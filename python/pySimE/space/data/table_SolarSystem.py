@@ -1,0 +1,56 @@
+
+Sun = {	
+'Radius'				:	0.696342e+9 ,
+'Radius_Equatorial' 		:	0.696342e+9 ,
+'Circumference'			:	4.379000e+9,
+'Circumference_Equatorial'	:	4.379000e+9,
+'Flattening	'			:	9.0e-6,
+'Surface area'			:	6.09e-18,
+'Volume'				:	1.41e+27,
+'Mass'				:	1.98855e+30,
+'Average density'			:	1.408e+3,
+'Density Center' 			:	1.622e+5 ,
+'Surface gravity'			:	274.0,
+'Escape velocity'			:	617.7e+3,
+'Temperature'			:	5.778e+3,
+'Temperature Center'		:	1.57e+7,
+'Temperature Photosphere'	:	5.778e+3,
+'Temperature Corona'		:	5e+6,
+'Power'				:	3.846e+26
+}
+
+
+Earth = {
+'Aphelion'			:	152098232000.0, 
+'Perihelion'		:	147098290000.0, 
+'Semi-major axis'  	:	149598261000.0, 
+'Eccentricity'		:	0.01671123,
+'Orbital period' 		:	365.256363004,
+'Orbital speed' 		:	29780,
+'Mean anomaly'		:	357.51716,
+'Inclination'		:	1.57869,
+'Longitude of ascending node' : 348.73936,
+'Argument of perihelion' 	 : 114.20783,
+
+'radius'			:	6371.0e+3,
+'radius_Mean'		:	6371.0e+3,
+'radius_Equatorial' 	:	6378.1e+3,
+'radius_Polar' 		:	6356.8e+3,
+'Flattening'		:	0.0033528,
+'Circumference'		:	40075017.0,
+'Circumference_equatorial'	:	40075017.0,
+'Circumference_meridiona' 	:	40007860.0,
+'Surface_area'			:	510072000e+6,
+'Surface_area_land' 		:	148940000e+6,
+'Surface_area_water' 		:	361132000e+6, 
+'Volume'				:	1.08321e+21,
+'Mass'				:	5.97219e+24,
+'Mean density' 			:	5515, 
+'Surface gravity' 		:	9.798,
+'Moment of inertia factor' 	:	0.3307,
+'Escape velocity'			:	11186,
+'Sidereal rotation period'	:	0.99726968,
+'Equatorial rotation velocity'	:	465.1,
+'Albedo_geometric' 		:	0.367,
+'Albedo_Bond'	 		:	0.306
+}
