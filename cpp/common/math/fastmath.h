@@ -80,7 +80,7 @@ double atan2_a1( double y, double x ){
 
 double atan2_a2( double y, double x ){
   double absx,absy;
-  Uint8 kind=0;
+  uint8_t kind=0;
   double a;
   if(    x > 0    ){ absx = x;   kind |= 2; }else{ absx=-x;  } 
   if(    y > 0    ){ absy = y;   kind |= 4; }else{ absy=-y;  } 

@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <cstdint>
 
-#include "cpp/fastmath.h"
-#include "cpp/Vec3.h"
-#include "cpp/spline_hermite.h"
-#include "cpp/optimizerDerivs.h"
-#include "cpp/ODEintegrator.h"
+#include "../../common/math/fastmath.h"
+#include "../../common/math/Vec3.h"
+#include "../../common/math/spline_hermite.h"
+#include "../../common/optimization/optimizerDerivs.h"
+#include "../../common/dynamics/ODEintegrator.h"
 
 const double GRAV_CONTS = 6.67384e-11;
 
