@@ -116,13 +116,14 @@ void Screen2D::draw(){
 	chain1->move( yacht1.pos );
 	glColor3f( 0.3f, 0.3f, 0.3f ); chain1->draw( yacht1.pos );
 
-
+/*
 	for (int i=0; i<nryb; i++){
 		glPushMatrix();
 		glTranslatef( (float)ryby[i].x, (float)ryby[i].y, 0 );
 		glCallList( tvar_ryby ); 
 		glPopMatrix();
 	}
+*/
 
 	glColor3f( 0.8f, 0.8f, 0.8f ); 	yacht1.draw_shape( );  
 	glColor3f( 0.2f, 0.2f, 0.2f );  yacht1.draw( ); 

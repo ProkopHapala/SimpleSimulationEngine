@@ -70,6 +70,21 @@ void drawLines( int nlinks, int * links, Vec2d * points ){
 }
 
 
+void drawPolarFunc( double x0, double y0, double fscale, int n, double phi0, double * data ){
+		double dphi = M_PI_2/n;
+		glBegin(GL_LINE_STRIP);
+		for( int i=-1; i<n; i++ ){
+			int ii = i;	if( i<0 ) ii=n-1; 
+			double cd  = data[ii];
+			double phi = dphi*i + phi0;
+			double x   = cos( phi );
+			double y   = sin( phi );
+			glVertex3f( (float)( x0 + fscale*x ), (float)(y0 + fscale*y), 0 );
+		}
+		glEnd();
+}
+
+
 
 
 
