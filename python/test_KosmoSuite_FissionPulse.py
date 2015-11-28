@@ -2,23 +2,7 @@
 
 from pylab import *
 import numpy as np
-import os 
-
-
-print "========= Load Library ============="
-
-def makeclean():
-	import os
-	[ os.remove(f) for f in os.listdir(".") if f.endswith(".so") ]
-	[ os.remove(f) for f in os.listdir(".") if f.endswith(".o") ]
-	[ os.remove(f) for f in os.listdir(".") if f.endswith(".pyc") ]
-
-os.chdir('../');       print " >> WORKDIR: ", os.getcwd()
-makeclean( )
-sys.path.insert(0, "./")
-import KosmoSuiteCpp as KS
-os.chdir('examples');  print " >> WORKDIR: ", os.getcwd()
-
+from pySimE.KosmoSuiteCpp import main as KS
 
 print "========= setup ============="
 

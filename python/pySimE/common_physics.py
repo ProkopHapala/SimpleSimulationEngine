@@ -20,6 +20,14 @@ def kineticEnergy( mass=const.protonMass, velocity=0.1*const.lightSpeed, relativ
 	else:
 		return 0.5*mass*velocity**2
 
+
+def classical_Energy_to_Velocity( Ek, m0 = const.protonMass ):
+	return np.sqrt( 2*Ek/m0 )
+
+def relativistic_Energy_to_Velocity( Ek, m0 = const.protonMass ):
+	E0 = m0 * const.lightSpeed**2
+	return const.lightSpeed * np.sqrt( Ek*(2*E0 + Ek )/(E0+Ek)**2 )
+
 # ===========  Thermodynamics  ===================
 	
 def thermalRadiativePower( temperature = 3500, area = 1 ):

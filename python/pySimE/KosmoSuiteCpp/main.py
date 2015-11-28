@@ -3,22 +3,19 @@ from   ctypes import c_int, c_double, c_bool, c_float
 import ctypes
 import os
 
-name='KosmoSuite'; ext='.so' 
+from .. import utils
 
-def recompile( 
-		FFLAGS = "-std=c++11 -Og -g -Wall",
-		LFLAGS = "-I/usr/local/include/SDL2 -lSDL2"
-	):
-	import os
-	print " COMPILATION OF : "+name
-	print  os.getcwd()
-	os.system("g++ "+FFLAGS+" -c -fPIC "+name+".cpp -o "+name+".o "+LFLAGS )
-	os.system("g++ "+FFLAGS+" -shared -Wl,-soname,lib"+name+ext+" -o lib"+name+ext+" "+name+".o "+LFLAGS)
+name='KosmoSuite'
 
-if not os.path.exists("./"+name+ext):
-	recompile()
+LIB_PATH      = os.path.dirname( os.path.realpath(__file__) )
+LIB_PATH_CPP  = os.path.normpath(LIB_PATH+'../../../../'+'/cpp/libs/KosmoSuiteCpp')
+print "KosmoSuiteCpp LIB_PATH     = ", LIB_PATH
+print "KosmoSuiteCpp LIB_PATH_CPP = ", LIB_PATH_CPP 
 
-lib    = ctypes.CDLL("./lib"+name+ext )
+if utils.recompile: 
+	utils.compile_lib( name, path = LIB_PATH_CPP )
+
+lib    = ctypes.CDLL( LIB_PATH_CPP+"/lib"+name+ utils.ext )
 
 array1ui = np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='CONTIGUOUS')
 array1i  = np.ctypeslib.ndpointer(dtype=np.int32,  ndim=1, flags='CONTIGUOUS')
@@ -106,9 +103,6 @@ lib.FissionPulse_set_trigger.argtypes   = [ c_double, c_double, c_double ]
 lib.FissionPulse_set_trigger.restype    = None
 def FissionPulse_set_trigger( time_trigger=1e+300, R_trigger=0.05, Nn_spark=1e+18 ):
 	lib.FissionPulse_set_trigger( time_trigger, R_trigger, Nn_spark )
-
-
-
 
 
 

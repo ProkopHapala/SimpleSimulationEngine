@@ -3,8 +3,8 @@
 import re
 import numpy as np
 
-from substances import substance_dict,substance_param_names
-from elements   import element_dict,element_param_names
+from .data.substances import substance_dict, substance_param_names
+from .data.elements   import element_dict, element_param_names
 
 # ======== parse reaction
 

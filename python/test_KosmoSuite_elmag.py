@@ -2,24 +2,7 @@
 
 from pylab import *
 import numpy as np
-import os 
-
-
-print "========= Load Library ============="
-
-def makeclean():
-	import os
-	[ os.remove(f) for f in os.listdir(".") if f.endswith(".so") ]
-	[ os.remove(f) for f in os.listdir(".") if f.endswith(".o") ]
-	[ os.remove(f) for f in os.listdir(".") if f.endswith(".pyc") ]
-
-os.chdir('../');       print " >> WORKDIR: ", os.getcwd()
-makeclean( )
-sys.path.insert(0, "./")
-import KosmoSuiteCpp as KS
-os.chdir('examples');  print " >> WORKDIR: ", os.getcwd()
-
-
+from pySimE.KosmoSuiteCpp import main as KS
 
 print " =========== sample magnetic field ============="
 
@@ -30,7 +13,6 @@ dIs = zeros((n,3))
 m = 100
 wheres = zeros((m,3))
 Bs     = zeros((m,3))
-
 
 R  = 1.0 
 dl = 2*pi*R/n;
@@ -45,11 +27,9 @@ dIs[:,0] =  sa;
 dIs[:,1] = -ca;
 dIs   *= dl*I; 
 
-'''
-wheres[:,0] = 0.0
-wheres[:,1] = 0.9
-wheres[:,2] = linspace(-5,5, m) 
-'''
+#wheres[:,0] = 0.0
+#wheres[:,1] = 0.9
+#wheres[:,2] = linspace(-5,5, m) 
 
 wheres[:,0] = 0.0 
 wheres[:,1] = linspace(-5,5, m)
@@ -80,11 +60,6 @@ ESI     = E *  eVtoSI;
 vSI     = sqrt( ( 2 * ESI ) / mass ) 
 print " ESI, vSI ", ESI, vSI
 
-
-
-
-
-
 trj_tin  = linspace( 0, 0.2e-5, 1000 );   nstep = len(trj_tin) 
 trj_tout = zeros( nstep ) 
 trj_v    = zeros( ( nstep, 3 ) );
@@ -107,6 +82,6 @@ legend(loc=2)
 grid()
 axis('equal')
 
-
 show()
+
  

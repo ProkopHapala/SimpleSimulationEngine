@@ -2,30 +2,7 @@
 
 from pylab import *
 import numpy as np
-import os 
-
-
-# ============ Library initialization
-
-#root_path="/media/WinDATA/Dropbox/Dropbox/MyDevSW/ctypes/KosmoSuiteCpp"
-#root_path="/home/prokop/Dropbox/MyDevSW/ctypes/KosmoSuiteCpp"
-#sys.path.insert(0, '../python')
-#sys.path.insert(0, '..')
-#sys.path.append('../python')
-#sys.path.insert(0, root_path)
-
-def makeclean():
-	import os
-	[ os.remove(f) for f in os.listdir(".") if f.endswith(".so") ]
-	[ os.remove(f) for f in os.listdir(".") if f.endswith(".o") ]
-	[ os.remove(f) for f in os.listdir(".") if f.endswith(".pyc") ]
-
-os.chdir('../');       print " >> WORKDIR: ", os.getcwd()
-makeclean( )
-#sys.path.insert(0, "../")
-sys.path.insert(0, "./")
-import KosmoSuiteCpp as KS
-os.chdir('examples');  print " >> WORKDIR: ", os.getcwd()
+from pySimE.KosmoSuiteCpp import main as KS
 
 # ============ Setup variables
 
