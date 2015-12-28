@@ -1,17 +1,10 @@
 
-
-
-
 /*
-
 TO DO :
 	*	each of a few runs ends up as segmentation fault:
 		./test: line 6: 11233 Segmentation fault      (core dumped) ./program.x
 		try to use valgrind ?
-
-
 */
-
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,32 +14,21 @@ TO DO :
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
+// ========= include from common
+#include "math/fastmath.h"
+#include "math/Vec2.h"
+#include "math/Vec3.h"
+#include "math/Mat3.h"
+#include "math/raytrace.h"
+#include "SDL2OGL/drawMath.h"
+#include "SDL2OGL/drawMath2D.h"
+#include "SDL2OGL/drawUtils.h"
+#include "dynamics/Body2D.h"
+#include "dynamics/AeroSurf2D.h"
+#include "dynamics/Chain2D.h"
 
-
-
-
-#include "../../common/math/fastmath.h"
-
-#include "../../common/math/Vec2.h"
-#include "../../common/math/Vec3.h"
-#include "../../common/math/Mat3.h"
-
-#include "../../common/math/raytrace.h"
-
-#include "../../common/SDL2OGL/drawMath.h"
-#include "../../common/SDL2OGL/drawMath2D.h"
-
-#include "../../common/SDL2OGL/drawUtils.h"
-
-#include "../../common/dynamics/Body2D.h"
-#include "../../common/dynamics/AeroSurf2D.h"
-
-#include "../../common/dynamics/Chain2D.h"
-
-
+// ========= include from local app
 #include "include/Ship2D.h"
-
-
 
 // ===============================
 // ===== GLOBAL CONSTAMNTS
@@ -66,29 +48,21 @@ bool  loopEnd           = false;
 int   frameCount		=	0;
 
 SDL_Event		 event; 
-
 int perFrame = 10;
 
 double dt = 0.0001;
 
 Vec2d windSpeed, watterSpeed;
 
-Yacht2D yacht1;
-
+Yacht2D   yacht1;
 Chain2D * chain1;
-
-
-
 
 const int npts = 4;
 static double poss[npts*2] = { -1.0, 0.0,   0.0, -0.1,   0.0, +0.1,   +1.0, 0.0  };
 static double mass[npts  ] = {  10.0, 50.0, 50.0, 10.0  };
 
-
-#include "../../common/SDL2OGL/Screen2D.h"
+#include "SDL2OGL/Screen2D.h"
 Screen2D* thisScreen;
-
-
 
 // ===============================
 // ===== FUNCTIONS 

@@ -1,0 +1,5 @@
+
+rm -rf *.o program
+
+make
+./program.x
