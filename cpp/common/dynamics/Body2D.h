@@ -78,7 +78,7 @@ class RigidBody2D : public PointBody2D {
 		//double yphi = sin( phi );
 		//printf( " dphi, phi, rot.x, rot.y, xphi, yphi  %f %f   %f %f   %f %f \n", dphi, phi, rot.x, rot.y, xphi, yphi );
 
-		printf( " torq, omega, phi %f %f %f  vel %f %f \n", torq, omega, phi, vel.x, vel.y  );
+		//printf( " torq, omega, phi %f %f %f  vel %f %f \n", torq, omega, phi, vel.x, vel.y  );
 	};
 
 	void from_mass_points( int n, double * amass, Vec2d * apos ){

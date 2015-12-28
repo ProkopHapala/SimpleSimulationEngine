@@ -9,6 +9,7 @@ TO DO :
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <vector>
 #include <math.h>
 
 #include <SDL2/SDL.h>
@@ -64,6 +65,8 @@ Vec2d windSpeed, watterSpeed;
 Frigate2D   ship1;
 Frigate2D   ship2;
 
+std::vector<Projectile*> projectiles( 100 );
+
 const int npts = 4;
 static double poss[npts*2] = { -1.0, 0.0,   0.0, -0.1,   0.0, +0.1,   +1.0, 0.0  };
 static double mass[npts  ] = {  10.0, 50.0, 50.0, 10.0  };
@@ -114,19 +117,11 @@ void update(){
 void setup(){
 	int ifree,igl,nvert,ndiv;
 
-
 	windSpeed  .set( -10.0, 0.0 );
 	watterSpeed.set(  0.0, 0.0 );
 
-	printf( " >>> Setup  ship1: \n" );
-	ship1.from_mass_points( 2, mass, (Vec2d*)poss );  printf( " I invI  %f %f \n", ship1.I, ship1.invI );
-	ship1.setDefaults();
-	ship1.setAngle( M_PI*0.6 );
-	ship1.pos.set( {0.0, 0.0} );
-	ship1.omega = 0.0;
-
-	int shape = glGenLists(1);
-	glNewList( shape , GL_COMPILE );
+	int FigateShape = glGenLists(1);
+	glNewList( FigateShape , GL_COMPILE );
 	glBegin   (GL_TRIANGLE_FAN);	       
 		glNormal3f( 0.0f, 0.0f, 1.0f ); 
 		glVertex3f( +1.5,  0.0, 0 );
@@ -138,45 +133,25 @@ void setup(){
 	glEnd();
 	glEndList();
 
-	ship1.shape = shape;
-
+	printf( " >>> Setup  ship1: \n" );
 	ship1.loadFromFile( "data/FrigateType.txt" );
-	
+	ship1.from_mass_points( 2, mass, (Vec2d*)poss );  printf( " I invI  %f %f \n", ship1.I, ship1.invI );
+	ship1.setDefaults();
+	ship1.setAngle( M_PI*0.6   );
+	ship1.pos.set ( {0.0, 0.0} );
+	ship1.omega = 0.0;
+	ship1.shape = FigateShape;
 
-/*
-	ship1.keel  .pos.set ( 0.0, 0.0 );
-	ship1.keel  .setAngle( M_PI/2 );
-	ship1.keel  .area   = 0.4;
-	ship1.keel  .CD0    = 0.04;  
-	ship1.keel  .dCD    = 1.5;  
-	ship1.keel  .dCDS   = 0.9;  
-	ship1.keel  .dCL    = 3.00;
-	ship1.keel  .dCLS   = 2.00;
-	ship1.keel  .sStall = 0.20;
-	ship1.keel  .wStall = 0.40;
+	ship1.initAllGuns( 5 );
 
-	ship1.rudder.pos.set ( -1.1, 0.0 );
-	ship1.rudder.setAngle(  M_PI/2 + 0.2  );
-	ship1.rudder.area = 0.03;
-	ship1.rudder.CD0    = 0.008;  
-	ship1.rudder.dCD    = 1.5;  
-	ship1.rudder.dCDS   = 0.9;  
-	ship1.rudder.dCL    = 6.28;
-	ship1.rudder.dCLS   = 2.70;
-	ship1.rudder.sStall = 0.16;
-	ship1.rudder.wStall = 0.08;
-
-	ship1.mast.pos.set ( +0.05, 0.0 );
-	ship1.mast.setAngle( M_PI*0.0 );
-	ship1.mast.area = 3.0;
-	ship1.mast.CD0    = 0.1;  
-	ship1.mast.dCD    = -1.0;  
-	ship1.mast.dCDS   = 0.8;  
-	ship1.mast.dCL    = 3.50;
-	ship1.mast.dCLS   = 2.20;
-	ship1.mast.sStall = 0.20;
-	ship1.mast.wStall = 0.40;
-*/
+	printf( " >>> Setup  ship2: \n" );
+	ship2.loadFromFile( "data/FrigateType.txt" );
+	ship2.from_mass_points( 2, mass, (Vec2d*)poss );  printf( " I invI  %f %f \n", ship1.I, ship1.invI );
+	ship2.setDefaults();
+	ship2.setAngle( M_PI*0.6   );
+	ship2.pos.set ( {1., 1.0} );
+	ship2.omega = 0.0;
+	ship2.shape = FigateShape;
 
 	printf( " >>> Setup  ship1 DONE \n" );
 
@@ -190,6 +165,8 @@ void inputHanding(){
 				case SDLK_SPACE:    STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
 				case SDLK_KP_MINUS: thisScreen->zoom*=VIEW_ZOOM_STEP; break;
 				case SDLK_KP_PLUS:  thisScreen->zoom/=VIEW_ZOOM_STEP; break;
+				case SDLK_KP_1:     ship1.fire_left ( &projectiles ); break;
+				case SDLK_KP_2:     ship1.fire_right( &projectiles ); break;
 			}
 
 /*

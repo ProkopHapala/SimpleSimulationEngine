@@ -3,16 +3,82 @@ class Frigate2D : public Yacht2D {
 	public:
 	
 	int nguns;
-	Gun ** left_guns, right_guns; 
+	Gun ** left_guns; 
+	Gun ** right_guns; 
 
-	void fire(){
+	Gun ** initGuns( int n, Vec3d pos1, Vec3d pos2, Vec3d ldir, double muzzle_velocity ){
+		Vec3d pos;
+		double d = 1.0d / n;
+		Gun ** guns = new Gun*[ n ];
+		for( int i=0; i<n; i++){
+			double t = i * d;
+			Gun * gun = new Gun( );
+			gun->lpos.set_lincomb( 1-t,  pos1,  t, pos2 );
+			gun->set_direction( ldir );
+			gun->muzzle_velocity = 	muzzle_velocity;
+			guns[i] = gun;
+			printf( " gun %i \n", i );
+		}
+		return guns;
+	}
 
+	void initAllGuns( int n ){
+		nguns = n;
+		Vec3d pos1,pos2,ldir;
+		pos1.set(  1.0, 0.1, 0.1 );
+		pos2.set( -1.0, 0.1, 0.1 );
+		ldir.set(  0.0, 1.0, 0.2 ); ldir.normalize();
+		initGuns( nguns, pos1, pos2, ldir, 200.0 );
+		pos1.set(  1.0, -0.1, 0.1 );
+		pos2.set( -1.0, -0.1, 0.1 );
+		ldir.set( 0.0, -1.0, 0.2 ); ldir.normalize();
+		initGuns( nguns, pos1, pos2, ldir, 200.0 );
+	}
+
+	void fire_gun_row( int n, Gun ** guns, std::vector<Projectile*> * projectiles ){
+		Vec3d vel3D,pos3D;
+		Mat3d rot3D;
+		vel3D.set( vel.x, vel.y, 0 );
+		pos3D.set( pos.x, pos.y, 0 );
+		rot3D.a.set( rot.x,  rot.y, 0.0d );
+		rot3D.b.set( rot.y, -rot.x, 0.0d );
+		rot3D.c.set(  0.0d,   0.0d, 1.0d ); 
+		for( int i=0; i<n; i++ ){ 
+			Projectile * p = guns[i]->fireProjectile( pos3D, rot3D, vel3D ); 
+			projectiles->push_back( p );
+		}
+	}
+	void fire_left ( std::vector<Projectile*> * projectiles ){ fire_gun_row( nguns, left_guns , projectiles ); }
+	void fire_right( std::vector<Projectile*> * projectiles ){ fire_gun_row( nguns, right_guns, projectiles ); }
+
+
+	void drawGun( Gun * gun ){
+		Vec2d lpos, lrot; 
+		lpos.set(  gun->lpos.x,   gun->lpos.y   );
+ 		lrot.set( -gun->lrot.c.y, gun->lrot.c.x );
+		Vec2d gpos, grot;  		
+		grot  .set_mul_cmplx( rot, lrot );
+		gpos  .set_mul_cmplx( rot, lpos );
+		gpos.add( pos );
+		float lperp = 0.1;
+		float llong = 0.5;
+		glBegin(GL_LINES);
+			glVertex3f( (float)( gpos.x-grot.x*lperp), (float)(gpos.y-grot.y*lperp), 1 );   glVertex3f( (float)(gpos.x+grot.x*lperp), (gpos.y+grot.y*lperp), 1 );
+			glVertex3f( (float)( gpos.x-grot.y*llong), (float)(gpos.y+grot.x*llong), 1 );   glVertex3f( (float)(gpos.x+grot.y*llong), (gpos.y-grot.x*llong), 1 );
+		glEnd();
 	}
 
 	virtual void draw( ){ 
 		keel  .draw  ( *this );
 		rudder.draw( *this );
 		mast  .draw  ( *this );
+		if( left_guns != NULL ){
+			printf( " plotting guns \n" );
+			for( int i=0; i<nguns; i++ ){ 
+				drawGun( left_guns [i] ); 
+				drawGun( right_guns[i] ); 
+			};
+		}
 	}
 
 	bool loadFromFile( char const* filename ){
@@ -22,10 +88,11 @@ class Frigate2D : public Yacht2D {
 		pFile = fopen ( filename, "r" );
 		const int nbuf = 1000; 
 		char line [ nbuf ];
-		fgets( line, nbuf, pFile );   keel  .fromString( line );  printf( "%s \n", keel  .toString( ) );
-		fgets( line, nbuf, pFile );   rudder.fromString( line );  printf( "%s \n", rudder.toString( ) );
-		fgets( line, nbuf, pFile );   mast  .fromString( line );  printf( "%s \n", mast  .toString( ) );
+		fgets( line, nbuf, pFile );   keel  .fromString( line );  //printf( "%s \n", keel  .toString( ) );
+		fgets( line, nbuf, pFile );   rudder.fromString( line );  //printf( "%s \n", rudder.toString( ) );
+		fgets( line, nbuf, pFile );   mast  .fromString( line );  //printf( "%s \n", mast  .toString( ) );
 		fclose( pFile );
+		//exit(0);
   		return false;
 	}
 
