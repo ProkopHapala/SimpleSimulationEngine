@@ -15,6 +15,11 @@ class PointBody2D{
 	// auxiliary variables
 	Vec2d force;
 
+	void setMass( double mass_ ){
+		mass    = mass_;
+		invMass = 1 / mass;
+	};
+
 	inline void move_PointBody2D( double dt ){
 		vel.add_mul( force, dt*invMass );
 		pos.add_mul( vel,   dt );

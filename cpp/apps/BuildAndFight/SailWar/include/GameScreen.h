@@ -14,13 +14,30 @@ class GameScreen : public Screen2D {
 			ship2.clean_temp( );
 			ship2.applySailForces(  windSpeed,  watterSpeed );
 			ship2.move( dt );
+
+			std::vector<Projectile*>::iterator it = projectiles.begin();
+			while( it != projectiles.end() ) {
+				Projectile * p = *it; 
+				p -> evalForce(    );
+				p -> move     ( dt );
+				if( p -> check_hit( ) ){ it = projectiles.erase( it ); }
+				else                   { ++it;                  }
+			}
+
 		}
+
 
 		glColor3f( 0.8f, 0.8f, 0.8f ); 	ship1.draw_shape( );  
 		glColor3f( 0.2f, 0.2f, 0.2f );  ship1.draw( ); 
 
 		glColor3f( 0.8f, 0.8f, 0.8f ); 	ship2.draw_shape( );  
 		glColor3f( 0.2f, 0.2f, 0.2f );  ship2.draw( ); 
+
+
+		for( std::vector<Projectile*>::iterator it = projectiles.begin(); it != projectiles.end(); ++it ) {
+			(*it) -> draw();
+		}
+
 
 		Vec2d compass_pos; compass_pos.set( 0.8*ASPECT_RATIO*zoom, 0.8*zoom );
 

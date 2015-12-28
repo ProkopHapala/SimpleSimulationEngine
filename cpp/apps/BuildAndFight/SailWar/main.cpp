@@ -60,12 +60,16 @@ int perFrame = 10;
 
 double dt = 0.0001;
 
+
+GameWorld world;
+
 Vec2d windSpeed, watterSpeed;
 
 Frigate2D   ship1;
 Frigate2D   ship2;
 
-std::vector<Projectile*> projectiles( 100 );
+//std::vector<Projectile*> projectiles( 100 );  
+std::vector<Projectile*> projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 
 const int npts = 4;
 static double poss[npts*2] = { -1.0, 0.0,   0.0, -0.1,   0.0, +0.1,   +1.0, 0.0  };
@@ -117,6 +121,10 @@ void update(){
 void setup(){
 	int ifree,igl,nvert,ndiv;
 
+	world.ground_level = 0.0d;
+	world.watter_speed.set(   0.0, 0.0      );
+	world.wind_speed  .set( -10.0, 0.0, 0.0 );
+
 	windSpeed  .set( -10.0, 0.0 );
 	watterSpeed.set(  0.0, 0.0 );
 
@@ -141,8 +149,7 @@ void setup(){
 	ship1.pos.set ( {0.0, 0.0} );
 	ship1.omega = 0.0;
 	ship1.shape = FigateShape;
-
-	ship1.initAllGuns( 5 );
+	ship1.initAllGuns( 1 );
 
 	printf( " >>> Setup  ship2: \n" );
 	ship2.loadFromFile( "data/FrigateType.txt" );
@@ -154,6 +161,8 @@ void setup(){
 	ship2.shape = FigateShape;
 
 	printf( " >>> Setup  ship1 DONE \n" );
+
+	projectiles.reserve(100); 
 
 }
 

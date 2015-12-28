@@ -11,7 +11,7 @@ class Frigate2D : public Yacht2D {
 		double d = 1.0d / n;
 		Gun ** guns = new Gun*[ n ];
 		for( int i=0; i<n; i++){
-			double t = i * d;
+			double t = ( i + 0.5d ) * d;
 			Gun * gun = new Gun( );
 			gun->lpos.set_lincomb( 1-t,  pos1,  t, pos2 );
 			gun->set_direction( ldir );
@@ -23,19 +23,23 @@ class Frigate2D : public Yacht2D {
 	}
 
 	void initAllGuns( int n ){
+		double dy = 0.15; 
+		double dz = 0.1;
+		double muzzle_vel = 1.0;
 		nguns = n;
 		Vec3d pos1,pos2,ldir;
-		pos1.set(  1.0, 0.1, 0.1 );
-		pos2.set( -1.0, 0.1, 0.1 );
+		pos1.set(  0.5, dy, dz );
+		pos2.set( -1.0, dy, dz );
 		ldir.set(  0.0, 1.0, 0.2 ); ldir.normalize();
-		initGuns( nguns, pos1, pos2, ldir, 200.0 );
-		pos1.set(  1.0, -0.1, 0.1 );
-		pos2.set( -1.0, -0.1, 0.1 );
+		left_guns = initGuns( nguns, pos1, pos2, ldir, muzzle_vel );
+		pos1.set(  0.5, -dy, dz );
+		pos2.set( -1.0, -dy, dz );
 		ldir.set( 0.0, -1.0, 0.2 ); ldir.normalize();
-		initGuns( nguns, pos1, pos2, ldir, 200.0 );
+		right_guns = initGuns( nguns, pos1, pos2, ldir, muzzle_vel );
 	}
 
 	void fire_gun_row( int n, Gun ** guns, std::vector<Projectile*> * projectiles ){
+		printf( " fire_left !!! \n" );
 		Vec3d vel3D,pos3D;
 		Mat3d rot3D;
 		vel3D.set( vel.x, vel.y, 0 );
@@ -47,6 +51,7 @@ class Frigate2D : public Yacht2D {
 			Projectile * p = guns[i]->fireProjectile( pos3D, rot3D, vel3D ); 
 			projectiles->push_back( p );
 		}
+		printf( " %i projectiles in air !!! \n", projectiles->size() );
 	}
 	void fire_left ( std::vector<Projectile*> * projectiles ){ fire_gun_row( nguns, left_guns , projectiles ); }
 	void fire_right( std::vector<Projectile*> * projectiles ){ fire_gun_row( nguns, right_guns, projectiles ); }
@@ -64,7 +69,7 @@ class Frigate2D : public Yacht2D {
 		float llong = 0.5;
 		glBegin(GL_LINES);
 			glVertex3f( (float)( gpos.x-grot.x*lperp), (float)(gpos.y-grot.y*lperp), 1 );   glVertex3f( (float)(gpos.x+grot.x*lperp), (gpos.y+grot.y*lperp), 1 );
-			glVertex3f( (float)( gpos.x-grot.y*llong), (float)(gpos.y+grot.x*llong), 1 );   glVertex3f( (float)(gpos.x+grot.y*llong), (gpos.y-grot.x*llong), 1 );
+			//glVertex3f( (float)( gpos.x-grot.y*llong), (float)(gpos.y+grot.x*llong), 1 );   glVertex3f( (float)(gpos.x+grot.y*llong), (gpos.y-grot.x*llong), 1 );
 		glEnd();
 	}
 
@@ -73,7 +78,7 @@ class Frigate2D : public Yacht2D {
 		rudder.draw( *this );
 		mast  .draw  ( *this );
 		if( left_guns != NULL ){
-			printf( " plotting guns \n" );
+			//printf( " plotting guns \n" );
 			for( int i=0; i<nguns; i++ ){ 
 				drawGun( left_guns [i] ); 
 				drawGun( right_guns[i] ); 

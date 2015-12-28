@@ -106,7 +106,7 @@ class AeroSurf2D : public KinematicBody2D {
 
 		//printf( " force %f %f \n",  force.x, force.y );
 		//printf( "   vhat %g %g   force %g %g   ca sa %g %g    CD CL %g %g \n", vhat.x, vhat.y,  force.x, force.y,   ca, sa,    CD, CL );
-		printf( "   vhat %g %g   force %g %g   CD CL %g %g  prefactor %g %g %g %g \n", vhat.x, vhat.y,  force.x, force.y,   CD, CL,   prefactor,  vr2, density, area );
+		//printf( "   vhat %g %g   force %g %g   CD CL %g %g  prefactor %g %g %g %g \n", vhat.x, vhat.y,  force.x, force.y,   CD, CL,   prefactor,  vr2, density, area );
 
 		platform.apply_force( force, gpos );
 

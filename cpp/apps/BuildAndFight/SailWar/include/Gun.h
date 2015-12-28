@@ -1,6 +1,7 @@
 class Gun : public KinematicBody {
 	public:
-	double muzzle_velocity;
+	double muzzle_velocity = 1.0;
+	double projectile_mass = 1.0;
 	
 	void set_direction( Vec3d dir ){
 		Vec3d up; up.set( 0.0d, 0.0d, 1.0d );
@@ -16,6 +17,8 @@ class Gun : public KinematicBody {
 		globalRot( grot, rotmat );
 		p->vel.set_mul( rotmat.a, muzzle_velocity );  
 		p->vel.add( gvel );
+		p->setMass( projectile_mass );
+		return p;
 	}
 
 };

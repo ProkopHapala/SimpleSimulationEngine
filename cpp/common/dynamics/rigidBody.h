@@ -22,6 +22,11 @@ class PointBody{
 	// auxiliary variables
 	Vec3d force;
 
+	void setMass( double mass_ ){
+		mass    = mass_;
+		invMass = 1 / mass;
+	};
+
 	inline void move_PointBody( double dt ){
 		vel.add_mul( force, dt*invMass );
 		pos.add_mul( vel,   dt );
