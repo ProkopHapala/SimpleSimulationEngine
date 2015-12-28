@@ -7,7 +7,8 @@ ext       ='.so'
 
 def compile_lib( name,
 		FFLAGS = "-std=c++11 -Og -g -Wall",
-		LFLAGS = "-I/usr/local/include/SDL2 -lSDL2",
+		#LFLAGS = "-I/usr/local/include/SDL2 -lSDL2",
+		LFLAGS = "",
 		path   = None,
 		clean  = True,
 	):
