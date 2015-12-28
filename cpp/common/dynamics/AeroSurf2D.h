@@ -134,4 +134,15 @@ class AeroSurf2D : public KinematicBody2D {
 		glEnd();
 	}
 
+	double fromString( char * line ){
+		double angle;  
+		sscanf ( line, "%d %d %d %d %d %d %d %d %d %d %d", pos.x, pos.y, angle, area, CD0, dCD, dCDS, dCL, dCLS, sStall, wStall );		
+		setAngle( angle );
+	}
+
+	char * toString( ){
+		char line[1000];
+		sprintf ( line, "%d %d %d %d %d %d %d %d %d %d %d", pos.x, pos.y, phi, area, CD0, dCD, dCDS, dCL, dCLS, sStall, wStall );		
+	}
+
 };

@@ -13,9 +13,9 @@
 class PointBody{
 	public:
 	// parameters
-	float	mass;
+	double	mass;
 	// auxiliary parameters
-	float	invMass; 
+	double	invMass; 
 	// State variables 
 	Vec3d pos;
 	Vec3d vel;
@@ -38,12 +38,25 @@ class PointBody{
 	inline void clean_temp( ){  force.set(0.0); }
 
 	virtual void evalForce()   { force.set( 0.0,-9.81f,0.0 ); }
-	virtual void move(float dt){ move_PointBody(dt);      }
+	virtual void move(double dt){ move_PointBody(dt);      }
 
 	virtual void render(){
 		drawPoint( pos );
 	}
 };
+
+//////////////////////////////
+//   CLASS :   KinematicBody
+/////////////////////////////
+
+class KinematicBody{
+	public:
+	Vec3d lpos;
+	Mat3d lrot;
+	void globalPos( const Vec3d& pos0, Vec3d& gpos ){ gpos.set_add ( lpos, pos0 ); }
+	void globalRot( const Mat3d& rot0, Mat3d& grot ){ grot.set_mmul( lrot, rot0 ); }
+};
+
 
 ///////////////////////////
 //   CLASS :   RigidBody
@@ -137,7 +150,7 @@ class RigidBody : public PointBody {
 	void render(){
 		glPushMatrix();
 		float glmat[16];
-		toGLMat( pos, rotMat, glmat);
+		toGLMat( pos, rotMat, glmat );
 		glMultMatrixf( glmat );
 		glCallList( shape );
 		glPopMatrix();

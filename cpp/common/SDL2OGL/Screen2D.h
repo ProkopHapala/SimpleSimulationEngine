@@ -29,7 +29,7 @@ class Screen2D{
 		mouse_begin_y  = 0;
 	}
 
-	Screen2D( int& id, int WIDTH_, int HEIGHT_ ){
+	void init( int& id, int WIDTH_, int HEIGHT_ ){
 		WIDTH  = WIDTH_;
 		HEIGHT = HEIGHT_;
 		setDefaults();
@@ -37,7 +37,6 @@ class Screen2D{
 		id = SDL_GetWindowID(window); printf( " win id %i \n", id );
 		char str[40];  sprintf(str, " Window id = %d", id );
 		SDL_SetWindowTitle( window, str );
-
 		setupRenderer();
 		printf( " ASPECT_RATIO %f \n", ASPECT_RATIO );
 	}
@@ -51,7 +50,7 @@ class Screen2D{
 
 	void camera();
 
-	void draw();
+	virtual void draw(){};
 	void projectMouse();
 	void inputHanding();
 	void getCameraDirections();
@@ -65,6 +64,10 @@ class Screen2D{
 		glPopMatrix();
 		SDL_RenderPresent(renderer);
 	};
+
+	Screen2D( int& id, int WIDTH_, int HEIGHT_ ){
+		init( id, WIDTH_, HEIGHT_ );
+	}
 
 };
 
@@ -96,58 +99,6 @@ void Screen2D::setupRenderer(){
 
 // ================ PER FRAME OPS
 
-void Screen2D::draw(){
-	glEnable (GL_LIGHTING);
-	glShadeModel(GL_FLAT);
-
-/*
-	yacht1.clean_temp( );
-	yacht1.applySailForces(  { -2.0, 0.0 },  { 0.0, 0.0 }  );
-	yacht1.move( dt );
-*/
-
-
-	for( int i=0; i<perFrame; i++ ){
-		yacht1.clean_temp( );
-		yacht1.applySailForces(  windSpeed,  watterSpeed );
-		yacht1.move( dt );
-	}
-
-	chain1->move( yacht1.pos );
-	glColor3f( 0.3f, 0.3f, 0.3f ); chain1->draw( yacht1.pos );
-
-/*
-	for (int i=0; i<nryb; i++){
-		glPushMatrix();
-		glTranslatef( (float)ryby[i].x, (float)ryby[i].y, 0 );
-		glCallList( tvar_ryby ); 
-		glPopMatrix();
-	}
-*/
-
-	glColor3f( 0.8f, 0.8f, 0.8f ); 	yacht1.draw_shape( );  
-	glColor3f( 0.2f, 0.2f, 0.2f );  yacht1.draw( ); 
-
-	Vec2d compass_pos; compass_pos.set( 0.8*ASPECT_RATIO*zoom, 0.8*zoom );
-	//printf( " zoom compass_pos %f %f %f \n", zoom, compass_pos.x, compass_pos.y );
-
-	glColor3f( 0.2f, 0.2f, 0.2f );  drawPointCross( compass_pos, zoom*0.1 );
-	glColor3f( 0.2f, 0.5f, 0.2f );  drawVecInPos( windSpeed*zoom*0.1,   compass_pos );
-	glColor3f( 0.2f, 0.2f, 0.8f );  drawVecInPos( watterSpeed*zoom*0.1, compass_pos );
-
-/*	
-	glColor3f( 0.8f, 0.1f, 0.1f ); b1.draw();     b1.draw_shape( ); 
-	glColor3f( 0.1f, 0.1f, 0.8f ); b2.draw();     b2.draw_shape( );
-	glColor3f( 0.1f, 0.8f, 0.0f ); b3.draw();     b3.draw_shape( );
-	glColor3f( 0.8f, 0.1f, 0.8f ); spring1->draw();
-	glColor3f( 0.1f, 0.8f, 0.8f ); spring2->draw();
-*/
-
-	glDisable  (GL_LIGHTING);
-	drawAxis( 10 );
-}
-
-
 void Screen2D::camera(){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
@@ -156,7 +107,7 @@ void Screen2D::camera(){
 	//glOrtho ( -zoom, zoom, -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -VIEW_DEPTH, +VIEW_DEPTH );
 	glMatrixMode (GL_MODELVIEW);
 	glPushMatrix();
-	glTranslatef( (float)-yacht1.pos.x, (float)-yacht1.pos.y, 0 );
+	//glTranslatef( (float)-yacht1.pos.x, (float)-yacht1.pos.y, 0 );
 	//glTranslatef( (float)0.1, (float)0.1, 0 );
 	
 }

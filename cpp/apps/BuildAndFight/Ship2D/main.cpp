@@ -62,7 +62,8 @@ static double poss[npts*2] = { -1.0, 0.0,   0.0, -0.1,   0.0, +0.1,   +1.0, 0.0 
 static double mass[npts  ] = {  10.0, 50.0, 50.0, 10.0  };
 
 #include "SDL2OGL/Screen2D.h"
-Screen2D* thisScreen;
+#include "include/GameScreen.h"
+GameScreen* thisScreen;
 
 // ===============================
 // ===== FUNCTIONS 
@@ -227,7 +228,7 @@ int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);  
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1); 
 	int sid;
-	thisScreen  = new Screen2D( sid, 800,600); 
+	thisScreen  = new GameScreen( sid, 800,600); 
 
 	setup();
 
