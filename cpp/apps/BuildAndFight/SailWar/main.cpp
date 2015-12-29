@@ -51,11 +51,11 @@ const float	VIEW_DEPTH_DEFAULT = 1000.0;
 // ===============================
 
 bool  isLib             = false;
-bool  STOP          	= false; 
+bool  STOP          	= false;
 bool  loopEnd           = false;
 int   frameCount		=	0;
 
-SDL_Event		 event; 
+SDL_Event		 event;
 int perFrame = 10;
 
 double dt = 0.0001;
@@ -68,7 +68,7 @@ Vec2d windSpeed, watterSpeed;
 Frigate2D   ship1;
 Frigate2D   ship2;
 
-//std::vector<Projectile*> projectiles( 100 );  
+//std::vector<Projectile*> projectiles( 100 );
 std::vector<Projectile*> projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 
 const int npts = 4;
@@ -81,11 +81,11 @@ static double mass[npts  ] = {  10.0, 50.0, 50.0, 10.0  };
 GameScreen* thisScreen;
 
 // ===============================
-// ===== FUNCTIONS 
+// ===== FUNCTIONS
 // ===============================
 
 void quit(){
-	SDL_Quit(); 
+	SDL_Quit();
 	exit(1);
 };
 
@@ -101,7 +101,7 @@ void escape(){
 
 
 void update(){
-	
+
 	//ship1.applySailForces(  { 0.0, 0.0 },  { 0.0, 1.0 }  );
 	//ship1.move( dt );
 
@@ -122,7 +122,7 @@ void setup(){
 	int ifree,igl,nvert,ndiv;
 
 	world.ground_level = 0.0d;
-	world.watter_speed.set(   0.0, 0.0      );
+	world.watter_speed.set(   0.0, 0.0     );
 	world.wind_speed  .set( -10.0, 0.0, 0.0 );
 
 	windSpeed  .set( -10.0, 0.0 );
@@ -130,8 +130,8 @@ void setup(){
 
 	int FigateShape = glGenLists(1);
 	glNewList( FigateShape , GL_COMPILE );
-	glBegin   (GL_TRIANGLE_FAN);	       
-		glNormal3f( 0.0f, 0.0f, 1.0f ); 
+	glBegin   (GL_TRIANGLE_FAN);
+		glNormal3f( 0.0f, 0.0f, 1.0f );
 		glVertex3f( +1.5,  0.0, 0 );
  		glVertex3f( +0.5,  0.2, 0 );
 		glVertex3f( -1.0,  0.2, 0 );
@@ -162,13 +162,13 @@ void setup(){
 
 	printf( " >>> Setup  ship1 DONE \n" );
 
-	projectiles.reserve(100); 
+	projectiles.reserve(100);
 
 }
 
 void inputHanding(){
 	while(SDL_PollEvent(&event)){ // be carefull to include all event handling instide the while loop !!!
-		if( event.type == SDL_KEYDOWN ){ 
+		if( event.type == SDL_KEYDOWN ){
 			switch( event.key.keysym.sym ){
 				case SDLK_ESCAPE:   escape(); break;
 				case SDLK_SPACE:    STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
@@ -184,7 +184,7 @@ void inputHanding(){
 			if( event.key.keysym.sym == SDLK_KP_MINUS ) { thisScreen->zoom*=VIEW_ZOOM_STEP; }
 			if( event.key.keysym.sym == SDLK_KP_PLUS  ) { thisScreen->zoom/=VIEW_ZOOM_STEP; }
 */
-		} 
+		}
 		if( event.type == SDL_QUIT){ quit();  };
 
 	} // while(SDL_PollEvent(&event))
@@ -205,27 +205,27 @@ void inputHanding(){
 void loop(int n ){
 	loopEnd = false;
 	for( int iframe=0; iframe<n; iframe++ ){
-		inputHanding(); 
+		inputHanding();
 		if(!STOP){
 			update();
 			thisScreen->update();
-		}  
+		}
 		//printf(" %i \n", iframe );
 		SDL_Delay( 10 );
 		frameCount++;
 		if(loopEnd) break;
-	} 
+	}
 }
 
 // FUNCTION ======  main
 int main(int argc, char *argv[]){
 
 	// creating windows
-	SDL_Init(SDL_INIT_VIDEO);  
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1); 
+	SDL_Init(SDL_INIT_VIDEO);
+	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	int sid;
-	//thisScreen  = new Screen2D( sid, 800,600); 
-	thisScreen  = new GameScreen( sid, 800,600 ); 
+	//thisScreen  = new Screen2D( sid, 800,600);
+	thisScreen  = new GameScreen( sid, 800,600 );
 
 	setup();
 
