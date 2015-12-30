@@ -1,0 +1,51 @@
+# depslib dependency file v1.0
+1451318845 source:/home/prokop/git/SimpleSimulationEngine/cpp/apps/BuildAndFight/Ship2D/main.cpp
+	<stdlib.h>
+	<stdio.h>
+	<string.h>
+	<math.h>
+	<SDL2/SDL.h>
+	<SDL2/SDL_opengl.h>
+	"math/fastmath.h"
+	"math/Vec2.h"
+	"math/Vec3.h"
+	"math/Mat3.h"
+	"math/raytrace.h"
+	"SDL2OGL/drawMath.h"
+	"SDL2OGL/drawMath2D.h"
+	"SDL2OGL/drawUtils.h"
+	"dynamics/Body2D.h"
+	"dynamics/AeroSurf2D.h"
+	"dynamics/Chain2D.h"
+	"include/Ship2D.h"
+	"SDL2OGL/Screen2D.h"
+	"include/GameScreen.h"
+
+1448726141 /home/prokop/git/SimpleSimulationEngine/cpp/common/math/fastmath.h
+
+1437605018 /home/prokop/git/SimpleSimulationEngine/cpp/common/math/Vec2.h
+
+1438361827 /home/prokop/git/SimpleSimulationEngine/cpp/common/math/Vec3.h
+
+1451314775 /home/prokop/git/SimpleSimulationEngine/cpp/common/math/Mat3.h
+
+1438361827 /home/prokop/git/SimpleSimulationEngine/cpp/common/math/raytrace.h
+
+1438361827 /home/prokop/git/SimpleSimulationEngine/cpp/common/SDL2OGL/drawMath.h
+
+1437906004 /home/prokop/git/SimpleSimulationEngine/cpp/common/SDL2OGL/drawMath2D.h
+
+1438361827 /home/prokop/git/SimpleSimulationEngine/cpp/common/SDL2OGL/drawUtils.h
+
+1451338765 /home/prokop/git/SimpleSimulationEngine/cpp/common/dynamics/Body2D.h
+
+1451332925 /home/prokop/git/SimpleSimulationEngine/cpp/common/dynamics/AeroSurf2D.h
+
+1438294107 /home/prokop/git/SimpleSimulationEngine/cpp/common/dynamics/Chain2D.h
+
+1438361827 /home/prokop/git/SimpleSimulationEngine/cpp/apps/BuildAndFight/Ship2D/include/Ship2D.h
+
+1451318659 /home/prokop/git/SimpleSimulationEngine/cpp/common/SDL2OGL/Screen2D.h
+
+1451318957 /home/prokop/git/SimpleSimulationEngine/cpp/apps/BuildAndFight/Ship2D/include/GameScreen.h
+
