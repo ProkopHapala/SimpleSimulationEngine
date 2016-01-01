@@ -1,4 +1,15 @@
 
+#ifndef  fastmath_h
+#define  fastmath_h
+
+#include <math.h>
+#include <cstdlib>
+#include <stdio.h>
+#include <stdint.h>
+
+#define SWAP( a, b, TYPE ) { TYPE t = a; a = b; b = t; }
+
+
 // ========= random ===========
 
 const  float INV_RAND_MAX = 1.0f/RAND_MAX;
@@ -58,7 +69,7 @@ inline void rot_csa( TYPE ca, TYPE sa, TYPE& ux, TYPE& uy ){
 
 // ========= Cartesian -> Polar ===========
 
-double atan2_a1( double y, double x ){
+inline double atan2_a1( double y, double x ){
   //http://pubs.opengroup.org/onlinepubs/009695399/functions/atan2.html
   //Volkan SALMA
   double a, angle;
@@ -78,7 +89,7 @@ double atan2_a1( double y, double x ){
 }
 
 
-double atan2_a2( double y, double x ){
+inline double atan2_a2( double y, double x ){
   double absx,absy;
   uint8_t kind=0;
   double a;
@@ -110,7 +121,7 @@ inline double atan_poly( double a ){
 }
 
 
-double atan2_a3( double y, double x ){
+inline double atan2_a3( double y, double x ){
   if( x > 0 ){
     if( y > 0 ){
       if( x > y ){
@@ -174,7 +185,7 @@ inline TYPE trashold_cub( TYPE x, TYPE x1, TYPE x2 ){
 
 
 
-
+#endif
 
 
 

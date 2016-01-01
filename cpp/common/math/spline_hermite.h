@@ -1,3 +1,11 @@
+
+#ifndef  spline_hermite_h
+#define  spline_hermite_h
+
+#include <math.h>
+#include <cstdlib>
+#include <stdio.h>
+
 //========================
 //   Hermite splines
 //========================
@@ -108,7 +116,7 @@ inline void curve_accel( TYPE u, const Vec3TYPE<TYPE>& p0, const Vec3TYPE<TYPE>&
 };
 
 
-
+#endif
 
 
 

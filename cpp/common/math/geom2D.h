@@ -1,14 +1,13 @@
 
-
 // read also:
 // http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle/
 
+#ifndef  geom2D_h
+#define  geom2D_h
 
-//#include <math.h>
-//#include <stdio.h>
-
-
-#define SWAP( a, b, TYPE ) { TYPE t = a; a = b; b = t; }
+#include <math.h>
+#include <cstdlib>
+#include <stdio.h>
 
 class Vec2d;
 
@@ -273,20 +272,6 @@ class Triangle2d{
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif
 
 

@@ -3,6 +3,14 @@
 // read also:
 // http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle/
 
+#ifndef  quaternion_h
+#define  quaternion_h
+
+#include <math.h>
+#include <cstdlib>
+#include <stdio.h>
+
+
 //template <class TYPE, class VEC, class MAT, class QUAT> 
 //template <class TYPE, class VEC> 
 template <class TYPE> 
@@ -262,9 +270,6 @@ class Quat4TYPE {
         }
 	}
 
-
-
-
 };
 
 /*
@@ -277,4 +282,6 @@ using Quat4i = Quat4TYPE< int>;
 using Quat4f = Quat4TYPE< float>;
 using Quat4d = Quat4TYPE< double >;
 
+
+#endif
 

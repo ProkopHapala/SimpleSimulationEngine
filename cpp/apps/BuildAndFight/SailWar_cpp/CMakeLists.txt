@@ -12,7 +12,26 @@ include_directories(
         ${GLU_INCLUDE_DIR}
         ${SDL2_INCLUDE_DIR}
 )
-add_executable( SailWar main.cpp $<TARGET_OBJECTS:Screen2D> $<TARGET_OBJECTS:Body2D> $<TARGET_OBJECTS:AeroSurf2D> )
+
+
+
+#add_library( SailWar_objects OBJECT Projectile Gun  )
+
+add_library( SailWar_objects OBJECT Frigate2D Yacht2D Projectile Gun GameWorld GameScreen )
+
+add_executable( SailWar 
+	main.cpp 
+	$<TARGET_OBJECTS:SailWar_objects> 
+
+	$<TARGET_OBJECTS:Body> 
+	$<TARGET_OBJECTS:Body2D> 
+	$<TARGET_OBJECTS:AeroSurf2D> 
+
+	$<TARGET_OBJECTS:drawMath> 
+	$<TARGET_OBJECTS:drawMath2D> 
+	$<TARGET_OBJECTS:Screen2D> 
+)
+
 target_link_libraries( SailWar ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 file( COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR} )

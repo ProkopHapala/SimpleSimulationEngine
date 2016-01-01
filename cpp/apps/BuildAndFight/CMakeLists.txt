@@ -1,1 +1,1 @@
-add_subdirectory (SailWar)
+add_subdirectory (SailWar_cpp)

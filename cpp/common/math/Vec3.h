@@ -1,4 +1,11 @@
 
+#ifndef  Vec3_h
+#define  Vec3_h
+
+#include <math.h>
+#include <cstdlib>
+#include <stdio.h>
+
 //template <class TYPE,class VEC> 
 template <class TYPE> 
 class Vec3TYPE{
@@ -134,8 +141,10 @@ using Vec3i = Vec3TYPE<int>;
 using Vec3f = Vec3TYPE<float>;
 using Vec3d = Vec3TYPE<double>;
 
-void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
-void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };
+inline void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
+inline void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };
+
+#endif
 
 
 

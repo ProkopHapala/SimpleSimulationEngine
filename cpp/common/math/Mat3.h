@@ -1,4 +1,10 @@
 
+#ifndef  Mat3_h
+#define  Mat3_h
+
+#include <math.h>
+#include <cstdlib>
+#include <stdint.h>
 
 //template <class TYPE, class VEC, class MAT> 
 //template <class TYPE, class VEC> 
@@ -204,6 +210,8 @@ using Mat3i = Mat3TYPE< int   >;
 using Mat3f = Mat3TYPE< float >;
 using Mat3d = Mat3TYPE< double>;
 
-void convert( Mat3f& from, Mat3d& to ){ convert( to.a, from.a ); convert( to.b, from.b ); convert( to.c, from.c ); };
-void convert( Mat3d& from, Mat3f& to ){ convert( to.a, from.a ); convert( to.b, from.b ); convert( to.c, from.c ); };
+inline void convert( Mat3f& from, Mat3d& to ){ convert( to.a, from.a ); convert( to.b, from.b ); convert( to.c, from.c ); };
+inline void convert( Mat3d& from, Mat3f& to ){ convert( to.a, from.a ); convert( to.b, from.b ); convert( to.c, from.c ); };
+
+#endif
 

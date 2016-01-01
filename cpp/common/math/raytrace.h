@@ -1,4 +1,12 @@
 
+#ifndef  raytrace_h
+#define  raytrace_h
+
+#include <math.h>
+#include <cstdlib>
+#include <stdio.h>
+
+
 // =========== sphere
 
 inline double rayPointDistance2( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& point, double& t ){
@@ -75,7 +83,7 @@ inline double rayTriangle(
 } 
 
 
-
+#endif
 
 
 

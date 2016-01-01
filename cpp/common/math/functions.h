@@ -1,4 +1,9 @@
+#ifndef  functions_h
+#define  functions_h
 
+#include <math.h>
+#include <cstdlib>
+#include <stdio.h>
 
 typedef double (*Function1d)( double x);
 typedef double (*DiffFunc1d)( double x, double& dx );
@@ -140,3 +145,7 @@ double mandelbort( double cX, double cY ){
 	//return 0.5*(sin(r)+1.0);
 	return tanh(r);
 }
+
+
+#endif
+

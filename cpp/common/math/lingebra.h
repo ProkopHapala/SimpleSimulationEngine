@@ -1,45 +1,59 @@
 
+#ifndef  lingebra_h
+#define  lingebra_h
 
-// ===============================================
-// ======                                  =======
-// ======              vector              =======
-// ======                                  =======
-// ===============================================
+#include <math.h>
+#include <cstdlib>
+#include <stdio.h>
 
-inline double dot(	int n,  double* a, double* b ){
-	double sum = 0;
-	for (int i=0; i<n; i++ ){		sum+= a[i]*b[i];	} 
-	return sum;
-}
+#include <vecN.h>
 
-inline void set( int n, double  f,            double* out ){  	for (int i=0; i<n; i++ ){ out[i] = f;	      } }
-inline void add( int n, double  f, double* b, double* out ){  	for (int i=0; i<n; i++ ){ out[i] = f+b[i];    } }
-inline void mul( int n, double  f, double* b, double* out ){  	for (int i=0; i<n; i++ ){ out[i] = f*b[i];    } }
 
-inline void set( int n, double* a,            double* out ){  	for (int i=0; i<n; i++ ){ out[i] = a[i];      } }
-inline void add( int n, double* a, double* b, double* out ){  	for (int i=0; i<n; i++ ){ out[i] = a[i]+b[i]; } }
-inline void sub( int n, double* a, double* b, double* out ){  	for (int i=0; i<n; i++ ){ out[i] = a[i]-b[i]; } }
-inline void mul( int n, double* a, double* b, double* out ){  	for (int i=0; i<n; i++ ){ out[i] = a[i]*b[i]; } }
-inline void div( int n, double* a, double* b, double* out ){  	for (int i=0; i<n; i++ ){ out[i] = a[i]/b[i]; } }
-inline void fma( int n, double* a, double* b, double f, double* out ){ for(int i=0; i<n; i++) { out[i]=a[i]+f*b[i]; }  }
+inline void set( int m, int n, double   f,             double** out ){  	for (int i=0; i<m; i++ ){ set( n, f,       out[i] );  } }
+inline void add( int m, int n, double   f, double** B, double** out ){  	for (int i=0; i<m; i++ ){ add( n, f, B[i], out[i] );  } }
+inline void mul( int m, int n, double   f, double** B, double** out ){  	for (int i=0; i<m; i++ ){ mul( n, f, B[i], out[i] );  } }
+
+inline void set( int m, int n, double** A,             double** out ){  	for (int i=0; i<m; i++ ){ set( n, A[i],       out[i] );   } }
+inline void add( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ add( n, A[i], B[i], out[i] );   } }
+inline void sub( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ sub( n, A[i], B[i], out[i] );   } }
+inline void mul( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ mul( n, A[i], B[i], out[i] );   } }
+inline void div( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ div( n, A[i], B[i], out[i] );   } }
 
 
 
-void random_vector ( int n, double xmin, double xmax, double * out ){
-	double xrange = xmax - xmin;
-	for (int i=0; i<n; i++ ){		out[i] = xmin + xrange*randf();	} 
-}
+double ** from_continuous( int m, int n, double *p );
+double ** new_matrix( int m, int n );
+double ** delete_matrix( int m, double** A );
+double ** delete_matrix( int m, double** A );
+void transpose( int m, int n, double** A, double** TA );
+void dot( int m, int n, double** A, double* x, double* out );
+void dotT( int m, int n, double** A, double* x, double* out );
 
-void print_vector( int n, double * a ){
-	for (int i=0; i<n; i++ ){	printf( "%f ", a[i] );	} 
-	printf( "\n" );
-}
+void mmul_ik_kj( int ni, int nj, int nk, double** A, double** B, double** out );
+void mmul_ik_jk( int ni, int nj, int nk, double** A, double** B, double** out );
+void mmul_ki_kj( int ni, int nj, int nk, double** A, double** B, double** out );
+void mmul_ki_jk( int ni, int nj, int nk, double** A, double** B, double** out );
 
-// ===============================================
-// ======                                  =======
-// ======              Matrix              =======
-// ======                                  =======
-// ===============================================
+void random_matrix( int m, int n, double xmin, double xmax, double** out ){
+void print_matrix( int m, int n, double ** A ){
+
+void   makeQuadricFormMatrix( int m, int n, double * ks, double ** A, double ** Q ){
+double evalQudraticForm( int n, double* x, double** Q ){
+double evalQudraticFormDirs( int m, int n, double* x, double* k, double** A ){
+
+
+void GaussElimination ( int n, double ** A, double * c, int * index ) {
+void linSolve_gauss   ( int n, double ** A, double * b, int * index, double * x ) {
+void linSolve_CG      ( int n, double ** A, double * b, double * x );
+void linSolve_BCG     ( int n, int m, double ** A, double * b, double * x );
+void leastSquareFit_Gauss( int n, int m, double ** A, double * b, double * x );
+
+#endif
+
+
+#ifndef just_headers
+#define just_headers
+#include "Ship.cpp"
 
 
 // creates double** from any continuous memory block folowing *p
@@ -87,15 +101,7 @@ void dotT( int m, int n, double** A, double* x, double* out ){
 	} 
 }
 
-inline void set( int m, int n, double   f,             double** out ){  	for (int i=0; i<m; i++ ){ set( n, f,       out[i] );  } }
-inline void add( int m, int n, double   f, double** B, double** out ){  	for (int i=0; i<m; i++ ){ add( n, f, B[i], out[i] );  } }
-inline void mul( int m, int n, double   f, double** B, double** out ){  	for (int i=0; i<m; i++ ){ mul( n, f, B[i], out[i] );  } }
 
-inline void set( int m, int n, double** A,             double** out ){  	for (int i=0; i<m; i++ ){ set( n, A[i],       out[i] );   } }
-inline void add( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ add( n, A[i], B[i], out[i] );   } }
-inline void sub( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ sub( n, A[i], B[i], out[i] );   } }
-inline void mul( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ mul( n, A[i], B[i], out[i] );   } }
-inline void div( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ div( n, A[i], B[i], out[i] );   } }
 
 
 
@@ -260,6 +266,7 @@ void linSolve_gauss( int n, double ** A, double * b, int * index, double * x ) {
 		}
 	}
 
+
 	// Perform backward substitutions
 	x[n-1] = b[index[n-1]]/A[index[n-1]][n-1];
 	for (int i=n-2; i>=0; --i) {
@@ -371,10 +378,6 @@ void linSolve_BCG( int n, int m, double ** A, double * b, double * x ){
 	delete Ap;
 }
 
-
-
-
-
 void leastSquareFit_Gauss( int n, int m, double ** A, double * b, double * x ){
 	double ** AA    = new_matrix( n, n );
 	double *  Ab    = new double[n];
@@ -390,5 +393,5 @@ void leastSquareFit_Gauss( int n, int m, double ** A, double * b, double * x ){
 }
 
 
-
+#endif
 

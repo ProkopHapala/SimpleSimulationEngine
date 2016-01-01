@@ -1,4 +1,9 @@
 
+#ifndef  Vec2_h
+#define  Vec2_h
+
+#include "fastmath.h"
+
 //template <class TYPE,class VEC> 
 template <class TYPE> 
 class Vec2TYPE{
@@ -98,13 +103,13 @@ class Vec2TYPE{
 
 };
 
-
 using Vec2i = Vec2TYPE<int>;
 using Vec2f = Vec2TYPE<float>;
 using Vec2d = Vec2TYPE<double>;
 
-void convert( const Vec2f& from, Vec2d& to ){ to.x=from.x;        to.y=from.y;        };
-void convert( const Vec2d& from, Vec2f& to ){ to.x=(float)from.x; to.y=(float)from.y; };
+inline void convert( const Vec2f& from, Vec2d& to ){ to.x=from.x;        to.y=from.y;        };
+inline void convert( const Vec2d& from, Vec2f& to ){ to.x=(float)from.x; to.y=(float)from.y; };
 
+#endif
 
 

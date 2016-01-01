@@ -1,5 +1,6 @@
 
-
+#ifndef  Vec3_h
+#define  Vec3_h
 
 typedef double (*Function2d)( double x, double y );
 typedef double (*DiffFunc2d)( double x, double y, double& dfdx, double& dfdy );
@@ -134,9 +135,5 @@ double warped_function_noDiff( double x, double y ){
 }
 
 
-
-
-
-
-
+#endif
 
