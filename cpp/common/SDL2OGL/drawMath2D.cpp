@@ -78,6 +78,23 @@ void drawTriangle( const Vec2d& p1,  const Vec2d& p2, const Vec2d& p3 ){
 	Vec2f p1_,p2_,p3_;  convert( p1, p1_ );  convert( p2, p2_ ); convert( p3, p3_ ); drawTriangle( p1_, p2_, p3_ );  
 };
 
+void drawCircle( const Vec2f& center, float radius, int n ){
+	glBegin   (GL_LINES);
+	float dphi =  6.28318530718f / n;
+	Vec2f drot; drot.fromAngle( dphi );
+	Vec2f v;    v.set( radius, 0.0f );
+	for ( int i=0; i<=n; i++ ){	          	     
+		glVertex3f( center.x + v.x, center.y + v.y, 0 ); 
+		v.mul_cmplx( drot );
+	}
+	glEnd();
+};
+
+void drawCircle( const Vec2d& center_, float radius, int n ){
+	Vec2f center; convert( center_, center );
+	drawCircle( center, radius, n );
+};
+
 void drawLines( int nlinks, int * links, Vec2d * points ){
 	int n2 = nlinks<<1;
 	for( int i=0; i<n2; i+=2 ){
@@ -99,4 +116,18 @@ void drawPolarFunc( double x0, double y0, double fscale, int n, double phi0, dou
 		}
 		glEnd();
 };
+
+
+
+void drawShape( const Vec2d& pos, const Vec2d& rot, int shape ){ 
+	glPushMatrix();
+	//glTranslatef( pos.x, pos.y , 0 );
+	//glRotatef( phi*(180/M_PI), 0, 0, 1 );
+	float glMat[16];
+	toGLMat( pos, rot, glMat );
+	glMultMatrixf( glMat );
+	glCallList( shape ); 
+	glPopMatrix();
+};
+
 

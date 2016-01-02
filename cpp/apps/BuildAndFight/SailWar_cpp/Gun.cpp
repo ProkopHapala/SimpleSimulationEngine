@@ -10,13 +10,16 @@ void Gun::set_direction( Vec3d dir ){
 	lrot.b.set_cross( lrot.c, lrot.a );
 }
 
-Projectile * Gun::fireProjectile( const Vec3d& gpos, const Mat3d& grot, const Vec3d& gvel  ){
+Projectile * Gun::fireProjectile( const Vec3d& pos0, const Mat3d& rot0, const Vec3d& gvel  ){
+    //printf( " Gun fireProjectile \n" );
 	Projectile * p = new Projectile();
 	Mat3d rotmat;
-	globalPos( gpos, p->pos );
-	globalRot( grot, rotmat );
-	p->vel.set_mul( rotmat.a, muzzle_velocity );  
+	globalPos( pos0, rot0, p->pos );
+	globalRot( rot0,        rotmat );
+	p->vel.set_mul( rotmat.a, muzzle_velocity );
 	p->vel.add( gvel );
 	p->setMass( projectile_mass );
+	p->update_old_pos();
+    //printf( " Gun fireProjectile DONE \n" );
 	return p;
 }

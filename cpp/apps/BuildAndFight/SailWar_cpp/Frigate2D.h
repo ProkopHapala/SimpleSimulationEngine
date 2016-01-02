@@ -9,13 +9,18 @@
 #include "Yacht2D.h"
 #include "Projectile.h"
 #include "Gun.h"
+#include "Collisions.h"
 
-class Frigate2D : public Yacht2D {
+class Frigate2D : public Yacht2D, public CollisionObject {
 	public:
-	
+    char * name;
 	int nguns;
-	Gun ** left_guns; 
-	Gun ** right_guns; 
+	Gun ** left_guns;
+	Gun ** right_guns;
+
+	double life_max               = 1.0d;
+	double life                   = 1.0d;
+	double life_regeneration_rate = 2.9d;
 
 	// ==== function declarations
 
@@ -26,7 +31,10 @@ class Frigate2D : public Yacht2D {
 	void fire_right( std::vector<Projectile*> * projectiles );
 	void drawGun( Gun * gun );
 	virtual void draw( );
+	virtual void drawHitBox( );
+	virtual bool colideWithLineSegment( const Vec3d& p1, const Vec3d& p2, Vec3d * where, Vec3d * normal );
 	bool loadFromFile( char const* filename );
+    virtual void update( double dt );
 
 };
 

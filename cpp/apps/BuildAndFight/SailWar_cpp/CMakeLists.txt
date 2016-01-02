@@ -23,6 +23,7 @@ add_executable( SailWar
 	main.cpp 
 	$<TARGET_OBJECTS:SailWar_objects> 
 
+	$<TARGET_OBJECTS:Collisions> 
 	$<TARGET_OBJECTS:Body> 
 	$<TARGET_OBJECTS:Body2D> 
 	$<TARGET_OBJECTS:AeroSurf2D> 

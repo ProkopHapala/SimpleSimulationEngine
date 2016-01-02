@@ -57,6 +57,7 @@ GameWorld world;
 #include "GameScreen.h"
 
 GameScreen* thisScreen;
+Frigate2D*  thisShip;
 
 // ===============================
 // ===== FUNCTIONS
@@ -79,23 +80,15 @@ void escape(){
 
 
 void update(){
-
-	//ship1.applySailForces(  { 0.0, 0.0 },  { 0.0, 1.0 }  );
-	//ship1.move( dt );
-
-/*
-	for( int i=0; i<perFrame; i++ ){
-		ship1.clean_temp( );
-		ship1.applySailForces(  windSpeed,  watterSpeed );
-		ship1.move( dt );
-	}
-*/
-
-	//STOP = true;
+   // world->update();   // this is now inside GameScreen update
 };
 
 void setup(){
-
+    printf( " main.setup \n" );
+    world.init();
+    thisShip = world.ships.front();
+    thisScreen->world = &world;
+    printf( " world.init DONE \n" );
 }
 
 void inputHanding(){
@@ -106,8 +99,8 @@ void inputHanding(){
 				case SDLK_SPACE:    STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
 				case SDLK_KP_MINUS: thisScreen->zoom*=VIEW_ZOOM_STEP; break;
 				case SDLK_KP_PLUS:  thisScreen->zoom/=VIEW_ZOOM_STEP; break;
-				case SDLK_KP_1:     world.ship1.fire_left ( &world.projectiles ); break;
-				case SDLK_KP_2:     world.ship1.fire_right( &world.projectiles ); break;
+				case SDLK_KP_1:     thisShip->fire_left ( &world.projectiles ); break;
+				case SDLK_KP_2:     thisShip->fire_right( &world.projectiles ); break;
 			}
 
 /*
@@ -123,11 +116,11 @@ void inputHanding(){
 
 
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
-	if( keys[ SDL_SCANCODE_LEFT  ] ){  world.ship1.rudder.setAngle( world.ship1.rudder.phi + 0.01 );  }
-	if( keys[ SDL_SCANCODE_RIGHT ] ){  world.ship1.rudder.setAngle( world.ship1.rudder.phi - 0.01 );  }
+	if( keys[ SDL_SCANCODE_LEFT  ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi + 0.01 );  }
+	if( keys[ SDL_SCANCODE_RIGHT ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi - 0.01 );  }
 
-	if( keys[ SDL_SCANCODE_UP  ]  ){  world.ship1.mast.setAngle( world.ship1.mast.phi + 0.01 );  }
-	if( keys[ SDL_SCANCODE_DOWN ] ){  world.ship1.mast.setAngle( world.ship1.mast.phi - 0.01 );  }
+	if( keys[ SDL_SCANCODE_UP  ]  ){ thisShip->mast.setAngle( thisShip->mast.phi + 0.01 );  }
+	if( keys[ SDL_SCANCODE_DOWN ] ){ thisShip->mast.setAngle( thisShip->mast.phi - 0.01 );  }
 
 	SDL_GetMouseState( &thisScreen->mouseX, &thisScreen->mouseY );
 	//printf( "frame %i mouseX moyseY  %i %i   \n", frameCount, mouseX, mouseY );
@@ -160,8 +153,6 @@ int main(int argc, char *argv[]){
 	thisScreen  = new GameScreen( sid, 800,600 );
 
 	setup();
-
-	printf( " setup done \n" );
 
 	//loop( 1 );
 	loop( 1000000 );

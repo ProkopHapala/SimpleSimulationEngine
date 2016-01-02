@@ -8,19 +8,28 @@
 #include "GameScreen.h" // THE HEADER
 
 void GameScreen::draw(){
+
+    //printf( " GameScreen::draw \n" );
+
 	glEnable (GL_LIGHTING);
 	glShadeModel(GL_FLAT);
 
 	world->update();
 
-	glColor3f( 0.8f, 0.8f, 0.8f ); 	world->ship1.draw_shape( );  
-	glColor3f( 0.2f, 0.2f, 0.2f );  world->ship1.draw( ); 
+    //printf( " world->update DONE \n" );
 
-	glColor3f( 0.8f, 0.8f, 0.8f );  world->ship2.draw_shape( );  
-	glColor3f( 0.2f, 0.2f, 0.2f );  world->ship2.draw( ); 
+	//for( std::vector<Projectile*>::iterator it = world->projectiles.begin(); it != world->projectiles.end(); ++it ) {
+	for( auto ship : world->ships ) {
+        //printf( "projectile draw \n " );
+        glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->drawHitBox( );
+        glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->draw_shape( );
+        glColor3f( 0.2f, 0.2f, 0.2f );  ship->draw( );
+	}
 
-	for( std::vector<Projectile*>::iterator it = world->projectiles.begin(); it != world->projectiles.end(); ++it ) {
-		(*it) -> draw();
+	for( auto p : world->projectiles ) {
+        //printf( "projectile draw \n " );
+		p->draw();
+		//p->update_old_pos();
 	}
 
 	Vec2d compass_pos; compass_pos.set( 0.8*ASPECT_RATIO*zoom, 0.8*zoom );
@@ -30,6 +39,8 @@ void GameScreen::draw(){
 	glColor3f( 0.2f, 0.2f, 0.8f );  drawVecInPos( world->watter_speed*zoom*0.1, compass_pos );
 
 	glDisable  (GL_LIGHTING);
+
+	//exit(0);
 	//drawAxis( 10 );
 };
 

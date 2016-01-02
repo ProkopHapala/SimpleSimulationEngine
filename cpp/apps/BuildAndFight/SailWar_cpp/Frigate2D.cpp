@@ -27,33 +27,43 @@ Gun ** Frigate2D::initGuns( int n, Vec3d pos1, Vec3d pos2, Vec3d ldir, double mu
 }
 
 void Frigate2D::initAllGuns( int n ){
-	double dy = 0.15; 
-	double dz = 0.1;
-	double muzzle_vel = 1.0;
+	double dy         = 0.15;
+	double dz         = 0.2;
+	double muzzle_vel = 50.0;
+    double elevation  = 0.00;
+    double sa = sin(elevation);
+	double ca = cos(elevation);
 	nguns = n;
 	Vec3d pos1,pos2,ldir;
-	pos1.set(  0.5, dy, dz );
-	pos2.set( -1.0, dy, dz );
-	ldir.set(  0.0, 1.0, 0.2 ); ldir.normalize();
+	pos1.set(  0.5,  dy, dz );
+	pos2.set( -1.0,  dy, dz );
+	ldir.set(  0.0,  ca, sa );
 	left_guns = initGuns( nguns, pos1, pos2, ldir, muzzle_vel );
 	pos1.set(  0.5, -dy, dz );
 	pos2.set( -1.0, -dy, dz );
-	ldir.set( 0.0, -1.0, 0.2 ); ldir.normalize();
+	ldir.set(  0.0, -ca, sa );
 	right_guns = initGuns( nguns, pos1, pos2, ldir, muzzle_vel );
 }
 
 void Frigate2D::fire_gun_row( int n, Gun ** guns, std::vector<Projectile*> * projectiles ){
-	printf( " fire_left !!! \n" );
 	Vec3d vel3D,pos3D;
 	Mat3d rot3D;
 	vel3D.set( vel.x, vel.y, 0 );
 	pos3D.set( pos.x, pos.y, 0 );
 	rot3D.a.set( rot.x,  rot.y, 0.0d );
 	rot3D.b.set( rot.y, -rot.x, 0.0d );
-	rot3D.c.set(  0.0d,   0.0d, 1.0d ); 
-	for( int i=0; i<n; i++ ){ 
-		Projectile * p = guns[i]->fireProjectile( pos3D, rot3D, vel3D ); 
+	rot3D.c.set(  0.0d,   0.0d, 1.0d );
+	for( int i=0; i<n; i++ ){
+		Projectile * p = guns[i]->fireProjectile( pos3D, rot3D, vel3D );
+		if( p == NULL ) { printf( " p is NULL !! \n" ); }
+		// FIXME: make sure ship does not hit itself
+/*
+		Vec3d dir; dir.set( p->vel );
+		double renorm = ( collisionShape->collision_radius + 0.1 ) / dir.norm();
+		p->pos.add_mul( dir, renorm );
+*/
 		projectiles->push_back( p );
+		p->world = world;
 	}
 	printf( " %i projectiles in air !!! \n", projectiles->size() );
 }
@@ -62,10 +72,10 @@ void Frigate2D::fire_right( std::vector<Projectile*> * projectiles ){ fire_gun_r
 
 
 void Frigate2D::drawGun( Gun * gun ){
-	Vec2d lpos, lrot; 
+	Vec2d lpos, lrot;
 	lpos.set(  gun->lpos.x,   gun->lpos.y   );
 	lrot.set( -gun->lrot.c.y, gun->lrot.c.x );
-	Vec2d gpos, grot;  		
+	Vec2d gpos, grot;
 	grot  .set_mul_cmplx( rot, lrot );
 	gpos  .set_mul_cmplx( rot, lpos );
 	gpos.add( pos );
@@ -77,17 +87,23 @@ void Frigate2D::drawGun( Gun * gun ){
 	glEnd();
 }
 
-void Frigate2D::draw( ){ 
+void Frigate2D::draw( ){
 	keel  .draw  ( *this );
 	rudder.draw( *this );
 	mast  .draw  ( *this );
 	if( left_guns != NULL ){
 		//printf( " plotting guns \n" );
-		for( int i=0; i<nguns; i++ ){ 
-			drawGun( left_guns [i] ); 
-			drawGun( right_guns[i] ); 
+		for( int i=0; i<nguns; i++ ){
+			drawGun( left_guns [i] );
+			drawGun( right_guns[i] );
 		};
 	}
+}
+
+void Frigate2D::drawHitBox( ){
+    float clife = (float)( life / life_max );
+    glColor4f( 1.0f, clife, clife, 1.0f );
+    drawShape( pos, rot, collisionShape->displayList );
 }
 
 bool Frigate2D::loadFromFile( char const* filename ){
@@ -95,7 +111,7 @@ bool Frigate2D::loadFromFile( char const* filename ){
 	printf(" filename: %s \n", filename );
 	FILE * pFile;
 	pFile = fopen ( filename, "r" );
-	const int nbuf = 1000; 
+	const int nbuf = 1000;
 	char line [ nbuf ];
 	fgets( line, nbuf, pFile );   keel  .fromString( line );  //printf( "%s \n", keel  .toString( ) );
 	fgets( line, nbuf, pFile );   rudder.fromString( line );  //printf( "%s \n", rudder.toString( ) );
@@ -105,3 +121,32 @@ bool Frigate2D::loadFromFile( char const* filename ){
 	return false;
 }
 
+bool Frigate2D::colideWithLineSegment( const Vec3d& p1, const Vec3d& p2, Vec3d * where, Vec3d * normal ){
+    bool hitted = false;
+    Vec3d pos3d; pos3d.set( pos.x, pos.y , 0 );
+    //printf( " Frigate2D::colideWithLineSegment collisionShape:  %s %s \n",  collisionShape );
+    hitted = collisionShape->colideWithLineSegment( p1, p2, pos3d, where, normal );
+
+    /*
+    Vec3d dp;
+    dp.set_sub( pos3d, p2 );
+    double r2   = dp.norm2();
+    double rmax = collisionShape->collision_radius;
+    if( r2 < (rmax*rmax) ) hitted = true;
+    */
+
+    //printf( " %f %f  %f %f   %d \n",  p1.x,p1.y,    p2.x,p2.y   , hitted );
+    if( hitted ){
+        printf( " Figate %s hitted \n", name );
+        life = 0.0;
+    }
+    return hitted;
+};
+
+
+void Frigate2D::update( double dt ){
+    if( life < life_max ) {
+        life += life_regeneration_rate * dt;
+        //printf( " %s %f \n", name, life );
+    }
+}

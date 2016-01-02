@@ -14,8 +14,9 @@ class KinematicBody{
 	public:
 	Vec3d lpos;
 	Mat3d lrot;
-	inline void globalPos( const Vec3d& pos0, Vec3d& gpos ){ gpos.set_add ( lpos, pos0 ); }
-	inline void globalRot( const Mat3d& rot0, Mat3d& grot ){ grot.set_mmul( lrot, rot0 ); }
+	inline void globalPos( const Vec3d& pos0, const Mat3d& rot0, Vec3d& gpos ){ rot0.dot_to( lpos, gpos ); gpos.add( pos0 ); }
+	inline void globalRot( const Mat3d& rot0,                    Mat3d& grot ){ grot.set_mmul( lrot, rot0 ); }
+	//inline void globalRot( const Mat3d& rot0, Mat3d& grot ){ grot.set_mmul_NT( lrot, rot0 ); }
 };
 
 class PointBody{

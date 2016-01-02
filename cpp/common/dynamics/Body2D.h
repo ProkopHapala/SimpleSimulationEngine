@@ -8,6 +8,14 @@
 #include "fastmath.h"
 #include "Vec2.h"
 
+class KinematicBody2D {
+	public:
+	double phi;
+	Vec2d  rot;
+	Vec2d  pos;
+	inline void setAngle( double phi_ ){  phi = phi_; rot.fromAngle( phi_ ); }
+};
+
 class PointBody2D{
 	public:
 	// parameters

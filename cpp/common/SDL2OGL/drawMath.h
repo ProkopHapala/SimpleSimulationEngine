@@ -22,6 +22,8 @@ void drawLine     ( const Vec3d& p1, const Vec3d& p2 );
 void drawVecInPos ( const Vec3f& v, const Vec3f& pos );
 void drawTriangle ( const Vec3d& p1, const Vec3d& p2, const Vec3d& p3 );
 void drawMatInPos ( const Mat3d& mat, const Vec3d& pos );
+//void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
+void drawShape    ( const Vec3d& pos, const Mat3d& rot, int shape );
 
 int  drawConeFan        ( int n, float r, const Vec3f& base, const Vec3f& tip );
 int  drawCylinderStrip  ( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );

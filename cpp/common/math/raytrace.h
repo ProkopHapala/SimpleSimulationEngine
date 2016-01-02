@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <stdio.h>
 
+#include "Vec3.h"
 
 // =========== sphere
 

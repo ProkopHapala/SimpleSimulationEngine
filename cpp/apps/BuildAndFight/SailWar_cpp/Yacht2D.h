@@ -6,14 +6,17 @@
 #include "Body2D.h"
 #include "AeroSurf2D.h"
 
+class GameWorld;
+
 class Yacht2D : public RigidBody2D {
 	public:
+	GameWorld * world;
 	AeroSurf2D keel;
 	AeroSurf2D rudder;
 	AeroSurf2D mast;
 
 	// ==== function declarations
-	
+
 	virtual void draw( );
 	virtual void applySailForces( const Vec2d& windSpeed, const Vec2d& watterSpeed );
 

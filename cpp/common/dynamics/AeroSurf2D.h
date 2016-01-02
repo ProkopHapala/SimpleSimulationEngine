@@ -7,16 +7,9 @@
 
 #include "fastmath.h"
 #include "Vec2.h"
+#include "Body2D.h"
 
 class RigidBody2D;
-
-class KinematicBody2D {
-	public:
-	double phi;
-	Vec2d  rot;
-	Vec2d  pos;
-	inline void setAngle( double phi_ ){  phi = phi_; rot.fromAngle( phi_ ); }
-};
 
 class AeroSurf2D : public KinematicBody2D {
 	public:
