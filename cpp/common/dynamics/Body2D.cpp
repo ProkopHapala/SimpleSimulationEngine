@@ -11,7 +11,7 @@
 
 	void PointBody2D::evalForce()   {  }
 	void PointBody2D::move( double dt ){ move_PointBody2D(dt);  }
-	void PointBody2D::draw( ){ drawPointCross( pos, 0.1 );  }
+	void PointBody2D::draw( ){ Draw2D::drawPointCross_d( pos, 0.1 );  }
 
 // ==========================
 // ====  CLASS : RigidBody2D
@@ -22,28 +22,28 @@ void RigidBody2D::from_mass_points( int n, double * amass, Vec2d * apos ){
 	pos.set(0.0);
 	for(int i=0; i<n; i++){
 		// printf( " %f %f %f \n", apos[i].x, apos[i].y, apos[i].z );
-		pos .add_mul( apos[i], amass[i] );  
+		pos .add_mul( apos[i], amass[i] );
 		mass +=                amass[i];
 	};
 	invMass = 1/mass;
 	pos.mul( invMass );
 	for(int i=0; i<n; i++){
-		Vec2d d; d.set( apos[i] - pos ); 
+		Vec2d d; d.set( apos[i] - pos );
 		I += amass[i] * d.norm2();
 	};
 	invI = 1/I;
 };
 
-void RigidBody2D::move( double dt ){ 
-	move_RigidBody2D(dt);                             
+void RigidBody2D::move( double dt ){
+	move_RigidBody2D(dt);
 };
 
-void RigidBody2D::draw(           ){ 
-	drawPointCross( pos, 0.1 ); 
-	drawVecInPos( rot, pos );  
+void RigidBody2D::draw(           ){
+	Draw2D::drawPointCross_d( pos, 0.1 );
+	Draw2D::drawVecInPos_d( rot, pos );
 };
 
-void RigidBody2D::draw_shape( ){ 
+void RigidBody2D::draw_shape( ){
 	glPushMatrix();
 	//glTranslatef( pos.x, pos.y , 0 );
 	//glRotatef( phi*(180/M_PI), 0, 0, 1 );
@@ -53,14 +53,14 @@ void RigidBody2D::draw_shape( ){
 	mat[8 ] = 0;      mat[9 ] = 0;      mat[10] = 1;  mat[11] = 0;
 	mat[12] = pos.x;  mat[13] = pos.y;  mat[14] = 0;  mat[15] = 1;
 	glMultMatrixf( mat );
-	glCallList( shape ); 
+	glCallList( shape );
 	glPopMatrix();
 };
 
 // =================================
 // ====  CLASS : SpringConstrain2D
 // =================================
- 
+
 void SpringConstrain2D::apply(){
 	Vec2d gp1; gp1.set_mul_cmplx( b1->rot, p1 );
 	Vec2d gp2; gp2.set_mul_cmplx( b2->rot, p2 );
@@ -72,14 +72,14 @@ void SpringConstrain2D::apply(){
 void SpringConstrain2D::draw(){
 	Vec2d gp1; gp1.set_mul_cmplx( p1, b1->rot ); gp1.add( b1->pos );
 	Vec2d gp2; gp2.set_mul_cmplx( p2, b2->rot ); gp2.add( b2->pos );
-	drawLine( gp1, gp2 );
-	drawPointCross( gp1, 0.1 );
-	drawPointCross( gp2, 0.1 );
+	Draw2D::drawLine_d( gp1, gp2 );
+	Draw2D::drawPointCross_d( gp1, 0.1 );
+	Draw2D::drawPointCross_d( gp2, 0.1 );
 };
 
 SpringConstrain2D::SpringConstrain2D( double k_, RigidBody2D* b1_, RigidBody2D* b2_, const Vec2d& p1_, const Vec2d& p2_ ){
-	k=k_; 
-	b1=b1_; 
+	k=k_;
+	b1=b1_;
 	b2=b2_;
 	p1.set( p1_ );
 	p2.set( p2_ );

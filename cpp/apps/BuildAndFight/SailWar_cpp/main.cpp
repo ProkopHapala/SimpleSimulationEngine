@@ -134,6 +134,7 @@ void loop(int n ){
 		if(!STOP){
 			update();
 			thisScreen->update();
+			thisScreen->thisShip = thisShip; // FIXME
 		}
 		//printf(" %i \n", iframe );
 		SDL_Delay( 10 );

@@ -25,11 +25,13 @@ class Screen2D{
 
 // ============ function declarations
 
-	void camera();
+	void camera   ();
+	void cameraHUD();
 
 	void update( );
-	virtual void draw();
-	void inputHanding();
+	virtual void draw   ();
+    virtual void drawHUD();
+	void inputHanding   ();
 
 	void setupRenderer();
 	void setDefaults();

@@ -66,9 +66,19 @@ void Frigate2D::fire_gun_row( int n, Gun ** guns, std::vector<Projectile*> * pro
 		p->world = world;
 	}
 	printf( " %i projectiles in air !!! \n", projectiles->size() );
-}
-void Frigate2D::fire_left ( std::vector<Projectile*> * projectiles ){ fire_gun_row( nguns, left_guns , projectiles ); }
-void Frigate2D::fire_right( std::vector<Projectile*> * projectiles ){ fire_gun_row( nguns, right_guns, projectiles ); }
+};
+void Frigate2D::fire_left ( std::vector<Projectile*> * projectiles ){
+    if( gunload_left >= 1.0d ){
+        fire_gun_row( nguns, left_guns , projectiles );
+        gunload_left = 0.0d;
+    }
+};
+void Frigate2D::fire_right( std::vector<Projectile*> * projectiles ){
+    if( gunload_right >= 1.0d ){
+        fire_gun_row( nguns, right_guns, projectiles );
+        gunload_right = 0.0d;
+    }
+};
 
 
 void Frigate2D::drawGun( Gun * gun ){
@@ -103,7 +113,7 @@ void Frigate2D::draw( ){
 void Frigate2D::drawHitBox( ){
     float clife = (float)( life / life_max );
     glColor4f( 1.0f, clife, clife, 1.0f );
-    drawShape( pos, rot, collisionShape->displayList );
+    Draw2D::drawShape( pos, rot, collisionShape->displayList );
 }
 
 bool Frigate2D::loadFromFile( char const* filename ){
@@ -149,4 +159,6 @@ void Frigate2D::update( double dt ){
         life += life_regeneration_rate * dt;
         //printf( " %s %f \n", name, life );
     }
+    if( gunload_left  < 1.0d ) { gunload_left  += reload_rate * dt; }
+    if( gunload_right < 1.0d ) { gunload_right += reload_rate * dt; }
 }

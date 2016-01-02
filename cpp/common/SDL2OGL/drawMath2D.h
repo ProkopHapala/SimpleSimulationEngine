@@ -4,21 +4,25 @@
 
 #include "Vec2.h"
 
-void printVec       ( const Vec2d& v );
-void drawPoint      ( const Vec2f& vec );
-void drawPointCross ( const Vec2f& vec, float d );
-void drawVec        ( const Vec2f& vec );
-void drawVecInPos   ( const Vec2f& v, const Vec2f& pos );
-void drawLine       ( const Vec2f& p1, const Vec2f& p2 );
-void drawTriangle   ( const Vec2f& p1, const Vec2f& p2, const Vec2f& p3 );
+namespace Draw2D{
 
-void drawPoint      ( const Vec2d& vec                   );
-void drawPointCross ( const Vec2d& vec, double d         );
-void drawVec        ( const Vec2d& vec                   );
-void drawVecInPos   ( const Vec2d& v,   const Vec2d& pos );
-void drawLine       ( const Vec2d& p1,  const Vec2d& p2  );
-void drawCircle     ( const Vec2d& center, float radius, int n );    
-//void drawCircle     ( const Vec2f& center, float radius, int n );
+void printVec       ( const Vec2d& v                     );
+void drawPoint      ( const Vec2f& vec                   );
+void drawPointCross ( const Vec2f& vec, float d          );
+void drawVec        ( const Vec2f& vec                   );
+void drawVecInPos   ( const Vec2f& v,   const Vec2f& pos );
+void drawLine       ( const Vec2f& p1, const Vec2f& p2   );
+void drawTriangle   ( const Vec2f& p1, const Vec2f& p2, const Vec2f& p3 );
+void drawRectangle  ( const Vec2f& p1, const Vec2f& p2   );
+void drawCircle     ( const Vec2f& center, float radius, int n );
+
+void drawPoint_d      ( const Vec2d& vec                   );
+void drawPointCross_d ( const Vec2d& vec, double d         );
+void drawVec_d        ( const Vec2d& vec                   );
+void drawVecInPos_d   ( const Vec2d& v,   const Vec2d& pos );
+void drawLine_d       ( const Vec2d& p1,  const Vec2d& p2  );
+void drawRectangle_d  ( const Vec2f& p1,  const Vec2f& p2 );
+void drawCircle_d     ( const Vec2d& center, float radius, int n );
 
 void drawLines      ( int nlinks, int * links, Vec2d * points );
 void drawPolarFunc  ( double x0, double y0, double fscale, int n, double phi0, double * data );
@@ -53,6 +57,8 @@ inline void toGLMatCam( const Vec2d& pos, const Vec2d& rot, float* glMat ){
 	glMat[8 ] = 0;      glMat[9 ] = 0;      glMat[10] = 1;  glMat[11] = 0;
 	glMat[12] = -pos.x; glMat[13] = -pos.y; glMat[14] = 0;  glMat[15] = 1;
 };
+
+}; // namespace Draw2D
 
 #endif
 

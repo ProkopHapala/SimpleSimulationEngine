@@ -22,6 +22,10 @@ class Frigate2D : public Yacht2D, public CollisionObject {
 	double life                   = 1.0d;
 	double life_regeneration_rate = 2.9d;
 
+	double reload_rate   = 2.5d;
+	double gunload_left  = 1.0d;
+	double gunload_right = 1.0d;
+
 	// ==== function declarations
 
 	Gun ** initGuns( int n, Vec3d pos1, Vec3d pos2, Vec3d ldir, double muzzle_velocity );

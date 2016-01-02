@@ -4,15 +4,20 @@
 
 #include "Screen2D.h" // THE HEADER
 
-void Screen2D::draw(){};
+void Screen2D::draw   (){
+    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+};
+void Screen2D::drawHUD(){ };
 
 void Screen2D::update( ){
 	//SDL_RenderPresent(renderer);
+	//glPushMatrix();
 	camera();
-	glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	draw();
-	glPopMatrix();
+	cameraHUD();
+	drawHUD();
+	//glPopMatrix();
 	SDL_RenderPresent(renderer);
 };
 
@@ -20,13 +25,14 @@ void Screen2D::camera(){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
 	glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
-	//glOrtho ( -zoom, zoom, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
-	//glOrtho ( -zoom, zoom, -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -VIEW_DEPTH, +VIEW_DEPTH );
 	glMatrixMode (GL_MODELVIEW);
-	glPushMatrix();
-	//glTranslatef( (float)-yacht1.pos.x, (float)-yacht1.pos.y, 0 );
-	//glTranslatef( (float)0.1, (float)0.1, 0 );
-	
+}
+
+void Screen2D::cameraHUD(){
+    glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+	glOrtho ( -0, WIDTH, 0, HEIGHT, -VIEW_DEPTH, +VIEW_DEPTH );
+	glMatrixMode (GL_MODELVIEW);
 }
 
 void Screen2D::setupRenderer(){
@@ -46,7 +52,7 @@ void Screen2D::setupRenderer(){
 	glEnable     ( GL_LIGHT0           );
 	glEnable     ( GL_NORMALIZE        );
 	glEnable     ( GL_DEPTH_TEST       );
-	glHint       ( GL_LINE_SMOOTH_HINT, GL_NICEST );	
+	glHint       ( GL_LINE_SMOOTH_HINT, GL_NICEST );
 	glShadeModel ( GL_SMOOTH           );
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
