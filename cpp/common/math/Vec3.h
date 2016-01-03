@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <stdio.h>
 
+#include "fastmath.h"
+
 //template <class TYPE,class VEC> 
 template <class TYPE> 
 class Vec3TYPE{

@@ -1,30 +1,41 @@
 
+#ifndef AeroSurf_h
+#define AeroSurf_h
 
-class AeroSurface{
+#include "fastmath.h"
+#include "Vec3.h"
+
+#include <SDL2/SDL_opengl.h>
+#include <drawMath.h> 
+
+#include "Body.h"
+
+class AeroSurface : public KinematicBody {
 	public:
 	RigidBody *craft;
 	
-	Vec3d C;   // Aerodynamic coefficients in each direction
+	Vec3d C;     // Aerodynamic coefficients in each direction
 	Vec3d lpos;
 	Mat3d lrot;
 
-	// Methods
-	inline void  applyForceSimple( const Vec3d& vair0 );
+	// ==== function declarations
+
 	void render( );
 
+	// ==== inline functions
 
-	inline void  AeroSurface::applyForceSimple( const Vec3d& vair0 ){
+	inline void  applyForceSimple( const Vec3d& vair0 ){
 		Mat3d grot;  grot.set_mmul( lrot, craft->rotMat );
 		Vec3d gdpos; craft->rotMat.dot_to( lpos, gdpos );
 
 		Vec3d uair; 
 		uair.set_cross( gdpos, craft->omega );
 		//uair.set(0);
-		uair += vair0;
+		uair.add( vair0 );
 		double vrair2  = uair.norm2();
 		if( vrair2 >0 ){
 			double vrair = sqrt(vrair2);
-			uair *= (1/vrair);		
+			uair.mul( 1/vrair );	
 
 			// plane force		
 			double ca = grot.a.dot( uair );
@@ -40,7 +51,7 @@ class AeroSurface{
 			//printVec( uair ); printf("uair\n");
 			//printVec( uair ); printf("force\n");
 
-			craft->applyForce( force, gdpos );
+			craft->apply_force( force, gdpos );
 
 			//drawMatInPos( craft->rotMat, craft->pos );
 			drawMatInPos( grot, craft->pos + gdpos );
@@ -55,23 +66,9 @@ class AeroSurface{
 		}
 	};
 
-	void AeroSurface::render( ){
-		//drawLine( const Vec3d& p1, const Vec3d& p2 );
-		double sz = 3*sqrt( C.z );
-		glEnable (GL_LIGHTING);
-		glColor3f( 0.5f,0.5f,0.5f );
-		glBegin  (GL_QUADS);
-			glNormal3d( lrot.b.x, lrot.b.y, lrot.b.z );	          	     
-			glVertex3d( lpos.x-sz*lrot.a.x, lpos.y-sz*lrot.a.y, lpos.z-sz*lrot.a.z ); 
-			glVertex3d( lpos.x-sz*lrot.c.x, lpos.y-sz*lrot.c.y, lpos.z-sz*lrot.c.z ); 
-			glVertex3d( lpos.x+sz*lrot.a.x, lpos.y+sz*lrot.a.y, lpos.z+sz*lrot.a.z );
-			glVertex3d( lpos.x+sz*lrot.c.x, lpos.y+sz*lrot.c.y, lpos.z+sz*lrot.c.z ); 
-		glEnd();		
-	};
-
-
 };
 
+#endif
 
 
 

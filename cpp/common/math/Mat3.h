@@ -6,6 +6,9 @@
 #include <cstdlib>
 #include <stdint.h>
 
+#include "fastmath.h"
+#include "Vec3.h"
+
 //template <class TYPE, class VEC, class MAT> 
 //template <class TYPE, class VEC> 
 template <class TYPE> 
@@ -197,6 +200,25 @@ class Mat3TYPE{
         Mout.zy = xy * zx - xx * zy;
         Mout.zz = xx * yy - xy * yx;
     };
+
+// ======= Rotation
+
+	inline void rotate( double angle, const Vec3d& axis  ){
+		Vec3d uaxis;
+		uaxis.set( axis * axis.norm() );
+		double ca   = cos(angle);
+		double sa   = sin(angle);
+ 		rotate_csa( ca, sa, uaxis );
+	};
+
+	inline void rotate_csa( double ca, double sa, const Vec3d& uaxis ){
+		a.rotate_csa( ca, sa, uaxis );
+		b.rotate_csa( ca, sa, uaxis );
+		c.rotate_csa( ca, sa, uaxis );
+		//a.set(1);
+		//b.set(2);
+		//c.set(3);
+	};
 
 };
 

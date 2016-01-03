@@ -101,6 +101,13 @@ class RigidBody : public PointBody {
 		//drawLine( gpos0, gdpos + pos  );
 	};
 
+	inline void checkStateNormal(){
+		// check if rotation is normalized
+		double qr2  = qrot.norm2();
+		double dqr2 = qr2-1;
+		if( (dqr2*dqr2) > 0.0001 ){ qrot.mul( 1/sqrt(qr2) ); }
+	}
+
 };
 
 class SpringConstrain{

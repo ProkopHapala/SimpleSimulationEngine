@@ -13,24 +13,21 @@ include_directories(
         ${SDL2_INCLUDE_DIR}
 )
 
-set( NAME "SailWar" )
+set( NAME "AeroCraft" )
 
-add_library( ${NAME}_objects OBJECT Frigate2D Yacht2D Projectile Gun GameWorld GameScreen )
+
+add_library( ${NAME}_objects OBJECT AeroCraft FieldPatch GameWorld GameScreen )
 
 add_executable( ${NAME} 
 	main.cpp 
 	$<TARGET_OBJECTS:${NAME}_objects> 
 
-	$<TARGET_OBJECTS:Collisions> 
 	$<TARGET_OBJECTS:Body> 
-	$<TARGET_OBJECTS:Body2D> 
-	$<TARGET_OBJECTS:AeroSurf2D> 
-
+	$<TARGET_OBJECTS:AeroSurf> 
 	$<TARGET_OBJECTS:drawMath> 
-	$<TARGET_OBJECTS:drawMath2D> 
 	$<TARGET_OBJECTS:ScreenSDL2OGL> 
 )
 
 target_link_libraries( ${NAME} ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-file( COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR} )
+#file( COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR} )

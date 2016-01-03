@@ -60,7 +60,7 @@ void GameScreen::drawHUD(){
 
 
 
-GameScreen::GameScreen( int& id, int WIDTH_, int HEIGHT_ ) : Screen2D( id, WIDTH_, HEIGHT_ ) {
+GameScreen::GameScreen( int& id, int WIDTH_, int HEIGHT_ ) : ScreenSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 //	init( id, WIDTH_, HEIGHT_ );
 }
 

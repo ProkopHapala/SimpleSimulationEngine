@@ -6,7 +6,6 @@
 
 namespace Draw2D{
 
-void printVec       ( const Vec2d& v                     );
 void drawPoint      ( const Vec2f& vec                   );
 void drawPointCross ( const Vec2f& vec, float d          );
 void drawVec        ( const Vec2f& vec                   );

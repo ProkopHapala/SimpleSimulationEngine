@@ -9,8 +9,6 @@
 #include "Vec2.h"
 #include "Body2D.h"
 
-class RigidBody2D;
-
 class AeroSurf2D : public KinematicBody2D {
 	public:
 	static constexpr double SAFETY_v = 1e-6;

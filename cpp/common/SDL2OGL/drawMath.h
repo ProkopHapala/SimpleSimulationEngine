@@ -13,8 +13,6 @@
 
 // ==== function declarations
 
-void printVec     ( const Vec3d& v );
-void printArray   ( int n, double * vec );
 void drawPoint    ( const Vec3d& vec );
 void drawVec      ( const Vec3d& vec );
 void drawVecInPos ( const Vec3d& v, const Vec3d& pos );
@@ -30,6 +28,11 @@ int  drawCylinderStrip  ( int n, float r1, float r2, const Vec3f& base, const Ve
 int  drawSphereTriangle ( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c );
 int  drawSphere_oct     ( int n, double r_, const Vec3d& pos_ );	
 void drawLines          ( int nlinks, int * links, Vec3d * points );
+
+// from drawUtils.h
+void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b );
+int  makeBoxList( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b  );
+void drawAxis( float sc );
 
 
 // ==== inline functions

@@ -14,7 +14,7 @@
 
 const  float INV_RAND_MAX = 1.0f/RAND_MAX;
 inline float randf(){ return INV_RAND_MAX*rand(); }
-
+inline float randf( float min, float max ){ return randf()*( max - min ) + min; }
 
 // there are some examples of hash functions   
 // https://en.wikipedia.org/wiki/Linear_congruential_generator

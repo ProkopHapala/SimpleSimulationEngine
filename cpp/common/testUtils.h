@@ -1,23 +1,32 @@
 
-/*
-void printVec( const Vec3f& vec ){
-	printf( " %f %f %f ", vec.x, vec.y, vec.z );
-}
+#ifndef  testUtils_h
+#define  testUtils_h
 
-void printMat( const Mat3f& mat  ){
-	printf( " %f %f %f \n", mat.xx, mat.xy, mat.xz );
-	printf( " %f %f %f \n", mat.yx, mat.yy, mat.yz );
-	printf( " %f %f %f \n", mat.zx, mat.zy, mat.zz );
-}
-*/
+#include <math.h>
+#include <cstdlib>
+#include <stdio.h>
 
-void printVec( const Vec3d& vec ){
-	printf( " %f %f %f ", vec.x, vec.y, vec.z );
-}
+#include "fastmath.h"
+#include "Vec2.h"
+#include "Vec3.h"
+#include "Mat3.h"
+#include "quaternion.h"
 
-void printQuat( const Quat4d& q ){
-	printf( " %f %f %f %f ", q.x, q.y, q.z, q.w );
-}
+void printArray( int n, double * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }};
+void printArray( int n, float  * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }};
+void printArray( int n, int    * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }};
+
+void printVec( const Vec2d& v ){ printf( " %f %f \n", v.x, v.y ); };
+void printVec( const Vec2f& v ){ printf( " %f %f \n", v.x, v.y );};
+void printVec( const Vec2i& v ){ printf( " %i %i \n", v.x, v.y );};
+
+void printVec( const Vec3d& v ){ printf( " %f %f %f \n", v.x, v.y, v.z );};
+void printVec( const Vec3f& v ){ printf( " %f %f %f \n", v.x, v.y, v.z );};
+void printVec( const Vec3i& v ){ printf( " %i %i %i \n", v.x, v.y, v.z );};
+
+void printQuat( const Quat4d& q ){	printf( " %f %f %f %f \n", q.x, q.y, q.z, q.w ); }
+void printQuat( const Quat4f& q ){	printf( " %f %f %f %f \n", q.x, q.y, q.z, q.w ); }
+void printQuat( const Quat4i& q ){ 	printf( " %i %i %i %i \n", q.x, q.y, q.z, q.w ); }
 
 void printMat( const Mat3d& mat  ){
 	printf( " %f %f %f \n", mat.ax, mat.ay, mat.az );
@@ -40,7 +49,7 @@ inline uint64_t getCPUticks(){
     return (uint64_t)hi << 32 | lo;
 }
 
-
+#endif
 
 
 

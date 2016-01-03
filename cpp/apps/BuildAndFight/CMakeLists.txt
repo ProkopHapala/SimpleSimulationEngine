@@ -1,1 +1,2 @@
-add_subdirectory (SailWar_cpp)
+add_subdirectory (SailWar)
+add_subdirectory (AeroCraft)

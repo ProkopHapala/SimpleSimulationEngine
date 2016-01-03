@@ -10,6 +10,37 @@
 #include <cstdlib>
 #include <stdio.h>
 
+#include "fastmath.h"
+#include "Vec3.h"
+#include "Mat3.h"
+
+template <class TYPE>
+inline TYPE project_beam_to_sphere( TYPE r, TYPE x, TYPE y ){
+	TYPE z;
+	TYPE r2 = r * r;
+	TYPE d2 = x*x + y*y;
+	if ( d2 < ( 0.5d * r2 ) ) {
+		z = sqrt( r2 - d2 );
+	} else {
+		TYPE t2 = 0.5d * r;
+		z = sqrt( t2 / d2 );
+	}
+	return z;
+}
+
+/*
+float project_beam_to_sphere( float r, float x, float y ){
+	float d, t, z;
+	d = sqrt( x*x + y*y );
+	if ( d < r * 0.70710678118654752440 ) {
+		z = sqrt( r*r - d*d );
+	} else {
+		t = r * 0.70710678118654752440; // == 1/sqrt(2)
+		z = t*t / d;
+	}
+	return z;
+}
+*/
 
 //template <class TYPE, class VEC, class MAT, class QUAT> 
 //template <class TYPE, class VEC> 
@@ -92,6 +123,125 @@ class Quat4TYPE {
 		z = sa * hat.z;
 	};
 
+	void fromCosAngleAxis( TYPE scal_prod, const VEC& axis ){
+	// we assume -phi instead of phi!!!, minus effectively implies sa -> -s
+		constexpr TYPE cos_cutoff = 1 - 1e-6;
+		TYPE cosphi, sinphi, sa, phi, sgn_sinphi;
+		TYPE ir    = 1.0 / axis.norm();
+		VEC  hat   = axis * ir;
+		cosphi     = scal_prod;				
+		sgn_sinphi = 1.0; // ?
+		if( cosphi > cos_cutoff ){
+			sa = 0; w = 1;
+		} else if( cosphi < -( cos_cutoff ) ){
+			sa = -1; w = 0;
+		} else {
+			sa = + sqrt( (1 - cosphi) / 2.0 );
+			w  = - sqrt( (1 + cosphi) / 2.0 ) * sgn_sinphi;
+//			sa = -sa; w = -w;
+		}
+		x = sa * hat.x;
+		y = sa * hat.y;
+		z = sa * hat.z;
+
+	}
+
+	#define TRACKBALLSIZE ( 0.8 )
+	// 
+	void fromTrackballQ( TYPE p1x, TYPE p1y, TYPE p2x, TYPE p2y ){
+		VEC  axis; // axis of rotation
+		TYPE phi;  // angle of rotation
+		VEC  p1, p2, d;
+		TYPE t;
+		if( p1x == p2x && p1y == p2y ){
+			setOne();
+			return;
+		}
+		p1.set( p1x, p1y, project_beam_to_sphere<TYPE>( TRACKBALLSIZE, p1x, p1y ) );
+		p2.set( p2x, p2y, project_beam_to_sphere<TYPE>( TRACKBALLSIZE, p2x, p2y ) );
+		axis.set_cross( p2, p1 );
+		d.set_sub( p1, p2 );
+		t = d.norm() / ( 2.0 * TRACKBALLSIZE );
+		if( t > 1.0 )  t =  1.0;
+		if( t < -1.0 ) t = -1.0;
+		
+		phi = 2.0 * asin( t );
+		fromAngleAxis( phi, axis );
+
+		// TYPE cosphi = ; 
+		// phi = 2.0 * asin( t );
+		// fromCosAngleAxis( cosphi, axis );
+
+	}	
+
+// =======  pitch, yaw, roll
+
+	inline void dpitch( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); pitch( ca, sa );  };
+	inline void pitch ( TYPE angle ){ pitch( cos(angle), sin(angle) );  };
+    inline void pitch ( TYPE ca, TYPE sa ) {
+        TYPE x_ =  x * ca + w * sa;
+        TYPE y_ =  y * ca + z * sa;
+        TYPE z_ = -y * sa + z * ca;
+                w = -x * sa + w * ca;
+        x = x_; y = y_; z = z_;
+    };
+
+	inline void dyaw( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); yaw( ca, sa );  };
+	inline void yaw ( TYPE angle ){ yaw( cos(angle), sin(angle) );  };
+    inline void yaw ( TYPE ca, TYPE sa ) {
+        TYPE x_ =  x * ca - z * sa;
+        TYPE y_ =  y * ca + w * sa;
+        TYPE z_ =  x * sa + z * ca;
+                w = -y * sa + w * ca;
+        x = x_; y = y_; z = z_;
+    };
+
+	inline void droll( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); roll( ca, sa );  };
+	inline void roll ( TYPE angle ){ roll( cos(angle), sin(angle) );  };
+    inline void roll ( TYPE ca, TYPE sa ) {
+        TYPE x_ =  x * ca + y * sa;
+        TYPE y_ = -x * sa + y * ca;
+        TYPE z_ =  z * ca + w * sa;
+                w = -z * sa + w * ca;
+        x = x_; y = y_; z = z_;
+    };
+
+
+	inline void dpitch2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); pitch2( ca, sa );  };
+	inline void pitch2 ( TYPE angle ){ pitch2( cos(angle), sin(angle) );  };
+    inline void pitch2 ( TYPE ca, TYPE sa ) {
+/*
+        TYPE x_ =  ax * w + ay * z - az * y + aw * x;
+        TYPE y_ = -ax * z + ay * w + az * x + aw * y;
+        TYPE z_ =  ax * y - ay * x + az * w + aw * z;
+               w  = -ax * x - ay * y - az * z + aw * w;
+*/
+        TYPE x_ =  sa * w + ca * x;
+        TYPE y_ = -sa * z + ca * y;
+        TYPE z_ =  sa * y + ca * z;
+               w  = -sa * x + ca * w;
+        x = x_; y = y_; z = z_;
+    };
+
+	inline void dyaw2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); yaw2( ca, sa );  };
+	inline void yaw2 ( TYPE angle ){ yaw2( cos(angle), sin(angle) );  };
+    inline void yaw2 ( TYPE ca, TYPE sa ) {
+        TYPE x_ = + sa * z  + ca * x;
+        TYPE y_ = + sa * w  + ca * y;
+        TYPE z_ = - sa * x  + ca * z;
+               w  = - sa * y  + ca * w;
+        x = x_; y = y_; z = z_;
+    };
+
+	inline void droll2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); roll2( ca, sa );  };
+	inline void roll2 ( TYPE angle ){ roll2( cos(angle), sin(angle) );  };
+    inline void roll2 ( TYPE ca, TYPE sa ) {
+        TYPE x_ = - sa * y + ca * x;
+        TYPE y_ = + sa * x + ca * y;
+        TYPE z_ = + sa * w + ca * z;
+               w  = - sa * z + ca * w;
+        x = x_; y = y_; z = z_;
+    };
 
 // ====== Differential rotation
 
@@ -269,6 +419,8 @@ class Quat4TYPE {
             w = (m10 - m01) * s;
         }
 	}
+
+
 
 };
 

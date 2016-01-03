@@ -5,10 +5,6 @@
 
 namespace Draw2D{
 
-void printVec( const Vec2d& v ){
-	printf( " %f %f \n", v.x, v.y );
-};
-
 void drawPoint( const Vec2f& vec ){
 	glDisable (GL_LIGHTING);
 	glBegin   (GL_POINTS);

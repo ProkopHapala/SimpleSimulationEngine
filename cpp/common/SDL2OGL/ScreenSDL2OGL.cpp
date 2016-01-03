@@ -1,16 +1,9 @@
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
+#include "ScreenSDL2OGL.h" // THE HEADER
 
-#include "Screen2D.h" // THE HEADER
+// ============== per frame 
 
-void Screen2D::draw   (){
-    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-};
-void Screen2D::drawHUD(){ };
-
-void Screen2D::update( ){
+void ScreenSDL2OGL::update( ){
 	//SDL_RenderPresent(renderer);
 	//glPushMatrix();
 	camera();
@@ -21,21 +14,32 @@ void Screen2D::update( ){
 	SDL_RenderPresent(renderer);
 };
 
-void Screen2D::camera(){
+void ScreenSDL2OGL::draw   (){
+    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+};
+
+void ScreenSDL2OGL::drawHUD(){ };
+
+void ScreenSDL2OGL::inputHanding(){};
+
+void ScreenSDL2OGL::camera(){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
 	glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
 	glMatrixMode (GL_MODELVIEW);
 }
 
-void Screen2D::cameraHUD(){
+void ScreenSDL2OGL::cameraHUD(){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
 	glOrtho ( -0, WIDTH, 0, HEIGHT, -VIEW_DEPTH, +VIEW_DEPTH );
 	glMatrixMode (GL_MODELVIEW);
 }
 
-void Screen2D::setupRenderer(){
+// ============== initialization
+
+void ScreenSDL2OGL::setupRenderer(){
 	float ambient  [] = { 0.1f, 0.15f, 0.25f, 1.0f };
 	float diffuse  [] = { 0.9f, 0.8f,  0.7f,  1.0f };
 	float specular [] = { 1.0f, 1.0f,  1.0f,  1.0f };
@@ -57,16 +61,16 @@ void Screen2D::setupRenderer(){
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
 
-void Screen2D::setDefaults(){
+void ScreenSDL2OGL::setDefaults(){
 	VIEW_DEPTH   = VIEW_DEPTH_DEFAULT;
 	ASPECT_RATIO = WIDTH/(float)HEIGHT;
-	zoom = VIEW_ZOOM_DEFAULT;
-	printf(" %f %f %f \n", zoom, ASPECT_RATIO, VIEW_DEPTH  );
+	zoom         = VIEW_ZOOM_DEFAULT;
+	//printf(" %f %f %f \n", zoom, ASPECT_RATIO, VIEW_DEPTH  );
 	mouse_begin_x  = 0;
 	mouse_begin_y  = 0;
 }
 
-void Screen2D::init( int& id, int WIDTH_, int HEIGHT_ ){
+void ScreenSDL2OGL::init( int& id, int WIDTH_, int HEIGHT_ ){
 	WIDTH  = WIDTH_;
 	HEIGHT = HEIGHT_;
 	setDefaults();
@@ -75,10 +79,10 @@ void Screen2D::init( int& id, int WIDTH_, int HEIGHT_ ){
 	char str[40];  sprintf(str, " Window id = %d", id );
 	SDL_SetWindowTitle( window, str );
 	setupRenderer();
-	printf( " ASPECT_RATIO %f \n", ASPECT_RATIO );
+	//printf( " ASPECT_RATIO %f \n", ASPECT_RATIO );
 }
 
-Screen2D::Screen2D( int& id, int WIDTH_, int HEIGHT_ ){
+ScreenSDL2OGL::ScreenSDL2OGL( int& id, int WIDTH_, int HEIGHT_ ){
 	init( id, WIDTH_, HEIGHT_ );
 };
 

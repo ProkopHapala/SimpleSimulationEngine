@@ -8,5 +8,6 @@ include_directories(
 
 add_library( Body       OBJECT Body.cpp       )
 add_library( Body2D     OBJECT Body2D.cpp     )
+add_library( AeroSurf   OBJECT AeroSurf.cpp   )
 add_library( AeroSurf2D OBJECT AeroSurf2D.cpp )
 add_library( Collisions OBJECT Collisions.cpp )

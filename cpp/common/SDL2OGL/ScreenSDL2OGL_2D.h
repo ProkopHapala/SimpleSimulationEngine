@@ -1,12 +1,12 @@
 
-#ifndef  Screen2D_h
-#define  Screen2D_h
+#ifndef  ScreenSDL2OGL_2D_h
+#define  ScreenSDL2OGL_2D_h
 
 const float	VIEW_ZOOM_STEP     = 1.2f;
 const float	VIEW_ZOOM_DEFAULT  = 10.0f;
 const float	VIEW_DEPTH_DEFAULT = 1000.0;
 
-class Screen2D{
+class ScreenSDL2OGL_2D : public ScreenSDL2OGL {
 	public:
 	// World2D* scene;   // TODO
 	int   WIDTH;
@@ -25,18 +25,19 @@ class Screen2D{
 
 // ============ function declarations
 
-	void camera   ();
-	void cameraHUD();
+	virtual void camera       ();
+	virtual void cameraHUD    ();
+	virtual void draw         ();
+    virtual void drawHUD      ();
+	virtual void inputHanding ();
+
+	virtual void setupRenderer();
+	virtual void setDefaults  ();
 
 	void update( );
-	virtual void draw   ();
-    virtual void drawHUD();
-	void inputHanding   ();
 
-	void setupRenderer();
-	void setDefaults();
 	void init( int& id, int WIDTH_, int HEIGHT_ );
-	Screen2D ( int& id, int WIDTH_, int HEIGHT_ );
+	ScreenSDL2OGL_2D ( int& id, int WIDTH_, int HEIGHT_ );
 
 // === inline functions
 
