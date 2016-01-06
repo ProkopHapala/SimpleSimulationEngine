@@ -10,7 +10,6 @@
 class GameScreen : public ScreenSDL2OGL_3D {
 	public:
 	GameWorld * world;
-	AeroCraft * thisShip;
 
 	// ==== function declarations
 

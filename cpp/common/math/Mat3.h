@@ -9,12 +9,12 @@
 #include "fastmath.h"
 #include "Vec3.h"
 
-//template <class TYPE, class VEC, class MAT> 
-//template <class TYPE, class VEC> 
-template <class TYPE> 
+//template <class TYPE, class VEC, class MAT>
+//template <class TYPE, class VEC>
+template <class TYPE>
 class Mat3TYPE{
-	using VEC = Vec3TYPE<TYPE>; 
-	using MAT = Mat3TYPE<TYPE>; 
+	using VEC = Vec3TYPE<TYPE>;
+	using MAT = Mat3TYPE<TYPE>;
 	public:
 	union{
 		struct{
@@ -49,7 +49,7 @@ class Mat3TYPE{
 		xx=a.x*b.x; xy=a.x*b.y; xz=a.x*b.z;
 		yx=a.y*b.x; yy=a.y*b.y; yz=a.y*b.z;
 		zx=a.z*b.x; zy=a.z*b.y; zz=a.z*b.z;
-	};; 
+	};;
 
 	inline VEC getColx(){ VEC out; out.x = xx; out.y = yx; out.z = zx; return out; };
     inline VEC getColy(){ VEC out; out.x = xy; out.y = yy; out.z = zy; return out; };
@@ -77,7 +77,7 @@ class Mat3TYPE{
 // ====== transpose
 
 	inline void T(){
-		TYPE t1=yx; yx=xy; xy=t1;  
+		TYPE t1=yx; yx=xy; xy=t1;
 		TYPE t2=zx; zx=xz; xz=t2;
 		TYPE t3=zy; zy=yz; yz=t3;
 	};
@@ -89,8 +89,8 @@ class Mat3TYPE{
 	};
 
 	inline void setT  ( const VEC& va, const VEC& vb, const VEC& vc ){
-		a.set( va.x, vb.x, vc.x ); 
-		b.set( va.y, vb.y, vc.y ); 
+		a.set( va.x, vb.x, vc.x );
+		b.set( va.y, vb.y, vc.y );
 		c.set( va.z, vb.z, vc.z );
 	};
 
@@ -98,72 +98,72 @@ class Mat3TYPE{
 
 	inline VEC dot( const VEC&  v ) const {
 		VEC vout;
-		vout.x = xx*v.x + xy*v.y + xz*v.z;  
-		vout.y = yx*v.x + yy*v.y + yz*v.z;  
-		vout.z = zx*v.x + zy*v.y + zz*v.z;  
+		vout.x = xx*v.x + xy*v.y + xz*v.z;
+		vout.y = yx*v.x + yy*v.y + yz*v.z;
+		vout.z = zx*v.x + zy*v.y + zz*v.z;
 		return vout;
 	}
 
 	inline void dot_to( const VEC&  v, VEC&  vout ) const {
-		vout.x = xx*v.x + xy*v.y + xz*v.z;  
-		vout.y = yx*v.x + yy*v.y + yz*v.z;  
-		vout.z = zx*v.x + zy*v.y + zz*v.z;  
+		vout.x = xx*v.x + xy*v.y + xz*v.z;
+		vout.y = yx*v.x + yy*v.y + yz*v.z;
+		vout.z = zx*v.x + zy*v.y + zz*v.z;
 	};
 
 	inline void dot_to_T( const VEC&  v, VEC&  vout ) const {
-		vout.x = xx*v.x + yx*v.y + zx*v.z;  
-		vout.y = xy*v.x + yy*v.y + zy*v.z;  
-		vout.z = xz*v.x + yz*v.y + zz*v.z;  
+		vout.x = xx*v.x + yx*v.y + zx*v.z;
+		vout.y = xy*v.x + yy*v.y + zy*v.z;
+		vout.z = xz*v.x + yz*v.y + zz*v.z;
 	};
 
 // ====== matrix multiplication
 
 	inline void set_mmul( const MAT& A, const MAT& B ){
-		xx = A.xx*B.xx + A.xy*B.yx + A.xz*B.zx;  
-		xy = A.xx*B.xy + A.xy*B.yy + A.xz*B.zy;  
+		xx = A.xx*B.xx + A.xy*B.yx + A.xz*B.zx;
+		xy = A.xx*B.xy + A.xy*B.yy + A.xz*B.zy;
 		xz = A.xx*B.xz + A.xy*B.yz + A.xz*B.zz;
-		yx = A.yx*B.xx + A.yy*B.yx + A.yz*B.zx;  
-		yy = A.yx*B.xy + A.yy*B.yy + A.yz*B.zy;  
-		yz = A.yx*B.xz + A.yy*B.yz + A.yz*B.zz; 
-		zx = A.zx*B.xx + A.zy*B.yx + A.zz*B.zx;  
-		zy = A.zx*B.xy + A.zy*B.yy + A.zz*B.zy;  
-		zz = A.zx*B.xz + A.zy*B.yz + A.zz*B.zz; 
+		yx = A.yx*B.xx + A.yy*B.yx + A.yz*B.zx;
+		yy = A.yx*B.xy + A.yy*B.yy + A.yz*B.zy;
+		yz = A.yx*B.xz + A.yy*B.yz + A.yz*B.zz;
+		zx = A.zx*B.xx + A.zy*B.yx + A.zz*B.zx;
+		zy = A.zx*B.xy + A.zy*B.yy + A.zz*B.zy;
+		zz = A.zx*B.xz + A.zy*B.yz + A.zz*B.zz;
 	};
 
 	inline void set_mmul_NT( const MAT& A, const MAT& B ){
-		xx = A.xx*B.xx + A.xy*B.xy + A.xz*B.xz;  
-		xy = A.xx*B.yx + A.xy*B.yy + A.xz*B.yz;  
+		xx = A.xx*B.xx + A.xy*B.xy + A.xz*B.xz;
+		xy = A.xx*B.yx + A.xy*B.yy + A.xz*B.yz;
 		xz = A.xx*B.zx + A.xy*B.zy + A.xz*B.zz;
-		yx = A.yx*B.xx + A.yy*B.xy + A.yz*B.xz;  
-		yy = A.yx*B.yx + A.yy*B.yy + A.yz*B.yz;  
-		yz = A.yx*B.zx + A.yy*B.zy + A.yz*B.zz; 
-		zx = A.zx*B.xx + A.zy*B.xy + A.zz*B.xz;  
-		zy = A.zx*B.yx + A.zy*B.yy + A.zz*B.yz;  
-		zz = A.zx*B.zx + A.zy*B.zy + A.zz*B.zz; 
+		yx = A.yx*B.xx + A.yy*B.xy + A.yz*B.xz;
+		yy = A.yx*B.yx + A.yy*B.yy + A.yz*B.yz;
+		yz = A.yx*B.zx + A.yy*B.zy + A.yz*B.zz;
+		zx = A.zx*B.xx + A.zy*B.xy + A.zz*B.xz;
+		zy = A.zx*B.yx + A.zy*B.yy + A.zz*B.yz;
+		zz = A.zx*B.zx + A.zy*B.zy + A.zz*B.zz;
 	};
 
 	inline void set_mmul_TN( const MAT& A, const MAT& B ){
-		xx = A.xx*B.xx + A.yx*B.yx + A.zx*B.zx;  
-		xy = A.xx*B.xy + A.yx*B.yy + A.zx*B.zy;  
+		xx = A.xx*B.xx + A.yx*B.yx + A.zx*B.zx;
+		xy = A.xx*B.xy + A.yx*B.yy + A.zx*B.zy;
 		xz = A.xx*B.xz + A.yx*B.yz + A.zx*B.zz;
-		yx = A.xy*B.xx + A.yy*B.yx + A.zy*B.zx;  
-		yy = A.xy*B.xy + A.yy*B.yy + A.zy*B.zy;  
-		yz = A.xy*B.xz + A.yy*B.yz + A.zy*B.zz; 
-		zx = A.xz*B.xx + A.yz*B.yx + A.zz*B.zx;  
-		zy = A.xz*B.xy + A.yz*B.yy + A.zz*B.zy;  
-		zz = A.xz*B.xz + A.yz*B.yz + A.zz*B.zz; 
+		yx = A.xy*B.xx + A.yy*B.yx + A.zy*B.zx;
+		yy = A.xy*B.xy + A.yy*B.yy + A.zy*B.zy;
+		yz = A.xy*B.xz + A.yy*B.yz + A.zy*B.zz;
+		zx = A.xz*B.xx + A.yz*B.yx + A.zz*B.zx;
+		zy = A.xz*B.xy + A.yz*B.yy + A.zz*B.zy;
+		zz = A.xz*B.xz + A.yz*B.yz + A.zz*B.zz;
 	};
 
 	inline void set_mmul_TT( const MAT& A, const MAT& B ){
-		xx = A.xx*B.xx + A.yx*B.xy + A.zx*B.xz;  
-		xy = A.xx*B.yx + A.yx*B.yy + A.zx*B.yz;  
+		xx = A.xx*B.xx + A.yx*B.xy + A.zx*B.xz;
+		xy = A.xx*B.yx + A.yx*B.yy + A.zx*B.yz;
 		xz = A.xx*B.zx + A.yx*B.zy + A.zx*B.zz;
-		yx = A.xy*B.xx + A.yy*B.xy + A.zy*B.xz;  
-		yy = A.xy*B.yx + A.yy*B.yy + A.zy*B.yz;  
-		yz = A.xy*B.zx + A.yy*B.zy + A.zy*B.zz; 
-		zx = A.xz*B.xx + A.yz*B.xy + A.zz*B.xz;  
-		zy = A.xz*B.yx + A.yz*B.yy + A.zz*B.yz;  
-		zz = A.xz*B.zx + A.yz*B.zy + A.zz*B.zz; 
+		yx = A.xy*B.xx + A.yy*B.xy + A.zy*B.xz;
+		yy = A.xy*B.yx + A.yy*B.yy + A.zy*B.yz;
+		yz = A.xy*B.zx + A.yy*B.zy + A.zy*B.zz;
+		zx = A.xz*B.xx + A.yz*B.xy + A.zz*B.xz;
+		zy = A.xz*B.yx + A.yz*B.yy + A.zz*B.yz;
+		zz = A.xz*B.zx + A.yz*B.zy + A.zz*B.zz;
 	};
 
 // ====== matrix solver
@@ -232,8 +232,8 @@ using Mat3i = Mat3TYPE< int   >;
 using Mat3f = Mat3TYPE< float >;
 using Mat3d = Mat3TYPE< double>;
 
-inline void convert( Mat3f& from, Mat3d& to ){ convert( to.a, from.a ); convert( to.b, from.b ); convert( to.c, from.c ); };
-inline void convert( Mat3d& from, Mat3f& to ){ convert( to.a, from.a ); convert( to.b, from.b ); convert( to.c, from.c ); };
+inline void convert( const Mat3f& from, Mat3d& to ){ convert( from.a, to.a ); convert( from.b, to.b ); convert( from.c, to.c ); };
+inline void convert( const Mat3d& from, Mat3f& to ){ convert( from.a, to.a ); convert( from.b, to.b ); convert( from.c, to.c ); };
 
 #endif
 

@@ -38,13 +38,13 @@ const float VIEW_ZOOM_STEP    = 1.2f;
 const float VIEW_ZOOM_DEFAULT = 0.5f;
 
 const int   PHYS_STEPS_PER_FRAME = 1;
-const float PHYS_TIME_PER_FRAME  = 0.01; 
+const float PHYS_TIME_PER_FRAME  = 0.01;
 const float PHYS_dt              = PHYS_TIME_PER_FRAME/((float)PHYS_STEPS_PER_FRAME);
 
 */
 
 bool loopEnd = false;
-bool STOP    = false; 
+bool STOP    = false;
 //#define COLDEPTH 16
 
 // ===============================
@@ -52,17 +52,11 @@ bool STOP    = false;
 // ===============================
 
 //SDL_Surface *screen;
-SDL_Event event; 
+SDL_Event event;
 
 int frameCount=0;
 
-// mouse rotation
-Quat4d qmouse;
-
-float zoom = VIEW_ZOOM_DEFAULT;
-
 GameWorld world;
-
 GameScreen* thisScreen;
 
 // ====================================
@@ -78,23 +72,23 @@ void inputHanding();
 // ===============================
 
 
-// FUNCTION ======	camera 
+// FUNCTION ======	camera
 
 
-double tickSum=0; 
+double tickSum=0;
 int    stepSum=0;
 
 // FUNCTION ======	inputHanding
 void inputHanding(){
-	while(SDL_PollEvent(&event)){ 
-		if( event.type == SDL_KEYDOWN ){ 
+	while(SDL_PollEvent(&event)){
+		if( event.type == SDL_KEYDOWN ){
 			switch( event.key.keysym.sym ){
 				case SDLK_ESCAPE   : quit(); break;
-				case SDLK_KP_PLUS  : zoom/=VIEW_ZOOM_STEP; printf("zoom: %f \n", zoom); break;
-				case SDLK_KP_MINUS : zoom*=VIEW_ZOOM_STEP; printf("zoom: %f \n", zoom); break;
+				case SDLK_KP_PLUS  : thisScreen->zoom/=VIEW_ZOOM_STEP; printf("zoom: %f \n", thisScreen->zoom); break;
+				case SDLK_KP_MINUS : thisScreen->zoom*=VIEW_ZOOM_STEP; printf("zoom: %f \n", thisScreen->zoom); break;
 				case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
 			}
-		} 
+		}
 		if( event.type == SDL_QUIT){ quit();  };
 	}
 
@@ -105,14 +99,14 @@ void inputHanding(){
 	//Uint8 *keystate = SDL_GetKeyState(NULL);
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
 
-	if ( keys[ SDL_SCANCODE_DOWN  ] ) { qmouse.pitch( -0.005 );  }
-	if ( keys[ SDL_SCANCODE_UP    ] ) { qmouse.pitch(  0.005  );  }
-	if ( keys[ SDL_SCANCODE_RIGHT ] ) { qmouse.yaw  (  0.005  );  }
-	if ( keys[ SDL_SCANCODE_LEFT  ] ) { qmouse.yaw  ( -0.005 ); }
+	if ( keys[ SDL_SCANCODE_DOWN  ] ) { thisScreen->qCamera.pitch( -0.005 );  }
+	if ( keys[ SDL_SCANCODE_UP    ] ) { thisScreen->qCamera.pitch(  0.005  );  }
+	if ( keys[ SDL_SCANCODE_RIGHT ] ) { thisScreen->qCamera.yaw  (  0.005  );  }
+	if ( keys[ SDL_SCANCODE_LEFT  ] ) { thisScreen->qCamera.yaw  ( -0.005 ); }
 
 	if      ( keys[ SDL_SCANCODE_A ] ){ world.myCraft->wingLeft.C.y = wingLiftUp;      world.myCraft->wingRight.C.y = wingLiftDown;    }
-	else if ( keys[ SDL_SCANCODE_D  ] ){ world.myCraft->wingLeft.C.y = wingLiftDown;    world.myCraft->wingRight.C.y = wingLiftUp;      }
-	else                               { world.myCraft->wingLeft.C.y = wingLiftDefault; world.myCraft->wingRight.C.y = wingLiftDefault; };
+	else if ( keys[ SDL_SCANCODE_D ] ){ world.myCraft->wingLeft.C.y = wingLiftDown;    world.myCraft->wingRight.C.y = wingLiftUp;      }
+	else                              { world.myCraft->wingLeft.C.y = wingLiftDefault; world.myCraft->wingRight.C.y = wingLiftDefault; };
 
 	//if ( keystate[ SDL_SCANCODE_DOWN  ] ) { qmouse.pitch2( -0.005 ); }
 	//if ( keystate[ SDL_SCANCODE_UP    ] ) { qmouse.pitch2( 0.005 ); }
@@ -124,8 +118,11 @@ void inputHanding(){
 	SDL_GetMouseState(&mx,&my);
 	int dmx = mx - thisScreen->WIDTH/2; 	int dmy = my - thisScreen->HEIGHT/2 ;
 	//printf( " mx: %i  my: %i dmx: %i dmy: %i ",mx, my, dmx, dmy );
-	qmouse.pitch( 0.001* dmy );
-	qmouse.yaw  ( 0.001* dmx );
+	//qmouse.pitch( 0.001* dmy );
+	//qmouse.yaw  ( 0.001* dmx );
+
+	thisScreen->qCamera.pitch( 0.001* dmy );
+	thisScreen->qCamera.yaw  ( 0.001* dmx );
 	//SDL_WarpMouse( thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
 	SDL_WarpMouseInWindow( thisScreen->window, thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
 
@@ -134,18 +131,22 @@ void inputHanding(){
 
 // FUNCTION ======	setup
 void setup(){
-
-	qmouse.setOne();
 	srand(1234);
-
+    world.init();
+    thisScreen->world = &world;
+    thisScreen->qCamera.setOne();
+    thisScreen->VIEW_DEPTH = 10000.0f;
+    printf( " world.init(); DONE! \n" );
 }
 
 void loop(int n ){
 	loopEnd = false;
 	for( int iframe=0; iframe<n; iframe++ ){
+        //printf( " inputHanding(); \n" );
 		inputHanding();
 		if(!STOP){
 			//update();
+			//printf( " thisScreen->update(); \n" );
 			thisScreen->update();
 			//thisScreen->thisShip = thisShip; // FIXME
 		}

@@ -6,16 +6,16 @@
 
 /*
 
-	// TODO 
+	// TODO
 
 void ScreenSDL2OGL_3D::mouse_camera (float x, float y){
 	if (mouse_spinning){
 		trackball ( qCameraOld,
-			(2.0f*mouse_begin_x-WIDTH)/WIDTH,  (HEIGHT-2.0f*mouse_begin_y)/HEIGHT, 
-			(2.0f*x-WIDTH            )/WIDTH,  (HEIGHT-2.0f*y            )/HEIGHT 
+			(2.0f*mouse_begin_x-WIDTH)/WIDTH,  (HEIGHT-2.0f*mouse_begin_y)/HEIGHT,
+			(2.0f*x-WIDTH            )/WIDTH,  (HEIGHT-2.0f*y            )/HEIGHT
 		);
 		add_quats ( qCameraOld, qCamera, qCamera );
-		mouse_begin_x = x; mouse_begin_y = y; 
+		mouse_begin_x = x; mouse_begin_y = y;
 	}
 }
 
@@ -31,6 +31,7 @@ void ScreenSDL2OGL_3D::getCameraDirections( ){
 */
 
 void ScreenSDL2OGL_3D::camera(){
+    //printf( "ScreenSDL2OGL_3D::camera() \n" );
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
 	glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );

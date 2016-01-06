@@ -1,7 +1,7 @@
 
 #include "ScreenSDL2OGL.h" // THE HEADER
 
-// ============== per frame 
+// ============== per frame
 
 void ScreenSDL2OGL::update( ){
 	//SDL_RenderPresent(renderer);

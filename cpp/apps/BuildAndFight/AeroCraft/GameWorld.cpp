@@ -25,7 +25,7 @@ void GameWorld::update( ){
 		myCraft->applyAeroForces( {0,0,0} );
 		//myCraft->applyAeroForces( {0,10,0} );
 		myCraft->move(dt);
-	} 
+	}
 
 	//long long nt2  = getCPUticks();
 	//double perStep = double(nt2-nt1)/PHYS_STEPS_PER_FRAME;
@@ -36,31 +36,34 @@ void GameWorld::update( ){
 
 
 void GameWorld::makeAeroCraft(){
-	const int len = 5; 
+	const int len = 5;
 	double masses[len]  = { 4,1,1,0.5f,0.5f };
 	Vec3d  poss[len]    = { {0,-0.05,1}, {-2,0,0}, {2,0,0}, {0,0,-3}, {0,0.2,-3} };
+    printf("init AeroCraft\n");
 
+    myCraft = new AeroCraft();
 	myCraft->from_mass_points( len, masses, poss );
-	myCraft->qrot.setOne(); 
+	myCraft->qrot.setOne();
 	//myCraft->qrot.set(0,0,-0.5,1); myCraft->qrot.normalize();
 
-	printVec(myCraft->pos); printf("pos\n");
+	printVec(myCraft->pos);
+	printf("pos\n");
 
 	myCraft->wingLeft .craft = myCraft;
 	myCraft->wingRight.craft = myCraft;
 	myCraft->elevator .craft = myCraft;
 	myCraft->rudder   .craft = myCraft;
 
-	myCraft->wingLeft .lpos.set( poss[1] - myCraft->pos ); 
+	myCraft->wingLeft .lpos.set( poss[1] - myCraft->pos );
 	myCraft->wingRight.lpos.set( poss[2] - myCraft->pos );
-	myCraft->elevator .lpos.set( poss[3] - myCraft->pos ); 
-	myCraft->rudder   .lpos.set( poss[4] - myCraft->pos ); 
+	myCraft->elevator .lpos.set( poss[3] - myCraft->pos );
+	myCraft->rudder   .lpos.set( poss[4] - myCraft->pos );
 
 /*
-	myCraft->wingLeft .lpos.set( poss[1] ); 
+	myCraft->wingLeft .lpos.set( poss[1] );
 	myCraft->wingRight.lpos.set( poss[2] );
-	myCraft->elevator .lpos.set( poss[3] ); 
-	myCraft->rudder   .lpos.set( poss[4] ); 
+	myCraft->elevator .lpos.set( poss[3] );
+	myCraft->rudder   .lpos.set( poss[4] );
 */
 
 	myCraft->wingLeft .lrot.set( { 1,0,0, 0,1,0,  0,0,1  } ); myCraft->wingLeft  .lrot.rotate( -0.1, { 0,0,1 } );
@@ -68,11 +71,11 @@ void GameWorld::makeAeroCraft(){
 	myCraft->elevator .lrot.set( { 1,0,0, 0,1,0,  0,0,1  } ); myCraft->elevator .lrot.rotate( +0.2, { 1,0,0 } );
 	printf("elevator lrot\n");
 	printMat( myCraft->elevator.lrot );
- 
+
 	myCraft->rudder   .lrot.set( { 0,1,0, 1,0,0,  0,0,1  } );
 
-	myCraft->wingLeft .C.set( 0.05, wingLiftDefault, 0.05 ); 
-	myCraft->wingRight.C.set( 0.05, wingLiftDefault, 0.05 ); 
+	myCraft->wingLeft .C.set( 0.05, wingLiftDefault, 0.05 );
+	myCraft->wingRight.C.set( 0.05, wingLiftDefault, 0.05 );
 	myCraft->elevator .C.set( 0.05, 1.0, 0.05 ); myCraft->elevator.C.mul( 0.1 );
 	myCraft->rudder   .C.set( 0.05, 1.0, 0.05 ); myCraft->rudder  .C.mul( 0.1 );
 
@@ -128,16 +131,15 @@ int GameWorld::makeBuildingsClusters( int nclustest, int nmin, int nmax, float m
 	return( ilist );
 }
 
-void GameWorld::makeEnvironment( float size ){
+void GameWorld::makeEnvironment( float sz ){
 
 	//buildings_shape = makeBuildings( 10, 10, 100, 100, 0.5, 0.5, 50, 100 );
-	buildings_shape = makeBuildingsClusters( 30, 3, 10,   -size,         size,         size,          size,            0, 500,   20, 100,   10, 100 );
+	buildings_shape = makeBuildingsClusters( 30, 3, 10,   -sz,         sz,         -sz,          sz,            0, 500,   20, 100,   10, 100 );
 	//buildings_shape = makeBuildingsClusters( 30, 3, 10, -VIEW_DEPTH/2, VIEW_DEPTH/2, -VIEW_DEPTH/2, VIEW_DEPTH/2,    0, 500,   20, 100,   10, 100 );
 	//buildings_shape= makeBuildingsClusters( 100, 5, 5, -VIEW_DEPTH/2, VIEW_DEPTH/2, -VIEW_DEPTH/2, VIEW_DEPTH/2,    0, 500,   100, 100,   10, 100 );
 
 	double h0    = 1;
 	//float tersz = VIEW_DEPTH/2;
-	double tersz = 5000;
 	//terrain   = FieldPatch::makeList( 15, { 0.5,   -tersz,-tersz,h0,   tersz,-tersz,h0,  -tersz,tersz,h0,   tersz,tersz,h0   }   );
 
 /*
@@ -148,7 +150,7 @@ void GameWorld::makeEnvironment( float size ){
 	p4.set( tersz, tersz,h0);
 	terrain     = FieldPatch::makeList( 3, Rect( 0.5d,   p1,  p2, p3, p4 )   );
 */
-	terrain_shape     = fieldPatch.makeList( 3, { 0.5d,   {-tersz,-tersz,h0},  { tersz,-tersz,h0},  {-tersz,tersz,h0},   {tersz,tersz,h0}   }   );
+	terrain_shape     = fieldPatch.makeList( 3, { 0.5d,   {-sz,-sz,h0},  { sz,-sz,h0},  {-sz,sz,h0},   {sz,sz,h0}   }   );
 	//terrain_shape   = FieldPatch::makeList( 15, { 0.5,   Vec3d(-tersz,-tersz,h0),  Vec3d( tersz,-tersz,h0),  Vec3d(-tersz,tersz,h0),   Vec3d(tersz,tersz,h0)   }   );
 
 }
@@ -165,9 +167,10 @@ int makeSinTerrain( float nx, float ny, float szx, float szy, float height ){
 
 void GameWorld::init( ){
 
-	makeEnvironment( 5000.0f );
+	makeEnvironment( 2000.0f );
+	printf( " Environment DONE! \n" );
 	makeAeroCraft();
-
+    printf( " AeroCraft DONE! \n" );
 };
 
 

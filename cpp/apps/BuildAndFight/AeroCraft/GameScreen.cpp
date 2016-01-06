@@ -13,7 +13,8 @@ void GameScreen:: camera (){
 
 /*
 	float zoomo = zoom*10;
-	glOrtho      ( -zoomo*ASPECT_RATIO, zoomo*ASPECT_RATIO, -zoomo, zoomo, -VIEW_DEPTH, +VIEW_DEPTH );	
+	glOrtho      ( -zoomo*ASPECT_RATIO, zoomo*ASPECT_RATIO, -zoomo, zoomo, -VIEW_DEPTH, +VIEW_DEPTH );
+
 	Mat3d camMat;
 	qmouse.toMatrix(camMat);
 	float glMat[16];
@@ -21,20 +22,26 @@ void GameScreen:: camera (){
 	glMultMatrixf( glMat );
 */
 
-/*
-	glFrustum ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, 0.5, VIEW_DEPTH);
-	Quat4d qcam;
-	qcam.setQmul( qmouse, myCraft.qrot );
+	//glFrustum ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, 0.5, VIEW_DEPTH);
+	glFrustum ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, 5.0, VIEW_DEPTH );
+	//Quat4d qcam;
+	//qcam.setQmul( qmouse, myCraft.qrot );
 	//qcam.set(qmouse);
-	//qcam.set( myCraft.qrot );
-	Mat3d camMat;
-	qcam.toMatrix(camMat);
-	float glMat[16];
-	toGLMatCam( {0,0,0}, camMat, glMat);
-	glMultMatrixf( glMat );
-*/
+	//qcam.set( world->myCraft->qrot );
+	Mat3f camMat;
+	//qcam.toMatrix(camMat);
+	//camMat.a.set( 1,0,0.0f );
+    //camMat.b.set( 0,0,1.0f );
+    //camMat.c.set( 0,-1,0.0f );
+    qCamera.toMatrix( camMat );
 
-	glTranslatef( (float)-world->myCraft->pos.x, (float)-world->myCraft->pos.y, (float)-world->myCraft->pos.z );
+	float glMat[16];
+	toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+	glMultMatrixf( glMat );
+
+    glTranslatef( -100, -500, -100.0f );
+
+	//glTranslatef( (float)-world->myCraft->pos.x, (float)-world->myCraft->pos.y, (float)-world->myCraft->pos.z );
 
 	glMatrixMode (GL_MODELVIEW);
 
@@ -46,43 +53,44 @@ void GameScreen:: renderSkyBox(){
 	glShadeModel(GL_SMOOTH);
 	float skysz = VIEW_DEPTH/2;
 	glBegin(GL_QUADS);
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, -skysz );   	  
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, +skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, +skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, -skysz );  
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, -skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, +skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, +skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, -skysz );
 
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, -skysz );   	  
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, +skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, +skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, -skysz ); 
-	
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, -skysz );   	  
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, +skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, +skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, -skysz ); 	
-  
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, -skysz );   	  
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, -skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, -skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, -skysz ); 
-	
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, +skysz );   	  
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, +skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, +skysz );   	 
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, +skysz ); 
+		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, -skysz );
+		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, +skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, +skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, -skysz );
+
+		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, -skysz );
+		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, +skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, +skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, -skysz );
+
+		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, -skysz );
+		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, -skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, -skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, -skysz );
+
+		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, +skysz );
+		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, +skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, +skysz );
+		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, +skysz );
 	glEnd();
 	glDepthMask(1);
 }
 
 void GameScreen:: draw(){
-	glClearColor( 0.9, 0.9, 0.9, 0.0);                      
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );   
+    printf( "GameScreen draw\n" );
+	glClearColor( 0.9, 0.9, 0.9, 0.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); 
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	renderSkyBox();
 
-	world->update(); // ALL PHYSICS COMPUTATION DONE HERE 
+	world->update(); // ALL PHYSICS COMPUTATION DONE HERE
 
 	/*
 	printQuat( myCraft.qrot );  printf("qrot\n");
@@ -91,9 +99,9 @@ void GameScreen:: draw(){
 	printVec( myCraft.L );      printf("L\n");
 	printVec( myCraft.omega );  printf("omega\n");
 	printf("invI\n");
-	printMat(  myCraft.invI ); 
+	printMat(  myCraft.invI );
 	printf("rotMat\n");
-	printMat(  myCraft.rotMat  ); 
+	printMat(  myCraft.rotMat  );
 	*/
 
 	camera ();
@@ -102,31 +110,31 @@ void GameScreen:: draw(){
 	glShadeModel(GL_FLAT);
 
 	world->myCraft->render();
-	
+
 	//glDisable (GL_LIGHTING);
 	glShadeModel(GL_SMOOTH);
 
-	if ( world->buildings_shape >0 ) glCallList( world->buildings_shape ); 
-	if ( world->terrain_shape >0)  { 
+	if ( world->buildings_shape >0 ) glCallList( world->buildings_shape );
+	if ( world->terrain_shape >0)  {
 		glCallList( world->terrain_shape   );
 	} else {
 	 	// terrain
 		float groundsz = VIEW_DEPTH;
 		glBegin(GL_QUADS);
-			glColor3f( 0.3, 0.6, 0.1 );		          	     
-			glNormal3f(0,1,0); 
-			glVertex3f( -groundsz, 0, -groundsz ); 
-			glVertex3f( +groundsz, 0, -groundsz ); 
-			glVertex3f( +groundsz, 0, +groundsz ); 
-			glVertex3f( -groundsz, 0, +groundsz ); 
+			glColor3f( 0.3, 0.6, 0.1 );
+			glNormal3f(0,1,0);
+			glVertex3f( -groundsz, 0, -groundsz );
+			glVertex3f( +groundsz, 0, -groundsz );
+			glVertex3f( +groundsz, 0, +groundsz );
+			glVertex3f( -groundsz, 0, +groundsz );
 		glEnd();
 	};
 
-	drawAxis( 5 );
+	drawAxis( 1000 );
 
 	//glFinish();
 	//SDL_GL_SwapBuffers();
- 
+
 };
 
 //void GameScreen:: drawHUD(){};
