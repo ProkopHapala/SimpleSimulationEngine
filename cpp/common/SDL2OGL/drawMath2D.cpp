@@ -115,6 +115,18 @@ void drawLines( int nlinks, int * links, Vec2d * points ){
 	}
 };
 
+void drawConvexPolygon( int n, Vec2d * points, bool filled ){
+	if( filled ){
+		glBegin   ( GL_TRIANGLE_FAN );
+	}else{
+		glBegin   ( GL_LINE_STRIP   );
+	}
+	for( int i=0; i<n; i++ ){
+		glVertex3f( (float)points[i].x, (float)points[i].y, 0 );
+	}
+	glEnd();
+};
+
 void drawPolarFunc( double x0, double y0, double fscale, int n, double phi0, double * data ){
 		double dphi = M_PI_2/n;
 		glBegin(GL_LINE_STRIP);

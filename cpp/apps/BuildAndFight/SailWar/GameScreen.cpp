@@ -34,6 +34,29 @@ void GameScreen::draw(){
 		//p->update_old_pos();
 	}
 
+
+    //printf( " mouse x,y : %i %i %f %f \n", mouseX, mouseY, mouseRight(mouseX), mouseUp(mouseY) );
+    Vec2d mvec;
+    mvec.set( mouseRight(mouseX), mouseUp(mouseY) );
+    //mvec.set( 0.0, 0.0 );
+    Draw2D::drawPointCross_d( mvec, 1.0 );
+
+	for( auto isle : world->isles ) {
+        //printf( "draw isle: %i %f %f \n ", isle->n, isle->corners[0].x, isle->corners[0].y );
+        if( isle->pointIn( mvec ) ){
+            glColor3f( 1.0f, 0.2f, 0.2f );
+            //printf( " mouse in isle \n " );
+        }else{
+            glColor3f( 0.2f, 0.2f, 0.2f );
+        }
+		Draw2D::drawConvexPolygon( isle->n, isle->corners, true );
+
+		//exit(0);
+	}
+
+
+
+
 	Vec2d compass_pos; compass_pos.set( 0.8*ASPECT_RATIO*zoom, 0.8*zoom );
 
 	glColor3f( 0.2f, 0.2f, 0.2f );  Draw2D::drawPointCross_d( compass_pos, zoom*0.1 );

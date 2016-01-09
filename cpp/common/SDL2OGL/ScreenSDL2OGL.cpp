@@ -37,6 +37,12 @@ void ScreenSDL2OGL::cameraHUD(){
 	glMatrixMode (GL_MODELVIEW);
 }
 
+void ScreenSDL2OGL::updateMousePos ( int x, int y ){
+    mouse_begin_x = mouseRight( x );
+    mouse_begin_y = mouseUp   ( y );
+}
+
+
 // ============== initialization
 
 void ScreenSDL2OGL::setupRenderer(){

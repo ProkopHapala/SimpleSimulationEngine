@@ -6,10 +6,12 @@
 
 #include "Vec2.h"
 #include "Vec3.h"
+#include "geom2D.h"
 
 #include "Projectile.h"
 #include "Projectile.h"
 #include "Frigate2D.h"
+
 
 class GameWorld {
 	public:
@@ -19,6 +21,8 @@ class GameWorld {
 
 	int perFrame = 10;
 	double dt = 0.0001;
+
+	std::vector<Convex2d*>   isles;
 
 	std::vector<Frigate2D*>  ships;
 	std::vector<Projectile*> projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector

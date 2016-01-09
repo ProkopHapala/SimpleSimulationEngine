@@ -33,6 +33,7 @@ class ScreenSDL2OGL{
 	virtual void draw        ();
     virtual void drawHUD     ();
 	virtual void inputHanding();
+    virtual void updateMousePos ( int x, int y );
 
 	virtual void setupRenderer ();
 	virtual void setDefaults   ();

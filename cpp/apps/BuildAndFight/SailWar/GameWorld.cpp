@@ -3,9 +3,11 @@
 
 #include "GameWorld.h" // THE HEADER
 
+#include "fastmath.h"
 #include "drawMath2D.h"
 
-
+#include <vector>
+#include <algorithm>
 
 const int npts = 4;
 static double poss[npts*2] = { -1.0, 0.0,   0.0, -0.1,   0.0, +0.1,   +1.0, 0.0  };
@@ -111,6 +113,34 @@ void GameWorld::init( ){
 	printf( " >>> Setup  ship1 DONE \n" );
 
 	projectiles.reserve(100);
+
+/*
+	Convex2d * isle1 = new Convex2d( 5 );
+	isle1->corners[0].set( -1.0, -1.0 );
+    isle1->corners[1].set( +1.0, -1.0 );
+    isle1->corners[2].set( +2.0,  0.0 );
+	isle1->corners[3].set( +1.0, +1.0 );
+	isle1->corners[4].set( -1.0, +1.0 );
+    isle1->update_lines();
+	isles.push_back( isle1 );
+*/
+
+    int ncorners = 5;
+    int nisles   = 30;
+    std::vector<double> phi_buf(ncorners);
+    for( int i=0; i<nisles; i++ ){
+        for( double& phi : phi_buf ){ phi = randf() * M_PI * 2; }
+        std::sort( phi_buf.begin(), phi_buf.end() );
+        Convex2d * isle = new Convex2d( ncorners );
+        double x0 = randf( -10.0, 10.0 );
+        double y0 = randf( -8.0, 8.0 );
+        for( int i=0; i<ncorners; i++ ){
+            double phi = phi_buf[i];
+            isle->corners[i].set( x0 + cos( phi ), y0 + sin(phi) );
+        }
+        isle->update_lines();
+        isles.push_back( isle );
+    }
 
 };
 

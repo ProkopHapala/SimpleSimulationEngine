@@ -3,6 +3,7 @@
 #define  drawMath2D_h
 
 #include "Vec2.h"
+//#include "geom2D.h"
 
 namespace Draw2D{
 
@@ -23,10 +24,13 @@ void drawLine_d       ( const Vec2d& p1,  const Vec2d& p2  );
 void drawRectangle_d  ( const Vec2f& p1,  const Vec2f& p2 );
 void drawCircle_d     ( const Vec2d& center, float radius, int n );
 
-void drawLines      ( int nlinks, int * links, Vec2d * points );
-void drawPolarFunc  ( double x0, double y0, double fscale, int n, double phi0, double * data );
+void drawLines         ( int nlinks, int * links, Vec2d * points );
+void drawConvexPolygon ( int n, Vec2d * points, bool filled );
+void drawPolarFunc     ( double x0, double y0, double fscale, int n, double phi0, double * data );
 
 void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
+
+
 
 
 // ==== inline functions

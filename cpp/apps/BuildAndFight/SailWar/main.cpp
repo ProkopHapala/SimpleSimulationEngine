@@ -31,6 +31,8 @@ TO DO :
 #include "Body2D.h"
 #include "AeroSurf2D.h"
 
+#include "geom2D.h"
+
 // ========= include from local app
 
 #include "GameWorld.h"
@@ -113,7 +115,6 @@ void inputHanding(){
 		if( event.type == SDL_QUIT){ quit();  };
 
 	} // while(SDL_PollEvent(&event))
-
 
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
 	if( keys[ SDL_SCANCODE_LEFT  ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi + 0.01 );  }
