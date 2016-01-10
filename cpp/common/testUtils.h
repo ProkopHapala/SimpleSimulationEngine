@@ -12,9 +12,9 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
-void printArray( int n, double * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }};
-void printArray( int n, float  * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }};
-void printArray( int n, int    * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }};
+void printArray( int n, double * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }; printf("\n"); };
+void printArray( int n, float  * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }; printf("\n"); };
+void printArray( int n, int    * vec ){	for (int i=0; i<n; i++){ printf( " %i ", vec[i] ); }; printf("\n"); };
 
 void printVec( const Vec2d& v ){ printf( " %f %f \n", v.x, v.y ); };
 void printVec( const Vec2f& v ){ printf( " %f %f \n", v.x, v.y );};

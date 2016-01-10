@@ -7,6 +7,7 @@
 #include "Vec2.h"
 #include "Vec3.h"
 #include "geom2D.h"
+#include "Convex2d.h"
 
 #include "Projectile.h"
 #include "Projectile.h"

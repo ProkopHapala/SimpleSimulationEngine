@@ -174,12 +174,12 @@ template<> class GridMap2D< Triangle2d, std::vector<Triangle2d*> > : public Grid
 
 	int insert( Triangle2d * t ){
 		int n_inserts = 0;
-		Point2D* a = t->a;
-		Point2D* b = t->b;
-		Point2D* c = t->c;
-		if( b->y < a->y ) { Point2D* tmp = a; a = b; b = tmp; }
-		if( c->y < a->y ) { Point2D* tmp = a; a = c; c = tmp; }
-		if( c->y < b->y ) { Point2D* tmp = b; b = c; c = tmp; }
+		Vec2d* a = t->a;
+		Vec2d* b = t->b;
+		Vec2d* c = t->c;
+		if( b->y < a->y ) { Vec2d* tmp = a; a = b; b = tmp; }
+		if( c->y < a->y ) { Vec2d* tmp = a; a = c; c = tmp; }
+		if( c->y < b->y ) { Vec2d* tmp = b; b = c; c = tmp; }
 		double xa  = a->x;
 		double ya  = a->y;
 		double xb  = b->x;
@@ -213,7 +213,7 @@ template<> class GridMap2D< Triangle2d, std::vector<Triangle2d*> > : public Grid
 				ix2 = ( ixab > oixab ) ? ixab : oixab;
 			}
 			for ( int ix = ix1; ix <= ix2; ix++ ){
-                insert( l, ix, iy );
+                insert( t, ix, iy );
                 n_inserts++;
 				//plot( ix, iy );
 			}
@@ -239,7 +239,7 @@ template<> class GridMap2D< Triangle2d, std::vector<Triangle2d*> > : public Grid
 			}
 			//printf( " ix1 ix2 %i %i \n ", ix1, ix2 );
 			for ( int ix = ix1; ix <= ix2; ix++ ){
-                insert( l, ix, iy );
+                insert( t, ix, iy );
                 n_inserts++;
 				//plot( ix, iy );
 			}
@@ -252,7 +252,7 @@ template<> class GridMap2D< Triangle2d, std::vector<Triangle2d*> > : public Grid
 
     void init( int nx_, int ny_, double step_, int tile_n0 ){
         init_stub( nx_, ny_, step_ );
-		tiles  = new std::vector<Segment2d*>[ nxy ];
+		tiles  = new std::vector<Triangle2d*>[ nxy ];
 		for (int i=0; i<nxy; i++){
 			//tiles[i] = new std::vector<Segment2d*>( );
 			if ( tile_n0 != 0 ){

@@ -17,6 +17,12 @@
 
 //         Basic fast functions
 
+
+////////////////////////////////
+//   FUNCTIONS : pointIn shapes
+////////////////////////////////
+
+
 template <class TYPE>
 inline bool pointInRect( const Vec2TYPE<TYPE>& p, TYPE x0, TYPE y0, TYPE x1, TYPE y1 ){ return ( p.x > x0 ) && ( p.x < x1 ) && ( p.y > y0 ) && ( p.y < y1 ); };
 
@@ -55,7 +61,6 @@ inline bool pointInConvexParalelogram( const Vec2TYPE<TYPE>& p, TYPE * buf, int 
 }
 
 
-
 /////////////////////////
 //   CLASS :   Rect2d
 /////////////////////////
@@ -88,21 +93,6 @@ class Rect2d{
 //   CLASS :   Line2d
 //////////////////////////
 
-/*
-inline double line_equation    ( const Vec2d& a, const Vec2d& b, double& A, double& B, double& C ){ B = a.x - b.x; A = b.y - a.y; C = A*a.x + B*a.y; }
-inline double line_side        ( const Vec2d& p, double A, double B, double C   ){ return   A*p.x + B*p.y - C ;                    }
-inline double dist_line_point  ( const Vec2d& p, double A, double B, double C   ){ return ( A*p.x + B*p.y + C )/sqrt( A*A + B*B ); }
-inline double line_side        ( const Vec2d& p, const Vec2d& a, const Vec2d& b ){ double A,B,C; line_equation( a, b, A,B,C ); return line_side( p, A,B,C );  }
-*/
-
-
-inline double along_unitary( const Vec2d& a, const Vec2d& ab_hat, const Vec2d& p ){ Vec2d ap; ap.set_sub( p, a ); return ab_hat.dot(ap); }
-inline double along        ( const Vec2d& a, const Vec2d& b,      const Vec2d& p ){
-	Vec2d ab; ab.set_sub( b, a ); double rab = ab.norm2();
-	Vec2d ap; ap.set_sub( p, a ); double ca  = ab.dot(ap);
-	return ca / sqrt( rab );
-}
-
 class Line2d{
 	public:
 	union{
@@ -111,20 +101,40 @@ class Line2d{
 		double array[3];
 	};
 
-	inline void   set       ( double a_, double b_, double c_ ){ a=a_; b=b_; c=c_;   };
-	inline void   set       ( const Vec2d& A, const Vec2d& B  ){ b = A.x - B.x; a = B.y - A.y; c = a*A.x + b*A.y; }
-	inline void   normalize (                                 ){ double ir = sqrt( a*a + b*b ); a*=ir; b*=ir; c*=ir; }
-	inline double dist      ( const Vec2d& p                  ) const { return a*p.x + b*p.y - c;            };
+	inline void   set          ( double a_, double b_, double c_ ){ a=a_; b=b_; c=c_;                                   };
+	inline void   set          ( const Vec2d& A, const Vec2d& B  ){ b = A.x - B.x; a = B.y - A.y; c = a*A.x + b*A.y;    };
+	inline void   normalize    (                                 ){ double ir = sqrt( a*a + b*b ); a*=ir; b*=ir; c*=ir; };
+	inline double dist_unitary ( const Vec2d& p                  ) const { return a*p.x + b*p.y - c;                    }; // Should normalize before
+
+	inline void intersectionPoint( const Line2d& l, Vec2d& p ) const {
+		double idet = 1/( a * l.b - b * l.a );
+		p.x = ( c * l.b - b * l.c ) * idet;
+		p.y = ( a * l.c - c * l.a ) * idet;
+	}
+
+    inline double intersection_t( const Vec2d& A, const Vec2d& dAB ) const{
+        double idet = 1/( a * dAB.x + b * dAB.y );
+        return ( c - a * A.x - b * A.y ) * idet;
+	}
+
+    inline unsigned char intersectionPoint( const Vec2d& A, const Vec2d& B, Vec2d& p ) const {
+        Vec2d dAB;
+        dAB.set_sub( B, A );
+        double t  = intersection_t( A, dAB );
+        unsigned char mask = 0;
+        if ( t<0 ) { mask = mask | 1; };
+        if ( t>1 ) { mask = mask | 2; };
+        p.x = A.x + t * dAB.x;
+        p.y = A.y + t * dAB.y;
+        return mask;
+	}
+
 };
 
-inline double line_side     ( const Vec2d& p, const Vec2d& a, const Vec2d& b ){ Line2d l; l.set( a, b ); return l.dist( p );  }
+inline double line_side     ( const Vec2d& p, const Vec2d& a, const Vec2d& b ){ Line2d l; l.set( a, b ); return l.dist_unitary( p );  }
 
-inline void intersection( const Line2d& l1, const Line2d& l2, Vec2d& p ){
-	double idet = 1/( l1.a * l2.b - l1.b * l2.a );
-	p.x = ( l1.c * l2.b - l1.b * l2.c ) * idet;
-	p.y = ( l1.a * l2.c - l1.c * l2.a ) * idet;
-};
-
+/*
+// not usefull ... use Line2d::intersection_t( const Vec2d& A, const Vec2d& dAB ) instead
 inline double intersection_t (  const Vec2d& l1a, const Vec2d& l1b, const Vec2d& l2a, const Vec2d& l2b ) {
     double dx1 = l1b.x - l1a.x;     double dy1 = l1b.y - l1a.y;
     double dx2 = l2b.x - l2a.x;     double dy2 = l2b.y - l2a.y;
@@ -133,6 +143,7 @@ inline double intersection_t (  const Vec2d& l1a, const Vec2d& l1b, const Vec2d&
 	double invD = 1/( -dx2 * dy1 + dx1 * dy2 );
     return ( dx2 * y12 - dy2 * x12 ) * invD;
 }
+*/
 
 inline void intersection_st (  const Vec2d& l1a, const Vec2d& l1b, const Vec2d& l2a, const Vec2d& l2b, double& s, double& t ) {
     double dx1 = l1b.x - l1a.x;     double dy1 = l1b.y - l1a.y;
@@ -200,67 +211,10 @@ class Triangle2d{
 	inline      Triangle2d( int id_ ){ id=id_;  };
 	inline      Triangle2d( int id_, Vec2d* a_, Vec2d* b_, Vec2d* c_ ){ id=id_; a=a_; b=b_; c=c_; };
 	inline void setPoints ( Vec2d* a_, Vec2d* b_, Vec2d* c_ ){ a=a_; b=b_; c=c_; };
-	//inline void setPoints ( const Vec2d& a_, const Vec2d& b_, const Vec2d& c_ ){ a=&a_; b=&b_; c=&c_; };
 
-	//inline bool pointIn( const Vec2d& p ){ return ( line_side( p, *a, *b ) < 0 ); }
 	inline bool pointIn( const Vec2d& p ){
 		double inward = line_side( *c, *a, *b );
 		return ( line_side( p, *a, *b )*inward > 0 ) && ( line_side( p, *b, *c )*inward > 0 ) && ( line_side( p, *c, *a )*inward > 0 );
-	}
-
-};
-
-/////////////////////////
-//   CLASS :   Convex2d
-//////////////////////////
-
-class Convex2d{
-	public:
-	int id;
-	int n;              // number of lines or corners ( it is the same )
-	Vec2d  * corners;
-	Line2d * lines;
-
-	inline void update_lines( ){
-		int nm1 = n - 1;
-		for ( int i=0; i<nm1; i++ ){
-			//lines[i].set( corners[i], corners[i+1] );
-			lines[i].set( corners[i+1], corners[i] );
-		}
-		//lines[nm1].set( corners[nm1], corners[0] );
-		lines[nm1].set( corners[0], corners[nm1] );
-	}
-
-	inline bool pointIn( const Vec2d& p ){
-		return pointInConvexPolygon<double>( p, (double*)lines, n );
-	}
-
-    inline void boundingBox( Rect2d * rect ){
-        //double a,b;
-        double xmin,xmax,ymin,ymax;
-        xmin=xmax=corners[0].x;
-        ymin=ymax=corners[0].y;
-        for ( int i=0; i<n; i++ ){
-            double x = corners[0].x;
-            double y = corners[0].y;
-            if( x<xmin ) xmin = x;
-            if( x>xmax ) xmax = x;
-            if( y<ymin ) ymin = y;
-            if( y>ymax ) ymax = y;
-        }
-        rect->set( xmin, xmax, ymin, ymax );
-    }
-
-	Convex2d( int n_ ){
-	    id      = 0;
-		n       = n_;
-		corners = new Vec2d [ n ];
-		lines   = new Line2d[ n ];
-	}
-
-	~Convex2d( ){
-		delete corners;
-		delete lines;
 	}
 
 };

@@ -119,7 +119,7 @@ void drawConvexPolygon( int n, Vec2d * points, bool filled ){
 	if( filled ){
 		glBegin   ( GL_TRIANGLE_FAN );
 	}else{
-		glBegin   ( GL_LINE_STRIP   );
+		glBegin   ( GL_LINE_LOOP   );
 	}
 	for( int i=0; i<n; i++ ){
 		glVertex3f( (float)points[i].x, (float)points[i].y, 0 );

@@ -9,8 +9,8 @@
 
 class GameScreen : public ScreenSDL2OGL {
 	public:
-	GameWorld * world;
-	Frigate2D * thisShip;
+	GameWorld * world    = NULL;
+	Frigate2D * thisShip = NULL; // without NULL there were segfaults
 
 	// ==== function declarations
 

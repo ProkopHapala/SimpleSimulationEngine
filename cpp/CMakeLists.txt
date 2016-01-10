@@ -12,6 +12,7 @@ SET( COMMON_SRCS "${CMAKE_SOURCE_DIR}/common" )
 
 include_directories(
         ${COMMON_SRCS}
+        ${COMMON_SRCS}/algorithms
         ${COMMON_SRCS}/math
         ${COMMON_SRCS}/dynamics
         ${COMMON_SRCS}/maps

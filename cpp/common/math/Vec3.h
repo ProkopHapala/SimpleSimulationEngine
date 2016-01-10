@@ -132,6 +132,14 @@ class Vec3TYPE{
 		x = x_; y = y_; 
 	};
 
+	inline double along_hat( const VEC& hat, const VEC& p ){ VEC ap; ap.set( p.x-x, p.y-y ); return hat.dot( ap ); }
+	inline double along    ( const VEC& b,   const VEC& p ){
+		VEC ab,ap; 
+		ab.set( b.x - x, b.y - y, b.z - z );
+		ap.set( p.x - x, p.y - y, b.z - z );
+		return ab.dot(ap) / ab.norm(ab);
+	}
+
 };
 
 /*

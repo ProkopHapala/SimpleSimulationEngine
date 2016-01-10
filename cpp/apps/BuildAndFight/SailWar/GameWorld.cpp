@@ -1,13 +1,13 @@
 
 #include <SDL2/SDL_opengl.h>
 
-#include "GameWorld.h" // THE HEADER
+#include <vector>
+#include <algorithm>
 
 #include "fastmath.h"
 #include "drawMath2D.h"
 
-#include <vector>
-#include <algorithm>
+#include "GameWorld.h" // THE HEADER
 
 const int npts = 4;
 static double poss[npts*2] = { -1.0, 0.0,   0.0, -0.1,   0.0, +0.1,   +1.0, 0.0  };

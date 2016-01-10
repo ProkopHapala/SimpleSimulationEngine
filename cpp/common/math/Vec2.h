@@ -101,6 +101,14 @@ class Vec2TYPE{
 		double x_ =    x*bx -   y*by;         y =    y*bx +   x*by;       x=x_;
 	}
 
+	inline double along_hat( const VEC& hat, const VEC& p ){ VEC ap; ap.set( p.x-x, p.y-y ); return hat.dot( ap ); }
+	inline double along    ( const VEC& b,   const VEC& p ){
+		VEC ab,ap; 
+		ab.set( b.x - x, b.y - y );
+		ap.set( p.x - x, p.y - y );
+		return ab.dot(ap) / ab.norm(ab);
+	}
+
 };
 
 using Vec2i = Vec2TYPE<int>;
