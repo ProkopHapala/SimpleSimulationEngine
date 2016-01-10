@@ -235,6 +235,22 @@ class Convex2d{
 		return pointInConvexPolygon<double>( p, (double*)lines, n );
 	}
 
+    inline void boundingBox( Rect2d * rect ){
+        //double a,b;
+        double xmin,xmax,ymin,ymax;
+        xmin=xmax=corners[0].x;
+        ymin=ymax=corners[0].y;
+        for ( int i=0; i<n; i++ ){
+            double x = corners[0].x;
+            double y = corners[0].y;
+            if( x<xmin ) xmin = x;
+            if( x>xmax ) xmax = x;
+            if( y<ymin ) ymin = y;
+            if( y>ymax ) ymax = y;
+        }
+        rect->set( xmin, xmax, ymin, ymax );
+    }
+
 	Convex2d( int n_ ){
 	    id      = 0;
 		n       = n_;

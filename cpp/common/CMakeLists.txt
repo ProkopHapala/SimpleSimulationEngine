@@ -1,3 +1,4 @@
 add_subdirectory (SDL2OGL)
 add_subdirectory (dynamics)
-#add_subdirectory (maps)
+add_subdirectory (math)
+add_subdirectory (maps)

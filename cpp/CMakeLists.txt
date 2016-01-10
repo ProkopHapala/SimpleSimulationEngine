@@ -10,6 +10,16 @@ SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${AXULIARY_COMPILE_FLAGS}" )
 
 SET( COMMON_SRCS "${CMAKE_SOURCE_DIR}/common" )
 
+include_directories(
+        ${COMMON_SRCS}
+        ${COMMON_SRCS}/math
+        ${COMMON_SRCS}/dynamics
+        ${COMMON_SRCS}/maps
+        ${COMMON_SRCS}/optimization
+        ${COMMON_SRCS}/SDL2OGL
+)
+
+
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )
 
 add_subdirectory( common )
