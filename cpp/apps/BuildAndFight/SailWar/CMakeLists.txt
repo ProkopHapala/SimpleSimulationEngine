@@ -21,7 +21,9 @@ add_executable( ${NAME}
 	main.cpp 
 	$<TARGET_OBJECTS:${NAME}_objects> 
 
-	$<TARGET_OBJECTS:Convex2d> 
+	$<TARGET_OBJECTS:Convex2d>
+	$<TARGET_OBJECTS:Voronoi>
+ 
 	$<TARGET_OBJECTS:Collisions> 
 	$<TARGET_OBJECTS:Body> 
 	$<TARGET_OBJECTS:Body2D> 

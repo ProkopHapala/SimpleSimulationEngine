@@ -6,8 +6,13 @@
 
 #include "drawMath2D.h"
 //#include "drawDrawUtils.h"
+#include "Voronoi.h"
 
 #include "GameScreen.h" // THE HEADER
+
+
+
+
 
 void GameScreen::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
@@ -36,9 +41,9 @@ void GameScreen::draw(){
 		//p->update_old_pos();
 	}
 
+	// ============== Convex Polygons Mouse Raycast
 
 /*
-
     //printf( " mouse x,y : %i %i %f %f \n", mouseX, mouseY, mouseRight(mouseX), mouseUp(mouseY) );
     Vec2d mvec;
     mvec.set( mouseRight(mouseX), mouseUp(mouseY) );
@@ -57,15 +62,18 @@ void GameScreen::draw(){
 
 		//exit(0);
 	}
-
 */
 
+	// ============== Convex Polygons Cut
+
+/*
+
     Convex2d base( 5 );
-    /*
-	base.corners[0].set( -1.0, +1.0 );
-    base.corners[1].set( +1.0, -1.5 );
-    base.corners[2].set( +2.0,  0.5 );
-    */
+
+	//base.corners[0].set( -1.0, +1.0 );
+    //base.corners[1].set( +1.0, -1.5 );
+    //base.corners[2].set( +2.0,  0.5 );
+
 	base.corners[0].set( -1.0, -1.0 );
     base.corners[1].set( +1.0, -1.0 );
     base.corners[2].set( +2.0,  0.0 );
@@ -81,31 +89,36 @@ void GameScreen::draw(){
     Line2d cutline; cutline.set( Acut, Bcut );
     glColor3f( 0.2f, 0.9f, 0.2f ); Draw2D::drawLine_d( Acut, Bcut );
 
-/*
-    Vec2d p1,p2;
-    cutline.intersectionPoint(      base.corners[0], base.corners[1], p1 );
-    //intersection_point( Acut, Bcut, base.corners[0], base.corners[1], p2 );
-    glColor3f( 0.9f, 0.2f, 0.2f ); Draw2D::drawLine_d( base.corners[0], base.corners[1] );
-    glColor3f( 0.9f, 0.9f, 0.2f ); Draw2D::drawPointCross_d( p1, 0.3 );
-    //glColor3f( 0.8f, 0.8f, 0.2f ); Draw2D::drawPointCross_d( p2, 0.3 );
-*/
-
-
     Convex2d left;
     Convex2d right;
 
-    //Convex2d * pLeft  = new Convex2d();
-    //Convex2d * pRight = new Convex2d();
-
-    //base.funcking_empty1( cutline, right );
-    //base.funcking_empty2( cutline, left, right );
-    //base.funcking_empty3( cutline, &left, &right );
-    //base.funcking_empty3( cutline, pLeft, pRight );
     base.cut( cutline, left, right );
     glColor3f( 0.9f, 0.2f, 0.9f ); Draw2D::drawPointCross_d( left.corners[0], 0.3 );
     glColor3f( 0.2f, 0.9f, 0.9f ); Draw2D::drawPointCross_d( left.corners[1], 0.3 );
     glColor3f( 0.9f, 0.2f, 0.2f ); Draw2D::drawConvexPolygon( left.n,  left.corners,  true );
     glColor3f( 0.2f, 0.2f, 0.9f ); Draw2D::drawConvexPolygon( right.n, right.corners, true );
+
+*/
+
+    // ============== plot Voronoi
+
+    glColor3f( 0.9f, 0.9f, 0.9f );
+    int iii=0;
+    for ( Vec2d * p : *(world->voronoi->places) ){
+        iii++;
+        Draw2D::drawPointCross_d( *p, 0.1 );
+	}
+	//printf( " Vertices N %i \n", iii );
+
+    glColor3f( 0.9f, 0.9f, 0.9f );
+    iii=0;
+    for ( VoronoiNamespace::VEdge * pe : *(world->voronoi->edges) ){
+        iii++;
+        Draw2D::drawLine_d( *(pe->start), *(pe->end) );
+	}
+	//printf( " Edges N %i \n", iii );
+
+	// ============== rest
 
 	Vec2d compass_pos; compass_pos.set( 0.8*ASPECT_RATIO*zoom, 0.8*zoom );
 

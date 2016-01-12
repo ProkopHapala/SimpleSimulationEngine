@@ -5,6 +5,10 @@
 #include <algorithm>
 
 #include "fastmath.h"
+
+
+
+
 #include "drawMath2D.h"
 
 #include "GameWorld.h" // THE HEADER
@@ -114,17 +118,6 @@ void GameWorld::init( ){
 
 	projectiles.reserve(100);
 
-/*
-	Convex2d * isle1 = new Convex2d( 5 );
-	isle1->corners[0].set( -1.0, -1.0 );
-    isle1->corners[1].set( +1.0, -1.0 );
-    isle1->corners[2].set( +2.0,  0.0 );
-	isle1->corners[3].set( +1.0, +1.0 );
-	isle1->corners[4].set( -1.0, +1.0 );
-    isle1->update_lines();
-	isles.push_back( isle1 );
-*/
-
     int ncorners = 5;
     int nisles   = 30;
     std::vector<double> phi_buf(ncorners);
@@ -141,6 +134,22 @@ void GameWorld::init( ){
         isle->update_lines();
         isles.push_back( isle );
     }
+
+    voronoi = new VoronoiNamespace::Voronoi();
+    VoronoiNamespace::Vertices * vertices = new VoronoiNamespace::Vertices();
+
+    for( int i=0; i<30; i++ ){
+        Vec2d * p = new Vec2d();
+        p->set( randf(0,10), randf(0,10) );
+        vertices->push_back( p );
+    }
+    voronoi->GetEdges( vertices, 100.0d, 100.0d );
+/*
+    voronoi->places = vertices;
+    voronoi->width  = 10.0;
+    voronoi->height = 10.0;
+    voronoi->GetEdges();
+*/
 
 };
 
