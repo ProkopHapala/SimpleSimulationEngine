@@ -138,18 +138,12 @@ void GameWorld::init( ){
     voronoi = new VoronoiNamespace::Voronoi();
     VoronoiNamespace::Vertices * vertices = new VoronoiNamespace::Vertices();
 
-    for( int i=0; i<30; i++ ){
+    for( int i=0; i<50; i++ ){
         Vec2d * p = new Vec2d();
         p->set( randf(0,10), randf(0,10) );
         vertices->push_back( p );
     }
-    voronoi->GetEdges( vertices, 100.0d, 100.0d );
-/*
-    voronoi->places = vertices;
-    voronoi->width  = 10.0;
-    voronoi->height = 10.0;
-    voronoi->GetEdges();
-*/
+    voronoi->GetEdges( vertices, 5.0d, 5.0d );
 
 };
 

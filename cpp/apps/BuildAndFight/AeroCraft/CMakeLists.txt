@@ -24,8 +24,7 @@ add_executable( ${NAME}
 
 	$<TARGET_OBJECTS:Body> 
 	$<TARGET_OBJECTS:AeroSurf> 
-	$<TARGET_OBJECTS:drawMath> 
-	$<TARGET_OBJECTS:ScreenSDL2OGL> 
+	$<TARGET_OBJECTS:SDL2OGL> 
 )
 
 target_link_libraries( ${NAME} ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )

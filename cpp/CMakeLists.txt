@@ -25,3 +25,4 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )
 
 add_subdirectory( common )
 add_subdirectory( apps )
+add_subdirectory( tests )

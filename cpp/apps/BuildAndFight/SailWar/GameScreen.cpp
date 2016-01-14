@@ -114,8 +114,13 @@ void GameScreen::draw(){
     iii=0;
     for ( VoronoiNamespace::VEdge * pe : *(world->voronoi->edges) ){
         iii++;
-        Draw2D::drawLine_d( *(pe->start), *(pe->end) );
+        Vec2d a,b;
+        a.set( *(pe->start) );
+        b.set( *(pe->end)   );
+        Draw2D::drawLine_d( a, b );
+        //printf( " %f %f   %f %f \n", a.x, a.y,    b.x, b.y  );
 	}
+	//exit(0);
 	//printf( " Edges N %i \n", iii );
 
 	// ============== rest
