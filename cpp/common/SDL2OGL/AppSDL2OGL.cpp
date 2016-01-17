@@ -40,8 +40,12 @@ void AppSDL2OGL::inputHanding(){
 	if( keys[ SDL_SCANCODE_UP    ] ){ camY0 += camStep; }
 	if( keys[ SDL_SCANCODE_DOWN  ] ){ camY0 -= camStep; }
 	SDL_GetMouseState( &mouseX, &mouseY );
-	mouse_begin_x = mouseRight( mouseX );
-	mouse_begin_y = mouseUp   ( mouseY );
+	mouse_begin_x = mouseRight( mouseX ) + camX0;
+	mouse_begin_y = mouseUp   ( mouseY ) + camY0;
+    fWIDTH  = zoom*ASPECT_RATIO;
+	fHEIGHT = zoom;
+	camXmin = camX0 - fWIDTH; camYmin = camY0 - fHEIGHT;
+	camXmax = camX0 + fWIDTH; camYmax = camY0 + fHEIGHT;
 }
 
 AppSDL2OGL::AppSDL2OGL( int& id, int WIDTH_, int HEIGHT_ ) : ScreenSDL2OGL( id, WIDTH_, HEIGHT_ ) {

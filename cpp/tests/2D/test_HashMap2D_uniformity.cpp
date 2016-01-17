@@ -14,6 +14,9 @@
 #include "HashMap2D.h"
 #include "drawMath2D.h"
 
+#include "AppSDL2OGL.h"
+#include "testUtils.h"
+
 // ==================== HashMap Debug utils
 
 class Histogram{
@@ -126,7 +129,6 @@ void testMapIndexing( const HashMap2D<Vec2d>& map, double x, double y ){
 
 // ======================  TestApp
 
-#include "AppSDL2OGL.h"
 class TestApp : public AppSDL2OGL {
 	public:
 	int npoints;
@@ -144,11 +146,15 @@ class TestApp : public AppSDL2OGL {
 
 TestApp::TestApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-	map.init( 0.5f, 16 );
-	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
-	int nside = 120;
+    //int power = 11; int nside = 20;
+    int power = 16; int nside = 100;
+    // int power = 20; int nside = 400;
+
+
 	npoints = 4*nside*nside;
 	points  = new Vec2d[npoints];
+    map.init( 0.5f, power );
+	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
 	int i = 0;
 	for( int iy=-nside+1; iy<nside; iy++ ){
 		for( int ix=-nside+1; ix<nside; ix++ ){
@@ -169,6 +175,7 @@ TestApp::TestApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, H
 }
 
 void TestApp::draw(){
+    long t0 = getCPUticks();
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
@@ -185,22 +192,23 @@ void TestApp::draw(){
 	}
 
 	// find points inside screen
-	float fWIDTH = 0.98*10*ASPECT_RATIO;
-	float fHEIHT = 0.98*10;
-	float x0 = -camX0 - fWIDTH; float y0 = -camY0 - fHEIHT;
-	float x1 = -camX0 + fWIDTH; float y1 = -camY0 + fHEIHT;
-	printf( " x0,y0 (%3.3f,%3.3f) x1,y1 (%3.3f,%3.3f) %f\n", x0,y0, x1,y1, zoom );
-	Draw2D::drawRectangle( x0, y0, x1, y1, false );
-	UINT nfound = map.getObjectsInRect( x0, x1, y0, y1, out );
+	//printf( " x0,y0 (%3.3f,%3.3f) x1,y1 (%3.3f,%3.3f) %f\n", x0,y0, x1,y1, zoom );
+	Draw2D::drawRectangle( camXmin, camYmin, camXmax, camYmax, false );
+	long t1 = getCPUticks();
+	UINT nfound = map.getObjectsInRect( camXmin, camYmin, camXmax, camYmax, &(out[0]) );
+	long t12 = getCPUticks() - t1;
 	glBegin(GL_POINTS);
 	for( int i=0; i<nfound; i++ ){
 		glVertex3f( (float) out[i]->x, (float)out[i]->y, 0.0f );
 	}
 	glEnd();
 
+
 	//STOP = true;
 
 	drawHistogram( hist.nbins+1, hist.bins, 3 );
+	long tdraw = getCPUticks() - t0;
+	printf(" frame: %06i HashFind: %3.2f ticks/point ( found %i points in %6.2f Mticks | %6.2f MTicks/frame ) \n", frameCount, ((double)t12)/nfound, nfound, ((1.0e-6d)*t12), ((1.0e-6d)*tdraw) );
 };
 
 void TestApp::drawHUD(){

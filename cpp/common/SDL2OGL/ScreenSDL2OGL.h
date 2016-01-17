@@ -17,7 +17,9 @@ class ScreenSDL2OGL{
 	float VIEW_DEPTH;
 	float ASPECT_RATIO;
 	float zoom;
+
 	float camX0=0.0f,camY0=0.0f;
+	float fWIDTH, fHEIGHT, camXmin, camYmin, camXmax, camYmax;
 
 	int   mouseX, mouseY;
 	float mouse_begin_x ;

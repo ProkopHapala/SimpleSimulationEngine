@@ -15,11 +15,11 @@ include_directories(
 
 set( NAME "SailWar" )
 
-add_library( ${NAME}_objects OBJECT Frigate2D Yacht2D Projectile Gun GameWorld GameScreen )
+#add_library( ${NAME}_objects OBJECT Frigate2D Yacht2D Projectile Gun GameWorld GameScreen )
 
 add_executable( ${NAME} 
-	main.cpp 
-	$<TARGET_OBJECTS:${NAME}_objects> 
+	main.cpp Frigate2D.cpp Yacht2D.cpp Projectile.cpp Gun.cpp GameWorld.cpp GameScreen.cpp
+#	$<TARGET_OBJECTS:${NAME}_objects> 
 
 	$<TARGET_OBJECTS:Convex2d>
 	$<TARGET_OBJECTS:Voronoi>

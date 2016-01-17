@@ -16,11 +16,11 @@ include_directories(
 set( NAME "AeroCraft" )
 
 
-add_library( ${NAME}_objects OBJECT AeroCraft FieldPatch GameWorld GameScreen )
+#add_library( ${NAME}_objects OBJECT AeroCraft FieldPatch GameWorld GameScreen )
 
 add_executable( ${NAME} 
-	main.cpp 
-	$<TARGET_OBJECTS:${NAME}_objects> 
+	main.cpp AeroCraft.cpp FieldPatch.cpp GameWorld.cpp GameScreen.cpp
+	#$<TARGET_OBJECTS:${NAME}_objects> 
 
 	$<TARGET_OBJECTS:Body> 
 	$<TARGET_OBJECTS:AeroSurf> 

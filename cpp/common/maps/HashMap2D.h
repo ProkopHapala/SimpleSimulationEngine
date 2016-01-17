@@ -79,7 +79,7 @@ class HashMap2D : public HashMap<OBJECT> {
     }
 */
 
-	UINT getObjectsInRect( double x0, double x1, double y0, double y1, OBJECT**out ){
+	UINT getObjectsInRect( double x0, double y0, double x1, double y1, OBJECT**out ){
 		UHALF ix0 = getIx( x0 );  UHALF iy0 = getIy( y0 );
 		UHALF ix1 = getIx( x1 );  UHALF iy1 = getIy( y1 );
 		UINT nfound = 0;

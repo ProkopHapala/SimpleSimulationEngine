@@ -27,7 +27,7 @@ void ScreenSDL2OGL::camera(){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
 	glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
-	glTranslatef( camX0, camY0, 0.0f );
+	glTranslatef( -camX0, -camY0, 0.0f );
 	glMatrixMode (GL_MODELVIEW);
 }
 
