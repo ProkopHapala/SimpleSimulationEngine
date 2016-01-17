@@ -15,17 +15,16 @@
 
 class GridMap2D_stub {
     public:
-	double    step, invStep;
-	int       nx, ny, nxy;
+	double        step, invStep;
+	int           nx, ny, nxy;
 
-	inline int getIx( double x ){ return (int)( invStep * x ); };
-	inline int getIy( double y ){ return (int)( invStep * y ); };
+	inline int    getIx( double x ){ return (int)( invStep * x ); };
+	inline int    getIy( double y ){ return (int)( invStep * y ); };
+	inline double getX ( int    ix ){ return step * ix ; };
+	inline double getY ( int    iy ){ return step * iy ; };
 
-	inline double getX( int ix ){ return step * ix ; };
-	inline double getY( int iy ){ return step * iy ; };
-
-	inline int getIndex ( int ix,   int iy   ){ return nx*iy + ix;                     };
-	inline int getIndex ( double x, double y ){ return getIndex( getIx(x), getIy(y) ); };
+	inline int    getIndex ( int ix,   int iy   ){ return nx*iy + ix;                     };
+	inline int    getIndex ( double x, double y ){ return getIndex( getIx(x), getIy(y) ); };
 
     inline void init_stub( int nx_, int ny_, double step_ ){
         step    = step_;

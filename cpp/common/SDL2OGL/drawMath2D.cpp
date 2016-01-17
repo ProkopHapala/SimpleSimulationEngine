@@ -50,14 +50,19 @@ void drawTriangle( const Vec2f& p1, const Vec2f& p2, const Vec2f& p3 ){
 	glEnd();
 };
 
-void drawRectangle( const Vec2f& p1, const Vec2f& p2 ){
-	glDisable (GL_LIGHTING);
+
+void drawRectangle( float p1x, float p1y, float p2x, float p2y, bool filled ){
+	if( filled){ glBegin(GL_QUADS); }else{ glBegin(GL_LINE_LOOP); };
 	glBegin   (GL_QUADS);
-		glVertex3f( p1.x, p1.y, 0 );
-		glVertex3f( p1.x, p2.y, 0 );
-		glVertex3f( p2.x, p2.y, 0 );
-		glVertex3f( p2.x, p1.y, 0 );
+		glVertex3f( p1x, p1y, 0 );
+		glVertex3f( p1x, p2y, 0 );
+		glVertex3f( p2x, p2y, 0 );
+		glVertex3f( p2x, p1y, 0 );
 	glEnd();
+};
+
+void drawRectangle( const Vec2f& p1, const Vec2f& p2, bool filled ){
+	drawRectangle( p1.x, p1.y, p2.x, p2.y, filled );
 };
 
 void drawPoint_d( const Vec2d& vec ){
@@ -82,8 +87,8 @@ void drawLine_d( const Vec2d& p1,  const Vec2d& p2  ){
 	Vec2f p1_,p2_; convert( p1, p1_ );   convert( p2, p2_ );   drawLine( p1_, p2_);
 };
 
-void drawRectangle_d( const Vec2d& p1,  const Vec2d& p2  ){
-	Vec2f p1_,p2_; convert( p1, p1_ );   convert( p2, p2_ );   drawRectangle( p1_, p2_);
+void drawRectangle_d( const Vec2d& p1,  const Vec2d& p2, bool filled ){
+	Vec2f p1_,p2_; convert( p1, p1_ );   convert( p2, p2_ );   drawRectangle( p1_, p2_, filled );
 };
 
 void drawTriangle_d( const Vec2d& p1,  const Vec2d& p2, const Vec2d& p3 ){
@@ -107,12 +112,25 @@ void drawCircle_d( const Vec2d& center_, float radius, int n ){
 	drawCircle( center, radius, n );
 };
 
+void drawPoints( int npoints, Vec2d * points ){
+	glBegin   (GL_POINTS);
+	for( int i=0; i<npoints; i++ ){
+		Vec2f p; convert( points[i], p );  glVertex3f( (float)p.x, (float)p.y, 0.0f );
+	}
+	glEnd();
+};
+
 void drawLines( int nlinks, int * links, Vec2d * points ){
 	int n2 = nlinks<<1;
+	glBegin   (GL_LINES);
 	for( int i=0; i<n2; i+=2 ){
-		drawLine_d( points[links[i]], points[links[i+1]] );
+		Vec2f p1, p2;
+		convert( points[links[i]],   p1 );  glVertex3f( (float)p1.x, (float)p1.y, 0.0f );
+		convert( points[links[i+1]], p2 );  glVertex3f( (float)p2.x, (float)p2.y, 0.0f );
+		//drawLine_d( points[links[i]], points[links[i+1]] );
 		//printf ( " %i %i %i %f %f \n", i, links[i], links[i+1], points[links[i]].x, points[links[i+1]].x );
 	}
+	glEnd();
 };
 
 void drawConvexPolygon( int n, Vec2d * points, bool filled ){

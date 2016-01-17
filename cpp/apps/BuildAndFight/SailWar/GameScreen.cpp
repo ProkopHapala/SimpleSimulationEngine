@@ -142,8 +142,8 @@ void GameScreen::drawHUD(){
     float bar_y =  10.0f;
     float bar_x = 100.0f;
     if( thisShip != NULL ){
-        Draw2D::drawRectangle( { 0.0f,  0.0f }, { bar_x * thisShip->gunload_left,    bar_y } );
-        Draw2D::drawRectangle( { 0.0f, bar_y }, { bar_x * thisShip->gunload_right, 2*bar_y } );
+        Draw2D::drawRectangle( { 0.0f,  0.0f }, { bar_x * thisShip->gunload_left,    bar_y }, true );
+        Draw2D::drawRectangle( { 0.0f, bar_y }, { bar_x * thisShip->gunload_right, 2*bar_y }, true );
         Draw2D::drawLine     ( { bar_x, 0.0f }, { bar_x, 2*bar_y } );
     }
 };
