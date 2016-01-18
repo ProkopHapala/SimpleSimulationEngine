@@ -1,26 +1,4 @@
 
-
-/*
-
-Performance:
-
-Home computer :
-Intel® Core™2 Quad CPU Q9450 @ 2.66GHz × 4
-36-60 ticks of processor per point
-
-
-
-
-*/
-
-
-
-
-
-
-
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -160,7 +138,11 @@ class TestApp : public AppSDL2OGL {
 
     Vec2d* out[65536];
 
+
+
 	// ---- function declarations
+
+    void prepareHashMap( int power, int nside );
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -168,36 +150,37 @@ class TestApp : public AppSDL2OGL {
 
 };
 
-TestApp::TestApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-    //int power = 11; int nside = 20;
-    int power = 16; int nside = 300;
-    //int power = 20; int nside = 400;
-    //int power = 24; int nside = 1500;
-
+void TestApp::prepareHashMap( int power, int nside ){
 
 	npoints = 4*nside*nside;
 	points  = new Vec2d[npoints];
     map.init( 0.5f, power );
-	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
+	//printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
 	int i = 0;
 	for( int iy=-nside+1; iy<nside; iy++ ){
 		for( int ix=-nside+1; ix<nside; ix++ ){
 			i++;
 			points[ i ].set( ( ix + randf() ) * map.step, ( iy + randf() ) * map.step );
-			//map.insertNoTest( &(points[i]), points[i].x, points[i].y  );
-			map.insertIfNew( &(points[i]), points[i].x, points[i].y  );
+			map.insertNoTest( &(points[i]), points[i].x, points[i].y  );
 			//printf( " insering (%i,%i) %i (%3.3f,%3.3f) \n", ix, iy, i, points[i].x, points[i].y );
 		};
 	};
 	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
 
+/*
 	hist.init( 20, 0, 20 );
 	for( int i=0; i<map.capacity; i++ ){
 		hist.insert( map.fields[i].n + 0.5 );
 	}
 	printf( "now comes printHistogram( hist );\n" );
 	printHistogram( hist );
+*/
+
+}
+
+TestApp::TestApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+
 }
 
 void TestApp::draw(){
@@ -212,6 +195,7 @@ void TestApp::draw(){
 
 	//Vec2d* out[1<<16];
 
+
 	UINT   nbucket  = map.getBucketObjects( mouse_begin_x, mouse_begin_y, &(out[0]) );
 	//printf( " mouse (%f,%f) nbucket %i filled %i \n", mouse_begin_x, mouse_begin_y, nbucket, map.filled );
 	for( int i=0; i<nbucket; i++ ){
@@ -220,21 +204,27 @@ void TestApp::draw(){
 
 	// find points inside screen
 	//printf( " x0,y0 (%3.3f,%3.3f) x1,y1 (%3.3f,%3.3f) %f\n", x0,y0, x1,y1, zoom );
+
+
 	Draw2D::drawRectangle( camXmin, camYmin, camXmax, camYmax, false );
 	long t1 = getCPUticks();
 	UINT nfound = map.getObjectsInRect( camXmin, camYmin, camXmax, camYmax, &(out[0]) );
 	long t12 = getCPUticks() - t1;
+    //printf(" frame %06i : %3.2f ticks/point ( %i points in %6.2f Mticks ) \n", frameCount, ((double)t12)/nfound, nfound, 1.0e-6d*t12 );
+    printf(" %06i : %4.2f %i %i \n", frameCount, ((double)t12)/nfound, nfound, t12 );
 	glBegin(GL_POINTS);
 	for( int i=0; i<nfound; i++ ){
 		glVertex3f( (float) out[i]->x, (float)out[i]->y, 0.0f );
 	}
 	glEnd();
 
+
 	//STOP = true;
 
-	drawHistogram( hist.nbins+1, hist.bins, 3 );
+	//drawHistogram( hist.nbins+1, hist.bins, 3 );
 	long tdraw = getCPUticks() - t0;
-	printf(" frame: %06i HashFind: %3.2f ticks/point ( found %i points in %6.2f Mticks | %6.2f MTicks/frame ) \n", frameCount, ((double)t12)/nfound, nfound, ((1.0e-6d)*t12), ((1.0e-6d)*tdraw) );
+	//printf(" frame: %06i HashFind: %3.2f ticks/point ( found %i points in %6.2f Mticks | %6.2f MTicks/frame ) \n", frameCount, ((double)t12)/nfound, nfound, ((1.0e-6d)*t12), ((1.0e-6d)*tdraw) );
+
 };
 
 void TestApp::drawHUD(){
@@ -251,7 +241,20 @@ int main(int argc, char *argv[]){
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	int junk;
 	testApp = new TestApp( junk , 800, 600 );
-	testApp->loop( 1000000 );
+
+    const  int ntest = 5;
+	//static int powers[ntest] = {   16,16,16,16, 16  ,   20,  20,  20,  20,  20  };
+	//static int nps   [ntest] = {   40,60,80,100,120 ,  160, 200, 240, 320, 400  };
+    static int powers[ntest] = {   20,  20,  20,  20,  20  };
+	static int nps   [ntest] = {  160, 200, 240, 320, 400  };
+	for( int itest = 0; itest<ntest; itest++ ){
+        printf( " \n" );
+        //printf( " ================= \n" );
+        testApp->prepareHashMap( powers[itest], nps[itest] );
+        testApp->loop( 100 );
+        delete testApp->map.fields;
+        delete testApp->points;
+    }
 	return 0;
 }
 

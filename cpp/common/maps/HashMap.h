@@ -46,9 +46,13 @@ class HashMapField{
 
 };
 
-//#define INFINITE_LOOP_DEBUG(ss)  if( (i==hash)||(i==(hash-1)) ){ printf( " INFINITE LOOP !!! %s \n ", ss );  return -i; };
+//#define CHECK_WRONG_INSERT if( fields[ i ].object != NULL ){ printf( "wrong insert %i %i \n", i, hash ); exit(0); }
+//#define INFINITE_LOOP_DEBUG(ss,n_)  if( (i==hash)||(i==(hash-1)) ){ \
+    printf( "INFINITE LOOP!!! %s | filled %i capacity %i hash %i i %i n %i n[hash] %i \n", \
+                              ss,  filled,   capacity,   hash,   i,   n_ , fields[hash].n ); exit(0); return -i; };
 
-#define INFINITE_LOOP_DEBUG(ss)
+#define CHECK_WRONG_INSERT
+#define INFINITE_LOOP_DEBUG(ss,n)
 
 template <class TYPE >
 class HashMap{
@@ -66,12 +70,14 @@ class HashMap{
 		power      = power_;
 		capacity   = 1<<power;
 		mask       = capacity-1;
+		filled = 0;
 		//printf( "  power %i capacity %i mask %i \n ", power, capacity, mask );
 		fields     = new HashMapField<TYPE>[ capacity ];
-		//for( int i=0; i<capacity; i++ ){ fields[i].set( 0, 0 ); }   // initialization done by constructor (?)
+		for( int i=0; i<capacity; i++ ){ fields[i].set( 0, 0 ); }   // FIXME initialization done by constructor (?)
 	}
 
 	inline void insert( TYPE* object, ULONG bucket, UINT hash, UINT i ){
+	    CHECK_WRONG_INSERT
 		filled++;
 		fields[ hash ].n++;
 		fields[ i    ].set( object, bucket );
@@ -85,7 +91,7 @@ class HashMap{
 		UINT i    = hash;
 		while( fields[i].object != NULL ){
 			i=(i+1)&mask;
-			INFINITE_LOOP_DEBUG( "findFreePlace" )
+			INFINITE_LOOP_DEBUG( "findFreePlace", 0 )
 		}
 		return i;
 	}
@@ -99,14 +105,20 @@ class HashMap{
 
 	void resize( UINT power_ ){
 		UINT old_capacity = capacity;
+		UINT old_filled   = filled;
 		HashMapField<TYPE>*  old_fields = fields;
 		init( power_ );
+		printf( " resize to power %i (capacity %i filled %i) \n", power, capacity, old_filled );
 		HashMapField<TYPE>*  p_field    = old_fields;
 		for (int i=0; i<old_capacity; i++){
-			insertNoTest( p_field->object, p_field->bucket );
+            if( p_field->object != NULL ){
+                insertNoTest( p_field->object, p_field->bucket );
+            }
 			p_field++;
 		}
+		//printf( " -- resize to power %i (capacity %i filled %i) \n", power, capacity, filled );
 		delete old_fields;
+		//exit(0);
 	}
 
 	inline int find( TYPE* object, ULONG bucket, UINT hash ) const {
@@ -118,7 +130,7 @@ class HashMap{
 			if( object == fields[ i ].object             ){ return i; }
 			if( hash   == ( mask&hashFunc( fields[ i ].bucket ) ) ){ n--; } // FIXME : here we call hashFunc in loop, would storing hash improve performance ?
 			i=(i+1)&mask;
-			INFINITE_LOOP_DEBUG("find")
+			INFINITE_LOOP_DEBUG("find", n )
 		}
 		return -1;
 	}
@@ -127,10 +139,10 @@ class HashMap{
 		return find( object, bucket, hash );
 	}
 	inline int insertIfNew( TYPE* object, ULONG bucket ){
+	    if ( (filled<<1) > capacity ) resize( power+1 ); // BE WARE !!! must be before hash otherwise hash would be inconsistent
 		UINT hash = mask&hashFunc( bucket );
 		int  i    = find( object, bucket, hash );
 		if( i < 0 ){
-			if ( (filled<<1) > capacity ) resize( power+1 );
 			UINT i = findFreePlace( hash );
 			insert( object, bucket, hash, i );
 			return i;
@@ -164,7 +176,7 @@ class HashMap{
 				n--;
 			}
 			i=(i+1)&mask;
-			INFINITE_LOOP_DEBUG("getBucketIndexes")
+			INFINITE_LOOP_DEBUG("getBucketIndexes", n )
 		}
 		return j;
 	};
@@ -185,7 +197,7 @@ class HashMap{
 				n--;
 			}
 			i=(i+1)&mask;
-			INFINITE_LOOP_DEBUG("getBucketObjects")
+			INFINITE_LOOP_DEBUG("getBucketObjects", n )
 		}
 		return j;
 	};
