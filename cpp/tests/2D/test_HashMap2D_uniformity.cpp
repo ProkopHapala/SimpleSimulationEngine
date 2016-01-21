@@ -234,7 +234,7 @@ void TestApp::draw(){
 
 	drawHistogram( hist.nbins+1, hist.bins, 3 );
 	long tdraw = getCPUticks() - t0;
-	printf(" frame: %06i HashFind: %3.2f ticks/point ( found %i points in %6.2f Mticks | %6.2f MTicks/frame ) \n", frameCount, ((double)t12)/nfound, nfound, ((1.0e-6d)*t12), ((1.0e-6d)*tdraw) );
+	//printf(" frame: %06i HashFind: %3.2f ticks/point ( found %i points in %6.2f Mticks | %6.2f MTicks/frame ) \n", frameCount, ((double)t12)/nfound, nfound, ((1.0e-6d)*t12), ((1.0e-6d)*tdraw) );
 };
 
 void TestApp::drawHUD(){

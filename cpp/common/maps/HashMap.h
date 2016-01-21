@@ -15,7 +15,7 @@ inline ULONG  hashFunc( ULONG i ) {
 	//return  ( 2166136261UL ^ (i * 16777619) );    // VERY BAD
 	//return ((i >> 16)^i);                           // NOT WORKING
 	//return ( i * 2654435761 >> 16 );   // Knuth's multiplicative method // GOOD
-	return ( i * 2654435761 >> 8 );   // GOOD, even better than Knuth for map size 2^16 ( 65536 fields )
+	//return ( i * 2654435761 >> 8 );   // GOOD, even better than Knuth for map size 2^16 ( 65536 fields )
 	//return ( i * 2654435761 >> 16 ) ^ i; // REASONABLY GOOD but worse than pure Knuth
 	//i = ((i >> 16) ^ i) * 0x45d9f3b; i = ((i >> 16) ^ i) * 0x45d9f3b; return  ((i >> 16) ^ i); // REASONABLY GOOD but worse than pure Knuth
 	//i = ((i >> 16) ^ i) * 0x45d9f3b; return  ((i >> 16) ^ i); // LESS GOOD
@@ -24,10 +24,10 @@ inline ULONG  hashFunc( ULONG i ) {
 
 // TODO: maybe optimal would be put several objects per bucket
 
-template <class TYPE1 >
+template <class TYPE >
 class HashMapField{
 	public:
-	TYPE1*  object;  // pointer is also unique identifier
+	TYPE*  object;  // pointer is also unique identifier
 	ULONG   bucket;  // unique index of bucket
 	UINT    n;       // number of stored objects with this hash
 	//UINT    hash;    // hash    // not necessary to store, can be quickly computed from ibox
@@ -38,7 +38,7 @@ class HashMapField{
 		bucket  = 0; // FIXME this is not necessary
 	}
 
-	inline void set( TYPE1* object_, ULONG bucket_ ){
+	inline void set( TYPE* object_, ULONG bucket_ ){
 		object  = object_;
 		bucket  = bucket_;
 		//hash    = hash_;

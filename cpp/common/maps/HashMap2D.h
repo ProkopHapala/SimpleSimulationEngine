@@ -28,14 +28,14 @@ class HashMap2D : public HashMap<OBJECT> {
 
 	//inline UHALF  getIx     ( double  x )          const{ return (UHALF)( ((short)(invStep * x)) + MAP_OFFSET ); }; // does not work for negative
 	//inline UHALF  getIy     ( double  y )          const{ return (UHALF)( ((short)(invStep * y)) + MAP_OFFSET ); };
-	inline UHALF  getIx     ( double  x )          const{ return (UHALF)( ( (invStep * x) + MAP_OFFSET ) ); };
-	inline UHALF  getIy     ( double  y )          const{ return (UHALF)( ( (invStep * y) + MAP_OFFSET ) ); };
-	inline double getX      ( UHALF  ix )          const{ return step * ( ix - MAP_OFFSET );            };
-	inline double getY      ( UHALF  iy )          const{ return step * ( iy - MAP_OFFSET );            };
-	inline ULONG  getBucket ( UHALF  ix, UHALF iy )const{ return ( iy << 16 ) + ix;                     };
-	inline ULONG  getBucket ( double  x, double y )const{ return getBucket( getIx(x), getIy(y) );       };
-	inline void   unfoldBucket( ULONG bucket, UHALF& ix, UHALF& iy  )const{ ix = bucket&0xFFFF; iy = (bucket>>16)&0xFFFF; }
-	inline void   unfoldBucket( ULONG bucket, double& x, double& y  )const{ UHALF ix,iy;  unfoldBucket( bucket, ix, iy  ); x=getX(ix); y=getY(iy); }
+	inline UHALF  getIx        ( double  x )          const{ return (UHALF)( ( (invStep * x) + MAP_OFFSET ) ); };
+	inline UHALF  getIy        ( double  y )          const{ return (UHALF)( ( (invStep * y) + MAP_OFFSET ) ); };
+	inline double getX         ( UHALF  ix )          const{ return step * ( ix - MAP_OFFSET );            };
+	inline double getY         ( UHALF  iy )          const{ return step * ( iy - MAP_OFFSET );            };
+	inline ULONG  getBucketInt ( UHALF  ix, UHALF iy )const{ return ( iy << 16 ) + ix;                     };
+	inline ULONG  getBucket    ( double  x, double y )const{ return getBucketInt( getIx(x), getIy(y) );       };
+	inline void   unfoldBucket ( ULONG bucket, UHALF& ix, UHALF& iy  )const{ ix = bucket&0xFFFF; iy = (bucket>>16)&0xFFFF; }
+	inline void   unfoldBucket ( ULONG bucket, double& x, double& y  )const{ UHALF ix,iy;  unfoldBucket( bucket, ix, iy  ); x=getX(ix); y=getY(iy); }
 
     inline void init( double step_, UINT power_ ){
         step    = step_;
