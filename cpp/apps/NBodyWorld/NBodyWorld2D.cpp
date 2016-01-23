@@ -20,7 +20,6 @@ for all particles "a" from "ActiveParticles" set
 */
 
 void NBodyWorld::update( ){
-    double dt = dt_frame / per_frame;
     for( int i=0; i<per_frame; i++  ){
         //simulationStep( dt );
         simulationStep_BruteForce( dt );
@@ -43,16 +42,25 @@ void NBodyWorld::simulationStep_BruteForce( double dt ){
             pj->force.sub( fout );
         }
     }
+
+    if( picked != NULL ){
+        Vec2d fstring;
+        stringForce( picked->pos, anchor, 0.01, fstring );
+        picked->force.add( fstring );
+    }
+
     for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
-        double ox = pi->pos.x;
-        double oy = pi->pos.y;
-        UHALF oix = map.getIx( ox );
-        UHALF oiy = map.getIy( oy );
+        // double ox = pi->pos.x;
+        //double oy = pi->pos.y;
+        //UHALF oix = map.getIx( ox );
+        //UHALF oiy = map.getIy( oy );
         ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
-        pi->vel.mul( 0.8 );
+        pi->vel.mul( damp );
         pi->move_PointBody2D( dt );
         ULONG new_index = map.getBucket( pi->pos.x, pi->pos.y );
+
+        // reinsert if particle moved to other cell
         if( old_index != new_index ){
             bool removed = map.HashMap<Particle2D>::tryRemove  ( pi, old_index );
             if( removed ){
@@ -203,6 +211,8 @@ void NBodyWorld::assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D**
 };
 
 void NBodyWorld::init(){
+    evalAuxSimParams();
+
     activeParticles = new Particle2D*[ 1<<20 ];
 
     int power = 8; int nside = 5;
@@ -211,12 +221,12 @@ void NBodyWorld::init(){
     nParticles = (2*nside+1)*(2*nside+1);
     //nParticles = 4*nside*nside;
 	particles  = new Particle2D[nParticles];
-    map.init( 0.5f, power );
+    map.init( 2.0f, power );
 	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
 	int i = 0;
 	for( int iy=-nside; iy<nside; iy++ ){
 		for( int ix=-nside; ix<nside; ix++ ){
-			particles[i].charge = 0;
+			particles[i].charge = ((int)randf(0.0, 1.9999999))*2 -1;
 			particles[i].vel.set( 0.0, 0.0 );
 			particles[i].setMass( 1.0 );
 			particles[i].pos.set(

@@ -10,13 +10,17 @@ class AppSDL2OGL : public ScreenSDL2OGL{
 	public:
 	int frameCount = 0;
 	bool loopEnd   = false, STOP = false;
-	float camStep  = VIEW_MOVE_STEP; 
+	float camStep  = VIEW_MOVE_STEP;
 
 // ============ function declarations
 
 	virtual void quit(       );
 	virtual void loop( int n );
 	virtual void inputHanding();
+	virtual void eventHandling   ( const SDL_Event& event               );
+	virtual void keyStateHandling( const Uint8 *keys                    );
+	virtual void mouseHandling   ( );
+	void defaultMouseHandling    ( const int& mouseX, const int& mouseY );
 
 	AppSDL2OGL( int& id, int WIDTH_, int HEIGHT_ );
 
