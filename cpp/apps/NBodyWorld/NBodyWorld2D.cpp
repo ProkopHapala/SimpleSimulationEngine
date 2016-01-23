@@ -1,6 +1,18 @@
 
 #include "NBodyWorld2D.h" // THE HEADER
 
+
+/*
+    TODO:
+    there is some problem in  which has two effects:
+
+
+*/
+
+
+
+
+
 /* Algorithm Pseudocode:
 // force assembling step
 clean set "ActiveParticles"
@@ -29,8 +41,8 @@ for all particles "a" from "ActiveParticles" set
 void NBodyWorld::update( ){
     for( int i=0; i<per_frame; i++  ){
         //simulationStep( dt );
-        simulationStep_semiBruteForce( dt );
-        //simulationStep_BruteForce( dt );
+        //simulationStep_semiBruteForce( dt );
+        simulationStep_BruteForce( dt );
     }
 }
 
@@ -42,7 +54,11 @@ void NBodyWorld::moveParticle( Particle2D* pi ){
     if( old_index != new_index ){
         bool removed = map.HashMap<Particle2D>::tryRemove  ( pi, old_index );
         if( removed ){
-            map.HashMap<Particle2D>::insertIfNew( pi, new_index );
+            int iinsert = map.HashMap<Particle2D>::insertIfNew( pi, new_index );
+            if( iinsert < 0 ){
+                printf( " cannot insert! inconsistent HashMap! \n" );
+                //exit(0);
+            }
         }else{
             printf( " cannot remove! inconsistent HashMap! \n" );
             //exit(0);
@@ -63,18 +79,20 @@ void NBodyWorld::moveParticleDebug( Particle2D* pi, int i ){
             int iinsert = map.HashMap<Particle2D>::insertIfNew( pi, new_index );
             map.unfoldBucketInt( old_index, ixo, iyo );
             map.unfoldBucketInt( new_index, ixn, iyn );
-            if( iinsert > 0 ){
+            if( iinsert >= 0 ){
                 printf( " reinsert: %03i-th %i=(%i,%i) -> %i=(%i,%i)  %i\n", i, old_index, ixo,iyo, new_index, ixn,iyn, iinsert );
             }else{
-                printf( " cannot reinsert: %03i-th %i=(%i,%i) -> %i=(%i,%i) %i\n", i, old_index, ixo,iyo, new_index, ixn,iyn, iinsert  );
+                printf( "!!! cannot insert !!! : %03i-th %i=(%i,%i) -> %i=(%i,%i) %i\n", i, old_index, ixo,iyo, new_index, ixn,iyn, iinsert  );
+                exit(0);
             }
             //printf( " map after reinsert %i -> %i   filled %i capacity %i\n", old_index, new_index, map.filled, map.capacity );
         }else{
             UHALF ixn,iyn, ixo,iyo;
             map.unfoldBucketInt( old_index, ixo, iyo );
             //printf( " cannot remove! %03i-th (%3.3f,%3.3f) (%i,%i) bucket %i (%i,%i) \n", i, ox,oy, oix, oiy, old_index, ix, iy );
-            printf( " cannot remove: %03i-th %i=(%i,%i) \n", i, old_index, ixo,iyo );
+            printf( "!!! cannot remove !!! : %03i-th %i=(%i,%i) \n", i, old_index, ixo,iyo );
             //printf( " map.fields[134]:  %i %i %i \n", map.fields[134].bucket, map.fields[134].object, pi );
+            exit(0);
         }
     }
 }
@@ -97,14 +115,14 @@ void NBodyWorld::simulationStep_BruteForce( double dt ){
 
     if( picked != NULL ){
         Vec2d fstring;
-        stringForce( picked->pos, anchor, 0.01, fstring );
+        stringForce( picked->pos, anchor, anchorStiffness, fstring );
         picked->force.add( fstring );
     }
 
     for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
-        moveParticle( pi );
-        //moveParticleDebug( pi, i );
+        //moveParticle( pi );
+        moveParticleDebug( pi, i );
     }
 
 };
@@ -122,17 +140,16 @@ void NBodyWorld::simulationStep_semiBruteForce( double dt ){
     for( ULONG icell : activeCells ){ assembleForces( icell ); }
     //exit(0);
 
-
     if( picked != NULL ){
         Vec2d fstring;
-        stringForce( picked->pos, anchor, 0.01, fstring );
+        stringForce( picked->pos, anchor, anchorStiffness, fstring );
         picked->force.add( fstring );
     }
 
     for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
-        moveParticle( pi );
-        //moveParticleDebug( pi, i );
+        //moveParticle( pi );
+        moveParticleDebug( pi, i );
     }
 
 };

@@ -44,8 +44,10 @@ class Particle2D: public PointBody2D{
 class NBodyWorld{
 	public:
     double dt_frame  = 1.0;
-    int    per_frame = 10;
+    int    per_frame = 20;
     double damping   = 0.2;
+
+    double anchorStiffness = 0.05;
 
     double damp;
     double dt;
