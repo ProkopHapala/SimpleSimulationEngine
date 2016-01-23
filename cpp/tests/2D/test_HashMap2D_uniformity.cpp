@@ -8,17 +8,7 @@ Home computer :
 Intel® Core™2 Quad CPU Q9450 @ 2.66GHz × 4
 36-60 ticks of processor per point
 
-
-
-
 */
-
-
-
-
-
-
-
 
 
 #include <stdlib.h>
@@ -81,10 +71,13 @@ void drawHasMapTile( const HashMap2D<Vec2d>& map, ULONG index ){
 
 void drawHashMapFilling( const HashMap<Vec2d>& map ){
 	int n = map.capacity;
+	//printf( " n = %i \n", n );
 	for( int i=0; i<n; i++ ){
 		int ni = map.fields[i].n;
 		Draw2D::drawLine( {i, 10}, {i,10+ni*3} );
+		//printf( " %i %i \n", i, ni );
 	}
+	//exit(0);
 	//map.unfoldBucket( index, x, y );
 }
 
@@ -170,6 +163,7 @@ class TestApp : public AppSDL2OGL {
 
 TestApp::TestApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
+    //int power = 8; int nside = 5;
     //int power = 11; int nside = 20;
     int power = 16; int nside = 300;
     //int power = 20; int nside = 400;
@@ -232,8 +226,8 @@ void TestApp::draw(){
 
 	//STOP = true;
 
-	drawHistogram( hist.nbins+1, hist.bins, 3 );
-	long tdraw = getCPUticks() - t0;
+	//drawHistogram( hist.nbins+1, hist.bins, 3 );
+	//long tdraw = getCPUticks() - t0;
 	//printf(" frame: %06i HashFind: %3.2f ticks/point ( found %i points in %6.2f Mticks | %6.2f MTicks/frame ) \n", frameCount, ((double)t12)/nfound, nfound, ((1.0e-6d)*t12), ((1.0e-6d)*tdraw) );
 };
 

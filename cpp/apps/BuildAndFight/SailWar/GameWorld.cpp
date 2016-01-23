@@ -62,7 +62,7 @@ void GameWorld::init( ){
 
     int hitBoxShape = glGenLists(1);
 	glNewList( hitBoxShape , GL_COMPILE );
-        Draw2D::drawCircle_d( {0.0f,0.0f}, 1.0f, 32 );
+        Draw2D::drawCircle_d( {0.0f,0.0f}, 1.0f, 32, false );
 	glEndList();
 
     int FigateShape = glGenLists(1);

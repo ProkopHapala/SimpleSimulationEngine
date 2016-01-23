@@ -15,7 +15,7 @@ void drawLine       ( const Vec2f& p1, const Vec2f& p2   );
 void drawTriangle   ( const Vec2f& p1, const Vec2f& p2, const Vec2f& p3 );
 void drawRectangle  ( float p1x, float p1y, float p2x, float p2y, bool filled );
 void drawRectangle  ( const Vec2f& p1, const Vec2f& p2, bool filled );
-void drawCircle     ( const Vec2f& center, float radius, int n );
+void drawCircle     ( const Vec2f& center, float radius, int n, bool filled );
 
 void drawPoint_d      ( const Vec2d& vec                   );
 void drawPointCross_d ( const Vec2d& vec, double d         );
@@ -23,7 +23,7 @@ void drawVec_d        ( const Vec2d& vec                   );
 void drawVecInPos_d   ( const Vec2d& v,   const Vec2d& pos );
 void drawLine_d       ( const Vec2d& p1,  const Vec2d& p2  );
 void drawRectangle_d  ( const Vec2f& p1,  const Vec2f& p2, bool filled );
-void drawCircle_d     ( const Vec2d& center, float radius, int n );
+void drawCircle_d     ( const Vec2d& center, float radius, int n, bool filled );
 
 void drawPoints        ( int npoints, Vec2d * points );
 void drawLines         ( int nlinks, int * links, Vec2d * points );

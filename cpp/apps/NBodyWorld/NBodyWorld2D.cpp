@@ -19,43 +19,118 @@ for all particles "a" from "ActiveParticles" set
         put cell "i" of particle "a" into set "ActiveCells"
 */
 
+void NBodyWorld::update( ){
+    double dt = dt_frame / per_frame;
+    for( int i=0; i<per_frame; i++  ){
+        //simulationStep( dt );
+        simulationStep_BruteForce( dt );
+    }
+}
+
+
+void NBodyWorld::simulationStep_BruteForce( double dt ){
+
+    for( int i=0; i<nParticles; i++ ){ particles[i].force.set( 0.0, 0.0 ); }
+    for(int i=0; i<nParticles; i++ ){
+        Particle2D* pi = particles+i;
+        for(int j=0; j<i; j++ ){
+            Particle2D* pj = particles+j;
+            Vec2d fout;
+            double qq = pi->charge * pj->charge;
+            pairwiseForce( pi->pos, pj->pos, qq, fout );
+            //printf( "praticles  %i %i force %f %f \n", i, j, fout.x, fout.y );
+            pi->force.add( fout );
+            pj->force.sub( fout );
+        }
+    }
+    for( int i=0; i<nParticles; i++ ){
+        Particle2D* pi = particles+i;
+        double ox = pi->pos.x;
+        double oy = pi->pos.y;
+        UHALF oix = map.getIx( ox );
+        UHALF oiy = map.getIy( oy );
+        ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
+        pi->vel.mul( 0.8 );
+        pi->move_PointBody2D( dt );
+        ULONG new_index = map.getBucket( pi->pos.x, pi->pos.y );
+        if( old_index != new_index ){
+            bool removed = map.HashMap<Particle2D>::tryRemove  ( pi, old_index );
+            if( removed ){
+                UHALF ixn,iyn, ixo,iyo;
+                int iinsert = map.HashMap<Particle2D>::insertIfNew( pi, new_index );
+                map.unfoldBucketInt( old_index, ixo, iyo );
+                map.unfoldBucketInt( new_index, ixn, iyn );
+                if( iinsert > 0 ){
+                    printf( " reinsert: %03i-th %i=(%i,%i) -> %i=(%i,%i)  %i\n", i, old_index, ixo,iyo, new_index, ixn,iyn, iinsert );
+                }else{
+                    printf( " cannot reinsert: %03i-th %i=(%i,%i) -> %i=(%i,%i) %i\n", i, old_index, ixo,iyo, new_index, ixn,iyn, iinsert  );
+                }
+                //printf( " map after reinsert %i -> %i   filled %i capacity %i\n", old_index, new_index, map.filled, map.capacity );
+            }else{
+                UHALF ixn,iyn, ixo,iyo;
+                map.unfoldBucketInt( old_index, ixo, iyo );
+                //printf( " cannot remove! %03i-th (%3.3f,%3.3f) (%i,%i) bucket %i (%i,%i) \n", i, ox,oy, oix, oiy, old_index, ix, iy );
+                printf( " cannot remove: %03i-th %i=(%i,%i) \n", i, old_index, ixo,iyo );
+                //printf( " map.fields[134]:  %i %i %i \n", map.fields[134].bucket, map.fields[134].object, pi );
+            }
+        }
+    }
+
+    /*
+    for( int i=0; i<1; i++ ){
+    //for( int i=0; i<nParticles; i++ ){
+        Particle2D* pi = particles+i;
+        ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
+        pi->pos.x += 0.01;
+        ULONG new_index = map.getBucket( pi->pos.x, pi->pos.y );
+        if( old_index != new_index ){
+            bool removed = map.HashMap<Particle2D>::tryRemove( pi, old_index );
+            if( removed ){
+                map.HashMap<Particle2D>::insertIfNew( pi, new_index );
+                printf( " map after reinsert %i -> %i   filled %i capacity %i\n", old_index, new_index, map.filled, map.capacity );
+            }else{
+                printf( " cannot remove! map HashMap is inconsistent (%i,%i) bucket %i \n", map.getIx(pi->pos.x), map.getIy(pi->pos.y), old_index );
+            }
+        }
+    }
+    */
+
+};
+
 
 void NBodyWorld::simulationStep( double dt ){
     // find particles in active cells, clean forces and put the particles to activeParticles buffer
+    activeCellsNeighbors.clear();
+    nActiveParticles = 0;
     for( ULONG icell : activeCells ){
         UHALF ix,iy;
-        map.unfoldBucket( icell, ix, iy );
-        activateParticles( map.getBucket( ix-1, iy-1 ) );
-        activateParticles( map.getBucket( ix  , iy-1 ) );
-        activateParticles( map.getBucket( ix+1, iy-1 ) );
-        activateParticles( map.getBucket( ix-1, iy   ) );
-        activateParticles( icell                           );
-        activateParticles( map.getBucket( ix+1, iy   ) );
-        activateParticles( map.getBucket( ix-1, iy+1 ) );
-        activateParticles( map.getBucket( ix  , iy+1 ) );
-        activateParticles( map.getBucket( ix+1, iy+1 ) );
+        map.unfoldBucketInt( icell, ix, iy );
+        activateCell( map.getBucket( ix-1, iy-1 ) );
+        activateCell( map.getBucket( ix  , iy-1 ) );
+        activateCell( map.getBucket( ix+1, iy-1 ) );
+        activateCell( map.getBucket( ix-1, iy   ) );
+        activateCell( icell                       );
+        activateCell( map.getBucket( ix+1, iy   ) );
+        activateCell( map.getBucket( ix-1, iy+1 ) );
+        activateCell( map.getBucket( ix  , iy+1 ) );
+        activateCell( map.getBucket( ix+1, iy+1 ) );
     }
     // evaluate pairwise forces
     for( ULONG icell : activeCells ){ assembleForces( icell ); } // performance intensive step
     // move the active particles and update activeCells accordingly
     // CONSIDERATION :  would be better to iterate over activeParticles or over activeCellsNighbors ?
+    activeCells.clear();
     ULONG icell_old = 0;
     for( int i=0; i<nActiveParticles; i++ ){
         Particle2D* pi = activeParticles[i];
         pi->move_PointBody2D( dt );
-        // CONSIDERATION : we can optimize here ... in activeParticles are particles from one cell grouped => we can check if icell changed from previous
-        ULONG icell = map.getBucket( pi->pos.x, pi->pos.y );
-        if( icell != icell_old ){
-            if( activeCells.find(icell) == activeCells.end() ){ activeCells.insert(icell); }
-            icell_old = icell;
-        }
+        activateAroundParticle( pi, icell_old );
     }
-
 };
 
-void NBodyWorld::activateParticles( ULONG i ){
+void NBodyWorld::activateCell( ULONG i ){
     // check if this is first time we visit this cell
-    if( activeCellsNighbors.find(i) != activeCellsNighbors.end() ) return;
+    if( activeCellsNeighbors.find(i) != activeCellsNeighbors.end() ) return;
     // find all particles, put them to ActiveParticles, and clean the forces
     Particle2D* buf_i[256];
     UINT ni = map.HashMap<Particle2D>::getBucketObjects( i, &buf_i[0] );
@@ -66,7 +141,16 @@ void NBodyWorld::activateParticles( ULONG i ){
         nActiveParticles++;
     }
     // store cell into the visited cells
-    activeCellsNighbors.insert( i );
+    activeCellsNeighbors.insert( i );
+}
+
+void NBodyWorld::activateAroundParticle( Particle2D* pi, ULONG& icell_old ){
+    // CONSIDERATION : we can optimize here ... in activeParticles are particles from one cell grouped => we can check if icell changed from previous
+    ULONG icell = map.getBucket( pi->pos.x, pi->pos.y );
+    if( icell != icell_old ){
+        if( activeCells.find(icell) == activeCells.end() ){ activeCells.insert(icell); }
+        icell_old = icell;
+    }
 }
 
 void NBodyWorld::assembleForces( ULONG i ){
@@ -79,14 +163,15 @@ void NBodyWorld::assembleForces( ULONG i ){
         for(int jj=0; jj<ii; jj++ ){
             Particle2D* pj = buf_i[jj];
             Vec2d fout;
-            shortRangeForce( pi->pos, pj->pos, fout );
+            double qq = pi->charge * pj->charge;
+            pairwiseForce( pi->pos, pj->pos, qq, fout );
             pi->force.add( fout );
             pj->force.sub( fout );
         }
     }
     // offside part
     UHALF ix,iy;
-    map.unfoldBucket( i, ix, iy );
+    map.unfoldBucketInt( i, ix, iy );
     assembleForces_offside( i, map.getBucket( ix-1, iy-1 ), ni, &buf_i[0] );
     assembleForces_offside( i, map.getBucket( ix  , iy-1 ), ni, &buf_i[0] );
     assembleForces_offside( i, map.getBucket( ix+1, iy-1 ), ni, &buf_i[0] );
@@ -108,7 +193,8 @@ void NBodyWorld::assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D**
             for(int jj=0; jj<nj; jj++ ){
                 Particle2D* pj = buf_j[jj];
                 Vec2d fout;
-                shortRangeForce( pi->pos, pj->pos, fout );
+                double qq = pi->charge * pj->charge;
+                pairwiseForce( pi->pos, pj->pos, qq, fout );
                 pi->force.add( fout );
                 pj->force.sub( fout );
             }
@@ -117,6 +203,41 @@ void NBodyWorld::assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D**
 };
 
 void NBodyWorld::init(){
+    activeParticles = new Particle2D*[ 1<<20 ];
+
+    int power = 8; int nside = 5;
+    //int power = 11; int nside = 20;
+    //int power = 16; int nside = 300;
+    nParticles = (2*nside+1)*(2*nside+1);
+    //nParticles = 4*nside*nside;
+	particles  = new Particle2D[nParticles];
+    map.init( 0.5f, power );
+	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
+	int i = 0;
+	for( int iy=-nside; iy<nside; iy++ ){
+		for( int ix=-nside; ix<nside; ix++ ){
+			particles[i].charge = 0;
+			particles[i].vel.set( 0.0, 0.0 );
+			particles[i].setMass( 1.0 );
+			particles[i].pos.set(
+                ( ix + randf(0.2,0.8) ) * map.step,
+                ( iy + randf(0.2,0.8) ) * map.step );
+                //( ix + 0.5 ) * map.step,
+                //( iy + 0.5 ) * map.step );
+			//map.insertNoTest( &(points[i]), points[i].x, points[i].y  );
+			map.insertIfNew( &(particles[i]), particles[i].pos.x, particles[i].pos.y  );
+			printf( " insering %03i-th particle  (%3.3f,%3.3f) to (%i,%i) %i \n", i,  particles[i].pos.x,  particles[i].pos.y, map.getIx( particles[i].pos.x), map.getIy( particles[i].pos.y), map.getBucket( particles[i].pos.x, particles[i].pos.y) );
+            i++;
+		};
+	};
+	nParticles = i;
+	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
+
+
+    ULONG icell_old = 0;
+    for( int i=0; i<nParticles; i++ ){ activateAroundParticle( &particles[i], icell_old ); };
+    printf( "number of active cells %i\n", activeCells.size() );
+
 
 };
 

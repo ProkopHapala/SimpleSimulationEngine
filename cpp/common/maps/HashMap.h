@@ -14,7 +14,7 @@ inline ULONG  hashFunc( ULONG i ) {
 	//return  ( ( 2166136261UL ^ i ) * 16777619 );  // VERY BAD
 	//return  ( 2166136261UL ^ (i * 16777619) );    // VERY BAD
 	//return ((i >> 16)^i);                           // NOT WORKING
-	//return ( i * 2654435761 >> 16 );   // Knuth's multiplicative method // GOOD
+	return ( i * 2654435761 >> 16 );   // Knuth's multiplicative method // GOOD
 	//return ( i * 2654435761 >> 8 );   // GOOD, even better than Knuth for map size 2^16 ( 65536 fields )
 	//return ( i * 2654435761 >> 16 ) ^ i; // REASONABLY GOOD but worse than pure Knuth
 	//i = ((i >> 16) ^ i) * 0x45d9f3b; i = ((i >> 16) ^ i) * 0x45d9f3b; return  ((i >> 16) ^ i); // REASONABLY GOOD but worse than pure Knuth
@@ -35,7 +35,7 @@ class HashMapField{
 	HashMapField(){
 		object  = NULL;
 		n       = 0;
-		bucket  = 0; // FIXME this is not necessary
+		bucket  = 0; // FIXME this is maybe not necessary
 	}
 
 	inline void set( TYPE* object_, ULONG bucket_ ){
@@ -46,13 +46,16 @@ class HashMapField{
 
 };
 
+#define CHECK_WRONG_INSERT
+#define INFINITE_LOOP_DEBUG(ss,n)
+#define DEBUG_REMOVE_FAILED( object, bucket, hash, i )
+
 //#define CHECK_WRONG_INSERT if( fields[ i ].object != NULL ){ printf( "wrong insert %i %i \n", i, hash ); exit(0); }
 //#define INFINITE_LOOP_DEBUG(ss,n_)  if( (i==hash)||(i==(hash-1)) ){ \
     printf( "INFINITE LOOP!!! %s | filled %i capacity %i hash %i i %i n %i n[hash] %i \n", \
                               ss,  filled,   capacity,   hash,   i,   n_ , fields[hash].n ); exit(0); return -i; };
-
-#define CHECK_WRONG_INSERT
-#define INFINITE_LOOP_DEBUG(ss,n)
+//#define DEBUG_REMOVE_FAILED( object, bucket, hash, i ) \
+    printf( " DEBUG_REMOVE_FAILED %i %i %i %i | %i \n", object, bucket, hash, i, fields[hash].n );
 
 template <class TYPE >
 class HashMap{
@@ -81,11 +84,14 @@ class HashMap{
 		filled++;
 		fields[ hash ].n++;
 		fields[ i    ].set( object, bucket );
+		//printf( " DEBUG_INSERT  (%i,%i) %i, %i, %i \n", i, hash, fields[ i ].object, fields[ i ].bucket, fields[ hash ].n );
 	}
 	inline void remove( UINT i, UINT hash ){
 		filled--;
 		fields[ hash ].n--;
-		fields[ i    ].object = NULL;
+		//fields[ i    ].object = NULL; // WARNING : if we do not set bucket to 0 we must check for NULL in find
+		fields[ i    ].set( NULL, 0 );
+		//printf( " DEBUG_REMOVE  (%i,%i) %i, %i, %i \n", i, hash, fields[ i ].object, fields[ i ].bucket, fields[ hash ].n );
 	};
 	inline int findFreePlace( UINT hash ) const {
 		UINT i    = hash;
@@ -127,8 +133,11 @@ class HashMap{
 		//printf( " find : object %i bucket %i hash %i n %i \n", object, bucket, hash, n );
 		while( n > 0 ){
 			//printf( " : i %i n %i bucket %i hash(bucket) %i hash %i object %i \n", i, n, fields[i].bucket, mask&hashFunc( fields[ i ].bucket ), hash, fields[i].object );
-			if( object == fields[ i ].object             ){ return i; }
-			if( hash   == ( mask&hashFunc( fields[ i ].bucket ) ) ){ n--; } // FIXME : here we call hashFunc in loop, would storing hash improve performance ?
+			TYPE* obj_i = fields[ i ].object ;
+			if( obj_i != NULL ){ // FIXME : this could be omitted if we make sure that for NULL field bucket is set such that it does not map to our hash
+                if( object == obj_i  ){ return i; }
+                if( hash   == ( mask&hashFunc( fields[ i ].bucket ) ) ){ n--; } // FIXME : here we call hashFunc in loop, would storing hash improve performance ?
+			}
 			i=(i+1)&mask;
 			INFINITE_LOOP_DEBUG("find", n )
 		}
@@ -158,6 +167,7 @@ class HashMap{
 			remove( i, hash);
 			return true;
 		};
+		DEBUG_REMOVE_FAILED( object, bucket, hash, i )
 		return false;
 	};
 
@@ -199,6 +209,7 @@ class HashMap{
 			i=(i+1)&mask;
 			INFINITE_LOOP_DEBUG("getBucketObjects", n )
 		}
+		//printf( " getBucketObjects bucket %i return j %i n %i \n", bucket, j, n );
 		return j;
 	};
 

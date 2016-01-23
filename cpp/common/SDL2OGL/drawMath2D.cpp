@@ -95,21 +95,21 @@ void drawTriangle_d( const Vec2d& p1,  const Vec2d& p2, const Vec2d& p3 ){
 	Vec2f p1_,p2_,p3_;  convert( p1, p1_ );  convert( p2, p2_ ); convert( p3, p3_ ); drawTriangle( p1_, p2_, p3_ );
 };
 
-void drawCircle( const Vec2f& center, float radius, int n ){
-	glBegin   (GL_LINES);
+void drawCircle( const Vec2f& center, float radius, int n, bool filled ){
+	if( filled){ glBegin(GL_TRIANGLE_FAN); }else{ glBegin(GL_LINE_LOOP); };
 	float dphi =  6.28318530718f / n;
 	Vec2f drot; drot.fromAngle( dphi );
 	Vec2f v;    v.set( radius, 0.0f );
-	for ( int i=0; i<=n; i++ ){
+	for ( int i=0; i<n; i++ ){
 		glVertex3f( center.x + v.x, center.y + v.y, 0 );
 		v.mul_cmplx( drot );
 	}
 	glEnd();
 };
 
-void drawCircle_d( const Vec2d& center_, float radius, int n ){
+void drawCircle_d( const Vec2d& center_, float radius, int n, bool filled ){
 	Vec2f center; convert( center_, center );
-	drawCircle( center, radius, n );
+	drawCircle( center, radius, n , filled );
 };
 
 void drawPoints( int npoints, Vec2d * points ){
@@ -134,11 +134,7 @@ void drawLines( int nlinks, int * links, Vec2d * points ){
 };
 
 void drawConvexPolygon( int n, Vec2d * points, bool filled ){
-	if( filled ){
-		glBegin   ( GL_TRIANGLE_FAN );
-	}else{
-		glBegin   ( GL_LINE_LOOP   );
-	}
+	if( filled ){glBegin   ( GL_TRIANGLE_FAN );	}else{glBegin   ( GL_LINE_LOOP   );	}
 	for( int i=0; i<n; i++ ){
 		glVertex3f( (float)points[i].x, (float)points[i].y, 0 );
 	}
