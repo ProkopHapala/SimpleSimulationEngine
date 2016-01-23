@@ -100,7 +100,7 @@ void printHashMap( const HashMap2D<Vec2d>& map ){
 	for( int i=0; i<n; i++ ){
 		ULONG bucket = map.fields[i].bucket;
 		UHALF ibx,iby;
-		map.unfoldBucket( bucket, ibx,iby);
+		map.unfoldBucketInt( bucket, ibx,iby);
 		if( map.fields[i].object == NULL ){
 			printf( "field %03i  :  %03i (%i,%i) NULL \n", i, map.fields[i].n, ibx, iby );
 		}else{
@@ -119,7 +119,7 @@ void drawHashMap( const HashMap2D<Vec2d>& map ){
 	for( int i=0; i<n; i++ ){
 		ULONG bucket = map.fields[i].bucket;
 		UHALF ibx,iby;
-		map.unfoldBucket( bucket, ibx,iby);
+		map.unfoldBucketInt( bucket, ibx,iby);
 		if( map.fields[i].object != NULL ){
 			Vec2d* p = map.fields[i].object;
 			double x,y;
@@ -135,7 +135,7 @@ void testMapIndexing( const HashMap2D<Vec2d>& map, double x, double y ){
 	ix = map.getIx( x );
 	iy = map.getIy( y );
 	ULONG bucket = map.getBucket( ix, iy );
-	map.unfoldBucket( bucket, ix_, iy_ );
+	map.unfoldBucketInt( bucket, ix_, iy_ );
 	map.unfoldBucket( bucket, x_, y_ );
 	printf( " (%3.3f,%3.3f), (%i,%i), %i, (%i,%i), (%3.3f,%3.3f) \n", x,y,  ix,iy, bucket, ix_,iy_,  x_,y_ );
 }
