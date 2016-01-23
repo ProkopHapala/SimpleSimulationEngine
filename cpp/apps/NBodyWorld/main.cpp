@@ -22,6 +22,10 @@ class NBodyWorldApp : public AppSDL2OGL {
 	virtual void draw   ();
 	virtual void drawHUD();
 	virtual void mouseHandling( );
+	virtual void eventHandling   ( const SDL_Event& event  );
+
+	void pickParticle( Particle2D*& picked );
+
 	NBodyWorldApp( int& id, int WIDTH_, int HEIGHT_ );
 
 };
@@ -47,14 +51,12 @@ void NBodyWorldApp::draw(){
     }
 */
 
-/*
     glColor3f( 0.2f, 0.2f, 0.2f );
     for( ULONG icell : world.activeCells ){
         double x,y;
         world.map.unfoldBucket( icell, x, y );
         Draw2D::drawRectangle( (float)x, (float)y, (float)(x+world.map.step), (float)(y+world.map.step), false );
     }
-*/
 
     Particle2D* screenObjects[65536];
     //float camXmin_ =-1; float camXmax_ =+1;
@@ -81,47 +83,22 @@ void NBodyWorldApp::draw(){
         for( UHALF ix = ix0; ix<=ix1; ix++ ){
             UINT nfoundi = world.map.getBucketObjectsInt( ix, iy, screenObjects );
             nfound_tot += nfoundi;
+            for( int i=0; i<nfoundi; i++ ){
+                Particle2D* p = screenObjects[i];
+                if( p->charge > 0 ){ glColor3f( 0.0f, 0.5f, 1.0f ); }else{ glColor3f( 1.0f, 0.5f, 0.0f ); }
+                Draw2D::drawCircle_d( p->pos, 0.5, 8, true );
+            }
+            /*
             if( nfoundi > 0 ){
                 glColor3f( 0.3f, 0.3f, 0.3f );
                 double x = world.map.getX(ix);
                 double y = world.map.getY(iy);
                 Draw2D::drawRectangle( (float)x, (float)y, (float)(x+world.map.step), (float)(y+world.map.step), false );
-                for( int i=0; i<nfoundi; i++ ){
-                    Particle2D* p = screenObjects[i];
-                    if( p->charge > 0 ){ glColor3f( 0.0f, 0.5f, 1.0f ); }else{ glColor3f( 1.0f, 0.5f, 0.0f ); }
-                    Draw2D::drawCircle_d( p->pos, 0.5, 8, true );
-                }
             }
+            */
             //printf( " ix %i iy %i  \n", ix, iy, ni );
         }
     }
-
-/*
-    // mouse picking
-    double rmax  = 2.0d;
-    double r2max = rmax*rmax;
-    glColor3f( 0.3f, 0.3f, 0.3f );
-    Vec2d vmouse;
-    vmouse.set( mouse_begin_x, mouse_begin_y );
-    Draw2D::drawPointCross_d( vmouse, 0.5 );
-    UINT mfound = world.map.getObjectsInRect( (float)(vmouse.x - rmax ), (float)(vmouse.y - rmax ), (float)(vmouse.x + rmax ), (float)(vmouse.y + rmax ), &(screenObjects[0]) );
-    int imin = -1;
-    double r2min = 1e+300;
-    for( int i=0; i<mfound; i++ ){
-        Particle2D* p = screenObjects[i];
-        Vec2d d;
-        d.set_sub( p->pos, vmouse );
-        double r2 = d.norm2();
-        if( r2 < r2max ){
-            if( r2 < r2min ){  r2min = r2; imin = i; }
-        }
-    }
-    if( imin > 0 ){
-        world.picked = screenObjects[imin];
-    }else{
-        world.picked = NULL;
-    }
-*/
 
     Draw2D::drawPointCross_d( world.anchor, 0.5 );
     if( world.picked != NULL ) Draw2D::drawLine_d( world.anchor, world.picked->pos );
@@ -134,37 +111,60 @@ void NBodyWorldApp::draw(){
 void NBodyWorldApp::mouseHandling( ){
     Uint32 buttons = SDL_GetMouseState( &mouseX, &mouseY );
     defaultMouseHandling( mouseX, mouseY );
-
     world.anchor.set( mouse_begin_x, mouse_begin_y );
+}
 
+
+void NBodyWorldApp::pickParticle( Particle2D*& picked ){
     Particle2D* screenObjects[256];
-    if ( buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-        // mouse picking
-        double rmax  = 2.0d;
-        double r2max = rmax*rmax;
-        Vec2d vmouse;
-        vmouse.set( mouse_begin_x, mouse_begin_y );
-        UINT mfound = world.map.getObjectsInRect( (float)(vmouse.x - rmax ), (float)(vmouse.y - rmax ), (float)(vmouse.x + rmax ), (float)(vmouse.y + rmax ), &(screenObjects[0]) );
-        //printf( "mfound  %i \n", mfound );
-        int imin = -1;
-        double r2min = 1e+300;
-        for( int i=0; i<mfound; i++ ){
-            Particle2D* p = screenObjects[i];
-            Vec2d d;
-            d.set_sub( p->pos, vmouse );
-            double r2 = d.norm2();
-            if( r2 < r2max ){
-                if( r2 < r2min ){  r2min = r2; imin = i; }
+    // mouse picking
+    double rmax  = 2.0d;
+    double r2max = rmax*rmax;
+    Vec2d vmouse;
+    vmouse.set( mouse_begin_x, mouse_begin_y );
+    UINT mfound = world.map.getObjectsInRect( (float)(vmouse.x - rmax ), (float)(vmouse.y - rmax ), (float)(vmouse.x + rmax ), (float)(vmouse.y + rmax ), &(screenObjects[0]) );
+    //printf( "mfound  %i \n", mfound );
+    int imin = -1;
+    double r2min = 1e+300;
+    for( int i=0; i<mfound; i++ ){
+        Particle2D* p = screenObjects[i];
+        Vec2d d;
+        d.set_sub( p->pos, vmouse );
+        double r2 = d.norm2();
+        if( r2 < r2max ){
+            if( r2 < r2min ){  r2min = r2; imin = i; }
+        }
+        //printf( " r2 %3.3f r2max %3.3f r2min %3.3f imin %i \n", r2, r2max, r2min, imin );
+    }
+    if( imin >= 0 ){
+        picked = screenObjects[imin];
+    }else{
+        picked = NULL;
+    }
+    //if( world.picked != NULL ) printf( " MOUSE picked (%f,%f) \n", world.picked->pos.x, world.picked->pos.y );
+}
+
+void NBodyWorldApp::eventHandling ( const SDL_Event& event  ){
+    printf( "NBodyWorldApp::eventHandling() \n" );
+    switch( event.type ){
+        case SDL_MOUSEBUTTONDOWN:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:
+                    //printf( "left button pressed !!!! " );
+                    pickParticle( world.picked );
+                break;
             }
-            //printf( " r2 %3.3f r2max %3.3f r2min %3.3f imin %i \n", r2, r2max, r2min, imin );
-        }
-        if( imin >= 0 ){
-            world.picked = screenObjects[imin];
-        }else{
-            world.picked = NULL;
-        }
-        //if( world.picked != NULL ) printf( " MOUSE picked (%f,%f) \n", world.picked->pos.x, world.picked->pos.y );
+            break;
+        case SDL_MOUSEBUTTONUP:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:
+                    //printf( "left button pressed !!!! " );
+                    world.picked = NULL;
+                    break;
+            }
+            break;
     };
+    AppSDL2OGL::eventHandling( event );
 }
 
 void NBodyWorldApp::drawHUD(){

@@ -1,7 +1,6 @@
 
 #include "NBodyWorld2D.h" // THE HEADER
 
-
 /* Algorithm Pseudocode:
 // force assembling step
 clean set "ActiveParticles"
@@ -19,13 +18,66 @@ for all particles "a" from "ActiveParticles" set
         put cell "i" of particle "a" into set "ActiveCells"
 */
 
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+#include "drawMath2D.h"
+
+#define DEBUG_PLOT_INTERACTION( pa, pb, R, G, B ) \
+    glColor3f( R, G, B ); \
+    Draw2D::drawLine_d( pa->pos, pb->pos );
+
 void NBodyWorld::update( ){
     for( int i=0; i<per_frame; i++  ){
         //simulationStep( dt );
-        simulationStep_BruteForce( dt );
+        simulationStep_semiBruteForce( dt );
+        //simulationStep_BruteForce( dt );
     }
 }
 
+void NBodyWorld::moveParticle( Particle2D* pi ){
+    ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
+    pi->vel.mul( damp );
+    pi->move_PointBody2D( dt );
+    ULONG new_index = map.getBucket( pi->pos.x, pi->pos.y );
+    if( old_index != new_index ){
+        bool removed = map.HashMap<Particle2D>::tryRemove  ( pi, old_index );
+        if( removed ){
+            map.HashMap<Particle2D>::insertIfNew( pi, new_index );
+        }else{
+            printf( " cannot remove! inconsistent HashMap! \n" );
+            //exit(0);
+        }
+    }
+}
+
+void NBodyWorld::moveParticleDebug( Particle2D* pi, int i ){
+    ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
+    pi->vel.mul( damp );
+    pi->move_PointBody2D( dt );
+    ULONG new_index = map.getBucket( pi->pos.x, pi->pos.y );
+    // reinsert if particle moved to other cell
+    if( old_index != new_index ){
+        bool removed = map.HashMap<Particle2D>::tryRemove  ( pi, old_index );
+        if( removed ){
+            UHALF ixn,iyn, ixo,iyo;
+            int iinsert = map.HashMap<Particle2D>::insertIfNew( pi, new_index );
+            map.unfoldBucketInt( old_index, ixo, iyo );
+            map.unfoldBucketInt( new_index, ixn, iyn );
+            if( iinsert > 0 ){
+                printf( " reinsert: %03i-th %i=(%i,%i) -> %i=(%i,%i)  %i\n", i, old_index, ixo,iyo, new_index, ixn,iyn, iinsert );
+            }else{
+                printf( " cannot reinsert: %03i-th %i=(%i,%i) -> %i=(%i,%i) %i\n", i, old_index, ixo,iyo, new_index, ixn,iyn, iinsert  );
+            }
+            //printf( " map after reinsert %i -> %i   filled %i capacity %i\n", old_index, new_index, map.filled, map.capacity );
+        }else{
+            UHALF ixn,iyn, ixo,iyo;
+            map.unfoldBucketInt( old_index, ixo, iyo );
+            //printf( " cannot remove! %03i-th (%3.3f,%3.3f) (%i,%i) bucket %i (%i,%i) \n", i, ox,oy, oix, oiy, old_index, ix, iy );
+            printf( " cannot remove: %03i-th %i=(%i,%i) \n", i, old_index, ixo,iyo );
+            //printf( " map.fields[134]:  %i %i %i \n", map.fields[134].bucket, map.fields[134].object, pi );
+        }
+    }
+}
 
 void NBodyWorld::simulationStep_BruteForce( double dt ){
 
@@ -51,57 +103,37 @@ void NBodyWorld::simulationStep_BruteForce( double dt ){
 
     for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
-        // double ox = pi->pos.x;
-        //double oy = pi->pos.y;
-        //UHALF oix = map.getIx( ox );
-        //UHALF oiy = map.getIy( oy );
-        ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
-        pi->vel.mul( damp );
-        pi->move_PointBody2D( dt );
-        ULONG new_index = map.getBucket( pi->pos.x, pi->pos.y );
-
-        // reinsert if particle moved to other cell
-        if( old_index != new_index ){
-            bool removed = map.HashMap<Particle2D>::tryRemove  ( pi, old_index );
-            if( removed ){
-                UHALF ixn,iyn, ixo,iyo;
-                int iinsert = map.HashMap<Particle2D>::insertIfNew( pi, new_index );
-                map.unfoldBucketInt( old_index, ixo, iyo );
-                map.unfoldBucketInt( new_index, ixn, iyn );
-                if( iinsert > 0 ){
-                    printf( " reinsert: %03i-th %i=(%i,%i) -> %i=(%i,%i)  %i\n", i, old_index, ixo,iyo, new_index, ixn,iyn, iinsert );
-                }else{
-                    printf( " cannot reinsert: %03i-th %i=(%i,%i) -> %i=(%i,%i) %i\n", i, old_index, ixo,iyo, new_index, ixn,iyn, iinsert  );
-                }
-                //printf( " map after reinsert %i -> %i   filled %i capacity %i\n", old_index, new_index, map.filled, map.capacity );
-            }else{
-                UHALF ixn,iyn, ixo,iyo;
-                map.unfoldBucketInt( old_index, ixo, iyo );
-                //printf( " cannot remove! %03i-th (%3.3f,%3.3f) (%i,%i) bucket %i (%i,%i) \n", i, ox,oy, oix, oiy, old_index, ix, iy );
-                printf( " cannot remove: %03i-th %i=(%i,%i) \n", i, old_index, ixo,iyo );
-                //printf( " map.fields[134]:  %i %i %i \n", map.fields[134].bucket, map.fields[134].object, pi );
-            }
-        }
+        moveParticle( pi );
+        //moveParticleDebug( pi, i );
     }
 
-    /*
-    for( int i=0; i<1; i++ ){
-    //for( int i=0; i<nParticles; i++ ){
+};
+
+
+void NBodyWorld::simulationStep_semiBruteForce( double dt ){
+    activeCells.clear();
+    for( int i=0; i<nParticles; i++ ){
+        particles[i].force.set( 0.0, 0.0 );
+        ULONG icell = map.getBucket( particles[i].pos.x, particles[i].pos.y );
+        if( activeCells.find( icell ) == activeCells.end() ){
+            activeCells.insert(icell);
+        }
+    }
+    for( ULONG icell : activeCells ){ assembleForces( icell ); }
+    //exit(0);
+
+
+    if( picked != NULL ){
+        Vec2d fstring;
+        stringForce( picked->pos, anchor, 0.01, fstring );
+        picked->force.add( fstring );
+    }
+
+    for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
-        ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
-        pi->pos.x += 0.01;
-        ULONG new_index = map.getBucket( pi->pos.x, pi->pos.y );
-        if( old_index != new_index ){
-            bool removed = map.HashMap<Particle2D>::tryRemove( pi, old_index );
-            if( removed ){
-                map.HashMap<Particle2D>::insertIfNew( pi, new_index );
-                printf( " map after reinsert %i -> %i   filled %i capacity %i\n", old_index, new_index, map.filled, map.capacity );
-            }else{
-                printf( " cannot remove! map HashMap is inconsistent (%i,%i) bucket %i \n", map.getIx(pi->pos.x), map.getIy(pi->pos.y), old_index );
-            }
-        }
+        moveParticle( pi );
+        //moveParticleDebug( pi, i );
     }
-    */
 
 };
 
@@ -113,15 +145,15 @@ void NBodyWorld::simulationStep( double dt ){
     for( ULONG icell : activeCells ){
         UHALF ix,iy;
         map.unfoldBucketInt( icell, ix, iy );
-        activateCell( map.getBucket( ix-1, iy-1 ) );
-        activateCell( map.getBucket( ix  , iy-1 ) );
-        activateCell( map.getBucket( ix+1, iy-1 ) );
-        activateCell( map.getBucket( ix-1, iy   ) );
+        activateCell( map.getBucketInt( ix-1, iy-1 ) );
+        activateCell( map.getBucketInt( ix  , iy-1 ) );
+        activateCell( map.getBucketInt( ix+1, iy-1 ) );
+        activateCell( map.getBucketInt( ix-1, iy   ) );
         activateCell( icell                       );
-        activateCell( map.getBucket( ix+1, iy   ) );
-        activateCell( map.getBucket( ix-1, iy+1 ) );
-        activateCell( map.getBucket( ix  , iy+1 ) );
-        activateCell( map.getBucket( ix+1, iy+1 ) );
+        activateCell( map.getBucketInt( ix+1, iy   ) );
+        activateCell( map.getBucketInt( ix-1, iy+1 ) );
+        activateCell( map.getBucketInt( ix  , iy+1 ) );
+        activateCell( map.getBucketInt( ix+1, iy+1 ) );
     }
     // evaluate pairwise forces
     for( ULONG icell : activeCells ){ assembleForces( icell ); } // performance intensive step
@@ -175,24 +207,26 @@ void NBodyWorld::assembleForces( ULONG i ){
             pairwiseForce( pi->pos, pj->pos, qq, fout );
             pi->force.add( fout );
             pj->force.sub( fout );
+            DEBUG_PLOT_INTERACTION( pi, pj, 0.1f, 0.9f, 0.1f )
         }
     }
     // offside part
     UHALF ix,iy;
     map.unfoldBucketInt( i, ix, iy );
-    assembleForces_offside( i, map.getBucket( ix-1, iy-1 ), ni, &buf_i[0] );
-    assembleForces_offside( i, map.getBucket( ix  , iy-1 ), ni, &buf_i[0] );
-    assembleForces_offside( i, map.getBucket( ix+1, iy-1 ), ni, &buf_i[0] );
-    assembleForces_offside( i, map.getBucket( ix-1, iy   ), ni, &buf_i[0] );
+    assembleForces_offside( i, map.getBucketInt( ix-1, iy-1 ), ni, &buf_i[0] );
+    assembleForces_offside( i, map.getBucketInt( ix  , iy-1 ), ni, &buf_i[0] );
+    assembleForces_offside( i, map.getBucketInt( ix+1, iy-1 ), ni, &buf_i[0] );
+    assembleForces_offside( i, map.getBucketInt( ix-1, iy   ), ni, &buf_i[0] );
     //         onside                          ix   iy
-    assembleForces_offside( i, map.getBucket( ix+1, iy   ), ni, &buf_i[0] );
-    assembleForces_offside( i, map.getBucket( ix-1, iy+1 ), ni, &buf_i[0] );
-    assembleForces_offside( i, map.getBucket( ix  , iy+1 ), ni, &buf_i[0] );
-    assembleForces_offside( i, map.getBucket( ix+1, iy+1 ), ni, &buf_i[0] );
+    assembleForces_offside( i, map.getBucketInt( ix+1, iy   ), ni, &buf_i[0] );
+    assembleForces_offside( i, map.getBucketInt( ix-1, iy+1 ), ni, &buf_i[0] );
+    assembleForces_offside( i, map.getBucketInt( ix  , iy+1 ), ni, &buf_i[0] );
+    assembleForces_offside( i, map.getBucketInt( ix+1, iy+1 ), ni, &buf_i[0] );
 };
 
 void NBodyWorld::assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D** buf_i ){
     // BE WARE : particle->force should be cleaned before we start
+    //printf( " assembleForces_offside === %i %i %i \n", i, j, ni );
     if( i < j ){ // this will ensure that we do not double-count
         Particle2D* buf_j[256];
         UINT nj = map.HashMap<Particle2D>::getBucketObjects( j, buf_j );
@@ -205,6 +239,8 @@ void NBodyWorld::assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D**
                 pairwiseForce( pi->pos, pj->pos, qq, fout );
                 pi->force.add( fout );
                 pj->force.sub( fout );
+                //printf( " %i %i   %i %i  (%3.3f,%3.3f)(%3.3f,%3.3f)\n",   i, j,  ii, jj,  pi->pos.x,pi->pos.y,  pj->pos.x,pj->pos.y );
+                DEBUG_PLOT_INTERACTION( pi, pj, 0.9f, 0.1f, 0.9f )
             }
         }
     }

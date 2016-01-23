@@ -51,13 +51,13 @@ void AppSDL2OGL::inputHanding(){
 */
 
 void AppSDL2OGL::inputHanding(){
+    const Uint8 *keys = SDL_GetKeyboardState(NULL);
+	keyStateHandling ( keys );
+	mouseHandling( );
     SDL_Event		 event;
 	while(SDL_PollEvent(&event)){
 	    eventHandling( event );
 	}
-	const Uint8 *keys = SDL_GetKeyboardState(NULL);
-	keyStateHandling ( keys );
-	mouseHandling( );
 }
 
 void AppSDL2OGL::eventHandling( const SDL_Event& event ){

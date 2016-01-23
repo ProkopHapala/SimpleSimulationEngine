@@ -67,11 +67,14 @@ class NBodyWorld{
     void init();
     void update();
     void simulationStep_BruteForce( double dt );
+    void simulationStep_semiBruteForce( double dt );
     void simulationStep( double dt );
     void activateCell  ( ULONG i );
     void activateAroundParticle( Particle2D* pi, ULONG& icell_old );
     void assembleForces( ULONG i );
     void assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D** buf_i );
+    void moveParticle     ( Particle2D* pi );
+    void moveParticleDebug( Particle2D* pi, int i );
 
     inline void setSimParams( double dt_frame_, double per_frame_, double damping_ ){
         dt_frame  = dt_frame_;
