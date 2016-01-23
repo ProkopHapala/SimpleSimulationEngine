@@ -4,8 +4,17 @@
 
 /*
     TODO:
-    there is some problem in  which has two effects:
+    there is some problem with reinserting :
+    it is probably appearing when hash==0
 
+ output obtained as:
+  >> ./NBodyWorld > OUT
+  >> grep 020-th OUT
+ insering 020-th particle  (-8.517,-4.435) to (32762,32764) 2147254266
+ reinsert: 020-th 2147254266=(32762,32764) -> 2147319802=(32762,32765)  121
+ reinsert: 020-th 2147319802=(32762,32765) -> 2147254266=(32762,32764)  199
+ reinsert: 020-th 2147254266=(32762,32764) -> 2147254267=(32763,32764)  0
+ !!! cannot remove !!! : 020-th 2147254267=(32763,32764)
 
 */
 

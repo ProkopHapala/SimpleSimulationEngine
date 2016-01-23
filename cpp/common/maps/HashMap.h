@@ -51,10 +51,10 @@ class HashMapField{
 #define DEBUG_REMOVE_FAILED( object, bucket, hash, i )
 
 //#define CHECK_WRONG_INSERT if( fields[ i ].object != NULL ){ printf( "wrong insert %i %i \n", i, hash ); exit(0); }
-//#define INFINITE_LOOP_DEBUG(ss,n_)  if( (i==hash)||(i==(hash-1)) ){ \
+#define INFINITE_LOOP_DEBUG(ss,n_)  if( (i==hash)||(i==(hash-1)) ){ \
     printf( "INFINITE LOOP!!! %s | filled %i capacity %i hash %i i %i n %i n[hash] %i \n", \
                               ss,  filled,   capacity,   hash,   i,   n_ , fields[hash].n ); exit(0); return -i; };
-//#define DEBUG_REMOVE_FAILED( object, bucket, hash, i ) \
+#define DEBUG_REMOVE_FAILED( object, bucket, hash, i ) \
     printf( " DEBUG_REMOVE_FAILED %i %i %i %i | %i \n", object, bucket, hash, i, fields[hash].n );
 
 template <class TYPE >
