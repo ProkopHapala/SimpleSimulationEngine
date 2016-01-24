@@ -37,13 +37,13 @@ inline bool pairwiseForce( const Vec2d& pa, const Vec2d& pb, double qq, Vec2d& F
 };
 
 
-const double f2conv = 0.01;
-const double v2conv   = 0.0001;
+const double f2conv = 1.0;
+const double v2conv = 0.01;
 
 class Particle2D: public PointBody2D{
     public:
     double charge;
-    bool   active;
+    int    stepsConverged;
 
 /*
     inline bool converged( ){
@@ -58,8 +58,8 @@ class Particle2D: public PointBody2D{
 
 class NBodyWorld{
 	public:
-    double dt_frame  = 0.5;
-    int    per_frame = 30;
+    double dt_frame  = 0.2;
+    int    per_frame = 10;
     double damping   = 0.2;
 
     double anchorStiffness = 0.5;

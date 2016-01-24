@@ -58,25 +58,34 @@ void NBodyWorld::update( ){
 }
 
 bool NBodyWorld::moveParticle( Particle2D* pi ){
-    ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
-    pi->vel.mul( damp );
 
-    bool forceOff = ( pi->force.norm2() < f2conv );
-    bool velOff   = ( pi->vel.norm2()   < v2conv );
-    if( velOff && forceOff ){
-        pi->vel  .set( 0.0d, 0.0d );
-        pi->force.set( 0.0d, 0.0d );
-        return false;
+    double v2 = pi->vel  .norm2(); v2max = (v2>v2max) ? v2 : v2max;
+    double f2 = pi->force.norm2(); f2max = (f2>f2max) ? f2 : f2max;
+    //bool forceOff = ( pi->force.norm2() < f2conv );
+    //bool velOff   = ( pi->vel.norm2()   < v2conv );
+
+
+    //if( v2 < v2conv ) pi->vel  .set( 0.0d, 0.0d );
+    //if( f2 < f2conv ) pi->force.set( 0.0d, 0.0d );
+    if( ( v2 < v2conv ) && ( f2 < f2conv ) ){
+    //if( v2 < v2conv ){
+        if( pi->stepsConverged > 100 ) return false;
+        pi->stepsConverged++;
+    }else{
+        if( ( v2 > 100*v2conv ) || ( f2 > 100*f2conv ) ) pi->stepsConverged = 0;
     }
     //if( velOff ){ pi->vel.set( 0.0d, 0.0d ); }
 
+
+    pi->vel.mul( damp );
+    ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
     pi->move_PointBody2D( dt );
+    ULONG new_index = map.getBucket( pi->pos.x, pi->pos.y );
     n_moves++;
 
-    double v2 = pi->vel.  norm2();   v2max = (v2>v2max) ? v2 : v2max;
-    double f2 = pi->force.norm2();   f2max = (f2>f2max) ? f2 : f2max;
+    //double v2 = pi->vel.  norm2();   v2max = (v2>v2max) ? v2 : v2max;
+    //double f2 = pi->force.norm2();   f2max = (f2>f2max) ? f2 : f2max;
 
-    ULONG new_index = map.getBucket( pi->pos.x, pi->pos.y );
     if( old_index != new_index ){
         bool removed = map.HashMap<Particle2D>::tryRemove  ( pi, old_index );
         if( removed ){
@@ -352,22 +361,23 @@ void NBodyWorld::init(){
     activeParticles = new Particle2D*[ 1<<20 ];
 
     //int power = 8; int nside = 5;
-    int power = 12; int nside = 20;
+    int power = 16; int nside = 40;
     //int power = 16; int nside = 300;
     nParticles = (2*nside+1)*(2*nside+1);
     //nParticles = 4*nside*nside;
 	particles  = new Particle2D[nParticles];
-    map.init( 6.0d, power );
+    map.init( 4.0d, power );
 	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
 	int i = 0;
 	for( int iy=-nside; iy<nside; iy++ ){
 		for( int ix=-nside; ix<nside; ix++ ){
+            particles[i].stepsConverged = 0;
 			particles[i].charge = ((int)randf(0.0, 1.9999999))*2 -1;
 			particles[i].vel.set( 0.0, 0.0 );
 			particles[i].setMass( 1.0 );
 			particles[i].pos.set(
-                ( ix + randf(0.2,0.8) ) * map.step,
-                ( iy + randf(0.2,0.8) ) * map.step );
+                ( ix + randf(0.2,0.8) ) * map.step*0.4,
+                ( iy + randf(0.2,0.8) ) * map.step*0.4 );
                 //( ix + 0.5 ) * map.step,
                 //( iy + 0.5 ) * map.step );
 			//map.insertNoTest( &(points[i]), points[i].x, points[i].y  );

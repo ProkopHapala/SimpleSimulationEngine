@@ -129,6 +129,9 @@ void NBodyWorldApp::draw(){
                 Particle2D* p = screenObjects[i];
                 if( p->charge > 0 ){ glColor3f( 0.0f, 0.5f, 1.0f ); }else{ glColor3f( 1.0f, 0.5f, 0.0f ); }
                 Draw2D::drawCircle_d( p->pos, 0.5, 8, true );
+
+                //Vec2d pos_f; pos_f.set_mul( p->force, 1.0 ); pos_f.add( p->pos );
+                //Draw2D::drawLine_d( p->pos, pos_f );
             }
             /*
             if( nfoundi > 0 ){
