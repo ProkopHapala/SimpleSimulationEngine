@@ -351,13 +351,13 @@ void NBodyWorld::init(){
 
     activeParticles = new Particle2D*[ 1<<20 ];
 
-    int power = 8; int nside = 5;
-    //int power = 11; int nside = 20;
+    //int power = 8; int nside = 5;
+    int power = 12; int nside = 20;
     //int power = 16; int nside = 300;
     nParticles = (2*nside+1)*(2*nside+1);
     //nParticles = 4*nside*nside;
 	particles  = new Particle2D[nParticles];
-    map.init( 4.0d, power );
+    map.init( 6.0d, power );
 	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
 	int i = 0;
 	for( int iy=-nside; iy<nside; iy++ ){

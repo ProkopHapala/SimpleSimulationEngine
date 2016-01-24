@@ -62,7 +62,7 @@ class NBodyWorld{
     int    per_frame = 30;
     double damping   = 0.2;
 
-    double anchorStiffness = 0.05;
+    double anchorStiffness = 0.5;
 
     double damp;
     double dt;

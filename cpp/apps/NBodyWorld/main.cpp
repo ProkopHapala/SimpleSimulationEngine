@@ -35,10 +35,13 @@ NBodyWorldApp::NBodyWorldApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( i
 }
 
 void NBodyWorldApp::draw(){
+    long tstart = getCPUticks();
     glClearColor( 0.9f, 0.9f, 0.9f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+    long t1 = getCPUticks();
     world.update();
+    long t2 = getCPUticks();
 
     Vec2d pa,pb,fout; pa.set(0.0,0.0); pb.set(0.0,0.0);
     int nsamp = 100;
@@ -142,7 +145,10 @@ void NBodyWorldApp::draw(){
     Draw2D::drawPointCross_d( world.anchor, 0.5 );
     if( world.picked != NULL ) Draw2D::drawLine_d( world.anchor, world.picked->pos );
 
-    printf( " ======== frame %i DONE ( map.filled %i nfound_tot %i )\n", frameCount, world.map.filled, nfound_tot );
+    long tend = getCPUticks();
+
+    //printf( " ======== frame %i DONE ( map.filled %i nfound_tot %i )\n", frameCount, world.map.filled, nfound_tot );
+    printf( " ======== frame %i DONE T=%3.3f Mticks/frame( %3.3f Mticks simulation )\n", frameCount, (tend-tstart)*1.0e-6, (t2-t1)*1.0e-6 );
 	//STOP = true;
 
 };
