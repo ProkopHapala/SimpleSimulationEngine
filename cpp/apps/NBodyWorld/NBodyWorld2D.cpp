@@ -49,6 +49,7 @@ for all particles "a" from "ActiveParticles" set
 
 void NBodyWorld::update( ){
     for( int i=0; i<per_frame; i++  ){
+        printf( " ==== simulation sub_step %i \n", i );
         //simulationStep( dt );
         simulationStep_semiBruteForce( dt );
         //simulationStep_BruteForce( dt );
@@ -138,15 +139,12 @@ void NBodyWorld::simulationStep_BruteForce( double dt ){
 
 
 void NBodyWorld::simulationStep_semiBruteForce( double dt ){
-    activeCells.clear();
     for( int i=0; i<nParticles; i++ ){
         particles[i].force.set( 0.0, 0.0 );
-        ULONG icell = map.getBucket( particles[i].pos.x, particles[i].pos.y );
-        if( activeCells.find( icell ) == activeCells.end() ){
-            activeCells.insert(icell);
-        }
     }
-    for( ULONG icell : activeCells ){ assembleForces( icell ); }
+    for( ULONG icell : activeCells ){
+        assembleForces( icell );
+    }
     //exit(0);
 
     if( picked != NULL ){
@@ -155,11 +153,17 @@ void NBodyWorld::simulationStep_semiBruteForce( double dt ){
         picked->force.add( fstring );
     }
 
+    activeCells.clear();
+    printf( "activeCells size : %i \n", activeCells.size() );
+    ULONG icell_old = 0;
     for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
-        moveParticle( pi );
-        //moveParticleDebug( pi, i );
+        //moveParticle( pi );
+        moveParticleDebug( pi, i );
+        activateAroundParticle( pi, icell_old );
     }
+    printf( "activeCells size - : %i \n", activeCells.size() );
+    checkHashMapConsistency( );
 
 };
 
@@ -214,7 +218,16 @@ void NBodyWorld::activateAroundParticle( Particle2D* pi, ULONG& icell_old ){
     // CONSIDERATION : we can optimize here ... in activeParticles are particles from one cell grouped => we can check if icell changed from previous
     ULONG icell = map.getBucket( pi->pos.x, pi->pos.y );
     if( icell != icell_old ){
-        if( activeCells.find(icell) == activeCells.end() ){ activeCells.insert(icell); }
+        if( activeCells.find(icell) == activeCells.end() ){
+            activeCells.insert(icell);
+
+
+            UHALF ix,iy,ix_,iy_;
+            map.unfoldBucketInt( icell, ix_, iy_ );
+            ix = map.getIx( pi->pos.x );
+            iy = map.getIy( pi->pos.y );
+            //printf( "activate cell %i=(%i,%i)=(%i,%i) pi (%3.3f,%3.3f) %i-th  \n", icell, ix_, iy_, ix,iy, pi->pos.x, pi->pos.y, pi-particles );
+        }
         icell_old = icell;
     }
 }
@@ -305,12 +318,48 @@ void NBodyWorld::init(){
 	nParticles = i;
 	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
 
-
     ULONG icell_old = 0;
     for( int i=0; i<nParticles; i++ ){ activateAroundParticle( &particles[i], icell_old ); };
     printf( "number of active cells %i\n", activeCells.size() );
 
-
 };
+
+
+void NBodyWorld::checkHashMapConsistency( ){
+    Particle2D* temp[256];
+    for( int i=0; i<nParticles; i++ ){
+        Particle2D* pi = particles+i;
+        ULONG icell = map.getBucket( pi->pos.x, pi->pos.y );
+        UINT nfound = map.HashMap<Particle2D>::getBucketObjects( icell, temp );
+        bool found = false;
+        for( int j=0; j<nfound; j++ ){
+            if( temp[j] == pi ){ found = true; break; }
+        }
+        if( !found ){
+            UHALF ix,iy;
+            map.unfoldBucketInt( icell, ix, iy );
+            printf( "!!! cannot find %i-th (%3.3f,%3.3f) particle in cell %i=(%i,%i)\n", i, pi->pos.x, pi->pos.y, icell, ix, iy );
+            int ifield = map.HashMap<Particle2D>::findBruteForce( pi );
+            if(ifield>=0){
+                printf( "bruteForce found %i-th particle in field %i | object %i bucket %i n %i \n", i, ifield, map.fields[ifield].object, map.fields[ifield].bucket, map.fields[ifield].n  );
+                //map.DEBUG_LEVEL = 3;
+                int ifield_ = map.HashMap<Particle2D>::find( pi, icell );
+                printf( " find returned %i \n", ifield_  );
+                nfound = map.HashMap<Particle2D>::getBucketObjects( icell, temp );
+                printf( " nfound %i \n", nfound );
+                for( int j=0; j<nfound; j++ ){
+                    printf( " temp[i] %i=(3.3f,3.3f) pi %i=(3.3f,3.3f) ", temp[j], temp[j]->pos.x, temp[j]->pos.y,   pi, pi->pos.x, pi->pos.y );
+                }
+            }
+            UINT hash = map.mask&hashFunc( icell );
+            int nhash = map.HashMap<Particle2D>::checkHashConsisent( hash );
+            if( nhash == 0) printf( "hash %i (n=%i) checked fine \n", hash, map.fields[hash].n );
+            exit(0);
+        }
+    }
+
+}
+
+
 
 

@@ -180,14 +180,16 @@ class HashMap{
 		UINT i    = hash;
 		UINT j    = 0;
 		while( n > 0 ){
-			ULONG bucketi = fields[ i ].bucket;
-			if( hash == ( mask&hashFunc( bucketi ) ) ){   // FIXME : here we call hashFunc in loop, would storing hash improve performance ?
-				if( bucketi == bucket ){
-					outi[ j ] = i;
-					j++;
-				}
-				n--;
-			}
+            if( fields[ i ].object != NULL ){
+                ULONG bucketi = fields[ i ].bucket;
+                if( hash == ( mask&hashFunc( bucketi ) ) ){   // FIXME : here we call hashFunc in loop, would storing hash improve performance ?
+                    if( bucketi == bucket ){
+                        outi[ j ] = i;
+                        j++;
+                    }
+                    n--;
+                }
+            }
 			i=(i+1)&mask;
 			INFINITE_LOOP_DEBUG("getBucketIndexes", n )
 		}
@@ -199,22 +201,68 @@ class HashMap{
 		UINT n    = fields[ hash ].n;
 		UINT i    = hash;
 		UINT j    = 0;
-		//printf( " getBucketObjects: bucket (%i,%i) hash %i n %i \n", (bucket&0xFFFF),((bucket>>16)&0xFFFF), hash, n );
+		//if( DEBUG_LEVEL > 1 ) printf( " getBucketObjects: bucket (%i,%i) hash %i n %i \n", bucket, hash, n );
 		while( n > 0 ){
-			ULONG bucketi = fields[ i ].bucket;
-			if( hash == ( mask&hashFunc( bucketi ) ) ){   // FIXME : here we call hashFunc in loop, would storing hash improve performance ?
-				if( bucketi == bucket ){
-					out[ j ] = fields[ i ].object;
-					j++;
-				}
-				n--;
-			}
+		    //if( DEBUG_LEVEL > 2 ) printf( " getBucketObjects: i %i bucket %i object %i \n", i, fields[ i ].bucket, fields[ i ].object );
+            TYPE* obj = fields[ i ].object;
+            if( obj != NULL ){
+                ULONG bucketi = fields[ i ].bucket;
+                if( hash == ( mask&hashFunc( bucketi ) ) ){   // FIXME : here we call hashFunc in loop, would storing hash improve performance ?
+                    if( bucketi == bucket ){
+                        out[ j ] = obj;
+                        j++;
+                    }
+                    n--;
+                }
+            }
 			i=(i+1)&mask;
 			INFINITE_LOOP_DEBUG("getBucketObjects", n )
 		}
 		//printf( " getBucketObjects bucket %i return j %i n %i \n", bucket, j, n );
 		return j;
 	};
+
+
+
+	// ====================== JUST FOR DEBUGING
+
+	int findBruteForce( TYPE* object ){
+	    int ifound = -1;
+	    for( int i=0; i<capacity; i++){
+            if( fields[i].object == object ){
+                if( ifound >= 0 ){ printf( "ERROR: object found in and other place %i after %i \n", i, ifound ); }
+                ifound = i;
+            }
+	    }
+	    if( ifound < 0 ){
+            printf( "ERROR: object not found " );
+	    }
+	    return ifound;
+	}
+
+
+    int checkHashConsisent( UINT hash ){
+        UINT n    = fields[ hash ].n;
+		UINT i    = hash;
+		while( true ){
+			TYPE* obj_i = fields[ i ].object ;
+			if( obj_i != NULL ){
+                if( hash   == ( mask&hashFunc( fields[ i ].bucket ) ) ){
+                    if( n<=0 ){
+                        printf( "ERROR: n==0 but we found other object" );
+                    }
+                    n--;
+                }
+			}
+			i=(i+1)&mask;
+            if ( i=hash ) break;
+		}
+		if( n>0 ){
+            printf( "ERROR: we did not found all objects" );
+		}
+		return n;
+	}
+
 
 };
 

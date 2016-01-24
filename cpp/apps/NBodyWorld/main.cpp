@@ -40,6 +40,8 @@ void NBodyWorldApp::draw(){
 
     world.update();
 
+    Particle2D* screenObjects[65536];
+
 /*
     glColor3f( 0.2f, 0.2f, 0.2f );
     for( int i=0; i<world.nParticles; i++ ){
@@ -56,9 +58,18 @@ void NBodyWorldApp::draw(){
         double x,y;
         world.map.unfoldBucket( icell, x, y );
         Draw2D::drawRectangle( (float)x, (float)y, (float)(x+world.map.step), (float)(y+world.map.step), false );
+
+        UINT nfound = world.map.HashMap<Particle2D>::getBucketObjects( icell, screenObjects );
+        if( nfound <= 0 ){
+            UHALF ix,iy;
+            world.map.unfoldBucketInt( icell, ix, iy );
+            printf( "!!! activeCell %i=(%i,%i) is empty\n", icell, ix, iy  );
+            int i= 97; printf( "!!! particle %i-th (%3.3f,%3.3f) \n", i, world.particles[i].pos.x, world.particles[i].pos.y  );
+            exit(0);
+        }
     }
 
-    Particle2D* screenObjects[65536];
+
     //float camXmin_ =-1; float camXmax_ =+1;
     //float camYmin_ =-1; float camYmax_ =+1;
     float camXmin_ =camXmin; float camXmax_ =camXmax;
@@ -145,7 +156,7 @@ void NBodyWorldApp::pickParticle( Particle2D*& picked ){
 }
 
 void NBodyWorldApp::eventHandling ( const SDL_Event& event  ){
-    printf( "NBodyWorldApp::eventHandling() \n" );
+    //printf( "NBodyWorldApp::eventHandling() \n" );
     switch( event.type ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){

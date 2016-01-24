@@ -77,6 +77,7 @@ class NBodyWorld{
     void assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D** buf_i );
     void moveParticle     ( Particle2D* pi );
     void moveParticleDebug( Particle2D* pi, int i );
+    void checkHashMapConsistency( );
 
     inline void setSimParams( double dt_frame_, double per_frame_, double damping_ ){
         dt_frame  = dt_frame_;
