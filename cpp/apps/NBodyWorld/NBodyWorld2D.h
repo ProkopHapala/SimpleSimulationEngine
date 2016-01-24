@@ -37,7 +37,7 @@ inline bool pairwiseForce( const Vec2d& pa, const Vec2d& pb, double qq, Vec2d& F
 };
 
 
-const double f2conv = 1.0;
+const double f2conv = 4.0;
 const double v2conv = 0.01;
 
 class Particle2D: public PointBody2D{

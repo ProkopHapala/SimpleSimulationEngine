@@ -65,17 +65,14 @@ bool NBodyWorld::moveParticle( Particle2D* pi ){
     //bool velOff   = ( pi->vel.norm2()   < v2conv );
 
 
+    // Freezing condition
     //if( v2 < v2conv ) pi->vel  .set( 0.0d, 0.0d );
     //if( f2 < f2conv ) pi->force.set( 0.0d, 0.0d );
-    if( ( v2 < v2conv ) && ( f2 < f2conv ) ){
-    //if( v2 < v2conv ){
-        if( pi->stepsConverged > 100 ) return false;
+    if( f2 > f2conv ) pi->stepsConverged = 0;
+    if( v2 < v2conv ){
+        if( pi->stepsConverged > 10 ) return false;
         pi->stepsConverged++;
-    }else{
-        if( ( v2 > 100*v2conv ) || ( f2 > 100*f2conv ) ) pi->stepsConverged = 0;
-    }
-    //if( velOff ){ pi->vel.set( 0.0d, 0.0d ); }
-
+    };
 
     pi->vel.mul( damp );
     ULONG old_index = map.getBucket( pi->pos.x, pi->pos.y );
