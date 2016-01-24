@@ -50,8 +50,8 @@ for all particles "a" from "ActiveParticles" set
 void NBodyWorld::update( ){
     for( int i=0; i<per_frame; i++  ){
         //simulationStep( dt );
-        //simulationStep_semiBruteForce( dt );
-        simulationStep_BruteForce( dt );
+        simulationStep_semiBruteForce( dt );
+        //simulationStep_BruteForce( dt );
     }
 }
 
@@ -66,11 +66,11 @@ void NBodyWorld::moveParticle( Particle2D* pi ){
             int iinsert = map.HashMap<Particle2D>::insertIfNew( pi, new_index );
             if( iinsert < 0 ){
                 printf( " cannot insert! inconsistent HashMap! \n" );
-                //exit(0);
+                exit(0);
             }
         }else{
             printf( " cannot remove! inconsistent HashMap! \n" );
-            //exit(0);
+            exit(0);
         }
     }
 }
@@ -100,7 +100,7 @@ void NBodyWorld::moveParticleDebug( Particle2D* pi, int i ){
             map.unfoldBucketInt( old_index, ixo, iyo );
             //printf( " cannot remove! %03i-th (%3.3f,%3.3f) (%i,%i) bucket %i (%i,%i) \n", i, ox,oy, oix, oiy, old_index, ix, iy );
             printf( "!!! cannot remove !!! : %03i-th %i=(%i,%i) \n", i, old_index, ixo,iyo );
-            //printf( " map.fields[134]:  %i %i %i \n", map.fields[134].bucket, map.fields[134].object, pi );
+            printf( " map.fields[134]:  %i %i %i \n", map.fields[0].bucket, map.fields[0].object, pi );
             exit(0);
         }
     }
@@ -130,8 +130,8 @@ void NBodyWorld::simulationStep_BruteForce( double dt ){
 
     for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
-        //moveParticle( pi );
-        moveParticleDebug( pi, i );
+        moveParticle( pi );
+        //moveParticleDebug( pi, i );
     }
 
 };
@@ -157,8 +157,8 @@ void NBodyWorld::simulationStep_semiBruteForce( double dt ){
 
     for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
-        //moveParticle( pi );
-        moveParticleDebug( pi, i );
+        moveParticle( pi );
+        //moveParticleDebug( pi, i );
     }
 
 };

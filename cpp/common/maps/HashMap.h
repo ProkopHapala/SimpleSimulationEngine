@@ -51,11 +51,12 @@ class HashMapField{
 #define DEBUG_REMOVE_FAILED( object, bucket, hash, i )
 
 //#define CHECK_WRONG_INSERT if( fields[ i ].object != NULL ){ printf( "wrong insert %i %i \n", i, hash ); exit(0); }
-#define INFINITE_LOOP_DEBUG(ss,n_)  if( (i==hash)||(i==(hash-1)) ){ \
+//#define INFINITE_LOOP_DEBUG(ss,n_)  if( (i==hash)||(i==(hash-1)) ){ \
     printf( "INFINITE LOOP!!! %s | filled %i capacity %i hash %i i %i n %i n[hash] %i \n", \
                               ss,  filled,   capacity,   hash,   i,   n_ , fields[hash].n ); exit(0); return -i; };
-#define DEBUG_REMOVE_FAILED( object, bucket, hash, i ) \
-    printf( " DEBUG_REMOVE_FAILED %i %i %i %i | %i \n", object, bucket, hash, i, fields[hash].n );
+//#define DEBUG_REMOVE_FAILED( object, bucket, hash, i ) \
+    printf( " DEBUG_REMOVE_FAILED %i %i %i %i | %i %i %i \n", object, bucket, hash, i, fields[hash].n, mask&hashFunc(fields[hash].bucket), fields[hash].bucket ); \
+    DEBUG_LEVEL = 3; find( object, bucket, hash );
 
 template <class TYPE >
 class HashMap{
@@ -68,6 +69,8 @@ class HashMap{
 	int DEBUG_counter;
 
 	HashMapField<TYPE>*  fields;
+
+	//int DEBUG_LEVEL = 0;
 
 	void init( UINT power_ ){
 		power      = power_;
@@ -130,9 +133,9 @@ class HashMap{
 	inline int find( TYPE* object, ULONG bucket, UINT hash ) const {
 		UINT n    = fields[ hash ].n;
 		UINT i    = hash;
-		//printf( " find : object %i bucket %i hash %i n %i \n", object, bucket, hash, n );
+		//if( DEBUG_LEVEL > 1 ) printf( " find : object %i bucket %i hash %i n %i \n", object, bucket, hash, n );
 		while( n > 0 ){
-			//printf( " : i %i n %i bucket %i hash(bucket) %i hash %i object %i \n", i, n, fields[i].bucket, mask&hashFunc( fields[ i ].bucket ), hash, fields[i].object );
+			//if( DEBUG_LEVEL > 2 ) printf( " : i %i n %i bucket %i hash(bucket) %i hash %i object %i \n", i, n, fields[i].bucket, mask&hashFunc( fields[ i ].bucket ), hash, fields[i].object );
 			TYPE* obj_i = fields[ i ].object ;
 			if( obj_i != NULL ){ // FIXME : this could be omitted if we make sure that for NULL field bucket is set such that it does not map to our hash
                 if( object == obj_i  ){ return i; }
@@ -163,7 +166,7 @@ class HashMap{
 	bool tryRemove( TYPE* object, ULONG bucket ){
 		UINT hash = mask&hashFunc( bucket );
 		int  i    = find( object, bucket, hash );
-		if( i > 0 ){
+		if( i >= 0 ){
 			remove( i, hash);
 			return true;
 		};
