@@ -37,25 +37,28 @@ inline bool pairwiseForce( const Vec2d& pa, const Vec2d& pb, double qq, Vec2d& F
 };
 
 
-const double force2conv = 0.0001;
-const double vel2conv   = 0.00001;
+const double f2conv = 0.01;
+const double v2conv   = 0.0001;
 
 class Particle2D: public PointBody2D{
     public:
     double charge;
+    bool   active;
 
+/*
     inline bool converged( ){
         if ( force.norm2() > force2conv ) return false;
         if ( vel  .norm2() > vel2conv   ) return false;
         return true;
     }
+*/
 
 };
 
 
 class NBodyWorld{
 	public:
-    double dt_frame  = 1.0;
+    double dt_frame  = 0.5;
     int    per_frame = 30;
     double damping   = 0.2;
 
@@ -81,6 +84,8 @@ class NBodyWorld{
     Vec2d anchor;
     Particle2D* picked = NULL;
 
+    int n_moves, n_interactions;
+
     void init();
     void update();
     void simulationStep_BruteForce( double dt );
@@ -90,7 +95,7 @@ class NBodyWorld{
     void activateAroundParticle( Particle2D* pi, ULONG& icell_old );
     void assembleForces( ULONG i );
     void assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D** buf_i );
-    void moveParticle     ( Particle2D* pi );
+    bool moveParticle     ( Particle2D* pi );
     void moveParticleDebug( Particle2D* pi, int i );
     void checkHashMapConsistency( );
 

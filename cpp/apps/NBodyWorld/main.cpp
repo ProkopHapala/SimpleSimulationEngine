@@ -91,12 +91,12 @@ void NBodyWorldApp::draw(){
         Draw2D::drawRectangle( (float)x, (float)y, (float)(x+world.map.step), (float)(y+world.map.step), false );
     }
 
-
+/*
     glColor3f( 0.9f, 0.9f, 0.9f );
     for( int i=0; i<world.nActiveParticles; i++ ){
         Draw2D::drawPointCross_d( world.activeParticles[i]->pos, 0.5 );
     }
-
+*/
 
     //float camXmin_ =-1; float camXmax_ =+1;
     //float camYmin_ =-1; float camYmax_ =+1;
