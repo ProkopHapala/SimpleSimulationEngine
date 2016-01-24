@@ -40,6 +40,19 @@ void NBodyWorldApp::draw(){
 
     world.update();
 
+    Vec2d pa,pb,fout; pa.set(0.0,0.0); pb.set(0.0,0.0);
+    int nsamp = 100;
+    double dx = 4.0/nsamp;
+    double ox = 0;
+    double oy = 0;
+    glColor3f( 0.9f, 0.2f, 0.2f ); ox=0; oy=0; for( int i=0; i<nsamp; i++ ){ pb.x = i * dx; pairwiseForce( pa, pb, -1, fout ); double x=pb.x*5;double y=-0.2*fout.x; Draw2D::drawLine_d( {ox,oy},{x,y} ); ox=x; oy=y; }
+    glColor3f( 0.2f, 0.2f, 0.2f ); ox=0; oy=0; for( int i=0; i<nsamp; i++ ){ pb.x = i * dx; pairwiseForce( pa, pb,  0, fout ); double x=pb.x*5;double y=-0.2*fout.x; Draw2D::drawLine_d( {ox,oy},{x,y} ); ox=x; oy=y; }
+    glColor3f( 0.2f, 0.2f, 0.9f ); ox=0; oy=0; for( int i=0; i<nsamp; i++ ){ pb.x = i * dx; pairwiseForce( pa, pb, +1, fout ); double x=pb.x*5;double y=-0.2*fout.x; Draw2D::drawLine_d( {ox,oy},{x,y} ); ox=x; oy=y; }
+    glColor3f( 0.2f, 0.2f, 0.2f );
+    Draw2D::drawLine_d( {0.0,-10.0},{0.0,+10.0} );
+    Draw2D::drawLine_d( {-10.0,0.0},{+10.0,0.0} );
+
+
     Particle2D* screenObjects[65536];
 
 /*
@@ -58,7 +71,7 @@ void NBodyWorldApp::draw(){
         double x,y;
         world.map.unfoldBucket( icell, x, y );
         Draw2D::drawRectangle( (float)x, (float)y, (float)(x+world.map.step), (float)(y+world.map.step), false );
-
+/*
         UINT nfound = world.map.HashMap<Particle2D>::getBucketObjects( icell, screenObjects );
         if( nfound <= 0 ){
             UHALF ix,iy;
@@ -67,6 +80,21 @@ void NBodyWorldApp::draw(){
             int i= 97; printf( "!!! particle %i-th (%3.3f,%3.3f) \n", i, world.particles[i].pos.x, world.particles[i].pos.y  );
             exit(0);
         }
+*/
+    }
+
+
+    glColor3f( 0.7f, 0.7f, 0.7f );
+    for( ULONG icell : world.activeCellsNeighbors ){
+        double x,y;
+        world.map.unfoldBucket( icell, x, y );
+        Draw2D::drawRectangle( (float)x, (float)y, (float)(x+world.map.step), (float)(y+world.map.step), false );
+    }
+
+
+    glColor3f( 0.9f, 0.9f, 0.9f );
+    for( int i=0; i<world.nActiveParticles; i++ ){
+        Draw2D::drawPointCross_d( world.activeParticles[i]->pos, 0.5 );
     }
 
 

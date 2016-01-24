@@ -19,7 +19,7 @@ inline void stringForce( const Vec2d& pa, const Vec2d& pb, double k, Vec2d& Fout
 };
 
 
-inline void pairwiseForce( const Vec2d& pa, const Vec2d& pb, double qq, Vec2d& Fout ){
+inline bool pairwiseForce( const Vec2d& pa, const Vec2d& pb, double qq, Vec2d& Fout ){
     const double r2max = 4.0d;
     Vec2d d;
     //d.set_sub( pb, pa );
@@ -27,16 +27,28 @@ inline void pairwiseForce( const Vec2d& pa, const Vec2d& pb, double qq, Vec2d& F
     double r2 = d.norm2();
     if( r2 < r2max ){
         double mr2 = r2max-r2;
-        double fr  = ( 1/r2 + qq - 0.1 )*mr2*mr2;
+        double fr  = ( 1/(r2+0.01) + qq - 0.1 )*mr2*mr2;
         Fout.set( d.x*fr, d.y*fr );
+        return true;
     }else{
         Fout.set( 0.0, 0.0 );
+        return false;
     }
 };
+
+
+const double force2conv = 0.0001;
+const double vel2conv   = 0.00001;
 
 class Particle2D: public PointBody2D{
     public:
     double charge;
+
+    inline bool converged( ){
+        if ( force.norm2() > force2conv ) return false;
+        if ( vel  .norm2() > vel2conv   ) return false;
+        return true;
+    }
 
 };
 
@@ -44,13 +56,16 @@ class Particle2D: public PointBody2D{
 class NBodyWorld{
 	public:
     double dt_frame  = 1.0;
-    int    per_frame = 20;
+    int    per_frame = 30;
     double damping   = 0.2;
 
     double anchorStiffness = 0.05;
 
     double damp;
     double dt;
+
+    double v2max;
+    double f2max;
 
 	int nParticles;
 	Particle2D* particles;

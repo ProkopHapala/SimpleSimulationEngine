@@ -43,15 +43,15 @@ for all particles "a" from "ActiveParticles" set
 #include <SDL2/SDL_opengl.h>
 #include "drawMath2D.h"
 
-#define DEBUG_PLOT_INTERACTION( pa, pb, R, G, B ) \
+#define DEBUG_PLOT_INTERACTION( pa, pb, R, G, B ) if(interacts){ \
     glColor3f( R, G, B ); \
-    Draw2D::drawLine_d( pa->pos, pb->pos );
+    Draw2D::drawLine_d( pa->pos, pb->pos ); };
 
 void NBodyWorld::update( ){
     for( int i=0; i<per_frame; i++  ){
-        printf( " ==== simulation sub_step %i \n", i );
-        //simulationStep( dt );
-        simulationStep_semiBruteForce( dt );
+        printf( " ==== simulation sub_step %i  v2max %f f2max %f \n", i, v2max, f2max );
+        simulationStep( dt );
+        //simulationStep_semiBruteForce( dt );
         //simulationStep_BruteForce( dt );
     }
 }
@@ -129,10 +129,13 @@ void NBodyWorld::simulationStep_BruteForce( double dt ){
         picked->force.add( fstring );
     }
 
+    activeCells.clear();
+    ULONG icell_old = 0;
     for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
         moveParticle( pi );
         //moveParticleDebug( pi, i );
+        activateAroundParticle( pi, icell_old );
     }
 
 };
@@ -158,8 +161,8 @@ void NBodyWorld::simulationStep_semiBruteForce( double dt ){
     ULONG icell_old = 0;
     for( int i=0; i<nParticles; i++ ){
         Particle2D* pi = particles+i;
-        //moveParticle( pi );
-        moveParticleDebug( pi, i );
+        moveParticle( pi );
+        //moveParticleDebug( pi, i );
         activateAroundParticle( pi, icell_old );
     }
     printf( "activeCells size - : %i \n", activeCells.size() );
@@ -179,7 +182,7 @@ void NBodyWorld::simulationStep( double dt ){
         activateCell( map.getBucketInt( ix  , iy-1 ) );
         activateCell( map.getBucketInt( ix+1, iy-1 ) );
         activateCell( map.getBucketInt( ix-1, iy   ) );
-        activateCell( icell                       );
+        activateCell( icell                          );
         activateCell( map.getBucketInt( ix+1, iy   ) );
         activateCell( map.getBucketInt( ix-1, iy+1 ) );
         activateCell( map.getBucketInt( ix  , iy+1 ) );
@@ -187,15 +190,40 @@ void NBodyWorld::simulationStep( double dt ){
     }
     // evaluate pairwise forces
     for( ULONG icell : activeCells ){ assembleForces( icell ); } // performance intensive step
+
+    if( picked != NULL ){
+        Vec2d fstring;
+        stringForce( picked->pos, anchor, anchorStiffness, fstring );
+        picked->force.add( fstring );
+    }
+
     // move the active particles and update activeCells accordingly
     // CONSIDERATION :  would be better to iterate over activeParticles or over activeCellsNighbors ?
+    bool picked_done = false;
     activeCells.clear();
     ULONG icell_old = 0;
+    v2max=0;
+    f2max=0;
     for( int i=0; i<nActiveParticles; i++ ){
         Particle2D* pi = activeParticles[i];
-        pi->move_PointBody2D( dt );
-        activateAroundParticle( pi, icell_old );
+        if( pi == picked ) picked_done = true;
+
+        moveParticle( pi );
+        if( !pi->converged() ){
+            activateAroundParticle( pi, icell_old );
+        }else{
+            pi->vel  .set( 0.0, 0.0 );
+            pi->force.set( 0.0, 0.0 );
+        }
+        double v2 = pi->vel.  norm2();   v2max = (v2>v2max) ? v2 : v2max;
+        double f2 = pi->force.norm2();   f2max = (f2>f2max) ? f2 : f2max;
     }
+
+    if( ( !picked_done ) && ( picked != NULL ) ){
+        moveParticle( picked );
+        activateAroundParticle( picked, icell_old );
+    }
+
 };
 
 void NBodyWorld::activateCell( ULONG i ){
@@ -243,7 +271,7 @@ void NBodyWorld::assembleForces( ULONG i ){
             Particle2D* pj = buf_i[jj];
             Vec2d fout;
             double qq = pi->charge * pj->charge;
-            pairwiseForce( pi->pos, pj->pos, qq, fout );
+            bool interacts = pairwiseForce( pi->pos, pj->pos, qq, fout );
             pi->force.add( fout );
             pj->force.sub( fout );
             DEBUG_PLOT_INTERACTION( pi, pj, 0.1f, 0.9f, 0.1f )
@@ -275,7 +303,7 @@ void NBodyWorld::assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D**
                 Particle2D* pj = buf_j[jj];
                 Vec2d fout;
                 double qq = pi->charge * pj->charge;
-                pairwiseForce( pi->pos, pj->pos, qq, fout );
+                bool interacts = pairwiseForce( pi->pos, pj->pos, qq, fout );
                 pi->force.add( fout );
                 pj->force.sub( fout );
                 //printf( " %i %i   %i %i  (%3.3f,%3.3f)(%3.3f,%3.3f)\n",   i, j,  ii, jj,  pi->pos.x,pi->pos.y,  pj->pos.x,pj->pos.y );
@@ -296,7 +324,7 @@ void NBodyWorld::init(){
     nParticles = (2*nside+1)*(2*nside+1);
     //nParticles = 4*nside*nside;
 	particles  = new Particle2D[nParticles];
-    map.init( 2.0f, power );
+    map.init( 4.0f, power );
 	printf( "map: %i %i %i %i \n", map.power, map.mask, map.capacity, map.filled );
 	int i = 0;
 	for( int iy=-nside; iy<nside; iy++ ){
