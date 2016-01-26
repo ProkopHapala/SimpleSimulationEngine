@@ -22,7 +22,7 @@ class PointBody2D{
 	double mass;
 	// auxiliary parameters
 	double invMass;
-	// State variables 
+	// State variables
 	Vec2d pos;
 	Vec2d vel;
 	// auxiliary variables
@@ -48,6 +48,8 @@ class PointBody2D{
 
 	inline void clean_temp( ){  force.set(0.0); }
 
+	PointBody2D(){};
+
 };
 
 class RigidBody2D : public PointBody2D {
@@ -56,21 +58,21 @@ class RigidBody2D : public PointBody2D {
 	// parameters
 	double	I;
 	// auxiliary parameters
-	double	invI; 
-	// State variables         
-	double phi;          
-	double omega;            
+	double	invI;
+	// State variables
+	double phi;
+	double omega;
 	// auxiliary variables
-	Vec2d   rot;  
+	Vec2d   rot;
 	double torq;
 
-	int shape; // displayList 
+	int shape; // displayList
 
 	// ==== function declarations
 
 	void from_mass_points( int n, double * amass, Vec2d * apos );
 	virtual void move( double dt );
-	virtual void draw(           ); 
+	virtual void draw(           );
 	virtual void draw_shape(     );
 
 	// ==== inline functions
@@ -87,7 +89,7 @@ class RigidBody2D : public PointBody2D {
 		pos.add_mul( vel,   dt );
 		// rotation
 		omega       += torq  * invI * dt;
-		double dphi  = omega * dt; 
+		double dphi  = omega * dt;
 		phi         += dphi;
 		rot.rotate_taylor2( dphi );
 		rot.x = cos(phi);
@@ -96,7 +98,7 @@ class RigidBody2D : public PointBody2D {
 
 	inline void apply_force( const Vec2d& dforce, const Vec2d& gdpos ){
 		torq += gdpos.cross( dforce );
-		force.add( dforce ); 
+		force.add( dforce );
 	};
 
 	inline void apply_anchor( double k, const Vec2d& lpos, const Vec2d& gpos0 ){

@@ -11,6 +11,7 @@ class AppSDL2OGL : public ScreenSDL2OGL{
 	int frameCount = 0;
 	bool loopEnd   = false, STOP = false;
 	float camStep  = VIEW_MOVE_STEP;
+	int delay = 10;
 
 // ============ function declarations
 

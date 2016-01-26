@@ -17,10 +17,6 @@ typedef unsigned short  UHALF;
 const UHALF MAP_OFFSET = 0x7FFF;
 
 
-
-
-
-
 template <class OBJECT >
 class HashMap2D : public HashMap<OBJECT> {
 	public:
@@ -94,6 +90,20 @@ class HashMap2D : public HashMap<OBJECT> {
 		}
 		//printf( " ncells %i \n", ncells );
 		return nfound;
+	}
+
+
+    UINT getBucketsInRect( double x0, double y0, double x1, double y1, ULONG * out ){
+		UHALF ix0 = getIx( x0 );  UHALF iy0 = getIy( y0 );
+		UHALF ix1 = getIx( x1 );  UHALF iy1 = getIy( y1 );
+		int ncells = 0;
+		for( UHALF iy = iy0; iy<=iy1; iy++ ){
+			for( UHALF ix = ix0; ix<=ix1; ix++ ){
+                out[ncells] = getBucketInt ( ix, iy );
+				ncells++;
+			}
+		}
+		return ncells;
 	}
 
 };

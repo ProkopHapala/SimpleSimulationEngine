@@ -14,7 +14,7 @@ void AppSDL2OGL::loop( int n ){
 			update();
 		}
 		//printf(" %i \n", iframe );
-		SDL_Delay( 10 );
+		if( delay>0 ) SDL_Delay( delay );
 		frameCount++;
 		if(loopEnd) break;
 	}
