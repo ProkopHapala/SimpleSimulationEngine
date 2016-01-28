@@ -51,14 +51,15 @@ class TerrainCubic : public Map2D {
     int renderRect( double x0, double y0, double x1, double y1, int nx ){
 		//int ix0 = getIx( x0 );  int iy0 = getIy( y0 );
 		//int ix1 = getIx( x1 );  int iy1 = getIy( y1 );
+		printf( " TerrainCubic::renderRect %f %f %f %f %i \n", x0, y0, x1, y1, nx );
 		int ny       = nx/0.86602540378;
-		float dx = (x1-y0)/nx;
+		float dx = (x1-x0)/nx;
         float dy = (y1-y0)/ny;
         float dxhalf = 0.5f*dx;
 		int nverts=0;
 		float ylo,yhi;
 		for( int iy = 0; iy<ny; iy++ ){
-            if( iy & 1 ){ ylo = iy*dy; yhi = ylo+dy; }else{  yhi = iy*dy; ylo = yhi+dy;  }
+            if( iy & 1 ){ ylo = y0 + iy*dy; yhi = ylo+dy; }else{  yhi = y0 + iy*dy; ylo = yhi+dy;  }
             float x     = x0;
             glBegin( GL_TRIANGLE_STRIP );
 			for( int ix = 0; ix<=nx; ix++ ){
@@ -78,13 +79,12 @@ class TerrainCubic : public Map2D {
         for( int i=0; i<nxy; i++ ){ heights[i] = randf( vmin, vmax );  }
     }
 
+/*
     int renderTile( double x0, double y0, double x1, double y1, int nx ){
-        int ilist=glGenLists(1);
-        glNewList( ilist, GL_COMPILE );
             renderRect( x0, y0, x1, y1, nx );
-        glEndList();
         return( ilist );
     }
+*/
 
 };
 

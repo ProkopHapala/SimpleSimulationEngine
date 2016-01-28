@@ -28,11 +28,20 @@ class Map2D {
 	inline int    getIndexI( int ix,   int iy   ){ return nx*iy + ix;                     };
 	inline int    getIndex ( double x, double y ){ return getIndex( getIx(x), getIy(y) ); };
 
-    inline void init( int nx_, int ny_, double step_ ){
-        step    = step_;
-		invStep = 1/step;
-		nx = nx_; ny=ny_;
-		nxy = nx*ny;
+    inline void setStep( double step_ ){
+        step  = step_;
+		invStep = 1/step_;
+    }
+
+    inline void setnxy( int nx_, int ny_ ){
+		nx  = nx_; ny=ny_;
+		nxy = nx_*ny_;
+    }
+
+    inline void init( int nx_, int ny_, double step_  ){
+        setStep( step_    );
+        setnxy ( nx_, ny_ );
+		//printf( "Map2D::init nx ny step invStep %i %i %f %f \n", nx, ny, step, invStep );
     }
 
 };
