@@ -18,5 +18,5 @@ target_link_libraries( test_HashMap2D_3 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_
 add_executable       ( test_NBodyColHashMap test_NBodyColHashMap.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Body2D> )
 target_link_libraries( test_NBodyColHashMap ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_TerrainCubic test_TerrainCubic.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Body2D> )
+add_executable       ( test_TerrainCubic test_TerrainCubic.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainCubic> $<TARGET_OBJECTS:TiledView> )
 target_link_libraries( test_TerrainCubic ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )

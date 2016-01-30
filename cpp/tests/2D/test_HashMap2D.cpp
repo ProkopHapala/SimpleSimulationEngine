@@ -40,7 +40,7 @@ void printHashMap( const HashMap2D<Vec2d>& map ){
 	for( int i=0; i<n; i++ ){
 		ULONG bucket = map.fields[i].bucket;
 		UHALF ibx,iby;
-		map.unfoldBucket( bucket, ibx,iby);
+		map.unfoldBucketInt( bucket, ibx,iby);
 		if( map.fields[i].object == NULL ){
 			//printf( "field %03i  :  %03i (%i,%i) NULL \n", i, map.fields[i].n, ibx, iby );
 		}else{
@@ -59,12 +59,12 @@ void printHashMap( const HashMap2D<Vec2d>& map ){
 
 #include "AppSDL2OGL.h"
 class TestApp : public AppSDL2OGL {
-	public:	
+	public:
 	int npoints;
 	Vec2d * points;
-	HashMap2D<Vec2d> map; 
+	HashMap2D<Vec2d> map;
 
-	// ---- function declarations 
+	// ---- function declarations
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -78,10 +78,10 @@ TestApp::TestApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, H
 	npoints = 30;
 	points  = new Vec2d[npoints];
 	//randomize( 289 );
-	for( int i=0; i<npoints; i++ ){ 
-		
+	for( int i=0; i<npoints; i++ ){
+
 		double x  = randf(-5.0,5.0);
-		double y  = randf(-5.0,5.0); 
+		double y  = randf(-5.0,5.0);
 
 /*
 		double x_,y_;
@@ -92,8 +92,8 @@ TestApp::TestApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, H
 		map.unfoldBucket( bucket, ix_, iy_ );
 		map.unfoldBucket( bucket, x_, y_ );
 		printf( " (%3.3f,%3.3f), (%i,%i), %i, (%i,%i), (%3.3f,%3.3f) \n", x,y,  ix,iy, bucket, ix_,iy_,  x_,y_ );
-*/		
-		points[i].set( x, y ); 
+*/
+		points[i].set( x, y );
 		int index = map.insertNoTest( &points[i], points[i].x, points[i].y  );
 		//int index = map.insertIfNew( &(points[i]), points[i].x, points[i].y  );
 		//printf( " inserting %i-th point to index %i \n", i, index  );
@@ -114,7 +114,7 @@ void TestApp::draw(){
 	printf( " mouse (%f,%f) nbucket %i filled %i \n", mouse_begin_x, mouse_begin_y, nbucket, map.filled );
 	//exit(0);
 	for( int i=0; i<nbucket; i++ ){
-		Draw2D::drawPointCross_d( *(out[i]), 0.3 ); 
+		Draw2D::drawPointCross_d( *(out[i]), 0.3 );
 	}
 	//STOP = true;
 };
