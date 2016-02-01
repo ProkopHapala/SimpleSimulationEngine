@@ -156,6 +156,49 @@ void drawPolarFunc( double x0, double y0, double fscale, int n, double phi0, dou
 };
 
 
+void drawFunc( float xmin, float xmax, int n, Func1d func ){
+    glBegin(GL_LINE_STRIP);
+    float dx = (xmax-xmin)/n;
+    for( float x=xmin; x<=xmax; x+=dx ){
+        float y = (float) func( x );
+        glVertex3f( x, y, 0 );
+    }
+    glEnd();
+};
+
+void drawFuncDeriv( float xmin, float xmax, float d, int n, Func1d func ){
+    glBegin(GL_LINE_STRIP);
+    float dx = (xmax-xmin)/n;
+    for( float x=xmin; x<=xmax; x+=dx ){
+        float y  = (float) func( x );
+        float y_ = (float) func( x + d );
+        float dy = (y_ - y)/d;
+        glVertex3f( x, dy, 0 );
+    }
+    glEnd();
+};
+
+void drawGrid( float xmin, float ymin, float xmax, float ymax, float dx, float dy ){
+    glBegin(GL_LINES);
+    // X-grid
+    int nmin,nmax;
+    nmin=xmin/dx;
+    nmax=xmax/dx;
+    for( int i=nmin; i<=nmax; i++ ){
+        float x = i*dx;
+        glVertex3f( x, ymin, 0 );
+        glVertex3f( x, ymax, 0 );
+    }
+    // Y-grid
+    nmin=ymin/dy;
+    nmax=ymax/dy;
+    for( int i=nmin; i<=nmax; i++ ){
+        float y = i*dy;
+        glVertex3f( xmin, y, 0 );
+        glVertex3f( xmax, y, 0 );
+    }
+    glEnd();
+};
 
 void drawShape( const Vec2d& pos, const Vec2d& rot, int shape ){
 	glPushMatrix();
@@ -167,6 +210,5 @@ void drawShape( const Vec2d& pos, const Vec2d& rot, int shape ){
 	glCallList( shape );
 	glPopMatrix();
 };
-
 
 }; // namespace Draw2D

@@ -14,7 +14,6 @@
 #include "drawMath2D.h"
 #include "AppSDL2OGL.h"
 
-#include "RBF2D.h"
 #include "TerrainRBF.h"
 #include "TiledView.h"
 

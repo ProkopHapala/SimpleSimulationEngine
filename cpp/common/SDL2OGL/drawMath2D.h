@@ -30,6 +30,11 @@ void drawLines         ( int nlinks, int * links, Vec2d * points );
 void drawConvexPolygon ( int n, Vec2d * points, bool filled );
 void drawPolarFunc     ( double x0, double y0, double fscale, int n, double phi0, double * data );
 
+
+void drawFunc     ( float xmin, float xmax,          int n, Func1d func );
+void drawFuncDeriv( float xmin, float xmax, float d, int n, Func1d func );
+void drawGrid     ( float xmin, float ymin, float xmax, float ymax, float dx, float dy );
+
 void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
 
 

@@ -49,6 +49,20 @@ inline uint64_t getCPUticks(){
     return (uint64_t)hi << 32 | lo;
 }
 
+#define SPEED_TEST_FUNC( caption, func, xmin, xmax, ncall ) \
+    do{                                    \
+    double sum  = 0.0;                     \
+    double dx   = (xmax-xmin)/(ncall-1);   \
+    long tstart = getCPUticks();           \
+    double x = xmin;                       \
+    for( int i=0; i<ncall; i++ ){          \
+        sum += func ( x );                 \
+        x   += dx;                         \
+    }                                      \
+    long time   = getCPUticks() - tstart;  \
+    printf( "%s : %3.3f ticks/call ( %g %g ) | %g \n", caption, time/double(ncall), (double)time, (double)ncall, sum );   \
+    } while (0) \
+
 #endif
 
 
