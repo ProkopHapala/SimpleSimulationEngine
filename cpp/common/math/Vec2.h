@@ -109,6 +109,12 @@ class Vec2TYPE{
 		return ab.dot(ap) / ab.norm(ab);
 	}
 
+	inline TYPE angle( const VEC& a ){
+		TYPE d = cdot ( a );
+		TYPE c = cross( a );
+		return atan2( d, c );
+	}
+
 };
 
 using Vec2i = Vec2TYPE<int>;
