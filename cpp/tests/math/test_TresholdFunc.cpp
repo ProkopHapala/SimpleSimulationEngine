@@ -102,8 +102,8 @@ void TestAppTerrainCubic::draw(){
     //glColor3f(0.9f,0.9f,0.2f); Draw2D::drawFuncDeriv( -3, 3, 0.01, 1000, &Treshold::root2  );
 
 
-    double xmin = -3.0;
-    double xmax =  3.0;
+    double xmin =  -0.5;
+    double xmax =   1.5;
     int ncall   = 10000000;
 
     printf("\n");

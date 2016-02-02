@@ -58,6 +58,7 @@ inline uint64_t getCPUticks(){
     for( int i=0; i<ncall; i++ ){          \
         sum += func ( x );                 \
         x   += dx;                         \
+        /*printf("%i %f %f %f \n", i, x, func ( x ), sum  );*/  \
     }                                      \
     long time   = getCPUticks() - tstart;  \
     printf( "%s : %3.3f ticks/call ( %g %g ) | %g \n", caption, time/double(ncall), (double)time, (double)ncall, sum );   \

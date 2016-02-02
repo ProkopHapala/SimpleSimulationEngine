@@ -28,9 +28,9 @@ void TiledView::draw( float xmin, float ymin, float xmax, float ymax ){
 
 void TiledView::renderAll( float xmin, float ymin, float xmax, float ymax ){
     x0 = xmin; y0 = ymin;
-    //printf( " TiledView ::reconstruct nx, ny, step ,invStep %i %i %f %f\n", nx, ny, step ,invStep );
-    float szx = xmax-xmin; float stepX = szx/nx;
-    float szy = ymax-ymin; float stepY = szy/ny;
+    printf( " TiledView ::reconstruct nx, ny, step ,invStep %i %i %f %f\n", nx, ny, step ,invStep );
+    float szx = xmax-xmin; float stepX = szx/(nx-1);
+    float szy = ymax-ymin; float stepY = szy/(ny-1);
     setStep( fmax( stepX, stepY ) );
     for( int iy=0; iy<ny; iy++ ){
         for( int ix=0; ix<nx; ix++ ){
@@ -90,7 +90,12 @@ bool TiledView::checkRender( float xmin, float ymin, float xmax, float ymax ){
     float oszy = ny*step;
     float szx  = xmax-xmin;
     float szy  = ymax-ymin;
-    if( (szx>oszx) || (szy>oszy) ){
+    if       ( (szx>oszx) || (szy>oszy) ){
+        printf( " TiledView::reconstruct Zoom out \n" );
+        renderAll( xmin, ymin, xmax, ymax );
+        return true;
+    }else if ( (szx<(0.25*oszx)) && (szy<(0.25*oszy)) ){
+        printf( " TiledView::reconstruct Zoom in \n" );
         renderAll( xmin, ymin, xmax, ymax );
         return true;
     }else {
