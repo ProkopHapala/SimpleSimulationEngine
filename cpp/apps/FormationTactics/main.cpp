@@ -54,8 +54,8 @@ void FormationTacticsApp::draw(){
 	glDisable( GL_DEPTH_TEST );
 
     //float szview = 4.0f;
-    float szview = 20.0f;
-    TiledView::draw(  mouse_begin_x-szview, mouse_begin_y-szview, mouse_begin_x+szview, mouse_begin_y+szview );
+    //float szview = 20.0f;
+    //TiledView::draw(  mouse_begin_x-szview, mouse_begin_y-szview, mouse_begin_x+szview, mouse_begin_y+szview );
     //printf( " camRect  %f %f %f %f \n", mouse_begin_x-szview, mouse_begin_y-szview, mouse_begin_x+szview, mouse_begin_y+szview );
 
     float camMargin = ( camXmax - camXmin )*0.1;

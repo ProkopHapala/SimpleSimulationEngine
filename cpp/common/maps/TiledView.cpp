@@ -27,11 +27,13 @@ void TiledView::draw( float xmin, float ymin, float xmax, float ymax ){
 
 
 void TiledView::renderAll( float xmin, float ymin, float xmax, float ymax ){
-    x0 = xmin; y0 = ymin;
-    printf( " TiledView ::reconstruct nx, ny, step ,invStep %i %i %f %f\n", nx, ny, step ,invStep );
-    float szx = xmax-xmin; float stepX = szx/(nx-1);
-    float szy = ymax-ymin; float stepY = szy/(ny-1);
+    //float szx = xmax-xmin; float stepX = 2*szx/nx;
+    //float szy = ymax-ymin; float stepY = 2*szy/ny;
+    float szx = xmax-xmin; float stepX = szx/(nx-2);
+    float szy = ymax-ymin; float stepY = szy/(ny-2);
     setStep( fmax( stepX, stepY ) );
+    x0 = xmin-0.5*step; y0 = ymin-0.5*step;
+    printf( " TiledView ::reconstruct nx, ny, step ,invStep %i %i %3.3f %3.3f  osz,osy %3.3f %3.3f\n", nx, ny, step ,invStep, step*nx, step*ny );
     for( int iy=0; iy<ny; iy++ ){
         for( int ix=0; ix<nx; ix++ ){
             int i    = getIndexI( ix, iy );
@@ -90,22 +92,27 @@ bool TiledView::checkRender( float xmin, float ymin, float xmax, float ymax ){
     float oszy = ny*step;
     float szx  = xmax-xmin;
     float szy  = ymax-ymin;
-    if       ( (szx>oszx) || (szy>oszy) ){
-        printf( " TiledView::reconstruct Zoom out \n" );
+    if       ( (szx>(oszx-step) ) || ( szy>(oszy-step) ) ){
+        //printf( "oszx,oszy, szx,szy   %3.3f %3.3f   %3.3f %3.3f \n", oszx, oszy, szx,szy );
+        //printf( " TiledView::reconstruct Zoom out \n" );
         renderAll( xmin, ymin, xmax, ymax );
         return true;
-    }else if ( (szx<(0.25*oszx)) && (szy<(0.25*oszy)) ){
-        printf( " TiledView::reconstruct Zoom in \n" );
+    }else if ( (szx<(0.3*oszx)) && (szy<(0.3*oszy)) ){
+        //printf( "oszx,oszy, szx,szy   %3.3f %3.3f   %3.3f %3.3f \n", oszx, oszy, szx,szy );
+        //printf( " TiledView::reconstruct Zoom in \n" );
         renderAll( xmin, ymin, xmax, ymax );
         return true;
     }else {
         bool shift = false;
         int dix=0,diy=0;
         if      (xmin<x0       ){ dix = (int)((xmin-x0     )*invStep)-1; shift=true; }
-        else if (xmax>(x0+oszx)){ dix = (int)((xmax-x0-oszx)*invStep)+1;  shift=true; }
+        else if (xmax>(x0+oszx)){ dix = (int)((xmax-x0-oszx)*invStep)+1; shift=true; }
         if      (ymin<y0       ){ diy = (int)((ymin-y0     )*invStep)-1; shift=true; }
         else if (ymax>(y0+oszy)){ diy = (int)((ymax-y0-oszy)*invStep)+1; shift=true; }
-        if (shift) shiftRender( dix, diy );
+        if (shift){
+            printf( " %3.3f %3.3f    %3.3f %3.3f | %3.3f %3.3f    %3.3f %3.3f   \n", xmin, xmax, x0, x0+oszx,     ymin, ymax, y0, y0+oszy );
+            shiftRender( dix, diy );
+        }
         return true;
     }
     return false;
