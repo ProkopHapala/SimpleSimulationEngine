@@ -16,7 +16,7 @@ include_directories(
 set( NAME "FormationWorld" )
 
 add_executable( ${NAME} 
-	main.cpp FormationWorld.cpp Formation.cpp Soldier.cpp
+	main.cpp FormationWorld.cpp Formation.cpp Soldier.cpp SoldierType.cpp
 	$<TARGET_OBJECTS:Body2D> 
 	$<TARGET_OBJECTS:SDL2OGL> 
 	$<TARGET_OBJECTS:TerrainCubic> 

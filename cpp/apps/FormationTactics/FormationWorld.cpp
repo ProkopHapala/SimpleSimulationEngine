@@ -25,12 +25,25 @@ void FormationWorld::update( ){
 
 
 void FormationWorld::simulationStep( double dt ){
-
+    for( Formation* f : formations ){
+        if( f != NULL ){
+            f->clean_temp();
+            f->applyWillForce( );
+            f->interactInside( );
+        }
+    }
+    for( Formation* f : formations ){
+        if( f != NULL ){
+            //f->moveBy( {0.01, 0.01 } );
+            f->update( dt );
+        }
+    }
 };
 
 
 
 void FormationWorld::init(){
+    printf( " FormationWorld::init() \n" );
     evalAuxSimParams();
 
     terrain.init( 100, 100, 5.0 );
@@ -38,6 +51,13 @@ void FormationWorld::init(){
     terrain.y0 = -0.5 * terrain.ny * terrain.step;
     terrain.allocate( );
     terrain.generateRandom( 0.0, 1.0 );
+
+    formations.reserve( 16 );
+    SoldierType * pikemen  = new SoldierType();
+    Formation * formation1 = new Formation( 4, 4, pikemen );
+    formation1->setEnds( {-2.0,-1.0}, {3.0,2.0}, 2.0 );
+    formation1->deploySoldiers();
+    formations.push_back( formation1 );
 
 };
 

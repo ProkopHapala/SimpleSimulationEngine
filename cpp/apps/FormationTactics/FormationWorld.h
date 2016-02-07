@@ -15,13 +15,13 @@
 
 class FormationWorld{
 	public:
-    Formation    * formations;
+    std::vector<Formation*> formations;
     TerrainCubic   terrain;
 
 	//HashMap2D<Particle2D> map;
 
-    double dt_frame  = 0.2;
-    int    per_frame = 10;
+    double dt_frame  = 0.1;
+    int    per_frame = 1;
     double damping   = 0.2;
     double damp;
     double dt;
