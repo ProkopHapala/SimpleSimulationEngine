@@ -85,9 +85,11 @@ void AeroSurf2D::assertAeroForce( RigidBody2D& platform, const Vec2d& vel, doubl
 	platform.apply_force( force, gpos );
 
 	gpos.add( platform.pos );
+	/*
 	glColor3f( 0.8f, 0.1f, 0.1f ); Draw2D::drawVecInPos_d( force*0.01, gpos );
 	glColor3f( 0.1f, 0.1f, 0.8f ); Draw2D::drawVecInPos_d(  vhat, gpos );
 	glColor3f( 0.1f, 0.1f, 0.1f ); Draw2D::drawVecInPos_d(  {CD,CL}, (Vec2d){0.0d,0.0d} );
+	*/
 
 };
 

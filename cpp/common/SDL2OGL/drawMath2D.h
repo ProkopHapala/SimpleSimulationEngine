@@ -26,6 +26,7 @@ void drawRectangle_d  ( const Vec2f& p1,  const Vec2f& p2, bool filled );
 void drawCircle_d     ( const Vec2d& center, float radius, int n, bool filled );
 
 void drawPoints        ( int npoints, Vec2d * points );
+void drawLines         ( int n, Vec2d * points );
 void drawLines         ( int nlinks, int * links, Vec2d * points );
 void drawConvexPolygon ( int n, Vec2d * points, bool filled );
 void drawPolarFunc     ( double x0, double y0, double fscale, int n, double phi0, double * data );

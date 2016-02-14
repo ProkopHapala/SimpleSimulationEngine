@@ -27,7 +27,7 @@ class GameWorld {
 
 	std::vector<Convex2d*>   isles;
 
-	VoronoiNamespace::Voronoi * voronoi;
+	//VoronoiNamespace::Voronoi * voronoi;
 
 	std::vector<Frigate2D*>  ships;
 	std::vector<Projectile*> projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector

@@ -135,6 +135,7 @@ void GameWorld::init( ){
         isles.push_back( isle );
     }
 
+/*
     voronoi = new VoronoiNamespace::Voronoi();
     VoronoiNamespace::Vertices * vertices = new VoronoiNamespace::Vertices();
 
@@ -144,6 +145,7 @@ void GameWorld::init( ){
         vertices->push_back( p );
     }
     voronoi->GetEdges( vertices, 5.0d, 5.0d );
+*/
 
 };
 

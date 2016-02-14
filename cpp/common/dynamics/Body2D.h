@@ -92,8 +92,7 @@ class RigidBody2D : public PointBody2D {
 		double dphi  = omega * dt;
 		phi         += dphi;
 		rot.rotate_taylor2( dphi );
-		rot.x = cos(phi);
-		rot.y = sin(phi);
+		//rot.x = cos(phi); rot.y = sin(phi);
 	};
 
 	inline void apply_force( const Vec2d& dforce, const Vec2d& gdpos ){

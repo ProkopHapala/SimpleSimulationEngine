@@ -12,6 +12,8 @@ class GameScreen : public ScreenSDL2OGL {
 	GameWorld * world    = NULL;
 	Frigate2D * thisShip = NULL; // without NULL there were segfaults
 
+	bool  STOP           = false;
+
 	// ==== function declarations
 
 	virtual void draw   ();

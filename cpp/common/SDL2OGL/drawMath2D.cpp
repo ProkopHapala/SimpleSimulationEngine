@@ -120,13 +120,25 @@ void drawPoints( int npoints, Vec2d * points ){
 	glEnd();
 };
 
+void drawLines( int n, Vec2d * points ){
+	glBegin   (GL_LINE_STRIP);
+	for( int i=0; i<n; i++ ){
+		Vec2f p1;
+		convert( points[i-1], p1 );
+		glVertex3f( p1.x, p1.y, 0.0f );
+		//drawLine_d( points[links[i]], points[links[i+1]] );
+		//printf ( " %i %i %i %f %f \n", i, links[i], links[i+1], points[links[i]].x, points[links[i+1]].x );
+	}
+	glEnd();
+};
+
 void drawLines( int nlinks, int * links, Vec2d * points ){
 	int n2 = nlinks<<1;
 	glBegin   (GL_LINES);
 	for( int i=0; i<n2; i+=2 ){
 		Vec2f p1, p2;
-		convert( points[links[i]],   p1 );  glVertex3f( (float)p1.x, (float)p1.y, 0.0f );
-		convert( points[links[i+1]], p2 );  glVertex3f( (float)p2.x, (float)p2.y, 0.0f );
+		convert( points[links[i]],   p1 );  glVertex3f( p1.x, p1.y, 0.0f );
+		convert( points[links[i+1]], p2 );  glVertex3f( p2.x, p2.y, 0.0f );
 		//drawLine_d( points[links[i]], points[links[i+1]] );
 		//printf ( " %i %i %i %f %f \n", i, links[i], links[i+1], points[links[i]].x, points[links[i+1]].x );
 	}

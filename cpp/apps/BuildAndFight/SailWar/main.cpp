@@ -48,7 +48,6 @@ TO DO :
 // ===============================
 
 bool  isLib             = false;
-bool  STOP          	= false;
 bool  loopEnd           = false;
 int   frameCount		=	0;
 
@@ -92,6 +91,7 @@ void setup(){
     world.init();
     thisShip = world.ships.front();
     thisScreen->world = &world;
+    thisScreen->zoom = 100;
     printf( " world.init DONE \n" );
 }
 
@@ -100,7 +100,7 @@ void inputHanding(){
 		if( event.type == SDL_KEYDOWN ){
 			switch( event.key.keysym.sym ){
 				case SDLK_ESCAPE:   escape(); break;
-				case SDLK_SPACE:    STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
+				case SDLK_SPACE:    thisScreen->STOP = !thisScreen->STOP; printf( thisScreen->STOP ? " STOPED\n" : " UNSTOPED\n"); break;
 				case SDLK_KP_MINUS: thisScreen->zoom*=VIEW_ZOOM_STEP; break;
 				case SDLK_KP_PLUS:  thisScreen->zoom/=VIEW_ZOOM_STEP; break;
 				case SDLK_KP_1:     thisShip->fire_left ( &world.projectiles ); break;
@@ -134,7 +134,7 @@ void loop(int n ){
 	loopEnd = false;
 	for( int iframe=0; iframe<n; iframe++ ){
 		inputHanding();
-		if(!STOP){
+		if(!thisScreen->STOP){
 			update();
 			thisScreen->update();
 			thisScreen->thisShip = thisShip; // FIXME

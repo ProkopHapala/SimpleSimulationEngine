@@ -102,6 +102,7 @@ void GameScreen::draw(){
 
     // ============== plot Voronoi
 
+/*
     glColor3f( 0.9f, 0.9f, 0.9f );
     int iii=0;
     for ( Vec2d * p : *(world->voronoi->places) ){
@@ -123,13 +124,76 @@ void GameScreen::draw(){
 	//exit(0);
 	//printf( " Edges N %i \n", iii );
 
+*/
+
+    // ============== polar
+
+    if(thisShip!=NULL){
+/*
+        const int nsteps = 100;
+        Vec2d * vels = new Vec2d[ nsteps ];
+        Vec2d * rots = new Vec2d[ nsteps ];
+        Vec2d * poss = new Vec2d[ nsteps ];
+        thisShip->pos.set( 0.0d );
+        thisShip->vel.set( 0.0d );
+        glColor3f( 0.2f, 0.2f, 0.2f );  Draw2D::drawPointCross_d( {0.0,0.0}, 0.10 );
+        thisShip->testSail( nsteps, 20, 0.01, -10.0, poss, vels, rots );
+        Draw2D::drawLines( nsteps, poss );
+        delete vels,rots,poss;
+*/
+
+/*
+        Vec2d vel_conv, rot_conv;
+        int nstepmax  = 1000;
+        thisShip->pos.set( 0.0d );
+        thisShip->vel.set( 0.0d );
+        glColor3f( 0.2f, 0.2f, 0.2f );  Draw2D::drawPointCross_d( {0.0,0.0}, 0.10 );
+        int nstepconv = thisShip->convergeSail( nstepmax, 20, 0.001, -10.0, 1e-3, 1e-3, vel_conv, rot_conv );
+        glColor3f( 0.9f, 0.2f, 0.2f );  Draw2D::drawPointCross_d( {0.0,0.0}, 0.10 );
+        if ( nstepconv < nstepmax ){
+            printf( " convergeSail : %i (%3.3f,%3.3f) (%3.3f,%3.3f) \n", nstepconv, vel_conv, rot_conv );
+        }else{
+            printf( " convergeSail not converged int %i ! \n", nstepmax );
+        }
+*/
+
+        const int nsteps = 50;
+        double * phi_rudder = new double[ nsteps ];
+        double * phi_mast   = new double[ nsteps ];
+        double * wind_speed = new double[ nsteps ];
+        Vec2d  * vels        = new Vec2d[ nsteps ];
+        Vec2d  * rots        = new Vec2d[ nsteps ];
+        glColor3f( 0.2f, 0.2f, 0.2f );
+        for( int i=0; i<nsteps; i++ ){
+            //phi_rudder[ i ] = 1.57079632679 +  -0.3 + ( i*( 0.3-(-0.3) )/ nsteps );
+            //phi_mast  [ i ] = M_PI * 0.25;
+            //phi_mast  [ i ] = 0.0;
+
+            phi_rudder[ i ] = 1.57079632679 + 0.09;
+            phi_mast  [ i ] = M_PI * (  -0.5   +    i/(float)nsteps  );
+            phi_mast  [ i ] = M_PI * ( 0.0   +  i/(float)nsteps  );
+
+
+            //phi_rudder[ i ] = 1.57079632679 + 0.1 * i/(float)nsteps ;
+            //phi_mast  [ i ] = M_PI * +0.25;
+
+            wind_speed[ i ] = -10.0d;
+            vels[ i ].set( 0.0d, 0.0d );
+            rots[ i ].set( 1.0d, 0.0d ); rots[ i ].normalize();
+        }
+        thisShip->evalPolar( nsteps, 0.01, 1e-300, 1e-300,  phi_rudder, phi_mast, wind_speed, vels, rots, true );
+        glScalef( 10.0, 10.0, 10.0 );
+        glColor3f( 0.9f, 0.2f, 0.2f ); Draw2D::drawLines( nsteps, vels );
+        glScalef( 1/10.0, 1/10.0, 1/10.0 );
+        delete phi_rudder, phi_mast, wind_speed,  vels, rots;
+
+
+        STOP = true;
+
+    }
+
+
 	// ============== rest
-
-	Vec2d compass_pos; compass_pos.set( 0.8*ASPECT_RATIO*zoom, 0.8*zoom );
-
-	glColor3f( 0.2f, 0.2f, 0.2f );  Draw2D::drawPointCross_d( compass_pos, zoom*0.1 );
-	glColor3f( 0.2f, 0.5f, 0.2f );  Draw2D::drawVecInPos_d( ( *(Vec2d*)&(world->wind_speed)) *zoom*0.1,   compass_pos );
-	glColor3f( 0.2f, 0.2f, 0.8f );  Draw2D::drawVecInPos_d( world->watter_speed*zoom*0.1, compass_pos );
 
 	glDisable  (GL_LIGHTING);
 
@@ -146,6 +210,11 @@ void GameScreen::drawHUD(){
         Draw2D::drawRectangle( { 0.0f, bar_y }, { bar_x * thisShip->gunload_right, 2*bar_y }, true );
         Draw2D::drawLine     ( { bar_x, 0.0f }, { bar_x, 2*bar_y } );
     }
+
+    Vec2d compass_pos; compass_pos.set( WIDTH*0.9, HEIGHT*0.9 );
+	glColor3f( 0.2f, 0.2f, 0.2f );  Draw2D::drawPointCross_d( compass_pos, 10 );
+	glColor3f( 0.2f, 0.5f, 0.2f );  Draw2D::drawVecInPos_d  ( ( *(Vec2d*)&(world->wind_speed))*10.1,   compass_pos );
+	glColor3f( 0.2f, 0.2f, 0.8f );  Draw2D::drawVecInPos_d  ( world->watter_speed*10.1, compass_pos );
 };
 
 
