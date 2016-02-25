@@ -219,6 +219,21 @@ class Triangle2d{
 
 };
 
+/*
+// from here http://geomalgorithms.com/a01-_area.html#area2D_Triangle%28%29
+
+inline double isLeft( const Vec2d& P0, const Vec2d& P1, const Vec2d& P2 ){
+	Vec2d d10; d10.set_sub( P1, P0 );
+	Vec2d d20; d20.set_sub( P2, P0 );
+	return d10.cross( d20 );
+	//return d10.x * d20.y - d20.x * d10.y; 
+    //return ( (P1.x - P0.x) * (P2.y - P0.y) - (P2.x - P0.x) * (P1.y - P0.y) );
+}
+
+inline double area2D_Triangle( const Vec2d& V0, const Vec2d& V1, const Vec2d& V2 ){
+    return isLeft( V0, V1, V2 ) * 0.5;
+}
+*/
 
 #endif
 
