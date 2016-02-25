@@ -42,9 +42,11 @@ Here is a copy of the Netlib documentation:
 
 */
 
+// template see here :  Ben Supnik  http://stackoverflow.com/questions/1174169/function-passed-as-template-argument
 
+typedef double( *scalar_func )(double);
 
-
+template<scalar_func pot_func>
 double lineSearch_Brent (double x0, double a, double b, double tol ) {
     double  x,  u, v, w; 
     double fx, fu,fv,fw;
