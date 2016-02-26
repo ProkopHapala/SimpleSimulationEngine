@@ -68,7 +68,8 @@ class Vec2TYPE{
     inline VEC operator* ( const VEC& vi ) const { VEC vo; vo.x=x*vi.x; vo.y=y*vi.y; return vo; };
     inline VEC operator/ ( const VEC& vi ) const { VEC vo; vo.x=x/vi.x; vo.y=y/vi.y; return vo; };
 
-	inline TYPE dot  ( const VEC& a ) const { return x*a.x + y*a.y; };
+	inline TYPE dot      ( const VEC& a ) const { return x*a.x + y*a.y; };
+	inline TYPE dot_perp ( const VEC& a ) const { return y*a.x - x*a.y; };
 	inline TYPE norm2(              ) const { return x*x + y*y;     };
 
 	inline TYPE norm ( ) const { return  sqrt( x*x + y*y ); };

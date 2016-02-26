@@ -19,6 +19,9 @@
 #define _abs(a)        (a>0)?a:-a
 #define _clamp(x,a,b)  max(a, min(b, x))
 
+#define _circ_inc( i, n )   i++; (i>=n) ? 0   : i; 
+#define _circ_dec( i, n )   i--; (i< 0) ? n-1 : i;
+
 
 #include "gonioApprox.h"
 

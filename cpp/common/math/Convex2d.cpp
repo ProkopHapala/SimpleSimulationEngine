@@ -1,5 +1,5 @@
 
-#include "arrayAlgs.h"
+//#include "arrayAlgs.h"
 #include "Convex2d.h" // THE HEADER
 
 /*
@@ -13,23 +13,6 @@ bool Convex2d::lineIntersections( const Line2d& line, const Vec2d& p1, Vec2d& p2
     if( i1 >= n ) i1 = 0;
 
 }
-*/
-
-/*
-bool Convex2d::funcking_empty1( const Line2d& line, Convex2d& left ){
-    printf( " inside Convex2d::funcking_empty1 \n" );
-    return false;
-};
-
-bool Convex2d::funcking_empty2( const Line2d& line, Convex2d& left, Convex2d& right ){
-    printf( " inside Convex2d::funcking_empty2 \n" );
-    return false;
-};
-
-bool Convex2d::funcking_empty3( const Line2d& line, Convex2d * left, Convex2d * right ){
-    printf( " inside Convex2d::funcking_empty3 \n" );
-    return false;
-};
 */
 
 bool Convex2d::cut( const Line2d& line, Convex2d& left, Convex2d& right ){
@@ -143,6 +126,17 @@ void Convex2d::fromPoints( int np, Vec2d * points ){
 	//delete permut;
 	//delete vals;
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
