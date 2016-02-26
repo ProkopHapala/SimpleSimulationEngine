@@ -10,7 +10,7 @@
 #include "Vec2.h"
 #include "geom2D.h"
 
-#include "arrayAlgs.h" // FIXME move this to .cpp 
+#include "arrayAlgs.h" // FIXME move this to .cpp
 
 /////////////////////////
 //   CLASS :   Convex2d
@@ -29,6 +29,7 @@ class Convex2d{
 	void fromPoints( int np, Vec2d * points, int * permut, double * vals );
 	void fromPoints( int np, Vec2d * points );
 	void make_corners( );
+	void projectToLine( const Vec2d& dir, double * xs, double * yLs, double * yRs );
 
 	// ======= inline functions
 
@@ -81,48 +82,6 @@ class Convex2d{
 		delete lines;
 	}
 
-
-// ======== temp
-
-	void projectToLine( const Vec2d& dir, double * xs, double * ys ){   // FIXME move this to .cpp 
-		// -- order corners by pos along direction
-		int    permut[ n ];
-		for( int i=0; i<n; i++ ){ 
-			xs [i] = dir.dot     ( corners[i] ); 
-		}		
-		quickSort<double>( xs, permut, 0, n );
-		// -- initialize left and right bonder from bottom point "ibot" to top point "itop" 
-		int ibot  = permut[ 0   ];
-		int itop  = permut[ n-1 ];
-		int index = 0;
-		ys [ 0 ]  = 0.0d;
-		Vec2d oleft,oright,pleft,pright;
-		oleft .set( xs[ibot], dir.dot_perp( corners[ibot] ) );
-		oright.set( oleft );
-		int ileft  = ibot;  _circ_inc( ileft,  n );
-		int iright = ibot;  _circ_dec( iright, n );
-		pleft .set( xs[ileft],  dir.dot_perp( corners[ileft ] ) );
-		pright.set( xs[iright], dir.dot_perp( corners[iright] ) );
-		// -- iterate over left and right border resolving points acording to its order along the direction
-		do {
-			index++;
-			if( pleft.x < pright.x ){ // left is closer 
-				double yright = oright.y +  ( pleft.x - oleft.x ) * ( pright.y - oright.y ) / ( pright.x - oright.x );
-				ys[ index ]   = pleft.y - yright;
-				oleft.set( pleft );
-				_circ_inc( ileft,  n );
-				pleft .set( xs[ileft],  dir.dot_perp( corners[ileft ] ) );
-				// FIXME : we should take care when it come to end ? probably not then ileft=itop
-			}else{
-				double yleft = oleft.y +  ( pright.x - oright.x ) * ( pleft.y - oleft.y ) / ( pleft.x - oleft.x );
-				ys[ index ]  = yleft - pright.y;
-				oright.set( pright );
-				_circ_dec( iright,  n );
-				pright .set( xs[iright],  dir.dot_perp( corners[iright ] ) );
-			}
-			if( index >= (n-1) ){ break; printf( " loop should end %i %i %i %i \n", index, n, ileft, iright ); } // FIXME DEBUG just to prevent infinite loop
-		} while( !( ( itop == ileft ) && ( itop == iright ) ) );
-	}
 
 };
 

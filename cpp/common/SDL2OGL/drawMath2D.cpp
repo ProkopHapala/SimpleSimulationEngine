@@ -167,6 +167,13 @@ void drawPolarFunc( double x0, double y0, double fscale, int n, double phi0, dou
 		glEnd();
 };
 
+void plot( int n, double * xs, double * ys ){
+    glBegin(GL_LINE_STRIP);
+    for( int i=0; i<n; i++ ){
+        glVertex3f( (float)xs[i], (float)ys[i], 0 );
+    }
+    glEnd();
+};
 
 void drawFunc( float xmin, float xmax, int n, Func1d func ){
     glBegin(GL_LINE_STRIP);

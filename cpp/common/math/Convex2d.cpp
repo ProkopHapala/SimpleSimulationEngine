@@ -127,6 +127,67 @@ void Convex2d::fromPoints( int np, Vec2d * points ){
 	//delete vals;
 }
 
+void Convex2d::projectToLine( const Vec2d& dir, double * xs, double * yLs, double * yRs ){   // FIXME move this to .cpp
+    // -- order corners by pos along direction
+    //printf( " DEBUG 0 \n" );
+    double xs_   [ n ];
+    int ibot,itop;
+    double xbot=+1e+300,xtop=-1e+308;
+    for( int i=0; i<n; i++ ){
+        double xi = dir.dot( corners[i] );
+        _minit( i, xi, ibot, xbot );   //if( xi<xbot ){ xbot=xi; ibot=i; }
+        _maxit( i, xi, itop, xtop );   //if( x>xmax ){ xmax=x; imax=i; }
+        xs_[i] = xi;
+        //printf( " %i %f \n", i, xi );
+    }
+    //printf( " imin %i xmin %f \n", ibot, xbot );
+    //printf( " imax %i xmax %f \n", itop, xtop );
+    //printf( " DEBUG 1 \n" );
+    // -- initialize left and right bonder from bottom point "ibot" to top point "itop"
+    Vec2d oleft,oright,pleft,pright;
+    oleft .set( xs_[ibot], dir.dot_perp( corners[ibot] ) );
+    oright.set( oleft );
+    xs [ 0 ]  = oleft.x;
+    yRs[ 0 ]  = oleft.y;
+    yLs[ 0 ]  = oleft.y;
+    int index  = 0;
+    int ileft  = ibot;  _circ_inc( ileft,  n );
+    int iright = ibot;  _circ_dec( iright, n );
+    pleft .set( xs_[ileft],  dir.dot_perp( corners[ileft ] ) );
+    pright.set( xs_[iright], dir.dot_perp( corners[iright] ) );
+    //printf( " DEBUG 3 \n" );
+    // -- iterate over left and right border resolving points acording to its order along the direction
+    do {
+        index++;
+        //printf( " DEBUG index %i %i %i %f %f \n", index, ileft, iright, pleft.x, pright.x );
+        if( pleft.x < pright.x ){ // left is closer
+            double yright = oright.y +  ( pleft.x - oright.x ) * ( pright.y - oright.y ) / ( pright.x - oright.x );
+            yLs[ index ]  = pleft.y;
+            yRs[ index ]  = yright;
+            xs [ index ]  = pleft.x;
+            oleft.set( pleft );
+            _circ_inc( ileft,  n );
+            pleft .set( xs_[ileft],  dir.dot_perp( corners[ileft ] ) );
+            //printf( " left  %i %i \n", index, ileft );
+            // FIXME : we should take care when it come to end ? probably not then ileft=itop
+        }else{
+            double yleft  = oleft.y +  ( pright.x - oleft.x ) * ( pleft.y - oleft.y ) / ( pleft.x - oleft.x );
+            yLs[ index ]  = yleft;
+            yRs[ index ]  = pright.y;
+            xs [ index ]  = pright.x;
+            oright.set( pright );
+            _circ_dec( iright,  n );
+            pright .set( xs_[iright],  dir.dot_perp( corners[iright ] ) );
+            //printf( " right %i %i \n", index, iright );
+        }
+        if( index >= (n-1) ){ printf( " loop should end %i %i %i %i \n", index, n, ileft, iright ); break; } // FIXME DEBUG just to prevent infinite loop
+    } while( !( ( itop == ileft ) && ( itop == iright ) ) );
+    //printf( " index %i ileft %i iright %i itop %i \n", index, ileft, iright, itop );
+    index = n-1;
+    yLs[ index ] = dir.dot_perp( corners[ itop ] );
+    yRs[ index ] = yLs[ index ];
+    xs [ index ] = xs_[itop];
+}
 
 
 
