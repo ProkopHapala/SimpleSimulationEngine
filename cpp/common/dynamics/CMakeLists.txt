@@ -11,3 +11,7 @@ add_library( Body2D     OBJECT Body2D.cpp     )
 add_library( AeroSurf   OBJECT AeroSurf.cpp   )
 add_library( AeroSurf2D OBJECT AeroSurf2D.cpp )
 add_library( Collisions OBJECT Collisions.cpp )
+
+
+file(GLOB dynamics_HEADERS_ *.h )
+add_custom_target(dynamics_headers SOURCES ${dynamics_HEADERS_} )

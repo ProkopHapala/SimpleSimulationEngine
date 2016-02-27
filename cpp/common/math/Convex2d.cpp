@@ -127,7 +127,7 @@ void Convex2d::fromPoints( int np, Vec2d * points ){
 	//delete vals;
 }
 
-void Convex2d::projectToLine( const Vec2d& dir, double * xs, double * yLs, double * yRs ){   // FIXME move this to .cpp
+void Convex2d::projectToLine( const Vec2d& dir, double * xs, double * yLs, double * yRs ) const {   // FIXME move this to .cpp
     // -- order corners by pos along direction
     //printf( " DEBUG 0 \n" );
     double xs_   [ n ];

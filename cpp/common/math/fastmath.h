@@ -14,9 +14,9 @@
 
 #define sq(a) a*a
 
-#define _max(a,b)      (a>b)?a:b
-#define _min(a,b)      (a<b)?a:b
-#define _abs(a)        (a>0)?a:-a
+#define _max(a,b)      ((a>b)?a:b)
+#define _min(a,b)      ((a<b)?a:b)
+#define _abs(a)        ((a>0)?a:-a)
 #define _clamp(x,a,b)  max(a, min(b, x))
 
 #define _minit( i, x, imin, xmin )  if( x<xmin ){ xmin=x; imin=i; }
@@ -83,6 +83,17 @@ inline TYPE trashold_cub( TYPE x, TYPE x1, TYPE x2 ){
 	if      (x<x1){ return 0.0; }
 	else if (x>x2){ return 1.0; }
 	else    {  double a =(x-x1)/(x2-x1); return a*a*( 3 - 2*a );  };
+}
+
+inline bool quadratic_roots( double a, double b, double c,  double& x1, double& x2 ){
+    double D     = b*b - 4*a*c;
+    if (D < 0) return false;
+    double sqrtD = sqrt( D );
+    double ia    = -0.5d/a;
+    x1         = ( b - sqrtD )*ia;
+    x2         = ( b + sqrtD )*ia;
+    //printf( "  a,b,c, %f %f %f  x1,x2 %f %f \n", a,b,c, x1, x2 );
+    return true;
 }
 
 #endif

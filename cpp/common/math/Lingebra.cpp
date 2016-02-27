@@ -1,109 +1,7 @@
 
-#ifndef  lingebra_h
-#define  lingebra_h
+#include <Lingebra.h> // THE HEADER
 
-#include <math.h>
-#include <cstdlib>
-#include <stdio.h>
-
-#include <vecN.h>
-
-
-inline void set( int m, int n, double   f,             double** out ){  	for (int i=0; i<m; i++ ){ set( n, f,       out[i] );  } }
-inline void add( int m, int n, double   f, double** B, double** out ){  	for (int i=0; i<m; i++ ){ add( n, f, B[i], out[i] );  } }
-inline void mul( int m, int n, double   f, double** B, double** out ){  	for (int i=0; i<m; i++ ){ mul( n, f, B[i], out[i] );  } }
-
-inline void set( int m, int n, double** A,             double** out ){  	for (int i=0; i<m; i++ ){ set( n, A[i],       out[i] );   } }
-inline void add( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ add( n, A[i], B[i], out[i] );   } }
-inline void sub( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ sub( n, A[i], B[i], out[i] );   } }
-inline void mul( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ mul( n, A[i], B[i], out[i] );   } }
-inline void div( int m, int n, double** A, double** B, double** out ){  	for (int i=0; i<m; i++ ){ div( n, A[i], B[i], out[i] );   } }
-
-
-
-double ** from_continuous( int m, int n, double *p );
-double ** new_matrix( int m, int n );
-double ** delete_matrix( int m, double** A );
-double ** delete_matrix( int m, double** A );
-void transpose( int m, int n, double** A, double** TA );
-void dot( int m, int n, double** A, double* x, double* out );
-void dotT( int m, int n, double** A, double* x, double* out );
-
-void mmul_ik_kj( int ni, int nj, int nk, double** A, double** B, double** out );
-void mmul_ik_jk( int ni, int nj, int nk, double** A, double** B, double** out );
-void mmul_ki_kj( int ni, int nj, int nk, double** A, double** B, double** out );
-void mmul_ki_jk( int ni, int nj, int nk, double** A, double** B, double** out );
-
-void random_matrix( int m, int n, double xmin, double xmax, double** out ){
-void print_matrix( int m, int n, double ** A ){
-
-void   makeQuadricFormMatrix( int m, int n, double * ks, double ** A, double ** Q ){
-double evalQudraticForm( int n, double* x, double** Q ){
-double evalQudraticFormDirs( int m, int n, double* x, double* k, double** A ){
-
-
-void GaussElimination ( int n, double ** A, double * c, int * index ) {
-void linSolve_gauss   ( int n, double ** A, double * b, int * index, double * x ) {
-void linSolve_CG      ( int n, double ** A, double * b, double * x );
-void linSolve_BCG     ( int n, int m, double ** A, double * b, double * x );
-void leastSquareFit_Gauss( int n, int m, double ** A, double * b, double * x );
-
-#endif
-
-
-#ifndef just_headers
-#define just_headers
-#include "Ship.cpp"
-
-
-// creates double** from any continuous memory block folowing *p
-double ** from_continuous( int m, int n, double *p ){
-	double ** A = new double*[m];
-	for (int i=0; i<m; i++ ){ A[i] = &(p[i*n]); }
-	return A;
-}
-
-// allocates new matrix 
-double ** new_matrix( int m, int n ){
-	double ** A = new double*[m];
-	for (int i=0; i<m; i++ ){ A[i] = new double[n]; }
-	return A;
-}
-
-// delete matrix
-double ** delete_matrix( int m, double** A ){
-	for (int i=0; i<m; i++ ){ delete A[i]; }
-	delete [] A;
-}
-
-
-// transpose matrix
-void transpose( int m, int n, double** A, double** TA ){
-	for (int i=0; i<m; i++ ){
-		for (int j=0; j<n; j++ ){
-			TA[i][j] = A[j][i];
-		} 
-	} 
-}
-
-// dot product
-void dot( int m, int n, double** A, double* x, double* out ){
-	for (int i=0; i<m; i++ ){
-		out[i] = dot( n, A[i], x );
-	} 
-}
-
-void dotT( int m, int n, double** A, double* x, double* out ){
-	for (int i=0; i<m; i++ ){
-		double doti = 0;
-		for (int j=0; j<n; j++ ){ doti += A[j][i] * x[j];	}
-		out[i] = doti;
-	} 
-}
-
-
-
-
+namespace Lingebra {
 
 void mmul_ik_kj( int ni, int nj, int nk, double** A, double** B, double** out ){
 	for(int i=0; i<ni; i++){
@@ -149,11 +47,11 @@ void mmul_ki_jk( int ni, int nj, int nk, double** A, double** B, double** out ){
 
 void random_matrix( int m, int n, double xmin, double xmax, double** out ){
 	double xrange = xmax - xmin;
-	for (int i=0; i<m; i++ ){  random_vector ( n, xmin, xmax, out[i] ); } 
+	for (int i=0; i<m; i++ ){ VecN::random_vector ( n, xmin, xmax, out[i] ); } 
 }
 
 void print_matrix( int m, int n, double ** A ){
-	for (int i=0; i<m; i++ ){	print_vector( n, A[i] );	} 
+	for (int i=0; i<m; i++ ){ VecN::print_vector( n, A[i] );	} 
 }
 
 // ===============================================
@@ -181,7 +79,7 @@ void makeQuadricFormMatrix( int m, int n, double * ks, double ** A, double ** Q 
 //  y =  < x | Q.x >
 double evalQudraticForm( int n, double* x, double** Q ){
 	double y =  0;
-	for (int i=0; i<n; i++ ){	y += x[i] * dot( n, Q[i], x );   } 
+	for (int i=0; i<n; i++ ){	y += x[i] * VecN::dot( n, Q[i], x );   } 
 	return y;
 }
 
@@ -189,7 +87,7 @@ double evalQudraticForm( int n, double* x, double** Q ){
 double evalQudraticFormDirs( int m, int n, double* x, double* k, double** A ){
 	double y =  0;
 	for (int i=0; i<m; i++ ){
-		double ri = dot( n, A[i], x );
+		double ri = VecN::dot( n, A[i], x );
 		y += k[i]*ri*ri;
 	} 
 	return y;
@@ -319,22 +217,22 @@ void linSolve_CG( int n, double ** A, double * b, double * x ){
 	double *  p     = new double[n];
 	double *  Ap    = new double[n];
 	dot( n, n, A, x, r );
-	sub( n, b, r, r );
-	set( n, r, p );
-	double rho = dot(n, r,r);
+	VecN::sub( n, b, r, r );
+	VecN::set( n, r, p );
+	double rho = VecN::dot(n, r,r);
 	double alpha = 0;
 	for ( int i =0; i<maxIters; i++) {
 		dot( n, n, A, p, Ap);
-		alpha = rho / dot(n, p, Ap);
-		fma( n, x, p ,  alpha,   x );
-		fma( n, r, Ap, -alpha,   r2 );
-		double err2 = dot(n, r2,r2);
+		alpha = rho / VecN::dot(n, p, Ap);
+		VecN::fma( n, x, p ,  alpha,   x );
+		VecN::fma( n, r, Ap, -alpha,   r2 );
+		double err2 = VecN::dot(n, r2,r2);
 		//printf( " iter: %i  err2: %f |  alpha %f \n", i, err2,     alpha );
 		printf( " iter: %i  err2: %f \n", i, err2 );
 		if (err2 < maxErr2 ) break;
-		double rho2 = dot(n, r2,r2);
+		double rho2 = VecN::dot(n, r2,r2);
 		double beta = rho2 / rho;
-		fma( n, r2, p, beta, p );
+		VecN::fma( n, r2, p, beta, p );
 		rho = rho2;
 		double * swap = r; r = r2; r2 = swap;
 	}
@@ -353,22 +251,22 @@ void linSolve_BCG( int n, int m, double ** A, double * b, double * x ){
 	double *  Ap    = new double[n];
 	dot ( n, m, A, x, r );
 	dotT( m, n, A, x, r );
-	sub( n, b, r, r );
-	set( n, r, p );
-	double rho = dot(n, r,r);
+	VecN::sub( n, b, r, r );
+	VecN::set( n, r, p );
+	double rho = VecN::dot(n, r,r);
 	double alpha = 0;
 	for ( int i =0; i<maxIters; i++) {
 		dot ( n, m, A, p, Ap);
 		dotT( m, n, A, p, Ap);
-		alpha = rho / dot(n, p, Ap);
-		fma( n, x, p ,  alpha,   x );
-		fma( n, r, Ap, -alpha,   r2 );
-		double err2 = dot(n, r2,r2);
+		alpha = rho / VecN::dot(n, p, Ap);
+		VecN::fma( n, x, p ,  alpha,   x );
+		VecN::fma( n, r, Ap, -alpha,   r2 );
+		double err2 = VecN::dot(n, r2,r2);
 		printf( " iter: %i  err2: %f \n", i, err2 );
 		if (err2 < maxErr2 ) break;
-		double rho2 = dot(n, r2,r2);
+		double rho2 = VecN::dot(n, r2,r2);
 		double beta = rho2 / rho;
-		fma( n, r2, p, beta, p );
+		VecN::fma( n, r2, p, beta, p );
 		rho = rho2;
 		double * swap = r; r = r2; r2 = swap;
 	}
@@ -386,12 +284,11 @@ void leastSquareFit_Gauss( int n, int m, double ** A, double * b, double * x ){
 	mmul_ki_kj( n, n, m, A, A, AA );
 	//linSolve_gauss( n, AA, Ab, index, x );
 	linSolve_CG( n, AA, Ab, x );
-	print_vector( n, x );
+	VecN::print_vector( n, x );
 	delete AA;
 	delete Ab;
 	delete index;
 }
 
-
-#endif
+};
 

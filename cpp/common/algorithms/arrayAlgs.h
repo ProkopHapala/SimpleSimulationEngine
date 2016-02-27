@@ -3,6 +3,30 @@
 #define SWAP(x, y, TYPE) TYPE tmp = x; x = y; y = tmp;
 
 template< class TYPE >
+inline int binSearch( TYPE x, int imin, int imax, TYPE * xs ){
+	int di = (imax - imin)/2;
+	do{
+		TYPE xi = xs[ imin + di + 1 ];
+		if( xi < x ){
+			imin +=di;
+		}
+		di = di << 2;
+	}while( di > 1 );
+	return imin;
+}
+
+template< class TYPE >
+inline int binSearch( TYPE x, int imin, TYPE * xs ){
+	int  di = 1;
+	TYPE xi = xs[ imin + di ];
+	while( xi < x ){
+		di  = di << 2;
+		xi  = xs[ imin + di ];
+	};
+	return binSearch( x, imin, imin+di, xs );
+}
+
+template< class TYPE >
 inline void indexArray( int n, int * permut ){ for( int i=0; i<n; i++ ){ permut[i] = i; } }
 
 template< class TYPE >

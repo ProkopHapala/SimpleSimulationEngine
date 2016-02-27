@@ -29,7 +29,7 @@ class Convex2d{
 	void fromPoints( int np, Vec2d * points, int * permut, double * vals );
 	void fromPoints( int np, Vec2d * points );
 	void make_corners( );
-	void projectToLine( const Vec2d& dir, double * xs, double * yLs, double * yRs );
+	void projectToLine( const Vec2d& dir, double * xs, double * yLs, double * yRs ) const ;
 
 	// ======= inline functions
 
