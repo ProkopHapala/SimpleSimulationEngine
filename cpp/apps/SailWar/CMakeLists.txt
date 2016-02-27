@@ -31,7 +31,13 @@ add_executable( ${NAME}
 
 	$<TARGET_OBJECTS:SDL2OGL> 
 )
-
 target_link_libraries( ${NAME} ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_buoyancy test_buoyancy.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Convex2d> )
+target_link_libraries( test_buoyancy ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 file( COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR} )
+
+
+
+
