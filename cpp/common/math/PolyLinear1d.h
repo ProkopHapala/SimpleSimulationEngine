@@ -94,11 +94,17 @@ class PolyLinear1d{
 			}else{
 			    //printf( " x_of_integral %i %f %f \n", i, Irest, dI );
                 double dxdy  = ( y - oy ) / dx;
-                double x1,x2;
-                quadratic_roots( 0.5d*dxdy, oy, -Irest, x1, x2 );
-                //printf( " x_of_integral quadratic_roots %f %f %f %f %f \n", 0.5d*dxdy, oy, -Irest, x1, x2  );
+                if( fabs(dxdy) < 1e-8 ){
+                    dx = Irest / oy;
+                    //return ox + Irest / oy;
+                }else{
+                    double x1,x2;
+                    quadratic_roots( 0.5d*dxdy, oy, -Irest, x1, x2 );
+                    if( dxdy > 0 ){ dx = _max( x1, x2 ); } else { dx = _min( x1, x2 ); };
+                    //printf( " x_of_integral quadratic_roots %f %f %f %f %f \n", dxdy, oy, Irest, x1, x2  );
+                }
                 //printf( " x1 %f x2 %f   %f %f \n", x1, x2, ox, ox + _max( x1, x2 ) );
-				return ox + _max( x1, x2 );
+				return ox + dx;
 			}
 		}
 		return NAN;

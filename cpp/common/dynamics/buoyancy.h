@@ -9,7 +9,6 @@
 #include "Convex2d.h"
 #include "PolyLinear1d.h"
 
-
 /*
  centre of mass:   yc(x) = 0.5*(yl(x) + yr(x))
  volume:           yv(y) =      yl(x) - yr(x)
@@ -20,6 +19,7 @@
  V =       x    *oyv  +  x^2/2 *       av
  M = 0.5*( x*oyc*oyv  +  x^2/2 * ( oyc*av + ac*oyv )  +  x^3/3 * ac*av  )
 */
+
 double integrate_moment( int n, double * xs, double * yLs, double * yRs, double displacement, double& watterline ){
     double Vsum = 0.0d;
     double Msum = 0.0d;
@@ -40,66 +40,44 @@ double integrate_moment( int n, double * xs, double * yLs, double * yRs, double 
         double dV = dx*( oyv + av*0.5 );
         double Vrest = displacement - Vsum;
         if( dV < Vrest ) {
-            Msum  = dx*( oyc*oyv + 0.5d*( oyc*av + ac*oyv ) + 0.33333333333*ac*av );
+            //Msum += dx*( oyc*oyv + dx*( 0.5d*( oyc*av/dx + ac*oyv/dx ) + dx*0.33333333333d*ac*av/dx/dx ) );
+            Msum += dx*( oyc*oyv + 0.5d*( oyc*av + ac*oyv ) + 0.33333333333d*ac*av );
             Vsum += dV;
             //printf( "|_| %i %f  (%3.3f,%3.3f) \n", i, Vsum, ox, x );
             ox=x; oyc=yc; oyv=yv;
         }else{
             //printf( " integrate_moment %i %f %f \n", i, Vrest, dV );
+            if( dx < 1e-8 ){
+                watterline = ox;
+                return Msum * 0.5d;
+            };
             double idx = 1/dx;
             ac *= idx;
             av *= idx;
-            double x1,x2;
-            dx =  quadratic_roots( 0.5d*av, oyv, -Vrest, x1, x2 );
-            dx = _max( x1, x2 );
-            //printf( " integrate_moment quadratic_roots %f %f %f %f %f \n", 0.5d*av, oyv, -Vrest, x1, x2  );
-            Msum += dx*( oyc*oyv + dx*( ( 0.5d*oyc*av + ac*oyv ) + dx*0.33333333333*ac*av ) );
+            if( fabs( av ) < 1e-8 ){
+                dx = Vrest / oyv;
+                //printf( " linear dx %f   %f %f %f \n", dx,   Vrest, av, oyv );
+                Msum += dx*( oyc*oyv + dx*0.5*ac*oyv );
+                //watterline = ox + dx;
+                //return Msum * 0.5d;
+            }else{
+                double x1,x2;
+                dx =  quadratic_roots( 0.5d*av, oyv, -Vrest, x1, x2 );
+                //dx = _max( x1, x2 );
+                if( av > 0 ){ dx = _max( x1, x2 ); } else { dx = _min( x1, x2 ); };
+                //printf( " quadrt dx %f   %f %f %f \n", dx,  Vrest, av, oyv );
+                //printf( " integrate_moment quadratic_roots %f %f %f %f %f \n", av, oyv, Vrest, x1, x2  );
+                Msum += dx*( oyc*oyv + dx*( 0.5*( oyc*av + ac*oyv ) + dx*0.33333333333*ac*av ) );
+                //watterline = ox + dx;
+                //return Msum * 0.5d;
+            }
+            //Msum += dx*( oyc*oyv + dx*( 0.5*( oyc*av + ac*oyv ) + dx*0.33333333333*ac*av ) );
             watterline = ox + dx;
             return Msum * 0.5d;
         }
     }
     return NAN;
 }
-
-/*
-// FIXME : more effective would be compute watterline together with moment
-double integrate_moment( int n, double xs, double yLs, double yRs, double displacement ){
-    double Vsum = 0.0d;
-    double Msum = 0.0d;
-    double ox =xs [i];
-    double oyl=yLs[i];
-    double oyr=yRs[i];
-    for( int i=1; i<n; i++ ){
-        double x   = xs [i];
-        double yl  = yLs[i];
-        double yr  = yRs[i];
-        double dx  = x  - ox;
-        double bc =           oyl + oyr;
-        double bv =           oyl - oyr;
-        double ac = yl + yr - oyl - oyr;
-        double av = yl - yr - oyl + oyr;
-        double dV = dx*( bv + av );
-        double Vrest = displacement - Vsum;
-        if( dV < Vrest ) {
-            Msum  = dx*( bc*bv + 0.5d*( bc*av + ac*bv ) + 0.33333333333*ac*av );
-            Vsum += dV;
-            //printf( "|_| %i %f  (%3.3f,%3.3f) \n", i, Isum, ox, x );
-            ox=x; oyl=yl; oyr=yr;
-        }else{
-            double idx = 1/dx;
-            ac *= idx;
-            av *= idx;
-            double x1,x2;
-            dx =  quadratic_roots( 0.5d*av, bv, -Vrest, x1, x2 );
-            dx = _max( x1, x2 );
-            Msum += dx*( bc*bv + dx*( ( 0.5d*bc*av + ac*bv ) + dx*0.33333333333*ac*av ) );
-            return Msum * 0.5d;
-        }
-    }
-    return NAN;
-}
-*/
-
 
 double buoy_moment_2D( const Convex2d& hull, const Vec2d& dir, const Vec2d& cog, double displacement ){
     double yLs [hull.n];

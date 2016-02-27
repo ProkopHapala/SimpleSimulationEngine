@@ -30,10 +30,11 @@ class TestAppTerrainCubic : public AppSDL2OGL {
 	public:
 
     double angle =0.0d;
-    double dAngle=0.01d;
+    double dAngle=0.0005d;
 
-    constexpr static int nPhis = 100;
+    constexpr static int nPhis = 500;
     double phis[ nPhis ];
+    double wts [ nPhis ];
     double Ms  [ nPhis ];
 
     constexpr static int np = 4;
@@ -52,12 +53,20 @@ class TestAppTerrainCubic : public AppSDL2OGL {
 
 TestAppTerrainCubic::TestAppTerrainCubic( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
     hull = new Convex2d( np );
+
 	hull->corners[0].set( -1.0, -1.0 );
     hull->corners[1].set( +1.0, -1.0 );
     hull->corners[2].set( +1.5, +1.0 );
 	hull->corners[3].set( -1.5, +1.0 );
 
-    evalPolar( -1.5, 1.5, 2.5 );
+/*
+    hull->corners[0].set( -1.2, -0.7 );
+    hull->corners[1].set( +1.2, -0.7 );
+    hull->corners[2].set( +1.0, +0.7 );
+	hull->corners[3].set( -1.0, +0.7 );
+*/
+
+    evalPolar( -1.5, 1.5, 2.0 );
     //exit(0);
 }
 
@@ -71,7 +80,8 @@ void TestAppTerrainCubic::evalPolar( double phi_min, double phi_max, double disp
         double moment = integrate_moment( np, xs, yLs, yRs, displacement, watterline );
         phis[i] = phi;
         Ms  [i] = moment;
-        printf( " %i %f %f \n", i, phi, moment );
+        wts [i] = watterline;
+        printf( " %i %f %f %f \n", i, phi, moment, watterline );
     }
 }
 
@@ -87,6 +97,8 @@ void TestAppTerrainCubic::draw(){
     //Vec2d dir; dir.set( +1.0, 0.1 ); dir.normalize( );
     //ouble angle = ( frameCount%100 - 50 ) * 0.007;
 
+    //angle = 0.3d;
+
     angle += dAngle;
     if       ( ( angle >  1.5 ) && ( dAngle > 0 ) ){ dAngle = -dAngle; }
     else if  ( ( angle < -1.5 ) && ( dAngle < 0 ) ){ dAngle = -dAngle; };
@@ -99,25 +111,26 @@ void TestAppTerrainCubic::draw(){
     double ys  [ np ];
     VecN::sub( np, yLs, yRs, ys );
 
+    double displacement = 2.0;
+
 /*
     PolyLinear1d pline( np, xs, ys );
-    //pline.n  = np;
-    //pline.xs = xs;
-    //pline.ys = ys;
+    pline.n  = np;
+    pline.xs = xs;
+    pline.ys = ys;
     //double V = pline.integrate( -1000.0, 1000.0 );
     double V     = pline.integrate_ibounds( 0, pline.n );
-    double Vtarget = V*0.1;
-    double xhalf   = pline.x_of_integral( Vtarget );
-    double Vhalf   = pline.integrate( -1000.0, xhalf );
-    printf( " V %f xhalf %f Vhalf %f  Vtarget %f \n", V, xhalf, Vhalf, Vtarget );
+    double x_disp   = pline.x_of_integral( displacement );
+    //double V_disp   = pline.integrate( -1000.0, x_disp );
+    double V_disp = NAN;
+    printf( " V %f xhalf %f Vhalf %f  Vtarget %f \n", V, x_disp, V_disp, displacement );
     pline.detach();
 */
 
-    double displacement = 2.5;
     double watterline;
     double moment = integrate_moment( np, xs, yLs, yRs, displacement, watterline );
-    //printf( " V %f xtarget %f %f  Vtarget %f %f moment %f \n", V, xhalf, watterline, Vhalf, Vtarget, moment );
-    printf( " %i %f %f \n", frameCount, watterline, moment );
+    //printf( " V %f xtarget %f %f  Vtarget %f %f moment %f \n", V, x_disp, watterline, V_disp, displacement, moment );
+    //printf( " %i %f %f \n", frameCount, watterline, moment );
 
     glColor3f( 0.2f, 0.9f, 0.2f ); Draw2D::drawLine( {  -10.0, watterline }, {  +10.0, watterline } );
     glColor3f( 0.9f, 0.9f, 0.9f ); Draw2D::drawLine( {  0.0, -10.0 }, {  0.0, +10.0 } ); Draw2D::drawLine( {-10.0,   0.0 }, {+10.0,   0.0 } );
@@ -125,7 +138,8 @@ void TestAppTerrainCubic::draw(){
     glColor3f( 0.2f, 0.2f, 0.9f ); Draw2D::plot( np, yRs, xs );
     glColor3f( 0.0f, 0.0f, 0.0f ); Draw2D::plot( np, ys,  xs );
 
-    glColor3f( 0.9f, 0.2f, 0.9f ); Draw2D::plot( nPhis, phis, Ms );
+    glColor3f( 0.9f, 0.2f, 0.9f ); Draw2D::plot( nPhis, phis, Ms ); Draw2D::drawPointCross_d( { angle, moment }, 0.1 );
+    glColor3f( 0.2f, 0.7f, 0.9f ); Draw2D::plot( nPhis, phis, wts ); Draw2D::drawPointCross_d( { angle, watterline }, 0.1 );
 
 	// ============== Mouse Raycast  Convex Polygons
 
