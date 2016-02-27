@@ -56,14 +56,21 @@ TestAppTerrainCubic::TestAppTerrainCubic( int& id, int WIDTH_, int HEIGHT_ ) : A
 
 	hull->corners[0].set( -1.0, -1.0 );
     hull->corners[1].set( +1.0, -1.0 );
-    hull->corners[2].set( +1.5, +1.0 );
-	hull->corners[3].set( -1.5, +1.0 );
+    hull->corners[2].set( +1.0, +1.0 );
+	hull->corners[3].set( -1.0, +1.0 );
 
 /*
-    hull->corners[0].set( -1.2, -0.7 );
-    hull->corners[1].set( +1.2, -0.7 );
-    hull->corners[2].set( +1.0, +0.7 );
-	hull->corners[3].set( -1.0, +0.7 );
+	hull->corners[0].set( -1.0, -1.0 );
+    hull->corners[1].set( +1.0, -1.0 );
+    hull->corners[2].set( +1.5, +1.0 );
+	hull->corners[3].set( -1.5, +1.0 );
+*/
+
+/*
+    hull->corners[0].set( -1.5, -1.0 );
+    hull->corners[1].set( +1.5, -1.0 );
+    hull->corners[2].set( +1.0, +1.0 );
+	hull->corners[3].set( -1.0, +1.0 );
 */
 
     evalPolar( -1.5, 1.5, 2.0 );

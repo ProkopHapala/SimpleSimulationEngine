@@ -4,10 +4,10 @@
 
 #include "fastmath.h"
 #include "Vec2.h"
-#include "VecN.h"
+//#include "VecN.h"
 #include "geom2D.h"
 #include "Convex2d.h"
-#include "PolyLinear1d.h"
+//#include "PolyLinear1d.h"
 
 /*
  centre of mass:   yc(x) = 0.5*(yl(x) + yr(x))
@@ -87,12 +87,8 @@ double buoy_moment_2D( const Convex2d& hull, const Vec2d& dir, const Vec2d& cog,
 	hull.projectToLine( dir, xs, yLs, yRs );
 	double watterline;
 	double moment = integrate_moment( hull.n, xs, yLs, yRs, displacement, watterline );
-	//VecN::sub( np, yLs, yRs, ys );
-	//PolyLinear1d pline( np, xs, ys );
-	//double x_watterline = pline.x_of_integral( displacement );
-	//double xcog = dir.dot_perp( cog );
-	//pline.detach();
-    return moment;
+	double ycog = dir.dot_perp( cog );
+    return moment/displacement - ycog;
 }
 
 #endif
