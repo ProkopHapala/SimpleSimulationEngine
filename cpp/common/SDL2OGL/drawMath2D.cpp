@@ -34,6 +34,15 @@ void drawVecInPos( const Vec2f& v, const Vec2f& pos ){
 	glEnd();
 };
 
+void drawBody2d( const Vec2f& rot, const Vec2f& pos, float l1, float l2 ){
+    //printf( "(%3.3f,%3.3f) (%3.3f,%3.3f)\n",  rot.x, rot.y, pos.x, pos.y );
+	glDisable (GL_LIGHTING);
+	glBegin   (GL_LINES);
+		glVertex3f( pos.x, pos.y, 0 ); glVertex3f( pos.x+rot.x*l1, pos.y+rot.y*l1, 0 );
+		glVertex3f( pos.x, pos.y, 0 ); glVertex3f( pos.x+rot.y*l2, pos.y-rot.x*l2, 0 );
+	glEnd();
+};
+
 void drawLine( const Vec2f& p1, const Vec2f& p2 ){
 	glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
@@ -83,6 +92,10 @@ void drawVecInPos_d( const Vec2d& v,   const Vec2d& pos ){
 	Vec2f v_,pos_; convert( v, v_ );     convert( pos, pos_ ); drawVecInPos( v_, pos_);
 };
 
+void drawBody2d_d( const Vec2d& rot,   const Vec2d& pos, float l1, float l2 ){
+	Vec2f rot_,pos_; convert( rot, rot_ );     convert( pos, pos_ ); drawBody2d( rot_, pos_, l1, l2 );
+};
+
 void drawLine_d( const Vec2d& p1,  const Vec2d& p2  ){
 	Vec2f p1_,p2_; convert( p1, p1_ );   convert( p2, p2_ );   drawLine( p1_, p2_);
 };
@@ -115,7 +128,20 @@ void drawCircle_d( const Vec2d& center_, float radius, int n, bool filled ){
 void drawPoints( int npoints, Vec2d * points ){
 	glBegin   (GL_POINTS);
 	for( int i=0; i<npoints; i++ ){
-		Vec2f p; convert( points[i], p );  glVertex3f( (float)p.x, (float)p.y, 0.0f );
+		Vec2f p; convert( points[i], p );
+		glVertex3f( p.x, p.y, 0.0f );
+	}
+	glEnd();
+};
+
+void drawPoints( int npoints, Vec2d * points, float sc  ){
+	glBegin   (GL_LINES);
+	for( int i=0; i<npoints; i++ ){
+		Vec2f p; convert( points[i], p );
+		glVertex3f( p.x-sc, p.y, 0.0f );
+		glVertex3f( p.x+sc, p.y, 0.0f );
+        glVertex3f( p.x, p.y-sc, 0.0f );
+		glVertex3f( p.x, p.y+sc, 0.0f );
 	}
 	glEnd();
 };

@@ -91,7 +91,7 @@ void setup(){
     world.init();
     thisShip = world.ships.front();
     thisScreen->world = &world;
-    thisScreen->zoom = 100;
+    //thisScreen->zoom = 100;
     printf( " world.init DONE \n" );
 }
 

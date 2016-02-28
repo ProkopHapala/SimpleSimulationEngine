@@ -35,6 +35,8 @@ void Yacht2D::testSail( int n, int nsub, double dt, double windSpeed, Vec2d * po
             applySailForces( wind_speed, watter_speed );
             move( dt );
         }
+        //Draw2D::drawBody2d_d( rot, pos, 0.5, 0.2 );
+        //Draw2D::drawPointCross_d( pos, 0.2 );
         if( poss != NULL ) poss[i].set( pos );
         if( vels != NULL ) vels[i].set( vel );
         if( rots != NULL ) rots[i].set( rot );

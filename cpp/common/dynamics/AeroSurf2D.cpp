@@ -25,26 +25,6 @@ CD limits ( Re = 10,000 )
 // ==== AeroSurf2D
 // ===================
 
-bool AeroSurf2D::loadPolar( char const* filename ){
-	printf(" loading polar from : %s \n", filename );
-	FILE * pFile;
-	pFile = fopen (filename,"r");
-	fscanf (pFile, " %i", &nPolar);
-	//printf("natoms %i \n", natoms );
-	cDs = new double[ nPolar ];
-	cLs = new double[ nPolar ];
-	for (int i=0; i<nPolar; i++){
-		int nw = fscanf (pFile, " %i %lf %lf %lf %lf", &cDs[i], &cLs[i] );
-	}
-	fclose (pFile);
-	return 0;
-};
-
-void AeroSurf2D::plot_polar( double x0, double y0, double fscale, double phi0 ){
-	glColor3f( 0.8f, 0.2f, 0.2f );	Draw2D::drawPolarFunc( x0, y0, fscale, nPolar, phi0, cDs );
-	glColor3f( 0.2f, 0.2f, 0.8f );  Draw2D::drawPolarFunc( x0, y0, fscale, nPolar, phi0, cLs );
-};
-
 void AeroSurf2D::assertAeroForce( RigidBody2D& platform, const Vec2d& vel, double density ){
 	Vec2d gpos, grot, vhat, force;
 
@@ -93,6 +73,37 @@ void AeroSurf2D::assertAeroForce( RigidBody2D& platform, const Vec2d& vel, doubl
 
 };
 
+void AeroSurf2D::eval_polar ( int n, double * phis, double * CLs, double * CDs ){
+    for( int i=0; i<n; i++){
+        double phi = phis[i];
+        double sa = sin( phi );
+        double ca = cos( phi );
+        polarModel( ca, sa, CDs[i], CLs[i] );
+    };
+}
+
+/*
+bool AeroSurf2D::loadPolar( char const* filename ){
+	printf(" loading polar from : %s \n", filename );
+	FILE * pFile;
+	pFile = fopen (filename,"r");
+	fscanf (pFile, " %i", &nPolar);
+	//printf("natoms %i \n", natoms );
+	cDs = new double[ nPolar ];
+	cLs = new double[ nPolar ];
+	for (int i=0; i<nPolar; i++){
+		int nw = fscanf (pFile, " %i %lf %lf %lf %lf", &cDs[i], &cLs[i] );
+	}
+	fclose (pFile);
+	return 0;
+};
+
+void AeroSurf2D::plot_polar( double x0, double y0, double fscale, double phi0 ){
+	glColor3f( 0.8f, 0.2f, 0.2f );	Draw2D::drawPolarFunc( x0, y0, fscale, nPolar, phi0, cDs );
+	glColor3f( 0.2f, 0.2f, 0.8f );  Draw2D::drawPolarFunc( x0, y0, fscale, nPolar, phi0, cLs );
+};
+*/
+
 void AeroSurf2D::draw( RigidBody2D& platform ){
 	Vec2d gpos, grot;
 	grot  .set_mul_cmplx( platform.rot, rot );
@@ -122,4 +133,3 @@ char * AeroSurf2D::toString( ){
 	sprintf ( s, "%g %g %g %g %g %g %g %g %g %g %g", pos.x, pos.y, phi, area, CD0, dCD, dCDS, dCL, dCLS, sStall, wStall );
 	return s;
 };
-
