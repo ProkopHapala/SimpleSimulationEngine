@@ -3,12 +3,16 @@
 #g++ test_UDPServer.cpp -o test_UDPServer.x -std=c++11 -lSDL2 -lSDL2_net -I/usr/local/include/SDL2  -Wl,-rpath -Wl,/usr/local/lib
 #g++ test_UDPClient.cpp -o test_UDPClient.x -std=c++11 -lSDL2 -lSDL2_net -I/usr/local/include/SDL2  -Wl,-rpath -Wl,/usr/local/lib
 
-COMMON="/home/prokop/git/SimpleSimulationEngine/cpp/common"
-
-g++ test_UDPNode_server.cpp -o test_UDPServer.x -std=c++11 -lSDL2_net -lSDL2 -I/usr/local/include/SDL2  -Wl,-rpath -Wl,/usr/local/lib
-g++ test_UDPNode_client.cpp -o test_UDPClient.x -std=c++11 -lSDL2_net -lSDL2 -lm -lGL -lGLU -I/usr/local/include/SDL2 -I$COMMON/math -I$COMMON/SDL2OGL -Wl,-rpath -Wl,/usr/local/lib
 
 
+g++ test_UDPServer.cpp -o test_UDPServer.x -std=c++11 -O3 -lSDL2 -lSDL2_net -I/usr/local/include/SDL2  -Wl,-rpath -Wl,/usr/local/lib
+g++ test_UDPClient.cpp -o test_UDPClient.x -std=c++11 -O3 -lSDL2 -lSDL2_net -I/usr/local/include/SDL2  -Wl,-rpath -Wl,/usr/local/lib
+
+
+
+#COMMON="/home/prokop/git/SimpleSimulationEngine/cpp/common"
+#g++ test_UDPNode_server.cpp -o test_UDPServer.x -std=c++11 -lSDL2_net -lSDL2 -I/usr/local/include/SDL2  -Wl,-rpath -Wl,/usr/local/lib
+#g++ test_UDPNode_client.cpp -o test_UDPClient.x -std=c++11 -lSDL2_net -lSDL2 -lm -lGL -lGLU -I/usr/local/include/SDL2 -I$COMMON/math -I$COMMON/SDL2OGL -Wl,-rpath -Wl,/usr/local/lib
 
 
 : '

@@ -23,8 +23,8 @@ int main(int argc, char **argv){
 
 class UDPClient_mod : public UDPClient {
 	public:
-	int iframe;
-	double t,x,y,vx,vy;
+	int iframe=0;
+	double t=0,x=0,y=0,vx=1,vy=0;
 
 	double move( double dt ){
 		double G = 9.81; 
@@ -42,11 +42,11 @@ class UDPClient_mod : public UDPClient {
 	virtual bool onSend(){
 		move( 0.01 );
 		const int expected_length = sizeof(double)*3 + sizeof(int)*1;
-		((double *)p->data)[0] = x;
- 		((double *)p->data)[1] = y;
-		((double *)p->data)[2] = t;
-		((int *)&(((double *)p->data)[3]))[0] = iframe;
-		p->len  = expected_length;
+		((double *)packet->data)[0] = x;
+ 		((double *)packet->data)[1] = y;
+		((double *)packet->data)[2] = t;
+		((int *)&(((double *)packet->data)[3]))[0] = iframe;
+		packet->len  = expected_length;
 	}
 
 };
@@ -54,19 +54,15 @@ class UDPClient_mod : public UDPClient {
 UDPClient_mod client;
 
 int main(int argc, char **argv){
-	client.init( "localhost", 2000, 0, 512 );
-
-	client.iframe;
-	client.t=0;
-	client.x=0;
-	client.y=0;
-	client.vx=1;
-	client.vy=0;
+	int frameCount = 0;
+	client.init( "localhost", 2000, 512 );
 
 	while (true){
+		printf( "test_UDPClient %04i: try\n", frameCount );
 		//printf( "client try\n" );
 		client.send( );
 		SDL_Delay( 20 );
+		frameCount++;
 	}
 }
 

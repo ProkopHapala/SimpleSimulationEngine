@@ -5,29 +5,30 @@
 
 class UDPClient{
 	public:
-	UDPsocket sd;
-	IPaddress srvadd;
-	UDPpacket *p;
+	UDPsocket socket;
+	IPaddress receiver;
+	UDPpacket *packet;
  
-	virtual int init( const char *host, Uint16 port, int socket, int nbytes ){
-		if (        SDLNet_Init() < 0                         ){ printf( "SDLNet_Init:        %s\n", SDLNet_GetError());                     return 1; }
-		if ( !(sd = SDLNet_UDP_Open(socket) )                 ){ printf( "SDLNet_UDP_Open:    %s\n", SDLNet_GetError());                     return 2; }
-		if (        SDLNet_ResolveHost( &srvadd, host, port ) ){ printf( "SDLNet_ResolveHost(%s %d): %s\n", host, port, SDLNet_GetError());	 return 3; }
-		if ( !( p = SDLNet_AllocPacket(512))                  ){ printf( "SDLNet_AllocPacket: %s\n", SDLNet_GetError());                     return 4; }
+	virtual int init( const char *host_str, Uint16 port, int nbytes ){
+		if (             SDLNet_Init() < 0                               ){ printf( "SDLNet_Init:        %s\n", SDLNet_GetError());                        return -1; }
+		if ( !( socket = SDLNet_UDP_Open(0) )                            ){ printf( "SDLNet_UDP_Open:    %s\n", SDLNet_GetError());                        return -2; }
+		if (             SDLNet_ResolveHost( &receiver, host_str, port ) ){ printf( "SDLNet_ResolveHost(%s %d): %s\n", host_str, port, SDLNet_GetError()); return -3; }
+		if ( !( packet = SDLNet_AllocPacket(nbytes))                     ){ printf( "SDLNet_AllocPacket: %s\n", SDLNet_GetError());                        return -4; }
+		printf( "connected to (%i %i) \n", receiver.host, receiver.port );
 		return 0;
 	}
 
 	void send_buff( ){
-		p->address.host = srvadd.host;	// Set the destination host
-		p->address.port = srvadd.port;	// And destination port		
-		SDLNet_UDP_Send(sd, -1, p);     // This sets the p->channel
+		packet->address.host = receiver.host;	// Set the destination host
+		packet->address.port = receiver.port;	// And destination port		
+		SDLNet_UDP_Send( socket, -1, packet );     // This sets the p->channel
 	}
 
 	virtual bool onSend(){
 		printf(" Fill the buffer\n>");
-		scanf("%s", (char *)p->data);
-		p->len = strlen((char *)p->data) + 1;
-		if( p->len > 1 ) return true; 
+		scanf("%s", (char *)packet->data);
+		packet->len = strlen((char *)packet->data) + 1;
+		if( packet->len > 1 ) return true; 
 		printf( " empty \n" );
 		return false;
 	}
@@ -35,7 +36,7 @@ class UDPClient{
 	virtual void send( ){ if ( onSend() ){ send_buff( ); } }
   
 	virtual void close(){
-		SDLNet_FreePacket(p);
+		SDLNet_FreePacket( packet );
 		SDLNet_Quit();
 	}
 

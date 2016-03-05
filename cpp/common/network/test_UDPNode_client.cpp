@@ -54,7 +54,7 @@ class UDPClientApp : public AppSDL2OGL, public UDPNode {
 // ==================== Implementation
 
 UDPClientApp::UDPClientApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
-	init_UDP   ( 1, 2001, 512      );
+	init_UDP   ( 1, 20002, 512      );
 	//connect_UDP( "localhost", 2000 );
 }
 
@@ -73,6 +73,7 @@ void UDPClientApp::onRecieve(){
 }
 
 bool UDPClientApp::onSend(){
+	//printf( "sending: \n" );
 	if( packet->len == 0 ) return false;
 	packet->data[ packet->len ] = 0;
 	packet->len++;
@@ -97,10 +98,11 @@ void UDPClientApp::eventHandling( const SDL_Event& event ){
         case SDL_QUIT: quit(); break;
     };
 
-	if( !connected ){ 
-		tryConnect_UDP( "localhost", 2000  );
+	if( connected ){ 
+		trySend(   );
+	}else{
+		tryConnect_UDP( "localhost", 20001  );
 	}
-	trySend();
 
 	AppSDL2OGL::eventHandling( event );
 }

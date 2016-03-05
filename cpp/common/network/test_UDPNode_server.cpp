@@ -63,18 +63,19 @@ TestServer server;
 
 int main(int argc, char **argv){
 
-	server.init_UDP   ( 0, 2000, 512       );
+	server.init_UDP   ( 0, 20001, 512       );
 	
 	while (true){
 		//printf( "server try %i :\n", server.iframe );
 		server.receiveQuedPackets( );
 		server.move( 0.01 );
 
-		if( !server.connected ){ 
-			server.tryConnect_UDP( "localhost", 2001  );
-		}
+	//	if( server.connected ){ 
+	//		server.trySend(   );
+	//	}else{
+	//		server.tryConnect_UDP( "localhost", 20002  );
+	//	}
 
-		server.trySend(   );
 		SDL_Delay( 10 );
 	}
 }
