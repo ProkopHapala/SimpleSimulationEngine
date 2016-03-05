@@ -5,8 +5,9 @@
 
 class UDPNode{
 	public:
-	UDPsocket  in_socket;	
-	UDPsocket  out_socket;	 
+	//UDPsocket  in_socket;	
+	//UDPsocket  out_socket;	
+ 	UDPsocket  socket;
 	UDPpacket *packet = NULL;
 	IPaddress  receiver;
 	bool       connected = false;
@@ -20,7 +21,8 @@ class UDPNode{
 	void send_buff( ){
 		packet->address.host = receiver.host;
 		packet->address.port = receiver.port;
-		SDLNet_UDP_Send( out_socket, -1, packet );
+		//SDLNet_UDP_Send( in_socket, -1, packet );
+		SDLNet_UDP_Send( socket, -1, packet );
 	}
 
 	virtual bool onSend(){
@@ -56,15 +58,15 @@ class UDPNode{
 	}
 
 	bool tryReceive( ){
-		printf( " tryReceive: \n" );
-		if ( SDLNet_UDP_Recv( in_socket, packet ) )	{
+		//printf( " tryReceive: \n" );
+		if ( SDLNet_UDP_Recv( socket, packet ) )	{
 			onRecieve();
 		}
 	}
 
 	bool receiveQuedPackets( ){
-		printf( " receiveQuedPackets: \n" );
-		while ( SDLNet_UDP_Recv( in_socket, packet ) )	{
+		//printf( " receiveQuedPackets: \n" );
+		while ( SDLNet_UDP_Recv( socket, packet ) )	{
 			onRecieve();
 		}
 	}
@@ -72,17 +74,17 @@ class UDPNode{
 	// ---- other
 
 	virtual int init_UDP( Uint16 net_id_, Uint16 in_port, Uint16 nbuff ){
-		if (                 SDLNet_Init()             < 0   ){  printf( "SDLNet_Init:        %s\n", SDLNet_GetError());       return -1; }
-		if ( !( packet     = SDLNet_AllocPacket( nbuff   ) ) ){  printf( "SDLNet_AllocPacket: %s\n", SDLNet_GetError() );      return -2; }
-		if ( !( in_socket  = SDLNet_UDP_Open(   in_port  ) ) ){  printf( "SDLNet_UDP_Open  in_port: %s\n", SDLNet_GetError()); return -3; }			
+		net_id = net_id_;
+		if (              SDLNet_Init()             < 0   ){  printf( "SDLNet_Init:        %s\n", SDLNet_GetError());       return -1; }
+		if ( !( packet  = SDLNet_AllocPacket( nbuff   ) ) ){  printf( "SDLNet_AllocPacket: %s\n", SDLNet_GetError() );      return -2; }
+		if ( !( socket  = SDLNet_UDP_Open(   in_port  ) ) ){  printf( "SDLNet_UDP_Open  in_port: %s\n", SDLNet_GetError()); return -3; }		
+		//if ( !( in_socket  = SDLNet_UDP_Open(   in_port  ) ) ){  printf( "SDLNet_UDP_Open  in_port: %s\n", SDLNet_GetError()); return -3; }		
 		return 0;
 	}
 
-	virtual int tryConnect_UDP( const char *host_str, Uint16 out_port ){
-		printf( "tryConnect_UDP( %s, %i )\n", host_str, out_port );
-		//if ( !( in_socket  = SDLNet_UDP_Open    ( 0        )              ) ){  printf( "SDLNet_UDP_Open  port 0 : %s\n", SDLNet_GetError());                           return -1; }
-		if (            0 != SDLNet_ResolveHost ( &receiver, host_str, out_port ) ){  printf( "SDLNet_ResolveHost(%s %d): %s\n", host_str, out_port, SDLNet_GetError()); return -2; }
-		//if ( !( out_socket = SDLNet_UDP_Open    ( out_port )              ) ){  printf( "SDLNet_UDP_Open out_port: %s\n", SDLNet_GetError() );                          return -3; }	
+	virtual int tryConnect_UDP( const char *host_str, Uint16 port ){
+		printf( "tryConnect_UDP( %s, %i )\n", host_str, port );
+		if (             -1 == SDLNet_ResolveHost( &receiver, host_str, port )   ){  printf( "SDLNet_ResolveHost(%s %d): %s\n", host_str, port, SDLNet_GetError()); return -2; }
 		connected = true;
 		printf( "connected to (%i %i) \n", receiver.host, receiver.port );
 		return 0;

@@ -11,9 +11,9 @@
 class TestServer : public UDPNode {
 	public:
 	int iframe;
-	double t=0,x=0,y=0,vx=-1,vy=0;
-	double friction    = -0.5;
-	double restitution =  0.5;
+	double t=0,x=0,y=0,vx=-5,vy=0;
+	double friction    = -0.1;
+	double restitution = -0.8;
 	double gravity     = -9.81;
 
 	double move( double dt ){
@@ -21,10 +21,10 @@ class TestServer : public UDPNode {
 		vx += ( vx * friction           ) * dt;
 		vy += ( vy * friction + gravity ) * dt;
 
-		if( ( x >  10 ) && ( vx > 0 ) ){ vx = -vx; }
-		if( ( x < -10 ) && ( vx < 0 ) ){ vx = -vx; }
-		if( ( y >  10 ) && ( vy > 0 ) ){ vy = -vy; }
-		if( ( y < -10 ) && ( vy < 0 ) ){ vy = -vy; }
+		if( ( x >  8 ) && ( vx > 0 ) ){ vx *= restitution; }
+		if( ( x < -8 ) && ( vx < 0 ) ){ vx *= restitution; }
+		if( ( y >  8 ) && ( vy > 0 ) ){ vy *= restitution; }
+		if( ( y < -8 ) && ( vy < 0 ) ){ vy *= restitution; }
 
 		x  += vx * dt;
 		y  += vy * dt;
@@ -46,13 +46,13 @@ class TestServer : public UDPNode {
 	}
 
 	virtual void onRecieve(){ 
-		printPacketInfo( );
+		//printPacketInfo( );
 		//printf( "recieved: %s \n", (char*)packet->data );
 		for( int i=0; i<packet->len; i++ ){
 			char key = ((char*)packet->data)[i];
             switch( key ){
-                case 'a': vy+=3.0; vx+=3.0; break;
-                case 'd': vy+=3.0; vx-=3.0; break;
+                case 'a': vy+=3.0; vx-=3.0; break;
+                case 'd': vy+=3.0; vx+=3.0; break;
             }
 		}
 	}
@@ -63,19 +63,13 @@ TestServer server;
 
 int main(int argc, char **argv){
 
-	server.init_UDP   ( 0, 20001, 512       );
+	server.init_UDP      ( 0, 2000, 512      );
+	server.tryConnect_UDP( "localhost", 2001 );
 	
 	while (true){
-		//printf( "server try %i :\n", server.iframe );
 		server.receiveQuedPackets( );
 		server.move( 0.01 );
-
-	//	if( server.connected ){ 
-	//		server.trySend(   );
-	//	}else{
-	//		server.tryConnect_UDP( "localhost", 20002  );
-	//	}
-
+		server.trySend(   );
 		SDL_Delay( 10 );
 	}
 }

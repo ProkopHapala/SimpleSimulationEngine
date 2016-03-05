@@ -55,7 +55,10 @@ UDPClient_mod client;
 
 int main(int argc, char **argv){
 	int frameCount = 0;
-	client.init( "localhost", 2000, 512 );
+	//client.init( "localhost", 2000, 512 );
+
+	client.init_UDP     ( 1, 0, 512 );
+	client.tryConnect_UDP( "localhost", 2000 );
 
 	while (true){
 		printf( "test_UDPClient %04i: try\n", frameCount );

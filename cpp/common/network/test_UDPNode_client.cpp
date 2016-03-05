@@ -54,12 +54,12 @@ class UDPClientApp : public AppSDL2OGL, public UDPNode {
 // ==================== Implementation
 
 UDPClientApp::UDPClientApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
-	init_UDP   ( 1, 20002, 512      );
-	//connect_UDP( "localhost", 2000 );
+	init_UDP      ( 1, 2001, 512      );
+	tryConnect_UDP( "localhost", 2000 );
 }
 
 void UDPClientApp::onRecieve(){
-	printPacketInfo( );
+	//printPacketInfo( );
 	int ibyte = 0;
 	double t_ = ((double *)(packet->data+ibyte))[0];   ibyte+=sizeof(double);
 	if( t_ > t ){
@@ -74,11 +74,18 @@ void UDPClientApp::onRecieve(){
 
 bool UDPClientApp::onSend(){
 	//printf( "sending: \n" );
+
 	if( packet->len == 0 ) return false;
 	packet->data[ packet->len ] = 0;
 	packet->len++;
 	printf( "sending: %s \n", (char*)packet->data );
 	return true;
+/*
+	sprintf( (char*)packet->data, "client frame %06i\n", frameCount );
+	packet->len = 19;
+	printf("sending: %s", (char*)packet->data );
+*/
+
 };
 
 void UDPClientApp::add_char_to_buff( char ch ){
@@ -97,26 +104,22 @@ void UDPClientApp::eventHandling( const SDL_Event& event ){
             break;
         case SDL_QUIT: quit(); break;
     };
-
-	if( connected ){ 
-		trySend(   );
-	}else{
-		tryConnect_UDP( "localhost", 20001  );
-	}
-
+	trySend( );
 	AppSDL2OGL::eventHandling( event );
 }
 
 void UDPClientApp::draw(){
-    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
+    glClearColor( 1.0f, 1.0f, 1.0f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+	//trySend( );
 	receiveQuedPackets( );
 
     glColor3f( 0.9f, 0.2f, 0.9f ); Draw2D::drawPointCross_d( { x, y }, 0.3 );
-        
-    glColor3f( 0.2f, 0.9f, 0.2f ); Draw2D::drawLine_d( { x, y }, { x+vx, y+vy } );
+    glColor3f( 0.2f, 0.9f, 0.2f ); Draw2D::drawLine_d      ( { x, y }, { x+vx*0.1, y+vy*0.1 } );
+	glColor3f( 0.2f, 0.2f, 0.2f ); Draw2D::drawRectangle   ( -8.0f, -8.0f, 8.0f, 8.0f, false );
 
+	frameCount++;
 };
 
 // ===================== MAIN
