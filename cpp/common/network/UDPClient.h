@@ -14,7 +14,6 @@ class UDPClient{
 		if ( !(sd = SDLNet_UDP_Open(socket) )                 ){ printf( "SDLNet_UDP_Open:    %s\n", SDLNet_GetError());                     return 2; }
 		if (        SDLNet_ResolveHost( &srvadd, host, port ) ){ printf( "SDLNet_ResolveHost(%s %d): %s\n", host, port, SDLNet_GetError());	 return 3; }
 		if ( !( p = SDLNet_AllocPacket(512))                  ){ printf( "SDLNet_AllocPacket: %s\n", SDLNet_GetError());                     return 4; }
-		p = SDLNet_AllocPacket(512); if ( p == NULL )          { printf( "SDLNet_AllocPacket: %s\n", SDLNet_GetError() );                    return 5; }
 		return 0;
 	}
 

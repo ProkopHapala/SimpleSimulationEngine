@@ -16,19 +16,6 @@ class UDPServer{
 		printf("\tMaxlen:  %d\n", p->maxlen);
 		printf("\tStatus:  %d\n", p->status);
 		printf("\tAddress: %x %x\n", p->address.host, p->address.port);
-	}
-
-	bool tryReceive( ){
-		if ( SDLNet_UDP_Recv( sd, p ) )	{
-			onRecieve();
-		}
-	}
-
-	bool receiveQuedPackets( ){
-		while ( SDLNet_UDP_Recv( sd, p ) )	{
-			onRecieve();
-		}
-	}
 
 	virtual int init( int socket, int nbytes ){   
 		if ( SDLNet_Init() < 0 )                        { printf("SDLNet_Init: %s\n", SDLNet_GetError() );        return 1; }
