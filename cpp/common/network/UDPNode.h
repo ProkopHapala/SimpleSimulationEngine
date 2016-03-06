@@ -3,19 +3,46 @@
 
 #include "SDL_net.h"
 
+
+/*
+
+TODO :
+
+    for Server
+
+    There will be multiple clients for one server; therefore server should has following structure:
+
+    int       nclinents;
+    IPaddress receivers[];
+    UDPsocket sockets  [];
+
+    - when client is connected virtual function onConnect() is activated;
+    - server give the client "net_id" according to order of connection, it is also index in array of clients
+
+
+    functions:
+    ---------
+    onSend()
+    onReceive()
+    onConnect()
+    onDisconnect()  ?( at begining not required         )
+    onTimeOut()     ?( can be used instead onDisconnect )
+
+*/
+
 class UDPNode{
 	public:
-	//UDPsocket  in_socket;	
-	//UDPsocket  out_socket;	
+	//UDPsocket  in_socket;
+	//UDPsocket  out_socket;
  	UDPsocket  socket;
 	UDPpacket *packet = NULL;
 	IPaddress  receiver;
 	bool       connected = false;
 
-	Uint16  net_id; 
+	Uint16    net_id;
 	//char*   host_IP;
-	//Uint16  in_port, out_port; 
- 
+	//Uint16  in_port, out_port;
+
 	// ---- outgoing
 
 	void send_buff( ){
@@ -29,16 +56,16 @@ class UDPNode{
 		printf(" Fill the buffer\n>");
 		scanf("%s", (char *)packet->data);
 		packet->len = strlen((char *)packet->data) + 1;
-		if( packet->len > 1 ) return true; 
+		if( packet->len > 1 ) return true;
 		printf( " empty \n" );
 		return false;
 	}
 
-	virtual void trySend( ){ 
-		if ( onSend() ){ 
+	virtual void trySend( ){
+		if ( onSend() ){
 			//printf( "sending bytes %i \n", packet->len );
-			send_buff( ); 
-		} 
+			send_buff( );
+		}
 	}
 
 	// ---- incoming
@@ -77,8 +104,8 @@ class UDPNode{
 		net_id = net_id_;
 		if (              SDLNet_Init()             < 0   ){  printf( "SDLNet_Init:        %s\n", SDLNet_GetError());       return -1; }
 		if ( !( packet  = SDLNet_AllocPacket( nbuff   ) ) ){  printf( "SDLNet_AllocPacket: %s\n", SDLNet_GetError() );      return -2; }
-		if ( !( socket  = SDLNet_UDP_Open(   in_port  ) ) ){  printf( "SDLNet_UDP_Open  in_port: %s\n", SDLNet_GetError()); return -3; }		
-		//if ( !( in_socket  = SDLNet_UDP_Open(   in_port  ) ) ){  printf( "SDLNet_UDP_Open  in_port: %s\n", SDLNet_GetError()); return -3; }		
+		if ( !( socket  = SDLNet_UDP_Open(   in_port  ) ) ){  printf( "SDLNet_UDP_Open  in_port: %s\n", SDLNet_GetError()); return -3; }
+		//if ( !( in_socket  = SDLNet_UDP_Open(   in_port  ) ) ){  printf( "SDLNet_UDP_Open  in_port: %s\n", SDLNet_GetError()); return -3; }
 		return 0;
 	}
 
@@ -89,7 +116,7 @@ class UDPNode{
 		printf( "connected to (%i %i) \n", receiver.host, receiver.port );
 		return 0;
 	}
-  
+
 	virtual void close_UDP(){
 		if( packet  != NULL ) SDLNet_FreePacket(packet);
 		SDLNet_Quit();
