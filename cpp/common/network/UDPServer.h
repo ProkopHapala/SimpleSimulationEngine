@@ -100,7 +100,7 @@ void UDPServer::toClients( ){
 
 void UDPServer::fromClients( ){
     while ( SDLNet_UDP_Recv( socket, packet ) )	{
-        printPacketInfo();
+        //printPacketInfo();
         int iClient = findKnownClient ( packet->address );
         if ( iClient >= 0 ){
             onRecieve( iClient );

@@ -69,6 +69,7 @@ SailWar_server::SailWar_server( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL(
     printf( " ==== main.setup \n"    );
     init_world();
     //makeShip( { randf(-5.0,5.0), randf(-5.0,5.0)}, M_PI*0.6, "data/FrigateType.txt", defaultShipShape, defaultCollisionShape );
+    //ships[ 0 ]->fire_left ( &projectiles );
     //thisScreen->zoom = 100;
     printf( " ==== world.init DONE \n" );
 
@@ -99,6 +100,7 @@ void SailWar_server::draw(){
 	}
 	for( auto p : projectiles ) {
 		p->draw();
+		//printf( " draw (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) %3.3f \n", p->pos.x,p->pos.y,p->pos.z, p->vel.x,p->vel.y,p->vel.z, p->mass );
 	}
 
 };
@@ -120,12 +122,10 @@ void SailWar_server::drawHUD(){
 //////////////////////////////////
 
 void SailWar_server::onRecieve( int iClient ){
-
     //printPacketInfo();
-
     Frigate2D * thisShip = ships[ iClient ];
     bool      * keys     = (bool*) packet->data;
-    if( keys[ 0 ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi + 0.01 );       }
+    if( keys[ 0 ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi + 0.01 );  }
 	if( keys[ 1 ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi - 0.01 );  }
 	if( keys[ 2 ] ){ thisShip->mast.setAngle  ( thisShip->mast.phi   + 0.01 );  }
 	if( keys[ 3 ] ){ thisShip->mast.setAngle  ( thisShip->mast.phi   - 0.01 );  }
@@ -139,14 +139,29 @@ bool SailWar_server::onSend   ( int iClient ){
     char * buff = (char*)packet->data;
 
     (*(int*)buff) = iClient;       buff += sizeof( int );
-    (*(int*)buff) = ships.size();  buff += sizeof( int );
 
+    (*(int*)buff) = ships.size();  buff += sizeof( int );
+    /*
     auto it_ship    = ships.begin();
     while( it_ship != ships.end  ( ) ) {
         Frigate2D * ship = *it_ship;
         buff = ship->toBytes( buff );
         ++it_ship;
     }
+    */
+
+    for( auto ship : ships ) {
+        //printf( " onSend (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) %3.3f \n", p->pos.x,p->pos.y,p->pos.z, p->vel.x,p->vel.y,p->vel.z, p->mass );
+        buff = ship->toBytes( buff );
+	}
+
+    printf( " =============== frame %i \n", frameCount );
+    (*(int*)buff) =  projectiles.size();  buff += sizeof( int );
+    for( auto p : projectiles ) {
+        //printf( " onSend (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) %3.3f \n", p->pos.x,p->pos.y,p->pos.z, p->vel.x,p->vel.y,p->vel.z, p->mass );
+        buff = p->toBytes( buff );
+	}
+
     packet->len = buff - (char*)packet->data;
 };
 

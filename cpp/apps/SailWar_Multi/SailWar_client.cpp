@@ -45,6 +45,8 @@ class SailWar_client : public AppSDL2OGL, public UDPNode, public SailWarWorld {
     public:
     Frigate2D* thisShip = NULL;
 
+    int nProj = 0;
+
     bool keys_to_send[ 6 ];
 
 
@@ -91,8 +93,8 @@ void SailWar_client::draw(){
 
 	glShadeModel(GL_FLAT);
 
-    tryReceive();   // HERE WE SHOULD READ INPUTS FROM CLIENTS
-	trySend();      // HERE WE SHOULD SEND WORLD STATE TO CLIENTS
+    trySend();               // HERE WE SHOULD SEND WORLD STATE TO CLIENTS
+    receiveQuedPackets( );   // HERE WE SHOULD READ INPUTS FROM CLIENTS
 
     if( thisShip != NULL ){
 
@@ -109,7 +111,10 @@ void SailWar_client::draw(){
             glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->draw_shape( );
             glColor3f( 0.2f, 0.2f, 0.2f );  ship->draw( );
         }
-        for( auto p : projectiles ) {
+
+        for( int i=0; i<nProj; i++ ){
+            Projectile * p = projectiles[ i ];
+            //printf( " draw %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) %3.3f \n", i, p->pos.x,p->pos.y,p->pos.z, p->vel.x,p->vel.y,p->vel.z, p->mass );
             p->draw();
         }
 
@@ -183,6 +188,21 @@ void SailWar_client::onRecieve( ){
         Frigate2D * ship = *it_ship;
         buff = ship->fromBytes( buff );
         ++it_ship;
+    }
+
+    nProj       = (*(int*)buff);   buff += sizeof( int );
+    int nProjSz = projectiles.size();
+    for( int i=0; i<nProj; i++ ){
+        Projectile * p;
+        if( i >= nProjSz ){
+            p = new Projectile( );
+            projectiles.push_back( p );
+            //printf( "new projectile i %i nProjSz %i ", i, nProjSz );
+        }else{
+            p = projectiles[ i ];
+        }
+        buff = p->fromBytes( buff );
+        //printf( " onRecieve %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) %3.3f \n", i, p->pos.x,p->pos.y,p->pos.z, p->vel.x,p->vel.y,p->vel.z, p->mass );
     }
 
     thisShip   = ships[net_id];

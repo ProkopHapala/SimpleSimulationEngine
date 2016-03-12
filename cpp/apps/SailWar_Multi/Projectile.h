@@ -28,6 +28,8 @@ class Projectile : public PointBody {
 	virtual void evalForce( );
 	//virtual void move( double dt );
 	virtual void draw();
+	virtual char * toBytes  ( char * buff );
+	virtual char * fromBytes( char * buff );
 };
 
 // ============== template implementation

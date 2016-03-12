@@ -57,3 +57,22 @@ void Projectile::draw(){
 	//printf( " I'm projectile \n");
 	//printf( " projectile   pos  %10.5f %10.5f %10.5f old_pos %10.5f %10.5f %10.5f \n",   pos.x, pos.y, pos.z,   old_pos.x, old_pos.y, old_pos.z );
 }
+
+char * Projectile::toBytes  ( char * buff ){
+    (*((Vec3d* )buff)).set( pos );    buff += sizeof( Vec3d );
+    (*((Vec3d* )buff)).set( vel );    buff += sizeof( Vec3d );
+    //printf( "toBytes (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", pos.x, pos.y, pos.z, vel.x, vel.y, vel.z );
+    //double* bf = (double*)buff;
+    //printf( "toBytes (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", bf[-6], bf[-5], bf[-4], bf[-3], bf[-2], bf[-1] );
+    return buff;
+}
+
+char * Projectile::fromBytes( char * buff ){
+    pos.set ( *((Vec3d* )buff)  ); buff += sizeof(Vec3d );
+    vel.set ( *((Vec3d* )buff)  ); buff += sizeof(Vec3d );
+    //double* bf = (double*)buff;
+    //printf( "fromBytes (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", bf[-6], bf[-5], bf[-4], bf[-3], bf[-2], bf[-1] );
+    //printf( "fromBytes (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", pos.x, pos.y, pos.z, vel.x, vel.y, vel.z );
+    return buff;
+}
+
