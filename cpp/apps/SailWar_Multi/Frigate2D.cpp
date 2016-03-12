@@ -162,3 +162,19 @@ void Frigate2D::update( double dt ){
     if( gunload_left  < 1.0d ) { gunload_left  += reload_rate * dt; }
     if( gunload_right < 1.0d ) { gunload_right += reload_rate * dt; }
 }
+
+char * Frigate2D::toBytes  ( char * buff ){
+    (*((Vec2d* )buff)).set( pos );    buff += sizeof(Vec2d );
+    (*((double*)buff)) = phi;         buff += sizeof(double);
+    (*((double*)buff)) = mast.phi;    buff += sizeof(double);
+    (*((double*)buff)) = rudder.phi;  buff += sizeof(double);
+    return buff;
+}
+
+char * Frigate2D::fromBytes( char * buff ){
+    pos.set        ( *((Vec2d* )buff)  ); buff += sizeof(Vec2d );
+    setAngle       ( *((double*)buff)  ); buff += sizeof(double);
+    mast  .setAngle( *((double*)buff)  ); buff += sizeof(double);
+    rudder.setAngle( *((double*)buff)  ); buff += sizeof(double);
+    return buff;
+}

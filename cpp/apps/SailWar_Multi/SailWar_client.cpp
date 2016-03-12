@@ -43,7 +43,9 @@
 
 class SailWar_client : public AppSDL2OGL, public UDPNode, public SailWarWorld {
     public:
-    Frigate2D* thisShip;
+    Frigate2D* thisShip = NULL;
+
+    bool keys_to_send[ 6 ];
 
 
 // ==== overide AppSDL2OGL
@@ -68,12 +70,14 @@ class SailWar_client : public AppSDL2OGL, public UDPNode, public SailWarWorld {
 
 SailWar_client::SailWar_client( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-	init_UDP      ( 1, 2000, 512      );
-	tryConnect_UDP( "localhost", 2001 );
+	//init_UDP      ( 1, 2001, 512      );
+	init_UDP      ( 1, 0, 512      );   // random port
+
+	tryConnect_UDP( "localhost", 2000 );
 
     printf( " ==== main.setup \n" );
     init_world();
-    thisShip = ships.front();;       // FIXME - this is just temporary, later this should be specified by server
+    //if( ) thisShip = ships.front();;       // FIXME - this is just temporary, later this should be specified by server
     //thisScreen->zoom = 100;
     printf( " ==== world.init DONE \n" );
 
@@ -87,20 +91,34 @@ void SailWar_client::draw(){
 
 	glShadeModel(GL_FLAT);
 
-    tryReceive();     // HERE WE SHOULD READ INPUTS FROM CLIENTS
+    tryReceive();   // HERE WE SHOULD READ INPUTS FROM CLIENTS
+	trySend();      // HERE WE SHOULD SEND WORLD STATE TO CLIENTS
 
+    if( thisShip != NULL ){
 
-	//update_world();
-	//trySend();      // HERE WE SHOULD SEND WORLD STATE TO CLIENTS
+        printf( "net_id %i   thisShip %i \n", net_id, thisShip );
+        printf( "pos (%3.3f,%3.3f) phi %3.3f \n", thisShip->pos, thisShip->phi );
 
-	for( auto ship : ships ) {
-        glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->drawHitBox( );
-        glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->draw_shape( );
-        glColor3f( 0.2f, 0.2f, 0.2f );  ship->draw( );
-	}
-	for( auto p : projectiles ) {
-		p->draw();
-	}
+        glPushMatrix();
+        glRotatef   ( (float)-thisShip->phi*180/M_PI + 90, 0.0f, 0.0f, 1.0f );
+        glTranslatef( (float)-thisShip->pos.x, (float)-thisShip->pos.y, 0 );
+        glColor3f( 0.55f, 0.55f, 0.55f ); Draw2D::drawGrid( -50.0, -50.0, +50.0, +50.0, 5.0, 5.0 );
+
+        for( auto ship : ships ) {
+            glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->drawHitBox( );
+            glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->draw_shape( );
+            glColor3f( 0.2f, 0.2f, 0.2f );  ship->draw( );
+        }
+        for( auto p : projectiles ) {
+            p->draw();
+        }
+
+        //glPushMatrix();
+        //glRotatef   ( (float)thisShip->phi*180/M_PI, 0.0f, 0.0f, 1.0f );
+        //Draw2D::drawGrid( -5.0, -5.0, +5.0, +5.0, 1.0, 1.0 );
+        glPopMatrix();
+
+    }
 
 };
 
@@ -119,15 +137,10 @@ void SailWar_client::drawHUD(){
 
 void SailWar_client::keyStateHandling( const Uint8 *keys ){
 
-    //if( keys[ SDL_SCANCODE_LEFT  ] ){ camX0 -= camStep; }
-	//if( keys[ SDL_SCANCODE_RIGHT ] ){ camX0 += camStep; }
-	//if( keys[ SDL_SCANCODE_UP    ] ){ camY0 += camStep; }
-	//if( keys[ SDL_SCANCODE_DOWN  ] ){ camY0 -= camStep; }
-
-    if( keys[ SDL_SCANCODE_LEFT  ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi + 0.01 );  }
-	if( keys[ SDL_SCANCODE_RIGHT ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi - 0.01 );  }
-	if( keys[ SDL_SCANCODE_UP    ] ){ thisShip->mast.setAngle  ( thisShip->mast.phi   + 0.01 );  }
-	if( keys[ SDL_SCANCODE_DOWN  ] ){ thisShip->mast.setAngle  ( thisShip->mast.phi   - 0.01 );  }
+    if( keys[ SDL_SCANCODE_LEFT  ] ){ keys_to_send[0] = true; }
+	if( keys[ SDL_SCANCODE_RIGHT ] ){ keys_to_send[1] = true; }
+	if( keys[ SDL_SCANCODE_UP    ] ){ keys_to_send[2] = true; }
+	if( keys[ SDL_SCANCODE_DOWN  ] ){ keys_to_send[3] = true; }
 
 };
 
@@ -135,8 +148,10 @@ void SailWar_client::eventHandling( const SDL_Event& event ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-				case SDLK_KP_1:     thisShip->fire_left ( &projectiles ); break;
-				case SDLK_KP_2:     thisShip->fire_right( &projectiles ); break;
+				//case SDLK_KP_1:     thisShip->fire_left ( &projectiles ); break;
+				//case SDLK_KP_2:     thisShip->fire_right( &projectiles ); break;
+                case SDLK_KP_1:     keys_to_send[4] = true; break;
+				case SDLK_KP_2:     keys_to_send[5] = true; break;
             }
             break;
     };
@@ -150,10 +165,38 @@ void SailWar_client::eventHandling( const SDL_Event& event ){
 
 void SailWar_client::onRecieve( ){
 
+    //printPacketInfo();
+
+    char * buff = ( char* ) packet->data;
+
+    net_id     = (*(int*)buff);   buff += sizeof( int );
+    int nShips = (*(int*)buff);   buff += sizeof( int );
+    int nShipsLeft = nShips - ships.size();
+    if( nShipsLeft > 0 ){
+        for( int i=0; i<nShipsLeft; i++ ){
+            SailWarWorld::makeShip( { 0.0, -0.0}, M_PI*0.6, "data/FrigateType.txt", defaultShipShape, defaultCollisionShape );
+        }
+    }
+
+    auto it_ship  = ships.begin();
+    while( it_ship != ships.end  ( ) ) {
+        Frigate2D * ship = *it_ship;
+        buff = ship->fromBytes( buff );
+        ++it_ship;
+    }
+
+    thisShip   = ships[net_id];
+
 };
 
 bool SailWar_client::onSend   ( ){
-
+    bool * keys = (bool*) packet->data;
+    for( int i=0; i<6; i++ ){
+        keys[i] = keys_to_send[i];
+        keys_to_send[i]  = false;
+    }
+    packet->len = 6;
+    return true;
 };
 
 // ============== main

@@ -35,6 +35,8 @@ class Frigate2D : public Yacht2D, public CollisionObject {
 	void fire_right( std::vector<Projectile*> * projectiles );
 	void drawGun( Gun * gun );
 
+    virtual char* toBytes  ( char* buff );
+    virtual char* fromBytes( char* buff );
 	virtual void draw( );
 	virtual void drawHitBox( );
 	virtual bool colideWithLineSegment( const Vec3d& p1, const Vec3d& p2, Vec3d * where, Vec3d * normal );

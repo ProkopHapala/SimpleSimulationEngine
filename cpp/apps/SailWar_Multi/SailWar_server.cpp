@@ -27,7 +27,8 @@
 // ========= include 3rd party library dependent
 
 #include  "AppSDL2OGL.h"
-#include  "UDPNode.h"
+//#include  "UDPNode.h"
+#include  "UDPServer.h"
 
 #include "GridMap2D.h"
 #include "drawMath.h"
@@ -41,7 +42,7 @@
 #include "Yacht2D.h"
 #include "Frigate2D.h"
 
-class SailWar_server : public AppSDL2OGL, public UDPNode, public SailWarWorld {
+class SailWar_server : public AppSDL2OGL, public UDPServer, public SailWarWorld {
     public:
 // ==== overide AppSDL2OGL
     virtual void draw    ( );
@@ -49,8 +50,9 @@ class SailWar_server : public AppSDL2OGL, public UDPNode, public SailWarWorld {
 	SailWar_server( int& id, int WIDTH_, int HEIGHT_ );
 
 // ==== overide UDPNode
-	virtual void onRecieve( );
-	virtual bool onSend   ( );
+	virtual void onRecieve( int iClient );
+	virtual bool onSend   ( int iClient );
+	virtual int  onConnect( IPaddress client );
 
 // ==== overide SailWarWorld
 
@@ -62,11 +64,11 @@ class SailWar_server : public AppSDL2OGL, public UDPNode, public SailWarWorld {
 
 SailWar_server::SailWar_server( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-	init_UDP      ( 1, 2000, 512      );
-	tryConnect_UDP( "localhost", 2001 );
+	init_UDP      ( 2000, 512, 8 );
 
-    printf( " ==== main.setup \n" );
+    printf( " ==== main.setup \n"    );
     init_world();
+    //makeShip( { randf(-5.0,5.0), randf(-5.0,5.0)}, M_PI*0.6, "data/FrigateType.txt", defaultShipShape, defaultCollisionShape );
     //thisScreen->zoom = 100;
     printf( " ==== world.init DONE \n" );
 
@@ -74,15 +76,21 @@ SailWar_server::SailWar_server( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL(
 
 void SailWar_server::draw(){
 
+    //printf( " ======== frame %i \n", frameCount );
+    //printf( "fromClients()\n" );
+    fromClients();    // HERE WE SHOULD READ INPUTS FROM CLIENTS
+    //printf( "update_world()\n" );
+	update_world();
+	//printf( "toClients();\n" );
+	toClients();      // HERE WE SHOULD SEND WORLD STATE TO CLIENTS
+
+    //printf( "\n" );
+
     glDisable  (GL_LIGHTING);
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	glShadeModel(GL_FLAT);
-
-    //tryReceive();     // HERE WE SHOULD READ INPUTS FROM CLIENTS
-	update_world();
-	//trySend();      // HERE WE SHOULD SEND WORLD STATE TO CLIENTS
 
 	for( auto ship : ships ) {
         glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->drawHitBox( );
@@ -111,12 +119,42 @@ void SailWar_server::drawHUD(){
 //      overide UDPNode
 //////////////////////////////////
 
-void SailWar_server::onRecieve( ){
+void SailWar_server::onRecieve( int iClient ){
 
+    //printPacketInfo();
+
+    Frigate2D * thisShip = ships[ iClient ];
+    bool      * keys     = (bool*) packet->data;
+    if( keys[ 0 ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi + 0.01 );       }
+	if( keys[ 1 ] ){ thisShip->rudder.setAngle( thisShip->rudder.phi - 0.01 );  }
+	if( keys[ 2 ] ){ thisShip->mast.setAngle  ( thisShip->mast.phi   + 0.01 );  }
+	if( keys[ 3 ] ){ thisShip->mast.setAngle  ( thisShip->mast.phi   - 0.01 );  }
+    if( keys[ 4 ] ){ thisShip->fire_left ( &projectiles );                      }
+    if( keys[ 5 ] ){ thisShip->fire_right( &projectiles );                      }
 };
 
-bool SailWar_server::onSend   ( ){
+bool SailWar_server::onSend   ( int iClient ){
 
+    //printf( "onSend : iClinet %i \n", iClient  );
+    char * buff = (char*)packet->data;
+
+    (*(int*)buff) = iClient;       buff += sizeof( int );
+    (*(int*)buff) = ships.size();  buff += sizeof( int );
+
+    auto it_ship    = ships.begin();
+    while( it_ship != ships.end  ( ) ) {
+        Frigate2D * ship = *it_ship;
+        buff = ship->toBytes( buff );
+        ++it_ship;
+    }
+    packet->len = buff - (char*)packet->data;
+};
+
+int SailWar_server::onConnect( IPaddress client ){
+    //makeShip( { 3.0, -3.0}, M_PI*0.6, "data/FrigateType.txt", defaultShipShape, defaultCollisionShape );
+    makeShip( { randf(-5.0,5.0), randf(-5.0,5.0)}, M_PI*0.6, "data/FrigateType.txt", defaultShipShape, defaultCollisionShape );
+    printf( " new Player [ %i ] initialized \n", ships.size() );
+    return UDPServer::onConnect( client );
 };
 
 // ============== main

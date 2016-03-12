@@ -22,11 +22,15 @@ class SailWarWorld {
 	int perFrame = 10;
 	double dt = 0.0001;
 
+	int defaultShipShape;
+	CollisionShape * defaultCollisionShape;
+
 	std::vector<Convex2d*>   isles;
 
 	std::vector<Frigate2D*>  ships;
 	std::vector<Projectile*> projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 
+    void makeShip( const Vec2d& pos, double angle, char * filename, int shape, CollisionShape * collisionShape );
 	void update_world ( );
 	void init_world   ( );
 

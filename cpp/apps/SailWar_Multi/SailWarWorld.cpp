@@ -10,7 +10,7 @@
 
 #include "SailWarWorld.h" // THE HEADER
 
-const int npts = 4;
+const int     npts = 4;
 static double poss[npts*2] = { -1.0, 0.0,   0.0, -0.1,   0.0, +0.1,   +1.0, 0.0  };
 static double mass[npts  ] = {  10.0, 50.0, 50.0, 10.0  };
 
@@ -49,10 +49,36 @@ void SailWarWorld::update_world( ){
 	}
 };
 
+void SailWarWorld::makeShip( const Vec2d& pos, double angle, char * filename, int shape, CollisionShape * collisionShape ){
+    int ith = ships.size();
+	printf( " >>> Setup  ship %i \n", ith );
+	Frigate2D* ship = new Frigate2D();
+	ship->loadFromFile( filename );
+	ship->from_mass_points( 2, mass, (Vec2d*)poss );
+	//printf( " I invI  %f %f \n", ship1->I, ship1->invI );
+	ship->setDefaults();
+	ship->setAngle( angle );
+	ship->pos.set ( pos );
+	ship->omega = 0.0;
+	ship->shape = shape;
+	printf( "DEBUG 1 \n" );
+	ship->initAllGuns( 6 );
+	printf( "DEBUG 2 \n" );
+	ship->world = this;
+    ship->collisionShape = collisionShape;
+    printf( "DEBUG 3 \n" );
+    ship->name = new char[7];
+    sprintf( ship->name, "Ship_%02i", ith );
+    printf( "DEBUG 4 \n" );
+    ships.push_back( ship );
+    printf( "DEBUG 5 \n" );
+}
 
 void SailWarWorld::init_world( ){
 
     // ---- misc.
+
+    printf( " SailWarWorld::init_world: misc. \n" );
 
 	ground_level = 0.0d;
 	watter_speed.set(   0.0, 0.0     );
@@ -64,13 +90,17 @@ void SailWarWorld::init_world( ){
 
     int ifree,igl,nvert,ndiv;
 
+    printf( " SailWarWorld::init_world: hitBoxShape \n" );
+
     int hitBoxShape = glGenLists(1);
 	glNewList( hitBoxShape , GL_COMPILE );
         Draw2D::drawCircle_d( {0.0f,0.0f}, 1.0f, 32, false );
 	glEndList();
 
-    int FigateShape = glGenLists(1);
-	glNewList( FigateShape , GL_COMPILE );
+    printf( " SailWarWorld::init_world: defaultShipShape \n" );
+
+    defaultShipShape = glGenLists(1);
+	glNewList( defaultShipShape , GL_COMPILE );
 	glBegin   (GL_TRIANGLE_FAN);
 		glNormal3f( 0.0f, 0.0f, 1.0f );
 		glVertex3f( +1.5,  0.0, 0 );
@@ -82,10 +112,16 @@ void SailWarWorld::init_world( ){
 	glEnd();
 	glEndList();
 
-    CollisionShape * collisionShape = new CollisionShape();
-    collisionShape->collision_radius = 1.0;
-    collisionShape->displayList = hitBoxShape;
+    printf( " SailWarWorld::init_world: defaultCollisionShape \n" );
 
+    defaultCollisionShape  = new CollisionShape();
+    defaultCollisionShape->collision_radius = 1.0;
+    defaultCollisionShape->displayList      = hitBoxShape;
+
+    //SailWarWorld::makeShip( { 3.0, -3.0}, M_PI*0.6, "data/FrigateType.txt", defaultShipShape, defaultCollisionShape );
+    //SailWarWorld::makeShip( {-3.0, -3.0}, M_PI*0.6, "data/FrigateType.txt", defaultShipShape, defaultCollisionShape );
+
+/*
 	printf( " >>> Setup  ship1: \n" );
 	Frigate2D* ship1 = new Frigate2D();
 	ship1->loadFromFile( "data/FrigateType.txt" );
@@ -117,10 +153,11 @@ void SailWarWorld::init_world( ){
     ship2->collisionShape = collisionShape;
     ship2->name = "ship2";
     ships.push_back( ship2 );
-
-	printf( " >>> Setup  ship1 DONE \n" );
+*/
 
     // ---- isles
+
+    printf( " SailWarWorld::init_world: isles \n" );
 
     int ncorners = 5;
     int nisles   = 30;
