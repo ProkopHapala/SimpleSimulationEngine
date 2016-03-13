@@ -77,11 +77,12 @@ class RigidBody2D : public PointBody2D {
 
 	// ==== inline functions
 
-	inline void clean_temp (             ){ force.set(0.0);          torq=0;                    }
-	inline void setDefaults(             ){	omega = 0.0;		     clean_temp();	            }
+    inline void setI       ( double I_   ){ I = I_; invI = 1 / I;                               };
 	inline void setAngle   ( double phi_ ){	phi = phi_;		         rot.fromAngle( phi_ ); 	}
-	inline void sinc_rot   (             ){	rot.x = cos( phi );		 rot.y = sin( phi );	}
+	inline void sinc_rot   (             ){	rot.x = cos( phi );		 rot.y = sin( phi );	    }
 	inline bool check_rot  (             ){	double r2 = rot.norm2(); return ( fabs( r2 - 1.0d ) > ROT_NORM2_PREC );	}
+    inline void clean_temp (             ){ force.set(0.0);          torq=0;                    }
+	inline void setDefaults(             ){	omega = 0.0;		     clean_temp();	            }
 
 	inline void move_RigidBody2D( double dt ){
 		// postion

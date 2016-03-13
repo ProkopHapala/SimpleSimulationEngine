@@ -1,5 +1,5 @@
-#ifndef NonInertWorld_h
-#define NonInertWorld_h
+#ifndef Projectile2D_h
+#define Projectile2D_h
 
 #include "fastmath.h"
 #include "Vec2.h"
