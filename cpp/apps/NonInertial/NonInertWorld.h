@@ -44,7 +44,8 @@ class NonInertWorld {
     virtual void update_world( );
     virtual void init_world  ( );
 
-    void makeWarrior( const Vec2d& pos, double angle, char * filename, int shape );
+    void makeWarrior   ( const Vec2d& pos, double angle, char * filename, int shape );
+    void fireProjectile( Warrior2D * w );
 
     // ==== inline functions
 
@@ -85,6 +86,7 @@ class NonInertWorld {
             double r     = sqrt(r2);
             double inv_r = 1/( r + 1.0e-8 );
             normal.set_mul( pos, inv_r );
+            //printf( "normal (%3.3f,%3.3f)\n", normal.x, normal.y );
             if( r > (rmax+0.5) ){
                 double vnormal = normal.dot( vel );
                 //printf( "vel (%3.3f,%3.3f,%3.3f) normal (%3.3f,%3.3f,%3.3f) vnormal %3.3f \n" );

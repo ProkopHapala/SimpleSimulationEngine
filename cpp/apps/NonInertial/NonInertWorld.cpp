@@ -4,6 +4,15 @@
 
 #include "NonInertWorld.h" // THE HEADER
 
+    void NonInertWorld::fireProjectile( Warrior2D * w ){
+        Projectile2D * p = new Projectile2D();
+        p->vel.set_mul( w->gun_rot, 10.0 );
+        p->vel.add( { randf(-0.1,0.1), randf(-0.1,0.1) } );
+        p->pos.set( w->pos );
+        p->pos.add_mul( w->gun_rot, 1.0 );
+        projectiles.push_back( p );
+    };
+
     void NonInertWorld::makeWarrior( const Vec2d& pos, double angle, char * filename, int shape ){
         int ith = warriors.size();
         printf( " >>> Setup  ship %i \n", ith );
@@ -42,32 +51,35 @@
                 addEnviroForces              ( w->pos, w->vel, w->force,  w->landed );
                 w->landed = collideWithWorld ( w->pos, w->vel, w->surf );
                 w->move( dt );
+                w->gun_rot.set_mul_cmplx( rot, w->rot );
                 //w->update( dt );
 
                 //printf( " warriro %i pos (%3.3f,%3.3f) vel (%3.3f,%3.3f) force (%3.3f,%3.3f) \n", itw, w->pos.x, w->pos.y, w->vel.x, w->vel.y, w->force.x, w->force.y );
                 ++itw;
             }
 
-        /*
             auto it_proj = projectiles.begin();
             while( it_proj != projectiles.end() ) {
-                Projectile * proj = *it_proj;
+                Projectile2D * proj = *it_proj;
 
-                proj ->update_old_pos( );
-                proj ->evalForce     (    );
+                //proj ->update_old_pos(    );
+                //proj ->evalForce     (    );
                 proj ->move          ( dt );
 
                 bool hitted = false;
-                hitted |= proj->check_hit_ground( );
-                hitted |= proj->check_hit_vector<Frigate2D>( warriors );
-                if( hitted ){
+                //hitted |= proj->check_hit_ground( );
+                //hitted |= proj->check_hit_vector<Frigate2D>( warriors );
+                Vec2d normal;
+                //hitted = collideWithWorld ( proj->pos, proj->vel, normal );
+                hitted = collideWithWorld ( proj->pos, proj->vel, normal );
+                //if( hitted ){
+                if( proj->time > 8.0 ){
                     it_proj = projectiles.erase( it_proj );
                     delete proj;
                 }else{
                     ++it_proj;
                 }
             }
-        */
 
         }
 	};

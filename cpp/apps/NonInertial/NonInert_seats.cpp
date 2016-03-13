@@ -63,6 +63,8 @@ void NonInert_seats::draw(){
     //warrior2->clean_temp ( );
     //world.addEnviroForces(  warrior2->pos,  warrior2->vel,  warrior2->force );
 
+    if( world.projectiles.size() > 1 ) printf( " frame %i : %i projectiles in air \n", frameCount, world.projectiles.size() );
+
     glPushMatrix();
     glRotatef( -world.phi * 180 / M_PI, 0.0f, 0.0f, 1.0f );
 
@@ -78,8 +80,13 @@ void NonInert_seats::draw(){
         //w->clean_temp ( );
         //world.addEnviroForces( w->pos, w->vel, w->force );
         glColor3f( 0.1, 0.1, 0.1 ); Draw2D::drawPointCross_d( w->pos, 0.1 );
-        glColor3f( 0.0, 0.0, 0.8 ); Draw2D::drawVecInPos_d  ( w->vel   * 1.0, w->pos );
-        glColor3f( 0.8, 0.0, 0.0 ); Draw2D::drawVecInPos_d  ( w->force * 10.0, w->pos );
+        glColor3f( 0.0, 0.0, 0.8 ); Draw2D::drawVecInPos_d  ( w->vel     * 1.0,  w->pos );
+        glColor3f( 0.8, 0.0, 0.0 ); Draw2D::drawVecInPos_d  ( w->force   * 10.0, w->pos );
+        glColor3f( 0.0, 0.5, 0.0 ); Draw2D::drawVecInPos_d  ( w->gun_rot * 1.0, w->pos );
+    }
+
+    for( auto p : world.projectiles ) {
+        glColor3f( 0.0f, 0.5f, 0.0f ); 	Draw2D::drawVecInPos_d( p->vel*0.02, p->pos );
     }
 
     glPopMatrix();
@@ -102,6 +109,19 @@ void NonInert_seats::keyStateHandling( const Uint8 *keys ){
 	if( keys[ SDL_SCANCODE_S ] ){ warrior1->vel.sub( dvy ); }
 	if( keys[ SDL_SCANCODE_D ] ){ warrior1->vel.add( dvx ); }
     if( keys[ SDL_SCANCODE_A ] ){ warrior1->vel.sub( dvx ); }
+    if( keys[ SDL_SCANCODE_Q ] ){ warrior1->rotate_gun( -0.03 ); }
+    if( keys[ SDL_SCANCODE_E ] ){ warrior1->rotate_gun( +0.03 ); }
+    if( keys[ SDL_SCANCODE_R ] ){ world.fireProjectile( warrior1 ); }
+
+    if( keys[ SDL_SCANCODE_I ] ){ warrior2->vel.add( dvy ); }
+	if( keys[ SDL_SCANCODE_K ] ){ warrior2->vel.sub( dvy ); }
+	if( keys[ SDL_SCANCODE_L ] ){ warrior2->vel.add( dvx ); }
+    if( keys[ SDL_SCANCODE_J ] ){ warrior2->vel.sub( dvx ); }
+    if( keys[ SDL_SCANCODE_U ] ){ warrior2->rotate_gun( -0.03 ); }
+    if( keys[ SDL_SCANCODE_O ] ){ warrior2->rotate_gun( +0.03 ); }
+    if( keys[ SDL_SCANCODE_P ] ){ world.fireProjectile( warrior2 ); }
+
+    //case SDLK_r:  world.fireProjectile( warrior1 ); break;
 
 };
 
@@ -111,7 +131,9 @@ void NonInert_seats::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                case SDLK_e:  warrior1->tryJump(); break;
+                case SDLK_f:  warrior1->tryJump(); break;
+                case SDLK_h:  warrior1->tryJump(); break;
+                //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             break;
         /*

@@ -7,6 +7,12 @@
 
 class Projectile2D : public PointBody2D {
 	public:
+    double time;
+
+    virtual void move( double dt ){
+        time += dt;
+        move_PointBody2D(dt);
+    };
 
 };
 
