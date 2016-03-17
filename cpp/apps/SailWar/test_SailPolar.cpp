@@ -219,20 +219,20 @@ TestAppSailPolar::TestAppSailPolar( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
 	thisShip -> mast  .fromString( " +0.05   0.0    0.0           3.0    0.1     -1.0   0.8    3.50    2.20    0.20     0.40"   );
 */
 
-/*
+
 	                              //  pos.x  pos.y  angle         area   CD0      dCD   dCDS   dCL     dCLS    sStall   wStall
     thisShip -> keel  .fromString( "  0.0    0.0    1.57079632679 0.4    0.15     1.5   0.9    3.00    2.00    0.20     0.40"   );
 	//thisShip -> rudder.fromString( " -1.1    0.0    1.77079632679 0.01   0.02     1.5   0.9    6.28    2.70    0.16     0.08"   );
 	thisShip -> rudder.fromString( " -1.1    0.0    1.77079632679 0.03   0.05     0.5   0.9    5.00    2.70    0.25     0.40"   );
 	thisShip -> mast  .fromString( " +0.05   0.0    0.0           12.0    0.2     -1.0   0.8    3.50    2.20    0.20     0.40"   );
-*/
 
 
+/*
                                   //  pos.x  pos.y  angle         area   CD0      dCD   dCDS   dCL     dCLS    sStall   wStall
     thisShip -> keel  .fromString( "  0.0    0.0    1.57079632679 0.4    0.15     1.5   1.5    3.00    3.00    0.20     0.40"   );
 	thisShip -> rudder.fromString( " -1.1    0.0    1.77079632679 0.03   0.05     1.5   1.5    3.00    3.00    0.25     0.40"   );
 	thisShip -> mast  .fromString( " +0.0   0.0    0.0            12.0    0.2      1.5   1.5    3.00    3.00    0.20     0.40"   );
-
+*/
 
 	thisShip -> from_mass_points( 2, mass, (Vec2d*)poss );
 	thisShip -> setDefaults( );

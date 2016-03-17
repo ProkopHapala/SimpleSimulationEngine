@@ -176,7 +176,7 @@ class Quat4TYPE {
 
 // =======  pitch, yaw, roll
 
-	inline void dpitch( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); pitch( ca, sa );  };
+	inline void dpitch( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); pitch( ca, sa );  };
 	inline void pitch ( TYPE angle ){ pitch( cos(angle), sin(angle) );  };
     inline void pitch ( TYPE ca, TYPE sa ) {
         TYPE x_ =  x * ca + w * sa;
@@ -186,7 +186,7 @@ class Quat4TYPE {
         x = x_; y = y_; z = z_;
     };
 
-	inline void dyaw( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); yaw( ca, sa );  };
+	inline void dyaw( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); yaw( ca, sa );  };
 	inline void yaw ( TYPE angle ){ yaw( cos(angle), sin(angle) );  };
     inline void yaw ( TYPE ca, TYPE sa ) {
         TYPE x_ =  x * ca - z * sa;
@@ -196,7 +196,7 @@ class Quat4TYPE {
         x = x_; y = y_; z = z_;
     };
 
-	inline void droll( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); roll( ca, sa );  };
+	inline void droll( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); roll( ca, sa );  };
 	inline void roll ( TYPE angle ){ roll( cos(angle), sin(angle) );  };
     inline void roll ( TYPE ca, TYPE sa ) {
         TYPE x_ =  x * ca + y * sa;
@@ -207,7 +207,7 @@ class Quat4TYPE {
     };
 
 
-	inline void dpitch2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); pitch2( ca, sa );  };
+	inline void dpitch2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); pitch2( ca, sa );  };
 	inline void pitch2 ( TYPE angle ){ pitch2( cos(angle), sin(angle) );  };
     inline void pitch2 ( TYPE ca, TYPE sa ) {
 /*
@@ -223,7 +223,7 @@ class Quat4TYPE {
         x = x_; y = y_; z = z_;
     };
 
-	inline void dyaw2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); yaw2( ca, sa );  };
+	inline void dyaw2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); yaw2( ca, sa );  };
 	inline void yaw2 ( TYPE angle ){ yaw2( cos(angle), sin(angle) );  };
     inline void yaw2 ( TYPE ca, TYPE sa ) {
         TYPE x_ = + sa * z  + ca * x;
@@ -233,7 +233,7 @@ class Quat4TYPE {
         x = x_; y = y_; z = z_;
     };
 
-	inline void droll2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,ca,sa); roll2( ca, sa );  };
+	inline void droll2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); roll2( ca, sa );  };
 	inline void roll2 ( TYPE angle ){ roll2( cos(angle), sin(angle) );  };
     inline void roll2 ( TYPE ca, TYPE sa ) {
         TYPE x_ = - sa * y + ca * x;

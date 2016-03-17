@@ -5,20 +5,20 @@
 
 #include <SDL2/SDL_opengl.h>
 
-#include "drawMath.h"
+#include "Draw3D.h"
 
 #include "AeroCraft.h" // THE HEADER
 
 void AeroCraft::render(){
 	glPushMatrix();
 	float glmat[16];
-	toGLMat( pos, rotMat, glmat);
+	Draw3D::toGLMat( pos, rotMat, glmat);
 	glMultMatrixf( glmat );
 	glDisable (GL_LIGHTING);
 	glColor3f( 0.3f,0.3f,0.3f );
-	drawLine( {0,0,0},wingLeft.lpos);
-	drawLine( {0,0,0},wingRight.lpos);
-	drawLine( {0,0,0},elevator.lpos);
+	Draw3D::drawLine( {0,0,0},wingLeft.lpos);
+	Draw3D::drawLine( {0,0,0},wingRight.lpos);
+	Draw3D::drawLine( {0,0,0},elevator.lpos);
 	wingLeft.render();
 	wingRight.render();
 	rudder.render();

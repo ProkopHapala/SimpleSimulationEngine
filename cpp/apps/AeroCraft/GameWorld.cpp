@@ -1,7 +1,7 @@
 
 #include <SDL2/SDL_opengl.h>
 
-#include "drawMath.h"
+#include "Draw3D.h"
 
 #include "testUtils.h"
 
@@ -101,7 +101,7 @@ int GameWorld::makeBuildingsGrid( int nx, int ny, float sx, float sy, float cx, 
 		for (int iy=-ny; iy<ny; iy++){
 			float height = randf() * (max_height-min_height) + min_height;
 			float y = iy*sy;
-			drawBox( x, x + sx*cx, 0, height, y, y + sy*cy, 0.75f, 0.75f, 0.75f );
+			Draw3D::drawBox( x, x + sx*cx, 0, height, y, y + sy*cy, 0.75f, 0.75f, 0.75f );
 		}
 	}
 	glEndList();
@@ -122,7 +122,7 @@ int GameWorld::makeBuildingsClusters( int nclustest, int nmin, int nmax, float m
 			float y  = y0 + randf()*(max_dist-min_dist) + min_dist;
 			float dx = randf()*(max_size-min_size) + min_size;
 			float dy = randf()*(max_size-min_size) + min_size;
-			drawBox( x-dx, x+dx, 0, height, y-dy, y+dy, 0.75f, 0.75f, 0.75f );
+			Draw3D::drawBox( x-dx, x+dx, 0, height, y-dy, y+dy, 0.75f, 0.75f, 0.75f );
 			nboxes++;
 		};
 	};

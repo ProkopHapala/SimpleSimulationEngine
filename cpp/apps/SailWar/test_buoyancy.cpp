@@ -54,10 +54,12 @@ class TestAppTerrainCubic : public AppSDL2OGL {
 TestAppTerrainCubic::TestAppTerrainCubic( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
     hull = new Convex2d( np );
 
+/*
 	hull->corners[0].set( -1.0, -1.0 );
     hull->corners[1].set( +1.0, -1.0 );
     hull->corners[2].set( +1.0, +1.0 );
 	hull->corners[3].set( -1.0, +1.0 );
+*/
 
 /*
 	hull->corners[0].set( -1.0, -1.0 );
@@ -66,12 +68,12 @@ TestAppTerrainCubic::TestAppTerrainCubic( int& id, int WIDTH_, int HEIGHT_ ) : A
 	hull->corners[3].set( -1.5, +1.0 );
 */
 
-/*
+
     hull->corners[0].set( -1.5, -1.0 );
     hull->corners[1].set( +1.5, -1.0 );
     hull->corners[2].set( +1.0, +1.0 );
 	hull->corners[3].set( -1.0, +1.0 );
-*/
+
 
     evalPolar( -1.5, 1.5, 2.0 );
     //exit(0);

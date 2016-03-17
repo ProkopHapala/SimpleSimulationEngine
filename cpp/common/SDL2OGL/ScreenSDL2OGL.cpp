@@ -57,8 +57,8 @@ void ScreenSDL2OGL::setupRenderer(){
 	glMaterialfv ( GL_FRONT_AND_BACK, GL_SPECULAR,  specular);
 	glMaterialfv ( GL_FRONT_AND_BACK, GL_SHININESS, shininess);
 	glEnable     ( GL_COLOR_MATERIAL    );
-	glLightfv    ( GL_LIGHT0, GL_POSITION, lightPos);
-	glLightfv    ( GL_LIGHT0, GL_AMBIENT, ambient);
+	glLightfv    ( GL_LIGHT0, GL_POSITION, lightPos );
+	glLightfv    ( GL_LIGHT0, GL_AMBIENT,  ambient  );
 	glEnable     ( GL_LIGHTING         );
 	glEnable     ( GL_LIGHT0           );
 	glEnable     ( GL_NORMALIZE        );

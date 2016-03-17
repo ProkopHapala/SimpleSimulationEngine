@@ -9,7 +9,7 @@
 //#include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
-#include "drawMath.h"
+#include "Draw3D.h"
 
 #include "Body.h" // THE HEADER
 
@@ -19,7 +19,7 @@
 
 void PointBody::evalForce()    { force.set( 0.0,-9.81f,0.0 ); };
 void PointBody::move(double dt){ move_PointBody(dt);          };
-void PointBody::render()       { drawPoint( pos );            };
+void PointBody::render()       { Draw3D::drawPoint( pos );            };
 
 // ========================
 //   CLASS :   RigidBody
@@ -75,7 +75,7 @@ void RigidBody::from_mass_points( int n, double* amass, Vec3d* apos ){
 void RigidBody::render(){
 	glPushMatrix();
 	float glmat[16];
-	toGLMat( pos, rotMat, glmat );
+	Draw3D::toGLMat( pos, rotMat, glmat );
 	glMultMatrixf( glmat );
 	glCallList( shape );
 	glPopMatrix();
@@ -103,7 +103,7 @@ void SpringConstrain::apply(){
 void SpringConstrain::render(){
 	Vec3d gp1; b1->rotMat.dot_to( p1, gp1 ); gp1.add( b1->pos );
 	Vec3d gp2; b2->rotMat.dot_to( p2, gp2 ); gp2.add( b2->pos );
-	drawLine( gp1, gp2 );
+	Draw3D::drawLine( gp1, gp2 );
 }
 
 SpringConstrain::SpringConstrain( double k_, RigidBody* b1_, RigidBody* b2_, const Vec3d& p1_, const Vec3d& p2_ ){

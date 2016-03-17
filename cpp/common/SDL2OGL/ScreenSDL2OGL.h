@@ -22,8 +22,10 @@ class ScreenSDL2OGL{
 	float fWIDTH, fHEIGHT, camXmin, camYmin, camXmax, camYmax;
 
 	int   mouseX, mouseY;
-	float mouse_begin_x ;
-	float mouse_begin_y ;
+	float mouse_begin_x;
+	float mouse_begin_y;
+	//float mouse_end_x;
+	//float mouse_end_y;
 
 	bool hasFocus;
 	SDL_Window*      window;

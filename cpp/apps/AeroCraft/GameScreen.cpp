@@ -2,7 +2,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
-#include "drawMath.h"
+#include "Draw3D.h"
 //#include "drawDrawUtils.h"
 
 #include "GameScreen.h" // THE HEADER
@@ -18,7 +18,7 @@ void GameScreen:: camera (){
 	Mat3d camMat;
 	qmouse.toMatrix(camMat);
 	float glMat[16];
-	toGLMatCam( {0,0,0}, camMat, glMat);
+	Draw3D::toGLMatCam( {0,0,0}, camMat, glMat);
 	glMultMatrixf( glMat );
 */
 
@@ -36,7 +36,7 @@ void GameScreen:: camera (){
     qCamera.toMatrix( camMat );
 
 	float glMat[16];
-	toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
 	glMultMatrixf( glMat );
 
     glTranslatef( -100, -500, -100.0f );
@@ -130,7 +130,7 @@ void GameScreen:: draw(){
 		glEnd();
 	};
 
-	drawAxis( 1000 );
+	Draw3D::drawAxis( 1000 );
 
 	//glFinish();
 	//SDL_GL_SwapBuffers();
