@@ -4,6 +4,7 @@ include_directories(
         ${COMMON_SRCS}/math
 )
 
+add_library( SimplexGrid    OBJECT SimplexGrid.cpp  )
 add_library( TiledView      OBJECT TiledView.cpp    )
 add_library( TerrainCubic   OBJECT TerrainCubic.cpp )
 add_library( TerrainRBF     OBJECT TerrainRBF.cpp   )

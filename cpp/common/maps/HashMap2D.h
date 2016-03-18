@@ -29,7 +29,7 @@ class HashMap2D : public HashMap<OBJECT> {
 	inline double getX            ( UHALF  ix )          const{ return step * ( ix - MAP_OFFSET );            };
 	inline double getY            ( UHALF  iy )          const{ return step * ( iy - MAP_OFFSET );            };
 	inline ULONG  getBucketInt    ( UHALF  ix, UHALF iy )const{ return ( iy << 16 ) + ix;                     };
-	inline ULONG  getBucket       ( double  x, double y )const{ return getBucketInt( getIx(x), getIy(y) );       };
+	inline ULONG  getBucket       ( double  x, double y )const{ return getBucketInt( getIx(x), getIy(y) );    };
 	inline void   unfoldBucketInt ( ULONG bucket, UHALF& ix, UHALF& iy  )const{ ix = bucket&0xFFFF; iy = (bucket>>16)&0xFFFF; }
 	inline void   unfoldBucket    ( ULONG bucket, double& x, double& y  )const{ UHALF ix,iy;  unfoldBucketInt( bucket, ix, iy  ); x=getX(ix); y=getY(iy); }
 
@@ -40,18 +40,18 @@ class HashMap2D : public HashMap<OBJECT> {
     }
 
 	// TODO: many of this function can be STATIC
-	inline int  findInt         ( OBJECT* p, UHALF ix, UHALF iy    )const{ return HashMap<OBJECT>::find         ( p, getBucketInt( ix,iy ) ); };
-	inline int  find            ( OBJECT* p, double x, double y    )const{ return HashMap<OBJECT>::find         ( p, getBucket   (  x, y ) ); };
-	inline int  insertNoTestInt ( OBJECT* p, UHALF ix, UHALF iy    ){ return HashMap<OBJECT>::insertNoTest      ( p, getBucketInt( ix,iy ) ); };
-	inline int  insertNoTest    ( OBJECT* p, double x, double y    ){ return HashMap<OBJECT>::insertNoTest      ( p, getBucket   (  x, y ) ); };
-	inline int  insertIfNewInt  ( OBJECT* p, UHALF ix, UHALF iy    ){ return HashMap<OBJECT>::insertIfNew       ( p, getBucketInt( ix,iy ) ); };
-	inline int  insertIfNew     ( OBJECT* p, double x, double y    ){ return HashMap<OBJECT>::insertIfNew       ( p, getBucket   (  x, y ) ); };
-	inline bool tryRemoveInt    ( OBJECT* p, UHALF ix, UHALF iy    ){ return HashMap<OBJECT>::tryRemove         ( p, getBucketInt( ix,iy ) ); };
-	inline bool tryRemove       ( OBJECT* p, double x, double y    ){ return HashMap<OBJECT>::tryRemove         ( p, getBucket   (  x, y ) ); };
-	inline UINT getBucketIndexesInt( UHALF  ix, UHALF iy, UINT * outi )const{ return HashMap<OBJECT>::getBucketIndexes( getBucketInt( ix,iy ), outi );  }
-	inline UINT getBucketIndexes   ( double  x, double y, UINT * outi )const{ return HashMap<OBJECT>::getBucketIndexes( getBucket   (  x, y ), outi );  }
-	inline UINT getBucketObjectsInt( UHALF  ix, UHALF iy, OBJECT**out )const{ return HashMap<OBJECT>::getBucketObjects( getBucketInt( ix,iy ), out  );  }
-	inline UINT getBucketObjects   ( double  x, double y, OBJECT**out )const{ return HashMap<OBJECT>::getBucketObjects( getBucket   (  x, y ), out  );  }
+	inline int  findInt            ( OBJECT* p, UHALF ix, UHALF iy    )const{ return HashMap<OBJECT>::find            ( p, getBucketInt( ix,iy ) ); };
+	inline int  find               ( OBJECT* p, double x, double y    )const{ return HashMap<OBJECT>::find            ( p, getBucket   (  x, y ) ); };
+	inline int  insertNoTestInt    ( OBJECT* p, UHALF ix, UHALF iy    )     { return HashMap<OBJECT>::insertNoTest    ( p, getBucketInt( ix,iy ) ); };
+	inline int  insertNoTest       ( OBJECT* p, double x, double y    )     { return HashMap<OBJECT>::insertNoTest    ( p, getBucket   (  x, y ) ); };
+	inline int  insertIfNewInt     ( OBJECT* p, UHALF ix, UHALF iy    )     { return HashMap<OBJECT>::insertIfNew     ( p, getBucketInt( ix,iy ) ); };
+	inline int  insertIfNew        ( OBJECT* p, double x, double y    )     { return HashMap<OBJECT>::insertIfNew     ( p, getBucket   (  x, y ) ); };
+	inline bool tryRemoveInt       ( OBJECT* p, UHALF ix, UHALF iy    )     { return HashMap<OBJECT>::tryRemove       ( p, getBucketInt( ix,iy ) ); };
+	inline bool tryRemove          ( OBJECT* p, double x, double y    )     { return HashMap<OBJECT>::tryRemove       ( p, getBucket   (  x, y ) ); };
+	inline UINT getBucketIndexesInt( UHALF  ix, UHALF iy, UINT * outi )const{ return HashMap<OBJECT>::getBucketIndexes(    getBucketInt( ix,iy ), outi );  }
+	inline UINT getBucketIndexes   ( double  x, double y, UINT * outi )const{ return HashMap<OBJECT>::getBucketIndexes(    getBucket   (  x, y ), outi );  }
+	inline UINT getBucketObjectsInt( UHALF  ix, UHALF iy, OBJECT**out )const{ return HashMap<OBJECT>::getBucketObjects(    getBucketInt( ix,iy ), out  );  }
+	inline UINT getBucketObjects   ( double  x, double y, OBJECT**out )const{ return HashMap<OBJECT>::getBucketObjects(    getBucket   (  x, y ), out  );  }
 
     // this is most general and safest method for inserting 3D objects
 /*
