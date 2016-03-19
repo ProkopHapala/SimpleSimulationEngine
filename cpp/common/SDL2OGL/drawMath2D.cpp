@@ -248,6 +248,54 @@ void Draw2D::drawGrid( float xmin, float ymin, float xmax, float ymax, float dx,
     glEnd();
 };
 
+void Draw2D::drawSimplex( float x, float y, bool s, float step ){
+    glBegin   ( GL_TRIANGLES );
+    if( s ){
+        glVertex3f( (float)(x+0.5*step ), (float)(y+0.86602540378*step), 0.0f );
+        glVertex3f( (float)(x+1.5*step ), (float)(y+0.86602540378*step), 0.0f );
+        glVertex3f( (float)(x+1.0*step ), (float) y               , 0.0f );
+    }else{
+        glVertex3f( (float) x,           (float)y,                 0.0f );
+        glVertex3f( (float)(x+step),     (float)y,                 0.0f );
+        glVertex3f( (float)(x+0.5*step), (float)(y+0.86602540378*step), 0.0f );
+    };
+    glEnd( );
+};
+
+void Draw2D::drawSimplexGrid( int n, float step ){
+    //glColor3f(0.1f,0.1f,0.1f);
+    glBegin( GL_LINES );
+    int n2 = 2 * n;
+    float stepy = step*0.86602540378f;
+    for( int i=-n; i<=n; i++ ){
+        glVertex3f( -n*step,  i*stepy,  0.0f);
+        glVertex3f(  n*step,  i*stepy,  0.0f);
+    }
+    for( int i=-n/2; i<=n/2; i++ ){
+        glVertex3f( (i-n*0.5f)*step, -n*stepy,  0.0f);
+        glVertex3f( (i+n*0.5f)*step,  n*stepy,  0.0f);
+
+        glVertex3f( (i+n*0.5f)*step, -n*stepy,  0.0f);
+        glVertex3f( (i-n*0.5f)*step,  n*stepy,  0.0f);
+    }
+
+    for( int i=-n/2; i<=n/2; i++ ){
+        glVertex3f( -n*step,        -2*i*stepy,  0.0f);
+        glVertex3f( (i-n*0.5f)*step,   n*stepy,  0.0f);
+
+        glVertex3f(  n*step,        -2*i*stepy,  0.0f);
+        glVertex3f( (i+n*0.5f)*step,  -n*stepy,  0.0f);
+
+        glVertex3f(  n*step,         2*i*stepy,  0.0f);
+        glVertex3f( (i+n*0.5f)*step,   n*stepy,  0.0f);
+
+        glVertex3f( -n*step,         2*i*stepy,  0.0f);
+        glVertex3f( (i-n*0.5f)*step,  -n*stepy,  0.0f);
+    }
+
+    glEnd();
+}
+
 void Draw2D::drawShape( const Vec2d& pos, const Vec2d& rot, int shape ){
 	glPushMatrix();
 	//glTranslatef( pos.x, pos.y , 0 );

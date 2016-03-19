@@ -162,7 +162,6 @@ class HashMap{
 		return -1;
 	};
 
-
 	bool tryRemove( TYPE* object, ULONG bucket ){
 		UINT hash = mask&hashFunc( bucket );
 		int  i    = find( object, bucket, hash );
@@ -172,6 +171,27 @@ class HashMap{
 		};
 		DEBUG_REMOVE_FAILED( object, bucket, hash, i )
 		return false;
+	};
+
+	int getFirstBucketIndex( ULONG bucket )  const {
+	    UINT hash = mask&hashFunc( bucket );
+		UINT n    = fields[ hash ].n;
+		UINT i    = hash;
+		UINT j    = 0;
+		while( n > 0 ){
+            if( fields[ i ].object != NULL ){
+                ULONG bucketi = fields[ i ].bucket;
+                if( hash == ( mask&hashFunc( bucketi ) ) ){   // FIXME : here we call hashFunc in loop, would storing hash improve performance ?
+                    if( bucketi == bucket ){
+                        return i;
+                    }
+                    n--;
+                }
+            }
+			i=(i+1)&mask;
+			INFINITE_LOOP_DEBUG("getBucketIndexes", n )
+		}
+		return -1;
 	};
 
 	UINT getBucketIndexes( ULONG bucket, UINT * outi )  const {

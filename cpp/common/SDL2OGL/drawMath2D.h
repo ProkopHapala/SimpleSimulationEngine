@@ -42,7 +42,13 @@ void plot         ( int n, double * xs, double * ys );
 
 void drawFunc     ( float xmin, float xmax,          int n, Func1d func );
 void drawFuncDeriv( float xmin, float xmax, float d, int n, Func1d func );
+
+
 void drawGrid     ( float xmin, float ymin, float xmax, float ymax, float dx, float dy );
+
+void drawSimplex    ( float x, float y, bool s, float step );
+void drawSimplexGrid( int n,  float step );
+
 
 void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
 
