@@ -7,6 +7,9 @@
 
 namespace Draw2D{
 
+extern float z_layer; // this can be used for drawing in multiple overlaping layers
+                      // should be initialized like this http://stackoverflow.com/questions/19136059/namespace-global-variable-losing-value-c
+
 void drawPoint      ( const Vec2f& vec                   );
 void drawPointCross ( const Vec2f& vec, float d          );
 void drawVec        ( const Vec2f& vec                   );
@@ -18,14 +21,15 @@ void drawRectangle  ( float p1x, float p1y, float p2x, float p2y, bool filled );
 void drawRectangle  ( const Vec2f& p1, const Vec2f& p2, bool filled );
 void drawCircle     ( const Vec2f& center, float radius, int n, bool filled );
 
-void drawPoint_d      ( const Vec2d& vec                   );
-void drawPointCross_d ( const Vec2d& vec, double d         );
-void drawVec_d        ( const Vec2d& vec                   );
-void drawVecInPos_d   ( const Vec2d& v,   const Vec2d& pos );
-void drawBody2d_d     ( const Vec2d& rot, const Vec2d& pos, float l1, float l2 );
-void drawLine_d       ( const Vec2d& p1,  const Vec2d& p2  );
-void drawRectangle_d  ( const Vec2d& p1,  const Vec2d& p2, bool filled );
-void drawCircle_d     ( const Vec2d& center, float radius, int n, bool filled );
+void drawPoint_d       ( const Vec2d& vec                   );
+void drawPointCross_d  ( const Vec2d& vec, double d         );
+void drawVec_d         ( const Vec2d& vec                   );
+void drawVecInPos_d    ( const Vec2d& v,   const Vec2d& pos );
+void drawBody2d_d      ( const Vec2d& rot, const Vec2d& pos, float l1, float l2 );
+void drawLine_d        ( const Vec2d& p1,  const Vec2d& p2  );
+void drawTriangle_d    ( const Vec2d& p1,  const Vec2d& p2, const Vec2d& p3 );
+void drawRectangle_d   ( const Vec2d& p1,  const Vec2d& p2, bool filled );
+void drawCircle_d      ( const Vec2d& center, float radius, int n, bool filled );
 
 void drawPoints        ( int npoints, Vec2d * points );
 void drawPoints        ( int npoints, Vec2d * points, float sz );

@@ -41,14 +41,22 @@ TestAppSimplexGrid::TestAppSimplexGrid( int& id, int WIDTH_, int HEIGHT_ ) : App
 
     grid.init( 1.0, 8 );
 
-    MySimplexField* p;
-    p = new MySimplexField(); p->lo = true; p->hi = true; grid.insertNoTest( p, 1.15454, 2.15454 );
-    p = new MySimplexField(); p->lo = true; p->hi = false; grid.insertNoTest( p, 3.15454, 2.15454 );
-    p = new MySimplexField(); p->lo = false; p->hi = true; grid.insertNoTest( p, 1.15454, 5.15454 );
-
-
     shape=glGenLists(1);
 	glNewList( shape, GL_COMPILE );
+    glColor3f( 0.8f, 0.8f, 0.8f );
+
+	for( int i=0; i<10; i++ ){
+	    MySimplexField* p;
+        Vec2d a;
+        a.set( randf( -10,10 ), randf( -10,10 ) );
+        p = new MySimplexField();
+        p->lo = true;
+        p->hi = true;
+        grid.insertIfNew( p, a.x, a.y );
+        Draw2D::drawPointCross_d(a,0.1);
+	}
+
+
 	glBegin   ( GL_POINTS   );
         for( int i=0; i<10000; i++ ){
             double x = randf( 0,5 );
@@ -69,6 +77,7 @@ TestAppSimplexGrid::TestAppSimplexGrid( int& id, int WIDTH_, int HEIGHT_ ) : App
             glVertex3f( (float)x,(float)y, 0.0f );
         }
     glEnd();
+
 	glEndList();
 
 }
@@ -76,7 +85,18 @@ TestAppSimplexGrid::TestAppSimplexGrid( int& id, int WIDTH_, int HEIGHT_ ) : App
 void TestAppSimplexGrid::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glDisable( GL_DEPTH_TEST );
+	//glDisable( GL_DEPTH_TEST );
+
+    glEnable( GL_DEPTH_TEST );
+	glDepthFunc( GL_LESS );
+
+	glColor3f( 0.8f,0.2f,0.2f ); Draw2D::z_layer = 1.0f; Draw2D::drawCircle( {0.0f,0.0f}, 2.0f, 16, true );
+	glColor3f( 0.2f,0.2f,0.8f ); Draw2D::z_layer = 0.0f; Draw2D::drawCircle( {1.0f,0.0f}, 2.0f, 16, true );
+
+    glColor3f( 0.8f,0.2f,0.2f ); Draw2D::z_layer = 0.0f; Draw2D::drawCircle( {0.0f,4.0f}, 2.0f, 16, true );
+	glColor3f( 0.2f,0.2f,0.8f ); Draw2D::z_layer = 1.0f; Draw2D::drawCircle( {1.0f,4.0f}, 2.0f, 16, true );
+
+/*
 
     glColor3f( 0.1f,0.1f,0.1f );
     glBegin( GL_TRIANGLES );
@@ -92,9 +112,9 @@ void TestAppSimplexGrid::draw(){
                 glVertex3f( (float)(x+0.5), (float)(y+0.86602540378), 0.0f );
             };
             if( field->hi ){
-                glVertex3f( (float)(x+0.5 ), (float)(y+0.86602540378),  0.0f );
-                glVertex3f( (float)(x+1.5 ), (float)(y+0.86602540378),  0.0f );
-                glVertex3f( (float)(x+1.0 ), (float) y               ,  0.0f );
+                glVertex3f( (float)(x+0.5 ), (float)(y+0.86602540378), 0.0f );
+                glVertex3f( (float)(x+1.5 ), (float)(y+0.86602540378), 0.0f );
+                glVertex3f( (float)(x+1.0 ), (float) y               , 0.0f );
             };
             //printf( " %i %i %3.3f %3.3f  %i %i \n", ia, ib, x, y, field->lo, field->hi );
         }
@@ -102,7 +122,8 @@ void TestAppSimplexGrid::draw(){
 	glEnd();
 
     //exit(0);
-	//glCallList( shape );
+	glCallList( shape );
+*/
 
 };
 

@@ -34,15 +34,15 @@ class SimplexGrid : public HashMap<OBJECT>{
     double        step, invStep;
 
     inline void simplexIndexBare( double x, double y, UHALF& ia, UHALF& ib ) const {
-        double a = ( invStep *   y * 0.86602540378     ) + MAP_OFFSET;
-        double b = ( invStep * ( x - 0.5d*y          ) ) + MAP_OFFSET;
+        double a = ( invStep *   y                            ) + MAP_OFFSET;
+        double b = ( invStep * ( x* 0.86602540378 - 0.5d*y  ) ) + MAP_OFFSET;
     	ia = (int)a;
         ib = (int)b;
     }
 
     inline bool simplexIndex( double x, double y, UHALF& ia, UHALF& ib, double& da, double& db ) const {
-        double a = ( invStep *   y * 0.86602540378    ) + MAP_OFFSET;
-        double b = ( invStep * ( x - 0.5d*y         ) ) + MAP_OFFSET;
+        double a = ( invStep *   y                             ) + MAP_OFFSET;
+        double b = ( invStep * ( x * 0.86602540378 - 0.5d*y  ) ) + MAP_OFFSET;
     	ia = (int)a;
         ib = (int)b;
         da = y - ia;
@@ -51,9 +51,9 @@ class SimplexGrid : public HashMap<OBJECT>{
     }
 
     inline void nodePoint( UHALF ia, UHALF ib, double& x, double& y ) const {
-        UHALF ia_ = ia            - MAP_OFFSET;
-        y = step * 0.86602540378 *( ia_ );
-        x = step *                ( ib + 0.5d*ia_ - MAP_OFFSET );
+        UHALF ia_ = ia - MAP_OFFSET;
+        y = step * ia_;
+        x = step * ( ( ib - MAP_OFFSET ) * 0.86602540378 + 0.5d*ia_ );
     };
 
     inline void tilePoint( UHALF ia, UHALF ib, bool s, double& x, double& y ) const {
