@@ -262,6 +262,7 @@ void drawPlanarPolygon( int n, const int * inds, const Vec3d * points ){
     glColor3f( 0.8f, 0.8f, 0.8f );
 */
 
+
     glVertex3f( a.x, a.y, a.z );
     glVertex3f( b.x, b.y, b.z );
     glVertex3f( c.x, c.y, c.z );
@@ -281,6 +282,7 @@ void drawPlanarPolygon( int n, const int * inds, const Vec3d * points ){
         average.add( normal );
         glVertex3f( average.x, average.y, average.z );
     glEnd();
+    printf( " %i %i %i : %f \n", inds[0], inds[1], inds[2], average.dot(normal) );
 */
 
 }

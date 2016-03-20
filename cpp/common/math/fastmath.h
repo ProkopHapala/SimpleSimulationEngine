@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <stdint.h>
 
+#define GOLDEN_RATIO  1.61803398875
+
 #define SWAP( a, b, TYPE ) { TYPE t = a; a = b; b = t; }
 
 #define sq(a) a*a

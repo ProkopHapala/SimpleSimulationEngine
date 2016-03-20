@@ -52,11 +52,15 @@ TestAppSolids::TestAppSolids( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         glPushMatrix();
         glDisable ( GL_LIGHTING );
         glColor3f( 1.0f, 0.0f, 1.0f );
+        /*
         Draw3D::drawLines    ( Solids::Tetrahedron_nedges, Solids::Tetrahedron_edges, Solids::Tetrahedron_verts );
         glTranslatef(  2.0f, 0.0f, 0.0f );
         Draw3D::drawLines    ( Solids::Octahedron_nedges, Solids::Octahedron_edges, Solids::Octahedron_verts );
         glTranslatef( -4.0f, 0.0f, 0.0f );
         Draw3D::drawLines    ( Solids::Cube_nedges, Solids::Cube_edges, Solids::Cube_verts );
+        */
+        //Draw3D::drawLines    ( Solids::RhombicDodecahedron_nedges, Solids::RhombicDodecahedron_edges, Solids::RhombicDodecahedron_verts );
+        Draw3D::drawLines    ( Solids::Icosahedron_nedges, Solids::Icosahedron_edges, Solids::Icosahedron_verts );
         glPopMatrix();
 
         glPushMatrix();
@@ -64,11 +68,16 @@ TestAppSolids::TestAppSolids( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         glShadeModel( GL_FLAT     );
         glColor3f( 0.8f, 0.8f, 0.8f );
         //Draw3D::drawTriangles( Solids::Tetrahedron_ntris,  Solids::Tetrahedron_tris,  Solids::Tetrahedron_verts );
+        /*
         Draw3D::drawPolygons( Solids::Tetrahedron_nfaces, Solids::Tetrahedron_ngons, Solids::Tetrahedron_faces, Solids::Tetrahedron_verts );
         glTranslatef(  2.0f, 0.0f, 0.0f );
         Draw3D::drawPolygons( Solids::Octahedron_nfaces,  Solids::Octahedron_ngons,  Solids::Octahedron_faces,  Solids::Octahedron_verts  );
         glTranslatef(  -4.0f, 0.0f, 0.0f );
         Draw3D::drawPolygons( Solids::Cube_nfaces,        Solids::Cube_ngons,        Solids::Cube_faces,        Solids::Cube_verts        );
+        */
+        //Draw3D::drawPolygons( Solids::RhombicDodecahedron_nfaces,        Solids::RhombicDodecahedron_ngons,        Solids::RhombicDodecahedron_faces,        Solids::RhombicDodecahedron_verts        );
+        Draw3D::drawPolygons( Solids::Icosahedron_nfaces,        Solids::Icosahedron_ngons,        Solids::Icosahedron_faces,        Solids::Icosahedron_verts        );
+
         glPopMatrix();
 
 	glEndList();
