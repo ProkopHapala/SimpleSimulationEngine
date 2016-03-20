@@ -1,7 +1,7 @@
 
 #include <SDL2/SDL_opengl.h>
 
-#include "drawMath2D.h"
+#include "Draw2D.h"
 
 #include "Yacht2D.h" // THE HEADER
 

@@ -5,15 +5,14 @@
 #include <vector>
 #include <math.h>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-
 #include "fastmath.h"
 #include "Vec2.h"
 #include "geom2D.h"
 #include "HashMap2D.h"
-#include "drawMath2D.h"
 
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+#include "Draw2D.h"
 #include "AppSDL2OGL.h"
 #include "testUtils.h"
 

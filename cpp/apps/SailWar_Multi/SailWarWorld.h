@@ -10,7 +10,6 @@
 #include "Convex2d.h"
 
 #include "Projectile.h"
-#include "Projectile.h"
 #include "Frigate2D.h"
 
 class SailWarWorld {

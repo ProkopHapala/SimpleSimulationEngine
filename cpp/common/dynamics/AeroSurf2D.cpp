@@ -14,10 +14,9 @@ CD limits ( Re = 10,000 )
 
 //#include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include "Draw2D.h"
 
 #include "Body2D.h"
-#include "drawMath2D.h"
-
 
 #include "AeroSurf2D.h" // THE HEADER
 
@@ -103,6 +102,7 @@ void AeroSurf2D::plot_polar( double x0, double y0, double fscale, double phi0 ){
 	glColor3f( 0.2f, 0.2f, 0.8f );  Draw2D::drawPolarFunc( x0, y0, fscale, nPolar, phi0, cLs );
 };
 */
+
 
 void AeroSurf2D::draw( RigidBody2D& platform ){
 	Vec2d gpos, grot;

@@ -38,7 +38,7 @@ for all particles "a" from "ActiveParticles" set
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
-#include "drawMath2D.h"
+#include "Draw2D.h"
 
 #define DEBUG_PLOT_INTERACTION( pa, pb, R, G, B ) if(interacts){ \
     glColor3f( R, G, B ); \

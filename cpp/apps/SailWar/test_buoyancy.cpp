@@ -17,7 +17,7 @@
 
 #include "geom2D.h"
 #include "Convex2d.h"
-#include "drawMath2D.h"
+#include "Draw2D.h"
 #include "AppSDL2OGL.h"
 
 #include "buoyancy.h"

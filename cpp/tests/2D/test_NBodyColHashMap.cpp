@@ -5,14 +5,6 @@
 #include <vector>
 #include <math.h>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-
-#include "drawMath2D.h"
-
-#include "AppSDL2OGL.h"
-#include "testUtils.h"
-
 //#include <unordered_set>
 
 #include "fastmath.h"
@@ -21,7 +13,11 @@
 #include "HashMap2D.h"
 #include "Body2D.h"
 
-
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+#include "Draw2D.h"
+#include "AppSDL2OGL.h"
+#include "testUtils.h"
 
 // ===========================
 //          NBodyWorld

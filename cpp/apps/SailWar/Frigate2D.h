@@ -3,7 +3,7 @@
 #define Frigate2D_h
 
 //#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
+//#include <SDL2/SDL_opengl.h>
 
 #include "Vec3.h"
 #include "Yacht2D.h"
