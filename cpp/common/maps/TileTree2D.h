@@ -8,25 +8,26 @@
 
 */
 
-template <class OBJECT >
+template <class OBJECT, unsigned int POWER >
 class LeafTile2D{
 	public:
-	int power;
-	int mask;
-	int n,n2;
+	//int power;
+    constexpr unsigned int n    = 1<<POWER; 
+	constexpr unsigned int mask = n - 1;
+	constexpr unsigned int n2   = n*n;
 
-	OBJECT * cells;
+	int nfilled; // this is used mostly for removing
 
-	inline int index2d    ( int ix, int iy ){ return ( iy << power ) + ix; };
+	OBJECT cells[n2];
 
-	inline OBJECT get( int ix, int iy         ){ return cells[ index2d(ix,iy) ];   }
-	inline void   set( int ix, int iy , OBJECT){ cells[ index2d(ix,iy) ] = OBJECT; }
+	inline int index2d( int ix, int iy ){ return ( iy << POWER ) + ix; };
 
-	OBJECT * tiles;
+	inline bool get( int ix, int iy,       OBJECT& obj ){ obj = cells[ index2d(ix,iy) ]; return true; } // we should inform if tile is empty
+	inline void set( int ix, int iy, const OBJECT& obj ){ cells[ index2d(ix,iy) ] = obj;              }
 
 }
 
-template <OBJECT>
+template <TILE,OBJECT,unsigned int POWER>
 class BranchTile2D{
 	public:
 	int sub_pow;
@@ -36,23 +37,34 @@ class BranchTile2D{
 	int ntotx,ntoty,ntotxy;
 	int nx,ny,nxy;
 
-	LeafTile2D * tiles;
+	TILE<OBJECT> * tiles;
 
 	inline int getSubIndex( int i          ){ return   i   & sub_mask;  };
 	inline int getSupIndex( int i          ){ return   i  >> sub_pow;   };
 	inline int isup2D     ( int ix, int iy ){ return ( iy *  nx ) + ix; };
 
-	inline TILE get( int ix, int iy ){
+	inline bool get( int ix, int iy,       OBJECT& obj ){
 		int i           = index2d( getSupIndex( ix ), getSupIndex( iy ) );
 		if( tiles[ i ] != NULL ){
-			return tiles[ i ].get( getSubIndex( ix ), getSubIndex( iy ) );
+			return tiles[ i ].get( getSubIndex( ix ), getSubIndex( iy ), obj );
 		}
+		return false;
 	}
 
-	inline bool set( int ix, int iy, TILE ){
+	inline bool set( int ix, int iy, const OBJECT& obj ){
 		int i= index2d( getSupIndex( ix ), getSupIndex( iy ) );
-		if( tiles[ i ] = NULL ){ ;                           }
+		if( tiles[ i ] = NULL ){ tiles[ i ] = new TILE<OBJECT>( sub_pow ); }
 		tiles[ i ].set( getSubIndex( ix ), getSubIndex( iy ) );
+		if( tiles[ i ].nfilled == 0 ){ delete tiles[ i ]; }
+	}
+
+	BranchTile2D{
+
+	}
+
+	~BranchTile2D(){
+		for( int i=0; i<nxy; i++ ){ delete tiles };
+		delete tiles;
 	}
 
 }
