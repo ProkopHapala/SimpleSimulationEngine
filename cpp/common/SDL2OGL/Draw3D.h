@@ -21,6 +21,7 @@ void drawVecInPos ( const Vec3d& v,   const Vec3d& pos );
 void drawLine     ( const Vec3d& p1,  const Vec3d& p2 );
 void drawVecInPos ( const Vec3f& v,   const Vec3f& pos );
 void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3 );
+void drawPlanarPolygon( int n, const int * inds, const Vec3d * points );
 void drawMatInPos ( const Mat3d& mat, const Vec3d& pos );
 //void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
 void drawShape    ( const Vec3d& pos, const Mat3d& rot, int shape );
@@ -29,7 +30,10 @@ int  drawConeFan        ( int n, float r, const Vec3f& base, const Vec3f& tip );
 int  drawCylinderStrip  ( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
 int  drawSphereTriangle ( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c );
 int  drawSphere_oct     ( int n, double r_, const Vec3d& pos_ );
-void drawLines          ( int nlinks, int * links, Vec3d * points );
+
+void drawLines          ( int nlinks, const int * links, const Vec3d * points );
+void drawTriangles      ( int nlinks, const int * links, const Vec3d * points );
+void drawPolygons       ( int nlinks, const int * ns,    const int * links, const Vec3d * points );
 
 // from drawUtils.h
 void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b );

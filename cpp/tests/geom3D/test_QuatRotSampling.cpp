@@ -10,7 +10,7 @@
 
 #include "fastmath.h"
 #include "Vec2.h"
-#include "geom2D.h"
+
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
 

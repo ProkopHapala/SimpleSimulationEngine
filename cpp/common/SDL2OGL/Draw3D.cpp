@@ -8,35 +8,35 @@ namespace Draw3D{
 
 void drawPoint( const Vec3d& vec ){
 	//glDisable (GL_LIGHTING);
-	glBegin   (GL_POINTS);	          	     
+	glBegin   (GL_POINTS);
 		glVertex3d( vec.x, vec.y, vec.z );
 	glEnd();
 };
 
 void drawVec( const Vec3d& vec ){
 	//glDisable (GL_LIGHTING);
-	glBegin   (GL_LINES);	          	     
+	glBegin   (GL_LINES);
 		glVertex3d( 0, 0, 0 ); glVertex3d( vec.x, vec.y, vec.z );
 	glEnd();
 };
 
 void drawVecInPos( const Vec3d& v, const Vec3d& pos ){
 	//glDisable (GL_LIGHTING);
-	glBegin   (GL_LINES);	          	     
+	glBegin   (GL_LINES);
 		glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+v.x, pos.y+v.y, pos.z+v.z );
 	glEnd();
 };
 
 void drawLine( const Vec3d& p1, const Vec3d& p2 ){
 	//glDisable (GL_LIGHTING);
-	glBegin   (GL_LINES);	          	     
+	glBegin   (GL_LINES);
 		glVertex3d( p1.x, p1.y, p1.z ); glVertex3d( p2.x, p2.y, p2.z );
 	glEnd();
 };
 
 void drawVecInPos( const Vec3f& v, const Vec3f& pos ){
 	//glDisable (GL_LIGHTING);
-	glBegin   (GL_LINES);	          	     
+	glBegin   (GL_LINES);
 		glVertex3f( pos.x, pos.y, pos.z ); glVertex3d( pos.x+v.x, pos.y+v.y, pos.z+v.z );
 	glEnd();
 };
@@ -48,8 +48,8 @@ void drawTriangle( const Vec3d& p1, const Vec3d& p2, const Vec3d& p3 ){
 	normal.set_cross(d1,d2);
 	normal.normalize();
 	glBegin   (GL_TRIANGLES);
-		glNormal3d( normal.x, normal.y, normal.z );	          	     
-		glVertex3d( p1.x, p1.y, p1.z ); 
+		glNormal3d( normal.x, normal.y, normal.z );
+		glVertex3d( p1.x, p1.y, p1.z );
 		glVertex3d( p2.x, p2.y, p2.z );
 		glVertex3d( p2.x, p2.y, p2.z );
 	glEnd();
@@ -57,26 +57,26 @@ void drawTriangle( const Vec3d& p1, const Vec3d& p2, const Vec3d& p3 ){
 
 void drawMatInPos( const Mat3d& mat, const Vec3d& pos ){
 	//glDisable (GL_LIGHTING);
-	glBegin   (GL_LINES);	          	     
+	glBegin   (GL_LINES);
 		glColor3f( 1, 0, 0 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.xx, pos.y+mat.xy, pos.z+mat.xz );
 		glColor3f( 0, 1, 0 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.yx, pos.y+mat.yy, pos.z+mat.yz );
 		glColor3f( 0, 0, 1 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.zx, pos.y+mat.zy, pos.z+mat.zz );
 	glEnd();
 };
 
-void drawShape( const Vec3d& pos, const Mat3d& rot, int shape ){ 
+void drawShape( const Vec3d& pos, const Mat3d& rot, int shape ){
 	glPushMatrix();
 	float glMat[16];
 	toGLMat( pos, rot, glMat );
 	glMultMatrixf( glMat );
-	glCallList( shape ); 
+	glCallList( shape );
 	glPopMatrix();
 };
 
 int drawConeFan( int n, float r, const Vec3f& base, const Vec3f& tip ){
 	int nvert=0;
-	Vec3f a,b,c,c_hat; 
-	c.set_sub( tip, base ); 
+	Vec3f a,b,c,c_hat;
+	c.set_sub( tip, base );
 	c_hat.set_mul( c, 1/c.norm() );
 	c_hat.getSomeOrtho( a, b );
 	a.normalize();
@@ -117,7 +117,7 @@ int drawConeFan( int n, float r, const Vec3f& base, const Vec3f& tip ){
 	glVertex3f( tip.x, tip.y, tip.z ); nvert++;
 	for(int i=0; i<=n; i++ ){
 		float pa_ = ca*pa - sa*pb;
-		      pb  = sa*pa + ca*pb;     
+		      pb  = sa*pa + ca*pb;
 	          pa  = pa_;
 		Vec3f p,pn;
 		p .set(   pa*a.x +  pb*b.x,   pa*a.y +  pb*b.y,   pa*a.z +  pb*b.z );
@@ -142,8 +142,8 @@ int drawConeFan( int n, float r, const Vec3f& base, const Vec3f& tip ){
 int drawCylinderStrip( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip ){
 	int nvert=0;
 
-	Vec3f a,b,c,c_hat; 
-	c.set_sub( tip, base ); 
+	Vec3f a,b,c,c_hat;
+	c.set_sub( tip, base );
 	c_hat.set_mul( c, 1/c.norm() );
 	c_hat.getSomeOrtho( a, b );
 	a.normalize();
@@ -164,7 +164,7 @@ int drawCylinderStrip( int n, float r1, float r2, const Vec3f& base, const Vec3f
 	//glBegin   ( GL_LINES );
 	for(int i=0; i<=n; i++ ){
 		float pa_ = ca*pa - sa*pb;
-		      pb  = sa*pa + ca*pb;     
+		      pb  = sa*pa + ca*pb;
 	          pa  = pa_;
 		Vec3f p,pn;
 		p .set(   pa*a.x +  pb*b.x,   pa*a.y +  pb*b.y,   pa*a.z +  pb*b.z );
@@ -183,7 +183,7 @@ int drawCylinderStrip( int n, float r1, float r2, const Vec3f& base, const Vec3f
 */
 	}
 	glEnd();
-	return nvert;	
+	return nvert;
 };
 
 
@@ -204,7 +204,7 @@ int drawSphereTriangle( int n, float r, const Vec3f& pos, const Vec3f& a, const 
 		glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
 		//glVertex3f( r*p.x+pos.x+p.x, r*p.y+pos.y+p.y, r*p.z+pos.z+p.z );
 		for( int ib=0; ib<(n-ia); ib++ ){
-			Vec3f p; 
+			Vec3f p;
 			p.set_add( p0, da );
 			p.normalize();
 			//glColor3f( 0, 1, 0 );
@@ -222,10 +222,10 @@ int drawSphereTriangle( int n, float r, const Vec3f& pos, const Vec3f& a, const 
 		}
 		glEnd();
 	}
-	return nvert;	
+	return nvert;
 };
 
-int drawSphere_oct( int n, double r_, const Vec3d& pos_ ){	
+int drawSphere_oct( int n, double r_, const Vec3d& pos_ ){
 	int nvert=0;
 	Vec3f pos,px,mx,py,my,pz,mz;
 	convert( pos_, pos ); float r = (float)r_;
@@ -242,14 +242,114 @@ int drawSphere_oct( int n, double r_, const Vec3d& pos_ ){
 	return nvert;
 };
 
-void drawLines( int nlinks, int * links, Vec3d * points ){
+
+void drawPlanarPolygon( int n, const int * inds, const Vec3d * points ){
+    if( n < 3 ) return;
+    glBegin( GL_TRIANGLE_FAN );
+    Vec3f a,b,c,normal;
+    convert( points[inds[0]], a );
+    convert( points[inds[1]], b );
+    convert( points[inds[2]], c );
+    normal.set_cross( a-b, b-c );
+    normal.normalize( );
+    glNormal3f( normal.x, normal.y, normal.z );
+
+/*
+    Vec3f average; average.set(0.0d);
+    average.add( a ); average.add( b ); average.add( c );
+    glEnable    ( GL_LIGHTING );
+    glShadeModel( GL_FLAT     );
+    glColor3f( 0.8f, 0.8f, 0.8f );
+*/
+
+    glVertex3f( a.x, a.y, a.z );
+    glVertex3f( b.x, b.y, b.z );
+    glVertex3f( c.x, c.y, c.z );
+    for( int i=3; i<n; i++ ){
+        convert( points[inds[i]], a );
+        glVertex3f( a.x, a.y, a.z );
+        //average.add( a );
+    }
+    glEnd();
+
+/*
+    glDisable ( GL_LIGHTING );
+    glColor3f( 0.0f, 0.0f, 0.0f );
+    average.mul(1.0d/n);
+    glBegin( GL_LINES );
+        glVertex3f( average.x, average.y, average.z );
+        average.add( normal );
+        glVertex3f( average.x, average.y, average.z );
+    glEnd();
+*/
+
+}
+
+void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 	int n2 = nlinks<<1;
+	glBegin( GL_LINES );
 	for( int i=0; i<n2; i+=2 ){
-		drawLine( points[links[i]], points[links[i+1]] );
+		//drawLine( points[links[i]], points[links[i+1]] );
 		//printf ( " %i %i %i %f %f \n", i, links[i], links[i+1], points[links[i]].x, points[links[i+1]].x );
+		Vec3f a,b;
+		convert( points[links[i  ]], a );
+        convert( points[links[i+1]], b );
+        glVertex3f( a.x, a.y, a.z );
+        glVertex3f( b.x, b.y, b.z );
 	}
+	glEnd();
 };
 
+    void drawTriangles( int nlinks, const int * links, const Vec3d * points ){
+        int n2 = nlinks*3;
+        glBegin( GL_TRIANGLES );
+        for( int i=0; i<n2; i+=3 ){
+            //drawTriangle( points[links[i]], points[links[i+1]], points[links[i+2]] );
+            //printf ( " %i %i %i %f %f \n", i, links[i], links[i+1], points[links[i]].x, points[links[i+1]].x );
+            Vec3f a,b,c,normal;
+            convert( points[links[i  ]], a );
+            convert( points[links[i+1]], b );
+            convert( points[links[i+2]], c );
+            printf( "(%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z  );
+            normal.set_cross( a-b, b-c );
+            normal.normalize( );
+            glNormal3f( normal.x, normal.y, normal.z );
+            glVertex3f( a.x, a.y, a.z );
+            glVertex3f( b.x, b.y, b.z );
+            glVertex3f( c.x, c.y, c.z );
+        }
+        glEnd();
+    };
+
+
+    void drawPolygons( int nlinks, const int * ns, const int * links, const Vec3d * points ){
+        const int * inds = links;
+        for( int i=0; i<nlinks; i++ ){
+            int ni = ns[i];
+            drawPlanarPolygon( ni, inds, points );
+            inds += ni;
+            /*
+            glBegin( GL_TRIANGLE_FAN );
+            Vec3f a,b,c,normal;
+            convert( points[links[i  ]], a );
+            convert( points[links[i+1]], b );
+            convert( points[links[i+2]], c );
+            normal.set_cross( a-b, b-c );
+            normal.normalize( );
+            glNormal3f( normal.x, normal.y, normal.z );
+            glVertex3f( a.x, a.y, a.z );
+            glVertex3f( b.x, b.y, b.z );
+            glVertex3f( c.x, c.y, c.z );
+            int ni = ns[i];
+            if( ni > 3 ){
+                convert( points[links[i  ]], a );
+                glVertex3f( a.x, a.y, a.z );
+            }
+            glEnd();
+            */
+        }
+
+    };
 
 // =================
 // from drawUtils.h
@@ -257,13 +357,13 @@ void drawLines( int nlinks, int * links, Vec3d * points ){
 
 void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b ){
 	glBegin(GL_QUADS);
-		glColor3f( r, g, b );		          	     
-		glNormal3f(0,0,-1); glVertex3f( x0, y0, z0 ); glVertex3f( x1, y0, z0 ); glVertex3f( x1, y1, z0 ); glVertex3f( x0, y1, z0 ); 
-		glNormal3f(0,-1,0); glVertex3f( x0, y0, z0 ); glVertex3f( x1, y0, z0 ); glVertex3f( x1, y0, z1 ); glVertex3f( x0, y0, z1 ); 
-		glNormal3f(-1,0,0); glVertex3f( x0, y0, z0 ); glVertex3f( x0, y1, z0 ); glVertex3f( x0, y1, z1 ); glVertex3f( x0, y0, z1 );	
-		glNormal3f(0,0,+1); glVertex3f( x1, y1, z1 ); glVertex3f( x0, y1, z1 ); glVertex3f( x0, y0, z1 ); glVertex3f( x1, y0, z1 ); 
-		glNormal3f(0,+1,1); glVertex3f( x1, y1, z1 ); glVertex3f( x0, y1, z1 ); glVertex3f( x0, y1, z0 ); glVertex3f( x1, y1, z0 ); 
-		glNormal3f(+1,0,0); glVertex3f( x1, y1, z1 ); glVertex3f( x1, y0, z1 ); glVertex3f( x1, y0, z0 ); glVertex3f( x1, y1, z0 );		
+		glColor3f( r, g, b );
+		glNormal3f(0,0,-1); glVertex3f( x0, y0, z0 ); glVertex3f( x1, y0, z0 ); glVertex3f( x1, y1, z0 ); glVertex3f( x0, y1, z0 );
+		glNormal3f(0,-1,0); glVertex3f( x0, y0, z0 ); glVertex3f( x1, y0, z0 ); glVertex3f( x1, y0, z1 ); glVertex3f( x0, y0, z1 );
+		glNormal3f(-1,0,0); glVertex3f( x0, y0, z0 ); glVertex3f( x0, y1, z0 ); glVertex3f( x0, y1, z1 ); glVertex3f( x0, y0, z1 );
+		glNormal3f(0,0,+1); glVertex3f( x1, y1, z1 ); glVertex3f( x0, y1, z1 ); glVertex3f( x0, y0, z1 ); glVertex3f( x1, y0, z1 );
+		glNormal3f(0,+1,1); glVertex3f( x1, y1, z1 ); glVertex3f( x0, y1, z1 ); glVertex3f( x0, y1, z0 ); glVertex3f( x1, y1, z0 );
+		glNormal3f(+1,0,0); glVertex3f( x1, y1, z1 ); glVertex3f( x1, y0, z1 ); glVertex3f( x1, y0, z0 ); glVertex3f( x1, y1, z0 );
 	glEnd();
 };
 
@@ -273,15 +373,15 @@ int makeBoxList( float x0, float x1, float y0, float y1, float z0, float z1, flo
 		drawBox( x0, x1, y0, y1, z0, z1, r, g, b );
 	glEndList();
 	return( ilist );
-	// don't forget use glDeleteLists( ilist ,1); later 
+	// don't forget use glDeleteLists( ilist ,1); later
 }
 
 void drawAxis( float sc ){
 	//glDisable (GL_LIGHTING);
-	glBegin   (GL_LINES);	          	     
+	glBegin   (GL_LINES);
 		glColor3f( 1, 0, 0 ); glVertex3f( 0, 0, 0 ); glVertex3f( 1*sc, 0, 0 );
 		glColor3f( 0, 1, 0 ); glVertex3f( 0, 0, 0 ); glVertex3f( 0, 1*sc, 0 );
-		glColor3f( 0, 0, 1 ); glVertex3f( 0, 0, 0 ); glVertex3f( 0, 0, 1*sc );	
+		glColor3f( 0, 0, 1 ); glVertex3f( 0, 0, 0 ); glVertex3f( 0, 0, 1*sc );
 	glEnd();
 };
 
