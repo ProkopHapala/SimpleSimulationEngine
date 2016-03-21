@@ -1,5 +1,5 @@
-#ifndef  TiledView_h
-#define  TiledView_h
+#ifndef  TileTree2D_h
+#define  TileTree2D_h
 
 /*
  TO DO
@@ -7,11 +7,15 @@
    - how to implement removel of tile ? Would depend on wheather OBJECT is pointer or not;
 */
 
-template < class OBJECT, unsigned int POWER >
+//template < class OBJECT, unsigned int POWER >
+template < class OBJECT, int POWER >
 class LeafTile2D{
 	public:
     constexpr unsigned static int n    = 1<<POWER;
 	constexpr unsigned static int n2   = n*n;
+
+    //constexpr static int n    = 1<<POWER;
+	//constexpr static int n2   = n*n;
 
 	int nfilled; // this is used mostly for removing
 
@@ -29,8 +33,10 @@ class LeafTile2D{
 };
 
 template < class OBJECT, unsigned int POWER, unsigned int NX, unsigned int NY >
+//template < class OBJECT, int POWER, int NX, int NY >
 class TileTree2D{
 	public:
+/*
     constexpr unsigned static int power  = POWER;
     constexpr unsigned static int nx     = NX;
     constexpr unsigned static int ny     = NY;
@@ -43,6 +49,21 @@ class TileTree2D{
 	constexpr unsigned static int ntotx  = nsub  * NX;
 	constexpr unsigned static int ntoty  = nsub  * NY;
 	constexpr unsigned static int ntotxy = ntotx * ntoty;
+*/
+
+
+    constexpr static int power  = POWER;
+    constexpr static int nx     = NX;
+    constexpr static int ny     = NY;
+
+    constexpr static int nsub      = 1<<POWER;
+	constexpr static int sub_mask  = nsub - 1;
+	constexpr static int nsub2     = nsub*nsub;
+	constexpr static int nxy       = NX*NY;
+
+	constexpr static int ntotx  = nsub  * NX;
+	constexpr static int ntoty  = nsub  * NY;
+	constexpr static int ntotxy = ntotx * ntoty;
 
 	LeafTile2D<OBJECT,POWER>* tiles[ nxy ];
 
