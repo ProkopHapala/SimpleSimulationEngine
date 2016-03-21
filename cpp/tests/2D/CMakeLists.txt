@@ -7,6 +7,8 @@ target_link_libraries( test_HashMap2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LI
 
 add_executable       ( test_TileTree2D test_TileTree2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_TileTree2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+target_compile_options( test_TileTree2D PRIVATE "-O2")
+
 
 add_executable       ( test_HashMap2D_uniformity test_HashMap2D_uniformity.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_HashMap2D_uniformity ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
