@@ -7,4 +7,5 @@ add_subdirectory (SailWar_Multi)
 add_subdirectory (AeroCraft)
 add_subdirectory (FormationTactics)
 add_subdirectory (NonInertial)
+add_subdirectory (MultiFight3D)
 
