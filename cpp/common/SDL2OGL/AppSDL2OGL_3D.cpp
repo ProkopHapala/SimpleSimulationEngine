@@ -10,7 +10,7 @@ void AppSDL2OGL_3D::camera(){
 
     float camMatrix[16];
     qCamera.toMatrix_unitary( camMat );
-    first_person = true;
+    //first_person = true;
     //perspective  = true;
 	if(first_person){
         glMatrixMode (GL_PROJECTION);
@@ -25,6 +25,8 @@ void AppSDL2OGL_3D::camera(){
         }
         Draw3D::toGLMatCam( {0.0f,0.0f,0.0f}, camMat, camMatrix );
         glMultMatrixf( camMatrix );
+        glMatrixMode (GL_MODELVIEW);
+        glLoadIdentity();
 	}else{
         glMatrixMode( GL_PROJECTION );
         glLoadIdentity();

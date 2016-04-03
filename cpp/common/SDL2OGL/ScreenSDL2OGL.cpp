@@ -36,6 +36,7 @@ void ScreenSDL2OGL::cameraHUD(){
     glLoadIdentity();
 	glOrtho ( -0, WIDTH, 0, HEIGHT, -VIEW_DEPTH, +VIEW_DEPTH );
 	glMatrixMode (GL_MODELVIEW);
+	glLoadIdentity();
 }
 
 void ScreenSDL2OGL::updateMousePos ( int x, int y ){
