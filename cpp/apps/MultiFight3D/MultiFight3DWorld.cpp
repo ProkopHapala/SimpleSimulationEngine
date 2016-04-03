@@ -101,7 +101,7 @@ void MultiFight3DWorld::update_world( ){
                 if (hitted) break;
             }
             //if( hitted ){
-            if( proj->time > 8.0 ){
+            if( proj->time > projLifetime ){
                 it_proj = projectiles.erase( it_proj );
                 delete proj;
             }else{
@@ -138,10 +138,10 @@ void MultiFight3DWorld::init_world  ( ){
         //Draw3D::drawAxis ( 3.0f );
         //glColor3f( 1.0f, 0.0f, 1.0f ); Draw3D::drawLines   ( Solids::Icosahedron_nedges, Solids::Icosahedron_edges, Solids::Icosahedron_verts                             );
 
-        glEnable( GL_LIGHTING );
-        glColor3f( 0.8f, 0.8f, 0.8f ); Draw3D::drawPolygons( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons, Solids::Icosahedron_faces,  Solids::Icosahedron_verts );
+        //glEnable( GL_LIGHTING );
+        //glColor3f( 0.8f, 0.8f, 0.8f ); Draw3D::drawPolygons( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons, Solids::Icosahedron_faces,  Solids::Icosahedron_verts );
 
-        //glEnable( GL_LIGHTING ); glColor3f( 0.8f, 0.8f, 0.8f );   Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
+        glEnable( GL_LIGHTING ); glColor3f( 0.8f, 0.8f, 0.8f );   Draw3D::drawSphere_oct( 4, objR, {0.0,0.0,0.0} );
         //glPopMatrix();
     glEndList();
     //objects = new KinematicBody();
@@ -152,7 +152,7 @@ void MultiFight3DWorld::init_world  ( ){
         glDisable ( GL_LIGHTING );
         Draw3D::drawAxis ( 3.0f );
         //glColor3f( 1.0f, 0.0f, 1.0f ); Draw3D::drawLines   ( Solids::Icosahedron_nedges, Solids::Icosahedron_edges, Solids::Icosahedron_verts                             );
-        glColor3f( 0.8f, 0.0f, 0.8f ); Draw3D::drawSphereOctLines( 16, 2.0, {0.0,0.0,0.0} );
+        glColor3f( 0.8f, 0.0f, 0.8f ); Draw3D::drawSphereOctLines( 16, objR, {0.0,0.0,0.0} );
         //glPopMatrix();
     glEndList();
     //objects = new KinematicBody();
@@ -167,8 +167,8 @@ void MultiFight3DWorld::init_world  ( ){
     glEndList();
     //objects = new KinematicBody();
 
-    int nobjects = 100;
-    float Lspan = 50.0;
+    int nobjects = 40;
+    float Lspan = 100.0;
     objects.reserve( nobjects );
     for( int i=0; i<nobjects; i++ ){
         KinematicBody* obj = new KinematicBody();

@@ -54,7 +54,7 @@ MultiFight3D_single::MultiFight3D_single( int& id, int WIDTH_, int HEIGHT_ ) : A
 }
 
 void MultiFight3D_single::draw(){
-    printf( " ==== frame %i \n", frameCount );
+    //printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
@@ -76,7 +76,7 @@ void MultiFight3D_single::draw(){
         Draw3D::toGLMat( o->lpos, o->lrot, glMat );
         glMultMatrixf( glMat );
 
-        double t = raySphere( camPos, camMat.c, 2.0, o->lpos );
+        double t = raySphere( camPos, camMat.c, world.objR, o->lpos );
         if( ( t>0 ) && (t < 1000.0 ) ){
             //printf( " t %f  pos (%3.3f,%3.3f,%3.3f) \n", t, o->lpos.x, o->lpos.y, o->lpos.z );
             glCallList( world.defaultObjectHitShape );
@@ -90,7 +90,7 @@ void MultiFight3D_single::draw(){
         float glMat[16];
         glPushMatrix();
         glTranslatef( p->pos.x, p->pos.y, p->pos.z );
-        printf( " %3.3f %3.3f %3.3f \n", p->pos.x, p->pos.y, p->pos.z);
+        //printf( " %3.3f %3.3f %3.3f \n", p->pos.x, p->pos.y, p->pos.z);
         glCallList  ( world.defaultProjectileShape );
         glPopMatrix();
     }

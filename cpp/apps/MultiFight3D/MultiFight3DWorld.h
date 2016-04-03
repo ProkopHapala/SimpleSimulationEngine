@@ -28,9 +28,10 @@ class MultiFight3DWorld {
     double restitution = -0.8d;
     double airDrag     = -0.05d;
     double landDrag    = -0.5d;
-    double objR        = 2.0d;
+    double objR        = 10.0d;
 
     double reload_time = 0.4;
+    double projLifetime = 20.0;
 
     int defaultWarriorShape, defaultObjectShape, defaultObjectHitShape, defaultProjectileShape;
 
