@@ -23,8 +23,10 @@ void AppSDL2OGL_3D::camera(){
         }else{
             glOrtho  ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
         }
-        Draw3D::toGLMatCam( {0.0f,0.0f,0.0f}, camMat, camMatrix );
+        //Draw3D::toGLMatCam( camPos, camMat, camMatrix ); // this does not work properly
+        Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, camMat, camMatrix );
         glMultMatrixf( camMatrix );
+        glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
         glMatrixMode (GL_MODELVIEW);
         glLoadIdentity();
 	}else{
@@ -39,8 +41,10 @@ void AppSDL2OGL_3D::camera(){
             glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
         }
         glMatrixMode (GL_MODELVIEW);
-        Draw3D::toGLMatCam( {0.0f,0.0f,0.0f}, camMat, camMatrix );
+        //Draw3D::toGLMatCam( camPos, camMat, camMatrix ); // this does not work properly
+        Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, camMat, camMatrix );
         glLoadMatrixf(camMatrix);
+        glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
 	}
 	//glMatrixMode (GL_MODELVIEW);
 }
@@ -106,40 +110,28 @@ void AppSDL2OGL_3D::keyStateHandling( const Uint8 *keys ){
 
 };
 
-/*
-void AppSDL2OGL_3D::mouse_camera (float x, float y){
-	if (mouse_spinning){
-		trackball ( qCameraOld,
-			(2.0f*mouse_begin_x-WIDTH)/WIDTH,  (HEIGHT-2.0f*mouse_begin_y)/HEIGHT,
-			(2.0f*x-WIDTH            )/WIDTH,  (HEIGHT-2.0f*y            )/HEIGHT
-		);
-		add_quats ( qCameraOld, qCamera, qCamera );
-		mouse_begin_x = x; mouse_begin_y = y;
-	}
-}
-
-void AppSDL2OGL_3D::getCameraDirections( ){
-	float mat[4][4];
-	glGetFloatv (GL_MODELVIEW_MATRIX, &mat[0][0]);
-	camRight.set( mat[0][0], mat[1][0], mat[2][0] );
-	camUp   .set( mat[0][1], mat[1][1], mat[2][1] );
-	camDir  .set( mat[0][2], mat[1][2], mat[2][2] );
-	camDir.mul( -1 ); // for some reason it is inverted
-}
-*/
-
 void AppSDL2OGL_3D::mouseHandling( ){
     int mx,my;
     //SDL_GetMouseState( &mouseX, &mouseY );
     SDL_GetRelativeMouseState( &mx, &my);
     //printf( " %i %i \n", mx,my );
-    Quat4d q; q.fromTrackball( 0, 0, mx*0.001, my*0.001 );
+    Quat4d q; q.fromTrackball( 0, 0, -mx*0.001, my*0.001 );
     //qCamera.qmul( q );
     qCamera.qmul_T( q );
+}
+
+void AppSDL2OGL_3D::drawCrosshair( float sz ){
+    glBegin( GL_LINES );
+    float whalf = WIDTH *0.5;
+    float hhalf = HEIGHT*0.5;
+    glVertex3f( whalf-10,hhalf, 0 ); glVertex3f( whalf+10,hhalf, 0 );
+    glVertex3f( whalf,hhalf-10, 0 ); glVertex3f( whalf,hhalf+10, 0 );
+    glEnd();
 }
 
 AppSDL2OGL_3D::AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 	qCamera.setOne();
 	qCamera.toMatrix_unitary( camMat );
+	camPos.set(0.0d);
 }
 

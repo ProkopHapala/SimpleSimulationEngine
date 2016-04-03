@@ -15,6 +15,7 @@ class AppSDL2OGL_3D : public AppSDL2OGL{
 	//Mat3f  camMat;
     Quat4d qCamera;
 	Mat3d  camMat;
+	Vec3d  camPos;
 
 	Vec2i spinning_start;
 
@@ -35,6 +36,8 @@ class AppSDL2OGL_3D : public AppSDL2OGL{
 
 	//void orthoCamera      ( );
 	//void perspectiveCamera( );
+
+	void drawCrosshair( float sz );
 
 	AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_ );
 

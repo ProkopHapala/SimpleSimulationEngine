@@ -11,9 +11,11 @@
 class Warrior3D : public RigidBody {
 	public:
     bool    landed = false;
+    bool    trigger = false;
     Vec3d   surf;
     Quat4d  look;
     Vec3d   gun_rot;
+    double until_reaload = 0;
 
     int shape;
 

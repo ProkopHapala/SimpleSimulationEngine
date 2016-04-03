@@ -34,7 +34,7 @@ class MultiFight3D_single : public AppSDL2OGL_3D {
 	virtual void drawHUD();
 	//virtual void mouseHandling( );
 	virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
+	virtual void keyStateHandling( const Uint8 *keys );
 
 	MultiFight3D_single( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -44,7 +44,12 @@ MultiFight3D_single::MultiFight3D_single( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     world.init_world();
     printf( " world.defaultObjectShape %i \n", world.defaultObjectShape );
-    zoom = 16.0;
+
+    warrior1 = world.makeWarrior( {0.0d,0.0d,0.0d}, {0.0d,0.0d,1.0d}, {0.0d,1.0d,0.0d}, world.defaultWarriorShape );
+
+    zoom = 5.0;
+    first_person = true;
+    perspective  = true;
 
 }
 
@@ -60,19 +65,33 @@ void MultiFight3D_single::draw(){
 
     //printf( "camMat.a (%3.3f,%3.3f,%3.3f) \n", camMat.a.x, camMat.a.y, camMat.a.z );
 
+    warrior1->gun_rot.set( camMat.c );
+    world.update_world( );
+
+
+
     for( auto o : world.objects ) {
         float glMat[16];
         glPushMatrix();
         Draw3D::toGLMat( o->lpos, o->lrot, glMat );
         glMultMatrixf( glMat );
 
-        double t = raySphere( {0.0d,0.0d,0.0d}, camMat.c, 2.0, o->lpos );
+        double t = raySphere( camPos, camMat.c, 2.0, o->lpos );
         if( ( t>0 ) && (t < 1000.0 ) ){
             //printf( " t %f  pos (%3.3f,%3.3f,%3.3f) \n", t, o->lpos.x, o->lpos.y, o->lpos.z );
             glCallList( world.defaultObjectHitShape );
         }
 
         glCallList( world.defaultObjectShape );
+        glPopMatrix();
+    }
+
+    for( auto p : world.projectiles ) {
+        float glMat[16];
+        glPushMatrix();
+        glTranslatef( p->pos.x, p->pos.y, p->pos.z );
+        printf( " %3.3f %3.3f %3.3f \n", p->pos.x, p->pos.y, p->pos.z);
+        glCallList  ( world.defaultProjectileShape );
         glPopMatrix();
     }
 
@@ -95,10 +114,38 @@ void MultiFight3D_single::mouseHandling( ){
 }
 */
 
-/*
+
 void MultiFight3D_single::keyStateHandling( const Uint8 *keys ){
+
+    if( warrior1 != NULL ){
+        //if( keys[ SDL_SCANCODE_W ] ){ warrior1->pos.add_mul( camMat.c, +0.1 ); }
+        //if( keys[ SDL_SCANCODE_S ] ){ warrior1->pos.add_mul( camMat.c, -0.1 ); }
+        //if( keys[ SDL_SCANCODE_A ] ){ warrior1->pos.add_mul( camMat.a, -0.1 ); }
+        //if( keys[ SDL_SCANCODE_D ] ){ warrior1->pos.add_mul( camMat.a, +0.1 ); }
+
+        if( keys[ SDL_SCANCODE_W ] ){ warrior1->vel.add_mul( camMat.c, +0.1 ); }
+        if( keys[ SDL_SCANCODE_S ] ){ warrior1->vel.add_mul( camMat.c, -0.1 ); }
+        if( keys[ SDL_SCANCODE_A ] ){ warrior1->vel.add_mul( camMat.a, -0.1 ); }
+        if( keys[ SDL_SCANCODE_D ] ){ warrior1->vel.add_mul( camMat.a, +0.1 ); }
+        if( keys[ SDL_SCANCODE_SPACE ] ){ warrior1->vel.mul( 0.9 ); }
+
+        camPos.set( warrior1->pos );
+    }
+
+    //if( keys[ SDL_SCANCODE_W ] ){ camPos.add_mul( camMat.c, +0.1 ); }
+	//if( keys[ SDL_SCANCODE_S ] ){ camPos.add_mul( camMat.c, -0.1 ); }
+	//if( keys[ SDL_SCANCODE_A ] ){ camPos.add_mul( camMat.a, -0.1 ); }
+	//if( keys[ SDL_SCANCODE_D ] ){ camPos.add_mul( camMat.a, +0.1 ); }
+	//if( keys[ SDL_SCANCODE_W ] ){ camPos.z += +0.1; }
+	//if( keys[ SDL_SCANCODE_S ] ){ camPos.z += -0.1; }
+	//if( keys[ SDL_SCANCODE_A ] ){ camPos.x += +0.1; }
+	//if( keys[ SDL_SCANCODE_D ] ){ camPos.x += -0.1; }
+    if( keys[ SDL_SCANCODE_Q ] ){ qCamera.droll2(  +0.01 ); }
+	if( keys[ SDL_SCANCODE_E ] ){ qCamera.droll2(  -0.01 ); }
+
+
 };
-*/
+
 
 
 void MultiFight3D_single::eventHandling ( const SDL_Event& event  ){
@@ -109,35 +156,39 @@ void MultiFight3D_single::eventHandling ( const SDL_Event& event  ){
                 //case SDLK_f:  warrior1->tryJump(); break;
                 //case SDLK_h:  warrior1->tryJump(); break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
+                case SDLK_ESCAPE:   quit(); break;
+                //case SDLK_SPACE:    STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
+                case SDLK_KP_MINUS: zoom*=VIEW_ZOOM_STEP; break;
+                case SDLK_KP_PLUS:  zoom/=VIEW_ZOOM_STEP; break;
             }
             break;
-        /*
+
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    //printf( "left button pressed !!!! " );
-                    pickParticle( world.picked );
-                break;
-            }
-            break;
-        case SDL_MOUSEBUTTONUP:
-            switch( event.button.button ){
-                case SDL_BUTTON_LEFT:
-                    //printf( "left button pressed !!!! " );
-                    world.picked = NULL;
+                    warrior1->trigger = true;
                     break;
             }
             break;
-        */
+
+        case SDL_MOUSEBUTTONUP:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:
+                    warrior1->trigger = false;
+                    break;
+            }
+            break;
     };
-    AppSDL2OGL::eventHandling( event );
+    //AppSDL2OGL::eventHandling( event );
 }
 
 
 
 
 void MultiFight3D_single::drawHUD(){
-
+    glDisable ( GL_LIGHTING );
+    glColor3f( 0.0f, 1.0f, 0.0f );
+    drawCrosshair( 10 );
 }
 
 // ===================== MAIN
