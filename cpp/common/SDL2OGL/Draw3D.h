@@ -31,6 +31,10 @@ int  drawCylinderStrip  ( int n, float r1, float r2, const Vec3f& base, const Ve
 int  drawSphereTriangle ( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c );
 int  drawSphere_oct     ( int n, double r_, const Vec3d& pos_ );
 
+int drawCircleAxis      ( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis, double dca, double dsa );
+int drawCircleAxis      ( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis );
+int drawSphereOctLines  ( int n, double r, const Vec3d& pos );
+
 void drawLines          ( int nlinks, const int * links, const Vec3d * points );
 void drawTriangles      ( int nlinks, const int * links, const Vec3d * points );
 void drawPolygons       ( int nlinks, const int * ns,    const int * links, const Vec3d * points );

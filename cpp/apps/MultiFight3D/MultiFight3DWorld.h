@@ -25,7 +25,7 @@ class MultiFight3DWorld {
     int perFrame = 10;
     double dt    = 0.005d;
 
-    int defaultWarriorShape, defaultObjectShape;
+    int defaultWarriorShape, defaultObjectShape, defaultObjectHitShape;
 
 	std::vector<Warrior3D*>    warriors;
 	std::vector<Projectile3D*> projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector

@@ -7,21 +7,39 @@
 #include "AppSDL2OGL_3D.h" // THE HEADER
 
 void AppSDL2OGL_3D::camera(){
-    //printf( "ScreenSDL2OGL_3D::camera() \n" );
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-	glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
-	//glOrtho ( -zoom, zoom, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
-	//glOrtho ( -zoom, zoom, -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -VIEW_DEPTH, +VIEW_DEPTH );
-	glMatrixMode (GL_MODELVIEW);
-	float camMatrix[16];
 
-	qCamera.toMatrix_unitary( camMat );
-	Draw3D::toGLMatCam( {0.0f,0.0f,0.0f}, camMat, camMatrix );
-
-	//build_rotmatrix( camMatrix, qCamera );
-	glLoadMatrixf(camMatrix);
-
+    float camMatrix[16];
+    qCamera.toMatrix_unitary( camMat );
+    first_person = true;
+    //perspective  = true;
+	if(first_person){
+        glMatrixMode (GL_PROJECTION);
+        glLoadIdentity();
+        if( perspective ){
+            //glFrustum( left, right, bottom, top, near, far );
+            //glFrustum( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, 5, 20 );
+            float fov = VIEW_ZOOM_DEFAULT/zoom;
+            glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
+        }else{
+            glOrtho  ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
+        }
+        Draw3D::toGLMatCam( {0.0f,0.0f,0.0f}, camMat, camMatrix );
+        glMultMatrixf( camMatrix );
+	}else{
+        glMatrixMode( GL_PROJECTION );
+        glLoadIdentity();
+        if( perspective ){
+            //glFrustum( left, right, bottom, top, near, far );
+            //glFrustum( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, 5, 20 );
+            float fov = VIEW_ZOOM_DEFAULT/zoom;
+            glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
+        }else{
+            glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
+        }
+        glMatrixMode (GL_MODELVIEW);
+        Draw3D::toGLMatCam( {0.0f,0.0f,0.0f}, camMat, camMatrix );
+        glLoadMatrixf(camMatrix);
+	}
 	//glMatrixMode (GL_MODELVIEW);
 }
 
@@ -109,7 +127,13 @@ void AppSDL2OGL_3D::getCameraDirections( ){
 */
 
 void AppSDL2OGL_3D::mouseHandling( ){
-    SDL_GetMouseState( &mouseX, &mouseY );
+    int mx,my;
+    //SDL_GetMouseState( &mouseX, &mouseY );
+    SDL_GetRelativeMouseState( &mx, &my);
+    //printf( " %i %i \n", mx,my );
+    Quat4d q; q.fromTrackball( 0, 0, mx*0.001, my*0.001 );
+    //qCamera.qmul( q );
+    qCamera.qmul_T( q );
 }
 
 AppSDL2OGL_3D::AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {

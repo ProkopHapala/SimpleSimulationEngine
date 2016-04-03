@@ -42,13 +42,13 @@ float project_beam_to_sphere( float r, float x, float y ){
 }
 */
 
-//template <class TYPE, class VEC, class MAT, class QUAT> 
-//template <class TYPE, class VEC> 
-template <class TYPE> 
+//template <class TYPE, class VEC, class MAT, class QUAT>
+//template <class TYPE, class VEC>
+template <class TYPE>
 class Quat4TYPE {
-	using VEC  = Vec3TYPE<TYPE>; 
-	using MAT  = Mat3TYPE<TYPE>; 
-	using QUAT = Quat4TYPE<TYPE>; 
+	using VEC  = Vec3TYPE<TYPE>;
+	using MAT  = Mat3TYPE<TYPE>;
+	using QUAT = Quat4TYPE<TYPE>;
 	public:
 	union{
 		struct{ TYPE x,y,z,w; };
@@ -99,6 +99,15 @@ class Quat4TYPE {
         x = x_; y = y_; z = z_;
     };
 
+    inline void qmul_T( const QUAT& a) {
+        TYPE aw = a.w, ax = a.x, ay = a.y, az = a.z;
+        TYPE x_ =  ax * w + ay * z - az * y + aw * x;
+        TYPE y_ = -ax * z + ay * w + az * x + aw * y;
+        TYPE z_ =  ax * y - ay * x + az * w + aw * z;
+              w = -ax * x - ay * y - az * z + aw * w;
+        x = x_; y = y_; z = z_;
+    };
+
     inline void invertUnitary() { x=-x; y=-y; z=-z; }
 
     inline void invert() {
@@ -112,7 +121,7 @@ class Quat4TYPE {
 
 // ======= Conversion : Angle & Axis
 
-	inline void fromAngleAxis( TYPE angle, const VEC& axis ){  
+	inline void fromAngleAxis( TYPE angle, const VEC& axis ){
 		TYPE ir   = 1/axis.norm();
 		VEC  hat  = axis * ir;
 		TYPE a    = 0.5d * angle;
@@ -129,7 +138,7 @@ class Quat4TYPE {
 		TYPE cosphi, sinphi, sa, phi, sgn_sinphi;
 		TYPE ir    = 1.0 / axis.norm();
 		VEC  hat   = axis * ir;
-		cosphi     = scal_prod;				
+		cosphi     = scal_prod;
 		sgn_sinphi = 1.0; // ?
 		if( cosphi > cos_cutoff ){
 			sa = 0; w = 1;
@@ -147,32 +156,86 @@ class Quat4TYPE {
 	}
 
 	#define TRACKBALLSIZE ( 0.8 )
-	// 
-	void fromTrackballQ( TYPE p1x, TYPE p1y, TYPE p2x, TYPE p2y ){
+
+	/*
+	void fromTrackball( TYPE p1x, TYPE p1y, TYPE p2x, TYPE p2y ){
+		VEC  axis; // axis of rotation
+		//TYPE phi;  // angle of rotation
+		VEC  p1, p2, d;
+		//TYPE t;
+		//if( ( sq(p2x-p1x)+sq(p2y-p1y) ) < 1e-8 ){   }
+		if( ( p2x == p1x ) && ( p2y == p1y ) ){ setOne(); return; }
+		p1.set( p1x, p1y, project_beam_to_sphere<TYPE>( TRACKBALLSIZE, p1x, p1y ) );
+		p2.set( p2x, p2y, project_beam_to_sphere<TYPE>( TRACKBALLSIZE, p2x, p2y ) );
+		axis.set_cross( p2, p1 );
+
+
+		TYPE t = d.norm() / ( 2.0 * TRACKBALLSIZE );
+		if( t > 1.0 )  t =  1.0;
+		if( t < -1.0 ) t = -1.0;
+        TYPE phi = 2.0 * asin( t );
+        fromAngleAxis( phi, axis );
+
+
+        //TYPE t = sqrt( 1 - d.norm2() );
+        //fromCosAngleAxis( t, axis );
+
+		// TYPE cosphi = ;
+		// phi = 2.0 * asin( t );
+		// fromCosAngleAxis( cosphi, axis );
+
+	}
+	*/
+
+	void fromTrackball( TYPE p1x, TYPE p1y, TYPE p2x, TYPE p2y ){
+		VEC  axis; // axis of rotation
+		//TYPE phi;  // angle of rotation
+		VEC  p1, p2, d;
+		//TYPE t;
+		//if( p1x == p2x && p1y == p2y ){	setOne(); return; }
+		if( ( sq<TYPE>(p2x-p1x)+sq<TYPE>(p2y-p1y) ) < 1e-8 ){ setOne(); return; }
+		p1.set( p1x, p1y, project_beam_to_sphere<TYPE>( TRACKBALLSIZE, p1x, p1y ) );
+		p2.set( p2x, p2y, project_beam_to_sphere<TYPE>( TRACKBALLSIZE, p2x, p2y ) );
+		axis.set_cross( p2, p1 );
+		d.set_sub( p1, p2 );
+
+        /*
+		TYPE t = d.norm() / ( 2.0 * TRACKBALLSIZE );
+		if( t > 1.0 )  t =  1.0;
+		if( t < -1.0 ) t = -1.0;
+		TYPE phi = 2.0 * asin( t );
+		fromAngleAxis( phi, axis );
+		*/
+
+        TYPE t = sqrt( 1 - d.norm2() );
+        fromCosAngleAxis( t, axis );
+
+	}
+
+
+/*
+    void fromTrackball_0( TYPE px, TYPE py ){
 		VEC  axis; // axis of rotation
 		TYPE phi;  // angle of rotation
 		VEC  p1, p2, d;
 		TYPE t;
-		if( p1x == p2x && p1y == p2y ){
+		if( ( px == 0 ) && ( p == py ) ){
 			setOne();
 			return;
 		}
-		p1.set( p1x, p1y, project_beam_to_sphere<TYPE>( TRACKBALLSIZE, p1x, p1y ) );
-		p2.set( p2x, p2y, project_beam_to_sphere<TYPE>( TRACKBALLSIZE, p2x, p2y ) );
+		p2.set( px, py, project_beam_to_sphere<TYPE>( TRACKBALLSIZE, px, py ) );
+		p1.set( 0, 0, TRACKBALLSIZE );
 		axis.set_cross( p2, p1 );
 		d.set_sub( p1, p2 );
 		t = d.norm() / ( 2.0 * TRACKBALLSIZE );
 		if( t > 1.0 )  t =  1.0;
 		if( t < -1.0 ) t = -1.0;
-		
+
 		phi = 2.0 * asin( t );
 		fromAngleAxis( phi, axis );
 
-		// TYPE cosphi = ; 
-		// phi = 2.0 * asin( t );
-		// fromCosAngleAxis( cosphi, axis );
-
-	}	
+	}
+*/
 
 // =======  pitch, yaw, roll
 
@@ -271,11 +334,11 @@ class Quat4TYPE {
 		TYPE hz   = omega.z;
 		TYPE r2   = hx*hx + hy*hy + hz*hz;
 		TYPE b2   = dt*dt*r2;
-		const TYPE c2 = 1.0d/8;    // 4  *2       
-		const TYPE c3 = 1.0d/48;   // 8  *2*3     
-		const TYPE c4 = 1.0d/384;  // 16 *2*3*4   
-		const TYPE c5 = 1.0d/3840; // 32 *2*3*4*5 
-		TYPE sa   = dt * ( 0.5d - b2*( c3 - c5*b2 ) ); 
+		const TYPE c2 = 1.0d/8;    // 4  *2
+		const TYPE c3 = 1.0d/48;   // 8  *2*3
+		const TYPE c4 = 1.0d/384;  // 16 *2*3*4
+		const TYPE c5 = 1.0d/3840; // 32 *2*3*4*5
+		TYPE sa   = dt * ( 0.5d - b2*( c3 - c5*b2 ) );
 		TYPE ca   =      ( 1    - b2*( c2 - c4*b2 ) );
 		hx*=sa; hy*=sa; hz*=sa;  // hat * sin(a)
 		TYPE x_ = x, y_ = y, z_ = z, w_ = w;
@@ -378,41 +441,41 @@ class Quat4TYPE {
 		TYPE py_w =   -p.a*z +   p.c*x;
 		TYPE pz_w =    p.a*y -   p.b*x;
 		fq.w += 2*( fp.x * px_w  +  fp.y * py_w  + fp.z * pz_w );
-		
+
 	}
 
 
 	inline void fromMatrix( const VEC& a, const VEC& b, const VEC& c ) { fromMatrix( a.x,  a.y,  a.z,  b.x,  b.y,  b.z,  c.x,  c.y,  c.z  );  }
 	inline void fromMatrix( const MAT& M                             ) { fromMatrix( M.ax, M.ay, M.az, M.bx, M.by, M.bz, M.cx, M.cy, M.cz );  }
 	inline void fromMatrix( TYPE m00, TYPE m01, TYPE m02,    TYPE m10, TYPE m11, TYPE m12,        TYPE m20, TYPE m21, TYPE m22) {
-        // Use the Graphics Gems code, from 
+        // Use the Graphics Gems code, from
         // ftp://ftp.cis.upenn.edu/pub/graphics/shoemake/quatut.ps.Z
         TYPE t = m00 + m11 + m22;
         // we protect the division by s by ensuring that s>=1
         if (t >= 0) { // by w
             TYPE s = sqrt(t + 1);
             w = 0.5 * s;
-            s = 0.5 / s;                 
+            s = 0.5 / s;
             x = (m21 - m12) * s;
             y = (m02 - m20) * s;
             z = (m10 - m01) * s;
         } else if ((m00 > m11) && (m00 > m22)) { // by x
-            TYPE s = sqrt(1 + m00 - m11 - m22); 
-            x = s * 0.5; 
+            TYPE s = sqrt(1 + m00 - m11 - m22);
+            x = s * 0.5;
             s = 0.5 / s;
             y = (m10 + m01) * s;
             z = (m02 + m20) * s;
             w = (m21 - m12) * s;
         } else if (m11 > m22) { // by y
-            TYPE s = sqrt(1 + m11 - m00 - m22); 
-            y = s * 0.5; 
+            TYPE s = sqrt(1 + m11 - m00 - m22);
+            y = s * 0.5;
             s = 0.5 / s;
             x = (m10 + m01) * s;
             z = (m21 + m12) * s;
             w = (m02 - m20) * s;
         } else { // by z
-            TYPE s = sqrt(1 + m22 - m00 - m11); 
-            z = s * 0.5; 
+            TYPE s = sqrt(1 + m22 - m00 - m11);
+            z = s * 0.5;
             s = 0.5 / s;
             x = (m02 + m20) * s;
             y = (m21 + m12) * s;

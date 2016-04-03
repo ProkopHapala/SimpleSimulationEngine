@@ -242,6 +242,34 @@ int drawSphere_oct( int n, double r_, const Vec3d& pos_ ){
 	return nvert;
 };
 
+int drawCircleAxis( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis, double dca, double dsa ){
+    Vec3d v; v.set(v0);
+    glBegin( GL_LINE_LOOP );
+    for( int i=0; i<n; i++ ){
+        glVertex3f( (float)( pos.x+v.x ), (float)( pos.y+v.y ), (float)( pos.z+v.z )  );
+        printf( " drawCircleAxis %i (%3.3f,%3.3f,%3.3f) \n", i, v.x, v.y, v.z );
+        v.rotate_csa( dca, dsa, uaxis );
+    }
+    glEnd();
+}
+
+int drawCircleAxis( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis ){
+    double dphi = 2*M_PI/n;
+    double dca  = cos( dphi );
+    double dsa  = sin( dphi );
+    return drawCircleAxis( n, pos, v0, uaxis, dca, dsa );
+}
+
+int drawSphereOctLines( int n, double r, const Vec3d& pos ){
+	int nvert=0;
+    double dphi = 2*M_PI/n;
+    double dca  = cos( dphi );
+    double dsa  = sin( dphi );
+    nvert += drawCircleAxis( n, pos, {0,r,0}, {1.0d,0.0d,0.0d}, dca, dsa );
+    nvert += drawCircleAxis( n, pos, {0,0,r}, {0.0d,1.0d,0.0d}, dca, dsa );
+    nvert += drawCircleAxis( n, pos, {r,0,0}, {0.0d,0.0d,1.0d}, dca, dsa );
+	return nvert;
+};
 
 void drawPlanarPolygon( int n, const int * inds, const Vec3d * points ){
     if( n < 3 ) return;

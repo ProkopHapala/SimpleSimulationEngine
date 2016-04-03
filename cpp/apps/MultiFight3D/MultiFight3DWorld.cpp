@@ -115,11 +115,26 @@ void MultiFight3DWorld::init_world  ( ){
     defaultObjectShape = glGenLists(1);
     glNewList( defaultObjectShape , GL_COMPILE );
         //glPushMatrix();
-        glDisable ( GL_LIGHTING );
-        Draw3D::drawAxis ( 3.0f );
-        glColor3f( 1.0f, 0.0f, 1.0f ); Draw3D::drawLines   ( Solids::Icosahedron_nedges, Solids::Icosahedron_edges, Solids::Icosahedron_verts                             );
+
+        //glDisable ( GL_LIGHTING );
+        //Draw3D::drawAxis ( 3.0f );
+        //glColor3f( 1.0f, 0.0f, 1.0f ); Draw3D::drawLines   ( Solids::Icosahedron_nedges, Solids::Icosahedron_edges, Solids::Icosahedron_verts                             );
+
         glEnable( GL_LIGHTING );
         glColor3f( 0.8f, 0.8f, 0.8f ); Draw3D::drawPolygons( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons, Solids::Icosahedron_faces,  Solids::Icosahedron_verts );
+
+        //glEnable( GL_LIGHTING ); glColor3f( 0.8f, 0.8f, 0.8f );   Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
+        //glPopMatrix();
+    glEndList();
+    //objects = new KinematicBody();
+
+    defaultObjectHitShape = glGenLists(1);
+    glNewList( defaultObjectHitShape , GL_COMPILE );
+        //glPushMatrix();
+        glDisable ( GL_LIGHTING );
+        Draw3D::drawAxis ( 3.0f );
+        //glColor3f( 1.0f, 0.0f, 1.0f ); Draw3D::drawLines   ( Solids::Icosahedron_nedges, Solids::Icosahedron_edges, Solids::Icosahedron_verts                             );
+        glColor3f( 0.8f, 0.0f, 0.8f ); Draw3D::drawSphereOctLines( 16, 2.0, {0.0,0.0,0.0} );
         //glPopMatrix();
     glEndList();
     //objects = new KinematicBody();

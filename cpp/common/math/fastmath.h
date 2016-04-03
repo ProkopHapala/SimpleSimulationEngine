@@ -14,7 +14,9 @@
 
 #define SWAP( a, b, TYPE ) { TYPE t = a; a = b; b = t; }
 
-#define sq(a) a*a
+//#define sq(a) a*a
+template <class TYPE> inline TYPE sq(TYPE a){ return a*a; }
+
 
 #define _max(a,b)      ((a>b)?a:b)
 #define _min(a,b)      ((a<b)?a:b)
@@ -30,6 +32,7 @@
 
 #include "gonioApprox.h"
 
+
 typedef double (*Func1d)( double );
 
 /*
@@ -40,7 +43,6 @@ inline clamp( TYPE x, TYPE xmin, TYPE xmax ){
 	return x;
 }
 */
-
 
 // ========= random ===========
 

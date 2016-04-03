@@ -11,12 +11,15 @@
 class AppSDL2OGL_3D : public AppSDL2OGL{
 	public:
 	bool mouseSpinning = false;
-	Quat4f qCamera; 
-	Mat3f  camMat;
+	//Quat4f qCamera;
+	//Mat3f  camMat;
+    Quat4d qCamera;
+	Mat3d  camMat;
 
-	Vec2i spinning_start;  
-	
-	bool perspective = false;
+	Vec2i spinning_start;
+
+	bool perspective  = false;
+	bool first_person = false;
 
 // ============ function declarations
 
