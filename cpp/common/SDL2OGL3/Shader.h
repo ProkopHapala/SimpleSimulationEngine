@@ -1,25 +1,30 @@
 
-class Shader{ 
+#ifndef  Shader_h
+#define  Shader_h
+
+#include "IO_utils.h"
+
+class Shader{
 	public:
-	GLchar *vertexsource;
-	GLchar *fragmentsource;
+	GLchar *vertexsource   = NULL;
+	GLchar *fragmentsource = NULL;
 	GLuint vertexshader;
-	GLuint fragmentshader; 
+	GLuint fragmentshader;
 	GLuint shaderprogram;
 
 	//Shader(){}
 
 	void compileShader( GLenum shaderType, char* sourceCode, GLuint& shader, char*& errLog ){
-		shader = glCreateShader( shaderType );   // Create an empty vertex shader handle 
+		shader = glCreateShader( shaderType );   // Create an empty vertex shader handle
 		errLog = NULL;
 		int isCompiled;
 		glShaderSource( shader, 1, (const GLchar**)&sourceCode, 0);
-		glCompileShader( shader );      									
+		glCompileShader( shader );
 		glGetShaderiv( shader, GL_COMPILE_STATUS, &isCompiled );
 		if( isCompiled == false)    {
 			int maxLength;
 			glGetShaderiv( shader, GL_INFO_LOG_LENGTH, &maxLength );
-			errLog = (char *)malloc(maxLength); 								// The maxLength includes the NULL character 
+			errLog = (char *)malloc(maxLength); 								// The maxLength includes the NULL character
 			glGetShaderInfoLog( shader, maxLength, &maxLength, errLog );
 			//printf( " Error in compilation of shader %s : \n",  );
 			//printf( " %s \n", errLog );
@@ -37,23 +42,26 @@ class Shader{
 		glGetProgramiv(shaderprogram, GL_LINK_STATUS, (int *)&isLinked);
 		if( isLinked == false)    {
 			int maxLength;
-			glGetProgramiv(shaderprogram, GL_INFO_LOG_LENGTH, &maxLength);  			 			// Noticed that glGetProgramiv is used to get the length for a shader program, not glGetShaderiv. 
-			errLog = (char *)malloc(maxLength);   									// The maxLength includes the NULL character 
-			glGetProgramInfoLog(shaderprogram, maxLength, &maxLength, errLog );		// Notice that glGetProgramInfoLog, not glGetShaderInfoLog. 
+			glGetProgramiv(shaderprogram, GL_INFO_LOG_LENGTH, &maxLength);  			 			// Noticed that glGetProgramiv is used to get the length for a shader program, not glGetShaderiv.
+			errLog = (char *)malloc(maxLength);   									// The maxLength includes the NULL character
+			glGetProgramInfoLog(shaderprogram, maxLength, &maxLength, errLog );		// Notice that glGetProgramInfoLog, not glGetShaderInfoLog.
 			//printf( " Error linking shaderProgram : \n" );
 			//printf( " %s \n", errLog );
 		}
 	}
 
 
-	void init( ){
+	void init( char const * vertName, char const * fragName ){
 
-		// Read our shaders into the appropriate buffers 
-		char const * vertName = "shaders/vert_1.c";
-		char const * fragName = "shaders/frag_1.c";
-		vertexsource   = filetobuf( vertName );
-		fragmentsource = filetobuf( fragName );
-	 
+		// Read our shaders into the appropriate buffers
+		//char const * vertName = "shaders/vert_1.c";
+		//char const * fragName = "shaders/frag_1.c";
+
+		vertexsource   = filetobuf( vertName );  if( vertexsource   == NULL ){ printf( "cannot load %s \n", vertName ); exit(1); }
+		fragmentsource = filetobuf( fragName );  if( fragmentsource == NULL ){ printf( "cannot load %s \n", fragName ); exit(1); }
+
+        printf( " DEBUG 1 \n" );
+
 		char * errLog = NULL;
 
 		compileShader( GL_VERTEX_SHADER,   vertexsource,   vertexshader, errLog   );
@@ -80,12 +88,14 @@ class Shader{
 			return;
 		}
 
+        printf( " DEBUG 2 \n" );
+
 		//free(vertexsource);
 		//free(fragmentsource);
 	}
 
 	void destory(){
-		// Cleanup all the things we bound and allocated 
+		// Cleanup all the things we bound and allocated
 		glUseProgram(0);
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
@@ -97,3 +107,5 @@ class Shader{
 	}
 
 };
+
+#endif

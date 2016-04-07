@@ -23,6 +23,7 @@ include_directories(
         ${COMMON_SRCS}/optimization
         ${COMMON_SRCS}/SDL2OGL
         ${COMMON_SRCS}/network
+        ${COMMON_SRCS}/SDL2OGL3
 )
 
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )
