@@ -26,7 +26,9 @@ void drawMatInPos ( const Mat3d& mat, const Vec3d& pos );
 //void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
 void drawShape    ( const Vec3d& pos, const Mat3d& rot, int shape );
 
-int  drawConeFan        ( int n, float r, const Vec3f& base, const Vec3f& tip );
+int  drawConeFan        ( int n, float r,                const Vec3f& base, const Vec3f& tip );
+int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3f& base, const Vec3f& tip, bool smooth );
+
 int  drawCylinderStrip  ( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
 int  drawSphereTriangle ( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c );
 int  drawSphere_oct     ( int n, double r_, const Vec3d& pos_ );

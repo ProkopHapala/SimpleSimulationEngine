@@ -13,6 +13,8 @@ class AppSDL2OGL_3D : public AppSDL2OGL{
 	bool mouseSpinning = false;
 	//Quat4f qCamera;
 	//Mat3f  camMat;
+	float  mouseRotSpeed = 0.001;
+	float  keyRotSpeed   = 0.01;
     Quat4d qCamera;
 	Mat3d  camMat;
 	Vec3d  camPos;

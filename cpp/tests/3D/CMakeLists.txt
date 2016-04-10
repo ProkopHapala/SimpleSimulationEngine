@@ -8,3 +8,6 @@ target_link_libraries( test_Solids ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRA
 add_executable       ( test_MousePicking test_MousePicking.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_MousePicking ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_BlockBuilder test_BlockBuilder.cpp $<TARGET_OBJECTS:SDL2OGL>  )
+target_link_libraries( test_BlockBuilder ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+

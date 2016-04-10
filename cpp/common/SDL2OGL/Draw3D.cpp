@@ -3,6 +3,7 @@
 #include <SDL2/SDL_opengl.h>
 
 #include "Draw3D.h" // THE HEADER
+#include "Vec2.h"
 
 namespace Draw3D{
 
@@ -81,28 +82,11 @@ int drawConeFan( int n, float r, const Vec3f& base, const Vec3f& tip ){
 	c_hat.getSomeOrtho( a, b );
 	a.normalize();
 	b.normalize();
-/*
-	printf( "a %f %f %f |a| %f \n", a.x, a.y, a.z, a.norm() );
-	printf( "b %f %f %f |b| %f \n", b.x, b.y, b.z, b.norm() );
-	printf( "c %f %f %f |c| %f \n", c.x, c.y, c.z, c.norm() );
-	printf( "c_hat %f %f %f |c_hat| %f \n", c_hat.x, c_hat.y, c_hat.z, c_hat.norm() );
-	printf( "a.b %f a.c %f b.c %f \n", a.dot(b), a.dot(c), b.dot(c) );
-
-	glColor3f(1,0,0); drawVecInPos( a,     base );
-	glColor3f(0,1,0); drawVecInPos( b,     base );
-	glColor3f(0,0,1); drawVecInPos( c_hat, base );
-	glColor3f(1,0,0); drawVecInPos( a,     tip );
-	glColor3f(0,1,0); drawVecInPos( b,     tip );
-	glColor3f(0,0,1); drawVecInPos( c_hat, tip );
-	glEnable (GL_LIGHTING);
-	glColor3f( 0.8f, 0.8f, 0.8f );
-*/
-	float ca, sa;
-	float pa=1, pb=0;
-	//sincos_taylor2<float>( 2*M_PI/n, sa, ca );
-	float alfa = 2*M_PI/n;
-	sa = sin( alfa );
-	ca = cos( alfa );
+    //float alfa = 2*M_PI/n;
+    float alfa = 2*M_PI/n;
+    Vec2f rot,drot;
+    rot .set(1.0f,0.0f);
+    drot.set( cos( alfa ), sin( alfa ) );
 
 	Vec3f q; q.set(c); q.add_mul( a, -r );
 	float pnab =  c_hat.dot( q )/q.norm();
@@ -116,28 +100,17 @@ int drawConeFan( int n, float r, const Vec3f& base, const Vec3f& tip ){
 	//printf( "pn0 %f %f %f \n", c_hat.x, c_hat.z, c_hat.z );
 	glVertex3f( tip.x, tip.y, tip.z ); nvert++;
 	for(int i=0; i<=n; i++ ){
-		float pa_ = ca*pa - sa*pb;
-		      pb  = sa*pa + ca*pb;
-	          pa  = pa_;
-		Vec3f p,pn;
-		p .set(   pa*a.x +  pb*b.x,   pa*a.y +  pb*b.y,   pa*a.z +  pb*b.z );
+        Vec3f p,pn;
+		p .set( rot.x*a.x +  rot.y*b.x, rot.x*a.y + rot.y*b.y, rot.x*a.z + rot.y*b.z    );
 		pn.set( pnab*p.x + pnc*c_hat.x, pnab*p.y + pnc*c_hat.y, pnab*p.z + pnc*c_hat.z  );
-		//pn.set( pnab*p.x - pnc*c_hat.x, pnab*p.y - pnc*c_hat.y, pnab*p.z - pnc*c_hat.z  );
-		//printf( "p %f %f %f   pn %f %f %f |pn| %f \n", p.x, p.y, p.z,   pn.x, pn.y, pn.z, pn.norm() );
-		//printf( " |a| %f |b| %f |p| %f |pn| %f |a+b| %f |ab+c| %f \n", a.norm(), b.norm(),  p.norm(), pn.norm(), sqrt(pa*pa+pb*pb), sqrt(pnc*pnc + pnab*pnab ) );
-		glNormal3f( pn.x, pn.y, pn.z );
+
+        glNormal3f( pn.x, pn.y, pn.z );
 		glVertex3f( base.x + r*p.x, base.y + r*p.y, base.z + r*p.z ); nvert++;
-/*
-		glVertex3f( tip.x, tip.y, tip.z );
-		glVertex3f( base.x + r*p.x, base.y + r*p.y, base.z + r*p.z );
-		glVertex3f( base.x + r*p.x, base.y + r*p.y, base.z + r*p.z );
-		glVertex3f( base.x + r*p.x+pn.x, base.y + r*p.y+pn.y, base.z + r*p.z+pn.z );
-*/
+        rot.mul_cmplx( drot );
 	}
 	glEnd();
 	return nvert;
 };
-
 
 int drawCylinderStrip( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip ){
 	int nvert=0;
@@ -149,12 +122,10 @@ int drawCylinderStrip( int n, float r1, float r2, const Vec3f& base, const Vec3f
 	a.normalize();
 	b.normalize();
 
-	float ca, sa;
-	float pa=1, pb=0;
-	//sincos_taylor2<float>( M_PI/n, ca, sa );
-	float alfa = 2*M_PI/n;
-	sa = sin( alfa );
-	ca = cos( alfa );
+    float alfa = 2*M_PI/n;
+    Vec2f rot,drot;
+    rot .set(1.0f,0.0f);
+    drot.set( cos( alfa ), sin( alfa ) );
 
 	Vec3f q; q.set(c); q.add_mul( a, -(r1-r2) );
 	float pnab =  c_hat.dot( q )/q.norm();
@@ -163,29 +134,91 @@ int drawCylinderStrip( int n, float r1, float r2, const Vec3f& base, const Vec3f
 	glBegin   ( GL_TRIANGLE_STRIP );
 	//glBegin   ( GL_LINES );
 	for(int i=0; i<=n; i++ ){
-		float pa_ = ca*pa - sa*pb;
-		      pb  = sa*pa + ca*pb;
-	          pa  = pa_;
 		Vec3f p,pn;
-		p .set(   pa*a.x +  pb*b.x,   pa*a.y +  pb*b.y,   pa*a.z +  pb*b.z );
-		pn.set( pnab*p.x - pnc*c_hat.x, pnab*p.y - pnc*c_hat.y, pnab*p.z - pnc*c_hat.z  );
+		p .set( rot.x*a.x +  rot.y*b.x, rot.x*a.y + rot.y*b.y, rot.x*a.z + rot.y*b.z    );
+		pn.set( pnab*p.x + pnc*c_hat.x, pnab*p.y + pnc*c_hat.y, pnab*p.z + pnc*c_hat.z  );
 		//printf( "p %f %f %f   pn %f %f %f |pn| %f \n", p.x, p.y, p.z,   pn.x, pn.y, pn.z, pn.norm() );
 		glNormal3f( pn.x, pn.y, pn.z );
 		glVertex3f( base.x + r1*p.x, base.y + r1*p.y, base.z + r1*p.z ); nvert++;
 		glVertex3f( tip .x + r2*p.x, tip .y + r2*p.y, tip .z + r2*p.z ); nvert++;
-/*
-		glVertex3f( base.x + r1*p.x,      base.y + r1*p.y,      base.z + r1*p.z      );
-		glVertex3f( tip .x + r2*p.x,      tip .y + r2*p.y,      tip .z + r2*p.z      );
-		glVertex3f( base.x + r1*p.x,      base.y + r1*p.y,      base.z + r1*p.z      );
-		glVertex3f( base.x + r1*p.x+pn.x, base.y + r1*p.y+pn.y, base.z + r1*p.z+pn.z );
-		glVertex3f( tip .x + r2*p.x,      tip .y + r2*p.y,      tip .z + r2*p.z      );
-		glVertex3f( tip .x + r2*p.x+pn.x, tip .y + r2*p.y+pn.y, tip .z + r2*p.z+pn.z );
-*/
+        rot.mul_cmplx( drot );
 	}
 	glEnd();
 	return nvert;
 };
 
+int drawCone( int n, float phi0, float phi1, float r1, float r2, const Vec3f& base, const Vec3f& tip, bool smooth ){
+	int nvert=0;
+
+	Vec3f a,b,c,c_hat;
+	c.set_sub( tip, base );
+	c_hat.set_mul( c, 1/c.norm() );
+	c_hat.getSomeOrtho( a, b );
+	a.normalize();
+	b.normalize();
+
+    //float alfa = 2*M_PI/n;
+    float alfa = (phi1-phi0)/n;
+    Vec2f rot,drot;
+    //rot .set(1.0f,0.0f);
+    rot.set( cos( phi0 ), sin( phi0 ) );
+    drot.set( cos( alfa ), sin( alfa ) );
+
+	Vec3f q; q.set(c); q.add_mul( a, -(r1-r2) );
+	float pnab =  c_hat.dot( q )/q.norm();
+	float pnc  =  sqrt( 1 - pnab*pnab );
+
+	glBegin   ( GL_QUADS );
+	//glBegin   ( GL_LINES );
+	Vec3f p,pn,op,opn;
+    op .set( rot.x*a.x +  rot.y*b.x, rot.x*a.y + rot.y*b.y, rot.x*a.z + rot.y*b.z    );
+	opn.set( pnab*op.x + pnc*c_hat.x, pnab*op.y + pnc*c_hat.y, pnab*op.z + pnc*c_hat.z  );
+	if( smooth ){
+        for(int i=0; i<n; i++ ){
+
+            glNormal3f( opn.x, opn.y, opn.z );		glVertex3f( base.x + r1*op.x, base.y + r1*op.y, base.z + r1*op.z ); nvert++;
+            glNormal3f( opn.x, opn.y, opn.z );		glVertex3f( tip .x + r2*op.x, tip .y + r2*op.y, tip .z + r2*op.z ); nvert++;
+
+            rot.mul_cmplx( drot );
+            p .set( rot.x*a.x +  rot.y*b.x, rot.x*a.y + rot.y*b.y, rot.x*a.z + rot.y*b.z    );
+            pn.set( pnab*p.x + pnc*c_hat.x, pnab*p.y + pnc*c_hat.y, pnab*p.z + pnc*c_hat.z  );
+            pn.normalize();
+
+            glNormal3f( pn.x, pn.y, pn.z );
+            glVertex3f( tip .x + r2*p.x, tip .y + r2*p.y, tip .z + r2*p.z ); nvert++;
+            glVertex3f( base.x + r1*p.x, base.y + r1*p.y, base.z + r1*p.z ); nvert++;
+
+            op.set(p);
+            opn.set(pn);
+
+        }
+	}else{
+        for(int i=0; i<n; i++ ){
+
+            printf( " %i (%3.3f,%3.3f) \n", i, rot.x, rot.y );
+
+            rot.mul_cmplx( drot );
+
+            p .set( rot.x*a.x +  rot.y*b.x, rot.x*a.y + rot.y*b.y, rot.x*a.z + rot.y*b.z    );
+            pn.set( pnab*p.x + pnc*c_hat.x, pnab*p.y + pnc*c_hat.y, pnab*p.z + pnc*c_hat.z  );
+
+            Vec3f normal; normal.set_add( opn, pn ); normal.normalize();
+
+            glNormal3f( normal.x, normal.y, normal.z );
+            glVertex3f( base.x + r1*op.x, base.y + r1*op.y, base.z + r1*op.z ); nvert++;
+            glVertex3f( tip .x + r2*op.x, tip .y + r2*op.y, tip .z + r2*op.z ); nvert++;
+
+            glVertex3f( tip .x + r2*p.x, tip .y + r2*p.y, tip .z + r2*p.z ); nvert++;
+            glVertex3f( base.x + r1*p.x, base.y + r1*p.y, base.z + r1*p.z ); nvert++;
+
+            op.set(p);
+            opn.set(pn);
+
+        }
+	}
+	glEnd();
+	return nvert;
+};
 
 int drawSphereTriangle( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c ){
 	int nvert=0;

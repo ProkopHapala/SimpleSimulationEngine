@@ -91,10 +91,19 @@ void AppSDL2OGL_3D::eventHandling ( const SDL_Event& event  ){
 }
 
 void AppSDL2OGL_3D::keyStateHandling( const Uint8 *keys ){
-    if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  0.01 ); }
-	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -0.01 ); }
-	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  0.01 ); }
-	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -0.01 ); }
+
+    if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
+
+/*
+    if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.yaw  (  keyRotSpeed ); qCamera.normalize(); }
+	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.yaw  ( -keyRotSpeed ); qCamera.normalize(); }
+	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.pitch(  keyRotSpeed ); qCamera.normalize(); }
+	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.pitch( -keyRotSpeed ); qCamera.normalize(); }
+ */
+
 /*
     if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  0.01 ); printf( "yaw   qCamera (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x, qCamera.y, qCamera.z, qCamera.w ); }
 	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -0.01 ); printf( "yaw   qCamera (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x, qCamera.y, qCamera.z, qCamera.w ); }
@@ -113,11 +122,13 @@ void AppSDL2OGL_3D::keyStateHandling( const Uint8 *keys ){
 void AppSDL2OGL_3D::mouseHandling( ){
     int mx,my;
     //SDL_GetMouseState( &mouseX, &mouseY );
-    SDL_GetRelativeMouseState( &mx, &my);
+    Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
     //printf( " %i %i \n", mx,my );
-    Quat4d q; q.fromTrackball( 0, 0, -mx*0.001, my*0.001 );
+    if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+        Quat4d q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
+        qCamera.qmul_T( q );
+    }
     //qCamera.qmul( q );
-    qCamera.qmul_T( q );
 }
 
 void AppSDL2OGL_3D::drawCrosshair( float sz ){
