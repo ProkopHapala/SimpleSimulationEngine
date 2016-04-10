@@ -11,7 +11,7 @@
 // =========== sphere
 
 inline double rayPointDistance2( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& point, double& t ){
-	Vec3d pt;	
+	Vec3d pt;
 	pt.set_sub( point, ray0 );
 	//printf( " %f %f %f   %f %f %f    %f %f %f \n", point.x, point.y, point.z,   ray0.x, ray0.y, ray0.z,   dPoint.x, dPoint.y, dPoint.z    );
 	t  = pt.dot( hRay );
@@ -37,8 +37,6 @@ inline void sphereNormal( double t, const Vec3d& ray0, const Vec3d& hRay, const 
 	normal.add_mul( hRay, t );
 }
 
-
-
 // =========== Plane
 
 inline double rayPlane( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& normal, const Vec3d& point ){
@@ -52,7 +50,7 @@ inline double rayPlane( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& norma
 // =========== Triangle
 
 inline bool pointInTriangleEdges( const Vec3d& pa, const Vec3d& pb, const Vec3d& ab, const Vec3d& bc, const Vec3d& ca ){
-	Vec3d nab,nbc,nca; 
+	Vec3d nab,nbc,nca;
 	nab.set_cross( pa, ab );
 	nbc.set_cross( pb, bc );
 	nca.set_cross( pa, ca );
@@ -74,22 +72,98 @@ inline double rayTriangle(
 	ca.set_sub( a, c );
 
 	normal.set_cross( ab, bc );
-	
+
 	double t = rayPlane( ray0, hRay, normal, a );
 	p.set( ray0 ); p.add_mul( hRay, t );
 
 	inside = pointInTriangleEdges( p-a, p-b, ab, bc, ca );
 
 	return t;
-} 
+}
 
+// =========== BoundingBox
+
+//inline double rayCubeSide( double h, double ha, double hb, double amin, double amax, double bmin, double bmax){
+//}
+
+inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, const Vec3d& p2,  Vec3d& hitPos, Vec3d& normal ){
+    Vec3d d1,d2;
+    d1.set_sub( p1, ray0 );
+    d2.set_sub( p2, ray0 );
+
+    double tmin = 1e+300;
+    //printf( " hRay (%3.3f,%3.3f,%3.3f) \n", hRay.x, hRay.y, hRay.z );
+
+    // ---  along x
+    if( (hRay.x*hRay.x) > 1e-32 ){
+
+        double t,dir;
+        if  ( hRay.x > 0 ){  t = d1.x/hRay.x;  dir = -1.0;  }
+        else              {  t = d2.x/hRay.x;  dir =  1.0;  }
+        //printf( " tx %f \n", t );
+        //if( t < tmin ){
+            double y = hRay.y * t;
+            double z = hRay.z * t;
+            //printf( " tx %f   y:  %3.3f %3.3f %3.3f    z: %3.3f %3.3f %3.3f \n", t, y, d1.y, d2.y,  z, d1.z, d2.z );
+            if( ( y > d1.y ) && ( y < d2.y ) && ( z > d1.z ) && ( z < d2.z ) ){
+                tmin = t;
+                normal.set( dir,0,0 );
+            }
+        //}
+    }else{
+        if( (d1.x<0.0)||(d2.x>0.0) ){ // cannot hit
+            return 1e+300;
+        }
+    }
+
+    // ---  along y
+    if( (hRay.y*hRay.y) > 1e-32 ){
+        double t,dir;
+        if  ( hRay.y > 0 ){  t = d1.y/hRay.y;  dir = -1.0;  }
+        else              {  t = d2.y/hRay.y;  dir =  1.0;  }
+        //printf( " ty %f \n", t );
+        if( t < tmin ){
+            double x = hRay.x * t;
+            double z = hRay.z * t;
+            //printf( " tx %f   y:  %3.3f %3.3f %3.3f    z: %3.3f %3.3f %3.3f \n", t, x, d1.x, d2.x,  z, d1.z, d2.z );
+            if( ( x > d1.x ) && ( x < d2.x ) && ( z > d1.z ) && ( z < d2.z ) ){
+                tmin = t;
+                normal.set( 0,dir,0 );
+            }
+        }
+    }else{
+        if( (d1.y<0.0)||(d2.y>0.0) ){ // cannot hit
+            return 1e+300;
+        }
+    }
+
+    // ---  along z
+    if( (hRay.z*hRay.z) > 1e-32 ){
+        double t,dir;
+        if  ( hRay.z > 0 ){  t = d1.z/hRay.z;   dir = -1.0; }
+        else              {  t = d2.z/hRay.z;   dir =  1.0; }
+        //printf( " tz %f \n", t );
+        if( t < tmin ){
+            double x = hRay.x * t;
+            double y = hRay.y * t;
+            //printf( " tz %f   x:  %3.3f %3.3f %3.3f    y: %3.3f %3.3f %3.3f \n", t, x, d1.x, d2.x,  y, d1.y, d2.y );
+            if( ( x > d1.x ) && ( x < d2.x ) && ( y > d1.y ) && ( y < d2.y ) ){
+                tmin = t;
+                normal.set( 0,0,dir );
+            }
+        }
+    }else{
+        if( (d1.z<0.0)||(d2.z>0.0) ){ // cannot hit
+            return 1e+300;
+        }
+    }
+
+    hitPos.set(ray0);
+    hitPos.add_mul( hRay, tmin );
+    return tmin;
+}
 
 #endif
-
-
-
-
-
 
 
 /*
@@ -121,10 +195,10 @@ bool rayTriangleIntersect(
 	// compute t (equation 3)
 	t = ( N.dot(orig) + d) / NdotRayDirection;
 
-	
+
 	//if (t < 0) return false;        // check if the triangle is in behind the ray
 
-	
+
 	Vec3d P = orig + t * dir;       // compute the intersection point using equation 1
 
 	// Step 2: inside-outside test
@@ -149,6 +223,6 @@ bool rayTriangleIntersect(
 	if (N.dotProduct(C) < 0) return false; // P is on the right side;
 
 	return true; // this ray hits the triangle
-} 
+}
 
 */

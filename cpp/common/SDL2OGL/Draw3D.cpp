@@ -14,6 +14,15 @@ void drawPoint( const Vec3d& vec ){
 	glEnd();
 };
 
+void drawPointCross( const Vec3d& vec, double sz ){
+	//glDisable (GL_LIGHTING);
+	glBegin   (GL_LINES);
+		glVertex3d( vec.x-sz, vec.y, vec.z ); glVertex3d( vec.x+sz, vec.y, vec.z );
+		glVertex3d( vec.x, vec.y-sz, vec.z ); glVertex3d( vec.x, vec.y+sz, vec.z );
+		glVertex3d( vec.x, vec.y, vec.z-sz ); glVertex3d( vec.x, vec.y, vec.z+sz );
+	glEnd();
+};
+
 void drawVec( const Vec3d& vec ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
@@ -34,6 +43,34 @@ void drawLine( const Vec3d& p1, const Vec3d& p2 ){
 		glVertex3d( p1.x, p1.y, p1.z ); glVertex3d( p2.x, p2.y, p2.z );
 	glEnd();
 };
+
+void drawScale( const Vec3d& p1, const Vec3d& p2, const Vec3d& up, double tick, double sza, double szb ){
+	//glDisable (GL_LIGHTING);
+	Vec3d d,a,b,p;
+	d.set_sub( p2, p1 );
+	float L = d.norm();
+	int n = (L+0.0001)/tick;
+	d.mul( 1/L );
+	a.set(up);
+	a.add_mul( d, -d.dot( a ) );
+	b.set_cross( d, a  );
+	glBegin   (GL_LINES);
+	p.set(p1);
+	d.mul( L/n );
+	a.mul(sza);
+	b.mul(szb);
+    for( int i=0; i<=n; i++){
+        glVertex3d( p.x-a.x, p.y-a.y, p.z-a.z );
+        glVertex3d( p.x+a.x, p.y+a.y, p.z+a.z );
+        glVertex3d( p.x-b.x, p.y-b.y, p.z-a.z );
+        glVertex3d( p.x+b.x, p.y+b.y, p.z+b.z );
+        p.add( d );
+    }
+    glVertex3d( p1.x, p1.y, p1.z ); glVertex3d( p2.x, p2.y, p2.z );
+	glEnd();
+};
+
+
 
 void drawVecInPos( const Vec3f& v, const Vec3f& pos ){
 	//glDisable (GL_LIGHTING);
@@ -195,7 +232,7 @@ int drawCone( int n, float phi0, float phi1, float r1, float r2, const Vec3f& ba
 	}else{
         for(int i=0; i<n; i++ ){
 
-            printf( " %i (%3.3f,%3.3f) \n", i, rot.x, rot.y );
+            //printf( " %i (%3.3f,%3.3f) \n", i, rot.x, rot.y );
 
             rot.mul_cmplx( drot );
 

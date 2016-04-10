@@ -24,6 +24,9 @@ void AppSDL2OGL_3D::camera(){
             glOrtho  ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
         }
         //Draw3D::toGLMatCam( camPos, camMat, camMatrix ); // this does not work properly
+        //camMat.a.mul(-1.0);
+        //camMat.b.mul(-1.0);
+        //camMat.c.mul(-1.0);
         Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, camMat, camMatrix );
         glMultMatrixf( camMatrix );
         glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
@@ -41,10 +44,10 @@ void AppSDL2OGL_3D::camera(){
             glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
         }
         glMatrixMode (GL_MODELVIEW);
-        //Draw3D::toGLMatCam( camPos, camMat, camMatrix ); // this does not work properly
-        Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, camMat, camMatrix );
+
+        Draw3D::toGLMatCam( camPos*-1.0, camMat, camMatrix );
         glLoadMatrixf(camMatrix);
-        glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
+
 	}
 	//glMatrixMode (GL_MODELVIEW);
 }
@@ -68,6 +71,13 @@ void AppSDL2OGL_3D::draw   (){
 
 void AppSDL2OGL_3D::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
+        case SDL_KEYDOWN :
+            switch( event.key.keysym.sym ){
+                case SDLK_o:  perspective   = !perspective; break;
+                case SDLK_p:  first_person  = !first_person ;   break;
+            }
+            break;
+        /*
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
@@ -86,6 +96,7 @@ void AppSDL2OGL_3D::eventHandling ( const SDL_Event& event  ){
                     break;
             }
             break;
+            */
     };
     AppSDL2OGL::eventHandling( event );
 }

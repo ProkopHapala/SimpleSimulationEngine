@@ -12,6 +12,7 @@
 #include "Vec3.h"
 #include "Mat3.h"
 #include "quaternion.h"
+#include "raytrace.h"
 #include "Solids.h"
 
 #include "Draw3D.h"
@@ -135,6 +136,9 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     glEnable     ( GL_LIGHTING         );
 
+
+    camPos.set( 0,0,-10 );
+
     Mat3d rotMat;    rotMat.set( {1.0d,0.0d,0.0d}, {0.0d,1.0d,0.0d}, {0.0d,0.0d,1.0d} );
     BlockWorld::setupBlockWorld( {-127.0d,-127.0d,-127.0d}, {1.0d,1.0d,1.0d}, rotMat           );
 
@@ -143,7 +147,7 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
         glPushMatrix();
         glScalef( 0.5f, 0.5f, 0.5f );
         glColor3f(0.01f,0.01f,0.01f); Draw3D::drawLines    ( Solids::Cube_nedges, Solids::Cube_edges, Solids::Cube_verts );
-        Draw3D::drawAxis( 0.5f );
+        //Draw3D::drawAxis( 0.5f );
         glPopMatrix();
     glEndList();
 
@@ -299,6 +303,14 @@ void TestAppBlockBuilder::draw   (){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glEnable(GL_DEPTH_TEST);
 
+
+    printf( " ==== frame %i \n", frameCount );
+    printf( " perspective %i first_person %i \n", perspective, first_person );
+    //printf( " rot %3.3f %3.3f %3.3f \n", camMat.a.x, camMat.a.y, camMat.a.z );
+    //printf( " rot %3.3f %3.3f %3.3f \n", camMat.b.x, camMat.b.y, camMat.b.z );
+    //printf( " rot %3.3f %3.3f %3.3f \n", camMat.c.x, camMat.c.y, camMat.c.z );
+
+
     BlockWorld::drawBlock( shapes[iShape], orientation, ix, iy, iz );
 
     for( int i=0; i<nBlocks; i++ ){
@@ -308,8 +320,23 @@ void TestAppBlockBuilder::draw   (){
         }
     }
 
-	glDisable ( GL_LIGHTING );
+    glDisable ( GL_LIGHTING );
+    /*
+    glColor3f(0.5f,0.0f,0.0f); Draw3D::drawScale( {0.0,0.0,0.0}, {ix-127,0.0,0.0}, {0.0,1.0,0.0}, 1.0, 0.1, 0.1 );
+    glColor3f(0.0f,0.5f,0.0f); Draw3D::drawScale( {0.0,0.0,0.0}, {0.0,iy-127,0.0}, {1.0,0.0,0.0}, 1.0, 0.1, 0.1 );
+    glColor3f(0.0f,0.0f,0.5f); Draw3D::drawScale( {0.0,0.0,0.0}, {0.0,0.0,iz-127}, {1.0,0.0,0.0}, 1.0, 0.1, 0.1 );
+    */
+    glColor3f(0.5f,0.0f,0.0f); Draw3D::drawScale( {   0.0,   0.0,0.0}, {ix-127,0.0   ,   0.0}, {0.0,1.0,0.0}, 1.0, 0.1, 0.1 );
+    glColor3f(0.0f,0.5f,0.0f); Draw3D::drawScale( {ix-127,   0.0,0.0}, {ix-127,iy-127,   0.0}, {1.0,0.0,0.0}, 1.0, 0.1, 0.1 );
+    glColor3f(0.0f,0.0f,0.5f); Draw3D::drawScale( {ix-127,iy-127,0.0}, {ix-127,iy-127,iz-127}, {1.0,0.0,0.0}, 1.0, 0.1, 0.1 );
 	Draw3D::drawAxis ( 3.0f );
+
+    Vec3d hitPos,normal;
+    double t = rayBox( camMat.c*-10.0, camMat.c, {-0.5,-0.5,-0.5}, {+0.5,+0.5,+0.5},  hitPos, normal );
+    //printf( " camMat.a (%3.3f,%3.3f,%3.3f) \n", camMat.a.x,  camMat.a.y,  camMat.a.z );
+    //printf( " %e   (%3.3f,%3.3f,%3.3f) \n", t, hitPos.x, hitPos.y, hitPos.z );
+    glColor3f(0.0f,1.0f,1.0f); Draw3D::drawPointCross   ( hitPos, 0.1 );
+    glColor3f(1.0f,0.0f,1.0f); Draw3D::drawVecInPos( normal,   hitPos );
 
 	glDisable(GL_DEPTH_TEST);
     BlockWorld::drawBlock( cursorShape   , orientation, ix, iy, iz );
@@ -410,7 +437,7 @@ void TestAppBlockBuilder::eventHandling ( const SDL_Event& event  ){
             break;
         */
     };
-    AppSDL2OGL::eventHandling( event );
+    AppSDL2OGL_3D::eventHandling( event );
 }
 
 
