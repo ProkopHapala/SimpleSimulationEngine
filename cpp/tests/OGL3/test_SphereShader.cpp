@@ -114,8 +114,9 @@ void draw(){
     // ---- constant sphere in center
     sphere[0] = 0.0;
     sphere[1] = 0.0;
+    sphere[2] = 0.2;
     origin[0] = sphere[0];
-    origin[1] = sphere[0];
+    origin[1] = sphere[1];
     uloc = glGetUniformLocation( shader1->shaderprogram, "origin"     );	glUniform2fv      (uloc, 1, origin   );
 
     uloc = glGetUniformLocation( shader1->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, sphere      );
@@ -124,6 +125,7 @@ void draw(){
     // ---- shifted sphere in mouse position
     sphere[0] = -2*(mouseX*2-WIDTH)/resolution[0];
     sphere[1] =  2*(mouseY*2-HEIGHT)/resolution[1];
+    sphere[2] = 0.3;
     origin[0] = -sphere[0]*0.4;
     origin[1] = -sphere[1]*0.4;
     uloc = glGetUniformLocation( shader1->shaderprogram, "origin"     );	glUniform2fv      (uloc, 1, origin   );

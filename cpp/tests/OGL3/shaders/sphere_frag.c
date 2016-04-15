@@ -44,26 +44,31 @@ void main( void ){
 	vec2 q  = (gl_FragCoord.xy/resolution.xy) - vec2(0.5,0.5);
 	//vec2 q  = (gl_FragCoord.xy/resolution.xy) - (mouse.xy/resolution.xy);
     
-	vec3 ray0 = vec3( 0.0, 0.0, -50.0 );	 
-	vec3 hRay = ray0 + vec3( q.x, q.y, 40.0 );
+	vec3 ray0 = vec3( 0.0, 0.0, 50.0 );	 
+	vec3 hRay = ray0 + vec3( q.x, q.y, -40.0 );
 	hRay = normalize( hRay ); 
 
 	//vec3 pos = vec3( 0.0,0.0,0.0 );
 
 	float t = raySphere( ray0, hRay, sphere.xyz, sphere.w );
 
+	//float depth = -t;
 	//float depth = (t+51.0);
-	float depth = 1.0 - 1.0/(100.0 + t);
+	//float depth = 1.0 - 1.0/(100.0 + (t - sphere.z) );
+	//float depth = 1.0 - 1.0/(100.0 + (t - sphere.z) );
+	float depth = 1.0 - 1.0/(100.0 + t );
+	//float depth = sphere.z;
+	//float depth = 0.5;
 	//float depth = clamp( 100.0/t, 0.0, 1.0 );
 
 	if( t > 1e+5 ){
-		gl_FragDepth = 0.99;
+		gl_FragDepth = 0.9999999;
 		gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 );
 		//discard;
 	}else{
 		vec3 normal = sphereNormal( t, ray0, hRay, sphere.xyz );
 		normal = normalize( normal );
-		float c_difuse   = dot( normal, light_dir );
+		float c_difuse   = -dot( normal, light_dir );
 		//float c_specular = dot( normal, light_dir-hRay  ) * 0.1;  // c_specular = c_specular*c_specular; c_specular = c_specular*c_specular; c_specular = c_specular*c_specular;
 		//gl_FragColor=vec4( clr_ambient + c_difuse*clr_diffuse + c_specular*clr_specular, 1.0 );
 		gl_FragColor = vec4( clr_ambient + c_difuse*clr_diffuse, 1.0 );
