@@ -43,8 +43,8 @@ GLfloat  afineMat[4] = {
   0.0, 1.0
 };
 
-GLfloat  origin[2] = {  0.0, 0.0 };
 
+GLfloat  origin[2] = {  0.0, 0.0 };
 
 int WIDTH  = 800;
 int HEIGHT = 800;
@@ -117,9 +117,8 @@ void draw(){
     sphere[2] = 0.2;
     origin[0] = sphere[0];
     origin[1] = sphere[1];
-    uloc = glGetUniformLocation( shader1->shaderprogram, "origin"     );	glUniform2fv      (uloc, 1, origin   );
-
-    uloc = glGetUniformLocation( shader1->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, sphere      );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "origin"     );	glUniform2fv(uloc, 1, origin        );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, sphere        );
     glEnableVertexAttribArray(0); object1->draw();
 
     // ---- shifted sphere in mouse position

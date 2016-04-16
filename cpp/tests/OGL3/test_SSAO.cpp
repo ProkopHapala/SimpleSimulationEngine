@@ -36,11 +36,16 @@ GLfloat  afineMat[4] = {
   0.0, 1.0
 };
 
-const int nspheres = 32;
+const int nspheres = 16;
 GLfloat spheres[4*nspheres];
 
+GLfloat camPos[3] = { 0.0,0.0,-50.0 };
+GLfloat camMat[9] = { 1.0,0.0,0.0,  0.0,1.0,0.0,   0.0,0.0,10.0  };
 
 GLfloat  origin[2] = {  0.0, 0.0 };
+
+const GLint nholes = 1;
+GLfloat  holes[4*nholes] = {};
 
 int WIDTH  = 800;
 int HEIGHT = 800;
@@ -81,7 +86,8 @@ void setup(){
     // ------------- shader for rendering geometry
 
     shader_pre=new Shader();
-	shader_pre->init( "shaders/afine2D_vert.c", "shaders/sphere_frag.c" );
+	//shader_pre->init( "shaders/afine2D_vert.c", "shaders/sphere_frag.c" );
+	shader_pre->init( "shaders/afine2D_vert.c", "shaders/sphereHoled_frag.c" );
 
     //randf( -1.0, 1.0 );
 
@@ -90,7 +96,20 @@ void setup(){
         spheres[ii+0] = randf( -1.0, 1.0 );
         spheres[ii+1] = randf( -1.0, 1.0 );
         spheres[ii+2] = randf( -1.0, 1.0 );
+
+        //spheres[ii+0] =  i*0.1-1.0;
+        //spheres[ii+1] =  i*0.1-1.0;
+        //spheres[ii+2] = +i*5 + 0.0;
+
         spheres[ii+3] = 0.5;
+    }
+    randf( -0.5, 0.5 );
+    for( int i=0; i<nholes; i++ ){
+        int ii = i << 2;
+        holes[ii+0] = randf( -0.5, 0.5 );
+        holes[ii+1] = randf( -0.5, 0.5 );
+        holes[ii+2] = randf( -0.5, 0.5 );
+        holes[ii+3] = 0.3;
     }
 
     Vec3f light_dir_; light_dir_.set( -1, -1, 2 ); light_dir_.normalize();
@@ -105,6 +124,8 @@ void setup(){
 
     GLuint uloc;
     uloc = glGetUniformLocation( shader_pre->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, resolution  );
+    uloc = glGetUniformLocation( shader_pre->shaderprogram, "camPos"     );	glUniform3fv(uloc, 1, camPos      );
+    uloc = glGetUniformLocation( shader_pre->shaderprogram, "camMat"     );	glUniformMatrix3fv( uloc, 1, false, camMat );
     uloc = glGetUniformLocation( shader_pre->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, sphere      );
     uloc = glGetUniformLocation( shader_pre->shaderprogram, "light_dir"  );	glUniform3fv(uloc, 1, light_dir   );
 
@@ -191,7 +212,9 @@ void draw(){
 
     glUseProgram(shader_pre->shaderprogram);
     origin[0] = 0;    origin[1] = 0;
-    uloc = glGetUniformLocation( shader_pre->shaderprogram, "origin"     );	glUniform2fv(uloc, 0, origin   );
+    uloc = glGetUniformLocation( shader_pre->shaderprogram, "origin"  );	glUniform2fv(uloc, 0, origin        );
+    uloc = glGetUniformLocation( shader_pre->shaderprogram, "nholes"     );	glUniform1iv(uloc, 1, &nholes        );
+    uloc = glGetUniformLocation( shader_pre->shaderprogram, "holes"      );	glUniform4fv(uloc, nholes, holes    );
     for( int i; i<nspheres; i++ ){
         uloc = glGetUniformLocation( shader_pre->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, &spheres[i<<2] );
         glEnableVertexAttribArray(0); object1->draw();
@@ -201,6 +224,8 @@ void draw(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
     // Generate mipmaps, by the way.
     glGenerateMipmap(GL_TEXTURE_2D);
+
+
     // -------- from texture to Screen
 
     glUseProgram(shader_post->shaderprogram);
@@ -215,6 +240,7 @@ void draw(){
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     //glViewport(0,0,WIDTH,HEIGHT);
     glEnableVertexAttribArray(0); object1->draw();
+
 
     SDL_GL_SwapWindow(window);
 
