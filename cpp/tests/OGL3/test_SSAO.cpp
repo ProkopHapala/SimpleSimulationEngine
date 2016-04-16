@@ -36,6 +36,10 @@ GLfloat  afineMat[4] = {
   0.0, 1.0
 };
 
+const int nspheres = 32;
+GLfloat spheres[4*nspheres];
+
+
 GLfloat  origin[2] = {  0.0, 0.0 };
 
 int WIDTH  = 800;
@@ -45,7 +49,7 @@ GLfloat resolution[2];
 GLfloat sphere[4];
 GLfloat light_dir[4];
 
-GLuint textureID;
+GLuint texZ,texRGB;
 GLuint FramebufferName = 0;
 GLuint depthrenderbuffer;
 
@@ -62,48 +66,7 @@ void draw();
 void loop( int niters );
 
 
-bool checkFramebufferStatus(){
-    // check FBO status
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    switch(status)
-    {
-    case GL_FRAMEBUFFER_COMPLETE:
-        printf( "Framebuffer complete.\n" );
-        return true;
-
-    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-        printf( "[ERROR] Framebuffer incomplete: Attachment is NOT complete.\n" );
-        return false;
-
-    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-        printf( "[ERROR] Framebuffer incomplete: No image is attached to FBO.\n" );
-        return false;
-/*
-    case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
-        std::cout << "[ERROR] Framebuffer incomplete: Attached images have different dimensions." << std::endl;
-        return false;
-
-    case GL_FRAMEBUFFER_INCOMPLETE_FORMATS:
-        std::cout << "[ERROR] Framebuffer incomplete: Color attached images have different internal formats." << std::endl;
-        return false;
-*/
-    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-        printf( "[ERROR] Framebuffer incomplete: Draw buffer.\n" );
-        return false;
-
-    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-        printf( "[ERROR] Framebuffer incomplete: Read buffer.\n" );
-        return false;
-
-    case GL_FRAMEBUFFER_UNSUPPORTED:
-        printf( "[ERROR] Framebuffer incomplete: Unsupported by FBO implementation.\n" );
-        return false;
-
-    default:
-        printf( "[ERROR] Framebuffer incomplete: Unknown error.\n" );
-        return false;
-    }
-}
+bool checkFramebufferStatus();
 
 void setup(){
 
@@ -120,15 +83,20 @@ void setup(){
     shader_pre=new Shader();
 	shader_pre->init( "shaders/afine2D_vert.c", "shaders/sphere_frag.c" );
 
-    sphere[0] = 0.0;
-    sphere[1] = 0.0;
-    sphere[2] = 0.0;
-    sphere[3] = 0.5;
+    //randf( -1.0, 1.0 );
 
-    Vec3f light_dir_; light_dir_.set( 1, 1, 2 ); light_dir_.normalize();
+    for( int i=0; i<nspheres; i++ ){
+        int ii = i << 2;
+        spheres[ii+0] = randf( -1.0, 1.0 );
+        spheres[ii+1] = randf( -1.0, 1.0 );
+        spheres[ii+2] = randf( -1.0, 1.0 );
+        spheres[ii+3] = 0.5;
+    }
+
+    Vec3f light_dir_; light_dir_.set( -1, -1, 2 ); light_dir_.normalize();
     light_dir[0]=light_dir_.x;
-    light_dir[1]=light_dir_.x;
-    light_dir[2]=light_dir_.x;
+    light_dir[1]=light_dir_.y;
+    light_dir[2]=light_dir_.z;
 
     resolution[0] = (float)WIDTH;
     resolution[1] = (float)HEIGHT;
@@ -146,7 +114,7 @@ void setup(){
     // ------------- shader for blitting from texture
 
     shader_post=new Shader();
-	shader_post->init( "shaders/plain_vert.c", "shaders/texture_frag.c" );
+	shader_post->init( "shaders/plain_vert.c", "shaders/SSAO_frag.c" );
 
     resolution[0] = (float)WIDTH;
     resolution[1] = (float)HEIGHT;
@@ -157,21 +125,21 @@ void setup(){
 
     // ------------- texture
 
-    glGenTextures(1, &textureID);    // Create one OpenGL texture
-    glBindTexture(GL_TEXTURE_2D, textureID); // "Bind" the newly created texture : all future texture functions will modify this texture
-    //glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, imgW, imgH, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);   // Give the image to OpenGL
-    //if( depth_instead_color ){ glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT24, WIDTH, HEIGHT, 0, GL_DEPTH_COMPONENT24, GL_FLOAT,         0); }
-    //else                     { glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB,               WIDTH, HEIGHT, 0, GL_RGB,               GL_UNSIGNED_BYTE, 0); }
-    if( depth_instead_color ){ glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT, WIDTH, HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT,         0); }
-    else                     { glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB,             WIDTH, HEIGHT, 0, GL_RGB,               GL_UNSIGNED_BYTE, 0); }
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_ARGB, imgW, imgH, 0, GL_ARGB, GL_UNSIGNED_BYTE, imgData);   // Give the image to OpenGL
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //glActiveTexture(GL_TEXTURE0 );
-    //glBindTexture(GL_TEXTURE_2D, textureID );
-    //glBindSampler(0, uloc);
+    glGenTextures(1, &texRGB );
+    glBindTexture(GL_TEXTURE_2D, texRGB );
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB,             WIDTH, HEIGHT, 0, GL_RGB,               GL_UNSIGNED_BYTE, 0);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    glGenTextures(1, &texZ);
+    glBindTexture(GL_TEXTURE_2D, texZ);
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_DEPTH_COMPONENT, WIDTH, HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT,         0);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
     // ------------- frameBuffer
 
@@ -186,15 +154,17 @@ void setup(){
 
     // Set "renderedTexture" as our colour attachement #0
 
-    GLenum DrawBuffers[1];
-    if( depth_instead_color ){
-        glFramebufferTexture(GL_FRAMEBUFFER,  GL_DEPTH_ATTACHMENT, textureID, 0);
-        DrawBuffers[0] = {GL_DEPTH_ATTACHMENT};
-    }else{
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textureID, 0);
-        DrawBuffers[0] = {GL_COLOR_ATTACHMENT0};
-    }
-    glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  texZ,   0 );
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texRGB, 0 );
+    GLenum DrawBuffers[2] = {GL_DEPTH_ATTACHMENT, GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(2, DrawBuffers);
+
+/*
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  texZ,   0 );
+    GLenum DrawBuffers[1] = {GL_DEPTH_ATTACHMENT};
+    glDrawBuffers(1, DrawBuffers);
+*/
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
         printf(" problem in FBO ! \n ");
@@ -222,20 +192,25 @@ void draw(){
     glUseProgram(shader_pre->shaderprogram);
     origin[0] = 0;    origin[1] = 0;
     uloc = glGetUniformLocation( shader_pre->shaderprogram, "origin"     );	glUniform2fv(uloc, 0, origin   );
-    for( int i; i<10; i++ ){
-        //sphere[0] = randf()-0.5f;    sphere[1] = randf()-0.5f;    origin[0] = randf()-0.5f;    origin[1] = sphere[0];
-        float d = 0.2;
-        sphere[0] = d*i-1.0;    sphere[1] = d*i-1.0;     sphere[2] = d*i-1.0;
-        //sphere[0] = 0.0;    sphere[1] = 0.0;    origin[0] = sphere[0];    origin[1] = sphere[0];
-        uloc = glGetUniformLocation( shader_pre->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, sphere   );
+    for( int i; i<nspheres; i++ ){
+        uloc = glGetUniformLocation( shader_pre->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, &spheres[i<<2] );
         glEnableVertexAttribArray(0); object1->draw();
     }
 
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+    // Generate mipmaps, by the way.
+    glGenerateMipmap(GL_TEXTURE_2D);
     // -------- from texture to Screen
 
     glUseProgram(shader_post->shaderprogram);
-    uloc = glGetUniformLocation( shader_post->shaderprogram, "texture1");
-    glUniform1i(uloc, 0);
+    uloc = glGetUniformLocation( shader_post->shaderprogram, "texZ");   glUniform1i(uloc, 0);
+    uloc = glGetUniformLocation( shader_post->shaderprogram, "texRGB"); glUniform1i(uloc, 1);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture  (GL_TEXTURE_2D, texZ   );
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture  (GL_TEXTURE_2D, texRGB );
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     //glViewport(0,0,WIDTH,HEIGHT);
@@ -304,4 +279,42 @@ void die( char const *msg ){
     printf("%s: %s\n", msg, SDL_GetError());
     SDL_Quit();
     exit(1);
+}
+
+
+
+
+
+bool checkFramebufferStatus(){
+    // check FBO status
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    switch(status)
+    {
+    case GL_FRAMEBUFFER_COMPLETE:
+        printf( "Framebuffer complete.\n" );
+        return true;
+
+    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+        printf( "[ERROR] Framebuffer incomplete: Attachment is NOT complete.\n" );
+        return false;
+
+    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+        printf( "[ERROR] Framebuffer incomplete: No image is attached to FBO.\n" );
+        return false;
+    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+        printf( "[ERROR] Framebuffer incomplete: Draw buffer.\n" );
+        return false;
+
+    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+        printf( "[ERROR] Framebuffer incomplete: Read buffer.\n" );
+        return false;
+
+    case GL_FRAMEBUFFER_UNSUPPORTED:
+        printf( "[ERROR] Framebuffer incomplete: Unsupported by FBO implementation.\n" );
+        return false;
+
+    default:
+        printf( "[ERROR] Framebuffer incomplete: Unknown error.\n" );
+        return false;
+    }
 }
