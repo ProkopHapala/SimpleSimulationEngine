@@ -2,6 +2,9 @@
 #ifndef  IO_utils_h
 #define  IO_utils_h
 
+#include <stdlib.h>
+#include <stdio.h>
+
 // A simple function that will read a file into an allocated char pointer buffer
 char* filetobuf(char const  *file){
 	FILE *fptr;

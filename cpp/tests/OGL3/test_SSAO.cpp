@@ -50,9 +50,9 @@ GLfloat  holes[4*nholes] = {};
 int WIDTH  = 800;
 int HEIGHT = 800;
 
-GLfloat resolution[2];
-GLfloat sphere[4];
-GLfloat light_dir[4];
+GLfloat resolution [2];
+GLfloat sphere     [4];
+GLfloat light_dir  [4];
 
 GLuint texZ,texRGB;
 GLuint FramebufferName = 0;
