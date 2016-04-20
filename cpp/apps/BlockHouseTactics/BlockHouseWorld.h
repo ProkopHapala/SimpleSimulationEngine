@@ -12,6 +12,8 @@
 
 //#include "SoftBody.h" // dynamics
 
+const static int nMaxTypes = 255;
+
 class WallType{
     public:
 	int shape;
@@ -22,9 +24,9 @@ class WallType{
 
 class Block{
     public:
-    char ix,iy,iz;
-    char content;
-	char sides[6];
+    uint8_t ix,iy,iz;
+    uint8_t content;
+	uint8_t sides[6];
 /*
     Uint8  roof;
     Uint8  roof;
@@ -36,11 +38,11 @@ class Block{
 */
 
     inline bool isEmpty(){
-        return 0 == sides[0] == sides[1] == sides[2] == sides[3] == sides[4] == sides[5] == content;
+        return 255 == sides[0] == sides[1] == sides[2] == sides[3] == sides[4] == sides[5] == content;
     }
 
     inline void setEmpty(){
-        sides[0] =0; sides[1]=0; sides[2]=0; sides[3]=0; sides[4]=0; sides[5]=0; content=0;
+        sides[0] =255; sides[1]=255; sides[2]=255; sides[3]=255; sides[4]=255; sides[5]=255; content=255;
     }
 };
 
@@ -51,7 +53,6 @@ class BlockHouseWorld{
     int iBlock  = 0;
 	Block blocks[nMaxBlocks];
 
-    const static int nMaxTypes = 256;
 	int nTypes = 0;
 	int iTypes = 0;
     WallType wallTypes[nMaxTypes];
@@ -97,10 +98,11 @@ class BlockHouseWorld{
 
         nMax   .set(256,256,256);
         pos0   .set( {-127.0d,-127.0d,-127.0d} );
+        //pos0   .set( {0.0d,0.0d,-0.0d} );
         scaling.set( {1.0,1.0,1.0} );
     }
 
-    int findBlock ( char ix, char iy, char iz ){
+    int findBlock ( uint8_t ix, uint8_t iy, uint8_t iz ){
         for( int i=0; i<nBlocks; i++ ){
             if( ( blocks[i].ix == ix ) && ( blocks[i].iy == iy ) && ( blocks[i].iz == iz ) ){
                 return i;
@@ -109,7 +111,8 @@ class BlockHouseWorld{
         return -1;
     };
 
-    int changeBlock( char ix, char iy, char iz, char iSide, char type ){
+
+    int changeBlock( uint8_t ix, uint8_t iy, uint8_t iz, uint8_t iSide, uint8_t type ){
         int i = findBlock ( ix, iy, iz );
         if( i < 0 ){
             if( nBlocks >= nMaxBlocks ) return -1;
@@ -124,7 +127,7 @@ class BlockHouseWorld{
         return i;
     };
 
-    int eraseBlock( char ix, char iy, char iz ){
+    int eraseBlock( uint8_t ix, uint8_t iy, uint8_t iz ){
         int i = findBlock ( ix, iy, iz );
         if( i > 0 ){
             blocks[i].setEmpty();

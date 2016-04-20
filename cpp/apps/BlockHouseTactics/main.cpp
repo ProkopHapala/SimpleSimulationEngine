@@ -36,7 +36,6 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
 	virtual void eventHandling   ( const SDL_Event& event  );
 
 	void drawWall( const Vec3d& pos, int iSide, int shape ){
-	    printf( " %i %i \n", iSide, shape );
         glPushMatrix();
         Mat3d rotmat = world.rotations[ iSide ];
         rotmat.a.mul( world.scaling.x );
@@ -53,9 +52,13 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
 	    Vec3d pos;
 	    world.index2pos( {block.ix,block.iy,block.iz}, pos );
 	    printf( "block %i %i %i (%3.3f,%3.3f,%3.3f)", block.ix,block.iy,block.iz, pos.x, pos.y, pos.z );
-		for(int i=0; i<6; i++){
-		    int shape = world.wallTypes[ block.sides[i] ].shape; // this seems to be a bit long dereferencing
-            drawWall( pos, i, shape );
+		for(int iSide=0; iSide<6; iSide++){
+            int type = block.sides[iSide];
+            if(type<nMaxTypes){
+                int shape = world.wallTypes[ type ].shape; // this seems to be a bit long dereferencing
+                printf( " side %i type %i shape %i \n", iSide, block.sides[iSide], shape );
+                drawWall( pos, iSide, shape );
+            }
 		}
 	}
 
@@ -131,6 +134,7 @@ void TestAppBlockBuilder::draw   (){
     //printf( " rot %3.3f %3.3f %3.3f \n", camMat.a.x, camMat.a.y, camMat.a.z );
     //printf( " rot %3.3f %3.3f %3.3f \n", camMat.b.x, camMat.b.y, camMat.b.z );
     //printf( " rot %3.3f %3.3f %3.3f \n", camMat.c.x, camMat.c.y, camMat.c.z );
+    printf( " %i %i %i   side %i type %i shape %i \n", ix,iy,iz, cursorSide, cursorWallType, world.wallTypes[ cursorWallType ].shape );
 
 
     Vec3d pos;
