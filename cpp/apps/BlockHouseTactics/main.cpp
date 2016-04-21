@@ -51,12 +51,12 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
 	void drawBlock( const Block& block ){
 	    Vec3d pos;
 	    world.index2pos( {block.ix,block.iy,block.iz}, pos );
-	    printf( "block %i %i %i (%3.3f,%3.3f,%3.3f)", block.ix,block.iy,block.iz, pos.x, pos.y, pos.z );
+	    //printf( "block %i %i %i (%3.3f,%3.3f,%3.3f)", block.ix,block.iy,block.iz, pos.x, pos.y, pos.z );
 		for(int iSide=0; iSide<6; iSide++){
             int type = block.sides[iSide];
             if(type<nMaxTypes){
                 int shape = world.wallTypes[ type ].shape; // this seems to be a bit long dereferencing
-                printf( " side %i type %i shape %i \n", iSide, block.sides[iSide], shape );
+                //printf( " side %i type %i shape %i \n", iSide, block.sides[iSide], shape );
                 drawWall( pos, iSide, shape );
             }
 		}
@@ -82,6 +82,10 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     world.wallTypes[world.nTypes].shape = glGenLists(1); // this is a bit strange, later we should initialize wallTypes more properly
     glNewList( world.wallTypes[world.nTypes].shape , GL_COMPILE );
+        glBegin( GL_LINE_LOOP );
+        glColor3f (  0.3f, 0.3f, 0.3f );
+        glVertex3f(  0.5f,  0.5f, 0.51f);        glVertex3f(  0.5f, -0.5f, 0.51f);        glVertex3f( -0.5f, -0.5f, 0.51f);        glVertex3f( -0.5f,  0.5f, 0.51f);
+        glEnd  ();
         glBegin( GL_QUADS );
 		glColor3f (  0.2f, 0.2f, 0.2f );
         glNormal3f(  0.0f, 0.0f, 1.0f );
@@ -92,6 +96,10 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     world.wallTypes[world.nTypes].shape = glGenLists(1);
     glNewList( world.wallTypes[world.nTypes].shape , GL_COMPILE );
+        glBegin( GL_LINE_LOOP );
+        glColor3f (  0.3f, 0.3f, 0.3f );
+        glVertex3f(  0.5f,  0.5f, 0.51f);        glVertex3f(  0.5f, -0.5f, 0.51f);        glVertex3f( -0.5f, -0.5f, 0.51f);        glVertex3f( -0.5f,  0.5f, 0.51f);
+        glEnd  ();
         glBegin( GL_QUADS );
 		glColor3f (  0.8f, 0.2f, 0.2f );
         glNormal3f(  0.0f, 0.0f, 1.0f );
@@ -102,6 +110,10 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     world.wallTypes[world.nTypes].shape = glGenLists(1);
     glNewList( world.wallTypes[world.nTypes].shape , GL_COMPILE );
+        glBegin( GL_LINE_LOOP );
+        glColor3f (  0.3f, 0.3f, 0.3f );
+        glVertex3f(  0.5f,  0.5f, 0.51f);        glVertex3f(  0.5f, -0.5f, 0.51f);        glVertex3f( -0.5f, -0.5f, 0.51f);        glVertex3f( -0.5f,  0.5f, 0.51f);
+        glEnd  ();
         glBegin( GL_QUADS );
 		glColor3f (  0.2f, 0.8f, 0.2f );
         glNormal3f(  0.0f, 0.0f, 1.0f );
@@ -112,6 +124,10 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     world.wallTypes[world.nTypes].shape = glGenLists(1);
     glNewList( world.wallTypes[world.nTypes].shape , GL_COMPILE );
+        glBegin( GL_LINE_LOOP );
+        glColor3f (  0.3f, 0.3f, 0.3f );
+        glVertex3f(  0.5f,  0.5f, 0.5f);        glVertex3f(  0.5f, -0.5f, 0.5f);        glVertex3f( -0.5f, -0.5f, 0.5f);        glVertex3f( -0.5f,  0.5f, 0.5f);
+        glEnd  ();
         glBegin( GL_QUADS );
 		glColor3f (  0.2f, 0.2f, 0.8f );
         glNormal3f(  0.0f, 0.0f, 1.0f );
@@ -128,6 +144,7 @@ void TestAppBlockBuilder::draw   (){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glEnable(GL_DEPTH_TEST);
 
+    //glEnable     ( GL_LIGHTING         );
 
     printf( " ==== frame %i \n", frameCount );
     printf( " perspective %i first_person %i \n", perspective, first_person );

@@ -18,6 +18,7 @@ set( NAME "BlockHouseTactics" )
 add_executable( ${NAME} 
 	main.cpp BlockHouseWorld.cpp 
 	$<TARGET_OBJECTS:SDL2OGL> 
+	$<TARGET_OBJECTS:SoftBody> 
 )
 
 target_link_libraries( ${NAME} ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )

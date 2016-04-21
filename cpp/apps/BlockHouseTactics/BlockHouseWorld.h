@@ -2,7 +2,7 @@
 #ifndef BlockHouseWorld_h
 #define BlockHouseWorld_h
 
-#include <unordered_set>
+#include <unordered_map>
 
 #include "fastmath.h"
 #include "Vec2.h"
@@ -10,9 +10,14 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
-//#include "SoftBody.h" // dynamics
+#include "SoftBody.h" // dynamics
+
 
 const static int nMaxTypes = 255;
+
+class Node{
+    double mass;
+};
 
 class WallType{
     public:
@@ -46,6 +51,27 @@ class Block{
     }
 };
 
+const static uint8_t wall_nodes [6][4][3] = {
+    {{0,0,0},{1,0,0},{0,1,0},{1,1,0}},
+    {{0,0,1},{1,0,1},{0,1,1},{1,1,1}},
+
+    {{0,0,0},{0,0,1},{0,1,0},{0,1,1}},
+    {{1,0,0},{1,0,1},{1,1,0},{1,1,1}},
+
+    {{0,0,0},{1,0,0},{0,0,1},{1,0,1}},
+    {{0,1,0},{1,1,0},{0,1,1},{1,1,1}},
+};
+
+inline uint32_t xyz2i( uint8_t ix, uint8_t iy, uint8_t iz ){
+    return ix | ( iy << 8 ) | ( iz << 16 );
+}
+
+inline void i2xyz( uint32_t i,  uint8_t& ix, uint8_t& iy, uint8_t& iz ){
+    iz=( i & 0xF00 ) >> 16;
+    iy=( i & 0x0F0 ) >> 8;
+    ix=( i & 0x00F );
+}
+
 class BlockHouseWorld{
 	public:
     const static int nMaxBlocks = 1024;
@@ -63,10 +89,35 @@ class BlockHouseWorld{
     Vec3d pos0;
     Mat3d rotations[6];
 
+    SoftBody truss;
+    std::unordered_map<uint32_t,Node> nodes;
+
     // =========== function implementation ( should be moved to .cpp )
 
     inline void index2pos( const Vec3i& index, Vec3d& pos    ){ pos  .set( index.x*scaling.x+pos0.x,    index.y*scaling.y+pos0.y,    index.z*scaling.z+pos0.z    );  };
     inline void pos2index( const Vec3d& pos,   Vec3i& index  ){ index.set( (pos.x-pos0.x)*invScaling.x, (pos.y-pos0.y)*invScaling.y, (pos.z-pos0.z)*invScaling.z );  };
+
+    void block2truss( const Block& block ){
+        for(int iSide=0; iSide<6; iSide++){
+            int type = block.sides[iSide];
+            if( type < nMaxTypes ){
+                uint32_t i00 = xyz2i( block.ix + wall_nodes[iSide][0][0], block.iy + wall_nodes[iSide][0][1], block.iz + wall_nodes[iSide][0][2] );
+                uint32_t i01 = xyz2i( block.ix + wall_nodes[iSide][1][0], block.iy + wall_nodes[iSide][1][1], block.iz + wall_nodes[iSide][1][2] );
+                uint32_t i10 = xyz2i( block.ix + wall_nodes[iSide][2][0], block.iy + wall_nodes[iSide][2][1], block.iz + wall_nodes[iSide][2][2] );
+                uint32_t i11 = xyz2i( block.ix + wall_nodes[iSide][3][0], block.iy + wall_nodes[iSide][3][1], block.iz + wall_nodes[iSide][3][2] );
+            }
+        }
+    }
+
+    void wall2truss( ){
+        for( int i=0; i<nBlocks; i++ ){
+           block2truss( blocks[i] );
+        }
+    }
+
+
+
+
 
 /*
     void buildRotations( const Mat3d& rot ){
