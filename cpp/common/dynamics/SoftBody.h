@@ -85,6 +85,19 @@ class SoftBody{
 
 	// ==== function declarations
 
+
+	int insertBond( int i, int j, double kTens_, double kPres_, double l0s_ ){
+	    int ib2 = nbonds<<1;
+        bonds[ib2  ] = i;
+        bonds[ib2+1] = j;
+        kTens[i] = kTens_;
+        kPres[i] = kPres_;
+        l0s  [i] = l0s_;
+	};
+
+
+
+
 	void bondFromType( int ib, int * bondTypes, const BondTypes& bondTypesBooks );
 	void evalForces( const Vec3d& gravity, const Vec3d& airFlow );
 	void applyConstrains();

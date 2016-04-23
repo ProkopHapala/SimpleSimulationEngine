@@ -16,6 +16,7 @@
 const static int nMaxTypes = 255;
 
 class Node{
+    int    id;
     double mass;
 };
 
@@ -90,33 +91,73 @@ class BlockHouseWorld{
     Mat3d rotations[6];
 
     SoftBody truss;
-    std::unordered_map<uint32_t,Node> nodes;
+    int nodeCount = 0,bondCount=0;
+    std::unordered_map<uint32_t,int> nodes;
+    std::unordered_map<uint32_t,int> bonds;
 
     // =========== function implementation ( should be moved to .cpp )
 
     inline void index2pos( const Vec3i& index, Vec3d& pos    ){ pos  .set( index.x*scaling.x+pos0.x,    index.y*scaling.y+pos0.y,    index.z*scaling.z+pos0.z    );  };
     inline void pos2index( const Vec3d& pos,   Vec3i& index  ){ index.set( (pos.x-pos0.x)*invScaling.x, (pos.y-pos0.y)*invScaling.y, (pos.z-pos0.z)*invScaling.z );  };
 
+    int getValidNode( uint32_t key ){
+        auto it = nodes.find( key );
+        if ( it == nodes.end() ){
+            int inode = nodeCount;
+            nodes.insert( {key, nodeCount} );
+            nodeCount++;
+            return inode;
+        }else{
+            return it->second;
+        };
+    }
+
+    int getValidBond(  int i, int j ){
+        uint32_t key = i<<16 + j;
+        auto it = bonds.find( key );
+        if ( it == nodes.end() ){
+            int ibond = bondCount;
+            bonds.insert( {key, ibond} );
+            bondCount++;
+            return ibond;
+        }else{
+            return it->second;
+        };
+    }
+
+    int insertNode( const Block& block, const uint8_t * corner ){
+        int inod = getValidNode( xyz2i( block.ix + corner[0], block.iy + corner[1], block.iz + corner[2] ) );
+        // nodes[inod].mass +=  ???
+        // points nodes[ ] +=
+        return inod;
+    }
+
+    int insertBond( int i, int j, const WallType& wtype ){
+        int ibond = getValidBond( i, j );
+        //insertBond( ib, i, j, wtype->kTens_diag, wtype->kPres_diag, wtype->l0_diag );
+        return ibond;
+    }
+
     void block2truss( const Block& block ){
         for(int iSide=0; iSide<6; iSide++){
             int type = block.sides[iSide];
             if( type < nMaxTypes ){
-                uint32_t i00 = xyz2i( block.ix + wall_nodes[iSide][0][0], block.iy + wall_nodes[iSide][0][1], block.iz + wall_nodes[iSide][0][2] );
-                uint32_t i01 = xyz2i( block.ix + wall_nodes[iSide][1][0], block.iy + wall_nodes[iSide][1][1], block.iz + wall_nodes[iSide][1][2] );
-                uint32_t i10 = xyz2i( block.ix + wall_nodes[iSide][2][0], block.iy + wall_nodes[iSide][2][1], block.iz + wall_nodes[iSide][2][2] );
-                uint32_t i11 = xyz2i( block.ix + wall_nodes[iSide][3][0], block.iy + wall_nodes[iSide][3][1], block.iz + wall_nodes[iSide][3][2] );
+                int nod00 = insertNode( block, wall_nodes[iSide][0] );
+                int nod01 = insertNode( block, wall_nodes[iSide][1] );
+                int nod10 = insertNode( block, wall_nodes[iSide][2] );
+                int nod11 = insertNode( block, wall_nodes[iSide][3] );
+
+                insertBond( nod00, nod11, wallTypes[type] );
+                insertBond( nod10, nod01, wallTypes[type] );
+
+                insertBond( nod00, nod01, wallTypes[type] );
+                insertBond( nod00, nod10, wallTypes[type] );
+                insertBond( nod11, nod01, wallTypes[type] );
+                insertBond( nod11, nod10, wallTypes[type] );
+
             }
         }
     }
-
-    void wall2truss( ){
-        for( int i=0; i<nBlocks; i++ ){
-           block2truss( blocks[i] );
-        }
-    }
-
-
-
 
 
 /*
