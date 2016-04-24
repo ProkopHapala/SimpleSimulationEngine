@@ -16,16 +16,18 @@
 const static int nMaxTypes = 255;
 
 class Node{
-    int    id;
-    double mass;
+    public:
+    uint16_t  id;    // unique indentifier
+    //uint8_t   ix,iy,iz;  // grid point index
+    Vec3d     pos;   //
+    //double    mass;
 };
 
 class WallType{
     public:
 	int shape;
 	double mass;
-	double stiffness;
-	double strength;
+    BondType edge,diag;
 };
 
 class Block{
@@ -91,74 +93,91 @@ class BlockHouseWorld{
     Mat3d rotations[6];
 
     SoftBody truss;
-    int nodeCount = 0,bondCount=0;
-    std::unordered_map<uint32_t,int> nodes;
-    std::unordered_map<uint32_t,int> bonds;
+    //int nodeCount = 0,bondCount=0;
+    std::unordered_map<uint32_t,Node> nodes;
+    std::unordered_map<uint32_t,Bond> bonds;
 
     // =========== function implementation ( should be moved to .cpp )
 
     inline void index2pos( const Vec3i& index, Vec3d& pos    ){ pos  .set( index.x*scaling.x+pos0.x,    index.y*scaling.y+pos0.y,    index.z*scaling.z+pos0.z    );  };
     inline void pos2index( const Vec3d& pos,   Vec3i& index  ){ index.set( (pos.x-pos0.x)*invScaling.x, (pos.y-pos0.y)*invScaling.y, (pos.z-pos0.z)*invScaling.z );  };
 
-    int getValidNode( uint32_t key ){
-        auto it = nodes.find( key );
-        if ( it == nodes.end() ){
-            int inode = nodeCount;
-            nodes.insert( {key, nodeCount} );
-            nodeCount++;
-            return inode;
+
+    Node& insertNode( const Block& block, const uint8_t * corner ){
+        uint8_t ix = block.ix + corner[0];
+        uint8_t iy = block.iy + corner[1];
+        uint8_t iz = block.iz + corner[2];
+        int key = xyz2i( ix, iy, iz );
+        int sz0 = nodes.size();
+        Node& node = nodes[key]; // get valid pointer ( if new alocate, if aold take it )
+        if( nodes.size() > sz0 ){ // new element
+            //node.ix = ix;
+            //node.iy = iy;
+            //node.iz = iz;
+            index2pos( {ix,iy,iz}, node.pos );
+            node.id = sz0;
+            //nodeCount++;
+        }
+        return node;
+    }
+
+    Bond& insertBond( uint16_t i, uint16_t j, double l0, const BondType& type ){
+        uint32_t key = (i<<16) + j;
+        int sz0 = nodes.size();
+        Bond& bond = bonds[key];   // get valid pointer ( if new alocate, if aold take it )
+        if( bonds.size() > sz0 ){  // new element
+            bond.i    = i;
+            bond.j    = j;
+            bond.id   = sz0;
+            bond.type = type;
+            bond.l0   = l0;
         }else{
-            return it->second;
-        };
-    }
-
-    int getValidBond(  int i, int j ){
-        uint32_t key = i<<16 + j;
-        auto it = bonds.find( key );
-        if ( it == nodes.end() ){
-            int ibond = bondCount;
-            bonds.insert( {key, ibond} );
-            bondCount++;
-            return ibond;
-        }else{
-            return it->second;
-        };
-    }
-
-    int insertNode( const Block& block, const uint8_t * corner ){
-        int inod = getValidNode( xyz2i( block.ix + corner[0], block.iy + corner[1], block.iz + corner[2] ) );
-        // nodes[inod].mass +=  ???
-        // points nodes[ ] +=
-        return inod;
-    }
-
-    int insertBond( int i, int j, const WallType& wtype ){
-        int ibond = getValidBond( i, j );
-        //insertBond( ib, i, j, wtype->kTens_diag, wtype->kPres_diag, wtype->l0_diag );
-        return ibond;
+            if( type.sPress > bond.type.sPress ){
+                bond.type = type;
+            }
+        }
+        return bond;
     }
 
     void block2truss( const Block& block ){
         for(int iSide=0; iSide<6; iSide++){
             int type = block.sides[iSide];
             if( type < nMaxTypes ){
-                int nod00 = insertNode( block, wall_nodes[iSide][0] );
-                int nod01 = insertNode( block, wall_nodes[iSide][1] );
-                int nod10 = insertNode( block, wall_nodes[iSide][2] );
-                int nod11 = insertNode( block, wall_nodes[iSide][3] );
+                Node& nod00 = insertNode( block, wall_nodes[iSide][0] );
+                Node& nod01 = insertNode( block, wall_nodes[iSide][1] );
+                Node& nod10 = insertNode( block, wall_nodes[iSide][2] );
+                Node& nod11 = insertNode( block, wall_nodes[iSide][3] );
 
-                insertBond( nod00, nod11, wallTypes[type] );
-                insertBond( nod10, nod01, wallTypes[type] );
+                double ldiag = 1.41421356237;
+                double ledge = 1.0d;
+                insertBond( nod00.id, nod11.id, ldiag, wallTypes[type].diag );
+                insertBond( nod10.id, nod01.id, ldiag, wallTypes[type].diag );
 
-                insertBond( nod00, nod01, wallTypes[type] );
-                insertBond( nod00, nod10, wallTypes[type] );
-                insertBond( nod11, nod01, wallTypes[type] );
-                insertBond( nod11, nod10, wallTypes[type] );
+                insertBond( nod00.id, nod01.id, ledge, wallTypes[type].edge );
+                insertBond( nod00.id, nod10.id, ledge, wallTypes[type].edge );
+                insertBond( nod11.id, nod01.id, ledge, wallTypes[type].edge );
+                insertBond( nod11.id, nod10.id, ledge, wallTypes[type].edge );
 
             }
         }
     }
 
+    void blocks2truss( ){
+        for( int i=0; i<nBlocks; i++ ){
+            block2truss( blocks[i] );
+        }
+        truss.allocate( nodes.size(), bonds.size(), 10, NULL, NULL, NULL, NULL );
+        for( auto it : nodes ){
+            Node& node = it.second;
+            truss.points[ node.id ] = node.pos; // do we need this at all ?
+        }
+        for( auto it : bonds ){
+            Bond& bond = it.second;
+            truss.bonds[ bond.id ] = bond;
+        }
+        truss.prepareBonds ( false            );
+        truss.preparePoints( true, -1.0, -1.0 );
+    }
 
 /*
     void buildRotations( const Mat3d& rot ){

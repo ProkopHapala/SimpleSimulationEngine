@@ -4,56 +4,62 @@
 
 #include "fastmath.h"
 #include "Vec3.h"
-
-const int def_nMaterials = 4;                            //  Steel    Dural   Ti     CFRP
-static double def_materials_density [def_nMaterials] = { 7.8e+3, 2.7e+3, 4.4e+3, 1.7e+3 };
-//static double def_bondTypes_kTens   [def_nMaterials] = { 200e+9,  69e+9, 110e+9,  50e+9 };
-//static double def_bondTypes_kPres   [def_nMaterials] = { 200e+9,  69e+9, 110e+9,  50e+9 };
-
-static double def_bondTypes_kTens   [def_nMaterials] = { 200e+8,  69e+8, 110e+8,  50e+8 };
-static double def_bondTypes_kPres   [def_nMaterials] = { 200e+8,  69e+8, 110e+8,  50e+8 };
-
-const int     def_nBondTypes = 3;                         // steel, graphene,
-static double def_bondTypes_area     [def_nBondTypes]={ 1e-4,   1e-4,   1e-4 }; // [ m^2 ]
-static int    def_bondTypes_material [def_nBondTypes]={    1,      1,      1 };
-/*
-static double def_bondTypes_density[def_nBondTypes]={ 7.8e+3, 7.8e+3, 7.8e+3 }; // [ kg/m^3 ]
-static double def_bondTypes_kTens  [def_nBondTypes]={ 200e+9, 200e+9, 200e+9 }; // [ Pa ]
-static double def_bondTypes_kPres [def_nBondTypes]={ 200e+9, 200e+9, 200e+9 }; // [ Pa ]
-*/
-
-static int def_fix[6] = { 0, 1, 2, 3, 4, 5 };
+//#include "DynamicOpt.h"
 
 // ==================
 //    BondTypes
 // ==================
 
-class BondTypes{
+class BondType{
 	public:
-	int n;
-	double * area;
-	double * density;
-	double * kTens;
-	double * kPres;
+	int id;
+	double linearDensity;
+    double kPress,kTens;  // stiffness
+	double sPress,sTens;  // strength
+};
 
-	BondTypes( int n_, double * area_, double * density_, double * kTens_,  double * kPres_ ){
-		n = n_;
-		area    = area_; density = density_; kTens   = kTens_; kPres  = kPres_;
-	};
+class Bond{
+    public:
+    uint16_t  id;        // unique indentifier
+    uint16_t  i,j;       // end node index
+    //double mass;
+    bool   broken;
+	double l0;           // relaxed length
+	BondType type;
 
-	BondTypes( int n_, double * area_, int * materialBook ){
-		n = n_;
-		area    = area_;
-		density = new double[n];
-		kTens   = new double[n];
-		kPres  = new double[n];
-		for (int i=0; i<n; i++){
-			int imat = materialBook[i];
-			density[i] = def_materials_density[imat];
-			kTens  [i] = def_bondTypes_kTens  [imat];
-			kPres  [i] = def_bondTypes_kPres  [imat];
-		}
-	};
+    inline double getMass(){ return l0 * type.linearDensity; }
+    inline double getDrag(){ return l0 ; }  // this could be improved later
+
+	inline bool evalFoce( double l ){
+        double dl = ( l - l0 ) / l;
+        double f;
+        if( dl > 0 ){
+            f = type.kTens *dl;
+        }else{
+            f = type.kPress*dl;
+        }
+        return f;
+	}
+
+    inline bool evalFoceBreak( double l ){
+        double dl = ( l - l0 ) / l;
+        double f;
+        if( dl > 0 ){
+            f = type.kTens*dl;
+            if( f >  type.sTens ){
+                broken = true;
+                return 0;
+            }
+        }else{
+            f = type.kPress*dl;
+            if( f >  type.sPress ){
+                broken = true;
+                return 0;
+            }
+        }
+        return f;
+	}
+
 };
 
 // ==================
@@ -64,85 +70,53 @@ class SoftBody{
 	public:
 	// points
 	int npoints;
-	double * mass;
-	double * drag;
-	Vec3d  * points;
-	// axuliary
-	Vec3d  * velocities;
-	Vec3d  * forces;
-	double * invMass;
+	Vec3d  * points     = NULL;
+	Vec3d  * velocities = NULL;
+	Vec3d  * forces     = NULL;
+    // parameters
+    double * mass     = NULL;
+	double * drag     = NULL;
+	double * invMass  = NULL;
 
 	// bonds
 	int nbonds;
-	int    * bonds;
-	double * kTens;
-	double * kPres;
-	double * l0s;
+    Bond * bonds;
 
 	// constrains
-	int nfix;
+	int   nfix;
 	int * fix;
+
+	bool own_points, own_mass, own_fix;
+
+	Vec3d gravity, airFlow;
+    double dt, damp;
 
 	// ==== function declarations
 
+	void evalForces     (  );
+	void applyConstrains(  );
+	void move_LeapFrog  (  );
+	void step           (  );
 
-	int insertBond( int i, int j, double kTens_, double kPres_, double l0s_ ){
-	    int ib2 = nbonds<<1;
-        bonds[ib2  ] = i;
-        bonds[ib2+1] = j;
-        kTens[i] = kTens_;
-        kPres[i] = kPres_;
-        l0s  [i] = l0s_;
-	};
-
-
-
-
-	void bondFromType( int ib, int * bondTypes, const BondTypes& bondTypesBooks );
-	void evalForces( const Vec3d& gravity, const Vec3d& airFlow );
-	void applyConstrains();
-	void move( double dt, double damp );
-	void draw( float forceScale );
-
-
-	void init(
-		int npoints_, int nbonds_, int nfix_,
-		Vec3d  * points_, double * mass_, double * drag_,
-		int    * bonds_, int * bondTypes, const BondTypes& bondTypeBooks,
-		int    * fix_
-	);
-
-	void init(
-		int npoints_, int nbonds_, int nfix_,
-		Vec3d  * points_, double * mass_,    double * drag_,
-		int    * bonds_,  double * kTens_,   double * kPres_,   double * l0s_,
-		int    * fix_
-	);
+    void allocate       ( int npoints_, int nbonds_, int nfix_, Vec3d  * points_, double * mass_, double * drag_,  int * fix_ );
+    void prepareBonds ( bool l0_fromPos );
+    void preparePoints( bool clearVelocity, double constDrag, double constMass );
 
 	// ===== inline functions
 
-	inline double getBondLength( int ib ){
-		int ib2 = ib<<1;
-		int i   = bonds[ib2  ];
-		int j   = bonds[ib2+1];
+	inline double getBondLength( uint16_t i, uint16_t j ){
 		Vec3d d; d.set_sub( points[i], points[j] );
-		return  d.norm();
+		return d.norm();
 	}
 
-	inline void evalBondForce( int ib ){
-		int ib2 = ib<<1;
-		int i   = bonds[ib2  ];
-		int j   = bonds[ib2+1];
-		Vec3d d; d.set_sub( points[i], points[j] );
-		double l  = d.norm(); // this should be optimized
-		double dl = ( l - l0s[ib] ) / l;
-		if( dl > 0 ){
-			d.mul( kTens[ib]*dl );
-		}else{
-			d.mul( kPres[ib]*dl );
-		}
-		forces[j].add( d );
-		forces[i].sub( d );
+	inline void evalBondForce( Bond& bond ){
+        Vec3d d; d.set_sub( points[bond.i], points[bond.j] );
+        double  l = d.norm();      // this should be optimized
+        double  f = bond.evalFoce( l );
+        //double  f = evalFoceBreak( l );
+        d.mul( f );
+        forces[bond.j].add( d );
+        forces[bond.i].sub( d );
 	}
 
 	inline void evalPointForce( int i, const Vec3d& gravity, const Vec3d& airFlow ){
