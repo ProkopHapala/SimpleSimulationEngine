@@ -231,8 +231,8 @@ void TestAppBlockBuilder::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                case SDLK_a:  ix ++; if( ix >= world.nMax.x ) ix = 255; break;
-                case SDLK_d:  ix --; if( ix <  0          ) ix = 0;   break;
+                case SDLK_a:  ix --; if( ix <  0          ) ix = 0;   break;
+                case SDLK_d:  ix ++; if( ix >= world.nMax.x ) ix = 255; break;
                 case SDLK_w:  iy ++; if( iy >= world.nMax.y ) iy = 255; break;
                 case SDLK_s:  iy --; if( iy <  0          ) iy = 0;   break;
                 case SDLK_q:  iz ++; if( iz >= world.nMax.z ) iz = 255; break;
