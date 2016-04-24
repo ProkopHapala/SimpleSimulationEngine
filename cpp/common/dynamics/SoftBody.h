@@ -30,7 +30,7 @@ class Bond{
     inline double getMass(){ return l0 * type.linearDensity; }
     inline double getDrag(){ return l0 ; }  // this could be improved later
 
-	inline bool evalFoce( double l ){
+	inline double evalFoce( double l ){
         double dl = ( l - l0 ) / l;
         double f;
         if( dl > 0 ){
@@ -38,10 +38,11 @@ class Bond{
         }else{
             f = type.kPress*dl;
         }
+        //printf( "%f %f %f %f\n",    l, l0, dl, f );
         return f;
 	}
 
-    inline bool evalFoceBreak( double l ){
+    inline double evalFoceBreak( double l ){
         double dl = ( l - l0 ) / l;
         double f;
         if( dl > 0 ){
@@ -88,8 +89,10 @@ class SoftBody{
 
 	bool own_points, own_mass, own_fix;
 
+	//Vec3d gravity = {0.0,-9.81,0.0}, airFlow={0.0,0.0,0.0};
 	Vec3d gravity, airFlow;
-    double dt, damp;
+    double dt   = 0.01;
+    double damp = 0.99;
 
 	// ==== function declarations
 
@@ -109,12 +112,13 @@ class SoftBody{
 		return d.norm();
 	}
 
-	inline void evalBondForce( Bond& bond ){
+	inline void addBondForce( Bond& bond ){
         Vec3d d; d.set_sub( points[bond.i], points[bond.j] );
         double  l = d.norm();      // this should be optimized
         double  f = bond.evalFoce( l );
         //double  f = evalFoceBreak( l );
         d.mul( f );
+        //printf( " bond force %i %i %f %f (%3.3f,%3.3f,%3.3f)\n", bond.i, bond.j, l, f, d.x, d.y, d.z );
         forces[bond.j].add( d );
         forces[bond.i].sub( d );
 	}

@@ -13,14 +13,16 @@ void SoftBody::evalForces( ){
 		evalPointForce( i, gravity, airFlow );
 		//printf( " %i  %f %f %f   %f %f %f \n", i, forces[i].x, forces[i].y, forces[i].z, mass[i], invMass[i], drag[i] );
 	}
-	for( int i=0; i<nbonds;  i++ ){	evalBondForce( bonds[i] ); }
+	for( int i=0; i<nbonds;  i++ ){	addBondForce( bonds[i] ); }
 }
 
 void SoftBody::applyConstrains(){
-	for( int i=0; i<nfix;   i++ ){
+	for( int i=0; i<nfix; i++ ){
 		int ip = fix[i];
-		forces    [ip].set(0.0);
-		velocities[ip].set(0.0);
+		if( (ip>0)&&(ip<npoints) ){
+            forces    [ip].set(0.0);
+            velocities[ip].set(0.0);
+		}
 	}
 }
 
@@ -29,10 +31,19 @@ void SoftBody::move_LeapFrog( ){
 		velocities[i].mul( damp );
 		velocities[i].add_mul( forces[i], invMass[i] * dt );
 		points[i].    add_mul( velocities[i], dt );
+		/*
+		printf( " (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) %3.3f %3.3f %3.3f \n",
+            points[i].x, points[i].y, points[i].z,
+            velocities[i].x, velocities[i].y, velocities[i].z,
+            forces[i].x, forces[i].y, forces[i].z,
+            invMass[i] ,  dt,  damp
+        );
+        */
 	}
 }
 
 void SoftBody::step( ){
+    //for (int i=0; i<npoints; i++){ forces[i].set(0.0); }
     evalForces( );
     applyConstrains();
     move_LeapFrog( );
@@ -54,6 +65,8 @@ void SoftBody::allocate(	int npoints_, int nbonds_, int nfix_,  	Vec3d  * points
 
     if( fix_ != NULL ){ fix = fix_;  }else{ fix = new int[nfix]; for(int i=0; i<nfix; i++ ){ fix[i]=-1; } }
 
+    gravity.set(0.0,-9.81,0.0);
+    airFlow.set(0.0,0.0,0.0);
 }
 
 void SoftBody::prepareBonds( bool l0_fromPos ){
@@ -75,7 +88,7 @@ void SoftBody::preparePoints(  bool clearVelocity, double constDrag, double cons
         if( constDrag > 0 ) drag[i] = constDrag;
         if( constMass > 0 ) mass[i] = constMass;
 		invMass[i] = 1/mass[i];
-		// printf( " %f   %f %f %f \n", invMass[i], velocities[i].x, velocities[i].y, velocities[i].z  );
+		//printf( " %f %f   %f %f %f \n", mass[i], invMass[i], velocities[i].x, velocities[i].y, velocities[i].z  );
 	}
 }
 

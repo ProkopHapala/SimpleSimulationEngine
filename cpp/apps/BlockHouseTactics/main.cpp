@@ -54,7 +54,7 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
 	    //printf( "block %i %i %i (%3.3f,%3.3f,%3.3f)", block.ix,block.iy,block.iz, pos.x, pos.y, pos.z );
 		for(int iSide=0; iSide<6; iSide++){
             int type = block.sides[iSide];
-            if(type<nMaxTypes){
+            if(type<world.nMaxTypes){
                 int shape = world.wallTypes[ type ].shape; // this seems to be a bit long dereferencing
                 //printf( " side %i type %i shape %i \n", iSide, block.sides[iSide], shape );
                 drawWall( pos, iSide, shape );
@@ -73,6 +73,24 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
                 glVertex3f( (float)pj.x, (float)pj.y, (float)pj.z );
                 if( DEBUG ){
                     printf( " %i  %i %i   (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f)\n",  i,   bond.i, bond.j,  pi.x, pi.y, pi.z,  pj.x, pj.y, pj.z  );
+                }
+            }
+            glEnd();
+	    }
+	}
+
+    void drawForces( double scale, bool DEBUG ){
+	    if( ( world.truss.points != NULL )&&( world.truss.forces != NULL ) ){
+            glBegin( GL_LINES );
+            for( int i=0; i<world.truss.npoints; i++ ){
+                Vec3d& p  =  world.truss.points[i];
+                Vec3d& f  =  world.truss.forces[i];
+                Vec3d  pf; pf.set(p); pf.add_mul( f, scale );
+                glVertex3f( (float)p.x, (float)p.y, (float)p.z );
+                glVertex3f( (float)pf.x, (float)pf.y, (float)pf.z );
+                if( DEBUG ){
+                    //printf( " %i  %i %i   (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f)\n",  i,   bond.i, bond.j,  pi.x, pi.y, pi.z,  f.x, f.y, f.z  );
+                    printf( " %i  (%3.3f,%3.3f,%3.3f) \n",  i, f.x, f.y, f.z  );
                 }
             }
             glEnd();
@@ -163,7 +181,7 @@ void TestAppBlockBuilder::draw   (){
 
     //glEnable     ( GL_LIGHTING         );
 
-    //printf( " ==== frame %i \n", frameCount );
+    printf( " ==== frame %i \n", frameCount );
     //printf( " perspective %i first_person %i \n", perspective, first_person );
     //printf( " rot %3.3f %3.3f %3.3f \n", camMat.a.x, camMat.a.y, camMat.a.z );
     //printf( " rot %3.3f %3.3f %3.3f \n", camMat.b.x, camMat.b.y, camMat.b.z );
@@ -174,6 +192,14 @@ void TestAppBlockBuilder::draw   (){
     Vec3d pos;
 	world.index2pos( {ix, iy, iz}, pos );
     drawWall( pos, cursorSide, world.wallTypes[ cursorWallType ].shape  );
+
+    if( world.truss.points != NULL ){
+        world.truss.dt   = 0.005;
+        world.truss.damp = 1.0 - 0.01;
+        for( int i=0; i<10; i++ ){
+             world.truss.step( );
+        }
+    }
 
     //printf( "nBlocks %i nMaxBlocks %i \n", world.nBlocks, world.nMaxBlocks );
     for( int i=0; i<world.nBlocks; i++ ){
@@ -191,7 +217,8 @@ void TestAppBlockBuilder::draw   (){
 
 	glDisable(GL_DEPTH_TEST);
 
-	drawTruss( false );
+	glColor3f(0.0f,0.0f,1.0f); drawTruss(       false );
+	glColor3f(1.0f,0.0f,0.0f); drawForces( 1.0, false );
 
 	drawWall( pos, cursorSide, cursorShape );
 

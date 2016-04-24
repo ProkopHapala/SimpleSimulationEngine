@@ -12,9 +12,6 @@
 
 #include "SoftBody.h" // dynamics
 
-
-const static int nMaxTypes = 255;
-
 class Node{
     public:
     uint16_t  id;    // unique indentifier
@@ -96,6 +93,7 @@ class BlockHouseWorld{
     int iBlock  = 0;
 	Block blocks[nMaxBlocks];
 
+	const static int nMaxTypes = 255;
 	int nTypes = 0;
 	int iTypes = 0;
     WallType wallTypes[nMaxTypes];
@@ -110,6 +108,21 @@ class BlockHouseWorld{
     //int nodeCount = 0,bondCount=0;
     std::unordered_map<uint32_t,Node> nodes;
     std::unordered_map<uint32_t,Bond> bonds;
+
+
+    BondType default_BondType_diag = {
+        0,          // id
+        7.8,        // density
+        1e+5,1e+5,  // stiffness
+        1e+9,1e+9,  // strength
+    };
+
+    BondType default_BondType_edge = {
+        0,          // id
+        7.8,        // density
+        1e+5,1e+5,  // stiffness
+        1e+9,1e+9,  // strength
+    };
 
     // =========== function implementation ( should be moved to .cpp )
 
@@ -190,23 +203,34 @@ class BlockHouseWorld{
             block2truss( blocks[i] );
         }
         printf( " blocks2truss 1 \n" );
-        truss.allocate( nodes.size(), bonds.size(), 10, NULL, NULL, NULL, NULL );
+        truss.allocate( nodes.size(), bonds.size(), 3, NULL, NULL, NULL, NULL );
         printf( " blocks2truss 2 \n" );
         for( auto it : nodes ){
             Node& node = it.second;
             truss.points[ node.id ] = node.pos; // do we need this at all ?
         }
-        printf( " blocks2truss 3 \n" );
         for( auto it : bonds ){
             Bond& bond = it.second;
             truss.bonds[ bond.id ] = bond;
         }
-        printf( " blocks2truss 4 \n" );
         truss.prepareBonds ( false            );
-        printf( " blocks2truss 5 \n" );
-        truss.preparePoints( true, -1.0, -1.0 );
-        printf( " blocks2truss 6 \n" );
+        truss.preparePoints( true, -1.0, 0.0 );
+
+        for( int i=0; i<truss.nfix; i++){
+            truss.fix[i] = i;   // FIXME ... this is just some stupid DEBUG default
+        }
     }
+
+
+    void setDefaultWallType(){
+        for( int i=0;  i<nMaxTypes; i++ ){
+            wallTypes[i].shape = 0;
+            wallTypes[i].diag  = default_BondType_diag;
+            wallTypes[i].edge  = default_BondType_edge;
+            wallTypes[i].mass  = 1.0;
+        }
+    }
+
 
 /*
     void buildRotations( const Mat3d& rot ){
@@ -240,6 +264,8 @@ class BlockHouseWorld{
         pos0   .set( {-127.0d,-127.0d,-127.0d} );
         //pos0   .set( {0.0d,0.0d,-0.0d} );
         scaling.set( {1.0,1.0,1.0} );
+
+        setDefaultWallType();
     }
 
     int findBlock ( uint8_t ix, uint8_t iy, uint8_t iz ){
