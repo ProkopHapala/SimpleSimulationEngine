@@ -62,6 +62,23 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
 		}
 	}
 
+	void drawTruss( bool DEBUG ){
+	    if( ( world.truss.bonds != NULL )&&( world.truss.points != NULL )  ){
+            glBegin( GL_LINES );
+            for( int i=0; i<world.truss.nbonds; i++ ){
+                Bond& bond = world.truss.bonds[i];
+                Vec3d& pi  =  world.truss.points[bond.i];
+                Vec3d& pj  =  world.truss.points[bond.j];
+                glVertex3f( (float)pi.x, (float)pi.y, (float)pi.z );
+                glVertex3f( (float)pj.x, (float)pj.y, (float)pj.z );
+                if( DEBUG ){
+                    printf( " %i  %i %i   (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f)\n",  i,   bond.i, bond.j,  pi.x, pi.y, pi.z,  pj.x, pj.y, pj.z  );
+                }
+            }
+            glEnd();
+	    }
+	}
+
 	TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ );
 
 };
@@ -146,19 +163,19 @@ void TestAppBlockBuilder::draw   (){
 
     //glEnable     ( GL_LIGHTING         );
 
-    printf( " ==== frame %i \n", frameCount );
-    printf( " perspective %i first_person %i \n", perspective, first_person );
+    //printf( " ==== frame %i \n", frameCount );
+    //printf( " perspective %i first_person %i \n", perspective, first_person );
     //printf( " rot %3.3f %3.3f %3.3f \n", camMat.a.x, camMat.a.y, camMat.a.z );
     //printf( " rot %3.3f %3.3f %3.3f \n", camMat.b.x, camMat.b.y, camMat.b.z );
     //printf( " rot %3.3f %3.3f %3.3f \n", camMat.c.x, camMat.c.y, camMat.c.z );
-    printf( " %i %i %i   side %i type %i shape %i \n", ix,iy,iz, cursorSide, cursorWallType, world.wallTypes[ cursorWallType ].shape );
+    //printf( " %i %i %i   side %i type %i shape %i \n", ix,iy,iz, cursorSide, cursorWallType, world.wallTypes[ cursorWallType ].shape );
 
 
     Vec3d pos;
 	world.index2pos( {ix, iy, iz}, pos );
     drawWall( pos, cursorSide, world.wallTypes[ cursorWallType ].shape  );
 
-    printf( "nBlocks %i nMaxBlocks %i \n", world.nBlocks, world.nMaxBlocks );
+    //printf( "nBlocks %i nMaxBlocks %i \n", world.nBlocks, world.nMaxBlocks );
     for( int i=0; i<world.nBlocks; i++ ){
         if( !world.blocks[i].isEmpty() ){
             drawBlock( world.blocks[i] );
@@ -173,6 +190,9 @@ void TestAppBlockBuilder::draw   (){
 	Draw3D::drawAxis ( 3.0f );
 
 	glDisable(GL_DEPTH_TEST);
+
+	drawTruss( false );
+
 	drawWall( pos, cursorSide, cursorShape );
 
 };
@@ -198,6 +218,9 @@ void TestAppBlockBuilder::eventHandling ( const SDL_Event& event  ){
                 case SDLK_RETURN:    world.changeBlock( ix, iy, iz, cursorSide, cursorWallType ); break;
                 case SDLK_BACKSPACE: world.eraseBlock ( ix, iy, iz ); break;
                 case SDLK_u:  qCamera.setOne();  break;
+
+                case SDLK_t: world.blocks2truss( ); drawTruss( true ); break;
+
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             break;

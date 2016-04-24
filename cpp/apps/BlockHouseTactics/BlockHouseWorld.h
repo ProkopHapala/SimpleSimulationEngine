@@ -54,6 +54,7 @@ class Block{
     }
 };
 
+/*
 const static uint8_t wall_nodes [6][4][3] = {
     {{0,0,0},{1,0,0},{0,1,0},{1,1,0}},
     {{0,0,1},{1,0,1},{0,1,1},{1,1,1}},
@@ -63,6 +64,19 @@ const static uint8_t wall_nodes [6][4][3] = {
 
     {{0,0,0},{1,0,0},{0,0,1},{1,0,1}},
     {{0,1,0},{1,1,0},{0,1,1},{1,1,1}},
+};
+*/
+
+// FIXME : I'm not sure why the points are inverted
+const static uint8_t wall_nodes [6][4][3] = {
+    {{1,1,1},{0,1,1},{1,0,1},{0,0,1}},
+    {{1,1,0},{0,1,0},{1,0,0},{0,0,0}},
+
+    {{1,1,1},{1,1,0},{1,0,1},{1,0,0}},
+    {{0,1,1},{0,1,0},{0,0,1},{0,0,0}},
+
+    {{1,1,1},{0,1,1},{1,1,0},{0,1,0}},
+    {{1,0,1},{0,0,1},{1,0,0},{0,0,0}},
 };
 
 inline uint32_t xyz2i( uint8_t ix, uint8_t iy, uint8_t iz ){
@@ -114,16 +128,19 @@ class BlockHouseWorld{
             //node.ix = ix;
             //node.iy = iy;
             //node.iz = iz;
-            index2pos( {ix,iy,iz}, node.pos );
+            index2pos( {ix,iy,iz}, node.pos ); node.pos.add_mul( scaling, -0.5 );
             node.id = sz0;
             //nodeCount++;
+            printf( "insert node %i (%i,%i,%i) (%3.3f,%3.3f,%3.3f) \n", node.id, ix,iy, iz, node.pos.x, node.pos.y, node.pos.z );
+        }else{
+            printf( "found  node %i (%i,%i,%i) (%3.3f,%3.3f,%3.3f) \n", node.id, ix,iy, iz, node.pos.x, node.pos.y, node.pos.z );
         }
         return node;
     }
 
     Bond& insertBond( uint16_t i, uint16_t j, double l0, const BondType& type ){
         uint32_t key = (i<<16) + j;
-        int sz0 = nodes.size();
+        int sz0 = bonds.size();
         Bond& bond = bonds[key];   // get valid pointer ( if new alocate, if aold take it )
         if( bonds.size() > sz0 ){  // new element
             bond.i    = i;
@@ -131,10 +148,12 @@ class BlockHouseWorld{
             bond.id   = sz0;
             bond.type = type;
             bond.l0   = l0;
+            printf( "insert bond (%i,%i) %i %i \n", i, j, key, bond.id );
         }else{
             if( type.sPress > bond.type.sPress ){
                 bond.type = type;
             }
+            printf( "found  bond (%i,%i) %i %i \n", i, j, key, bond.id );
         }
         return bond;
     }
@@ -147,6 +166,7 @@ class BlockHouseWorld{
                 Node& nod01 = insertNode( block, wall_nodes[iSide][1] );
                 Node& nod10 = insertNode( block, wall_nodes[iSide][2] );
                 Node& nod11 = insertNode( block, wall_nodes[iSide][3] );
+                printf( " node.ids %i %i %i %i \n", nod00.id, nod01.id, nod10.id, nod11.id );
 
                 double ldiag = 1.41421356237;
                 double ledge = 1.0d;
@@ -163,20 +183,29 @@ class BlockHouseWorld{
     }
 
     void blocks2truss( ){
+        printf( " blocks2truss 0 \n" );
+        nodes.clear();  nodes.reserve ( 1024    );
+        bonds.clear();  bonds.reserve ( 16*1024 );
         for( int i=0; i<nBlocks; i++ ){
             block2truss( blocks[i] );
         }
+        printf( " blocks2truss 1 \n" );
         truss.allocate( nodes.size(), bonds.size(), 10, NULL, NULL, NULL, NULL );
+        printf( " blocks2truss 2 \n" );
         for( auto it : nodes ){
             Node& node = it.second;
             truss.points[ node.id ] = node.pos; // do we need this at all ?
         }
+        printf( " blocks2truss 3 \n" );
         for( auto it : bonds ){
             Bond& bond = it.second;
             truss.bonds[ bond.id ] = bond;
         }
+        printf( " blocks2truss 4 \n" );
         truss.prepareBonds ( false            );
+        printf( " blocks2truss 5 \n" );
         truss.preparePoints( true, -1.0, -1.0 );
+        printf( " blocks2truss 6 \n" );
     }
 
 /*
