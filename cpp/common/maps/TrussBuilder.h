@@ -10,6 +10,7 @@
 //#include "Mat3.h"
 #include "quaternion.h"
 
+/*
 class NodeIndex{
     public:
     union{
@@ -27,6 +28,42 @@ class BondIndex{
         int_fast32_t array[2];
         int_fast64_t i;
     };
+};
+
+*/
+
+class ID16{
+    public:
+     union{
+         int_fast8_t array[2];
+         struct{ int_fast8_t l,h;                       };
+         int_fast16_t id;
+     };
+};
+
+class ID32{
+    public:
+     union{
+         int_fast8_t array[4];
+         struct{ int_fast16_t a,b;                         };
+         //struct{ int_fast16_t a;     int_fast8_t bl,bh;  };
+         //struct{ int_fast8_t  al,ah; int_fast16_t b;     };
+         struct{ ID16 l, h; };
+         int_fast32_t id;
+     };
+};
+
+class ID64{
+    public:
+     union{
+        int_fast8_t array[8];
+         struct{ int_fast16_t x,y,z,w;                   };
+         struct{ int_fast32_t a,b;                       };
+         //struct{ int_fast32_t a;     int_fast16_t bl,bh; };
+         //struct{ int_fast16_t al,ah; int_fast32_t b;     };
+         struct{ ID32 l, h; };
+         int_fast64_t id;
+     };
 };
 
 class Node{

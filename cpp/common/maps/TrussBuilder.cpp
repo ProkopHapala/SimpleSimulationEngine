@@ -4,9 +4,9 @@
 #include "TrussBuilder.h" // THE HEADER
 
 Node& TrussBuilder::insertNode( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz ){
-    NodeIndex inod; inod.x=ix; inod.y=iy; inod.z=iz;
+    ID64 inod; inod.x=ix; inod.y=iy; inod.z=iz;
     int sz0 = nodes.size();
-    Node& node = nodes[inod.i]; // get valid pointer ( if new alocate, if aold take it )
+    Node& node = nodes[inod.id]; // get valid pointer ( if new alocate, if aold take it )
     if( nodes.size() > sz0 ){ // new element
         //node.ix = ix;
         //node.iy = iy;
@@ -22,9 +22,9 @@ Node& TrussBuilder::insertNode( int_fast16_t ix, int_fast16_t iy, int_fast16_t i
 }
 
 Bond& TrussBuilder::insertBond( int_fast32_t i, int_fast32_t j, double l0, const BondType& type ){
-    BondIndex ib;
+    ID64 ib;  ib.a=i; ib.b=j;
     int sz0 = bonds.size();
-    Bond& bond = bonds[ib.i];   // get valid pointer ( if new alocate, if aold take it )
+    Bond& bond = bonds[ib.id];   // get valid pointer ( if new alocate, if aold take it )
     if( bonds.size() > sz0 ){  // new element
         bond.i    = i;   // we actually don't need this
         bond.j    = j;
