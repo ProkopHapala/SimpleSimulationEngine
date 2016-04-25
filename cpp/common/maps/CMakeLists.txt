@@ -8,6 +8,7 @@ add_library( SimplexGrid    OBJECT SimplexGrid.cpp  )
 add_library( TiledView      OBJECT TiledView.cpp    )
 add_library( TerrainCubic   OBJECT TerrainCubic.cpp )
 add_library( TerrainRBF     OBJECT TerrainRBF.cpp   )
+add_library( TrussBuilder   OBJECT TrussBuilder.cpp )
 
 add_library( NBodyWorld2D   OBJECT NBodyWorld2D.cpp   )
 #target_compile_options(mylib PRIVATE   -O3 --ffast-math )

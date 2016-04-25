@@ -8,8 +8,8 @@
 
 #include "fastmath.h"
 
-//template <class TYPE,class VEC> 
-template <class TYPE> 
+//template <class TYPE,class VEC>
+template <class TYPE>
 class Vec3TYPE{
 	using VEC = Vec3TYPE<TYPE>;
 	public:
@@ -87,28 +87,28 @@ class Vec3TYPE{
     };
 
 	inline void getSomeOrtho( VEC& v1, VEC& v2 ){
-		if(x<y){ 
-//			x : y*vz - z*vy; 
-//			y : z*vx - x*vz; 
-//			z : x*vy - y*vx; 
+		if(x<y){
+//			x : y*vz - z*vy;
+//			y : z*vx - x*vz;
+//			z : x*vy - y*vx;
 //			x : y*0 - z*0 ;
-//			y : z*1 - x*0 ; 
+//			y : z*1 - x*0 ;
 //			z : x*0 - y*1 ;
 //			float vx = 0; float vy = z; float vz =-y;
 			v1.x =  -y*y -z*z;
 			v1.y =  x*y;
 			v1.z =  x*z;
-		}else{ 
-//			x : y*0 - z*1; 
-//			y : z*0 - x*0; 
-//			z : x*1 - y*0; 
+		}else{
+//			x : y*0 - z*1;
+//			y : z*0 - x*0;
+//			z : x*1 - y*0;
 //			float vx = -z; float vy = 0; float vz = x;
 			v1.x =  y*x;
 			v1.y =  -z*z -x*x;
 			v1.z =  y*z;
 		}
-		v2.x = y*v1.z - z*v1.y; 
-		v2.y = z*v1.x - x*v1.z; 
+		v2.x = y*v1.z - z*v1.y;
+		v2.y = z*v1.x - x*v1.z;
 		v2.z = x*v1.y - y*v1.x;
 	}
 
@@ -123,18 +123,18 @@ class Vec3TYPE{
 
 	inline void rotate_csa( TYPE ca, TYPE sa, const VEC& uaxis ){
 		TYPE cu = (1-ca)*dot(uaxis);
-		TYPE utx  = uaxis.y*z - uaxis.z*y; 
-		TYPE uty  = uaxis.z*x - uaxis.x*z; 
+		TYPE utx  = uaxis.y*z - uaxis.z*y;
+		TYPE uty  = uaxis.z*x - uaxis.x*z;
 		TYPE utz  = uaxis.x*y - uaxis.y*x;
 		TYPE x_ = ca*x + sa*utx + cu*uaxis.x;
 		TYPE y_ = ca*y + sa*uty + cu*uaxis.y;
 		       z  = ca*z + sa*utz + cu*uaxis.z;
-		x = x_; y = y_; 
+		x = x_; y = y_;
 	};
 
 	inline double along_hat( const VEC& hat, const VEC& p ){ VEC ap; ap.set( p.x-x, p.y-y ); return hat.dot( ap ); }
 	inline double along    ( const VEC& b,   const VEC& p ){
-		VEC ab,ap; 
+		VEC ab,ap;
 		ab.set( b.x - x, b.y - y, b.z - z );
 		ap.set( p.x - x, p.y - y, b.z - z );
 		return ab.dot(ap) / ab.norm(ab);
