@@ -11,3 +11,6 @@ target_link_libraries( test_MousePicking ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2
 add_executable       ( test_BlockBuilder test_BlockBuilder.cpp $<TARGET_OBJECTS:SDL2OGL>  )
 target_link_libraries( test_BlockBuilder ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_TrussBuilder   test_TrussBuilder.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TrussBuilder> $<TARGET_OBJECTS:SoftBody> $<TARGET_OBJECTS:DynamicOpt>  )
+target_link_libraries( test_TrussBuilder  ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+

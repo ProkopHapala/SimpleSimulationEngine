@@ -2,6 +2,7 @@
 #ifndef  TrussBuilder_h
 #define  TrussBuilder_h
 
+#include <vector>
 #include <unordered_map>
 
 #include "fastmath.h"
@@ -32,6 +33,8 @@ class BondIndex{
 
 */
 
+
+/*
 class ID16{
     public:
      union{
@@ -65,62 +68,97 @@ class ID64{
          int_fast64_t id;
      };
 };
+*/
 
-class Node{
+class GridNode{
     public:
-    int_fast32_t  id;    // unique indentifier
+    int_fast16_t  ix,iy,iz;
+    bool exist,fixed;
+    //int_fast32_t  id;    // unique indentifier
     //uint8_t   ix,iy,iz;  // grid point index
     //uint8_t
-    Vec3d     pos;
+    //Vec3d     pos;
     //double    mass;
 };
 
 // ===== point index conversion
 
-/*
-inline uint32_t xyz2i( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz ){
-    return ix | ( iy << 8 ) | ( iz << 16 );
+
+inline int_fast64_t xyz2id( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz ){
+    return ix | ( ((int_fast64_t)iy) << 16 ) | ( ((int_fast64_t)iz) << 32 );
 }
 
-inline void i2xyz( int_fast64_t i,  int_fast16_t& ix, int_fast16_t& iy, int_fast16_t& iz ){
-    iz=( i & 0xF00 ) >> 32;
-    iy=( i & 0x0F0 ) >> 16;
-    ix=( i & 0x00F );
+inline void id2xyz( int_fast64_t id,  int_fast16_t& ix, int_fast16_t& iy, int_fast16_t& iz ){
+    iz=( id & 0xFF0000 ) >> 32;
+    iy=( id & 0x00FF00 ) >> 16;
+    ix=( id & 0x0000FF );
 }
 
 // ===== point index conversion
 
-inline uint32_t ij2ib( int_fast16_t ix, int_fast32_t iy, int_fast32_t iz ){
-    return ix | ( iy << 8 ) | ( iz << 16 );
+inline int_fast64_t xy2id( int_fast32_t ix, int_fast32_t iy ){
+    return (int_fast64_t)ix | ( ((int_fast64_t)iy) << 32 );
+    //return ((int_fast64_t)iy) << 32;
+    //return iy << 32;
 }
 
-inline uint32_t ib2ij( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz ){
-    return ix | ( iy << 8 ) | ( iz << 16 );
+inline int_fast64_t id2xy( int_fast64_t id, int_fast32_t ix, int_fast32_t iy ){
+    iy=( id & 0xFFFF0000 ) >> 32;
+    ix=( id & 0x0000FFFF );
 }
-*/
+
 
 // ====================
 // ==== TrussBuilder
 // ====================
 
 class TrussBuilder{
+    public:
 
-    Vec3i nMax;
-    Vec3d scaling;
-    Vec3d invScaling;
-    Vec3d pos0;
+    //static Vec3i nMax;
+    constexpr static int nMax = 1<<16;
+    constexpr static int ioff = 1<<15;
 
-    std::unordered_map<int_fast64_t,Node> nodes;
-    std::unordered_map<int_fast64_t,Bond> bonds;
+    Vec3d  scaling;
+    Vec3d  invScaling;
+    Vec3d  pos0;
 
-    Node& insertNode( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );
+    std::unordered_map<int_fast64_t,Bond>         bonds;
+    std::unordered_map<int_fast64_t,int_fast32_t> nodeIs;
+    std::vector<GridNode>                         nodes;
+
+    //GridNode& insertNode( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );
+    int_fast32_t insertNode  ( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );
+    int_fast32_t getNodeIndex( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );
+    bool         removeNode  ( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );
+
     Bond& insertBond( int_fast32_t i, int_fast32_t j, double l0, const BondType& type );
+    Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, double l0, const BondType& type );
+    Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1,            const BondType& type );
+
+    int_fast64_t getBondKey( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 );
+    bool         removeBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 );
+    bool         removeBond( int_fast32_t i,   int_fast32_t j );
+
+    void  init( int nNodesGuess, int nBondsGuess );
     void  toSoftBody( SoftBody& truss );
 
     // =========== inline functions
 
     inline void index2pos( const Vec3i& index, Vec3d& pos    ){ pos  .set( index.x*scaling.x+pos0.x,    index.y*scaling.y+pos0.y,    index.z*scaling.z+pos0.z    );  };
     inline void pos2index( const Vec3d& pos,   Vec3i& index  ){ index.set( (pos.x-pos0.x)*invScaling.x, (pos.y-pos0.y)*invScaling.y, (pos.z-pos0.z)*invScaling.z );  };
+
+    inline double dist2( const Vec3i& ip1, const Vec3i& ip2  ){
+        Vec3d p1,p2,dp;
+        index2pos( ip1, p1 );
+        index2pos( ip2, p2 );
+        dp.set_sub(p2,p1);
+        return dp.norm2();
+    };
+
+    void  setScaling( const Vec3d& scaling_ ){
+        scaling = scaling_; invScaling.set( 1/scaling.x, 1/scaling.y, 1/scaling.z );
+    };
 
 };
 
