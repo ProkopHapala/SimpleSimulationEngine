@@ -317,7 +317,7 @@ int drawCircleAxis( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis
     glBegin( GL_LINE_LOOP );
     for( int i=0; i<n; i++ ){
         glVertex3f( (float)( pos.x+v.x ), (float)( pos.y+v.y ), (float)( pos.z+v.z )  );
-        printf( " drawCircleAxis %i (%3.3f,%3.3f,%3.3f) \n", i, v.x, v.y, v.z );
+        //printf( " drawCircleAxis %i (%3.3f,%3.3f,%3.3f) \n", i, v.x, v.y, v.z );
         v.rotate_csa( dca, dsa, uaxis );
     }
     glEnd();

@@ -75,17 +75,17 @@ class SoftBody{
 	Vec3d  * velocities = NULL;
 	Vec3d  * forces     = NULL;
     // parameters
-    double * mass     = NULL;
-	double * drag     = NULL;
-	double * invMass  = NULL;
+    double * mass       = NULL;
+	double * drag       = NULL;
+	double * invMass    = NULL;
 
 	// bonds
 	int nbonds;
-    Bond * bonds;
+    Bond * bonds        = NULL;
 
 	// constrains
 	int   nfix;
-	int * fix;
+	int * fix = NULL;
 
 	bool own_points, own_mass, own_fix;
 
@@ -101,7 +101,8 @@ class SoftBody{
 	void move_LeapFrog  (  );
 	void step           (  );
 
-    void allocate       ( int npoints_, int nbonds_, int nfix_, Vec3d  * points_, double * mass_, double * drag_,  int * fix_ );
+    void deallocateAll( );
+    void allocate     ( int npoints_, int nbonds_, int nfix_, Vec3d  * points_, double * mass_, double * drag_,  int * fix_ );
     void prepareBonds ( bool l0_fromPos );
     void preparePoints( bool clearVelocity, double constDrag, double constMass );
 

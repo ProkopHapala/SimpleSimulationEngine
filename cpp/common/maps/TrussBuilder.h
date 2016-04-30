@@ -13,65 +13,6 @@
 
 #include "SoftBody.h"
 
-/*
-class NodeIndex{
-    public:
-    union{
-        struct{ int_fast16_t x,y,z,w; };
-        //struct{ int_fast16_t a,b,c,d;     };
-        int_fast16_t array[4];
-        int_fast64_t i;
-    };
-};
-
-class BondIndex{
-    public:
-    union{
-        struct{ int_fast32_t a,b; };
-        int_fast32_t array[2];
-        int_fast64_t i;
-    };
-};
-
-*/
-
-
-/*
-class ID16{
-    public:
-     union{
-         int_fast8_t array[2];
-         struct{ int_fast8_t l,h;                       };
-         int_fast16_t id;
-     };
-};
-
-class ID32{
-    public:
-     union{
-         int_fast8_t array[4];
-         struct{ int_fast16_t a,b;                         };
-         //struct{ int_fast16_t a;     int_fast8_t bl,bh;  };
-         //struct{ int_fast8_t  al,ah; int_fast16_t b;     };
-         struct{ ID16 l, h; };
-         int_fast32_t id;
-     };
-};
-
-class ID64{
-    public:
-     union{
-        int_fast8_t array[8];
-         struct{ int_fast16_t x,y,z,w;                   };
-         struct{ int_fast32_t a,b;                       };
-         //struct{ int_fast32_t a;     int_fast16_t bl,bh; };
-         //struct{ int_fast16_t al,ah; int_fast32_t b;     };
-         struct{ ID32 l, h; };
-         int_fast64_t id;
-     };
-};
-*/
-
 class GridNode{
     public:
     int_fast16_t  ix,iy,iz;
@@ -125,11 +66,23 @@ class TrussBuilder{
     Vec3d  invScaling;
     Vec3d  pos0;
 
+    int nfixed = 0;
+
     std::vector<BondType> bondTypes;
 
     std::unordered_map<int_fast64_t,Bond>         bonds;
     std::unordered_map<int_fast64_t,int_fast32_t> nodeIs;
     std::vector<GridNode>                         nodes;
+
+
+    BondType default_BondType = {
+        0,          // id
+        7.8,        // density
+        1e+5,1e+5,  // stiffness
+        1e+9,1e+9   // strength
+    };
+
+    // ======== function declarations
 
     //GridNode& insertNode( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );
     int_fast32_t insertNode  ( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );

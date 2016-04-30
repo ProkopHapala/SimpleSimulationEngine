@@ -35,7 +35,7 @@ void AppSDL2OGL::eventHandling( const SDL_Event& event ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
                 case SDLK_ESCAPE:   quit(); break;
-                case SDLK_SPACE:    STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
+                //case SDLK_SPACE:    STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
                 case SDLK_KP_MINUS: zoom*=VIEW_ZOOM_STEP; break;
                 case SDLK_KP_PLUS:  zoom/=VIEW_ZOOM_STEP; break;
             }

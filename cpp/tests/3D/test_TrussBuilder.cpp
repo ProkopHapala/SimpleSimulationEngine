@@ -33,6 +33,9 @@ class TestAppTrussBuilder : public AppSDL2OGL_3D {
 	//int iType  = 0;
     //BondType bondTypes[nMaxTypes];
 
+    bool running = false;
+    int perFrame = 10;
+
     int iType  = 0;
 
     bool startSet = false;
@@ -41,6 +44,7 @@ class TestAppTrussBuilder : public AppSDL2OGL_3D {
     int cursorShape;
 
     TrussBuilder builder;
+    SoftBody     truss;
 
 	// ---- function declarations
 	virtual void draw   ();
@@ -49,6 +53,9 @@ class TestAppTrussBuilder : public AppSDL2OGL_3D {
 
 	void op_enter     ();
 	void op_backspace ();
+	void op_fixNode   ();
+	void drawTruss  ( bool DEBUG );
+	void drawBuilder( bool DEBUG );
 
 	TestAppTrussBuilder( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -69,16 +76,24 @@ TestAppTrussBuilder::TestAppTrussBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
 
 };
 
+void TestAppTrussBuilder::drawTruss( bool DEBUG ){
+    if( ( truss.bonds != NULL )&&( truss.points != NULL )  ){
+        glBegin( GL_LINES );
+        for( int i=0; i<truss.nbonds; i++ ){
+            Bond& bond = truss.bonds[i];
+            Vec3d& pi  = truss.points[bond.i];
+            Vec3d& pj  = truss.points[bond.j];
+            glVertex3f( (float)pi.x, (float)pi.y, (float)pi.z );
+            glVertex3f( (float)pj.x, (float)pj.y, (float)pj.z );
+            if( DEBUG ){
+                printf( " %i  %i %i   (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f)\n",  i,   bond.i, bond.j,  pi.x, pi.y, pi.z,  pj.x, pj.y, pj.z  );
+            }
+        }
+        glEnd();
+    }
+}
 
-void TestAppTrussBuilder::draw   (){
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glEnable(GL_DEPTH_TEST);
-
-    //printf( " ==== frame %i \n", frameCount );
-    //printf( " perspective %i first_person %i \n", perspective, first_person );
-    //printf( " %i %i %i   %i \n", ix, iy, iz, builder.nMax );
-
+void TestAppTrussBuilder::drawBuilder( bool DEBUG ){
     glColor3f( 0.0f, 0.0f, 0.0f );
     for( int i=0; i<builder.nodes.size(); i++ ){
         //truss.points[ node.id ] = node.pos; // do we need this at all ?
@@ -87,6 +102,10 @@ void TestAppTrussBuilder::draw   (){
         builder.index2pos( {node.ix,node.iy,node.iz}, pos );
         //printf(  " (%i,%i,%i)  (%3.3f,%3.3f,%3.3f) \n" , node.ix,node.iy,node.iz, pos );
         Draw3D::drawPointCross( pos, 0.2 );
+
+        if( node.fixed ){
+            Draw3D::drawSphereOctLines  ( 16, 0.2, pos );
+        }
     }
     glBegin(GL_LINES);
     for( auto it : builder.bonds ){
@@ -102,6 +121,29 @@ void TestAppTrussBuilder::draw   (){
         //exit(0);
     }
     glEnd();
+}
+
+
+void TestAppTrussBuilder::draw   (){
+    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	glEnable(GL_DEPTH_TEST);
+
+    //printf( " ==== frame %i \n", frameCount );
+    //printf( " perspective %i first_person %i \n", perspective, first_person );
+    //printf( " %i %i %i   %i \n", ix, iy, iz, builder.nMax );
+
+    if(running){
+        truss.dt   = 0.005;
+        truss.damp = 1.0 - 0.01;
+        for( int i=0; i<perFrame; i++ ){
+             truss.step( );
+        }
+        drawTruss  ( false );
+        //exit(0);
+    }else{
+        drawBuilder( false );
+    }
 
     if( startSet ){
 
@@ -110,7 +152,6 @@ void TestAppTrussBuilder::draw   (){
         builder.index2pos( {ix,iy,iz}, p2 );
         glColor3f( 1.0f, 1.0f, 1.0f ); Draw3D::drawLine( p1, p2 );
     }
-
 
     int ioff = (TrussBuilder::ioff);
     glDisable(GL_LIGHTING);
@@ -153,6 +194,19 @@ void TestAppTrussBuilder::op_backspace(){
     }
 }
 
+void TestAppTrussBuilder::op_fixNode(){
+    int_fast32_t inode = builder.getNodeIndex( ix, iy, iz );
+    if( inode >= 0 ){
+        if( builder.nodes[inode].fixed ){
+            builder.nodes[inode].fixed = false;
+            builder.nfixed--;
+        }else{
+            builder.nodes[inode].fixed = true;
+            builder.nfixed++;
+        }
+    }
+}
+
 void TestAppTrussBuilder::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
     int rot;
@@ -165,6 +219,7 @@ void TestAppTrussBuilder::eventHandling ( const SDL_Event& event  ){
                 case SDLK_s:  iy --; if( iy <  0            ) iy = builder.nMax-1;   break;
                 case SDLK_q:  iz ++; if( iz >= builder.nMax ) iz = 0;                break;
                 case SDLK_e:  iz --; if( iz <  0            ) iz = builder.nMax-1;   break;
+                case SDLK_x:  op_fixNode(); break;
                 case SDLK_LEFTBRACKET:  iType ++; if( iType>=builder.bondTypes.size() ) iType = 0;                            break;
                 case SDLK_RIGHTBRACKET: iType --; if( iType<0                         ) iType = builder.bondTypes.size()-1;   break;
                 case SDLK_RETURN:    op_enter    (); break;
@@ -172,6 +227,7 @@ void TestAppTrussBuilder::eventHandling ( const SDL_Event& event  ){
                 case SDLK_u:  qCamera.setOne();  break;
                 case SDLK_k: printf("to   file \n"); builder.toFile  ( "truss.txt" ); break;
                 case SDLK_l: printf("from file \n"); builder.fromFile( "truss.txt" ); break;
+                case SDLK_SPACE: running = !running; if(running){ builder.toSoftBody( truss ); }; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             break;

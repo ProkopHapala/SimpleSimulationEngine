@@ -31,14 +31,14 @@ void SoftBody::move_LeapFrog( ){
 		velocities[i].mul( damp );
 		velocities[i].add_mul( forces[i], invMass[i] * dt );
 		points[i].    add_mul( velocities[i], dt );
-		/*
+/*
 		printf( " (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) %3.3f %3.3f %3.3f \n",
             points[i].x, points[i].y, points[i].z,
             velocities[i].x, velocities[i].y, velocities[i].z,
             forces[i].x, forces[i].y, forces[i].z,
             invMass[i] ,  dt,  damp
         );
-        */
+*/
 	}
 }
 
@@ -69,6 +69,17 @@ void SoftBody::allocate(	int npoints_, int nbonds_, int nfix_,  	Vec3d  * points
     airFlow.set(0.0,0.0,0.0);
 }
 
+void SoftBody::deallocateAll( ){
+    if( points     != NULL ) delete points;       //printf( "DEBUG delete points\n" );
+    if( velocities != NULL ) delete velocities;   //printf( "DEBUG delete velocities\n" );
+    if( forces     != NULL ) delete forces ;      //printf( "DEBUG delete forces\n" );
+    if( mass       != NULL ) delete mass;         //printf( "DEBUG delete mass\n" );
+    if( drag       != NULL ) delete drag;         //printf( "DEBUG delete drag\n" );
+    if( invMass    != NULL ) delete invMass;      //printf( "DEBUG delete invMass\n" );
+    if( bonds      != NULL ) delete bonds;        //printf( "DEBUG delete bonds\n" );
+    if( fix        != NULL ) delete fix;          //printf( "DEBUG delete fix\n" );
+}
+
 void SoftBody::prepareBonds( bool l0_fromPos ){
     for( int i=0; i<nbonds; i++ ){
         Bond& bond = bonds[i];
@@ -79,6 +90,8 @@ void SoftBody::prepareBonds( bool l0_fromPos ){
         mass[bond.j] += dmass;
         drag[bond.i] += ddrag;
         drag[bond.j] += ddrag;
+        //printf( " bond %i %i %e %e %e \n", i, bond.type.id, bond.type.linearDensity, bond.type.kPress, bond.type.kTens );
+        //printf( " bond %i %f %f  %f \n", i, bond.l0, dmass, ddrag );
     }
 }
 
@@ -88,7 +101,7 @@ void SoftBody::preparePoints(  bool clearVelocity, double constDrag, double cons
         if( constDrag > 0 ) drag[i] = constDrag;
         if( constMass > 0 ) mass[i] = constMass;
 		invMass[i] = 1/mass[i];
-		//printf( " %f %f   %f %f %f \n", mass[i], invMass[i], velocities[i].x, velocities[i].y, velocities[i].z  );
+		//printf( " poins %i %e %e   (%e,%e,%e) \n", i, mass[i], invMass[i], velocities[i].x, velocities[i].y, velocities[i].z  );
 	}
 }
 
