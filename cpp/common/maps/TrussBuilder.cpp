@@ -1,6 +1,7 @@
 
+#include <iostream>
+#include <fstream>
 
-#include "SoftBody.h"
 #include "TrussBuilder.h" // THE HEADER
 
 // ============= editor functions
@@ -101,19 +102,92 @@ bool TrussBuilder::removeBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t 
 }
 
 
-
-
-
+bool TrussBuilder::removeNodesWithoutBond( ){
+    int  * permut = new int[nodes.size()];
+    for(int i=0; i<nodes.size(); i++ ){
+        permut[i] = -1;
+    }
+    for( auto it : bonds ){
+        Bond& bond = it.second;
+        permut[bond.i] = 1;
+        permut[bond.j] = 1;
+    }
+    int n=0;
+    for(int i=0; i<nodes.size(); i++ ){
+        if( permut[i]>=0 ){
+            permut[i]=n;
+            nodes[n] = nodes[i];
+            n++;
+        }
+    }
+    for( auto it : bonds ){
+        Bond& bond = it.second;
+        bond.i = permut[bond.i];
+        bond.j = permut[bond.j];
+    }
+    delete permut;
+}
 
 // ============= IO functions
 
-void  TrussBuilder::init( int nNodesGuess, int nBondsGuess ){
-    bonds .clear();  bonds.reserve ( nBondsGuess );
-    nodeIs.clear();  bonds.reserve ( nNodesGuess );
-    nodes .clear();  nodes.reserve ( nNodesGuess );
+void TrussBuilder::init( int nNodesGuess, int nBondsGuess, int nBondsTypesGuess ){
+    bonds .clear(); nodeIs.clear(); // nodes .clear(); bondTypes.clear();
+    bonds .reserve ( nBondsGuess );
+    nodeIs.reserve ( nNodesGuess );
+    nodes .reserve ( nNodesGuess );
+    bondTypes.reserve(nBondsTypesGuess);
     setScaling( {1.0d,1.0d,1.0d} );
     pos0.set  ( -ioff, -ioff, -ioff );
+    for( int i=0; i<bondTypes.size(); i++ ){
+        bondTypes[i].id = i;
+    }
 };
+
+void TrussBuilder::toFile( char * fname ){
+    std::ofstream fout;
+    fout.open( fname );
+    fout << nodes.size() << "\n";
+    for( int i=0; i<nodes.size(); i++ ){
+        GridNode& node = nodes[i];
+        fout << (node.ix-ioff) << " " << (node.iy-ioff) << " " << (node.iz-ioff) << "\n";
+    }
+    fout << bonds.size() << "\n";
+    for( auto it : bonds ){
+        Bond& bond = it.second;
+        //fout << bond.i << " " << bond.j << " " << bond.type.id << "\n";
+        fout << bond.i << " " << bond.j << " " << 0 << "\n";
+    }
+    fout.close();
+}
+
+void TrussBuilder::fromFile( char * fname ){
+    std::ifstream fin;
+    fin.open( fname );
+    if ( fin.is_open() ){
+        int nnodes,nbonds;
+        fin >> nnodes;     printf( "nnodes %i \n", nnodes );
+        nodes.clear(); nodeIs.clear(); bonds.clear();
+        nodes .reserve( nnodes );
+        nodeIs.reserve( nnodes );
+        for(int i=0; i<nnodes; i++){
+            int ix,iy,iz;
+            fin >> ix >> iy >> iz;
+            //fin >> iz >> iy >> ix;
+            printf( " %i %i %i \n", ix, iy, iz );
+            ix+=ioff; iy+=ioff; iz+=ioff;
+            insertNode( ix, iy, iz );
+        }
+        fin >> nbonds;     printf( "nbonds %i \n", nbonds );
+        for(int i=0; i<nbonds; i++){
+            int inod, jnod, itype;
+            fin >> inod >> jnod >> itype;
+            //fin >> itype >> jnod >> inod;
+            printf( " %i %i %i \n", inod, jnod, itype );
+            insertBond( nodes[inod].ix, nodes[inod].iy, nodes[inod].iz, nodes[jnod].ix, nodes[jnod].iy, nodes[jnod].iz, bondTypes[itype] );
+        }
+    }
+    fin.close();
+}
 
 void TrussBuilder::toSoftBody( SoftBody& truss ){
     truss.allocate( nodes.size(), bonds.size(), 3, NULL, NULL, NULL, NULL );

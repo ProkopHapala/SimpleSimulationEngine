@@ -28,10 +28,12 @@
 class TestAppTrussBuilder : public AppSDL2OGL_3D {
 	public:
 
-	const static int nMaxTypes = 256;
-	int nTypes = 0;
-	int iType  = 0;
-    BondType bondTypes[nMaxTypes];
+	//const static int nMaxTypes = 256;
+	//int nTypes = 0;
+	//int iType  = 0;
+    //BondType bondTypes[nMaxTypes];
+
+    int iType  = 0;
 
     bool startSet = false;
     int_fast16_t ix=TrussBuilder::ioff,iy=TrussBuilder::ioff,iz=TrussBuilder::ioff;
@@ -54,7 +56,7 @@ class TestAppTrussBuilder : public AppSDL2OGL_3D {
 
 TestAppTrussBuilder::TestAppTrussBuilder( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
-    builder.init( 256, 256*8 );
+    builder.init( 256, 256*8, 16 );
 
     cursorShape = glGenLists(1);
     glNewList( cursorShape , GL_COMPILE );
@@ -64,12 +66,6 @@ TestAppTrussBuilder::TestAppTrussBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
         //Draw3D::drawAxis( 0.5f );
         glPopMatrix();
     glEndList();
-
-    for(int i=0; i<10; i++){
-        for(int j=0; j<10; j++){
-           printf(  "i,j,id %i %i %li \n", i, j, xy2id( i, j ) );
-        }
-    }
 
 };
 
@@ -136,7 +132,7 @@ void TestAppTrussBuilder::op_enter(){
     if( startSet ){
         //printf( " insert \n" );
         if( (ix!=oix) || (iy!=oiy) || (iz!=oiz) ){
-            builder.insertBond( oix, oiy, oiz, ix, iy, iz, bondTypes[iType] );
+            builder.insertBond( oix, oiy, oiz, ix, iy, iz, builder.bondTypes[iType] );
         }
         startSet=false;
     }else{
@@ -169,11 +165,13 @@ void TestAppTrussBuilder::eventHandling ( const SDL_Event& event  ){
                 case SDLK_s:  iy --; if( iy <  0            ) iy = builder.nMax-1;   break;
                 case SDLK_q:  iz ++; if( iz >= builder.nMax ) iz = 0;                break;
                 case SDLK_e:  iz --; if( iz <  0            ) iz = builder.nMax-1;   break;
-                case SDLK_LEFTBRACKET:  iType ++; if( iType>=nTypes ) iType = 0;          break;
-                case SDLK_RIGHTBRACKET: iType --; if( iType< 0      ) iType = nTypes-1;   break;
+                case SDLK_LEFTBRACKET:  iType ++; if( iType>=builder.bondTypes.size() ) iType = 0;                            break;
+                case SDLK_RIGHTBRACKET: iType --; if( iType<0                         ) iType = builder.bondTypes.size()-1;   break;
                 case SDLK_RETURN:    op_enter    (); break;
                 case SDLK_BACKSPACE: op_backspace(); break;
                 case SDLK_u:  qCamera.setOne();  break;
+                case SDLK_k: printf("to   file \n"); builder.toFile  ( "truss.txt" ); break;
+                case SDLK_l: printf("from file \n"); builder.fromFile( "truss.txt" ); break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             break;

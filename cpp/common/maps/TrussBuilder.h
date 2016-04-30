@@ -11,6 +11,8 @@
 //#include "Mat3.h"
 #include "quaternion.h"
 
+#include "SoftBody.h"
+
 /*
 class NodeIndex{
     public:
@@ -116,12 +118,14 @@ class TrussBuilder{
     public:
 
     //static Vec3i nMax;
-    constexpr static int nMax = 1<<16;
-    constexpr static int ioff = 1<<15;
+    constexpr static int          nMax = 1<<16;
+    constexpr static int_fast16_t ioff = 1<<15;
 
     Vec3d  scaling;
     Vec3d  invScaling;
     Vec3d  pos0;
+
+    std::vector<BondType> bondTypes;
 
     std::unordered_map<int_fast64_t,Bond>         bonds;
     std::unordered_map<int_fast64_t,int_fast32_t> nodeIs;
@@ -140,8 +144,13 @@ class TrussBuilder{
     bool         removeBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 );
     bool         removeBond( int_fast32_t i,   int_fast32_t j );
 
-    void  init( int nNodesGuess, int nBondsGuess );
+    bool removeNodesWithoutBond( );
+
+    void  init( int nNodesGuess, int nBondsGuess, int nBondsTypesGuess );
     void  toSoftBody( SoftBody& truss );
+
+    void toFile  ( char * fname );
+    void fromFile( char * fname );
 
     // =========== inline functions
 
