@@ -15,12 +15,13 @@
 #include "geom2D.h"
 
 #include "TerrainHydraulics.h"
+#include "testUtils.h"
 
 // ======================  TestApp
 
 class TestAppTerrainHydraulics : public AppSDL2OGL{
 	public:
-    int perframe = 20;
+    int perframe = 5;
     TerrainHydraulics terrain;
     int shape;
     bool running = true;
@@ -95,6 +96,7 @@ TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEI
 	glEndList();
 */
 
+/*
     terrain.init_outflow();
     for ( int ii=0; ii<50; ii++){
         int i = rand()%terrain.ntot;
@@ -104,6 +106,10 @@ TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEI
 
     }
     //for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = terrain.ground[i]; }
+*/
+
+
+    for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = 0.1; terrain.water_[i] = 0.1; }
 
     shape=glGenLists(1);
 }
@@ -112,12 +118,17 @@ void TestAppTerrainHydraulics::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
-
+    long t0;
     if( running ){
+        t0 = getCPUticks();
         for( int i=0; i<perframe; i++ ){
-            terrain.outflow_step();
-            if( terrain.nContour == 0 ){  running=false; break; }
+            //terrain.outflow_step();
+            //if( terrain.nContour == 0 ){  running=false; break; }
+            terrain.rain_and_evaporation();
+            terrain.flow_errosion_step();
         }
+        long tcomp = getCPUticks() - t0;
+        t0    = getCPUticks();
         if( running ){
             renderMapContent( -0.1*terrain.nx, -0.1*terrain.ny,  0.2, 1.0, 1.0 );
         }else{
@@ -125,9 +136,12 @@ void TestAppTerrainHydraulics::draw(){
             renderMapContent( -0.1*terrain.nx, -0.1*terrain.ny,  0.2, 1.0, 1.0 );
             glEndList();
         }
+        long tplot = getCPUticks() - t0;
+        printf( " tplot %3.3f Mtick tcomp %3.3f Mtick ( %3.3f ticks/pix ) \n", tplot*1e-6, tcomp*1e-6, ((double)tcomp)/(terrain.ntot*perframe) );
     }else{
         glCallList( shape );
     }
+
 
     //renderMapContent( );
 
