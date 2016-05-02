@@ -45,6 +45,9 @@ public:
     double f_mix       = 0.1;
     double mf_mix      = 1.0-f_mix;
 
+    int droplet_ix, droplet_iy;
+    double droplet_size,droplet_h;
+
 	// ==== function declaration
 
     void genTerrainNoise( int n, double scale, double hscale, double fdown, double strength, int seed, const Vec2d& pos0 );
@@ -52,9 +55,13 @@ public:
     void outflow_step();
     void extend_path( float val, int oi, int i );
 
+    void initErrosion( double w );
     void flow_errosion_step  ( );
     void rain_and_evaporation( );
     int  flow_errosion_step_noRain( );
+    void initDroplet  ( double size_ );
+    bool droplet_step ( );
+    void errodeDroples( int n, int nStepMax, double size_ );
 
 	// ==== inline functions
 

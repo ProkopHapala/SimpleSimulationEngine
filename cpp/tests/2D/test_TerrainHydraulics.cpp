@@ -109,7 +109,8 @@ TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEI
 */
 
 
-    for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = 1.0; terrain.water_[i] = 1.0; }
+    //for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = 1.0; terrain.water_[i] = 1.0; }
+    terrain.initErrosion( 1.0 );
 
     shape=glGenLists(1);
 }
@@ -121,12 +122,14 @@ void TestAppTerrainHydraulics::draw(){
     long t0;
     if( running ){
         t0 = getCPUticks();
+        //perframe = 1;
         for( int i=0; i<perframe; i++ ){
             //terrain.outflow_step();
             //if( terrain.nContour == 0 ){  running=false; break; }
             //terrain.rain_and_evaporation(); terrain.flow_errosion_step();
 
             int npix = terrain.flow_errosion_step_noRain( );  if( npix < terrain.nx ){ running = false;}
+            //terrain.errodeDroples( 1000, 100, 0.01 );
         }
         long tcomp = getCPUticks() - t0;
         t0    = getCPUticks();
@@ -152,8 +155,13 @@ void TestAppTerrainHydraulics::drawHUD(){}
 
 
 void TestAppTerrainHydraulics::eventHandling( const SDL_Event& event ){
-    /*
     switch( event.type ){
+        case SDL_KEYDOWN :
+            switch( event.key.keysym.sym ){
+                case SDLK_r:  terrain.initErrosion( 0.8 ); running=true;  break;
+            }
+            break;
+         /*
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
@@ -176,8 +184,8 @@ void TestAppTerrainHydraulics::eventHandling( const SDL_Event& event ){
                     break;
             }
             break;
+        */
     };
-    */
     AppSDL2OGL::eventHandling( event );
 };
 

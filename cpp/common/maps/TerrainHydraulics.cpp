@@ -72,41 +72,13 @@ void TerrainHydraulics::extend_path( float val, int oi, int i ){
     }
 }
 
-
-/*
-void flow_errosion_step( int i ){
-    // gradient evaluation
-    //int ii = 0;
-    int which_mask = istep%mask;
-    int    imaskx   = mask [which_mask<<1  ];
-    int    imasky   = mask [which_mask<<1+1];
-    double cdist    = dists[which_mask];
-    for(int iy=1; iy<ny; iy++){
-        for(int iy=1; j<nx; ix++){
-            int ii =  xy2i( ix, iy );
-            double hij   = ground[ii];
-            int    iimin = imins [ii];
-            double dhmin = ground[iimin]-hij;
-            double dh,dhmin2=0;
-            int itest = ii + imask;
-            dh = (ground[itest]-hij)*cdist;   if( dh<dhmin ){  iimin = itest;  imins[ii] = itest; dhmin2=dhmin; dhmin = dh;   }
-            //println( i+" "+j+" "+dhmin+" "+dhmin2 );
-            if( dhmin<-0.00001 ){
-                double wij   = watter[ii];
-                double sediment = wij*c_sediment/(1-dhmin); wij-=sediment;
-                watter_[iimin] += wij;
-                //float mud =  c_errode * wij*(-dhmin);
-                //float mud =  c_errode * 5.0* wij*(-dhmin);
-                double mud =  c_errode * sqrt(wij)*(-dhmin);
-                //mud = min( mud, (dhmin2 - dhmin) * 0.1  );  // WTF IS THIS ????
-                h[ii]            =   hij  - mud + sediment;
-                //h[i][j]            =    f_orig*h_orig[i][j] + mf_orig*hij  - mud + sediment;
-                h[iimin] += mud*f_sediment;
-            }
-        }
+void TerrainHydraulics::initErrosion( double w ){
+    for (int i=0; i<ntot; i++){
+            if(ground[i]>1.0) ground[i] = 1.0;
+            if(ground[i]<0.0) ground[i] = 0.0;
+            water[i] = w; water_[i] = 0.0;
     }
 }
-*/
 
 int TerrainHydraulics::flow_errosion_step_noRain( ){
 // gradient evaluation
@@ -119,7 +91,7 @@ int TerrainHydraulics::flow_errosion_step_noRain( ){
             double hij  = ground[ii];
             double dh,dhmin=0,dhmin2=0;
             int jj,iimin;
-            jj = ii+nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
+            jj = ii-nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
             jj = ii+nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
             jj = ii-1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
             jj = ii+1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
@@ -163,7 +135,7 @@ void TerrainHydraulics::flow_errosion_step( ){
             double dh,dhmin=0,dhmin2=0;
             int jj,iimin;
 
-            jj = ii+nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
+            jj = ii-nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
             jj = ii+nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
             jj = ii-1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
             jj = ii+1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
@@ -210,5 +182,53 @@ void TerrainHydraulics::rain_and_evaporation( ){
         }
     }
 }
+
+void TerrainHydraulics::initDroplet ( double size_ ){
+    droplet_size = size_;
+    droplet_ix = rand()%nx;
+    droplet_iy = rand()%ny;
+    droplet_h = ground[ xy2i( droplet_ix, droplet_iy ) ];
+
+    //printf( "initDroplet  %i %i    %f  \n", droplet_ix, droplet_iy, droplet_h  );
+}
+
+bool TerrainHydraulics::droplet_step( ){
+    if( (droplet_ix > 0)&(droplet_ix < nx)&(droplet_iy > 0)&(droplet_iy < ny) ){
+        int    ii   = xy2i( droplet_ix, droplet_iy );
+        int xmin,ymin;
+        double h,hmin=droplet_h;
+        bool found=false;
+        h = ground[ii-nx  ]; if( h<hmin ){ ymin = -1; xmin =  0; hmin = h; found=true; }
+        h = ground[ii+nx  ]; if( h<hmin ){ ymin = +1; xmin =  0; hmin = h; found=true; }
+        h = ground[ii   -1]; if( h<hmin ){ ymin =  0; xmin = -1; hmin = h; found=true; }
+        h = ground[ii   +1]; if( h<hmin ){ ymin =  0; xmin = +1; hmin = h; found=true; }
+        h = ground[ii-nx+1]; if( h<hmin ){ ymin = -1; xmin = +1; hmin = h; found=true; }
+        h = ground[ii+nx-1]; if( h<hmin ){ ymin = +1; xmin = -1; hmin = h; found=true; }
+        //if( (hmin-droplet_h)<-0.00001 ){
+        //found=true;
+        //printf( " %i %i   %i %i   %f %f %f  \n", droplet_ix, droplet_iy,  xmin, ymin, h, hmin, droplet_h  );
+        if( found ){
+                //printf( " found \n" );
+                //int    jj   = xy2i( droplet_ix, droplet_iy );
+                ground[ii   ]  -= droplet_size;
+                droplet_h   = hmin;
+                droplet_ix += xmin;
+                droplet_iy += ymin;
+                //ground[iimin] += mud*f_sediment;
+                return false;
+        }
+    }
+    return true;
+}
+
+void TerrainHydraulics::errodeDroples( int n, int nStepMax, double size_ ){
+    for(int i=0; i<n; i++ ){
+        initDroplet( size_ );
+        for(int j=0; j<nStepMax; j++ ){
+            if( droplet_step( ) ) break;
+        }
+    }
+};
+
 
 
