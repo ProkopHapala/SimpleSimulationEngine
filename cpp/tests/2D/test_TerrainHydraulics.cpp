@@ -21,6 +21,7 @@
 
 class TestAppTerrainHydraulics : public AppSDL2OGL{
 	public:
+    int job_type = 1;
     int perframe = 3;
     TerrainHydraulics terrain;
     int shape;
@@ -46,7 +47,7 @@ double TestAppTerrainHydraulics::terrain_color( int i ){
     float w   = terrain.water [i];
     if( w > g ){
         float c = (1-20*(w-g)); if(c<0) c=0;
-        glColor3f(g*g*c,0.2+0.8*g*(1-g)*c,1.0);
+        glColor3f(g*g*c,0.2+0.8*g*(1-g)*c,0.5);
     }else{
         glColor3f(g*g,0.2+0.8*(1-g)*g,0);
     }
@@ -96,18 +97,7 @@ TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEI
 	glEndList();
 */
 
-/*
-    terrain.init_outflow();
-    for ( int ii=0; ii<50; ii++){
-        int i = rand()%terrain.ntot;
-        terrain.contour2[ii] = i;
-        terrain.nContour++;
-        terrain.water[i] = terrain.ground[i];
-
-    }
     //for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = terrain.ground[i]; }
-*/
-
 
     //for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = 1.0; terrain.water_[i] = 1.0; }
     terrain.initErrosion( 1.0 );
@@ -124,12 +114,30 @@ void TestAppTerrainHydraulics::draw(){
         t0 = getCPUticks();
         //perframe = 1;
         for( int i=0; i<perframe; i++ ){
-            //terrain.outflow_step();
-            //if( terrain.nContour == 0 ){  running=false; break; }
-            //terrain.rain_and_evaporation(); terrain.flow_errosion_step();
-
-            int npix = terrain.flow_errosion_step_noRain( );  if( npix < terrain.nx ){ running = false;}
-            //terrain.errodeDroples( 1000, 100, 0.01 );
+            switch(job_type){
+                case 1: {
+                    int npix = terrain.flow_errosion_step_noRain( );
+                    if( npix < terrain.nx ){
+                        job_type = 2;
+                        terrain.init_outflow();
+                        for ( int ii=0; ii<50; ii++){
+                            int i = rand()%terrain.ntot;
+                            terrain.contour2[ii] = i;
+                            terrain.nContour++;
+                            terrain.water[i] = terrain.ground[i];
+                        }
+                        //running = false;
+                    }
+                    //terrain.errodeDroples( 1000, 100, 0.01 );
+                    break; }
+                case 2:{
+                    terrain.outflow_step();
+                    if( terrain.nContour == 0 ){
+                        //job_type = 2;
+                        running=false; break;
+                    }
+                    break;}
+            }
         }
         long tcomp = getCPUticks() - t0;
         t0    = getCPUticks();
