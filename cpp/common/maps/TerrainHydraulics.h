@@ -13,7 +13,6 @@ public:
     static constexpr int     mask [nmask*2] = { 0,-1, 0,1, -1,0, +1,0, -1,-1, -1,+1, +1,-1, +1+1 };
     static constexpr double  dists[nmask  ] = { 1.0, 1.0, 1.0, 1.0, isqrt2, isqrt2, isqrt2, isqrt2 };
 
-
     int istep;
 	int    nx, ny, ntot;
 	double * ground;
@@ -28,16 +27,23 @@ public:
 	int    * contour2;
 	double * water_;
 
-
-	double dt          = 0.2;
-    double c_errode    = 0.4 *dt;
-    double c_rain      = 0.0001*dt;
-    double c_blur      = 0.0*dt;
-    double c_sediment  = 0.001*dt;
+/*
+    double c_errode    = 0.4;
+    double c_rain      = 0.0001;
+    double c_blur      = 0.0;
+    double c_sediment  = 0.001;
     double f_sediment  = 0.1;
     double f_mix       = 0.1;
     double mf_mix      = 1.0-f_mix;
+*/
 
+    double c_errode    = 0.4;
+    double c_rain      = 0.00;
+    //double c_blur      = 0.0;
+    double c_sediment  = 0.001;
+    double f_sediment  = 0.1;
+    double f_mix       = 0.1;
+    double mf_mix      = 1.0-f_mix;
 
 	// ==== function declaration
 
@@ -48,6 +54,7 @@ public:
 
     void flow_errosion_step  ( );
     void rain_and_evaporation( );
+    int  flow_errosion_step_noRain( );
 
 	// ==== inline functions
 

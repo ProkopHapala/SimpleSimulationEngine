@@ -108,13 +108,57 @@ void flow_errosion_step( int i ){
 }
 */
 
+int TerrainHydraulics::flow_errosion_step_noRain( ){
+// gradient evaluation
+    int ii = 0;
+    int npix=0;
+    for(int iy=1;iy<ny-1;iy++){
+        for(int ix=1;ix<ny-1;ix++){
+            //int    ii   = xy2i( ix, iy );
+            ii++;
+            double hij  = ground[ii];
+            double dh,dhmin=0,dhmin2=0;
+            int jj,iimin;
+            jj = ii+nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
+            jj = ii+nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
+            jj = ii-1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
+            jj = ii+1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
+            jj = ii-nx+1; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
+            jj = ii+nx-1; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
+            if( dhmin<-0.00001 ){
+                double wij       = water[ii];
+                if(wij>0.0001) npix++;
+                double sediment  = wij*c_sediment/(1-dhmin);
+                wij             -= sediment;
+                water_[iimin]   += wij;
+                water[ii]        = 0;
+                double mud =  c_errode * sqrt(wij)*(-dhmin);
+                ground[ii   ]    = hij - mud + sediment;
+                ground[iimin]   += mud*f_sediment;
+            }
+        }
+    }
+    ii =0;
+    for(int iy=0;iy<ny;iy++){
+        for(int ix=0;ix<nx;ix++){
+            double wij = water_[ii];
+            water [ii] = wij;
+            water_[ii] = 0.0;
+            ii++;
+        }
+    }
+    //double * tmp = water; water=water_; water = tmp;
+    return npix;
+}
 
 void TerrainHydraulics::flow_errosion_step( ){
 // gradient evaluation
 //int ii = 0;
+
+    int ii =0;
     for(int iy=1;iy<ny-1;iy++){
         for(int ix=1;ix<ny-1;ix++){
-            int    ii   = xy2i( ix, iy );
+            //int    ii   = xy2i( ix, iy );
             double hij  = ground[ii];
             double dh,dhmin=0,dhmin2=0;
             int jj,iimin;
@@ -136,28 +180,33 @@ void TerrainHydraulics::flow_errosion_step( ){
                 */
 
                 double wij       = water[ii];
+
                 double sediment  = wij*c_sediment/(1-dhmin);
                 wij             -= sediment;
                 water_[iimin]   += wij;
                 //float mud =  c_errode * wij*(-dhmin);
                 double mud =  c_errode * sqrt(wij)*(-dhmin);
+                // double mud =  c_errode * wij*(-dhmin);
                 //mud = fmin( mud, (dhmin2 - dhmin) * 0.1  );   // WTF IS THIS ????
                 ground[ii   ]  = hij - mud + sediment;
                 //h[i][j]            =    f_orig*h_orig[i][j] + mf_orig*hij  - mud + sediment;
                 ground[iimin] += mud*f_sediment;
-
             }
+            ii++;
         }
     }
+    //printf( "npix %i \n", npix);
 }
 
 void TerrainHydraulics::rain_and_evaporation( ){
+    int ii =0;
     for(int iy=0;iy<ny;iy++){
         for(int ix=0;ix<nx;ix++){
-            int ii     = xy2i( ix, iy );
+            //int ii     = xy2i( ix, iy );
             double wij = water_[ii]        +  c_rain;
             water [ii] = water [ii]*mf_mix +  wij*f_mix;
             water_[ii] = 0.0;
+            ii++;
         }
     }
 }

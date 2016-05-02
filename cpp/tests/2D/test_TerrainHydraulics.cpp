@@ -21,7 +21,7 @@
 
 class TestAppTerrainHydraulics : public AppSDL2OGL{
 	public:
-    int perframe = 5;
+    int perframe = 3;
     TerrainHydraulics terrain;
     int shape;
     bool running = true;
@@ -46,9 +46,9 @@ double TestAppTerrainHydraulics::terrain_color( int i ){
     float w   = terrain.water [i];
     if( w > g ){
         float c = (1-20*(w-g)); if(c<0) c=0;
-        glColor3f(g*c,0.7*(1-g)*c,1.0);
+        glColor3f(g*g*c,0.2+0.8*g*(1-g)*c,1.0);
     }else{
-        glColor3f(g,0.7*(1-g),0);
+        glColor3f(g*g,0.2+0.8*(1-g)*g,0);
     }
     return g;
 }
@@ -109,7 +109,7 @@ TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEI
 */
 
 
-    for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = 0.1; terrain.water_[i] = 0.1; }
+    for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = 1.0; terrain.water_[i] = 1.0; }
 
     shape=glGenLists(1);
 }
@@ -124,8 +124,9 @@ void TestAppTerrainHydraulics::draw(){
         for( int i=0; i<perframe; i++ ){
             //terrain.outflow_step();
             //if( terrain.nContour == 0 ){  running=false; break; }
-            terrain.rain_and_evaporation();
-            terrain.flow_errosion_step();
+            //terrain.rain_and_evaporation(); terrain.flow_errosion_step();
+
+            int npix = terrain.flow_errosion_step_noRain( );  if( npix < terrain.nx ){ running = false;}
         }
         long tcomp = getCPUticks() - t0;
         t0    = getCPUticks();
