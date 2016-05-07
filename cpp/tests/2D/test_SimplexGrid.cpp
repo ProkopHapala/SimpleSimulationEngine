@@ -127,7 +127,7 @@ void TestAppSimplexGrid::renderMapContent( ){
 
 TestAppSimplexGrid::TestAppSimplexGrid( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-    grid.init( 1.7, 8 );
+    grid.init( 1.0, 8 );
 
     shape=glGenLists(1);
 	glNewList( shape, GL_COMPILE );

@@ -154,64 +154,57 @@ class SimplexGrid : public HashMap<OBJECT>{
         double pa,pb,pc, invPa,invPb,invPc;
         int    ia,ib,ic,i;
         printf( " %f %f \n", step, invStep );
-        //pa = fabs( dirHat.dot({ 0.0d        ,0.86602540378*step} ) );     invPa = 1/pa;
-        pa = dirHat.dot( { 0.0d        ,1.15470053839*invStep} );  invPa = 1/pa;
-        //pb = fabs( dirHat.dot({ 1.0d*invStep,0.57735026919*invStep} ) );  invPb = 1/pb;
-        //pc = fabs( dirHat.dot({-1.0d*invStep,0.57735026919*invStep} ) );  invPc = 1/pc;
+        double mda,mdb,mdc, mta,mtb,mtc;
+        pa  = dirHat.dot( { 0.0d        ,1.15470053839*invStep} );
+        pb  = dirHat.dot( { 1.0d*invStep,0.57735026919*invStep} );
+        pc  = dirHat.dot( {-1.0d*invStep,0.57735026919*invStep} );
+        mda = pos0.dot  ( { 0.0d        ,1.15470053839*invStep} );
+        mdb = pos0.dot  ( { 1.0d*invStep,0.57735026919*invStep} );
+        mdc = pos0.dot  ( {-1.0d*invStep,0.57735026919*invStep} );
+        if( pa < 0 ){ pa=-pa; mda = 1-mda; };
+        if( pb < 0 ){ pa=-pb; mdb = 1-mdb; };
+        if( pc < 0 ){ pc=-pc; mdc = 1-mdc; };
+        ia=(int)(mda + MAP_OFFSET);   mda = 1-(mda - (ia - MAP_OFFSET) );
+        ib=(int)(mdb + MAP_OFFSET);   mdb = 1-(mdb - (ib - MAP_OFFSET) );
+        ic=(int)(mdc + MAP_OFFSET);   mdc = 1-(mdc - (ic - MAP_OFFSET) );
+        invPa = 1/pa; invPb = 1/pb; invPc = 1/pc;
         //printf( " t_1,2  %f %f   p_a,b,c %f %f %f  \n", t0, t1, pa, pb, pc );
         printf( " pa invPa \n", pa, invPa );
         double t = 0;
-        double mda,mdb,mdc, mta,mtb,mtc;
-
-        //if( pa > 0 ){
-        //    invPa = 1/pa;
-        //}else{
-        //    pa = -pa; invPa = 1/pa;
-        //}
-
-        mda = t0*0.86602540378;   ia=(int)(mda + MAP_OFFSET);   mda = 1-(mda - (ia - MAP_OFFSET) );   //tma = mda * invPa;
-        //mdb = t0*invPb;   ib=(int)(mdb + MAP_OFFSET);   mdb = 1-(mdb - (ib - MAP_OFFSET) );   //tmb = mdb * invPb;
-        //mdc = t0*invPc;   ic=(int)(mdc + MAP_OFFSET);   mdc = 1-(mdc - (ic - MAP_OFFSET) );   //tmc = mdc * invPc;
         i=0;
-        //exit(0);
-        //mda = 1;
         while( t<tspan ){
-            double tmb=0,tmc=0;
             double tma = mda * invPa;
-            //double tma = mda * pa;
-            t += tma; ia++;
-            mda = 1;
-            boundaries[i] = 0;
-
-            /*
             double tmb = mdb * invPb;
             double tmc = mdc * invPc;
+            //t += tma; boundaries[i] = 0;  mda = 1;
+            //t += tmb; boundaries[i] = 1;  mdb = 1;
+            //t += tmc; boundaries[i] = 2;  mdc = 1;
             if( tma < tmb ){
                if( tma < tmc ){  // a min
-                    t    += tma; ia++;
+                    t    += tma;
                     mda   = 1; mdb -= pb*tma; mdc -= pc*tma;
-                    boundaries[i] = 0;
+                    boundaries[i] = 0; ia++;
                }else{            // c min
                     t    += tmc; ic++;
                     mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
-                    boundaries[i] = 2;
+                    boundaries[i] = 2; ic++;
                }
             }else{
                if( tmb < tmc ){  // b min
-                    t    += tmb; ib++;
-                    mda   = pa*tmb; mdb = 1; mdc -= pc*tmb;
-                    boundaries[i] = 1;
+                    t    += tmb;
+                    mda  -= pa*tmb; mdb = 1; mdc -= pc*tmb;
+                    boundaries[i] = 1; ib++;
                }else{            // c min
-                    t    += tmc; ic++;
+                    t    += tmc;
                     mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
-                    boundaries[i] = 2;
+                    boundaries[i] = 2; ic++;
                }
             }
-            */
             hits[i].set( pos0 );
             hits[i].add_mul( dirHat, t );
             //hits[i].set_mul( dirHat, t );
-            printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], tma, tmb, tmc,       t, hits[i].x, hits[i].y );
+            //printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], tma, tmb, tmc,       t, hits[i].x, hits[i].y );
+            printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], mda, mdb, mdc,       t, hits[i].x, hits[i].y );
             i++;
         }
         return i;
