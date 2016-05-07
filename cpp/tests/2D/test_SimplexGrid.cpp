@@ -31,6 +31,11 @@ class TestAppSimplexGrid : public AppSDL2OGL{
     bool mouse_left = false;
     bool mouse_right = false;
 
+    int nhits;
+    Vec2d p1,p2;
+    Vec2d hits[1024];
+    int   boundaries[1024];
+
 	// ---- function declarations
 
 	virtual void draw   ();
@@ -122,7 +127,7 @@ void TestAppSimplexGrid::renderMapContent( ){
 
 TestAppSimplexGrid::TestAppSimplexGrid( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-    grid.init( 0.8, 8 );
+    grid.init( 1.7, 8 );
 
     shape=glGenLists(1);
 	glNewList( shape, GL_COMPILE );
@@ -150,6 +155,12 @@ TestAppSimplexGrid::TestAppSimplexGrid( int& id, int WIDTH_, int HEIGHT_ ) : App
 
     glColor3f(0.1f,0.1f,0.1f); Draw2D::drawSimplexGrid( 10, (float)grid.step );
 
+    Vec2d dirHat;
+    p1.set(0.9,0.6);
+    p2.set(8.2,8.3);
+    dirHat.set_sub( p2, p1 ); dirHat.normalize();
+    nhits = grid.raster_line( dirHat, p1, p2, hits, boundaries );
+
 	glEndList();
 
 }
@@ -173,6 +184,17 @@ void TestAppSimplexGrid::draw(){
 	bool s = grid.simplexIndex( mouse_begin_x, mouse_begin_y, ia,ib, da, db );
 	renderSimplex( ia, ib, s, grid.step );
 	glColor3f( 0.8f,0.8f,0.8f ); Draw2D::drawPointCross( {mouse_begin_x, mouse_begin_y}, 0.2f );
+
+    glColor3f( 0.8, 0.0, 0.8 );
+    Draw2D::drawLine_d( p1, p2 );
+	for(int i=0; i<nhits; i++){
+	    switch( boundaries[i] ){
+            case 0: glColor3f( 1.0,0.0,0.0 ); break;
+            case 1: glColor3f( 0.0,1.0,0.0 ); break;
+            case 2: glColor3f( 0.0,0.0,1.0 ); break;
+	    }
+        Draw2D::drawPointCross_d( hits[i], 0.1 );
+	}
 
 };
 

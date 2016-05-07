@@ -2,13 +2,19 @@
 #ifndef  SimplexGrid_h
 #define  SimplexGrid_h
 
+#include "fastmath.h"
+#include "Vec2.h"
+#include "Vec3.h"
+
+
 #include "HashMap.h"
+
 
 typedef unsigned short  UHALF;
 const UHALF MAP_OFFSET = 0x7FFF;
 
 inline bool simplexIndex( double x, double y, int& ia, int& ib, double& da, double& db ){
-	ia = (int)y * 0.86602540378;
+	ia = (int)y * 0.86602540378d;
 	double b = x - 0.5d*y;
 	ib = (int)b;
 	da = y - ia;
@@ -32,6 +38,8 @@ template < class OBJECT >
 class SimplexGrid : public HashMap<OBJECT>{
     public:
     double        step, invStep;
+    //Vec2d avec,bvec,cvec;
+    //Vec2d ainv,binv,cinv;
 
     inline void simplexIndexBare( double x, double y, UHALF& ia, UHALF& ib ) const {
         double a = ( invStep *    y * 1.15470053839       ) + MAP_OFFSET;
@@ -87,6 +95,129 @@ class SimplexGrid : public HashMap<OBJECT>{
 	inline UINT getBucketIndexes   ( double  x, double y, UINT * outi )const{ return HashMap<OBJECT>::getBucketIndexes(    getBucket   (  x, y ), outi );  }
 	inline UINT getBucketObjectsInt( UHALF  ia, UHALF ib, OBJECT**out )const{ return HashMap<OBJECT>::getBucketObjects(    getBucketInt( ia,ib ), out  );  }
 	inline UINT getBucketObjects   ( double  x, double y, OBJECT**out )const{ return HashMap<OBJECT>::getBucketObjects(    getBucket   (  x, y ), out  );  }
+
+/*
+	int raster_line( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * hits ){
+	    double t0    = dirHat.dot( pos0 );
+	    double t1    = dirHat.dot( pos1 );
+	    //double dtmax = t1-t2;
+        double pa,pb,pc, invPa,invPb,invPc;
+        int    ia,ib,ic,i;
+        pa = dirHat.dot({ 0,1               } );  invPa = 1/pa;   ia=(int)(t0*invPa + MAP_OFFSET);
+        pb = dirHat.dot({ 0.86602540378,0.5d} );  invPb = 1/pb;   ib=(int)(t0*invPb + MAP_OFFSET);
+        pc = dirHat.dot({-0.86602540378,0.5d} );  invPc = 1/pc;   ic=(int)(t0*invPc + MAP_OFFSET);
+        printf( " t_1,2  %f %f   p_a,b,c %f %f %f  \n", t0, t1, pa, pb, pc );
+        double t = t0;
+        double da,db,dc, mta,mtb,mtc;
+        da = t0*invPa;   ia=(int)(da + MAP_OFFSET);   da -= ( ia - MAP_OFFSET );   //tma = mda * invPa;
+        db = t0*invPb;   ib=(int)(db + MAP_OFFSET);   db -= ( ib - MAP_OFFSET );   //tmb = mdb * invPb;
+        dc = t0*invPc;   ic=(int)(dc + MAP_OFFSET);   dc -= ( ic - MAP_OFFSET );   //tmc = mdc * invPc;
+        i=0;
+        //exit(0);
+        while( t<t1 ){
+            double ta = da * invPa; double abs_ta = fabs( ta );
+            double tb = db * invPb; double abs_tb = fabs( tb );
+            double tc = dc * invPc; double abs_tc = fabs( tc );
+            if( tma < tmb ){
+               if( abs_ta < abs_tc ){  // a min
+                    t    += abs_ta; ia++;
+                    da    = 1; db -= pa*ta; dc -= pc*ta;
+               }else{            // c min
+                    t    += abs_tmc; ic++;
+                    mda   -= pa*tmc; mdb -= pa*tmc; mdc = 1;
+               }
+            }else{
+               if( abs_tmb < abs_tmc ){  // b min
+                    t    += abs_tmb; ib++;
+                    mda   = pa*tmb; mdb = 1; mdc -= pc*tmb;
+                    ib++;
+               }else{            // c min
+                    t    += abs_tmc; ic++;
+                    mda   -= pa*tmc; mdb -= pa*tmc; mdc = 1;
+               }
+            }
+            hits[i].set_mul( dirHat, t );
+            printf( "%i %f (%f,%f) \n", i, t, hits[i].x, hits[i].y );
+            i++;
+        }
+        return i;
+	}
+*/
+
+
+
+
+	int raster_line( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * hits, int * boundaries ){
+	    double t0    = dirHat.dot( pos0 );
+	    double t1    = dirHat.dot( pos1 );
+	    double tspan = t1-t0;
+        double pa,pb,pc, invPa,invPb,invPc;
+        int    ia,ib,ic,i;
+        printf( " %f %f \n", step, invStep );
+        //pa = fabs( dirHat.dot({ 0.0d        ,0.86602540378*step} ) );     invPa = 1/pa;
+        pa = dirHat.dot( { 0.0d        ,1.15470053839*invStep} );  invPa = 1/pa;
+        //pb = fabs( dirHat.dot({ 1.0d*invStep,0.57735026919*invStep} ) );  invPb = 1/pb;
+        //pc = fabs( dirHat.dot({-1.0d*invStep,0.57735026919*invStep} ) );  invPc = 1/pc;
+        //printf( " t_1,2  %f %f   p_a,b,c %f %f %f  \n", t0, t1, pa, pb, pc );
+        printf( " pa invPa \n", pa, invPa );
+        double t = 0;
+        double mda,mdb,mdc, mta,mtb,mtc;
+
+        //if( pa > 0 ){
+        //    invPa = 1/pa;
+        //}else{
+        //    pa = -pa; invPa = 1/pa;
+        //}
+
+        mda = t0*0.86602540378;   ia=(int)(mda + MAP_OFFSET);   mda = 1-(mda - (ia - MAP_OFFSET) );   //tma = mda * invPa;
+        //mdb = t0*invPb;   ib=(int)(mdb + MAP_OFFSET);   mdb = 1-(mdb - (ib - MAP_OFFSET) );   //tmb = mdb * invPb;
+        //mdc = t0*invPc;   ic=(int)(mdc + MAP_OFFSET);   mdc = 1-(mdc - (ic - MAP_OFFSET) );   //tmc = mdc * invPc;
+        i=0;
+        //exit(0);
+        //mda = 1;
+        while( t<tspan ){
+            double tmb=0,tmc=0;
+            double tma = mda * invPa;
+            //double tma = mda * pa;
+            t += tma; ia++;
+            mda = 1;
+            boundaries[i] = 0;
+
+            /*
+            double tmb = mdb * invPb;
+            double tmc = mdc * invPc;
+            if( tma < tmb ){
+               if( tma < tmc ){  // a min
+                    t    += tma; ia++;
+                    mda   = 1; mdb -= pb*tma; mdc -= pc*tma;
+                    boundaries[i] = 0;
+               }else{            // c min
+                    t    += tmc; ic++;
+                    mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
+                    boundaries[i] = 2;
+               }
+            }else{
+               if( tmb < tmc ){  // b min
+                    t    += tmb; ib++;
+                    mda   = pa*tmb; mdb = 1; mdc -= pc*tmb;
+                    boundaries[i] = 1;
+               }else{            // c min
+                    t    += tmc; ic++;
+                    mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
+                    boundaries[i] = 2;
+               }
+            }
+            */
+            hits[i].set( pos0 );
+            hits[i].add_mul( dirHat, t );
+            //hits[i].set_mul( dirHat, t );
+            printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], tma, tmb, tmc,       t, hits[i].x, hits[i].y );
+            i++;
+        }
+        return i;
+	}
+
+
 
 };
 
