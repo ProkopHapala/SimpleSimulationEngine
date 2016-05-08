@@ -116,8 +116,12 @@ void TestAppTerrainHydraulics::draw(){
         for( int i=0; i<perframe; i++ ){
 
             //terrain.errodeDroples( 10000, 100, 0.00, 0.2, 0.5 );
-
-            terrain.errodeDroples( 10000, 20, 0.02, 0.15, 0.5 );
+            for( int j=0; j<20; j++ ){
+                int isz = 25;
+                int ix0 = rand()%(terrain.nx-isz);
+                int iy0 = rand()%(terrain.ny-isz);
+                terrain.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
+            }
 
 
             /*

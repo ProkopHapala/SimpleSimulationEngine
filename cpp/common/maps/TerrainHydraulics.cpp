@@ -183,13 +183,16 @@ void TerrainHydraulics::rain_and_evaporation( ){
     }
 }
 
-void TerrainHydraulics::initDroplet ( double w, double disolve, double sediment ){
+void TerrainHydraulics::initDroplet ( double w, double disolve, double sediment, int ix0, int iy0, int ix1, int iy1 ){
     droplet_w  = w;
     droplet_disolve  = disolve;
     droplet_sediment = sediment;
-    droplet_ix = rand()%nx;
-    droplet_iy = rand()%ny;
-    droplet_h = ground[ xy2i( droplet_ix, droplet_iy ) ];
+    //droplet_ix = rand()%nx;
+    //droplet_iy = rand()%ny;
+    droplet_ix = ix0 + rand()%(ix1-ix0);
+    droplet_iy = iy0 + rand()%(iy1-iy0);
+
+    droplet_h  = ground[ xy2i( droplet_ix, droplet_iy ) ];
     //printf( "initDroplet  %i %i    %f  \n", droplet_ix, droplet_iy, droplet_h  );
 }
 
@@ -237,9 +240,9 @@ bool TerrainHydraulics::droplet_step( ){
     return true;
 }
 
-void TerrainHydraulics::errodeDroples( int n, int nStepMax, double w, double disolve, double sediment ){
+void TerrainHydraulics::errodeDroples( int n, int nStepMax, double w, double disolve, double sediment, int ix0, int iy0, int ix1, int iy1 ){
     for(int i=0; i<n; i++ ){
-        initDroplet( w, disolve, sediment );
+        initDroplet( w, disolve, sediment, ix0, iy0, ix1, iy1 );
         for(int j=0; j<nStepMax; j++ ){
             if( droplet_step( ) ) break;
         }

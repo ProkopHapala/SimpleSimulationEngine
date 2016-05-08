@@ -60,9 +60,9 @@ public:
     void flow_errosion_step  ( );
     void rain_and_evaporation( );
     int  flow_errosion_step_noRain( );
-    void initDroplet  ( double w, double disolve, double sediment );
+    void initDroplet  ( double w, double disolve, double sediment, int ix0, int iy0, int ix1, int iy1 );
     bool droplet_step ( );
-    void errodeDroples( int n, int nStepMax, double w, double disolve, double sediment );
+    void errodeDroples( int n, int nStepMax, double w, double disolve, double sediment, int ix0, int iy0, int ix1, int iy1 );
 
 	// ==== inline functions
 
