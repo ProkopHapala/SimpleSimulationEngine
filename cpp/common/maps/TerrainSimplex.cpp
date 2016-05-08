@@ -1,7 +1,83 @@
 
-#include "TerrainHydraulics.h"  // THE HEADER
+#include "TerrainSimplex.h"  // THE HEADER
 
-void TerrainHydraulics::genTerrainNoise( int n, double scale,  double hscale,  double fdown, double strength, int seed, const Vec2d& pos0 ){
+
+int TerrainSimplex::raster_line( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * hits, int * boundaries, UHALF * edges ){
+    double t0    = dirHat.dot( pos0 );
+    double t1    = dirHat.dot( pos1 );
+    double tspan = t1-t0;
+    double pa,pb,pc, invPa,invPb,invPc;
+    int    ia,ib,ic,i;
+    printf( " %f %f \n", step, invStep );
+    double mda,mdb,mdc, mta,mtb,mtc;
+    pa  = dirHat.dot( { 0.0d        ,1.15470053839*invStep} );
+    pb  = dirHat.dot( { 1.0d*invStep,0.57735026919*invStep} );
+    pc  = dirHat.dot( {-1.0d*invStep,0.57735026919*invStep} );
+    mda = pos0.dot  ( { 0.0d        ,1.15470053839*invStep} );
+    mdb = pos0.dot  ( { 1.0d*invStep,0.57735026919*invStep} );
+    mdc = pos0.dot  ( {-1.0d*invStep,0.57735026919*invStep} );
+    if( pa < 0 ){ pa=-pa; mda = 1-mda; };
+    if( pb < 0 ){ pa=-pb; mdb = 1-mdb; };
+    if( pc < 0 ){ pc=-pc; mdc = 1-mdc; };
+    ia=(int)(mda + MAP_OFFSET);   mda = 1-(mda - (ia - MAP_OFFSET) );
+    ib=(int)(mdb + MAP_OFFSET);   mdb = 1-(mdb - (ib - MAP_OFFSET) );
+    ic=(int)(mdc + MAP_OFFSET);   mdc = 1-(mdc - (ic - MAP_OFFSET) );
+    invPa = 1/pa; invPb = 1/pb; invPc = 1/pc;
+    //printf( " t_1,2  %f %f   p_a,b,c %f %f %f  \n", t0, t1, pa, pb, pc );
+    printf( " pa invPa \n", pa, invPa );
+    double t = 0;
+    i=0;
+    UHALF ia_,ib_;
+    simplexIndexBare( pos0.x, pos0.y, ia_, ib_ );
+    while( t<tspan ){
+        double tma = mda * invPa;
+        double tmb = mdb * invPb;
+        double tmc = mdc * invPc;
+        //t += tma; boundaries[i] = 0;  mda = 1;
+        //t += tmb; boundaries[i] = 1;  mdb = 1;
+        //t += tmc; boundaries[i] = 2;  mdc = 1;
+        int ii = i<<2;
+        if( tma < tmb ){
+           if( tma < tmc ){  // a min
+                t    += tma;
+                mda   = 1; mdb -= pb*tma; mdc -= pc*tma;
+                boundaries[i] = 0; ia_++;
+                edges[ii  ] = ia_; edges[ii+1] = ib_;
+                edges[ii+2] = ia_; edges[ii+3] = ib_+1;
+           }else{            // c min
+                t    += tmc;
+                mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
+                boundaries[i] = 2; ib_++;
+                edges[ii  ] = ia_; edges[ii+1] = ib_;
+                edges[ii+2] = ia_+1; edges[ii+3] = ib_;
+           }
+        }else{
+           if( tmb < tmc ){  // b min
+                t    += tmb;
+                mda  -= pa*tmb; mdb = 1; mdc -= pc*tmb;
+                boundaries[i] = 1;
+                edges[ii  ] = ia_;   edges[ii+1] = ib_+1;
+                edges[ii+2] = ia_+1; edges[ii+3] = ib_;
+           }else{            // c min
+                t    += tmc;
+                mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
+                boundaries[i] = 2; ib_++;
+                edges[ii  ] = ia_; edges[ii+1] = ib_;
+                edges[ii+2] = ia_+1; edges[ii+3] = ib_;
+           }
+        }
+        hits[i].set( pos0 );
+        hits[i].add_mul( dirHat, t );
+        //hits[i].set_mul( dirHat, t );
+        //printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], tma, tmb, tmc,       t, hits[i].x, hits[i].y );
+        printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], mda, mdb, mdc,       t, hits[i].x, hits[i].y );
+        i++;
+    }
+    return i;
+}
+
+
+void TerrainSimplex::genTerrainNoise( int n, double scale,  double hscale,  double fdown, double strength, int seed, const Vec2d& pos0 ){
     Vec2d pos,dpos,rot,a,b;
     rot.fromAngle( seed*0.1 );
     a.set( 1.0d, 0.0d           ); a.mul(scale);
@@ -25,14 +101,14 @@ void TerrainHydraulics::genTerrainNoise( int n, double scale,  double hscale,  d
     for(int i=0; i<ntot; i++){ ground[i] = renorm*(ground[i]-vmin); }
 }
 
-void TerrainHydraulics::init_outflow(){
+void TerrainSimplex::init_outflow(){
     for (int i=0; i<ntot; i++){
         water[i] = 1e+300;
         known[i] = false;
     }
 }
 
-void TerrainHydraulics::outflow_step(){
+void TerrainSimplex::outflow_step(){
     // clean known
     // swap old and new endpoints
     nContour_old = nContour;  nContour = 0;
@@ -55,7 +131,7 @@ void TerrainHydraulics::outflow_step(){
     }
 }
 
-void TerrainHydraulics::extend_path( float val, int oi, int i ){
+void TerrainSimplex::extend_path( float val, int oi, int i ){
     // evaluate objective function for proposed path
     //val += dval*ground[i];
     //printf( " %i val %f g %f w %f k %i \n", i, val, ground[i], water[i], known[i] );
@@ -72,7 +148,7 @@ void TerrainHydraulics::extend_path( float val, int oi, int i ){
     }
 }
 
-void TerrainHydraulics::initErrosion( double w ){
+void TerrainSimplex::initErrosion( double w ){
     for (int i=0; i<ntot; i++){
             if(ground[i]>1.0) ground[i] = 1.0;
             if(ground[i]<0.0) ground[i] = 0.0;
@@ -80,7 +156,7 @@ void TerrainHydraulics::initErrosion( double w ){
     }
 }
 
-int TerrainHydraulics::flow_errosion_step_noRain( ){
+int TerrainSimplex::flow_errosion_step_noRain( ){
 // gradient evaluation
     int ii = 0;
     int npix=0;
@@ -123,7 +199,7 @@ int TerrainHydraulics::flow_errosion_step_noRain( ){
     return npix;
 }
 
-void TerrainHydraulics::flow_errosion_step( ){
+void TerrainSimplex::flow_errosion_step( ){
 // gradient evaluation
 //int ii = 0;
 
@@ -170,7 +246,7 @@ void TerrainHydraulics::flow_errosion_step( ){
     //printf( "npix %i \n", npix);
 }
 
-void TerrainHydraulics::rain_and_evaporation( ){
+void TerrainSimplex::rain_and_evaporation( ){
     int ii =0;
     for(int iy=0;iy<ny;iy++){
         for(int ix=0;ix<nx;ix++){
@@ -183,21 +259,20 @@ void TerrainHydraulics::rain_and_evaporation( ){
     }
 }
 
-void TerrainHydraulics::initDroplet ( double w, double disolve, double sediment ){
-    droplet_w  = w;
-    droplet_disolve  = disolve;
-    droplet_sediment = sediment;
+void TerrainSimplex::initDroplet ( double size_ ){
+    droplet_size = size_;
     droplet_ix = rand()%nx;
     droplet_iy = rand()%ny;
     droplet_h = ground[ xy2i( droplet_ix, droplet_iy ) ];
+
     //printf( "initDroplet  %i %i    %f  \n", droplet_ix, droplet_iy, droplet_h  );
 }
 
-bool TerrainHydraulics::droplet_step( ){
+bool TerrainSimplex::droplet_step( ){
     if( (droplet_ix > 0)&(droplet_ix < nx)&(droplet_iy > 0)&(droplet_iy < ny) ){
         int    ii   = xy2i( droplet_ix, droplet_iy );
         int xmin,ymin;
-        double h,hmin=droplet_h+droplet_w;
+        double h,hmin=droplet_h;
         bool found=false;
         h = ground[ii-nx  ]; if( h<hmin ){ ymin = -1; xmin =  0; hmin = h; found=true; }
         h = ground[ii+nx  ]; if( h<hmin ){ ymin = +1; xmin =  0; hmin = h; found=true; }
@@ -211,25 +286,10 @@ bool TerrainHydraulics::droplet_step( ){
         if( found ){
                 //printf( " found \n" );
                 //int    jj   = xy2i( droplet_ix, droplet_iy );
-
-                //ground[ii   ]  -= droplet_dh;
+                ground[ii   ]  -= droplet_size;
+                droplet_h   = hmin;
                 droplet_ix += xmin;
                 droplet_iy += ymin;
-                int    jj       = xy2i( droplet_ix, droplet_iy );
-                //double hi = ground[ii];
-                double hi = droplet_h;
-                double hj = ground[jj];
-                double dh = (hi-hj);
-                //printf( " %f %f %f \n", hi, hj, dh  );
-                if( dh > 0 ){
-                    dh *= droplet_disolve;
-                    ground[ii] = hi - dh;
-                    droplet_h  = hj + dh*droplet_sediment;
-                    ground[jj] = droplet_h;
-                    //ground[jj] = hj + dh;
-                }
-                //droplet_h   = hmin;
-
                 //ground[iimin] += mud*f_sediment;
                 return false;
         }
@@ -237,9 +297,9 @@ bool TerrainHydraulics::droplet_step( ){
     return true;
 }
 
-void TerrainHydraulics::errodeDroples( int n, int nStepMax, double w, double disolve, double sediment ){
+void TerrainSimplex::errodeDroples( int n, int nStepMax, double size_ ){
     for(int i=0; i<n; i++ ){
-        initDroplet( w, disolve, sediment );
+        initDroplet( size_ );
         for(int j=0; j<nStepMax; j++ ){
             if( droplet_step( ) ) break;
         }

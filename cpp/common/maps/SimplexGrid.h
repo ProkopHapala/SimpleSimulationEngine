@@ -147,7 +147,7 @@ class SimplexGrid : public HashMap<OBJECT>{
 
 
 
-	int raster_line( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * hits, int * boundaries ){
+	int raster_line( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * hits, int * boundaries, UHALF * edges ){
 	    double t0    = dirHat.dot( pos0 );
 	    double t1    = dirHat.dot( pos1 );
 	    double tspan = t1-t0;
@@ -172,6 +172,8 @@ class SimplexGrid : public HashMap<OBJECT>{
         printf( " pa invPa \n", pa, invPa );
         double t = 0;
         i=0;
+        UHALF ia_,ib_;
+        simplexIndexBare( pos0.x, pos0.y, ia_, ib_ );
         while( t<tspan ){
             double tma = mda * invPa;
             double tmb = mdb * invPb;
@@ -179,25 +181,34 @@ class SimplexGrid : public HashMap<OBJECT>{
             //t += tma; boundaries[i] = 0;  mda = 1;
             //t += tmb; boundaries[i] = 1;  mdb = 1;
             //t += tmc; boundaries[i] = 2;  mdc = 1;
+            int ii = i<<2;
             if( tma < tmb ){
                if( tma < tmc ){  // a min
                     t    += tma;
                     mda   = 1; mdb -= pb*tma; mdc -= pc*tma;
-                    boundaries[i] = 0; ia++;
+                    boundaries[i] = 0; ia_++;
+                    edges[ii  ] = ia_; edges[ii+1] = ib_;
+                    edges[ii+2] = ia_; edges[ii+3] = ib_+1;
                }else{            // c min
-                    t    += tmc; ic++;
+                    t    += tmc;
                     mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
-                    boundaries[i] = 2; ic++;
+                    boundaries[i] = 2; ib_++;
+                    edges[ii  ] = ia_; edges[ii+1] = ib_;
+                    edges[ii+2] = ia_+1; edges[ii+3] = ib_;
                }
             }else{
                if( tmb < tmc ){  // b min
                     t    += tmb;
                     mda  -= pa*tmb; mdb = 1; mdc -= pc*tmb;
-                    boundaries[i] = 1; ib++;
+                    boundaries[i] = 1;
+                    edges[ii  ] = ia_;   edges[ii+1] = ib_+1;
+                    edges[ii+2] = ia_+1; edges[ii+3] = ib_;
                }else{            // c min
                     t    += tmc;
                     mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
-                    boundaries[i] = 2; ic++;
+                    boundaries[i] = 2; ib_++;
+                    edges[ii  ] = ia_; edges[ii+1] = ib_;
+                    edges[ii+2] = ia_+1; edges[ii+3] = ib_;
                }
             }
             hits[i].set( pos0 );

@@ -14,12 +14,15 @@
 #include "Vec2.h"
 #include "geom2D.h"
 
-#include "TerrainHydraulics.h"
+#include "Terrainsimplex.h"
+
+#include "CastleWorld.h"
+
 #include "testUtils.h"
 
 // ======================  TestApp
 
-class TestAppTerrainHydraulics : public AppSDL2OGL{
+class CastleBuilderSingle : public AppSDL2OGL{
 	public:
     int job_type = 1;
     int perframe = 3;
@@ -38,11 +41,11 @@ class TestAppTerrainHydraulics : public AppSDL2OGL{
     double terrain_color( int i );
 	//void drawSimplexGrid( int n, float step );
 
-	TestAppTerrainHydraulics( int& id, int WIDTH_, int HEIGHT_ );
+	CastleBuilderSingle( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-double TestAppTerrainHydraulics::terrain_color( int i ){
+double CastleBuilderSingle::terrain_color( int i ){
     float g   = terrain.ground[i];
     float w   = terrain.water [i];
     if( w > g ){
@@ -54,7 +57,7 @@ double TestAppTerrainHydraulics::terrain_color( int i ){
     return g;
 }
 
-void TestAppTerrainHydraulics::renderMapContent( float x0, float y0, float scale, float csc, float hsc ){
+void CastleBuilderSingle::renderMapContent( float x0, float y0, float scale, float csc, float hsc ){
     //glColor3f( 0.1f,0.1f,0.1f );
     Vec2f a,b,p;
     a.set( 1.0d, 0.0d           ); a.mul(scale);
@@ -83,7 +86,7 @@ void TestAppTerrainHydraulics::renderMapContent( float x0, float y0, float scale
     }
 }
 
-TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+CastleBuilderSingle::CastleBuilderSingle( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
     terrain.allocate( 512, 512 );
     //terrain.genTerrainNoise( 14, 0.3, 0.7, 0.6, 45454, {1000.0,1000.0} );
@@ -100,12 +103,12 @@ TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEI
     //for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = terrain.ground[i]; }
 
     //for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = 1.0; terrain.water_[i] = 1.0; }
-    //terrain.initErrosion( 1.0 );
+    terrain.initErrosion( 1.0 );
 
     shape=glGenLists(1);
 }
 
-void TestAppTerrainHydraulics::draw(){
+void CastleBuilderSingle::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
@@ -114,13 +117,6 @@ void TestAppTerrainHydraulics::draw(){
         t0 = getCPUticks();
         //perframe = 1;
         for( int i=0; i<perframe; i++ ){
-
-            //terrain.errodeDroples( 10000, 100, 0.00, 0.2, 0.5 );
-
-            terrain.errodeDroples( 10000, 20, 0.02, 0.15, 0.5 );
-
-
-            /*
             switch(job_type){
                 case 1: {
                     int npix = terrain.flow_errosion_step_noRain( );
@@ -145,7 +141,6 @@ void TestAppTerrainHydraulics::draw(){
                     }
                     break;}
             }
-            */
         }
         long tcomp = getCPUticks() - t0;
         t0    = getCPUticks();
@@ -167,10 +162,10 @@ void TestAppTerrainHydraulics::draw(){
 
 };
 
-void TestAppTerrainHydraulics::drawHUD(){}
+void CastleBuilderSingle::drawHUD(){}
 
 
-void TestAppTerrainHydraulics::eventHandling( const SDL_Event& event ){
+void CastleBuilderSingle::eventHandling( const SDL_Event& event ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
@@ -207,14 +202,14 @@ void TestAppTerrainHydraulics::eventHandling( const SDL_Event& event ){
 
 // ===================== MAIN
 
-TestAppTerrainHydraulics * testApp;
+CastleBuilderSingle * testApp;
 
 int main(int argc, char *argv[]){
 
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	int junk;
-	testApp = new TestAppTerrainHydraulics( junk , 800, 600 );
+	testApp = new CastleBuilderSingle( junk , 800, 600 );
 	testApp->loop( 1000000 );
 	return 0;
 }

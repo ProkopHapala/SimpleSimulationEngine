@@ -8,6 +8,7 @@ add_library( SimplexGrid    OBJECT SimplexGrid.cpp  )
 add_library( TiledView      OBJECT TiledView.cpp    )
 add_library( TerrainCubic   OBJECT TerrainCubic.cpp )
 add_library( TerrainHydraulics   OBJECT TerrainHydraulics.cpp )
+add_library( TerrainSimplex      OBJECT TerrainSimplex.cpp )
 add_library( TerrainRBF     OBJECT TerrainRBF.cpp   )
 add_library( TrussBuilder   OBJECT TrussBuilder.cpp )
 

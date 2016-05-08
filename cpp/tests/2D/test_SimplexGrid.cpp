@@ -33,8 +33,9 @@ class TestAppSimplexGrid : public AppSDL2OGL{
 
     int nhits;
     Vec2d p1,p2;
-    Vec2d hits[1024];
+    Vec2d hits      [1024];
     int   boundaries[1024];
+    UHALF edges     [1024];
 
 	// ---- function declarations
 
@@ -159,7 +160,7 @@ TestAppSimplexGrid::TestAppSimplexGrid( int& id, int WIDTH_, int HEIGHT_ ) : App
     p1.set(0.9,0.6);
     p2.set(8.2,8.3);
     dirHat.set_sub( p2, p1 ); dirHat.normalize();
-    nhits = grid.raster_line( dirHat, p1, p2, hits, boundaries );
+    nhits = grid.raster_line( dirHat, p1, p2, hits, boundaries, edges );
 
 	glEndList();
 
@@ -194,6 +195,12 @@ void TestAppSimplexGrid::draw(){
             case 2: glColor3f( 0.0,0.0,1.0 ); break;
 	    }
         Draw2D::drawPointCross_d( hits[i], 0.1 );
+
+        Vec2d nd1,nd2;
+        int ii = i<<2;
+        grid.nodePoint( edges[ii]  , edges[ii+1], nd1.x, nd1.y );
+        grid.nodePoint( edges[ii+2], edges[ii+3], nd2.x, nd2.y );
+        Draw2D::drawLine_d( nd1, nd2 );
 	}
 
 };

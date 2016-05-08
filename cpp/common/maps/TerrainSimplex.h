@@ -1,11 +1,9 @@
-#ifndef TerrainHydraulics_h
-#define TerrainHydraulics_h
+#ifndef TerrainSimplex_h
+#define TerrainSimplex_h
 
 #include "Noise.h"
 
-
-
-class TerrainHydraulics{
+class TerrainSimplex{
 public:
 
     static constexpr int     nmask   = 8;
@@ -27,16 +25,6 @@ public:
 	int    * contour2;
 	double * water_;
 
-/*
-    double c_errode    = 0.4;
-    double c_rain      = 0.0001;
-    double c_blur      = 0.0;
-    double c_sediment  = 0.001;
-    double f_sediment  = 0.1;
-    double f_mix       = 0.1;
-    double mf_mix      = 1.0-f_mix;
-*/
-
     double c_errode    = 0.4;
     double c_rain      = 0.00;
     //double c_blur      = 0.0;
@@ -46,8 +34,7 @@ public:
     double mf_mix      = 1.0-f_mix;
 
     int droplet_ix, droplet_iy;
-    double droplet_h;
-    double droplet_w,droplet_disolve,droplet_sediment;
+    double droplet_size,droplet_h;
 
 	// ==== function declaration
 
@@ -60,9 +47,9 @@ public:
     void flow_errosion_step  ( );
     void rain_and_evaporation( );
     int  flow_errosion_step_noRain( );
-    void initDroplet  ( double w, double disolve, double sediment );
+    void initDroplet  ( double size_ );
     bool droplet_step ( );
-    void errodeDroples( int n, int nStepMax, double w, double disolve, double sediment );
+    void errodeDroples( int n, int nStepMax, double size_ );
 
 	// ==== inline functions
 
