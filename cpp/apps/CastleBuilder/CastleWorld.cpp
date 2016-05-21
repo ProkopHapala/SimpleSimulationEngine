@@ -9,16 +9,7 @@
 #include "Vec2.h"
 #include "geom2D.h"
 
-#include "TerrainHydraulics.h"
-
-#include "CastleWorld.h" // THE HEADER
-
-// ======================  TestApp
-
-class CastleWorld: public TerrainSimplex{
-	public:
-
-};
+#include "CastleWorld.h"
 
 /*
 CastleWorld::CastleWorld( ){

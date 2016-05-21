@@ -2,7 +2,7 @@
 #include "TerrainSimplex.h"  // THE HEADER
 
 
-int TerrainSimplex::raster_line( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * hits, int * boundaries, UHALF * edges ){
+int TerrainSimplex::raster_line( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * hits, int * boundaries, int * edges ){
     double t0    = dirHat.dot( pos0 );
     double t1    = dirHat.dot( pos1 );
     double tspan = t1-t0;
@@ -27,7 +27,7 @@ int TerrainSimplex::raster_line( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * h
     printf( " pa invPa \n", pa, invPa );
     double t = 0;
     i=0;
-    UHALF ia_,ib_;
+    int ia_,ib_;
     simplexIndexBare( pos0.x, pos0.y, ia_, ib_ );
     while( t<tspan ){
         double tma = mda * invPa;

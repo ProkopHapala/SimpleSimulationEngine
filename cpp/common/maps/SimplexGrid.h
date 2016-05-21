@@ -9,7 +9,6 @@
 
 #include "HashMap.h"
 
-
 typedef unsigned short  UHALF;
 const UHALF MAP_OFFSET = 0x7FFF;
 

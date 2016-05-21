@@ -35,6 +35,7 @@ class MultiFight3D_single : public AppSDL2OGL_3D {
 	//virtual void mouseHandling( );
 	virtual void eventHandling   ( const SDL_Event& event  );
 	virtual void keyStateHandling( const Uint8 *keys );
+    virtual void mouseHandling( );
 
 	MultiFight3D_single( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -143,8 +144,20 @@ void MultiFight3D_single::keyStateHandling( const Uint8 *keys ){
     if( keys[ SDL_SCANCODE_Q ] ){ qCamera.droll2(  +0.01 ); }
 	if( keys[ SDL_SCANCODE_E ] ){ qCamera.droll2(  -0.01 ); }
 
-
 };
+
+void MultiFight3D_single::mouseHandling( ){
+    int mx,my;
+    //SDL_GetMouseState( &mouseX, &mouseY );
+    Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
+    //printf( " %i %i \n", mx,my );
+    //if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+
+        Quat4d q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
+        qCamera.qmul_T( q );
+    //}
+    //qCamera.qmul( q );
+}
 
 
 

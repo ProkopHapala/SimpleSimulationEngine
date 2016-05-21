@@ -77,7 +77,6 @@ class Vec3TYPE{
 
 	inline TYPE dot  ( const VEC& a ) const { return x*a.x + y*a.y + z*a.z;  };
 	inline TYPE norm2(              ) const { return x*x + y*y + z*z;        };
-
 	inline TYPE norm ( ) const { return  sqrt( x*x + y*y + z*z ); };
     inline TYPE normalize() {
 		TYPE norm  = sqrt( x*x + y*y + z*z );
@@ -139,6 +138,17 @@ class Vec3TYPE{
 		ap.set( p.x - x, p.y - y, b.z - z );
 		return ab.dot(ap) / ab.norm(ab);
 	}
+
+    inline bool isLower  ( const VEC& vmax ) const { return (x<vmax.x)&&(y<vmax.y)&&(x<vmax.z); }
+    inline bool isGreater( const VEC& vmin ) const { return (x>vmin.x)&&(y>vmin.y)&&(x>vmin.z); }
+    inline bool isBetween( const VEC& vmin, const VEC& vmax ) const {
+        return (x>vmin.x)&&(x<vmax.x)&&
+               (y>vmin.y)&&(y<vmax.y)&&
+               (y>vmin.z)&&(x<vmax.z);
+    }
+
+    inline double dist2( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm2(); }
+    inline double dist ( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm (); }
 
 };
 

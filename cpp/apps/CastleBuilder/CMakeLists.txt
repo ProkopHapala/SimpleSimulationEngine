@@ -18,6 +18,7 @@ set( NAME "CastleBuilder" )
 
 add_executable( ${NAME} 
 	main.cpp CastleWorld.cpp
+	$<TARGET_OBJECTS:Noise> 
 	$<TARGET_OBJECTS:Body2D> 
 	$<TARGET_OBJECTS:SDL2OGL> 
 	$<TARGET_OBJECTS:TerrainSimplex> 

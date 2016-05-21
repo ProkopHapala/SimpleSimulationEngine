@@ -34,7 +34,7 @@ class Mat3TYPE{
 
 // ====== initialization
 
-	inline void setOne(          ){ xx=yy=zz=1; xy=xz=yx=yz=zx=zy=0; };
+	inline void setOne(        ){ xx=yy=zz=1; xy=xz=yx=yz=zx=zy=0; };
 	inline void set   ( TYPE f ){ xx=yy=zz=f; xy=xz=yx=yz=zx=zy=0; };
 
 	inline void set  ( const VEC& va, const VEC& vb, const VEC& vc ){ a.set(va); b.set(vb); c.set(vc); }
