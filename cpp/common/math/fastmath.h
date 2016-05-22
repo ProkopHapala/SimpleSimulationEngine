@@ -32,6 +32,24 @@ template <class TYPE> inline TYPE sq(TYPE a){ return a*a; }
 
 #include "gonioApprox.h"
 
+/*
+template <class FLOAT,class INT> INT fastFloor( FLOAT x ){
+    if( x > 0 ){
+        INT ix = static_cast <INT>(x);
+        //dx = x - ix;
+        return ix;
+    }else{
+        INT ix = static_cast <INT>(-x);
+        return 1-ix;
+    }
+};
+*/
+
+inline int fastFloor( double x ){
+     int ix = static_cast <int>(x);
+     if( x < 0 ) ix--;
+     return ix;
+}
 
 typedef double (*Func1d)( double );
 

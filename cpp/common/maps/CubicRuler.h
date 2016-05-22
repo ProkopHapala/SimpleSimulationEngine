@@ -79,10 +79,10 @@ class CubicRuler {
     }
 
     inline void setup( const Vec3d& pos0_, const Mat3d& mat_ ){
-        pos0  .set( pos0 );
+        pos0  .set( pos0_ );
         mat   .set( mat_ );
         mat.invert_to( invMat );
-
+        printf( "(%3.3f,%3.3f,%3.3f) \n", pos0.x, pos0.y, pos0.z );
         //printf( "(%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", mat.ax,mat.ay,mat.az, mat.bx,mat.by,mat.bz,  mat.cx,mat.cy,mat.cz );
         //printf( "(%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", invMat.ax,invMat.ay,invMat.az, invMat.bx,invMat.by,invMat.bz,  invMat.cx,invMat.cy,invMat.cz );
     }

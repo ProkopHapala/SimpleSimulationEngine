@@ -49,6 +49,13 @@ inline uint64_t getCPUticks(){
     return (uint64_t)hi << 32 | lo;
 }
 
+
+void genRandomArray( int n, double * vals, double vmin, double vmax ){
+    for( int i=0; i<n; i++ ){ vals[i] = randf( vmin, vmax ); }
+}
+
+
+
 #define SPEED_TEST_FUNC( caption, func, xmin, xmax, ncall ) \
     do{                                    \
     double sum  = 0.0;                     \
@@ -63,6 +70,27 @@ inline uint64_t getCPUticks(){
     long time   = getCPUticks() - tstart;  \
     printf( "%s : %3.3f ticks/call ( %g %g ) | %g \n", caption, time/double(ncall), (double)time, (double)ncall, sum );   \
     } while (0) \
+
+
+#define SPEED_TEST_FUNC_ARRAY( caption, func, arr, n, m ) \
+    do{                                    \
+    double sum  = 0.0;                     \
+    long tstart = getCPUticks();           \
+    for(int j=0; j<m; j++){                \
+        for( int i=0; i<n; i++ ){          \
+            sum += func ( arr[i] );        \
+            /*printf("%i %f %f %f \n", i, arr[i], func ( arr[i] ), sum  );*/  \
+        }                                  \
+    }                                      \
+    long time   = getCPUticks() - tstart;  \
+    int ncall = n*m;                       \
+    printf( "%s : %3.3f ticks/call ( %g %g ) | %g \n", caption, time/double(ncall), (double)time, (double)ncall, sum );   \
+    } while (0) \
+
+
+
+
+
 
 #endif
 
