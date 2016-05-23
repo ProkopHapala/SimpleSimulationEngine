@@ -64,8 +64,14 @@ class TestAppSphereTree : public AppSDL2OGL_3D {
     bool DLArunning = true;
     Vec3d DLA_pos;
 
-	// ---- function declarations
+    Vec3d hRay,pos0Ray;
+    double tRay = 0;
+    static const int nMaxRayShapes=256;
+    int nRayShapes = 0;
+    int rayShapes[nMaxRayShapes];
 
+	// ---- function declarations
+    void ray_next();
     void printMapContent();
     void insertWarper( int ix, int iy, int iz, int val );
 	bool insertSphere( const Vec3d& pos, int_fast64_t ind );
@@ -83,6 +89,28 @@ class TestAppSphereTree : public AppSDL2OGL_3D {
 	TestAppSphereTree ( int& id, int WIDTH_, int HEIGHT_ );
 
 };
+
+void TestAppSphereTree::ray_next(){
+    double dt = ruler.ray_next();
+    tRay+=dt;
+    printf( " iRay (%03i,%03i,%03i) mdRay (%3.3f,%3.3f,%3.3f) dt %3.3f tRay %3.3f \n",
+           ruler.iRay.a, ruler.iRay.b, ruler.iRay.c,
+           ruler.mdRay.a,ruler.mdRay.b,ruler.mdRay.c, dt, tRay );
+
+    Vec3d lpos, p1,p2;
+    p1.set_add_mul( pos0Ray, hRay ,  tRay    );
+    p2.set_add_mul( pos0Ray, hRay ,  tRay+dt );
+    ruler.index2pos( ruler.iRay, {0.0,0.0,0.0}, lpos );
+    int rayShape = glGenLists(1);
+    glNewList( rayShape , GL_COMPILE );
+        Draw3D::drawShape ( lpos, {1.0,0.0,0.0,  0.0,1.0,0.0, 0.0,0.0,1.0}, cursorShape );
+        Draw3D::drawLine      ( p1, p2 );
+        Draw3D::drawPointCross( p2, 0.2 );
+    glEndList();
+    rayShapes[nRayShapes] = rayShape;
+    nRayShapes++;
+}
+
 
 void TestAppSphereTree::printMapContent(){
     int ip = 0;
@@ -341,6 +369,22 @@ TestAppSphereTree::TestAppSphereTree( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
 
     srand(114545);
+
+    pos0Ray.set( 0.5, 0.5, 0.5  );
+    hRay   .set( 1.0, -0.5, 0.25 );
+    hRay.normalize();
+    ruler.ray_start( hRay, pos0Ray );
+    tRay=0;
+
+    printf( " hRay (%3.3f,%3.3f,%3.3f) \n", hRay.a, hRay.b, hRay.c );
+    printf( " hRay (%3.3f,%3.3f,%3.3f) hRayInv (%3.3f,%3.3f,%3.3f) dt %3.3f \n",
+       ruler.hRay.a, ruler.hRay.b, ruler.hRay.c,
+       ruler.hRayInv.a, ruler.hRayInv.b, ruler.hRayInv.c );
+
+    printf( " iRay (%03i,%03i,%03i) mdRay (%3.3f,%3.3f,%3.3f) dt %3.3f \n",
+       ruler.iRay.a, ruler.iRay.b, ruler.iRay.c,
+       ruler.mdRay.a,ruler.mdRay.b,ruler.mdRay.c );
+
 };
 
 void TestAppSphereTree::draw   (){
@@ -364,7 +408,11 @@ void TestAppSphereTree::draw   (){
     Vec3d lpos;
     Mat3d lrot; lrot.setOne();
 
+    for(int i=0; i<nRayShapes; i++){
+        glCallList( rayShapes[i] );
+    }
 
+/*
     int perFrame = 400000;
     glColor3f(0.8f,0.2f,0.2f);
     long tcomp = getCPUticks();
@@ -381,6 +429,8 @@ void TestAppSphereTree::draw   (){
         }
     }
     tcomp = getCPUticks() - tcomp;
+*/
+
 
     //for( auto o : world.objects ) {
     //glColor3f(0.8f,0.8f,0.8f);
@@ -402,8 +452,7 @@ void TestAppSphereTree::draw   (){
         Draw3D::drawShape ( lpos, {1.01,0.0,0.0,  0.0,1.01,0.0, 0.0,0.0,1.01}, sphereShape );
     }
 
-    printf( " frame %05i : alg %3.3f(%3.3f+e6) view %3.3f(%3.3f+e6) | nsph %05i \n", frameCount, (tcomp/(double)perFrame), tcomp*1e-6, (tview/(double)nSpheres), tview*1e-6, nSpheres );
-
+//    printf( " frame %05i : alg %3.3f(%3.3f+e6) view %3.3f(%3.3f+e6) | nsph %05i \n", frameCount, (tcomp/(double)perFrame), tcomp*1e-6, (tview/(double)nSpheres), tview*1e-6, nSpheres );
 
     glColor3f( 1.0f, 1.0f, 1.0f );
 	//glDisable(GL_DEPTH_TEST);
@@ -431,12 +480,14 @@ void TestAppSphereTree::eventHandling ( const SDL_Event& event  ){
                 case SDLK_y:  qCamera.set( 0.7071, 0.0, 0.0 ,0.7071 );; break;
                 case SDLK_z:  qCamera.set( 0.0, 0.7071, 0.0 ,0.7071 ); break;
 
+                case SDLK_n:  ray_next(); break;
+
                 //case SDLK_a:  ix --; if( ix <  0            ) ix = builder.nMax-1;   break;
             }
             Vec3d pos;
             ruler.index2pos( iCurPos ,{0.0,0.0,0.0}, pos );
             int_fast64_t id = xyz2id(  iCurPos.x,  iCurPos.y,  iCurPos.z );
-            printf( " cursor (%i,%i,%i) %i (%3.3f,%3.3f,%3.3f) \n", iCurPos.x, iCurPos.y, iCurPos.z, id, pos.x, pos.y, pos.z );
+            //printf( " cursor (%i,%i,%i) %i (%3.3f,%3.3f,%3.3f) \n", iCurPos.x, iCurPos.y, iCurPos.z, id, pos.x, pos.y, pos.z );
             break;
         /*
         case SDL_MOUSEBUTTONDOWN:

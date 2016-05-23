@@ -36,6 +36,8 @@ class Vec3TYPE{
     inline void mul( const VEC&  v ) { x*=v.x; y*=v.y; z*=v.z; };
     inline void div( const VEC&  v ) { x/=v.x; y/=v.y; z/=v.z; };
 
+    inline void set_inv( const VEC&  v ) { x=1/v.x; y=1/v.y; z=1/v.z; };
+
     inline void add( TYPE fx, TYPE fy, TYPE fz ) { x+=fx; y+=fy; z+=fz; };
     inline void sub( TYPE fx, TYPE fy, TYPE fz ) { x-=fx; y-=fy; z-=fz; };
     inline void mul( TYPE fx, TYPE fy, TYPE fz ) { x*=fx; y*=fy; z*=fz; };

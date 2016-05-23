@@ -43,7 +43,6 @@ class CubicRuler {
     Mat3d mat;
     Mat3d invMat;
 
-
     inline void pos2index( const Vec3d& pos, Vec3d& dabc, Vec3i& iabc ) const {
         Vec3d abc;
         invMat.dot_to( pos - pos0, abc );
@@ -86,6 +85,181 @@ class CubicRuler {
         //printf( "(%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", mat.ax,mat.ay,mat.az, mat.bx,mat.by,mat.bz,  mat.cx,mat.cy,mat.cz );
         //printf( "(%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", invMat.ax,invMat.ay,invMat.az, invMat.bx,invMat.by,invMat.bz,  invMat.cx,invMat.cy,invMat.cz );
     }
+
+
+    Vec3d  hRay,hRayInv,mdRay;
+    Vec3i  iRay;
+
+    void ray_start( const  Vec3d& dirHat, const Vec3d& startPos ){
+
+        Vec3d abc;
+        invMat.dot_to( startPos - pos0, abc );
+
+        iRay.a = (int) abc.a;  mdRay.a = 1 - abc.a + iRay.a;
+        iRay.b = (int) abc.b;  mdRay.b = 1 - abc.b + iRay.b;
+        iRay.c = (int) abc.c;  mdRay.c = 1 - abc.c + iRay.c;
+
+        invMat.dot_to( dirHat,  hRay );
+        if( hRay.a < 0 ){ hRay.a=-hRay.a; mdRay.a = 1-mdRay.a; };
+        if( hRay.b < 0 ){ hRay.b=-hRay.b; mdRay.b = 1-mdRay.b; };
+        if( hRay.c < 0 ){ hRay.c=-hRay.c; mdRay.c = 1-mdRay.c; };
+
+        hRayInv.set_inv( hRay );
+
+    }
+
+   double ray_next( ){
+        Vec3d tm;
+        tm.set_mul( mdRay, hRayInv );
+
+        if( tm.a < tm.b ){
+           if( tm.a < tm.c ){  // a min
+                mdRay.a  = 1;
+                mdRay.b -= hRay.b*tm.a;
+                mdRay.c -= hRay.c*tm.a;
+                iRay.a++;
+                return tm.a;
+           }
+        }else{
+           if( tm.b < tm.c ){  // b min
+                mdRay.a -= hRay.a*tm.b;
+                mdRay.b  = 1;
+                mdRay.c -= hRay.c*tm.b;
+                iRay.b++;
+                return tm.b;
+           }
+        }
+        // c min
+        mdRay.a -= hRay.a*tm.c;
+        mdRay.b -= hRay.b*tm.c;
+        mdRay.c = 1;
+        iRay.c++;
+        //hits[i].set_mul( dirHat, t );
+        //printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], tma, tmb, tmc,       t, hits[i].x, hits[i].y );
+        //printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], mda, mdb, mdc,       t, hits[i].x, hits[i].y );
+        return tm.c;
+    }
+
+/*
+    double ray_next( ){
+        Vec3d tm;
+        tm.set_mul( mdRay, hRayInv );
+
+        double dt;
+
+        if( tm.a < tm.b ){
+           if( tm.a < tm.c ){  // a min
+                dt      += tm.a;
+                mdRay.a  = 1;
+                mdRay.b -= hRay.b*tm.a;
+                mdRay.c -= hRay.c*tm.a;
+                iRay.a++;
+           }else{             // c min
+                dt     = tm.c;
+                mdRay.a -= hRay.a*tm.c;
+                mdRay.b -= hRay.b*tm.c;
+                mdRay.c  = 1;
+                iRay.c++;
+           }
+        }else{
+           if( tm.b < tm.c ){  // b min
+                dt    = tm.b;
+                mdRay.a  -= hRay.a*tm.b;
+                mdRay.b = 1;
+                mdRay.c -= hRay.c*tm.b;
+                iRay.b++;
+           }else{              // c min
+                dt    = tm.c;
+                mdRay.a -= hRay.a*tm.c;
+                mdRay.b -= hRay.b*tm.c;
+                mdRay.c = 1;
+                iRay.c++;
+           }
+        }
+        //hits[i].set_mul( dirHat, t );
+        //printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], tma, tmb, tmc,       t, hits[i].x, hits[i].y );
+        //printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], mda, mdb, mdc,       t, hits[i].x, hits[i].y );
+        return dt;
+    }
+*/
+
+
+/*
+    int ray_next( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * hits, int * boundaries, int * edges ){
+        double t0    = dirHat.dot( pos0 );
+        double t1    = dirHat.dot( pos1 );
+        double tspan = t1-t0;
+        double pa,pb,pc, invPa,invPb,invPc;
+        int    ia,ib,ic,i;
+        printf( " %f %f \n", step, invStep );
+        double mda,mdb,mdc, mta,mtb,mtc;
+        pa  = dirHat.dot( { 0.0d        ,1.15470053839*invStep} );
+        pb  = dirHat.dot( { 1.0d*invStep,0.57735026919*invStep} );
+        pc  = dirHat.dot( {-1.0d*invStep,0.57735026919*invStep} );
+        mda = pos0.dot  ( { 0.0d        ,1.15470053839*invStep} );
+        mdb = pos0.dot  ( { 1.0d*invStep,0.57735026919*invStep} );
+        mdc = pos0.dot  ( {-1.0d*invStep,0.57735026919*invStep} );
+        if( pa < 0 ){ pa=-pa; mda = 1-mda; };
+        if( pb < 0 ){ pa=-pb; mdb = 1-mdb; };
+        if( pc < 0 ){ pc=-pc; mdc = 1-mdc; };
+        ia=(int)(mda + MAP_OFFSET);   mda = 1-(mda - (ia - MAP_OFFSET) );
+        ib=(int)(mdb + MAP_OFFSET);   mdb = 1-(mdb - (ib - MAP_OFFSET) );
+        ic=(int)(mdc + MAP_OFFSET);   mdc = 1-(mdc - (ic - MAP_OFFSET) );
+        invPa = 1/pa; invPb = 1/pb; invPc = 1/pc;
+        //printf( " t_1,2  %f %f   p_a,b,c %f %f %f  \n", t0, t1, pa, pb, pc );
+        printf( " pa invPa \n", pa, invPa );
+        double t = 0;
+        i=0;
+        int ia_,ib_;
+        simplexIndexBare( pos0.x, pos0.y, ia_, ib_ );
+        while( t<tspan ){
+            double tma = mda * invPa;
+            double tmb = mdb * invPb;
+            double tmc = mdc * invPc;
+            //t += tma; boundaries[i] = 0;  mda = 1;
+            //t += tmb; boundaries[i] = 1;  mdb = 1;
+            //t += tmc; boundaries[i] = 2;  mdc = 1;
+            int ii = i<<2;
+            if( tma < tmb ){
+               if( tma < tmc ){  // a min
+                    t    += tma;
+                    mda   = 1; mdb -= pb*tma; mdc -= pc*tma;
+                    boundaries[i] = 0; ia_++;
+                    edges[ii  ] = ia_; edges[ii+1] = ib_;
+                    edges[ii+2] = ia_; edges[ii+3] = ib_+1;
+               }else{            // c min
+                    t    += tmc;
+                    mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
+                    boundaries[i] = 2; ib_++;
+                    edges[ii  ] = ia_; edges[ii+1] = ib_;
+                    edges[ii+2] = ia_+1; edges[ii+3] = ib_;
+               }
+            }else{
+               if( tmb < tmc ){  // b min
+                    t    += tmb;
+                    mda  -= pa*tmb; mdb = 1; mdc -= pc*tmb;
+                    boundaries[i] = 1;
+                    edges[ii  ] = ia_;   edges[ii+1] = ib_+1;
+                    edges[ii+2] = ia_+1; edges[ii+3] = ib_;
+               }else{            // c min
+                    t    += tmc;
+                    mda  -= pa*tmc; mdb -= pb*tmc; mdc = 1;
+                    boundaries[i] = 2; ib_++;
+                    edges[ii  ] = ia_; edges[ii+1] = ib_;
+                    edges[ii+2] = ia_+1; edges[ii+3] = ib_;
+               }
+            }
+            hits[i].set( pos0 );
+            hits[i].add_mul( dirHat, t );
+            //hits[i].set_mul( dirHat, t );
+            //printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], tma, tmb, tmc,       t, hits[i].x, hits[i].y );
+            printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], mda, mdb, mdc,       t, hits[i].x, hits[i].y );
+            i++;
+        }
+        return i;
+    }
+*/
+
 
 };
 
