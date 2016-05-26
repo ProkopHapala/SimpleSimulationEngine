@@ -88,21 +88,21 @@ class CubicRuler {
 
 
     Vec3d  hRay,hRayInv,mdRay;
-    Vec3i  iRay;
+    Vec3i  iRay,diRay;
 
     void ray_start( const  Vec3d& dirHat, const Vec3d& startPos ){
 
         Vec3d abc;
         invMat.dot_to( startPos - pos0, abc );
 
-        iRay.a = (int) abc.a;  mdRay.a = 1 - abc.a + iRay.a;
-        iRay.b = (int) abc.b;  mdRay.b = 1 - abc.b + iRay.b;
-        iRay.c = (int) abc.c;  mdRay.c = 1 - abc.c + iRay.c;
+        iRay.a = (int) abc.a;
+        iRay.b = (int) abc.b;
+        iRay.c = (int) abc.c;
 
         invMat.dot_to( dirHat,  hRay );
-        if( hRay.a < 0 ){ hRay.a=-hRay.a; mdRay.a = 1-mdRay.a; };
-        if( hRay.b < 0 ){ hRay.b=-hRay.b; mdRay.b = 1-mdRay.b; };
-        if( hRay.c < 0 ){ hRay.c=-hRay.c; mdRay.c = 1-mdRay.c; };
+        if( hRay.a < 0 ){ mdRay.a = abc.a-iRay.a; diRay.a=-1; hRay.a=-hRay.a; }else{ mdRay.a = 1 - abc.a + iRay.a; diRay.a=1; };
+        if( hRay.b < 0 ){ mdRay.b = abc.b-iRay.b; diRay.b=-1; hRay.b=-hRay.b; }else{ mdRay.b = 1 - abc.b + iRay.b; diRay.b=1; };
+        if( hRay.c < 0 ){ mdRay.c = abc.c-iRay.c; diRay.c=-1; hRay.c=-hRay.c; }else{ mdRay.c = 1 - abc.c + iRay.c; diRay.c=1; };
 
         hRayInv.set_inv( hRay );
 
@@ -117,7 +117,7 @@ class CubicRuler {
                 mdRay.a  = 1;
                 mdRay.b -= hRay.b*tm.a;
                 mdRay.c -= hRay.c*tm.a;
-                iRay.a++;
+                iRay.a  += diRay.a;
                 return tm.a;
            }
         }else{
@@ -125,7 +125,7 @@ class CubicRuler {
                 mdRay.a -= hRay.a*tm.b;
                 mdRay.b  = 1;
                 mdRay.c -= hRay.c*tm.b;
-                iRay.b++;
+                iRay.b  += diRay.b;
                 return tm.b;
            }
         }
@@ -133,7 +133,7 @@ class CubicRuler {
         mdRay.a -= hRay.a*tm.c;
         mdRay.b -= hRay.b*tm.c;
         mdRay.c = 1;
-        iRay.c++;
+        iRay.c += diRay.c;
         //hits[i].set_mul( dirHat, t );
         //printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], tma, tmb, tmc,       t, hits[i].x, hits[i].y );
         //printf( "%i %i  (%f,%f,%f)     %f (%f,%f) \n", i, boundaries[i], mda, mdb, mdc,       t, hits[i].x, hits[i].y );
@@ -257,6 +257,45 @@ class CubicRuler {
             i++;
         }
         return i;
+    }
+*/
+
+/*
+    while( t<tmax ){
+        double tma = mda * invPa;
+        double tmb = mdb * invPb;
+        double tmc = mdc * invPc;
+        int ii = i<<2;
+        if( tma < tmb ){
+           if( tma < tmc ){  // a min
+                t   += tma;
+                mda  = 1;
+                mdb -= pb*tma;
+                mdc -= pc*tma;
+                ia++;
+           }else{            // c min
+                t   += tmc;
+                mda -= pa*tmc;
+                mdb -= pb*tmc;
+                mdc  = 1;
+                ic++;
+           }
+        }else{
+           if( tmb < tmc ){  // b min
+                t   += tmb;
+                mda -= pa*tmb;
+                mdb  = 1;
+                mdc -= pc*tmb;
+                ib++;
+           }else{            // c min
+                t   += tmc;
+                mda -= pa*tmc;
+                mdb -= pb*tmc;
+                mdc  = 1;
+                ic++;
+           }
+        }
+        // do something with ia,ib,ic,mda,mdb,mdc
     }
 */
 

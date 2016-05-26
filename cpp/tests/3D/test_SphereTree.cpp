@@ -34,7 +34,7 @@ class TestAppSphereTree : public AppSDL2OGL_3D {
     int perFrame = 10;
 
 	int nSpheres = 0;
-	const static int nMaxSpheres = 1024*64;
+	const static int nMaxSpheres = 1024*4; //*64;
 	Vec3d sphere_pos[nMaxSpheres];
 	//std::vector<Vec3d>
 
@@ -72,6 +72,8 @@ class TestAppSphereTree : public AppSDL2OGL_3D {
 
 	// ---- function declarations
     void ray_next();
+    int  raySpheresOnGrid( const Vec3d& hRay, const Vec3d& ray0, double tmax, double R, double& tmin );
+
     void printMapContent();
     void insertWarper( int ix, int iy, int iz, int val );
 	bool insertSphere( const Vec3d& pos, int_fast64_t ind );
@@ -92,7 +94,7 @@ class TestAppSphereTree : public AppSDL2OGL_3D {
 
 void TestAppSphereTree::ray_next(){
     double dt = ruler.ray_next();
-    tRay+=dt;
+
     printf( " iRay (%03i,%03i,%03i) mdRay (%3.3f,%3.3f,%3.3f) dt %3.3f tRay %3.3f \n",
            ruler.iRay.a, ruler.iRay.b, ruler.iRay.c,
            ruler.mdRay.a,ruler.mdRay.b,ruler.mdRay.c, dt, tRay );
@@ -103,14 +105,38 @@ void TestAppSphereTree::ray_next(){
     ruler.index2pos( ruler.iRay, {0.0,0.0,0.0}, lpos );
     int rayShape = glGenLists(1);
     glNewList( rayShape , GL_COMPILE );
-        Draw3D::drawShape ( lpos, {1.0,0.0,0.0,  0.0,1.0,0.0, 0.0,0.0,1.0}, cursorShape );
-        Draw3D::drawLine      ( p1, p2 );
-        Draw3D::drawPointCross( p2, 0.2 );
+        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawShape ( lpos, {1.0,0.0,0.0,  0.0,1.0,0.0, 0.0,0.0,1.0}, cursorShape );
+        glColor3f(0.0f,0.0f,0.8f); Draw3D::drawLine      ( p1, p2 );
+        glColor3f(0.8f,0.0f,0.0f); Draw3D::drawPointCross( p2, 0.2 );
     glEndList();
     rayShapes[nRayShapes] = rayShape;
+    tRay+=dt;
     nRayShapes++;
 }
 
+int TestAppSphereTree::raySpheresOnGrid( const Vec3d& hRay, const Vec3d& ray0, double tmax, double R, double& tmin ){
+    ruler.ray_start( hRay, ray0 );
+    double t = 0;
+    while( t < tmax ){
+        double dt = ruler.ray_next();
+        int_fast64_t ind =  xyz2id( ruler.iRay.a, ruler.iRay.b, ruler.iRay.c );
+        auto range = grid.equal_range( ind );
+        tmin=tmax;
+        double imin=-1;
+        for ( auto it = range.first; it != range.second; ++it ){
+            int i = it->second;
+            Vec3d posi = sphere_pos[i];
+            //double r2 = rayPointDistance2( ray0, hRay, posi, thit );
+            double t = raySphere( ray0, hRay, R, posi );
+            if( t<tmin ){ tmin=t; imin=i; };
+            i++;
+        }
+        if( imin>=0 ){
+            return imin;
+        }
+    }
+    return -1;
+}
 
 void TestAppSphereTree::printMapContent(){
     int ip = 0;
@@ -348,7 +374,7 @@ TestAppSphereTree::TestAppSphereTree( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         //glColor3f( 0.8f, 0.8f, 0.8f ); Draw3D::drawPolygons( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons, Solids::Icosahedron_faces,  Solids::Icosahedron_verts );
         glEnable( GL_LIGHTING );
         //glColor3f( 0.8f, 0.8f, 0.8f );
-        Draw3D::drawSphere_oct( 4, (float)rSphere, {0.0,0.0,0.0} );
+        Draw3D::drawSphere_oct( 2, (float)rSphere, {0.0,0.0,0.0} );
         //glPopMatrix();
     glEndList();
 
@@ -371,7 +397,7 @@ TestAppSphereTree::TestAppSphereTree( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     srand(114545);
 
     pos0Ray.set( 0.5, 0.5, 0.5  );
-    hRay   .set( 1.0, -0.5, 0.25 );
+    hRay   .set( 1.0, -0.5, 2.25 );
     hRay.normalize();
     ruler.ray_start( hRay, pos0Ray );
     tRay=0;
@@ -412,7 +438,6 @@ void TestAppSphereTree::draw   (){
         glCallList( rayShapes[i] );
     }
 
-/*
     int perFrame = 400000;
     glColor3f(0.8f,0.2f,0.2f);
     long tcomp = getCPUticks();
@@ -429,8 +454,6 @@ void TestAppSphereTree::draw   (){
         }
     }
     tcomp = getCPUticks() - tcomp;
-*/
-
 
     //for( auto o : world.objects ) {
     //glColor3f(0.8f,0.8f,0.8f);
@@ -443,6 +466,14 @@ void TestAppSphereTree::draw   (){
         Draw3D::drawShape    ( lpos, lrot, sphereShape );
     }
     tview = getCPUticks() - tview;
+
+    double t;
+    int isph = raySpheresOnGrid( camMat.c, camMat.c*(-10.0), 10.0, rSphere, t );
+    if(isph>=0){
+        lpos = sphere_pos[isph];
+        glColor3f( 0.0, 1.0, 1.0 );
+        Draw3D::drawShape ( lpos, {1.01,0.0,0.0,  0.0,1.01,0.0, 0.0,0.0,1.01}, sphereShape );
+    }
 
     glColor3f( 1.0, 0.0, 1.0 );
     int_fast64_t ind = xyz2id(  iCurPos.x,  iCurPos.y,  iCurPos.z );
