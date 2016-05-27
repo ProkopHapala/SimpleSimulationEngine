@@ -13,9 +13,18 @@
 
 #include "TerrainCubic.h"
 
+#include "FormationTacticsCommon.h"
+#include "Formation.h"
+#include "BattleLine.h"
+#include "Faction.h"
+
 class FormationWorld{
 	public:
-    std::vector<Formation*> formations;
+    //std::vector<BattleLine*> battleLines;
+    std::vector<Formation*>  formations;
+    std::vector<Faction*>    factions;
+    std::vector<SoldierType> soldierTypes;
+
     TerrainCubic   terrain;
 
 	//HashMap2D<Particle2D> map;
@@ -29,6 +38,8 @@ class FormationWorld{
     void init();
     void update();
     void simulationStep( double dt );
+
+    void refreshFormations( );
 
     //void assembleForces( ULONG i );
     //void assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D** buf_i );

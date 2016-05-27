@@ -28,6 +28,7 @@ class FormationTacticsApp : public AppSDL2OGL, public TiledView {
     FormationWorld world;
 
     Formation * currentFormation = NULL;
+    Faction   * currentFaction   = NULL;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -44,7 +45,9 @@ class FormationTacticsApp : public AppSDL2OGL, public TiledView {
 
 FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
     world.init();
-    currentFormation = world.formations[0];
+
+    currentFaction   = world.factions[0];  printf( "currentFaction: %s\n", currentFaction->name );
+    currentFormation = currentFaction->formations[0];
 
     TiledView::init( 6, 6 );
     tiles    = new int[ nxy ];
@@ -64,11 +67,20 @@ void FormationTacticsApp::draw(){
     //printf( " camRect  %f %f %f %f \n", camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin );
 
 
-    glColor3f( 0.8f, 0.1f, 0.1f );
-    for( Formation* f : world.formations ){
+    for( Formation* fm : world.formations ){
         //printf( " f %i \n", f  );
-        if( f != NULL ) f->render( );
+        glColor3f( fm->faction->color.x, fm->faction->color.y, fm->faction->color.z );
+        if( fm != NULL ) fm->render( );
     }
+    /*
+    for( Faction* fa : world.factions ){
+        glColor3f( fa->color.x, fa->color.y, fa->color.z );
+        for( Formation* fm : fa->formations ){
+            //printf( " f %i \n", f  );
+            if( fm != NULL ) fm->render( );
+        }
+    }
+    */
 
     //if(frameCount > 10) STOP = true;
 };

@@ -3,8 +3,6 @@
 #include <SDL2/SDL_opengl.h>
 #include "Draw2D.h"
 
-#include "Formation.h"
-
 #include "FormationWorld.h" // THE HEADER
 
 #define DEBUG_PLOT_INTERACTION( pa, pb, R, G, B ) if(interacts){ \
@@ -21,24 +19,43 @@ void FormationWorld::update( ){
     }
 }
 
-
 void FormationWorld::simulationStep( double dt ){
+
     for( Formation* f : formations ){
-        if( f != NULL ){
+       // if( f != NULL ){
             f->clean_temp();
             f->applyWillForce( );
             f->interactInside( );
-        }
+            f->update_bbox( );
+       // }
     }
+
+    for( int i=0; i<formations.size(); i++ ){
+        Formation * fi = formations[i];
+        //if( fi != NULL ){
+            for( int j=0; j<i; j++ ){
+                fi->interact( formations[j] );
+            }
+        //}
+    }
+
     for( Formation* f : formations ){
-        if( f != NULL ){
+        //if( f != NULL ){
             //f->moveBy( {0.01, 0.01 } );
             f->update( dt );
-        }
+        //}
     }
 };
 
 
+void FormationWorld::refreshFormations( ){
+    formations.clear();
+    for( Faction* fa : factions ){
+        for( Formation* fm : fa->formations ){
+            formations.push_back( fm );
+        }
+    }
+}
 
 void FormationWorld::init(){
     printf( " FormationWorld::init() \n" );
@@ -50,12 +67,30 @@ void FormationWorld::init(){
     terrain.allocate( );
     terrain.generateRandom( 0.0, 1.0 );
 
+    //soldierTypes.push_back( SoldierType(){"pikemen",1.0d,0.25d,1.0d} );
+    soldierTypes.push_back( {"pikemen",1.0d,0.25d,1.0d} );
+
+    Faction* fac1 = new Faction( "RedArmy" , {1.0f,0.25f,0.0f} );
+    factions.push_back( fac1 );
+    fac1->initFaction( 4, 4, 16, soldierTypes, {-20.0,3.0}, {+20.0,3.0}, 1.0 );
+    //fac1->battleLines[0]->setTargetLine( {-10.0,3.0}, {+10.0,3.0} );
+
+    Faction* fac2 = new Faction( "BlueArmy", {0.0f,0.5f, 1.0f} );
+    factions.push_back( fac2 );
+    fac2->initFaction( 4, 4, 16, soldierTypes, {+20.0,-3.0}, {-20.0,-3.0}, 1.0 );
+    //fac2->battleLines[0]->setTargetLine( {+10.0,-3.0}, {-10.0,-3.0} );
+
+
+    refreshFormations( );
+
+/*
     formations.reserve( 16 );
     SoldierType * pikemen  = new SoldierType();
     Formation * formation1 = new Formation( 4, 4, pikemen );
     formation1->setEnds( {-2.0,-1.0}, {3.0,2.0}, 2.0 );
     formation1->deploySoldiers();
     formations.push_back( formation1 );
+*/
 
 };
 

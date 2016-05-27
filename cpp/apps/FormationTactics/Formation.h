@@ -12,13 +12,14 @@
 #include "geom2D.h"
 #include "Body2D.h"
 
+#include "FormationTacticsCommon.h"
 #include "Soldier.h"
 
 class Formation{
 	public:
-    char  * name;
-
-    Vec2d * nodes;
+    char       * name;
+    Faction    * faction;
+    BattleLine * line;
 
     Vec2d center;
     Vec2d p00target,p01target;
@@ -29,18 +30,57 @@ class Formation{
     double length,width;
     double kLength=3.0, kWidth=3.0;
 
+    Rect2d bbox;
+    //Vec2d bbox_min, bbox_max;
+
     int nrows;
     int ncols;
     int nsoldiers;
     int ncapable,nalive;
     Soldier * soldiers = NULL;
 
+    // =========== function implementation ( FIXME - this should be in cpp )
+
+    void update_bbox( ){
+        Vec2d p = soldiers[0].pos;
+        bbox.x0 = p.x; bbox.x1 = p.x;
+        bbox.y0 = p.y; bbox.y1 = p.y;
+        for(int i=1; i<nsoldiers; i++){
+            p = soldiers[i].pos;
+            if( p.x < bbox.x0 ){ bbox.x0 = p.x; }
+            if( p.y < bbox.y0 ){ bbox.y0 = p.y; }
+            if( p.x > bbox.x1 ){ bbox.x1 = p.x; }
+            if( p.y > bbox.y1 ){ bbox.y1 = p.y; }
+        }
+    }
 
     void moveBy( const Vec2d& dpos ){
         center.add( dpos );
         setCenterRot( center, dirFw );
     }
 
+    void interact( Formation * fb ){
+        if ( fb == NULL ) return;
+        if ( bbox.notOverlaps( fb->bbox ) ) return;
+        for( int i=0; i<fb->nsoldiers; i++ ){
+            Soldier * si = fb->soldiers + i;
+            if( si->alive ){
+                for( int j=0; j<nsoldiers; j++ ){
+                    Soldier * sj = soldiers + j;
+                    if( sj->alive ){
+                        Vec2d d;
+                        d.set_sub( si->pos, sj->pos );
+                        double r2 = d.norm2( );
+                        if( r2 < 1.0 ){
+                            d.mul( (1-r2)*10 );
+                            si->force.add( d );
+                            sj->force.sub( d );
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     void interactInside( ){
         for( int i=0; i<nsoldiers; i++ ){
@@ -74,6 +114,10 @@ class Formation{
         movingToTarget = true;
     }
 
+    void jumpToTarget( ){
+        setEnds( p00target, p01target, width );
+    }
+
     void checkTarget( ){
         Vec2d d;
         d.set_sub( p00, p00target );
@@ -93,6 +137,8 @@ class Formation{
             setEnds( p00, p01, width );
         }
     }
+
+
 
 
 
@@ -160,7 +206,7 @@ class Formation{
     void render( ){
         //printf( " rendering \n" );
         //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) \n",p00.x,p00.y, p01.x,p01.y, p10.x,p10.y, p11.x,p11.y );
-        //glColor3f( 0.1f, 0.1f, 0.1f );
+        //glColor3f( faction->color.x, faction->color.y, faction->color.z );
         glBegin( GL_LINE_LOOP );
         glVertex3f( (float)p00.x, (float)p00.y, 0 );
         glVertex3f( (float)p01.x, (float)p01.y, 0 );
@@ -182,7 +228,8 @@ class Formation{
     }
 
     Formation(){};
-    Formation( int nrows_, int ncols_, SoldierType * type ){
+    Formation( int nrows_, int ncols_, SoldierType * type, Faction * faction_ ){
+        faction   = faction_;
         nrows     = nrows_;
         ncols     = ncols_;
         nsoldiers = ncols*nrows;
@@ -203,18 +250,19 @@ class Formation{
     }
 
     void deploySoldiers( ){
-        double dlf = length / nrows;
-        double dfw = width  / ncols;
+        double dlf = length / ncols;
+        double dfw = width  / nrows;
         int i=0;
         double cfw = 0.5*dfw;
-        for( int icol=0; icol<ncols; icol++ ){
-            double clf = 0.5*dlf;
-            for( int irow=0; irow<nrows; irow++ ){
-                soldiers[i].pos.set_lincomb( 1, cfw+randf(-0.1,-0.1), clf+randf(-0.1,-0.1), p11, dirFw, dirLf );
+        for( int irow=0; irow<nrows; irow++ ){
+            double clf = 0.5*dlf + ( (irow&1) -0.5d );
+            for( int icol=0; icol<ncols; icol++ ){
+                //soldiers[i].pos.set_lincomb( 1, cfw+randf(-0.1,-0.1), clf+randf(-0.1,-0.1), p11, dirFw, dirLf );
+                soldiers[i].pos.set_lincomb( 1, cfw, clf, p11, dirFw, dirLf );
                 clf += dlf;
                 i++;
             }
-            cfw += dfw;
+            cfw += dfw ;
         }
 /*
         for( int i=0; i<nsoldiers; i++ ){

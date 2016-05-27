@@ -13,10 +13,10 @@ include_directories(
         ${SDL2_INCLUDE_DIR}
 )
 
-set( NAME "FormationWorld" )
+set( NAME "FormationTactics" )
 
 add_executable( ${NAME} 
-	main.cpp FormationWorld.cpp Formation.cpp Soldier.cpp SoldierType.cpp
+	main.cpp FormationWorld.cpp Faction.cpp BattleLine.cpp Formation.cpp Soldier.cpp SoldierType.cpp
 	$<TARGET_OBJECTS:Body2D> 
 	$<TARGET_OBJECTS:SDL2OGL> 
 	$<TARGET_OBJECTS:TerrainCubic> 

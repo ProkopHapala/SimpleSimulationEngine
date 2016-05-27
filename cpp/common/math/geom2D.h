@@ -84,7 +84,11 @@ class Rect2d{
 	//inline      Rect2d   ( double x0_, double y0_, double x1_, double y1_ ){ x0=x0_; y0=y0_; x1=x1_; y1=y1_; };
 	//inline      Rect2d   ( const Vec2d& a, const Vec2d b                  ){ x0=x0_; y0=y0_; x1=x1_; y1=y1_; };
 
-	inline bool pointIn( const Vec2d& p ){ return pointInRect( p, x0, y0, x1, y1 );    		       }
+	inline bool pointIn( const Vec2d& p ) const { return pointInRect( p, x0, y0, x1, y1 );    		          }
+
+	inline bool notOverlaps( const Rect2d& r ) const {
+        return ( x0 > r.x1 ) || ( x1 < r.x0 ) || ( r.y0 > r.y1 ) || ( y1 < r.y0 );
+	}
 
 };
 
@@ -226,7 +230,7 @@ inline double isLeft( const Vec2d& P0, const Vec2d& P1, const Vec2d& P2 ){
 	Vec2d d10; d10.set_sub( P1, P0 );
 	Vec2d d20; d20.set_sub( P2, P0 );
 	return d10.cross( d20 );
-	//return d10.x * d20.y - d20.x * d10.y; 
+	//return d10.x * d20.y - d20.x * d10.y;
     //return ( (P1.x - P0.x) * (P2.y - P0.y) - (P2.x - P0.x) * (P1.y - P0.y) );
 }
 
