@@ -10,7 +10,7 @@
 //#include "Draw2D.h"
 
 //#include "fastmath.h"
-//#include "Vec2.h"
+#include "Vec2.h"
 #include "Vec3.h"
 //#include "geom2D.h"
 //#include "Body2D.h"
@@ -23,10 +23,23 @@
 class Faction{
 	public:
     char  * name;
-    Vec3f color;
+    Vec3f   color;
 
     std::vector<BattleLine*> battleLines;
     std::vector<Formation*>  formations;
+
+    Formation* getFormationAt(const Vec2d& p ){
+        int i=0;
+        int imin=0;
+        double r2min = 1e+300;
+        for(Formation * fm : formations ){
+            double r2 = p.dist2( fm->center );
+            if( r2 < r2min ){ r2min=r2; imin=i; }
+            i++;
+        }
+        printf( " imin %i r2min %f \n", imin, r2min );
+        return formations[imin];
+    };
 
     void initFaction( int nFormations, int nrows_, int ncols_, std::vector<SoldierType>& soldierTypes, const Vec2d& p1, const Vec2d& p2, double width ){
         BattleLine* battleLine = new BattleLine();
@@ -34,7 +47,8 @@ class Faction{
         formations.reserve( nFormations );
         battleLines.push_back( battleLine );
         for( int i=0; i<nFormations; i++ ){
-            Formation * formation = new Formation( nrows_, ncols_, &(soldierTypes[0]), this );
+            //char * name; asprintf(&name,"%3iof%s", i, name );
+            Formation * formation = new Formation( i, nrows_, ncols_, &(soldierTypes[0]), this );
             formation->width = width;
             formations .push_back( formation );
             battleLine->formations.push_back( formation );

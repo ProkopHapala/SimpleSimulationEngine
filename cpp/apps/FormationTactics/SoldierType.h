@@ -8,6 +8,9 @@ class SoldierType{
     double seed;
     double radius;
     double moral;
+
+    double mass;
+    double meleeRange;
 };
 
 #endif

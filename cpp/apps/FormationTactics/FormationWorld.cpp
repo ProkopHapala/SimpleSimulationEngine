@@ -23,6 +23,7 @@ void FormationWorld::simulationStep( double dt ){
 
     for( Formation* f : formations ){
        // if( f != NULL ){
+            f->eliminateInvalids( );
             f->clean_temp();
             f->applyWillForce( );
             f->interactInside( );
@@ -33,7 +34,8 @@ void FormationWorld::simulationStep( double dt ){
     for( int i=0; i<formations.size(); i++ ){
         Formation * fi = formations[i];
         //if( fi != NULL ){
-            for( int j=0; j<i; j++ ){
+            //for( int j=0; j<i; j++ ){ // This will be more complicated to resolve symetrically
+            for( int j=0; j<formations.size(); j++ ){
                 fi->interact( formations[j] );
             }
         //}
@@ -68,16 +70,16 @@ void FormationWorld::init(){
     terrain.generateRandom( 0.0, 1.0 );
 
     //soldierTypes.push_back( SoldierType(){"pikemen",1.0d,0.25d,1.0d} );
-    soldierTypes.push_back( {"pikemen",1.0d,0.25d,1.0d} );
+    soldierTypes.push_back( {"pikemen",1.0d,0.25d,1.0d, 1.0, 1.0 } );
 
     Faction* fac1 = new Faction( "RedArmy" , {1.0f,0.25f,0.0f} );
     factions.push_back( fac1 );
-    fac1->initFaction( 4, 4, 16, soldierTypes, {-20.0,3.0}, {+20.0,3.0}, 1.0 );
+    fac1->initFaction( 4, 4, 16, soldierTypes, {+20.0,3.0}, {-20.0,3.0}, 1.0 );
     //fac1->battleLines[0]->setTargetLine( {-10.0,3.0}, {+10.0,3.0} );
 
     Faction* fac2 = new Faction( "BlueArmy", {0.0f,0.5f, 1.0f} );
     factions.push_back( fac2 );
-    fac2->initFaction( 4, 4, 16, soldierTypes, {+20.0,-3.0}, {-20.0,-3.0}, 1.0 );
+    fac2->initFaction( 4, 4, 16, soldierTypes, {-20.0,-3.0}, {+20.0,-3.0}, 1.0 );
     //fac2->battleLines[0]->setTargetLine( {+10.0,-3.0}, {-10.0,-3.0} );
 
 

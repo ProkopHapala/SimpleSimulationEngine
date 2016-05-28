@@ -72,6 +72,12 @@ void FormationTacticsApp::draw(){
         glColor3f( fm->faction->color.x, fm->faction->color.y, fm->faction->color.z );
         if( fm != NULL ) fm->render( );
     }
+
+    if( currentFormation != 0 ){
+        glColor3f(1.0,0.0,1.0);
+        Draw2D::drawCircle_d( currentFormation->center, 0.5, 16, false );
+    }
+
     /*
     for( Faction* fa : world.factions ){
         glColor3f( fa->color.x, fa->color.y, fa->color.z );
@@ -102,6 +108,10 @@ void FormationTacticsApp::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
+                    //printf( "left button pressed !!!! " );
+                    if( currentFaction != NULL ) currentFormation = currentFaction->getFormationAt( { mouse_begin_x, mouse_begin_y } );
+                break;
+                case SDL_BUTTON_RIGHT:
                     //printf( "left button pressed !!!! " );
                     if( currentFormation != NULL ) currentFormation->setTarget( { mouse_begin_x, mouse_begin_y } );
                 break;

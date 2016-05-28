@@ -12,15 +12,17 @@
 #include "FormationTacticsCommon.h"
 #include "SoldierType.h"
 
-class Soldier : public PointBody2D{
+class Soldier : public RigidBody2D{
 	public:
 	Formation   * formation = NULL;
     SoldierType * type = NULL;
-    bool alive   = true;
-    bool capable = true;
+    //bool alive   = true;
+    //bool capable = true;
 
     Vec2d  willForce;
     double maxwf = 1.0;
+
+    uint8_t impair_mask=0;   //  0=fit, 1==incapable, 4=deserted, 128==dead    probably bit mask
 
     // ===== inline functions
 

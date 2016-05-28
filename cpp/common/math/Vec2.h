@@ -4,8 +4,8 @@
 
 #include "fastmath.h"
 
-//template <class TYPE,class VEC> 
-template <class TYPE> 
+//template <class TYPE,class VEC>
+template <class TYPE>
 class Vec2TYPE{
 	using VEC = Vec2TYPE<TYPE>;
 	public:
@@ -80,8 +80,11 @@ class Vec2TYPE{
 		return norm;
     };
 
+    inline TYPE dist2( const VEC& a) const { VEC d; TYPE dx = x-a.x; TYPE dy = y-a.y; return dx*dx + dy*dy; }
+    inline TYPE dist ( const VEC& a) const { return sqrt( dist2(a) ); }
+
 	inline void set_perp( const VEC& a )       { x=-a.y; y=a.x; }
-	inline double cross ( const VEC& a ) const { return x*a.y - y*a.x; }; 
+	inline double cross ( const VEC& a ) const { return x*a.y - y*a.x; };
 
 	inline void     mul_cmplx (               const VEC& b ){                            double x_ =    x*b.x -   y*b.y;         y =    y*b.x +   x*b.y;       x=x_;  }
 	inline void pre_mul_cmplx ( const VEC& a               ){                            double x_ =  a.x*  x - a.y*  y;         y =  a.y*  x + a.x*  y;       x=x_;  }
@@ -104,7 +107,7 @@ class Vec2TYPE{
 
 	inline double along_hat( const VEC& hat, const VEC& p ){ VEC ap; ap.set( p.x-x, p.y-y ); return hat.dot( ap ); }
 	inline double along    ( const VEC& b,   const VEC& p ){
-		VEC ab,ap; 
+		VEC ab,ap;
 		ab.set( b.x - x, b.y - y );
 		ap.set( p.x - x, p.y - y );
 		return ab.dot(ap) / ab.norm(ab);
