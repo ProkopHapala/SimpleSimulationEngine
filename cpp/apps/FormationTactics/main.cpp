@@ -74,8 +74,9 @@ void FormationTacticsApp::draw(){
     }
 
     if( currentFormation != 0 ){
-        glColor3f(1.0,0.0,1.0);
-        Draw2D::drawCircle_d( currentFormation->center, 0.5, 16, false );
+        //glColor3f(1.0,0.0,1.0);
+        glColor3f(0.0,1.0,0.0);
+        Draw2D::drawCircle_d( currentFormation->center, 0.5, 16, true );
     }
 
     /*

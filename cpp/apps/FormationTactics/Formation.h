@@ -3,12 +3,6 @@
 #ifndef Formation_h
 #define Formation_h
 
-#include <algorithm>
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include "Draw2D.h"
-
 #include "fastmath.h"
 #include "Vec2.h"
 #include "geom2D.h"
@@ -49,128 +43,45 @@ class Formation{
     int nCapable,nAlive;
     Soldier * soldiers = NULL;
 
-    // =========== function implementation ( FIXME - this should be in cpp )
+    // =========== function declaration
 
-    void update_bbox( ){
-        Vec2d p = soldiers[0].pos;
-        cog.set( p );
-        bbox.a.set(p); bbox.b.set(p);
-        for(int i=1; i<nCapable; i++){
-            p = soldiers[i].pos;
-            cog.add(p);
-            if( p.x < bbox.x0 ){ bbox.x0 = p.x; }
-            if( p.y < bbox.y0 ){ bbox.y0 = p.y; }
-            if( p.x > bbox.x1 ){ bbox.x1 = p.x; }
-            if( p.y > bbox.y1 ){ bbox.y1 = p.y; }
-        }
-        cog.mul( 1.0/nCapable );
-        bbox.a.add(-bboxMargin); bbox.b.add(bboxMargin);
+    void setTarget     ( const Vec2d& target );
+    void setEnds       ( const Vec2d& pL_, const Vec2d& pR_, double width_ );
+    void setCenterRot  ( const Vec2d& center_, const Vec2d& dirFw_ );
+    void moveToTarget  ( );
+    void moveBy        ( const Vec2d& dpos );
+    void jumpToTarget  ( );
+
+    void clean_temp    ( );
+    void applyWillForce( Soldier& soldier );
+    void applyWillForce( );
+
+    void leaveMenBehind   ( );
+    bool eliminateInvalids( );
+    void update_bbox      ( );
+    void interact         ( Formation * fb );
+    void interactInside   ( );
+    void update           ( double dt );
+    void render           ( );
+
+    void setupSoldiers( SoldierType * type );
+    void deploySoldiers( );
+
+    Formation( int id_, int nrows_, int ncols_, SoldierType * type, Faction * faction_ );
+
+    // =========== inline functions
+
+    inline double willSaturation( double will ){
+        if( will > maxWill ) return maxWill;
+        return will;
     }
 
-    void moveBy( const Vec2d& dpos ){
-        center.add( dpos );
-        setCenterRot( center, dirFw );
-    }
-
-    void interact( Formation * fb ){
-        //if ( fb == NULL ) return;
-        if ( bbox.notOverlaps( fb->bbox ) ) return;
-        bool enemy = ( fb->faction != faction );
-        for( int i=0; i<fb->nCapable; i++ ){
-            Soldier * si = fb->soldiers + i;
-            for( int j=0; j<nCapable; j++ ){
-                Soldier * sj = soldiers + j;
-                Vec2d d;
-                d.set_sub( si->pos, sj->pos );
-                double r2 = d.norm2( );
-                if( r2 < 1.0 ){
-                    d.mul( (1-r2)*10 );
-                    si->force.add( d );
-                    //sj->force.sub( d );
-                }
-                if( enemy ){
-                    double range = si->type->meleeRange;
-                    if( r2 < sq( range ) ){
-                        si->rot.add_mul( d, -1/(1+r2) );
-                    }
-                }
-            }
-        }
-    }
-
-    void interactInside( ){
-        for( int i=0; i<nCapable; i++ ){
-            Soldier * si = soldiers + i;
-            for( int j=0; j<i; j++ ){
-                Soldier * sj = soldiers + j;
-                Vec2d d;
-                d.set_sub( si->pos, sj->pos );
-                double r2 = d.norm2( );
-                if( r2 < 1.0 ){
-                    d.mul( (1-r2)*10 );
-                    si->force.add( d );
-                    sj->force.sub( d );
-                }
-            }
-        }
-    }
-
-    void setTarget( const Vec2d& target ){
-        printf( " setTarget (%3.3f,%3.3f) \n", target.x, target.y );
-        Vec2d d;
-        d.set_sub( target, center ); d.normalize();
-        //dirFw.set( d ); dirFw.normalize(); dirLf.set_perp( dirFw );
-        setCenterRot( center, d );
-        p00target.set_add_mul( target, dirLf,  length * 0.5d );
-        p01target.set_add_mul( target, dirLf, -length * 0.5d );
-        movingToTarget = true;
-    }
-
-    void jumpToTarget( ){
-        setEnds( p00target, p01target, width );
-    }
-
-    void leaveMenBehind( ){
-        for( int i=0; i<nCapable; i++ ){
-            Vec2d d; d.set_sub( soldiers[i].pos, center );
-            double llf = -dirLf.dot( d );
-            double lfw = -dirFw.dot( d );
-            if( ( fabs(llf)>(length+bboxMargin) ) || ( fabs(lfw)>(width+bboxMargin) ) ){
-                printf( "soldier %i abandoned \n" );
-                soldiers[i].impair_mask |= 4;
-            }
-        }
-    }
-
-    bool eliminateInvalids( ){
-        int j = nCapable-1;
-        bool change = false;
-        for( int i=0; i<nCapable; i++ ){
-            if( soldiers[i].impair_mask >=4 ){
-                change = true;
-                while( soldiers[j].impair_mask>=4 ){ j--; }
-                if( j>i ){
-                    std::swap( soldiers[i], soldiers[j] );
-                }else{
-                    j = i;
-                    break;
-                }
-            }
-        }
-        if( change ){
-            printf( " nCapable %i -> %i \n", nCapable, j );
-            for( int i=0; i<nSoldiers; i++ ){ printf( " soldier %i : %i \n", i, soldiers[i].impair_mask ); } // just debug
-            nCapable = j;
-        }
-        return change;
-    }
-
-    bool checkMenBehind( ){
+    inline bool checkMenBehind( ){
         double r2box = bbox.a.dist2( bbox.b );
         return r2box > ( maxBbox2*( width*width + length*length  ) );
     }
 
-    void checkTarget( ){
+    inline void checkTarget( ){
         Vec2d d;
         d.set_sub( p00, p00target );
         if( d.norm2() >  0.01 ) return;
@@ -179,181 +90,7 @@ class Formation{
         movingToTarget = false;
     }
 
-    void moveToTarget( ){
-
-        if( checkMenBehind( ) ){
-            printf( " formation %i cannot move, men stuck ! \n", id );
-            if( shouldLeaveMenBehind ){
-                printf( " => leaving men behind ! \n", id );
-                leaveMenBehind( );
-            }
-            return;
-        }
-
-        checkTarget( );
-        if( movingToTarget ){
-            double speed = 0.01;
-            Vec2d d1,d0;
-            d0.set_sub( p00target, p00 ); d0.normalize(); p00.add_mul( d0, speed );
-            d1.set_sub( p01target, p01 ); d1.normalize(); p01.add_mul( d1, speed );
-            setEnds( p00, p01, width );
-        }
-    }
-
-    inline double willSaturation( double will ){
-        if( will > maxWill ) return maxWill;
-        return will;
-    }
-
-    void applyWillForce( Soldier& soldier ){
-        if( soldier.impair_mask < 4 ){
-            Vec2d d;
-            d.set_sub( soldier.pos, p00 );
-            double llf = -dirLf.dot( d );
-            if      ( llf < 0      ){ soldier.willForce.add_mul( dirLf, -willSaturation( -llf        *kLength)); }
-            else if ( llf > length ){ soldier.willForce.add_mul( dirLf,  willSaturation( (llf-length)*kLength)); }
-            double lfw = -dirFw.dot( d );
-            if      ( lfw < 0      ){ soldier.willForce.add_mul( dirFw, -willSaturation( -lfw        *kWidth )); }
-            else if ( lfw > width  ){ soldier.willForce.add_mul( dirFw,  willSaturation( (lfw-width )*kWidth )); }
-            //printf( "- %3.3f %3.3f   %3.3f %3.3f \n", llf, lfw, length, width  );
-        }
-    }
-
-    void applyWillForce( ){
-        for( int i = 0; i<nCapable; i++ ){
-            applyWillForce( soldiers[i] );
-            //printf( " (%3.3f,%3.3f)\n", i, soldiers[i].willForce.x, soldiers[i].willForce.y );
-        }
-    }
-
-    void clean_temp(){
-        for( int i = 0; i<nCapable; i++ ){
-            soldiers[i].clean_temp();
-        }
-    }
-
-    void setEnds( const Vec2d& pL_, const Vec2d& pR_, double width_ ){
-        width = width_;
-        p00.set( pL_ ); p01.set( pR_ );
-        center.set_lincomb( 0.5d, p00, 0.5d, p01 );
-        Vec2d d; d.set_sub( p00, p01 );
-        length = d.norm();
-        dirLf.set_mul ( d, 1/length  );
-        dirFw.set_perp( dirLf );  dirFw.mul(-1);
-        p10.set_add_mul( p00, dirFw, -width );
-        p11.set_add_mul( p01, dirFw, -width );
-        //printf( " p00 (%3.3f,%3.3f) p01 (%3.3f,%3.3f) dirLf (%3.3f,%3.3f) dirFw (%3.3f,%3.3f) \n", p00.x,p00.y, p01.x,p01.y, dirLf.x,dirLf.y, dirFw.x,dirFw.y );
-        //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) \n",p00.x,p00.y, p01.x,p01.y, p10.x,p10.y, p11.x,p11.y );
-    }
-
-
-    void setCenterRot( const Vec2d& center_, const Vec2d& dirFw_ ){
-        center.set( center_ );
-        dirFw .set( dirFw_ );
-        dirLf .set_perp ( dirFw );
-        p00.set_add_mul( center, dirLf,  length * 0.5d );
-        p01.set_add_mul( center, dirLf, -length * 0.5d );
-        p10.set_add_mul( p00,    dirFw, -width );
-        p11.set_add_mul( p01,    dirFw, -width );
-        //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) \n",p00.x,p00.y, p01.x,p01.y, p10.x,p10.y, p11.x,p11.y );
-        //exit(0);
-    }
-
-    void update( double dt ){
-        moveToTarget( );
-        for( int i = 0; i<nCapable; i++ ){
-            soldiers[i].rot.add_mul( dirFw, 0.1 );
-            soldiers[i].rot.normalize();
-            soldiers[i].vel.mul( 0.9 );
-            soldiers[i].moveSoldier( dt );
-        }
-    }
-
-    void render( ){
-        //printf( " rendering \n" );
-        //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) \n",p00.x,p00.y, p01.x,p01.y, p10.x,p10.y, p11.x,p11.y );
-        //glColor3f( faction->color.x, faction->color.y, faction->color.z );
-        glBegin( GL_LINE_LOOP );
-        glVertex3f( (float)p00.x, (float)p00.y, 0 );
-        glVertex3f( (float)p01.x, (float)p01.y, 0 );
-        glVertex3f( (float)p11.x, (float)p11.y, 0 );
-        glVertex3f( (float)p10.x, (float)p10.y, 0 );
-        glEnd();
-
-        Draw2D::drawRectangle_d   ( bbox.a, bbox.b, false );
-        Draw2D::drawPointCross_d( cog, 0.5 );
-
-        for( int i = 0; i<nCapable; i++ ){
-            //Draw2D::drawCircle_d( soldiers[i].pos, 0.5, 8, true );
-            Draw2D::drawCircle_d( soldiers[i].pos, 0.25, 8, true );
-            //Draw2D::drawLine_d  ( soldiers[i].pos, soldiers[i].pos );
-            Draw2D::drawVecInPos_d( soldiers[i].rot, soldiers[i].pos );
-
-            if( movingToTarget ){
-                Draw2D::drawLine_d( p00target, p01target );
-                Draw2D::drawLine_d( center, (p01target+p00target)*0.5 );
-            }
-            /*
-            printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) \n", soldiers[i].pos.x,soldiers[i].pos.y,
-                           soldiers[i].vel.x,soldiers[i].vel.y,
-                           soldiers[i].force.x,soldiers[i].force.y,
-                           soldiers[i].willForce.x,soldiers[i].willForce.y  );
-            */
-        }
-        //printf( "============== \n" );
-        //exit(0);
-    }
-
     Formation(){};
-    Formation( int id_, int nrows_, int ncols_, SoldierType * type, Faction * faction_ ){
-        id = id_;
-        //name      = name_;
-        faction   = faction_;
-        nrows     = nrows_;
-        ncols     = ncols_;
-        nSoldiers = ncols*nrows;
-        nAlive    = nSoldiers;
-        nCapable  = nSoldiers;
-        soldiers  = new Soldier[ nSoldiers ];
-        setupSoldiers( type );
-    }
-
-    void setupSoldiers( SoldierType * type ){
-        for( int i=0; i<nSoldiers; i++ ){
-            soldiers[i].type  = type;
-            soldiers[i].setMass( type->mass );
-            soldiers[i].vel      .set( 0.0 );
-            soldiers[i].willForce.set( 0.0 );
-            soldiers[i].force    .set( 0.0 );
-        }
-        bboxMargin = type->meleeRange;
-    }
-
-    void deploySoldiers( ){
-        double dlf = length / ncols;
-        double dfw = width  / nrows;
-        int i=0;
-        double cfw = 0.5*dfw;
-        for( int irow=0; irow<nrows; irow++ ){
-            double clf = 0.5*dlf + ( (irow&1) -0.5d );
-            for( int icol=0; icol<ncols; icol++ ){
-                //soldiers[i].pos.set_lincomb( 1, cfw+randf(-0.1,-0.1), clf+randf(-0.1,-0.1), p11, dirFw, dirLf );
-                soldiers[i].pos.set_lincomb( 1, cfw, clf, p11, dirFw, dirLf );
-                clf += dlf;
-                i++;
-            }
-            cfw += dfw ;
-        }
-/*
-        for( int i=0; i<nsoldiers; i++ ){
-            printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) \n",
-                soldiers[i].pos.x,soldiers[i].pos.y,
-                soldiers[i].vel.x,soldiers[i].vel.y,
-                soldiers[i].force.x,soldiers[i].force.y,
-                soldiers[i].willForce.x,soldiers[i].willForce.y  );
-        }
-*/
-    }
     ~Formation(){
         if( soldiers != NULL ) delete soldiers;
     }
