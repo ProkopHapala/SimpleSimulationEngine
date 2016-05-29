@@ -80,7 +80,7 @@ void Formation::leaveMenBehind( ){
         double lfw = -dirFw.dot( d );
         if( ( fabs(llf)>(length+bboxMargin) ) || ( fabs(lfw)>(width+bboxMargin) ) ){
             printf( "soldier %i abandoned \n" );
-            soldiers[i].impair_mask |= 4;
+            soldiers[i].impair_mask |= 8;
         }
     }
 }
@@ -89,9 +89,9 @@ bool Formation::eliminateInvalids( ){
     int j = nCapable-1;
     bool change = false;
     for( int i=0; i<nCapable; i++ ){
-        if( soldiers[i].impair_mask >=4 ){
+        if( soldiers[i].impair_mask >=8 ){
             change = true;
-            while( soldiers[j].impair_mask>=4 ){ j--; }
+            while( soldiers[j].impair_mask >=8 ){ j--; }
             if( j>i ){
                 std::swap( soldiers[i], soldiers[j] );
             }else{
@@ -102,7 +102,7 @@ bool Formation::eliminateInvalids( ){
     }
     if( change ){
         printf( " nCapable %i -> %i \n", nCapable, j );
-        for( int i=0; i<nSoldiers; i++ ){ printf( " soldier %i : %i \n", i, soldiers[i].impair_mask ); } // just debug
+        //for( int i=0; i<nSoldiers; i++ ){ printf( " soldier %i : %i \n", i, soldiers[i].impair_mask ); } // just debug
         nCapable = j;
     }
     return change;
@@ -130,7 +130,7 @@ void Formation::moveToTarget( ){
 }
 
 void Formation::applyWillForce( Soldier& soldier ){
-    if( soldier.impair_mask < 4 ){
+    //if( soldier.impair_mask < 8 ){
         Vec2d d;
         d.set_sub( soldier.pos, p00 );
         double llf = -dirLf.dot( d );
@@ -140,7 +140,7 @@ void Formation::applyWillForce( Soldier& soldier ){
         if      ( lfw < 0      ){ soldier.willForce.add_mul( dirFw, -willSaturation( -lfw        *kWidth )); }
         else if ( lfw > width  ){ soldier.willForce.add_mul( dirFw,  willSaturation( (lfw-width )*kWidth )); }
         //printf( "- %3.3f %3.3f   %3.3f %3.3f \n", llf, lfw, length, width  );
-    }
+    //}
 }
 
 void Formation::applyWillForce( ){
@@ -191,7 +191,7 @@ void Formation::update( double dt ){
         //soldiers[i].vel.mul( 0.9 );
         applyWillForce( soldiers[i] );
         soldiers[i].attentionDir.add_mul( dirFw, 0.1 );
-        soldiers[i].update      ( dt );
+        soldiers[i].update      ( dt, tAttack );
     }
 }
 
@@ -223,9 +223,9 @@ void Formation::render( const Vec3f& color, int view_type ){
         Vec3f cv;
         switch( view_type ){
             case VIEW_INJURY:  cv = si.impair2color(); glColor3f( cv.x, cv.y, cv.z ); break;
-            case VIEW_STAMINA: c  = si.stamina/si.type->stamina;   glColor3f( c,c,c ); break;
-            case VIEW_CHARGE:  c  = si.charge /si.action_period(); glColor3f( c,c,c ); break;
-            case VIEW_MORAL:   c  = si.moral  /si.type->moral;     glColor3f( c,c,c ); break;
+            case VIEW_STAMINA: c  = si.stamina;               glColor3f( c,c,c ); break;
+            case VIEW_CHARGE:  c  = si.time_buf/5.0; if(c>0){ glColor3f( 1-c,1-c,1 ); }else{ glColor3f( 1,1+c,1+c); } break;
+            case VIEW_MORAL:   c  = si.moral;                 glColor3f( c,c,c ); break;
         };
         //Draw2D::drawCircle_d( soldiers[i].pos, 0.5, 8, true );
         Draw2D::drawCircle_d( soldiers[i].pos, 0.25, 8, true );

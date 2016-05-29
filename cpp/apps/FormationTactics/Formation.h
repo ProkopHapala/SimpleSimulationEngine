@@ -15,8 +15,8 @@
 
 const int VIEW_INJURY  = 1;
 const int VIEW_STAMINA = 2;
-const int VIEW_MORAL   = 3;
-const int VIEW_CHARGE  = 4;
+const int VIEW_CHARGE  = 3;
+const int VIEW_MORAL   = 4;
 
 class Formation{
 	public:
@@ -29,6 +29,7 @@ class Formation{
     double bboxMargin = 0.0;
     double maxBbox2   = 4.0;
 
+    bool   tAttack = 3.0;
     bool   melee   = true;
     double order   = 1.0;
     double moral   = 1.0;

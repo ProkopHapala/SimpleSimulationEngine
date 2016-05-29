@@ -14,22 +14,25 @@
 #include "FormationTacticsCommon.h"
 #include "SoldierType.h"
 
-
 static const double body_push = 10.0;
 
-static const double injury_chances [4] = {
- 0.4, // arm wound // cannot fight
- 0.3, // leg wound // cannot move
- 0.2, // coma      // fall to coma (head injury and trauma)
- 0.1  // die       // totaly dead
+static const float injury_chances [8] = {  // MUST BE NORMALIZE !!!
+ 0.2,  // 1 disturbed
+ 0.15, // 2 frightened
+ 0.2,  // 3 minor wound
+ 0.05, // 4 deserted broken moral
+ 0.1,  // 5 cannot fight
+ 0.1,  // 6 cannot move
+ 0.1,  // 7 coma
+ 0.1   // 8 die
 };
 
 static const float impair_colors [8][3] = {
 //  health  ability moral
    { 1.0f,  1.0f,   0.66f }, // 1 disturbed
    { 1.0f,  1.0f,   0.33f }, // 2 frightened
-   { 0.5f,  1.0f,   1.0f },  // 4 minor wound
-   { 1.0f,  1.0f,   0.0f },  // 3 deserted broken moral
+   { 0.5f,  1.0f,   1.0f },  // 3 minor wound
+   { 1.0f,  1.0f,   0.0f },  // 4 deserted broken moral
    { 0.5f,  0.33f,  0.0f },  // 5 cannot fight
    { 0.5f,  0.66f,  1.0f },  // 6 cannot move
    { 1.0f,  0.0f,   0.0f },  // 7 coma        // fall to coma (head injury and trauma)
@@ -53,7 +56,7 @@ class Soldier : public RigidBody2D{
     uint8_t impair_mask  = 0;   //  0=fit, 1==incapable, 4=deserted, 128==dead    probably bit mask
     double  moral        = 1.0; // pshycical wellness
     double  stamina      = 1.0; // pshycical wellness
-    double  charge       = 1.0; // action point for attack ( both meele and ranged )
+    double  time_buf     = 1.0; // action point for attack ( both meele and ranged )
     double  shield       = 1.0;
 
     // ===== inline functions
@@ -74,7 +77,7 @@ class Soldier : public RigidBody2D{
         return c;
     }
 
-    void update( double dt ){
+    void update( double dt, double tAttack ){
         /*
         double  rwf2 = willForce.norm2();
         if( rwf2 > (maxwf*maxwf) ){
@@ -82,10 +85,20 @@ class Soldier : public RigidBody2D{
         }
         */
 
-        if( opponent ) fight(opponent);
+        double dstamina = type->stamina_regain;
+        if( time_buf > tAttack ){
+            if( opponent ) attack_melee( opponent );
+        }else{
+            double ds  = dt*stamina;
+            time_buf  += ds;
+            stamina   *= ( 1 - 10*ds*dstamina );
+            //stamina  -= ds;
+        }
+        if( stamina  < 1.0 ) stamina += dt*dstamina;
 
-        stamina = clip( stamina + dt, 0.0, type->stamina   );
-        charge  = clip( charge  + dt, 0.0, action_period() );
+
+        //stamina = clip( stamina + dt, 0.0, type->stamina   );
+        //charge  = clip( charge  + dt, 0.0, action_period() );
         //stamina = fmin( stamina + dt, type->stamina  );
         //charge  = fmin( charge  + dt, fire ? type->fire_period : type->melee_period );
         //moral   = fmax( moral +=dt, type->moral  ); // this should be done differently
@@ -103,32 +116,41 @@ class Soldier : public RigidBody2D{
     double armor_ramp( double att, double def ){ return Treshold::r2( (att-def)/(att+def) ); }
 
     void getDamage( double damage ){
-        moral       -= damage;
-        stamina     -= damage;
-        double dice  = pow( randf(), damage );
-        double s = 0;
-        for( int i=0; i<4; i++ ){
+        //moral       -= damage;
+        //stamina     -= damage;
+        double xdmg = damage/type->damage_tolerance;
+        float dice = 1-pow( randf(), xdmg );
+        float s = 0;
+        int i;
+        for( i=0; i<8; i++ ){
             s+= injury_chances[i];
-            if( dice < s ){
-                impair_mask |=  1<<(4+i);
+            if( s > dice ){
+                impair_mask |=  1<<i;
                 break;
             }
         }
+        printf( "damage %f xdmg %f dice %f i %i impair_mask %i \n", damage, xdmg, dice, i, impair_mask );
     }
 
     bool getHit( double bare_damage, double penetration, double skill, const Vec2d& dir ){
         //if( rot.dot(dir) )
         //type->
-        double c_dir        = rot.dot( dir );
-        double skill_tresh = skill_ramp( skill, c_dir*type->defence_skill );
-        double dice        = randf();
-        if ( dice > skill_tresh ){
-            charge -= skill_tresh;
-            return false;
-        };
+        /*
+        // FIXME :  this require some DEBUG
+        double c_dir  = rot.dot( dir );
+        if( time_buf > 0 ){  // defence action
+            double skill_tresh = skill_ramp( skill, c_dir*type->defence_skill );
+            double dice        = randf();
+            if ( dice > skill_tresh ){
+                time_buf -= type->defence_period;
+                return false;
+            };
+        }
         double c_armor = armor_ramp( penetration, type->armorFw );
         double damage  = c_armor * bare_damage;
         getDamage( damage );
+        */
+        getDamage( bare_damage );
         return true;
     }
 
@@ -145,12 +167,10 @@ class Soldier : public RigidBody2D{
         return true;
     }
 
-    void fight( Soldier * enemy ){
-        if( charge>0 ){
-            stamina -= type->melee_dStamina;
-            charge   = 0;
-            enemy->getHit( type->melee_damage, type->melee_penetration, type->attack_skill, rot );
-        }
+    void attack_melee( Soldier * enemy ){
+        time_buf -= type->melee_period;
+        stamina  *= type->melee_fStamina;
+        enemy->getHit( type->melee_damage, type->melee_penetration, type->attack_skill, rot );
     }
 
 /*
@@ -215,10 +235,12 @@ class Soldier : public RigidBody2D{
 
     void setType( SoldierType* type_ ){
         type = type_;
-        stamina = type->stamina;
-        moral   = type->moral;
-        shield  = type->shield_endurance;
-        charge  = 0.0;
+        //stamina = type->stamina;
+        //moral   = type->moral;
+        stamina  = 1.0;
+        moral    = 1.0;
+        shield   = type->shield_endurance;
+        time_buf = 0.0;
     }
 
     Soldier(){};

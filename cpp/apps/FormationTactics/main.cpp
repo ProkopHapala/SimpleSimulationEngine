@@ -114,8 +114,8 @@ void FormationTacticsApp::eventHandling ( const SDL_Event& event  ){
                 case SDLK_0:  formation_view_mode = 0;            printf( "view : default\n" ); break;
                 case SDLK_1:  formation_view_mode = VIEW_INJURY;  printf( "view : injury\n"  ); break;
                 case SDLK_2:  formation_view_mode = VIEW_STAMINA; printf( "view : stamina\n" ); break;
-                case SDLK_3:  formation_view_mode = VIEW_MORAL;   printf( "view : moral\n"   ); break;
-                case SDLK_4:  formation_view_mode = VIEW_CHARGE;  printf( "view : charge\n"  ); break;
+                case SDLK_3:  formation_view_mode = VIEW_CHARGE;  printf( "view : charge\n"  ); break;
+                case SDLK_4:  formation_view_mode = VIEW_MORAL;   printf( "view : moral\n"   ); break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
