@@ -36,20 +36,14 @@ void Formation::interact( Formation * fb ){
         Soldier * si = fb->soldiers + i;
         for( int j=0; j<nCapable; j++ ){
             Soldier * sj = soldiers + j;
-            Vec2d d;
-            d.set_sub( si->pos, sj->pos );
-            double r2 = d.norm2( );
-            if( r2 < 1.0 ){
-                d.mul( (1-r2)*10 );
-                si->force.add( d );
-                //sj->force.sub( d );
+            //si->enemy_interaction( sj, meele&&enemy );
+            if( enemy ) {
+                si->enemy_interaction ( sj, melee );
+                //si->enemy_interaction ( sj, false );
+            }else{
+                si->friend_interaction( sj );
             }
-            if( enemy ){
-                double range = si->type->meleeRange;
-                if( r2 < sq( range ) ){
-                    si->rot.add_mul( d, -1/(1+r2) );
-                }
-            }
+
         }
     }
 }
@@ -59,14 +53,7 @@ void Formation::interactInside( ){
         Soldier * si = soldiers + i;
         for( int j=0; j<i; j++ ){
             Soldier * sj = soldiers + j;
-            Vec2d d;
-            d.set_sub( si->pos, sj->pos );
-            double r2 = d.norm2( );
-            if( r2 < 1.0 ){
-                d.mul( (1-r2)*10 );
-                si->force.add( d );
-                sj->force.sub( d );
-            }
+            si->friend_interaction( sj );
         }
     }
 }
@@ -121,7 +108,6 @@ bool Formation::eliminateInvalids( ){
     return change;
 }
 
-
 void Formation::moveToTarget( ){
 
     if( checkMenBehind( ) ){
@@ -142,7 +128,6 @@ void Formation::moveToTarget( ){
         setEnds( p00, p01, width );
     }
 }
-
 
 void Formation::applyWillForce( Soldier& soldier ){
     if( soldier.impair_mask < 4 ){
@@ -201,17 +186,22 @@ void Formation::setCenterRot( const Vec2d& center_, const Vec2d& dirFw_ ){
 void Formation::update( double dt ){
     moveToTarget( );
     for( int i = 0; i<nCapable; i++ ){
-        soldiers[i].rot.add_mul( dirFw, 0.1 );
-        soldiers[i].rot.normalize();
-        soldiers[i].vel.mul( 0.9 );
-        soldiers[i].moveSoldier( dt );
+        //soldiers[i].rot.add_mul( dirFw, 0.1 );
+        //soldiers[i].rot.normalize();
+        //soldiers[i].vel.mul( 0.9 );
+        applyWillForce( soldiers[i] );
+        soldiers[i].attentionDir.add_mul( dirFw, 0.1 );
+        soldiers[i].update      ( dt );
     }
 }
 
-void Formation::render( ){
+void Formation::render( const Vec3f& color, int view_type ){
     //printf( " rendering \n" );
     //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) \n",p00.x,p00.y, p01.x,p01.y, p10.x,p10.y, p11.x,p11.y );
     //glColor3f( faction->color.x, faction->color.y, faction->color.z );
+
+    glColor3f( color.x, color.y, color.z );
+
     glBegin( GL_LINE_LOOP );
     glVertex3f( (float)p00.x, (float)p00.y, 0 );
     glVertex3f( (float)p01.x, (float)p01.y, 0 );
@@ -222,16 +212,28 @@ void Formation::render( ){
     Draw2D::drawRectangle_d   ( bbox.a, bbox.b, false );
     Draw2D::drawPointCross_d( cog, 0.5 );
 
+    if( movingToTarget ){
+        Draw2D::drawLine_d( p00target, p01target );
+        Draw2D::drawLine_d( center, (p01target+p00target)*0.5 );
+    }
+
     for( int i = 0; i<nCapable; i++ ){
+        Soldier& si = soldiers[i];
+        float c;
+        Vec3f cv;
+        switch( view_type ){
+            case VIEW_INJURY:  cv = si.impair2color(); glColor3f( cv.x, cv.y, cv.z ); break;
+            case VIEW_STAMINA: c  = si.stamina/si.type->stamina;   glColor3f( c,c,c ); break;
+            case VIEW_CHARGE:  c  = si.charge /si.action_period(); glColor3f( c,c,c ); break;
+            case VIEW_MORAL:   c  = si.moral  /si.type->moral;     glColor3f( c,c,c ); break;
+        };
         //Draw2D::drawCircle_d( soldiers[i].pos, 0.5, 8, true );
         Draw2D::drawCircle_d( soldiers[i].pos, 0.25, 8, true );
         //Draw2D::drawLine_d  ( soldiers[i].pos, soldiers[i].pos );
         Draw2D::drawVecInPos_d( soldiers[i].rot, soldiers[i].pos );
 
-        if( movingToTarget ){
-            Draw2D::drawLine_d( p00target, p01target );
-            Draw2D::drawLine_d( center, (p01target+p00target)*0.5 );
-        }
+
+
         /*
         printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f) \n", soldiers[i].pos.x,soldiers[i].pos.y,
                        soldiers[i].vel.x,soldiers[i].vel.y,
@@ -258,14 +260,15 @@ Formation::Formation( int id_, int nrows_, int ncols_, SoldierType * type, Facti
 }
 
 void Formation::setupSoldiers( SoldierType * type ){
+    bboxMargin = type->melee_range;
     for( int i=0; i<nSoldiers; i++ ){
         soldiers[i].type  = type;
         soldiers[i].setMass( type->mass );
         soldiers[i].vel      .set( 0.0 );
         soldiers[i].willForce.set( 0.0 );
         soldiers[i].force    .set( 0.0 );
+        soldiers[i].attentionDir.set( 0.0 );
     }
-    bboxMargin = type->meleeRange;
 }
 
 void Formation::deploySoldiers( ){

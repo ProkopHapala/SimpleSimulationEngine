@@ -25,7 +25,7 @@ void FormationWorld::simulationStep( double dt ){
        // if( f != NULL ){
             f->eliminateInvalids( );
             f->clean_temp();
-            f->applyWillForce( );
+            //f->applyWillForce( );
             f->interactInside( );
             f->update_bbox( );
        // }
@@ -36,7 +36,7 @@ void FormationWorld::simulationStep( double dt ){
         //if( fi != NULL ){
             //for( int j=0; j<i; j++ ){ // This will be more complicated to resolve symetrically
             for( int j=0; j<formations.size(); j++ ){
-                fi->interact( formations[j] );
+                if( i!=j ) fi->interact( formations[j] );
             }
         //}
     }
@@ -63,14 +63,15 @@ void FormationWorld::init(){
     printf( " FormationWorld::init() \n" );
     evalAuxSimParams();
 
-    terrain.init( 100, 100, 5.0 );
+    terrain.init( 100, 100, 30.0 );
     terrain.x0 = -0.5 * terrain.nx * terrain.step;
     terrain.y0 = -0.5 * terrain.ny * terrain.step;
     terrain.allocate( );
     terrain.generateRandom( 0.0, 1.0 );
 
     //soldierTypes.push_back( SoldierType(){"pikemen",1.0d,0.25d,1.0d} );
-    soldierTypes.push_back( {"pikemen",1.0d,0.25d,1.0d, 1.0, 1.0 } );
+    //soldierTypes.push_back( {"pikemen",1.0d,0.25d,1.0d, 1.0, 1.0 } );
+    soldierTypes.push_back( SoldierType() );
 
     Faction* fac1 = new Faction( "RedArmy" , {1.0f,0.25f,0.0f} );
     factions.push_back( fac1 );

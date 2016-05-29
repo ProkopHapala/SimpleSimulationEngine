@@ -5,11 +5,18 @@
 
 #include "fastmath.h"
 #include "Vec2.h"
+#include "Vec3.h"
 #include "geom2D.h"
 #include "Body2D.h"
 
 #include "FormationTacticsCommon.h"
 #include "Soldier.h"
+
+
+const int VIEW_INJURY  = 1;
+const int VIEW_STAMINA = 2;
+const int VIEW_MORAL   = 3;
+const int VIEW_CHARGE  = 4;
 
 class Formation{
 	public:
@@ -22,6 +29,10 @@ class Formation{
     double bboxMargin = 0.0;
     double maxBbox2   = 4.0;
 
+    bool   melee   = true;
+    double order   = 1.0;
+    double moral   = 1.0;
+    double stamina = 1.0; // stamina summary over all soldier
     bool shouldLeaveMenBehind = true;
 
     Vec2d center;
@@ -62,7 +73,7 @@ class Formation{
     void interact         ( Formation * fb );
     void interactInside   ( );
     void update           ( double dt );
-    void render           ( );
+    void render           ( const Vec3f& color, int view_type );
 
     void setupSoldiers( SoldierType * type );
     void deploySoldiers( );

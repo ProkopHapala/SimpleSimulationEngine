@@ -27,6 +27,7 @@ class FormationTacticsApp : public AppSDL2OGL, public TiledView {
 	public:
     FormationWorld world;
 
+    int formation_view_mode = 0;
     Formation * currentFormation = NULL;
     Faction   * currentFaction   = NULL;
 
@@ -66,11 +67,13 @@ void FormationTacticsApp::draw(){
     TiledView::draw(  camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin  );
     //printf( " camRect  %f %f %f %f \n", camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin );
 
-
     for( Formation* fm : world.formations ){
         //printf( " f %i \n", f  );
-        glColor3f( fm->faction->color.x, fm->faction->color.y, fm->faction->color.z );
-        if( fm != NULL ) fm->render( );
+        //glColor3f( fm->faction->color.x, fm->faction->color.y, fm->faction->color.z );
+        if( fm != NULL ){
+            if  ( fm == currentFormation ){ fm->render( fm->faction->color, formation_view_mode );   }
+            else                          { fm->render( fm->faction->color, 0                   );   }
+        }
     }
 
     if( currentFormation != 0 ){
@@ -106,6 +109,15 @@ void FormationTacticsApp::drawHUD(){}
 void FormationTacticsApp::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );
     switch( event.type ){
+        case SDL_KEYDOWN :
+            switch( event.key.keysym.sym ){
+                case SDLK_0:  formation_view_mode = 0;            printf( "view : default\n" ); break;
+                case SDLK_1:  formation_view_mode = VIEW_INJURY;  printf( "view : injury\n"  ); break;
+                case SDLK_2:  formation_view_mode = VIEW_STAMINA; printf( "view : stamina\n" ); break;
+                case SDLK_3:  formation_view_mode = VIEW_MORAL;   printf( "view : moral\n"   ); break;
+                case SDLK_4:  formation_view_mode = VIEW_CHARGE;  printf( "view : charge\n"  ); break;
+            }
+            break;
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:

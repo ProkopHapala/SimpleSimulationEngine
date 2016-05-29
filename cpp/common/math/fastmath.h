@@ -15,13 +15,15 @@
 #define SWAP( a, b, TYPE ) { TYPE t = a; a = b; b = t; }
 
 //#define sq(a) a*a
-template <class TYPE> inline TYPE sq(TYPE a){ return a*a; }
+template <class TYPE> inline TYPE sq   (TYPE a){ return a*a; }
+template <class TYPE> inline TYPE clip(TYPE x, TYPE xmin, TYPE xmax ){ if( x<xmin ) return xmin; if( x>xmax ) return xmax; return x; }
 
 
 #define _max(a,b)      ((a>b)?a:b)
 #define _min(a,b)      ((a<b)?a:b)
 #define _abs(a)        ((a>0)?a:-a)
-#define _clamp(x,a,b)  max(a, min(b, x))
+//#define _clamp(x,a,b)  max(a, min(b, x))
+#define _clamp(n, lower, upper) if (n < lower) n= lower; else if (n > upper) n= upper
 
 #define _minit( i, x, imin, xmin )  if( x<xmin ){ xmin=x; imin=i; }
 #define _maxit( i, x, imax, xmax )  if( x>xmax ){ xmax=x; imax=i; }
@@ -31,6 +33,43 @@ template <class TYPE> inline TYPE sq(TYPE a){ return a*a; }
 
 
 #include "gonioApprox.h"
+
+// from http://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp/
+inline double fastPow(double a, double b) {
+  union {
+    double d;
+    int x[2];
+  } u = { a };
+  u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447);
+  u.x[0] = 0;
+  return u.d;
+}
+
+// from http://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp/
+// should be much more precise with large b
+inline double fastPrecisePow(double a, double b) {
+  // calculate approximation with fraction of the exponent
+  int e = (int) b;
+  union {
+    double d;
+    int x[2];
+  } u = { a };
+  u.x[1] = (int)((b - e) * (u.x[1] - 1072632447) + 1072632447);
+  u.x[0] = 0;
+
+  // exponentiation by squaring with the exponent's integer part
+  // double r = u.d makes everything much slower, not sure why
+  double r = 1.0;
+  while (e) {
+    if (e & 1) {
+      r *= a;
+    }
+    a *= a;
+    e >>= 1;
+  }
+
+  return r * u.d;
+}
 
 /*
 template <class FLOAT,class INT> INT fastFloor( FLOAT x ){
