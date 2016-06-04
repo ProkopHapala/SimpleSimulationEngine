@@ -11,12 +11,16 @@
 #include "HashMap2D.h"
 #include "Body2D.h"
 
+#include "TileBuffer2D.h"
+#include "Ruler2DFast.h"
 #include "TerrainCubic.h"
 
 #include "FormationTacticsCommon.h"
 #include "Formation.h"
 #include "BattleLine.h"
 #include "Faction.h"
+
+
 
 class FormationWorld{
 	public:
@@ -25,7 +29,14 @@ class FormationWorld{
     std::vector<Faction*>    factions;
     std::vector<SoldierType> soldierTypes;
 
+    double RmaxInteract = 2.0;
+
+    Ruler2DFast colruler;
+    TileBuffer<Soldier*,32,32,32> colbuf;
+
     TerrainCubic   terrain;
+
+
 
 	//HashMap2D<Particle2D> map;
 
@@ -38,6 +49,8 @@ class FormationWorld{
     void init();
     void update();
     void simulationStep( double dt );
+    void formationInteractions( );
+    void formationInteractions_buff( );
 
     void refreshFormations( );
 

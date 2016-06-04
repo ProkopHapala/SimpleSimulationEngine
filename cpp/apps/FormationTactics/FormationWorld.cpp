@@ -31,15 +31,7 @@ void FormationWorld::simulationStep( double dt ){
        // }
     }
 
-    for( int i=0; i<formations.size(); i++ ){
-        Formation * fi = formations[i];
-        //if( fi != NULL ){
-            //for( int j=0; j<i; j++ ){ // This will be more complicated to resolve symetrically
-            for( int j=0; j<formations.size(); j++ ){
-                if( i!=j ) fi->interact( formations[j] );
-            }
-        //}
-    }
+    formationInteractions( );
 
     for( Formation* f : formations ){
         //if( f != NULL ){
@@ -48,6 +40,66 @@ void FormationWorld::simulationStep( double dt ){
         //}
     }
 };
+
+void FormationWorld::formationInteractions( ){
+        for( int i=0; i<formations.size(); i++ ){
+        Formation * fi = formations[i];
+        //if( fi != NULL ){
+            //for( int j=0; j<i; j++ ){ // This will be more complicated to resolve symetrically
+            for( int j=0; j<formations.size(); j++ ){
+                if( i!=j ) fi->interact( formations[j] );
+            }
+        //}
+    }
+}
+
+void FormationWorld::formationInteractions_buff( ){ // this is version of interactions accelerated by collision buffer
+    for( int i=0; i<formations.size(); i++ ){
+        Formation * fi = formations[i];
+        double r = RmaxInteract; // FICME - this should be specific for formation pair
+        colruler.setup( {fi->bbox.x0-2*r,fi->bbox.y0-2*r}, {r+0.25,r+0.25} );
+        colbuf.clear();
+        for( int k=0; k<fi->nCapable; k++){ // put soldiers to collision buffer
+            Soldier * s = fi->soldiers + k;
+            Vec2d dipos; Vec2i ipos;
+            colruler.pos2index( s->pos, dipos, ipos );
+            colbuf.insert( s, ipos, dipos, r );
+        }
+
+        // just debug
+        printf( " ==== i,k %i %i  \n", i, colbuf.count );
+        for( int icell=0; icell<colbuf.count; icell++ ){
+            printf( "  \n", icell, colbuf.counts[icell] );
+            int ix,iy;
+            colbuf.i2xy( icell, ix, iy );
+            printf( " >>> %i (%i,%i) %i \n", i,ix,ix, colbuf.counts[icell] );
+            for( int im=0; im<colbuf.counts[icell]; im++ ){
+                Soldier * si = colbuf.get( icell, im );
+                printf( " %i (%3.3f,%3.3f) \n", im, si->pos.x,si->pos.y );
+            }
+        }
+
+        for( int j=0; j<formations.size(); j++ ){ // cast other formations against that buffer
+            if(i=j) continue;
+            Formation * fj = formations[j];
+            if ( fi->bbox.notOverlaps( fj->bbox ) ) return;
+            bool enemy = ( fi->faction != fj->faction );
+            for( int kj=0; kj<fj->nCapable; kj++ ){
+                Soldier * sj = fj->soldiers + kj;
+                int ix  = colruler.x2i( sj->pos.x );
+                int iy  = colruler.y2i( sj->pos.y );
+                int ixy = colbuf.xy2i(ix,iy);
+                for( int im=0; im<colbuf.counts[ixy]; im++ ){
+                    //Soldier * si = colbuf.buff[ colbuf.im2i( ixy, im ) ];
+                    Soldier * si = colbuf.get( ixy, im );
+                    if( enemy ) { si->enemy_interaction ( sj, fi->melee );  }
+                    else        { si->friend_interaction( sj );             }
+                }
+            }
+        }
+        exit(0);
+    }
+}
 
 
 void FormationWorld::refreshFormations( ){

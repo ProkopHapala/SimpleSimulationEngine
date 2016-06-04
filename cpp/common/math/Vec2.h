@@ -37,6 +37,8 @@ class Vec2TYPE{
     inline void mul( TYPE fx, TYPE fy, TYPE fz ) { x*=fx; y*=fy; };
     inline void div( TYPE fx, TYPE fy, TYPE fz ) { x/=fx; y/=fy; };
 
+    inline void set_inv( const VEC&  v ) { x=1/v.x; y=1/v.y; };
+
 	inline void set_add( const VEC& a, TYPE f ){ x=a.x+f; y=a.y+f; };
 	inline void set_mul( const VEC& a, TYPE f ){ x=a.x*f; y=a.y*f; };
 	inline void set_mul( const VEC& a, const VEC& b, TYPE f ){ x=a.x*b.x*f; y=a.y*b.y*f; };
