@@ -73,7 +73,7 @@ class Soldier : public RigidBody2D{
                 c.z = fmin( c.z, impair_colors[i][2] );
             }
         }
-        if( impair_mask != 0 ){ printf( " injury %i color (%3.3f,%3.3f,%3.3f) \n", impair_mask, c.x, c.y, c.z ); };
+        //if( impair_mask != 0 ){ printf( " injury %i color (%3.3f,%3.3f,%3.3f) \n", impair_mask, c.x, c.y, c.z ); };
         return c;
     }
 
@@ -129,7 +129,7 @@ class Soldier : public RigidBody2D{
                 break;
             }
         }
-        printf( "damage %f xdmg %f dice %f i %i impair_mask %i \n", damage, xdmg, dice, i, impair_mask );
+        //printf( "damage %f xdmg %f dice %f i %i impair_mask %i \n", damage, xdmg, dice, i, impair_mask );
     }
 
     bool getHit( double bare_damage, double penetration, double skill, const Vec2d& dir ){

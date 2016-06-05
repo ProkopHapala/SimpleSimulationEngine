@@ -188,14 +188,21 @@ void FormationWorld::init(){
     //soldierTypes.push_back( {"pikemen",1.0d,0.25d,1.0d, 1.0, 1.0 } );
     soldierTypes.push_back( SoldierType() );
 
+    //double span = 20.0; int nform = 4; int nrow = 4; int ncol=16;
+    double span = 320.0; int nform = 32; int nrow = 8; int ncol=16;
+    //double span = 640.0; int nform = 64; int nrow = 8; int ncol=16; // works fine with buff - 24 ms
+    //double span = 640.0; int nform = 64; int nrow = 16; int ncol=16;
+
     Faction* fac1 = new Faction( "RedArmy" , {1.0f,0.25f,0.0f} );
     factions.push_back( fac1 );
-    fac1->initFaction( 4, 4, 16, soldierTypes, {+20.0,3.0}, {-20.0,3.0}, 1.0 );
+    //fac1->initFaction( 4, 4, 16, soldierTypes, {+20.0,3.0}, {-20.0,3.0}, 1.0 );
+    fac1->initFaction( nform, nrow, ncol, soldierTypes, {+span,3.0}, {-span,3.0}, 1.0 );
     //fac1->battleLines[0]->setTargetLine( {-10.0,3.0}, {+10.0,3.0} );
 
     Faction* fac2 = new Faction( "BlueArmy", {0.0f,0.5f, 1.0f} );
     factions.push_back( fac2 );
-    fac2->initFaction( 4, 4, 16, soldierTypes, {-20.0,-3.0}, {+20.0,-3.0}, 1.0 );
+    //fac2->initFaction( 4, 4, 16, soldierTypes, {-20.0,-3.0}, {+20.0,-3.0}, 1.0 );
+    fac2->initFaction( nform, nrow, ncol, soldierTypes, {-span,-3.0}, {+span,-3.0}, 1.0 );
     //fac2->battleLines[0]->setTargetLine( {+10.0,-3.0}, {-10.0,-3.0} );
 
 

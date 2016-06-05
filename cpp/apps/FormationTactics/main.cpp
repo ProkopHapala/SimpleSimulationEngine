@@ -14,7 +14,6 @@
 #include "geom2D.h"
 #include "AppSDL2OGL.h"
 
-#include "AppSDL2OGL.h"
 #include "testUtils.h"
 
 #include "TerrainCubic.h"
@@ -23,23 +22,25 @@
 #include "Formation.h"
 #include "FormationWorld.h"
 
-
-
 /*
 
 Performance:
 
-Method  soldiers    interactions    Mticks  ticks/soldier   ticks/interactions
-noBuff  1012        606568          10.398  10274.514       17.14
-Buff    1012        39874           1.799   1778.087        45.128
+Method  soldiers    interactions    Mticks  ticks/soldier   ticks/interaction
 
-noBuff   512        131072          2.269   4431.172        17.309
-Buff     512        12902           0.613   1196.438        47.479
+noBuff  512         131072          2.269   4431.172        17.309
+noBuff  1012        606568          10.398  10274.514       17.14
+noBuff  8188        6121488         79.428  9700.575        12.975
+noBuff  16384       12419072        210.705 12860.431       16.966
+noBuff  32374       48482256        787.849 24335.853       16.250
+
+Buff    512         12902           0.613   1196.438        47.479
+Buff    1012        39874           1.799   1778.087        45.128
+Buff    8164        252302          11.865  1453.294        47.02
+Buff    16377       527631          24.428  1491.580        46.29
+Buff    32393       1731907         63.651  1964.948        36.752
 
 */
-
-
-
 
 class FormationTacticsApp : public AppSDL2OGL, public TiledView {
 	public:
@@ -106,6 +107,7 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
 }
 
 void FormationTacticsApp::draw(){
+    long tTot = getCPUticks();
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
@@ -117,8 +119,7 @@ void FormationTacticsApp::draw(){
 
 
 
-    long tComp;
-    tComp = getCPUticks();
+    long tComp = getCPUticks();
     world.update( );
     tComp = getCPUticks() - tComp;
 
@@ -126,15 +127,17 @@ void FormationTacticsApp::draw(){
     // DEBUG grid insert
     debug_buffinsert( );
 
+    long tDraw = getCPUticks();
     for( Formation* fm : world.formations ){
+        if( fm->bbox.notOverlaps( {camXmin,camYmin, camXmax,camYmax} ) ) continue;
         //printf( " f %i \n", f  );
         //glColor3f( fm->faction->color.x, fm->faction->color.y, fm->faction->color.z );
-        if( fm != NULL ){
+        if( (fm!= NULL) ){
             if  ( fm == currentFormation ){ fm->render( fm->faction->color, formation_view_mode );   }
             else                          { fm->render( fm->faction->color, 0                   );   }
         }
     }
-
+    tDraw = getCPUticks() - tDraw;
 
     if( currentFormation != 0 ){
         //glColor3f(1.0,0.0,1.0);
@@ -158,6 +161,10 @@ void FormationTacticsApp::draw(){
 
     printf( " frame %i : %i %i   %4.3f %4.3f %4.3f\n", frameCount, world.nSoldiers, world.nSoldierInteractions,
                                  tComp*1.0e-6, tComp/(double)world.nSoldiers, tComp/(double)world.nSoldierInteractions );
+
+    tTot = getCPUticks() - tTot;
+    //printf( " frame %i : %i %i   %4.3f %4.3f %4.3f \n", frameCount, world.nSoldiers, world.nSoldierInteractions,
+    //       tComp*1.0e-6, tDraw*1.0e-6, tTot*1.0e-6 );
 };
 
 int FormationTacticsApp::tileToList( float x0, float y0, float x1, float y1 ){
@@ -207,6 +214,7 @@ void FormationTacticsApp::eventHandling ( const SDL_Event& event  ){
             */
     };
     AppSDL2OGL::eventHandling( event );
+    camStep = zoom*0.05;
 }
 
 // ===================== MAIN

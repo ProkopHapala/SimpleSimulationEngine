@@ -62,7 +62,7 @@ int Formation::interactInside( ){
 }
 
 void Formation::setTarget( const Vec2d& target ){
-    printf( " setTarget (%3.3f,%3.3f) \n", target.x, target.y );
+    //printf( " setTarget (%3.3f,%3.3f) \n", target.x, target.y );
     Vec2d d;
     d.set_sub( target, center ); d.normalize();
     //dirFw.set( d ); dirFw.normalize(); dirLf.set_perp( dirFw );
@@ -82,7 +82,7 @@ void Formation::leaveMenBehind( ){
         double llf = -dirLf.dot( d );
         double lfw = -dirFw.dot( d );
         if( ( fabs(llf)>(length+bboxMargin) ) || ( fabs(lfw)>(width+bboxMargin) ) ){
-            printf( "soldier %i abandoned \n" );
+            //printf( "soldier %i abandoned \n" );
             soldiers[i].impair_mask |= 8;
         }
     }
@@ -104,7 +104,7 @@ bool Formation::eliminateInvalids( ){
         }
     }
     if( change ){
-        printf( " nCapable %i -> %i \n", nCapable, j );
+        //printf( " nCapable %i -> %i \n", nCapable, j );
         //for( int i=0; i<nSoldiers; i++ ){ printf( " soldier %i : %i \n", i, soldiers[i].impair_mask ); } // just debug
         nCapable = j;
     }
@@ -114,9 +114,9 @@ bool Formation::eliminateInvalids( ){
 void Formation::moveToTarget( ){
 
     if( checkMenBehind( ) ){
-        printf( " formation %i cannot move, men stuck ! \n", id );
+        //printf( " formation %i cannot move, men stuck ! \n", id );
         if( shouldLeaveMenBehind ){
-            printf( " => leaving men behind ! \n", id );
+            //printf( " => leaving men behind ! \n", id );
             leaveMenBehind( );
         }
         return;
