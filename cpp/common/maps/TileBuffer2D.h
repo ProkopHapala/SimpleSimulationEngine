@@ -7,9 +7,12 @@
 
 #include "Vec2.h"
 
-template<class OBJECT,int NX,int NY,int M>
+template<class OBJECT,int NX_,int NY_,int M_>
 class TileBuffer{
     public:
+    static constexpr int NX   = NX_;
+	static constexpr int NY   = NY_;
+    static constexpr int M    = M_;
 	static constexpr int MNX  = M*NX;
 	static constexpr int NXY  = NX*NY;
 	static constexpr int NTOT = M*NX*NY;
@@ -18,7 +21,7 @@ class TileBuffer{
 	int    counts [NXY ];
 	OBJECT buff   [NTOT];
 
-	inline int  xy2i(        int  ix, int  iy ){ return M*ix + NX*iy; }
+	inline int  xy2i(        int  ix, int  iy ){ return ix + NX*iy; }
 	inline void i2xy( int i, int& ix, int& iy ){ iy=i/NX; ix=i%NX;    } // see performance http://stackoverflow.com/questions/7070346/c-best-way-to-get-integer-division-and-remainder
 
 	inline int  xym2i(        int  ix, int  iy, int  im ){ return im + M*ix + MNX*iy;         }

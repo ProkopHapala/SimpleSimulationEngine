@@ -36,6 +36,9 @@ class FormationWorld{
 
     TerrainCubic   terrain;
 
+    int nSoldierInteractions = 0;
+    int nSoldiers = 0;
+
 
 
 	//HashMap2D<Particle2D> map;
@@ -49,8 +52,8 @@ class FormationWorld{
     void init();
     void update();
     void simulationStep( double dt );
-    void formationInteractions( );
-    void formationInteractions_buff( );
+    int  formationInteractions( );
+    int  formationInteractions_buff( );
 
     void refreshFormations( );
 

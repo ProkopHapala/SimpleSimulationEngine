@@ -28,9 +28,9 @@ void Formation::moveBy( const Vec2d& dpos ){
     setCenterRot( center, dirFw );
 }
 
-void Formation::interact( Formation * fb ){
+int Formation::interact( Formation * fb ){
     //if ( fb == NULL ) return;
-    if ( bbox.notOverlaps( fb->bbox ) ) return;
+    if ( bbox.notOverlaps( fb->bbox ) ) return 0;
     bool enemy = ( fb->faction != faction );
     for( int i=0; i<fb->nCapable; i++ ){
         Soldier * si = fb->soldiers + i;
@@ -46,16 +46,19 @@ void Formation::interact( Formation * fb ){
 
         }
     }
+    return nCapable * fb->nCapable;
 }
 
-void Formation::interactInside( ){
+int Formation::interactInside( ){
     for( int i=0; i<nCapable; i++ ){
         Soldier * si = soldiers + i;
-        for( int j=0; j<i; j++ ){
+        //for( int j=0; j<i; j++ ){
+        for( int j=0; j<nCapable; j++ ){
             Soldier * sj = soldiers + j;
             si->friend_interaction( sj );
         }
     }
+    return nCapable*nCapable;
 }
 
 void Formation::setTarget( const Vec2d& target ){

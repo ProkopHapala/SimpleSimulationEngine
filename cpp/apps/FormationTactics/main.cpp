@@ -15,7 +15,7 @@
 #include "AppSDL2OGL.h"
 
 #include "AppSDL2OGL.h"
-//#include "testUtils.h"
+#include "testUtils.h"
 
 #include "TerrainCubic.h"
 #include "TiledView.h"
@@ -60,12 +60,17 @@ void FormationTacticsApp::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
 
-	world.update( );
-
     float camMargin = ( camXmax - camXmin )*0.1;
     //float camMargin = 0;
     TiledView::draw(  camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin  );
     //printf( " camRect  %f %f %f %f \n", camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin );
+
+
+    long tComp;
+    tComp = getCPUticks();
+    world.update( );
+    tComp = getCPUticks() - tComp;
+
 
     for( Formation* fm : world.formations ){
         //printf( " f %i \n", f  );
@@ -75,6 +80,7 @@ void FormationTacticsApp::draw(){
             else                          { fm->render( fm->faction->color, 0                   );   }
         }
     }
+
 
     if( currentFormation != 0 ){
         //glColor3f(1.0,0.0,1.0);
@@ -93,6 +99,11 @@ void FormationTacticsApp::draw(){
     */
 
     //if(frameCount > 10) STOP = true;
+
+    //printf( " frame %i soldiers %i interactions %i time %i  \n" );
+
+    printf( " frame %i : %i %i   %4.3f %4.3f %4.3f\n", frameCount, world.nSoldiers, world.nSoldierInteractions,
+                                 tComp*1.0e-6, tComp/(double)world.nSoldiers, tComp/(double)world.nSoldierInteractions );
 };
 
 int FormationTacticsApp::tileToList( float x0, float y0, float x1, float y1 ){

@@ -7,6 +7,13 @@
 
 float Draw2D::z_layer = 0.0f; // should be initialized like this http://stackoverflow.com/questions/19136059/namespace-global-variable-losing-value-c
 
+void Draw2D::color_of_hash( int i ){
+    constexpr float inv255 = 1.0f/255.0f;
+    //int h = rand_hash2( i );
+    int h = hash_Wang( i );
+    glColor3f( (h&0xFF)*inv255, ((h>>8)&0xFF)*inv255, ((h>>16)&0xFF)*inv255 );
+};
+
 void Draw2D::drawPoint( const Vec2f& vec ){
 	glDisable (GL_LIGHTING);
 	glBegin   (GL_POINTS);
@@ -230,16 +237,16 @@ void Draw2D::drawGrid( float xmin, float ymin, float xmax, float ymax, float dx,
     glBegin(GL_LINES);
     // X-grid
     int nmin,nmax;
-    nmin=xmin/dx;
-    nmax=xmax/dx;
+    if( xmin>0 ){ nmin=(int)(xmin/dx)+1; }else{ nmin=(int)(xmin/dx);   }
+    if( xmax>0 ){ nmax=(int)(xmax/dx);   }else{ nmax=(int)(xmax/dx)-1; }
     for( int i=nmin; i<=nmax; i++ ){
         float x = i*dx;
         glVertex3f( x, ymin, z_layer );
         glVertex3f( x, ymax, z_layer );
     }
     // Y-grid
-    nmin=ymin/dy;
-    nmax=ymax/dy;
+    if( ymin>0 ){ nmin=(int)(ymin/dy)+1; }else{ nmin=(int)(ymin/dy); }
+    if( ymax>0 ){ nmax=(int)(ymax/dy);   }else{ nmax=(int)(ymax/dy)-1; }
     for( int i=nmin; i<=nmax; i++ ){
         float y = i*dy;
         glVertex3f( xmin, y, z_layer );

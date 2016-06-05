@@ -71,8 +71,8 @@ class Formation{
     void leaveMenBehind   ( );
     bool eliminateInvalids( );
     void update_bbox      ( );
-    void interact         ( Formation * fb );
-    void interactInside   ( );
+    int  interact         ( Formation * fb );
+    int  interactInside   ( );
     void update           ( double dt );
     void render           ( const Vec3f& color, int view_type );
 

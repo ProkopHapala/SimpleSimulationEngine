@@ -2,6 +2,7 @@
 #ifndef  Draw2D_h
 #define  Draw2D_h
 
+#include "fastmath.h"
 #include "Vec2.h"
 //#include "geom2D.h"
 
@@ -9,6 +10,9 @@ namespace Draw2D{
 
 extern float z_layer; // this can be used for drawing in multiple overlaping layers
                       // should be initialized like this http://stackoverflow.com/questions/19136059/namespace-global-variable-losing-value-c
+
+
+void color_of_hash( int );
 
 void drawPoint      ( const Vec2f& vec                   );
 void drawPointCross ( const Vec2f& vec, float d          );
