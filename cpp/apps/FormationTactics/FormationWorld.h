@@ -29,10 +29,10 @@ class FormationWorld{
     std::vector<Faction*>    factions;
     std::vector<SoldierType> soldierTypes;
 
-    double RmaxInteract = 2.0;
+    double RmaxInteract = 1.5;
 
     Ruler2DFast colruler;
-    TileBuffer<Soldier*,32,32,32> colbuf;
+    TileBuffer<Soldier*,16,16,64> colbuf;
 
     TerrainCubic   terrain;
 

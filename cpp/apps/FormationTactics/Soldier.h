@@ -191,6 +191,7 @@ class Soldier : public RigidBody2D{
         d.mul( (1-(r2/R2))*body_push );
         force.add( d );
         sj->force.sub( d );
+        return true;
     }
 
     bool enemy_interaction( Soldier * sj, bool melee ){

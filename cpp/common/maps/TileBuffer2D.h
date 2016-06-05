@@ -60,7 +60,9 @@ class TileBuffer{
 		else if(  dpos.x > mr ){ insert( o, ipos.x+1, ipos.y );  dix=+1; dr2 += sq(1-dpos.x); }
 		if     (  dpos.y < r  ){ insert( o, ipos.x, ipos.y-1 );  diy=-1; dr2 += sq(  dpos.y); }
 		else if(  dpos.y > mr ){ insert( o, ipos.x, ipos.y+1 );  diy=+1; dr2 += sq(1-dpos.y); }
-		if ( dr2 > (r*r) ){ insert( o, ipos.x+dix, ipos.y+diy ); }
+		if ( dr2 < (r*r) ){ insert( o, ipos.x+dix, ipos.y+diy ); }
+		//if( (dix!=0)&&(diy!=0) ){ insert( o, ipos.x+dix, ipos.y+diy ); }
+		//printf( " %1.3f %1.3f  (%1.3f,%1.3f) (%i,%i) %1.3f \n", r, mr, dpos.x,dpos.y, dix, diy, dr2 );
 	}
 
 	OBJECT get( int ixy, int im ){

@@ -33,8 +33,8 @@ void FormationWorld::simulationStep( double dt ){
        // }
     }
 
-    //nSoldierInteractions = formationInteractions( );
-    nSoldierInteractions = formationInteractions_buff( );
+    nSoldierInteractions = formationInteractions( );
+    //nSoldierInteractions = formationInteractions_buff( );
 
     for( Formation* f : formations ){
         //if( f != NULL ){
@@ -67,7 +67,9 @@ int FormationWorld::formationInteractions_buff( ){ // this is version of interac
     for( int i=0; i<formations.size(); i++ ){
         Formation * fi = formations[i];
         double r = RmaxInteract; // FICME - this should be specific for formation pair
-        colruler.setup( {fi->bbox.x0-3*r,fi->bbox.y0-3*r}, {r+0.25,r+0.25} );
+        colruler.setup(  {fi->bbox.x0-3*r,fi->bbox.y0-3*r}, {2*r+0.1,2*r+0.1} );
+        //colruler.setup(  {fi->bbox.x0-3*r,fi->bbox.y0-3*r}, {3*r,3*r} );
+        double rf = r/colruler.step.x;
         //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f)\n",  fi->bbox.x0, fi->bbox.y0, fi->bbox.x1, fi->bbox.y1, colruler.step.x, colruler.step.y );
         //Draw2D::drawGrid(  fi->bbox.x0, fi->bbox.y0, fi->bbox.x1, fi->bbox.y1, colruler.step.x, colruler.step.y  );
         colbuf.clear( );
@@ -76,14 +78,15 @@ int FormationWorld::formationInteractions_buff( ){ // this is version of interac
             Soldier * s = fi->soldiers + k;
             Vec2d dipos; Vec2i ipos;
             colruler.pos2index( s->pos, dipos, ipos );
-            colbuf.insert( s, ipos, dipos, r );
+            colbuf.insert( s, ipos, dipos, rf );
             //int h = colbuf.xy2i( ipos.x, ipos.y );
             //Draw2D::color_of_hash( h+1000 );
             //Draw2D::drawCircle_d( s->pos, 0.5, 8, true );
         }
+
 /*
         glBegin(GL_POINTS);
-        for( int k=0; k<10000; k++){ // put soldiers to collision buffer
+        for( int k=0; k<1000; k++){ // put soldiers to collision buffer
             Vec2d pos;
             pos.set( randf(fi->bbox.x0, fi->bbox.x1), randf(fi->bbox.y0, fi->bbox.y1) );
             Vec2d dipos; Vec2i ipos;
@@ -94,9 +97,9 @@ int FormationWorld::formationInteractions_buff( ){ // this is version of interac
             glVertex3f( (float)pos.x, (float)pos.y, 0.0 );
         }
         glEnd();
-        break;
+        glColor3f(0.0f,1.0f,0.0f);
+        //break;
 */
-
 
 /*
         // just debug
@@ -127,8 +130,9 @@ int FormationWorld::formationInteractions_buff( ){ // this is version of interac
                         //if( (si == NULL) ){ printf( "error ixy %i im %i is NULL \n", ixy, im ); exit(0); }
                         nInteractions++;
                         //if ( si < sj ) si->friend_interaction( sj );
-                        if( si != sj ) si->friend_interaction( sj );
-                        //if( si != sj ) sj->friend_interaction( si );
+                        if( si != sj ) sj->friend_interaction( si );
+                        //if( si != sj ){  si->friend_interaction( sj ); Draw2D::drawLine_d ( si->pos, sj->pos );  }
+                        //if( si != sj ){  if( si->friend_interaction( sj ) ) Draw2D::drawLine_d ( si->pos, sj->pos );  }
                     }
                 }
             }else{
@@ -155,7 +159,7 @@ int FormationWorld::formationInteractions_buff( ){ // this is version of interac
             }
         }
         //exit(0);
-        //return;
+        //return nInteractions;
     }
     return nInteractions;
 }

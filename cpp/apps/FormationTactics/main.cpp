@@ -23,6 +23,24 @@
 #include "Formation.h"
 #include "FormationWorld.h"
 
+
+
+/*
+
+Performance:
+
+Method  soldiers    interactions    Mticks  ticks/soldier   ticks/interactions
+noBuff  1012        606568          10.398  10274.514       17.14
+Buff    1012        39874           1.799   1778.087        45.128
+
+noBuff   512        131072          2.269   4431.172        17.309
+Buff     512        12902           0.613   1196.438        47.479
+
+*/
+
+
+
+
 class FormationTacticsApp : public AppSDL2OGL, public TiledView {
 	public:
     FormationWorld world;
@@ -36,6 +54,9 @@ class FormationTacticsApp : public AppSDL2OGL, public TiledView {
 	//virtual void mouseHandling( );
 	virtual void eventHandling   ( const SDL_Event& event  );
 
+
+	void debug_buffinsert( );
+
 	//void pickParticle( Particle2D*& picked );
 
 	virtual int tileToList( float x0, float y0, float x1, float y1 );
@@ -43,6 +64,35 @@ class FormationTacticsApp : public AppSDL2OGL, public TiledView {
 	FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ );
 
 };
+
+void FormationTacticsApp::debug_buffinsert( ){
+    if( currentFormation == NULL ) return;
+    Formation * fi = currentFormation;
+    double r = world.RmaxInteract;
+    world.colruler.setup(  {fi->bbox.x0-3*r,fi->bbox.y0-3*r}, {2*r+0.1,2*r+0.1} );
+    //world.colruler.setup(  {fi->bbox.x0-3*r,fi->bbox.y0-3*r}, {3*r,3*r} );
+    double rf = r/world.colruler.step.x;
+    //printf( " pos0 (%3.3f,%3.3f) step (%3.3f,%3.3f) \n", world.colruler.pos0, world.colruler.pos0.y, world.colruler.step.y, world.colruler.step.y );
+    world.colbuf.clear( );
+    Vec2d pos,dipos; Vec2i ipos;
+    pos.set( mouse_begin_x, mouse_begin_y );
+    Draw2D::drawPointCross_d( pos, r );
+    Draw2D::drawCircle_d( pos, r, 64, false );
+    world.colruler.pos2index( pos, dipos, ipos );
+    if( (ipos.x<1) || (ipos.x>=world.colbuf.NX-1) || (ipos.y<1) || (ipos.y>=world.colbuf.NY-1) ) return;
+    world.colbuf.insert( NULL, ipos, dipos, rf );
+    for( int iy=0; iy<world.colbuf.NY; iy++ ){
+        double y = world.colruler.i2y( iy );
+        for( int ix=0; ix<world.colbuf.NX; ix++ ){
+            double x = world.colruler.i2x( ix );
+            int ixy =  world.colbuf.xy2i( ix, iy );
+            int ncount = world.colbuf.counts[ixy];
+            for( int im=0; im<ncount; im++ ){
+                Draw2D::drawRectangle_d( {x,y}, {x+world.colruler.step.x,y+world.colruler.step.y}, false );
+            }
+        }
+    }
+}
 
 FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
     world.init();
@@ -66,11 +116,15 @@ void FormationTacticsApp::draw(){
     //printf( " camRect  %f %f %f %f \n", camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin );
 
 
+
     long tComp;
     tComp = getCPUticks();
     world.update( );
     tComp = getCPUticks() - tComp;
 
+
+    // DEBUG grid insert
+    debug_buffinsert( );
 
     for( Formation* fm : world.formations ){
         //printf( " f %i \n", f  );
