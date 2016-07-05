@@ -33,8 +33,8 @@ void FormationWorld::simulationStep( double dt ){
        // }
     }
 
-    nSoldierInteractions = formationInteractions( );
-    //nSoldierInteractions = formationInteractions_buff( );
+    //nSoldierInteractions = formationInteractions( );
+    nSoldierInteractions = formationInteractions_buff( );
 
     for( Formation* f : formations ){
         //if( f != NULL ){
