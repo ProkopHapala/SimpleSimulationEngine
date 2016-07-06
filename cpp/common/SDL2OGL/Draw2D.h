@@ -4,7 +4,7 @@
 
 #include "fastmath.h"
 #include "Vec2.h"
-//#include "geom2D.h"
+#include "geom2D.h"
 
 namespace Draw2D{
 
@@ -56,7 +56,9 @@ void drawSimplexGrid( int n,  float step );
 
 void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
 
-
+void renderImage( GLuint itex, const Rect2d& rec );
+void drawString ( char * str, int imin, int imax, float x, float y, float sz, int itex );
+void drawString ( char * str,                     float x, float y, float sz, int itex );
 
 
 // ==== inline functions

@@ -21,7 +21,7 @@ class UnitType{
     int    fire_nburst      = 1;
 
     // armor and defence
-    double damage_tolerance  = 10.0;
+    double damage_tolerance  = 2.0;
     double armorFw           = 1.0;
     double armorBk           = 0.5;
 

@@ -40,7 +40,7 @@ const int UNIT_JOB_FIRE_AT_WILL = 10; // fire at any target in range;  choose pr
 class Unit : public RigidBody2D {
 	public:
 
-    int n, ntot;
+    int n=100, ntot=100;
     double suppressed = 0.0; // between one and zero
 
     Faction  * faction;
@@ -83,7 +83,7 @@ class Unit : public RigidBody2D {
         double dist = d.normalize();
         // this does not care about time-of-flight neither raytracing we may later emit projectile instead of this
         Draw2D::drawLine_d(pos,target->pos);
-        target->getShot( d, type->fire_nburst, sq(type->fire_range * dist), type->fire_damage_const, type->fire_damage_kinetic, type->fire_penetration );
+        target->getShot( d, type->fire_nburst, sq(type->fire_spread_aim * dist), type->fire_damage_const, type->fire_damage_kinetic, type->fire_penetration );
     }
 
     void update( double dt ){
@@ -99,7 +99,7 @@ class Unit : public RigidBody2D {
 
     }
 
-    double damage_ramp( double att, double def ){ return Treshold::r2( (att-def)/(att+def) ); }
+    double damage_ramp( double att, double def ){ return 0.5*(1+Treshold::r2( (att-def)/(att+def) )); }
 
     void getShot( const Vec2d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration ){
 
@@ -107,13 +107,14 @@ class Unit : public RigidBody2D {
         //double  ca  = from.dot( dir );
         // double armor = 0.5* (1+ca) * (type->armorFw - type->armorBg )  + type->armorBg;
         double pass = ( penetration - type->armorFw )/penetration;
+        printf( "pass %f \n", pass );
         if( pass < 0 ) return;
         double damage = pass*damage_kinetic + damage_const;
 
         // evaluate hit probability
         double hit_prob  =            type->hit_area/(type->hit_area + area);
         double kill_prob = hit_prob * damage_ramp( damage, type->damage_tolerance );
-
+        printf( "kill_prob %f   %f  (%f %f)   (%f %f) \n", kill_prob, hit_prob, damage, type->damage_tolerance, area, type->hit_area );
         suppressed -= kill_prob;
         // TODO : carefullness to modulate suppression and damage ??
         for( int i = 0; i<nburst; i++ ){
@@ -142,6 +143,10 @@ class Unit : public RigidBody2D {
         Draw2D::drawCircle_d( pos, radius, 16, false );
         Draw2D::drawVecInPos_d( attentionDir, pos );
         //printf( "render (%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", pos.x, pos.y, pos.x, c.x, c.y, c.z );
+
+        char str[8];
+        sprintf(str,"%4i",n);
+        Draw2D::drawString( str, (float)pos.x, (float)pos.y, 0.4f, default_font_texture );
     }
 
     void renderJob( Vec3f& c ){

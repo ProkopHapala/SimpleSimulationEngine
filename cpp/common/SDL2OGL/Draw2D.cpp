@@ -314,4 +314,64 @@ void Draw2D::drawShape( const Vec2d& pos, const Vec2d& rot, int shape ){
 	glPopMatrix();
 };
 
+
+// ===== image and sprite-text
+
+
+void Draw2D::renderImage( GLuint itex, const Rect2d& rec ){
+    glEnable( GL_TEXTURE_2D );
+    glBindTexture( GL_TEXTURE_2D, itex );
+    glColor3f(1.0f,1.0f,1.0f);
+    //printf( " itex %i \n", itex );
+    glBegin(GL_QUADS);
+        glTexCoord2f( 0.0f, 1.0f ); glVertex3f( rec.a.x, rec.a.y, 3.0f );
+        glTexCoord2f( 1.0f, 1.0f ); glVertex3f( rec.b.x, rec.a.y, 3.0f );
+        glTexCoord2f( 1.0f, 0.0f ); glVertex3f( rec.b.x, rec.b.y, 3.0f );
+        glTexCoord2f( 0.0f, 0.0f ); glVertex3f( rec.a.x, rec.b.y, 3.0f );
+    glEnd();
+};
+
+void Draw2D::drawString( char * str, int imin, int imax, float x, float y, float sz, int itex ){
+    const int nchars = 95;
+    float persprite = 1.0f/nchars;
+    glEnable( GL_TEXTURE_2D );
+    glBindTexture( GL_TEXTURE_2D, itex );
+    glColor3f(1.0f,1.0f,1.0f);
+    glBegin(GL_QUADS);
+    for(int i=imin; i<imax; i++){
+        int isprite = str[i] - 33;
+        float offset  = isprite*persprite+(persprite*0.57);
+        float xi = i*sz + x;
+        glTexCoord2f( offset          , 1.0f ); glVertex3f( xi,    y,    3.0f );
+        glTexCoord2f( offset+persprite, 1.0f ); glVertex3f( xi+sz, y,    3.0f );
+        glTexCoord2f( offset+persprite, 0.0f ); glVertex3f( xi+sz, y+sz*2, 3.0f );
+        glTexCoord2f( offset          , 0.0f ); glVertex3f( xi,    y+sz*2, 3.0f );
+    }
+    glEnd();
+}
+
+void Draw2D::drawString( char * str, float x, float y, float sz, int itex ){
+    const int nchars = 95;
+    float persprite = 1.0f/nchars;
+    glEnable( GL_TEXTURE_2D );
+    glBindTexture( GL_TEXTURE_2D, itex );
+    glColor3f(1.0f,1.0f,1.0f);
+    glBegin(GL_QUADS);
+    for(int i=0; i<65536; i++){
+        if( str[i] == 0 ) break;
+        int isprite = str[i] - 33;
+        float offset  = isprite*persprite+(persprite*0.57);
+        float xi = i*sz + x;
+        glTexCoord2f( offset          , 1.0f ); glVertex3f( xi,    y,    3.0f );
+        glTexCoord2f( offset+persprite, 1.0f ); glVertex3f( xi+sz, y,    3.0f );
+        glTexCoord2f( offset+persprite, 0.0f ); glVertex3f( xi+sz, y+sz*2, 3.0f );
+        glTexCoord2f( offset          , 0.0f ); glVertex3f( xi,    y+sz*2, 3.0f );
+    }
+    glEnd();
+}
+
+
+
+
+
 //}; // namespace Draw2D
