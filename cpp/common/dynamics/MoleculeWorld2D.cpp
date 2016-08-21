@@ -9,9 +9,6 @@
     glColor3f( R, G, B ); \
     Draw2D::drawLine_d( pa->pos, pb->pos ); };
 
-
-
-
 void interMolForce(
 	int na, double * aRs, double * aQs, Vec2d * aPos, Vec2d * aFs,
 	int nb, double * bRs, double * bQs, Vec2d * bPos, Vec2d * bFs
@@ -23,6 +20,7 @@ void interMolForce(
 			//dR.set_sub( aRs[ia], bRs[ib] );
 			double qq = aQs[ia]*bQs[ib];
 			double R  = aRs[ia]+bRs[ib];
+			//printf( " %i %i (%3.3f,%3.3f)  (%3.3f,%3.3f)  %3.3f %3.3f  \n", ia, ib, aPos[ia].x, aPos[ia].y,   bPos[ib].x, bPos[ib].y,  qq, R );
 			pairwiseForce( aPos[ia], bPos[ib], qq, R*R, f );
 			aFs[ia].add( f ); bFs[ib].sub( f );
 			//aFs[ia].sub( f ); bFs[ib].add( f );
@@ -31,47 +29,14 @@ void interMolForce(
 	}
 }
 
-void forceTransform( int n, Vec2d * poss, Vec2d * fs,  Vec2d center,  Vec2d& f, double& tq ){
+void forceTransform( int n, Vec2d * poss, Vec2d * fs, Vec2d center,  Vec2d& f, double& tq ){
+    //tq = 0;
     for( int i = 0; i < n; i++ ){
         Vec2d d; d.set_sub( poss[i], center );
         tq += d.cross( fs[i] );
         f.add( fs[i] );
     }
 }
-
-
-/*
-void MoleculeWorld::optStep( ){
-// one step of the relaxation
-
-	// initialize everything associated with forces to zero
-	for( int i = 0; i < nmols; i++ ){
-		fpos[i].set( 0.0 );			// set all "forces positions" to zero
-		frot[i].set( 0.0, 0.0, 0.0, 0.0 );	// set all "forces rotations" to zero
-		rot[i].normalize();			// keep quaternion normalized, otherwise unstable !!!
-	}
-
-	Vec3d vec;
-
-	// calculate forces
-	forcesMolecules();
-	if( tip != NULL ){
-		forcesTip( vec );
-	}
-	pixelDataListItem = vec.z;
-
-	// in frot[i] left only its part which is perpendicular to rot[i]
-	for( int i = 0; i < nmols; i++ ){
-		double qfq = rot[i].dot( frot[i] );	// projection of frot[i] onto rot[i]
-		frot[i].add_mul( rot[i], -qfq );	// from frot[i] subtract its part parallel to rot[i]
-	}
-
-	// update positions and velocities of molecules
-	optimizer->move();
-}
-*/
-
-
 
 void MoleculeWorld::forcesMolecules( ){
 	for( int i = 0; i < nMols; i++ ){
@@ -85,7 +50,7 @@ void MoleculeWorld::forcesMolecules( ){
 		    int jtype = mols[i];
 			MoleculeType2D* molj = &molTypes[jtype];				            // in molj store j-th molecule
 			int npj = molj->natoms;						                        // npj is a number of atoms in j-th molecule
-			molj->rigidTransform( rot[j], pos[j], Tps_i );	                    // to Tps_j store system coordinates of j-th molecule's atom positions
+			molj->rigidTransform( rot[j], pos[j], Tps_j );	                    // to Tps_j store system coordinates of j-th molecule's atom positions
 			//cleanPointForce( npj, fs_j );
 			VecN::set( 2*npj, 0.0, (double*)fs_j );				                    // initialize fs_j to zeros
 			interMolForce(
@@ -94,7 +59,10 @@ void MoleculeWorld::forcesMolecules( ){
 			);
 			if( notFixed[j] ) forceTransform( npj, Tps_j, fs_j,  pos[j],  fpos[j], frot[j] );
 		}
+		//VecN::set( 2*npi, 0.0, (double*)fs_i );
 		if( notFixed[i] ) forceTransform( npi, Tps_i, fs_i,  pos[i], fpos[i], frot[i] );
 	}
+
+
 }
 
