@@ -410,7 +410,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             convert( points[links[i  ]], a );
             convert( points[links[i+1]], b );
             convert( points[links[i+2]], c );
-            printf( "(%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z  );
+            printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", i, a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z  );
             normal.set_cross( a-b, b-c );
             normal.normalize( );
             glNormal3f( normal.x, normal.y, normal.z );

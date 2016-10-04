@@ -56,7 +56,7 @@ inline bool pointInTriangleEdges( const Vec3d& pa, const Vec3d& pb, const Vec3d&
 	nca.set_cross( pa, ca );
 	double sgn1 = nca.dot( nab );
 	double sgn2 = nca.dot( nbc );
-	printf( " sgn1, sgn2 %f, %f \n", sgn1, sgn2 );
+	//printf( " sgn1, sgn2 %f, %f \n", sgn1, sgn2 );
 	return ( sgn1>0 )&&( sgn2>0 );
 }
 
@@ -64,9 +64,9 @@ inline bool pointInTriangleEdges( const Vec3d& pa, const Vec3d& pb, const Vec3d&
 inline double rayTriangle(
 	const Vec3d &ray0, const Vec3d &hRay,
 	const Vec3d &a,    const Vec3d &b,    const Vec3d &c,
-	bool& inside, Vec3d& p
+	bool& inside, Vec3d& hitpos, Vec3d& normal
 ){
-	Vec3d ab,bc,ca, normal;
+	Vec3d ab,bc,ca;
 	ab.set_sub( b, a );
 	bc.set_sub( c, b );
 	ca.set_sub( a, c );
@@ -74,9 +74,9 @@ inline double rayTriangle(
 	normal.set_cross( ab, bc );
 
 	double t = rayPlane( ray0, hRay, normal, a );
-	p.set( ray0 ); p.add_mul( hRay, t );
+	hitpos.set( ray0 ); hitpos.add_mul( hRay, t );
 
-	inside = pointInTriangleEdges( p-a, p-b, ab, bc, ca );
+	inside = pointInTriangleEdges( hitpos-a, hitpos-b, ab, bc, ca );
 
 	return t;
 }

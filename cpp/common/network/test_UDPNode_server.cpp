@@ -4,7 +4,7 @@
 #include <string.h>
  
 #include <SDL2/SDL.h>
-#include "SDL_net.h"
+#include "SDL2/SDL_net.h"
 
 #include "UDPNode.h"
 

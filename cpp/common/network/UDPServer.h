@@ -1,7 +1,7 @@
 #ifndef  UDPServer_h
 #define  UDPServer_h
 
-#include "SDL_net.h"
+#include "SDL2/SDL_net.h"
 
 
 /*

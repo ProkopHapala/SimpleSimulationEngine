@@ -1,0 +1,11 @@
+*~
+
+*.[oa]
+*.pyc
+*.pyd
+*.x
+*.so
+
+Build
+
+*.log

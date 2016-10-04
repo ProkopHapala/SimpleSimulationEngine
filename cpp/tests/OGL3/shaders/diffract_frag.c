@@ -15,7 +15,7 @@ uniform float scale;
 
 precision highp float;
 
-out vec4 gl_FragColor;
+//out vec4 gl_FragColor;
 
 // ======== axuliary
 
@@ -65,6 +65,6 @@ void main(void) {
 	}
 
 
-};
+}
 
 
