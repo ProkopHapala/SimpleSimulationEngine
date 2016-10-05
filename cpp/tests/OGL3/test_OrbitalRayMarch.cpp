@@ -76,7 +76,20 @@ void setup(){
 		atoms[ii+1 ] = randf( -1.0,1.0  );
 		atoms[ii+2 ] = randf(  1.0,5.0 );
 		atoms[ii+3 ] = 2.0;
-		printf( "atom %i %i (%3.3f,%3.3f,%3.3f) %3.3f \n", i, ii, atoms[ii], atoms[ii]+1, atoms[ii]+2, atoms[ii+3]  ); 
+
+		coefs[ii   ] = randf( -1.0,1.0 );
+		coefs[ii+1 ] = randf( -1.0,1.0 );
+		coefs[ii+2 ] = randf( -1.0,1.0 );
+		coefs[ii+3 ] = randf( -1.0,1.0 );
+
+/*
+		coefs[ii   ] = 0.0;
+		coefs[ii+1 ] = 0.0;
+		coefs[ii+2 ] = 0.0;
+		coefs[ii+3 ] = randf( -1.0,-0.01 );
+*/
+
+		printf( "atom %i %i (%3.3f,%3.3f,%3.3f) %3.3f  (%3.3f,%3.3f,%3.3f,%3.3f) \n", i, ii, atoms[ii], atoms[ii+1], atoms[ii+2], atoms[ii+3],    coefs[ii], coefs[ii+1], coefs[ii+2], coefs[ii+3] ); 
 	}
 
 }
