@@ -1,0 +1,141 @@
+
+uniform vec2  resolution;
+uniform vec3  light_dir;
+
+uniform int  natoms;
+uniform vec4 atoms [100];
+uniform vec4 coefs [100];
+
+const vec3 clr_diffuse  = vec3( 0.9, 0.8, 0.7 );
+const vec3 clr_specular = vec3( 1.0, 1.0, 1.0 );
+const vec3 clr_ambient  = vec3( 0.1, 0.2, 0.3 );
+
+const float cutoff     = 4.0;
+const float cutoff2    = cutoff*cutoff;
+const float exp_cutoff = exp(-cutoff);
+
+const float iso   = 0.95;
+const float tmin  = 50.0;
+const float tmax  = 60.0;
+const float dtmin = 0.01;
+const float dtmax = 0.1;
+
+const float dderiv = 0.01;
+
+vec2 rayPointDist( vec3 ray0, vec3 hRay, vec3 point ){
+	vec3 pt  = point - ray0;	
+	float t  = dot( hRay, pt );
+    pt      -= t * hRay;
+	float r2 = dot( pt, pt );  
+	return vec2( t, r2 );
+}
+
+float evalFunc( vec3 pos ){
+	float sum = 0.0;
+	for(int i=0; i<natoms; i++){
+		vec3 dr     = pos - atoms[i].xyz;
+		float r2    = dot(dr,dr); 
+		float beta  = atoms[i].w;
+		float arg2  = r2*beta*beta;
+		if( arg2 < cutoff2 ){
+			sum += exp( -sqrt(arg2) ) - exp_cutoff;
+		}
+	}
+	return sum;
+}
+
+float bisec( vec3 ray0, vec3 hRay, float t, float dt ){
+	while( dt > dtmin ){
+		dt *=0.5;
+		float thalf = t+dt;
+		float val = evalFunc( ray0 + thalf*hRay );
+		if( val < iso ) t = thalf;
+	}
+	return t;
+}
+
+float rayMarch( vec3 ray0, vec3 hRay ){
+	float dt = dtmax;
+	float t  = tmin;
+	while( t<tmax ){
+		float val = evalFunc( ray0 + t*hRay );
+		if( val > iso )	break; 
+		t += dt;
+	}
+	//return t;
+	return bisec( ray0, hRay, t-dt, dt );
+}
+
+vec3 getNormal( vec3 hitpos, float val0 ){
+	return vec3(
+		evalFunc( hitpos + vec3( dderiv, 0.0, 0.0 ) ) - val0,
+		evalFunc( hitpos + vec3( 0.0, dderiv, 0.0 ) ) - val0,
+		evalFunc( hitpos + vec3( 0.0, 0.0, dderiv ) ) - val0
+	) / dderiv;
+}
+
+float integrate( vec3 ray0, vec3 hRay ){
+	float dt = dtmax;
+	float t  = tmin;
+	float sum = 0.0;
+	while( t<tmax ){
+		sum += evalFunc( ray0 + t*hRay );
+		t   += dt;
+	}
+	return sum;
+}
+
+
+void main( void ){
+	vec2 q    = (gl_FragCoord.xy/resolution.xy) - vec2(0.5,0.5);
+	//vec2 q  = (gl_FragCoord.xy/resolution.xy) - (mouse.xy/resolution.xy);
+	vec3 ray0 = vec3( 0.0, 0.0, -50.0 );	 
+	vec3 hRay = vec3( q.x, q.y,  10.0 );
+	hRay = normalize( hRay ); 
+
+	//float sum = integrate( ray0, hRay ) * 0.1;
+	//gl_FragColor = vec4( sum, sum, sum, 1.0 );
+
+	float t = rayMarch( ray0, hRay );
+	vec3  hitpos = ray0 + t*hRay;
+
+	//if( t < (tmax-dtmax) ){ gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0 ); }else{ gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 ); }
+/*
+	float t = 1e+8;
+	float sum = 0.0;
+	for(int i=0; i<natoms; i++){
+		vec2 tr2 = rayPointDist( ray0, hRay, atoms[i].xyz );
+		sum += 0.1/( 1.0 + 16.0*tr2.y );
+		//if( tr2.y < 1.0 ) t = tr2.x;
+		//if( tr2.y < 1.0 ) t = tr2.x;
+		//vec2  dq = q - atoms[i].xy;
+		//float r2 = dot(dq,dq);
+		//if( r2<1.0 ) t = 1.0;
+		//sum += 1.0/(1.0 + 64.0*r2 );
+		//sum = 1.0/( 1.0 + 16.0*dot(q,q) );
+	}
+	gl_FragColor = vec4( sum, sum, sum, 1.0 );
+*/
+
+//	float t = 1e+8;
+//	if( dot(q,q) < 1.0 ) t = 1.0;
+//	float r2 = 1.0/( 1.0 + 16.0*dot(q,q) );
+//	gl_FragColor = vec4( r2, r2, r2, 1.0 );
+
+	float  val0  = evalFunc ( hitpos ); 
+	vec3  normal = getNormal( hitpos, val0 );
+	normal       = normalize( normal );
+	float c_diff = dot ( light_dir,      normal );  
+	//float c_spec = dot      ( light_dir-hRay, normal );  c_spec*=c_spec; c_spec*=c_spec; c_spec*=c_spec;
+	//float c = c_diff + c_spec;
+	float c = 0.1 + max( 0.0, c_diff );
+
+	if( t < (tmax-dtmax) ){
+		gl_FragColor = vec4( c, c, c, 1.0 );
+	}else{
+		gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 );
+	}
+
+}
+
+
