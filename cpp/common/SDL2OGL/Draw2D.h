@@ -13,6 +13,7 @@ extern float z_layer; // this can be used for drawing in multiple overlaping lay
 
 
 void color_of_hash( int );
+void setColor( uint32_t i );
 
 void drawPoint      ( const Vec2f& vec                   );
 void drawPointCross ( const Vec2f& vec, float d          );

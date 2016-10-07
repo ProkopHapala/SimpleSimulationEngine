@@ -52,7 +52,7 @@ void AppSDL2OGL::keyStateHandling( const Uint8 *keys ){
 };
 
 void AppSDL2OGL::mouseHandling( ){
-    SDL_GetMouseState( &mouseX, &mouseY );
+    SDL_GetMouseState( &mouseX, &mouseY ); mouseY=HEIGHT-mouseY;
     defaultMouseHandling( mouseX, mouseY );
 }
 

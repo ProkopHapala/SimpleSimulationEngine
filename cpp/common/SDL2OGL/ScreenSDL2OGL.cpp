@@ -34,7 +34,7 @@ void ScreenSDL2OGL::camera(){
 void ScreenSDL2OGL::cameraHUD(){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-	glOrtho ( -0, WIDTH, 0, HEIGHT, -VIEW_DEPTH, +VIEW_DEPTH );
+	glOrtho ( 0, WIDTH, 0, HEIGHT, -VIEW_DEPTH, +VIEW_DEPTH );
 	glMatrixMode (GL_MODELVIEW);
 	glLoadIdentity();
 }

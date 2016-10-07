@@ -7,6 +7,13 @@
 
 float Draw2D::z_layer = 0.0f; // should be initialized like this http://stackoverflow.com/questions/19136059/namespace-global-variable-losing-value-c
 
+
+void Draw2D::setColor( uint32_t i ){
+    constexpr float inv255 = 1.0f/255.0f;
+    //printf( " clr %f %f %f \n", (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
+    glColor3f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
+};
+
 void Draw2D::color_of_hash( int i ){
     constexpr float inv255 = 1.0f/255.0f;
     //int h = rand_hash2( i );

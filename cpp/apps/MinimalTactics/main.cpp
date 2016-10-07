@@ -19,6 +19,7 @@
 #include "AppSDL2OGL.h"
 
 #include "testUtils.h"
+#include "SDL_utils.h"
 
 #include "TerrainCubic.h"
 #include "TiledView.h"
@@ -51,7 +52,7 @@ class FormationTacticsApp : public AppSDL2OGL, public TiledView {
 
     // ==== function declaration
     void printASCItable( int imin, int imax  );
-    GLuint makeTexture( char * fname );
+    //GLuint makeTexture( char * fname );
     //GLuint renderImage( GLuint itex, const Rect2d& rec );
     //void drawString( char * str, int imin, int imax, float x, float y, float sz, int itex );
     //void drawString( char * str, float x, float y, float sz, int itex );
@@ -72,6 +73,7 @@ class FormationTacticsApp : public AppSDL2OGL, public TiledView {
 
 };
 
+/*
 GLuint FormationTacticsApp::makeTexture( char * fname ){
     GLuint itex;
     //SDL_Surface * surf = IMG_Load( fname );
@@ -89,6 +91,7 @@ GLuint FormationTacticsApp::makeTexture( char * fname ){
     //glGenTextures( 1, &itex );
     return itex;
 };
+*/
 
 /*
 GLuint FormationTacticsApp::renderImage( GLuint itex, const Rect2d& rec ){
