@@ -343,7 +343,7 @@ void Draw2D::drawString( const char * str, int imin, int imax, float x, float y,
     float persprite = 1.0f/nchars;
     glEnable( GL_TEXTURE_2D );
     glBindTexture( GL_TEXTURE_2D, itex );
-    glColor4f(1.0f,1.0f,1.0f,1.0f);
+    //glColor4f(1.0f,1.0f,1.0f,1.0f);
     glBegin(GL_QUADS);
     for(int i=imin; i<imax; i++){
         int isprite = str[i] - 33;
@@ -362,7 +362,7 @@ void Draw2D::drawString( const  char * str, float x, float y, float sz, int itex
     float persprite = 1.0f/nchars;
     glEnable( GL_TEXTURE_2D );
     glBindTexture( GL_TEXTURE_2D, itex );
-    glColor4f(1.0f,1.0f,1.0f,1.0f);
+    //glColor4f(1.0f,1.0f,1.0f,1.0f);
     glBegin(GL_QUADS);
     for(int i=0; i<65536; i++){
         if( str[i] == 0 ) break;

@@ -8,18 +8,72 @@
 
 #include <string>
 
-class GUIPanel{
+
+// ==============================
+//    class GUIPanelBasic
+// ==============================
+
+
+class GUIAbstractPanel{
     public:
-	// ===== properties
 	int  xmin=256,xmax=128,ymin=0,ymax=0;
 	bool visible=true, disabled=false;
+
+	uint32_t bgColor=0xA0A0A0, textColor=0x000000;
+
+	bool     redraw=true;
+	int      gllist=0;
+
+	int      fontTex=0;
+    char*    caption=NULL;
+
+    inline bool check      ( int  x, int  y ){  return (x>xmin)&&(x<xmax)&&(y>ymin)&&(y<ymax); }
+	inline void toRelative ( int& x, int& y ){ x-=xmin; y-=ymin; }
+
+	virtual void onKeyDown( SDL_Event e )                 = 0;
+	virtual bool onMouse( int x, int y, SDL_Event event ) = 0;
+    virtual void onText( SDL_Event e )                    = 0;
+
+    virtual void draw  ( ){
+        glCallList( gllist );
+    };
+
+    virtual void tryRender(){
+        if(!redraw) return;
+        gllist=glGenLists(1);
+        glNewList( gllist, GL_COMPILE );
+            glDisable   ( GL_LIGHTING    );
+            glDisable   ( GL_DEPTH_TEST  );
+            glShadeModel( GL_FLAT        );
+            Draw2D::setColor( bgColor );
+            Draw2D::drawRectangle ( xmin, ymin, xmax, ymax, true );
+            if(caption) Draw2D::drawString ( caption,             xmin, ymax-12, 6, fontTex );
+        glEndList();
+        redraw=false;
+	};
+
+    virtual void init( int xmin_, int ymin_, int xmax_, int ymax_, int fontTex_ ){
+		xmin=xmin_,ymin=ymin_,xmax=xmax_,ymax=ymax_; fontTex=fontTex_;
+		//val_text = new char[nCharMax];
+	};
+
+};
+
+
+// ==============================
+//       GUIPanel
+// ==============================
+
+
+class GUIPanel : public GUIAbstractPanel {
+    public:
+	// ===== properties
+
 	bool isSlider=true, isButton=false;
 
-	uint32_t bgColor=0xA0A0A0, textColor=0x000000, barColor=0x00FF00;
-	int      fontTex=0;
-	bool     redraw=true;
+	uint32_t barColor=0x00FF00;
+
 	bool     executed=false;
-	int      gllist=0;
 
     //static const int nSubMax=64;
 	//int       nSub;
@@ -28,7 +82,6 @@ class GUIPanel{
 	int      curPos=0;
 	//int      nCharMax=64;
 	//char*    val_text=NULL;
-	char*    caption =NULL;
 	std::string inputText;
 
 	float    vmin=0.0f, vmax=1.0f;
@@ -37,17 +90,16 @@ class GUIPanel{
 	void (*command)(double) = NULL;
 
 	// ===== inline functions
-	inline bool check      ( int  x, int  y ){  return (x>xmin)&&(x<xmax)&&(y>ymin)&&(y<ymax); }
-	inline void toRelative ( int& x, int& y ){ x-=xmin; y-=ymin; }
 	inline double x2val( float  x   ){ return ( x*(vmax-vmin)/(xmax-xmin) )+ vmin; };
 	inline float  val2x( double val ){ return (val-vmin)*(xmax-xmin)/(vmax-vmin);  };
 
 	// ===== virtual functions
 
-	virtual void render(){
+	virtual void tryRender(){
 		//Draw3D::drawRect( xmin, ymin, xmax, ymax );
-       // gllist=glGenLists(1);
-       // glNewList( gllist, GL_COMPILE );
+		if(!redraw) return;
+        gllist=glGenLists(1);
+        glNewList( gllist, GL_COMPILE );
             glDisable( GL_LIGHTING );
             glDisable( GL_DEPTH_TEST);
             glShadeModel( GL_FLAT     );
@@ -56,8 +108,8 @@ class GUIPanel{
             //printf("panel render %3.3f %3.3f %3.3f %3.3f \n", (float)xmin, (float)ymin, (float)xmax, (float)ymax );
             Draw2D::drawRectangle ( xmin, ymin, xmax, ymax, true );
             //float val_=(float)( (value-vmin)/(vmax-vmin) );
-            if(isSlider){ Draw2D::setColor(barColor); Draw2D::drawRectangle ( xmin, ymin, xmin+val2x(value), ymax, true ); }
-
+            if(isSlider){ Draw2D::setColor(barColor); Draw2D::drawRectangle ( xmin, ymax-2, xmin+val2x(value), ymax, true ); }
+            Draw2D::setColor( bgColor );
             Draw2D::drawString ( caption,             xmin, ymin+12, 6, fontTex );
             //Draw2D::drawString ( val_text, 0, curPos, xmin, ymin,    6, fontTex );
             int nch = inputText.length();
@@ -66,7 +118,8 @@ class GUIPanel{
                 int xcur = xmin + curPos*6;
                 Draw2D::setColor(textColor); Draw2D::drawLine   ( {xcur, ymin}, {xcur, ymin+12} );
             }
-       // glEndList();
+        glEndList();
+        redraw=false;
 	};
 
 	virtual void onKeyDown( SDL_Event e ){
@@ -112,7 +165,6 @@ class GUIPanel{
         inputText.insert(curPos,e.text.text); curPos++;
 	}
 
-
 	virtual bool onMouse( int x, int y, SDL_Event event ){
         //printf( "panel.onMouse %i %i \n", x, y );
 		if( check( x, y ) ){
@@ -135,11 +187,65 @@ class GUIPanel{
 		return executed;
 	}
 
-	void init( int xmin_, int ymin_, int xmax_, int ymax_, int fontTex_ ){
+};
+
+// ==============================
+//       GUIPanel
+// ==============================
+
+class MultiPanel : public GUIAbstractPanel {
+    public:
+    int nsubs;
+    GUIPanel ** subs;
+
+    virtual void draw  ( ){
+        glCallList( gllist );
+        glPushMatrix();
+        glTranslatef(xmin,ymin,0);
+        for(int i=0; i<nsubs; i++){
+            subs[i]->draw();
+        }
+        glPopMatrix();
+	};
+
+    virtual void tryRender( ){
+        GUIAbstractPanel::tryRender();
+        for(int i=0; i<nsubs; i++){
+            subs[i]->tryRender();
+        }
+	};
+
+    void initMulti( int xmin_, int ymin_, int xmax_, int ymax_, int fontTex_, int nsubs_ ){
 		xmin=xmin_,ymin=ymin_,xmax=xmax_,ymax=ymax_; fontTex=fontTex_;
-		//val_text = new char[nCharMax];
-	}
+		nsubs=nsubs_;
+		subs = new GUIPanel*[nsubs_];
+		int dy = (ymax-ymin)/nsubs;
+		int yi = 0;
+        for(int i=0; i<nsubs; i++){
+            subs[i] = new GUIPanel();
+            subs[i]->init(0,yi,xmax-xmin,yi+dy, fontTex );
+            subs[i]->caption = new char[16];
+            sprintf(subs[i]->caption,"val%i",i);
+            yi+=dy;
+        }
+	};
+
+	virtual bool onMouse  ( int x, int y, SDL_Event event ){
+        if( check( x, y ) ){
+			toRelative(x,y);
+            for(int i=0; i<nsubs; i++){
+                subs[i]->onMouse  ( x, y, event );
+            }
+        }
+	};
+
+    virtual void onKeyDown( SDL_Event e ){};
+
+    virtual void onText   ( SDL_Event e ){};
 
 };
+
+
+
 
 #endif

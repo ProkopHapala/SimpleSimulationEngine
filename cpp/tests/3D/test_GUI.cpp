@@ -30,7 +30,8 @@ void command_example( double value ){
 class TestAppGUI : public AppSDL2OGL_3D {
 	public:
     int      fontTex;
-    GUIPanel panel;
+    GUIPanel   panel;
+    MultiPanel mpanel;
 
 	// ---- function declarations
 	virtual void draw   ();
@@ -45,10 +46,12 @@ TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, 
 
     fontTex = makeTexture( "/home/prokop/git/SimpleSimulationEngine/cpp/common_resources/dejvu_sans_mono.bmp" );
 
-    panel.init( 5,5,100,40,  fontTex );
+    panel.init( 5,5,105,35,  fontTex );
     panel.caption   = "rotation [Rad]"; panel.vmin = -3.14159265359; panel.vmax = 3.14159265359;
     //sprintf(panel.val_text, "NA" );
     panel.command = &command_example; panel.isButton = true;
+
+    mpanel.initMulti( 120,5,200,120, fontTex , 4 );
 
     SDL_StartTextInput ();
     //panel.nChars = 6;
@@ -65,8 +68,8 @@ void TestAppGUI::draw   (){
 };
 
 void TestAppGUI::drawHUD(){
-	if( panel.redraw ) panel.render();
-	glCallList( panel.gllist );
+	panel.tryRender();  panel.draw();
+	mpanel.tryRender(); mpanel.draw();
 
 	//glColor3f(1.0f,1.0f,1.0f);
 	//panel.render();
@@ -83,7 +86,7 @@ void TestAppGUI::eventHandling ( const SDL_Event& event  ){
             panel.onText( event ); break;
         case SDL_MOUSEBUTTONDOWN:
             //printf( "%i %i\n", mouseX, mouseY );
-
+            mpanel.onMouse( mouseX, mouseY, event );
             bool button_clicked = panel.onMouse( mouseX, mouseY, event );
             if  (button_clicked) printf("button_clicked!!! panel.value= %3.6f\n", panel.value );
             break;
