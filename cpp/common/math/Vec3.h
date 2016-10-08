@@ -87,7 +87,7 @@ class Vec3TYPE{
 		return norm;
     };
 
-	inline void getSomeOrtho( VEC& v1, VEC& v2 ){
+	inline void getSomeOrtho( VEC& v1, VEC& v2 ) const {
 		if(x<y){
 //			x : y*vz - z*vy;
 //			y : z*vx - x*vz;

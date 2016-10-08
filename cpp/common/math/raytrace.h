@@ -6,9 +6,12 @@
 #include <cstdlib>
 #include <stdio.h>
 
+#include "Vec2.h"
 #include "Vec3.h"
 
 // =========== sphere
+
+const double t_inf = 1e+300;
 
 inline double rayPointDistance2( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& point, double& t ){
 	Vec3d pt;
@@ -81,6 +84,58 @@ inline double rayTriangle(
 	return t;
 }
 
+inline bool rayInTriangle( const Vec3d& a_, const Vec3d& b_, const Vec3d& c_, const Vec3d& hX, const Vec3d& hY ){
+/*
+	Vec2d a; a.set( hX.dot(a_), hY.dot(a_)  );
+	Vec2d b; b.set( hX.dot(b_), hY.dot(b_)  );
+	if( 0 > ( a.x*(b.y-a.y) - a.y*(b.x-a.x) ) ) return false;
+	Vec2d c; c.set( hX.dot(c_), hY.dot(c_)  );
+	if( 0 > ( b.x*(c.y-b.y) - b.y*(c.x-b.x) ) ) return false;
+	if( 0 > ( c.x*(a.y-c.y) - c.y*(a.x-c.x) ) ) return false;
+*/
+
+	Vec2d a; a.set( hX.dot(a_), hY.dot(a_)  );
+	Vec2d b; b.set( hX.dot(b_), hY.dot(b_)  );
+	double sgn = a.x*(b.y-a.y) - a.y*(b.x-a.x);
+	Vec2d c; c.set( hX.dot(c_), hY.dot(c_)  );
+	if( 0 > sgn*( b.x*(c.y-b.y) - b.y*(c.x-b.x) ) ) return false;
+	if( 0 > sgn*( c.x*(a.y-c.y) - c.y*(a.x-c.x) ) ) return false;
+
+    /*
+    printf( "a  (%3.3f,%3.3f,%3.3f)\n", a_.x, a_.y, a_.z );
+    printf( "b  (%3.3f,%3.3f,%3.3f)\n", b_.x, b_.y, b_.z );
+    printf( "c  (%3.3f,%3.3f,%3.3f)\n", c_.x, c_.y, c_.z );
+    printf( "hX (%3.3f,%3.3f,%3.3f)\n", hX.x, hX.y, hX.z );
+    printf( "hY (%3.3f,%3.3f,%3.3f)\n", hY.x, hY.y, hY.z );
+	Vec2d a; a.set( hX.dot(a_), hY.dot(a_) );
+	Vec2d b; b.set( hX.dot(b_), hY.dot(b_) );
+	Vec2d c; c.set( hX.dot(c_), hY.dot(c_) );
+	double C1 = a.x*(b.y-a.y) - a.y*(b.x-a.x);
+	double C2 = b.x*(c.y-b.y) - b.y*(c.x-b.x);
+	double C3 = c.x*(a.y-c.y) - c.y*(a.x-c.x);
+	printf( "C123 %f %f %f \n", C1, C2, C3 );
+    if( (C1<0)||(C2<0)||(C3<0) ) return false;
+	*/
+
+    //printf("passed\n");
+    return true;
+}
+
+inline double rayTriangle2(
+	const Vec3d &ray0, const Vec3d &hRay, const Vec3d &hX, const Vec3d &hY,
+	const Vec3d &a,    const Vec3d &b,    const Vec3d &c,
+    Vec3d& normal
+){
+    if( !rayInTriangle( a-ray0, b-ray0, c-ray0, hX, hY ) ) return t_inf;
+    //printf("ray is in triangle\n");
+	Vec3d ab,ac;
+	ab.set_sub( b, a );
+	ac.set_sub( c, a );
+	normal.set_cross( ab, ac );
+
+	return rayPlane( ray0, hRay, normal, a );
+}
+
 // =========== BoundingBox
 
 //inline double rayCubeSide( double h, double ha, double hb, double amin, double amax, double bmin, double bmax){
@@ -91,7 +146,7 @@ inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, con
     d1.set_sub( p1, ray0 );
     d2.set_sub( p2, ray0 );
 
-    double tmin = 1e+300;
+    double tmin = t_inf ;
     //printf( " hRay (%3.3f,%3.3f,%3.3f) \n", hRay.x, hRay.y, hRay.z );
 
     // ---  along x
@@ -112,7 +167,7 @@ inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, con
         //}
     }else{
         if( (d1.x<0.0)||(d2.x>0.0) ){ // cannot hit
-            return 1e+300;
+            return t_inf;
         }
     }
 
@@ -133,7 +188,7 @@ inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, con
         }
     }else{
         if( (d1.y<0.0)||(d2.y>0.0) ){ // cannot hit
-            return 1e+300;
+            return t_inf ;
         }
     }
 
@@ -154,7 +209,7 @@ inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, con
         }
     }else{
         if( (d1.z<0.0)||(d2.z>0.0) ){ // cannot hit
-            return 1e+300;
+            return t_inf;
         }
     }
 

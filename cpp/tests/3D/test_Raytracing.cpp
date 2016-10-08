@@ -31,8 +31,12 @@ class TriangleMesh{
 
     void init(int npoints_, int ntris_){ npoints=npoints_; ntris=ntris_; points = new Vec3d[npoints]; tris = new Vec3i[ntris]; }
 
-    double ray( const Vec3d &ray0, const Vec3d &hRay, bool& inside, Vec3d& hitpos, Vec3d& normal ){
+    double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal ){
         //int    imin  = 0;
+
+        Vec3d hX,hY;
+        hRay.getSomeOrtho( hX, hY );
+
         double t_min = 1e+300;
         //Vec3d hitpos_min,normal_min;
         for(int i=0; i<ntris; i++ ){
@@ -40,16 +44,18 @@ class TriangleMesh{
             Vec3d A = points[itri.x];
             Vec3d B = points[itri.y];
             Vec3d C = points[itri.z];
-            Vec3d hitpos_, normal_;
+            Vec3d normal_;
             bool inside_;
-            double t = rayTriangle( ray0, hRay, A, B, C, inside_, hitpos_, normal_ );
-            if( inside & ( t<t_min ) ){
+            //double t = rayTriangle( ray0, hRay, A, B, C, inside_, hitpos_, normal_ );
+            double t = rayTriangle2( ray0, hRay, hX, hY, A, B, C, normal_ );
+            //printf( "t=%f\n", t );
+            inside_ = (t<0.9e+300 )&&(t>0);
+            if( inside_ && ( t<t_min ) ){
                 t_min = t;
-                inside = true;
-                hitpos = hitpos_;
                 normal = normal_;
             }
         };
+
     };
 
 };
@@ -65,7 +71,7 @@ class TestAppRaytracing : public AppSDL2OGL_3D {
     //std::vector<KinematicBody*> objects;
     TriangleMesh mesh;
 
-    int nRays = 5;
+    int nRays = 3;
     Vec3d   raySource;
     Vec3d * hRays;
 
@@ -83,10 +89,8 @@ class TestAppRaytracing : public AppSDL2OGL_3D {
 
 TestAppRaytracing::TestAppRaytracing( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+
     double range   = 5.0;
-    //mesh.init( 30, 10 );
-    //for( int i=0; i<mesh.npoints; i++ ){ mesh.points[i].set( randf(-range,range), randf(-range,range), randf(-range,range) ); }
-    //for( int i=0; i<mesh.ntris;   i++ ){ mesh.tris  [i].set( i%mesh.npoints, (i+1)%mesh.npoints, (i+2)%mesh.npoints ); }
     double scatter = 5.0;
     int ntris      = 10;
     mesh.init( 3*ntris, ntris );
@@ -99,16 +103,29 @@ TestAppRaytracing::TestAppRaytracing( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         mesh.tris  [i].set( i3, i3+1, i3+2 );
     }
 
-    double dray = 0.3;
-    hRays = new Vec3d[0];
+    double dray = 3.8;
     raySource    .set(3.0, 3.0, 3.0);
     Vec3d rayDir0; rayDir0.set(raySource*-1);
+    hRays = new Vec3d[nRays];
     for( int i=0; i<nRays; i++ ){
         hRays[i].set( rayDir0 );
         hRays[i].add( randf(-dray,dray), randf(-dray,dray), randf(-dray,dray) );
         hRays[i].normalize();
     }
 
+/*
+    mesh.init( 3, 1 );
+    mesh.points[0].set( 1.0,0.0,0.0 );
+    mesh.points[1].set( 0.0,1.0,0.0 );
+    mesh.points[2].set( 0.0,0.0,1.0 );
+    mesh.tris  [0].set( 0, 1, 2 );
+
+    nRays = 1;
+    hRays = new Vec3d[nRays];
+    raySource.set(-3.0, -3.0, -3.0);
+    hRays[0].set( 1.0, 1.0, 1.0 );
+    hRays[0].normalize();
+*/
     defaultObjectShape = glGenLists(1);
     glNewList( defaultObjectShape , GL_COMPILE );
         glEnable( GL_LIGHTING );
@@ -130,19 +147,33 @@ void TestAppRaytracing::draw(){
     glEnable( GL_LIGHTING );
     glCallList( defaultObjectShape );
 
+    /*
     glDisable ( GL_LIGHTING );
     for( int i=0; i<nRays; i++ ) {
-        bool  inside;
-        Vec3d hitpos, normal;
         glColor3f( 0.8f, 0.0f, 0.0f ); Draw3D::drawLine( raySource, raySource + hRays[i]*100  );
+
+        bool  inside=false;
+        Vec3d hitpos, normal;
         double t = mesh.ray( raySource, hRays[i], inside, hitpos, normal );
+
         if (inside){
             glColor3f( 0.0f, 0.0f, 0.8f );
             Draw3D::drawPointCross( hitpos, 0.2 );
             Draw3D::drawVecInPos  ( normal, hitpos );
         }
     }
+    */
 
+    Vec3d hitpos, normal;
+    double t = mesh.ray( camPos, camMat.c, normal );   //raySphere( camPos, camMat.c, 2.0, * );
+    hitpos.set_add_mul( camPos, camMat.c, t);
+    if( t<t_inf ){
+        glColor3f( 0.0f, 0.0f, 0.8f );
+        Draw3D::drawPointCross( hitpos, 0.2 );
+        Draw3D::drawVecInPos  ( normal, hitpos );
+    };
+
+    //STOP = true;
 
 };
 
