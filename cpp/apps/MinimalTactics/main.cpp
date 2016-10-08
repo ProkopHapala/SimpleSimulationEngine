@@ -172,7 +172,7 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     tiles    = new int[ nxy ];
     //TiledView::renderAll( -10, -10, 10, 10 );
 
-    default_font_texture = makeTexture(  "data/dejvu_sans_mono.bmp" );
+    default_font_texture = makeTexture(  "common_resource/dejvu_sans_mono.bmp" );
     //itex = makeTexture(  "data/tank.bmp" );
     //itex = makeTexture(  "data/nehe.bmp" );
     printf( "default_font_texture :  %i \n", default_font_texture );

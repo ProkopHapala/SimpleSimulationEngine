@@ -12,7 +12,7 @@ const vec3 clr_ambient  = vec3( 0.1, 0.2, 0.3 );
 
 const float cutoff     = 6.0;
 const float cutoff2    = cutoff*cutoff;
-const float exp_cutoff = exp(-cutoff);
+const float exp_cutoff = 0.00247875217; // exp(-cutoff);
 
 const float iso   = 0.2;
 const float tmin  = 50.0;
