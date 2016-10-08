@@ -136,6 +136,40 @@ inline double rayTriangle2(
 	return rayPlane( ray0, hRay, normal, a );
 }
 
+
+
+// =========== Polygon
+
+inline double rayPolygon(
+	const Vec3d &ray0, const Vec3d &hRay, const Vec3d &hX, const Vec3d &hY,
+	int n, const int * inds, const Vec3d * points,
+    Vec3d& normal
+){
+    Vec3d tmp;
+    Vec2d a,b;
+	tmp.set_sub(points[inds[n-1]],ray0); a.set( hX.dot(tmp), hY.dot(tmp)  );
+	tmp.set_sub(points[inds[0  ]],ray0); b.set( hX.dot(tmp), hY.dot(tmp)  );
+	double sgn = a.x*(b.y-a.y) - a.y*(b.x-a.x);
+	//printf( "0 %f  (%3.3f,%3.3f) (%3.3f,%3.3f)\n", sgn, a.x,a.y, b.x,b.y );
+    for( int i=1; i<n; i++ ){
+        a.set(b);
+        tmp.set_sub(points[inds[i]],ray0); b.set( hX.dot(tmp), hY.dot(tmp)  );
+        double sgn2 = ( a.x*(b.y-a.y) - a.y*(b.x-a.x) );
+        //printf( "%i %i %f  (%3.3f,%3.3f) (%3.3f,%3.3f)\n", i, inds[i], sgn2, a.x,a.y, b.x,b.y );
+        if( 0 > sgn*sgn2 ) return t_inf;
+    }
+
+    tmp.add(ray0);
+	Vec3d ab,ac;
+	ab.set_sub( points[inds[0]], tmp );
+	ac.set_sub( points[inds[1]], tmp );
+	normal.set_cross( ab, ac );
+
+	return rayPlane( ray0, hRay, normal, tmp );
+}
+
+
+
 // =========== BoundingBox
 
 //inline double rayCubeSide( double h, double ha, double hb, double amin, double amax, double bmin, double bmax){

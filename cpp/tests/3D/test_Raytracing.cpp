@@ -71,6 +71,10 @@ class TestAppRaytracing : public AppSDL2OGL_3D {
     //std::vector<KinematicBody*> objects;
     TriangleMesh mesh;
 
+    const static int ngons   = 5;
+    int              vertinds[ngons]   = {0,1,2,3,4};
+    double           verts   [ngons*3] = { -1.0,-1.0,5.0,    2.0,-1.0,5.0,    2.0,1.0,5.0,   1.0,2.0,5.0,   -1.0,1.0,5.0     };
+
     int nRays = 3;
     Vec3d   raySource;
     Vec3d * hRays;
@@ -145,9 +149,12 @@ void TestAppRaytracing::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     glEnable( GL_LIGHTING );
-    glCallList( defaultObjectShape );
+    glEnable(GL_DEPTH_TEST);
+    double t;
+    Vec3d hitpos, normal;
 
     /*
+    glCallList( defaultObjectShape );
     glDisable ( GL_LIGHTING );
     for( int i=0; i<nRays; i++ ) {
         glColor3f( 0.8f, 0.0f, 0.0f ); Draw3D::drawLine( raySource, raySource + hRays[i]*100  );
@@ -164,14 +171,32 @@ void TestAppRaytracing::draw(){
     }
     */
 
-    Vec3d hitpos, normal;
-    double t = mesh.ray( camPos, camMat.c, normal );   //raySphere( camPos, camMat.c, 2.0, * );
-    hitpos.set_add_mul( camPos, camMat.c, t);
+    Vec3d ray0; ray0.set_add(camPos,{5.3,-5.8,-5.9});
+
+    glCallList( defaultObjectShape );
+    t = mesh.ray( ray0, camMat.c, normal );   //raySphere( camPos, camMat.c, 2.0, * );
+    hitpos.set_add_mul( ray0, camMat.c, t);
+    if( t<t_inf ){
+        glColor3f( 0.0f, 0.0f, 0.8f );
+        Draw3D::drawPointCross( hitpos, 0.2 );
+        Draw3D::drawVecInPos  ( normal*10, hitpos );
+    };
+
+    t = rayPolygon( ray0, camMat.c, camMat.a, camMat.b, ngons, vertinds, (Vec3d*)verts, normal );   //raySphere( camPos, camMat.c, 2.0, * );
+    hitpos.set_add_mul( ray0, camMat.c, t);
     if( t<t_inf ){
         glColor3f( 0.0f, 0.0f, 0.8f );
         Draw3D::drawPointCross( hitpos, 0.2 );
         Draw3D::drawVecInPos  ( normal, hitpos );
-    };
+        glColor3f(1.0f,0.0f,0.0f);
+    }else{ glColor3f(1.0f,1.0f,1.0f); };
+    Draw3D::drawPlanarPolygon( ngons, vertinds, (Vec3d*)verts );
+
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+    glColor3f( 1.0f, 1.0f, 1.0f );
+    Draw3D::drawPointCross( ray0, 1.0 );
+    Draw3D::drawVecInPos  ( camMat.c, ray0 );
 
     //STOP = true;
 
@@ -195,13 +220,15 @@ void TestAppRaytracing::eventHandling ( const SDL_Event& event  ){
 
 void TestAppRaytracing::drawHUD(){
     glDisable ( GL_LIGHTING );
+    /*
     glColor3f( 0.0f, 1.0f, 0.0f );
     glBegin( GL_LINES );
-    float whalf = WIDTH *0.5;
-    float hhalf = HEIGHT*0.5;
-    glVertex3f( whalf-10,hhalf, 0 ); glVertex3f( whalf+10,hhalf, 0 );
-    glVertex3f( whalf,hhalf-10, 0 ); glVertex3f( whalf,hhalf+10, 0 );
+        float whalf = WIDTH *0.5;
+        float hhalf = HEIGHT*0.5;
+        glVertex3f( whalf-10,hhalf, 0 ); glVertex3f( whalf+10,hhalf, 0 );
+        glVertex3f( whalf,hhalf-10, 0 ); glVertex3f( whalf,hhalf+10, 0 );
     glEnd();
+    */
 }
 
 // ===================== MAIN
