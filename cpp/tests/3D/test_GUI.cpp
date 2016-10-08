@@ -47,8 +47,10 @@ TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, 
 
     panel.init( 5,5,100,40,  fontTex );
     panel.caption   = "rotation [Rad]"; panel.vmin = -3.14159265359; panel.vmax = 3.14159265359;
-    sprintf(panel.val_text, "NA" );
+    //sprintf(panel.val_text, "NA" );
     panel.command = &command_example; panel.isButton = true;
+
+    SDL_StartTextInput ();
     //panel.nChars = 6;
 }
 
@@ -66,7 +68,6 @@ void TestAppGUI::drawHUD(){
 	if( panel.redraw ) panel.render();
 	glCallList( panel.gllist );
 
-
 	//glColor3f(1.0f,1.0f,1.0f);
 	//panel.render();
 	//Draw2D::drawRectangle ( 100, 100, 300, 200, false    );
@@ -76,6 +77,10 @@ void TestAppGUI::drawHUD(){
 void TestAppGUI::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );
     switch( event.type ){
+        case SDL_KEYDOWN:
+            panel.onKeyDown( event ); break;
+        case SDL_TEXTINPUT:
+            panel.onText( event ); break;
         case SDL_MOUSEBUTTONDOWN:
             //printf( "%i %i\n", mouseX, mouseY );
 
