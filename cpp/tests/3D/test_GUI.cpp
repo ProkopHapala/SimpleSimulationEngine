@@ -59,6 +59,7 @@ TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, 
     panel.command = &command_example; panel.isButton = true;
 
     mpanel.initMulti( 120,5,200,120, fontTex , 4 );
+    mpanel.caption="MultiPanel_1";
 
     txt.inputText = "insert number using =+-*/";
 
