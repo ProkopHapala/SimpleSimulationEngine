@@ -7,20 +7,6 @@
 
 float Draw2D::z_layer = 0.0f; // should be initialized like this http://stackoverflow.com/questions/19136059/namespace-global-variable-losing-value-c
 
-
-void Draw2D::setColor( uint32_t i ){
-    constexpr float inv255 = 1.0f/255.0f;
-    //printf( " clr %f %f %f \n", (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
-    glColor3f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
-};
-
-void Draw2D::color_of_hash( int i ){
-    constexpr float inv255 = 1.0f/255.0f;
-    //int h = rand_hash2( i );
-    int h = hash_Wang( i );
-    glColor3f( (h&0xFF)*inv255, ((h>>8)&0xFF)*inv255, ((h>>16)&0xFF)*inv255 );
-};
-
 void Draw2D::drawPoint( const Vec2f& vec ){
 	glDisable (GL_LIGHTING);
 	glBegin   (GL_POINTS);
@@ -341,9 +327,39 @@ void Draw2D::renderImage( GLuint itex, const Rect2d& rec ){
 void Draw2D::drawString( const char * str, int imin, int imax, float x, float y, float sz, int itex ){
     const int nchars = 95;
     float persprite = 1.0f/nchars;
-    glEnable( GL_TEXTURE_2D );
+    glEnable     ( GL_TEXTURE_2D );
     glBindTexture( GL_TEXTURE_2D, itex );
-    //glColor4f(1.0f,1.0f,1.0f,1.0f);
+    //glColor4f(0.0f,0.5f,0.0f,1.0f);
+    glEnable(GL_BLEND);
+    glEnable(GL_ALPHA_TEST);
+    //glBlendFunc( GL_ONE, GL_ZERO );
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+    //glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_DST_ALPHA);
+    glBegin(GL_QUADS);
+    for(int i=imin; i<imax; i++){
+        int isprite = str[i] - 33;
+        float offset  = isprite*persprite+(persprite*0.57);
+        float xi = i*sz + x;
+        glTexCoord2f( offset          , 1.0f ); glVertex3f( xi,    y,      3.0f );
+        glTexCoord2f( offset+persprite, 1.0f ); glVertex3f( xi+sz, y,      3.0f );
+        glTexCoord2f( offset+persprite, 0.0f ); glVertex3f( xi+sz, y+sz*2, 3.0f );
+        glTexCoord2f( offset          , 0.0f ); glVertex3f( xi,    y+sz*2, 3.0f );
+    }
+    glEnd();
+    glDisable  ( GL_BLEND );
+    glDisable  ( GL_ALPHA_TEST );
+    glDisable  ( GL_TEXTURE_2D );
+    glBlendFunc( GL_ONE, GL_ZERO );
+
+    /*
+    glColor4f(0.0f,1.0f,0.0f,1.0f);
+    glEnable(GL_BLEND);
+    glEnable(GL_ALPHA_TEST);
+    //glBlendFunc( GL_ONE, GL_ZERO );
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_DST_ALPHA);
     glBegin(GL_QUADS);
     for(int i=imin; i<imax; i++){
         int isprite = str[i] - 33;
@@ -355,6 +371,11 @@ void Draw2D::drawString( const char * str, int imin, int imax, float x, float y,
         glTexCoord2f( offset          , 0.0f ); glVertex3f( xi,    y+sz*2, 3.0f );
     }
     glEnd();
+    glDisable  ( GL_BLEND );
+    glDisable  ( GL_ALPHA_TEST );
+    glDisable  ( GL_TEXTURE_2D );
+    glBlendFunc( GL_ONE, GL_ZERO );
+    */
 }
 
 void Draw2D::drawString( const  char * str, float x, float y, float sz, int itex ){
@@ -362,10 +383,13 @@ void Draw2D::drawString( const  char * str, float x, float y, float sz, int itex
     float persprite = 1.0f/nchars;
     glEnable( GL_TEXTURE_2D );
     glBindTexture( GL_TEXTURE_2D, itex );
-    //glColor4f(1.0f,1.0f,1.0f,1.0f);
+    glEnable(GL_BLEND);
+    glEnable(GL_ALPHA_TEST);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    //glColor4f(0.0f,1.0f,0.0f,1.0f);
     glBegin(GL_QUADS);
     for(int i=0; i<65536; i++){
-        if( str[i] == 0 ) break;
+        if( str[i] == 0 ) break; // 0-terminated string
         int isprite = str[i] - 33;
         float offset  = isprite*persprite+(persprite*0.57);
         float xi = i*sz + x;
@@ -375,6 +399,11 @@ void Draw2D::drawString( const  char * str, float x, float y, float sz, int itex
         glTexCoord2f( offset          , 0.0f ); glVertex3f( xi,    y+sz*2, 3.0f );
     }
     glEnd();
+    glDisable( GL_TEXTURE_2D );
+    glDisable  ( GL_BLEND );
+    glDisable  ( GL_ALPHA_TEST );
+    glDisable  ( GL_TEXTURE_2D );
+    glBlendFunc( GL_ONE, GL_ZERO );
 }
 
 

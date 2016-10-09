@@ -2,8 +2,11 @@
 //#include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
-#include "Draw3D.h" // THE HEADER
 #include "Vec2.h"
+#include "Draw.h"
+
+#include "Draw3D.h" // THE HEADER
+
 
 namespace Draw3D{
 
@@ -450,6 +453,20 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         }
 
     };
+
+    void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend ){
+        glDisable    ( GL_LIGHTING   );
+        glDisable    ( GL_DEPTH_TEST );
+        glShadeModel ( GL_FLAT       );
+        glPushMatrix();
+            //glMatrixMode(GL_MODELVIEW);
+            //glMatrixMode(GL_PROJECTION);
+            glTranslatef( pos.x, pos.y, pos.z );
+            Draw::billboardCam( );
+            //Draw2D::drawString( inputText.c_str(), 0, 0, textSize, fontTex );
+            Draw::drawText( str, fontTex, textSize, istart, iend );
+        glPopMatrix();
+	};
 
 // =================
 // from drawUtils.h

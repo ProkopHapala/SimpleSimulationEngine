@@ -14,6 +14,7 @@
 #include "Vec2.h"
 #include "Solids.h"
 
+#include "Draw.h"
 #include "Draw2D.h"
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
@@ -32,6 +33,9 @@ class TestAppGUI : public AppSDL2OGL_3D {
     int      fontTex;
     GUIPanel   panel;
     MultiPanel mpanel;
+    GUITextInput txt;
+
+    GUIAbstractPanel*  focused = NULL;
 
 	// ---- function declarations
 	virtual void draw   ();
@@ -44,7 +48,10 @@ class TestAppGUI : public AppSDL2OGL_3D {
 
 TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
-    fontTex = makeTexture( "/home/prokop/git/SimpleSimulationEngine/cpp/common_resources/dejvu_sans_mono.bmp" );
+    //fontTex = makeTexture( "common_resources/dejvu_sans_mono.bmp" );
+    //fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA.bmp" );
+    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    //fontTex = makeTexture( "common_resources/dejvu_sans_mono_Alpha.bmp" );
 
     panel.init( 5,5,105,35,  fontTex );
     panel.caption   = "rotation [Rad]"; panel.vmin = -3.14159265359; panel.vmax = 3.14159265359;
@@ -52,6 +59,8 @@ TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, 
     panel.command = &command_example; panel.isButton = true;
 
     mpanel.initMulti( 120,5,200,120, fontTex , 4 );
+
+    txt.inputText = "insert number using =+-*/";
 
     SDL_StartTextInput ();
     //panel.nChars = 6;
@@ -63,13 +72,18 @@ void TestAppGUI::draw   (){
 
 	glDisable ( GL_LIGHTING );
 
+	//Draw3D::drawText( txt.inputText.c_str(), {1.0,1.0,1.0}, fontTex, 0.3, 0, 0 );
+	txt.view3D( {1.0,1.0,1.0}, fontTex, 0.3 );
 	Draw3D::drawAxis ( 3.0f );
+
+
 
 };
 
 void TestAppGUI::drawHUD(){
-	panel.tryRender();  panel.draw();
+	panel .tryRender();  panel.draw();
 	mpanel.tryRender(); mpanel.draw();
+	if(focused) Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
 
 	//glColor3f(1.0f,1.0f,1.0f);
 	//panel.render();
@@ -81,14 +95,14 @@ void TestAppGUI::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );
     switch( event.type ){
         case SDL_KEYDOWN:
-            panel.onKeyDown( event ); break;
+            if(focused){ focused->onKeyDown( event ); }else{ txt.onKeyDown(  event ); }; break;
         case SDL_TEXTINPUT:
-            panel.onText( event ); break;
+            if(focused){ focused->onText   ( event ); }else{ txt.onText   ( event );  }; break;
         case SDL_MOUSEBUTTONDOWN:
             //printf( "%i %i\n", mouseX, mouseY );
-            mpanel.onMouse( mouseX, mouseY, event );
-            bool button_clicked = panel.onMouse( mouseX, mouseY, event );
-            if  (button_clicked) printf("button_clicked!!! panel.value= %3.6f\n", panel.value );
+            GUIAbstractPanel* active = NULL; focused=NULL;
+            active = mpanel.onMouse( mouseX, mouseY, event ); if(active) focused=active;
+            active = panel .onMouse( mouseX, mouseY, event ); if(active) focused=active;
             break;
     };
     AppSDL2OGL::eventHandling( event );

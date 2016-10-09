@@ -43,22 +43,14 @@ void drawLines          ( int nlinks, const int * links, const Vec3d * points );
 void drawTriangles      ( int nlinks, const int * links, const Vec3d * points );
 void drawPolygons       ( int nlinks, const int * ns,    const int * links, const Vec3d * points );
 
+void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend );
+
 // from drawUtils.h
 void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b );
 int  makeBoxList( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b  );
 void drawAxis( float sc );
 
 // ==== inline functions
-
-inline void setColorInt32( uint32_t clr ) {
-	const float i255 = 1/255.0f;
-	uint8_t b = ( ( clr       ) & 0xFF );
-	uint8_t g = ( ( clr >> 8  ) & 0xFF );
-	uint8_t r = ( ( clr >> 16 ) & 0xFF );
-	uint8_t a = (   clr >> 24          );
-	glColor4f( i255*r, i255*g, i255*b, i255*a );
-	//printf( " r %i g %i b %i a %i     %f %f %f %f  \n", r, g, b, a,  i255*r, i255*g, i255*b, i255*a   );
-}
 
 /*
 inline void toGLMat( const Vec3d& pos, const Mat3d& rot, float* glMat ){

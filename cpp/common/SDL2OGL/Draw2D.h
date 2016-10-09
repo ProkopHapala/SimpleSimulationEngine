@@ -12,9 +12,6 @@ extern float z_layer; // this can be used for drawing in multiple overlaping lay
                       // should be initialized like this http://stackoverflow.com/questions/19136059/namespace-global-variable-losing-value-c
 
 
-void color_of_hash( int );
-void setColor( uint32_t i );
-
 void drawPoint      ( const Vec2f& vec                   );
 void drawPointCross ( const Vec2f& vec, float d          );
 void drawVec        ( const Vec2f& vec                   );
