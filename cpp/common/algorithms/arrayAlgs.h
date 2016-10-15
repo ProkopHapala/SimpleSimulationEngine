@@ -2,28 +2,44 @@
 // from here  http://stackoverflow.com/questions/3982348/implement-generic-swap-macro-in-c
 #define SWAP(x, y, TYPE) TYPE tmp = x; x = y; y = tmp;
 
+
+/*
+template<class TYPE>
+inline TYPE * insertN( int i, int nTo, int nFrom, TYPE * to, TYPE * from ){
+    TYPE * to_ = new TYPE[nTo+nFrom];
+    for(int i=0; i< ; i++){   }
+}
+
+template<class TYPE>
+inline int insertN( int i0, int len, TYPE * x, TYPE * x ){
+
+}
+*/
+
+//1 2 1 2.0000
 template< class TYPE >
-inline int binSearch( TYPE x, int imin, int imax, TYPE * xs ){
-	int di = (imax - imin)/2;
+inline int binSearchBetween( TYPE x, int imax, TYPE * xs ){
+	int di   = imax;
+	int imin = 0;
 	do{
-		TYPE xi = xs[ imin + di + 1 ];
-		if( xi < x ){
-			imin +=di;
-		}
-		di = di << 2;
+        di  = di>>1;
+        int  i  = imin + di;
+		if( xs[i] < x ){ imin=i; di = (imax-i); }
+		printf("binSearchBetween %i %i %i %f %f \n", imin, i, di, xs[i], x );
 	}while( di > 1 );
+	printf( " %f < %f < %f\n", xs[imin], x, xs[imin+1] );
 	return imin;
 }
 
 template< class TYPE >
-inline int binSearch( TYPE x, int imin, TYPE * xs ){
-	int  di = 1;
-	TYPE xi = xs[ imin + di ];
-	while( xi < x ){
-		di  = di << 2;
-		xi  = xs[ imin + di ];
-	};
-	return binSearch( x, imin, imin+di, xs );
+inline int binSearchFrom( TYPE x, int n, TYPE * xs ){
+	int   i = 1;
+	do{
+        i  = i << 1;
+		if(i>n) if(xs[n]>x){ return binSearchBetween( x, n, xs ); }else{ return -1; };
+		printf("binSearchForm    %i %f %f \n", i, xs[i], x);
+	}while( xs[i] < x );
+	return binSearchBetween( x, i, xs );
 }
 
 template< class TYPE >

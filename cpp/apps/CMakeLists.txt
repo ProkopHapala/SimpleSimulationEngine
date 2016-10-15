@@ -11,5 +11,6 @@ add_subdirectory (NonInertial)
 add_subdirectory (MultiFight3D)
 add_subdirectory (BlockHouseTactics)
 add_subdirectory (CastleBuilder)
+add_subdirectory (OrbitalWar)
 
 

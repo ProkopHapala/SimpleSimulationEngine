@@ -47,6 +47,14 @@ void drawLine( const Vec3d& p1, const Vec3d& p2 ){
 	glEnd();
 };
 
+void drawPolyLine( int n, Vec3d * ps, bool closed ){   // closed=false
+    if(closed){ glBegin(GL_LINE_LOOP); }else{ glBegin(GL_LINE_STRIP); }
+    for(int i=0; i<n; i++){
+        glVertex3d( ps[i].x, ps[i].y, ps[i].z );
+    };
+    glEnd();
+};
+
 void drawScale( const Vec3d& p1, const Vec3d& p2, const Vec3d& up, double tick, double sza, double szb ){
 	//glDisable (GL_LIGHTING);
 	Vec3d d,a,b,p;

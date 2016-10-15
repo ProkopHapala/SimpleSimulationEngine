@@ -128,6 +128,9 @@ void Draw2D::drawCircle_d( const Vec2d& center_, float radius, int n, bool fille
 	drawCircle( center, radius, n , filled );
 };
 
+
+
+
 void Draw2D::drawPoints( int npoints, Vec2d * points ){
 	glBegin   (GL_POINTS);
 	for( int i=0; i<npoints; i++ ){
@@ -202,6 +205,18 @@ void Draw2D::plot( int n, double * xs, double * ys ){
         glVertex3f( (float)xs[i], (float)ys[i], z_layer );
     }
     glEnd();
+};
+
+void Draw2D::plot_cross( int n, double * xs, double * ys, double sz ){
+    glBegin   (GL_LINES);
+	for( int i=0; i<n; i++ ){
+        float x = (float)xs[i]; float y = (float)ys[i];
+		glVertex3f( x-sz, y   , z_layer );
+		glVertex3f( x+sz, y   , z_layer );
+        glVertex3f( x   , y-sz, z_layer );
+		glVertex3f( x   , y+sz, z_layer );
+	}
+	glEnd();
 };
 
 void Draw2D::drawFunc( float xmin, float xmax, int n, Func1d func ){
