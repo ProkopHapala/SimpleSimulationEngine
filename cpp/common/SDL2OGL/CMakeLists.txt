@@ -6,7 +6,10 @@ include_directories(
         ${COMMON_SRCS}/SDL2OGL
 )
 
-add_library( SDL2OGL      OBJECT AppSDL2OGL_3D.cpp AppSDL2OGL.cpp ScreenSDL2OGL.cpp ScreenSDL2OGL_3D.cpp Draw.cpp Draw2D.cpp Draw3D.cpp GUI.cpp )
+add_library( SDL2OGL      OBJECT AppSDL2OGL_3D.cpp AppSDL2OGL.cpp ScreenSDL2OGL.cpp ScreenSDL2OGL_3D.cpp Draw.cpp Draw2D.cpp Draw3D.cpp GUI.cpp 
+#$<TARGET_OBJECTS:Mesh> 
+${COMMON_SRCS}/math/Mesh.cpp
+)
 
 #add_library( GUI      OBJECT GUI.cpp Draw2D.cpp Draw3D.cpp )
 

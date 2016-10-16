@@ -134,6 +134,8 @@ void AppSDL2OGL_3D::keyStateHandling( const Uint8 *keys ){
 void AppSDL2OGL_3D::mouseHandling( ){
     int mx,my;
     SDL_GetMouseState( &mouseX, &mouseY );   mouseY=HEIGHT-mouseY;
+    mouse_begin_x = (2*mouseX-WIDTH )*zoom/HEIGHT;
+    mouse_begin_y = (2*mouseY-HEIGHT)*zoom/HEIGHT;
     Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
     //printf( " %i %i \n", mx,my );
     if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {

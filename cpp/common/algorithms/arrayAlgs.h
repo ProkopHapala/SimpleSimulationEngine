@@ -1,4 +1,7 @@
 
+#ifndef  arrayAlgs_h
+#define  arrayAlgs_h
+
 // from here  http://stackoverflow.com/questions/3982348/implement-generic-swap-macro-in-c
 #define SWAP(x, y, TYPE) TYPE tmp = x; x = y; y = tmp;
 
@@ -107,3 +110,4 @@ void quickSort_inplace( TYPE * A, int p, int q){
 }
 
 
+#endif

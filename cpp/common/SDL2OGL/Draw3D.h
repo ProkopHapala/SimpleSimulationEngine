@@ -11,6 +11,8 @@
 #include "Vec3.h"
 #include "Mat3.h"
 
+#include "Mesh.h"
+
 namespace Draw3D{
 
 // ==== function declarations
@@ -44,6 +46,8 @@ void drawPolyLine( int n, Vec3d * ps, bool closed=false );
 void drawLines          ( int nlinks, const int * links, const Vec3d * points );
 void drawTriangles      ( int nlinks, const int * links, const Vec3d * points );
 void drawPolygons       ( int nlinks, const int * ns,    const int * links, const Vec3d * points );
+
+int drawMesh( const Mesh& mesh  );
 
 void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend );
 

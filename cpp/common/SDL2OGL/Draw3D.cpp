@@ -354,24 +354,16 @@ int drawSphereOctLines( int n, double r, const Vec3d& pos ){
 
 void drawPlanarPolygon( int n, const int * inds, const Vec3d * points ){
     if( n < 3 ) return;
-    glBegin( GL_TRIANGLE_FAN );
+
     Vec3f a,b,c,normal;
     convert( points[inds[0]], a );
     convert( points[inds[1]], b );
     convert( points[inds[2]], c );
     normal.set_cross( a-b, b-c );
     normal.normalize( );
+
+    glBegin( GL_TRIANGLE_FAN );
     glNormal3f( normal.x, normal.y, normal.z );
-
-/*
-    Vec3f average; average.set(0.0d);
-    average.add( a ); average.add( b ); average.add( c );
-    glEnable    ( GL_LIGHTING );
-    glShadeModel( GL_FLAT     );
-    glColor3f( 0.8f, 0.8f, 0.8f );
-*/
-
-
     glVertex3f( a.x, a.y, a.z );
     glVertex3f( b.x, b.y, b.z );
     glVertex3f( c.x, c.y, c.z );
@@ -461,6 +453,12 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         }
 
     };
+
+    int drawMesh( const Mesh& mesh  ){
+        for( Polygon* pl : mesh.polygons ){
+            Draw3D::drawPlanarPolygon( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
+        }
+    }
 
     void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend ){
         glDisable    ( GL_LIGHTING   );
