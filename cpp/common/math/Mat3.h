@@ -203,15 +203,15 @@ class Mat3TYPE{
 
 // ======= Rotation
 
-	inline void rotate( double angle, const Vec3d& axis  ){
+	inline void rotate( TYPE angle, const VEC& axis  ){
 		Vec3d uaxis;
 		uaxis.set( axis * axis.norm() );
-		double ca   = cos(angle);
-		double sa   = sin(angle);
+		TYPE ca   = cos(angle);
+		TYPE sa   = sin(angle);
  		rotate_csa( ca, sa, uaxis );
 	};
 
-	inline void rotate_csa( double ca, double sa, const Vec3d& uaxis ){
+	inline void rotate_csa( TYPE ca, TYPE sa, const VEC& uaxis ){
 		a.rotate_csa( ca, sa, uaxis );
 		b.rotate_csa( ca, sa, uaxis );
 		c.rotate_csa( ca, sa, uaxis );
@@ -219,6 +219,52 @@ class Mat3TYPE{
 		//b.set(2);
 		//c.set(3);
 	};
+
+	// ==== generation
+
+
+	// http://www.realtimerendering.com/resources/GraphicsGems/gemsiii/rand_rotation.c
+    // http://www.realtimerendering.com/resources/GraphicsGems/gemsiii/rand_rotation.c
+    // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.53.1357&rep=rep1&type=pdf
+     //  RAND _ ROTATION   Author: Jim Arvo, 1991
+     //  This routine maps three values (x[0], x[1], x[2]) in the range [0,1]
+     //  into a 3x3 rotation matrix, M.  Uniformly distributed random variables
+     //  x0, x1, and x2 create uniformly distributed random rotation matrices.
+     //  To create small uniformly distributed "perturbations", supply
+     //  samples in the following ranges
+     //      x[0] in [ 0, d ]
+     //      x[1] in [ 0, 1 ]
+     //      x[2] in [ 0, d ]
+     // where 0 < d < 1 controls the size of the perturbation.  Any of the
+     // random variables may be stratified (or "jittered") for a slightly more
+     // even distribution.
+     //=========================================================================
+	inline void fromRand( const VEC& vrand  ){
+        TYPE theta = vrand.x * M_TWO_PI; // Rotation about the pole (Z).
+        TYPE phi   = vrand.y * M_TWO_PI; // For direction of pole deflection.
+        TYPE z     = vrand.z * 2.0;      // For magnitude of pole deflection.
+        // Compute a vector V used for distributing points over the sphere
+        // via the reflection I - V Transpose(V).  This formulation of V
+        // will guarantee that if x[1] and x[2] are uniformly distributed,
+        // the reflected points will be uniform on the sphere.  Note that V
+        // has length sqrt(2) to eliminate the 2 in the Householder matrix.
+        TYPE r  = sqrt( z );
+        TYPE Vx = sin ( phi ) * r;
+        TYPE Vy = cos ( phi ) * r;
+        TYPE Vz = sqrt( 2.0 - z );
+        // Compute the row vector S = Transpose(V) * R, where R is a simple
+        // rotation by theta about the z-axis.  No need to compute Sz since
+        // it's just Vz.
+        TYPE st = sin( theta );
+        TYPE ct = cos( theta );
+        TYPE Sx = Vx * ct - Vy * st;
+        TYPE Sy = Vx * st + Vy * ct;
+        // Construct the rotation matrix  ( V Transpose(V) - I ) R, which
+        // is equivalent to V S - R.
+        xx = Vx * Sx - ct;   xy = Vx * Sy - st;   xz = Vx * Vz;
+        yx = Vy * Sx + st;   yy = Vy * Sy - ct;   yz = Vy * Vz;
+        zx = Vz * Sx;        zy = Vz * Sy;        zz = 1.0 - z;   // This equals Vz * Vz - 1.0
+	}
 
 };
 

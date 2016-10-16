@@ -39,6 +39,11 @@ class SplineManager{
         return dval/dt;
     }
 
+    inline double getPointDeriv( int ip, int im ){
+        double * dCPi = dCPs[im];
+        if( dCPi ){ return dCPi[ip]; }else{ return inferDeriv(ip,im ); };
+    }
+
     double evalIt( int ip, double t,       int m_, const int * which, double * val, double * dval, double * ddval ){
         double t0     = ts[ip  ];
         double t1     = ts[ip+1];
@@ -55,7 +60,7 @@ class SplineManager{
         if( dval ){ Spline_Hermite:: dbasis<double>( u,  v0,v1,vm,vp ); v0*=invdt; v1*=invdt; }
         if( ddval){ Spline_Hermite::ddbasis<double>( u,  a0,a1,am,ap ); double invdt2=invdt*invdt; a0*=invdt2; a1*=invdt2; am*=invdt; ap*=invdt; }
 
-        printf("ip %i t1 %3.3f t2 %3.3f u %3.3f %3.3f %3.3f \n", ip, t0,t1,u,invdtm,invdtp  );
+        //printf("ip %i t1 %3.3f t2 %3.3f u %3.3f %3.3f %3.3f \n", ip, t0,t1,u,invdtm,invdtp  );
         //if( val  )  printf("r0,r1,rm,rp %3.3f %3.3f %3.3f %3.3f ", r0,r1,rm,rp );
         //if( dval )  printf("a0,a1,am,ap %3.3f %3.3f %3.3f %3.3f ", v0,v1,vm,vp );
         //if( dval )  printf("a0,a1,am,ap %3.3f %3.3f %3.3f %3.3f ", a0,a1,am,ap );

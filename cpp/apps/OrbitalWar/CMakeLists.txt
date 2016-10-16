@@ -19,5 +19,10 @@ add_executable( orbitEditor
 	$<TARGET_OBJECTS:SDL2OGL>
 	$<TARGET_OBJECTS:Splines>
 )
+
 target_link_libraries( orbitEditor ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_custom_command(
+    TARGET ${PROJECT_NAME} orbitEditor
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
+)

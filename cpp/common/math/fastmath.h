@@ -12,6 +12,8 @@
 
 #define GOLDEN_RATIO  1.61803398875
 
+constexpr double M_TWO_PI = M_PI * 2;
+
 #define SWAP( a, b, TYPE ) { TYPE t = a; a = b; b = t; }
 
 //#define sq(a) a*a

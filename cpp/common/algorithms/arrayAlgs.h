@@ -25,9 +25,9 @@ inline int binSearchBetween( TYPE x, int imax, TYPE * xs ){
         di  = di>>1;
         int  i  = imin + di;
 		if( xs[i] < x ){ imin=i; di = (imax-i); }
-		printf("binSearchBetween %i %i %i %f %f \n", imin, i, di, xs[i], x );
+		//printf("binSearchBetween %i %i %i %f %f \n", imin, i, di, xs[i], x );
 	}while( di > 1 );
-	printf( " %f < %f < %f\n", xs[imin], x, xs[imin+1] );
+	//printf( " %f < %f < %f\n", xs[imin], x, xs[imin+1] );
 	return imin;
 }
 
@@ -37,7 +37,7 @@ inline int binSearchFrom( TYPE x, int n, TYPE * xs ){
 	do{
         i  = i << 1;
 		if(i>n) if(xs[n]>x){ return binSearchBetween( x, n, xs ); }else{ return -1; };
-		printf("binSearchForm    %i %f %f \n", i, xs[i], x);
+		//printf("binSearchForm    %i %f %f \n", i, xs[i], x);
 	}while( xs[i] < x );
 	return binSearchBetween( x, i, xs );
 }
