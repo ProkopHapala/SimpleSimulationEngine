@@ -62,6 +62,21 @@ void Shooter::update_world( ){
 
             w->clean_temp( );
             //addEnviroForces              ( w->pos, w->vel, w->force,  w->landed );
+            w->force.add( {0.0,gravity,0.0} );
+            if(terrain){
+                Vec2d dv;
+                double h  = terrain->eval( {w->pos.x,w->pos.z}, dv );
+                double dh = w->pos.y - w->hground - h;
+                if( dh  < 0.0 ){
+                    //w->force.add( {0.0,gravity,0.0} );
+                    //w->force.add( {dv.x, dh*(-1-0.5*w->vel.y), dv.y} );
+                    w->force.add( { dv.x, dh*(-100+2.5*w->vel.y), dv.y } );
+                    w->force.add( {w->vel.x*landDrag,0.0,w->vel.z*landDrag} );
+                    //printf( " dv (%3.3f,%3.3f) (%3.3f,%3.3f)  \n", dv.x, dv.y, w->pos.x,w->pos.y );
+                    //w->force.add( {0, dh*(-100+2.5*w->vel.y), 0} );
+
+                }
+            }
             //w->landed = collideWithWorld ( w->pos, w->vel, w->surf );
             w->move( dt );
 

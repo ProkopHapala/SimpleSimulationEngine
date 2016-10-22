@@ -32,6 +32,7 @@ class Shooter {
     double restitution = -0.8d;
     double airDrag     = -0.05d;
     double landDrag    = -0.5d;
+    double gravity     = -9.81;
     double objR        = 10.0d;
 
     double projLifetime = 10.0;
@@ -41,7 +42,7 @@ class Shooter {
 	std::vector<Warrior3D*>     warriors;
 	std::vector<Projectile3D*>  projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 	std::vector<Object3D*>      objects;
-	Terrain25D * terrain;
+	Terrain25D * terrain = NULL;
 
     // ==== function declarations
 

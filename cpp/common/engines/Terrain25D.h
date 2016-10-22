@@ -30,14 +30,17 @@ class Terrain25D {
 
 
     virtual double eval(const Vec2d& pos, Vec2d& deriv ){
-        constexpr double scx = 0.1;
-        constexpr double scy = 0.2;
-        double cax = cos(scx*pos.x);
-        double sax = sin(scx*pos.x);
-        double cay = cos(scy*pos.y);
-        double say = sin(scy*pos.y);
-        deriv.set( scx*cax + say, sax + scy*cay );
-        return sax + say;
+        constexpr double scx = 0.4;
+        constexpr double scy = 0.15;
+        double x  = scx*pos.x;
+        double y  = scy*pos.y;
+        double cx = cos(x);
+        double sx = sin(x);
+        double cy = cos(y);
+        double sy = sin(y);
+        deriv.set( scx*cx, scy*cy );
+        //printf( "deriv (%3.3f,%3.3f)  (%3.3f,%3.3f) \n", deriv.x, deriv.y, x, y );
+        return sx + sy;
     };
 
     virtual double ray( const Vec3d& hRay, const Vec3d& ray0, double tmax, Vec3d& normal ){

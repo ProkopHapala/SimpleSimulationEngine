@@ -17,6 +17,7 @@ class Warrior3D : public RigidBody {
     Quat4d  look;
     Vec3d   gun_rot;
     double  until_reaload = 0;
+    double  hground       = 0.5;
 
 };
 

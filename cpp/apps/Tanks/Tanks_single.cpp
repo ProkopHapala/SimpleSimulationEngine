@@ -53,6 +53,64 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     world.init_world();
     printf( "DEBUG_SHIT : %i \n", world.debug_shit );
 
+    // ---- terrain
+
+    world.terrain = new Terrain25D();
+    world.terrain->shape = glGenLists(1);
+    glNewList( world.terrain->shape , GL_COMPILE );
+    int na=100,nb=100;
+    float da=1.0,db=1.0;
+    float x0=-0.5*da*na,y0=-0.5*db*nb;
+    glEnable(GL_LIGHTING);
+    glColor3f(0.5f,0.5f,0.5f);
+    glNormal3f(0.0f,1.0f,0.0f);
+    /*
+    glBegin(GL_QUADS);
+        glVertex3f( na*da,     0, 0 );
+        glVertex3f( 0,         0, 0 );
+        glVertex3f( 0,     nb*db, 0 );
+        glVertex3f( na*da, nb*db, 0 );
+    glEnd();
+    */
+    float * oldvals = new float[na*3];
+    for(int ia=0; ia<na; ia++){
+        glBegin(GL_TRIANGLE_STRIP);
+        for(int ib=0; ib<nb; ib++){
+            int i3 = 3*ib;
+            Vec2d dv1,dv2;
+            Vec2d p1; p1.set( (ia  )*da+x0, ib*db+y0 );
+            Vec2d p2; p2.set( (ia+1)*da+x0, ib*db+y0 );
+            float v1,v2;
+            if( ia == 0 ){
+                v1 = (float)world.terrain->eval( p1, dv1 );
+            }else{
+                v1 = oldvals[i3]; dv1.x=oldvals[i3+1]; dv1.y=oldvals[i3+2];
+            }
+            v2 = (float)world.terrain->eval( p2, dv2 );
+            oldvals[i3] = v2; oldvals[i3+1] = dv2.x; oldvals[i3+2] = dv2.y;
+            glNormal3f(-dv1.x,1.0,-dv1.y); glVertex3f( (float)p1.x,  v1, (float)p1.y  );
+            glNormal3f(-dv2.x,1.0,-dv2.y); glVertex3f( (float)p2.x,  v2, (float)p2.y );
+            printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
+        }
+        glEnd();
+    }
+
+    glBegin(GL_LINES);
+    for(int ia=0; ia<na; ia++){
+        for(int ib=0; ib<nb; ib++){
+            int i3 = 3*ib;
+            Vec2d p,dv; p.set( ia*da+x0, ib*db+y0 );
+            double v = (float)world.terrain->eval( p, dv );
+            glVertex3f( (float)p.x,         v, (float)p.y );
+            glVertex3f( (float)(p.x-dv.x),  v+1.0, (float)(p.y-dv.y) );
+        }
+
+    }
+    glEnd();
+    glEndList();
+
+    // ---- Objects
+
     int sphereShape = glGenLists(1);
     glNewList( sphereShape , GL_COMPILE );
         //glPushMatrix();
@@ -78,11 +136,17 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         o->bounds.span.set( randf(0.2,2.0), randf(0.2,2.0), randf(0.2,2.0) );
         //o->bounds.span.set( 1, 2.0, 0.5 );
         Mat3d m; m.set_mmul_NT( o->bounds.orientation, o->bounds.orientation );
+        /*
         printf( " === %i \n", i );
         printf( " %f %f %f \n", m.ax, m.ay, m.az );
         printf( " %f %f %f \n", m.bx, m.by, m.bz );
         printf( " %f %f %f \n", m.cx, m.cy, m.cz );
-        o->bounds.pos.set( randf(-xrange,xrange),randf(-xrange,xrange),randf(-xrange,xrange) );
+        */
+        //o->bounds.pos.set( randf(-xrange,xrange),randf(-xrange,xrange),randf(-xrange,xrange) );
+        Vec2d p,dv; p.set( randf(-xrange,xrange),randf(-xrange,xrange) );
+        double v = world.terrain->eval( p, dv );
+        o->bounds.pos.set( p.x, v, p.y );
+
         //o->bounds.pos.set( {0.0,0.0,0.0} );
         o->shape= sphereShape;
         o->id = i;
@@ -105,7 +169,7 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
 void Tanks_single::draw(){
     //delay = 200;
-    printf( " ==== frame %i \n", frameCount );
+    //printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
@@ -117,8 +181,10 @@ void Tanks_single::draw(){
     //printf( "camMat.a (%3.3f,%3.3f,%3.3f) \n", camMat.a.x, camMat.a.y, camMat.a.z );
 
     warrior1->gun_rot.set( camMat.c );
+
     world.update_world( );
 
+    if(world.terrain) glCallList(world.terrain->shape);
 
     Vec3d hRay,ray0,normal;
     hRay.set(camMat.c);
