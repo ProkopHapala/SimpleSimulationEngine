@@ -94,6 +94,19 @@ class Mat3TYPE{
 		c.set( va.z, vb.z, vc.z );
 	};
 
+    inline void mul ( const VEC& va ){
+		a.mul( va.a );
+		b.mul( va.b );
+		c.mul( va.c );
+	};
+
+    inline void mulT ( const VEC& va ){
+		ax*=va.x; ay*=va.y; az*=va.z;
+		bx*=va.x; by*=va.y; bz*=va.z;
+		cx*=va.x; cy*=va.y; cz*=va.z;
+	};
+
+
 // ====== dot product with vector
 
 	inline VEC dot( const VEC&  v ) const {
@@ -101,6 +114,14 @@ class Mat3TYPE{
 		vout.x = xx*v.x + xy*v.y + xz*v.z;
 		vout.y = yx*v.x + yy*v.y + yz*v.z;
 		vout.z = zx*v.x + zy*v.y + zz*v.z;
+		return vout;
+	}
+
+    inline VEC dotT( const VEC&  v ) const {
+		VEC vout;
+		vout.x = xx*v.x + yx*v.y + zx*v.z;
+		vout.y = xy*v.x + yy*v.y + zy*v.z;
+		vout.z = xz*v.x + yz*v.y + zz*v.z;
 		return vout;
 	}
 

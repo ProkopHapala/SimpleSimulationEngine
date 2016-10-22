@@ -101,6 +101,23 @@ inline void toGLMatCam( const Vec3d& pos, const Mat3d& rot, float* glMat ){
     toGLMatCam( pos_, rot_, glMat );
 };
 
+inline void toGLMat( const Vec3d& pos, const Mat3d& rot,  const Vec3d& sc, float* glMat ){
+    Vec3f pos_; convert( pos, pos_ );
+    Vec3f sc_;  convert( sc, sc_ );
+    Mat3f rot_; convert( rot, rot_ );
+    rot_.mul(sc_);
+    toGLMat( pos_, rot_, glMat );
+};
+
+inline void toGLMatCam( const Vec3d& pos, const Mat3d& rot,  const Vec3d& sc, float* glMat ){
+    Vec3f pos_; convert( pos, pos_ );
+    Vec3f sc_;  convert( sc, sc_ );
+    Mat3f rot_; convert( rot, rot_ );
+    sc_.set_inv(sc_);
+    rot_.mulT(sc_);
+    toGLMatCam( pos_, rot_, glMat );
+};
+
 
 }; // namespace Draw3D
 

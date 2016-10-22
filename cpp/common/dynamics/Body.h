@@ -24,8 +24,8 @@ class PointBody{
 	// parameters
 	double	mass;
 	// auxiliary parameters
-	double	invMass; 
-	// State variables 
+	double	invMass;
+	// State variables
 	Vec3d pos;
 	Vec3d vel;
 	// auxiliary variables
@@ -59,17 +59,17 @@ class RigidBody : public PointBody {
 	// parameters
 	Mat3d	Ibody;
 	// auxiliary parameters
-	Mat3d	invIbody; 
-	// State variables        
-	Quat4d qrot;             
-	Vec3d      L;            
+	Mat3d	invIbody;
+	// State variables
+	Quat4d qrot;
+	Vec3d      L;
 	// auxiliary variables
-	Mat3d rotMat;           
-	Mat3d invI;        
-	Vec3d omega; 
-	Vec3d torq; 
+	Mat3d rotMat;
+	Mat3d invI;
+	Vec3d omega;
+	Vec3d torq;
 
-	int shape; // displayList 
+	int shape; // displayList
 
 	// ==== function declarations
 
@@ -85,12 +85,12 @@ class RigidBody : public PointBody {
 
 	inline void update_aux( ){
 		qrot.toMatrix   ( rotMat );
-		Mat3d tmp; tmp.set_mmul_NT(  invIbody, rotMat  ); invI.set_mmul( rotMat, tmp ); 
+		Mat3d tmp; tmp.set_mmul_NT(  invIbody, rotMat  ); invI.set_mmul( rotMat, tmp );
 	};
 
 	inline void apply_force( const Vec3d& dforce, const Vec3d& gdpos ){
 		torq .add_cross( gdpos, dforce );
-		force.add( dforce ); 
+		force.add( dforce );
 	};
 
 	inline void apply_anchor( double k, const Vec3d& lpos, const Vec3d& gpos0 ){
@@ -108,6 +108,14 @@ class RigidBody : public PointBody {
 		if( (dqr2*dqr2) > 0.0001 ){ qrot.mul( 1/sqrt(qr2) ); }
 	}
 
+	inline void initOne(){
+	    setMass( 1.0 );
+        Ibody.a.set(1,0,0);
+        Ibody.b.set(0,1,0);
+        Ibody.c.set(0,0,1);
+        Ibody.invert_to( invIbody );
+	};
+
 };
 
 class SpringConstrain{
@@ -115,7 +123,7 @@ class SpringConstrain{
 	Vec3d p1,p2;
 	RigidBody *b1,*b2;
 	double k;
- 
+
 	// ==== function declarations
 
 	void apply();

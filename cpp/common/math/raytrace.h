@@ -16,9 +16,11 @@ const double t_inf = 1e+300;
 inline double rayPointDistance2( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& point, double& t ){
 	Vec3d pt;
 	pt.set_sub( point, ray0 );
-	//printf( " %f %f %f   %f %f %f    %f %f %f \n", point.x, point.y, point.z,   ray0.x, ray0.y, ray0.z,   dPoint.x, dPoint.y, dPoint.z    );
-	t  = pt.dot( hRay );
+	//printf( " (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", point.x, point.y, point.z,   ray0.x, ray0.y, ray0.z,   pt.x, pt.y, pt.z    );
+	t  = hRay.dot( pt );
+	//printf( " %f (%3.3f,%3.3f,%3.3f) \n", t, pt.x, pt.y, pt.z    );
     pt.add_mul( hRay, -t );
+    //printf( " %f %f (%3.3f,%3.3f,%3.3f) \n", t, pt.norm2(), pt.x, pt.y, pt.z    );
 	return pt.norm2();
 }
 

@@ -12,5 +12,6 @@ add_subdirectory (MultiFight3D)
 add_subdirectory (BlockHouseTactics)
 add_subdirectory (CastleBuilder)
 add_subdirectory (OrbitalWar)
+add_subdirectory (Tanks)
 
 

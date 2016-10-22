@@ -44,6 +44,7 @@ class TestAppMesh : public AppSDL2OGL_3D {
 
 TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+
     mesh.fromFileOBJ( "common_resources/turret.obj" );
     printf("initialization DONE !");
 
@@ -53,6 +54,26 @@ TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id
         glColor3f( 0.8f, 0.8f, 0.8f );
         Draw3D::drawMesh( mesh );
     glEndList();
+
+    // TO DO : convex hull
+    /*
+    int npoints = 20;
+    Vec3d * points = new Vec3d[npoints];
+    for(int i=0; i<npoints; i++){
+        points[i].set( randf(-1.0,1.0), randf(-1.0,1.0), randf(-1.0,1.0) );
+    }
+
+    mesh.rendered_shape = glGenLists(1);
+    glNewList( mesh.rendered_shape , GL_COMPILE );
+    glDisable(GL_LIGHTING);
+    glColor3f(1.0,1.0,1.0);
+    glBegin( GL_POINTS );
+        for(int i=0; i<npoints; i++){ glVertex3f( points[i].x, points[i].y, points[i].z ); }
+    glEnd();
+    glEndList();
+    */
+
+    //exit(0);
 
 }
 
