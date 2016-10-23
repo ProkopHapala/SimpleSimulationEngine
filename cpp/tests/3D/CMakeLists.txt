@@ -5,6 +5,9 @@ target_link_libraries( test_QuatRotSampling ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${S
 add_executable       ( test_Solids test_Solids.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Solids ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_Patches test_Patches.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_Patches ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_GUI test_GUI.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_GUI ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

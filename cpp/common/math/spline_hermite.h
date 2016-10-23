@@ -21,9 +21,19 @@
 // dy1   1   -1
 
 
+//         x3   x2   x   1
+//  ----------------------
+//  p-1   -1   +2   -1       /2
+//  p0    +3   -5       +2   /2
+//  p1    -3   +4   +1       /2
+//  p2    +1   -1            /2
+
+
+
 // ============ optimized
 
 namespace Spline_Hermite{
+
 
 const static double C[4][4] = {
 { 1, 0, 0, 0 },
@@ -38,7 +48,6 @@ const static double B[4][4] = {
 { -3, -2,  3, -1 },
 {  2,  1, -2,  1 }
 };
-
 
 
 template <class TYPE>

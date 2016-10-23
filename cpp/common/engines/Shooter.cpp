@@ -70,7 +70,7 @@ void Shooter::update_world( ){
                 if( dh  < 0.0 ){
                     //w->force.add( {0.0,gravity,0.0} );
                     //w->force.add( {dv.x, dh*(-1-0.5*w->vel.y), dv.y} );
-                    w->force.add( { dv.x, dh*(-100+2.5*w->vel.y), dv.y } );
+                    w->force.add( { -dv.x, dh*(-100+2.5*w->vel.y), -dv.y } );
                     w->force.add( {w->vel.x*landDrag,0.0,w->vel.z*landDrag} );
                     //printf( " dv (%3.3f,%3.3f) (%3.3f,%3.3f)  \n", dv.x, dv.y, w->pos.x,w->pos.y );
                     //w->force.add( {0, dh*(-100+2.5*w->vel.y), 0} );
