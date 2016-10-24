@@ -91,6 +91,7 @@ void drawVecInPos( const Vec3f& v, const Vec3f& pos ){
 };
 
 void drawTriangle( const Vec3d& p1, const Vec3d& p2, const Vec3d& p3 ){
+    //printf("p1 (%3.3f,%3.3f,%3.3f) p2 (%3.3f,%3.3f,%3.3f) p3 (%3.3f,%3.3f,%3.3f) \n", p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z);
 	Vec3d d1,d2,normal;
 	d1.set( p2 - p1 );
 	d2.set( p3 - p1 );

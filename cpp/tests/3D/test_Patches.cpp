@@ -33,56 +33,40 @@ inline void subEdge( Vec3d& result, const Vec3d& up, const Vec3d& down, const Ve
 // TODO : point order should be modified to be consistent with the rim
 // later this should be optimized especially for case of uniform grid
 // see here  : https://graphics.stanford.edu/~mdfisher/subdivision.html
-void subdivTrinagle( int level, Vec3d * points ){
+void subdivTrinagle( int level,
+    const Vec3d& p0, const Vec3d& p1,  const Vec3d& p2,
+    const Vec3d& p3, const Vec3d& p4,  const Vec3d& p5,
+    const Vec3d& p6, const Vec3d& p7,  const Vec3d& p8,
+    const Vec3d& p9, const Vec3d& p10, const Vec3d& p11
+    ){
     level--;
-    Vec3d p01,p12,p20;
-    subEdge( p01,  points[0],points[1],   points[2],points[5] );
-    subEdge( p12,  points[1],points[2],   points[0],points[3] );
-    subEdge( p20,  points[2],points[0],   points[1],points[4] );
+    Vec3d h0,h1,h2;
+    subEdge( h0,  p0,p1,  p2,p4  );
+    subEdge( h1,  p1,p2,  p0,p7  );
+    subEdge( h2,  p0,p2,  p1,p10 );
     if( level>0 ){
-        Vec3d rim[12];
-        subEdge( rim[0 ],  points[0],points[4 ],   points[2],points[11] );
-        subEdge( rim[1 ],  points[0],points[11],   points[4],points[6 ] );
-        subEdge( rim[2 ],  points[0],points[6 ],   points[5],points[11] );
-        subEdge( rim[3 ],  points[0],points[5 ],   points[1],points[6 ] );
-        subEdge( rim[4 ],  points[1],points[5 ],   points[1],points[7 ] );
-        subEdge( rim[5 ],  points[1],points[7 ],   points[5],points[8 ] );
-        subEdge( rim[6 ],  points[1],points[8 ],   points[3],points[7 ] );
-        subEdge( rim[7 ],  points[1],points[3 ],   points[2],points[8 ] );
-        subEdge( rim[8 ],  points[2],points[3 ],   points[1],points[9 ] );
-        subEdge( rim[9 ],  points[2],points[9 ],   points[3],points[10] );
-        subEdge( rim[10],  points[2],points[10],   points[4],points[9 ] );
-        subEdge( rim[11],  points[2],points[4 ],   points[0],points[10] );
-
-
-        Vec3d points_[12];
-        points_[0 ] = points[0];
-        points_[1 ] = p01;
-        points_[2 ] = p20;
-        /*
-        points_[3 ]
-        points_[4 ]
-        points_[5 ]
-        points_[6 ]
-        points_[7 ]
-        points_[8 ]
-        points_[9 ]
-        points_[10]
-        points_[11]
-        points_[12]
-        */
-        subdivTrinagle( level, points_ );
-
-        subdivTrinagle( level, points_ );
-
-        subdivTrinagle( level, points_ );
-
-        subdivTrinagle( level, points_ );
+        Vec3d h3,h4,h5,h6, h7,h8,h9,h10, h11,h12,h13,h14;
+        subEdge( h3 ,  p0,p10,  p2,p11);
+        subEdge( h4 ,  p0,p11,  p3,p10);
+        subEdge( h5 ,  p0,p3,   p4,p11);
+        subEdge( h6 ,  p0,p4,   p1,p3 );
+        subEdge( h7 ,  p1,p4,   p0,p5 );
+        subEdge( h8 ,  p1,p5,   p4,p6 );
+        subEdge( h9 ,  p1,p6,   p5,p7 );
+        subEdge( h10,  p1,p7,   p2,p6 );
+        subEdge( h11,  p2,p7,   p1,p8 );
+        subEdge( h12,  p2,p8,   p7,p9 );
+        subEdge( h13,  p2,p9,   p8,p10);
+        subEdge( h14,  p2,p10,  p0,p9 );
+        subdivTrinagle( level, p0,h1,h2,  h5,h6,h7 ,p1 ,h1 ,p2 ,h14,h3 ,h4 );
+        subdivTrinagle( level, h0,p1,h1,  h6,h7,h8 ,h9 ,h10,h11,p2 ,h2 ,p0 );
+        subdivTrinagle( level, h2,h1,p2,  p0,h0,p1 ,h10,h11,h12,h13,h14,h3 );
+        subdivTrinagle( level, h0,h1,h2,  h7,p1,h10,h11,p2 ,h14,h3 ,p0 ,h6 );
     }else{
-        Draw3D::drawTriangle( points[0], p01, p20 );
-        Draw3D::drawTriangle( points[1], p12, p01 );
-        Draw3D::drawTriangle( points[2], p20, p12 );
-        Draw3D::drawTriangle( p01, p12, p20 );
+        Draw3D::drawTriangle( p0, h0, h2 );
+        Draw3D::drawTriangle( p1, h1, h0 );
+        Draw3D::drawTriangle( p2, h2, h1 );
+        Draw3D::drawTriangle( h0, h1, h2 );
     }
 }
 
@@ -299,8 +283,10 @@ void TestAppPatches::draw   (){
             drawBesierHull    (     btri,  0xFF008000, 0xFF00FF00, 0xFF0000FF );
             drawBesierTriangle( 10, btri,  0xFFFFFFFF, 0xFF000000, 0xFF000080 );
         */
+
             for ( int i=0; i<Solids::Tetrahedron_ntris; i++ ){
                 Vec3d A,B,C, nA,nB,nC;
+
 
                 int i3=3*i;
                 A.set(Solids::Tetrahedron_verts[ Solids::Tetrahedron_tris[i3  ] ]);  nA.set(A); nA.normalize(); A.add(center);
@@ -312,6 +298,17 @@ void TestAppPatches::draw   (){
                 drawBesierTriangle( 20, btri,  0xFFFFFFFF, 0xFF000000, 0xFF000080 );
             };
 
+
+        /*
+        TO DO : problem that control points are the same
+        glColor3f(1.0f,1.0f,1.0f);
+        subdivTrinagle( 1,
+            Solids::Tetrahedron_verts[0],Solids::Tetrahedron_verts[1],Solids::Tetrahedron_verts[2],
+            Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],
+            Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],
+            Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3]
+        );
+        */
         glEndList();
         refresh=false;
 	}
