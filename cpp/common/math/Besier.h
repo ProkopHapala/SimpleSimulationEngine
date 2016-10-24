@@ -107,10 +107,10 @@ class BesierTriangle{
         ps[7].set_add( C, p);     p.set_lincomb(-c13, C, c13, B ); p.add_mul( nC, -p.dot(nC) );
         ps[8].set_add( C, p);
 
-        //ps[9].set_lincomb(0.25d, ps[8]+ps[7]+ps[5]+ps[4]+ps[2]+ps[1], c16, A+B+C );  // 6/4- 3/6 = 1
+        ps[9].set_lincomb(0.25d, ps[8]+ps[7]+ps[5]+ps[4]+ps[2]+ps[1], c16, A+B+C );  // 6/4- 3/6 = 1
         //ps[9].set_lincomb(0.5d, ps[8]+ps[7]+ps[5]+ps[4]+ps[2]+ps[1], -c13, A+B+C );  // 6/2- 3/1 = 1
         //ps[9].set_lincomb(1.0, ps[8]+ps[7]+ps[5]+ps[4]+ps[2]+ps[1], -5.0/3.0, A+B+C );    // 6 - 3 = 1
-        ps[9].set_lincomb(5.0/3.0, ps[8]+ps[7]+ps[5]+ps[4]+ps[2]+ps[1], -3.0, A+B+C );
+        //ps[9].set_lincomb(5.0/3.0, ps[8]+ps[7]+ps[5]+ps[4]+ps[2]+ps[1], -3.0, A+B+C );
         //ps[9].set_lincomb(0.25d, ps[8]+ps[7]+ps[5]+ps[4]+ps[2]+ps[1], 1, A+B+C );    // this makes it smooth - probably some bug
 
         ns[0].set(nA);
@@ -126,6 +126,8 @@ class BesierTriangle{
         ns[4].set(n);
         n.set_add(nB,nC);   p.set_sub(B,C);  n.add_mul(p, cn*p.dot(n) / p.norm2() );  n.normalize();
         ns[5].set(n);
+
+
 
     }
 

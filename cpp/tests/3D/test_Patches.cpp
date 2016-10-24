@@ -20,6 +20,72 @@
 
 // ======================  TestApp
 
+inline void subEdge( Vec3d& result, const Vec3d& up, const Vec3d& down, const Vec3d& left, const Vec3d& right ){
+    constexpr double c_para = 0.125d;
+    constexpr double c_perp = 0.375d;
+    result.set_lincomb( c_para, up, c_para, down );
+    result.add_mul(left, c_perp);
+    result.add_mul(right, c_perp);
+};
+
+
+// Loop subdivision : not finished
+// TODO : point order should be modified to be consistent with the rim
+// later this should be optimized especially for case of uniform grid
+// see here  : https://graphics.stanford.edu/~mdfisher/subdivision.html
+void subdivTrinagle( int level, Vec3d * points ){
+    level--;
+    Vec3d p01,p12,p20;
+    subEdge( p01,  points[0],points[1],   points[2],points[5] );
+    subEdge( p12,  points[1],points[2],   points[0],points[3] );
+    subEdge( p20,  points[2],points[0],   points[1],points[4] );
+    if( level>0 ){
+        Vec3d rim[12];
+        subEdge( rim[0 ],  points[0],points[4 ],   points[2],points[11] );
+        subEdge( rim[1 ],  points[0],points[11],   points[4],points[6 ] );
+        subEdge( rim[2 ],  points[0],points[6 ],   points[5],points[11] );
+        subEdge( rim[3 ],  points[0],points[5 ],   points[1],points[6 ] );
+        subEdge( rim[4 ],  points[1],points[5 ],   points[1],points[7 ] );
+        subEdge( rim[5 ],  points[1],points[7 ],   points[5],points[8 ] );
+        subEdge( rim[6 ],  points[1],points[8 ],   points[3],points[7 ] );
+        subEdge( rim[7 ],  points[1],points[3 ],   points[2],points[8 ] );
+        subEdge( rim[8 ],  points[2],points[3 ],   points[1],points[9 ] );
+        subEdge( rim[9 ],  points[2],points[9 ],   points[3],points[10] );
+        subEdge( rim[10],  points[2],points[10],   points[4],points[9 ] );
+        subEdge( rim[11],  points[2],points[4 ],   points[0],points[10] );
+
+
+        Vec3d points_[12];
+        points_[0 ] = points[0];
+        points_[1 ] = p01;
+        points_[2 ] = p20;
+        /*
+        points_[3 ]
+        points_[4 ]
+        points_[5 ]
+        points_[6 ]
+        points_[7 ]
+        points_[8 ]
+        points_[9 ]
+        points_[10]
+        points_[11]
+        points_[12]
+        */
+        subdivTrinagle( level, points_ );
+
+        subdivTrinagle( level, points_ );
+
+        subdivTrinagle( level, points_ );
+
+        subdivTrinagle( level, points_ );
+    }else{
+        Draw3D::drawTriangle( points[0], p01, p20 );
+        Draw3D::drawTriangle( points[1], p12, p01 );
+        Draw3D::drawTriangle( points[2], p20, p12 );
+        Draw3D::drawTriangle( p01, p12, p20 );
+    }
+}
+
 
 void drawBesierHull( const BesierTriangle& btri, uint32_t inner, uint32_t outer, uint32_t normals ){
     glDisable(GL_LIGHTING);
