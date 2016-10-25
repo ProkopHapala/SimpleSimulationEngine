@@ -101,8 +101,11 @@ void drawTriangle( const Vec3d& p1, const Vec3d& p2, const Vec3d& p3 ){
 		glNormal3d( normal.x, normal.y, normal.z );
 		glVertex3d( p1.x, p1.y, p1.z );
 		glVertex3d( p2.x, p2.y, p2.z );
-		glVertex3d( p2.x, p2.y, p2.z );
+		glVertex3d( p3.x, p3.y, p3.z );
 	glEnd();
+	//drawPointCross( p1, 0.1 );
+	//drawPointCross( p2, 0.1 );
+	//drawPointCross( p3, 0.1 );
 };
 
 void drawMatInPos( const Mat3d& mat, const Vec3d& pos ){

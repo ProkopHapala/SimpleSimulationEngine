@@ -21,13 +21,12 @@
 // ======================  TestApp
 
 inline void subEdge( Vec3d& result, const Vec3d& up, const Vec3d& down, const Vec3d& left, const Vec3d& right ){
-    constexpr double c_para = 0.125d;
-    constexpr double c_perp = 0.375d;
+    constexpr double c_para = 0.375d;
+    constexpr double c_perp = 0.125d;
     result.set_lincomb( c_para, up, c_para, down );
-    result.add_mul(left, c_perp);
+    result.add_mul(left,  c_perp);
     result.add_mul(right, c_perp);
 };
-
 
 // Loop subdivision : not finished
 // TODO : point order should be modified to be consistent with the rim
@@ -44,6 +43,13 @@ void subdivTrinagle( int level,
     subEdge( h0,  p0,p1,  p2,p4  );
     subEdge( h1,  p1,p2,  p0,p7  );
     subEdge( h2,  p0,p2,  p1,p10 );
+    constexpr double c_on  = 0.625d;
+    constexpr double c_off = 0.0625d;
+    Vec3d v0,v1,v2;
+    v0.set_lincomb( c_on, p0, c_off, p1+p2 +p3+p4+p10+p11 );
+    v1.set_lincomb( c_on, p1, c_off, p0+p2 +p4+p5+p6+p7   );
+    v2.set_lincomb( c_on, p2, c_off, p0+p1 +p7+p8+p9+p10  );
+    //printf("h0 (%3.3f,%3.3f,%3.3f) h1 (%3.3f,%3.3f,%3.3f) h2 (%3.3f,%3.3f,%3.3f) \n", h0.x, h0.y, h0.z, h1.x, h1.y, h1.z, h2.x, h2.y, h2.z );
     if( level>0 ){
         Vec3d h3,h4,h5,h6, h7,h8,h9,h10, h11,h12,h13,h14;
         subEdge( h3 ,  p0,p10,  p2,p11);
@@ -58,14 +64,43 @@ void subdivTrinagle( int level,
         subEdge( h12,  p2,p8,   p7,p9 );
         subEdge( h13,  p2,p9,   p8,p10);
         subEdge( h14,  p2,p10,  p0,p9 );
-        subdivTrinagle( level, p0,h1,h2,  h5,h6,h7 ,p1 ,h1 ,p2 ,h14,h3 ,h4 );
+
+        subdivTrinagle( level, v0,h0,h2,  h5,h6,h7 ,v1 ,h1 ,v2 ,h14,h3 ,h4 );
+        subdivTrinagle( level, h0,v1,h1,  h6,h7,h8 ,h9 ,h10,h11,v2 ,h2 ,v0 );
+        subdivTrinagle( level, h2,h1,v2,  v0,h0,v1 ,h10,h11,h12,h13,h14,h3 );
+        subdivTrinagle( level, h0,h1,h2,  h7,v1,h10,h11,v2 ,h14,h3 ,v0 ,h6 );
+        /*
+        subdivTrinagle( level, p0,h0,h2,  h5,h6,h7 ,p1 ,h1 ,p2 ,h14,h3 ,h4 );
         subdivTrinagle( level, h0,p1,h1,  h6,h7,h8 ,h9 ,h10,h11,p2 ,h2 ,p0 );
         subdivTrinagle( level, h2,h1,p2,  p0,h0,p1 ,h10,h11,h12,h13,h14,h3 );
         subdivTrinagle( level, h0,h1,h2,  h7,p1,h10,h11,p2 ,h14,h3 ,p0 ,h6 );
+        */
+        /*
+        glDisable(GL_LIGHTING);
+        Draw3D::drawPointCross(h0,0.05);
+        Draw3D::drawPointCross(h1,0.05);
+        Draw3D::drawPointCross(h2,0.05);
+
+        Draw3D::drawPointCross(h3,0.05);
+        Draw3D::drawPointCross(h4,0.05);
+        Draw3D::drawPointCross(h5,0.05);
+        Draw3D::drawPointCross(h6,0.05);
+
+        Draw3D::drawPointCross(h7,0.05);
+        Draw3D::drawPointCross(h8,0.05);
+        Draw3D::drawPointCross(h9,0.05);
+        Draw3D::drawPointCross(h10,0.05);
+
+        Draw3D::drawPointCross(h11,0.05);
+        Draw3D::drawPointCross(h12,0.05);
+        Draw3D::drawPointCross(h13,0.05);
+        Draw3D::drawPointCross(h14,0.05);
+        */
     }else{
-        Draw3D::drawTriangle( p0, h0, h2 );
-        Draw3D::drawTriangle( p1, h1, h0 );
-        Draw3D::drawTriangle( p2, h2, h1 );
+        glEnable(GL_LIGHTING);
+        Draw3D::drawTriangle( v0, h0, h2 );
+        Draw3D::drawTriangle( v1, h1, h0 );
+        Draw3D::drawTriangle( v2, h2, h1 );
         Draw3D::drawTriangle( h0, h1, h2 );
     }
 }
@@ -187,6 +222,21 @@ class TestAppPatches : public AppSDL2OGL_3D {
 
 	bool refresh=true;
 
+	double test_tris[3*12] = {
+        -0.5, 0.0, 0.0,
+         0.5, 0.0, 0.0,
+         0.0, 1.0, 0.0,
+        -1.0,-1.0, 0.0,
+         0.0,-1.0, 0.0,
+         1.0,-1.0, 0.0,
+         1.5, 0.0, 0.0,
+         1.0, 1.0, 0.0,
+         0.5, 2.0, 0.0,
+        -0.5, 2.0, 0.0,
+        -1.0, 1.0, 0.0,
+        -1.5, 0.0, 0.0,
+	};
+
 	// ---- function declarations
 
 	virtual void draw   ();
@@ -227,44 +277,6 @@ TestAppPatches::TestAppPatches( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
         printf(" n %i (%3.3f,%3.3f,%3.3f)\n", i, btri.ns[i].x, btri.ns[i].y, btri.ns[i].z );
     };
 
-     /*
-     p 0 (-0.594,0.577,-0.880)
-     p 1 (-0.671,0.338,-0.650)
-     p 2 (-0.735,0.276,-0.627)
-     p 3 (-0.731,-0.277,-0.303)
-     p 4 (-0.728,0.037,-0.380)
-     p 5 (-0.784,-0.350,-0.304)
-     p 6 (-0.911,-0.481,-0.248)
-     p 7 (-0.903,-0.099,-0.375)
-     p 8 (-0.881,-0.404,-0.241)
-     p 9 (-0.803,-0.020,-0.406)
-     n 0 (0.464,-0.688,-0.558)
-     n 1 (0.337,-0.230,-0.913)
-     n 2 (0.741,-0.227,-0.632)
-     n 3 (0.403,-0.591,-0.699)
-     n 4 (0.601,-0.561,-0.569)
-     n 5 (0.231,-0.645,-0.728)
-
-    p 0 (0.151,0.637,-0.403)
-     p 1 (0.075,0.399,-0.173)
-     p 2 (0.010,0.337,-0.150)
-     p 3 (0.015,-0.216,0.174)
-     p 4 (0.018,0.097,0.096)
-     p 5 (-0.038,-0.289,0.173)
-     p 6 (-0.166,-0.421,0.229)
-     p 7 (-0.158,-0.038,0.101)
-     p 8 (-0.136,-0.343,0.236)
-     p 9 (-0.057,0.040,0.071)
-     n 0 (0.464,-0.688,-0.558)
-     n 1 (0.337,-0.230,-0.913)
-     n 2 (0.741,-0.227,-0.632)
-     n 3 (0.403,-0.591,-0.699)
-     n 4 (0.601,-0.561,-0.569)
-     n 5 (0.231,-0.645,-0.728)
-
-
-     */
-
     zoom=2.0;
 }
 
@@ -283,6 +295,7 @@ void TestAppPatches::draw   (){
             drawBesierHull    (     btri,  0xFF008000, 0xFF00FF00, 0xFF0000FF );
             drawBesierTriangle( 10, btri,  0xFFFFFFFF, 0xFF000000, 0xFF000080 );
         */
+        /*
 
             for ( int i=0; i<Solids::Tetrahedron_ntris; i++ ){
                 Vec3d A,B,C, nA,nB,nC;
@@ -297,18 +310,44 @@ void TestAppPatches::draw   (){
                 drawBesierHull    (     btri,  0xFF008000, 0xFF00FF00, 0xFF0000FF );
                 drawBesierTriangle( 20, btri,  0xFFFFFFFF, 0xFF000000, 0xFF000080 );
             };
+        */
 
 
+        //TO DO : problem that control points are the same
         /*
-        TO DO : problem that control points are the same
         glColor3f(1.0f,1.0f,1.0f);
-        subdivTrinagle( 1,
+        subdivTrinagle( 3,
             Solids::Tetrahedron_verts[0],Solids::Tetrahedron_verts[1],Solids::Tetrahedron_verts[2],
             Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],
             Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],
             Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3],Solids::Tetrahedron_verts[3]
         );
         */
+
+
+
+
+
+        //glEnable(GL_LIGHTING);
+        glDisable(GL_LIGHTING);
+        glColor3f(1.0f,1.0f,1.0f);
+        Vec3d * tris = (Vec3d*)&test_tris[0];
+        double dmax = 0.5;
+        for(int i=0; i<12; i++){
+            //tris[i].z += randf(-dmax,dmax);
+            //tris[i].y += randf(-dmax,dmax);
+            //tris[i].x += randf(-dmax,dmax);
+            if(i>2) tris[i].z +=-1;
+            Draw3D::drawPointCross(tris[i],0.1);
+        }
+        subdivTrinagle( 3,
+            tris[0],tris[1],tris[2],
+            tris[3],tris[4],tris[5],
+            tris[6],tris[7],tris[8],
+            tris[9],tris[10],tris[11]
+        );
+
+
         glEndList();
         refresh=false;
 	}
