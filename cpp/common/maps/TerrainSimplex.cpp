@@ -307,4 +307,3 @@ void TerrainSimplex::errodeDroples( int n, int nStepMax, double size_ ){
 };
 
 
-

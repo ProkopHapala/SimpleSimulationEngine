@@ -14,6 +14,9 @@
 #include "Besier.h"
 #include "Solids.h"
 
+#include "grids2D.h"
+
+#include "TerrainSimplex.h"
 #include "Draw.h"
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
@@ -210,6 +213,11 @@ void drawBesierTriangle( int nsub, const BesierTriangle& btri, uint32_t faces, u
 
 }
 
+/////////////////////////////////////////////////////////
+//          TestAppPatches
+/////////////////////////////////////////////////////////
+
+
 
 class TestAppPatches : public AppSDL2OGL_3D {
 	public:
@@ -236,6 +244,9 @@ class TestAppPatches : public AppSDL2OGL_3D {
         -1.0, 1.0, 0.0,
         -1.5, 0.0, 0.0,
 	};
+
+	int      na,nb;
+	double * vals;
 
 	// ---- function declarations
 
@@ -276,6 +287,14 @@ TestAppPatches::TestAppPatches( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
     for(int i=0; i<6; i++){
         printf(" n %i (%3.3f,%3.3f,%3.3f)\n", i, btri.ns[i].x, btri.ns[i].y, btri.ns[i].z );
     };
+
+    na=5; nb=6;
+    vals = new double[ na*nb];
+    for(int ia=0;ia<na; ia++){
+        for(int ib=0;ib<nb; ib++){
+            vals[ia*nb+ib] = randf(-1.0,1.0);
+        }
+    }
 
     zoom=2.0;
 }
@@ -327,7 +346,7 @@ void TestAppPatches::draw   (){
 
 
 
-
+/*
         //glEnable(GL_LIGHTING);
         glDisable(GL_LIGHTING);
         glColor3f(1.0f,1.0f,1.0f);
@@ -346,6 +365,31 @@ void TestAppPatches::draw   (){
             tris[6],tris[7],tris[8],
             tris[9],tris[10],tris[11]
         );
+        */
+
+        Vec2d da,db;
+        da.set( 0.5, 0.86602540378 );
+        db.set( 1.0,           0.0 );
+        //Draw3D::drawSimplexGrid( na, nb, da, db, vals, vals, 0, NULL );
+        glColor3f(0.1f,0.1f,0.8f); Draw3D::drawSimplexGridLines( na, nb, da, db,  vals );
+
+        int na_=na<<1,nb_=nb<<1;
+        double * vals_ = new double[na_*nb_];
+        subdivideLoopGrid( nb, na, vals, vals_ );
+        //Draw3D::drawSimplexGrid( na_, nb_, da*0.5, db*0.5, vals_, vals_, 0, NULL );
+        glColor3f(0.1f,0.8f,0.1f); Draw3D::drawSimplexGridLines( na_, nb_, da*0.5, db*0.5,  vals_ );
+
+        int na__=na_<<1,nb__=nb_<<1;
+        double * vals__= new double[na__*nb__];
+        subdivideLoopGrid( nb_, na_, vals_, vals__ );
+        //Draw3D::drawSimplexGrid( na__, nb__, da*0.25, db*0.25, vals__, vals__, 0, NULL );
+        glColor3f(0.8f,0.1f,0.1f); Draw3D::drawSimplexGridLines( na__, nb__, da*0.25, db*0.25,  vals__ );
+
+        //delete vals_,vals__;
+
+        //Draw3D::drawSimplexGrid( na, nb, da, db, vals, vals );
+        //Draw3D::drawSimplexGrid( na, nb, da, db );
+        //Draw3D::drawSimplexGrid( );
 
 
         glEndList();
@@ -356,7 +400,7 @@ void TestAppPatches::draw   (){
 
 	glDisable ( GL_LIGHTING );
 
-	//Draw3D::drawAxis ( 3.0f );
+	Draw3D::drawAxis ( 3.0f );
 
 };
 

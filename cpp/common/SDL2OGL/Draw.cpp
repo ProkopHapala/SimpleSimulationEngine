@@ -19,6 +19,20 @@ void Draw::color_of_hash( int i ){
 	glColor3f( (h&0xFF)*inv255, ((h>>8)&0xFF)*inv255, ((h>>16)&0xFF)*inv255 );
 };
 
+void Draw::colorScale( double d, int ncol, const uint32_t * colors ){
+    constexpr float inv255 = 1.0f/255.0f;
+    d*=(ncol-1);
+    int icol = (int)d;
+    d-=icol; double md = 1-d;
+    uint32_t clr1=colors[icol];
+    uint32_t clr2=colors[icol];
+    glColor3f(
+        ( d*(  colors[icol]    &0xFF) + md*( colors[icol]     &0xFF ))*inv255,
+        ( d*((colors[icol]>>8 )&0xFF) + md*((colors[icol]>>8 )&0xFF ))*inv255,
+        ( d*((colors[icol]>>16)&0xFF) + md*((colors[icol]>>16)&0xFF ))*inv255
+    );
+};
+
 /*
 void Draw::setColorInt32( uint32_t clr ) {
     constexpr float i255 = 1/255.0f;

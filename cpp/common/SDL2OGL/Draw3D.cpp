@@ -417,7 +417,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             convert( points[links[i  ]], a );
             convert( points[links[i+1]], b );
             convert( points[links[i+2]], c );
-            printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", i, a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z  );
+            //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", i, a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z  );
             normal.set_cross( a-b, b-c );
             normal.normalize( );
             glNormal3f( normal.x, normal.y, normal.z );
@@ -457,6 +457,79 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         }
 
     };
+
+    inline void simplex_deriv(
+        const Vec2d& da, const Vec2d& db,
+        double p7, double p8, double p9, double p4, double p5, double p6, double p2, double p3,
+        Vec2d& deriv
+    ){
+        deriv.x = da.x*(p6-p4) + db.x*(p8-p2) + (da.x-db.x)*(p3-p7);
+        deriv.y = da.y*(p6-p4) + db.y*(p8-p2) + (da.y-db.y)*(p3-p7);
+    };
+
+    void drawSimplexGrid( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs, const double * clrs, int ncolors, const uint32_t * cscale ){
+        //const double * heights
+        //const double * colors
+        //const Vec2d  * normals
+
+        Vec2d pa; pa.set(0.0d);
+        if( !cscale ){ cscale=&Draw::colors_rainbow[0]; ncolors=Draw::ncolors; }
+        int ii=0;
+        glNormal3f(0.0f,1.0f,0.0f);
+        for (int ia=0; ia<(na-1); ia++){
+            glBegin( GL_TRIANGLE_STRIP );
+            Vec2d p; p.set(pa);
+            for (int ib=0; ib<nb; ib++){
+                double h=0.0d;
+                printf( " %i %i %i (%3.3f,%3.3f) %f %f \n", ia, ib, ii, p.x, p.y, hs[ii], clrs[ii] );
+                if(clrs) Draw::colorScale( clrs[ii], ncolors, cscale );
+                //if(hs){ simplex_deriv(); glNormal3f(0.0f,1.0f,0.0f); }
+                if(hs){ h=hs[ii]; }
+                glVertex3f( (float)(p.x), (float)(p.y), (float)h );
+
+                if(clrs) Draw::colorScale( clrs[ii+nb], ncolors, cscale );
+                //if(hs){ simplex_deriv(); glNormal3f(0.0f,1.0f,0.0f); }
+                if(hs){ h=hs[ii+nb]; }
+                glVertex3f( (float)(p.x+da.x), (float)(p.y+da.y), (float)h );
+                p.add(db);
+                ii++;
+            }
+            pa.add(da);
+        glEnd();
+        }
+
+    }
+
+    void drawSimplexGridLines( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs ){
+        Vec2d p,pa; pa.set(0.0d);
+        for (int ia=0; ia<(na-1); ia++){
+            glBegin( GL_LINE_STRIP );
+            p.set(pa);
+            for (int ib=0; ib<nb; ib++){
+                glVertex3f( (float)(p.x),      (float)(p.y),      (float)hs[ia*nb+ib] );
+                p.add(db);
+            }
+            glEnd();
+            p.set(pa);
+            glBegin( GL_LINE_STRIP );
+            for (int ib=0; ib<nb; ib++){
+                int ii=ia*nb+ib;
+                glVertex3f( (float)(p.x),      (float)(p.y),      (float)hs[ii   ] );
+                glVertex3f( (float)(p.x+da.x), (float)(p.y+da.y), (float)hs[ii+nb] );
+                p.add(db);
+                ii++;
+            }
+            glEnd();
+            pa.add(da);
+        }
+        p.set(pa);
+        glBegin( GL_LINE_STRIP );
+        for (int ib=0; ib<nb; ib++){
+            glVertex3f( (float)(p.x),  (float)(p.y), (float)hs[(na-1)*nb+ib] );
+            p.add(db);
+        }
+        glEnd();
+    }
 
     int drawMesh( const Mesh& mesh  ){
         for( Polygon* pl : mesh.polygons ){

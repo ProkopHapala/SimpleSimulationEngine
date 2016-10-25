@@ -108,7 +108,7 @@ public:
 		power   = power;
 		nx      = 1<<power;
 		ny      = nx;
-		mask    = nx - 1; 
+		mask    = nx - 1;
     }
 
 	inline int xy2i( int ix, int iy  ){ return iy*nx + ix; };
@@ -126,5 +126,16 @@ public:
 	}
 
 };
+
+
+
+// by numlock
+//   7-8-9
+//  4-5-6
+//   2-3
+
+
+//inline int ipbc( int i, int n ){  if(i>n) return i-n; if(i<) }
+
 
 #endif
