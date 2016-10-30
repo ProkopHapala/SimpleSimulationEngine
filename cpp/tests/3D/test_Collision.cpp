@@ -29,52 +29,30 @@ Terrain25D *  prepareTerrain()      {
     int na=100,nb=100;
     float da=1.0,db=1.0;
     float x0=-0.5*da*na,y0=-0.5*db*nb;
-    glEnable(GL_LIGHTING);
-    glColor3f(0.5f,0.5f,0.5f);
-    glNormal3f(0.0f,1.0f,0.0f);
-    /*
-    glBegin(GL_QUADS);
-        glVertex3f( na*da,     0, 0 );
-        glVertex3f( 0,         0, 0 );
-        glVertex3f( 0,     nb*db, 0 );
-        glVertex3f( na*da, nb*db, 0 );
-    glEnd();
-    */
-    float * oldvals = new float[na*3];
+    glColor3f(0.0f,0.0f,0.0f);
+    Vec2d p,dv;
     for(int ia=0; ia<na; ia++){
-        glBegin(GL_TRIANGLE_STRIP);
+        glBegin(GL_LINE_STRIP);
+        p.y = ia*da+y0;
         for(int ib=0; ib<nb; ib++){
-            int i3 = 3*ib;
-            Vec2d dv1,dv2;
-            Vec2d p1; p1.set( (ia  )*da+x0, ib*db+y0 );
-            Vec2d p2; p2.set( (ia+1)*da+x0, ib*db+y0 );
-            float v1,v2;
-            if( ia == 0 ){
-                v1 = (float)terrain->eval( p1, dv1 );
-            }else{
-                v1 = oldvals[i3]; dv1.x=oldvals[i3+1]; dv1.y=oldvals[i3+2];
-            }
-            v2 = (float)terrain->eval( p2, dv2 );
-            oldvals[i3] = v2; oldvals[i3+1] = dv2.x; oldvals[i3+2] = dv2.y;
-            glNormal3f(-dv1.x,1.0,-dv1.y); glVertex3f( (float)p1.x,  v1, (float)p1.y  );
-            glNormal3f(-dv2.x,1.0,-dv2.y); glVertex3f( (float)p2.x,  v2, (float)p2.y );
+            p.x = ib*db+x0;
+            float h = (float)terrain->eval( p, dv );
+            glVertex3f( (float)p.x,  h, (float)p.y  );
             //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
         }
         glEnd();
     }
-
-    glBegin(GL_LINES);
-    for(int ia=0; ia<na; ia++){
-        for(int ib=0; ib<nb; ib++){
-            int i3 = 3*ib;
-            Vec2d p,dv; p.set( ia*da+x0, ib*db+y0 );
-            double v = (float)terrain->eval( p, dv );
-            glVertex3f( (float)p.x,         v, (float)p.y );
-            glVertex3f( (float)(p.x-dv.x),  v+1.0, (float)(p.y-dv.y) );
+    for(int ib=0; ib<nb; ib++){
+        glBegin(GL_LINE_STRIP);
+        p.x = ib*db+x0;
+        for(int ia=0; ia<na; ia++){
+            p.y = ia*da+y0;
+            float h = (float)terrain->eval( p, dv );
+            glVertex3f( (float)p.x,  h, (float)p.y  );
+            //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
         }
-
+        glEnd();
     }
-    glEnd();
     glEndList();
     return terrain;
 }
@@ -87,11 +65,13 @@ class TestAppCollision : public AppSDL2OGL_3D {
 	Terrain25D               * terrain;
     std::vector<Object3D*>     objects;
 
+    RigidBody * body = NULL;
+
 	virtual void draw   ();
 	virtual void drawHUD();
 	//virtual void mouseHandling( );
 	virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
+	virtual void keyStateHandling( const Uint8 *keys );
 
 	TestAppCollision( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -112,7 +92,7 @@ TestAppCollision::TestAppCollision( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
 
     Object3D * o;
 
-
+/*
     o = new Object3D();
     o->id = 1;
     o->bounds.initOne();
@@ -123,9 +103,9 @@ TestAppCollision::TestAppCollision( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     o->coll = new CollisionShape();
     o->shape = mesh->rendered_shape;
     objects.push_back(o);
+*/
 
 
-    /*
     o = new Object3D();
     o->id = 2;
     o->bounds.initOne();
@@ -138,7 +118,8 @@ TestAppCollision::TestAppCollision( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     o->coll = coll;
     o->shape = mesh->rendered_shape;
     objects.push_back(o);
-    */
+    body = o->controler;
+
 
 }
 
@@ -147,8 +128,8 @@ void TestAppCollision::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	int perFrame = 10;
-	double dt    = 0.001;
+	int perFrame = 1;
+	double dt    = 0.005;
 	for(int itr=0; itr<perFrame; itr++){
         for( Object3D * o : objects ){
             RigidBody * rb = o->controler;
@@ -157,10 +138,11 @@ void TestAppCollision::draw(){
                 rb->vel.mul( 1-dt );
                 rb->L.  mul( 1-dt );
                 rb->apply_force({0,-9.81,0},{0.0,0.0,0.0});
-                Vec3d force, torq; force.set(0.0); torq.set(0.0);
-                o->coll->colideWithTerrain(terrain, rb->rotMat, rb->pos, force, torq );
-                rb->force.add_mul( force,10.0 );
-                rb->torq .add_mul( torq ,10.0 );
+                //Vec3d force, torq; force.set(0.0); torq.set(0.0);
+                //o->coll->colideWithTerrain(terrain, rb->rotMat, rb->pos, force, torq );
+                //rb->force.add_mul( force,100.0 );
+                //rb->torq .add_mul( torq ,10.0 );
+                o->coll->colideWithTerrain(terrain, *rb );
                 rb->move_RigidBody(dt);
             };
         }
@@ -175,7 +157,7 @@ void TestAppCollision::draw(){
 
 	// ======== draw
     glEnable( GL_LIGHTING );
-    glEnable(GL_DEPTH_TEST);
+   // glEnable(GL_DEPTH_TEST);
     glCallList(terrain->shape);
 
     for( Object3D * o : objects ){
@@ -197,7 +179,7 @@ void TestAppCollision::draw(){
     glDisable( GL_LIGHTING );
     Draw3D::drawAxis(1.0);
 
-    glDisable( GL_DEPTH_TEST );
+   // glDisable( GL_DEPTH_TEST );
 
     //glColor3f(0,0,0); Draw3D::drawPointCross( mesh.points[ipicked], 0.2 );
 
@@ -217,6 +199,16 @@ void TestAppCollision::eventHandling ( const SDL_Event& event  ){
     };
     AppSDL2OGL::eventHandling( event );
 }
+
+void TestAppCollision::keyStateHandling( const Uint8 *keys ){
+    if( body != NULL ){
+        if( keys[ SDL_SCANCODE_W ] ){ body->vel.add_mul( camMat.c, +0.1 ); }
+        if( keys[ SDL_SCANCODE_S ] ){ body->vel.add_mul( camMat.c, -0.1 ); }
+        if( keys[ SDL_SCANCODE_A ] ){ body->vel.add_mul( camMat.a, -0.1 ); }
+        if( keys[ SDL_SCANCODE_D ] ){ body->vel.add_mul( camMat.a, +0.1 ); }
+        if( keys[ SDL_SCANCODE_SPACE ] ){ body->vel.mul( 0.9 ); }
+    }
+};
 
 void TestAppCollision::drawHUD(){
     glDisable ( GL_LIGHTING );

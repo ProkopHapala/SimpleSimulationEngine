@@ -58,7 +58,8 @@ TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     o->bounds.initOne();
     //o->bounds.pos.set(-1.0,4.0,-2.0);
     o->controler = new RigidBody();
-    o->controler->initOne();
+    //o->controler->initOne();
+    o->controler->initSpherical( 1.0, 2.0 );
     o->controler->pos.set(-2.0,4.0,1.0);
     MeshCollisionShape * coll = new MeshCollisionShape();
     coll->mesh = mesh;
@@ -66,7 +67,10 @@ TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     o->shape = mesh->rendered_shape;
     objects.push_back(o);
 
-
+    SpringConstrain * sp;
+    sp = new SpringConstrain( 10.0, 0.0, 5.0, o->controler, NULL, mesh->points[0], o->controler->pos ); springs.push_back(sp);
+    //sp = new SpringConstrain( 10.0, 0.0, 5.0, o->controler, NULL, mesh->points[2], o->controler->pos ); springs.push_back(sp);
+    //sp = new SpringConstrain( 10.0, 0.0, 5.0, o->controler, NULL, mesh->points[3], o->controler->pos ); springs.push_back(sp);
 }
 
 void TestAppRigidBody::draw(){
@@ -77,18 +81,17 @@ void TestAppRigidBody::draw(){
 	int perFrame = 10;
 	double dt    = 0.001;
 	for(int itr=0; itr<perFrame; itr++){
+        for(SpringConstrain * sp : springs){
+            sp->apply();
+        }
         for( Object3D * o : objects ){
             RigidBody * rb = o->controler;
             if(rb){
-                rb->clean_temp();
-                rb->vel.mul( 1-dt );
-                rb->L.  mul( 1-dt );
+                //rb->vel.mul( 1-dt*0.01 );
+                //rb->L.  mul( 1-dt*0.01 );
                 rb->apply_force({0,-9.81,0},{0.0,0.0,0.0});
-                Vec3d force, torq; force.set(0.0); torq.set(0.0);
-                //o->coll->colideWithTerrain(terrain, rb->rotMat, rb->pos, force, torq );
-                rb->force.add_mul( force,10.0 );
-                rb->torq .add_mul( torq ,10.0 );
                 rb->move_RigidBody(dt);
+                rb->clean_temp();
             }
         }
 	}
@@ -97,6 +100,7 @@ void TestAppRigidBody::draw(){
         if(o->controler){
             o->bounds.pos         = o->controler->pos;
             o->bounds.orientation = o->controler->rotMat;
+            //o->bounds.orientation.setT(o->controler->rotMat);
         };
 	}
 
@@ -114,6 +118,7 @@ void TestAppRigidBody::draw(){
             //printf("(%3.3f,%3.3f,%3.3f)\n", o->bounds.orientation.a.x, o->bounds.orientation.a.y, o->bounds.orientation.a.z );
             //printf("(%3.3f,%3.3f,%3.3f)\n", o->bounds.orientation.b.x, o->bounds.orientation.b.y, o->bounds.orientation.b.z );
             //printf("(%3.3f,%3.3f,%3.3f)\n", o->bounds.orientation.c.x, o->bounds.orientation.c.y, o->bounds.orientation.c.z );
+            //Draw3D::toGLMat( o->bounds.pos, o->bounds.orientation, o->bounds.span, glMat );
             Draw3D::toGLMat( o->bounds.pos, o->bounds.orientation, o->bounds.span, glMat );
             glMultMatrixf( glMat );
             glCallList( o->shape );
@@ -122,6 +127,14 @@ void TestAppRigidBody::draw(){
     }
 
     glDisable( GL_LIGHTING );
+
+    for(SpringConstrain * sp : springs ){
+        Vec3d gp1,gp2,f;
+        sp->getPoints( gp1, gp2 );
+        f = sp->getForce( gp1, gp2 );
+        glColor3f(1.0f,1.0f,1.0f); Draw3D::drawLine( gp1, gp2 );
+        //glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos( f, gp1 );
+    }
     Draw3D::drawAxis(1.0);
 
     glDisable( GL_DEPTH_TEST );

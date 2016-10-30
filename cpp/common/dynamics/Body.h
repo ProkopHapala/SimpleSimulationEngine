@@ -96,8 +96,15 @@ class RigidBody : public PointBody {
 	inline void clean_temp( ){  force.set(0.0); torq.set(0.0);  }
 
 	inline void update_aux( ){
+        double qr2 = qrot.norm2();
+        if( (qr2 > 1.000001d) || (qr2 < 0.999999d) ){
+            qrot.mul(1/sqrt(qr2));
+        }
 		qrot.toMatrix   ( rotMat );
-		Mat3d tmp; tmp.set_mmul_NT(  invIbody, rotMat  ); invI.set_mmul( rotMat, tmp );
+		Mat3d tmp;
+		tmp.set_mmul_NT(  invIbody, rotMat  ); invI.set_mmul( rotMat, tmp );
+		//tmp.set_mmul(  invIbody, rotMat  ); invI.set_mmul_TN( rotMat, tmp );
+		//tmp.set_mmul(  invIbody, rotMat  ); invI.set_mmul_NT( rotMat, tmp );
 	};
 
     inline void move_RigidBody( double dt ){
@@ -107,6 +114,7 @@ class RigidBody : public PointBody {
         // rotation
         L   .add_mul    ( torq, dt  );  // we have to use angular momentum as state variable, omega is not conserved
         invI.dot_to     ( L,   omega );
+        //invI.dot_to_T     ( L,   omega );
         //qrot.dRot_exact ( dt,  omega );
         qrot.dRot_taylor2( dt,  omega );
         update_aux(   );
@@ -114,21 +122,27 @@ class RigidBody : public PointBody {
     };
 
     inline void glob2loc( const Vec3d& gp, Vec3d& lp ) const{
-        Vec3d tmp; tmp.set_sub(gp,pos); rotMat.dot_to_T( tmp, lp );
+        Vec3d tmp; tmp.set_sub(gp,pos);
+        rotMat.dot_to( tmp, lp );
+        //rotMat.dot_to_T( tmp, lp );
     };
 
     inline void loc2glob( const Vec3d& lp, Vec3d& gp ) const {
-        rotMat.dot_to( lp, gp ); gp.add(pos);
+        rotMat.dot_to_T( lp, gp );
+        //rotMat.dot_to( lp, gp );
+        gp.add(pos);
     };
 
 	inline void apply_force( const Vec3d& dforce, const Vec3d& gdpos ){
-		torq .add_cross( gdpos, dforce );
+		//torq .add_cross( gdpos, dforce );
+		torq .add_cross( dforce, gdpos );
 		force.add( dforce );
 	};
 
 	inline void apply_anchor( double k, const Vec3d& lpos, const Vec3d& gpos0 ){
 		Vec3d sforce, gdpos;
-		rotMat.dot_to(  lpos, gdpos   );
+		rotMat.dot_to_T(  lpos, gdpos   );
+		//rotMat.dot_to(  lpos, gdpos   );
 		sforce.set   (( gdpos + pos - gpos0 )*(-k) );
 		apply_force  (  sforce, gdpos );
 		//drawLine( gpos0, gdpos + pos  );
@@ -146,6 +160,16 @@ class RigidBody : public PointBody {
         Ibody.a.set(1,0,0);
         Ibody.b.set(0,1,0);
         Ibody.c.set(0,0,1);
+        Ibody.invert_to( invIbody );
+        qrot.setOne();
+        qrot.toMatrix   ( rotMat );
+	};
+
+    inline void initSpherical( double mass, double I ){
+	    setMass( mass );
+        Ibody.a.set(I,0,0);
+        Ibody.b.set(0,I,0);
+        Ibody.c.set(0,0,I);
         Ibody.invert_to( invIbody );
         qrot.setOne();
         qrot.toMatrix   ( rotMat );
@@ -172,11 +196,13 @@ class SpringConstrain{
     inline Vec3d getForce( const Vec3d& gp1, const Vec3d& gp2 ){
         Vec3d dp; dp.set_sub(gp2, gp1);
         double r = dp.norm();
+        //printf("(%3.3f,%3.3f,%3.3f) %f \n", dp.x, dp.y, dp.z, r);
         if( r > L0){
-            dp.mul( kPull*(r-L0)/(r+1e+8) );
+            dp.mul( kPull*(r-L0)/(r+1e-16) );
         }else{
-            dp.mul( kPush*(r-L0)/(r+1e+8) );
+            dp.mul( kPush*(L0-r)/(r+1e-16) );
         }
+        //printf("(%3.3f,%3.3f,%3.3f) \n", dp.x, dp.y, dp.z);
         return dp;
     }
 
@@ -184,7 +210,7 @@ class SpringConstrain{
 		Vec3d gp1,gp2;
         getPoints( gp1, gp2 );
         Vec3d f = getForce( gp1, gp2 );
-        b1->apply_force ( f   , gp1-b2->pos );
+        b1      ->apply_force( f   , gp1-b1->pos );
         if(b2)b2->apply_force( f*-1, gp2-b2->pos );
         return f;
 	};

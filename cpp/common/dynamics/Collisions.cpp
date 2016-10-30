@@ -4,6 +4,12 @@
 
 #include "Collisions.h" // THE HEADER
 
+// just for debug
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h>
+//#include "Draw3D.h"
+
+
 // ===================
 // ==== CollisionShape
 // ===================
@@ -29,6 +35,7 @@ bool CollisionShape::colideWithLineSegment( const Vec3d& p1, const Vec3d& p2, co
 	}
 };
 
+/*
 bool CollisionShape::colideWithTerrain( Terrain25D * terrain, const Mat3d& orientation, const Vec3d& cog, Vec3d& force, Vec3d& torq ){
     //torq.set(0.0);
     Vec2d dv;
@@ -38,25 +45,46 @@ bool CollisionShape::colideWithTerrain( Terrain25D * terrain, const Mat3d& orien
         force.add(-dv.x*dh,dh,-dv.y*dh);
     };
 };
+*/
+
+bool CollisionShape::colideWithTerrain( Terrain25D * terrain, RigidBody& rb ){
+    //torq.set(0.0);
+    Vec2d dv;
+    double h  = terrain->eval( {rb.pos.x,rb.pos.z}, dv);
+    double dh = h+collision_radius-rb.pos.y;
+    if(dh>0){
+        rb.force.add(-dv.x*dh,dh,-dv.y*dh);
+    };
+};
 
 // ========================
 // ==== MeshCollisionShape
 // ========================
 
-bool MeshCollisionShape::colideWithTerrain( Terrain25D * terrain, const Mat3d& orientation, const Vec3d& cog, Vec3d& force, Vec3d& torq ){
+bool MeshCollisionShape::colideWithTerrain( Terrain25D * terrain, RigidBody& rb ){
     //torq.set(0.0);
     //force.set(0.0);
     for(int i=0; i<mesh->points.size(); i++){
-        Vec3d p = mesh->points[i];
+        Vec3d p,v;
+        rb.rotMat.dot_to_T( mesh->points[i], p );
+        v.set_cross( p, rb.omega );
+        v.add(rb.vel);
+        //glColor3f( 0.0f,0.0f,0.8f); Draw3D::drawVecInPos( v, p+rb.pos );
+
         Vec2d dv;
-        double h = terrain->eval( {cog.x+p.x,cog.z+p.z}, dv);
-        double dh = h-cog.y;
+        double h = terrain->eval( {rb.pos.x+p.x,rb.pos.z+p.z}, dv);
+        double dh = h-p.y-rb.pos.y;
         if(dh>0){
             Vec3d f;
-            f.set(-dv.x*dh,dh,-dv.y*dh);
-            torq .add_cross( p, f );
-            force.add(f);
+            //double clat  = 30.0*(v.x*dv.x + v.z*dv.y)/dv.norm2(); if(clat<0.0) clat*=0.5f;
+            double clat  = 30.0;
+            double cvert = (v.y<0)?30.0:10.0;
+            f.set(-dv.x*dh*clat, dh*cvert, -dv.y*dh*clat);
+            rb.torq .add_cross( f,  p );
+            rb.force.add(f);
+            //glColor3f( 0.8f,0.0f,0.0f); Draw3D::drawVecInPos( f, p+rb.pos );
         }
+
     }
 };
 
