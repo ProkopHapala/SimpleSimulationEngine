@@ -79,10 +79,7 @@ void TestAppTerrainCubic::draw(){
     glColor3f(0.9f,0.9f,0.9f); Draw2D::drawGrid( -5, -5, 5, 5, 0.5, 0.5 );
     glColor3f(0.8f,0.8f,0.8f); Draw2D::drawGrid( -5, -5, 5, 5, 1.0, 1.0 );
 
-    glColor3f(0.2f,0.2f,0.2f); Draw2D::drawFunc( -3, 3, 1000, &floor_exact       );
-    glColor3f(0.2f,0.2f,0.9f); Draw2D::drawFunc( -3, 3, 1000, &floor_fast        );
-    glColor3f(0.9f,0.2f,0.2f); Draw2D::drawFunc( -3, 3, 1000, &floor_veryfast    );
-    glColor3f(0.5f,0.2f,0.2f); Draw2D::drawFunc( -3, 3, 1000, &floor_veryfast_c  );
+
     //glColor3f(0.9f,0.2f,0.9f); Draw2D::drawFunc( -3, 3, 1000, &floor_justcast    );
     //glColor3f(0.5f,0.2f,0.5f); Draw2D::drawFunc( -3, 3, 1000, &floor_justcast_c  );
 
@@ -91,9 +88,16 @@ void TestAppTerrainCubic::draw(){
     double xmax =   1.5;
     int ncall   = 100000000;
     //int ncall   = 100;
+    int narr = 10000;
+    double * arr = new double[ narr ];
+    genRandomArray( narr, arr, -1000.0, +1000.0 );
 
     printf("\n");
-    /*
+
+    glColor3f(0.2f,0.2f,0.2f); Draw2D::drawFunc( -3, 3, 1000, &floor_exact       );
+    glColor3f(0.2f,0.2f,0.9f); Draw2D::drawFunc( -3, 3, 1000, &floor_fast        );
+    glColor3f(0.9f,0.2f,0.2f); Draw2D::drawFunc( -3, 3, 1000, &floor_veryfast    );
+    glColor3f(0.5f,0.2f,0.2f); Draw2D::drawFunc( -3, 3, 1000, &floor_veryfast_c  );
     SPEED_TEST_FUNC( "void       ",                  , xmin, xmax, ncall );
     SPEED_TEST_FUNC( "exact      ", floor_exact      , xmin, xmax, ncall  );
     SPEED_TEST_FUNC( "fast       ", floor_fast       , xmin, xmax, ncall  );
@@ -101,12 +105,6 @@ void TestAppTerrainCubic::draw(){
     SPEED_TEST_FUNC( "veryfast_c ", floor_veryfast_c , xmin, xmax, ncall  );
     SPEED_TEST_FUNC( "justcast   ", floor_justcast   , xmin, xmax, ncall  );
     SPEED_TEST_FUNC( "justcast_c ", floor_justcast_c , xmin, xmax, ncall  );
-    */
-
-    int narr = 10000;
-    double * arr = new double[ narr ];
-    genRandomArray( narr, arr, -1000.0, +1000.0 );
-
     int m = ncall/narr;
     printf("%i \n", m);
     SPEED_TEST_FUNC_ARRAY( "void       ",                  , arr,  narr,  m );
@@ -116,6 +114,11 @@ void TestAppTerrainCubic::draw(){
     SPEED_TEST_FUNC_ARRAY( "veryfast_c ", floor_veryfast_c , arr,  narr,  m );
     SPEED_TEST_FUNC_ARRAY( "justcast   ", floor_justcast   , arr,  narr,  m );
     SPEED_TEST_FUNC_ARRAY( "justcast_c ", floor_justcast_c , arr,  narr,  m );
+
+
+
+    //SPEED_TEST_FUNC_ARRAY( "acos       ",                  , arr,  narr,  m );
+
 
     STOP = true;
 

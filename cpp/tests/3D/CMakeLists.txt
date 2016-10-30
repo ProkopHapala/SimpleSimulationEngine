@@ -20,6 +20,12 @@ target_link_libraries( test_Raytracing ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_Mesh test_Mesh.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Mesh> )
 target_link_libraries( test_Mesh ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_RigidBody test_RigidBody.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_RigidBody ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
+
+add_executable       ( test_Collision test_Collision.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_Collision ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
+
 add_executable       ( test_BlockBuilder test_BlockBuilder.cpp $<TARGET_OBJECTS:SDL2OGL>  )
 target_link_libraries( test_BlockBuilder ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

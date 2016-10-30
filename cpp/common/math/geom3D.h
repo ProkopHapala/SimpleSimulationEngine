@@ -53,6 +53,14 @@ class Ellipsoide{
 	Vec3d span;
     Mat3d orientation;
 
+    inline bool initOne(){
+        pos.set(0.0,0.0,0.0);
+        span.set(1.0,1.0,1.0);
+        orientation.a.set(1.0,0.0,0.0);
+        orientation.b.set(0.0,1.0,0.0);
+        orientation.c.set(0.0,0.0,1.0);
+    }
+
     inline bool fromVecs( const Mat3d& mat ){
         orientation.set(mat);
         span.a = orientation.a.normalize();

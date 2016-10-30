@@ -9,7 +9,7 @@
 //#include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
-#include "Draw3D.h"
+//#include "Draw3D.h"
 
 #include "Body.h" // THE HEADER
 
@@ -19,38 +19,30 @@
 
 void PointBody::evalForce()    { force.set( 0.0,-9.81f,0.0 ); };
 void PointBody::move(double dt){ move_PointBody(dt);          };
-void PointBody::render()       { Draw3D::drawPoint( pos );    };
+//void PointBody::render()       { Draw3D::drawPoint( pos );    };
 
 // ========================
 //   CLASS :   RigidBody
 // ========================
 
 void RigidBody::move( double dt ){
-	// postion
-	vel.add_mul( force, dt*invMass );
-	pos.add_mul( vel, dt   );
-	// rotation
-	L   .add_mul    ( torq, dt  );  // we have to use angular momentum as state variable, omega is not conserved
-	invI.dot_to     ( L,   omega );
-	//qrot.dRot_exact ( dt,  omega );
-	qrot.dRot_taylor2( dt,  omega );
-	update_aux(   );
+    move_RigidBody(dt);
 };
 
 void RigidBody::from_mass_points( int n, double* amass, Vec3d* apos ){
-	printf( " a1 \n" );
+	//printf( " a1 \n" );
 	mass = 0;
 	pos.set(0.0);
-	printf( " a1.1 \n" );
+	//printf( " a1.1 \n" );
 	for(int i=0;  i<n; i++){
-		printf( " %f %f %f \n", apos[i].x, apos[i].y, apos[i].z );
+		//printf( " %f %f %f \n", apos[i].x, apos[i].y, apos[i].z );
 		pos .add_mul( apos[i], amass[i] );
 		mass +=                amass[i];
 	};
-	printf( " a2 \n" );
+	//printf( " a2 \n" );
 	invMass = 1/mass;
 	pos.mul( invMass );
-	printf( " a3 \n" );
+	//printf( " a3 \n" );
 	for(int i=0;  i<n; i++){
 		double mi = amass[i];
 		Vec3d d; d.set( apos[i] - pos );
@@ -66,12 +58,12 @@ void RigidBody::from_mass_points( int n, double* amass, Vec3d* apos ){
   		Ibody.zy += mi*( -yz  );
   		Ibody.zz += mi*(  xx + yy  );
 	};
-	printf( " a4 \n" );
+	//printf( " a4 \n" );
 	Ibody.invert_to( invIbody );
-	printf( " a5 \n" );
+	//printf( " a5 \n" );
 };
 
-
+/*
 void RigidBody::render(){
 	glPushMatrix();
 	float glmat[16];
@@ -80,7 +72,7 @@ void RigidBody::render(){
 	glCallList( shape );
 	glPopMatrix();
 };
-
+*/
 
 void RigidBody::init( ){
 	clean_temp( );
@@ -92,25 +84,16 @@ void RigidBody::init( ){
 //   CLASS :   SpringConstrain
 // ===============================
 
-void SpringConstrain::apply(){
-	Vec3d gp1; b1->rotMat.dot_to( p1, gp1 );
-	Vec3d gp2; b2->rotMat.dot_to( p2, gp2 );
-	Vec3d gdp = ( (gp2+b2->pos)-(gp1+b1->pos) );
-	b1->apply_force ( gdp*( k), gp1 );
-	b2->apply_force ( gdp*(-k), gp2 );
-}
 
+/*
 void SpringConstrain::render(){
 	Vec3d gp1; b1->rotMat.dot_to( p1, gp1 ); gp1.add( b1->pos );
 	Vec3d gp2; b2->rotMat.dot_to( p2, gp2 ); gp2.add( b2->pos );
 	Draw3D::drawLine( gp1, gp2 );
 }
+*/
 
-SpringConstrain::SpringConstrain( double k_, RigidBody* b1_, RigidBody* b2_, const Vec3d& p1_, const Vec3d& p2_ ){
-	k=k_;
-	b1=b1_;
-	b2=b2_;
-	p1.set( p1_ );
-	p2.set( p2_ );
+SpringConstrain::SpringConstrain( double kPull_, double kPush_, double L0_, RigidBody* b1_, RigidBody* b2_, const Vec3d& p1_, const Vec3d& p2_ ){
+	kPull=kPull_; kPush=kPush_; L0=L0_; b1=b1_; b2=b2_; p1.set( p1_ ); p2.set( p2_ );
 }
 

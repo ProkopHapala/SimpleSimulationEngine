@@ -84,49 +84,49 @@ class Mesh{
 
 
     int fromFileOBJ( std::string fname ){
-    //std::ofstream infile;
-    std::ifstream infile ( fname );
-    //myfile << "Writing this to a file.\n";
-    std::string line,word;
-    //std::stringstream ss;
+        //std::ofstream infile;
+        std::ifstream infile ( fname );
+        //myfile << "Writing this to a file.\n";
+        std::string line,word;
+        //std::stringstream ss;
 
-    int npoints0   = points  .size();
-    int npolygons0 = polygons.size();
-    int i=0;
-    while ( std::getline(infile,line) ){
-        std::cout << line << '\n';
-        //ss.str(line);
-        std::stringstream ss(line);
-        getline(ss, word, ' ');
-        if ( word.compare("v")==0 ){
-            Vec3d p;
-            getline(ss, word, ' '); p.x = stof(word);
-            getline(ss, word, ' '); p.y = stof(word);
-            getline(ss, word, ' '); p.z = stof(word);
-            points.push_back(p);
-            i++;
-        }else if ( word.compare("f")==0  ){
-            Polygon * p = new Polygon();
-            polygons.push_back(p);
-            while ( getline(ss, word, ' ')) {
-                size_t of;
-                p->ipoints .push_back( stoi(word,&of)-1 );
-                //std::cout << word.substr(of) << '\n';
-                p->inormals.push_back( stoi(word.substr(of+2))-1 );
+        int npoints0   = points  .size();
+        int npolygons0 = polygons.size();
+        int i=0;
+        while ( std::getline(infile,line) ){
+            //std::cout << line << '\n';
+            //ss.str(line);
+            std::stringstream ss(line);
+            getline(ss, word, ' ');
+            if ( word.compare("v")==0 ){
+                Vec3d p;
+                getline(ss, word, ' '); p.x = stof(word);
+                getline(ss, word, ' '); p.y = stof(word);
+                getline(ss, word, ' '); p.z = stof(word);
+                points.push_back(p);
+                i++;
+            }else if ( word.compare("f")==0  ){
+                Polygon * p = new Polygon();
+                polygons.push_back(p);
+                while ( getline(ss, word, ' ')) {
+                    size_t of;
+                    p->ipoints .push_back( stoi(word,&of)-1 );
+                    //std::cout << word.substr(of) << '\n';
+                    p->inormals.push_back( stoi(word.substr(of+2))-1 );
+                };
+                i++;
+            }else if ( word.compare("vn")==0 ){
+                Vec3d p;
+                getline(ss, word, ' '); p.x = stof(word);
+                getline(ss, word, ' '); p.y = stof(word);
+                getline(ss, word, ' '); p.z = stof(word);
+                normals.push_back(p);
+                i++;
             };
-            i++;
-        }else if ( word.compare("vn")==0 ){
-            Vec3d p;
-            getline(ss, word, ' '); p.x = stof(word);
-            getline(ss, word, ' '); p.y = stof(word);
-            getline(ss, word, ' '); p.z = stof(word);
-            normals.push_back(p);
-            i++;
-        };
-    }
-    infile.close();
-    return i;
-};
+        }
+        infile.close();
+        return i;
+    };
 
 int pickVertex( const Vec3d &ray0, const Vec3d &hRay ){
     double r2min=1e+300;

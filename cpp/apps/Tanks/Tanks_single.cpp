@@ -28,36 +28,10 @@
 #include "Shooter.h"
 
 
-class Tanks_single : public AppSDL2OGL_3D {
-	public:
-    Shooter world;
-    double dvel = 10.0;
-
-    Warrior3D *warrior1;
-
-    int hitShape, warriorShape, objectShape;
-
-	virtual void draw   ();
-	virtual void drawHUD();
-	//virtual void mouseHandling( );
-	virtual void eventHandling   ( const SDL_Event& event  );
-	virtual void keyStateHandling( const Uint8 *keys );
-    virtual void mouseHandling( );
-
-	Tanks_single( int& id, int WIDTH_, int HEIGHT_ );
-
-};
-
-Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
-
-    world.init_world();
-    printf( "DEBUG_SHIT : %i \n", world.debug_shit );
-
-    // ---- terrain
-
-    world.terrain = new Terrain25D();
-    world.terrain->shape = glGenLists(1);
-    glNewList( world.terrain->shape , GL_COMPILE );
+Terrain25D *  prepareTerrain()      {
+    Terrain25D * terrain = new Terrain25D();
+    terrain->shape = glGenLists(1);
+    glNewList( terrain->shape , GL_COMPILE );
     int na=100,nb=100;
     float da=1.0,db=1.0;
     float x0=-0.5*da*na,y0=-0.5*db*nb;
@@ -82,11 +56,11 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
             Vec2d p2; p2.set( (ia+1)*da+x0, ib*db+y0 );
             float v1,v2;
             if( ia == 0 ){
-                v1 = (float)world.terrain->eval( p1, dv1 );
+                v1 = (float)terrain->eval( p1, dv1 );
             }else{
                 v1 = oldvals[i3]; dv1.x=oldvals[i3+1]; dv1.y=oldvals[i3+2];
             }
-            v2 = (float)world.terrain->eval( p2, dv2 );
+            v2 = (float)terrain->eval( p2, dv2 );
             oldvals[i3] = v2; oldvals[i3+1] = dv2.x; oldvals[i3+2] = dv2.y;
             glNormal3f(-dv1.x,1.0,-dv1.y); glVertex3f( (float)p1.x,  v1, (float)p1.y  );
             glNormal3f(-dv2.x,1.0,-dv2.y); glVertex3f( (float)p2.x,  v2, (float)p2.y );
@@ -100,7 +74,7 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         for(int ib=0; ib<nb; ib++){
             int i3 = 3*ib;
             Vec2d p,dv; p.set( ia*da+x0, ib*db+y0 );
-            double v = (float)world.terrain->eval( p, dv );
+            double v = (float)terrain->eval( p, dv );
             glVertex3f( (float)p.x,         v, (float)p.y );
             glVertex3f( (float)(p.x-dv.x),  v+1.0, (float)(p.y-dv.y) );
         }
@@ -108,6 +82,41 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     }
     glEnd();
     glEndList();
+    return terrain;
+}
+
+class Tanks_single : public AppSDL2OGL_3D {
+	public:
+    Shooter world;
+    double dvel = 10.0;
+
+    Warrior3D *warrior1;
+
+    int hitShape, warriorShape, objectShape;
+
+    double camPhi,camTheta;
+
+	virtual void draw   ();
+	virtual void drawHUD();
+	//virtual void mouseHandling( );
+	virtual void eventHandling   ( const SDL_Event& event  );
+	virtual void keyStateHandling( const Uint8 *keys );
+    virtual void mouseHandling( );
+    void         camera();
+
+	Tanks_single( int& id, int WIDTH_, int HEIGHT_ );
+
+};
+
+Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    world.init_world();
+    printf( "DEBUG_SHIT : %i \n", world.debug_shit );
+
+    // ---- terrain
+
+    //new Terrain25D();
+    world.terrain = prepareTerrain();
 
     // ---- Objects
 
@@ -221,22 +230,8 @@ void Tanks_single::draw(){
 
 };
 
-/*
-void Tanks_single::mouseHandling( ){
-    int mx,my;
-    //Uint32 buttons = SDL_GetMouseState( &mx, &my );
-    //SDL_WarpMouse(0, 0);
-    SDL_GetRelativeMouseState( &mx, &my);
-    //printf( " %i %i \n", mx,my );
-    Quat4d q; q.fromTrackball( 0, 0, mx*0.001, my*0.001 );
-    //qCamera.qmul( q );
-    qCamera.qmul_T( q );
-    camMat( );
 
-    //defaultMouseHandling( mouseX, mouseY );
-    //world.anchor.set( mouse_begin_x, mouse_begin_y );
-}
-*/
+
 
 
 void Tanks_single::keyStateHandling( const Uint8 *keys ){
@@ -253,7 +248,8 @@ void Tanks_single::keyStateHandling( const Uint8 *keys ){
         if( keys[ SDL_SCANCODE_D ] ){ warrior1->vel.add_mul( camMat.a, +0.1 ); }
         if( keys[ SDL_SCANCODE_SPACE ] ){ warrior1->vel.mul( 0.9 ); }
 
-        camPos.set( warrior1->pos );
+        //camPos.set( warrior1->pos );
+        camPos.set_add( warrior1->pos, {0.0,1.0,0.0} );
     }
 
     //if( keys[ SDL_SCANCODE_W ] ){ camPos.add_mul( camMat.c, +0.1 ); }
@@ -271,15 +267,32 @@ void Tanks_single::keyStateHandling( const Uint8 *keys ){
 
 void Tanks_single::mouseHandling( ){
     int mx,my;
-    //SDL_GetMouseState( &mouseX, &mouseY );
     Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
-    //printf( " %i %i \n", mx,my );
-    //if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
 
-        Quat4d q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
-        qCamera.qmul_T( q );
-    //}
-    //qCamera.qmul( q );
+    camPhi   += mx*0.001;
+    camTheta += my*0.001;
+    camMat.a.set( sin(camPhi),0.0,cos(camPhi) );
+    double ct=cos(camTheta),st=sin(camTheta);
+    camMat.b.set(-camMat.a.z*st, ct, camMat.a.x*st);
+    camMat.c.set(-camMat.a.z*ct,-st, camMat.a.x*ct); // up vector
+    //printf("camMat:\n",);
+    printf("camMat: (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n",camMat.ax,camMat.ay,camMat.az,  camMat.bx,camMat.by,camMat.bz, camMat.cx,camMat.cy,camMat.cz);
+    //qCamera.fromAngleAxis( camTheta, {sin(camPhi),0, cos(camPhi)} );
+    //qCamera.fromAngleAxis( camTheta, {0,sin(camPhi), cos(camPhi)} );
+
+}
+
+void Tanks_single::camera(){
+    float camMatrix[16];
+    glMatrixMode (GL_PROJECTION);
+    glLoadIdentity();
+    float fov = VIEW_ZOOM_DEFAULT/zoom;
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
+    Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, camMat, camMatrix );
+    glMultMatrixf( camMatrix );
+    glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
+    glMatrixMode (GL_MODELVIEW);
+    glLoadIdentity();
 }
 
 

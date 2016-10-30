@@ -10,6 +10,10 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
+// ========================
+//   CLASS :   KinematicBody
+// ========================
+
 class KinematicBody{
 	public:
 	Vec3d lpos;
@@ -18,6 +22,10 @@ class KinematicBody{
 	inline void globalRot( const Mat3d& rot0,                    Mat3d& grot ){ grot.set_mmul( lrot, rot0 ); }
 	//inline void globalRot( const Mat3d& rot0, Mat3d& grot ){ grot.set_mmul_NT( lrot, rot0 ); }
 };
+
+// ========================
+//   CLASS :   PointBody
+// ========================
 
 class PointBody{
 	public:
@@ -35,7 +43,7 @@ class PointBody{
 
 	virtual void evalForce();
 	virtual void move(double dt);
-	virtual void render();
+	//virtual void render();
 
 	// ==== inline functions
 
@@ -53,6 +61,10 @@ class PointBody{
 	inline void clean_temp( ){  force.set(0.0); }
 
 };
+
+// ========================
+//   CLASS :   RigidBody
+// ========================
 
 class RigidBody : public PointBody {
 	public:
@@ -77,7 +89,7 @@ class RigidBody : public PointBody {
 	void init( );
 	//void apply_anchor( double k, const Vec3d& lpos, const Vec3d& gpos0 );
 	virtual void move( double dt );
-	virtual void render();
+	//virtual void render();
 
 	// ==== inline functions
 
@@ -87,6 +99,27 @@ class RigidBody : public PointBody {
 		qrot.toMatrix   ( rotMat );
 		Mat3d tmp; tmp.set_mmul_NT(  invIbody, rotMat  ); invI.set_mmul( rotMat, tmp );
 	};
+
+    inline void move_RigidBody( double dt ){
+        // postion
+        vel.add_mul( force, dt*invMass );
+        pos.add_mul( vel, dt   );
+        // rotation
+        L   .add_mul    ( torq, dt  );  // we have to use angular momentum as state variable, omega is not conserved
+        invI.dot_to     ( L,   omega );
+        //qrot.dRot_exact ( dt,  omega );
+        qrot.dRot_taylor2( dt,  omega );
+        update_aux(   );
+        //printf("force (%3.3f,%3.3f,%3.3f) vel (%3.3f,%3.3f,%3.3f) pos (%3.3f,%3.3f,%3.3f)\n", force.x,force.y,force.z, vel.x,vel.y,vel.z,  pos.x, pos.y, pos.z  );
+    };
+
+    inline void glob2loc( const Vec3d& gp, Vec3d& lp ) const{
+        Vec3d tmp; tmp.set_sub(gp,pos); rotMat.dot_to_T( tmp, lp );
+    };
+
+    inline void loc2glob( const Vec3d& lp, Vec3d& gp ) const {
+        rotMat.dot_to( lp, gp ); gp.add(pos);
+    };
 
 	inline void apply_force( const Vec3d& dforce, const Vec3d& gdpos ){
 		torq .add_cross( gdpos, dforce );
@@ -114,21 +147,50 @@ class RigidBody : public PointBody {
         Ibody.b.set(0,1,0);
         Ibody.c.set(0,0,1);
         Ibody.invert_to( invIbody );
+        qrot.setOne();
+        qrot.toMatrix   ( rotMat );
 	};
 
 };
 
+// ===============================
+//   CLASS :   SpringConstrain
+// ===============================
+
 class SpringConstrain{
 	public:
-	Vec3d p1,p2;
-	RigidBody *b1,*b2;
-	double k;
+	Vec3d     p1,p2;
+	RigidBody *b1=NULL,*b2=NULL;
+	double kPull,kPush,L0;
 
-	// ==== function declarations
+	// ==== functiopn declarations
+    inline void getPoints( Vec3d& gp1, Vec3d& gp2 ){
+        b1->loc2glob(p1,gp1);
+		if(b2){ b2->loc2glob(p2,gp2); }else{gp2.set(p2);}
+    }
 
-	void apply();
-	void render();
-	SpringConstrain( double k_, RigidBody* b1_, RigidBody* b2_, const Vec3d& p1_, const Vec3d& p2_ );
+    inline Vec3d getForce( const Vec3d& gp1, const Vec3d& gp2 ){
+        Vec3d dp; dp.set_sub(gp2, gp1);
+        double r = dp.norm();
+        if( r > L0){
+            dp.mul( kPull*(r-L0)/(r+1e+8) );
+        }else{
+            dp.mul( kPush*(r-L0)/(r+1e+8) );
+        }
+        return dp;
+    }
+
+	inline Vec3d apply(){
+		Vec3d gp1,gp2;
+        getPoints( gp1, gp2 );
+        Vec3d f = getForce( gp1, gp2 );
+        b1->apply_force ( f   , gp1-b2->pos );
+        if(b2)b2->apply_force( f*-1, gp2-b2->pos );
+        return f;
+	};
+	//void render();
+	//SpringConstrain( double k_, RigidBody* b1_, RigidBody* b2_, const Vec3d& p1_, const Vec3d& p2_ );
+	SpringConstrain( double kPull_, double kPush_, double L0_, RigidBody* b1_, RigidBody* b2_, const Vec3d& p1_, const Vec3d& p2_ );
 
 };
 

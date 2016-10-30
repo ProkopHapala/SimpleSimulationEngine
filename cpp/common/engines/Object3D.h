@@ -5,11 +5,16 @@
 #include "Vec3.h"
 #include "Mat3.h"
 #include "geom3D.h"
+#include "Collisions.h"
+#include "Body.h"
 
-class Object3D {
+class Object3D{
 	public:
 	int id, kind, shape;
-	Ellipsoide bounds;
+	Ellipsoide       bounds;
+	CollisionShape * coll      = NULL;
+	RigidBody      * controler = NULL;
+
 
     virtual bool pointIn( const Vec3d& point ){
         // distance from bounding ellipsoide
