@@ -29,7 +29,7 @@ Terrain25D *  prepareTerrain()      {
     int na=100,nb=100;
     float da=1.0,db=1.0;
     float x0=-0.5*da*na,y0=-0.5*db*nb;
-    glColor3f(0.0f,0.0f,0.0f);
+    //glColor3f(0.0f,0.0f,0.0f);
     Vec2d p,dv;
     for(int ia=0; ia<na; ia++){
         glBegin(GL_LINE_STRIP);
@@ -37,7 +37,8 @@ Terrain25D *  prepareTerrain()      {
         for(int ib=0; ib<nb; ib++){
             p.x = ib*db+x0;
             float h = (float)terrain->eval( p, dv );
-            glVertex3f( (float)p.x,  h, (float)p.y  );
+            float c = (float)(h*0.5+1.0);
+            glColor3f(c,c,c); glVertex3f( (float)p.x,  h, (float)p.y  );
             //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
         }
         glEnd();
@@ -48,7 +49,8 @@ Terrain25D *  prepareTerrain()      {
         for(int ia=0; ia<na; ia++){
             p.y = ia*da+y0;
             float h = (float)terrain->eval( p, dv );
-            glVertex3f( (float)p.x,  h, (float)p.y  );
+            float c = (float)(h*0.5+1.0);
+            glColor3f(c,c,c); glVertex3f( (float)p.x,  h, (float)p.y  );
             //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
         }
         glEnd();

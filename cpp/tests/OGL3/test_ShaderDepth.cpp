@@ -1,3 +1,18 @@
+
+
+
+
+
+
+// read this tutorial
+// http://www.opengl-tutorial.org/beginners-tutorials/tutorial-4-a-colored-cube/
+
+
+
+
+
+
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -24,18 +39,19 @@ SDL_GLContext   context = NULL;
 GLuint vao;     // vertex array object
 
 
-GLfloat vertexes[4][2] = {
-	{  -0.9f,  -0.9f  },
-	{  -0.9f,   0.9f  },
-	{   0.9f,  -0.9f  },
-	{   0.9f,   0.9f  } };
+GLfloat vertexes[4][3] = {
+	{  -0.2f,  -0.2f, 0.0f  },
+	{  -0.2f,   0.2f, 0.0f  },
+	{   0.2f,  -0.2f, 0.0f  },
+	{   0.2f,   0.2f, 0.0f  } };
+
+GLfloat  afineMat[4] = {
+  1.0, 0.0,
+  0.0, 1.0
+};
+
 
 GLfloat  origin[2] = {  0.0, 0.0 };
-
-const int imgW = 256;
-const int imgH = 256;
-
-unsigned int imgData [imgW*imgH];
 
 int WIDTH  = 800;
 int HEIGHT = 800;
@@ -43,8 +59,6 @@ int HEIGHT = 800;
 GLfloat resolution[2];
 GLfloat sphere[4];
 GLfloat light_dir[4];
-
-GLuint textureID;
 
 // ============= FUNCTIONS
 
@@ -60,20 +74,25 @@ void loop( int niters );
 
 void setup(){
 
-    // ------------- object
-
 	object1 = new GLObject( );
-	object1->nVert   = 4;
-	object1->vertDim = 2;
+	object1->nVert    = 4;
+	object1->vertDim  = 3;
 	object1->vertexes = &vertexes[0][0];
 	object1->init();
 
-    // ------------- shader
-
 	shader1=new Shader();
 	//shader1->init( "shaders/plain_vert.c", "shaders/sphere_frag.c" );
-	//shader1->init( "shaders/afine2D_vert.c", "shaders/sphere_frag.c" );
-	shader1->init( "shaders/plain_vert.c", "shaders/texture_frag.c" );
+	shader1->init( "shaders/afine2D_vert.c", "shaders/sphere_frag.c" );
+
+    sphere[0] = 0.0;
+    sphere[1] = 0.0;
+    sphere[2] = 0.0;
+    sphere[3] = 0.5;
+
+    Vec3f light_dir_; light_dir_.set( 1, 1, 2 ); light_dir_.normalize();
+    light_dir[0]=light_dir_.x;
+    light_dir[1]=light_dir_.x;
+    light_dir[2]=light_dir_.x;
 
     resolution[0] = (float)WIDTH;
     resolution[1] = (float)HEIGHT;
@@ -82,31 +101,11 @@ void setup(){
 
     GLuint uloc;
     uloc = glGetUniformLocation( shader1->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, resolution  );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, sphere      );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "light_dir"  );	glUniform3fv(uloc, 1, light_dir   );
 
-    // ------------- texture
-
-    for( int iy=0; iy<imgH; iy++ ){
-        for( int ix=0; ix<imgW; ix++ ){
-            float r = sin(ix*0.1) + 1.0f;
-            float g = sin(iy*0.1) + 1.0f;
-            float b = sin((ix+iy)*0.1) + 1.0f;
-            imgData[ iy*imgW + ix ] =  ((int)(127*r) <<16) | ((int)(127*g)<<8) | ((int)(127*b));
-            //imgData[ iy*imgW + ix ]   = (( 0xFF & (ix^iy) )<<16 ) | ( 0xFF&(ix^(-iy) )<<8 ); // | ( 0xFF&(ix*iy) );
-            //imgData[ iy*imgW + ix ]   = (( 0xFF & (ix^iy) )<<8 ) | ( 0xFF&(ix^(-iy)) ); // | ( 0xFF&(ix*iy) );
-            //imgData[ iy*imgW + ix ]   = ix^iy;
-        }
-    }
-    glGenTextures(1, &textureID);    // Create one OpenGL texture
-    glBindTexture(GL_TEXTURE_2D, textureID); // "Bind" the newly created texture : all future texture functions will modify this texture
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, imgW, imgH, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);   // Give the image to OpenGL
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_ARGB, imgW, imgH, 0, GL_ARGB, GL_UNSIGNED_BYTE, imgData);   // Give the image to OpenGL
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //glActiveTexture(GL_TEXTURE0 );
-    //glBindTexture(GL_TEXTURE_2D, textureID );
-    //glBindSampler(0, uloc);
+    uloc = glGetUniformLocation( shader1->shaderprogram, "afineMat"   );	glUniformMatrix2fv(uloc, 1, GL_FALSE, afineMat  );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "origin"     );	glUniform2fv      (uloc, 1, origin   );
 
 }
 
@@ -114,15 +113,31 @@ void draw(){
     glClearColor(0.0, 0.0, 1.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 
+    glEnable( GL_DEPTH_TEST );
+    glDepthFunc( GL_LESS );
+
     GLuint uloc;
 
-    uloc = glGetUniformLocation( shader1->shaderprogram, "texture1");     glUniform1i(uloc, 0);
-    //glActiveTexture(GL_TEXTURE0 );
-    //glBindTexture(GL_TEXTURE_2D, textureID );
-    //glBindSampler(0, uloc);
+    // ---- constant sphere in center
+    sphere[0] = 0.0;
+    sphere[1] = 0.0;
+    sphere[2] = 0.2;
+    origin[0] = sphere[0];
+    origin[1] = sphere[1];
+    uloc = glGetUniformLocation( shader1->shaderprogram, "origin"     );	glUniform2fv(uloc, 1, origin        );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, sphere        );
+    glEnableVertexAttribArray(0); object1->draw();
 
-    //glRotatef( 60.0, 1.0, 1.0, 1.0 );
-    //glTranslatef( 1.0, 1.0, 1.0 );
+    // ---- shifted sphere in mouse position
+    sphere[0] = -2*(mouseX*2-WIDTH)/resolution[0];
+    sphere[1] =  2*(mouseY*2-HEIGHT)/resolution[1];
+    sphere[2] = 0.3;
+    origin[0] = -sphere[0]*0.4;
+    origin[1] = -sphere[1]*0.4;
+    uloc = glGetUniformLocation( shader1->shaderprogram, "origin"     );	glUniform2fv      (uloc, 1, origin   );
+
+    //printf( "  %i %i %f %f \n", mouseX, mouseY, sphere[0], sphere[1] );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, sphere      );
     glEnableVertexAttribArray(0); object1->draw();
 
     SDL_GL_SwapWindow(window);
