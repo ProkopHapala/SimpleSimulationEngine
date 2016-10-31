@@ -24,7 +24,7 @@ Node& BlockHouseWorld::insertNode( const Block& block, const uint8_t * corner ){
     return node;
 }
 
-Bond& BlockHouseWorld::insertBond( uint16_t i, uint16_t j, double l0, const BondType& type ){
+Bond& BlockHouseWorld::insertBond( uint16_t i, uint16_t j, double l0, BondType * type ){
     uint32_t key = (i<<16) + j;
     int sz0 = bonds.size();
     Bond& bond = bonds[key];   // get valid pointer ( if new alocate, if aold take it )
@@ -36,7 +36,7 @@ Bond& BlockHouseWorld::insertBond( uint16_t i, uint16_t j, double l0, const Bond
         bond.l0   = l0;
         //printf( "insert bond (%i,%i) %i %i \n", i, j, key, bond.id );
     }else{
-        if( type.sPress > bond.type.sPress ){
+        if( type->sPress > bond.type->sPress ){
             bond.type = type;
         }
         //printf( "found  bond (%i,%i) %i %i \n", i, j, key, bond.id );
@@ -74,7 +74,7 @@ void BlockHouseWorld::blocks2truss( ){
     for( int i=0; i<nBlocks; i++ ){
         block2truss( blocks[i] );
     }
-    truss.allocate( nodes.size(), bonds.size(), 3, NULL, NULL, NULL, NULL );
+    truss.allocate( nodes.size(), bonds.size(), 3 );
     for( auto it : nodes ){
         Node& node = it.second;
         truss.points[ node.id ] = node.pos; // do we need this at all ?
@@ -96,8 +96,8 @@ void BlockHouseWorld::blocks2truss( ){
 void BlockHouseWorld::setDefaultWallType(){
     for( int i=0;  i<nMaxTypes; i++ ){
         wallTypes[i].shape = 0;
-        wallTypes[i].diag  = default_BondType_diag;
-        wallTypes[i].edge  = default_BondType_edge;
+        wallTypes[i].diag  = &default_BondType_diag;
+        wallTypes[i].edge  = &default_BondType_edge;
         wallTypes[i].mass  = 1.0;
     }
 }

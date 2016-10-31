@@ -83,9 +83,9 @@ class Mat3TYPE{
 	};
 
 	inline void setT  ( const MAT& M ){
-		xx=M.xx; xy=M.xy; xz=M.xz;
-		yx=M.yx; yy=M.yy; yz=M.yz;
-		zx=M.zx; zy=M.zy; zz=M.zz;
+		xx=M.xx; xy=M.yx; xz=M.zx;
+		yx=M.xy; yy=M.yy; yz=M.zy;
+		zx=M.xz; zy=M.yz; zz=M.zz;
 	};
 
 	inline void setT  ( const VEC& va, const VEC& vb, const VEC& vc ){

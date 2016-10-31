@@ -105,7 +105,6 @@ TestAppCollision::TestAppCollision( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     objects.push_back(o);
 */
 
-
     o = new Object3D();
     o->id = 2;
     o->bounds.initOne();
@@ -129,19 +128,15 @@ void TestAppCollision::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	int perFrame = 1;
-	double dt    = 0.005;
+	double dt    = 0.01;
 	for(int itr=0; itr<perFrame; itr++){
         for( Object3D * o : objects ){
             RigidBody * rb = o->controler;
             if(rb){
                 rb->clean_temp();
-                rb->vel.mul( 1-dt );
-                rb->L.  mul( 1-dt );
+                rb->vel.mul( (1-dt*0.1) );
+                rb->L.  mul( (1-dt*0.1) );
                 rb->apply_force({0,-9.81,0},{0.0,0.0,0.0});
-                //Vec3d force, torq; force.set(0.0); torq.set(0.0);
-                //o->coll->colideWithTerrain(terrain, rb->rotMat, rb->pos, force, torq );
-                //rb->force.add_mul( force,100.0 );
-                //rb->torq .add_mul( torq ,10.0 );
                 o->coll->colideWithTerrain(terrain, *rb );
                 rb->move_RigidBody(dt);
             };
@@ -151,7 +146,7 @@ void TestAppCollision::draw(){
 	for( Object3D * o : objects ){
         if(o->controler){
             o->bounds.pos         = o->controler->pos;
-            o->bounds.orientation = o->controler->rotMat;
+            o->bounds.orientation.setT(o->controler->rotMat);
         };
 	}
 
@@ -164,11 +159,6 @@ void TestAppCollision::draw(){
         if (o->shape){
             float glMat[16];
             glPushMatrix();
-            //printf("------ %i \n", o->id );
-            //printf("(%3.3f,%3.3f,%3.3f)\n", o->bounds.pos.x, o->bounds.pos.y, o->bounds.pos.z );
-            //printf("(%3.3f,%3.3f,%3.3f)\n", o->bounds.orientation.a.x, o->bounds.orientation.a.y, o->bounds.orientation.a.z );
-            //printf("(%3.3f,%3.3f,%3.3f)\n", o->bounds.orientation.b.x, o->bounds.orientation.b.y, o->bounds.orientation.b.z );
-            //printf("(%3.3f,%3.3f,%3.3f)\n", o->bounds.orientation.c.x, o->bounds.orientation.c.y, o->bounds.orientation.c.z );
             Draw3D::toGLMat( o->bounds.pos, o->bounds.orientation, o->bounds.span, glMat );
             glMultMatrixf( glMat );
             glCallList( o->shape );
@@ -201,12 +191,19 @@ void TestAppCollision::eventHandling ( const SDL_Event& event  ){
 }
 
 void TestAppCollision::keyStateHandling( const Uint8 *keys ){
+    double dv = 0.1;
     if( body != NULL ){
+    /*
         if( keys[ SDL_SCANCODE_W ] ){ body->vel.add_mul( camMat.c, +0.1 ); }
         if( keys[ SDL_SCANCODE_S ] ){ body->vel.add_mul( camMat.c, -0.1 ); }
         if( keys[ SDL_SCANCODE_A ] ){ body->vel.add_mul( camMat.a, -0.1 ); }
         if( keys[ SDL_SCANCODE_D ] ){ body->vel.add_mul( camMat.a, +0.1 ); }
-        if( keys[ SDL_SCANCODE_SPACE ] ){ body->vel.mul( 0.9 ); }
+    */
+        if( keys[ SDL_SCANCODE_W ] ){ body->vel.z+=dv; }
+        if( keys[ SDL_SCANCODE_S ] ){ body->vel.z-=dv; }
+        if( keys[ SDL_SCANCODE_A ] ){ body->vel.x-=dv; }
+        if( keys[ SDL_SCANCODE_D ] ){ body->vel.x+=dv; }
+        if( keys[ SDL_SCANCODE_SPACE ] ){ body->vel.mul( 0.9 ); body->L.mul( 0.9 ); }
     }
 };
 

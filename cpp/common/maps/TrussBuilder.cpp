@@ -47,7 +47,8 @@ bool TrussBuilder::removeNode( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz
     return true;
 }
 
-Bond& TrussBuilder::insertBond( int_fast32_t i, int_fast32_t j, double l0, const BondType& type ){
+//Bond& TrussBuilder::insertBond( int_fast32_t i, int_fast32_t j, double l0, const BondType& type ){
+Bond& TrussBuilder::insertBond( int_fast32_t i, int_fast32_t j, double l0, BondType * type ){
     //ID64 ib;  ib.a=i; ib.b=j;
     if( i > j ) { int_fast32_t sw = i; i=j; j=sw; };  // permutations symmetry
     int_fast64_t key = xy2id( i, j );
@@ -72,13 +73,15 @@ Bond& TrussBuilder::insertBond( int_fast32_t i, int_fast32_t j, double l0, const
     return bond;
 }
 
-Bond& TrussBuilder::insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, double l0, const BondType& type ){
+//Bond& TrussBuilder::insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, double l0, const BondType& type ){
+Bond& TrussBuilder::insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, double l0, BondType* type ){
     int_fast32_t id1 = insertNode( ix0, iy0, iz0 );
     int_fast32_t id2 = insertNode( ix1, iy1, iz1 );
     return insertBond( id1, id2, l0, type );
 }
 
-Bond& TrussBuilder::insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, const BondType& type ){
+//Bond& TrussBuilder::insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, const BondType& type ){
+Bond& TrussBuilder::insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, BondType* type ){
     double l0  = sqrt( dist2( {ix0, iy0, iz0}, { ix1,  iy1,  iz1}  ) );
     return insertBond( ix0, iy0, iz0, ix1, iy1, iz1, l0, type );
 }
@@ -187,7 +190,7 @@ void TrussBuilder::fromFile( char * fname ){
             fin >> inod >> jnod >> itype;
             //fin >> itype >> jnod >> inod;
             printf( " %i %i %i \n", inod, jnod, itype );
-            insertBond( nodes[inod].ix, nodes[inod].iy, nodes[inod].iz, nodes[jnod].ix, nodes[jnod].iy, nodes[jnod].iz, bondTypes[itype] );
+            insertBond( nodes[inod].ix, nodes[inod].iy, nodes[inod].iz, nodes[jnod].ix, nodes[jnod].iy, nodes[jnod].iz, &bondTypes[itype] );
         }
     }
     fin.close();
@@ -196,7 +199,7 @@ void TrussBuilder::fromFile( char * fname ){
 void TrussBuilder::toSoftBody( SoftBody& truss ){
     truss.deallocateAll( );
     //printf( "\DEBUG 2 : %i %i %i\n", nodes.size(), bonds.size(), nfixed );
-    truss.allocate( nodes.size(), bonds.size(), nfixed+1, NULL, NULL, NULL, NULL );
+    truss.allocate( nodes.size(), bonds.size(), nfixed+1 );
     int ni_fix=0;
     for( int i=0; i<nodes.size(); i++ ){
         //truss.points[ node.id ] = node.pos; // do we need this at all ?

@@ -65,23 +65,21 @@ bool MeshCollisionShape::colideWithTerrain( Terrain25D * terrain, RigidBody& rb 
     //torq.set(0.0);
     //force.set(0.0);
     for(int i=0; i<mesh->points.size(); i++){
-        Vec3d p,v;
-        rb.rotMat.dot_to_T( mesh->points[i], p );
-        v.set_cross( p, rb.omega );
-        v.add(rb.vel);
+        Vec3d gdp,gv,gp;
+        rb.velOfPoint(mesh->points[i], gv, gdp);
+        gp.set_add(gdp, rb.pos);
         //glColor3f( 0.0f,0.0f,0.8f); Draw3D::drawVecInPos( v, p+rb.pos );
 
         Vec2d dv;
-        double h = terrain->eval( {rb.pos.x+p.x,rb.pos.z+p.z}, dv);
-        double dh = h-p.y-rb.pos.y;
+        double h = terrain->eval( {gp.x,gp.z}, dv);
+        double dh = h-gp.y;
         if(dh>0){
             Vec3d f;
             //double clat  = 30.0*(v.x*dv.x + v.z*dv.y)/dv.norm2(); if(clat<0.0) clat*=0.5f;
             double clat  = 30.0;
-            double cvert = (v.y<0)?30.0:10.0;
+            double cvert = (gv.y<0)?30.0:10.0;
             f.set(-dv.x*dh*clat, dh*cvert, -dv.y*dh*clat);
-            rb.torq .add_cross( f,  p );
-            rb.force.add(f);
+            rb.apply_force(f,gdp);
             //glColor3f( 0.8f,0.0f,0.0f); Draw3D::drawVecInPos( f, p+rb.pos );
         }
 

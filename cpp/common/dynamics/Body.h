@@ -100,7 +100,7 @@ class RigidBody : public PointBody {
         if( (qr2 > 1.000001d) || (qr2 < 0.999999d) ){
             qrot.mul(1/sqrt(qr2));
         }
-		qrot.toMatrix   ( rotMat );
+		qrot.toMatrix  ( rotMat );
 		Mat3d tmp;
 		tmp.set_mmul_NT(  invIbody, rotMat  ); invI.set_mmul( rotMat, tmp );
 		//tmp.set_mmul(  invIbody, rotMat  ); invI.set_mmul_TN( rotMat, tmp );
@@ -119,30 +119,38 @@ class RigidBody : public PointBody {
         qrot.dRot_taylor2( dt,  omega );
         update_aux(   );
         //printf("force (%3.3f,%3.3f,%3.3f) vel (%3.3f,%3.3f,%3.3f) pos (%3.3f,%3.3f,%3.3f)\n", force.x,force.y,force.z, vel.x,vel.y,vel.z,  pos.x, pos.y, pos.z  );
+        //printf("L (%3.3f,%3.3f,%3.3f) omega (%3.3f,%3.3f,%3.3f) qrot (%3.3f,%3.3f,%3.3f,%3.3f)\n", L.x,L.y,L.z, omega.x,omega.y,omega.z,  qrot.x, qrot.y, qrot.z, qrot.w  );
     };
 
     inline void glob2loc( const Vec3d& gp, Vec3d& lp ) const{
         Vec3d tmp; tmp.set_sub(gp,pos);
-        rotMat.dot_to( tmp, lp );
-        //rotMat.dot_to_T( tmp, lp );
+        //rotMat.dot_to( tmp, lp );
+        rotMat.dot_to_T( tmp, lp );
     };
 
     inline void loc2glob( const Vec3d& lp, Vec3d& gp ) const {
-        rotMat.dot_to_T( lp, gp );
-        //rotMat.dot_to( lp, gp );
+        //rotMat.dot_to_T( lp, gp );
+        rotMat.dot_to( lp, gp );
         gp.add(pos);
     };
 
+    inline void velOfPoint( const Vec3d& lp, Vec3d& gv, Vec3d& gdp ) const {
+        rotMat.dot_to( lp, gdp    );
+        gv.set_cross ( omega, gdp );
+        gv.add(vel);
+        //gp.add(pos);
+    }
+
 	inline void apply_force( const Vec3d& dforce, const Vec3d& gdpos ){
-		//torq .add_cross( gdpos, dforce );
-		torq .add_cross( dforce, gdpos );
+		torq .add_cross( gdpos, dforce );
+		//torq .add_cross( dforce, gdpos );
 		force.add( dforce );
 	};
 
 	inline void apply_anchor( double k, const Vec3d& lpos, const Vec3d& gpos0 ){
 		Vec3d sforce, gdpos;
-		rotMat.dot_to_T(  lpos, gdpos   );
-		//rotMat.dot_to(  lpos, gdpos   );
+		//rotMat.dot_to_T(  lpos, gdpos   );
+		rotMat.dot_to(  lpos, gdpos   );
 		sforce.set   (( gdpos + pos - gpos0 )*(-k) );
 		apply_force  (  sforce, gdpos );
 		//drawLine( gpos0, gdpos + pos  );

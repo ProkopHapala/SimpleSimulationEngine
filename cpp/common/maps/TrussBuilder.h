@@ -74,14 +74,6 @@ class TrussBuilder{
     std::unordered_map<int_fast64_t,int_fast32_t> nodeIs;
     std::vector<GridNode>                         nodes;
 
-
-    BondType default_BondType = {
-        0,          // id
-        7.8,        // density
-        1e+5,1e+5,  // stiffness
-        1e+9,1e+9   // strength
-    };
-
     // ======== function declarations
 
     //GridNode& insertNode( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );
@@ -89,9 +81,13 @@ class TrussBuilder{
     int_fast32_t getNodeIndex( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );
     bool         removeNode  ( int_fast16_t ix, int_fast16_t iy, int_fast16_t iz );
 
-    Bond& insertBond( int_fast32_t i, int_fast32_t j, double l0, const BondType& type );
-    Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, double l0, const BondType& type );
-    Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1,            const BondType& type );
+    //Bond& insertBond( int_fast32_t i, int_fast32_t j, double l0, const BondType& type );
+    //Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, double l0, const BondType& type );
+    //Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1,            const BondType& type );
+
+    Bond& insertBond( int_fast32_t i, int_fast32_t j, double l0, BondType* type );
+    Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, double l0, BondType* type );
+    Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1,            BondType* type );
 
     int_fast64_t getBondKey( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 );
     bool         removeBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 );

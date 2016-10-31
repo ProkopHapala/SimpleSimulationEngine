@@ -24,7 +24,7 @@ class WallType{
     public:
 	int shape;
 	double mass;
-    BondType edge,diag;
+    BondType *edge,*diag;
 };
 
 class Block{
@@ -110,7 +110,7 @@ class BlockHouseWorld{
     // =========== function declaration
 
     Node& insertNode( const Block& block, const uint8_t * corner );
-    Bond& insertBond( uint16_t i, uint16_t j, double l0, const BondType& type );
+    Bond& insertBond( uint16_t i, uint16_t j, double l0, BondType* type );
     void  block2truss( const Block& block );
     void  blocks2truss( );
 

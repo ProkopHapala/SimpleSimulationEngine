@@ -135,7 +135,7 @@ void TestAppTrussBuilder::draw   (){
 
     if(running){
         truss.dt   = 0.005;
-        truss.damp = 1.0 - 0.01;
+        truss.damp = 0.5;
         for( int i=0; i<perFrame; i++ ){
              truss.step( );
         }
@@ -173,7 +173,7 @@ void TestAppTrussBuilder::op_enter(){
     if( startSet ){
         //printf( " insert \n" );
         if( (ix!=oix) || (iy!=oiy) || (iz!=oiz) ){
-            builder.insertBond( oix, oiy, oiz, ix, iy, iz, builder.bondTypes[iType] );
+            builder.insertBond( oix, oiy, oiz, ix, iy, iz, &builder.bondTypes[iType] );
         }
         startSet=false;
     }else{
