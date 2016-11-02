@@ -498,5 +498,9 @@ using Quat4f = Quat4TYPE< float>;
 using Quat4d = Quat4TYPE< double >;
 
 
+inline void convert( const Quat4f& from, Quat4d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z;        to.w=from.w;        };
+inline void convert( const Quat4d& from, Quat4f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; to.w=(float)from.w; };
+
+
 #endif
 

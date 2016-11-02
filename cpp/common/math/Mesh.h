@@ -128,6 +128,32 @@ class Mesh{
         return i;
     };
 
+    void polygonsToTriangles(){
+        for(int i=0; i<polygons.size(); i++){
+            Polygon * pl;
+            Vec3i tri;
+            tri.a = pl->ipoints[i];
+            tri.b = pl->ipoints[i];
+            for(int i=2; i<pl->ipoints.size(); i++){
+                tri.c = pl->ipoints[i];
+                triangles.push_back(tri);
+            }
+        }
+    }
+
+    void tris(){
+        for(int i=0; i<polygons.size(); i++){
+            Polygon * pl;
+            Vec3i tri;
+            tri.a = pl->ipoints[i];
+            tri.b = pl->ipoints[i];
+            for(int i=2; i<pl->ipoints.size(); i++){
+                tri.c = pl->ipoints[i];
+                triangles.push_back(tri);
+            }
+        }
+    }
+
 int pickVertex( const Vec3d &ray0, const Vec3d &hRay ){
     double r2min=1e+300;
     int imin=0;
