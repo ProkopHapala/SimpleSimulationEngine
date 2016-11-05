@@ -59,10 +59,11 @@ void ScreenSDL2OGL3::setupDefferedRender( ){
     };
 
     canvasQuad = new GLObject( );
+    /*
 	canvasQuad->nVert    = 4;
-	canvasQuad->vertDim  = 2;
 	canvasQuad->vertexes = quadVerts;
 	canvasQuad->init();
+	*/
 
     canvasShader=new Shader();
 	canvasShader->init( "shaders/plain_vert.c", "shaders/SSAO_frag.c" );

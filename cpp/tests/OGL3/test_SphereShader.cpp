@@ -67,11 +67,11 @@ void loop( int niters );
 
 void setup(){
 
-	object1 = new GLObject( );
+    object1 = new GLObject( );
 	object1->nVert   = 4;
-	object1->vertDim = 2;
-	object1->vertexes = &vertexes[0][0];
+    object1->buffs[0].setup(0,2,GL_FALSE,&vertexes[0][0],'v'); // vertexes
 	object1->init();
+
 
 	shader1=new Shader();
 	//shader1->init( "shaders/plain_vert.c", "shaders/sphere_frag.c" );

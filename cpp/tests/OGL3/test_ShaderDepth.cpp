@@ -29,14 +29,9 @@
 Shader   * shader1;
 GLObject * object1;
 
-
 Mesh mesh;
 
-
-
 GLuint vao;     // vertex array object
-
-
 
 /*
 const int nVert = 3;
@@ -142,21 +137,28 @@ GLfloat colors[nVert*3] = {
     0.982f,  0.099f,  0.879f
 };
 
-
-GLfloat camPos[3] = { 0.0f,  0.0f,  -10.0f };
-GLfloat camMat[9] = {
-  1.0f,  0.0f,  0.0f,
-  0.0f,  1.0f,  0.0f,
-  0.0f,  0.0f,  1.0f
-};
 GLfloat modelPos[3] = { 0.0f,  0.0f,  -30.0f };
 GLfloat modelMat[9] = {
   1.0f,  0.0f,  0.0f,
   0.0f,  1.0f,  0.0f,
   0.0f,  0.0f,  1.0f
 };
-GLfloat light_dir[3] = { 1.0f,  1.0f,  1.0f };
 
+GLfloat camRot[9] = {
+  1.0f,  0.0f,  0.0f,
+  0.0f,  1.0f,  0.0f,
+  0.0f,  0.0f,  1.0f
+};
+GLfloat cam_pos      [3] = { 0.0f,  0.0f,  -10.0f };
+GLfloat light_pos    [3] = { 1.0f,  1.0f,   -1.0f };
+
+GLfloat lightColor   [3] = { 1.0f,  0.9f,   0.8f  };
+//GLfloat lightColor   [3] = { 1.0f,  1.0f,   1.0f  };
+GLfloat diffuseColor [3] = { 1.0f,  1.0f,   1.0f  };
+//GLfloat diffuseColor [3] = { 0.0f,  0.0f,   0.0f  };
+GLfloat ambientColor [3] = { 0.2f,  0.2f,   0.3f  };
+GLfloat specularColor[3] = { 1.0f,  1.0f,   1.0f  };
+//GLfloat specularColor[3] = { 0.0f,  0.0f,   0.0f  };
 
 
 int WIDTH  = 800;
@@ -194,26 +196,33 @@ void init();
 void draw();
 void loop( int niters );
 
+
+int render_type = 0;
+
 void setup(){
 
-	object1 = new GLObject( );
-	object1->nVert    = nVert;
-	object1->vertDim  = 3;
-	object1->clrDim   = 3;
-	object1->vertexes = &vertexes[0];
-	object1->colors   = &vertexes[0];
-	//object1->normals  = &normals [0];
-	//object1->vertexes = &colors[0];
-	//object1->colors   = &colors  [0];
-	object1->init();
-
-	shader1=new Shader();
-	//shader1->init( "shaders/plain_vert.c", "shaders/sphere_frag.c" );
-	shader1->init( "shaders/minimal3D_vert.c", "shaders/minimal3D_frag.c" );
-	//shader1->init( "shaders/default_vert.c", "shaders/defaut_frag.c" );
-	glUseProgram(shader1->shaderprogram);
-
-	mesh.fromFileOBJ("common_resources/turret.obj");
+    if ( render_type == 0      ){
+        // --- vertex const color
+        shader1=new Shader();
+        shader1->init( "shaders/basicColor3D_vert.c", "shaders/basicColor3D_frag.c" );
+        glUseProgram(shader1->shaderprogram);
+        object1 = new GLObject( );
+        object1->nVert    = nVert;
+        object1->buffs[0].setup(0,3,GL_FALSE,vertexes,'v'); // vertexes
+        object1->buffs[1].setup(1,3,GL_FALSE,vertexes,'c'); // colors
+        object1->init();
+    }else if ( render_type == 1 ){
+        // --- shading
+        shader1=new Shader();
+        shader1->init( "shaders/basicShading3D_vert.c", "shaders/basicShading3D_frag.c" );
+        glUseProgram(shader1->shaderprogram);
+        object1 = new GLObject( );
+        object1->nVert    = nVert;
+        object1->buffs[0].setup(0,3,GL_FALSE,vertexes,'v'); // vertexes
+        object1->buffs[1].setup(1,3,GL_FALSE,vertexes,'n'); // normals
+        object1->init();
+    };
+	//mesh.fromFileOBJ("common_resources/turret.obj");
 
 	qCamera.setOne();
 }
@@ -225,22 +234,33 @@ void draw(){
     glEnable( GL_DEPTH_TEST );
     glDepthFunc( GL_LESS );
 
+    float camMat[16];
     getPerspectiveMatrix( -WIDTH, WIDTH, -HEIGHT, HEIGHT, 1.0, 10.0, camMat );
 
     //Quat4f qCamera_; convert(qCamera,qCamera_);
     Mat3f mouseMat; qCamera.toMatrix(mouseMat);
-    printf( " (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x,qCamera.y,qCamera.z,qCamera.w );
     //printf( " (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x,qCamera.y,qCamera.z,qCamera.w );
-    printf( "mouseMat (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", mouseMat.ax, mouseMat.ay, mouseMat.az,  mouseMat.bx, mouseMat.by, mouseMat.bz,   mouseMat.cx, mouseMat.cy, mouseMat.cz );
+    //printf( " (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x,qCamera.y,qCamera.z,qCamera.w );
+    //printf( "mouseMat (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", mouseMat.ax, mouseMat.ay, mouseMat.az,  mouseMat.bx, mouseMat.by, mouseMat.bz,   mouseMat.cx, mouseMat.cy, mouseMat.cz );
 
     GLuint uloc;
-    //uloc = glGetUniformLocation( shader1->shaderprogram, "MVC"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, MVC );
     uloc = glGetUniformLocation( shader1->shaderprogram, "modelPos" ); glUniform3fv      (uloc, 1, modelPos );
     //uloc = glGetUniformLocation( shader1->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, modelMat );
     uloc = glGetUniformLocation( shader1->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&mouseMat );
     uloc = glGetUniformLocation( shader1->shaderprogram, "camMat"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, camMat   );
 
-    uloc = glGetUniformLocation( shader1->shaderprogram, "light_dir"); glUniform3fv(uloc, 1, light_dir  );
+    // shading
+    if ( render_type == 1 ){
+        uloc = glGetUniformLocation( shader1->shaderprogram, "cam_pos"       ); glUniform3fv      (uloc, 1, cam_pos      );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "light_pos"     ); glUniform3fv      (uloc, 1, light_pos     );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "lightColor"    ); glUniform3fv      (uloc, 1, lightColor    );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "diffuseColor"  ); glUniform3fv      (uloc, 1, diffuseColor  );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "ambientColor"  ); glUniform3fv      (uloc, 1, ambientColor  );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "specularColor" ); glUniform3fv      (uloc, 1, specularColor );
+    };
+
+    //uloc = glGetUniformLocation( shader1->shaderprogram, "light_dir"); glUniform3fv(uloc, 1, light_dir  );
+
     object1->draw();
 
     SDL_GL_SwapWindow(window);
@@ -279,8 +299,9 @@ void inputHanding(){
     float mouseRotSpeed = 0.01;
     if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
         Quat4f q; q.fromTrackball( 0, 0, -dmx*mouseRotSpeed, dmy*mouseRotSpeed );
-        printf( " %i %i  (%3.3f,%3.3f,%3.3f,%3.3f) \n", dmx,dmy, q.x,q.y,q.z,q.w );
-        qCamera.qmul_T( q );
+        //printf( " %i %i  (%3.3f,%3.3f,%3.3f,%3.3f) \n", dmx,dmy, q.x,q.y,q.z,q.w );
+        //qCamera.qmul_T( q );
+        qCamera.qmul( q );
         //qCamera.normalize();
     }
 }

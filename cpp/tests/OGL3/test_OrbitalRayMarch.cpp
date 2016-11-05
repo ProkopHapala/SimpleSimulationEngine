@@ -58,10 +58,9 @@ void loop( int niters );
 
 void setup(){
 
-	object1 = new GLObject( );
+    object1 = new GLObject( );
 	object1->nVert   = 4;
-	object1->vertDim = 2;
-	object1->vertexes = &vertexes[0][0];
+    object1->buffs[0].setup(0,2,GL_FALSE,&vertexes[0][0],'v'); // vertexes
 	object1->init();
 
 	shader1=new Shader();
@@ -89,7 +88,7 @@ void setup(){
 		coefs[ii+3 ] = randf( -1.0,-0.01 );
 */
 
-		printf( "atom %i %i (%3.3f,%3.3f,%3.3f) %3.3f  (%3.3f,%3.3f,%3.3f,%3.3f) \n", i, ii, atoms[ii], atoms[ii+1], atoms[ii+2], atoms[ii+3],    coefs[ii], coefs[ii+1], coefs[ii+2], coefs[ii+3] ); 
+		printf( "atom %i %i (%3.3f,%3.3f,%3.3f) %3.3f  (%3.3f,%3.3f,%3.3f,%3.3f) \n", i, ii, atoms[ii], atoms[ii+1], atoms[ii+2], atoms[ii+3],    coefs[ii], coefs[ii+1], coefs[ii+2], coefs[ii+3] );
 	}
 
 }
