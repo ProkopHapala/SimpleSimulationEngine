@@ -70,6 +70,7 @@ void loop( int niters );
 void setup(){
 
     object1 = new GLObject( );
+    object1->draw_mode = GL_TRIANGLE_STRIP;
 	object1->nVert   = 4;
     object1->buffs[0].setup(0,2,GL_FALSE,&vertexes[0][0],'v'); // vertexes
 	object1->init();

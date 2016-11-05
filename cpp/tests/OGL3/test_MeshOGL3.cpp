@@ -25,34 +25,11 @@
 #include "GLObject.h"
 #include "Shader.h"
 
-
+GLuint vao;
 Shader   * shader1;
 GLObject * object1;
 
 Mesh mesh;
-
-GLuint vao;     // vertex array object
-
-/*
-const int nVert = 3;
-GLfloat vertexes[nVert*3] = {
-  1.0f,  0.0f,  0.0f,
-  0.0f,  1.0f,  0.0f,
-  0.0f,  0.0f,  1.0f,
-};
-GLfloat colors[nVert*3] = {
-  1.0f,  0.0f,  0.0f,
-  0.0f,  1.0f,  0.0f,
-  0.0f,  0.0f,  1.0f,
-};
-
-GLfloat UVs[nVert*2] = {
-  0.0f,  0.0f,
-  1.0f,  0.0f,
-  0.0f,  1.0f
-};
-*/
-
 
 //http://www.opengl-tutorial.org/beginners-tutorials/tutorial-4-a-colored-cube/
 // Our vertices. Three consecutive floats give a 3D vertex; Three consecutive vertices give a triangle.
@@ -201,26 +178,44 @@ int render_type = 1;
 
 void setup(){
 
+
+    mesh.fromFileOBJ( "common_resources/turret.obj" );
+    mesh.polygonsToTriangles();
+    mesh.tris2normals(true);
+    object1 = new GLObject( );
+    object1->nVert    = mesh.points.size();
+    //object1->nInd     = mesh.triangles.size();
+
+    //object1->setIndexes( 16, (int*)&mesh.triangles[0] );
+    object1->setIndexes( mesh.triangles.size()*3, (int*)&mesh.triangles[0] );
+    printf( "nVert %i nInd %i \n", object1->nVert, object1->nInd);
+    object1->buffs[0].setup(0,3,GL_FALSE,(double*)&(mesh.points [0]), object1->nVert, 'v'); // vertexes
+    object1->buffs[1].setup(1,3,GL_FALSE,(double*)&(mesh.normals[0]), object1->nVert, 'n'); // normals
+    //object1->indexes .setup(2,3,GL_FALSE,(void*  )&(mesh.triangles[0]), 'i'); // indexes
+    //object1->index_cbuff = (GLuint *)&mesh.triangles[0];
+    //object1->nVert = 5;
+
+
+    /*
+    object1 = new GLObject( );
+    object1->nVert    = nVert;
+    object1->buffs[0].setup(0,3,GL_FALSE,vertexes,'v'); // vertexes
+    object1->buffs[1].setup(1,3,GL_FALSE,vertexes,'c'); // colors
+    object1->init();
+    */
+
+    object1->init();
+
     if ( render_type == 0      ){
         // --- vertex const color
         shader1=new Shader();
         shader1->init( "shaders/basicColor3D_vert.c", "shaders/basicColor3D_frag.c" );
         glUseProgram(shader1->shaderprogram);
-        object1 = new GLObject( );
-        object1->nVert    = nVert;
-        object1->buffs[0].setup(0,3,GL_FALSE,vertexes,'v'); // vertexes
-        object1->buffs[1].setup(1,3,GL_FALSE,vertexes,'c'); // colors
-        object1->init();
     }else if ( render_type == 1 ){
         // --- shading
         shader1=new Shader();
         shader1->init( "shaders/basicShading3D_vert.c", "shaders/basicShading3D_frag.c" );
         glUseProgram(shader1->shaderprogram);
-        object1 = new GLObject( );
-        object1->nVert    = nVert;
-        object1->buffs[0].setup(0,3,GL_FALSE,vertexes,'v'); // vertexes
-        object1->buffs[1].setup(1,3,GL_FALSE,vertexes,'n'); // normals
-        object1->init();
     };
 	//mesh.fromFileOBJ("common_resources/turret.obj");
 

@@ -6,12 +6,20 @@ void GLObject::init(){
     // vertexes to GPU
 
     for(int i=0; i<nbuffs; i++){
-        if( buffs[i].cbuff == NULL ) continue;
         /*
+        if( buffs[i].cbuff == NULL ) continue;
         glGenBuffers( 1, &buffs[i].vbo );
         glBindBuffer( buffs[i].id, buffs[i].vbo );
         glBufferData( buffs[i].target, nVert*buffs[i].dim * sizeof(GLfloat), buffs[i].cbuff, buffs[i].usage );
         */
+        if( index_cbuff  ) {
+            //indexes.target=GL_ELEMENT_ARRAY_BUFFER;
+            //indexes.dtype=GL_UNSIGNED_INT;
+            //buffs[i].toGPU( nInd );
+            glGenBuffers(1, &index_vbo);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vbo );
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, nInd * sizeof(unsigned int), index_cbuff, GL_STATIC_DRAW);
+        }
         if( buffs[i].cbuff ) buffs[i].toGPU( nVert );
     }
 
@@ -36,7 +44,13 @@ void GLObject::draw_default(){
         glVertexAttribPointer( buffs[i].id, buffs[i].dim, GL_FLOAT, GL_FALSE, 0, 0 );
         */
     }
-    glDrawArrays( draw_mode, 0, nVert);
+    if(index_vbo){
+        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexes.vbo );
+        glBindBuffer  (GL_ELEMENT_ARRAY_BUFFER, index_vbo );
+        glDrawElements( GL_TRIANGLES, nInd,  GL_UNSIGNED_INT, (void*)0 );
+    }else{
+        glDrawArrays( draw_mode, 0, nVert);
+    }
     for(int i=0; i<nbuffs; i++){ if(buffs[i].vbo)glDisableVertexAttribArray(buffs[i].id);  }
 
 /*

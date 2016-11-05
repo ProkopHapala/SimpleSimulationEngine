@@ -73,13 +73,7 @@ class Mesh{
 
 
 
-
-
-
-
-
-
-
+    // ========== Implementations
 
 
 
@@ -89,7 +83,7 @@ class Mesh{
         //myfile << "Writing this to a file.\n";
         std::string line,word;
         //std::stringstream ss;
-
+        if (!infile.is_open()) { std::cout << "cannot open "<<fname<<"\n"; }
         int npoints0   = points  .size();
         int npolygons0 = polygons.size();
         int i=0;
@@ -130,27 +124,35 @@ class Mesh{
 
     void polygonsToTriangles(){
         for(int i=0; i<polygons.size(); i++){
-            Polygon * pl;
+            Polygon * pl = polygons[i];
             Vec3i tri;
-            tri.a = pl->ipoints[i];
-            tri.b = pl->ipoints[i];
-            for(int i=2; i<pl->ipoints.size(); i++){
-                tri.c = pl->ipoints[i];
+            tri.a = pl->ipoints[0];
+            tri.b = pl->ipoints[1];
+            for(int j=2; j<pl->ipoints.size(); j++){
+                tri.c = pl->ipoints[j];
+                //printf( "%i %i (%i,%i,%i)\n", i, j, tri.a,tri.b,tri.c );
                 triangles.push_back(tri);
+                tri.b=tri.c;
             }
         }
     }
 
-    void tris(){
-        for(int i=0; i<polygons.size(); i++){
-            Polygon * pl;
-            Vec3i tri;
-            tri.a = pl->ipoints[i];
-            tri.b = pl->ipoints[i];
-            for(int i=2; i<pl->ipoints.size(); i++){
-                tri.c = pl->ipoints[i];
-                triangles.push_back(tri);
-            }
+    void tris2normals( bool normalize ){
+        //normals.erase();
+        normals.resize(points.size());
+        for( Vec3i tri : triangles ){
+            Vec3d a,b,c;
+            a = points[tri.a];
+            b.set_sub(  points[tri.b], a );
+            c.set_sub(  points[tri.c], a );
+            a.set_cross(b,c);
+            a.normalize();
+            normals[tri.a].add(a);
+            normals[tri.b].add(a);
+            normals[tri.c].add(a);
+        };
+        if(normalize){
+            for(int i=0; i<normals.size(); i++){ normals[i].normalize(); }
         }
     }
 

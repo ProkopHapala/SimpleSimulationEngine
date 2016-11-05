@@ -10,6 +10,9 @@ target_link_libraries( test_SphereShader ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW
 add_executable       ( test_ShaderDepth test_ShaderDepth.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( test_ShaderDepth ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_MeshOGL3 test_MeshOGL3.cpp $<TARGET_OBJECTS:SDL2OGL3> )
+target_link_libraries( test_MeshOGL3 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_OrbitalRayMarch test_OrbitalRayMarch.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( test_OrbitalRayMarch ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
@@ -24,11 +27,14 @@ add_executable       ( test_ScreenOGL3 test_ScreenOGL3.cpp $<TARGET_OBJECTS:SDL2
 target_link_libraries( test_ScreenOGL3 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} ${_LIBRARY} )
 
 add_custom_command(
-    TARGET ${PROJECT_NAME} test_DiffractShader test_SphereShader test_OrbitalRayMarch test_Texture test_SSAO test_ScreenOGL3
-    #COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resource
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders
+    TARGET ${PROJECT_NAME} test_DiffractShader test_SphereShader test_OrbitalRayMarch test_Texture test_SSAO test_ScreenOGL3 test_MeshOGL3
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
 )
 
+add_custom_command(
+    TARGET ${PROJECT_NAME} test_DiffractShader test_SphereShader test_OrbitalRayMarch test_Texture test_SSAO test_ScreenOGL3 test_MeshOGL3
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders
+)
 
 # instead do softling manually
 #file( COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION ${CMAKE_CURRENT_BINARY_DIR} )

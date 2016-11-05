@@ -46,13 +46,32 @@ TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id
 
 
     mesh.fromFileOBJ( "common_resources/turret.obj" );
+    mesh.polygonsToTriangles();
+    mesh.tris2normals(true);
     printf("initialization DONE !");
 
     mesh.rendered_shape = glGenLists(1);
     glNewList( mesh.rendered_shape , GL_COMPILE );
         glEnable( GL_LIGHTING );
         glColor3f( 0.8f, 0.8f, 0.8f );
+        /*
         Draw3D::drawMesh( mesh );
+        glColor3f(0.0f,0.0f,0.9f);
+        for(int i=0; i<mesh.points.size(); i++){
+            Draw3D::drawVecInPos( mesh.normals[i], mesh.points[i] );
+        }
+        */
+        glBegin(GL_TRIANGLES);
+        for( Vec3i tri : mesh.triangles ){
+            Vec3f p,n;
+            convert( mesh.points[tri.a], p ); convert( mesh.normals[tri.a], n ); glNormal3f( n.x, n.y, n.z ); glVertex3f( p.x, p.y, p.z );
+            convert( mesh.points[tri.b], p ); convert( mesh.normals[tri.b], n ); glNormal3f( n.x, n.y, n.z ); glVertex3f( p.x, p.y, p.z );
+            convert( mesh.points[tri.c], p ); convert( mesh.normals[tri.c], n ); glNormal3f( n.x, n.y, n.z ); glVertex3f( p.x, p.y, p.z );
+        };
+        for(int i=0; i<mesh.points.size(); i++){
+            Draw3D::drawVecInPos( mesh.normals[i], mesh.points[i] );
+        }
+        glEnd();
     glEndList();
 
     // TO DO : convex hull
@@ -143,6 +162,11 @@ void TestAppMesh::eventHandling ( const SDL_Event& event  ){
                             glEnable( GL_LIGHTING );
                             glColor3f( 0.8f, 0.8f, 0.8f );
                             Draw3D::drawMesh( mesh );
+                            mesh.tris2normals(true);
+                            glColor3f(0.0f,0.0f,0.9f);
+                            for(int i=0; i<mesh.points.size(); i++){
+                                Draw3D::drawVecInPos( mesh.normals[i], mesh.points[i] );
+                            }
                         glEndList();
                     }
                     dragging=false;
