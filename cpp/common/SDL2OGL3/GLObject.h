@@ -75,6 +75,12 @@ class GLObject{
 	virtual void draw   ();
 	virtual void destroy();
 
+	void draw_default();
+    void preDraw();
+	void afterDraw();
+	void draw_instance();
+
+
 	inline void setIndexes( int nInd_, int * cbuff_ ){
         nInd = nInd_;
         //int nd=nInd*3;
@@ -85,7 +91,7 @@ class GLObject{
         }
     }
 
-	void draw_default();
+
 
 };
 

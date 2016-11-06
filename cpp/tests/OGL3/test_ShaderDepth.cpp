@@ -1,11 +1,5 @@
 
-// read this tutorial
-// http://www.opengl-tutorial.org/beginners-tutorials/tutorial-4-a-colored-cube/
-
-// http://gamedev.stackexchange.com/questions/93055/getting-the-real-fragment-depth-in-glsl
-
-// TODO see later vbo indexing to avoid duplicating triangles
-// http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-9-vbo-indexing/
+// http://outerra.blogspot.nl/2012/11/maximizing-depth-buffer-range-and.html
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,9 +15,10 @@
 #include "quaternion.h"
 
 #include "Solids.h"
-#include "GL3Utils.h"
+#include "Noise.h"
 #include "Mesh.h"
 
+#include "GL3Utils.h"
 #include "GLObject.h"
 #include "Shader.h"
 
@@ -31,11 +26,16 @@
 Shader   * shader1;
 GLObject * object1;
 
+Shader   * shader2;
+GLObject * object2;
+
 Mesh mesh;
 
 GLuint vao;     // vertex array object
+GLuint textureID;
+GLuint uloc;
 
-GLfloat modelPos[3] = { 0.0f,  0.0f,  -30.0f };
+GLfloat modelPos[3] = { 0.0f,  0.0f,  -5.0f };
 GLfloat modelMat[9] = {
   1.0f,  0.0f,  0.0f,
   0.0f,  1.0f,  0.0f,
@@ -60,6 +60,21 @@ GLfloat ambientColor [3] = { 0.2f,  0.2f,   0.3f  };
 GLfloat specularColor[3] = { 1.0f,  1.0f,   1.0f  };
 //GLfloat specularColor[3] = { 0.0f,  0.0f,   0.0f  };
 
+
+float resolution[2] = {800,800};
+
+float terrain_0[2]   = {128.0,128.0};
+float terrain_size[2]= {256.0,256.0};
+
+
+int ninstancs = 10;
+GLfloat * instance_points;
+
+GLfloat QUAD_verts[4][2] = {
+	{  -0.9f,  -0.9f  },
+	{  -0.9f,   0.9f  },
+	{   0.9f,  -0.9f  },
+	{   0.9f,   0.9f  } };
 
 int WIDTH  = 800;
 int HEIGHT = 800;
@@ -95,7 +110,8 @@ void draw();
 void loop( int niters );
 
 
-int render_type = 1;
+int  render_type  = 1;
+bool terrain_mode = true;
 
 void setup(){
 
@@ -104,8 +120,6 @@ void setup(){
         // --- vertex const color
         shader1=new Shader();
         shader1->init( "shaders/basicColor3D_vert.c", "shaders/basicColor3D_frag.c" );
-        glUseProgram(shader1->shaderprogram);
-
     }else if ( render_type == 1 ){
         // --- shading
         shader1=new Shader();
@@ -179,6 +193,68 @@ void setup(){
     object1->buffs[1].setup(1,3,GL_FALSE,normals,'n'); // normals
     object1->init();
 
+        // shading
+    if ( render_type == 1 ){
+        uloc = glGetUniformLocation( shader1->shaderprogram, "cam_pos"       ); glUniform3fv      (uloc, 1, cam_pos      );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "light_pos"     ); glUniform3fv      (uloc, 1, light_pos     );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "lightColor"    ); glUniform3fv      (uloc, 1, lightColor    );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "diffuseColor"  ); glUniform3fv      (uloc, 1, diffuseColor  );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "ambientColor"  ); glUniform3fv      (uloc, 1, ambientColor  );
+        uloc = glGetUniformLocation( shader1->shaderprogram, "specularColor" ); glUniform3fv      (uloc, 1, specularColor );
+    };
+
+    ninstancs = 10;
+    instance_points = new GLfloat[3*ninstancs];
+    for (int i=0; i<ninstancs; i++){
+        int i3 = 3*i;
+        instance_points[i3+0] = randf(-5.0,5.0);
+        instance_points[i3+1] = randf(-5.0,5.0);
+        instance_points[i3+2] = randf(-50.0,-1000.0);
+    }
+
+    // ------------- Terrain
+	shader2=new Shader();
+	if  ( terrain_mode ){ shader2->init( "shaders/terrain_vert.c", "shaders/terrain_frag.c" ); }
+    else                {   shader2->init( "shaders/plain_vert.c", "shaders/texture_frag.c" ); };
+
+    object2 = new GLObject( );
+    object2->draw_mode = GL_TRIANGLE_STRIP;
+	object2->nVert   = 4;
+    object2->buffs[0].setup(0,2,GL_FALSE,&QUAD_verts[0],'v');
+	object2->init();
+    // ------------- texture
+    const int imgW = 256;
+    const int imgH = 256;
+    unsigned int imgData [imgW*imgH];
+    Vec2d pos,rot,dpos;
+    rot.fromAngle( 45454*0.1 );
+    for( int iy=0; iy<imgH; iy++ ){
+        for( int ix=0; ix<imgW; ix++ ){
+            /*
+            float r = sin(ix*0.16);
+            float g = sin(iy*-0.31);
+            float b = sin((ix+iy)*0.1);
+            r*=g*b; g=r; b=r;
+            r+=1.0f; g+=1.0f; b+=1.0f;
+            */
+            //8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0}
+            //int n, double scale,  double hscale,  double fdown, double strength, int seed, const Vec2d& pos0
+            pos.set(ix*5,iy*5);
+            Noise::warpNoise3R( pos, rot, 0.4, 0.4, 6, dpos );
+            float r = 1-(dpos.x * dpos.y)*2+0.5;
+            //float r = 0.3*sin(ix*0.1)*cos(iy*0.1) + 0.2*cos(ix*0.3)*sin(iy*0.3); r+=0.5;
+            float g=r; float b=r;
+            imgData[ iy*imgW + ix ] =  ((int)(255*r) <<16) | ((int)(255*g)<<8) | ((int)(255*b));
+        }
+    }
+    glGenTextures  (0, &textureID);    // Create one OpenGL texture
+    glBindTexture  (GL_TEXTURE_2D, textureID); // "Bind" the newly created texture : all future texture functions will modify this texture
+    glTexImage2D   (GL_TEXTURE_2D, 0,GL_RGBA, imgW, imgH, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);   // Give the image to OpenGL
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+
+
 	qCamera.setOne();
 }
 
@@ -190,7 +266,8 @@ void draw(){
     glDepthFunc( GL_LESS );
 
     float camMat[16];
-    getPerspectiveMatrix( -WIDTH, WIDTH, -HEIGHT, HEIGHT, 1.0, 10.0, camMat );
+    //getPerspectiveMatrix( -WIDTH, WIDTH, -HEIGHT, HEIGHT, 1.0, 10.0, camMat );
+    getPerspectiveMatrix( -WIDTH, WIDTH, -HEIGHT, HEIGHT, 1.0, 20.0, camMat );
 
     //Quat4f qCamera_; convert(qCamera,qCamera_);
     Mat3f mouseMat; qCamera.toMatrix(mouseMat);
@@ -198,26 +275,58 @@ void draw(){
     //printf( " (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x,qCamera.y,qCamera.z,qCamera.w );
     //printf( "mouseMat (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", mouseMat.ax, mouseMat.ay, mouseMat.az,  mouseMat.bx, mouseMat.by, mouseMat.bz,   mouseMat.cx, mouseMat.cy, mouseMat.cz );
 
-    GLuint uloc;
-    uloc = glGetUniformLocation( shader1->shaderprogram, "modelPos" ); glUniform3fv      (uloc, 1, modelPos );
-    //uloc = glGetUniformLocation( shader1->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, modelMat );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&mouseMat );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "camMat"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, camMat   );
+    // ============= Terrain
+    glUseProgram(shader2->shaderprogram);
 
-    // shading
-    if ( render_type == 1 ){
-        uloc = glGetUniformLocation( shader1->shaderprogram, "cam_pos"       ); glUniform3fv      (uloc, 1, cam_pos      );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "light_pos"     ); glUniform3fv      (uloc, 1, light_pos     );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "lightColor"    ); glUniform3fv      (uloc, 1, lightColor    );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "diffuseColor"  ); glUniform3fv      (uloc, 1, diffuseColor  );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "ambientColor"  ); glUniform3fv      (uloc, 1, ambientColor  );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "specularColor" ); glUniform3fv      (uloc, 1, specularColor );
+    glActiveTexture(GL_TEXTURE0 );
+    glBindTexture(GL_TEXTURE_2D, textureID );
+    float depth[] = {0.99999};
+    uloc = glGetUniformLocation( shader2->shaderprogram, "depth" );	        glUniform1fv(uloc, 1, depth  );
+    uloc = glGetUniformLocation( shader2->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, resolution  );
+    uloc = glGetUniformLocation( shader2->shaderprogram, "texture1");       glUniform1i (uloc, 0);
+
+    if( terrain_mode ){
+        uloc = glGetUniformLocation( shader2->shaderprogram, "camMat"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, camMat   );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&mouseMat );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "modelPos" ); glUniform3fv      (uloc, 1, modelPos );
+
+        float h0     = -50.0;
+        float hrange =  49.0;
+        //float hmax   = h0 + hrange;
+        float  dhmax  =  1.0;
+        float  dtmin  =  1.0;
+        GLint  maxRayIter = 200;
+
+        uloc = glGetUniformLocation( shader2->shaderprogram, "h0"        ); glUniform1fv (uloc, 1, &h0         );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "hrange"    ); glUniform1fv (uloc, 1, &hrange     );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "dhmax"     ); glUniform1fv (uloc, 1, &dhmax      );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "dtmin"     ); glUniform1fv (uloc, 1, &dtmin      );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "maxiter"   ); glUniform1i  (uloc,     maxRayIter );
+
+        uloc = glGetUniformLocation( shader2->shaderprogram, "size"      ); glUniform2fv(uloc, 1, terrain_size );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "tx0"       ); glUniform2fv(uloc, 1, terrain_0    );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "cam_pos"   ); glUniform3fv(uloc, 1,  cam_pos     );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "light_pos" ); glUniform3fv(uloc, 1, light_pos    );
     };
 
-    //uloc = glGetUniformLocation( shader1->shaderprogram, "light_dir"); glUniform3fv(uloc, 1, light_dir  );
+    object2->draw();
 
-    object1->draw();
 
+    // ============= Objects
+    glUseProgram(shader1->shaderprogram);
+
+    uloc = glGetUniformLocation( shader1->shaderprogram, "camMat"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, camMat   );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&mouseMat );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "modelPos" ); // glUniform3fv      (uloc, 1, modelPos );
+
+    //object1->draw();
+    object1->preDraw();
+    for(int i=0; i<ninstancs; i++){
+        glUniform3fv( uloc, 1, instance_points+i*3 );
+        //glDrawArrays( object1->draw_mode, 0, object1->nVert);
+        object1->draw_instance();
+    }
+    object1->afterDraw();
     SDL_GL_SwapWindow(window);
 
 }
@@ -229,18 +338,18 @@ void draw(){
 
 // FUNCTION ======	inputHanding
 void inputHanding(){
-    float posstep = 0.1;
+    float posstep = 2.0;
 	SDL_Event event;
 	while(SDL_PollEvent(&event)){
 		if( event.type == SDL_KEYDOWN ){
             switch( event.key.keysym.sym ){
                 case SDLK_ESCAPE: quit(); break;
-                case SDLK_w: modelPos[1] +=posstep; break;
-                case SDLK_s: modelPos[1] -=posstep; break;
-                case SDLK_a: modelPos[0] +=posstep; break;
-                case SDLK_d: modelPos[0] -=posstep; break;
-                case SDLK_q: modelPos[2] +=posstep*10; break;
-                case SDLK_e: modelPos[2] -=posstep*10; break;
+                case SDLK_w: terrain_0[1] +=posstep; break;
+                case SDLK_s: terrain_0[1] -=posstep; break;
+                case SDLK_a: terrain_0[0] -=posstep; break;
+                case SDLK_d: terrain_0[0] +=posstep; break;
+                case SDLK_KP_PLUS:  terrain_size[0] *=1.1; terrain_size[2] *=1.1; break;
+                case SDLK_KP_MINUS: terrain_size[0] /=1.1; terrain_size[2] /=1.1; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
 		}

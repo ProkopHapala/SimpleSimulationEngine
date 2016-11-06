@@ -35,14 +35,28 @@ void GLObject::init(){
     */
 }
 
+void GLObject::preDraw(){
+    for(int i=0; i<nbuffs; i++){ if (buffs[i].vbo ) buffs[i].activate(); }
+}
+
+void GLObject::afterDraw(){
+    for(int i=0; i<nbuffs; i++){ if(buffs[i].vbo)glDisableVertexAttribArray(buffs[i].id);  }
+}
+
+void GLObject::draw_instance(){
+    if(index_vbo){
+        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexes.vbo );
+        glBindBuffer  (GL_ELEMENT_ARRAY_BUFFER, index_vbo );
+        glDrawElements( GL_TRIANGLES, nInd,  GL_UNSIGNED_INT, (void*)0 );
+    }else{
+        glDrawArrays( draw_mode, 0, nVert);
+    }
+}
+
 void GLObject::draw_default(){
+/*
     for(int i=0; i<nbuffs; i++){
         if (buffs[i].vbo ) buffs[i].activate();
-        /*
-        glEnableVertexAttribArray( buffs[i].id );
-        glBindBuffer(GL_ARRAY_BUFFER, buffs[i].vbo );
-        glVertexAttribPointer( buffs[i].id, buffs[i].dim, GL_FLOAT, GL_FALSE, 0, 0 );
-        */
     }
     if(index_vbo){
         //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexes.vbo );
@@ -52,27 +66,10 @@ void GLObject::draw_default(){
         glDrawArrays( draw_mode, 0, nVert);
     }
     for(int i=0; i<nbuffs; i++){ if(buffs[i].vbo)glDisableVertexAttribArray(buffs[i].id);  }
-
-/*
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-    glVertexAttribPointer(0, vertDim, GL_FLOAT, GL_FALSE, 0, 0);
-    if(vbo[1]){
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-        glVertexAttribPointer(1, clrDim, GL_FLOAT, GL_FALSE, 0, 0);
-    }
-    if(vbo[2]){
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-        glVertexAttribPointer(2, clrDim, GL_FLOAT, GL_FALSE, 0, 0);
-    }
-    glDrawArrays( draw_mode, 0, nVert);
-    glDisableVertexAttribArray(0);
-    if(vbo[1])glDisableVertexAttribArray(1);
-    if(vbo[2])glDisableVertexAttribArray(2);
-    //glDisableVertexAttribArray(2);
-    */
+*/
+    preDraw();
+    draw_instance();
+    afterDraw();
 }
 
 void GLObject::draw(  ){

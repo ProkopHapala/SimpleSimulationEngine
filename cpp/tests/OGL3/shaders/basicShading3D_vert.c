@@ -20,6 +20,14 @@ void main(){
 	vec3 position_world = modelPos + modelMat * vertPos_model;
 	gl_Position         = camMat   * vec4( position_world, 1 );
 	fragNormal_world    = modelMat * vertNormal_model;
+
+	// http://outerra.blogspot.nl/2012/11/maximizing-depth-buffer-range-and.html
+	//gl_Position.z = 2.0*log(gl_Position.w/near)/log(far/near) - 1; 
+    //gl_Position.z *= gl_Position.w;
+	//gl_Position.z = 2.0*log(-gl_Position.w)/10.0-1; 
+    //gl_Position.z *= gl_Position.w;
+	//gl_Position.z = -log(gl_Position.z); 
+	gl_Position.z = -2.0*log(gl_Position.w)-1.0;   //gl_Position.z *= -gl_Position.w;
 }
 
 

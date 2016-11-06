@@ -7,7 +7,7 @@ target_link_libraries( test_DiffractShader ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GL
 add_executable       ( test_SphereShader test_SphereShader.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( test_SphereShader ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_ShaderDepth test_ShaderDepth.cpp $<TARGET_OBJECTS:SDL2OGL3> )
+add_executable       ( test_ShaderDepth test_ShaderDepth.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_ShaderDepth ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
 add_executable       ( test_MeshOGL3 test_MeshOGL3.cpp $<TARGET_OBJECTS:SDL2OGL3> )
