@@ -22,6 +22,8 @@
 #include "GLObject.h"
 #include "Shader.h"
 
+#include "testUtils.h"
+
 
 Shader   * shader1;
 GLObject * object1;
@@ -99,6 +101,7 @@ void getPerspectiveMatrix( float xmin, float xmax, float ymin, float ymax, float
 
 // ============= FUNCTIONS
 
+
 int frameCount = 0;
 bool STOP = false;
 
@@ -112,6 +115,10 @@ void loop( int niters );
 
 int  render_type  = 1;
 bool terrain_mode = true;
+
+// speed test
+int delay = 1; int VSync = 0;
+//int delay = 10; int VSync = 1;
 
 void setup(){
 
@@ -189,7 +196,7 @@ void setup(){
 
     object1 = new GLObject( );
     object1->nVert    = nVert;
-    object1->buffs[0].setup(0,3,GL_FALSE,verts,'v'); // vertexes
+    object1->buffs[0].setup(0,3,GL_FALSE,verts,  'v'); // vertexes
     object1->buffs[1].setup(1,3,GL_FALSE,normals,'n'); // normals
     object1->init();
 
@@ -203,13 +210,14 @@ void setup(){
         uloc = glGetUniformLocation( shader1->shaderprogram, "specularColor" ); glUniform3fv      (uloc, 1, specularColor );
     };
 
-    ninstancs = 10;
+    ninstancs = 100; // 30 ms/frame
+    //ninstancs = 10000; // 30 ms/frame
     instance_points = new GLfloat[3*ninstancs];
     for (int i=0; i<ninstancs; i++){
         int i3 = 3*i;
-        instance_points[i3+0] = randf(-5.0,5.0);
-        instance_points[i3+1] = randf(-5.0,5.0);
-        instance_points[i3+2] = randf(-50.0,-1000.0);
+        instance_points[i3+0] = randf(-15.0,15.0);
+        instance_points[i3+1] = randf(-15.0,15.0);
+        instance_points[i3+2] = randf(-60.0,-1000.0);
     }
 
     // ------------- Terrain
@@ -256,14 +264,22 @@ void setup(){
 
 
 	qCamera.setOne();
+
+
+	delay = 1;
 }
 
 void draw(){
+
+    long time_start = getCPUticks();
+
     glClearColor(0.0, 0.0, 1.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 
     glEnable( GL_DEPTH_TEST );
     glDepthFunc( GL_LESS );
+
+    long time_0 = getCPUticks();
 
     float camMat[16];
     //getPerspectiveMatrix( -WIDTH, WIDTH, -HEIGHT, HEIGHT, 1.0, 10.0, camMat );
@@ -293,9 +309,12 @@ void draw(){
         float h0     = -50.0;
         float hrange =  49.0;
         //float hmax   = h0 + hrange;
-        float  dhmax  =  1.0;
-        float  dtmin  =  1.0;
-        GLint  maxRayIter = 200;
+
+        //float  dhmax  =  1.0; float  dtmin  =  1.0;  GLint  maxRayIter = 1;                // off              1.0 ms/frame
+        float  dhmax  =  1.0; float  dtmin  =  1.0;  GLint  maxRayIter = 200;            // compromise        7.6 ms/frame
+        //float  dhmax  =  2.0; float  dtmin  =  0.25; GLint  maxRayIter = 1000;           // quality          15.0 ms/frame
+        //float  dhmax      =  5.0; float  dtmin      =  0.1; GLint  maxRayIter =  2000;   // overkill         33.0 ms/frame
+        //float  dhmax      =  10.0; float  dtmin      =  0.01; GLint  maxRayIter =  5000; // insame      80.0ms/frame
 
         uloc = glGetUniformLocation( shader2->shaderprogram, "h0"        ); glUniform1fv (uloc, 1, &h0         );
         uloc = glGetUniformLocation( shader2->shaderprogram, "hrange"    ); glUniform1fv (uloc, 1, &hrange     );
@@ -311,6 +330,7 @@ void draw(){
 
     object2->draw();
 
+    long time_1 = getCPUticks();
 
     // ============= Objects
     glUseProgram(shader1->shaderprogram);
@@ -327,7 +347,20 @@ void draw(){
         object1->draw_instance();
     }
     object1->afterDraw();
+
+    long time_2 = getCPUticks();
+
     SDL_GL_SwapWindow(window);
+
+    long time_3 = getCPUticks();
+
+
+    double Ttot     = (time_3-time_start)*1e-6;
+    double Tterrain = (time_1-time_0)*1e-6;
+    double Tobject  = (time_2-time_1)*1e-6;
+    double Tswap    = (time_3-time_2)*1e-6;
+
+    printf( "Ttot %3.2f terrain %3.2f objects %3.2f swap %3.2f \n", Ttot, Tterrain, Tobject, Tswap );
 
 }
 
@@ -375,7 +408,7 @@ void loop( int nframes ){
  		if( !STOP ) draw();
 		inputHanding();
 		frameCount++;
-        SDL_Delay(10);
+        SDL_Delay(delay);
     }
 }
 
@@ -396,7 +429,8 @@ void init(){
     window = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     if ( !window ) die("Unable to create window");
     context = SDL_GL_CreateContext( window );
-    SDL_GL_SetSwapInterval(1);
+    //SDL_GL_SetSwapInterval(1); // VSync On
+    SDL_GL_SetSwapInterval(VSync);
 
 	// vertex array object
 	glGenVertexArrays(1, &vao);  				// Allocate and assign a Vertex Array Object to our handle

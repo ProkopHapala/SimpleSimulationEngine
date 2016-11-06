@@ -27,7 +27,8 @@ void main(){
 	//gl_Position.z = 2.0*log(-gl_Position.w)/10.0-1; 
     //gl_Position.z *= gl_Position.w;
 	//gl_Position.z = -log(gl_Position.z); 
-	gl_Position.z = -2.0*log(gl_Position.w)-1.0;   //gl_Position.z *= -gl_Position.w;
+	gl_Position.z   = -2.0*log(-position_world.z)-1.0; 
+	//gl_Position.z = -2.0*log(gl_Position.w)-1.0;   //gl_Position.z *= -gl_Position.w;
 }
 
 

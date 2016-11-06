@@ -47,7 +47,9 @@ float binSearch( vec3 hRay, vec3 p0, float tmax ){
 void main(){
 
 	vec3 hRay = fragPos_world - cam_pos;
-	hRay      = normalize( hRay );
+	float fnorm = sqrt(dot(hRay,hRay));
+	hRay       *= (1/fnorm);
+	//hRay        = normalize( hRay );
 	float hmax = h0 + hrange;
 	float t0  = ( hmax - cam_pos.y )/hRay.y;
 	if (t0<0) discard;
@@ -69,9 +71,18 @@ void main(){
 	if(i>=maxiter) discard;
 	t = binSearch( hRay, cam_pos+t*hRay, dt )+t;
 	vec3 p  = cam_pos + t * hRay;
-	float c = (p.y - h0)/hrange;
+	//float c = (p.y - h0)/hrange;
 	//float c = log(t*0.05)*0.5;
+
+	float c = log((t-fnorm)*0.002);
 	color = vec3(c,c,c);
+
+	//gl_FragDepth = -2.0*log((t-fnorm)*0.001)-1.0;
+	//gl_FragDepth = log(1000*(t-fnorm))-1.0;
+	//gl_FragDepth = 0.00000001;
+	//gl_FragDepth = -0.9999;
+	//gl_FragDepth = 0.9999;
+	gl_FragDepth = c;
 
 }
 

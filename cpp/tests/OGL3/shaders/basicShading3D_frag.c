@@ -22,7 +22,7 @@ uniform	vec3 specularColor;
 
 void main(){
 
-	gl_FragDepth = gl_FragCoord.z;
+	//gl_FragDepth = gl_FragCoord.z;
 
 	// difuse
 	vec3 n = normalize( fragNormal_world );
