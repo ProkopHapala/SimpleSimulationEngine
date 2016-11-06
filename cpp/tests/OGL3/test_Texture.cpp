@@ -96,7 +96,7 @@ void setup(){
             //imgData[ iy*imgW + ix ]   = ix^iy;
         }
     }
-    glGenTextures(1, &textureID);    // Create one OpenGL texture
+    glGenTextures(0, &textureID);    // Create one OpenGL texture
     glBindTexture(GL_TEXTURE_2D, textureID); // "Bind" the newly created texture : all future texture functions will modify this texture
     glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, imgW, imgH, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);   // Give the image to OpenGL
     //glTexImage2D(GL_TEXTURE_2D, 0, GL_ARGB, imgW, imgH, 0, GL_ARGB, GL_UNSIGNED_BYTE, imgData);   // Give the image to OpenGL
@@ -117,13 +117,19 @@ void draw(){
     GLuint uloc;
 
     uloc = glGetUniformLocation( shader1->shaderprogram, "texture1");     glUniform1i(uloc, 0);
-    //glActiveTexture(GL_TEXTURE0 );
-    //glBindTexture(GL_TEXTURE_2D, textureID );
+
+    glActiveTexture(GL_TEXTURE0 );
+    glBindTexture(GL_TEXTURE_2D, textureID );
     //glBindSampler(0, uloc);
+    glUniform1i(uloc, 0);
+
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_2D, Texture);
+    //glUniform1i(TextureID, 0);
 
     //glRotatef( 60.0, 1.0, 1.0, 1.0 );
     //glTranslatef( 1.0, 1.0, 1.0 );
-    glEnableVertexAttribArray(0); object1->draw();
+    object1->draw();
 
     SDL_GL_SwapWindow(window);
 

@@ -21,6 +21,7 @@ void drawPoint     ( const Vec3d& vec                   );
 void drawPointCross( const Vec3d& vec, double sz        );
 void drawVec       ( const Vec3d& vec                   );
 void drawVecInPos  ( const Vec3d& v,   const Vec3d& pos );
+void drawVecInPos  ( const Vec3f& v,   const Vec3f& pos );
 void drawLine      ( const Vec3d& p1,  const Vec3d& p2  );
 void drawScale     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& a, double tick, double sza, double szb );
 

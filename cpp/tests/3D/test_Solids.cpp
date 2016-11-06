@@ -15,6 +15,8 @@
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
 
+#include "GL3Utils.h"
+
 // ======================  TestApp
 
 class TestAppSolids : public AppSDL2OGL_3D {
@@ -77,6 +79,19 @@ TestAppSolids::TestAppSolids( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         */
         //Draw3D::drawPolygons( Solids::RhombicDodecahedron_nfaces,        Solids::RhombicDodecahedron_ngons,        Solids::RhombicDodecahedron_faces,        Solids::RhombicDodecahedron_verts        );
         Draw3D::drawPolygons( Solids::Icosahedron_nfaces,        Solids::Icosahedron_ngons,        Solids::Icosahedron_faces,        Solids::Icosahedron_verts        );
+
+
+        int nVert = countVerts( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons );
+        GLfloat * verts   = new GLfloat[nVert*3];
+        GLfloat * normals = new GLfloat[nVert*3];
+        hardFace( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons, Solids::Icosahedron_faces, Solids::Icosahedron_verts, verts, normals );
+        Vec3f * verts_ = (Vec3f*)verts;
+        Vec3f * normals_ = (Vec3f*)normals;
+        for(int i=0; i<nVert; i++){
+            //Draw3D::drawVecInPos( ((Vec3f*)normals)[i], ((Vec3f*)verts)[i] );
+            Draw3D::drawVecInPos( normals_[i], verts_[i] );
+            printf("%g %g %g   %g %g %g\n", verts_[i].x, verts_[i].y, verts_[i].z,   normals_[i].x,normals_[i].y,normals_[i].z );
+        }
 
         glPopMatrix();
 

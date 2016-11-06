@@ -174,7 +174,7 @@ void draw();
 void loop( int niters );
 
 
-int render_type = 1;
+int render_type = 0;
 
 void setup(){
 
