@@ -46,8 +46,8 @@ void GLObject::afterDraw(){
 void GLObject::draw_instance(){
     if(index_vbo){
         //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexes.vbo );
-        glBindBuffer  (GL_ELEMENT_ARRAY_BUFFER, index_vbo );
-        glDrawElements( GL_TRIANGLES, nInd,  GL_UNSIGNED_INT, (void*)0 );
+        glBindBuffer  ( GL_ELEMENT_ARRAY_BUFFER, index_vbo );
+        glDrawElements( draw_mode, nInd,  GL_UNSIGNED_INT, (void*)0 );
     }else{
         glDrawArrays( draw_mode, 0, nVert);
     }

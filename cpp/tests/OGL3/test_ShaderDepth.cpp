@@ -81,25 +81,10 @@ GLfloat QUAD_verts[4][2] = {
 int WIDTH  = 800;
 int HEIGHT = 800;
 
-
 int mouseX, mouseY;
 SDL_Window * window     = NULL;
 SDL_GLContext   context = NULL;
 Quat4f qCamera;
-
-//   http://www.songho.ca/opengl/gl_projectionmatrix.html
-
-void getPerspectiveMatrix( float xmin, float xmax, float ymin, float ymax, float zmin, float zmax, float * mat ){
-    float invdx = xmax-xmin;
-    float invdy = ymax-ymin;
-    float invdz = zmax-zmin;
-    mat[0 ]  = 2*zmin*invdx; mat[1 ] = 0;            mat[2 ] =  (xmax+xmin)*invdx;  mat[3 ] = 0;
-    mat[4 ]  = 0;            mat[5 ] = 2*zmin*invdy; mat[6 ] =  (ymin+ymax)*invdy;  mat[7 ] = 0;
-    mat[8 ]  = 0;            mat[9 ] = 0;            mat[10] = -(zmin+zmax)*invdz;  mat[11] = -2*zmax*zmin*invdz;
-    mat[12]  = 0;            mat[13] = 0;            mat[14] = -1;                  mat[15] = 0;
-}
-
-// ============= FUNCTIONS
 
 
 int frameCount = 0;
@@ -115,13 +100,132 @@ void loop( int niters );
 
 int  render_type  = 1;
 bool terrain_mode = true;
+bool RayTerrain   = false;
 
 // speed test
 int delay = 1; int VSync = 0;
 //int delay = 10; int VSync = 1;
+float camMat[16];
+Mat3f mouseMat;
+
+int   Ter_nquads = 100+1;
+float Ter_tg     = 0.4;
+float Ter_z0     = 1.0;
+float Ter_dx     = 1.0/(Ter_nquads-1);
+float Ter_dz     = 2.0*Ter_dx;
+float Ter_fsc    = 1+Ter_dz*Ter_tg;
+
+// ===============================================
+// ======================= Functions
+// ===============================================
+
+//   http://www.songho.ca/opengl/gl_projectionmatrix.html
+void getPerspectiveMatrix( float xmin, float xmax, float ymin, float ymax, float zmin, float zmax, float * mat ){
+    float invdx = xmax-xmin;
+    float invdy = ymax-ymin;
+    float invdz = zmax-zmin;
+    mat[0 ]  = 2*zmin*invdx; mat[1 ] = 0;            mat[2 ] =  (xmax+xmin)*invdx;  mat[3 ] = 0;
+    mat[4 ]  = 0;            mat[5 ] = 2*zmin*invdy; mat[6 ] =  (ymin+ymax)*invdy;  mat[7 ] = 0;
+    mat[8 ]  = 0;            mat[9 ] = 0;            mat[10] = -(zmin+zmax)*invdz;  mat[11] = -2*zmax*zmin*invdz;
+    mat[12]  = 0;            mat[13] = 0;            mat[14] = -1;                  mat[15] = 0;
+}
+
+void draw_TerrainMeshHeightMap(){
+    glUseProgram(shader2->shaderprogram);
+    glActiveTexture(GL_TEXTURE0 );
+    glBindTexture(GL_TEXTURE_2D, textureID );
+    float depth[] = {0.99999};
+    uloc = glGetUniformLocation( shader2->shaderprogram, "depth" );	        glUniform1fv(uloc, 1, depth  );
+    uloc = glGetUniformLocation( shader2->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, resolution  );
+    //uloc = glGetUniformLocation( shader2->shaderprogram, "texture1");       glUniform1i (uloc, 0);
+    uloc = glGetUniformLocation( shader2->shaderprogram, "texRGB");       glUniform1i (uloc, 0);
+    if( terrain_mode ){
+        uloc = glGetUniformLocation( shader2->shaderprogram, "camMat"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, camMat   );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&mouseMat );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "modelPos" ); glUniform3fv      (uloc, 1, modelPos );
+        float h0     = -50.0;
+        float hrange =  49.0;
+        //float hmax   = h0 + hrange;
+
+        //float  dhmax  =  1.0; float  dtmin  =  1.0;  GLint  maxRayIter = 1;                // off              1.0 ms/frame
+        float  dhmax  =  1.0; float  dtmin  =  1.0;  GLint  maxRayIter = 200;            // compromise        7.6 ms/frame
+        //float  dhmax  =  2.0; float  dtmin  =  0.25; GLint  maxRayIter = 1000;           // quality          15.0 ms/frame
+        //float  dhmax      =  5.0; float  dtmin      =  0.1; GLint  maxRayIter =  2000;   // overkill         33.0 ms/frame
+        //float  dhmax      =  10.0; float  dtmin      =  0.01; GLint  maxRayIter =  5000; // insame      80.0ms/frame
+        uloc = glGetUniformLocation( shader2->shaderprogram, "h0"        ); glUniform1fv (uloc, 1, &h0         );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "hrange"    ); glUniform1fv (uloc, 1, &hrange     );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "dhmax"     ); glUniform1fv (uloc, 1, &dhmax      );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "dtmin"     ); glUniform1fv (uloc, 1, &dtmin      );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "maxiter"   ); glUniform1i  (uloc,     maxRayIter );
+
+        uloc = glGetUniformLocation( shader2->shaderprogram, "size"      ); glUniform2fv(uloc, 1, terrain_size );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "tx0"       ); glUniform2fv(uloc, 1, terrain_0    );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "cam_pos"   ); glUniform3fv(uloc, 1,  cam_pos     );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "light_pos" ); glUniform3fv(uloc, 1, light_pos    );
+    };
+    //object2->draw();
+    uloc = glGetUniformLocation ( shader2->shaderprogram, "terrain_tex0" ); glUniform2fv(uloc, 1, terrain_0    );
+    GLuint uloc_pos = glGetUniformLocation ( shader2->shaderprogram, "modelPos" );
+    GLuint uloc_sc  = glGetUniformLocation( shader2->shaderprogram, "scale" );
+    object2->preDraw();
+    //object2->draw_instance();
+    float z  = Ter_z0;
+    float sc = 1.0;
+    //GLfloat modelPos_[3];
+    for(int i=0; i<500; i++){
+        //modelPos[0]=i*0.2-1.0; modelPos[1]=0; modelPos[2]=0.0;
+        modelPos[0]=0;
+        modelPos[1]=-0.7;
+        modelPos[2]=z;
+        //printf("sc %f  zs %f\n", sc, z);
+        glUniform3fv( uloc_pos, 1, modelPos );
+        glUniform1fv( uloc_sc, 1,  &sc );
+        object2->draw_instance();
+        z+=Ter_dz*sc; sc*=Ter_fsc;
+    }
+    object2->afterDraw();
+    // vetex_heightmap terrain runs 2.3 ms for 500*100Quads mesh
+}
+
+void draw_TerrainRayMarch(){
+    glUseProgram(shader2->shaderprogram);
+    glActiveTexture(GL_TEXTURE0 );
+    glBindTexture(GL_TEXTURE_2D, textureID );
+    float depth[] = {0.99999};
+    uloc = glGetUniformLocation( shader2->shaderprogram, "depth" );	        glUniform1fv(uloc, 1, depth  );
+    uloc = glGetUniformLocation( shader2->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, resolution  );
+    uloc = glGetUniformLocation( shader2->shaderprogram, "texRGB");       glUniform1i (uloc, 0);
+    if( terrain_mode ){
+        uloc = glGetUniformLocation( shader2->shaderprogram, "camMat"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, camMat   );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&mouseMat );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "modelPos" ); glUniform3fv      (uloc, 1, modelPos );
+        float h0     = -50.0;
+        float hrange =  49.0;
+        //float hmax   = h0 + hrange;
+        //float  dhmax  =  1.0; float  dtmin  =  1.0;  GLint  maxRayIter = 1;                // off              1.0 ms/frame
+        float  dhmax  =  1.0; float  dtmin  =  1.0;  GLint  maxRayIter = 200;            // compromise        7.6 ms/frame
+        //float  dhmax  =  2.0; float  dtmin  =  0.25; GLint  maxRayIter = 1000;           // quality          15.0 ms/frame
+        //float  dhmax      =  5.0; float  dtmin      =  0.1; GLint  maxRayIter =  2000;   // overkill         33.0 ms/frame
+        //float  dhmax      =  10.0; float  dtmin      =  0.01; GLint  maxRayIter =  5000; // insame      80.0ms/frame
+        uloc = glGetUniformLocation( shader2->shaderprogram, "h0"        ); glUniform1fv (uloc, 1, &h0         );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "hrange"    ); glUniform1fv (uloc, 1, &hrange     );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "dhmax"     ); glUniform1fv (uloc, 1, &dhmax      );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "dtmin"     ); glUniform1fv (uloc, 1, &dtmin      );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "maxiter"   ); glUniform1i  (uloc,     maxRayIter );
+
+        uloc = glGetUniformLocation( shader2->shaderprogram, "size"      ); glUniform2fv(uloc, 1, terrain_size );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "tx0"       ); glUniform2fv(uloc, 1, terrain_0    );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "cam_pos"   ); glUniform3fv(uloc, 1,  cam_pos     );
+        uloc = glGetUniformLocation( shader2->shaderprogram, "light_pos" ); glUniform3fv(uloc, 1, light_pos    );
+    };
+    object2->draw();
+}
+
+
+
+
 
 void setup(){
-
 
     if ( render_type == 0      ){
         // --- vertex const color
@@ -134,60 +238,6 @@ void setup(){
         glUseProgram(shader1->shaderprogram);
     };
 	//mesh.fromFileOBJ("common_resources/turret.obj");
-
-
-	/*
-    object1 = new GLObject( );
-    object1->nVert    = nVert;
-    object1->buffs[0].setup(0,3,GL_FALSE,vertexes,'v'); // vertexes
-    object1->buffs[1].setup(1,3,GL_FALSE,vertexes,'n'); // normals
-    object1->init();
-    */
-
-    /*
-    object1 = new GLObject( );
-    object1->nVert    = nVert;
-    object1->buffs[0].setup(0,3,GL_FALSE,vertexes,'v'); // vertexes
-    object1->buffs[1].setup(1,3,GL_FALSE,vertexes,'n'); // normals
-    object1->init();
-    */
-
-    /*
-    object1 = new GLObject( );
-    object1->nVert    = Solids::Octahedron_nverts;
-    object1->setIndexes( Solids::Octahedron_nfaces*3, Solids::Octahedron_faces );
-    printf( "nVert %i nInd %i \n", object1->nVert, object1->nInd);
-    object1->buffs[0].setup(0,3,GL_FALSE,(double*)Solids::Octahedron_verts, object1->nVert, 'v'); // vertexes
-    object1->buffs[1].setup(1,3,GL_FALSE,(double*)Solids::Octahedron_verts, object1->nVert, 'n'); // normals
-    object1->init();
-    */
-
-    /*
-    object1 = new GLObject( );
-    object1->nVert    = Solids::Tetrahedron_nverts;
-    object1->setIndexes( Solids::Tetrahedron_nfaces*3, Solids::Tetrahedron_faces );
-    printf( "nVert %i nInd %i \n", object1->nVert, object1->nInd);
-    object1->buffs[0].setup(0,3,GL_FALSE,(double*)Solids::Tetrahedron_verts, object1->nVert, 'v'); // vertexes
-    object1->buffs[1].setup(1,3,GL_FALSE,(double*)Solids::Tetrahedron_verts, object1->nVert, 'n'); // normals
-    object1->init();
-    */
-
-    /*
-    object1 = new GLObject( );
-    object1->nVert    = Solids::Icosahedron_nverts;
-    object1->setIndexes( Solids::Icosahedron_nfaces*3, Solids::Icosahedron_faces );
-    printf( "nVert %i nInd %i \n", object1->nVert, object1->nInd);
-    object1->buffs[0].setup(0,3,GL_FALSE,(double*)Solids::Icosahedron_verts, object1->nVert, 'v'); // vertexes
-    object1->buffs[1].setup(1,3,GL_FALSE,(double*)Solids::Icosahedron_verts, object1->nVert, 'n'); // normals
-    object1->init();
-    */
-
-    /*
-    int nVert = 3*countTris( Solids::Tetrahedron_nfaces, Solids::Tetrahedron_ngons );
-    GLfloat * verts   = new GLfloat[nVert];
-    GLfloat * normals = new GLfloat[nVert];
-    hardFace( Solids::Tetrahedron_nfaces, Solids::Tetrahedron_ngons, Solids::Tetrahedron_faces, Solids::Tetrahedron_verts, verts, normals );
-    */
 
     int nVert = countVerts( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons );
     GLfloat * verts   = new GLfloat[nVert*3];
@@ -222,14 +272,13 @@ void setup(){
 
     // ------------- Terrain
 	shader2=new Shader();
-	if  ( terrain_mode ){ shader2->init( "shaders/terrain_vert.c", "shaders/terrain_frag.c" ); }
-    else                {   shader2->init( "shaders/plain_vert.c", "shaders/texture_frag.c" ); };
+	if  ( terrain_mode ){
+        if(RayTerrain){ shader2->init( "shaders/terrain_vert.c",  "shaders/terrain_frag.c"  );   }
+        else          { shader2->init( "shaders/terrain_vert2.c", "shaders/terrain_frag2.c" );   }
+    }else {
+        shader2->init( "shaders/plain_vert.c", "shaders/texture_frag.c" );
+    };
 
-    object2 = new GLObject( );
-    object2->draw_mode = GL_TRIANGLE_STRIP;
-	object2->nVert   = 4;
-    object2->buffs[0].setup(0,2,GL_FALSE,&QUAD_verts[0],'v');
-	object2->init();
     // ------------- texture
     const int imgW = 256;
     const int imgH = 256;
@@ -261,7 +310,26 @@ void setup(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-
+    if( RayTerrain ){
+        object2 = new GLObject( );
+        object2->draw_mode = GL_TRIANGLE_STRIP;
+        object2->nVert   = 4;
+        object2->buffs[0].setup(0,2,GL_FALSE,&QUAD_verts[0],'v');
+        object2->init();
+    }else{
+        float * strip = new GLfloat[Ter_nquads*2*2];
+        for(int i=0; i<Ter_nquads; i++){
+            int i4 = i<<2;
+            float x  = i*Ter_dx-0.5;
+            strip[i4  ]=x;          strip[i4+1]=0.0f;
+            strip[i4+2]=x*Ter_fsc;  strip[i4+3]=Ter_dz;
+        }
+        object2 = new GLObject();
+        object2->draw_mode = GL_TRIANGLE_STRIP;
+        object2->nVert     = Ter_nquads*2;
+        object2->buffs[0].setup(0,2,GL_FALSE,strip,'v');
+        object2->init();
+    }
 
 	qCamera.setOne();
 
@@ -281,54 +349,23 @@ void draw(){
 
     long time_0 = getCPUticks();
 
-    float camMat[16];
+
     //getPerspectiveMatrix( -WIDTH, WIDTH, -HEIGHT, HEIGHT, 1.0, 10.0, camMat );
     getPerspectiveMatrix( -WIDTH, WIDTH, -HEIGHT, HEIGHT, 1.0, 20.0, camMat );
 
     //Quat4f qCamera_; convert(qCamera,qCamera_);
-    Mat3f mouseMat; qCamera.toMatrix(mouseMat);
+    qCamera.toMatrix(mouseMat);
     //printf( " (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x,qCamera.y,qCamera.z,qCamera.w );
     //printf( " (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x,qCamera.y,qCamera.z,qCamera.w );
     //printf( "mouseMat (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", mouseMat.ax, mouseMat.ay, mouseMat.az,  mouseMat.bx, mouseMat.by, mouseMat.bz,   mouseMat.cx, mouseMat.cy, mouseMat.cz );
 
     // ============= Terrain
-    glUseProgram(shader2->shaderprogram);
 
-    glActiveTexture(GL_TEXTURE0 );
-    glBindTexture(GL_TEXTURE_2D, textureID );
-    float depth[] = {0.99999};
-    uloc = glGetUniformLocation( shader2->shaderprogram, "depth" );	        glUniform1fv(uloc, 1, depth  );
-    uloc = glGetUniformLocation( shader2->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, resolution  );
-    uloc = glGetUniformLocation( shader2->shaderprogram, "texture1");       glUniform1i (uloc, 0);
-
-    if( terrain_mode ){
-        uloc = glGetUniformLocation( shader2->shaderprogram, "camMat"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, camMat   );
-        uloc = glGetUniformLocation( shader2->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&mouseMat );
-        uloc = glGetUniformLocation( shader2->shaderprogram, "modelPos" ); glUniform3fv      (uloc, 1, modelPos );
-
-        float h0     = -50.0;
-        float hrange =  49.0;
-        //float hmax   = h0 + hrange;
-
-        //float  dhmax  =  1.0; float  dtmin  =  1.0;  GLint  maxRayIter = 1;                // off              1.0 ms/frame
-        float  dhmax  =  1.0; float  dtmin  =  1.0;  GLint  maxRayIter = 200;            // compromise        7.6 ms/frame
-        //float  dhmax  =  2.0; float  dtmin  =  0.25; GLint  maxRayIter = 1000;           // quality          15.0 ms/frame
-        //float  dhmax      =  5.0; float  dtmin      =  0.1; GLint  maxRayIter =  2000;   // overkill         33.0 ms/frame
-        //float  dhmax      =  10.0; float  dtmin      =  0.01; GLint  maxRayIter =  5000; // insame      80.0ms/frame
-
-        uloc = glGetUniformLocation( shader2->shaderprogram, "h0"        ); glUniform1fv (uloc, 1, &h0         );
-        uloc = glGetUniformLocation( shader2->shaderprogram, "hrange"    ); glUniform1fv (uloc, 1, &hrange     );
-        uloc = glGetUniformLocation( shader2->shaderprogram, "dhmax"     ); glUniform1fv (uloc, 1, &dhmax      );
-        uloc = glGetUniformLocation( shader2->shaderprogram, "dtmin"     ); glUniform1fv (uloc, 1, &dtmin      );
-        uloc = glGetUniformLocation( shader2->shaderprogram, "maxiter"   ); glUniform1i  (uloc,     maxRayIter );
-
-        uloc = glGetUniformLocation( shader2->shaderprogram, "size"      ); glUniform2fv(uloc, 1, terrain_size );
-        uloc = glGetUniformLocation( shader2->shaderprogram, "tx0"       ); glUniform2fv(uloc, 1, terrain_0    );
-        uloc = glGetUniformLocation( shader2->shaderprogram, "cam_pos"   ); glUniform3fv(uloc, 1,  cam_pos     );
-        uloc = glGetUniformLocation( shader2->shaderprogram, "light_pos" ); glUniform3fv(uloc, 1, light_pos    );
-    };
-
-    object2->draw();
+    if(RayTerrain){
+        draw_TerrainRayMarch();
+    }else{
+        draw_TerrainMeshHeightMap();
+    }
 
     long time_1 = getCPUticks();
 
@@ -371,7 +408,8 @@ void draw(){
 
 // FUNCTION ======	inputHanding
 void inputHanding(){
-    float posstep = 2.0;
+
+    float posstep = 0.1; if(RayTerrain){ posstep = 2.0; }
 	SDL_Event event;
 	while(SDL_PollEvent(&event)){
 		if( event.type == SDL_KEYDOWN ){
