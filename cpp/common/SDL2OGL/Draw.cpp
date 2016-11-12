@@ -5,7 +5,8 @@
 
 void Draw::setRGB( uint32_t i ){
 	constexpr float inv255 = 1.0f/255.0f;
-	glColor3f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
+	//glColor3f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
+	glColor3f( ((i>>16)&0xFF)*inv255, ((i>>8)&0xFF)*inv255, (i&0xFF)*inv255  );
 };
 
 void Draw::setRGBA( uint32_t i ){

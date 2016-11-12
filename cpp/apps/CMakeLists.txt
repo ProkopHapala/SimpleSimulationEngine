@@ -15,3 +15,6 @@ add_subdirectory (OrbitalWar)
 add_subdirectory (Tanks)
 
 
+add_subdirectory (MolecularEditor)
+
+
