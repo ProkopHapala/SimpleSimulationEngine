@@ -1,15 +1,16 @@
 
-#ifndef GameScreen_h
-#define GameScreen_h
+#ifndef AeroCraftGUI_h
+#define AeroCraftGUI_h
 
 #include "ScreenSDL2OGL_3D.h"
 
-#include "GameWorld.h"
+#include "AeroCraftWorld.h"
 #include "AeroCraft.h"
 
-class GameScreen : public ScreenSDL2OGL_3D {
+class AeroCraftGUI : public ScreenSDL2OGL_3D {
 	public:
-	GameWorld * world;
+	int default_font_texture;
+	AeroCraftWorld * world;
 
 	// ==== function declarations
 
@@ -19,7 +20,7 @@ class GameScreen : public ScreenSDL2OGL_3D {
 	//virtual void cameraHUD();
 	virtual void draw       ();
 	//virtual void drawHUD  ();
-	GameScreen( int& id, int WIDTH_, int HEIGHT_ );
+	AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ );
 
 
 

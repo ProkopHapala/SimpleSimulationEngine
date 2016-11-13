@@ -15,13 +15,9 @@ include_directories(
 
 set( NAME "AeroCraft" )
 
-
-#add_library( ${NAME}_objects OBJECT AeroCraft FieldPatch GameWorld GameScreen )
-
 add_executable( ${NAME} 
-	main.cpp AeroCraft.cpp FieldPatch.cpp GameWorld.cpp GameScreen.cpp
+	main.cpp AeroCraft.cpp FieldPatch.cpp AeroCraftWorld.cpp AeroCraftGUI.cpp
 	#$<TARGET_OBJECTS:${NAME}_objects> 
-
 	$<TARGET_OBJECTS:Body> 
 	$<TARGET_OBJECTS:AeroSurf> 
 	$<TARGET_OBJECTS:SDL2OGL> 
@@ -29,4 +25,8 @@ add_executable( ${NAME}
 
 target_link_libraries( ${NAME} ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-#file( COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR} )
+add_custom_command(
+    TARGET ${NAME}
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resource
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data
+)

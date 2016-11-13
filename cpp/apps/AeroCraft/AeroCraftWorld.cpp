@@ -5,13 +5,13 @@
 
 #include "testUtils.h"
 
-#include "GameWorld.h" // THE HEADER
+#include "AeroCraftWorld.h" // THE HEADER
 
 static constexpr int npts     = 4;
 static constexpr double poss[npts*2] = { -1.0, 0.0,   0.0, -0.1,   0.0, +0.1,   +1.0, 0.0  };
 static constexpr double mass[npts  ] = {  10.0, 50.0, 50.0, 10.0  };
 
-void GameWorld::update( ){
+void AeroCraftWorld::update( ){
 
 	//long long nt1 = getCPUticks();
 
@@ -35,10 +35,11 @@ void GameWorld::update( ){
 };
 
 
-void GameWorld::makeAeroCraft(){
+void AeroCraftWorld::makeAeroCraft(){
 	const int len = 5;
-	double masses[len]  = { 4,1,1,0.5f,0.5f };
-	Vec3d  poss[len]    = { {0,-0.05,1}, {-2,0,0}, {2,0,0}, {0,0,-3}, {0,0.2,-3} };
+	//                      motor        wingLeft   wingRight  elevator   rudder
+	double masses[len]  = { 4,           1,         1,         0.5f,      0.5f      };
+	Vec3d  poss[len]    = { {0,-0.1,1}, {-2,0,0}, {2,0,0},   {0,0,-3},   {0,0.2,-3} };
     printf("init AeroCraft\n");
 
     myCraft = new AeroCraft();
@@ -66,8 +67,8 @@ void GameWorld::makeAeroCraft(){
 	myCraft->rudder   .lpos.set( poss[4] );
 */
 
-	myCraft->wingLeft .lrot.set( { 1,0,0, 0,1,0,  0,0,1  } ); myCraft->wingLeft  .lrot.rotate( -0.1, { 0,0,1 } );
-	myCraft->wingRight.lrot.set( { 1,0,0, 0,1,0,  0,0,1  } ); myCraft->wingRight .lrot.rotate( +0.1, { 0,0,1 } );
+	myCraft->wingLeft .lrot.set( { 1,0,0, 0,1,0,  0,0,1  } ); myCraft->wingLeft .lrot.rotate( -0.1, { 0,0,1 } );
+	myCraft->wingRight.lrot.set( { 1,0,0, 0,1,0,  0,0,1  } ); myCraft->wingRight.lrot.rotate( +0.1, { 0,0,1 } );
 	myCraft->elevator .lrot.set( { 1,0,0, 0,1,0,  0,0,1  } ); myCraft->elevator .lrot.rotate( +0.2, { 1,0,0 } );
 	printf("elevator lrot\n");
 	printMat( myCraft->elevator.lrot );
@@ -93,7 +94,7 @@ void GameWorld::makeAeroCraft(){
 };
 
 
-int GameWorld::makeBuildingsGrid( int nx, int ny, float sx, float sy, float cx, float cy,  float min_height, float max_height ){
+int AeroCraftWorld::makeBuildingsGrid( int nx, int ny, float sx, float sy, float cx, float cy,  float min_height, float max_height ){
 	int ilist=glGenLists(1);
 	glNewList( ilist, GL_COMPILE );
 	for (int ix=-nx; ix<nx; ix++){
@@ -108,7 +109,7 @@ int GameWorld::makeBuildingsGrid( int nx, int ny, float sx, float sy, float cx, 
 	return( ilist );
 }
 
-int GameWorld::makeBuildingsClusters( int nclustest, int nmin, int nmax, float minx, float maxx, float miny, float maxy, float min_dist, float max_dist, float min_size, float max_size, float min_height, float max_height ){
+int AeroCraftWorld::makeBuildingsClusters( int nclustest, int nmin, int nmax, float minx, float maxx, float miny, float maxy, float min_dist, float max_dist, float min_size, float max_size, float min_height, float max_height ){
 	int ilist=glGenLists(1);
 	glNewList( ilist, GL_COMPILE );
 	int nboxes = 0;
@@ -131,7 +132,7 @@ int GameWorld::makeBuildingsClusters( int nclustest, int nmin, int nmax, float m
 	return( ilist );
 }
 
-void GameWorld::makeEnvironment( float sz ){
+void AeroCraftWorld::makeEnvironment( float sz ){
 
 	//buildings_shape = makeBuildings( 10, 10, 100, 100, 0.5, 0.5, 50, 100 );
 	buildings_shape = makeBuildingsClusters( 30, 3, 10,   -sz,         sz,         -sz,          sz,            0, 500,   20, 100,   10, 100 );
@@ -165,7 +166,7 @@ int makeSinTerrain( float nx, float ny, float szx, float szy, float height ){
 }
 */
 
-void GameWorld::init( ){
+void AeroCraftWorld::init( ){
 
 	makeEnvironment( 2000.0f );
 	printf( " Environment DONE! \n" );

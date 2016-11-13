@@ -1,6 +1,6 @@
 
-#ifndef GameWorld_h
-#define GameWorld_h
+#ifndef AeroCraftWorld_h
+#define AeroCraftWorld_h
 
 #include <vector>
 
@@ -16,7 +16,7 @@ static constexpr double wingLiftDown    = 0.0;
 static constexpr double wingLiftUp      = 2.0;
 
 
-class GameWorld {
+class AeroCraftWorld {
 	public:
 
 	double ground_level;
@@ -29,7 +29,7 @@ class GameWorld {
 	AeroCraft * myCraft;
 
 
-	FieldPatch fieldPatch; 
+	FieldPatch fieldPatch;
 	int buildings_shape = -1;
 	int terrain_shape   = -1;
 
@@ -53,4 +53,4 @@ class GameWorld {
 
 };
 
-#endif  // #ifndef GameWorld_h
+#endif  // #ifndef AeroCraftWorld_h

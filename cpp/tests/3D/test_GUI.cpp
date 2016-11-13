@@ -74,14 +74,18 @@ void TestAppGUI::draw   (){
 	glDisable ( GL_LIGHTING );
 
 	//Draw3D::drawText( txt.inputText.c_str(), {1.0,1.0,1.0}, fontTex, 0.3, 0, 0 );
-	txt.view3D( {1.0,1.0,1.0}, fontTex, 0.3 );
+
 	Draw3D::drawAxis ( 3.0f );
 
+	glColor4f(1.0f,1.0f,1.0f,0.9f);
+	txt.view3D( {1.0,1.0,1.0}, fontTex, 0.3 );
 
+	//Draw3D::drawText( "AHOJ!\0", {1.0,1.0,1.0}, fontTex, 5.0, 0, 0 );
 
 };
 
 void TestAppGUI::drawHUD(){
+
 	panel .tryRender();  panel.draw();
 	mpanel.tryRender(); mpanel.draw();
 	if(focused) Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);

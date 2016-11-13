@@ -21,8 +21,8 @@
 #include "AeroSurf.h"
 #include "AeroCraft.h"
 #include "FieldPatch.h"
-#include "GameWorld.h"
-#include "GameScreen.h"
+#include "AeroCraftWorld.h"
+#include "AeroCraftGUI.h"
 
 // ===============================
 // ===== GLOBAL CONSTAMNTS
@@ -56,8 +56,8 @@ SDL_Event event;
 
 int frameCount=0;
 
-GameWorld world;
-GameScreen* thisScreen;
+AeroCraftWorld world;
+AeroCraftGUI* thisScreen;
 
 // ====================================
 // ===== FUNCTION FORWARD DECLARATIONS
@@ -166,7 +166,7 @@ int main(int argc, char *argv[]){
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	int sid;
 	//thisScreen  = new Screen2D( sid, 800,600);
-	thisScreen  = new GameScreen( sid, 800,600 );
+	thisScreen  = new AeroCraftGUI( sid, 800,600 );
 
 	setup();
 

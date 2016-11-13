@@ -545,7 +545,8 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             //glMatrixMode(GL_MODELVIEW);
             //glMatrixMode(GL_PROJECTION);
             glTranslatef( pos.x, pos.y, pos.z );
-            Draw::billboardCam( );
+            //Draw::billboardCam( );
+            Draw::billboardCamProj( );
             //Draw2D::drawString( inputText.c_str(), 0, 0, textSize, fontTex );
             Draw::drawText( str, fontTex, textSize, istart, iend );
         glPopMatrix();

@@ -21,6 +21,7 @@ namespace Draw{
 	void color_of_hash( int i  );
 
     void billboardCam( );
+    void billboardCamProj( );
     void drawText    ( const char * str, int itex, float sz, int istart, int iend );
 
 

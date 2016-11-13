@@ -48,11 +48,23 @@ void Draw::setColorInt32( uint32_t clr ) {
 
 void Draw::billboardCam( ){
     float glMat[16];
+    //glMatrixMode(GL_MODELVIEW);
     glGetFloatv(GL_MODELVIEW_MATRIX , glMat);
     glMat[0 ] = 1;   glMat[1 ] = 0;   glMat[2 ] = 0;
     glMat[4 ] = 0;   glMat[5 ] = 1;   glMat[6 ] = 0;
     glMat[8 ] = 0;   glMat[9 ] = 0;   glMat[10] = 1;
     glLoadMatrixf(glMat);
+};
+
+void Draw::billboardCamProj( ){
+    float glCam  [16];
+    float glModel[16];
+    glGetFloatv (GL_MODELVIEW_MATRIX,  glModel);
+    glGetFloatv (GL_PROJECTION_MATRIX, glCam);
+    glModel[0 ] = glCam[0];   glModel[1 ] = glCam[4];   glModel[2 ] = glCam[8];
+    glModel[4 ] = glCam[1];   glModel[5 ] = glCam[5];   glModel[6 ] = glCam[9];
+    glModel[8 ] = glCam[2];   glModel[9 ] = glCam[6];   glModel[10] = glCam[10];
+    glLoadMatrixf(glModel);
 };
 
 void Draw::drawText( const char * str, int itex, float sz, int istart, int iend ){
