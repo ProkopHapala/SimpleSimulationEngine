@@ -87,6 +87,8 @@ void inputHanding(){
 				case SDLK_KP_PLUS  : thisScreen->zoom/=VIEW_ZOOM_STEP; printf("zoom: %f \n", thisScreen->zoom); break;
 				case SDLK_KP_MINUS : thisScreen->zoom*=VIEW_ZOOM_STEP; printf("zoom: %f \n", thisScreen->zoom); break;
 				case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
+
+				case SDLK_p    : thisScreen->first_person = !thisScreen->first_person; break;
 			}
 		}
 		if( event.type == SDL_QUIT){ quit();  };
@@ -104,9 +106,19 @@ void inputHanding(){
 	if ( keys[ SDL_SCANCODE_RIGHT ] ) { thisScreen->qCamera.yaw  (  0.005  );  }
 	if ( keys[ SDL_SCANCODE_LEFT  ] ) { thisScreen->qCamera.yaw  ( -0.005 ); }
 
-	if      ( keys[ SDL_SCANCODE_A ] ){ world.myCraft->wingLeft.C.y = wingLiftUp;      world.myCraft->wingRight.C.y = wingLiftDown;    }
-	else if ( keys[ SDL_SCANCODE_D ] ){ world.myCraft->wingLeft.C.y = wingLiftDown;    world.myCraft->wingRight.C.y = wingLiftUp;      }
-	else                              { world.myCraft->wingLeft.C.y = wingLiftDefault; world.myCraft->wingRight.C.y = wingLiftDefault; };
+	float dpitch = 0.01;
+	float droll  = 0.01;
+	float dyaw   = 0.01;
+
+	if      ( keys[ SDL_SCANCODE_A ] ){ world.myCraft->panels[0].lrot.rotate( -droll, { 1,0,0 } );  world.myCraft->panels[1].lrot.rotate( +0.01, { 1,0,0 } );    }
+	else if ( keys[ SDL_SCANCODE_D ] ){ world.myCraft->panels[0].lrot.rotate( +droll, { 1,0,0 } );  world.myCraft->panels[1].lrot.rotate( -0.01, { 1,0,0 } );    }
+
+    if      ( keys[ SDL_SCANCODE_W ] ){ world.myCraft->panels[2].lrot.rotate( -dpitch, { 1,0,0 } );  }
+	else if ( keys[ SDL_SCANCODE_S ] ){ world.myCraft->panels[2].lrot.rotate( +dpitch, { 1,0,0 } );  }
+
+    if      ( keys[ SDL_SCANCODE_Q ] ){ world.myCraft->panels[3].lrot.rotate( -dyaw, { 0,1,0 } );  }
+	else if ( keys[ SDL_SCANCODE_E ] ){ world.myCraft->panels[3].lrot.rotate( +dyaw, { 0,1,0 } );  }
+
 
 	//if ( keystate[ SDL_SCANCODE_DOWN  ] ) { qmouse.pitch2( -0.005 ); }
 	//if ( keystate[ SDL_SCANCODE_UP    ] ) { qmouse.pitch2( 0.005 ); }
@@ -126,6 +138,10 @@ void inputHanding(){
 	//SDL_WarpMouse( thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
 	SDL_WarpMouseInWindow( thisScreen->window, thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
 
+	Mat3d matCam;
+	thisScreen->qCamera.toMatrix( matCam );
+	world.steerToDir( matCam.c );
+
 
 }
 
@@ -135,9 +151,27 @@ void setup(){
     world.init();
     thisScreen->world = &world;
     thisScreen->qCamera.setOne();
+
     thisScreen->VIEW_DEPTH = 10000.0f;
+    thisScreen->first_person = false;
     printf( " world.init(); DONE! \n" );
 }
+
+/*
+void loop( int n ){
+	loopEnd = false;
+	for( int iframe=0; iframe<n; iframe++ ){
+		inputHanding();
+		if(!STOP){
+			thisScreen->update();
+		}
+		//printf(" %i \n", iframe );
+		if( thisScreen->delay>0 ) SDL_Delay( thisScreen->delay );
+		frameCount++;
+		if(loopEnd) break;
+	}
+}
+*/
 
 void loop(int n ){
 	loopEnd = false;

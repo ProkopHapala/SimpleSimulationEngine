@@ -24,10 +24,10 @@ class AeroCraftWorld {
 	Vec2d  watter_speed;
 
 	int perFrame = 10;
-	double dt = 0.0001;
+	double dt = 0.001;
 
 	AeroCraft * myCraft;
-
+	AeroCraft * myCraft_bak;
 
 	FieldPatch fieldPatch;
 	int buildings_shape = -1;
@@ -38,6 +38,8 @@ class AeroCraftWorld {
 	std::vector<Projectile*> projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 */
 
+
+	void steerToDir( const Vec3d& dir );
 	void update( );
 	void init( );
 

@@ -59,6 +59,7 @@ int MolecularWorld::loadMolTypes( char const* dirName, char const* fileName ){
         molTypes[i].loadFromFile_bas( fname );
         molTypes[i].typeList = &atomTypes;
     }
+    fclose(pFile);
     return nMolTypes;
 }
 
@@ -108,6 +109,7 @@ int MolecularWorld::loadInstances( char const* filename ){
        // molecules[ i ] = &molTypeList[ itype-1 ];
         //printf("=====\n");
     }
+    fclose(pFile);
     return nmols;
 }
 

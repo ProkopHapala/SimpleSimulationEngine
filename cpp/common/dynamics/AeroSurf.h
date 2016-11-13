@@ -21,16 +21,32 @@ class AeroSurface : public KinematicBody {
 	// ==== function declarations
 
 	void render( );
+	void fromString( const char * str );
 
 	// ==== inline functions
 
 	inline void  applyForceSimple( const Vec3d& vair0 ){
+        //printf ( " %lf %lf %lf   %lf %lf %lf\n", lpos.x, lpos.y, lpos.z, C.a, C.b, C.c );
+
 		Mat3d grot; Mat3d rotMat;
 		rotMat.setT(craft->rotMat);  grot.set_mmul( lrot, rotMat );
 		//grot.set_mmul( lrot, craft->rotMat );
 		//grot.set_mmul( craft->rotMat, lrot );
 
 		Vec3d gdpos; craft->rotMat.dot_to( lpos, gdpos );
+
+		//printf( "gdpos    %3.3f %3.3f %3.3f \n", gdpos.x, gdpos.y, gdpos.z );
+		//printf( "grot.a %3.3f %3.3f %3.3f \n", grot.ax, grot.ay, grot.az );
+		//printf( "grot.b %3.3f %3.3f %3.3f \n", grot.bx, grot.by, grot.bz );
+		//printf( "grot.c %3.3f %3.3f %3.3f \n", grot.cx, grot.cy, grot.cz );
+
+        //printf( "lrot.a %3.3f %3.3f %3.3f \n", lrot.ax, lrot.ay, lrot.az );
+		//printf( "lrot.b %3.3f %3.3f %3.3f \n", lrot.bx, lrot.by, lrot.bz );
+		//printf( "lrot.c %3.3f %3.3f %3.3f \n", lrot.cx, lrot.cy, lrot.cz );
+
+        glColor3f( 1.0f,0.0f,0.0f ); Draw3D::drawVecInPos( grot.a*C.a,    craft->pos + gdpos );
+        glColor3f( 0.0f,1.0f,0.0f ); Draw3D::drawVecInPos( grot.b*C.b,    craft->pos + gdpos );
+        glColor3f( 0.0f,0.0f,1.0f ); Draw3D::drawVecInPos( grot.c*C.c,    craft->pos + gdpos );
 
 		Vec3d uair;
 		uair.set_cross( gdpos, craft->omega );
@@ -59,9 +75,7 @@ class AeroSurface : public KinematicBody {
 			//drawMatInPos( craft->rotMat, craft->pos );
 			//Draw3D::drawMatInPos( grot, craft->pos + gdpos );
 
-			glColor3f( 1.0f,0.0f,0.0f ); Draw3D::drawVecInPos( grot.a*C.a,    craft->pos + gdpos );
-			glColor3f( 0.0f,1.0f,0.0f ); Draw3D::drawVecInPos( grot.b*C.b,    craft->pos + gdpos );
-			glColor3f( 0.0f,0.0f,1.0f ); Draw3D::drawVecInPos( grot.c*C.c,    craft->pos + gdpos );
+
 
 
 			glColor3f( 0.9f,0.0f,0.9f ); Draw3D::drawVecInPos( force*0.1,    craft->pos + gdpos );

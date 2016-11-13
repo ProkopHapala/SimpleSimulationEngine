@@ -25,7 +25,8 @@ template <class TYPE> inline TYPE clip(TYPE x, TYPE xmin, TYPE xmax ){ if( x<xmi
 #define _min(a,b)      ((a<b)?a:b)
 #define _abs(a)        ((a>0)?a:-a)
 //#define _clamp(x,a,b)  max(a, min(b, x))
-#define _clamp(n, lower, upper) if (n < lower) n= lower; else if (n > upper) n= upper
+//#define _clamp(n, lower, upper) if (n < lower) n= lower; else if (n > upper) n= upper
+#define _clamp(a, lower, upper) ((a>lower)?((a<upper)?a:upper):lower)
 
 #define _minit( i, x, imin, xmin )  if( x<xmin ){ xmin=x; imin=i; }
 #define _maxit( i, x, imax, xmax )  if( x>xmax ){ xmax=x; imax=i; }

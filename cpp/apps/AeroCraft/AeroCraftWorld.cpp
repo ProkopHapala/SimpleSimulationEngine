@@ -7,9 +7,28 @@
 
 #include "AeroCraftWorld.h" // THE HEADER
 
-static constexpr int npts     = 4;
-static constexpr double poss[npts*2] = { -1.0, 0.0,   0.0, -0.1,   0.0, +0.1,   +1.0, 0.0  };
-static constexpr double mass[npts  ] = {  10.0, 50.0, 50.0, 10.0  };
+void AeroCraftWorld::steerToDir( const Vec3d& dir ){
+    myCraft->panels[0].lrot = myCraft_bak->panels[0].lrot;
+    myCraft->panels[1].lrot = myCraft_bak->panels[1].lrot;
+    myCraft->panels[2].lrot = myCraft_bak->panels[2].lrot;
+    myCraft->panels[3].lrot = myCraft_bak->panels[3].lrot;
+
+    //Mat3d rotMatT;
+    //rotMatT.setT(myCraft->rotMat);
+    //double a = rotMatT.a.dot( dir );
+    //double b = rotMatT.b.dot( dir );
+    //myCraft->panels[0].lrot.rotate(  _clamp( -0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
+    //myCraft->panels[1].lrot.rotate(  _clamp( +0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
+    //myCraft->panels[2].lrot.rotate(  _clamp(  -1.5*fabs(a) ,-0.5, 0.5), {1.0,0.0,0.0} );
+    //myCraft->panels[3].lrot.rotate(  _clamp(  1.5*a             ,-0.5, 0.5),   {0.0,1.0,0.0} );
+
+    double a = myCraft->rotMat.a.dot( dir );
+    double b = myCraft->rotMat.b.dot( dir );
+    myCraft->panels[0].lrot.rotate(  _clamp(  0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
+    myCraft->panels[1].lrot.rotate(  _clamp( -0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
+    myCraft->panels[2].lrot.rotate(  _clamp(  1.5*fabs(a)-1.5*b ,-0.5, 0.5), {1.0,0.0,0.0} );
+    myCraft->panels[3].lrot.rotate(  _clamp(  1.5*a             ,-0.5, 0.5),   {0.0,1.0,0.0} );
+};
 
 void AeroCraftWorld::update( ){
 
@@ -20,10 +39,9 @@ void AeroCraftWorld::update( ){
 	//for(int iSubStep=0; iSubStep<PHYS_STEPS_PER_FRAME; iSubStep++ ){
 	for( int i=0; i<perFrame; i++ ){
 		myCraft->clean_temp();
-		myCraft->force.set( { 0, g*myCraft->mass, 0 } );
-		myCraft->force.add_mul(   myCraft->rotMat.c, 50.0 );
+		myCraft->force.set    ( { 0, g*myCraft->mass, 0 } );
+		myCraft->force.add_mul(   myCraft->rotMat.c, 500.0 ); // motor
 		myCraft->applyAeroForces( {0,0,0} );
-		//myCraft->applyAeroForces( {0,10,0} );
 		myCraft->move(dt);
 	}
 
@@ -34,7 +52,7 @@ void AeroCraftWorld::update( ){
 
 };
 
-
+/*
 void AeroCraftWorld::makeAeroCraft(){
 	const int len = 5;
 	//                      motor        wingLeft   wingRight  elevator   rudder
@@ -59,13 +77,6 @@ void AeroCraftWorld::makeAeroCraft(){
 	myCraft->wingRight.lpos.set( poss[2] - myCraft->pos );
 	myCraft->elevator .lpos.set( poss[3] - myCraft->pos );
 	myCraft->rudder   .lpos.set( poss[4] - myCraft->pos );
-
-/*
-	myCraft->wingLeft .lpos.set( poss[1] );
-	myCraft->wingRight.lpos.set( poss[2] );
-	myCraft->elevator .lpos.set( poss[3] );
-	myCraft->rudder   .lpos.set( poss[4] );
-*/
 
 	myCraft->wingLeft .lrot.set( { 1,0,0, 0,1,0,  0,0,1  } ); myCraft->wingLeft .lrot.rotate( -0.1, { 0,0,1 } );
 	myCraft->wingRight.lrot.set( { 1,0,0, 0,1,0,  0,0,1  } ); myCraft->wingRight.lrot.rotate( +0.1, { 0,0,1 } );
@@ -92,6 +103,7 @@ void AeroCraftWorld::makeAeroCraft(){
 	printMat(myCraft->invIbody);
 
 };
+*/
 
 
 int AeroCraftWorld::makeBuildingsGrid( int nx, int ny, float sx, float sy, float cx, float cy,  float min_height, float max_height ){
@@ -170,7 +182,11 @@ void AeroCraftWorld::init( ){
 
 	makeEnvironment( 2000.0f );
 	printf( " Environment DONE! \n" );
-	makeAeroCraft();
+	//makeAeroCraft();
+
+	myCraft_bak = new AeroCraft();   myCraft_bak->fromFile("data/AeroCraft1.ini");
+    myCraft     = new AeroCraft();   myCraft    ->fromFile("data/AeroCraft1.ini");
+
     printf( " AeroCraft DONE! \n" );
 };
 
