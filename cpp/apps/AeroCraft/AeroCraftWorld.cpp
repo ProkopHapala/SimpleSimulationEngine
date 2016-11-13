@@ -7,27 +7,44 @@
 
 #include "AeroCraftWorld.h" // THE HEADER
 
-void AeroCraftWorld::steerToDir( const Vec3d& dir ){
+
+void AeroCraftWorld::resetSteer( ){
     myCraft->panels[0].lrot = myCraft_bak->panels[0].lrot;
     myCraft->panels[1].lrot = myCraft_bak->panels[1].lrot;
     myCraft->panels[2].lrot = myCraft_bak->panels[2].lrot;
     myCraft->panels[3].lrot = myCraft_bak->panels[3].lrot;
+}
 
-    //Mat3d rotMatT;
-    //rotMatT.setT(myCraft->rotMat);
-    //double a = rotMatT.a.dot( dir );
-    //double b = rotMatT.b.dot( dir );
-    //myCraft->panels[0].lrot.rotate(  _clamp( -0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
-    //myCraft->panels[1].lrot.rotate(  _clamp( +0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
-    //myCraft->panels[2].lrot.rotate(  _clamp(  -1.5*fabs(a) ,-0.5, 0.5), {1.0,0.0,0.0} );
-    //myCraft->panels[3].lrot.rotate(  _clamp(  1.5*a             ,-0.5, 0.5),   {0.0,1.0,0.0} );
+void AeroCraftWorld::steerToDir( const Vec3d& dir, bool on ){
+    if(on) resetSteer();
+    Mat3d rotMatT;
+    rotMatT.setT(myCraft->rotMat);
+    Draw3D::drawMatInPos( rotMatT, myCraft->pos );
+    double a = rotMatT.a.dot( dir );
+    double b = rotMatT.b.dot( dir );
 
+	glColor4f(1.0f,1.0f,1.0f,0.9f);
+	char str[256];
+	sprintf(str, "a %3.3f b 3.3f %3.3f\0",a,b);
+	Draw3D::drawText(str, myCraft->pos, fontTex_DEBUG, 0.2, 0, 0 );
+	glEnable(GL_DEPTH_TEST);
+
+	if(on){
+        myCraft->panels[0].lrot.rotate(  _clamp( -0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
+        myCraft->panels[1].lrot.rotate(  _clamp( +0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
+        myCraft->panels[2].lrot.rotate(  _clamp(  0.5*b ,-0.5, 0.5), {1.0,0.0,0.0} );
+        myCraft->panels[3].lrot.rotate(  _clamp(  -0.5*a             ,-0.5, 0.5),   {0.0,1.0,0.0} );
+    }
+
+    /*
+    Draw3D::drawMatInPos( myCraft->rotMat, myCraft->pos );
     double a = myCraft->rotMat.a.dot( dir );
     double b = myCraft->rotMat.b.dot( dir );
     myCraft->panels[0].lrot.rotate(  _clamp(  0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
     myCraft->panels[1].lrot.rotate(  _clamp( -0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
     myCraft->panels[2].lrot.rotate(  _clamp(  1.5*fabs(a)-1.5*b ,-0.5, 0.5), {1.0,0.0,0.0} );
     myCraft->panels[3].lrot.rotate(  _clamp(  1.5*a             ,-0.5, 0.5),   {0.0,1.0,0.0} );
+    */
 };
 
 void AeroCraftWorld::update( ){

@@ -33,13 +33,16 @@ class AeroCraftWorld {
 	int buildings_shape = -1;
 	int terrain_shape   = -1;
 
+
+	int fontTex_DEBUG;
+
 /*
 	std::vector<Frigate2D*>  ships;
 	std::vector<Projectile*> projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 */
 
-
-	void steerToDir( const Vec3d& dir );
+    void resetSteer( );
+	void steerToDir( const Vec3d& dir, bool on );
 	void update( );
 	void init( );
 

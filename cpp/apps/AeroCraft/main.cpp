@@ -81,7 +81,8 @@ int    stepSum=0;
 // FUNCTION ======	inputHanding
 void inputHanding(){
 	while(SDL_PollEvent(&event)){
-		if( event.type == SDL_KEYDOWN ){
+        switch( event.type ){
+            case SDL_KEYDOWN :
 			switch( event.key.keysym.sym ){
 				case SDLK_ESCAPE   : quit(); break;
 				case SDLK_KP_PLUS  : thisScreen->zoom/=VIEW_ZOOM_STEP; printf("zoom: %f \n", thisScreen->zoom); break;
@@ -89,9 +90,31 @@ void inputHanding(){
 				case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
 
 				case SDLK_p    : thisScreen->first_person = !thisScreen->first_person; break;
-			}
-		}
-		if( event.type == SDL_QUIT){ quit();  };
+
+				case SDLK_c :
+                    world.myCraft->panels[0].lrot = world.myCraft_bak->panels[0].lrot;
+                    world.myCraft->panels[1].lrot = world.myCraft_bak->panels[1].lrot;
+                    world.myCraft->panels[2].lrot = world.myCraft_bak->panels[2].lrot;
+                    world.myCraft->panels[3].lrot = world.myCraft_bak->panels[3].lrot;
+			}; break;
+            case SDL_QUIT: quit(); break;
+
+            case SDL_MOUSEBUTTONDOWN:
+                switch( event.button.button ){
+                    case SDL_BUTTON_RIGHT:
+                        thisScreen->mouseSteer = true;
+                        break;
+                }
+                break;
+            case SDL_MOUSEBUTTONUP:
+                switch( event.button.button ){
+                    case SDL_BUTTON_RIGHT:
+                        thisScreen->mouseSteer = false;
+                        world.resetSteer();
+                        break;
+                }
+                break;
+        }
 	}
 
 
@@ -107,18 +130,17 @@ void inputHanding(){
 	if ( keys[ SDL_SCANCODE_LEFT  ] ) { thisScreen->qCamera.yaw  ( -0.005 ); }
 
 	float dpitch = 0.01;
-	float droll  = 0.01;
+	float droll  = 0.002;
 	float dyaw   = 0.01;
 
-	if      ( keys[ SDL_SCANCODE_A ] ){ world.myCraft->panels[0].lrot.rotate( -droll, { 1,0,0 } );  world.myCraft->panels[1].lrot.rotate( +0.01, { 1,0,0 } );    }
-	else if ( keys[ SDL_SCANCODE_D ] ){ world.myCraft->panels[0].lrot.rotate( +droll, { 1,0,0 } );  world.myCraft->panels[1].lrot.rotate( -0.01, { 1,0,0 } );    }
+	if      ( keys[ SDL_SCANCODE_A ] ){ world.myCraft->panels[0].lrot.rotate( +droll, { 1,0,0 } );  world.myCraft->panels[1].lrot.rotate( -droll, { 1,0,0 } );    }
+	else if ( keys[ SDL_SCANCODE_D ] ){ world.myCraft->panels[0].lrot.rotate( -droll, { 1,0,0 } );  world.myCraft->panels[1].lrot.rotate( +droll, { 1,0,0 } );    }
 
     if      ( keys[ SDL_SCANCODE_W ] ){ world.myCraft->panels[2].lrot.rotate( -dpitch, { 1,0,0 } );  }
 	else if ( keys[ SDL_SCANCODE_S ] ){ world.myCraft->panels[2].lrot.rotate( +dpitch, { 1,0,0 } );  }
 
-    if      ( keys[ SDL_SCANCODE_Q ] ){ world.myCraft->panels[3].lrot.rotate( -dyaw, { 0,1,0 } );  }
-	else if ( keys[ SDL_SCANCODE_E ] ){ world.myCraft->panels[3].lrot.rotate( +dyaw, { 0,1,0 } );  }
-
+    if      ( keys[ SDL_SCANCODE_Q ] ){ world.myCraft->panels[3].lrot.rotate( +dyaw, { 0,1,0 } );  }
+	else if ( keys[ SDL_SCANCODE_E ] ){ world.myCraft->panels[3].lrot.rotate( -dyaw, { 0,1,0 } );  }
 
 	//if ( keystate[ SDL_SCANCODE_DOWN  ] ) { qmouse.pitch2( -0.005 ); }
 	//if ( keystate[ SDL_SCANCODE_UP    ] ) { qmouse.pitch2( 0.005 ); }
@@ -138,11 +160,6 @@ void inputHanding(){
 	//SDL_WarpMouse( thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
 	SDL_WarpMouseInWindow( thisScreen->window, thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
 
-	Mat3d matCam;
-	thisScreen->qCamera.toMatrix( matCam );
-	world.steerToDir( matCam.c );
-
-
 }
 
 // FUNCTION ======	setup
@@ -155,6 +172,9 @@ void setup(){
     thisScreen->VIEW_DEPTH = 10000.0f;
     thisScreen->first_person = false;
     printf( " world.init(); DONE! \n" );
+
+    world.fontTex_DEBUG = thisScreen->fontTex;
+    SDL_ShowCursor( SDL_FALSE );
 }
 
 /*
@@ -198,6 +218,7 @@ int main(int argc, char *argv[]){
 	// creating windows
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int sid;
 	//thisScreen  = new Screen2D( sid, 800,600);
 	thisScreen  = new AeroCraftGUI( sid, 800,600 );

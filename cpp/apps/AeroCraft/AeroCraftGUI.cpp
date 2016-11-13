@@ -107,14 +107,23 @@ void AeroCraftGUI:: draw(){
 		glEnd();
 	};
 
-	Draw3D::drawAxis( 1000 );
+	//Draw3D::drawAxis( 1000 );
 
+	/*
 	glColor4f(1.0f,1.0f,1.0f,0.9f);
 	char str[256];
 	sprintf(str, "speed %3.3f\0",world->myCraft->vel.norm());
 	Draw3D::drawText(str, world->myCraft->pos, fontTex, 0.2, 0, 0 );
 	//Draw3D::drawText( "AHOJ!\0", world->myCraft->pos, fontTex, 0.2, 0, 0 );
 	//Draw3D::drawText( "AHOJ!\0", {0.0,0.0,0.0}, fontTex, 0.5, 0, 0 );
+	*/
+
+
+    Mat3d matCam;
+	qCamera.toMatrix_T( matCam );
+	Draw3D::drawMatInPos(matCam, world->myCraft->pos);
+    world->steerToDir( matCam.c, mouseSteer );
+
 
 };
 

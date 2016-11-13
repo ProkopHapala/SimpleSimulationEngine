@@ -372,6 +372,29 @@ class Quat4TYPE {
 	};
 
 
+    inline void toMatrix_T( MAT& result) const {
+		    TYPE r2 = w*w + x*x + y*y + z*z;
+		    //TYPE s  = (r2 > 0) ? 2d / r2 : 0;
+			TYPE s  = 2 / r2;
+		    // compute xs/ys/zs first to save 6 multiplications, since xs/ys/zs
+		    // will be used 2-4 times each.
+		    TYPE xs = x * s;  TYPE ys = y * s;  TYPE zs = z * s;
+		    TYPE xx = x * xs; TYPE xy = x * ys; TYPE xz = x * zs;
+		    TYPE xw = w * xs; TYPE yy = y * ys; TYPE yz = y * zs;
+		    TYPE yw = w * ys; TYPE zz = z * zs; TYPE zw = w * zs;
+		    // using s=2/norm (instead of 1/norm) saves 9 multiplications by 2 here
+		    result.xx = 1 - (yy + zz);
+		    result.yx =     (xy - zw);
+		    result.zx =     (xz + yw);
+		    result.xy =     (xy + zw);
+		    result.yy = 1 - (xx + zz);
+		    result.zy =     (yz - xw);
+		    result.xz =     (xz - yw);
+		    result.yz =     (yz + xw);
+		    result.zz = 1 - (xx + yy);
+	};
+
+
 	inline void toMatrix_unitary( MAT& result)  const  {
 		TYPE xx = x * x;
 		TYPE xy = x * y;

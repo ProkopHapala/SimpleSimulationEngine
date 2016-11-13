@@ -44,9 +44,9 @@ class AeroSurface : public KinematicBody {
 		//printf( "lrot.b %3.3f %3.3f %3.3f \n", lrot.bx, lrot.by, lrot.bz );
 		//printf( "lrot.c %3.3f %3.3f %3.3f \n", lrot.cx, lrot.cy, lrot.cz );
 
-        glColor3f( 1.0f,0.0f,0.0f ); Draw3D::drawVecInPos( grot.a*C.a,    craft->pos + gdpos );
-        glColor3f( 0.0f,1.0f,0.0f ); Draw3D::drawVecInPos( grot.b*C.b,    craft->pos + gdpos );
-        glColor3f( 0.0f,0.0f,1.0f ); Draw3D::drawVecInPos( grot.c*C.c,    craft->pos + gdpos );
+        //glColor3f( 1.0f,0.0f,0.0f ); Draw3D::drawVecInPos( grot.a*C.a,    craft->pos + gdpos );
+        //glColor3f( 0.0f,1.0f,0.0f ); Draw3D::drawVecInPos( grot.b*C.b,    craft->pos + gdpos );
+        //glColor3f( 0.0f,0.0f,1.0f ); Draw3D::drawVecInPos( grot.c*C.c,    craft->pos + gdpos );
 
 		Vec3d uair;
 		uair.set_cross( gdpos, craft->omega );
@@ -78,8 +78,8 @@ class AeroSurface : public KinematicBody {
 
 
 
-			glColor3f( 0.9f,0.0f,0.9f ); Draw3D::drawVecInPos( force*0.1,    craft->pos + gdpos );
-			glColor3f( 0.0f,0.5f,0.5f ); Draw3D::drawVecInPos( uair*vrair,   craft->pos + gdpos );
+			glColor3f( 0.9f,0.0f,0.9f ); Draw3D::drawVecInPos( force     *0.005,    craft->pos + gdpos );
+			glColor3f( 0.0f,0.5f,0.5f ); Draw3D::drawVecInPos( uair*vrair*0.1,   craft->pos + gdpos );
 
 		}
 	};
