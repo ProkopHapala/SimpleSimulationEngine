@@ -9,16 +9,16 @@ model_params={
 'dCDS'   : 0.9,  
 'dCL'    : 6.28,
 'dCLS'   : 2.70,
-'sStall' : 0.16,
-'wStall' : 0.08,
+'sStall' : 0.15,
+'wStall' : 0.10,
 }
 
 
 # ==== Functions
 
-def model_simple( sa, ca, Cx, Cy ):
-	CD = Cy*ca
-	CL = Cx*sa
+def model_simple( sa, ca ):
+	CD = np.abs(sa)
+	CL = 2*sa*ca
 	return CD,CL,CD*0
 
 
@@ -32,17 +32,17 @@ def model( sa, ca, params ):
 	wS[ mask1  ]  = 1
 	a             = (abs_sa[mask01] - params['sStall'])/params['wStall']
 	wS[ mask01 ]  = a*a*( 3 - 2*a )
-	CD = params['CD0'] + ( (1-wS)*params['dCD']*abs_sa + wS*params['dCDS']        ) * abs_sa
-	CL =                 ( (1-wS)*params['dCL']        + wS*params['dCLS']*abs_ca ) * sa 
+	CD = params['CD0'] + ( (1-wS)*params['dCD']*abs_sa + wS*params['dCDS']    ) * abs_sa
+	CL =                 ( (1-wS)*params['dCL']*ca     + wS*params['dCLS']*ca ) * sa 
 	return CD,CL,wS
 
 def multdata( F, sgn=1 ):
 	n = len(F)
 	F_=np.zeros( n*4 )
-	F_[:n     ] = F*sgn
-	F_[n:2*n  ] = F[::-1]*sgn 
+	F_[:n     ] = F
+	F_[n:2*n  ] = F[::-1] *sgn
 	F_[2*n:3*n] = F 
-	F_[3*n:   ] = F[::-1]
+	F_[3*n:   ] = F[::-1] *sgn
 	return F_
 
 # ==== Main
@@ -57,7 +57,7 @@ alfas = np.linspace( -np.pi,np.pi,len(CD) )
 sa    = np.sin(alfas)
 ca    = np.cos(alfas)
 CD_,CL_,wS = model( sa, ca, model_params )
-#CD_,CL_,wS = model_simple( sa, ca, 0.05,1.0 )
+CD__,CL__,wS = model_simple( sa, ca )
 
 #plot_1  angle dependence
 plt.figure()
@@ -65,6 +65,8 @@ plt.plot( alfas, CD , 'r-', label='CD')
 plt.plot( alfas, CL , 'b-', label='CL')
 plt.plot( alfas, CD_, 'm-', label='CD_')
 plt.plot( alfas, CL_, 'c-', label='CL_')
+plt.plot( alfas, CD__, 'm--', label='CD__')
+plt.plot( alfas, CL__, 'c--', label='CL__')
 plt.plot( alfas, wS, 'k-', label='wS')
 #axis('equal'); 
 plt.grid(); 
@@ -74,6 +76,7 @@ plt.legend()
 plt.figure()
 plt.plot( CD, CL  , 'k-' )
 plt.plot( CD_, CL_, 'r-' )
+plt.plot( CD__, CL__, 'r--' )
 #plt.axis('equal'); 
 plt.grid(); 
 #plt.xlim(0.0,1.5)
