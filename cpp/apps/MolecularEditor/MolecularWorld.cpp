@@ -5,8 +5,157 @@
 
 #include "forceField.h"
 
+#include  "Draw3D.h"
+
 #include "MolecularWorld.h" // THE HEADER
 
+
+// =========================================
+// =========== Rotation optimization
+// =========================================
+
+void MolecularWorld::transformPoints( const Vec3d& pos, const Quat4d& rot, int npoints, Vec3d * points, Vec3d * Tpoints ){
+    Mat3d T;
+    //q.toMatrix_unitary2( T );
+    rot.toMatrix( T);
+    //printVec( T.a );
+    //printVec( T.b );
+    //printVec( T.c );
+    //printf( " %f %f %f \n", T.a.dot(T.b), T.a.dot(T.c), T.b.dot(T.c) );
+    //printf( " %f %f %f \n", T.a.dot(T.a), T.b.dot(T.b), T.c.dot(T.c) );
+    for( int i=0; i<npoints; i++ ){
+        Vec3d Tp;
+        T.dot_to_T(   points[i],  Tp );
+        //T.dot_to(   points[i],  Tp );
+        Tpoints[i].set_add( pos, Tp  );
+    }
+}
+
+int MolecularWorld::applyLinkerForce( ){
+    for( int il=0; il<nLinkers; il++ ){
+        Mat3d T;
+        Vec3d dgpi,dgpj, dp;
+
+        int i = linkers[il].i;
+        rot[i].toMatrix( T);
+        T.dot_to_T( linkers[il].posi, dgpi );
+
+        int j = linkers[il].j;
+        rot[j].toMatrix(T);
+        T.dot_to_T( linkers[il].posj, dgpj );
+
+        dp      = dgpj + pos[j] - dgpi + pos[i];
+        Vec3d f = linkers[il].getForce(dp);
+
+        //Draw3D::drawLine( dgpi + pos[i],   dgpj + pos[j] );
+
+        //printf( "%i   %g %g %g   %g %g %g  \n", i, f.x,f.y,f.z, dp.x,dp.y,dp.z   );
+
+        // TODO - we can optimize this if we use dGlobPos instead of LocPos
+        fpos[i].add( f );   rot[i].addForceFromPoint( pos[i], f, frot[i] );
+        f.mul(-1);
+        fpos[j].add( f );   rot[j].addForceFromPoint( pos[j], f, frot[j] );
+    }
+    return nLinkers;
+}
+
+
+
+void MolecularWorld::forceFromPoints( int npoints, Vec3d * points, Vec3d * forces,  const Quat4d& q,  Vec3d& fp, Quat4d& fq ){
+    //printf( "forceFromPoints ----------------\n" );
+    for( int i=0; i<npoints; i++ ){
+        //printf( " %i   %f %f %f   %f %f %f \n", i,   points[i].x, points[i].y, points[i].z,   forces[i].x, forces[i].y, forces[i].z  );
+        q .addForceFromPoint( points[i], forces[i], fq );
+        fp.add( forces[i] );
+        //printf( " %i   %f %f %f   %f %f %f %f \n", i,   forces[i].x, forces[i].y, forces[i].z,    fp.x, fp.y, fp.z,  fq.x, fq.y, fq.z, fq.w  );
+    }
+}
+
+void MolecularWorld::cleanPointForce( int npoints, Vec3d * forces ){	for( int i=0; i<npoints; i++ ){  forces[i].set(0.0);  }	}
+
+void MolecularWorld::assembleForces( ){
+    nInteractions = 0;
+    // points
+    /*
+    for (int i=0; i<nmols; i++){
+        //printf("DEBUG 2.1\n");
+        MoleculeType * moli = instances[i];
+        int npi = moli->natoms;
+        //printf("DEBUG 2.2\n");
+        transformPoints( pos[i], rot[i], npi, moli->xyzs, Tps_i );
+        cleanPointForce( moli->natoms, fs_i );
+        //printf("DEBUG 2.3\n");
+        for (int j=0; j<i; j++){
+            MoleculeType * molj = instances[j];
+            int npj = molj->natoms;
+            //printf("DEBUG 2.4\n");
+            transformPoints( pos[j], rot[j], npj, molj->xyzs, Tps_j );
+            //cleanPointForce( moli->natoms, fs_i );
+            //printf("DEBUG 2.5\n");
+            cleanPointForce( molj->natoms, fs_j );
+            //printf("DEBUG 2.6\n");
+
+            nInteractions +=
+            interMolForceLJE(
+                npi, moli->atypes, moli->Qs, Tps_i, fs_i,
+                npj, molj->atypes, molj->Qs, Tps_j, fs_j,
+                atomTypes.ntypes, C6s, C12s
+            );
+            //printf("DEBUG 2.7\n");
+            forceFromPoints( npj, molj->xyzs, fs_j,  rot[j], fpos[j], frot[j] );
+            //forceFromPoints( moli->natoms, moli->xyzs, fs_i,  rot[i],  fpos[i], frot[i] );
+            //exit(0);
+        }
+        //printf("DEBUG 2.8\n");
+        //forceMolSurf( surf_z0, surf_zMin, surf_Emin, surf_hat, npi,  Tps_i, fs_i );
+        //printf("DEBUG 2.9\n");
+        forceFromPoints( npi, moli->xyzs, fs_i,  rot[i],  fpos[i], frot[i] );
+        //printf("DEBUG 2.10\n");
+    }
+    */
+    // linkers
+    if(linkers) nInteractions += applyLinkerForce( );
+
+    /*
+    for(int i=0; i<nmols; i++){
+        printf( "%i %g %g %g    %g %g %g %g\n", i, fpos[i].x,fpos[i].y,fpos[i].z,   frot[i].x,frot[i].y,frot[i].z,frot[i].w );
+    }
+    exit(0);
+    */
+}
+
+void MolecularWorld::rigidOptStep( ){
+    //printf("DEBUG 1\n");
+    for (int i=0; i<nmols; i++){
+        fpos[i].set(0.0d); frot[i].set(0.0d,0.0d,0.0d,0.0d);   // set all forces to zero
+        rot[i].normalize();                               // keep quaternion normalized, otherwise unstable !!!
+    }
+    //printf("DEBUG 2\n");
+    assembleForces( );
+    //printf("DEBUG 3\n");
+    for (int i=0; i<nmols; i++){
+        // out-project component which would harm unitarity of quaternion
+        double cdot;
+        cdot = rot[i].dot( frot[i] );  frot[i].add_mul( rot[i], -cdot );
+        cdot = rot[i].dot( vrot[i] );  vrot[i].add_mul( rot[i], -cdot );
+        // apply constrains
+        int i2 = i<<1;
+        if(constrains[i2  ]){ fpos[i].set(0.0d); vpos[i].set(0.0d); }
+        if(constrains[i2+1]){ frot[i].set(0.0d); vrot[i].set(0.0d); }
+    }
+    //printf("DEBUG 4\n");
+    //optimizer->move();
+    //optimizer->optStep();
+    //for(int i=0;i<optimizer->n; i++ ){ printf( " %i %g %g %g \n", i, optimizer->pos[i], optimizer->vel[i], optimizer->force[i] ); }
+    optimizer->move_FIRE();
+    //printf("DEBUG 5\n");
+}
+
+
+
+// =========================================
+// =========== initialization and I/O
+// =========================================
 
 void MolecularWorld::initParams( ){
     // optimization parameters
@@ -24,9 +173,13 @@ void MolecularWorld::initParams( ){
     pos   = (Vec3d* )&optimizer->pos[0];
     vpos  = (Vec3d* )&optimizer->vel[0];
     fpos  = (Vec3d* )&optimizer->force[0];
+    invMpos  = (Vec3d* )&optimizer->invMasses[0];
+
     rot   = (Quat4d*)&optimizer->pos[irot];
     vrot  = (Quat4d*)&optimizer->vel[irot];
     frot  = (Quat4d*)&optimizer->force[irot];
+    invMrot  = (Quat4d*)&optimizer->invMasses[irot];
+
 }
 
 void MolecularWorld::initTPoints(){
@@ -63,59 +216,81 @@ int MolecularWorld::loadMolTypes( char const* dirName, char const* fileName ){
     return nMolTypes;
 }
 
-int MolecularWorld::loadInstances( char const* filename ){
-    printf(" loading molecular instances from: >>%s<<\n", filename );
+int MolecularWorld::loadInstances( char const* fileName ){
+    printf(" loading molecular instances from: >>%s<<\n", fileName );
 
     FILE * pFile;
-    pFile = fopen (filename,"r");
+    pFile = fopen (fileName,"r");
     fscanf ( pFile, " %i", &nmols);
     printf ( "nmols %i \n", nmols );
     //printf ( " PhysicalSystem 1 \n" );
-    instances = new MoleculeType*[nmols];
+
+    instances  = new MoleculeType*[nmols];
+    constrains = new bool       [2*nmols];
     initParams( );
     //printf( " PhysicalSystem 2 \n" );
 
     for (int i=0; i<nmols; i++){
+        int i2 = i<<1;
         int itype;
         Mat3d M;
-        fscanf (pFile, " %i %lf %lf %lf     %lf %lf %lf     %lf %lf %lf", &itype, &pos[i].x, &pos[i].y, &pos[i].z,    &M.ax, &M.ay, &M.az,    &M.bx, &M.by, &M.bz );
-        printf(  " %i %f %f %f     %f %f %f     %f %f %f \n", itype, pos[i].x, pos[i].y, pos[i].z,    M.ax, M.ay, M.az,    M.bx, M.by, M.bz );
+        //int c1,c2;
+        fscanf (pFile, " %i   %lf %lf %lf     %lf %lf %lf     %lf %lf %lf  %i %i\n",
+            &itype,
+            &pos[i].x, &pos[i].y, &pos[i].z,
+            &M.ax, &M.ay, &M.az,
+            &M.bx, &M.by, &M.bz,
+            &constrains[i2], &constrains[i2+1]
+        );
+        printf(  " %i   %f %f %f     %f %f %f     %f %f %f %i %i\n", itype, pos[i].x, pos[i].y, pos[i].z,    M.ax, M.ay, M.az,    M.bx, M.by, M.bz, constrains[i2], constrains[i2+1] );
         itype--;
         instances[i] = &molTypes[itype];
+
+        //printf("M.a %f %f %f\n", M.ax,M.ay,M.az);
+        //printf("M.b %f %f %f\n", M.bx,M.by,M.bz);
 
         M.a.normalize();
         M.b.add_mul( M.a, -M.a.dot( M.b ) );
         M.b.normalize();
         M.c.set_cross( M.a, M.b );
+        //printf("M.a %f %f %f\n", M.ax,M.ay,M.az);
+        //printf("M.b %f %f %f\n", M.bx,M.by,M.bz);
+        //printf("M.c %f %f %f\n", M.cx,M.cy,M.cz);
         rot[i].fromMatrix( M );
-/*
-        printf(" matrix:  \n");
-        printVec(M.a);
-        printVec(M.b);
-        printVec(M.c);
-        printf(" ortonormality:  \n");
-        printf( " a.a b.b c.c %f %f %f \n", M.a.norm2(),  M.b.norm2(),  M.c.norm2() );
-        printf( " a.b a.c b.c %f %f %f \n", M.a.dot(M.b), M.a.dot(M.c), M.b.dot(M.c) );
-        printf( " det(M) %f \n", M.determinant() );
-        printf(" matrix -> quat \n");
-        rot[i].fromMatrix( M );
-        printf(" q: %f %f %f %f  qnorm %f  \n", rot[i].x, rot[i].y, rot[i].z, rot[i].w,   rot[i].norm2() );
-        printf(" quat -> matrix  \n");
-        rot[i].toMatrix( M );
-        printVec(M.a);
-        printVec(M.b);
-        printVec(M.c);
-*/
-       // molecules[ i ] = &molTypeList[ itype-1 ];
-        //printf("=====\n");
+
+        invMpos[i].set(1.0d);
+        invMrot[i].set(1.0d/instances[i]->Rmax);
+
     }
     fclose(pFile);
     return nmols;
 }
 
+int MolecularWorld::loadLinkers( char const* fileName ){
+    printf(" loading linkers from: >>%s<<\n", fileName );
+    FILE * pFile;
+    pFile = fopen (fileName,"r");
+    fscanf ( pFile, " %i\n", &nLinkers);
+    linkers = new MolecularLink[nLinkers];
+    for (int i=0; i<nLinkers; i++){
+        MolecularLink& li = linkers[i];
+        fscanf (pFile, " %i %i   %lf %lf %lf     %lf %lf %lf     %lf %lf\n",
+            &li.i, &li.j,
+            &li.posi.x, &li.posi.y, &li.posi.z,
+            &li.posj.x, &li.posj.y, &li.posj.z,
+            &li.k, &li.l0
+        );
+        //li.i--; li.j--;  // uncoment this if instances numbered from 1 rather than from 0
+        printf ( " %i %i   %lf %lf %lf     %lf %lf %lf     %lf %lf\n", li.i, li.j,  li.posi.x, li.posi.y, li.posi.z, li.posj.x, li.posj.y, li.posj.z, li.k, li.l0 );
+    }
+    fclose(pFile);
+    return nLinkers;
+}
+
 bool MolecularWorld::fromDir( char const* dirName, char const* atom_fname, char const* mol_fname, char const* instance_fname ){
 
-    //printf("dirName: >>%s<<\n", dirName);
+    printf("dirName: >>%s<< atom_fname: >>%s<< mol_fname: >>%s<< instance_fname: >>%s<<\n", dirName, atom_fname, mol_fname, instance_fname );
+
     char fname[256];
     strcpy(fname,dirName ); strcat(fname,atom_fname);
     atomTypes.loadFromFile( fname );
@@ -132,6 +307,25 @@ bool MolecularWorld::fromDir( char const* dirName, char const* atom_fname, char 
     return true;
 }
 
+
+int MolecularWorld::exportAtomsXYZ(  FILE * pFile, const char * comment ){
+    //printf( "exportAtomsXYZ \n");
+    int natoms = 0;
+    for (int i=0; i<nmols; i++){ natoms += instances[i]->natoms; }
+    fprintf(pFile, "%i\n", natoms  );
+    fprintf(pFile, "%s\n", comment );
+    for (int i=0; i<nmols; i++){
+        MoleculeType * moli = instances[i];
+        int npi = moli->natoms;
+        transformPoints( pos[i], rot[i], npi, moli->xyzs, Tps_i );
+        for (int j=0; j<npi; j++){
+            fprintf( pFile, " %s %3.6f %3.6f %3.6f\n", atomTypes.names[moli->atypes[j]], Tps_i[j].x, Tps_i[j].y, Tps_i[j].z );
+            //printf( "DEBUG %s %3.6f %3.6f %3.6f\n", atomTypes.names[moli->atypes[j]], Tps_i[j].x, Tps_i[j].y, Tps_i[j].z );
+        }
+    }
+    return natoms;
+}
+
 /*
 MolecularWorld::MolecularWorld( int nmols_, MoleculeType ** molecules_ ){
     nmols = nmols_;
@@ -146,96 +340,7 @@ void MolecularWorld::makeFF( ){
 }
 
 
-// =========== Rotation optimization
 
-void MolecularWorld::transformPoints( const Vec3d& pos, const Quat4d& rot, int npoints, Vec3d * points, Vec3d * Tpoints ){
-    Mat3d T;
-    //q.toMatrix_unitary2( T );
-    rot.toMatrix( T);
-    //printVec( T.a );
-    //printVec( T.b );
-    //printVec( T.c );
-    //printf( " %f %f %f \n", T.a.dot(T.b), T.a.dot(T.c), T.b.dot(T.c) );
-    //printf( " %f %f %f \n", T.a.dot(T.a), T.b.dot(T.b), T.c.dot(T.c) );
-    for( int i=0; i<npoints; i++ ){
-        Vec3d Tp;
-        T.dot_to_T(   points[i],  Tp );
-        //T.dot_to(   points[i],  Tp );
-        Tpoints[i].set_add( pos, Tp  );
-    }
-}
-
-void MolecularWorld::forceFromPoints( int npoints, Vec3d * points, Vec3d * forces,  const Quat4d& q,  Vec3d& fp, Quat4d& fq ){
-    //printf( "forceFromPoints ----------------\n" );
-    for( int i=0; i<npoints; i++ ){
-        //printf( " %i   %f %f %f   %f %f %f \n", i,   points[i].x, points[i].y, points[i].z,   forces[i].x, forces[i].y, forces[i].z  );
-        q .addForceFromPoint( points[i], forces[i], fq );
-        fp.add( forces[i] );
-        //printf( " %i   %f %f %f   %f %f %f %f \n", i,   forces[i].x, forces[i].y, forces[i].z,    fp.x, fp.y, fp.z,  fq.x, fq.y, fq.z, fq.w  );
-    }
-}
-
-void MolecularWorld::cleanPointForce( int npoints, Vec3d * forces ){	for( int i=0; i<npoints; i++ ){  forces[i].set(0.0);  }	}
-
-void MolecularWorld::assembleForces( ){
-    nInteractions = 0;
-    for (int i=0; i<nmols; i++){
-        //printf("DEBUG 2.1\n");
-        MoleculeType * moli = instances[i];
-        int npi = moli->natoms;
-        //printf("DEBUG 2.2\n");
-        transformPoints( pos[i], rot[i], npi, moli->xyzs, Tps_i );
-        cleanPointForce( moli->natoms, fs_i );
-        //printf("DEBUG 2.3\n");
-        for (int j=0; j<i; j++){
-            MoleculeType * molj = instances[j];
-            int npj = molj->natoms;
-            //printf("DEBUG 2.4\n");
-            transformPoints( pos[j], rot[j], npj, molj->xyzs, Tps_j );
-            //cleanPointForce( moli->natoms, fs_i );
-            //printf("DEBUG 2.5\n");
-            cleanPointForce( molj->natoms, fs_j );
-            //printf("DEBUG 2.6\n");
-
-            nInteractions +=
-            interMolForceLJE(
-                npi, moli->atypes, moli->Qs, Tps_i, fs_i,
-                npj, molj->atypes, molj->Qs, Tps_j, fs_j,
-                atomTypes.ntypes, C6s, C12s
-            );
-            //printf("DEBUG 2.7\n");
-            forceFromPoints( npj, molj->xyzs, fs_j,  rot[j], fpos[j], frot[j] );
-            //forceFromPoints( moli->natoms, moli->xyzs, fs_i,  rot[i],  fpos[i], frot[i] );
-            //exit(0);
-        }
-        //printf("DEBUG 2.8\n");
-        //forceMolSurf( surf_z0, surf_zMin, surf_Emin, surf_hat, npi,  Tps_i, fs_i );
-        //printf("DEBUG 2.9\n");
-        forceFromPoints( npi, moli->xyzs, fs_i,  rot[i],  fpos[i], frot[i] );
-        //printf("DEBUG 2.10\n");
-    }
-}
-
-void MolecularWorld::rigidOptStep( ){
-    //printf("DEBUG 1\n");
-    for (int i=0; i<nmols; i++){
-        fpos[i].set(0.0); frot[i].set(0.0,0.0,0.0,0.0);   // set all forces to zero
-        rot[i].normalize();                               // keep quaternion normalized, otherwise unstable !!!
-    }
-    //printf("DEBUG 2\n");
-    assembleForces( );
-    //printf("DEBUG 3\n");
-    for (int i=0; i<nmols; i++){
-        double qfq = rot[i].dot( frot[i] );
-        frot[i].add_mul( rot[i], -qfq ); // out-project component which would harm unitarity of quaternion
-    }
-    //printf("DEBUG 4\n");
-    //optimizer->move();
-    //optimizer->optStep();
-    //for(int i=0;i<optimizer->n; i++ ){ printf( " %i %g %g %g \n", i, optimizer->pos[i], optimizer->vel[i], optimizer->force[i] ); }
-    optimizer->move_FIRE();
-    //printf("DEBUG 5\n");
-}
 
 // =========== view utils
 

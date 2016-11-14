@@ -4,8 +4,9 @@
 // ===============  MoveSteps
 
 void DynamicOpt::move_LeapFrog(){
+    double dtv = dt*fscale_safe;
 	for ( int i=0; i<n; i++ ){
-		vel[i] += dt*force[i];
+        vel[i] += invMasses[i]*dtv*force[i];
 		pos[i] += dt*vel[i];
 	}
 	stepsDone++;
@@ -14,8 +15,9 @@ void DynamicOpt::move_LeapFrog(){
 
 void DynamicOpt::move_MDquench(){
 	double cdamp = 1 - damping;
+	double dtv = dt*fscale_safe;
 	for ( int i=0; i<n; i++ ){
-		vel[i]  = cdamp*vel[i] + dt*force[i];
+		vel[i]  = cdamp*vel[i] + dtv*force[i]*invMasses[i];
 		pos[i] += dt*vel[i];
 	}
 	stepsDone++;
@@ -51,6 +53,8 @@ void DynamicOpt::move_FIRE(){
 		}
 		lastNeg++;
 	}
+
+    if( ff > fmax*fmax ){ fscale_safe=fmax/sqrt(ff); }else{ fscale_safe=1; }
 	move_LeapFrog();
 
 	//printf( " %i f v vf  %f %f %f   dt damp  %f %f \n",  stepsDone,   sqrt(ff), sqrt(vv), vf/sqrt(vv*ff),   dt_var, damp_var  );

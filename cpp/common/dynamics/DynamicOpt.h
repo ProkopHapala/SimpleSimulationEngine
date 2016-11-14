@@ -2,6 +2,7 @@
 #ifndef DynamicOpt_h
 #define DynamicOpt_h
 
+#include <cstddef>
 #include <math.h>
 
 typedef void (*ForceFunction)( int n, double * xs, double * dfs );
@@ -16,14 +17,17 @@ const int    RELAX_maxIters  = 1000;
 class DynamicOpt{
 	public:
 	// variables
-	int n;
-	double * pos;
-	double * vel;
-	double * force;
+	int n=0;
+	double * pos       = NULL;
+	double * vel       = NULL;
+	double * force     = NULL;
+	double * invMasses = NULL;
 
 	// parameters
 	double dt           = 0.05d;
 	double damping      = 0.1d;
+
+	double fmax         = 10.0;
 
 	// FIRE
 	int    minLastNeg   = 5;
@@ -34,6 +38,7 @@ class DynamicOpt{
 
 	double dt_max       = dt;
 	double damp_max     = damping;
+	double fscale_safe  = 1;
 
 	int    lastNeg      = 0;
 
@@ -42,7 +47,7 @@ class DynamicOpt{
 	int stepsDone = 0;
 	double t      = 0.0d;
 
-	ForceFunction getForce;
+	ForceFunction getForce = NULL;
 
 	// ==== function declarations
 
@@ -69,6 +74,7 @@ class DynamicOpt{
 		pos   = new double[n];
 		vel   = new double[n];
 		force = new double[n];
+		invMasses = new double[n];
 	}
 
 	inline void deallocate( ){

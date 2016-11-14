@@ -16,6 +16,8 @@ class MoleculeType{
 	int    * bonds  = NULL;
 	int viewlist=0;
 
+	double Rmax = 0.0;
+
 	// ---- Functions
 
 	void allocateAtoms( int n );
@@ -34,6 +36,7 @@ class MoleculeType{
 	//int drawBond( int i, int j, int nstick, float bondwidth  );
 	//int makeViewCPK ( int nsphere, int nstick, float atomscale, float bondwidth );
 
+	void initBounds();
 	void toCOG_minmax();
 	void toCOG_average();
 

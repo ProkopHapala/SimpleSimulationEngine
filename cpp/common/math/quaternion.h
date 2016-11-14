@@ -55,6 +55,7 @@ class Quat4TYPE {
 		TYPE array[4];
 	};
 
+    inline void set   ( TYPE f                             ){ x=f;   y=f;   z=f;   w=f;   };
 	inline void set   ( const  QUAT& q                     ){ x=q.x; y=q.y; z=q.z; w=q.w; };
 	inline void set   ( TYPE fx, TYPE fy, TYPE fz, TYPE fw ){ x=fx;  y=fy;  z=fz;  w=fw;  };
 	inline void setOne( ){ x=y=z=0; w=1; };

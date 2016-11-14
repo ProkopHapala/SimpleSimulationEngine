@@ -15,9 +15,8 @@ class AtomTypes{
 
 	bool loadFromFile( char const* filename );
 
-
-	inline AtomTypes( ){};
-	AtomTypes( char const* filename );
+	inline AtomTypes(){};
+	//AtomTypes( char const* filename );
 };
 
 #endif

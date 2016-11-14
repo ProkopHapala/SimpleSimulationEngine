@@ -92,6 +92,8 @@ class MolecularEditorApp : public AppSDL2OGL_3D {
     bool converged     = false;
     double fmaxConverg = 0.00001;
 
+    FILE * fout_xyz = NULL;
+
 	virtual void draw   ();
 	virtual void drawHUD();
 	//virtual void mouseHandling( );
@@ -104,15 +106,20 @@ MolecularEditorApp::MolecularEditorApp( int& id, int WIDTH_, int HEIGHT_ ) : App
 
     //MolecularWorld( char const* filename, MoleculeType * molTypeList );
     world.fromDir( "inputs/", "atomTypes.ini", "molTypes.ini", "instances.ini" );
+    world.loadLinkers("inputs/linkers.ini");
+
     world.makeFF ( );
     world.optimizer->initOpt( 0.05, 0.15 );
 
     for(int i=0; i<world.nMolTypes; i++){
         printf(" rendering mol %i \n", i );
-        world.molTypes[i].toCOG_average();
+        //world.molTypes[i].toCOG_average();
         world.molTypes[i].findBonds( 0.6 );
-        renderMoleculeCPK( &world.molTypes[i], 4, 8, 0.5, 0.2 );
+        //renderMoleculeCPK( &world.molTypes[i], 4, 8, 0.5, 0.2 );
+        renderMoleculeCPK( &world.molTypes[i], 1, 3, 0.1, 0.05 );
     }
+
+    fout_xyz = fopen("relax.xyz","w");
 
 }
 
@@ -123,26 +130,43 @@ void MolecularEditorApp::draw(){
 	//glDisable( GL_DEPTH_TEST );
 
 
+    //converged = true;
+    //delay = 100; world.optimizer->dt_max = 0.00001; world.optimizer->dt_max = 0.00001; perFrame=1;
+    delay = 100; perFrame=1;
+    //perFrame=1;
 	if( !converged ){
         long tick1 = getCPUticks();
+        double fmax = 0.0;
         for(int iter=0; iter<perFrame; iter++){
             world.rigidOptStep( );
-            double fmax = world.optimizer->getFmaxAbs( );
+            fmax = world.optimizer->getFmaxAbs( );
             printf(" opt step %i fmax %g \n", world.optimizer->stepsDone, fmax );
             if( fmax < fmaxConverg ){
                 converged = true;
                 printf(" converged after %i step \n", world.optimizer->stepsDone );
+                if(fout_xyz){
+                    fclose(fout_xyz);
+                    fout_xyz = NULL;
+                }
                 break;
             }
         }
         double ticks = (getCPUticks() - tick1)/((double)perFrame);
         printf("======= %f Mticks/iter  %f ticks/interaction \n", ticks*1.0e-6, ticks/world.nInteractions );
+
+        if(fout_xyz){
+            char str[256];
+            sprintf(str,"# fmax = %g", fmax );
+            world.exportAtomsXYZ( fout_xyz, str );
+        }
+
     }
     //exit(0);
 
 
 	glMatrixMode(GL_MODELVIEW);
 	//glMatrixMode(GL_PROJECTION);
+	glEnable(GL_LIGHTING);
     for (int i=0; i<world.nmols; i++){
         if( world.instances[i]->viewlist > 0 ){
             Mat3d rotmat;
@@ -151,7 +175,7 @@ void MolecularEditorApp::draw(){
             //rot[i].toMatrix_unitary( rotmat );
             //printf( "%i   (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f,%3.3f)\n", i,  world.pos[i].x,world.pos[i].y,world.pos[i].z,   world.rot[i].x,world.rot[i].y,world.rot[i].z,world.rot[i].w  );
             world.rot[i].toMatrix( rotmat );
-            Draw3D::drawPointCross(world.pos[i],2.0);
+            glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.pos[i],1.0);
             Draw3D::toGLMat( world.pos[i], rotmat, glMat ); // somehow not working
             //Draw3D::toGLMat( {0.0,0.0,0.0}, rotmat, glMat );
             glPushMatrix();
@@ -163,6 +187,33 @@ void MolecularEditorApp::draw(){
             glPopMatrix();
         }
     };
+
+    //printf(" nLinkers %i &linkers %i \n" , world.nLinkers,  world.linkers );
+    glDisable(GL_LIGHTING);
+    glColor3f(0.0f,1.0f,0.0f);
+    if( world.linkers ){
+        for (int il=0; il<world.nLinkers; il++){
+            Mat3d T;
+            Vec3d gpi,gpj;
+            MolecularLink& li =  world.linkers[il];
+            int i = li.i;
+            world.rot[i].toMatrix( T);
+            T.dot_to( li.posi, gpi );
+            gpi.add( world.pos[i] );
+
+            int j = li.j;
+            world.rot[j].toMatrix(T);
+            T.dot_to( li.posj, gpj );
+            gpj.add( world.pos[j] );
+
+            Draw3D::drawLine(  gpi, gpj );
+            Draw3D::drawPointCross(gpi,0.5);
+            Draw3D::drawPointCross(gpj,0.5);
+
+            //printf( "%i (%i,%i)  (%3.3f,%3.3f,%3.3f)   (%3.3f,%3.3f,%3.3f)\n" , il, i,j,   li.posi.x, li.posi.y, li.posi.z, li.posj.x, li.posj.y, li.posj.z );
+            //printf( "%i          (%3.3f,%3.3f,%3.3f)   (%3.3f,%3.3f,%3.3f)\n" , il, gpi.x, gpi.y, gpi.z,   gpj.x,gpj.y,gpj.z);
+        }
+    }
 
     //exit(0);
 

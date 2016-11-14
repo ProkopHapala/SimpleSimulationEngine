@@ -39,6 +39,7 @@ bool MoleculeType::loadFromFile_bas( char const* filename ){
         //printf( " %i %f %f %f %f    %f %i \n", ai, x, y, z, Qs[i],    q, nw );
         printf( " %i %f %f %f %f    %f %i \n", atypes[i], xyzs[i].x, xyzs[i].y, xyzs[i].z, Qs[i],    q, nw );
     }
+    initBounds();
     fclose (pFile);
     return 0;
 }
@@ -97,6 +98,13 @@ int MoleculeType::makeViewCPK ( int nsphere, int nstick, float atomscale, float 
     return viewlist;
 }
 */
+
+void MoleculeType::initBounds(){
+    Rmax = 0.0d;
+    for (int i=0; i<natoms; i++){ Rmax = fmax( xyzs[i].norm2(), Rmax ); }
+    Rmax = sqrt(Rmax);
+}
+
 
 void MoleculeType::toCOG_minmax(){
     Vec3d pmin,pmax; pmin.set( 100000,100000,100000 );  pmax.set( -100000,-100000,-100000 );

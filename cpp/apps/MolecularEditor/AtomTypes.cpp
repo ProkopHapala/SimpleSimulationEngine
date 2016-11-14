@@ -27,7 +27,7 @@ bool AtomTypes::loadFromFile( char const* filename ){
     return 0;
 }
 
-AtomTypes::AtomTypes( char const* filename ){  loadFromFile( filename );  };
+//AtomTypes::AtomTypes( char const* filename ){  loadFromFile( filename );  };
 
 
 
