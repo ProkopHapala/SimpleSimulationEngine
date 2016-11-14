@@ -132,7 +132,7 @@ void MolecularEditorApp::draw(){
 
     //converged = true;
     //delay = 100; world.optimizer->dt_max = 0.00001; world.optimizer->dt_max = 0.00001; perFrame=1;
-    delay = 100; perFrame=1;
+    //delay = 100; perFrame=1;
     //perFrame=1;
 	if( !converged ){
         long tick1 = getCPUticks();

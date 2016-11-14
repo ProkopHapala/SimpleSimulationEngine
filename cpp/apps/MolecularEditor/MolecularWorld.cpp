@@ -52,9 +52,9 @@ int MolecularWorld::applyLinkerForce( ){
         //printf( "%i   %g %g %g   %g %g %g  \n", i, f.x,f.y,f.z, dp.x,dp.y,dp.z   );
 
         // TODO - we can optimize this if we use dGlobPos instead of LocPos
-        fpos[i].add( f );   rot[i].addForceFromPoint( pos[i], f, frot[i] );
+        fpos[i].add( f );   rot[i].addForceFromPoint( linkers[il].posi, f, frot[i] );
         f.mul(-1);
-        fpos[j].add( f );   rot[j].addForceFromPoint( pos[j], f, frot[j] );
+        fpos[j].add( f );   rot[j].addForceFromPoint( linkers[il].posj, f, frot[j] );
     }
     return nLinkers;
 }
@@ -76,7 +76,6 @@ void MolecularWorld::cleanPointForce( int npoints, Vec3d * forces ){	for( int i=
 void MolecularWorld::assembleForces( ){
     nInteractions = 0;
     // points
-    /*
     for (int i=0; i<nmols; i++){
         //printf("DEBUG 2.1\n");
         MoleculeType * moli = instances[i];
@@ -112,7 +111,6 @@ void MolecularWorld::assembleForces( ){
         forceFromPoints( npi, moli->xyzs, fs_i,  rot[i],  fpos[i], frot[i] );
         //printf("DEBUG 2.10\n");
     }
-    */
     // linkers
     if(linkers) nInteractions += applyLinkerForce( );
 

@@ -6,7 +6,7 @@ import numpy as np
 
 bas=np.genfromtxt("H56.bas", skip_header=1)
 
-bas=bas[:5]
+#bas=bas[:5]
 #print( bas )
 
 molType=2
