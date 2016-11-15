@@ -29,6 +29,37 @@ void makeLJparams( int ntypes, double * Rs, double * Es, double*& C6s, double*& 
 
 // =============== inter-Atomic Force-Filed
 
+inline Vec3d radialSpringForce( const Vec3d& dp, double k, double l0){
+
+    Vec3d f;
+    //printf( "r2 %g  l0 %g\n", sqrt(r2), l0 );
+    double r = dp.norm();
+    f.set_mul( dp, k*(l0-r)/r );
+
+    /*
+    double r2 = dp.norm2();
+    if( r2 > l0*l0 ){
+        double r = sqrt(r2);
+        f.set_mul( dp, k*(r-l0)/r );
+    }else{
+        f.set(0.0);
+    }
+    */
+    return f;
+}
+
+
+inline Vec3d radialBondForce( const Vec3d& dp, double k, double l0, double dlmax){
+
+    Vec3d f;
+    //printf( "r2 %g  l0 %g\n", sqrt(r2), l0 );
+    double r  = dp.norm();
+    double dr = r-l0;
+    if( dr > dlmax ) dr=dlmax;
+    f.set_mul( dp, -k*dr/r );
+    return f;
+}
+
 inline void forceLJ( const Vec3d& dR, double c6, double c12, Vec3d& f ){
 	double ir2  = 1/dR.norm2( );
 	double ir6  = ir2*ir2*ir2;
@@ -37,6 +68,7 @@ inline void forceLJ( const Vec3d& dR, double c6, double c12, Vec3d& f ){
 }
 
 inline void forceLJE( const Vec3d& dR, double c6, double c12, double qq, Vec3d& f ){
+    //printf("forceLJE %g %g   (%3.3f,%3.3f,%3.3f)\n", c6, c12, dR.x, dR.y, dR.z);
 	const double kcoulomb   = 14.3996448915;   //   (e/Angstrome) /(4*pi*epsilon0)  =  ( (1.60217657e-19/1e-10)^2)/(4*pi*8.85418782e-12)
 	double ir2  = 1/dR.norm2( );
 	double ir6  = ir2*ir2*ir2;
@@ -105,6 +137,7 @@ inline int interMolForceLJE(
 			int ityp   = ityp0 + btyp;
 			double C6  = C6s [ ityp ];
 			double C12 = C12s[ ityp ];
+			//printf( "interMolForceLJE %i %i  %i %i  %i %i  %g %g \n", ia, ib, atyp, btyp, ityp, ntypes,   C6, C12 );
 			Vec3d dR,f;
 			dR.set_sub( aRs[ia], bRs[ib] );
 			//printf( " %i %i %i %i \n", ia, ib, atyp, btyp );

@@ -36,25 +36,105 @@ int MolecularWorld::applyLinkerForce( ){
         Mat3d T;
         Vec3d dgpi,dgpj, dp;
 
-        int i = linkers[il].i;
+        MolecularLink& li = linkers[il];
+        int i = li.i;
         rot[i].toMatrix( T);
-        T.dot_to_T( linkers[il].posi, dgpi );
+        T.dot_to( li.posi, dgpi );
 
-        int j = linkers[il].j;
+        int j = li.j;
         rot[j].toMatrix(T);
-        T.dot_to_T( linkers[il].posj, dgpj );
+        T.dot_to( li.posj, dgpj );
 
-        dp      = dgpj + pos[j] - dgpi + pos[i];
-        Vec3d f = linkers[il].getForce(dp);
+        dp       = dgpi + pos[i] - dgpj - pos[j];
+        //Vec3d f = linkers[il].getForce(dp);
+        Vec3d f = radialSpringForce( dp, li.k, li.l0 );
+
+
 
         //Draw3D::drawLine( dgpi + pos[i],   dgpj + pos[j] );
 
         //printf( "%i   %g %g %g   %g %g %g  \n", i, f.x,f.y,f.z, dp.x,dp.y,dp.z   );
 
         // TODO - we can optimize this if we use dGlobPos instead of LocPos
-        fpos[i].add( f );   rot[i].addForceFromPoint( linkers[il].posi, f, frot[i] );
+        fpos[i].add( f );   rot[i].addForceFromPoint( li.posi, f, frot[i] );
         f.mul(-1);
-        fpos[j].add( f );   rot[j].addForceFromPoint( linkers[il].posj, f, frot[j] );
+        fpos[j].add( f );   rot[j].addForceFromPoint( li.posj, f, frot[j] );
+    }
+    return nLinkers;
+}
+
+// BUG TO DO : when anchoring atom is not in COG simulation gets unstable !!!   -- tested on Si68+Butyl
+int MolecularWorld::applyBondForce( ){
+    for( int ib=0; ib<nBonds; ib++ ){
+        Mat3d T;
+        Vec3d lpi,lpj,dgpi,dgpj, dp;
+
+        MolecularBond& bi =  bonds[ib];
+
+        int i = bi.imol;
+        rot[i].toMatrix( T);
+        lpi = instances[i]->xyzs[bi.iatom];
+        T.dot_to( lpi, dgpi );
+
+        int j = bi.jmol;
+        rot[j].toMatrix( T);
+        lpj = instances[j]->xyzs[bi.jatom];
+        T.dot_to( lpj, dgpj );
+
+        dp       = dgpi + pos[i] - dgpj - pos[j];
+        int ityp = instances[i]->atypes[bi.iatom];
+        int jtyp = instances[j]->atypes[bi.jatom];
+
+        int iff =  ityp*atomTypes.ntypes + jtyp;
+        //printf( "applyBondForce: %i %i  %i %i  %i  %g %g \n", bi.iatom, bi.jatom, ityp, jtyp, iff, atomTypes.ntypes,  C6s[iff], C12s[iff] );
+        Vec3d  f;
+        if(nonCovalent){
+            forceLJE( dp, -C6s[iff], -C12s[iff], 0.0, f );   // undo non-covalent force
+            //f.add( radialSpringForce( dp, bi.k, bi.l0 ) );
+            f.add( radialBondForce( dp, bi.k, bi.l0, bi.dlmax) );
+        }else{
+            f = radialBondForce( dp, bi.k, bi.l0, bi.dlmax);
+        };
+
+        //if(fmax<1e-4) printf(" ib %i r %f  dp (%g,%g,%g)\n", ib, dp.norm(), dp.x, dp.y, dp.z );
+
+        //Draw3D::drawLine( dgpi + pos[i],   dgpj + pos[j] );
+
+        //printf( "%i   %g %g %g   %g %g %g  \n", i, f.x,f.y,f.z, dp.x,dp.y,dp.z   );
+
+        // TODO - we can optimize this if we use dGlobPos instead of LocPos
+        fpos[i].add( f );   rot[i].addForceFromPoint( lpi, f, frot[i] );
+        f.mul(-1);
+        fpos[j].add( f );   rot[j].addForceFromPoint( lpj, f, frot[j] );
+    }
+    return nLinkers;
+}
+
+
+
+int MolecularWorld::checkBonds( double flmin, double flmax ){
+    printf("checking bond lengths\n");
+    for( int ib=0; ib<nBonds; ib++ ){
+        Mat3d T;
+        Vec3d lpi,lpj,dgpi,dgpj, dp;
+
+        MolecularBond& bi =  bonds[ib];
+
+        int i = bi.imol;
+        rot[i].toMatrix( T);
+        lpi = instances[i]->xyzs[bi.iatom];
+        T.dot_to( lpi, dgpi );
+
+        int j = bi.jmol;
+        rot[j].toMatrix( T);
+        lpj = instances[j]->xyzs[bi.jatom];
+        T.dot_to( lpj, dgpj );
+
+        dp       = dgpi + pos[i] - dgpj - pos[j];
+        double l = dp.norm();
+        if( l > flmax*bi.l0 ) printf( "bond too long  %i %i  %i %i | %g instead %g %g\n", ib, i, j, bi.iatom, bi.jatom, l, bi.l0, l/bi.l0 );
+        if( l < flmin*bi.l0 ) printf( "bond too short %i %i  %i %i | %g instead %g %g\n", ib, i, j, bi.iatom, bi.jatom, l, bi.l0, l/bi.l0 );
+        //printf( "%i %i  %i %i %g %g\n", ib, i, j, bi.iatom, bi.jatom, dp.norm(), bi.l0 );
     }
     return nLinkers;
 }
@@ -76,6 +156,7 @@ void MolecularWorld::cleanPointForce( int npoints, Vec3d * forces ){	for( int i=
 void MolecularWorld::assembleForces( ){
     nInteractions = 0;
     // points
+    if( nonCovalent ){
     for (int i=0; i<nmols; i++){
         //printf("DEBUG 2.1\n");
         MoleculeType * moli = instances[i];
@@ -110,10 +191,11 @@ void MolecularWorld::assembleForces( ){
         //printf("DEBUG 2.9\n");
         forceFromPoints( npi, moli->xyzs, fs_i,  rot[i],  fpos[i], frot[i] );
         //printf("DEBUG 2.10\n");
-    }
+    } }
     // linkers
     if(linkers) nInteractions += applyLinkerForce( );
-
+    if(bonds)   nInteractions += applyBondForce( );
+    //exit(0);
     /*
     for(int i=0; i<nmols; i++){
         printf( "%i %g %g %g    %g %g %g %g\n", i, fpos[i].x,fpos[i].y,fpos[i].z,   frot[i].x,frot[i].y,frot[i].z,frot[i].w );
@@ -146,10 +228,9 @@ void MolecularWorld::rigidOptStep( ){
     //optimizer->optStep();
     //for(int i=0;i<optimizer->n; i++ ){ printf( " %i %g %g %g \n", i, optimizer->pos[i], optimizer->vel[i], optimizer->force[i] ); }
     optimizer->move_FIRE();
+    fmax = optimizer->getFmaxAbs( );
     //printf("DEBUG 5\n");
 }
-
-
 
 // =========================================
 // =========== initialization and I/O
@@ -285,6 +366,23 @@ int MolecularWorld::loadLinkers( char const* fileName ){
     return nLinkers;
 }
 
+
+int MolecularWorld::loadBonds( char const* fileName ){
+    printf(" loading bonds from: >>%s<<\n", fileName );
+    FILE * pFile;
+    pFile = fopen (fileName,"r");
+    fscanf ( pFile, " %i\n", &nBonds);
+    bonds = new MolecularBond[nBonds];
+    for (int i=0; i<nBonds; i++){
+        MolecularBond& bi = bonds[i];
+        fscanf (pFile, " %i %i   %i %i  %lf %lf %lf\n", &bi.imol, &bi.jmol,  &bi.iatom, &bi.jatom, &bi.k, &bi.l0, &bi.dlmax );
+        //li.i--; li.j--;  // uncoment this if instances numbered from 1 rather than from 0
+        printf ( " %i %i   %i %i   %lf %lf %lf %lf\n", bi.imol, bi.jmol, bi.iatom, bi.jatom, bi.k, bi.l0, bi.dlmax );
+    }
+    fclose(pFile);
+    return nLinkers;
+}
+
 bool MolecularWorld::fromDir( char const* dirName, char const* atom_fname, char const* mol_fname, char const* instance_fname ){
 
     printf("dirName: >>%s<< atom_fname: >>%s<< mol_fname: >>%s<< instance_fname: >>%s<<\n", dirName, atom_fname, mol_fname, instance_fname );
@@ -305,6 +403,27 @@ bool MolecularWorld::fromDir( char const* dirName, char const* atom_fname, char 
     return true;
 }
 
+int  MolecularWorld::saveInstances( char const* fileName ){
+    //printf(" loading molecular instances from: >>%s<<\n", fileName );
+    FILE * pFile;
+    pFile = fopen (fileName,"w");
+    fprintf ( pFile, "%i\n", nmols );
+    for (int i=0; i<nmols; i++){
+        int i2 = i<<1;
+        Mat3d M;
+        rot[i].toMatrix(M);
+        int itype = instances[i] - molTypes + 1 ; // TO DO : this is a bit strange hack
+        fprintf (pFile, " %i   %lf %lf %lf     %lf %lf %lf     %lf %lf %lf  %i %i\n",
+            itype,
+            pos[i].x, pos[i].y, pos[i].z,
+            M.ax, M.ay, M.az,
+            M.bx, M.by, M.bz,
+            constrains[i2], constrains[i2+1]
+        );
+    }
+    fclose(pFile);
+    return nmols;
+};
 
 int MolecularWorld::exportAtomsXYZ(  FILE * pFile, const char * comment ){
     //printf( "exportAtomsXYZ \n");

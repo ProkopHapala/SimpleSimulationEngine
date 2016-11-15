@@ -100,8 +100,11 @@ int MoleculeType::makeViewCPK ( int nsphere, int nstick, float atomscale, float 
 */
 
 void MoleculeType::initBounds(){
-    Rmax = 0.0d;
-    for (int i=0; i<natoms; i++){ Rmax = fmax( xyzs[i].norm2(), Rmax ); }
+    Rmax = 3.0d; // TO DO : here should be Rmax in future
+    for (int i=0; i<natoms; i++){
+        //r += typeList->vdwRs[atypes[i];
+        Rmax = fmax( xyzs[i].norm2(), Rmax );
+    }
     Rmax = sqrt(Rmax);
 }
 

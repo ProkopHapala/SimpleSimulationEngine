@@ -1,13 +1,45 @@
 
 #include "DynamicOpt.h" // THE HEADER
 
+#include <cstdio>// DEBUG
+
 // ===============  MoveSteps
 
+/*
 void DynamicOpt::move_LeapFrog(){
     double dtv = dt*fscale_safe;
 	for ( int i=0; i<n; i++ ){
         vel[i] += invMasses[i]*dtv*force[i];
 		pos[i] += dt*vel[i];
+	}
+	stepsDone++;
+	t += dt;
+}
+*/
+
+void DynamicOpt::move_LeapFrog(double dt_loc){
+    //double dt_ = dt*fscale_safe;
+	for ( int i=0; i<n; i++ ){
+        vel[i] += invMasses[i]*dt_loc*force[i];
+		pos[i] += dt_loc*vel[i];
+	}
+	stepsDone++;
+	t += dt_loc;
+}
+
+void DynamicOpt::move_LeapFrog_vlimit(){
+    double dtv = dt*fscale_safe;
+    double vmax = 0.0d;
+	for ( int i=0; i<n; i++ ){
+        double v = vel[i] + invMasses[i]*dtv*force[i];
+        vmax = fmax( fabs(v), vmax );
+        vel[i]=v;
+    }
+    double dtp = dt;
+    if( vmax>v_limit ) dtp=v_limit/vmax;
+    //printf("vmax %g dtp  %g dtv %g\n", vmax);
+    for ( int i=0; i<n; i++ ){
+		pos[i] += dtp*vel[i];
 	}
 	stepsDone++;
 	t += dt;
@@ -41,8 +73,8 @@ void DynamicOpt::move_FIRE(){
 		for(int i=0; i<n; i++){ vel[i] = kickStart*dt*force[i]; }
 		//for(int i=0; i<n; i++){ vel[i] = dmax*force[i]*sqrt(1/ff)/dt_var; }
 	}else{
-		//double cf  =      damping * sqrt(vv/(ff+1e-8));
-		double cf     =     damping * sqrt(vv/ff);
+		double cf  =      damping * sqrt(vv/(ff+ff_safety));
+		//double cf     =     damping * sqrt(vv/ff);
 		double cv     = 1 - damping;
 		for(int i=0; i<n; i++){
 			vel[i]    = cv * vel[i]  + cf * force[i];
@@ -54,8 +86,15 @@ void DynamicOpt::move_FIRE(){
 		lastNeg++;
 	}
 
-    if( ff > fmax*fmax ){ fscale_safe=fmax/sqrt(ff); }else{ fscale_safe=1; }
-	move_LeapFrog();
+	double dt_=dt;
+    if( ff > f_limit*f_limit ){
+        double f = sqrt(ff);
+        dt_*=sqrt(f_limit/f);
+        printf( "force too: %g => large limit dt: %g \n", f, dt_ );
+    };
+    move_LeapFrog( dt_ );
+	//move_LeapFrog();
+	//move_LeapFrog_vlimit();  // this does not seem to help
 
 	//printf( " %i f v vf  %f %f %f   dt damp  %f %f \n",  stepsDone,   sqrt(ff), sqrt(vv), vf/sqrt(vv*ff),   dt_var, damp_var  );
 	//stepsDone++;
@@ -65,7 +104,7 @@ double DynamicOpt::optStep(){
 	//cleanForce( );
 	getForce( n, pos, force );
 	switch( method ){
-		case 0: move_LeapFrog();
+		case 0: move_LeapFrog(dt);
 		case 1: move_MDquench();
 		case 2: move_FIRE();
 	}

@@ -89,7 +89,7 @@ class MolecularEditorApp : public AppSDL2OGL_3D {
     MolecularWorld world;
 
     int perFrame       = 40;
-    bool converged     = false;
+    bool converged     = true;
     double fmaxConverg = 0.00001;
 
     FILE * fout_xyz = NULL;
@@ -106,7 +106,12 @@ MolecularEditorApp::MolecularEditorApp( int& id, int WIDTH_, int HEIGHT_ ) : App
 
     //MolecularWorld( char const* filename, MoleculeType * molTypeList );
     world.fromDir( "inputs/", "atomTypes.ini", "molTypes.ini", "instances.ini" );
-    world.loadLinkers("inputs/linkers.ini");
+    //world.loadLinkers("inputs/linkers.ini");
+    world.loadBonds("inputs/bonds.ini");
+
+    world.checkBonds( 0.9, 1.2 );
+
+    //exit(0);
 
     world.makeFF ( );
     world.optimizer->initOpt( 0.05, 0.15 );
@@ -116,10 +121,12 @@ MolecularEditorApp::MolecularEditorApp( int& id, int WIDTH_, int HEIGHT_ ) : App
         //world.molTypes[i].toCOG_average();
         world.molTypes[i].findBonds( 0.6 );
         //renderMoleculeCPK( &world.molTypes[i], 4, 8, 0.5, 0.2 );
-        renderMoleculeCPK( &world.molTypes[i], 1, 3, 0.1, 0.05 );
+        //renderMoleculeCPK( &world.molTypes[i], 1, 3, 0.1, 0.05 );
+        //renderMoleculeCPK( &world.molTypes[i], 6, 3, 1.0, 0.05 );
+        renderMoleculeCPK( &world.molTypes[i], 6, 3, 0.9, 0.05 );
     }
 
-    fout_xyz = fopen("relax.xyz","w");
+    //fout_xyz = fopen("relaxation.xyz","w");
 
 }
 
@@ -132,34 +139,36 @@ void MolecularEditorApp::draw(){
 
     //converged = true;
     //delay = 100; world.optimizer->dt_max = 0.00001; world.optimizer->dt_max = 0.00001; perFrame=1;
-    //delay = 100; perFrame=1;
-    //perFrame=1;
+    //delay = 1000; perFrame=1;
+    perFrame=5;  // world.optimizer->dt_max = 0.01;
+    //world.optimizer->dt_max = 0.01;
+    //world.nonCovalent  = false;
 	if( !converged ){
         long tick1 = getCPUticks();
-        double fmax = 0.0;
         for(int iter=0; iter<perFrame; iter++){
             world.rigidOptStep( );
-            fmax = world.optimizer->getFmaxAbs( );
-            printf(" opt step %i fmax %g \n", world.optimizer->stepsDone, fmax );
-            if( fmax < fmaxConverg ){
+            printf(" opt step %i fmax %g \n", world.optimizer->stepsDone, world.fmax );
+            if( world.fmax < fmaxConverg ){
                 converged = true;
                 printf(" converged after %i step \n", world.optimizer->stepsDone );
-                if(fout_xyz){
-                    fclose(fout_xyz);
-                    fout_xyz = NULL;
-                }
+                if(fout_xyz){ fclose(fout_xyz); fout_xyz = NULL; }
+                fout_xyz = fopen("relaxed.xyz", "w");
+                char str[256];
+                sprintf(str,"# fmax = %g", world.fmax );
+                world.exportAtomsXYZ( fout_xyz, str );
+                fclose(fout_xyz); fout_xyz = NULL;
                 break;
             }
         }
         double ticks = (getCPUticks() - tick1)/((double)perFrame);
         printf("======= %f Mticks/iter  %f ticks/interaction \n", ticks*1.0e-6, ticks/world.nInteractions );
 
+        world.saveInstances( "instances_lastStep.ini" );
         if(fout_xyz){
             char str[256];
-            sprintf(str,"# fmax = %g", fmax );
+            sprintf(str,"# fmax = %g", world.fmax );
             world.exportAtomsXYZ( fout_xyz, str );
         }
-
     }
     //exit(0);
 
@@ -215,6 +224,30 @@ void MolecularEditorApp::draw(){
         }
     }
 
+    if( world.bonds ){
+        for (int il=0; il<world.nBonds; il++){
+            Mat3d T;
+            Vec3d lpi,lpj,gpi,gpj;
+            MolecularBond& bi =  world.bonds[il];
+            int i = bi.imol;
+            world.rot[i].toMatrix( T);
+            lpi = world.instances[i]->xyzs[bi.iatom];
+            T.dot_to( lpi, gpi );
+            gpi.add( world.pos[i] );
+
+            int j = bi.jmol;
+            world.rot[j].toMatrix(T);
+            lpj = world.instances[j]->xyzs[bi.jatom];
+            T.dot_to( lpj, gpj );
+            gpj.add( world.pos[j] );
+
+            Draw3D::drawLine(  gpi, gpj );
+
+            //printf( "%i (%i,%i)  (%3.3f,%3.3f,%3.3f)   (%3.3f,%3.3f,%3.3f)\n" , il, i,j,   li.posi.x, li.posi.y, li.posi.z, li.posj.x, li.posj.y, li.posj.z );
+            //printf( "%i          (%3.3f,%3.3f,%3.3f)   (%3.3f,%3.3f,%3.3f)\n" , il, gpi.x, gpi.y, gpi.z,   gpj.x,gpj.y,gpj.z);
+        }
+    }
+
     //exit(0);
 
 };
@@ -226,6 +259,7 @@ void MolecularEditorApp::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
+                case SDLK_SPACE: converged = !converged; break;
                 //case SDLK_0:  formation_view_mode = 0;            printf( "view : default\n" ); break;
                 //case SDLK_1:  formation_view_mode = VIEW_INJURY;  printf( "view : injury\n"  ); break;
                 //case SDLK_2:  formation_view_mode = VIEW_STAMINA; printf( "view : stamina\n" ); break;

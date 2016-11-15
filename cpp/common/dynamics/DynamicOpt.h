@@ -27,7 +27,10 @@ class DynamicOpt{
 	double dt           = 0.05d;
 	double damping      = 0.1d;
 
-	double fmax         = 10.0;
+	double f_limit      = 10.0;
+	double v_limit      = 1.0;
+    double fscale_safe  = 1;
+	double ff_safety    = 1e-32;
 
 	// FIRE
 	int    minLastNeg   = 5;
@@ -38,7 +41,7 @@ class DynamicOpt{
 
 	double dt_max       = dt;
 	double damp_max     = damping;
-	double fscale_safe  = 1;
+
 
 	int    lastNeg      = 0;
 
@@ -51,7 +54,8 @@ class DynamicOpt{
 
 	// ==== function declarations
 
-	void   move_LeapFrog();
+	void   move_LeapFrog( double dt_loc);
+	void   move_LeapFrog_vlimit();
 	void   move_MDquench();
 	void   move_FIRE();
 	double optStep();

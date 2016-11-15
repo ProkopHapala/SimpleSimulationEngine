@@ -10,34 +10,29 @@
 #include "AtomTypes.h"
 #include "MoleculeType.h"
 
-
 class MolecularLink{
     public:
     int i,j;
     Vec3d posi,posj;
     double l0,k;
+};
 
-    inline Vec3d getForce(const Vec3d& dp){
-        double r2 = dp.norm2();
-        Vec3d f;
-        //printf( "r2 %g  l0 %g\n", sqrt(r2), l0 );
-        if( r2 > l0*l0 ){
-            double r = sqrt(r2);
-            f.set_mul( dp, (r-l0)/r );
-        }else{
-            f.set(0.0);
-        }
-        return f;
-    }
+class MolecularBond{
+    public:
+    int imol,jmol;
+    int iatom,jatom;
+    double l0,k,dlmax;
 };
 
 class MolecularWorld{
 	public:
-	int nmols=0,nAtomTypes=0,nMolTypes=0,nLinkers=0;
+	int nmols=0,nMolTypes=0,nLinkers=0,nBonds=0;
+	//int nAtomTypes=0;
     AtomTypes atomTypes;
-	MoleculeType *   molTypes=NULL;
-	MoleculeType ** instances=NULL;
-	MolecularLink * linkers=NULL;
+	MoleculeType   * molTypes=NULL;
+	MoleculeType  ** instances=NULL;
+	MolecularLink  * linkers=NULL;
+	MolecularBond  * bonds=NULL;
 
 	Vec3d  *pos=NULL,*vpos=NULL,*fpos=NULL,*invMpos=NULL;
 	Quat4d *rot=NULL,*vrot=NULL,*frot=NULL,*invMrot=NULL;
@@ -51,7 +46,7 @@ class MolecularWorld{
 
 
 	double    *C6s=NULL,*C12s=NULL;
-	int nInteractions;
+
 
 	double surf_z0;
 	double surf_zMin;
@@ -59,6 +54,9 @@ class MolecularWorld{
 	Vec3d  surf_hat;
 
 	DynamicOpt * optimizer=NULL;
+    int    nInteractions;
+	bool   nonCovalent = true;
+	double fmax;
 
 // ======== initialization
 
@@ -68,9 +66,10 @@ class MolecularWorld{
 	int  loadMolTypes  ( char const* dirName, char const* fileName );
 	int  loadInstances ( char const* fileName );
 	int  loadLinkers   ( char const* fileName );
+	int  loadBonds     ( char const* fileName );
 	bool fromDir       ( char const* dirName, char const* atom_fname, char const* mol_fname, char const* instance_fname );
 
-
+    int  saveInstances ( char const* fileName );
 	int  exportAtomsXYZ( FILE * pFile, const char * comment );
 
     inline MolecularWorld(){};
@@ -86,6 +85,9 @@ class MolecularWorld{
 	void cleanPointForce ( int npoints, Vec3d * forces );
 	void assembleForces  ( );
 	int  applyLinkerForce( );
+	int  applyBondForce  ( );
+
+	int checkBonds( double flmin, double flmax );
 
 	void rigidOptStep( );
 
