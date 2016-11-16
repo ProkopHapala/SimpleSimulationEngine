@@ -366,7 +366,6 @@ int MolecularWorld::loadLinkers( char const* fileName ){
     return nLinkers;
 }
 
-
 int MolecularWorld::loadBonds( char const* fileName ){
     printf(" loading bonds from: >>%s<<\n", fileName );
     FILE * pFile;
@@ -381,6 +380,21 @@ int MolecularWorld::loadBonds( char const* fileName ){
     }
     fclose(pFile);
     return nLinkers;
+}
+
+int MolecularWorld::loadSplines( char const* fileName ){
+    char str  [256];
+    printf(" loading splines from: >>%s<<\n", fileName );
+    FILE * pFile;
+    pFile = fopen (fileName,"r");
+    fscanf ( pFile, " %i\n", &nSplines);
+    splines = new GeneralSpline[nSplines];
+    for (int i=0; i<nSplines; i++){
+        fscanf ( pFile, "%s", &str );
+        splines[i].loadFromFile(str);
+    }
+    fclose(pFile);
+    return nSplines;
 }
 
 bool MolecularWorld::fromDir( char const* dirName, char const* atom_fname, char const* mol_fname, char const* instance_fname ){

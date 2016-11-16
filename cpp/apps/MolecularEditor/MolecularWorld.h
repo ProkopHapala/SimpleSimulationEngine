@@ -7,6 +7,7 @@
 #include "quaternion.h"
 #include "DynamicOpt.h"
 
+#include "radial_splines.h"
 #include "AtomTypes.h"
 #include "MoleculeType.h"
 
@@ -26,13 +27,14 @@ class MolecularBond{
 
 class MolecularWorld{
 	public:
-	int nmols=0,nMolTypes=0,nLinkers=0,nBonds=0;
+	int nmols=0,nMolTypes=0,nLinkers=0,nBonds=0,nSplines=0;
 	//int nAtomTypes=0;
     AtomTypes atomTypes;
 	MoleculeType   * molTypes=NULL;
 	MoleculeType  ** instances=NULL;
 	MolecularLink  * linkers=NULL;
 	MolecularBond  * bonds=NULL;
+	GeneralSpline  * splines;
 
 	Vec3d  *pos=NULL,*vpos=NULL,*fpos=NULL,*invMpos=NULL;
 	Quat4d *rot=NULL,*vrot=NULL,*frot=NULL,*invMrot=NULL;
@@ -67,6 +69,7 @@ class MolecularWorld{
 	int  loadInstances ( char const* fileName );
 	int  loadLinkers   ( char const* fileName );
 	int  loadBonds     ( char const* fileName );
+	int  loadSplines   ( char const* fileName );
 	bool fromDir       ( char const* dirName, char const* atom_fname, char const* mol_fname, char const* instance_fname );
 
     int  saveInstances ( char const* fileName );
@@ -79,8 +82,8 @@ class MolecularWorld{
 
 // =========== Rotation optimization
 
-	void transformPoints( const Vec3d& pos, const Quat4d& rot, int npoints, Vec3d * points, Vec3d * Tpoints );
-	void forceFromPoints( int npoints, Vec3d * points, Vec3d * forces,  const Quat4d& q,  Vec3d& fp, Quat4d& fq );
+	void transformPoints ( const Vec3d& pos, const Quat4d& rot, int npoints, Vec3d * points, Vec3d * Tpoints );
+	void forceFromPoints ( int npoints, Vec3d * points, Vec3d * forces,  const Quat4d& q,  Vec3d& fp, Quat4d& fq );
 
 	void cleanPointForce ( int npoints, Vec3d * forces );
 	void assembleForces  ( );

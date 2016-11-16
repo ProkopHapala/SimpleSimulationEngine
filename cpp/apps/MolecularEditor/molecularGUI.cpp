@@ -107,7 +107,20 @@ MolecularEditorApp::MolecularEditorApp( int& id, int WIDTH_, int HEIGHT_ ) : App
     //MolecularWorld( char const* filename, MoleculeType * molTypeList );
     world.fromDir( "inputs/", "atomTypes.ini", "molTypes.ini", "instances.ini" );
     //world.loadLinkers("inputs/linkers.ini");
-    world.loadBonds("inputs/bonds.ini");
+    world.loadSplines("inputs/splines.ini"); //exit(0);
+    double r_start=4+0.001;
+    double r_end  =10-0.001;
+    int    nr     =100;
+    double dr     =(r_end-r_start)/(nr-1);
+    for(int i=0; i<nr; i++){
+        double r  = i*dr+r_start;
+        double r2 = r*r;
+        double f = world.splines[0].get_splineR2(r2);
+        printf("%i %g %g\n", i, r, f);
+    }
+    //exit(0);
+
+    world.loadBonds  ("inputs/bonds.ini");
 
     world.checkBonds( 0.9, 1.2 );
 
@@ -127,6 +140,8 @@ MolecularEditorApp::MolecularEditorApp( int& id, int WIDTH_, int HEIGHT_ ) : App
     }
 
     //fout_xyz = fopen("relaxation.xyz","w");
+
+
 
 }
 
