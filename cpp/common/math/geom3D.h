@@ -15,6 +15,19 @@
 #include "Vec3.h"
 #include "Mat3.h"
 
+
+
+inline double dist2_PointBox( Vec3d C1, Vec3d C2, Vec3d S){
+    // from here : http://stackoverflow.com/questions/4578967/cube-sphere-intersection-test
+    // assume C1 and C2 are element-wise sorted, if not, do that now
+    double dist2 = 0.0d;
+    if (S.x < C1.x){ dist2 += sq(S.x - C1.x); }else if(S.x > C2.x){ dist2 += sq(S.x - C2.x); };
+    if (S.y < C1.y){ dist2 += sq(S.y - C1.y); }else if(S.y > C2.y){ dist2 += sq(S.y - C2.y); };
+    if (S.z < C1.z){ dist2 += sq(S.z - C1.z); }else if(S.z > C2.z){ dist2 += sq(S.z - C2.z); };
+    return dist2;
+}
+
+
 // ============ Plane3D
 
 class Plane3D{

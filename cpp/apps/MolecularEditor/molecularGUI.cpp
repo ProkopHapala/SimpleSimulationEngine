@@ -146,16 +146,14 @@ MolecularEditorApp::MolecularEditorApp( int& id, int WIDTH_, int HEIGHT_ ) : App
 }
 
 void MolecularEditorApp::draw(){
-
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	//glDisable( GL_DEPTH_TEST );
 
-
     //converged = true;
     //delay = 100; world.optimizer->dt_max = 0.00001; world.optimizer->dt_max = 0.00001; perFrame=1;
     //delay = 1000; perFrame=1;
-    perFrame=5;  // world.optimizer->dt_max = 0.01;
+    perFrame=1;  // world.optimizer->dt_max = 0.01;
     //world.optimizer->dt_max = 0.01;
     //world.nonCovalent  = false;
 	if( !converged ){

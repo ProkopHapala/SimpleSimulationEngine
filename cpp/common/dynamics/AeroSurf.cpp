@@ -10,7 +10,7 @@
 
 void AeroSurface::render( ){
 	//drawLine( const Vec3d& p1, const Vec3d& p2 );
-	double sz = 3*sqrt( C.z );
+	double sz = sqrt( area );
 	glEnable (GL_LIGHTING);
 	glColor3f( 0.5f,0.5f,0.5f );
 	glBegin  (GL_QUADS);
@@ -40,6 +40,27 @@ void AeroSurface::fromString( const char * str ){
     lrot.a.normalize();
 };
 
+
+void AeroSurface::fromStringPolarModel( const char * str ){
+    sscanf ( str, " %lf %lf %lf    %lf %lf %lf    %lf %lf %lf    %lf %lf %lf     %lf   %lf %lf %lf   %lf %lf   %lf %lf",
+                &lpos.x, &lpos.y, &lpos.z,
+                &lrot.bx, &lrot.by, &lrot.bz,
+                &lrot.cx, &lrot.cy, &lrot.cz,
+                &C.a, &C.b, &C.c,
+                &area, &CD0, &dCD, &dCDS, &dCL, &dCLS, &sStall, &wStall
+            );
+    //printf ( " %lf %lf %lf    %lf %lf %lf    %lf %lf %lf    %lf %lf %lf\n", lpos.x, lpos.y, lpos.z, lrot.bx, lrot.by, lrot.bz, lrot.cx, lrot.cy, lrot.cz, C.a, C.b, C.c );
+
+    //printf ( " %lf %lf %lf   %lf %lf %lf\n", lpos.x, lpos.y, lpos.z, C.a, C.b, C.c );
+
+    printf ( " %lf   %lf %lf %lf   %lf %lf   %lf %lf\n", area, CD0, dCD, dCDS, dCL, dCLS, sStall, wStall );
+
+    lrot.b.normalize();
+    double bc = lrot.b.dot(lrot.c);
+    lrot.c.add_mul( lrot.b, -bc );
+    lrot.a.set_cross( lrot.b, lrot.c );
+    lrot.a.normalize();
+};
 
 
 

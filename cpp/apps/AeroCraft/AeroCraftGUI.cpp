@@ -17,7 +17,7 @@ void AeroCraftGUI:: camera (){
     Mat3d camMat;
     Vec3f camPos;
     convert(world->myCraft->pos, camPos );
-    float camDist = 5.0;
+    float camDist = 10.0;
     if(first_person){
         // third person camera attached to aero-craft
         camMat.setT( world->myCraft->rotMat );
@@ -134,9 +134,28 @@ void AeroCraftGUI::drawHUD(){
 
 	char str[256];
 	//sprintf(str, "speed %3.3f attitude %4.3f glideRatio %3.3f \0",world->myCraft->vel.norm(), world->myCraft->pos.y,   -sqrt(sq(world->myCraft->vel.x)+sq(world->myCraft->vel.z))/world->myCraft->vel.y );
-	double vtot = world->myCraft->vel.norm();
-	sprintf(str, "attitude %4.3f speed %3.3f vVert %3.3f tgAlfa %3.3f \0", world->myCraft->pos.y, vtot, world->myCraft->vel.y, world->myCraft->vel.y/vtot );
+	double vtot   = world->myCraft->vel.norm();
+	//double thrust = world->myCraft->propelers[0].getThrust( vtot );
+	double thrust = world->myCraft->totalThrust.norm();
+	sprintf(str, "attitude %4.3f speed %3.3f vVert %3.3f tgAlfa %3.3f thrust %3.3f \0", world->myCraft->pos.y, vtot, world->myCraft->vel.y, world->myCraft->vel.y/vtot, thrust );
 	Draw::drawText( str, fontTex, 10, 0,0 );
+
+	/*
+	int npol = 101;
+	double phi0 =0.0;
+	double dphi =3.14/(npol-1);
+    for( int i=0; i<npol; i++){
+        double phi = phi0 + dphi*i;
+        double sa = sin( phi );
+        double ca = cos( phi );
+        double CD,CL;
+        world->myCraft->panels[0].polarModel( ca, sa, CD, CL );
+        printf("%i: %3.3f (%3.3f,%3.3f) (%3.3f,%3.3f) \n", i, phi, ca, sa, CD, CL);
+    };
+    exit(0);
+    */
+
+
 }
 
 //void AeroCraftGUI:: drawHUD(){};

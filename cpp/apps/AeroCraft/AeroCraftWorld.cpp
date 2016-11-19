@@ -57,7 +57,7 @@ void AeroCraftWorld::update( ){
 	for( int i=0; i<perFrame; i++ ){
 		myCraft->clean_temp();
 		myCraft->force.set    ( { 0, g*myCraft->mass, 0 } );
-		myCraft->force.add_mul(   myCraft->rotMat.c, 500.0 ); // motor
+		//myCraft->force.add_mul(   myCraft->rotMat.c, 500.0 ); // motor
 		myCraft->applyAeroForces( {0,0,0} );
 		myCraft->move(dt);
 	}
@@ -203,6 +203,16 @@ void AeroCraftWorld::init( ){
 
 	myCraft_bak = new AeroCraft();   myCraft_bak->fromFile("data/AeroCraft1.ini");
     myCraft     = new AeroCraft();   myCraft    ->fromFile("data/AeroCraft1.ini");
+
+    //--- propeller characterisic
+    double vmin=0.01;
+    double vmax=300.0;
+    double dv  =5.0;
+    for(double v=vmin; v<vmax; v+=dv){
+        double thrust = myCraft->propelers[0].getThrust(v);
+        printf(" v=%f [m/s] thrust=%f [N] \n",  v, thrust );
+    }
+    //exit(0);
 
     printf( " AeroCraft DONE! \n" );
 };

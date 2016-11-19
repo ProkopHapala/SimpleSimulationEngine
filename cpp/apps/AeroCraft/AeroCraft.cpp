@@ -46,7 +46,8 @@ void AeroCraft::render(){
 
 
 	int AeroCraft::fromFile( const char * fname ){
-        char buf  [1024];
+        const int nbuf = 1024;
+        char buf  [nbuf];
         FILE * pFile;
         pFile = fopen (fname,"r");
         printf(" loading molTypes from: >>%s<<\n", fname );
@@ -57,10 +58,19 @@ void AeroCraft::render(){
         fscanf ( pFile, "%i\n", &nPanels);
         panels = new AeroSurface[nPanels];
         for(int i=0; i<nPanels; i++){
-            fgets( buf, 256, pFile);
+            fgets( buf, nbuf, pFile);
             //AeroSurface * a = new AeroSurface();
-            panels[i].fromString( buf );
+            //panels[i].fromString( buf );
+            panels[i].fromStringPolarModel( buf );
             panels[i].craft = this;
+        }
+
+        fscanf ( pFile, "%i\n", &nPropelers);
+        propelers = new Propeler[nPropelers];
+        for(int i=0; i<nPropelers; i++){
+            fgets( buf, nbuf, pFile);
+            propelers[i].fromString( buf );
+            //propelers[i].craft = this;
         }
 
         Ibody.invert_to( invIbody );
