@@ -42,7 +42,7 @@ class AeroCraftWorld {
 */
 
     void resetSteer( );
-	void steerToDir( const Vec3d& dir, bool on );
+	void steerToDir( const Vec3d& dir );
 	void update( );
 	void init( );
 

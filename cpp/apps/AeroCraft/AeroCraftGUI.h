@@ -26,7 +26,7 @@ class AeroCraftGUI : public AppSDL2OGL_3D {
 
 	// ==== function declarations
 
-	void renderSkyBox();
+	void renderSkyBox( float x0, float y0, float z0 );
 
 	virtual void camera     ();
 	//virtual void cameraHUD();

@@ -90,12 +90,13 @@ void inputHanding(){
 				case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
 
 				case SDLK_p    : thisScreen->first_person = !thisScreen->first_person; break;
-
+                case SDLK_m : thisScreen->mouseSteer = !thisScreen->mouseSteer; break;
 				case SDLK_c :
                     world.myCraft->panels[0].lrot = world.myCraft_bak->panels[0].lrot;
                     world.myCraft->panels[1].lrot = world.myCraft_bak->panels[1].lrot;
                     world.myCraft->panels[2].lrot = world.myCraft_bak->panels[2].lrot;
                     world.myCraft->panels[3].lrot = world.myCraft_bak->panels[3].lrot;
+                    break;
 			}; break;
             case SDL_QUIT: quit(); break;
 
@@ -136,8 +137,8 @@ void inputHanding(){
 	if      ( keys[ SDL_SCANCODE_A ] ){ world.myCraft->panels[0].lrot.rotate( +droll, { 1,0,0 } );  world.myCraft->panels[1].lrot.rotate( -droll, { 1,0,0 } );    }
 	else if ( keys[ SDL_SCANCODE_D ] ){ world.myCraft->panels[0].lrot.rotate( -droll, { 1,0,0 } );  world.myCraft->panels[1].lrot.rotate( +droll, { 1,0,0 } );    }
 
-    if      ( keys[ SDL_SCANCODE_W ] ){ world.myCraft->panels[2].lrot.rotate( -dpitch, { 1,0,0 } );  }
-	else if ( keys[ SDL_SCANCODE_S ] ){ world.myCraft->panels[2].lrot.rotate( +dpitch, { 1,0,0 } );  }
+    if      ( keys[ SDL_SCANCODE_W ] ){ world.myCraft->panels[2].lrot.rotate( +dpitch, { 1,0,0 } );  }
+	else if ( keys[ SDL_SCANCODE_S ] ){ world.myCraft->panels[2].lrot.rotate( -dpitch, { 1,0,0 } );  }
 
     if      ( keys[ SDL_SCANCODE_Q ] ){ world.myCraft->panels[3].lrot.rotate( +dyaw, { 0,1,0 } );  }
 	else if ( keys[ SDL_SCANCODE_E ] ){ world.myCraft->panels[3].lrot.rotate( -dyaw, { 0,1,0 } );  }
@@ -151,14 +152,17 @@ void inputHanding(){
 	int mx,my;
 	SDL_GetMouseState(&mx,&my);
 	int dmx = mx - thisScreen->WIDTH/2; 	int dmy = my - thisScreen->HEIGHT/2 ;
+	thisScreen->mouseX = dmx;
+	thisScreen->mouseY = -dmy;
 	//printf( " mx: %i  my: %i dmx: %i dmy: %i ",mx, my, dmx, dmy );
 	//qmouse.pitch( 0.001* dmy );
 	//qmouse.yaw  ( 0.001* dmx );
 
-	thisScreen->qCamera.pitch( 0.001* dmy );
-	thisScreen->qCamera.yaw  ( 0.001* dmx );
+	SDL_GetRelativeMouseState(&dmx,&dmy);
+	thisScreen->qCamera.pitch( 0.005* dmy );
+	thisScreen->qCamera.yaw  ( 0.005* dmx );
 	//SDL_WarpMouse( thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
-	SDL_WarpMouseInWindow( thisScreen->window, thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
+	//SDL_WarpMouseInWindow( thisScreen->window, thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
 
 }
 
@@ -168,6 +172,7 @@ void setup(){
     world.init();
     thisScreen->world = &world;
     thisScreen->qCamera.setOne();
+    thisScreen->VIEW_DEPTH = 100000;
 
     thisScreen->VIEW_DEPTH = 10000.0f;
     thisScreen->first_person = false;

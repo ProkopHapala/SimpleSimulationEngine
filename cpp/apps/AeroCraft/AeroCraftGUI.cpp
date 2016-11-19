@@ -36,36 +36,39 @@ void AeroCraftGUI:: camera (){
 
 }
 
-void AeroCraftGUI:: renderSkyBox(){
+void AeroCraftGUI:: renderSkyBox( float x0, float y0, float z0){
 	glDepthMask(0);
 	glDisable (GL_LIGHTING);
+	glDisable (GL_DEPTH_TEST);
 	glShadeModel(GL_SMOOTH);
-	float skysz = VIEW_DEPTH/2;
+	float skysz = VIEW_DEPTH*0.25;
+	float R0=0.1,G0=0.1,B0=0.5;
+	float R1=0.7,G1=0.8,B1=0.8;
 	glBegin(GL_QUADS);
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, -skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, +skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, +skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, -skysz );
+		glColor3f( R0, G0, B0 );  glVertex3f( -skysz+x0, skysz+y0, -skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( -skysz+x0, skysz+y0, +skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( +skysz+x0, skysz+y0, +skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( +skysz+x0, skysz+y0, -skysz+z0 );
 
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, -skysz );
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, +skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, +skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, -skysz );
+		glColor3f( R1, G1, B1 );  glVertex3f( -skysz+x0,     0+y0, -skysz+z0 );
+		glColor3f( R1, G1, B1 );  glVertex3f( -skysz+x0,     0+y0, +skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( -skysz+x0, skysz+y0, +skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( -skysz+x0, skysz+y0, -skysz+z0 );
 
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, -skysz );
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, +skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, +skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, -skysz );
+		glColor3f( R1, G1, B1 );  glVertex3f( +skysz+x0,     0+y0, -skysz+z0 );
+		glColor3f( R1, G1, B1 );  glVertex3f( +skysz+x0,     0+y0, +skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( +skysz+x0, skysz+y0, +skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( +skysz+x0, skysz+y0, -skysz+z0 );
 
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, -skysz );
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, -skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, -skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, -skysz );
+		glColor3f( R1, G1, B1 );  glVertex3f( -skysz+x0,     0+y0, -skysz+z0 );
+		glColor3f( R1, G1, B1 );  glVertex3f( +skysz+x0,     0+y0, -skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( +skysz+x0, skysz+y0, -skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( -skysz+x0, skysz+y0, -skysz+z0 );
 
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( -skysz,     0, +skysz );
-		glColor3f( 0.3, 0.5, 0.5 );  glVertex3f( +skysz,     0, +skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( +skysz, skysz, +skysz );
-		glColor3f( 0.1, 0.1, 0.5 );  glVertex3f( -skysz, skysz, +skysz );
+		glColor3f( R1, G1, B1 );  glVertex3f( -skysz+x0,     0+y0, +skysz+z0 );
+		glColor3f( R1, G1, B1 );  glVertex3f( +skysz+x0,     0+y0, +skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( +skysz+x0, skysz+y0, +skysz+z0 );
+		glColor3f( R0, G0, B0 );  glVertex3f( -skysz+x0, skysz+y0, +skysz+z0 );
 	glEnd();
 	glDepthMask(1);
 }
@@ -75,13 +78,12 @@ void AeroCraftGUI:: draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	renderSkyBox();
-
-	glEnable(GL_DEPTH_TEST);
-
 	world->update(); // ALL PHYSICS COMPUTATION DONE HERE
 
 	camera ();
+
+	renderSkyBox(world->myCraft->pos.x, world->myCraft->pos.y-1000, world->myCraft->pos.z );
+	glEnable(GL_DEPTH_TEST);
 
 	glEnable    (GL_LIGHTING);
 	glShadeModel(GL_FLAT);
@@ -118,12 +120,20 @@ void AeroCraftGUI:: draw(){
 	//Draw3D::drawText( "AHOJ!\0", {0.0,0.0,0.0}, fontTex, 0.5, 0, 0 );
 	*/
 
-
-    Mat3d matCam;
-	qCamera.toMatrix_T( matCam );
-	Draw3D::drawMatInPos(matCam, world->myCraft->pos);
-    world->steerToDir( matCam.c, mouseSteer );
-
+    if(mouseSteer){
+        if (first_person){
+            double dpitch=mouseY*0.005;
+            double dyaw  =mouseX*0.002;
+            double droll =0.2*dyaw;
+            world->resetSteer( );
+            world->myCraft->steerTo(droll, dpitch , dyaw);
+        }else{
+            Mat3d matCam;
+            qCamera.toMatrix_T( matCam );
+            Draw3D::drawMatInPos(matCam, world->myCraft->pos);
+            world->steerToDir( matCam.c );
+        }
+    }
 
 };
 
@@ -138,7 +148,10 @@ void AeroCraftGUI::drawHUD(){
 	//double thrust = world->myCraft->propelers[0].getThrust( vtot );
 	double thrust = world->myCraft->totalThrust.norm();
 	sprintf(str, "attitude %4.3f speed %3.3f vVert %3.3f tgAlfa %3.3f thrust %3.3f \0", world->myCraft->pos.y, vtot, world->myCraft->vel.y, world->myCraft->vel.y/vtot, thrust );
-	Draw::drawText( str, fontTex, 10, 0,0 );
+	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw::drawText( str, fontTex, 10, 0,0 );
+
+
+	if(first_person){ glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawPointCross({mouseX+WIDTH*0.5,mouseY+HEIGHT*0.5},5.0); }
 
 	/*
 	int npol = 101;

@@ -15,27 +15,26 @@ void AeroCraftWorld::resetSteer( ){
     myCraft->panels[3].lrot = myCraft_bak->panels[3].lrot;
 }
 
-void AeroCraftWorld::steerToDir( const Vec3d& dir, bool on ){
-    if(on) resetSteer();
+void AeroCraftWorld::steerToDir( const Vec3d& dir ){
+
     Mat3d rotMatT;
     rotMatT.setT(myCraft->rotMat);
     Draw3D::drawMatInPos( rotMatT, myCraft->pos );
-    double a = rotMatT.a.dot( dir );
-    double b = rotMatT.b.dot( dir );
+    double dyaw   = rotMatT.a.dot( dir );
+    double dpitch = rotMatT.b.dot( dir );
+    const double acut = 0.1;
+    //double droll = (a>acut)?(a-acut):((a<-acut)?(a+acut):0.0d);
+    double droll = dyaw;
 
+    /*
 	glColor4f(1.0f,1.0f,1.0f,0.9f);
 	char str[256];
 	sprintf(str, "a %3.3f b 3.3f %3.3f\0",a,b);
 	Draw3D::drawText(str, myCraft->pos, fontTex_DEBUG, 0.2, 0, 0 );
 	glEnable(GL_DEPTH_TEST);
-
-	if(on){
-        myCraft->panels[0].lrot.rotate(  _clamp( -0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
-        myCraft->panels[1].lrot.rotate(  _clamp( +0.2*a             , 0.0, 0.5),  {1.0,0.0,0.0} );
-        myCraft->panels[2].lrot.rotate(  _clamp(  0.5*b ,-0.5, 0.5), {1.0,0.0,0.0} );
-        myCraft->panels[3].lrot.rotate(  _clamp(  -0.5*a             ,-0.5, 0.5),   {0.0,1.0,0.0} );
-    }
-
+	*/
+    resetSteer();
+    myCraft->steerTo( 0.1*droll, 0.5*dpitch+0.5*fabs(dyaw), 0.5*dyaw);
     /*
     Draw3D::drawMatInPos( myCraft->rotMat, myCraft->pos );
     double a = myCraft->rotMat.a.dot( dir );
@@ -46,6 +45,33 @@ void AeroCraftWorld::steerToDir( const Vec3d& dir, bool on ){
     myCraft->panels[3].lrot.rotate(  _clamp(  1.5*a             ,-0.5, 0.5),   {0.0,1.0,0.0} );
     */
 };
+
+/*
+void AeroCraftWorld::steerToMat( Mat3d& mat, bool on ){
+    if(on) resetSteer();
+    Mat3d rotMatT;
+    rotMatT.setT(myCraft->rotMat);
+    Draw3D::drawMatInPos( rotMatT, myCraft->pos );
+    double a = rotMatT.a.dot( dir );
+    double b = rotMatT.b.dot( dir );
+    const double acut = 0.1;
+    double a_ = (a>acut)?(a-acut):((a<-acut)?(a+acut):0.0d);
+
+	glColor4f(1.0f,1.0f,1.0f,0.9f);
+	char str[256];
+	sprintf(str, "a %3.3f b 3.3f %3.3f\0",a,b);
+	Draw3D::drawText(str, myCraft->pos, fontTex_DEBUG, 0.2, 0, 0 );
+	glEnable(GL_DEPTH_TEST);
+
+	if(on){
+
+        myCraft->panels[0].lrot.rotate(  _clamp( -0.05*a_            , 0.0, 0.5),  {1.0,0.0,0.0} );
+        myCraft->panels[1].lrot.rotate(  _clamp( +0.05*a_            , 0.0, 0.5),  {1.0,0.0,0.0} );
+        myCraft->panels[2].lrot.rotate(  _clamp(  0.5*b + 0.5*fabs(a),-0.5, 0.5), {1.0,0.0,0.0} );
+        myCraft->panels[3].lrot.rotate(  _clamp( -0.5*a ,-0.5, 0.5),   {0.0,1.0,0.0} );
+    }
+};
+*/
 
 void AeroCraftWorld::update( ){
 
@@ -180,7 +206,7 @@ void AeroCraftWorld::makeEnvironment( float sz ){
 	p4.set( tersz, tersz,h0);
 	terrain     = FieldPatch::makeList( 3, Rect( 0.5d,   p1,  p2, p3, p4 )   );
 */
-	terrain_shape     = fieldPatch.makeList( 3, { 0.5d,   {-sz,-sz,h0},  { sz,-sz,h0},  {-sz,sz,h0},   {sz,sz,h0}   }   );
+	terrain_shape     = fieldPatch.makeList( 5, { 0.5d,   {-sz,-sz,h0},  { sz,-sz,h0},  {-sz,sz,h0},   {sz,sz,h0}   }   );
 	//terrain_shape   = FieldPatch::makeList( 15, { 0.5,   Vec3d(-tersz,-tersz,h0),  Vec3d( tersz,-tersz,h0),  Vec3d(-tersz,tersz,h0),   Vec3d(tersz,tersz,h0)   }   );
 
 }
@@ -197,13 +223,14 @@ int makeSinTerrain( float nx, float ny, float szx, float szy, float height ){
 
 void AeroCraftWorld::init( ){
 
-	makeEnvironment( 2000.0f );
+	makeEnvironment( 20000.0f );
 	printf( " Environment DONE! \n" );
 	//makeAeroCraft();
 
 	myCraft_bak = new AeroCraft();   myCraft_bak->fromFile("data/AeroCraft1.ini");
     myCraft     = new AeroCraft();   myCraft    ->fromFile("data/AeroCraft1.ini");
 
+    myCraft->vel.set_mul( myCraft->rotMat.c, 100.0 );
     //--- propeller characterisic
     double vmin=0.01;
     double vmax=300.0;
