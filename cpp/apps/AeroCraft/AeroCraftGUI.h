@@ -23,6 +23,7 @@ class AeroCraftGUI : public AppSDL2OGL_3D {
     GUIAbstractPanel*  focused = NULL;
 
     bool mouseSteer = false;
+    bool autoPilot  = false;
 
 	// ==== function declarations
 

@@ -122,6 +122,11 @@ void AeroCraftGUI:: draw(){
 	//Draw3D::drawText( "AHOJ!\0", {0.0,0.0,0.0}, fontTex, 0.5, 0, 0 );
 	*/
 
+	if(autoPilot){
+        //printf("autoPiloting frame %i\n", frameCount);
+        world->autoPilot1.control(world->dt); return;
+    }
+
     if(mouseSteer){
         if (first_person){
             double dpitch=mouseY*0.005;
@@ -189,8 +194,8 @@ void AeroCraftGUI::drawStaticTest2D(){
     Vec3d pos,vel,force,Up,Fw;
     // --- attitude
     double attitude;
-    glPushMatrix();
-    glScalef(1.0,0.5,1.0);
+    //glPushMatrix();
+    //glScalef(1.0,0.5,1.0);
     glBegin(GL_LINE_STRIP);
     glColor3f(0.0f,0.0f,0.0f);
     for(int i=0; i<n; i++){
@@ -206,16 +211,50 @@ void AeroCraftGUI::drawStaticTest2D(){
     t        = world->trjT[n-1]; attitude = world->trjPos[n-1].y;
     sprintf(str, "attitude=%4.3f m\0", attitude );
     Draw2D::drawText( str, {t,attitude},fontTex, 10, 0,0 );
+    //glPopMatrix();
+
+    // --- pos.zy
+    glBegin(GL_LINE_STRIP);
+    glColor3f(0.0f,0.8f,0.8f);
+    for(int i=0; i<n; i++){
+        pos = world->trjPos[i];
+        glVertex3f(pos.z*0.02+WIDTH*0.5,pos.y*0.02+HEIGHT*0.5, 1.0);
+    }
+    glEnd();
 
     // --- pos.xy
     glBegin(GL_LINE_STRIP);
-    glColor3f(0.5f,0.5f,0.0f);
+    glColor3f(0.8f,0.8f,0.0f);
     for(int i=0; i<n; i++){
         pos = world->trjPos[i];
-        glVertex3f(pos.z,pos.y, 1.0);
+        glVertex3f(pos.x*0.02+WIDTH*0.5,pos.y*0.02+HEIGHT*0.5, 1.0);
     }
     glEnd();
-    glPopMatrix();
+
+    // --- pos.xz
+    int iturn_old=0;
+    int iturn    =0;
+    double xold  =0.0;
+    double xmin=1e+8,xmax=-1e+8,zmin=1e+8,zmax=-1e+8;
+    glBegin(GL_LINE_STRIP);
+    glColor3f(0.8f,0.8f,0.8f);
+    for(int i=0; i<n; i++){
+        pos = world->trjPos[i];
+        vel = world->trjVel[i];
+        if(pos.x<xmin) xmin=pos.x;
+        if(pos.x>xmax) xmax=pos.x;
+        if(pos.z<zmin) zmin=pos.z;
+        if(pos.z>zmax) zmax=pos.z;
+        if(vel.x*xold <0 ){ iturn_old=iturn; iturn=i; } xold=vel.x;
+        glVertex3f(pos.x*0.02+WIDTH*0.5,pos.z*0.02+HEIGHT*0.5, 1.0);
+    }
+    glEnd();
+    //sprintf(str, "xspan=%4.3f[m] zspan=%4.3f[m] T=%4.3f [s]\0", xmax-xmin, zmax-zmin, world->trjT[iturn]-world->trjT[iturn_old] );
+    sprintf(str, "xspan=%4.3f[m] T=%4.3f [s]\0", xmax-xmin, world->trjT[iturn]-world->trjT[iturn_old] );
+	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, {WIDTH*0.5,HEIGHT*0.5},fontTex, 10, 0,0 );
+	pos=world->trjPos[iturn    ]; Draw2D::drawPointCross({pos.x*0.02+WIDTH*0.5,pos.z*0.02+HEIGHT*0.5},10);
+	pos=world->trjPos[iturn_old]; Draw2D::drawPointCross({pos.x*0.02+WIDTH*0.5,pos.z*0.02+HEIGHT*0.5},10);
+
 
     // --- v.y
     float d0 = HEIGHT*0.5f;
@@ -245,6 +284,8 @@ void AeroCraftGUI::drawStaticTest2D(){
     glEnd();
     sprintf(str, "v=%4.3fm/s(%4.3fkm/h)\0", speed, speed*3.6 );
 	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, {t,speed},fontTex, 10, 0,0 );
+
+
     //exit(0);
 }
 

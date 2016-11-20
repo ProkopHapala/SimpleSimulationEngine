@@ -89,8 +89,9 @@ void inputHanding(){
 				case SDLK_KP_MINUS : thisScreen->zoom*=VIEW_ZOOM_STEP; printf("zoom: %f \n", thisScreen->zoom); break;
 				case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
 
-				case SDLK_p    : thisScreen->first_person = !thisScreen->first_person; break;
-                case SDLK_m : thisScreen->mouseSteer = !thisScreen->mouseSteer; break;
+				case SDLK_u : thisScreen->autoPilot    = !thisScreen->autoPilot;    break;
+				case SDLK_p : thisScreen->first_person = !thisScreen->first_person; break;
+                case SDLK_m : thisScreen->mouseSteer   = !thisScreen->mouseSteer;   break;
 				case SDLK_c :
                     world.myCraft->panels[0].lrot = world.myCraft_bak->panels[0].lrot;
                     world.myCraft->panels[1].lrot = world.myCraft_bak->panels[1].lrot;

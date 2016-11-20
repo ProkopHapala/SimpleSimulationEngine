@@ -41,7 +41,7 @@ class AeroCraftWorld {
 
 	int fontTex_DEBUG;
 
-	 AeroCraftControler autoPilot1;
+    AeroCraftControler autoPilot1;
 
 /*
 	std::vector<Frigate2D*>  ships;
@@ -55,7 +55,7 @@ class AeroCraftWorld {
 	void init( );
 
 	void reallocateTrj(int n);
-    void evalAircraftTrajectory( int n, int nsub, double dt );
+    void evalAircraftTrajectory( int n, int nsub, int msub, double dt );
 
 	// filling game with objects
 	void makeAeroCraft();

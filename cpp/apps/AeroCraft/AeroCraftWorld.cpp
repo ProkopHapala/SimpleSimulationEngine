@@ -233,7 +233,7 @@ int makeSinTerrain( float nx, float ny, float szx, float szy, float height ){
 }
 */
 
-void AeroCraftWorld::evalAircraftTrajectory( int n, int nsub, double dt ){
+void AeroCraftWorld::evalAircraftTrajectory( int n, int nsub, int msub, double dt ){
     ntrj=n;
     double t=0;
     long ticks1 = getCPUticks();
@@ -244,18 +244,20 @@ void AeroCraftWorld::evalAircraftTrajectory( int n, int nsub, double dt ){
         trjFw   [i] = myCraft->rotMat.c;
         trjUp   [i] = myCraft->rotMat.b;
         trjT    [i] = t;
-        //resetSteer();
-        autoPilot1.control(dt*nsub);
-        for(int itr=0; itr<nsub; itr++){
-            myCraft->clean_temp();
-            myCraft->force.set      ( { 0, gravityG*myCraft->mass, 0 } );
-            myCraft->applyAeroForces( {0,0,0} );
-            myCraft->move(dt);
-            t+=dt;
+        for(int j=0; j<nsub; j++){
+            //resetSteer();
+            autoPilot1.control(dt*msub);
+            for(int itr=0; itr<msub; itr++){
+                myCraft->clean_temp();
+                myCraft->force.set      ( { 0, gravityG*myCraft->mass, 0 } );
+                myCraft->applyAeroForces( {0,0,0} );
+                myCraft->move(dt);
+                t+=dt;
+            }
 		}
     }
     double  dticks        = getCPUticks() - ticks1;
-    double  ticksPerIter  = dticks/(nsub*n);
+    double  ticksPerIter  = dticks/(n*nsub*msub);
     double  tickPerSec    = dticks/(t-trjT[0]);
     printf( "Ticks %g /iter %g /sec %g\n", dticks, ticksPerIter, tickPerSec );
 }
@@ -270,9 +272,10 @@ void AeroCraftWorld::doStaticTesting( ){
         printf(" v=%f [m/s] thrust=%f [N] \n",  v, thrust );
     }
 
-    int ntrj_=1000;
+    int ntrj_=500;
     reallocateTrj(ntrj_);
-    evalAircraftTrajectory(ntrj_, 10, 0.05);
+    evalAircraftTrajectory(ntrj_, 100, 10, 0.001);  // correspond to interactive simulation
+    //evalAircraftTrajectory(ntrj_, 25, 4, 0.01);
     //exit(0);
 }
 
@@ -285,9 +288,13 @@ void AeroCraftWorld::init( ){
 	myCraft_bak = new AeroCraft();   myCraft_bak->fromFile("data/AeroCraft1.ini");
     myCraft     = new AeroCraft();   myCraft    ->fromFile("data/AeroCraft1.ini");
 
+    myCraft->pos.y=200.0;
+
     myCraft->vel.set_mul( myCraft->rotMat.c, 100.0 );
 
     autoPilot1.craft=myCraft;
+
+    //staticTest=false;
 
     // static test ---------
     if( staticTest ) doStaticTesting( );

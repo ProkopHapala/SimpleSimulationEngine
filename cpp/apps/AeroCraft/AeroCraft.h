@@ -117,25 +117,45 @@ class AeroCraftControler{
     public:
     AeroCraft * craft;
 
-    double vvert_target    =-10.0d;
-    //double vvert_rate      =0.05d;
-    //double vvert_strength  =0.000005d;
-    //double vvert_strength  =0.00005d;  // this is safe without "vy_against_fy" checking
-    double vvert_strength  =0.005d;
-    double dvvert_smooth   =0.0d;
+    double vvert_target    = 0.0d;
+    double vvert_strength  = 0.1d;
+    double dvvert_smooth   = 0.0d;
+
+    double roll_target     = 0.9d;
+    //double roll_strength   = 0.1d;
+    //double roll_damp       = 50;
+    double roll_strength   = 0.3d;
+    double roll_damp       = 30;
 
 	inline void control( double dt ){
 
-        double dvvert  = (vvert_target - craft->vel.y);
-        //double bmix    = vvert_rate*dt;
-        //dvvert_smooth  = bmix*dvvert + (1-bmix)*dvvert_smooth;
-        dvvert_smooth = dvvert*dt;
 
-        bool vy_against_fy = (( craft->force.y < 0 )&&( dvvert_smooth < 0 ))  && !(( craft->force.y > 0 )&&( dvvert_smooth > 0 ));
-        if( !vy_against_fy ){
+        double dvvert  = (vvert_target - craft->vel.y);
+        bool vy_against_fy = (craft->force.y * dvvert) < 0.0d;
+        if( vy_against_fy ){
+            //double bmix    = vvert_rate*dt;
+            //dvvert_smooth  = bmix*dvvert + (1-bmix)*dvvert_smooth;
+            dvvert_smooth = dvvert;
+            double dpitch = dvvert_smooth*vvert_strength*dt;
+            //printf("%f %f\n", dpitch, dt );
             //printf("%g %g %g %g\n", craft->vel.y, dvvert, bmix, dvvert_smooth );
-            craft->elevator->lrot.rotate(  _clamp(  dvvert_smooth*vvert_strength,-craft->maxElevator,craft->maxElevator), {1.0,0.0,0.0} );
+            craft->elevator->lrot.rotate(  _clamp( dpitch,-craft->maxElevator,craft->maxElevator), {1.0,0.0,0.0} );
         }
+
+        //
+        Mat3d rmat; rmat.setT(craft->rotMat);
+        double roll_err = (roll_target - rmat.a.y);
+        double comega   =  craft->omega.dot( rmat.c );
+        bool adjust_roll = true;
+        //if( fabs(comega>1e-8) )  adjust_roll = ((roll_err * comega ) < 0.0);
+        roll_err *= (1- roll_damp*roll_err*comega);
+        double droll=0;
+        if( adjust_roll ){
+            droll = _clamp( roll_err*roll_strength*dt,-craft->maxAileron,craft->maxElevator);
+            craft-> leftAirelon->lrot.rotate(  droll , {1.0,0.0,0.0} );
+            craft->rightAirelon->lrot.rotate( -droll , {1.0,0.0,0.0} );
+        }
+        //printf("autoPilot roll_err %g droll %g    %g \n",roll_err, droll,  roll_err * comega );
 
 	}
 
