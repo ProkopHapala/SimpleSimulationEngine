@@ -162,7 +162,7 @@ void inputHanding(){
 	thisScreen->qCamera.pitch( 0.005* dmy );
 	thisScreen->qCamera.yaw  ( 0.005* dmx );
 	//SDL_WarpMouse( thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
-	//SDL_WarpMouseInWindow( thisScreen->window, thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
+	//if( !thisScreen->first_person ) SDL_WarpMouseInWindow( thisScreen->window, thisScreen->WIDTH/2, thisScreen->HEIGHT/2 );
 
 }
 

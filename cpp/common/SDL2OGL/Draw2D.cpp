@@ -1,6 +1,7 @@
 
 #include <SDL2/SDL_opengl.h>
 
+#include "Draw.h"
 #include "Draw2D.h"  // THE HEADER
 
 //namespace Draw2D{
@@ -421,6 +422,21 @@ void Draw2D::drawString( const  char * str, float x, float y, float sz, int itex
     glBlendFunc( GL_ONE, GL_ZERO );
 }
 
+
+void Draw2D::drawText( const char * str, const Vec2d& pos, int fontTex, float textSize, int istart, int iend ){
+    glDisable    ( GL_LIGHTING   );
+    glDisable    ( GL_DEPTH_TEST );
+    glShadeModel ( GL_FLAT       );
+    glPushMatrix();
+        //glMatrixMode(GL_MODELVIEW);
+        //glMatrixMode(GL_PROJECTION);
+        glTranslatef( pos.x, pos.y, z_layer );
+        //Draw::billboardCam( );
+        //Draw::billboardCamProj( );
+        //Draw2D::drawString( inputText.c_str(), 0, 0, textSize, fontTex );
+        Draw::drawText( str, fontTex, textSize, istart, iend );
+    glPopMatrix();
+};
 
 
 

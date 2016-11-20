@@ -56,6 +56,11 @@ class AeroCraft : public RigidBody {
 	AeroSurface * panels    = NULL;
 	Propeler    * propelers = NULL;
 
+	AeroSurface * leftAirelon =NULL;
+	AeroSurface * rightAirelon=NULL;
+	AeroSurface * elevator    =NULL;
+	AeroSurface * rudder      =NULL;
+
 	Vec3d totalThrust;
 
 	double maxAileron  = 0.1;
@@ -103,6 +108,36 @@ class AeroCraft : public RigidBody {
         panels[2].lrot.rotate(  _clamp(  dpitch,-maxElevator,maxElevator), {1.0,0.0,0.0} );
         panels[3].lrot.rotate(  _clamp( -dyaw  ,-maxRudder  ,maxRudder  ), {0.0,1.0,0.0} );
     }
+
+};
+
+
+
+class AeroCraftControler{
+    public:
+    AeroCraft * craft;
+
+    double vvert_target    =-10.0d;
+    //double vvert_rate      =0.05d;
+    //double vvert_strength  =0.000005d;
+    //double vvert_strength  =0.00005d;  // this is safe without "vy_against_fy" checking
+    double vvert_strength  =0.005d;
+    double dvvert_smooth   =0.0d;
+
+	inline void control( double dt ){
+
+        double dvvert  = (vvert_target - craft->vel.y);
+        //double bmix    = vvert_rate*dt;
+        //dvvert_smooth  = bmix*dvvert + (1-bmix)*dvvert_smooth;
+        dvvert_smooth = dvvert*dt;
+
+        bool vy_against_fy = (( craft->force.y < 0 )&&( dvvert_smooth < 0 ))  && !(( craft->force.y > 0 )&&( dvvert_smooth > 0 ));
+        if( !vy_against_fy ){
+            //printf("%g %g %g %g\n", craft->vel.y, dvvert, bmix, dvvert_smooth );
+            craft->elevator->lrot.rotate(  _clamp(  dvvert_smooth*vvert_strength,-craft->maxElevator,craft->maxElevator), {1.0,0.0,0.0} );
+        }
+
+	}
 
 };
 

@@ -4,6 +4,7 @@
 
 #include "SDL_utils.h"
 #include "Draw.h"
+#include "Draw2D.h"
 #include "Draw3D.h"
 //#include "drawDrawUtils.h"
 
@@ -78,8 +79,9 @@ void AeroCraftGUI:: draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	world->update(); // ALL PHYSICS COMPUTATION DONE HERE
+	if(world->staticTest) return;
 
+	world->update(); // ALL PHYSICS COMPUTATION DONE HERE
 	camera ();
 
 	renderSkyBox(world->myCraft->pos.x, world->myCraft->pos.y-1000, world->myCraft->pos.z );
@@ -142,6 +144,8 @@ void AeroCraftGUI::drawHUD(){
 	//mpanel.tryRender(); mpanel.draw();
 	//if(focused) Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
 
+	if(world->staticTest){ drawStaticTest2D(); return; }
+
 	char str[256];
 	//sprintf(str, "speed %3.3f attitude %4.3f glideRatio %3.3f \0",world->myCraft->vel.norm(), world->myCraft->pos.y,   -sqrt(sq(world->myCraft->vel.x)+sq(world->myCraft->vel.z))/world->myCraft->vel.y );
 	double vtot   = world->myCraft->vel.norm();
@@ -149,7 +153,6 @@ void AeroCraftGUI::drawHUD(){
 	double thrust = world->myCraft->totalThrust.norm();
 	sprintf(str, "attitude %4.3f speed %3.3f vVert %3.3f tgAlfa %3.3f thrust %3.3f \0", world->myCraft->pos.y, vtot, world->myCraft->vel.y, world->myCraft->vel.y/vtot, thrust );
 	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw::drawText( str, fontTex, 10, 0,0 );
-
 
 	if(first_person){ glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawPointCross({mouseX+WIDTH*0.5,mouseY+HEIGHT*0.5},5.0); }
 
@@ -168,7 +171,81 @@ void AeroCraftGUI::drawHUD(){
     exit(0);
     */
 
+}
 
+
+void AeroCraftGUI::drawStaticTest2D(){
+    char str[256];
+    /*
+        Vec3d pos   = world->trjPos  [i];
+        Vec3d vel   = world->trjVel  [i];
+        Vec3d Force = world->trjForce[i];
+        Vec3d Fw    = world->trjFw   [i];
+        Vec3d Up    = world->trjUp   [i];
+    */
+
+    int n = world->ntrj;
+     double t;
+    Vec3d pos,vel,force,Up,Fw;
+    // --- attitude
+    double attitude;
+    glPushMatrix();
+    glScalef(1.0,0.5,1.0);
+    glBegin(GL_LINE_STRIP);
+    glColor3f(0.0f,0.0f,0.0f);
+    for(int i=0; i<n; i++){
+        t    = world->trjT    [i];
+        pos = world->trjPos[i];
+        glVertex3f(t,pos.y, 1.0);
+    }
+    glEnd();
+    glColor4f(1.0f,1.0f,1.0f,0.9f);
+    t        = world->trjT  [0]; attitude = world->trjPos[0].y;
+    sprintf(str, "attitude=%4.3f m\0", attitude );
+    Draw2D::drawText( str, {t,attitude},fontTex, 10, 0,0 );
+    t        = world->trjT[n-1]; attitude = world->trjPos[n-1].y;
+    sprintf(str, "attitude=%4.3f m\0", attitude );
+    Draw2D::drawText( str, {t,attitude},fontTex, 10, 0,0 );
+
+    // --- pos.xy
+    glBegin(GL_LINE_STRIP);
+    glColor3f(0.5f,0.5f,0.0f);
+    for(int i=0; i<n; i++){
+        pos = world->trjPos[i];
+        glVertex3f(pos.z,pos.y, 1.0);
+    }
+    glEnd();
+    glPopMatrix();
+
+    // --- v.y
+    float d0 = HEIGHT*0.5f;
+    glBegin(GL_LINE_STRIP);
+    glColor3f(1.0f,0.0f,1.0f);
+    for(int i=0; i<n; i++){
+        t     = world->trjT    [i];
+        vel   = world->trjVel  [i];
+        glVertex3f(t,vel.y+d0, 1.0);
+    }
+    glEnd();
+    glBegin(GL_LINES);
+        glVertex3f(0,d0, 1.0); glVertex3f(WIDTH,d0, 1.0);
+    glEnd();
+
+
+    // --- speed
+    glBegin(GL_LINE_STRIP);
+    glColor3f(0.0f,0.0f,1.0f);
+    double speed;
+    for(int i=0; i<n; i++){
+        t     = world->trjT    [i];
+        vel   = world->trjVel  [i];
+        speed = vel.norm();
+        glVertex3f(t,speed, 1.0);
+    }
+    glEnd();
+    sprintf(str, "v=%4.3fm/s(%4.3fkm/h)\0", speed, speed*3.6 );
+	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, {t,speed},fontTex, 10, 0,0 );
+    //exit(0);
 }
 
 //void AeroCraftGUI:: drawHUD(){};

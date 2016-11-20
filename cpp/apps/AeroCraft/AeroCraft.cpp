@@ -64,6 +64,14 @@ void AeroCraft::render(){
             panels[i].fromStringPolarModel( buf );
             panels[i].craft = this;
         }
+        int ileftAirelon,irightAirelon,ielevator,irudder;
+        fscanf ( pFile, "%i %i %i %i\n", &ileftAirelon,&irightAirelon,&ielevator,&irudder);
+        printf( "%i %i %i %i\n", ileftAirelon,irightAirelon,ielevator,irudder );
+        leftAirelon =&panels[ileftAirelon -1];
+        rightAirelon=&panels[irightAirelon-1];
+        elevator    =&panels[ielevator    -1];
+        rudder      =&panels[irudder      -1];
+
 
         fscanf ( pFile, "%i\n", &nPropelers);
         propelers = new Propeler[nPropelers];

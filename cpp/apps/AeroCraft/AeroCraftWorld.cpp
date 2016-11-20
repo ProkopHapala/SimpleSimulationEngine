@@ -6,6 +6,18 @@
 #include "testUtils.h"
 
 #include "AeroCraftWorld.h" // THE HEADER
+#include "testUtils.h"
+
+void AeroCraftWorld::reallocateTrj(int n){
+  ntrjMax=n;
+  if(trjPos  ) delete trjPos;   trjPos   = new Vec3d[n];
+  if(trjVel  ) delete trjVel;   trjVel   = new Vec3d[n];
+  if(trjForce) delete trjForce; trjForce = new Vec3d[n];
+  if(trjFw   ) delete trjFw;    trjFw    = new Vec3d[n];
+  if(trjUp   ) delete trjUp;    trjUp    = new Vec3d[n];
+  if(trjT    ) delete trjT;     trjT     = new double[n];
+}
+
 
 
 void AeroCraftWorld::resetSteer( ){
@@ -77,12 +89,12 @@ void AeroCraftWorld::update( ){
 
 	//long long nt1 = getCPUticks();
 
-	double g  = -9.81;
+
 	myCraft->checkStateNormal();
 	//for(int iSubStep=0; iSubStep<PHYS_STEPS_PER_FRAME; iSubStep++ ){
 	for( int i=0; i<perFrame; i++ ){
 		myCraft->clean_temp();
-		myCraft->force.set    ( { 0, g*myCraft->mass, 0 } );
+		myCraft->force.set    ( { 0, gravityG*myCraft->mass, 0 } );
 		//myCraft->force.add_mul(   myCraft->rotMat.c, 500.0 ); // motor
 		myCraft->applyAeroForces( {0,0,0} );
 		myCraft->move(dt);
@@ -221,6 +233,49 @@ int makeSinTerrain( float nx, float ny, float szx, float szy, float height ){
 }
 */
 
+void AeroCraftWorld::evalAircraftTrajectory( int n, int nsub, double dt ){
+    ntrj=n;
+    double t=0;
+    long ticks1 = getCPUticks();
+    for(int i=0; i<n; i++){
+        trjPos  [i] = myCraft->pos;
+        trjVel  [i] = myCraft->vel;
+        trjForce[i] = myCraft->force;
+        trjFw   [i] = myCraft->rotMat.c;
+        trjUp   [i] = myCraft->rotMat.b;
+        trjT    [i] = t;
+        //resetSteer();
+        autoPilot1.control(dt*nsub);
+        for(int itr=0; itr<nsub; itr++){
+            myCraft->clean_temp();
+            myCraft->force.set      ( { 0, gravityG*myCraft->mass, 0 } );
+            myCraft->applyAeroForces( {0,0,0} );
+            myCraft->move(dt);
+            t+=dt;
+		}
+    }
+    double  dticks        = getCPUticks() - ticks1;
+    double  ticksPerIter  = dticks/(nsub*n);
+    double  tickPerSec    = dticks/(t-trjT[0]);
+    printf( "Ticks %g /iter %g /sec %g\n", dticks, ticksPerIter, tickPerSec );
+}
+
+void AeroCraftWorld::doStaticTesting( ){
+    //--- propeller characterisic
+    double vmin=0.01;
+    double vmax=300.0;
+    double dv  =5.0;
+    for(double v=vmin; v<vmax; v+=dv){
+        double thrust = myCraft->propelers[0].getThrust(v);
+        printf(" v=%f [m/s] thrust=%f [N] \n",  v, thrust );
+    }
+
+    int ntrj_=1000;
+    reallocateTrj(ntrj_);
+    evalAircraftTrajectory(ntrj_, 10, 0.05);
+    //exit(0);
+}
+
 void AeroCraftWorld::init( ){
 
 	makeEnvironment( 20000.0f );
@@ -231,15 +286,11 @@ void AeroCraftWorld::init( ){
     myCraft     = new AeroCraft();   myCraft    ->fromFile("data/AeroCraft1.ini");
 
     myCraft->vel.set_mul( myCraft->rotMat.c, 100.0 );
-    //--- propeller characterisic
-    double vmin=0.01;
-    double vmax=300.0;
-    double dv  =5.0;
-    for(double v=vmin; v<vmax; v+=dv){
-        double thrust = myCraft->propelers[0].getThrust(v);
-        printf(" v=%f [m/s] thrust=%f [N] \n",  v, thrust );
-    }
-    //exit(0);
+
+    autoPilot1.craft=myCraft;
+
+    // static test ---------
+    if( staticTest ) doStaticTesting( );
 
     printf( " AeroCraft DONE! \n" );
 };

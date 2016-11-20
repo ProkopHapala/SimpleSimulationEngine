@@ -19,6 +19,7 @@ static constexpr double wingLiftUp      = 2.0;
 class AeroCraftWorld {
 	public:
 
+	double gravityG     = -9.81;
 	double ground_level;
 	Vec3d  wind_speed;
 	Vec2d  watter_speed;
@@ -33,8 +34,14 @@ class AeroCraftWorld {
 	int buildings_shape = -1;
 	int terrain_shape   = -1;
 
+    bool staticTest = true;
+	int ntrj=0,ntrjMax=0;
+    Vec3d  *trjPos=NULL,*trjVel=NULL,*trjForce=NULL,*trjFw=NULL,*trjUp=NULL;
+    double *trjT=NULL;
 
 	int fontTex_DEBUG;
+
+	 AeroCraftControler autoPilot1;
 
 /*
 	std::vector<Frigate2D*>  ships;
@@ -44,8 +51,11 @@ class AeroCraftWorld {
     void resetSteer( );
 	void steerToDir( const Vec3d& dir );
 	void update( );
+	void doStaticTesting( );
 	void init( );
 
+	void reallocateTrj(int n);
+    void evalAircraftTrajectory( int n, int nsub, double dt );
 
 	// filling game with objects
 	void makeAeroCraft();

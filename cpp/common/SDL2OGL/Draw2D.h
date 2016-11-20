@@ -58,7 +58,7 @@ void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
 void renderImage( GLuint itex, const Rect2d& rec );
 void drawString ( const char * str, int imin, int imax, float x, float y, float sz, int itex );
 void drawString ( const char * str,                     float x, float y, float sz, int itex );
-
+void drawText   ( const char * str, const Vec2d& pos, int fontTex, float textSize, int istart, int iend );
 
 // ==== inline functions
 
