@@ -66,11 +66,26 @@ void Plot2D::drawAxes(){
     //Draw2D::drawPointCross({0.0,0.0},100.0);
 
     if(grid){
-        Draw::setRGBA(clrGrid);   Draw2D::drawGrid( nXTicks, xTicks, axBounds.y0, axBounds.y1, true  );
-        Draw::setRGBA(clrGrid);   Draw2D::drawGrid( nYTicks, yTicks, axBounds.x0, axBounds.x1, false );
+        Draw::setRGBA(clrGrid);
+        Draw2D::drawGrid( nXTicks, xTicks, axBounds.y0, axBounds.y1, true  );
+        Draw2D::drawGrid( nYTicks, yTicks, axBounds.x0, axBounds.x1, false );
     }else{
         Draw::setRGBA(clrTicksY); Draw2D::drawGrid( nXTicks, xTicks, axPos.x, axPos.x+tickSz,     true  );  Draw2D::drawLine( {axPos   .x ,axBounds.y0}, {axPos   .x ,axBounds.y1} );
         Draw::setRGBA(clrTicksX); Draw2D::drawGrid( nYTicks, yTicks, axPos.x, axPos.y+tickSz,     false );  Draw2D::drawLine( {axBounds.x0,axPos   .y }, {axBounds.x1,axPos   .y } );
+    }
+
+    if(fontTex){
+        char str[16];
+        Draw::setRGBA(clrTicksX);
+        for(int i=0; i<nXTicks; i++){
+            sprintf(str,tickFormat,xTicks[i]);
+            Draw2D::drawText(str,{xTicks[i],axPos.y}, 90, fontTex, tickSz, 0, 0 );
+        }
+        Draw::setRGBA(clrTicksY);
+        for(int i=0; i<nYTicks; i++){
+            sprintf(str,tickFormat,yTicks[i]);
+            Draw2D::drawText(str,{axPos.x,yTicks[i]}, 0.0, fontTex, tickSz, 0, 0 );
+        }
     }
 
 }
@@ -90,8 +105,8 @@ void Plot2D::render(){
 };
 
 void Plot2D::view(){
-    for( DataLine2D* line : lines ){ line->view(); }
     glCallList( glObj );
+    for( DataLine2D* line : lines ){ line->view(); }
    // printf( "%i \n", glObj);
 };
 

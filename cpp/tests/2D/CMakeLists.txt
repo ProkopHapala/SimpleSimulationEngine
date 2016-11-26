@@ -39,3 +39,8 @@ target_link_libraries( test_GlobOpt2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LI
 
 add_executable       ( test_Plotting2D test_Plotting2D.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:MoleculeWorld2D> $<TARGET_OBJECTS:DynamicOpt> $<TARGET_OBJECTS:Body2D> )
 target_link_libraries( test_Plotting2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
+add_custom_command(
+    TARGET ${PROJECT_NAME} test_Plotting2D
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
+)

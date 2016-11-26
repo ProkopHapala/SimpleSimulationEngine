@@ -476,7 +476,7 @@ void Draw2D::drawString( const  char * str, float x, float y, float sz, int itex
 }
 
 
-void Draw2D::drawText( const char * str, const Vec2d& pos, int fontTex, float textSize, int istart, int iend ){
+void Draw2D::drawText( const char * str, const Vec2d& pos, float angle, int fontTex, float textSize, int istart, int iend ){
     glDisable    ( GL_LIGHTING   );
     glDisable    ( GL_DEPTH_TEST );
     glShadeModel ( GL_FLAT       );
@@ -484,6 +484,7 @@ void Draw2D::drawText( const char * str, const Vec2d& pos, int fontTex, float te
         //glMatrixMode(GL_MODELVIEW);
         //glMatrixMode(GL_PROJECTION);
         glTranslatef( pos.x, pos.y, z_layer );
+        glRotatef( angle, 0,0,1 );
         //Draw::billboardCam( );
         //Draw::billboardCamProj( );
         //Draw2D::drawString( inputText.c_str(), 0, 0, textSize, fontTex );

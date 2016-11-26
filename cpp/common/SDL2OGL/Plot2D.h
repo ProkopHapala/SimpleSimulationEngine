@@ -61,11 +61,13 @@ class Plot2D{
     Rect2d axBounds;
     float tickSz = 0.1;
 
-    bool     grid       =false;
+    bool     grid       =true;
     bool     tickCaption=false;
-    uint32_t clrGrid    = 0xFF000000;
+    uint32_t clrGrid    = 0xFFE0E0E0;
     uint32_t clrTicksX  = 0xFF000000;
     uint32_t clrTicksY  = 0xFF000000;
+    char   * tickFormat = "%2.2f\0";
+    int      fontTex=0;
 
     void update();
     void drawAxes();

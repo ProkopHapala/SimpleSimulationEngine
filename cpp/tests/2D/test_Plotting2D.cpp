@@ -5,14 +5,16 @@
 #include <vector>
 #include <math.h>
 
+#include "fastmath.h"
+#include "Vec2.h"
+#include "geom2D.h"
+
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw2D.h"
 #include "AppSDL2OGL.h"
-
-#include "fastmath.h"
-#include "Vec2.h"
-#include "geom2D.h"
+#include "SDL_utils.h"
 
 #include "Plot2D.h"
 #include "PlotScreen2D.h"
@@ -23,6 +25,7 @@ class TestAppPlotting : public AppSDL2OGL{
 	public:
 
     Plot2D plot1;
+    int fontTex;
 
 	virtual void draw   ();
     //virtual void eventHandling( const SDL_Event& event );
@@ -32,9 +35,13 @@ class TestAppPlotting : public AppSDL2OGL{
 
 TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
+    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+
     Func1d myFunc = &sin;
 
     plot1.init();
+    plot1.fontTex = fontTex;
+
 
     DataLine2D * line1 = new DataLine2D(100);
     line1->linspan(-3*M_PI,2*M_PI);
