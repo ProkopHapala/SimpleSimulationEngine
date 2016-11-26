@@ -42,12 +42,17 @@ void drawPolarFunc     ( double x0, double y0, double fscale, int n, double phi0
 
 void plot         ( int n, double * xs, double * ys );
 void plot_cross   ( int n, double * xs, double * ys, double sz );
+void plot_X       ( int n, double * xs, double * ys, double sz );
+void plot_O       ( int n, double * xs, double * ys, double sz, int ncirc );
 
 void drawFunc     ( float xmin, float xmax,          int n, Func1d func );
 void drawFuncDeriv( float xmin, float xmax, float d, int n, Func1d func );
 
 
 void drawGrid     ( float xmin, float ymin, float xmax, float ymax, float dx, float dy );
+
+void drawGrid      ( int n, double * ticks, double lmin, double lmax, bool XorY );
+//void drawTicketAxis( int n, double * ticks, double l0,   double lsz,  bool XorY );
 
 void drawSimplex    ( float x, float y, bool s, float step );
 void drawSimplexGrid( int n,  float step );

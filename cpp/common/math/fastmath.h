@@ -35,6 +35,16 @@ template <class TYPE> inline TYPE clip(TYPE x, TYPE xmin, TYPE xmax ){ if( x<xmi
 #define _circ_dec( i, n )   i--; if(i< 0) i=n-1;
 
 
+typedef float  (*Func1f)( float  );
+typedef double (*Func1d)( double );
+
+typedef float  (*Func2f)( float,  float  );
+typedef double (*Func2d)( double, double );
+
+typedef float  (*Func3f)( float,  float,  float  );
+typedef double (*Func3d)( double, double, double );
+
+
 #include "gonioApprox.h"
 
 // from http://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp/
@@ -93,7 +103,6 @@ inline int fastFloor( double x ){
      return ix;
 }
 
-typedef double (*Func1d)( double );
 
 /*
 template <class TYPE>

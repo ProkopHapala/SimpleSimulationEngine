@@ -203,6 +203,7 @@ void Draw2D::drawPolarFunc( double x0, double y0, double fscale, int n, double p
 void Draw2D::plot( int n, double * xs, double * ys ){
     glBegin(GL_LINE_STRIP);
     for( int i=0; i<n; i++ ){
+        //printf("%f %f\n", xs[i], ys[i] );
         glVertex3f( (float)xs[i], (float)ys[i], z_layer );
     }
     glEnd();
@@ -212,10 +213,33 @@ void Draw2D::plot_cross( int n, double * xs, double * ys, double sz ){
     glBegin   (GL_LINES);
 	for( int i=0; i<n; i++ ){
         float x = (float)xs[i]; float y = (float)ys[i];
-		glVertex3f( x-sz, y   , z_layer );
-		glVertex3f( x+sz, y   , z_layer );
-        glVertex3f( x   , y-sz, z_layer );
-		glVertex3f( x   , y+sz, z_layer );
+		glVertex3f( x-sz, y   , z_layer );   glVertex3f( x+sz, y   , z_layer );
+        glVertex3f( x   , y-sz, z_layer );   glVertex3f( x   , y+sz, z_layer );
+	}
+	glEnd();
+};
+
+void Draw2D::plot_X( int n, double * xs, double * ys, double sz ){
+    glBegin   (GL_LINES);
+	for( int i=0; i<n; i++ ){
+        float x = (float)xs[i]; float y = (float)ys[i];
+		glVertex3f( x-sz, y-sz, z_layer );   glVertex3f( x+sz, y+sz, z_layer );
+        glVertex3f( x+sz, y-sz, z_layer );   glVertex3f( x-sz, y+sz, z_layer );
+	}
+	glEnd();
+};
+
+void Draw2D::plot_O( int n, double * xs, double * ys, double sz, int ncirc ){
+    glBegin   (GL_LINE_LOOP);
+    float dphi =  6.28318530718f / ncirc;
+    Vec2f drot; drot.fromAngle( dphi );
+	for( int i=0; i<n; i++ ){
+        float x = (float)xs[i]; float y = (float)ys[i];
+        Vec2f v;    v.set( sz, 0.0f );
+        for( int j=0; j<ncirc; j++ ){
+            glVertex3f( x + v.x, y + v.y, z_layer );
+            v.mul_cmplx( drot );
+        }
 	}
 	glEnd();
 };
@@ -263,6 +287,35 @@ void Draw2D::drawGrid( float xmin, float ymin, float xmax, float ymax, float dx,
     }
     glEnd();
 };
+
+void Draw2D::drawGrid( int n, double * ticks, double lmin, double lmax, bool XorY ){
+    glBegin(GL_LINES);
+    // X-grid
+    if( XorY ){
+        for( int i=0; i<=n; i++ ){ float x = ticks[i]; glVertex3f( x,    (float)lmin, z_layer ); glVertex3f( x,    (float)lmax, z_layer ); }
+    }else{
+        for( int i=0; i<=n; i++ ){ float y = ticks[i]; glVertex3f( lmin, (float)y,    z_layer ); glVertex3f( lmax, (float)y,    z_layer ); }
+    }
+    glEnd();
+};
+
+/*
+void Draw2D::drawTicketAxis( int n, double * ticks, double l0, double lsz, bool XorY ){
+    glBegin(GL_LINES);
+    // X-grid
+    float lplus  = l0+lsz;
+    float lminus = l0-lsz;
+    doub
+    if( XorY ){
+        glVertex3f( ticks[0], (float)l0, z_layer );    glVertex3f( ticks[n-1],    (float)l0, z_layer );
+        for( int i=0; i<=n; i++ ){ float x = ticks[i]; glVertex3f( x, lminus, z_layer ); glVertex3f( x, lplus, z_layer ); }
+    }else{
+        glVertex3f( (float)l0, ticks[0], z_layer );    glVertex3f(     (float)l0, ticks[n-1], z_layer );
+        for( int i=0; i<=n; i++ ){ float y = ticks[i]; glVertex3f( lminus, y,    z_layer ); glVertex3f( lplus, y,    z_layer ); }
+    }
+    glEnd();
+};
+*/
 
 void Draw2D::drawSimplex( float x, float y, bool s, float step ){
     glBegin   ( GL_TRIANGLES );
