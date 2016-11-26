@@ -207,10 +207,10 @@ void AeroCraftGUI::drawStaticTest2D(){
     glColor4f(1.0f,1.0f,1.0f,0.9f);
     t        = world->trjT  [0]; attitude = world->trjPos[0].y;
     sprintf(str, "attitude=%4.3f m\0", attitude );
-    Draw2D::drawText( str, {t,attitude},fontTex, 10, 0,0 );
+    Draw2D::drawText( str, {t,attitude},0.0,fontTex, 10, 0,0 );
     t        = world->trjT[n-1]; attitude = world->trjPos[n-1].y;
     sprintf(str, "attitude=%4.3f m\0", attitude );
-    Draw2D::drawText( str, {t,attitude},fontTex, 10, 0,0 );
+    Draw2D::drawText( str, {t,attitude},0.0,fontTex, 10, 0,0 );
     //glPopMatrix();
 
     // --- pos.zy
@@ -251,7 +251,7 @@ void AeroCraftGUI::drawStaticTest2D(){
     glEnd();
     //sprintf(str, "xspan=%4.3f[m] zspan=%4.3f[m] T=%4.3f [s]\0", xmax-xmin, zmax-zmin, world->trjT[iturn]-world->trjT[iturn_old] );
     sprintf(str, "xspan=%4.3f[m] T=%4.3f [s]\0", xmax-xmin, world->trjT[iturn]-world->trjT[iturn_old] );
-	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, {WIDTH*0.5,HEIGHT*0.5},fontTex, 10, 0,0 );
+	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, {WIDTH*0.5,HEIGHT*0.5},0.0,fontTex, 10, 0,0 );
 	pos=world->trjPos[iturn    ]; Draw2D::drawPointCross({pos.x*0.02+WIDTH*0.5,pos.z*0.02+HEIGHT*0.5},10);
 	pos=world->trjPos[iturn_old]; Draw2D::drawPointCross({pos.x*0.02+WIDTH*0.5,pos.z*0.02+HEIGHT*0.5},10);
 
@@ -283,7 +283,7 @@ void AeroCraftGUI::drawStaticTest2D(){
     }
     glEnd();
     sprintf(str, "v=%4.3fm/s(%4.3fkm/h)\0", speed, speed*3.6 );
-	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, {t,speed},fontTex, 10, 0,0 );
+	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, {t,speed},0.0,fontTex, 10, 0,0 );
 
 
     //exit(0);
