@@ -32,7 +32,7 @@ class FormationWorld{
     double RmaxInteract = 1.5;
 
     Ruler2DFast colruler;
-    TileBuffer<Soldier*,16,16,64> colbuf;
+    TileBuffer2D<Soldier*,16,16,64> colbuf;
 
     TerrainCubic   terrain;
 

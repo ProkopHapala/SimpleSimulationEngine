@@ -568,6 +568,26 @@ void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float 
 	glEnd();
 };
 
+
+
+void drawBBox( const Vec3d& p0, const Vec3d& p1 ){
+	glBegin(GL_LINES);
+		glVertex3f( (float)p0.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p1.x, (float)p0.y, (float)p0.z );
+		glVertex3f( (float)p0.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p0.x, (float)p1.y, (float)p0.z );
+		glVertex3f( (float)p0.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p0.x, (float)p0.y, (float)p1.z );
+        glVertex3f( (float)p1.x, (float)p1.y, (float)p1.z ); glVertex3f( (float)p0.x, (float)p1.y, (float)p1.z );
+		glVertex3f( (float)p1.x, (float)p1.y, (float)p1.z ); glVertex3f( (float)p1.x, (float)p0.y, (float)p1.z );
+		glVertex3f( (float)p1.x, (float)p1.y, (float)p1.z ); glVertex3f( (float)p1.x, (float)p1.y, (float)p0.z );
+		glVertex3f( (float)p1.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p1.x, (float)p1.y, (float)p0.z );
+		glVertex3f( (float)p1.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p1.x, (float)p0.y, (float)p1.z );
+		glVertex3f( (float)p0.x, (float)p1.y, (float)p0.z ); glVertex3f( (float)p1.x, (float)p1.y, (float)p0.z );
+		glVertex3f( (float)p0.x, (float)p1.y, (float)p0.z ); glVertex3f( (float)p0.x, (float)p1.y, (float)p1.z );
+		glVertex3f( (float)p0.x, (float)p0.y, (float)p1.z ); glVertex3f( (float)p1.x, (float)p0.y, (float)p1.z );
+		glVertex3f( (float)p0.x, (float)p0.y, (float)p1.z ); glVertex3f( (float)p0.x, (float)p1.y, (float)p1.z );
+	glEnd();
+};
+
+
 int makeBoxList( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b  ){
 	int ilist=glGenLists(1);
 	glNewList( ilist, GL_COMPILE );

@@ -6,6 +6,7 @@
 #include "Mat3.h"
 #include "quaternion.h"
 #include "DynamicOpt.h"
+#include "TileBuffer3D.h"
 
 #include "radial_splines.h"
 #include "AtomTypes.h"
@@ -46,9 +47,7 @@ class MolecularWorld{
 	Vec3d  *Tps_i=NULL, *Tps_j=NULL;
 	Vec3d  *fs_i =NULL,  *fs_j=NULL;
 
-
-	double    *C6s=NULL,*C12s=NULL;
-
+	//double    *C6s=NULL,*C12s=NULL;
 
 	double surf_z0;
 	double surf_zMin;
@@ -56,14 +55,18 @@ class MolecularWorld{
 	Vec3d  surf_hat;
 
 	DynamicOpt * optimizer=NULL;
-    int    nInteractions;
+    int    nInteractions,nAtomTot;
 	bool   nonCovalent = true;
 	double fmax;
 
+    double Rcut = 6.0;
+	TileBuffer3D<uint16_t,16,16,16,512> boxbuf;
+
 // ======== initialization
 
-	void initParams( );
-	void initTPoints();
+	void initParams ( );
+	void initTPoints( );
+	void setCutoff  ( double Rcut_);
 
 	int  loadMolTypes  ( char const* dirName, char const* fileName );
 	int  loadInstances ( char const* fileName );
@@ -87,10 +90,13 @@ class MolecularWorld{
 
 	void cleanPointForce ( int npoints, Vec3d * forces );
 	void assembleForces  ( );
+	int  nonBondingFroces_N2 ();
+	int  nonBondingFroces_buf();
 	int  applyLinkerForce( );
 	int  applyBondForce  ( );
 
 	int checkBonds( double flmin, double flmax );
+	//void initBufBox( double Rmax );
 
 	void rigidOptStep( );
 

@@ -45,6 +45,14 @@ typedef float  (*Func3f)( float,  float,  float  );
 typedef double (*Func3d)( double, double, double );
 
 
+inline double x2grid( double x, double xstep, double invXstep, int& ix ){
+    double x_=x*invXstep;
+    ix=(int)x_;
+    //printf( " %f %f %i \n", x, x_, ix );
+    return x - ix*xstep;
+}
+
+
 #include "gonioApprox.h"
 
 // from http://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp/

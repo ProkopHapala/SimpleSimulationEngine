@@ -1,6 +1,6 @@
 
-#ifndef  TileBuffer_h
-#define  TileBuffer_h
+#ifndef  TileBuffer2D_h
+#define  TileBuffer2D_h
 
 //template <,N>
 //class BufferTile
@@ -8,7 +8,7 @@
 #include "Vec2.h"
 
 template<class OBJECT,int NX_,int NY_,int M_>
-class TileBuffer{
+class TileBuffer2D{
     public:
     static constexpr int NX   = NX_;
 	static constexpr int NY   = NY_;

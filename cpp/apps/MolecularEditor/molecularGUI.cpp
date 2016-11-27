@@ -88,7 +88,7 @@ class MolecularEditorApp : public AppSDL2OGL_3D {
 	public:
     MolecularWorld world;
 
-    int perFrame       = 40;
+    int perFrame       = 100;
     bool converged     = true;
     double fmaxConverg = 0.00001;
 
@@ -126,6 +126,7 @@ MolecularEditorApp::MolecularEditorApp( int& id, int WIDTH_, int HEIGHT_ ) : App
 
     //exit(0);
 
+    world.setCutoff( 6.0 );
     world.makeFF ( );
     world.optimizer->initOpt( 0.05, 0.15 );
 
@@ -141,7 +142,15 @@ MolecularEditorApp::MolecularEditorApp( int& id, int WIDTH_, int HEIGHT_ ) : App
 
     //fout_xyz = fopen("relaxation.xyz","w");
 
-
+    /*
+    for(double r=0.5; r<10.0; r+=0.1){
+        world.pos[1].x = r;
+        world.optimizer->cleanForce();
+        world.assembleForces();
+        printf( "%f %f\n", r, world.fpos[1].x );
+    }
+    exit(0);
+    */
 
 }
 
@@ -153,12 +162,13 @@ void MolecularEditorApp::draw(){
     //converged = true;
     //delay = 100; world.optimizer->dt_max = 0.00001; world.optimizer->dt_max = 0.00001; perFrame=1;
     //delay = 1000; perFrame=1;
-    perFrame=1;  // world.optimizer->dt_max = 0.01;
+    //perFrame=1;  // world.optimizer->dt_max = 0.01;
     //world.optimizer->dt_max = 0.01;
     //world.nonCovalent  = false;
 	if( !converged ){
         long tick1 = getCPUticks();
-        for(int iter=0; iter<perFrame; iter++){
+        int iter;
+        for(iter=0; iter<perFrame; iter++){
             world.rigidOptStep( );
             printf(" opt step %i fmax %g \n", world.optimizer->stepsDone, world.fmax );
             if( world.fmax < fmaxConverg ){
@@ -172,9 +182,10 @@ void MolecularEditorApp::draw(){
                 fclose(fout_xyz); fout_xyz = NULL;
                 break;
             }
+            if( (getCPUticks()-tick1)>4e+8 ) break;
         }
         double ticks = (getCPUticks() - tick1)/((double)perFrame);
-        printf("======= %f Mticks/iter  %f ticks/interaction \n", ticks*1.0e-6, ticks/world.nInteractions );
+        printf("======= %i %5.2f Mticks/iter %5.2f tick/atom %5.2f ticks/interaction \n", iter, ticks*1.0e-6, ticks/world.nAtomTot, ticks/world.nInteractions );
 
         world.saveInstances( "instances_lastStep.ini" );
         if(fout_xyz){
@@ -185,6 +196,7 @@ void MolecularEditorApp::draw(){
     }
     //exit(0);
 
+    //world.nonBondingFroces_buf(); return;
 
 	glMatrixMode(GL_MODELVIEW);
 	//glMatrixMode(GL_PROJECTION);

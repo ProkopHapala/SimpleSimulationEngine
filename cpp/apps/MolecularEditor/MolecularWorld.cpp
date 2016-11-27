@@ -89,7 +89,7 @@ int MolecularWorld::applyBondForce( ){
         //printf( "applyBondForce: %i %i  %i %i  %i  %g %g \n", bi.iatom, bi.jatom, ityp, jtyp, iff, atomTypes.ntypes,  C6s[iff], C12s[iff] );
         Vec3d  f;
         if(nonCovalent){
-            forceLJE( dp, -C6s[iff], -C12s[iff], 0.0, f );   // undo non-covalent force
+            forceLJE( dp, -ForceField::C6s[iff], -ForceField::C12s[iff], 0.0, f );   // undo non-covalent force
             //f.add( radialSpringForce( dp, bi.k, bi.l0 ) );
             f.add( radialBondForce( dp, bi.k, bi.l0, bi.dlmax) );
         }else{
@@ -153,10 +153,8 @@ void MolecularWorld::forceFromPoints( int npoints, Vec3d * points, Vec3d * force
 
 void MolecularWorld::cleanPointForce( int npoints, Vec3d * forces ){	for( int i=0; i<npoints; i++ ){  forces[i].set(0.0);  }	}
 
-void MolecularWorld::assembleForces( ){
-    nInteractions = 0;
-    // points
-    if( nonCovalent ){
+int MolecularWorld::nonBondingFroces_N2( ){
+    int nInteractions_ = 0;
     for (int i=0; i<nmols; i++){
         //printf("DEBUG 2.1\n");
         MoleculeType * moli = instances[i];
@@ -175,11 +173,11 @@ void MolecularWorld::assembleForces( ){
             cleanPointForce( molj->natoms, fs_j );
             //printf("DEBUG 2.6\n");
 
-            nInteractions +=
+            nInteractions_ +=
             interMolForceLJE(
                 npi, moli->atypes, moli->Qs, Tps_i, fs_i,
-                npj, molj->atypes, molj->Qs, Tps_j, fs_j,
-                atomTypes.ntypes, C6s, C12s
+                npj, molj->atypes, molj->Qs, Tps_j, fs_j
+                //atomTypes.ntypes, C6s, C12s
             );
             //printf("DEBUG 2.7\n");
             forceFromPoints( npj, molj->xyzs, fs_j,  rot[j], fpos[j], frot[j] );
@@ -191,7 +189,142 @@ void MolecularWorld::assembleForces( ){
         //printf("DEBUG 2.9\n");
         forceFromPoints( npi, moli->xyzs, fs_i,  rot[i],  fpos[i], frot[i] );
         //printf("DEBUG 2.10\n");
-    } }
+    }
+    return nInteractions_;
+}
+
+int MolecularWorld::nonBondingFroces_buf( ){
+    int nInteractions_ = 0;
+
+    //Draw3D::drawBBox( {0.0,1.0,2.0}, {3.0,4.0,5.0} );
+
+    for (int imol=0; imol<nmols; imol++){
+        MoleculeType * moli = instances[imol];
+        int npi = moli->natoms;
+        transformPoints( pos[imol], rot[imol], npi, moli->xyzs, Tps_i );
+
+        boxbuf.clear( );
+
+        Vec3d pmin,pmax;
+        pmin.set(+1e+300,+1e+300,+1e+300);
+        pmax.set(-1e+300,-1e+300,-1e+300);
+        for(int iatom=0; iatom<npi; iatom++ ){
+            Vec3d& p = Tps_i[iatom];
+            if(p.x<pmin.x){ pmin.x=p.x;} if(p.x>pmax.x){ pmax.x=p.x;}
+            if(p.y<pmin.y){ pmin.y=p.y;} if(p.y>pmax.y){ pmax.y=p.y;}
+            if(p.z<pmin.z){ pmin.z=p.z;} if(p.z>pmax.z){ pmax.z=p.z;}
+            //printf( "%i p: (%3.3f,%3.3f,%3.3f) \n", ia, p.x, p.y, p.z );
+        }
+        boxbuf.pos0 = pmin; boxbuf.pos0.sub({Rcut*1.1,Rcut*1.1,Rcut*1.1});
+
+        //printf( "pmin (%3.3f,%3.3f,%3.3f) pmax (%3.3f,%3.3f,%3.3f)\n", pmin.x, pmin.y, pmin.z, pmax.x, pmax.y, pmax.z );
+        //printf( "N (%3.3f,%3.3f,%3.3f)\n", (pmax.x-pmin.x)*boxbuf.invStep, (pmax.x-pmin.x)*boxbuf.invStep, (pmax.x-pmin.x)*boxbuf.invStep );
+
+        //for(int iatom=0; iatom<npi; iatom++ ){
+        for(int iatom=0; iatom<1; iatom++ ){
+            Vec3d dpos; Vec3i ipos;
+            boxbuf.pos2box( Tps_i[iatom], ipos,dpos );
+            //printf( "%i  (%3.3f,%3.3f,%3.3f) (%i,%i,%i)\n", ia, Tps_i[ia].x, Tps_i[ia].y, Tps_i[ia].z, ipos.x,ipos.y,ipos.z);
+            boxbuf.insert( iatom, ipos, dpos, Rcut );
+            //Draw3D::drawSphere_oct(3,Rcut,Tps_i[iatom]);
+            //boxbuf.insert(ia,Tps_i[ia],Rcut);
+        }
+        //exit(0);
+
+        /*
+        for(int ibox=0; ibox<boxbuf.NXYZ; ibox++){
+            int nib = boxbuf.counts[ibox];
+            if(nib==0) continue;
+            Vec3i ipos;
+            boxbuf.i2xyz(ibox,ipos.x,ipos.y,ipos.z);
+            Vec3d p0,p1;
+            p0.set(ipos.x*boxbuf.step+boxbuf.pos0.x,
+                   ipos.y*boxbuf.step+boxbuf.pos0.y,
+                   ipos.z*boxbuf.step+boxbuf.pos0.z);
+            p1.set_add( p0, {boxbuf.step,boxbuf.step,boxbuf.step} );
+            Draw3D::drawBBox( p0, p1 );
+            //printf("%i %i \n", ibox, nib );
+            for( int im=0; im<nib; im++ ){
+                int iatom = boxbuf.get(ibox,im);
+                Draw3D::drawPointCross( Tps_i[iatom], 0.5 );
+            }
+        }
+        */
+        //exit(0);
+        //return;
+        cleanPointForce( moli->natoms, fs_i );
+
+        for (int jmol=0; jmol<imol; jmol++){
+            MoleculeType * molj = instances[jmol];
+            int npj = molj->natoms;
+            //printf("DEBUG 2.4\n");
+            transformPoints( pos[jmol], rot[jmol], npj, molj->xyzs, Tps_j );
+            //cleanPointForce( moli->natoms, fs_i );
+            //printf("DEBUG 2.5\n");
+            cleanPointForce( molj->natoms, fs_j );
+            //printf("DEBUG 2.6\n");
+
+            for(int jatom=0; jatom<npj; jatom++ ){
+                Vec3d& pj = Tps_j[jatom];
+                Vec3i ipos; Vec3d dpos;
+                boxbuf.pos2box(pj,ipos,dpos);
+                if( !boxbuf.validIndex( ipos ) ) continue;
+
+                int atyp  = molj->atypes[jatom];
+                int ityp0 = ForceField::ntypes*atyp;
+                double qa = molj->Qs[jatom];
+
+                int ixyz = boxbuf.xyz2i(ipos.x,ipos.y,ipos.z);
+                int nib  = boxbuf.counts[ixyz];
+                for(int im=0; im<nib; im++){
+                    int iatom = boxbuf.get(ixyz,im);
+
+                    Vec3d dR;
+                    dR.set_sub( Tps_i[iatom], pj );
+                    //Draw3D::drawLine(Tps_i[iatom], pj);
+
+                    nInteractions_++;
+                    double r2 = dR.norm2();
+                    if( r2>ForceField::Rcut2 ) continue;
+
+                    //Draw3D::drawLine(Tps_i[iatom], pj);
+
+                    int btyp   = moli->atypes[iatom];
+                    int ityp   = ityp0 + btyp;
+                    double C6  = ForceField::C6s [ ityp ];
+                    double C12 = ForceField::C12s[ ityp ];
+                    //printf( "interMolForceLJE %i %i  %i %i  %i %i  %g %g \n", ia, ib, atyp, btyp, ityp, ntypes,   C6, C12 );
+                    Vec3d f;
+
+                    //printf( " %i %i %i %i \n", ia, ib, atyp, btyp );
+
+                    //forceLJE( dR, C6, C12, qa*Qbs[ib], f );
+
+                    double qq   = qa*moli->Qs[iatom];
+                    double fcut = ForceField::FcutLJ[ityp] + ForceField::FcutCoulomb[ityp]*qq;
+                    //ForceField::forceLJE( dR, C6, C12, qq, -fcut, f );
+                    ForceField::forceLJE( dR, C6, C12, qq, 0.0, f );
+
+                    fs_i[iatom].add( f ); fs_j[jatom].sub( f );
+
+                }
+            }
+
+            forceFromPoints( npj, molj->xyzs, fs_j,  rot[jmol], fpos[jmol], frot[jmol] );
+        }
+        //printf("DEBUG 2.8\n");
+        //forceMolSurf( surf_z0, surf_zMin, surf_Emin, surf_hat, npi,  Tps_i, fs_i );
+        //printf("DEBUG 2.9\n");
+        forceFromPoints( npi, moli->xyzs, fs_i,  rot[imol],  fpos[imol], frot[imol] );
+    }
+    return nInteractions_;
+}
+
+void MolecularWorld::assembleForces( ){
+    nInteractions = 0;
+    // points
+    if( nonCovalent ){ nInteractions += nonBondingFroces_N2(); }
+    //if( nonCovalent ){ nInteractions += nonBondingFroces_buf(); }
     // linkers
     if(linkers) nInteractions += applyLinkerForce( );
     if(bonds)   nInteractions += applyBondForce( );
@@ -309,6 +442,7 @@ int MolecularWorld::loadInstances( char const* fileName ){
     initParams( );
     //printf( " PhysicalSystem 2 \n" );
 
+    nAtomTot = 0;
     for (int i=0; i<nmols; i++){
         int i2 = i<<1;
         int itype;
@@ -324,6 +458,8 @@ int MolecularWorld::loadInstances( char const* fileName ){
         printf(  " %i   %f %f %f     %f %f %f     %f %f %f %i %i\n", itype, pos[i].x, pos[i].y, pos[i].z,    M.ax, M.ay, M.az,    M.bx, M.by, M.bz, constrains[i2], constrains[i2+1] );
         itype--;
         instances[i] = &molTypes[itype];
+
+        nAtomTot += instances[i]->natoms;
 
         //printf("M.a %f %f %f\n", M.ax,M.ay,M.az);
         //printf("M.b %f %f %f\n", M.bx,M.by,M.bz);
@@ -370,6 +506,7 @@ int MolecularWorld::loadBonds( char const* fileName ){
     printf(" loading bonds from: >>%s<<\n", fileName );
     FILE * pFile;
     pFile = fopen (fileName,"r");
+    if( !pFile ){ printf("cannot access >>%s<<\n", fileName); return 0; }
     fscanf ( pFile, " %i\n", &nBonds);
     bonds = new MolecularBond[nBonds];
     for (int i=0; i<nBonds; i++){
@@ -467,8 +604,27 @@ MolecularWorld::MolecularWorld( int nmols_, MoleculeType ** molecules_ ){
 */
 
 void MolecularWorld::makeFF( ){
+    //ForceField::init( 6.0, atomTypes.ntypes, atomTypes.vdwRs, atomTypes.vdwEs );
+    ForceField::init( Rcut, atomTypes.ntypes, atomTypes.vdwRs, atomTypes.vdwEs );
+/*
     makeLJparams( atomTypes.ntypes, atomTypes.vdwRs, atomTypes.vdwEs, C6s, C12s );
+    ForceField::ntypes = atomTypes.ntypes;
+    ForceField::C12s   = C12s;
+    ForceField::C6s    = C6s;
+*/
+
 }
+
+void MolecularWorld::setCutoff  ( double Rcut_){
+    Rcut = Rcut_;
+    boxbuf.step    = Rcut*2;
+    boxbuf.invStep = 1/boxbuf.step;
+    boxbuf.clear( );
+    //ForceField::Rcut = Rcut; // TO DO : this is somwhat inconsistent
+};
+
+
+//void MolecularWorld::initBufBox( double Rmax ){}
 
 
 
