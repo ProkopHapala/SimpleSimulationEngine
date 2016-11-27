@@ -90,8 +90,9 @@ class MolecularWorld{
 
 	void cleanPointForce ( int npoints, Vec3d * forces );
 	void assembleForces  ( );
-	int  nonBondingFroces_N2 ();
-	int  nonBondingFroces_buf();
+	int  nonBondingFroces_N2  ();
+	int  nonBondingFroces_bbox();
+	int  nonBondingFroces_buf ();
 	int  applyLinkerForce( );
 	int  applyBondForce  ( );
 
