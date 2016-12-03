@@ -294,7 +294,7 @@ void AeroCraftWorld::init( ){
 
     autoPilot1.craft=myCraft;
 
-    //staticTest=false;
+    staticTest=false;
 
     // static test ---------
     if( staticTest ) doStaticTesting( );

@@ -23,15 +23,7 @@ libGL  = ctypes.CDLL( "/usr/lib/x86_64-linux-gnu/libGL.so",  ctypes.RTLD_GLOBAL 
 lib = ctypes.CDLL( LIB_PATH_CPP+"/libMolecular.so" )
 
 #lib.printHello()
-lib.initWindow()
-
-
-
-'''
-print "KosmoSuiteCpp LIB_PATH     = ", LIB_PATH
-print "KosmoSuiteCpp LIB_PATH_CPP = ", LIB_PATH_CPP 
-
-lib    = ctypes.CDLL( LIB_PATH_CPP+"/lib"+name+ utils.ext )
+#lib.initWindow()
 
 array1ui = np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='CONTIGUOUS')
 array1i  = np.ctypeslib.ndpointer(dtype=np.int32,  ndim=1, flags='CONTIGUOUS')
@@ -40,19 +32,33 @@ array1d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=1, flags='CONTIGUOUS')
 array2d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=2, flags='CONTIGUOUS')
 array3d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=3, flags='CONTIGUOUS')
 
+default_icolor = int("0xFF101010", 0)
 
-# ========= Nbody
+# ========= C functions
 
-# void set_Nbody( int n, double * mass, double * poss, double * vs ){
-lib.nbody_setup.argtypes   = [c_int, array1d, array2d, array2d, array2d ]
-lib.nbody_setup.restype    = None
-def nbody_setup( mass, poss, vs, errs ):
-	lib.nbody_setup( len(mass), mass, poss, vs, errs )
-'''
+#int makeSpheres( int n, double * poss_, double * colors_, double * radius )
+lib.spheres.argtypes   = [c_int, array2d, array2d, array1d ]
+lib.spheres.restype    = c_int
+def spheres( poss, colors, radius ):
+	return lib.spheres( len(poss), poss, colors, radius )
 
+#int polyline( int n, double * points_, int closed )
+lib.polyline.argtypes   = [c_int, array2d, c_int, c_int ]
+lib.polyline.restype    = c_int
+def polyline( poss, closed=0, icolor=default_icolor ):
+	return lib.polyline( len(poss), poss, closed, icolor )
 
-
-
+#int lines( int nedges, int * edges, double * points_ )
+lib.lines.argtypes   = [c_int, array2i, array2d, c_int ]
+lib.lines.restype    = c_int
+def lines( edges, points, icolor=default_icolor ):
+	return lib.lines( len(edges), edges, points, icolor )    
+	
+#int triangles( int ntris, int * tris, double * points_ )
+lib.triangles.argtypes   = [c_int, array2i, array2d, c_int ]
+lib.triangles.restype    = c_int
+def triangles( tris, points, icolor=default_icolor ):
+	return lib.triangles( len(tris), tris, points, icolor )
 
 
 

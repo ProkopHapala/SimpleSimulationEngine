@@ -48,8 +48,10 @@ void drawLine( const Vec3d& p1, const Vec3d& p2 ){
 };
 
 void drawPolyLine( int n, Vec3d * ps, bool closed ){   // closed=false
+    //printf("%i %i\n", n, closed );
     if(closed){ glBegin(GL_LINE_LOOP); }else{ glBegin(GL_LINE_STRIP); }
     for(int i=0; i<n; i++){
+        //printf("%i (%3.3f,%3.3f,%3.3f)\n", i, ps[i].x, ps[i].y, ps[i].z );
         glVertex3d( ps[i].x, ps[i].y, ps[i].z );
     };
     glEnd();
