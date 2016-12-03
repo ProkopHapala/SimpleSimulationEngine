@@ -47,6 +47,20 @@ lib.exportAtoms.argtypes   = [ c_char_p ]
 lib.exportAtoms.restype    = None
 def exportAtoms( fname ):
 	return lib.exportAtoms( fname )
+	
+
+# ---- testing	
+	
+#void testMultipole( int order, int np, double * ps, double * Qs,    int nsamples, double * psamples, double * Eref, double * Eaprox
+lib.testMultipole.argtypes   = [ c_int, c_int, array2d, array1d,  c_int, array2d, array1d, array1d ]
+lib.testMultipole.restype    = None
+def testMultipole( ps, Qs, psamples, order=2 ):
+    nsamples = len(psamples)
+    Eref     = np.zeros(nsamples); 
+    Eaprox   = np.zeros(nsamples);
+    lib.testMultipole( order, len(ps), ps, Qs, nsamples, psamples, Eref, Eaprox )
+    return Eaprox, Eref
+
 
 
 

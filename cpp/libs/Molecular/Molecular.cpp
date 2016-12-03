@@ -13,6 +13,7 @@
 #include "Vec3.h"
 #include "Mat3.h"
 #include "quaternion.h"
+#include "Multipoles.h"
 #include "DynamicOpt.h"
 
 #include "radial_splines.h"
@@ -65,6 +66,22 @@ extern "C"{
         sprintf(str,"# fmax = %g", world.fmax );
         world.exportAtomsXYZ( fout, str );
         fclose(fout);
+    }
+
+    void testMultipole( int order,
+        int np, double * ps_, double * Qs,
+        int nsamples, double * psamples_, double * Eref, double * Eaprox
+    ){
+        Vec3d * ps       = (Vec3d*)ps_;
+        Vec3d * psamples = (Vec3d*)psamples_;
+        double coefs[10];
+        getMultiPole( {0.0,0.0,0.0}, np, (Vec3d*)ps, Qs, order, coefs );
+        for(int i=0;i<10;i++){printf("%f ", coefs[i]);} printf("\n");
+        for(int i=0; i<nsamples; i++){
+            Vec3d& p = psamples[i];
+            Eref  [i] = evalEelectrostatic( p, 1.0, np, (Vec3d*)ps, Qs );
+            Eaprox[i] = Emultipole        ( p, order, coefs );
+        }
     }
 
 }
