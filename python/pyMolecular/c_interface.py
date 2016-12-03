@@ -1,5 +1,5 @@
 import numpy as np
-from   ctypes import c_int, c_double, c_bool, c_float
+from   ctypes import c_int, c_double, c_bool, c_float, c_char_p
 import ctypes
 import os
 
@@ -17,13 +17,7 @@ def recompile(path):
 # =========== main
 recompile(LIB_PATH_CPP)
 
-libSDL = ctypes.CDLL( "/usr/lib/x86_64-linux-gnu/libSDL2.so",     ctypes.RTLD_GLOBAL )
-libGL  = ctypes.CDLL( "/usr/lib/x86_64-linux-gnu/libGL.so",  ctypes.RTLD_GLOBAL )
-
 lib = ctypes.CDLL( LIB_PATH_CPP+"/libMolecular.so" )
-
-#lib.printHello()
-#lib.initWindow()
 
 array1ui = np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='CONTIGUOUS')
 array1i  = np.ctypeslib.ndpointer(dtype=np.int32,  ndim=1, flags='CONTIGUOUS')
@@ -36,30 +30,23 @@ default_icolor = int("0xFF101010", 0)
 
 # ========= C functions
 
-#int makeSpheres( int n, double * poss_, double * colors_, double * radius )
-lib.spheres.argtypes   = [c_int, array2d, array2d, array1d ]
-lib.spheres.restype    = c_int
-def spheres( poss, colors, radius ):
-	return lib.spheres( len(poss), poss, colors, radius )
+#void initWorld( char * workdir ){
+lib.initWorld.argtypes   = [ c_char_p ]
+lib.initWorld.restype    = None
+def initWorld( workdir ):
+	return lib.initWorld( workdir )
 
-#int polyline( int n, double * points_, int closed )
-lib.polyline.argtypes   = [c_int, array2d, c_int, c_int ]
-lib.polyline.restype    = c_int
-def polyline( poss, closed=0, icolor=default_icolor ):
-	return lib.polyline( len(poss), poss, closed, icolor )
+#double relax( int niter, double fmaxConverg ){
+lib.relax.argtypes   = [ c_int, c_double ]
+lib.relax.restype    = c_double
+def relax( n, fconv=1e-5 ):
+	return lib.relax( n, fconv )
 
-#int lines( int nedges, int * edges, double * points_ )
-lib.lines.argtypes   = [c_int, array2i, array2d, c_int ]
-lib.lines.restype    = c_int
-def lines( edges, points, icolor=default_icolor ):
-	return lib.lines( len(edges), edges, points, icolor )    
-	
-#int triangles( int ntris, int * tris, double * points_ )
-lib.triangles.argtypes   = [c_int, array2i, array2d, c_int ]
-lib.triangles.restype    = c_int
-def triangles( tris, points, icolor=default_icolor ):
-	return lib.triangles( len(tris), tris, points, icolor )
-
+#void exportAtoms( char * fname ){
+lib.exportAtoms.argtypes   = [ c_char_p ]
+lib.exportAtoms.restype    = None
+def exportAtoms( fname ):
+	return lib.exportAtoms( fname )
 
 
 

@@ -17,9 +17,12 @@ include_directories(
 
 set( NAME "MolecularEditor" )
 
+add_library( MolecularEngine OBJECT MolecularWorld.cpp MoleculeType.cpp AtomTypes.cpp  )
+
 add_executable( ${NAME} 
-	molecularGUI.cpp MolecularWorld.cpp MoleculeType.cpp AtomTypes.cpp
+	molecularGUI.cpp 
 	#$<TARGET_OBJECTS:Body> 
+	$<TARGET_OBJECTS:MolecularEngine>  
 	$<TARGET_OBJECTS:DynamicOpt>
 	$<TARGET_OBJECTS:SDL2OGL>  
 )

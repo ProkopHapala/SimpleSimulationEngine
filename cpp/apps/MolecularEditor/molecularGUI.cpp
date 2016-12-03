@@ -88,8 +88,8 @@ class MolecularEditorApp : public AppSDL2OGL_3D {
 	public:
     MolecularWorld world;
 
-    int perFrame       = 100;
-    bool converged     = true;
+    int    perFrame    = 100;
+    bool   converged   = true;
     double fmaxConverg = 0.00001;
 
     FILE * fout_xyz = NULL;

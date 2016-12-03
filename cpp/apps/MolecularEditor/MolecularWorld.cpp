@@ -5,7 +5,7 @@
 
 #include "forceField.h"
 
-#include  "Draw3D.h"
+//#include  "Draw3D.h"
 
 #include "MolecularWorld.h" // THE HEADER
 

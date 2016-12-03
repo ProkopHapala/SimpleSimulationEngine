@@ -1,6 +1,7 @@
 ﻿
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <vector>
 
 #include "fastmath.h"
@@ -9,131 +10,61 @@
 #include "quaternion.h"
 #include "raytrace.h"
 
-#include "Draw.h"
-#include "Draw3D.h"
-#include "AppSDL2OGL_3D.h"
+#include "Vec3.h"
+#include "Mat3.h"
+#include "quaternion.h"
+#include "DynamicOpt.h"
 
-class TestAppMesh : public AppSDL2OGL_3D {
-	public:
+#include "radial_splines.h"
+#include "AtomTypes.h"
+#include "MoleculeType.h"
+#include "MolecularWorld.h"
 
-    Mesh mesh;
+//#include "testUtils.h"
 
-    bool  dragging;
-    Vec2f mouse0;
-    int   ipicked;
+// ============ Global Variables
 
-    std::vector<int>  displayLists;
+MolecularWorld world;
 
-	virtual void draw   ();
-	//virtual void drawHUD();
-	//virtual void mouseHandling( );
-	//virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
+bool   converged   = false;
+//double fmaxConverg = 0.00001;
 
-	TestAppMesh( int& id, int WIDTH_, int HEIGHT_ );
-
-};
-
-TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {};
-
-void TestAppMesh::draw(  ) {
-    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-	//printf("displayLists.size() %i \n", displayLists.size() );
-	for(int i=0; i<displayLists.size(); i++){
-        //printf( " %i \n", i, displayLists[i] );
-        glCallList( displayLists[i] );
-	}
-};
-
-
-
-
-int           default_sphere = 0;
-TestAppMesh * thisApp;
-
+// ============ Exported functions
 
 extern "C"{
 
-    void printHello(){
-        printf("Hello!\n");
+    void initWorld( char * workdir ){
+        char fname[256];
+        world.fromDir( workdir, "atomTypes.ini", "molTypes.ini", "instances.ini" );
+        //world.fromDir( "inputs/", "atomTypes.ini", "molTypes.ini", "instances.ini" );
+        //strcpy(fname,workdir ); strcat(fname,"splines.ini"); world.loadSplines(fname); //exit(0);
+        strcpy(fname,workdir ); strcat(fname,"bonds.ini");   world.loadBonds  (fname);
+
+        world.checkBonds( 0.9, 1.2 );
+        world.setCutoff ( 6.0 );
+        world.makeFF    ( );
+        world.optimizer->initOpt( 0.05, 0.15 );
     }
 
-    void initWindow(){
-        SDL_Init(SDL_INIT_VIDEO);
-        SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-        int junk;
-        thisApp = new TestAppMesh( junk , 800, 600 );
-    }
-
-    void loop( int n ){
-        thisApp->loop( 1000000 );
-    }
-
-    int defaultSphere( int n ){
-        if(default_sphere) glDeleteLists(default_sphere,1);
-        default_sphere = glGenLists(1);
-        glNewList( default_sphere, GL_COMPILE);
-            Draw3D::drawSphere_oct( n, 1.0, {0.0,0.0,0.0} );
-        glEndList();
-    }
-
-    int spheres( int n, double * poss_, double * colors_, double * radius ){
-        Vec3d * poss   = (Vec3d*)poss_;
-        Vec3d * colors = (Vec3d*)colors_;
-        if( !default_sphere ) defaultSphere( 4 );
-        int ilist = glGenLists(1);
-        glNewList(ilist, GL_COMPILE);
-        glEnable (GL_LIGHTING);
-        for( int i=0; i<n; i++ ){
-            Vec3f clr; convert(colors[i],clr);
-            Vec3f pos; convert(poss[i],pos);
-            glColor3f   (clr.x,clr.y,clr.z);
-            glPushMatrix();
-            glTranslatef(pos.x,pos.y,pos.z);
-            float r = radius[i];
-            glScalef(r,r,r);
-            glCallList(default_sphere);
-            glPopMatrix();
-            //printf( " %i (%3.3f,%3.3f,%3.3f) \n", i, pos.x, pos.y, pos.z );
+    double relax( int niter, double fmaxConverg ){
+        int iter;
+        for(iter=0; iter<niter; iter++){
+            world.rigidOptStep( );
+            printf(" opt step %i fmax %g \n", world.optimizer->stepsDone, world.fmax );
+            if( world.fmax < fmaxConverg ){
+                converged = true;
+                return world.fmax;
+            }
         }
-        glEndList();
-        thisApp->displayLists.push_back( ilist );
-        return thisApp->displayLists.size()-1;
+        return world.fmax;
     }
 
-    int polyline( int n, double * points_, int closed, uint32_t icolor ){
-        int ilist = glGenLists(1);
-        glNewList(ilist, GL_COMPILE);
-            glDisable (GL_LIGHTING);
-            Draw::setRGBA(icolor);
-            Draw3D::drawPolyLine( n, (Vec3d*)points_, closed );
-        glEndList();
-        thisApp->displayLists.push_back( ilist );
-        return thisApp->displayLists.size()-1;
-    }
-
-    int lines( int nedges, int * edges, double * points_, uint32_t icolor ){
-        int ilist = glGenLists(1);
-        glNewList(ilist, GL_COMPILE);
-            glDisable (GL_LIGHTING);
-            Draw::setRGBA(icolor);
-            Draw3D::drawLines( nedges, edges, (Vec3d *)points_ );
-        glEndList();
-        thisApp->displayLists.push_back( ilist );
-        return thisApp->displayLists.size()-1;
-    }
-
-    int triangles( int ntris, int * tris, double * points_, uint32_t icolor ){
-        int ilist = glGenLists(1);
-        glNewList(ilist, GL_COMPILE);
-            glEnable (GL_LIGHTING);
-            Draw::setRGBA(icolor);
-            Draw3D::drawTriangles( ntris, tris, (Vec3d *)points_ );
-        glEndList();
-        thisApp->displayLists.push_back( ilist );
-        return thisApp->displayLists.size()-1;
+    void exportAtoms( char * fname ){
+        FILE * fout = fopen(fname, "w");
+        char str[256];
+        sprintf(str,"# fmax = %g", world.fmax );
+        world.exportAtomsXYZ( fout, str );
+        fclose(fout);
     }
 
 }
