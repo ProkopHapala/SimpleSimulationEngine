@@ -51,18 +51,20 @@ TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     mesh.fromFileOBJ( "common_resources/turret.obj" );
+    //mesh.fromFileOBJ( "common_resources/tank_hull.obj" );
 
     mesh.findEdges(); //exit(0);
 
     mesh.polygons[2]->printPoints();
     mesh.polygons[8]->printPoints();
-    mesh.insertEdgeVertex( 15 );
+    mesh.insertEdgeVertex( 14 );
     mesh.points[mesh.points.size()-1].add(0.5,0.5,0.0);
     mesh.polygons[2]->printPoints();
     mesh.polygons[8]->printPoints();
 
-    int ip = mesh.colapseEdge(19);
+    int ip = mesh.colapseEdge(12);
     mesh.cleanRemovedPoints();
+
 
     mesh.polygonsToTriangles();
     mesh.tris2normals(true);
