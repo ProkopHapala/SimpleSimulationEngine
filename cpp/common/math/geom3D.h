@@ -15,9 +15,35 @@
 #include "Vec3.h"
 #include "Mat3.h"
 
+inline Vec3d cog_of_points ( int n, Vec3d * points ){ Vec3d c;  c.set(0.0); for(int i=0;i<n; i++){ c.add(points[i]); }  c.mul(1.0d/n); return c; }
+inline double Rbound2( const Vec3d& center, int n, Vec3d * points ){
+    double r2max=0;
+    for(int i=0;i<n; i++){
+        Vec3d p; p.set_sub( points[i], center );
+        double r2 = p.norm2();
+        if(r2>r2max) r2max = r2;
+    }
+    return r2max;
+}
 
+class Box{
+    public:
+    Vec3d a,b;
 
-inline double dist2_PointBox( Vec3d C1, Vec3d C2, Vec3d S){
+    void fromPoints( int n, Vec3d * points ){
+        a.set(points[0]);
+        b.set(points[0]);
+        for(int i=1; i<n; i++){
+            Vec3d& p = points[i];
+            if(p.x<a.x){a.x=p.x;}else if(p.x>b.x){b.x=p.x;}
+            if(p.y<a.y){a.y=p.y;}else if(p.y>b.y){b.y=p.y;}
+            if(p.z<a.z){a.z=p.z;}else if(p.z>b.z){b.z=p.z;}
+        }
+    }
+
+};
+
+inline double dist2_PointBox( const Vec3d& C1, const Vec3d& C2, Vec3d S){
     // from here : http://stackoverflow.com/questions/4578967/cube-sphere-intersection-test
     // assume C1 and C2 are element-wise sorted, if not, do that now
     double dist2 = 0.0d;
@@ -146,13 +172,46 @@ class Polygon{
     std::vector<int> inormals;
     std::vector<int> iedges;
     //bool convex=false;
+
+    int findEdgeIndex( int ip1, int ip2 ){
+        int n = ipoints.size();
+        int ip = ipoints[0];
+        if      (ip==ip1){
+            if(ipoints[1]==ip2){return 0;}else{ return n-1; }
+        }else if(ip==ip2){
+            if(ipoints[1]==ip1){return 0;}else{ return n-1; }
+        }
+        int i;
+        for(i=1; i<n-1; i++){
+            if( ipoints[i]==ip1 ) break;
+        }
+        if(ipoints[i-1]==ip2){return (i-1); }else{ return i; }
+    }
+
+    void insertPoint( int ip, int ito ){
+        auto it = ipoints.begin();
+        ipoints.insert(it+ito, ip );
+    }
+
+    void removePoint( int ip ){
+        //auto it = find( ipoints.begin(), ipoints.end(), ip ); ipoints.erase( it );
+        int i;
+        for(i=0; i<ipoints.size(); i++ ){ if(ipoints[i]==ip){ break;} }
+        if( i<ipoints.size() ) ipoints.erase( ipoints.begin()+i );
+
+    }
+
+    void printPoints( ){ for( int i=0; i<ipoints.size(); i++ ){ printf("%i ", ipoints[i]); } printf("\n"); }
+
 };
 
+class MeshEdge{
+    public:
+    Vec2i verts;
+    Vec2i faces;
 
-
-
-
-
+    void setVerts( int ia, int ib ){ if(ia<ib){verts.set(ia,ib);}else{verts.set(ib,ia);} };
+};
 
 #endif
 

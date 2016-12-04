@@ -7,6 +7,8 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+
+#include "SDL_utils.h"
 #include "Draw3D.h"
 #include "Solids.h"
 
@@ -32,6 +34,8 @@ class TestAppMesh : public AppSDL2OGL_3D {
     Vec2f mouse0;
     int ipicked;
 
+    int      fontTex;
+
 	virtual void draw   ();
 	virtual void drawHUD();
 	//virtual void mouseHandling( );
@@ -44,8 +48,22 @@ class TestAppMesh : public AppSDL2OGL_3D {
 
 TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     mesh.fromFileOBJ( "common_resources/turret.obj" );
+
+    mesh.findEdges(); //exit(0);
+
+    mesh.polygons[2]->printPoints();
+    mesh.polygons[8]->printPoints();
+    mesh.insertEdgeVertex( 15 );
+    mesh.points[mesh.points.size()-1].add(0.5,0.5,0.0);
+    mesh.polygons[2]->printPoints();
+    mesh.polygons[8]->printPoints();
+
+    int ip = mesh.colapseEdge(19);
+    mesh.cleanRemovedPoints();
+
     mesh.polygonsToTriangles();
     mesh.tris2normals(true);
     printf("initialization DONE !");
@@ -54,13 +72,13 @@ TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id
     glNewList( mesh.rendered_shape , GL_COMPILE );
         glEnable( GL_LIGHTING );
         glColor3f( 0.8f, 0.8f, 0.8f );
-        /*
+
         Draw3D::drawMesh( mesh );
         glColor3f(0.0f,0.0f,0.9f);
         for(int i=0; i<mesh.points.size(); i++){
             Draw3D::drawVecInPos( mesh.normals[i], mesh.points[i] );
         }
-        */
+        /*
         glBegin(GL_TRIANGLES);
         for( Vec3i tri : mesh.triangles ){
             Vec3f p,n;
@@ -68,6 +86,7 @@ TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id
             convert( mesh.points[tri.b], p ); convert( mesh.normals[tri.b], n ); glNormal3f( n.x, n.y, n.z ); glVertex3f( p.x, p.y, p.z );
             convert( mesh.points[tri.c], p ); convert( mesh.normals[tri.c], n ); glNormal3f( n.x, n.y, n.z ); glVertex3f( p.x, p.y, p.z );
         };
+        */
         for(int i=0; i<mesh.points.size(); i++){
             Draw3D::drawVecInPos( mesh.normals[i], mesh.points[i] );
         }
@@ -118,6 +137,29 @@ void TestAppMesh::draw(){
     int ip = mesh.pickVertex( camPos, camMat.c );
     */
 
+    glColor3f(0.0,0.0,1.0);
+    char str[256];
+    for(int i=0; i<mesh.points.size(); i++){
+        sprintf(str,"%i\0",i);
+        Vec3d& p = mesh.points[i];
+        Draw3D::drawText(str, p, fontTex, 0.03, 0,0);
+    }
+    glColor3f(1.0,0.0,0.0);
+    for(int i=0; i<mesh.polygons.size(); i++){
+        Vec3d c = mesh.faceCog( i );
+        sprintf(str,"%i\0",i);
+        Vec3d& p = mesh.points[i];
+        Draw3D::drawText(str, c, fontTex, 0.03, 0,0);
+    }
+
+    glColor3f(0.0,0.7,0.0);
+    for(int i=0; i<mesh.edges.size(); i++){
+        MeshEdge& ed = mesh.edges[i];
+        Vec3d c = (mesh.points[ed.verts.a]+mesh.points[ed.verts.b])*0.5;
+        sprintf(str,"%i\0",i);
+        Vec3d& p = mesh.points[i];
+        Draw3D::drawText(str, c, fontTex, 0.03, 0,0);
+    }
 
     glColor3f(0,0,0); Draw3D::drawPointCross( mesh.points[ipicked], 0.2 );
 

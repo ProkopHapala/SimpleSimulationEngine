@@ -3,6 +3,7 @@
 #define  Mesh_h
 
 #include <vector>
+#include <unordered_map>
 #include <cstring>
 #include <string>
 
@@ -15,22 +16,11 @@
 #include "geom3D.h"
 
 
-
-
-
-
 // implementation
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
-
-
-
-
-
-
 
 class Mesh{
     public:
@@ -55,7 +45,10 @@ class Mesh{
     std::vector<Vec3i>        triangles;
     std::vector<Polygon*>     polygons;
     //std::vector<double[4]>  planes;
-    std::vector<Vec2i>        edges;
+    std::vector<MeshEdge>     edges;
+
+    std::vector<int>        removed_points;
+    std::vector<int>        removed_edges;
 
     Disk3D * disks;  // used for acceleration of raytracing; for each polygon there is one disk
 
@@ -75,6 +68,48 @@ class Mesh{
 
     // ========== Implementations
 
+    Vec3d faceCog( int ipl ){
+        Polygon* pl = polygons.at(ipl);
+        int n = pl->ipoints.size();
+        Vec3d c; c.set(0.0);
+        for(int i=0;i<n; i++){ c.add( points[ pl->ipoints[i] ] ); }
+        c.mul(1.0d/n);
+        return c;
+    };
+
+    int findEdges( ){
+        std::unordered_map<uint64_t,MeshEdge> edge_map;
+        for( int i=0; i<polygons.size(); i++ ){
+            //if(i>0) break;
+            Polygon* pl = polygons[i];
+            Vec2i verts;
+            int np  = pl->ipoints.size();
+            verts.a = pl->ipoints[np-1];
+            //printf( "%i %i \n", i, np );
+            for(int j=0;j<np;j++){
+                verts.b = pl->ipoints[j];
+                uint64_t key = symetric_id(verts);
+                //uint64_t key = scalar_id(verts);
+                int sz0 = edge_map.size();
+                MeshEdge& edge = edge_map[key];   // get valid pointer ( if new alocate, if aold take it )
+                //printf( "%i :  %i %i %li %i \n", j, verts.a, verts.b, key, edge_map.size()-sz0 );
+                if( edge_map.size() > sz0 ){     // new element
+                    edge.setVerts(verts.a,verts.b);
+                    edge.faces.a = i;
+                    edge.faces.b = -1;
+                }else{
+                    edge.faces.b = i;
+                }
+                verts.a=verts.b;
+            }
+        }
+        int i=0;
+        for(auto kv : edge_map) {
+            edges.push_back( kv.second );
+            printf( "%i (%i,%i)(%i,%i)\n", i, kv.second.verts.a, kv.second.verts.b, kv.second.faces.a, kv.second.faces.b );
+            i++;
+        }
+    }
 
 
     int fromFileOBJ( std::string fname ){
@@ -156,43 +191,121 @@ class Mesh{
         }
     }
 
-int pickVertex( const Vec3d &ray0, const Vec3d &hRay ){
-    double r2min=1e+300;
-    int imin=0;
-    for(int i=0; i<points.size(); i++){
-        double t;
-        double r2 = rayPointDistance2( ray0, hRay, points[i], t );
-        if(r2<r2min){ imin=i; r2min=r2; }
-    }
-    return imin;
-};
+    int pickVertex( const Vec3d &ray0, const Vec3d &hRay ){
+        double r2min=1e+300;
+        int imin=0;
+        for(int i=0; i<points.size(); i++){
+            double t;
+            double r2 = rayPointDistance2( ray0, hRay, points[i], t );
+            if(r2<r2min){ imin=i; r2min=r2; }
+        }
+        return imin;
+    };
 
-double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal ){
+    double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal ){
     //int    imin  = 0;
 
-    Vec3d hX,hY;
-    hRay.getSomeOrtho( hX, hY );
+        Vec3d hX,hY;
+        hRay.getSomeOrtho( hX, hY );
 
-    double t_min = 1e+300;
-    //Vec3d hitpos_min,normal_min;
-    for(int i=0; i<triangles.size(); i++ ){
-        Vec3i itri = triangles[i];
-        Vec3d A = points[itri.x];
-        Vec3d B = points[itri.y];
-        Vec3d C = points[itri.z];
-        Vec3d normal_;
-        bool inside_;
-        //double t = rayTriangle( ray0, hRay, A, B, C, inside_, hitpos_, normal_ );
-        double t = rayTriangle2( ray0, hRay, hX, hY, A, B, C, normal_ );
-        //printf( "t=%f\n", t );
-        inside_ = (t<0.9e+300 )&&(t>0);
-        if( inside_ && ( t<t_min ) ){
-            t_min = t;
-            normal = normal_;
+        double t_min = 1e+300;
+        //Vec3d hitpos_min,normal_min;
+        for(int i=0; i<triangles.size(); i++ ){
+            Vec3i itri = triangles[i];
+            Vec3d A = points[itri.x];
+            Vec3d B = points[itri.y];
+            Vec3d C = points[itri.z];
+            Vec3d normal_;
+            bool inside_;
+            //double t = rayTriangle( ray0, hRay, A, B, C, inside_, hitpos_, normal_ );
+            double t = rayTriangle2( ray0, hRay, hX, hY, A, B, C, normal_ );
+            //printf( "t=%f\n", t );
+            inside_ = (t<0.9e+300 )&&(t>0);
+            if( inside_ && ( t<t_min ) ){
+                t_min = t;
+                normal = normal_;
+            }
+        }
+
+    };
+
+    /// Topology operations
+
+    int insertEdgeVertex( int ied ){
+        int ip = points.size();
+        MeshEdge& ed = edges[ied];
+        Vec3d p = (points[ed.verts.a] + points[ed.verts.b])*0.5;
+        points.push_back(p);
+        int ito; Polygon * pl;
+
+        printf("%i %i\n", ed.verts.a, ed.verts.b );
+        // insert to 1
+        pl  = polygons[ed.faces.a];
+        ito = pl->findEdgeIndex( ed.verts.a, ed.verts.b );
+        pl->insertPoint( ip, ito+1 );
+        // insert to 2
+        pl  = polygons[ed.faces.b];
+        ito = pl->findEdgeIndex( ed.verts.a, ed.verts.b );
+        pl->insertPoint( ip, ito+1 );
+        // edges
+        MeshEdge ed2;
+        ed2.verts.a = ip;
+        ed2.verts.b = ed.verts.b;
+        ed .verts.b = ip;
+        ed2.faces   = ed.faces;
+        edges.push_back(ed2);
+    }
+
+    void cleanRemovedPoints( ){
+        int reind[ points.size() ];
+        int nvalid=0;
+        for(int i=0; i<points.size();         i++){ reind[i]=0; };
+        for(int i=0; i<removed_points.size(); i++){ reind[removed_points[i]]=-1; }
+        for(int i=0; i<points.size();         i++){
+            if( reind[i] != -1 ){
+                reind[i]      =nvalid;
+                points[nvalid]=points[i];
+                nvalid++;
+            }
+        };
+        points.resize(nvalid);
+        for(MeshEdge& edi: edges ){
+            edi.verts.a = reind[ edi.verts.a ];
+            edi.verts.b = reind[ edi.verts.b ];
+        }
+        for(Polygon* pl: polygons ){
+            for(int j=0; j<pl->ipoints.size(); j++ ){
+                int& ip = pl->ipoints[j];
+                ip=reind[ ip ];
+            }
         }
     }
 
-};
+    int colapseEdge( int ied ){
+        MeshEdge ed = edges[ied];
+        removed_points.push_back(ed.verts.b);
+        edges.erase(edges.begin()+ied);
+        for( MeshEdge& edi: edges ){
+            if(edi.verts.a == ed.verts.b) edi.verts.a = ed.verts.a;
+            if(edi.verts.b == ed.verts.b) edi.verts.b = ed.verts.a;
+        }
+        polygons[ed.faces.a]->removePoint(ed.verts.b);
+        polygons[ed.faces.b]->removePoint(ed.verts.b);
+        for( int i=0; i<polygons.size(); i++ ){ // this operation has cost N^2
+            if( (i==ed.faces.a)||(i==ed.faces.b) ) continue;
+            Polygon* pl = polygons[i];
+            for(int j=0; j<pl->ipoints.size(); j++ ){
+                int& ip = pl->ipoints[j];
+                if( ip== ed.verts.b) ip=ed.verts.a;
+            }
+        }
+        return ed.verts.a;
+    }
+
+    int bevelVertex( int i ){
+
+    }
+
 
 
 
