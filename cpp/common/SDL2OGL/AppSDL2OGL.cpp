@@ -4,7 +4,7 @@
 
 #include "AppSDL2OGL.h" // THE HEADER
 
-void AppSDL2OGL::quit(){ SDL_Quit(); exit(1); };
+void AppSDL2OGL::quit(){ SDL_Quit(); loopEnd=true; /*exit(1);*/ };
 
 void AppSDL2OGL::loop( int n ){
 	loopEnd = false;

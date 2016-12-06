@@ -59,7 +59,12 @@ lib.triangles.argtypes   = [c_int, array2i, array2d, c_int ]
 lib.triangles.restype    = c_int
 def triangles( tris, points, icolor=default_icolor ):
 	return lib.triangles( len(tris), tris, points, icolor )
-
+	
+# void setGobVar( double f )
+lib.setGobVar.argtypes   = [c_double]
+lib.setGobVar.restype    = None
+def setGobVar( f ):
+	return lib.setGobVar( fr )
 
 
 
