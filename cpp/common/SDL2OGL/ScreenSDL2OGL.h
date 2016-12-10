@@ -27,6 +27,8 @@ class ScreenSDL2OGL{
 	//float mouse_end_x;
 	//float mouse_end_y;
 
+	bool GL_LOCK = false;
+
 	bool hasFocus;
 	SDL_Window*      window;
 	SDL_Renderer*    renderer;
@@ -53,6 +55,8 @@ class ScreenSDL2OGL{
 	//inline float mouseUp     ( float mY ){ return 2*zoom*( 0.5 -mY/float(HEIGHT)                    ); };
 	inline float mouseUp     ( float mY ){ return 2*zoom*(      mY/float(HEIGHT) - 0.5              ); };
 	inline float mouseRight  ( float mX ){ return 2*zoom*(      mX/float(HEIGHT) - 0.5*ASPECT_RATIO ); };
+
+	bool wait_LOCK( int n, int ms ){ if(!GL_LOCK) return true; for(int i=0; i<n; i++){ SDL_Delay(ms); if(!GL_LOCK) return true; } return false; }
 
 };
 

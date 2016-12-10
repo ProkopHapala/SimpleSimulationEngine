@@ -1,4 +1,8 @@
 ﻿
+// see
+// https://www.opengl.org/discussion_boards/showthread.php/171319-glFlush-or-glFinish-with-mulithreading
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
@@ -13,13 +17,12 @@
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
 
-#include <thread>  
+#include <thread>
 
 double  glob_var               = 0.0;
-bool    modifications_finished = true;
 int     default_sphere         = 0;
 
-class TestAppMesh : public AppSDL2OGL_3D {
+class Vis3DApp : public AppSDL2OGL_3D {
 	public:
 
     Mesh mesh;
@@ -36,30 +39,30 @@ class TestAppMesh : public AppSDL2OGL_3D {
 	//virtual void eventHandling   ( const SDL_Event& event  );
 	//virtual void keyStateHandling( const Uint8 *keys );
 
-	TestAppMesh( int& id, int WIDTH_, int HEIGHT_ );
+	Vis3DApp( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {};
+Vis3DApp::Vis3DApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {};
 
-void TestAppMesh::draw(  ) {
-    if( modifications_finished ){
-        glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
-	    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+void Vis3DApp::draw(  ) {
+    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	    //printf("displayLists.size() %i \n", displayLists.size() );
-	    for(int i=0; i<displayLists.size(); i++){
-            //printf( " %i \n", i, displayLists[i] );
-            int ilist = displayLists[i];
-            if(ilist>0){  printf(" %i %i \n", i, ilist ); glCallList( ilist ); }
-	    }
-	
-	    //printf( "glob var = %f\n", glob_var );
-	}
+    //printf("displayLists.size() %i \n", displayLists.size() );
+    for(int i=0; i<displayLists.size(); i++){
+        //printf( " %i \n", i, displayLists[i] );
+        int ilist = displayLists[i];
+        if(ilist>0){
+            //printf(" %i %i \n", i, ilist );
+            glCallList( ilist );
+        }
+    }
+    //printf( "glob var = %f\n", glob_var );
 };
 
 
-TestAppMesh * thisApp;
+Vis3DApp * thisApp;
 
 extern "C"{
 
@@ -75,37 +78,41 @@ extern "C"{
         SDL_Init(SDL_INIT_VIDEO);
         SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
         int junk;
-        thisApp = new TestAppMesh( junk , 800, 600 );
+        thisApp = new Vis3DApp( junk , 800, 600 );
     }
 
     void loop( int n ){
         thisApp->loop( n );
     }
-    
+
     void asyncLoop( int n){
         std::thread ( loop, n ).detach();
     }
-    
-    void erase( int iobj ){
-        modifications_finished = false;
-        printf( "%i %i \n", iobj, thisApp->displayLists[iobj]  );
+
+    int erase( int iobj ){
+        if( !thisApp->wait_LOCK(10,5) ) return -1;  thisApp->GL_LOCK = true;
+        printf( "erase iobj %i ilist %i \n", iobj, thisApp->displayLists[iobj]  );
         glDeleteLists( thisApp->displayLists[iobj], 1 );
         thisApp->displayLists[iobj] = 0;
-        modifications_finished = true;
+        thisApp->GL_LOCK = false;
+        return 0;
     }
 
     int defaultSphere( int n ){
-        modifications_finished = false;
+        //thisApp->GL_LOCK = true; glFinish();
+        //if( !thisApp->wait_LOCK(10,5) ) return -1;  thisApp->GL_LOCK = true;
         if(default_sphere) glDeleteLists(default_sphere,1);
         default_sphere = glGenLists(1);
         glNewList( default_sphere, GL_COMPILE);
             Draw3D::drawSphere_oct( n, 1.0, {0.0,0.0,0.0} );
         glEndList();
-        modifications_finished = true;
+        //thisApp->GL_LOCK = false;
+        //glFinish();  thisApp->GL_LOCK = false;
+        return 0;
     }
 
     int spheres( int n, double * poss_, double * colors_, double * radius ){
-        modifications_finished = false;
+        if( !thisApp->wait_LOCK(10,5) ) return -1; thisApp->GL_LOCK = true;
         Vec3d * poss   = (Vec3d*)poss_;
         Vec3d * colors = (Vec3d*)colors_;
         if( !default_sphere ) defaultSphere( 4 );
@@ -126,12 +133,12 @@ extern "C"{
         }
         glEndList();
         thisApp->displayLists.push_back( ilist );
-        modifications_finished = true;
+        thisApp->GL_LOCK = false;
         return thisApp->displayLists.size()-1;
     }
 
     int polyline( int n, double * points_, int closed, uint32_t icolor ){
-        modifications_finished = false;
+        if( !thisApp->wait_LOCK(10,5) ) return -1; thisApp->GL_LOCK = true;
         int ilist = glGenLists(1);
         glNewList(ilist, GL_COMPILE);
             glDisable (GL_LIGHTING);
@@ -139,12 +146,12 @@ extern "C"{
             Draw3D::drawPolyLine( n, (Vec3d*)points_, closed );
         glEndList();
         thisApp->displayLists.push_back( ilist );
-        modifications_finished = true;
+        thisApp->GL_LOCK = false;
         return thisApp->displayLists.size()-1;
     }
 
     int lines( int nedges, int * edges, double * points_, uint32_t icolor ){
-        modifications_finished = false;
+        if( !thisApp->wait_LOCK(10,5) ) return -1; thisApp->GL_LOCK = true;
         int ilist = glGenLists(1);
         glNewList(ilist, GL_COMPILE);
             glDisable (GL_LIGHTING);
@@ -152,12 +159,12 @@ extern "C"{
             Draw3D::drawLines( nedges, edges, (Vec3d *)points_ );
         glEndList();
         thisApp->displayLists.push_back( ilist );
-        modifications_finished = true;
+        thisApp->GL_LOCK = false;
         return thisApp->displayLists.size()-1;
     }
 
     int triangles( int ntris, int * tris, double * points_, uint32_t icolor ){
-        modifications_finished = false;
+        if( !thisApp->wait_LOCK(10,5) ) return -1; thisApp->GL_LOCK = true;
         int ilist = glGenLists(1);
         glNewList(ilist, GL_COMPILE);
             glEnable (GL_LIGHTING);
@@ -165,7 +172,7 @@ extern "C"{
             Draw3D::drawTriangles( ntris, tris, (Vec3d *)points_ );
         glEndList();
         thisApp->displayLists.push_back( ilist );
-        modifications_finished = true;
+        thisApp->GL_LOCK = false;
         return thisApp->displayLists.size()-1;
     }
 

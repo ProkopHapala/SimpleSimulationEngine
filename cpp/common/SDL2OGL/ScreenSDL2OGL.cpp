@@ -6,12 +6,16 @@
 void ScreenSDL2OGL::update( ){
 	//SDL_RenderPresent(renderer);
 	//glPushMatrix();
+	if( GL_LOCK ){ printf("ScreenSDL2OGL::update GL_LOCK\n"); return; }
+	GL_LOCK = true;
 	camera();
 	draw();
 	cameraHUD();
 	drawHUD();
 	//glPopMatrix();
+	//glFlush();
 	SDL_RenderPresent(renderer);
+    GL_LOCK = false;
 };
 
 void ScreenSDL2OGL::draw   (){
