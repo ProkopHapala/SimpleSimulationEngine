@@ -21,6 +21,8 @@
 #include "MoleculeType.h"
 #include "MolecularWorld.h"
 
+#include "PointCloudComparator.h"
+
 //#include "testUtils.h"
 
 // ============ Global Variables
@@ -29,6 +31,9 @@ MolecularWorld world;
 
 bool   converged   = false;
 //double fmaxConverg = 0.00001;
+
+
+PointCloudComparator comp;
 
 // ============ Exported functions
 
@@ -83,5 +88,16 @@ extern "C"{
             Eaprox[i] = Emultipole        ( p, order, coefs );
         }
     }
+
+    void initComparator( int n, double * points ){
+        comp.allocate( n );
+        comp.setGrid ( 1.0, 0.5 ); // rmax is smaller than rmin that is not mistake: rmax maximim distance between corresponding atoms, rmin minimal distance between different atoms
+        comp.setRefPoints( n, (Vec3d*)points );
+    }
+
+    double compDistance( double * points ){
+        return comp.overlap_N2( (Vec3d*)points );
+    }
+    // distance between configurations
 
 }

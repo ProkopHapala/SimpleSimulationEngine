@@ -12,6 +12,8 @@
 #include "AtomTypes.h"
 #include "MoleculeType.h"
 
+#include "PointCloudComparator.h"
+
 class MolecularLink{
     public:
     int i,j;

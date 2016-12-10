@@ -50,6 +50,20 @@ def exportAtoms( fname ):
 	
 
 # ---- testing	
+
+# void initComparator( int n, double * points ){
+lib.initComparator.argtypes   = [ c_int, array2d ]
+lib.initComparator.restype    = None
+def initComparator( points ):
+    n = len( points )
+    return lib.initComparator( n, points )
+
+# void compDistance( double * points ){
+lib.compDistance.argtypes   = [ array2d ]
+lib.compDistance.restype    = c_double
+def compDistance( points ):
+	return lib.compDistance( points )
+
 	
 #void testMultipole( int order, int np, double * ps, double * Qs,    int nsamples, double * psamples, double * Eref, double * Eaprox
 lib.testMultipole.argtypes   = [ c_int, c_int, array2d, array1d,  c_int, array2d, array1d, array1d ]

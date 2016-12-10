@@ -163,6 +163,16 @@ using Vec3i = Vec3TYPE<int>;
 using Vec3f = Vec3TYPE<float>;
 using Vec3d = Vec3TYPE<double>;
 
+inline uint64_t scalar_id  ( const Vec3i& v){ return ( v.x | (((uint64_t)v.y)<<16) | (((uint64_t)v.z)<<32) ); }
+inline Vec3i    from_id    ( uint64_t id   ){
+    Vec3i vi;
+    vi.x=( id & 0xFFFF ); id>>16;
+    vi.y=( id & 0xFFFF ); id>>16;
+    vi.z=( id & 0xFFFF );
+    return vi;
+}
+
+
 inline void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
 inline void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };
 
