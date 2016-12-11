@@ -34,6 +34,7 @@ bool   converged   = false;
 
 
 PointCloudComparator comp;
+TypePointsComparator compT;
 
 // ============ Exported functions
 
@@ -96,8 +97,19 @@ extern "C"{
     }
 
     double compDistance( double * points ){
-        return comp.overlap_N2( (Vec3d*)points );
+        //return comp.dist_overlap_N2( (Vec3d*)points );
+        //return comp.dist_maxmin_N2( (Vec3d*)points );
+        return comp.dist_maxmin_N2( (Vec3d*)points );
     }
-    // distance between configurations
+
+    void initComparatorT( int n, double * points, int * ptypes ){
+        int ntyp = compT.setupTypes  ( n, ptypes );                  printf( "DEBUG 1 %i\n", ntyp );
+        compT.setRefPoints( (Vec3d*)points, ptypes );     printf( "DEBUG 2\n" );
+        compT.initRefGrid ( 1.0, 0.5 );                   printf( "DEBUG 3\n" );
+    }
+
+    double compDistanceT( int n, double * points, int * types ){
+        return compT.dist( n, (Vec3d*)points, types );
+    }
 
 }

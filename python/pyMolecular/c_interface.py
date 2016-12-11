@@ -40,13 +40,13 @@ def initWorld( workdir ):
 lib.relax.argtypes   = [ c_int, c_double ]
 lib.relax.restype    = c_double
 def relax( n, fconv=1e-5 ):
-	return lib.relax( n, fconv )
+    return lib.relax( n, fconv )
 
 #void exportAtoms( char * fname ){
 lib.exportAtoms.argtypes   = [ c_char_p ]
 lib.exportAtoms.restype    = None
 def exportAtoms( fname ):
-	return lib.exportAtoms( fname )
+    return lib.exportAtoms( fname )
 	
 
 # ---- testing	
@@ -62,7 +62,22 @@ def initComparator( points ):
 lib.compDistance.argtypes   = [ array2d ]
 lib.compDistance.restype    = c_double
 def compDistance( points ):
-	return lib.compDistance( points )
+    return lib.compDistance( points )
+	
+# void initComparatorT( int n, double * points, int * types ){
+lib.initComparatorT.argtypes   = [ c_int, array2d, array1i ]
+lib.initComparatorT.restype    = None
+def initComparatorT( points, types ):
+    n = len( points )
+    return lib.initComparatorT( n, points, types )
+
+# double compDistanceT( int n, double * points, int * types ){
+lib.compDistanceT.argtypes   = [ c_int, array2d, array1i ]
+lib.compDistanceT.restype    = c_double
+def compDistanceT( points, types ):
+    n = len( points )
+    return lib.compDistanceT( n, points, types )
+
 
 	
 #void testMultipole( int order, int np, double * ps, double * Qs,    int nsamples, double * psamples, double * Eref, double * Eaprox
