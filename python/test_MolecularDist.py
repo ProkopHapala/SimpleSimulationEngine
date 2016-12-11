@@ -74,7 +74,7 @@ coefs = mol.getPlaneWaveDescriptor( points_1, ks );          print "coefs (ident
 np.random.shuffle(points_1); points_1 = points_1.copy() 
 coefs = mol.getPlaneWaveDescriptor( points_1, ks );          print "coefs (shufled)   ", coefs
 
-points_3 = points_ref.copy() + np.random.rand( len(atoms), 3 ) * 10.5
+points_3 = points_ref.copy() + np.random.rand( len(atoms), 3 ) * 0.25
 coefs = mol.getPlaneWaveDescriptor( points_3, ks );          print "coefs (drand)     ", coefs
 
 

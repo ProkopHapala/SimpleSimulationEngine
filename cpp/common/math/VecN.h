@@ -20,8 +20,8 @@ namespace VecN{
     inline int    imin(int n, double* a ){ double amin=+1e+300; int im=-1; for (int i=0; i<n; i++ ){ double ai=a[i]; if(ai<amin){amin=ai;im=i;} } return im;  }
     inline int    imax(int n, double* a ){ double amax=-1e+300; int im=-1; for (int i=0; i<n; i++ ){ double ai=a[i]; if(ai>amax){amax=ai;im=i;} } return im;  }
 
-    inline double err2     (int n, double* xs, double* y1s, double* y2s ){ double sum=0;        for (int i=0; i<n; i++ ){ double d=(y1s[i]-y2s[i]); sum+=d*d;          } return sum;  }
-    inline double errAbsMax(int n, double* xs, double* y1s, double* y2s ){ double amax=-1e+300; for (int i=0; i<n; i++ ){ double d=(y1s[i]-y2s[i]); amax=_max(d,amax); } return amax; }
+    inline double err2     (int n, double* y1s, double* y2s ){ double sum=0;        for (int i=0; i<n; i++ ){ double d=(y1s[i]-y2s[i]); sum+=d*d;          } return sum;  }
+    inline double errAbsMax(int n, double* y1s, double* y2s ){ double amax=-1e+300; for (int i=0; i<n; i++ ){ double d=(y1s[i]-y2s[i]); amax=_max(d,amax); } return amax; }
 
     // =======  basic vector arritmetics
 

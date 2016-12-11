@@ -13,6 +13,7 @@
 #include "MoleculeType.h"
 
 #include "PointCloudComparator.h"
+#include "SphereTreeND.h"
 
 class MolecularLink{
     public:

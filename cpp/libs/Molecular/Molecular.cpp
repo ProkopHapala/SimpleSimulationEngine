@@ -22,6 +22,7 @@
 #include "MolecularWorld.h"
 
 #include "PointCloudComparator.h"
+#include "SphereTreeND.h"
 
 //#include "testUtils.h"
 
