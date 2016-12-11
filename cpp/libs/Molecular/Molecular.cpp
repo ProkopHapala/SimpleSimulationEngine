@@ -112,4 +112,9 @@ extern "C"{
         return compT.dist( n, (Vec3d*)points, types );
     }
 
+    void getPlaneWaveDescriptor( double * center_, int np, double * points, int nk,  double * ks, double * coefs ){
+        Vec3d center; center.set( center_[0], center_[1], center_[2] );
+        return getPlaneWaveDescriptor( center, np, (Vec3d*)points, nk,  (Vec3d*)ks, coefs );
+    }
+
 }

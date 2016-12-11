@@ -11,6 +11,14 @@
 #include "Vec3.h"
 
 
+/*
+
+What about k-means map ? points are assigned to small number of centers
+
+
+*/
+
+
 // https://en.wikipedia.org/wiki/Hungarian_algorithm
 
 class Neigh{
@@ -21,6 +29,22 @@ class Neigh{
     friend bool operator<(const Neigh& l, const Neigh& r){ return l.r2<r.r2; }
 };
 
+inline double saw_sine( double x ){
+    int ix    = (int)x;
+    double dx = x-ix;
+    if( ix&1 ){ return 1-dx; }else{ return dx; }
+}
+
+inline void getPlaneWaveDescriptor( const Vec3d& center, int np, Vec3d * points, int nk,  Vec3d * ks, double * coefs ){
+    for(int ik=0; ik<nk; ik++){ coefs[ik]=0; }
+    for(int ip=0; ip<np; ip++){
+        Vec3d p = points[ip] - center;
+        for(int ik=0; ik<nk; ik++){
+            double x = p.dot(ks[ik]) + 1000.0; // 1000 is just to make sure we do not hit zero in saw_sine
+            coefs[ik] += saw_sine( x ) - 0.5;
+        }
+    }
+}
 
 //==============================
 //   PointCloudComparator
@@ -28,7 +52,7 @@ class Neigh{
 
 class PointCloudComparator {
     public:
-    int n;
+    int n = 0;
     Vec3d  * points    = NULL;
     double * overlap_j = NULL;
     //double * overlap_i = NULL;
@@ -39,8 +63,14 @@ class PointCloudComparator {
     double rmin, r2min, invRmin, invR2min;
     Vec3d  pmin;
     Vec3d  pmax;
+    Vec3d  cog;
     double step;
     double invStep;
+
+    int      ndesc = 0;
+    double * descriptors      = NULL;
+    //double * descriptors_comp = NULL;
+    //Vec3d  * descParams  = NULL;     // just pointer, this sould be more global
 
     /*
     // this is used just for hungarian-like algorithm
@@ -81,6 +111,7 @@ class PointCloudComparator {
         printf("n %i\n",n);
         for(int i=0; i<n; i++ ){
             Vec3d& p = points[i];
+
             if(p.x<pmin.x){ pmin.x=p.x;} if(p.x>pmax.x){ pmax.x=p.x;}
             if(p.y<pmin.y){ pmin.y=p.y;} if(p.y>pmax.y){ pmax.y=p.y;}
             if(p.z<pmin.z){ pmin.z=p.z;} if(p.z>pmax.z){ pmax.z=p.z;}
@@ -106,6 +137,23 @@ class PointCloudComparator {
                 printf( "cannot insert point %i occupied by %i \n", i, *p.first );
             }
         }
+    }
+
+    void eval_descriptors( int nk, Vec3d * kps ){
+        ndesc       = nk;
+        descriptors = new double[ndesc];
+        getPlaneWaveDescriptor( cog, n, points, nk,  kps, descriptors );
+    }
+
+    double compareDescriptors( double * descriptors_comp, double d2max ){
+        double d2sum = 0;
+        for(int i=0; i<ndesc; i++ ){
+            double d  = descriptors_comp[i] - descriptors[i];
+            double d2 = d*d;
+            d2sum += d2;
+            if( d2 > d2max ) return 1e+300;
+        }
+        return d2sum;
     }
 
     void setRefPoints( int n_, Vec3d * points_ ){
@@ -206,6 +254,9 @@ class PointCloudComparator {
         }
         return dist;
     }
+
+
+
 
 
     /*

@@ -78,7 +78,14 @@ def compDistanceT( points, types ):
     n = len( points )
     return lib.compDistanceT( n, points, types )
 
-
+#double getPlaneWaveDescriptor( double * center_, int np, double * points, int nk,  double * ks, double * coefs )
+lib.getPlaneWaveDescriptor.argtypes   = [  array1d, c_int, array2d, c_int, array2d, array1d ]
+lib.getPlaneWaveDescriptor.restype    = None
+def getPlaneWaveDescriptor( points, ks, center=np.zeros(3) ):
+    nk = len( ks )
+    coefs = np.zeros( nk )
+    lib.getPlaneWaveDescriptor( center, len(points), points, nk, ks, coefs )
+    return coefs
 	
 #void testMultipole( int order, int np, double * ps, double * Qs,    int nsamples, double * psamples, double * Eref, double * Eaprox
 lib.testMultipole.argtypes   = [ c_int, c_int, array2d, array1d,  c_int, array2d, array1d, array1d ]
