@@ -138,7 +138,7 @@ distLines = np.array([1e+1, 1e+2,   1e+3, 1e+4,   1e+5,    1e+6,     1e+7,      
 distTexts =          ['10m','100m', '1km','10km', '100km', '1000km', r'10$^4$km',r'10$^5$km', r'10$^6$km', r'10$^7$km', '1AU',          '10AU',       '100AU',           '0.01ly',            '0.1ly',         '1ly',          '10ly'         ]
 
 
-def plotShips():
+def main():
     # --- setup
     times = 10**np.linspace( 0, 11.0, 100  )
     nodes = np.linspace( 0.0,  1.0, 100 ); # nodes = nodes**2; nodes[0] = NaN
@@ -171,5 +171,6 @@ def plotShips():
     #plt.savefig( "timeToDistance.png", bbox_inches='tight' )	
     plt.show()
 
-#if __name__ == "__main__":
+if __name__ == "__main__":
+    main()
 
