@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js - ASCII Effect</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+    </head>
+    <body>
+       <h1>three.js Hello world </h1>
+       This should show rotation cube wireframe; <br>
+       It is using three.js (https://threejs.org/) from https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js
+    ﻿   <!--script src="three.min.js"></script-->
+       <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js"></script> 
+        <script>
+        var scene, camera, renderer;
+        var geometry, material, mesh;
+        init();
+        animate();
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+            camera.position.z = 1000;
+            geometry = new THREE.BoxGeometry( 200, 200, 200 );
+            material = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true } );
+            mesh = new THREE.Mesh( geometry, material );
+            scene.add( mesh );
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            document.body.appendChild( renderer.domElement );
+        }
+        function animate() {
+            requestAnimationFrame( animate );
+            mesh.rotation.x += 0.01;
+            mesh.rotation.y += 0.02;
+            renderer.render( scene, camera );
+        }
+	    </script>
+    </body>
+</html>
