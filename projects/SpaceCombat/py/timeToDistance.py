@@ -147,7 +147,6 @@ def main():
     dmin=1       ;  dmax=1e+17
     # --- main
     plt.figure(figsize=(15,10))
-    plt.legend( loc=2, prop={'family': 'monospace'})
     for ship in ships:
 	    print( ship[5], ship[1]*1e-3," km/s",ship[0]*1e-3, "kW/kg" )
 	    st,vt = timeToDistace( times, ship[0], ship[1],     ship[2], ship[3], ship[4], nodes=nodes )
@@ -161,6 +160,7 @@ def main():
 	    if ( dist < dmax) and (dist > dmin):
 		    plt.axvline( dist, color='k', alpha=0.5 )
 		    plt.text   ( dist, tmin, txt, rotation=90, color='k', horizontalalignment='left', rotation_mode='anchor', verticalalignment='baseline')
+    plt.legend( loc=2, prop={'family': 'monospace'})
     plt.xscale('log')
     plt.yscale('log')
     plt.xlim(dmin,dmax)
