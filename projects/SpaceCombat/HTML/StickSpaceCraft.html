@@ -1,26 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>three.js - ASCII Effect</title>
+    <head>
+		<title>three.js webgl - trackball controls</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
 			body {
-				font-family: Monospace;
-				background-color: #f0f0f0;
+				color: #808080;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+				background-color: #fff;
 				margin: 0px;
 				overflow: hidden;
 			}
+			#info {
+				color: #606060;
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+			a {
+				color: red;
+			}
 		</style>
-    </head>
+	</head>
     <body>
-       <h1>three.js Hello world </h1>
-       This should show rotation cube wireframe; <br>
-       It is using three.js (https://threejs.org/) from https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js
+       <div id="container"></div>
+       <h1> Example of SpaceCraft with Stick-Layout</h1>
+       <div id="info">
+			<a href="http://threejs.org" target="_blank">three.js</a> - trackball controls example<br />
+			MOVE mouse &amp; press LEFT/A: rotate, MIDDLE/S: zoom, RIGHT/D: pan
+       </div>
     ﻿   <!--script src="three.min.js"></script-->
-       <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js"></script> 
+       <!--script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.min.js"></script--> 
+       <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script> 
+       <!--script src="OrbitControls.js"></script-->
+       <script src="TrackballControls.js"></script>
+       <script src="OBJLoader.js"></script>
        <script src="SpaceScaft_stick1.js"></script> 
        <script>
+       		var container, stats;
+			var camera, controls, scene, renderer;
+			var cross;
+			
+			function init() {
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 500;
+				controls = new THREE.TrackballControls( camera );
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 5.0;
+				controls.panSpeed  = 0.8;
+				controls.noZoom    = false;
+				controls.noPan     = false;
+				controls.staticMoving = true;
+				controls.dynamicDampingFactor = 0.3;
+				controls.keys = [ 65, 83, 68 ];
+				controls.addEventListener( 'change', render );
+				// world
+				scene = new THREE.Scene();
+				//scene.fog = new THREE.FogExp2( 0xcccccc, 0.002 );
+
+                BuildSpaceShip_1( scene );
+                
+                /*
+                // TODO : LOAD MAN FIGURE
+                // LEADS TO ERROR : three.js:29259 XMLHttpRequest cannot load file:///home/prokop/git/SimpleSimulationEngine/projects/SpaceCombat/HTML/Man_model1910.obj. Cross origin requests are only supported for protocol schemes: http, data, chrome, chrome-extension, https, chrome-extension-resource.
+				var manager = new THREE.LoadingManager();
+				manager.onProgress = function ( item, loaded, total ) {
+					console.log( item, loaded, total );
+				};
+				
+				var loader = new THREE.OBJLoader( manager );
+				loader.load( 'Man_model1910.obj', function ( object ) {
+					object.traverse( function ( child ) {
+						if ( child instanceof THREE.Mesh ) {
+							child.material.map = texture;
+						}
+					} );
+					object.position.y = - 95;
+					scene.add( object );
+				}, onProgress, onError );
+				var onProgress = function ( xhr ) {
+					if ( xhr.lengthComputable ) {
+						var percentComplete = xhr.loaded / xhr.total * 100;
+						console.log( Math.round(percentComplete, 2) + '% downloaded' );
+					}
+				};
+				var onError = function ( xhr ) {
+				};
+				*/
+                
+                
+				// lights
+				light = new THREE.DirectionalLight( 0xffffff );
+				light.position.set( 1, 1, 1 );
+				scene.add( light );
+
+				light = new THREE.DirectionalLight( 0x002288 );
+				light.position.set( -1, -1, -1 );
+				scene.add( light );
+
+				light = new THREE.AmbientLight( 0x222222 );
+				scene.add( light );
+
+				// renderer
+				renderer = new THREE.WebGLRenderer( { antialias: false } );
+				//renderer.setClearColor( scene.fog.color );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				container = document.getElementById( 'container' );
+				container.appendChild( renderer.domElement );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				render();
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				controls.handleResize();
+				render();
+			}
+
+			function animate() {
+				requestAnimationFrame( animate );
+				controls.update();
+			}
+
+			function render() {
+				renderer.render( scene, camera );
+				//stats.update();
+			}
        init();
        animate();
 	   </script>
