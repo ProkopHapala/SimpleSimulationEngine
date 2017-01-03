@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>05.10 - Custom fragment shader</title>
+    <!--script src="../libs/three.js"></script-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
+    <!--script src="../libs/dat.gui.min.js"></script-->
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+
+
+<script id="Scene" type="x-shader/x-fragment">
+//------------------------------------------------------------------
+
+float scene( in vec3 pos ){
+    float res = STEP_MAX;
+
+    //float res = sdPlane( pos);
+    
+    res = opU( res, sdSphere( opRepRot( pos, 6.0 )-vec3(0.18,0.0,0.0), 0.1 ) );
+    //res = opU( res, sdSphere( pos-offset, 0.1 ) );
+    
+    //res = opU( res, sdSphere( pos, 0.25 ) );
+    //res = opI( res, sdTorus(  pos, vec2(0.25,0.1) ) );
+    res = opS( res, sdTorus(  pos, vec2(0.25,0.07) ) );
+    //res = opS( res, sdSphere( opRepRot( pos, 6.0 )-vec3(0.2,0.0,0.0), 0.1 ) );
+    
+    res = opU( res, sdCone( pos, vec3(0.8,0.6,0.3) ) );
+    res = opU( res, sdCylinder(  pos, vec2(0.1,0.2) ) );
+    
+    /*
+    //vec3 pos_ = pos-vec3(-2.0,0.2, 0.0);
+    vec3 pos_ = pos;
+    vec3 p_rep = opRep( vec3(atan(pos.x,pos.z)/6.2831, pos.y, 0.02+0.5*length( pos_ )), vec3(0.05,1.0,0.05));
+    res = opU( res, opS( sdTorus82( pos_, vec2(0.20,0.1)), sdCylinder( p_rep  , vec2(0.02,0.6)   )) );
+    */
+     
+    //res = opU( res, vec2( opS( 
+    //    udRoundBox(  pos, vec3(0.15),0.05), 
+    //    sdSphere(    pos, 0.25)), 13.0 ) );
+    
+    /*
+    res = opU( res, vec2( sdSphere(    pos-vec3( 0.0,0.25, 0.0), 0.25 ), 46.9 ) );
+    res = opU( res, vec2( sdBox(       pos-vec3( 1.0,0.25, 0.0), vec3(0.25) ), 3.0 ) );
+    res = opU( res, vec2( udRoundBox(  pos-vec3( 1.0,0.25, 1.0), vec3(0.15), 0.1 ), 41.0 ) );
+	res = opU( res, vec2( sdTorus(     pos-vec3( 0.0,0.25, 1.0), vec2(0.20,0.05) ), 25.0 ) );
+    res = opU( res, vec2( sdCapsule(   pos,vec3(-1.3,0.10,-0.1), vec3(-0.8,0.50,0.2), 0.1  ), 31.9 ) );
+	res = opU( res, vec2( sdTriPrism(  pos-vec3(-1.0,0.25,-1.0), vec2(0.25,0.05) ),43.5 ) );
+	res = opU( res, vec2( sdCylinder(  pos-vec3( 1.0,0.30,-1.0), vec2(0.1,0.2) ), 8.0 ) );
+	res = opU( res, vec2( sdCone(      pos-vec3( 0.0,0.50,-1.0), vec3(0.8,0.6,0.3) ), 55.0 ) );
+	res = opU( res, vec2( sdTorus82(   pos-vec3( 0.0,0.25, 2.0), vec2(0.20,0.05) ),50.0 ) );
+	res = opU( res, vec2( sdTorus88(   pos-vec3(-1.0,0.25, 2.0), vec2(0.20,0.05) ),43.0 ) );
+	res = opU( res, vec2( sdCylinder6( pos-vec3( 1.0,0.30, 2.0), vec2(0.1,0.2) ), 12.0 ) );
+	res = opU( res, vec2( sdHexPrism(  pos-vec3(-1.0,0.20, 1.0), vec2(0.25,0.05) ),17.0 ) );
+	res = opU( res, vec2( sdPryamid4(  pos-vec3(-1.0,0.15,-2.0), vec3(0.8,0.6,0.25) ),37.0 ) );
+    res = opU( res, vec2( opS( udRoundBox(  pos-vec3(-2.0,0.2, 1.0), vec3(0.15),0.05),
+	                           sdSphere(    pos-vec3(-2.0,0.2, 1.0), 0.25)), 13.0 ) );
+    res = opU( res, vec2( opS( sdTorus82(  pos-vec3(-2.0,0.2, 0.0), vec2(0.20,0.1)),
+	                           sdCylinder(  opRep( vec3(atan(pos.x+2.0,pos.z)/6.2831, pos.y, 0.02+0.5*length(pos-vec3(-2.0,0.2, 0.0))), vec3(0.05,1.0,0.05)), vec2(0.02,0.6))), 51.0 ) );
+	res = opU( res, vec2( 0.5*sdSphere(    pos-vec3(-2.0,0.25,-1.0), 0.2 ) + 0.03*sin(50.0*pos.x)*sin(50.0*pos.y)*sin(50.0*pos.z), 65.0 ) );
+	res = opU( res, vec2( 0.5*sdTorus( opTwist(pos-vec3(-2.0,0.25, 2.0)),vec2(0.20,0.05)), 46.7 ) );
+    res = opU( res, vec2( sdConeSection( pos-vec3( 0.0,0.35,-2.0), 0.15, 0.2, 0.1 ), 13.67 ) );
+    res = opU( res, vec2( sdEllipsoid( pos-vec3( 1.0,0.35,-2.0), vec3(0.15, 0.2, 0.05) ), 43.17 ) );
+    */
+    return res;
+}
+</script>
+
+<script id="Primitives" type="x-shader/x-fragment">
+// https://www.shadertoy.com/view/Xds3zN
+// Created by inigo quilez - iq/2013
+// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+
+// A list of usefull distance function to simple primitives, and an example on how to 
+// do some interesting boolean operations, repetition and displacement.
+//
+// More info here: http://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+
+
+#define AA           0   
+#define POSITIVE_INF 1e+8
+#define SKY_DIST     1e+7
+#define STEP_MAX     100.0
+#define MAX_STEPS    256
+#define HIT_PREC     0.0001
+//------------------------------------------------------------------
+
+float iterCont = 0.0; 
+
+
+float sdPlane( vec3 p ){
+	return p.y;
+}
+
+float sdSphere( vec3 p, float s ){
+    return length(p)-s;
+}
+
+float sdBox( vec3 p, vec3 b ){
+    vec3 d = abs(p) - b;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float sdEllipsoid( in vec3 p, in vec3 r ){
+    return (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z);
+}
+
+float udRoundBox( vec3 p, vec3 b, float r ){
+    return length(max(abs(p)-b,0.0))-r;
+}
+
+float sdTorus( vec3 p, vec2 t ){
+    return length( vec2(length(p.xz)-t.x,p.y) )-t.y;
+}
+
+float sdHexPrism( vec3 p, vec2 h ){
+    vec3 q = abs(p);
+#if 0
+    return max(q.z-h.y,max((q.x*0.866025+q.y*0.5),q.y)-h.x);
+#else
+    float d1 = q.z-h.y;
+    float d2 = max((q.x*0.866025+q.y*0.5),q.y)-h.x;
+    return length(max(vec2(d1,d2),0.0)) + min(max(d1,d2), 0.);
+#endif
+}
+
+float sdCapsule( vec3 p, vec3 a, vec3 b, float r ){
+	vec3 pa = p-a, ba = b-a;
+	float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+	return length( pa - ba*h ) - r;
+}
+
+float sdTriPrism( vec3 p, vec2 h ){
+    vec3 q = abs(p);
+#if 0
+    return max(q.z-h.y,max(q.x*0.866025+p.y*0.5,-p.y)-h.x*0.5);
+#else
+    float d1 = q.z-h.y;
+    float d2 = max(q.x*0.866025+p.y*0.5,-p.y)-h.x*0.5;
+    return length(max(vec2(d1,d2),0.0)) + min(max(d1,d2), 0.);
+#endif
+}
+
+float sdCylinder( vec3 p, vec2 h ){
+  vec2 d = abs(vec2(length(p.xz),p.y)) - h;
+  return min(max(d.x,d.y),0.0) + length(max(d,0.0));
+}
+
+float sdCone( in vec3 p, in vec3 c ){
+    vec2 q = vec2( length(p.xz), p.y );
+    float d1 = -q.y-c.z;
+    float d2 = max( dot(q,c.xy), q.y);
+    return length(max(vec2(d1,d2),0.0)) + min(max(d1,d2), 0.);
+}
+
+float sdConeSection( in vec3 p, in float h, in float r1, in float r2 ){
+    float d1 = -p.y - h;
+    float q = p.y - h;
+    float si = 0.5*(r1-r2)/h;
+    float d2 = max( sqrt( dot(p.xz,p.xz)*(1.0-si*si)) + q*si - r2, q );
+    return length(max(vec2(d1,d2),0.0)) + min(max(d1,d2), 0.);
+}
+
+float sdPryamid4(vec3 p, vec3 h ) {     // h = { cos a, sin a, height }
+    // Tetrahedron = Octahedron - Cube
+    float box = sdBox( p - vec3(0,-2.0*h.z,0), vec3(2.0*h.z) );
+ 
+    float d = 0.0;
+    d = max( d, abs( dot(p, vec3( -h.x, h.y, 0 )) ));
+    d = max( d, abs( dot(p, vec3(  h.x, h.y, 0 )) ));
+    d = max( d, abs( dot(p, vec3(  0, h.y, h.x )) ));
+    d = max( d, abs( dot(p, vec3(  0, h.y,-h.x )) ));
+    float octa = d - h.z;
+    return max(-box,octa); // Subtraction
+ }
+
+float length2( vec2 p ){
+	return sqrt( p.x*p.x + p.y*p.y );
+}
+
+float length6( vec2 p ){
+	p = p*p*p; p = p*p;
+	return pow( p.x + p.y, 1.0/6.0 );
+}
+
+float length8( vec2 p ){
+	p = p*p; p = p*p; p = p*p;
+	return pow( p.x + p.y, 1.0/8.0 );
+}
+
+float sdTorus82( vec3 p, vec2 t ){
+    vec2 q = vec2(length2(p.xz)-t.x,p.y);
+    return length8(q)-t.y;
+}
+
+float sdTorus88( vec3 p, vec2 t ){
+    vec2 q = vec2(length8(p.xz)-t.x,p.y);
+    return length8(q)-t.y;
+}
+
+float sdCylinder6( vec3 p, vec2 h ){
+    return max( length6(p.xz)-h.x, abs(p.y)-h.y );
+}
+
+// ===  Operations
+
+float opU( float d1, float d2 ){
+	return min(d1,d2);
+}
+
+float opS( float d1, float d2 ){
+    return max(-d2,d1);
+    //return max(-d1,d2);
+}
+
+float opI( float d1, float d2 ){
+    return max(d1,d2);
+}
+
+vec3 opRep( vec3 p, vec3 c ){
+    return mod(p,c)-0.5*c;
+}
+
+vec3 opRepRot( vec3 p, float times ){
+/*
+    float phi = atan(p.x,p.z) * times;
+    float r   = length( p );
+    return vec3( r*cos(phi), p.y, r*sin(phi) );
+*/
+
+    float phi  = atan(p.z,p.x);
+    float dphi = 3.14159265359 / times;
+    phi        = mod(phi+dphi,2.0*dphi)-dphi;  
+    float r    = length(p.xz);
+    return     vec3( r*cos(phi), p.y, r*sin(phi) );
+}
+
+vec3 opTwist( vec3 p ){
+    float  c = cos(10.0*p.y+10.0);
+    float  s = sin(10.0*p.y+10.0);
+    mat2   m = mat2(c,-s,s,c);
+    return vec3(m*p.xz,p.y);
+}
+</script>
+
+
+<script id="RayTracer" type="x-shader/x-fragment">
+
+uniform vec2  resolution;
+uniform float time;
+uniform mat3  camMat;
+
+float castRay( in vec3 ro, in vec3 rd ){
+    float tmin = 1.0;
+    float tmax = 20.0;
+   
+    // bounding volume
+    //float tp1 = (0.0-ro.y)/rd.y; if( tp1>0.0 ) tmax = min( tmax, tp1 );
+    //float tp2 = (1.6-ro.y)/rd.y; if( tp2>0.0 ) { if( ro.y>1.6 ) tmin = max( tmin, tp2 ); else tmax = min( tmax, tp2 ); }
+    
+    float t = tmin;
+    //float m = -1.0;
+    for( int i=0; i<MAX_STEPS; i++ ){
+	    float res = scene( ro+rd*t );
+	    iterCont += 1.0;
+	    //iterCont += 1.0/res;
+        //if( res<precis || t>tmax ) break;
+        if( res<(HIT_PREC*t) ) return t;
+        if( t>tmax     ) return POSITIVE_INF;
+        t += res;
+    }
+    //if( t>tmax ) m=-1.0;
+    //if( t>tmax ) t=POSITIVE_INF;
+    //if( t>tmax ) t=POSITIVE_INF;
+    //return vec2( t, m );
+    //return POSITIVE_INF;
+    return t;
+}
+
+
+float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax ){
+	float res = 1.0;
+    float t = mint;
+    for( int i=0; i<16; i++ ){
+		float h = scene( ro + rd*t );
+        res = min( res, 8.0*h/t );
+        t += clamp( h, 0.02, 0.10 );
+        if( h<0.001 || t>tmax ) break;
+    }
+    return clamp( res, 0.0, 1.0 );
+}
+
+vec3 calcNormal( in vec3 pos ){
+    vec2 e = vec2(1.0,-1.0)*0.5773*0.0005;
+    return normalize( e.xyy*scene( pos + e.xyy ) + 
+					  e.yyx*scene( pos + e.yyx ) + 
+					  e.yxy*scene( pos + e.yxy ) + 
+					  e.xxx*scene( pos + e.xxx ) );
+}
+
+float calcAO( in vec3 pos, in vec3 nor ){
+	float occ = 0.0;
+    float sca = 1.0;
+    for( int i=0; i<5; i++ ){
+        float hr   = 0.01 + 0.12*float(i)/4.0;
+        vec3 aopos =  nor * hr + pos;
+        float dd = scene( aopos );
+        occ += -(dd-hr)*sca;
+        sca *= 0.95;
+    }
+    return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
+}
+
+vec3 render( in vec3 ro, in vec3 rd ){ 
+    vec3 col = vec3(0.7, 0.9, 1.0) +rd.y*0.8;
+    float t = castRay(ro,rd);
+    if( t<SKY_DIST ){
+        vec3 pos = ro + t*rd;
+        vec3 nor = calcNormal( pos );
+        vec3 ref = reflect( rd, nor );
+                
+        col      = vec3(0.7, 0.5, 0.5);
+        vec3 lin = vec3(0.0);
+
+        // lighitng  
+        
+		vec3  lig = normalize( vec3(-0.4, 0.7, -0.6) );
+		float amb = clamp( 0.5+0.5*nor.y, 0.0, 1.0 );
+        float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
+        float bac = clamp( dot( nor, normalize(vec3(-lig.x,0.0,-lig.z))), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0);
+        float dom = smoothstep( -0.1, 0.1, ref.y );
+        float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
+		float spe = pow(clamp( dot( ref, lig ), 0.0, 1.0 ),16.0);
+		
+        // shadows
+        dif *= softshadow( pos, lig, 0.02, 2.5 );
+        dom *= softshadow( pos, ref, 0.02, 2.5 );
+
+        lin += 1.30*dif*vec3(1.00,0.80,0.55);
+		lin += 2.00*spe*vec3(1.00,0.90,0.70)*dif;
+		
+		
+		// occlusion
+		float occ = calcAO( pos, nor );
+		/*
+        lin += 0.40*amb*vec3(0.40,0.60,1.00)*occ;
+        lin += 0.50*dom*vec3(0.40,0.60,1.00)*occ;
+        lin += 0.50*bac*vec3(0.25,0.25,0.25)*occ;
+        lin += 0.25*fre*vec3(1.00,1.00,1.00)*occ;
+        */
+        lin += vec3(occ);
+        
+        col = col*lin;
+    	col = mix( col, vec3(0.8,0.9,1.0), 1.0-exp( -0.0002*t*t*t ) );
+    }
+
+	return vec3( clamp(col,0.0,1.0) );
+}
+
+void main( ){
+
+    vec3 tot = vec3(0.0);
+    
+    vec3 uvz = vec3( 2.0 * gl_FragCoord.xy / resolution.xy - 1.0, 5.0 );
+    vec3 ro  = vec3(0.0, 0.0, -5.0 );
+    vec3 rd  = normalize(vec3(resolution.x/resolution.y * uvz.x, uvz.y, -uvz.z ) );
+    
+    rd = camMat *  rd;
+    ro = camMat * -ro;
+
+    vec3 col = render( ro, rd );
+
+    //col = pow( col, vec3(0.4545) ); // gamma correction ?
+    //tot += col;
+    //gl_FragColor = vec4( tot, 1.0 );
+    
+    gl_FragColor = vec4( col, 1.0 );
+    //gl_FragColor   = vec4( vec3(iterCont/float(MAX_STEPS)), 1.0 ); // number of iteration
+    //gl_FragColor   = vec4( vec3( log( iterCont )*0.1 ), 1.0 );   // log inverse distance integral
+    //gl_FragColor = vec4( col-vec3(iterCont/float(MAX_STEPS)), 1.0 );
+    
+    /*
+    // test of Kaleidoscope
+    vec2 p = 2.0 *gl_FragCoord.xy / resolution.xy - 1.0;
+    vec2 offset = vec2( 0.25, 0.0 );
+    //float phi = atan(p.y,p.x) * 3.0; 
+    float phi = atan(p.y,p.x);
+    float dphi = 3.14159265359 * 0.33333;
+    phi       = mod(phi+dphi,2.0*dphi)-dphi;  
+    float r   = length(p);
+    p         = vec2( r*cos(phi), r*sin(phi) );
+    float c = 0.1/length( p-offset );
+    gl_FragColor = vec4( c,c,c, 1.0 );
+    */
+    
+    
+}
+</script>
+
+<script>
+	// ===================== 
+    //   THREE JS MAIN
+    // =====================
+    // global variables
+    var renderer;
+    var scene;
+    var camera;
+
+    var uniforms = {};
+    var control;
+    var mousePosOld;
+    
+    var camQuat = new  THREE.Quaternion();
+    //var camMat  = new THREE.Matrix3();
+    
+    function handleMouseMove(event) {
+        var dot, eventDoc, doc, body, pageX, pageY;        
+        if (mousePosOld) {
+            var dx = (event.clientX-mousePosOld.x)*1.0;
+            var dy = (event.clientY-mousePosOld.y)*1.0;
+            var q = new THREE.Quaternion( -dy*0.002, 0.0, dx*0.002, 1.0 );
+            camQuat.multiply(q).normalize();
+            //console.log( q.x+" "+ q.y+" "+ q.z+" "+ q.w +" "+ camQuat.x+" "+ camQuat.y+" "+ camQuat.z+" "+ camQuat.w  );
+            
+        }else{
+            mousePosOld = new THREE.Vector3();
+        }
+        mousePosOld.x = event.clientX;
+        mousePosOld.y = event.clientY;
+        
+    }
+
+    function init() {
+        document.onmousemove = handleMouseMove;
+    
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer();
+        renderer.setClearColor(0x000000, 1.0);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // SHADER
+        var basicShader = THREE.ShaderLib['normal'];
+		uniforms = {
+				time      : { value: 1.0 },
+				resolution: { value: new THREE.Vector2() },
+				camMat    : { value: new THREE.Matrix3() }
+		};
+		uniforms.resolution.value.x = renderer.domElement.width;
+		uniforms.resolution.value.y = renderer.domElement.height;
+        var material = new THREE.ShaderMaterial({
+            uniforms: uniforms,
+            vertexShader: basicShader.vertexShader,
+            fragmentShader: document.getElementById('Primitives').text + document.getElementById('Scene').text + document.getElementById('RayTracer').text,
+        });
+                
+        var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200 ), material ); scene.add( mesh );
+				
+        camera.position.x = 0.0;
+        camera.position.y = 0.0;
+        camera.position.z = 100.0;
+        camera.lookAt(scene.position);
+        
+        document.body.appendChild(renderer.domElement);
+        control = new function () {
+            this.rotationSpeed = 0.005;
+            this.scale = 1;
+        };
+        //addControls(control);
+        // call the render function
+        render();
+    }
+
+    function render() {
+        //console.log("x: " + event.clientX + ", y: " + event.clientY );
+        
+        var camMat4 = new THREE.Matrix4(); camMat4.compose ( new THREE.Vector3(0.0,0.0,0.0), camQuat, new THREE.Vector3(1.0,1.0,1.0) );
+        var camMat_ = new THREE.Matrix3(); camMat_.getNormalMatrix ( camMat4 );
+        //console.log( camMat_.elements +" "+ camQuat.x+" "+ camQuat.y+" "+ camQuat.z+" "+ camQuat.w  );
+        uniforms.camMat.value = camMat_;
+        
+        renderer.render(scene, camera);
+        uniforms.time.value += 0.05;
+        requestAnimationFrame(render);
+    }
+
+    // calls the init function when the window is done loading.
+    window.onload = init;
+
+</script>
+<body>
+See: 
+https://www.shadertoy.com/user/Zavie <br>
+    Minimal Raytracer : https://www.shadertoy.com/view/XsSSWW <br>
+    Cone RayTrace with Radiance : https://www.shadertoy.com/view/MtcXWr <br>
+</body>
+</html>
