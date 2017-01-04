@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>05.10 - Custom fragment shader</title>
+    <!--script src="../libs/three.js"></script-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
+    <!--script src="../libs/dat.gui.min.js"></script-->
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+
+
+<script id="Scene" type="x-shader/x-fragment">
+// ===================== 
+//   SCENE
+// =====================
+
+#define ADD( SURF ) { ts1 = ray_ts( SURF, ray ); if( ts1.x < hit.x ){ hit = vec4(ts1.x, normal(SURF,point(ray,ts1.x))); } }
+
+#define SUB( SURF ) { vec2 ts2 = ray_ts( SURF, ray ); if( (ts1.x>ts2.x) && (ts1.x<ts2.y) ){ if( ts2.y<ts1.y ){ hit = vec4( ts2.y, normal(SURF,point(ray,ts2.y))*-1.0 ); }else{ hit = vec4( POSITIVE_INF, vec3(0.0) ); } } }
+ 
+vec4 scene( Ray ray ){
+
+    vec4 hit = vec4( POSITIVE_INF, vec3(0.0) );
+
+	Sphere SURF1 = Sphere( vec3(0.0,0.0,0.0), 1.0 );
+	Sphere SURF2 = Sphere( vec3(1.0,0.0,0.0), 0.75 );
+	Sphere SURF3 = Sphere( vec3(0.0,1.0,0.0), 0.75 );
+	
+	/*
+	// difference of two objects
+	vec2 ts1 = ray_ts( SURF1, ray );
+	if( ts1.x < SKY_DIST ){
+	    vec2 ts2 = ray_ts( SURF2, ray );
+	    if( (ts1.x<ts2.x) || (ts1.x>ts2.y) ){
+	        hit = vec4(ts1.x, normal(SURF1,point(ray,ts1.x)));
+	    }else{
+	        if( ts2.y<ts1.y ) hit = vec4(ts2.y, normal(SURF2,point(ray,ts2.y))*-1.0);
+	    }
+	}
+	*/
+	
+	// add first object
+	vec2 ts1;
+	ADD( SURF1 );
+	/*
+	ts1 = ray_ts( SURF1, ray );
+	if( ts1.x < hit.x ){
+	    hit = vec4(ts1.x, normal(SURF1,point(ray,ts1.x)));
+	}
+	*/
+	
+	// substract next object
+	SUB( SURF2 );
+	/*
+	{
+	vec2 ts2 = ray_ts( SURF2, ray );
+	if( (ts1.x>ts2.x) && (ts1.x<ts2.y) ){
+	    if( ts2.y<ts1.y ){
+	        hit = vec4( ts2.y, normal(SURF2,point(ray,ts2.y))*-1.0 );
+	    }else{
+	        hit = vec4( POSITIVE_INF, vec3(0.0) );
+	    }
+	}
+	}
+	*/
+	
+	// substract next object
+	SUB( SURF3 );
+	/*
+	{
+	vec2 ts2 = ray_ts( SURF3, ray );
+	if( (ts1.x>ts2.x) && (ts1.x<ts2.y) ){
+	    if( ts2.y<ts1.y ){
+	        hit = vec4( ts2.y, normal(SURF3,point(ray,ts2.y))*-1.0 );
+	    }else{
+	        hit = vec4( POSITIVE_INF, vec3(0.0) );
+	    }
+	}
+	}
+	*/
+    
+    return hit;
+}
+
+</script>
+
+<script id="Primitives" type="x-shader/x-fragment">
+
+#define PI 3.14159275358979
+#define POSITIVE_INF 1e+8
+#define SKY_DIST     1e+7
+
+// Structs
+struct Ray     { vec3 o;  vec3 d; };
+struct Plane   { vec3  n;         float C; };
+struct Slab    { vec3  n;         float Cmin; float Cmax; };
+struct Sphere  { vec3  p;         float R; };
+struct Cylinder{ vec3  p; vec3 d; float R; };
+struct Cone    { vec3  c; float cosa; vec3  v; float h; };
+
+// === Ray 
+
+vec3 point( Ray r, float t ){ return r.o + t*r.d; }
+
+// === Plane
+
+float dist( Plane pl, vec3 p ){
+    float c = dot(pl.n,p);
+    return c - pl.C;
+}
+
+float ray_t(Plane pl, Ray ray){
+    float cnd = dot(pl.n, ray.d);
+    float c   = dot(pl.n, ray.o);
+    return -(c + pl.C) / cnd;
+}
+
+// === Slab
+
+float dist( Slab sl, vec3 p ){
+    float c = dot(sl.n,p);
+    if (c<sl.Cmin){ return sl.Cmin-c; } else if (c>sl.Cmax){ return c-sl.Cmax; } else { return -1.0; };
+}
+
+vec2 ray_ts( Slab sl, Ray ray){
+    float cnd = dot(sl.n, ray.d);
+    float c   = dot(sl.n, ray.o);
+    float t1  = -(c + sl.Cmin) / cnd;
+    float t2  = -(c + sl.Cmax) / cnd;
+    if(t1<t2){ return vec2(t1,t2); }else{ return vec2(t2,t1); };
+}
+
+float ray_t( Slab sl, Ray ray){
+    vec2 ts = ray_ts( sl, ray);
+    if (ts.x>0.0){ return ts.x; }else{ return ts.y; };
+}
+
+vec3 normal( Slab sl, vec3 p ){ 
+    float c = dot(sl.n,p);
+    if( c > 0.5*(sl.Cmin+sl.Cmax) ){ return sl.n; }else{ return -sl.n; } 
+}
+
+// === Sphere
+
+float dist2( Sphere sph, vec3 p ){
+    vec3 dp = p - sph.p;
+    return dot(dp,dp)-(sph.R*sph.R);
+}
+
+float ray_t( Sphere sph, Ray ray ){
+    vec3 op   = sph.p - ray.o;
+    float b   = dot(op, ray.d);
+    float det = b*b - dot(op,op) + sph.R*sph.R;
+    if (det<0.0) return POSITIVE_INF;
+    det       = sqrt(det);
+    float t   = b - det; 
+    if (t < 0.0) t = b + det;
+    return t;
+}
+
+vec2 ray_ts( Sphere sph, Ray ray ){
+    vec3 op   = sph.p - ray.o;
+    float b   = dot(op, ray.d);
+    float det = b*b - dot(op,op) + sph.R*sph.R;
+    if (det<0.0) return vec2(POSITIVE_INF,POSITIVE_INF);
+    det       = sqrt(det);
+    return vec2( b-det, b+det );
+}
+
+vec3 normal( Sphere sph, vec3 p ){ return (p-sph.p)/sph.R; }
+
+// === Cylinder
+
+
+
+
+
+// === Cone
+
+</script>
+
+
+<script id="RayTracer" type="x-shader/x-fragment">
+// ===================== 
+//   RayTracer
+// =====================
+uniform vec2  resolution;
+uniform float time;
+uniform mat3  camMat;
+
+#define MAX_BOUNCES 2
+float gamma = 2.2;
+
+struct DirectionalLight{  vec3 d; vec3 c; };
+struct Material{ vec3 color; float gloss; };
+
+DirectionalLight sunLight = DirectionalLight( normalize(vec3(1.0, 0.5, 0.5)), vec3(1.0) );
+
+float Lorenz( float x ){ return 1.0/(1.0+x*x); }
+    
+void main( ){	
+    mat3 camMat_ = camMat;
+	vec3 uvz = vec3( 2.0 * gl_FragCoord.xy / resolution.xy - 1.0, 5.0 );
+	
+	vec3 p  = vec3(0.0, 0.0, 10.0 );
+    vec3 d  = normalize(vec3(resolution.x/resolution.y * uvz.x, uvz.y, -uvz.z ) );
+    Ray ray = Ray(camMat_*p, camMat_*d);
+ 
+	vec4 hit = scene(ray);
+
+	Material mat = Material( vec3(1.0,0.5,0.5), 1.0 ); // we don't care for now
+
+    if( hit.x<SKY_DIST ){
+        float c_diffuse  = clamp( dot(hit.yzw,sunLight.d), 0.0, 1.0);
+        //-- specular
+        vec3  nn = sunLight.d-ray.d;
+        float cn = dot(hit.yzw,nn);
+        float c_specular = Lorenz( 100.0*(1.0-clamp( (cn*cn)/dot(nn,nn), 0.0, 1.0)) );
+        //-- output
+        gl_FragColor = vec4( (c_diffuse + c_specular*mat.gloss)*mat.color + vec3(0.1,0.1,0.2)*mat.color, 1.0 ); 
+        //gl_FragColor = vec4( (hit.yzw+vec3(1.0))*0.5, 1.0 );   
+        //gl_FragColor = vec4( vec3(log(hit.x)-2.0), 1.0 );   
+        //gl_FragColor = vec4( sin(hit.x*4.0),sin(hit.x),sin(hit.x*16.0), 1.0 ); 
+    }else{
+        discard;
+    }
+    
+}
+</script>
+
+<script>
+	// ===================== 
+    //   THREE JS MAIN
+    // =====================
+    // global variables
+    var renderer;
+    var scene;
+    var camera;
+
+    var uniforms = {};
+    var control;
+    var mousePosOld;
+    
+    var camQuat = new  THREE.Quaternion();
+    //var camMat  = new THREE.Matrix3();
+    
+    function handleMouseMove(event) {
+        var dot, eventDoc, doc, body, pageX, pageY;        
+        if (mousePosOld) {
+            var dx = (event.clientX-mousePosOld.x)*1.0;
+            var dy = (event.clientY-mousePosOld.y)*1.0;
+            //console.log( "x: "+ dx +" y: "+ dy );
+            //var v = new THREE.Vector3( dx, dy, 0.0 );//.normalize();
+            //var q = new THREE.Quaternion().setFromEuler( v );
+            //THREE.Quaternion.slerp( camQuat, q, camQuat, 0.07 );
+            //var q = new THREE.Quaternion( 0.01, 0.01, 0.01, 1.0 );
+            var q = new THREE.Quaternion( -dy*0.002, 0.0, dx*0.002, 1.0 );
+            camQuat.multiply(q).normalize();
+            //console.log( q.x+" "+ q.y+" "+ q.z+" "+ q.w +" "+ camQuat.x+" "+ camQuat.y+" "+ camQuat.z+" "+ camQuat.w  );
+            
+        }else{
+            mousePosOld = new THREE.Vector3();
+        }
+        mousePosOld.x = event.clientX;
+        mousePosOld.y = event.clientY;
+        
+    }
+
+    function init() {
+        document.onmousemove = handleMouseMove;
+    
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer();
+        renderer.setClearColor(0x000000, 1.0);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // SHADER
+        var basicShader = THREE.ShaderLib['normal'];
+		uniforms = {
+				time      : { value: 1.0 },
+				resolution: { value: new THREE.Vector2() },
+				camMat    : { value: new THREE.Matrix3() }
+		};
+		uniforms.resolution.value.x = renderer.domElement.width;
+		uniforms.resolution.value.y = renderer.domElement.height;
+        var material = new THREE.ShaderMaterial({
+            uniforms: uniforms,
+            vertexShader: basicShader.vertexShader,
+            fragmentShader: document.getElementById('Primitives').text + document.getElementById('Scene').text + document.getElementById('RayTracer').text,
+        });
+                
+        var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 200, 200 ), material ); scene.add( mesh );
+				
+        camera.position.x = 0.0;
+        camera.position.y = 0.0;
+        camera.position.z = 100.0;
+        camera.lookAt(scene.position);
+        
+        document.body.appendChild(renderer.domElement);
+        control = new function () {
+            this.rotationSpeed = 0.005;
+            this.scale = 1;
+        };
+        //addControls(control);
+        // call the render function
+        render();
+    }
+
+    function render() {
+        //console.log("x: " + event.clientX + ", y: " + event.clientY );
+        
+        var camMat4 = new THREE.Matrix4(); camMat4.compose ( new THREE.Vector3(0.0,0.0,0.0), camQuat, new THREE.Vector3(1.0,1.0,1.0) );
+        var camMat_ = new THREE.Matrix3(); camMat_.getNormalMatrix ( camMat4 );
+        //console.log( camMat_.elements +" "+ camQuat.x+" "+ camQuat.y+" "+ camQuat.z+" "+ camQuat.w  );
+        uniforms.camMat.value = camMat_;
+        
+        renderer.render(scene, camera);
+        uniforms.time.value += 0.05;
+        requestAnimationFrame(render);
+    }
+
+    // calls the init function when the window is done loading.
+    window.onload = init;
+
+</script>
+<body>
+See: 
+https://www.shadertoy.com/user/Zavie <br>
+    Minimal Raytracer : https://www.shadertoy.com/view/XsSSWW <br>
+    Cone RayTrace with Radiance : https://www.shadertoy.com/view/MtcXWr <br>
+</body>
+</html>
