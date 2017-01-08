@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - loaders - OBJ loader</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000;
+				color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				color: #fff;
+				position: absolute;
+				top: 10px;
+				width: 100%;
+				text-align: center;
+				z-index: 100;
+				display:block;
+			}
+			#info a, .button { color: #f00; font-weight: bold; text-decoration: underline; cursor: pointer }
+		</style>
+	</head>
+
+	<body>
+		<div id="info">
+		<a href="http://threejs.org" target="_blank">three.js</a> - OBJLoader test
+		</div>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script> 
+		<script src="OBJLoader.js"></script>
+
+		<script>
+
+            //const util = require('util');
+            
+			var container;
+			var camera, scene, renderer, raycaster;
+			var mouseX = 0, mouseY = 0;
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+			
+			
+			//var omx=0.0,omy=0.0;
+			var mouse = new THREE.Vector2();
+			var isMouseDown = false;
+			
+			var armor_object;
+			var point_enter, point_exit;
+			var hit_line;
+
+			init();
+			animate();
+
+            function getThickness( screen_pos ){
+                	raycaster.setFromCamera( screen_pos, camera );
+	                var intersects = raycaster.intersectObject( armor_object, false );
+	                //var intersects = raycaster.intersectObject( armor_object, true );
+	                var n = intersects.length;
+	                
+                    if( n > 0 ){
+	                    point_enter.position.copy( intersects[0  ].point );
+	                    point_exit.position.copy(  intersects[n-1].point );
+	                    hit_line.geometry.vertices[ 0 ].copy( intersects[0  ].point );
+	                    hit_line.geometry.vertices[ 1 ].copy( intersects[n-1].point );
+                        hit_line.geometry.verticesNeedUpdate = true;
+	                    var thick    = intersects[n-1].distance - intersects[0].distance; 
+	                    console.log(thick);
+	                    for( var i=0; i<n; i++){ console.log( intersects[i].point , intersects[i]); }
+	                    return thick;
+	                }else{
+	                    console.log(" no hit "+screen_pos.x+" "+screen_pos.y);
+	                    return 0.0;
+	                }
+            }
+
+			function init() {
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.position.z = 25;
+
+				scene = new THREE.Scene();
+				raycaster = new THREE.Raycaster();
+
+				var ambient = new THREE.AmbientLight( 0x101030 );
+				scene.add( ambient );
+
+				var directionalLight = new THREE.DirectionalLight( 0xffeedd );
+				directionalLight.position.set( 0.0, 0.0, 1.0 );
+				scene.add( directionalLight );
+
+
+				var manager = new THREE.LoadingManager();
+				manager.onProgress = function ( item, loaded, total ) {
+					console.log( item, loaded, total );
+
+				};
+
+                var onProgress = function ( xhr ) {};
+				var onError    = function ( xhr ) {};
+				var onLoad     = function(object){ 
+				    //armor_object = object; 
+				    //scene.add( object ); 
+				    //armor_object.material.side = THREE.DoubleSide;
+				    console.log( typeof( object ) );
+				    //armor_object = object.getObjectById( 1 );  // we are interestd just in first mesh in that OBJ file
+				    armor_object = object.children[ 0 ]; console.log( typeof( armor_object ) );
+				    scene.add( armor_object );
+				    armor_object.material.side = THREE.DoubleSide;
+				    armor_object.material.transparent = true; 
+				    armor_object.material.opacity =  0.5;
+				    //armor_object.material.wireframe = true;
+				    
+				} 
+				var loader = new THREE.OBJLoader( manager );
+				//loader.load( '../cpp/common_resources/turret.obj',onLoad, onProgress, onError ); //NS_ERROR_DOM_BAD_URI: Access to restricted URI denied
+				loader.load( 'turret.obj',onLoad, onProgress, onError );
+				
+/*
+                var material = new THREE.MeshLambertMaterial( { side: THREE.DoubleSide } );
+				var geometry = new THREE.BoxBufferGeometry( 1.0, 2.0, 2.0 );
+				var object   = new THREE.Mesh( geometry, material );
+				armor_object = object; scene.add( object );
+*/
+
+                var material = new THREE.MeshLambertMaterial( { side: THREE.DoubleSide } );
+                point_enter  = new THREE.Mesh( new THREE.OctahedronGeometry( 0.1, 0 ), material );  point_enter.position.set( 0.0, 0.0, 0.0 ); scene.add( point_enter );
+				point_exit   = new THREE.Mesh( new THREE.OctahedronGeometry( 0.1, 0 ), material );  point_exit .position.set( 0.0, 0.0, 0.0 ); scene.add( point_exit );
+				
+				
+                var geometry = new THREE.Geometry();
+                geometry.vertices.push( point_enter.position );
+                geometry.vertices.push( point_exit .position );
+                geometry.verticesNeedUpdate = true;
+                geometry.dynamic = true;
+                hit_line = new THREE.Line(geometry, new THREE.LineBasicMaterial({color: 0xDF4949, linewidth: 5}) );
+                scene.add(hit_line);
+			
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+            document.onmousedown = function( event ) { 
+                isMouseDown = true; 
+                getThickness( mouse );
+            };
+            document.onmouseup   = function() { isMouseDown = false; };
+			function onWindowResize() {
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+			function onDocumentMouseMove( event ) {
+			    var rotSpeed = -10.0;
+			    var mx = ( event.clientX / ( 1.0*window.innerWidth)  ) *  2.0 - 1.0;
+			    var my = ( event.clientY / ( 1.0*window.innerHeight) ) * -2.0 + 1.0;
+				var dx = mx - mouse.x;
+				var dy = my - mouse.y;
+				mouse.x=mx; mouse.y=my;
+				if ( isMouseDown ) {
+				    var vec = new THREE.Vector3( -rotSpeed*dx, +rotSpeed*dy, 0.0 );
+				    camera.position.add( vec.applyMatrix4( camera.matrixWorld ) );
+				    camera.position.multiplyScalar ( 10.0/camera.position.length() ); 
+				    camera.lookAt( scene.position );
+				}
+			}
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+			}
+			function render() {
+				renderer.render( scene, camera );
+			}
+		</script>
+
+	</body>
+</html>

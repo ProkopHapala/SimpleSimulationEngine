@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<style type="text/css">
+html * {font-size: 11px; font-family: Arial }
+p { padding: 0px 0px 0px 0px; }
+input {  font-size: 10px; line-height: 10px; }
+</style>
+
+<p> ---------- Parameters -------------- </p>
+<p> <input id="ship_mass"                type="number" onchange="evalAll()"> mass                   [ ton ]     </p>
+
+<p> <input id="ship_accelearion"         type="number" onchange="evalAll()"> acceleration           [ G ]      </p>
+<p> <input id="propelant_temperature"    type="number" onchange="evalAll()"> propelant temperature  [ K ]      </p>
+<p> <input id="propelant_molar_mass"     type="number" onchange="evalAll()"> propelant molar mass   [ g/mol ]  </p>
+<p> <input id="propel_efficiency"        type="number" onchange="evalAll()"> propel efficiency      [ 1 ]      </p>
+<p> <input id="radiator_temeprature"    type="number" onchange="evalAll()"> radiator temeprature    [ K ]      </p>
+<p> <input id="radiator_absorbed"        type="number" onchange="evalAll()"> radiator absorbed      [ 1 ]      </p>
+<p> <input id="radiator_emited"          type="number" onchange="evalAll()"> radiator emited        [ 1 ]      </p>
+<p> <input id="fuel_energy_density"      type="number" onchange="evalAll()"> fuel energy density    [ J/kg ]   </p>
+<p> <input id="fuel_efficiency"          type="number" onchange="evalAll()"> fuel efficiency 1      [ 1 ]      </p>
+
+<p> </p>
+<p> ---------- Results -------------- </p>
+<p> </p>
+
+<p> <input id="propelant_energy_density"                type="number" onchange="evalAll()"> propelant_energy_density [ MJ/kg ] </p>
+<p> <input id="exhaust_velocity"         type="number" onchange="evalAll()"> exhaust_velocity         [ km/s  ] </p>
+<p> </p>
+<p> <input id="propel_power"     type="number" onchange="evalAll()"> propel_power    [ TW  ]            </p>
+<p> <input id="total_power"      type="number" onchange="evalAll()"> total_power     [ TW  ]            </p>
+<p> <input id="radiator_power"   type="number" onchange="evalAll()"> radiator_power  [ TW  ]            </p>
+<p> <input id="radiator_area"    type="number" onchange="evalAll()"> radiator_size   [ m^2 ]            </p>
+<p> <input id="radiator_radius"  type="number" onchange="evalAll()"> radiator_radius [ m   ]            </p>
+<p> </p>
+<p> <input id="propelant_per_sec"  type="number" onchange="evalAll()"> propelant_consumption [ kg/s     ] </p>
+<p> <input id="propelant_per_day"  type="number" onchange="evalAll()"> propelant_consumption [ kg/day   ] </p>
+<p> <input id="propelant_per_year" type="number" onchange="evalAll()"> propelant_consumption [ ton/year ] </p>
+<p> </p>
+<p> <input id="fuel_per_sec"            type="number" onchange="evalAll()"> fuel_consumption [ kg/s     ]      </p>
+<p> <input id="fuel_per_day"            type="number" onchange="evalAll()"> fuel_consumption [ ton/year ]      </p>
+<p> <input id="fuel_per_year"           type="number" onchange="evalAll()"> fuel_consumption [ ton/year ]      </p>
+<p> <input id="propelant_to_fuel_ratio" type="number" onchange="evalAll()"> propelant_to_fuel_ratio [ 1 ]      </p>
+
+
+<script>
+// constants
+earth_gravity_acceleration		= 9.81;				// [ m/s^2		]
+StefanBoltzmanConst 			= 5.67037321e-8;	// [ W / m^2 K^4 ]
+gas_const						= 8.3144621;		// [ J / K mol   ] 
+// unit conversion
+g2kg      = 0.001
+ton2kg    = 1000.0
+year2sec  = 31.556926e+6
+day2sec   = 86.400e+3
+// utils
+function getval( id      ){ return document.getElementById(id).value;  }
+function setval( id, val ){ document.getElementById(id).value = val;  }
+function sq( a ){ return a*a; }
+// on startup
+
+function init( ){
+	setval( "ship_mass"             ,  10000.0  );
+	setval( "ship_accelearion"      ,  0.004    );
+	setval( "propelant_temperature" ,  900e+6   );
+	setval( "propelant_molar_mass"  ,  1.0      );
+	setval( "propel_efficiency"     ,  0.7      );
+	setval( "radiator_temeprature"  ,  2500.0   );
+	setval( "radiator_absorbed"     ,  0.2      );
+	setval( "radiator_emited"       ,  0.8      );
+	setval( "fuel_energy_density"   ,  5.76e+14 );
+	setval( "fuel_efficiency"       ,  0.8      );
+	evalAll();
+}
+onload = init;
+
+// on update
+function evalAll() {
+	// read in
+	ship_mass             = getval("ship_mass" )             * ton2kg;
+	ship_accelearion      = getval("ship_accelearion"  )     * earth_gravity_acceleration;
+	propelant_temperature = getval("propelant_temperature");
+	propelant_molar_mass  = getval("propelant_molar_mass")   * g2kg;
+	propel_efficiency     = getval("propel_efficiency" );
+	radiator_temeprature  = getval("radiator_temeprature");
+	radiator_absorbed     = getval("radiator_absorbed");
+	radiator_emited       = getval("radiator_emited");
+	fuel_energy_density   = getval("fuel_energy_density");
+	fuel_efficiency       = getval("fuel_efficiency");
+	// evaluate
+	propelant_energy_density = gas_const * propelant_temperature / propelant_molar_mass;
+	exhaust_velocity         = Math.sqrt( 2*propelant_energy_density );
+	propel_power_density     = exhaust_velocity     * ship_accelearion;
+	propel_power             = propel_power_density * ship_mass;
+	total_power              = propel_power / propel_efficiency;
+	radiator_power			 = (total_power - propel_power)* radiator_absorbed;
+	radiator_area 			 = radiator_power/( StefanBoltzmanConst*radiator_emited* sq(sq(radiator_temeprature)) );
+	propelant_consumption    = propel_power / propelant_energy_density;
+	fuel_consumption		 = total_power / ( fuel_efficiency*fuel_energy_density );
+	propelant_to_fuel_ratio  = propelant_consumption /  fuel_consumption;
+	// write out
+setval(  "propelant_energy_density" , propelant_energy_density / 1.0e+6 );
+setval(  "exhaust_velocity" ,         exhaust_velocity / 1000.0 );
+setval(  "propel_power"  ,            propel_power / 1.0e+12);
+setval(  "total_power"  ,             total_power / 1.0e+12);
+setval(  "radiator_power" ,  radiator_power / 1.0e+12 );
+setval(  "radiator_area"  ,  radiator_area  );
+setval(  "radiator_radius" , Math.sqrt(radiator_area) /3.1415 );
+setval(  "propelant_per_sec" , propelant_consumption  );
+setval(  "propelant_per_day" , propelant_consumption*day2sec  );
+setval(  "propelant_per_year" ,propelant_consumption*year2sec/ton2kg   );
+setval(  "fuel_per_sec" ,  fuel_consumption );
+setval(  "fuel_per_day" ,  fuel_consumption*day2sec );
+setval(  "fuel_per_year" , fuel_consumption*year2sec/ton2kg );
+setval(  "propelant_to_fuel_ratio" , propelant_to_fuel_ratio  );
+}
+</script>
+
+
+
+</body>
+</html> 
