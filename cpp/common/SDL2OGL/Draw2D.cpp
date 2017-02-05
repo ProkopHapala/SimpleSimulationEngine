@@ -371,6 +371,8 @@ void Draw2D::drawShape( const Vec2d& pos, const Vec2d& rot, int shape ){
 	//glRotatef( phi*(180/M_PI), 0, 0, 1 );
 	float glMat[16];
 	toGLMat( pos, rot, glMat );
+
+    //Draw::printGLmat( glMat );
 	glMultMatrixf( glMat );
 	glCallList( shape );
 	glPopMatrix();

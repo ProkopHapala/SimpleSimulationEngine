@@ -18,6 +18,7 @@
 #include "Object3D.h"
 #include "Terrain25D.h"
 #include "Warrior3D.h"
+#include "Warrior25D.h"
 #include "Projectile3D.h"
 
 // class NonInertWorld : public NBodyWorld2D {       //  TODO:  We would like to add this later
@@ -35,16 +36,24 @@ class Shooter {
     double gravity     = -9.81;
     double objR        = 10.0d;
 
+    Vec3d wind_speed;
+
     double projLifetime = 10.0;
 
     int shotsCount=0,warriorCount=0;
 
 	std::vector<Warrior3D*>     warriors;
+	std::vector<Warrior25D*>    warriors25D;
 	std::vector<Projectile3D*>  projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 	std::vector<Object3D*>      objects;
+
 	Terrain25D * terrain = NULL;
 
     // ==== function declarations
+
+    virtual void update_warriors3D();
+    virtual void update_warriors25D();
+    virtual void update_projectiles3D();
 
     virtual void update_world( );
     virtual void init_world  ( );

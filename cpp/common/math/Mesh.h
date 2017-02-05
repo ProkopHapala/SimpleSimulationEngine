@@ -118,12 +118,12 @@ class Mesh{
         //myfile << "Writing this to a file.\n";
         std::string line,word;
         //std::stringstream ss;
-        if (!infile.is_open()) { std::cout << "cannot open "<<fname<<"\n"; }
-        int npoints0   = points  .size();
-        int npolygons0 = polygons.size();
+        if (!infile.is_open()) { std::cout << "cannot open "<<fname<<"\n"; return -1; }
+        //int npoints0   = points  .size();
+        //int npolygons0 = polygons.size();
         int i=0;
         while ( std::getline(infile,line) ){
-            //std::cout << line << '\n';
+            std::cout << line << '\n';
             //ss.str(line);
             std::stringstream ss(line);
             getline(ss, word, ' ');
@@ -140,7 +140,7 @@ class Mesh{
                 while ( getline(ss, word, ' ')) {
                     size_t of;
                     p->ipoints .push_back( stoi(word,&of)-1 );
-                    //std::cout << word.substr(of) << '\n';
+                    std::cout << word.substr(of) << '\n';
                     p->inormals.push_back( stoi(word.substr(of+2))-1 );
                 };
                 i++;

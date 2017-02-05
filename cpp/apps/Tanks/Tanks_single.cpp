@@ -141,11 +141,18 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         Object3D * o = new Object3D();
         //o->bounds.orientation.set({});
         //o->bounds.span.set(o->bounds.orientation.a.normalize(),o->bounds.orientation.a.normalize(),o->bounds.orientation.a.normalize());
-        o->bounds.orientation.fromRand( {randf(0,1),randf(0,1),randf(0,1)} );
-        o->bounds.span.set( randf(0.2,2.0), randf(0.2,2.0), randf(0.2,2.0) );
+
+
+        o->lrot.fromRand( {randf(0,1),randf(0,1),randf(0,1)} );
+        o->grot = o->lrot;
+        o->span.set( randf(0.2,2.0), randf(0.2,2.0), randf(0.2,2.0) );
+
+
+
         //o->bounds.span.set( 1, 2.0, 0.5 );
-        Mat3d m; m.set_mmul_NT( o->bounds.orientation, o->bounds.orientation );
+        //
         /*
+        Mat3d m; m.set_mmul_NT( o->lrot, o->lrot );
         printf( " === %i \n", i );
         printf( " %f %f %f \n", m.ax, m.ay, m.az );
         printf( " %f %f %f \n", m.bx, m.by, m.bz );
@@ -154,7 +161,8 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         //o->bounds.pos.set( randf(-xrange,xrange),randf(-xrange,xrange),randf(-xrange,xrange) );
         Vec2d p,dv; p.set( randf(-xrange,xrange),randf(-xrange,xrange) );
         double v = world.terrain->eval( p, dv );
-        o->bounds.pos.set( p.x, v, p.y );
+        o->lpos.set( p.x, v, p.y );
+        o->gpos = o->lpos;
 
         //o->bounds.pos.set( {0.0,0.0,0.0} );
         o->shape= sphereShape;
@@ -200,21 +208,21 @@ void Tanks_single::draw(){
     ray0.set(camPos);
     for( auto o : world.objects ) {
 
-        glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos( o->bounds.orientation.a*o->bounds.span.a*1.2, o->bounds.pos );
-        glColor3f(0.0f,1.0f,0.0f); Draw3D::drawVecInPos( o->bounds.orientation.b*o->bounds.span.b*1.2, o->bounds.pos );
-        glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos( o->bounds.orientation.c*o->bounds.span.c*1.2, o->bounds.pos );
+        glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos( o->grot.a*o->span.a*1.2, o->gpos );
+        glColor3f(0.0f,1.0f,0.0f); Draw3D::drawVecInPos( o->grot.b*o->span.b*1.2, o->gpos );
+        glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos( o->grot.c*o->span.c*1.2, o->gpos );
 
         float glMat[16];
         glPushMatrix();
-        Draw3D::toGLMat( o->bounds.pos, o->bounds.orientation, o->bounds.span, glMat );
+        Draw3D::toGLMat( o->gpos, o->grot, o->span, glMat );
 
         glMultMatrixf( glMat );
         glCallList( o->shape );
         glPopMatrix();
 
         double thit;
-        if ( rayPointDistance2( ray0, hRay,  o->bounds.pos, thit ) > 4.0 ) continue;
-        thit = o->bounds.ray( ray0, hRay,  &normal );
+        if ( rayPointDistance2( ray0, hRay,  o->gpos, thit ) > 4.0 ) continue;
+        thit = o->ray( ray0, hRay,  &normal );
         if( (thit>0)&&(thit < 0.999e+300) ){
             Vec3d hit_point; hit_point.set_add_mul( ray0, hRay, thit );
             //printf( " %i %g (%3.3f,%3.3f,%3.3f)  \n", o->id,  thit, hit_point.x, hit_point.y, hit_point.z );

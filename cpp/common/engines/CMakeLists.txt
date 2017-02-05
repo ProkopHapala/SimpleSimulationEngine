@@ -6,9 +6,11 @@ include_directories(
 )
 
 #add_library( Shooter OBJECT Shooter.cpp Warrior3D.cpp Projectile3D.cpp Object3D.cpp Terrain25D.h 
-add_library( Shooter SHARED Shooter.cpp Warrior3D.cpp Projectile3D.cpp Object3D.cpp Terrain25D.h 
+add_library( Shooter SHARED Ship2D.cpp Shooter.cpp Warrior3D.cpp Warrior25D.cpp Turret.cpp Gun3D.cpp Projectile3D.cpp Object3D.cpp Terrain25D.h 
 ${COMMON_SRCS}/dynamics/Body.cpp
+${COMMON_SRCS}/dynamics/Body2D.cpp
 ${COMMON_SRCS}/dynamics/AeroSurf.cpp
+${COMMON_SRCS}/dynamics/AeroSurf2D.cpp
 ${COMMON_SRCS}/dynamics/Collisions.cpp
 ${COMMON_SRCS}/dynamics/DynamicOpt.cpp
 ${COMMON_SRCS}/dynamics/SoftBody.cpp

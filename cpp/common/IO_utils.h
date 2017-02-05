@@ -5,6 +5,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+char * fgets_comment( char * line, int num, FILE * stream ){
+    constexpr int NMaxComment = 10;
+    for(int i=0; i<NMaxComment; i++){
+        char *str = fgets( line, num, stream );
+        printf(">> %s", line );
+        if( str[0] != '#' ) return str;
+    }
+    return NULL;
+}
+
 // A simple function that will read a file into an allocated char pointer buffer
 char* filetobuf(char const  *file){
 	FILE *fptr;

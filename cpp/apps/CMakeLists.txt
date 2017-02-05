@@ -13,7 +13,7 @@ add_subdirectory (BlockHouseTactics)
 add_subdirectory (CastleBuilder)
 add_subdirectory (OrbitalWar)
 add_subdirectory (Tanks)
-
+add_subdirectory (NavalBattle)
 
 add_subdirectory (MolecularEditor)
 

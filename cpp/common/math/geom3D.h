@@ -84,7 +84,119 @@ class Plane3D{
 
 };
 
+
+inline bool dist_Box( const Vec3d& point,    const Vec3d& pos, const Mat3d& orientation, const Vec3d& span ){
+    // distance from bounding ellipsoide
+    Vec3d d;
+    d.set_sub( point, pos );
+    d = orientation.dot( d );
+    double dm;
+    dm =     ( fabs(d.a) - span.a     );
+    dm = fmax( fabs(d.b) - span.b, dm );
+    dm = fmax( fabs(d.c) - span.c, dm );
+    return dm;
+};
+
+
+inline double ray_Box( const Vec3d& ray0, const Vec3d& hRay,    const Vec3d& pos, const Mat3d& orientation, const Vec3d& span ){
+    // WARRNING: unfinished
+    Vec3d d ;
+    d.set_sub(ray0, pos);
+    d = orientation.dot( d );
+
+}
+
+
 // ============ Ellipsoide
+
+inline double dist_Ellipsoide( const Vec3d& point, const Vec3d& pos, const Mat3d& orientation, const Vec3d& span ){
+    // distance from bounding ellipsoide
+    Vec3d d;
+    d.set_sub( point, pos );
+    d = orientation.dot( d );
+    d.mul(span);
+    return 1 - d.norm2();
+};
+
+inline Vec3d normal_Ellipsoide( const Vec3d& phit, const Vec3d& pos, const Mat3d& orientation, const Vec3d& invspan ){
+    Vec3d normal_ = phit;
+    //normal_.set_add_mul(ray0_, hRay_, thit );
+    normal_.mul(invspan); normal_.mul(invspan);
+    return orientation.dotT( normal_ );
+}
+
+inline double ray_Ellipsoide( const Vec3d& ray0, const Vec3d& hRay, Vec3d * normal, const Vec3d& pos, const Mat3d& orientation, const Vec3d& span ){
+    // distance from bounding volume
+    // transform space
+    //printf("here\n");
+    Vec3d hRay_,ray0_,p,invspan;
+    ray0_.set_sub(ray0, pos);
+    invspan.set_inv(span);
+    Mat3d m; m.set(orientation);
+    m.mul(invspan);
+    //m.mulT(p);
+    //ray0_  = m.dotT(ray0_);
+    //hRay_  = m.dotT(hRay);
+    ray0_  = m.dot(ray0_);
+    hRay_  = m.dot(hRay);
+    //ray0_  = orientation.dotT(ray0_); ray0_.mul( p );
+    //hRay_  = orientation.dotT(hRay);  hRay_.mul( p );
+    //printf( " hRay_ (%3.3f,%3.3f,%3.3f) \n",  hRay_.x, hRay_.y, hRay_.z    );
+    double lRay = hRay_.normalize(); // this sqrt() may be possible to optimize out
+    // ray sphere
+    double tdisk = -hRay_.dot( ray0_ );
+    //printf( " tdisk %f ray0_ (%3.3f,%3.3f,%3.3f) \n", tdisk,  ray0_.x, ray0_.y, ray0_.z );
+    p.set_add_mul( ray0_, hRay_, tdisk );
+    double r2   = p.norm2();
+    //printf( " r2 %f p (%3.3f,%3.3f,%3.3f) \n", r2,  p.x, p.y, p.z    );
+    if( r2 > 1 ) return 1e+300;
+    double thit = tdisk - sqrt( 1 - r2 );
+    if(normal){
+        // ======== NOT CORRECT; TO DO LATER
+        // E = (x/Lx)^2 + (y/Ly)^2  + (z/Lz)^2
+        // (dE/dx,dE/dy,dE/dz) = ( 2*x/Lx^2, 2*y/Ly^2, 2*x/Lz^2 )
+        // normal
+        Vec3d normal_;
+        normal_.set_add_mul(ray0_, hRay_, thit );
+        normal_.mul(invspan); normal_.mul(invspan);
+        *normal = orientation.dotT( normal_ );
+    }
+    return thit/lRay;
+};
+
+/*
+inline double ray_Ellipsoide( const Vec3d& ray0, const Vec3d& hRay,   const Vec3d& pos, const Mat3d& orientation, const Vec3d& span ){
+        // distance from bounding volume
+        // transform space
+        //printf("here\n");
+        Vec3d hRay_,ray0_,p,invspan;
+        ray0_.set_sub(ray0, pos);
+        invspan.set_inv(span);
+        Mat3d m; m.set(orientation);
+        m.mul(invspan);
+        //m.mulT(p);
+        //ray0_  = m.dotT(ray0_);
+        //hRay_  = m.dotT(hRay);
+        ray0_  = m.dot(ray0_);
+        hRay_  = m.dot(hRay);
+        //ray0_  = orientation.dotT(ray0_); ray0_.mul( p );
+        //hRay_  = orientation.dotT(hRay);  hRay_.mul( p );
+        //printf( " hRay_ (%3.3f,%3.3f,%3.3f) \n",  hRay_.x, hRay_.y, hRay_.z    );
+        double lRay = hRay_.normalize(); // this sqrt() may be possible to optimize out
+        // ray sphere
+        double tdisk = -hRay_.dot( ray0_ );
+        //printf( " tdisk %f ray0_ (%3.3f,%3.3f,%3.3f) \n", tdisk,  ray0_.x, ray0_.y, ray0_.z );
+        p.set_add_mul( ray0_, hRay_, tdisk );
+        double r2   = p.norm2();
+        //printf( " r2 %f p (%3.3f,%3.3f,%3.3f) \n", r2,  p.x, p.y, p.z    );
+        if( r2 > 1 ) return 1e+300;
+        double thit = tdisk - sqrt( 1 - r2 );
+        return thit/lRay;
+}
+*/
+
+
+
 
 class Ellipsoide{
     public:
@@ -114,6 +226,35 @@ class Ellipsoide{
         d = orientation.dot( d );
         d.mul(span);
         return d.norm2()<1;
+    };
+
+    inline double ray( const Vec3d& ray0, const Vec3d& hRay ){
+        // distance from bounding volume
+        // transform space
+        //printf("here\n");
+        Vec3d hRay_,ray0_,p,invspan;
+        ray0_.set_sub(ray0, pos);
+        invspan.set_inv(span);
+        Mat3d m; m.set(orientation);
+        m.mul(invspan);
+        //m.mulT(p);
+        //ray0_  = m.dotT(ray0_);
+        //hRay_  = m.dotT(hRay);
+        ray0_  = m.dot(ray0_);
+        hRay_  = m.dot(hRay);
+        //ray0_  = orientation.dotT(ray0_); ray0_.mul( p );
+        //hRay_  = orientation.dotT(hRay);  hRay_.mul( p );
+        //printf( " hRay_ (%3.3f,%3.3f,%3.3f) \n",  hRay_.x, hRay_.y, hRay_.z    );
+        double lRay = hRay_.normalize(); // this sqrt() may be possible to optimize out
+        // ray sphere
+        double tdisk = -hRay_.dot( ray0_ );
+        //printf( " tdisk %f ray0_ (%3.3f,%3.3f,%3.3f) \n", tdisk,  ray0_.x, ray0_.y, ray0_.z );
+        p.set_add_mul( ray0_, hRay_, tdisk );
+        double r2   = p.norm2();
+        //printf( " r2 %f p (%3.3f,%3.3f,%3.3f) \n", r2,  p.x, p.y, p.z    );
+        if( r2 > 1 ) return 1e+300;
+        double thit = tdisk - sqrt( 1 - r2 );
+        return thit/lRay;
     };
 
     inline double ray( const Vec3d& ray0, const Vec3d& hRay, Vec3d * normal ){
@@ -149,8 +290,7 @@ class Ellipsoide{
             // normal
             Vec3d normal_;
             normal_.set_add_mul(ray0_, hRay_, thit );
-            normal_.mul(invspan);
-            normal_.mul(invspan);
+            normal_.mul(invspan); normal_.mul(invspan);
             *normal = orientation.dotT( normal_ );
         }
         return thit/lRay;

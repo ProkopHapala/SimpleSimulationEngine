@@ -180,7 +180,7 @@ TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
 
     o = new Object3D();
     o->id = 1;
-    o->bounds.initOne();
+    o->initOne();
     //o->bounds.pos.set(-1.0,4.0,-2.0);
     o->controler = new RigidBody();
     o->controler->initOne();
@@ -251,9 +251,9 @@ void TestAppRigidBody::draw(){
 	}
 	for( Object3D * o : objects ){
         if(o->controler){
-            o->bounds.pos         = o->controler->pos;
+            o->gpos         = o->controler->pos;
             //o->bounds.orientation = o->controler->rotMat;
-            o->bounds.orientation.setT(o->controler->rotMat);
+            o->grot.setT(o->controler->rotMat);
         };
 	}
     glEnable( GL_LIGHTING );
@@ -262,7 +262,7 @@ void TestAppRigidBody::draw(){
         if (o->shape){
             float glMat[16];
             glPushMatrix();
-            Draw3D::toGLMat( o->bounds.pos, o->bounds.orientation, o->bounds.span, glMat );
+            Draw3D::toGLMat( o->gpos, o->grot, o->span, glMat );
             glMultMatrixf( glMat );
             glCallList( o->shape );
             glPopMatrix();
