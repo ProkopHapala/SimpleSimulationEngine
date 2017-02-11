@@ -21,9 +21,122 @@ bool Battleship::loadFromFile( char const* filename ){
     fgets_comment( line, nbuf, pFile );  fromString(line);
     fgets_comment( line, nbuf, pFile );  keel  .fromString( line );
     fgets_comment( line, nbuf, pFile );  rudder.fromString( line );
+
+    int n;
+    //---- turret types
+    printf("//---- turret types \n");
+    fgets_comment( line, nbuf, pFile ); sscanf(line,"%i\n", &n );
+    for(int i=0; i<n; i++ ){
+        if ( fgets_comment( line, nbuf, pFile ) ){
+            TurretType * TT = new TurretType();
+            TT->fromString(line);
+            turretTypes.push_back(TT);
+        };
+    };
+    //---- turrets
+    printf("//---- turrets \n");
+    fgets_comment( line, nbuf, pFile ); sscanf(line,"%i\n", &n );
+    for(int i=0; i<n; i++ ){
+        if ( fgets_comment( line, nbuf, pFile ) ){
+            Turret * T = new Turret();
+            T->fromString(line);
+            T->type = turretTypes[T->kind];
+            //printf("T->type %i %i \n", T->kind, T->type );
+            turrets.push_back(T);
+        };
+    };
     return false;
 };
 
+void Battleship::render( ){
+    float sc = 10.0;
+    shape = glGenLists(1);
+    glNewList( shape, GL_COMPILE );
+		glScalef( sc, sc, sc ); Draw3D::drawMesh( *mesh );   // the ship model in obj is 1:10 smaller
+		//Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
+	glEndList();
+
+
+	for( TurretType* TT : turretTypes ){
+        //glScalef( 1.0, 1.0, 1.0 );
+        TT->shape = glGenLists(1);
+        glNewList( TT->shape, GL_COMPILE );
+            sc = TT->Rsize*0.3; glScalef( sc, sc, sc ); Draw3D::drawMesh( *(TT->mesh) );
+            //printf( ">>>>> TT->shape %i \n",  TT->shape);
+        glEndList();
+	}
+	for( Turret* tur : turrets ){
+        //printf( ">>>>> %i %i \n",  tur->shape, tur->type );
+        //printf( ">>>>> %i %i %f \n",  tur->shape, tur->type, tur->type->mass );
+        //printf( ">>>>> %i %i %i\n",  tur->shape, tur->type, tur->type->shape);
+        //exit(0);
+        tur->shape = tur->type->shape;
+    }
+
+}
+
+void Battleship::draw( ){
+
+    glColor3f(0.8,0.8,0.8);
+    Draw3D::drawShape( pos3d, rot3d, shape );
+    glColor3f(0.8,0.0,0.0);
+    for( Turret* tur : turrets ){
+        printf( "(%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", tur->gpos.x, tur->gpos.y, tur->gpos.z, tur->gun_dir.x, tur->gun_dir.y, tur->gun_dir.z );
+        //Draw2D::drawVecInPos( {tur->gpos.x,tur->gpos.z}, {tur->grot.c.x,tur->grot.c.z} );
+
+        Draw3D::drawVecInPos( tur->gun_dir*50.0, tur->gpos );
+
+        //Draw3D::drawShape( {0.0,0.0,0.0}, {1.0,0.0,0.0,   0.0,1.0,0.0,  1.0,0.0,0.0}, tur->shape );
+        Draw3D::drawShape( tur->gpos, {1.0,0.0,0.0,   0.0,1.0,0.0,  0.0,0.0,1.0}, tur->shape );
+        //Draw3D::drawShape( tur->gpos, tur->grot, tur->shape );
+
+
+        //Draw2D::drawShape( pos, rot, shape );
+        //Draw2D::drawShape( pos, rot, tur->shape );
+    }
+
+}
+
+void Battleship::update( double dt, const Vec3d& wind_speed, const Vec3d& watter_speed ){
+    printf(" Battleship::update \n");
+
+    //if( life < life_max ) { life += life_regeneration_rate * dt; }
+
+    //Mat3d rotmat; rotmat.set( {rot.x,0,rot.y}, {0.0,1.0,0.0}, {-rot.y,0,rot.x} );
+
+    for( Turret* tur : turrets ){
+        tur->updateTransforms( pos3d, rot3d );
+        tur->update( dt );
+    }
+
+    // from Ship2D
+    clean_temp( );
+    applyHydroForces( {0.0,0.0} );
+    move_RigidBody2D(dt);
+    sync3D();
+}
+
+bool Battleship::colideWithLineSegment( const Vec3d& p1, const Vec3d& p2, Vec3d * where, Vec3d * normal ){
+    bool hitted = false;
+    Vec3d pos3d; pos3d.set( pos.x, pos.y , 0 );
+    //printf( " Battleship::colideWithLineSegment collisionShape:  %s %s \n",  collisionShape );
+    hitted = collisionShape->colideWithLineSegment( p1, p2, pos3d, where, normal );
+
+    /*
+    Vec3d dp;
+    dp.set_sub( pos3d, p2 );
+    double r2   = dp.norm2();
+    double rmax = collisionShape->collision_radius;
+    if( r2 < (rmax*rmax) ) hitted = true;
+    */
+
+    //printf( " %f %f  %f %f   %d \n",  p1.x,p1.y,    p2.x,p2.y   , hitted );
+    if( hitted ){
+        printf( " Figate %s hitted \n", name );
+        life = 0.0;
+    }
+    return hitted;
+};
 
 /*
 Turret ** Battleship::initGuns( int n, Vec3d pos1, Vec3d pos2, Vec3d ldir, double muzzle_velocity ){
@@ -119,34 +232,4 @@ void Battleship::drawHitBox( ){
 }
 */
 
-bool Battleship::colideWithLineSegment( const Vec3d& p1, const Vec3d& p2, Vec3d * where, Vec3d * normal ){
-    bool hitted = false;
-    Vec3d pos3d; pos3d.set( pos.x, pos.y , 0 );
-    //printf( " Battleship::colideWithLineSegment collisionShape:  %s %s \n",  collisionShape );
-    hitted = collisionShape->colideWithLineSegment( p1, p2, pos3d, where, normal );
 
-    /*
-    Vec3d dp;
-    dp.set_sub( pos3d, p2 );
-    double r2   = dp.norm2();
-    double rmax = collisionShape->collision_radius;
-    if( r2 < (rmax*rmax) ) hitted = true;
-    */
-
-    //printf( " %f %f  %f %f   %d \n",  p1.x,p1.y,    p2.x,p2.y   , hitted );
-    if( hitted ){
-        printf( " Figate %s hitted \n", name );
-        life = 0.0;
-    }
-    return hitted;
-};
-
-
-void Battleship::update( double dt ){
-    if( life < life_max ) {
-        life += life_regeneration_rate * dt;
-        //printf( " %s %f \n", name, life );
-    }
-    if( gunload_left  < 1.0d ) { gunload_left  += reload_rate * dt; }
-    if( gunload_right < 1.0d ) { gunload_right += reload_rate * dt; }
-}

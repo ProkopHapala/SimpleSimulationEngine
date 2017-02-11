@@ -9,14 +9,14 @@
 float Draw2D::z_layer = 0.0f; // should be initialized like this http://stackoverflow.com/questions/19136059/namespace-global-variable-losing-value-c
 
 void Draw2D::drawPoint( const Vec2f& vec ){
-	glDisable (GL_LIGHTING);
+	//glDisable (GL_LIGHTING);
 	glBegin   (GL_POINTS);
 		glVertex3f( vec.x, vec.y, z_layer );
 	glEnd();
 };
 
 void Draw2D::drawPointCross( const Vec2f& vec, float d ){
-	glDisable (GL_LIGHTING);
+	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glVertex3f( vec.x-d, vec.y,   z_layer   );  glVertex3f( vec.x+d, vec.y,   z_layer );
 		glVertex3f( vec.x,   vec.y-d, z_layer   );  glVertex3f( vec.x,   vec.y+d, z_layer  );
@@ -24,14 +24,14 @@ void Draw2D::drawPointCross( const Vec2f& vec, float d ){
 };
 
 void Draw2D::drawVec( const Vec2f& vec ){
-	glDisable (GL_LIGHTING);
+	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glVertex3f( 0, 0, z_layer ); glVertex3f( vec.x, vec.y, z_layer );
 	glEnd();
 };
 
 void Draw2D::drawVecInPos( const Vec2f& v, const Vec2f& pos ){
-	glDisable (GL_LIGHTING);
+	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glVertex3f( pos.x, pos.y, z_layer ); glVertex3f( pos.x+v.x, pos.y+v.y, z_layer );
 	glEnd();
@@ -39,7 +39,7 @@ void Draw2D::drawVecInPos( const Vec2f& v, const Vec2f& pos ){
 
 void Draw2D::drawBody2d( const Vec2f& rot, const Vec2f& pos, float l1, float l2 ){
     //printf( "(%3.3f,%3.3f) (%3.3f,%3.3f)\n",  rot.x, rot.y, pos.x, pos.y );
-	glDisable (GL_LIGHTING);
+	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glVertex3f( pos.x, pos.y, z_layer ); glVertex3f( pos.x+rot.x*l1, pos.y+rot.y*l1, z_layer );
 		glVertex3f( pos.x, pos.y, z_layer ); glVertex3f( pos.x+rot.y*l2, pos.y-rot.x*l2, z_layer );
@@ -47,7 +47,7 @@ void Draw2D::drawBody2d( const Vec2f& rot, const Vec2f& pos, float l1, float l2 
 };
 
 void Draw2D::drawLine( const Vec2f& p1, const Vec2f& p2 ){
-	glDisable (GL_LIGHTING);
+	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glVertex3f( p1.x, p1.y, z_layer ); glVertex3f( p2.x, p2.y, z_layer );
 	glEnd();

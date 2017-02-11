@@ -13,11 +13,12 @@ void Ship2D::draw( ){
 };
 */
 
-void Ship2D::update( double dt, const Vec3d& wind_speed  ){
+void Ship2D::update( double dt, const Vec3d& wind_speed, const Vec3d& watter_speed ){
     clean_temp( );
     //applySailForces ( {wind_speed.x, wind_speed.z} );
     applyHydroForces( {0.0,0.0} );
     move_RigidBody2D(dt);
+    sync3D();
     //printf( " pos (%3.3f,%3.3f) vel (%3.3f,%3.3f) f (%3.3f,%3.3f) \n", pos.x, pos.y,  vel.x, vel.y,  force.x, force.y  );
 }
 

@@ -31,6 +31,11 @@
 #include "Projectile3D.h"
 #include "Shooter.h"
 
+
+const int BB_Type = 1;
+
+
+
 class NavalBattle_single : public AppSDL2OGL_3D {
 	public:
     Shooter world;
@@ -52,21 +57,17 @@ class NavalBattle_single : public AppSDL2OGL_3D {
 
 NavalBattle_single::NavalBattle_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     world.init_world();
+    world.wind_speed.set(0.0);
+    world.watter_speed.set(0.0);
 
     ship1 = new Battleship();
     // ShipHull.obj exported from blender with Forward=-Y  Up=-Z
     ((Battleship*)ship1)->loadFromFile( "data/USS_Arizona.ini" );
+    ((Battleship*)ship1)->render( );
     ship1->setAngle ( 1.5 );
-
     ship1->throttle = 1.0;
 
     world.warriors25D.push_back(ship1);
-
-    ship1->shape = glGenLists(1);
-    glNewList( ship1->shape, GL_COMPILE );
-		glScalef( 10.0, 10.0, 10.0 ); Draw3D::drawMesh( *ship1->mesh );   // the ship model in obj is 1:10 smaller
-		//Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
-	glEndList();
 
 	printf( "==== INITIALIZATION DONE ====\n" );
 
@@ -82,20 +83,27 @@ void NavalBattle_single::draw(){
 
     //glEnable( GL_LIGHTING );
     //glCallList( world.defaultObjectShape );
-	glDisable ( GL_LIGHTING );
-	Draw3D::drawAxis ( 3.0f );
 
-	delay = 100;
-	world.dt    = 0.1;
+	delay          = 100;
+	world.dt       = 0.1;
 	world.perFrame = 1;
     world.update_world( );
+
+
+    glEnable( GL_LIGHTING );
 
     float glMat[16];
     if (ship1){
         printf( "drawing ship! rudder %f pos (%3.3f,%3.3f) rot (%3.3f,%3.3f) vel (%3.3f,%3.3f) \n", ship1->rudder.phi, ship1->pos.x, ship1->pos.y,  ship1->rot.x, ship1->rot.y, ship1->vel.x, ship1->vel.y );
         //glCallList(ship1->shape);
-        Draw2D::drawShape( ship1->pos, ship1->rot, ship1->shape );
+        //Draw2D::drawShape( ship1->pos, ship1->rot, ship1->shape );
         //Draw3D::drawShape( const Vec3d& pos, const Mat3d& rot, int shape );
+
+        //for( Turret* tur : ((Battleship*)ship1)->turrets ){
+        //    Draw2D::drawVecInPos( {tur->gpos.x,tur->gpos.z}, {tur->grot.c.x,tur->grot.c.z} );
+        //}
+
+        ship1->draw();
 
         /*
         glPushMatrix();
@@ -114,6 +122,9 @@ void NavalBattle_single::draw(){
         Draw3D::drawPointCross(p->pos,0.1);
     }
     */
+
+    glDisable ( GL_LIGHTING );
+	Draw3D::drawAxis ( 3.0f );
 
 };
 
@@ -166,7 +177,7 @@ void NavalBattle_single::mouseHandling( ){
 
 void NavalBattle_single::camera(){
 
-    float camMatrix[16];
+    //float camMatrix[16];
     glMatrixMode (GL_PROJECTION);
     glLoadIdentity();
     float fov = VIEW_ZOOM_DEFAULT/zoom;
@@ -174,6 +185,7 @@ void NavalBattle_single::camera(){
     glOrtho  ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
     //Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, camMat, camMatrix );
 
+    glRotatef(90,1.0,0.0,0.0);
     //glMultMatrixf( camMatrix );
     //glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
 

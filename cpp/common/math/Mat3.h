@@ -243,6 +243,33 @@ class Mat3TYPE{
 
 	// ==== generation
 
+	inline void fromDirUp( const VEC&  dir, const VEC&  up ){
+		// make orthonormal rotation matrix c=dir; b=(up-<b|c>c)/|b|; a=(c x b)/|a|;
+		c.set(dir);
+		//c.normalize(); // we assume dir is already normalized
+		b.set(up);
+		b.add_mul( c, -b.dot(c) );   //
+		b.normalize();
+		a.set_cross(b,c);
+		//a.normalize(); // we don't need this since b,c are orthonormal
+	};
+
+	inline void fromEuler( TYPE phi, TYPE theta, TYPE psi ){
+        // http://mathworld.wolfram.com/EulerAngles.html
+        TYPE ca=1,sa=1, cb=1,sb=1, cc=1,sc=1;
+        if(phi*phi    >1e-16){ ca=cos(phi);   sa=sin(phi); }
+        if(theta*theta>1e-16){ cb=cos(theta); sb=sin(theta); }
+        if(psi*psi    >1e-16){ cc=cos(psi);   sc=sin(psi); }
+        xx =  cc*ca-cb*sa*sc;
+		xy =  cc*sa-cb*ca*sc;
+		xz =  sc*sb;
+		yx = -sc*ca-cb*sa*sc;
+		yy = -sc*sa+cb*sa*sc;
+		yz =  cc*sb;
+		zx =  sb*sa;
+		zy = -sb*ca;
+		zz =  cb;
+	};
 
 	// http://www.realtimerendering.com/resources/GraphicsGems/gemsiii/rand_rotation.c
     // http://www.realtimerendering.com/resources/GraphicsGems/gemsiii/rand_rotation.c

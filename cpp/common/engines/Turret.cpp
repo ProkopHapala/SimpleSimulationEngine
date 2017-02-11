@@ -13,17 +13,20 @@ void Turret::set_direction( Vec3d dir ){
 }
 */
 
-Projectile3D * Turret::fireProjectile3D( const Vec3d& pos0, const Mat3d& rot0, const Vec3d& gvel  ){
+Projectile3D * Turret::fireProjectile3D( const Vec3d& gvel ){
     //printf( " Gun fireProjectile3D \n" );
 	Projectile3D * p = new Projectile3D();
 	//Mat3d rotmat;
 	//globalPos( pos0, rot0, p->pos  );
 	//globalRot( rot0,        rotmat );
-	p->pos.set( gpos );
-	p->vel.set_mul( grot.a, muzzle_velocity );
-	p->vel.add( gvel );
-	p->setMass( Projectile3D_mass );
+	p->pos.set    ( gpos + gun_dir*type->Rsize );
+	p->vel.set_mul( gun_dir, type->vmuzzle );
+	p->vel.add    ( gvel );
+	p->setMass    ( type->prjmass );
 	//p->update_old_pos();
     //printf( " Gun fireProjectile3D DONE \n" );
 	return p;
+
 }
+
+//void Turret::draw(){};

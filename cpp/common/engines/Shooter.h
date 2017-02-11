@@ -36,7 +36,7 @@ class Shooter {
     double gravity     = -9.81;
     double objR        = 10.0d;
 
-    Vec3d wind_speed;
+    Vec3d wind_speed,watter_speed;
 
     double projLifetime = 10.0;
 

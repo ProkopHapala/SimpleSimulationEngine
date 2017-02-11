@@ -22,9 +22,13 @@ class Object3D {
 	CollisionShape * coll      = NULL;
 	RigidBody      * controler = NULL;
 
-	inline void updateGlob( const Vec3d& pos0, const Mat3d& rot0 ){
+	inline void updateTransforms_Object3D( const Vec3d& pos0, const Mat3d& rot0 ){
         rot0.dot_to( lpos, gpos ); gpos.add( pos0 );
         grot.set_mmul( lrot, rot0 );
+	}
+
+	virtual void updateTransforms( const Vec3d& pos0, const Mat3d& rot0 ){
+        updateTransforms_Object3D( pos0, rot0 );
 	}
 
     virtual bool pointIn( const Vec3d& point ){
@@ -59,6 +63,10 @@ class Object3D {
         //gpos=lpos;
         grot=lrot;
     }
+
+    // place-holder functions
+    //virtual void draw();
+
 };
 
 #endif

@@ -97,7 +97,7 @@ void Shooter::update_warriors25D(){
         //w->force.add( {0.0,gravity,0.0} );
         //w->move( dt );
 
-        w->update( dt, wind_speed );
+        w->update( dt, wind_speed, watter_speed );
 
         ++itw;
     }
@@ -140,7 +140,7 @@ void Shooter::update_world( ){
 //        phi += omega * dt;
 //        rot.fromAngle( phi );
         update_warriors3D();
-        Shooter::update_warriors25D();
+        update_warriors25D();
         update_projectiles3D();
     }
 };

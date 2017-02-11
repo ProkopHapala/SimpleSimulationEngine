@@ -25,7 +25,7 @@ class Ship2D : public Warrior25D {
 	//virtual void loadFromFile( char const* fname ) = 0;
 	//virtual void fromString( char const* str );
 
-	virtual void update( double dt, const Vec3d& wind_speed  );
+	virtual void update( double dt, const Vec3d& wind_speed, const Vec3d& watter_speed ); // override Warrior25D
 
 	void applyHydroForces( const Vec2d& watterSpeed );
 	void applySailForces ( const Vec2d& windSpeedd  );

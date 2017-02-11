@@ -2,8 +2,9 @@
 #ifndef Battleship_h
 #define Battleship_h
 
-//#include <SDL2/SDL.h>
-//#include <SDL2/SDL_opengl.h>
+
+
+#include <vector>
 
 #include "Vec3.h"
 #include "Ship2D.h"
@@ -12,19 +13,22 @@
 #include "Turret.h"
 #include "Collisions.h"
 
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h>
+#include "Draw2D.h"
+#include "Draw3D.h"
+
 class Battleship : public Ship2D, public CollisionObject {
 	public:
     char * name;
 	int nguns;
-	Turret * turrets;
+	//Turret * turrets;
+	std::vector<TurretType*> turretTypes;
+	std::vector<Turret*>     turrets;
 
 	double life_max               = 1.0d;
 	double life                   = 1.0d;
 	double life_regeneration_rate = 2.9d;
-
-	double reload_rate   = 2.5d;
-	double gunload_left  = 1.0d;
-	double gunload_right = 1.0d;
 
 	// ==== function declarations
 
@@ -35,7 +39,10 @@ class Battleship : public Ship2D, public CollisionObject {
 	//virtual void drawHitBox( );
 	virtual bool colideWithLineSegment( const Vec3d& p1, const Vec3d& p2, Vec3d * where, Vec3d * normal );
 	virtual bool loadFromFile( char const* filename );
-    virtual void update( double dt );
+    virtual void update( double dt, const Vec3d& wind_speed, const Vec3d& watter_speed );   // override Warrior25D,Ship2D
+
+    virtual void draw();   // overtide RigidBody2D::draw()
+    virtual void render();
 
 };
 
