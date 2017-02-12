@@ -87,8 +87,10 @@ void Battleship::draw( ){
         Draw3D::drawVecInPos( tur->gun_dir*50.0, tur->gpos );
 
         //Draw3D::drawShape( {0.0,0.0,0.0}, {1.0,0.0,0.0,   0.0,1.0,0.0,  1.0,0.0,0.0}, tur->shape );
-        Draw3D::drawShape( tur->gpos, {1.0,0.0,0.0,   0.0,1.0,0.0,  0.0,0.0,1.0}, tur->shape );
-        //Draw3D::drawShape( tur->gpos, tur->grot, tur->shape );
+        //Draw3D::drawShape( tur->gpos, {1.0,0.0,0.0,   0.0,1.0,0.0,  0.0,0.0,1.0}, tur->shape );
+        Draw3D::drawShape( tur->gpos, tur->grot, tur->shape );
+
+
 
 
         //Draw2D::drawShape( pos, rot, shape );
@@ -96,6 +98,17 @@ void Battleship::draw( ){
     }
 
 }
+
+int Battleship::shoot( std::vector<Projectile3D*> projectiles ){
+    int nshots = 0;
+    for( Turret* tur : turrets ){
+        if( tur->reload >= 1.0 ){
+            nshots += tur->shoot( projectiles, {vel.x, 0.0, vel.y} );
+        }
+        if(nshots>=nsalvo) break;
+    }
+    return nshots;
+};
 
 void Battleship::update( double dt, const Vec3d& wind_speed, const Vec3d& watter_speed ){
     printf(" Battleship::update \n");

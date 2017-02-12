@@ -256,19 +256,34 @@ class Mat3TYPE{
 
 	inline void fromEuler( TYPE phi, TYPE theta, TYPE psi ){
         // http://mathworld.wolfram.com/EulerAngles.html
-        TYPE ca=1,sa=1, cb=1,sb=1, cc=1,sc=1;
-        if(phi*phi    >1e-16){ ca=cos(phi);   sa=sin(phi); }
-        if(theta*theta>1e-16){ cb=cos(theta); sb=sin(theta); }
-        if(psi*psi    >1e-16){ cc=cos(psi);   sc=sin(psi); }
+        TYPE ca=1,sa=0, cb=1,sb=0, cc=1,sc=0;
+        //if(phi*phi    >1e-16){ ca=cos(phi);   sa=sin(phi); }
+        //if(theta*theta>1e-16){ cb=cos(theta); sb=sin(theta); }
+        //if(psi*psi    >1e-16){ cc=cos(psi);   sc=sin(psi); }
+        ca=cos(phi);   sa=sin(phi);
+        cb=cos(theta); sb=sin(theta);
+        cc=cos(psi);   sc=sin(psi);
+        /*
         xx =  cc*ca-cb*sa*sc;
-		xy =  cc*sa-cb*ca*sc;
+		xy =  cc*sa+cb*ca*sc;
 		xz =  sc*sb;
-		yx = -sc*ca-cb*sa*sc;
-		yy = -sc*sa+cb*sa*sc;
+		yx = -sc*ca-cb*sa*cc;
+		yy = -sc*sa+cb*ca*cc;
 		yz =  cc*sb;
 		zx =  sb*sa;
 		zy = -sb*ca;
 		zz =  cb;
+		*/
+
+        xx =  cc*ca-cb*sa*sc;
+		xy =  cc*sa+cb*ca*sc;
+		xz =  sc*sb;
+		zx = -sc*ca-cb*sa*cc;
+		zy = -sc*sa+cb*ca*cc;
+		zz =  cc*sb;
+		yx =  sb*sa;
+		yy = -sb*ca;
+		yz =  cb;
 	};
 
 	// http://www.realtimerendering.com/resources/GraphicsGems/gemsiii/rand_rotation.c
@@ -313,6 +328,12 @@ class Mat3TYPE{
         yx = Vy * Sx + st;   yy = Vy * Sy - ct;   yz = Vy * Vz;
         zx = Vz * Sx;        zy = Vz * Sy;        zz = 1.0 - z;   // This equals Vz * Vz - 1.0
 	}
+
+	void print(){
+        printf( " %f %f %f \n", ax, ay, az );
+        printf( " %f %f %f \n", bx, by, bz );
+        printf( " %f %f %f \n", cx, cy, cz );
+    }
 
 };
 

@@ -31,7 +31,7 @@ void Ship2D::applyHydroForces( const Vec2d& watterSpeed ){
 	rudder.assertAeroForce( *this, lvel, 1000.0 );
 
     double thrust = getPropelerThrust( 3.0 );
-    force.add_mul( rot, thrust );   // printf( " f propel (%3.3f,%3.3f) \n", force.x, force.y  );
+    force.add_mul( rot, thrust * throttle );   // printf( " f propel (%3.3f,%3.3f) \n", force.x, force.y  );
 
 }
 

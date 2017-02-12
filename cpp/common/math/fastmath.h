@@ -52,6 +52,17 @@ inline double x2grid( double x, double xstep, double invXstep, int& ix ){
     return x - ix*xstep;
 }
 
+inline double dangle(double da){
+    if      (da> M_PI){ return da - 2*M_PI; }
+    else if (da<-M_PI){ return da + 2*M_PI; }
+    return da;
+}
+
+inline double clamp_abs( double x, double xmax ){
+    if( x>0 ){ if(x>xmax) return xmax; }else{ if(x<-xmax) return -xmax; };
+    return x;
+}
+
 
 #include "gonioApprox.h"
 

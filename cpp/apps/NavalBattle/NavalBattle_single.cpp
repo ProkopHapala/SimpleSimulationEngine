@@ -34,14 +34,14 @@
 
 const int BB_Type = 1;
 
-
-
 class NavalBattle_single : public AppSDL2OGL_3D {
 	public:
     Shooter world;
     double dvel = 10.0;
 
     Ship2D *ship1 = NULL;
+
+    Vec3d crosshair;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -64,8 +64,8 @@ NavalBattle_single::NavalBattle_single( int& id, int WIDTH_, int HEIGHT_ ) : App
     // ShipHull.obj exported from blender with Forward=-Y  Up=-Z
     ((Battleship*)ship1)->loadFromFile( "data/USS_Arizona.ini" );
     ((Battleship*)ship1)->render( );
-    ship1->setAngle ( 1.5 );
-    ship1->throttle = 1.0;
+    ship1->setAngle ( 1.0 );
+    ship1->throttle = 0.0;
 
     world.warriors25D.push_back(ship1);
 
@@ -84,11 +84,12 @@ void NavalBattle_single::draw(){
     //glEnable( GL_LIGHTING );
     //glCallList( world.defaultObjectShape );
 
+    Draw3D::drawPointCross( crosshair , 10.0 );
+
 	delay          = 100;
 	world.dt       = 0.1;
 	world.perFrame = 1;
     world.update_world( );
-
 
     glEnable( GL_LIGHTING );
 
@@ -136,8 +137,11 @@ void NavalBattle_single::keyStateHandling( const Uint8 *keys ){
        //if( keys[ SDL_SCANCODE_A ] ){ ship1->vel.add_mul( camMat.a, -0.1 ); }
        //if( keys[ SDL_SCANCODE_D ] ){ ship1->vel.add_mul( camMat.a, +0.1 ); }
 
-        if( keys[ SDL_SCANCODE_LEFT  ] ){ ship1->rudder.setAngle( ship1->rudder.phi + 0.01 );  }
-        if( keys[ SDL_SCANCODE_RIGHT ] ){ ship1->rudder.setAngle( ship1->rudder.phi - 0.01 );  }
+        //if( keys[ SDL_SCANCODE_LEFT  ] ){ ship1->rudder.setAngle( ship1->rudder.phi + 0.01 );  }
+        //if( keys[ SDL_SCANCODE_RIGHT ] ){ ship1->rudder.setAngle( ship1->rudder.phi - 0.01 );  }
+
+        if( keys[ SDL_SCANCODE_LEFT  ] ){ ship1->setAngle( ship1->phi + 0.01 );  }
+        if( keys[ SDL_SCANCODE_RIGHT ] ){ ship1->setAngle( ship1->phi - 0.01 );  }
 
         //if( keys[ SDL_SCANCODE_SPACE ] ){ warrior1->vel.mul( 0.9 ); }
     }
@@ -157,7 +161,11 @@ void NavalBattle_single::keyStateHandling( const Uint8 *keys ){
 
 void NavalBattle_single::mouseHandling( ){
     int mx,my;
-    Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
+    //Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
+    Uint32 buttons = SDL_GetMouseState(&mx, &my);
+    crosshair.set((mx-WIDTH*0.5)*(2*zoom/HEIGHT),0.0,(my-HEIGHT*0.5)*(2*zoom/HEIGHT));
+    ((Battleship*)ship1)->aim( crosshair, world.gravity );
+
 
     /*
     camPhi   += mx*0.001;

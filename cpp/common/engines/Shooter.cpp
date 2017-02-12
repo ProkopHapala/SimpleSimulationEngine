@@ -99,6 +99,8 @@ void Shooter::update_warriors25D(){
 
         w->update( dt, wind_speed, watter_speed );
 
+        if(w->trigger) w->shoot(projectiles);
+
         ++itw;
     }
 

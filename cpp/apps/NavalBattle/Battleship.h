@@ -22,6 +22,7 @@ class Battleship : public Ship2D, public CollisionObject {
 	public:
     char * name;
 	int nguns;
+	int nsalvo = 1;
 	//Turret * turrets;
 	std::vector<TurretType*> turretTypes;
 	std::vector<Turret*>     turrets;
@@ -43,6 +44,14 @@ class Battleship : public Ship2D, public CollisionObject {
 
     virtual void draw();   // overtide RigidBody2D::draw()
     virtual void render();
+
+    void aim( const Vec3d& target, double G ){
+        for( Turret* tur : turrets ){
+            tur->aim( target, G, phi );
+        }
+    }
+
+    virtual int shoot( std::vector<Projectile3D*>  projectiles ); // override Warrior25D,Ship2D
 
 };
 
