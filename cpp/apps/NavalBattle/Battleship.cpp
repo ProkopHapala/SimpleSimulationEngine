@@ -99,10 +99,11 @@ void Battleship::draw( ){
 
 }
 
-int Battleship::shoot( std::vector<Projectile3D*> projectiles ){
+int Battleship::shoot( std::vector<Projectile3D*>& projectiles ){
     int nshots = 0;
     for( Turret* tur : turrets ){
         if( tur->reload >= 1.0 ){
+            printf("reload rate %f\n", tur->type->reload_rate );
             nshots += tur->shoot( projectiles, {vel.x, 0.0, vel.y} );
         }
         if(nshots>=nsalvo) break;

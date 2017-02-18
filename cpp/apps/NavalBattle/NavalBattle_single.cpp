@@ -124,6 +124,10 @@ void NavalBattle_single::draw(){
     }
     */
 
+    for(Projectile3D * p : world.projectiles){
+        Draw3D::drawLine( p->pos, p->old_pos );
+    }
+
     glDisable ( GL_LIGHTING );
 	Draw3D::drawAxis ( 3.0f );
 
@@ -244,6 +248,16 @@ void NavalBattle_single::drawHUD(){
     glDisable ( GL_LIGHTING );
     glColor3f( 0.0f, 1.0f, 0.0f );
     drawCrosshair( 10 );
+
+    if (ship1){
+        int i=0;
+        for(Turret* tur : ((Battleship*)ship1)->turrets){
+            Draw2D::drawRectangle({0.0,i},{tur->reload*100,i+1},true);
+            i++;
+        }
+        Draw2D::drawLine({100,0},{100,i});
+    }
+
 }
 
 // ===================== MAIN

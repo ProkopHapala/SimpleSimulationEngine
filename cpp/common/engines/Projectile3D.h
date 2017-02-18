@@ -11,10 +11,15 @@ class Projectile3D : public PointBody {
     Vec3d  old_pos;
     double time=0;
 
-    virtual void update( double dt ){
+    inline void update_Projectile3D( double dt ){
         time   += dt;
         old_pos.set(pos);
         move_PointBody(dt);
+    }
+
+    virtual void update( double dt ){
+        update_Projectile3D( dt );
+
     };
 
     // TO DO : would be usefull if material of target specified

@@ -40,7 +40,7 @@ class Warrior25D : public RigidBody2D {
     virtual void fromString( char const* str );
     virtual void update( double dt, const Vec3d& wind_speed, const Vec3d& watter_speed ) = 0;
 
-    virtual int shoot( std::vector<Projectile3D*>  projectiles ){};
+    virtual int shoot( std::vector<Projectile3D*>& projectiles ){};
 
 };
 

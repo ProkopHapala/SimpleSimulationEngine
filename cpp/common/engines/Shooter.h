@@ -35,6 +35,7 @@ class Shooter {
     double landDrag    = -0.5d;
     double gravity     = -9.81;
     double objR        = 10.0d;
+    double ground_height = 0.0;
 
     Vec3d wind_speed,watter_speed;
 

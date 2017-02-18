@@ -13,7 +13,7 @@ void Turret::set_direction( Vec3d dir ){
 }
 */
 
-int Turret::shoot( std::vector<Projectile3D*>  projectiles, const Vec3d& gvel ){
+int Turret::shoot( std::vector<Projectile3D*>& projectiles, const Vec3d& gvel ){
     //printf( " Gun fireProjectile3D \n" );
 	Projectile3D * p = new Projectile3D();
 	//Mat3d rotmat;
@@ -29,6 +29,8 @@ int Turret::shoot( std::vector<Projectile3D*>  projectiles, const Vec3d& gvel ){
 
 	printf( "shooting projectile %i (%f,%f,%f) (%f,%f,%f) \n", projectiles.size(), p->pos.x,p->pos.y,p->pos.z,   p->vel.x,p->vel.y,p->vel.z );
 	projectiles.push_back(p);
+
+	reload = 0.0;
 	return 1;
 
 }

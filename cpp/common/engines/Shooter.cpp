@@ -107,13 +107,18 @@ void Shooter::update_warriors25D(){
 }
 
 void Shooter::update_projectiles3D(){
+    printf( "update_projectiles3D %i\n", projectiles.size() );
         auto it_proj = projectiles.begin();
         while( it_proj != projectiles.end() ) {
             Projectile3D * proj = *it_proj;
 
             //proj ->update_old_pos(    );
             //proj ->evalForce     (    );
-            proj ->move          ( dt );
+            proj ->clean_temp();
+            proj ->force.add( {0.0,gravity,0.0});
+            proj ->update_Projectile3D( dt );
+
+            printf( "prj (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f) %f\n", proj->pos.x, proj->pos.y, proj->pos.z,    proj->old_pos.x, proj->old_pos.y, proj->old_pos.z,   proj->time );
 
             Vec3d hRay,normal;
             hRay.set_sub( proj->pos, proj->old_pos );
@@ -122,13 +127,17 @@ void Shooter::update_projectiles3D(){
             bool hitted = false;
             //hitted |= proj->check_hit_ground( );
             //hitted |= proj->check_hit_vector<Frigate2D>( warriors );
-
             for( o : objects ){
                 o->ray( proj->old_pos, hRay, &normal );
                 if (hitted) break;
             }
+
+            if( proj->pos.y < ground_height ){
+                hitted = true;
+            }
+
             //if( hitted ){
-            if( proj->time > projLifetime ){
+            if( hitted || (proj->time > projLifetime) ){
                 it_proj = projectiles.erase( it_proj );
                 delete proj;
             }else{

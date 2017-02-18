@@ -34,8 +34,8 @@ class TurretType{
         printf(      "%s %lf %lf %i %lf %lf %lf %lf %lf\n", meshname,  Rsize,  mass,  ngun,   prjmass,  vmuzzle,  reload_rate,  vphi,  vtheta );
 
         reload_rate = 1/reload_rate;
-        vphi        = M_PI*vphi/180.0;
-        vtheta      = M_PI*vtheta/180.0;
+        vphi        = vphi*DEG2RAD;
+        vtheta      = vtheta*DEG2RAD;
 
         Mesh * mesh_ = new Mesh();
         int res = mesh_->fromFileOBJ( meshname );
@@ -64,6 +64,8 @@ class Turret : public Object3D {
     virtual void fromString( char const* str ){
         sscanf( str, "%i %lf %lf %lf %lf %lf %lf %lf\n", &kind,  &lpos.x, &lpos.y, &lpos.z,    &phimin, &phimax,  &thetamin, &thetamax );
         printf(      "%i %lf %lf %lf %lf %lf %lf %lf\n",  kind,   lpos.x,  lpos.y,  lpos.z,     phimin,  phimax,   thetamin,  thetamax );
+        thetamin *= DEG2RAD;  thetamax *= DEG2RAD;
+        phimin   *= DEG2RAD;  phimax   *= DEG2RAD;
         phi   = 0.5*(phimin+phimax);
         theta = 0.5*(thetamin+thetamax);
     }
@@ -72,6 +74,8 @@ class Turret : public Object3D {
         if(reload<1) reload += dt*type->reload_rate;
         phi   += clamp_abs( dangle( phi_target-phi ),   dt*type->vphi   );
         theta += clamp_abs( theta_target-theta, dt*type->vtheta );
+
+        //printf( "theta_target %f theta %f \n", theta_target, theta );
 	};
 
     virtual void updateTransforms( const Vec3d& pos0, const Mat3d& rot0 ){
@@ -107,14 +111,14 @@ class Turret : public Object3D {
         if(x2<x1)x1=x2;
         theta_target = atan( x1 );
 
-        printf( "  x1 %f x2 %f theta_target %f \n", x1, x2, theta_target );
+        //printf( "  x1 %f x2 %f theta_target %f \n", x1, x2, theta_target );
 	}
 
 
 
 	//void   set_direction( Vec3d dir );
 	//Projectile3D * fireProjectile3D( const Vec3d& gvel );
-	int shoot( std::vector<Projectile3D*>  projectiles, const Vec3d& gvel );
+	int shoot( std::vector<Projectile3D*>& projectiles, const Vec3d& gvel );
 
 	//virtual void draw();
 

@@ -51,7 +51,7 @@ class Battleship : public Ship2D, public CollisionObject {
         }
     }
 
-    virtual int shoot( std::vector<Projectile3D*>  projectiles ); // override Warrior25D,Ship2D
+    virtual int shoot( std::vector<Projectile3D*>& projectiles ); // override Warrior25D,Ship2D
 
 };
 
