@@ -120,6 +120,7 @@ class Quat4TYPE {
     };
 
 
+
 // ======= Conversion : Angle & Axis
 
 	inline void fromAngleAxis( TYPE angle, const VEC& axis ){
@@ -348,6 +349,36 @@ class Quat4TYPE {
 		z =  hx*y_ - hy*x_ + hz*w_ + ca*z_;
 		w = -hx*x_ - hy*y_ - hz*z_ + ca*w_;
 	};
+
+	//  QUAT -> VEC
+
+    inline void rotate(VEC& v){
+        // rotate vector by quternion
+        // should be optimized later
+        // http://gamedev.stackexchange.com/questions/28395/rotating-vector3-by-a-quaternion
+        QUAT qv; qv.set(v.x,v.y,v.z);
+        qmul  ( qv);
+        qmul_T( qv );
+        v.set(qv.x,qv.y,qv.z);
+    }
+
+    inline void dirFw  ( VEC& result)  const  {
+        result.zx =     2 * ( x*z - y*w );
+		result.zy =     2 * ( y*z + x*w );
+		result.zz = 1 - 2 * ( x*x + y*y );
+    }
+
+    inline void dirUp  ( VEC& result)  const  {
+        result.x =     2 * ( x*y + z*w );
+		result.y = 1 - 2 * ( x*x + z*z );
+		result.z =     2 * ( y*z - x*w );
+    }
+
+    inline void dirLeft( VEC& result)  const  {
+        result.xx = 1 - 2 * ( y*y + z*z );
+		result.xy =     2 * ( x*y - z*w );
+		result.xz =     2 * ( x*z + y*w );
+    }
 
 
 	inline void toMatrix( MAT& result) const {
