@@ -162,6 +162,25 @@ extern "C"{
         thisApp->GL_LOCK = false;
         return thisApp->displayLists.size()-1;
     }
+    
+    int vectors( int n, double * vecs, double * poss, uint32_t icolor ){
+        if( !thisApp->wait_LOCK(10,5) ) return -1; thisApp->GL_LOCK = true;
+        int ilist = glGenLists(1);
+        glNewList(ilist, GL_COMPILE);
+            glDisable (GL_LIGHTING);
+            Draw::setRGBA(icolor);
+            for(int i=0; i<n; i++){
+                int i3 = i*3;
+                glBegin(GL_LINES);
+                glVertex3f((float) poss[i3],           (float) poss[i3+1],             (float) poss[i3+2]             );
+                glVertex3f((float)(poss[i3]+vecs[i3]),(float)(poss[i3+1]+vecs[i3+1]),(float)(poss[i3+2]+vecs[i3+2]));
+                glEnd();
+           };
+        glEndList();
+        thisApp->displayLists.push_back( ilist );
+        thisApp->GL_LOCK = false;
+        return thisApp->displayLists.size()-1;
+    }
 
     int triangles( int ntris, int * tris, double * points_, uint32_t icolor ){
         if( !thisApp->wait_LOCK(10,5) ) return -1; thisApp->GL_LOCK = true;

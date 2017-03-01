@@ -54,6 +54,12 @@ lib.lines.restype    = c_int
 def lines( edges, points, icolor=default_icolor ):
 	return lib.lines( len(edges), edges, points, icolor )    
 	
+#int vectors( int n, double * vecs, double * poss, uint32_t icolor )
+lib.vectors.argtypes   = [c_int, array2d, array2d, c_int ]
+lib.vectors.restype    = c_int
+def vectors( vecs, poss, icolor=default_icolor ):
+	return lib.vectors( len(vecs), vecs, poss, icolor ) 
+	
 #int triangles( int ntris, int * tris, double * points_ )
 lib.triangles.argtypes   = [c_int, array2i, array2d, c_int ]
 lib.triangles.restype    = c_int
