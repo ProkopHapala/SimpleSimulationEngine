@@ -53,7 +53,10 @@ extern "C"{
         world.makeFF    ( );
         world.optimizer->initOpt( 0.05, 0.15 );
     }
-
+    
+    double * getOptPointer_pos(){ for(int i=0; i<world.optimizer->n; i++){ printf("%i %f \n",i,world.optimizer->pos[i]);}; return world.optimizer->pos; }
+    int      getOptSize       (){ return world.optimizer->n;   }
+    
     double relax( int niter, double fmaxConverg ){
         int iter;
         for(iter=0; iter<niter; iter++){
@@ -74,6 +77,10 @@ extern "C"{
         world.exportAtomsXYZ( fout, str );
         fclose(fout);
     }
+    
+    int getNAtoms() { return world.getNAtoms(); };    
+    int getAtomPos  ( double * buff ){ return world.getAtomPos  ( (Vec3d*)buff ); };
+    int getAtomTypes( int    * buff ){ return world.getAtomTypes(         buff ); };
 
     void testMultipole( int order,
         int np, double * ps_, double * Qs,

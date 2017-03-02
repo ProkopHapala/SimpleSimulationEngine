@@ -47,8 +47,47 @@ lib.exportAtoms.argtypes   = [ c_char_p ]
 lib.exportAtoms.restype    = None
 def exportAtoms( fname ):
     return lib.exportAtoms( fname )
-	
 
+#int getNAtoms() {
+lib.getNAtoms.argtypes   = None
+lib.getNAtoms.restype    = c_int
+def getNAtoms( ):
+    return lib.getNAtoms()
+
+#int getAtomPos  ( double * buff ){
+lib.getAtomPos.argtypes   = [ array2d ]
+lib.getAtomPos.restype    = c_int
+def getAtomPos( arr ):
+    return lib.getAtomPos( arr )
+
+#int getAtomTypes( int    * buff ){
+lib.getAtomTypes.argtypes   = [ array1i ]
+lib.getAtomTypes.restype    = c_int
+def getAtomTypes( arr ):
+    return lib.getAtomTypes( arr )
+    
+def getAtoms():
+    n     = getNAtoms( )
+    poss  = np.zeros( (n,3) )
+    types = np.zeros(  n, dtype=np.int32 )
+    getAtomPos(poss)
+    getAtomTypes(types)
+    return types, poss
+    
+lib.getOptPointer_pos.argtypes   = [ ]
+lib.getOptPointer_pos.restype    = ctypes.c_void_p
+
+lib.getOptSize.argtypes   = [ ]
+lib.getOptSize.restype    = ctypes.c_int
+
+def getInstancePointer( ):
+    # http://stackoverflow.com/questions/23930671/how-to-create-n-dim-numpy-array-from-a-pointer
+	p   = lib.getOptPointer_pos()
+	p   = ctypes.cast(p, ctypes.POINTER( ctypes.c_double) )
+	n   = lib.getOptSize       ()
+	arr = np.ctypeslib.as_array(p,shape=(n,))
+	return arr 
+	
 # ---- testing	
 
 # void initComparator( int n, double * points ){

@@ -78,8 +78,12 @@ class MolecularWorld{
 	int  loadSplines   ( char const* fileName );
 	bool fromDir       ( char const* dirName, char const* atom_fname, char const* mol_fname, char const* instance_fname );
 
-    int  saveInstances ( char const* fileName );
+    int  getNAtoms();
+    int  getAtomTypes  ( int   * buff );
+    int  getAtomPos    ( Vec3d * buff );
+    
 	int  exportAtomsXYZ( FILE * pFile, const char * comment );
+	int  saveInstances ( char const* fileName );
 
     inline MolecularWorld(){};
 	//MolecularWorld( char const* filename, MoleculeType * molTypeList );

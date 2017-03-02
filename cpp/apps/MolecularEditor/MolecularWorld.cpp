@@ -647,6 +647,61 @@ bool MolecularWorld::fromDir( char const* dirName, char const* atom_fname, char 
     return true;
 }
 
+
+
+
+int MolecularWorld::getNAtoms(){
+    int natoms = 0;
+    for (int i=0; i<nmols; i++){ natoms += instances[i]->natoms; }
+    return natoms;
+}
+
+int MolecularWorld::getAtomPos( Vec3d * buff ){
+    //int natoms = getNAtoms();
+    int iatom  = 0;
+    for (int i=0; i<nmols; i++){
+        MoleculeType * moli = instances[i];
+        int npi = moli->natoms;
+        transformPoints( pos[i], rot[i], npi, moli->xyzs, Tps_i );
+        for (int j=0; j<npi; j++){
+            buff[iatom].set( Tps_i[j].x, Tps_i[j].y, Tps_i[j].z );
+            iatom++;
+        }
+    }
+    return iatom;
+}
+
+int MolecularWorld::getAtomTypes( int * buff ){
+    //int natoms = getNAtoms();
+    int iatom  = 0;
+    for (int i=0; i<nmols; i++){
+        MoleculeType * moli = instances[i];
+        int npi = moli->natoms;
+        for (int j=0; j<npi; j++){
+            buff[iatom] = moli->atypes[j];
+            iatom++;
+        }
+    }
+    return iatom;
+}
+
+int MolecularWorld::exportAtomsXYZ(  FILE * pFile, const char * comment ){
+    //printf( "exportAtomsXYZ \n");
+    int natoms = getNAtoms();
+    fprintf(pFile, "%i\n", natoms  );
+    fprintf(pFile, "%s\n", comment );
+    for (int i=0; i<nmols; i++){
+        MoleculeType * moli = instances[i];
+        int npi = moli->natoms;
+        transformPoints( pos[i], rot[i], npi, moli->xyzs, Tps_i );
+        for (int j=0; j<npi; j++){
+            fprintf( pFile, " %s %3.6f %3.6f %3.6f\n", atomTypes.names[moli->atypes[j]], Tps_i[j].x, Tps_i[j].y, Tps_i[j].z );
+            //printf( "DEBUG %s %3.6f %3.6f %3.6f\n", atomTypes.names[moli->atypes[j]], Tps_i[j].x, Tps_i[j].y, Tps_i[j].z );
+        }
+    }
+    return natoms;
+}
+
 int  MolecularWorld::saveInstances( char const* fileName ){
     //printf(" loading molecular instances from: >>%s<<\n", fileName );
     FILE * pFile;
@@ -669,23 +724,8 @@ int  MolecularWorld::saveInstances( char const* fileName ){
     return nmols;
 };
 
-int MolecularWorld::exportAtomsXYZ(  FILE * pFile, const char * comment ){
-    //printf( "exportAtomsXYZ \n");
-    int natoms = 0;
-    for (int i=0; i<nmols; i++){ natoms += instances[i]->natoms; }
-    fprintf(pFile, "%i\n", natoms  );
-    fprintf(pFile, "%s\n", comment );
-    for (int i=0; i<nmols; i++){
-        MoleculeType * moli = instances[i];
-        int npi = moli->natoms;
-        transformPoints( pos[i], rot[i], npi, moli->xyzs, Tps_i );
-        for (int j=0; j<npi; j++){
-            fprintf( pFile, " %s %3.6f %3.6f %3.6f\n", atomTypes.names[moli->atypes[j]], Tps_i[j].x, Tps_i[j].y, Tps_i[j].z );
-            //printf( "DEBUG %s %3.6f %3.6f %3.6f\n", atomTypes.names[moli->atypes[j]], Tps_i[j].x, Tps_i[j].y, Tps_i[j].z );
-        }
-    }
-    return natoms;
-}
+
+
 
 /*
 MolecularWorld::MolecularWorld( int nmols_, MoleculeType ** molecules_ ){
