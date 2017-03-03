@@ -110,8 +110,6 @@ int MolecularWorld::applyBondForce( ){
     return nLinkers;
 }
 
-
-
 int MolecularWorld::checkBonds( double flmin, double flmax ){
     printf("checking bond lengths\n");
     for( int ib=0; ib<nBonds; ib++ ){
@@ -412,6 +410,134 @@ int MolecularWorld::nonBondingFroces_buf( ){
     return nInteractions_;
 }
 
+uint32_t MolecularWorld::atom2map( int i, int ix, int iy, int iz ){
+    uint32_t key = pack32(ix,iy,iz,0);
+    atomsMap.insert( {key,i} );
+    return key;
+}
+
+int MolecularWorld::atom2map( int i, double r ){
+
+/*
+    for( int i=0; i<10; i++ ){
+
+        uint8_t x = rand() & 0xFF;
+        uint8_t y = rand() & 0xFF;
+        uint8_t z = rand() & 0xFF;
+        uint8_t w = rand() & 0xFF;
+
+        uint32_t ind = pack32( x,y,z,w );
+
+        uint8_t x_,y_,z_,w_;
+        unpack32( ind,  x_,y_,z_,w_ );
+        printf( " (%i,%i,%i,%i)    %li  (%i,%i,%i,%i) \n",  x,y,z,w,   ind, x_,y_,z_,w_ );
+
+        uint16_t x = rand() & 0xFFFF;
+        uint16_t y = rand() & 0xFFFF;
+
+        uint32_t ind = pack32( x,y );
+
+        uint16_t x_,y_;
+        unpack32( ind, x_,y_ );
+        printf( " (%i,%i)    %li  (%i,%i) \n",  x,y,   ind, x_,y_ );
+    }
+*/
+
+    Vec3d pos = atoms_pos[i];
+    Vec3d dpos;
+    Vec3i ipos;
+    ruler.pos2index( pos, dpos, ipos );
+    // insertSphere( pos, ind );
+
+    atom2map( i, ipos.x, ipos.y, ipos.z );
+    int dix=0,diy=0,diz=0;
+    double dr2x=0,dr2y=0,dr2z=0;
+    double mr = 1-r;
+    if     (  dpos.x < r  ){ atom2map( i, ipos.x-1, ipos.y  , ipos.z   );  dix=-1; dr2x = sq(  dpos.x); }
+    else if(  dpos.x > mr ){ atom2map( i, ipos.x+1, ipos.y  , ipos.z   );  dix=+1; dr2x = sq(1-dpos.x); }
+    if     (  dpos.y < r  ){ atom2map( i, ipos.x  , ipos.y-1, ipos.z   );  diy=-1; dr2y = sq(  dpos.y); }
+    else if(  dpos.y > mr ){ atom2map( i, ipos.x  , ipos.y+1, ipos.z   );  diy=+1; dr2y = sq(1-dpos.y); }
+    if     (  dpos.z < r  ){ atom2map( i, ipos.x  , ipos.y  , ipos.z-1 );  diz=-1; dr2z = sq(  dpos.z); }
+    else if(  dpos.z > mr ){ atom2map( i, ipos.x  , ipos.y  , ipos.z+1 );  diz=+1; dr2z = sq(1-dpos.z); }
+    double r2 = r*r;
+    if ( dr2x+dr2y      < r2 ){ atom2map( i, ipos.x+dix, ipos.y+diy, ipos.z     ); }
+    if ( dr2x+dr2z      < r2 ){ atom2map( i, ipos.x+dix, ipos.y    , ipos.z+diz ); }
+    if ( dr2y+dr2z      < r2 ){ atom2map( i, ipos.x    , ipos.y+diy, ipos.z+diz ); }
+    if ( dr2x+dr2y+dr2z < r2 ){ atom2map( i, ipos.x+dix, ipos.y+diy, ipos.z+diz ); }
+
+    //if( (dix!=0)&&(diy!=0) ){ insert( o, ipos.x+dix, ipos.y+diy ); }
+    //printf( " %1.3f %1.3f  (%1.3f,%1.3f) (%i,%i) %1.3f \n", r, mr, dpos.x,dpos.y, dix, diy, dr2 );
+
+}
+
+int MolecularWorld::atoms2map( ){
+    getAtomPos( atoms_pos );
+    atomsMap.clear();
+    for(int i=0; i<nAtoms; i++){
+        atom2map( i, Rcollision );
+    }
+}
+
+
+int MolecularWorld::collisionForce( int imol, const Vec3d& pos, const Quat4d& qrot,  Vec3d& fpos, Quat4d& frot ){
+    MoleculeType * molj = instances[imol];
+    int npj = molj->natoms;
+    transformPoints( pos, qrot, npj, molj->xyzs, Tps_j );
+
+    double R2 = Rcollision*Rcollision;
+
+    for(int jatom=0; jatom<npj; jatom++ ){
+        Vec3d& pj = Tps_j[jatom];
+        Vec3i ipos; Vec3d dpos;
+        ruler.pos2index( pos, dpos, ipos );
+        //boxbuf.pos2box(pj,ipos,dpos);
+        //if( !boxbuf.validIndex( ipos ) ) continue;
+
+        //int jtyp  = molj->atypes[jatom];
+
+        uint32_t key = pack32(ipos.x,ipos.y,ipos.z,0);
+
+        auto its = atomsMap.equal_range( key );
+        for (auto it = its.first; it != its.second; ++it) {
+            int iatom = it->second;
+
+            if ( imol == atoms_mol[iatom] ) continue;
+
+            Vec3d dR;
+            dR.set_sub( atoms_pos[iatom], pj );
+
+            double r2 = dR.norm2();
+            if( r2 > R2 ) continue;
+            //break;
+
+            // there we may compute some force
+            //int ityp  = moli->atypes[iatom];
+            //Rijmax = ( atomTypes.vdwRs[ityp] +  atomTypes.vdwRs[ityp] ) * Rcolfactor;
+
+            fs_j[jatom].add_mul( dR, 1.0/r2 );
+
+        }
+    }
+
+    forceFromPoints( npj, molj->xyzs, fs_j, qrot, fpos, frot );
+}
+
+
+/*
+double MolecularWorld::checkOverlap(){
+    // check if trial geometry is feasible (does not overlap)
+    // simples is just to compute forces (especially repulsive force)
+    // this can be optimized by several ways:
+    //    - Compute
+    //    - Evaluate just one moved molecule against all other
+    int nInteractions += nonBondingFroces_bbox();
+}
+
+double MolecularWorld::TryMoveAllMol( double ){}
+
+double MolecularWorld::TryMoveSingleMol( ){}
+*/
+
 void MolecularWorld::assembleForces( ){
     nInteractions = 0;
     // points
@@ -496,6 +622,26 @@ void MolecularWorld::initTPoints(){
     fs_i  = new Vec3d[nptmp];
     fs_j  = new Vec3d[nptmp];
     //atypeList = moleculeTypes[0]->typeList;
+}
+
+
+void MolecularWorld::initAtoms(){
+    // point temporary
+    nAtoms = getNAtoms();
+	if(atoms_type) delete atoms_type; atoms_type  = new int  [nAtoms];
+	if(atoms_mol)  delete atoms_mol;  atoms_mol   = new int  [nAtoms];
+	if(atoms_pos)  delete atoms_pos;  atoms_pos   = new Vec3d[nAtoms];
+
+	int iatom  = 0;
+    for (int i=0; i<nmols; i++){
+        MoleculeType * moli = instances[i];
+        int npi = moli->natoms;
+        for (int j=0; j<npi; j++){
+            atoms_type[iatom] = moli->atypes[j];
+            atoms_mol [iatom] = i;
+            iatom++;
+        }
+    }
 }
 
 int MolecularWorld::loadMolTypes( char const* dirName, char const* fileName ){
@@ -643,6 +789,7 @@ bool MolecularWorld::fromDir( char const* dirName, char const* atom_fname, char 
     //fclose (pFile);
     //printf( "PhysicalSystem 3 \n" );
     initTPoints();
+    initAtoms  ();
     //printf( "PhysicalSystem 4 \n" );
     return true;
 }

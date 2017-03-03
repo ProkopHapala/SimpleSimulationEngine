@@ -53,10 +53,10 @@ extern "C"{
         world.makeFF    ( );
         world.optimizer->initOpt( 0.05, 0.15 );
     }
-    
+
     double * getOptPointer_pos(){ for(int i=0; i<world.optimizer->n; i++){ printf("%i %f \n",i,world.optimizer->pos[i]);}; return world.optimizer->pos; }
     int      getOptSize       (){ return world.optimizer->n;   }
-    
+
     double relax( int niter, double fmaxConverg ){
         int iter;
         for(iter=0; iter<niter; iter++){
@@ -77,10 +77,19 @@ extern "C"{
         world.exportAtomsXYZ( fout, str );
         fclose(fout);
     }
-    
-    int getNAtoms() { return world.getNAtoms(); };    
+
+    int getNAtoms() { return world.getNAtoms(); };
     int getAtomPos  ( double * buff ){ return world.getAtomPos  ( (Vec3d*)buff ); };
     int getAtomTypes( int    * buff ){ return world.getAtomTypes(         buff ); };
+
+    int atoms2map(){world.atoms2map();};
+
+    double collisionForce( int imol, double * pose, double * fpose ){
+        world.collisionForce(  imol,  *((Vec3d*)pose), *((Quat4d*)(pose+3)),  *((Vec3d*)fpose), *((Quat4d*)(fpose+3)) );
+        double ftot = 0;
+        for(int i=0; i<7; i++){  double f = fpose[i]; ftot+=f*f; }
+        return ftot;
+    }
 
     void testMultipole( int order,
         int np, double * ps_, double * Qs,

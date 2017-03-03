@@ -7,6 +7,8 @@
 #include "quaternion.h"
 #include "DynamicOpt.h"
 #include "TileBuffer3D.h"
+#include "Grid3D.h"
+#include "CubicRuler.h"
 
 #include "radial_splines.h"
 #include "AtomTypes.h"
@@ -50,6 +52,14 @@ class MolecularWorld{
 	Vec3d  *Tps_i=NULL, *Tps_j=NULL;
 	Vec3d  *fs_i =NULL,  *fs_j=NULL;
 
+	//  global atomic positions - will be more efficient for fiture
+
+	int     nAtoms;
+	int   * atoms_type = NULL;  // index of atomType
+	int   * atoms_mol  = NULL;   // index of molecular instance to which the atom belongs
+	Vec3d * atoms_pos  = NULL;
+
+
 	//double    *C6s=NULL,*C12s=NULL;
 
 	double surf_z0;
@@ -62,13 +72,21 @@ class MolecularWorld{
 	bool   nonCovalent = true;
 	double fmax;
 
+	double Rcollision = 3.0;
     double Rcut = 6.0;
 	TileBuffer3D<uint16_t,16,16,16,512> boxbuf;
+
+	//Grid3D<TILE_vector<int>,int,50,50,50> grid;
+
+    CubicRuler ruler;
+    std::unordered_multimap<int_fast64_t,int>  atomsMap;
+
 
 // ======== initialization
 
 	void initParams ( );
 	void initTPoints( );
+	void initAtoms  ( );
 	void setCutoff  ( double Rcut_);
 
 	int  loadMolTypes  ( char const* dirName, char const* fileName );
@@ -81,7 +99,13 @@ class MolecularWorld{
     int  getNAtoms();
     int  getAtomTypes  ( int   * buff );
     int  getAtomPos    ( Vec3d * buff );
-    
+
+    uint32_t atom2map ( int i, int ix, int iy, int iz );
+    int      atom2map ( int i, double r );
+    int      atoms2map( );
+    //int      check_collision( int imol, const Vec3d& pos, const Quat4d& qrot );
+    int      collisionForce( int imol, const Vec3d& pos, const Quat4d& qrot,  Vec3d& fpos, Quat4d& frot );
+
 	int  exportAtomsXYZ( FILE * pFile, const char * comment );
 	int  saveInstances ( char const* fileName );
 

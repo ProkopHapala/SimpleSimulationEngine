@@ -140,6 +140,8 @@ MolecularEditorApp::MolecularEditorApp( int& id, int WIDTH_, int HEIGHT_ ) : App
         renderMoleculeCPK( &world.molTypes[i], 6, 3, 0.9, 0.05 );
     }
 
+    //world.atom2map( 0 );
+
     //fout_xyz = fopen("relaxation.xyz","w");
 
     /*
