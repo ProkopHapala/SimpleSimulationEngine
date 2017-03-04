@@ -14,10 +14,9 @@ add_library( Collisions OBJECT Collisions.cpp )
 
 add_library( DynamicOpt OBJECT DynamicOpt.cpp )
 add_library( SoftBody   OBJECT SoftBody.cpp   )
+add_library( ShockWaves OBJECT Shock1D.cpp    )
 
 add_library( MoleculeWorld2D OBJECT MoleculeWorld2D.cpp )
-
-
 
 file(GLOB dynamics_HEADERS_ *.h )
 add_custom_target(dynamics_headers SOURCES ${dynamics_HEADERS_} )

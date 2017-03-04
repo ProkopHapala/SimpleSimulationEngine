@@ -3,4 +3,5 @@
 #add_subdirectory (libSail)
 add_subdirectory (Molecular)
 add_subdirectory (Vis3D)
+add_subdirectory (Shock)
 

@@ -9,6 +9,8 @@
 #include "../../common/optimization/optimizerDerivs.h"
 #include "../../common/dynamics/ODEintegrator.h"
 
+#include "../../common/dynamics/Shock1D.h"
+
 const double GRAV_CONTS = 6.67384e-11;
 
 void gravity_force( const Vec3d& r12, double GM12, Vec3d& f )   {
