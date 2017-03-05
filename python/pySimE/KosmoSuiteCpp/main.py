@@ -5,6 +5,8 @@ import os
 
 from .. import utils
 
+
+'''
 name='KosmoSuite'
 
 LIB_PATH      = os.path.dirname( os.path.realpath(__file__) )
@@ -16,6 +18,22 @@ if utils.recompile:
 	utils.compile_lib( name, path = LIB_PATH_CPP )
 
 lib    = ctypes.CDLL( LIB_PATH_CPP+"/lib"+name+ utils.ext )
+'''
+
+
+
+def recompile(path):
+    print( path )
+    dir_bak = os.getcwd()
+    os.chdir( path)
+    os.system("make" )
+    os.chdir( dir_bak )
+    print( os.getcwd() )
+
+LIB_PATH      = os.path.dirname( os.path.realpath(__file__) )
+LIB_PATH_CPP  = os.path.normpath(LIB_PATH+'../../../../'+'/cpp/Build/libs/KosmoSuite')
+recompile(LIB_PATH_CPP)
+lib = ctypes.CDLL( LIB_PATH_CPP+"/libKosmoSuite.so" )
 
 array1ui = np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='CONTIGUOUS')
 array1i  = np.ctypeslib.ndpointer(dtype=np.int32,  ndim=1, flags='CONTIGUOUS')

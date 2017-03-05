@@ -4,7 +4,7 @@ import ctypes
 import os
 
 LIB_PATH      = os.path.dirname( os.path.realpath(__file__) )
-LIB_PATH_CPP  = os.path.normpath(LIB_PATH+'../../../'+'/cpp/Build/libs/Vis3D')
+LIB_PATH_CPP  = os.path.normpath(LIB_PATH+'../../../'+'/cpp/Build/libs_SDL/Vis3D')
 
 def recompile(path):
     print( path )

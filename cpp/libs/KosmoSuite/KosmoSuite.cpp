@@ -3,13 +3,21 @@
 #include <stdio.h>
 #include <cstdint>
 
+/*
 #include "../../common/math/fastmath.h"
 #include "../../common/math/Vec3.h"
 #include "../../common/math/spline_hermite.h"
 #include "../../common/optimization/optimizerDerivs.h"
 #include "../../common/dynamics/ODEintegrator.h"
-
 #include "../../common/dynamics/Shock1D.h"
+*/
+
+#include "fastmath.h"
+#include "Vec3.h"
+#include "spline_hermite.h"
+//#include "optimizerDerivs.h"
+#include "ODEintegrator.h"
+//#include "Shock1D.h"
 
 const double GRAV_CONTS = 6.67384e-11;
 
@@ -39,7 +47,6 @@ void biot_savart_element( const Vec3d& R, const Vec3d& dI, Vec3d& B ){
 #include "cpp/Nbody.h"
 #include "cpp/ShipAccel.h"
 #include "cpp/elmag.h"
-
 
 #include "cpp/fissionPulse.h"
 
