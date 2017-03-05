@@ -1,7 +1,7 @@
 
 //#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include "Draw2D.h"
+//#include <SDL2/SDL_opengl.h>
+//#include "Draw2D.h"
 
 #include "Body2D.h" // THE HEADER
 
@@ -11,7 +11,7 @@
 
 	void PointBody2D::evalForce()   {  }
 	void PointBody2D::move( double dt ){ move_PointBody2D(dt);  }
-	void PointBody2D::draw( ){ Draw2D::drawPointCross_d( pos, 0.1 );  }
+	//void PointBody2D::draw( ){ Draw2D::drawPointCross_d( pos, 0.1 );  }
 
 // ==========================
 // ====  CLASS : RigidBody2D
@@ -38,6 +38,7 @@ void RigidBody2D::move( double dt ){
 	move_RigidBody2D(dt);
 };
 
+/*
 void RigidBody2D::draw(           ){
 	Draw2D::drawPointCross_d( pos, 0.1 );
 	Draw2D::drawVecInPos_d( rot, pos );
@@ -56,6 +57,7 @@ void RigidBody2D::draw_shape( ){
 	glCallList( shape );
 	glPopMatrix();
 };
+*/
 
 // =================================
 // ====  CLASS : SpringConstrain2D
@@ -69,6 +71,7 @@ void SpringConstrain2D::apply(){
 	b2->apply_force ( gdp*(-k), gp2 );
 };
 
+/*
 void SpringConstrain2D::draw(){
 	Vec2d gp1; gp1.set_mul_cmplx( p1, b1->rot ); gp1.add( b1->pos );
 	Vec2d gp2; gp2.set_mul_cmplx( p2, b2->rot ); gp2.add( b2->pos );
@@ -76,6 +79,7 @@ void SpringConstrain2D::draw(){
 	Draw2D::drawPointCross_d( gp1, 0.1 );
 	Draw2D::drawPointCross_d( gp2, 0.1 );
 };
+*/
 
 SpringConstrain2D::SpringConstrain2D( double k_, RigidBody2D* b1_, RigidBody2D* b2_, const Vec2d& p1_, const Vec2d& p2_ ){
 	k=k_;

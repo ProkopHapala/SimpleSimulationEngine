@@ -74,7 +74,8 @@ void NonInert_seats::draw(){
 	//glColor3f( 0.8, 0.8, 0.8 ); Draw2D::drawLine_d( {0.0d,world.rmax+1.0}, { 0, world.rmax+1.5 } );
 
     for( auto w : world.warriors ) {
-        glColor3f( 0.8f, 0.8f, 0.8f ); 	w->draw_shape( );
+        //glColor3f( 0.8f, 0.8f, 0.8f ); 	w->draw_shape( );
+        glColor3f( 0.8f, 0.8f, 0.8f ); 	Draw2D::drawShape( w->pos, w->rot, w->shape );
 
         //w->clean_temp ( );
         //world.addEnviroForces( w->pos, w->vel, w->force );

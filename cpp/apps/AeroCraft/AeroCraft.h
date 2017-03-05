@@ -6,10 +6,8 @@
 #include "Body.h"
 #include "AeroSurf.h"
 
-
 #include <SDL2/SDL_opengl.h>
 #include <Draw3D.h>
-
 
 class Propeler{
     public:
@@ -47,7 +45,6 @@ class Propeler{
     }
 
 };
-
 
 class AeroCraft : public RigidBody {
 	public:

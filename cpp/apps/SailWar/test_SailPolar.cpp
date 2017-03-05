@@ -284,9 +284,12 @@ void TestAppSailPolar::draw(){
 
     //glColor3f( 0.1f, 0.1f, 0.1f );   Draw2D::drawBody2d_d( thisShip->rot, thisShip->pos, 1.0, 0.5 );
     glScalef ( 4.0f, 4.0f, 4.0f );
-    glColor3f( 0.7f, 0.7f, 0.7f );   thisShip->draw_shape();
-    glColor3f( 0.9f, 0.2f, 0.2f );   thisShip->rudder.draw( *thisShip );
-    glColor3f( 0.2f, 0.2f, 0.9f );   thisShip->mast  .draw( *thisShip );
+    //glColor3f( 0.7f, 0.7f, 0.7f );   thisShip->draw_shape();
+    //glColor3f( 0.9f, 0.2f, 0.2f );   thisShip->rudder.draw( *thisShip );
+    //glColor3f( 0.2f, 0.2f, 0.9f );   thisShip->mast  .draw( *thisShip );
+    glColor3f( 0.7f, 0.7f, 0.7f ); Draw2D::drawShape ( thisShip->pos, thisShip->rot, thisShip->shape );
+	glColor3f( 0.9f, 0.2f, 0.2f ); Draw2D::draw_attached_vec( thisShip->rudder.pos, thisShip->rudder.rot, thisShip->pos, thisShip->rot, {0.1,0.5} );
+	glColor3f( 0.2f, 0.2f, 0.9f ); Draw2D::draw_attached_vec( thisShip->mast  .pos, thisShip->mast  .rot,   thisShip->pos, thisShip->rot, {0.1,0.5} );
     glScalef ( 0.25f, 0.25f, 0.25f );
 
     glColor3f( 0.5f, 0.5f, 0.5f );

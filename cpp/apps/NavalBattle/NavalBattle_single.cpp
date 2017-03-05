@@ -104,7 +104,8 @@ void NavalBattle_single::draw(){
         //    Draw2D::drawVecInPos( {tur->gpos.x,tur->gpos.z}, {tur->grot.c.x,tur->grot.c.z} );
         //}
 
-        ship1->draw();
+        ((Battleship*)ship1)->draw();
+        
 
         /*
         glPushMatrix();

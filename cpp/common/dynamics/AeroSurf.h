@@ -5,8 +5,8 @@
 #include "fastmath.h"
 #include "Vec3.h"
 
-#include <SDL2/SDL_opengl.h>
-#include <Draw3D.h>
+//#include <SDL2/SDL_opengl.h>
+//#include <Draw3D.h>
 
 #include "Body.h"
 
@@ -152,9 +152,9 @@ class AeroSurface : public KinematicBody {
 
 
 
-        glColor3f( 1.0f,0.0f,0.0f ); Draw3D::drawVecInPos( grot.a*C.a,    craft->pos + gdpos );
-        glColor3f( 0.0f,1.0f,0.0f ); Draw3D::drawVecInPos( grot.b*C.b,    craft->pos + gdpos );
-        glColor3f( 0.0f,0.0f,1.0f ); Draw3D::drawVecInPos( grot.c*C.c,    craft->pos + gdpos );
+        //glColor3f( 1.0f,0.0f,0.0f ); Draw3D::drawVecInPos( grot.a*C.a,    craft->pos + gdpos );
+        //glColor3f( 0.0f,1.0f,0.0f ); Draw3D::drawVecInPos( grot.b*C.b,    craft->pos + gdpos );
+        //glColor3f( 0.0f,0.0f,1.0f ); Draw3D::drawVecInPos( grot.c*C.c,    craft->pos + gdpos );
 
 		Vec3d uair;
 		uair.set_cross( gdpos, craft->omega );
@@ -184,8 +184,8 @@ class AeroSurface : public KinematicBody {
 			//drawMatInPos( craft->rotMat, craft->pos );
 			//Draw3D::drawMatInPos( grot, craft->pos + gdpos );
 
-			glColor3f( 0.9f,0.0f,0.9f ); Draw3D::drawVecInPos( force     *0.005,    craft->pos + gdpos );
-			glColor3f( 0.0f,0.5f,0.5f ); Draw3D::drawVecInPos( uair*vrair*0.1,   craft->pos + gdpos );
+			//glColor3f( 0.9f,0.0f,0.9f ); Draw3D::drawVecInPos( force     *0.005,    craft->pos + gdpos );
+			//glColor3f( 0.0f,0.5f,0.5f ); Draw3D::drawVecInPos( uair*vrair*0.1,   craft->pos + gdpos );
 
 		}
 	};

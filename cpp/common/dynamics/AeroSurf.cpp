@@ -2,12 +2,12 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include <SDL2/SDL_opengl.h>
-
+//#include <SDL2/SDL_opengl.h>
 //#include <Draw3D.h>
 
 #include "AeroSurf.h" // THE HEADER
 
+/*
 void AeroSurface::render( ){
 	//drawLine( const Vec3d& p1, const Vec3d& p2 );
 	double sz = sqrt( area );
@@ -21,6 +21,7 @@ void AeroSurface::render( ){
 		glVertex3d( lpos.x+sz*lrot.c.x, lpos.y+sz*lrot.c.y, lpos.z+sz*lrot.c.z );
 	glEnd();
 };
+*/
 
 void AeroSurface::fromString( const char * str ){
     sscanf ( str, " %lf %lf %lf    %lf %lf %lf    %lf %lf %lf    %lf %lf %lf",

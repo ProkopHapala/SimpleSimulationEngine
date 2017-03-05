@@ -36,10 +36,19 @@ lib.initWorld.restype    = None
 def initWorld( workdir ):
 	return lib.initWorld( workdir )
 
+# void update( int n, double dt ){
 
 
+double* getPointer( int i ){    
+def getInstancePointer( ):
+    # http://stackoverflow.com/questions/23930671/how-to-create-n-dim-numpy-array-from-a-pointer
+	p   = lib.getOptPointer_pos()
+	p   = ctypes.cast(p, ctypes.POINTER( ctypes.c_double) )
+	n   = lib.getOptSize       ()
+	arr = np.ctypeslib.as_array(p,shape=(n,))
+	return arr 
 
-
+};
 
 
 

@@ -1,9 +1,9 @@
 
 #include "MoleculeWorld2D.h" // THE HEADER
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include "Draw2D.h"
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h>
+//#include "Draw2D.h"
 
 #define DEBUG_PLOT_INTERACTION( pa, pb, R, G, B ) if(interacts){ \
     glColor3f( R, G, B ); \

@@ -6,9 +6,14 @@
 #include "Yacht2D.h" // THE HEADER
 
 void Yacht2D::draw( ){
+    /*
 	keel.draw  ( *this );
 	rudder.draw( *this );
 	mast.draw  ( *this );
+	*/
+	Draw2D::draw_attached_vec( keel.pos,   keel.rot,   pos, rot, {0.1,0.5} );
+	Draw2D::draw_attached_vec( rudder.pos, rudder.rot, pos, rot, {0.1,0.5} );
+	Draw2D::draw_attached_vec( mast.pos,   mast.rot,   pos, rot, {0.1,0.5} );
 };
 
 void Yacht2D::applySailForces( const Vec2d& windSpeed, const Vec2d& watterSpeed ){

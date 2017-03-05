@@ -36,13 +36,12 @@ for all particles "a" from "ActiveParticles" set
         put cell "i" of particle "a" into set "ActiveCells"
 */
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include "Draw2D.h"
-
-#define DEBUG_PLOT_INTERACTION( pa, pb, R, G, B ) if(interacts){ \
-    glColor3f( R, G, B ); \
-    Draw2D::drawLine_d( pa->pos, pb->pos ); };
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h>
+//#include "Draw2D.h"
+//#define DEBUG_PLOT_INTERACTION( pa, pb, R, G, B ) if(interacts){ \
+//    glColor3f( R, G, B ); \
+//    Draw2D::drawLine_d( pa->pos, pb->pos ); };
 
 void NBodyWorld::update( ){
     n_moves_frame=0; n_interactions_frame=0;
@@ -171,7 +170,7 @@ void NBodyWorld::assembleForces( ULONG i ){
             pj->force.sub( fout );
             */
             n_interactions++;
-            DEBUG_PLOT_INTERACTION( pi, pj, 0.1f, 0.9f, 0.1f )
+            //DEBUG_PLOT_INTERACTION( pi, pj, 0.1f, 0.9f, 0.1f )
         }
     }
     // offside part
@@ -210,7 +209,7 @@ void NBodyWorld::assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D**
                 */
                 //printf( " %i %i   %i %i  (%3.3f,%3.3f)(%3.3f,%3.3f)\n",   i, j,  ii, jj,  pi->pos.x,pi->pos.y,  pj->pos.x,pj->pos.y );
                 n_interactions++;
-                DEBUG_PLOT_INTERACTION( pi, pj, 0.9f, 0.1f, 0.9f )
+                //DEBUG_PLOT_INTERACTION( pi, pj, 0.9f, 0.1f, 0.9f )
             }
         }
     //}
@@ -345,7 +344,7 @@ void NBodyWorld::simulationStep_BruteForce( double dt ){
             pj->force.sub( fout );
             */
             n_interactions++;
-            DEBUG_PLOT_INTERACTION( pi, pj, 0.1f, 0.9f, 0.1f )
+            //DEBUG_PLOT_INTERACTION( pi, pj, 0.1f, 0.9f, 0.1f )
         }
     }
 

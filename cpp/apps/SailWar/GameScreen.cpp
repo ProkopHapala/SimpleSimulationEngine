@@ -25,7 +25,8 @@ void GameScreen::draw(){
 	for( auto ship : world->ships ) {
         //printf( "projectile draw \n " );
         glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->drawHitBox( );
-        glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->draw_shape( );
+        //glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->draw_shape( );  
+        glColor3f( 0.8f, 0.8f, 0.8f ); 	Draw2D::drawShape ( ship->pos, ship->rot, ship->shape );
         glColor3f( 0.2f, 0.2f, 0.2f );  ship->draw( );
 	}
 

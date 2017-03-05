@@ -1,8 +1,4 @@
 
-find_package( OpenGL REQUIRED )
-find_package( GLU REQUIRED    )
-find_package( SDL2 REQUIRED   )
-
 include_directories(
         ${COMMON_SRCS}
         ${COMMON_SRCS}/math

@@ -38,7 +38,8 @@ void AeroCraft::render(){
 		for( int i=0; i<nPanels; i++ ){
             Draw3D::drawLine( {0,0,0}, panels[i].lpos);
             //printf( "%g %g %g\n", panels[i].lpos.x, panels[i].lpos.y, panels[i].lpos.z);
-            panels[i].render( );
+            //panels[i].render( );
+            Draw3D::drawKite( panels[i].lpos, panels[i].lrot, sqrt(panels[i].area) );
 		}
 
 	glPopMatrix();

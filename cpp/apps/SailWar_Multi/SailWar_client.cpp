@@ -107,7 +107,8 @@ void SailWar_client::draw(){
 
         for( auto ship : ships ) {
             glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->drawHitBox( );
-            glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->draw_shape( );
+            //glColor3f( 0.8f, 0.8f, 0.8f ); 	ship->draw_shape( );
+            glColor3f( 0.8f, 0.8f, 0.8f ); 	Draw2D::drawShape ( ship->pos, ship->rot, ship->shape );
             glColor3f( 0.2f, 0.2f, 0.2f );  ship->draw( );
         }
 

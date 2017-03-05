@@ -13,8 +13,8 @@ CD limits ( Re = 10,000 )
 */
 
 //#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include "Draw2D.h"
+//#include <SDL2/SDL_opengl.h>
+//#include "Draw2D.h"
 
 #include "Body2D.h"
 
@@ -104,6 +104,7 @@ void AeroSurf2D::plot_polar( double x0, double y0, double fscale, double phi0 ){
 */
 
 
+/*
 void AeroSurf2D::draw( RigidBody2D& platform ){
 	Vec2d gpos, grot;
 	grot  .set_mul_cmplx( platform.rot, rot );
@@ -119,6 +120,7 @@ void AeroSurf2D::draw( RigidBody2D& platform ){
 		glVertex3f( (float)( gpos.x-grot.y*llong), (float)(gpos.y+grot.x*llong), 1 );   glVertex3f( (float)(gpos.x+grot.y*llong), (gpos.y-grot.x*llong), 1 );
 	glEnd();
 };
+*/
 
 double AeroSurf2D::fromString( char * s ){
 	double angle;

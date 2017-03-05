@@ -32,7 +32,7 @@ class PointBody2D{
 
 	virtual void evalForce();
 	virtual void move( double dt );
-	virtual void draw( );
+	//virtual void draw( );
 
 	// ==== inline functions
 
@@ -72,8 +72,8 @@ class RigidBody2D : public PointBody2D {
 
 	void from_mass_points( int n, double * amass, Vec2d * apos );
 	virtual void move( double dt );
-	virtual void draw(           );
-	virtual void draw_shape(     );
+	//virtual void draw(           );
+	//virtual void draw_shape(     );
 
 	// ==== inline functions
 
@@ -123,7 +123,7 @@ class SpringConstrain2D{
 	// ==== function declarations
 
 	void apply();
-	void draw();
+	//void draw();
 	SpringConstrain2D( double k_, RigidBody2D* b1_, RigidBody2D* b2_, const Vec2d& p1_, const Vec2d& p2_ );
 
 };

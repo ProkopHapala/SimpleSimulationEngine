@@ -5,7 +5,6 @@ include_directories(
 )
 
 add_library( SimplexGrid    OBJECT SimplexGrid.cpp  )
-add_library( TiledView      OBJECT TiledView.cpp    )
 add_library( TerrainCubic   OBJECT TerrainCubic.cpp )
 add_library( TerrainHydraulics   OBJECT TerrainHydraulics.cpp )
 add_library( TerrainSimplex      OBJECT TerrainSimplex.cpp )

@@ -99,9 +99,14 @@ void Frigate2D::drawGun( Gun * gun ){
 }
 
 void Frigate2D::draw( ){
+    /*
 	keel  .draw( *this );
 	rudder.draw( *this );
 	mast  .draw( *this );
+	*/
+	Draw2D::draw_attached_vec( keel.pos,   keel.rot,   pos, rot, {0.1,0.5} );
+	Draw2D::draw_attached_vec( rudder.pos, rudder.rot, pos, rot, {0.1,0.5} );
+	Draw2D::draw_attached_vec( mast.pos,   mast.rot,   pos, rot, {0.1,0.5} );
 	if( left_guns != NULL ){
 		//printf( " plotting guns \n" );
 		for( int i=0; i<nguns; i++ ){
