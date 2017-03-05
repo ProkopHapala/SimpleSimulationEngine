@@ -1,5 +1,5 @@
 cmake_minimum_required ( VERSION 2.8 )
-project ( SimpleSimulationEngine )
+project ( SimpleSimulationEngine_libs )
 
 # ==== FLAGS
 
@@ -11,10 +11,13 @@ endif()
 SET( AXULIARY_COMPILE_FLAGS "-w -O2 -fPIC")
 SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${AXULIARY_COMPILE_FLAGS}" )
 
-# ==== DIRS
+# ==== FLAGS
 
-SET( MY_SOURCE_DIR  "${CMAKE_SOURCE_DIR}" )
-SET( COMMON_SRCS "${MY_SOURCE_DIR}/common" )
+SET( MY_SRC_DIR    "${CMAKE_SOURCE_DIR}/../../" )
+#SET( MY_BIN_SHARE  "${MY_SRC_DIR}/Builds/shared_bins"       )
+SET( MY_BIN_SHARE  "${MY_SRC_DIR}/Build"       )
+
+SET( COMMON_SRCS "${MY_SRC_DIR}common" )
 
 include_directories(
         ${COMMON_SRCS}
@@ -29,11 +32,7 @@ include_directories(
         ${COMMON_SRCS}/SDL2OGL3
 )
 
-set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )
+set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${MY_SRC_DIR}cmake_utils )
 
-# ==== BUILD TARGETS
-
-add_subdirectory( ${MY_SOURCE_DIR}/common )
-add_subdirectory( ${MY_SOURCE_DIR}/apps )
-add_subdirectory( ${MY_SOURCE_DIR}/tests )
-add_subdirectory( ${MY_SOURCE_DIR}/libs )
+add_subdirectory( ${MY_SRC_DIR}/common ${MY_BIN_SHARE}/common )
+add_subdirectory( ${MY_SRC_DIR}/tests  tests  )

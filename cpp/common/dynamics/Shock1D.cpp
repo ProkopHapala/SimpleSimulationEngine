@@ -23,7 +23,8 @@ void ShockSystem1D::move( double dt ){
     for(int i=0; i<nlayers; i++){
         double bforce1,r1;
         bforce1 = bforce[i];
-        double vel     = velocity[i] + (bforce0+bforce1)*imass[i]*dt;
+        //double vel   = velocity[i] + (bforce0+bforce1)*imass[i]*dt;
+        double vel     = velocity[i] + (bforce0+bforce1)*dt/cells[i].mass;
         velocity[i]    = vel;
         r1             = bounds[i];
         //double   pos   = getCOG( r0, r1 );
@@ -49,7 +50,7 @@ void ShockSystem1D::allocate( int nlayers_ ){
     nlayers = nlayers_;
     if (bounds)   delete bounds;   bounds    = new double[nlayers+1];
     if (bforce)   delete bforce;   bforce    = new double[nlayers+1];
-    if (imass)    delete imass;    imass     = new double[nlayers];
+    //if (imass)    delete imass;    imass     = new double[nlayers];
     if (velocity) delete velocity; velocity  = new double[nlayers];
     if (cells)    delete cells;    cells     = new ShockVolume[nlayers]; 
 }
@@ -61,7 +62,7 @@ void ShockSystem1D::init(){
         double volume1;
         boundProperties(bounds[1], volume1, area_);
         cells[i].init( volume1 - volume0 ); 
-        imass[i] = 1/cells[i].mass;
+        //imass[i] = 1/cells[i].mass;
         volume0=volume1;
     }
 }

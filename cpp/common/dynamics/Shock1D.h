@@ -108,7 +108,6 @@ class ShockVolume{
     }
 };
 
-
 class ShockSystem1D{
 	public:
 	// params
@@ -118,7 +117,7 @@ class ShockSystem1D{
 	
 	int       nlayers;
 	//double  * mass;
-	double    * imass;
+	//double    * imass;
 	//int     * materials;   
 	ShockVolume * cells; 
 	
@@ -129,7 +128,7 @@ class ShockSystem1D{
 	// state varibles
 	double  * bounds     = NULL;  // n (n+1 but one is in 0)
 	double  * bforce     = NULL;  // ----,,-------
-	//double  * pos        = NULL;  // or boundary ?
+	//double  * pos      = NULL;  // or boundary ?
 	double  * velocity   = NULL;  // of COG or boundary ?
 
 	// axuliary - should be stored or just computed on-the-fly ? maybe just for debugging?  
