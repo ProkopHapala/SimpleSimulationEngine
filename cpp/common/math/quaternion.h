@@ -72,9 +72,9 @@ class Quat4TYPE {
 	inline void add_mul    ( const QUAT& a, TYPE f                ){ x+=a.x*f;        y+=a.y*f;       z+=a.z*f;       w+=a.w*f;        };
 	inline void set_add_mul( const QUAT& a, const QUAT& b, TYPE f ){ x =a.x + f*b.x;  y =a.y + f*b.y; z =a.z + f*b.z; w =a.w + f*b.w;  };
 
-    inline TYPE dot  ( QUAT q   ) {  return       w*q.w + x*q.x + y*q.y + z*q.z;   }
-    inline TYPE norm2(          ) {  return       w*  w + x*  x + y*  y + z*  z;   }
-	inline TYPE norm (          ) {  return sqrt( w*  w + x*  x + y*  y + z*  z ); }
+    inline TYPE dot  ( QUAT q   ) const {  return       w*q.w + x*q.x + y*q.y + z*q.z;   }
+    inline TYPE norm2(          ) const {  return       w*  w + x*  x + y*  y + z*  z;   }
+	inline TYPE norm (          ) const {  return sqrt( w*  w + x*  x + y*  y + z*  z ); }
     inline TYPE normalize() {
 		TYPE norm  = sqrt( x*x + y*y + z*z + w*w );
 		TYPE inorm = 1.0d/norm;
@@ -118,6 +118,30 @@ class Quat4TYPE {
 			x *= -invNorm; y *= -invNorm;z *= -invNorm;	w *=  invNorm;
 		}
     };
+
+
+
+// ======= metric 
+    // metric on quaternions : http://www.cs.cmu.edu/~cga/dynopt/readings/Rmetric.pdf = /home/prokop/Dropbox/KnowDev/quaternions/Rotation_metric_Rmetric.pdf
+    //  q and -q denote the same rotation !!!
+    //  rho(q,q0)   = |q - q0|
+    //  rho(q,q0)   = arccos( dot(q,q) )  ~=   1 - dot(q,q)
+    
+    inline double dist_cos( const QUAT& q0 ) const {
+        double cdot = dot( q0 );
+        return (cdot>=0)?cdot:-cdot;    // consider q=-q 
+    }
+    
+    inline double ddist_cos( const QUAT& q0, QUAT& dRdq ) const {
+        double cdot = dot( q0 );
+        if( cdot<0 ){ dRdq.mul(-1); };  // consider q=-q 
+    }
+
+    inline double sub_paralel_fast( const QUAT& q ) {  
+        // substract component of *this paralel to q assuming that q is normalized 
+        double cdot = dot( q );  
+        add_mul( q, -cdot );
+    }
 
 
 // ======= Conversion : Angle & Axis

@@ -17,6 +17,8 @@
 #include "PointCloudComparator.h"
 #include "SphereTreeND.h"
 
+#include "RBodyConfDyn.h"
+
 class MolecularLink{
     public:
     int i,j;
