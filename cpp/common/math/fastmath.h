@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <stdint.h>
 
+#include "integerOps.h"
+
 #define GOLDEN_RATIO  1.61803398875
 #define DEG2RAD  0.0174533
 #define RAD2DEG  57.2958
@@ -47,6 +49,8 @@ typedef float  (*Func3f)( float,  float,  float  );
 typedef double (*Func3d)( double, double, double );
 
 
+/*
+// moved to integerOps.h
 inline uint64_t   pack32 (             uint16_t  x, uint16_t y  ){return x|(((uint32_t)y)<<16);};
 inline void     unpack32 ( uint32_t i, uint16_t& x, uint16_t& y ){x=i&0xFFFF; y=(i>>16); };
 
@@ -58,7 +62,7 @@ inline void     unpack64 ( uint64_t i, uint32_t& x, uint32_t& y ){x=i&0xFFFFFFFF
 
 inline uint64_t   pack64 (             uint16_t  x, uint16_t  y, uint16_t  z, uint16_t  w ){return x|(((uint64_t)y)<<16)|(((uint64_t)z)<<32)|(((uint64_t)w)<<28);};
 inline void     unpack64 ( uint64_t i, uint16_t& x, uint16_t& y, uint16_t& z, uint16_t& w ){x=i&0xFFFF; y=((i&0xFFFF0000)>>16); z=((i&0xFFFF00000000)>>32); w=((i&0xFFFF000000000000)>>48);};
-
+*/
 
 inline double x2grid( double x, double xstep, double invXstep, int& ix ){
     double x_=x*invXstep;
@@ -158,6 +162,9 @@ inline float randf( float min, float max ){ return randf()*( max - min ) + min; 
 // https://en.wikipedia.org/wiki/Xorshift
 // https://gist.github.com/badboy/6267743
 
+
+/*
+// moved to integerOps.h
 inline int rand_hash ( int r ){	return 1664525*r ^ 1013904223; }
 
 inline int rand_hash2( int r ){
@@ -176,10 +183,10 @@ inline uint32_t hash_Wang( uint32_t a){
     return a;
 }
 
-
 inline unsigned int hash_Knuth( unsigned int i ){
 	return ( i * 2654435761 >> 16 );
 }
+*/
 
 // ========= Treshold functions ( Sigmoide, hevyside etc. ) ===========
 
