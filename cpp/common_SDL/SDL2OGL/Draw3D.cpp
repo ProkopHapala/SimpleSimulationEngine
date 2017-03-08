@@ -127,6 +127,14 @@ void drawShape( const Vec3d& pos, const Mat3d& rot, int shape ){
 	glCallList( shape );
 	glPopMatrix();
 };
+void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape ){
+	glPushMatrix();
+	float glMat[16];
+	toGLMat( pos, qrot, glMat );
+	glMultMatrixf( glMat );
+	glCallList( shape );
+	glPopMatrix();
+};
 
 int drawConeFan( int n, float r, const Vec3f& base, const Vec3f& tip ){
 	int nvert=0;
@@ -459,7 +467,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         }
 
     };
-    
+
     void drawKite( const Vec3d& pos, const Mat3d& rot, double sz ){
 	    //drawLine( const Vec3d& p1, const Vec3d& p2 );
 	    //double sz = sqrt( area );

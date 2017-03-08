@@ -10,6 +10,7 @@
 #include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
+#include "quaternion.h"
 
 #include "Mesh.h"
 
@@ -30,6 +31,7 @@ void drawPlanarPolygon( int n, const int * inds, const Vec3d * points );
 void drawMatInPos ( const Mat3d& mat, const Vec3d& pos );
 //void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
 void drawShape    ( const Vec3d& pos, const Mat3d& rot, int shape );
+void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape );
 
 int  drawConeFan        ( int n, float r,                const Vec3f& base, const Vec3f& tip );
 int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3f& base, const Vec3f& tip, bool smooth );
@@ -111,6 +113,20 @@ inline void toGLMat( const Vec3d& pos, const Mat3d& rot, float* glMat ){
 inline void toGLMatCam( const Vec3d& pos, const Mat3d& rot, float* glMat ){
     Vec3f pos_; convert( pos, pos_ );
     Mat3f rot_; convert( rot, rot_ );
+    toGLMatCam( pos_, rot_, glMat );
+};
+
+inline void toGLMat( const Vec3d& pos, const Quat4d& qrot, float* glMat ){
+    Vec3f pos_;    convert( pos, pos_ );
+    Quat4f qrot_;  convert( qrot, qrot_ );
+    Mat3f  rot_;   qrot_.toMatrix_unitary2( rot_ );
+    toGLMat( pos_, rot_, glMat );
+};
+
+inline void toGLMatCam( const Vec3d& pos, const Quat4d& qrot, float* glMat ){
+    Vec3f pos_;    convert( pos, pos_ );
+    Quat4f qrot_;  convert( qrot, qrot_ );
+    Mat3f  rot_;   qrot_.toMatrix_unitary2( rot_ );
     toGLMatCam( pos_, rot_, glMat );
 };
 

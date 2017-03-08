@@ -48,22 +48,6 @@ typedef double (*Func2d)( double, double );
 typedef float  (*Func3f)( float,  float,  float  );
 typedef double (*Func3d)( double, double, double );
 
-
-/*
-// moved to integerOps.h
-inline uint64_t   pack32 (             uint16_t  x, uint16_t y  ){return x|(((uint32_t)y)<<16);};
-inline void     unpack32 ( uint32_t i, uint16_t& x, uint16_t& y ){x=i&0xFFFF; y=(i>>16); };
-
-inline uint64_t   pack32 (             uint8_t  x, uint8_t  y, uint8_t  z, uint8_t  w ){ return x|(((uint32_t)y)<<8)|(((uint32_t)z)<<16)|(((uint32_t)w)<<24);};
-inline void     unpack32 ( uint32_t i, uint8_t& x, uint8_t& y, uint8_t& z, uint8_t& w ){ x=i&0xFF; y=((i&0xFF00)>>8); z=((i&0xFF0000)>>16); w=((i&0xFF000000)>>24); };
-
-inline uint64_t   pack64 (             uint32_t  x, uint32_t  y ){return x|(((uint64_t)y)<<32);};
-inline void     unpack64 ( uint64_t i, uint32_t& x, uint32_t& y ){x=i&0xFFFFFFFF; y=(i>>32);};
-
-inline uint64_t   pack64 (             uint16_t  x, uint16_t  y, uint16_t  z, uint16_t  w ){return x|(((uint64_t)y)<<16)|(((uint64_t)z)<<32)|(((uint64_t)w)<<28);};
-inline void     unpack64 ( uint64_t i, uint16_t& x, uint16_t& y, uint16_t& z, uint16_t& w ){x=i&0xFFFF; y=((i&0xFFFF0000)>>16); z=((i&0xFFFF00000000)>>32); w=((i&0xFFFF000000000000)>>48);};
-*/
-
 inline double x2grid( double x, double xstep, double invXstep, int& ix ){
     double x_=x*invXstep;
     ix=(int)x_;
@@ -161,32 +145,6 @@ inline float randf( float min, float max ){ return randf()*( max - min ) + min; 
 // https://en.wikipedia.org/wiki/Linear_congruential_generator
 // https://en.wikipedia.org/wiki/Xorshift
 // https://gist.github.com/badboy/6267743
-
-
-/*
-// moved to integerOps.h
-inline int rand_hash ( int r ){	return 1664525*r ^ 1013904223; }
-
-inline int rand_hash2( int r ){
-	r = 1664525*r ^ 1013904223;
-	r = 1664525*r ^ 1013904223;
-	return r;
-}
-
-// from http://burtleburtle.net/bob/hash/integer.html
-inline uint32_t hash_Wang( uint32_t a){
-    a = (a ^ 61) ^ (a >> 16);
-    a = a + (a << 3);
-    a = a ^ (a >> 4);
-    a = a * 0x27d4eb2d;
-    a = a ^ (a >> 15);
-    return a;
-}
-
-inline unsigned int hash_Knuth( unsigned int i ){
-	return ( i * 2654435761 >> 16 );
-}
-*/
 
 // ========= Treshold functions ( Sigmoide, hevyside etc. ) ===========
 
