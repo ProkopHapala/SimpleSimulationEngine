@@ -38,7 +38,7 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${MY_SRC_DIR}/cmake_utils )
 
 add_subdirectory( ${MY_SRC_DIR}/common   ${MY_BIN_SHARE}/common    )
 add_subdirectory( ${MY_SRC_DIR}/libs     ${MY_BIN_SHARE}/libs    )
-#add_subdirectory( ${MY_SOURCE_DIR}/sketches    )   # currently empty
+add_subdirectory( ${MY_SRC_DIR}/tests    ${MY_BIN_SHARE}/tests   )   # currently empty
 
 # ---- these need SDL
 add_subdirectory( ${MY_SRC_DIR}/common_SDL   ${MY_BIN_SHARE}/common_SDL   )

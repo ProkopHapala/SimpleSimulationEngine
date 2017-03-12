@@ -9,9 +9,19 @@
 #include "fastmath.h"
 #include "VecN.h"
 
+
+//#define IJ(i,j) n*i+j
+
 namespace Lingebra{
 
 	// ==== function declarations
+
+    double ** from_continuous( int m, int n, double *p );
+	double ** new_matrix     ( int m, int n );
+	double ** delete_matrix  ( int m,        double** A );
+	void transpose           ( int m, int n, double** A, double** TA );
+	void dot                 ( int m, int n, double** A, double* x, double* out );
+	void dotT                ( int m, int n, double** A, double* x, double* out );
 
 	void mmul_ik_kj( int ni, int nj, int nk, double** A, double** B, double** out );
 	void mmul_ik_jk( int ni, int nj, int nk, double** A, double** B, double** out );
@@ -31,7 +41,11 @@ namespace Lingebra{
 	void linSolve_BCG        ( int n, int m, double ** A, double * b, double * x );
 	void leastSquareFit_Gauss( int n, int m, double ** A, double * b, double * x );
 
-	// ==== inline function 
+	int eig_Jacobi( int n, double* A, double* V, double* es, double tol, int nMaxIter  );
+	double eig_Jacobi_init( int n, double* A, double* V, int* mjs, int& imax, int& jmax );
+	void eig_Jacobi_step  ( int n, double* A, double* V, int* mjs, int& imax, int& jmax, double& vmax );
+
+	// ==== inline function
 
 	inline void set( int m, int n, double   f,             double** out ){  for (int i=0; i<m; i++ ){ VecN::set( n, f,       out[i] );  } }
 	inline void add( int m, int n, double   f, double** B, double** out ){  for (int i=0; i<m; i++ ){ VecN::add( n, f, B[i], out[i] );  } }
@@ -42,46 +56,6 @@ namespace Lingebra{
 	inline void sub( int m, int n, double** A, double** B, double** out ){  for (int i=0; i<m; i++ ){ VecN::sub( n, A[i], B[i], out[i] );   } }
 	inline void mul( int m, int n, double** A, double** B, double** out ){  for (int i=0; i<m; i++ ){ VecN::mul( n, A[i], B[i], out[i] );   } }
 	inline void div( int m, int n, double** A, double** B, double** out ){  for (int i=0; i<m; i++ ){ VecN::div( n, A[i], B[i], out[i] );   } }
-
-	// creates double** from any continuous memory block folowing *p
-	double ** from_continuous( int m, int n, double *p ){
-		double ** A = new double*[m];
-		for (int i=0; i<m; i++ ){ A[i] = &(p[i*n]); }
-		return A;
-	}
-
-	double ** new_matrix( int m, int n ){
-		double ** A = new double*[m];
-		for (int i=0; i<m; i++ ){ A[i] = new double[n]; }
-		return A;
-	}
-
-	double ** delete_matrix( int m, double** A ){
-		for (int i=0; i<m; i++ ){ delete A[i]; }
-		delete [] A;
-	}
-
-	void transpose( int m, int n, double** A, double** TA ){
-		for (int i=0; i<m; i++ ){
-			for (int j=0; j<n; j++ ){
-				TA[i][j] = A[j][i];
-			} 
-		} 
-	}
-
-	void dot( int m, int n, double** A, double* x, double* out ){
-		for (int i=0; i<m; i++ ){
-			out[i] = VecN::dot( n, A[i], x );
-		} 
-	}
-
-	void dotT( int m, int n, double** A, double* x, double* out ){
-		for (int i=0; i<m; i++ ){
-			double doti = 0;
-			for (int j=0; j<n; j++ ){ doti += A[j][i] * x[j];	}
-			out[i] = doti;
-		} 
-	}
 
 };
 

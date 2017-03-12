@@ -13,7 +13,7 @@ SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${AXULIARY_COMPILE_FLAGS}" )
 
 # ==== DIRS
 
-SET( MY_SRC_DIR "${CMAKE_SOURCE_DIR}" )
+SET( MY_SRC_DIR "${CMAKE_SOURCE_DIR}/../.." )
 SET( MY_BIN_SHARE  "${MY_SRC_DIR}/Build"       )
 
 SET( COMMON_SRCS     "${MY_SRC_DIR}/common"     )
@@ -25,24 +25,18 @@ include_directories(
         ${COMMON_SRCS}/dynamics
         ${COMMON_SRCS}/maps
         ${COMMON_SRCS}/optimization
-	${COMMON_SDL_SRCS}
-        ${COMMON_SDL_SRCS}/network
-        ${COMMON_SDL_SRCS}/SDL2OGL
-        ${COMMON_SDL_SRCS}/SDL2OGL3
-        ${MY_SRC_DIR}/engines
+	#${COMMON_SDL_SRCS}
+        #${COMMON_SDL_SRCS}/network
+        #${COMMON_SDL_SRCS}/SDL2OGL
+        #${COMMON_SDL_SRCS}/SDL2OGL3
+        #${MY_SRC_DIR}/engines
 )
 
-set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )
+set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${MY_SRC_DIR}/cmake_utils )
 
 # ==== BUILD TARGETS
 
 add_subdirectory( ${MY_SRC_DIR}/common   ${MY_BIN_SHARE}/common    )
-add_subdirectory( ${MY_SRC_DIR}/libs         )
-add_subdirectory( ${MY_SOURCE_DIR}/tests    )   # currently empty
+#add_subdirectory( ${MY_SRC_DIR}/libs    ${MY_BIN_SHARE}/libs      )
+add_subdirectory( ${MY_SRC_DIR}/tests    ${MY_BIN_SHARE}/tests     )   # currently empty
 
-# ---- these need SDL
-add_subdirectory( ${MY_SRC_DIR}/common_SDL   ${MY_BIN_SHARE}/common_SDL )
-add_subdirectory( ${MY_SRC_DIR}/libs_SDL     )
-add_subdirectory( ${MY_SRC_DIR}/sketches_SDL )
-add_subdirectory( ${MY_SRC_DIR}/engines      )
-add_subdirectory( ${MY_SRC_DIR}/apps         )

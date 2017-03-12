@@ -1,7 +1,56 @@
 
-#include <Lingebra.h> // THE HEADER
+#include "Lingebra.h" // THE HEADER
+
+/*
+Discussion:
+
+Should matrix be stored as array of pointers A[i][j] or as plain array A[i+j*n] ?
+ - A[i][j] is more general (we may easily select arbitrary sub-matrix without copy)
+ - A[i+j*n] could be faster (?) but if n is large cache coherency is bad anyway
+*/
 
 namespace Lingebra {
+
+// creates double** from any continuous memory block folowing *p
+double ** from_continuous( int m, int n, double *p ){
+    double ** A = new double*[m];
+    for (int i=0; i<m; i++ ){ A[i] = &(p[i*n]); }
+    return A;
+}
+
+double ** new_matrix( int m, int n ){
+    double ** A = new double*[m];
+    for (int i=0; i<m; i++ ){ A[i] = new double[n]; }
+    return A;
+}
+
+double ** delete_matrix( int m, double** A ){
+    for (int i=0; i<m; i++ ){ delete A[i]; }
+    delete [] A;
+}
+
+void transpose( int m, int n, double** A, double** TA ){
+    for (int i=0; i<m; i++ ){
+        for (int j=0; j<n; j++ ){
+            TA[i][j] = A[j][i];
+        }
+    }
+}
+
+void dot( int m, int n, double** A, double* x, double* out ){
+    for (int i=0; i<m; i++ ){
+        out[i] = VecN::dot( n, A[i], x );
+    }
+}
+
+void dotT( int m, int n, double** A, double* x, double* out ){
+    for (int i=0; i<m; i++ ){
+        double doti = 0;
+        for (int j=0; j<n; j++ ){ doti += A[j][i] * x[j];	}
+        out[i] = doti;
+    }
+}
+
 
 void mmul_ik_kj( int ni, int nj, int nk, double** A, double** B, double** out ){
 	for(int i=0; i<ni; i++){
@@ -43,15 +92,13 @@ void mmul_ki_jk( int ni, int nj, int nk, double** A, double** B, double** out ){
 	}
 }
 
-
-
 void random_matrix( int m, int n, double xmin, double xmax, double** out ){
 	double xrange = xmax - xmin;
-	for (int i=0; i<m; i++ ){ VecN::random_vector ( n, xmin, xmax, out[i] ); } 
+	for (int i=0; i<m; i++ ){ VecN::random_vector ( n, xmin, xmax, out[i] ); }
 }
 
 void print_matrix( int m, int n, double ** A ){
-	for (int i=0; i<m; i++ ){ VecN::print_vector( n, A[i] );	} 
+	for (int i=0; i<m; i++ ){ VecN::print_vector( n, A[i] );	}
 }
 
 // ===============================================
@@ -64,7 +111,7 @@ void print_matrix( int m, int n, double ** A ){
 void makeQuadricFormMatrix( int m, int n, double * ks, double ** A, double ** Q ){
 	for (int im=0; im<m; im++ ){
 		double kim   = ks[im];
-		double * Aim =  A[im]; 
+		double * Aim =  A[im];
 		for (int i=0; i<n; i++ ){
 			for (int j=0; j<i; j++ ){
 				double Qij = kim*Aim[i]*Aim[j];
@@ -79,7 +126,7 @@ void makeQuadricFormMatrix( int m, int n, double * ks, double ** A, double ** Q 
 //  y =  < x | Q.x >
 double evalQudraticForm( int n, double* x, double** Q ){
 	double y =  0;
-	for (int i=0; i<n; i++ ){	y += x[i] * VecN::dot( n, Q[i], x );   } 
+	for (int i=0; i<n; i++ ){	y += x[i] * VecN::dot( n, Q[i], x );   }
 	return y;
 }
 
@@ -89,7 +136,7 @@ double evalQudraticFormDirs( int m, int n, double* x, double* k, double** A ){
 	for (int i=0; i<m; i++ ){
 		double ri = VecN::dot( n, A[i], x );
 		y += k[i]*ri*ri;
-	} 
+	}
 	return y;
 }
 
@@ -289,6 +336,377 @@ void leastSquareFit_Gauss( int n, int m, double ** A, double * b, double * x ){
 	delete Ab;
 	delete index;
 }
+
+
+
+// ===============================================
+// ======       EigenValueSolver          =======
+// ===============================================
+
+
+void get_diag_vector( int n, double* a, double* v ){
+  for ( int i = 0; i < n; i++ ){ v[i] = a[i*n+i]; }
+}
+
+void fill_identity ( int n, double* a ){
+  int k = 0;
+  for (int j = 0; j < n; j++ ){
+    for (int i = 0; i < n; i++ ){
+      if ( i == j ){ a[k] = 1.0; }else{ a[k] = 0.0; }
+      k = k + 1;
+    }
+  }
+}
+
+inline void jacobi_rot( double* g_, double* h_, double s, double tau ){
+    double g=*g_; double h=*h_;
+    *g_ = g - s * ( h + g * tau );
+    *h_ = h + s * ( g - h * tau );
+};
+
+void jacobi_rotation( int n, double* A, double* V, int k, int l ){
+    //  https://en.wikipedia.org/wiki/Jacobi_rotation
+    double aDiff = A[l*n+l] - A[k*n+k];
+    double akl   = A[k*n+l];
+    double t;
+    if ( fabs(akl) < fabs(aDiff)*1.0e-36d ){
+        t = akl/aDiff;
+    }else{
+        double phi = aDiff/(2*akl);
+        t = 1/(fabs(phi) + sqrt(phi*phi + 1));
+        if (phi < 0.0) t = -t;
+    }
+    double c   = 1/sqrt(t*t + 1);
+    double s   = t*c;
+    double tau = s/(1+c);
+    A[k*n+l] = 0;
+    A[k*n+k] = A[k*n+k] - t*akl;
+    A[l*n+l] = A[l*n+l] + t*akl;
+    for (int i = 0    ; i < k; i++ ){ jacobi_rot( A+(i*n+k), A+(i*n+l), s, tau ); }
+    for (int i = k + 1; i < l; i++ ){ jacobi_rot( A+(k*n+i), A+(i*n+l), s, tau ); }
+    for (int i = l + 1; i < n; i++ ){ jacobi_rot( A+(k*n+i), A+(l*n+i), s, tau ); }
+    for (int i = 0    ; i < n; i++ ){ jacobi_rot( V+(i*n+k), V+(i*n+l), s, tau ); }
+    /*
+    for i in range(k){      // Case of i < k
+        double g = A[i*n+k];
+        double h = A[i*n+l];
+        A[i*n+k] = g - s*(h + tau*g);
+        A[i*n+l] = h + s*(g - tau*h);
+    }
+    for i in range(k+1,l){  // Case of k < i < l
+        double g = A[k*n+i];
+        double h = A[i*n+l];
+        A[k*n+i] = g - s*(h + tau*g);
+        A[i*n+l] = h + s*(g - tau*h);
+    }
+    for i in range(l+1,n){  // Case of i > l
+        double g = A[k*n+i];
+        double h = A[l*n+i];
+        A[k*n+i] = g - s*(h + tau*g);
+        A[l*n+i] = h + s*(g - tau*h);
+    }
+    for i in range(n){      // Update transformation matrix
+        double g = V[i*n+k];
+        double h = V[i*n+l];
+        V[i*n+k] = g - s*(h + tau*g);
+        V[i*n+l] = h + s*(g - tau*h);
+    }
+    */
+}
+
+template<double func(double x)>
+inline int getMaxIndex(int n, double* v ){
+    int imax    = 0;
+    double vmax = func(v[0]);
+    for(int i=1;i<n;i++){
+        double vi = func(v[i]);
+        //printf(">>>>> %i %2.5f %2.5f \n", i, vi, vmax);
+        if(vi>vmax){ vmax=vi; imax=i; }
+    }
+    return imax;
+}
+
+double updateRowMax(int n, double* A, int* mjs, int& imax, int& jmax){
+    double vmax=0;
+    int    imax_=imax;
+    int    jmax_=jmax;
+    for(int i=0; i<(n-1); i++){
+        int     mj = mjs[i];
+        double vmj = fabs( A[i*n+mj] );
+
+        if ((i==imax)||(i==jmax)||(mj==imax)||(mj==jmax)){
+            int j=i+1;
+            mj   = getMaxIndex<fabs>( (n-j), A+(i*n+j) )+j;
+            vmj  = fabs( A[i*n+mj] );
+            //printf("%i case row \n", i, mj, vmj);
+        }else{
+            if (imax>i){
+                double v=fabs( A[i*n+imax] );
+                if(v>vmj){ mj=imax; vmj=v; }
+                //printf("%i case imax %i %f\n", i, mj, vmj );
+            }
+            if (jmax>i){
+                double v=fabs(A[i*n+jmax]);
+                if(v>vmj){ mj=jmax; vmj=v; }   // //vmj=v is not required
+                //printf("%i case jmax %i %f\n", i, mj, vmj );
+            }
+        }
+        mjs[i]=mj;
+
+        if(vmj>vmax){
+            vmax=vmj;
+            imax_=i;
+            jmax_=mj;
+        }
+        //printf("mj = %i \n", mj );
+    }
+    imax=imax_; jmax=jmax_;
+    //printf("imax,jmax (%i,%i)\n", imax,jmax );
+    return vmax;
+}
+
+void printmatrix( int ni, int nj, double* A, char* format ){
+    for(int i=0; i<ni; i++){
+        for(int j=0; j<nj; j++){
+            printf( format, A[i*nj+j]);
+        }
+        printf("\n");
+    }
+}
+
+double eig_Jacobi_init( int n, double* A, double* V, int* mjs, int& imax, int& jmax ){
+    fill_identity( n, V );
+    double vmax=0;
+    for(int i=0;i<(n-1);i++){
+        int j=i+1;
+        int mj = getMaxIndex<fabs>( (n-j), A+(i*n+j) )+j;
+        mjs[i] = mj;
+        double v=fabs(A[i*n+mj]);
+        //printf(">> %i %i %f\n", i, mj, v );
+        if(v>vmax){ vmax=v; imax=i; jmax=mj; }
+    }
+    return vmax;
+}
+
+void eig_Jacobi_step( int n, double* A, double* V, int* mjs, int& imax, int& jmax, double& vmax ){
+    jacobi_rotation    ( n, A, V,   imax, jmax );
+    vmax = updateRowMax( n, A, mjs, imax, jmax );
+    /*
+    vmax=0;
+    for(int i=0;i<(n-1);i++){
+        int j=i+1;
+        int mj = getMaxIndex<fabs>( (n-j), A+(i*n+j) )+j;
+        mjs[i] = mj;
+        double v=fabs(A[i*n+mj]);
+        //printf(">> %i %i %f\n", i, mj, v );
+        if(v>vmax){ vmax=v; imax=i; jmax=mj; }
+    }
+    */
+}
+
+int eig_Jacobi( int n, double* A, double* V, double* es, double tol, int nMaxIter  ){
+    fill_identity( n, V );
+    int* mjs = new int[n];
+    double vmax=0;
+    int    imax,jmax;
+    for(int i=0;i<(n-1);i++){
+        int j=i+1;
+        int mj = getMaxIndex<fabs>( (n-j), A+(i*n+j) )+j;
+        mjs[i] = mj;
+        double v=fabs(A[i*n+mj]);
+        //printf(">> %i %i %f\n", i, mj, v );
+        if(v>vmax){ vmax=v; imax=i; jmax=mj; }
+    }
+    int iter;
+    for(int iter=0; iter<nMaxIter; iter++){
+        //printf("%i (%i,%i) %f\n", iter, imax,jmax,vmax);
+        if( vmax < tol ){
+            printf( "converged by %i rotations; error < %e \n", iter, tol );
+            for(int i=0;i<n;i++){ es[i] = A[i*n+i]; };
+            delete mjs;
+            return iter;
+        }
+        //printmatrix( n,n, A, " %2.3f" );
+        jacobi_rotation    ( n, A, V,   imax, jmax );
+        vmax = updateRowMax( n, A, mjs, imax, jmax );
+    }
+    delete mjs;
+    printf( "not converged in %i rotations; A[%i,%i] = %e \n", iter, imax,jmax, vmax  );
+    return -iter;
+}
+
+
+
+
+
+
+
+
+
+
+/*
+int jacobi_rotation( double * a, double *v, double s, double tau, int p, int q ){
+    //  Rotate, using information from the upper triangle of A only.
+    int pn = p*n;
+    int qn = q*n;
+    a[p+q*n] = 0.0;
+    for (int j = 0    ; j < p; j++ ){ jacobi_rot( s, tau, a+(j+pn ), a+(j+qn) );  }
+    for (int j = p + 1; j < q; j++ ){ jacobi_rot( s, tau, a+(p+j*n), a+(j+qn) );  }
+    for (int j = q + 1; j < n; j++ ){ jacobi_rot( s, tau, a+(p+j*n), a+(q+j*n));  }
+    for (int j = 0    ; j < n; j++ ){ jacobi_rot( s, tau, v+(j+pn ), v+(j+qn) );  }
+
+    for (int  j = 0; j < p; j++ ){
+        double* ajp = a+(j+pn);
+        double* ajq = a+(j+qn);
+        double g = *ajp;
+        double h = *ajq;
+        *ajp  = g - s * ( h + g * tau );
+        *ajq = h + s * ( g - h * tau );
+    }
+    for (int j = p + 1; j < q; j++ ){
+        double* apj   = a+(p+j*n);
+        double* ajq   = a+(j+qn);
+        double g = apj;
+        double h = ajq;
+        *apj = g - s * ( h + g * tau );
+        *ajq = h + s * ( g - h * tau );
+    }
+    for (int  j = q + 1; j < n; j++ ){
+        int jn=j*n;
+        double* apj = a+(p+jn);
+        double* aqj = a+(q+jn);
+        double g = apj;
+        double h = aqj;
+        *apj = g - s * ( h + g * tau );
+        *aqj = h + s * ( g - h * tau );
+    }
+    //  Accumulate information in the eigenvector matrix.
+    for (int j = 0; j < n; j++ ){
+        double* vjp = v+(j+pn);
+        double* vjq = v+(j+qn);
+        double g = vjp;
+        double h = vjq;
+        *vjp = g - s * ( h + g * tau );
+        *vjq = h + s * ( g - h * tau );
+    }
+
+    //  original ... is it really faster ?
+
+      //  Rotate, using information from the upper triangle of A only.
+      for ( j = 0; j < p; j++ ){
+        g = a[j+p*n];
+        h = a[j+q*n];
+        a[j+p*n] = g - s * ( h + g * tau );
+        a[j+q*n] = h + s * ( g - h * tau );
+      }
+      for ( j = p + 1; j < q; j++ ){
+        g = a[p+j*n];
+        h = a[j+q*n];
+        a[p+j*n] = g - s * ( h + g * tau );
+        a[j+q*n] = h + s * ( g - h * tau );
+      }
+      for ( j = q + 1; j < n; j++ ){
+        g = a[p+j*n];
+        h = a[q+j*n];
+        a[p+j*n] = g - s * ( h + g * tau );
+        a[q+j*n] = h + s * ( g - h * tau );
+      }
+      //  Accumulate information in the eigenvector matrix.
+      for ( j = 0; j < n; j++ ){
+        g = v[j+p*n];
+        h = v[j+q*n];
+        v[j+p*n] = g - s * ( h + g * tau );
+        v[j+q*n] = h + s * ( g - h * tau );
+      }
+
+
+}
+
+
+
+void jacobi_eigenvalue ( int n, double a[], int it_max, double v[], double d[], int *it_num, int *rot_num ){
+
+    // --- temp initialization
+    bw = new double[n];
+    zw = new double[n];
+    for (int i = 0; i < n; i++ ){   bw[i] = d[i];  zw[i] = 0.0; }
+    fill_identity  ( n, v );
+    get_diag_vector( n, a, d );
+
+    *it_num = 0;  *rot_num = 0;
+
+    while ( *it_num < it_max ){
+        *it_num = *it_num + 1;
+
+        // check convergence treshold -  The convergence threshold is based on the size of the elements in the strict upper triangle of the matrix.
+        double thresh = 0.0;
+        for ( j = 0; j < n; j++ ){
+            for ( i = 0; i < j; i++ ){
+                double thresh += a[i+j*n] * a[i+j*n];
+            }
+        }
+        thresh = sqrt ( thresh ) / ( double ) ( 4 * n );
+        if ( thresh == 0.0 ){ break; }
+
+        // go over offdiagonal  elements (p,q)
+        for ( p = 0; p < n; p++ ){
+            for ( q = p + 1; q < n; q++ ){
+                double *apq_ = a+(p+q*n);
+                double apq   = *apq_;
+                double gapq  = 10.0 * fabs ( apq );
+                double termp = gapq + fabs ( d[p] );
+                double termq = gapq + fabs ( d[q] );
+
+                // condition this is strange !!!
+                if ( ( *it_num > 4) && ( termp == fabs ( d[p] ) ) && ( termq == fabs ( d[q] ) ) ){
+                    *apq_ = 0.0;   // Annihilate tiny offdiagonal elements.
+                } else if ( thresh <= fabs ( apq ) ){
+                // Otherwise, apply a rotation.
+
+                double h    = d[q] - d[p];
+                double term = fabs ( h ) + gapq;
+
+                if ( term == fabs ( h ) ){
+                    t = *apq_ / h;
+                } else {
+                    double theta = 0.5 * h / apq;
+                    t = 1.0 / ( fabs ( theta ) + sqrt ( 1.0 + theta * theta ) );
+                    if ( theta < 0.0 ){ t = - t; }
+                }
+                double c   = 1.0 / sqrt ( 1.0 + t * t );
+                double s   = t * c;
+                double tau = s / ( 1.0 + c );
+                h          = t * apq;
+
+                //  Accumulate corrections to diagonal elements.
+                zw[p] = zw[p] - h;
+                zw[q] = zw[q] + h;
+                d [p] = d [p] - h;
+                d [q] = d [q] + h;
+                jacobi_rotation( a, v, s, tau, p, q );
+                *rot_num = *rot_num + 1;
+                } // if rotate ?
+            } // q
+        } // p
+            for ( i = 0; i < n; i++ ){
+                bw[i] = bw[i] + zw[i];
+                d [i] = bw[i];
+                zw[i] = 0.0;
+            }
+        }
+    //  Restore upper triangle of input matrix.
+    for ( j = 0; j < n; j++ ){
+        for ( i = 0; i < j; i++ ){
+            a[i+j*n] = a[j+i*n];
+        }
+    }
+    delete bw;
+    delete zw;
+    return;
+}
+
+*/
+
 
 };
 
