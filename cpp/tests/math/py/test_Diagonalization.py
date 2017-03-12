@@ -4,34 +4,50 @@ import numpy as np
 import libTest_Lingebra as LA
 import JacobiEigen as JE
 import matplotlib.pyplot as plt
+import time
 
-n = 6;
+'''
+test tol=1e-9
+Lenovo-ideapad-Y700-15ISK    i7-6700HQ CPU @ 2.60GHz
+N       time np.eig(A) [s]     time LA.eig_Jacobi(A,tol=1e-9)   Nrot
+200         0.259829                0.902322
+200         0.256582                0.900702
+200         0.260135                0.875203        78648  => 11128 ns/rotation => 55ns/index
+100         0.035707                0.1576
+100         0.05374                 0.252058
+100         0.061157                0.180691        18983  => 9518 ns/rotation =>  95ns/index
+'''
+
+n = 200;
 #np.random.seed(15464)
 sqrtA    = np.random.rand( n,n ) - 0.5
 A        = np.dot( sqrtA, np.transpose(sqrtA) )
 
-
-
-
-
 tol = 1e-9
-
-
 
 V     = np.zeros((n,n))
 es    = np.zeros(n)
 mjs   = np.zeros(n,dtype=np.int32) 
 ijmax = np.zeros(2,dtype=np.int32) 
 A_=A.copy(); V_=V.copy();
-print A
+#print A
 
+t1=time.clock()
 esA, vsA = np.linalg.eig( A )
+t2=time.clock()
 print "eigenvalues np.eig:     ",np.sort(esA) 
+print "time:     ",t2-t1
+
+t1=time.clock()
+esA,vsA = LA.eig_Jacobi( A,  tol=tol, nMaxIter=100000 )
+t2=time.clock()
+print "eigenvalues cpp.jacobi: ",np.sort(esA)
+print "time:     ",t2-t1
+
+'''
 esA,vsA = JE.jacobi    ( A_, tol = tol ) 
 print "eigenvalues py.jacobi:  ",np.sort(esA)  
-esA,vsA = LA.eig_Jacobi( A,  tol=tol )
-print "eigenvalues cpp.jacobi: ",np.sort(esA)
-
+'''
 
 '''
 vmax=LA.lib.eig_Jacobi_init(n,A,V,mjs,ijmax)
