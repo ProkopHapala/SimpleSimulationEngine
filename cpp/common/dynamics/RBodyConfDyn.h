@@ -26,24 +26,26 @@ class RBodyPose{
     public:
     Vec3d   pos;
     Quat4d  rot;
+
+    void print(){ printf("(%f %f %f)  (%f %f %f %f)\n", pos.x,pos.y,pos.z, rot.x,rot.y,rot.z,rot.w );}
 };
 
 class RBodyConfDyn{
 	public:
 	double RmutPos = 0.2;
-	double RmutRot = 0.05;
+	double RmutRot = 0.2;
 
 	double RposMax    = 3.0; // maximum distance from which configurations feel each orther
 	double RrotMax    = 0.1;
 	//double RtotMax    =    ; // RtotMax**2 < Rrot**2 + Rpos**2
 	//double RrotScale  = 1.0;
+	double FposScale=1.0;
+    double FrotScale=1.0;
 
+    // axuliary
     double RposMax2;
 	double RrotMax2;
-
-	double FposScale;
-	double Fpos0;
-    double FrotScale;
+    double Fpos0;
 	double Frot0;
 
 	double convF;
@@ -57,12 +59,12 @@ class RBodyConfDyn{
 	Quat4d *rot=NULL,*vrot=NULL,*frot=NULL;
 
     // configuration database - in future we may use more sophisticated detastructure with fast neighborhood search
-    int nConfsMax;
-    int nConfs;
+    int nConfsMax=0;
+    int nConfs=0;
     RBodyPose * confs = NULL;
     double    * confE = NULL;
 
-    Func_array2 objectiveFuncDerivs;  // external objective function for the relaxation
+    Func_array2 objectiveFuncDerivs = NULL;  // external objective function for the relaxation
 
     // ============= Functions
 
@@ -80,6 +82,7 @@ class RBodyConfDyn{
         confs[i].pos=*pos;
         confs[i].rot=*rot;
         confE[i] = E_last;
+        nConfs++;
     }
 
     void mutate(){
@@ -95,20 +98,27 @@ class RBodyConfDyn{
     };
 
     void forceFromConf( const Vec3d& pos, const Quat4d rot, const Vec3d& pos0, const Quat4d rot0, Vec3d& fpos, Quat4d& frot ){
+        constexpr double r2safety = 1e-8;
         // --- position force
         Vec3d dpos; dpos.set_sub(pos,pos0);
         double rp2 = dpos.norm2();
+
         if( rp2 > RposMax2 ) return;
-        double fpos_scale = FposScale/rp2-Fpos0;   // we can put some 1D spline here in future
+        double fpos_scale = FposScale/(rp2+r2safety)-Fpos0;   // we can put some 1D spline here in future
         fpos.add_mul( dpos, fpos_scale );
 
         // --- rotation force
+        /*
         Quat4d dRdq;
         double rr2 = rot.ddist_cos( rot0, dRdq );
+        //printf("rp2 %f  rr2 %f \n", rp2, rr2 );
+        //printf("dRdq (%g,%g,%g,%g)\n", dRdq.x, dRdq.y, dRdq.z, dRdq.w);
         if( rr2 > RrotMax2 ) return;
-        double frot_scale = FrotScale/rr2-Frot0;    // we can put some 1D spline here in future
+        double frot_scale = FrotScale/(rr2+r2safety)-Frot0;    // we can put some 1D spline here in future
         frot.add_mul( dRdq, frot_scale );
-
+        */
+        //printf("FposScale %f  FrotScale %f \n", FposScale, FrotScale );
+        //printf("fpos_scale %f  frot_scale %f \n", fpos_scale, frot_scale );
     }
 
     void assembleConfForces(){
@@ -126,11 +136,23 @@ class RBodyConfDyn{
     }
 
     double optStep( ){
+        //printf("DEBUG 1\n");
         optimizer.cleanForce( ); // set all forces to zero
+        //printf("DEBUG 2\n");
         rot->normalize();        // keep quaternion normalized, otherwise unstable !!!
-        assembleConfForces();                                            // forces form configurations stored in memory
-        E_last = objectiveFuncDerivs( 7, optimizer.pos, optimizer.force );         // forces from derivative of external objective function
+        //printf("DEBUG 3\n");
+        //printf("pos 1");((RBodyPose*)optimizer.pos)->print();
+        assembleConfForces();
+        printf("force"); ((RBodyPose*)optimizer.force)->print();                                           // forces form configurations stored in memory
+        //printf("DEBUG 4\n");
+        if( objectiveFuncDerivs ){
+            E_last = objectiveFuncDerivs( 7, optimizer.pos, optimizer.force );         // forces from derivative of external objective function
+        }
+        //printf("DEBUG 5\n");
         frot->sub_paralel_fast( *rot ); vrot->sub_paralel_fast( *rot );  // out-project component which would harm unitarity of quaternion
+        //printf("DEBUG 6\n");
+        //printf("pos 2");((RBodyPose*)optimizer.pos)->print();
+        printf("force"); ((RBodyPose*)optimizer.force)->print();
         return optimizer.optStep();
     }
 
@@ -144,7 +166,7 @@ class RBodyConfDyn{
     }
 
 
-    void init(){
+    void init( int nConfsMax_ ){
         optimizer.allocate( 7 );
         pos   = (Vec3d* )(optimizer.pos  );
         rot   = (Quat4d*)(optimizer.pos+3);
@@ -156,6 +178,10 @@ class RBodyConfDyn{
         rot->setOne();
         precompAux();
         optimizer.initOpt( 0.01, 0.1 );
+        optimizer.setInvMass( 1.0 );
+        nConfsMax=nConfsMax_;
+        confs = new RBodyPose[nConfsMax];
+        confE = new double[nConfsMax];
     }
 
 };

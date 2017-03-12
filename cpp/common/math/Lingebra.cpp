@@ -520,19 +520,18 @@ int eig_Jacobi( int n, double* A, double* V, double* es, double tol, int nMaxIte
     int iter;
     for(int iter=0; iter<nMaxIter; iter++){
         //printf("%i (%i,%i) %f\n", iter, imax,jmax,vmax);
-        if( vmax < tol ){
-            printf( "converged by %i rotations; error < %e \n", iter, tol );
-            for(int i=0;i<n;i++){ es[i] = A[i*n+i]; };
-            delete mjs;
-            return iter;
-        }
         //printmatrix( n,n, A, " %2.3f" );
         jacobi_rotation    ( n, A, V,   imax, jmax );
         vmax = updateRowMax( n, A, mjs, imax, jmax );
+        if( vmax < tol ) break;
     }
+
+    if( vmax < tol ){  printf( "converged by %i rotations; error < %e \n", iter, tol ); }
+    else            {  printf( "not converged in %i rotations; A[%i,%i] = %e \n", iter, imax,jmax, vmax  );  }
+
+    for(int i=0;i<n;i++){ es[i] = A[i*n+i]; };
     delete mjs;
-    printf( "not converged in %i rotations; A[%i,%i] = %e \n", iter, imax,jmax, vmax  );
-    return -iter;
+    return iter;
 }
 
 

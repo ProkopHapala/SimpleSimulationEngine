@@ -121,25 +121,27 @@ class Quat4TYPE {
 
 
 
-// ======= metric 
+// ======= metric
     // metric on quaternions : http://www.cs.cmu.edu/~cga/dynopt/readings/Rmetric.pdf = /home/prokop/Dropbox/KnowDev/quaternions/Rotation_metric_Rmetric.pdf
     //  q and -q denote the same rotation !!!
     //  rho(q,q0)   = |q - q0|
     //  rho(q,q0)   = arccos( dot(q,q) )  ~=   1 - dot(q,q)
-    
+
     inline double dist_cos( const QUAT& q0 ) const {
         double cdot = dot( q0 );
-        return (cdot>=0)?cdot:-cdot;    // consider q=-q 
-    }
-    
-    inline double ddist_cos( const QUAT& q0, QUAT& dRdq ) const {
-        double cdot = dot( q0 );
-        if( cdot<0 ){ dRdq.mul(-1); };  // consider q=-q 
+        return 1-(cdot>=0)?cdot:-cdot;    // consider q=-q
     }
 
-    inline double sub_paralel_fast( const QUAT& q ) {  
-        // substract component of *this paralel to q assuming that q is normalized 
-        double cdot = dot( q );  
+    inline double ddist_cos( const QUAT& q0, QUAT& dRdq ) const {
+        dRdq.set(q0);
+        double cdot = dot( q0 );
+        if( cdot<0 ){ dRdq.mul(-1); cdot=-cdot; };  // consider q=-q
+        return 1-cdot;
+    }
+
+    inline double sub_paralel_fast( const QUAT& q ) {
+        // substract component of *this paralel to q assuming that q is normalized
+        double cdot = dot( q );
         add_mul( q, -cdot );
     }
 

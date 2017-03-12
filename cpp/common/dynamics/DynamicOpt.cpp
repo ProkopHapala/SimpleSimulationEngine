@@ -90,7 +90,7 @@ void DynamicOpt::move_FIRE(){
     if( ff > f_limit*f_limit ){
         double f = sqrt(ff);
         dt_*=sqrt(f_limit/f);
-        printf( "force too: %g => large limit dt: %g \n", f, dt_ );
+        printf( "force too large: %g => limit dt: %g \n", f, dt_ );
     };
     move_LeapFrog( dt_ );
 	//move_LeapFrog();
@@ -101,8 +101,10 @@ void DynamicOpt::move_FIRE(){
 }
 
 double DynamicOpt::optStep(){
-	//cleanForce( );
-	getForce( n, pos, force );
+	if(getForce){
+        cleanForce( );
+        getForce( n, pos, force );
+	}
 	switch( method ){
 		case 0: move_LeapFrog(dt);
 		case 1: move_MDquench();

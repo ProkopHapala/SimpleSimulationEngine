@@ -87,8 +87,9 @@ class DynamicOpt{
 		delete force;
 	}
 
-	inline void cleanForce( ){  for(int i=0; i<n; i++){ force[i]=0; } }
-	inline void cleanVel  ( ){  for(int i=0; i<n; i++){ vel  [i]=0; } }
+	inline void setInvMass( double d){ for(int i=0; i<n; i++){ invMasses[i]=d;} }
+	inline void cleanForce( )        { for(int i=0; i<n; i++){ force[i]=0;    } }
+	inline void cleanVel  ( )        { for(int i=0; i<n; i++){ vel  [i]=0;    } }
 
 	inline void initOpt( double dt_, double damp_ ){
 		dt      = dt_max   = dt_;
