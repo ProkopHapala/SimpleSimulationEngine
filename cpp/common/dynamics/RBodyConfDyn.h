@@ -28,25 +28,29 @@ class RBodyPose{
     Quat4d  rot;
 
     void print(){ printf("(%f %f %f)  (%f %f %f %f)\n", pos.x,pos.y,pos.z, rot.x,rot.y,rot.z,rot.w );}
+
+
+
 };
 
 class RBodyConfDyn{
 	public:
 	double RmutPos = 0.2;
-	double RmutRot = 0.2;
+	double RmutRot = 0.0;
 
-	double RposMax    = 3.0; // maximum distance from which configurations feel each orther
-	double RrotMax    = 0.1;
+	double RposMax    = 0.5; // maximum distance from which configurations feel each orther
+	double RrotMax    = 0.2;
 	//double RtotMax    =    ; // RtotMax**2 < Rrot**2 + Rpos**2
 	//double RrotScale  = 1.0;
-	double FposScale=1.0;
-    double FrotScale=1.0;
+	double FposScale=30.0;
+    double FrotScale=10.0;
 
     // axuliary
     double RposMax2;
 	double RrotMax2;
-    double Fpos0;
-	double Frot0;
+	double RposeMax2;
+    //double Fpos0;
+	//double Frot0;
 
 	double convF;
 	int    nMaxSteps = 100;
@@ -71,21 +75,16 @@ class RBodyConfDyn{
     void precompAux(){
         RposMax2  = RposMax*RposMax;
         RrotMax2  = RrotMax*RrotMax;
-        Fpos0     = FposScale/RposMax2;
-        Frot0     = FrotScale/RrotMax2;
+        RposeMax2 = RposMax2*0.2; // + RrotMax2
+
+        FposScale=FposScale/RposMax2;
+        FrotScale=FrotScale/RrotMax2;
+
+        //Fpos0     = FposScale/RposMax2;
+        //Frot0     = FrotScale/RrotMax2;
     }
 
-    void storeThisConf(){
-        // this should be improved in future - if configuration database is changed
-        if(nConfs>=nConfsMax){ printf("error: unable to store configuration, database full !!! %i \n", nConfs ); return;}
-        int i = nConfs;
-        confs[i].pos=*pos;
-        confs[i].rot=*rot;
-        confE[i] = E_last;
-        nConfs++;
-    }
-
-    void mutate(){
+    void mutate_near(){
         // there we do some initial mutation which should than relax
         // pos
         Vec3d  dpos;
@@ -97,14 +96,60 @@ class RBodyConfDyn{
         //rot.dRot_taylor2 ( RmutRot/dpos.norm(), dpos ); // fast for small rotations
     };
 
+    void mutate_far(){
+        // there we do some initial mutation which should than relax
+        // pos
+        Vec3d  dpos;
+        dpos.set(randf(-1,1),randf(-1,1),randf(-1,1));
+        pos->add_mul( dpos, 1.0/dpos.norm() );
+        // rot
+        //dpos.set(randf(-1,1),randf(-1,1),randf(-1,1));
+        //rot->dRot_exact( RmutRot/dpos.norm(), dpos );
+        //rot.dRot_taylor2 ( RmutRot/dpos.norm(), dpos ); // fast for small rotations
+    };
+
+    void storeThisConf(){
+        // this should be improved in future - if configuration database is changed
+
+        for(int i=0; i<nConfs; i++){
+            RBodyPose* conf_i = confs+i;
+            double r2 = evalConfDist( *pos, *rot, conf_i->pos, conf_i->rot );
+            if(r2 < RposeMax2){
+                mutate_far();
+                return;
+            }
+        }
+
+        if(nConfs>=nConfsMax){ printf("error: unable to store configuration, database full !!! %i \n", nConfs ); return;}
+        int i = nConfs;
+        confs[i].pos=*pos;
+        confs[i].rot=*rot;
+        confE[i] = E_last;
+        nConfs++;
+    }
+
+    double evalConfDist( const Vec3d& pos, const Quat4d rot, const Vec3d& pos0, const Quat4d rot0 ){
+        Vec3d dpos; dpos.set_sub(pos,pos0);
+        double r2 = dpos.norm2();
+        //double rr2 += rot.ddist_cos( rot0, dRdq );
+        return r2;
+    }
+
     void forceFromConf( const Vec3d& pos, const Quat4d rot, const Vec3d& pos0, const Quat4d rot0, Vec3d& fpos, Quat4d& frot ){
+        // NOTE :
+        // Calculation of force between configurations is both (i) iefficient and (ii) useless
+        // (i)  inefficient because hard and discontinuous constrain force will require fine time step
+        // (ii) useless because we only need to know that a configuration hit an other to terminate the trijectory and generate new trial, repel it outward
+        //      - generation of new trial can be done be extending in random direction by given length
+        //  But dimer method is good to search for soft DOFs - this should be rather dynamics constrained on sphere
         constexpr double r2safety = 1e-8;
         // --- position force
         Vec3d dpos; dpos.set_sub(pos,pos0);
         double rp2 = dpos.norm2();
-
         if( rp2 > RposMax2 ) return;
-        double fpos_scale = FposScale/(rp2+r2safety)-Fpos0;   // we can put some 1D spline here in future
+        //double fpos_scale = FposScale/(rp2+r2safety)-Fpos0;   // we can put some 1D spline here in future
+        double fpos_scale = FposScale*(RposMax2-rp2); // this makes problems because derivative discontinuity => unstable simulation
+        //double fpos_scale = FposScale*sq(RposMax2-rp2); // to remove derivative discontinuity and make simulation smoother
         fpos.add_mul( dpos, fpos_scale );
 
         // --- rotation force
@@ -115,6 +160,7 @@ class RBodyConfDyn{
         //printf("dRdq (%g,%g,%g,%g)\n", dRdq.x, dRdq.y, dRdq.z, dRdq.w);
         if( rr2 > RrotMax2 ) return;
         double frot_scale = FrotScale/(rr2+r2safety)-Frot0;    // we can put some 1D spline here in future
+        double frot_scale = FrotScale/(RrotMax2+rr2);
         frot.add_mul( dRdq, frot_scale );
         */
         //printf("FposScale %f  FrotScale %f \n", FposScale, FrotScale );
@@ -136,28 +182,21 @@ class RBodyConfDyn{
     }
 
     double optStep( ){
-        //printf("DEBUG 1\n");
         optimizer.cleanForce( ); // set all forces to zero
-        //printf("DEBUG 2\n");
         rot->normalize();        // keep quaternion normalized, otherwise unstable !!!
-        //printf("DEBUG 3\n");
-        //printf("pos 1");((RBodyPose*)optimizer.pos)->print();
-        assembleConfForces();
-        printf("force"); ((RBodyPose*)optimizer.force)->print();                                           // forces form configurations stored in memory
-        //printf("DEBUG 4\n");
         if( objectiveFuncDerivs ){
-            E_last = objectiveFuncDerivs( 7, optimizer.pos, optimizer.force );         // forces from derivative of external objective function
+            E_last = objectiveFuncDerivs( 7, optimizer.pos, optimizer.force );  // forces from derivative of external objective function
         }
-        //printf("DEBUG 5\n");
-        frot->sub_paralel_fast( *rot ); vrot->sub_paralel_fast( *rot );  // out-project component which would harm unitarity of quaternion
-        //printf("DEBUG 6\n");
-        //printf("pos 2");((RBodyPose*)optimizer.pos)->print();
-        printf("force"); ((RBodyPose*)optimizer.force)->print();
+        assembleConfForces();
+        //printf("force"); ((RBodyPose*)optimizer.force)->print();              // forces form configurations stored in memory
+        frot->sub_paralel_fast( *rot ); vrot->sub_paralel_fast( *rot );         // out-project component which would harm unitarity of quaternion
+        //printf("force"); ((RBodyPose*)optimizer.force)->print();
         return optimizer.optStep();
+        //return false;
     }
 
     void findNewConf(){
-        mutate();
+        mutate_near();
         for( int i=0; i<nMaxSteps; i++ ){
             double f = optStep( );
             if( f < convF ) break;
@@ -177,7 +216,7 @@ class RBodyConfDyn{
         pos->set(0.0);
         rot->setOne();
         precompAux();
-        optimizer.initOpt( 0.01, 0.1 );
+        optimizer.initOpt( 0.5, 0.1 );
         optimizer.setInvMass( 1.0 );
         nConfsMax=nConfsMax_;
         confs = new RBodyPose[nConfsMax];
