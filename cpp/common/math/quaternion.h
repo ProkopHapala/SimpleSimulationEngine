@@ -129,7 +129,7 @@ class Quat4TYPE {
 
     inline double dist_cos( const QUAT& q0 ) const {
         double cdot = dot( q0 );
-        return 1-(cdot>=0)?cdot:-cdot;    // consider q=-q
+        return 1-((cdot>=0)?cdot:-cdot);    // consider q=-q
     }
 
     inline double ddist_cos( const QUAT& q0, QUAT& dRdq ) const {
@@ -266,70 +266,65 @@ class Quat4TYPE {
 
 // =======  pitch, yaw, roll
 
-	inline void dpitch( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); pitch( ca, sa );  };
-	inline void pitch ( TYPE angle ){ pitch( cos(angle), sin(angle) );  };
+	inline void dpitch( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*0.5,sa,ca); pitch( ca, sa );  };
+	inline void pitch ( TYPE angle ){ angle*=0.5; pitch( cos(angle), sin(angle) );  };
     inline void pitch ( TYPE ca, TYPE sa ) {
         TYPE x_ =  x * ca + w * sa;
         TYPE y_ =  y * ca + z * sa;
         TYPE z_ = -y * sa + z * ca;
-                w = -x * sa + w * ca;
+             w = -x * sa + w * ca;
         x = x_; y = y_; z = z_;
     };
 
-	inline void dyaw( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); yaw( ca, sa );  };
-	inline void yaw ( TYPE angle ){ yaw( cos(angle), sin(angle) );  };
+	inline void dyaw( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*0.5,sa,ca); yaw( ca, sa );  };
+	inline void yaw ( TYPE angle ){ angle*=0.5; yaw( cos(angle), sin(angle) );  };
     inline void yaw ( TYPE ca, TYPE sa ) {
         TYPE x_ =  x * ca - z * sa;
         TYPE y_ =  y * ca + w * sa;
         TYPE z_ =  x * sa + z * ca;
-                w = -y * sa + w * ca;
+             w = -y * sa + w * ca;
         x = x_; y = y_; z = z_;
     };
 
-	inline void droll( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); roll( ca, sa );  };
-	inline void roll ( TYPE angle ){ roll( cos(angle), sin(angle) );  };
+	inline void droll( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*0.5,sa,ca); roll( ca, sa );  };
+	inline void roll ( TYPE angle ){ angle*=0.5; roll( cos(angle), sin(angle) );  };
     inline void roll ( TYPE ca, TYPE sa ) {
         TYPE x_ =  x * ca + y * sa;
         TYPE y_ = -x * sa + y * ca;
         TYPE z_ =  z * ca + w * sa;
-                w = -z * sa + w * ca;
+             w = -z * sa + w * ca;
         x = x_; y = y_; z = z_;
     };
 
 
-	inline void dpitch2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); pitch2( ca, sa );  };
-	inline void pitch2 ( TYPE angle ){ pitch2( cos(angle), sin(angle) );  };
+	inline void dpitch2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*0.5,sa,ca); pitch2( ca, sa );  };
+	inline void pitch2 ( TYPE angle ){ angle*=0.5; pitch2( cos(angle), sin(angle) );  };
     inline void pitch2 ( TYPE ca, TYPE sa ) {
-/*
-        TYPE x_ =  ax * w + ay * z - az * y + aw * x;
-        TYPE y_ = -ax * z + ay * w + az * x + aw * y;
-        TYPE z_ =  ax * y - ay * x + az * w + aw * z;
-               w  = -ax * x - ay * y - az * z + aw * w;
-*/
         TYPE x_ =  sa * w + ca * x;
         TYPE y_ = -sa * z + ca * y;
         TYPE z_ =  sa * y + ca * z;
-               w  = -sa * x + ca * w;
+             w  = -sa * x + ca * w;
         x = x_; y = y_; z = z_;
     };
 
-	inline void dyaw2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); yaw2( ca, sa );  };
-	inline void yaw2 ( TYPE angle ){ yaw2( cos(angle), sin(angle) );  };
+	inline void dyaw2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*0.5,sa,ca); yaw2( ca, sa );  };
+	inline void yaw2 ( TYPE angle ){ angle*=0.5; yaw2( cos(angle), sin(angle) );  };
     inline void yaw2 ( TYPE ca, TYPE sa ) {
         TYPE x_ = + sa * z  + ca * x;
         TYPE y_ = + sa * w  + ca * y;
         TYPE z_ = - sa * x  + ca * z;
-               w  = - sa * y  + ca * w;
+             w  = - sa * y  + ca * w;
         x = x_; y = y_; z = z_;
     };
 
-	inline void droll2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle,sa,ca); roll2( ca, sa );  };
-	inline void roll2 ( TYPE angle ){ roll2( cos(angle), sin(angle) );  };
+	inline void droll2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*0.5,sa,ca); roll2( ca, sa );  };
+	inline void roll2 ( TYPE angle ){ angle*=0.5; roll2( cos(angle), sin(angle) );  };
     inline void roll2 ( TYPE ca, TYPE sa ) {
+        //ca *=0.5; sa *=0.5; // seems that should be just half
         TYPE x_ = - sa * y + ca * x;
         TYPE y_ = + sa * x + ca * y;
         TYPE z_ = + sa * w + ca * z;
-               w  = - sa * z + ca * w;
+             w  = - sa * z + ca * w;
         x = x_; y = y_; z = z_;
     };
 
