@@ -69,6 +69,24 @@ inline double clamp_abs( double x, double xmax ){
 
 #include "gonioApprox.h"
 
+// https://en.wikipedia.org/wiki/Error_function#Approximation_with_elementary_functions
+
+inline double erf_4_plus(double x){
+    double p = 1 + x*( 0.278393d + x*( 0.230389d + x*(0.000972d + x*0.078108d )));
+    p=p*p; p=p*p;
+    return 1 - 1/p;
+}
+inline double erf_4(double x){ if(x>0){ return erf_4_plus(x); }else{ return -erf_4_plus(-x); } }
+
+
+inline double erf_6_plus(double x){
+    double p = 1 + x*( 0.0705230784d + x*( 0.0422820123d + x*( 0.0092705272d + x*( 0.0001520143d + x*( 0.0002765672d + x*0.0000430638d ))))); 
+    p=p*p; p=p*p; p=p*p; p=p*p;
+    return 1 - 1/p;
+}
+inline double erf_6(double x){ if(x>0){ return erf_6_plus(x); }else{ return -erf_6_plus(-x); } }
+
+
 // from http://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp/
 inline double fastPow(double a, double b) {
   union {
