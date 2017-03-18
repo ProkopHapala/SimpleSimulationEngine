@@ -23,42 +23,99 @@
 
 */
 
+
+// ================ Algorithm based on recursion
+
+
+inline double dist2limited( int n, double * xs, double * x0s, double dist2max ){
+    double d2sum = 0;
+    for(int i=0; i<n; i++){ double d = d-x0s[i]; d*=d; d2sum+=d; }
+    //for(int i=0; i<n; i++){ double d=center[i]-d; d*=d; d2sum+=d;  if(d2sum>dist2max) return 1e+300; }
+    return d2sum;
+}
+
+/*
+class SphereNodeND_Abstract{
+    public:
+    double * center;
+    virtual  SphereNodeND_Abstract* findNearest( int n, double xs, double dist2max, double& d, int& level );
+}
+
+class SphereNodeND_Branch{
+    public:
+    std::vector<SphereNodeND_Abstract*> branches;
+
+    virtual SphereNodeND_Abstract* findNearest( int n, double xs, double dist2max, double& d, int& level ){
+        for( sph : branches ){
+            double r2 = dist2limited( nDim, vec, sph->center, dist2max );
+            if (r2>R2OUT) continue;
+            findNearest( n, xs, dist2max, d, level );
+        }
+    };
+}
+
+class SphereNodeND_Leaf{
+    public:
+    std::vector<double*> leafs;
+
+    virtual SphereNodeND_Abstract* findNearest( int n, double xs, double dist2max, double& d, int& level ){
+        if(level) ;
+    };
+}
+
+class SphereNodeND_Root{
+
+}
+*/
+
+
+
+
+//=================================================
+//================================================= Other version
+//=================================================
+
 class SphereNodeND{
     public:
     double * center;
     //double R;
     //std::vector<SphereNodeND*> branches;  // later we should make multi-level branching
-    std::vector<int>           leafs;
-
-    inline double dist2( int n, double * vec, double dist2max ){
-        double d2sum = 0;
-        for(int i=0; i<n; i++){ double d = center[i]-d; d*=d; d2sum+=d; }
-        //for(int i=0; i<n; i++){ double d=center[i]-d; d*=d; d2sum+=d;  if(d2sum>dist2max) return 1e+300; }
-        return d2sum;
-    }
+    std::vector<int>    leafs; // int can be both branch and leaf
 
     // try shift sphere center toward 'vec' by least amout that sphere contains vec, check if all leafs are still inside sthis sphereNode
-    inline bool tryShift( int n, double * vec, double R ){}
+    inline bool tryShift( int n, double * vec, double R ){};
 
 };
 
 class SphereTreeND{
     public:
     int     nDim;
-    double  R_contain; // if |p-sph.center|<R_contain point        'p' is child of sph
+    double  R_contain;   // if |p-sph.center|<R_contain point        'p' is child of sph
     //double  R_overlap; // if |p-sph.center|<R_overlap neighbors of 'p' should searched in sph
 
-    std::vector<double*> points;
+    std::vector<double*>       points;
     std::vector<SphereNodeND*> branches;
 
-    SphereNodeND* findNeighs( double * vec, double R, std::unordered_set<int>* found ){
-        double R2 = R*R;
-        double R_overlap = R + R_contain;
-        double dist2max = R_overlap*R_overlap;
-        double d2min = 1e+300;
+    SphereNodeND* findClosestBranch( double * vec, double dist2max, double& d2min ){
+        d2min                 = 1e+300;
         SphereNodeND* sph_min = NULL;
         for( sph : branches ){
-            double dist2i = sph->dist2( nDim, vec, dist2max );
+            double r2 = dist2limited( nDim, vec, sph->center, dist2max );
+            if( r2 > dist2max ) continue;
+            if( r2 < d2min    ){ sph_min = sph;  d2min=r2; }
+        }
+        return sph_min;
+    }
+
+    SphereNodeND* findNeighs( double * vec, double R, std::unordered_set<int>* found ){
+        double R2        = R*R;
+        double R_overlap = R + R_contain;
+        double dist2max  = R_overlap*R_overlap;
+        double d2min     = 1e+300;
+        SphereNodeND* sph_min = NULL;
+        for( sph : branches ){
+            //double dist2i = sph->dist2( nDim, vec, dist2max );
+            double dist2i = dist2limited( nDim, vec, sph->center, dist2max  );
             if( dist2i > dist2max ) continue;
             if( dist2i < d2min    ){ sph_min = sph;  d2min=dist2i; }
             if(!found) continue;
@@ -88,7 +145,8 @@ class SphereTreeND{
         //for( int i=0; branches.size(); i++ ){
         for( sph : branches ){
             //SphereNodeND* sph = branches[i];
-            double dist2i = sph->dist2( nDim, vec, dist2max );
+            //double dist2i = sph->dist2( nDim, vec, dist2max );
+            double dist2i = dist2limited( nDim, vec, sph->center, dist2max  );
             //if( dist2i > dist2max ) continue;
             if( dist2i < d2min    ){ sph_min = sph;  d2min=dist2i; }
         }
@@ -101,7 +159,6 @@ class SphereTreeND{
     }
 
 };
-
 
 #endif
 

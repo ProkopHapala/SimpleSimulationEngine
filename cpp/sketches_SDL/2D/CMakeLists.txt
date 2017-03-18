@@ -5,6 +5,9 @@ target_link_libraries( test_AppSDL2OGL ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_HashMap2D test_HashMap2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_HashMap2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_SphereTree2D test_SphereTree2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_SphereTree2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_TileTree2D test_TileTree2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_TileTree2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 #target_compile_options( test_TileTree2D PRIVATE "-O2")
