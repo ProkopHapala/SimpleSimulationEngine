@@ -1,9 +1,12 @@
 
+#ifndef  PolyLinear1d_h
+#define  PolyLinear1d_h
+
 // read also:
 // http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle/
 
-#ifndef  PolyLinear1d_h
-#define  PolyLinear1d_h
+// routines for calculation of integrals and arguments(limits) of integral of piecewise linear function 
+// used e.g. for Buoyancy
 
 #include <math.h>
 #include <cstdlib>

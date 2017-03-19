@@ -160,7 +160,29 @@ inline TYPE val2D( TYPE x, TYPE y, TYPE * f0s, TYPE * f1s, TYPE * f2s, TYPE * f3
 
 
 
+/*
 
+
+Bicubic spline along line: (e.g. for terrain visibility raytracing)
+
+according to wiki https://en.wikipedia.org/wiki/Bicubic_interpolation
+F(x,y) = [y^3,y^2,y,1][B][P][B][x^3,x^2,x,1]      # 4x4 matrix product, quadratic form
+where [B] is 4x4 matrix of cubic spline basis functions; and [P] 4x4 is matrix of control points 
+
+for direction vector s = [sx,sy]
+x = x0 + sx*t
+y = y0 + sy*t
+
+F(t) = [(y0 + sy*t)^3,(y0 + sy*t)^2,(y0 + sy*t),1 ] [B][P][B]  [(x0 + sx*t)^3,(x0 + sx*t)^2,(x0 + sx*t),1 ]
+which is 6 degree polynominal in t     
+F(t)  = c0 + c1*t + c2*t^2 + c3*t^3 + c4*t^4 + c5*t^5  +  c6*t^6
+and its derivative is 5th degree polynominal
+dF(t) = d0 + d1*t + d2*t^2 + d3*t^3 + d4*t^4 + d5*t^5 
+... coefitients 
+  
+=> more effitient should be  line-search for maximum ( we even know second derivatives )
+
+*/
 
 
 

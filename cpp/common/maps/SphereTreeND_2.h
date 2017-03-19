@@ -7,9 +7,11 @@
 //#include "VecN.h"
 
 inline double dist2limited( int n, double * xs, double * x0s, double dist2max ){
+    printf( "dist2limited (%g,%g) (%g,%g) \n", xs[0],xs[1],   x0s[0],x0s[1] );
     double d2sum = 0;
-    for(int i=0; i<n; i++){ double d = d-x0s[i]; d*=d; d2sum+=d; }
+    for(int i=0; i<n; i++){ double d = xs[i]-x0s[i]; d*=d; d2sum+=d; }
     //for(int i=0; i<n; i++){ double d=center[i]-d; d*=d; d2sum+=d;  if(d2sum>dist2max) return 1e+300; }
+    //printf( "dist2limited d2sum %g \n", d2sum );
     return d2sum;
 }
 
@@ -25,10 +27,12 @@ class SphereNodeND{
 
     inline void searchOp( int i, int n, double* xs, double r2max,     double& rmin, int& imin, int& nfound, int* found ){
         double  r2  = dist2limited( n, xs, center, r2max );
+        printf( "searchOp %i %g %g %g \n", i, r2, r2max, rmin  );
         if(r2>r2max) return;
         if(found)found[nfound]=i;
         nfound++;
         if(r2<rmin ){ rmin=r2; imin = i; }
+        //printf( "--\n" );
     }
 
 
@@ -88,8 +92,10 @@ class SphereTreeND{
     public:
     int nDim=0;
     int nLevel=0;
-    double * RIs = NULL; // inner radius - child can be attached under this node ( but is not enclosed by it )
-    double * ROs = NULL; // outer radius - point can interact with some child of this node ( but not necessarily inside the node RI )
+    double * RIs  = NULL; // inner radius - child can be attached under this node ( but is not enclosed by it )
+    double * ROs  = NULL; // outer radius - point can interact with some child of this node ( but not necessarily inside the node RI )
+    double * R2Is = NULL;
+    double * R2Os = NULL;
     std::vector<SphereNodeND>* nodes = NULL;
     std::vector<double*>       leafs;
 
@@ -155,30 +161,40 @@ class SphereTreeND{
     */
 
     int findNeighAtLevel( int n, double * xs, int& level, int& closest ){
-        int ilevel=0;
+        int insert_level=  0;
+        closest         = -1;
         // ------- top level
-        int nsup = 0; int imin  = -1; double rmin  = 1.0e+300d; double r2max = ROs[0];
+        int nsup = 0; int imin  = -1; double rmin  = 1.0e+300d; double r2max = R2Os[0];
         std::vector<SphereNodeND>& nodes_sup = nodes[0];
+        printf(" nodes_sup.size() %i\n", nodes_sup.size() );
         for(int i=0; i<nodes_sup.size(); i++){
             nodes_sup[i].searchOp( i, n, xs, r2max, rmin, imin, nsup, sups );  // sups are level 1
         }
-        closest = imin;
+        printf(" findNeighAtLevel level 0 : nsup %i rmin %g \n", rmin, nsup );
+        if( rmin < R2Is[0] ){ closest = imin; insert_level=0; }
         if (nsup==0) return 0;
         // ------- lover levels
-        for(ilevel=1;ilevel<level;ilevel++){
-            int nsub  =  0; imin  = -1;  rmin  =  1.0e+300d; r2max = ROs[ilevel];
+        for(int ilevel=0;ilevel<level;ilevel++){
+            printf(" --- level %i \n", ilevel );
+            int nsub  =  0; imin  = -1;  rmin  =  1.0e+300d; r2max = R2Os[ilevel];
             std::vector<SphereNodeND>& nodes_sup = nodes[ilevel];
             std::vector<SphereNodeND>& nodes_sub = nodes[ilevel+1];
             for(int j=0; j<nsup; j++ ){
+                printf( "j %i nsup %i \n", j, nsup );
+                printf( "j %i nsup %i sups[j] %i \n", j, nsup, sups[j] );
+                printf( "j %i nsup %i sups[j] %i nbranch %i \n", j, nsup, sups[j], nodes_sup[sups[j]].branches.size() );
                 for( int i : nodes_sup[sups[j]].branches ){
                     nodes_sub[i].searchOp( i, n, xs, r2max, rmin, imin, nsub, subs );
                 }
             }
+            printf(" nsub %i \n", nsub );
             if (nsub==0) break;
-            int* tmp = sups; sups = subs; sups = tmp; nsup=nsub;
-            closest = imin;
+            int* tmp = sups; sups = subs; subs = tmp; nsup=nsub;
+            if( rmin < R2Is[ilevel] ){ closest = imin; insert_level=ilevel; }
+            printf(" --- END level %i \n", ilevel );
         }
-        level=ilevel;
+        printf( "findNeighAtLevel level %i closest %i\n", insert_level, closest );
+        level=insert_level;
         return nsup;
     }
 
@@ -195,30 +211,39 @@ class SphereTreeND{
 */
 
     int insert( int n, double * xs, int level, int isup ){
-        SphereNodeND * sup;
+        //SphereNodeND * sup;
+        printf( " insert level %i isup %i \n", level, isup );
+        printf( "leafs.size() %i \n", leafs.size() );
         if(level==0){
-            sup = new SphereNodeND( xs, isup );
+            printf( "level %i isup %i \n", level, isup );
+            SphereNodeND * node = new SphereNodeND( xs, isup );
             isup = nodes[0].size();
-            nodes[0].push_back( *sup );
+            nodes[0].push_back( *node );
             level++;
         }else{
-            sup = &nodes[level][isup];
+            //sup = &nodes[level][isup];
         }
-        for(int i=level; i<(nLevel-1); i++ ){
+        for(level; level<nLevel; level++ ){
+            printf( "--- level %i isup %i \n", level, isup );
             SphereNodeND * node = new SphereNodeND( xs, isup );
-            isup = nodes[level].size();
-            sup->branches.push_back(isup);
-            nodes[level] .push_back( *node );
-            sup = node;
+            int isup_ = nodes[level].size();
+            printf( "isup_ %i \n", isup_  );
+            nodes[level-1][isup].branches.push_back(isup_); //printf( "sup->branches.size() %i \n", sup->branches.size() );
+            nodes[level  ].push_back( *node );
+            isup = isup_;
         }
-        sup->branches.push_back( leafs.size() );
+        printf( "--- last level %i \n", nLevel-1 );
+        printf( "leafs.size() %i \n", leafs.size() );
+        nodes[nLevel-1][isup].branches.push_back( leafs.size() );
         leafs.push_back(xs);
+        printf( "leafs.size() %i \n", leafs.size() );
+        printf( " ==== DONE insert === \n" );
     }
 
     int insert( int n, double * xs ){
-        leafs.push_back( xs );
         int closest; int level = nLevel-1;
         int nsup = findNeighAtLevel( n, xs, level, closest );
+        printf( " ==== DONE findNeighAtLevel === \n" );
         insert( n, xs, level, closest );
     }
 
@@ -227,12 +252,17 @@ class SphereTreeND{
         nodes = new std::vector<SphereNodeND>[nLevel];
         //leafs = new std::vector<double*>     ;
         ROs   = new double[nLevel];
+        R2Is  = new double[nLevel];
+        R2Os  = new double[nLevel];
         subs  = new int[nMaxFound];
         sups  = new int[nMaxFound];
         double ro=0.0;
         for( int i=nLevel-1; i>=0; i--){
-            ro    += RIs[i];
-            ROs[i] = ro;
+            double ri = RIs[i];
+            R2Is[i]   = ri*ri;
+            ro       += ri;
+            ROs[i]    = ro;
+            R2Os[i]   = ro*ro;
         }
     }
 
