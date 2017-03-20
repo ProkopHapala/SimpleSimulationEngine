@@ -161,40 +161,44 @@ class SphereTreeND{
     */
 
     int findNeighAtLevel( int n, double * xs, int& level, int& closest ){
+        printf( " ==== START findNeighAtLevel === \n" );
         int insert_level=  0;
         closest         = -1;
         // ------- top level
+        printf(" --- level %i \n", 0 );
         int nsup = 0; int imin  = -1; double rmin  = 1.0e+300d; double r2max = R2Os[0];
         std::vector<SphereNodeND>& nodes_sup = nodes[0];
         printf(" nodes_sup.size() %i\n", nodes_sup.size() );
         for(int i=0; i<nodes_sup.size(); i++){
-            nodes_sup[i].searchOp( i, n, xs, r2max, rmin, imin, nsup, sups );  // sups are level 1
+            nodes_sup[i].searchOp( i, n, xs, r2max, rmin, imin, nsup, sups );  // sups are level 0
         }
         printf(" findNeighAtLevel level 0 : nsup %i rmin %g \n", rmin, nsup );
-        if( rmin < R2Is[0] ){ closest = imin; insert_level=0; }
-        if (nsup==0) return 0;
-        // ------- lover levels
-        for(int ilevel=0;ilevel<level;ilevel++){
-            printf(" --- level %i \n", ilevel );
-            int nsub  =  0; imin  = -1;  rmin  =  1.0e+300d; r2max = R2Os[ilevel];
-            std::vector<SphereNodeND>& nodes_sup = nodes[ilevel];
-            std::vector<SphereNodeND>& nodes_sub = nodes[ilevel+1];
-            for(int j=0; j<nsup; j++ ){
-                printf( "j %i nsup %i \n", j, nsup );
-                printf( "j %i nsup %i sups[j] %i \n", j, nsup, sups[j] );
-                printf( "j %i nsup %i sups[j] %i nbranch %i \n", j, nsup, sups[j], nodes_sup[sups[j]].branches.size() );
-                for( int i : nodes_sup[sups[j]].branches ){
-                    nodes_sub[i].searchOp( i, n, xs, r2max, rmin, imin, nsub, subs );
+        if( rmin < R2Is[0] ){ closest = imin; insert_level=1; }
+        if (nsup>0){
+            // ------- lover levels
+            for(int ilevel=1;ilevel<level;ilevel++){
+                printf(" --- level %i \n", ilevel );
+                int nsub  =  0; imin  = -1;  rmin  =  1.0e+300d; r2max = R2Os[ilevel];
+                std::vector<SphereNodeND>& nodes_sup = nodes[ilevel-1];
+                std::vector<SphereNodeND>& nodes_sub = nodes[ilevel  ];
+                for(int j=0; j<nsup; j++ ){
+                    printf( "j %i nsup %i \n", j, nsup );
+                    printf( "j %i nsup %i sups[j] %i \n", j, nsup, sups[j] );
+                    printf( "j %i nsup %i sups[j] %i nbranch %i \n", j, nsup, sups[j], nodes_sup[sups[j]].branches.size() );
+                    for( int i : nodes_sup[sups[j]].branches ){
+                        nodes_sub[i].searchOp( i, n, xs, r2max, rmin, imin, nsub, subs );
+                    }
                 }
+                printf(" nsub %i \n", nsub );
+                if (nsub==0) break;
+                int* tmp = sups; sups = subs; subs = tmp; nsup=nsub;
+                if( rmin < R2Is[ilevel] ){ closest = imin; insert_level=ilevel+1; }
+                printf(" --- END level %i \n", ilevel );
             }
-            printf(" nsub %i \n", nsub );
-            if (nsub==0) break;
-            int* tmp = sups; sups = subs; subs = tmp; nsup=nsub;
-            if( rmin < R2Is[ilevel] ){ closest = imin; insert_level=ilevel; }
-            printf(" --- END level %i \n", ilevel );
         }
         printf( "findNeighAtLevel level %i closest %i\n", insert_level, closest );
         level=insert_level;
+        printf( " ==== DONE findNeighAtLevel === \n" );
         return nsup;
     }
 
@@ -241,9 +245,8 @@ class SphereTreeND{
     }
 
     int insert( int n, double * xs ){
-        int closest; int level = nLevel-1;
+        int closest; int level = nLevel;
         int nsup = findNeighAtLevel( n, xs, level, closest );
-        printf( " ==== DONE findNeighAtLevel === \n" );
         insert( n, xs, level, closest );
     }
 

@@ -38,7 +38,8 @@ void drawSphereTreeND( SphereTreeND& store ){
                 if(ilevel<(store.nLevel-1)){
                     Draw2D::drawLine_d( *((Vec2d*) nd.center), *((Vec2d*) store.nodes[ilevel+1][isub].center) );
                 }else{
-                    //Draw2D::drawLine_d( *((Vec2d*) nd.center), *((Vec2d*) store.leafs[isub] ) );
+                    Draw2D::drawLine_d( *((Vec2d*) nd.center), *((Vec2d*) store.leafs[isub] ) );
+                    Draw2D::drawPointCross_d( *((Vec2d*) store.leafs[isub] ), 0.05 );
                 }
             }
 
@@ -102,6 +103,9 @@ TestAppSphereTree2D::TestAppSphereTree2D( int& id, int WIDTH_, int HEIGHT_ ) : A
     */
 
 
+    printf("==== print store done ====\n");
+    printf("==== print store done ====\n");
+    printf("==== print store done ====\n");
     printf("==== print store done ====\n");
 
     //store.init();
