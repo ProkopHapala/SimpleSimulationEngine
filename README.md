@@ -31,7 +31,7 @@ Main motivation is to assemble various common algorithma from physics, numerical
 - However, part of the code is dedicated to visualization and user interface using [simple direct media layer 2](https://www.libsdl.org/) ( SDL2 ) and OpenGL
 - other dependencies may be added in examples of particular use cases ( i.e. in praticular games and simulation programs )
 
-# What is inside
+# What is inside (C++ part)
 
 <font color="green"> This is work in progress. Often particular modules of the engine are functional, but they are not put together to build an unified system and work together. </font>
 
@@ -43,6 +43,7 @@ Main motivation is to assemble various common algorithma from physics, numerical
   - Various splines in 1D, 2D 3D, e.g. cubic hermite spline, and other methods for composing of complicated 1D,2D,3D functions from simple primitives 
   - Basic computational geometry, ray tracing, Covex polygons, polygon Mesh.
   - Basic linear algebra ( matrix multiplication, transpose, GaussJordan solver, Biconjugate gradinet iterative solver, Fitting, Jacobi matrix diagonalization)
+  - iterative non-linear gradient based optimization using FIRE (faster and more robust CG, comparable and sometimes better than BFGS) 
 - basic algorithms and datastrucutres  
   - Various methos for acceleration of local interactions and nearest neighbor search e.g. HashMap, nD BoundigSphere hierarchy, and grids.
   - Rasterization of various grids (trinagular, regular)
@@ -50,10 +51,19 @@ Main motivation is to assemble various common algorithma from physics, numerical
   - RigidBody dynamics in 2D and 3D - with application in RigidBody molecular dynamics, flight dynamics and vehicle on tarrain
   - SoftBody dynamics with Truss simulation (e.g. for something like BridgeBuilder)
   - simulation of hydraulic errosion for terrain generation
-- Apps
+- GUI and interfaces
+  - basic SDL application prefabricates in 2D and 3D
+  - Basic lightweight gui comonents (buttons, sliders, input box ... ) for SDL2
+  - basic plotting utilities for 1D,2D and 3D data (inspired by matplolib)
+- CG
+  - many basic functions for drawing basic primitives
+  - shaders form ScreenSpace ambient occlusion, and ray-tracing and ray-marching simple gometric primitives (in-shader Constructive solid geometry CGS), in shader raymarching of LCAO function.
+  - Shaders for Terrain rendering with logaritmic depth buffer for large scenes
+  - basic OpenGL 
+- Apps and Games
   - Molecular editor with rigid body molecular dynamics (fast local interactions) with python interface
   - 3D aircraft flight dynamics simulation (3D rigid body and 3D airfoil) 
-  - 2D ships dynamics with sail simulation (2D rigid body and 2D airfoil) with shooting cannons fighting in (1) age-of-sail combat and (2) wwII battleship
+  - 2D ships dynamics with sail simulation (2D rigid body and 2D airfoil) with shooting cannons fighting in (1) age-of-sail combat and (2) wwII battleship, with multiplayer using SDL2net UDP
   - 3D Tank in terrain 
   - 2D top view simulation of large army (~30000 soldiers) for total-war like game (interactions accelerated by BoxBuffer)
   
