@@ -18,6 +18,10 @@ other option is to download the notebook locally on your computer and open it us
 jupyter notebook ch1_basics.ipynb
 ```
 
+for HTML with javascript use: http://htmlpreview.github.io/ for example:
+
+http://htmlpreview.github.io/?https://github.com/ProkopHapala/SimpleSimulationEngine/blob/master/projects/SpaceCombat/HTML/StickSpaceCraft.html
+
 ## Tools used
 
 - Jupyter/IPython notebooks ( graphics by matplotlib, posibly POVray)
