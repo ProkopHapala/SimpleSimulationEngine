@@ -15,12 +15,19 @@ https://nbviewer.jupyter.org/github/ProkopHapala/SimpleSimulationEngine/blob/mas
 other option is to download the notebook locally on your computer and open it using ipython (easiest form linux terminal) by command: 
 
 ```
-jupyter notebook ch1_basics.ipynb
+$ jupyter notebook ch1_basics.ipynb
 ```
 
 for HTML with javascript use: http://htmlpreview.github.io/ for example:
 
 http://htmlpreview.github.io/?https://github.com/ProkopHapala/SimpleSimulationEngine/blob/master/projects/SpaceCombat/HTML/StickSpaceCraft.html
+
+for offline browsing use python web server
+```
+$ cd ~/git/SimpleSimulationEngine/projects/SpaceCombat/HTML
+$ python -m SimpleHTTPServer
+```
+and than in web browser open http://127.0.0.1:8000
 
 ## Tools used
 
