@@ -149,6 +149,8 @@ void ScreenSDL2OGL3::init( int& id, int WIDTH_, int HEIGHT_ ){
 */
 
 int ScreenSDL2OGL3::init( int& id, int WIDTH_, int HEIGHT_ ){
+
+
     WIDTH  = WIDTH_;
 	HEIGHT = HEIGHT_;
 	setDefaults();
@@ -158,6 +160,9 @@ int ScreenSDL2OGL3::init( int& id, int WIDTH_, int HEIGHT_ ){
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2); // Opengl 3.2
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+    printf( "GL_VENDOR  : %s \n", glGetString(GL_VENDOR)  );
+	printf( "GL_VERSION : %s \n", glGetString(GL_VERSION) );
 
     window = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     id = SDL_GetWindowID(window); printf( " win id %i \n", id );

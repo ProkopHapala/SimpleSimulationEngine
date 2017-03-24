@@ -158,5 +158,9 @@ AppSDL2OGL_3D::AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( i
 	qCamera.setOne();
 	qCamera.toMatrix_unitary( camMat );
 	camPos.set(0.0d);
+	GLbyte* s;
+	// http://stackoverflow.com/questions/40444046/c-how-to-detect-graphics-card-model
+	printf( "GL_VENDOR  : %s \n", glGetString(GL_VENDOR)  );
+	printf( "GL_VERSION : %s \n", glGetString(GL_VERSION) );
 }
 

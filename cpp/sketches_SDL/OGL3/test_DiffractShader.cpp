@@ -208,6 +208,9 @@ void init(){
     context = SDL_GL_CreateContext( window );
     SDL_GL_SetSwapInterval(1);
 
+    printf( "GL_VENDOR  : %s \n", glGetString(GL_VENDOR)  );
+	printf( "GL_VERSION : %s \n", glGetString(GL_VERSION) );
+
 	// vertex array object
 	glGenVertexArrays(1, &vao);  				// Allocate and assign a Vertex Array Object to our handle
 	glBindVertexArray(vao); 					// Bind our Vertex Array Object as the current used object
