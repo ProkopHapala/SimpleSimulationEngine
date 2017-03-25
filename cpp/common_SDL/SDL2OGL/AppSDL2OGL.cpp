@@ -32,14 +32,23 @@ void AppSDL2OGL::inputHanding(){
 
 void AppSDL2OGL::eventHandling( const SDL_Event& event ){
     switch( event.type ){
+        case SDL_MOUSEBUTTONDOWN:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:  LMB = true;  break;
+                case SDL_BUTTON_RIGHT: RMB = true;  break;
+            };  break;
+        case SDL_MOUSEBUTTONUP:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:  LMB = false; break;
+                case SDL_BUTTON_RIGHT: RMB = false; break;
+            }; break;
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
                 case SDLK_ESCAPE:   quit(); break;
                 //case SDLK_SPACE:    STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
                 case SDLK_KP_MINUS: zoom*=VIEW_ZOOM_STEP; break;
                 case SDLK_KP_PLUS:  zoom/=VIEW_ZOOM_STEP; break;
-            }
-            break;
+            } break;
         case SDL_QUIT: quit(); break;
     };
 };

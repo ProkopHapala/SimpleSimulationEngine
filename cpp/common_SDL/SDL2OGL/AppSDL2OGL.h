@@ -8,6 +8,7 @@ const float	VIEW_MOVE_STEP     = 0.2f;
 
 class AppSDL2OGL : public ScreenSDL2OGL{
 	public:
+	bool LMB=false,RMB=false;
 	int frameCount = 0;
 	bool loopEnd   = false, STOP = false;
 	float camStep  = VIEW_MOVE_STEP;
