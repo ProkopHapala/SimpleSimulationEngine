@@ -30,35 +30,6 @@ class OCLBuffer{
     inline OCLBuffer( size_t n_, size_t typesize_, void * p_cpu_, cl_mem_flags flags_ ) :n(n_),typesize(typesize_),p_cpu(p_cpu_),flags(flags_){};
 };
 
-class OCLArg{
-    public:
-    int kind      = 0;
-    OCLBuffer * buff;
-};
-
-class OCLKernel{
-    public:
-    cl_kernel   kernel;
-    cl_uint     dim       = 1;
-    size_t      global[2] = {0,0};
-    size_t      local [2] = {0,0};
-    cl_uint     blocksize = 0;
-
-    int nargs;
-    OCLArg * args = NULL;
-
-    inline int enque( cl_command_queue& commands ){
-        if(local[0]==0){
-            return clEnqueueNDRangeKernel( commands, kernel, dim, NULL, global, NULL,  0, NULL, NULL );
-        }else{
-            return clEnqueueNDRangeKernel( commands, kernel, dim, NULL, global, local, 0, NULL, NULL );
-        }
-    }
-
-    OCLKernel(){};
-    OCLKernel(cl_kernel kernel_,cl_uint dim_, size_t global_, size_t local_ ) : kernel(kernel_),dim(dim_) { global[0]=global_;global[1]=global_; local[0]=local_;local[0]=local_; };
-};
-
 class OCLsystem{
     // http://stackoverflow.com/questions/20105566/advantages-of-a-program-containing-several-opencl-kernels-versus-several-program
     public:
@@ -67,9 +38,8 @@ class OCLsystem{
     cl_context       context;       // compute context
     cl_command_queue commands;      // compute command queue
     cl_program       program;       // compute program
-    //cl_kernel        kernel;        // compute kernel
 
-    std::vector<OCLKernel> kernels;
+    std::vector<cl_kernel> kernels;
     std::vector<OCLBuffer> buffers;
 
     int init(){
@@ -124,9 +94,8 @@ class OCLsystem{
         return err;
     }
 
-    int finish(){
-        err = clFinish(commands);
-        OCL_checkError(err, "Waiting for kernel to finish");
+    int download(){
+        int err = CL_SUCCESS;
         for(int i=0; i<buffers.size(); i++ ){
             if( buffers[i].read_on_finish ){
                 printf("finish : reading buff %i \n", i);
@@ -136,22 +105,44 @@ class OCLsystem{
         return err;
     }
 
-    int runKernelSequence( int n, int * ikerns ){
-        for(int i=0; i<n; i++){
-            err |= kernels[ikerns[i]].enque(commands);
-            //OCL_checkError(err, "kernel ");
-        }
+    int finish(){
+        int err;
+        err = clFinish(commands);   OCL_checkError(err, "Waiting for kernel to finish");
+        err |= download();
         return err;
     }
 
     void destroy(){
         clReleaseProgram(program);
-        for(int i=0; i<kernels.size(); i++){ clReleaseKernel(kernels[i].kernel);       }
+        for(int i=0; i<kernels.size(); i++){ clReleaseKernel(kernels[i]);       }
         for(int i=0; i<buffers.size(); i++){ clReleaseMemObject(buffers[i].p_gpu); }
         //clReleaseKernel(kernel);
         clReleaseCommandQueue(commands);
         clReleaseContext(context);
     }
+};
+
+class OCLtask{
+    public:
+    OCLsystem  * cl;
+    //cl_kernel  * kernel;
+    size_t      ikernel   = 0;
+    size_t      dim       = 1;
+    size_t      global[2] = {0,0};
+    size_t      local [2] = {0,0};
+
+    inline int enque_raw( ){
+        if(local[0]==0){ return clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, NULL,  0, NULL, NULL );   }
+        else{            return clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL );   }
+    }
+
+    virtual int enque( ){
+        enque_raw( );
+    }
+
+    inline void setup( OCLsystem  * cl_, size_t ikernel_, size_t dim_, size_t global_, size_t local_ ){ cl=cl_; ikernel=ikernel_; dim=dim_; global[0]=global_;global[1]=global_; local[0]=local_;local[1]=local_; };
+    OCLtask(){};
+    ///OCLtask( size_t ikernel_, size_t dim_, size_t global_, size_t local_ ) : ikernel(ikernel_),dim(dim_) { global[0]=global_;global[1]=global_; local[0]=local_;local[0]=local_; };
 };
 
 #endif
