@@ -16,15 +16,18 @@ class OCLBuffer{
     bool         read_on_finish = false;
     cl_mem_flags flags = CL_MEM_READ_WRITE;
 
-    inline cl_int initOnGPU ( cl_context& context ){
-        cl_int err;
+    inline int initOnGPU ( cl_context& context ){
+        int err;
         if( flags == CL_MEM_WRITE_ONLY ){  p_gpu = clCreateBuffer(context, flags, typesize * n, NULL,    &err);
         }else{                  if(p_cpu)  p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }
         return err;
     }
 
-    inline cl_int setAsArg( cl_kernel& kernel, int i  ){ return clSetKernelArg(kernel, i, sizeof(cl_mem), p_gpu );  };
-    inline cl_int fromGPU ( cl_command_queue& commands ){ return clEnqueueReadBuffer( commands, p_gpu, CL_TRUE, 0, typesize * n, p_cpu, 0, NULL, NULL); }
+    inline int setAsArg( cl_kernel& kernel, int i   ){ return clSetKernelArg(kernel, i, sizeof(cl_mem), &p_gpu );  };
+    inline int fromGPU ( cl_command_queue& commands ){ return clEnqueueReadBuffer( commands, p_gpu, CL_TRUE, 0, typesize * n, p_cpu, 0, NULL, NULL); }
+
+    inline OCLBuffer(){};
+    inline OCLBuffer( size_t n_, size_t typesize_, void * p_cpu_, cl_mem_flags flags_ ) :n(n_),typesize(typesize_),p_cpu(p_cpu_),flags(flags_){};
 };
 
 class OCLArg{
@@ -44,27 +47,16 @@ class OCLKernel{
     int nargs;
     OCLArg * args = NULL;
 
-    //std::vector<OCLBuffer> buffers;
-    /*
-    inline cl_int setArgs (){
-        cl_int err = 0;
-        for(int i=0; i<nargs; i++){
-            if( ){
-            err | = clSetKernelArg(kernel, args, sizeof(cl_mem), &d_a);
-            switch( args[i].kind ){
-                case 0:
-                case 1:
-
-            err | = clSetKernelArg(kernel, args, sizeof(cl_mem), &d_a);
-            }
+    inline int enque( cl_command_queue& commands ){
+        if(local[0]==0){
+            return clEnqueueNDRangeKernel( commands, kernel, dim, NULL, global, NULL,  0, NULL, NULL );
+        }else{
+            return clEnqueueNDRangeKernel( commands, kernel, dim, NULL, global, local, 0, NULL, NULL );
         }
-        return err;
     }
-    */
 
-    inline cl_int enque( cl_command_queue& commands ){
-        return clEnqueueNDRangeKernel( commands, kernel, dim, NULL, global, local, 0, NULL, NULL );
-    }
+    OCLKernel(){};
+    OCLKernel(cl_kernel kernel_,cl_uint dim_, size_t global_, size_t local_ ) : kernel(kernel_),dim(dim_) { global[0]=global_;global[1]=global_; local[0]=local_;local[0]=local_; };
 };
 
 class OCLsystem{
@@ -90,12 +82,12 @@ class OCLsystem{
         char name[MAX_INFO_STRING];
         getDeviceName(device, name);
         printf("\nUsing OpenCL device: %s\n", name);
-        context = clCreateContext(0, 1, &device, NULL, NULL, &err);  OCL_checkError(err, "Creating context");
-        commands = clCreateCommandQueue(context, device, 0, &err);   OCL_checkError(err, "Creating command queue");
+        context  = clCreateContext(0, 1, &device, NULL, NULL, &err);  OCL_checkError(err, "Creating context");
+        commands = clCreateCommandQueue(context, device, 0, &err);    OCL_checkError(err, "Creating command queue");
         return err;
     }
 
-    int initBuffers   (){ for(int i=0; i<buffers.size(); i++){ buffers[i].initOnGPU ( context );     } }
+    int initBuffers   (){ int err = CL_SUCCESS; for(int i=0; i<buffers.size(); i++){  err |= buffers[i].initOnGPU ( context );     }; return err; }
     //int releaseBuffers(){ for(int i=0; i<buffers; i++){ clReleaseMemObject(buffers[i].p_gpu); } }
 
     char * getKernelSource(char *filename){
@@ -114,7 +106,7 @@ class OCLsystem{
     int buildProgram( char * fname ){
         char * kernelsource = getKernelSource( fname);
         // Create the comput program from the source buffer
-        cl_program  program = clCreateProgramWithSource(context, 1, (const char **) & kernelsource, NULL, &err);
+        program = clCreateProgramWithSource(context, 1, (const char **) & kernelsource, NULL, &err);
         char tmpstr[1024];
         sprintf(tmpstr,"Creating program with %s", fname);
         OCL_checkError(err, tmpstr);
@@ -129,26 +121,17 @@ class OCLsystem{
             printf("%s\n", tmpstr);
             return -1;
         }
-        // Create the compute kernel from the program
-        //kernel = clCreateKernel(program, name, &err);
-        //OCL_checkError(err, tmpstr);
         return err;
     }
-
-    /*
-    int buildKernel( char * fname, int nnames, char * name ){
-        cl_kernel kernel;
-        buildKernel( kernel, fname, name );
-        kernels[kernels.size()].kernel = kernel;
-        //kernels.push_back(kernel);
-    }
-    */
 
     int finish(){
         err = clFinish(commands);
         OCL_checkError(err, "Waiting for kernel to finish");
         for(int i=0; i<buffers.size(); i++ ){
-            if( buffers[i].read_on_finish ) buffers[i].fromGPU( commands );
+            if( buffers[i].read_on_finish ){
+                printf("finish : reading buff %i \n", i);
+                err |= buffers[i].fromGPU( commands );
+            }
         }
         return err;
     }

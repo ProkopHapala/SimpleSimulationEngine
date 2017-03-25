@@ -11,9 +11,9 @@ __kernel void mmul(
     if (i < N) {
         for (j = 0; j < N; j++) {
             tmp = 0.0;
-            for (k = 0; k < N; k++)
-                tmp += A[i*N+k] * B[k*N+j];
+            for (k = 0; k < N; k++){ tmp += A[i*N+k] * B[k*N+j]; }
             C[i*N+j] = tmp;
+            //C[i*N+j] = i*N+j;
         }
     }
 }
