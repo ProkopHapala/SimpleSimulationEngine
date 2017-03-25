@@ -100,6 +100,23 @@ class Task_Mmul_privB : public OCLtask {
     }
 };
 
+class Task_Mmul_local : public OCLtask {
+    public:
+    int n;
+    virtual int enque( ){
+        int err;
+        cl_kernel kernel = cl->kernels[ikernel];
+        err = cl->buffers[0].setAsArg( kernel, 0 );     OCL_checkError(err, "setAsArg");
+        err = cl->buffers[1].setAsArg( kernel, 1 );     OCL_checkError(err, "setAsArg");
+        err = cl->buffers[2].setAsArg( kernel, 2 );     OCL_checkError(err, "setAsArg");
+        err = clSetKernelArg( kernel, 3, sizeof(int),  &n );   OCL_checkError(err, "setAsArg");
+        err = clSetKernelArg( kernel, 4, sizeof(int),  &n );   OCL_checkError(err, "setAsArg");
+        err = clSetKernelArg( kernel, 5, sizeof(int),  &n );   OCL_checkError(err, "setAsArg");
+        //err = clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL ); OCL_checkError(err, "clEnqueueNDRangeKernel");
+        err = enque_raw( );                             OCL_checkError(err, "enque_raw");
+    }
+};
+
 class Task_Mmul_block : public OCLtask {
     public:
     int n;
@@ -170,8 +187,11 @@ void runCL_auto(){
     //cl.kernels.push_back( clCreateKernel( cl.program, "mmul_row_priv", &err ) );    OCL_checkError(err, "clCreateKernel");
     //Task_Mmul_row * task_ = new Task_Mmul_row();   task_->setup( &cl, cl.kernels.size()-1, 1, n2, 0    );
     // ---- mmul_row_priv_block
-    cl.kernels.push_back( clCreateKernel( cl.program, "mmul_row_priv_block", &err ) );    OCL_checkError(err, "clCreateKernel");
-    Task_Mmul_privB   * task_ = new Task_Mmul_privB();   task_->setup( &cl, cl.kernels.size()-1, 1, n2, n/16    );
+    //cl.kernels.push_back( clCreateKernel( cl.program, "mmul_row_priv_block", &err ) );    OCL_checkError(err, "clCreateKernel");
+    //Task_Mmul_privB   * task_ = new Task_Mmul_privB();   task_->setup( &cl, cl.kernels.size()-1, 1, n2, n/16    );
+    // ---- mmul_local
+    cl.kernels.push_back( clCreateKernel( cl.program, "mmul_local", &err ) );    OCL_checkError(err, "clCreateKernel");
+    Task_Mmul_local   * task_ = new Task_Mmul_local();   task_->setup( &cl, cl.kernels.size()-1, 2, n, 16    );
     // ---- mmul_block
     //cl.kernels.push_back( clCreateKernel( cl.program, "mmul_block", &err ) );    OCL_checkError(err, "clCreateKernel");
     //Task_Mmul_block * task_ = new Task_Mmul_block(); task_->setup( &cl, cl.kernels.size()-1, 2, n, 16 );
@@ -202,8 +222,8 @@ int main(){
 
     cl.init();
 
-    runCL_direct();
-    //runCL_auto();
+    //runCL_direct();
+    runCL_auto();
     printf( "TIME( GPU          ) %g [ticks] %g [tick/op]\n", fticks1, fticks1/(n*n*n) );
     printf( "TIME( GPU+download ) %g [ticks] %g [tick/op]\n", fticks2, fticks2/(n*n*n) );
 

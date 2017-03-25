@@ -90,6 +90,36 @@ __kernel void mmul_row_priv_block(
     }
 }
 
+// from http://gpgpu-computing4.blogspot.cz/2009/10/matrix-multiplication-3-opencl.html
+#define BLOCK_SIZE 16
+
+__kernel void mmul_local(
+          __global float* Aik, 
+          __global float* Bkj, 
+          __global float* Cij, 
+          __const int ni, 
+          __const int nj,
+          __const int nk
+){
+    //   WARRNING : interchange of  i  and  j  dimension  lower the performance >2x on my nV GT275 GPU    
+    int gj = get_global_id(0);    int gi = get_global_id(1); 
+    int bj = get_group_id(0);     int bi = get_group_id(1);  // Block index
+    int tj = get_local_id(0);     int ti = get_local_id(1);  // Thread index
+    int oj = bi*BLOCK_SIZE;       int oi = bj*BLOCK_SIZE; 
+    float Csub =0; 
+    __local float As   [BLOCK_SIZE][BLOCK_SIZE];
+    __local float Bs   [BLOCK_SIZE][BLOCK_SIZE];
+    for (int ok = 0; ok < nk; ok += BLOCK_SIZE )   {
+        As[ti][tj] = Aik[ nk*(gi   ) + tj + ok ];   // A[i][k]
+        Bs[ti][tj] = Bkj[ nj*(ti+ok) + gj ];        // B[k][j]
+        barrier(CLK_LOCAL_MEM_FENCE);
+        #pragma unroll
+        for (int k = 0; k < BLOCK_SIZE; ++k) Csub += As[ti][k] * Bs[k][tj];
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    Cij[ nj * ( gi ) + gj ] = Csub;
+}
+
 //-------------------------------------------------------------
 //
 //  PROGRAM: Blocked Matrix Multipliplication kernel
@@ -138,7 +168,6 @@ __kernel void mmul_row_priv_block(
 // 16 works well for an NVIDIA  GPU, 32 works well for a CPU
 
 #define blksz 16
-
 
 __kernel void mmul_block(
     const unsigned int             N,
