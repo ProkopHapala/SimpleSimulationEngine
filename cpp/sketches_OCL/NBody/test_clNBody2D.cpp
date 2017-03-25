@@ -13,19 +13,21 @@
 #include "Draw2D.h"
 #include "AppSDL2OGL.h"
 
+#include "OCL.h"
 
 
 #define R2SAFE  1.0e-2
-#define F2MAX  10.0
+#define F2MAX   10.0
 
 //int n = 1024;
 //constexpr int n = 32;
 //constexpr int n = 256;
 constexpr int n = 1024;
 float damp = 0.8;
-Vec2f pos  [n];
-Vec2f vel  [n];
-Vec2f force[n];
+Vec2f pos   [n];
+Vec2f vel   [n];
+Vec2f force [n];
+Vec2f force_[n];
 
 inline void acum_force( const Vec2f& p1, const Vec2f& p2, Vec2f& f ){
     Vec2f dp; dp.set_sub( p2, p1 );
@@ -76,11 +78,35 @@ float move_leap_frog( float dt ){
     return f2max;
 }
 
+// ==================== OpenCL part
+
+class Task_NBodyForce: public OCLtask {
+    public:
+    //int n;
+    virtual int enque( ){
+        int err;
+        cl_kernel kernel = cl->kernels[ikernel];
+        err = clSetKernelArg( kernel, 0, sizeof(int),  &n );
+        err = cl->buffers[0].setAsArg( kernel, 1 );     OCL_checkError(err, "setAsArg");
+        err = cl->buffers[1].setAsArg( kernel, 2 );     OCL_checkError(err, "setAsArg");
+        //err = clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL ); OCL_checkError(err, "clEnqueueNDRangeKernel");
+        err = enque_raw( );                             OCL_checkError(err, "enque_raw");
+    }
+};
+
+
 // ==================== Declaration
 
 class TestApp_clNBody2D : public AppSDL2OGL {
 	public:
 	int per_frame = 10;
+
+	int err;
+	OCLsystem cl;
+	OCLtask * task1;
+
+	//bool use_GPU = false;
+	bool use_GPU = true;
 
 	//virtual void loop( int nframes );
 	virtual void draw   ();
@@ -99,6 +125,38 @@ TestApp_clNBody2D::TestApp_clNBody2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         vel[i].set(0.0);
     }
 
+    // --- OpenCL
+    printf("DEBUG 1\n");
+    cl.init();
+    printf("DEBUG 2\n");
+    cl.buffers.push_back( OCLBuffer( n*2, sizeof(float), (float*)pos,    CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR ) );
+    cl.buffers.push_back( OCLBuffer( n*2, sizeof(float), (float*)force_, CL_MEM_WRITE_ONLY ) );
+    cl.buffers[1].read_on_finish = true;
+    printf("DEBUG 3\n");
+    err = cl.initBuffers();                                                      OCL_checkError(err, "clinitBuffers");
+    printf("DEBUG = 4\n");
+    err = cl.buildProgram( "cl/nbody.cl" );                                      OCL_checkError(err, "cl.buildProgram");
+    // --- NBody_force
+    cl.kernels.push_back( clCreateKernel( cl.program, "NBody_force", &err ) );    OCL_checkError(err, "clCreateKernel");
+    Task_NBodyForce   * task_ = new Task_NBodyForce();   task_->setup( &cl, cl.kernels.size()-1, 1, n, 256    );
+    // --- NBody_force_naive
+    //cl.kernels.push_back( clCreateKernel( cl.program, "NBody_force_naive", &err ) );    OCL_checkError(err, "clCreateKernel");
+    //Task_NBodyForce   * task_ = new Task_NBodyForce();   task_->setup( &cl, cl.kernels.size()-1, 1, n, 0  );
+    task1    = task_;
+    printf("DEBUG = 5\n");
+
+    // --- Test OpenCL force
+    task1->enque();
+    cl.finish();
+
+    clean_force( );
+    add_ineraction_forces();
+    for(int i=0;  i<n; i++ ){  printf( "i (%g,%g) (%g,%g) \n", i,  force_[i].x, force_[i].y,   force[i].x, force[i].y ); }
+
+    cl.buffers[1].p_cpu = (float*)force;    // bind Force output array
+
+    //exit(0);
+
 }
 
 void TestApp_clNBody2D::draw(){
@@ -111,7 +169,13 @@ void TestApp_clNBody2D::draw(){
     double f2err = 0;
 	for(int itr=0; itr<per_frame; itr++){
         clean_force();
-        add_ineraction_forces( );
+        if(use_GPU){
+            cl.buffers[0].toGPU( cl.commands );
+            task1->enque();
+            cl.finish();
+        }else{
+            add_ineraction_forces( );
+        }
         add_confine_force( {0.0,0.0}, -2.0 );
         //if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -10.0 );
         f2err = move_leap_frog( 0.01 );

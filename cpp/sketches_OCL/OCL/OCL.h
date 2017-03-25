@@ -24,7 +24,8 @@ class OCLBuffer{
     }
 
     inline int setAsArg( cl_kernel& kernel, int i   ){ return clSetKernelArg(kernel, i, sizeof(cl_mem), &p_gpu );  };
-    inline int fromGPU ( cl_command_queue& commands ){ return clEnqueueReadBuffer( commands, p_gpu, CL_TRUE, 0, typesize * n, p_cpu, 0, NULL, NULL); }
+    inline int fromGPU ( cl_command_queue& commands ){ return clEnqueueReadBuffer ( commands, p_gpu, CL_TRUE, 0, typesize * n, p_cpu, 0, NULL, NULL);  }
+    inline int toGPU   ( cl_command_queue& commands ){ return clEnqueueWriteBuffer( commands, p_gpu, CL_TRUE, 0, typesize * n, p_cpu, 0, NULL, NULL ); }
 
     inline OCLBuffer(){};
     inline OCLBuffer( size_t n_, size_t typesize_, void * p_cpu_, cl_mem_flags flags_ ) :n(n_),typesize(typesize_),p_cpu(p_cpu_),flags(flags_){};
@@ -98,7 +99,7 @@ class OCLsystem{
         int err = CL_SUCCESS;
         for(int i=0; i<buffers.size(); i++ ){
             if( buffers[i].read_on_finish ){
-                printf("finish : reading buff %i \n", i);
+                //printf("finish : reading buff %i \n", i);
                 err |= buffers[i].fromGPU( commands );
             }
         }
