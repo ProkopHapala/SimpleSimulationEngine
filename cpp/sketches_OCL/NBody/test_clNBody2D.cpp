@@ -23,7 +23,7 @@
 //constexpr int n = 32;
 //constexpr int n = 256;
 constexpr int n = 1024;
-float damp = 0.8;
+float damp      = 0.5;
 Vec2f pos   [n];
 Vec2f vel   [n];
 Vec2f force [n];
@@ -64,6 +64,7 @@ void add_external_force( const Vec2f& center, float strength ){
 }
 
 float move_leap_frog( float dt ){
+    float cdamp = 1 - damp*dt;
     double f2max = 0;
     for(int i=0; i<n; i++){
         float f2 = force[i].norm2();
@@ -71,29 +72,12 @@ float move_leap_frog( float dt ){
     }
     if(f2max > F2MAX ) dt *= sqrt( sqrt(F2MAX/f2max) );
     for(int i=0; i<n; i++){
-        vel[i].mul(damp);
+        vel[i].mul(cdamp);
         vel[i].add_mul( force[i], dt );
         pos[i].add_mul( vel[i]  , dt );
     }
     return f2max;
 }
-
-// ==================== OpenCL part
-
-class Task_NBodyForce: public OCLtask {
-    public:
-    //int n;
-    virtual int enque( ){
-        int err;
-        cl_kernel kernel = cl->kernels[ikernel];
-        err = clSetKernelArg( kernel, 0, sizeof(int),  &n );
-        err = cl->buffers[0].setAsArg( kernel, 1 );     OCL_checkError(err, "setAsArg");
-        err = cl->buffers[1].setAsArg( kernel, 2 );     OCL_checkError(err, "setAsArg");
-        //err = clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL ); OCL_checkError(err, "clEnqueueNDRangeKernel");
-        err = enque_raw( );                             OCL_checkError(err, "enque_raw");
-    }
-};
-
 
 // ==================== Declaration
 
@@ -126,26 +110,36 @@ TestApp_clNBody2D::TestApp_clNBody2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     }
 
     // --- OpenCL
-    printf("DEBUG 1\n");
     cl.init();
-    printf("DEBUG 2\n");
-    cl.buffers.push_back( OCLBuffer( n*2, sizeof(float), (float*)pos,    CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR ) );
-    cl.buffers.push_back( OCLBuffer( n*2, sizeof(float), (float*)force_, CL_MEM_WRITE_ONLY ) );
+    //cl.buffers.push_back( OCLBuffer( "pos",   n*2, sizeof(float), (float*)pos,    CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR ) );
+    //cl.buffers.push_back( OCLBuffer( "force", n*2, sizeof(float), (float*)force_, CL_MEM_WRITE_ONLY ) );
+
+    cl.newBuffer( "pos",   n*2, sizeof(float), (float*)pos,    CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "force", n*2, sizeof(float), (float*)force_, CL_MEM_WRITE_ONLY );
     cl.buffers[1].read_on_finish = true;
-    printf("DEBUG 3\n");
-    err = cl.initBuffers();                                                      OCL_checkError(err, "clinitBuffers");
-    printf("DEBUG = 4\n");
-    err = cl.buildProgram( "cl/nbody.cl" );                                      OCL_checkError(err, "cl.buildProgram");
+    err = cl.buildProgram( "cl/nbody.cl" );                                       OCL_checkError(err, "cl.buildProgram");
     // --- NBody_force
-    cl.kernels.push_back( clCreateKernel( cl.program, "NBody_force", &err ) );    OCL_checkError(err, "clCreateKernel");
-    Task_NBodyForce   * task_ = new Task_NBodyForce();   task_->setup( &cl, cl.kernels.size()-1, 1, n, 256    );
+    //cl.kernels.push_back( clCreateKernel( cl.program, "NBody_force", &err ) );    OCL_checkError(err, "clCreateKernel");
+    //task1=new OCLtask( &cl, cl.kernels.size()-1, 1, n, 0 ); task1->args = { OCLarg(n,OCL_INT), OCLarg(0,OCL_BUFF), OCLarg(1,OCL_BUFF) };
+    //task1=new OCLtask( &cl, cl.kernels.size()-1, 1, n, 0 ); task1->args = { INTarg(n), BUFFarg(0), BUFFarg(1) };
+    //Task_NBodyForce   * task_ = new Task_NBodyForce();   task_->setup( &cl, cl.kernels.size()-1, 1, n, 0    ); task1    = task_;
     // --- NBody_force_naive
     //cl.kernels.push_back( clCreateKernel( cl.program, "NBody_force_naive", &err ) );    OCL_checkError(err, "clCreateKernel");
-    //Task_NBodyForce   * task_ = new Task_NBodyForce();   task_->setup( &cl, cl.kernels.size()-1, 1, n, 0  );
-    task1    = task_;
+    //Task_NBodyForce   * task_ = new Task_NBodyForce();   task_->setup( &cl, cl.kernels.size()-1, 1, n, 0  ); task1    = task_;
+
+    task1 = new OCLtask( &cl, cl.newKernel("NBody_force"), 1, n, 0 ); task1->args = { INTarg(n), BUFFarg(0), BUFFarg(1) };
+
+    task1->print_arg_list();
+
     printf("DEBUG = 5\n");
 
+    //char ret[1024];
+    //size_t nbytes=0;
+    //err = clGetKernelArgInfo ( cl.kernels[0], 0, CL_KERNEL_ARG_TYPE_NAME, 1024 , ret , &nbytes );  printf("CL_KERNEL_ARG_TYPE_NAME  >>%s<<\n", ret );      OCL_checkError(err, "clGetKernelArgInfo");
+    //err = clGetKernelArgInfo ( cl.kernels[0], 0, CL_KERNEL_ARG_NAME     , 1024 , ret , &nbytes );  printf("CL_KERNEL_ARG_NAME       >>%s<<\n", ret );      OCL_checkError(err, "clGetKernelArgInfo");
+
     // --- Test OpenCL force
+    //task1->enque();
     task1->enque();
     cl.finish();
 
@@ -176,8 +170,8 @@ void TestApp_clNBody2D::draw(){
         }else{
             add_ineraction_forces( );
         }
-        add_confine_force( {0.0,0.0}, -2.0 );
-        //if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -10.0 );
+        //add_confine_force( {0.0,0.0}, -2.0 );
+        if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -10.0 );
         f2err = move_leap_frog( 0.01 );
 	}
 	double fticks = getCPUticks() - t1;

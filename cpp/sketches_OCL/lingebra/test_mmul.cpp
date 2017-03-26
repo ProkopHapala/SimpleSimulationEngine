@@ -67,75 +67,6 @@ long t1;
 double fticks1;
 double fticks2;
 
-// ==================== Task derived types
-
-class Task_Mmul_row : public OCLtask {
-    public:
-    int n;
-    virtual int enque( ){
-        int err;
-        cl_kernel kernel = cl->kernels[ikernel];
-        err = clSetKernelArg( kernel, 0, sizeof(int),  &n );
-        err = cl->buffers[0].setAsArg( kernel, 1 );     OCL_checkError(err, "setAsArg");
-        err = cl->buffers[1].setAsArg( kernel, 2 );     OCL_checkError(err, "setAsArg");
-        err = cl->buffers[2].setAsArg( kernel, 3 );     OCL_checkError(err, "setAsArg");
-        //err = clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL ); OCL_checkError(err, "clEnqueueNDRangeKernel");
-        err = enque_raw( );                             OCL_checkError(err, "enque_raw");
-    }
-};
-
-class Task_Mmul_privB : public OCLtask {
-    public:
-    int n;
-    virtual int enque( ){
-        int err;
-        cl_kernel kernel = cl->kernels[ikernel];
-        err = clSetKernelArg( kernel, 0, sizeof(int),  &n );
-        err = cl->buffers[0].setAsArg( kernel, 1 );     OCL_checkError(err, "setAsArg");
-        err = cl->buffers[1].setAsArg( kernel, 2 );     OCL_checkError(err, "setAsArg");
-        err = cl->buffers[2].setAsArg( kernel, 3 );     OCL_checkError(err, "setAsArg");
-        err = clSetKernelArg( kernel, 4, sizeof(float) * n,  NULL );  OCL_checkError(err, "setAsArg");
-        //err = clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL ); OCL_checkError(err, "clEnqueueNDRangeKernel");
-        err = enque_raw( );                             OCL_checkError(err, "enque_raw");
-    }
-};
-
-class Task_Mmul_local : public OCLtask {
-    public:
-    int n;
-    virtual int enque( ){
-        int err;
-        cl_kernel kernel = cl->kernels[ikernel];
-        err = cl->buffers[0].setAsArg( kernel, 0 );     OCL_checkError(err, "setAsArg");
-        err = cl->buffers[1].setAsArg( kernel, 1 );     OCL_checkError(err, "setAsArg");
-        err = cl->buffers[2].setAsArg( kernel, 2 );     OCL_checkError(err, "setAsArg");
-        err = clSetKernelArg( kernel, 3, sizeof(int),  &n );   OCL_checkError(err, "setAsArg");
-        err = clSetKernelArg( kernel, 4, sizeof(int),  &n );   OCL_checkError(err, "setAsArg");
-        err = clSetKernelArg( kernel, 5, sizeof(int),  &n );   OCL_checkError(err, "setAsArg");
-        //err = clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL ); OCL_checkError(err, "clEnqueueNDRangeKernel");
-        err = enque_raw( );                             OCL_checkError(err, "enque_raw");
-    }
-};
-
-class Task_Mmul_block : public OCLtask {
-    public:
-    int n;
-    virtual int enque( ){
-        int err;
-        int block_size = 16;
-        cl_kernel kernel = cl->kernels[ikernel];
-        err = clSetKernelArg( kernel, 0, sizeof(int),  &n );
-        err = cl->buffers[0].setAsArg( kernel, 1 );     OCL_checkError(err, "setAsArg");
-        err = cl->buffers[1].setAsArg( kernel, 2 );     OCL_checkError(err, "setAsArg");
-        err = cl->buffers[2].setAsArg( kernel, 3 );     OCL_checkError(err, "setAsArg");
-        err = clSetKernelArg( kernel, 4, sizeof(float) * block_size * block_size,  NULL );  OCL_checkError(err, "setAsArg");
-        err = clSetKernelArg( kernel, 5, sizeof(float) * block_size * block_size,  NULL );  OCL_checkError(err, "setAsArg");
-        printf( "global_sz (%i,%i) (%i,%i) \n", global[0], global[1], local[0], local[1] );
-        err = clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL ); OCL_checkError(err, "clEnqueueNDRangeKernel");
-        //err = enque_raw( );                             OCL_checkError(err, "enque_raw");
-    }
-};
-
 // ==================== Main
 
 void runCL_direct(){
@@ -144,8 +75,8 @@ void runCL_direct(){
     cl_mem B_clmem = clCreateBuffer( cl.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR , sizeof(float) * n2, B,      &err );   OCL_checkError(err, "clCreateBuffer");
     cl_mem C_clmem = clCreateBuffer( cl.context, CL_MEM_WRITE_ONLY                       , sizeof(float) * n2, NULL  , &err );   OCL_checkError(err, "clCreateBuffer");
     printf("DEBUG = 3\n");
-    err = cl.buildProgram( "cl/mmuls.cl" );                          OCL_checkError(err, "cl.buildProgram");
-    cl_kernel kernel = clCreateKernel( cl.program, "mmul_row", &err );    OCL_checkError(err, "clCreateKernel");
+    err = cl.buildProgram( "cl/mmuls.cl" );                                   OCL_checkError(err, "cl.buildProgram");
+    cl_kernel kernel = clCreateKernel( cl.program, "mmul_row", &err );        OCL_checkError(err, "clCreateKernel");
     //cl_kernel kernel = clCreateKernel( cl.program, "mmul_block", &err );    OCL_checkError(err, "clCreateKernel");
     printf("DEBUG = 4\n");
     size_t global_sz[2] = {n2, n }; size_t* local_sz    = NULL;   //  mmul_row
@@ -172,31 +103,21 @@ void runCL_direct(){
 
 void runCL_auto(){
     printf("DEBUG 2\n");
-    cl.buffers.push_back( OCLBuffer( n2, sizeof(float), A, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR ) );
-    cl.buffers.push_back( OCLBuffer( n2, sizeof(float), B, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR ) );
-    cl.buffers.push_back( OCLBuffer( n2, sizeof(float), C, CL_MEM_WRITE_ONLY ) );
+    cl.newBuffer( "A", n2, sizeof(float), A, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "B", n2, sizeof(float), B, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "C", n2, sizeof(float), C, CL_MEM_WRITE_ONLY );
     cl.buffers[2].read_on_finish = true;
-    printf("DEBUG 2\n");
-    err = cl.initBuffers();                                                    OCL_checkError(err, "clinitBuffers");
+    //OCL_checkError(err, "clinitBuffers");
     printf("DEBUG = 3\n");
     err = cl.buildProgram( "cl/mmuls.cl" );                               OCL_checkError(err, "cl.buildProgram");
-    // ---- mmul_row
-    //cl.kernels.push_back( clCreateKernel( cl.program, "mmul_row", &err ) );    OCL_checkError(err, "clCreateKernel");
-    //Task_Mmul_row   * task_ = new Task_Mmul_row();   task_->setup( &cl, cl.kernels.size()-1, 1, n2, 0    );
-    // ---- mmul_row_priv
-    //cl.kernels.push_back( clCreateKernel( cl.program, "mmul_row_priv", &err ) );    OCL_checkError(err, "clCreateKernel");
-    //Task_Mmul_row * task_ = new Task_Mmul_row();   task_->setup( &cl, cl.kernels.size()-1, 1, n2, 0    );
-    // ---- mmul_row_priv_block
-    //cl.kernels.push_back( clCreateKernel( cl.program, "mmul_row_priv_block", &err ) );    OCL_checkError(err, "clCreateKernel");
-    //Task_Mmul_privB   * task_ = new Task_Mmul_privB();   task_->setup( &cl, cl.kernels.size()-1, 1, n2, n/16    );
-    // ---- mmul_local
-    cl.kernels.push_back( clCreateKernel( cl.program, "mmul_local", &err ) );    OCL_checkError(err, "clCreateKernel");
-    Task_Mmul_local   * task_ = new Task_Mmul_local();   task_->setup( &cl, cl.kernels.size()-1, 2, n, 16    );
-    // ---- mmul_block
-    //cl.kernels.push_back( clCreateKernel( cl.program, "mmul_block", &err ) );    OCL_checkError(err, "clCreateKernel");
-    //Task_Mmul_block * task_ = new Task_Mmul_block(); task_->setup( &cl, cl.kernels.size()-1, 2, n, 16 );
-    task_->n = n;
-    task1    = task_;
+    //int iker = cl.newKernel("mmul_row");            task1 = new OCLtask( &cl, iker, 1, n2, 0    ); task1->args = { INTarg(n), BUFFarg(0), BUFFarg(1), BUFFarg(2) };
+    //int iker = cl.newKernel("mmul_row_priv");       task1 = new OCLtask( &cl, iker, 1, n2, 0    ); task1->args = { INTarg(n), BUFFarg(0), BUFFarg(1), BUFFarg(2) };
+    //int iker = cl.newKernel("mmul_row_priv_block"); task1 = new OCLtask( &cl, iker, 1, n2, n/16 ); task1->args = { INTarg(n), BUFFarg(0), BUFFarg(1), BUFFarg(2), LBUFFarg(n*sizeof(float)) };
+    int iker = cl.newKernel("mmul_local");            task1 = new OCLtask( &cl, iker, 2, n, 16    ); task1->args = {            BUFFarg(0), BUFFarg(1), BUFFarg(2), INTarg(n),INTarg(n),INTarg(n) };
+    //int iker = cl.newKernel("mmul_block");          task1 = new OCLtask( &cl, iker, 2, n, 16    ); task1->args = { INTarg(n), BUFFarg(0), BUFFarg(1), BUFFarg(2), LBUFFarg(16*16*sizeof(float)), LBUFFarg(16*16*sizeof(float)) };
+
+    task1->print_arg_list();
+
     printf("DEBUG = 4\n");
     t1 = getCPUticks();
     for (int irep = 0; irep < nrep; irep++){
