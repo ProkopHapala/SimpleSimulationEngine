@@ -1,5 +1,6 @@
 
 #define R2SAFE 1.0e-2
+#define F2MAX  10.0
 
 float2 force_LJ( float2 p1, float2 p2 ){
     float2 d   = p2 - p1;
@@ -56,6 +57,52 @@ __kernel void NBody_force(
     force[i] = f;
     //force[i] = (float2) (i, tid);
     //force[i] = pos[i];
+}
+
+
+__kernel void NBody_step(
+    int   num,
+    __global float2* pos, 
+    __global float2* vel, 
+    float dt,    
+    float damp, 
+    int   nsteps
+){
+    //get our index in the array
+    unsigned int i         = get_global_id(0);
+    unsigned int tid       = get_local_id(0);
+    unsigned int block_dim = get_local_size(0);
+
+    for (int iter=0; iter<nsteps; iter++){
+
+        // evaluate interaction forces
+        __local  float2 pos_shared[256];
+        float2 p = pos[i];
+        float2 f = (float2) (0.0f, 0.0f);
+        int tile=0;
+        //int body, j;
+        for (int body=0; body <num; body += block_dim, tile++){
+            pos_shared[tid] = pos[tile * block_dim + tid];
+            barrier(CLK_LOCAL_MEM_FENCE);
+            for (int j=0; j < block_dim; j++){
+                float2 pj = pos_shared[j];
+               f += force_LJ( p, pj );
+               //f += pj;
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+        //force[i] = f;
+        
+        float2 v = vel[i];
+        
+        v  = v*damp +  f * dt;
+        p += v * dt;
+
+        pos[i] = p;
+        vel[i] = v;
+
+        barrier(CLK_GLOBAL_MEM_FENCE);
+    }
 }
 
 

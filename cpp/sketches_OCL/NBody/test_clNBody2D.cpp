@@ -22,6 +22,7 @@
 //int n = 1024;
 //constexpr int n = 32;
 //constexpr int n = 256;
+float time_step = 0.01;
 constexpr int n = 1024;
 float damp      = 0.5;
 Vec2f pos   [n];
@@ -87,14 +88,16 @@ class TestApp_clNBody2D : public AppSDL2OGL {
 
 	int err;
 	OCLsystem cl;
-	OCLtask * task1;
+	OCLtask *task1,*task2;
 
 	//bool use_GPU = false;
-	bool use_GPU = true;
+	int method = 2;
 
 	//virtual void loop( int nframes );
+	virtual void eventHandling( const SDL_Event& event );
 	virtual void draw   ();
 	//virtual void drawHUD();
+
 	TestApp_clNBody2D( int& id, int WIDTH_, int HEIGHT_ );
 
 };
@@ -111,25 +114,19 @@ TestApp_clNBody2D::TestApp_clNBody2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     // --- OpenCL
     cl.init();
-    //cl.buffers.push_back( OCLBuffer( "pos",   n*2, sizeof(float), (float*)pos,    CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR ) );
-    //cl.buffers.push_back( OCLBuffer( "force", n*2, sizeof(float), (float*)force_, CL_MEM_WRITE_ONLY ) );
-
-    cl.newBuffer( "pos",   n*2, sizeof(float), (float*)pos,    CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR );
-    cl.newBuffer( "force", n*2, sizeof(float), (float*)force_, CL_MEM_WRITE_ONLY );
-    cl.buffers[1].read_on_finish = true;
+    cl.newBuffer( "pos",   n*2, sizeof(float), (float*)pos,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "vel",   n*2, sizeof(float), (float*)vel,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "force", n*2, sizeof(float), (float*)force_, CL_MEM_READ_WRITE );
+    //cl.buffers[1].read_on_finish = true;
     err = cl.buildProgram( "cl/nbody.cl" );                                       OCL_checkError(err, "cl.buildProgram");
-    // --- NBody_force
-    //cl.kernels.push_back( clCreateKernel( cl.program, "NBody_force", &err ) );    OCL_checkError(err, "clCreateKernel");
-    //task1=new OCLtask( &cl, cl.kernels.size()-1, 1, n, 0 ); task1->args = { OCLarg(n,OCL_INT), OCLarg(0,OCL_BUFF), OCLarg(1,OCL_BUFF) };
-    //task1=new OCLtask( &cl, cl.kernels.size()-1, 1, n, 0 ); task1->args = { INTarg(n), BUFFarg(0), BUFFarg(1) };
-    //Task_NBodyForce   * task_ = new Task_NBodyForce();   task_->setup( &cl, cl.kernels.size()-1, 1, n, 0    ); task1    = task_;
-    // --- NBody_force_naive
-    //cl.kernels.push_back( clCreateKernel( cl.program, "NBody_force_naive", &err ) );    OCL_checkError(err, "clCreateKernel");
-    //Task_NBodyForce   * task_ = new Task_NBodyForce();   task_->setup( &cl, cl.kernels.size()-1, 1, n, 0  ); task1    = task_;
 
-    task1 = new OCLtask( &cl, cl.newKernel("NBody_force"), 1, n, 0 ); task1->args = { INTarg(n), BUFFarg(0), BUFFarg(1) };
-
+    task1 = new OCLtask( &cl, cl.newKernel("NBody_force"), 1, n, 0 );
+    task1->args = { INTarg(n), BUFFarg(0), BUFFarg(2) };
     task1->print_arg_list();
+    //exit(0);
+
+    task2 = new OCLtask( &cl, cl.newKernel("NBody_step"), 1, n, 0 );
+    task2->args = { INTarg(n), BUFFarg(0), BUFFarg(1), FLOATarg(time_step), FLOATarg(damp), INTarg(per_frame) };
 
     printf("DEBUG = 5\n");
 
@@ -141,13 +138,14 @@ TestApp_clNBody2D::TestApp_clNBody2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     // --- Test OpenCL force
     //task1->enque();
     task1->enque();
-    cl.finish();
+    //cl.finish();
+    clFinish(cl.commands); cl.download(2);
 
     clean_force( );
     add_ineraction_forces();
     for(int i=0;  i<n; i++ ){  printf( "i (%g,%g) (%g,%g) \n", i,  force_[i].x, force_[i].y,   force[i].x, force[i].y ); }
 
-    cl.buffers[1].p_cpu = (float*)force;    // bind Force output array
+    cl.buffers[2].p_cpu = (float*)force;    // bind Force output array
 
     //exit(0);
 
@@ -159,24 +157,35 @@ void TestApp_clNBody2D::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     //delay = 100;
+    double f2err;
     t1=getCPUticks();
-    double f2err = 0;
-	for(int itr=0; itr<per_frame; itr++){
-        clean_force();
-        if(use_GPU){
-            cl.buffers[0].toGPU( cl.commands );
-            task1->enque();
-            cl.finish();
-        }else{
-            add_ineraction_forces( );
-        }
-        //add_confine_force( {0.0,0.0}, -2.0 );
-        if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -10.0 );
-        f2err = move_leap_frog( 0.01 );
-	}
-	double fticks = getCPUticks() - t1;
-    printf( "%i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, sqrt(f2err), fticks*1e-6, fticks/(n*n) );
+    switch(method){
+        case 3:
+            task2->enque();
+            clFinish(cl.commands);
+            cl.download(0);
+            break;
+        case 2:
+            for(int itr=0; itr<per_frame; itr++){
+                cl.upload(0);
+                task1->enque();
+                clFinish(cl.commands);
+                cl.download(2);
+                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -10.0 );
+                f2err = move_leap_frog( time_step );
+            }
+            break;
+        case 1:
+            for(int itr=0; itr<per_frame; itr++){
+                add_ineraction_forces( );
+                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -10.0 );
+                f2err = move_leap_frog( time_step );
+            }
+            break;
+    }
 
+	double fticks = getCPUticks() - t1;
+    printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(n*n) );
 
 	glBegin(GL_POINTS);
     for(int i=0; i<n; i++){  glVertex3f( pos[i].x, pos[i].y, 0.0 ); }
@@ -184,6 +193,22 @@ void TestApp_clNBody2D::draw(){
 
 
 };
+
+
+void TestApp_clNBody2D::eventHandling( const SDL_Event& event ){
+    switch( event.type ){
+        case SDL_KEYDOWN :
+            switch( event.key.keysym.sym ){
+                //case SDLK_f: use_GPU=!use_GPU; break;
+                //case SDLK_g: fullGPU=!fullGPU; break;
+                case SDLK_KP_1:  method=1; break;
+                case SDLK_KP_2:  method=2; break;
+                case SDLK_KP_3:  method=3; break;
+            } break;
+    };
+    AppSDL2OGL::eventHandling( event );
+};
+
 
 // ===================== MAIN
 
