@@ -22,7 +22,7 @@
 //int n = 1024;
 //constexpr int n = 32;
 //constexpr int n = 256;
-float time_step = 0.01;
+float time_step = 0.05;
 constexpr int n = 1024;
 float damp      = 0.5;
 Vec2f pos   [n];
@@ -55,10 +55,11 @@ void add_confine_force( const Vec2f& center, float strength ){
     for(int i=0; i<n; i++){ force[i].add_mul( pos[i], strength ); }
 }
 
-void add_external_force( const Vec2f& center, float strength ){
+void add_external_force( const Vec2f& center, float strength, float width ){
+    float w2 = width*width;
     for(int i=0; i<n; i++){
         Vec2f dp; dp.set_sub( pos[i], center );
-        float ir2 = 1/(dp.norm2() + R2SAFE);
+        float ir2 = 1/(dp.norm2() + w2);
         float ir  = sqrt(ir2);
         force[i].add_mul( dp, strength*ir2*ir );
     }
@@ -171,14 +172,14 @@ void TestApp_clNBody2D::draw(){
                 task1->enque();
                 clFinish(cl.commands);
                 cl.download(2);
-                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -10.0 );
+                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -40.0, 1.0 );
                 f2err = move_leap_frog( time_step );
             }
             break;
         case 1:
             for(int itr=0; itr<per_frame; itr++){
                 add_ineraction_forces( );
-                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -10.0 );
+                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -40.0, 1.0 );
                 f2err = move_leap_frog( time_step );
             }
             break;
