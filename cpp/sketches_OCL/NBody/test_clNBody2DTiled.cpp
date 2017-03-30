@@ -14,241 +14,40 @@
 #include "Draw2D.h"
 #include "AppSDL2OGL.h"
 
-#include "OCL.h"
-
-
-#define R2SAFE  1.0e-2
-#define F2MAX   10.0
-
-//int n = 1024;
-constexpr int n = 32;
-//constexpr int n = 512;
-float time_step = 0.05;
-//constexpr int n = 1024*2;
-float damp      = 0.5;
-Vec2f pos   [n];
-Vec2f pos_  [n];
-Vec2f vel   [n];
-Vec2f force [n];
-Vec2f force_[n];
-
-
-// cell acceleration buffer
-int constexpr nx    = 16;
-int constexpr ny    = 16;
-int constexpr ncell = nx*ny;
-int           cell2pos  [ncell+1];
-int           cellNs    [ncell];
-//int           cellNcount[ncell];
-int           atom2cell[n];
-float cell_size     = 2.0;
-float grid_orig [2] = {-16.0,-16.0};
-
-inline void acum_force( const Vec2f& p1, const Vec2f& p2, Vec2f& f ){
-    Vec2f dp; dp.set_sub( p2, p1 );
-    float ir2 = 1/( dp.norm2() + R2SAFE );
-    //float ir  = sqrt(ir2);
-    float ir6 = ir2*ir2*ir2;
-    float fr  = ir6 - ir6*ir6;
-    f.add_mul( dp, fr );
-}
-
-void atomsToCells( ){
-    double inv_size = 1/cell_size;
-    for(int i=0; i<ncell; i++){ cellNs[i] = 0; }
-    for(int i=0; i<n; i++){
-        Vec2f& p  = pos[i];
-        int ix    = (p.x - grid_orig[0])*inv_size;
-        int iy    = (p.y - grid_orig[1])*inv_size;
-        int icell = nx*iy + ix;
-        cellNs[icell]++;
-        atom2cell[i] = icell;
-        //printf( "%i (%3.3f,%3.3f) (%i,%i) %i \n", i, p.x,p.y, ix, iy, icell );
-    }
-    int nsum = 0;
-    for(int i=0; i<ncell; i++){
-        cell2pos[i] = nsum;
-        nsum       += cellNs[i];
-        cellNs[i]   = 0;
-    }
-    cell2pos[ncell] = n;
-    //for(int i=0; i<ncell; i++){ printf( "cell2pos[%i] = %i \n", i, cell2pos[i] ); }
-    for(int i=0; i<n; i++){
-        int icell     = atom2cell[i];
-        int ni        = cellNs  [icell];
-        int i_        = cell2pos[icell] + ni;
-        cellNs[icell] = ni+1;
-        pos_[i_]      = pos[i];
-    }
-    /*
-    for(int i=0; i<n; i++){
-        Vec2f& p  = pos_[i];
-        int ix    = (p.x - grid_orig[0])*inv_size;
-        int iy    = (p.y - grid_orig[1])*inv_size;
-        int icell = nx*iy + ix;
-        printf( "%i (%3.3f,%3.3f) (%i,%i) %i \n", i, p.x,p.y, ix, iy, icell );
-    }
-    */
-    //exit(0);
-}
-
-void interact_cell( int iStart, int iEnd, int jStart, int jEnd, Vec2f* pos, Vec2f* force ){
-    for(int i=iStart; i<iEnd; i++){
-        Vec2f& pi = pos[i];
-        Vec2f  f; f.set(0.0);
-        for(int j=jStart; j<jEnd; j++){
-            if(i==j) continue;
-            acum_force( pi, pos[j], f );
-            Draw2D::drawLine(pi, pos[j]);
-        }
-        //force[i].add(f);
-    }
-}
-
-void add_ineraction_forces_cells( Vec2f* pos, int* c2p ){
-    const int nx_ = nx-1;
-    const int ny_ = ny-1;
-    for(int iy=1; iy<ny_; iy++){
-        for(int ix=1; ix<nx_; ix++){
-            int i      = nx*iy+ix;
-            int iStart = c2p[i  ];
-            int iEnd   = c2p[i+1];
-            int j;
-            // upper row (iy-1)
-
-            j=i-nx-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-            j=i-nx  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-            j=i-nx+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-            j=i   -1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-                      interact_cell( iStart, iEnd, iStart, iEnd,     pos, force );
-            j=i   +1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-            j=i-nx-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-            j=i-nx  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-            j=i-nx+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-
-            //printf( " (%i,%i) %i (%i,%i) (%i,%i) \n", ix, iy, i, iStart, iEnd,  c2p[j], c2p[j+1] );
-
-            /*
-            if(iy>1  ){
-                int i_ = i - nx;
-                if(ix>1  ){ j=i_-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force ); }  //   [ iy-1 , ix-1 ]
-                            j=i_  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );    //   [ iy-1 , ix   ]
-                if(ix<nx_){ j=i_+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force ); }  //   [ iy-1 , ix+1 ]
-            }
-
-            // middle row (iy)
-                if(ix>1  ){ j=i-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );  }  //  [ iy   , ix-1 ]
-                                   interact_cell( iStart, iEnd, iStart, iEnd, pos, force );         //  [ iy   , ix   ]
-                if(ix<nx_){ j=i+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );  }  //  [ iy   , ix+1 ]
-            // upper row (iy+1)
-            if(iy<ny_){
-                int i_ = i + nx;
-                if(ix>1  ){ j=i_+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force ); }  //  [iy+1  , ix-1 ]
-                            j=i_  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );    //  [iy+1  , ix   ]
-                if(ix<nx_){ j=i_-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force ); }  //  [iy+1  , ix+1 ]
-            }
-            */
-        }
-    }
-    //exit(0);
-}
+#include "NBody2D.h"
 
 void drawAtomsByCell( Vec2f* pos, int* c2p ){
-    glBegin(GL_POINTS);
+    //glBegin(GL_POINTS);
     for(int iy=0; iy<ny; iy++){ for(int ix=0; ix<nx; ix++){ int i = nx*iy+ix;
     //for(int i=0; i<ncell; i++){
             int iStart = c2p[i  ];
             int iEnd   = c2p[i+1];
             if(iStart<iEnd){
             //printf( "(%i,%i) %i (%i,%i) \n", ix, iy, i, iStart, iEnd );
-            Draw::setRGB( rand_hash2( i + 15464)*15 );
+            Draw::setRGB( rand_hash2( i + 15464) );
             for(int i=iStart; i<iEnd; i++){
-                glVertex3f( pos[i].x, pos[i].y, 0.0 );
+                //glVertex3f( pos[i].x, pos[i].y, 0.0 );
+                Draw2D::drawCircle(pos[i],0.5,8,false);
             }
             }
     //}
     } }
-    glEnd();
+    //glEnd();
     //exit(0);
 }
-
-
-void add_ineraction_forces(){
-    for(int i=0; i<n; i++){
-        Vec2f f; f.set(0.0);
-        for(int j=0; j<n; j++){
-            acum_force( pos[i], pos[j], f );
-        }
-        force[i] = f;
-    }
-}
-
-void clean_force( ){ for(int i=0; i<n; i++){ force[i].set(0.0); } }
-
-void add_confine_force( const Vec2f& center, float strength ){
-    for(int i=0; i<n; i++){ force[i].add_mul( pos[i], strength ); }
-}
-
-void add_external_force( const Vec2f& center, float strength, float width ){
-    float w2 = width*width;
-    for(int i=0; i<n; i++){
-        Vec2f dp; dp.set_sub( pos[i], center );
-        float ir2 = 1/(dp.norm2() + w2);
-        float ir  = sqrt(ir2);
-        force[i].add_mul( dp, strength*ir2*ir );
-    }
-}
-
-float move_leap_frog( float dt ){
-    float cdamp = 1 - damp*dt;
-    double f2max = 0;
-    for(int i=0; i<n; i++){
-        float f2 = force[i].norm2();
-        if(f2>f2max) f2max = f2;
-    }
-    if(f2max > F2MAX ) dt *= sqrt( sqrt(F2MAX/f2max) );
-    for(int i=0; i<n; i++){
-        vel[i].mul(cdamp);
-        vel[i].add_mul( force[i], dt );
-        pos[i].add_mul( vel[i]  , dt );
-    }
-    return f2max;
-}
-
-void splitForce(){
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ==================== Declaration
 
 class TestApp_clNBody2DTiled : public AppSDL2OGL {
 	public:
-	int per_frame = 10;
+	int per_frame = 1;
 
 	int err;
 	OCLsystem cl;
 	OCLtask *task1,*task2;
 
 	//bool use_GPU = false;
-	int method = 2;
+	int method = 1;
 
 	//virtual void loop( int nframes );
 	virtual void eventHandling( const SDL_Event& event );
@@ -263,11 +62,15 @@ class TestApp_clNBody2DTiled : public AppSDL2OGL {
 
 TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
+    /*
     float span = 5.0;
     for(int i=0; i<n; i++){
         pos[i].set(randf(-span,span),randf(-span,span));
         vel[i].set(0.0);
     }
+    */
+
+    initParticles( 1.5, 0.0 );
 
     // --- OpenCL
     cl.init();
@@ -315,7 +118,7 @@ void TestApp_clNBody2DTiled::draw(){
 	glDisable(GL_DEPTH_TEST);
 
 
-	/*
+
     //delay = 100;
     double f2err;
     t1=getCPUticks();
@@ -331,14 +134,19 @@ void TestApp_clNBody2DTiled::draw(){
                 task1->enque();
                 clFinish(cl.commands);
                 cl.download(2);
-                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -40.0, 1.0 );
+                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -4.0, 1.0 );
                 f2err = move_leap_frog( time_step );
             }
             break;
         case 1:
             for(int itr=0; itr<per_frame; itr++){
-                add_ineraction_forces( );
-                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -40.0, 1.0 );
+                atomsToCells( );
+                //add_ineraction_forces( );
+
+                clean_force( );
+                add_ineraction_forces_cells( pos, cell2pos );
+
+                if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -4.0, 1.0 );
                 f2err = move_leap_frog( time_step );
             }
             break;
@@ -347,10 +155,11 @@ void TestApp_clNBody2DTiled::draw(){
 
 	double fticks = getCPUticks() - t1;
     printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(n*n) );
-    */
 
+
+
+    /*
     printf("frame %i \n", frameCount);
-
     glColor3f(0.48,0.48,0.48);
     Draw2D::drawGrid( grid_orig[0], grid_orig[1], grid_orig[0]+cell_size*nx+0.1, grid_orig[0]+cell_size*ny+0.1, cell_size, cell_size );
 
@@ -358,8 +167,11 @@ void TestApp_clNBody2DTiled::draw(){
     glColor3f(0.5,0.45,0.45);
     add_ineraction_forces_cells( pos_, cell2pos );
     drawAtomsByCell( pos_, cell2pos );
+    */
 
     //exit(0);
+
+    drawAtomsByCell( pos_, cell2pos );
 
     /*
     glColor3f(0.9,0.9,0.9);
@@ -371,6 +183,7 @@ void TestApp_clNBody2DTiled::draw(){
     }
     glEnd();
     */
+
 
     //exit(0);
 
