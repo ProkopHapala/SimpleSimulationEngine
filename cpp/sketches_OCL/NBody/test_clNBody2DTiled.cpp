@@ -101,8 +101,8 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
     //cl.finish();
     clFinish(cl.commands); cl.download(2);
 
-    clean_force( );
-    add_ineraction_forces();
+    clean_array( n, force );
+    add_ineraction_forces(n, pos, force );
     for(int i=0;  i<n; i++ ){  printf( "i (%g,%g) (%g,%g) \n", i,  force_[i].x, force_[i].y,   force[i].x, force[i].y ); }
 
     cl.buffers[2].p_cpu = (float*)force;    // bind Force output array
@@ -141,10 +141,12 @@ void TestApp_clNBody2DTiled::draw(){
         case 1:
             for(int itr=0; itr<per_frame; itr++){
                 atomsToCells( );
-                //add_ineraction_forces( );
+                //glColor3f(1.0f,0.0f,0.0f);
+                add_ineraction_forces( n, pos, force );
 
-                clean_force( );
-                add_ineraction_forces_cells( pos, cell2pos );
+                //glColor3f(0.0f,0.0f,1.0f);
+                //clean_array(n,force_); add_ineraction_forces_cells( n, pos, force_, cell2pos ); checkDiff( n,  force_, force );
+                clean_array(n,force); add_ineraction_forces_cells( n, pos, force, cell2pos );
 
                 if( LMB ) add_external_force( {mouse_begin_x, mouse_begin_y}, -4.0, 1.0 );
                 f2err = move_leap_frog( time_step );
@@ -171,6 +173,11 @@ void TestApp_clNBody2DTiled::draw(){
 
     //exit(0);
 
+    Vec2f a = {1.0,1.0};
+
+    glColor3f(0.48,0.48,0.48); Draw2D::drawGrid( grid_orig[0], grid_orig[1], grid_orig[0]+cell_size*nx+0.1, grid_orig[0]+cell_size*ny+0.1, cell_size, cell_size );
+    //glColor3f(0.15,0.15,0.15); Draw2D::drawRectangle( Vec2f(-xspan,-yspan), Vec2f(xspan,yspan) );
+    Draw2D::drawRectangle( {-xspan,-yspan}, {xspan,yspan}, false );
     drawAtomsByCell( pos_, cell2pos );
 
     /*

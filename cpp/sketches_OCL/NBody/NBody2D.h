@@ -6,8 +6,11 @@
 #define R2SAFE  1.0e-2
 #define F2MAX   10.0
 
-constexpr float R_MAX  = 1.8;
+constexpr float R_MAX = 1.8;
 constexpr float R2MAX = R_MAX*R_MAX;
+
+constexpr float xspan = 27.0;
+constexpr float yspan = 27.0;
 
 //int n = 1024;
 //constexpr int n = 32;
@@ -30,8 +33,8 @@ int           cell2pos  [ncell+1];
 int           cellNs    [ncell];
 //int           cellNcount[ncell];
 int           atom2cell[n];
-float cell_size     = 2.0;
-float grid_orig [2] = {-16.0,-16.0};
+float cell_size     = 4.0;
+float grid_orig [2] = {-cell_size*nx*0.5,-cell_size*ny*0.5};
 
 
 
@@ -50,6 +53,8 @@ inline void acum_force( const Vec2f& p1, const Vec2f& p2, Vec2f& f ){
     Vec2f dp; dp.set_sub( p2, p1 );
     float r2 = dp.norm2();
     if (r2 > R2MAX) return;
+    //Draw2D::drawLine(p1,p2);
+
     float ir2 = 1/( dp.norm2() + R2SAFE );
     //float fr  = (0.2-ir2)*(R2MAX-r2);
     float fr  = (0.7-ir2)*(R2MAX-r2);
@@ -115,7 +120,7 @@ void atomsToCells( ){
 }
 
 
-void add_ineraction_forces(){
+void add_ineraction_forces( int n, Vec2f* pos, Vec2f* force ){
     for(int i=0; i<n; i++){
         Vec2f f; f.set(0.0);
         Vec2f& pi = pos[i];
@@ -145,7 +150,7 @@ void interact_cell( int iStart, int iEnd, Vec2f* pos, Vec2f* force ){
     }
 }
 
-void add_ineraction_forces_cells( Vec2f* pos, int* c2p ){
+void add_ineraction_forces_cells( int n, Vec2f* pos, Vec2f* force, int* c2p ){
     const int nx_ = nx-1;
     const int ny_ = ny-1;
     for(int iy=1; iy<ny_; iy++){
@@ -162,9 +167,9 @@ void add_ineraction_forces_cells( Vec2f* pos, int* c2p ){
             j=i   -1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
                       interact_cell( iStart, iEnd,                   pos, force );
             j=i   +1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-            j=i-nx-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-            j=i-nx  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-            j=i-nx+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
+            j=i+nx-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
+            j=i+nx  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
+            j=i+nx+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
 
             //printf( " (%i,%i) %i (%i,%i) (%i,%i) \n", ix, iy, i, iStart, iEnd,  c2p[j], c2p[j+1] );
 /*
@@ -192,7 +197,23 @@ void add_ineraction_forces_cells( Vec2f* pos, int* c2p ){
     //exit(0);
 }
 
-void clean_force( ){ for(int i=0; i<n; i++){ force[i].set(0.0); } }
+void clean_array( int n, Vec2f * arr ){ for(int i=0; i<n; i++){ arr[i].set(0.0); } }
+
+double checkDiff( int n, Vec2f * ps, Vec2f * p0s ){
+    double errSum2 = 0;
+    for(int i=0; i<n; i++){
+        Vec2f d; d.set_sub( ps[i], p0s[i] );
+        double err2 = d.norm2();
+        errSum2    += err2;
+        if ( err2 > 1e-8 ){
+            printf( "%i is (%g,%g,) should be (%g,%g,) \n", i, ps[i].x, ps[i].y, p0s[i].x, p0s[i].y );
+            exit(0);
+            break;
+
+        }
+    }
+    return errSum2;
+}
 
 void add_confine_force( const Vec2f& center, float strength ){
     for(int i=0; i<n; i++){ force[i].add_mul( pos[i], strength ); }
@@ -208,10 +229,7 @@ void add_external_force( const Vec2f& center, float strength, float width ){
     }
 }
 
-#define xspan 12.0
-#define yspan 12.0
-
-inline void wrap( Vec2f& p, Vec2f& v ){
+inline void wrap( Vec2f& p ){
     bool wrapped = false;
     if     (p.x> xspan){ p.x = -2*xspan+p.x; wrapped = true; }
     else if(p.x<-xspan){ p.x =  2*xspan+p.x; wrapped = true; }
@@ -223,8 +241,8 @@ inline void wrap( Vec2f& p, Vec2f& v ){
     //    if(vr2>1e+4) v.set(0.0);
     //    if(vr2>1e+2) v.mul(0.5);
     //}
-    double vr2 = v.norm2();
-    if(vr2>1) v.set(0.5);
+    //double vr2 = v.norm2();
+    //if(vr2>1) v.set(0.5);
 
 }
 
@@ -240,7 +258,7 @@ float move_leap_frog( float dt ){
         vel[i].mul(cdamp);
         vel[i].add_mul( force[i], dt );
         pos[i].add_mul( vel[i]  , dt );
-        wrap( pos[i], vel[i] );
+        wrap( pos[i] );
     }
     return f2max;
 }

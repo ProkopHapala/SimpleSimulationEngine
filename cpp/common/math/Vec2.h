@@ -16,10 +16,16 @@ class Vec2TYPE{
 	};
 
 	// ===== methods
-	inline void set( TYPE f                    ) { x=f;   y=f;   };
-    inline void set( TYPE fx, TYPE fy ) { x=fx;  y=fy;  };
-    inline void set( const VEC& v              ) { x=v.x; y=v.y; };
-	inline void set( TYPE* arr                 ) { x=arr[0]; y=arr[1]; };
+	inline void set( TYPE f            ) { x=f;   y=f;   };
+    inline void set( TYPE fx, TYPE fy  ) { x=fx;  y=fy;  };
+    inline void set( const VEC& v      ) { x=v.x; y=v.y; };
+	inline void set( TYPE* arr         ) { x=arr[0]; y=arr[1]; };
+
+	//inline Vec2TYPE(){};
+	//inline Vec2TYPE( TYPE f            ){ x=f;   y=f; };
+	//inline Vec2TYPE( TYPE fx, TYPE fy  ){ x=fx;  y=fy; };
+	//inline Vec2TYPE( const VEC& v      ){ x=v.x; y=v.y; };
+	//inline Vec2TYPE( TYPE* arr         ){ x=arr[0]; y=arr[1]; };
 
     inline void get( TYPE& fx, TYPE& fy ) { fx=x;  fy=y;        };
 	inline void get( TYPE* arr                    ) { arr[0]=x; arr[1]=y; };
