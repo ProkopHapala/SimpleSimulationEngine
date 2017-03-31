@@ -18,6 +18,10 @@
 
 #include "OCL.h"
 
+
+
+
+
 void drawAtomsByCell(int n, Vec2f* pos, int* c2p ){
     //glBegin(GL_POINTS);
     for(int iy=0; iy<ny; iy++){ for(int ix=0; ix<nx; ix++){ int i = nx*iy+ix;
@@ -72,6 +76,11 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
     }
     */
 
+    //Vec2i v2i_test[10];
+    //for(int i=0; i<10; i++){ v2i_test[i].set(i,10-i); }
+    //for(int i=0; i<10; i++){ printf( "%i   : %i %i \n", i, v2i_test[i].x, v2i_test[i].y ); }
+    //exit(0);
+
     initParticles( 1.5, 0.25 );
 
     // --- OpenCL
@@ -85,6 +94,11 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
     cl.newBuffer( "pos",   n*2, sizeof(float), (float*)pos,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
     cl.newBuffer( "vel",   n*2, sizeof(float), (float*)vel,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
     cl.newBuffer( "force", n*2, sizeof(float), (float*)force_, CL_MEM_READ_WRITE );
+
+    cl.newBuffer( "bounds",     ncell*2, sizeof(int),   (float*)cellBounds,     CL_MEM_READ_ONLY  );
+    cl.newBuffer( "debug",      ncell,   sizeof(float), (float*)DEBUG_int_buff, CL_MEM_WRITE_ONLY );
+    cl.newBuffer( "neighCells", 9,       sizeof(float), (float*)neighCells,     CL_MEM_READ_ONLY  );
+
     //cl.buffers[1].read_on_finish = true;
     err = cl.buildProgram( "cl/nbody_SR.cl" );                                       OCL_checkError(err, "cl.buildProgram");
     task1 = new OCLtask( &cl, cl.newKernel("NBody_force"), 1, n, 64 );
@@ -92,31 +106,42 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
     task1->print_arg_list();
     //exit(0);
 
-    //task2 = new OCLtask( &cl, cl.newKernel("NBody_step"), 1, n, 0 );
-    //task2->args = { INTarg(n), BUFFarg(0), BUFFarg(1), FLOATarg(time_step), FLOATarg(damp), INTarg(per_frame) };
-    //printf(" ::: Init OpenCL .... DONE \n");
+    task2 = new OCLtask( &cl, cl.newKernel("force_Tiled"), 1, ncell*16, 16 );
+    task2->args = { INTarg(ncell), BUFFarg(0), BUFFarg(2), BUFFarg(3), BUFFarg(4), BUFFarg(5) };
+    printf(" ::: Init OpenCL .... DONE \n");
 
     //char ret[1024];
     //size_t nbytes=0;
     //err = clGetKernelArgInfo ( cl.kernels[0], 0, CL_KERNEL_ARG_TYPE_NAME, 1024 , ret , &nbytes );  printf("CL_KERNEL_ARG_TYPE_NAME  >>%s<<\n", ret );      OCL_checkError(err, "clGetKernelArgInfo");
     //err = clGetKernelArgInfo ( cl.kernels[0], 0, CL_KERNEL_ARG_NAME     , 1024 , ret , &nbytes );  printf("CL_KERNEL_ARG_NAME       >>%s<<\n", ret );      OCL_checkError(err, "clGetKernelArgInfo");
 
-
-    // --- Test Force tiles
+    printf( " --- Test Force tiles \n" );
     atomsToCells();
+    //for(int i=0; i<ncell; i++){ printf("%i : %i %i %i \n", i, cellBounds[i].x, cellBounds[i].y, DEBUG_int_buff[i] ); }; exit(0);
     clean_array( n, force  ); add_ineraction_forces      ( n, pos, force );
     clean_array( n, force_ ); add_ineraction_forces_cells( n, pos, force_, cell2pos );
 
     printf("check CPU-Tiled vs CPU-naieve\n");
-    checkDiff  ( n, force_, force );
+    //checkDiff  ( n, force_, force );
 
 
-    // --- Test force OpenCL
+    printf( " --- Test force OpenCL \n" );
     cl.upload(0); task1->enque(); // cl.finish();
     clFinish(cl.commands); cl.download(2);
     //for(int i=0;  i<n; i++ ){  printf( "i (%g,%g) (%g,%g) \n", i,  force_[i].x, force_[i].y,   force[i].x, force[i].y ); }
     printf("check GPU-naieve vs CPU-naieve\n");
     checkDiff( n, force_, force );
+
+    printf( " --- Test force OpenCL cells \n" );
+    //atomsToCells( );
+    cl.upload(0); cl.upload(3); cl.upload(5);
+    task2->enque();
+    clFinish(cl.commands);
+    cl.download(2); cl.download(4);
+    for(int i=0; i<ncell; i++){ printf("%i %i %i \n", i, DEBUG_int_buff[i], DEBUG_int_buff_[i] ); }
+    for(int i=0;  i<n; i++ ){  printf( "%i (%g,%g) (%g,%g) \n", i,  force_[i].x, force_[i].y,   force[i].x, force[i].y ); }
+    checkDiff( n, force_, force );
+    //exit(0);
 
 
     cl.buffers[2].p_cpu = (float*)force;    // bind Force output array
@@ -131,7 +156,8 @@ void TestApp_clNBody2DTiled::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable(GL_DEPTH_TEST);
 
-
+    float touchStrength =  -0.5;
+    float touchRadius   =   3.0;
 
     //delay = 100;
     double f2err;
@@ -146,7 +172,7 @@ void TestApp_clNBody2DTiled::draw(){
                 long t_1 =  getCPUticks();
                     add_ineraction_forces( n, pos, force );
                 long t_2 = getCPUticks();
-                    if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, -4.0, 1.0 );
+                    if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, touchStrength, touchRadius );
                     f2err = move_leap_frog( n, pos, vel, force, time_step );
                 long t_3 = getCPUticks();
                 t_interact+=(t_2-t_1); t_move+=(t_3-t_2);
@@ -159,7 +185,7 @@ void TestApp_clNBody2DTiled::draw(){
                     clean_array(n,force);
                 long t_2 = getCPUticks();
                     add_ineraction_forces_cells( n, pos, force, cell2pos );
-                    if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, -4.0, 1.0 );
+                    if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, touchStrength, touchRadius );
                 long t_3 = getCPUticks();
                     f2err = move_leap_frog( n, pos, vel, force, time_step );
                 long t_4 = getCPUticks();
@@ -174,19 +200,31 @@ void TestApp_clNBody2DTiled::draw(){
                     clFinish(cl.commands);
                     cl.download(2);
                 long t_2 = getCPUticks();
-                    if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, -4.0, 1.0 );
+                    if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, touchStrength, touchRadius );
                     f2err = move_leap_frog( n, pos, vel, force, time_step );
                 long t_3 = getCPUticks();
                 t_interact+=(t_2-t_1); t_move+=(t_3-t_2);
             }
             break;
         case 4:
-            //task2->enque();
-            //clFinish(cl.commands);
-            //cl.download(0);
+            for(int itr=0; itr<per_frame; itr++){
+                long t_1 =  getCPUticks();
+                    atomsToCells();
+                long t_2 =  getCPUticks();
+                    cl.upload(0); cl.upload(3); cl.upload(5);
+                    task2->enque();
+                    clFinish(cl.commands);
+                    cl.download(2); cl.download(4);
+                long t_3 = getCPUticks();
+                    if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, touchStrength, touchRadius );
+                    f2err = move_leap_frog( n, pos, vel, force, time_step );
+                long t_4 = getCPUticks();
+                t_arrange+=(t_2-t_1); t_interact+=(t_3-t_2); t_move+=(t_4-t_3);
+            }
             break;
     }
 
+    glColor3f(0.5f,0.0f,0.5f); Draw2D::drawCircle( {mouse_begin_x, mouse_begin_y}, touchRadius, 16, false );
 
 	double fticks = getCPUticks() - t1;
     //printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(n*n) );
