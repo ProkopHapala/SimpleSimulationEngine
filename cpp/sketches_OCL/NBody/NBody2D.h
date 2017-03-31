@@ -1,20 +1,20 @@
 #ifndef  NBody_h
 #define  NBody_h
 
-#include "OCL.h"
+#include "arrayAlgs.h"
 
 #define R2SAFE  1.0e-2
 #define F2MAX   10.0
 
+//  ============== Globals
+
 constexpr float R_MAX = 1.8;
 constexpr float R2MAX = R_MAX*R_MAX;
 
-constexpr float xspan = 27.0;
-constexpr float yspan = 27.0;
-
 //int n = 1024;
 //constexpr int n = 32;
-constexpr int n = 128;
+//constexpr int n = 128;
+constexpr int n = 1024*4;
 float time_step = 0.05;
 //constexpr int n = 1024*2;
 float damp      = 0.5;
@@ -24,17 +24,142 @@ Vec2f vel   [n];
 Vec2f force [n];
 Vec2f force_[n];
 
-
 // cell acceleration buffer
-int constexpr nx    = 16;
-int constexpr ny    = 16;
-int constexpr ncell = nx*ny;
+constexpr int  nx    = 32;
+constexpr int  ny    = 32;
+constexpr int ncell = nx*ny;
+constexpr float cell_size     = 4.0;
+constexpr float xspan = cell_size*(ny-2)*0.49;
+constexpr float yspan = cell_size*(ny-2)*0.49;
+
 int           cell2pos  [ncell+1];
 int           cellNs    [ncell];
 //int           cellNcount[ncell];
 int           atom2cell[n];
-float cell_size     = 4.0;
+
 float grid_orig [2] = {-cell_size*nx*0.5,-cell_size*ny*0.5};
+
+
+//constexpr int nbins           = 4;
+
+constexpr int nbins            = 8;
+const     int binTrashs[nbins] = {4,8,16,32,64,128,256};
+std::vector<int>   cellBins[nbins];
+std::vector<Vec2i> interBins[nbins];
+
+int   ninters=0;
+int   interNs    [ncell*9];
+Vec2i interIJs   [ncell*9];
+int   interPermut[ncell*9];
+
+
+#include <map>
+std::multimap<int,Vec2i> interMap;
+
+//  ============== Functions
+
+inline int getBinIndex(int i){
+    //if i<binTrashs[1]{ if(i<binTrashs[0]){ return 0; }else{ return 1; }
+    //}else{             if(i<binTrashs[2]){ return 2; }else{ return 3; }   };
+    if(i<32){
+        if (i<8)  { if(i<4 ){ return 0; }else{ return 1; }
+        }else     { if(i<16){ return 2; }else{ return 3; }   };
+    }else{
+        if (i<128){ if(i<64 ){ return 4; }else{ return 5; }
+        }else     { if(i<256){ return 6; }else{ return 7; }   };
+    }
+}
+
+void sizeSort( ){
+    printf(" --- sizeSort \n");
+    // http://stackoverflow.com/questions/53161/find-the-highest-order-bit-in-c
+    for(int i=0; i<nbins; i++ ){ cellBins[i].clear(); }
+    int nsum = 0;
+    for(int i=0; i<ncell; i++ ){
+        int ni = cellNs[i];
+        if(ni==0) continue;
+        nsum+=ni;
+        //int firstBit = fls(ibin);
+        int ibin = getBinIndex(ni);
+        cellBins[ibin].push_back(i);
+        //printf("%i %i %i\n", i, ni, ibin);
+    }
+    printf("nsum %i\n", nsum);
+    for(int i=0; i<nbins; i++ ){ printf( "nbin %i size %i (%i)\n", i, cellBins[i].size(), cellBins[i].size()*binTrashs[i]  ); }
+    //exit(0);
+}
+
+inline void processIterCell(int i, int ni, int j ){
+    int nj = cellNs[i];
+    if (nj==0) return;
+    int ibin = getBinIndex(ni*nj);
+    interBins[ibin].push_back({i,j});
+    //interMap.insert( std::pair<int,Vec2i>(ni*nj,{i,j}) );   // too costly - 16 Mticks for 4096 particles and 32*32 cells
+}
+
+void sortInterCell( ){
+    //printf(" --- sortInterCell \n");
+    const int nx_ = nx-1;
+    const int ny_ = ny-1;
+    //for(int i=0; i<nbins; i++ ){ cellBins[i].clear(); }
+    interMap.clear();
+    for(int iy=1; iy<ny_; iy++){
+        for(int ix=1; ix<nx_; ix++){
+            int i  = nx*iy+ix;
+            int ni = cellNs[i];
+            if( ni==0 ) continue;
+            processIterCell( i, ni, i-nx-1 );
+            processIterCell( i, ni, i-nx   );
+            processIterCell( i, ni, i-nx+1 );
+            processIterCell( i, ni, i   -1 );
+            processIterCell( i, ni, i      );
+            processIterCell( i, ni, i   +1 );
+            processIterCell( i, ni, i+nx-1 );
+            processIterCell( i, ni, i+nx   );
+            processIterCell( i, ni, i+nx+1 );
+        }
+    }
+    //printf("nsum %i\n", nsum);
+    //for(int i=0; i<nbins; i++ ){ printf( "nbin %i size %i \n", i, cellBins[i].size()  ); }
+    //exit(0);
+}
+
+inline void processIterCell_2( int i, int ni, int j ){
+    int nj = cellNs[i];
+    if (nj==0) return;
+    interNs [ninters] = ni*nj;
+    interIJs[ninters] = {i,j};
+    ninters++;
+}
+
+void sortInters( ){
+    ninters = 0;
+    const int nx_ = nx-1;
+    const int ny_ = ny-1;
+    for(int iy=1; iy<ny_; iy++){
+        for(int ix=1; ix<nx_; ix++){
+            int i  = nx*iy+ix;
+            int ni = cellNs[i];
+            if( ni==0 ) continue;
+            processIterCell_2( i, ni, i-nx-1 );
+            processIterCell_2( i, ni, i-nx   );
+            processIterCell_2( i, ni, i-nx+1 );
+            processIterCell_2( i, ni, i   -1 );
+            processIterCell_2( i, ni, i      );
+            processIterCell_2( i, ni, i   +1 );
+            processIterCell_2( i, ni, i+nx-1 );
+            processIterCell_2( i, ni, i+nx   );
+            processIterCell_2( i, ni, i+nx+1 );
+        }
+    }
+    for(int i=0; i<ninters; i++ ){
+        interPermut[i]=i;
+        //printf( "inter-cell %i (%i,%i) %i \n", i, interIJs[i].a, interIJs[i].b, interNs[i] );
+    }
+    //quickSort<int>( interNs, interPermut, 0, ninters ); // too costly - 16 Mticks for 4096 particles and 32*32 cells
+    //for(int i=0; i<ninters; i++ ){ int ip=interPermut[i]; printf( "inter-cell %i -> %i (%i,%i) %i \n", i, ip, interIJs[ip].a, interIJs[ip].b, interNs[ip] ); }
+    //exit(0);
+}
 
 
 
@@ -55,7 +180,7 @@ inline void acum_force( const Vec2f& p1, const Vec2f& p2, Vec2f& f ){
     if (r2 > R2MAX) return;
     //Draw2D::drawLine(p1,p2);
 
-    float ir2 = 1/( dp.norm2() + R2SAFE );
+    float ir2 = 1/( r2 + R2SAFE );
     //float fr  = (0.2-ir2)*(R2MAX-r2);
     float fr  = (0.7-ir2)*(R2MAX-r2);
     f.add_mul( dp, fr );
@@ -70,13 +195,18 @@ void initParticles( double step, double drnd ){
     for(int iy=0; iy<ny; iy++){
         for(int ix=0; ix<nx; ix++){
             if(i<n){
-                pos[i].set( ix*step -0.5*nx + randf(-drnd,drnd), iy*step -0.5*ny +randf(-drnd,drnd) );
+                pos[i].set(
+                    (ix-0.5*nx)*step + randf(-drnd,drnd),
+                    (iy-0.5*ny)*step + randf(-drnd,drnd)
+                );
                 vel  [i].set(0.0);
                 force[i].set(0.0);
             }
             i++;
         }
     }
+
+    //cellBins[] = std::vector<int>[nbins];
 }
 
 void atomsToCells( ){
@@ -91,6 +221,9 @@ void atomsToCells( ){
         atom2cell[i] = icell;
         //printf( "%i (%3.3f,%3.3f) (%i,%i) %i \n", i, p.x,p.y, ix, iy, icell );
     }
+    //sizeSort( );
+    sortInterCell( );
+    //sortInters( );
     int nsum = 0;
     for(int i=0; i<ncell; i++){
         cell2pos[i] = nsum;
@@ -118,7 +251,6 @@ void atomsToCells( ){
     //exit(0);
     for(int i=0; i<n; i++){ pos[i]=pos_[i]; }
 }
-
 
 void add_ineraction_forces( int n, Vec2f* pos, Vec2f* force ){
     for(int i=0; i<n; i++){
@@ -158,6 +290,7 @@ void add_ineraction_forces_cells( int n, Vec2f* pos, Vec2f* force, int* c2p ){
             int i      = nx*iy+ix;
             int iStart = c2p[i  ];
             int iEnd   = c2p[i+1];
+            if( iStart==iEnd ) continue;
             int j;
             // upper row (iy-1)
 
@@ -219,7 +352,7 @@ void add_confine_force( const Vec2f& center, float strength ){
     for(int i=0; i<n; i++){ force[i].add_mul( pos[i], strength ); }
 }
 
-void add_external_force( const Vec2f& center, float strength, float width ){
+void add_external_force( int n, Vec2f * force, const Vec2f& center, float strength, float width ){
     float w2 = width*width;
     for(int i=0; i<n; i++){
         Vec2f dp; dp.set_sub( pos[i], center );
@@ -243,10 +376,9 @@ inline void wrap( Vec2f& p ){
     //}
     //double vr2 = v.norm2();
     //if(vr2>1) v.set(0.5);
-
 }
 
-float move_leap_frog( float dt ){
+float move_leap_frog( int n, Vec2f * pos, Vec2f * vel, Vec2f * force, float dt ){
     float cdamp = 1 - damp*dt;
     double f2max = 0;
     for(int i=0; i<n; i++){
@@ -262,7 +394,6 @@ float move_leap_frog( float dt ){
     }
     return f2max;
 }
-
 
 #endif
 
