@@ -18,9 +18,9 @@ constexpr float R2MAX = R_MAX*R_MAX;
 //constexpr int n = 512;
 //constexpr int n = 1024;
 //constexpr int n = 2048;
-constexpr int n = 4096;
+//constexpr int n = 4096;
 //constexpr int   n = 8192;
-//constexpr int n = 16384;
+constexpr int n = 16384;
 //constexpr int n = 32768;
 float time_step = 0.05;
 //constexpr int n = 1024*2;
@@ -38,7 +38,7 @@ constexpr int  ny    = 64;
 //constexpr int  nx    = 8;
 //constexpr int  ny    = 8;
 constexpr int ncell = nx*ny;
-constexpr float cell_size = 6.0;
+constexpr float cell_size = 4.0;
 constexpr float xspan = cell_size*(ny-2)*0.49;
 constexpr float yspan = cell_size*(ny-2)*0.49;
 
@@ -52,8 +52,10 @@ float grid_orig [2] = {-cell_size*nx*0.5,-cell_size*ny*0.5};
 
 //constexpr int nbins           = 4;
 
-constexpr int nbins            = 8;
-const     int binTrashs[nbins] = {4,8,16,32,64,128,256};
+constexpr int nbins               = 8;
+const     int binTrashs[nbins]    = {4,8,16,32,64,128,256};
+const     int cellBinTrash[nbins] = {32,64,128,256,512,1024,2048,4096};
+int           istrata[nbins];
 std::vector<int>   cellBins[nbins];
 std::vector<Vec2i> interBins[nbins];
 
@@ -62,10 +64,11 @@ int   interNs    [ncell*9];
 Vec2i interIJs   [ncell*9];
 int   interPermut[ncell*9];
 
+int   sortedCells[ncell];
+int   sortedIters[ncell*4*9];
 
 #include <map>
 std::multimap<int,Vec2i> interMap;
-
 
 const int neighCells[9] = {
     0,    -1,    +1,
@@ -73,6 +76,7 @@ const int neighCells[9] = {
     +nx-1,+nx,+nx+1
 };
 
+int       nFilledCells = 0;
 Vec2i     cellBounds     [ncell];
 //int       DEBUG_int_buff [ncell];
 //int       DEBUG_int_buff_[ncell];
@@ -91,6 +95,20 @@ inline int getBinIndex(int i){
         }else     { if(i<256){ return 6; }else{ return 7; }   };
     }
 }
+
+
+inline int getCellBinIndex(int i){
+    //if i<binTrashs[1]{ if(i<binTrashs[0]){ return 0; }else{ return 1; }
+    //}else{             if(i<binTrashs[2]){ return 2; }else{ return 3; }   };
+    if(i<cellBinTrash[3]){
+        if (i<cellBinTrash[1]){ if(i<cellBinTrash[0] ){ return 0; }else{ return 1; }
+        }else                 { if(i<cellBinTrash[2] ){ return 2; }else{ return 3; }   };
+    }else{
+        if (i<cellBinTrash[5]){ if(i<cellBinTrash[4] ){ return 4; }else{ return 5; }
+        }else                 { if(i<cellBinTrash[6] ){ return 6; }else{ return 7; }   };
+    }
+}
+
 
 void sizeSort( ){
     printf(" --- sizeSort \n");
@@ -111,20 +129,73 @@ void sizeSort( ){
     //exit(0);
 }
 
+void sortCells( ){
+    //printf(" --- sortInterCell \n");
+    const int nx_ = nx-1;
+    const int ny_ = ny-1;
+    //for(int i=0; i<nbins; i++ ){ cellBins[i].clear(); }
+    //interMap.clear();
+    for(int ibin=0; ibin<nbins; ibin++){ cellBins[ibin].clear(); }
+    //FILE * logFile = fopen("sortCells.log","w");
+    for(int iy=1; iy<ny_; iy++){
+        for(int ix=1; ix<nx_; ix++){
+            int i  = nx*iy+ix;
+            int ni = cellNs[i];
+            if( ni==0 ) continue;
+            int nj = ni;
+            nj += cellNs[i-nx-1]; nj += cellNs[i-nx  ]; nj += cellNs[i-nx+1];
+            nj += cellNs[i-1   ];                       nj += cellNs[i+1   ];
+            nj += cellNs[i+nx-1]; nj += cellNs[i+nx  ]; nj += cellNs[i+nx+1];
+            int ibin = getCellBinIndex(nj*ni);
+            cellBins[ibin].push_back(i);
+            //fprintf( logFile, "cell(%i,%i) %i (%i,%i) %i %i \n", iy, ix, i, ni, nj, ni*nj, ibin );
+        }
+    }
+    nFilledCells = 0;
+    for(int ibin=0; ibin<nbins; ibin++){
+        std::vector<int>& bin = cellBins[ibin];
+        for(int i=0; i<bin.size(); i++){
+            int icell = bin[i];
+            sortedCells[nFilledCells]=icell;
+            //cellBounds[nFilledCells].set( cell2pos[icell], cellNs[icell] );
+            int nj = cellNs[icell] + cellNs[icell-1] + cellNs[icell+1] + cellNs[icell-nx-1] + cellNs[icell-nx] + cellNs[icell-nx+1] + cellNs[icell+nx-1] + cellNs[icell+nx] + cellNs[icell+nx+1];
+            //fprintf( logFile, "cellBounds %i %i  %i (%i,%i) %i %i \n", nFilledCells, icell, cell2pos[icell], cellNs[icell], nj, nj*cellNs[icell], ibin );
+            nFilledCells++;
+        }
+        istrata[ibin] = nFilledCells;
+    }
+    //fclose(logFile);
+    //printf("nsum %i\n", nsum);
+    //for(int i=0; i<nbins; i++ ){ printf( "nbin %i size %i \n", i, cellBins[i].size()  ); }
+    //exit(0);
+}
+
+
+
+
+
+
+
+
+
+
+
+
 inline void processIterCell(int i, int ni, int j ){
-    int nj = cellNs[i];
+    int nj = cellNs[j];
     if (nj==0) return;
     int ibin = getBinIndex(ni*nj);
     interBins[ibin].push_back({i,j});
     //interMap.insert( std::pair<int,Vec2i>(ni*nj,{i,j}) );   // too costly - 16 Mticks for 4096 particles and 32*32 cells
 }
 
-void sortInterCell( ){
+void sortIntersBins( ){
     //printf(" --- sortInterCell \n");
     const int nx_ = nx-1;
     const int ny_ = ny-1;
     //for(int i=0; i<nbins; i++ ){ cellBins[i].clear(); }
-    interMap.clear();
+    //interMap.clear();
+    for(int ibin=0; ibin<nbins; ibin++){ interBins[ibin].clear(); }
     for(int iy=1; iy<ny_; iy++){
         for(int ix=1; ix<nx_; ix++){
             int i  = nx*iy+ix;
@@ -141,6 +212,22 @@ void sortInterCell( ){
             processIterCell( i, ni, i+nx+1 );
         }
     }
+    //FILE * logFile = fopen("sortIntersBins.log","w");
+    ninters = 0;
+    for(int ibin=0; ibin<nbins; ibin++){
+        std::vector<Vec2i>& bin = interBins[ibin];
+        for(int i=0; i<bin.size(); i++){
+            Vec2i c = bin[i];
+            int i4 = ninters<<2;
+            sortedIters[i4  ] = cell2pos[c.a];
+            sortedIters[i4+1] = cellNs  [c.a];
+            sortedIters[i4+2] = cell2pos[c.b];
+            sortedIters[i4+3] = cellNs  [c.b];
+            //fprintf( logFile, "inter %i (%i,%i) (%i,%i) \n", ninters, sortedIters[i4  ], sortedIters[i4+1], sortedIters[i4+2], sortedIters[i4+3] );
+            ninters++;
+        }
+    }
+    //fclose(logFile);
     //printf("nsum %i\n", nsum);
     //for(int i=0; i<nbins; i++ ){ printf( "nbin %i size %i \n", i, cellBins[i].size()  ); }
     //exit(0);
@@ -154,7 +241,7 @@ inline void processIterCell_2( int i, int ni, int j ){
     ninters++;
 }
 
-void sortInters( ){
+void sortIntersQuick( ){
     ninters = 0;
     const int nx_ = nx-1;
     const int ny_ = ny-1;
@@ -243,9 +330,6 @@ void atomsToCells( ){
         atom2cell[i] = icell;
         //printf( "%i (%3.3f,%3.3f) (%i,%i) %i \n", i, p.x,p.y, ix, iy, icell );
     }
-    //sizeSort( );
-    //sortInterCell( );
-    //sortInters( );
     int nsum = 0;
     for(int i=0; i<ncell; i++){
         cell2pos[i] = nsum;
@@ -261,24 +345,12 @@ void atomsToCells( ){
         cellNs[icell] = ni+1;
         pos_[i_]      = pos[i];
     }
-    /*
-    for(int i=0; i<n; i++){
-        Vec2f& p  = pos_[i];
-        int ix    = (p.x - grid_orig[0])*inv_size;
-        int iy    = (p.y - grid_orig[1])*inv_size;
-        int icell = nx*iy + ix;
-        printf( "%i (%3.3f,%3.3f) (%i,%i) %i \n", i, p.x,p.y, ix, iy, icell );
-    }
-    */
-    //exit(0);
     for(int i=0; i<n; i++){ pos[i]=pos_[i]; }
-    for(int i=0; i<ncell; i++){
-        //printf("%i \n", i);
-        cellBounds[i].set( cell2pos[i], cellNs[i] );
-        //DEBUG_int_buff[i] = 0;
-    }
-    //printf("DONE \n" );
 }
+
+void prepareCellBounds( ){
+    for(int i=0; i<ncell; i++){ cellBounds[i].set( cell2pos[i], cellNs[i] ); }
+};
 
 void add_ineraction_forces( int n, Vec2f* pos, Vec2f* force ){
     for(int i=0; i<n; i++){
@@ -287,6 +359,28 @@ void add_ineraction_forces( int n, Vec2f* pos, Vec2f* force ){
         for(int j=0; j<n; j++){ acum_force( pi, pos[j], f ); }
         force[i] = f;
     }
+}
+
+void add_forces_Inters( int n, Vec2f* pos, Vec2f* force ){
+    Vec2f pjs[256];
+    //FILE * logFile = fopen("add_forces_Inters.log","w");
+    for(int inter=0; inter<ninters; inter++){
+        int i4 = inter<<2;
+        int i0 = sortedIters[i4  ];
+        int ni = sortedIters[i4+1];
+        int j0 = sortedIters[i4+2];
+        int nj = sortedIters[i4+3];
+        //fprintf( logFile, "inter %i (%i,%i) (%i,%i) %i \n", inter, i0, j0, ni, nj, ni*nj );
+        for(int j=0;j<nj;j++){ pjs[j] = pos[j0+j]; }
+        for(int i=0;i<ni;i++){
+            Vec2f pi = pos[i0+i];
+            Vec2f f; f.set(0.0);
+            for(int j=0;j<nj;j++){ acum_force( pi, pjs[j], f ); }
+            //for(int j=0;j<nj;j++){ acum_force( pi, pos[j0+j], f ); }
+            force[i0+i].add( f );
+        }
+    }
+    //fclose(logFile);
 }
 
 void interact_cell( int iStart, int iEnd, int jStart, int jEnd, Vec2f* pos, Vec2f* force ){
@@ -335,30 +429,6 @@ void add_ineraction_forces_cells( int n, Vec2f* pos, Vec2f* force, int* c2p ){
             j=i+nx-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
             j=i+nx  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
             j=i+nx+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
-
-            //DEBUG_int_buff_[i] = DEBUG_counter;
-
-            //printf( " (%i,%i) %i (%i,%i) (%i,%i) \n", ix, iy, i, iStart, iEnd,  c2p[j], c2p[j+1] );
-/*
-            if(iy>1  ){
-                int i_ = i - nx;
-                if(ix>1  ){ j=i_-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force ); }  //   [ iy-1 , ix-1 ]
-                            j=i_  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );    //   [ iy-1 , ix   ]
-                if(ix<nx_){ j=i_+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force ); }  //   [ iy-1 , ix+1 ]
-            }
-
-            // middle row (iy)
-                if(ix>1  ){ j=i-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );  }  //  [ iy   , ix-1 ]
-                                   interact_cell( iStart, iEnd, iStart, iEnd, pos, force );         //  [ iy   , ix   ]
-                if(ix<nx_){ j=i+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );  }  //  [ iy   , ix+1 ]
-            // upper row (iy+1)
-            if(iy<ny_){
-                int i_ = i + nx;
-                if(ix>1  ){ j=i_+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force ); }  //  [iy+1  , ix-1 ]
-                            j=i_  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );    //  [iy+1  , ix   ]
-                if(ix<nx_){ j=i_-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force ); }  //  [iy+1  , ix+1 ]
-            }
-*/
         }
     }
     //exit(0);

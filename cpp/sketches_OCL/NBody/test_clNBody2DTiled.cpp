@@ -18,10 +18,6 @@
 
 #include "OCL.h"
 
-
-
-
-
 void drawAtomsByCell(int n, Vec2f* pos, int* c2p ){
     //glBegin(GL_POINTS);
     for(int iy=0; iy<ny; iy++){ for(int ix=0; ix<nx; ix++){ int i = nx*iy+ix;
@@ -50,10 +46,10 @@ class TestApp_clNBody2DTiled : public AppSDL2OGL {
 
 	int err;
 	OCLsystem cl;
-	OCLtask *task1,*task2;
+	OCLtask *taskN2,*taskTiled,*taskSorted;
 
 	//bool use_GPU = false;
-	int method = 4;
+	int method = 3;
 	int nloc   = 16;
 	int niters = 0;
     double t_interact = 0;
@@ -99,25 +95,29 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
     //cl_ulong local_mem_size;
     //clGetDeviceInfo(cl.device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &local_mem_size, 0); printf("local_mem_size %li \n",local_mem_size); exit(0);
 
-    cl.newBuffer( "pos",   n*2, sizeof(float), (float*)pos,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
-    cl.newBuffer( "vel",   n*2, sizeof(float), (float*)vel,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
-    cl.newBuffer( "force", n*2, sizeof(float), (float*)force_, CL_MEM_READ_WRITE );
+    cl.newBuffer( "pos",   n*2, sizeof(float), pos,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "vel",   n*2, sizeof(float), vel,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "force", n*2, sizeof(float), force_, CL_MEM_READ_WRITE );
 
-    cl.newBuffer( "bounds",     ncell*2, sizeof(int),   (float*)cellBounds,     CL_MEM_READ_ONLY  );
+    cl.newBuffer( "bounds", ncell*2, sizeof(int), cellBounds,     CL_MEM_READ_ONLY  );
+    cl.newBuffer( "order",  ncell,   sizeof(int), sortedCells,    CL_MEM_READ_ONLY  );
     //cl.newBuffer( "debug",      ncell,   sizeof(float), (float*)DEBUG_int_buff, CL_MEM_WRITE_ONLY );
     //cl.newBuffer( "neighCells", 9,       sizeof(float), (float*)neighCells,     CL_MEM_READ_ONLY  );
 
     //cl.buffers[1].read_on_finish = true;
     err = cl.buildProgram( "cl/nbody_SR.cl" );                                       OCL_checkError(err, "cl.buildProgram");
-    task1 = new OCLtask( &cl, cl.newKernel("NBody_force"), 1, n, 64 );
-    task1->args = { INTarg(n), BUFFarg(0), BUFFarg(2) };
-    task1->print_arg_list();
+    taskN2 = new OCLtask( &cl, cl.newKernel("NBody_force"), 1, n, 64 );
+    taskN2->args = { INTarg(n), BUFFarg(0), BUFFarg(2) };
+    taskN2->print_arg_list();
     //exit(0);
 
     nloc = 32;
-    task2 = new OCLtask( &cl, cl.newKernel("force_Tiled"), 1, ncell*nloc, nloc );
-    //task2->args = { INTarg(nx), BUFFarg(0), BUFFarg(2), BUFFarg(3), BUFFarg(4), BUFFarg(5) };
-    task2->args = { INTarg(nx), BUFFarg(0), BUFFarg(2), BUFFarg(3) };
+    taskTiled = new OCLtask( &cl, cl.newKernel("force_Tiled"), 1, ncell*nloc, nloc );
+    taskTiled->args = { INTarg(nx), BUFFarg(0), BUFFarg(2), BUFFarg(3) };
+
+    taskSorted = new OCLtask( &cl, cl.newKernel("force_Tiled_Sorted"), 1, ncell*nloc, nloc );
+    taskSorted->args = { INTarg(nx), BUFFarg(0), BUFFarg(2), BUFFarg(3), BUFFarg(4) };
+
     printf(" ::: Init OpenCL .... DONE \n");
 
     //char ret[1024];
@@ -127,26 +127,47 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
 
     printf( " --- Test Force tiles \n" );
     atomsToCells();
+    sortIntersBins();
     //for(int i=0; i<ncell; i++){ printf("%i : %i %i %i \n", i, cellBounds[i].x, cellBounds[i].y, DEBUG_int_buff[i] ); }; exit(0);
     clean_array( n, force  ); add_ineraction_forces      ( n, pos, force );
     clean_array( n, force_ ); add_ineraction_forces_cells( n, pos, force_, cell2pos );
+    printf("check CPU-Tiled vs CPU-naieve\n"); checkDiff ( n, force_, force );
+    clean_array( n, force_ ); add_forces_Inters          ( n, pos, force_ );
+    printf("check CPU-Inter vs CPU-naieve\n"); checkDiff ( n, force_, force );
 
-    printf("check CPU-Tiled vs CPU-naieve\n");
-    //checkDiff  ( n, force_, force );
 
 
-    printf( " --- Test force OpenCL \n" );
-    cl.upload(0); task1->enque(); // cl.finish();
+    printf( " --- Test force OpenCL N2 \n" );
+    cl.upload(0); taskN2->enque(); // cl.finish();
     clFinish(cl.commands); cl.download(2);
     //for(int i=0;  i<n; i++ ){  printf( "i (%g,%g) (%g,%g) \n", i,  force_[i].x, force_[i].y,   force[i].x, force[i].y ); }
-    printf("check GPU-naieve vs CPU-naieve\n");
     checkDiff( n, force_, force );
 
-    printf( " --- Test force OpenCL cells \n" );
-    //atomsToCells( );
+    printf( " --- Test force OpenCL Tiled \n" );
+    atomsToCells( );
+    prepareCellBounds();
     clean_array( n, force_ );
     cl.upload(0); cl.upload(2); cl.upload(3); //cl.upload(5);
-    task2->enque();
+    taskTiled->enque();
+    clFinish(cl.commands);
+    cl.download(2); //cl.download(4);
+    //for(int i=0; i<ncell; i++){ printf("%i %i %i \n", i, DEBUG_int_buff[i], DEBUG_int_buff_[i] ); }
+    //for(int i=0;  i<n; i++ ){  printf( "%i (%g,%g) (%g,%g) \n", i,  force_[i].x, force_[i].y,   force[i].x, force[i].y ); }
+    checkDiff( n, force_, force );
+    //exit(0);
+
+    printf( " --- Test force OpenCL Sorted \n" );
+    atomsToCells( );
+    sortCells();
+    printf("nFilledCells %i\n", nFilledCells );
+    taskSorted->global[0] = nloc*nFilledCells;
+    taskSorted->local [0] = nloc;
+    //taskTiled->global[0] = nloc*nFilledCells;
+    //taskTiled->local [0] = nloc;
+    clean_array( n, force_ );
+    cl.upload(0); cl.upload(2); cl.upload(3); cl.upload(4); //cl.upload(5);
+    taskSorted->enque();
+    //taskTiled->enque();
     clFinish(cl.commands);
     cl.download(2); //cl.download(4);
     //for(int i=0; i<ncell; i++){ printf("%i %i %i \n", i, DEBUG_int_buff[i], DEBUG_int_buff_[i] ); }
@@ -173,7 +194,7 @@ void TestApp_clNBody2DTiled::draw(){
     double f2err;
     t1=getCPUticks();
     switch(method){
-        case 1:
+        case 1: // ---- N^2 implementation on CPU
             for(int itr=0; itr<per_frame; itr++){
                 niters++;
                 //atomsToCells( );
@@ -186,7 +207,7 @@ void TestApp_clNBody2DTiled::draw(){
                 t_interact+=(t_2-t_1); t_move+=(t_3-t_2);
             }
             break;
-        case 2:
+        case 2: // ---- Tilled implementation on CPU
             for(int itr=0; itr<per_frame; itr++){
                 niters++;
                 long t_1 =  getCPUticks();
@@ -201,12 +222,28 @@ void TestApp_clNBody2DTiled::draw(){
                 t_arrange+=(t_2-t_1); t_interact+=(t_3-t_2); t_move+=(t_4-t_3);
             }
             break;
-        case 3:
+        case 3: // ---- Inters implementation on CPU
+            for(int itr=0; itr<per_frame; itr++){
+                niters++;
+                long t_1 =  getCPUticks();
+                    atomsToCells();
+                    sortIntersBins();
+                    clean_array(n,force);
+                long t_2 = getCPUticks();
+                    add_forces_Inters( n, pos, force );
+                    if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, touchStrength, touchRadius );
+                long t_3 = getCPUticks();
+                    f2err = move_leap_frog( n, pos, vel, force, time_step );
+                long t_4 = getCPUticks();
+                t_arrange+=(t_2-t_1); t_interact+=(t_3-t_2); t_move+=(t_4-t_3);
+            }
+            break;
+        case 4:// ---- N^2 implementation on GPU
             for(int itr=0; itr<per_frame; itr++){
                 niters++;
                 long t_1 =  getCPUticks();
                     cl.upload(0);
-                    task1->enque();
+                    taskN2->enque();
                     clFinish(cl.commands);
                     cl.download(2);
                 long t_2 = getCPUticks();
@@ -216,14 +253,36 @@ void TestApp_clNBody2DTiled::draw(){
                 t_interact+=(t_2-t_1); t_move+=(t_3-t_2);
             }
             break;
-        case 4:
+        case 5:// ---- Tiled implementation on GPU
             for(int itr=0; itr<per_frame; itr++){
                 niters++;
                 long t_1 =  getCPUticks();
                     atomsToCells();
+                    prepareCellBounds();
                 long t_2 =  getCPUticks();
                     cl.upload(0); cl.upload(3);// cl.upload(5);
-                    task2->enque();
+                    taskTiled->enque();
+                    clFinish(cl.commands);
+                    cl.download(2);// cl.download(4);
+                long t_3 = getCPUticks();
+                    if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, touchStrength, touchRadius );
+                    f2err = move_leap_frog( n, pos, vel, force, time_step );
+                long t_4 = getCPUticks();
+                t_arrange+=(t_2-t_1); t_interact+=(t_3-t_2); t_move+=(t_4-t_3);
+            }
+            break;
+        case 6:// ---- Tiled implementation on GPU
+            for(int itr=0; itr<per_frame; itr++){
+                niters++;
+                long t_1 =  getCPUticks();
+                    atomsToCells();
+                    prepareCellBounds();
+                    sortCells();
+                long t_2 =  getCPUticks();
+                    cl.upload(0); cl.upload(3); cl.upload(4);
+                    taskSorted->global[0] = nloc*nFilledCells;
+                    taskSorted->local [0] = nloc;
+                    taskSorted->enque();
                     clFinish(cl.commands);
                     cl.download(2);// cl.download(4);
                 long t_3 = getCPUticks();
@@ -305,6 +364,8 @@ void TestApp_clNBody2DTiled::eventHandling( const SDL_Event& event ){
                 case SDLK_KP_2:  switchMethod( 2 ); break;
                 case SDLK_KP_3:  switchMethod( 3 ); break;
                 case SDLK_KP_4:  switchMethod( 4 ); break;
+                case SDLK_KP_5:  switchMethod( 5 ); break;
+                case SDLK_KP_6:  switchMethod( 6 ); break;
             } break;
     };
     AppSDL2OGL::eventHandling( event );
