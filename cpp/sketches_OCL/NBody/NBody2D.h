@@ -19,7 +19,9 @@ constexpr float R2MAX = R_MAX*R_MAX;
 //constexpr int n = 1024;
 //constexpr int n = 2048;
 constexpr int n = 4096;
+//constexpr int   n = 8192;
 //constexpr int n = 16384;
+//constexpr int n = 32768;
 float time_step = 0.05;
 //constexpr int n = 1024*2;
 float damp      = 0.5;
@@ -30,13 +32,13 @@ Vec2f force [n];
 Vec2f force_[n];
 
 // cell acceleration buffer
-constexpr int  nx    = 32;
-constexpr int  ny    = 32;
+constexpr int  nx    = 64;
+constexpr int  ny    = 64;
 
 //constexpr int  nx    = 8;
 //constexpr int  ny    = 8;
 constexpr int ncell = nx*ny;
-constexpr float cell_size     = 4.0;
+constexpr float cell_size = 6.0;
 constexpr float xspan = cell_size*(ny-2)*0.49;
 constexpr float yspan = cell_size*(ny-2)*0.49;
 
@@ -72,10 +74,9 @@ const int neighCells[9] = {
 };
 
 Vec2i     cellBounds     [ncell];
-int       DEBUG_int_buff [ncell];
-int       DEBUG_int_buff_[ncell];
-
-int DEBUG_counter = 0;
+//int       DEBUG_int_buff [ncell];
+//int       DEBUG_int_buff_[ncell];
+//int DEBUG_counter = 0;
 
 //  ============== Functions
 
@@ -274,7 +275,7 @@ void atomsToCells( ){
     for(int i=0; i<ncell; i++){
         //printf("%i \n", i);
         cellBounds[i].set( cell2pos[i], cellNs[i] );
-        DEBUG_int_buff[i] = 0;
+        //DEBUG_int_buff[i] = 0;
     }
     //printf("DONE \n" );
 }
@@ -289,7 +290,7 @@ void add_ineraction_forces( int n, Vec2f* pos, Vec2f* force ){
 }
 
 void interact_cell( int iStart, int iEnd, int jStart, int jEnd, Vec2f* pos, Vec2f* force ){
-    DEBUG_counter += (jEnd-jStart);
+    //DEBUG_counter += (jEnd-jStart);
     for(int i=iStart; i<iEnd; i++){
         Vec2f& pi = pos[i];
         Vec2f  f; f.set(0.0);
@@ -322,8 +323,8 @@ void add_ineraction_forces_cells( int n, Vec2f* pos, Vec2f* force, int* c2p ){
             int j;
             // upper row (iy-1)
 
-            DEBUG_counter = 0;
-            DEBUG_counter += iEnd-iStart;
+            //DEBUG_counter = 0;
+            //DEBUG_counter += iEnd-iStart;
 
             j=i-nx-1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
             j=i-nx  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
@@ -335,7 +336,7 @@ void add_ineraction_forces_cells( int n, Vec2f* pos, Vec2f* force, int* c2p ){
             j=i+nx  ; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
             j=i+nx+1; interact_cell( iStart, iEnd, c2p[j], c2p[j+1], pos, force );
 
-            DEBUG_int_buff_[i] = DEBUG_counter;
+            //DEBUG_int_buff_[i] = DEBUG_counter;
 
             //printf( " (%i,%i) %i (%i,%i) (%i,%i) \n", ix, iy, i, iStart, iEnd,  c2p[j], c2p[j+1] );
 /*

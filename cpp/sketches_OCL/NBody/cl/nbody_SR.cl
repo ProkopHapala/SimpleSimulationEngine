@@ -68,55 +68,90 @@ For performance reasons on many GPUs, it is usually desirable to have multiple w
 
 */
 
+/*
+int loadCell( int2 bound, int iL, int nL, __global float2 * pos, __local float2 * Ps ){
+    for(int i0=0; i0<bound.y; i0+=nL){
+        int i     = i0 + iL; 
+        if(i>=bound.y) break;              // should not matter; question is if it help performance ?
+        Ps[i] = pos[bound.x+i];
+    }
+    return bound.y;
+    
+    njs+=loadCell( bound0            , iL, nL, pos, Ps+njs );
+    njs+=loadCell( bounds[icell   -1], iL, nL, pos, Ps+njs );
+    njs+=loadCell( bounds[icell   +1], iL, nL, pos, Ps+njs );
+    njs+=loadCell( bounds[icell-nx-1], iL, nL, pos, Ps+njs );
+    njs+=loadCell( bounds[icell-nx  ], iL, nL, pos, Ps+njs );
+    njs+=loadCell( bounds[icell-nx+1], iL, nL, pos, Ps+njs );
+    njs+=loadCell( bounds[icell+nx-1], iL, nL, pos, Ps+njs );
+    njs+=loadCell( bounds[icell+nx  ], iL, nL, pos, Ps+njs );
+    njs+=loadCell( bounds[icell+nx+1], iL, nL, pos, Ps+njs );
+}
+*/
+
+/*
+ Performance test [Mticks]:
+     n     nx   ny   ncell  nloc   cell_sz  CPU       Full     Just-Load   Check-cell    Empty    
+   4096  32  32   1024       16     4.0              1.07348       0.51388    0.21731    0.46654 
+   4096  24  24    576       16     6.0              1.37183       0.43338    0.45145    0.467181 
+   4096  24  24    576        8     6.0              1.59139   
+   4096  24  24    576       32     6.0    3.27869   1.09454  
+   8192  64  64   4096       32     6.0    6.24658   1.60579       
+  16384  64  64   4096       32     6.0   12.14813   2.69230  
+  32768  64  64   4096       32     6.0   23.73025   4.98328 
+*/
+
+
 __kernel void force_Tiled(
-    unsigned int      ncell,
+    unsigned int      nx,
     __global  float2* pos, 
     __global  float2* force,
-    __global    int2* bounds,
-    __global     int* debug,
-    __constant   int* neighCells
+    __global    int2* bounds
 ){
     __local  float2 Ps[256];
     const int iG = get_global_id (0);
     const int iL = get_local_id  (0);
     const int nL = get_local_size(0);
-    
+ 
     // --- copy content of neighboring cells to local memory
     
-    int  icell = iG/nL; 
-    int  nis   = bounds[icell].y;
-    if( nis==0 ){ debug[icell] = -1; return; }
-    int  njs   = 0;
-    for(int ineigh=0; ineigh<9; ineigh++ ){
-        int  idcell = neighCells[ineigh];  
-        int2 bound  = bounds[icell+idcell];
-        for(int i0=0; i0<bound.y; i0+=nL){
-            int i     = i0 + iL; 
-            if(i>=bound.y) break;  // should not matter; question is if it help performance ?
-            Ps[njs+i] = pos[bound.x+i];
-        }
-        njs += bound.y;
-    }
+    int icell = iG/nL; 
+    int2 bound0 = bounds[icell];
     
-    if(iL==0) debug[icell] = njs;
-
+    if( bound0.y==0 )return;
+    
+    #define LOAD_CELL( BOUND ){ \
+        int2 bound = BOUND;                  \
+        for(int i0=0; i0<bound.y; i0+=nL){   \
+            int i     = i0 + iL;             \
+            if(i>=bound.y) break;            \
+            Ps[njs+i] = pos[bound.x+i];      \
+        }                                    \
+        njs+=bound.y;          }              
+    int njs = 0; 
+    LOAD_CELL( bound0             );   
+    LOAD_CELL( bounds[icell   -1] );    
+    LOAD_CELL( bounds[icell   +1] );    
+    LOAD_CELL( bounds[icell-nx-1] );   
+    LOAD_CELL( bounds[icell-nx  ] );   
+    LOAD_CELL( bounds[icell-nx+1] );    
+    LOAD_CELL( bounds[icell+nx-1] );   
+    LOAD_CELL( bounds[icell+nx  ] );   
+    LOAD_CELL( bounds[icell+nx+1] ); 
+    #undef  LOAD_CELL
     barrier(CLK_LOCAL_MEM_FENCE);
     
     // --- compute force using only local memory
-    
-    int i0cell = bounds[icell].x;
-    for (int i0=0; i0<nis; i0 += nL ){
+    for (int i0=0; i0<bound0.y; i0 += nL ){
         int i = i0+iL;
-        if (i>=nis) break;
+        if (i>=bound0.y) break;
         float2 pi = Ps[i];
         float2 f  = (float2) (0.0f, 0.0f);
         for (int j=0; j<njs; j++ ){
             f += pair_force( pi, Ps[j] );
         }
-        force[i0cell+i] = f;
-        //force[i0cell+i] = (float2)(151515.0,888888.0);
-    } 
-    
+        force[bound0.x+i] = f;
+    }    
 }
 
 

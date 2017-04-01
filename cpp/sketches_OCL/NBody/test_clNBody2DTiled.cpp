@@ -53,12 +53,20 @@ class TestApp_clNBody2DTiled : public AppSDL2OGL {
 	OCLtask *task1,*task2;
 
 	//bool use_GPU = false;
-	int method = 2;
+	int method = 4;
+	int nloc   = 16;
+	int niters = 0;
+    double t_interact = 0;
+    double t_arrange  = 0;
+    double t_move     = 0;
 
 	//virtual void loop( int nframes );
 	virtual void eventHandling( const SDL_Event& event );
-	virtual void draw   ();
+	virtual void draw();
+	virtual void quit();
 	//virtual void drawHUD();
+
+    void switchMethod( int i );
 
 	TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -96,8 +104,8 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
     cl.newBuffer( "force", n*2, sizeof(float), (float*)force_, CL_MEM_READ_WRITE );
 
     cl.newBuffer( "bounds",     ncell*2, sizeof(int),   (float*)cellBounds,     CL_MEM_READ_ONLY  );
-    cl.newBuffer( "debug",      ncell,   sizeof(float), (float*)DEBUG_int_buff, CL_MEM_WRITE_ONLY );
-    cl.newBuffer( "neighCells", 9,       sizeof(float), (float*)neighCells,     CL_MEM_READ_ONLY  );
+    //cl.newBuffer( "debug",      ncell,   sizeof(float), (float*)DEBUG_int_buff, CL_MEM_WRITE_ONLY );
+    //cl.newBuffer( "neighCells", 9,       sizeof(float), (float*)neighCells,     CL_MEM_READ_ONLY  );
 
     //cl.buffers[1].read_on_finish = true;
     err = cl.buildProgram( "cl/nbody_SR.cl" );                                       OCL_checkError(err, "cl.buildProgram");
@@ -106,8 +114,10 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
     task1->print_arg_list();
     //exit(0);
 
-    task2 = new OCLtask( &cl, cl.newKernel("force_Tiled"), 1, ncell*16, 16 );
-    task2->args = { INTarg(ncell), BUFFarg(0), BUFFarg(2), BUFFarg(3), BUFFarg(4), BUFFarg(5) };
+    nloc = 32;
+    task2 = new OCLtask( &cl, cl.newKernel("force_Tiled"), 1, ncell*nloc, nloc );
+    //task2->args = { INTarg(nx), BUFFarg(0), BUFFarg(2), BUFFarg(3), BUFFarg(4), BUFFarg(5) };
+    task2->args = { INTarg(nx), BUFFarg(0), BUFFarg(2), BUFFarg(3) };
     printf(" ::: Init OpenCL .... DONE \n");
 
     //char ret[1024];
@@ -134,15 +144,15 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
 
     printf( " --- Test force OpenCL cells \n" );
     //atomsToCells( );
-    cl.upload(0); cl.upload(3); cl.upload(5);
+    clean_array( n, force_ );
+    cl.upload(0); cl.upload(2); cl.upload(3); //cl.upload(5);
     task2->enque();
     clFinish(cl.commands);
-    cl.download(2); cl.download(4);
-    for(int i=0; i<ncell; i++){ printf("%i %i %i \n", i, DEBUG_int_buff[i], DEBUG_int_buff_[i] ); }
-    for(int i=0;  i<n; i++ ){  printf( "%i (%g,%g) (%g,%g) \n", i,  force_[i].x, force_[i].y,   force[i].x, force[i].y ); }
+    cl.download(2); //cl.download(4);
+    //for(int i=0; i<ncell; i++){ printf("%i %i %i \n", i, DEBUG_int_buff[i], DEBUG_int_buff_[i] ); }
+    //for(int i=0;  i<n; i++ ){  printf( "%i (%g,%g) (%g,%g) \n", i,  force_[i].x, force_[i].y,   force[i].x, force[i].y ); }
     checkDiff( n, force_, force );
     //exit(0);
-
 
     cl.buffers[2].p_cpu = (float*)force;    // bind Force output array
 
@@ -162,12 +172,10 @@ void TestApp_clNBody2DTiled::draw(){
     //delay = 100;
     double f2err;
     t1=getCPUticks();
-    double t_interact = 0;
-    double t_arrange  = 0;
-    double t_move     = 0;
     switch(method){
         case 1:
             for(int itr=0; itr<per_frame; itr++){
+                niters++;
                 //atomsToCells( );
                 long t_1 =  getCPUticks();
                     add_ineraction_forces( n, pos, force );
@@ -180,6 +188,7 @@ void TestApp_clNBody2DTiled::draw(){
             break;
         case 2:
             for(int itr=0; itr<per_frame; itr++){
+                niters++;
                 long t_1 =  getCPUticks();
                     atomsToCells();
                     clean_array(n,force);
@@ -194,6 +203,7 @@ void TestApp_clNBody2DTiled::draw(){
             break;
         case 3:
             for(int itr=0; itr<per_frame; itr++){
+                niters++;
                 long t_1 =  getCPUticks();
                     cl.upload(0);
                     task1->enque();
@@ -208,13 +218,14 @@ void TestApp_clNBody2DTiled::draw(){
             break;
         case 4:
             for(int itr=0; itr<per_frame; itr++){
+                niters++;
                 long t_1 =  getCPUticks();
                     atomsToCells();
                 long t_2 =  getCPUticks();
-                    cl.upload(0); cl.upload(3); cl.upload(5);
+                    cl.upload(0); cl.upload(3);// cl.upload(5);
                     task2->enque();
                     clFinish(cl.commands);
-                    cl.download(2); cl.download(4);
+                    cl.download(2);// cl.download(4);
                 long t_3 = getCPUticks();
                     if( LMB ) add_external_force( n, force, {mouse_begin_x, mouse_begin_y}, touchStrength, touchRadius );
                     f2err = move_leap_frog( n, pos, vel, force, time_step );
@@ -228,7 +239,7 @@ void TestApp_clNBody2DTiled::draw(){
 
 	double fticks = getCPUticks() - t1;
     //printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(n*n) );
-    printf( "%i METHOD %i T %g (%g,%g,%g) [Mticks]\n", frameCount, method, (t_arrange+t_interact+t_move)*1e-6,  t_arrange*1e-6, t_interact*1e-6, t_move*1e-6 );
+    printf( "%i METHOD %i T %g (%g,%g,%g) [Mticks]\n", frameCount, method, (t_arrange+t_interact+t_move)*1e-6/niters,  t_arrange*1e-6/niters, t_interact*1e-6/niters, t_move*1e-6/niters );
 
 
 
@@ -270,16 +281,30 @@ void TestApp_clNBody2DTiled::draw(){
 };
 
 
+void TestApp_clNBody2DTiled::switchMethod( int i ){
+    method=i;
+    niters     = 0;
+    t_interact = 0;
+    t_arrange  = 0;
+    t_move     = 0;
+}
+
+void TestApp_clNBody2DTiled::quit( ){
+    printf("    n  nx  ny   ncell nloc niters CellSz  t_arrange t_interact t_move\n");
+    printf("%5i %3i %3i %6i %6i   %2i  %2.3f  %5.5f   %5.5f   %5.5f\n", n, nx, ny, ncell, nloc, niters, cell_size, t_arrange*1e-6/niters, t_interact*1e-6/niters, t_move*1e-6/niters );
+    exit(0);
+}
+
 void TestApp_clNBody2DTiled::eventHandling( const SDL_Event& event ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
                 //case SDLK_f: use_GPU=!use_GPU; break;
                 //case SDLK_g: fullGPU=!fullGPU; break;
-                case SDLK_KP_1:  method=1; break;
-                case SDLK_KP_2:  method=2; break;
-                case SDLK_KP_3:  method=3; break;
-                case SDLK_KP_4:  method=4; break;
+                case SDLK_KP_1:  switchMethod( 1 ); break;
+                case SDLK_KP_2:  switchMethod( 2 ); break;
+                case SDLK_KP_3:  switchMethod( 3 ); break;
+                case SDLK_KP_4:  switchMethod( 4 ); break;
             } break;
     };
     AppSDL2OGL::eventHandling( event );
