@@ -156,7 +156,7 @@ class OCLarg{
     };
     inline void setFloat(  float f_ ){ f=f_; kind=OCL_FLOAT; }
     inline void setInt  (  int   i_ ){ i=i_; kind=OCL_FLOAT; }
-    inline void setBuff (  float i_ ){ i=i_; kind=OCL_BUFF;  }
+    inline void setBuff (  int   i_ ){ i=i_; kind=OCL_BUFF;  }
     OCLarg(){};
     OCLarg(  float f_            ):f(f_){ kind=OCL_FLOAT; }
     OCLarg(  int   i_, int kind_ ):i(i_), kind(kind_){ }

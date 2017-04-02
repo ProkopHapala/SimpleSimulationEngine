@@ -10,3 +10,4 @@ include_directories(
 add_subdirectory (OCL)
 add_subdirectory (lingebra)
 add_subdirectory (NBody)
+add_subdirectory (Grids)

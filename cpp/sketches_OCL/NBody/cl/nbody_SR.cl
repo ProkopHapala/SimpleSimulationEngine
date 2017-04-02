@@ -115,7 +115,8 @@ __kernel void force_Tiled(
  
     // --- copy content of neighboring cells to local memory
     
-    int icell = iG/nL; 
+    //int icell = iG/nL; 
+    int icell = get_group_id(0); 
     int2 bound0 = bounds[icell];
     
     if( bound0.y==0 )return;
@@ -168,7 +169,8 @@ __kernel void force_Tiled_Sorted(
  
     // --- copy content of neighboring cells to local memory
     
-    int icell    = iG/nL;
+    int icell = get_group_id(0); 
+    //int icell    = iG/nL;
         icell    = order [icell]; // may be slow?   should we do if(iL==0) icell 
     int2 bound0  = bounds[icell];
         
