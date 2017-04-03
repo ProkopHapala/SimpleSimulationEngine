@@ -58,6 +58,7 @@ TestApp_clConvolve2D::TestApp_clConvolve2D( int& id, int WIDTH_, int HEIGHT_ ) :
     err = cl.buildProgram( "cl/convolve2D.cl" );     OCL_checkError(err, "cl.buildProgram");
 
     task1 = new OCLtask( &cl, cl.newKernel("blur2D_naive"), 2, 0, 0 );
+    //task1 = new OCLtask( &cl, cl.newKernel("blur2D_Gauss"), 2, 0, 0 );
     //task1 = new OCLtask( &cl, cl.newKernel("blur2D_local"), 2, 0, 0 );
     task1->global[0] = nx-2; task1->global[1] = ny-2;
     task1->local [0] = 16;   task1->local [1] = 16;
@@ -80,6 +81,9 @@ void TestApp_clConvolve2D::draw(){
             for(int itr=0; itr<per_frame; itr++){
                 blur(nx, ny, buff , buff_ );
                 blur(nx, ny, buff_, buff  );
+
+                //blur_Gauss(nx, ny, buff , buff_ );
+                //blur_Gauss(nx, ny, buff_, buff  );
             }
             break;
         case 2:

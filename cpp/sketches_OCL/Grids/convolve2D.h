@@ -28,6 +28,20 @@ void blur(int nx, int ny, float * I, float * O ){
     } }
 }
 
+void blur_Gauss(int nx, int ny, float * I, float * O ){
+    for(int iy=1;iy<ny-1;iy++){ for(int ix=1;ix<nx-1;ix++){
+        int i   = iy*nx+ix;
+        //O[i] =( 0.0625*I[i-nx-1] + 0.125*I[i-nx] + 0.0625*I[i-nx+1] +
+        //        0.125 *I[i   -1] + 0.25 *I[i   ] + 0.125 *I[i   +1] +
+        //        0.0625*I[i+nx-1] + 0.125*I[i+nx] + 0.0625*I[i+nx+1] );
+
+        O[i] = 0.25  *  I[i]
+         + 0.0625*( I[i-nx-1] + I[i+nx-1] + I[i+nx+1] + I[i-nx+1] )
+         + 0.125 *( I[i-nx]   + I[i-1]    + I[i+1]    + I[i+nx]   );
+    } }
+}
+
+
 //============== Functions
 
 #endif
