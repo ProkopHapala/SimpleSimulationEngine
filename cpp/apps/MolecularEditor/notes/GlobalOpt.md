@@ -21,6 +21,11 @@ $(1-1/r^2)^2-1$ - looks very similar to LJ but can by simply evaluated from $1/r
 
 ### GridFF for rigid substrate
 
+Application for 
+ - Absortion of molecules on ionic substrates (NaCl, CaCO3, MgO ... )
+ - Absorbtion of molecules in zeolites
+ - Rigid nanopartiles (nanocrystals, viruses ... ) 
+
 This will reduce NBody problem with $O(N^2)$ complexity to simple grid sampling. However grid based forcefiled has also several problems. List of pro-vs-cons:
 
  - Pros:

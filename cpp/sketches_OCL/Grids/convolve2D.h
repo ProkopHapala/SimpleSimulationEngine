@@ -28,6 +28,23 @@ void blur(int nx, int ny, float * I, float * O ){
     } }
 }
 
+void blur_scanline(int nx, int ny, float * I, float * O ){
+    float renorm = 1.0/9.0;
+    for(int ix=1;ix<nx-1;ix++){
+        Vec3f Lm; Lm.set(I[ix   -1], I[ix   ], I[ix   +1]);
+        Vec3f L0; L0.set(I[ix+nx-1], I[ix+nx], I[ix+nx+1]);
+        for(int iy=1;iy<ny-1;iy++){
+            int i   = iy*nx+ix;
+            int ip  = i+nx;
+            Vec3f Lp; Lp.set(I[ip-1], I[ip], I[ip+1]);
+            O[i] =( Lm.x + Lm.y + Lm.z +
+                    L0.x + L0.y + L0.z +
+                    Lp.x + Lp.y + Lp.z   ) * renorm;
+            Lm=L0; L0=Lp;
+        }
+    }
+}
+
 void blur_Gauss(int nx, int ny, float * I, float * O ){
     for(int iy=1;iy<ny-1;iy++){ for(int ix=1;ix<nx-1;ix++){
         int i   = iy*nx+ix;
