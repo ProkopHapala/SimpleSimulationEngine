@@ -22,11 +22,11 @@
 
 class TestApp_clConvolve2D : public AppSDL2OGL {
 	public:
-	int per_frame = 64;
+	int per_frame = 32;
 
 	int err;
 	OCLsystem cl;
-	OCLtask *task1,*task2;
+	OCLtask *task1,*task2,*task3;
 
 	//bool use_GPU = false;
 	int method = 1;
@@ -57,19 +57,29 @@ TestApp_clConvolve2D::TestApp_clConvolve2D( int& id, int WIDTH_, int HEIGHT_ ) :
     cl.newBuffer( "O",   ntot, sizeof(float), (float*)buff_, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
     err = cl.buildProgram( "cl/convolve2D.cl" );     OCL_checkError(err, "cl.buildProgram");
 
-    //task1 = new OCLtask( &cl, cl.newKernel("blur2D_naive"), 2, 0, 0 );
+    task1 = new OCLtask( &cl, cl.newKernel("blur2D_naive"), 2, 0, 0 );
     //task1 = new OCLtask( &cl, cl.newKernel("blur2D_Gauss"), 2, 0, 0 );
-    task1 = new OCLtask( &cl, cl.newKernel("blur2D_local"), 2, 0, 0 );
+    //task1 = new OCLtask( &cl, cl.newKernel("blur2D_local"), 2, 0, 0 );
     task1->global[0] = nx-2; task1->global[1] = ny-2;
     task1->local [0] = 16;   task1->local [1] = 16;
     task1->args = { BUFFarg(0), BUFFarg(1) };
     task1->print_arg_list();
 
-    task2 = new OCLtask( &cl, cl.newKernel("blur2D_scanline_priv"), 1, nx-2, 32 );
+    //task2 = new OCLtask( &cl, cl.newKernel("blur2D_scanline_priv"), 1, nx-2, 32 );
+    task2 = new OCLtask( &cl, cl.newKernel("blur2D_scanline_async"), 1, nx-2, 64 );
     task2->args = { INTarg(nx),INTarg(ny), BUFFarg(0), BUFFarg(1) };
     task2->print_arg_list();
 
+    task3 = new OCLtask( &cl, cl.newKernel("blur2D_local_async"), 2, 0, 0 );
+    //task3 = new OCLtask( &cl, cl.newKernel("blur2D_naive"), 2, 0, 0 );
+    task3->global[0] = nx-2; task3->global[1] = 16;
+    task3->local [0] = 16;   task3->local [1] = 16;
+    task3->args = { BUFFarg(0), BUFFarg(1) };
+    task3->print_arg_list();
+
     //exit(0);
+
+    switchMethod( 4 );
 
 }
 
@@ -108,6 +118,14 @@ void TestApp_clConvolve2D::draw(){
             clFinish(cl.commands);
             cl.download(0);
             break;
+        case 4:
+            for(int itr=0; itr<per_frame; itr++){
+                task3->args[0].setBuff(0); task3->args[1].setBuff(1); task3->enque();   //exit(0);
+                task3->args[0].setBuff(1); task3->args[1].setBuff(0); task3->enque();
+            }
+            clFinish(cl.commands);
+            cl.download(0);
+            break;
     }
     t1 = getCPUticks() - t1;
 
@@ -122,6 +140,7 @@ void TestApp_clConvolve2D::draw(){
 void TestApp_clConvolve2D::switchMethod( int i ){
     method=i;
     genXOR2D(nx, ny, buff);
+    //genZero(nx, ny, buff);
     cl.upload(0);
 }
 
@@ -132,6 +151,7 @@ void TestApp_clConvolve2D::eventHandling( const SDL_Event& event ){
                 case SDLK_KP_1:  switchMethod( 1 ); break;
                 case SDLK_KP_2:  switchMethod( 2 ); break;
                 case SDLK_KP_3:  switchMethod( 3 ); break;
+                case SDLK_KP_4:  switchMethod( 4 ); break;
             } break;
     };
     AppSDL2OGL::eventHandling( event );

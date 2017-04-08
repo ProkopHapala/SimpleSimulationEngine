@@ -7,6 +7,11 @@
 http://enja.org/2011/03/30/adventures-in-opencl-part-3-constant-memory-structs/
 - bank conflicts
 http://stackoverflow.com/questions/3841877/what-is-a-bank-conflict-doing-cuda-opencl-programming
+- async_work_group_copy
+    - http://stackoverflow.com/questions/43217449/shouldnt-be-3x3-convolution-much-faster-on-gpu-opencl
+    - https://www.khronos.org/registry/OpenCL/sdk/1.0/docs/man/xhtml/async_work_group_copy.html
+    - http://stackoverflow.com/questions/15545841/how-to-use-async-work-group-copy-in-opencl
+    - https://streamcomputing.eu/blog/2014-06-19/using-async_work_group_copy-on-2d-data/
 
 # Examples & Tutorials
 
@@ -46,6 +51,14 @@ http://stackoverflow.com/questions/15707064/efficient-histogram-implementation-u
 - Lattice boltzman OpenCL
 http://scicomp.stackexchange.com/questions/19740/gpu-enabled-lattice-boltzmann-solvers
 https://github.com/sailfish-team/sailfish
+
+## Tasks:
+  - 3x3 convolution
+    - https://software.intel.com/en-us/blogs/2014/07/15/an-investigation-of-fast-real-time-gpu-based-image-blur-algorithms
+     - http://gpgpu2.blogspot.cz/
+     - http://downloads.ti.com/mctools/esd/docs/opencl/optimization/examples.html
+     - http://stackoverflow.com/questions/43217449/shouldnt-be-3x3-convolution-much-faster-on-gpu-opencl/43217833?noredirect=1#comment73553552_43217833
+
 
 ## Unsorted & Temp
 
