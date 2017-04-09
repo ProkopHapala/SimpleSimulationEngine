@@ -393,6 +393,7 @@ void Draw2D::renderImage( GLuint itex, const Rect2d& rec ){
         glTexCoord2f( 1.0f, 0.0f ); glVertex3f( rec.b.x, rec.b.y, 3.0f );
         glTexCoord2f( 0.0f, 0.0f ); glVertex3f( rec.a.x, rec.b.y, 3.0f );
     glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0); // this is not most efficient but safe
 };
 
 void Draw2D::drawString( const char * str, int imin, int imax, float x, float y, float sz, int itex ){

@@ -14,19 +14,32 @@ class OCLBuffer{
     size_t       n        = 0;
     size_t       typesize = 0;
     bool         read_on_finish = false;
-    cl_mem_flags flags = CL_MEM_READ_WRITE;
-    char       * name = NULL;
+    cl_mem_flags flags    = CL_MEM_READ_WRITE;
+    char       * name      = NULL;
+    // following is needed only for images
+    bool img_dims = 0;
+    int  nImg[3]  = {0,0,0};
+    cl_image_format imageFormat;
 
     inline int initOnGPU ( cl_context& context ){
         int err;
         if( flags == CL_MEM_WRITE_ONLY ){  p_gpu = clCreateBuffer(context, flags, typesize * n, NULL,    &err);
-        }else{                  if(p_cpu)  p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }
+        }else{                 if(p_cpu)  p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }
+        return err;
+    }
+
+    inline int initOnGPUImage( cl_context& context ){
+        int err;
+        //p_gpu = clCreateBuffer(context, flags, typesize * n, NULL,  &err);
+        p_gpu = clCreateImage2D(context, flags, &imageFormat, nImg[0],nImg[1], 0, p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
         return err;
     }
 
     inline int setAsArg( cl_kernel& kernel, int i   ){ return clSetKernelArg(kernel, i, sizeof(cl_mem), &p_gpu );  };
     inline int fromGPU ( cl_command_queue& commands ){ return clEnqueueReadBuffer ( commands, p_gpu, CL_TRUE, 0, typesize * n, p_cpu, 0, NULL, NULL);  }
     inline int toGPU   ( cl_command_queue& commands ){ return clEnqueueWriteBuffer( commands, p_gpu, CL_TRUE, 0, typesize * n, p_cpu, 0, NULL, NULL ); }
+
+    //inline setImageParams(  );
 
     inline OCLBuffer(){};
     inline OCLBuffer( char* name_, size_t n_, size_t typesize_, void * p_cpu_, cl_mem_flags flags_ ) :n(n_),typesize(typesize_),p_cpu(p_cpu_),flags(flags_),name(name_){};
@@ -64,8 +77,20 @@ class OCLsystem{
     }
 
     int newBuffer( char* name, size_t n, size_t typesize, void * p_cpu, cl_mem_flags flags ){
-        buffers.push_back( OCLBuffer( name, n, typesize, p_cpu, flags ) ); int i=buffers.size()-1; int err=buffers[i].initOnGPU(context); OCL_checkError(err, "clCreateKernel"); return i;
+        buffers.push_back( OCLBuffer( name, n, typesize, p_cpu, flags ) ); int i=buffers.size()-1; int err=buffers[i].initOnGPU(context); OCL_checkError(err, "initOnGPU"); return i;
     }
+
+    int newBufferImage2D( char* name, size_t nx, size_t ny, size_t typesize, void * p_cpu, cl_mem_flags flags, cl_image_format imageFormat ){
+        buffers.push_back( OCLBuffer( name, nx*ny, typesize, p_cpu, flags ) );
+        int i=buffers.size()-1;
+        buffers[i].img_dims    = 2;
+        buffers[i].nImg[0]     = nx;
+        buffers[i].nImg[1]     = ny;
+        buffers[i].imageFormat = imageFormat;
+        int err=buffers[i].initOnGPUImage(context); OCL_checkError(err, "initOnGPUImage");
+        return i;
+    }
+
 
     int initBuffers   (){ int err = CL_SUCCESS; for(int i=0; i<buffers.size(); i++){  err |= buffers[i].initOnGPU ( context );     }; return err; }
     //int releaseBuffers(){ for(int i=0; i<buffers; i++){ clReleaseMemObject(buffers[i].p_gpu); } }
