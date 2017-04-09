@@ -21,11 +21,17 @@
 #define R2SAFE  1.0e-2
 #define F2MAX   10.0
 
+inline void colorscale(float f ){
+    f*=0.25f;
+    glColor3f(f,1.0f-abs(f),-f);
+}
+
 void drawSquareFrame(int nx, int ny, float * pos){
     for(int iy=0;iy<ny;iy++){
         glBegin(GL_LINE_STRIP);
         for(int ix=0;ix<nx;ix++){
             int i4  = (iy*nx + ix)<<2;
+            colorscale(pos[i4+2]);
             glVertex3f( pos[i4], pos[i4+1], pos[i4+2] );
             //printf( "(%i,%i) (%g,%g,%g)\n", ix,iy, pos[i4], pos[i4+1], pos[i4+2] );
         }
@@ -35,6 +41,7 @@ void drawSquareFrame(int nx, int ny, float * pos){
         glBegin(GL_LINE_STRIP);
         for(int iy=0;iy<ny;iy++){
             int i4  = (iy*nx + ix)<<2;
+            colorscale(pos[i4+2]);
             glVertex3f( pos[i4], pos[i4+1], pos[i4+2] );
             //printf( "(%i,%i) (%g,%g,%g)\n", ix,iy, pos[i4], pos[i4+1], pos[i4+2] );
         }
@@ -71,7 +78,7 @@ class TestApp_clConvolve2D : public AppSDL2OGL {
 
 	float dt   = 0.1;
 	float damp = 0.999;
-	float K_constr = 10.0;
+	float K_constr = 100.0;
 
 	//virtual void loop( int nframes );
 	virtual void eventHandling( const SDL_Event& event );
@@ -100,7 +107,8 @@ TestApp_clConvolve2D::TestApp_clConvolve2D( int& id, int WIDTH_, int HEIGHT_ ) :
     cl.newBuffer( "constrains" ,   nConstrMax, sizeof(float)*4,  constrains, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR );
     err = cl.buildProgram( "cl/cloth.cl" );     OCL_checkError(err, "cl.buildProgram");
 
-    task1 = new OCLtask( &cl, cl.newKernel("cloth_force"), 2, 0, 0 );
+    //task1 = new OCLtask( &cl, cl.newKernel("cloth_force"), 2, 0, 0 );
+    task1 = new OCLtask( &cl, cl.newKernel("sheet_force"), 2, 0, 0 );
     task1->global[0] = nx; task1->global[1] = ny;
     task1->local [0] = 16; task1->local [1] = 16;
     task1->args = { BUFFarg(0), BUFFarg(2) };
@@ -130,7 +138,9 @@ TestApp_clConvolve2D::TestApp_clConvolve2D( int& id, int WIDTH_, int HEIGHT_ ) :
     task1->enque();
     clFinish(cl.commands);
     cl.download(2);
-    evalForce(nx, ny, pos, force_ );
+    //evalForce(nx, ny, pos, force_ );
+    //evalForceBend(nx, ny, pos, force_ );
+    evalForceSheetBend(nx, ny, pos, force_ );
     //for(int i=0; i<ntot; i++ ){ int i4=i<<2; printf( "%i (%g,%g,%g) (%g,%g,%g) \n", i, force[i4], force[i4+1], force[i4+2], force_[i4], force_[i4+1], force_[i4+2] ); }
     checkDiff( ntot, force, force_ );
 
@@ -150,13 +160,17 @@ void TestApp_clConvolve2D::draw(){
     //delay = 100;
     double f2err;
     t1=getCPUticks();
+    Vec3f pMouse = {mouse_begin_x,mouse_begin_y,5.0};
     switch(method){
         case 1:
             for(int itr=0; itr<per_frame; itr++){
-                evalForce(nx, ny, pos, force );
+                //evalForce(nx, ny, pos, force );
+                //evalForceBend(nx, ny, pos, force );
+                //evalForceSheet( nx, ny, pos, force );
+                evalForceSheetBend( nx, ny, pos, force );
                 if( i_picked >= 0 ){
                     int i4 = (i_picked<<2);
-                    addHarmonicForce( *((Vec3f*)(pos+i4)), {mouse_begin_x,mouse_begin_y,0.0}, *((Vec3f*)(force+i4)), K_constr );
+                    addHarmonicForce( *((Vec3f*)(pos+i4)), pMouse, *((Vec3f*)(force+i4)), K_constr );
                 }
                 move_leapfrog( ntot-nx, pos, vel, force, dt, damp );
             }
@@ -169,7 +183,7 @@ void TestApp_clConvolve2D::draw(){
                 cl.download(2);
                 if( i_picked >= 0 ){
                     int i4 = (i_picked<<2);
-                    addHarmonicForce( *((Vec3f*)(pos+i4)), {mouse_begin_x,mouse_begin_y,0.0}, *((Vec3f*)(force+i4)), K_constr );
+                    addHarmonicForce( *((Vec3f*)(pos+i4)), pMouse, *((Vec3f*)(force+i4)), K_constr );
                 }
                 move_leapfrog( ntot-nx, pos, vel, force, dt, damp );
             }
@@ -180,9 +194,9 @@ void TestApp_clConvolve2D::draw(){
             //cl.upload(1);
             taskConstr->global[0] = 1;
             iConstrains       [0] = i_picked;
-            constrains        [0] = mouse_begin_x;
-            constrains        [1] = mouse_begin_y;
-            constrains        [2] = 0.0;
+            constrains        [0] = pMouse.x;
+            constrains        [1] = pMouse.y;
+            constrains        [2] = pMouse.z;
             constrains        [3] = K_constr;
             cl.upload(3);
             cl.upload(4);

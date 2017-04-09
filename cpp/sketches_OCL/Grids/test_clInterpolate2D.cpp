@@ -77,24 +77,21 @@ TestApp_clInterpolate2D::TestApp_clInterpolate2D( int& id, int WIDTH_, int HEIGH
     cl.newBuffer(    "points",   nPoints, 2*sizeof(float),   points, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
     cl.newBuffer(      "vals",   nPoints,   sizeof(float),     vals, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
 
-    //cl_image_format FimgRGBA = {CL_RGBA, CL_FLOAT};
-    //cl_image_format FimgRGBA = {CL_RG, CL_FLOAT}
-    //cl_image_format imageFormat = {CL_A, CL_FLOAT};
     cl.newBufferImage2D(  "hf", nx, ny,   sizeof(float),      hf, CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_A,  CL_FLOAT} );
     cl.newBufferImage2D( "Dhf", nx, ny,   sizeof(float),     Dhf, CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RG, CL_FLOAT} );
     cl.newBuffer(      "Dvals", nPoints,2*sizeof(float),   Dvals, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
 
     err = cl.buildProgram( "cl/interpolate2D.cl" );     OCL_checkError(err, "cl.buildProgram");
 
-    task1 = new OCLtask( &cl, cl.newKernel("getValInPoints"), 1, nPoints, 1 );
+    task1 = new OCLtask( &cl, cl.newKernel("getValInPoints"), 1, nPoints, 32 );
     task1->args = { BUFFarg(2), BUFFarg(0), BUFFarg(1) };
     task1->print_arg_list();
 
-    task2 = new OCLtask( &cl, cl.newKernel("getF2InPoints"), 1, nPoints, 1 );
+    task2 = new OCLtask( &cl, cl.newKernel("getF2InPoints"), 1, nPoints, 32 );
     task2->args = { BUFFarg(3), BUFFarg(0), BUFFarg(4) };
     task2->print_arg_list();
 
-    task3 = new OCLtask( &cl, cl.newKernel("relaxPoints"), 1, nPoints, 1 );
+    task3 = new OCLtask( &cl, cl.newKernel("relaxPoints"), 1, nPoints, 32 );
     task3->args = { BUFFarg(3), BUFFarg(0), BUFFarg(4), INTarg(per_frame), FLOATarg(dt), FLOATarg(damp) };
     task3->print_arg_list();
 
