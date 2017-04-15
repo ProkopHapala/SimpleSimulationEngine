@@ -148,6 +148,20 @@ class Quat4TYPE {
 
 // ======= Conversion : Angle & Axis
 
+    inline void fromUniformS3(VEC u){ // u is vec of 3 random numbers from (0..1)
+        //  http://planning.cs.uiuc.edu/node198.html
+        TYPE a=sqrt(1-u.x);
+        TYPE b=sqrt(  u.x);
+        u.y *= 2*M_PI;
+        u.z *= 2*M_PI;
+        x = a*sin(u.y);
+        y = b*cos(u.y);
+        z = a*sin(u.z);
+        w = b*cos(u.z);
+    }
+
+
+
 	inline void fromAngleAxis( TYPE angle, const VEC& axis ){
 		TYPE ir   = 1/axis.norm();
 		VEC  hat  = axis * ir;

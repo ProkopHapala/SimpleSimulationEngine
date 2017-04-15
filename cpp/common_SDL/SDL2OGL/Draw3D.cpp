@@ -17,6 +17,15 @@ void drawPoint( const Vec3d& vec ){
 	glEnd();
 };
 
+void drawPointCross( const Vec3f& vec, float sz ){
+	//glDisable (GL_LIGHTING);
+	glBegin   (GL_LINES);
+		glVertex3f( vec.x-sz, vec.y, vec.z ); glVertex3f( vec.x+sz, vec.y, vec.z );
+		glVertex3f( vec.x, vec.y-sz, vec.z ); glVertex3f( vec.x, vec.y+sz, vec.z );
+		glVertex3f( vec.x, vec.y, vec.z-sz ); glVertex3f( vec.x, vec.y, vec.z+sz );
+	glEnd();
+};
+
 void drawPointCross( const Vec3d& vec, double sz ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
@@ -117,6 +126,16 @@ void drawMatInPos( const Mat3d& mat, const Vec3d& pos ){
 		glColor3f( 0, 1, 0 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.yx, pos.y+mat.yy, pos.z+mat.yz );
 		glColor3f( 0, 0, 1 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.zx, pos.y+mat.zy, pos.z+mat.zz );
 	glEnd();
+};
+
+
+void drawShape( const Vec3f& pos, const Mat3f& rot, int shape ){
+	glPushMatrix();
+	float glMat[16];
+	toGLMat( pos, rot, glMat );
+	glMultMatrixf( glMat );
+	glCallList( shape );
+	glPopMatrix();
 };
 
 void drawShape( const Vec3d& pos, const Mat3d& rot, int shape ){

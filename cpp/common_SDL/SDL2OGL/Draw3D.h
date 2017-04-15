@@ -19,6 +19,7 @@ namespace Draw3D{
 // ==== function declarations
 
 void drawPoint     ( const Vec3d& vec                   );
+void drawPointCross( const Vec3f& vec, float  sz        );
 void drawPointCross( const Vec3d& vec, double sz        );
 void drawVec       ( const Vec3d& vec                   );
 void drawVecInPos  ( const Vec3d& v,   const Vec3d& pos );
@@ -30,6 +31,7 @@ void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3 );
 void drawPlanarPolygon( int n, const int * inds, const Vec3d * points );
 void drawMatInPos ( const Mat3d& mat, const Vec3d& pos );
 //void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
+void drawShape    ( const Vec3f& pos, const Mat3f& rot, int shape );
 void drawShape    ( const Vec3d& pos, const Mat3d& rot, int shape );
 void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape );
 
