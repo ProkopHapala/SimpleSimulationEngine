@@ -18,14 +18,17 @@
 
 class TestApp_clRigidMolecule : public AppSDL2OGL_3D {
 	public:
-	int per_frame = 10;
+	int per_frame = 1;
 
 	int err;
 	OCLsystem cl;
 	OCLtask *task1,*task2;
 
+	float dt   = 0.01;
+	float damp = 0.99;
+
 	//bool use_GPU = false;
-	int method = 2;
+	int method = 1;
 
 	int atomView = 0;
 
@@ -50,7 +53,9 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
 		//Draw3D::drawSphere_oct(4,1.0,{0.0,0.0,0.0});
 	glEndList();
 
-	initParticles( nMols, pos, 6.0, 0.0 );
+	initParticles( nMols, pos, 4.0, 0.0 );
+	setArray     ( nMols*8, vel,   0.0f );
+	setArray     ( nMols*8, force, 0.0f );
 
     /*
     // --- OpenCL
@@ -65,7 +70,6 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
     task1->args = { INTarg(n), BUFFarg(0), BUFFarg(2) };
     task1->print_arg_list();
     //exit(0);
-
     */
 
 }
@@ -79,10 +83,14 @@ void TestApp_clRigidMolecule::draw(){
     double f2err;
     t1=getCPUticks();
     switch(method){
-        case 3:
-            task2->enque();
-            clFinish(cl.commands);
-            cl.download(0);
+        case 1:
+            transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );
+            setArray      ( nMols*8, force, 0.0f );
+            RBodyForce    ( nMols, nAtoms, pos, force, atomsT, molAtoms );
+            move_leap_frog( nMols, pos, vel, force, dt, damp );
+            //task2->enque();
+            //clFinish(cl.commands);
+            //cl.download(0);
             break;
     }
 
@@ -90,7 +98,6 @@ void TestApp_clRigidMolecule::draw(){
     //printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(n*n) );
 
     glDisable(GL_LIGHTING);
-    transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );
     Mat3f mrot; mrot.setOne();
     glColor3f(1.0f,0.0f,0.0f);
     for(int i=0; i<nMols; i++){
@@ -103,8 +110,9 @@ void TestApp_clRigidMolecule::draw(){
     glColor3f(0.8f,0.8f,0.8f);
     for(int i=0; i<nMols*nAtoms; i++){
         //printf( " %i (%g,%g,%g)  \n", i, atomsT[i].x, atomsT[i].y, atomsT[i].z );
-        Draw3D::drawShape(atomsT[i],mrot,atomView);
-        //Draw3D::drawPointCross(atomsT[i],0.1);
+        //Draw3D::drawShape(atomsT[i],mrot,atomView);
+        Draw3D::drawPointCross(atomsT[i],0.1);
+        Draw3D::drawVecInPos(forceAtomT[i]*10.0f,atomsT[i]);
     }
     //exit(0);
 

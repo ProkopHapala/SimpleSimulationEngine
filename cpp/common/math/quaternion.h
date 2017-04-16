@@ -109,6 +109,29 @@ class Quat4TYPE {
         x = x_; y = y_; z = z_;
     };
 
+    inline void qmul_it( QUAT& a) const {
+        TYPE aw = a.w, ax = a.x, ay = a.y, az = a.z;
+        a.x =  x * aw + y * az - z * ay + w * ax;
+        a.y = -x * az + y * aw + z * ax + w * ay;
+        a.z =  x * ay - y * ax + z * aw + w * az;
+        a.w = -x * ax - y * ay - z * az + w * aw;
+    };
+
+    inline void qmul_it_T( QUAT& a) const {
+        TYPE aw = a.w, ax = a.x, ay = a.y, az = a.z;
+        a.x = -x * aw - y * az + z * ay + w * ax;
+        a.y = +x * az - y * aw - z * ax + w * ay;
+        a.z = -x * ay + y * ax - z * aw + w * az;
+        a.w = +x * ax + y * ay + z * az + w * aw;
+    };
+
+    inline void transformVec( const VEC& vec, VEC& out ) const{
+        QUAT qv; qv.set(vec.x,vec.y,vec.z,0.0);
+        qmul_it  (qv);
+        qmul_it_T(qv);
+        out.set(qv.x,qv.y,qv.z);
+    }
+
     inline void invertUnitary() { x=-x; y=-y; z=-z; }
 
     inline void invert() {
@@ -477,7 +500,8 @@ class Quat4TYPE {
 		result.zz = 1 - ( xx + yy );
 	};
 
-	// this will compute force on quaternion from force on some point in coordinate system of the quaternion
+	// this will compute force on quaternion from force on some point "p" in coordinate system of the quaternion
+	//   EXAMPLE : if "p" is atom in molecule, it should be local coordinate in molecular local space, not global coordante after quaternion rotation is applied
 	inline void addForceFromPoint( const VEC& p, const VEC& fp, QUAT& fq ) const {
 		// dE/dx = dE/dpx * dpx/dx
 		// dE/dx = fx
@@ -503,6 +527,7 @@ class Quat4TYPE {
 
 	}
 
+	inline TYPE outproject( const QUAT& q ){ TYPE cdot = dot(q); add_mul( q, -cdot ); return cdot; };
 
 	inline void fromMatrix( const VEC& a, const VEC& b, const VEC& c ) { fromMatrix( a.x,  a.y,  a.z,  b.x,  b.y,  b.z,  c.x,  c.y,  c.z  );  }
 	inline void fromMatrix( const MAT& M                             ) { fromMatrix( M.ax, M.ay, M.az, M.bx, M.by, M.bz, M.cx, M.cy, M.cz );  }
