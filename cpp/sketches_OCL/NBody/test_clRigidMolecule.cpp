@@ -16,6 +16,18 @@
 
 // ==================== Declaration
 
+void checkDiff( int n,  float * a_,  Vec3f * a ){
+    for(int i=0; i<n; i++){
+        int i4 = i<<2;
+        printf( "%i (%g,%g,%g) (%g,%g,%g) \n",i,  a_[i4],a_[i4+1],a_[i4+2], a[i].x,a[i].y,a[i].z );
+        float err2 = sq(a_[i4]-a[i].x) + sq(a_[i4+1]-a[i].y)  + sq(a_[i4+2]-a[i].z);
+        if(err2 > 1e-8){
+            printf(" incorrect force on molecule %i err2 = %g \n", i, err2 );
+            exit(0);
+        }
+    }
+}
+
 class TestApp_clRigidMolecule : public AppSDL2OGL_3D {
 	public:
 	int per_frame = 1;
@@ -53,24 +65,114 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
 		//Draw3D::drawSphere_oct(4,1.0,{0.0,0.0,0.0});
 	glEndList();
 
+
+	// test quaternion
+	/*
+	Quat4f q;
+	Mat3f  m;
+	Vec3f  v,vT,vT_;
+	q.fromUniformS3({randf(),randf(),randf()});
+	q.toMatrix(m);
+	v.set(randf(),randf(),randf()); printVec(v  );
+	printf( "q.norm2() %g \n", q.norm2() );
+
+	m.dot_to_T    (v,  vT  );   printVec(vT );
+	//m.dot_to    (v,  vT  );
+	//m.dot_to     (vT, vT_ );
+	q.transformVec  (v,  vT_); printVec(vT );
+	q.untransformVec(vT, vT_); printVec(vT_);
+    exit(0);
+    */
+
 	initParticles( nMols, pos, 4.0, 0.0 );
 	setArray     ( nMols*8, vel,   0.0f );
 	setArray     ( nMols*8, force, 0.0f );
 
-    /*
+	for(int i=0; i<nAtoms; i++){
+        int i4 = i<<2;
+        molAtoms_[i4  ]=molAtoms[i].x;
+        molAtoms_[i4+1]=molAtoms[i].y;
+        molAtoms_[i4+2]=molAtoms[i].z;
+        molAtoms_[i4+3]=0.0f;
+        printf("%i (%g,%g,%g)\n", i, molAtoms[i].x,molAtoms[i].y,molAtoms[i].z);
+	}
+
     // --- OpenCL
     cl.init();
-    cl.newBuffer( "pos",   n*2, sizeof(float), (float*)pos,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
-    cl.newBuffer( "vel",   n*2, sizeof(float), (float*)vel,    CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
-    cl.newBuffer( "force", n*2, sizeof(float), (float*)force_, CL_MEM_READ_WRITE );
+    cl.newBuffer( "molAtoms",   nAtoms*4,       sizeof(float), (float*)molAtoms_, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "pos",        nMols*8,        sizeof(float), (float*)pos,       CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "force",      nMols*8,        sizeof(float), (float*)force,     CL_MEM_READ_WRITE );
+    cl.newBuffer( "atomsT",     nAtoms*nMols*4, sizeof(float), (float*)atomsT_,   CL_MEM_READ_WRITE );
     //cl.buffers[1].read_on_finish = true;
-    err = cl.buildProgram( "cl/nbody.cl" );                                       OCL_checkError(err, "cl.buildProgram");
+    err = cl.buildProgram( "cl/RigidMolecule.cl" );                                       OCL_checkError(err, "cl.buildProgram");
 
-    task1 = new OCLtask( &cl, cl.newKernel("NBody_force"), 1, n, 0 );
-    task1->args = { INTarg(n), BUFFarg(0), BUFFarg(2) };
+    /*
+    //  check transform
+    task1 = new OCLtask( &cl, cl.newKernel("RigidMolTransform"), 1, nMols*nAtoms, nAtoms );
+    task1->args = { INTarg(nAtoms), BUFFarg(0), BUFFarg(1), BUFFarg(3) };
     task1->print_arg_list();
-    //exit(0);
+    printf( "==== transformAllAtoms CPU \n" );
+    transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );
+    printf( "==== transformAllAtoms GPU \n" );
+    cl.upload(0); cl.upload(1);
+    task1->enque();
+    clFinish(cl.commands);
+    cl.download(3);
+    printf( "==== check results \n" );
+    checkDiff( nMols*nAtoms,  atomsT_, atomsT );
+    exit(0);
     */
+
+    /*
+    //  check atom-wise forces
+    task1 = new OCLtask( &cl, cl.newKernel("RigidMolAtomForce"), 1, nMols*nAtoms, nAtoms );
+    task1->args = { INTarg(nAtoms), BUFFarg(0), BUFFarg(1), BUFFarg(3) };
+    task1->print_arg_list();
+    printf( "==== transformAllAtoms CPU \n" );
+    transformAllAtoms ( nMols, nAtoms, pos, molAtoms, atomsT );
+    setArray          ( nMols*8, force_, 0.0f );
+    RBodyForce        ( nMols, nAtoms, pos, force_, atomsT, molAtoms );
+    printf( "==== transformAllAtoms GPU \n" );
+    cl.upload(0); cl.upload(1);
+    task1->enque();
+    clFinish(cl.commands);
+    cl.download(3);
+    printf( "==== check results \n" );
+    checkDiff( nMols*nAtoms,  atomsT_, forceAtomT );
+    exit(0);
+    */
+
+
+    task1 = new OCLtask( &cl, cl.newKernel("RigidMolForce"), 1, nMols*nAtoms, nAtoms );
+    task1->args = { INTarg(nAtoms), BUFFarg(0), BUFFarg(1), BUFFarg(2) };
+    task1->print_arg_list();
+
+    setArray         ( nMols*8, force , 0.0f );
+    setArray         ( nMols*8, force_, 0.0f );
+    transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );
+    RBodyForce       ( nMols, nAtoms, pos, force_, atomsT, molAtoms );
+
+    cl.upload(0); cl.upload(1);
+    task1->enque();
+    clFinish(cl.commands);
+    cl.download(2);
+
+    for(int i=0; i<nMols; i++){
+        int i8 = i<<3;
+        printf( "%i (%g,%g,%g,%g, %g,%g,%g,%g) (%g,%g,%g,%g, %g,%g,%g,%g) \n",i,
+            force [i8],force [i8+1],force [i8+2],force [i8+3],force [i8+4],force [i8+5],force [i8+6],force [i8+7],
+            force_[i8],force_[i8+1],force_[i8+2],force_[i8+3],force_[i8+4],force_[i8+5],force_[i8+6],force_[i8+7]  );
+        float err2 = sq(force [i8  ]-force_[i8  ]) + sq(force [i8+1]-force_[i8+1]) + sq(force [i8+2]-force_[i8+2]) + sq(force [i8+3]-force_[i8+3])
+                   + sq(force [i8+4]-force_[i8+4]) + sq(force [i8+5]-force_[i8+5]) + sq(force [i8+6]-force_[i8+6]) + sq(force [i8+7]-force_[i8+7]);
+        if(err2 > 1e-8){
+            printf(" incorrect force on molecule %i err2 = %g \n", i, err2 );
+            exit(0);
+        }
+    }
+
+
+    //exit(0);
+
 
 }
 
@@ -92,10 +194,18 @@ void TestApp_clRigidMolecule::draw(){
             //clFinish(cl.commands);
             //cl.download(0);
             break;
+        case 2:
+            cl.upload(0); cl.upload(1);
+            task1->enque();
+            clFinish(cl.commands);
+            cl.download(2);
+            move_leap_frog( nMols, pos, vel, force, dt, damp );
+            break;
     }
+    double fticks = getCPUticks() - t1;
+    printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(nMols*nMols*nAtoms*nAtoms) );
 
-	double fticks = getCPUticks() - t1;
-    //printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(n*n) );
+    transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );  // just for visualization
 
     glDisable(GL_LIGHTING);
     Mat3f mrot; mrot.setOne();
@@ -110,8 +220,8 @@ void TestApp_clRigidMolecule::draw(){
     glColor3f(0.8f,0.8f,0.8f);
     for(int i=0; i<nMols*nAtoms; i++){
         //printf( " %i (%g,%g,%g)  \n", i, atomsT[i].x, atomsT[i].y, atomsT[i].z );
-        //Draw3D::drawShape(atomsT[i],mrot,atomView);
-        Draw3D::drawPointCross(atomsT[i],0.1);
+        Draw3D::drawShape(atomsT[i],mrot,atomView);
+        //Draw3D::drawPointCross(atomsT[i],0.1);
         Draw3D::drawVecInPos(forceAtomT[i]*10.0f,atomsT[i]);
     }
     //exit(0);

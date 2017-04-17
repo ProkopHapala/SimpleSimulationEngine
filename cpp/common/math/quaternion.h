@@ -126,10 +126,41 @@ class Quat4TYPE {
     };
 
     inline void transformVec( const VEC& vec, VEC& out ) const{
-        QUAT qv; qv.set(vec.x,vec.y,vec.z,0.0);
-        qmul_it  (qv);
-        qmul_it_T(qv);
-        out.set(qv.x,qv.y,qv.z);
+        //QUAT qv; qv.set(vec.x,vec.y,vec.z,0.0);
+        //qmul_it  (qv);
+        //qmul_it_T(qv);
+        //out.set(qv.x,qv.y,qv.z);
+        // https://blog.molecular-matters.com/2013/05/24/a-faster-quaternion-vector-multiplication/
+
+        // http://stackoverflow.com/questions/22497093/faster-quaternion-vector-multiplication-doesnt-work
+        //t = 2 * cross(q.xyz, v); v' = v + q.w * t + cross(q.xyz, t)
+        //
+        //t = 2 * cross(q.xyz, v)
+        //TYPE tx = 2*( y*vec.z - z*vec.y );
+        //TYPE ty = 2*( z*vec.x - x*vec.z );
+        //TYPE tz = 2*( x*vec.y - y*vec.x );
+        // v' = v + q.w * t + cross(q.xyz, t)
+        //out.x   = vec.x + w*tx + y*tz - z*ty;
+        //out.y   = vec.y + w*ty + z*tx - x*tz;
+        //out.z   = vec.z + w*tz + x*ty - y*tx;
+
+        // v' = v + 2.0 * cross(cross(v, q.xyz) + q.w * v, q.xyz);
+        TYPE tx = 2*( vec.y*z - vec.z*y  + w*vec.x);
+        TYPE ty = 2*( vec.z*x - vec.x*z  + w*vec.y);
+        TYPE tz = 2*( vec.x*y - vec.y*x  + w*vec.z);
+        out.x   = vec.x + ty*z - tz*y;
+        out.y   = vec.y + tz*x - tx*z;
+        out.z   = vec.z + tx*y - ty*x;
+        // 15 mult, 12 add
+    }
+
+    inline void untransformVec( const VEC& vec, VEC& out ) const{
+        TYPE tx = 2*( y*vec.z - z*vec.y  + w*vec.x);
+        TYPE ty = 2*( z*vec.x - x*vec.z  + w*vec.y);
+        TYPE tz = 2*( x*vec.y - y*vec.x  + w*vec.z);
+        out.x   = vec.x + y*tz - z*ty;
+        out.y   = vec.y + z*tx - x*tz;
+        out.z   = vec.z + x*ty - y*tx;
     }
 
     inline void invertUnitary() { x=-x; y=-y; z=-z; }
@@ -145,6 +176,7 @@ class Quat4TYPE {
 
 
 // ======= metric
+    // https://fgiesen.wordpress.com/2013/01/07/small-note-on-quaternion-distance-metrics/
     // metric on quaternions : http://www.cs.cmu.edu/~cga/dynopt/readings/Rmetric.pdf = /home/prokop/Dropbox/KnowDev/quaternions/Rotation_metric_Rmetric.pdf
     //  q and -q denote the same rotation !!!
     //  rho(q,q0)   = |q - q0|
@@ -178,8 +210,8 @@ class Quat4TYPE {
         u.y *= 2*M_PI;
         u.z *= 2*M_PI;
         x = a*sin(u.y);
-        y = b*cos(u.y);
-        z = a*sin(u.z);
+        y = a*cos(u.y);
+        z = b*sin(u.z);
         w = b*cos(u.z);
     }
 

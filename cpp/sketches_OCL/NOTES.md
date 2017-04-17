@@ -23,6 +23,8 @@ http://stackoverflow.com/questions/3841877/what-is-a-bank-conflict-doing-cuda-op
  -   Brief Intro to GPU PIC with CUDA particle in cell GPU https://www.particleincell.com/2016/cuda-pic/\
  - FFT OpenCL
 http://www.bealto.com/gpu-fft.html
+ -  Matrix vector multiplocation
+  http://www.bealto.com/gpu-gemv_v3.html
  
 # Libraries
 
