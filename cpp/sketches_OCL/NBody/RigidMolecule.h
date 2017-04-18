@@ -14,8 +14,8 @@
 constexpr float R_MAX = 1.8;
 constexpr float R2MAX = R_MAX*R_MAX;
 
-constexpr int nAtoms = 4;
-constexpr int nMols  = 2;
+constexpr int nAtoms = 8;
+constexpr int nMols  = 256;
 //constexpr int nMols  = 128;
 float pos   [nMols*8];
 float vel   [nMols*8];
@@ -29,7 +29,36 @@ Vec3f forceAtomT[nAtoms*nMols];
 
 //Vec3f molAtoms   [nAtoms*3] = { 0.0f,0.0f,0.0f,   1.0f,0.0f,0.0f,   0.0f,1.0f,0.0f,   0.0f,0.0f,1.0f  };
 //Vec3f molAtoms     [nAtoms] = { 1.0f,1.0f,1.0f,   -1.0f,-1.0f,1.0f,   -1.0f,1.0f,-1.0f,   1.0f,-1.0f,-1.0f  };
-Vec3f molAtoms     [nAtoms] = { 0.5f,0.5f,0.5f,   -0.5f,-0.5f,0.5f,   -0.5f,0.5f,-0.5f,   0.5f,-0.5f,-0.5f  };
+//Vec3f molAtoms     [nAtoms] = { 0.5f,0.5f,0.5f,   -0.5f,-0.5f,0.5f,   -0.5f,0.5f,-0.5f,   0.5f,-0.5f,-0.5f  };
+
+//Vec3f molAtoms     [nAtoms] = {
+//    +0.5f,+0.5f,+0.5f,   -0.5f,-0.5f,+0.5f,   -0.5f,+0.5f,+0.5f,  +0.5f,-0.5f,+0.5f,
+//    +0.5f,+0.5f,-0.5f,   -0.5f,-0.5f,-0.5f,   -0.5f,+0.5f,-0.5f,  +0.5f,-0.5f,-0.5f
+//};
+
+//Vec3f molAtoms     [nAtoms] = {
+//    +1.0f,+0.5f,+0.0f,   +1.0f,-0.5f,+0.0f,
+//    +0.5f,+0.5f,+0.0f,   +0.5f,-0.5f,+0.0f,
+//    -0.5f,+0.5f,+0.0f,   -0.5f,-0.5f,+0.0f,
+//    -1.0f,+0.5f,+0.0f,   -1.0f,-0.5f,+0.0f
+//};
+
+
+Vec3f molAtoms     [nAtoms] = {
+    +0.75f,+0.5f,+0.0f,   +0.75f,-0.5f,+0.0f,
+    +0.25f,+0.5f,+0.0f,   +0.25f,-0.5f,+0.0f,
+    -0.25f,+0.5f,+0.0f,   -0.25f,-0.5f,+0.0f,
+    -0.75f,+0.5f,+0.0f,   -0.75f,-0.5f,+0.0f
+};
+
+
+Vec4f molCoefs     [nAtoms] = {
+    +0.75f,+0.5f,+0.0f,   +0.75f,-0.5f,+0.0f,
+    +0.25f,+0.5f,+0.0f,   +0.25f,-0.5f,+0.0f,
+    -0.25f,+0.5f,+0.0f,   -0.25f,-0.5f,+0.0f,
+    -0.75f,+0.5f,+0.0f,   -0.75f,-0.5f,+0.0f
+};
+
 //Vec3f molAtoms     [nAtoms] = { 1.0f,0.0f,0.0f,   -1.0f,0.0f,0.0f  };
 //Vec3f molAtoms     [nAtoms] = { 2.0f,0.0f,0.0f };
 
@@ -146,7 +175,8 @@ void RBodyForce( int nMols, int nAtoms, float * pos, float * force, Vec3f * atom
                 for(int jatom=0; jatom<nAtoms; jatom++){
                     //addAtomicForceSR( p, atomsT[j], f );
                     //addAtomicForceLJ( atomsT[j]-p, f );
-                    addAtomicForceR24( atomsT[j]-p, f, 1.0f, 3.0f );
+                    //addAtomicForceR24( atomsT[j]-p, f, 1.0f, 4.0f );
+                    addAtomicForceLJ( atomsT[j]-p, f, 4.0f, 16.0f );
                     //addAtomicForceCoulomb( atomsT[j]-p, f );
                     //addAtomicForceSpring( atomsT[j]-p, f );
                     //printf( "(%i,%i) (%g,%g,%g)\n",i,j,  f.x, f.y, f.z );

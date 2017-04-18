@@ -8,6 +8,7 @@
 #include "testUtils.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include "Draw.h"
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
 
@@ -30,14 +31,14 @@ void checkDiff( int n,  float * a_,  Vec3f * a ){
 
 class TestApp_clRigidMolecule : public AppSDL2OGL_3D {
 	public:
-	int per_frame = 1;
+	int per_frame = 5;
 
 	int err;
 	OCLsystem cl;
 	OCLtask *task1,*task2;
 
 	float dt   = 0.01;
-	float damp = 0.99;
+	float damp = 0.998;
 
 	//bool use_GPU = false;
 	int method = 1;
@@ -186,24 +187,28 @@ void TestApp_clRigidMolecule::draw(){
     t1=getCPUticks();
     switch(method){
         case 1:
-            transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );
-            setArray      ( nMols*8, force, 0.0f );
-            RBodyForce    ( nMols, nAtoms, pos, force, atomsT, molAtoms );
-            move_leap_frog( nMols, pos, vel, force, dt, damp );
-            //task2->enque();
-            //clFinish(cl.commands);
-            //cl.download(0);
+            for(int itr=0;itr<per_frame; itr++){
+                transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );
+                setArray      ( nMols*8, force, 0.0f );
+                RBodyForce    ( nMols, nAtoms, pos, force, atomsT, molAtoms );
+                move_leap_frog( nMols, pos, vel, force, dt, damp );
+                //task2->enque();
+                //clFinish(cl.commands);
+                //cl.download(0);
+            }
             break;
         case 2:
-            cl.upload(0); cl.upload(1);
-            task1->enque();
-            clFinish(cl.commands);
-            cl.download(2);
-            move_leap_frog( nMols, pos, vel, force, dt, damp );
+            for(int itr=0;itr<per_frame; itr++){
+                cl.upload(0); cl.upload(1);
+                task1->enque();
+                clFinish(cl.commands);
+                cl.download(2);
+                move_leap_frog( nMols, pos, vel, force, dt, damp );
+            }
             break;
     }
     double fticks = getCPUticks() - t1;
-    printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(nMols*nMols*nAtoms*nAtoms) );
+    printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(nMols*nMols*nAtoms*nAtoms*per_frame) );
 
     transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );  // just for visualization
 
@@ -218,12 +223,16 @@ void TestApp_clRigidMolecule::draw(){
     glEnable(GL_LIGHTING);
     //glColor3f(0.0f,1.0f,0.0f);
     glColor3f(0.8f,0.8f,0.8f);
-    for(int i=0; i<nMols*nAtoms; i++){
-        //printf( " %i (%g,%g,%g)  \n", i, atomsT[i].x, atomsT[i].y, atomsT[i].z );
-        Draw3D::drawShape(atomsT[i],mrot,atomView);
-        //Draw3D::drawPointCross(atomsT[i],0.1);
-        Draw3D::drawVecInPos(forceAtomT[i]*10.0f,atomsT[i]);
-    }
+    int i=0;
+    for(int imol=0; imol<nMols; imol++){
+        Draw::color_of_hash(i+154);
+        for(int iatom=0; iatom<nAtoms; iatom++){
+            //printf( " %i (%g,%g,%g)  \n", i, atomsT[i].x, atomsT[i].y, atomsT[i].z );
+            Draw3D::drawShape(atomsT[i],mrot,atomView);
+            //Draw3D::drawPointCross(atomsT[i],0.1);
+           // Draw3D::drawVecInPos(forceAtomT[i]*10.0f,atomsT[i]);
+           i++;
+    }}
     //exit(0);
 
 };

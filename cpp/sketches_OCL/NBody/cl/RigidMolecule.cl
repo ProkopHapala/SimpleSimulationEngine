@@ -33,6 +33,19 @@ float3 atomicForceCoulomb( float3 dp, float kQQ ){
     return dp * fr;
 }
 
+// https://en.wikipedia.org/wiki/Lennard-Jones_potential
+// VLJ = eps * (          (r0/r)**12 -       2*(r0/r)**6  )
+// FLJ = eps * (  (12/r0)*(r0/r)**13 - (12/r0)*(r0/r)**7  ) * (d/r)
+// FLJ = eps * (          (r0/r)**12 -         (r0/r)**6  ) * d*(1/r**2) * 12
+float3 atomicForceLJQ( float3 dp, float3 coefs ){
+    float ir2  = 1/( dot(dp,dp) + R2SAFE );
+    float ir   = sqrt(ir2);
+    float ir2_ = ir2 * coefs.x*coefs.x;
+    float ir6  = ir2_*ir2_*ir2_;
+    float fr   = ( ( coefs.x - coefs.y*ir6 )*12*ir6 + ir*coefs.z*-14.3996448915f )*ir2; 
+    return dp * fr;
+}
+
 float3 atomicForceSpring( float3 dp, float k ){
     return dp * k;
 }
@@ -200,8 +213,9 @@ __kernel void RigidMolForce(
 ){
     __local  float4 atoms0[16];
     __local  float4 atomsB[16];
+    //__local  float8 fbuf[16];
     
-    const int iL = get_local_id  (0);
+    const int iL = get_local_id(0);
     
     atoms0[iL] = AtomsInMol[iL];
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -218,28 +232,87 @@ __kernel void RigidMolForce(
         if(jmol!=get_group_id(0)){
             for (int j=0; j<get_local_size(0); j++){
                 //fatomi += atomicForceSR( atomsB[j].xyz - atomi );
-                fatomi += atomicForceR24( atomsB[j].xyz - atomi, 1.0f, 3.0f );
+                //fatomi += atomicForceR24( atomsB[j].xyz - atomi, 1.0f, 4.0f );
+                fatomi += atomicForceLJ( atomsB[j].xyz - atomi, 4.0f, 16.0f );
+                
             }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
     
     // sum force on molecule
-    atoms0[iL] = (float4)(fatomi,0.0f);  // re-use local buffers 
-    atomsB[iL] = Quat_forceFromPoint( posi.hi, atom0.xyz, fatomi ); 
-    //atoms0[iL] = 1.0f;  
+    
+    // for some reason this part makes the run 10x slower
+    atoms0[iL] = (float4)(fatomi,0.0f);                             
+    atomsB[iL] = Quat_forceFromPoint( posi.hi, atom0.xyz, fatomi );
+    //fbuf[iL] = (float8)( fatomi,0.0f, Quat_forceFromPoint( posi.hi, atom0.xyz, fatomi ) );
     barrier(CLK_LOCAL_MEM_FENCE);
     if(iL==0){
         float8 fmol  = 0.0f;
         for (int j=0; j<get_local_size(0); j++){
             fmol.lo += atoms0[j];
             fmol.hi += atomsB[j];
-            //fmol.hi  = j;
-            //fmol.hi  = get_local_size(0);
+            //fmol += fbuf[iL];
         }
         force[get_group_id(0)] = fmol;
-        //force[get_group_id(0)] = 1515.0f;
     };
+    
+}
+
+
+
+__kernel void RigidMolForceLJQ(
+    int nAtoms,
+    __constant float4* AtomsInMol,
+    __constant float4* AtomsLJQ,
+    __global   float8* pos,    // pos,quat 
+    __global   float8* force 
+){
+    __local  float4 atoms0[16];
+    __local  float4 atomsB[16];
+    __local  float4 LJQ[16];
+    
+    const int iL = get_local_id(0);
+    
+    atoms0[iL] = AtomsInMol[iL];
+    LJQ   [iL] = AtomsLJQ  [iL];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    float8 posi   = pos   [get_group_id  (0)];
+    float3 atom0  = atoms0[iL].xyz;
+    float3 cqi    = LJQ   [iL].xyz;
+    float3 atomi  = Quat_transformVec( posi.hi, atom0 ) + posi.xyz;
+    float3 fatomi = 0.0f;
+  
+    for (int jmol=0; jmol<get_num_groups(0); jmol++ ){
+        float8 posj   = pos[jmol];
+        float4 atomj0 = atoms0[iL];
+        atomsB[iL]    = (float4)( Quat_transformVec( posj.hi, atomj0.xyz ) + posj.xyz, atomj0.w );
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if(jmol!=get_group_id(0)){
+            for (int j=0; j<get_local_size(0); j++){
+                float3 cqj = atomsB[j].xyz;
+                float3 cq  = (float3)(
+                         cqj.x+cqi.x   ,   // vdW radius    r_ii
+                         cqj.y*cqi.y   ,   // vdW depth     sqrt(eps_ii)   !!!! square root !!!!
+                         cqj.z*cqi.z       // charge
+                );  
+                fatomi +=  atomicForceLJQ( atomsB[j].xyz - atomi, cq );
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    atoms0[iL] = (float4)(fatomi,0.0f);                             
+    atomsB[iL] = Quat_forceFromPoint( posi.hi, atom0.xyz, fatomi );
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(iL==0){
+        float8 fmol  = 0.0f;
+        for (int j=0; j<get_local_size(0); j++){
+            fmol.lo += atoms0[j];
+            fmol.hi += atomsB[j];
+        }
+        force[get_group_id(0)] = fmol;
+    };
+    
 }
 
 
