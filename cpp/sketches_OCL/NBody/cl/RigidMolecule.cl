@@ -111,6 +111,10 @@ float4 Quat_qmul( float4 a, float4 b) {  // 16 mul, 12 add
      -b.x * a.x - b.y * a.y - b.z * a.z + b.w * a.w );
 };
 
+float3 Quat_Left( float4 q ){ return (float3)( 1-2*( q.y*q.y + q.z*q.z ),   2*( q.x*q.y - q.z*q.w ),   2*( q.x*q.z + q.y*q.w )  ); }
+float3 Quat_Up  ( float4 q ){ return (float3)(   2*( q.x*q.y + q.z*q.w ), 1-2*( q.x*q.x + q.z*q.z ),   2*( q.y*q.z - q.x*q.w )  ); }
+float3 Quat_Fw  ( float4 q ){ return (float3)(   2*( q.x*q.z - q.y*q.w ),   2*( q.y*q.z + q.x*q.w ), 1-2*( q.x*q.x + q.y*q.y )  ); }
+
 //float3 Quat_transformVec( float4 q, float3 p){  
 //    return Quat_qmul( q, Quat_qmul( (float4)(q,0), q) );   // 32 mul, 24 add ... using matrix it would be faster (9 mul) (?)
 //}
@@ -316,6 +320,59 @@ __kernel void RigidMolForceLJQ(
         force[get_group_id(0)] = fmol;
     };
     
+}
+
+
+
+__kernel void RigidMolForceLJQ_2(
+    int nAtoms,
+    __constant float8* AtomsInMol,
+    __global   float8* pose,    // pos,quat 
+    __global   float8* force 
+){
+    __local  float8 Latoms[16];
+    __local  float8 Lpose [16];
+    
+    const int iL  = get_local_id(0);
+    Latoms [iL]   = AtomsInMol[iL];
+    float8 posei  = pose[get_global_id(0)];
+    float8 fposei = 0.0f;
+    const int nAtoms_ =  nAtoms;
+    
+    barrier(CLK_LOCAL_MEM_FENCE);
+    for (int iatom=0; iatom<nAtoms_; iatom++ ){
+        float8 atomi  = Latoms[iatom];
+        float3 atomiT = Quat_transformVec( posei.hi, atomi.xyz ) + posei.xyz;
+        float3 fatomi = 0.0f;
+        for (int jmol0=0; jmol0<get_global_size(0); jmol0 += get_local_size(0) ){
+            //int jmol = jmol0+iL;
+            Lpose[iL] = pose[jmol0+iL];
+            barrier(CLK_LOCAL_MEM_FENCE);
+            for (int jm=0; jm<get_local_size(0); jm++ ){
+                if( (jm+jmol0) != get_global_id(0) ){
+                    float8 posej = Lpose[jm];
+                    float3 up = Quat_Up  (posej.hi);
+                    float3 fw = Quat_Fw  (posej.hi);
+                    float3 lf = Quat_Left(posej.hi);                    
+                    for (int jatom=0; jatom<nAtoms_; jatom++ ){
+                        float8 atomj  = Latoms[jatom]; 
+                        //float3 atomjT = ((float3)(dot(up,atomj.xyz),dot(up,atomj.xyz),dot(up,atomj.xyz)) + posej.xyz;
+                        float3 atomjT = atomj.x*lf + atomj.y*up + atomj.z*fw + posej.xyz;
+                        //float3 atomjT = Quat_transformVec( posej.hi, atomj.xyz ) + posej.xyz;
+                        float3 cq  = (float3)(
+                                 atomj.s3+atomi.s3,   // vdW radius    r_ii
+                                 atomj.s4*atomi.s4,   // vdW depth     sqrt(eps_ii)   !!!! square root !!!!
+                                 atomj.s5*atomi.s5    // charge
+                        );
+                        fatomi +=  atomicForceLJQ( atomjT - atomiT, cq );
+                    }
+                }
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+        fposei += (float8)( fatomi*F_POS_VS_ROT,0.0f, Quat_forceFromPoint( posei.hi, atomi.xyz, fatomi ) );
+    }
+    force[get_global_id(0)] = fposei;
 }
 
 

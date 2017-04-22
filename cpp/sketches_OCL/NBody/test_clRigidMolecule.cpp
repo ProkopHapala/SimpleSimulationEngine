@@ -89,8 +89,6 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
 	setArray     ( nMols*8, vel,   0.0f );
 	setArray     ( nMols*8, force, 0.0f );
 
-
-
     // --- OpenCL
     cl.init();
     cl.newBuffer( "molecule",   nAtoms*8,       sizeof(float), (float*)molecule,  CL_MEM_READ_ONLY );
@@ -136,10 +134,13 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
     exit(0);
     */
 
-
     task1 = new OCLtask( &cl, cl.newKernel("RigidMolForceLJQ"), 1, nMols*nAtoms, nAtoms );
     task1->args = { INTarg(nAtoms), BUFFarg(0), BUFFarg(1), BUFFarg(2) };
     task1->print_arg_list();
+
+    task2 = new OCLtask( &cl, cl.newKernel("RigidMolForceLJQ_2"), 1, nMols, 16 );
+    task2->args = { INTarg(nAtoms), BUFFarg(0), BUFFarg(1), BUFFarg(2) };
+    task2->print_arg_list();
 
     printf("==== CPU ==== \n");
     setArray         ( nMols*8, force , 0.0f );
@@ -148,7 +149,8 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
     RBodyForce       ( nMols, nAtoms, pos, force_, atomsT, molecule );
     printf("==== GPU ==== \n");
     cl.upload(0); cl.upload(1);
-    task1->enque();
+    //task1->enque();
+    task2->enque();
     clFinish(cl.commands);
     cl.download(2);
     printf("==== Check results ==== \n");
@@ -160,15 +162,13 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
             force_[i8],force_[i8+1],force_[i8+2],force_[i8+3],force_[i8+4],force_[i8+5],force_[i8+6],force_[i8+7]  );
         float err2 = sq(force [i8  ]-force_[i8  ]) + sq(force [i8+1]-force_[i8+1]) + sq(force [i8+2]-force_[i8+2]) + sq(force [i8+3]-force_[i8+3])
                    + sq(force [i8+4]-force_[i8+4]) + sq(force [i8+5]-force_[i8+5]) + sq(force [i8+6]-force_[i8+6]) + sq(force [i8+7]-force_[i8+7]);
-        if(err2 > 1e-6){
+        if(!(err2 < 1e-6)){
             printf(" incorrect force on molecule %i err2 = %g \n", i, err2 );
             exit(0);
         }
     }
 
-
     //exit(0);
-
 
 }
 
@@ -193,6 +193,15 @@ void TestApp_clRigidMolecule::draw(){
             for(int itr=0;itr<per_frame; itr++){
                 cl.upload(0); cl.upload(1);
                 task1->enque();
+                clFinish(cl.commands);
+                cl.download(2);
+                move_leap_frog( nMols, pos, vel, force, dt, damp );
+            }
+            break;
+        case 3:
+            for(int itr=0;itr<per_frame; itr++){
+                cl.upload(0); cl.upload(1);
+                task2->enque();
                 clFinish(cl.commands);
                 cl.download(2);
                 move_leap_frog( nMols, pos, vel, force, dt, damp );

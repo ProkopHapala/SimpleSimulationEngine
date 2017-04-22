@@ -17,7 +17,9 @@ constexpr float R_MAX = 1.8;
 constexpr float R2MAX = R_MAX*R_MAX;
 
 constexpr int nAtoms = 8;
+//constexpr int nMols  = 8;
 constexpr int nMols  = 256;
+//constexpr int nMols  = 1024;
 //constexpr int nMols  = 64;
 //constexpr int nMols  = 128;
 float pos   [nMols*8];
@@ -181,7 +183,9 @@ void RBodyForce( int nMols, int nAtoms, float * pos, float * force, Vec3f * atom
                     //printf( "(%i,%i) (%g,%g,%g)\n",i,j,  f.x, f.y, f.z );
                     //if((iatom==2)&&(imol==2)){
                     //    //printf( "(%i,%i) (%g,%g,%g) (%g,%g,%g) \n", jmol,j, atomsT[j].x,atomsT[j].y,atomsT[j].z,  r0, eps, q );
-                    //    printf( "(%i,%i) (%g,%g,%g) (%g,%g,%g) \n", jmol,jatom, atomsT[j].x,atomsT[j].y,atomsT[j].z,  f.x, f.y, f.z );
+                    //    //printf( "(%i,%i) (%g,%g,%g) (%g,%g,%g) \n", jmol,jatom, atomsT[j].x,atomsT[j].y,atomsT[j].z,  f.x, f.y, f.z );
+                    //    Vec3f dp = atomsT[j]-p;
+                    //    printf( "(%i,%i) (%g,%g,%g) (%g,%g,%g) \n", jmol,jatom, dp.x,dp.y,dp.z,  f.x, f.y, f.z );
                     //}
                     j++;
                 }
