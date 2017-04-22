@@ -6,8 +6,10 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
-#define R2SAFE  1.0e-8
-#define F2MAX   10.0
+#define R2SAFE  1.0e-8f
+#define F2MAX   10.0f
+
+#define F_POS_VS_ROT   1.0f
 
 //  ============== Globals
 
@@ -16,6 +18,7 @@ constexpr float R2MAX = R_MAX*R_MAX;
 
 constexpr int nAtoms = 8;
 constexpr int nMols  = 256;
+//constexpr int nMols  = 64;
 //constexpr int nMols  = 128;
 float pos   [nMols*8];
 float vel   [nMols*8];
@@ -27,49 +30,24 @@ float atomsT_[nAtoms*nMols*4];
 
 Vec3f forceAtomT[nAtoms*nMols];
 
-//Vec3f molAtoms   [nAtoms*3] = { 0.0f,0.0f,0.0f,   1.0f,0.0f,0.0f,   0.0f,1.0f,0.0f,   0.0f,0.0f,1.0f  };
-//Vec3f molAtoms     [nAtoms] = { 1.0f,1.0f,1.0f,   -1.0f,-1.0f,1.0f,   -1.0f,1.0f,-1.0f,   1.0f,-1.0f,-1.0f  };
-//Vec3f molAtoms     [nAtoms] = { 0.5f,0.5f,0.5f,   -0.5f,-0.5f,0.5f,   -0.5f,0.5f,-0.5f,   0.5f,-0.5f,-0.5f  };
-
-//Vec3f molAtoms     [nAtoms] = {
-//    +0.5f,+0.5f,+0.5f,   -0.5f,-0.5f,+0.5f,   -0.5f,+0.5f,+0.5f,  +0.5f,-0.5f,+0.5f,
-//    +0.5f,+0.5f,-0.5f,   -0.5f,-0.5f,-0.5f,   -0.5f,+0.5f,-0.5f,  +0.5f,-0.5f,-0.5f
-//};
-
-//Vec3f molAtoms     [nAtoms] = {
-//    +1.0f,+0.5f,+0.0f,   +1.0f,-0.5f,+0.0f,
-//    +0.5f,+0.5f,+0.0f,   +0.5f,-0.5f,+0.0f,
-//    -0.5f,+0.5f,+0.0f,   -0.5f,-0.5f,+0.0f,
-//    -1.0f,+0.5f,+0.0f,   -1.0f,-0.5f,+0.0f
-//};
-
-
-/*
-Vec3f molAtoms     [nAtoms] = {
-    +0.75f,+0.5f,+0.0f,   +0.75f,-0.5f,+0.0f,
-    +0.25f,+0.5f,+0.0f,   +0.25f,-0.5f,+0.0f,
-    -0.25f,+0.5f,+0.0f,   -0.25f,-0.5f,+0.0f,
-    -0.75f,+0.5f,+0.0f,   -0.75f,-0.5f,+0.0f
-};
-*/
-
-
-float molAtoms[nAtoms*6] = {
--0.00000f,  0.00000f,  1.34064,    1.908f,  0.00373f, +0.2f,    // C
- 0.00000f,  0.00000f,  0.13029,    1.6612,	0.00911f, -0.2f,    // O
--1.15325f,  0.00000f,  2.14769,    1.780f,	0.00737f, -0.2f,    // N
--1.05756f,  0.00000f,  3.14399,    1.487f,	0.00068f, +0.1f,    // H
--2.14597f,  0.00000f,  1.88185,    1.487f,	0.00068f, +0.1f,    // H
- 1.15325f,  0.00000f,  2.14769,    1.780f,	0.00737f, -0.2f,    // N
- 1.05756f,  0.00000f,  3.14399,    1.487f,	0.00068f, +0.1f,    // H
- 2.14597f,  0.00000f,  1.88185,    1.487f,	0.00068f, +0.1f     // H
+float molecule[nAtoms*8] = {
+ 0.00000f,	0.00000f,	 0.00000f,   1.908f,    0.00373f, +0.2f,    0.0f,0.0f,   // C
+ 0.00000f,	0.00000f,	-1.21035f,   1.6612,	0.00911f, -0.2f,    0.0f,0.0f,   // O
+-1.15325f,	0.00000f,	 0.80705f,   1.780f,	0.00737f, -0.2f,    0.0f,0.0f,   // N
+-1.05756f,	0.00000f,	 1.80335f,   1.487f,	0.00068f, +0.1f,    0.0f,0.0f,   // H
+-2.14597f,	0.00000f,	 0.54121f,   1.487f,	0.00068f, +0.1f,    0.0f,0.0f,   // H
+ 1.15325f,	0.00000f,	 0.80705f,   1.780f,	0.00737f, -0.2f,    0.0f,0.0f,   // N
+ 1.05756f,	0.00000f,	 1.80335f,   1.487f,	0.00068f, +0.1f,    0.0f,0.0f,   // H
+ 2.14597f,	0.00000f,	 0.54121f,   1.487f,	0.00068f, +0.1f,    0.0f,0.0f    // H
 };
 
+void prepareMol(){
+    for(int i=0; i<nAtoms; i++){
+        int i8        = i<<3;
+        molecule[i8+4] = sqrt(molecule[i8+4]);
+    }
+}
 
-//Vec3f molAtoms     [nAtoms] = { 1.0f,0.0f,0.0f,   -1.0f,0.0f,0.0f  };
-//Vec3f molAtoms     [nAtoms] = { 2.0f,0.0f,0.0f };
-
-float molAtoms_[nAtoms*4];
 
 void initParticles( int n, float * pos, double step, double drnd ){
     float root_n = pow(n,0.33333);
@@ -118,6 +96,16 @@ inline void addAtomicForceLJ( const Vec3f& dp, Vec3f& f, float C6, float C12 ){
     f.add_mul( dp, fr );
 }
 
+inline void addAtomicForceLJQ( const Vec3f& dp, Vec3f& f, float r0, float eps, float q ){
+    //Vec3f dp; dp.set_sub( p2, p1 );
+    float ir2  = 1/( dp.norm2() + R2SAFE );
+    float ir   = sqrt(ir2);
+    float ir2_ = ir2*r0*r0;
+    float ir6  = ir2_*ir2_*ir2_;
+    float fr   = ( ( 1 - ir6 )*ir6*12*eps + ir*q*-14.3996448915f )*ir2;
+    f.add_mul( dp, fr );
+}
+
 inline void addAtomicForceR24( const Vec3f& dp, Vec3f& f, float C2, float C4 ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     float ir2 = 1/( dp.norm2() + R2SAFE );
@@ -136,70 +124,77 @@ inline void addAtomicForceSpring( const Vec3f& dp, Vec3f& f, float k ){
     f.add_mul( dp, k );
 }
 
-void transformAtoms( const Vec3f& pos, const Quat4f& rot, int npoints, Vec3f * points, Vec3f * Tpoints ){
-    // https://blog.molecular-matters.com/2013/05/24/a-faster-quaternion-vector-multiplication/
-    Mat3f T;
-    rot.toMatrix( T);
-    for( int i=0; i<npoints; i++ ){
-        Vec3f Tp;
-        T.dot_to_T(   points[i],  Tp ); // this is correct as far as I know
-        //T.dot_to(   points[i],  Tp );
-        Tpoints[i].set_add( pos, Tp  );
-    }
-}
-
-void transformAtoms_noMat( const Vec3f& pos, const Quat4f& rot, int npoints, Vec3f * points, Vec3f * Tpoints ){
-    for( int i=0; i<npoints; i++ ){
-        Vec3f Tp;
-        //printf( "%i (%g,%g,%g) (%g,%g,%g)\n", i, rot.x, rot.y, rot.z, rot.w,   points[i].x, points[i].y, points[i].z  );
-        rot.transformVec(points[i],Tp);
-        //printf( "%i (%g,%g,%g,%g) (%g,%g,%g)\n", i, rot.x, rot.y, rot.z, rot.w,   points[i].x, points[i].y, points[i].z );
-        //printf( "%i (%g,%g,%g,%g) (%g,%g,%g) (%g,%g,%g)\n", i, rot.x, rot.y, rot.z, rot.w,   points[i].x, points[i].y, points[i].z, Tp.x,Tp.y,Tp.z  );
-        Tpoints[i].set_add( pos, Tp  );
-    }
-}
-
-void transformAllAtoms( int nMols, int nAtoms, float * pos, Vec3f * molAtoms, Vec3f * atomsT ){
-    int iatom0 = 0;
-    for(int i=0; i<nMols; i++){
-        int i8 = i<<3;
+void transformAllAtoms( int nMols, int nAtoms, float * pose, float * molecule, Vec3f * atomsT ){
+    int i = 0;
+    for(int imol=0; imol<nMols; imol++){
+        int im8 = imol<<3;
         //transformAtoms( *(Vec3f*)(pos+i8), *(Quat4f*)(pos+i8+4), nAtoms, molAtoms, atomsT+iatom0 );
-        transformAtoms_noMat( *(Vec3f*)(pos+i8), *(Quat4f*)(pos+i8+4), nAtoms, molAtoms, atomsT+iatom0 );
-        iatom0  += nAtoms;
+        //transformAtoms_noMat( *(Vec3f*)(pos+i8), *(Quat4f*)(pos+i8+4), nAtoms, (Vec3f*)(molecule+i8), atomsT+iatom0 );
+        Vec3f  pos  = *((Vec3f* )(pose+im8  ));
+        Quat4f rot  = *((Quat4f*)(pose+im8+4));
+        Mat3f T; rot.toMatrix(T);
+        for( int j=0; j<nAtoms; j++ ){
+            //int j8 = j<<3;
+            //Vec3f p = *(Vec3f*)(molecule+(j<<3));
+            Vec3f Tp;
+            // using matrix
+            T.dot_to_T( *(Vec3f*)(molecule+(j<<3)), Tp );
+            atomsT[i].set_add( pos, Tp  );
+            //printf( "(%i,%i) (%g,%g,%g) (%g,%g,%g)\n",   imol,i,   p.x, p.y, p.z,  Tp.x, Tp.y, Tp.z );
+            // no matrix
+            //rot.transformVec(points[i],Tp);
+            //Tpoints[i].set_add( pos, Tp  );
+            i++;
+        }
     }
+    //exit(0);
 }
 
-void RBodyForce( int nMols, int nAtoms, float * pos, float * force, Vec3f * atomsT, Vec3f * molAtoms ){
+void RBodyForce( int nMols, int nAtoms, float * pos, float * force, Vec3f * atomsT, float * molecule ){
     int i=0;
     for(int imol=0; imol<nMols; imol++){
         for(int iatom=0; iatom<nAtoms; iatom++){
             Vec3f f; f.set(0.0f);
             //f.set(0.0f,0.1f,0.0f);
+            float * atomi = molecule +(iatom<<3);
+            float ri = atomi[3];
+            float ei = atomi[4];
+            float qi = atomi[5];
             Vec3f p = atomsT[i];
             int j = 0;
             for(int jmol=0; jmol<nMols; jmol++){
                 if(jmol==imol){ j+=nAtoms; continue; }
                 for(int jatom=0; jatom<nAtoms; jatom++){
+
                     //addAtomicForceSR( p, atomsT[j], f );
                     //addAtomicForceLJ( atomsT[j]-p, f );
                     //addAtomicForceR24( atomsT[j]-p, f, 1.0f, 4.0f );
-                    addAtomicForceLJ( atomsT[j]-p, f, 4.0f, 16.0f );
+                    //addAtomicForceLJ( atomsT[j]-p, f, 4.0f, 16.0f );
                     //addAtomicForceCoulomb( atomsT[j]-p, f );
                     //addAtomicForceSpring( atomsT[j]-p, f );
+                    float * atomj = molecule +(jatom<<3);
+                    float r0  = ri + atomj[3];
+                    float eps = ei * atomj[4];
+                    float q   = qi * atomj[5];
+                    addAtomicForceLJQ( atomsT[j]-p, f, r0, eps, q );
+
                     //printf( "(%i,%i) (%g,%g,%g)\n",i,j,  f.x, f.y, f.z );
-                    //if((iatom==0)&&(imol==0)){
-                    //    //printf( "(%i,%i) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) \n", jmol,j, p.x,p.y,p.z,  atomsT[j].x,atomsT[j].y,atomsT[j].z,  f.x, f.y, f.z );
-                    //    printf( "(%i,%i) (%g,%g,%g) (%g,%g,%g) \n", jmol,j, atomsT[j].x,atomsT[j].y,atomsT[j].z,  f.x, f.y, f.z );
+                    //if((iatom==2)&&(imol==2)){
+                    //    //printf( "(%i,%i) (%g,%g,%g) (%g,%g,%g) \n", jmol,j, atomsT[j].x,atomsT[j].y,atomsT[j].z,  r0, eps, q );
+                    //    printf( "(%i,%i) (%g,%g,%g) (%g,%g,%g) \n", jmol,jatom, atomsT[j].x,atomsT[j].y,atomsT[j].z,  f.x, f.y, f.z );
                     //}
                     j++;
                 }
             }
             //printf( "%i %i %i (%g,%g,%g)\n", imol, iatom, i, f.x, f.y, f.z );
+            //printf(">>(%i,%i) (%f,%f,%f)\n", imol, iatom,  f.x, f.y, f.z );
             forceAtomT[i] = f;
-            ((Quat4f*)(pos+4))->addForceFromPoint( molAtoms[iatom], f, *((Quat4f*)(force+4)) );
-            ((Vec3f *)(force))->add( f );
+            //((Quat4f*)(pos+4))->addForceFromPoint( molAtoms[iatom], f, *((Quat4f*)(force+4)) );
+            ((Quat4f*)(pos+4))->addForceFromPoint( *(Vec3f*)(atomi), f, *((Quat4f*)(force+4)) );
+            ((Vec3f *)(force))->add_mul( f, F_POS_VS_ROT );
             i++;
         }
+
         force+=8;
         pos  +=8;
     }

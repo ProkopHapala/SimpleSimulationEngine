@@ -38,7 +38,7 @@ class TestApp_clRigidMolecule : public AppSDL2OGL_3D {
 	OCLtask *task1,*task2;
 
 	float dt   = 0.01;
-	float damp = 0.998;
+	float damp = 0.999;
 
 	//bool use_GPU = false;
 	int method = 1;
@@ -85,27 +85,20 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
     exit(0);
     */
 
-	initParticles( nMols, pos, 4.0, 0.0 );
+	initParticles( nMols, pos, 5.0, 0.0 );
 	setArray     ( nMols*8, vel,   0.0f );
 	setArray     ( nMols*8, force, 0.0f );
 
-	for(int i=0; i<nAtoms; i++){
-        int i4 = i<<2;
-        molAtoms_[i4  ]=molAtoms[i].x;
-        molAtoms_[i4+1]=molAtoms[i].y;
-        molAtoms_[i4+2]=molAtoms[i].z;
-        molAtoms_[i4+3]=0.0f;
-        printf("%i (%g,%g,%g)\n", i, molAtoms[i].x,molAtoms[i].y,molAtoms[i].z);
-	}
+
 
     // --- OpenCL
     cl.init();
-    cl.newBuffer( "molAtoms",   nAtoms*4,       sizeof(float), (float*)molAtoms_, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
+    cl.newBuffer( "molecule",   nAtoms*8,       sizeof(float), (float*)molecule,  CL_MEM_READ_ONLY );
     cl.newBuffer( "pos",        nMols*8,        sizeof(float), (float*)pos,       CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
     cl.newBuffer( "force",      nMols*8,        sizeof(float), (float*)force,     CL_MEM_READ_WRITE );
     cl.newBuffer( "atomsT",     nAtoms*nMols*4, sizeof(float), (float*)atomsT_,   CL_MEM_READ_WRITE );
     //cl.buffers[1].read_on_finish = true;
-    err = cl.buildProgram( "cl/RigidMolecule.cl" );                                       OCL_checkError(err, "cl.buildProgram");
+    err = cl.buildProgram( "cl/RigidMolecule.cl" );                               OCL_checkError(err, "cl.buildProgram");
 
     /*
     //  check transform
@@ -144,19 +137,21 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
     */
 
 
-    task1 = new OCLtask( &cl, cl.newKernel("RigidMolForce"), 1, nMols*nAtoms, nAtoms );
+    task1 = new OCLtask( &cl, cl.newKernel("RigidMolForceLJQ"), 1, nMols*nAtoms, nAtoms );
     task1->args = { INTarg(nAtoms), BUFFarg(0), BUFFarg(1), BUFFarg(2) };
     task1->print_arg_list();
 
+    printf("==== CPU ==== \n");
     setArray         ( nMols*8, force , 0.0f );
     setArray         ( nMols*8, force_, 0.0f );
-    transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );
-    RBodyForce       ( nMols, nAtoms, pos, force_, atomsT, molAtoms );
-
+    transformAllAtoms( nMols, nAtoms, pos, molecule, atomsT );
+    RBodyForce       ( nMols, nAtoms, pos, force_, atomsT, molecule );
+    printf("==== GPU ==== \n");
     cl.upload(0); cl.upload(1);
     task1->enque();
     clFinish(cl.commands);
     cl.download(2);
+    printf("==== Check results ==== \n");
 
     for(int i=0; i<nMols; i++){
         int i8 = i<<3;
@@ -165,7 +160,7 @@ TestApp_clRigidMolecule::TestApp_clRigidMolecule( int& id, int WIDTH_, int HEIGH
             force_[i8],force_[i8+1],force_[i8+2],force_[i8+3],force_[i8+4],force_[i8+5],force_[i8+6],force_[i8+7]  );
         float err2 = sq(force [i8  ]-force_[i8  ]) + sq(force [i8+1]-force_[i8+1]) + sq(force [i8+2]-force_[i8+2]) + sq(force [i8+3]-force_[i8+3])
                    + sq(force [i8+4]-force_[i8+4]) + sq(force [i8+5]-force_[i8+5]) + sq(force [i8+6]-force_[i8+6]) + sq(force [i8+7]-force_[i8+7]);
-        if(err2 > 1e-8){
+        if(err2 > 1e-6){
             printf(" incorrect force on molecule %i err2 = %g \n", i, err2 );
             exit(0);
         }
@@ -188,13 +183,10 @@ void TestApp_clRigidMolecule::draw(){
     switch(method){
         case 1:
             for(int itr=0;itr<per_frame; itr++){
-                transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );
+                transformAllAtoms( nMols, nAtoms, pos, molecule, atomsT );
                 setArray      ( nMols*8, force, 0.0f );
-                RBodyForce    ( nMols, nAtoms, pos, force, atomsT, molAtoms );
+                RBodyForce    ( nMols, nAtoms, pos, force, atomsT, molecule );
                 move_leap_frog( nMols, pos, vel, force, dt, damp );
-                //task2->enque();
-                //clFinish(cl.commands);
-                //cl.download(0);
             }
             break;
         case 2:
@@ -210,7 +202,7 @@ void TestApp_clRigidMolecule::draw(){
     double fticks = getCPUticks() - t1;
     printf( "%i METHOD %i Ferr= %g T= %g [Mtick] %g [t/op]\n", frameCount*per_frame, method, sqrt(f2err), fticks*1e-6, fticks/(nMols*nMols*nAtoms*nAtoms*per_frame) );
 
-    transformAllAtoms( nMols, nAtoms, pos, molAtoms, atomsT );  // just for visualization
+    transformAllAtoms( nMols, nAtoms, pos, molecule, atomsT );  // just for visualization
 
     glDisable(GL_LIGHTING);
     Mat3f mrot; mrot.setOne();
@@ -228,6 +220,8 @@ void TestApp_clRigidMolecule::draw(){
         Draw::color_of_hash(i+154);
         for(int iatom=0; iatom<nAtoms; iatom++){
             //printf( " %i (%g,%g,%g)  \n", i, atomsT[i].x, atomsT[i].y, atomsT[i].z );
+            //float cq = (*(molecule+(iatom<<3)+5))*3.0f;
+            //glColor3f( 1.0f+cq, 1.0f-fabs(cq), 1.0f-cq );
             Draw3D::drawShape(atomsT[i],mrot,atomView);
             //Draw3D::drawPointCross(atomsT[i],0.1);
            // Draw3D::drawVecInPos(forceAtomT[i]*10.0f,atomsT[i]);
