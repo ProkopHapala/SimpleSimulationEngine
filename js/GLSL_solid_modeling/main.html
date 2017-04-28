@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <!--script src="../libs/three.js"></script-->
+    <!--script src="../libs/dat.gui.min.js"></script-->
+    <!--script id="Primitives" type="x-shader/x-fragment" src="Primitives.glsl"></script-->
+    <!--script id="RayTracer"  type="x-shader/x-fragment" src="RayTracer.glsl"></script-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
+    <!--script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script-->
+    <script src="GLSLscreen.js"></script>
+    <!--div><object data="RayTracer.glsl" id="txtRayTracer"></object></div-->
+    <!--div><object data="Primitives.glsl" id="txtPrimitives"></object></div-->
+
+    <!--iframe src="RayTracer.glsl" id="txtRayTracer"></iframe-->
+    <!--iframe src="Primitives.glsl" id="txtPrimitives"></iframe-->
+    <head>
+        <title>05.10 - Custom fragment shader</title>
+        <style> body { margin: 0; overflow: hidden; } </style>
+    </head>
+    <body onLoad="init_GLSLScreen();">
+        <div style="width: 400px; float: left;">
+            <textarea id="txtScene" cols="60" rows="20" onChange="updateShader(this)">
+vec4 scene( Ray ray ){
+    vec4 hit = vec4( POSITIVE_INF, vec3(0.0) );
+    Sphere SURF1 = Sphere( vec3(0.0,0.0,0.0), 1.0 );
+    Sphere SURF2 = Sphere( vec3(1.0,0.0,0.0), 0.75 );
+    Sphere SURF3 = Sphere( vec3(0.0,1.0,0.0), 0.75 );
+    vec2 ts1;
+    ADD( SURF1 );
+    SUB( SURF2 );
+    SUB( SURF3 );
+    return hit;
+} 
+            </textarea>
+            <object data="RayTracer.glsl" id="txtRayTracer"></object>
+            <object data="Primitives.glsl" id="txtPrimitives"></object>
+        </div>
+        <div style="margin-left: 400px;" id="divLeft"> 
+        
+        </div>
+    </body>
+</html>
