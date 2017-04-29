@@ -32,10 +32,11 @@ void main( ){
         float cn = dot(hit.yzw,nn);
         float c_specular = Lorenz( 100.0*(1.0-clamp( (cn*cn)/dot(nn,nn), 0.0, 1.0)) );
         //-- output
-        gl_FragColor = vec4( (c_diffuse + c_specular*mat.gloss)*mat.color + vec3(0.1,0.1,0.2)*mat.color, 1.0 ); 
+        //gl_FragColor = vec4( (c_diffuse + c_specular*mat.gloss)*mat.color + vec3(0.1,0.1,0.2)*mat.color, 1.0 ); 
         //gl_FragColor = vec4( (hit.yzw+vec3(1.0))*0.5, 1.0 );   
         //gl_FragColor = vec4( vec3(log(hit.x)-2.0), 1.0 );   
-        //gl_FragColor = vec4( sin(hit.x*4.0),sin(hit.x),sin(hit.x*16.0), 1.0 ); 
+        //gl_FragColor = vec4( sin(hit.x*4.0),sin(hit.x),sin(hit.x*16.0), 1.0 );
+        gl_FragColor = OUTPUT_PIXEL 
     }else{
         discard;
     }

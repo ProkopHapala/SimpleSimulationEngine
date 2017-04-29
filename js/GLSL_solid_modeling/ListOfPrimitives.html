@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
+    <script src="GLSLscreen.js"></script>
+    <head>
+        <title>05.10 - Custom fragment shader</title>
+        <style> body { margin: 0; overflow: scroll;; } </style>
+    </head>
+    <script>function initThis(){ init_GLSLScreen("GLScreen","txtScene"); } </script>
+    <body onLoad="initThis()">
+        <select id="slPrimitives" onChange="selectPrimitive(this)">
+          <option value="Sphere   SURF1 = Sphere  ( vec3(0.0,0.0,0.0), 1.0 );"     selected="selected"  >sphere   </option>
+          <option value="Cylinder SURF1 = Cylinder( vec3(0.0,-1.0,0.0), vec3(0.0,1.0,0.0), 0.5      );" >cylinder </option>
+          <option value="Cone     SURF1 = Cone    ( vec3(0.0,0.0,-1.0), vec3(0.0,0.0,1.0), 1.0, 0.9 );" >cone     </option>
+          <option value="Sphere   SURF1 = Sphere  ( vec3(0.0,0.0,0.0), 1.0 );"                          >capsula  </option>
+        </select>
+        <select id="slPrimitives" onChange="selectPixelMap(this)">
+          <option value="vec4( (c_diffuse + c_specular*mat.gloss)*mat.color + vec3(0.1,0.1,0.2)*mat.color, 1.0 );"  selected="selected" >phong  </option>
+          <option value="vec4( vec3(   (hit.x-8.0)*0.25  ), 1.0 ); "                                                                    >t      </option>
+          <option value="vec4( vec3(log(hit.x-8.0)       ), 1.0 ); "                                                                    >log(t) </option>
+          <option value="vec4( sin(hit.x*10.0),log(hit.x-8.0),sin(hit.x*100.0), 1.0 );"                                                 >sin(t) </option>
+          <option value="vec4( sin((ray.o+ray.d*hit.x)*100.0), 1.0 );"                                                                  >sin(p) </option>
+          <option value="vec4( hit.yzw*0.5 + 0.5, 1.0 );"                                                                                         >normal </option>
+        </select>
+        <div style="width: 640px;height: 480px;" id="GLScreen"></div>
+        <div style="width: 1200px;">
+             Scene Source    </BR> <textarea id="txtScene" cols="40" rows="5" onChange="updateShader(this)"></textarea></BR> 
+             RayTracer.glslf </BR> <object data="RayTracer.glslf"  id="txtRayTracer"></object> </BR> 
+             Primitives.glslf</BR> <object data="Primitives.glslf" id="txtPrimitives"></object> </BR> 
+        </div>
+        <script>selectPrimitive(document.getElementById("slPrimitives"));</script>
+    </body>
+</html>

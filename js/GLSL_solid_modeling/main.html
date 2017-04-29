@@ -1,24 +1,16 @@
 <!DOCTYPE html>
 <html>
-    <!--script src="../libs/three.js"></script-->
-    <!--script src="../libs/dat.gui.min.js"></script-->
-    <!--script id="Primitives" type="x-shader/x-fragment" src="Primitives.glsl"></script-->
-    <!--script id="RayTracer"  type="x-shader/x-fragment" src="RayTracer.glsl"></script-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
     <!--script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script-->
     <script src="GLSLscreen.js"></script>
-    <!--div><object data="RayTracer.glsl" id="txtRayTracer"></object></div-->
-    <!--div><object data="Primitives.glsl" id="txtPrimitives"></object></div-->
-
-    <!--iframe src="RayTracer.glsl" id="txtRayTracer"></iframe-->
-    <!--iframe src="Primitives.glsl" id="txtPrimitives"></iframe-->
     <head>
         <title>05.10 - Custom fragment shader</title>
         <style> body { margin: 0; overflow: hidden; } </style>
     </head>
-    <body onLoad="init_GLSLScreen();">
-        <div style="width: 400px; float: left;">
-            <textarea id="txtScene" cols="60" rows="20" onChange="updateShader(this)">
+    <script>function initThis(){ init_GLSLScreen("GLScreen","txtScene"); } </script>
+    <body onLoad="initThis()">
+        <div style="width: 300px; float: left;">
+            <textarea id="txtScene" cols="40" rows="20" onChange="updateShader(this)">
 vec4 scene( Ray ray ){
     vec4 hit = vec4( POSITIVE_INF, vec3(0.0) );
     Sphere SURF1 = Sphere( vec3(0.0,0.0,0.0), 1.0 );
@@ -31,11 +23,9 @@ vec4 scene( Ray ray ){
     return hit;
 } 
             </textarea>
-            <object data="RayTracer.glsl" id="txtRayTracer"></object>
-            <object data="Primitives.glsl" id="txtPrimitives"></object>
+            <object data="RayTracer.glslf" id="txtRayTracer"></object>
+            <object data="Primitives.glslf" id="txtPrimitives"></object>
         </div>
-        <div style="margin-left: 400px;" id="divLeft"> 
-        
-        </div>
+        <div style="margin-left: 400px; width: 640px;height: 480px;" id="GLScreen"></div>
     </body>
 </html>
