@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
+    <script src="GLSLscreen.js"></script>
+    <head>
+        <title>05.10 - Custom fragment shader</title>
+        <style> body { margin: 0; overflow: scroll;; } </style>
+    </head>
+    
+    <script>
+        function getShaderCode(element){
+            var shader_code = "";
+	        //shader_code += element.value;
+	        shader_code += document.getElementById("srcPlanet").contentDocument.body.childNodes[0].textContent.replace( "TURBULENCE_FUNCTION", element.value );
+	        //console.log(shader_code);
+	        return shader_code;
+        }
+        function updateSurface(element){ updateShader(getShaderCode(element)); }
+        function initThis(){ 
+            //console.log( document.getElementById("txtSurface") );
+            init_GLSLScreen("GLScreen",getShaderCode(document.getElementById("txtSurface"))); 
+        } 
+    </script>
+    <body onLoad="initThis()">
+        <div style="width: 640px;height: 480px;" id="GLScreen"></div>
+        <div style="width: 1200px;">
+             Scene Source    </BR> 
+             <textarea id="txtSurface" cols="40" rows="5" onChange="updateSurface(this)">
+vec2 v      = _st;
+vec2 shift  = vec2(10.0);
+float a     = 0.3;
+for (int i  = 0; i < 8; ++i) {
+    float phi = noise(_st) * 6.28 * 0.5;
+    v      += a * vec2( cos(phi), sin(phi) );
+    _st     = const_rot * _st * 1.6 + shift;
+    a      *= 0.8;
+}
+             </textarea></BR> 
+             RayTracer.glslf </BR> <object data="Planet.glslf" id="srcPlanet">
+             </object> </BR> 
+        </div>
+    </body>
+</html>
