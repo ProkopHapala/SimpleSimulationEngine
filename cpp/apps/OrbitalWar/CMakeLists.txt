@@ -5,8 +5,13 @@ add_executable( orbitEditor
 	$<TARGET_OBJECTS:SDL2OGL>
 	$<TARGET_OBJECTS:Splines>
 )
-
 target_link_libraries( orbitEditor ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
+add_executable( test_OptContinuousThrust
+	test_OptContinuousThrust
+	$<TARGET_OBJECTS:SDL2OGL>
+)
+target_link_libraries( test_OptContinuousThrust  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_custom_command(
     TARGET ${PROJECT_NAME} orbitEditor
