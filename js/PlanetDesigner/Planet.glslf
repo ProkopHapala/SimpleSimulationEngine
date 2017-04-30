@@ -15,22 +15,16 @@
 
 */
 
-
-
-
 #define PI 3.14159275358979
 #define POSITIVE_INF 1e+8
 #define SKY_DIST     1e+7
 #define PREC_STEP    1e-5
-
-
 
 vec2 mul_complx( vec2 a, vec2 b ){
     return vec2( a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x );
 }
 
 
-/*
 #define HASHSCALE1 .1031
 #define HASHSCALE3 vec3(.1031, .1030, .0973)
 #define HASHSCALE4 vec4(1031, .1030, .0973, .1099)
@@ -67,14 +61,6 @@ vec2 hashSin22( vec2 p ){
 			  dot(p,vec2(269.5,183.3)));
 	return fract(sin(p)*43758.5453123);
 }
-
-vec4 surface_color( vec2 uv ){
-    //return vec4( sin(uv*100.0), 1.0,1.0 );
-    return vec4( vec3(hash12(uv)) ,1.0 );
-}
-
-*/
-
 
 #define NUM_OCTAVES 8
 
@@ -115,8 +101,14 @@ float fbm ( in vec2 _st) {
     return v;
 }
 
-vec2 fbm_dist( in vec2 _st ){
+vec4 surface_color( vec2 uv ){
+    //return vec4( sin(uv*100.0), 1.0,1.0 );
+    return vec4( vec3(fbm(uv)) ,1.0 );
+}
 
+
+
+vec2 fbm_dist( in vec2 _st ){
     vec2 v      = _st;
     vec2 shift  = vec2(10.0);
     float a     = 0.3;
@@ -180,12 +172,11 @@ void main( ){
     mat3 camMat_ = camMat;
 	vec3 uvz = vec3( 2.0 * gl_FragCoord.xy / resolution.xy - 1.0, 5.0 );
 	
-	/*
+	
     vec3 d  = normalize(vec3(resolution.x/resolution.y * uvz.x, uvz.y, -uvz.z ) );
     Ray ray = Ray(camMat_*vec3(0.0, 0.0, 10.0 ), camMat_*d);
     
-    // === Scene  ( planet, rings?, moon? )
-	
+    // === Scene  ( planet, rings?, moon? )	
 	Sphere planet = Sphere( vec3(0.0,0.0,0.0), 2.0 );
 	float t = ray_t( planet, ray );
 	vec3 p = ray.o + ray.d*t;
@@ -195,40 +186,39 @@ void main( ){
     if( t<SKY_DIST ){
         //gl_FragColor = vec4( sin(t*4.0),sin(t),sin(t*16.0), 1.0 );
         //gl_FragColor = vec4( sin(p*100.0), 1.0 );
-        //gl_FragColor = surface_color(uv);
-
+        gl_FragColor = surface_color(uv);
     }else{
         discard;
     }
     
-    */
     
     //float c = hash12( hash22( uvz.xy + 15454.0 ) );
     //float c = hashSin22( uvz.xy ).x;
     //float c  = fbm( uvz.xy );
-    
-    
     //vec2  uv  = fbm_dist( uvz.xy );
+    //float c   = ( uvz.xy );
+    //float c = hash12( uvz.xy + 15454.0 );
+    //gl_FragColor =  vec4( c,c,c,1.0 ); 
     
+    
+    
+    // -------------- Scheodinger wirpools
+    /*
     vec2  uv = uvz.xy;
     //uv += sin(uv*6.0 + 1.0);
     vec2  psi = sin( uv*10.0 + mul_complx(sin(uv*20.0),uv) ); 
     //gl_FragColor =  vec4( 0.01/(psi*psi), 0.5, 1.0 );
-    
     float phi = 1.0/( length(psi) + 0.01 );
     vec2  d   = psi*phi;
     vec2  ur  = vec2( cos(phi), sin(phi) );
-    
     d = mul_complx( d, ur );
     d = mul_complx( d, ur );
     d = mul_complx( d, ur );
+    gl_FragColor =  vec4( sin((uv+d*0.3)*vec2(1.0,5.0)), 0.5, 1.0 );   
+    */
     
-    gl_FragColor =  vec4( sin((uv+d*0.1)*vec2(1.0,5.0)), 0.5, 1.0 );   
     
-    //float c   = ( uvz.xy );
-    
-    //float c = hash12( uvz.xy + 15454.0 );
-    //gl_FragColor =  vec4( c,c,c,1.0 ); 
+
 }
 
 

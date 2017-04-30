@@ -8,13 +8,19 @@ var renderer;
 var scene;
 var camera;
 
-var uniforms = {};
+var uniforms = {
+		time      : { value: 1.0 },
+		resolution: { value: new THREE.Vector2() },
+		camMat    : { value: new THREE.Matrix3() },
+		//freq0: { value: new THREE.Vector2() }
+		//color_DEBUG : { value : 0.7 }
+		//color_DEBUG : { value : new THREE.Vector2() }
+};
+
 var control;
 var mousePosOld;
-
 var basicShader;
 var mesh;
-
 var str_PixelMap = "vec4( (c_diffuse + c_specular*mat.gloss)*mat.color + vec3(0.1,0.1,0.2)*mat.color, 1.0 );";
 
 // ---- Functions
@@ -78,11 +84,6 @@ function init_GLSLScreen(screenBoxId,shader_code){
 
     // SHADER
     basicShader = THREE.ShaderLib['normal'];
-	uniforms = {
-			time      : { value: 1.0 },
-			resolution: { value: new THREE.Vector2() },
-			camMat    : { value: new THREE.Matrix3() }
-	};
 	uniforms.resolution.value.x = renderer.domElement.width;
 	uniforms.resolution.value.y = renderer.domElement.height;
     updateShader( shader_code );

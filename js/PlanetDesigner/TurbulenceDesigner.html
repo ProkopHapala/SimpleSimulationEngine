@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
+    <script src="GLSLscreen.js"></script>
+    <head>
+        <title>05.10 - Custom fragment shader</title>
+        <style> body { margin: 0; overflow: scroll;; } </style>
+    </head>
+    
+    <script>
+        function getShaderCode(){
+            var shader_code = "";
+	        //shader_code += document.getElementById("srcPlanet").contentDocument.body.childNodes[0].textContent.replace( "TURBULENCE_FUNCTION", element.value );
+	        shader_code  = document.getElementById("srcPlanet").contentDocument.body.childNodes[0].textContent;
+	        shader_code  = shader_code.replace( "__NWRAPS__",    document.getElementById("inp_NWRAPS").value );
+	        shader_code  = shader_code.replace( "__VIEW_FUNC__", document.getElementById("slRender").value );
+	        return shader_code;
+        }
+        function updateSurface(){ updateShader(getShaderCode()); }
+        function initThis(){ 
+            initUniforms();
+            init_GLSLScreen("GLScreen",getShaderCode(document.getElementById("txtSurface"))); 
+            updateUniforms();
+        } 
+        function initUniforms(){
+            uniforms['color_DEBUG'] = { value : new THREE.Vector3() };
+            uniforms['freq0']   = { value : new THREE.Vector2() };
+            uniforms['freqFac'] = { value : new THREE.Vector2() };
+            uniforms['scl']     = { value : new THREE.Vector2() };
+            uniforms['amp']     = { value : new THREE.Vector2() };
+        }
+        function updateUniforms(){
+            uniforms.freq0.value.set(
+                document.getElementById("inp_freq0_x").value,
+                document.getElementById("inp_freq0_y").value
+            ); //uniforms.freq0.needsUpdate = true;    
+            uniforms.freqFac.value.set(
+                document.getElementById("inp_freqFac_x").value,
+                document.getElementById("inp_freqFac_y").value
+            );   
+            uniforms.scl.value.set(
+                document.getElementById("inp_scl_x").value,
+                document.getElementById("inp_scl_y").value
+            );   
+            uniforms.amp.value.set(
+                document.getElementById("inp_amp_x").value,
+                document.getElementById("inp_amp_y").value
+            );   
+        }
+    </script>
+    <body onLoad="initThis()">
+        <div style="width: 640px;height: 480px;" id="GLScreen"></div>
+        <p> 
+        <select id="slRender" onChange="updateSurface()">
+            <option value="vec4( vec3(o.z*0.5)+0.5, 1.0 )"  selected="selected" >value      </option>
+            <option value="vec4(      o.xy*0.05+0.5,0.5, 1.0 ); "               >derivative </option>
+            <option value="vec4( vec3(o.xy*0.02,0.0)+vec3(o.z*0.5)+0.2, 1.0 );" >combined   </option>
+        </select>
+            <input id="inp_NWRAPS"  type="number" value=4 step=1 min=1 onchange="updateSurface()">  NWRAPS 
+        </p>
+        <p> 
+            <input id="inp_freq0_x"  type="number" value=1.0 step=0.05 onchange="updateUniforms()"> 
+            <input id="inp_freq0_y"  type="number" value=1.0 step=0.05 onchange="updateUniforms()"> 
+            initial frequency  
+        </p>
+        <p> 
+            <input id="inp_freqFac_x"  type="number" value=1.0 step=0.05 onchange="updateUniforms()"> 
+            <input id="inp_freqFac_y"  type="number" value=1.0 step=0.05 onchange="updateUniforms()"> 
+            frequency mult. factor 
+        </p>
+        <p> 
+            <input id="inp_scl_x"  type="number" value=1.0 step=0.05 onchange="updateUniforms()"> 
+            <input id="inp_scl_y"  type="number" value=1.0 step=0.05 onchange="updateUniforms()"> 
+            scaling
+        </p>
+        <p> 
+            <input id="inp_amp_x"  type="number" value=0.9 step=0.05 onchange="updateUniforms()"> 
+            <input id="inp_amp_y"  type="number" value=0.9 step=0.05 onchange="updateUniforms()"> 
+            wrap-func amplitude 
+        </p>
+        <div style="width: 1200px;">
+             Surface function </BR> 
+             <textarea id="txtSurface" cols="40" rows="5" onChange="updateSurface()">
+             </textarea></BR> 
+             Shader Template </BR> 
+             <!--object data="Planet.glslf" id="srcPlanet"></object--> </BR> 
+             <object data="WrapFun3.glslf" id="srcPlanet"></object> </BR> 
+             
+        </div>
+    </body>
+</html>
