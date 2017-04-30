@@ -12,6 +12,7 @@
 #include "SDL_utils.h"
 
 #include "CubicBSpline.h"
+//#include "TrajectoryVariation.h"
 
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
@@ -22,7 +23,8 @@
 // /home/prokop/Dropbox/MyDevSW/Processing_arch/Kosmos/_Orbital/OrbitalOpt2D_cubicBsplineFIRE_ends
 
 constexpr int nCP = 10;
-double CPs[nCP] = { 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0};
+//double CPs[nCP] = { 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0};
+double CPs[nCP] = { 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
 
 class TestApp_OptContinuousThrust : public AppSDL2OGL_3D {
@@ -55,7 +57,7 @@ void TestApp_OptContinuousThrust::draw(){
 
 	glDisable ( GL_LIGHTING );
 
-    int nsub = 10;
+    int nsub = 50;
     double du =  1.0d/nsub;
     double x    = 0;
     double oy   = 0;
@@ -77,9 +79,18 @@ void TestApp_OptContinuousThrust::draw(){
         //double c0 = CPs[i+3];
         //printf( " >> CP[%i] \n", i );
         for(int j=0; j<nsub; j++){
-            double   y = CubicBSpline::val  ( u, c0, c1, c2, c3 ); glColor3f( 0.0,0.0,0.0 ); Draw2D::drawLine_d( {x-du,  oy},{x,  y} );
-            double  dy = CubicBSpline::dval ( u, c0, c1, c2, c3 ); glColor3f( 0.0,0.0,1.0 ); Draw2D::drawLine_d( {x-du, ody},{x, dy} );
-            double ddy = CubicBSpline::ddval( u, c0, c1, c2, c3 ); glColor3f( 1.0,0.0,0.0 ); Draw2D::drawLine_d( {x-du,oddy},{x,ddy} );
+            double   y = CubicBSpline::val  ( u, c0, c1, c2, c3 );
+            //double  dy = CubicBSpline::dval ( u, c0, c1, c2, c3 );
+            //double ddy = CubicBSpline::ddval( u, c0, c1, c2, c3 );
+
+            double b0,b1,b2,b3;
+            //CubicBSpline::  basis( u, b0, b1, b2, b3 ); double   y = b0*c0 + b1*c1 + b2*c2 + b3*c3;
+            CubicBSpline:: dbasis( u, b0, b1, b2, b3 ); double  dy = b0*c0 + b1*c1 + b2*c2 + b3*c3;
+            CubicBSpline::ddbasis( u, b0, b1, b2, b3 ); double ddy = b0*c0 + b1*c1 + b2*c2 + b3*c3;
+
+            glColor3f( 0.0,0.0,0.0 ); Draw2D::drawLine_d( {x-du,  oy},{x,  y} );
+            glColor3f( 0.0,0.0,1.0 ); Draw2D::drawLine_d( {x-du, ody},{x, dy} );
+            glColor3f( 1.0,0.0,0.0 ); Draw2D::drawLine_d( {x-du,oddy},{x,ddy} );
 
             double  dynum = (y-  oy)/du; glColor3f( 0.0,0.7,0.7 ); Draw2D::drawLine_d( {x-du,   odynum},{x,   dynum} );
             double ddynum = (dy-ody)/du; glColor3f( 0.7,0.7,0.0 ); Draw2D::drawLine_d( {x-du,  oddynum},{x,  ddynum} );
