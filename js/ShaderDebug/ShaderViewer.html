@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js"></script>
+    <script src="../PlanetDesigner/GLSLscreen.js"></script>
+    <head>
+        <title>05.10 - Custom fragment shader</title>
+        <style> body { margin: 0; overflow: scroll;; } </style>
+    </head>
+    
+    <script>
+        shader_name = ""
+        function getShaderCode(){
+            var shader_code = "";
+            shader_name =  document.getElementById( "slShader" ).value;
+            s = "src"+shader_name;
+            console.log(s);
+	        shader_code += document.getElementById( s ).contentDocument.body.childNodes[0].textContent;
+	        return shader_code;
+        }
+        function updateSurface(){ updateShader(getShaderCode()); }
+        function initThis(){ 
+            init_GLSLScreen("GLScreen",getShaderCode()); 
+        } 
+    </script>
+    <body onLoad="initThis()">
+        <div style="width: 640px;height: 480px;" id="GLScreen"></div>
+        <div style="width: 1200px;">
+            <select id="slShader" onChange="updateSurface()">
+                <option value="Vorticity" >Vorticity</option>
+            </select>
+            <BR>
+            <object data="Vorticity.glslf" id="srcVorticity"></object> </BR>  
+        </div>
+    </body>
+</html>
