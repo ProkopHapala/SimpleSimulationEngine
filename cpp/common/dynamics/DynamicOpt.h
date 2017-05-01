@@ -40,6 +40,7 @@ class DynamicOpt{
 	double kickStart    = 1.0d;
 
 	double dt_max       = dt;
+	double dt_min       = dt*0.1;
 	double damp_max     = damping;
 
 
@@ -82,17 +83,19 @@ class DynamicOpt{
 	}
 
 	inline void deallocate( ){
-		delete pos;
-		delete vel;
-		delete force;
+		delete[] pos;
+		delete[] vel;
+		delete[] force;
+		delete[] invMasses;
 	}
 
-	inline void setInvMass( double d){ for(int i=0; i<n; i++){ invMasses[i]=d;} }
+	inline void setInvMass( double d){ if(invMasses==NULL) invMasses = new double[n];  for(int i=0; i<n; i++){ invMasses[i]=d;} }
 	inline void cleanForce( )        { for(int i=0; i<n; i++){ force[i]=0;    } }
 	inline void cleanVel  ( )        { for(int i=0; i<n; i++){ vel  [i]=0;    } }
 
 	inline void initOpt( double dt_, double damp_ ){
 		dt      = dt_max   = dt_;
+		dt_min  = dt_max*0.1;
 		damping = damp_max = damp_;
 		cleanForce( );
 		cleanVel  ( );

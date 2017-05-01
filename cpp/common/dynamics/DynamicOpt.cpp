@@ -66,7 +66,8 @@ void DynamicOpt::move_FIRE(){
 		vf += vi*fi;
 	}
 	if( vf < 0.0 ){
-		dt       = dt * fdec;
+		//dt       = dt * fdec;
+		dt       = fmax( dt * fdec, dt_min );
 	  	damping  = damp_max;
 		lastNeg  = 0;
 		//cleanVel  ( );

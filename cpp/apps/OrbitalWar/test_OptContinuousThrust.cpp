@@ -7,13 +7,18 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+
+#include "Vec3.h"
+#include "Mat3.h"
+
 #include "Draw2D.h"
 #include "Draw3D.h"
-#include "SDL_utils.h"
 
+#include "DynamicOpt.h"
 #include "CubicBSpline.h"
-//#include "TrajectoryVariation.h"
+#include "TrajectoryVariation.h"
 
+#include "SDL_utils.h"
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 #include "testUtils.h"
@@ -22,42 +27,16 @@
 // Java version
 // /home/prokop/Dropbox/MyDevSW/Processing_arch/Kosmos/_Orbital/OrbitalOpt2D_cubicBsplineFIRE_ends
 
-constexpr int nCP = 10;
-//double CPs[nCP] = { 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0};
-double CPs[nCP] = { 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+constexpr int nCP = 20;
+double CPs1D[nCP];
+//double CPs1D[nCP] = { 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 0.0, 0.0, 0.0};
+//double CPs1D[nCP] = { 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
+Vec3d  CPs[nCP];
+Vec3d vCPs[nCP];
+Vec3d fCPs[nCP];
 
-class TestApp_OptContinuousThrust : public AppSDL2OGL_3D {
-	public:
-
-    //DEGUB
-    //Vec3d *  dpos;
-    //Vec3d * ddpos;
-
-	virtual void draw   ();
-	virtual void drawHUD();
-	//virtual void mouseHandling( );
-	//virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
-    //virtual void mouseHandling( );
-
-	TestApp_OptContinuousThrust( int& id, int WIDTH_, int HEIGHT_ );
-
-};
-
-TestApp_OptContinuousThrust::TestApp_OptContinuousThrust( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
-
-}
-
-void TestApp_OptContinuousThrust::draw(){
-    //printf( " ==== frame %i \n", frameCount );
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-
-	glDisable ( GL_LIGHTING );
-
-    int nsub = 50;
+void drawBspline1D( int nsub ){
     double du =  1.0d/nsub;
     double x    = 0;
     double oy   = 0;
@@ -68,10 +47,10 @@ void TestApp_OptContinuousThrust::draw(){
     double oddynum = 0;
     for( int i=0; i<nCP-2; i++ ){
         double u = 0;
-        double c0 = CPs[i  ];
-        double c1 = CPs[i+1];
-        double c2 = CPs[i+2];
-        double c3 = CPs[i+3];
+        double c0 = CPs1D[i  ];
+        double c1 = CPs1D[i+1];
+        double c2 = CPs1D[i+2];
+        double c3 = CPs1D[i+3];
         // spline is in inverse order
         //double c3 = CPs[i  ];
         //double c2 = CPs[i+1];
@@ -101,6 +80,73 @@ void TestApp_OptContinuousThrust::draw(){
             x += du;
         }
     }
+}
+
+
+class TestApp_OptContinuousThrust : public AppSDL2OGL_3D {
+	public:
+
+	DynamicOpt optimizer;
+    //DEGUB
+    //Vec3d *  dpos;
+    //Vec3d * ddpos;
+
+	virtual void draw   ();
+	virtual void drawHUD();
+	//virtual void mouseHandling( );
+	//virtual void eventHandling   ( const SDL_Event& event  );
+	//virtual void keyStateHandling( const Uint8 *keys );
+    //virtual void mouseHandling( );
+
+	TestApp_OptContinuousThrust( int& id, int WIDTH_, int HEIGHT_ );
+
+};
+
+TestApp_OptContinuousThrust::TestApp_OptContinuousThrust( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    double r0 = 1.4;
+    for(int i=0; i<nCP; i++){
+        //CPs[i].set( 0.0, i*1.0, 0.0 );
+        //double r = (1+0.01*i); double x = cos(i*0.5)*r; double y = sin(i*0.5)*r;
+        double z = 0;
+        double r = (1+i); double x = cos(i*0.5)*r; double y = sin(i*0.5)*r; z = 0.5*i*i;
+
+        //double x = (i - 10.0)*1.1; double y = sqrt(r0*r0+x*x) - 2*r0;
+        //double x = (i - 10.0)*1.1; double y = sqrt(r0*r0+x*x)*0.5 - 1.2*r0;
+
+        CPs[i].set( x, y, 0.0 );
+    }
+
+    optimizer.bindArrays( nCP*3, (double*)CPs, (double*)vCPs, (double*)fCPs );
+    optimizer.setInvMass(1.0);
+    optimizer.initOpt( 0.1, 0.9 );
+
+}
+
+void TestApp_OptContinuousThrust::draw(){
+    //printf( " ==== frame %i \n", frameCount );
+    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+	glDisable ( GL_LIGHTING );
+
+    //drawBspline1D( 50.0 );
+
+    //delay = 1000;
+    //delay = 200;
+
+    double sumT2 = getTrajectoryVariation( nCP, CPs, fCPs, 1.0 );
+    printf( "%i sumT2 = %g \n", frameCount, sumT2 );
+
+    optimizer.move_FIRE();
+
+    for(int i=0; i<nCP; i++){
+        Vec3d p = CPs[i];
+        //p.x = i;
+        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( p, 0.1 );
+        glColor3f(0.0f,1.0f,0.0f); Draw3D::drawVecInPos  ( fCPs[i]*3.0, p );
+    }
+    glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( {0.0,0.0,0.0}, 0.5 );
 
     //printf( "camMat.a (%3.3f,%3.3f,%3.3f) \n", camMat.a.x, camMat.a.y, camMat.a.z );
 

@@ -44,12 +44,13 @@ class Mat3TYPE{
 		zx=M.zx; zy=M.zy; zz=M.zz;
 	};
 
-
 	inline void set_outer  ( const VEC& a, const VEC& b ){
 		xx=a.x*b.x; xy=a.x*b.y; xz=a.x*b.z;
 		yx=a.y*b.x; yy=a.y*b.y; yz=a.y*b.z;
 		zx=a.z*b.x; zy=a.z*b.y; zz=a.z*b.z;
-	};;
+	};
+
+	inline void diag_add( TYPE f ){ xx+=f; yy+=f; zz+=f; };
 
 	inline VEC getColx(){ VEC out; out.x = xx; out.y = yx; out.z = zx; return out; };
     inline VEC getColy(){ VEC out; out.x = xy; out.y = yy; out.z = zy; return out; };
@@ -94,11 +95,8 @@ class Mat3TYPE{
 		c.set( va.z, vb.z, vc.z );
 	};
 
-    inline void mul ( const VEC& va ){
-		a.mul( va.a );
-		b.mul( va.b );
-		c.mul( va.c );
-	};
+    inline void mul ( TYPE f        ){ a.mul(f);    b.mul(f);    c.mul(f);    };
+    inline void mul ( const VEC& va ){ a.mul(va.a); b.mul(va.b); c.mul(va.c); };
 
     inline void mulT ( const VEC& va ){
 		ax*=va.x; ay*=va.y; az*=va.z;
