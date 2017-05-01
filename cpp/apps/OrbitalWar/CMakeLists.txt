@@ -14,6 +14,12 @@ add_executable( test_OptContinuousThrust
 )
 target_link_libraries( test_OptContinuousThrust  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable( test_SpaceFlightODE
+    test_SpaceFlightODE.cpp
+    $<TARGET_OBJECTS:SDL2OGL>
+)
+target_link_libraries( test_SpaceFlightODE  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_custom_command(
     TARGET ${PROJECT_NAME} orbitEditor
     #COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources

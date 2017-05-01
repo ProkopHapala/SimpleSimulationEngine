@@ -24,7 +24,7 @@ static const double IntegrationWeights[6] ={ 0.085662246189585275d, 0.1803807865
 
 bool DEBUG_PLOT = true;
 
-inline void addGravity( const Vec3d p, Vec3d& T, Vec3d& T2_b ){
+inline void addGravity( const Vec3d& p, Vec3d& T, Vec3d& T2_b ){
     // T is thrust vector; T2_b is variation of |T|^2 with basis function
     constexpr double GM = -1.0d;  // TODO read mass of body
     Vec3d  dp  = p;               // TODO substract position of body
