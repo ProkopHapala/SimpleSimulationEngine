@@ -597,6 +597,17 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         glPopMatrix();
 	};
 
+	void drawCurve( float tmin, float tmax, int n, Func1d3 func ){
+        glBegin(GL_LINE_STRIP);
+        float dt = (tmax-tmin)/n;
+        for( float t=tmin; t<=tmax; t+=dt ){
+            double x,y,z;
+            func( t, x, y, z );
+            glVertex3f( (float)x, (float)y, (float)z );
+        }
+        glEnd();
+    };
+
 // =================
 // from drawUtils.h
 // =================

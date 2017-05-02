@@ -57,7 +57,6 @@ void drawKite           ( const Vec3d& pos, const Mat3d& rot, double sz );
 void drawSimplexGrid( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs, const double * clrs, int ncolors, const uint32_t * colorscale );
 void drawSimplexGridLines( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs );
 
-
 int drawMesh( const Mesh& mesh  );
 
 void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend );
@@ -67,6 +66,9 @@ void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float 
 void drawBBox( const Vec3d& p0, const Vec3d& p1 );
 int  makeBoxList( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b  );
 void drawAxis( float sc );
+
+
+void drawCurve    ( float tmin, float tmax,          int n, Func1d3 func );
 
 // ==== inline functions
 

@@ -254,6 +254,17 @@ void Draw2D::drawFunc( float xmin, float xmax, int n, Func1d func ){
     glEnd();
 };
 
+void Draw2D::drawCurve( float tmin, float tmax, int n, Func1d2 func ){
+    glBegin(GL_LINE_STRIP);
+    float dt = (tmax-tmin)/n;
+    for( float t=tmin; t<=tmax; t+=dt ){
+        double x,y;
+        func( t, x, y );
+        glVertex3f( (float)x, (float)y, z_layer );
+    }
+    glEnd();
+};
+
 void Draw2D::drawFuncDeriv( float xmin, float xmax, float d, int n, Func1d func ){
     glBegin(GL_LINE_STRIP);
     float dx = (xmax-xmin)/n;

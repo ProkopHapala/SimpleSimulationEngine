@@ -48,6 +48,15 @@ typedef double (*Func2d)( double, double );
 typedef float  (*Func3f)( float,  float,  float  );
 typedef double (*Func3d)( double, double, double );
 
+typedef void   (*Func1d2)( double,                 double&, double& );
+typedef void   (*Func2d2)( double, double,         double&, double& );
+typedef void   (*Func3d2)( double, double, double, double&, double& );
+
+typedef void   (*Func1d3)( double,                 double&, double&, double& );
+typedef void   (*Func2d3)( double, double,         double&, double&, double& );
+typedef void   (*Func3d3)( double, double, double, double&, double&, double& );
+
+
 inline double x2grid( double x, double xstep, double invXstep, int& ix ){
     double x_=x*invXstep;
     ix=(int)x_;
@@ -80,7 +89,7 @@ inline double erf_4(double x){ if(x>0){ return erf_4_plus(x); }else{ return -erf
 
 
 inline double erf_6_plus(double x){
-    double p = 1 + x*( 0.0705230784d + x*( 0.0422820123d + x*( 0.0092705272d + x*( 0.0001520143d + x*( 0.0002765672d + x*0.0000430638d ))))); 
+    double p = 1 + x*( 0.0705230784d + x*( 0.0422820123d + x*( 0.0092705272d + x*( 0.0001520143d + x*( 0.0002765672d + x*0.0000430638d )))));
     p=p*p; p=p*p; p=p*p; p=p*p;
     return 1 - 1/p;
 }

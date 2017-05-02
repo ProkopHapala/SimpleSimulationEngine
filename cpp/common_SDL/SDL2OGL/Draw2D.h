@@ -45,9 +45,9 @@ void plot_cross   ( int n, double * xs, double * ys, double sz );
 void plot_X       ( int n, double * xs, double * ys, double sz );
 void plot_O       ( int n, double * xs, double * ys, double sz, int ncirc );
 
-void drawFunc     ( float xmin, float xmax,          int n, Func1d func );
-void drawFuncDeriv( float xmin, float xmax, float d, int n, Func1d func );
-
+void drawFunc     ( float xmin, float xmax,          int n, Func1d  func );
+void drawFuncDeriv( float xmin, float xmax, float d, int n, Func1d  func );
+void drawCurve    ( float tmin, float tmax,          int n, Func1d2 func );
 
 void drawGrid     ( float xmin, float ymin, float xmax, float ymax, float dx, float dy );
 
@@ -68,6 +68,15 @@ void drawString ( const char * str,                     float x, float y, float 
 void drawText   ( const char * str, const Vec2d& pos, float angle, int fontTex, float textSize, int istart, int iend );
 
 // ==== inline functions
+
+/*
+template< inline double val( double u, double c0, double c1, double c2, double c3 ) >
+void drawSplineXt( int n, double * CPs ){
+
+};
+*/
+
+
 
 inline void toGLMat( const Vec2d& pos, const Vec2d& rot, float* glMat ){
 /*
