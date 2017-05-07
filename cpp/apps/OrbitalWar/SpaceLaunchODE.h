@@ -3,7 +3,6 @@
 
 // TODO : in futere maybe warp it into obejct ??
 
-
 constexpr static int nCP  = 10;
 double  thetaCPs [nCP];
 double  thrustCPs[nCP];

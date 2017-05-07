@@ -23,6 +23,7 @@
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 #include "testUtils.h"
+#include "IO_utils.h"
 
 #include "SpaceLaunchODE.h"
 
@@ -33,6 +34,12 @@ void getODEDerivs( double t, int n, double * Ys, double * dYs ){
     plaunch1->getODEDerivs(t,n,Ys,dYs);
 }
 */
+
+double * Cd_CPs       = NULL;
+double * attitude_CPs = NULL;
+double * rho_CPs      = NULL;
+
+
 
 void splinePixel( double t, double& x, double& y, double& z ){
     int    i = (int) t;
@@ -73,6 +80,32 @@ class TestApp_SpaceFlightODE : public AppSDL2OGL_3D {
 
 TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+    void* buffs[3];
+    printf("DEBUG 1 \n");
+    //allocateIOBuffs( 10, "dd", buffs );
+    //int n = loadColumns( "data/standard_atmosphere.dat", "0000d0", buffs );
+    //int n_ = loadColumns( "data/standard_atmosphere.dat", "d000d0", buffs );
+    int n_ = loadColumns( "data/standard_atmosphere.dat", "d3d0", buffs );
+    printf("DEBUG 2 \n");
+    attitude_CPs = (double*)buffs[0];
+    Vec3d * junk3d = (Vec3d *)buffs[1];
+    rho_CPs      = (double*)buffs[2];
+    printf( "%i %i \n", attitude_CPs, rho_CPs  );
+    printf("DEBUG 3 \n");
+    for(int i=0; i<n_; i++){ printf( " %i %f (%f,%f,%f) %f \n", i, attitude_CPs[i], junk3d[i].x,junk3d[i].y,junk3d[i].z, rho_CPs[i] ); }
+
+    /*
+    int n = loadColumns( "data/standard_atmosphere.dat", "0000d0", (void**)&rho_CPs );
+    for(int i=0; i<n; i++){ printf( " %i %f \n", i, rho_CPs[i] ); }
+    */
+
+    //Cd_CPs  = (double*)buffs[0];
+    //rho_CPs = (double*)buffs[1];
+    //printf( "%f %f \n", Cd_CPs[0], rho_CPs[0] );
+    //printf( "%f %f \n", Cd_CPs[0], rho_CPs[0] );
+
+    exit(0);
+
     odeint.reallocate( 7 );
     odeint.dt_max    = 0.005;
     odeint.dt_min    = 0.0001;
@@ -93,7 +126,7 @@ TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_
     //pos->set(0.0,100.0e+3,0.0); vel->set(7.9e+3,0.0,0.0); satelite
     *mass = mass_initial;
 
-    for(int i=1; i<nCP; i++){
+    for(int i=0; i<nCP; i++){
         double t = (i-1)*0.5;
         //double   theta = M_PI_2/(1.0d + t*t*1.5 );
         double   theta = M_PI_2*exp( -0.5*t*t );
@@ -102,7 +135,6 @@ TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_
         thrustCPs[i] = thrust_full;
         dirCPs   [i].set( cos(theta), sin(theta), 0.0 );
     }
-
 
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -172,10 +204,11 @@ void TestApp_SpaceFlightODE::draw(){
 void TestApp_SpaceFlightODE::drawHUD(){
     glDisable ( GL_LIGHTING );
 
+    float x0 = 100;
     float tsc = 1.0;
     float sc  = 100.0;
     for(int i=0; i<nCP; i++){
-        double st = uT*(i-1)*tsc;
+        double st = uT*(i-1)*tsc + x0;
         glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( {st,thetaCPs[i]  *sc*2,0.0}, 5.0 );
         glColor3f(1.0f,0.0f,0.0f); Draw3D::drawPointCross( {st,dirCPs  [i].x*sc,0.0}, 5.0 );
         glColor3f(0.0f,0.0f,1.0f); Draw3D::drawPointCross( {st,dirCPs  [i].y*sc,0.0}, 5.0 );
@@ -184,7 +217,7 @@ void TestApp_SpaceFlightODE::drawHUD(){
     int icp; double u;
     spline_sampe( odeint.t, u, icp );
     if((icp+3)<nCP){
-        double st = odeint.t*tsc;
+        double st = odeint.t*tsc + x0;
         double theta = getSpline  ( u, thetaCPs+icp );
         Vec3d  dir   = getSpline3d( u, dirCPs   +icp );
         //double thrust = getSpline  ( u, thrustCPs+icp );

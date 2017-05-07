@@ -4,6 +4,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <cstdarg>
+
+#include "Vec2.h"
+#include "Vec3.h"
+
 
 char * fgets_comment( char * line, int num, FILE * stream ){
     constexpr int NMaxComment = 10;
@@ -34,5 +39,91 @@ char* filetobuf(char const  *file){
 
 	return buf; 						// Return the buffer
 }
+
+/*
+int loadColums(char const  *fname, char const  *format, ... ){
+    FILE * pFile = fopen (fname,"r");
+    char buff[1024];
+    char * line;
+    while( line = fgets( buff, 1024, pFile ) ){
+        sscanf( buff, format, ... );
+        printf()
+    }
+    va_list args;
+    va_start(args, fmt);
+    scanf( format );
+    va_end(args);
+    fclose(pFile);
+}
+*/
+
+int allocateIOBuffs( int nitems, char const *format, void **buffs ){
+    int nbuffs = 0;
+    //int ibuff  = 0;
+    while (*format != '\0') {
+        printf( "format %c nbuffs %i \n", *format, nbuffs );
+        switch( *format ){
+            case 'i': buffs[nbuffs] = new int   [nitems]; nbuffs++; break;
+            case 'f': buffs[nbuffs] = new float [nitems]; nbuffs++; break;
+            case 'd': buffs[nbuffs] = new double[nitems]; nbuffs++; break;
+            case '2': buffs[nbuffs] = new Vec3d [nitems]; nbuffs++; break;  // TODO
+            case '3': buffs[nbuffs] = new Vec2d [nitems]; nbuffs++; break;
+        }
+        format++;
+    }
+    return nbuffs;
+}
+
+int loadColumns( char const  *fname, char const *format, void **buffs ){
+    FILE * pFile = fopen(fname,"r");
+    if( pFile == NULL ){
+        printf("cannot find %s\n", fname );
+        return -1;
+    }
+    char buff[1024];
+    char * line;
+    int nl;
+    line = fgets( buff, 1024, pFile );
+    if(line==NULL){
+        printf("read nl line NULL \n");
+        return -1;
+    }
+    sscanf( buff,"%i", &nl );
+    printf(" nl = %i \n", nl);
+    allocateIOBuffs( nl, format, buffs );
+    for(int il=0; il<nl; il++){
+        line = fgets( buff, 1024, pFile );
+        //while( line = fgets( buff, 1024, pFile ) ){
+        //printf("%s \n", line );
+        int ib = 0;
+        const char *formati = format;
+        char *tok = strtok(line, " \t");
+        while (tok != NULL) {
+            //my_array[i++] = atof(tok);
+            //printf( "%s   %c \n", tok, *formati );
+            switch( *formati ){
+                case 'i': ((int   *)buffs[ib])[il]=atoi(tok); ib++; break;
+                case 'f': ((float *)buffs[ib])[il]=atof(tok); ib++; break;
+                case 'd': ((double*)buffs[ib])[il]=atof(tok); ib++; break;
+                case '2':{
+                    Vec2d& v2 = ((Vec2d*)buffs[ib])[il];
+                    v2.x = atof(tok); tok = strtok(NULL, " \t");
+                    v2.y = atof(tok);
+                    }; ib++; break;
+                case '3':{
+                    //printf(" Vdfsdfsdf455464 \n");
+                    Vec3d& v3 = ((Vec3d*)buffs[ib])[il];
+                    v3.x = atof(tok); tok = strtok(NULL, " \t"); // printf("tok_y %s \n",tok);
+                    v3.y = atof(tok); tok = strtok(NULL, " \t"); // printf("tok_z %s \n",tok);
+                    v3.z = atof(tok);
+                    }; ib++; break;
+            }
+            tok = strtok(NULL, " \t");
+            formati++;
+        }
+    }
+    return nl;
+}
+
 
 #endif
