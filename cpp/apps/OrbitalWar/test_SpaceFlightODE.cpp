@@ -35,11 +35,16 @@ void getODEDerivs( double t, int n, double * Ys, double * dYs ){
 }
 */
 
-double * Cd_CPs       = NULL;
-double * attitude_CPs = NULL;
-double * rho_CPs      = NULL;
+//double * Cd_CPs       = NULL;
+//double * attitude_CPs = NULL;
+//double * rho_CPs      = NULL;
 
+FILE * flog;
 
+void logFunc1(){
+    //printf( " logFunc1 %g %g %g %g \n", log_t, log_t_trig, log_Cd, log_rho );
+    if( flog ) fprintf( flog, " %g %g   %g %g %g   %g %g %g   %g %g   %g %g %g \n", log_t, log_h,   log_v, log_vx, log_vy,  log_T, log_Tx, log_Ty,  log_m, log_G,     log_FD, log_Cd, log_rho );
+}
 
 void splinePixel( double t, double& x, double& y, double& z ){
     int    i = (int) t;
@@ -80,6 +85,7 @@ class TestApp_SpaceFlightODE : public AppSDL2OGL_3D {
 
 TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+    /*
     void* buffs[3];
     printf("DEBUG 1 \n");
     //allocateIOBuffs( 10, "dd", buffs );
@@ -93,18 +99,25 @@ TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_
     printf( "%i %i \n", attitude_CPs, rho_CPs  );
     printf("DEBUG 3 \n");
     for(int i=0; i<n_; i++){ printf( " %i %f (%f,%f,%f) %f \n", i, attitude_CPs[i], junk3d[i].x,junk3d[i].y,junk3d[i].z, rho_CPs[i] ); }
+    */
 
     /*
     int n = loadColumns( "data/standard_atmosphere.dat", "0000d0", (void**)&rho_CPs );
     for(int i=0; i<n; i++){ printf( " %i %f \n", i, rho_CPs[i] ); }
     */
 
+    nrho = loadColumns( "data/standard_atmosphere.dat", "000d", (void**)&planet_rho_CPs );
+    nCds = loadColumns( "data/Cd.dat", "0d", (void**)&rocket_Cd_CPs );
+    printf( "DEBUG load done \n" );
+
+    flog = fopen( "SpaceFlightODE.log", "w");
+
     //Cd_CPs  = (double*)buffs[0];
     //rho_CPs = (double*)buffs[1];
     //printf( "%f %f \n", Cd_CPs[0], rho_CPs[0] );
     //printf( "%f %f \n", Cd_CPs[0], rho_CPs[0] );
 
-    exit(0);
+    //exit(0);
 
     odeint.reallocate( 7 );
     odeint.dt_max    = 0.005;
@@ -112,6 +125,8 @@ TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_
     odeint.dt_adapt  = 0.001;
     odeint.getDerivs = getODEDerivs;
     //plaunch1         = &launch1;
+
+    logFunc = logFunc1;
 
     ((Vec3d*)(odeint.invMaxYerr  ))->set(1/1e-1);
     ((Vec3d*)(odeint.invMaxYerr+3))->set(1/1e-2);
@@ -129,7 +144,7 @@ TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_
     for(int i=0; i<nCP; i++){
         double t = (i-1)*0.5;
         //double   theta = M_PI_2/(1.0d + t*t*1.5 );
-        double   theta = M_PI_2*exp( -0.5*t*t );
+        double   theta = M_PI_2*exp( -0.15*t*t*t*t );
         if(i==0) theta = M_PI_2;
         thetaCPs [i] = theta;
         thrustCPs[i] = thrust_full;
@@ -139,7 +154,9 @@ TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    zoom = 0.2;
+    //zoom = 0.2;
+    zoom = 1;
+    //zoom = 15;
 }
 
 void TestApp_SpaceFlightODE::draw(){
@@ -163,6 +180,25 @@ void TestApp_SpaceFlightODE::draw(){
     //for(int i=0; i<nCP; i++){ Draw3D::drawPointCross( {i,thetaCPs[i]*5.0,0.0}, 0.1 ); }
     //for(int i=0; i<nCP; i++){ Draw3D::drawPointCross( dirCPs[i], 0.1 ); }
 
+
+    /*
+    for(int i=0; i<100; i++){
+        double h   = i*1000.0;
+        if( h < hmax){
+            double rho = getAtmosphereDensity( h );
+            printf( "%i %g %g\n", i, h, rho );
+        }
+    }
+    */
+    /*
+    for(int i=0; i<100; i++){
+        double M   = i*0.2;
+        double Cd = getDragCoef( M );
+        printf( "%i %g %g\n", i, M, Cd );
+    }
+    */
+    //exit(0);
+
     //RUNNING = 0;
 
     if(RUNNING){
@@ -176,9 +212,14 @@ void TestApp_SpaceFlightODE::draw(){
         //odeint.step_euler( 0.1d );
 
         //printf( "%i %i (%g,%g,%g) %g %g\n ", frameCount, nstep, pos->x,pos->y,pos->z, odeint.t, odeint.dt_adapt );
-        printf( " %g : (%g,%g,%g) %g %g \n ", odeint.t, pos->x,pos->y,pos->z, vel->norm(), *mass );
+        //printf( " %g : (%g,%g,%g) %g %g \n ", odeint.t, pos->x,pos->y,pos->z, vel->norm(), *mass );
+
+        printf( " %g [s] %g [km] %g [km/s] %g [ton] \n ", odeint.t, ((*pos-planet_pos).norm() - planet_R )*1e-3, vel->norm()*1e-3, (*mass)*1e-3 );
+
         //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine    ( opos      , *pos ); Draw3D::drawPointCross( *pos, 0.1 );
         //glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos( (*vel)*2.0, *pos );
+
+        if( (log_t_trig > log_tmax)&&(flog) ){ fclose(flog); flog = NULL; }
 
         if( (*pos-planet_pos).norm2()<(planet_R*planet_R) ){
             printf("crashed !!!\n");
@@ -215,7 +256,7 @@ void TestApp_SpaceFlightODE::drawHUD(){
     }
 
     int icp; double u;
-    spline_sampe( odeint.t, u, icp );
+    spline_sample( odeint.t, inv_uT, u, icp );
     if((icp+3)<nCP){
         double st = odeint.t*tsc + x0;
         double theta = getSpline  ( u, thetaCPs+icp );
@@ -225,8 +266,6 @@ void TestApp_SpaceFlightODE::drawHUD(){
         glColor3f(1.0f,0.0f,0.0f); Draw3D::drawPointCross( {st,dir.x*sc,0.0}, 5.0 );
         glColor3f(0.0f,0.0f,1.0f); Draw3D::drawPointCross( {st,dir.y*sc,0.0}, 5.0 );
     }
-
-
 
     //exit(0);
 }

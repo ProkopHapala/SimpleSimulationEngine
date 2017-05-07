@@ -78,6 +78,8 @@ class ODEintegrator_RKF45 : public ODEintegrator{
 	double error;
 	double dt_adapt=dt_max;
 
+	//int substep = 0;
+
 	// ==================   reallocate =======================
 
 	virtual void reallocate( int n_ ){

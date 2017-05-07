@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <cstdarg>
+#include <cstring>
 
 #include "Vec2.h"
 #include "Vec3.h"
