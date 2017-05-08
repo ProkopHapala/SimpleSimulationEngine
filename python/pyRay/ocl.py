@@ -43,23 +43,26 @@ def getRays( cam, fw0=-4.0, t0=8.0, tg=(0.25,0.25), nsz=screen_resolution ):
     #print ro
     return rd, ro
 
-def prep_rayTraceBasic( rd, ro ):
-    #print "rd = ", rd
-    #print "ro = ", ro
+def prep_rayTraceBasic( nsz=screen_resolution ):
     mf      = cl.mem_flags
-    cl_rd   = cl.Buffer(ctx, mf.READ_ONLY  | mf.COPY_HOST_PTR, hostbuf=rd )
-    cl_ro   = cl.Buffer(ctx, mf.READ_ONLY  | mf.COPY_HOST_PTR, hostbuf=ro )
-    cl_hitp = cl.Buffer(ctx, mf.WRITE_ONLY, ro.nbytes )
-    cl_hitn = cl.Buffer(ctx, mf.WRITE_ONLY, ro.nbytes )
+    bsz = np.dtype(np.float32).itemsize * nsz[0] * nsz[1] * 4
+    #print "bsz", bsz
+    cl_rd   = cl.Buffer(ctx, mf.READ_WRITE , bsz )
+    cl_ro   = cl.Buffer(ctx, mf.READ_ONLY , bsz )
+    cl_hitp = cl.Buffer(ctx, mf.WRITE_ONLY, bsz )
+    cl_hitn = cl.Buffer(ctx, mf.WRITE_ONLY, bsz )
     kargs = ( cl_rd, cl_ro, cl_hitp, cl_hitn )
     return kargs 
     	
-def run_rayTraceBasic( kargs, nsz=screen_resolution, local_size=(16,), max_depth=20.0 ):
+def run_rayTraceBasic( rd, ro, kargs, nsz=screen_resolution, local_size=(16,), max_depth=20.0 ):
     #print "run opencl kernel ..."
+    #nsz = rd.shape[0:2]
     global_size = (nsz[0]*nsz[1],)
     hitp        = np.zeros( nsz+[4,] , dtype=np.float32 )
     hitn        = np.zeros( nsz+[4,] , dtype=np.float32 )
     args_       = (np.float32(max_depth),)
+    cl.enqueue_copy          ( queue, kargs[0], rd );
+    cl.enqueue_copy          ( queue, kargs[1], ro );
     cl_program.rayTrace_basic( queue, global_size, local_size, *(kargs+args_) )
     cl.enqueue_copy          ( queue, hitp, kargs[2] );
     cl.enqueue_copy          ( queue, hitn, kargs[3] );
