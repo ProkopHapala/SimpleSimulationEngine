@@ -29,8 +29,9 @@ import time
 
 test_scenes = {
 "2spheres" : '''
-dist = sdSphere( pos, 0.5f );   
-dist = opU( dist, sdSphere( pos-(float3)(0.7f,0.0f,0.2f), 0.7f ) ); 
+dist = sdOgiv( pos, (float2)(0.9f,0.2f) );
+//dist = sdSphere( pos, 0.5f );   
+//dist = opU( dist, sdSphere( pos-(float3)(0.7f,0.0f,0.2f), 0.7f ) ); 
 ''',
 "granade" : ''' 
 U( sdSphere  ( pos- (float3)(0.0f,0.5f,0.0), 0.5f )  );

@@ -52,6 +52,11 @@ float sdCylinder( float3 p, float2 h ){
   return fmin(fmax(d.x,d.y),0.0f) + length(fmax(d,0.0f));
 }
 
+float sdOgiv( float3 p, float2 h ){
+  float R = (h.x*h.x + h.y*h.y)/(2*h.y);
+  return  length(p.xz) - sqrt( R*R - p.y*p.y ) + (R-h.y);
+}
+
 float sdCone( float3 p, float3 c ){
     float2 q = (float2)( length(p.xz), p.y );
     float d1 = -q.y-c.z;
