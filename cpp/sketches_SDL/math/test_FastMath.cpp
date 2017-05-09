@@ -18,36 +18,34 @@
 
 #include "tresholdFunctions.h"
 
-
-
-double floor_exact( double x ){
+inline double floor_exact( double x ){
     int ix   = floor( x );
     return x - ix;
 }
 
-double floor_fast( double x ){
+inline double floor_fast( double x ){
     //int ix = static_cast<int>( x );
     //if( x<0 ) ix--;
     int ix = fastFloor( x );
     return x - ix;
 }
 
-double floor_veryfast( double x ){
+inline double floor_veryfast( double x ){
     int ix = static_cast<int>( x + 10000 ) - 10000;
     return x - ix;
 }
 
-double floor_veryfast_c( double x ){
+inline double floor_veryfast_c( double x ){
     int ix = (int)( x + 10000 ) - 10000;
     return x - ix;
 }
 
-double floor_justcast( double x ){
+inline double floor_justcast( double x ){
     int ix = static_cast<int>( x );
     return x - ix;
 }
 
-double floor_justcast_c( double x ){
+inline double floor_justcast_c( double x ){
     int ix = (int)( x );
     return x - ix;
 }
@@ -115,10 +113,7 @@ void TestAppTerrainCubic::draw(){
     SPEED_TEST_FUNC_ARRAY( "justcast   ", floor_justcast   , arr,  narr,  m );
     SPEED_TEST_FUNC_ARRAY( "justcast_c ", floor_justcast_c , arr,  narr,  m );
 
-
-
     //SPEED_TEST_FUNC_ARRAY( "acos       ",                  , arr,  narr,  m );
-
 
     STOP = true;
 

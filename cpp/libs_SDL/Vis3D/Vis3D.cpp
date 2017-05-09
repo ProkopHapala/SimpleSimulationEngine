@@ -14,6 +14,9 @@
 #include "quaternion.h"
 #include "raytrace.h"
 
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+
 #include "Draw.h"
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"

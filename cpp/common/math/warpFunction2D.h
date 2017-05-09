@@ -1,7 +1,11 @@
 
-#ifndef  Vec3_h
-#define  Vec3_h
+#ifndef  warpFunction2D_h
+#define  warpFunction2D_h
 
+//#include "fastmath.h" 
+#include "functions.h" 
+
+/*
 typedef double (*Function2d)( double x, double y );
 typedef double (*DiffFunc2d)( double x, double y, double& dfdx, double& dfdy );
 typedef void   (*Warp2d    )(  double& Tx,   double& Ty,   double& dTxdx, double& dTxdy, double& dTydx, double& dTydy );
@@ -20,7 +24,6 @@ double x1period( double x, double& dfdx ){
 		return  1.0d-2.0d*dx;
 	}
 }
-
 
 double x2period( double x, double& dfdx ){
 	int ix = (int)(x+1000.0)-1000;
@@ -55,6 +58,8 @@ double mlorenz( double x, double y, double& dfdx, double& dfdy ){
 	dfdx = -dfdx; dfdy = -dfdy;
 	return f;
 }
+
+*/
 
 // ===================== Warping
 
@@ -133,7 +138,6 @@ double warped_function_noDiff( double x, double y ){
 	//return harmonic( x, y, dfdx, dfdy );
 	return warped_function( x, y, dfdx, dfdy );
 }
-
 
 #endif
 

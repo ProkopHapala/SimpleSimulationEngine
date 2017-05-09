@@ -27,6 +27,7 @@ include_directories(
         ${COMMON_SRCS}/optimization
 	#${COMMON_SDL_SRCS}
         #${COMMON_SDL_SRCS}/network
+        #${COMMON_SDL_SRCS}/SDL2
         #${COMMON_SDL_SRCS}/SDL2OGL
         #${COMMON_SDL_SRCS}/SDL2OGL3
         #${MY_SRC_DIR}/engines
