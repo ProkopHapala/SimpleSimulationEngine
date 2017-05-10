@@ -9,6 +9,8 @@
 #include "optimizer_random.h"
 #include "SDLplot.h"
 
+#include "TestFuncND.h"
+
 // ===============================
 // ===== GLOBAL VARIABLES
 // ===============================
@@ -31,9 +33,13 @@ OptimizerRandom* opt1;
 double dxMax[] = { 0.05, 0.05 };
 double xBest[] = { 2.0, +1.2 };
 
+double freqScales[] = { 2.0, 1.0, 0.7, 0.4 };
+
 double tolerance = 0.001;
 
 int nEvals = 0;
+
+TestFuncND funcND;
 
 // ====================================
 // ===== FUNCTION FORWARD DECLARATIONS
@@ -50,8 +56,11 @@ void inputHanding();
 
 
 inline double myFittnessFunc_( double x, double y ){
+    Vec2d xs; xs.set(x,y);
+    double f =  funcND.eval( ((double*)&xs) ); return 1-1/(1+f*VALEY_TIGHTNESS) + fabs(x+2)*0.1;
+    //return funcND.eval( ((double*)&xs) );
 	//return rosenbrok( x, y );
-	return sinValey( x, y ) + fabs(x+2)*0.1;
+	//return sinValey( x, y ) + fabs(x+2)*0.1;
 	//return spiral( x, y ) + sqrt(harmonic(x,y))*0.1 - lorenz(x*30,y*30);
 
     //return warped_function_noDiff( x, y );
@@ -85,6 +94,30 @@ int perform_relaxation( int nMaxIter ){
     return -1;
 }
 
+void restartRelaxation(){
+    nEvals = 0;
+    double t = randf( 2.0,4.0);
+	opt1->xBest[0]= t;
+	funcND.getNodeAt( t, opt1->xBest );
+    //opt1->xBest[0]=randf( 2.0,4.0);
+	//opt1->xBest[1]=randf(-3.0,3.0);
+    opt1->restart();
+}
+
+void newTestFunc(){
+    printf("generationg new test func ... \n");
+    funcND.setRandomStiffness(0.5d,2.0d);
+    funcND.setRandomCoefs(freqScales, 1.0, 0.0 );
+
+    restartRelaxation();
+
+    SDL_DestroyTexture(tempTex);
+    setPixelsFunctionClamped( tempSurf, 0, 0, tempSurf->w,  tempSurf->h, &myFittnessFunc_, 0.0, 1.0 );
+    tempTex   = SDL_CreateTextureFromSurface( render, tempSurf  );
+    SDL_RenderCopy( render, tempTex, &SrcR, &DestR );
+    printf(" ... DONE \n");
+}
+
 void draw(){
     /*
 	int perFrame=1;
@@ -107,19 +140,31 @@ void draw(){
 		}
 		SDL_RenderDrawLine    ( render,  x2i(x0), y2i(y0), x2i(x1), y2i(y1) );
 	}
-	*/
-    nEvals = 0;
-	opt1->xBest[0]=randf( 2.0,4.0);
-	opt1->xBest[1]=randf(-3.0,3.0);
-    opt1->restart();
+    */
+	restartRelaxation();
 	perform_relaxation( 10000 );
+
 	SDL_RenderPresent( render );
 	SDL_UpdateWindowSurface(window);
+
 }
+
+
 
 void setup(){
 
     NWRAP = 2;
+
+    funcND.allocate(2, 4);
+    //funcND.setRandomStiffness(0.5d,2.0d);
+    //funcND.setRandomCoefs(freqScales);
+
+    //double f = myFittnessFunc_( 0.5, 0.4 );
+    //printf( "(%f,%f) -> %f",  f);
+    //exit(0);
+
+    opt1 = new OptimizerRandom_2( 2, xBest, dxMax, 0.85, 1.2, &myFittnessFunc );
+	//opt1 = new OptimizerRandom_3( 2, xBest, dxMax, 0.7, 1.2, &myFittnessFunc );
 
     setZoom( 50.0d );
 
@@ -132,6 +177,8 @@ void setup(){
 	setPixelsFunctionClamped( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, &myFittnessFunc_, 0.0, 1.0 );
 	//setPixelsFunction( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, -2.0,-2.0, 2.0, 2.0, &mandelbort );
 
+	newTestFunc();
+
 	tempTex   = SDL_CreateTextureFromSurface( render, tempSurf  );
 
 	SrcR.x  = 0; SrcR.y  = 0; SrcR.w  = tempSurf->w; SrcR.h  = tempSurf->h;
@@ -139,17 +186,15 @@ void setup(){
 
 	SDL_RenderCopy( render, tempTex, &SrcR, &DestR);
 
-	opt1 = new OptimizerRandom_2( 2, xBest, dxMax, 0.85, 1.2, &myFittnessFunc );
-	//opt1 = new OptimizerRandom_3( 2, xBest, dxMax, 0.7, 1.2, &myFittnessFunc );
-
 	SDL_SetRenderDrawBlendMode( render, SDL_BLENDMODE_BLEND );
 }
 
 void inputHanding(){
 	while(SDL_PollEvent(&event)){
 		if( event.type == SDL_KEYDOWN ){
-			if(event.key.keysym.sym == SDLK_ESCAPE) { quit(); }
+			if(event.key.keysym.sym == SDLK_ESCAPE   ){ quit(); }
 			if(event.key.keysym.sym == SDLK_SPACE    ){ STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); }
+			if(event.key.keysym.sym == SDLK_n        ){ newTestFunc(); }
 		}
 		if( event.type == SDL_QUIT){ quit();  };
 	}
