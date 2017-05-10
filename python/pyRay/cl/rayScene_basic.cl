@@ -5,6 +5,8 @@
 #define MAX_STEPS    256
 #define HIT_PREC     0.0001
 
+//===USER_FUNCTIONS
+
 float sceneDistFunction( float3 pos ){
     float dist = POSITIVE_INF;
     //===SCENE

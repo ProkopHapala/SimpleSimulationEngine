@@ -28,12 +28,52 @@ import image as img
 import time
 
 test_scenes = {
-"2spheres" : '''
-dist = sdOgiv( pos, (float2)(0.9f,0.2f) );
-//dist = sdSphere( pos, 0.5f );   
-//dist = opU( dist, sdSphere( pos-(float3)(0.7f,0.0f,0.2f), 0.7f ) ); 
+
+"user_func1" :
+('''
+U( obj1( pos, 0.5f, 0.6f ) );
+S( obj1( pos+(float3)(0.0f,0.0f,+0.5f), 0.3f, 0.5 ) );
+S( obj1( pos+(float3)(0.0f,0.0f,-0.5f), 0.3f, 0.7 ) );
+
 ''',
-"granade" : ''' 
+'''
+float obj1(float3 pos, float R, float L){
+float dist = 1000000.0f;
+U( sdSphere  ( pos- (float3)(+L,0.0f,0.0), R )  );
+U( sdSphere  ( pos- (float3)(-L,0.0f,0.0), R )  );
+U( sdSphere  ( pos- (float3)(0.0f,+L,0.0), R )  );
+U( sdSphere  ( pos- (float3)(0.0f,-L,0.0), R )  );
+return dist;
+}
+'''),
+
+"dirRep" :
+('''
+dist = sdSphere( opRepDir( pos, (float3)(0.7f,0.0f,0.0f), 5.0f ), 0.35f );
+''',
+""),
+
+"objRep" :
+('''
+U( obj1( opRepDir( pos, (float3)(0.0f,0.0f,1.0f), 5.0f ), 0.5f, 0.6f ) );
+pos.z+=0.5;
+pos  = opRepDir( pos, (float3)(0.0f,0.0f,1.0f), 5.0f );
+S( obj1( pos, 0.3f, 0.6f ) );
+S( sdSphere  ( pos, 0.5 ) );
+''',
+'''
+float obj1(float3 pos, float R, float L){
+float dist = 1000000.0f;
+U( sdSphere  ( pos- (float3)(+L,0.0f,0.0), R )  );
+U( sdSphere  ( pos- (float3)(-L,0.0f,0.0), R )  );
+U( sdSphere  ( pos- (float3)(0.0f,+L,0.0), R )  );
+U( sdSphere  ( pos- (float3)(0.0f,-L,0.0), R )  );
+return dist;
+}
+'''),
+
+"granade" : 
+(''' 
 U( sdSphere  ( pos- (float3)(0.0f,0.5f,0.0), 0.5f )  );
 U( sdCone    ( pos, (float3)(0.8f,0.6f,0.3f ) ) );
 U( sdCylinder( pos, (float2)(0.1f,0.2f)       ) );
@@ -42,13 +82,19 @@ S( sdPlane   ( pos, (float3)(1.0,0.0,0.0), 0.0 ) );
 S( sdCylinder( pos, (float2)(0.05f,0.9f)       ) );
 S( sdSphere  ( pos- (float3)(0.0f,0.5f,0.0), 0.3f )  );
 ''',
-"RepRot" : ''' 
+""),
+
+"RepRot" : 
+(''' 
 dist = opU( dist, sdSphere  ( opRepRot( pos, 6.0f )-(float3)(0.18f,0.0f,0.0f), 0.1f ) );
 dist = opS( dist, sdTorus   ( pos, (float2)(0.25f,0.07f) ) );
 dist = opU( dist, sdCone    ( pos, (float3)(0.8f,0.6f,0.3f) ) );
 dist = opU( dist, sdCylinder( pos, (float2)(0.1f,0.2f) ) );
 ''',
-"primitives" : ''' 
+""),
+
+"primitives" :
+(''' 
 pos.y*=-1.0f;
 pos.y+=0.5f;
 U(sdPlaneY(pos));
@@ -74,7 +120,10 @@ dist = opU( dist, sdConeSection( pos-(float3)( 0.0,0.35,-2.0), 0.15, 0.2, 0.1 ) 
 dist = opU( dist, sdEllipsoid( pos-(float3)( 1.0,0.35,-2.0), (float3)(0.15, 0.2, 0.05) ) );
 dist = opU( dist, sdEllipsoid( pos-(float3)( 1.0,0.35,-2.0), (float3)(0.15, 0.2, 0.05) ) );
 ''',
-"bounding_sphere" : '''
+""),
+
+"bounding_sphere" : 
+('''
 dist = 0.2;
 float bound = sdSphere( pos, 0.8f );
 if( 0.2f>bound  ){
@@ -86,6 +135,8 @@ dist = opU( dist, sdSphere( pos-(float3)(0.0f,-0.7f,0.0f), 0.4f ) );
 dist = opU( dist, sdSphere( pos-(float3)(0.0f,0.0f,-0.7f), 0.4f ) ); 
 dist = opI(dist, bound);
 }''',
+""),
+
 }
 
 class MyDynamicMplCanvas(FigureCanvas):
@@ -173,9 +224,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         
         # --- slScene
         self.slScene = QtWidgets.QComboBox(self)
-        self.slScene.addItem("2spheres")
-        self.slScene.addItem("granade")
+        self.slScene.addItem("user_func1")
+        self.slScene.addItem("dirRep")
+        self.slScene.addItem("objRep") 
         self.slScene.addItem("RepRot")
+        self.slScene.addItem("granade")
         self.slScene.addItem("primitives")
         self.slScene.addItem("bounding_sphere")
         self.slScene.setCurrentIndex(1)
@@ -187,6 +240,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.txtScene.setFont(self.font)
         #self.txtScene.returnPressed.connect(self.updateScene)
         l.addWidget( self.txtScene )
+        
+        self.txtFunctions = QtWidgets.QPlainTextEdit(self)
+        self.txtFunctions.setFont(self.font)
+        #self.txtScene.returnPressed.connect(self.updateScene)
+        l.addWidget( self.txtFunctions )
         
         # --- btScene
         self.btScene = QtWidgets.QPushButton('render scene', self)
@@ -243,9 +301,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.updateRender()
    
     def updateScene(self):
-        src_scene = self.txtScene.toPlainText()
+        src_scene     = self.txtScene.toPlainText()
+        src_functions = self.txtFunctions.toPlainText()
         print src_scene
-        prog_scr = scn.makeProgram( src_scene )
+        print src_functions
+        prog_scr = scn.makeProgram( src_scene, src_user_func=src_functions )
         ocl.make_program(prog_scr)
         try:
             self.rd.shape # check if rd exists 
@@ -257,7 +317,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def selectScene(self):
         scene_name = str(self.slScene.currentText())
         src_scene = test_scenes[scene_name]
-        self.txtScene.setPlainText(src_scene)
+        self.txtScene    .setPlainText(src_scene[0])
+        self.txtFunctions.setPlainText(src_scene[1])
         self.updateScene()
             
     def updateBuffers(self):
