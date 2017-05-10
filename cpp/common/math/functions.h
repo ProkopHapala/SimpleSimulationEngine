@@ -5,10 +5,12 @@
 #include <cstdlib>
 #include <stdio.h>
 
-//#include "fastmath.h"
-
+#include "fastmath.h"
 
 int N_MANDELBROT = 8;
+
+double VALEY_TIGHTNESS = 1.0d;
+double FREQ = M_PI;
 
 // ==== Types
 
@@ -82,6 +84,10 @@ double warp_x2period( double x, double y, double& dfdx, double& dfdy ){
 
 */
 
+inline double lorenz( double x, double y ){
+	return 1/(1+(x*x+y*y)*VALEY_TIGHTNESS);
+}
+
 inline double lorenz( double x, double y, double& dfdx, double& dfdy ){
 	double D = 1/(1+x*x + y*y);
 	double D2 = D*D*2;
@@ -100,6 +106,18 @@ inline double harmonic( double x, double y ){
 	return x*x + y*y;
 }
 
+inline double particles( double x, double y ){
+    double d  = x-y;
+    double d2 = d*d;
+	return 1.0d/(d2*d2) - 2.0d/d2;
+}
+
+inline double cross_valey( double x, double y ){
+    double a = x + y;
+    double b = x - y;
+    return 1-1/(1+a*a*b*b*VALEY_TIGHTNESS);
+}
+
 inline double harmonic( double x, double y, double& dfdx, double& dfdy ){
 	dfdx = x;
 	dfdy = y;
@@ -112,20 +130,24 @@ inline double rosenbrok( double x, double y ){
 }
 
 inline double sinValey( double x, double y ){
-	double f = ( sin(x)  - y);
-	return f*f + x*x*0.1;
+	double f = sin(x*FREQ) - y;
+	return 1-1/(1+f*f*VALEY_TIGHTNESS);
 }
 
-inline double cosValey( double x, double y ){
-	double f = ( cos(4*x) - y);
-	return (0.2*f*f + x*x*0.05)*0.2;
+inline double gridValy( double x, double y ){
+    double a = x + y;
+    double b = x - y;
+    double sa = sin(a*FREQ);
+    double sb = sin(b);
+    return 1-1/(1+a*a*b*b*VALEY_TIGHTNESS);
 }
 
 inline double spiral( double x, double y ){
-	double  phi = atan2 (y,x);
+	double  phi = atan2(y,x);
 	double  r2  = x*x + y*y;
 	double  r   = sqrt(r2);
-	return  (1+sin( 2*M_PI*r + phi ))*0.1     + 0.05*r2;
+	double  f   = 1+cos( FREQ*r + phi );
+	return 1.0d-1.0d/(1.0d+f*VALEY_TIGHTNESS) ;
 }
 
 double mandelbort( double cX, double cY ){

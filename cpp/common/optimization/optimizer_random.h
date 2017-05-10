@@ -3,20 +3,26 @@ typedef double (*FitnessFunction)( double * xs );
 
 class OptimizerRandom{
 	public:
-		int n;
-		double * xBest ;
-		double * xNew  ;
-		double * dxMax ;
-		double bestFitness;
+		int n     = 0;
+		int nfail = 0;
+		double * xBest = NULL;
+		double * xNew  = NULL;
+		double * dxMax = NULL;
+		double bestFitness = 0.0f;
 		FitnessFunction fitnessFunction;
+
+	virtual void restart(){
+        bestFitness = fitnessFunction( xBest );
+        nfail = 0;
+	}
 
 	OptimizerRandom(int n_, double* xBest_, double* dxMax_, FitnessFunction fitnessFunction_  ){
 		n = n_;
-		dxMax   = dxMax_;
+		dxMax = dxMax_;
 		xBest = new double [n];	for(int i=0; i<n; i++){  xBest[i] = xBest_[i]; }
-		xNew    = new double [n];
+		xNew  = new double [n];
 		fitnessFunction = fitnessFunction_;
-		bestFitness = fitnessFunction( xBest );
+		restart();
 	};
 
 	virtual double step(){
@@ -25,6 +31,9 @@ class OptimizerRandom{
 		if( dfitness > 0 ){
 			for(int i=0; i<n; i++){ xBest[i] = xNew[i]; }
 			bestFitness += dfitness;
+			nfail=0;
+		}else{
+            nfail++;
 		}
 		return dfitness;
 	};
@@ -34,10 +43,9 @@ class OptimizerRandom{
 
 class OptimizerRandom_2 : public OptimizerRandom {
 	public:
-		double decay;
-		double c_moment;
-		double * momentum;
-
+		double decay      = 0.0d;
+		double c_moment   = 0.0d;
+		double * momentum = NULL;
 
 	OptimizerRandom_2  (int n_, double* xBest_, double* dxMax_, double decay_, double c_moment_, FitnessFunction fitnessFunction_  )
 	: OptimizerRandom  ( n_, xBest_, dxMax_, fitnessFunction_  ) {
@@ -46,8 +54,16 @@ class OptimizerRandom_2 : public OptimizerRandom {
 		momentum  = new double [n]; for(int i=0; i<n; i++){  momentum[i] = 0; }
 	};
 
+	void cleanMomentum(){ for(int i=0; i<n; i++){ momentum[i]=0; } }
+
+    virtual void restart(){
+        OptimizerRandom::restart();
+        cleanMomentum();
+	}
+
 	virtual double step(){
-		for(int i=0; i<n; i++){   xNew[i] = xBest[i] + dxMax[i] * ( 2.0*randf() - 1.0 ) + momentum[i];  }
+		//for(int i=0; i<n; i++){   xNew[i] = xBest[i] + dxMax[i] * ( 2.0*randf() - 1.0 ) + momentum[i];  }
+		for(int i=0; i<n; i++){   xNew[i] = xBest[i] + dxMax[i] * ( 2.0*randf() - 1.0 ) + momentum[i]*randf();  }
 		double dfitness  = fitnessFunction( xNew ) - bestFitness;
 		if( dfitness > 0 ){
 			for(int i=0; i<n; i++){
@@ -56,6 +72,7 @@ class OptimizerRandom_2 : public OptimizerRandom {
 			}
 			bestFitness += dfitness;
 		} else {
+            nfail++;
 			for(int i=0; i<n; i++){ momentum[i] *= decay; }
 		}
 		return dfitness;
@@ -68,11 +85,10 @@ class OptimizerRandom_2 : public OptimizerRandom {
 
 class OptimizerRandom_3 : public OptimizerRandom {
 	public:
-		double decay;
-		double c_moment;
-		double * xBestNew;
+		double decay      = 0.0d;
+		double c_moment   = 0.0d;
+		double * xBestNew = NULL;
 		double bestNewFitness;
-
 
 	OptimizerRandom_3  (int n_, double* xBest_, double* dxMax_, double decay_, double c_moment_, FitnessFunction fitnessFunction_  )
 	: OptimizerRandom  ( n_, xBest_, dxMax_, fitnessFunction_  ) {
@@ -101,6 +117,7 @@ class OptimizerRandom_3 : public OptimizerRandom {
 			bestFitness    = fitness;
 			success_step();
 		} else {
+            nfail++;
 			if( fitness > bestNewFitness ){
 				bestNewFitness = fitness;
 				for(int i=0; i<n; i++){ xBestNew[i]    = xNew[i]; }

@@ -51,16 +51,42 @@ void inputHanding();
 
 inline double myFittnessFunc_( double x, double y ){
 	//return rosenbrok( x, y );
-	//return sinValey( x, y );
-	//return cosValey( x, y );
+	return sinValey( x, y ) + fabs(x+2)*0.1;
+	//return spiral( x, y ) + sqrt(harmonic(x,y))*0.1 - lorenz(x*30,y*30);
+
+    //return warped_function_noDiff( x, y );
+	//return cross_valey(x,y) + harmonic(x,y)*0.1;
 	//return mandelbort( x, y );
-	return spiral( x, y );
+	//return particles(x,y) + harmonic(x,y)*0.1;
 }
 
-inline double myFittnessFunc( double * xs ){ return -myFittnessFunc_( xs[0], xs[1] ); nEvals++; };
+inline double myFittnessFunc( double * xs ){ nEvals++; return -myFittnessFunc_( xs[0], xs[1] );  };
+
+int perform_relaxation( int nMaxIter ){
+
+	for (int i=0; i<nMaxIter; i++){
+		double x0 = opt1->xBest[0];
+		double y0 = opt1->xBest[1];
+		double dfitness = opt1->step();
+		double x1 = opt1->xNew[0];
+		double y1 = opt1->xNew[1];
+		if( dfitness > 0 ){
+			SDL_SetRenderDrawColor( render, 0, 128, 0, 255 );
+			if( -opt1->bestFitness < tolerance){
+				printf( " CONVERGENCE ACHIEVED in %i iterations, fittness = %f \n", nEvals, opt1->bestFitness  );
+				//STOP = true;
+				return i;
+			}
+		}else  {
+			SDL_SetRenderDrawColor( render, 255, 0, 0, 50  );
+		}
+		SDL_RenderDrawLine    ( render,  x2i(x0), y2i(y0), x2i(x1), y2i(y1) );
+	}
+    return -1;
+}
 
 void draw(){
-	//nEvals = 0;
+    /*
 	int perFrame=1;
 	for (int i=0; i<perFrame; i++){
 		double x0 = opt1->xBest[0];
@@ -81,20 +107,29 @@ void draw(){
 		}
 		SDL_RenderDrawLine    ( render,  x2i(x0), y2i(y0), x2i(x1), y2i(y1) );
 	}
+	*/
+    nEvals = 0;
+	opt1->xBest[0]=randf( 2.0,4.0);
+	opt1->xBest[1]=randf(-3.0,3.0);
+    opt1->restart();
+	perform_relaxation( 10000 );
 	SDL_RenderPresent( render );
 	SDL_UpdateWindowSurface(window);
 }
 
 void setup(){
 
-    setZoom( 100.0d );
+    NWRAP = 2;
+
+    setZoom( 50.0d );
 
 	window          = SDL_CreateWindow( "SDL Tutorial",   SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
 	render        	= SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC );
 	SDL_UpdateWindowSurface( window );
 
 	tempSurf        = SDL_CreateRGBSurface(0,SCREEN_WIDTH,SCREEN_HEIGHT,32,0,0,0,0 );
-	setPixelsFunction( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, &myFittnessFunc_ );
+	//setPixelsFunction( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, &myFittnessFunc_ );
+	setPixelsFunctionClamped( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, &myFittnessFunc_, 0.0, 1.0 );
 	//setPixelsFunction( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, -2.0,-2.0, 2.0, 2.0, &mandelbort );
 
 	tempTex   = SDL_CreateTextureFromSurface( render, tempSurf  );
@@ -104,7 +139,9 @@ void setup(){
 
 	SDL_RenderCopy( render, tempTex, &SrcR, &DestR);
 
-	opt1 = new OptimizerRandom_3( 2, xBest, dxMax, 0.7, 1.2, &myFittnessFunc );
+	opt1 = new OptimizerRandom_2( 2, xBest, dxMax, 0.85, 1.2, &myFittnessFunc );
+	//opt1 = new OptimizerRandom_3( 2, xBest, dxMax, 0.7, 1.2, &myFittnessFunc );
+
 	SDL_SetRenderDrawBlendMode( render, SDL_BLENDMODE_BLEND );
 }
 

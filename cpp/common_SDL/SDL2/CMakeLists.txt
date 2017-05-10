@@ -1,3 +1,3 @@
 
 file(GLOB SDL2_HEADERS_ *.h )
-add_custom_target(SDL2OGL_headers SOURCES ${SDL2OGL_HEADERS_} )
+add_custom_target(SDL2_headers SOURCES ${SDL2_HEADERS_} )

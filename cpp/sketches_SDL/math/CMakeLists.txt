@@ -11,4 +11,7 @@ target_link_libraries( test_Convex2d ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIB
 add_executable       ( test_opt2d test_opt2d.cpp )
 target_link_libraries( test_opt2d ${SDL2_LIBRARY} )
 
+add_executable       ( test_SpaceFillingCurves test_SpaceFillingCurves.cpp )
+target_link_libraries( test_SpaceFillingCurves ${SDL2_LIBRARY} )
+
 

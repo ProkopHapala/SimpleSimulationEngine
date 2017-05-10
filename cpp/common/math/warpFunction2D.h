@@ -2,8 +2,10 @@
 #ifndef  warpFunction2D_h
 #define  warpFunction2D_h
 
-//#include "fastmath.h" 
-#include "functions.h" 
+//#include "fastmath.h"
+#include "functions.h"
+
+int NWRAP = 4;
 
 /*
 typedef double (*Function2d)( double x, double y );
@@ -17,7 +19,7 @@ double x1period( double x, double& dfdx ){
 	int ix = (int)(x+1000.0d)-1000;
 	double dx = x-ix;
 	if( ix&0x1 ){
-		dfdx =    2.0d; 
+		dfdx =    2.0d;
 		return 2.0d*dx-1.0d;
 	}else{
 		dfdx =   -2.0d;
@@ -29,7 +31,7 @@ double x2period( double x, double& dfdx ){
 	int ix = (int)(x+1000.0)-1000;
 	double dx = x-ix-0.5d;
 	if( ix&0x1 ){
-		dfdx =  -8*dx; 
+		dfdx =  -8*dx;
 		return 1-dx*dx*4;
 	}else{
 		dfdx =   8*dx;
@@ -78,8 +80,8 @@ void warp_sin( double& x, double& y,   double& dTxdx, double& dTxdy, double& dTy
 	double sy = sin(y);
 	double dFxdTx = 1;						double dFxdTy = cos(y)*strength;
 	double dFydTx = cos(x)*strength;		double dFydTy = 1;
-	x += sy*strength;		
-	y += sx*strength;		
+	x += sy*strength;
+	y += sx*strength;
 	_WARP_DERIVATIVS_2D_;
 }
 
@@ -89,7 +91,7 @@ void warp_x2period( double& x, double& y,   double& dTxdx, double& dTxdy, double
 	double dFydTx, dFydTy = 1;
 	double sy = x2period(y, dFxdTy );   dFxdTy*=strength;
 	double sx = x2period(x, dFydTx );	 dFydTx*=strength;
-	x += sy*strength;		
+	x += sy*strength;
 	y += sx*strength;
 	_WARP_DERIVATIVS_2D_;
 }
@@ -100,22 +102,22 @@ void warp_x1period( double& x, double& y,   double& dTxdx, double& dTxdy, double
 	double dFydTx, dFydTy = 1;
 	double sy = x1period(y, dFxdTy );   dFxdTy*=strength;
 	double sx = x1period(x, dFydTx );	 dFydTx*=strength;
-	x += sy*strength;		
+	x += sy*strength;
 	y += sx*strength;
 	_WARP_DERIVATIVS_2D_;
 }
 
 double warped_function( double x, double y, double& dfdx, double& dfdy ){
 
-	double fscale = 2.0; 
+	double fscale  = 2.0;
 	double ifscale = 1.0/fscale;
 	x *= fscale;	y *= fscale;
 	double dTxdx = 1,dTxdy = 0;
 	double dTydx = 0,dTydy = 1;
-	for(int i=0; i<4; i++){
+	for(int i=0; i<NWRAP; i++){
 		//warp_sin( x, y,   dTxdx, dTxdy, dTydx, dTydy );
-		//warp_x2period( x, y,   dTxdx, dTxdy, dTydx, dTydy );
-		warp_x1period( x, y,   dTxdx, dTxdy, dTydx, dTydy );
+		warp_x2period( x, y,   dTxdx, dTxdy, dTydx, dTydy );
+		//warp_x1period( x, y,   dTxdx, dTxdy, dTydx, dTydy );
 		//x+=0.1-y*0.25;
 		//y+=0.1+x*0.25;
 		x *= 1.1;
