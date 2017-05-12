@@ -24,7 +24,7 @@ const double GRAV_CONTS = 6.67384e-11;
 void gravity_force( const Vec3d& r12, double GM12, Vec3d& f )   {
 	double ir2 = 1.0d/r12.norm2( );
 	double fr =  ir2*sqrt(ir2)*GM12;
-	f.add_mul( r12, fr ); 
+	f.add_mul( r12, fr );
 	//printf( "fr %e ir2 %e G %e ma %e mb %e \n",  fr,  ir2, GRAV_CONTS, ma, mb );
 	//printf( " ir2  %e fr %e  f %e %e %e r12  %e %e %e \n", ir2,  fr,    f.x, f.y, f.z,    r12.x, r12.y, r12.z );
 }
@@ -39,15 +39,14 @@ void biot_savart_element( const Vec3d& R, const Vec3d& dI, Vec3d& B ){
 	Vec3d dB;
 	dB.set_cross( dI, R );
 	double r2 = R.norm2();
-	B.add_mul( dB, 1e-7 / ( r2 * sqrt(r2) ) ); 
+	B.add_mul( dB, 1e-7 / ( r2 * sqrt(r2) ) );
 }
 
 #include "cpp/OrbitalUtils.h"
-
+#include "cpp/SpaceLaunchODE.h"
 #include "cpp/Nbody.h"
 #include "cpp/ShipAccel.h"
 #include "cpp/elmag.h"
-
 #include "cpp/fissionPulse.h"
 
 extern "C"{
@@ -86,6 +85,40 @@ void elmag_run( double dt_start, double dt_min, double dt_max, int nstep, double
 	ElMag::run( dt_start, dt_min, dt_max, nstep, tsIn, tsOut, poss, vs );
 }
 
+// ========= SpaceLaunchODE
+
+ODEintegrator_RKF45  odeint;
+
+void SpaceLaunchODE_init( SpaceLaunchODE::Planet *planet_, SpaceLaunchODE::Rocket *rocket_, SpaceLaunchODE::Aerodynamics *aero_, SpaceLaunchODE::Atmosphere *atmosphere_){
+    using namespace SpaceLaunchODE;
+    planet = *planet_; rocket = *rocket_; aero = *aero_; atmosphere = *atmosphere_;
+    odeint.reallocate( 7 );
+    odeint.dt_max    = 0.005;
+    odeint.dt_min    = 0.0001;
+    odeint.dt_adapt  = 0.001;
+    odeint.getDerivs = getODEDerivs;
+}
+
+int SpaceLaunchODE_run( int nLogMax, int nMaxIters, SpaceLaunchODE::Launch *launch_, SpaceLaunchODE::LogTrig *logTrig_, double * outbuff ){
+    using namespace SpaceLaunchODE;
+    launch = *launch_; logTrig = *logTrig_;
+    logbuff = (LogVars*)outbuff;
+    logFunc = logfunc_default;
+    //logTrig.tmax   = 0;
+    //logTrig.t_trig = 1e+300;
+    //logTrig.on     = false;
+    int nstep = 0;
+    for(int i=0; i<nLogMax; i++){
+        //odeint.step( 0.1d );
+        //odeint.adaptive_step_RKF45( );
+        //nstep = odeint.integrate_adaptive( odeint.dt_adapt, odeint.t+0.2d );
+        nstep += odeint.integrate_adaptive( odeint.dt_adapt, odeint.t+5.0d );
+        if( ( logVars.vx >= launch.vTarget ) && ( logVars.h  >= launch.hTarget ) ) break;
+        if( ( logVars.t > launch.tMax ) || ( nstep > nMaxIters ) ){ logTrig.i*=-1; break; }
+    }
+    return logTrig.i;
+}
+
 // ========= FissionPulse
 
 void FissionPulse_set_params( double mass,double alphaDOF,double total_crossection,double fission_share, double back_scatter_share, double generation_rate,  double spontaneous_rate, double E_fission, double nmult, double nmult_spontal){
@@ -100,7 +133,7 @@ void FissionPulse_run_fixStep( double dt, int nstep, double * buff ){
 	FissionPulse::run_fixStep( dt, nstep, buff );
 }
 
-void FissionPulse_set_trigger( double time_trigger, double R_trigger, double Nn_spark ){ 
+void FissionPulse_set_trigger( double time_trigger, double R_trigger, double Nn_spark ){
 	FissionPulse::set_trigger( time_trigger, R_trigger, Nn_spark );
 }
 

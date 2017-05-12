@@ -1,4 +1,6 @@
 
+include_directories( ${MY_SRC_DIR}/libs/KosmoSuite/cpp )
+
 add_executable( orbitEditor 
 	orbitEditor.cpp 
 	$<TARGET_OBJECTS:Body>
