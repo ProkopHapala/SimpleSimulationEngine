@@ -1,5 +1,5 @@
 import numpy as np
-from   ctypes import c_int, c_double, c_bool, c_float
+from   ctypes import c_int, c_double, c_bool, c_float, c_void_p
 import ctypes
 import os
 
@@ -123,7 +123,89 @@ def FissionPulse_set_trigger( time_trigger=1e+300, R_trigger=0.05, Nn_spark=1e+1
 	lib.FissionPulse_set_trigger( time_trigger, R_trigger, Nn_spark )
 
 
+# ========= SpaceLaunchODE
+# simple example is in /home/prokop/Dropbox/MyDevSW/ctypes/PassStruct
+# this things should be automatized
+#see https://github.com/davidjamesca/ctypesgen/tree/master/ctypesgencore
+#    http://cffi.readthedocs.io/en/latest/
+#    http://stackoverflow.com/questions/14534998/tool-to-convert-c-structure-to-ctypes-structure
 
+class Vec3d(ctypes.Structure):
+     _fields_ = [
+     ("x",    c_double),
+     ("y",    c_double),
+     ("z",    c_double)
+     ]
+
+class Launch(ctypes.Structure):
+     _fields_ = [
+     ("n",         c_int),
+     ("thetaCPs ", c_void_p),
+     ("thrustCPs", c_void_p),
+     ("dirCPs",    c_void_p),
+     ("uT",        c_double),
+     ("inv_uT",    c_double),
+     ("tMax",      c_double),
+     ("vTarget",   c_double),
+     ("hTarget",   c_double)
+     ]
+
+class Aerodynamics(ctypes.Structure):
+     _fields_ = [
+     ("n",       c_int),
+     ("dvM",     c_double),
+     ("inv_dvM", c_double),
+     ("vMax",    c_double),
+     ("Cd_CPs",  c_void_p)
+     ]
+
+class Atmosphere(ctypes.Structure):
+     _fields_ = [
+     ("n",        c_int),
+     ("dh",       c_double),
+     ("inv_dh",   c_double),
+     ("hmax",     c_double),
+     ("rho_CPs",  c_void_p),
+     ("rho0",     c_double),
+     ("zrate",    c_double)
+     ]
+
+class Rocket(ctypes.Structure):
+     _fields_ = [
+     ("vexhaust",    c_double),
+     ("dm_F",        c_double),
+     ("mass_initial",c_double),
+     ("mass_empty",  c_double),
+     ("thrust_full", c_double),
+     ("AeroArea",    c_double),
+     ]
+
+class Planet(ctypes.Structure):
+     _fields_ = [
+     ("R",   c_double),
+     ("GM",  c_double),
+     ("pos", Vec3d)
+     ]
+
+class LogTrig(ctypes.Structure):
+     _fields_ = [
+     ("on",      c_bool),
+     ("dt_trig", c_double),
+     ("t_trig",  c_double),
+     ("i",       c_int),
+     ]
+
+# void SpaceLaunchODE_init( Planet *planet_, Rocket *rocket_, Aerodynamics *aero_, Atmosphere *atmosphere_){
+lib.SpaceLaunchODE_init.argtypes   = [ Planet, Rocket, Aerodynamics, Atmosphere ]
+lib.SpaceLaunchODE_init.restype    = None
+#def SpaceLaunchODE_init( planet, rocket, aero, atmosphere ):
+#	lib.SpaceLaunchODE_init( planet, rocket, aero, atmosphere )
+
+# int SpaceLaunchODE_run( int nLogMax, int nMaxIters, Launch *launch_, LogTrig *logTrig_, double * outbuff ){
+lib.SpaceLaunchODE_run.argtypes   = [ c_int, c_int, Launch, LogTrig, ctypes.c_void_p ]
+lib.SpaceLaunchODE_run.restype    = c_int
+#def SpaceLaunchODE_run( ):
+#	lib.SpaceLaunchODE_run(  )
 
 
 
