@@ -25,7 +25,11 @@
 #include "testUtils.h"
 #include "IO_utils.h"
 
+double view_scale = 1e-6;
 #include "SpaceLaunchODE.h"
+
+using namespace SpaceLaunchODE;
+
 
 /*
 // TODO : in case we need object ?
@@ -43,7 +47,7 @@ FILE * flog;
 
 void logFunc1(){
     //printf( " logFunc1 %g %g %g %g \n", log_t, log_t_trig, log_Cd, log_rho );
-    if( flog ) fprintf( flog, " %g %g   %g %g %g   %g %g %g   %g %g   %g %g %g \n", log_t, log_h,   log_v, log_vx, log_vy,  log_T, log_Tx, log_Ty,  log_m, log_G,     log_FD, log_Cd, log_rho );
+    if( flog ) fprintf( flog, " %g %g   %g %g %g   %g %g %g   %g %g   %g %g %g \n", logVars.t, logVars.h,   logVars.v, logVars.vx, logVars.vy,  logVars.T, logVars.Tx, logVars.Ty,  logVars.m, logVars.G,     logVars.FD, logVars.Cd, logVars.rho );
 }
 
 void splinePixel( double t, double& x, double& y, double& z ){
@@ -56,7 +60,7 @@ void splinePixel( double t, double& x, double& y, double& z ){
     y = Spline_Hermite::val( u, y1, y2, (y2-thetaCPs[i])*0.5d, (thetaCPs[i+3]-y1)*0.5d ) * 5.0;
     z = 0;
     */
-    Vec3d p = getSpline3d( u, dirCPs+i );
+    Vec3d p = getSpline3d( u, launch.dirCPs+i );
     x=p.x; y=p.y; z=p.z;
 };
 
@@ -106,8 +110,8 @@ TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_
     for(int i=0; i<n; i++){ printf( " %i %f \n", i, rho_CPs[i] ); }
     */
 
-    nrho = loadColumns( "data/standard_atmosphere.dat", "000d", (void**)&planet_rho_CPs );
-    nCds = loadColumns( "data/Cd.dat", "0d", (void**)&rocket_Cd_CPs );
+    atmosphere.n = loadColumns( "data/standard_atmosphere.dat", "000d", (void**)&atmosphere.rho_CPs );
+    aero.n       = loadColumns( "data/Cd.dat", "0d", (void**)&aero.Cd_CPs );
     printf( "DEBUG load done \n" );
 
     flog = fopen( "SpaceFlightODE.log", "w");
@@ -139,16 +143,20 @@ TestApp_SpaceFlightODE::TestApp_SpaceFlightODE( int& id, int WIDTH_, int HEIGHT_
 
     pos->set(1.0,0.0,0.0); vel->set(0.0,0.0,0.0);
     //pos->set(0.0,100.0e+3,0.0); vel->set(7.9e+3,0.0,0.0); satelite
-    *mass = mass_initial;
+    *mass = rocket.mass_initial;
 
-    for(int i=0; i<nCP; i++){
+    launch.n = 10;
+    launch.thetaCPs  = new double[launch.n];
+    launch.thrustCPs = new double[launch.n];
+    launch.dirCPs    = new Vec3d [launch.n];
+    for(int i=0; i<launch.n; i++){
         double t = (i-1)*0.5;
         //double   theta = M_PI_2/(1.0d + t*t*1.5 );
         double   theta = M_PI_2*exp( -0.15*t*t*t*t );
         if(i==0) theta = M_PI_2;
-        thetaCPs [i] = theta;
-        thrustCPs[i] = thrust_full;
-        dirCPs   [i].set( cos(theta), sin(theta), 0.0 );
+        launch.thetaCPs [i] = theta;
+        launch.thrustCPs[i] = rocket.thrust_full;
+        launch.dirCPs   [i].set( cos(theta), sin(theta), 0.0 );
     }
 
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
@@ -214,14 +222,14 @@ void TestApp_SpaceFlightODE::draw(){
         //printf( "%i %i (%g,%g,%g) %g %g\n ", frameCount, nstep, pos->x,pos->y,pos->z, odeint.t, odeint.dt_adapt );
         //printf( " %g : (%g,%g,%g) %g %g \n ", odeint.t, pos->x,pos->y,pos->z, vel->norm(), *mass );
 
-        printf( " %g [s] %g [km] %g [km/s] %g [ton] \n ", odeint.t, ((*pos-planet_pos).norm() - planet_R )*1e-3, vel->norm()*1e-3, (*mass)*1e-3 );
+        printf( " %g [s] %g [km] %g [km/s] %g [ton] \n ", odeint.t, ((*pos-planet.pos).norm() - planet.R )*1e-3, vel->norm()*1e-3, (*mass)*1e-3 );
 
         //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine    ( opos      , *pos ); Draw3D::drawPointCross( *pos, 0.1 );
         //glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos( (*vel)*2.0, *pos );
 
-        if( (log_t_trig > log_tmax)&&(flog) ){ fclose(flog); flog = NULL; }
+        if( (logTrig.t_trig > logTrig.tmax)&&(flog) ){ fclose(flog); flog = NULL; }
 
-        if( (*pos-planet_pos).norm2()<(planet_R*planet_R) ){
+        if( (*pos-planet.pos).norm2()<sq(planet.R) ){
             printf("crashed !!!\n");
             RUNNING = false;
         }
@@ -235,8 +243,8 @@ void TestApp_SpaceFlightODE::draw(){
     // --- draw planet
     //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( {0.0,0.0,0.0}, 0.5 );
     glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( {0.0,0.0,0.0}, 0.1 );
-    glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( planet_pos*view_scale, 0.5 );
-    glColor3f(0.0f,0.0f,0.0f); Draw3D::drawCircleAxis( 64, planet_pos*view_scale, {0.0,planet_R*view_scale,0.0}, {0.0,0.0,1.0} );
+    glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( planet.pos*view_scale, 0.5 );
+    glColor3f(0.0f,0.0f,0.0f); Draw3D::drawCircleAxis( 64, planet.pos*view_scale, {0.0,planet.R*view_scale,0.0}, {0.0,0.0,1.0} );
 
 	glDisable ( GL_LIGHTING );
 
@@ -248,19 +256,19 @@ void TestApp_SpaceFlightODE::drawHUD(){
     float x0 = 100;
     float tsc = 1.0;
     float sc  = 100.0;
-    for(int i=0; i<nCP; i++){
-        double st = uT*(i-1)*tsc + x0;
-        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( {st,thetaCPs[i]  *sc*2,0.0}, 5.0 );
-        glColor3f(1.0f,0.0f,0.0f); Draw3D::drawPointCross( {st,dirCPs  [i].x*sc,0.0}, 5.0 );
-        glColor3f(0.0f,0.0f,1.0f); Draw3D::drawPointCross( {st,dirCPs  [i].y*sc,0.0}, 5.0 );
+    for(int i=0; i<launch.n; i++){
+        double st = launch.uT*(i-1)*tsc + x0;
+        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( {st,launch.thetaCPs[i]  *sc*2,0.0}, 5.0 );
+        glColor3f(1.0f,0.0f,0.0f); Draw3D::drawPointCross( {st,launch.dirCPs  [i].x*sc,0.0}, 5.0 );
+        glColor3f(0.0f,0.0f,1.0f); Draw3D::drawPointCross( {st,launch.dirCPs  [i].y*sc,0.0}, 5.0 );
     }
 
     int icp; double u;
-    spline_sample( odeint.t, inv_uT, u, icp );
-    if((icp+3)<nCP){
+    spline_sample( odeint.t, launch.inv_uT, u, icp );
+    if((icp+3)<launch.n){
         double st = odeint.t*tsc + x0;
-        double theta = getSpline  ( u, thetaCPs+icp );
-        Vec3d  dir   = getSpline3d( u, dirCPs   +icp );
+        double theta = getSpline  ( u, launch.thetaCPs+icp );
+        Vec3d  dir   = getSpline3d( u, launch.dirCPs   +icp );
         //double thrust = getSpline  ( u, thrustCPs+icp );
         glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( {st,theta*sc*2,0.0}, 5.0 );
         glColor3f(1.0f,0.0f,0.0f); Draw3D::drawPointCross( {st,dir.x*sc,0.0}, 5.0 );
