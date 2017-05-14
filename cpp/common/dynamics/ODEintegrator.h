@@ -106,7 +106,7 @@ class ODEintegrator_RKF45 : public ODEintegrator{
 		// predictor step ( get all derivatives )
 
 		//printf( "DEBUG 1.1 \n" );
-		getDerivs( t + at[0]*dt, n, Y   , dY0 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt *   b10*dY1[i];                                                        }
+		getDerivs( t + at[0]*dt, n, Y   , dY0 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt *   b10*dY0[i];                                                        }
 		getDerivs( t + at[1]*dt, n, Ynew, dY1 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b20*dY0[i] + b21*dY1[i]                                         ); }
 		getDerivs( t + at[2]*dt, n, Ynew, dY2 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b30*dY0[i] + b31*dY1[i] + b32*dY2[i]                            ); }
 		getDerivs( t + at[3]*dt, n, Ynew, dY3 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b40*dY0[i] + b41*dY1[i] + b42*dY2[i] + b43*dY3[i]               ); }

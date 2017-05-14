@@ -92,14 +92,33 @@ ODEintegrator_RKF45  odeint;
 void SpaceLaunchODE_init( SpaceLaunchODE::Planet *planet_, SpaceLaunchODE::Rocket *rocket_, SpaceLaunchODE::Aerodynamics *aero_, SpaceLaunchODE::Atmosphere *atmosphere_){
     using namespace SpaceLaunchODE;
     planet = *planet_; rocket = *rocket_; aero = *aero_; atmosphere = *atmosphere_;
+    /*
+    printf( "%i \n", planet_ );
+    printf( "%i \n", rocket_ );
+    printf( "%i \n", aero_ );
+    printf( "%i \n", atmosphere_ );
+
+
+    printf( "%i \n", atmosphere_->n );
+    printf( "%i %g %g %g %g\n", atmosphere_->n, atmosphere_->dh, atmosphere_->inv_dh, atmosphere_->hmax, atmosphere_->rho_CPs[2] );
+    printf( "%i %g %g %g %g\n", atmosphere.n, atmosphere.dh, atmosphere.inv_dh, atmosphere.hmax, atmosphere.rho_CPs[1] );
+
+    printf( "HEY  atmosphere.n %i \n", atmosphere.n );
+
+    for(int i=0; i<atmosphere.n; i++){
+        printf( "%i %f\n", i,atmosphere.rho_CPs[i] );
+    }
+    */
+
     odeint.reallocate( 7 );
     odeint.dt_max    = 0.005;
     odeint.dt_min    = 0.0001;
     odeint.dt_adapt  = 0.001;
     odeint.getDerivs = getODEDerivs;
+
 }
 
-int SpaceLaunchODE_run( int nLogMax, int nMaxIters, SpaceLaunchODE::Launch *launch_, SpaceLaunchODE::LogTrig *logTrig_, double * outbuff ){
+int SpaceLaunchODE_run( int nMax, int nMaxIters, SpaceLaunchODE::Launch *launch_, SpaceLaunchODE::LogTrig *logTrig_, double * outbuff ){
     using namespace SpaceLaunchODE;
     launch = *launch_; logTrig = *logTrig_;
     logbuff = (LogVars*)outbuff;
@@ -107,14 +126,44 @@ int SpaceLaunchODE_run( int nLogMax, int nMaxIters, SpaceLaunchODE::Launch *laun
     //logTrig.tmax   = 0;
     //logTrig.t_trig = 1e+300;
     //logTrig.on     = false;
+
+    ((Vec3d*)(odeint.invMaxYerr  ))->set(1/1e-1);
+    ((Vec3d*)(odeint.invMaxYerr+3))->set(1/1e-2);
+    odeint.invMaxYerr[6] = 1/1e+1;
+
+    Vec3d  * pos  = (Vec3d*)(odeint.Y   );
+    Vec3d  * vel  = (Vec3d*)(odeint.Y+3 );
+    Vec3d  * acc  = (Vec3d*)(odeint.dY+3);
+    double * mass = odeint.Y+6;
+
+    pos->set(0.0,0.0,0.0); vel->set(0.0,0.0,0.0);
+    //pos->set(0.0,100.0e+3,0.0); vel->set(7.9e+3,0.0,0.0); satelite
+    *mass = rocket.mass_initial;
+
+    /*
+    printf( "rocket %g %g %g %g %g %g \n",         rocket.AeroArea, rocket.dm_F, rocket.mass_empty, rocket.mass_initial, rocket.thrust_full, rocket.vexhaust );
+    printf( "planet %g %g (%g,%g,%g) \n",          planet.GM, planet.R, planet.pos.x, planet.pos.y, planet.pos.z );
+    printf( "launch %g %g %g %g \n",               launch.uT, launch.inv_uT, launch.hTarget, launch.vTarget  );
+    printf( "logTrig %i %i %g %g %g \n",           logTrig.i, logTrig.on, logTrig.dt_trig, logTrig.t_trig, logTrig.tmax  );
+
+    printf( ">>pos<< (%g,%g,%g) vel (%g,%g,%g) mass %g \n", pos->x,pos->y,pos->z, vel->x,vel->y,vel->z, *mass );
+    for(int i=0; i<launch.n; i++){
+        printf( "%i : %g %g (%g,%g,%g) \n", i, launch.thetaCPs[i], launch.thrustCPs[i], launch.dirCPs[i].x, launch.dirCPs[i].y, launch.dirCPs[i].z );
+    }
+    printf( "xMax %i nMaxIters %i \n", nMax, nMaxIters );
+    //exit(0);
+    */
+
     int nstep = 0;
-    for(int i=0; i<nLogMax; i++){
+    for(int i=0; i<nMax; i++){
         //odeint.step( 0.1d );
         //odeint.adaptive_step_RKF45( );
         //nstep = odeint.integrate_adaptive( odeint.dt_adapt, odeint.t+0.2d );
         nstep += odeint.integrate_adaptive( odeint.dt_adapt, odeint.t+5.0d );
         if( ( logVars.vx >= launch.vTarget ) && ( logVars.h  >= launch.hTarget ) ) break;
         if( ( logVars.t > launch.tMax ) || ( nstep > nMaxIters ) ){ logTrig.i*=-1; break; }
+        if( logTrig.i >= nMax ) break;
+        //logbuff[i].t = i;
     }
     return logTrig.i;
 }

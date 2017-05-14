@@ -5,23 +5,6 @@ import os
 
 from .. import utils
 
-
-'''
-name='KosmoSuite'
-
-LIB_PATH      = os.path.dirname( os.path.realpath(__file__) )
-LIB_PATH_CPP  = os.path.normpath(LIB_PATH+'../../../../'+'/cpp/libs/KosmoSuiteCpp')
-print "KosmoSuiteCpp LIB_PATH     = ", LIB_PATH
-print "KosmoSuiteCpp LIB_PATH_CPP = ", LIB_PATH_CPP 
-
-if utils.recompile: 
-	utils.compile_lib( name, path = LIB_PATH_CPP )
-
-lib    = ctypes.CDLL( LIB_PATH_CPP+"/lib"+name+ utils.ext )
-'''
-
-
-
 def recompile(path):
     print( path )
     dir_bak = os.getcwd()
@@ -130,83 +113,108 @@ def FissionPulse_set_trigger( time_trigger=1e+300, R_trigger=0.05, Nn_spark=1e+1
 #    http://cffi.readthedocs.io/en/latest/
 #    http://stackoverflow.com/questions/14534998/tool-to-convert-c-structure-to-ctypes-structure
 
+def printStruc(S):
+    for field_name, field_type in S._fields_:
+        print field_name, getattr(S, field_name)
+
 class Vec3d(ctypes.Structure):
-     _fields_ = [
-     ("x",    c_double),
-     ("y",    c_double),
-     ("z",    c_double)
-     ]
+    _fields_ = [
+    ("x",    c_double),
+    ("y",    c_double),
+    ("z",    c_double)
+    ]
 
 class Launch(ctypes.Structure):
-     _fields_ = [
-     ("n",         c_int),
-     ("thetaCPs ", c_void_p),
-     ("thrustCPs", c_void_p),
-     ("dirCPs",    c_void_p),
-     ("uT",        c_double),
-     ("inv_uT",    c_double),
-     ("tMax",      c_double),
-     ("vTarget",   c_double),
-     ("hTarget",   c_double)
-     ]
+    _fields_ = [
+    ("n",         c_int),
+    ("thetaCPs ", c_void_p),
+    ("thrustCPs", c_void_p),
+    ("dirCPs",    c_void_p),
+    ("uT",        c_double),
+    ("inv_uT",    c_double),
+    ("tMax",      c_double),
+    ("vTarget",   c_double),
+    ("hTarget",   c_double)
+    ]
+    def __init__(self, thetaCPs, thrustCPs, dirCPs, uT, vTarget, hTarget ):
+        n      = len(thetaCPs)
+        #dirCPs = np.zeros((n,3))
+        inv_uT = 1.0/uT
+        tMax   = uT*(n-3)
+        super(Launch, self).__init__(n,thetaCPs.ctypes.data,thrustCPs.ctypes.data,dirCPs.ctypes.data,uT,inv_uT,tMax,vTarget,hTarget)
 
 class Aerodynamics(ctypes.Structure):
-     _fields_ = [
-     ("n",       c_int),
-     ("dvM",     c_double),
-     ("inv_dvM", c_double),
-     ("vMax",    c_double),
-     ("Cd_CPs",  c_void_p)
-     ]
+    _fields_ = [
+    ("n",       c_int),
+    ("dvM",     c_double),
+    ("inv_dvM", c_double),
+    ("vMax",    c_double),
+    ("Cd_CPs",  c_void_p)
+    ]
+    def __init__(self, dvM, Cd_CPs ):
+        n      = len(Cd_CPs)
+        inv_dvM = 1/dvM
+        vMax   = dvM*(n-3)
+        super(Aerodynamics, self).__init__(n, dvM, inv_dvM, vMax, Cd_CPs.ctypes.data)
 
 class Atmosphere(ctypes.Structure):
-     _fields_ = [
-     ("n",        c_int),
-     ("dh",       c_double),
-     ("inv_dh",   c_double),
-     ("hmax",     c_double),
-     ("rho_CPs",  c_void_p),
-     ("rho0",     c_double),
-     ("zrate",    c_double)
-     ]
+    _fields_ = [
+    ("n",        c_int),
+    ("dh",       c_double),
+    ("inv_dh",   c_double),
+    ("hmax",     c_double),
+    ("rho_CPs",  c_void_p),
+    ("rho0",     c_double),
+    ("zrate",    c_double)
+    ]
+    def __init__(self, dh, rho_CPs ):
+        n      = len(rho_CPs)
+        inv_dh = 1/dh
+        hmax   = dh*(n-3)
+        super(Atmosphere, self).__init__(n, dh, inv_dh, hmax, rho_CPs.ctypes.data, 0.0, 0.0 )
 
 class Rocket(ctypes.Structure):
-     _fields_ = [
-     ("vexhaust",    c_double),
-     ("dm_F",        c_double),
-     ("mass_initial",c_double),
-     ("mass_empty",  c_double),
-     ("thrust_full", c_double),
-     ("AeroArea",    c_double),
-     ]
+    _fields_ = [
+    ("vexhaust",    c_double),
+    ("dm_F",        c_double),
+    ("mass_initial",c_double),
+    ("mass_empty",  c_double),
+    ("thrust_full", c_double),
+    ("AeroArea",    c_double),
+    ]
+    def __init__(self, vexhaust, mass_initial, mass_empty, thrust_full, AeroArea ):
+        dm_F = 1.0/vexhaust
+        super(Rocket, self).__init__(vexhaust, dm_F, mass_initial, mass_empty, thrust_full, AeroArea)
 
 class Planet(ctypes.Structure):
-     _fields_ = [
-     ("R",   c_double),
-     ("GM",  c_double),
-     ("pos", Vec3d)
-     ]
+    _fields_ = [
+    ("R",   c_double),
+    ("GM",  c_double),
+    ("pos", Vec3d)
+    ]
 
 class LogTrig(ctypes.Structure):
-     _fields_ = [
-     ("on",      c_bool),
-     ("dt_trig", c_double),
-     ("t_trig",  c_double),
-     ("i",       c_int),
-     ]
+    _fields_ = [
+    ("tmax",    c_double),
+    ("dt_trig", c_double),
+    ("t_trig",  c_double),
+    ("i",       c_int),
+    ("on",      c_bool),
+    ]
+    def __init__(self, dt_trig, tmax ):
+        super(LogTrig, self).__init__( tmax, dt_trig, 0.0, 0, False )
 
 # void SpaceLaunchODE_init( Planet *planet_, Rocket *rocket_, Aerodynamics *aero_, Atmosphere *atmosphere_){
-lib.SpaceLaunchODE_init.argtypes   = [ Planet, Rocket, Aerodynamics, Atmosphere ]
-lib.SpaceLaunchODE_init.restype    = None
-#def SpaceLaunchODE_init( planet, rocket, aero, atmosphere ):
-#	lib.SpaceLaunchODE_init( planet, rocket, aero, atmosphere )
+def SpaceLaunchODE_init( planet, rocket, aero, atmosphere ):
+    lib.SpaceLaunchODE_init( ctypes.byref(planet), ctypes.byref(rocket), ctypes.byref(aero), ctypes.byref(atmosphere) )
 
 # int SpaceLaunchODE_run( int nLogMax, int nMaxIters, Launch *launch_, LogTrig *logTrig_, double * outbuff ){
-lib.SpaceLaunchODE_run.argtypes   = [ c_int, c_int, Launch, LogTrig, ctypes.c_void_p ]
-lib.SpaceLaunchODE_run.restype    = c_int
-#def SpaceLaunchODE_run( ):
-#	lib.SpaceLaunchODE_run(  )
-
+def SpaceLaunchODE_run( nMax, nMaxIters, launch, logTrig ):
+    nLogMax = int( launch.tMax / logTrig.dt_trig )
+    print  "nLogMax=", nLogMax
+    outbuff = np.zeros( (nLogMax,13) )
+    lib.SpaceLaunchODE_run( nMax, nMaxIters, ctypes.byref(launch), ctypes.byref(logTrig), ctypes.c_voidp(outbuff.ctypes.data) )
+    return outbuff
 
 
 

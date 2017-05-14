@@ -20,16 +20,16 @@ typedef struct{
 
 typedef struct{
     int n;
-    double dvM;
-    double inv_dvM = 1/0.25;      // [1/Mach]
-    double vMmax   =     9.0d;  // [Mach]
-    double * Cd_CPs  = NULL;
+    double dvM      = 0.25;
+    double inv_dvM  = 1/dvM; // [1/Mach]
+    double vMmax    = 9.0d;  // [Mach]
+    double * Cd_CPs = NULL;
 } Aerodynamics;
 
 typedef struct{
     int n;
-    double dh;
-    double inv_dh  = 1/2000.0;  // [1/m]
+    double dh      = 2000.0;
+    double inv_dh  = 1/dh;  // [1/m]
     double hmax    = 84000.0d;  // [m]
     double * rho_CPs = NULL;
 
@@ -59,24 +59,24 @@ typedef struct{
     double tmax     = 1000.0;
     double dt_trig  = 1.0;
     double t_trig   = 0.0;
-    int i  = 0;
-    double on       = false;
+    int    i        = 0;
+    bool   on       = false;
 } LogTrig;
 
 typedef struct{
-    double t;
-    double Cd;
-    double rho;
-    double FD;
-    double m;
-    double h;
-    double v;
-    double vx;
-    double vy;
-    double T;
-    double Tx;
-    double Ty;
-    double G;
+    double t;   //0
+    double Cd;  //1
+    double rho; //2
+    double FD;  //3
+    double m;   //4
+    double h;   //5
+    double v;   //6
+    double vx;  //7
+    double vy;  //8
+    double T;   //9
+    double Tx;  //10
+    double Ty;  //11
+    double G;   //12
 } LogVars;
 
 // ==== Globals
@@ -97,7 +97,12 @@ void (*logFunc)();
 
 // ==== Functions
 
-void logfunc_default( ){ logbuff[logTrig.i] = logVars; }
+void logfunc_default( ){
+    logbuff[logTrig.i] = logVars;
+    //printf( " === %i %g %g \n", logTrig.i, logVars.t, logVars.vy );
+    //printf( "%i %g \n", logTrig.i, logTrig.t_trig );
+    //logbuff[logTrig.i].t = logTrig.i;
+}
 
 inline void spline_sample( double t, double inv_dt, double& u, int& icp ){
     double tcp = t*inv_dt;
@@ -204,6 +209,9 @@ void getODEDerivs( double t, int n, double * Ys, double * dYs ){
     // double r = addGravity( pos-planet_pos, acc, planet_GM );
 
     // --- Gravity
+
+    //printf( "%g : pos (%g,%g,%g) vel (%g,%g,%g) %g\n", t, pos.x,pos.y,pos.z, vel.x,vel.y,vel.z, m  );
+
     Vec3d dp; dp.set_sub(pos, planet.pos );
     double r2  = dp.norm2();
     double r   = sqrt(r2);
@@ -212,7 +220,9 @@ void getODEDerivs( double t, int n, double * Ys, double * dYs ){
     Vec3d acc; acc.set_mul( dp, G );
 
     double h = r - planet.R;
+
     if( h < atmosphere.hmax ){
+    //if( false ){
         acc.add_mul( getAirDragForce( vel, h ), 1/m );
         //exit(0);
     }else{
@@ -220,9 +230,11 @@ void getODEDerivs( double t, int n, double * Ys, double * dYs ){
     }
 
     if(logTrig.on){
-        double cr   = dp.dot(vel);
-        Vec3d velT  = vel - dp*cr;
-        double cl   = velT.norm();
+
+        double cr  = dp.dot(vel);
+        Vec3d velT = vel - dp*cr;
+        double cl  = velT.norm();
+        //printf( " +++ %g %g (%g,%g,%g) \n", cl, cr,  vel.x, vel.y, vel.z );
         logVars.v  = vel.norm();
         logVars.vx = cl;
         logVars.vy = cr;
@@ -246,6 +258,8 @@ void getODEDerivs( double t, int n, double * Ys, double * dYs ){
             Vec3d  dir    = getSpline3d( u, launch.dirCPs   +icp );
             double thrust = getSpline  ( u, launch.thrustCPs+icp );
 
+            //printf( "%g (%g,%g,%g) %g\n", t, dir.x, dir.y, dir.z, thrust  ); exit(0);
+
             //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawVecInPos( dir*5.0, pos*view_scale );
             //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine( pos*view_scale, pos*view_scale + dir );
             //Vec3d dir_ = {1.0,dir.y,0.0};
@@ -258,17 +272,17 @@ void getODEDerivs( double t, int n, double * Ys, double * dYs ){
                 double cr   = dp.dot(dir);
                 Vec3d dirT  = dir - dp*cr;
                 double cl   = dirT.norm();
-                logVars.Tx      = thrust*cl;
-                logVars.Ty      = thrust*cr;
-                logVars.T       = thrust;
+                logVars.Tx  = thrust*cl;
+                logVars.Ty  = thrust*cr;
+                logVars.T   = thrust;
             }
 
             //printf( "T %g T/m %g acc %g m %g dm %g \n", thrust,thrust/m, acc.norm(), m, dm  );
             acc.add_mul( dir, thrust/m );
-        }else{
-            if(logTrig.on){ logVars.Tx= 0; logVars.Ty= 0; logVars.T= 0; }
         }
         //exit(0);
+    }else{
+        if(logTrig.on){ logVars.Tx= 0; logVars.Ty= 0; logVars.T= 0; }
     };
 
     if(logTrig.on){
@@ -281,6 +295,11 @@ void getODEDerivs( double t, int n, double * Ys, double * dYs ){
 
     // TODO : air drag
 
+    //((Vec3d*) dYs   )->set( 0.0 );
+    //((Vec3d*)(dYs+3))->set( 0.0 );
+
+
+    //printf( "dY : vel (%g,%g,%g) acc (%g,%g,%g) dm %g\n", vel.x,vel.y,vel.z, acc.x,acc.y,acc.z, dm  );
     ((Vec3d*) dYs   )->set( vel );
     ((Vec3d*)(dYs+3))->set( acc );
     dYs[6] = dm;
