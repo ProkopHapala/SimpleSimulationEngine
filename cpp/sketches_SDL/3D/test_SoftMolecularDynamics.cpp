@@ -22,6 +22,8 @@
 // TestAppSoftMolDyn
 // ==========================
 
+
+
 constexpr int natoms=5, nbonds=4, nang=6, ntors=0;
 
 Vec3d  apos[natoms] = {
@@ -33,14 +35,27 @@ Vec3d  apos[natoms] = {
 };   // atomic position
 
 Vec2i  bond2atom[nbonds] = {{0,1},{0,2},{0,3},{0,4}};
-double bond_0   [nbonds] = {1.0,1.2,1.5,1.7};  // [A]
-//double bond_k   [nbonds] = {};  // [eV/A] ?
+//double bond_0   [nbonds] = {1.0,1.2,1.5,1.7};  // [A]
+double bond_0   [nbonds] = {1.0,1.0,1.0,1.0};  // [A]
 
 Vec2i  ang2bond [nang]     = {{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}};
-//Vec3i  ang2atom [nang]   = {};
-//Vec2d  ang_0    [nang]   = {}; // [1]
-//double ang_k    [nang]   = {}; // [eV/A^2]
 
+
+
+/*
+constexpr int natoms=3, nbonds=2, nang=1, ntors=0;
+
+Vec3d  apos[natoms] = {
+{ 0.0, 0.0, 0.0},
+{+1.0,+1.0,+1.0},
+{-1.0,-1.0,+1.0},
+};   // atomic position
+
+Vec2i  bond2atom[nbonds] = {{0,1},{0,2}};
+double bond_0   [nbonds] = {0.8,1.2};  // [A]
+
+Vec2i  ang2bond [nang]   = {{0,1}};
+*/
 
 
 class TestAppSoftMolDyn : public AppSDL2OGL_3D {
@@ -69,6 +84,8 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     opt.bindArrays( 3*natoms, (double*)world.apos, new double[3*natoms], (double*)world.aforce );
     opt.setInvMass( 1.0 );
 
+    world.ang_b2a();
+
     for(int i=0; i<world.nbonds; i++){
         world.bond_k[i] = 2.0;
     }
@@ -76,8 +93,8 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     for(int i=0; i<world.nang; i++){
         world.ang_0[i] = {1.0,0.0};
         world.ang_k[i] = 0.5;
-        Vec2i ib = world.ang2bond[i];
-        world.ang2atom [i] = (Vec3i){ world.bond2atom[ib.x].y, world.bond2atom[ib.y].y, world.bond2atom[ib.y].x };
+        //Vec2i ib = world.ang2bond[i];
+        //world.ang2atom [i] = (Vec3i){ world.bond2atom[ib.x].y, world.bond2atom[ib.y].y, world.bond2atom[ib.y].x };
     }
 
 }
@@ -88,18 +105,30 @@ void TestAppSoftMolDyn::draw(){
 
 	for(int i=0; i<natoms; i++){ world.aforce[i].set(0.0d); }
 	world.eval_bonds();
+	//world.eval_angles();
+	world.eval_angcos();
+    //exit(0);
 
-    opt.move_FIRE();
+    /*
+	for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.1,0.0}); }
+	int ipivot = 0;
+	world.aforce[ipivot].set(0.0);
+    */
+
+    //opt.move_LeapFrog(0.01);
+    //opt.move_MDquench();
+    //opt.move_FIRE();
     //exit(0);
 
     printf( "==== frameCount %i\n", frameCount);
 
     for(int i=0; i<world.natoms; i++){
-        Draw3D::drawPointCross(world.apos[i],0.1);
+        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.apos[i],0.2);
+        //glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(world.aforce[i],world.apos[i]);
     }
     for(int i=0; i<world.nbonds; i++){
         Vec2i ib = world.bond2atom[i];
-        Draw3D::drawLine(world.apos[ib.x],world.apos[ib.y]);
+        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine(world.apos[ib.x],world.apos[ib.y]);
     }
 
 };
