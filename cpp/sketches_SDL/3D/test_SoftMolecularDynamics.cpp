@@ -23,7 +23,6 @@
 // ==========================
 
 
-
 constexpr int natoms=5, nbonds=4, nang=6, ntors=0;
 
 Vec3d  apos[natoms] = {
@@ -37,23 +36,35 @@ Vec3d  apos[natoms] = {
 Vec2i  bond2atom[nbonds] = {{0,1},{0,2},{0,3},{0,4}};
 //double bond_0   [nbonds] = {1.0,1.2,1.5,1.7};  // [A]
 double bond_0   [nbonds] = {1.0,1.0,1.0,1.0};  // [A]
+Vec2i  ang2bond [nang]   = {{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}};
 
-Vec2i  ang2bond [nang]     = {{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}};
 
+/*
+constexpr int natoms=4, nbonds=3, nang=3, ntors=0;
 
+Vec3d  apos[natoms] = {
+{ 0.0, 0.0, 0.0},
+{ 0.0, 0.0,+1.0},
+{-1.0, 0.0, 0.0},
+{+1.0, 0.0,-1.0},
+};   // atomic position
+
+Vec2i  bond2atom[nbonds] = {{0,1},{0,2},{0,3}};
+double bond_0   [nbonds] = {1.0,1.0,1.0};  // [A]
+Vec2i  ang2bond [nang]   = {{0,1},{1,2},{2,0}};
+*/
 
 /*
 constexpr int natoms=3, nbonds=2, nang=1, ntors=0;
 
 Vec3d  apos[natoms] = {
 { 0.0, 0.0, 0.0},
-{+1.0,+1.0,+1.0},
-{-1.0,-1.0,+1.0},
+{+1.0,+1.0,0.0},
+{-1.0,-1.0,0.0},
 };   // atomic position
 
 Vec2i  bond2atom[nbonds] = {{0,1},{0,2}};
 double bond_0   [nbonds] = {0.8,1.2};  // [A]
-
 Vec2i  ang2bond [nang]   = {{0,1}};
 */
 
@@ -109,15 +120,15 @@ void TestAppSoftMolDyn::draw(){
 	world.eval_angcos();
     //exit(0);
 
-    /*
+
 	for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.1,0.0}); }
 	int ipivot = 0;
 	world.aforce[ipivot].set(0.0);
-    */
+
 
     //opt.move_LeapFrog(0.01);
     //opt.move_MDquench();
-    //opt.move_FIRE();
+    opt.move_FIRE();
     //exit(0);
 
     printf( "==== frameCount %i\n", frameCount);
@@ -142,6 +153,12 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
+
+
+                case SDLK_a: world.apos[1].rotate(  0.1, {0.0,0.0,1.0} ); break;
+                case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;
+                case SDLK_w: world.apos[1].mul( 1.1 ); break;
+                case SDLK_s: world.apos[1].mul( 0.9 ); break;
             }
             break;
     };

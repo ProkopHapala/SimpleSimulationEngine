@@ -74,8 +74,8 @@ void ang_b2a(){
         else if( a01 == a11 ){ ang2atom [i] = (Vec3i){ a00, a01, a01 }; }
         */
         if     ( a00 == a10 ){ ang2atom [i] = (Vec3i){ a01, a11, a00 }; }
-        else if( a00 == a11 ){ ang2atom [i] = (Vec3i){ a01, a10, a00 }; ang2bond[i].x *=-1; }
-        else if( a01 == a10 ){ ang2atom [i] = (Vec3i){ a00, a11, a01 }; ang2bond[i].y *=-1; }
+        else if( a00 == a11 ){ ang2atom [i] = (Vec3i){ a01, a10, a00 }; ang2bond[i].x*=-1; }
+        else if( a01 == a10 ){ ang2atom [i] = (Vec3i){ a00, a11, a01 }; ang2bond[i].y*=-1; }
         else if( a01 == a11 ){ ang2atom [i] = (Vec3i){ a00, a01, a01 }; ang2bond[i].x*=-1; ang2bond[i].y*=-1; }
     }
 }
@@ -114,20 +114,20 @@ void eval_angcos(){
         if(ib.x<0){ ib.x=-ib.x; h1 = hbond[ib.x]; h1.mul(-1.0d); }else{ h1 = hbond[ib.x]; };
         if(ib.y<0){ ib.y=-ib.y; h2 = hbond[ib.y]; h2.mul(-1.0d); }else{ h2 = hbond[ib.y]; };
 
-
-
         double c = h1.dot(h2);
+        //double s = sqrt(1-c*c);
 
         //printf( " %i (%i,%i) (%g,%g,%g) (%g,%g,%g) \n", ib, ib.x,ib.y, h1.x,h1.y,h1.z, h2.x,h2.y,h2.z );
 
         Vec3d hf1,hf2; // unitary vectors of force
         hf1 = h2 - h1*c;
         hf2 = h1 - h2*c;
+        //hf1 = h1*c - h2;
+        //hf2 = h2*c - h1;
 
         Vec3i ia = ang2atom[ig];
 
-        double fang = ang_k[ig] * c;
-
+        double fang = -ang_k[ig]/(1.02-c);
         hf1.mul( fang/lbond[ib.x] );
         hf2.mul( fang/lbond[ib.y] );
 
@@ -163,7 +163,7 @@ void eval_angles(){
 
         cs.mul_cmplx( ang_0[ig] );
         //E = 0.5*ang_k[ig]*cs.x*cs.x;
-        double fang = (ang_k[ig] * cs.x * cs.y)*inv_sa;
+        double fang = (ang_k[ig]*cs.x*cs.y)*inv_sa;
 
         Vec3i ia = ang2atom[ig];
 
