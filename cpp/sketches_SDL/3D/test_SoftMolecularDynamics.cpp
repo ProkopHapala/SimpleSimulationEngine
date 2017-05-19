@@ -12,6 +12,8 @@
 
 #include "fastmath.h"
 #include "Vec3.h"
+
+#include "Molecule.h"
 #include "MMFF.h"
 #include "DynamicOpt.h"
 
@@ -22,7 +24,7 @@
 // TestAppSoftMolDyn
 // ==========================
 
-
+/*
 constexpr int natoms=5, nbonds=4, nang=6, ntors=0;
 
 Vec3d  apos[natoms] = {
@@ -37,9 +39,9 @@ Vec2i  bond2atom[nbonds] = {{0,1},{0,2},{0,3},{0,4}};
 //double bond_0   [nbonds] = {1.0,1.2,1.5,1.7};  // [A]
 double bond_0   [nbonds] = {1.0,1.0,1.0,1.0};  // [A]
 Vec2i  ang2bond [nang]   = {{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}};
+*/
 
 
-/*
 constexpr int natoms=4, nbonds=3, nang=3, ntors=0;
 
 Vec3d  apos[natoms] = {
@@ -52,7 +54,7 @@ Vec3d  apos[natoms] = {
 Vec2i  bond2atom[nbonds] = {{0,1},{0,2},{0,3}};
 double bond_0   [nbonds] = {1.0,1.0,1.0};  // [A]
 Vec2i  ang2bond [nang]   = {{0,1},{1,2},{2,0}};
-*/
+
 
 /*
 constexpr int natoms=3, nbonds=2, nang=1, ntors=0;
@@ -72,6 +74,7 @@ Vec2i  ang2bond [nang]   = {{0,1}};
 class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 	public:
 
+	Molecule   mol;
     MMFF       world;
     DynamicOpt opt;
 
@@ -86,16 +89,33 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 };
 
 TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    mol.loadMol("common_resources/propylacid.mol");
+    mol.bondsOfAtoms();   mol.printAtom2Bond();
+    mol.autoAngles();
+
+    Vec3d cog = mol.getCOG_av();
+    mol.addToPos( cog*-1.0d );
+
+    world.apos      = mol.pos;
+    world.bond2atom = mol.bond2atom;
+    world.ang2bond  = mol.ang2bond;
+    world.allocate( mol.natoms, mol.nbonds, mol.nang, 0 );
+    world.ang_b2a();
+
+    //exit(0);
+
+    /*
     world.apos      = apos;
     world.bond2atom = bond2atom;
     world.ang2bond  = ang2bond;
     world.bond_0    = bond_0;
     world.allocate( natoms, nbonds, nang, ntors );
+    world.ang_b2a();
+    */
 
     opt.bindArrays( 3*natoms, (double*)world.apos, new double[3*natoms], (double*)world.aforce );
     opt.setInvMass( 1.0 );
-
-    world.ang_b2a();
 
     for(int i=0; i<world.nbonds; i++){
         world.bond_k[i] = 2.0;

@@ -33,7 +33,6 @@ class MMFF{
     Vec3d  * hbond  = NULL;   // normalized bond unitary vectors
     Vec3d  * aforce = NULL;
 
-
 void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     natoms=natoms_; nbonds=nbonds_; nang=nang_; ntors=ntors_;
     if(apos     ==NULL) apos      = new Vec3d [natoms];
@@ -58,7 +57,6 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     tors_k    = new double[ntors];
     */
 }
-
 
 void ang_b2a(){
     for(int i=0; i<nang; i++){

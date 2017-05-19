@@ -42,7 +42,7 @@ add_executable       ( test_SoftMolecularDynamics.cpp  test_SoftMolecularDynamic
 target_link_libraries( test_SoftMolecularDynamics.cpp  ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_custom_command(
-    TARGET ${PROJECT_NAME} test_GUI test_Solids test_Mesh
+    TARGET ${PROJECT_NAME} test_GUI test_Solids test_Mesh test_SoftMolecularDynamics
     #COMMAND ln -sf ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
     #COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${MY_SRC_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources

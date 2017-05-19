@@ -21,6 +21,7 @@ SET( COMMON_SDL_SRCS "${MY_SRC_DIR}/common_SDL" )
 include_directories(
         ${COMMON_SRCS}
         ${COMMON_SRCS}/algorithms
+        ${COMMON_SRCS}/dataStructures
         ${COMMON_SRCS}/math
         ${COMMON_SRCS}/dynamics
         ${COMMON_SRCS}/maps
