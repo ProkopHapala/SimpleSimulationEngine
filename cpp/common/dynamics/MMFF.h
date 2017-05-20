@@ -7,10 +7,89 @@
 #include "Vec3.h"
 #include "quaternion.h"
 
+#include "integerOps.h"
+#include <unordered_map>
+
 // forcefield parameters
 
-class MMFF{
-    public:
+
+//inline BondType2id
+//inline BondTypeDec
+
+#define SIGN_MASK 2147483648
+
+//inline int invIndex( int i ){ return i^SIGN_MASK; }
+
+inline uint64_t getBondTypeId( uint16_t at1, uint16_t at2, uint8_t order ){
+    if (at1>at2){ SWAP(at1,at2,uint16_t); }
+    return pack64( at1, at2, order, 0 );
+}
+
+class BondType{ public:
+    double length;
+    double stiffness;
+    uint16_t at1,at2;
+    uint8_t  order;
+};
+
+class MMFFparams{ public:
+
+    // http://www.science.uwaterloo.ca/~cchieh/cact/c120/bondel.html
+
+    std::unordered_map<uint64_t,BondType> bonds;
+
+    double default_bond_length      = 2.0;
+    double default_bond_stiffness   = 1.0;
+
+    int loadBondTypes(char * fname){
+
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){
+            printf("cannot find %s\n", fname );
+            return -1;
+        }
+        char buff[1024];
+        char * line;
+        int nl;
+
+        BondType bt;
+        //line = fgets( buff, 1024, pFile ); //printf("%s",line);
+        //sscanf( line, "%i %i\n", &n );
+        int i;
+        for(int i; i<0xFFFF; i++){
+            line = fgets( buff, 1024, pFile );
+            if(line==NULL) break;
+            //printf("%s",line);
+            sscanf(  line, "%i %i %i %lf %lf\n", &bt.at1, &bt.at2, &bt.order, &bt.length, &bt.stiffness );
+            printf(        "%i %i %i %lf %lf\n",  bt.at1,  bt.at2,  bt.order,  bt.length,  bt.stiffness );
+            uint64_t id = getBondTypeId( bt.at1, bt.at2, bt.order );
+            //bt.at1--; bt.at2--;
+            bonds[id]=bt;
+        }
+        return i;
+    }
+
+    void fillBondParams( int nbonds, Vec2i * bond2atom, int * bondOrder, int * atomType, double * bond_0, double * bond_k ){
+        printf("fillBondParams: %i\n", nbonds);
+        for(int i=0; i<nbonds; i++){
+            Vec2i ib = bond2atom[i];
+            uint64_t id  = getBondTypeId( atomType[ib.x], atomType[ib.y], bondOrder[i] );
+            //BondType& bt = bonds[id];
+            auto it = bonds.find(id);
+
+            if( it == bonds.end() ){
+                bond_0[i]=default_bond_length; bond_k[i]=default_bond_stiffness;
+            }else{
+                bond_0[i]=it->second.length; bond_k[i]=it->second.stiffness;
+            }
+            printf("%i (%i,%i) (%i,%i,%i) %g %g\n", i, ib.x+1, ib.y+1, atomType[ib.x], atomType[ib.y], bondOrder[i], bond_0[i], bond_k[i] );
+        }
+    }
+
+};
+
+
+class MMFF{ public:
     int  natoms=0, nbonds=0, nang=0, ntors=0;
 
     Vec2i  * bond2atom = NULL;
@@ -61,23 +140,16 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
 void ang_b2a(){
     for(int i=0; i<nang; i++){
         Vec2i ib = ang2bond[i];
-        int a00 = bond2atom[ib.x].x;
-        int a01 = bond2atom[ib.x].y;
-        int a10 = bond2atom[ib.y].x;
-        int a11 = bond2atom[ib.y].y;
-        /*
-        if     ( a00 == a10 ){ ang2atom [i] = (Vec3i){ a01, a11, a00 }; }
-        else if( a00 == a11 ){ ang2atom [i] = (Vec3i){ a01, a10, a00 }; }
-        else if( a01 == a10 ){ ang2atom [i] = (Vec3i){ a00, a11, a01 }; }
-        else if( a01 == a11 ){ ang2atom [i] = (Vec3i){ a00, a01, a01 }; }
-        */
-        if     ( a00 == a10 ){ ang2atom [i] = (Vec3i){ a01, a11, a00 }; }
-        else if( a00 == a11 ){ ang2atom [i] = (Vec3i){ a01, a10, a00 }; ang2bond[i].x*=-1; }
-        else if( a01 == a10 ){ ang2atom [i] = (Vec3i){ a00, a11, a01 }; ang2bond[i].y*=-1; }
-        else if( a01 == a11 ){ ang2atom [i] = (Vec3i){ a00, a01, a01 }; ang2bond[i].x*=-1; ang2bond[i].y*=-1; }
+        Vec2i b1,b2;
+        b1 = bond2atom[ib.x];
+        b2 = bond2atom[ib.y];
+        if     ( b1.x == b2.x ){ ang2atom[i] = (Vec3i){ b1.y, b2.y, b1.x }; }
+        else if( b1.x == b2.y ){ ang2atom[i] = (Vec3i){ b1.y, b2.x, b1.x }; ang2bond[i].y|=SIGN_MASK; }
+        else if( b1.y == b2.x ){ ang2atom[i] = (Vec3i){ b1.x, b2.y, b1.y }; ang2bond[i].x|=SIGN_MASK; }
+        else if( b1.y == b2.y ){ ang2atom[i] = (Vec3i){ b1.x, b2.x, b1.y }; ang2bond[i].x|=SIGN_MASK; ang2bond[i].y|=SIGN_MASK; }
+        //printf( "%i (%i,%i)(%i,%i) (%i,%i,%i) (%i,%i) (%i,%i) \n", i, b1.x+1,b1.y+1, b2.x+1,b2.y+1, ang2atom[i].x+1,ang2atom[i].y+1,ang2atom[i].z+1,  ang2bond[i].x&0xFFFF, ang2bond[i].y&0xFFFF, ang2bond[i].x, ang2bond[i].y );
     }
 }
-
 
 void eval_bonds(){
     for(int ib=0; ib<nbonds; ib++){
@@ -106,11 +178,20 @@ void eval_angcos(){
     // dv/dr4 = ( dot(h23,h34)*h34 - h23 )/r34
     for(int ig=0; ig<nang; ig++){
         Vec2i ib = ang2bond[ig];
+        Vec3i ia = ang2atom[ig];
         //Vec3d h1 = hbond[ib.x];
         //Vec3d h2 = hbond[ib.y];
         Vec3d h1,h2;
-        if(ib.x<0){ ib.x=-ib.x; h1 = hbond[ib.x]; h1.mul(-1.0d); }else{ h1 = hbond[ib.x]; };
-        if(ib.y<0){ ib.y=-ib.y; h2 = hbond[ib.y]; h2.mul(-1.0d); }else{ h2 = hbond[ib.y]; };
+
+        if(ib.x&SIGN_MASK){ ib.x&=0xFFFF; h1 = hbond[ib.x]; h1.mul(-1.0d); }else{ h1 = hbond[ib.x]; };
+        if(ib.y&SIGN_MASK){ ib.y&=0xFFFF; h2 = hbond[ib.y]; h2.mul(-1.0d); }else{ h2 = hbond[ib.y]; };
+
+        /*
+        Vec3d h1_,h2_;
+        h1_ = apos[ia.x] - apos[ia.z]; h1_.normalize();
+        h2_ = apos[ia.y] - apos[ia.z]; h2_.normalize();
+        printf( " ig %i c1 %g c2 %g   (%i,%i) \n", ig, h1_.dot(h1), h2_.dot(h2),   ang2bond[ig].x,  ang2bond[ig].y );
+        */
 
         double c = h1.dot(h2);
         //double s = sqrt(1-c*c);
@@ -123,19 +204,19 @@ void eval_angcos(){
         //hf1 = h1*c - h2;
         //hf2 = h2*c - h1;
 
-        Vec3i ia = ang2atom[ig];
-
         double fang = -ang_k[ig]/(1.02-c);
         hf1.mul( fang/lbond[ib.x] );
         hf2.mul( fang/lbond[ib.y] );
 
+        /*
         glColor3f(0.0f,1.0f,0.0f);
-        Draw3D::drawVecInPos( h1, apos[ia.z] );
-        Draw3D::drawVecInPos( h2, apos[ia.z] );
+        Draw3D::drawVecInPos( h1*0.25, apos[ia.z] );
+        Draw3D::drawVecInPos( h2*0.25, apos[ia.z] );
 
         glColor3f(1.0f,0.0f,0.0f);
         Draw3D::drawVecInPos( hf1, apos[ia.x] );
         Draw3D::drawVecInPos( hf2, apos[ia.y] );
+        */
 
         aforce[ia.x].add( hf1     );
         aforce[ia.y].add( hf2     );
@@ -212,6 +293,12 @@ void eval_torsion(){
         aforce[ia.w].sub( hf2 ); // is this correct ?
         //aforce[ia.x] ????
         // TODO : zero moment condition
+    }
+}
+
+void printBondParams(){
+    for( int i=0; i<nbonds; i++ ){
+        printf( "%i (%i,%i) %g %g \n", i, bond2atom[i].x+1, bond2atom[i].y+1, bond_0[i], bond_k[i] );
     }
 }
 

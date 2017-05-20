@@ -25,8 +25,7 @@ inline int otherAtom( Vec2i ib, int ia ){ return (ia==ib.x)?ib.y:ib.x; }
 
 #define NBMAX 4
 
-class Molecule{
-    public:
+class Molecule{ public:
     int  natoms=0, nbonds=0;
     Vec3d * pos       = NULL;
     Vec2i * bond2atom = NULL;

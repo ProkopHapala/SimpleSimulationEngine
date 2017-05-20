@@ -10,10 +10,10 @@ inline int wrap_index_fast( int i, int n){
 
 // ========= Type conversion and packing ===========
 
-inline uint64_t   pack32 (             uint16_t  x, uint16_t y  ){return x|(((uint32_t)y)<<16);};
+inline uint32_t   pack32 (             uint16_t  x, uint16_t y  ){return x|(((uint32_t)y)<<16);};
 inline void     unpack32 ( uint32_t i, uint16_t& x, uint16_t& y ){x=i&0xFFFF; y=(i>>16); };
 
-inline uint64_t   pack32 (             uint8_t  x, uint8_t  y, uint8_t  z, uint8_t  w ){ return x|(((uint32_t)y)<<8)|(((uint32_t)z)<<16)|(((uint32_t)w)<<24);};
+inline uint32_t   pack32 (             uint8_t  x, uint8_t  y, uint8_t  z, uint8_t  w ){ return x|(((uint32_t)y)<<8)|(((uint32_t)z)<<16)|(((uint32_t)w)<<24);};
 inline void     unpack32 ( uint32_t i, uint8_t& x, uint8_t& y, uint8_t& z, uint8_t& w ){ x=i&0xFF; y=((i&0xFF00)>>8); z=((i&0xFF0000)>>16); w=((i&0xFF000000)>>24); };
 
 inline uint64_t   pack64 (             uint32_t  x, uint32_t  y ){return x|(((uint64_t)y)<<32);};

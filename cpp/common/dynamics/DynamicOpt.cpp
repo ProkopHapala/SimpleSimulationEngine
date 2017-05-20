@@ -56,7 +56,7 @@ void DynamicOpt::move_MDquench(){
 	t += dt;
 }
 
-void DynamicOpt::move_FIRE(){
+double DynamicOpt::move_FIRE(){
 	double ff=0,vv=0,vf=0;
 	for(int i=0; i<n; i++){
 		double fi = force[i];
@@ -99,6 +99,7 @@ void DynamicOpt::move_FIRE(){
 
 	//printf( " %i f v vf  %f %f %f   dt damp  %f %f \n",  stepsDone,   sqrt(ff), sqrt(vv), vf/sqrt(vv*ff),   dt_var, damp_var  );
 	//stepsDone++;
+	return ff;
 }
 
 double DynamicOpt::optStep(){

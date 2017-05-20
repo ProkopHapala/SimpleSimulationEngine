@@ -58,7 +58,7 @@ class DynamicOpt{
 	void   move_LeapFrog( double dt_loc);
 	void   move_LeapFrog_vlimit();
 	void   move_MDquench();
-	void   move_FIRE();
+	double move_FIRE();
 	double optStep();
 	bool   optimize( double convF, int nMaxSteps );
 
