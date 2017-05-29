@@ -17,9 +17,12 @@ class TerrainCubic : public Map2D {
     public:
 	double * heights;
 
+
     // ==== functions
     // evaluation
-    double getVal( double x, double y );
+    double getVal ( double x, double y );
+    int rayLine( Vec2d hdir, Vec2d p0, double hg0, double dr, double rmax, int ntg, double * tgs, Vec3d * poss );
+
     // drawing
 	int    renderRect( double x0, double y0, double x1, double y1, int nx );
 

@@ -20,6 +20,13 @@
 #include "TerrainCubic.h"
 #include "TiledView.h"
 
+constexpr int ntg = 4;
+double  tgs    [ntg] = {-0.2,-0.1,-0.0,0.1};
+Vec3d   hitposs[ntg];
+
+constexpr int nAngles = 64;
+Vec2d   hitcontours[nAngles*ntg];
+
 // ======================  TestApp
 
 class TestAppTerrainCubic : public AppSDL2OGL, public TiledView {
@@ -47,6 +54,10 @@ TestAppTerrainCubic::TestAppTerrainCubic( int& id, int WIDTH_, int HEIGHT_ ) : A
     terrain.allocate( );
     terrain.generateRandom( 0.0, 1.0 );
 
+    terrain.rayLine( {1.0,0.0}, {0.0,0.0}, 0.1, 0.1, 10.0, ntg, tgs, hitposs );
+
+    //exit(0);
+
     //viewList = tileToList( 3, 3, 8, 8  );
 
     TiledView::init( 6, 6 ); // initialize parent
@@ -71,6 +82,18 @@ void TestAppTerrainCubic::draw(){
 
     float szview = 4.0f;
     TiledView::draw(  mouse_begin_x-szview, mouse_begin_y-szview, mouse_begin_x+szview, mouse_begin_y+szview );
+
+
+    for(int i=0; i<ntg; i++){ for(int ia=0; ia<nAngles; ia++){ hitcontours[i*nAngles+ia].set(0.0); } }
+    for(int ia=0; ia<nAngles; ia++){
+        double phi = ia * 2*M_PI/nAngles;
+        terrain.rayLine( {cos(phi),sin(phi)}, {mouse_begin_x,mouse_begin_y}, 0.1, 0.1, 5.0, ntg, tgs, hitposs );
+        for(int i=0; i<ntg; i++){ hitcontours[i*nAngles+ia] = {hitposs[i].x,hitposs[i].y}; }
+    }
+    for(int i=0; i<ntg; i++){ glColor3f(i*0.3f, 0.0f, 1.0f-i*0.3f ); Draw2D::drawConvexPolygon( nAngles, hitcontours+(i*nAngles), false ); }
+    //for(int i=0; i<ntg; i++){Draw2D::drawPointCross( {hitposs[i].x, hitposs[i].y}, 0.1 );}
+
+
 
     glColor3f(0.2f,0.2f,0.9f); Draw2D::drawRectangle( -10, -10, 10, 10, false );
     glColor3f(0.9f,0.2f,0.9f); Draw2D::drawRectangle( x0, y0, x0+nx*step, y0+ny*step, false );
