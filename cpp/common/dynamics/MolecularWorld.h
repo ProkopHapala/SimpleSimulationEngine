@@ -21,15 +21,15 @@
 
 class MolecularLink{
     public:
-    int i,j;
-    Vec3d posi,posj;
+    int    i,j;
+    Vec3d  posi,posj;
     double l0,k;
 };
 
 class MolecularBond{
     public:
-    int imol,jmol;
-    int iatom,jatom;
+    int    imol,jmol;
+    int    iatom,jatom;
     double l0,k,dlmax;
 };
 
@@ -43,6 +43,8 @@ class MolecularWorld{
 	MolecularLink  * linkers=NULL;
 	MolecularBond  * bonds=NULL;
 	GeneralSpline  * splines;
+
+
 
 	Vec3d  *pos=NULL,*vpos=NULL,*fpos=NULL,*invMpos=NULL;
 	Quat4d *rot=NULL,*vrot=NULL,*frot=NULL,*invMrot=NULL;

@@ -42,6 +42,33 @@ inline void sphereNormal( double t, const Vec3d& ray0, const Vec3d& hRay, const 
 	normal.add_mul( hRay, t );
 }
 
+// =========== Line
+
+inline double rayLineDist( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p0, const Vec3d& hL ){
+    // http://mathworld.wolfram.com/Line-LineDistance.html
+    Vec3d rxl; rxl.set_cross(hRay, hL);
+    double r = rxl.norm();
+    return rxl.dot( p0-ray0 )/r;
+}
+
+inline double rayLine( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p0, const Vec3d& hL, double& t1, double& t2 ){
+    // https://math.stackexchange.com/questions/2083573/mutually-closest-point-of-two-lines-defined-by-vectors
+    Vec3d d;     d.set_sub(p0,ray0);    // (p2-p1)
+    Vec3d rxl; rxl.set_cross(hRay, hL); // normal vector to (d1,d2) plane
+    rxl.normalize();
+    double c = rxl.dot(d);
+    d.add_mul(rxl,c); // (p2-p1) in d1 d2 plane
+    // --- solve system of linear equtions    (p2-p1)_T = d1*t - d2*s;
+    double crl  = hRay.dot(hL); // <d1|d2>
+    double c1   = d.dot(hRay);
+    double c2   = d.dot(hL);
+    t1 = (c1-c2*crl)/(1-crl*crl);
+    t2 = -(c2-c1*crl)/(1-crl*crl);
+    return c;
+    //return (c1-c2*crl)/(1-crl*crl);
+    //return
+}
+
 // =========== Plane
 
 inline double rayPlane( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& normal, const Vec3d& point ){

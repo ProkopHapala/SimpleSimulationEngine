@@ -13,6 +13,7 @@
 #include "fastmath.h"
 #include "Vec3.h"
 
+#include "raytrace.h"
 #include "Molecule.h"
 #include "MMFF.h"
 #include "DynamicOpt.h"
@@ -70,16 +71,21 @@ double bond_0   [nbonds] = {0.8,1.2};  // [A]
 Vec2i  ang2bond [nang]   = {{0,1}};
 */
 
+// test closest point skew-lines
+//Vec3d   p1,p2,dp1,dp2;
+//double  t1,t2;
 
 class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 	public:
-
 	Molecule    mol;
 	MMFFparams  params;
     MMFF        world;
     DynamicOpt  opt;
 
     int ogl_sph;
+    Vec3d ray0;
+    int ipicked  = -1, ibpicked = -1;
+    int perFrame = 10.0;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -90,6 +96,7 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 	TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ );
 
 };
+
 
 TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
@@ -141,8 +148,20 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     glNewList( ogl_sph, GL_COMPILE );
         //glEnable( GL_LIGHTING );
         //glColor3f( 0.8f, 0.8f, 0.8f );
-        Draw3D::drawSphere_oct(3, 0.5, {0.0,0.0,0.0} );
+        //Draw3D::drawSphere_oct(3, 0.5, {0.0,0.0,0.0} );
+        Draw3D::drawSphere_oct(1, 0.1, {0.0,0.0,0.0} );
     glEndList();
+
+    /*
+    // test closest point skew-lines
+    srand(548);
+    p1  = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};
+    p2  = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};
+    dp1 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};  dp1.normalize();
+    dp2 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};  dp2.normalize();
+    rayLine( p1, dp1, p2, dp2, t1, t2 );
+    //t2  = rayLine( p2, dp2, p1, dp1 );
+    */
 
 }
 
@@ -150,27 +169,50 @@ void TestAppSoftMolDyn::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
-	world.eval_bonds();
-	//world.eval_angles();
-	world.eval_angcos();
+	/*
+	// test closest point skew-lines
+	glColor3f(0.8f,0.0f,0.0f); Draw3D::drawLine( p1+(dp1*3.0), p1+(dp1*-3.0) );
+	glColor3f(0.0f,0.0f,0.8f); Draw3D::drawLine( p2+(dp2*3.0), p2+(dp2*-3.0) );
+	glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine( p1+(dp1*t1), p2+(dp2*t2) );
+	printf( "t1 %g t2 %g \n", t1, t2);
+	//Vec3d rxl; rxl.set_cross(dp1, dp2);
+	//glColor3f(0.8f,0.0f,0.0f); Draw3D::drawVecInPos( rxl, p1+(dp1*t1) );
+	//glColor3f(0.0f,0.0f,0.8f); Draw3D::drawVecInPos( rxl, p2+(dp2*t2) );
+	return;
+	*/
 
-    //exit(0);
+    ray0 = camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
+    Draw3D::drawPointCross( ray0, 0.1 );
+    //Draw3D::drawVecInPos( camMat.c, ray0 );
+    if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
 
-	for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.01,0.0}); }
-	int ipivot = 0;
-	world.aforce[ipivot].set(0.0);
+	double F2;
+	for(int itr=0; itr<perFrame; itr++){
+        for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
+        world.eval_bonds();
+        //world.eval_angles();
+        world.eval_angcos();
 
+        //exit(0);
+        if(ipicked>=0){
+            Vec3d f = getForceSpringRay( world.apos[ipicked], camMat.c, ray0, -1.0 );
+            //printf( "f (%g,%g,%g)\n", f.x, f.y, f.z );
+            world.aforce[ipicked].add( f );
+        };
 
-    //opt.move_LeapFrog(0.01);
-    //opt.move_MDquench();
-    double F2 = opt.move_FIRE();
-    //exit(0);
+        //for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.01,0.0}); }
+        int ipivot = 0;
+        world.aforce[ipivot].set(0.0);
+        //opt.move_LeapFrog(0.01);
+        //opt.move_MDquench();
+        F2 = opt.move_FIRE();
+        //exit(0);
+    }
 
-    printf( "==== frameCount %i  |F| %g \n", frameCount, sqrt(F2) );
+    //printf( "==== frameCount %i  |F| %g \n", frameCount, sqrt(F2) );
 
     for(int i=0; i<world.natoms; i++){
-        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.apos[i],0.2);
+        //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.apos[i],0.2);
         glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(world.aforce[i]*30.0,world.apos[i]);
 
         //glCallList( ogl_sph );
@@ -184,7 +226,9 @@ void TestAppSoftMolDyn::draw(){
     }
     for(int i=0; i<world.nbonds; i++){
         Vec2i ib = world.bond2atom[i];
-        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine(world.apos[ib.x],world.apos[ib.y]);
+        glColor3f(0.0f,0.0f,0.0f);
+        if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f); ;
+        Draw3D::drawLine(world.apos[ib.x],world.apos[ib.y]);
     }
 
 };
@@ -204,6 +248,27 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
                 case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;
                 case SDLK_w: world.apos[1].mul( 1.1 ); break;
                 case SDLK_s: world.apos[1].mul( 0.9 ); break;
+            }
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:
+                    ipicked = pickParticle( world.natoms, world.apos, ray0, camMat.c , 0.5 );
+                    break;
+                case SDL_BUTTON_RIGHT:
+                    ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
+                    printf("ibpicked %i \n", ibpicked);
+                    break;
+            }
+            break;
+        case SDL_MOUSEBUTTONUP:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:
+                    ipicked = -1;
+                    break;
+                case SDL_BUTTON_RIGHT:
+                    ibpicked = -1;
+                    break;
             }
             break;
     };

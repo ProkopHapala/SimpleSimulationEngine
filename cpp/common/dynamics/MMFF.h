@@ -20,6 +20,28 @@
 
 //inline int invIndex( int i ){ return i^SIGN_MASK; }
 
+inline Vec3d getForceSpringPlane( const Vec3d& p, const Vec3d& normal, double c0, double k ){
+    double cdot = normal.dot(p) - c0;
+    return normal * (cdot * k);
+}
+
+inline Vec3d getForceSpringRay( const Vec3d& p, const Vec3d& hray, const Vec3d& ray0, double k ){
+    Vec3d dp; dp.set_sub( p, ray0 );
+    double cdot = hray.dot(dp);
+    dp.add_mul(hray,-cdot);
+    return dp*k;
+}
+
+int pickParticle( int n, Vec3d * ps, Vec3d& ray0, Vec3d& hRay, double R ){
+    double tmin =  1e+300;
+    int imin    = -1;
+    for(int i=0; i<n; i++){
+        double ti = raySphere( ray0, hRay, R, ps[i] );
+        if(ti<tmin){ imin=i; tmin=ti; }
+    }
+    return imin;
+}
+
 inline uint64_t getBondTypeId( uint16_t at1, uint16_t at2, uint8_t order ){
     if (at1>at2){ SWAP(at1,at2,uint16_t); }
     return pack64( at1, at2, order, 0 );
@@ -135,6 +157,20 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     tors_0    = new double[ntors];
     tors_k    = new double[ntors];
     */
+}
+
+int pickBond( Vec3d& ray0, Vec3d& hRay, double R ){
+    double dist_min =  R;
+    int    imin     = -1;
+    for(int ib=0; ib<nbonds; ib++){
+        Vec2i iat = bond2atom[ib];
+        double t1,t2;
+        double dist = rayLine( ray0, hRay, apos[iat.x], hbond[ib], t1, t2 );
+        if( (dist<dist_min) && (t2>0) && (t2<lbond[ib]) ){
+            imin=ib; dist_min=dist;
+        }
+    }
+    return imin;
 }
 
 void ang_b2a(){
@@ -295,6 +331,12 @@ void eval_torsion(){
         // TODO : zero moment condition
     }
 }
+
+/*
+void eval_spring( Vec3d hray, double k ){
+
+};
+*/
 
 void printBondParams(){
     for( int i=0; i<nbonds; i++ ){
