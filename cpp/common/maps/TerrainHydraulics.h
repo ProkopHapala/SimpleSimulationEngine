@@ -3,8 +3,6 @@
 
 #include "Noise.h"
 
-
-
 class TerrainHydraulics{
 public:
 
@@ -13,19 +11,19 @@ public:
     static constexpr int     mask [nmask*2] = { 0,-1, 0,1, -1,0, +1,0, -1,-1, -1,+1, +1,-1, +1+1 };
     static constexpr double  dists[nmask  ] = { 1.0, 1.0, 1.0, 1.0, isqrt2, isqrt2, isqrt2, isqrt2 };
 
-    int istep;
-	int    nx, ny, ntot;
-	double * ground;
-	double * water;
+    int      istep=0;
+	int      nx=0, ny=0, ntot=0;
 
+	double * ground  = NULL;
+	double * water   = NULL;
 
 	// countor step algorithm
 	//int    nContourMax;
 	int    nContour=0,nContour_old=0;
-	bool   * known;
-	int    * contour1;
-	int    * contour2;
-	double * water_;
+	bool   * known     = NULL;
+	int    * contour1  = NULL;
+	int    * contour2  = NULL;
+	double * water_    = NULL;
 
 /*
     double c_errode    = 0.4;
@@ -66,19 +64,30 @@ public:
 
 	// ==== inline functions
 
+	inline void setSize( int nx_, int ny_ ){ nx=nx_; ny=ny_; ntot=nx*ny; };
 	inline int xy2i( int ix, int iy  ){ return iy*nx + ix; };
 	//inline i2xy( int i, int ix, int iy ){     };
 
 	void allocate( int nx_, int ny_ ){
 		nx = nx_; ny = ny_; ntot = nx * ny;
-		ground   = new double[ntot];
-		water    = new double[ntot];
-		water_   = new double[ntot]; // FIXME: this is just temporary array
-        known    = new bool  [ntot]; // FIXME: this is just temporary array
-	    contour1 = new int   [ntot]; // FIXME: just temporary, 1D => size < ntot
-	    contour2 = new int   [ntot]; // FIXME: just temporary, 1D => size < ntot
-
+		if(ground  ==NULL) ground   = new double[ntot];
+		if(water   ==NULL) water    = new double[ntot];
+		if(water_  ==NULL) water_   = new double[ntot]; // FIXME: this is just temporary array
+        if(known   ==NULL) known    = new bool  [ntot]; // FIXME: this is just temporary array
+	    if(contour1==NULL) contour1 = new int   [ntot]; // FIXME: just temporary, 1D => size < ntot
+	    if(contour2==NULL) contour2 = new int   [ntot]; // FIXME: just temporary, 1D => size < ntot
 	}
+
+    void deallocate( bool all ){
+		if(all){
+            delete [] ground;
+            delete [] water;
+		}
+		delete [] water_;
+        delete [] known;
+	    delete [] contour1;
+	    delete [] contour2;
+    };
 
 };
 

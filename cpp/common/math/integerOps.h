@@ -8,6 +8,11 @@ inline int wrap_index_fast( int i, int n){
     return i;
 }
 
+inline int clamp_index_fast( int i, int n){
+    if(i<0){ return 0; }else if (i>=n){ return n-1; };
+    return i;
+}
+
 // ========= Type conversion and packing ===========
 
 inline uint32_t   pack32 (             uint16_t  x, uint16_t y  ){return x|(((uint32_t)y)<<16);};

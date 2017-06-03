@@ -7,6 +7,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include "Draw.h"
 #include "Draw2D.h"
 #include "AppSDL2OGL.h"
 
@@ -18,6 +19,9 @@
 
 #include "SimplexGrid.h"
 
+#include "SimplexRuler.h"
+
+
 // ======================  TestApp
 
 using MySimplexField = SimplexField < bool, bool >;
@@ -26,6 +30,9 @@ using MySimplexGrid  = SimplexGrid  < MySimplexField >;
 class TestAppSimplexGrid : public AppSDL2OGL{
 	public:
     MySimplexGrid grid;
+
+    SimplexRuler ruler;
+
     int shape;
 
     bool mouse_left = false;
@@ -128,6 +135,7 @@ void TestAppSimplexGrid::renderMapContent( ){
 
 TestAppSimplexGrid::TestAppSimplexGrid( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
+    ruler.MAP_OFFSET = 1000;
     grid.init( 1.0, 8 );
 
     shape=glGenLists(1);
@@ -171,6 +179,7 @@ void TestAppSimplexGrid::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
 
+    //return;
 
     if      ( mouse_left  ){ paintSimplex(mouse_begin_x,mouse_begin_y); }
     else if ( mouse_right ){ eraseSimplex(mouse_begin_x,mouse_begin_y); }
@@ -182,10 +191,19 @@ void TestAppSimplexGrid::draw(){
 	glCallList( shape );
 
 	double da,db; UHALF ia,ib;
-	bool s = grid.simplexIndex( mouse_begin_x, mouse_begin_y, ia,ib, da, db );
-	renderSimplex( ia, ib, s, grid.step );
+
+	//bool s = grid.simplexIndex( mouse_begin_x, mouse_begin_y, ia,ib, da, db );
+    //renderSimplex( ia, ib, s, grid.step );
+
+	Vec2i ind; Vec2d dind; Vec2d p;
+	bool s = 1& ruler.simplexIndex( {mouse_begin_x, mouse_begin_y}, ind, dind );
+	//printf( " (%i,%i) \n", ind.x, ind.y );
+    ruler.nodePoint( ind, p );
+    Draw2D::drawSimplex( p.x, p.y, s, ruler.step );
+
 	glColor3f( 0.8f,0.8f,0.8f ); Draw2D::drawPointCross( {mouse_begin_x, mouse_begin_y}, 0.2f );
 
+	/*
     glColor3f( 0.8, 0.0, 0.8 );
     Draw2D::drawLine_d( p1, p2 );
 	for(int i=0; i<nhits; i++){
@@ -202,7 +220,29 @@ void TestAppSimplexGrid::draw(){
         grid.nodePoint( edges[ii+2], edges[ii+3], nd2.x, nd2.y );
         Draw2D::drawLine_d( nd1, nd2 );
 	}
+    */
 
+
+    printf("===============\n");
+    Vec2d hray = (Vec2d){1.0,0.5}; hray.normalize();
+    Vec2d ray0 = (Vec2d){0.6,0.6};
+    ruler.rayStart( ray0, hray );
+    for(int i=0; i<10; i++){
+        int edgeKind = ruler.rayStep();
+        glColor3f(0.0f,1.0f,0.0f); Draw2D::drawPointCross_d( ray0 + hray * ruler.ray_t, 0.1 );
+        Vec2d p1,p2;
+        //ruler.nodePoint ( {ruler.ray_i.a+kind2edge[edgeKind][0], ruler.ray_i.b+kind2edge[edgeKind][1]}, p1 );
+        //ruler.nodePoint ( {ruler.ray_i.a+kind2edge[edgeKind][2], ruler.ray_i.b+kind2edge[edgeKind][3]}, p2 );
+        //printf( "%i (%i,%i)(%i,%i)\n", edgeKind, kind2edge[edgeKind][0].x, kind2edge[edgeKind][0].y, kind2edge[edgeKind][1].x, kind2edge[edgeKind][1].y );
+        Vec2i ip1,ip2; ip1 = ruler.ray_i + kind2edge[edgeKind][0]; ip2 = ruler.ray_i + kind2edge[edgeKind][1];
+
+        Draw::color_of_hash(edgeKind*154);
+        ruler.nodePoint ( ip1, p1 );
+        ruler.nodePoint ( ip2, p2 );
+        printf( "%i (%i,%i)(%i,%i) (%g,%g)(%g,%g) \n", edgeKind, ip1.x, ip1.y, ip2.x, ip2.y, p1.x, p1.y, p2.x, p2.y );
+        Draw2D::drawLine_d( p1, p2 );
+        //printf("%f \n", ruler.ray_t );
+    }
 };
 
 void TestAppSimplexGrid::drawHUD(){

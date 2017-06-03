@@ -6,7 +6,6 @@
 #include "Vec2.h"
 #include "Vec3.h"
 
-
 #include "HashMap.h"
 
 typedef unsigned short  UHALF;
@@ -144,8 +143,6 @@ class SimplexGrid : public HashMap<OBJECT>{
 */
 
 
-
-
 	int raster_line( Vec2d dirHat, Vec2d pos0, Vec2d pos1, Vec2d * hits, int * boundaries, UHALF * edges ){
 	    double t0    = dirHat.dot( pos0 );
 	    double t1    = dirHat.dot( pos1 );
@@ -161,7 +158,7 @@ class SimplexGrid : public HashMap<OBJECT>{
         mdb = pos0.dot  ( { 1.0d*invStep,0.57735026919*invStep} );
         mdc = pos0.dot  ( {-1.0d*invStep,0.57735026919*invStep} );
         if( pa < 0 ){ pa=-pa; mda = 1-mda; };
-        if( pb < 0 ){ pa=-pb; mdb = 1-mdb; };
+        if( pb < 0 ){ pb=-pb; mdb = 1-mdb; };
         if( pc < 0 ){ pc=-pc; mdc = 1-mdc; };
         ia=(int)(mda + MAP_OFFSET);   mda = 1-(mda - (ia - MAP_OFFSET) );
         ib=(int)(mdb + MAP_OFFSET);   mdb = 1-(mdb - (ib - MAP_OFFSET) );
