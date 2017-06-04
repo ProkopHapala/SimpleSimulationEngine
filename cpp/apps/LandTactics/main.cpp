@@ -10,7 +10,7 @@
 #include <SDL2/SDL_image.h>
 //#include <SDL2/SDL_ttf.h>
 //#include "Texture.h"
-
+#include "Draw.h"
 #include "Draw2D.h"
 
 #include "fastmath.h"
@@ -173,6 +173,7 @@ void FormationTacticsApp::draw(){
         currentUnit->renderJob( currentUnit->faction->color );
     }
 
+    /*
     double h = world.ruler.getValue( {mouse_begin_x,mouse_begin_y}, world.ground );
 	cmapHeight( h/world.maxHeight );
     //Draw2D::drawPointCross_d( {mouse_begin_x,mouse_begin_y}, 100 );
@@ -182,6 +183,30 @@ void FormationTacticsApp::draw(){
     //double hdx = world.ruler.getValue( {mouse_begin_x+0.1,mouse_begin_y    }, world.ground );
     //double hdy = world.ruler.getValue( {mouse_begin_x    ,mouse_begin_y+0.1}, world.ground );
     //printf( "(%g,%g) (%g,%g) \n", (hdx-h)/0.1, (hdy-h)/0.1, dh.x, dh.y );
+    */
+
+
+    Vec2d ray0 = (Vec2d){mouse_begin_x,mouse_begin_y};
+    Vec2d hray = (Vec2d){0.0,1.0};   hray.normalize();
+    /*
+    printf("==========\n");
+    hray.normalize();
+    world.ruler.rayStart( ray0, hray );
+    for(int i=0; i<6; i++){
+        int edgeKind = world.ruler.rayStep();
+        Draw::setRGB(0xFF<<(8*edgeKind));
+        Draw2D::drawPointCross_d( ray0 + hray * world.ruler.ray_t, 2 );
+    }
+    */
+
+    printf("===== frameCount %i \n", frameCount);
+    //double g   = world.ruler.rayView( ray0, hray, 2.0, 0.0, world.ground, 200.0 );
+    int ntg = world.ruler.rayList( ray0, hray, 2.0, world.ntg, world.tgs, world.Ttgs, world.ground, 200.0 );
+    glColor3f(0.0,1.0,0.0);
+    Draw2D::drawLine_d(ray0, (ray0+hray*world.ruler.ray_t) );
+    Draw2D::drawPointCross_d(ray0, 2.0 );
+    Draw2D::drawPointCross_d((ray0+hray*world.ruler.ray_t), 1.0 );
+
 
 };
 

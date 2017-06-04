@@ -52,7 +52,7 @@ void LTWorld::init(){
     hydraulics.ground = ground;
 
     //world.hydraulics.allocate( 512, 512 );
-
+    /*
     hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
     for( int j=0; j<500; j++ ){
         int isz = 25;
@@ -61,7 +61,8 @@ void LTWorld::init(){
         hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
     }
     for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
-    //for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,1.0); };
+    */
+    for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,500.0); };
     //for(int ib=0; ib<ruler.nb; ib++){  for(int ia=0; ia<ruler.na; ia++){  ground[ib*ruler.na+ia] = ia/(float)ruler.na;  } };
 
     //soldierTypes.push_back( SoldierType(){"pikemen",1.0d,0.25d,1.0d} );

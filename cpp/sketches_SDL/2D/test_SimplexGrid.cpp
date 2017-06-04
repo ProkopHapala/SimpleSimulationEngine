@@ -44,6 +44,10 @@ class TestAppSimplexGrid : public AppSDL2OGL{
     int   boundaries[1024];
     UHALF edges     [1024];
 
+
+    Vec2d hray = (Vec2d){0.0,1.0};
+    Vec2d ray0 = (Vec2d){0.6,0.6};
+
 	// ---- function declarations
 
 	virtual void draw   ();
@@ -172,6 +176,8 @@ TestAppSimplexGrid::TestAppSimplexGrid( int& id, int WIDTH_, int HEIGHT_ ) : App
 
 	glEndList();
 
+	zoom = 5;
+
 }
 
 void TestAppSimplexGrid::draw(){
@@ -222,27 +228,35 @@ void TestAppSimplexGrid::draw(){
 	}
     */
 
-
     printf("===============\n");
-    Vec2d hray = (Vec2d){1.0,0.5}; hray.normalize();
-    Vec2d ray0 = (Vec2d){0.6,0.6};
+    //Vec2d hray = (Vec2d){ 0.0, 1.0};
+    //Vec2d ray0 = (Vec2d){ 1.9, 0.6};
+    Vec2d ray0 = (Vec2d){ mouse_begin_x, mouse_begin_y};
+    hray.normalize();
     ruler.rayStart( ray0, hray );
     for(int i=0; i<10; i++){
         int edgeKind = ruler.rayStep();
-        glColor3f(0.0f,1.0f,0.0f); Draw2D::drawPointCross_d( ray0 + hray * ruler.ray_t, 0.1 );
+        Draw::setRGB(0xFF<<(8*edgeKind));
+        //glColor3f(0.0f,1.0f,0.0f);
+        Draw2D::drawPointCross_d( ray0 + hray * ruler.ray_t, 0.1 );
         Vec2d p1,p2;
         //ruler.nodePoint ( {ruler.ray_i.a+kind2edge[edgeKind][0], ruler.ray_i.b+kind2edge[edgeKind][1]}, p1 );
         //ruler.nodePoint ( {ruler.ray_i.a+kind2edge[edgeKind][2], ruler.ray_i.b+kind2edge[edgeKind][3]}, p2 );
         //printf( "%i (%i,%i)(%i,%i)\n", edgeKind, kind2edge[edgeKind][0].x, kind2edge[edgeKind][0].y, kind2edge[edgeKind][1].x, kind2edge[edgeKind][1].y );
-        Vec2i ip1,ip2; ip1 = ruler.ray_i + kind2edge[edgeKind][0]; ip2 = ruler.ray_i + kind2edge[edgeKind][1];
+        Vec2i ip1,ip2; ip1 = ruler.ray_i.xy() + kind2edge[edgeKind][0]; ip2 = ruler.ray_i.xy() + kind2edge[edgeKind][1];
 
         Draw::color_of_hash(edgeKind*154);
         ruler.nodePoint ( ip1, p1 );
         ruler.nodePoint ( ip2, p2 );
-        printf( "%i (%i,%i)(%i,%i) (%g,%g)(%g,%g) \n", edgeKind, ip1.x, ip1.y, ip2.x, ip2.y, p1.x, p1.y, p2.x, p2.y );
+        //printf( "%i (%i,%i)(%i,%i) (%g,%g)(%g,%g) \n", edgeKind, ip1.x, ip1.y, ip2.x, ip2.y, p1.x, p1.y, p2.x, p2.y );
         Draw2D::drawLine_d( p1, p2 );
         //printf("%f \n", ruler.ray_t );
     }
+    glColor3f(1.0f,1.0f,1.0f);
+    Draw2D::drawPointCross_d( ray0, 0.3 );
+    Draw2D::drawLine_d      ( ray0, ray0+hray*ruler.ray_t );
+
+    //STOP = true;
 };
 
 void TestAppSimplexGrid::drawHUD(){
@@ -251,6 +265,11 @@ void TestAppSimplexGrid::drawHUD(){
 
 void TestAppSimplexGrid::eventHandling( const SDL_Event& event ){
     switch( event.type ){
+        case SDL_KEYDOWN :
+            switch( event.key.keysym.sym ){
+                case   SDLK_r: hray=(Vec2d){randf(-5.0,5.0),randf(-5.0,5.0)}; ray0=(Vec2d){randf(-5.0,5.0),randf(-5.0,5.0)}; break;
+            }
+            break;
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:

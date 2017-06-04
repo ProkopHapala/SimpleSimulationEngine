@@ -7,11 +7,13 @@
 #include <stdio.h>
 
 #include "fastmath.h"
+#include "Vec2.h"
 
 //template <class TYPE,class VEC>
 template <class TYPE>
 class Vec3TYPE{
-	using VEC = Vec3TYPE<TYPE>;
+	using VEC  = Vec3TYPE<TYPE>;
+	using VEC2 = Vec2TYPE<TYPE>;
 	public:
 	union{
 		struct{ TYPE x,y,z; };
@@ -20,6 +22,20 @@ class Vec3TYPE{
 	};
 
 	// ===== methods
+
+	// swizzles
+	inline VEC2 xy(){ return {x,y}; };
+	inline VEC2 xz(){ return {x,z}; };
+	inline VEC2 yz(){ return {x,y}; };
+    inline VEC2 yx(){ return {x,y}; };
+	inline VEC2 zx(){ return {x,z}; };
+	inline VEC2 zy(){ return {x,y}; };
+    inline VEC xzy(){ return {x,z,y}; };
+	inline VEC yxz(){ return {y,x,z}; };
+	inline VEC yzx(){ return {y,z,x}; };
+	inline VEC zxy(){ return {z,x,y}; };
+	inline VEC zyx(){ return {z,y,x}; };
+
 	inline void set( TYPE f                    ) { x=f;   y=f;   z=f;   };
     inline void set( TYPE fx, TYPE fy, TYPE fz ) { x=fx;  y=fy;  z=fz;  };
     inline void set( const VEC& v              ) { x=v.x; y=v.y; z=v.z; };

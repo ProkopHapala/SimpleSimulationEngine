@@ -35,6 +35,12 @@ class LTWorld{
     Vec2d map_center;
     double maxHeight = 500.0;
 
+    static const int   ntg = 4;
+    static const int nAngles = 64;
+    double  tgs    [ntg] = {-0.2,-0.1,-0.0,0.1};
+    double  Ttgs   [ntg];
+    Vec2d   hitcontours[nAngles*ntg];
+
     static constexpr int nTypesMax = 16;
     LTUnitType      unitTypes[nTypesMax];
     int             nTypes = 0;

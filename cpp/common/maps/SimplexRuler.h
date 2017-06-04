@@ -28,14 +28,17 @@ inline Vec2d trinagleDeriv( Vec3d hs ){
 
 class SimplexRuler{
     public:
-    double    MAP_OFFSET = 0.0;
     double    step=1.0d, invStep=1.0d;
-
     int        na,nb,ntot;
 
-    Vec3d ray_p, ray_ip, ray_md;
-    Vec2i ray_i;
+    double    MAP_OFFSET    = 0.0;
+    double    ROUND_OFFSET  = 1000.0; // WARRNING : if ROUND_OFFSET is insufficient rounding will fail !!!
+
+    Vec3d  ray_d, ray_id, ray_p;
+    Vec3i  ray_i,ray_si;
     double ray_t;
+
+    int maxRayIter = 100;
 
     // --- inline functions
 
@@ -114,75 +117,150 @@ class SimplexRuler{
     inline void setStep( double step_     ){ step = step_; invStep = 1.0d/step; };
 
     int rayStart( Vec2d ray0, Vec2d hray ){
-        ray_p.a  = hray.dot( { 0.0d        ,1.15470053839*invStep} );
-        ray_p.b  = hray.dot( { 1.0d*invStep,0.57735026919*invStep} );
-        ray_p.c  = hray.dot( {-1.0d*invStep,0.57735026919*invStep} );
-        ray_md.a = ray0.dot( { 0.0d        ,1.15470053839*invStep} );
-        ray_md.b = ray0.dot( { 1.0d*invStep,0.57735026919*invStep} );
-        ray_md.c = ray0.dot( {-1.0d*invStep,0.57735026919*invStep} );
-        if( ray_p.a < 0 ){ ray_p.a=-ray_p.a; ray_md.a = 1-ray_md.a; };
-        if( ray_p.b < 0 ){ ray_p.b=-ray_p.b; ray_md.b = 1-ray_md.b; };
-        if( ray_p.c < 0 ){ ray_p.c=-ray_p.c; ray_md.c = 1-ray_md.c; };
-        int ia=(int)(ray_md.a + MAP_OFFSET); ray_md.a = 1-(ray_md.a - (ia - MAP_OFFSET) );
-        int ib=(int)(ray_md.b + MAP_OFFSET); ray_md.b = 1-(ray_md.b - (ib - MAP_OFFSET) );
-        int ic=(int)(ray_md.c + MAP_OFFSET); ray_md.c = 1-(ray_md.c - (ic - MAP_OFFSET) );
-        ray_ip.set_inv( ray_p );
+        // dlat/dt
+        ray_d.a = hray.dot( { 0.0d        ,1.15470053839*invStep} );
+        ray_d.b = hray.dot( { 1.0d*invStep,0.57735026919*invStep} );
+        ray_d.c = hray.dot( {-1.0d*invStep,0.57735026919*invStep} );
+        // pos in grid coords
+        ray_p.a = ray0.dot( { 0.0d        ,1.15470053839*invStep} );
+        ray_p.b = ray0.dot( { 1.0d*invStep,0.57735026919*invStep} );
+        ray_p.c = ray0.dot( {-1.0d*invStep,0.57735026919*invStep} );
+        //printf( " d (%g,%g,%g) p (%g,%g,%g) \n", ray_d.a, ray_d.b, ray_d.c, ray_p.a, ray_p.b, ray_p.c );
+        if( ray_d.a < 0 ){ ray_d.a=-ray_d.a; ray_p.a = 1-ray_p.a; ray_si.a=-1; }else{ ray_si.a=1; };
+        if( ray_d.b < 0 ){ ray_d.b=-ray_d.b; ray_p.b = 1-ray_p.b; ray_si.b=-1; }else{ ray_si.b=1; };
+        if( ray_d.c < 0 ){ ray_d.c=-ray_d.c; ray_p.c = 1-ray_p.c; ray_si.c=-1; }else{ ray_si.c=1; };
+        //printf( " d (%g,%g,%g) p (%g,%g,%g) \n", ray_d.x, ray_d.y, ray_d.z, ray_p.x, ray_p.y, ray_p.z );
+        // WARRNING : if ROUND_OFFSET is sufficient rounding will fail !!!
+        ray_i.a=(int)(ray_p.a + ROUND_OFFSET); ray_p.a = 1-(ray_p.a - (ray_i.a - ROUND_OFFSET) );
+        ray_i.b=(int)(ray_p.b + ROUND_OFFSET); ray_p.b = 1-(ray_p.b - (ray_i.b - ROUND_OFFSET) );
+        ray_i.c=(int)(ray_p.c + ROUND_OFFSET); ray_p.c = 1-(ray_p.c - (ray_i.c - ROUND_OFFSET) );
+        ray_id.set_inv( ray_d );
         ray_t = 0;
-        simplexIndexBare( ray0, ray_i );
+        //simplexIndexBare( ray0, ray_i );
+        //printf( "p (%g,%g,%g) ip (%g,%g,%g)\n", ray_d.a, ray_d.b, ray_d.c,   ray_id.a, ray_id.b, ray_id.c );
     }
 
     int rayStep(){
-        Vec3d tm; tm.set_mul(ray_md, ray_ip);
+        Vec3d tm; tm.set_mul(ray_p, ray_id);
+        //printf( "tm (%g,%g,%g)  (%g,%g,%g) (%g,%g,%g)", tm.x, tm.y, tm.z, ray_md.x,    ray_md.y, ray_md.z,   ray_ip.x, ray_ip.y, ray_ip.z );
+        //printf( "tm (%g,%g,%g) md (%g,%g,%g) \n", tm.a, tm.b, tm.c, ray_p.a, ray_p.b, ray_p.c,   ray_id.a, ray_id.b, ray_id.c );
         int edgeKind = -1;
         if( tm.a < tm.b ){
-           if( tm.a < tm.c ){  // a min
-                ray_t    += tm.a;
-                ray_md.a   = 1; ray_md.b -= ray_p.b*tm.a; ray_md.c -= ray_p.c*tm.a;
-                ray_i.b++;
+           if( tm.a < tm.c ){  // printf("a\n");
+                ray_t   += tm.a;
+                ray_p.a  = 1;
+                ray_p.b -= tm.a*ray_d.b;
+                ray_p.c -= tm.a*ray_d.c;
+                ray_i.a +=ray_si.a;
                 edgeKind = 0;
-           }else{            // c min
-                ray_t    += tm.c;
-                ray_md.a -= ray_p.a*tm.c; ray_md.b -= ray_p.b*tm.c; ray_md.c = 1;
-                ray_i.a++;
+           }else{              // printf("c\n");
+                ray_t   += tm.c;
+                ray_p.a -= tm.c*ray_d.a;
+                ray_p.b -= tm.c*ray_d.b;
+                ray_p.c  = 1;
+                ray_i.c +=ray_si.c;
                 edgeKind = 1;
            }
         }else{
-           if( tm.b < tm.c ){  // b min
-                ray_t    += tm.b;
-                ray_md.a -= ray_p.a*tm.b; ray_md.b = 1; ray_md.c -= ray_p.c*tm.b;
+           if( tm.b < tm.c ){  // printf("b\n");
+                ray_t   += tm.b;
+                ray_p.a -= tm.b*ray_d.a;
+                ray_p.b  = 1;
+                ray_p.c -= tm.b*ray_d.c;
+                ray_i.b +=ray_si.b;
                 edgeKind = 2;
-           }else{            // c min
-                ray_t    += tm.c;
-                ray_md.a -= ray_p.a*tm.c; ray_md.b -= ray_p.b*tm.c; ray_md.c = 1;
-                ray_i.a++;
-                edgeKind = 3;
+           }else{            // printf("c\n");
+                ray_t   += tm.c;
+                ray_p.a -= tm.c*ray_d.a;
+                ray_p.b -= tm.c*ray_d.b;
+                ray_p.c  = 1;
+                ray_i.c +=ray_si.c;
+                edgeKind = 1;
            }
         }
         return edgeKind;
     }
 
-    double rayView( Vec3d ray0, Vec3d hray, double * hs ){
-        rayStart( {ray0.x,ray0.y}, {hray.x,hray.y} );
+    double rayView( Vec2d ray0, Vec2d hray, double h0, double dh, double * hs, double tmax ){
+        rayStart( ray0, hray );
         double ot = 0;
-        double oh = ray0.z;
-        double og = getValue( {ray0.x,ray0.y}, hs );
-        ray0.z   += og;
-        for(int i=0; i<100; i++){
+        double oh = h0;
+        double og = getValue( ray0, hs );
+        double z0 = og + h0;
+        for(int i=0; i<maxRayIter; i++){
             rayStep();
-            Vec3d  p = ray0 + hray*ray_t;
-            double g = getValue( {p.x,p.y}, hs );
-            double h = p.z-g;
+            glColor3f(1.0f,0.0f,0.0f); Draw2D::drawPointCross_d( ray0 + hray*ray_t, 2.0 );
+            Vec2d  p = ray0 + hray*ray_t;
+            double z = z0   + dh  *ray_t;
+            double g = getValue( p, hs );
+            double h = z-g;
+            Draw2D::drawLine_d( p, p+((Vec2d){-hray.y,hray.x})*h );
             //double h = ray0.z+hray.z*ray_t - g;
             if( h<0 ){
                 double  f = oh/(oh-h);
-                double dt = ray_t-ot;
                 ray_t     = ot + f*(ray_t-ot);
+                if(true){
+                    // since the surface is piecewise-linear the solution must be exact !
+                    double HH = (z0+dh*ray_t) - getValue( ray0+hray*ray_t, hs );
+                    printf("HHH=%g ,   %g %g %g %g \n", HH, (oh-h), oh, h, f );
+                    return HH;
+                }
+                return      og + f*(g-og);
+            }else if( ray_t > tmax ){
+                double  f = (tmax-ot)/(ray_t-ot);
+                ray_t = tmax;
                 return      og + f*(g-og);
             }
             oh = h;
             og = g;
             ot = ray_t;
         }
+    }
+
+    int rayList( Vec2d ray0, Vec2d hray, double h0, int ntg, double * tgs, double * Ttgs, double * hs, double tmax ){
+        rayStart( ray0, hray );
+        double ot = 0;
+        //double oh = h0;
+        //double og = getValue( ray0, hs );
+        double z0 = getValue( ray0, hs ) + h0;
+        for( int itg=0; itg<ntg; itg++){
+            double dh = tgs[itg];
+            double oh = (z0+dh*ot) - getValue( ray0+hray*ot, hs );
+            if(oh<0){ printf("__error__ oh=%g itg \n", oh, itg ); }
+            bool fly=true;
+            while( fly ){
+                // FIXME : new ray with "dh[n+1]" may still hit the same tile as dh[n] => we should not do rayStep() each time
+                rayStep();
+                Vec2d  p = ray0 + hray*ray_t;
+                double z = z0   + dh  *ray_t;
+                double g = getValue( p, hs );
+                double h = z-g;
+                if(oh<0){ printf("error oh=%g \n", oh ); }
+                glColor3f(0.0f,1.0f,0.0f); Draw2D::drawLine_d( p, p+((Vec2d){-hray.y,hray.x})*h );
+                if( h<0 ){
+                    double  f = oh/(oh-h);
+                    ray_t     = ot + f*(ray_t-ot);
+                    if(f<0){printf("error f=%g (%g,%g) %i %g \n", f, oh, h,  itg, dh ); return itg; }
+                    if(true){
+                        double HH = (z0+dh*ray_t) - getValue( ray0+hray*ray_t, hs );
+                        printf("HH=%g ,   %g %g %g \n", HH, (oh-h), oh, h );
+                        //return itg;
+                    }
+                    fly = false;
+                }else if( ray_t > tmax ){
+                    ray_t     = tmax;
+                    ot        = ray_t;
+                    Ttgs[itg] = ray_t;
+                    //fly = false;
+                    return itg;
+                }
+                oh = h;
+                ot = ray_t;
+            }
+            glColor3f(1.0f,0.0f,0.0f); Draw2D::drawPointCross_d( ray0 + hray*ray_t, 10.0 );
+            Ttgs[itg] = ray_t;
+        }
+        return ntg;
     }
 
 };
