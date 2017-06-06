@@ -8,15 +8,19 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw3D.h"
+#include "SDL_utils.h"
 #include "Solids.h"
 
 #include "fastmath.h"
 #include "Vec3.h"
+#include "Mat3.h"
 
 #include "raytrace.h"
 #include "Molecule.h"
 #include "MMFF.h"
 #include "DynamicOpt.h"
+
+
 
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
@@ -25,55 +29,16 @@
 // TestAppSoftMolDyn
 // ==========================
 
-/*
-constexpr int natoms=5, nbonds=4, nang=6, ntors=0;
-
-Vec3d  apos[natoms] = {
-{ 0.0, 0.0, 0.0},
-{+1.0,+1.0,+1.0},
-{-1.0,-1.0,+1.0},
-{+1.0,-1.0,-1.0},
-{-1.0,+1.0,-1.0}
-};   // atomic position
-
-Vec2i  bond2atom[nbonds] = {{0,1},{0,2},{0,3},{0,4}};
-//double bond_0   [nbonds] = {1.0,1.2,1.5,1.7};  // [A]
-double bond_0   [nbonds] = {1.0,1.0,1.0,1.0};  // [A]
-Vec2i  ang2bond [nang]   = {{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}};
-*/
-
-/*
-constexpr int natoms=4, nbonds=3, nang=3, ntors=0;
-
-Vec3d  apos[natoms] = {
-{ 0.0, 0.0, 0.0},
-{ 0.0, 0.0,+1.0},
-{-1.0, 0.0, 0.0},
-{+1.0, 0.0,-1.0},
-};   // atomic position
-
-Vec2i  bond2atom[nbonds] = {{0,1},{0,2},{0,3}};
-double bond_0   [nbonds] = {1.0,1.0,1.0};  // [A]
-Vec2i  ang2bond [nang]   = {{0,1},{1,2},{2,0}};
-*/
-
-/*
-constexpr int natoms=3, nbonds=2, nang=1, ntors=0;
-
-Vec3d  apos[natoms] = {
-{ 0.0, 0.0, 0.0},
-{+1.0,+1.0,0.0},
-{-1.0,-1.0,0.0},
-};   // atomic position
-
-Vec2i  bond2atom[nbonds] = {{0,1},{0,2}};
-double bond_0   [nbonds] = {0.8,1.2};  // [A]
-Vec2i  ang2bond [nang]   = {{0,1}};
-*/
-
-// test closest point skew-lines
-//Vec3d   p1,p2,dp1,dp2;
-//double  t1,t2;
+void plotSurfPlane( Vec3d normal, double c0, Vec2d d, Vec2i n ){
+    Vec3d da,db;
+    normal.getSomeOrtho( da,db );
+    da.mul( d.a/da.norm() );
+    db.mul( d.b/db.norm() );
+    //glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(normal, {0.0,0.0,0.0} );
+    //glColor3f(0.0f,1.0f,0.0f); Draw3D::drawVecInPos(da*10, {0.0,0.0,0.0} );
+    //glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos(db*10, {0.0,0.0,0.0} );
+    Draw3D::drawRectGridLines( n*2, (da*-n.a)+(db*-n.b) + normal*c0, da, db );
+}
 
 class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 	public:
@@ -82,10 +47,17 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
     MMFF        world;
     DynamicOpt  opt;
 
-    int ogl_sph;
+    int     fontTex;
+    int     ogl_sph;
+
+    char str[256];
+
     Vec3d ray0;
     int ipicked  = -1, ibpicked = -1;
     int perFrame = 10.0;
+
+    double drndv =  10.0;
+    double drndp =  0.5;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -97,8 +69,9 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 
 };
 
-
 TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     params.loadBondTypes("common_resources/BondTypes.dat");
 
@@ -120,15 +93,6 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     params.fillBondParams( world.nbonds, world.bond2atom, mol.bondType, mol.atomType, world.bond_0, world.bond_k );
     world.printBondParams();
     //exit(0);
-
-    /*
-    world.apos      = apos;
-    world.bond2atom = bond2atom;
-    world.ang2bond  = ang2bond;
-    world.bond_0    = bond_0;
-    world.allocate( natoms, nbonds, nang, ntors );
-    world.ang_b2a();
-    */
 
     opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce );
     opt.setInvMass( 1.0 );
@@ -152,34 +116,35 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         Draw3D::drawSphere_oct(1, 0.1, {0.0,0.0,0.0} );
     glEndList();
 
-    /*
-    // test closest point skew-lines
-    srand(548);
-    p1  = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};
-    p2  = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};
-    dp1 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};  dp1.normalize();
-    dp2 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};  dp2.normalize();
-    rayLine( p1, dp1, p2, dp2, t1, t2 );
-    //t2  = rayLine( p2, dp2, p1, dp1 );
-    */
-
 }
 
 void TestAppSoftMolDyn::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	/*
+    /*
+    srand(154);
+    Vec3d ax  = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};   ax.normalize();
+    Vec3d dp1 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};   dp1.add_mul( ax, -ax.dot(dp1) ); dp1.normalize();
+    Vec3d dp2 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};   dp2.add_mul( ax, -ax.dot(dp2) ); dp2.normalize();
+    printf( "%g %g %g %g \n", dp1.dot(dp1), dp2.dot(dp2), dp1.dot(ax), dp2.dot(ax) );
+    Vec3d p1  = ax*randf( 0.0,1.0) + dp1*randf( -1.5,-1.0);
+    Vec3d p2  = ax*randf(-1.0,0.0) + dp2*randf( -1.5,0.0);
+    double t1,t2;
+    double dist = rayLine( p1, dp1, p2, dp2, t1, t2 );
 	// test closest point skew-lines
-	glColor3f(0.8f,0.0f,0.0f); Draw3D::drawLine( p1+(dp1*3.0), p1+(dp1*-3.0) );
-	glColor3f(0.0f,0.0f,0.8f); Draw3D::drawLine( p2+(dp2*3.0), p2+(dp2*-3.0) );
-	glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine( p1+(dp1*t1), p2+(dp2*t2) );
-	printf( "t1 %g t2 %g \n", t1, t2);
+	//glColor3f(0.6f,0.6f,0.6f); Draw3D::drawLine( ax*1, ax*-1 );
+	glColor3f(0.8f,0.0f,0.0f); Draw3D::drawLine( p1, p1+dp1 ); Draw3D::drawPointCross( p1, 0.1 );
+	glColor3f(0.0f,0.0f,0.8f); Draw3D::drawLine( p2, p2+dp2 ); Draw3D::drawPointCross( p2, 0.1 );
+	glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine( p1+(dp1*t1), p2+(dp2*t2) ); // Draw3D::drawLine( p1+(dp1*t1), p1 );   Draw3D::drawLine( p2, p2+(dp2*t2) );
+	printf( "t1 %g t2 %g  dist %g %g \n", t1, t2, dist, (p1+(dp1*t1)-p2-(dp2*t2)).norm() );
 	//Vec3d rxl; rxl.set_cross(dp1, dp2);
 	//glColor3f(0.8f,0.0f,0.0f); Draw3D::drawVecInPos( rxl, p1+(dp1*t1) );
 	//glColor3f(0.0f,0.0f,0.8f); Draw3D::drawVecInPos( rxl, p2+(dp2*t2) );
 	return;
 	*/
+
+	//ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
 
     ray0 = camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
     Draw3D::drawPointCross( ray0, 0.1 );
@@ -188,7 +153,9 @@ void TestAppSoftMolDyn::draw(){
 
 	double F2;
 	for(int itr=0; itr<perFrame; itr++){
+
         for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
+
         world.eval_bonds();
         //world.eval_angles();
         world.eval_angcos();
@@ -200,14 +167,24 @@ void TestAppSoftMolDyn::draw(){
             world.aforce[ipicked].add( f );
         };
 
+        for(int i=0; i<world.natoms; i++){
+            world.aforce[i].add( getForceHamakerPlane( world.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
+            //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
+        }
+        //exit(0);
+
         //for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.01,0.0}); }
-        int ipivot = 0;
-        world.aforce[ipivot].set(0.0);
+        //int ipivot = 0;
+        //world.aforce[ipivot].set(0.0);
         //opt.move_LeapFrog(0.01);
         //opt.move_MDquench();
         F2 = opt.move_FIRE();
         //exit(0);
+
     }
+
+    glColor3f(0.6f,0.6f,0.6f); plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
+    //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,1.0},  (Vec3d){0.0,0.0,0.0} );
 
     //printf( "==== frameCount %i  |F| %g \n", frameCount, sqrt(F2) );
 
@@ -229,6 +206,8 @@ void TestAppSoftMolDyn::draw(){
         glColor3f(0.0f,0.0f,0.0f);
         if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f); ;
         Draw3D::drawLine(world.apos[ib.x],world.apos[ib.y]);
+        sprintf(str,"%i\0",i);
+        Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.03, 0,0);
     }
 
 };
@@ -239,13 +218,20 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                case SDLK_p:  first_person = !first_person; break;
-                case SDLK_o:  perspective  = !perspective; break;
+                //case SDLK_p:  first_person = !first_person; break;
+                //case SDLK_o:  perspective  = !perspective; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
 
+                case SDLK_v: for(int i=0; i<world.natoms; i++){ ((Vec3d*)opt.vel)[i].add(randf(-drndv,drndv),randf(-drndv,drndv),randf(-drndv,drndv)); } break;
+                case SDLK_p: for(int i=0; i<world.natoms; i++){ world.apos[i].add(randf(-drndp,drndp),randf(-drndp,drndp),randf(-drndp,drndp)); } break;
+
+                case SDLK_LEFTBRACKET:  if(ibpicked>=0) world.bond_0[ibpicked] += 0.1; printf("SDLK_LEFTBRACKET\n"); break;
+                case SDLK_RIGHTBRACKET: if(ibpicked>=0) world.bond_0[ibpicked] -= 0.1; printf("SDLK_RIGHTBRACKET\n"); break;
+                //case SDLK_RIGHTBRACKET:  printf("SDLK_RIGHTBRACKET\n"); break;
 
                 case SDLK_a: world.apos[1].rotate(  0.1, {0.0,0.0,1.0} ); break;
                 case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;
+
                 case SDLK_w: world.apos[1].mul( 1.1 ); break;
                 case SDLK_s: world.apos[1].mul( 0.9 ); break;
             }
@@ -267,7 +253,7 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
                     ipicked = -1;
                     break;
                 case SDL_BUTTON_RIGHT:
-                    ibpicked = -1;
+                    //ibpicked = -1;
                     break;
             }
             break;

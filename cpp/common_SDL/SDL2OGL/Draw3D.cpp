@@ -92,8 +92,6 @@ void drawScale( const Vec3d& p1, const Vec3d& p2, const Vec3d& up, double tick, 
 	glEnd();
 };
 
-
-
 void drawVecInPos( const Vec3f& v, const Vec3f& pos ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
@@ -526,7 +524,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             Vec2d p; p.set(pa);
             for (int ib=0; ib<nb; ib++){
                 double h=0.0d;
-                printf( " %i %i %i (%3.3f,%3.3f) %f %f \n", ia, ib, ii, p.x, p.y, hs[ii], clrs[ii] );
+                //printf( " %i %i %i (%3.3f,%3.3f) %f %f \n", ia, ib, ii, p.x, p.y, hs[ii], clrs[ii] );
                 if(clrs) Draw::colorScale( clrs[ii], ncolors, cscale );
                 //if(hs){ simplex_deriv(); glNormal3f(0.0f,1.0f,0.0f); }
                 if(hs){ h=hs[ii]; }
@@ -575,6 +573,29 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         }
         glEnd();
     }
+
+
+    void drawRectGridLines( Vec2i n, const Vec3d& p0, const Vec3d& da, const Vec3d& db ){
+        glBegin( GL_LINES );
+        Vec3d p  = p0;
+        Vec3d dn = db*n.b;
+        for (int ia=0; ia<n.a; ia++){
+            glVertex3f( (float)(p .x), (float)(p .y), (float)(p .z) );  Vec3d p_ = p+dn;
+            glVertex3f( (float)(p_.x), (float)(p_.y), (float)(p_.z) );
+            //printf( "ia (%g,%g,%g) (%g,%g,%g)\n", p.x,p.y,p.z,   p_.x,p_.y,p_.z );
+            p.add(da);
+        }
+        p   = p0;
+        dn  = da*n.a;
+        for (int ib=0; ib<n.b; ib++){
+            glVertex3f( (float)(p .x), (float)(p .y), (float)(p .z) );  Vec3d p_ = p+dn;
+            glVertex3f( (float)(p_.x), (float)(p_.y), (float)(p_.z) );
+            //printf( "ib (%g,%g,%g) (%g,%g,%g)\n", p.x,p.y,p.z,   p_.x,p_.y,p_.z );
+            p.add(db);
+        }
+        glEnd();
+    }
+
 
     int drawMesh( const Mesh& mesh  ){
         for( Polygon* pl : mesh.polygons ){

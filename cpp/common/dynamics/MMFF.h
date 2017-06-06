@@ -25,6 +25,17 @@ inline Vec3d getForceSpringPlane( const Vec3d& p, const Vec3d& normal, double c0
     return normal * (cdot * k);
 }
 
+inline Vec3d getForceHamakerPlane( const Vec3d& p, const Vec3d& normal, double c0, double e0, double r0 ){
+    // https://en.wikipedia.org/wiki/Lennard-Jones_potential
+    //printf(  " normal %g %g %g \n", normal.x, normal.y, normal.z );
+    double cdot = normal.dot(p) - c0;
+    double ir   = r0/cdot;
+    double ir3  = ir*ir*ir;
+    double f    = e0*(ir/r0)*ir3*(ir3-1);
+    //printf( "%g %g %g %g %g %g %g \n", f, cdot, ir, ir3, e0, c0, r0  );
+    return normal * f;
+}
+
 inline Vec3d getForceSpringRay( const Vec3d& p, const Vec3d& hray, const Vec3d& ray0, double k ){
     Vec3d dp; dp.set_sub( p, ray0 );
     double cdot = hray.dot(dp);
@@ -166,6 +177,8 @@ int pickBond( Vec3d& ray0, Vec3d& hRay, double R ){
         Vec2i iat = bond2atom[ib];
         double t1,t2;
         double dist = rayLine( ray0, hRay, apos[iat.x], hbond[ib], t1, t2 );
+        //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine( ray0+(hRay*t1), apos[iat.x]+(hbond[ib]*t2) );
+        //printf( "%i %g %g %g \n", ib, t1, t2, dist );
         if( (dist<dist_min) && (t2>0) && (t2<lbond[ib]) ){
             imin=ib; dist_min=dist;
         }

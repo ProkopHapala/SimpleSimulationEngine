@@ -57,6 +57,8 @@ void drawKite           ( const Vec3d& pos, const Mat3d& rot, double sz );
 void drawSimplexGrid( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs, const double * clrs, int ncolors, const uint32_t * colorscale );
 void drawSimplexGridLines( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs );
 
+void drawRectGridLines( Vec2i n, const Vec3d& p0, const Vec3d& da, const Vec3d& db );
+
 int drawMesh( const Mesh& mesh  );
 
 void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend );

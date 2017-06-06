@@ -62,9 +62,9 @@ inline double rayLine( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p0, co
     double crl  = hRay.dot(hL); // <d1|d2>
     double c1   = d.dot(hRay);
     double c2   = d.dot(hL);
-    t1 = (c1-c2*crl)/(1-crl*crl);
-    t2 = -(c2-c1*crl)/(1-crl*crl);
-    return c;
+    t1 =   (c1-c2*crl)/(1-crl*crl);
+    t2 =  -(c2-c1*crl)/(1-crl*crl);
+    return fabs(c);
     //return (c1-c2*crl)/(1-crl*crl);
     //return
 }
