@@ -54,7 +54,7 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 
     Vec3d ray0;
     int ipicked  = -1, ibpicked = -1;
-    int perFrame = 10.0;
+    int perFrame =  10;
 
     double drndv =  10.0;
     double drndp =  0.5;
@@ -96,6 +96,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce );
     opt.setInvMass( 1.0 );
+    opt.cleanVel( );
 
     for(int i=0; i<world.nbonds; i++){
         world.bond_k[i] = 2.0;
@@ -167,10 +168,12 @@ void TestAppSoftMolDyn::draw(){
             world.aforce[ipicked].add( f );
         };
 
+
         for(int i=0; i<world.natoms; i++){
             world.aforce[i].add( getForceHamakerPlane( world.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
             //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
         }
+
         //exit(0);
 
         //for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.01,0.0}); }
@@ -210,6 +213,14 @@ void TestAppSoftMolDyn::draw(){
         Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.03, 0,0);
     }
 
+    /*
+    printf("==========\n");
+    for(int i=0; i<world.natoms; i++){
+        printf("iatom %i (%g,%g,%g) (%g,%g,%g) \n", i, world.apos[i].x,world.apos[i].y,world.apos[i].z, world.aforce[i].x,world.aforce[i].y,world.aforce[i].z  );
+    }
+    if(frameCount>=10){STOP = true;}
+    */
+
 };
 
 
@@ -225,9 +236,8 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
                 case SDLK_v: for(int i=0; i<world.natoms; i++){ ((Vec3d*)opt.vel)[i].add(randf(-drndv,drndv),randf(-drndv,drndv),randf(-drndv,drndv)); } break;
                 case SDLK_p: for(int i=0; i<world.natoms; i++){ world.apos[i].add(randf(-drndp,drndp),randf(-drndp,drndp),randf(-drndp,drndp)); } break;
 
-                case SDLK_LEFTBRACKET:  if(ibpicked>=0) world.bond_0[ibpicked] += 0.1; printf("SDLK_LEFTBRACKET\n"); break;
-                case SDLK_RIGHTBRACKET: if(ibpicked>=0) world.bond_0[ibpicked] -= 0.1; printf("SDLK_RIGHTBRACKET\n"); break;
-                //case SDLK_RIGHTBRACKET:  printf("SDLK_RIGHTBRACKET\n"); break;
+                case SDLK_LEFTBRACKET:  if(ibpicked>=0) world.bond_0[ibpicked] += 0.1; break;
+                case SDLK_RIGHTBRACKET: if(ibpicked>=0) world.bond_0[ibpicked] -= 0.1; break;
 
                 case SDLK_a: world.apos[1].rotate(  0.1, {0.0,0.0,1.0} ); break;
                 case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;

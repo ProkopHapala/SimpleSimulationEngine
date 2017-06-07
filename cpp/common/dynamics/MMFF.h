@@ -102,10 +102,19 @@ class MMFFparams{ public:
         return i;
     }
 
+    bool getBondParams( int atyp1, int atyp2, int btyp, double& l0, double& k ){
+        uint64_t id  = getBondTypeId( atyp1, atyp2, btyp );
+        auto it = bonds.find(id);
+        if   ( it == bonds.end() ){ l0=default_bond_length; k=default_bond_stiffness; return false;}
+        else                      { l0=it->second.length;   k=it->second.stiffness;   return true; }
+    }
+
     void fillBondParams( int nbonds, Vec2i * bond2atom, int * bondOrder, int * atomType, double * bond_0, double * bond_k ){
         printf("fillBondParams: %i\n", nbonds);
         for(int i=0; i<nbonds; i++){
             Vec2i ib = bond2atom[i];
+            getBondParams( atomType[ib.x], atomType[ib.y], bondOrder[i], bond_0[i], bond_k[i] );
+            /*
             uint64_t id  = getBondTypeId( atomType[ib.x], atomType[ib.y], bondOrder[i] );
             //BondType& bt = bonds[id];
             auto it = bonds.find(id);
@@ -115,12 +124,13 @@ class MMFFparams{ public:
             }else{
                 bond_0[i]=it->second.length; bond_k[i]=it->second.stiffness;
             }
+
             printf("%i (%i,%i) (%i,%i,%i) %g %g\n", i, ib.x+1, ib.y+1, atomType[ib.x], atomType[ib.y], bondOrder[i], bond_0[i], bond_k[i] );
+            */
         }
     }
 
 };
-
 
 class MMFF{ public:
     int  natoms=0, nbonds=0, nang=0, ntors=0;
@@ -141,6 +151,7 @@ class MMFF{ public:
 
     // molecular gemeotry
     Vec3d  * apos   = NULL;   // atomic position
+    Vec3d  * aLJq   = NULL;
     double * lbond  = NULL;  // bond lengths
     Vec3d  * hbond  = NULL;   // normalized bond unitary vectors
     Vec3d  * aforce = NULL;
@@ -149,6 +160,7 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     natoms=natoms_; nbonds=nbonds_; nang=nang_; ntors=ntors_;
     if(apos     ==NULL) apos      = new Vec3d [natoms];
     if(aforce   ==NULL) aforce    = new Vec3d [natoms];
+    if(aLJq   ==NULL)   aLJq      = new Vec3d [natoms];
 
     if(lbond    ==NULL) lbond     = new double[nbonds];
     if(hbond    ==NULL) hbond     = new Vec3d [nbonds];
@@ -168,6 +180,12 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     tors_0    = new double[ntors];
     tors_k    = new double[ntors];
     */
+}
+
+void deallocate(){
+    delete [] apos;     delete [] aforce;   delete [] aLJq;
+    delete [] lbond;    delete [] hbond;    delete [] bond2atom; delete [] bond_0; delete [] bond_k;
+    delete [] ang2bond; delete [] ang2atom; delete [] ang_0;     delete [] ang_k;
 }
 
 int pickBond( Vec3d& ray0, Vec3d& hRay, double R ){
@@ -356,6 +374,86 @@ void printBondParams(){
         printf( "%i (%i,%i) %g %g \n", i, bond2atom[i].x+1, bond2atom[i].y+1, bond_0[i], bond_k[i] );
     }
 }
+
+};
+
+// =================
+// =================  MMFFBuilder
+// =================
+
+#include "Molecule.h"
+
+class MMFFAtom{ public:
+    int type;
+    Vec3d pos;
+    Vec3d LJq;
+};
+
+class MMFFBond{ public:
+    int    type;
+    Vec2i  atoms;
+    //double l0,k;
+};
+
+class MMFFAngle{ public:
+    int type;
+    Vec2i  bonds;
+    //double a0,k;
+};
+
+class MMFFmol{ public:
+    Molecule * mol;
+    Vec3i    i0;
+};
+
+class MMFFBuilder{  public:
+    std::vector<MMFFAtom>  atoms;
+    std::vector<MMFFBond>  bonds;
+    std::vector<MMFFAngle> angles;
+    std::vector<MMFFmol>   mols;
+
+    void insertMolecule( Molecule * mol ){
+        int natom0  = atoms.size();
+        int nbond0  = bonds.size();
+        int nangle0 = angles.size();
+        mols.push_back( (MMFFmol){mol, (Vec3i){natom0,nbond0,nangle0} } );
+        for(int i=0; i<mol->natoms; i++){
+            Vec3d LJq = (Vec3d){0.0,0.0,0.0}; // TO DO : LJq can be set by type
+            atoms.push_back( (MMFFAtom){mol->atomType[i], mol->pos[i], LJq } );
+        }
+        for(int i=0; i<mol->nbonds; i++){
+            bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] } );
+        }
+        for(int i=0; i<mol->nang; i++){
+            angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] } );
+        }
+    }
+
+    void toMMFF( MMFF * mmff, MMFFparams * params ){
+        mmff->deallocate();
+        mmff->allocate( atoms.size(), bonds.size(), angles.size(), 0 );
+        //int * atomTypes = new int[atoms.size()];
+        //int * bondTypes = new int[bonds.size()];
+        for(int i=0; i<atoms.size(); i++){
+            mmff->apos[i] = atoms[i].pos;
+            mmff->aLJq[i] = atoms[i].LJq;
+            //atomTypes[i]  = atoms[i].type;
+        }
+        for(int i=0; i<bonds.size(); i++){
+            mmff->bond2atom[i] = bonds[i].atoms;
+            Vec2i ib           = bonds[i].atoms;
+            params->getBondParams( atoms[ib.x].type, atoms[ib.y].type, bonds[i].type, mmff->bond_0[i], mmff->bond_k[i] );
+            //bondTypes[i]       = bonds[i].type;
+        }
+        for(int i=0; i<angles.size(); i++){
+            mmff->ang2bond[i] = angles[i].bonds;
+            mmff->ang_0[i] = {1.0,0.0}; // TODO FIXME
+            mmff->ang_k[i] = 0.5;       // TODO FIXME
+        }
+        //params.fillBondParams( mmff->nbonds, mmff->bond2atom, bondTypes, atomTypes, mmff->bond_0, mmff->bond_k );
+        //delete [] atomTypes;
+        //delete [] bondTypes;
+    }
 
 };
 
