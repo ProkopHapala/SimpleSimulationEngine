@@ -16,9 +16,25 @@
 //inline BondType2id
 //inline BondTypeDec
 
+#define R2SAFE  1.0e-8f
+#define F2MAX   10.0f
+
 #define SIGN_MASK 2147483648
 
 //inline int invIndex( int i ){ return i^SIGN_MASK; }
+
+// compied from RigidMolecule.h      ============>   TODO : make common lib of inter-molecular forcefields formulas
+
+inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double q ){
+    //Vec3f dp; dp.set_sub( p2, p1 );
+    double ir2  = 1/( dp.norm2() + R2SAFE );
+    double ir   = sqrt(ir2);
+    double ir2_ = ir2*r0*r0;
+    double ir6  = ir2_*ir2_*ir2_;
+    double fr   = ( ( 1 - ir6 )*ir6*12*eps + ir*q*-14.3996448915f )*ir2;
+    f.add_mul( dp, fr );
+}
+
 
 inline Vec3d getForceSpringPlane( const Vec3d& p, const Vec3d& normal, double c0, double k ){
     double cdot = normal.dot(p) - c0;
@@ -271,9 +287,13 @@ void eval_angcos(){
         //hf1 = h1*c - h2;
         //hf2 = h2*c - h1;
 
+        //printf("ig %i ib (%i,%i) \n", ig, ib.x, ib.y );
+
         double fang = -ang_k[ig]/(1.02-c);
         hf1.mul( fang/lbond[ib.x] );
         hf2.mul( fang/lbond[ib.y] );
+
+        //printf("ia (%i,%i,%i)\n", ia.x, ia.y, ia.z );
 
         /*
         glColor3f(0.0f,1.0f,0.0f);
@@ -288,6 +308,8 @@ void eval_angcos(){
         aforce[ia.x].add( hf1     );
         aforce[ia.y].add( hf2     );
         aforce[ia.z].sub( hf1+hf2 );
+
+        //printf("ig %i\n", ig );
         //aforce[ia.x] ????
         // TODO : zero moment condition
     }
@@ -363,6 +385,24 @@ void eval_torsion(){
     }
 }
 
+void eval_LJq_On2(){
+    for(int i=0; i<natoms; i++){
+        Vec3d ljq_i = aLJq[i];
+        Vec3d pi    = apos[i];
+        Vec3d f; f.set(0.0);
+        for(int j=0; j<natoms; j++){
+            if(i!=j){
+                Vec3d& ljq_j = aLJq[j];
+                double rij = ljq_i.x+ljq_j.x;
+                double eij = ljq_i.y*ljq_j.y;
+                double qq  = ljq_i.z*ljq_j.z;
+                addAtomicForceLJQ( pi-apos[j], f, rij, -eij, qq );
+            }
+        }
+        aforce[i].add(f);
+    }
+}
+
 /*
 void eval_spring( Vec3d hray, double k ){
 
@@ -412,20 +452,22 @@ class MMFFBuilder{  public:
     std::vector<MMFFAngle> angles;
     std::vector<MMFFmol>   mols;
 
-    void insertMolecule( Molecule * mol ){
+    void insertMolecule( Molecule * mol, Vec3d pos, Mat3d rot ){
         int natom0  = atoms.size();
         int nbond0  = bonds.size();
         int nangle0 = angles.size();
         mols.push_back( (MMFFmol){mol, (Vec3i){natom0,nbond0,nangle0} } );
         for(int i=0; i<mol->natoms; i++){
-            Vec3d LJq = (Vec3d){0.0,0.0,0.0}; // TO DO : LJq can be set by type
-            atoms.push_back( (MMFFAtom){mol->atomType[i], mol->pos[i], LJq } );
+            //Vec3d LJq = (Vec3d){0.0,0.0,0.0}; // TO DO : LJq can be set by type
+            Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
+            Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
+            atoms.push_back( (MMFFAtom){mol->atomType[i], p, LJq } );
         }
         for(int i=0; i<mol->nbonds; i++){
-            bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] } );
+            bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}) } );
         }
         for(int i=0; i<mol->nang; i++){
-            angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] } );
+            angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}) } );
         }
     }
 
