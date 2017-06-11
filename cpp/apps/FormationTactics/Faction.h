@@ -4,6 +4,7 @@
 #define Faction_h
 
 #include <vector>
+#include <unordered_map>
 
 //#include <SDL2/SDL.h>
 //#include <SDL2/SDL_opengl.h>
@@ -62,6 +63,74 @@ class Faction{
             fm->deploySoldiers();
             i++;
         }
+    }
+
+
+    int initFaction( char * fname, Vec2d pos0, Vec2d dir0, const std::unordered_map<std::string,SoldierType*>& name2soldierType ){
+        printf("\n", fname );
+        BattleLine* battleLine = new BattleLine();
+        battleLine->formations.reserve( 20 );
+        printf( "bl.fms.size %i \n", battleLine->formations.size() );
+        //formations.reserve( nFormations );
+        battleLines.push_back( battleLine );
+
+        FILE * pFile;
+        const int nbuff = 1024;
+        char str[nbuff];
+        pFile = fopen ( fname , "r");
+        if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
+        fgets ( str, nbuff, pFile);
+        printf(">>%s<<\n", str);
+
+        printf( "1 bl.fms.size %i \n", battleLine->formations.size() );
+
+        int i=0;
+        while ( fgets ( str , nbuff, pFile) != NULL ){
+
+            printf( "2 bl.fms.size %i \n", battleLine->formations.size() );
+            printf(">>%s<<\n", str);
+            //Vec2d pos, dir;
+            Vec2d p1, p2;
+            int nrow, ncol;
+            char* token;
+            std::string name = strtok( str, ";");
+            printf(">>%s<<\n", name.c_str() );
+            printf( "3 bl.fms.size %i \n", battleLine->formations.size() );
+            SoldierType * typ;// =  &(soldierTypes[0]);
+            auto found = name2soldierType.find( name );
+            if( found->second ){ typ = found->second; }else{ printf("cannot found SoldierType : %s\n", name ); exit(0); };
+            token = strtok( NULL, ";");
+            printf(">>%s<<\n", token);
+            //printf( "4 bl.fms.size %i \n", battleLine->formations.size() );
+            //scanf( token, "%li %li  %lf %lf  %lf %lf", nrow, ncol, pos.x, pos.y, dir.x, dir.y );
+            sscanf( token, "%i %i  %lf %lf  %lf %lf", &nrow, &ncol, &p1.x, &p1.y, &p2.x, &p2.y );
+            printf("printf: %i %i  %lf %lf  %lf %lf \n",  nrow, ncol, p1.x, p1.y, p2.x, p2.y );
+            //printf( "4.5 bl.fms.size %i \n", battleLine->formations.size() );
+            p1.mul_cmplx(dir0); p1.add(pos0);
+            p2.mul_cmplx(dir0); p2.add(pos0);
+            //printf("==>>%s<<\n", str);
+            //soldierTypes.push_back( SoldierType(str) );
+            //printf( "5 bl.fms.size %i \n", battleLine->formations.size() );
+            Formation * fm = new Formation( i, nrow, ncol, typ, this );
+            //fm->setTarget( pos );
+            //printf("DEBUG 1\n");
+            //printf( "6 bl.fms.size %i \n", battleLine->formations.size() );
+            formations .push_back( fm );
+            //printf( "%i %i\n",fm->id, fm->faction);
+            //printf( "bl.fms.size %i \n", battleLine->formations.size() );
+            battleLine->formations.push_back( fm );
+            //printf("DEBUG 2\n");
+            fm->p00target.set( p1 );
+            fm->p01target.set( p2 );
+            fm->width = (p2-p1).norm();
+            //printf("DEBUG 3\n");
+            fm->jumpToTarget();
+            fm->deploySoldiers();
+            //printf("DEBUG 4\n");
+            i++;
+        }
+        fclose(pFile);
+        //exit(0);
     }
 
     Faction( char * name_, const Vec3f& color_ ){

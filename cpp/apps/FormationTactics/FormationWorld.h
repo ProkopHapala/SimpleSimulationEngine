@@ -3,7 +3,7 @@
 #ifndef FormationWorld_h
 #define FormationWorld_h
 
-#include <unordered_set>
+#include <unordered_map>
 
 #include "fastmath.h"
 #include "Vec2.h"
@@ -28,6 +28,8 @@ class FormationWorld{
     std::vector<Formation*>  formations;
     std::vector<Faction*>    factions;
     std::vector<SoldierType> soldierTypes;
+
+    std::unordered_map<std::string,SoldierType*> name2soldierType;
 
     double RmaxInteract = 1.5;
 
@@ -56,6 +58,9 @@ class FormationWorld{
     int  formationInteractions_buff( );
 
     void refreshFormations( );
+
+    int  loadSoldierTypes( char * fname );
+    void updateSoldierTypeMap();
 
     //void assembleForces( ULONG i );
     //void assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D** buf_i );

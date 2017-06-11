@@ -170,7 +170,7 @@ class Soldier : public RigidBody2D{
     void attack_melee( Soldier * enemy ){
         time_buf -= type->melee_period;
         stamina  *= type->melee_fStamina;
-        enemy->getHit( type->melee_damage, type->melee_penetration, type->attack_skill, rot );
+        enemy->getHit( type->melee_damage, type->melee_penetration, type->melee_skill, rot );
     }
 
 /*

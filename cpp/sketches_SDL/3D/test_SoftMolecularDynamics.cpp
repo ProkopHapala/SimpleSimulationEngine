@@ -56,7 +56,7 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 
     Vec3d ray0;
     int ipicked  = -1, ibpicked = -1;
-    int perFrame =  10;
+    int perFrame =  50;
 
     double drndv =  10.0;
     double drndp =  0.5;

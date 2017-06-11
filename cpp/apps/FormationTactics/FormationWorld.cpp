@@ -174,6 +174,30 @@ void FormationWorld::refreshFormations( ){
     }
 }
 
+int FormationWorld::loadSoldierTypes( char * fname ){
+    FILE * pFile;
+    const int nbuff = 4096;
+    char str[nbuff];
+    pFile = fopen ( fname , "r");
+    if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
+    fgets ( str, nbuff, pFile);
+    printf(">>%s<<\n", str);
+    while ( fgets ( str , nbuff, pFile) != NULL ){
+        printf("==>>%s<<\n", str);
+        soldierTypes.push_back( SoldierType(str) );
+    }
+    fclose(pFile);
+    return soldierTypes.size();
+}
+
+void FormationWorld::updateSoldierTypeMap(){
+    for(int i=0; i<soldierTypes.size(); i++){
+        SoldierType * s = &soldierTypes[i];
+        name2soldierType[s->name] = s;
+        printf( "%s -> %s \n", s->name.c_str(), name2soldierType.find(s->name)->second->name.c_str() );
+    }
+}
+
 void FormationWorld::init(){
     printf( " FormationWorld::init() \n" );
     evalAuxSimParams();
@@ -186,7 +210,17 @@ void FormationWorld::init(){
 
     //soldierTypes.push_back( SoldierType(){"pikemen",1.0d,0.25d,1.0d} );
     //soldierTypes.push_back( {"pikemen",1.0d,0.25d,1.0d, 1.0, 1.0 } );
-    soldierTypes.push_back( SoldierType() );
+
+    //SoldierType s;
+    //s.fromString( "default;  1.0 0.5 1.0 1.0;  0.01 15.0;  1.0 10.0 1.2 3.0 1.0 0.8 1.0;  1.0 2.0 0.9;  20.0 0.0 3.0 1.0 1.1 0.8 30;  10.0 1.0  0.5;  0.5 0.5 100.0;" );
+
+    loadSoldierTypes( "data/SoldierTypes.dat" );
+    updateSoldierTypeMap();
+
+    //printf( "Hoplite -> %s \n", name2soldierType.find("Hoplite")->second->name.c_str() );
+    //exit(0);
+
+    //soldierTypes.push_back( SoldierType() );
 
     //double span = 20.0; int nform = 4; int nrow = 4; int ncol=16;
     double span = 320.0; int nform = 32; int nrow = 8; int ncol=16;
@@ -195,9 +229,11 @@ void FormationWorld::init(){
 
     Faction* fac1 = new Faction( "RedArmy" , {1.0f,0.25f,0.0f} );
     factions.push_back( fac1 );
+    //fac1->initFaction( "data/Army1.dat", {0.0,3.0}, {0.0,1.0}, name2soldierType );
+    //exit(0);
     //fac1->initFaction( 4, 4, 16, soldierTypes, {+20.0,3.0}, {-20.0,3.0}, 1.0 );
     fac1->initFaction( nform, nrow, ncol, soldierTypes, {+span,3.0}, {-span,3.0}, 1.0 );
-    //fac1->battleLines[0]->setTargetLine( {-10.0,3.0}, {+10.0,3.0} );
+    fac1->battleLines[0]->setTargetLine( {-10.0,3.0}, {+10.0,3.0} );
 
     Faction* fac2 = new Faction( "BlueArmy", {0.0f,0.5f, 1.0f} );
     factions.push_back( fac2 );

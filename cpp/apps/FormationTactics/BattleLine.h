@@ -33,11 +33,11 @@ class BattleLine{
         dp.mul( 1.0/(formations.size()-1) );
         p1i.set    ( p1    );
         p2i.set_add( p1,dp );
-        printf( " p1 (%3.3f,%3.3f) p2 (%3.3f,%3.3f)  dp (%3.3f,%3.3f) \n", p1.x,p1.y, p2.x,p2.y,  dp.x,dp.y );
+        //printf( " p1 (%3.3f,%3.3f) p2 (%3.3f,%3.3f)  dp (%3.3f,%3.3f) \n", p1.x,p1.y, p2.x,p2.y,  dp.x,dp.y );
         for( Formation* fm : formations ){
             fm->p00target.set( p1i );
             fm->p01target.set( p2i );
-            printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) \n", fm->p00target.x, fm->p00target.y, fm->p01target.x, fm->p01target.y  );
+            //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) \n", fm->p00target.x, fm->p00target.y, fm->p01target.x, fm->p01target.y  );
             p1i.set( p2i );
             p2i.add( dp  );
         }
