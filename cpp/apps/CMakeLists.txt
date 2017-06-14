@@ -17,5 +17,6 @@ add_subdirectory (Tanks)
 add_subdirectory (NavalBattle)
 
 add_subdirectory (MolecularEditor)
+add_subdirectory (MolecularEditor2)
 
 

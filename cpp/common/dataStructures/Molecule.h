@@ -2,6 +2,10 @@
 #ifndef Molecule_h
 #define Molecule_h
 
+#include <unordered_map>
+#include <vector>
+#include <string>
+
 #include "fastmath.h"
 #include "Vec2.h"
 #include "Vec3.h"
@@ -38,6 +42,8 @@ class Molecule{ public:
     int nang = 0;
     Vec2i * ang2bond = NULL;
     //int * ang2atom = NULL;
+
+    std::unordered_map<std::string,int>* atypNames = NULL;
 
     void allocate( int natoms_, int nbonds_ ){
         natoms=natoms_; nbonds=nbonds_;
@@ -126,11 +132,19 @@ class Molecule{ public:
         printf("%i %i \n", natoms, nbonds );
         allocate(natoms,nbonds);
         for(int i=0; i<natoms; i++){
-            char ch;
+            //char ch;
+            char at_name[8];
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
-            sscanf( line, "%lf %lf %lf %c\n", &pos[i].x, &pos[i].y, &pos[i].z, &ch );
-            printf(        "%lf %lf %lf %c\n", pos[i].x,  pos[i].y,  pos[i].z,  ch );
-            atomType[i] = atomChar2int( ch );
+            sscanf( line, "%lf %lf %lf %s\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name );
+            printf(       "%lf %lf %lf %s\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name );
+            // atomType[i] = atomChar2int( ch );
+            auto it = atypNames->find( at_name );
+            if( it != atypNames->end() ){
+                atomType[i] = it->second;
+            }else{
+                //atomType[i] = atomChar2int( at_name[0] );
+                atomType[i] = -1;
+            }
         }
         for(int i=0; i<nbonds; i++){
             line = fgets( buff, 1024, pFile );  //printf("%s",line);

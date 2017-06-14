@@ -9,7 +9,8 @@
 
 #include "integerOps.h"
 #include <unordered_map>
-
+#include <vector>
+#include <string>
 // forcefield parameters
 
 
@@ -81,16 +82,46 @@ class BondType{ public:
     uint8_t  order;
 };
 
+
+class AtomType{ public:
+    char      name[8];
+    uint8_t   iZ;         // proton number
+    uint8_t   neval;      // number of valence electrons
+    uint8_t   valence;    // sum of bond orders of all bonds
+    uint8_t   sym;        // sp, sp2, sp3 ... tetrahedral, triangle, linear, kink, square, octahedral
+    uint32_t  color;
+    double    RvdW;
+    double    EvdW;
+
+    char* toString( char * str ){
+        sprintf( str, "printf: %s %i %i %i %i %lf %lf %x", name,  iZ,   neval,  valence,   sym,    RvdW, EvdW,   color );
+        return str;
+    }
+
+    void fromString( char * str ){
+        int iZ_, neval_, valence_, sym_;
+        //char sclr[6];
+        sscanf( str, " %s %i %i %i %i %lf %lf %x \n", name, &iZ_, &neval_, &valence_, &sym_,  &RvdW, &EvdW, &color );
+        iZ=iZ_; neval=neval_; valence=valence_; sym=sym_;
+        //printf( "printf: %s %i %i %i %i %lf %lf %x \n", name,  iZ,   neval_,  valence,   sym,    RvdW, EvdW,   color );
+        //char ss[256]; printf("%s\n", toString(ss) );
+    }
+
+};
+
 class MMFFparams{ public:
 
     // http://www.science.uwaterloo.ca/~cchieh/cact/c120/bondel.html
+
+    std::unordered_map<std::string,int> atypNames;
+    std::vector<AtomType>          atypes;
 
     std::unordered_map<uint64_t,BondType> bonds;
 
     double default_bond_length      = 2.0;
     double default_bond_stiffness   = 1.0;
 
-    int loadBondTypes(char * fname){
+    int loadAtomTypes(char * fname){
 
         FILE * pFile = fopen(fname,"r");
         if( pFile == NULL ){
@@ -101,6 +132,27 @@ class MMFFparams{ public:
         char * line;
         int nl;
 
+        AtomType atyp;
+        int i;
+        for(int i; i<0xFFFF; i++){
+            line = fgets( buff, 1024, pFile );
+            if(line==NULL) break;
+            atyp.fromString( line );
+            atypes.push_back(atyp);
+            atypNames[atyp.name] = atypes.size()-1;
+        }
+        return i;
+    }
+
+    int loadBondTypes(char * fname){
+
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){
+            printf("cannot find %s\n", fname );
+            return -1;
+        }
+        char buff[1024];
+        char * line;
         BondType bt;
         //line = fgets( buff, 1024, pFile ); //printf("%s",line);
         //sscanf( line, "%i %i\n", &n );
@@ -119,7 +171,8 @@ class MMFFparams{ public:
     }
 
     bool getBondParams( int atyp1, int atyp2, int btyp, double& l0, double& k ){
-        uint64_t id  = getBondTypeId( atyp1, atyp2, btyp );
+        uint64_t id  = getBondTypeId( atypes[atyp1].iZ, atypes[atyp2].iZ, btyp );
+        //uint64_t id  = getBondTypeId( atyp1, atyp2, btyp );
         auto it = bonds.find(id);
         if   ( it == bonds.end() ){ l0=default_bond_length; k=default_bond_stiffness; return false;}
         else                      { l0=it->second.length;   k=it->second.stiffness;   return true; }
@@ -130,19 +183,6 @@ class MMFFparams{ public:
         for(int i=0; i<nbonds; i++){
             Vec2i ib = bond2atom[i];
             getBondParams( atomType[ib.x], atomType[ib.y], bondOrder[i], bond_0[i], bond_k[i] );
-            /*
-            uint64_t id  = getBondTypeId( atomType[ib.x], atomType[ib.y], bondOrder[i] );
-            //BondType& bt = bonds[id];
-            auto it = bonds.find(id);
-
-            if( it == bonds.end() ){
-                bond_0[i]=default_bond_length; bond_k[i]=default_bond_stiffness;
-            }else{
-                bond_0[i]=it->second.length; bond_k[i]=it->second.stiffness;
-            }
-
-            printf("%i (%i,%i) (%i,%i,%i) %g %g\n", i, ib.x+1, ib.y+1, atomType[ib.x], atomType[ib.y], bondOrder[i], bond_0[i], bond_k[i] );
-            */
         }
     }
 
@@ -166,6 +206,7 @@ class MMFF{ public:
     double * tors_k    = NULL; // [eV/A^2]
 
     // molecular gemeotry
+    int    * atypes = NULL;
     Vec3d  * apos   = NULL;   // atomic position
     Vec3d  * aLJq   = NULL;
     double * lbond  = NULL;  // bond lengths
@@ -174,9 +215,10 @@ class MMFF{ public:
 
 void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     natoms=natoms_; nbonds=nbonds_; nang=nang_; ntors=ntors_;
+    if(atypes   ==NULL) atypes    = new int   [natoms];
     if(apos     ==NULL) apos      = new Vec3d [natoms];
     if(aforce   ==NULL) aforce    = new Vec3d [natoms];
-    if(aLJq   ==NULL)   aLJq      = new Vec3d [natoms];
+    if(aLJq     ==NULL) aLJq      = new Vec3d [natoms];
 
     if(lbond    ==NULL) lbond     = new double[nbonds];
     if(hbond    ==NULL) hbond     = new Vec3d [nbonds];
@@ -234,22 +276,30 @@ void ang_b2a(){
     }
 }
 
-void eval_bonds(){
+void eval_bonds( const bool substract_LJq ){
     for(int ib=0; ib<nbonds; ib++){
         Vec2i iat = bond2atom[ib];
         Vec3d dp; dp.set_sub( apos[iat.y], apos[iat.x] );
+        Vec3d f;
         //printf( "%i %i (%g,%g,%g) (%g,%g,%g) \n", iat.x, iat.y, apos[iat.x].x, apos[iat.x].y, apos[iat.x].z, apos[iat.y].x, apos[iat.y].y, apos[iat.y].z );
         double l = dp.norm();
-        dp.mul(1.0d/l);
+        f.set_mul(dp,1.0d/l);
         //printf( " %i (%i,%i) (%g,%g,%g) %g \n", ib, iat.x, iat.y, dp.x, dp.y, dp.z, l );
 
         lbond [ib] = l;
-        hbond [ib] = dp;
+        hbond [ib] = f;
 
-        dp.mul( (l-bond_0[ib])*bond_k[ib] );
+        f.mul( (l-bond_0[ib])*bond_k[ib] );
 
-        aforce[iat.x].add( dp );
-        aforce[iat.y].sub( dp );
+        if( substract_LJq ){
+            double rij = aLJq[iat.x].x+aLJq[iat.y].x;
+            double eij = aLJq[iat.x].y*aLJq[iat.y].y;
+            double qq  = aLJq[iat.x].z*aLJq[iat.y].z;
+            addAtomicForceLJQ( dp, f, rij, -eij, qq );
+        }
+
+        aforce[iat.x].add( f );
+        aforce[iat.y].sub( f );
     }
     //exit(0);
 }
@@ -477,8 +527,9 @@ class MMFFBuilder{  public:
         //int * atomTypes = new int[atoms.size()];
         //int * bondTypes = new int[bonds.size()];
         for(int i=0; i<atoms.size(); i++){
-            mmff->apos[i] = atoms[i].pos;
-            mmff->aLJq[i] = atoms[i].LJq;
+            mmff->atypes[i] = atoms[i].type;
+            mmff->apos [i]  = atoms[i].pos;
+            mmff->aLJq [i]  = atoms[i].LJq;
             //atomTypes[i]  = atoms[i].type;
         }
         for(int i=0; i<bonds.size(); i++){
