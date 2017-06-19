@@ -38,8 +38,11 @@ target_link_libraries( test_TrussBuilder  ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL
 add_executable       ( test_SphereTree test_SphereTree.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:SoftBody> $<TARGET_OBJECTS:DynamicOpt>  )
 target_link_libraries( test_SphereTree  ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_SoftMolecularDynamics.cpp  test_SoftMolecularDynamics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_SoftMolecularDynamics.cpp  ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+add_executable       ( test_SoftMolecularDynamics test_SoftMolecularDynamics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
+target_link_libraries( test_SoftMolecularDynamics ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
+add_executable       ( test_Stick test_Stick.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
+target_link_libraries( test_Stick ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_custom_command(
     TARGET ${PROJECT_NAME} test_GUI test_Solids test_Mesh test_SoftMolecularDynamics

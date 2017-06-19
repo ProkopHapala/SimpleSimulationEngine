@@ -62,7 +62,7 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
     double drndv =  10.0;
     double drndp =  0.5;
 
-    double  atomSize = 1.0;
+    double  atomSize = 0.25;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -106,7 +106,9 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     params.loadBondTypes("common_resources/BondTypes.dat");
 
-    mol.loadMol("common_resources/propylacid.mol");
+    //mol.loadMol("common_resources/propylacid.mol");
+    //mol.loadMol("common_resources/precursor_OH.mol");
+    mol.loadMol("common_resources/precursor_CN.mol");
     mol.bondsOfAtoms();   mol.printAtom2Bond();
     mol.autoAngles();
 
@@ -163,7 +165,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
         //glEnable( GL_LIGHTING );
         //glColor3f( 0.8f, 0.8f, 0.8f );
         //Draw3D::drawSphere_oct(3, 0.5, {0.0,0.0,0.0} );
-        Draw3D::drawSphere_oct( 3, 0.25, {0.0,0.0,0.0} );
+        Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
     glEndList();
 
 }

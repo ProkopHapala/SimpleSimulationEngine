@@ -24,17 +24,17 @@ class Vec3TYPE{
 	// ===== methods
 
 	// swizzles
-	inline VEC2 xy(){ return {x,y}; };
-	inline VEC2 xz(){ return {x,z}; };
-	inline VEC2 yz(){ return {x,y}; };
-    inline VEC2 yx(){ return {x,y}; };
-	inline VEC2 zx(){ return {x,z}; };
-	inline VEC2 zy(){ return {x,y}; };
-    inline VEC xzy(){ return {x,z,y}; };
-	inline VEC yxz(){ return {y,x,z}; };
-	inline VEC yzx(){ return {y,z,x}; };
-	inline VEC zxy(){ return {z,x,y}; };
-	inline VEC zyx(){ return {z,y,x}; };
+	inline VEC2 xy() const { return {x,y}; };
+	inline VEC2 xz() const { return {x,z}; };
+	inline VEC2 yz() const { return {x,y}; };
+    inline VEC2 yx() const { return {x,y}; };
+	inline VEC2 zx() const { return {x,z}; };
+	inline VEC2 zy() const { return {x,y}; };
+    inline VEC xzy() const { return {x,z,y}; };
+	inline VEC yxz() const { return {y,x,z}; };
+	inline VEC yzx() const { return {y,z,x}; };
+	inline VEC zxy() const { return {z,x,y}; };
+	inline VEC zyx() const { return {z,y,x}; };
 
 	inline void set( TYPE f                    ) { x=f;   y=f;   z=f;   };
     inline void set( TYPE fx, TYPE fy, TYPE fz ) { x=fx;  y=fy;  z=fz;  };
