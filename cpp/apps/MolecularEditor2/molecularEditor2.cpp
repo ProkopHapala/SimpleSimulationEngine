@@ -21,10 +21,28 @@
 #include "MMFF.h"
 #include "DynamicOpt.h"
 
-
-
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
+
+
+/*
+
+TO DO:
+ - save geom to .xyz
+ - save geom to .pdb or .mol
+ - add charges (read from .pdb)
+ - torsion angles
+ - add better model of substrate
+ - include rigid body molecules (from MoleculerWorld )
+ - Brute force non-bonded interactions by OpenCL
+ - add some editation capabilities
+
+ TODO Corrections:
+ - vdW distances seems to be too close
+ - some bonds too long
+ - correct angular forcefield to repdesent kinked groups ( e.g. -OH )
+*/
+
 
 // ==========================
 // AppMolecularEditor2
@@ -168,6 +186,12 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
         Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
     glEndList();
 
+    //printf( "bond 8 %g \n", world.bond_0[8] );
+    //printf( "bond 9 %g \n", world.bond_0[9] );
+    //Vec2i iat = bond2atom[8];
+    //Vec2i iat = bond2atom[9];
+    //exit(0);
+
 }
 
 void AppMolecularEditor2::draw(){
@@ -306,7 +330,8 @@ void AppMolecularEditor2::eventHandling ( const SDL_Event& event  ){
                 case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;
 
                 case SDLK_w: world.apos[1].mul( 1.1 ); break;
-                case SDLK_s: world.apos[1].mul( 0.9 ); break;
+                //case SDLK_s: world.apos[1].mul( 0.9 ); break;
+                case SDLK_s: printf("saving ... "); save2xyz( "out.xyz", &world, &params ); printf("... DONE "); break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:

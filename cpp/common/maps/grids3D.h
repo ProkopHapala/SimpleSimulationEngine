@@ -5,10 +5,10 @@
 
 This is header-only module with mostly function templates for common operations on regular grids in 3D
 
-we try to avoid making complex classes in order to keep things simple, modular and independent ( with classes we usually and up in dependency-hell and too complicated templates )  
+we try to avoid making complex classes in order to keep things simple, modular and independent ( with classes we usually and up in dependency-hell and too complicated templates )
 
 operations such as:
-  - support rutines for particle in cell (PIC) sumulation 
+  - support rutines for particle in cell (PIC) sumulation
   - nearest neighbor interaction in 3D accelerated by grid
   - boundary condition resolution for 3D grid
 
@@ -18,40 +18,60 @@ operations such as:
 #include "fastmath.h"
 #include "Vec3.h"
 
-class GridRulerInterface{
-    public:
+class GridRulerInterface{ public:
 };
 
-class CubeGridRuler : public GridRulerInterface {
-    public:
+class CubeGridRuler : public GridRulerInterface { public:
     double step;
     double invStep;
     Vec3d  pos0;
-    
-    inline setStep( double step_ ){ step=step_; invStep=1/step; };
-    
+    Vec3i  n;
+    int    ntot,nxy;
+    //int    nxy;
+    inline void setn( Vec3i n_ ){ n = n_; nxy = n.x*n.y; ntot=nxy*n.z; }
+    inline void setStep( double step_ ){ step=step_; invStep=1/step; };
+
     inline void pos2box( const Vec3d& pos, Vec3i& ipos, Vec3d& dpos ) const {
         dpos.x = x2grid( pos.x-pos0.x, step, invStep, ipos.x );
         dpos.y = x2grid( pos.y-pos0.y, step, invStep, ipos.y );
         dpos.z = x2grid( pos.z-pos0.z, step, invStep, ipos.z );
         //printf( "(%3.3f,%3.3f,%3.3f) (%i,%i,%i)\n", pos.x, pos.y, pos.z, ipos.x,ipos.y,ipos.z);
     }
-};
 
+    inline Vec3d box2pos( const Vec3i& ipos, const Vec3d& dpos ) const {
+        return (Vec3d){
+            step*ipos.x + pos0.x + dpos.x,
+            step*ipos.y + pos0.y + dpos.y,
+            step*ipos.z + pos0.z + dpos.z };
+    }
+
+    inline int ixyz2i( Vec3i ip         ){ return ip.x + n.x*(ip.y + n.y*ip.z);          }
+    inline int i2ixyz( int i, Vec3i& ip ){ ip.z=i/nxy; i=i%nxy; ip.y=i/n.x; ip.x=i%n.x;  }
+
+};
 
 namespace Grids3D {
 
     // should we move this to Vec3.h ?
-    inline wrapIndex( Vec3i& ipos, const Vec3i& n ){
-        if(ipos>0){}else{};
+    inline void wrapIndex( Vec3i& ipos, const Vec3i& n ){
+        ipos.x = wrap_index_fast( ipos.x, n.x );
+        ipos.y = wrap_index_fast( ipos.y, n.y );
+        ipos.z = wrap_index_fast( ipos.z, n.z );
     }
 
 
     //typedef KeyType  unit32_t;
     //typedef ValType  unit32_t;
-    
-    //   search 2x2x2 neighborhood of 
-    template< OBJECT o, void insert_func( int ix, int iy, int iz, int val) >
+
+    template<class OBJECT, void insert_func( int ix, int iy, int iz, int val) >
+    inline void insert( OBJECT o, const CubeGridRuler& ruler, const Vec3d& pos, double r ){
+        Vec3d dpos; Vec3i ipos;
+        ruler.pos2box( pos, ipos,dpos );
+        insert<insert_func>( o, ipos, dpos, r );
+    }
+
+    //   search 2x2x2 neighborhood of
+    template<class OBJECT, void insert_func( int ix, int iy, int iz, int val) >
     void insert_SphereOfInfluence( OBJECT o, const Vec3i& ipos, const Vec3d& dpos, double r ){
 	    insert( o, ipos.x, ipos.y, ipos.z );
 	    int    dix =0,diy =0,diz =0;
@@ -65,7 +85,7 @@ namespace Grids3D {
 	    else if(  dpos.z > mr ){ insert_func( ipos.x  , ipos.y  , ipos.z+1, o );  diz=+1; dr2z = sq(1-dpos.z); }
 
 	    double r2 = r*r;
-	    if ( dr2x+dr2y      < r2 ){ insert_func( ipos.x+dix, ipos.y+diy, ipos.z o      ); }
+	    if ( dr2x+dr2y      < r2 ){ insert_func( ipos.x+dix, ipos.y+diy, ipos.z    , o ); }
 	    if ( dr2x+dr2z      < r2 ){ insert_func( ipos.x+dix, ipos.y    , ipos.z+diz, o ); }
 	    if ( dr2y+dr2z      < r2 ){ insert_func( ipos.x    , ipos.y+diy, ipos.z+diz, o ); }
 	    if ( dr2x+dr2y+dr2z < r2 ){ insert_func( ipos.x+dix, ipos.y+diy, ipos.z+diz, o ); }
@@ -73,13 +93,8 @@ namespace Grids3D {
 	    //if( (dix!=0)&&(diy!=0) ){ insert( o, ipos.x+dix, ipos.y+diy ); }
 	    //printf( " %1.3f %1.3f  (%1.3f,%1.3f) (%i,%i) %1.3f \n", r, mr, dpos.x,dpos.y, dix, diy, dr2 );
     }
-    
-    template< OBJECT o, void insert_func( int ix, int iy, int iz, int val) >
-    inline void insert( OBJECT o, const CubeGridRuler& ruler, const Vec3d& pos, double r ){
-        Vec3d dpos; Vec3i ipos;
-        pos2box( pos, ipos,dpos );
-        insert<insert_func>( val, ipos, dpos, r );
-    }
+
+
 
 }
 

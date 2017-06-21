@@ -164,6 +164,7 @@ class MMFFparams{ public:
             sscanf(  line, "%i %i %i %lf %lf\n", &bt.at1, &bt.at2, &bt.order, &bt.length, &bt.stiffness );
             printf(        "%i %i %i %lf %lf\n",  bt.at1,  bt.at2,  bt.order,  bt.length,  bt.stiffness );
             uint64_t id = getBondTypeId( bt.at1, bt.at2, bt.order );
+            //printf( ":: (%i,%i,%i) -> %i \n", bt.at1, bt.at2, bt.order, id );
             //bt.at1--; bt.at2--;
             bonds[id]=bt;
         }
@@ -172,6 +173,7 @@ class MMFFparams{ public:
 
     bool getBondParams( int atyp1, int atyp2, int btyp, double& l0, double& k ){
         uint64_t id  = getBondTypeId( atypes[atyp1].iZ, atypes[atyp2].iZ, btyp );
+        //printf( "(%i,%i,%i) -> %i \n", atypes[atyp1].iZ, atypes[atyp2].iZ, btyp, id );
         //uint64_t id  = getBondTypeId( atyp1, atyp2, btyp );
         auto it = bonds.find(id);
         if   ( it == bonds.end() ){ l0=default_bond_length; k=default_bond_stiffness; return false;}
@@ -183,6 +185,7 @@ class MMFFparams{ public:
         for(int i=0; i<nbonds; i++){
             Vec2i ib = bond2atom[i];
             getBondParams( atomType[ib.x], atomType[ib.y], bondOrder[i], bond_0[i], bond_k[i] );
+            //printf( "%i (%i %i) %i %g %g \n", i, atomType[ib.x], atomType[ib.y], bondOrder[i], bond_0[i], bond_k[i] );
         }
     }
 
@@ -547,7 +550,26 @@ class MMFFBuilder{  public:
         //delete [] atomTypes;
         //delete [] bondTypes;
     }
-
 };
+
+int write2xyz( FILE* pfile, MMFF * mmff, MMFFparams * params ){
+    fprintf(pfile, "%i\n", mmff->natoms );
+    fprintf(pfile, "#comment \n");
+    for(int i=0; i<mmff->natoms; i++){
+        int ityp   = mmff->atypes[i];
+        Vec3d&  pi = mmff->apos[i];
+        printf( "%i %i (%g,%g,%g) %s \n", i, ityp, pi.x,pi.y,pi.z, params->atypes[ityp].name );
+        fprintf( pfile, "%s   %15.10f   %15.10f   %15.10f \n", params->atypes[ityp].name, pi.x,pi.y,pi.z );
+    };
+    return mmff->natoms;
+}
+
+int save2xyz( char * fname, MMFF * mmff, MMFFparams * params ){
+    FILE* pfile = fopen(fname, "w");
+    if( pfile == NULL ) return -1;
+    int n = write2xyz(pfile, mmff, params );
+    fclose(pfile);
+    return n;
+}
 
 #endif

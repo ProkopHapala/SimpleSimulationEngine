@@ -32,9 +32,26 @@ double evalEelectrostatic( const Vec3d& p, double Q, int n, Vec3d * ps, double *
     return E;
 }
 
+inline void getMultipole( const Vec3d& dR, double Q, int order, double * coefs ){
+    coefs[0] += Q;
+    if(order<1) return;
+    coefs[1] += dR.x*Q;
+    coefs[2] += dR.y*Q;
+    coefs[3] += dR.z*Q;
+    if(order<2) return;
+    coefs[4] += dR.x*dR.x*Q;
+    coefs[5] += dR.x*dR.y*Q;
+    coefs[6] += dR.y*dR.y*Q;
+    coefs[7] += dR.y*dR.z*Q;
+    coefs[8] += dR.z*dR.z*Q;
+    coefs[9] += dR.z*dR.x*Q;
+}
+
 void getMultiPole( const Vec3d& center, int n, Vec3d * ps, double * Qs, int order, double * coefs ){
     for( int i=0; i<10; i++ ) coefs[i]=0;
     for( int i=0; i<n; i++){
+        getMultipole( ps[i]-center, Qs[i], order, coefs );
+        /*
         Vec3d dR = ps[i] - center;
         double Q = Qs[i];
         coefs[0] += Q;
@@ -49,6 +66,7 @@ void getMultiPole( const Vec3d& center, int n, Vec3d * ps, double * Qs, int orde
         coefs[7] += dR.y*dR.z*Q;
         coefs[8] += dR.z*dR.z*Q;
         coefs[9] += dR.z*dR.x*Q;
+        */
     }
 }
 

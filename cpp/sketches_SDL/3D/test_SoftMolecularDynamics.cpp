@@ -274,7 +274,8 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
                 case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;
 
                 case SDLK_w: world.apos[1].mul( 1.1 ); break;
-                case SDLK_s: world.apos[1].mul( 0.9 ); break;
+                //case SDLK_s: world.apos[1].mul( 0.9 ); break;
+
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
