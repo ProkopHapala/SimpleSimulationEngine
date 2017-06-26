@@ -11,6 +11,7 @@
 // ===== GLOBAL VARIABLES
 // ===============================
 
+/*
 SDL_Renderer*	render			= NULL;
 SDL_Window*		window        	= NULL;
 SDL_Surface*	screenSurface 	= NULL;
@@ -19,6 +20,10 @@ SDL_Texture*	tempTex;
 
 SDL_Rect SrcR;
 SDL_Rect DestR;
+*/
+
+SDLplot plot;
+
 SDL_Event		event;
 bool 			STOP          	= false;
 int 			frameCount		=	0;
@@ -43,30 +48,32 @@ int pixelFunc(int ix, int iy){
 }
 
 void draw(){
-
-	SDL_RenderPresent( render );
-	SDL_UpdateWindowSurface(window);
+	SDL_RenderPresent( plot.render );
+	SDL_UpdateWindowSurface( plot.window);
 }
 
 void setup(){
 
-    setZoom( 100.0d );
+    plot.setZoom( 100.0d );
+    plot.init( "space filling curve", 512, 512 );
 
-	window          = SDL_CreateWindow( "SDL Tutorial",   SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
-	render        	= SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC );
-	SDL_UpdateWindowSurface( window );
+	//window          = SDL_CreateWindow( "SDL Tutorial",   SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
+	//render        	= SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC );
+	//SDL_UpdateWindowSurface( window );
 
-	tempSurf        = SDL_CreateRGBSurface(0,SCREEN_WIDTH,SCREEN_HEIGHT,32,0,0,0,0 );
+	//tempSurf        = SDL_CreateRGBSurface(0,SCREEN_WIDTH,SCREEN_HEIGHT,32,0,0,0,0 );
 
     //pixelFunc(1554,6548);
 
-	setPixelsFunc2i( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, &pixelFunc );
+	plot.setPixelsFunc2i( plot.tempSurf, 0, 0, plot.tempSurf->w,    plot.tempSurf->h, &pixelFunc );
 
-	tempTex   = SDL_CreateTextureFromSurface( render, tempSurf  );
-	SrcR.x  = 0; SrcR.y  = 0; SrcR.w  = tempSurf->w; SrcR.h  = tempSurf->h;
-	DestR.x = 0; DestR.y = 0; DestR.w = tempSurf->w; DestR.h = tempSurf->h;
-	SDL_RenderCopy( render, tempTex, &SrcR, &DestR);
-	SDL_SetRenderDrawBlendMode( render, SDL_BLENDMODE_BLEND );
+	plot.tempTex   = SDL_CreateTextureFromSurface( plot.render, plot.tempSurf  );
+	//SrcR.x  = 0; SrcR.y  = 0; SrcR.w  = tempSurf->w; SrcR.h  = tempSurf->h;
+	//DestR.x = 0; DestR.y = 0; DestR.w = tempSurf->w; DestR.h = tempSurf->h;
+	SDL_RenderCopy( plot.render, plot.tempTex, &plot.SrcR, &plot.DestR);
+
+
+	SDL_SetRenderDrawBlendMode( plot.render, SDL_BLENDMODE_BLEND );
 }
 
 void inputHanding(){
