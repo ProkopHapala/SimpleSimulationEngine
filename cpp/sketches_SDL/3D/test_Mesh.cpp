@@ -65,8 +65,7 @@ TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id
     int ip = mesh.colapseEdge(12);
     mesh.cleanRemovedPoints();
 
-
-    mesh.polygonsToTriangles();
+    mesh.polygonsToTriangles( false );
     mesh.tris2normals(true);
     printf("initialization DONE !");
 

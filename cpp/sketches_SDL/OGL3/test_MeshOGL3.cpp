@@ -180,7 +180,7 @@ void setup(){
 
 
     mesh.fromFileOBJ( "common_resources/turret.obj" );
-    mesh.polygonsToTriangles();
+    mesh.polygonsToTriangles(false);
     mesh.tris2normals(true);
     object1 = new GLObject( );
     object1->nVert    = mesh.points.size();

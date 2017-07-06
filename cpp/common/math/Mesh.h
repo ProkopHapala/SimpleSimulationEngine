@@ -51,6 +51,8 @@ class Mesh{ public:
 
     Disk3D * disks;  // used for acceleration of raytracing; for each polygon there is one disk
 
+    std::vector<int> tri2poly;
+
     // ==== functions
 
     //int    fromFileOBJ( std::string fname );
@@ -63,9 +65,22 @@ class Mesh{ public:
     //void subdivHull  ( const Vec3i& tri, int n, int *selection, Vec3d * from_points );
     //void findHull_oct( int npoints, Vec3d * from_points );
 
-
-
     // ========== Implementations
+
+    /*
+    void assign_tri2poly(){
+        if( tri2poly ) delete [] tri2poly; tri2poly = new int[triangles.size()];
+        for(int itr=0; itr<triangles.size(); itr++){
+            for(int ipl=0; ipl<polygons.size(); ipl++){
+                Polygon * pl = polygons[ipl];
+                for(int i=0; i<triangles.size(); i++){
+                    if( pl-> )
+                    tri2poly[itr] =
+                }
+            }
+        }
+    }
+    */
 
     Vec3d faceCog( int ipl )const {
         Polygon* pl = polygons.at(ipl);
@@ -175,7 +190,8 @@ class Mesh{ public:
         return i;
     };
 
-    void polygonsToTriangles(){
+    void polygonsToTriangles( bool t2p ){
+        //if(t2p){ if( tri2poly ) delete [] tri2poly; tri2poly = new int[triangles.size()]; }
         for(int i=0; i<polygons.size(); i++){
             Polygon * pl = polygons[i];
             Vec3i tri;
@@ -185,6 +201,7 @@ class Mesh{ public:
                 tri.c = pl->ipoints[j];
                 //printf( "%i %i (%i,%i,%i)\n", i, j, tri.a,tri.b,tri.c );
                 triangles.push_back(tri);
+                if(t2p) tri2poly.push_back(i);
                 tri.b=tri.c;
             }
         }
@@ -220,14 +237,13 @@ class Mesh{ public:
         return imin;
     };
 
-    double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal ){
+    double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal, int& imin ){
     //int    imin  = 0;
-
         Vec3d hX,hY;
         hRay.getSomeOrtho( hX, hY );
-
         double t_min = 1e+300;
         //Vec3d hitpos_min,normal_min;
+        imin = -1;
         for(int i=0; i<triangles.size(); i++ ){
             Vec3i itri = triangles[i];
             Vec3d A = points[itri.x];
@@ -240,11 +256,12 @@ class Mesh{ public:
             //printf( "t=%f\n", t );
             inside_ = (t<0.9e+300 )&&(t>0);
             if( inside_ && ( t<t_min ) ){
-                t_min = t;
+                t_min  = t;
                 normal = normal_;
+                imin   = i;
             }
         }
-
+        return t_min;
     };
 
     /// Topology operations

@@ -37,6 +37,9 @@ class ArmorPlate{ public:
 
 class VehicleBlock : public KinematicBody, public Mesh { public:
     std::vector<ArmorPlate> armor;
+    int glo_captions;
+    int glo_armor;
+
 
     double getMaxArmor(){
         double maxThickness = 0.0;
@@ -89,10 +92,9 @@ class VehicleBlock : public KinematicBody, public Mesh { public:
 
 class Tank : public Warrior3D { public:
     int nwheel = 0;
-    Wheel * wheels;
-
-    VehicleBlock hull;
-    VehicleBlock turret;
+    Wheel        * wheels;
+    VehicleBlock   hull;
+    VehicleBlock   turret;
 
 	void makeWheels( int n, double xmin, double xmax, double width, double height, double k, double m, double damp ){
         wheels = new Wheel[n*2];

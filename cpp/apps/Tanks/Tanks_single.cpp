@@ -223,15 +223,48 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     warrior1 = new Tank();
     warrior1->fromFile( "data/tank1.txt" );
     warrior1->kind = 0;
+    warrior1->hground = 2.5;
     warrior1->setPose( {0.0d,0.0d,0.0d}, {0.0d,0.0d,1.0d}, {0.0d,1.0d,0.0d} );
     world.registrWarrior( warrior1 );
     warrior1->pos.set( 0.0, 0.0, -15.0 );
 
-
-
     printf( "hull   mass : %g [kg]\n", warrior1->hull  .getArmorMass( 7890.0 ) );
     printf( "turret mass : %g [kg]\n", warrior1->turret.getArmorMass( 7890.0 ) );
     //exit(0);
+
+    warrior1->hull  .polygonsToTriangles( true );
+    warrior1->turret.polygonsToTriangles( true );
+
+    double maxThick = fmax( warrior1->hull.getMaxArmor(), warrior1->turret.getMaxArmor() );
+
+    warrior1->hull.glo_armor = glGenLists(1);
+    glNewList(warrior1->hull.glo_armor, GL_COMPILE);
+        glDisable    ( GL_LIGHTING   );
+        glShadeModel ( GL_FLAT       );
+        renderArmor( warrior1->hull,   maxThick );
+    glEndList();
+
+    warrior1->turret.glo_armor = glGenLists(1);
+    glNewList(warrior1->turret.glo_armor, GL_COMPILE);
+        glDisable    ( GL_LIGHTING   );
+        glShadeModel ( GL_FLAT       );
+        renderArmor( warrior1->turret,   maxThick );
+    glEndList();
+
+    warrior1->hull.glo_captions = glGenLists(1);
+    glNewList( warrior1->hull.glo_captions, GL_COMPILE);
+        renderArmorCaptions( warrior1->hull,   0.15 );
+    glEndList();
+
+    warrior1->turret.glo_captions = glGenLists(1);
+    glNewList(warrior1->turret.glo_captions, GL_COMPILE);
+        renderArmorCaptions( warrior1->turret, 0.15 );
+    glEndList();
+
+    Tank* tank2 = new Tank();
+    *tank2 = *warrior1;
+    tank2->pos.add(5.0,5.0,10.0);
+    world.registrWarrior( tank2 );
 
     zoom = 5.0;
     first_person = true;
@@ -291,6 +324,8 @@ void Tanks_single::draw(){
         Draw3D::drawPointCross(p->pos,0.1);
     }
 
+
+    /*
     //glTranslatef( 0.0f,3.0f,0.0f );
     double maxThick = fmax( warrior1->hull.getMaxArmor(), warrior1->turret.getMaxArmor() );
     Draw3D::drawColorScale( 32, {0.0,0.0,2.0}, {0.0,2.0,0.0}, {0.0,0.0,0.4}, &armorColorScale );
@@ -306,8 +341,52 @@ void Tanks_single::draw(){
     glShadeModel ( GL_SMOOTH     );
     //glTranslatef( 0.0f,-3.0f,0.0f );
 
+    */
 
-    Draw3D::drawAxis( 10 );
+    glCallList( warrior1->hull  .glo_armor    );
+    glCallList( warrior1->turret.glo_armor    );
+
+    //Draw3D::drawShape( warrior1->pos, warrior1->qrot, warrior1->hull  .glo_armor  );
+    //Draw3D::drawShape( warrior1->pos, warrior1->qrot, warrior1->turret.glo_armor  );
+    for( Warrior3D * w : world.warriors ){
+        Tank * tank =  ((Tank*)w);
+        Draw3D::drawShape( tank->pos, tank->qrot, tank->hull.glo_armor  );
+        Draw3D::drawShape( tank->pos, tank->qrot, tank->turret.glo_armor  );
+    }
+
+
+    //glCallList( warrior1->hull  .glo_captions ); // TODO : does not work because of Draw::billboardCamProj contains ::glGetFloatv (GL_MODELVIEW_MATRIX,  glModel);
+    //glCallList( warrior1->turret.glo_captions );
+    glColor3f(1.0f,0.5f,0.5f);  renderArmorCaptions( warrior1->hull,   0.15 );
+    glColor3f(0.5f,0.5f,1.0f);  renderArmorCaptions( warrior1->turret, 0.15 );
+
+    int itr,ipl;
+    //Vec3d normal;
+    Tank * tank2 = (Tank*)world.warriors[1];
+    double t = tank2->turret.ray( camPos, camMat.c, normal, itr );
+    ipl = tank2->turret.tri2poly[itr];
+    if(itr>=0){
+        //printf( "itr %i ipl %i \n", itr, ipl);
+        glColor3f(0.0f,1.0f,0.0f);
+        //Draw3D::drawVecInPos( normal, camPos + camMat.c*t );
+        Draw3D::drawVecInPos( tank2->turret.armor[ipl].normal, camPos + camMat.c*t );
+        Draw3D::drawPolygonBorder( ipl, tank2->turret );
+        double thick    = tank2->turret.armor[ipl].thickness;
+        double cdot     = tank2->turret.armor[ipl].normal.dot( camMat.c );
+        double effthick = thick/-cdot;
+        printf( "itr %i ipl %i %g %g %g\n", itr, ipl, thick, cdot, effthick  );
+    }
+
+    glEnable     ( GL_LIGHTING   );
+    glEnable     ( GL_DEPTH_TEST );
+    glShadeModel ( GL_SMOOTH     );
+
+
+
+
+
+
+    // Draw3D::drawAxis( 10 );
 
 };
 
@@ -330,7 +409,8 @@ void Tanks_single::keyStateHandling( const Uint8 *keys ){
         if( keys[ SDL_SCANCODE_SPACE ] ){ warrior1->vel.mul( 0.9 ); }
 
         //camPos.set( warrior1->pos );
-        camPos.set_add( warrior1->pos, {0.0,1.0,0.0} );
+        //camPos.set_add( warrior1->pos, {0.0,2.0,0.0} );
+        camPos = warrior1->pos +  (Vec3d){0.0,2.0,0.0} + camMat.c*(-4.0) ;
     }
 
     //if( keys[ SDL_SCANCODE_W ] ){ camPos.add_mul( camMat.c, +0.1 ); }
@@ -373,7 +453,7 @@ void Tanks_single::camera(){
     glMultMatrixf( camMatrix );
     glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
     //glTranslatef ( -10*camMat.c.x, -10*camMat.c.y, -10*camMat.c.z );
-    glTranslatef ( 0.0, -5.0, 0.0 );
+    //glTranslatef ( 0.0, -5.0, 0.0 );
     glMatrixMode (GL_MODELVIEW);
     glLoadIdentity();
 }

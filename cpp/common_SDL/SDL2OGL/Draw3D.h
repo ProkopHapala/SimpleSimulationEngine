@@ -29,6 +29,8 @@ void drawScale     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& a, double t
 
 void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3 );
 void drawPlanarPolygon( int n, const int * inds, const Vec3d * points );
+void drawPolygonBorder( int n, const int * inds, const Vec3d * points );
+void drawPolygonBorder( int ipl, Mesh& mesh );
 void drawMatInPos ( const Mat3d& mat, const Vec3d& pos );
 //void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
 void drawShape    ( const Vec3f& pos, const Mat3f& rot, int shape );
