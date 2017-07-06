@@ -106,6 +106,27 @@ class Tank : public Warrior3D { public:
         }
 	};
 
+	double ray( const Vec3d &ray0, const Vec3d &hRay, int& ipl, VehicleBlock*& block, double& effthick ){
+        Vec3d normal;
+	    int itr,itr2;
+	    ipl=-1;
+        block = &hull;
+        double t  = hull  .ray( ray0, hRay, normal, itr  );
+        double t2 = turret.ray( ray0, hRay, normal, itr2 );
+        if( (itr2>=0)&&(t2<t) ){
+            itr=itr2;
+            block = &turret;
+            t=t2;
+        };
+        if( itr>=0 ){
+            ipl = block->tri2poly[itr];
+            double thick    = block->armor[ipl].thickness;
+            double cdot     = block->armor[ipl].normal.dot( hRay );
+            effthick = thick/-cdot;
+        }
+        return t;
+	}
+
     void interactTerrain( Terrain25D * terrain ){
         Vec3d gpos,normal;
         Vec2d dv;

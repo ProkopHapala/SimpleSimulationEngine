@@ -324,25 +324,6 @@ void Tanks_single::draw(){
         Draw3D::drawPointCross(p->pos,0.1);
     }
 
-
-    /*
-    //glTranslatef( 0.0f,3.0f,0.0f );
-    double maxThick = fmax( warrior1->hull.getMaxArmor(), warrior1->turret.getMaxArmor() );
-    Draw3D::drawColorScale( 32, {0.0,0.0,2.0}, {0.0,2.0,0.0}, {0.0,0.0,0.4}, &armorColorScale );
-    glDisable    ( GL_LIGHTING   );
-    //glEnable     ( GL_DEPTH_TEST );
-    glShadeModel ( GL_FLAT       );
-    renderArmor( warrior1->hull,   maxThick );
-    renderArmor( warrior1->turret, maxThick );
-    glColor3f(1.0f,0.5f,0.5f);  renderArmorCaptions( warrior1->hull,   0.15 );
-    glColor3f(0.5f,0.5f,1.0f);  renderArmorCaptions( warrior1->turret, 0.15 );
-    glEnable     ( GL_LIGHTING   );
-    glEnable     ( GL_DEPTH_TEST );
-    glShadeModel ( GL_SMOOTH     );
-    //glTranslatef( 0.0f,-3.0f,0.0f );
-
-    */
-
     glCallList( warrior1->hull  .glo_armor    );
     glCallList( warrior1->turret.glo_armor    );
 
@@ -354,37 +335,28 @@ void Tanks_single::draw(){
         Draw3D::drawShape( tank->pos, tank->qrot, tank->turret.glo_armor  );
     }
 
-
     //glCallList( warrior1->hull  .glo_captions ); // TODO : does not work because of Draw::billboardCamProj contains ::glGetFloatv (GL_MODELVIEW_MATRIX,  glModel);
     //glCallList( warrior1->turret.glo_captions );
     glColor3f(1.0f,0.5f,0.5f);  renderArmorCaptions( warrior1->hull,   0.15 );
     glColor3f(0.5f,0.5f,1.0f);  renderArmorCaptions( warrior1->turret, 0.15 );
 
-    int itr,ipl;
-    //Vec3d normal;
     Tank * tank2 = (Tank*)world.warriors[1];
-    double t = tank2->turret.ray( camPos, camMat.c, normal, itr );
-    ipl = tank2->turret.tri2poly[itr];
-    if(itr>=0){
-        //printf( "itr %i ipl %i \n", itr, ipl);
+    int ipl; VehicleBlock* block; double effthick;
+    double t = tank2->ray( camPos, camMat.c, ipl, block, effthick );
+    if( ipl>=0 ){
         glColor3f(0.0f,1.0f,0.0f);
         //Draw3D::drawVecInPos( normal, camPos + camMat.c*t );
-        Draw3D::drawVecInPos( tank2->turret.armor[ipl].normal, camPos + camMat.c*t );
-        Draw3D::drawPolygonBorder( ipl, tank2->turret );
-        double thick    = tank2->turret.armor[ipl].thickness;
-        double cdot     = tank2->turret.armor[ipl].normal.dot( camMat.c );
-        double effthick = thick/-cdot;
-        printf( "itr %i ipl %i %g %g %g\n", itr, ipl, thick, cdot, effthick  );
+        Draw3D::drawVecInPos( block->armor[ipl].normal, camPos + camMat.c*t );
+        Draw3D::drawPolygonBorder( ipl, *block );
+        char str[64];
+        sprintf(str,"%4.0fmm\0", effthick );
+        Draw3D::drawText(str, camPos + camMat.c*t, fontTex, 0.2, 0,0);
+        //printf( "itr %i ipl %i %g %g %g\n", itr, ipl, thick, cdot, effthick  );
     }
 
     glEnable     ( GL_LIGHTING   );
     glEnable     ( GL_DEPTH_TEST );
     glShadeModel ( GL_SMOOTH     );
-
-
-
-
-
 
     // Draw3D::drawAxis( 10 );
 
