@@ -1,0 +1,3 @@
+- Terrain -> rectangular grid using cubic splines
+- Armor - each mesh polygon has particular thinckness
+- Guns - fixed number of ports, which can be equiped with different gunns and repositioned

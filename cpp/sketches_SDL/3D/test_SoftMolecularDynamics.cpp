@@ -75,7 +75,9 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
-    params.loadBondTypes("common_resources/BondTypes.dat");
+    params.loadAtomTypes( "common_resources/AtomTypes.dat" );
+    mol.atypNames = &params.atypNames;
+    params.loadBondTypes( "common_resources/BondTypes.dat");
 
     mol.loadMol("common_resources/propylacid.mol");
     mol.bondsOfAtoms();   mol.printAtom2Bond();
@@ -178,7 +180,7 @@ void TestAppSoftMolDyn::draw(){
         for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
 
         //printf( "DEBUG x.1 \n" );
-        world.eval_bonds();
+        world.eval_bonds(true);
         //world.eval_angles();
         //printf( "DEBUG x.2 \n" );
         world.eval_angcos();

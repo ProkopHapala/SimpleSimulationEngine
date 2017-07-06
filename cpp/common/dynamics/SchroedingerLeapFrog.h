@@ -22,9 +22,10 @@ inline double potential( double x ){
 	//V = (x> -2.2)? V : 10.0 ;
 	//V = ( V < 10.0)? V : 10.0;
 
-	double V = -2*x;
+	double V = -3*x;
 	double x_ = x+4;
-	V += -20/(1+(x_*x_));
+	//V += -20/(1+(x_*x_));
+	V += -50.0*exp(-(1+x_*x_));
 
 /*
 	// quadric

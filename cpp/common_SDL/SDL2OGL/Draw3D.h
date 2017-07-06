@@ -74,6 +74,22 @@ void drawCurve    ( float tmin, float tmax,          int n, Func1d3 func );
 
 // ==== inline functions
 
+inline void drawColorScale( int n, Vec3d pos, Vec3d dir, Vec3d up, void (_colorFunc_)(float f) ){
+    glBegin(GL_TRIANGLE_STRIP);
+    double d = 1.0/(n-1);
+    for(int i=0; i<n; i++){
+        double f = i*d;
+        _colorFunc_( f );
+        //glColor3f(1.0,1.0,1.0);
+        Vec3d p = pos + dir*f;
+        glVertex3f( (float)(p.x     ),(float)( p.y     ),(float)( p.z     ) );
+        glVertex3f( (float)(p.x+up.x),(float)( p.y+up.y),(float)( p.z+up.z) );
+        //printf( "(%g,%g,%g) (%g,%g,%g) \n", p.x, p.y, p.z, (float)(pos.x+up.x),(float)( pos.y+up.y),(float)( pos.z+up.z)  );
+    }
+    glEnd();
+}
+
+
 /*
 inline void toGLMat( const Vec3d& pos, const Mat3d& rot, float* glMat ){
 	glMat[0 ] = (float)rot.ax;   glMat[1 ] = (float)rot.ay;   glMat[2 ] = (float)rot.az;   glMat[3 ]  = 0;

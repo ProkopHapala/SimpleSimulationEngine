@@ -15,15 +15,7 @@
 // ===== GLOBAL VARIABLES
 // ===============================
 
-SDL_Renderer*	render			= NULL;
-SDL_Window*		window        	= NULL;
-SDL_Surface*	screenSurface 	= NULL;
-SDL_Surface*	tempSurf;
-SDL_Texture*	tempTex;
-
-SDL_Rect SrcR;
-SDL_Rect DestR;
-
+SDLplot plot;
 SDL_Event		event;
 bool 			STOP          	= false;
 int 			frameCount		=	0;
@@ -32,13 +24,9 @@ OptimizerRandom* opt1;
 
 double dxMax[] = { 0.05, 0.05 };
 double xBest[] = { 2.0, +1.2 };
-
 double freqScales[] = { 2.0, 1.0, 0.7, 0.4 };
-
 double tolerance = 0.001;
-
 int nEvals = 0;
-
 TestFuncND funcND;
 
 // ====================================
@@ -80,16 +68,17 @@ int perform_relaxation( int nMaxIter ){
 		double x1 = opt1->xNew[0];
 		double y1 = opt1->xNew[1];
 		if( dfitness > 0 ){
-			SDL_SetRenderDrawColor( render, 0, 128, 0, 255 );
+			SDL_SetRenderDrawColor( plot.render, 0, 128, 0, 255 );
 			if( -opt1->bestFitness < tolerance){
 				printf( " CONVERGENCE ACHIEVED in %i iterations, fittness = %f \n", nEvals, opt1->bestFitness  );
 				//STOP = true;
 				return i;
 			}
 		}else  {
-			SDL_SetRenderDrawColor( render, 255, 0, 0, 50  );
+			SDL_SetRenderDrawColor( plot.render, 255, 0, 0, 50  );
 		}
-		SDL_RenderDrawLine    ( render,  x2i(x0), y2i(y0), x2i(x1), y2i(y1) );
+		//SDL_RenderDrawLine    ( render,  x2i(x0), y2i(y0), x2i(x1), y2i(y1) );
+		plot.drawLine( x0, y0, x1, y1 );
 	}
     return -1;
 }
@@ -111,10 +100,11 @@ void newTestFunc(){
 
     restartRelaxation();
 
-    SDL_DestroyTexture(tempTex);
-    setPixelsFunctionClamped( tempSurf, 0, 0, tempSurf->w,  tempSurf->h, &myFittnessFunc_, 0.0, 1.0 );
-    tempTex   = SDL_CreateTextureFromSurface( render, tempSurf  );
-    SDL_RenderCopy( render, tempTex, &SrcR, &DestR );
+    plot.setPixelsFunctionClamped( plot.tempSurf, 0, 0, plot.tempSurf->w,  plot.tempSurf->h, &myFittnessFunc_, 0.0, 1.0 );
+    //SDL_DestroyTexture(tempTex);
+    //tempTex   = SDL_CreateTextureFromSurface( render, tempSurf  );
+    //SDL_RenderCopy( render, tempTex, &SrcR, &DestR );
+    plot.updateSurfTex();
     printf(" ... DONE \n");
 }
 
@@ -144,12 +134,10 @@ void draw(){
 	restartRelaxation();
 	perform_relaxation( 10000 );
 
-	SDL_RenderPresent( render );
-	SDL_UpdateWindowSurface(window);
+	SDL_RenderPresent(       plot.render );
+	SDL_UpdateWindowSurface( plot.window);
 
 }
-
-
 
 void setup(){
 
@@ -166,27 +154,13 @@ void setup(){
     opt1 = new OptimizerRandom_2( 2, xBest, dxMax, 0.85, 1.2, &myFittnessFunc );
 	//opt1 = new OptimizerRandom_3( 2, xBest, dxMax, 0.7, 1.2, &myFittnessFunc );
 
-    setZoom( 50.0d );
+    plot.setZoom( 50.0d );
 
-	window          = SDL_CreateWindow( "SDL Tutorial",   SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
-	render        	= SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC );
-	SDL_UpdateWindowSurface( window );
-
-	tempSurf        = SDL_CreateRGBSurface(0,SCREEN_WIDTH,SCREEN_HEIGHT,32,0,0,0,0 );
-	//setPixelsFunction( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, &myFittnessFunc_ );
-	setPixelsFunctionClamped( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, &myFittnessFunc_, 0.0, 1.0 );
-	//setPixelsFunction( tempSurf, 0, 0, tempSurf->w,    tempSurf->h, -2.0,-2.0, 2.0, 2.0, &mandelbort );
-
+	plot.init( "Schoedinger Leap Frog 1D", 512, 512 );
 	newTestFunc();
 
-	tempTex   = SDL_CreateTextureFromSurface( render, tempSurf  );
-
-	SrcR.x  = 0; SrcR.y  = 0; SrcR.w  = tempSurf->w; SrcR.h  = tempSurf->h;
-	DestR.x = 0; DestR.y = 0; DestR.w = tempSurf->w; DestR.h = tempSurf->h;
-
-	SDL_RenderCopy( render, tempTex, &SrcR, &DestR);
-
-	SDL_SetRenderDrawBlendMode( render, SDL_BLENDMODE_BLEND );
+	SDL_RenderCopy( plot.render, plot.tempTex, &plot.SrcR, &plot.DestR);
+	SDL_SetRenderDrawBlendMode( plot.render, SDL_BLENDMODE_BLEND );
 }
 
 void inputHanding(){

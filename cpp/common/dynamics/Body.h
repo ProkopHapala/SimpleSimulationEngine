@@ -14,8 +14,7 @@
 //   CLASS :   KinematicBody
 // ========================
 
-class KinematicBody{
-	public:
+class KinematicBody{ public:
 	Vec3d lpos;
 	Mat3d lrot;
 	inline void globalPos( const Vec3d& pos0, const Mat3d& rot0, Vec3d& gpos ){ rot0.dot_to( lpos, gpos ); gpos.add( pos0 ); }
@@ -27,8 +26,7 @@ class KinematicBody{
 //   CLASS :   PointBody
 // ========================
 
-class PointBody{
-	public:
+class PointBody{ public:
 	// parameters
 	double	mass;
 	// auxiliary parameters
@@ -66,8 +64,7 @@ class PointBody{
 //   CLASS :   RigidBody
 // ========================
 
-class RigidBody : public PointBody {
-	public:
+class RigidBody : public PointBody { public:
 	// parameters
 	Mat3d	Ibody;
 	// auxiliary parameters
@@ -189,8 +186,7 @@ class RigidBody : public PointBody {
 //   CLASS :   SpringConstrain
 // ===============================
 
-class SpringConstrain{
-	public:
+class SpringConstrain{ public:
 	Vec3d     p1,p2;
 	RigidBody *b1=NULL,*b2=NULL;
 	double kPull,kPush,L0;

@@ -596,7 +596,6 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         glEnd();
     }
 
-
     int drawMesh( const Mesh& mesh  ){
         for( Polygon* pl : mesh.polygons ){
             Draw3D::drawPlanarPolygon( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );

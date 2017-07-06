@@ -18,14 +18,58 @@
 #include "geom3D.h"
 #include "raytrace.h"
 
+#include "SDL_utils.h"
+#include "Draw.h"
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
 
+#include "Mesh.h"
 #include "Object3D.h"
 #include "Warrior3D.h"
+#include "Tank.h"
 #include "Projectile3D.h"
 #include "Shooter.h"
+
+
+int fontTex;
+
+void armorColorScale( float f ){
+    float mf = 1 - f;
+    //float r = f*f; float g = 4*mf*f; float b = mf*mf;
+
+    float r = 1-mf*mf; float g = f*f*f; float b = mf*mf*mf*mf;
+    //float r = 1-mf*mf; float g = f*f*f; float b = f*f*f*f*f*f + 0.5*mf*mf*mf*mf;
+
+    //float renorm = 3/(r+g+b); r*=renorm; g*=renorm; b*=renorm;
+    glColor3f( r, g, b );
+}
+
+void renderArmor( const VehicleBlock& block, double maxThickness ){
+    int i=0;
+    for( Polygon* pl : block.polygons ){
+        //printf( " pl %i npoints %i \n", i, pl->ipoints.size() );
+        armorColorScale( block.armor[i].thickness/maxThickness );
+        Draw3D::drawPlanarPolygon( pl->ipoints.size(), &pl->ipoints.front(), &block.points.front() );
+
+        Vec3d c = block.faceCog( i );
+        glColor3f(1.0f,1.0f,1.0f); Draw3D::drawVecInPos( block.armor[i].normal, c );
+
+        i++;
+    }
+
+}
+
+void renderArmorCaptions( const VehicleBlock& block, float sz ){
+    char str[64];
+    int i=0;
+    for( Polygon* pl : block.polygons ){
+        sprintf(str,"%i:%3.0fmm%2.1fton\0",i+1, block.armor[i].thickness, block.armor[i].mass*1e-3 );
+        Vec3d c = block.faceCog( i );
+        Draw3D::drawText(str, c, fontTex, sz, 0,0);
+        i++;
+    }
+}
 
 
 Terrain25D *  prepareTerrain()      {
@@ -90,7 +134,8 @@ class Tanks_single : public AppSDL2OGL_3D {
     Shooter world;
     double dvel = 10.0;
 
-    Warrior3D *warrior1;
+    //Warrior3D *warrior1;
+    Tank *warrior1;
 
     int hitShape, warriorShape, objectShape;
 
@@ -104,11 +149,14 @@ class Tanks_single : public AppSDL2OGL_3D {
     virtual void mouseHandling( );
     void         camera();
 
+
 	Tanks_single( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
 Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     world.init_world();
     printf( "DEBUG_SHIT : %i \n", world.debug_shit );
@@ -119,7 +167,6 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     world.terrain = prepareTerrain();
 
     // ---- Objects
-
     int sphereShape = glGenLists(1);
     glNewList( sphereShape , GL_COMPILE );
         //glPushMatrix();
@@ -147,8 +194,6 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         o->grot = o->lrot;
         o->span.set( randf(0.2,2.0), randf(0.2,2.0), randf(0.2,2.0) );
 
-
-
         //o->bounds.span.set( 1, 2.0, 0.5 );
         //
         /*
@@ -173,10 +218,20 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     //camPos.set();
 
-
-    warrior1 = world.makeWarrior( {0.0d,0.0d,0.0d}, {0.0d,0.0d,1.0d}, {0.0d,1.0d,0.0d}, 0 );
-
+    //Tank * tank1 = new Tank();
+    //warrior1 = new Warrior3D();
+    warrior1 = new Tank();
+    warrior1->fromFile( "data/tank1.txt" );
+    warrior1->kind = 0;
+    warrior1->setPose( {0.0d,0.0d,0.0d}, {0.0d,0.0d,1.0d}, {0.0d,1.0d,0.0d} );
+    world.registrWarrior( warrior1 );
     warrior1->pos.set( 0.0, 0.0, -15.0 );
+
+
+
+    printf( "hull   mass : %g [kg]\n", warrior1->hull  .getArmorMass( 7890.0 ) );
+    printf( "turret mass : %g [kg]\n", warrior1->turret.getArmorMass( 7890.0 ) );
+    //exit(0);
 
     zoom = 5.0;
     first_person = true;
@@ -236,6 +291,24 @@ void Tanks_single::draw(){
         Draw3D::drawPointCross(p->pos,0.1);
     }
 
+    //glTranslatef( 0.0f,3.0f,0.0f );
+    double maxThick = fmax( warrior1->hull.getMaxArmor(), warrior1->turret.getMaxArmor() );
+    Draw3D::drawColorScale( 32, {0.0,0.0,2.0}, {0.0,2.0,0.0}, {0.0,0.0,0.4}, &armorColorScale );
+    glDisable    ( GL_LIGHTING   );
+    //glEnable     ( GL_DEPTH_TEST );
+    glShadeModel ( GL_FLAT       );
+    renderArmor( warrior1->hull,   maxThick );
+    renderArmor( warrior1->turret, maxThick );
+    glColor3f(1.0f,0.5f,0.5f);  renderArmorCaptions( warrior1->hull,   0.15 );
+    glColor3f(0.5f,0.5f,1.0f);  renderArmorCaptions( warrior1->turret, 0.15 );
+    glEnable     ( GL_LIGHTING   );
+    glEnable     ( GL_DEPTH_TEST );
+    glShadeModel ( GL_SMOOTH     );
+    //glTranslatef( 0.0f,-3.0f,0.0f );
+
+
+    Draw3D::drawAxis( 10 );
+
 };
 
 
@@ -284,7 +357,7 @@ void Tanks_single::mouseHandling( ){
     camMat.b.set(-camMat.a.z*st, ct, camMat.a.x*st);
     camMat.c.set(-camMat.a.z*ct,-st, camMat.a.x*ct); // up vector
     //printf("camMat:\n",);
-    printf("camMat: (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n",camMat.ax,camMat.ay,camMat.az,  camMat.bx,camMat.by,camMat.bz, camMat.cx,camMat.cy,camMat.cz);
+    //printf("camMat: (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n",camMat.ax,camMat.ay,camMat.az,  camMat.bx,camMat.by,camMat.bz, camMat.cx,camMat.cy,camMat.cz);
     //qCamera.fromAngleAxis( camTheta, {sin(camPhi),0, cos(camPhi)} );
     //qCamera.fromAngleAxis( camTheta, {0,sin(camPhi), cos(camPhi)} );
 
@@ -299,6 +372,8 @@ void Tanks_single::camera(){
     Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, camMat, camMatrix );
     glMultMatrixf( camMatrix );
     glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
+    //glTranslatef ( -10*camMat.c.x, -10*camMat.c.y, -10*camMat.c.z );
+    glTranslatef ( 0.0, -5.0, 0.0 );
     glMatrixMode (GL_MODELVIEW);
     glLoadIdentity();
 }

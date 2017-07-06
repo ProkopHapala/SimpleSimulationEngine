@@ -63,6 +63,7 @@ class Shooter {
 
     Projectile3D* fireProjectile( Warrior3D * w, double speed, int kind );
     Warrior3D*    makeWarrior   ( const Vec3d& pos, const Vec3d& dir, const Vec3d& up, int kind );
+    int registrWarrior( Warrior3D * w );
 
 };
 

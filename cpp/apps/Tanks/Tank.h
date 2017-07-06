@@ -12,8 +12,7 @@
 #include "Warrior3D.h"
 #include "Projectile3D.h"
 
-class Wheel{
-    public:
+class Wheel{ public:
     double k,m,damp;
     Vec3d  lpos;
     double h,vh,fh;
@@ -29,10 +28,71 @@ class Wheel{
     }
 };
 
-class Tank : public Warrior3D {
-	public:
+class ArmorPlate{ public:
+    double thickness;
+    double mass;
+    Vec3d  normal;
+    int material;
+};
+
+class VehicleBlock : public KinematicBody, public Mesh { public:
+    std::vector<ArmorPlate> armor;
+
+    double getMaxArmor(){
+        double maxThickness = 0.0;
+        for(ArmorPlate& pl : armor){
+            maxThickness = fmax(pl.thickness, maxThickness);
+        }
+        return maxThickness;
+    }
+
+    double getArmorMass( double density ){
+        double m = 0.0;
+        for(int i=0; i<polygons.size(); i++){
+            double D  = armor[i].thickness*1e-3;
+            double S  = polygonArea( i, &armor[i].normal );
+            double mi = D*S*density;
+            armor[i].mass = mi;
+            m+=mi;
+            printf( "%i D %f S %f dm %f n (%g,%g,%g)%g \n", i, D, S, D*S*density, armor[i].normal.x, armor[i].normal.y, armor[i].normal.z, armor[i].normal.norm() );
+        }
+        return m;
+    }
+
+    int loadArmor( char * fname ){
+        printf("VehicleBlock.loadArmor %s\n", fname );
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){ printf("cannot find %s\n", fname ); return -1; }
+        char buff [1024];
+        char mat_name[64];
+        char * line;
+        int nl;
+        for( int i=0; i<polygons.size(); i++ ){
+            double thickness;
+            line = fgets( buff, 1024, pFile );
+            sscanf( line, "%s %lf", mat_name, &thickness );
+            printf( "%i %s %lf", mat_name, &thickness );
+            armor.push_back((ArmorPlate){thickness});
+        }
+    }
+
+    void fromString( char * str ){
+        printf("VehicleBlock.fromString %s\n", str );
+        //char* fname1,fname2;
+        char fname1[64];
+        char fname2[64];
+        sscanf( str, "%s %s\n", fname1, fname2 );
+        fromFileOBJ(fname1);
+        loadArmor(fname2);
+    }
+};
+
+class Tank : public Warrior3D { public:
     int nwheel = 0;
     Wheel * wheels;
+
+    VehicleBlock hull;
+    VehicleBlock turret;
 
 	void makeWheels( int n, double xmin, double xmax, double width, double height, double k, double m, double damp ){
         wheels = new Wheel[n*2];
@@ -67,6 +127,16 @@ class Tank : public Warrior3D {
     void update( double dt ){
         for(int i=0; i<nwheel; i++){ wheels[i].move( dt); }
         move(dt);
+    }
+
+    int fromFile( char * fname ){
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){ printf("cannot find %s\n", fname ); return -1; }
+        char buff[1024];
+        char * line;
+        int nl;
+        line = fgets( buff, 1024, pFile ); hull  .fromString( line );
+        line = fgets( buff, 1024, pFile ); turret.fromString( line );
     }
 
 };

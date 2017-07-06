@@ -22,8 +22,7 @@
 #include <sstream>
 #include <string>
 
-class Mesh{
-    public:
+class Mesh{ public:
     int    rendered_shape;
     Vec3d  center; // center of spherical bounding box
     double Rbound; // radius of spherical bounding box
@@ -68,7 +67,7 @@ class Mesh{
 
     // ========== Implementations
 
-    Vec3d faceCog( int ipl ){
+    Vec3d faceCog( int ipl )const {
         Polygon* pl = polygons.at(ipl);
         int n = pl->ipoints.size();
         Vec3d c; c.set(0.0);
@@ -76,6 +75,25 @@ class Mesh{
         c.mul(1.0d/n);
         return c;
     };
+
+    double polygonArea( int ipl, Vec3d * pl_normal ){
+        Polygon* pl = polygons.at(ipl);
+        double S = 0.0;
+        Vec3d a  = points[ pl->ipoints[0] ];
+        Vec3d ab = points[ pl->ipoints[1] ] - a;
+        for(int i=2;i<pl->ipoints.size(); i++){
+            Vec3d ac  = points[ pl->ipoints[i] ] - a;
+            //Vec3d vT  = ac - ab*( ac.dot(ab)/ac.norm() );
+            //double Si = vT.dot(ab);
+            Vec3d normal; normal.set_cross(ab,ac);
+            if(pl_normal) pl_normal->add(normal);
+            double Si = 0.5*normal.norm();
+            S += Si;
+            ab = ac;
+        }
+        if(pl_normal) pl_normal->mul(0.5/S);
+        return S;
+    }
 
     int findEdges( ){
         std::unordered_map<uint64_t,MeshEdge> edge_map;

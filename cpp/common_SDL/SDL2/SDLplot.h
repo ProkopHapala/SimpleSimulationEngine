@@ -52,6 +52,12 @@ class SDLplot{ public:
         DestR = SrcR;
     }
 
+    void updateSurfTex(){
+        SDL_DestroyTexture(tempTex);
+        tempTex   = SDL_CreateTextureFromSurface( render, tempSurf  );
+        SDL_RenderCopy( render, tempTex, &SrcR, &DestR );
+    }
+
     void plotHline( double y ){
         SDL_RenderDrawLine( render, 0, y2i(-y), SCREEN_WIDTH, y2i(-y) );
     }
@@ -64,6 +70,10 @@ class SDLplot{ public:
         plotHline( 0 );
         plotVline( 0 );
     }
+
+    void drawLine ( double x0, double y0, double x1, double y1 ){
+        SDL_RenderDrawLine ( render,  x2i(x0), y2i(y0), x2i(x1), y2i(y1) );
+    };
 
     void plotFunc( int n, double * xs, double * ys, double yscale ){
         int oix=x2i(  xs[0]        );

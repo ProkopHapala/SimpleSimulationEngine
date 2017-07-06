@@ -18,26 +18,22 @@ Projectile3D* Shooter::fireProjectile( Warrior3D * w, double speed, int kind ){
     return p;
 };
 
+int Shooter::registrWarrior( Warrior3D * w ){
+    w->id = warriorCount;
+    warriorCount++;
+    warriors.push_back( w );
+    return warriorCount;
+}
+
 Warrior3D* Shooter::makeWarrior( const Vec3d& pos, const Vec3d& dir, const Vec3d& up, int kind ){
     //int ith = warriors.size();
     //printf( " >>> Setup  ship %i \n", ith );
     Warrior3D* w = new Warrior3D();
-    w->kind = kind; w->id = warriorCount; warriorCount++;
+    w->kind = kind;
+    //w->id = warriorCount; warriorCount++;
     //w->loadFromFile( filename );
     //w->from_mass_points( 2, mass, (Vec2d*)poss );
-    w->initOne();
-
-    //printf( " I invI  %f %f \n", ship1->I, ship1->invI );
-    //w->setDefaults();
-    //w->setAngle( angle );
-    w->pos.set ( pos  );
-    //w->omega = 0.0;
-
-    w->rotMat.a.set      ( dir     );
-    w->rotMat.b.set      ( up      );
-    w->rotMat.c.set_cross( dir, up );
-    w->qrot.fromMatrix   ( w->rotMat );
-
+    w->setPose( pos, dir, up );
     //w->initAllGuns( 6 );
     //printf( "DEBUG 2 \n" );
     //ship->world = this;
@@ -45,12 +41,11 @@ Warrior3D* Shooter::makeWarrior( const Vec3d& pos, const Vec3d& dir, const Vec3d
     //ship->name = new char[7];
     //sprintf( ship->name, "Ship_%02i", ith );
     //printf( "DEBUG 4 \n" );
-    warriors.push_back( w );
+    //warriors.push_back( w );
     //printf( "DEBUG 5 \n" );
+    registrWarrior( w );
     return w;
 }
-
-
 
 void Shooter::update_warriors3D(){
     auto itw = warriors.begin();
@@ -107,43 +102,43 @@ void Shooter::update_warriors25D(){
 }
 
 void Shooter::update_projectiles3D(){
-    printf( "update_projectiles3D %i\n", projectiles.size() );
-        auto it_proj = projectiles.begin();
-        while( it_proj != projectiles.end() ) {
-            Projectile3D * proj = *it_proj;
+    //printf( "update_projectiles3D %i\n", projectiles.size() );
+    auto it_proj = projectiles.begin();
+    while( it_proj != projectiles.end() ) {
+        Projectile3D * proj = *it_proj;
 
-            //proj ->update_old_pos(    );
-            //proj ->evalForce     (    );
-            proj ->clean_temp();
-            proj ->force.add( {0.0,gravity,0.0});
-            proj ->update_Projectile3D( dt );
+        //proj ->update_old_pos(    );
+        //proj ->evalForce     (    );
+        proj ->clean_temp();
+        proj ->force.add( {0.0,gravity,0.0});
+        proj ->update_Projectile3D( dt );
 
-            printf( "prj (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f) %f\n", proj->pos.x, proj->pos.y, proj->pos.z,    proj->old_pos.x, proj->old_pos.y, proj->old_pos.z,   proj->time );
+        //printf( "prj (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f) %f\n", proj->pos.x, proj->pos.y, proj->pos.z,    proj->old_pos.x, proj->old_pos.y, proj->old_pos.z,   proj->time );
 
-            Vec3d hRay,normal;
-            hRay.set_sub( proj->pos, proj->old_pos );
-            double tmax = hRay.normalize();
+        Vec3d hRay,normal;
+        hRay.set_sub( proj->pos, proj->old_pos );
+        double tmax = hRay.normalize();
 
-            bool hitted = false;
-            //hitted |= proj->check_hit_ground( );
-            //hitted |= proj->check_hit_vector<Frigate2D>( warriors );
-            for( o : objects ){
-                o->ray( proj->old_pos, hRay, &normal );
-                if (hitted) break;
-            }
-
-            if( proj->pos.y < ground_height ){
-                hitted = true;
-            }
-
-            //if( hitted ){
-            if( hitted || (proj->time > projLifetime) ){
-                it_proj = projectiles.erase( it_proj );
-                delete proj;
-            }else{
-                ++it_proj;
-            }
+        bool hitted = false;
+        //hitted |= proj->check_hit_ground( );
+        //hitted |= proj->check_hit_vector<Frigate2D>( warriors );
+        for( o : objects ){
+            o->ray( proj->old_pos, hRay, &normal );
+            if (hitted) break;
         }
+
+        if( proj->pos.y < ground_height ){
+            hitted = true;
+        }
+
+        //if( hitted ){
+        if( hitted || (proj->time > projLifetime) ){
+            it_proj = projectiles.erase( it_proj );
+            delete proj;
+        }else{
+            ++it_proj;
+        }
+    }
 }
 
 void Shooter::update_world( ){
