@@ -153,6 +153,36 @@ void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape ){
 	glPopMatrix();
 };
 
+
+void drawShapeT( const Vec3f& pos, const Mat3f& rot, int shape ){
+	glPushMatrix();
+	float glMat[16];
+	toGLMatT( pos, rot, glMat );
+	glMultMatrixf( glMat );
+	glCallList( shape );
+	glPopMatrix();
+};
+
+void drawShapeT( const Vec3d& pos, const Mat3d& rot, int shape ){
+	glPushMatrix();
+	float glMat[16];
+	toGLMatT( pos, rot, glMat );
+	glMultMatrixf( glMat );
+	glCallList( shape );
+	glPopMatrix();
+};
+void drawShapeT    ( const Vec3d& pos, const Quat4d& qrot, int shape ){
+	glPushMatrix();
+	float glMat[16];
+	Quat4d qrotT;
+	qrotT.setInverseUnitary(qrot);
+	toGLMat( pos, qrotT, glMat );
+	glMultMatrixf( glMat );
+	glCallList( shape );
+	glPopMatrix();
+};
+
+
 int drawConeFan( int n, float r, const Vec3f& base, const Vec3f& tip ){
 	int nvert=0;
 	Vec3f a,b,c,c_hat;

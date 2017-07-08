@@ -25,6 +25,8 @@ include_directories(
         ${COMMON_SRCS}/dynamics
         ${COMMON_SRCS}/maps
         ${COMMON_SRCS}/optimization
+        ${COMMON_SRCS}/dataStructures
+        ${COMMON_SRCS}/engine
         ${COMMON_SDL_SRCS}
         ${COMMON_SDL_SRCS}/network
         ${COMMON_SDL_SRCS}/SDL2
@@ -38,8 +40,8 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )
 # ==== BUILD TARGETS
 
 add_subdirectory( ${MY_SRC_DIR}/common   ${MY_BIN_SHARE}/common    )
-add_subdirectory( ${MY_SRC_DIR}/libs         )
-add_subdirectory( ${MY_SOURCE_DIR}/tests    )   # currently empty
+add_subdirectory( ${MY_SRC_DIR}/libs     )
+add_subdirectory( ${MY_SRC_DIR}/tests    )   # currently empty
 
 # ---- these need SDL
 add_subdirectory( ${MY_SRC_DIR}/common_SDL   ${MY_BIN_SHARE}/common_SDL )

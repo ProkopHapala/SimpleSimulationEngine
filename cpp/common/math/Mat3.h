@@ -95,6 +95,8 @@ class Mat3TYPE{
 		c.set( va.z, vb.z, vc.z );
 	};
 
+	inline MAT operator* ( TYPE f   ) const { MAT m; m.a.set_mul(a,f); m.b.set_mul(b,f); m.c.set_mul(c,f); return m; };
+
     inline void mul ( TYPE f        ){ a.mul(f);    b.mul(f);    c.mul(f);    };
     inline void mul ( const VEC& va ){ a.mul(va.a); b.mul(va.b); c.mul(va.c); };
 

@@ -72,6 +72,12 @@ inline double dangle(double da){
     return da;
 }
 
+
+inline double clamp( double x, double xmin, double xmax ){
+    if(x<xmin){ return xmin; }else{ if(x>xmax) return xmax; };
+    return x;
+}
+
 inline double clamp_abs( double x, double xmax ){
     if( x>0 ){ if(x>xmax) return xmax; }else{ if(x<-xmax) return -xmax; };
     return x;

@@ -51,10 +51,8 @@ void renderArmor( const VehicleBlock& block, double maxThickness ){
         //printf( " pl %i npoints %i \n", i, pl->ipoints.size() );
         armorColorScale( block.armor[i].thickness/maxThickness );
         Draw3D::drawPlanarPolygon( pl->ipoints.size(), &pl->ipoints.front(), &block.points.front() );
-
-        Vec3d c = block.faceCog( i );
-        glColor3f(1.0f,1.0f,1.0f); Draw3D::drawVecInPos( block.armor[i].normal, c );
-
+        //Vec3d c = block.faceCog( i );
+        //glColor3f(1.0f,1.0f,1.0f); Draw3D::drawVecInPos( block.armor[i].normal, c );
         i++;
     }
 
@@ -71,6 +69,14 @@ void renderArmorCaptions( const VehicleBlock& block, float sz ){
     }
 }
 
+void drawTankWheels(Tank * tank){
+    Vec3d gpos;
+    for(int i=0; i<tank->nwheel; i++){
+        tank->getWheelPos( i, gpos );
+        //printf( "%i (%g,%g,%g)\n", i, gpos.x, gpos.y, gpos.z );
+        Draw3D::drawPointCross( gpos, 0.5 );
+    }
+}
 
 Terrain25D *  prepareTerrain()      {
     Terrain25D * terrain = new Terrain25D();
@@ -159,6 +165,7 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     world.init_world();
+    world.perFrame = 3;
     printf( "DEBUG_SHIT : %i \n", world.debug_shit );
 
     // ---- terrain
@@ -221,12 +228,16 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //Tank * tank1 = new Tank();
     //warrior1 = new Warrior3D();
     warrior1 = new Tank();
+
+
+
     warrior1->fromFile( "data/tank1.txt" );
     warrior1->kind = 0;
     warrior1->hground = 2.5;
     warrior1->setPose( {0.0d,0.0d,0.0d}, {0.0d,0.0d,1.0d}, {0.0d,1.0d,0.0d} );
     world.registrWarrior( warrior1 );
     warrior1->pos.set( 0.0, 0.0, -15.0 );
+    warrior1->makeWheels( 3, -3.0, 3.0, 3.0, -1.0, 300.0, 0.0, 0.01  );
 
     printf( "hull   mass : %g [kg]\n", warrior1->hull  .getArmorMass( 7890.0 ) );
     printf( "turret mass : %g [kg]\n", warrior1->turret.getArmorMass( 7890.0 ) );
@@ -234,6 +245,8 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     warrior1->hull  .polygonsToTriangles( true );
     warrior1->turret.polygonsToTriangles( true );
+
+    warrior1->initSpherical( 5.0, 2.0 );
 
     double maxThick = fmax( warrior1->hull.getMaxArmor(), warrior1->turret.getMaxArmor() );
 
@@ -331,8 +344,12 @@ void Tanks_single::draw(){
     //Draw3D::drawShape( warrior1->pos, warrior1->qrot, warrior1->turret.glo_armor  );
     for( Warrior3D * w : world.warriors ){
         Tank * tank =  ((Tank*)w);
-        Draw3D::drawShape( tank->pos, tank->qrot, tank->hull.glo_armor  );
-        Draw3D::drawShape( tank->pos, tank->qrot, tank->turret.glo_armor  );
+        Draw3D::drawShapeT( tank->pos, tank->qrot, tank->hull.glo_armor  );
+        Draw3D::drawShapeT( tank->pos, tank->qrot, tank->turret.glo_armor  );
+        drawTankWheels(tank);
+        //Mat3d setT( const MAT& M );
+        Mat3d rotMat; tank->qrot.toMatrix_T(rotMat);
+        Draw3D::drawMatInPos( rotMat*10, tank->pos );
     }
 
     //glCallList( warrior1->hull  .glo_captions ); // TODO : does not work because of Draw::billboardCamProj contains ::glGetFloatv (GL_MODELVIEW_MATRIX,  glModel);
@@ -363,10 +380,10 @@ void Tanks_single::draw(){
 };
 
 
-
-
-
 void Tanks_single::keyStateHandling( const Uint8 *keys ){
+
+
+    warrior1->power_gear[1]= 0.0; warrior1->power_gear[0]= 0.0;
 
     if( warrior1 != NULL ){
         //if( keys[ SDL_SCANCODE_W ] ){ warrior1->pos.add_mul( camMat.c, +0.1 ); }
@@ -374,11 +391,16 @@ void Tanks_single::keyStateHandling( const Uint8 *keys ){
         //if( keys[ SDL_SCANCODE_A ] ){ warrior1->pos.add_mul( camMat.a, -0.1 ); }
         //if( keys[ SDL_SCANCODE_D ] ){ warrior1->pos.add_mul( camMat.a, +0.1 ); }
 
-        if( keys[ SDL_SCANCODE_W ] ){ warrior1->vel.add_mul( camMat.c, +0.1 ); }
-        if( keys[ SDL_SCANCODE_S ] ){ warrior1->vel.add_mul( camMat.c, -0.1 ); }
-        if( keys[ SDL_SCANCODE_A ] ){ warrior1->vel.add_mul( camMat.a, -0.1 ); }
-        if( keys[ SDL_SCANCODE_D ] ){ warrior1->vel.add_mul( camMat.a, +0.1 ); }
-        if( keys[ SDL_SCANCODE_SPACE ] ){ warrior1->vel.mul( 0.9 ); }
+        //if( keys[ SDL_SCANCODE_W ] ){ warrior1->vel.add_mul( camMat.c, +0.1 ); }
+        //if( keys[ SDL_SCANCODE_S ] ){ warrior1->vel.add_mul( camMat.c, -0.1 ); }
+        //if( keys[ SDL_SCANCODE_A ] ){ warrior1->vel.add_mul( camMat.a, -0.1 ); }
+        //if( keys[ SDL_SCANCODE_D ] ){ warrior1->vel.add_mul( camMat.a, +0.1 ); }
+        //if( keys[ SDL_SCANCODE_SPACE ] ){ warrior1->vel.mul( 0.9 ); }
+
+        if( keys[ SDL_SCANCODE_W ] ){ warrior1->power_gear[1]= 1.0; warrior1->power_gear[0]= 1.0; }
+        if( keys[ SDL_SCANCODE_S ] ){ warrior1->power_gear[1]=-1.0; warrior1->power_gear[0]=-1.0; }
+        if( keys[ SDL_SCANCODE_A ] ){ warrior1->power_gear[1]= 1.0; warrior1->power_gear[0]=-1.0; }
+        if( keys[ SDL_SCANCODE_D ] ){ warrior1->power_gear[1]=-1.0; warrior1->power_gear[0]= 1.0; }
 
         //camPos.set( warrior1->pos );
         //camPos.set_add( warrior1->pos, {0.0,2.0,0.0} );
@@ -446,7 +468,7 @@ void Tanks_single::eventHandling ( const SDL_Event& event  ){
                 case SDLK_KP_PLUS:  zoom/=VIEW_ZOOM_STEP; break;
             }
             break;
-
+        break;
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:

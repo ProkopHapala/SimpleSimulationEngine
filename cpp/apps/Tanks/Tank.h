@@ -24,7 +24,7 @@ class Wheel{ public:
         lpos.z += vh*dt;
     }
     inline void init( Vec3d lpos_, double k_, double m_, double damp_ ){
-        k=k_; m=m_; damp=damp_; lpos.set( lpos); h=lpos.y; vh=0.0; fh=0.0;
+        k=k_; m=m_; damp=damp_; lpos=lpos_; h=lpos.y; vh=0.0; fh=0.0;
     }
 };
 
@@ -39,7 +39,6 @@ class VehicleBlock : public KinematicBody, public Mesh { public:
     std::vector<ArmorPlate> armor;
     int glo_captions;
     int glo_armor;
-
 
     double getMaxArmor(){
         double maxThickness = 0.0;
@@ -96,14 +95,23 @@ class Tank : public Warrior3D { public:
     VehicleBlock   hull;
     VehicleBlock   turret;
 
+    double maxPower= 1.0;
+
+    double power_gear[2] = {0.0,0.0};
+
 	void makeWheels( int n, double xmin, double xmax, double width, double height, double k, double m, double damp ){
-        wheels = new Wheel[n*2];
-        double dx = (xmax-xmin)/(n-1);
+        nwheel = n*2;
+        wheels = new Wheel[nwheel];
+        double dx = (xmax-xmin)/(nwheel-1);
+        //printf( "makeWheels n %i xmin %g xmax %g width %g height %g k %g m %g damp %g \n", n, xmin, xmax, width, height, k, m, damp );
         for(int i=0;i<n;i++){
             int i2 = i<<1;
-            wheels[i2  ].init( {dx*i2, height, width*+0.5}, k, m, damp );
-            wheels[i2+1].init( {dx*i2, height, width*-0.5}, k, m, damp );
+            wheels[i2  ].init( {xmin+dx*i2, height, width*+0.5}, k, m, damp );
+            wheels[i2+1].init( {xmin+dx*i2, height, width*-0.5}, k, m, damp );
+            //printf( "wheel %i (%g,%g,%g)\n", i2  , wheels[i2  ].lpos.x, wheels[i2  ].lpos.y, wheels[i2  ].lpos.z   );
+            //printf( "wheel %i (%g,%g,%g)\n", i2+1, wheels[i2+1].lpos.x, wheels[i2+1].lpos.y, wheels[i2+1].lpos.z   );
         }
+        //exit(0);
 	};
 
 	double ray( const Vec3d &ray0, const Vec3d &hRay, int& ipl, VehicleBlock*& block, double& effthick ){
@@ -127,25 +135,44 @@ class Tank : public Warrior3D { public:
         return t;
 	}
 
+	inline void getWheelPos( int i, Vec3d& gpos ){
+        rotMat.dot_to( {wheels[i].lpos.x,wheels[i].h,wheels[i].lpos.z}, gpos );
+        gpos.add(pos);
+	}
+
     void interactTerrain( Terrain25D * terrain ){
-        Vec3d gpos,normal;
-        Vec2d dv;
-        normal.set(0.0,1.0,0.0);
+        Mat3d mrot; qrot.toMatrix_T(mrot);
+        double wheelLock[2]={0.0,0.0};
+        wheelLock[0] = 1-clamp(fabs(power_gear[0]), 0.0, 0.7);
+        wheelLock[1] = 1-clamp(fabs(power_gear[1]), 0.0, 0.7);
+        //printf( "wheelLock %g %g\n", wheelLock[0], wheelLock[1], power_gear[0], power_gear[1] );
         for(int i=0; i<nwheel; i++){
-            wheels[i].clean_temp();
-            rotMat.dot_to( {wheels[i].lpos.x,wheels[i].h,wheels[i].lpos.z}, gpos );
-            double h  = terrain->eval( {gpos.x,gpos.z}, dv );
-            double dh = gpos.y - h;
-                if( dh  < 0.0 ){
-                    //w->force.add( {0.0,gravity,0.0} );
-                    //w->force.add( {dv.x, dh*(-1-0.5*w->vel.y), dv.y} );
-                    //wheels[i].fh += rotMat.b.dot( normal ) * dh;
-                    wheels[i].fh += dh;
-                    //force.add( {vel.x*landDrag,0.0,vel.z*landDrag} );
-                }
-            apply_force( rotMat.b*wheels[i].getSpringForce(), gpos-pos );
+            Vec3d gdp,gv,gp;
+            velOfPoint(wheels[i].lpos, gv, gdp);
+            gp.set_add(gdp,pos);
+            Vec2d dv;
+            double h  = terrain->eval( {gp.x,gp.z}, dv);
+            double dh = h-gp.y;
+            if(dh>0){
+                Vec3d f;
+                double fnormal = (gv.y<0)?dh*wheels[i].k:0.0;
+                //double clat  = 30.0;
+                //double cvert = (gv.y<0)?30.0:0.0;
+                //f.set(-dv.x*dh*clat, dh*cvert, -dv.y*dh*clat);
+                //f.set( 0.0, fnormal, 0.0 );
+                f.set( -dv.x*fnormal, fnormal, -dv.y*fnormal );
+                //f.add_mul( mrot.a,  fnormal*0.1*power_gear[i&1]*maxPower );
+                //f.add_mul( mrot.c, -fnormal*0.5*gv.dot(mrot.c) );
+                //f.add_mul( mrot.a,  fnormal*0.5*(power_gear[i&1]*maxPower - gv.dot(mrot.a)*wheelLock[i&1] ) );
+
+                f.add_mul( mrot.c, -5.0*gv.dot(mrot.c) );
+                f.add_mul( mrot.a,  5.0*(power_gear[i&1]*maxPower - gv.dot(mrot.a)*wheelLock[i&1] ) );
+                apply_force(f,gdp);
+            }
         }
     }
+
+    virtual void interact( Terrain25D * terrain ){ interactTerrain( terrain ); }
 
     void update( double dt ){
         for(int i=0; i<nwheel; i++){ wheels[i].move( dt); }

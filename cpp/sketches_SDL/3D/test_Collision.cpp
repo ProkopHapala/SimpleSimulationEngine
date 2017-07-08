@@ -159,12 +159,19 @@ void TestAppCollision::draw(){
 
     for( Object3D * o : objects ){
         if (o->shape){
+            /*
             float glMat[16];
             glPushMatrix();
             Draw3D::toGLMat( o->gpos, o->grot, o->span, glMat );
             glMultMatrixf( glMat );
             glCallList( o->shape );
             glPopMatrix();
+            */
+            Draw3D::drawShape( o->gpos, o->grot, o->shape );
+            //Draw3D::drawShape( o->controler->pos, o->controler->rotMat, o->shape ); // WRONG : invert rotation
+            //Draw3D::drawShape( o->controler->pos, o->controler->qrot, o->shape ); // WRONG : invert rotation
+            //Draw3D::drawShapeT( o->controler->pos, o->controler->qrot, o->shape );
+            Draw3D::drawShapeT( o->controler->pos, o->controler->rotMat, o->shape );
         }
     }
 

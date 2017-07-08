@@ -3,6 +3,7 @@
 
 #include "fastmath.h"
 #include "Vec2.h"
+#include "Vec3.h"
 
 class Terrain25D {
 	public:
@@ -12,6 +13,10 @@ class Terrain25D {
 	Vec2d b;
     double zmin = -1.0;
     double zmax =  1.0;
+
+    //double h0          = 0.0;
+    double drag        = -0.5d;
+    double restitution = -0.8d;
 
 	int    shape;
 
@@ -27,7 +32,6 @@ class Terrain25D {
     inline void boundingPlanes( double zRay, double z0, double tmax, double& tstart, double& tend ){
         boundingPlanes( zRay, z0, tmax, tstart, tend, zmin, zmax );
     }
-
 
     virtual double eval(const Vec2d& pos, Vec2d& deriv ){
         constexpr double scx = 0.4;

@@ -33,9 +33,13 @@ void drawPolygonBorder( int n, const int * inds, const Vec3d * points );
 void drawPolygonBorder( int ipl, Mesh& mesh );
 void drawMatInPos ( const Mat3d& mat, const Vec3d& pos );
 //void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
-void drawShape    ( const Vec3f& pos, const Mat3f& rot, int shape );
-void drawShape    ( const Vec3d& pos, const Mat3d& rot, int shape );
+void drawShape    ( const Vec3f& pos, const Mat3f&  rot,  int shape );
+void drawShape    ( const Vec3d& pos, const Mat3d&  rot,  int shape );
 void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape );
+
+void drawShapeT   ( const Vec3f& pos, const Mat3f&  rot,  int shape );
+void drawShapeT   ( const Vec3d& pos, const Mat3d&  rot,  int shape );
+void drawShapeT   ( const Vec3d& pos, const Quat4d& qrot, int shape );
 
 int  drawConeFan        ( int n, float r,                const Vec3f& base, const Vec3f& tip );
 int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3f& base, const Vec3f& tip, bool smooth );
@@ -120,6 +124,19 @@ inline void toGLMat( const Vec3f& pos, const Mat3f& rot, float* glMat ){
 	//glMat[12] = 0;        glMat[13] = 0;        glMat[14] = 0;        glMat[15]  = 1;
 };
 
+inline void toGLMatT( const Vec3f& pos, const Mat3f& rot, float* glMat ){
+    //printf("pos (%3.3f,%3.3f,%3.3f)\n", pos.x,pos.y,pos.z);
+	glMat[0 ] = rot.ax;   glMat[1 ] = rot.bx;   glMat[2 ] = rot.cx;   glMat[3 ]  = 0;
+	glMat[4 ] = rot.ay;   glMat[5 ] = rot.by;   glMat[6 ] = rot.cy;   glMat[7 ]  = 0;
+	glMat[8 ] = rot.az;   glMat[9 ] = rot.bz;   glMat[10] = rot.cz;   glMat[11]  = 0;
+	glMat[12] = pos. x;   glMat[13] = pos. y;   glMat[14] = pos. z;   glMat[15]  = 1;
+    //glMat[0 ] = rot.ax;   glMat[1 ] = rot.ay;   glMat[2 ] = rot.az;   glMat[3 ]  = pos.x;
+	//glMat[4 ] = rot.bx;   glMat[5 ] = rot.by;   glMat[6 ] = rot.bz;   glMat[7 ]  = pos.y;
+	//glMat[8 ] = rot.cx;   glMat[9 ] = rot.cy;   glMat[10] = rot.cz;   glMat[11]  = pos.z;
+	//glMat[12] = 0;        glMat[13] = 0;        glMat[14] = 0;        glMat[15]  = 1;
+};
+
+
 inline void toGLMatCam( const Vec3f& pos, const Mat3f& rot, float* glMat ){
 	glMat[0 ] = rot.ax;   glMat[1 ] = rot.bx;   glMat[2 ] = -rot.cx;   glMat[3 ]  = 0;
 	glMat[4 ] = rot.ay;   glMat[5 ] = rot.by;   glMat[6 ] = -rot.cy;   glMat[7 ]  = 0;
@@ -127,11 +144,16 @@ inline void toGLMatCam( const Vec3f& pos, const Mat3f& rot, float* glMat ){
 	glMat[12] = -pos. x;  glMat[13] = -pos. y;  glMat[14] = -pos. z;   glMat[15]  = 1;
 };
 
-
 inline void toGLMat( const Vec3d& pos, const Mat3d& rot, float* glMat ){
     Vec3f pos_; convert( pos, pos_ );
     Mat3f rot_; convert( rot, rot_ );
     toGLMat( pos_, rot_, glMat );
+};
+
+inline void toGLMatT( const Vec3d& pos, const Mat3d& rot, float* glMat ){
+    Vec3f pos_; convert( pos, pos_ );
+    Mat3f rot_; convert( rot, rot_ );
+    toGLMatT( pos_, rot_, glMat );
 };
 
 inline void toGLMatCam( const Vec3d& pos, const Mat3d& rot, float* glMat ){

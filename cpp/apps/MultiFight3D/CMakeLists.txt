@@ -2,7 +2,9 @@
 set( NAME "MultiFight3D" )
 
 add_executable( ${NAME}_single 
-	${NAME}_single.cpp ${NAME}World.cpp Warrior3D.cpp Projectile3D.cpp 
+	${NAME}_single.cpp ${NAME}World.cpp #Warrior3D.cpp Projectile3D.cpp 
+	$<TARGET_OBJECTS:Warrior3D>
+	$<TARGET_OBJECTS:Projectile3D>
 	$<TARGET_OBJECTS:Body>
 	$<TARGET_OBJECTS:SDL2OGL>
 )

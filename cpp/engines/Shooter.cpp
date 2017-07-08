@@ -51,10 +51,11 @@ void Shooter::update_warriors3D(){
     auto itw = warriors.begin();
     while( itw != warriors.end() ) {
         Warrior3D * w = *itw;
-
         w->clean_temp( );
         //addEnviroForces              ( w->pos, w->vel, w->force,  w->landed );
-        w->force.add( {0.0,gravity,0.0} );
+        w->force.add( {0.0,gravity*w->mass,0.0} );
+        if(terrain){ w->interact(terrain); }
+        /*
         if(terrain){
             Vec2d dv;
             double h  = terrain->eval( {w->pos.x,w->pos.z}, dv );
@@ -69,6 +70,7 @@ void Shooter::update_warriors3D(){
 
             }
         }
+        */
         //w->landed = collideWithWorld ( w->pos, w->vel, w->surf );
         w->move( dt );
 
@@ -87,15 +89,11 @@ void Shooter::update_warriors25D(){
     auto itw = warriors25D.begin();
     while( itw != warriors25D.end() ) {
         Warrior25D * w = *itw;
-
         //w->clean_temp( );
         //w->force.add( {0.0,gravity,0.0} );
         //w->move( dt );
-
         w->update( dt, wind_speed, watter_speed );
-
         if(w->trigger) w->shoot(projectiles);
-
         ++itw;
     }
 
@@ -127,7 +125,7 @@ void Shooter::update_projectiles3D(){
             if (hitted) break;
         }
 
-        if( proj->pos.y < ground_height ){
+        if( proj->pos.y < ground_height ){ // TODO - real terrain height
             hitted = true;
         }
 
