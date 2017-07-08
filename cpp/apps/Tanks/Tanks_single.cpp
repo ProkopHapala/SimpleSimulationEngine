@@ -229,15 +229,13 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //warrior1 = new Warrior3D();
     warrior1 = new Tank();
 
-
-
     warrior1->fromFile( "data/tank1.txt" );
     warrior1->kind = 0;
     warrior1->hground = 2.5;
     warrior1->setPose( {0.0d,0.0d,0.0d}, {0.0d,0.0d,1.0d}, {0.0d,1.0d,0.0d} );
     world.registrWarrior( warrior1 );
     warrior1->pos.set( 0.0, 0.0, -15.0 );
-    warrior1->makeWheels( 3, -3.0, 3.0, 3.0, -1.0, 300.0, 0.0, 0.01  );
+    warrior1->makeWheels( 3, -3.0, 3.0, 3.0, -1.7, 50.0, 0.0, 0.01  );
 
     printf( "hull   mass : %g [kg]\n", warrior1->hull  .getArmorMass( 7890.0 ) );
     printf( "turret mass : %g [kg]\n", warrior1->turret.getArmorMass( 7890.0 ) );
@@ -298,7 +296,7 @@ void Tanks_single::draw(){
 
     //printf( "camMat.a (%3.3f,%3.3f,%3.3f) \n", camMat.a.x, camMat.a.y, camMat.a.z );
 
-    warrior1->gun_rot.set( camMat.c );
+    //warrior1->gun_rot.set( camMat.c );
 
     world.update_world( );
 
@@ -340,16 +338,25 @@ void Tanks_single::draw(){
     glCallList( warrior1->hull  .glo_armor    );
     glCallList( warrior1->turret.glo_armor    );
 
+    warrior1->rotateTurretToward( camMat.c );
+
+
     //Draw3D::drawShape( warrior1->pos, warrior1->qrot, warrior1->hull  .glo_armor  );
     //Draw3D::drawShape( warrior1->pos, warrior1->qrot, warrior1->turret.glo_armor  );
     for( Warrior3D * w : world.warriors ){
         Tank * tank =  ((Tank*)w);
+
+        Mat3d grot;
+        //globalRot( const Mat3d& rot0, Mat3d& grot );
+        tank->turret.globalRotT(tank->rotMat, grot);
         Draw3D::drawShapeT( tank->pos, tank->qrot, tank->hull.glo_armor  );
-        Draw3D::drawShapeT( tank->pos, tank->qrot, tank->turret.glo_armor  );
+        //Draw3D::drawShapeT( tank->pos, tank->qrot, tank->turret.glo_armor  );
+        Draw3D::drawShape( tank->pos, grot, tank->turret.glo_armor  );
         drawTankWheels(tank);
         //Mat3d setT( const MAT& M );
         Mat3d rotMat; tank->qrot.toMatrix_T(rotMat);
         Draw3D::drawMatInPos( rotMat*10, tank->pos );
+        glColor3f(1.0f,1.0f,1.0f); Draw3D::drawVecInPos( tank->gun_rot*10.0, tank->pos );
     }
 
     //glCallList( warrior1->hull  .glo_captions ); // TODO : does not work because of Draw::billboardCamProj contains ::glGetFloatv (GL_MODELVIEW_MATRIX,  glModel);
@@ -357,17 +364,23 @@ void Tanks_single::draw(){
     glColor3f(1.0f,0.5f,0.5f);  renderArmorCaptions( warrior1->hull,   0.15 );
     glColor3f(0.5f,0.5f,1.0f);  renderArmorCaptions( warrior1->turret, 0.15 );
 
+    //Vec3d hRay = camMat.c;
+    //Vec3d ray0 = camPos;
+
+    //hRay = camMat.c; ray0 = camPos;
+    hRay = warrior1->gun_rot; ray0 = warrior1->pos;
+
     Tank * tank2 = (Tank*)world.warriors[1];
     int ipl; VehicleBlock* block; double effthick;
-    double t = tank2->ray( camPos, camMat.c, ipl, block, effthick );
+    double t = tank2->ray( ray0, hRay, ipl, block, effthick );
     if( ipl>=0 ){
         glColor3f(0.0f,1.0f,0.0f);
-        //Draw3D::drawVecInPos( normal, camPos + camMat.c*t );
-        Draw3D::drawVecInPos( block->armor[ipl].normal, camPos + camMat.c*t );
+        //Draw3D::drawVecInPos( normal, ray0 + camMat.c*t );
+        Draw3D::drawVecInPos( block->armor[ipl].normal, ray0 + hRay*t );
         Draw3D::drawPolygonBorder( ipl, *block );
         char str[64];
         sprintf(str,"%4.0fmm\0", effthick );
-        Draw3D::drawText(str, camPos + camMat.c*t, fontTex, 0.2, 0,0);
+        Draw3D::drawText(str, ray0 + hRay*t, fontTex, 0.2, 0,0);
         //printf( "itr %i ipl %i %g %g %g\n", itr, ipl, thick, cdot, effthick  );
     }
 
@@ -381,7 +394,6 @@ void Tanks_single::draw(){
 
 
 void Tanks_single::keyStateHandling( const Uint8 *keys ){
-
 
     warrior1->power_gear[1]= 0.0; warrior1->power_gear[0]= 0.0;
 

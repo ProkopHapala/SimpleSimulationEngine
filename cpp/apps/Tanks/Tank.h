@@ -11,6 +11,7 @@
 #include "Terrain25D.h"
 #include "Warrior3D.h"
 #include "Projectile3D.h"
+#include "Turret.h"
 
 class Wheel{ public:
     double k,m,damp;
@@ -95,6 +96,8 @@ class Tank : public Warrior3D { public:
     VehicleBlock   hull;
     VehicleBlock   turret;
 
+    double elevation = 0.0;
+
     double maxPower= 1.0;
 
     double power_gear[2] = {0.0,0.0};
@@ -113,6 +116,40 @@ class Tank : public Warrior3D { public:
         }
         //exit(0);
 	};
+
+	void rotateTurret( double angle ){
+		double ca   = cos(angle);
+		double sa   = sin(angle);
+        turret.lrot.c.rotate_csa( ca, sa, turret.lrot.b );
+        turret.lrot.a.rotate_csa( ca, sa, turret.lrot.b );
+	}
+
+    void rotateTurretToward( const Vec3d& dir ){
+        Mat3d grot;
+        turret.globalRotT(rotMat, grot);
+
+        double sa,ca,sa_;
+
+        double sa0=gun_rot.dot( grot.b  );
+        //sa_  =  dir.dot( grot.b ) - sa0;
+        //if( sa_>0 ){ sa=sa0+0.01; }else{sa=sa0-0.01; };
+        sa = sa0 + clamp( dir.dot( grot.b )-sa0, -0.01, 0.01 );
+        ca = sqrt( 1 - sa*sa );
+        gun_rot = grot.b*sa + grot.a*ca;
+
+        /*
+        // instant
+        sa  =  dir.dot( grot.b );
+        ca  =  sqrt   (1 - sa*sa);
+        gun_rot = grot.b*sa + grot.a*ca;
+        */
+
+        sa = clamp( -dir.dot( grot.c ), -0.01, 0.01 );
+        ca = sqrt(1 - sa*sa);
+        turret.lrot.c.rotate_csa( ca, sa, turret.lrot.b );
+        turret.lrot.a.rotate_csa( ca, sa, turret.lrot.b );
+
+	}
 
 	double ray( const Vec3d &ray0, const Vec3d &hRay, int& ipl, VehicleBlock*& block, double& effthick ){
         Vec3d normal;
@@ -155,16 +192,8 @@ class Tank : public Warrior3D { public:
             double dh = h-gp.y;
             if(dh>0){
                 Vec3d f;
-                double fnormal = (gv.y<0)?dh*wheels[i].k:0.0;
-                //double clat  = 30.0;
-                //double cvert = (gv.y<0)?30.0:0.0;
-                //f.set(-dv.x*dh*clat, dh*cvert, -dv.y*dh*clat);
-                //f.set( 0.0, fnormal, 0.0 );
+                double fnormal = dh*wheels[i].k; if( gv.y>0 ) fnormal*=0.5;
                 f.set( -dv.x*fnormal, fnormal, -dv.y*fnormal );
-                //f.add_mul( mrot.a,  fnormal*0.1*power_gear[i&1]*maxPower );
-                //f.add_mul( mrot.c, -fnormal*0.5*gv.dot(mrot.c) );
-                //f.add_mul( mrot.a,  fnormal*0.5*(power_gear[i&1]*maxPower - gv.dot(mrot.a)*wheelLock[i&1] ) );
-
                 f.add_mul( mrot.c, -5.0*gv.dot(mrot.c) );
                 f.add_mul( mrot.a,  5.0*(power_gear[i&1]*maxPower - gv.dot(mrot.a)*wheelLock[i&1] ) );
                 apply_force(f,gdp);

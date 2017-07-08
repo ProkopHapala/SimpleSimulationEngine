@@ -15,7 +15,7 @@ class Warrior3D : public RigidBody { public:
     bool    trigger = false;
     Vec3d   surf;
     Quat4d  look;
-    Vec3d   gun_rot;
+    Vec3d   gun_rot = (Vec3d){1.0,0.0,0.0};
     double  until_reaload = 0;
     double  hground       = 0.5;
 

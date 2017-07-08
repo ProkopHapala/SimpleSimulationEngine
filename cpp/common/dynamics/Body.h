@@ -15,10 +15,13 @@
 // ========================
 
 class KinematicBody{ public:
-	Vec3d lpos;
-	Mat3d lrot;
+	Vec3d lpos = (Vec3d){0.0,0.0,0.0};
+	Mat3d lrot = (Mat3d){ 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0};
 	inline void globalPos( const Vec3d& pos0, const Mat3d& rot0, Vec3d& gpos ){ rot0.dot_to( lpos, gpos ); gpos.add( pos0 ); }
 	inline void globalRot( const Mat3d& rot0,                    Mat3d& grot ){ grot.set_mmul( lrot, rot0 ); }
+
+    inline void globalPosT( const Vec3d& pos0, const Mat3d& rot0, Vec3d& gpos ){ rot0.dot_to_T   ( lpos, gpos ); gpos.add( pos0 ); }
+	inline void globalRotT( const Mat3d& rot0,                    Mat3d& grot ){ grot.set_mmul_NT( lrot, rot0 ); }
 	//inline void globalRot( const Mat3d& rot0, Mat3d& grot ){ grot.set_mmul_NT( lrot, rot0 ); }
 };
 
@@ -28,14 +31,14 @@ class KinematicBody{ public:
 
 class PointBody{ public:
 	// parameters
-	double	mass;
+	double	mass    = 1.0;
 	// auxiliary parameters
-	double	invMass;
+	double	invMass = 1.0;
 	// State variables
-	Vec3d pos;
-	Vec3d vel;
+	Vec3d pos = (Vec3d){0.0,0.0,0.0};
+	Vec3d vel = (Vec3d){0.0,0.0,0.0};
 	// auxiliary variables
-	Vec3d force;
+	Vec3d force = (Vec3d){0.0,0.0,0.0};
 
 	// ==== function declarations
 
@@ -66,19 +69,19 @@ class PointBody{ public:
 
 class RigidBody : public PointBody { public:
 	// parameters
-	Mat3d	Ibody;
+	Mat3d	Ibody    = (Mat3d){ 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0};
 	// auxiliary parameters
-	Mat3d	invIbody;
+	Mat3d	invIbody = (Mat3d){ 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0};
 	// State variables
-	Quat4d qrot;
-	Vec3d      L;
+	Quat4d qrot  = (Quat4d){0.0,0.0,0.0,1.0};
+	Vec3d      L = (Vec3d){0.0,0.0,0.0};
 	// auxiliary variables
-	Mat3d rotMat;
-	Mat3d invI;
-	Vec3d omega;
-	Vec3d torq;
+	Mat3d rotMat = (Mat3d){ 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0};
+	Mat3d invI   = (Mat3d){ 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0};
+	Vec3d omega  = (Vec3d){0.0,0.0,0.0};
+	Vec3d torq   = (Vec3d){0.0,0.0,0.0};
 
-	int shape; // displayList
+	int shape = 0; // displayList
 
 	// ==== function declarations
 
