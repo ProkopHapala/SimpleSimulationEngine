@@ -41,6 +41,15 @@ class VehicleBlock : public KinematicBody, public Mesh { public:
     int glo_captions;
     int glo_armor;
 
+    double ray( const Vec3d &ray0_, const Vec3d &hRay_, Vec3d& normal, int& imin ){
+        //ray0 -= lpos;
+
+        Vec3d hRay = lrot.dot(hRay_);
+        Vec3d ray0 = lrot.dot(ray0_);
+        return Mesh::ray( ray0, hRay, normal, imin );
+    }
+
+
     double getMaxArmor(){
         double maxThickness = 0.0;
         for(ArmorPlate& pl : armor){
@@ -151,11 +160,19 @@ class Tank : public Warrior3D { public:
 
 	}
 
-	double ray( const Vec3d &ray0, const Vec3d &hRay, int& ipl, VehicleBlock*& block, double& effthick ){
+	double ray( const Vec3d &ray0_, const Vec3d &hRay_, int& ipl, VehicleBlock*& block, double& effthick ){
         Vec3d normal;
 	    int itr,itr2;
 	    ipl=-1;
         block = &hull;
+
+        //ray0.sub(pos);
+        //hRay = rotMat.dot( hRay );
+        //ray0 = rotMat.dot( ray0-pos );
+
+        Vec3d hRay = rotMat.dotT( hRay_ );
+        Vec3d ray0 = rotMat.dotT( ray0_-pos );
+
         double t  = hull  .ray( ray0, hRay, normal, itr  );
         double t2 = turret.ray( ray0, hRay, normal, itr2 );
         if( (itr2>=0)&&(t2<t) ){

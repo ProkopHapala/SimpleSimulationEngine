@@ -276,6 +276,7 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     *tank2 = *warrior1;
     tank2->pos.add(5.0,5.0,10.0);
     world.registrWarrior( tank2 );
+    tank2->rotateTurret( M_PI/3.0 );
 
     zoom = 5.0;
     first_person = true;
@@ -367,8 +368,8 @@ void Tanks_single::draw(){
     //Vec3d hRay = camMat.c;
     //Vec3d ray0 = camPos;
 
-    //hRay = camMat.c; ray0 = camPos;
-    hRay = warrior1->gun_rot; ray0 = warrior1->pos;
+    hRay = camMat.c; ray0 = camPos;
+    //hRay = warrior1->gun_rot; ray0 = warrior1->pos;
 
     Tank * tank2 = (Tank*)world.warriors[1];
     int ipl; VehicleBlock* block; double effthick;
@@ -376,8 +377,19 @@ void Tanks_single::draw(){
     if( ipl>=0 ){
         glColor3f(0.0f,1.0f,0.0f);
         //Draw3D::drawVecInPos( normal, ray0 + camMat.c*t );
-        Draw3D::drawVecInPos( block->armor[ipl].normal, ray0 + hRay*t );
-        Draw3D::drawPolygonBorder( ipl, *block );
+        printf( "ray t %g \n", t );
+        //Draw3D::drawPointCross( ray0 + hRay*t, 100.5 );
+
+        Mat3d grot;
+        block->globalRotT( tank2->rotMat, grot );
+
+        Draw3D::drawVecInPos( grot.dotT(block->armor[ipl].normal), ray0 + hRay*t );
+        glPushMatrix();
+            float glMat[16];
+            Draw3D::toGLMat( tank2->pos, grot, glMat );
+            glMultMatrixf( glMat );
+            Draw3D::drawPolygonBorder( ipl, *block );
+        glPopMatrix();
         char str[64];
         sprintf(str,"%4.0fmm\0", effthick );
         Draw3D::drawText(str, ray0 + hRay*t, fontTex, 0.2, 0,0);
