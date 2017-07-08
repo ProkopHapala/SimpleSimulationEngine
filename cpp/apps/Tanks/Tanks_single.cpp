@@ -275,6 +275,8 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     Tank* tank2 = new Tank();
     *tank2 = *warrior1;
     tank2->pos.add(5.0,5.0,10.0);
+    tank2->setPose( {5.0d,5.0d,10.0d}, {0.7d,0.0d,0.7d}, {0.0d,1.0d,0.0d} );
+
     world.registrWarrior( tank2 );
     tank2->rotateTurret( M_PI/3.0 );
 
@@ -373,7 +375,8 @@ void Tanks_single::draw(){
 
     Tank * tank2 = (Tank*)world.warriors[1];
     int ipl; VehicleBlock* block; double effthick;
-    double t = tank2->ray( ray0, hRay, ipl, block, effthick );
+    //Vec3d normal;
+    double t = tank2->ray( ray0, hRay, ipl, block, effthick, normal );
     if( ipl>=0 ){
         glColor3f(0.0f,1.0f,0.0f);
         //Draw3D::drawVecInPos( normal, ray0 + camMat.c*t );
@@ -383,7 +386,9 @@ void Tanks_single::draw(){
         Mat3d grot;
         block->globalRotT( tank2->rotMat, grot );
 
-        Draw3D::drawVecInPos( grot.dotT(block->armor[ipl].normal), ray0 + hRay*t );
+        //Draw3D::drawVecInPos( grot.dotT(block->armor[ipl].normal), ray0 + hRay*t );
+        //Draw3D::drawVecInPos( grot.dotT(normal), ray0 + hRay*t );
+        Draw3D::drawVecInPos( normal, ray0 + hRay*t );
         glPushMatrix();
             float glMat[16];
             Draw3D::toGLMat( tank2->pos, grot, glMat );

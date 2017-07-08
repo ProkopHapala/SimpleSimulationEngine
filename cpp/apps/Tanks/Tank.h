@@ -32,7 +32,7 @@ class Wheel{ public:
 class ArmorPlate{ public:
     double thickness;
     double mass;
-    Vec3d  normal;
+    //Vec3d  normal;
     int material;
 };
 
@@ -43,10 +43,10 @@ class VehicleBlock : public KinematicBody, public Mesh { public:
 
     double ray( const Vec3d &ray0_, const Vec3d &hRay_, Vec3d& normal, int& imin ){
         //ray0 -= lpos;
-
         Vec3d hRay = lrot.dot(hRay_);
         Vec3d ray0 = lrot.dot(ray0_);
         return Mesh::ray( ray0, hRay, normal, imin );
+        //normal     = lrot.dotT(normal);
     }
 
 
@@ -62,11 +62,12 @@ class VehicleBlock : public KinematicBody, public Mesh { public:
         double m = 0.0;
         for(int i=0; i<polygons.size(); i++){
             double D  = armor[i].thickness*1e-3;
-            double S  = polygonArea( i, &armor[i].normal );
+            //double S  = polygonArea( i, &armor[i].normal );
+            double S  = polygonArea( i, NULL );
             double mi = D*S*density;
             armor[i].mass = mi;
             m+=mi;
-            printf( "%i D %f S %f dm %f n (%g,%g,%g)%g \n", i, D, S, D*S*density, armor[i].normal.x, armor[i].normal.y, armor[i].normal.z, armor[i].normal.norm() );
+            //printf( "%i D %f S %f dm %f n (%g,%g,%g)%g \n", i, D, S, D*S*density, armor[i].normal.x, armor[i].normal.y, armor[i].normal.z, armor[i].normal.norm() );
         }
         return m;
     }
@@ -146,13 +147,6 @@ class Tank : public Warrior3D { public:
         ca = sqrt( 1 - sa*sa );
         gun_rot = grot.b*sa + grot.a*ca;
 
-        /*
-        // instant
-        sa  =  dir.dot( grot.b );
-        ca  =  sqrt   (1 - sa*sa);
-        gun_rot = grot.b*sa + grot.a*ca;
-        */
-
         sa = clamp( -dir.dot( grot.c ), -0.01, 0.01 );
         ca = sqrt(1 - sa*sa);
         turret.lrot.c.rotate_csa( ca, sa, turret.lrot.b );
@@ -160,30 +154,35 @@ class Tank : public Warrior3D { public:
 
 	}
 
-	double ray( const Vec3d &ray0_, const Vec3d &hRay_, int& ipl, VehicleBlock*& block, double& effthick ){
-        Vec3d normal;
+	double ray( const Vec3d &ray0_, const Vec3d &hRay_, int& ipl, VehicleBlock*& block, double& effthick, Vec3d& normal ){
+        //ray0.sub(pos);
+        //hRay = rotMat.dot( hRay );
+        //ray0 = rotMat.dot( ray0-pos );
+        Vec3d hRay = rotMat.dotT( hRay_ );
+        Vec3d ray0 = rotMat.dotT( ray0_-pos );
+
+        Vec3d normal2;
 	    int itr,itr2;
 	    ipl=-1;
         block = &hull;
 
-        //ray0.sub(pos);
-        //hRay = rotMat.dot( hRay );
-        //ray0 = rotMat.dot( ray0-pos );
-
-        Vec3d hRay = rotMat.dotT( hRay_ );
-        Vec3d ray0 = rotMat.dotT( ray0_-pos );
-
-        double t  = hull  .ray( ray0, hRay, normal, itr  );
-        double t2 = turret.ray( ray0, hRay, normal, itr2 );
+        double t  = hull  .ray( ray0, hRay, normal,  itr  );
+        double t2 = turret.ray( ray0, hRay, normal2, itr2 );
         if( (itr2>=0)&&(t2<t) ){
             itr=itr2;
             block = &turret;
             t=t2;
-        };
+            normal=normal2;
+            //normal     = lrot.dotT(normal);
+        }
+        normal.normalize();
+        normal = rotMat.dot(normal);
         if( itr>=0 ){
             ipl = block->tri2poly[itr];
             double thick    = block->armor[ipl].thickness;
-            double cdot     = block->armor[ipl].normal.dot( hRay );
+            //double cdot     = block->armor[ipl].normal.dot( hRay );
+            normal = block->lrot.dotT(normal);
+            double cdot     = normal.dot( hRay_ );
             effthick = thick/-cdot;
         }
         return t;
