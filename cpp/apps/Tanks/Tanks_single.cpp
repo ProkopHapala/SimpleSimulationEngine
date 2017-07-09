@@ -78,8 +78,14 @@ void drawTankWheels(Tank * tank){
     }
 }
 
-Terrain25D *  prepareTerrain()      {
-    Terrain25D * terrain = new Terrain25D();
+Terrain25D *  prepareTerrain(){
+//    Terrain25D * terrain = new Terrain25D();
+
+    Terrain25D_bicubic * terrain = new Terrain25D_bicubic();
+    terrain->ruler.setup( (Vec2d){10.0,10.0}*-16, (Vec2d){10.0d,10.0d} );
+    terrain->allocate( {32,32} );
+    terrain->makeRandom( -2.0, 2.0 );
+
     terrain->shape = glGenLists(1);
     glNewList( terrain->shape , GL_COMPILE );
     int na=100,nb=100;
@@ -112,9 +118,13 @@ Terrain25D *  prepareTerrain()      {
             }
             v2 = (float)terrain->eval( p2, dv2 );
             oldvals[i3] = v2; oldvals[i3+1] = dv2.x; oldvals[i3+2] = dv2.y;
-            glNormal3f(-dv1.x,1.0,-dv1.y); glVertex3f( (float)p1.x,  v1, (float)p1.y  );
+            glNormal3f(-dv1.x,1.0,-dv1.y); glVertex3f( (float)p1.x,  v1, (float)p1.y );
             glNormal3f(-dv2.x,1.0,-dv2.y); glVertex3f( (float)p2.x,  v2, (float)p2.y );
-            printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
+
+            //glColor3f(v1,0.5,-v1); glVertex3f( (float)p1.x,  v1, (float)p1.y );
+            //glColor3f(v2,0.5,-v2); glVertex3f( (float)p2.x,  v2, (float)p2.y );
+
+            //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
         }
         glEnd();
     }
@@ -130,6 +140,7 @@ Terrain25D *  prepareTerrain()      {
         }
 
     }
+
     glEnd();
     glEndList();
     return terrain;
@@ -172,6 +183,8 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     //new Terrain25D();
     world.terrain = prepareTerrain();
+
+    //exit(0);
 
     // ---- Objects
     int sphereShape = glGenLists(1);
@@ -232,9 +245,8 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     warrior1->fromFile( "data/tank1.txt" );
     warrior1->kind = 0;
     warrior1->hground = 2.5;
-    warrior1->setPose( {0.0d,0.0d,0.0d}, {0.0d,0.0d,1.0d}, {0.0d,1.0d,0.0d} );
+    warrior1->setPose( {0.0d,2.0d,0.0d}, {0.0d,0.0d,1.0d}, {0.0d,1.0d,0.0d} );
     world.registrWarrior( warrior1 );
-    warrior1->pos.set( 0.0, 0.0, -15.0 );
     warrior1->makeWheels( 3, -3.0, 3.0, 3.0, -1.7, 50.0, 0.0, 0.01  );
 
     printf( "hull   mass : %g [kg]\n", warrior1->hull  .getArmorMass( 7890.0 ) );
@@ -274,7 +286,7 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     Tank* tank2 = new Tank();
     *tank2 = *warrior1;
-    tank2->pos.add(5.0,5.0,10.0);
+    //tank2->pos.add(5.0,5.0,10.0);
     tank2->setPose( {5.0d,5.0d,10.0d}, {0.7d,0.0d,0.7d}, {0.0d,1.0d,0.0d} );
 
     world.registrWarrior( tank2 );
@@ -301,9 +313,11 @@ void Tanks_single::draw(){
 
     //warrior1->gun_rot.set( camMat.c );
 
-    world.update_world( );
-
     if(world.terrain) glCallList(world.terrain->shape);
+
+    //return;
+
+    world.update_world( );
 
     Vec3d hRay,ray0,normal;
     hRay.set(camMat.c);

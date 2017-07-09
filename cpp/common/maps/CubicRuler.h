@@ -5,10 +5,6 @@
 #include "Vec3.h"
 #include "Mat3.h"
 
-
-
-
-
 const static int CubicRuler_nFaces  = 6;
 const static int CubicRuler_nEdges  = 12;
 const static int CubicRuler_nVerts  = 8;
@@ -20,7 +16,6 @@ constexpr static int  CubicRuler_neighs[ CubicRuler_nNeighs ][3] = {
     { -1,-1,0 },{ -1,+1,0 }, { +1,-1,0 },{ +1,+1,0 },  { 0,-1,-1 },{ 0,-1,+1 }, { 0,+1,-1 },{ 0,+1,+1 },    { -1,0,-1 },{ +1,0,-1 }, { -1,0,+1 },{ +1,0,+1 },
     { -1,-1,-1  },{ -1,-1,+1 },  { -1,+1,-1 },{ -1,+1,+1 },  { +1,-1,-1  },{ +1,-1,+1 },  { +1,+1,-1 },{ +1,+1,+1 },
 };
-
 
 // ===== point index conversion
 

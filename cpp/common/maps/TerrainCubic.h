@@ -17,7 +17,6 @@ class TerrainCubic : public Map2D {
     public:
 	double * heights;
 
-
     // ==== functions
     // evaluation
     double getVal ( double x, double y );

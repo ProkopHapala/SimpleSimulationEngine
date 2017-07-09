@@ -17,7 +17,7 @@ ${COMMON_SRCS}/engine/Turret.cpp
 ${COMMON_SRCS}/engine/Gun3D.cpp
 ${COMMON_SRCS}/engine/Projectile3D.cpp
 ${COMMON_SRCS}/engine/Object3D.cpp
-${COMMON_SRCS}/engine/Terrain25D.h
+${COMMON_SRCS}/engine/Terrain25D.cpp
 ${COMMON_SRCS}/engine/Collisions.cpp
 ${COMMON_SRCS}/dynamics/Body.cpp
 ${COMMON_SRCS}/dynamics/Body2D.cpp
