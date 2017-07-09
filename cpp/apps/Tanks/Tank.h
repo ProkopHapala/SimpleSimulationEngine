@@ -2,6 +2,8 @@
 #ifndef Tank_h
 #define Tank_h
 
+#include "appliedPhysics.h"
+
 #include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
@@ -14,7 +16,7 @@
 #include "Turret.h"
 
 class Wheel{ public:
-    double k,m,damp;
+    double k,mass,damp;
     Vec3d  lpos;
     double h,vh,fh;
 
@@ -24,8 +26,8 @@ class Wheel{ public:
         vh     += ( vh*damp + fh + getSpringForce() )*dt;
         lpos.z += vh*dt;
     }
-    inline void init( Vec3d lpos_, double k_, double m_, double damp_ ){
-        k=k_; m=m_; damp=damp_; lpos=lpos_; h=lpos.y; vh=0.0; fh=0.0;
+    inline void init( Vec3d lpos_, double k_, double mass_, double damp_ ){
+        k=k_; mass=mass_; damp=damp_; lpos=lpos_; h=lpos.y; vh=0.0; fh=0.0;
     }
 };
 
@@ -48,7 +50,6 @@ class VehicleBlock : public KinematicBody, public Mesh { public:
         return Mesh::ray( ray0, hRay, normal, imin );
         //normal     = lrot.dotT(normal);
     }
-
 
     double getMaxArmor(){
         double maxThickness = 0.0;
@@ -112,15 +113,15 @@ class Tank : public Warrior3D { public:
 
     double power_gear[2] = {0.0,0.0};
 
-	void makeWheels( int n, double xmin, double xmax, double width, double height, double k, double m, double damp ){
+	void makeWheels( int n, double xmin, double xmax, double width, double height, double k, double mass, double damp ){
         nwheel = n*2;
         wheels = new Wheel[nwheel];
         double dx = (xmax-xmin)/(nwheel-1);
         //printf( "makeWheels n %i xmin %g xmax %g width %g height %g k %g m %g damp %g \n", n, xmin, xmax, width, height, k, m, damp );
         for(int i=0;i<n;i++){
             int i2 = i<<1;
-            wheels[i2  ].init( {xmin+dx*i2, height, width*+0.5}, k, m, damp );
-            wheels[i2+1].init( {xmin+dx*i2, height, width*-0.5}, k, m, damp );
+            wheels[i2  ].init( {xmin+dx*i2, height, width*+0.5}, k, mass, damp );
+            wheels[i2+1].init( {xmin+dx*i2, height, width*-0.5}, k, mass, damp );
             //printf( "wheel %i (%g,%g,%g)\n", i2  , wheels[i2  ].lpos.x, wheels[i2  ].lpos.y, wheels[i2  ].lpos.z   );
             //printf( "wheel %i (%g,%g,%g)\n", i2+1, wheels[i2+1].lpos.x, wheels[i2+1].lpos.y, wheels[i2+1].lpos.z   );
         }
@@ -208,7 +209,7 @@ class Tank : public Warrior3D { public:
             double dh = h-gp.y;
             if(dh>0){
                 Vec3d f;
-                double fnormal = dh*wheels[i].k; if( gv.y>0 ) fnormal*=0.5;
+                double fnormal = dh*wheels[i].k; if( gv.y>0 ) fnormal*=wheels[i].damp;
                 f.set( -dv.x*fnormal, fnormal, -dv.y*fnormal );
                 f.add_mul( mrot.c, -5.0*gv.dot(mrot.c) );
                 f.add_mul( mrot.a,  5.0*(power_gear[i&1]*maxPower - gv.dot(mrot.a)*wheelLock[i&1] ) );

@@ -31,7 +31,6 @@
 #include "Projectile3D.h"
 #include "Shooter.h"
 
-
 int fontTex;
 
 void armorColorScale( float f ){
@@ -247,7 +246,7 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     warrior1->hground = 2.5;
     warrior1->setPose( {0.0d,2.0d,0.0d}, {0.0d,0.0d,1.0d}, {0.0d,1.0d,0.0d} );
     world.registrWarrior( warrior1 );
-    warrior1->makeWheels( 3, -3.0, 3.0, 3.0, -1.7, 50.0, 0.0, 0.01  );
+    warrior1->makeWheels( 3, -3.0, 3.0, 3.0, -1.7, 20.0, 1.0, 0.8  );
 
     printf( "hull   mass : %g [kg]\n", warrior1->hull  .getArmorMass( 7890.0 ) );
     printf( "turret mass : %g [kg]\n", warrior1->turret.getArmorMass( 7890.0 ) );
@@ -287,7 +286,7 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     Tank* tank2 = new Tank();
     *tank2 = *warrior1;
     //tank2->pos.add(5.0,5.0,10.0);
-    tank2->setPose( {5.0d,5.0d,10.0d}, {0.7d,0.0d,0.7d}, {0.0d,1.0d,0.0d} );
+    tank2->setPose( {5.0d,3.0d,10.0d}, {0.7d,0.0d,0.7d}, {0.0d,1.0d,0.0d} );
 
     world.registrWarrior( tank2 );
     tank2->rotateTurret( M_PI/3.0 );
