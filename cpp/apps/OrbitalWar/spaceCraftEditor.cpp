@@ -24,29 +24,38 @@
 #include "GUI.h"
 #include "testUtils.h"
 
+enum class EDIT_MODE : int { vertex=0, edge=1, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
 
 void drawTruss( Truss& truss ){
+    //printf("=============\n");
     for( int i=0; i<truss.blocks.size(); i++ ){
         Draw::color_of_hash(i+15454);
         Vec2i bj,bi = truss.blocks[i];
         if( i==(truss.blocks.size()-1) ){ bj = {truss.points.size(),truss.edges.size()}; }else{ bj = truss.blocks[i+1]; };
-        Draw3D::drawPoints( bj.a-bi.a, &truss.points[bi.a], 0.1 );
+        //Draw3D::drawPoints( bj.a-bi.a, &truss.points[bi.a], 0.1 );
         glBegin( GL_LINES );
-        for( int i=bi.b; i<bj.b; i++ ){
+        for( int j=bi.b; j<bj.b; j++ ){
             Vec3f a,b;
-            convert( truss.points[truss.edges[i].a], a );
-            convert( truss.points[truss.edges[i].b], b );
-            glVertex3f( a.x, a.y, a.z );
-            glVertex3f( b.x, b.y, b.z );
+            TrussEdge& ed = truss.edges[j];
+            convert( truss.points[ed.a], a ); glVertex3f( a.x, a.y, a.z );
+            convert( truss.points[ed.b], b ); glVertex3f( b.x, b.y, b.z );
+
+            //if(i==(truss.blocks.size()-1)){ printf( "%i %i (%i,%i) (%g,%g,%g) (%g,%g,%g) \n", i, j, ed.a, ed.b, a.x, a.y, a.z,  b.x, b.y, b.z ); }
         }
         glEnd();
     }
+    //printf( "points.size() %i \n", truss.points.size() );
 };
 
 class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 	public:
 
     Truss truss;
+
+    //EDIT_MODE edit_mode = EDIT_MODE::vertex;
+    EDIT_MODE edit_mode = EDIT_MODE::edge;
+    int picked = -1;
+    Vec3d mouse_ray0;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -65,7 +74,9 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     Truss trussPlan;
     trussPlan.loadXYZ(  "data/octShip.xyz" );
 
-    trussPlan.affineTransform( (Mat3d){7.0,0.0,0.0, 0.0,7.0,0.0, 0.0,0.0,7.0}, false );
+    //trussPlan.affineTransform( (Mat3d){5.5,0.0,0.0, 0.0,5.5,0.0, 0.0,0.0,5.5}, false );
+
+    trussPlan.affineTransform( (Mat3d){6,0.0,0.0, 0.0,6,0.0, 0.0,0.0,6}, false );
 
     GirderParams * gpar = new GirderParams [trussPlan.edges.size()];
     //Vec3d ups  = new Vec3d[trussPlan.edges.size()];
@@ -79,7 +90,11 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     };
 
     //truss.makeGriders( 6, &trussPlan.edges[0], &trussPlan.points[0], gpar, ups );
-    truss.makeGriders( trussPlan, gpar, ups );
+    //truss.makeGriders( trussPlan, gpar, ups, NULL );
+    std::vector<Vec2i> ends;
+    truss.makeGriders( trussPlan, gpar, ups, &ends );
+    truss.autoBridge(ends.size(), &ends[0], 0.8, 0 );
+
     delete [] gpar;
     //delete [] ups;
 
@@ -91,7 +106,27 @@ void SpaceCraftEditGUI::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+	glDisable(GL_DEPTH_TEST);
+
     drawTruss( truss );
+
+    //printf( "%i\n", EDIT_MODE::vertex );
+    if(picked>=0){
+        switch(edit_mode){
+            case EDIT_MODE::vertex:
+                glColor3f(1.0,1.0,1.0); Draw3D::drawPointCross( truss.points[picked], 0.3 );
+                if ( SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_LEFT) ){ Draw3D::drawLine(truss.points[picked], mouse_ray0); }
+                break;
+            case EDIT_MODE::edge  : glColor3f(1.0,1.0,1.0); auto ed = truss.edges[picked]; Draw3D::drawLine( truss.points[ed.a], truss.points[ed.b] ); break;
+        }
+
+    }
+
+
+
+
+    mouse_ray0 = camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
+
     //glColor3f(0.0f,0.0f,0.0f); drawTruss( truss.edges.size(), &truss.edges[0], &truss.points[0] );
     //glColor3f(1.0f,1.0f,1.0f); Draw3D::drawPoints( truss.points.size(), &truss.points[0], 0.1 );
 
@@ -130,21 +165,28 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                //case SDLK_f:  warrior1->tryJump(); break;
+                case SDLK_m:  edit_mode = (EDIT_MODE)((((int)edit_mode)+1)%((int)EDIT_MODE::size)); printf("edit_mode %i\n", (int)edit_mode); break;
                 //case SDLK_h:  warrior1->tryJump(); break;
             }
             break;
-
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
-                case SDL_BUTTON_LEFT: break;
+                case SDL_BUTTON_LEFT:
+                    switch(edit_mode){
+                        case EDIT_MODE::vertex: picked = truss.pickVertex( mouse_ray0, camMat.c, 0.5  ); printf("picked %i\n", picked); break;
+                        case EDIT_MODE::edge  : picked = truss.pickEdge  ( mouse_ray0, camMat.c, 0.25 ); printf("picked %i\n", picked); break;
+                    }; break;
                 case SDL_BUTTON_RIGHT: break;
             }
             break;
 
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
-                case SDL_BUTTON_LEFT:break;
+                case SDL_BUTTON_LEFT:
+                    switch(edit_mode){
+                        case EDIT_MODE::vertex: int ip2 = truss.pickVertex( mouse_ray0, camMat.c, 0.5  ); if((picked>=0)&(ip2!=picked)); truss.edges.push_back((TrussEdge){picked,ip2,0}); break;
+                        //case EDIT_MODE::edge  : picked = truss.pickEdge  ( mouse_ray0, camMat.c, 0.25 ); printf("picked %i\n", picked); break;
+                    }; break;
                 case SDL_BUTTON_RIGHT:break;
             }
             break;
