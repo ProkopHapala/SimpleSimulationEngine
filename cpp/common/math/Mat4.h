@@ -142,10 +142,10 @@ class Mat4TYPE{
 // ====== matrix solver
 
 	void print(){
-        printf( " %f %f %f \n", ax, ay, az, aw );
-        printf( " %f %f %f \n", bx, by, bz, bw );
-        printf( " %f %f %f \n", cx, cy, cz, cw );
-        printf( " %f %f %f \n", dx, dy, dz, dw );
+        printf( " %f %f %f %f \n", ax, ay, az, aw );
+        printf( " %f %f %f %f \n", bx, by, bz, bw );
+        printf( " %f %f %f %f \n", cx, cy, cz, cw );
+        printf( " %f %f %f %f \n", dx, dy, dz, dw );
     }
 
 };
