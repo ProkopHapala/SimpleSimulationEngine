@@ -22,8 +22,16 @@ add_executable( test_SpaceFlightODE
 )
 target_link_libraries( test_SpaceFlightODE  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable( spaceCraftEditor
+    spaceCraftEditor.cpp
+    $<TARGET_OBJECTS:SDL2OGL>
+    $<TARGET_OBJECTS:SoftBody>
+    $<TARGET_OBJECTS:DynamicOpt>
+)
+target_link_libraries( spaceCraftEditor  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_custom_command(
-    TARGET ${PROJECT_NAME} orbitEditor test_OptContinuousThrust test_SpaceFlightODE
+    TARGET ${PROJECT_NAME} orbitEditor test_OptContinuousThrust test_SpaceFlightODE spaceCraftEditor
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${MY_SRC_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/py ${CMAKE_CURRENT_BINARY_DIR}/py

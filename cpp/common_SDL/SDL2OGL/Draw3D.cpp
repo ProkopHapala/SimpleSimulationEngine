@@ -464,6 +464,28 @@ void drawPolygonBorder( int ipl, Mesh& mesh ){
     Draw3D:: drawPolygonBorder( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
 }
 
+void drawPoints( int n, const  Vec3d * points, float sz ){
+    if(sz<=0){
+        glBegin( GL_POINTS );
+        for( int i=0; i<n; i++ ){
+            Vec3f a;
+            convert( points[i], a );
+            glVertex3f( a.x, a.y, a.z );
+        }
+        glEnd();
+	}else{
+        glBegin( GL_LINES );
+        for( int i=0; i<n; i++ ){
+            Vec3f vec;
+            convert( points[i], vec );
+            glVertex3f( vec.x-sz, vec.y, vec.z ); glVertex3f( vec.x+sz, vec.y, vec.z );
+            glVertex3f( vec.x, vec.y-sz, vec.z ); glVertex3f( vec.x, vec.y+sz, vec.z );
+            glVertex3f( vec.x, vec.y, vec.z-sz ); glVertex3f( vec.x, vec.y, vec.z+sz );
+        }
+        glEnd();
+	}
+};
+
 void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 	int n2 = nlinks<<1;
 	glBegin( GL_LINES );
