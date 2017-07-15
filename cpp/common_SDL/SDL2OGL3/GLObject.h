@@ -80,7 +80,6 @@ class GLObject{
 	void afterDraw();
 	void draw_instance();
 
-
 	inline void setIndexes( int nInd_, int * cbuff_ ){
         nInd = nInd_;
         //int nd=nInd*3;

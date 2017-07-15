@@ -52,8 +52,8 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 
     Truss truss;
 
-    //EDIT_MODE edit_mode = EDIT_MODE::vertex;
-    EDIT_MODE edit_mode = EDIT_MODE::edge;
+    EDIT_MODE edit_mode = EDIT_MODE::vertex;
+    //EDIT_MODE edit_mode = EDIT_MODE::edge;
     int picked = -1;
     Vec3d mouse_ray0;
 

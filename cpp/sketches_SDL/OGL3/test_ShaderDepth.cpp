@@ -53,7 +53,6 @@ GLfloat camRot[9] = {
 
 GLfloat cam_pos      [3] = { 0.0f,  0.0f,  -10.0f };
 GLfloat light_pos    [3] = { 1.0f,  1.0f,   -1.0f };
-
 GLfloat lightColor   [3] = { 1.0f,  0.9f,   0.8f  };
 //GLfloat lightColor   [3] = { 1.0f,  1.0f,   1.0f  };
 GLfloat diffuseColor [3] = { 1.0f,  1.0f,   1.0f  };
@@ -62,11 +61,9 @@ GLfloat ambientColor [3] = { 0.2f,  0.2f,   0.3f  };
 GLfloat specularColor[3] = { 1.0f,  1.0f,   1.0f  };
 //GLfloat specularColor[3] = { 0.0f,  0.0f,   0.0f  };
 
-
-float resolution[2] = {800,800};
-
-float terrain_0[2]   = {128.0,128.0};
-float terrain_size[2]= {256.0,256.0};
+float resolution[2]   = {800,800};
+float terrain_0[2]    = {128.0,128.0};
+float terrain_size[2] = {256.0,256.0};
 
 
 int ninstancs = 10;
