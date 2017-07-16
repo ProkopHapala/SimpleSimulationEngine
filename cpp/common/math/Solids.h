@@ -1,10 +1,10 @@
-    #ifndef  Solids_h
-    #define  Solids_h
+#ifndef  Solids_h
+#define  Solids_h
 
-    #include "fastmath.h"
-    #include "Vec3.h"
+#include "fastmath.h"
+#include "Vec3.h"
 
-    class Solid{
+    class Solid{ public:
 
         int nvert;
         int nedge;
@@ -12,7 +12,7 @@
 
         Vec3d * verts;
         int   * edges;
-        Vec3i * tris;  // later we may do polygon faces ?
+        int   * tris;  // later we may do polygon faces ?
 
     };
 
@@ -40,6 +40,9 @@
         static int       Tetrahedron_tris    [Tetrahedron_ntris *3] = { 0,2,1, 0,1,3, 0,3,2,  1,2,3 };
         static int       Tetrahedron_ngons   [Tetrahedron_nfaces  ] = { 3,     3,     3,      3     };
         static int       Tetrahedron_faces   [Tetrahedron_nfaces*3] = { 0,2,1, 0,1,3, 0,3,2,  1,2,3 }; // order is important for normals
+
+        //const static Solid Tetrahedron = (Solid){Tetrahedron_nverts,Tetrahedron_nedges,Tetrahedron_ntris, NULL,NULL,NULL};
+        //const static Solid Tetrahedron = (Solid){Tetrahedron_nverts,Tetrahedron_nedges,Tetrahedron_ntris, &Tetrahedron_verts,&Tetrahedron_edges,&Tetrahedron_tris};
 
         // ==== Octahedron
 

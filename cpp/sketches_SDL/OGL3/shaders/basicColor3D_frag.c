@@ -13,7 +13,6 @@ out vec3 color;
 uniform vec3 light_dir;
 
 void main(){
-
 	color = fragColor;
 	gl_FragDepth = gl_FragCoord.z;
 }

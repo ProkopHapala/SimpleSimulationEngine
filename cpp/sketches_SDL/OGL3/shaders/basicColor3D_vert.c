@@ -16,8 +16,8 @@ uniform mat4 camMat;
 
 void main(){
 	vec3 position_world = modelPos + modelMat * vertPos_model;
-	gl_Position  = camMat   * vec4( position_world, 1 );
-	fragColor = vertColor;
+	gl_Position         = camMat   * vec4( position_world, 1 );
+	fragColor           = vertColor;
 }
 
 

@@ -65,6 +65,9 @@ class Mat4TYPE{
 	inline void  setColz( const VEC v ){ xz = v.x; yz = v.y; zz = v.z; wx = v.w; };
 	inline void  setColw( const VEC v ){ xw = v.x; yw = v.y; zw = v.z; wx = v.w; };
 
+    inline void setTranspose( MAT& m ){ setColx(m.a); setColy(m.b); setColz(m.c); setColw(m.d); };
+    inline MAT   transposed(){ MAT M; M.setColx(a); M.setColy(b); M.setColz(c); M.setColw(d); return M; };
+
 // ====== transpose
 
 	inline MAT operator* ( TYPE f   ) const { MAT m; m.a.set_mul(a,f); m.b.set_mul(b,f); m.c.set_mul(c,f); return m; };
@@ -128,9 +131,24 @@ class Mat4TYPE{
         //TYPE invdx = xmax-xmin; TYPE invdy = ymax-ymin; TYPE invdz = zmax-zmin; // WARRNING : THIS IS WRONG
         TYPE invdx = 1/(xmax-xmin); TYPE invdy = 1/(ymax-ymin); TYPE invdz = 1/(zmax-zmin);
         array[0 ]  = 2*zmin*invdx; array[1 ] = 0;            array[2 ] =  (xmax+xmin)*invdx;  array[3 ] = 0;
-        array[4 ]  = 0;            array[5 ] = 2*zmin*invdy; array[6 ] =  (ymin+ymax)*invdy;  array[7 ] = 0;
-        array[8 ]  = 0;            array[9 ] = 0;            array[10] = -(zmin+zmax)*invdz;  array[11] = -2*zmax*zmin*invdz;
+        array[4 ]  = 0;            array[5 ] = 2*zmin*invdy; array[6 ] =  (ymax+ymin)*invdy;  array[7 ] = 0;
+        array[8 ]  = 0;            array[9 ] = 0;            array[10] = -(zmax+zmin)*invdz;  array[11] = -2*zmax*zmin*invdz;
         array[12]  = 0;            array[13] = 0;            array[14] = -1;                  array[15] = 0;
+        /*
+        array[0 ]  = 2*zmin*invdx; array[1 ] = 0;            array[2 ] =  (xmax+xmin)*invdx;  array[3 ] = 0;
+        array[4 ]  = 0;            array[5 ] = 2*zmin*invdy; array[6 ] =  (ymax+ymin)*invdy;  array[7 ] = 0;
+        array[8 ]  = 0;            array[9 ] = 0;            array[10] = -(zmax+zmin)*invdz;  array[11] = zmax*zmin*invdz;
+        array[12]  = 0;            array[13] = 0;            array[14] = -1;                  array[15] = 0;
+        */
+    }
+
+    //   https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
+    void getPerspectiveMatrix( TYPE ctgx, TYPE ctgy, TYPE zmin, TYPE zmax ){
+        TYPE invdz = 1/(zmin-zmax);
+        array[0 ]  = 2*ctgx; array[1 ] = 0;      array[2 ] =  0;                  array[3 ] = 0;
+        array[4 ]  = 0;      array[5 ] = 2*ctgy; array[6 ] =  0;                  array[7 ] = 0;
+        array[8 ]  = 0;      array[9 ] = 0;      array[10] = (zmax+zmin)*invdz;   array[11] = 2*zmax*zmin*invdz;
+        array[12]  = 0;      array[13] = 0;      array[14] = -1;                  array[15] = 0;
     }
 
     void set( Mat3TYPE<TYPE> M ){

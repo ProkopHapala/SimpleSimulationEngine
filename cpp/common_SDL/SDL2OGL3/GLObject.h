@@ -4,6 +4,7 @@
 
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
+//#include <GL/glext.h>
 
 #include "Shader.h"
 
@@ -15,8 +16,7 @@
 // Vertex Array Object ? - does the same job as GLBuff ?
 // https://www.opengl.org/discussion_boards/showthread.php/185088-Vertex-Array-Object-vs-Vertex-Buffer-Object
 
-class GLBuff{
-    public:
+class GLBuff{ public:
     GLuint  id    = 0;
     GLuint  dim   = 3;
     bool normalized = GL_FALSE;
@@ -56,8 +56,7 @@ class GLBuff{
 
 };
 
-class GLObject{
-	public:
+class GLObject{ public:
 	static constexpr int nbuffs = 4;
 
     Shader * shader;
@@ -80,6 +79,12 @@ class GLObject{
 	void afterDraw();
 	void draw_instance();
 
+	void setup( int nVert_ ){
+        nVert  = nVert_;
+        buffs[0].setup(0,3,GL_FALSE,new GLfloat[nVert*3],'v'); // vertexes
+        buffs[1].setup(1,3,GL_FALSE,new GLfloat[nVert*3],'n'); // normals
+	}
+
 	inline void setIndexes( int nInd_, int * cbuff_ ){
         nInd = nInd_;
         //int nd=nInd*3;
@@ -90,7 +95,24 @@ class GLObject{
         }
     }
 
+    /*
+    inline void init( int nVert_ ){
+        nVert  = nVert_;
+        buffs[0].setup(0,3,GL_FALSE,new GLfloat[nVert*3],'v'); // vertexes
+        buffs[1].setup(1,3,GL_FALSE,new GLfloat[nVert*3],'n'); // normals
+        init();
+    }
+    */
 
+    /*
+    GLObject(){};
+    GLObject( int nVert_ ){
+        nVert  = nVert_;
+        buffs[0].setup(0,3,GL_FALSE,new GLfloat[nVert*3],'v'); // vertexes
+        buffs[1].setup(1,3,GL_FALSE,new GLfloat[nVert*3],'n'); // normals
+        init();
+    }
+    */
 
 };
 

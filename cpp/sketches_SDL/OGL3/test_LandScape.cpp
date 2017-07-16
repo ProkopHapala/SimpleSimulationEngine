@@ -43,7 +43,7 @@ GLfloat modelMat[9] = {
   0.0f,  0.0f,  1.0f
 };
 
-Vec3f cam_pos = (Vec3f){ 0.0f,  0.0f,  -10.0f };
+
 //GLfloat cam_pos      [3] = { 0.0f,  0.0f,  -10.0f };
 GLfloat light_pos    [3] = { 1.0f,  1.0f,   -1.0f };
 GLfloat lightColor   [3] = { 1.0f,  0.9f,   0.8f  };
@@ -65,6 +65,7 @@ Vec3f * instance_points;
 
 int WIDTH  = 800;
 int HEIGHT = 800;
+float ASPECT_RATIO = HEIGHT/WIDTH;
 
 int mouseX, mouseY;
 SDL_Window * window     = NULL;
@@ -90,35 +91,22 @@ int delay = 1; int VSync = 0;
 //int delay = 10; int VSync = 1;
 //float camMat[16];
 
-Mat4f camMat;
-
+Vec3f camPos = (Vec3f){ 0.0f, 0.0f, 0.0f };
+Mat4f camMat,mRot,mPersp;
 Mat3f mouseMat;
-
-int   Ter_nquads = 100+1;
-float Ter_tg     = 0.4;
-float Ter_z0     = 1.0;
-float Ter_dx     = 1.0/(Ter_nquads-1);
-float Ter_dz     = 2.0*Ter_dx;
-float Ter_fsc    = 1+Ter_dz*Ter_tg;
 
 // ===============================================
 // ======================= Functions
 // ===============================================
 
+Vec3d terrainFunc( Vec2d p ){ return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0,p.y*10.0}; };
+
 void setup(){
 
-    if ( render_type == 0      ){
-        // --- vertex const color
-        shader1=new Shader();
-        shader1->init( "shaders/basicColor3D_vert.c", "shaders/basicColor3D_frag.c" );
-    }else if ( render_type == 1 ){
-        // --- shading
-        shader1=new Shader();
-        shader1->init( "shaders/basicShading3D_vert.c", "shaders/basicShading3D_frag.c" );
-        glUseProgram(shader1->shaderprogram);
-    };
-	//mesh.fromFileOBJ("common_resources/turret.obj");
+    shader1=new Shader();
+    shader1->init( "shaders/basicColor3D_vert.c",   "shaders/basicColor3D_frag.c"   );
 
+    /*
     int nVert = countVerts( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons );
     GLfloat * verts   = new GLfloat[nVert*3];
     GLfloat * normals = new GLfloat[nVert*3];
@@ -129,37 +117,45 @@ void setup(){
     object1->buffs[0].setup(0,3,GL_FALSE,verts,  'v'); // vertexes
     object1->buffs[1].setup(1,3,GL_FALSE,normals,'n'); // normals
     object1->init();
+    */
 
-        // shading
-    if ( render_type == 1 ){
-        uloc = glGetUniformLocation( shader1->shaderprogram, "cam_pos"       ); glUniform3fv      (uloc, 1, (GLfloat*)&cam_pos      );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "light_pos"     ); glUniform3fv      (uloc, 1, light_pos     );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "lightColor"    ); glUniform3fv      (uloc, 1, lightColor    );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "diffuseColor"  ); glUniform3fv      (uloc, 1, diffuseColor  );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "ambientColor"  ); glUniform3fv      (uloc, 1, ambientColor  );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "specularColor" ); glUniform3fv      (uloc, 1, specularColor );
-    };
+    /*
+    object1 = new GLObject( );
+    object1->setup( countVerts( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons ) );
+    hardFace( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons, Solids::Icosahedron_faces, Solids::Icosahedron_verts, object1->buffs[0].cbuff, object1->buffs[1].cbuff );
+    object1->init();
+    */
+    /*
+    object1 = new GLObject( );
+    object1->setup( countVerts( Solids::Cube_nfaces, Solids::Cube_ngons ) );
+    hardFace( Solids::Cube_nfaces, Solids::Cube_ngons, Solids::Cube_faces, Solids::Cube_verts, object1->buffs[0].cbuff, object1->buffs[1].cbuff );
+    object1->init();
+    */
+
+    object1 = new GLObject( );
+    object1->setup( countVerts( Solids::Octahedron_nfaces, Solids::Octahedron_ngons ) );
+    hardFace( Solids::Octahedron_nfaces, Solids::Octahedron_ngons, Solids::Octahedron_faces, Solids::Octahedron_verts, object1->buffs[0].cbuff, object1->buffs[1].cbuff );
+    object1->init();
+
+    obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, terrainFunc );
+
+    printf( "obj_terrain nVert %i", obj_terrain->nVert);
+    //exit(0);
+    /*
+    for(int i=0; i<obj_terrain->nVert; i++){
+        Vec3f& p  = ((Vec3f*)obj_terrain->buffs[0].cbuff)[i];
+        Vec3f& nv = ((Vec3f*)obj_terrain->buffs[1].cbuff)[i];
+        printf( " %i (%g,%g,%g) (%g,%g,%g) \n", i, p.x, p.y, p.z,   nv.x, nv.y, nv.z );
+    }
+    */
+    //exit(0);
 
     ninstancs = 100; // 30 ms/frame
-
     instance_points = new Vec3f[ninstancs];
-    for (int i=0; i<ninstancs; i++){ instance_points[i] = (Vec3f){randf(-15.0,15.0),randf(-15.0,15.0),randf(-20.0,-500.0)};};
-
-    Vec3f * strip = new Vec3f[Ter_nquads*2];
-    for(int i=0; i<Ter_nquads; i++){
-        int i2 = i<<1;
-        float x  = (i-0.5*Ter_nquads)*Ter_dx;
-        strip[i].set(-1.0, randf(), x);
-        strip[i].set( 1.0, randf(), x);
-    }
-    obj_terrain = new GLObject();
-    obj_terrain->draw_mode = GL_TRIANGLE_STRIP;
-    obj_terrain->nVert     = Ter_nquads*2;
-    obj_terrain->buffs[0].setup(0,3,GL_FALSE,strip,'v');
-    obj_terrain->init();
+    //for (int i=0; i<ninstancs; i++){ instance_points[i] = (Vec3f){randf(-15.0,15.0),randf(-15.0,15.0),randf(5.0,100.0)};};
+    for (int i=0; i<ninstancs; i++){ instance_points[i] = (Vec3f){0.0,0.0,5.0*i};};
 
 	qCamera.setOne();
-
 	delay = 1;
 }
 
@@ -168,67 +164,50 @@ void draw(){
 
     long time_start = getCPUticks();
 
-    glClearColor(0.0, 0.0, 1.0, 1.0);
+    glClearColor(0.8, 0.8, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 
     glEnable( GL_DEPTH_TEST );
-    glDepthFunc( GL_LESS );
-
-    long time_0 = getCPUticks();
+    glDepthFunc   ( GL_LESS );
 
     qCamera.toMatrix(mouseMat);
 
-
-    Mat4f m1; m1.setOne(); m1.set(mouseMat);
-    //Mat4f m2; m2.getPerspectiveMatrix( -WIDTH, WIDTH, -HEIGHT, HEIGHT, 1.0, 20.0 );
-    Mat4f m2; m2.getPerspectiveMatrix( -WIDTH*0.0001, WIDTH*0.0001, -HEIGHT*0.0001, HEIGHT*0.0001, 5.0, 1000.0 );
-
-    camMat.set_mmul_TN( m1, m2 );
-
-    // ============= Terrain
-
-    long time_1 = getCPUticks();
+    float fov = 3.0;
+    mRot.setOne(); mRot.set(mouseMat);
+    mPersp.getPerspectiveMatrix( fov, fov*ASPECT_RATIO, -1.0, -1000.0 );
+    //camMat.set_mmul_TN( m1, mPersp );
+    //camMat.set_mmul( m1, mPersp );
+    mRot = mRot.transposed( );
+    camMat.set_mmul( mRot, mPersp );
+    //camMat.set_mmul( mPersp, mRot );
+    Mat3f objRot; objRot.setOne();
 
     // ============= Objects
     glUseProgram(shader1->shaderprogram);
 
     uloc = glGetUniformLocation( shader1->shaderprogram, "camMat"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, (float*)&camMat   );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&mouseMat );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "modelPos" ); // glUniform3fv      (uloc, 1, modelPos );
+    uloc = glGetUniformLocation( shader1->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&objRot );
+    int uloc_pos = glGetUniformLocation( shader1->shaderprogram, "modelPos" ); // glUniform3fv      (uloc, 1, modelPos );
 
     //object1->draw();
     object1->preDraw();
-
-
     for(int i=0; i<ninstancs; i++){
         //glUniform3fv( uloc, 1, instance_points+i*3 );
-        Vec3f p = instance_points[i] - cam_pos;
-        glUniform3fv( uloc, 1, (GLfloat*)&p );
+        Vec3f p = instance_points[i] - camPos;
+        glUniform3fv( uloc_pos, 1, (GLfloat*)&p );
         //glDrawArrays( object1->draw_mode, 0, object1->nVert);
         object1->draw_instance();
     }
     object1->afterDraw();
 
+    //object1->draw();
     obj_terrain->preDraw();
-    glUniform3fv (uloc, 1, (GLfloat*)modelPos );
+    Vec3f p = (Vec3f){0.0,0.0,0.0} - camPos;
+    glUniform3fv( uloc_pos, 1, (GLfloat*)&p );
     obj_terrain->draw_instance();
     obj_terrain->afterDraw();
 
-    long time_2 = getCPUticks();
-
     SDL_GL_SwapWindow(window);
-
-    long time_3 = getCPUticks();
-
-
-    double Ttot     = (time_3-time_start)*1e-6;
-    double Tterrain = (time_1-time_0)*1e-6;
-    double Tobject  = (time_2-time_1)*1e-6;
-    double Tswap    = (time_3-time_2)*1e-6;
-
-    //printf("camPos (%g,%g,%g) \n", cam_pos[0], cam_pos[1], cam_pos[2]);
-    printf("camPos (%g,%g,%g) \n", cam_pos.x, cam_pos.y, cam_pos.z );
-    //printf( "Ttot %3.2f terrain %3.2f objects %3.2f swap %3.2f \n", Ttot, Tterrain, Tobject, Tswap );
 
 }
 
@@ -239,24 +218,38 @@ void draw(){
 // FUNCTION ======	inputHanding
 void inputHanding(){
 
-    float posstep = 0.1; if(RayTerrain){ posstep = 2.0; }
-    double step = 1.0;
+    float posstep = 0.1f; if(RayTerrain){ posstep = 2.0f; }
+    float step          = 0.25f;
+    float keyRotSpeed   = 0.002f;
+
+    const Uint8 *keys = SDL_GetKeyboardState(NULL);
+
+    if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  (float)keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -(float)keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  (float)keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -(float)keyRotSpeed ); }
+
+    if( keys[ SDL_SCANCODE_W  ] ){ camPos.add_mul( mouseMat.c, +step ); }
+	if( keys[ SDL_SCANCODE_S  ] ){ camPos.add_mul( mouseMat.c, -step ); }
+	if( keys[ SDL_SCANCODE_A  ] ){ camPos.add_mul( mouseMat.a, -step ); }
+	if( keys[ SDL_SCANCODE_D  ] ){ camPos.add_mul( mouseMat.a, +step ); }
 
 	SDL_Event event;
 	while(SDL_PollEvent(&event)){
 		if( event.type == SDL_KEYDOWN ){
             switch( event.key.keysym.sym ){
                 case SDLK_ESCAPE: quit(); break;
-
-                case SDLK_w: cam_pos.add_mul( mouseMat.c,  step ); break;
-                case SDLK_s: cam_pos.add_mul( mouseMat.c, -step ); break;
-                case SDLK_a: cam_pos.add_mul( mouseMat.a,  step ); break;
-                case SDLK_d: cam_pos.add_mul( mouseMat.a, -step ); break;
-
+                /*
+                case SDLK_w: camPos.add_mul( mouseMat.c, +step ); break;
+                case SDLK_s: camPos.add_mul( mouseMat.c, -step ); break;
+                case SDLK_a: camPos.add_mul( mouseMat.a, -step ); break;
+                case SDLK_d: camPos.add_mul( mouseMat.a, +step ); break;
+                */
                 case SDLK_KP_PLUS:  terrain_size[0] *=1.1; terrain_size[2] *=1.1; break;
                 case SDLK_KP_MINUS: terrain_size[0] /=1.1; terrain_size[2] /=1.1; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
+            printf( "" );
 		}
 		if( event.type == SDL_QUIT){ quit();  };
 	}
@@ -267,11 +260,9 @@ void inputHanding(){
     //printf( " %i %i \n", mx,my );
     float mouseRotSpeed = 0.01;
     if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-        Quat4f q; q.fromTrackball( 0, 0, -dmx*mouseRotSpeed, dmy*mouseRotSpeed );
-        //printf( " %i %i  (%3.3f,%3.3f,%3.3f,%3.3f) \n", dmx,dmy, q.x,q.y,q.z,q.w );
-        //qCamera.qmul_T( q );
-        qCamera.qmul( q );
-        //qCamera.normalize();
+        Quat4f q; q.fromTrackball( 0, 0, -dmx*mouseRotSpeed, dmy*mouseRotSpeed ); qCamera.qmul_T( q );
+        //qCamera.dyaw(-dmx*mouseRotSpeed); qCamera.dpitch(-dmy*mouseRotSpeed);
+        qCamera.normalize();
     }
 }
 
@@ -287,7 +278,7 @@ void loop( int nframes ){
 int main(int argc, char *argv[]){
     init();
 	setup();
-	loop( 100000 );
+	loop( 10000000 );
     quit();
     return 0;
 }

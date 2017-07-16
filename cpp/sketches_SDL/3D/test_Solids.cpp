@@ -15,7 +15,7 @@
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
 
-#include "GL3Utils.h"
+#include "GLUtils.h"
 
 // ======================  TestApp
 
