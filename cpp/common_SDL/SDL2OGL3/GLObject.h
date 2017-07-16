@@ -59,16 +59,17 @@ class GLBuff{ public:
 class GLObject{ public:
 	static constexpr int nbuffs = 4;
 
+	// ======= variables
+
     Shader * shader;
     int nVert     = 0;
     int nInd      = 0;
-    //GLBuff indexes;
     GLBuff buffs[nbuffs];
     GLuint * index_cbuff = NULL;
     GLuint   index_vbo;
-	//GLuint vbo   [3] = {0,0,0};  // vertex buffer object
-	//GLuint vboDim[3] = {3,3,3};
 	GLenum draw_mode = GL_TRIANGLES;
+
+    // ======= function def
 
 	virtual void init   ();
 	virtual void draw   ();
@@ -78,6 +79,8 @@ class GLObject{ public:
     void preDraw();
 	void afterDraw();
 	void draw_instance();
+
+	// ======= functions inline
 
 	void setup( int nVert_ ){
         nVert  = nVert_;

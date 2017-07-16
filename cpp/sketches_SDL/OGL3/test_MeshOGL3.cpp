@@ -174,10 +174,9 @@ void draw();
 void loop( int niters );
 
 
-int render_type = 0;
+int render_type = 1;
 
 void setup(){
-
 
     mesh.fromFileOBJ( "common_resources/turret.obj" );
     mesh.polygonsToTriangles(false);
@@ -209,12 +208,14 @@ void setup(){
     if ( render_type == 0      ){
         // --- vertex const color
         shader1=new Shader();
-        shader1->init( "shaders/basicColor3D_vert.c", "shaders/basicColor3D_frag.c" );
+        //shader1->init( "shaders/basicColor3D_vert.c", "shaders/basicColor3D_frag.c" );
+        shader1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
         glUseProgram(shader1->shaderprogram);
     }else if ( render_type == 1 ){
         // --- shading
         shader1=new Shader();
-        shader1->init( "shaders/basicShading3D_vert.c", "shaders/basicShading3D_frag.c" );
+        //shader1->init( "shaders/basicShading3D_vert.c", "shaders/basicShading3D_frag.c" );
+        shader1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
         glUseProgram(shader1->shaderprogram);
     };
 	//mesh.fromFileOBJ("common_resources/turret.obj");

@@ -36,16 +36,18 @@ void GLObject::init(){
 }
 
 void GLObject::preDraw(){
+    //printf(" preDraw( \n");
     for(int i=0; i<nbuffs; i++){ if (buffs[i].vbo ) buffs[i].activate(); }
 }
 
 void GLObject::afterDraw(){
+    //printf(" afterDraw \n");
     for(int i=0; i<nbuffs; i++){ if(buffs[i].vbo)glDisableVertexAttribArray(buffs[i].id);  }
 }
 
 void GLObject::draw_instance(){
+    //printf(" draw_instance\n");
     if(index_vbo){
-        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexes.vbo );
         glBindBuffer  ( GL_ELEMENT_ARRAY_BUFFER, index_vbo );
         glDrawElements( draw_mode, nInd,  GL_UNSIGNED_INT, (void*)0 );
     }else{
@@ -54,19 +56,7 @@ void GLObject::draw_instance(){
 }
 
 void GLObject::draw_default(){
-/*
-    for(int i=0; i<nbuffs; i++){
-        if (buffs[i].vbo ) buffs[i].activate();
-    }
-    if(index_vbo){
-        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexes.vbo );
-        glBindBuffer  (GL_ELEMENT_ARRAY_BUFFER, index_vbo );
-        glDrawElements( GL_TRIANGLES, nInd,  GL_UNSIGNED_INT, (void*)0 );
-    }else{
-        glDrawArrays( draw_mode, 0, nVert);
-    }
-    for(int i=0; i<nbuffs; i++){ if(buffs[i].vbo)glDisableVertexAttribArray(buffs[i].id);  }
-*/
+    //printf("==== draw_default \n");
     preDraw();
     draw_instance();
     afterDraw();

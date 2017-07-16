@@ -370,8 +370,8 @@ class Quat4TYPE {
     };
 
 
-	inline void dpitch2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*0.5,sa,ca); pitch2( ca, sa );  };
-	inline void pitch2 ( TYPE angle ){ angle*=0.5; pitch2( cos(angle), sin(angle) );  };
+	inline void dpitch2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*(TYPE)0.5,sa,ca); pitch2( ca, sa );  };
+	inline void pitch2 ( TYPE angle ){ angle*=(TYPE)0.5; pitch2( cos(angle), sin(angle) );  };
     inline void pitch2 ( TYPE ca, TYPE sa ) {
         TYPE x_ =  sa * w + ca * x;
         TYPE y_ = -sa * z + ca * y;
@@ -380,8 +380,8 @@ class Quat4TYPE {
         x = x_; y = y_; z = z_;
     };
 
-	inline void dyaw2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*0.5,sa,ca); yaw2( ca, sa );  };
-	inline void yaw2 ( TYPE angle ){ angle*=0.5; yaw2( cos(angle), sin(angle) );  };
+	inline void dyaw2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*(TYPE)0.5,sa,ca); yaw2( ca, sa );  };
+	inline void yaw2 ( TYPE angle ){ angle*=(TYPE)0.5; yaw2( cos(angle), sin(angle) );  };
     inline void yaw2 ( TYPE ca, TYPE sa ) {
         TYPE x_ = + sa * z  + ca * x;
         TYPE y_ = + sa * w  + ca * y;
@@ -390,8 +390,8 @@ class Quat4TYPE {
         x = x_; y = y_; z = z_;
     };
 
-	inline void droll2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*0.5,sa,ca); roll2( ca, sa );  };
-	inline void roll2 ( TYPE angle ){ angle*=0.5; roll2( cos(angle), sin(angle) );  };
+	inline void droll2( TYPE angle ){ TYPE ca,sa; sincos_taylor2(angle*(TYPE)0.5,sa,ca); roll2( ca, sa );  };
+	inline void roll2 ( TYPE angle ){ angle*=(TYPE)0.5; roll2( cos(angle), sin(angle) );  };
     inline void roll2 ( TYPE ca, TYPE sa ) {
         //ca *=0.5; sa *=0.5; // seems that should be just half
         TYPE x_ = - sa * y + ca * x;
