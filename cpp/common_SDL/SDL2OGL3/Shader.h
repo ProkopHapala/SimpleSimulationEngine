@@ -6,6 +6,10 @@
 #include <GL/gl.h>
 //#include "IO_utils.h"
 
+#include "Vec3.h"
+#include "Mat3.h"
+#include "Mat4.h"
+
 class Shader{
 	public:
 	GLchar *vertexsource   = NULL;
@@ -24,6 +28,14 @@ class Shader{
 	void destory             (                                                                           );
 
 	void getDefaultUniformLocation();
+
+	void setUniformi    ( char * name, int    i);
+	void setUniformf    ( char * name, float  f);
+	void setUniformVec2f( char * name, Vec2f  v);
+	void setUniformVec4f( char * name, Quat4f v);
+	void setUniformVec3f( char * name, Vec3f  v);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform3fv      (u, 1, modelPos           ); };
+	void setUniformMat3f( char * name, Mat3f  m);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix3fv(u, 1, GL_FALSE, modelMat ); };
+	void setUniformMat4f( char * name, Mat4f  m);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix4fv(u, 1, GL_FALSE, camMat   ); };
 
 	inline void set_baseColor( GLfloat * baseColor ){ glUniform4fv      (uloc_baseColor, 1, baseColor );          };
 	inline void set_modelPos ( GLfloat * modelPos  ){ glUniform3fv      (uloc_modelPos,  1, modelPos );           };

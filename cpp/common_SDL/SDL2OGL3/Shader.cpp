@@ -103,3 +103,11 @@ void Shader::getDefaultUniformLocation(){
     uloc_baseColor = glGetUniformLocation( shaderprogram, "baseColor" );
 }
 
+void Shader::setUniformi    ( char * name, int    i){ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform1iv      (u, 1, (GLint*  )&i           ); };
+void Shader::setUniformf    ( char * name, float  f){ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform1fv      (u, 1, (GLfloat*)&f           ); };
+void Shader::setUniformVec2f( char * name, Vec2f  v){ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform2fv      (u, 1, (GLfloat*)&v           ); };
+void Shader::setUniformVec3f( char * name, Vec3f  v){ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform3fv      (u, 1, (GLfloat*)&v           ); };
+void Shader::setUniformVec4f( char * name, Quat4f v){ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform4fv      (u, 1, (GLfloat*)&v           ); };
+void Shader::setUniformMat3f( char * name, Mat3f  m){ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix3fv(u, 1, GL_FALSE, (GLfloat*)&m ); };
+void Shader::setUniformMat4f( char * name, Mat4f  m){ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix4fv(u, 1, GL_FALSE, (GLfloat*)&m ); };
+

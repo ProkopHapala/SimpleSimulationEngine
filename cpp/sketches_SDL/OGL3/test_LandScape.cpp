@@ -117,7 +117,8 @@ void setup(){
 
     shader1=new Shader();
 
-    shader1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    //shader1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    shader1->init( "common_resources/shaders/color3D_depth.glslv",   "common_resources/shaders/color3D_depth.glslf"   );
     //shader1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
     //shader1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/pointSprite.glslf"   );
     //shader1->init( "common_resources/shaders/pos3D.glslv",   "common_resources/shaders/pos3D.glslf"   );
@@ -180,7 +181,7 @@ void setup(){
             p  =  (Vec3d){z,y,x};
             nv =  (Vec3d){0.0,0.0,1.0};
         }else{
-            p  =  (Vec3d){z-5.0,y+5.0,x+0.001 };
+            p  =  (Vec3d){z-5.0,y+5.0,x+0.01 };
             nv =  (Vec3d){1.0,0.0,0.0};
         }
     });
@@ -345,7 +346,7 @@ void inputHanding(){
 	SDL_GetMouseState( &mouseX, &mouseY );
     Uint32 buttons = SDL_GetRelativeMouseState( &dmx, &dmy);
     //printf( " %i %i \n", mx,my );
-    float mouseRotSpeed = 0.01;
+    float mouseRotSpeed = 0.002;
     if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
         Quat4f q; q.fromTrackball( 0, 0, -dmx*mouseRotSpeed, dmy*mouseRotSpeed ); qCamera.qmul_T( q );
         //qCamera.dyaw2(-dmx*mouseRotSpeed); qCamera.dpitch2(-dmy*mouseRotSpeed);
@@ -381,6 +382,7 @@ void init(){
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2); // Opengl 3.2
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
     window = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     if ( !window ) die("Unable to create window");
     context = SDL_GL_CreateContext( window );
