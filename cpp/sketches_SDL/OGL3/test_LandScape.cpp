@@ -28,7 +28,7 @@
 //============ Globals
 
 Shader   * shader1;
-GLObject * object1,*obj_terrain;
+GLObject * object1,*obj_terrain,*obj_flicker;
 
 Mesh mesh;
 
@@ -101,7 +101,9 @@ float pitch=0,yaw=0;
 // ======================= Functions
 // ===============================================
 
+/*
 Vec3d terrainFunc( Vec2d p ){ return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0,p.y*10.0}; };
+*/
 
 GLObject * makeOgl_flat( const CMesh& mesh ){
     GLObject * ogl = new GLObject();
@@ -118,6 +120,8 @@ void setup(){
     shader1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
     //shader1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
     //shader1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/pointSprite.glslf"   );
+    //shader1->init( "common_resources/shaders/pos3D.glslv",   "common_resources/shaders/pos3D.glslf"   );
+    //shader1->init( "common_resources/shaders/terrain_world.glslv",   "common_resources/shaders/pos3D.glslf" );
 
     /*
     shader1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
@@ -134,7 +138,52 @@ void setup(){
     object1 = makeOgl_flat( Solids::Octahedron );
     //object1 = makeOgl_flat( Solids::Icosahedron );
 
-    obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, terrainFunc );
+    //obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, terrainFunc );
+
+    //obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, terrainFunc };
+    obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, [](Vec2d p)->Vec3d{
+        return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0,p.y*10.0}; // lambda
+        //return (Vec3d){p.x*10.0,-1.0,p.y*10.0}; // lambda
+    } );
+
+    /*
+    // circle
+    double freq   = 0.05;
+    double radius = 150.0;
+    obj_flicker = makeNVerts( 100, [&](int i, Vec3d& p,Vec3d& nv){
+        double x = i * freq;
+        double ca = cos( x );
+        double sa = sin( x );
+        p  =  (Vec3d){0.0,ca*radius,sa*radius};
+        nv =  (Vec3d){0.0,sa,-ca};
+    });
+    */
+
+    /*
+    obj_flicker = makeNVerts( 100, [](int i, Vec3d& p,Vec3d& nv){
+        double x = (i>>1)*10.0;
+        if( i&1){
+            p  =  (Vec3d){0.0,0.1,x};
+            nv =  (Vec3d){0.0,0.0,1.0};
+        }else{
+            p  =  (Vec3d){0.5,0.1,x+0.00001};
+            nv =  (Vec3d){1.0,0.0,0.0};
+        }
+    });
+    */
+
+    obj_flicker = makeNTris( 20, [](int i, int iv, Vec3d& p,Vec3d& nv){
+        double x = (i>>1)*100.0;
+        double y = (iv&1)*20.0;
+        double z = (iv&2)*10.0;
+        if( i&1 ){
+            p  =  (Vec3d){z,y,x};
+            nv =  (Vec3d){0.0,0.0,1.0};
+        }else{
+            p  =  (Vec3d){z-5.0,y+5.0,x+0.001 };
+            nv =  (Vec3d){1.0,0.0,0.0};
+        }
+    });
 
     printf( "obj_terrain nVert %i", obj_terrain->nVert);
     //exit(0);
@@ -177,28 +226,43 @@ void draw(){
     //printf("====\n"); mouseMat.print();
 
     float fov = 3.0;
-    mRot.setOne(); mRot.set(mouseMat);
-    mPersp.getPerspectiveMatrix( fov, fov*ASPECT_RATIO, -1.0, -1000.0 );
+
+    mRot.setOne(); mRot.setRot(mouseMat);
+
+    /*
+    // === camPos to camMat does not seem to work
+    // mRot.setPos(camPos);
+    printf("====\n");
+    mRot.print();
+    mpos.print();
+    Mat4f mpos; mpos.setOne(); mpos.setPos(camPos);
+    mRot.mmulR(mpos);
+    mRot.print();
+    */
+
+    mPersp.setPerspective( fov, fov*ASPECT_RATIO, -1.0, -1000.0 );
     //camMat.set_mmul_TN( m1, mPersp );
     //camMat.set_mmul( m1, mPersp );
-    mRot = mRot.transposed( );
-    camMat.set_mmul( mRot, mPersp );
+    //mRot = mRot.transposed( );
+    camMat.set_mmul_TN( mRot, mPersp );
     //camMat.set_mmul( mPersp, mRot );
     Mat3f objRot; objRot.setOne();
 
     // ============= Objects
     glUseProgram(shader1->shaderprogram);
 
+    shader1->set_camPos  ( (float*)&camPos );
     shader1->set_camMat  ( (float*)&camMat );
     shader1->set_modelMat( (float*)&objRot );
 
     Vec3f  p;
     Quat4f c;
 
+        /*
     //object1->draw();
     object1->preDraw();
     for(int i=0; i<ninstancs; i++){
-        p = instance_points[i] - camPos;
+        p = instance_points[i]; p.y+=5.0;
         shader1->set_modelPos ( (GLfloat*)&p );
         c.set( i*0.01f, 0.5f,1-i*0.01f, 1.0f  );
         //c.set( 1.0f, 0.0f, 1.0f, 1.0f );
@@ -206,12 +270,18 @@ void draw(){
         object1->draw_instance();
     }
     object1->afterDraw();
+    */
 
-    p = (Vec3f){0.0,0.0,0.0} - camPos;
+    p = (Vec3f){0.0,0.0,0.0}; shader1->set_modelPos( (GLfloat*)&p );
+    obj_terrain->draw_mode = GL_TRIANGLES; obj_terrain->draw_default();
+    //obj_terrain->draw_mode = GL_POINTS; glPointSize( 15.0 ); obj_terrain->draw_default();
+    //obj_terrain->draw_mode = GL_LINES;  glLineWidth( 5.0 );  obj_terrain->draw_default();
+    //obj_terrain->draw_mode = GL_LINE_STRIP;  glLineWidth( 5.0 );  obj_terrain->draw_default();
 
-    shader1->set_modelPos( (GLfloat*)&p );
-    obj_terrain->draw_mode = GL_POINTS; glPointSize( 15.0 ); obj_terrain->draw_default();
-    obj_terrain->draw_mode = GL_LINES;  glLineWidth( 5.0 ); obj_terrain->draw_default();
+    p = (Vec3f){0.0,2.0,0.0};  shader1->set_modelPos( (GLfloat*)&p );
+    obj_flicker->draw_mode = GL_TRIANGLES; obj_flicker->draw_default();
+    //obj_flicker->draw_mode = GL_POINTS; glPointSize( 20.0 ); obj_flicker->draw_default();
+    //obj_flicker->draw_mode = GL_LINE_STRIP;  glLineWidth( 5.0 );  obj_flicker->draw_default();
 
     /*
     // https://www.khronos.org/opengl/wiki/Primitive#Point_primitives
@@ -235,7 +305,7 @@ void draw(){
 void inputHanding(){
 
     float posstep = 0.1f; if(RayTerrain){ posstep = 2.0f; }
-    float step          = 0.25f;
+    float step          = 0.1f;
     float keyRotSpeed   = 0.002f;
 
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
@@ -251,6 +321,11 @@ void inputHanding(){
 	if( keys[ SDL_SCANCODE_S  ] ){ camPos.add_mul( mouseMat.c, -step ); }
 	if( keys[ SDL_SCANCODE_A  ] ){ camPos.add_mul( mouseMat.a, -step ); }
 	if( keys[ SDL_SCANCODE_D  ] ){ camPos.add_mul( mouseMat.a, +step ); }
+
+    //if( keys[ SDL_SCANCODE_W  ] ){ camPos.z +=step ; }
+	//if( keys[ SDL_SCANCODE_S  ] ){ camPos.z -=step ; }
+	//if( keys[ SDL_SCANCODE_A  ] ){ camPos.x -=step ; }
+	//if( keys[ SDL_SCANCODE_D  ] ){ camPos.x +=step ; }
 
 	SDL_Event event;
 	while(SDL_PollEvent(&event)){

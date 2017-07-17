@@ -126,8 +126,14 @@ class Mat4TYPE{
         }}
 	};
 
+	void mmulL( const MAT& A ){ MAT& M=*this; set_mmul( M, A); }
+	void mmulR( const MAT& A ){ MAT& M=*this; set_mmul( A, M); }
+
+    void mmulLT( const MAT& A ){ MAT& M=*this; set_mmul_NT( M, A); }
+	void mmulRT( const MAT& A ){ MAT& M=*this; set_mmul_TN( A, M); }
+
 	//   http://www.songho.ca/opengl/gl_projectionmatrix.html
-    void getPerspectiveMatrix( TYPE xmin, TYPE xmax, TYPE ymin, TYPE ymax, TYPE zmin, TYPE zmax ){
+    void setPerspective( TYPE xmin, TYPE xmax, TYPE ymin, TYPE ymax, TYPE zmin, TYPE zmax ){
         //TYPE invdx = xmax-xmin; TYPE invdy = ymax-ymin; TYPE invdz = zmax-zmin; // WARRNING : THIS IS WRONG
         TYPE invdx = 1/(xmax-xmin); TYPE invdy = 1/(ymax-ymin); TYPE invdz = 1/(zmax-zmin);
         array[0 ]  = 2*zmin*invdx; array[1 ] = 0;            array[2 ] =  (xmax+xmin)*invdx;  array[3 ] = 0;
@@ -143,7 +149,7 @@ class Mat4TYPE{
     }
 
     //   https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
-    void getPerspectiveMatrix( TYPE ctgx, TYPE ctgy, TYPE zmin, TYPE zmax ){
+    void setPerspective( TYPE ctgx, TYPE ctgy, TYPE zmin, TYPE zmax ){
         TYPE invdz = 1/(zmin-zmax);
         array[0 ]  = 2*ctgx; array[1 ] = 0;      array[2 ] =  0;                  array[3 ] = 0;
         array[4 ]  = 0;      array[5 ] = 2*ctgy; array[6 ] =  0;                  array[7 ] = 0;
@@ -151,11 +157,14 @@ class Mat4TYPE{
         array[12]  = 0;      array[13] = 0;      array[14] = -1;                  array[15] = 0;
     }
 
-    void set( Mat3TYPE<TYPE> M ){
+    void setRot( Mat3TYPE<TYPE> M ){
         xx=M.xx; xy=M.xy; xz=M.xz;
 		yx=M.yx; yy=M.yy; yz=M.yz;
 		zx=M.zx; zy=M.zy; zz=M.zz;
     }
+
+    //void setPos( Vec3TYPE<TYPE> p ){ xw=p.x; yw=p.y; xw=p.z; }
+    void setPos( Vec3TYPE<TYPE> p ){ wx=p.x; wy=p.y; wz=p.z; }
 
 // ====== matrix solver
 

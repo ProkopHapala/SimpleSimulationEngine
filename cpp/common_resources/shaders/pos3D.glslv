@@ -4,10 +4,9 @@
 
 // IN --- Input vertex data, different for all executions of this shader.
 layout(location = 0) in vec3 vertPos_model;
-layout(location = 1) in vec3 vertColor;
 
-// OUT --- will be interpolated for each fragment.
-smooth out vec3 fragColor;
+// OUT --- Output data ; will be interpolated for each fragment.
+noperspective out vec3 world_pos;
 
 // UNI --- Values that stay constant for the whole mesh.
 uniform vec3 modelPos;
@@ -16,9 +15,8 @@ uniform vec3 camPos;
 uniform mat4 camMat;
 
 void main(){
-	vec3 position_world = modelPos + modelMat * vertPos_model;
-	gl_Position         = camMat   * vec4( position_world-camPos, 1 );
-	fragColor           = vertColor;
+	world_pos    = modelPos + modelMat * vertPos_model;
+	gl_Position  = camMat   * vec4( world_pos-camPos, 1 );
 }
 
 

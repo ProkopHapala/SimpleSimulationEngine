@@ -9,16 +9,18 @@ layout(location = 1) in vec3 vertNormal_model;
 
 // OUT --- Output data ; will be interpolated for each fragment.
 noperspective out vec3 fragNormal_world;
+noperspective out vec3 world_pos;
 
 // UNI --- Values that stay constant for the whole mesh.
 uniform vec3 modelPos;
 uniform mat3 modelMat;
+uniform vec3 camPos;
 uniform mat4 camMat;
 
 void main(){
 	//gl_Position =  MVC * vec4(vertexPosition_modelspace,1);
 	vec3 position_world = modelPos + modelMat * vertPos_model;
-	gl_Position         = camMat   * vec4( position_world, 1 );
+	gl_Position         = camMat   * vec4( position_world-camPos, 1 );
 	fragNormal_world    = modelMat * vertNormal_model;
 
 	// http://outerra.blogspot.nl/2012/11/maximizing-depth-buffer-range-and.html

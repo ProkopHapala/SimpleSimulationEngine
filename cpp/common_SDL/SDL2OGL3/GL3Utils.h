@@ -8,8 +8,10 @@
 #include "GLObject.h"
 #include "GLUtils.h"
 
-GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Vec3d (vertFunc)(Vec2d) ){
+//GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Vec3d (vertFunc)(Vec2d) ){
 
+template<typename Func>
+GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Func vertFunc ){
     //GLObject * ogl = new GLObject( 3*2*n*n );
     GLObject * ogl = new GLObject();
     ogl->setup( 3*2*n*n );
@@ -40,38 +42,40 @@ GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Vec3d (vertFunc)(
     return ogl;
 }
 
-/*
-void triPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Vec3d (vertFunc)(Vec2d), GLfloat* verts, GLfloat* normals ){
-    Vec3f * verti = (Vec3f*)verts;
-    Vec3f * normi = (Vec3f*)normals;
-    double d = 1.0d/(n);
-    int nVert = 3*n*n;
+template<typename Func>
+GLObject * makeNVerts( int n, Func vertFunc ){
+    //GLObject * ogl = new GLObject( 3*2*n*n );
+    GLObject * ogl = new GLObject();
+    ogl->setup( n );
+    Vec3f * verti = (Vec3f*)ogl->buffs[0].cbuff;
+    Vec3f * normi = (Vec3f*)ogl->buffs[1].cbuff;
     for(int i=0; i<n; i++){
-        uv.x    = p0 + da*i;
-        Vec3d oa = vertFunc( uv );
-        Vec3d ob = vertFunc( uv );
-        for(int j=0; j<n-i; j++){
-            uv.add(da);
-            Vec3d a  = vertFunc( uv+da );
-            Vec3d n; n.set_cross(a-oa,b-oa);
-            n.normalize();
-            convert(a,verti[0]); convert(b,verti[1]); convert(a,verti[2]);
-            convert(n,normi[0]); convert(n,normi[1]); convert(n,normi[2]);
-            if( j<i ){
-                Vec3d b  = vertFunc( uv+db );
-                Vec3d n; n.set_cross(a-oa,b-oa);
-                n.normalize();
-                convert(a,verti[0]); convert(b,verti[1]); convert(a,verti[2]);
-                convert(n,normi[0]); convert(n,normi[1]); convert(n,normi[2]);
-                oa=a; ob=b;
-                verti+=3;
-                normi+=3;
-            }
-        }
-        facei += ni;
+        Vec3d p,nv;
+        vertFunc( i, p, nv );
+        convert(p,verti[i]); convert(nv,normi[i]);
     }
+    ogl->init();
+    return ogl;
 }
-*/
+
+
+template<typename Func>
+GLObject * makeNTris( int n, Func vertFunc ){
+    //GLObject * ogl = new GLObject( 3*2*n*n );
+    GLObject * ogl = new GLObject();
+    ogl->setup( n*3 );
+    Vec3f * verti = (Vec3f*)ogl->buffs[0].cbuff;
+    Vec3f * normi = (Vec3f*)ogl->buffs[1].cbuff;
+    int ii = 0;
+    for(int i=0; i<n; i++){
+        Vec3d p,nv;
+        vertFunc( i, 0, p, nv ); convert(p,verti[ii]); convert(nv,normi[ii]); ii++;
+        vertFunc( i, 1, p, nv ); convert(p,verti[ii]); convert(nv,normi[ii]); ii++;
+        vertFunc( i, 2, p, nv ); convert(p,verti[ii]); convert(nv,normi[ii]); ii++;
+    }
+    ogl->init();
+    return ogl;
+}
 
 
 #endif

@@ -14,7 +14,7 @@ class Shader{
 	GLuint fragmentshader =0;
 	GLuint shaderprogram  =0;
 
-	GLuint uloc_camMat=0, uloc_modelMat=0, uloc_modelPos=0, uloc_baseColor=0;
+	GLuint uloc_camMat=0, uloc_modelMat=0, uloc_modelPos=0, uloc_camPos=0, uloc_baseColor=0;
 
 	// ==== function declarations
 
@@ -25,10 +25,11 @@ class Shader{
 
 	void getDefaultUniformLocation();
 
-	inline void set_baseColor( GLfloat * baseColor ){ glUniform4fv      (uloc_baseColor, 1, baseColor );         };
+	inline void set_baseColor( GLfloat * baseColor ){ glUniform4fv      (uloc_baseColor, 1, baseColor );          };
 	inline void set_modelPos ( GLfloat * modelPos  ){ glUniform3fv      (uloc_modelPos,  1, modelPos );           };
     inline void set_modelMat ( GLfloat * modelMat  ){ glUniformMatrix3fv(uloc_modelMat,  1, GL_FALSE, modelMat ); };
     inline void set_camMat   ( GLfloat * camMat    ){ glUniformMatrix4fv(uloc_camMat  ,  1, GL_FALSE, camMat   ); };
+    inline void set_camPos   ( GLfloat * camPos    ){ glUniform3fv      (uloc_camPos  ,  1, camPos   );           };
     inline void setPose      ( GLfloat * modelPos, GLfloat * modelMat, GLfloat * camMat  ){ set_modelPos(modelPos); set_modelMat(modelMat); set_camMat(camMat); };
 
 };

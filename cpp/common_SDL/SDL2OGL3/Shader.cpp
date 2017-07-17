@@ -97,6 +97,7 @@ void Shader::destory(){
 
 void Shader::getDefaultUniformLocation(){
     uloc_camMat    = glGetUniformLocation( shaderprogram, "camMat"    );
+    uloc_camPos    = glGetUniformLocation( shaderprogram, "camPos"    );
     uloc_modelMat  = glGetUniformLocation( shaderprogram, "modelMat"  );
     uloc_modelPos  = glGetUniformLocation( shaderprogram, "modelPos"  ); // glUniform3fv      (uloc, 1, modelPos );
     uloc_baseColor = glGetUniformLocation( shaderprogram, "baseColor" );
