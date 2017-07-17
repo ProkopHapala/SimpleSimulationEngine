@@ -103,12 +103,20 @@ float pitch=0,yaw=0;
 
 Vec3d terrainFunc( Vec2d p ){ return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0,p.y*10.0}; };
 
+GLObject * makeOgl_flat( const CMesh& mesh ){
+    GLObject * ogl = new GLObject();
+    ogl->setup( countVerts( mesh.nfaces, mesh.ngons ) );
+    hardFace( mesh.nfaces, mesh.ngons, mesh.faces, mesh.verts, ogl->buffs[0].cbuff, ogl->buffs[1].cbuff );
+    ogl->init();
+    return ogl;
+}
+
 void setup(){
 
     shader1=new Shader();
 
-    //shader1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
-    shader1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
+    shader1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    //shader1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
     //shader1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/pointSprite.glslf"   );
 
     /*
@@ -122,36 +130,9 @@ void setup(){
     uloc = glGetUniformLocation( shader1->shaderprogram, "specularColor" ); glUniform3fv      (uloc, 1, specularColor     );
     */
 
-    /*
-    int nVert = countVerts( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons );
-    GLfloat * verts   = new GLfloat[nVert*3];
-    GLfloat * normals = new GLfloat[nVert*3];
-    hardFace( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons, Solids::Icosahedron_faces, Solids::Icosahedron_verts, verts, normals );
-
-    object1 = new GLObject( );
-    object1->nVert    = nVert;
-    object1->buffs[0].setup(0,3,GL_FALSE,verts,  'v'); // vertexes
-    object1->buffs[1].setup(1,3,GL_FALSE,normals,'n'); // normals
-    object1->init();
-    */
-
-    /*
-    object1 = new GLObject( );
-    object1->setup( countVerts( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons ) );
-    hardFace( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons, Solids::Icosahedron_faces, Solids::Icosahedron_verts, object1->buffs[0].cbuff, object1->buffs[1].cbuff );
-    object1->init();
-    */
-    /*
-    object1 = new GLObject( );
-    object1->setup( countVerts( Solids::Cube_nfaces, Solids::Cube_ngons ) );
-    hardFace( Solids::Cube_nfaces, Solids::Cube_ngons, Solids::Cube_faces, Solids::Cube_verts, object1->buffs[0].cbuff, object1->buffs[1].cbuff );
-    object1->init();
-    */
-
-    object1 = new GLObject( );
-    object1->setup( countVerts( Solids::Octahedron_nfaces, Solids::Octahedron_ngons ) );
-    hardFace( Solids::Octahedron_nfaces, Solids::Octahedron_ngons, Solids::Octahedron_faces, Solids::Octahedron_verts, object1->buffs[0].cbuff, object1->buffs[1].cbuff );
-    object1->init();
+    //object1 = makeOgl_flat( Solids::Tetrahedron );
+    object1 = makeOgl_flat( Solids::Octahedron );
+    //object1 = makeOgl_flat( Solids::Icosahedron );
 
     obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, terrainFunc );
 
