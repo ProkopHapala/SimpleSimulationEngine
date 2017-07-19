@@ -38,4 +38,9 @@ body.{ pos={1.0,0.0,0.0}; vel.x=1.0; mass=10.0;}
 Notes:
 - https://stackoverflow.com/questions/6181715/convenient-c-struct-initialisation
 - https://stackoverflow.com/questions/2279180/does-c-have-with-keyword-like-pascal
+- https://stackoverflow.com/questions/3016107/what-is-tagged-structure-initialization-syntax
+- https://stackoverflow.com/questions/5790534/static-structure-initialization-with-tags-in-c
 
+#### Estension methods
+
+- http://mariusbancila.ro/blog/2014/10/15/extension-methods-in-cpp/

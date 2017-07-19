@@ -106,6 +106,7 @@ Vec3d terrainFunc( Vec2d p ){ return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0
 */
 
 double arr_func( int n, const double * xs ){ };
+struct S { int a, b, c, d, e; };
 
 GLObject * makeOgl_flat( const CMesh& mesh ){
     GLObject * ogl = new GLObject();
@@ -118,6 +119,7 @@ GLObject * makeOgl_flat( const CMesh& mesh ){
 void setup(){
 
     arr_func( 3, (const double[]){1.0,2.0,3.0} );
+    //struct S s = { .c = 3, .d=4.0 }; // works only in C99 not in C++11
 
     shader1=new Shader();
 
