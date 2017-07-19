@@ -27,6 +27,8 @@ class Shader{
 	void init                ( char const * vertName, char const * fragName                              );
 	void destory             (                                                                           );
 
+	inline void use(){glUseProgram(shaderprogram);}
+
 	void getDefaultUniformLocation();
 
 	void setUniformi    ( char * name, int    i);
