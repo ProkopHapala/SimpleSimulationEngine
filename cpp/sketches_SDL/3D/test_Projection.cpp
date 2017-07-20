@@ -57,7 +57,7 @@ TestAppProjection::TestAppProjection( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     float far = 30.0;
 
     Mat4f m;
-    m.getPerspectiveMatrix( -corner.x, corner.x, -corner.y, corner.y, -corner.z, -far );
+    m.setPerspective( -corner.x, corner.x, -corner.y, corner.y, -corner.z, -far );
 
     //m.print();
 

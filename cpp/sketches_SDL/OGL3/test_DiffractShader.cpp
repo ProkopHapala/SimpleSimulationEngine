@@ -6,14 +6,12 @@
 #include <GL/gl.h>
 #include <SDL2/SDL.h>
 
-
-const float  INV_RAND_MAX = 1.0f/RAND_MAX;
-inline float randf(){ return INV_RAND_MAX*rand(); }
+//const float  INV_RAND_MAX = 1.0f/RAND_MAX;
+//inline float randf(){ return INV_RAND_MAX*rand(); }
 
 //#include "IO_utils.h"
 #include "Shader.h"
 #include "GLObject.h"
-
 
 Shader   * shader1;
 GLObject * object1;
