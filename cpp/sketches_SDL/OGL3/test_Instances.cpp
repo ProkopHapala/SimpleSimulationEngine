@@ -59,6 +59,7 @@ GLuint billboard_vertex_buffer;
 GLuint particles_color_buffer;
 GLuint particles_position_buffer;
 
+int nVerts = 0;
 int ParticlesCount = 0;
 int frameCount = 0;
 double lastTime = 0.0;
@@ -125,15 +126,36 @@ int setup(){
 		ParticlesContainer[i].cameradistance = -1.0f;
 	}
 
-	static const GLfloat g_vertex_buffer_data[] = {
-		 -0.5f, -0.5f, 0.0f,
-		  0.5f, -0.5f, 0.0f,
-		 -0.5f,  0.5f, 0.0f,
-		  0.5f,  0.5f, 0.0f,
+	/*
+	nVerts = 8;
+	//static const
+	GLfloat g_vertex_buffer_data[nVerts*3] = {
+        -0.5f, -0.5f, 0.0f,
+         0.5f, -0.5f, 0.0f,
+        -0.5f,  0.5f, 0.0f,
+         0.5f,  0.5f, 0.0f,
+
+        -1.5f, -1.5f, 0.0f,
+         1.5f, -1.5f, 0.0f,
+        -1.5f,  1.5f, 0.0f,
+         1.5f,  1.5f, 0.0f,
 	};
+	*/
+
+	nVerts = 50;
+    float dx = 1.0f/nVerts;
+	Vec3f g_vertex_buffer_data[nVerts*3];
+	for( int i=0; i<nVerts; i++){
+        float x = i*dx;
+        g_vertex_buffer_data[i].x = x*sin(x*10.0);
+        g_vertex_buffer_data[i].y = x*cos(x*10.0);
+        g_vertex_buffer_data[i].z = x;
+	}
+
+
 	glGenBuffers(1, &billboard_vertex_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, nVerts*3* sizeof(GLfloat), (GLfloat*)g_vertex_buffer_data, GL_STATIC_DRAW);
 
 	// The VBO containing the positions and sizes of the particles
 	glGenBuffers(1, &particles_position_buffer);
@@ -229,8 +251,11 @@ void physics(){
 
 void draw( ){
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.8, 0.8, 0.8, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 	// Simulate all particles
+
+	glDisable(GL_ALPHA);
 
 	physics();
 	SortParticles();
@@ -251,9 +276,10 @@ void draw( ){
 	glBufferData(GL_ARRAY_BUFFER, MaxParticles * 4 * sizeof(GLubyte), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
 	glBufferSubData(GL_ARRAY_BUFFER, 0, ParticlesCount * sizeof(GLubyte) * 4, g_particule_color_data);
 
+	//glEnable(GL_BLEND);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_BLEND);
 
 	// Use our shader
 	//glUseProgram(programID);
@@ -284,38 +310,17 @@ void draw( ){
 	// 1rst attribute buffer : vertices
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
-	glVertexAttribPointer(
-		0,                  // attribute. No particular reason for 0, but must match the layout in the shader.
-		3,                  // size
-		GL_FLOAT,           // type
-		GL_FALSE,           // normalized?
-		0,                  // stride
-		(void*)0            // array buffer offset
-	);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
 
 	// 2nd attribute buffer : positions of particles' centers
 	glEnableVertexAttribArray(1);
 	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
-	glVertexAttribPointer(
-		1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
-		4,                                // size : x + y + z + size => 4
-		GL_FLOAT,                         // type
-		GL_FALSE,                         // normalized?
-		0,                                // stride
-		(void*)0                          // array buffer offset
-	);
+	glVertexAttribPointer(1,4,GL_FLOAT,GL_FALSE,0,(void*)0);
 
 	// 3rd attribute buffer : particles' colors
 	glEnableVertexAttribArray(2);
 	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
-	glVertexAttribPointer(
-		2,                                // attribute. No particular reason for 1, but must match the layout in the shader.
-		4,                                // size : r + g + b + a => 4
-		GL_UNSIGNED_BYTE,                 // type
-		GL_TRUE,                          // normalized?    *** YES, this means that the unsigned char[4] will be accessible with a vec4 (floats) in the shader ***
-		0,                                // stride
-		(void*)0                          // array buffer offset
-	);
+	glVertexAttribPointer(2,4,GL_UNSIGNED_BYTE,GL_TRUE,0,(void*)0);
 
 	// These functions are specific to glDrawArrays*Instanced*.
 	// The first parameter is the attribute buffer we're talking about.
@@ -324,13 +329,10 @@ void draw( ){
 	glVertexAttribDivisor(0, 0); // particles vertices : always reuse the same 4 vertices -> 0
 	glVertexAttribDivisor(1, 1); // positions : one per quad (its center)                 -> 1
 	glVertexAttribDivisor(2, 1); // color : one per quad                                  -> 1
-
-	// Draw the particules !
-	// This draws many times a small triangle_strip (which looks like a quad).
-	// This is equivalent to :
-	// for(i in ParticlesCount) : glDrawArrays(GL_TRIANGLE_STRIP, 0, 4),
-	// but faster.
-	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, ParticlesCount);
+	//glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, nVerts, ParticlesCount);
+	glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, nVerts, ParticlesCount);
+	//glLineWidth(5); glDrawArraysInstanced(GL_LINE_STRIP, 0, nVerts, ParticlesCount);
+    //glDrawArraysInstanced(GL_TRIANGLES, 0, nVerts, ParticlesCount);
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
