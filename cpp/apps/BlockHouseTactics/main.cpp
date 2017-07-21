@@ -111,7 +111,7 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
     glNewList( cursorShape , GL_COMPILE );
         glPushMatrix();
         glScalef( 0.5f, 0.5f, 0.5f );
-        glColor3f(0.01f,0.01f,0.01f); Draw3D::drawLines    ( Solids::Cube_nedges, Solids::Cube_edges, Solids::Cube_verts );
+        glColor3f(0.01f,0.01f,0.01f); Draw3D::drawLines    ( Solids::Cube_nedges, (int*)Solids::Cube_edges, Solids::Cube_verts );
         glPopMatrix();
     glEndList();
 

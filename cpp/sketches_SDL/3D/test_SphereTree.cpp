@@ -383,7 +383,7 @@ TestAppSphereTree::TestAppSphereTree( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         glPushMatrix();
         glTranslatef(0.5f,0.5f,0.5f);
         glScalef( (float)gridStep*0.5, (float)gridStep*0.5, (float)gridStep*0.5 );
-        glColor3f(0.01f,0.01f,0.01f); Draw3D::drawLines ( Solids::Cube_nedges, Solids::Cube_edges, Solids::Cube_verts );
+        glColor3f(0.01f,0.01f,0.01f); Draw3D::drawLines ( Solids::Cube_nedges, (int*)Solids::Cube_edges, Solids::Cube_verts );
         //Draw3D::drawAxis( 0.5f );
         glPopMatrix();
     glEndList();

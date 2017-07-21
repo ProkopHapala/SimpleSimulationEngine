@@ -108,14 +108,6 @@ Vec3d terrainFunc( Vec2d p ){ return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0
 double arr_func( int n, const double * xs ){ };
 struct S { int a, b, c, d, e; };
 
-GLObject * makeOgl_flat( const CMesh& mesh ){
-    GLObject * ogl = new GLObject();
-    ogl->setup( countVerts( mesh.nfaces, mesh.ngons ) );
-    hardFace( mesh.nfaces, mesh.ngons, mesh.faces, mesh.verts, ogl->buffs[0].cbuff, ogl->buffs[1].cbuff );
-    ogl->init();
-    return ogl;
-}
-
 void setup(){
 
     arr_func( 3, (const double[]){1.0,2.0,3.0} );
@@ -232,7 +224,7 @@ void draw(){
 
     //printf("====\n"); mouseMat.print();
 
-    float fov = 3.0;
+
 
     mRot.setOne(); mRot.setRot(mouseMat);
 
@@ -247,7 +239,8 @@ void draw(){
     mRot.print();
     */
 
-    mPersp.setPerspective( fov, fov*ASPECT_RATIO, -1.0, -1000.0 );
+    float fov = 3.0;
+    mPersp.setPerspective( fov, fov*ASPECT_RATIO, 1.0, 1000.0 );
     //camMat.set_mmul_TN( m1, mPersp );
     //camMat.set_mmul( m1, mPersp );
     //mRot = mRot.transposed( );
@@ -265,7 +258,6 @@ void draw(){
     Vec3f  p;
     Quat4f c;
 
-        /*
     //object1->draw();
     object1->preDraw();
     for(int i=0; i<ninstancs; i++){
@@ -277,7 +269,7 @@ void draw(){
         object1->draw_instance();
     }
     object1->afterDraw();
-    */
+
 
     p = (Vec3f){0.0,0.0,0.0}; shader1->set_modelPos( (GLfloat*)&p );
     obj_terrain->draw_mode = GL_TRIANGLES; obj_terrain->draw_default();

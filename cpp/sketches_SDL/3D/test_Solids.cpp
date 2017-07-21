@@ -62,7 +62,7 @@ TestAppSolids::TestAppSolids( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         Draw3D::drawLines    ( Solids::Cube_nedges, Solids::Cube_edges, Solids::Cube_verts );
         */
         //Draw3D::drawLines    ( Solids::RhombicDodecahedron_nedges, Solids::RhombicDodecahedron_edges, Solids::RhombicDodecahedron_verts );
-        Draw3D::drawLines    ( Solids::Icosahedron_nedges, Solids::Icosahedron_edges, Solids::Icosahedron_verts );
+        Draw3D::drawLines    ( Solids::Icosahedron_nedges, (int*)Solids::Icosahedron_edges, Solids::Icosahedron_verts );
         glPopMatrix();
 
         glPushMatrix();

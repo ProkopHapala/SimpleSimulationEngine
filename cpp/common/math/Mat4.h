@@ -153,7 +153,7 @@ class Mat4TYPE{
         TYPE invdz = 1/(zmin-zmax);
         array[0 ]  = 2*ctgx; array[1 ] = 0;      array[2 ] =  0;                  array[3 ] = 0;
         array[4 ]  = 0;      array[5 ] = 2*ctgy; array[6 ] =  0;                  array[7 ] = 0;
-        array[8 ]  = 0;      array[9 ] = 0;      array[10] = (zmax+zmin)*invdz;   array[11] = 2*zmax*zmin*invdz;
+        array[8 ]  = 0;      array[9 ] = 0;      array[10] = -(zmax+zmin)*invdz;  array[11] = -2*zmax*zmin*invdz;
         array[12]  = 0;      array[13] = 0;      array[14] = -1;                  array[15] = 0;
     }
 

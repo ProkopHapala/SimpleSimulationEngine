@@ -10,6 +10,30 @@
 #include "Mat3.h"
 #include "Mat4.h"
 
+const char DEFAULT_fragment_shader_code[] = R"(
+#version 330 core
+smooth in vec4 gl_FragCoord;
+out     vec3 color;
+uniform vec4 baseColor;
+void main(){
+	color = baseColor.xyz;
+	gl_FragDepth = gl_FragCoord.z;
+};
+)";
+
+const char DEFAULT_vertex_shader_code[]=R"(
+#version 330 core
+layout(location = 0) in vec3 vertPos_model;
+uniform vec3 modelPos;
+uniform mat3 modelMat;
+uniform vec3 camPos;
+uniform mat4 camMat;
+void main(){
+	vec3 position_world = modelPos + modelMat * vertPos_model;
+	gl_Position         = camMat   * vec4( position_world-camPos, 1 );
+};
+)";
+
 class Shader{
 	public:
 	GLchar *vertexsource   = NULL;
@@ -22,9 +46,10 @@ class Shader{
 
 	// ==== function declarations
 
-	void compileShader       ( GLenum shaderType, char* sourceCode, GLuint& shader, char*& errLog        );
+	void compileShader       ( GLenum shaderType, const char* sourceCode, GLuint& shader, char*& errLog  );
 	void compileShaderProgram( GLuint vertexshader, GLuint fragmentshader, GLuint& shader, char*& errLog );
-	void init                ( char const * vertName, char const * fragName                              );
+	int  init_str            ( const char * vertexsource , const char * fragmentsource                   );
+	int  init                ( const char * vertName,      const char * fragName                         );
 	void destory             (                                                                           );
 
 	inline void use(){glUseProgram(shaderprogram);}

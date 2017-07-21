@@ -2,13 +2,26 @@
 #ifndef  GL3Utils_h
 #define  GL3Utils_h
 
+//#include <GL/glew.h>
+
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include "Vec3.h"
 #include "GLObject.h"
 #include "GLUtils.h"
 
+#include "CMesh.h"
+
 //GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Vec3d (vertFunc)(Vec2d) ){
+
+
+GLObject * makeOgl_flat( const CMesh& mesh ){
+    GLObject * ogl = new GLObject();
+    ogl->setup( countVerts( mesh.nfaces, mesh.ngons ) );
+    hardFace( mesh.nfaces, mesh.ngons, mesh.faces, mesh.verts, ogl->buffs[0].cbuff, ogl->buffs[1].cbuff );
+    ogl->init();
+    return ogl;
+}
 
 template<typename Func>
 GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Func vertFunc ){

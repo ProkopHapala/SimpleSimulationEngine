@@ -84,8 +84,8 @@ class Vec3TYPE{
     inline void  set_cross( const VEC& a, const VEC& b ){ x =a.y*b.z-a.z*b.y; y =a.z*b.x-a.x*b.z; z =a.x*b.y-a.y*b.x; };
 	inline void  add_cross( const VEC& a, const VEC& b ){ x+=a.y*b.z-a.z*b.y; y+=a.z*b.x-a.x*b.z; z+=a.x*b.y-a.y*b.x; };
 
-	double makeOrthoU( const VEC& a ){ double c = dot(a);          add_mul(a, c); return c; }
-	double makeOrtho ( const VEC& a ){ double c = dot(a)/a.norm(); add_mul(a, c); return c; }
+	double makeOrthoU( const VEC& a ){ double c = dot(a);          add_mul(a, -c); return c; }
+	double makeOrtho ( const VEC& a ){ double c = dot(a)/a.norm(); add_mul(a, -c); return c; }
 
     inline VEC operator+ ( TYPE f   ) const { VEC vo; vo.x=x+f; vo.y=y+f; vo.z=z+f; return vo; };
     inline VEC operator* ( TYPE f   ) const { VEC vo; vo.x=x*f; vo.y=y*f; vo.z=z*f; return vo; };

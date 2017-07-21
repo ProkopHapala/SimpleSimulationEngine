@@ -18,18 +18,26 @@
 #include "quaternion.h"
 #include "Mat4.h"
 
-
+#include "GL3Utils.h"
+#include "GLObject.h"
 #include "GLInstances.h"
 #include "Shader.h"
+
+#include "Solids.h"
+#include "CMesh.h"
 
 // =============== Global variables
 
 //const int MaxParticles = 100000;
-const int MaxParticles = 16;
+//const int MaxParticles = 16;
+const int MaxParticles = 256;
+//const int MaxParticles = 256*256;
 
-GLuint VertexArrayID;
-GLfloat* instance_pos = new GLfloat[MaxParticles * 4];
-GLubyte* instance_color         = new GLubyte[MaxParticles * 4];
+//GLuint VertexArrayID;
+GLfloat* instance_pos;
+GLfloat* instance_dir;
+GLfloat* instance_Up;
+GLfloat* instance_sc;
 
 //GLuint programID;
 Shader* shaderParticle;
@@ -66,15 +74,18 @@ Vec3f  camPos = (Vec3f){ 0.0f, 0.0f, 0.0f };
 int setup(){
 
 	shaderParticle=new Shader();
-	shaderParticle->init( "common_resources/shaders/Particle.glslv",   "common_resources/shaders/Particle.glslf"   );
+	//shaderParticle->init( "common_resources/shaders/Particle.glslv",   "common_resources/shaders/Particle.glslf"   );
+	shaderParticle->init( "common_resources/shaders/Instance3D.glslv",   "common_resources/shaders/Instance3D.glslf"   );
 
     shaderParticle->use();
     shaderParticle->getDefaultUniformLocation();
 
-	instance_pos = new GLfloat[MaxParticles * 4];
-	instance_color         = new GLubyte[MaxParticles * 4];
+	instance_pos    = new GLfloat[MaxParticles*4];
+	instance_dir    = new GLfloat[MaxParticles*4];
+	instance_Up     = new GLfloat[MaxParticles*4];
+	instance_sc     = new GLfloat[MaxParticles*4];
 
-	nVerts = 50;
+	/*
     float dx = 1.0f/nVerts;
 	Vec3f g_vertex_buffer_data[nVerts*3];
 	for( int i=0; i<nVerts; i++){
@@ -83,23 +94,36 @@ int setup(){
         g_vertex_buffer_data[i].y = x*cos(x*10.0);
         g_vertex_buffer_data[i].z = x;
 	}
+	*/
 
+	float span = 20.0f;
     float time = frameCount * 0.005;
     ParticlesCount = MaxParticles;
 	for( int i=0; i<ParticlesCount; i++ ){
-        instance_pos[4*i+0] = sin(time+i);
-        instance_pos[4*i+1] = cos(time+i);
-        instance_pos[4*i+2] = -5.0;
-        instance_pos[4*i+3] =  0.5f;
+        Vec3f pos, dir, up;
+        pos.set( randf(-span,span), randf(-span,span), randf(-span,span) );
+        dir.set( randf(-1.0f,1.0f), randf(-1.0f,1.0f), randf(-1.0f,1.0f) ); dir.normalize();
+        up .set( randf(-1.0f,1.0f), randf(-1.0f,1.0f), randf(-1.0f,1.0f) ); up.makeOrthoU( dir ); up.normalize();
 
-        // actually direction
-        instance_color[4*i+0] = rand() % 0xFF;
-        instance_color[4*i+1] = rand() % 0xFF;
-        instance_color[4*i+2] = rand() % 0xFF;
-        instance_color[4*i+3] = 0xFF;
+        //printf( "%i %g  %g %g \n", i, up.dot(dir),    dir.norm2(), up.norm2()  );
+
+        *((Vec3f*)(instance_pos+(3*i))) = pos;
+        *((Vec3f*)(instance_dir+(3*i))) = dir;
+        *((Vec3f*)(instance_Up +(3*i))) = up;
+        *((Vec3f*)(instance_sc +(3*i))) = (Vec3f){ randf(0.5,1.5),randf(0.5,1.5),randf(0.5,1.5) };
 	}
 
-	instances.init( MaxParticles, nVerts, g_vertex_buffer_data, instance_pos, instance_color );
+    CMesh mesh = Solids::Octahedron;
+    nVerts = countVerts( mesh.nfaces, mesh.ngons );
+    Vec3f * model_vpos = new Vec3f[nVerts];
+	Vec3f * model_vnor = new Vec3f[nVerts];
+	hardFace( mesh.nfaces, mesh.ngons, mesh.faces, mesh.verts, (GLfloat*)model_vpos, (GLfloat*)model_vnor );
+
+	instances.init( MaxParticles, nVerts, model_vpos, model_vnor, instance_pos, instance_dir, instance_Up, instance_sc );
+
+
+	delete [] model_vpos;
+	delete [] model_vnor;
 
     //lastTime = glfwGetTime();
     lastTime = 0.0;
@@ -110,11 +134,19 @@ int setup(){
 void physics(){
     float time = frameCount * 0.005;
     ParticlesCount = MaxParticles;
+
+    float dphi = 0.001;
+    double ca  = cos(dphi);
+    float  sa  = sin(dphi);
+
 	for( int i=0; i<ParticlesCount-2; i++ ){
-        instance_pos[4*i+0] = sin(time+i);
-        instance_pos[4*i+1] = cos(time+i);
-        instance_pos[4*i+2] =  5.0;
-        instance_pos[4*i+3] =  0.5f;
+        //Vec3f pos, dir, up;
+        //pos.set( randf(-span,span), randf(-span,span), randf(-span,span) );
+        //dir.set( randf(-1.0f,1.0f), randf(-1.0f,1.0f), randf(-1.0f,1.0f) ); dir.normalize();
+
+        ((Vec3f*)(instance_Up+(3*i)))->rotate_csa( ca, sa, *(Vec3f*)(instance_dir+(3*i)) );
+        //up.makeOrthoU( dir ); up.normalize();
+
 	}
 }
 
@@ -124,13 +156,13 @@ void draw( ){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 	// Simulate all particles
 
-	glDisable(GL_ALPHA);
-
-	//physics();
+	physics();
 
 	//glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
 
     Mat4f camMat,mRot,mPersp;
     qCamera.toMatrix(mouseMat);
@@ -156,7 +188,11 @@ void draw( ){
 	// http://www.opengl.org/wiki/Buffer_Object_Streaming
     //instances.upload_pos   ( ParticlesCount, instance_pos   );
     //instances.upload_colors( ParticlesCount, instance_color );
-    instances.draw();
+
+    uploadArrayBuffer( instances.pose_Up, instances.nInstances*3*sizeof(GLfloat), instance_Up );
+    instances.draw( GL_TRIANGLES );
+    //glLineWidth( 3.0); instances.draw( GL_LINE_LOOP );
+    //glPointSize(10.0); instances.draw( GL_POINTS );
 
 }
 
