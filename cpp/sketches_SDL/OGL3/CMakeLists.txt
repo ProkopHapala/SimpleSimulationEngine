@@ -21,6 +21,9 @@ target_link_libraries( test_LandScape ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LI
 add_executable       ( test_Instances test_Instances.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_Instances ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_StreamLines test_StreamLines.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
+target_link_libraries( test_StreamLines ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_MeshOGL3 test_MeshOGL3.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( test_MeshOGL3 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
