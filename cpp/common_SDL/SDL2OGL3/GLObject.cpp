@@ -62,7 +62,7 @@ void GLObject::draw_default(){
     afterDraw();
 }
 
-void GLObject::draw(  ){
+void GLObject::draw(){
     draw_default();
 }
 

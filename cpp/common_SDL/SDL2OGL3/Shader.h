@@ -23,13 +23,13 @@ void main(){
 
 const char DEFAULT_vertex_shader_code[]=R"(
 #version 330 core
-layout(location = 0) in vec3 vertPos_model;
+layout(location = 0) in vec3 vpos;
 uniform vec3 modelPos;
 uniform mat3 modelMat;
 uniform vec3 camPos;
 uniform mat4 camMat;
 void main(){
-	vec3 position_world = modelPos + modelMat * vertPos_model;
+	vec3 position_world = modelPos + modelMat * vpos;
 	gl_Position         = camMat   * vec4( position_world-camPos, 1 );
 };
 )";
@@ -52,9 +52,12 @@ class Shader{
 	int  init                ( const char * vertName,      const char * fragName                         );
 	void destory             (                                                                           );
 
-	inline void use(){glUseProgram(shaderprogram);}
+	inline int    init_default (){ init_str(DEFAULT_vertex_shader_code, DEFAULT_fragment_shader_code);     };
+	inline void   use          (){glUseProgram(shaderprogram);}
+	inline GLuint getUloc( char * name ){ return glGetUniformLocation(shaderprogram,name); };
 
 	void getDefaultUniformLocation();
+
 
 	void setUniformi    ( char * name, int    i);
 	void setUniformf    ( char * name, float  f);

@@ -82,6 +82,10 @@ class Mesh{ public:
     }
     */
 
+    void   exportEdges ( Vec2i* vts, Vec2i* fcs ){               for(int i=0;i<edges.size();i++){ if(vts)vts[i]=edges[i].verts; if(fcs)fcs[i]=edges[i].faces; }; }
+    Vec2i* exportEdgeVs(){ Vec2i* vts = new Vec2i[edges.size()]; for(int i=0;i<edges.size();i++){ vts[i]=edges[i].verts; }; return vts; }
+    Vec2i* exportEdgeFs(){ Vec2i* fcs = new Vec2i[edges.size()]; for(int i=0;i<edges.size();i++){ fcs[i]=edges[i].faces; }; return fcs; }
+
     Vec3d faceCog( int ipl )const {
         Polygon* pl = polygons.at(ipl);
         int n = pl->ipoints.size();

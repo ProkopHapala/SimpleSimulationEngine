@@ -20,6 +20,7 @@
 
 #include "GL3Utils.h"
 #include "GLObject.h"
+#include "GLfunctions.h"
 #include "GLInstances.h"
 #include "Shader.h"
 

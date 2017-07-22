@@ -10,9 +10,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <GL/glew.h>
 //#define GL3_PROTOTYPES 1
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
+//#define GL_GLEXT_PROTOTYPES
+//#include <GL/gl.h>
 #include <SDL2/SDL.h>
 
 #include "Vec2.h"
@@ -22,144 +23,29 @@
 
 #include "Mesh.h"
 
+#include "GLfunctions.h"
+#include "GLobjects.h"
+
 #include "GLObject.h"
 #include "Shader.h"
 
+int WIDTH  = 800;
+int HEIGHT = 800;
+SDL_Window * window     = NULL;
+SDL_GLContext   context = NULL;
+
 GLuint vao;
-Shader   * shader1;
-GLObject * object1;
+Shader   *shader1,*shConst;
+//GLObject * object1;
+GLMesh   *glmesh, *gledges;
 
 Mesh mesh;
 
-//http://www.opengl-tutorial.org/beginners-tutorials/tutorial-4-a-colored-cube/
-// Our vertices. Three consecutive floats give a 3D vertex; Three consecutive vertices give a triangle.
-// A cube has 6 faces with 2 triangles each, so this makes 6*2=12 triangles, and 12*3 vertices
-
-const int nVert = 36;
-GLfloat vertexes[nVert*3] = {
-    -1.0f,-1.0f,-1.0f, // triangle 1 : begin
-    -1.0f,-1.0f, 1.0f,
-    -1.0f, 1.0f, 1.0f, // triangle 1 : end
-    1.0f, 1.0f,-1.0f, // triangle 2 : begin
-    -1.0f,-1.0f,-1.0f,
-    -1.0f, 1.0f,-1.0f, // triangle 2 : end
-    1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f,-1.0f,
-    1.0f,-1.0f,-1.0f,
-    1.0f, 1.0f,-1.0f,
-    1.0f,-1.0f,-1.0f,
-    -1.0f,-1.0f,-1.0f,
-    -1.0f,-1.0f,-1.0f,
-    -1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f,-1.0f,
-    1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f,-1.0f,
-    -1.0f, 1.0f, 1.0f,
-    -1.0f,-1.0f, 1.0f,
-    1.0f,-1.0f, 1.0f,
-    1.0f, 1.0f, 1.0f,
-    1.0f,-1.0f,-1.0f,
-    1.0f, 1.0f,-1.0f,
-    1.0f,-1.0f,-1.0f,
-    1.0f, 1.0f, 1.0f,
-    1.0f,-1.0f, 1.0f,
-    1.0f, 1.0f, 1.0f,
-    1.0f, 1.0f,-1.0f,
-    -1.0f, 1.0f,-1.0f,
-    1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f,-1.0f,
-    -1.0f, 1.0f, 1.0f,
-    1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f, 1.0f,
-    1.0f,-1.0f, 1.0f
-};
-// One color for each vertex. They were generated randomly.
-GLfloat colors[nVert*3] = {
-    0.583f,  0.771f,  0.014f,
-    0.609f,  0.115f,  0.436f,
-    0.327f,  0.483f,  0.844f,
-    0.822f,  0.569f,  0.201f,
-    0.435f,  0.602f,  0.223f,
-    0.310f,  0.747f,  0.185f,
-    0.597f,  0.770f,  0.761f,
-    0.559f,  0.436f,  0.730f,
-    0.359f,  0.583f,  0.152f,
-    0.483f,  0.596f,  0.789f,
-    0.559f,  0.861f,  0.639f,
-    0.195f,  0.548f,  0.859f,
-    0.014f,  0.184f,  0.576f,
-    0.771f,  0.328f,  0.970f,
-    0.406f,  0.615f,  0.116f,
-    0.676f,  0.977f,  0.133f,
-    0.971f,  0.572f,  0.833f,
-    0.140f,  0.616f,  0.489f,
-    0.997f,  0.513f,  0.064f,
-    0.945f,  0.719f,  0.592f,
-    0.543f,  0.021f,  0.978f,
-    0.279f,  0.317f,  0.505f,
-    0.167f,  0.620f,  0.077f,
-    0.347f,  0.857f,  0.137f,
-    0.055f,  0.953f,  0.042f,
-    0.714f,  0.505f,  0.345f,
-    0.783f,  0.290f,  0.734f,
-    0.722f,  0.645f,  0.174f,
-    0.302f,  0.455f,  0.848f,
-    0.225f,  0.587f,  0.040f,
-    0.517f,  0.713f,  0.338f,
-    0.053f,  0.959f,  0.120f,
-    0.393f,  0.621f,  0.362f,
-    0.673f,  0.211f,  0.457f,
-    0.820f,  0.883f,  0.371f,
-    0.982f,  0.099f,  0.879f
-};
-
-GLfloat modelPos[3] = { 0.0f,  0.0f,  -30.0f };
-GLfloat modelMat[9] = {
-  1.0f,  0.0f,  0.0f,
-  0.0f,  1.0f,  0.0f,
-  0.0f,  0.0f,  1.0f
-};
-
-GLfloat camRot[9] = {
-  1.0f,  0.0f,  0.0f,
-  0.0f,  1.0f,  0.0f,
-  0.0f,  0.0f,  1.0f
-};
-GLfloat cam_pos      [3] = { 0.0f,  0.0f,  -10.0f };
-GLfloat light_pos    [3] = { 1.0f,  1.0f,   -1.0f };
-
-GLfloat lightColor   [3] = { 1.0f,  0.9f,   0.8f  };
-//GLfloat lightColor   [3] = { 1.0f,  1.0f,   1.0f  };
-GLfloat diffuseColor [3] = { 1.0f,  1.0f,   1.0f  };
-//GLfloat diffuseColor [3] = { 0.0f,  0.0f,   0.0f  };
-GLfloat ambientColor [3] = { 0.2f,  0.2f,   0.3f  };
-GLfloat specularColor[3] = { 1.0f,  1.0f,   1.0f  };
-//GLfloat specularColor[3] = { 0.0f,  0.0f,   0.0f  };
-
-
-int WIDTH  = 800;
-int HEIGHT = 800;
-
-
 int mouseX, mouseY;
-SDL_Window * window     = NULL;
-SDL_GLContext   context = NULL;
 Quat4f qCamera;
-
-
-
-//   http://www.songho.ca/opengl/gl_projectionmatrix.html
-
-void getPerspectiveMatrix( float xmin, float xmax, float ymin, float ymax, float zmin, float zmax, float * mat ){
-    float invdx = xmax-xmin;
-    float invdy = ymax-ymin;
-    float invdz = zmax-zmin;
-    mat[0 ]  = 2*zmin*invdx; mat[1 ] = 0;            mat[2 ] =  (xmax+xmin)*invdx;  mat[3 ] = 0;
-    mat[4 ]  = 0;            mat[5 ] = 2*zmin*invdy; mat[6 ] =  (ymin+ymax)*invdy;  mat[7 ] = 0;
-    mat[8 ]  = 0;            mat[9 ] = 0;            mat[10] = -(zmin+zmax)*invdz;  mat[11] = -2*zmax*zmin*invdz;
-    mat[12]  = 0;            mat[13] = 0;            mat[14] = -1;                  mat[15] = 0;
-}
+Mat3f  mouseMat;
+Vec3f  camPos   = (Vec3f){ 0.0f,0.0f, -10.0f };
+Vec3f  modelPos = (Vec3f){ 0.0f,0.0f, -30.0f };
 
 // ============= FUNCTIONS
 
@@ -173,7 +59,6 @@ void init();
 void draw();
 void loop( int niters );
 
-
 int render_type = 1;
 
 void setup(){
@@ -181,46 +66,41 @@ void setup(){
     mesh.fromFileOBJ( "common_resources/turret.obj" );
     mesh.polygonsToTriangles(false);
     mesh.tris2normals(true);
-    object1 = new GLObject( );
-    object1->nVert    = mesh.points.size();
-    //object1->nInd     = mesh.triangles.size();
-
-    //object1->setIndexes( 16, (int*)&mesh.triangles[0] );
-    object1->setIndexes( mesh.triangles.size()*3, (int*)&mesh.triangles[0] );
-    printf( "nVert %i nInd %i \n", object1->nVert, object1->nInd);
-    object1->buffs[0].setup(0,3,GL_FALSE,(double*)&(mesh.points [0]), object1->nVert, 'v'); // vertexes
-    object1->buffs[1].setup(1,3,GL_FALSE,(double*)&(mesh.normals[0]), object1->nVert, 'n'); // normals
-    //object1->indexes .setup(2,3,GL_FALSE,(void*  )&(mesh.triangles[0]), 'i'); // indexes
-    //object1->index_cbuff = (GLuint *)&mesh.triangles[0];
-    //object1->nVert = 5;
-
+    mesh.findEdges( );
 
     /*
     object1 = new GLObject( );
-    object1->nVert    = nVert;
-    object1->buffs[0].setup(0,3,GL_FALSE,vertexes,'v'); // vertexes
-    object1->buffs[1].setup(1,3,GL_FALSE,vertexes,'c'); // colors
+    object1->nVert   = mesh.points.size();
+    object1->setIndexes( mesh.triangles.size()*3, (int*)&mesh.triangles[0] );
+    object1->buffs[0].setup(0,3,GL_FALSE,(double*)&(mesh.points [0]), object1->nVert, 'v'); // vertexes
+    object1->buffs[1].setup(1,3,GL_FALSE,(double*)&(mesh.normals[0]), object1->nVert, 'n'); // normals
     object1->init();
     */
 
-    object1->init();
+    glmesh = new GLMesh();
+    glmesh->init_d( mesh.points.size(), mesh.triangles.size()*3, ((int*)&mesh.triangles[0]), (double*)&(mesh.points [0]), (double*)&(mesh.normals[0]), NULL, NULL );
+    //glmesh->init_d( mesh.points.size(), 0, NULL, (double*)&(mesh.points [0]), (double*)&(mesh.normals[0]), NULL, NULL );
 
-    if ( render_type == 0      ){
-        // --- vertex const color
-        shader1=new Shader();
-        //shader1->init( "shaders/basicColor3D_vert.c", "shaders/basicColor3D_frag.c" );
-        shader1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
-        glUseProgram(shader1->shaderprogram);
-    }else if ( render_type == 1 ){
-        // --- shading
-        shader1=new Shader();
-        //shader1->init( "shaders/basicShading3D_vert.c", "shaders/basicShading3D_frag.c" );
-        shader1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
-        glUseProgram(shader1->shaderprogram);
-    };
-	//mesh.fromFileOBJ("common_resources/turret.obj");
+    gledges = new GLMesh();
+    *gledges = *glmesh;
+    gledges->nInds = mesh.edges.size()*2;
+    Vec2i * evts = mesh.exportEdgeVs();
+    newArrayBuffer( gledges->inds, gledges->nInds*3*sizeof(GLuint), (int*)evts, GL_STATIC_DRAW );
+    delete [] evts;
+
+	shConst=new Shader();
+	shConst->init_default();
+	//shConst->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
+	//shConst->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+	//shConst->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
+	shConst->getDefaultUniformLocation();
+
+	shader1=new Shader();
+	shader1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
+	shader1->getDefaultUniformLocation();
 
 	qCamera.setOne();
+
 }
 
 void draw(){
@@ -230,34 +110,36 @@ void draw(){
     glEnable( GL_DEPTH_TEST );
     glDepthFunc( GL_LESS );
 
-    float camMat[16];
-    getPerspectiveMatrix( -WIDTH, WIDTH, -HEIGHT, HEIGHT, 1.0, 10.0, camMat );
+    qCamera.toMatrix(mouseMat);
+    Mat4f camMat;   camMat.setPerspective( 20.0, 20.0, -2.0, -1000.0 );
 
-    //Quat4f qCamera_; convert(qCamera,qCamera_);
-    Mat3f mouseMat; qCamera.toMatrix(mouseMat);
-    //printf( " (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x,qCamera.y,qCamera.z,qCamera.w );
-    //printf( " (%3.3f,%3.3f,%3.3f,%3.3f) \n", qCamera.x,qCamera.y,qCamera.z,qCamera.w );
-    //printf( "mouseMat (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", mouseMat.ax, mouseMat.ay, mouseMat.az,  mouseMat.bx, mouseMat.by, mouseMat.bz,   mouseMat.cx, mouseMat.cy, mouseMat.cz );
+    shader1->use();
+    shader1->set_modelPos( (GLfloat*)&modelPos );
+    shader1->set_modelMat( (GLfloat*)&mouseMat );
+    //shader1->set_camPos  ( (GLfloat*)&camPos );
+    shader1->set_camMat  ( (GLfloat*)&camMat );
 
-    GLuint uloc;
-    uloc = glGetUniformLocation( shader1->shaderprogram, "modelPos" ); glUniform3fv      (uloc, 1, modelPos );
-    //uloc = glGetUniformLocation( shader1->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, modelMat );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "modelMat" ); glUniformMatrix3fv(uloc, 1, GL_FALSE, (float*)&mouseMat );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "camMat"   ); glUniformMatrix4fv(uloc, 1, GL_FALSE, camMat   );
+    glUniform3fv( shader1->getUloc("light_pos"    ), 1, (const float[]){ 1.0f,  1.0f, -1.0f } );
+    glUniform3fv( shader1->getUloc("lightColor"   ), 1, (const float[]){ 1.0f,  0.9f,  0.8f } );
+    glUniform3fv( shader1->getUloc("diffuseColor" ), 1, (const float[]){ 1.0f,  1.0f,  1.0f } );
+    glUniform3fv( shader1->getUloc("ambientColor" ), 1, (const float[]){ 0.2f,  0.2f,  0.3f } );
+    glUniform3fv( shader1->getUloc("specularColor"), 1, (const float[]){ 0.0f,  0.0f,  0.0f } );
 
     // shading
-    if ( render_type == 1 ){
-        uloc = glGetUniformLocation( shader1->shaderprogram, "cam_pos"       ); glUniform3fv      (uloc, 1, cam_pos      );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "light_pos"     ); glUniform3fv      (uloc, 1, light_pos     );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "lightColor"    ); glUniform3fv      (uloc, 1, lightColor    );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "diffuseColor"  ); glUniform3fv      (uloc, 1, diffuseColor  );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "ambientColor"  ); glUniform3fv      (uloc, 1, ambientColor  );
-        uloc = glGetUniformLocation( shader1->shaderprogram, "specularColor" ); glUniform3fv      (uloc, 1, specularColor );
-    };
-
     //uloc = glGetUniformLocation( shader1->shaderprogram, "light_dir"); glUniform3fv(uloc, 1, light_dir  );
+    //object1->draw();
 
-    object1->draw();
+    glmesh->draw();
+    //glmesh->draw( GL_TRIANGLES );
+    //glPointSize(10.0); glmesh->draw( GL_POINTS );
+    //glLineWidth(30.0); glmesh->draw( GL_LINE_STRIP );
+
+    shConst->use();
+    shConst->set_modelPos( (GLfloat*)&modelPos );
+    shConst->set_modelMat( (GLfloat*)&mouseMat );
+    shConst->set_camMat  ( (GLfloat*)&camMat );
+    glUniform4fv( shConst->getUloc("baseColor"), 1, (const float[]){1.0f,0.0f,0.0f,1.0f} ); gledges->drawPoints(10.0);
+    glUniform4fv( shConst->getUloc("baseColor"), 1, (const float[]){0.0f,1.0f,0.0f,1.0f} ); glLineWidth(3.0); gledges->draw(GL_LINES);
 
     SDL_GL_SwapWindow(window);
 
@@ -272,17 +154,19 @@ void draw(){
 void inputHanding(){
     float posstep = 0.1;
 	SDL_Event event;
+
+	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+    if( keys[ SDL_SCANCODE_W  ] ){ modelPos.y += posstep; }
+	if( keys[ SDL_SCANCODE_S  ] ){ modelPos.y -= posstep; }
+	if( keys[ SDL_SCANCODE_A  ] ){ modelPos.x -= posstep; }
+	if( keys[ SDL_SCANCODE_D  ] ){ modelPos.x += posstep; }
+    if( keys[ SDL_SCANCODE_Q  ] ){ modelPos.z += posstep; }
+	if( keys[ SDL_SCANCODE_E  ] ){ modelPos.z -= posstep; }
+
 	while(SDL_PollEvent(&event)){
 		if( event.type == SDL_KEYDOWN ){
             switch( event.key.keysym.sym ){
                 case SDLK_ESCAPE: quit(); break;
-                case SDLK_w: modelPos[1] +=posstep; break;
-                case SDLK_s: modelPos[1] -=posstep; break;
-                case SDLK_a: modelPos[0] +=posstep; break;
-                case SDLK_d: modelPos[0] -=posstep; break;
-                case SDLK_q: modelPos[2] +=posstep*10; break;
-                case SDLK_e: modelPos[2] -=posstep*10; break;
-                //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
 		}
 		if( event.type == SDL_QUIT){ quit();  };
@@ -329,6 +213,14 @@ void init(){
     if ( !window ) die("Unable to create window");
     context = SDL_GL_CreateContext( window );
     SDL_GL_SetSwapInterval(1);
+
+    glewExperimental = true; // Needed for core profile
+	if (glewInit() != GLEW_OK) {
+		fprintf(stderr, "Failed to initialize GLEW\n");
+		getchar();
+		quit();
+		//return -1;
+	}
 
 	// vertex array object
 	glGenVertexArrays(1, &vao);  				// Allocate and assign a Vertex Array Object to our handle
