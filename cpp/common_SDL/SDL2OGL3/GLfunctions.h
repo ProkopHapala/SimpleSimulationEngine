@@ -38,4 +38,25 @@ inline void drawElements( GLenum draw_mode, GLuint buff, GLuint n ){
     glDrawElements( draw_mode,n,GL_UNSIGNED_INT,(void*)0 );
 }
 
+// =========== GL_ELEMENT_ARRAY_BUFFER
+
+inline void newTexture2D( GLuint& textureID, int W, int H, void * cbuff, GLint format, GLenum type ){
+    // example:
+    // newTexture2D( textureID, 800, 600, imgData, GL_RGBA, GL_UNSIGNED_BYTE );
+    // newTexture2D( textureID, 800, 600, imgData, GL_R, GL_FLOAT );
+    glGenTextures(1, &textureID);    // Create one OpenGL texture
+    glBindTexture  (GL_TEXTURE_2D, textureID);
+    glTexImage2D   (GL_TEXTURE_2D, 0, format, W, H, 0, format, type, cbuff );
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+}
+
+inline void bindTexture( GLuint slot, GLuint textureID, GLuint uloc ){
+    // https://www.opengl.org/discussion_boards/showthread.php/163092-Passing-Multiple-Textures-from-OpenGL-to-GLSL-shader
+    // https://www.khronos.org/registry/OpenGL-Refpages/es1.1/xhtml/glActiveTexture.xml
+    glActiveTexture(GL_TEXTURE0 + slot );
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glUniform1i( uloc, slot );
+}
+
 #endif

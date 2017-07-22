@@ -28,54 +28,45 @@
 
 //============ Globals
 
-Shader   * shader1;
-GLObject * object1,*obj_terrain,*obj_flicker;
-GLMesh   * terrain_mesh;
+Shader   *shader1,*shTerrain;
+GLObject *object1,*obj_terrain,*obj_flicker;
+GLMesh   *terrain_mesh,*terrain_mesh2;
 
 Mesh mesh;
-
 GLuint vao;     // vertex array object
-GLuint textureID;
-GLuint uloc;
-
-GLfloat modelPos[3] = { 0.0f,  0.0f,  -5.0f };
-GLfloat modelMat[9] = {
-  1.0f,  0.0f,  0.0f,
-  0.0f,  1.0f,  0.0f,
-  0.0f,  0.0f,  1.0f
-};
 
 
-//GLfloat cam_pos      [3] = { 0.0f,  0.0f,  -10.0f };
-GLfloat light_pos    [3] = { 1.0f,  1.0f,   -1.0f };
-GLfloat lightColor   [3] = { 1.0f,  0.9f,   0.8f  };
-//GLfloat lightColor   [3] = { 1.0f,  1.0f,   1.0f  };
-GLfloat diffuseColor [3] = { 1.0f,  1.0f,   1.0f  };
-//GLfloat diffuseColor [3] = { 0.0f,  0.0f,   0.0f  };
-GLfloat ambientColor [3] = { 0.2f,  0.2f,   0.3f  };
-GLfloat specularColor[3] = { 1.0f,  1.0f,   1.0f  };
-//GLfloat specularColor[3] = { 0.0f,  0.0f,   0.0f  };
-
-float resolution  [2] = {800,800};
-float terrain_0   [2] = {128.0,128.0};
-float terrain_size[2] = {256.0,256.0};
-
-int ninstancs = 10;
-//GLfloat * instance_points;
-
+int     ninstancs = 10;
 Vec3f * instance_points;
 
 int WIDTH  = 800;
 int HEIGHT = 800;
 float ASPECT_RATIO = HEIGHT/WIDTH;
 
-int mouseX, mouseY;
+
 SDL_Window * window     = NULL;
 SDL_GLContext   context = NULL;
-Quat4f qCamera;
-
 int frameCount = 0;
 bool STOP = false;
+
+// speed test
+int delay = 1; int VSync = 0;
+//int delay = 10; int VSync = 1;
+//float camMat[16];
+
+int mouseX, mouseY;
+Quat4f qCamera;
+Vec3f camPos = (Vec3f){ 0.0f, 0.0f, 0.0f };
+Mat4f camMat,mRot,mPersp;
+Mat3f mouseMat;
+
+float pitch=0,yaw=0;
+
+GLuint txHeight=0;
+
+// ===============================================
+// ======================= Functions
+// ===============================================
 
 void quit();
 void die ( char const *msg );
@@ -83,25 +74,6 @@ void inputHanding ();
 void init();
 void draw();
 void loop( int niters );
-
-int  render_type  = 1;
-bool terrain_mode = true;
-bool RayTerrain   = false;
-
-// speed test
-int delay = 1; int VSync = 0;
-//int delay = 10; int VSync = 1;
-//float camMat[16];
-
-Vec3f camPos = (Vec3f){ 0.0f, 0.0f, 0.0f };
-Mat4f camMat,mRot,mPersp;
-Mat3f mouseMat;
-
-float pitch=0,yaw=0;
-
-// ===============================================
-// ======================= Functions
-// ===============================================
 
 /*
 Vec3d terrainFunc( Vec2d p ){ return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0,p.y*10.0}; };
@@ -117,13 +89,13 @@ void setup(){
 
     shader1=new Shader();
 
-    //shader1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
-    shader1->init( "common_resources/shaders/color3D_depth.glslv",   "common_resources/shaders/color3D_depth.glslf"   );
+    shader1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    //shader1->init( "common_resources/shaders/color3D_depth.glslv",   "common_resources/shaders/color3D_depth.glslf"   );
     //shader1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
     //shader1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/pointSprite.glslf"   );
     //shader1->init( "common_resources/shaders/pos3D.glslv",   "common_resources/shaders/pos3D.glslf"   );
     //shader1->init( "common_resources/shaders/terrain_world.glslv",   "common_resources/shaders/pos3D.glslf" );
-
+    shader1->getDefaultUniformLocation();
     /*
     shader1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
     GLuint uloc;
@@ -134,6 +106,11 @@ void setup(){
     uloc = glGetUniformLocation( shader1->shaderprogram, "ambientColor"  ); glUniform3fv      (uloc, 1, ambientColor      );
     uloc = glGetUniformLocation( shader1->shaderprogram, "specularColor" ); glUniform3fv      (uloc, 1, specularColor     );
     */
+
+    shTerrain = new Shader();
+    //shTerrain->init( "common_resources/shaders/terrain_world.glslv", "common_resources/shaders/color3D.glslf" );
+    shTerrain->init( "common_resources/shaders/terrain_world.glslv", "common_resources/shaders/terrain_world.glslf" );
+    shTerrain->getDefaultUniformLocation();
 
     //object1 = makeOgl_flat( Solids::Tetrahedron );
     object1 = makeOgl_flat( Solids::Octahedron );
@@ -162,7 +139,6 @@ void setup(){
     */
 
     terrain_mesh = qaudPatchSmooth( (Vec2i){40,40}, (Vec2f){200.0,200.0}, 1, [](Vec2f p,Vec3f& pv,Vec3f& nv)->void{
-
         float h    = sin(p.x*0.1)*sin(p.y*0.05)*10.0;
         float dh_x = cos(p.x*0.1)*sin(p.y*0.05)*10.0*0.1;
         float dh_y = sin(p.x*0.1)*cos(p.y*0.05)*10.0*0.05;
@@ -173,31 +149,32 @@ void setup(){
         //nv = (Vec3f){0.0f,0.0f,0.0f};
     }, NULL );
 
-    /*
-    // circle
-    double freq   = 0.05;
-    double radius = 150.0;
-    obj_flicker = makeNVerts( 100, [&](int i, Vec3d& p,Vec3d& nv){
-        double x = i * freq;
-        double ca = cos( x );
-        double sa = sin( x );
-        p  =  (Vec3d){0.0,ca*radius,sa*radius};
-        nv =  (Vec3d){0.0,sa,-ca};
-    });
-    */
+    terrain_mesh2 = qaudPatchUV( (Vec2i){40,40} );
 
-    /*
-    obj_flicker = makeNVerts( 100, [](int i, Vec3d& p,Vec3d& nv){
-        double x = (i>>1)*10.0;
-        if( i&1){
-            p  =  (Vec3d){0.0,0.1,x};
-            nv =  (Vec3d){0.0,0.0,1.0};
-        }else{
-            p  =  (Vec3d){0.5,0.1,x+0.00001};
-            nv =  (Vec3d){1.0,0.0,0.0};
+    int imgH = 100;
+    int imgW = 100;
+    float * height_map = new float[imgH*imgW];
+    for( int iy=0; iy<imgH; iy++ ){
+        for( int ix=0; ix<imgW; ix++ ){
+            float x = ix*0.1;
+            float y = iy*0.2;
+            height_map[ iy*imgW + ix ] = sin(x)*sin(y)*0.5 + 0.5;
+            //float r = sin(ix*0.1) + 1.0f;
+            //float g = sin(iy*0.1) + 1.0f;
+            //float b = sin((ix+iy)*0.1) + 1.0f;
+            //imgData[ iy*imgW + ix ] =  ((int)(127*r) <<16) | ((int)(127*g)<<8) | ((int)(127*b));
         }
-    });
+    }
+    /*
+    glGenTextures(0, &txHeight);    // Create one OpenGL texture
+    glBindTexture(GL_TEXTURE_2D, txHeight); // "Bind" the newly created texture : all future texture functions will modify this texture
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, imgW, imgH, 0, GL_RED, GL_FLOAT, height_map );
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     */
+    newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
+
+    delete [] height_map;
 
     obj_flicker = makeNTris( 20, [](int i, int iv, Vec3d& p,Vec3d& nv){
         double x = (i>>1)*100.0;
@@ -212,24 +189,11 @@ void setup(){
         }
     });
 
-    printf( "obj_terrain nVert %i", obj_terrain->nVert);
-    //exit(0);
-    /*
-    for(int i=0; i<obj_terrain->nVert; i++){
-        Vec3f& p  = ((Vec3f*)obj_terrain->buffs[0].cbuff)[i];
-        Vec3f& nv = ((Vec3f*)obj_terrain->buffs[1].cbuff)[i];
-        printf( " %i (%g,%g,%g) (%g,%g,%g) \n", i, p.x, p.y, p.z,   nv.x, nv.y, nv.z );
-    }
-    */
-    //exit(0);
-
     ninstancs = 100; // 30 ms/frame
     instance_points = new Vec3f[ninstancs];
     //for (int i=0; i<ninstancs; i++){ instance_points[i] = (Vec3f){randf(-15.0,15.0),randf(-15.0,15.0),randf(5.0,100.0)};};
     for (int i=0; i<ninstancs; i++){ instance_points[i] = (Vec3f){0.0,0.0,5.0*i};};
 
-
-    shader1->getDefaultUniformLocation();
 	qCamera.setOne();
 	delay = 1;
 }
@@ -275,8 +239,8 @@ void draw(){
     Mat3f objRot; objRot.setOne();
 
     // ============= Objects
-    glUseProgram(shader1->shaderprogram);
 
+    shader1->use();
     shader1->set_camPos  ( (float*)&camPos );
     shader1->set_camMat  ( (float*)&camMat );
     shader1->set_modelMat( (float*)&objRot );
@@ -296,7 +260,6 @@ void draw(){
     }
     object1->afterDraw();
 
-
     //p = (Vec3f){0.0,0.0,0.0}; shader1->set_modelPos( (GLfloat*)&p );
     //obj_terrain->draw_mode = GL_TRIANGLES; obj_terrain->draw_default();
     //obj_terrain->draw_mode = GL_POINTS; glPointSize( 15.0 ); obj_terrain->draw_default();
@@ -305,24 +268,45 @@ void draw(){
 
     p = (Vec3f){0.0,0.0,0.0}; shader1->set_modelPos( (GLfloat*)&p );
     //printf( "\n*terrain_mesh %i \n", terrain_mesh);
-    terrain_mesh->draw();
+    //terrain_mesh->draw();
     //terrain_mesh->drawPoints( 3.0f );
+
+    //terrain_mesh2->drawPoints( 3.0f );
 
     p = (Vec3f){0.0,2.0,0.0};  shader1->set_modelPos( (GLfloat*)&p );
     obj_flicker->draw_mode = GL_TRIANGLES; obj_flicker->draw_default();
     //obj_flicker->draw_mode = GL_POINTS; glPointSize( 20.0 ); obj_flicker->draw_default();
     //obj_flicker->draw_mode = GL_LINE_STRIP;  glLineWidth( 5.0 );  obj_flicker->draw_default();
 
+    shTerrain->use();
+
+    Vec3f modelPos = {0.0,0.0,0.0};
+    shTerrain->set_camPos  ( (float*)&camPos );
+    shTerrain->set_camMat  ( (float*)&camMat );
+    shTerrain->set_modelMat( (float*)&objRot );
+
+    //uloc = glGetUniformLocation( shader1->shaderprogram, "texture1");
+    //glActiveTexture(GL_TEXTURE0 );
+    //glBindTexture(GL_TEXTURE_2D, txHeight );
+    //glBindSampler(0, uloc);
+    //glUniform1i(uloc, 0);
+
     /*
-    // https://www.khronos.org/opengl/wiki/Primitive#Point_primitives
-    obj_terrain->preDraw();
-    //obj_terrain->draw_mode = GL_TRIANGLES;
-    obj_terrain->draw_instance();
-    //p.add(0.0,1.0,0.0);  glUniform3fv( uloc_pos, 1, (GLfloat*)&p );
-    //obj_terrain->draw_mode = GL_POINTS;    obj_terrain->draw_instance();
-    //obj_terrain->draw_mode = GL_LINES;     obj_terrain->draw_instance();
-    obj_terrain->afterDraw();
+    glActiveTexture( GL_TEXTURE0 );
+    glBindTexture  ( GL_TEXTURE_2D, txHeight );
+    glUniform1i    ( shTerrain->getUloc("txHeight"), 0 );
     */
+    bindTexture( 0, txHeight, shTerrain->getUloc("txHeight") );
+
+    glUniform2fv   ( shTerrain->getUloc("uv_0"    ), 1, (const float[]){0.5f,0.5f} );
+    glUniform2fv   ( shTerrain->getUloc("uv_da"   ), 1, (const float[]){100.0f,  0.0f} );
+    glUniform2fv   ( shTerrain->getUloc("uv_db"   ), 1, (const float[]){  0.0f,100.0f} );
+    glUniform3fv   ( shTerrain->getUloc("mapScale"), 1, (const float[]){0.005f,0.005f,20.0f} );
+
+    modelPos = { 0.0f  ,0.0f,  0.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->drawPoints( 3.0f );
+    modelPos = {-100.0f,0.0f,  0.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->draw();
+    modelPos = {   0.0f,0.0f,100.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->draw();
+    modelPos = {-100.0f,0.0f,100.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->draw();
 
     SDL_GL_SwapWindow(window);
 }
@@ -334,7 +318,7 @@ void draw(){
 // FUNCTION ======	inputHanding
 void inputHanding(){
 
-    float posstep = 0.1f; if(RayTerrain){ posstep = 2.0f; }
+    float posstep = 0.1f; //if(RayTerrain){ posstep = 2.0f; }
     float step          = 0.1f;
     float keyRotSpeed   = 0.002f;
 
@@ -362,8 +346,8 @@ void inputHanding(){
 		if( event.type == SDL_KEYDOWN ){
             switch( event.key.keysym.sym ){
                 case SDLK_ESCAPE: quit(); break;
-                case SDLK_KP_PLUS:  terrain_size[0] *=1.1; terrain_size[2] *=1.1; break;
-                case SDLK_KP_MINUS: terrain_size[0] /=1.1; terrain_size[2] /=1.1; break;
+                //case SDLK_KP_PLUS:  terrain_size[0] *=1.1; terrain_size[2] *=1.1; break;
+                //case SDLK_KP_MINUS: terrain_size[0] /=1.1; terrain_size[2] /=1.1; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             printf( "" );

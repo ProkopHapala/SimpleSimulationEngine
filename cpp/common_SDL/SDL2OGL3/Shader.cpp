@@ -44,21 +44,21 @@ int Shader::init_str( const char * vertexsource , const char * fragmentsource ){
     char * errLog = NULL;
     compileShader( GL_VERTEX_SHADER,   vertexsource,   vertexshader, errLog   );
     if( errLog != NULL ){
-        printf( " Error in Vertex Shader %s : \n" );
+        printf( " Error in Vertex Shader: \n" );
         printf( " %s \n", errLog );
         free( errLog );
         return -1;
     }
     compileShader( GL_FRAGMENT_SHADER, fragmentsource, fragmentshader, errLog  );
     if( errLog != NULL ){
-        printf( " Error in Fragment Shader %s : \n" );
+        printf( " Error in Fragment Shader: \n" );
         printf( " %s \n", errLog );
         free( errLog );
         return -2;
     }
     compileShaderProgram( vertexshader, fragmentshader, shaderprogram, errLog );
     if( errLog != NULL ){
-        printf( " Error in linking of Shader Program : \n" );
+        printf( " Error in linking of Shader Program: \n" );
         printf( " %s \n", errLog );
         free( errLog );
         return -3;

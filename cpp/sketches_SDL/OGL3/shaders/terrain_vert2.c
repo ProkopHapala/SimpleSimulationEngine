@@ -7,6 +7,7 @@ layout(location = 0) in vec2 vertPos_model;
 
 // OUT --- Output data ; will be interpolated for each fragment.
 noperspective out vec3 fragPos_world;
+out float logz;
 
 // UNI --- Values that stay constant for the whole mesh.
 uniform vec3 modelPos;

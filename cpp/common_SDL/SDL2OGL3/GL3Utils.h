@@ -130,11 +130,10 @@ GLMesh * qaudPatchSmooth( Vec2i n, Vec2f span, int pattern, Func vertFunc, void*
     return glmesh;
 }
 
-template<typename Func>
 GLMesh * qaudPatchUV( Vec2i n, void**cbuffs=NULL ){
     int nVerts = n.a*n.b;
     int nTris  =(n.a-1)*(n.b-1)*2;
-    Vec2f * vUVs = new Vec3f[nVerts];
+    Vec2f * vUVs = new Vec2f[nVerts];
     Vec3i * tris = new Vec3i[nTris ];
     int iv = 0;
     int ii = 0;
