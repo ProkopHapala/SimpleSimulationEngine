@@ -31,8 +31,8 @@
 
 int WIDTH  = 800;
 int HEIGHT = 800;
-SDL_Window * window     = NULL;
-SDL_GLContext   context = NULL;
+SDL_Window   * window  = NULL;
+SDL_GLContext  context = NULL;
 
 GLuint vao;
 Shader   *shader1,*shConst;

@@ -8,8 +8,9 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
+#include <GL/glew.h>
+//#define GL_GLEXT_PROTOTYPES
+//#include <GL/gl.h>
 #include <SDL2/SDL.h>
 
 #include "Shader.h"

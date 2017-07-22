@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <GL/glew.h>
 //#define GL3_PROTOTYPES 1
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
+//#define GL_GLEXT_PROTOTYPES
+//#include <GL/gl.h>
 #include <SDL2/SDL.h>
 
 #include "Vec2.h"
@@ -467,6 +468,14 @@ void init(){
     context = SDL_GL_CreateContext( window );
     //SDL_GL_SetSwapInterval(1); // VSync On
     SDL_GL_SetSwapInterval(VSync);
+
+    glewExperimental = true; // Needed for core profile
+	if (glewInit() != GLEW_OK) {
+		fprintf(stderr, "Failed to initialize GLEW\n");
+		getchar();
+		quit();
+		//return -1;
+	}
 
 	// vertex array object
 	glGenVertexArrays(1, &vao);  				// Allocate and assign a Vertex Array Object to our handle

@@ -38,10 +38,10 @@ class Vec2TYPE{
     inline void mul( const VEC&  v ) { x*=v.x; y*=v.y; };
     inline void div( const VEC&  v ) { x/=v.x; y/=v.y; };
 
-    inline void add( TYPE fx, TYPE fy, TYPE fz ) { x+=fx; y+=fy; };
-    inline void sub( TYPE fx, TYPE fy, TYPE fz ) { x-=fx; y-=fy; };
-    inline void mul( TYPE fx, TYPE fy, TYPE fz ) { x*=fx; y*=fy; };
-    inline void div( TYPE fx, TYPE fy, TYPE fz ) { x/=fx; y/=fy; };
+    inline void add( TYPE fx, TYPE fy) { x+=fx; y+=fy; };
+    inline void sub( TYPE fx, TYPE fy) { x-=fx; y-=fy; };
+    inline void mul( TYPE fx, TYPE fy ) { x*=fx; y*=fy; };
+    inline void div( TYPE fx, TYPE fy ) { x/=fx; y/=fy; };
 
     inline void set_inv( const VEC&  v ) { x=1/v.x; y=1/v.y; };
 

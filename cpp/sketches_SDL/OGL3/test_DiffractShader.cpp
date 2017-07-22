@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+
+#include <GL/glew.h>
 //#define GL3_PROTOTYPES 1
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
+//#define GL_GLEXT_PROTOTYPES
+//#include <GL/gl.h>
 #include <SDL2/SDL.h>
 
 //const float  INV_RAND_MAX = 1.0f/RAND_MAX;
@@ -205,6 +207,14 @@ void init(){
     if ( !window ) die("Unable to create window");
     context = SDL_GL_CreateContext( window );
     SDL_GL_SetSwapInterval(1);
+
+    glewExperimental = true; // Needed for core profile
+	if (glewInit() != GLEW_OK) {
+		fprintf(stderr, "Failed to initialize GLEW\n");
+		getchar();
+		quit();
+		//return -1;
+	}
 
     printf( "GL_VENDOR  : %s \n", glGetString(GL_VENDOR)  );
 	printf( "GL_VERSION : %s \n", glGetString(GL_VERSION) );

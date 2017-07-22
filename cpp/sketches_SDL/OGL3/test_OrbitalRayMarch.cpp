@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <GL/glew.h>
 //#define GL3_PROTOTYPES 1
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
+//#define GL_GLEXT_PROTOTYPES
+//#include <GL/gl.h>
 #include <SDL2/SDL.h>
 
 #include "fastmath.h"
@@ -159,6 +160,14 @@ void init(){
     if ( !window ) die("Unable to create window");
     context = SDL_GL_CreateContext( window );
     SDL_GL_SetSwapInterval(1);
+
+    glewExperimental = true; // Needed for core profile
+	if (glewInit() != GLEW_OK) {
+		fprintf(stderr, "Failed to initialize GLEW\n");
+		getchar();
+		quit();
+		//return -1;
+	}
 
 	// vertex array object
 	glGenVertexArrays(1, &vao);  				// Allocate and assign a Vertex Array Object to our handle

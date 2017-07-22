@@ -1,8 +1,9 @@
 
-#ifndef  GLInstances_h
-#define  GLInstances_h
+#ifndef  GLobjects_h
+#define  GLobjects_h
 
 #include <GL/glew.h>
+#include "GLfunctions.h"
 //#include <SDL2/SDL.h>
 
 //float * double2float( int n, double * ds ){ float*fs=float[n]; for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; return fs; }
@@ -60,6 +61,8 @@ class GLMesh{ public:
     void draw   (){ draw   ( draw_mode ); };
     void drawPointsRaw( float sz ){ glPointSize(sz); glDrawArrays( GL_POINTS, 0, nVerts); } // mostly for debugging - ignores indexes
     void drawPoints   ( float sz ){ int narg = preDraw(); drawPointsRaw(sz); postDraw(narg);}
+
+    //inline GLMesh(){ vpos=0,vnor=0,vcol=0,vUVs=0; };
 };
 
 #endif

@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <GL/glew.h>
 //#define GL3_PROTOTYPES 1
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
+//#define GL_GLEXT_PROTOTYPES
+//#include <GL/gl.h>
 #include <SDL2/SDL.h>
 
 #include "Vec2.h"
@@ -29,6 +30,7 @@
 
 Shader   * shader1;
 GLObject * object1,*obj_terrain,*obj_flicker;
+GLMesh   * terrain_mesh;
 
 Mesh mesh;
 
@@ -105,12 +107,12 @@ float pitch=0,yaw=0;
 Vec3d terrainFunc( Vec2d p ){ return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0,p.y*10.0}; };
 */
 
-double arr_func( int n, const double * xs ){ };
-struct S { int a, b, c, d, e; };
+//double arr_func( int n, const double * xs ){ };
+//struct S { int a, b, c, d, e; };
 
 void setup(){
 
-    arr_func( 3, (const double[]){1.0,2.0,3.0} );
+    //arr_func( 3, (const double[]){1.0,2.0,3.0} );
     //struct S s = { .c = 3, .d=4.0 }; // works only in C99 not in C++11
 
     shader1=new Shader();
@@ -140,10 +142,36 @@ void setup(){
     //obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, terrainFunc );
 
     //obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, terrainFunc };
+
     obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, [](Vec2d p)->Vec3d{
         return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0,p.y*10.0}; // lambda
         //return (Vec3d){p.x*10.0,-1.0,p.y*10.0}; // lambda
     } );
+
+    /*
+    //terrain_mesh = qaudPatchSmooth( (Vec2i){40,40}, (Vec2f){-50.0,-50.0}, (Vec2f){1.0,0.0}, (Vec2f){0.0,1.0}, [](Vec2f p,Vec3f& pv,Vec3f& nv)->void{
+    terrain_mesh = qaudPatchSmooth( (Vec2i){40,40}, (Vec2f){-0.0,-0.0}, (Vec2f){8.0,0.0}, (Vec2f){0.0,8.0}, [](Vec2f p,Vec3f& pv,Vec3f& nv)->void{
+        float h    = sin(p.x*0.1)*sin(p.y*0.05)*10.0;
+        float dh_x = cos(p.x*0.1)*sin(p.y*0.05)*10.0*0.1;
+        float dh_y = sin(p.x*0.1)*cos(p.y*0.05)*10.0*0.05;
+        pv = (Vec3f){p.x ,h,p.y };
+        nv = (Vec3f){dh_x,1,dh_y}; nv.normalize();
+        //pv = (Vec3f){p.x ,0.0f,p.y };
+        //nv = (Vec3f){0.0f,1.0f,0.0f};
+    }, NULL );
+    */
+
+    terrain_mesh = qaudPatchSmooth( (Vec2i){40,40}, (Vec2f){200.0,200.0}, 1, [](Vec2f p,Vec3f& pv,Vec3f& nv)->void{
+
+        float h    = sin(p.x*0.1)*sin(p.y*0.05)*10.0;
+        float dh_x = cos(p.x*0.1)*sin(p.y*0.05)*10.0*0.1;
+        float dh_y = sin(p.x*0.1)*cos(p.y*0.05)*10.0*0.05;
+        pv = (Vec3f){p.x ,h,p.y };
+        nv = (Vec3f){dh_x,1,dh_y}; nv.normalize();
+
+        //pv = (Vec3f){p.x ,0.0f,p.y };
+        //nv = (Vec3f){0.0f,0.0f,0.0f};
+    }, NULL );
 
     /*
     // circle
@@ -224,8 +252,6 @@ void draw(){
 
     //printf("====\n"); mouseMat.print();
 
-
-
     mRot.setOne(); mRot.setRot(mouseMat);
 
     /*
@@ -271,11 +297,16 @@ void draw(){
     object1->afterDraw();
 
 
-    p = (Vec3f){0.0,0.0,0.0}; shader1->set_modelPos( (GLfloat*)&p );
-    obj_terrain->draw_mode = GL_TRIANGLES; obj_terrain->draw_default();
+    //p = (Vec3f){0.0,0.0,0.0}; shader1->set_modelPos( (GLfloat*)&p );
+    //obj_terrain->draw_mode = GL_TRIANGLES; obj_terrain->draw_default();
     //obj_terrain->draw_mode = GL_POINTS; glPointSize( 15.0 ); obj_terrain->draw_default();
     //obj_terrain->draw_mode = GL_LINES;  glLineWidth( 5.0 );  obj_terrain->draw_default();
     //obj_terrain->draw_mode = GL_LINE_STRIP;  glLineWidth( 5.0 );  obj_terrain->draw_default();
+
+    p = (Vec3f){0.0,0.0,0.0}; shader1->set_modelPos( (GLfloat*)&p );
+    //printf( "\n*terrain_mesh %i \n", terrain_mesh);
+    terrain_mesh->draw();
+    //terrain_mesh->drawPoints( 3.0f );
 
     p = (Vec3f){0.0,2.0,0.0};  shader1->set_modelPos( (GLfloat*)&p );
     obj_flicker->draw_mode = GL_TRIANGLES; obj_flicker->draw_default();
@@ -386,6 +417,14 @@ void init(){
     context = SDL_GL_CreateContext( window );
     //SDL_GL_SetSwapInterval(1); // VSync On
     SDL_GL_SetSwapInterval(VSync);
+
+    glewExperimental = true; // Needed for core profile
+	if (glewInit() != GLEW_OK) {
+		fprintf(stderr, "Failed to initialize GLEW\n");
+		getchar();
+		quit();
+		//return -1;
+	}
 
 	// vertex array object
 	glGenVertexArrays(1, &vao);  				// Allocate and assign a Vertex Array Object to our handle

@@ -2,8 +2,9 @@
 #ifndef  Shader_h
 #define  Shader_h
 
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
+#include <GL/glew.h>
+//#define GL_GLEXT_PROTOTYPES
+//#include <GL/gl.h>
 //#include "IO_utils.h"
 
 #include "Vec3.h"

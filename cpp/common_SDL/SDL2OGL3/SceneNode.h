@@ -11,9 +11,10 @@
 #include "quaternion.h"
 #include "raytrace.h"
 
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
-#include <SDL2/SDL.h>
+#include <GL/glew.h>
+//#define GL_GLEXT_PROTOTYPES
+//#include <GL/gl.h>
+//#include <SDL2/SDL.h>
 
 #include "Shader.h"
 #include "GLObject.h"
