@@ -70,6 +70,8 @@ int Shader::init( const char * vertName, const char * fragName ){
     vertexsource   = filetobuf( vertName );  if( vertexsource   == NULL ){ printf( "cannot load %s \n", vertName ); exit(1); }
     fragmentsource = filetobuf( fragName );  if( fragmentsource == NULL ){ printf( "cannot load %s \n", fragName ); exit(1); }
     return init_str( vertexsource , fragmentsource );
+    delete [] vertexsource;
+    delete [] fragmentsource;
 }
 
 void Shader::destory(){

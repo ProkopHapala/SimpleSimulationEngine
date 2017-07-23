@@ -11,19 +11,11 @@
 #include "Mat3.h"
 #include "Mat4.h"
 
-const char DEFAULT_fragment_shader_code[] = R"(
-#version 330 core
-smooth in vec4 gl_FragCoord;
-out     vec3 color;
-uniform vec4 baseColor;
-void main(){
-	color = baseColor.xyz;
-	gl_FragDepth = gl_FragCoord.z;
-};
-)";
+#define GLSL(version, shader)  "#version " #version "\n" #shader
+// https://stackoverflow.com/questions/13872544/gcc-stringification-and-inline-glsl
+// Multiline commet R"( .... )"   // https://stackoverflow.com/questions/20508534/c-multiline-string-raw-literal
 
-const char DEFAULT_vertex_shader_code[]=R"(
-#version 330 core
+const char DEFAULT_vertex_shader_code[]= GLSL(330,
 layout(location = 0) in vec3 vpos;
 uniform vec3 modelPos;
 uniform mat3 modelMat;
@@ -33,7 +25,17 @@ void main(){
 	vec3 position_world = modelPos + modelMat * vpos;
 	gl_Position         = camMat   * vec4( position_world-camPos, 1 );
 };
-)";
+);
+
+const char DEFAULT_fragment_shader_code[] = GLSL(330,
+smooth in vec4 gl_FragCoord;
+out     vec3 color;
+uniform vec4 baseColor;
+void main(){
+	color = baseColor.xyz;
+	gl_FragDepth = gl_FragCoord.z;
+};
+);
 
 class Shader{
 	public:

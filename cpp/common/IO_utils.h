@@ -11,7 +11,7 @@
 #include "Vec3.h"
 
 
-char * fgets_comment( char * line, int num, FILE * stream ){
+inline char * fgets_comment( char * line, int num, FILE * stream ){
     constexpr int NMaxComment = 10;
     for(int i=0; i<NMaxComment; i++){
         char *str = fgets( line, num, stream );
@@ -22,7 +22,7 @@ char * fgets_comment( char * line, int num, FILE * stream ){
 }
 
 // A simple function that will read a file into an allocated char pointer buffer
-char* filetobuf(char const  *file){
+inline  char* filetobuf(char const  *file){
 	FILE *fptr;
 	long length;
 	char *buf;
@@ -32,12 +32,12 @@ char* filetobuf(char const  *file){
 	    return NULL;
 	fseek(fptr, 0, SEEK_END); 			// Seek to the end of the file
 	length = ftell(fptr); 				// Find out how many bytes into the file we are
-	buf = (char*)malloc(length+1); 		// Allocate a buffer for the entire length of the file and a null terminator
+	//buf = (char*)malloc(length+1); 		// Allocate a buffer for the entire length of the file and a null terminator
+	buf = new char[length+1];
 	fseek(fptr, 0, SEEK_SET); 			// Go back to the beginning of the file
 	fread(buf, length, 1, fptr); 		// Read the contents of the file in to the buffer
 	fclose(fptr); 						// Close the file
 	buf[length] = 0; 					// Null terminator
-
 	return buf; 						// Return the buffer
 }
 
@@ -58,7 +58,7 @@ int loadColums(char const  *fname, char const  *format, ... ){
 }
 */
 
-int allocateIOBuffs( int nitems, char const *format, void **buffs ){
+inline  int allocateIOBuffs( int nitems, char const *format, void **buffs ){
     int nbuffs = 0;
     //int ibuff  = 0;
     while (*format != '\0') {
@@ -75,7 +75,7 @@ int allocateIOBuffs( int nitems, char const *format, void **buffs ){
     return nbuffs;
 }
 
-int loadColumns( char const  *fname, char const *format, void **buffs ){
+inline  int loadColumns( char const  *fname, char const *format, void **buffs ){
     FILE * pFile = fopen(fname,"r");
     if( pFile == NULL ){
         printf("cannot find %s\n", fname );
