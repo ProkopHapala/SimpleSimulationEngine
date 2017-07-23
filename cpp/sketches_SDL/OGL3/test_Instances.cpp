@@ -41,7 +41,7 @@ GLfloat* instance_Up;
 GLfloat* instance_sc;
 
 //GLuint programID;
-Shader* shaderParticle;
+Shader   *shaderParticle,*shaderInstance;
 //GLuint CameraRight_worldspace_ID;
 //GLuint CameraUp_worldspace_ID;
 //GLuint ViewProjMatrixID;
@@ -70,15 +70,20 @@ Quat4f qCamera;
 Mat3f  mouseMat;
 Vec3f  camPos = (Vec3f){ 0.0f, 0.0f, 0.0f };
 
+bool bInstances=true;
+bool bParticles=true;
+bool bDepthTest=true;
+
 // =============== Functions
 
 int setup(){
 
-	shaderParticle=new Shader();
-	//shaderParticle->init( "common_resources/shaders/Particle.glslv",   "common_resources/shaders/Particle.glslf"   );
-	shaderParticle->init( "common_resources/shaders/Instance3D.glslv",   "common_resources/shaders/Instance3D.glslf"   );
+    shaderInstance=new Shader();
+	shaderInstance->init( "common_resources/shaders/Instance3D.glslv",   "common_resources/shaders/Instance3D.glslf"   );
+    shaderInstance->getDefaultUniformLocation();
 
-    shaderParticle->use();
+	shaderParticle=new Shader();
+	shaderParticle->init( "common_resources/shaders/Instance3D.glslv",   "common_resources/shaders/pointSprite.glslf"   );
     shaderParticle->getDefaultUniformLocation();
 
 	instance_pos    = new GLfloat[MaxParticles*4];
@@ -179,10 +184,6 @@ void draw( ){
     //mouseMat.print();
     //camMat.print();
 
-    shaderParticle->use();
-    shaderParticle->set_camPos( (GLfloat*)&camPos );
-    shaderParticle->set_camMat( (GLfloat*)&camMat );
-
     // Update the buffers that OpenGL uses for rendering.
 	// There are much more sophisticated means to stream data from the CPU to the GPU,
 	// but this is outside the scope of this tutorial.
@@ -191,9 +192,31 @@ void draw( ){
     //instances.upload_colors( ParticlesCount, instance_color );
 
     uploadArrayBuffer( instances.pose_Up, instances.nInstances*3*sizeof(GLfloat), instance_Up );
-    instances.draw( GL_TRIANGLES );
+    //instances.draw( GL_TRIANGLES );
     //glLineWidth( 3.0); instances.draw( GL_LINE_LOOP );
-    //glPointSize(10.0); instances.draw( GL_POINTS );
+
+    if(bInstances){
+        shaderInstance->use();
+        shaderInstance->set_camPos( (GLfloat*)&camPos );
+        shaderInstance->set_camMat( (GLfloat*)&camMat );
+        glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+        instances.draw( GL_TRIANGLES );
+    }
+    if(bParticles){
+        shaderParticle->use();
+        shaderParticle->set_camPos( (GLfloat*)&camPos );
+        shaderParticle->set_camMat( (GLfloat*)&camMat );
+        if(!bDepthTest) glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable( GL_PROGRAM_POINT_SIZE );
+        //glPointSize(100.0);
+        instances.draw( GL_POINTS );
+    }
+
+
+
 
 }
 
@@ -242,11 +265,14 @@ void inputHanding(){
 		if( event.type == SDL_KEYDOWN ){
             switch( event.key.keysym.sym ){
                 case SDLK_ESCAPE: quit(); break;
+                case SDLK_i: bInstances   =!bInstances;   break;
+                case SDLK_p: bParticles   =!bParticles;   break;
+                case SDLK_t: bDepthTest   =!bDepthTest;   break;
                 //case SDLK_KP_PLUS:  terrain_size[0] *=1.1; terrain_size[2] *=1.1; break;
                 //case SDLK_KP_MINUS: terrain_size[0] /=1.1; terrain_size[2] /=1.1; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
-            printf( "" );
+            printf( "bInstances[I] %i bParticles[P] %i bDepthTest[T] %i\n", bInstances, bParticles, bDepthTest );
 		}
 		if( event.type == SDL_QUIT){ quit();  };
 	}

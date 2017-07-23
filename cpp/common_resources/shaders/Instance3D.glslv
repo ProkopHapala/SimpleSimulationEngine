@@ -14,6 +14,7 @@ noperspective out vec3 fpos_world;
 noperspective out vec3 fnor_world;
 //smooth        out vec3 vpos_world;
 noperspective out vec4 obj;
+//flat          out float point_size;
 
 void main(){
     mat3 rotMat  = mat3( cross(pose_dir,pose_Up), pose_Up, pose_dir );
@@ -26,5 +27,7 @@ void main(){
     //vec3 world_vpos = model_vpos + pose_pos;
     //vnor_world      = model_vnor;
     gl_Position     = camMat * vec4( world_vpos-camPos, 1.0 );
+    
+    gl_PointSize = (3.0 * 1000.0) / gl_Position.w;
 }
 

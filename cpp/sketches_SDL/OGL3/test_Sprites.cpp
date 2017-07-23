@@ -200,7 +200,6 @@ void draw( ){
         sh=shSpriteBlend;
     }
 
-
     sh->use();
     sh->set_camPos( (GLfloat*)&camPos );
     sh->set_camMat( (GLfloat*)&camMat );
