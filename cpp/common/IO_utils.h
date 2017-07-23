@@ -22,14 +22,16 @@ inline char * fgets_comment( char * line, int num, FILE * stream ){
 }
 
 // A simple function that will read a file into an allocated char pointer buffer
-inline  char* filetobuf(char const  *file){
+inline  char* filetobuf(char const  *fname){
 	FILE *fptr;
 	long length;
 	char *buf;
 
-	fptr = fopen(file, "rb");			// Open file for reading
-	if (!fptr)							// Return NULL on failure
+	fptr = fopen(fname, "rb");			// Open file for reading
+	if(fptr==NULL){
+        printf("Failed to load %s \n", fname );
 	    return NULL;
+    }
 	fseek(fptr, 0, SEEK_END); 			// Seek to the end of the file
 	length = ftell(fptr); 				// Find out how many bytes into the file we are
 	//buf = (char*)malloc(length+1); 		// Allocate a buffer for the entire length of the file and a null terminator

@@ -33,29 +33,19 @@
 // =============== Global variables
 
 //const int MaxParticles = 100000;
-const int MaxParticles = 80000;
+const int MaxParticles = 1600;
 //const int MaxParticles = 16;
 //const int MaxParticles = 256;
 //const int MaxParticles = 256*256;
 
-//GLuint VertexArrayID;
-GLfloat* instance_pos;
-GLfloat* instance_dir;
-GLfloat* instance_Up;
-GLfloat* instance_sc;
+GLfloat *instance_pos,*instance_sc;
 
-//GLuint programID;
-Shader *shGeom,*shFraged,*shFragedDepth;
-//GLuint CameraRight_worldspace_ID;
-//GLuint CameraUp_worldspace_ID;
-//GLuint ViewProjMatrixID;
+Shader *shSprite,*shSpriteBlend;
 
-GLInstances instances;
-//GLuint billboard_vertex_buffer;
-//GLuint particles_color_buffer;
-//GLuint particles_position_buffer;
+//GLInstances instances;
+GLBillboards bilboards;
+GLuint texture_1;
 
-int nVerts = 0;
 int ParticlesCount = 0;
 int frameCount = 0;
 double lastTime = 0.0;
@@ -74,8 +64,7 @@ Quat4f qCamera;
 Mat3f  mouseMat;
 Vec3f  camPos = (Vec3f){ 0.0f, 0.0f, 0.0f };
 
-bool viewGeom = false;
-bool customDepth = false;
+bool bTransparent  = false;
 
 long lastCPUtick = 0;
 double ticks_per_second=0;
@@ -83,34 +72,11 @@ double ticks_per_second=0;
 // =============== Functions
 
 const char str_glslf_sin[]= GLSL(330,
-in        vec3 fpos_world;
-out       vec4 gl_FragColor;
-void main(){ gl_FragColor = vec4( sin( fpos_world*30.0 ), 1.0 ); }
+    in        vec3 fpos_world;
+    out       vec4 gl_FragColor;
+    void main(){ gl_FragColor = vec4( sin( fpos_world*30.0 ), 1.0 ); }
+    //void main(){ gl_FragColor = vec4( 0.0,0.0,0.0, 1.0 ); }
 );
-
-char* strconcat( char* str1, char * str2 ){
-    int n1 = strlen(str1);
-    int n2 = strlen(str2);
-    //printf("%s\n", str1);
-    //printf("%s\n", str2);
-    char* str12 = new char[n1+n2+1];
-    strcpy(str12,str1);
-    strcat(str12,str2);
-    return str12;
-}
-
-void replaceStr_inpl(char* str, char* mask, char* mod){
-    char * found  = strstr(str,mask);
-    if(found) strncpy(str,mod,strlen(mask));
-}
-
-char* replaceStr(char* str, char* mask, char* mod){
-    char * str_  = new char[strlen(str)];
-    strcpy(str_,str);
-    char * found = strstr(str_,mask);
-    if(found) strncpy(found,mod,strlen(mask));
-    return str_;
-}
 
 double calibrate_timer(int delay){
     long t1 = getCPUticks();
@@ -119,32 +85,39 @@ double calibrate_timer(int delay){
     return (t2-t1)/(delay*0.001d);
 }
 
+int juliaPoint( double x, double y, int maxIters ){
+    //const int maxIters = 64;
+    const double cX=-0.7,cY=0.27015;
+    double x_;
+    for(int i=0; i<maxIters; i++){
+        x_ = x*x-y*y  + cX;
+        y  = 2.0d*x*y + cY;
+        x = x_;
+        if((x*x+y*y)>4.0d) return i;
+    }
+    return maxIters;
+};
+
 int setup(){
 
-    shFraged=new Shader();
-    //shFraged->init( "common_resources/shaders/Instance3D.glslv",   "common_resources/shaders/Sphere3D.glslf" );
-    shFraged->init( "common_resources/shaders/Instance3D.glslv",   "common_resources/shaders/Sphere3D.glslf" );
-    shFraged->getDefaultUniformLocation();
+    shSprite=new Shader();
+    shSprite->init( "common_resources/shaders/Bilboard3D.glslv", "common_resources/shaders/hardSprite.glslf" );
+    shSprite->getDefaultUniformLocation();
 
-    char* str_glslv_Instance3D     = filetobuf( "common_resources/shaders/Instance3D.glslv"  );
-    char* str_glslf_Sphere3D       = filetobuf( "common_resources/shaders/Sphere3D.glslf"    );
-    char* str_glslf_Sphere3D_depth = replaceStr( str_glslf_Sphere3D, "#define CUSTOM_DEPTH_0", "#define CUSTOM_DEPTH_1");
-    printf("str_glslf_Sphere3D_depth:>>%s<<\n", str_glslf_Sphere3D_depth );
+    shSpriteBlend=new Shader();
+    shSpriteBlend->init( "common_resources/shaders/Bilboard3D.glslv", "common_resources/shaders/texture.glslf" );
+    shSpriteBlend->getDefaultUniformLocation();
 
-    shGeom=new Shader();
-	shGeom-> init_str ( str_glslv_Instance3D, str_glslf_sin );
-    shGeom->getDefaultUniformLocation();
+    /*
+    char* str_glslv_Bilboard3D = filetobuf( "common_resources/shaders/Bilboard3D.glslv"  ); if(str_glslv_Bilboard3D==NULL){ printf("fail to load shader!\n"); exit(1); };
+    shSprite=new Shader();
+    shSprite->init_str( str_glslv_Bilboard3D, str_glslf_sin );
+    shSprite->getDefaultUniformLocation();
+    delete [] str_glslv_Bilboard3D;
+    */
 
-    shFragedDepth=new Shader();
-    shFragedDepth->init_str( str_glslv_Instance3D, str_glslf_Sphere3D_depth );
-    shFragedDepth->getDefaultUniformLocation();
-
-    delete [] str_glslv_Instance3D; delete [] str_glslf_Sphere3D; delete [] str_glslf_Sphere3D_depth;
-
-	instance_pos    = new GLfloat[MaxParticles*4];
-	instance_dir    = new GLfloat[MaxParticles*4];
-	instance_Up     = new GLfloat[MaxParticles*4];
-	instance_sc     = new GLfloat[MaxParticles*4];
+	instance_pos    = new GLfloat[MaxParticles*3];
+	instance_sc     = new GLfloat[MaxParticles*2];
 
 	float span = 20.0f;
     float time = frameCount * 0.005;
@@ -153,60 +126,47 @@ int setup(){
     int nside = int( pow( ParticlesCount, 1.0/3.0) );
 
 	for( int i=0; i<ParticlesCount; i++ ){
-        Vec3f pos, dir, up, sc;
+        Vec3f pos;
+        Vec2f sc;
         // pos.set( randf(-span,span), randf(-span,span), randf(-span,span) );
         // sc.set( randf(0.5,1.5),randf(0.5,1.5),randf(0.5,1.5) );
-        pos.set( i%nside , (i/nside )%nside , (i/(nside*nside))%nside ); pos.mul(2.5);
+        pos.set( i%nside , (i/nside)%nside , (i/(nside*nside)) ); pos.mul(1.2);
         //sc.set( 1.0,1.0,1.0 );
-        float sz = randf(0.5,1.5); sc.set( sz,sz,sz );
+        //float sz = randf(0.5,1.5); sc.set( sz,sz );
+        sc.set( randf(0.5,1.5),randf(0.5,1.5) );
 
-        dir.set( randf(-1.0f,1.0f), randf(-1.0f,1.0f), randf(-1.0f,1.0f) ); dir.normalize();
-        up .set( randf(-1.0f,1.0f), randf(-1.0f,1.0f), randf(-1.0f,1.0f) ); up.makeOrthoU( dir ); up.normalize();
-        //printf( "%i %g  %g %g \n", i, up.dot(dir),    dir.norm2(), up.norm2()  );
         *((Vec3f*)(instance_pos+(3*i))) = pos;
-        *((Vec3f*)(instance_dir+(3*i))) = dir;
-        *((Vec3f*)(instance_Up +(3*i))) = up;
-        *((Vec3f*)(instance_sc +(3*i))) = sc;
+        *((Vec2f*)(instance_sc +(2*i))) = sc;
 	}
 
-    //CMesh mesh = Solids::Octahedron;
-    CMesh mesh = Solids::Icosahedron;
-    nVerts = countVerts( mesh.nfaces, mesh.ngons );
-    Vec3f * model_vpos = new Vec3f[nVerts];
-	Vec3f * model_vnor = new Vec3f[nVerts];
-	hardFace( mesh.nfaces, mesh.ngons, mesh.faces, mesh.verts, (GLfloat*)model_vpos, (GLfloat*)model_vnor );
+	bilboards.init( MaxParticles, 6, DEFAULT_Bilboard_UVs, instance_pos, instance_sc );
 
-	instances.init( MaxParticles, nVerts, model_vpos, model_vnor, instance_pos, instance_dir, instance_Up, instance_sc );
+    int imgH  = 512; int imgW  = 512;
+    double dx = 1.0d/(imgW);
+    double dy = 1.0d/(imgH);
+    uint32_t * c_img1 = new uint32_t[imgH*imgW];
+    for( int iy=0; iy<imgH; iy++ ){
+        for( int ix=0; ix<imgW; ix++ ){
+            uint8_t r,g,b,a;
+            //r=0; g=ix^iy; b=255; a=ix^iy;
+            double x = (ix*2-imgW)*dx;
+            double y = (iy*2-imgH)*dy;
 
-	delete [] model_vpos;
-	delete [] model_vnor;
+            int nMaxIter = 64;
+            int iters = (nMaxIter-juliaPoint(x*2,y,nMaxIter))*4; if(iters>255)iters=255;
+            r=iters; g=0; b=iters*2.0; a=255-iters;
+
+            c_img1[ iy*imgW + ix ] = (a<<24) | (b<<16) | (g<<8) | (r);
+        }
+    }
+    newTexture2D( texture_1, imgW, imgH, c_img1, GL_RGBA, GL_UNSIGNED_BYTE );
 
     ticks_per_second = calibrate_timer(100);
-
     //lastTime = glfwGetTime();
     lastTime = 0.0;
     qCamera.setOne();
     return 0;
 };
-
-void physics(){
-    float time = frameCount * 0.005;
-    ParticlesCount = MaxParticles;
-
-    float dphi = 0.001;
-    double ca  = cos(dphi);
-    float  sa  = sin(dphi);
-
-	for( int i=0; i<ParticlesCount-2; i++ ){
-        //Vec3f pos, dir, up;
-        //pos.set( randf(-span,span), randf(-span,span), randf(-span,span) );
-        //dir.set( randf(-1.0f,1.0f), randf(-1.0f,1.0f), randf(-1.0f,1.0f) ); dir.normalize();
-
-        ((Vec3f*)(instance_Up+(3*i)))->rotate_csa( ca, sa, *(Vec3f*)(instance_dir+(3*i)) );
-        //up.makeOrthoU( dir ); up.normalize();
-
-	}
-}
 
 void draw( ){
 
@@ -221,14 +181,6 @@ void draw( ){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 	// Simulate all particles
 
-	physics();
-
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glDisable(GL_BLEND);
-	glEnable(GL_DEPTH_TEST);
-
     Mat4f camMat,mRot,mPersp;
     qCamera.toMatrix(mouseMat);
     mRot.setOne(); mRot.setRot(mouseMat);
@@ -237,21 +189,29 @@ void draw( ){
     camMat.set_mmul_TN( mRot, mPersp );
     //Mat3f objRot; objRot.setOne();
 
-    //printf("======\n");
-    //printf( "qCamera (%g,%g,%g,%g)\n", qCamera.x, qCamera.y, qCamera.z, qCamera.w );
-    //printf( "camPos (%g,%g,%g)\n", camPos.x, camPos.y, camPos.z );
-    //mouseMat.print();
-    //camMat.print();
+    Shader * sh=shSprite;
+    if( bTransparent ){
+    	glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+    }else{
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        sh=shSpriteBlend;
+    }
 
-    Shader       * sh;
-    if      ( viewGeom    ){ sh = shGeom; }
-    else if ( customDepth ){ sh = shFragedDepth; }else{ sh = shFraged; };
+
     sh->use();
     sh->set_camPos( (GLfloat*)&camPos );
     sh->set_camMat( (GLfloat*)&camMat );
 
-    uploadArrayBuffer( instances.pose_Up, instances.nInstances*3*sizeof(GLfloat), instance_Up );
-    instances.draw( GL_TRIANGLES );
+    glUniformMatrix3fv( sh->getUloc( "camRot" ), 1, GL_FALSE, (GLfloat*)&mouseMat );
+    glUniform4fv( sh->getUloc( "keyColor" ), 1, (const GLfloat[]){1.0f,0.0f,1.0f,10.0f} );
+
+    //uploadArrayBuffer( instances.pose_Up, instances.nInstances*3*sizeof(GLfloat), instance_Up );
+    bilboards.draw( GL_TRIANGLES );
+
+    //glPointSize(10.0); bilboards.draw( GL_POINTS );
 
 }
 
@@ -278,7 +238,7 @@ int main(int argc, char *argv[]){
 void inputHanding(){
 
     //float posstep = 0.1f; if(RayTerrain){ posstep = 2.0f; }
-    float step          = 0.5f;
+    float step          = 0.1f;
     float keyRotSpeed   = 0.01f;
 
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
@@ -300,8 +260,7 @@ void inputHanding(){
 		if( event.type == SDL_KEYDOWN ){
             switch( event.key.keysym.sym ){
                 case SDLK_ESCAPE: quit(); break;
-                case SDLK_g: viewGeom   =!viewGeom;    break;
-                case SDLK_f: customDepth=!customDepth; break;
+                case SDLK_t: bTransparent   =!bTransparent;    break;
                 //case SDLK_KP_PLUS:  terrain_size[0] *=1.1; terrain_size[2] *=1.1; break;
                 //case SDLK_KP_MINUS: terrain_size[0] /=1.1; terrain_size[2] /=1.1; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;

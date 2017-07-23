@@ -7,13 +7,13 @@
 
 // =========== GL_ARRAY_BUFFER
 
-inline void newArrayBuffer( GLuint& buff, GLuint sz,  void * c_buff, GLenum usage ){
+inline void newArrayBuffer( GLuint& buff, GLuint sz, const void * c_buff, GLenum usage ){
     glGenBuffers(1, &buff);
     glBindBuffer(GL_ARRAY_BUFFER, buff );
     glBufferData(GL_ARRAY_BUFFER, sz, c_buff, usage);
 };
 
-inline void uploadArrayBuffer( GLuint buff, GLuint sz,  void * c_buff ){
+inline void uploadArrayBuffer( GLuint buff, GLuint sz, const void * c_buff ){
     glBindBuffer   (GL_ARRAY_BUFFER, buff);
     glBufferData   (GL_ARRAY_BUFFER,    sz, NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
     glBufferSubData(GL_ARRAY_BUFFER, 0, sz, c_buff );
@@ -27,7 +27,7 @@ inline void bindVertexAttribPointer( GLuint id, GLuint buff, GLint sz, GLenum ty
 
 // =========== GL_ELEMENT_ARRAY_BUFFER
 
-inline void newElementBuffer( GLuint& buff, GLuint sz,  void * c_buff, GLenum usage ){
+inline void newElementBuffer( GLuint& buff, GLuint sz, const void * c_buff, GLenum usage ){
     glGenBuffers(1, &buff);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buff);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sz, c_buff, usage );
@@ -40,7 +40,7 @@ inline void drawElements( GLenum draw_mode, GLuint buff, GLuint n ){
 
 // =========== GL_ELEMENT_ARRAY_BUFFER
 
-inline void newTexture2D( GLuint& textureID, int W, int H, void * cbuff, GLint format, GLenum type ){
+inline void newTexture2D( GLuint& textureID, int W, int H, const void * cbuff, GLint format, GLenum type ){
     // example:
     // newTexture2D( textureID, 800, 600, imgData, GL_RGBA, GL_UNSIGNED_BYTE );
     // newTexture2D( textureID, 800, 600, imgData, GL_R, GL_FLOAT );
