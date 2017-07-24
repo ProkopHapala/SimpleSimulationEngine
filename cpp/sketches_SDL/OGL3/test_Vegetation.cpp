@@ -21,7 +21,8 @@
 #include "GL3Utils.h"
 #include "GLObject.h"
 #include "GLfunctions.h"
-#include "GLInstances.h"
+#include "GLobjects.h"
+//#include "GLInstances.h"
 #include "IO_utils.h"
 #include "Shader.h"
 
@@ -32,21 +33,15 @@
 
 // =============== Global variables
 
-//const int MaxParticles = 100000;
-const int MaxParticles = 1600;
-//const int MaxParticles = 16;
-//const int MaxParticles = 256;
-//const int MaxParticles = 256*256;
-
-GLfloat *instance_pos,*instance_sc;
-
-Shader *shSprite,*shSpriteBlend;
+Shader *shBranches,*shLeafs;
 
 //GLInstances instances;
-GLBillboards bilboards;
-GLuint texture_1;
+//GLBillboards bilboards;
+//GLuint texture_1;
 
-int ParticlesCount = 0;
+GLMesh   *mshBranches,*mshLeafs;
+
+
 int frameCount = 0;
 double lastTime = 0.0;
 
@@ -71,97 +66,49 @@ double ticks_per_second=0;
 
 // =============== Functions
 
-const char str_glslf_sin[]= GLSL(330,
-    in        vec3 fpos_world;
-    out       vec4 gl_FragColor;
-    void main(){ gl_FragColor = vec4( sin( fpos_world*30.0 ), 1.0 ); }
-    //void main(){ gl_FragColor = vec4( 0.0,0.0,0.0, 1.0 ); }
-);
-
-double calibrate_timer(int delay){
-    long t1 = getCPUticks();
-    SDL_Delay(delay);
-    long t2 = getCPUticks();
-    return (t2-t1)/(delay*0.001d);
-}
-
-int juliaPoint( double x, double y, int maxIters ){
-    //const int maxIters = 64;
-    const double cX=-0.73,cY=0.27015;
-    double x_;
-    for(int i=0; i<maxIters; i++){
-        x_ = x*x-y*y  + cX;
-        y  = 2.0d*x*y + cY;
-        x = x_;
-        if((x*x+y*y)>4.0d) return i;
+void tree_step( int level, Vec3f pos, Vec3f dir, std::vector<Vec3f>& branches, std::vector<Vec3f>& leafs ){
+    static const float drnd = 0.6;
+    //dir.x *= randf(1.0-drnd,1.0);
+    //dir.y *= randf(1.0-drnd,1.0);
+    //dir.z *= randf(1.0-drnd,1.0);
+    float l = dir.norm();
+    dir.add( randf(-drnd,drnd)*l, randf(-drnd,drnd)*l, randf(-drnd,drnd)*l );
+    dir.mul( randf(0.5,0.9) );
+    Vec3f pos_ = pos + dir;
+    branches.push_back(pos );
+    branches.push_back(pos_);
+    if( level==0 ){
+        leafs.push_back(pos_);
+    }else{
+        level--;
+        tree_step( level, pos_, dir,  branches, leafs );
+        tree_step( level, pos_, dir,  branches, leafs );
     }
-    return maxIters;
-};
+}
 
 int setup(){
 
-    shSprite=new Shader();
-    shSprite->init( "common_resources/shaders/Bilboard3D.glslv", "common_resources/shaders/hardSprite.glslf" );
-    shSprite->getDefaultUniformLocation();
+    shBranches=new Shader();
+    shBranches->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    shBranches->getDefaultUniformLocation();
 
-    shSpriteBlend=new Shader();
-    shSpriteBlend->init( "common_resources/shaders/Bilboard3D.glslv", "common_resources/shaders/texture.glslf" );
-    shSpriteBlend->getDefaultUniformLocation();
+    shLeafs=new Shader();
+    shLeafs->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/pointSprite.glslf"   );
+    shLeafs->getDefaultUniformLocation();
 
-    /*
-    char* str_glslv_Bilboard3D = filetobuf( "common_resources/shaders/Bilboard3D.glslv"  ); if(str_glslv_Bilboard3D==NULL){ printf("fail to load shader!\n"); exit(1); };
-    shSprite=new Shader();
-    shSprite->init_str( str_glslv_Bilboard3D, str_glslf_sin );
-    shSprite->getDefaultUniformLocation();
-    delete [] str_glslv_Bilboard3D;
-    */
+    std::vector<Vec3f> branches;
+    std::vector<Vec3f> leafs;
+    tree_step( 5, (Vec3f){0.0f,0.0f,0.0f}, (Vec3f){0.0f,1.0f,0.0f}, branches, leafs );
 
-	instance_pos    = new GLfloat[MaxParticles*3];
-	instance_sc     = new GLfloat[MaxParticles*2];
+    //for(int i=0; i<branches.size(); i++){ printf("%i (%g,%g,%g)\n", i, branches[i].x, branches[i].y, branches[i].z ); }
 
-	float span = 20.0f;
-    float time = frameCount * 0.005;
-    ParticlesCount = MaxParticles;
+    mshBranches = new GLMesh();
+    mshBranches->init( branches.size(), 0, NULL, &branches[0],  NULL, NULL, NULL );
 
-    int nside = int( pow( ParticlesCount, 1.0/3.0) );
+    mshLeafs = new GLMesh();
+    mshLeafs->init( leafs.size(), 0, NULL, &leafs[0],  NULL, NULL, NULL );
 
-	for( int i=0; i<ParticlesCount; i++ ){
-        Vec3f pos;
-        Vec2f sc;
-        // pos.set( randf(-span,span), randf(-span,span), randf(-span,span) );
-        // sc.set( randf(0.5,1.5),randf(0.5,1.5),randf(0.5,1.5) );
-        pos.set( i%nside , (i/nside)%nside , (i/(nside*nside)) ); pos.mul(1.2);
-        //sc.set( 1.0,1.0,1.0 );
-        //float sz = randf(0.5,1.5); sc.set( sz,sz );
-        sc.set( randf(0.5,1.5),randf(0.5,1.5) );
-
-        *((Vec3f*)(instance_pos+(3*i))) = pos;
-        *((Vec2f*)(instance_sc +(2*i))) = sc;
-	}
-
-	bilboards.init( MaxParticles, 6, DEFAULT_Bilboard_UVs, instance_pos, instance_sc );
-
-    int imgH  = 512; int imgW  = 512;
-    double dx = 1.0d/(imgW);
-    double dy = 1.0d/(imgH);
-    uint32_t * c_img1 = new uint32_t[imgH*imgW];
-    for( int iy=0; iy<imgH; iy++ ){
-        for( int ix=0; ix<imgW; ix++ ){
-            uint8_t r,g,b,a;
-            //r=0; g=ix^iy; b=255; a=ix^iy;
-            double x = (ix*2-imgW)*dx;
-            double y = (iy*2-imgH)*dy;
-
-            int nMaxIter = 64;
-            int iters = (nMaxIter-juliaPoint(x*2,y,nMaxIter))*4; if(iters>255)iters=255;
-            r=iters; g=0; b=iters*2.0; a=255-iters;
-
-            c_img1[ iy*imgW + ix ] = (a<<24) | (b<<16) | (g<<8) | (r);
-        }
-    }
-    newTexture2D( texture_1, imgW, imgH, c_img1, GL_RGBA, GL_UNSIGNED_BYTE );
-
-    ticks_per_second = calibrate_timer(100);
+    //ticks_per_second = calibrate_timer(100);
     //lastTime = glfwGetTime();
     lastTime = 0.0;
     qCamera.setOne();
@@ -169,14 +116,6 @@ int setup(){
 };
 
 void draw( ){
-
-    if((frameCount%100)==0){
-        long t2     = getCPUticks();
-        double lag  = (t2-lastCPUtick)/100.0d;
-        printf( "%f [Mtick/frame] %f fps\n", lag*1e-6, ticks_per_second/lag );
-        lastCPUtick = t2;
-    };
-
     glClearColor(0.8, 0.8, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 	// Simulate all particles
@@ -189,26 +128,36 @@ void draw( ){
     camMat.set_mmul_TN( mRot, mPersp );
     //Mat3f objRot; objRot.setOne();
 
-    Shader * sh=shSprite;
-    if( bTransparent ){
-    	glDisable(GL_BLEND);
-        glEnable(GL_DEPTH_TEST);
-    }else{
-        glDisable(GL_DEPTH_TEST);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        sh=shSpriteBlend;
-    }
+    Mat3f modelMat; modelMat.setOne();
+    Vec3f modelPos; modelPos.set(0.0f,0.0f,10.0f);
 
+    Shader * sh;
+
+    sh = shBranches;
     sh->use();
-    sh->set_camPos( (GLfloat*)&camPos );
-    sh->set_camMat( (GLfloat*)&camMat );
+    sh->set_camPos  ( (GLfloat*)&camPos );
+    sh->set_camMat  ( (GLfloat*)&camMat );
+    sh->set_modelPos( (GLfloat*)&modelPos );
+    sh->set_modelMat( (GLfloat*)&modelMat );
 
-    glUniformMatrix3fv( sh->getUloc( "camRot" ), 1, GL_FALSE, (GLfloat*)&mouseMat );
-    glUniform4fv( sh->getUloc( "keyColor" ), 1, (const GLfloat[]){1.0f,0.0f,1.0f,10.0f} );
+    glLineWidth(3.0); mshBranches->draw(GL_LINES);
+    //mshBranch->drawPoints(10.0);
+
+    sh = shLeafs;
+    sh->use();
+    sh->set_camPos  ( (GLfloat*)&camPos );
+    sh->set_camMat  ( (GLfloat*)&camMat );
+    sh->set_modelPos( (GLfloat*)&modelPos );
+    sh->set_modelMat( (GLfloat*)&modelMat );
+    //glEnable( GL_PROGRAM_POINT_SIZE ); // somehow does not work ... perhaps look inside the shader
+    glPointSize(30.0);
+    mshLeafs->draw( GL_POINTS );
+
+    //glUniformMatrix3fv( sh->getUloc( "camRot" ), 1, GL_FALSE, (GLfloat*)&mouseMat );
+    //glUniform4fv( sh->getUloc( "keyColor" ), 1, (const GLfloat[]){1.0f,0.0f,1.0f,10.0f} );
 
     //uploadArrayBuffer( instances.pose_Up, instances.nInstances*3*sizeof(GLfloat), instance_Up );
-    bilboards.draw( GL_TRIANGLES );
+    //bilboards.draw( GL_TRIANGLES );
 
     //glPointSize(10.0); bilboards.draw( GL_POINTS );
 

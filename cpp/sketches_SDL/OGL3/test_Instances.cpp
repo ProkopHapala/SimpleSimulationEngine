@@ -113,10 +113,15 @@ int setup(){
 
         //printf( "%i %g  %g %g \n", i, up.dot(dir),    dir.norm2(), up.norm2()  );
 
+        //float rmin=0.01f;
+        //float rmax=500.0f;
         *((Vec3f*)(instance_pos+(3*i))) = pos;
         *((Vec3f*)(instance_dir+(3*i))) = dir;
         *((Vec3f*)(instance_Up +(3*i))) = up;
         *((Vec3f*)(instance_sc +(3*i))) = (Vec3f){ randf(0.5,1.5),randf(0.5,1.5),randf(0.5,1.5) };
+        //*((Vec3f*)(instance_sc +(3*i))) = (Vec3f){ randf(rmin,rmax),randf(rmin,rmax),randf(rmin,rmax) };
+        // float r = randf(rmin,rmax);
+        //*((Vec3f*)(instance_sc +(3*i))) = (Vec3f){ r,r,r };
 	}
 
     CMesh mesh = Solids::Octahedron;
@@ -201,7 +206,8 @@ void draw( ){
         shaderInstance->set_camMat( (GLfloat*)&camMat );
         glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
-        instances.draw( GL_TRIANGLES );
+        //instances.draw( GL_TRIANGLES );
+        glLineWidth(3.0); instances.draw( GL_LINE_LOOP );
     }
     if(bParticles){
         shaderParticle->use();

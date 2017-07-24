@@ -158,7 +158,7 @@ int setup(){
         // sc.set( randf(0.5,1.5),randf(0.5,1.5),randf(0.5,1.5) );
         pos.set( i%nside , (i/nside )%nside , (i/(nside*nside))%nside ); pos.mul(2.5);
         //sc.set( 1.0,1.0,1.0 );
-        float sz = randf(0.5,1.5); sc.set( sz,sz,sz );
+        float sz = randf(0.1,2.5); sc.set( sz,sz,sz );
 
         dir.set( randf(-1.0f,1.0f), randf(-1.0f,1.0f), randf(-1.0f,1.0f) ); dir.normalize();
         up .set( randf(-1.0f,1.0f), randf(-1.0f,1.0f), randf(-1.0f,1.0f) ); up.makeOrthoU( dir ); up.normalize();
