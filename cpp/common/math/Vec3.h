@@ -180,12 +180,8 @@ class Vec3TYPE{
 };
 
 template<typename VEC> inline VEC cross( VEC a, VEC b ){ return (VEC){ a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x }; }
+template<typename VEC> inline VEC add  ( VEC a, VEC b ){ return (VEC){ a.x+b.x, a.z+b.z, a.z+b.z }; }
 
-/*
-class Vec3i : public Vec3TYPE< int,    Vec3i > {  };
-class Vec3f : public Vec3TYPE< float,  Vec3f > {  };
-class Vec3d : public Vec3TYPE< double, Vec3d > {  };
-*/
 using Vec3i = Vec3TYPE<int>;
 using Vec3f = Vec3TYPE<float>;
 using Vec3d = Vec3TYPE<double>;

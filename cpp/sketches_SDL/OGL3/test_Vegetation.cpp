@@ -170,6 +170,18 @@ int setup(){
     //lastTime = glfwGetTime();
     lastTime = 0.0;
     qCamera.setOne();
+
+
+
+    // ==== BEGIN : RENDER TO TEXTURE
+
+	// Get a handle for our "myTextureSampler" uniform
+	//GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
+
+
+    // ==== END   : RENDER TO TEXTURE
+
+
     return 0;
 };
 

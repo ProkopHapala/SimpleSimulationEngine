@@ -233,10 +233,8 @@ void draw(){
     uloc = glGetUniformLocation( shader_post->shaderprogram, "texZ");   glUniform1i(uloc, 0);
     uloc = glGetUniformLocation( shader_post->shaderprogram, "texRGB"); glUniform1i(uloc, 1);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture  (GL_TEXTURE_2D, texZ   );
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture  (GL_TEXTURE_2D, texRGB );
+    glActiveTexture(GL_TEXTURE0);    glBindTexture  (GL_TEXTURE_2D, texZ   );
+    glActiveTexture(GL_TEXTURE1);    glBindTexture  (GL_TEXTURE_2D, texRGB );
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     //glViewport(0,0,WIDTH,HEIGHT);
@@ -323,8 +321,7 @@ void die( char const *msg ){
 bool checkFramebufferStatus(){
     // check FBO status
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    switch(status)
-    {
+    switch(status){
     case GL_FRAMEBUFFER_COMPLETE:
         printf( "Framebuffer complete.\n" );
         return true;

@@ -31,9 +31,9 @@ class GLBuff{ public:
     GLuint     vbo  = 0;
     GLfloat * cbuff = NULL;
 
-    inline void setup( int id_, int dim_, bool normalized_, void * cbuff_, char kind_ ){ id = id_; dim = dim_; normalized = normalized_; cbuff = (GLfloat*)cbuff_; kind=kind_; }
+    inline void setup( int id_, int dim_, bool normalized_, const void * cbuff_, char kind_ ){ id = id_; dim = dim_; normalized = normalized_; cbuff = (GLfloat*)cbuff_; kind=kind_; }
 
-    inline void setup( int id_, int dim_, bool normalized_, double * cbuff_, int n, char kind_ ){
+    inline void setup( int id_, int dim_, bool normalized_, const double * cbuff_, int n, char kind_ ){
         id = id_; dim = dim_; normalized = normalized_; kind=kind_;
         int nd=n*dim;
         cbuff = new GLfloat[nd];

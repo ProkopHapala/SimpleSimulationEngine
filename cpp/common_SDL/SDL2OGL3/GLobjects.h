@@ -9,6 +9,10 @@
 //float * double2float( int n, double * ds ){ float*fs=float[n]; for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; return fs; }
 void double2float( int n, double * ds, float * fs ){ for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; }
 
+// ==============================
+// ========== GLMesh
+// ==============================
+
 class GLMesh{ public:
     union{
         //struct{ GLuint vpos=0,vnor=0,vcol=0,vUVs=0; }; // union does not work with initializer
@@ -63,6 +67,45 @@ class GLMesh{ public:
     void drawPoints   ( float sz ){ int narg = preDraw(); drawPointsRaw(sz); postDraw(narg);}
 
     //inline GLMesh(){ vpos=0,vnor=0,vcol=0,vUVs=0; };
+};
+
+// ==============================
+// ========== GLMesh
+// ==============================
+
+class FrameBuffer{ public:
+    GLuint buff =0;
+    GLuint buffZ=0;
+    GLuint texZ =0, texRGB=0;
+
+    inline void init( GLuint texRGB_, GLuint texZ_, int WIDTH, int HEIGHT ){
+        texZ   =  texZ_;
+        texRGB =  texRGB_;
+        glGenFramebuffers(1, &buff);
+        glBindFramebuffer(GL_FRAMEBUFFER, buff);
+        // The depth buffer
+        glGenRenderbuffers       (1, &buffZ);
+        glBindRenderbuffer       (GL_RENDERBUFFER, buffZ );
+        glRenderbufferStorage    (GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT );
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER,  GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, buffZ );
+
+        //printf( "texZ %i texRGB %i \n", texZ, texRGB );
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  texZ,   0 );
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texRGB, 0 );
+        GLenum DrawBuffers[2] = {GL_DEPTH_ATTACHMENT, GL_COLOR_ATTACHMENT0};
+        glDrawBuffers(2, DrawBuffers);
+        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+            printf(" problem in FBO ! \n ");
+            checkFramebufferStatus();
+        }
+    }
+
+    void init( int WIDTH, int HEIGHT  ){
+        newTexture2D( texRGB, WIDTH, HEIGHT, NULL, GL_RGB,             GL_UNSIGNED_BYTE );
+        newTexture2D( texZ  , WIDTH, HEIGHT, NULL, GL_DEPTH_COMPONENT, GL_FLOAT         );
+        init( texRGB, texZ, WIDTH, HEIGHT );
+    }
+
 };
 
 #endif

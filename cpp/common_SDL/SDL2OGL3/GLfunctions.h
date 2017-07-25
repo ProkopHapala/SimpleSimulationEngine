@@ -59,4 +59,20 @@ inline void bindTexture( GLuint slot, GLuint textureID, GLuint uloc ){
     glUniform1i( uloc, slot );
 }
 
+// ========== Frame Buffer
+
+bool checkFramebufferStatus(){
+    // check FBO status
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    switch(status){
+        case GL_FRAMEBUFFER_COMPLETE:                      printf( "Framebuffer complete.\n" );                                              return true;
+        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:         printf( "[ERROR] Framebuffer incomplete: Attachment is NOT complete.\n" );        return false;
+        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: printf( "[ERROR] Framebuffer incomplete: No image is attached to FBO.\n" );       return false;
+        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:        printf( "[ERROR] Framebuffer incomplete: Draw buffer.\n" );                       return false;
+        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:        printf( "[ERROR] Framebuffer incomplete: Read buffer.\n" );                       return false;
+        case GL_FRAMEBUFFER_UNSUPPORTED:                   printf( "[ERROR] Framebuffer incomplete: Unsupported by FBO implementation.\n" ); return false;
+        default:                                           printf( "[ERROR] Framebuffer incomplete: Unknown error.\n" );                     return false;
+    }
+}
+
 #endif
