@@ -139,6 +139,8 @@ inline uint64_t symetric_id( const Vec2i& v){ if( v.a>v.b ){ return (((uint64_t)
 inline void convert( const Vec2f& from, Vec2d& to ){ to.x=from.x;        to.y=from.y;        };
 inline void convert( const Vec2d& from, Vec2f& to ){ to.x=(float)from.x; to.y=(float)from.y; };
 
+inline Vec2f toFloat( const Vec2d& from){ return (Vec2f){(float)from.x,(float)from.y}; }
+
 #endif
 
 

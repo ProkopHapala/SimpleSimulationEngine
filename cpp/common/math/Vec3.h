@@ -75,14 +75,15 @@ class Vec3TYPE{
 
 	inline void set_add_mul( const VEC& a, const VEC& b, TYPE f ){ x= a.x + f*b.x;     y= a.y + f*b.y;     z= a.z + f*b.z;  };
 
+
 	inline void set_lincomb( TYPE fa, const VEC& a, TYPE fb, const VEC& b ){ x = fa*a.x + fb*b.x;  y = fa*a.y + fb*b.y;  z = fa*a.z + fb*b.z; };
 	inline void add_lincomb( TYPE fa, const VEC& a, TYPE fb, const VEC& b ){ x+= fa*a.x + fb*b.x;  y+= fa*a.y + fb*b.y;  z+= fa*a.z + fb*b.z; };
 
 	inline void set_lincomb( TYPE fa, TYPE fb, TYPE fc, const VEC& a, const VEC& b, const VEC& c ){ x = fa*a.x + fb*b.x + fc*c.x;  y = fa*a.y + fb*b.y + fc*c.y;  z = fa*a.z + fb*b.z + fc*c.z; };
 	inline void add_lincomb( TYPE fa, TYPE fb, TYPE fc, const VEC& a, const VEC& b, const VEC& c ){ x+= fa*a.x + fb*b.x + fc*c.x;  y+= fa*a.y + fb*b.y + fc*c.y;  z+= fa*a.z + fb*b.z + fc*c.z; };
 
-    inline void  set_cross( const VEC& a, const VEC& b ){ x =a.y*b.z-a.z*b.y; y =a.z*b.x-a.x*b.z; z =a.x*b.y-a.y*b.x; };
-	inline void  add_cross( const VEC& a, const VEC& b ){ x+=a.y*b.z-a.z*b.y; y+=a.z*b.x-a.x*b.z; z+=a.x*b.y-a.y*b.x; };
+    inline void set_cross( const VEC& a, const VEC& b ){ x =a.y*b.z-a.z*b.y; y =a.z*b.x-a.x*b.z; z =a.x*b.y-a.y*b.x; };
+	inline void add_cross( const VEC& a, const VEC& b ){ x+=a.y*b.z-a.z*b.y; y+=a.z*b.x-a.x*b.z; z+=a.x*b.y-a.y*b.x; };
 
 	double makeOrthoU( const VEC& a ){ double c = dot(a);          add_mul(a, -c); return c; }
 	double makeOrtho ( const VEC& a ){ double c = dot(a)/a.norm(); add_mul(a, -c); return c; }
@@ -104,6 +105,12 @@ class Vec3TYPE{
 		x *= inVnorm;    y *= inVnorm;    z *= inVnorm;
 		return norm;
     };
+
+    inline VEC getOrtho( VEC& up ) const {
+        up.makeOrthoU(*this); up.normalize();
+        VEC out; out.set_cross(*this,up);
+        return out;
+	}
 
 	inline void getSomeOrtho( VEC& v1, VEC& v2 ) const {
 		if(x<y){
@@ -172,6 +179,8 @@ class Vec3TYPE{
 
 };
 
+template<typename VEC> inline VEC cross( VEC a, VEC b ){ return (VEC){ a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x }; }
+
 /*
 class Vec3i : public Vec3TYPE< int,    Vec3i > {  };
 class Vec3f : public Vec3TYPE< float,  Vec3f > {  };
@@ -190,9 +199,10 @@ inline Vec3i    from_id    ( uint64_t id   ){
     return vi;
 }
 
-
 inline void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
 inline void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };
+
+inline Vec3f toFloat( const Vec3d& from){ return (Vec3f){(float)from.x,(float)from.y,(float)from.z}; }
 
 #endif
 
