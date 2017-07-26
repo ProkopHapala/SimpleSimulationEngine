@@ -22,7 +22,7 @@
 #include "GLObject.h"
 #include "GLfunctions.h"
 #include "GLobjects.h"
-//#include "GLInstances.h"
+#include "GLInstances.h"
 #include "IO_utils.h"
 #include "Shader.h"
 
@@ -33,13 +33,18 @@
 
 // =============== Global variables
 
-Shader *shBranches,*shLeafs;
+Shader *shBranches,*shLeafs,*shTex;
 
 //GLInstances instances;
 //GLBillboards bilboards;
 //GLuint texture_1;
 
 GLMesh   *mshBranches,*mshLeafs;
+
+GLuint       texTest;
+GLMesh       *glquad;
+GLBillboards bilboards;
+FrameBuffer  frameBuff1;
 
 
 int frameCount = 0;
@@ -57,7 +62,7 @@ float ASPECT_RATIO = HEIGHT/WIDTH;
 int mouseX, mouseY;
 Quat4f qCamera;
 Mat3f  mouseMat;
-Vec3f  camPos = (Vec3f){ 0.0f, 0.0f, 0.0f };
+Vec3f  camPos = (Vec3f){ 0.0f, 0.0f, -10.0f };
 
 bool bTransparent  = false;
 
@@ -65,6 +70,22 @@ long lastCPUtick = 0;
 double ticks_per_second=0;
 
 // =============== Functions
+
+GLuint makeTestTextureRGBA( int W, int H ){
+    double dx = 1.0d/W;
+    double dy = 1.0d/H;
+    uint32_t * c_img1 = new uint32_t[H*W];
+    for( int iy=0; iy<H; iy++ ){
+        for( int ix=0; ix<W; ix++ ){
+            uint8_t r,g,b,a;
+            r=ix; g=ix^iy; b=iy; a=255;
+            c_img1[ iy*W + ix ] = (a<<24) | (b<<16) | (g<<8) | (r);
+        }
+    }
+    GLuint texID;
+    newTexture2D( texID, W, H, c_img1, GL_RGBA, GL_UNSIGNED_BYTE );
+    return texID;
+}
 
 int pushCylinderTris( int n, float r1, float r2, Vec3f base, Vec3f tip, Vec3f up, std::vector<Vec3f>& verts, std::vector<Vec3f>* normals ){
 	int nvert=0;
@@ -139,6 +160,42 @@ void tree_step( int level, Vec3f pos, Vec3f dir, std::vector<Vec3f>& branches, s
     }
 }
 
+void camera(Mat4f& camMat){
+    Mat4f mRot,mPersp;
+    qCamera.toMatrix(mouseMat);
+    mRot.setOne(); mRot.setRot(mouseMat);
+    float fov = 3.0;
+    mPersp.setPerspective( fov, fov*ASPECT_RATIO, 1.0, 1000.0 );
+    camMat.set_mmul_TN( mRot, mPersp );
+}
+
+void renderPhases(){
+
+    Mat4f camMat;  camera(camMat);
+
+    int nPhases = 8;
+    Mat3f modelMat; modelMat.setOne();
+    Vec3f modelPos; modelPos.set(-7.0f,0.0f,10.0f);
+    for(int iph=0; iph<nPhases; iph++){
+
+        modelMat.rotate( 2*M_PI/16, (Vec3f){0.0f,1.0f,0.0f});
+        modelPos.add( 1.5f, 0.0f, 0.0f );
+
+        Shader * sh;
+        sh = shBranches;
+        sh->use();
+        sh->set_camPos  ( (GLfloat*)&camPos );
+        sh->set_camMat  ( (GLfloat*)&camMat );
+        sh->set_modelPos( (GLfloat*)&modelPos );
+        sh->set_modelMat( (GLfloat*)&modelMat );
+
+        glEnable(GL_DEPTH_TEST);
+        mshBranches->draw(GL_TRIANGLES);
+    }
+}
+
+
+
 int setup(){
 
     shBranches=new Shader();
@@ -171,70 +228,66 @@ int setup(){
     lastTime = 0.0;
     qCamera.setOne();
 
-
-
     // ==== BEGIN : RENDER TO TEXTURE
 
-	// Get a handle for our "myTextureSampler" uniform
-	//GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
+    shTex=new Shader();
+    //shTex->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    //shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
+    //shTex->init( "common_resources/shaders/texture3D_anim.glslv",   "common_resources/shaders/texture.glslf"   );
+    shTex->init( "common_resources/shaders/texture3D_anim.glslv",   "common_resources/shaders/texture_anim.glslf"   );
+    shTex->getDefaultUniformLocation();
 
+    glquad =new GLMesh();
+    glquad->init( 6, 0, NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs );
+    //glquad->init( 6, 0, NULL, DEFAULT_Bilboard_verts, DEFAULT_Bilboard_verts, NULL, NULL );
+
+    texTest = makeTestTextureRGBA( 256, 256);
+
+    frameBuff1.init( 800, 800 );
+
+    // ===== Prepare texture by rendering
+
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBuff1.buff );
+
+    //glClearColor(0.0, 0.0, 0.8, 1.0);
+    glClearColor(0.9, 0.9, 0.9, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
+
+    renderPhases();
 
     // ==== END   : RENDER TO TEXTURE
-
 
     return 0;
 };
 
 void draw( ){
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClearColor(0.8, 0.8, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 	// Simulate all particles
 
-    Mat4f camMat,mRot,mPersp;
-    qCamera.toMatrix(mouseMat);
-    mRot.setOne(); mRot.setRot(mouseMat);
-    float fov = 3.0;
-    mPersp.setPerspective( fov, fov*ASPECT_RATIO, 1.0, 1000.0 );
-    camMat.set_mmul_TN( mRot, mPersp );
-    //Mat3f objRot; objRot.setOne();
+	renderPhases();
 
-    Mat3f modelMat; modelMat.setOne();
+    Mat3f modelMat; modelMat.setOne(); modelMat.mul(5.0f);
     Vec3f modelPos; modelPos.set(0.0f,0.0f,10.0f);
+    Mat4f camMat; camera(camMat);
+
+    //glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, texTest );
+    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, frameBuff1.texRGB );
 
     Shader * sh;
-
-    sh = shBranches;
+    sh = shTex;
     sh->use();
-    sh->set_camPos  ( (GLfloat*)&camPos );
-    sh->set_camMat  ( (GLfloat*)&camMat );
     sh->set_modelPos( (GLfloat*)&modelPos );
     sh->set_modelMat( (GLfloat*)&modelMat );
+    sh->set_camPos  ( (GLfloat*)&camPos   );
+    sh->set_camMat  ( (GLfloat*)&camMat   );
 
-    glEnable(GL_DEPTH_TEST);
-    mshBranches->draw(GL_TRIANGLES);
+    glUniform1f(sh->getUloc("angle0"), frameCount*0.01 );
+    glUniform1i(sh->getUloc("texture_1"), 0);
 
-    //glLineWidth(3.0); mshBranches->draw(GL_LINES);
-    //mshBranch->drawPoints(10.0);
-
-    /*
-    sh = shLeafs;
-    sh->use();
-    sh->set_camPos  ( (GLfloat*)&camPos );
-    sh->set_camMat  ( (GLfloat*)&camMat );
-    sh->set_modelPos( (GLfloat*)&modelPos );
-    sh->set_modelMat( (GLfloat*)&modelMat );
-    //glEnable( GL_PROGRAM_POINT_SIZE ); // somehow does not work ... perhaps look inside the shader
-    glPointSize(30.0);
-    mshLeafs->draw( GL_POINTS );
-
-    //glUniformMatrix3fv( sh->getUloc( "camRot" ), 1, GL_FALSE, (GLfloat*)&mouseMat );
-    //glUniform4fv( sh->getUloc( "keyColor" ), 1, (const GLfloat[]){1.0f,0.0f,1.0f,10.0f} );
-
-    //uploadArrayBuffer( instances.pose_Up, instances.nInstances*3*sizeof(GLfloat), instance_Up );
-    //bilboards.draw( GL_TRIANGLES );
-
-    //glPointSize(10.0); bilboards.draw( GL_POINTS );
-    */
+    glquad->draw(GL_TRIANGLES);
+    glquad->drawPoints(10.0);
 
 }
 

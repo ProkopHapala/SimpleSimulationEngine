@@ -225,7 +225,7 @@ class Mat3TYPE{
 // ======= Rotation
 
 	inline void rotate( TYPE angle, const VEC& axis  ){
-		Vec3d uaxis;
+		VEC uaxis;
 		uaxis.set( axis * axis.norm() );
 		TYPE ca   = cos(angle);
 		TYPE sa   = sin(angle);
