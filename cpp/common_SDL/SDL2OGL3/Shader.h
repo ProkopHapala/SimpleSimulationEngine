@@ -61,21 +61,20 @@ class Shader{
 
 	void getDefaultUniformLocation();
 
+	void setUniformi    ( const char * name, const int    i);
+	void setUniformf    ( const char * name, const float  f);
+	void setUniformVec2f( const char * name, const Vec2f  v);
+	void setUniformVec4f( const char * name, const Quat4f v);
+	void setUniformVec3f( const char * name, const Vec3f  v);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform3fv      (u, 1, modelPos           ); };
+	void setUniformMat3f( const char * name, const Mat3f  m);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix3fv(u, 1, GL_FALSE, modelMat ); };
+	void setUniformMat4f( const char * name, const Mat4f  m);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix4fv(u, 1, GL_FALSE, camMat   ); };
 
-	void setUniformi    ( char * name, int    i);
-	void setUniformf    ( char * name, float  f);
-	void setUniformVec2f( char * name, Vec2f  v);
-	void setUniformVec4f( char * name, Quat4f v);
-	void setUniformVec3f( char * name, Vec3f  v);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform3fv      (u, 1, modelPos           ); };
-	void setUniformMat3f( char * name, Mat3f  m);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix3fv(u, 1, GL_FALSE, modelMat ); };
-	void setUniformMat4f( char * name, Mat4f  m);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix4fv(u, 1, GL_FALSE, camMat   ); };
-
-	inline void set_baseColor( GLfloat * baseColor ){ glUniform4fv      (uloc_baseColor, 1, baseColor );          };
-	inline void set_modelPos ( GLfloat * modelPos  ){ glUniform3fv      (uloc_modelPos,  1, modelPos );           };
-    inline void set_modelMat ( GLfloat * modelMat  ){ glUniformMatrix3fv(uloc_modelMat,  1, GL_FALSE, modelMat ); };
-    inline void set_camMat   ( GLfloat * camMat    ){ glUniformMatrix4fv(uloc_camMat  ,  1, GL_FALSE, camMat   ); };
-    inline void set_camPos   ( GLfloat * camPos    ){ glUniform3fv      (uloc_camPos  ,  1, camPos   );           };
-    inline void setPose      ( GLfloat * modelPos, GLfloat * modelMat, GLfloat * camMat  ){ set_modelPos(modelPos); set_modelMat(modelMat); set_camMat(camMat); };
+	inline void set_baseColor( const GLfloat * baseColor ){ glUniform4fv      (uloc_baseColor, 1, baseColor );          };
+	inline void set_modelPos ( const GLfloat * modelPos  ){ glUniform3fv      (uloc_modelPos,  1, modelPos );           };
+    inline void set_modelMat ( const GLfloat * modelMat  ){ glUniformMatrix3fv(uloc_modelMat,  1, GL_FALSE, modelMat ); };
+    inline void set_camMat   ( const GLfloat * camMat    ){ glUniformMatrix4fv(uloc_camMat  ,  1, GL_FALSE, camMat   ); };
+    inline void set_camPos   ( const GLfloat * camPos    ){ glUniform3fv      (uloc_camPos  ,  1, camPos   );           };
+    inline void setPose      ( const GLfloat * modelPos, GLfloat * modelMat, GLfloat * camMat  ){ set_modelPos(modelPos); set_modelMat(modelMat); set_camMat(camMat); };
 
 };
 

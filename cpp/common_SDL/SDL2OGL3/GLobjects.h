@@ -82,16 +82,18 @@ class FrameBuffer{ public:
     GLuint buff =0;
     GLuint buffZ=0;
     GLuint texZ =0, texRGB=0;
+    int W=0,H=0;
 
-    inline void init( GLuint texRGB_, GLuint texZ_, int WIDTH, int HEIGHT ){
+    inline void init( GLuint texRGB_, GLuint texZ_, int W_, int H_){
         texZ   =  texZ_;
         texRGB =  texRGB_;
+        W=W_;H=H_;
         glGenFramebuffers(1, &buff);
         glBindFramebuffer(GL_FRAMEBUFFER, buff);
         // The depth buffer
         glGenRenderbuffers       (1, &buffZ);
         glBindRenderbuffer       (GL_RENDERBUFFER, buffZ );
-        glRenderbufferStorage    (GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT );
+        glRenderbufferStorage    (GL_RENDERBUFFER, GL_DEPTH_COMPONENT, W, H );
         glFramebufferRenderbuffer(GL_FRAMEBUFFER,  GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, buffZ );
 
         //printf( "texZ %i texRGB %i \n", texZ, texRGB );
@@ -105,12 +107,16 @@ class FrameBuffer{ public:
         }
     }
 
-    void init( int WIDTH, int HEIGHT  ){
-        newTexture2D( texRGB, WIDTH, HEIGHT, NULL, GL_RGB,             GL_UNSIGNED_BYTE );
-        newTexture2D( texZ  , WIDTH, HEIGHT, NULL, GL_DEPTH_COMPONENT, GL_FLOAT         );
-        init( texRGB, texZ, WIDTH, HEIGHT );
+    void init( int W, int H  ){
+        newTexture2D( texRGB, W, H, NULL, GL_RGB,             GL_UNSIGNED_BYTE );
+        newTexture2D( texZ  , W, H, NULL, GL_DEPTH_COMPONENT, GL_FLOAT         );
+        init( texRGB, texZ, W, H );
     }
 
+    void bind(){
+        glBindFramebuffer(GL_FRAMEBUFFER,buff);
+        glViewport(0,0,W,H);
+    }
 };
 
 #endif

@@ -12,12 +12,14 @@ uniform vec3 camPos;
 uniform mat4 camMat;
 
 uniform float angle0;
-const   float nPhases = 8;
+//const   float nPhases = 32;
+uniform float nPhases;
 
 void main(){
 	vec3 vpos_world = modelPos + modelMat * vpos;
 	vec3 vdir    = modelMat[0];
-	float phase  = ( angle0 + atan ( vdir.x, vdir.y) ) * ( nPhases/6.28318530718 );
+	//float phase  = ( angle0 + atan ( vdir.x, vdir.y) ) * ( nPhases/6.28318530718 );
+	float phase  = angle0 * ( nPhases/6.28318530718 );
 	float iphase = floor( phase );
 	fUV1         = uv     + vec2( (iphase  )/nPhases,  1 );
 	fUV2         = uv     + vec2( (iphase+1)/nPhases,  1 );

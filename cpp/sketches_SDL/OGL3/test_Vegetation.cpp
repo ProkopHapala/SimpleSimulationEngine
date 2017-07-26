@@ -42,7 +42,7 @@ Shader *shBranches,*shLeafs,*shTex;
 GLMesh   *mshBranches,*mshLeafs;
 
 GLuint       texTest;
-GLMesh       *glquad;
+GLMesh       *glSprite,*glAtlas;
 GLBillboards bilboards;
 FrameBuffer  frameBuff1;
 
@@ -70,6 +70,17 @@ long lastCPUtick = 0;
 double ticks_per_second=0;
 
 // =============== Functions
+
+GLMesh* makeQuad3D( Vec2f p0, Vec2f p1, Vec2f u0, Vec2f u1 ){
+    //GLfloat verts = new GLfloat[3*2*3];
+    //GLfloat vUVs  = new GLfloat[3*2*2];
+    //delete [] verts;
+    GLfloat verts[] = { p0.x,p0.y,0.0, p1.x,p1.y,0.0, p0.x,p1.y,0.0,   p0.x,p0.y,0.0, p1.x,p1.y,0.0, p1.x,p0.y,0.0 };
+    Vec2f vUVs   [] = { u0.x,u0.y,     u1.x,u1.y,     u0.x,u1.y,       u0.x,u0.y,     u1.x,u1.y,     u1.x,u0.y     };
+    GLMesh* glquad = new GLMesh();
+    glquad->init( 6, 0, NULL, verts, NULL, NULL, vUVs );
+    return glquad;
+}
 
 GLuint makeTestTextureRGBA( int W, int H ){
     double dx = 1.0d/W;
@@ -160,26 +171,28 @@ void tree_step( int level, Vec3f pos, Vec3f dir, std::vector<Vec3f>& branches, s
     }
 }
 
-void camera(Mat4f& camMat){
-    Mat4f mRot,mPersp;
+void camera(float aspect, Mat4f& camMat){
+    Mat4f mRot,mProj;
     qCamera.toMatrix(mouseMat);
     mRot.setOne(); mRot.setRot(mouseMat);
-    float fov = 3.0;
-    mPersp.setPerspective( fov, fov*ASPECT_RATIO, 1.0, 1000.0 );
-    camMat.set_mmul_TN( mRot, mPersp );
+    // float fov = 3.0; mPersp.setPerspective( fov, fov*ASPECT_RATIO, 1.0, 1000.0 );
+    mProj.setOrthographic( 8.0, 8.0*aspect, -1.0, -1000.0);
+    //mProj.setOne();
+    camMat.set_mmul_TN( mRot, mProj );
 }
 
-void renderPhases(){
+void renderPhases( Mat4f camMat ){
 
-    Mat4f camMat;  camera(camMat);
+    //Mat4f camMat;  camera( 32, camMat);
 
-    int nPhases = 8;
-    Mat3f modelMat; modelMat.setOne();
-    Vec3f modelPos; modelPos.set(-7.0f,0.0f,10.0f);
+    int nPhases = 32;
+    Mat3f modelMat; modelMat.setOne(); modelMat.mul(0.3);
+    //Vec3f modelPos; modelPos.set(-4.25f,-4.0f,10.0f);
+    Vec3f modelPos; modelPos.set(-8.25f,-0.5f,10.0f);
     for(int iph=0; iph<nPhases; iph++){
 
-        modelMat.rotate( 2*M_PI/16, (Vec3f){0.0f,1.0f,0.0f});
-        modelPos.add( 1.5f, 0.0f, 0.0f );
+        modelMat.rotate( 2*M_PI/nPhases, (Vec3f){0.0f,1.0f,0.0f});
+        modelPos.add( 0.5f, 0.0f, 0.0f );
 
         Shader * sh;
         sh = shBranches;
@@ -237,23 +250,30 @@ int setup(){
     shTex->init( "common_resources/shaders/texture3D_anim.glslv",   "common_resources/shaders/texture_anim.glslf"   );
     shTex->getDefaultUniformLocation();
 
-    glquad =new GLMesh();
-    glquad->init( 6, 0, NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs );
+    glAtlas  = makeQuad3D( {0.0f,0.0f}, {32.0f,2.0f}, {0.0f,0.0f}, {1.f,1.0f} );
+    //glquad = makeQuad3D( {0.0f,0.0f}, {0.5f,1.0f}, {0.0f,0.0f}, {0.125f,1.0f} );
+    glSprite = makeQuad3D( {0.0f,0.0f}, {4.0f,8.0f}, {0.0f,0.0f}, {1/32.0f,1.0f} );
+
+    //glquad =new GLMesh();
+    //glquad->init( 6, 0, NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs );
     //glquad->init( 6, 0, NULL, DEFAULT_Bilboard_verts, DEFAULT_Bilboard_verts, NULL, NULL );
 
     texTest = makeTestTextureRGBA( 256, 256);
 
-    frameBuff1.init( 800, 800 );
+    //frameBuff1.init( 2048, 64 );
+    frameBuff1.init( 2048, 128 );
 
     // ===== Prepare texture by rendering
 
-    glBindFramebuffer(GL_FRAMEBUFFER, frameBuff1.buff );
+    //glBindFramebuffer(GL_FRAMEBUFFER, frameBuff1.buff );
+    frameBuff1.bind();
 
     //glClearColor(0.0, 0.0, 0.8, 1.0);
-    glClearColor(0.9, 0.9, 0.9, 1.0);
+    glClearColor(0.9, 0.9, 0.9, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 
-    renderPhases();
+    Mat4f camMat; camera( 1/16.0, camMat);
+    renderPhases( camMat);
 
     // ==== END   : RENDER TO TEXTURE
 
@@ -261,16 +281,16 @@ int setup(){
 };
 
 void draw( ){
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); glViewport(0,0,WIDTH,HEIGHT);
     glClearColor(0.8, 0.8, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 	// Simulate all particles
 
-	renderPhases();
+	Mat4f camMat;  camera( 1.0, camMat);
+	renderPhases(camMat);
 
-    Mat3f modelMat; modelMat.setOne(); modelMat.mul(5.0f);
-    Vec3f modelPos; modelPos.set(0.0f,0.0f,10.0f);
-    Mat4f camMat; camera(camMat);
+    Mat3f modelMat; modelMat.setOne(); modelMat.mul(0.5f);
+    //Vec3f modelPos;
 
     //glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, texTest );
     glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, frameBuff1.texRGB );
@@ -278,16 +298,23 @@ void draw( ){
     Shader * sh;
     sh = shTex;
     sh->use();
-    sh->set_modelPos( (GLfloat*)&modelPos );
     sh->set_modelMat( (GLfloat*)&modelMat );
     sh->set_camPos  ( (GLfloat*)&camPos   );
     sh->set_camMat  ( (GLfloat*)&camMat   );
 
-    glUniform1f(sh->getUloc("angle0"), frameCount*0.01 );
-    glUniform1i(sh->getUloc("texture_1"), 0);
 
-    glquad->draw(GL_TRIANGLES);
-    glquad->drawPoints(10.0);
+    glUniform1i(sh->getUloc("texture_1"), 0);
+    glUniform1f(sh->getUloc("nPhases"), 32.0f);
+
+    glUniform1f(sh->getUloc("angle0"), 0 );
+    sh->set_modelPos( (const GLfloat[]){-4.0f,0.5f,10.0f} );
+    glAtlas->draw(GL_TRIANGLES);
+    glAtlas->drawPoints(10.0);
+
+    glUniform1f(sh->getUloc("angle0"), frameCount*0.005 );
+    sh->set_modelPos( (const GLfloat[]){0.0f,2.5f,10.0f} );
+    glSprite->draw(GL_TRIANGLES);
+    glSprite->drawPoints(10.0);
 
 }
 
@@ -324,8 +351,10 @@ void inputHanding(){
 	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch2(  (float)keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch2( -(float)keyRotSpeed ); }
 
-    if( keys[ SDL_SCANCODE_W  ] ){ camPos.add_mul( mouseMat.c, +step ); }
-	if( keys[ SDL_SCANCODE_S  ] ){ camPos.add_mul( mouseMat.c, -step ); }
+    if( keys[ SDL_SCANCODE_Q  ] ){ camPos.add_mul( mouseMat.c, +step ); }
+	if( keys[ SDL_SCANCODE_E  ] ){ camPos.add_mul( mouseMat.c, -step ); }
+    if( keys[ SDL_SCANCODE_W  ] ){ camPos.add_mul( mouseMat.b, +step ); }
+	if( keys[ SDL_SCANCODE_S  ] ){ camPos.add_mul( mouseMat.b, -step ); }
 	if( keys[ SDL_SCANCODE_A  ] ){ camPos.add_mul( mouseMat.a, -step ); }
 	if( keys[ SDL_SCANCODE_D  ] ){ camPos.add_mul( mouseMat.a, +step ); }
 
