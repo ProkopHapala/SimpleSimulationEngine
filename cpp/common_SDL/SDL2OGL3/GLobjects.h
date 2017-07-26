@@ -7,11 +7,16 @@
 //#include <SDL2/SDL.h>
 
 //float * double2float( int n, double * ds ){ float*fs=float[n]; for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; return fs; }
-void double2float( int n, double * ds, float * fs ){ for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; }
+void double2float( int n, const double * ds, float * fs ){ for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; }
 
 // ==============================
 // ========== GLMesh
 // ==============================
+
+static const float DEFAULT_Bilboard_verts[] = {
+    0.0f,0.0f,0.0f,   1.0f,0.0f,0.0f,   0.0f,1.0f,0.0f,
+    1.0f,1.0f,0.0f,   1.0f,0.0f,0.0f,   0.0f,1.0f,0.0f
+};
 
 class GLMesh{ public:
     union{
@@ -24,7 +29,7 @@ class GLMesh{ public:
     int nInds  =0;
     GLenum draw_mode=GL_TRIANGLES;
 
-    void init( int nVerts_, int nInds_, void * c_inds, void * c_vpos,  void * c_vnor, void * c_vcol, void * c_vUVs, GLenum usage=GL_STATIC_DRAW ){
+    void init( int nVerts_, int nInds_, const void * c_inds, const void * c_vpos,  const void * c_vnor, const void * c_vcol, const void * c_vUVs, GLenum usage=GL_STATIC_DRAW ){
         nVerts = nVerts_;
         nInds  = nInds_;
         if(nInds  ){ newElementBuffer( inds, nInds   *sizeof(GLuint),  c_inds, usage ); }else{ inds=0; };
@@ -34,7 +39,7 @@ class GLMesh{ public:
         if(c_vUVs ){ newArrayBuffer  ( vUVs, nVerts*2*sizeof(GLfloat), c_vUVs, usage ); }else{ vUVs=0; };
     };
 
-    void init_d( int nVerts_, int nInds_, int * c_inds, double * c_vpos,  double * c_vnor, double * c_vcol, double * c_vUVs, GLenum usage=GL_STATIC_DRAW ){
+    void init_d( int nVerts_, int nInds_, const int * c_inds, const double * c_vpos, const double * c_vnor, const double * c_vcol, const double * c_vUVs, GLenum usage=GL_STATIC_DRAW ){
         nVerts = nVerts_;
         nInds  = nInds_;
         float * fs = new float[4*nVerts];
