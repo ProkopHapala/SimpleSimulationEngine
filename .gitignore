@@ -9,3 +9,5 @@
 Build
 
 *.log
+*.xsf
+*.npy

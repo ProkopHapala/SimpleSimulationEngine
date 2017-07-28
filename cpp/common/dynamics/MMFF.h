@@ -6,6 +6,7 @@
 #include "Vec2.h"
 #include "Vec3.h"
 #include "quaternion.h"
+#include "Grid.h"
 
 #include "integerOps.h"
 #include <unordered_map>
@@ -17,6 +18,7 @@
 //inline BondType2id
 //inline BondTypeDec
 
+#define RSAFE   1.0e-4f
 #define R2SAFE  1.0e-8f
 #define F2MAX   10.0f
 
@@ -36,6 +38,31 @@ inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps,
     f.add_mul( dp, fr );
 }
 
+inline void addAtomicForceQ( const Vec3d& dp, Vec3d& f, double q ){
+    //Vec3f dp; dp.set_sub( p2, p1 );
+    double ir2  = 1/( dp.norm2() + R2SAFE );
+    double ir   = sqrt(ir2);
+    double fr   = ( ir*q*-14.3996448915f )*ir2;
+    f.add_mul( dp, fr );
+}
+
+inline void addAtomicForceLJ( const Vec3d& dp, Vec3d& f, double r0, double eps ){
+    //Vec3f dp; dp.set_sub( p2, p1 );
+    double ir2  = 1/( dp.norm2() + R2SAFE );
+    double ir2_ = ir2*r0*r0;
+    double ir6  = ir2_*ir2_*ir2_;
+    double fr   = ( ( 1 - ir6 )*ir6*12*eps )*ir2;
+    f.add_mul( dp, fr );
+}
+
+inline void addAtomicForceExp( const Vec3d& dp, Vec3d& f, double r0, double eps, double a ){
+    //Vec3f dp; dp.set_sub( p2, p1 );
+    double r    = dp.norm();
+    double E    = eps*exp( a*(r-r0) );
+    double fr   = a*E/(r+RSAFE);
+    f.add_mul( dp, fr );
+    //f.add_mul( dp, 1/(dp.norm2()+R2SAFE) ); // WARRNING DEBUG !!!!
+}
 
 inline Vec3d getForceSpringPlane( const Vec3d& p, const Vec3d& normal, double c0, double k ){
     double cdot = normal.dot(p) - c0;
@@ -216,6 +243,12 @@ class MMFF{ public:
     Vec3d  * hbond  = NULL;   // normalized bond unitary vectors
     Vec3d  * aforce = NULL;
 
+    Vec3d  *FFPauli  = NULL;
+    Vec3d  *FFLondon = NULL;
+    Vec3d  *FFelec   = NULL;
+    GridShape   grid;
+
+
 void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     natoms=natoms_; nbonds=nbonds_; nang=nang_; ntors=ntors_;
     if(atypes   ==NULL) atypes    = new int   [natoms];
@@ -366,6 +399,13 @@ void eval_angcos(){
         //aforce[ia.x] ????
         // TODO : zero moment condition
     }
+
+    /*
+    evalGridFFs(int natoms, Vec3d * apos, Vec3d * aLJqs ){
+        // TODO : this will be faster since we may reuse dpos, sqrt() function etc.
+    }
+    */
+
 }
 
 void eval_angles(){
@@ -468,7 +508,60 @@ void printBondParams(){
     }
 }
 
-};
+void evalGridFFel(int natoms, Vec3d * apos, Vec3d * aLJqs, Vec3d * FF ){
+    //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p)->void{
+    interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+        Vec3d f = (Vec3d){0.0,0.0,0.0};
+        for(int ia=0; ia<natoms; ia++){ addAtomicForceQ( p-apos[ia], f, aLJq[ia].z ); }
+        FF[ibuff]=f;
+    });
+}
+
+void evalGridFFexp(int natoms, Vec3d * apos, Vec3d * aLJqs, double alpha, double A, Vec3d * FF ){
+    //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p){
+    interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+        Vec3d f = (Vec3d){0.0,0.0,0.0};
+        for(int ia=0; ia<natoms; ia++){
+            addAtomicForceExp( p-apos[ia], f, aLJq[ia].x, aLJq[ia].y,    alpha );
+            //addAtomicForceExp( p-apos[ia], f, aLJq[ia].x, aLJq[ia].y,    alpha*2 );
+            //addAtomicForceExp( p-apos[ia], f, aLJq[ia].x, aLJq[ia].y*-2, alpha   );
+        }
+        FF[ibuff]=f*A;
+    });
+}
+
+void evalGridFFs(int natoms, Vec3d * apos, Vec3d * aLJqs, double alpha ){
+    //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p){
+    interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+        Vec3d fp = (Vec3d){0.0d,0.0d,0.0d};
+        Vec3d fl = (Vec3d){0.0d,0.0d,0.0d};
+        Vec3d fe = (Vec3d){0.0d,0.0d,0.0d};
+        for(int ia=0; ia<natoms; ia++){
+            Vec3d dp; dp.set_sub( p, apos[ia] );
+            Vec3d aLJi = aLJqs[ia];
+            double r      = dp.norm();
+            double ir     = 1/(r+RSAFE);
+            double expar  = exp( alpha*(r-aLJi.x) );
+            double fexp   = alpha*expar*aLJi.y*ir;
+            fp.add_mul( dp, fexp*expar*2 );              // repulsive part of Morse
+            fl.add_mul( dp, fexp*-2      );              // attractive part of Morse
+            fe.add_mul( dp, -14.3996448915d*aLJi.z*ir*ir*ir ); // Coulomb
+        }
+        if(FFPauli)  FFPauli [ibuff]=fp;
+        if(FFLondon) FFLondon[ibuff]=fl;
+        if(FFelec)   FFelec  [ibuff]=fe;
+    });
+}
+
+void evalCombindGridFF( double alpha, double Q, double R, double E, Vec3d * FF ){
+    double CPauli  = E*exp(   alpha*R );
+    double CLondon = E*exp( 2*alpha*R );
+    interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+        FF[ibuff] = FFPauli[ibuff]*CPauli + FFLondon[ibuff]*CLondon + FFelec[ibuff]*Q;
+    });
+}
+
+}; // MMFF
 
 // =================
 // =================  MMFFBuilder

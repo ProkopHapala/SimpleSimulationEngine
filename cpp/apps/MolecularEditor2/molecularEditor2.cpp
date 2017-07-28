@@ -48,6 +48,12 @@ TO DO:
 // AppMolecularEditor2
 // ==========================
 
+
+
+
+
+
+
 void plotSurfPlane( Vec3d normal, double c0, Vec2d d, Vec2i n ){
     Vec3d da,db;
     normal.getSomeOrtho( da,db );
@@ -191,6 +197,21 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //Vec2i iat = bond2atom[8];
     //Vec2i iat = bond2atom[9];
     //exit(0);
+
+    world.grid.n    = (Vec3i){100,100,100};
+    world.grid.pos0 = (Vec3d){-5.0,-5.0,-5.0};
+    world.grid.setCell( (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f } );
+
+    Vec3d * FF     = new Vec3d[world.grid.getNtot()];
+    world.FFPauli  = new Vec3d[world.grid.getNtot()];
+    world.FFLondon = new Vec3d[world.grid.getNtot()];
+
+    world.evalGridFFexp( world.natoms, world.apos, world.aLJq, -2.0*2,  1, world.FFPauli );
+    world.evalGridFFexp( world.natoms, world.apos, world.aLJq, -2.0  , -2, world.FFLondon );
+    world.evalCombindGridFF( -2.0, 0.0, 2.0, 1.0, FF );
+    world.grid.saveXSF( "testX.xsf", FF, 0 );
+    world.grid.saveXSF( "testY.xsf", FF, 1 );
+    world.grid.saveXSF( "testZ.xsf", FF, 2 );
 
 }
 
