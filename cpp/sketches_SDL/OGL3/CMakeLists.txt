@@ -36,6 +36,9 @@ target_link_libraries( test_Sprites ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBR
 add_executable       ( test_MeshOGL3 test_MeshOGL3.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( test_MeshOGL3 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_GeometryShader test_GeometryShader.cpp $<TARGET_OBJECTS:SDL2OGL3> )
+target_link_libraries( test_GeometryShader ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_OrbitalRayMarch test_OrbitalRayMarch.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( test_OrbitalRayMarch ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
