@@ -198,6 +198,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //Vec2i iat = bond2atom[9];
     //exit(0);
 
+    /*
     world.grid.n    = (Vec3i){100,100,100};
     world.grid.pos0 = (Vec3d){-5.0,-5.0,-5.0};
     world.grid.setCell( (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f } );
@@ -205,13 +206,52 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     Vec3d * FF     = new Vec3d[world.grid.getNtot()];
     world.FFPauli  = new Vec3d[world.grid.getNtot()];
     world.FFLondon = new Vec3d[world.grid.getNtot()];
+    */
+    //world.substrate.init( (Vec3i){100,100,100}, (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f }, (Vec3d){-5.0,-5.0,-5.0} );
 
+
+    printf( "params.atypNames:\n" );
+    for(auto kv : params.atypNames) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
+    //exit(0);
+    //world.substrate.grid.n    = (Vec3i){120,120,200};
+    world.substrate.grid.n    = (Vec3i){60,60,100};
+    //world.substrate.grid.n    = (Vec3i){12,12,20};
+    world.substrate.grid.pos0 = (Vec3d){0.0d,0.0d,0.0d};
+    world.substrate.loadCell ( "inputs/cel.lvs" );
+    world.substrate.grid.printCell();
+    //world.substrate.loadXYZ( "inputs/answer_NaCL.xyz", params );
+    world.substrate.loadXYZ( "inputs/Cl.xyz", params );
+
+    //world.substrate.evalFFlineToFile( 100, (Vec3d){0.000000, 4.005760, 0.900000}, (Vec3d){0.000000, 14.005760, 0.900000}, (Vec3d){ 1.66, 0.009, 0.0}, -1.5,  "force.dat" );
+    world.substrate.evalFFlineToFile( 100, (Vec3d){0.000000, 0.00000, 10.000000}, (Vec3d){0.000000, 0.00000, 0.000000}, (Vec3d){ 1.487, 0.0006808, 0.0}, -1.6, "force_H.dat" );
+    world.substrate.evalFFlineToFile( 100, (Vec3d){0.000000, 0.00000, 10.000000}, (Vec3d){0.000000, 0.00000, 0.000000}, (Vec3d){ 2.181, 0.0243442, 0.0}, -1.6, "force_Xe.dat" );
+    /*
+    //exit(0);
+    //world.substrate.grid.n    = (Vec3i){120,120,200};
+    world.substrate.allocateFFs();
+    world.substrate.evalGridFFs( -2.0 );
+    //world.substrate.grid.saveXSF( "testX.xsf", FF, 0 );
+    //world.substrate.grid.saveXSF( "testY.xsf", FF, 1 );
+    world.substrate.grid.saveXSF( "FFPaul_z.xsf", world.substrate.FFPauli,  2 );
+    world.substrate.grid.saveXSF( "FFLond_z.xsf", world.substrate.FFLondon, 2 );
+    world.substrate.grid.saveXSF( "FFel_z.xsf"  , world.substrate.FFelec,   2 );
+    */
+
+
+    exit(0);
+
+
+    /*
     world.evalGridFFexp( world.natoms, world.apos, world.aLJq, -2.0*2,  1, world.FFPauli );
     world.evalGridFFexp( world.natoms, world.apos, world.aLJq, -2.0  , -2, world.FFLondon );
     world.evalCombindGridFF( -2.0, 0.0, 2.0, 1.0, FF );
     world.grid.saveXSF( "testX.xsf", FF, 0 );
     world.grid.saveXSF( "testY.xsf", FF, 1 );
     world.grid.saveXSF( "testZ.xsf", FF, 2 );
+    */
+
+
+
 
 }
 

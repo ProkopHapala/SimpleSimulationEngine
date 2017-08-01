@@ -32,13 +32,17 @@ class GridShape {
 	//inline Vec3d * allocateArray_Vec3d(){ return new Vec3d[n.x*n.y*n.z); }
 	inline int getNtot(){return n.x*n.y*n.z ; }
 
-	inline void setCell( const Mat3d& cell_ ){
-		//n.set( n_ );
-		cell.set( cell_ );
-		dCell.a.set_mul( cell.a, 1.0d/n.a );
+	inline void updateCell(){
+        dCell.a.set_mul( cell.a, 1.0d/n.a );
 		dCell.b.set_mul( cell.b, 1.0d/n.b );
 		dCell.c.set_mul( cell.c, 1.0d/n.c );
 		dCell.invert_T_to( diCell );
+	}
+
+	inline void setCell( const Mat3d& cell_ ){
+		//n.set( n_ );
+		cell.set( cell_ );
+        updateCell();
 	};
 
 	//inline void set( int * n_, double * cell_ ){ set( *(Vec3d*) n_, *(Mat3d*)cell_ ); };
@@ -69,6 +73,7 @@ class GridShape {
     }
 
     void saveXSF( char * fname, Vec3d * FF, int icomp ){
+        printf( "saving %s\n", fname );
         FILE *fout;
         fout = fopen(fname,"w");
         fprintf( fout, "   ATOMS\n" );
