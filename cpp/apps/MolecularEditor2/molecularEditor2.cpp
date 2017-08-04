@@ -43,16 +43,30 @@ TO DO:
  - correct angular forcefield to repdesent kinked groups ( e.g. -OH )
 */
 
-
-
-
 std::vector<Vec3d> iso_points;
 int isoOgl;
 
+Vec3d PPpos0 = (Vec3d){1.3,1.7, 1.5};
 
 // ==========================
 // AppMolecularEditor2
 // ==========================
+
+void drawPPRelaxTrj( int n, double dt, double damp, GridFF& gff, Vec3d pos, Vec3d PRQ ){
+    Vec3d vel = (Vec3d){0.0,0.0,0.0};
+    glBegin(GL_LINE_STRIP);
+    for(int i=0; i<n; i++){
+        Vec3d f = (Vec3d){0.0,0.0,0.0};
+        gff.addForce( pos, PRQ, f);
+        vel.mul(damp);
+        vel.add_mul( f  , dt);
+        pos.add_mul( vel, dt );
+        glVertex3f(pos.x,pos.y,pos.z);
+        //printf( " %i (%g,%g,%g) (%g,%g,%g) \n", i, pos.x,pos.y,pos.z,  f.x,f.y,f.z );
+    }
+    glEnd();
+    //exit(0);
+}
 
 void drawGridForceAlongLine( int n, GridFF& gff, Vec3d pos0, Vec3d dpos, Vec3d PRQ, double fsc ){
     Vec3d pos = pos0;
@@ -100,11 +114,11 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
 
     double  atomSize = 0.25;
 
-	virtual void draw   ();
-	virtual void drawHUD();
-	//virtual void mouseHandling( );
-	virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
+	virtual void draw   ()  override;
+	virtual void drawHUD()  override;
+	//virtual void mouseHandling( )  = override;
+	virtual void eventHandling   ( const SDL_Event& event  ) override;
+	virtual void keyStateHandling( const Uint8 *keys ) override;
 
 	AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -310,6 +324,9 @@ void AppMolecularEditor2::draw(){
 	drawGridForceAlongLine( 100, world.gridFF, {3.3,0.0,2.0}, {0.0,0.1,0.0}, testPRQ, 50.0 );
 	//exit(0);
 
+	glColor3f( 1.0f,0.0f,0.0f );
+	drawPPRelaxTrj( 5000, 0.3, 0.95, world.gridFF, PPpos0, testPRQ );
+
 	return;
 
     /*
@@ -431,6 +448,18 @@ void AppMolecularEditor2::draw(){
 };
 
 
+void  AppMolecularEditor2::keyStateHandling( const Uint8 *keys ){
+    double dstep=0.1;
+    if( keys[ SDL_SCANCODE_W ] ){ PPpos0.y +=dstep; }
+    if( keys[ SDL_SCANCODE_S ] ){ PPpos0.y -=dstep; }
+    if( keys[ SDL_SCANCODE_A ] ){ PPpos0.x +=dstep; }
+    if( keys[ SDL_SCANCODE_D ] ){ PPpos0.x -=dstep; }
+    if( keys[ SDL_SCANCODE_Q ] ){ PPpos0.z +=dstep; }
+    if( keys[ SDL_SCANCODE_E ] ){ PPpos0.z -=dstep; }
+    AppSDL2OGL_3D::keyStateHandling( keys );
+};
+
+
 void AppMolecularEditor2::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
     switch( event.type ){
@@ -446,12 +475,10 @@ void AppMolecularEditor2::eventHandling ( const SDL_Event& event  ){
                 case SDLK_LEFTBRACKET:  if(ibpicked>=0) world.bond_0[ibpicked] += 0.1; break;
                 case SDLK_RIGHTBRACKET: if(ibpicked>=0) world.bond_0[ibpicked] -= 0.1; break;
 
-                case SDLK_a: world.apos[1].rotate(  0.1, {0.0,0.0,1.0} ); break;
-                case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;
-
-                case SDLK_w: world.apos[1].mul( 1.1 ); break;
-                //case SDLK_s: world.apos[1].mul( 0.9 ); break;
-                case SDLK_s: printf("saving ... "); save2xyz( "out.xyz", &world, &params ); printf("... DONE "); break;
+                //case SDLK_a: world.apos[1].rotate(  0.1, {0.0,0.0,1.0} ); break;
+                //case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;
+                //case SDLK_w: world.apos[1].mul( 1.1 ); break;
+                //case SDLK_s: printf("saving ... "); save2xyz( "out.xyz", &world, &params ); printf("... DONE "); break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
