@@ -44,15 +44,27 @@ TO DO:
 */
 
 
+
+
+std::vector<Vec3d> iso_points;
+int isoOgl;
+
+
 // ==========================
 // AppMolecularEditor2
 // ==========================
 
-
-
-
-
-
+void drawGridForceAlongLine( int n, GridFF& gff, Vec3d pos0, Vec3d dpos, Vec3d PRQ, double fsc ){
+    Vec3d pos = pos0;
+	for( int i=0; i<n; i++ ){
+        Vec3d f = (Vec3d){0.0,0.0,0.0};
+        gff.addForce( pos, PRQ, f);
+        //printf( " %i (%g,%g,%g) (%g,%g,%g) \n", i, pos.x,pos.y,pos.z,  f.x,f.y,f.z );
+        Draw3D::drawVecInPos( f*fsc, pos );
+        Draw3D::drawPointCross( pos, 0.1 );
+        pos.add(dpos);
+	}
+}
 
 void plotSurfPlane( Vec3d normal, double c0, Vec2d d, Vec2i n ){
     Vec3d da,db;
@@ -214,17 +226,50 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     for(auto kv : params.atypNames) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
     //exit(0);
     //world.substrate.grid.n    = (Vec3i){120,120,200};
-    world.substrate.grid.n    = (Vec3i){60,60,100};
+    world.gridFF.grid.n    = (Vec3i){60,60,100};
     //world.substrate.grid.n    = (Vec3i){12,12,20};
-    world.substrate.grid.pos0 = (Vec3d){0.0d,0.0d,0.0d};
-    world.substrate.loadCell ( "inputs/cel.lvs" );
-    world.substrate.grid.printCell();
-    //world.substrate.loadXYZ( "inputs/answer_NaCL.xyz", params );
-    world.substrate.loadXYZ( "inputs/Cl.xyz", params );
+    world.gridFF.grid.pos0 = (Vec3d){0.0d,0.0d,0.0d};
+    //world.gridFF.loadCell ( "inputs/cel.lvs" );
+    world.gridFF.loadCell ( "inputs/cel_2.lvs" );
+    world.gridFF.grid.printCell();
+    world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
+    //world.gridFF.loadXYZ( "inputs/Cl.xyz", params );
 
+    world.translate( {0.0,0.0,2.5} );
+
+    /*
     //world.substrate.evalFFlineToFile( 100, (Vec3d){0.000000, 4.005760, 0.900000}, (Vec3d){0.000000, 14.005760, 0.900000}, (Vec3d){ 1.66, 0.009, 0.0}, -1.5,  "force.dat" );
-    world.substrate.evalFFlineToFile( 100, (Vec3d){0.000000, 0.00000, 10.000000}, (Vec3d){0.000000, 0.00000, 0.000000}, (Vec3d){ 1.487, 0.0006808, 0.0}, -1.6, "force_H.dat" );
-    world.substrate.evalFFlineToFile( 100, (Vec3d){0.000000, 0.00000, 10.000000}, (Vec3d){0.000000, 0.00000, 0.000000}, (Vec3d){ 2.181, 0.0243442, 0.0}, -1.6, "force_Xe.dat" );
+    world.gridFF.evalFFlineToFile( 100, (Vec3d){0.000000, 0.00000, 10.000000}, (Vec3d){0.000000, 0.00000, 0.000000}, (Vec3d){ 1.487, 0.0006808, 0.0}, "force_H.dat" );
+    world.gridFF.evalFFlineToFile( 100, (Vec3d){0.000000, 0.00000, 10.000000}, (Vec3d){0.000000, 0.00000, 0.000000}, (Vec3d){ 2.181, 0.0243442, 0.0}, "force_Xe.dat" );
+    */
+
+    world.genPLQ();
+    world.gridFF.allocateFFs();
+    world.gridFF.evalGridFFs( {0,0,0} );
+    //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
+
+    Vec3d * FFtot = new Vec3d[world.gridFF.grid.getNtot()];
+
+    world.gridFF.evalCombindGridFF_CheckInterp( (Vec3d){ 2.181, 0.0243442, 0.0}, FFtot );
+    saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+
+    world.gridFF.evalCombindGridFF            ( (Vec3d){ 2.181, 0.0243442, 0.0}, FFtot );
+    saveXSF( "FFtot_z.xsf",             world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+
+    getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
+
+    isoOgl = glGenLists(1);
+    glNewList(isoOgl, GL_COMPILE);
+    printf( "iso_points.size() %i \n", iso_points.size() );
+    glBegin(GL_LINES);
+    for(int i=0; i<iso_points.size(); i++){
+        glVertex3f( iso_points[i].x, iso_points[i].y, iso_points[i].z      );
+        glVertex3f( iso_points[i].x, iso_points[i].y, iso_points[i].z + 0.1 );
+    }
+    glEnd();
+    glEndList();
+
+
     /*
     //exit(0);
     //world.substrate.grid.n    = (Vec3i){120,120,200};
@@ -237,9 +282,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     world.substrate.grid.saveXSF( "FFel_z.xsf"  , world.substrate.FFelec,   2 );
     */
 
-
-    exit(0);
-
+    //exit(0);
 
     /*
     world.evalGridFFexp( world.natoms, world.apos, world.aLJq, -2.0*2,  1, world.FFPauli );
@@ -250,14 +293,24 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     world.grid.saveXSF( "testZ.xsf", FF, 2 );
     */
 
-
-
-
 }
 
 void AppMolecularEditor2::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+	glColor3f( 0.0f,0.0f,0.0f );
+	//if(isoOgl)
+	glCallList(isoOgl);
+	//perFrame = 10;
+	//delay = 100;
+
+	Vec3d testPRQ = REQ2PLQ( (Vec3d){ 2.181, 0.0243442, 0.0}, -1.6 );
+	drawGridForceAlongLine( 100, world.gridFF, {1.0,1.1,2.5}, {0.1,0.1,0.0}, testPRQ, 50.0 );
+	drawGridForceAlongLine( 100, world.gridFF, {3.3,0.0,2.0}, {0.0,0.1,0.0}, testPRQ, 50.0 );
+	//exit(0);
+
+	return;
 
     /*
     srand(154);
@@ -293,6 +346,8 @@ void AppMolecularEditor2::draw(){
 
         for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
 
+        world.eval_FFgrid();
+        /*
         //printf( "DEBUG x.1 \n" );
         world.eval_bonds(true);
         //world.eval_angles();
@@ -300,6 +355,7 @@ void AppMolecularEditor2::draw(){
         world.eval_angcos();
         //printf( "DEBUG x.3 \n" );
         world.eval_LJq_On2();
+        */
 
         //exit(0);
         if(ipicked>=0){
@@ -308,11 +364,14 @@ void AppMolecularEditor2::draw(){
             world.aforce[ipicked].add( f );
         };
 
-
+        /*
         for(int i=0; i<world.natoms; i++){
             world.aforce[i].add( getForceHamakerPlane( world.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
             //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
         }
+
+        */
+
 
         //exit(0);
 

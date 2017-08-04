@@ -15,8 +15,8 @@
 // ================= MACROS
 
 #define fast_floor_offset  1000
-#define fast_floor( x )    ( ( (int)( x + fast_floor_offset ) ) - fast_floor_offset )
-#define i3D( ix, iy, iz )  ( iz*nxy + iy*nx + ix  )
+#define fast_floor( x )    ( ( (int)( (x) + fast_floor_offset ) ) - fast_floor_offset )
+#define i3D( ix, iy, iz )  ( (iz)*nxy + (iy)*nx + (ix)  )
 
 // ================= CONSTANTS
 
@@ -72,6 +72,7 @@ class GridShape {
 	    printf( " inv_dc %f %f %f \n", diCell.c.x, diCell.c.y, diCell.c.z );
     }
 
+    /*
     void saveXSF( char * fname, Vec3d * FF, int icomp ){
         printf( "saving %s\n", fname );
         FILE *fout;
@@ -98,6 +99,40 @@ class GridShape {
         }
         fprintf( fout, "   END_DATAGRID_3D\n" );
         fprintf( fout, "END_BLOCK_DATAGRID_3D\n" );
+        fclose(fout);
+    }
+    */
+
+    void toXSF( FILE* fout, Vec3d * FF, int icomp ){
+        fprintf( fout, "BEGIN_BLOCK_DATAGRID_3D\n" );
+        fprintf( fout, "   some_datagrid\n" );
+        fprintf( fout, "   BEGIN_DATAGRID_3D_whatever\n" );
+        fprintf( fout, "%i %i %i\n", n.x, n.y, n.z );
+        fprintf( fout, "%5.10f %5.10f %5.10f \n", pos0.x,   pos0.x,   pos0.x   );
+        fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.a.x, cell.a.y, cell.a.z );
+        fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.b.x, cell.b.y, cell.b.z );
+        fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.c.x, cell.c.y, cell.c.z );
+        int nx  = n.x; 	int ny  = n.y; 	int nz  = n.z; int nxy = ny * nx;
+        for ( int ic=0; ic<nz; ic++ ){
+            for ( int ib=0; ib<ny; ib++ ){
+                for ( int ia=0; ia<nx; ia++ ){
+                   int i = i3D( ia, ib, ic );
+                   fprintf( fout, "%6.5e\n", ((double*)(FF+i))[icomp] );
+                }
+            }
+        }
+        fprintf( fout, "   END_DATAGRID_3D\n" );
+        fprintf( fout, "END_BLOCK_DATAGRID_3D\n" );
+    }
+
+    void saveXSF( char * fname, Vec3d * FF, int icomp ){
+        printf( "saving %s\n", fname );
+        FILE *fout;
+        fout = fopen(fname,"w");
+        fprintf( fout, "   ATOMS\n" );
+        fprintf( fout, "    1   0.0   0.0   0.0\n" );
+        fprintf( fout, "\n" );
+        toXSF( fout, FF, icomp );
         fclose(fout);
     }
 
@@ -172,22 +207,49 @@ void interateGrid3D( const GridShape& grid, FUNC func ){
     printf ("\n");
 }
 
-void getIsovalPoints_a( const GridShape& grid, double isoval, Vec3d  *FF, std::vector<Vec3d> points ){
+void getIsovalPoints_a( const GridShape& grid, double isoval, Vec3d  *FF, std::vector<Vec3d>& points ){
     int nx  = grid.n.x; 	int ny  = grid.n.y; 	int nz  = grid.n.z; int nxy = ny * nx;
-    for ( int ic=0; ic<nz; ic++ ){
+    int ii = 0;
+    for ( int ic=0; ic<(nz-1); ic++ ){
         for ( int ib=0; ib<ny; ib++ ){
             for ( int ia=0; ia<nx; ia++ ){
-                int i1 = i3D( ia, ib, ic   );
-                int i2 = i3D( ia, ib, ic+1 );
-                double df1 = FF[i1].x-isoval;
-                double df2 = FF[i2].x-isoval;
+                int     i1 = i3D( ia, ib,  ic    );
+                int     i2 = i3D( ia, ib, (ic+1) );
+                double df1 = FF[i1].z-isoval;
+                double df2 = FF[i2].z-isoval;
+                //if(ii<1000)printf( " %i (%i,%i,%i) (%g,%g)\n", ii, ia,ib,ic, df1, df2 );
                 if( (df1*df2)<0 ){
                     double fc = df1/(df1-df2);
-                    points.push_back( grid.dCell.a*(ia+fc) + grid.dCell.b*ib + grid.dCell.c*ic );
+                    points.push_back( grid.dCell.a*ia + grid.dCell.b*ib + grid.dCell.c*(ic+fc) );
+
+                    int ip = points.size()-1;
+                    if( ip < 1000 ) printf( " %i (%i,%i,%i) (%g,%g,%g)\n", ip, ia,ib,ic, points[ip].x, points[ip].y, points[ip].z );
                 }
+                ii++;
             }
         }
     }
+
+
+    /*
+    int ia = 20;
+    int ib = 20;
+    for ( int ic=0; ic<nz; ic++ ){
+        int     i1 = i3D( ia, ib,  ic   );
+        int     i2 = i3D( ia, ib, (ic+1) );
+        //double df1 = FF[i1].z-isoval;
+        //double df2 = FF[i2].z-isoval;
+
+        double df1 = FF[i1].z;
+        double df2 = FF[i2].z;
+
+        printf( " %i (%i,%i,%i) (%g,%g)\n", ii, ia,ib,ic, df1, df2 );
+        if( (df1*df2)<0 ){
+            double fc = df1/(df1-df2);
+            printf( " cross fc=%g \n", fc );
+        };
+    }
+    */
 }
 
 
@@ -207,6 +269,65 @@ BEGIN_BLOCK_DATAGRID_3D
    END_DATAGRID_3D
 END_BLOCK_DATAGRID_3D
 
+*/
+
+
+void writePrimCoord( FILE* fout, Mat3d& cell, int natoms, Vec3d * apos, int * iZs ){
+    fprintf( fout, "CRYSTAL\n" );
+    fprintf( fout, "PRIMVEC\n" );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.a.x, cell.a.y, cell.a.z );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.b.x, cell.b.y, cell.b.z );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.c.x, cell.c.y, cell.c.z );
+    fprintf( fout, "CONVVEC\n" );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.a.x, cell.a.y, cell.a.z );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.b.x, cell.b.y, cell.b.z );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.c.x, cell.c.y, cell.c.z );
+    fprintf( fout, "PRIMCOORD\n" );
+    fprintf( fout, "%i %i\n", natoms, 1 );
+    for(int i=0; i<natoms; i++){
+        fprintf( fout, "%i %3.8f %3.8f %3.8f\n", iZs[i], apos[i].x, apos[i].y, apos[i].z );
+    }
+}
+
+void saveXSF( char * fname, GridShape& grid, Vec3d * FF, int icomp, int natoms, Vec3d * apos, int * iZs ){
+    printf( "saving %s\n", fname );
+    FILE *fout;
+    fout = fopen(fname,"w");
+    writePrimCoord( fout, grid.cell, natoms, apos, iZs );
+    grid.toXSF    ( fout, FF, icomp );
+    fclose(fout);
+}
+
+/*
+void saveXSF( char * fname, GridShape& grid, Vec3d * FF, int icomp, int natoms, Vec3d * apos, int * iZs ){
+    printf( "saving %s\n", fname );
+    FILE *fout;
+    fout = fopen(fname,"w");
+    //fprintf( fout, "   ATOMS\n" );
+    //fprintf( fout, "    1   0.0   0.0   0.0\n" );
+    writePrimCoord( grid.cell, natoms, apos, iZs );
+    fprintf( fout, "\n" );
+    fprintf( fout, "BEGIN_BLOCK_DATAGRID_3D\n" );
+    fprintf( fout, "   some_datagrid\n" );
+    fprintf( fout, "   BEGIN_DATAGRID_3D_whatever\n" );
+    fprintf( fout, "%i %i %i\n", grid.n.x, grid.n.y, grid.n.z );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", grid.pos0.x,   grid.pos0.x,   grid.pos0.x   );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", grid.cell.a.x, grid.cell.a.y, grid.cell.a.z );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", grid.cell.b.x, grid.cell.b.y, grid.cell.b.z );
+    fprintf( fout, "%5.10f %5.10f %5.10f \n", grid.cell.c.x, grid.cell.c.y, grid.cell.c.z );
+    int nx  = grid.n.x; 	int ny  = grid.n.y; 	int nz  = grid.n.z; int nxy = ny * nx;
+    for ( int ic=0; ic<nz; ic++ ){
+        for ( int ib=0; ib<ny; ib++ ){
+            for ( int ia=0; ia<nx; ia++ ){
+               int i = i3D( ia, ib, ic );
+               fprintf( fout, "%6.5e\n", ((double*)(FF+i))[icomp] );
+            }
+        }
+    }
+    fprintf( fout, "   END_DATAGRID_3D\n" );
+    fprintf( fout, "END_BLOCK_DATAGRID_3D\n" );
+    fclose(fout);
+}
 */
 
 #endif

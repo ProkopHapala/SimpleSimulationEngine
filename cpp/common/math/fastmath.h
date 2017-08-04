@@ -83,6 +83,7 @@ inline double clamp_abs( double x, double xmax ){
     return x;
 }
 
+inline int fastFloor( float f ){ int i=(int)f; if(f<0)i--; return i; }
 
 #include "gonioApprox.h"
 

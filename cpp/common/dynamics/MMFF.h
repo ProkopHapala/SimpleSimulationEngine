@@ -14,7 +14,6 @@
 #include <string>
 // forcefield parameters
 
-
 //inline BondType2id
 //inline BondTypeDec
 
@@ -69,7 +68,7 @@ inline Vec3d REQ2PLQ( Vec3d REQ, double alpha ){
     double expar = exp(-alpha*REQ.x);
     double CP =    eps*expar*expar;
     double CL = -2*eps*expar;
-    printf( "REQ2PLQ: %g %g %g  ->  %g %g\n", REQ.x, eps, alpha,   CP, CL );
+    //printf( "REQ2PLQ: %g %g %g  ->  %g %g\n", REQ.x, eps, alpha,   CP, CL );
     return (Vec3d){ CP, CL, REQ.z };
 }
 
@@ -227,18 +226,21 @@ class MMFFparams{ public:
 
 };
 
-class RigidSubstrate{ public:
+class GridFF{ public:
     GridShape   grid;
     Vec3d  *FFPauli  = NULL;
     Vec3d  *FFLondon = NULL;
     Vec3d  *FFelec   = NULL;
     //Vec3d  *FFtot    = NULL; // total FF is not used since each atom-type has different linear combination
 
-    int  natoms=0;
+    int  natoms     = 0;
     int    * atypes = NULL;
     Vec3d  * apos   = NULL;   // atomic position
-    Vec3d  * aLJq   = NULL;
+    Vec3d  * aREQs  = NULL;
     //Vec3d  * aPLQ = NULL;
+
+    double alpha    = -1.6;
+
 
     void allocateFFs(){
         int ntot = grid.getNtot();
@@ -252,7 +254,7 @@ class RigidSubstrate{ public:
         natoms = natoms_;
         atypes = new int  [natoms];
         apos   = new Vec3d[natoms];
-        aLJq   = new Vec3d[natoms];
+        aREQs  = new Vec3d[natoms];
     }
 
     int loadCell( char * fname ){
@@ -288,23 +290,31 @@ class RigidSubstrate{ public:
             int nret = sscanf( line, "%s %lf %lf %lf %lf\n", at_name, &apos[i].x, &apos[i].y, &apos[i].z, &Q );
             if( nret<5 ) Q = 0.0d;
             //printf(                  "%s %lf %lf %lf %lf\n", at_name,  apos[i].x,  apos[i].y,  apos[i].z,  Q );
-            aLJq[i].z = Q;
+            aREQs[i].z = Q;
             // atomType[i] = atomChar2int( ch );
             auto it = params.atypNames.find( at_name );
             if( it != params.atypNames.end() ){
                 atypes[i] = it->second;
-                aLJq[i].x = params.atypes[atypes[i]].RvdW;
+                aREQs[i].x = params.atypes[atypes[i]].RvdW;
                 //aLJq[i].y = params.atypes[atypes[i]].EvdW;
-                aLJq[i].y = sqrt( params.atypes[atypes[i]].EvdW );
+                aREQs[i].y = sqrt( params.atypes[atypes[i]].EvdW );
             }else{
                 //atomType[i] = atomChar2int( at_name[0] );
                 atypes[i] = -1;
                 //aLJq[i].x  = 0.0d;
                 //aLJq[i].x  = 0.0d;
             }
-            printf(  "%i : >>%s<< (%g,%g,%g) %i (%g,%g,%g)\n", i, at_name,  apos[i].x,  apos[i].y,  apos[i].z, atypes[i], aLJq[i].x, aLJq[i].y, aLJq[i].z );
+            printf(  "%i : >>%s<< %i (%g,%g,%g) %i (%g,%g,%g)\n", i, at_name, atypes[i],  apos[i].x,  apos[i].y,  apos[i].z, atypes[i], aREQs[i].x, aREQs[i].y, aREQs[i].z );
         }
         return natoms;
+    }
+
+    inline void addForce( Vec3d pos, Vec3d PLQ, Vec3d& f ){
+        Vec3d gpos;
+        grid.cartesian2grid(pos, gpos);
+        f.add_mul( interpolate3DvecWrap( FFPauli,  grid.n, gpos ) , PLQ.x );
+        f.add_mul( interpolate3DvecWrap( FFLondon, grid.n, gpos ) , PLQ.y );
+        f.add_mul( interpolate3DvecWrap( FFelec,   grid.n, gpos ) , PLQ.z );
     }
 
     void init( Vec3i n, Mat3d cell, Vec3d pos0 ){
@@ -314,7 +324,111 @@ class RigidSubstrate{ public:
         allocateFFs();
     }
 
-    void evalFFline( int n, Vec3d p0, Vec3d p1, Vec3d PLQ, double alpha, Vec3d * pos, Vec3d * fs ){
+    void evalGridFFel(int natoms, Vec3d * apos, Vec3d * aREQs, Vec3d * FF ){
+        //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p)->void{
+        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+            Vec3d f = (Vec3d){0.0,0.0,0.0};
+            for(int ia=0; ia<natoms; ia++){ addAtomicForceQ( p-apos[ia], f, aREQs[ia].z ); }
+            FF[ibuff]=f;
+        });
+    }
+
+    void evalGridFFexp(int natoms, Vec3d * apos, Vec3d * aREQs, double alpha, double A, Vec3d * FF ){
+        //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p){
+        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+            Vec3d f = (Vec3d){0.0,0.0,0.0};
+            for(int ia=0; ia<natoms; ia++){
+                //printf( " %i (%g,%g,%g) (%g,%g)\n", ia, apos[ia].x, apos[ia].y, apos[ia].z,  aLJq[ia].x, aLJq[ia].y  );
+                addAtomicForceExp( p-apos[ia], f, aREQs[ia].x, aREQs[ia].y,    alpha );
+                //addAtomicForceExp( p-apos[ia], f, aLJq[ia].x, aLJq[ia].y,    alpha*2 );
+                //addAtomicForceExp( p-apos[ia], f, aLJq[ia].x, aLJq[ia].y*-2, alpha   );
+            }
+            //printf( " >> %i %i (%g,%g,%g) %g \n", ibuff, natoms, f.x, f.y, f.z, A  );
+            FF[ibuff]=f*A;
+            //printf( " %i (%g,%g,%g) \n", ibuff, p.x, p.y, p.z );
+            //FF[ibuff]=p;
+        });
+    }
+
+    void evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs ){
+        //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p){
+        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+            Vec3d fp = (Vec3d){0.0d,0.0d,0.0d};
+            Vec3d fl = (Vec3d){0.0d,0.0d,0.0d};
+            Vec3d fe = (Vec3d){0.0d,0.0d,0.0d};
+            for(int ia=0; ia<natoms; ia++){
+                Vec3d dp; dp.set_sub( p, apos[ia] );
+                Vec3d REQi = aREQs[ia];
+                double r      = dp.norm();
+                double ir     = 1/(r+RSAFE);
+                double expar  = exp( alpha*(r-REQi.x) );
+                double fexp   = alpha*expar*REQi.y*ir;
+                fp.add_mul( dp, fexp*expar*2 );                    // repulsive part of Morse
+                fl.add_mul( dp, fexp         );                    // attractive part of Morse
+                fe.add_mul( dp, -14.3996448915d*REQi.z*ir*ir*ir ); // Coulomb
+            }
+            if(FFPauli)  FFPauli [ibuff]=fp;
+            if(FFLondon) FFLondon[ibuff]=fl;
+            if(FFelec)   FFelec  [ibuff]=fe;
+        });
+    }
+
+    void evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs, Vec3i nPBC ){
+        //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p){
+        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+            Vec3d fp = (Vec3d){0.0d,0.0d,0.0d};
+            Vec3d fl = (Vec3d){0.0d,0.0d,0.0d};
+            Vec3d fe = (Vec3d){0.0d,0.0d,0.0d};
+            for(int ia=0; ia<natoms; ia++){
+                Vec3d dp0; dp0.set_sub( p, apos[ia] );
+                Vec3d REQi = aREQs[ia];
+                for(int ia=-nPBC.a; ia<(nPBC.a+1); ia++){ for(int ib=-nPBC.b; ib<(nPBC.b+1); ib++){ for(int ic=-nPBC.c; ic<(nPBC.c+1); ic++){
+                    Vec3d  dp = dp0 + grid.cell.a*ia + grid.cell.b*ib + grid.cell.c*ic;
+                    double r      = dp.norm();
+                    double ir     = 1/(r+RSAFE);
+                    double expar  = exp( alpha*(r-REQi.x) );
+                    double fexp   = alpha*expar*REQi.y*ir;
+                    fp.add_mul( dp, -fexp*expar*2 );                    // repulsive part of Morse
+                    fl.add_mul( dp, -fexp         );                    // attractive part of Morse
+                    fe.add_mul( dp, -14.3996448915d*REQi.z*ir*ir*ir ); // Coulomb
+                }}}
+            }
+            if(FFPauli)  FFPauli [ibuff]=fp;
+            if(FFLondon) FFLondon[ibuff]=fl;
+            if(FFelec)   FFelec  [ibuff]=fe;
+        });
+    }
+
+    void evalGridFFs( Vec3i nPBC){
+        //evalGridFFexp( natoms, apos, aREQs, alpha*2,  1, FFPauli  );
+        //evalGridFFexp( natoms, apos, aREQs, alpha  , 1, FFLondon );  // -2.0 coef is in  REQ2PLQ
+        //evalGridFFel ( natoms, apos, aREQs,              FFelec   );
+        //evalGridFFs( natoms, apos, aREQs );
+        evalGridFFs( natoms, apos, aREQs, nPBC );
+    }
+
+    void evalCombindGridFF( Vec3d REQ, Vec3d * FF ){
+        Vec3d PLQ = REQ2PLQ( REQ, alpha );
+        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+            Vec3d f = (Vec3d){0.0d,0.0d,0.0d};
+            if(FFPauli ) f.add_mul( FFPauli[ibuff],  PLQ.x );
+            if(FFLondon) f.add_mul( FFLondon[ibuff], PLQ.y );
+            if(FFelec  ) f.add_mul( FFelec[ibuff],   PLQ.z );
+            FF[ibuff] =  f;
+        });
+    }
+
+    void evalCombindGridFF_CheckInterp( Vec3d REQ, Vec3d * FF ){
+        Vec3d PLQ = REQ2PLQ( REQ, alpha );
+        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
+            Vec3d f = (Vec3d){0.0d,0.0d,0.0d};
+            //addForce( p, PLQ, f );
+            addForce( p+(Vec3d){0.1,0.1,0.1}, PLQ, f );
+            FF[ibuff] =  f;
+        });
+    }
+
+    void evalFFline( int n, Vec3d p0, Vec3d p1, Vec3d PLQ, Vec3d * pos, Vec3d * fs ){
         Vec3d dp = p1-p0; dp.mul(1.0d/(n-1));
         Vec3d  p = p0;
         for(int i=0; i<n; i++){
@@ -324,8 +438,8 @@ class RigidSubstrate{ public:
                 Vec3d fq = (Vec3d){0.0,0.0,0.0};
                 for(int ia=0; ia<natoms; ia++){
                     Vec3d d = p-apos[ia];
-                    addAtomicForceExp( d, fp, aLJq[ia].x, aLJq[ia].y, 2*alpha );
-                    addAtomicForceExp( d, fl, aLJq[ia].x, aLJq[ia].y,   alpha );
+                    addAtomicForceExp( d, fp, aREQs[ia].x, aREQs[ia].y, 2*alpha );
+                    addAtomicForceExp( d, fl, aREQs[ia].x, aREQs[ia].y,   alpha );
                     //addAtomicForceQ  ( d, fq, aLJq[ia].z );
                     //printf( "%i %i %g  (%g,%g)   %g \n", i, ia, d.z, aLJq[ia].x, aLJq[ia].y, alpha  );
                 }
@@ -337,10 +451,10 @@ class RigidSubstrate{ public:
         }
     }
 
-    void evalFFlineToFile( int n, Vec3d p0, Vec3d p1, Vec3d REQ, double alpha, const char * fname ){
+    void evalFFlineToFile( int n, Vec3d p0, Vec3d p1, Vec3d REQ, const char * fname ){
         Vec3d * pos = new Vec3d[n];
         Vec3d * fs  = new Vec3d[n];
-        evalFFline( n, p0, p1, REQ2PLQ(REQ, alpha), alpha, pos, fs );
+        evalFFline( n, p0, p1, REQ2PLQ(REQ, alpha), pos, fs );
         FILE* pfile;
         pfile = fopen(fname, "w" );
         for(int i=0; i<n; i++){
@@ -348,73 +462,6 @@ class RigidSubstrate{ public:
         }
         fclose(pfile);
         delete [] pos; delete [] fs;
-    }
-
-    void evalGridFFel(int natoms, Vec3d * apos, Vec3d * aLJqs, Vec3d * FF ){
-        //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p)->void{
-        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
-            Vec3d f = (Vec3d){0.0,0.0,0.0};
-            for(int ia=0; ia<natoms; ia++){ addAtomicForceQ( p-apos[ia], f, aLJq[ia].z ); }
-            FF[ibuff]=f;
-        });
-    }
-
-    void evalGridFFexp(int natoms, Vec3d * apos, Vec3d * aLJqs, double alpha, double A, Vec3d * FF ){
-        //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p){
-        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
-            Vec3d f = (Vec3d){0.0,0.0,0.0};
-            for(int ia=0; ia<natoms; ia++){
-                //printf( " %i (%g,%g,%g) (%g,%g)\n", ia, apos[ia].x, apos[ia].y, apos[ia].z,  aLJq[ia].x, aLJq[ia].y  );
-                addAtomicForceExp( p-apos[ia], f, aLJq[ia].x, aLJq[ia].y,    alpha );
-                //addAtomicForceExp( p-apos[ia], f, aLJq[ia].x, aLJq[ia].y,    alpha*2 );
-                //addAtomicForceExp( p-apos[ia], f, aLJq[ia].x, aLJq[ia].y*-2, alpha   );
-            }
-            //printf( " >> %i %i (%g,%g,%g) %g \n", ibuff, natoms, f.x, f.y, f.z, A  );
-            FF[ibuff]=f*A;
-            //printf( " %i (%g,%g,%g) \n", ibuff, p.x, p.y, p.z );
-            //FF[ibuff]=p;
-        });
-    }
-
-    void evalGridFFs(int natoms, Vec3d * apos, Vec3d * aLJqs, double alpha ){
-        //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p){
-        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
-            Vec3d fp = (Vec3d){0.0d,0.0d,0.0d};
-            Vec3d fl = (Vec3d){0.0d,0.0d,0.0d};
-            Vec3d fe = (Vec3d){0.0d,0.0d,0.0d};
-            for(int ia=0; ia<natoms; ia++){
-                Vec3d dp; dp.set_sub( p, apos[ia] );
-                Vec3d aLJi = aLJqs[ia];
-                double r      = dp.norm();
-                double ir     = 1/(r+RSAFE);
-                double expar  = exp( alpha*(r-aLJi.x) );
-                double fexp   = alpha*expar*aLJi.y*ir;
-                fp.add_mul( dp, fexp*expar*2 );              // repulsive part of Morse
-                fl.add_mul( dp, fexp*-2      );              // attractive part of Morse
-                fe.add_mul( dp, -14.3996448915d*aLJi.z*ir*ir*ir ); // Coulomb
-            }
-            if(FFPauli)  FFPauli [ibuff]=fp;
-            if(FFLondon) FFLondon[ibuff]=fl;
-            if(FFelec)   FFelec  [ibuff]=fe;
-        });
-    }
-
-    void evalGridFFs( double alpha ){
-        evalGridFFexp( natoms, apos, aLJq, alpha*2,  1, FFPauli  );
-        evalGridFFexp( natoms, apos, aLJq, alpha  , -2, FFLondon );
-        evalGridFFel ( natoms, apos, aLJq,              FFelec   );
-    }
-
-    void evalCombindGridFF( double alpha, double Q, double R, double E, Vec3d * FF ){
-        double CPauli  = E*exp(   alpha*R );
-        double CLondon = E*exp( 2*alpha*R );
-        interateGrid3D( grid, [=](int ibuff, Vec3d p)->void{
-            Vec3d f = (Vec3d){0.0d,0.0d,0.0d};
-            if(FFPauli ) f.add_mul( FFPauli[ibuff],  CPauli  );
-            if(FFLondon) f.add_mul( FFLondon[ibuff], CLondon );
-            if(FFelec  ) f.add_mul( FFelec[ibuff],   Q       );
-            FF[ibuff] =  f;
-        });
     }
 
 }; // RigidSubstrate
@@ -440,11 +487,13 @@ class MMFF{ public:
     int    * atypes = NULL;
     Vec3d  * apos   = NULL;   // atomic position
     Vec3d  * aLJq   = NULL;
-    double * lbond  = NULL;  // bond lengths
+    Vec3d  * aPLQ   = NULL;   // this is used for grid-accelerated factorized potential
+    double * lbond  = NULL;   // bond lengths
     Vec3d  * hbond  = NULL;   // normalized bond unitary vectors
     Vec3d  * aforce = NULL;
 
-    RigidSubstrate substrate;
+    //RigidSubstrate substrate;
+    GridFF gridFF;
 
 
 void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
@@ -478,6 +527,7 @@ void deallocate(){
     delete [] apos;     delete [] aforce;   delete [] aLJq;
     delete [] lbond;    delete [] hbond;    delete [] bond2atom; delete [] bond_0; delete [] bond_k;
     delete [] ang2bond; delete [] ang2atom; delete [] ang_0;     delete [] ang_k;
+    if(aPLQ) delete [] aPLQ;
 }
 
 int pickBond( Vec3d& ray0, Vec3d& hRay, double R ){
@@ -495,6 +545,17 @@ int pickBond( Vec3d& ray0, Vec3d& hRay, double R ){
     }
     return imin;
 }
+
+void genPLQ(){
+    if(aPLQ==NULL) aPLQ = new Vec3d[natoms];
+    for(int i=0; i<natoms; i++){
+        aPLQ[i] = REQ2PLQ( aLJq[i], gridFF.alpha );
+        printf( "genPLQ %i (%g,%g,%g)->(%g,%g,%g) \n", i, aLJq[i].x, aLJq[i].y, aLJq[i].z,   aPLQ[i].x, aPLQ[i].y, aPLQ[i].z );
+    }
+    //exit(0);
+}
+
+void translate( Vec3d dpos){ for(int i=0; i<natoms; i++) apos[i].add(dpos); }
 
 void ang_b2a(){
     for(int i=0; i<nang; i++){
@@ -691,6 +752,12 @@ void eval_LJq_On2(){
             }
         }
         aforce[i].add(f);
+    }
+}
+
+void eval_FFgrid(){
+    for(int i=0; i<natoms; i++){
+        gridFF.addForce( apos[i], aPLQ[i], aforce[i] );
     }
 }
 
