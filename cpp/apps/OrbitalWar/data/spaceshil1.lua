@@ -1,6 +1,6 @@
 ﻿--- https://www.lua.org/pil/5.3.html
 
-print("Ahoj");
+print("BEGIN spaceship");
 
 -- http://www.mse.mtu.edu/~drjohn/my4150/props.html
 Material{ name="Kevlar", density=1.44e+3, Spull=3.6e+9, Spush=0.0, Kpull=154.0e+9, Kpush=0.0, reflectivity=0.6,  Tmelt=350 }
@@ -11,8 +11,8 @@ Material{ name="Steel" , density=7.89e+3, Spull=1.2e+9, Spush=0.0, Kpull=200.0e+
 
 origin = {0.0,0.0,0.0}
 xvec   = {1.0,0.0,0.0} 
-yvec   = {1.0,0.0,0.0}
-zvec   = {1.0,0.0,0.0}
+yvec   = {0.0,1.0,0.0}
+zvec   = {0.0,0.0,1.0}
 
 n0 = Node( origin );
 n1 = Node( {-100.0,   0.0,    0.0} )
@@ -37,6 +37,8 @@ Rope(n5,n1, 25, "Kevlar"); Rope(n6,n1, 25, "Kevlar" )
 Rope(n5,n2, 25, "Kevlar"); Rope(n6,n2, 25, "Kevlar" )
 Rope(n5,n3, 25, "Kevlar"); Rope(n6,n3, 25, "Kevlar" )
 Rope(n5,n4, 25, "Kevlar"); Rope(n6,n4, 25, "Kevlar" )
+
+print("END spaceship");
 
 --[=====[ 
 --                type          T[K]

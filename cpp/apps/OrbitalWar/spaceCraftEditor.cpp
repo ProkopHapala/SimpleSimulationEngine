@@ -83,10 +83,10 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     initSpaceCraftingLua();
     //luaL_dofile(theLua, "data/spaceshil1.lua");
-    Lua::checkError(theLua, Lua::dofile(theLua,"data/spaceshil1.lua"));
+    Lua::dofile(theLua,"data/spaceshil1.lua");
     //luaL_dostring(theLua, "print('LuaDEBUG 1'); n1 = Node( {-100.0,0.0,0.0} ); print('LuaDEBUG 2'); print(n1)");
 
-    exit(0);
+    //exit(0);
 
     Truss trussPlan;
     trussPlan.loadXYZ(  "data/octShip.xyz" );
