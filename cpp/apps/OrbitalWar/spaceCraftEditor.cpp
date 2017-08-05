@@ -18,11 +18,16 @@
 #include "raytrace.h"
 
 #include "Truss.h"
+#include "SpaceCraft.h"
 #include "SoftBody.h"
 
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 #include "testUtils.h"
+
+#include "EditSpaceCraft.h"
+
+using namespace SpaceCrafting;
 
 enum class EDIT_MODE : int { vertex=0, edge=1, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
 
@@ -50,7 +55,8 @@ void drawTruss( Truss& truss ){
 class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 	public:
 
-    Truss truss;
+	SpaceCraft craft;
+    Truss      truss;
 
     EDIT_MODE edit_mode = EDIT_MODE::vertex;
     //EDIT_MODE edit_mode = EDIT_MODE::edge;
@@ -70,6 +76,17 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 
 SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     //truss.loadXYZ(  "data/octShip.xyz" );
+
+    //Lua1.init();
+
+    theSpaceCraft = new SpaceCraft();
+
+    initSpaceCraftingLua();
+    //luaL_dofile(theLua, "data/spaceshil1.lua");
+    Lua::checkError(theLua, Lua::dofile(theLua,"data/spaceshil1.lua"));
+    //luaL_dostring(theLua, "print('LuaDEBUG 1'); n1 = Node( {-100.0,0.0,0.0} ); print('LuaDEBUG 2'); print(n1)");
+
+    exit(0);
 
     Truss trussPlan;
     trussPlan.loadXYZ(  "data/octShip.xyz" );

@@ -9,5 +9,6 @@ find_package( SDL2   REQUIRED )
 add_subdirectory (SDL2)
 add_subdirectory (SDL2OGL)
 add_subdirectory (SDL2OGL3)
-#add_subdirectory (network)     # currently there are only headers
+add_subdirectory (network)     # currently there are only headers
+add_subdirectory (Lua) 
 #add_subdirectory (engines)

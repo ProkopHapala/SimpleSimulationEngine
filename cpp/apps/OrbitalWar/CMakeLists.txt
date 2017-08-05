@@ -1,8 +1,14 @@
 
-include_directories( ${MY_SRC_DIR}/libs/KosmoSuite/cpp )
+# === Lua # https://www.gamedev.net/forums/topic/681869-linking-lua-via-cmake/
+find_package( Lua52   REQUIRED )
+set(INCLUDE_DIRS ${LUA_INCLUDE_DIR})
+add_definitions(-DLUA)
+include_directories(${INCLUDE_DIRS})
 
-add_executable( orbitEditor 
-	orbitEditor.cpp 
+include_directories( ${MY_SRC_DIR}/libs/KosmoSuite/cpp  ${COMMON_SDL_SRCS}/Lua )
+
+add_executable( orbitEditor
+	orbitEditor.cpp
 	$<TARGET_OBJECTS:Body>
 	$<TARGET_OBJECTS:SDL2OGL>
 	$<TARGET_OBJECTS:Splines>
@@ -28,7 +34,7 @@ add_executable( spaceCraftEditor
     $<TARGET_OBJECTS:SoftBody>
     $<TARGET_OBJECTS:DynamicOpt>
 )
-target_link_libraries( spaceCraftEditor  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+target_link_libraries( spaceCraftEditor  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
 add_custom_command(
     TARGET ${PROJECT_NAME} orbitEditor test_OptContinuousThrust test_SpaceFlightODE spaceCraftEditor

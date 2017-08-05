@@ -1,11 +1,15 @@
 
-
 # https://www.gamedev.net/forums/topic/681869-linking-lua-via-cmake/
 find_package( Lua52   REQUIRED )
 #FIND_PACKAGE(Lua 5.3 REQUIRED)
 set(INCLUDE_DIRS ${LUA_INCLUDE_DIR})
 add_definitions(-DLUA)
 include_directories(${INCLUDE_DIRS})
+
+include_directories(
+#        ${COMMON_SRCS}/math
+        ${COMMON_SDL_SRCS}/Lua
+)
 
 # put this after add_executable
 #target_link_libraries(PROJECT_NAME ${LUA_LIBRARY})

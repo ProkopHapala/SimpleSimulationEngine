@@ -66,18 +66,20 @@ int l_doSomePhysics(lua_State* L){
     return 3;
 }
 
-    extern "C"
-    int l_doSomePhysics2(lua_State* L){
-        // lua interface for doSomePhysics
-        Vec3d pos;
-        Mat3d mat;
-        int n = lua_tointeger(L, 1);
-        lua_getVec3(L, 2, pos );
-        lua_getMat3(L, 3, mat );
-        doSomePhysics2(n,pos,mat);
-        //lua_pushnumber(L, 123);
-        return 3;
-    }
+extern "C"
+int l_doSomePhysics2(lua_State* L){
+    // lua interface for doSomePhysics
+    Vec3d pos;
+    Mat3d mat;
+    int n = lua_tointeger(L, 1);
+    lua_getVec3(L, 2, pos );
+    lua_getMat3(L, 3, mat );
+    doSomePhysics2(n,pos,mat);
+
+    lua_dumpStack(L);
+    //lua_pushnumber(L, 123);
+    return 3;
+}
 
 
 void print_error(lua_State* state) {
