@@ -1,5 +1,4 @@
-## Simple Simulation Engine
-
+# Simple Simulation Engine
 a minimalistic engine for: 
 - Physical simulations 
 - Numerical math 
@@ -7,10 +6,14 @@ a minimalistic engine for:
 - Computer graphics
 - Educational purposes
 
-Computational core is written in C++11. Standalone apps, demos and games use SDL2 and OpenGL 1.2 and 4.0 for Graphical user interface.  Some apps use embeded Lua3.2 for scripting. Python 2.7 using numpy and matplotlib is used to make conveneitne science/engineering packeges wrapaing C++ core libraries.
+## Structure
+* Computational core is written in C++11. 
+* Standalone apps, demos and games use SDL2 and OpenGL 1.2 and 4.0 for Graphical user interface.  
+* Some apps use embeded Lua3.2 for scripting. 
+* Python 2.7 + numpy + matplotlib is used to make convenient science/engineering packeges partialy wrappaing the C/C++ core libraries. 
+* In addition there are some documents using iPython (Jupyter) and javascript+WebGL for rendering interactive 3D graphics and editors of glsl shaders on web.
 
 ## Philosophy
-
 Main motivation is to assemble various common algorithma from physics, numerical mathematics, computer graphics and computer science and build minimalistic tools for rapid development of physical simulation programs and games. 
 
 **I should be:**
@@ -42,7 +45,6 @@ Main motivation is to assemble various common algorithma from physics, numerical
 <font color="green"> This is work in progress. Often particular modules of the engine are functional, but they are not put together to build an unified system and work together. </font>
 
 ## C++ part
-
 - [Math](cpp/common/math)
   - [2d vector](cpp/common/math/Vec2.h), [3d vector](cpp/common/math/Vec3.h), [3x3 matrix](cpp/common/math/Mat3.h), [4x4 matrix](cpp/common/math/Mat4.h), [Quaternions](cpp/common/math/Mat3.h)
   - [Fast math rutines](cpp/common/math/fastmath.h) with approximations of some functions ( e.g. [goniometry](cpp/common/math/gonioApprox.h), Error function ... )
@@ -76,12 +78,13 @@ Main motivation is to assemble various common algorithma from physics, numerical
   - OpenGL 1.2/2
     - drawing many basic primitives and more complex shapes in [2D](cpp/common_SDL/SDL2OGL/Draw2D.h) and [3D](cpp/common_SDL/SDL2OGL/Draw3D.h)
   - OpenGL 3+
-    - Example of Rendering [meshes](cpp/sketches_SDL/test_MeshOGL3.cpp), [textures](cpp/sketches_SDL/test_Texture.cpp), [instances](cpp/sketches_SDL/test_Instances.cpp), [bilboards](cpp/sketches_SDL/test_Sprites.cpp)
+    - Examples of Rendering [meshes](cpp/sketches_SDL/test_MeshOGL3.cpp), [rendering to texture](test_RenderToTexture.cpp), [instances](cpp/sketches_SDL/test_Instances.cpp), [bilboards](cpp/sketches_SDL/cpp/sketches_SDL/test_Sprites.cpp)
     - [ScreenSpace ambient occlusion](cpp/sketches_SDL/OGL3/test_SSAO.cpp)
     - Ray-Traced analytic primitives e.g. Spherical [atoms](cpp/sketches_SDL/test_Atoms.cpp)
     - Ray-Marching of analytical functions e.g. [molecular orbitals](cpp/sketches_SDL/test_OrbitalRayMarch.cpp).
     - <font color="green" size=2>TODO: (in-shader Constructive solid geometry CGS)</font>
-    - [Terrain rendering](cpp/sketches_SDL/test_LandScape.cpp) with logaritmic depth buffer for large scenes
+    - [Terrain rendering](cpp/sketches_SDL/test_LandScape.cpp) from heightmap texture with logaritmic depth buffer for large scenes
+    - Angularly sensitive bilboards (impostors) for rendering [Vegetation](cpp/sketches_SDL/test_Vegetation.cpp) and clouds
 
 - Apps and Games
   - Molecular editors with [Rigid Body Molecular dynamics](cpp/apps/MolecularEditor) (coarse grained=>faster, no need for intramoleculer forcefiel) with [python interface](python/pyMolecular), and normal [Soft Body Molecular mechanics](cpp/apps/MolecularEditor2)
