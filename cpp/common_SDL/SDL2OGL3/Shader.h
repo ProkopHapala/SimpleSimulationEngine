@@ -39,23 +39,24 @@ void main(){
 
 class Shader{
 	public:
-	GLchar *vertexsource   = NULL;
-	GLchar *fragmentsource = NULL;
+	//GLchar *vertexsource   = NULL;
+	//GLchar *fragmentsource = NULL;
 	GLuint vertexshader   =0;
 	GLuint fragmentshader =0;
+	GLuint geomShader     =0;
 	GLuint shaderprogram  =0;
 
 	GLuint uloc_camMat=0, uloc_modelMat=0, uloc_modelPos=0, uloc_camPos=0, uloc_baseColor=0;
 
 	// ==== function declarations
 
-	void compileShader       ( GLenum shaderType, const char* sourceCode, GLuint& shader, char*& errLog  );
-	void compileShaderProgram( GLuint vertexshader, GLuint fragmentshader, GLuint& shader, char*& errLog );
-	int  init_str            ( const char * vertexsource , const char * fragmentsource                   );
-	int  init                ( const char * vertName,      const char * fragName                         );
+	void compileShader       ( GLenum shaderType, const char* sourceCode,                     GLuint& shader, char*& errLog  );
+	void compileShaderProgram( GLuint vertexshader, GLuint fragmentshader, GLuint geomShader, GLuint& shader, char*& errLog );
+	int  init_str            ( const char * vertexsource , const char * fragmentsource, const char * GSsrc       );
+	int  init                ( const char * vertName,      const char * fragName,       const char * GSName=NULL );
 	void destory             (                                                                           );
 
-	inline int    init_default (){ init_str(DEFAULT_vertex_shader_code, DEFAULT_fragment_shader_code);     };
+	inline int    init_default (){ init_str(DEFAULT_vertex_shader_code, DEFAULT_fragment_shader_code, NULL);     };
 	inline void   use          (){glUseProgram(shaderprogram);}
 	inline GLuint getUloc( char * name ){ return glGetUniformLocation(shaderprogram,name); };
 

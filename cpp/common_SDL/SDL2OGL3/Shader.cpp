@@ -3,6 +3,17 @@
 
 #include "Shader.h" // THE HEADER
 
+
+void checkError( char * errLog, const char * comment ){
+    if( errLog != NULL ){
+        //printf( " Error in Vertex Shader: \n" );
+        printf( "%s %s \n", comment, errLog );
+        free( errLog );
+        //return -1;
+        exit(-1);
+    }
+}
+
 void Shader::compileShader( GLenum shaderType, const char* sourceCode, GLuint& shader, char*& errLog ){
     shader = glCreateShader( shaderType );   // Create an empty vertex shader handle
     errLog = NULL;
@@ -20,10 +31,11 @@ void Shader::compileShader( GLenum shaderType, const char* sourceCode, GLuint& s
     }
 }
 
-void Shader::compileShaderProgram( GLuint vertexshader, GLuint fragmentshader, GLuint& shader, char*& errLog ){
+void Shader::compileShaderProgram( GLuint vertexshader, GLuint fragmentshader, GLuint geomShader, GLuint& shader, char*& errLog ){
     shaderprogram = glCreateProgram();
     glAttachShader(shaderprogram, vertexshader );
     glAttachShader(shaderprogram, fragmentshader );
+    if(geomShader) glAttachShader(shaderprogram, geomShader );
     glBindAttribLocation(shaderprogram, 0, "in_Position");
     //glBindAttribLocation(shaderprogram, 1, "in_Color");
     glLinkProgram(shaderprogram);
@@ -39,39 +51,58 @@ void Shader::compileShaderProgram( GLuint vertexshader, GLuint fragmentshader, G
     }
 }
 
-int Shader::init_str( const char * vertexsource , const char * fragmentsource ){
+int Shader::init_str( const char * vertexsource , const char * fragmentsource, const char * GSsrc ){
     //printf( " DEBUG 1 \n" );
     char * errLog = NULL;
-    compileShader( GL_VERTEX_SHADER,   vertexsource,   vertexshader, errLog   );
-    if( errLog != NULL ){
-        printf( " Error in Vertex Shader: \n" );
-        printf( " %s \n", errLog );
-        free( errLog );
-        return -1;
+    compileShader( GL_VERTEX_SHADER,   vertexsource,   vertexshader, errLog   );  checkError( errLog, " Error in Vertex Shader: \n" );
+    //if( errLog != NULL ){
+    //    printf( " Error in Vertex Shader: \n" );
+    //    printf( " %s \n", errLog );
+    //    free( errLog );
+    //    return -1;
+    //}
+    compileShader( GL_FRAGMENT_SHADER, fragmentsource, fragmentshader, errLog  ); checkError( errLog, " Error in Fragment Shader: \n" );
+    //if( errLog != NULL ){
+    //    printf( " Error in Fragment Shader: \n" );
+    //    printf( " %s \n", errLog );
+    //    free( errLog );
+    //    return -2;
+    //}
+    geomShader = 0;
+    if( GSsrc  ){
+        compileShader( GL_GEOMETRY_SHADER, GSsrc , geomShader, errLog  ); checkError( errLog, " Error in Geometry Shader: \n" );
+        //if( errLog != NULL ){
+        //    printf( " Error in Geometry Shader: \n" );
+        //    printf( " %s \n", errLog );
+        //    free( errLog );
+        //    return -2;
+        //}
     }
-    compileShader( GL_FRAGMENT_SHADER, fragmentsource, fragmentshader, errLog  );
-    if( errLog != NULL ){
-        printf( " Error in Fragment Shader: \n" );
-        printf( " %s \n", errLog );
-        free( errLog );
-        return -2;
-    }
-    compileShaderProgram( vertexshader, fragmentshader, shaderprogram, errLog );
-    if( errLog != NULL ){
-        printf( " Error in linking of Shader Program: \n" );
-        printf( " %s \n", errLog );
-        free( errLog );
-        return -3;
-    }
+    compileShaderProgram( vertexshader, fragmentshader, geomShader, shaderprogram, errLog ); checkError( errLog, " Error in linking of Shader Program: \n" );
+    //if( errLog != NULL ){
+    //    printf( " Error in linking of Shader Program: \n" );
+    //    printf( " %s \n", errLog );
+    //    free( errLog );
+    //    return -3;
+    //}
 }
 
-int Shader::init( const char * vertName, const char * fragName ){
-    printf( "loading shaders: Frag: %s Vert: %s\n", vertName, fragName );
-    vertexsource   = filetobuf( vertName );  if( vertexsource   == NULL ){ printf( "cannot load %s \n", vertName ); exit(1); }
-    fragmentsource = filetobuf( fragName );  if( fragmentsource == NULL ){ printf( "cannot load %s \n", fragName ); exit(1); }
-    return init_str( vertexsource , fragmentsource );
+int Shader::init( const char * vertName, const char * fragName, const char * GSName ){
+    if( GSName ){ printf( "loading shaders: Frag: %s Vert: %s Geom: %s \n", vertName, fragName, GSName ); }
+    else        { printf( "loading shaders: Frag: %s Vert: %s\n",           vertName, fragName ); }
+    int ret=0;
+    char * vertexsource   = filetobuf( vertName );  if( vertexsource   == NULL ){ printf( "cannot load %s \n", vertName ); exit(1); }
+    char * fragmentsource = filetobuf( fragName );  if( fragmentsource == NULL ){ printf( "cannot load %s \n", fragName ); exit(1); }
+    char * GSsrc = NULL;
+    if( GSName ){
+        GSsrc = filetobuf( GSName );  if( GSsrc == NULL ){ printf( "cannot load %s \n", GSName ); exit(1); }
+        ret = init_str( vertexsource , fragmentsource, GSsrc );
+    }else{
+        ret = init_str( vertexsource , fragmentsource, NULL );
+    }
     delete [] vertexsource;
     delete [] fragmentsource;
+    return ret;
 }
 
 void Shader::destory(){
