@@ -9,6 +9,7 @@ add_library( Body       OBJECT Body.cpp       )
 add_library( Body2D     OBJECT Body2D.cpp     )
 add_library( AeroSurf   OBJECT AeroSurf.cpp   )
 add_library( AeroSurf2D OBJECT AeroSurf2D.cpp )
+add_library( AeroCraft  OBJECT AeroCraft.cpp  )
 
 add_library( DynamicOpt OBJECT DynamicOpt.cpp )
 add_library( SoftBody   OBJECT SoftBody.cpp   )

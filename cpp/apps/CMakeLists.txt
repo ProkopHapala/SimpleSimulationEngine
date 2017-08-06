@@ -4,7 +4,7 @@ find_package( SDL2   REQUIRED )
 
 add_subdirectory (SailWar)
 add_subdirectory (SailWar_Multi)
-add_subdirectory (AeroCraft)
+add_subdirectory (AeroCombat)
 add_subdirectory (FormationTactics)
 add_subdirectory (MinimalTactics)
 add_subdirectory (LandTactics)

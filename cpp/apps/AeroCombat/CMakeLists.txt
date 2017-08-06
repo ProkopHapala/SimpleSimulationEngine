@@ -1,11 +1,12 @@
 
-set( NAME "AeroCraft" )
+set( NAME "AeroCombat" )
 
 add_executable( ${NAME} 
-	main.cpp AeroCraft.cpp FieldPatch.cpp AeroCraftWorld.cpp AeroCraftGUI.cpp
+	main.cpp FieldPatch.cpp AeroCraftWorld.cpp AeroCraftGUI.cpp #AeroCraft.cpp
 	#$<TARGET_OBJECTS:${NAME}_objects> 
 	$<TARGET_OBJECTS:Body> 
-	$<TARGET_OBJECTS:AeroSurf> 
+	$<TARGET_OBJECTS:AeroSurf>
+	$<TARGET_OBJECTS:AeroCraft>
 	$<TARGET_OBJECTS:SDL2OGL> 
 )
 

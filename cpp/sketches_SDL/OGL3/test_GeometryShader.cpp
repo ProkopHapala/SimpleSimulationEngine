@@ -153,15 +153,6 @@ glUseProgram  (shaderProgram);
 
 glGenBuffers(1, &vbo);
 
-/*
-float points[] = {
-    -0.45f,  0.45f,
-     0.45f,  0.45f,
-     0.45f, -0.45f,
-    -0.45f, -0.45f,
-};
-*/
-
 float *points = new float[2*npoints];
 for( int i=0; i<npoints; i++ ){
     int i2 = i<<1;
