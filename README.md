@@ -12,6 +12,9 @@ a minimalistic engine for:
 - [Simple Simulation Engine](#simple-simulation-engine)
     - [Table Of Contents](#table-of-contents)
     - [Structure and Dependecies](#structure-and-dependecies)
+    - [Compilation](#compilation)
+            - [quickstart](#quickstart)
+            - [remarks](#remarks)
     - [Content](#content)
         - [C++ part](#c-part)
                 - [C++ Planned or Preliminary or ToDo](#c-planned-or-preliminary-or-todo)
@@ -29,6 +32,30 @@ a minimalistic engine for:
 * Some apps use embeded Lua3.2 for scripting, but it is not globally required.
 * Python 2.7 + numpy + matplotlib is used to make [convenient science/engineering packeges](python) partialy wrappaing the C/C++ core libraries. 
 * In addition there are some [documents](projects) using iPython (Jupyter) and [javascript+WebGL](js) for rendering interactive 3D graphics and editors of glsl shaders on web. These are independent on the rest.
+
+## Compilation 
+ * tested on Ubunu 16.04 64bit)
+#### quickstart
+1. make sure you have installed `gcc >=5.4.0`, `CMake >2.8`, `libglew-dev`, `SDL2-dev`
+2. got to `cpp/Builds/sketches_SDL/` create subdirectory `Build`
+1. from `cpp/Builds/sketches_SDL/Build` generate makefiles by `cmake .. -G "CodeBlocks - Unix Makefiles"`
+2. in the same directory compile the project `make`. The compiled binaris are stored in `cpp/Build`
+
+#### remarks
+  * you may also load Code::Blocks project `cpp/Builds/sketches_SDL/SimpleSimulationEngine.cbp` and compile particular build target from Code::Blocks
+  * If `cmake` or `make` fails due to some dependencies, you may try compile just part of the project (e.g. `cpp/Build/libs`) which has less dependencies 
+  * you may also remove problematic build targets by commenting out particular parts of `CMakeFile.txt`
+ 
+ #### optional
+ 6. If you were able to compile `sketches_SDL` you may try compile applications and games in `cpp/Builds/apps/` or the whole project in the same way just in `cpp/Builds/all/` (you will need `liblua5.2-dev` and `libtolua5.2-dev`) 
+ 7. You may try compile OpenCL demos in `cpp/Build/sketches_OCL` in the same way. This will require properly installed GPU drivers and opencl libraris. These are platform dependent. Personally I tested with `nvidia-opencl-dev`.
+    * **Note:** be very carefull when installing GPU drivers on linux, ou can easily brak the system (I did 3 times). In my case `nvidia-opencl-dev` installed dependecies `libcuda-378 nvidia-378 nvidia-opencl-icd-378 nvidia-prime nvidia-settings opencl-headers`. I also added `nvidia-modprobe`. When you break your system this make help:
+      ```
+      sudo apt-get autoremove --purge nvidia-*
+      sudo stop lightdm
+      sudo apt-get install xserver-xorg-video-nouveau
+      ```
+      there are many guides for installing GPU drivers on linux. I found particularily helpfull and working [this one](https://askubuntu.com/questions/335285/how-to-change-proprietary-video-driver-using-the-command-line)
 
 ## Content
 <font color="green"> This is work in progress. Often particular modules of the engine are functional, but they are not put together to build an unified system and work together. </font>
