@@ -197,7 +197,8 @@ void setup(){
     */
 
     //p_sh =  LoadProgram(  "shaders/Tubes.glslv",  "shaders/Tubes_GS.glslv", "shaders/Tubes.glslf", GL_TRIANGLE_STRIP );
-    p_sh =  LoadProgram(  "common_resources/shaders/color3D.glslv",  NULL, "common_resources/shaders/color3D.glslf", GL_TRIANGLE_STRIP );
+    p_sh =  LoadProgram(  "shaders/Lines2Tubes.glslv",  "shaders/Lines2Tubes_GS.glslv", "shaders/Lines2Tubes.glslf", GL_TRIANGLE_STRIP );
+    //p_sh =  LoadProgram(  "common_resources/shaders/color3D.glslv",  NULL, "common_resources/shaders/color3D.glslf", GL_TRIANGLE_STRIP );
 
     //glUniform1iv(, 1, (GLint*  )&i           ); };
     glUniform3fv(glGetUniformLocation(p_sh,"DiffuseMaterial" ), 1, (const float[]){1.0f,   0.5f,   0.125f} );
@@ -267,7 +268,6 @@ void draw(){
 
     glUseProgram(p_sh);
 
-
     /*
     glUniform3fv(glGetUniformLocation(p_sh,"LightDirection" ), 1, (const float[]){0.25f, 0.25f, 1.0f} );
     glUniform3fv(glGetUniformLocation(p_sh,"Projection"     ), 1, (const float[]){0.125f, 0.125f, 0.0f}   );
@@ -288,6 +288,7 @@ void draw(){
     glUniform3fv(glGetUniformLocation(p_sh,"modelPos" ), 1, (GLfloat*)&modelPos );
     glUniform3fv(glGetUniformLocation(p_sh,"camPos" ),   1, (const float[]){0.f,   0.0,  -10.0f} );
     glUniform3fv(glGetUniformLocation(p_sh,"light_dir"), 1, (const float[]){1.0,   0.0f,   0.0f} );
+
 
     //qCamera.toMatrix(mouseMat);
     //Mat4f camMat;  camMat.setOne(); // camMat.setPerspective( 20.0, 20.0, -2.0, -1000.0 );
@@ -313,10 +314,9 @@ void draw(){
     glVertexAttribPointer(NormalSlot,    3, GL_FLOAT, GL_FALSE, stride, normalOffset);
     glVertexAttribPointer(PathCoordSlot, 1, GL_FLOAT, GL_FALSE, stride, pathCoordOffset);
 
-    glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, NPoints );
-
+    //glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, NPoints );
     //glPointSize(100.0); glDrawArrays(GL_POINTS, 0, NPoints );
-    //glDrawArrays(GL_LINE_STRIP, 0, NPoints );
+    glDrawArrays(GL_LINE_STRIP, 0, NPoints );
 
     glDisableVertexAttribArray(PositionSlot);
     glDisableVertexAttribArray(NormalSlot);
