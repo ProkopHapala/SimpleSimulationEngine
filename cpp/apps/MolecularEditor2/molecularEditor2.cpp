@@ -93,7 +93,45 @@ void plotSurfPlane( Vec3d normal, double c0, Vec2d d, Vec2i n ){
     Draw3D::drawRectGridLines( n*2, (da*-n.a)+(db*-n.b) + normal*c0, da, db );
 }
 
-void drawSubstrate( int nx, int ny, int isoOgl, Vec3d a, Vec3d b ){
+void renderSubstrate( int n, Vec3d * points, GLenum mode ){
+    //printf( "iso_points.size() %i \n", iso_points.size() );
+    if( mode == GL_POINTS ){
+        glBegin(GL_POINTS);
+        for(int i=0; i<iso_points.size(); i++){ glVertex3f( iso_points[i].x, iso_points[i].y, iso_points[i].z      ); }
+        glEnd();
+    }
+}
+
+void renderSubstrate_( const GridShape& grid, Vec3d * FF, double isoval, bool sign ){
+    //printf( "iso_points.size() %i \n", iso_points.size() );
+    Vec3d * pos     = new Vec3d[grid.n.x * grid.n.y];
+    Vec3d * normals = new Vec3d[grid.n.x * grid.n.y];
+    printf( " -- DEBUG 1 \n" );
+    getIsoSurfZ( grid, isoval, sign, FF, pos, normals );
+    printf( " -- DEBUG 2 \n" );
+    glBegin(GL_TRIANGLE_STRIP);
+    //glEnable(GL_LIGHTING);
+    for ( int ib=1; ib<grid.n.y; ib++ ){
+        for ( int ia=0; ia<grid.n.x; ia++ ){
+            int ip1 = (ib-1)*grid.n.x + ia;
+            int ip2 = (ib  )*grid.n.x + ia;
+            printf( "iba (%i,%i)\n", ib,ia );
+            //glColor3f(pos[ip1].z*5-2,1.0f,1.0f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
+            //glColor3f(pos[ip2].z*5-2,1.0f,1.0f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
+
+            glColor3f(0.7f,0.7f,0.7f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
+            glColor3f(0.8f,0.7f,0.7f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
+        }
+    }
+    printf( " -- DEBUG 3 \n" );
+    glEnd();
+    delete [] pos;
+    delete [] normals;
+    //exit(0);
+}
+
+
+void viewSubstrate( int nx, int ny, int isoOgl, Vec3d a, Vec3d b ){
     glPushMatrix();
     for( int ix = -nx; ix<=nx; ix++ ){
         for( int iy = -ny; iy<=ny; iy++ ){
@@ -292,17 +330,11 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     world.gridFF.evalCombindGridFF            ( testREQ, FFtot );
     saveXSF( "FFtot_z.xsf",             world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
-    getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
-
     isoOgl = glGenLists(1);
     glNewList(isoOgl, GL_COMPILE);
-    printf( "iso_points.size() %i \n", iso_points.size() );
-    glBegin(GL_LINES);
-    for(int i=0; i<iso_points.size(); i++){
-        glVertex3f( iso_points[i].x, iso_points[i].y, iso_points[i].z      );
-        glVertex3f( iso_points[i].x, iso_points[i].y, iso_points[i].z + 0.1 );
-    }
-    glEnd();
+    //getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
+    //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
+    renderSubstrate_( world.gridFF.grid, FFtot, 0.1, true );
     glEndList();
 
 }
@@ -314,7 +346,9 @@ void AppMolecularEditor2::draw(){
 	glColor3f( 0.0f,0.0f,0.0f );
 	//if(isoOgl)
 
-	drawSubstrate( 2, 2, isoOgl, world.gridFF.grid.cell.a, world.gridFF.grid.cell.b );
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+	viewSubstrate( 2, 2, isoOgl, world.gridFF.grid.cell.a, world.gridFF.grid.cell.b );
 
 	//perFrame = 10;
 	//delay = 100;

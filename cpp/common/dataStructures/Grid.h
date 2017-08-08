@@ -229,48 +229,34 @@ void getIsovalPoints_a( const GridShape& grid, double isoval, Vec3d  *FF, std::v
             }
         }
     }
-
-
-    /*
-    int ia = 20;
-    int ib = 20;
-    for ( int ic=0; ic<nz; ic++ ){
-        int     i1 = i3D( ia, ib,  ic   );
-        int     i2 = i3D( ia, ib, (ic+1) );
-        //double df1 = FF[i1].z-isoval;
-        //double df2 = FF[i2].z-isoval;
-
-        double df1 = FF[i1].z;
-        double df2 = FF[i2].z;
-
-        printf( " %i (%i,%i,%i) (%g,%g)\n", ii, ia,ib,ic, df1, df2 );
-        if( (df1*df2)<0 ){
-            double fc = df1/(df1-df2);
-            printf( " cross fc=%g \n", fc );
-        };
-    }
-    */
 }
 
-
-/*
-ATOMS
- 1   0.0   0.0   0.0
-
-BEGIN_BLOCK_DATAGRID_3D
-   some_datagrid
-   BEGIN_DATAGRID_3D_whatever
-232 232 301
-0.0 0.0 0.0
-23.10994667 0.0 0.0
-11.55497333 20.01380089 0.0
-0.0 0.0 30.0
-1.64109e-04
-   END_DATAGRID_3D
-END_BLOCK_DATAGRID_3D
-
-*/
-
+void getIsoSurfZ( const GridShape& grid, double isoval, bool sign, Vec3d  *FF, Vec3d *pos, Vec3d * normal ){
+    int nx  = grid.n.x; 	int ny  = grid.n.y; 	int nz  = grid.n.z; int nxy = ny * nx;
+    int ii = 0;
+    printf("%i %i %i \n", nx,ny,nxy );
+    for ( int ib=0; ib<ny; ib++ ){
+        for ( int ia=0; ia<nx; ia++ ){
+            int ibuff = i3D( ia, ib,  0 );
+            double ofz = FF[ibuff].x;
+            double fz;
+            int ic;
+            //printf( "iba (%i,%i)\n", ib,ia );
+            for ( ic=1; ic<nz; ic++ ){
+                ibuff+=nxy;
+                fz = FF[ibuff].z;
+                if( (fz<isoval)==sign ) break;
+                ofz = fz;
+            }
+            double fc = (ofz-isoval)/(ofz-fz);
+            int ibxy  = ib*nx + ia;
+            pos   [ibxy] = grid.dCell.a*ia + grid.dCell.b*ib + grid.dCell.c*(ic+fc);
+            normal[ibxy] = FF[ibuff-1];
+            normal[ibxy].normalize();
+            //normal[ibxy] = interpolate3DvecWrap( FF, grid.n, {ia,ib, ic+fc } );
+        }
+    }
+}
 
 void writePrimCoord( FILE* fout, Mat3d& cell, int natoms, Vec3d * apos, int * iZs ){
     fprintf( fout, "CRYSTAL\n" );
@@ -298,37 +284,6 @@ void saveXSF( char * fname, GridShape& grid, Vec3d * FF, int icomp, int natoms, 
     fclose(fout);
 }
 
-/*
-void saveXSF( char * fname, GridShape& grid, Vec3d * FF, int icomp, int natoms, Vec3d * apos, int * iZs ){
-    printf( "saving %s\n", fname );
-    FILE *fout;
-    fout = fopen(fname,"w");
-    //fprintf( fout, "   ATOMS\n" );
-    //fprintf( fout, "    1   0.0   0.0   0.0\n" );
-    writePrimCoord( grid.cell, natoms, apos, iZs );
-    fprintf( fout, "\n" );
-    fprintf( fout, "BEGIN_BLOCK_DATAGRID_3D\n" );
-    fprintf( fout, "   some_datagrid\n" );
-    fprintf( fout, "   BEGIN_DATAGRID_3D_whatever\n" );
-    fprintf( fout, "%i %i %i\n", grid.n.x, grid.n.y, grid.n.z );
-    fprintf( fout, "%5.10f %5.10f %5.10f \n", grid.pos0.x,   grid.pos0.x,   grid.pos0.x   );
-    fprintf( fout, "%5.10f %5.10f %5.10f \n", grid.cell.a.x, grid.cell.a.y, grid.cell.a.z );
-    fprintf( fout, "%5.10f %5.10f %5.10f \n", grid.cell.b.x, grid.cell.b.y, grid.cell.b.z );
-    fprintf( fout, "%5.10f %5.10f %5.10f \n", grid.cell.c.x, grid.cell.c.y, grid.cell.c.z );
-    int nx  = grid.n.x; 	int ny  = grid.n.y; 	int nz  = grid.n.z; int nxy = ny * nx;
-    for ( int ic=0; ic<nz; ic++ ){
-        for ( int ib=0; ib<ny; ib++ ){
-            for ( int ia=0; ia<nx; ia++ ){
-               int i = i3D( ia, ib, ic );
-               fprintf( fout, "%6.5e\n", ((double*)(FF+i))[icomp] );
-            }
-        }
-    }
-    fprintf( fout, "   END_DATAGRID_3D\n" );
-    fprintf( fout, "END_BLOCK_DATAGRID_3D\n" );
-    fclose(fout);
-}
-*/
 
 #endif
 
