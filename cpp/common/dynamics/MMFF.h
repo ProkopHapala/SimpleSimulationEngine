@@ -27,6 +27,10 @@
 
 // compied from RigidMolecule.h      ============>   TODO : make common lib of inter-molecular forcefields formulas
 
+// ================================
+// ====   Forcefield Functions
+// ================================
+
 inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double q ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     double ir2  = 1/( dp.norm2() + R2SAFE );
@@ -118,6 +122,8 @@ class BondType{ public:
 };
 
 
+// ==========  AtomType
+
 class AtomType{ public:
     char      name[8];
     uint8_t   iZ;         // proton number
@@ -144,12 +150,16 @@ class AtomType{ public:
 
 };
 
+// ======================
+// ====   MMFFparams
+// ======================
+
 class MMFFparams{ public:
 
     // http://www.science.uwaterloo.ca/~cchieh/cact/c120/bondel.html
 
     std::unordered_map<std::string,int> atypNames;
-    std::vector<AtomType>          atypes;
+    std::vector<AtomType>               atypes;
 
     std::unordered_map<uint64_t,BondType> bonds;
 
@@ -225,6 +235,10 @@ class MMFFparams{ public:
     }
 
 };
+
+// ======================
+// ====   GridFF
+// ======================
 
 class GridFF{ public:
     GridShape   grid;
@@ -465,6 +479,11 @@ class GridFF{ public:
     }
 
 }; // RigidSubstrate
+
+
+// ======================
+// ====   MMFF
+// ======================
 
 class MMFF{ public:
     int  natoms=0, nbonds=0, nang=0, ntors=0;
@@ -776,13 +795,9 @@ void printBondParams(){
 }; // MMFF
 
 
-
-
-
-
-// =================
-// =================  MMFFBuilder
-// =================
+// ======================
+// ====   MMFFBuilder
+// ======================
 
 #include "Molecule.h"
 
@@ -831,6 +846,18 @@ class MMFFBuilder{  public:
         }
         for(int i=0; i<mol->nang; i++){
             angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}) } );
+        }
+    }
+
+
+    void assignAtomTypes( MMFFparams * params ){
+        for(int i=0; i<atoms.size(); i++){
+            //mmff->aLJq [i]  = atoms[i].type;
+            int ityp = atoms[i].type;
+            atoms[i].LJq.x = params->atypes[ityp].RvdW;
+            atoms[i].LJq.y = params->atypes[ityp].EvdW;
+            atoms[i].LJq.z = 0;
+            //atomTypes[i]  = atoms[i].type;
         }
     }
 

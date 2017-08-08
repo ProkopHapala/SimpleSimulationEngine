@@ -48,6 +48,8 @@ int isoOgl;
 
 Vec3d PPpos0 = (Vec3d){1.3,1.7, 1.5};
 
+Vec3d testREQ,testPLQ;
+
 // ==========================
 // AppMolecularEditor2
 // ==========================
@@ -91,6 +93,19 @@ void plotSurfPlane( Vec3d normal, double c0, Vec2d d, Vec2i n ){
     Draw3D::drawRectGridLines( n*2, (da*-n.a)+(db*-n.b) + normal*c0, da, db );
 }
 
+void drawSubstrate( int nx, int ny, int isoOgl, Vec3d a, Vec3d b ){
+    glPushMatrix();
+    for( int ix = -nx; ix<=nx; ix++ ){
+        for( int iy = -ny; iy<=ny; iy++ ){
+            Vec3d pos = a*ix + b*iy;
+            glTranslatef(pos.x, pos.y, pos.z);
+            glCallList(isoOgl);
+            glTranslatef(-pos.x, -pos.y, -pos.z);
+        }
+    }
+    glPopMatrix();
+}
+
 class AppMolecularEditor2 : public AppSDL2OGL_3D {
 	public:
 	Molecule    mol;
@@ -131,7 +146,6 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
 
     //for(auto kv : params.atypNames) { printf( ">>%s<< %i \n", kv.first.c_str(), kv.second ); };
-
 
     char str[1024];
     printf( "type %s \n", params.atypes[ params.atypNames.find( "C" )->second ].toString( str ) );
@@ -176,18 +190,15 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     //Vec3d pos = (Vec3d){0.0,0.0,0.0};
     Mat3d rot; rot.setOne();
-    builder.insertMolecule(&mol, {0.0,0.0,0.0}, rot );
-    builder.insertMolecule(&mol, {5.0,0.0,0.0}, rot );
-    builder.insertMolecule(&mol, {0.0,5.0,0.0}, rot );
-    builder.insertMolecule(&mol, {5.0,5.0,0.0}, rot );
-    builder.toMMFF(&world, &params);
+    builder.insertMolecule (&mol, {0.0,0.0,0.0}, rot );
+    builder.insertMolecule (&mol, {5.0,0.0,0.0}, rot );
+    builder.insertMolecule (&mol, {0.0,5.0,0.0}, rot );
+    builder.insertMolecule (&mol, {5.0,5.0,0.0}, rot );
+    builder.assignAtomTypes(&params );
+    builder.toMMFF (&world, &params);
 
-    world.ang_b2a();
-
-    //exit(0);
-
-    world.printBondParams();
-    //exit(0);
+    world.ang_b2a();           //exit(0);
+    world.printBondParams();   //exit(0);
 
     opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce );
     opt.setInvMass( 1.0 );
@@ -235,7 +246,6 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     */
     //world.substrate.init( (Vec3i){100,100,100}, (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f }, (Vec3d){-5.0,-5.0,-5.0} );
 
-
     printf( "params.atypNames:\n" );
     for(auto kv : params.atypNames) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
     //exit(0);
@@ -246,10 +256,16 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //world.gridFF.loadCell ( "inputs/cel.lvs" );
     world.gridFF.loadCell ( "inputs/cel_2.lvs" );
     world.gridFF.grid.printCell();
-    world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
+    world.gridFF.loadXYZ  ( "inputs/Xe_instead_Na.xyz", params );
     //world.gridFF.loadXYZ( "inputs/Cl.xyz", params );
 
     world.translate( {0.0,0.0,2.5} );
+
+
+    //testREQ = (Vec3d){ 2.181, 0.0243442, 0.0}; // Xe
+    testREQ = (Vec3d){ 1.487, 0.0006808, 0.0}; // H
+    testPLQ = REQ2PLQ( testREQ, -1.6 );
 
     /*
     //world.substrate.evalFFlineToFile( 100, (Vec3d){0.000000, 4.005760, 0.900000}, (Vec3d){0.000000, 14.005760, 0.900000}, (Vec3d){ 1.66, 0.009, 0.0}, -1.5,  "force.dat" );
@@ -262,12 +278,18 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     world.gridFF.evalGridFFs( {0,0,0} );
     //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
 
+    int iatom = 11;
+    printf( "testREQ   (%g,%g,%g) -> PLQ (%g,%g,%g) \n",        testREQ.x, testREQ.y, testREQ.z, testPLQ.x, testPLQ.y, testPLQ.z   );
+    printf( "aREQs[%i] (%g,%g,%g) -> PLQ (%g,%g,%g) \n", iatom, world.aLJq[iatom].x, world.aLJq[iatom].y, world.aLJq[iatom].z, world.aPLQ[iatom].x, world.aPLQ[iatom].y, world.aPLQ[iatom].z );
+
+   // exit(0);
+
     Vec3d * FFtot = new Vec3d[world.gridFF.grid.getNtot()];
 
-    world.gridFF.evalCombindGridFF_CheckInterp( (Vec3d){ 2.181, 0.0243442, 0.0}, FFtot );
-    saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+    //world.gridFF.evalCombindGridFF_CheckInterp( (Vec3d){ 2.181, 0.0243442, 0.0}, FFtot );
+    //saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
-    world.gridFF.evalCombindGridFF            ( (Vec3d){ 2.181, 0.0243442, 0.0}, FFtot );
+    world.gridFF.evalCombindGridFF            ( testREQ, FFtot );
     saveXSF( "FFtot_z.xsf",             world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
     getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
@@ -283,30 +305,6 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     glEnd();
     glEndList();
 
-
-    /*
-    //exit(0);
-    //world.substrate.grid.n    = (Vec3i){120,120,200};
-    world.substrate.allocateFFs();
-    world.substrate.evalGridFFs( -2.0 );
-    //world.substrate.grid.saveXSF( "testX.xsf", FF, 0 );
-    //world.substrate.grid.saveXSF( "testY.xsf", FF, 1 );
-    world.substrate.grid.saveXSF( "FFPaul_z.xsf", world.substrate.FFPauli,  2 );
-    world.substrate.grid.saveXSF( "FFLond_z.xsf", world.substrate.FFLondon, 2 );
-    world.substrate.grid.saveXSF( "FFel_z.xsf"  , world.substrate.FFelec,   2 );
-    */
-
-    //exit(0);
-
-    /*
-    world.evalGridFFexp( world.natoms, world.apos, world.aLJq, -2.0*2,  1, world.FFPauli );
-    world.evalGridFFexp( world.natoms, world.apos, world.aLJq, -2.0  , -2, world.FFLondon );
-    world.evalCombindGridFF( -2.0, 0.0, 2.0, 1.0, FF );
-    world.grid.saveXSF( "testX.xsf", FF, 0 );
-    world.grid.saveXSF( "testY.xsf", FF, 1 );
-    world.grid.saveXSF( "testZ.xsf", FF, 2 );
-    */
-
 }
 
 void AppMolecularEditor2::draw(){
@@ -315,41 +313,20 @@ void AppMolecularEditor2::draw(){
 
 	glColor3f( 0.0f,0.0f,0.0f );
 	//if(isoOgl)
-	glCallList(isoOgl);
+
+	drawSubstrate( 2, 2, isoOgl, world.gridFF.grid.cell.a, world.gridFF.grid.cell.b );
+
 	//perFrame = 10;
 	//delay = 100;
 
-	Vec3d testPRQ = REQ2PLQ( (Vec3d){ 2.181, 0.0243442, 0.0}, -1.6 );
-	drawGridForceAlongLine( 100, world.gridFF, {1.0,1.1,2.5}, {0.1,0.1,0.0}, testPRQ, 50.0 );
-	drawGridForceAlongLine( 100, world.gridFF, {3.3,0.0,2.0}, {0.0,0.1,0.0}, testPRQ, 50.0 );
+	//drawGridForceAlongLine( 100, world.gridFF, {1.0,1.1,2.5}, {0.1,0.1,0.0}, testPLQ, 50.0 );
+	//drawGridForceAlongLine( 100, world.gridFF, {3.3,0.0,2.0}, {0.0,0.1,0.0}, testPLQ, 50.0 );
 	//exit(0);
 
-	glColor3f( 1.0f,0.0f,0.0f );
-	drawPPRelaxTrj( 5000, 0.3, 0.95, world.gridFF, PPpos0, testPRQ );
+	//glColor3f( 1.0f,0.0f,0.0f );
+	//drawPPRelaxTrj( 5000, 0.3, 0.95, world.gridFF, PPpos0, testPLQ );
 
-	return;
-
-    /*
-    srand(154);
-    Vec3d ax  = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};   ax.normalize();
-    Vec3d dp1 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};   dp1.add_mul( ax, -ax.dot(dp1) ); dp1.normalize();
-    Vec3d dp2 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};   dp2.add_mul( ax, -ax.dot(dp2) ); dp2.normalize();
-    printf( "%g %g %g %g \n", dp1.dot(dp1), dp2.dot(dp2), dp1.dot(ax), dp2.dot(ax) );
-    Vec3d p1  = ax*randf( 0.0,1.0) + dp1*randf( -1.5,-1.0);
-    Vec3d p2  = ax*randf(-1.0,0.0) + dp2*randf( -1.5,0.0);
-    double t1,t2;
-    double dist = rayLine( p1, dp1, p2, dp2, t1, t2 );
-	// test closest point skew-lines
-	//glColor3f(0.6f,0.6f,0.6f); Draw3D::drawLine( ax*1, ax*-1 );
-	glColor3f(0.8f,0.0f,0.0f); Draw3D::drawLine( p1, p1+dp1 ); Draw3D::drawPointCross( p1, 0.1 );
-	glColor3f(0.0f,0.0f,0.8f); Draw3D::drawLine( p2, p2+dp2 ); Draw3D::drawPointCross( p2, 0.1 );
-	glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine( p1+(dp1*t1), p2+(dp2*t2) ); // Draw3D::drawLine( p1+(dp1*t1), p1 );   Draw3D::drawLine( p2, p2+(dp2*t2) );
-	printf( "t1 %g t2 %g  dist %g %g \n", t1, t2, dist, (p1+(dp1*t1)-p2-(dp2*t2)).norm() );
-	//Vec3d rxl; rxl.set_cross(dp1, dp2);
-	//glColor3f(0.8f,0.0f,0.0f); Draw3D::drawVecInPos( rxl, p1+(dp1*t1) );
-	//glColor3f(0.0f,0.0f,0.8f); Draw3D::drawVecInPos( rxl, p2+(dp2*t2) );
-	return;
-	*/
+    //return;
 
 	//ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
 
@@ -364,7 +341,7 @@ void AppMolecularEditor2::draw(){
         for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
 
         world.eval_FFgrid();
-        /*
+
         //printf( "DEBUG x.1 \n" );
         world.eval_bonds(true);
         //world.eval_angles();
@@ -372,7 +349,7 @@ void AppMolecularEditor2::draw(){
         world.eval_angcos();
         //printf( "DEBUG x.3 \n" );
         world.eval_LJq_On2();
-        */
+
 
         //exit(0);
         if(ipicked>=0){
