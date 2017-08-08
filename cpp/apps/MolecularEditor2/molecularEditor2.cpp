@@ -179,6 +179,18 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
 
 AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+    //qCamera.set( 0.0,0.0,0.0,1.0 );  // bottom view
+    //qCamera.set( 0.0,0.0,1.0,0.0 );  // bottom view
+    //qCamera.set( 0.0,1.0,0.0,0.0 );  // top view  x=-x, y=y,
+    qCamera.set( 1.0,0.0,0.0,0.0 );    // top view  x=x, y=-y,
+    //qCamera.set( 0.70710678118,0.0,0.0,0.70710678118 ); // side down
+    //qCamera.set( -0.70710678118,0.0,0.0,0.70710678118 ); // x=x, z=y,  y=-y,
+    //qCamera.set( 0.0, -0.70710678118,0.0,0.70710678118 ); // z=-x, y=y
+    //qCamera.set( 0.0, +0.70710678118,0.0,0.70710678118 ); // z=+x, y=y
+    //qCamera.set( 0.0,0.0, +0.70710678118, 0.70710678118 ); // y=-x, x=y
+    //qCamera.set( 0.0,0.0, -0.70710678118, 0.70710678118 ); // y=x, x=-y
+
+
     //AtomType atyp;
     //atyp.fromString( "CA 6 4 4 1 2.00 0.09 0x11EEAA" );
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
@@ -345,6 +357,9 @@ void AppMolecularEditor2::draw(){
 
 	glColor3f( 0.0f,0.0f,0.0f );
 	//if(isoOgl)
+
+	Draw3D::drawAxis(10);
+
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);

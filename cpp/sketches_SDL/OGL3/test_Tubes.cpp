@@ -16,7 +16,8 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
-#include "Mesh.h"
+//#include "Mesh.h"
+#include "Solids.h"
 
 #include "GLfunctions.h"
 #include "GLobjects.h"
@@ -49,7 +50,7 @@ Vec3f  modelPos = (Vec3f){ 0.0f,0.0f, 0.0f };
 //GLuint shaderProgram,vertexShader,fragmentShader,geometryShader;
 //GLuint vbo;
 
-const int NPoints = 40;
+int NPoints = 40;
 
 // ============= FUNCTIONS
 
@@ -184,6 +185,21 @@ GLuint LoadProgram(const char* vsName, const char* gsName, const char* fsName, G
 
 
 
+float * makeLines( const CMesh& cmesh){
+    NPoints = cmesh.nedge * 2;
+    float * points = new float[NPoints*7];
+    float * pi = points;
+    for (size_t i=0; i<NPoints; i++ ) {
+        int ip  = ((int*)cmesh.edges)[i];
+        Vec3d p = cmesh.verts[ip];
+        *pi++ = p.x; *pi++ = p.y; *pi++ = p.z;
+        *pi++ = 0;   *pi++ = 0;   *pi++ = 1;
+        *pi++ = (float)i/float(NPoints);
+    }
+    return points;
+}
+
+
 void setup(){
 
     /*
@@ -217,25 +233,8 @@ void setup(){
     //glmesh = new GLMesh();
     //glmesh->init_d( mesh.points.size(), mesh.triangles.size()*3, ((int*)&mesh.triangles[0]), (double*)&(mesh.points [0]), (double*)&(mesh.normals[0]), NULL, NULL );
 
-    float * points = new float[NPoints*7];
-    float * pi = points;
-
-    //Vec3d dir = (Vec3d){10.0,0.0,0.0};
-    Vec3d p = (Vec3d){ 0.0,0.0,0.0};
-    double l = 1.0;
-    for (size_t i=0; i<NPoints; i++ ) {
-
-        float dy = 0;
-        if(i&1){ p.x += l; }
-        else   { dy = l*(((int)i&2)-1);  p.y += dy; }
-        l*=0.9;
-
-        printf( "%i (%g,%g,%g)  dy %g \n", i, p.x, p.y, p.z, dy );
-
-        *pi++ = p.x; *pi++ = p.y; *pi++ = p.z;
-        *pi++ = 0;   *pi++ = 0;   *pi++ = 1;
-        *pi++ = (float)i/float(NPoints);
-    }
+    //float * points = makeLines( Solids::Tetrahedron );
+    float * points = makeLines( Solids::Icosahedron );
 
     printf("DEBUG 8 \n");
 
@@ -245,6 +244,8 @@ void setup(){
     delete [] points;
 
     printf("DEBUG 9 \n");
+
+    qCamera.setOne();
 }
 
 void draw(){
@@ -254,52 +255,25 @@ void draw(){
     glEnable( GL_DEPTH_TEST );
     glDisable(GL_BLEND);
 
-    //SetUniform("LightDirection", lightDir);
-    //SetUniform("Projection", ProjectionMatrix);
-    //SetUniform("Modelview", modelView);
-    //SetUniform("ModelviewProjection", ProjectionMatrix * modelView);
-    //SetUniform("Radius", 0.05f);
-
-    //Matrix4 modelMatrix ( transpose(ModelTrackball->GetRotation()), Vector3(0, 0, 0) );
-    //Matrix4 modelView ( ViewMatrix * modelMatrix );
-    //Vector3 lightPosObjSpace ((0.25f, 0.25f, 1.0f));
-    //Vector3 lightPosEyeSpace = rowMul(lightPosObjSpace, ViewMatrix.getUpper3x3());
-    //Vector3 lightDir = -normalize(lightPosEyeSpace);
-
     glUseProgram(p_sh);
 
-    /*
-    glUniform3fv(glGetUniformLocation(p_sh,"LightDirection" ), 1, (const float[]){0.25f, 0.25f, 1.0f} );
-    glUniform3fv(glGetUniformLocation(p_sh,"Projection"     ), 1, (const float[]){0.125f, 0.125f, 0.0f}   );
-    glUniform1f (glGetUniformLocation(p_sh,"Radius"         ), 50.0f );
-    Mat4f modelMatrix; modelMatrix.setOne();
-    Mat4f ViewMatrix;  ViewMatrix.setPerspective( 20.0, 20.0, 2.0, 1000.0 );
-    Mat4f modelView  = ViewMatrix;
-    glUniformMatrix4fv(glGetUniformLocation(p_sh,"Projection"          ), 1, GL_FALSE, (GLfloat*)&modelView   );
-    glUniformMatrix4fv(glGetUniformLocation(p_sh,"Modelview"           ), 1, GL_FALSE, (GLfloat*)&modelMatrix );
-    glUniformMatrix4fv(glGetUniformLocation(p_sh,"ModelviewProjection" ), 1, GL_FALSE, (GLfloat*)&modelView   );
-    */
+    Vec3f light_dir = (Vec3f){1.0,1.0,1.0}; light_dir.normalize();
 
     // debug - simple shader
-    Mat4f camMat;   camMat.setOne();    camMat.setPerspective( 20.0, 20.0, 2.0, 1000.0 );
-    Mat3f modelMat; modelMat.setOne();
-    glUniformMatrix4fv(glGetUniformLocation(p_sh,"camMat"          ), 1, GL_FALSE, (GLfloat*)&camMat   );
-    glUniformMatrix3fv(glGetUniformLocation(p_sh,"modelMat"        ), 1, GL_FALSE, (GLfloat*)&modelMat );
-    glUniform3fv(glGetUniformLocation(p_sh,"modelPos" ), 1, (GLfloat*)&modelPos );
-    glUniform3fv(glGetUniformLocation(p_sh,"camPos" ),   1, (const float[]){0.f,   0.0,  -10.0f} );
-    glUniform3fv(glGetUniformLocation(p_sh,"light_dir"), 1, (const float[]){1.0,   0.0f,   0.0f} );
 
 
-    //qCamera.toMatrix(mouseMat);
-    //Mat4f camMat;  camMat.setOne(); // camMat.setPerspective( 20.0, 20.0, -2.0, -1000.0 );
 
-    /*
-    Shader * sh = shader1;
-    sh->use();
-    sh->set_modelPos( (GLfloat*)&modelPos );
-    sh->set_modelMat( (GLfloat*)&mouseMat );
-    sh->set_camMat  ( (GLfloat*)&camMat );
-    */
+    Mat4f camMat;   camMat.setOne();    camMat.setPerspective( 10.0, 10.0, 2.0, 1000.0 );
+    Mat3f modelMat; modelMat.setOne(); qCamera.toMatrix( modelMat);
+    glUniformMatrix4fv(glGetUniformLocation(p_sh,"camMat"   ), 1, GL_FALSE, (GLfloat*)&camMat   );
+    glUniformMatrix3fv(glGetUniformLocation(p_sh,"modelMat" ), 1, GL_FALSE, (GLfloat*)&modelMat );
+    glUniform3fv      (glGetUniformLocation(p_sh,"modelPos" ), 1, (GLfloat*)&modelPos );
+    glUniform3fv      (glGetUniformLocation(p_sh,"camPos"   ), 1, (GLfloat*)&camPos   );
+    glUniform3fv      (glGetUniformLocation(p_sh,"light_dir"), 1, (GLfloat*)&light_dir );
+
+
+
+
 
     glBindBuffer(GL_ARRAY_BUFFER, curve_vbo);
     glEnableVertexAttribArray(PositionSlot);
@@ -316,7 +290,7 @@ void draw(){
 
     //glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, NPoints );
     //glPointSize(100.0); glDrawArrays(GL_POINTS, 0, NPoints );
-    glDrawArrays(GL_LINE_STRIP, 0, NPoints );
+    glDrawArrays(GL_LINES, 0, NPoints );
 
     glDisableVertexAttribArray(PositionSlot);
     glDisableVertexAttribArray(NormalSlot);
@@ -338,12 +312,22 @@ void inputHanding(){
 	SDL_Event event;
 
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+	/*
     if( keys[ SDL_SCANCODE_W  ] ){ modelPos.y += posstep; }
 	if( keys[ SDL_SCANCODE_S  ] ){ modelPos.y -= posstep; }
 	if( keys[ SDL_SCANCODE_A  ] ){ modelPos.x -= posstep; }
 	if( keys[ SDL_SCANCODE_D  ] ){ modelPos.x += posstep; }
     if( keys[ SDL_SCANCODE_Q  ] ){ modelPos.z += posstep; }
 	if( keys[ SDL_SCANCODE_E  ] ){ modelPos.z -= posstep; }
+	*/
+
+    if( keys[ SDL_SCANCODE_W  ] ){ camPos.y += posstep; }
+	if( keys[ SDL_SCANCODE_S  ] ){ camPos.y -= posstep; }
+	if( keys[ SDL_SCANCODE_A  ] ){ camPos.x -= posstep; }
+	if( keys[ SDL_SCANCODE_D  ] ){ camPos.x += posstep; }
+    if( keys[ SDL_SCANCODE_Q  ] ){ camPos.z += posstep; }
+	if( keys[ SDL_SCANCODE_E  ] ){ camPos.z -= posstep; }
+
 
 	while(SDL_PollEvent(&event)){
 		if( event.type == SDL_KEYDOWN ){
