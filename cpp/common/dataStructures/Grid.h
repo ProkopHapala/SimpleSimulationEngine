@@ -234,7 +234,7 @@ void getIsovalPoints_a( const GridShape& grid, double isoval, Vec3d  *FF, std::v
 void getIsoSurfZ( const GridShape& grid, double isoval, bool sign, Vec3d  *FF, Vec3d *pos, Vec3d * normal ){
     int nx  = grid.n.x; 	int ny  = grid.n.y; 	int nz  = grid.n.z; int nxy = ny * nx;
     int ii = 0;
-    printf("%i %i %i \n", nx,ny,nxy );
+    //printf("%i %i %i \n", nx,ny,nxy );
     for ( int ib=0; ib<ny; ib++ ){
         for ( int ia=0; ia<nx; ia++ ){
             int ibuff = i3D( ia, ib,  0 );

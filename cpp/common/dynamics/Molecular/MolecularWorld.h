@@ -44,8 +44,6 @@ class MolecularWorld{
 	MolecularBond  * bonds=NULL;
 	GeneralSpline  * splines;
 
-
-
 	Vec3d  *pos=NULL,*vpos=NULL,*fpos=NULL,*invMpos=NULL;
 	Quat4d *rot=NULL,*vrot=NULL,*frot=NULL,*invMrot=NULL;
 

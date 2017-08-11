@@ -19,6 +19,7 @@
 #include "raytrace.h"
 #include "Molecule.h"
 #include "MMFF.h"
+#include "MMFFBuilder.h"
 #include "DynamicOpt.h"
 
 #include "AppSDL2OGL_3D.h"
@@ -106,24 +107,23 @@ void renderSubstrate_( const GridShape& grid, Vec3d * FF, double isoval, bool si
     //printf( "iso_points.size() %i \n", iso_points.size() );
     Vec3d * pos     = new Vec3d[grid.n.x * grid.n.y];
     Vec3d * normals = new Vec3d[grid.n.x * grid.n.y];
-    printf( " -- DEBUG 1 \n" );
+    //printf( " -- DEBUG 1 \n" );
     getIsoSurfZ( grid, isoval, sign, FF, pos, normals );
-    printf( " -- DEBUG 2 \n" );
+    //printf( " -- DEBUG 2 \n" );
     glBegin(GL_TRIANGLE_STRIP);
     //glEnable(GL_LIGHTING);
     for ( int ib=1; ib<grid.n.y; ib++ ){
         for ( int ia=0; ia<grid.n.x; ia++ ){
             int ip1 = (ib-1)*grid.n.x + ia;
             int ip2 = (ib  )*grid.n.x + ia;
-            printf( "iba (%i,%i)\n", ib,ia );
+            printf( "iba (%i,%i) pos (%g,%g,%g)\n", ib,ia, pos[ip1].x,pos[ip1].y,pos[ip1].z );
             //glColor3f(pos[ip1].z*5-2,1.0f,1.0f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
             //glColor3f(pos[ip2].z*5-2,1.0f,1.0f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
-
             glColor3f(0.7f,0.7f,0.7f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
             glColor3f(0.8f,0.7f,0.7f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
         }
     }
-    printf( " -- DEBUG 3 \n" );
+    //printf( " -- DEBUG 3 \n" );
     glEnd();
     delete [] pos;
     delete [] normals;
@@ -347,6 +347,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
     //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
     renderSubstrate_( world.gridFF.grid, FFtot, 0.1, true );
+    Draw3D::drawAxis(1.0);
     glEndList();
 
 }

@@ -31,10 +31,11 @@ inline int otherAtom( Vec2i ib, int ia ){ return (ia==ib.x)?ib.y:ib.x; }
 
 class Molecule{ public:
     int  natoms=0, nbonds=0;
-    Vec3d * pos       = NULL;
-    Vec2i * bond2atom = NULL;
-    int   * atomType  = NULL;
-    int   * bondType  = NULL;
+    Vec3d  * pos       = NULL;
+    Vec2i  * bond2atom = NULL;
+    double * charges   = NULL;
+    int    * atomType  = NULL;
+    int    * bondType  = NULL;
 
     int   * atom_nb;
     int   * atom2bond;
@@ -48,6 +49,7 @@ class Molecule{ public:
     void allocate( int natoms_, int nbonds_ ){
         natoms=natoms_; nbonds=nbonds_;
         if(pos      ==NULL) pos       = new Vec3d [natoms];
+        if(charges  ==NULL) charges   = new double[natoms];
         if(bond2atom==NULL) bond2atom = new Vec2i [nbonds];
         if(atomType ==NULL) atomType  = new int   [natoms];
         if(bondType ==NULL) bondType  = new int   [nbonds];
@@ -116,6 +118,8 @@ class Molecule{ public:
     void addToPos( Vec3d dp ){ for(int i=0; i<natoms; i++){ pos[i].add(dp); } }
 
     int loadMol( char* fname ){
+        // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
+        // http://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
         FILE * pFile = fopen(fname,"r");
         if( pFile == NULL ){
             printf("cannot find %s\n", fname );
@@ -131,6 +135,60 @@ class Molecule{ public:
         sscanf( line, "%i %i\n", &natoms, &nbonds );
         printf("%i %i \n", natoms, nbonds );
         allocate(natoms,nbonds);
+        for(int i=0; i<natoms; i++){
+            //char ch;
+            char at_name[8];
+            double junk;
+            line = fgets( buff, 1024, pFile );  //printf("%s",line);
+            sscanf( line, "%lf %lf %lf %s %lf %lf\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name, &junk, &charges[i] );
+            printf(       "%lf %lf %lf %s %lf %lf\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name,  junk,  charges[i] );
+            // atomType[i] = atomChar2int( ch );
+            auto it = atypNames->find( at_name );
+            if( it != atypNames->end() ){
+                atomType[i] = it->second;
+            }else{
+                //atomType[i] = atomChar2int( at_name[0] );
+                atomType[i] = -1;
+            }
+        }
+        for(int i=0; i<nbonds; i++){
+            line = fgets( buff, 1024, pFile );  //printf("%s",line);
+            sscanf( line, "%i %i %i\n", &bond2atom[i].x, &bond2atom[i].y, &bondType[i] );
+            printf(       "%i %i %i\n",  bond2atom[i].x,  bond2atom[i].y,  bondType[i] );
+            bond2atom[i].x--;
+            bond2atom[i].y--;
+        }
+        return natoms + nbonds;
+    }
+
+
+    int loadMol_const( char* fname ){
+        // 0        10         20
+        //   -13.0110  -15.2500   -0.0030 N   0  0  0  0  0  0  0  0  0  0  0  0
+        // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
+        // http://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){
+            printf("cannot find %s\n", fname );
+            return -1;
+        }
+        char buff[1024];
+        char * line;
+        int nl;
+        line = fgets( buff, 1024, pFile ); //printf("%s",line);
+        line = fgets( buff, 1024, pFile ); //printf("%s",line);
+        line = fgets( buff, 1024, pFile ); //printf("%s",line);
+        line = fgets( buff, 1024, pFile ); //printf("%s",line);
+        sscanf( line, "%i %i\n", &natoms, &nbonds );
+        printf("%i %i \n", natoms, nbonds );
+        allocate(natoms,nbonds);
+
+        int istr_x      =0;
+        int istr_y      =10;
+        int istr_z      =20;
+        int istr_name   =25;
+        int istr_charge =30;
+
         for(int i=0; i<natoms; i++){
             //char ch;
             char at_name[8];
@@ -155,6 +213,8 @@ class Molecule{ public:
         }
         return natoms + nbonds;
     }
+
+
 };
 
 #endif

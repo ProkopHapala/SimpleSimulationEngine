@@ -4,6 +4,8 @@
 
 set( NAME "MolecularEditor2" )
 
+include_directories( ${COMMON_SRCS}/dynamics/Molecular )
+
 add_executable( ${NAME} 
 	molecularEditor2.cpp 
 	#$<TARGET_OBJECTS:MolecularEngine>  
