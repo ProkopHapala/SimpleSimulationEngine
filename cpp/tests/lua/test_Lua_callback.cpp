@@ -59,8 +59,8 @@ int l_doSomePhysics(lua_State* L){
     // lua interface for doSomePhysics
     Vec3d pos,vel;
     int n = lua_tointeger(L, 1);
-    lua_getVec3(L, 2, pos );
-    lua_getVec3(L, 3, vel );
+    Lua::getVec3(L, 2, pos );
+    Lua::getVec3(L, 3, vel );
     doSomePhysics(n,pos,vel);
     //lua_pushnumber(L, 123);
     return 3;
@@ -72,12 +72,11 @@ int l_doSomePhysics2(lua_State* L){
     Vec3d pos;
     Mat3d mat;
     int n = lua_tointeger(L, 1);
-    lua_getVec3(L, 2, pos );
-    lua_getMat3(L, 3, mat );
+    Lua::getVec3(L, 2, pos );
+    Lua::getMat3(L, 3, mat );
     doSomePhysics2(n,pos,mat);
-
-    lua_dumpStack(L);
-    //lua_pushnumber(L, 123);
+    Lua::dumpStack(L);
+    //Lua::pushnumber(L, 123);
     return 3;
 }
 

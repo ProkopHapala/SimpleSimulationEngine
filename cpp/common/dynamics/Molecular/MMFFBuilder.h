@@ -10,7 +10,7 @@
 class MMFFAtom{ public:
     int type;
     Vec3d pos;
-    Vec3d LJq;
+    Vec3d REQ;
 };
 
 class MMFFBond{ public:
@@ -35,18 +35,22 @@ class MMFFBuilder{  public:
     std::vector<MMFFBond>  bonds;
     std::vector<MMFFAngle> angles;
     std::vector<MMFFmol>   mols;
+    std::vector<Vec2i>     frags;
 
-    void insertMolecule( Molecule * mol, Vec3d pos, Mat3d rot ){
+    void insertMolecule( Molecule * mol, Vec3d pos, Mat3d rot, bool rigid ){
         int natom0  = atoms.size();
         int nbond0  = bonds.size();
         int nangle0 = angles.size();
         mols.push_back( (MMFFmol){mol, (Vec3i){natom0,nbond0,nangle0} } );
+
+        int natoms0 = atoms.size();
         for(int i=0; i<mol->natoms; i++){
             //Vec3d LJq = (Vec3d){0.0,0.0,0.0}; // TO DO : LJq can be set by type
             Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
             Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
             atoms.push_back( (MMFFAtom){mol->atomType[i], p, LJq } );
         }
+        if( rigid ) frags.push_back( {natoms0, atoms.size()-natoms0} );
         for(int i=0; i<mol->nbonds; i++){
             bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}) } );
         }
@@ -59,9 +63,9 @@ class MMFFBuilder{  public:
         for(int i=0; i<atoms.size(); i++){
             //mmff->aLJq [i]  = atoms[i].type;
             int ityp = atoms[i].type;
-            atoms[i].LJq.x = params->atypes[ityp].RvdW;
-            atoms[i].LJq.y = params->atypes[ityp].EvdW;
-            atoms[i].LJq.z = 0;
+            atoms[i].REQ.x = params->atypes[ityp].RvdW;
+            atoms[i].REQ.y = params->atypes[ityp].EvdW;
+            atoms[i].REQ.z = 0;
             //atomTypes[i]  = atoms[i].type;
         }
     }
@@ -74,7 +78,7 @@ class MMFFBuilder{  public:
         for(int i=0; i<atoms.size(); i++){
             mmff->atypes[i] = atoms[i].type;
             mmff->apos [i]  = atoms[i].pos;
-            mmff->aLJq [i]  = atoms[i].LJq;
+            mmff->aREQ [i]  = atoms[i].REQ;
             //atomTypes[i]  = atoms[i].type;
         }
         for(int i=0; i<bonds.size(); i++){

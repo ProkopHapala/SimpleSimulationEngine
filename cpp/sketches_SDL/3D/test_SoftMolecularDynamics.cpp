@@ -98,10 +98,10 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     //Vec3d pos = (Vec3d){0.0,0.0,0.0};
     Mat3d rot; rot.setOne();
-    builder.insertMolecule(&mol, {0.0,0.0,0.0}, rot );
-    builder.insertMolecule(&mol, {5.0,0.0,0.0}, rot );
-    builder.insertMolecule(&mol, {0.0,5.0,0.0}, rot );
-    builder.insertMolecule(&mol, {5.0,5.0,0.0}, rot );
+    builder.insertMolecule(&mol, {0.0,0.0,0.0}, rot, false );
+    builder.insertMolecule(&mol, {5.0,0.0,0.0}, rot, false );
+    builder.insertMolecule(&mol, {0.0,5.0,0.0}, rot, false );
+    builder.insertMolecule(&mol, {5.0,5.0,0.0}, rot, false );
     builder.toMMFF(&world, &params);
 
     world.ang_b2a();

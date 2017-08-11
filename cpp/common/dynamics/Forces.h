@@ -20,6 +20,18 @@ inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps,
     f.add_mul( dp, fr );
 }
 
+inline void addAtomicForceMorseQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double q, double alpha ){
+    //Vec3f dp; dp.set_sub( p2, p1 );
+    double r     = dp.norm();
+    double expar = exp( alpha*(r-r0));
+    //double E     = eps*( expar*expar - 2*expar );
+    double ir    = 1/(r+RSAFE);
+    double fr    = eps*2*alpha*( expar*expar - expar ) - 14.3996448915f*q*ir*ir;
+
+    //printf( " %g -> %g | (%g,%g,%g) %g\n" , r, fr,  r0, eps,  q, alpha );
+    f.add_mul( dp, fr*ir );
+}
+
 inline void addAtomicForceQ( const Vec3d& dp, Vec3d& f, double q ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     double ir2  = 1/( dp.norm2() + R2SAFE );

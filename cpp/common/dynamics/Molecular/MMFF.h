@@ -2,6 +2,8 @@
 #ifndef MMFF_h
 #define MMFF_h
 
+#include <vector>
+
 #include "fastmath.h"
 #include "Vec2.h"
 #include "Vec3.h"
@@ -28,6 +30,13 @@ int pickParticle( int n, Vec3d * ps, Vec3d& ray0, Vec3d& hRay, double R ){
     return imin;
 }
 
+class MolType{ public:
+    int nAtoms;
+    Vec3d * apos   = NULL;
+    int   * atypes = NULL;
+    Vec3d * REQs   = NULL;
+};
+
 // ======================
 // ====   MMFF
 // ======================
@@ -52,11 +61,22 @@ class MMFF{ public:
     // molecular gemeotry
     int    * atypes = NULL;
     Vec3d  * apos   = NULL;   // atomic position
-    Vec3d  * aLJq   = NULL;
+    //Vec3d  * aLJq   = NULL;
+    Vec3d  * aREQ   = NULL;
     Vec3d  * aPLQ   = NULL;   // this is used for grid-accelerated factorized potential
     double * lbond  = NULL;   // bond lengths
     Vec3d  * hbond  = NULL;   // normalized bond unitary vectors
     Vec3d  * aforce = NULL;
+
+    std::vector<MolType> molTypes;
+
+    int nFrag;  // rigid fragments
+    //int *    imolTypes = NULL;
+    Vec3d  ** fapos0s = NULL; // position of atoms in rigid fragment
+    int    *  frag2a  = NULL; // start of the fragment in forcefield
+    int    *  fragNa  = NULL; // lengh of the fragment
+    double *  poses   = NULL; // rigd body pose of molecule (pos,qRot);
+    double *  poseFs  = NULL; // rigd body pose of molecule (pos,qRot);
 
     //RigidSubstrate substrate;
     GridFF gridFF;
@@ -67,7 +87,7 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     if(atypes   ==NULL) atypes    = new int   [natoms];
     if(apos     ==NULL) apos      = new Vec3d [natoms];
     if(aforce   ==NULL) aforce    = new Vec3d [natoms];
-    if(aLJq     ==NULL) aLJq      = new Vec3d [natoms];
+    if(aREQ     ==NULL) aREQ      = new Vec3d [natoms];
 
     if(lbond    ==NULL) lbond     = new double[nbonds];
     if(hbond    ==NULL) hbond     = new Vec3d [nbonds];
@@ -89,8 +109,17 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     */
 }
 
+void allocFragment( int nFrag_ ){
+    nFrag = nFrag_;
+    //imolTypes = new int[nFrag];
+    frag2a    = new int[nFrag];       // start of the fragment in forcefield
+    fragNa    = new int[nFrag];       // lengh of the fragment
+    poses     = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
+    fapos0s   = new Vec3d*[nFrag];
+}
+
 void deallocate(){
-    delete [] apos;     delete [] aforce;   delete [] aLJq;
+    delete [] apos;     delete [] aforce;   delete [] aREQ;
     delete [] lbond;    delete [] hbond;    delete [] bond2atom; delete [] bond_0; delete [] bond_k;
     delete [] ang2bond; delete [] ang2atom; delete [] ang_0;     delete [] ang_k;
     if(aPLQ) delete [] aPLQ;
@@ -115,13 +144,89 @@ int pickBond( Vec3d& ray0, Vec3d& hRay, double R ){
 void genPLQ(){
     if(aPLQ==NULL) aPLQ = new Vec3d[natoms];
     for(int i=0; i<natoms; i++){
-        aPLQ[i] = REQ2PLQ( aLJq[i], gridFF.alpha );
-        printf( "genPLQ %i (%g,%g,%g)->(%g,%g,%g) \n", i, aLJq[i].x, aLJq[i].y, aLJq[i].z,   aPLQ[i].x, aPLQ[i].y, aPLQ[i].z );
+        aPLQ[i] = REQ2PLQ( aREQ[i], gridFF.alpha );
+        printf( "genPLQ %i (%g,%g,%g)->(%g,%g,%g) \n", i, aREQ[i].x, aREQ[i].y, aREQ[i].z,   aPLQ[i].x, aPLQ[i].y, aPLQ[i].z );
     }
     //exit(0);
 }
 
 void translate( Vec3d dpos){ for(int i=0; i<natoms; i++) apos[i].add(dpos); }
+
+void frags2atoms( ){
+    // : fragment pose -> atomic position
+    for(int ifrag=0; ifrag<nFrag; ifrag++){
+        int im8 = ifrag<<3;
+        Vec3d  pos = *((Vec3d* )(poses+im8  ));
+        Quat4d rot = *((Quat4d*)(poses+im8+4));
+        Mat3d T; rot.toMatrix(T);
+        int ia = frag2a[ifrag];
+        int na = fragNa[ifrag];
+        //MolType& mtyp = mTypes[imolTypes[i]];
+        //Vec3d * m_apos = mTypes[imolTypes[ifrag]].apos;
+        Vec3d * m_apos = fapos0s[ifrag];
+        for( int j=0; j<na; j++ ){
+            Vec3d Tp;
+            T.dot_to_T( m_apos[j], Tp );
+            apos[ia].set_add( pos, Tp );
+            ia++;
+        }
+    }
+    //exit(0);
+}
+
+void aforce2frags(){
+    // : atomic force -> force on fragment pose
+    for(int ifrag=0; ifrag<nFrag; ifrag++){
+        int ia = frag2a[ifrag];
+        int na = fragNa[ifrag];
+        Vec3d * m_apos   = fapos0s[ifrag];
+        int im8 = ifrag<<3;
+        double * pose_i  = poses +im8;
+        double * poseF_i = poseFs+im8;
+        for( int j=0; j<na; j++ ){
+            ((Quat4d*)(pose_i+4))->addForceFromPoint( m_apos[j], aforce[ia], *((Quat4d*)(poseF_i+4)) );
+            ((Vec3d *)(poseF_i)) ->add( aforce[ia] );
+            ia++;
+        }
+    }
+}
+
+void RBodyForce(){
+    // : Force between two rigid body molecules
+    for(int ifrag=0; ifrag<nFrag; ifrag++){
+        int ia = frag2a[ifrag];
+        int ni = fragNa[ifrag];
+        Vec3d * m_apos = fapos0s[ifrag];
+        for(int iatom=0; iatom<ni; iatom++){
+            int ig = ifrag+iatom;
+            Vec3d REQi = aREQ[ig];
+            Vec3d pi   = apos[ig];
+            Vec3d f; f.set(0.0f);
+            for(int jfrag=0; jfrag<nFrag; jfrag++){
+                int ja = frag2a[ifrag];
+                int nj = fragNa[ifrag];
+                Vec3d * m_apos = fapos0s[ifrag];
+                if(jfrag==ifrag){ continue; }
+                for(int jatom=0; jatom<nj; jatom++){
+                    int jg = jfrag+jatom;
+                    Vec3d REQj = aREQ[jg];
+                    Vec3d pj   = apos[jg];
+                    addAtomicForceLJQ( pj-pi, f, REQi.x+REQj.x, REQi.y*REQj.y, REQi.z*REQj.z );
+                }
+            }
+            //aforce[ig] = f; // Not necessary
+            int im8 = ifrag<<3;
+            double * pose_i  = poses +im8;
+            double * poseF_i = poseFs+im8;
+            Vec3d  * m_apos  = fapos0s[ifrag];
+            ((Quat4d*)(pose_i+4))->addForceFromPoint( m_apos[iatom], f, *((Quat4d*)(poseF_i+4)) );
+            ((Vec3d *)(poseF_i)) ->add( f );
+        }
+    }
+    //exit(0);
+}
+
+
 
 void ang_b2a(){
     for(int i=0; i<nang; i++){
@@ -153,10 +258,8 @@ void eval_bonds( const bool substract_LJq ){
         f.mul( (l-bond_0[ib])*bond_k[ib] );
 
         if( substract_LJq ){
-            double rij = aLJq[iat.x].x+aLJq[iat.y].x;
-            double eij = aLJq[iat.x].y*aLJq[iat.y].y;
-            double qq  = aLJq[iat.x].z*aLJq[iat.y].z;
-            addAtomicForceLJQ( dp, f, rij, -eij, qq );
+            //addAtomicForceLJQ( dp, f, aREQ[iat.x].x+aREQ[iat.y].x, -aREQ[iat.x].y*aREQ[iat.y].y, aREQ[iat.x].z*aREQ[iat.y].z );
+            addAtomicForceMorseQ( dp, f, aREQ[iat.x].x+aREQ[iat.y].x, -aREQ[iat.x].y*aREQ[iat.y].y, aREQ[iat.x].z*aREQ[iat.y].z, gridFF.alpha );
         }
 
         aforce[iat.x].add( f );
@@ -224,13 +327,6 @@ void eval_angcos(){
         //aforce[ia.x] ????
         // TODO : zero moment condition
     }
-
-    /*
-    evalGridFFs(int natoms, Vec3d * apos, Vec3d * aLJqs ){
-        // TODO : this will be faster since we may reuse dpos, sqrt() function etc.
-    }
-    */
-
 }
 
 void eval_angles(){
@@ -305,12 +401,12 @@ void eval_torsion(){
 
 void eval_LJq_On2(){
     for(int i=0; i<natoms; i++){
-        Vec3d ljq_i = aLJq[i];
+        Vec3d ljq_i = aREQ[i];
         Vec3d pi    = apos[i];
         Vec3d f; f.set(0.0);
         for(int j=0; j<natoms; j++){
             if(i!=j){
-                Vec3d& ljq_j = aLJq[j];
+                Vec3d& ljq_j = aREQ[j];
                 double rij = ljq_i.x+ljq_j.x;
                 double eij = ljq_i.y*ljq_j.y;
                 double qq  = ljq_i.z*ljq_j.z;
@@ -321,17 +417,28 @@ void eval_LJq_On2(){
     }
 }
 
+void eval_MorseQ_On2(){
+    for(int i=0; i<natoms; i++){
+        Vec3d REQi = aREQ[i];
+        Vec3d pi   = apos[i];
+        Vec3d f; f.set(0.0);
+        for(int j=0; j<natoms; j++){
+            if(i!=j){
+                Vec3d& REQj = aREQ[j];
+                //printf("(%i,%i)", i, j );
+                addAtomicForceMorseQ( pi-apos[j], f, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z, gridFF.alpha );
+            }
+        }
+        aforce[i].add(f);
+    }
+    //exit(0);
+}
+
 void eval_FFgrid(){
     for(int i=0; i<natoms; i++){
         gridFF.addForce( apos[i], aPLQ[i], aforce[i] );
     }
 }
-
-/*
-void eval_spring( Vec3d hray, double k ){
-
-};
-*/
 
 void printBondParams(){
     for( int i=0; i<nbonds; i++ ){

@@ -1,11 +1,13 @@
 #ifndef LuaHelpers_h
 #define LuaHelpers_h
 
-#include <string>
-#include <vector>
-#include <iostream>
-
 // http://www.lua.org/manual/5.2/manual.html#lua_load
+
+#include <cstring>
+#include <cstdio>
+//#include <string>
+#include <vector>
+//#include <iostream>
 
 #ifdef __cplusplus
 # include <lua5.2/lua.hpp>

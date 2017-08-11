@@ -20,6 +20,11 @@
 #include "Molecule.h"
 #include "MMFF.h"
 #include "MMFFBuilder.h"
+
+
+//#include "RBMMFF.h"
+
+
 #include "DynamicOpt.h"
 
 #include "AppSDL2OGL_3D.h"
@@ -240,10 +245,10 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     //Vec3d pos = (Vec3d){0.0,0.0,0.0};
     Mat3d rot; rot.setOne();
-    builder.insertMolecule (&mol, {0.0,0.0,0.0}, rot );
-    builder.insertMolecule (&mol, {5.0,0.0,0.0}, rot );
-    builder.insertMolecule (&mol, {0.0,5.0,0.0}, rot );
-    builder.insertMolecule (&mol, {5.0,5.0,0.0}, rot );
+    builder.insertMolecule (&mol, {0.0,0.0,0.0}, rot, false );
+    builder.insertMolecule (&mol, {5.0,0.0,0.0}, rot, false );
+    builder.insertMolecule (&mol, {0.0,5.0,0.0}, rot, false );
+    builder.insertMolecule (&mol, {5.0,5.0,0.0}, rot, false );
     builder.assignAtomTypes(&params );
     builder.toMMFF (&world, &params);
 
@@ -330,7 +335,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     int iatom = 11;
     printf( "testREQ   (%g,%g,%g) -> PLQ (%g,%g,%g) \n",        testREQ.x, testREQ.y, testREQ.z, testPLQ.x, testPLQ.y, testPLQ.z   );
-    printf( "aREQs[%i] (%g,%g,%g) -> PLQ (%g,%g,%g) \n", iatom, world.aLJq[iatom].x, world.aLJq[iatom].y, world.aLJq[iatom].z, world.aPLQ[iatom].x, world.aPLQ[iatom].y, world.aPLQ[iatom].z );
+    printf( "aREQs[%i] (%g,%g,%g) -> PLQ (%g,%g,%g) \n", iatom, world.aREQ[iatom].x, world.aREQ[iatom].y, world.aREQ[iatom].z, world.aPLQ[iatom].x, world.aPLQ[iatom].y, world.aPLQ[iatom].z );
 
    // exit(0);
 
@@ -398,7 +403,8 @@ void AppMolecularEditor2::draw(){
         //printf( "DEBUG x.2 \n" );
         world.eval_angcos();
         //printf( "DEBUG x.3 \n" );
-        world.eval_LJq_On2();
+        //world.eval_LJq_On2();
+        world.eval_MorseQ_On2();
 
 
         //exit(0);
