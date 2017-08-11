@@ -18,6 +18,7 @@
 #include "raytrace.h"
 #include "Molecule.h"
 #include "MMFF.h"
+#include "MMFFBuilder.h"
 #include "DynamicOpt.h"
 
 

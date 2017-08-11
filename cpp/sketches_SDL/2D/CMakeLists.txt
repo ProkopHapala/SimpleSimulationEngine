@@ -36,9 +36,9 @@ target_link_libraries( test_TerrainCubic ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2
 add_executable       ( test_TerrainRBF test_TerrainRBF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainRBF> $<TARGET_OBJECTS:TiledView> )
 target_link_libraries( test_TerrainRBF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+include_directories( ${COMMON_SRCS}/dynamics/Molecular )
 add_executable       ( test_GlobOpt2D test_GlobOpt2D.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:MoleculeWorld2D> $<TARGET_OBJECTS:DynamicOpt> $<TARGET_OBJECTS:Body2D> )
 target_link_libraries( test_GlobOpt2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
 
 add_executable       ( test_Plotting2D test_Plotting2D.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:MoleculeWorld2D> $<TARGET_OBJECTS:DynamicOpt> $<TARGET_OBJECTS:Body2D> )
 target_link_libraries( test_Plotting2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )

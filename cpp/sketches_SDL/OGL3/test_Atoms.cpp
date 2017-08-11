@@ -132,11 +132,11 @@ int setup(){
     printf("str_glslf_Sphere3D_depth:>>%s<<\n", str_glslf_Sphere3D_depth );
 
     shGeom=new Shader();
-	shGeom-> init_str ( str_glslv_Instance3D, str_glslf_sin );
+	shGeom-> init_str ( str_glslv_Instance3D, str_glslf_sin, NULL );
     shGeom->getDefaultUniformLocation();
 
     shFragedDepth=new Shader();
-    shFragedDepth->init_str( str_glslv_Instance3D, str_glslf_Sphere3D_depth );
+    shFragedDepth->init_str( str_glslv_Instance3D, str_glslf_Sphere3D_depth, NULL );
     shFragedDepth->getDefaultUniformLocation();
 
     delete [] str_glslv_Instance3D; delete [] str_glslf_Sphere3D; delete [] str_glslf_Sphere3D_depth;
