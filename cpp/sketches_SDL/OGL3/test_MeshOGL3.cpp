@@ -29,6 +29,8 @@
 #include "GLObject.h"
 #include "Shader.h"
 
+#include "IO_utils.h"
+
 int WIDTH  = 800;
 int HEIGHT = 800;
 SDL_Window   * window  = NULL;
@@ -63,6 +65,16 @@ int render_type = 1;
 
 void setup(){
 
+    char* names[] = { "shade3D.frag", "color3D.vert", "color3D.frag" };
+
+    //char* src = fileGetSection( "common_resources/shaders/Basic_small.glslf", "//>>const3D.vert", "//<<" );
+    //printf("src : \n %s\n", src);
+
+    int nkeys = 3;
+    char ** srcs = fileGetSections( "common_resources/shaders/Basic.glslf", nkeys, names, "//>>" );
+    for(int ikey=0; ikey<nkeys; ikey++){ printf("##### shader: %s\n%s\n", names[ikey], srcs[ikey] ); }
+    //exit(0);
+
     mesh.fromFileOBJ( "common_resources/turret.obj" );
     mesh.polygonsToTriangles(false);
     mesh.tris2normals(true);
@@ -96,7 +108,15 @@ void setup(){
 	shConst->getDefaultUniformLocation();
 
 	shader1=new Shader();
-	shader1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
+	char*  shader_names[] = { "shade3D.vert", "shade3D.frag" };
+	char** shader_srcs    = fileGetSections( "common_resources/shaders/Basic.glslf", 2, shader_names, "//>>" );
+	for(int i=0; i<2; i++){ printf("##### shader: %s\n%s\n", shader_names[i], shader_srcs[i] ); }
+	shader1->init_str(shader_srcs[0],shader_srcs[1],NULL);
+	//saveStr("shade3D.vert.glslv", shader_srcs[0]);
+	//saveStr("shade3D.frag.glslv", shader_srcs[1]);
+    //shader1->init( "shade3D.vert.glslv",   "shade3D.frag.glslv"   );
+	//exit(0);
+	//shader1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
 	shader1->getDefaultUniformLocation();
 
 	shader1->use();

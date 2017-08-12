@@ -11,6 +11,9 @@
 #include "Vec3.h"
 
 
+const int N_CHAR_TMP = 256;
+
+
 inline char * fgets_comment( char * line, int num, FILE * stream ){
     constexpr int NMaxComment = 10;
     for(int i=0; i<NMaxComment; i++){
@@ -26,7 +29,6 @@ inline  char* filetobuf(char const  *fname){
 	FILE *fptr;
 	long length;
 	char *buf;
-
 	fptr = fopen(fname, "rb");			// Open file for reading
 	if(fptr==NULL){
         printf("Failed to load %s \n", fname );
@@ -42,6 +44,85 @@ inline  char* filetobuf(char const  *fname){
 	buf[length] = 0; 					// Null terminator
 	return buf; 						// Return the buffer
 }
+
+inline int fileGetNextKey( FILE  *fptr, char * keystr, char * tmp ){
+	int nch = strlen(keystr);
+    while(fgets(tmp, N_CHAR_TMP, fptr)){  if( strncmp(tmp,keystr,nch)==0 ) return ftell(fptr); };
+    return -1;
+}
+
+inline char * fileCut( FILE * fptr, int ibeg, int iend ){
+    int nch     = iend-ibeg;
+    char * buff = new char[nch+1];
+    fseek(fptr, ibeg, SEEK_SET);
+    fread(buff, nch, 1, fptr);
+    buff[nch]='\0';
+    return buff;
+}
+
+// cut piece out of file
+inline char* fileGetSection(char const  *fname, char * keystr, char * endstr ){
+	FILE  *fptr = fopen(fname, "rb");	  // Open file for reading
+	if(fptr==NULL){ printf("Failed to load %s \n", fname ); return NULL; }
+    char *buff = NULL;
+	char      tmp[N_CHAR_TMP];
+    int ibeg = fileGetNextKey(fptr, keystr, tmp);
+    if( ibeg>=0 ){
+        int iend = fileGetNextKey(fptr, endstr, tmp);
+        if(iend>=0){           // cut (ibeg,iend)
+            buff = fileCut(fptr, ibeg, iend-strlen(endstr)-1 );
+        }
+    }
+    fclose (fptr);
+	return buff;
+}
+
+inline int whichKey( char * tmp, int nkey, char ** keys ){
+    for(int ikey=0; ikey<nkey; ikey++){
+        char * key = keys[ikey];
+        int i=0;
+        bool match=true;
+        while(key[i]!='\0'){ if(key[i]!=tmp[i])match=false; i++; }
+        if(match) return ikey;
+    }
+    return -1;
+}
+
+inline char ** fileGetSections(char const  *fname, int nkey, char ** keys, char *begstr ){
+	FILE  *fptr = fopen(fname, "rb");	  // Open file for reading
+	if(fptr==NULL){ printf("Failed to load %s \n", fname ); return NULL; }
+	char      tmp[N_CHAR_TMP];
+	int nb = strlen(begstr);
+	char** result = new char*[nkey];
+	for(int ikey=0; ikey<nkey; ikey++){ result[ikey] = NULL; }
+	int ikey=-1,i0=-1,i1;
+	while( (i1=fileGetNextKey( fptr, begstr, tmp ))>=0 ){
+        //if((ikey>=0)&&(i0>=0)){
+        //    //printf(" ikey %i i0  %i i1 %i \n", ikey, i0, i1 );
+        //    result[ikey] = fileCut( fptr, i0, i1 );
+        //}
+        if((ikey>=0)&&(i0>=0)){ result[ikey] = fileCut( fptr, i0, i1 ); }
+        ikey = whichKey( tmp+nb, nkey, keys );
+        i0=i1;
+	};
+	fseek(fptr, 0, SEEK_END);
+	if((ikey>=0)&&(i0>=0)) result[ikey] = fileCut( fptr, i0, ftell(fptr) ); // seaction at end of file
+	return result;
+}
+
+inline int checkNullSections( int n, char ** sections ){
+    for(int i=0; i<n; i++){ if(sections[i]==NULL) return i; }
+    return 0;
+}
+
+inline void saveStr( char * fname, char * str ){
+    int n = strlen(str);
+    FILE  *fptr = fopen(fname, "wb");
+    fwrite( str, n, 1, fptr);
+    fclose(fptr);
+}
+
+
 
 /*
 int loadColums(char const  *fname, char const  *format, ... ){

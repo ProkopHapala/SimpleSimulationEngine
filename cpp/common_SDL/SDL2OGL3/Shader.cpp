@@ -94,12 +94,8 @@ int Shader::init( const char * vertName, const char * fragName, const char * GSN
     char * vertexsource   = filetobuf( vertName );  if( vertexsource   == NULL ){ printf( "cannot load %s \n", vertName ); exit(1); }
     char * fragmentsource = filetobuf( fragName );  if( fragmentsource == NULL ){ printf( "cannot load %s \n", fragName ); exit(1); }
     char * GSsrc = NULL;
-    if( GSName ){
-        GSsrc = filetobuf( GSName );  if( GSsrc == NULL ){ printf( "cannot load %s \n", GSName ); exit(1); }
-        ret = init_str( vertexsource , fragmentsource, GSsrc );
-    }else{
-        ret = init_str( vertexsource , fragmentsource, NULL );
-    }
+    if( GSName ){ GSsrc = filetobuf( GSName );  if( GSsrc == NULL ){ printf( "cannot load %s \n", GSName ); exit(1); } }
+    ret = init_str( vertexsource , fragmentsource, GSsrc );
     delete [] vertexsource;
     delete [] fragmentsource;
     return ret;
