@@ -22,12 +22,11 @@ inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps,
 
 inline void addAtomicForceMorseQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double q, double alpha ){
     //Vec3f dp; dp.set_sub( p2, p1 );
-    double r     = dp.norm();
+    double r     = sqrt( dp.norm2()+R2SAFE );
     double expar = exp( alpha*(r-r0));
     //double E     = eps*( expar*expar - 2*expar );
-    double ir    = 1/(r+RSAFE);
+    double ir    = 1/r;
     double fr    = eps*2*alpha*( expar*expar - expar ) - 14.3996448915f*q*ir*ir;
-
     //printf( " %g -> %g | (%g,%g,%g) %g\n" , r, fr,  r0, eps,  q, alpha );
     f.add_mul( dp, fr*ir );
 }
@@ -51,9 +50,9 @@ inline void addAtomicForceLJ( const Vec3d& dp, Vec3d& f, double r0, double eps )
 
 inline void addAtomicForceExp( const Vec3d& dp, Vec3d& f, double r0, double eps, double alpha ){
     //Vec3f dp; dp.set_sub( p2, p1 );
-    double r    = dp.norm();
+    double r    = sqrt(dp.norm2() + R2SAFE );
     double E    = eps*exp( alpha*(r-r0) );
-    double fr   = alpha*E/(r+RSAFE);
+    double fr   = alpha*E/r;
     f.add_mul( dp, fr );
     //f.add_mul( dp, 1/(dp.norm2()+R2SAFE) ); // WARRNING DEBUG !!!!
 }

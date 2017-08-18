@@ -104,6 +104,35 @@ inline double erf_6_plus(double x){
 }
 inline double erf_6(double x){ if(x>0){ return erf_6_plus(x); }else{ return -erf_6_plus(-x); } }
 
+template <typename T>
+inline T fastExp(T x, size_t n ){
+    T e = 1 + x/(1<<n);
+    for(int i=0; i<n; i++) e*=e;
+    return e;
+}
+
+template <typename T>
+inline T fastExp_n4(T x){
+    T e = 1 + x*0.0625;
+    e*=e; e*=e; e*=e; e*=e;
+    return e;
+}
+
+template <typename T>
+inline T fastExp_n4m(T x){
+    T e = 1 + x*0.0625;
+    if(e<0)e=0; // smooth landing at zero - cut of divergent part
+    e*=e; e*=e; e*=e; e*=e;
+    return e;
+}
+
+template <typename T>
+inline T fastExp_n8(T x){
+    T e = 1 + x*0.00390625;
+    e*=e; e*=e; e*=e; e*=e;
+    e*=e; e*=e; e*=e; e*=e;
+    return e;
+}
 
 // from http://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp/
 inline double fastPow(double a, double b) {
