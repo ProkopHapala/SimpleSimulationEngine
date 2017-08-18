@@ -5,6 +5,18 @@
 # https://stackoverflow.com/questions/33201384/pyqt-opengl-drawing-simple-scenes
 # from here : https://stackoverflow.com/questions/33201384/pyqt-opengl-drawing-simple-scenes
 
+
+
+'''
+TODO:
+ - Mouse
+ - textures iChannle
+ - frameBuffer (multiplass rendering)
+
+'''
+
+
+
 # PyQt4 imports
 from PyQt4 import QtGui, QtCore, QtOpenGL
 from PyQt4.QtOpenGL import QGLWidget,QGLFormat
@@ -71,9 +83,26 @@ class GLPlotWidget(QGLWidget):
         fs = glu.compile_fragment_shader(self.fragment_code)     # compile the fragment shader
         self.shader = glu.link_shader_program(vs, fs)            # compile the vertex shader
         gl.glUseProgram(self.shader)
+        '''
+        uniform vec3      iResolution;           // viewport resolution (in pixels)
+        uniform float     iTime;                 // shader playback time (in seconds)
+        uniform float     iTimeDelta;            // render time (in seconds)
+        uniform int       iFrame;                // shader playback frame
+        uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
+        uniform vec4      iDate;                 // (year, month, day, time in seconds)
+        uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
+        //uniform float     iChannelTime[4];       // channel playback time (in seconds)
+        //uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)
+        //uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube
+        '''
         self.UNIFORM_LOCATIONS = { 
-            'iTime':       gl.glGetUniformLocation( self.shader, 'iTime' ), 
-            'iResolution': gl.glGetUniformLocation( self.shader, 'iResolution' ), 
+            'iResolution':  gl.glGetUniformLocation( self.shader, 'iResolution' ),
+            'iTime':        gl.glGetUniformLocation( self.shader, 'iTime'       ), 
+            'iTimeDelta':   gl.glGetUniformLocation( self.shader, 'iTimeDelta'  ), 
+            'iFrame':       gl.glGetUniformLocation( self.shader, 'iFrame'      ), 
+            'iMouse':       gl.glGetUniformLocation( self.shader, 'iMouse'      ), 
+            'iDate':        gl.glGetUniformLocation( self.shader, 'iDate'       ), 
+            'iSampleRate':  gl.glGetUniformLocation( self.shader, 'iSampleRate' ), 
         }
         print self.UNIFORM_LOCATIONS
         self.frameCount = 0
@@ -84,19 +113,17 @@ class GLPlotWidget(QGLWidget):
         #print "self.frameCount = ", self.frameCount
         #try:
         """Paint the scene."""
+        #print "QCursor.pos () : ", QtGui.QCursor.pos()
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)    # clear the buffer
         self.vbo.bind()                       # bind the VBO
         gl.glEnableVertexAttribArray(0)
         gl.glVertexAttribPointer(0, 2, gl.GL_FLOAT, gl.GL_FALSE, 0, None)   # these vertices contain 2 single precision coordinates
         gl.glUseProgram( self.shader)
+        mousePos = self.mapFromGlobal( QtGui.QCursor.pos() )
         gl.glUniform1f ( self.UNIFORM_LOCATIONS['iTime'],       0.01*self.frameCount ) 
         gl.glUniform3f ( self.UNIFORM_LOCATIONS['iResolution'], 1.0*self.width, 1.0*self.height, 1.0 )
+        gl.glUniform4f ( self.UNIFORM_LOCATIONS['iMouse'],      0.1*mousePos.x(), 0.1*mousePos.y(), 0.0, 0.0 )
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, len(self.points))   # draw "count" points from the VBO
-        #gl.glDrawArrays(gl.GL_LINE_STRIP, 0, len(self.points))   # draw "count" points from the VBO
-        #except:
-        #    print "Unexpected error:", sys.exc_info()[0]
-        #    print "some error in paintGL"
-        #    exit()
         self.frameCount +=1
 
     def resizeGL(self, width, height):
@@ -113,12 +140,19 @@ class MainWindow(QtGui.QWidget):
         self.widget = GLPlotWidget(qgl_format)
         self.widget.vertex_code   = glu.DEFAULT_VERTEX_SHADER
         #self.widget.fragment_code = glu.DEFAULT_FRAGMENT_SHADER
+
+        '''
         with open("Torus_intersection.glslf","r") as f:
             #self.widget.fragment_code=f.read()
             self.widget.fragment_code=glu.fromShaderToy(f.read())
             #print self.widget.fragment_code
             with open("fragment_code.glslf", "w") as fo:
                 fo.write(self.widget.fragment_code)
+        '''
+
+        name, desc, codes = glu.downloadFromShaderToy('Xds3zN')
+        self.widget.fragment_code=glu.fromShaderToy(codes[0].encode('utf8'))
+        with open("fragment_code.glslf", "w") as fo: fo.write(self.widget.fragment_code)
 
         self.button = QtGui.QPushButton('Test', self)
 
