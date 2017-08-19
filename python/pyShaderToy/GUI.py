@@ -5,8 +5,6 @@
 # https://stackoverflow.com/questions/33201384/pyqt-opengl-drawing-simple-scenes
 # from here : https://stackoverflow.com/questions/33201384/pyqt-opengl-drawing-simple-scenes
 
-
-
 '''
 TODO:
  - Mouse
@@ -15,19 +13,18 @@ TODO:
 
 '''
 
-
-
 # PyQt4 imports
-from PyQt4 import QtGui, QtCore, QtOpenGL
+
+from PyQt4          import QtGui, QtCore, QtOpenGL
 from PyQt4.QtOpenGL import QGLWidget,QGLFormat
-from PyQt4.QtCore import QTimer
+from PyQt4.QtCore   import QTimer
 # PyOpenGL imports
 import OpenGL.GL as gl
 import OpenGL.arrays.vbo as glvbo
 
 import GLUtils as glu
 
-import sys
+import sys,os
 import numpy as np
 
 
@@ -56,13 +53,12 @@ def create_window(window_class):
 
 class GLPlotWidget(QGLWidget):
     # default window size
-    width, height = 800, 800
+    width, height = 256, 256
 
     def __init__(self, parent):
         QGLWidget.__init__(self, parent)
         self.setMinimumSize(self.width, self.height)
         self.frameCount = 0
-
         # Set up a timer to call updateGL() every 0 ms
         self.timer = QTimer()
         self.timer.setInterval(10)
@@ -71,30 +67,14 @@ class GLPlotWidget(QGLWidget):
         #timer.timeout.connect( self.widget.update)
         self.timer.start()
 
-
-    def initializeGL(self):
-        """Initialize OpenGL, VBOs, upload data on the GPU, etc."""
-        gl.glClearColor(0, 0, 0, 0)          # background color
-
-        self.points = np.array([[-1.0,-1.0],[1.0,-1.0],[-1.0,1.0],   [1.0,1.0],[1.0,-1.0],[-1.0,1.0]], dtype=np.float32)
-
-        self.vbo = glvbo.VBO(self.points)    # create a Vertex Buffer Object with the specified data
+    def updateShader(self):
+        try:gl.glDeleteShader(self.shader)
+        except:pass
+        self.vertex_code = glu.DEFAULT_VERTEX_SHADER
         vs = glu.compile_vertex_shader  (self.vertex_code)       # compile the vertex shader
         fs = glu.compile_fragment_shader(self.fragment_code)     # compile the fragment shader
         self.shader = glu.link_shader_program(vs, fs)            # compile the vertex shader
         gl.glUseProgram(self.shader)
-        '''
-        uniform vec3      iResolution;           // viewport resolution (in pixels)
-        uniform float     iTime;                 // shader playback time (in seconds)
-        uniform float     iTimeDelta;            // render time (in seconds)
-        uniform int       iFrame;                // shader playback frame
-        uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
-        uniform vec4      iDate;                 // (year, month, day, time in seconds)
-        uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
-        //uniform float     iChannelTime[4];       // channel playback time (in seconds)
-        //uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)
-        //uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube
-        '''
         self.UNIFORM_LOCATIONS = { 
             'iResolution':  gl.glGetUniformLocation( self.shader, 'iResolution' ),
             'iTime':        gl.glGetUniformLocation( self.shader, 'iTime'       ), 
@@ -104,16 +84,20 @@ class GLPlotWidget(QGLWidget):
             'iDate':        gl.glGetUniformLocation( self.shader, 'iDate'       ), 
             'iSampleRate':  gl.glGetUniformLocation( self.shader, 'iSampleRate' ), 
         }
-        print self.UNIFORM_LOCATIONS
+        #print self.UNIFORM_LOCATIONS
+        gl.glUniform3f ( self.UNIFORM_LOCATIONS['iResolution'], 1.0*self.width, 1.0*self.height, 1.0 )
+
+    def initializeGL(self):
+        """Initialize OpenGL, VBOs, upload data on the GPU, etc."""
+        self.points = np.array([[-1.0,-1.0],[1.0,-1.0],[-1.0,1.0],   [1.0,1.0],[1.0,-1.0],[-1.0,1.0]], dtype=np.float32)
+        self.vbo = glvbo.VBO(self.points)    # create a Vertex Buffer Object with the specified data
+        self.updateShader()
+        gl.glClearColor(0, 0, 0, 0)          # background color
         self.frameCount = 0
 
-        # Set up a timer to call updateGL() every 0 ms
-
     def paintGL(self):
-        #print "self.frameCount = ", self.frameCount
-        #try:
         """Paint the scene."""
-        #print "QCursor.pos () : ", QtGui.QCursor.pos()
+        #print "self.frameCount = ", self.frameCount
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)    # clear the buffer
         self.vbo.bind()                       # bind the VBO
         gl.glEnableVertexAttribArray(0)
@@ -121,7 +105,7 @@ class GLPlotWidget(QGLWidget):
         gl.glUseProgram( self.shader)
         mousePos = self.mapFromGlobal( QtGui.QCursor.pos() )
         gl.glUniform1f ( self.UNIFORM_LOCATIONS['iTime'],       0.01*self.frameCount ) 
-        gl.glUniform3f ( self.UNIFORM_LOCATIONS['iResolution'], 1.0*self.width, 1.0*self.height, 1.0 )
+        #gl.glUniform3f ( self.UNIFORM_LOCATIONS['iResolution'], 1.0*self.width, 1.0*self.height, 1.0 )
         gl.glUniform4f ( self.UNIFORM_LOCATIONS['iMouse'],      0.1*mousePos.x(), 0.1*mousePos.y(), 0.0, 0.0 )
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, len(self.points))   # draw "count" points from the VBO
         self.frameCount +=1
@@ -130,6 +114,7 @@ class GLPlotWidget(QGLWidget):
         """Called upon window resizing: reinitialize the viewport."""
         self.width, self.height = width, height   # update the window size
         gl.glViewport(0, 0, width, height)        # paint within the whole window
+        gl.glUniform3f ( self.UNIFORM_LOCATIONS['iResolution'], 1.0*self.width, 1.0*self.height, 1.0 )
 
 class MainWindow(QtGui.QWidget):
     def __init__(self):
@@ -137,33 +122,68 @@ class MainWindow(QtGui.QWidget):
         qgl_format = QGLFormat()
         qgl_format.setSwapInterval(1)
 
-        self.widget = GLPlotWidget(qgl_format)
-        self.widget.vertex_code   = glu.DEFAULT_VERTEX_SHADER
-        #self.widget.fragment_code = glu.DEFAULT_FRAGMENT_SHADER
+        w = QtGui.QFont(); self.font=w; w.setFamily('Lucida'); w.setFixedPitch(True); w.setPointSize(10)
 
-        '''
-        with open("Torus_intersection.glslf","r") as f:
-            #self.widget.fragment_code=f.read()
-            self.widget.fragment_code=glu.fromShaderToy(f.read())
-            #print self.widget.fragment_code
-            with open("fragment_code.glslf", "w") as fo:
-                fo.write(self.widget.fragment_code)
-        '''
+        l0 = QtGui.QHBoxLayout();  self.setLayout(l0)
+        w = GLPlotWidget(qgl_format); self.glview = w; l0.addWidget(self.glview); w.setSizePolicy(QtGui.QSizePolicy.Expanding,QtGui.QSizePolicy.Expanding)
+        
+        l1 = QtGui.QVBoxLayout(); l0.addLayout(l1)
+        w = QtGui.QTextEdit(self);            self.txtCode = w; l1.addWidget(w); w.setFont(self.font); w.setLineWrapMode(QtGui.QTextEdit.NoWrap)  
 
-        name, desc, codes = glu.downloadFromShaderToy('Xds3zN')
-        self.widget.fragment_code=glu.fromShaderToy(codes[0].encode('utf8'))
-        with open("fragment_code.glslf", "w") as fo: fo.write(self.widget.fragment_code)
+        l2 = QtGui.QHBoxLayout(); l1.addLayout(l2)
+        w = QtGui.QPushButton('update',self); self.btShUpdate = w; l2.addWidget(w); w.setToolTip('update shader from code'); w.clicked.connect(self.updateShader); 
+        w = QtGui.QPushButton('save',self);   self.btShSave   = w; l2.addWidget(w); w.setToolTip('save shader from code');   w.clicked.connect(self.saveShaderDlg); 
+        w = QtGui.QPushButton('load',self);   self.btShLoad   = w; l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg); 
+        w = QtGui.QLineEdit(); self.bxShToy = w; l2.addWidget(w);  w.returnPressed.connect(self.downloadShaderEvent )
+        #l3 = QtGui.QHBoxLayout(); l1.addLayout(l3)
+        #w = QtGui.QLineEdit(); 
+        #w = QtGui.QPushButton('fromShadeToy',self);   self.btSave  = w; l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg);
+        
+        #self.loadShaderToy ("Torus_intersection.glslf")
+        self.loadShader    ("Torus_intersection.glslf")
+        #self.downloadShader("Xds3zN")
 
-        self.button = QtGui.QPushButton('Test', self)
+    def saveShaderDlg(self):
+        fname = QtGui.QFileDialog.getSaveFileName(self, 'Save Shader ... ', os.getcwd(), selectedFilter='*.glslf')
+        if fname:
+            print "saving shader to file : ", fname
+            with open(fname, "w") as fo: fo.write(self.glview.fragment_code)
+    
+    def loadShaderDlg(self):
+        fname= QtGui.QFileDialog.getOpenFileName(self, 'Load Shader ... ', os.getcwd(), selectedFilter='*.glslf')
+        if fname:
+            print "loading shader to file : ",fname
+            self.loadShader(fname)
+            self.updateShader()
 
-        mainLayout = QtGui.QHBoxLayout()
-        mainLayout.addWidget(self.widget)
-        mainLayout.addWidget(self.button)
+    def updateShader(self):
+        self.glview.fragment_code = unicode( self.txtCode.toPlainText()).encode('utf8');
+        self.glview.updateShader()  
 
-        self.setLayout(mainLayout)
+    def loadShader(self, fname ):
+        w = self.glview
+        with open(fname,"r") as f:w.fragment_code=f.read()
+        self.txtCode.setPlainText( w.fragment_code )
+
+    def downloadShader(self, id):
+        w = self.glview 
+        name, desc, codes = glu.downloadFromShaderToy(id)
+        w.fragment_code=glu.fromShaderToy(codes[0].encode('utf8'))
+        #with open("fragment_code.glslf", "w") as fo: fo.write(w.fragment_code)
+        self.txtCode.setPlainText( w.fragment_code )
+    
+    def downloadShaderEvent(self):
+        shId = str(self.bxShToy.text())
+        fname = shId+".glslf"
+        try:
+            self.loadShade(fname)
+        except:
+            self.downloadShader( shId )
+            with open(fname, "w") as fo: fo.write(self.glview.fragment_code)
+        self.glview.updateShader( )
 
 if __name__ == '__main__':
-    app = QtGui.QApplication(['Yo'])
+    app = QtGui.QApplication(['pyShaderToy'])
     window = MainWindow()
     window.show()
     app.exec_()
