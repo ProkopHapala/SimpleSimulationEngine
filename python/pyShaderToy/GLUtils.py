@@ -48,6 +48,20 @@ void main(){
 }
 """
 
+
+SHADERTOY_HEADER = '''
+uniform vec3      iResolution;           // viewport resolution (in pixels)
+uniform float     iTime;                 // shader playback time (in seconds)
+uniform float     iTimeDelta;            // render time (in seconds)
+uniform int       iFrame;                // shader playback frame
+uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
+uniform vec4      iDate;                 // (year, month, day, time in seconds)
+//uniform float     iChannelTime[4];       // channel playback time (in seconds)
+//uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)
+//uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube
+//uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
+'''
+
 def getShaderToyUrl(id):
     import urllib, urllib2, json
     url = 'https://www.shadertoy.com/shadertoy'
@@ -111,20 +125,5 @@ def link_shader_program(vertex_shader, fragment_shader):
 
 
 def fromShaderToy(vertex_code):
-    vertex_code_ = '''
-    uniform vec3      iResolution;           // viewport resolution (in pixels)
-    uniform float     iTime;                 // shader playback time (in seconds)
-    uniform float     iTimeDelta;            // render time (in seconds)
-    uniform int       iFrame;                // shader playback frame
-    uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
-    uniform vec4      iDate;                 // (year, month, day, time in seconds)
-    //uniform float     iChannelTime[4];       // channel playback time (in seconds)
-    //uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)
-    //uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube
-    //uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
-    ''' + vertex_code + '''
-    void main(){
-        mainImage( gl_FragColor, gl_FragCoord );
-    };
-    '''
+    vertex_code_ =  SHADERTOY_HEADER + vertex_code + "\n\nvoid main(){mainImage( gl_FragColor, gl_FragCoord );};"
     return vertex_code_

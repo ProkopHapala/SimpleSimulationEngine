@@ -18,9 +18,7 @@ from PyQt4.QtOpenGL import QGLWidget,QGLFormat
 from PyQt4.QtCore   import QTimer
 import OpenGL.GL as gl
 import OpenGL.arrays.vbo as glvbo
-
 import GLUtils as glu
-
 import sys,os
 import numpy as np
 
@@ -91,7 +89,7 @@ class GLPlotWidget(QGLWidget):
         self.points = np.array([[-1.0,-1.0],[1.0,-1.0],[-1.0,1.0],   [1.0,1.0],[1.0,-1.0],[-1.0,1.0]], dtype=np.float32)
         self.vbo = glvbo.VBO(self.points)    # create a Vertex Buffer Object with the specified data
         self.updateShader()
-        gl.glClearColor(0, 0, 0, 0)          # background color
+        #gl.glClearColor(0, 0, 0, 0)          # background color
         self.frameCount = 0
 
     def paintGL(self):
@@ -104,7 +102,6 @@ class GLPlotWidget(QGLWidget):
         gl.glUseProgram( self.shader)
         mousePos = self.mapFromGlobal( QtGui.QCursor.pos() )
         gl.glUniform1f ( self.UNIFORM_LOCATIONS['iTime'],       0.01*self.frameCount ) 
-        #gl.glUniform3f ( self.UNIFORM_LOCATIONS['iResolution'], 1.0*self.width, 1.0*self.height, 1.0 )
         gl.glUniform4f ( self.UNIFORM_LOCATIONS['iMouse'],      0.1*mousePos.x(), 0.1*mousePos.y(), 0.0, 0.0 )
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, len(self.points))   # draw "count" points from the VBO
         self.frameCount +=1
@@ -118,30 +115,28 @@ class GLPlotWidget(QGLWidget):
 class MainWindow(QtGui.QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
-        qgl_format = QGLFormat()
-        qgl_format.setSwapInterval(1)
+        
+        with open('primitives.glslf','r') as f: self.src_primitives = f.read()
+        with open('sdRayMarchRenderer.glslf','r') as f: self.src_renderer   = f.read()
 
         w = QtGui.QFont(); self.font=w; w.setFamily('Lucida'); w.setFixedPitch(True); w.setPointSize(10)
 
         l0 = QtGui.QHBoxLayout();  self.setLayout(l0)
+        qgl_format = QGLFormat(); qgl_format.setSwapInterval(1)
         w = GLPlotWidget(qgl_format); self.glview = w; l0.addWidget(self.glview); w.setSizePolicy(QtGui.QSizePolicy.Expanding,QtGui.QSizePolicy.Expanding)
         
         l1 = QtGui.QVBoxLayout(); l0.addLayout(l1)
         w = QtGui.QTextEdit(self);            self.txtCode = w; l1.addWidget(w); w.setFont(self.font); w.setLineWrapMode(QtGui.QTextEdit.NoWrap)  
 
         l2 = QtGui.QHBoxLayout(); l1.addLayout(l2)
-        w = QtGui.QPushButton('play',self);   self.btPlay     = w; l2.addWidget(w); w.setToolTip('on/off update on timer');  w.clicked.connect(self.play);
         w = QtGui.QPushButton('update',self); self.btShUpdate = w; l2.addWidget(w); w.setToolTip('update shader from code'); w.clicked.connect(self.updateShader); 
         w = QtGui.QPushButton('save',self);   self.btShSave   = w; l2.addWidget(w); w.setToolTip('save shader from code');   w.clicked.connect(self.saveShaderDlg); 
-        w = QtGui.QPushButton('load',self);   self.btShLoad   = w; l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg); 
-        w = QtGui.QLineEdit(); self.bxShToy = w; l2.addWidget(w);  w.returnPressed.connect(self.downloadShaderEvent )
-        #l3 = QtGui.QHBoxLayout(); l1.addLayout(l3)
-        #w = QtGui.QLineEdit(); 
-        #w = QtGui.QPushButton('fromShadeToy',self);   self.btSave  = w; l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg);
-        
-        #self.loadShaderToy ("Torus_intersection.glslf")
-        self.loadShader    ("Torus_intersection.glslf")
-        #self.downloadShader("Xds3zN")
+        w = QtGui.QPushButton('load',self);   self.btShLoad   = w; l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg);
+        w = QtGui.QPushButton('play',self);   self.btPlay     = w; l2.addWidget(w); w.setToolTip('on/off update on timer');  w.clicked.connect(self.play); 
+
+        self.txtCode.setPlainText( "d = opU( sdPlane(pos), sdSphere(pos-vec3( 0.0,0.25, 0.0), 0.25 ) );" )
+        self.makeShaderCode()
+        #self.updateShader()
 
     def play(self):
         self.btPlay.setText("Stop"); self.btPlay.clicked.connect(self.stop);
@@ -155,40 +150,24 @@ class MainWindow(QtGui.QWidget):
         fname = QtGui.QFileDialog.getSaveFileName(self, 'Save Shader ... ', os.getcwd(), selectedFilter='*.glslf')
         if fname:
             print "saving shader to file : ", fname
-            with open(fname, "w") as fo: fo.write(self.glview.fragment_code)
+            with open(fname, "w") as fo: fo.write( self.txtCode.toPlainText() )
     
     def loadShaderDlg(self):
         fname= QtGui.QFileDialog.getOpenFileName(self, 'Load Shader ... ', os.getcwd(), selectedFilter='*.glslf')
         if fname:
             print "loading shader to file : ",fname
-            self.loadShader(fname)
+            with open(fname,'r') as f: self.txtCode.setPlainText( f.read() )
             self.updateShader()
 
+    def makeShaderCode(self):
+        src_scene = "vec2 map( in vec3 pos ){\n float d;\n" + self.txtCode.toPlainText() + "return vec2(d,1.0);\n}"
+        src = glu.SHADERTOY_HEADER + self.src_primitives + src_scene + self.src_renderer
+        self.glview.fragment_code = unicode( src ).encode('utf8');
+        with open("fragment_code.glslf", "w") as fo: fo.write( self.glview.fragment_code )
+
     def updateShader(self):
-        self.glview.fragment_code = unicode( self.txtCode.toPlainText()).encode('utf8');
+        self.makeShaderCode()
         self.glview.updateShader()  
-
-    def loadShader(self, fname ):
-        w = self.glview
-        with open(fname,"r") as f:w.fragment_code=f.read()
-        self.txtCode.setPlainText( w.fragment_code )
-
-    def downloadShader(self, id):
-        w = self.glview 
-        name, desc, codes = glu.downloadFromShaderToy(id)
-        w.fragment_code=glu.fromShaderToy(codes[0].encode('utf8'))
-        #with open("fragment_code.glslf", "w") as fo: fo.write(w.fragment_code)
-        self.txtCode.setPlainText( w.fragment_code )
-    
-    def downloadShaderEvent(self):
-        shId = str(self.bxShToy.text())
-        fname = shId+".glslf"
-        try:
-            self.loadShade(fname)
-        except:
-            self.downloadShader( shId )
-            with open(fname, "w") as fo: fo.write(self.glview.fragment_code)
-        self.glview.updateShader( )
 
 if __name__ == '__main__':
     app = QtGui.QApplication(['pyShaderToy'])
