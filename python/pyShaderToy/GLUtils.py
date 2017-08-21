@@ -50,6 +50,8 @@ void main(){
 
 
 SHADERTOY_HEADER = '''
+#version 100
+precision highp float;
 uniform vec3      iResolution;           // viewport resolution (in pixels)
 uniform float     iTime;                 // shader playback time (in seconds)
 uniform float     iTimeDelta;            // render time (in seconds)
@@ -125,5 +127,5 @@ def link_shader_program(vertex_shader, fragment_shader):
 
 
 def fromShaderToy(vertex_code):
-    vertex_code_ =  SHADERTOY_HEADER + vertex_code + "\n\nvoid main(){mainImage( gl_FragColor, gl_FragCoord );};"
+    vertex_code_ =  SHADERTOY_HEADER + vertex_code + "\n\nvoid main(){mainImage( gl_FragColor, gl_FragCoord.xy );}"
     return vertex_code_

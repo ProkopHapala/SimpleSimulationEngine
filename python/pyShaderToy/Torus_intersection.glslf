@@ -1,4 +1,6 @@
 
+#version 100
+precision highp float;
     uniform vec3      iResolution;           // viewport resolution (in pixels)
     uniform float     iTime;                 // shader playback time (in seconds)
     uniform float     iTimeDelta;            // render time (in seconds)
@@ -90,7 +92,7 @@ vec3 nTorus( in vec3 pos, vec2 tor )
 	return normalize( pos*(dot(pos,pos)- tor.y*tor.y - tor.x*tor.x*vec3(1.0,1.0,-1.0)));
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
+void mainImage( out vec4 fragColor, in vec4 fragCoord )
 {
 	vec2 p = (-iResolution.xy + 2.0*fragCoord.xy) / iResolution.y;
 
@@ -129,5 +131,5 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     void main(){
         mainImage( gl_FragColor, gl_FragCoord );
-    };
+    }
     
