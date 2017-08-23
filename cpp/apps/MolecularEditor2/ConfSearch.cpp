@@ -115,6 +115,7 @@ void renderSubstrate_( const GridShape& grid, Vec3d * FF, double isoval, bool si
     //printf( " -- DEBUG 1 \n" );
     getIsoSurfZ( grid, isoval, sign, FF, pos, normals );
     //printf( " -- DEBUG 2 \n" );
+
     //glEnable(GL_LIGHTING);
     for ( int ib=1; ib<grid.n.y; ib++ ){
         glBegin(GL_TRIANGLE_STRIP);
@@ -134,7 +135,6 @@ void renderSubstrate_( const GridShape& grid, Vec3d * FF, double isoval, bool si
     delete [] normals;
     //exit(0);
 }
-
 
 void viewSubstrate( int nx, int ny, int isoOgl, Vec3d a, Vec3d b ){
     glPushMatrix();
@@ -312,10 +312,13 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     world.gridFF.loadCell ( "inputs/cel_2.lvs" );
     world.gridFF.grid.printCell();
     //world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
-    world.gridFF.loadXYZ  ( "inputs/Xe_instead_Na.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym.xyz", params );
+    world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Cl_vac.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Na_vac.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/Xe_instead_Na.xyz", params );
     //world.gridFF.loadXYZ( "inputs/Cl.xyz", params );
 
-    world.translate( {0.0,0.0,2.5} );
+    world.translate( {0.0,0.0,4.5} );
 
 
     //testREQ = (Vec3d){ 2.181, 0.0243442, 0.0}; // Xe
@@ -351,7 +354,6 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     glNewList(isoOgl, GL_COMPILE);
     //getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
     //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
-    //renderSubstrate_( world.gridFF.grid, FFtot, 0.1, true );
     renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
     Draw3D::drawAxis(1.0);
     glEndList();

@@ -242,13 +242,18 @@ void getIsoSurfZ( const GridShape& grid, double isoval, bool sign, Vec3d  *FF, V
             double fz;
             int ic;
             //printf( "iba (%i,%i)\n", ib,ia );
-            for ( ic=1; ic<nz; ic++ ){
-                ibuff+=nxy;
-                fz = FF[ibuff].z;
-                if( (fz<isoval)==sign ) break;
+            for ( ic=nz-1; ic>1; ic-- ){
+                int ibuff_ = ibuff + nxy*ic;
+                fz = FF[ibuff_].z;
+                if( (fz>isoval)==sign ){
+                    ibuff = ibuff_;
+                    break;
+                }
                 ofz = fz;
             }
-            double fc = (ofz-isoval)/(ofz-fz);
+            //double fc = (ofz-isoval)/(ofz-fz);
+            double fc = 1-((ofz-isoval)/(ofz-fz));
+            //double fc = 0;
             int ibxy  = ib*nx + ia;
             pos   [ibxy] = grid.dCell.a*ia + grid.dCell.b*ib + grid.dCell.c*(ic+fc);
             normal[ibxy] = FF[ibuff-1];
