@@ -24,6 +24,8 @@
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
 
+
+#include "balistics.h"
 #include "Mesh.h"
 #include "Object3D.h"
 #include "Warrior3D.h"
@@ -386,6 +388,7 @@ void Tanks_single::draw(){
     hRay = camMat.c; ray0 = camPos;
     //hRay = warrior1->gun_rot; ray0 = warrior1->pos;
 
+    // ray vs tank
     Tank * tank2 = (Tank*)world.warriors[1];
     int ipl; VehicleBlock* block; double effthick;
     //Vec3d normal;
@@ -409,6 +412,10 @@ void Tanks_single::draw(){
             Draw3D::drawPolygonBorder( ipl, *block );
         glPopMatrix();
         char str[64];
+
+
+
+
         sprintf(str,"%4.0fmm\0", effthick );
         Draw3D::drawText(str, ray0 + hRay*t, fontTex, 0.2, 0,0);
         //printf( "itr %i ipl %i %g %g %g\n", itr, ipl, thick, cdot, effthick  );

@@ -92,29 +92,31 @@ class Vec2TYPE{
     inline TYPE dist ( const VEC& a) const { return sqrt( dist2(a) ); }
 
 	inline void set_perp( const VEC& a )       { x=-a.y; y=a.x; }
-	inline double cross ( const VEC& a ) const { return x*a.y - y*a.x; };
+	inline TYPE cross ( const VEC& a ) const { return x*a.y - y*a.x; };
 
-	inline void     mul_cmplx (               const VEC& b ){                            double x_ =    x*b.x -   y*b.y;         y =    y*b.x +   x*b.y;       x=x_;  }
-	inline void pre_mul_cmplx ( const VEC& a               ){                            double x_ =  a.x*  x - a.y*  y;         y =  a.y*  x + a.x*  y;       x=x_;  }
-	inline void set_mul_cmplx ( const VEC& a, const VEC& b ){                            double x_ =  a.x*b.x - a.y*b.y;         y =  a.y*b.x + a.x*b.y;       x=x_;  }
-	inline void set_udiv_cmplx( const VEC& a, const VEC& b ){                            double x_ =  a.x*b.x + a.y*b.y;         y =  a.y*b.x - a.x*b.y;       x=x_;  }
-	inline void set_div_cmplx ( const VEC& a, const VEC& b ){ double ir2 = 1/b.norm2();  double x_ = (a.x*b.x + a.y*b.y)*ir2;    y = (a.y*b.x - a.x*b.y)*ir2;  x=x_;  }
+	inline void     mul_cmplx (               const VEC& b ){                            TYPE x_ =    x*b.x -   y*b.y;         y =    y*b.x +   x*b.y;       x=x_;  }
+	inline void pre_mul_cmplx ( const VEC& a               ){                            TYPE x_ =  a.x*  x - a.y*  y;         y =  a.y*  x + a.x*  y;       x=x_;  }
+	inline void set_mul_cmplx ( const VEC& a, const VEC& b ){                            TYPE x_ =  a.x*b.x - a.y*b.y;         y =  a.y*b.x + a.x*b.y;       x=x_;  }
+	inline void set_udiv_cmplx( const VEC& a, const VEC& b ){                            TYPE x_ =  a.x*b.x + a.y*b.y;         y =  a.y*b.x - a.x*b.y;       x=x_;  }
+	inline void set_div_cmplx ( const VEC& a, const VEC& b ){ TYPE ir2 = 1/b.norm2();  TYPE x_ = (a.x*b.x + a.y*b.y)*ir2;    y = (a.y*b.x - a.x*b.y)*ir2;  x=x_;  }
 
-	inline void fromAngle        ( double phi ){	x = cos( phi );	y = sin( phi );	    }
-	inline void fromAngle_taylor2( double phi ){	sincos_taylor2<TYPE>( phi, y, x );	}
+	inline void fromAngle        ( TYPE phi ){	x = cos( phi );	y = sin( phi );	    }
+	inline void fromAngle_taylor2( TYPE phi ){	sincos_taylor2<TYPE>( phi, y, x );	}
+	inline void fromCos          ( TYPE ca  ){  x=ca; y=sqrt(1-ca*ca); }
+	inline void fromSin          ( TYPE sa  ){  y=sa; x=sqrt(1-sa*sa); }
 
-	inline void rotate( double phi ){
-		double bx = cos( phi );   		  double by = sin( phi );
-		double x_ =    x*bx -   y*by;         y =    y*bx +   x*by;       x=x_;
+	inline void rotate( TYPE phi ){
+		TYPE bx = cos( phi );   		  TYPE by = sin( phi );
+		TYPE x_ =    x*bx -   y*by;         y =    y*bx +   x*by;       x=x_;
 	}
 
-	inline void rotate_taylor2( double phi ){
-		double bx,by;  sincos_taylor2<TYPE>( phi, by, bx );
-		double x_ =    x*bx -   y*by;         y =    y*bx +   x*by;       x=x_;
+	inline void rotate_taylor2( TYPE phi ){
+		TYPE bx,by;  sincos_taylor2<TYPE>( phi, by, bx );
+		TYPE x_ =    x*bx -   y*by;         y =    y*bx +   x*by;       x=x_;
 	}
 
-	inline double along_hat( const VEC& hat, const VEC& p ){ VEC ap; ap.set( p.x-x, p.y-y ); return hat.dot( ap ); }
-	inline double along    ( const VEC& b,   const VEC& p ){
+	inline TYPE along_hat( const VEC& hat, const VEC& p ){ VEC ap; ap.set( p.x-x, p.y-y ); return hat.dot( ap ); }
+	inline TYPE along    ( const VEC& b,   const VEC& p ){
 		VEC ab,ap;
 		ab.set( b.x - x, b.y - y );
 		ap.set( p.x - x, p.y - y );

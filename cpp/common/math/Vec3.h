@@ -85,8 +85,8 @@ class Vec3TYPE{
     inline void set_cross( const VEC& a, const VEC& b ){ x =a.y*b.z-a.z*b.y; y =a.z*b.x-a.x*b.z; z =a.x*b.y-a.y*b.x; };
 	inline void add_cross( const VEC& a, const VEC& b ){ x+=a.y*b.z-a.z*b.y; y+=a.z*b.x-a.x*b.z; z+=a.x*b.y-a.y*b.x; };
 
-	double makeOrthoU( const VEC& a ){ double c = dot(a);          add_mul(a, -c); return c; }
-	double makeOrtho ( const VEC& a ){ double c = dot(a)/a.norm(); add_mul(a, -c); return c; }
+	TYPE makeOrthoU( const VEC& a ){ TYPE c = dot(a);          add_mul(a, -c); return c; }
+	TYPE makeOrtho ( const VEC& a ){ TYPE c = dot(a)/a.norm(); add_mul(a, -c); return c; }
 
     inline VEC operator+ ( TYPE f   ) const { VEC vo; vo.x=x+f; vo.y=y+f; vo.z=z+f; return vo; };
     inline VEC operator* ( TYPE f   ) const { VEC vo; vo.x=x*f; vo.y=y*f; vo.z=z*f; return vo; };
@@ -158,8 +158,8 @@ class Vec3TYPE{
 		x = x_; y = y_;
 	};
 
-	inline double along_hat( const VEC& hat, const VEC& p ){ VEC ap; ap.set( p.x-x, p.y-y ); return hat.dot( ap ); }
-	inline double along    ( const VEC& b,   const VEC& p ){
+	inline TYPE along_hat( const VEC& hat, const VEC& p ){ VEC ap; ap.set( p.x-x, p.y-y ); return hat.dot( ap ); }
+	inline TYPE along    ( const VEC& b,   const VEC& p ){
 		VEC ab,ap;
 		ab.set( b.x - x, b.y - y, b.z - z );
 		ap.set( p.x - x, p.y - y, b.z - z );
@@ -174,8 +174,8 @@ class Vec3TYPE{
                (y>vmin.z)&&(x<vmax.z);
     }
 
-    inline double dist2( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm2(); }
-    inline double dist ( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm (); }
+    inline TYPE dist2( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm2(); }
+    inline TYPE dist ( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm (); }
 
 };
 

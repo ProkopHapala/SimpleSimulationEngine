@@ -4,6 +4,8 @@
 
 #include "fastmath.h"
 
+inline double kineticEnergy( double v, double mass ){ return 0.5*mass*v*v; }
+
 inline double gunEnergy( double d, double l, double mPowder, double mProjectile, double Vchamber ){
     // http://www.stardestroyer.net/Armour/ShepStuff/Website/Statistics/MilitaryPropellants.htm
     // https://en.wikipedia.org/wiki/Adiabatic_process
@@ -20,6 +22,8 @@ inline double gunEnergy( double d, double l, double mPowder, double mProjectile,
     double efficiency = mProjectile/(mProjectile+mPowder);
     return Wtot*efficiency;
 };
+
+
 
 #endif
 
