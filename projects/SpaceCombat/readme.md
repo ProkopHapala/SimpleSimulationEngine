@@ -20,7 +20,7 @@ $ jupyter notebook ch1_basics.ipynb
 
 for HTML with javascript use: http://htmlpreview.github.io/ for example:
 
-http://htmlpreview.github.io/?https://github.com/ProkopHapala/SimpleSimulationEngine/blob/master/projects/SpaceCombat/HTML/StickSpaceCraft.html
+https://rawgit.com/ProkopHapala/SimpleSimulationEngine/master/projects/SpaceCombat/HTML/StickSpaceCraft.html
 
 for offline browsing use python web server
 ```

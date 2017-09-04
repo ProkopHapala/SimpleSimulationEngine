@@ -54,6 +54,26 @@ class Ruler2DFast { public:
 		invStep.set_inv( step );
     }
 
+
+    int getOverlapingTiles( Vec2d pos, double r, int * results ){
+        Vec2d dpos;
+        Vec2i ipos;
+        pos2index( pos, dpos, ipos );
+        dpos.mul( step );
+        results[0] = ip2i(ipos); int nret=1;
+        int dix=0,diy=0;
+        double dr2   = 0;
+        double mr    = 1-r;
+        if     (  dpos.x < r  ){ results[nret]=ip2i( {ipos.x-1  , ipos.y    }); nret++; dix=-1; dr2 += sq(  dpos.x); }
+        else if(  dpos.x > mr ){ results[nret]=ip2i( {ipos.x+1  , ipos.y    }); nret++; dix=+1; dr2 += sq(1-dpos.x); }
+        if     (  dpos.y < r  ){ results[nret]=ip2i( {ipos.x    , ipos.y-1  }); nret++; diy=-1; dr2 += sq(  dpos.y); }
+        else if(  dpos.y > mr ){ results[nret]=ip2i( {ipos.x    , ipos.y+1  }); nret++; diy=+1; dr2 += sq(1-dpos.y); }
+        if     ( dr2 < (r*r)  ){ results[nret]=ip2i( {ipos.x+dix, ipos.y+diy}); }
+        //if( (dix!=0)&&(diy!=0) ){ insert( o, ipos.x+dix, ipos.y+diy ); }
+        //printf( " %1.3f %1.3f  (%1.3f,%1.3f) (%i,%i) %1.3f \n", r, mr, dpos.x,dpos.y, dix, diy, dr2 );
+        return nret;
+    }
+
 };
 
 #endif

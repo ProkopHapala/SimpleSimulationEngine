@@ -12,6 +12,7 @@
 #include "Body2D.h"
 
 #include "SimplexRuler.h"
+#include "Ruler2DFast.h"
 #include "TerrainHydraulics.h"
 
 
@@ -21,6 +22,25 @@
 
 #include "LTUnit.h"
 
+
+enum LTSObjKind{
+    tree, house, rocks
+};
+
+class LTStaticObject{ public:
+    // this object should represent Trees, Houses, Rocks ...
+    LTSObjKind kind; int id; // void * ptr;
+    Vec2d  pos;
+    double radius;
+    //Vec2d dir;
+    //Vec3d span;
+};
+
+class LTMapSquare{ public:
+    std::vector<LTStaticObject*> objects;
+    //vector<LTUnit>  objects;
+};
+
 class LTWorld{
 	public:
     //std::vector<BattleLine*> battleLines;
@@ -28,9 +48,12 @@ class LTWorld{
     std::vector<LTFaction*> factions;
 
     SimplexRuler       ruler;
+    Ruler2DFast        square_ruler;
     TerrainHydraulics  hydraulics;
+    double * ground       = NULL;
 
-    double * ground = NULL;
+    LTStaticObject * objects = NULL;
+    LTMapSquare    * squares = NULL;
 
     Vec2d map_center;
     double maxHeight = 500.0;
@@ -62,6 +85,7 @@ class LTWorld{
     double dt;
 
     void init();
+    void initStaticObject();
     void update();
     void simulationStep( double dt );
     int  getUnitAt( const Vec2d& p, LTFaction * faction );

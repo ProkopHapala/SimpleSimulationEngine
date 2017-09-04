@@ -134,7 +134,7 @@ a minimalistic engine for:
 ### Web
 projects using HTML + Javascritp + WebGL + THREE.js and/or Python Jupyter.nb
 
-* [SpaceCombat](projects/SpaceCombat/readme.md) - ideas about combat in solar system supported by physical calculations in python (Jupyter.nb) ([see example](https://nbviewer.jupyter.org/github/ProkopHapala/SimpleSimulationEngine/blob/master/projects/SpaceCombat/ch1_basics.ipynb) and [3D graphics](http://htmlpreview.github.io/?https://github.com/ProkopHapala/SimpleSimulationEngine/blob/master/projects/SpaceCombat/HTML/StickSpaceCraft.html) (WebGL+Three.js) - it is strongly inspired by [Project Rho: Atomic rockets ](http://www.projectrho.com/public_html/rocket/)
+* [SpaceCombat](projects/SpaceCombat/readme.md) - ideas about combat in solar system supported by physical calculations in python (Jupyter.nb) ([see example](https://nbviewer.jupyter.org/github/ProkopHapala/SimpleSimulationEngine/blob/master/projects/SpaceCombat/ch1_basics.ipynb) and [3D graphics](https://rawgit.com/ProkopHapala/SimpleSimulationEngine/master/projects/SpaceCombat/HTML/StickSpaceCraft.html) (WebGL+Three.js) - it is strongly inspired by [Project Rho: Atomic rockets ](http://www.projectrho.com/public_html/rocket/)
 
 * Web interfaces for building fragment shaders inspired by [ShaderToy](https://www.shadertoy.com/)
   * [RayTraced analytical primitives](js/GLSL_solid_modeling/ListOfPrimitives.html) for other shaders 

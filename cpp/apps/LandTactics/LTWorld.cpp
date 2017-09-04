@@ -37,6 +37,27 @@ int LTWorld::getUnitAt( const Vec2d& p, LTFaction * faction ){
     return imin;
 };
 
+void LTWorld::initStaticObject(){
+
+    int n = 64;
+    objects = new LTStaticObject[n];
+
+    square_ruler.setup( {0.0,0.0}, {100.0,100.0} );
+    square_ruler.setN ( {64,64} );
+    squares = new LTMapSquare[ square_ruler.ntot ];
+
+    int otiles[4];
+    for(int i=0; i<n; i++){
+        LTStaticObject * s = new LTStaticObject();
+        s->id     = i;
+        s->kind   = LTSObjKind::tree;
+        s->pos.set( randf(-100.0,100.0)+map_center.x, randf(100.0,100.0)+map_center.y );
+        s->radius = 5.0;
+
+        int nret = square_ruler.getOverlapingTiles( s->pos, s->radius, otiles );
+        for( int j=0; j<nret; j++ ){ squares[ otiles[j] ].objects.push_back(s); }
+    }
+}
 
 void LTWorld::init(){
     printf( " LTWorld::init() \n" );
@@ -68,6 +89,9 @@ void LTWorld::init(){
     //soldierTypes.push_back( SoldierType(){"pikemen",1.0d,0.25d,1.0d} );
     //soldierTypes.push_back( {"pikemen",1.0d,0.25d,1.0d, 1.0, 1.0 } );
     //unitTypes.push_back( UnitType() );
+
+    //initStaticObject();
+
 
     LTUnit * u;
 
