@@ -124,13 +124,15 @@ void MultiFight3D_single::keyStateHandling( const Uint8 *keys ){
         //if( keys[ SDL_SCANCODE_A ] ){ warrior1->pos.add_mul( camMat.a, -0.1 ); }
         //if( keys[ SDL_SCANCODE_D ] ){ warrior1->pos.add_mul( camMat.a, +0.1 ); }
 
-        if( keys[ SDL_SCANCODE_W ] ){ warrior1->vel.add_mul( camMat.c, +0.1 ); }
-        if( keys[ SDL_SCANCODE_S ] ){ warrior1->vel.add_mul( camMat.c, -0.1 ); }
-        if( keys[ SDL_SCANCODE_A ] ){ warrior1->vel.add_mul( camMat.a, -0.1 ); }
-        if( keys[ SDL_SCANCODE_D ] ){ warrior1->vel.add_mul( camMat.a, +0.1 ); }
-        if( keys[ SDL_SCANCODE_SPACE ] ){ warrior1->vel.mul( 0.9 ); }
+        RigidBody* rb = warrior1->asRigidBody();
 
-        camPos.set( warrior1->pos );
+        if( keys[ SDL_SCANCODE_W ] ){ rb->vel.add_mul( camMat.c, +0.1 ); }
+        if( keys[ SDL_SCANCODE_S ] ){ rb->vel.add_mul( camMat.c, -0.1 ); }
+        if( keys[ SDL_SCANCODE_A ] ){ rb->vel.add_mul( camMat.a, -0.1 ); }
+        if( keys[ SDL_SCANCODE_D ] ){ rb->vel.add_mul( camMat.a, +0.1 ); }
+        if( keys[ SDL_SCANCODE_SPACE ] ){ rb->vel.mul( 0.9 ); }
+
+        camPos.set( rb->pos );
     }
 
     //if( keys[ SDL_SCANCODE_W ] ){ camPos.add_mul( camMat.c, +0.1 ); }

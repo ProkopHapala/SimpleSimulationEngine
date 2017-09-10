@@ -5,9 +5,10 @@
 
 #include "MultiFight3DWorld.h" // THE HEADER
 
-void MultiFight3DWorld::fireProjectile( Warrior3D * w ){
+void MultiFight3DWorld::fireProjectile( SomeWarrior3D * w ){
     Projectile3D * p = new Projectile3D();
     p->vel.set_mul( w->gun_rot, 10.0 );
+    //RigidBody *b = w->asRigidBody();
     p->vel.add( w->vel );
     p->vel.add( { randf(-0.1,0.1), randf(-0.1,0.1), randf(-0.1,0.1) } );
     p->pos.set( w->pos );
@@ -15,10 +16,10 @@ void MultiFight3DWorld::fireProjectile( Warrior3D * w ){
     projectiles.push_back( p );
 };
 
-Warrior3D* MultiFight3DWorld::makeWarrior( const Vec3d& pos, const Vec3d& dir, const Vec3d& up, int shape ){
+SomeWarrior3D* MultiFight3DWorld::makeWarrior( const Vec3d& pos, const Vec3d& dir, const Vec3d& up, int shape ){
     int ith = warriors.size();
     //printf( " >>> Setup  ship %i \n", ith );
-    Warrior3D* w = new Warrior3D();
+    SomeWarrior3D* w = new SomeWarrior3D();
     //w->loadFromFile( filename );
     //w->from_mass_points( 2, mass, (Vec2d*)poss );
     w->setMass( 1.0 );
@@ -60,7 +61,7 @@ void MultiFight3DWorld::update_world( ){
 
         auto itw = warriors.begin();
         while( itw != warriors.end() ) {
-            Warrior3D * w = *itw;
+            SomeWarrior3D * w = *itw;
 
             w->clean_temp( );
             //addEnviroForces              ( w->pos, w->vel, w->force,  w->landed );

@@ -51,6 +51,12 @@ double Terrain25D_bicubic::eval( const Vec2d& pos, Vec2d& deriv ){
     Vec2d dipos; Vec2i ipos;
     ruler.pos2index( pos, dipos, ipos );
     ipos.x--; ipos.y--;
+
+    if( (ipos.x<0)||(ipos.y<0)||(ipos.y>(ruler.n.x-3))||(ipos.y>(ruler.n.y-3)) ){
+        //printf( "invalid index %i %i \n", ipos.x, ipos.y );
+        deriv.x = 0.0; deriv.y = 0.0;  return 0.0;
+    };
+
     double * h0 = heights + ruler.ip2i( ipos );
     double * h1 = h0 + ruler.n.x;
     double * h2 = h1 + ruler.n.x;

@@ -13,7 +13,7 @@
 
 class Warrior3D { public:
 
-	int id=-1,kind=-1,shape=0;
+	int id=-1,kind=-1,glo=0;
     bool    landed  = false;
     bool    trigger = false;
     Vec3d   surf;
@@ -35,23 +35,7 @@ class Warrior3D { public:
     }
     */
 
-    /*
-    virtual void interact( Terrain25D * terrain ){
 
-        Vec2d dv;
-        double h  = terrain->eval( {pos.x,pos.z}, dv );
-        double dh = pos.y - hground - h;
-        if( dh  < 0.0 ){
-            //w->force.add( {0.0,gravity,0.0} );
-            //w->force.add( {dv.x, dh*(-1-0.5*w->vel.y), dv.y} );
-            force.add( { -dv.x, dh*(-100+2.5*vel.y), -dv.y } );
-            force.add( {vel.x*terrain->drag,0.0,vel.z*terrain->drag} );
-            //printf( " dv (%3.3f,%3.3f) (%3.3f,%3.3f)  \n", dv.x, dv.y, w->pos.x,w->pos.y );
-            //w->force.add( {0, dh*(-100+2.5*w->vel.y), 0} );
-
-        }
-    }
-    */
 
     //virtual void getPos( ){};
     //virtual void getPos( ){};
@@ -59,6 +43,29 @@ class Warrior3D { public:
 
     virtual RigidBody* asRigidBody ( ) = 0;  //{ return cstatic_cast<RigidBody*>(this); };
     virtual void       move_warrior( double dt, Vec3d& wind_speed, Vec3d& gravity, Terrain25D * terrain ) = 0;
+
+};
+
+class SomeWarrior3D : public RigidBody, public Warrior3D { public:
+
+    void interactTerrain( Terrain25D * terrain  ){
+        Vec2d dv;
+        double h  = terrain->eval( {pos.x,pos.z}, dv );
+        double dh = pos.y - hground - h;
+        if( dh  < 0.0 ){
+            force.add( { -dv.x, dh*(-100+2.5*vel.y), -dv.y } );
+            force.add( {vel.x*terrain->drag,0.0,vel.z*terrain->drag} );
+
+        }
+    }
+
+    virtual RigidBody* asRigidBody( ){ return static_cast<RigidBody*>(this); };
+    virtual void move_warrior( double dt, Vec3d& wind_speed, Vec3d& gravity, Terrain25D * terrain ){
+        clean_temp();
+        force.add( gravity*mass );
+        if(terrain){ interactTerrain( terrain ); }
+        move( dt );
+    };
 
 };
 

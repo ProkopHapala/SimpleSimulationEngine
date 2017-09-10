@@ -148,7 +148,7 @@ class AeroCraftControler{
         roll_err *= (1- roll_damp*roll_err*comega);
         double droll=0;
         if( adjust_roll ){
-            droll = _clamp( roll_err*roll_strength*dt,-craft->maxAileron,craft->maxElevator);
+            droll = _clamp( roll_err*roll_strength*dt,-craft->maxAileron,craft->maxAileron);
             craft-> leftAirelon->lrot.rotate(  droll , {1.0,0.0,0.0} );
             craft->rightAirelon->lrot.rotate( -droll , {1.0,0.0,0.0} );
         }

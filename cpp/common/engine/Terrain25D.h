@@ -39,7 +39,7 @@ class Terrain25D { public:
 class Terrain25D_bicubic : public Terrain25D { public:
     // --- variables
     Ruler2DFast ruler;
-    double * heights;
+    double * heights = NULL;
     // --- function declarations
 	virtual double eval( const Vec2d& pos, Vec2d& deriv );
 	//virtual double ray ( const Vec3d& hRay, const Vec3d& ray0, double tmax, Vec3d& normal );

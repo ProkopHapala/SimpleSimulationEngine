@@ -35,8 +35,8 @@ class MultiFight3DWorld {
 
     int defaultWarriorShape, defaultObjectShape, defaultObjectHitShape, defaultProjectileShape;
 
-	std::vector<Warrior3D*>    warriors;
-	std::vector<Projectile3D*> projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
+	std::vector<SomeWarrior3D*> warriors;
+	std::vector<Projectile3D*>  projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 
     std::vector<KinematicBody*> objects;
 
@@ -47,8 +47,8 @@ class MultiFight3DWorld {
 
     //virtual void drawEnvironment();
 
-    Warrior3D* makeWarrior( const Vec3d& pos, const Vec3d& dir, const Vec3d& Up, int shape );
-    void fireProjectile( Warrior3D * w );
+    SomeWarrior3D* makeWarrior( const Vec3d& pos, const Vec3d& dir, const Vec3d& Up, int shape );
+    void fireProjectile( SomeWarrior3D * w );
 
     // ==== inline functions
 

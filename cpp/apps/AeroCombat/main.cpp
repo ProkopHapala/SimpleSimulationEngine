@@ -18,6 +18,11 @@
 
 #include "Body.h"
 
+//#include "SimplexRuler.h"
+//#include "Ruler2DFast.h"
+//#include "TerrainHydraulics.h"
+
+#include "Terrain25D.h"
 #include "Shooter.h"
 
 #include "AeroSurf.h"
@@ -42,9 +47,9 @@
 // ===== GLOBAL CONSTAMNTS
 // ===============================
 
-AeroTester         * tester      = NULL;
-AeroCraftControler * autoPilot1  = NULL;
-Shooter            * world       = NULL;
+Shooter            * world      = NULL;
+AeroCraftControler * autoPilot  = NULL;
+AeroTester         * tester     = NULL;
 
 //AeroTester         tester     ;
 //AeroCraftControler autoPilot1 ;
@@ -59,6 +64,93 @@ int    stepSum=0;
 
 bool loopEnd = false;
 bool STOP    = false;
+
+// ===============================
+// ===== Free Functions
+// ===============================
+
+void rotateTo( int pivot, Mat3d& rot, const Mat3d& rot0, const Vec3d& xhat, const Vec3d& yhat, double sin_angle ){
+    //rot.add_mul( rot0, coef ); rot.normalize();
+    double ca,sa;
+    int i3 = pivot*3;
+    Vec3d& piv  = *(Vec3d*)(rot .array+i3);
+    Vec3d& piv0 = *(Vec3d*)(rot0.array+i3);
+    piv.getInPlaneRotation( piv0, xhat, yhat, ca, sa );
+    if( sa < sin_angle ){
+        Vec3d uaxis; uaxis.set_cross( xhat, yhat );
+        rot.rotate_csa( ca, sa, uaxis );
+    }else{
+        rot.set(rot0);
+    }
+}
+
+Terrain25D * prepareTerrain( int nsz, int nsub, double step, double hmax ){
+    Terrain25D_bicubic * terrain = new Terrain25D_bicubic();
+    terrain->ruler.setup( (Vec2d){nsz*0.5,nsz*0.5}*-step, (Vec2d){step,step} );
+    terrain->allocate( {nsz,nsz} );
+    terrain->makeRandom( 0.0, hmax );
+
+    terrain->shape = glGenLists(1);
+    glNewList( terrain->shape , GL_COMPILE );
+    //int na=100,nb=100;
+
+    int na = (terrain->ruler.n.a - 3)*nsub;
+    int nb = (terrain->ruler.n.b - 3)*nsub;
+    float da=terrain->ruler.step.a/float(nsub);
+    float db=terrain->ruler.step.b/float(nsub);
+    float x0=terrain->ruler.pos0.x;
+    float y0=terrain->ruler.pos0.y;
+
+    glEnable(GL_LIGHTING);
+    glColor3f (0.5f,0.5f,0.5f);
+    glNormal3f(0.0f,1.0f,0.0f);
+
+    float * oldvals = new float[na*3];
+    for(int ia=0; ia<na; ia++){
+        glBegin(GL_TRIANGLE_STRIP);
+        for(int ib=0; ib<nb; ib++){
+            int i3 = 3*ib;
+            Vec2d dv1,dv2;
+            Vec2d p1; p1.set( (ia  )*da+x0, ib*db+y0 );
+            Vec2d p2; p2.set( (ia+1)*da+x0, ib*db+y0 );
+            float v1,v2;
+            if( ia == 0 ){
+                v1 = (float)terrain->eval( p1, dv1 );
+            }else{
+                v1 = oldvals[i3]; dv1.x=oldvals[i3+1]; dv1.y=oldvals[i3+2];
+            }
+            v2 = (float)terrain->eval( p2, dv2 );
+            oldvals[i3] = v2; oldvals[i3+1] = dv2.x; oldvals[i3+2] = dv2.y;
+            glNormal3f(-dv1.x,1.0,-dv1.y); glVertex3f( (float)p1.x,  v1, (float)p1.y );
+            glNormal3f(-dv2.x,1.0,-dv2.y); glVertex3f( (float)p2.x,  v2, (float)p2.y );
+
+            //glColor3f(v1,0.5,-v1); glVertex3f( (float)p1.x,  v1, (float)p1.y );
+            //glColor3f(v2,0.5,-v2); glVertex3f( (float)p2.x,  v2, (float)p2.y );
+            //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
+        }
+        glEnd();
+    }
+
+    // Normals
+    /*
+    glBegin(GL_LINES);
+    for(int ia=0; ia<na; ia++){
+        for(int ib=0; ib<nb; ib++){
+            int i3 = 3*ib;
+            Vec2d p,dv; p.set( ia*da+x0, ib*db+y0 );
+            double v = (float)terrain->eval( p, dv );
+            glVertex3f( (float)p.x,         v, (float)p.y );
+            glVertex3f( (float)(p.x-dv.x),  v+1.0, (float)(p.y-dv.y) );
+        }
+
+    }
+    glEnd();
+    */
+    glEndList();
+    delete [] oldvals;
+    return terrain;
+}
+
 
 // ====================================
 //      AeroCraftGUI
@@ -75,8 +167,9 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 
     GUIAbstractPanel*  focused = NULL;
 
-    bool mouseSteer = false;
-    bool autoPilot  = false;
+    bool mouseSteer   = false;
+    bool autoRetractAirelon = true;
+    bool useAutoPilot = false;
 
 	int perFrame = 10;
 	//double dt = 0.001;
@@ -85,9 +178,9 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 	//AeroCraft * myCraft;
 	AeroCraft * myCraft_bak;
 
-	FieldPatch fieldPatch;
-	int buildings_shape = -1;
-	int terrain_shape   = -1;
+	//FieldPatch fieldPatch;
+	//int buildings_shape = -1;
+	//int terrain_shape   = -1;
 
     bool staticTest = true;
     // - put to Spline manager ? ... make indepemented AeroCraft Test ?
@@ -172,7 +265,7 @@ void AeroCraftGUI::draw(){
 	world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
 	camera ();
 
-	renderSkyBox(myCraft->pos.x, myCraft->pos.y-1000, myCraft->pos.z, VIEW_DEPTH*0.25 );
+	//renderSkyBox(myCraft->pos.x, myCraft->pos.y-1000, myCraft->pos.z, VIEW_DEPTH*0.25 );
 	glEnable(GL_DEPTH_TEST);
 
 	glEnable    (GL_LIGHTING);
@@ -183,6 +276,8 @@ void AeroCraftGUI::draw(){
 
 	//glDisable (GL_LIGHTING);
 	glShadeModel(GL_SMOOTH);
+
+	/*
 
 	if ( buildings_shape >0 ) glCallList( buildings_shape );
 	if ( terrain_shape >0)  {
@@ -200,20 +295,15 @@ void AeroCraftGUI::draw(){
 		glEnd();
 	};
 
-	//Draw3D::drawAxis( 1000 );
-
-	/*
-	glColor4f(1.0f,1.0f,1.0f,0.9f);
-	char str[256];
-	sprintf(str, "speed %3.3f\0",world->myCraft->vel.norm());
-	Draw3D::drawText(str, world->myCraft->pos, fontTex, 0.2, 0, 0 );
-	//Draw3D::drawText( "AHOJ!\0", world->myCraft->pos, fontTex, 0.2, 0, 0 );
-	//Draw3D::drawText( "AHOJ!\0", {0.0,0.0,0.0}, fontTex, 0.5, 0, 0 );
 	*/
 
-	if(autoPilot){
+	if(world->terrain) glCallList(world->terrain->shape);
+
+	//Draw3D::drawAxis( 1000 );
+
+	if(useAutoPilot){
         //printf("autoPiloting frame %i\n", frameCount);
-        autoPilot1->control(world->dt); return;
+        autoPilot->control(world->dt); return;
     }
 
     if(mouseSteer){
@@ -249,122 +339,57 @@ void AeroCraftGUI::drawHUD(){
 	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw::drawText( str, fontTex, 10, 0,0 );
 
 	if(first_person){ glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawPointCross({mouseX+WIDTH*0.5,mouseY+HEIGHT*0.5},5.0); }
-
-	/*
-	int npol = 101;
-	double phi0 =0.0;
-	double dphi =3.14/(npol-1);
-    for( int i=0; i<npol; i++){
-        double phi = phi0 + dphi*i;
-        double sa = sin( phi );
-        double ca = cos( phi );
-        double CD,CL;
-        world->myCraft->panels[0].polarModel( ca, sa, CD, CL );
-        printf("%i: %3.3f (%3.3f,%3.3f) (%3.3f,%3.3f) \n", i, phi, ca, sa, CD, CL);
-    };
-    exit(0);
-    */
-
 }
 
-//void AeroCraftGUI:: drawHUD(){};
-
-//AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : ScreenSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    printf( " === GUI \n" );
+
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono.bmp" );
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA.bmp" );
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono_Alpha.bmp" );
-
     panel.init( 5,5,105,35,  fontTex );
     panel.caption   = "rotation [Rad]"; panel.vmin = -3.14159265359; panel.vmax = 3.14159265359;
-
     mpanel.initMulti( 120,5,200,120, fontTex , 4 );
     mpanel.caption="MultiPanel_1";
-
     txt.inputText = "insert number using =+-*/";
-
     SDL_StartTextInput ();
 
-    // ======= from AeroCraftWorld
-
-	//makeEnvironment( 20000.0f );
-	printf( " Environment DONE! \n" );
-	//makeAeroCraft();
+    printf( " === world  \n" );
 
 	world = new Shooter();
-
     world->perFrame = 1;
     world->dt       = 0.005d;
 
-	printf( "DEBUG 1 " );
+    printf( " === Environment \n" );
+    world->terrain =  prepareTerrain( 128, 2, 100.0, 50 );
 
-
-	//AeroCraftWarrior = AeroCraftWarrior();
+    printf( " === aerocraft \n" );
 
 	myCraft_bak = new AeroCraft();          myCraft_bak->fromFile("data/AeroCraft1.ini");
 	myCraft     = new AeroCraftWarrior();   myCraft    ->fromFile("data/AeroCraft1.ini");
 	//myCraft     = new AeroCraft();   myCraft->fromFile("data/AeroCraft1.ini");
     myCraft->pos.y=200.0;
     myCraft->vel.set_mul( myCraft->rotMat.c, 100.0 );
-
     world->registrWarrior(myCraft);
 
-    printf( "DEBUG 2 " );
+    printf( " === autoPilot1 \n" );
 
-    autoPilot1  = new AeroCraftControler();
-    autoPilot1->craft=myCraft;
+    autoPilot  = new AeroCraftControler();
+    autoPilot->craft=myCraft;
 
-    printf( "DEBUG 3 " );
+    printf( " === tester \n" );
 
     tester      = new AeroTester();
-    tester->autoPilot1 = autoPilot1;
-    tester->myCraft    = myCraft;
-    tester->gravityG   = world->gravity;
+    tester->autoPilot = autoPilot;
+    tester->craft     = myCraft;
+    tester->gravityG  = world->gravity;
     //tester->reallocateTrj(int n);
-
     staticTest=false;
     if( staticTest ) tester->doStaticTesting( 500, 0.01, 300.0, 5.0 );
 
-    printf( " AeroCraft DONE! \n" );
-
-    // ======= fmakeEnvironment( 20000.0f );
-
-	//buildings_shape = makeBuildings( 10, 10, 100, 100, 0.5, 0.5, 50, 100 );
-	float sz = 1000.0;
-	//buildings_shape = makeBuildingsClusters( 30, 3, 10,   -sz,         sz,         -sz,          sz,            0, 500,   20, 100,   10, 100 );
-	//buildings_shape = makeBuildingsClusters( 30, 3, 10, -VIEW_DEPTH/2, VIEW_DEPTH/2, -VIEW_DEPTH/2, VIEW_DEPTH/2,    0, 500,   20, 100,   10, 100 );
-	//buildings_shape= makeBuildingsClusters( 100, 5, 5, -VIEW_DEPTH/2, VIEW_DEPTH/2, -VIEW_DEPTH/2, VIEW_DEPTH/2,    0, 500,   100, 100,   10, 100 );
-
-	double h0    = 1;
-	//float tersz = VIEW_DEPTH/2;
-	//terrain   = FieldPatch::makeList( 15, { 0.5,   -tersz,-tersz,h0,   tersz,-tersz,h0,  -tersz,tersz,h0,   tersz,tersz,h0   }   );
-
-	//terrain_shape     = fieldPatch.makeList( 5, { 0.5d,   {-sz,-sz,h0},  { sz,-sz,h0},  {-sz,sz,h0},   {sz,sz,h0}   }   );
-	//terrain_shape   = FieldPatch::makeList( 15, { 0.5,   Vec3d(-tersz,-tersz,h0),  Vec3d( tersz,-tersz,h0),  Vec3d(-tersz,tersz,h0),   Vec3d(tersz,tersz,h0)   }   );
-
-    printf( " Environment DONE! \n" );
-
-    //panel.nChars = 6;
 };
-
-// ===============================
-// ===== GLOBAL VARIABLES
-// ===============================
-
-//AeroCraftGUI* thisScreen;
-
-// ====================================
-// ===== FUNCTION FORWARD DECLARATIONS
-// ====================================
-
-
-
-// ===============================
-// ===== FUNCTION IMPLEMENTATION
-// ===============================
-
-// FUNCTION ======	camera
 
 void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
     switch( event.type ){
@@ -375,7 +400,7 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
             case SDLK_KP_MINUS : zoom*=VIEW_ZOOM_STEP; printf("zoom: %f \n", zoom); break;
             case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
 
-            case SDLK_u : autoPilot    = !autoPilot;    break;
+            case SDLK_u : useAutoPilot = !useAutoPilot;    break;
             case SDLK_p : first_person = !first_person; break;
             case SDLK_m : mouseSteer   = !mouseSteer;   break;
             case SDLK_c : resetSteer( );
@@ -401,8 +426,13 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
 };
 
 void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
-	//Uint8 *keystate = SDL_GetKeyState(NULL);
-	//const Uint8 *keys = SDL_GetKeyboardState(NULL);
+
+    if( autoRetractAirelon ){
+        //myCraft->panels[0].lrot.rotateTo( myCraft_bak->panels[0].lrot, 0.01 );
+        //myCraft->panels[1].lrot.rotateTo( myCraft_bak->panels[1].lrot, 0.01 );
+        rotateTo( 1, myCraft->panels[0].lrot, myCraft_bak->panels[0].lrot, { 0,0,1 }, { 0,1,0 }, 0.01 );
+        rotateTo( 1, myCraft->panels[0].lrot, myCraft_bak->panels[0].lrot, { 0,0,1 }, { 0,1,0 }, 0.01 );
+    }
 
 	if ( keys[ SDL_SCANCODE_DOWN  ] ) { qCamera.pitch( -0.005 );  }
 	if ( keys[ SDL_SCANCODE_UP    ] ) { qCamera.pitch(  0.005  );  }
@@ -421,10 +451,7 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
 
     if      ( keys[ SDL_SCANCODE_Q ] ){ myCraft->panels[3].lrot.rotate( +dyaw, { 0,1,0 } );  }
 	else if ( keys[ SDL_SCANCODE_E ] ){ myCraft->panels[3].lrot.rotate( -dyaw, { 0,1,0 } );  }
-    //if ( keystate[ SDL_SCANCODE_DOWN  ] ) { qmouse.pitch2( -0.005 ); }
-	//if ( keystate[ SDL_SCANCODE_UP    ] ) { qmouse.pitch2( 0.005 ); }
-	//if ( keystate[ SDL_SCANCODE_RIGHT ] ) { qmouse.yaw2  ( 0.005 ); }
-	//if ( keystate[ SDL_SCANCODE_LEFT  ] ) { qmouse.yaw2  ( -0.005 ); }
+
 };
 
 void AeroCraftGUI:: mouseHandling   ( ){
@@ -434,77 +461,11 @@ void AeroCraftGUI:: mouseHandling   ( ){
 	int dmx = mx - WIDTH/2; 	int dmy = my - HEIGHT/2 ;
 	mouseX = dmx;
 	mouseY = -dmy;
-	//printf( " mx: %i  my: %i dmx: %i dmy: %i ",mx, my, dmx, dmy );
-	//qmouse.pitch( 0.001* dmy );
-	//qmouse.yaw  ( 0.001* dmx );
 
 	SDL_GetRelativeMouseState(&dmx,&dmy);
 	qCamera.pitch( 0.005* dmy );
 	qCamera.yaw  ( 0.005* dmx );
 };
-
-/*
-
-void quit(){SDL_Quit(); exit(1);};
-void setup();
-void inputHanding();
-
-// FUNCTION ======	setup
-void setup(){
-	srand(1234);
-    world.init();
-    thisScreen->world = &world;
-    thisScreen->qCamera.setOne();
-    thisScreen->VIEW_DEPTH = 100000;
-
-    thisScreen->VIEW_DEPTH = 10000.0f;
-    thisScreen->first_person = false;
-    printf( " world.init(); DONE! \n" );
-
-    world.fontTex_DEBUG = thisScreen->fontTex;
-    SDL_ShowCursor( SDL_FALSE );
-}
-
-void loop(int n ){
-	loopEnd = false;
-	for( int iframe=0; iframe<n; iframe++ ){
-        //printf( " inputHanding(); \n" );
-		inputHanding();
-		if(!STOP){
-			//update();
-			//printf( " thisScreen->update(); \n" );
-			thisScreen->update();
-			//thisScreen->thisShip = thisShip; // FIXME
-		}
-		//printf(" %i \n", iframe );
-		SDL_Delay( 10 );
-		//SDL_Delay(  int(PHYS_TIME_PER_FRAME*1000) );
-		frameCount++;
-		if(loopEnd) break;
-	}
-}
-
-
-
-// FUNCTION ======  main
-int main(int argc, char *argv[]){
-
-	// creating windows
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	//SDL_SetRelativeMouseMode( SDL_TRUE );
-	int sid;
-	//thisScreen  = new Screen2D( sid, 800,600);
-	thisScreen  = new AeroCraftGUI( sid, 800,600 );
-
-	setup();
-
-	//loop( 1 );
-	loop( 1000000 );
-
-	return 0;
-}
-*/
 
 AeroCraftGUI * thisApp;
 

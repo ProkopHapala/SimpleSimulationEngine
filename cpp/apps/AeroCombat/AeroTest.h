@@ -5,9 +5,9 @@
 #include "testUtils.h"
 
 class AeroTester{ public:
-    AeroCraftControler* autoPilot1 = NULL;
-    AeroCraft*          myCraft    = NULL;
-    double             gravityG    = 9.81;
+    AeroCraftControler* autoPilot = NULL;
+    AeroCraft*          craft     = NULL;
+    double              gravityG  = 9.81;
 
     int ntrj=0,ntrjMax=0;
     Vec3d  *trjPos=NULL,*trjVel=NULL,*trjForce=NULL,*trjFw=NULL,*trjUp=NULL;
@@ -37,20 +37,20 @@ void AeroTester::evalAircraftTrajectory( int n, int nsub, int msub, double dt ){
     double t=0;
     long ticks1 = getCPUticks();
     for(int i=0; i<n; i++){
-        trjPos  [i] = myCraft->pos;
-        trjVel  [i] = myCraft->vel;
-        trjForce[i] = myCraft->force;
-        trjFw   [i] = myCraft->rotMat.c;
-        trjUp   [i] = myCraft->rotMat.b;
+        trjPos  [i] = craft->pos;
+        trjVel  [i] = craft->vel;
+        trjForce[i] = craft->force;
+        trjFw   [i] = craft->rotMat.c;
+        trjUp   [i] = craft->rotMat.b;
         trjT    [i] = t;
         for(int j=0; j<nsub; j++){
             //resetSteer();
-            autoPilot1->control(dt*msub);
+            autoPilot->control(dt*msub);
             for(int itr=0; itr<msub; itr++){
-                myCraft->clean_temp();
-                myCraft->force.set      ( { 0, gravityG*myCraft->mass, 0 } );
-                myCraft->applyAeroForces( {0,0,0} );
-                myCraft->move(dt);
+                craft->clean_temp();
+                craft->force.set      ( { 0, gravityG*craft->mass, 0 } );
+                craft->applyAeroForces( {0,0,0} );
+                craft->move(dt);
                 t+=dt;
             }
 		}
@@ -67,7 +67,7 @@ void AeroTester::doStaticTesting( int ntrj_, double vmin, double vmax, double dv
     //double vmax=300.0;
     //double dv  =5.0;
     for(double v=vmin; v<vmax; v+=dv){
-        double thrust = myCraft->propelers[0].getThrust(v);
+        double thrust = craft->propelers[0].getThrust(v);
         printf(" v=%f [m/s] thrust=%f [N] \n",  v, thrust );
     }
     //int ntrj_=500;
