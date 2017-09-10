@@ -9,7 +9,10 @@
 #include "Body.h"
 #include "Terrain25D.h" // if we don't use functions from Terrain25D we do not need to link it against Terrain25D.o or Terrain25D.cpp
 
-class Warrior3D : public RigidBody { public:
+//class Warrior3D : public RigidBody { public:
+
+class Warrior3D { public:
+
 	int id=-1,kind=-1,shape=0;
     bool    landed  = false;
     bool    trigger = false;
@@ -19,6 +22,7 @@ class Warrior3D : public RigidBody { public:
     double  until_reaload = 0;
     double  hground       = 0.5;
 
+    /*
     void setPose( const Vec3d& pos_, const Vec3d& dir, const Vec3d& up ){
         //w->kind = kind; w->id = warriorCount; warriorCount++;
         initOne();
@@ -29,8 +33,11 @@ class Warrior3D : public RigidBody { public:
         qrot.fromMatrix   ( rotMat );
         printf( "pos (%g,%g,%g) qrot (%g,%g,%g,%g)\n", pos.x, pos.x, pos.x, qrot.x,qrot.y,qrot.z,qrot.w );
     }
+    */
 
+    /*
     virtual void interact( Terrain25D * terrain ){
+
         Vec2d dv;
         double h  = terrain->eval( {pos.x,pos.z}, dv );
         double dh = pos.y - hground - h;
@@ -44,6 +51,14 @@ class Warrior3D : public RigidBody { public:
 
         }
     }
+    */
+
+    //virtual void getPos( ){};
+    //virtual void getPos( ){};
+    //virtual void getPos( ){};
+
+    virtual RigidBody* asRigidBody ( ) = 0;  //{ return cstatic_cast<RigidBody*>(this); };
+    virtual void       move_warrior( double dt, Vec3d& wind_speed, Vec3d& gravity, Terrain25D * terrain ) = 0;
 
 };
 

@@ -173,6 +173,17 @@ class RigidBody : public PointBody { public:
         qrot.toMatrix   ( rotMat );
 	};
 
+    inline void setPose( const Vec3d& pos_, const Vec3d& dir, const Vec3d& up ){
+        //w->kind = kind; w->id = warriorCount; warriorCount++;
+        initOne();
+        pos.set           ( pos_    );
+        rotMat.a.set      ( dir     );
+        rotMat.b.set      ( up      );
+        rotMat.c.set_cross( dir, up );
+        qrot.fromMatrix   ( rotMat );
+        //printf( "pos (%g,%g,%g) qrot (%g,%g,%g,%g)\n", pos.x, pos.x, pos.x, qrot.x,qrot.y,qrot.z,qrot.w );
+	}
+
     inline void initSpherical( double mass, double I ){
 	    setMass( mass );
         Ibody.a.set(I,0,0);

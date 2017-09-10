@@ -6,8 +6,8 @@
 #include "Body.h"
 #include "AeroSurf.h"
 
-#include <SDL2/SDL_opengl.h>
-#include <Draw3D.h>
+//#include <SDL2/SDL_opengl.h>
+//#include <Draw3D.h>
 
 class Propeler{
     public:
@@ -50,8 +50,8 @@ class AeroCraft : public RigidBody {
 	public:
 
 	int nPanels = 0, nPropelers= 0;
-	AeroSurface * panels    = NULL;
-	Propeler    * propelers = NULL;
+	AeroSurface * panels      =NULL;
+	Propeler    * propelers   =NULL;
 
 	AeroSurface * leftAirelon =NULL;
 	AeroSurface * rightAirelon=NULL;
@@ -66,7 +66,7 @@ class AeroCraft : public RigidBody {
 
 	// ==== function declarations
 
-	virtual void render();
+	//virtual void render();
 
 	int fromFile( const char * fname );
 

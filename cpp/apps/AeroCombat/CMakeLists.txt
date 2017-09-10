@@ -1,16 +1,27 @@
 
 set( NAME "AeroCombat" )
 
-add_executable( ${NAME} 
-	main.cpp FieldPatch.cpp AeroCraftWorld.cpp AeroCraftGUI.cpp #AeroCraft.cpp
-	#$<TARGET_OBJECTS:${NAME}_objects> 
-	$<TARGET_OBJECTS:Body> 
-	$<TARGET_OBJECTS:AeroSurf>
-	$<TARGET_OBJECTS:AeroCraft>
-	$<TARGET_OBJECTS:SDL2OGL> 
+include_directories(
+        ${COMMON_SRCS}
+        ${COMMON_SRCS}/math
+        ${COMMON_SRCS}/dynamics
+        ${COMMON_SRCS}/engines
+        ${COMMON_SRCS}/SDL2OGL
+        ${OpenGL_INCLUDE_DIR}
+        ${GLU_INCLUDE_DIR}
+        ${SDL2_INCLUDE_DIR}
 )
 
-target_link_libraries( ${NAME} ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+add_executable( ${NAME}
+	main.cpp FieldPatch.cpp  #AeroCraft.cpp AeroCraftWorld.cpp AeroCraftGUI.cpp
+	#$<TARGET_OBJECTS:${NAME}_objects>
+	#$<TARGET_OBJECTS:Body>
+	#$<TARGET_OBJECTS:AeroSurf>
+	#$<TARGET_OBJECTS:AeroCraft>
+	$<TARGET_OBJECTS:SDL2OGL>
+)
+
+target_link_libraries( ${NAME} ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
 
 add_custom_command(
     TARGET ${NAME}

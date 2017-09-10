@@ -75,9 +75,9 @@ void FieldPatch::divide( int nlevels, int level, const Quad& rc ){
 	//printVec(rc.p1); printVec(rc.p2); printVec(rc.p3); printVec(rc.p4); printf(" rc.ps \n");
 	double rnd  = randf();
 	double area = rc.area();
-	printf("%f %f\n", area, minarea);
+	//printf("%f %f\n", area, minarea);
 	if((level>0)&&( area>minarea )){
-        printf("here\n");
+        //printf("here\n");
 		if      ( rnd < thresh[0] ){ divide_1( nlevels, level, rc ); }
 		else{
 			if( level>(nlevels-startkill) ){ divide_1( nlevels, level, rc );  }

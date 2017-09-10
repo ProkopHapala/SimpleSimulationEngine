@@ -10,7 +10,43 @@
 
 #include "AeroCraftGUI.h" // THE HEADER
 
-void AeroCraftGUI:: camera (){
+void render( const AeroCraft& craft){
+	glPushMatrix();
+        Mat3d camMat;
+        camMat.setT(craft.rotMat);
+        float glmat[16];
+        Draw3D::toGLMat( craft.pos, camMat, glmat);
+        //printf( "%g %g %g\n", pos.x, pos.y, pos.z);
+        //printf( "%g %g %g\n", camMat.ax, camMat.ay, camMat.az);
+        //printf( "%g %g %g\n", camMat.bx, camMat.by, camMat.bz);
+        //printf( "%g %g %g\n", camMat.cx, camMat.cy, camMat.cz);
+        glMultMatrixf( glmat );
+        glDisable (GL_LIGHTING);
+        glColor3f( 0.3f,0.3f,0.3f );
+
+        Draw3D::drawSphere_oct(1,0.2,{0.0,0.0,0.0});
+
+        //Draw3D::drawLine( {0,0,0},wingLeft .lpos);
+        //Draw3D::drawLine( {0,0,0},wingRight.lpos);
+        //Draw3D::drawLine( {0,0,0},elevator .lpos);
+        //wingLeft .render();
+        //wingRight.render();
+        //rudder   .render();
+        //elevator .render();
+
+
+		for( int i=0; i<craft.nPanels; i++ ){
+            Draw3D::drawLine( {0,0,0}, craft.panels[i].lpos);
+            //printf( "%g %g %g\n", panels[i].lpos.x, panels[i].lpos.y, panels[i].lpos.z);
+            //panels[i].render( );
+            Draw3D::drawKite( craft.panels[i].lpos, craft.panels[i].lrot, sqrt(craft.panels[i].area) );
+		}
+
+	glPopMatrix();
+};
+
+
+void AeroCraftGUI::camera (){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
     float fov = VIEW_ZOOM_DEFAULT/zoom;
@@ -90,7 +126,8 @@ void AeroCraftGUI:: draw(){
 	glEnable    (GL_LIGHTING);
 	glShadeModel(GL_FLAT);
 
-	world->myCraft->render();
+	//world->myCraft->render();
+	render( *world->myCraft );
 
 	//glDisable (GL_LIGHTING);
 	glShadeModel(GL_SMOOTH);

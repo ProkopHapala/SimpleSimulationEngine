@@ -7,12 +7,14 @@
 
 Projectile3D* Shooter::fireProjectile( Warrior3D * w, double speed, int kind ){
     Projectile3D * p = new Projectile3D();
+    //RigidBody *b = (RigidBody*)p; // FIXME: This is very bad but get arround diamond problem
+    RigidBody *b = w->asRigidBody();
     p->kind = kind;
     p->id   = shotsCount; shotsCount++;
     p->vel.set_mul ( w->gun_rot, speed );
-    p->vel.add     ( w->vel );
+    p->vel.add     ( b->vel );
     //p->vel.add( { randf(-0.1,0.1), randf(-0.1,0.1), randf(-0.1,0.1) } );
-    p->pos.set     ( w->pos );
+    p->pos.set     ( b->pos );
     p->pos.add_mul ( w->gun_rot, 5.0 );
     projectiles.push_back( p );
     return p;
@@ -25,6 +27,7 @@ int Shooter::registrWarrior( Warrior3D * w ){
     return warriorCount;
 }
 
+/*
 Warrior3D* Shooter::makeWarrior( const Vec3d& pos, const Vec3d& dir, const Vec3d& up, int kind ){
     //int ith = warriors.size();
     //printf( " >>> Setup  ship %i \n", ith );
@@ -46,33 +49,24 @@ Warrior3D* Shooter::makeWarrior( const Vec3d& pos, const Vec3d& dir, const Vec3d
     registrWarrior( w );
     return w;
 }
+*/
 
 void Shooter::update_warriors3D(){
     auto itw = warriors.begin();
     while( itw != warriors.end() ) {
         Warrior3D * w = *itw;
+        /*
+
         w->clean_temp( );
         //addEnviroForces              ( w->pos, w->vel, w->force,  w->landed );
         w->force.add( {0.0,gravity*w->mass,0.0} );
         if(terrain){ w->interact(terrain); }
-        /*
-        if(terrain){
-            Vec2d dv;
-            double h  = terrain->eval( {w->pos.x,w->pos.z}, dv );
-            double dh = w->pos.y - w->hground - h;
-            if( dh  < 0.0 ){
-                //w->force.add( {0.0,gravity,0.0} );
-                //w->force.add( {dv.x, dh*(-1-0.5*w->vel.y), dv.y} );
-                w->force.add( { -dv.x, dh*(-100+2.5*w->vel.y), -dv.y } );
-                w->force.add( {w->vel.x*landDrag,0.0,w->vel.z*landDrag} );
-                //printf( " dv (%3.3f,%3.3f) (%3.3f,%3.3f)  \n", dv.x, dv.y, w->pos.x,w->pos.y );
-                //w->force.add( {0, dh*(-100+2.5*w->vel.y), 0} );
-
-            }
-        }
-        */
         //w->landed = collideWithWorld ( w->pos, w->vel, w->surf );
         w->move( dt );
+        */
+
+        Vec3d G = (Vec3d){0.0,gravity,0.0};
+        w->move_warrior( dt, wind_speed, G, terrain );
 
         //w->gun_rot.set_mul_cmplx( rot, w->rot );
         //w->update( dt );

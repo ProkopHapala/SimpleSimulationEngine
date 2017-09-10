@@ -101,7 +101,7 @@ class VehicleBlock : public KinematicBody, public Mesh { public:
     }
 };
 
-class Tank : public Warrior3D { public:
+class Tank : public RigidBody, public Warrior3D { public:
     int nwheel = 0;
     Wheel        * wheels;
     VehicleBlock   hull;
@@ -218,7 +218,19 @@ class Tank : public Warrior3D { public:
         }
     }
 
-    virtual void interact( Terrain25D * terrain ){ interactTerrain( terrain ); }
+    //virtual void interact( Terrain25D * terrain ){ interactTerrain( terrain ); }
+
+    //virtual void asRigidBody(){}
+
+    virtual RigidBody* asRigidBody( ){ return static_cast<RigidBody*>(this); };
+
+    virtual void move_warrior( double dt, Vec3d& wind_speed, Vec3d& gravity, Terrain25D * terrain ){
+        clean_temp();
+        force.add( gravity*mass );
+        if(terrain){ interactTerrain( terrain ); }
+        //w->landed = collideWithWorld ( w->pos, w->vel, w->surf );
+        move( dt );
+    };
 
     void update( double dt ){
         for(int i=0; i<nwheel; i++){ wheels[i].move( dt); }

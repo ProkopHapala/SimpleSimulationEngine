@@ -13,7 +13,8 @@
 //class AeroCraftGUI : public ScreenSDL2OGL_3D {
 class AeroCraftGUI : public AppSDL2OGL_3D {
 	public:
-	AeroCraftWorld * world;
+	//AeroCraftWorld * world;
+	Shooter * world;
 
     int      fontTex;
     GUIPanel   panel;
