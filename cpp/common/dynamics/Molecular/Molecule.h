@@ -33,7 +33,8 @@ class Molecule{ public:
     int  natoms=0, nbonds=0;
     Vec3d  * pos       = NULL;
     Vec2i  * bond2atom = NULL;
-    double * charges   = NULL;
+    //double * charges   = NULL;
+    Vec3d  * REQs      = NULL;
     int    * atomType  = NULL;
     int    * bondType  = NULL;
 
@@ -49,7 +50,8 @@ class Molecule{ public:
     void allocate( int natoms_, int nbonds_ ){
         natoms=natoms_; nbonds=nbonds_;
         if(pos      ==NULL) pos       = new Vec3d [natoms];
-        if(charges  ==NULL) charges   = new double[natoms];
+        //if(charges  ==NULL) charges   = new double[natoms];
+        if(REQs     ==NULL) REQs      = new Vec3d [natoms];
         if(bond2atom==NULL) bond2atom = new Vec2i [nbonds];
         if(atomType ==NULL) atomType  = new int   [natoms];
         if(bondType ==NULL) bondType  = new int   [nbonds];
@@ -140,8 +142,8 @@ class Molecule{ public:
             char at_name[8];
             double junk;
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
-            sscanf( line, "%lf %lf %lf %s %lf %lf\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name, &junk, &charges[i] );
-            printf(       "%lf %lf %lf %s %lf %lf\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name,  junk,  charges[i] );
+            sscanf( line, "%lf %lf %lf %s %lf %lf\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name, &junk, &REQs[i].z );
+            printf(       "%lf %lf %lf %s %lf %lf\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name,  junk,  REQs[i].z );
             // atomType[i] = atomChar2int( ch );
             auto it = atypNames->find( at_name );
             if( it != atypNames->end() ){
@@ -212,6 +214,44 @@ class Molecule{ public:
             bond2atom[i].y--;
         }
         return natoms + nbonds;
+    }
+
+
+    int loadXYZ( char* fname ){
+        // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
+        // http://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){
+            printf("cannot find %s\n", fname );
+            return -1;
+        }
+        char buff[1024];
+        char * line;
+        int nl;
+        line = fgets( buff, 1024, pFile ); //printf("%s",line);
+        sscanf( line, "%i \n", &natoms );
+        printf("%i \n", natoms );
+        allocate(natoms,nbonds);
+        line = fgets( buff, 1024, pFile ); // comment
+        for(int i=0; i<natoms; i++){
+            //char ch;
+            char at_name[8];
+            double junk;
+            line = fgets( buff, 1024, pFile );  //printf("%s",line);
+            double Q;
+            int nret = sscanf( line, "%s %lf %lf %lf %lf\n", at_name, &pos[i].x, &pos[i].y, &pos[i].z, &Q );
+            if( nret == 5 ){  REQs[i].z=Q; };
+            printf(       "%s %lf %lf %lf  %lf\n",  at_name, pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z );
+            // atomType[i] = atomChar2int( ch );
+            auto it = atypNames->find( at_name );
+            if( it != atypNames->end() ){
+                atomType[i] = it->second;
+            }else{
+                //atomType[i] = atomChar2int( at_name[0] );
+                atomType[i] = -1;
+            }
+        }
+        return natoms;
     }
 
 

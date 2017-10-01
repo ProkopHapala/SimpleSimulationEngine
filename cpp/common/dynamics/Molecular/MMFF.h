@@ -84,6 +84,7 @@ class MMFF{ public:
 
 void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     natoms=natoms_; nbonds=nbonds_; nang=nang_; ntors=ntors_;
+    printf( "MMFF::allocate natoms: %i  nbonds: %i  nang: %i ntors: %i \n", natoms, nbonds, nang, ntors );
     if(atypes   ==NULL) atypes    = new int   [natoms];
     if(apos     ==NULL) apos      = new Vec3d [natoms];
     if(aforce   ==NULL) aforce    = new Vec3d [natoms];
@@ -111,10 +112,12 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
 
 void allocFragment( int nFrag_ ){
     nFrag = nFrag_;
+    printf( "MMFF::allocFragment nFrags: %i  nPosses: %i \n", nFrag, nFrag*8 );
     //imolTypes = new int[nFrag];
-    frag2a    = new int[nFrag];       // start of the fragment in forcefield
-    fragNa    = new int[nFrag];       // lengh of the fragment
+    frag2a    = new int   [nFrag];    // start of the fragment in forcefield
+    fragNa    = new int   [nFrag];    // lengh of the fragment
     poses     = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
+    poseFs    = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
     fapos0s   = new Vec3d*[nFrag];
 }
 
@@ -152,8 +155,9 @@ void genPLQ(){
 
 void translate( Vec3d dpos){ for(int i=0; i<natoms; i++) apos[i].add(dpos); }
 
-void frags2atoms( ){
+void frags2atoms(){
     // : fragment pose -> atomic position
+    //printf( ">>> MMFF::frags2atoms %i \n", nFrag );
     for(int ifrag=0; ifrag<nFrag; ifrag++){
         int im8 = ifrag<<3;
         Vec3d  pos = *((Vec3d* )(poses+im8  ));
@@ -161,6 +165,7 @@ void frags2atoms( ){
         Mat3d T; rot.toMatrix(T);
         int ia = frag2a[ifrag];
         int na = fragNa[ifrag];
+        //printf( "ia na %i %i \n", ia, na );
         //MolType& mtyp = mTypes[imolTypes[i]];
         //Vec3d * m_apos = mTypes[imolTypes[ifrag]].apos;
         Vec3d * m_apos = fapos0s[ifrag];
@@ -168,10 +173,28 @@ void frags2atoms( ){
             Vec3d Tp;
             T.dot_to_T( m_apos[j], Tp );
             apos[ia].set_add( pos, Tp );
+            //printf( "%i %i  (%g,%g,%g) (%g,%g,%g) \n", ifrag, j,  m_apos[j].x, m_apos[j].y, m_apos[j].z,   Tp.x, Tp.y, Tp.z  );
             ia++;
         }
     }
     //exit(0);
+}
+
+void cleanPoseTemps(){
+    for( int ifrag=0; ifrag<nFrag; ifrag++ ){
+        int im8 = ifrag<<3;
+        double * poseF_i = poseFs+im8;
+        ((Quat4d*)(poseF_i  ))->set(0.0);
+        ((Quat4d*)(poseF_i+4))->set(0.0);
+    }
+}
+
+void checkPoseNormal(){
+    for( int ifrag=0; ifrag<nFrag; ifrag++ ){
+        int im8 = ifrag<<3;
+        double * pose_i = poseFs+im8;
+        ((Quat4d*)(pose_i+4))->checkNormalized(1e-4);
+    }
 }
 
 void aforce2frags(){
@@ -432,6 +455,30 @@ void eval_MorseQ_On2(){
         aforce[i].add(f);
     }
     //exit(0);
+}
+
+void eval_MorseQ_Frags(){
+    // we can use in principle eval_MorseQ_On2, but it will make it less numerically precise due to adding repulasive force between non-bonded atoms
+    // also this will allow for more optimizations in future (e.g. per-fragment bounding boxes)
+    for(int ifrag=0; ifrag<nFrag; ifrag++){
+        int ia = frag2a[ifrag];
+        int na = ia+fragNa[ifrag];
+        for( int i=ia; i<na; i++ ){
+            Vec3d REQi = aREQ[i];
+            Vec3d pi   = apos[i];
+            Vec3d f; f.set(0.0);
+            for(int jfrag=0; jfrag<nFrag; jfrag++){
+                if( jfrag == ifrag ) continue;
+                int ja = frag2a[jfrag];
+                int ma = ja+fragNa[jfrag];
+                for( int j=ja; j<ma; j++ ){
+                    Vec3d& REQj = aREQ[j];
+                    addAtomicForceMorseQ( pi-apos[j], f, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z, gridFF.alpha );
+                }
+            }
+            aforce[i].add(f);
+        }
+    }
 }
 
 void eval_FFgrid(){

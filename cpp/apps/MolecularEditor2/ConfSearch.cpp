@@ -184,6 +184,14 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
 
 AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+
+    ogl_sph = glGenLists(1);
+    glNewList( ogl_sph, GL_COMPILE );
+        //Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
+        Draw3D::drawSphere_oct( 3, 0.25, {0.0,0.0,0.0} );
+    glEndList();
+
     //qCamera.set( 0.0,0.0,0.0,1.0 );  // bottom view
     //qCamera.set( 0.0,0.0,1.0,0.0 );  // bottom view
     //qCamera.set( 0.0,1.0,0.0,0.0 );  // top view  x=-x, y=y,
@@ -195,13 +203,11 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //qCamera.set( 0.0,0.0, +0.70710678118, 0.70710678118 ); // y=-x, x=y
     //qCamera.set( 0.0,0.0, -0.70710678118, 0.70710678118 ); // y=x, x=-y
 
-
     //AtomType atyp;
     //atyp.fromString( "CA 6 4 4 1 2.00 0.09 0x11EEAA" );
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
-
+    params.loadBondTypes( "common_resources/BondTypes.dat" );
     //for(auto kv : params.atypNames) { printf( ">>%s<< %i \n", kv.first.c_str(), kv.second ); };
-
     char str[1024];
     printf( "type %s \n", params.atypes[ params.atypNames.find( "C" )->second ].toString( str ) );
     printf( "type %s \n", params.atypes[ params.atypNames.find( "H" )->second ].toString( str ) );
@@ -221,27 +227,17 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     //exit(0);
 
-    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
-
-    params.loadBondTypes("common_resources/BondTypes.dat");
-
+    /*
+    // --- not Rigid Body
     //mol.loadMol("common_resources/propylacid.mol");
     //mol.loadMol("common_resources/precursor_OH.mol");
+    //mol.loadMol("common_resources/precursor_CN.mol");
     mol.loadMol("common_resources/precursor_CN.mol");
-    mol.bondsOfAtoms();   mol.printAtom2Bond();
+    mol.bondsOfAtoms();
+    mol.printAtom2Bond();
     mol.autoAngles();
-
     Vec3d cog = mol.getCOG_av();
     mol.addToPos( cog*-1.0d );
-
-    /*
-    world.apos      = mol.pos;
-    world.bond2atom = mol.bond2atom;
-    world.ang2bond  = mol.ang2bond;
-    world.allocate( mol.natoms, mol.nbonds, mol.nang, 0 );
-    world.ang_b2a();
-    //params.fillBondParams( world.nbonds, world.bond2atom, mol.bondType, mol.atomType, world.bond_0, world.bond_k );
-    */
 
     //Vec3d pos = (Vec3d){0.0,0.0,0.0};
     Mat3d rot; rot.setOne();
@@ -273,16 +269,31 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
         //Vec2i ib = world.ang2bond[i];
         //world.ang2atom [i] = (Vec3i){ world.bond2atom[ib.x].y, world.bond2atom[ib.y].y, world.bond2atom[ib.y].x };
     }
+    */
+
+    mol.loadXYZ( "inputs/water_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
+    Mat3d rot; rot.setOne();
+    builder.insertMolecule( &mol, {0.0,0.0,0.0}, rot, true );          printf( "DEBUG 3.2 \n" );
+    builder.insertMolecule( &mol, {3.0,0.0,0.0}, rot, true );
+    builder.toMMFF( &world, &params );                                 printf( "DEBUG 3.3 \n" );
+
+    //world.allocFragment( nFrag );
+
+    opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); printf( "DEBUG 3.4 \n" );
+    opt.setInvMass( 1.0 );  printf( "DEBUG 3.5 \n" );
+    opt.cleanVel  ( );      printf( "DEBUG 3.6 \n" );
+    //exit(0);
+
+    /*
+    world.apos      = mol.pos;
+    world.bond2atom = mol.bond2atom;
+    world.ang2bond  = mol.ang2bond;
+    world.allocate( mol.natoms, mol.nbonds, mol.nang, 0 );
+    world.ang_b2a();
+    //params.fillBondParams( world.nbonds, world.bond2atom, mol.bondType, mol.atomType, world.bond_0, world.bond_k );
+    */
 
     printf( "DEBUG 4 \n" );
-
-    ogl_sph = glGenLists(1);
-    glNewList( ogl_sph, GL_COMPILE );
-        //glEnable( GL_LIGHTING );
-        //glColor3f( 0.8f, 0.8f, 0.8f );
-        //Draw3D::drawSphere_oct(3, 0.5, {0.0,0.0,0.0} );
-        Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
-    glEndList();
 
     //printf( "bond 8 %g \n", world.bond_0[8] );
     //printf( "bond 9 %g \n", world.bond_0[9] );
@@ -291,14 +302,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //exit(0);
 
     /*
-    world.grid.n    = (Vec3i){100,100,100};
-    world.grid.pos0 = (Vec3d){-5.0,-5.0,-5.0};
-    world.grid.setCell( (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f } );
-
-    Vec3d * FF     = new Vec3d[world.grid.getNtot()];
-    world.FFPauli  = new Vec3d[world.grid.getNtot()];
-    world.FFLondon = new Vec3d[world.grid.getNtot()];
-    */
+    // ---- Rigid Substrate
     //world.substrate.init( (Vec3i){100,100,100}, (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f }, (Vec3d){-5.0,-5.0,-5.0} );
 
     printf( "params.atypNames:\n" );
@@ -320,16 +324,9 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     world.translate( {0.0,0.0,4.5} );
 
-
     //testREQ = (Vec3d){ 2.181, 0.0243442, 0.0}; // Xe
     testREQ = (Vec3d){ 1.487, 0.0006808, 0.0}; // H
-    testPLQ = REQ2PLQ( testREQ, -1.6 );
-
-    /*
-    //world.substrate.evalFFlineToFile( 100, (Vec3d){0.000000, 4.005760, 0.900000}, (Vec3d){0.000000, 14.005760, 0.900000}, (Vec3d){ 1.66, 0.009, 0.0}, -1.5,  "force.dat" );
-    world.gridFF.evalFFlineToFile( 100, (Vec3d){0.000000, 0.00000, 10.000000}, (Vec3d){0.000000, 0.00000, 0.000000}, (Vec3d){ 1.487, 0.0006808, 0.0}, "force_H.dat" );
-    world.gridFF.evalFFlineToFile( 100, (Vec3d){0.000000, 0.00000, 10.000000}, (Vec3d){0.000000, 0.00000, 0.000000}, (Vec3d){ 2.181, 0.0243442, 0.0}, "force_Xe.dat" );
-    */
+    testPLQ = REQ2PLQ( testREQ, -1.6 );//
 
     world.genPLQ();
     world.gridFF.allocateFFs();
@@ -352,11 +349,13 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     isoOgl = glGenLists(1);
     glNewList(isoOgl, GL_COMPILE);
-    //getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
-    //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
-    renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
-    Draw3D::drawAxis(1.0);
+        //getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
+        //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
+        renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
+        Draw3D::drawAxis(1.0);
     glEndList();
+
+    */
 
 }
 
@@ -368,7 +367,6 @@ void AppMolecularEditor2::draw(){
 	//if(isoOgl)
 
 	Draw3D::drawAxis(10);
-
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
@@ -394,37 +392,33 @@ void AppMolecularEditor2::draw(){
     if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
 
 	double F2;
+	perFrame = 1;
+	//delay = 100;
 	for(int itr=0; itr<perFrame; itr++){
 
-        for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
+        for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }  //printf( "DEBUG 5.1\n" );
 
-        world.eval_FFgrid();
+        world.frags2atoms();       //printf( "DEBUG 5.2\n" );
+        //world.eval_MorseQ_On2(); printf( "DEBUG 5.3\n" );
+        world.eval_MorseQ_Frags(); //printf( "DEBUG 5.3\n" );
+        world.cleanPoseTemps();
+        world.aforce2frags();      //printf( "DEBUG 5.4\n" );
 
-        //printf( "DEBUG x.1 \n" );
-        world.eval_bonds(true);
-        //world.eval_angles();
-        //printf( "DEBUG x.2 \n" );
-        world.eval_angcos();
-        //printf( "DEBUG x.3 \n" );
-        //world.eval_LJq_On2();
-        world.eval_MorseQ_On2();
-
-
+        /*
         //exit(0);
         if(ipicked>=0){
             Vec3d f = getForceSpringRay( world.apos[ipicked], camMat.c, ray0, -1.0 );
             //printf( "f (%g,%g,%g)\n", f.x, f.y, f.z );
             world.aforce[ipicked].add( f );
         };
+        */
 
         /*
         for(int i=0; i<world.natoms; i++){
             world.aforce[i].add( getForceHamakerPlane( world.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
             //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
         }
-
         */
-
 
         //exit(0);
 
@@ -433,7 +427,15 @@ void AppMolecularEditor2::draw(){
         //world.aforce[ipivot].set(0.0);
         //opt.move_LeapFrog(0.01);
         //opt.move_MDquench();
-        F2 = opt.move_FIRE();
+        F2 = opt.move_FIRE();  //printf( "DEBUG 5.5\n" );
+
+        /*
+        for( int i=0; i<world.nFrag; i++ ){
+            int i8 = i*8;
+            printf( "force[%04i] %g,%g,%g,%g|%g,%g,%g,%g\n",i, opt.force[i8+0], opt.force[i8+1], opt.force[i8+2], opt.force[i8+3],    opt.force[i8+4], opt.force[i8+5], opt.force[i8+6], opt.force[i8+7]  );
+            printf( "pos  [%04i] %g,%g,%g,%g|%g,%g,%g,%g\n",i, opt.pos[i8+0], opt.pos[i8+1], opt.pos[i8+2], opt.pos[i8+3],    opt.pos[i8+4], opt.pos[i8+5], opt.pos[i8+6], opt.pos[i8+7]  );
+        }
+        */
         //exit(0);
 
     }
@@ -442,7 +444,6 @@ void AppMolecularEditor2::draw(){
     //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,1.0},  (Vec3d){0.0,0.0,0.0} );
 
     //printf( "==== frameCount %i  |F| %g \n", frameCount, sqrt(F2) );
-
 
     for(int i=0; i<world.nbonds; i++){
         Vec2i ib = world.bond2atom[i];
@@ -458,7 +459,7 @@ void AppMolecularEditor2::draw(){
     glShadeModel(GL_SMOOTH);
     for(int i=0; i<world.natoms; i++){
         //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.apos[i],0.2);
-        glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(world.aforce[i]*30.0,world.apos[i]);
+        glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(world.aforce[i]*1000.0,world.apos[i]);
 
         //glCallList( ogl_sph );
         glEnable(GL_LIGHTING);
@@ -481,8 +482,8 @@ void AppMolecularEditor2::draw(){
     if(frameCount>=10){STOP = true;}
     */
 
+   //exit(0);
 };
-
 
 void  AppMolecularEditor2::keyStateHandling( const Uint8 *keys ){
     double dstep=0.1;
@@ -494,7 +495,6 @@ void  AppMolecularEditor2::keyStateHandling( const Uint8 *keys ){
     if( keys[ SDL_SCANCODE_E ] ){ PPpos0.z -=dstep; }
     AppSDL2OGL_3D::keyStateHandling( keys );
 };
-
 
 void AppMolecularEditor2::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );

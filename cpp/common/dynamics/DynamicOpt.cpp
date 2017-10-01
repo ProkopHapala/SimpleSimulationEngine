@@ -58,6 +58,7 @@ void DynamicOpt::move_MDquench(){
 
 double DynamicOpt::move_FIRE(){
 	double ff=0,vv=0,vf=0;
+	//printf( "DEBUG 5.5.1: %i\n", n  );
 	for(int i=0; i<n; i++){
 		double fi = force[i];
 		double vi = vel[i];
@@ -65,6 +66,7 @@ double DynamicOpt::move_FIRE(){
 		vv += vi*vi;
 		vf += vi*fi;
 	}
+	//printf( "DEBUG 5.5.2 \n" );
 	if( vf < 0.0 ){
 		//dt       = dt * fdec;
 		dt       = fmax( dt * fdec, dt_min );
@@ -86,6 +88,7 @@ double DynamicOpt::move_FIRE(){
 		}
 		lastNeg++;
 	}
+	//printf( "DEBUG 5.5.3 \n" );
 
 	double dt_=dt;
     if( ff > f_limit*f_limit ){

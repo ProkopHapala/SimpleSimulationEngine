@@ -81,9 +81,19 @@ class Quat4TYPE {
 	inline TYPE norm (          ) const {  return sqrt( w*  w + x*  x + y*  y + z*  z ); }
     inline TYPE normalize() {
 		TYPE norm  = sqrt( x*x + y*y + z*z + w*w );
-		TYPE inorm = 1.0d/norm;
+		TYPE inorm = 1/norm;
 		x *= inorm;    y *= inorm;    z *= inorm;   w *= inorm;
 		return norm;
+    }
+
+    inline void checkNormalized( TYPE D2 ){
+        TYPE r2 =  x*x + y*y + z*z + w*w;
+        TYPE d2 = r2 - 1;
+        if( (d2>D2) || (d2<-D2) ){
+            TYPE norm  = sqrt( x*x + y*y + z*z + w*w );
+            TYPE inorm = 1/norm;
+            x *= inorm;    y *= inorm;    z *= inorm;   w *= inorm;
+		}
     }
 
 // ====== Quaternion multiplication

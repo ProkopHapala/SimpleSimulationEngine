@@ -2,6 +2,7 @@
 #define MMFFBuilder_h
 
 #include <vector>
+#include <unordered_map>
 
 #include "Molecule.h"
 #include "MMFF.h"
@@ -30,12 +31,21 @@ class MMFFmol{ public:
     Vec3i    i0;
 };
 
+class MMFFfrag{ public:
+    int atom0, natom;
+    Vec3d  pos;
+    Quat4d rot;
+    Molecule * mol;
+    Vec3d    * pos0s;
+};
+
 class MMFFBuilder{  public:
     std::vector<MMFFAtom>  atoms;
     std::vector<MMFFBond>  bonds;
     std::vector<MMFFAngle> angles;
     std::vector<MMFFmol>   mols;
-    std::vector<Vec2i>     frags;
+    std::vector<MMFFfrag>       frags;
+    std::unordered_map<size_t,size_t> fragTypes;
 
     void insertMolecule( Molecule * mol, Vec3d pos, Mat3d rot, bool rigid ){
         int natom0  = atoms.size();
@@ -44,18 +54,34 @@ class MMFFBuilder{  public:
         mols.push_back( (MMFFmol){mol, (Vec3i){natom0,nbond0,nangle0} } );
 
         int natoms0 = atoms.size();
-        for(int i=0; i<mol->natoms; i++){
-            //Vec3d LJq = (Vec3d){0.0,0.0,0.0}; // TO DO : LJq can be set by type
-            Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
-            Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
-            atoms.push_back( (MMFFAtom){mol->atomType[i], p, LJq } );
-        }
-        if( rigid ) frags.push_back( {natoms0, atoms.size()-natoms0} );
-        for(int i=0; i<mol->nbonds; i++){
-            bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}) } );
-        }
-        for(int i=0; i<mol->nang; i++){
-            angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}) } );
+        if( rigid ){
+            Quat4d qrot; qrot.fromMatrix(rot);
+            for(int i=0; i<mol->natoms; i++){
+                Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
+                //atoms.push_back( (MMFFAtom){mol->atomType[i],mol->pos[i], LJq } );
+                Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
+                atoms.push_back( (MMFFAtom){mol->atomType[i], p, LJq } );
+            }
+            frags.push_back( (MMFFfrag){natoms0, atoms.size()-natoms0, pos, qrot, mol}  );
+            //size_t mol_id = static_cast<size_t>(mol);
+            size_t mol_id = (size_t)(mol);
+            auto got = fragTypes.find(mol_id);
+            if ( got == fragTypes.end() ) {
+                fragTypes[ mol_id ] = frags.size()-1;
+            }else{}
+        }else{
+            for(int i=0; i<mol->natoms; i++){
+                //Vec3d LJq = (Vec3d){0.0,0.0,0.0}; // TO DO : LJq can be set by type
+                Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
+                Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
+                atoms.push_back( (MMFFAtom){mol->atomType[i], p, LJq } );
+            }
+            for(int i=0; i<mol->nbonds; i++){
+                bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}) } );
+            }
+            for(int i=0; i<mol->nang; i++){
+                angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}) } );
+            }
         }
     }
 
@@ -91,6 +117,18 @@ class MMFFBuilder{  public:
             mmff->ang2bond[i] = angles[i].bonds;
             mmff->ang_0[i] = {1.0,0.0}; // TODO FIXME
             mmff->ang_k[i] = 0.5;       // TODO FIXME
+        }
+        if( frags.size()>0 ){
+            mmff->allocFragment( frags.size() );
+            for(int i=0; i<frags.size(); i++){
+                MMFFfrag& fragi = frags[i];
+                mmff->frag2a  [i] = fragi.atom0;
+                mmff->fragNa  [i] = fragi.natom;
+                mmff->fapos0s [i] = fragi.mol->pos;
+                double * posi= (mmff->poses + i*8);
+                *(Vec3d *)(posi  )= fragi.pos;
+                *(Quat4d*)(posi+4)= fragi.rot;
+            }
         }
         //params.fillBondParams( mmff->nbonds, mmff->bond2atom, bondTypes, atomTypes, mmff->bond_0, mmff->bond_k );
         //delete [] atomTypes;
