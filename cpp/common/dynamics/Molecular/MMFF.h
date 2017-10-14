@@ -76,7 +76,9 @@ class MMFF{ public:
     int    *  frag2a  = NULL; // start of the fragment in forcefield
     int    *  fragNa  = NULL; // lengh of the fragment
     double *  poses   = NULL; // rigd body pose of molecule (pos,qRot);
-    double *  poseFs  = NULL; // rigd body pose of molecule (pos,qRot);
+    double *  poseFs  = NULL; //
+    double *  poseVs  = NULL; //
+
 
     //RigidSubstrate substrate;
     GridFF gridFF;
@@ -118,6 +120,7 @@ void allocFragment( int nFrag_ ){
     fragNa    = new int   [nFrag];    // lengh of the fragment
     poses     = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
     poseFs    = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
+    poseVs    = new double[nFrag*8];
     fapos0s   = new Vec3d*[nFrag];
 }
 
@@ -180,6 +183,11 @@ void frags2atoms(){
     //exit(0);
 }
 
+
+void cleanAtomForce(){
+    for(int i=0; i<natoms; i++){ aforce[i].set(0.0); }
+}
+
 void cleanPoseTemps(){
     for( int ifrag=0; ifrag<nFrag; ifrag++ ){
         int im8 = ifrag<<3;
@@ -189,11 +197,16 @@ void cleanPoseTemps(){
     }
 }
 
-void checkPoseNormal(){
+void checkPoseUnitary(){
     for( int ifrag=0; ifrag<nFrag; ifrag++ ){
-        int im8 = ifrag<<3;
-        double * pose_i = poseFs+im8;
-        ((Quat4d*)(pose_i+4))->checkNormalized(1e-4);
+        int ioff = (ifrag<<3) + 4;
+        Quat4d& rot  = *(Quat4d*)(poses+ioff);
+        Quat4d& frot = *(Quat4d*)(poseFs+ioff);
+        Quat4d& vrot = *(Quat4d*)(poseVs+ioff);
+        rot.checkNormalized(1e-4);
+        double cdot;
+        cdot = rot.dot( frot );  frot.add_mul( rot, -cdot );
+        cdot = rot.dot( vrot );  vrot.add_mul( rot, -cdot );
     }
 }
 
@@ -467,18 +480,22 @@ void eval_MorseQ_Frags(){
             Vec3d REQi = aREQ[i];
             Vec3d pi   = apos[i];
             Vec3d f; f.set(0.0);
+            //printf( " (%i,%i) (%g,%g,%g)  \n",  ifrag, i, REQi.x, REQi.y, REQi.z );
             for(int jfrag=0; jfrag<nFrag; jfrag++){
                 if( jfrag == ifrag ) continue;
                 int ja = frag2a[jfrag];
                 int ma = ja+fragNa[jfrag];
                 for( int j=ja; j<ma; j++ ){
                     Vec3d& REQj = aREQ[j];
+                    //printf( " (%i,%i) (%i,%i) ()  \n",  ifrag jfrag i j );
+                    //addAtomicForceMorseQ( pi-apos[j], f, REQi.x+REQj.x, -REQi.y*REQj.y, 0, gridFF.alpha );
                     addAtomicForceMorseQ( pi-apos[j], f, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z, gridFF.alpha );
                 }
             }
             aforce[i].add(f);
         }
     }
+    //exit(0);
 }
 
 void eval_FFgrid(){

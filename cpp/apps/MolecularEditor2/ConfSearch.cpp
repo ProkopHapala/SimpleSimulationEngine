@@ -60,6 +60,14 @@ Vec3d testREQ,testPLQ;
 // AppMolecularEditor2
 // ==========================
 
+void printPoses( int n, double * poses ){
+    for( int i=0; i<n; i++ ){
+        int i8 = i*8;
+        //printf( "force[%04i] %g,%g,%g,%g|%g,%g,%g,%g\n",i, opt.force[i8+0], opt.force[i8+1], opt.force[i8+2], opt.force[i8+3],    opt.force[i8+4], opt.force[i8+5], opt.force[i8+6], opt.force[i8+7]  );
+        printf( "[%04i] %g,%g,%g,%g | %g,%g,%g,%g \n",i, poses[i8+0], poses[i8+1], poses[i8+2], poses[i8+3],    poses[i8+4], poses[i8+5], poses[i8+6], poses[i8+7]  );
+    }
+}
+
 void drawPPRelaxTrj( int n, double dt, double damp, GridFF& gff, Vec3d pos, Vec3d PRQ ){
     Vec3d vel = (Vec3d){0.0,0.0,0.0};
     glBegin(GL_LINE_STRIP);
@@ -188,8 +196,8 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     ogl_sph = glGenLists(1);
     glNewList( ogl_sph, GL_COMPILE );
-        //Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
-        Draw3D::drawSphere_oct( 3, 0.25, {0.0,0.0,0.0} );
+        Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
+        //Draw3D::drawSphere_oct( 3, 0.25, {0.0,0.0,0.0} );
     glEndList();
 
     //qCamera.set( 0.0,0.0,0.0,1.0 );  // bottom view
@@ -271,17 +279,30 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     }
     */
 
-    mol.loadXYZ( "inputs/water_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
+    //mol.loadXYZ( "inputs/water_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
+    mol.loadXYZ( "inputs/water_ax_q0.xyz" );                              printf( "DEBUG 3.1 \n" );
+    //mol.loadXYZ( "inputs/OH_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
+    //mol.loadXYZ( "inputs/water_T5_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
+
+
+    params.assignREs( mol.natoms, mol.atomType, mol.REQs );
+
     Mat3d rot; rot.setOne();
     builder.insertMolecule( &mol, {0.0,0.0,0.0}, rot, true );          printf( "DEBUG 3.2 \n" );
-    builder.insertMolecule( &mol, {3.0,0.0,0.0}, rot, true );
+    builder.insertMolecule( &mol, {4.0,1.0,1.0}, rot, true );
     builder.toMMFF( &world, &params );                                 printf( "DEBUG 3.3 \n" );
 
     //world.allocFragment( nFrag );
 
-    opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); printf( "DEBUG 3.4 \n" );
+    //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); printf( "DEBUG 3.4 \n" );
+    opt.bindArrays( 8*world.nFrag, world.poses, world.poseVs, world.poseFs );
     opt.setInvMass( 1.0 );  printf( "DEBUG 3.5 \n" );
     opt.cleanVel  ( );      printf( "DEBUG 3.6 \n" );
+    //exit(0);
+
+
+    printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
+    printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
     //exit(0);
 
     /*
@@ -396,11 +417,11 @@ void AppMolecularEditor2::draw(){
 	//delay = 100;
 	for(int itr=0; itr<perFrame; itr++){
 
-        for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }  //printf( "DEBUG 5.1\n" );
-
+        world.cleanAtomForce();
         world.frags2atoms();       //printf( "DEBUG 5.2\n" );
         //world.eval_MorseQ_On2(); printf( "DEBUG 5.3\n" );
         world.eval_MorseQ_Frags(); //printf( "DEBUG 5.3\n" );
+
         world.cleanPoseTemps();
         world.aforce2frags();      //printf( "DEBUG 5.4\n" );
 
@@ -428,14 +449,10 @@ void AppMolecularEditor2::draw(){
         //opt.move_LeapFrog(0.01);
         //opt.move_MDquench();
         F2 = opt.move_FIRE();  //printf( "DEBUG 5.5\n" );
+        world.checkPoseUnitary();
 
-        /*
-        for( int i=0; i<world.nFrag; i++ ){
-            int i8 = i*8;
-            printf( "force[%04i] %g,%g,%g,%g|%g,%g,%g,%g\n",i, opt.force[i8+0], opt.force[i8+1], opt.force[i8+2], opt.force[i8+3],    opt.force[i8+4], opt.force[i8+5], opt.force[i8+6], opt.force[i8+7]  );
-            printf( "pos  [%04i] %g,%g,%g,%g|%g,%g,%g,%g\n",i, opt.pos[i8+0], opt.pos[i8+1], opt.pos[i8+2], opt.pos[i8+3],    opt.pos[i8+4], opt.pos[i8+5], opt.pos[i8+6], opt.pos[i8+7]  );
-        }
-        */
+        //printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
+        //printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
         //exit(0);
 
     }

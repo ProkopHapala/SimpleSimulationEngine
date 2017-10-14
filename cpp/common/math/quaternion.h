@@ -88,10 +88,10 @@ class Quat4TYPE {
 
     inline void checkNormalized( TYPE D2 ){
         TYPE r2 =  x*x + y*y + z*z + w*w;
+        //printf( " (%g,%g,%g,%g) r2 %g \n", x,y,z,w,   r2 );
         TYPE d2 = r2 - 1;
-        if( (d2>D2) || (d2<-D2) ){
-            TYPE norm  = sqrt( x*x + y*y + z*z + w*w );
-            TYPE inorm = 1/norm;
+        if( (d2>D2) || (d2<-D2) ){ //printf( "renorm\n" );
+            TYPE inorm = 1/sqrt( r2 );
             x *= inorm;    y *= inorm;    z *= inorm;   w *= inorm;
 		}
     }

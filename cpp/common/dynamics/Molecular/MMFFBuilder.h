@@ -57,10 +57,11 @@ class MMFFBuilder{  public:
         if( rigid ){
             Quat4d qrot; qrot.fromMatrix(rot);
             for(int i=0; i<mol->natoms; i++){
-                Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
+                //Vec3d REQi = (Vec3d){1.0,0.03,mol->}; // TO DO : LJq can be set by type
                 //atoms.push_back( (MMFFAtom){mol->atomType[i],mol->pos[i], LJq } );
-                Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
-                atoms.push_back( (MMFFAtom){mol->atomType[i], p, LJq } );
+                Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y); // REQi.z = 0.0;
+                Vec3d  p; rot.dot_to(mol->pos[i],p); p.add( pos );
+                atoms.push_back( (MMFFAtom){mol->atomType[i], p, REQi } );
             }
             frags.push_back( (MMFFfrag){natoms0, atoms.size()-natoms0, pos, qrot, mol}  );
             //size_t mol_id = static_cast<size_t>(mol);

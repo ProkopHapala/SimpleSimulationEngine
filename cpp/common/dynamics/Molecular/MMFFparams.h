@@ -84,6 +84,18 @@ class MMFFparams{ public:
         return i;
     }
 
+    void assignREs( int n, int * itypes, Vec3d * REQs ){
+        for(int i=0; i<n; i++){
+            //mmff->aLJq [i]  = atoms[i].type;
+            //int ityp = atoms[i].type;
+            int ityp = itypes[i];
+            REQs[i].x = atypes[ityp].RvdW;
+            REQs[i].y = atypes[ityp].EvdW;
+            //REQs.z = 0;
+            //atomTypes[i]  = atoms[i].type;
+        }
+    }
+
     int loadBondTypes(char * fname){
 
         FILE * pFile = fopen(fname,"r");
