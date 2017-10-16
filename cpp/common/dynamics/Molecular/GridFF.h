@@ -161,9 +161,9 @@ class GridFF{ public:
             Vec3d fp = (Vec3d){0.0d,0.0d,0.0d};
             Vec3d fl = (Vec3d){0.0d,0.0d,0.0d};
             Vec3d fe = (Vec3d){0.0d,0.0d,0.0d};
-            for(int ia=0; ia<natoms; ia++){
-                Vec3d dp0; dp0.set_sub( p, apos[ia] );
-                Vec3d REQi = aREQs[ia];
+            for(int iat=0; iat<natoms; iat++){
+                Vec3d dp0; dp0.set_sub( p, apos[iat] );
+                Vec3d REQi = aREQs[iat];
                 for(int ia=-nPBC.a; ia<(nPBC.a+1); ia++){ for(int ib=-nPBC.b; ib<(nPBC.b+1); ib++){ for(int ic=-nPBC.c; ic<(nPBC.c+1); ic++){
                     Vec3d  dp = dp0 + grid.cell.a*ia + grid.cell.b*ib + grid.cell.c*ic;
                     double r      = dp.norm();

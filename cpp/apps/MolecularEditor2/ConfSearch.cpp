@@ -59,7 +59,7 @@ Vec3d testREQ,testPLQ;
 // ==========================
 
 
-void colorRB( float f ){ glColor3f( 0.5-f, 0.5, 0.5+f ); }
+void colorRB( float f ){ glColor3f( 0.5+f, 0.5, 0.5-f ); }
 
 
 
@@ -238,7 +238,8 @@ void AppMolecularEditor2::initRigidSubstrate(){
 
     world.genPLQ();
     world.gridFF.allocateFFs();
-    world.gridFF.evalGridFFs( {0,0,0} );
+    //world.gridFF.evalGridFFs( {0,0,0} );
+    world.gridFF.evalGridFFs( {1,1,1} );
     //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
 
     int iatom = 11;
