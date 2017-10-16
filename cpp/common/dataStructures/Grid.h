@@ -30,7 +30,7 @@ class GridShape {
 	Vec3i   n;          // number of pixels along each basis vector
 
 	//inline Vec3d * allocateArray_Vec3d(){ return new Vec3d[n.x*n.y*n.z); }
-	inline int getNtot(){return n.x*n.y*n.z ; }
+	inline int getNtot() const {return n.x*n.y*n.z ; }
 
 	inline void updateCell(){
         dCell.a.set_mul( cell.a, 1.0d/n.a );
@@ -47,19 +47,19 @@ class GridShape {
 
 	//inline void set( int * n_, double * cell_ ){ set( *(Vec3d*) n_, *(Mat3d*)cell_ ); };
 
-	inline void grid2cartesian( const Vec3d& gpos, Vec3d& cpos ){
+	inline void grid2cartesian( const Vec3d& gpos, Vec3d& cpos ) const {
 		cpos.set_mul( dCell.a, gpos.x );
 		cpos.add_mul( dCell.b, gpos.y );
 		cpos.add_mul( dCell.c, gpos.z );
 	};
 
-	inline void cartesian2grid( const Vec3d& cpos, Vec3d& gpos ){
+	inline void cartesian2grid( const Vec3d& cpos, Vec3d& gpos ) const {
 		gpos.a = cpos.dot( diCell.a );
 		gpos.b = cpos.dot( diCell.b );
 		gpos.c = cpos.dot( diCell.c );
 	};
 
-	void printCell(){
+	void printCell() const {
 	    printf( " n      %i %i %i \n", n.x,        n.y,       n.z        );
 	    printf( " a      %f %f %f \n", cell.a.x,   cell.a.y,   cell.a.z  );
 	    printf( " b      %f %f %f \n", cell.b.x,   cell.b.y,   cell.b.z  );
@@ -103,7 +103,7 @@ class GridShape {
     }
     */
 
-    void toXSF( FILE* fout, Vec3d * FF, int icomp ){
+    void toXSF( FILE* fout, Vec3d * FF, int icomp ) const {
         fprintf( fout, "BEGIN_BLOCK_DATAGRID_3D\n" );
         fprintf( fout, "   some_datagrid\n" );
         fprintf( fout, "   BEGIN_DATAGRID_3D_whatever\n" );
@@ -125,7 +125,7 @@ class GridShape {
         fprintf( fout, "END_BLOCK_DATAGRID_3D\n" );
     }
 
-    void saveXSF( char * fname, Vec3d * FF, int icomp ){
+    void saveXSF( char * fname, Vec3d * FF, int icomp )const {
         printf( "saving %s\n", fname );
         FILE *fout;
         fout = fopen(fname,"w");

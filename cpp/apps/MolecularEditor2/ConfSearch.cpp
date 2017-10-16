@@ -58,6 +58,11 @@ Vec3d testREQ,testPLQ;
 // AppMolecularEditor2
 // ==========================
 
+
+void colorRB( float f ){ glColor3f( 0.5-f, 0.5, 0.5+f ); }
+
+
+
 void printPoses( int n, double * poses ){
     for( int i=0; i<n; i++ ){
         int i8 = i*8;
@@ -114,12 +119,13 @@ void renderSubstrate( int n, Vec3d * points, GLenum mode ){
     }
 }
 
-void renderSubstrate_( const GridShape& grid, Vec3d * FF, double isoval, bool sign ){
+void renderSubstrate_( const GridShape& grid, Vec3d * FF, Vec3d * FFel, double isoval, bool sign ){
     //printf( "iso_points.size() %i \n", iso_points.size() );
     Vec3d * pos     = new Vec3d[grid.n.x * grid.n.y];
     Vec3d * normals = new Vec3d[grid.n.x * grid.n.y];
     //printf( " -- DEBUG 1 \n" );
     getIsoSurfZ( grid, isoval, sign, FF, pos, normals );
+
     //printf( " -- DEBUG 2 \n" );
 
     //glEnable(GL_LIGHTING);
@@ -128,11 +134,24 @@ void renderSubstrate_( const GridShape& grid, Vec3d * FF, double isoval, bool si
         for ( int ia=0; ia<grid.n.x; ia++ ){
             int ip1 = (ib-1)*grid.n.x + ia;
             int ip2 = (ib  )*grid.n.x + ia;
-            printf( "iba (%i,%i) pos (%g,%g,%g)\n", ib,ia, pos[ip1].x,pos[ip1].y,pos[ip1].z );
+            //printf( "iba (%i,%i) pos (%g,%g,%g)\n", ib,ia, pos[ip1].x,pos[ip1].y,pos[ip1].z );
             //glColor3f(pos[ip1].z*5-2,1.0f,1.0f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
             //glColor3f(pos[ip2].z*5-2,1.0f,1.0f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
-            glColor3f(0.7f,0.7f,0.7f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
-            glColor3f(0.8f,0.7f,0.7f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
+
+
+            Vec3d gpos,fel1,fel2;
+            grid.cartesian2grid( pos[ip1], gpos); fel1 = interpolate3DvecWrap( FFel, grid.n, gpos );
+            grid.cartesian2grid( pos[ip2], gpos); fel2 = interpolate3DvecWrap( FFel, grid.n, gpos );
+
+
+            //glColor3f(0.7f,0.7f,0.7f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
+            //glColor3f(0.8f,0.7f,0.7f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
+
+            //glColor3f( fel1.x, fel1.y, fel1.z ); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
+            //glColor3f( fel2.x, fel2.y, fel2.z ); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
+
+            colorRB( fel1.z ); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
+            colorRB( fel2.z ); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
         }
         glEnd();
     }
@@ -233,14 +252,14 @@ void AppMolecularEditor2::initRigidSubstrate(){
     //world.gridFF.evalCombindGridFF_CheckInterp( (Vec3d){ 2.181, 0.0243442, 0.0}, FFtot );
     //saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
-    world.gridFF.evalCombindGridFF            ( testREQ, FFtot );
-    saveXSF( "FFtot_z.xsf",             world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+    world.gridFF.evalCombindGridFF( testREQ, FFtot );
+    saveXSF( "FFtot_z.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
     isoOgl = glGenLists(1);
     glNewList(isoOgl, GL_COMPILE);
         //getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
         //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
-        renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
+        renderSubstrate_( world.gridFF.grid, FFtot, world.gridFF.FFelec, 0.01, true );
         Draw3D::drawAxis(1.0);
     glEndList();
 
@@ -459,7 +478,7 @@ void AppMolecularEditor2::draw(){
 
    //exit(0);
 
-   printf( "camPos %g %g %g \n", camPos.x, camPos.y, camPos.z );
+   //printf( "camPos %g %g %g \n", camPos.x, camPos.y, camPos.z );
 
 };
 
