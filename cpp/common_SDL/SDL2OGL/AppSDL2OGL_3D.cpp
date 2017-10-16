@@ -47,6 +47,7 @@ void AppSDL2OGL_3D::camera(){
 
         Draw3D::toGLMatCam( camPos*-1.0, camMat, camMatrix );
         glLoadMatrixf(camMatrix);
+        glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
 
 	}
 	//glMatrixMode (GL_MODELVIEW);

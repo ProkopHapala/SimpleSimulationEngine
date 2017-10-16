@@ -172,7 +172,7 @@ class GridFF{ public:
                     double fexp   = alpha*expar*REQi.y*ir;
                     fp.add_mul( dp, -fexp*expar*2 );                    // repulsive part of Morse
                     fl.add_mul( dp, -fexp         );                    // attractive part of Morse
-                    fe.add_mul( dp, -14.3996448915d*REQi.z*ir*ir*ir ); // Coulomb
+                    fe.add_mul( dp, 14.3996448915d*REQi.z*ir*ir*ir ); // Coulomb
                 }}}
             }
             if(FFPauli)  FFPauli [ibuff]=fp;

@@ -21,9 +21,7 @@
 #include "MMFF.h"
 #include "MMFFBuilder.h"
 
-
 //#include "RBMMFF.h"
-
 
 #include "DynamicOpt.h"
 
@@ -188,7 +186,67 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
 
 	AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ );
 
+    void initRigidSubstrate();
 };
+
+void AppMolecularEditor2::initRigidSubstrate(){
+
+    // ---- Rigid Substrate
+    //world.substrate.init( (Vec3i){100,100,100}, (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f }, (Vec3d){-5.0,-5.0,-5.0} );
+
+    printf( "params.atypNames:\n" );
+    for(auto kv : params.atypNames) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
+    //exit(0);
+    //world.substrate.grid.n    = (Vec3i){120,120,200};
+    world.gridFF.grid.n    = (Vec3i){60,60,100};
+    //world.substrate.grid.n    = (Vec3i){12,12,20};
+    world.gridFF.grid.pos0 = (Vec3d){0.0d,0.0d,0.0d};
+    //world.gridFF.loadCell ( "inputs/cel.lvs" );
+    world.gridFF.loadCell ( "inputs/cel_2.lvs" );
+    world.gridFF.grid.printCell();
+    //world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym.xyz", params );
+    world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Na_add.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Cl_vac.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Na_vac.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/Xe_instead_Na.xyz", params );
+    //world.gridFF.loadXYZ( "inputs/Cl.xyz", params );
+    world.translate( {0.0,0.0,4.5} );
+
+    //testREQ = (Vec3d){ 2.181, 0.0243442, 0.0}; // Xe
+    testREQ = (Vec3d){ 1.487, 0.0006808, 0.0}; // H
+    testPLQ = REQ2PLQ( testREQ, -1.6 );//
+
+    world.genPLQ();
+    world.gridFF.allocateFFs();
+    world.gridFF.evalGridFFs( {0,0,0} );
+    //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
+
+    int iatom = 11;
+    printf( "testREQ   (%g,%g,%g) -> PLQ (%g,%g,%g) \n",        testREQ.x, testREQ.y, testREQ.z, testPLQ.x, testPLQ.y, testPLQ.z   );
+    printf( "aREQs[%i] (%g,%g,%g) -> PLQ (%g,%g,%g) \n", iatom, world.aREQ[iatom].x, world.aREQ[iatom].y, world.aREQ[iatom].z, world.aPLQ[iatom].x, world.aPLQ[iatom].y, world.aPLQ[iatom].z );
+
+   // exit(0);
+
+    Vec3d * FFtot = new Vec3d[world.gridFF.grid.getNtot()];
+
+    //world.gridFF.evalCombindGridFF_CheckInterp( (Vec3d){ 2.181, 0.0243442, 0.0}, FFtot );
+    //saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+
+    world.gridFF.evalCombindGridFF            ( testREQ, FFtot );
+    saveXSF( "FFtot_z.xsf",             world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+
+    isoOgl = glGenLists(1);
+    glNewList(isoOgl, GL_COMPILE);
+        //getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
+        //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
+        renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
+        Draw3D::drawAxis(1.0);
+    glEndList();
+
+    camPos.z = +5.0;
+
+}
 
 AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
@@ -235,61 +293,17 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     //exit(0);
 
-    /*
-    // --- not Rigid Body
-    //mol.loadMol("common_resources/propylacid.mol");
-    //mol.loadMol("common_resources/precursor_OH.mol");
-    //mol.loadMol("common_resources/precursor_CN.mol");
-    mol.loadMol("common_resources/precursor_CN.mol");
-    mol.bondsOfAtoms();
-    mol.printAtom2Bond();
-    mol.autoAngles();
-    Vec3d cog = mol.getCOG_av();
-    mol.addToPos( cog*-1.0d );
-
-    //Vec3d pos = (Vec3d){0.0,0.0,0.0};
-    Mat3d rot; rot.setOne();
-    builder.insertMolecule (&mol, {0.0,0.0,0.0}, rot, false );
-    builder.insertMolecule (&mol, {5.0,0.0,0.0}, rot, false );
-    builder.insertMolecule (&mol, {0.0,5.0,0.0}, rot, false );
-    builder.insertMolecule (&mol, {5.0,5.0,0.0}, rot, false );
-    builder.assignAtomTypes(&params );
-    builder.toMMFF (&world, &params);
-
-    world.ang_b2a();           //exit(0);
-    world.printBondParams();   //exit(0);
-
-    opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce );
-    opt.setInvMass( 1.0 );
-    opt.cleanVel( );
-
-    printf( "DEBUG 2 \n" );
-
-    for(int i=0; i<world.nbonds; i++){
-        world.bond_k[i] = 2.0;
-    }
-
-    printf( "DEBUG 3 \n" );
-
-    for(int i=0; i<world.nang; i++){
-        world.ang_0[i] = {1.0,0.0};
-        world.ang_k[i] = 0.5;
-        //Vec2i ib = world.ang2bond[i];
-        //world.ang2atom [i] = (Vec3i){ world.bond2atom[ib.x].y, world.bond2atom[ib.y].y, world.bond2atom[ib.y].x };
-    }
-    */
-
     // ---- Rigid Body Molecules
-    //mol.loadXYZ( "inputs/water_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
-    //mol.loadXYZ( "inputs/water_ax_q0.xyz" );                              printf( "DEBUG 3.1 \n" );
+    //mol.loadXYZ( "inputs/water_ax.xyz" );                           printf( "DEBUG 3.1 \n" );
+    //mol.loadXYZ( "inputs/water_ax_q0.xyz" );                        printf( "DEBUG 3.1 \n" );
     //mol.loadXYZ( "inputs/OH_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
-    mol.loadXYZ( "inputs/water_T5_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
+    mol.loadXYZ( "inputs/water_T5_ax.xyz" );                          printf( "DEBUG 3.1 \n" );
     params.assignREs( mol.natoms, mol.atomType, mol.REQs );
     Mat3d rot; rot.setOne();
-    builder.insertMolecule( &mol, {0.0,0.0,0.0}, rot, true );          printf( "DEBUG 3.2 \n" );
-    builder.insertMolecule( &mol, {4.0,0.0,1.0}, rot, true );
-    builder.insertMolecule( &mol, {0.0,4.0,1.0}, rot, true );
-    builder.insertMolecule( &mol, {4.0,4.0,0.0}, rot, true );
+    builder.insertMolecule( &mol, {0.0,0.0,4.0}, rot, true );          printf( "DEBUG 3.2 \n" );
+    builder.insertMolecule( &mol, {4.0,0.0,4.0}, rot, true );
+    builder.insertMolecule( &mol, {0.0,4.0,4.0}, rot, true );
+    builder.insertMolecule( &mol, {4.0,4.0,4.0}, rot, true );
     builder.toMMFF( &world, &params );                                 printf( "DEBUG 3.3 \n" );
     //world.allocFragment( nFrag );
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); printf( "DEBUG 3.4 \n" );
@@ -317,68 +331,15 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //Vec2i iat = bond2atom[8];
     //Vec2i iat = bond2atom[9];
     //exit(0);
-
-    /*
-    // ---- Rigid Substrate
-    //world.substrate.init( (Vec3i){100,100,100}, (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f }, (Vec3d){-5.0,-5.0,-5.0} );
-
-    printf( "params.atypNames:\n" );
-    for(auto kv : params.atypNames) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
-    //exit(0);
-    //world.substrate.grid.n    = (Vec3i){120,120,200};
-    world.gridFF.grid.n    = (Vec3i){60,60,100};
-    //world.substrate.grid.n    = (Vec3i){12,12,20};
-    world.gridFF.grid.pos0 = (Vec3d){0.0d,0.0d,0.0d};
-    //world.gridFF.loadCell ( "inputs/cel.lvs" );
-    world.gridFF.loadCell ( "inputs/cel_2.lvs" );
-    world.gridFF.grid.printCell();
-    //world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
-    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym.xyz", params );
-    world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Cl_vac.xyz", params );
-    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Na_vac.xyz", params );
-    //world.gridFF.loadXYZ  ( "inputs/Xe_instead_Na.xyz", params );
-    //world.gridFF.loadXYZ( "inputs/Cl.xyz", params );
-
-    world.translate( {0.0,0.0,4.5} );
-
-    //testREQ = (Vec3d){ 2.181, 0.0243442, 0.0}; // Xe
-    testREQ = (Vec3d){ 1.487, 0.0006808, 0.0}; // H
-    testPLQ = REQ2PLQ( testREQ, -1.6 );//
-
-    world.genPLQ();
-    world.gridFF.allocateFFs();
-    world.gridFF.evalGridFFs( {0,0,0} );
-    //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
-
-    int iatom = 11;
-    printf( "testREQ   (%g,%g,%g) -> PLQ (%g,%g,%g) \n",        testREQ.x, testREQ.y, testREQ.z, testPLQ.x, testPLQ.y, testPLQ.z   );
-    printf( "aREQs[%i] (%g,%g,%g) -> PLQ (%g,%g,%g) \n", iatom, world.aREQ[iatom].x, world.aREQ[iatom].y, world.aREQ[iatom].z, world.aPLQ[iatom].x, world.aPLQ[iatom].y, world.aPLQ[iatom].z );
-
-   // exit(0);
-
-    Vec3d * FFtot = new Vec3d[world.gridFF.grid.getNtot()];
-
-    //world.gridFF.evalCombindGridFF_CheckInterp( (Vec3d){ 2.181, 0.0243442, 0.0}, FFtot );
-    //saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
-
-    world.gridFF.evalCombindGridFF            ( testREQ, FFtot );
-    saveXSF( "FFtot_z.xsf",             world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
-
-    isoOgl = glGenLists(1);
-    glNewList(isoOgl, GL_COMPILE);
-        //getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
-        //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
-        renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
-        Draw3D::drawAxis(1.0);
-    glEndList();
-
-    */
+    initRigidSubstrate();
 
 }
 
 void AppMolecularEditor2::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+	//glTranslatef( 0.0, 0.0, -5.0 );
 
 	glColor3f( 0.0f,0.0f,0.0f );
 	//if(isoOgl)
@@ -403,7 +364,7 @@ void AppMolecularEditor2::draw(){
 
 	//ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
 
-    ray0 = camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
+    ray0 = camPos + camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
     Draw3D::drawPointCross( ray0, 0.1 );
     //Draw3D::drawVecInPos( camMat.c, ray0 );
     if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
@@ -414,7 +375,9 @@ void AppMolecularEditor2::draw(){
 	for(int itr=0; itr<perFrame; itr++){
 
         world.cleanAtomForce();
+
         world.frags2atoms();       //printf( "DEBUG 5.2\n" );
+        world.eval_FFgrid();
         //world.eval_MorseQ_On2(); printf( "DEBUG 5.3\n" );
         world.eval_MorseQ_Frags(); //printf( "DEBUG 5.3\n" );
 
@@ -495,6 +458,9 @@ void AppMolecularEditor2::draw(){
     */
 
    //exit(0);
+
+   printf( "camPos %g %g %g \n", camPos.x, camPos.y, camPos.z );
+
 };
 
 void  AppMolecularEditor2::keyStateHandling( const Uint8 *keys ){
@@ -505,6 +471,10 @@ void  AppMolecularEditor2::keyStateHandling( const Uint8 *keys ){
     if( keys[ SDL_SCANCODE_D ] ){ PPpos0.x -=dstep; }
     if( keys[ SDL_SCANCODE_Q ] ){ PPpos0.z +=dstep; }
     if( keys[ SDL_SCANCODE_E ] ){ PPpos0.z -=dstep; }
+
+    if( keys[ SDL_SCANCODE_X ] ){ camPos.z +=0.1; }
+    if( keys[ SDL_SCANCODE_Z ] ){ camPos.z -=0.1; }
+
     AppSDL2OGL_3D::keyStateHandling( keys );
 };
 
