@@ -279,28 +279,24 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     }
     */
 
+    // ---- Rigid Body Molecules
     //mol.loadXYZ( "inputs/water_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
-    mol.loadXYZ( "inputs/water_ax_q0.xyz" );                              printf( "DEBUG 3.1 \n" );
+    //mol.loadXYZ( "inputs/water_ax_q0.xyz" );                              printf( "DEBUG 3.1 \n" );
     //mol.loadXYZ( "inputs/OH_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
-    //mol.loadXYZ( "inputs/water_T5_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
-
-
+    mol.loadXYZ( "inputs/water_T5_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
     params.assignREs( mol.natoms, mol.atomType, mol.REQs );
-
     Mat3d rot; rot.setOne();
     builder.insertMolecule( &mol, {0.0,0.0,0.0}, rot, true );          printf( "DEBUG 3.2 \n" );
-    builder.insertMolecule( &mol, {4.0,1.0,1.0}, rot, true );
+    builder.insertMolecule( &mol, {4.0,0.0,1.0}, rot, true );
+    builder.insertMolecule( &mol, {0.0,4.0,1.0}, rot, true );
+    builder.insertMolecule( &mol, {4.0,4.0,0.0}, rot, true );
     builder.toMMFF( &world, &params );                                 printf( "DEBUG 3.3 \n" );
-
     //world.allocFragment( nFrag );
-
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); printf( "DEBUG 3.4 \n" );
     opt.bindArrays( 8*world.nFrag, world.poses, world.poseVs, world.poseFs );
     opt.setInvMass( 1.0 );  printf( "DEBUG 3.5 \n" );
     opt.cleanVel  ( );      printf( "DEBUG 3.6 \n" );
     //exit(0);
-
-
     printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
     printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
     //exit(0);
@@ -413,7 +409,7 @@ void AppMolecularEditor2::draw(){
     if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
 
 	double F2;
-	perFrame = 1;
+	perFrame = 10;
 	//delay = 100;
 	for(int itr=0; itr<perFrame; itr++){
 
@@ -422,17 +418,13 @@ void AppMolecularEditor2::draw(){
         //world.eval_MorseQ_On2(); printf( "DEBUG 5.3\n" );
         world.eval_MorseQ_Frags(); //printf( "DEBUG 5.3\n" );
 
-        world.cleanPoseTemps();
-        world.aforce2frags();      //printf( "DEBUG 5.4\n" );
-
-        /*
         //exit(0);
         if(ipicked>=0){
             Vec3d f = getForceSpringRay( world.apos[ipicked], camMat.c, ray0, -1.0 );
             //printf( "f (%g,%g,%g)\n", f.x, f.y, f.z );
             world.aforce[ipicked].add( f );
         };
-        */
+
 
         /*
         for(int i=0; i<world.natoms; i++){
@@ -440,6 +432,9 @@ void AppMolecularEditor2::draw(){
             //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
         }
         */
+
+        world.cleanPoseTemps();
+        world.aforce2frags();      //printf( "DEBUG 5.4\n" );
 
         //exit(0);
 
@@ -476,7 +471,7 @@ void AppMolecularEditor2::draw(){
     glShadeModel(GL_SMOOTH);
     for(int i=0; i<world.natoms; i++){
         //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.apos[i],0.2);
-        glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(world.aforce[i]*1000.0,world.apos[i]);
+        //glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(world.aforce[i]*1000.0,world.apos[i]);
 
         //glCallList( ogl_sph );
         glEnable(GL_LIGHTING);
