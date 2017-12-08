@@ -25,9 +25,10 @@ void TerrainHydraulics::genTerrainNoise( int n, double scale,  double hscale,  d
     for(int i=0; i<ntot; i++){ ground[i] = renorm*(ground[i]-vmin); }
 }
 
-void TerrainHydraulics::init_outflow(){
+void TerrainHydraulics::init_outflow( double water_level ){
     for (int i=0; i<ntot; i++){
-        water[i] = 1e+300;
+        //water[i] = 1e+300;
+        water[i] = water_level;
         known[i] = false;
     }
 }
@@ -45,7 +46,7 @@ void TerrainHydraulics::outflow_step(){
         double val = water[i];
         //val +=  dval/( val - ground[i] + 0.1 ); // this is just to simulate non-zero viscosity of watter
         int iy = i/nx;
-        int ix = i-(iy*nx);
+        int ix = i%nx;
         //printf( " %i %i (%i,%i)\n", ii, i, ix, iy );
         // extend in four directions, check boundary overflow
         if( ix>0      ){  extend_path( val, i, i - 1  ); }

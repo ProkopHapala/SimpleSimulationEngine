@@ -50,8 +50,8 @@ public:
 	// ==== function declaration
 
     void genTerrainNoise( int n, double scale, double hscale, double fdown, double strength, int seed, const Vec2d& pos0 );
-    void init_outflow();
-    void outflow_step();
+    void init_outflow( double water_level );
+    void outflow_step( );
     void extend_path( float val, int oi, int i );
 
     void initErrosion( double w );
@@ -67,6 +67,16 @@ public:
 	inline void setSize( int nx_, int ny_ ){ nx=nx_; ny=ny_; ntot=nx*ny; };
 	inline int xy2i( int ix, int iy  ){ return iy*nx + ix; };
 	//inline i2xy( int i, int ix, int iy ){     };
+
+	void allocate_outflow(){
+        known     = new bool[ntot];
+        contour1  = new int [ntot];
+        contour2  = new int [ntot];
+    }
+
+    void deallocate_outflow(){
+        delete [] known; delete [] contour1; delete [] contour2;
+    }
 
 	void allocate( int nx_, int ny_ ){
 		nx = nx_; ny = ny_; ntot = nx * ny;

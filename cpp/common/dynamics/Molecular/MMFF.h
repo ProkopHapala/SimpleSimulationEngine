@@ -16,6 +16,15 @@
 
 #define SIGN_MASK 2147483648
 
+
+/*
+
+Chimera generuje topologie ... zdrojak C/python
+
+*/
+
+
+
 //inline int invIndex( int i ){ return i^SIGN_MASK; }
 
 // compied from RigidMolecule.h      ============>   TODO : make common lib of inter-molecular forcefields formulas

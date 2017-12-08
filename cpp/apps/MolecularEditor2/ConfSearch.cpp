@@ -224,8 +224,8 @@ void AppMolecularEditor2::initRigidSubstrate(){
     world.gridFF.loadCell ( "inputs/cel_2.lvs" );
     world.gridFF.grid.printCell();
     //world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
-    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym.xyz", params );
-    world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Na_add.xyz", params );
+    world.gridFF.loadXYZ  ( "inputs/NaCl_sym.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Na_add.xyz", params );
     //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Cl_vac.xyz", params );
     //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Na_vac.xyz", params );
     //world.gridFF.loadXYZ  ( "inputs/Xe_instead_Na.xyz", params );

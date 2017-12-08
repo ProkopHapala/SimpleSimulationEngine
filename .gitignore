@@ -6,6 +6,7 @@
 *.pyd
 *.x
 *.so
+*.bin
 
 Build
 

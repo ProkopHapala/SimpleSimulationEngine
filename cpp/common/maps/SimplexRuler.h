@@ -67,6 +67,27 @@ class SimplexRuler{
         return (dind.a+dind.b)>1.0d;
     }
 
+    inline int hexIndex( const Vec2d& p ) const {
+        // backport form javascript /home/prokop/git/LearnWeb/SimSim/maps/HexGrid.js     HexRuler.prototype.hexIndex
+        double a = ( invStep * (  p.x - 0.57735026919*p.y   ) ) + MAP_OFFSET;
+        double b = ( invStep *    p.y * 1.15470053839       ) + MAP_OFFSET;
+    	int ia  = (int)a;
+        int ib  = (int)b;
+        //Vec2d dind;
+        double da = a - ia;
+        double db = b - ib;
+        double ab  = da+db;
+        double ab2 = ab+db;
+        double a2b = ab+da;
+        //if      ( (ab2<1.0)&&(a2b<1.0) ){ this.ia=ia;   this.ib=ib;   }  // else{ this.ia=ia+1; this.ib=ib+1; }
+        //if      ( (ab2>2.0)&&(a2b>2.0) ){ this.ia=ia+1; this.ib=ib+1; }
+        //else if ( da>db                ){ this.ia=ia+1; this.ib=ib;   }
+        //else                            { this.ia=ia;   this.ib=ib+1; }
+        if      ( (ab2>2.0)&&(a2b>2.0) ){ ia++; ib++; }
+        else if ( da>db                ){ ia++; }
+        else                            { ib++; }
+    }
+
     inline void nodePoint( const Vec2i& ind, Vec2d& p ) const {
         double ib_ = ind.b-MAP_OFFSET;
         p.x = step * ( (ind.a-MAP_OFFSET) + 0.5*ib_ );
