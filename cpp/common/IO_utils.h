@@ -13,6 +13,34 @@
 
 const int N_CHAR_TMP = 256;
 
+int saveBin( char *fname, int n, char * data ){
+    FILE *ptr_myfile;
+    ptr_myfile=fopen( fname,"wb");
+    if (!ptr_myfile){ printf("Unable to open file!"); return -1; }
+    int nchar = 1024;
+    for( int i=1; i<=n; i+=nchar ){
+        int len = nchar;
+        if( (n-i)<nchar ) len = (n-i);
+        fwrite( data+i, sizeof(char), len, ptr_myfile);
+    }
+    fclose(ptr_myfile);
+    return 0;
+}
+
+int loadBin( char *fname, int n, char * data ){
+    FILE *ptr_myfile;
+    ptr_myfile=fopen( fname,"rb");
+    if (!ptr_myfile){ printf("Unable to open file!"); return -1; }
+    int nchar = 1024;
+    for( int i=1; i<=n; i+=nchar ){
+        int len = nchar;
+        if( (n-i)<nchar ) len = (n-i);
+        fread( data+i, sizeof(char), len, ptr_myfile);
+    }
+    fclose(ptr_myfile);
+    return 0;
+}
+
 
 inline char * fgets_comment( char * line, int num, FILE * stream ){
     constexpr int NMaxComment = 10;

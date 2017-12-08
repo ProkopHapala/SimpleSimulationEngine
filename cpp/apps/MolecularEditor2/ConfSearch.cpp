@@ -21,6 +21,8 @@
 #include "MMFF.h"
 #include "MMFFBuilder.h"
 
+#include "IO_utils.h"
+
 //#include "RBMMFF.h"
 
 #include "DynamicOpt.h"
@@ -239,7 +241,20 @@ void AppMolecularEditor2::initRigidSubstrate(){
     world.genPLQ();
     world.gridFF.allocateFFs();
     //world.gridFF.evalGridFFs( {0,0,0} );
-    world.gridFF.evalGridFFs( {1,1,1} );
+
+    bool recalcFF = false;
+    if( recalcFF ){
+        world.gridFF.evalGridFFs( {1,1,1} );
+        if(world.gridFF.FFelec )  saveBin( "data/FFelec.bin",   world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFelec );
+        if(world.gridFF.FFPauli)  saveBin( "data/FFPauli.bin",  world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
+        if(world.gridFF.FFLondon) saveBin( "data/FFLondon.bin", world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
+    }else{
+        if(world.gridFF.FFelec )  loadBin( "data/FFelec.bin",   world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFelec );
+        if(world.gridFF.FFPauli)  loadBin( "data/FFPauli.bin",  world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
+        if(world.gridFF.FFLondon) loadBin( "data/FFLondon.bin", world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
+    }
+
+
     //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
 
     int iatom = 11;
