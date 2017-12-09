@@ -40,7 +40,7 @@ void TerrainHydraulics::outflow_step(){
     int * tmp = contour1; contour1 = contour2; contour2 = tmp;
     for ( int ii=0; ii<nContour_old; ii++ ){ known[contour1[ii]] = false; }
     // check all countor point neighbors for possible path extension
-    printf( "nContour_old %i nContour %i \n", nContour_old, nContour );
+    if( nContour_old>0 ) printf( "nContour_old %i nContour %i \n", nContour_old, nContour );
     for ( int ii=0; ii<nContour_old; ii++ ){
         int    i   = contour1[ii];
         double val = water[i];
@@ -49,20 +49,26 @@ void TerrainHydraulics::outflow_step(){
         int ix = i%nx;
         //printf( " %i %i (%i,%i)\n", ii, i, ix, iy );
         // extend in four directions, check boundary overflow
-        if( ix>0      ){  extend_path( val, i, i - 1  ); }
-        if( ix<(nx-1) ){  extend_path( val, i, i + 1  ); }
-        if( iy>0      ){  extend_path( val, i, i - nx ); }
-        if( iy<(ny-1) ){  extend_path( val, i, i + nx ); }
+        if( ix>0      ){  extend_outflow( val, i, i-1   ); }
+        if( ix<(nx-1) ){  extend_outflow( val, i, i+1   ); }
+        if( iy>0      ){  extend_outflow( val, i, i-nx  ); }
+        if( iy<(ny-1) ){  extend_outflow( val, i, i+nx  ); }
+        if( (iy>0)&&(ix<(nx-1)) ){  extend_outflow( val, i, i-nx+1); }
+        if( (iy<(ny-1))&&(ix>0) ){  extend_outflow( val, i, i+nx-1); }
     }
 }
 
-void TerrainHydraulics::extend_path( float val, int oi, int i ){
+void TerrainHydraulics::extend_outflow( float val, int oi, int i ){
     // evaluate objective function for proposed path
     //val += dval*ground[i];
     //printf( " %i val %f g %f w %f k %i \n", i, val, ground[i], water[i], known[i] );
     val = fmax( val, ground[i] );
     // check if new path is advantegeneous
-    if( val < water[i] ){
+    bool doit;
+    if( isOutflow ){ doit = val < water[i]; }  // ouflow
+    else           { doit = val > water[i]; }; // inflow
+    if( doit ){
+    //if( (val < water[i]) == isOutflow ){
         water[i] = val;       //  extend path
         //printf( "mod %i  \n", i );
         //gofrom[i] = oi;     //  ... optionaly we may store oi to reconstruct path backwards later

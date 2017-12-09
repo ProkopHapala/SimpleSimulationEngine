@@ -19,6 +19,7 @@ public:
 
 	// countor step algorithm
 	//int    nContourMax;
+	bool   isOutflow = true;
 	int    nContour=0,nContour_old=0;
 	bool   * known     = NULL;
 	int    * contour1  = NULL;
@@ -52,7 +53,9 @@ public:
     void genTerrainNoise( int n, double scale, double hscale, double fdown, double strength, int seed, const Vec2d& pos0 );
     void init_outflow( double water_level );
     void outflow_step( );
-    void extend_path( float val, int oi, int i );
+    void extend_outflow( float val, int oi, int i );
+    //void inflow_step( );
+    //void extend_inflow( float val, int oi, int i );
 
     void initErrosion( double w );
     void flow_errosion_step  ( );

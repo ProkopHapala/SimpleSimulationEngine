@@ -74,18 +74,17 @@ class SimplexRuler{
     	int ia  = (int)a;
         int ib  = (int)b;
         //Vec2d dind;
-        double da = a - ia;
-        double db = b - ib;
+        double da  = a - ia;
+        double db  = b - ib;
         double ab  = da+db;
         double ab2 = ab+db;
         double a2b = ab+da;
-        //if      ( (ab2<1.0)&&(a2b<1.0) ){ this.ia=ia;   this.ib=ib;   }  // else{ this.ia=ia+1; this.ib=ib+1; }
-        //if      ( (ab2>2.0)&&(a2b>2.0) ){ this.ia=ia+1; this.ib=ib+1; }
-        //else if ( da>db                ){ this.ia=ia+1; this.ib=ib;   }
-        //else                            { this.ia=ia;   this.ib=ib+1; }
-        if      ( (ab2>2.0)&&(a2b>2.0) ){ ia++; ib++; }
-        else if ( da>db                ){ ia++; }
-        else                            { ib++; }
+        if ( (ab2>1.0)||(a2b>1.0) ){
+            if      ( (ab2>2.0)&&(a2b>2.0) ){ ia++; ib++; }
+            else if ( da>db                ){ ia++; }
+            else                            { ib++; }
+        }
+        return na*ib+ia;
     }
 
     inline void nodePoint( const Vec2i& ind, Vec2d& p ) const {

@@ -57,6 +57,11 @@ class LandCraftApp : public AppSDL2OGL {
     Vec2d map_center;
     double maxHeight = 500.0;
 
+    double drawHeight = 0;
+
+    //int doDrain = 0;
+
+
     //int       ifaction = 0;
     bool bDrawing = false;
 
@@ -71,11 +76,16 @@ class LandCraftApp : public AppSDL2OGL {
 
 	virtual void draw   ();
 	virtual void drawHUD();
-	//virtual void mouseHandling( );
+	virtual void mouseHandling( );
 	virtual void eventHandling( const SDL_Event& event  );
 	void debug_buffinsert( );
 	//void pickParticle( Particle2D*& picked );
 	//virtual int tileToList( float x0, float y0, float x1, float y1 );
+
+
+    void generateTerrain();
+	void terrainColor( double watter, double ground );
+	void drawTerrain( Vec2i i0, Vec2i n, int NX );
 
 	LandCraftApp( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -89,6 +99,31 @@ void LandCraftApp::printASCItable( int imin, int imax  ){
     }
     printf("%s\n", str );
 };
+
+
+void LandCraftApp::generateTerrain(){
+    //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
+    hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, rand(), {100.0,100.0} );
+    for( int j=0; j<500; j++ ){
+        int isz = 25;
+        int ix0 = rand()%(hydraulics.nx-isz);
+        int iy0 = rand()%(hydraulics.ny-isz);
+        hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
+    }
+    for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; water[i] = ground[i]; }
+
+    hydraulics.init_outflow( 500.0 );
+    int n = 0;
+    for(int ix=0; ix<ruler.na; ix++){ int idx=ix;                     hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
+    for(int ix=0; ix<ruler.na; ix++){ int idx=ix+ruler.ntot-ruler.na; hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
+    for(int iy=0; iy<ruler.nb; iy++){ int idx=iy*    ruler.na;        hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
+    for(int iy=0; iy<ruler.nb; iy++){ int idx=(iy+1)*ruler.na-1;      hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
+    hydraulics.nContour = n;
+    hydraulics.isOutflow = true;
+    //doDrain = 1;
+
+}
+
 
 LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
@@ -118,32 +153,28 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     hydraulics.setSize(ruler.na,ruler.nb);
     hydraulics.ground = ground;
 
-    bool newMap = false;
-    if( newMap ){
-        hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
-        for( int j=0; j<500; j++ ){
-            int isz = 25;
-            int ix0 = rand()%(hydraulics.nx-isz);
-            int iy0 = rand()%(hydraulics.ny-isz);
-            hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
-        }
-        for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
-        //for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,500.0); };
-        saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
-    }else{
-        loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
-    }
-
     hydraulics.allocate_outflow();
     water = new double[ruler.ntot];
     hydraulics.water = water;
-    hydraulics.init_outflow( 500.0 );
 
+    bool newMap = false;
+    if( newMap ){
+        generateTerrain();
+        //for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,500.0); };
+        saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
+        saveBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
+    }else{
+        loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
+        loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
+    }
+
+    /*
     hydraulics.nContour = 1;
     int idrain = hydraulics.nx/2 + hydraulics.nx*hydraulics.ny/2;
     printf( "idrain  %i \n", idrain   );
     hydraulics.contour2[0] = idrain;
     water[idrain]          = ground[idrain];
+    */
 
     //TiledView::init( 6, 6 );
     //tiles    = new int[ nxy ];
@@ -155,6 +186,34 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     //itex = makeTexture(  "data/nehe.bmp" );
     printf( "default_font_texture :  %i \n", default_font_texture );
 
+}
+
+void LandCraftApp::terrainColor( double watter, double ground ){
+    double maxDepth = 50.0;
+    double depth = clamp( (watter-ground)/maxDepth, 0.0, 1.0 );
+    ground /= maxHeight;
+    glColor3f( (1-depth)*ground, (1-depth)*(1-ground), depth );
+    //glColor3f( 1.0,1.0,1.0 );
+}
+
+void LandCraftApp::drawTerrain( Vec2i i0, Vec2i n, int NX ){
+    Vec2f a,b,p;
+    a.set( 1.0d, 0.0d           ); //a.mul(scale);
+    b.set( 0.5d, 0.86602540378d ); //b.mul(scale);
+    //glDisable(GL_SMOOTH);
+    //int ii = 0;
+    //double renorm=1.0d/(vmax-vmin);
+    for (int iy=0; iy<n.y-1; iy++){
+        glBegin( GL_TRIANGLE_STRIP );
+        int ii = (i0.y+iy)*NX + i0.x;
+        for (int ix=0; ix<n.x; ix++){
+            p.set( ix*a.x+iy*b.x, ix*a.y+iy*b.y );
+            terrainColor( water[ii]   , ground[ii]    ); glVertex3f( p.x    , p.y    , 0 );
+            terrainColor( water[ii+NX], ground[ii+NX] ); glVertex3f( p.x+b.x, p.y+b.y, 0 );
+            ii++;
+        }
+        glEnd();
+    }
 }
 
 void LandCraftApp::draw(){
@@ -173,18 +232,33 @@ void LandCraftApp::draw(){
         ground[i] = randf(0.0,1.0);
 	}
 
-	hydraulics.outflow_step();
+    hydraulics.outflow_step();
+	//if( doDrain==1 ){ hydraulics.outflow_step(); }else if (doDrain==-1){ hydraulics.inflow_step();  }
 	//printf( " nContour %i \n", hydraulics.nContour );
 	//if(frameCount>150)exit(0);
 
 	glPushMatrix();
 	glScalef(ruler.step,ruler.step,1.0);
 	//Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, ruler.na, ground, 0.0, maxHeight );
-	Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, ruler.na, water, 0.0, maxHeight );
+	//Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, ruler.na, water, 0.0, maxHeight );
+	drawTerrain( {0,0}, {128,128}, ruler.na );
 	glPopMatrix();
 
-
-
+	/*
+	// test of hexIndex
+    glBegin(GL_POINTS);
+    for( int ix=0; ix<50; ix++ ){
+        for( int iy=0; iy<50; iy++ ){
+            double x = mouse_begin_x+ix*2.1;
+            double y = mouse_begin_y+iy*2.1;
+            int ihex = ruler.hexIndex( {x,y} );
+            //glColor3f(  );
+            Draw::color_of_hash(ihex+15454);
+            glVertex3f( x, y, 100 );
+        }
+    }
+    glEnd();
+    */
 
 
     //float camMargin = ( camXmax - camXmin )*0.1;
@@ -197,7 +271,7 @@ void LandCraftApp::draw(){
 
 
 
-    printf("===== frameCount %i \n", frameCount);
+    //printf("===== frameCount %i \n", frameCount);
 
 
 
@@ -222,6 +296,33 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
+                case SDLK_n : generateTerrain(); break;
+                case SDLK_s :
+                    saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
+                    saveBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
+                    break;
+                case SDLK_l :
+                    loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
+                    loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
+                    break;
+                case SDLK_o :
+                    ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
+                    hydraulics.contour2[0] = ihex;
+                    hydraulics.nContour++;
+                    printf( "idrain  %i \n", ihex  );
+                    water[ihex]          = ground[ihex];
+                    hydraulics.isOutflow = true;
+                    //doDrain = 1;
+                    break;
+                case SDLK_i :
+                    ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
+                    hydraulics.contour2[0] = ihex;
+                    hydraulics.nContour++;
+                    printf( "idrain  %i \n", ihex   );
+                    water[ihex]          = ground[ihex] + 10.0;
+                    hydraulics.isOutflow = false;
+                    //doDrain = -1;
+                    break;
                 //case SDLK_0:  formation_view_mode = 0;            printf( "view : default\n" ); break;
                 //case SDLK_1:  formation_view_mode = VIEW_INJURY;  printf( "view : injury\n"  ); break;
                 //case SDLK_2:  formation_view_mode = VIEW_STAMINA; printf( "view : stamina\n" ); break;
@@ -234,7 +335,10 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
-                    hydraulics.water[ihex] = 1000.0;
+                    drawHeight = ground[ihex];
+                    printf( "drawHeight %f \n", drawHeight );
+                    //printf( " (%f,%f) %i  \n", mouse_begin_x, mouse_begin_y, ihex );
+                    //hydraulics.water[ihex] = 1000.0;
                     //printf( "left button pressed !!!! " );
                     //if( currentFaction != NULL ) currentUnit = currentFaction->getUnitAt( { mouse_begin_x, mouse_begin_y } );
                     //bDrawing=true;
@@ -258,6 +362,16 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
     AppSDL2OGL::eventHandling( event );
     camStep = zoom*0.05;
 }
+
+void LandCraftApp::mouseHandling( ){
+    uint32_t buttons = SDL_GetMouseState( &mouseX, &mouseY );
+    mouseY=HEIGHT-mouseY;
+    defaultMouseHandling( mouseX, mouseY );
+    if( buttons & SDL_BUTTON(SDL_BUTTON_LEFT) ){
+        int ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
+        hydraulics.ground[ihex] = drawHeight;
+    }
+};
 
 // ===================== MAIN
 
