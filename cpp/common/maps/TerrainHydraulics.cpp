@@ -1,6 +1,33 @@
 
 #include "TerrainHydraulics.h"  // THE HEADER
 
+
+void TerrainHydraulics::gatherRain( ){
+    for(int i=0; i<ntot; i++){ contour1[i]=i; }
+    quickSort( ground, contour1, 0, ntot);
+
+    for(int ii=0; ii<ntot; ii++){
+        int i = contour1[ii];
+        int iy = i/nx;
+        int ix = i%nx;
+        int imin = -1;
+        double val = ground[ii];
+        #define MINSTEP double g=ground[i_]; if(g<val){ imin=i_; val=g; }
+        if( ix>0                ){ int i_=i-1;    MINSTEP }
+        if( ix<(nx-1)           ){ int i_=i+1;    MINSTEP }
+        if( iy>0                ){ int i_=i-nx;   MINSTEP }
+        if( iy<(ny-1)           ){ int i_=i+nx;   MINSTEP }
+        if( (iy>0)&&(ix<(nx-1)) ){ int i_=i-nx+1; MINSTEP }
+        if( (iy<(ny-1))&&(ix>0) ){ int i_=i+nx-1; MINSTEP }
+        #undef MINSTEP
+        if(imin>=0){
+            water[imin] += water[i];
+        }else{
+            // sink-less pixel
+        }
+    }
+}
+
 void TerrainHydraulics::genTerrainNoise( int n, double scale,  double hscale,  double fdown, double strength, int seed, const Vec2d& pos0 ){
     Vec2d pos,dpos,rot,a,b;
     rot.fromAngle( seed*0.1 );

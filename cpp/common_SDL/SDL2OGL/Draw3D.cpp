@@ -641,6 +641,39 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         glEnd();
     }
 
+    void drawSimplexGridLinesToned( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs ){
+        Vec2d p,pa; pa.set(0.0d);
+        float h;
+        for (int ia=0; ia<(na-1); ia++){
+            glBegin( GL_LINE_STRIP );
+            p.set(pa);
+            for (int ib=0; ib<nb; ib++){
+                h = (float)hs[ia*nb+ib];
+                glColor3f( h,h*4,h*16 ); glVertex3f( (float)(p.x),      (float)(p.y),      h );
+                p.add(db);
+            }
+            glEnd();
+            p.set(pa);
+            glBegin( GL_LINE_STRIP );
+            for (int ib=0; ib<nb; ib++){
+                int ii=ia*nb+ib;
+                h=(float)hs[ii   ]; glColor3f( h,h*4,h*16 ); glVertex3f( (float)(p.x),      (float)(p.y),      h );
+                h=(float)hs[ii+nb]; glColor3f( h,h*4,h*16 ); glVertex3f( (float)(p.x+da.x), (float)(p.y+da.y), h );
+                p.add(db);
+                ii++;
+            }
+            glEnd();
+            pa.add(da);
+        }
+        p.set(pa);
+        glBegin( GL_LINE_STRIP );
+        for (int ib=0; ib<nb; ib++){
+            h=(float)hs[(na-1)*nb+ib]; glColor3f( h,h*4,h*16 ); glVertex3f( (float)(p.x),  (float)(p.y), h );
+            p.add(db);
+        }
+        glEnd();
+    }
+
 
     void drawRectGridLines( Vec2i n, const Vec3d& p0, const Vec3d& da, const Vec3d& db ){
         glBegin( GL_LINES );

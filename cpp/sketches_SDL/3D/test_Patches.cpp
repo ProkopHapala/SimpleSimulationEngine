@@ -21,6 +21,8 @@
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
 
+#include "spline_triC1.h"
+
 // ======================  TestApp
 
 inline void subEdge( Vec3d& result, const Vec3d& up, const Vec3d& down, const Vec3d& left, const Vec3d& right ){
@@ -213,10 +215,47 @@ void drawBesierTriangle( int nsub, const BesierTriangle& btri, uint32_t faces, u
 
 }
 
+void interpolateTriC1( int na, int nb, int nsub, double* CPs, double* out ){
+    double d = 1.0/nsub;
+    int na_ = na*nsub;
+    for(int ib=0; ib<nb; ib++){
+        for(int ia=0; ia<na; ia++){
+            int i0=ib*na+ia;
+            double A=0,B=0,C=0,D=0,E=0,F=0,E_=0,F_=0;
+            if((ia<(na-1))&&(ib<(nb-1)) ) A = CPs[i0+na+1];
+            if((ia<(na-1))              ) B = CPs[i0   +1];
+            if(             (ib<(nb-1)) ) C = CPs[i0+na  ];
+                                          D = CPs[i0     ];
+            if(             (ib<(nb-2)) ) E = CPs[i0+na*2];
+            if((ia<(na-2))              ) F = CPs[i0   +2];
+            if((ia>1     )&&(ib<(nb-1)) ) E_= CPs[i0+na-1];
+            if((ia<(na-1))&&(ib>1)      ) F_= CPs[i0-na+1];
+            for(int isb=0;isb<nsub;isb++){
+                for(int isa=0;isa<nsub;isa++){
+                    double v = d*isb;
+                    double u = d*isa;
+                    double w = 1-u-v;
+                    if (w>0){
+                        out[ (ib*nsub+isb)*na_ + ia*nsub+isa ] = Spline_triC1::val<double>( u,v,w,  D, B, C, A, E_, F_ );
+                        //out[ (ib*nsub+isb)*na_ + ia*nsub+isa ] = 1;
+                    }else{
+                        //u=1-u;
+                        //v=1-v;
+                        //w=1-u-v;
+                        //out[ (ib*nsub+isb)*na_ + ia*nsub+isa ] = Spline_triC1::val<double>( u,v,w,  A, C, B, D, F, E  );
+                        out[ (ib*nsub+isb)*na_ + ia*nsub+isa ] = Spline_triC1::val<double>( 1-u, 1-v, u+v-1,  A, C, B, D, F, E  );
+                        //out[ (ib*nsub+isb)*na_ + ia*nsub+isa ] = 0;
+                    }
+                }
+            }
+            //exit(0);
+        }
+    }
+}
+
 /////////////////////////////////////////////////////////
 //          TestAppPatches
 /////////////////////////////////////////////////////////
-
 
 
 class TestAppPatches : public AppSDL2OGL_3D {
@@ -227,6 +266,9 @@ class TestAppPatches : public AppSDL2OGL_3D {
 
 	Vec3d A,B,C,nA,nB,nC,center;
 	BesierTriangle btri;
+
+	int nsub = 10;
+	double* val_interp = NULL;
 
 	bool refresh=true;
 
@@ -288,16 +330,24 @@ TestAppPatches::TestAppPatches( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
         printf(" n %i (%3.3f,%3.3f,%3.3f)\n", i, btri.ns[i].x, btri.ns[i].y, btri.ns[i].z );
     };
 
-    na=5; nb=6;
+    na=8; nb=8;
     vals = new double[ na*nb];
     for(int ia=0;ia<na; ia++){
         for(int ib=0;ib<nb; ib++){
-            vals[ia*nb+ib] = randf(-1.0,1.0);
+            vals[ia*nb+ib] = randf(0.0,1.0)*randf(0.0,1.0);
+            //vals[ia*nb+ib] = 0;
         }
     }
+    //vals[2*nb+3] = 1;
+
+    val_interp = new double[nsub*nsub*na*nb];
+    interpolateTriC1( na, nb, nsub, vals, val_interp);
 
     zoom=2.0;
 }
+
+
+
 
 void TestAppPatches::draw   (){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
@@ -367,9 +417,12 @@ void TestAppPatches::draw   (){
         );
         */
 
+
         Vec2d da,db;
         da.set( 0.5, 0.86602540378 );
         db.set( 1.0,           0.0 );
+
+        /*
         //Draw3D::drawSimplexGrid( na, nb, da, db, vals, vals, 0, NULL );
         glColor3f(0.1f,0.1f,0.8f); Draw3D::drawSimplexGridLines( na, nb, da, db,  vals );
 
@@ -384,6 +437,11 @@ void TestAppPatches::draw   (){
         subdivideLoopGrid( nb_, na_, vals_, vals__ );
         //Draw3D::drawSimplexGrid( na__, nb__, da*0.25, db*0.25, vals__, vals__, 0, NULL );
         glColor3f(0.8f,0.1f,0.1f); Draw3D::drawSimplexGridLines( na__, nb__, da*0.25, db*0.25,  vals__ );
+        */
+
+        //glColor3f(0.8f,0.1f,0.1f); Draw3D::drawSimplexGridLinesToned( na, nb, da, db,  vals );
+        glColor3f(0.8f,0.1f,0.1f); Draw3D::drawSimplexGridLinesToned( na*nsub, nb*nsub, da*0.1, db*0.1,  val_interp );
+
 
         //delete vals_,vals__;
 

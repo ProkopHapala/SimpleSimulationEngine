@@ -2,6 +2,7 @@
 #define TerrainHydraulics_h
 
 #include "Noise.h"
+#include "arrayAlgs.h"
 
 class TerrainHydraulics{
 public:
@@ -49,6 +50,8 @@ public:
     double droplet_w,droplet_disolve,droplet_sediment;
 
 	// ==== function declaration
+
+	void gatherRain( );
 
     void genTerrainNoise( int n, double scale, double hscale, double fdown, double strength, int seed, const Vec2d& pos0 );
     void init_outflow( double water_level );
