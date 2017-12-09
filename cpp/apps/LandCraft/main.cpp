@@ -64,6 +64,11 @@ class LandCraftApp : public AppSDL2OGL {
 
     //int       ifaction = 0;
     bool bDrawing = false;
+    int terrainViewMode  = 1;
+
+    const int nTraceMax = 256;
+    int       nTrace=0;
+    int * trace = NULL;
 
     //GLuint       itex;
 
@@ -84,7 +89,7 @@ class LandCraftApp : public AppSDL2OGL {
 
 
     void generateTerrain();
-	void terrainColor( double watter, double ground );
+	void terrainColor( int i );
 	void drawTerrain( Vec2i i0, Vec2i n, int NX );
 
 	LandCraftApp( int& id, int WIDTH_, int HEIGHT_ );
@@ -104,14 +109,29 @@ void LandCraftApp::printASCItable( int imin, int imax  ){
 void LandCraftApp::generateTerrain(){
     //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
     hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, rand(), {100.0,100.0} );
+
+    /*
+    // fast with short strokes
     for( int j=0; j<500; j++ ){
         int isz = 25;
         int ix0 = rand()%(hydraulics.nx-isz);
         int iy0 = rand()%(hydraulics.ny-isz);
-        hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
+        hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz ); // fast
     }
+    */
+
+    for( int j=0; j<500; j++ ){
+        int isz = 25;
+        int ix0 = rand()%(hydraulics.nx-isz);
+        int iy0 = rand()%(hydraulics.ny-isz);
+        //                         n nStepMax, w,  disolve, sediment, ix0, iy0, ix1, iy1
+        hydraulics.errodeDroples( 400, 500, +0.1, 0.15, 0.9, ix0, iy0, ix0+isz, iy0+isz );
+        //hydraulics.errodeDroples( 200, 500,   0.02, 0.1,    0.0,   0,0, hydraulics.nx, hydraulics.ny ); // fast
+    }
+
     for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; water[i] = ground[i]; }
 
+    /*
     hydraulics.init_outflow( 500.0 );
     int n = 0;
     for(int ix=0; ix<ruler.na; ix++){ int idx=ix;                     hydraulics.contour2[n]=idx; water[idx]=ground[idx]; n++; };
@@ -121,6 +141,7 @@ void LandCraftApp::generateTerrain(){
     hydraulics.nContour = n;
     hydraulics.isOutflow = true;
     //doDrain = 1;
+    */
 
 }
 
@@ -143,11 +164,12 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
 
     printASCItable( 33, 127  );
 
-
     ruler.setSize(128,128);
     ruler.setStep(50);
 
     map_center = (Vec2d){ruler.na*0.75*ruler.step,ruler.nb*0.5*ruler.step};
+
+    trace = new int [nTraceMax];
 
     ground = new double[ruler.ntot];
     hydraulics.setSize(ruler.na,ruler.nb);
@@ -167,6 +189,8 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
         loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
         loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
     }
+
+    //hydraulics.gatherRain( );
 
     /*
     hydraulics.nContour = 1;
@@ -188,11 +212,24 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
 
 }
 
-void LandCraftApp::terrainColor( double watter, double ground ){
+void LandCraftApp::terrainColor( int i ){
     double maxDepth = 50.0;
-    double depth = clamp( (watter-ground)/maxDepth, 0.0, 1.0 );
-    ground /= maxHeight;
-    glColor3f( (1-depth)*ground, (1-depth)*(1-ground), depth );
+    double depth;
+    double w = water [i];
+    double g = ground[i];
+    switch( terrainViewMode ){
+        case 1:
+            depth = clamp( (w-g)/maxDepth, 0.0, 1.0 );
+            g /= maxHeight;
+            glColor3f( (1-depth)*g, (1-depth)*(1-g), depth );
+            break;
+        case 2:
+            //w *= 0.1;
+            //w *= log(w*5.0)*0.1;
+            w=sqrt(w)*0.05;
+            if( hydraulics.known[i] ){ glColor3f( 1, 0, 0 ); }else{ glColor3f( w, w, w ); }
+            break;
+    }
     //glColor3f( 1.0,1.0,1.0 );
 }
 
@@ -208,8 +245,8 @@ void LandCraftApp::drawTerrain( Vec2i i0, Vec2i n, int NX ){
         int ii = (i0.y+iy)*NX + i0.x;
         for (int ix=0; ix<n.x; ix++){
             p.set( ix*a.x+iy*b.x, ix*a.y+iy*b.y );
-            terrainColor( water[ii]   , ground[ii]    ); glVertex3f( p.x    , p.y    , 0 );
-            terrainColor( water[ii+NX], ground[ii+NX] ); glVertex3f( p.x+b.x, p.y+b.y, 0 );
+            terrainColor( ii    ); glVertex3f( p.x    , p.y    , 0 );
+            terrainColor( ii+NX ); glVertex3f( p.x+b.x, p.y+b.y, 0 );
             ii++;
         }
         glEnd();
@@ -260,6 +297,14 @@ void LandCraftApp::draw(){
     glEnd();
     */
 
+    glBegin(GL_LINE_STRIP);
+    glColor3f( 1.0, 0.0, 1.0 );
+    for(int ii=0; ii<nTrace; ii++){
+        Vec2d p;
+        ruler.nodePoint( trace[ii],p);
+        glVertex3f( p.x, p.y, 100.0 );
+    }
+    glEnd();
 
     //float camMargin = ( camXmax - camXmin )*0.1;
     //float camMargin = 0;
@@ -304,6 +349,7 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                 case SDLK_l :
                     loadBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
                     loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
+                    terrainViewMode = 1;
                     break;
                 case SDLK_o :
                     ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
@@ -312,6 +358,7 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                     printf( "idrain  %i \n", ihex  );
                     water[ihex]          = ground[ihex];
                     hydraulics.isOutflow = true;
+                    terrainViewMode = 1;
                     //doDrain = 1;
                     break;
                 case SDLK_i :
@@ -321,7 +368,19 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                     printf( "idrain  %i \n", ihex   );
                     water[ihex]          = ground[ihex] + 10.0;
                     hydraulics.isOutflow = false;
+                    terrainViewMode = 1;
                     //doDrain = -1;
+                    break;
+                case SDLK_g :
+                    hydraulics.gatherRain( );
+                    terrainViewMode = 2;
+                    break;
+                case SDLK_m :
+                    terrainViewMode=(terrainViewMode%2)+1;
+                    break;
+                case SDLK_t :
+                    ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
+                    nTrace = hydraulics.traceDroplet( ihex%hydraulics.nx, ihex/hydraulics.nx, nTraceMax, trace );
                     break;
                 //case SDLK_0:  formation_view_mode = 0;            printf( "view : default\n" ); break;
                 //case SDLK_1:  formation_view_mode = VIEW_INJURY;  printf( "view : injury\n"  ); break;

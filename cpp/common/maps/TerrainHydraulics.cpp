@@ -3,15 +3,17 @@
 
 
 void TerrainHydraulics::gatherRain( ){
-    for(int i=0; i<ntot; i++){ contour1[i]=i; }
+    double SAFETY = 1e-8;
+    for(int i=0; i<ntot; i++){ contour1[i]=i; water[i]=1.0; known[i]=false; }
     quickSort( ground, contour1, 0, ntot);
-
-    for(int ii=0; ii<ntot; ii++){
+    //for(int i=0; i<ntot i++)
+    //for(int ii=0; ii<ntot; ii++){
+    for(int ii=ntot; ii>0; ii--){
         int i = contour1[ii];
         int iy = i/nx;
         int ix = i%nx;
         int imin = -1;
-        double val = ground[ii];
+        double val = ground[ii]-SAFETY;
         #define MINSTEP double g=ground[i_]; if(g<val){ imin=i_; val=g; }
         if( ix>0                ){ int i_=i-1;    MINSTEP }
         if( ix<(nx-1)           ){ int i_=i+1;    MINSTEP }
@@ -24,8 +26,41 @@ void TerrainHydraulics::gatherRain( ){
             water[imin] += water[i];
         }else{
             // sink-less pixel
+            known[i] = true;
         }
     }
+    double wmax = 0.0;
+    for(int i=0; i<ntot; i++){ wmax = fmax(wmax,water[i]); }
+    printf( "max water %f \n", wmax);
+    //for(int i=0; i<ntot; i++){ water[contour1[i]]=i*0.001; }
+}
+
+int TerrainHydraulics::traceDroplet( int ix, int iy, int nmax, int * trace ){
+    double SAFETY = 1e-8;
+    int i=iy*nx+ix;
+    int ii=0;
+    for(ii=0; ii<nmax; ii++){
+        int iy = i/nx;
+        int ix = i%nx;
+        int imin = -1;
+        double val = ground[i]-SAFETY;
+        #define MINSTEP double g=ground[i_]; if(g<val){ imin=i_; val=g; }
+        if( ix>0                ){ int i_=i-1;    MINSTEP }
+        if( ix<(nx-1)           ){ int i_=i+1;    MINSTEP }
+        if( iy>0                ){ int i_=i-nx;   MINSTEP }
+        if( iy<(ny-1)           ){ int i_=i+nx;   MINSTEP }
+        if( (iy>0)&&(ix<(nx-1)) ){ int i_=i-nx+1; MINSTEP }
+        if( (iy<(ny-1))&&(ix>0) ){ int i_=i+nx-1; MINSTEP }
+        printf( "trace[%i] (%i,%i) : %i %g\n", ii, ix, iy,   imin, val );
+        #undef MINSTEP
+        if(imin>=0){
+            i = imin;
+            trace[ii] = imin;
+        }else{
+            break;
+        }
+    }
+    return ii;
 }
 
 void TerrainHydraulics::genTerrainNoise( int n, double scale,  double hscale,  double fdown, double strength, int seed, const Vec2d& pos0 ){
@@ -265,7 +300,6 @@ bool TerrainHydraulics::droplet_step( ){
                     //ground[jj] = hj + dh;
                 }
                 //droplet_h   = hmin;
-
                 //ground[iimin] += mud*f_sediment;
                 return false;
         }

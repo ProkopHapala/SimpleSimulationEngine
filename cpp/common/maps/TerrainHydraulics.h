@@ -52,6 +52,7 @@ public:
 	// ==== function declaration
 
 	void gatherRain( );
+	int  traceDroplet( int ix, int iy, int nmax, int * trace );
 
     void genTerrainNoise( int n, double scale, double hscale, double fdown, double strength, int seed, const Vec2d& pos0 );
     void init_outflow( double water_level );
