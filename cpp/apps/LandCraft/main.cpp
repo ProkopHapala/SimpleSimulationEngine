@@ -30,6 +30,8 @@
 
 #include "IO_utils.h"
 
+#include "CommandParser.h"
+
 
 // font rendering:
 //  http://www.willusher.io/sdl2%20tutorials/2013/12/18/lesson-6-true-type-fonts-with-sdl_ttf
@@ -69,6 +71,8 @@ class LandCraftApp : public AppSDL2OGL {
     const int nTraceMax = 256;
     int       nTrace=0;
     int * trace = NULL;
+
+    CommandParser cmdPars;
 
     //GLuint       itex;
 
@@ -147,6 +151,8 @@ void LandCraftApp::generateTerrain(){
 
 
 LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+
+    cmdPars.execFile( "data/comands.ini" );
 
     /*
     for(int i=0; i<100; i++){
