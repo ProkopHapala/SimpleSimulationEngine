@@ -20,6 +20,13 @@
 - channel/watterway with channel lock
 - road/train
 
+- Basins - map of all pixels associated to particular sink
+    - each sink can set water level independently
+    - each sink knows height of saddlepoints to other sinks (basin connectivity network)
+    - How to Do it:
+        - random droplet tracking which writes to know[] resp. contour
+        - when we have pixel map of basis, we can just trace boundaries of these basins
+
 - River Building
 	- downward rainfall gathering
     		1. make sort pixels by ground height

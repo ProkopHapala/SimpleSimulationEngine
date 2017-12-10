@@ -1,9 +1,9 @@
 
 #include "TerrainHydraulics.h"  // THE HEADER
 
-
-void TerrainHydraulics::gatherRain( ){
+void TerrainHydraulics::gatherRain( double minSinkFlow ){
     double SAFETY = 1e-8;
+    sinks.clear();
     for(int i=0; i<ntot; i++){ contour1[i]=i; water[i]=1.0; known[i]=false; }
     quickSort( ground, contour1, 0, ntot);
     //for(int i=0; i<ntot i++)
@@ -13,7 +13,7 @@ void TerrainHydraulics::gatherRain( ){
         int iy = i/nx;
         int ix = i%nx;
         int imin = -1;
-        double val = ground[ii]-SAFETY;
+        double val = ground[i]-SAFETY;
         #define MINSTEP double g=ground[i_]; if(g<val){ imin=i_; val=g; }
         if( ix>0                ){ int i_=i-1;    MINSTEP }
         if( ix<(nx-1)           ){ int i_=i+1;    MINSTEP }
@@ -27,6 +27,7 @@ void TerrainHydraulics::gatherRain( ){
         }else{
             // sink-less pixel
             known[i] = true;
+            if( water[i] > minSinkFlow ) sinks.push_back(i);
         }
     }
     double wmax = 0.0;
@@ -37,6 +38,7 @@ void TerrainHydraulics::gatherRain( ){
 
 int TerrainHydraulics::traceDroplet( int ix, int iy, int nmax, int * trace ){
     double SAFETY = 1e-8;
+    //double SAFETY = -0.5;
     int i=iy*nx+ix;
     int ii=0;
     for(ii=0; ii<nmax; ii++){
@@ -51,7 +53,7 @@ int TerrainHydraulics::traceDroplet( int ix, int iy, int nmax, int * trace ){
         if( iy<(ny-1)           ){ int i_=i+nx;   MINSTEP }
         if( (iy>0)&&(ix<(nx-1)) ){ int i_=i-nx+1; MINSTEP }
         if( (iy<(ny-1))&&(ix>0) ){ int i_=i+nx-1; MINSTEP }
-        printf( "trace[%i] (%i,%i) : %i %g\n", ii, ix, iy,   imin, val );
+        //printf( "trace[%i] (%i,%i) : %i %g\n", ii, ix, iy,   imin, val );
         #undef MINSTEP
         if(imin>=0){
             i = imin;
@@ -61,6 +63,85 @@ int TerrainHydraulics::traceDroplet( int ix, int iy, int nmax, int * trace ){
         }
     }
     return ii;
+}
+
+int TerrainHydraulics::trackRiver( int sink, double minFlow, std::vector<int>& river, std::vector<int>& feeders ){
+    river  .clear();
+    feeders.clear();
+    double SAFETY = 1e-8;
+    int i=sink;
+    //printf( " TerrainHydraulics::trackRiver( %i, %f ) \n", sink, minFlow );
+    int ii;
+    for(ii=0; ii<10000; ii++){
+        int iy = i/nx;
+        int ix = i%nx;
+        int imax  = -1;
+        //int imax2 = -1;
+        int nhigh=0;
+        double vallim = water[i]-SAFETY;
+        double valmax = 0;
+        //#define MAXSTEP double w=water[i_]; if( (w>minFlow)&&(w<vallim)&&(w>valmax) ){ imax2=imax; imax=i_; valmax=w; }
+        #define MAXSTEP double w=water[i_]; if( (!known[i_])&&(w>minFlow) ){ nhigh++; if( (w<vallim)&&(w>valmax) ){ imax=i_; valmax=w; } }
+        if( ix>0                ){ int i_=i-1;    MAXSTEP }
+        if( ix<(nx-1)           ){ int i_=i+1;    MAXSTEP }
+        if( iy>0                ){ int i_=i-nx;   MAXSTEP }
+        if( iy<(ny-1)           ){ int i_=i+nx;   MAXSTEP }
+        if( (iy>0)&&(ix<(nx-1)) ){ int i_=i-nx+1; MAXSTEP }
+        if( (iy<(ny-1))&&(ix>0) ){ int i_=i+nx-1; MAXSTEP }
+        #undef MAXSTEP
+        //printf( " (%i,%i) %i %f \n", ix,iy,  imax, valmax );
+        if(imax>=0){
+            //if(imax2>=0) feeders.push_back(i);
+            if(nhigh>1){
+                bool cannot = (feeders.size()>0) && ( feeders[feeders.size()-1] == river[river.size()-1] ); // check if included in previous step
+                if( !cannot ){  feeders.push_back(i); }
+            }
+            river.push_back(i);
+            known[i]=true;
+            i = imax;
+        }else{
+            // sink-less pixel
+            //known[i] = true;
+            //if( water[i] > minSinkFlow ) sinks.push_back(i);
+            break;
+        }
+    }
+    //double wmax = 0.0;
+    //for(int i=0; i<ntot; i++){ wmax = fmax(wmax,water[i]); }
+    //printf( "max water %f \n", wmax);
+    //for(int i=0; i<ntot; i++){ water[contour1[i]]=i*0.001; }
+    return ii;
+}
+
+int TerrainHydraulics::trackRiverRecursive( int sink, double minFlow, River * mouth ){
+    //printf( "trackRiverRecursive  %i \n", sink );
+    std::vector<int> feeders;
+    River* river = new River();
+    river->mouth=mouth;
+    int n=trackRiver( sink, minFlow, river->path, feeders );
+    //printf( "path size  %i %i \n", river->path.size(), n );
+    int nriv=1;
+    if( river->path.size() > 5 ){
+        rivers.push_back(river);
+        for( ifeeder : feeders ){
+            nriv+=trackRiverRecursive( ifeeder, minFlow, river );
+        }
+    }else{
+        delete river;
+    }
+    return nriv++;
+}
+
+int TerrainHydraulics::findAllRivers( double minFlow ){
+    for(River * river : rivers) delete river;
+    rivers.clear();
+    for(int i=0; i<ntot; i++){ known[i]=false; }
+    int n=0;
+    for( int sink : sinks ){
+        n+=trackRiverRecursive( sink, minFlow, NULL );
+    }
+    printf( "findAllRivers DONE \n" );
+    return n;
 }
 
 void TerrainHydraulics::genTerrainNoise( int n, double scale,  double hscale,  double fdown, double strength, int seed, const Vec2d& pos0 ){

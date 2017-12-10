@@ -72,6 +72,9 @@ class LandCraftApp : public AppSDL2OGL {
     int       nTrace=0;
     int * trace = NULL;
 
+    std::vector<int> river;
+    std::vector<int> feeders;
+
     CommandParser cmdPars;
 
     //GLuint       itex;
@@ -226,6 +229,7 @@ void LandCraftApp::terrainColor( int i ){
     switch( terrainViewMode ){
         case 1:
             depth = clamp( (w-g)/maxDepth, 0.0, 1.0 );
+            //w-=g; if(w)depth=clamp( sqrt(w-g)*0.05, 0.0, 1.0 );
             g /= maxHeight;
             glColor3f( (1-depth)*g, (1-depth)*(1-g), depth );
             break;
@@ -303,6 +307,15 @@ void LandCraftApp::draw(){
     glEnd();
     */
 
+    // draw sinks
+    glColor3f( 0.0, 1.0, 1.0 );
+    for(int isink : hydraulics.sinks ){
+        Vec2d p;
+        ruler.nodePoint( isink,p);
+        Draw2D::drawPointCross_d( p, 100.0 );
+    }
+
+    // draw droplet trace
     glBegin(GL_LINE_STRIP);
     glColor3f( 1.0, 0.0, 1.0 );
     for(int ii=0; ii<nTrace; ii++){
@@ -311,6 +324,38 @@ void LandCraftApp::draw(){
         glVertex3f( p.x, p.y, 100.0 );
     }
     glEnd();
+
+    /*
+    // draw river
+    glBegin(GL_LINE_STRIP);
+    glColor3f( 0.0, 1.0, 1.0 );
+    for( i : river ){
+        Vec2d p;
+        ruler.nodePoint(i,p);
+        glVertex3f( p.x, p.y, 100.0 );
+    }
+    glEnd();
+
+    // draw feeders
+    glColor3f( 1.0, 0.0, 1.0 );
+    for(int i : feeders ){
+        Vec2d p;
+        ruler.nodePoint( i,p);
+        Draw2D::drawPointCross_d( p, 30.0 );
+    }
+    */
+
+    for( River* river: hydraulics.rivers ){
+        //printf( " path size: %i \n", river->path.size() );
+        glBegin(GL_LINE_STRIP);
+        Draw::color_of_hash( river->path[0]+54877 );
+        for( i : river->path ){
+            Vec2d p;
+            ruler.nodePoint(i,p);
+            glVertex3f( p.x, p.y, 100.0 );
+        }
+        glEnd();
+    }
 
     //float camMargin = ( camXmax - camXmin )*0.1;
     //float camMargin = 0;
@@ -344,6 +389,7 @@ void LandCraftApp::drawHUD(){}
 void LandCraftApp::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );
     int ihex;
+    double val;
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
@@ -358,6 +404,7 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                     terrainViewMode = 1;
                     break;
                 case SDLK_o :
+                    for(int i=0; i<hydraulics.ntot; i++){ hydraulics.known[i]=false; }
                     ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
                     hydraulics.contour2[0] = ihex;
                     hydraulics.nContour++;
@@ -368,6 +415,7 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                     //doDrain = 1;
                     break;
                 case SDLK_i :
+                    for(int i=0; i<hydraulics.ntot; i++){ hydraulics.known[i]=false; }
                     ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
                     hydraulics.contour2[0] = ihex;
                     hydraulics.nContour++;
@@ -378,8 +426,14 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                     //doDrain = -1;
                     break;
                 case SDLK_g :
-                    hydraulics.gatherRain( );
+                    hydraulics.gatherRain( 100.0 );
                     terrainViewMode = 2;
+                    //val=0.0; ihex=0;
+                    //for( int isink : hydraulics.sinks ){ double w=water[isink]; if(w>val){val=w; ihex=isink; } } // find largest river
+                    //hydraulics.trackRiver( ihex, 50.0, river, feeders );
+                    hydraulics.findAllRivers( 50.0 );
+                    //for(int i=0; i<hydraulics.ntot; i++){ hydraulics.known[i]=false; }
+                    //hydraulics.trackRiverRecursive( ihex, 50.0, NULL );
                     break;
                 case SDLK_m :
                     terrainViewMode=(terrainViewMode%2)+1;

@@ -1,8 +1,15 @@
 #ifndef TerrainHydraulics_h
 #define TerrainHydraulics_h
 
+#include <vector>
 #include "Noise.h"
 #include "arrayAlgs.h"
+
+class River{ public:
+    River* mouth = NULL;
+    std::vector<int>    path;
+    std::vector<double> flow;
+};
 
 class TerrainHydraulics{
 public:
@@ -26,6 +33,9 @@ public:
 	int    * contour1  = NULL;
 	int    * contour2  = NULL;
 	double * water_    = NULL;
+
+	std::vector<int>    sinks;
+	std::vector<River*> rivers;
 
 /*
     double c_errode    = 0.4;
@@ -51,8 +61,11 @@ public:
 
 	// ==== function declaration
 
-	void gatherRain( );
+	void gatherRain( double minSinkFlow );
 	int  traceDroplet( int ix, int iy, int nmax, int * trace );
+	int  trackRiver( int sink, double minFlow, std::vector<int>& river, std::vector<int>& feeders );
+	int  trackRiverRecursive( int sink, double minFlow, River * mouth );
+	int  findAllRivers( double minFlow );
 
     void genTerrainNoise( int n, double scale, double hscale, double fdown, double strength, int seed, const Vec2d& pos0 );
     void init_outflow( double water_level );
