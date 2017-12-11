@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <vector>
+#include <unordered_map>
 #include <math.h>
 
 #include <SDL2/SDL.h>
@@ -31,6 +32,8 @@
 #include "IO_utils.h"
 
 #include "CommandParser.h"
+
+#include "Economy.h"
 
 
 // font rendering:
@@ -62,8 +65,6 @@ class LandCraftApp : public AppSDL2OGL {
     double drawHeight = 0;
 
     //int doDrain = 0;
-
-
     //int       ifaction = 0;
     bool bDrawing = false;
     int terrainViewMode  = 1;
@@ -74,6 +75,9 @@ class LandCraftApp : public AppSDL2OGL {
 
     std::vector<int> river;
     std::vector<int> feeders;
+
+    std::unordered_map<std::string,Commodity*>  commodities;
+    std::unordered_map<std::string,Technology*> technologies;
 
     CommandParser cmdPars;
 
@@ -154,6 +158,35 @@ void LandCraftApp::generateTerrain(){
 
 
 LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+
+
+    FILE* pFile = fopen("data/Technologies.txt", "r" );
+    if (!pFile){ printf("Unable to open file!\n"); exit(0); }
+    while( true ){
+        Technology* tech = new Technology();
+        if( tech->fromFile(pFile) ){
+            tech->print();
+            technologies[tech->name]=tech;
+            //technologies.insert({tech->name,tech});
+            //technologies[tech->name]->print();
+        }else{
+            delete tech;
+            break;
+        }
+    }
+    printf("===========\n");
+    Factory factory;
+    //for( auto it : technologies ){ printf("%s ::::::\n", it.first.c_str() ); it.second->print(); }
+    //technologies[ std::string("Charcoal") ]->print();
+    factory.setTechnology( technologies[ std::string("Charcoal") ] );
+    factory.currentTenchnology->print();
+    //factory.stored[ "Wood" ]->ammount = 500.0;
+    factory.stored[ "Wood" ] = 500.0;
+    printMap_d( factory.stored );
+    factory.produce(10.0);
+    printMap_d( factory.stored );
+     printf("===========\n");
+    //exit(0);
 
     cmdPars.execFile( "data/comands.ini" );
 
