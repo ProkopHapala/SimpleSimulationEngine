@@ -18,7 +18,6 @@
 #include "testUtils.h"
 
 // ======================  TestApp
-
 #define CELL_TYPE int
 
 class TestAppTileTree2D : public AppSDL2OGL {
