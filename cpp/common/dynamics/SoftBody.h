@@ -4,6 +4,10 @@
 
 #include "fastmath.h"
 #include "Vec3.h"
+
+#include "Lingebra.h"
+//#include "LinearElasticity.h"
+
 //#include "DynamicOpt.h"
 
 // ==================
@@ -160,7 +164,73 @@ class SoftBody{
 		}
 	}
 
+
+
+
+
+
+
 };
+
+
+
+
+class SoftBodyLinearized {
+    int  npoints;
+    int  nsticks;
+    Vec3d  * poss;
+    Vec3d  * Fextern;
+    Vec3d  * disps;
+    Vec2i  * ijs;
+    double * l0s;
+    double * ks;
+    Vec3d  * dirs;
+    //Vec3d  * kDirs;
+
+    void prepare(){
+        // - evaluate stick lengths and normalized directions
+        for( int il=0; il<nsticks; il++  ){
+            Vec2i ij    = ijs[il];
+            Vec3d d     = poss[ij.a] - poss[ij.b];
+            double l    = d.norm();
+            double f0   = ks[il]*(l-l0s[il]);
+            d.mul( 1/l );
+            dirs[il] = d;
+            d.mul( f0 );
+            Fextern[ij.a].add(d);
+            Fextern[ij.b].sub(d);
+        }
+    }
+
+    //void disp2force( int nds, int nfs, double * ds_, double * fs_ ){
+    void disp2force( int n, Vec3d* ds, Vec3d* fs ){
+        //int n=nds/3;
+        //Vec3d * ds = (Vec3d*)ds;
+        //Vec3d * fs = (Vec3d*)fs;
+        //for( int i=0; i<nfs; i++ ){ fs_[i]=0; }
+        for( int i=0; i<n; i++ ){ fs[i].set(0.0); }
+        for( int il=0; il<nsticks; il++ ){
+            Vec2i ij   = ijs[il];
+            double dfl = ks[il]   * dirs[il].dot( ds[ij.a] - ds[ij.b] );
+            Vec3d f    = dirs[il] * dfl;
+            //Vec3d f   = kDirs[il] * ( ds[ij.a] - ds[ij.b] );
+            fs[ij.a].add(f);
+            fs[ij.b].sub(f);
+        }
+    };
+
+    void solve(){
+        prepare();
+        //Lingebra::genLinSolve_CG<disp2force>( npoints*3, (double*)disps, (double*)Fextern );
+        //SoftBodyLinearized* T;
+        Lingebra::genLinSolve_CG( npoints*3, (double*)disps, (double*)Fextern,
+            [&](int nds, int nfs, double * ds_, double * fs_){ this->disp2force( nds/3, (Vec3d*)ds_, (Vec3d*)fs_ ); }
+        );
+    }
+
+};
+
+
 
 #endif
 

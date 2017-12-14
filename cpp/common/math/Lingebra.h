@@ -10,6 +10,9 @@
 #include "VecN.h"
 
 
+void (dotFunc)(int nx, int ny, double * x, double * y );
+
+
 //#define IJ(i,j) n*i+j
 
 namespace Lingebra{
@@ -56,6 +59,42 @@ namespace Lingebra{
 	inline void sub( int m, int n, double** A, double** B, double** out ){  for (int i=0; i<m; i++ ){ VecN::sub( n, A[i], B[i], out[i] );   } }
 	inline void mul( int m, int n, double** A, double** B, double** out ){  for (int i=0; i<m; i++ ){ VecN::mul( n, A[i], B[i], out[i] );   } }
 	inline void div( int m, int n, double** A, double** B, double** out ){  for (int i=0; i<m; i++ ){ VecN::div( n, A[i], B[i], out[i] );   } }
+
+	//template<void dotFunc(int nx, int ny, double* x, double* y)>
+	template<typename F>
+    void genLinSolve_CG( int n, double * b, double * x , F dotFunc ){
+        const int    maxIters   = 10;
+        const double    maxErr2 = 1e-5;
+        double *  r     = new double[n];
+        double *  r2    = new double[n];
+        double *  p     = new double[n];
+        double *  Ap    = new double[n];
+        dotFunc( n, n, x, r );
+        VecN::sub( n, b, r, r );
+        VecN::set( n, r, p );
+        double rho = VecN::dot(n, r,r);
+        double alpha = 0;
+        for ( int i =0; i<maxIters; i++) {
+            dotFunc( n, n, p, Ap);
+            alpha = rho / VecN::dot(n, p, Ap);
+            VecN::fma( n, x, p ,  alpha,   x );
+            VecN::fma( n, r, Ap, -alpha,   r2 );
+            double err2 = VecN::dot(n, r2,r2);
+            //printf( " iter: %i  err2: %f |  alpha %f \n", i, err2,     alpha );
+            printf( " iter: %i  err2: %f \n", i, err2 );
+            if (err2 < maxErr2 ) break;
+            double rho2 = VecN::dot(n, r2,r2);
+            double beta = rho2 / rho;
+            VecN::fma( n, r2, p, beta, p );
+            rho = rho2;
+            double * swap = r; r = r2; r2 = swap;
+        }
+        delete r;
+        delete r2;
+        delete p;
+        delete Ap;
+    }
+
 
 };
 
