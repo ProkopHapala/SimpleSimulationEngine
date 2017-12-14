@@ -173,18 +173,19 @@ class SoftBody{
 };
 
 
+class SoftBodyLinearized { public:
 
-
-class SoftBodyLinearized {
     int  npoints;
+    Vec3d  * poss    = NULL;
+    Vec3d  * Fextern = NULL;
+    Vec3d  * Fwork   = NULL;
+
     int  nsticks;
-    Vec3d  * poss;
-    Vec3d  * Fextern;
-    Vec3d  * disps;
-    Vec2i  * ijs;
-    double * l0s;
-    double * ks;
-    Vec3d  * dirs;
+    Vec3d  * disps = NULL;
+    Vec2i  * ijs   = NULL;
+    double * l0s   = NULL;
+    double * ks    = NULL;
+    Vec3d  * dirs  = NULL;
     //Vec3d  * kDirs;
 
     void prepare(){
@@ -208,14 +209,17 @@ class SoftBodyLinearized {
         //Vec3d * ds = (Vec3d*)ds;
         //Vec3d * fs = (Vec3d*)fs;
         //for( int i=0; i<nfs; i++ ){ fs_[i]=0; }
-        for( int i=0; i<n; i++ ){ fs[i].set(0.0); }
+        //for( int i=0; i<n; i++ ){ fs[i].set(0.0); }
+        for( int i=0; i<n; i++ ){ fs[i] = Fextern[i]; }
         for( int il=0; il<nsticks; il++ ){
-            Vec2i ij   = ijs[il];
-            double dfl = ks[il]   * dirs[il].dot( ds[ij.a] - ds[ij.b] );
-            Vec3d f    = dirs[il] * dfl;
+            Vec2i ij   = ijs [il];
+            Vec3d hat  = dirs[il];
+            double dfl = ks  [il] * hat.dot( ds[ij.a] - ds[ij.b] );
+            hat.mul(dfl);  // f = k * <h|di-dj> * h
+            //Vec3d f    = dirs[il] * dfl;
             //Vec3d f   = kDirs[il] * ( ds[ij.a] - ds[ij.b] );
-            fs[ij.a].add(f);
-            fs[ij.b].sub(f);
+            fs[ij.a].add(hat);
+            fs[ij.b].sub(hat);
         }
     };
 
@@ -223,7 +227,7 @@ class SoftBodyLinearized {
         prepare();
         //Lingebra::genLinSolve_CG<disp2force>( npoints*3, (double*)disps, (double*)Fextern );
         //SoftBodyLinearized* T;
-        Lingebra::genLinSolve_CG( npoints*3, (double*)disps, (double*)Fextern,
+        Lingebra::genLinSolve_CG( npoints*3, (double*)disps, (double*)Fwork,
             [&](int nds, int nfs, double * ds_, double * fs_){ this->disp2force( nds/3, (Vec3d*)ds_, (Vec3d*)fs_ ); }
         );
     }
