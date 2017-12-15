@@ -24,6 +24,9 @@
 #include "PointCloudComparator.h"
 #include "SphereTreeND.h"
 
+#include "BasisFunc.h"
+#include "FitFF.h"
+
 //#include "testUtils.h"
 
 // ============ Global Variables
@@ -33,13 +36,55 @@ MolecularWorld world;
 bool   converged   = false;
 //double fmaxConverg = 0.00001;
 
-
 PointCloudComparator comp;
 TypePointsComparator compT;
+
+
+// ========== Fitting globals
+
+int ntypes=0;
+int paramsPerType=0;
+int nparams;
+double* params  = NULL;
+double* dparams = NULL;
+
+double Rcut;
+std::vector<FitStructure*> fitStructs;
 
 // ============ Exported functions
 
 extern "C"{
+
+    // BEGIN ========== Fitting functions
+
+    void initFitting(){
+
+    }
+
+    void addFitStruct( int natoms, int * types, double* poss, double* lvec ){
+        FitStructure* s = new FitStructure();
+        s->types = types;        // WARRNING:  make sure that these pointers are not deallocated in Python (i.e. save reference somewhere)
+        s->poss  = (Vec3d*)poss;
+        s->makePairs( Rcut, {1,1,1}, ntypes, paramsPerType );
+        fitStructs.push_back(s);
+    }
+
+    void iterateFit( int niter, double dt, double RMSgoal ){
+        for(int itr=0; itr<niter; itr++){
+            double F2err=0;
+            double E2err=0;
+            for( FitStructure* s : fitStructs ){
+                F2err += s->getPairwiseVarDerivStep( params, dparams );
+                E2err += s->Eerr*s->Eerr;
+                // some upadate step // Later use DynamicOpt
+                for(int i=0; i<nparams; i++ ){ params[i] += dparams[i] * dt; } // very stupid optimization algorithms
+            }
+            //double RMS = 1e+300;
+            if( (F2err + E2err) <RMSgoal) break;
+        }
+    }
+
+    // END ========== Fitting functions
 
     void initWorld( char * workdir ){
         char fname[256];
