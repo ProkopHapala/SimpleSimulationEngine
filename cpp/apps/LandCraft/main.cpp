@@ -34,6 +34,7 @@
 #include "CommandParser.h"
 
 #include "Economy.h"
+#include "Roads.h"
 
 
 // font rendering:
@@ -79,6 +80,12 @@ class LandCraftApp : public AppSDL2OGL {
     std::unordered_map<std::string,Commodity*>  commodities;
     std::unordered_map<std::string,Technology*> technologies;
 
+
+    RoadBuilder roadBuilder;
+    std::vector<RoadVehicleType*>  vehicleTypes;
+    std::vector<Road*>         roads;
+    std::vector<RoadVehicle*>  vehicles;
+
     CommandParser cmdPars;
 
     //GLuint       itex;
@@ -102,6 +109,7 @@ class LandCraftApp : public AppSDL2OGL {
     void generateTerrain();
 	void terrainColor( int i );
 	void drawTerrain( Vec2i i0, Vec2i n, int NX );
+	void drawRoad( Road* road );
 
 	LandCraftApp( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -187,6 +195,38 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     printMap_d( factory.stored );
      printf("===========\n");
     //exit(0);
+
+    Road* road  = new Road();
+    roads.push_back( road );
+
+    roadBuilder.road = road;
+
+    //std::list<int> lst;
+    //lst.push_back(15454);
+    //printf( " %i \n", *(lst.end()) );  //  Returns an iterator to the element following the last element of the container. This element acts as a placeholder; attempting to access it results in undefined behavior.;
+
+    //printf( " %i \n", lst.back() );
+
+    //RoadTile rt =   (RoadTile){(uint16_t)10,(uint16_t)15,(double)154.0};
+    //rt.print();
+    roadBuilder.path.push_back( (RoadTile){10,15,0.0} );
+    //roadBuilder.path.push_back ( rt );
+    //roadBuilder.path.end()->print();
+    roadBuilder.pushStright ( {55,38}     );
+    roadBuilder.writeIt();
+
+    //exit(0);
+
+    RoadVehicleType* vehicleType= new RoadVehicleType();
+    vehicleTypes.push_back(vehicleType);
+
+    RoadVehicle* vehicle = new RoadVehicle();
+    vehicle->road = road;
+    vehicle->type = vehicleType;
+    vehicles.push_back( vehicle );
+
+
+
 
     cmdPars.execFile( "data/comands.ini" );
 
@@ -296,6 +336,21 @@ void LandCraftApp::drawTerrain( Vec2i i0, Vec2i n, int NX ){
     }
 }
 
+void LandCraftApp::drawRoad( Road* road ){
+    glBegin( GL_LINE_STRIP );
+    RoadTile* path = road->path;
+    //printf( "road->n %i\n", road->n );
+    for(int i=0; i<road->n; i++){
+        Vec2d p;
+        ruler.nodePoint( {path[i].ia,path[i].ib}, p );
+        glVertex3f( (float)p.x, (float)p.y, 100.0f );
+        //printf( "(%i,%i)  %f %f \n", path[i].ia,path[i].ib, p.x, p.y );
+        //glVertex3f();
+    }
+    glEnd();
+    //exit(0);
+}
+
 void LandCraftApp::draw(){
     //long tTot = getCPUticks();
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
@@ -323,6 +378,25 @@ void LandCraftApp::draw(){
 	//Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, ruler.na, water, 0.0, maxHeight );
 	drawTerrain( {0,0}, {128,128}, ruler.na );
 	glPopMatrix();
+
+    glColor3f( 1.0, 1.0, 1.0 );
+	drawRoad( roads[0] );
+
+	for( RoadVehicle* veh : vehicles ){
+        //veh->moveStep( 1.0 );
+        veh->move( 2.0 );
+        //if( !veh->onWay ){ veh->idir*=-1; veh->onWay=true; }
+        if( !veh->onWay ) veh->depart();
+	}
+	//if(frameCount>100) exit(0);
+
+	for( RoadVehicle* veh : vehicles ){
+        Vec2d p;
+        //veh->ipath
+        RoadTile& tile = veh->road->path[veh->ipath];
+        ruler.nodePoint( {tile.ia,tile.ib}, p );
+        Draw2D::drawCircle_d( p, 25, 16, false );
+	}
 
 	/*
 	// test of hexIndex
