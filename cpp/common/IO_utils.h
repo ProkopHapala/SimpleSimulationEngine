@@ -13,7 +13,7 @@
 
 const int N_CHAR_TMP = 256;
 
-int saveBin( char *fname, int n, char * data ){
+inline int saveBin( char *fname, int n, char * data ){
     FILE *ptr_myfile;
     ptr_myfile=fopen( fname,"wb");
     if (!ptr_myfile){ printf("Unable to open file!"); return -1; }
@@ -27,7 +27,7 @@ int saveBin( char *fname, int n, char * data ){
     return 0;
 }
 
-int loadBin( char *fname, int n, char * data ){
+inline int loadBin( char *fname, int n, char * data ){
     FILE *ptr_myfile;
     ptr_myfile=fopen( fname,"rb");
     if (!ptr_myfile){ printf("Unable to open file!"); return -1; }

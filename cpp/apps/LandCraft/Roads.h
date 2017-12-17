@@ -104,7 +104,7 @@ class RoadVehicle{ public:
         double slope = path[ipath+idir].height - path[ipath].height;
         double tStep = type->getSpeed( slope );
         double dt = t_left - tStep;
-        printf( "%i %i %f %f\n", ipath, idir, t_left, t_rest );
+        //printf( "%i %i %f %f\n", ipath, idir, t_left, t_rest );
         if(dt>0){
             if( idir==1 ){
                 ipath++; if( ipath==road->n ) return true;
@@ -124,7 +124,7 @@ class RoadVehicle{ public:
         if( onWay ){
             while( t>0 ){
                 if( moveStep( t ) ){
-                    printf( "arrived \n" );
+                    //printf( "arrived \n" );
                     onWay = false;
                     break;
                 };

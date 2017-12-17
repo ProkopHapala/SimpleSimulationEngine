@@ -35,7 +35,6 @@
 
 int   default_font_texture;
 
-
 void cmapHeight(double g){
 
     //glColor3f(0.2+0.8*g*g,0.2+0.3*(1-g)*g,0.2);
@@ -58,6 +57,8 @@ class FormationTacticsApp : public AppSDL2OGL {
 
     bool bDrawing = false;
 
+    double xsc,ysc;
+
     //GLuint       itex;
 
     // ==== function declaration
@@ -74,6 +75,8 @@ class FormationTacticsApp : public AppSDL2OGL {
 	void debug_buffinsert( );
 	//void pickParticle( Particle2D*& picked );
 	//virtual int tileToList( float x0, float y0, float x1, float y1 );
+
+	double polyLinIntercept( int n, double* xs, double* ys, double y0, double a );
 
 	FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -124,6 +127,33 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     //itex = makeTexture(  "data/nehe.bmp" );
     printf( "default_font_texture :  %i \n", default_font_texture );
 
+}
+
+double FormationTacticsApp::polyLinIntercept( int n, double* xs, double* ys, double y0, double a ){
+    double ox = xs[0];
+    double oy = ys[0];
+    //for( int i=0; i<n; i++ ){ Draw2D::drawPointCross_d( { camXmin + xs[i]*xsc, camYmin + ysc*ys[i] }, 5.0 );  };
+    for(int i=1; i<n; i++){
+        double x  = xs[i];
+        double y  = ys[i];
+        double h  = (y0 + a*x ) -  y;
+        glColor3f(0.0f,0.0f,1.0f); Draw2D::drawPointCross_d( { camXmin+x*xsc, camYmin + ysc*y     }, 1.0 );
+        glColor3f(1.0f,0.0f,0.0f); Draw2D::drawPointCross_d( { camXmin+x*xsc, camYmin + ysc*(y+h) }, 1.0 );
+        glColor3f(1.0f,0.0f,1.0f); Draw2D::drawLine( { camXmin+x*xsc, camYmin + ysc*y     },{ camXmin+x*xsc, camYmin + ysc*(y+h) } );
+        //printf( "... %i x=%f %f \n", i, x, oy );
+        if(h<0){
+            double oh = (y0 + a*ox) - oy;
+            double f  = oh/(oh-h);
+            //printf( "OOO %i x=%f dx=%f %f %f oh=%f \n", i, x, x-ox, a, oy, oh );
+            x  = f*(x-ox) + ox;
+            //printf( "<<< %i %f %f %f dx=%f   %f %f %f \n", i, y0, h, x, (x-ox),   oh, f, x );
+
+            glColor3f(0.0f,1.0f,0.0f); Draw2D::drawPointCross_d( { camXmin+x*xsc, camYmin + ysc*(y0 + a*x ) }, 1.0 );
+            return x;
+        }
+        ox=x; oy=y;
+    }
+    return -1e-8;
 }
 
 void FormationTacticsApp::draw(){
@@ -199,6 +229,8 @@ void FormationTacticsApp::draw(){
     }
     */
 
+
+    /*
     printf("===== frameCount %i \n", frameCount);
     //double g   = world.ruler.rayView( ray0, hray, 2.0, 0.0, world.ground, 200.0 );
     int ntg = world.ruler.rayList( ray0, hray, 2.0, world.ntg, world.tgs, world.Ttgs, world.ground, 200.0 );
@@ -206,6 +238,98 @@ void FormationTacticsApp::draw(){
     Draw2D::drawLine_d(ray0, (ray0+hray*world.ruler.ray_t) );
     Draw2D::drawPointCross_d(ray0, 2.0 );
     Draw2D::drawPointCross_d((ray0+hray*world.ruler.ray_t), 1.0 );
+    */
+
+    const int  ndhs = 5;
+    const int nDirs = 50;
+    double dhs[ndhs];
+    double ts [ndhs];
+
+    Vec2d  hRays[nDirs];
+    double horizonts[nDirs*ndhs];
+
+    //for(int i=0; i<ndhs ; i++ ){ dhs[i]=-0.8 + 0.2*i; };
+    for(int i=0; i<ndhs ; i++ ){ dhs[i]=-1.0/i; };
+    double dphi = 2*M_PI/nDirs;
+    for(int i=0; i<nDirs; i++ ){ double a = dphi*i; hRays[i]=(Vec2d){cos(a),sin(a)}; };
+
+    double tmax = 200.0;
+    for(int i=0; i<nDirs; i++ ){
+        int nhit = world.ruler.rayHorizonts( ray0, hRays[i], world.ground, 10.0, ndhs, dhs, ts, tmax );
+        for(int j=0; j<ndhs ; j++ ){
+            int ij = j*nDirs + i;
+            if( j<nhit ){
+                horizonts[ij]=ts[j];
+            }else{
+                horizonts[ij]=tmax+1.0;
+            }
+        }
+    };
+
+    for(int j=0; j<ndhs ; j++ ){
+        glBegin(GL_LINE_LOOP);
+            for(int i=0; i<nDirs; i++ ){
+                int ij = j*nDirs + i;
+                double t = horizonts[ij];
+                Vec2d p = ray0 + hRays[i]*t;
+                if( t>tmax ){ glColor3f(0.0f,0.0f,0.0f); }else{ glColor3f(0.0f,1.0f,0.0f); };
+                glVertex3f( (float)p.x, (float)p.y, 100.0);
+            }
+        glEnd();
+    }
+
+
+    /*
+    const int nSamples = 50;
+    double vals[nSamples];
+    double ts  [nSamples];
+
+    double dt = 5.0;
+
+    glColor3f( 1.0f,1.0f, 1.0f ); Draw2D::drawLine_d( ray0, ray0+hray*(dt*nSamples) );
+
+    xsc = ASPECT_RATIO*zoom/(nSamples*dt);
+    ysc = 0.2;
+
+    world.ruler.sampleLine( nSamples, ray0, hray*dt, world.ground, vals );
+    glColor3f( 0.0f,0.0f,1.0f );
+    glBegin(GL_LINE_STRIP);
+    for( int i=0; i<nSamples; i++ ){
+        glVertex3f( camXmin + i*dt*xsc, camYmin + ysc*vals[i], 100.0 );
+    }
+    glEnd();
+
+    world.ruler.maxRayIter = nSamples;
+    int nstep = world.ruler.rayCut    ( ray0, hray, world.ground, ts, vals, nSamples*dt );
+    glColor3f( 1.0f,0.0f,0.0f );
+    glBegin(GL_LINE_STRIP);
+    for( int i=0; i<nstep; i++ ){
+        glVertex3f( camXmin + ts[i]*xsc, camYmin + ysc*vals[i], 100.0 );
+    }
+    glEnd();
+
+    //for( int i=0; i<nstep; i++ ){ Draw2D::drawPointCross_d( { camXmin + ts[i]*xsc, camYmin + ysc*vals[i] }, 5.0 );  };
+
+    double rayh0 = 10.0;
+    double thit = polyLinIntercept( nSamples, ts, vals, vals[0]+rayh0, dhs[0] );
+    int nhit = world.ruler.rayHorizonts( ray0, hray, world.ground, rayh0, ndhs, dhs, ts, nSamples*dt );
+
+    glBegin(GL_LINES);
+    double z0 = (vals[0]+rayh0);
+    for( int i=0; i<ndhs; i++ ){
+        glColor3f( 0.0f,1.0f,0.0f );
+        glVertex3f( camXmin, camYmin + ysc*  z0                                 , 100.0 );
+        glVertex3f( camXmax, camYmin + ysc*( z0 + dhs[i]*(camXmax-camXmin)/xsc ), 100.0 );
+        //glVertex3f( camXmin + (ts[i]/dt)*(ASPECT_RATIO*zoom/nSamples), camYmin + 0.2*( z0 + hray[i]*ts[i] ), 100.0 );
+        glColor3f( 0.0f,1.0f,1.0f );
+        if( i<=nhit ){
+            glVertex3f( camXmin + ts[i]*xsc, camYmin, 100.0 );
+            glVertex3f( camXmin + ts[i]*xsc, camYmax, 100.0 );
+        }
+    }
+    glEnd();
+    */
+
 
 
 };

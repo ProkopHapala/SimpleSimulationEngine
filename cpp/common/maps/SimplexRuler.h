@@ -107,7 +107,7 @@ class SimplexRuler{
 
     inline void tilePoint( int i, Vec2d& p ) const { tilePoint( i2ip(i>>1), i&1, p ); };
 
-    inline double getValue( Vec2d p, double * hs )const {
+    inline double getValue( Vec2d p, const double * hs )const {
         Vec2i ind; Vec2d dind;
         bool s = simplexIndex( p, ind, dind );
         int ia  = ip2i(wrap_index({ind.a+1,ind.b  }));
@@ -201,6 +201,87 @@ class SimplexRuler{
         return edgeKind;
     }
 
+    double sampleLine( int n, Vec2d p, Vec2d dp, const double * vmap, double* vals ){
+        //Vec3d d = p2 - p; d.mul( 1/(n-1) );
+        //Vec3d p;
+        for(int i=0; i<n; i++){ vals[i] = getValue( p, vmap ); p.add(dp); }
+    }
+
+    int rayCut( Vec2d ray0, Vec2d hray, const double * vmap, double * ts, double* vals, double tmax ){
+        rayStart( ray0, hray );
+        int i;
+        //ts  [i] = 0.0;
+        //vals[i] = getValue( ray0, vmap );
+        for(i=0; i<maxRayIter; i++){
+            if( ray_t > tmax ){
+                ts  [i] = tmax;
+                vals[i] = getValue( ray0+hray*tmax, vmap );
+            }else{
+                ts  [i] = ray_t;
+                vals[i] = getValue( ray0+hray*ray_t, vmap );
+                rayStep();
+            }
+        }
+        return i;
+    }
+
+    int rayHorizonts( Vec2d p, Vec2d hray, const double * vmap, double rayh0, int ndhs, double * dhs, double * ts, double tmax ){
+        rayStart( p, hray );
+        int i;
+        //ts  [i] = 0.0;
+        //vals[i] = getValue( ray0, vmap );
+        int idh     = 0;
+        double a    = dhs[idh];
+        //double zray = zray0;
+        //double oh = getValue( p, vmap ) - zray0;
+        double ozg   = getValue( p, vmap );
+        double zray0 = rayh0 + ozg;
+        for(i=0; i<maxRayIter; i++){
+            double dt = -ray_t;
+            rayStep();
+            dt += ray_t;
+            p.add_mul( hray, dt );
+            double zray = zray0 + a*ray_t;
+            double zg   = getValue( p, vmap );
+            double h    = zray - zg;
+            //printf( "... %i t=%f %f \n", i, ray_t, ozg );
+            if( h<0 ){
+                double oh = zray - a*dt - ozg;
+                double f  = oh/(oh-h);
+                double t  = dt*(f-1) + ray_t;
+                //printf( ">>> %i %f %f %f dt=%f   %f %f %f \n", i, zray0, h, ray_t, dt,   oh, f, t );
+                //printf( "XXX %i t=%f dt=%f %f %f oh=%f  \n", i, ray_t, dt,  a, ozg, oh  );
+                //double z  = ;
+                //vals[idh] = t;
+                ts  [idh] = t;
+                //printf( " %f   %f %f %f    %f %f %f    %f  %f   %f \n", t, f, ray_t, ot,   zray0, zray, zg,   h, oh,     a   );
+                // new point
+
+                while(true){
+                    idh++;
+                    if( idh>=ndhs ) return idh;
+                    a    = dhs[idh];
+                    zray =   zray0 + a*ray_t;
+                    h    =   zray - zg;
+                    if( h>0 ){
+                        break;
+                    }else{
+                        //t = 0.5*(t+ray_t); // TODO LATER
+                        oh = zray - a*dt - ozg;
+                        f  = oh/(oh-h);
+                        t  = dt*(f-1) + ray_t;
+                        ts[idh] = t;
+                    }
+                }
+                //ot  = ray_t;
+            }
+            if(ray_t>tmax) break;
+            ozg = zg;
+        }
+        return idh;
+    }
+
+    /*
     double rayView( Vec2d ray0, Vec2d hray, double h0, double dh, double * hs, double tmax ){
         rayStart( ray0, hray );
         double ot = 0;
@@ -282,6 +363,7 @@ class SimplexRuler{
         }
         return ntg;
     }
+    */
 
 };
 
