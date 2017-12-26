@@ -79,12 +79,12 @@ void Plot2D::drawAxes(){
         Draw::setRGBA(clrTicksX);
         for(int i=0; i<nXTicks; i++){
             sprintf(str,tickFormat,xTicks[i]);
-            Draw2D::drawText(str,{xTicks[i],axPos.y}, 90, fontTex, tickSz, 0, 0 );
+            Draw2D::drawText(str, 0, {xTicks[i],axPos.y}, 90, fontTex, tickSz );
         }
         Draw::setRGBA(clrTicksY);
         for(int i=0; i<nYTicks; i++){
             sprintf(str,tickFormat,yTicks[i]);
-            Draw2D::drawText(str,{axPos.x,yTicks[i]}, 0.0, fontTex, tickSz, 0, 0 );
+            Draw2D::drawText(str, 0, {axPos.x,yTicks[i]}, 0.0, fontTex, tickSz );
         }
     }
 
@@ -96,9 +96,9 @@ void Plot2D::render(){
     if( glObj ) glDeleteLists(glObj,1);
     glObj = glGenLists(1);
     glNewList(glObj, GL_COMPILE);
+    if( (clrBg&0xFF000000) ){ Draw::setRGBA( clrBg ); Draw2D::drawRectangle_d( axBounds.a, axBounds.b, true ); }
     drawAxes();
     glEndList( );
-
     for( DataLine2D* line : lines ){ line->render(); }
     // TO DO :
     //if( tickCaption ){ }

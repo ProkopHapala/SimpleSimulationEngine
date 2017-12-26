@@ -86,7 +86,7 @@ void NavalBattle_single::draw(){
 
     Draw3D::drawPointCross( crosshair , 10.0 );
 
-	delay          = 100;
+	delay          = 25;
 	world.dt       = 0.1;
 	world.perFrame = 1;
     world.update_world( );
@@ -105,7 +105,7 @@ void NavalBattle_single::draw(){
         //}
 
         ((Battleship*)ship1)->draw();
-        
+
 
         /*
         glPushMatrix();

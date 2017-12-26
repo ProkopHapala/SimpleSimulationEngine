@@ -14,8 +14,7 @@ const int nYTicks_def = 11;
 const int dXTicks_def = 1.0;
 const int dYTicks_def = 1.0;
 
-class DataLine2D{
-    public:
+class DataLine2D{ public:
     // data
     int      n     =0;
     double * xs    =NULL;
@@ -46,8 +45,7 @@ class DataLine2D{
     inline DataLine2D(int n_){ allocate(n_); }
 };
 
-class Plot2D{
-    public:
+class Plot2D{ public:
     // data
     std::vector<DataLine2D*> lines;
     // properties
@@ -63,6 +61,7 @@ class Plot2D{
 
     bool     grid       =true;
     bool     tickCaption=false;
+    uint32_t clrBg      = 0x00f0f0f0;
     uint32_t clrGrid    = 0xFFE0E0E0;
     uint32_t clrTicksX  = 0xFF000000;
     uint32_t clrTicksY  = 0xFF000000;

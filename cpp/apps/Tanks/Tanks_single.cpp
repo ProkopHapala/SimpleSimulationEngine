@@ -65,7 +65,7 @@ void renderArmorCaptions( const VehicleBlock& block, float sz ){
     for( Polygon* pl : block.polygons ){
         sprintf(str,"%i:%3.0fmm%2.1fton\0",i+1, block.armor[i].thickness, block.armor[i].mass*1e-3 );
         Vec3d c = block.faceCog( i );
-        Draw3D::drawText(str, c, fontTex, sz, 0,0);
+        Draw3D::drawText(str, c, fontTex, sz, 0 );
         i++;
     }
 }
@@ -417,7 +417,7 @@ void Tanks_single::draw(){
 
 
         sprintf(str,"%4.0fmm\0", effthick );
-        Draw3D::drawText(str, ray0 + hRay*t, fontTex, 0.2, 0,0);
+        Draw3D::drawText(str, ray0 + hRay*t, fontTex, 0.2, 0 );
         //printf( "itr %i ipl %i %g %g %g\n", itr, ipl, thick, cdot, effthick  );
     }
 
@@ -537,9 +537,6 @@ void Tanks_single::eventHandling ( const SDL_Event& event  ){
     //AppSDL2OGL::eventHandling( event );
 }
 
-
-
-
 void Tanks_single::drawHUD(){
     glDisable ( GL_LIGHTING );
     glColor3f( 0.0f, 1.0f, 0.0f );
@@ -554,8 +551,12 @@ int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	SDL_SetRelativeMouseMode( SDL_TRUE );
+    SDL_DisplayMode dm;
+    SDL_GetDesktopDisplayMode(0, &dm);
 	int junk;
-	thisApp = new Tanks_single( junk , 800, 600 );
+	thisApp = new Tanks_single( junk , dm.w-150, dm.h-100 );
+	SDL_SetWindowPosition(thisApp->window, 100, 0 );
+
 	thisApp->loop( 1000000 );
 	return 0;
 }

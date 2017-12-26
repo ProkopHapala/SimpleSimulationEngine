@@ -606,8 +606,11 @@ LandCraftApp * thisApp;
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+    SDL_DisplayMode dm;
+    SDL_GetDesktopDisplayMode(0, &dm);
 	int junk;
-	thisApp = new LandCraftApp( junk , 800, 600 );
+	thisApp = new LandCraftApp( junk , dm.w-150, dm.h-100 );
+	SDL_SetWindowPosition(thisApp->window, 100, 0 );
 	thisApp->zoom  = 3000;
 	thisApp->camX0 = 4000;
 	thisApp->camY0 = 2000;

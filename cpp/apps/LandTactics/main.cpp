@@ -29,6 +29,9 @@
 #include "LTFaction.h"
 #include "LTWorld.h"
 
+#include "GUI.h"
+#include "Plot2D.h"
+
 // font rendering:
 //  http://www.willusher.io/sdl2%20tutorials/2013/12/18/lesson-6-true-type-fonts-with-sdl_ttf
 //  http://stackoverflow.com/questions/28880562/rendering-text-with-sdl2-and-opengl
@@ -93,6 +96,8 @@ void FormationTacticsApp::printASCItable( int imin, int imax  ){
 
 FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
+    //SDL_MaximizeWindow( window);  // does not work if not resizable windows // https://stackoverflow.com/questions/311818/maximize-sdl-window
+
     /*
     for(int i=0; i<100; i++){
         //Vec3d hs = {0.0,1.0,1.0};
@@ -121,7 +126,8 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     //tiles    = new int[ nxy ];
     //TiledView::renderAll( -10, -10, 10, 10 );
 
-    default_font_texture = makeTexture(  "common_resources/dejvu_sans_mono.bmp" );
+    //default_font_texture = makeTexture(  "common_resources/dejvu_sans_mono.bmp" );
+    default_font_texture = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     //default_font_texture = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     //itex = makeTexture(  "data/tank.bmp" );
     //itex = makeTexture(  "data/nehe.bmp" );
@@ -168,9 +174,13 @@ void FormationTacticsApp::draw(){
         world.ruler.simplexIndexBare({mouse_begin_x,mouse_begin_y},ind);
         ind = world.ruler.wrap_index(ind);
         int i = world.ruler.ip2i(ind);
-        printf("i %i (%i,%i) \n",i, ind.x, ind.y );
+        //printf("i %i (%i,%i) \n",i, ind.x, ind.y );
         world.ground[i] = randf(0.0,1.0);
 	}
+
+    //glDisable    ( GL_LIGHTING   );
+    //glDisable    ( GL_DEPTH_TEST );
+    glShadeModel ( GL_SMOOTH     );
 
 	glPushMatrix();
 	glScalef(world.ruler.step,world.ruler.step,1.0);
@@ -404,8 +414,13 @@ FormationTacticsApp * thisApp;
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+
+    SDL_DisplayMode dm;
+    SDL_GetDesktopDisplayMode(0, &dm);
+    //printf( "Display size W: %i H:%i \n", dm.w, dm.h );
+
 	int junk;
-	thisApp = new FormationTacticsApp( junk , 800, 600 );
+	thisApp = new FormationTacticsApp( junk , dm.w-150, dm.h-100 );
 	thisApp->zoom = 30;
 	thisApp->loop( 1000000 );
 	return 0;

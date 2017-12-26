@@ -78,7 +78,7 @@ void Draw::billboardCamProj( ){
     glLoadMatrixf(glModel);
 };
 
-void Draw::drawText( const char * str, int itex, float sz, int istart, int iend ){
+void Draw::drawText( const char * str, int itex, float sz, int iend ){
     const int nchars = 95;
     float persprite = 1.0f/nchars;
     glEnable     ( GL_TEXTURE_2D );
@@ -89,7 +89,7 @@ void Draw::drawText( const char * str, int itex, float sz, int istart, int iend 
     glBegin(GL_QUADS);
     int terminator = 0xFFFF;
     if(iend<=0) { terminator=-iend; iend=256; };
-    for(int i=istart; i<iend; i++){
+    for(int i=0; i<iend; i++){
         if  (str[i]==terminator) break;
         int isprite = str[i] - 33;
         float offset  = isprite*persprite+(persprite*0.57);
@@ -105,6 +105,42 @@ void Draw::drawText( const char * str, int itex, float sz, int istart, int iend 
     glDisable  ( GL_TEXTURE_2D );
     glBlendFunc( GL_ONE, GL_ZERO );
 };
+
+void Draw::drawText( const char * str, int itex, float sz, Vec2i block_size ){
+    const int nchars = 95;
+    float persprite = 1.0f/nchars;
+    glEnable     ( GL_TEXTURE_2D );
+    glBindTexture( GL_TEXTURE_2D, itex );
+    glEnable(GL_BLEND);
+    glEnable(GL_ALPHA_TEST);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glBegin(GL_QUADS);
+    //int terminator = 0xFFFF;
+    //if(iend<=0) { terminator=-iend; iend=256; };
+    char terminator = '\0';
+    int iline=0,ix=0;
+    //printf("\n"); printf("-------\n");
+    for(int i=0; i<65536; i++){
+        char ch = str[i]; // printf("%c", ch);
+        if       (ch==terminator){ break; }
+        else if ((ch=='\n')||(ix>block_size.x)){ iline++; ix=0; if(iline>block_size.y) break; continue; }
+        int isprite = ch - 33;
+        float offset  = isprite*persprite+(persprite*0.57);
+        float x = ix   *sz;
+        float y = -iline*sz*2;
+        glTexCoord2f( offset          , 1.0f ); glVertex3f( x   , y+   0, 0.0f );
+        glTexCoord2f( offset+persprite, 1.0f ); glVertex3f( x+sz, y+   0, 0.0f );
+        glTexCoord2f( offset+persprite, 0.0f ); glVertex3f( x+sz, y+sz*2, 0.0f );
+        glTexCoord2f( offset          , 0.0f ); glVertex3f( x   , y+sz*2, 0.0f );
+        ix++;
+    }
+    glEnd();
+    glDisable  ( GL_BLEND );
+    glDisable  ( GL_ALPHA_TEST );
+    glDisable  ( GL_TEXTURE_2D );
+    glBlendFunc( GL_ONE, GL_ZERO );
+};
+
 
 
 /*

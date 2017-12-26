@@ -20,6 +20,7 @@
 #include "AppSDL2OGL_3D.h"
 
 #include "GUI.h"
+#include "Plot2D.h"
 
 // ======================  TestApp
 
@@ -34,6 +35,8 @@ class TestAppGUI : public AppSDL2OGL_3D {
     GUIPanel   panel;
     MultiPanel mpanel;
     GUITextInput txt;
+
+    Plot2D plot1;
 
     GUIAbstractPanel*  focused = NULL;
 
@@ -65,6 +68,32 @@ TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, 
 
     SDL_StartTextInput ();
     //panel.nChars = 6;
+
+    // Plot2D
+
+    plot1.init();
+    plot1.fontTex = fontTex;
+    plot1.clrGrid = 0xFF404040;
+    plot1.clrBg   = 0xFF408080;
+
+    DataLine2D * line1 = new DataLine2D(100);
+    line1->linspan(-3*M_PI,2*M_PI);
+    //Func1d myFunc = &sin;
+    //line1->yfunc = myFunc;
+    line1->yfunc = &sin;
+
+    DataLine2D * line2 = new DataLine2D(400);
+    line2->linspan(-M_PI,3*M_PI);
+    for(int i=0; i<line2->n; i++){
+        double x     = line2->xs[i];
+        line2->ys[i] = sin(x*x);
+    }
+    line2->clr = 0xFF00FF00;
+
+    plot1.lines.push_back( line1 );
+    plot1.lines.push_back( line2 );
+    plot1.render();
+
 }
 
 void TestAppGUI::draw   (){
@@ -89,6 +118,15 @@ void TestAppGUI::drawHUD(){
 	panel .tryRender();  panel.draw();
 	mpanel.tryRender(); mpanel.draw();
 	if(focused) Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
+
+	glTranslatef( 10.0,300.0,0.0 );
+	glColor3f(0.5,0.0,0.3);
+    Draw::drawText( "abcdefghijklmnopqrstuvwxyz \n0123456789 \nABCDEFGHIJKLMNOPQRTSTUVWXYZ \nxvfgfgdfgdfgdfgdfgdfg", fontTex, 8, {10,5} );
+
+	glTranslatef( 200.0,100.0,0.0 );
+	glScalef    ( 10.0,10.00,1.0  );
+	plot1.view();
+
 
 	//glColor3f(1.0f,1.0f,1.0f);
 	//panel.render();

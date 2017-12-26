@@ -28,7 +28,8 @@ void GUITextInput::view3D( const Vec3d& pos, int fontTex, float textSize ){
     glPushMatrix();
         glTranslatef( pos.x, pos.y, pos.z );
         Draw::billboardCam( );
-        Draw::drawText( inputText.c_str(), fontTex, textSize, 0, 0 );
+        //Draw::drawText( inputText.c_str(), fontTex, textSize, 0, 0 );
+        Draw::drawText( inputText.c_str(), fontTex, textSize, 0 );
         Draw3D::drawLine( {curPos*textSize,0.0,0.0}, {curPos*textSize,textSize*2,0.0} );
     glPopMatrix();
 }
@@ -97,6 +98,7 @@ void GUIAbstractPanel::draw  ( ){
     glCallList( gllist );
 };
 
+/*
 void GUIAbstractPanel::tryRender(){
     if(!redraw) return;
     gllist=glGenLists(1);
@@ -114,6 +116,34 @@ void GUIAbstractPanel::tryRender(){
     glEndList();
     redraw=false;
 };
+*/
+
+
+void GUIAbstractPanel::tryRender(){
+    if(!redraw) return;
+    gllist=glGenLists(1);
+    glNewList( gllist, GL_COMPILE );
+        glDisable   ( GL_LIGHTING    );
+        glDisable   ( GL_DEPTH_TEST  );
+        glShadeModel( GL_FLAT        );
+        Draw  ::setRGB( bgColor );
+        Draw2D::drawRectangle ( xmin, ymin, xmax, ymax, true );
+        printf("&caption %i\n", caption );
+        if(caption) {
+            Draw  ::setRGB( textColor );
+            //Draw2D::drawString ( caption,             xmin, ymax-12, 6, fontTex );
+            //Draw::drawText( const char * str, int itex, float sz, int istart, int iend ){
+            //Draw::drawText( caption,             xmin, ymax-12, 6, fontTex );
+            int nchr = strlen(caption);
+            Draw2D::drawText( caption, nchr, {xmin, ymax-12},  0.0, fontTex, 6 );
+        }
+    glEndList();
+    redraw=false;
+};
+
+
+
+
 
 void GUIAbstractPanel::init( int xmin_, int ymin_, int xmax_, int ymax_, int fontTex_ ){
     xmin=xmin_,ymin=ymin_,xmax=xmax_,ymax=ymax_; fontTex=fontTex_;
@@ -145,11 +175,14 @@ void GUIPanel::tryRender(){
         //float val_=(float)( (value-vmin)/(vmax-vmin) );
         if(isSlider){ Draw::setRGB(barColor); Draw2D::drawRectangle ( xmin, ymax-2, xmin+val2x(value), ymax, true ); }
         Draw  ::setRGB( textColor );
-        Draw2D::drawString ( caption,             xmin, ymin+12, 6, fontTex );
+        //Draw2D::drawString ( caption,             xmin, ymin+12, 6, fontTex );
         //Draw2D::drawString ( val_text, 0, curPos, xmin, ymin,    6, fontTex );
-        int nch = inputText.length();
+        int nch = strlen(caption);
+        Draw2D::drawText( caption, nch, {xmin, ymin+12,}, 0.0,  fontTex, 6 );
+        nch = inputText.length();
         if( nch > 0 ){
-            Draw2D::drawString ( inputText.c_str(), 0, nch, xmin, ymin,    6, fontTex );
+            //Draw2D::drawString ( inputText.c_str(), 0, nch, xmin, ymin,    6, fontTex );
+            Draw2D::drawText( inputText.c_str(), nch, {xmin, ymin}, 0.0, fontTex, 6 );
         }
     glEndList();
     redraw=false;

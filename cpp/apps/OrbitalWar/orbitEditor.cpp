@@ -199,7 +199,7 @@ void OrbitEditor::drawHUD(){
         //txtPop.view3D( {splines.ts[ipoint],splines.CPs[iedit][ipoint],1.0}, fontTex, 10 );
         glTranslatef(mouse_t,0,0);
         glRotatef(90,0,0,1);
-        Draw::drawText(curCaption, fontTex, 0.1, 0, 0 );
+        Draw::drawText(curCaption, fontTex, 0.1, 0 );
 
     glPopMatrix();
 }

@@ -146,7 +146,8 @@ class Unit : public RigidBody2D {
 
         char str[8];
         sprintf(str,"%4i",n);
-        Draw2D::drawString( str, (float)pos.x, (float)pos.y, 0.4f, default_font_texture );
+        //Draw2D::drawString( str, (float)pos.x, (float)pos.y, 0.4f, default_font_texture );
+        Draw2D::drawText( str, 0, pos, 0.0, default_font_texture, 0.4f );
     }
 
     void renderJob( Vec3f& c ){

@@ -702,7 +702,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         }
     }
 
-    void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend ){
+    void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int iend ){
         glDisable    ( GL_LIGHTING   );
         glDisable    ( GL_DEPTH_TEST );
         glShadeModel ( GL_FLAT       );
@@ -713,7 +713,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             //Draw::billboardCam( );
             Draw::billboardCamProj( );
             //Draw2D::drawString( inputText.c_str(), 0, 0, textSize, fontTex );
-            Draw::drawText( str, fontTex, textSize, istart, iend );
+            Draw::drawText( str, fontTex, textSize, iend );
         glPopMatrix();
 	};
 

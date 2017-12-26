@@ -407,6 +407,7 @@ void Draw2D::renderImage( GLuint itex, const Rect2d& rec ){
     glBindTexture(GL_TEXTURE_2D, 0); // this is not most efficient but safe
 };
 
+/*
 void Draw2D::drawString( const char * str, int imin, int imax, float x, float y, float sz, int itex ){
     const int nchars = 95;
     float persprite = 1.0f/nchars;
@@ -436,29 +437,6 @@ void Draw2D::drawString( const char * str, int imin, int imax, float x, float y,
     glDisable  ( GL_TEXTURE_2D );
     glBlendFunc( GL_ONE, GL_ZERO );
 
-    /*
-    glColor4f(0.0f,1.0f,0.0f,1.0f);
-    glEnable(GL_BLEND);
-    glEnable(GL_ALPHA_TEST);
-    //glBlendFunc( GL_ONE, GL_ZERO );
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    //glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_DST_ALPHA);
-    glBegin(GL_QUADS);
-    for(int i=imin; i<imax; i++){
-        int isprite = str[i] - 33;
-        float offset  = isprite*persprite+(persprite*0.57);
-        float xi = i*sz + x;
-        glTexCoord2f( offset          , 1.0f ); glVertex3f( xi,    y,    3.0f );
-        glTexCoord2f( offset+persprite, 1.0f ); glVertex3f( xi+sz, y,    3.0f );
-        glTexCoord2f( offset+persprite, 0.0f ); glVertex3f( xi+sz, y+sz*2, 3.0f );
-        glTexCoord2f( offset          , 0.0f ); glVertex3f( xi,    y+sz*2, 3.0f );
-    }
-    glEnd();
-    glDisable  ( GL_BLEND );
-    glDisable  ( GL_ALPHA_TEST );
-    glDisable  ( GL_TEXTURE_2D );
-    glBlendFunc( GL_ONE, GL_ZERO );
-    */
 }
 
 void Draw2D::drawString( const  char * str, float x, float y, float sz, int itex ){
@@ -488,8 +466,43 @@ void Draw2D::drawString( const  char * str, float x, float y, float sz, int itex
     glDisable  ( GL_TEXTURE_2D );
     glBlendFunc( GL_ONE, GL_ZERO );
 }
+*/
+/*
+void Draw2D::drawText( const char * str, int nchar, Vec2d pos, int fontTex, float textSize ){
+    glDisable    ( GL_LIGHTING   );
+    glDisable    ( GL_DEPTH_TEST );
+    glShadeModel ( GL_FLAT       );
+    glPushMatrix();
+        glTranslatef( pos.x, pos.y, z_layer );
+        Draw::drawText( str, fontTex, textSize, 0, nchar );
+    glPopMatrix();
+};
+*/
 
+void Draw2D::drawText( const char * str, int nchar, Vec2d pos, float angle, int fontTex, float textSize ){
+    glDisable    ( GL_LIGHTING   );
+    glDisable    ( GL_DEPTH_TEST );
+    glShadeModel ( GL_FLAT       );
+    glPushMatrix();
+        glTranslatef( pos.x, pos.y, z_layer );
+        glRotatef( angle, 0,0,1 );
+        Draw::drawText( str, fontTex, textSize, nchar );
+    glPopMatrix();
+};
 
+void Draw2D::drawText( const char * str, Vec2d pos, Vec2d sz, int fontTex, float textSize ){
+    Vec2i block_size = {(int) sz.x/textSize, (int)sz.y/(2*textSize) };
+    glDisable    ( GL_LIGHTING   );
+    glDisable    ( GL_DEPTH_TEST );
+    glShadeModel ( GL_FLAT       );
+    glPushMatrix();
+        glTranslatef( pos.x, pos.y, z_layer );
+        //Draw::drawText( str, fontTex, textSize, 0, nchar );
+        Draw::drawText ( str, fontTex, textSize, block_size );
+    glPopMatrix();
+};
+
+/*
 void Draw2D::drawText( const char * str, const Vec2d& pos, float angle, int fontTex, float textSize, int istart, int iend ){
     glDisable    ( GL_LIGHTING   );
     glDisable    ( GL_DEPTH_TEST );
@@ -505,6 +518,7 @@ void Draw2D::drawText( const char * str, const Vec2d& pos, float angle, int font
         Draw::drawText( str, fontTex, textSize, istart, iend );
     glPopMatrix();
 };
+*/
 
 void Draw2D::draw_attached_vec( const Vec2d& pos, const Vec2d& rot, const Vec2d& pos0, const Vec2d& rot0, const Vec2d& lengths ){
 	Vec2d gpos, grot;

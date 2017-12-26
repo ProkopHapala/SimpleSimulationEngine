@@ -11,12 +11,22 @@
 
 #include <string>
 
+/*
+
+TODO:
+ - draw small glyph by simple language ... like:
+    goto    100.0 100.0
+    line    200.0 250.0
+    ngon    6 16.5
+*/
+
+
+
 // ==============================
 //    class GUITextInput
 // ==============================
 
-class GUITextInput{
-    public:
+class GUITextInput{ public:
 
     int         curPos=0;
 	std::string inputText;
@@ -42,8 +52,7 @@ class GUITextInput{
 //    class GUIAbstractPanel
 // ==============================
 
-class GUIAbstractPanel{
-    public:
+class GUIAbstractPanel{ public:
 	int  xmin=256,xmax=128,ymin=0,ymax=0;
 	bool visible=true, disabled=false;
 
@@ -74,8 +83,7 @@ class GUIAbstractPanel{
 //       class GUIPanel
 // ==============================
 
-class GUIPanel : public GUIAbstractPanel {
-    public:
+class GUIPanel : public GUIAbstractPanel { public:
 	bool isSlider=true, isButton=false;
 
 	uint32_t barColor=0x00FF00;
@@ -107,8 +115,7 @@ class GUIPanel : public GUIAbstractPanel {
 //     class  MultiPanel
 // ==============================
 
-class MultiPanel : public GUIAbstractPanel {
-    public:
+class MultiPanel : public GUIAbstractPanel { public:
     int nsubs;
     GUIPanel ** subs;
 

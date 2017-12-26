@@ -74,17 +74,20 @@ void LTUnit::setType( LTUnitType* type_ ){
     type = type_;
 }
 
-void LTUnit::render( Vec3f& c ){
-    glColor3f( c.x, c.y, c.z );
+void LTUnit::render( uint32_t color ){
+    //glColor3f( c.x, c.y, c.z );
+    Draw::setRGBA(color);
     Draw2D::drawCircle_d( pos, radius, 16, false );
     Draw2D::drawVecInPos_d( attentionDir, pos );
     //printf( "render (%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", pos.x, pos.y, pos.x, c.x, c.y, c.z );
     char str[8];
     sprintf(str,"%4i",n);
-    Draw2D::drawString( str, (float)pos.x, (float)pos.y, 0.4f, default_font_texture );
+    //Draw2D::drawString( str, (float)pos.x, (float)pos.y, 0.4f, default_font_texture );
+    Draw2D::drawText( str, 0, {pos.x,pos.y}, 0.0, default_font_texture, 2.0 );
+
 }
 
-void LTUnit::renderJob( Vec3f& c ){
+void LTUnit::renderJob( uint32_t c){
     if(job == Unit_JOB_GOTO         ) Draw2D::drawLine_d( pos, goal );
     if(job == Unit_JOB_FIRE_AT_UNIT ) Draw2D::drawLine_d( pos, opponent->pos );
     //printf( "render (%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", pos.x, pos.y, pos.x, c.x, c.y, c.z );

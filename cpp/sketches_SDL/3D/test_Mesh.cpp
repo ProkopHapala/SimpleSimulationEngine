@@ -143,14 +143,14 @@ void TestAppMesh::draw(){
     for(int i=0; i<mesh.points.size(); i++){
         sprintf(str,"%i\0",i);
         Vec3d& p = mesh.points[i];
-        Draw3D::drawText(str, p, fontTex, 0.03, 0,0);
+        Draw3D::drawText(str, p, fontTex, 0.03, 0);
     }
     glColor3f(1.0,0.0,0.0);
     for(int i=0; i<mesh.polygons.size(); i++){
         Vec3d c = mesh.faceCog( i );
         sprintf(str,"%i\0",i);
         Vec3d& p = mesh.points[i];
-        Draw3D::drawText(str, c, fontTex, 0.03, 0,0);
+        Draw3D::drawText(str, c, fontTex, 0.03, 0);
     }
 
     glColor3f(0.0,0.7,0.0);
@@ -160,7 +160,7 @@ void TestAppMesh::draw(){
         Vec3d c = (mesh.points[ed.verts.a]+mesh.points[ed.verts.b])*0.5;
         sprintf(str,"%i\0",i);
         Vec3d& p = mesh.points[i];
-        Draw3D::drawText(str, c, fontTex, 0.03, 0,0);
+        Draw3D::drawText(str, c, fontTex, 0.03, 0);
     }
 
     //glColor3f(0,0,0); Draw3D::drawPointCross( mesh.points[ipicked], 0.2 );

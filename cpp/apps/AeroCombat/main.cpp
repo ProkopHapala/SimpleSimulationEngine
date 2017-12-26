@@ -336,7 +336,7 @@ void AeroCraftGUI::drawHUD(){
 	//double thrust = world->myCraft->propelers[0].getThrust( vtot );
 	double thrust = myCraft->totalThrust.norm();
 	sprintf(str, "attitude %4.3f speed %3.3f vVert %3.3f tgAlfa %3.3f thrust %3.3f \0", myCraft->pos.y, vtot, myCraft->vel.y, myCraft->vel.y/vtot, thrust );
-	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw::drawText( str, fontTex, 10, 0,0 );
+	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw::drawText( str, fontTex, 10, 0 );
 
 	if(first_person){ glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawPointCross({mouseX+WIDTH*0.5,mouseY+HEIGHT*0.5},5.0); }
 }
@@ -473,8 +473,11 @@ int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	SDL_SetRelativeMouseMode( SDL_TRUE );
+	SDL_DisplayMode dm;
+    SDL_GetDesktopDisplayMode(0, &dm);
 	int junk;
-	thisApp = new AeroCraftGUI( junk , 800, 600 );
+	thisApp = new AeroCraftGUI( junk , dm.w-150, dm.h-100 );
+	SDL_SetWindowPosition(thisApp->window, 100, 0 );
 	thisApp->loop( 1000000 );
 	return 0;
 }

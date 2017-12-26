@@ -225,7 +225,10 @@ int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	int junk;
-	thisApp = new FormationTacticsApp( junk , 800, 600 );
+    SDL_DisplayMode dm;
+    SDL_GetDesktopDisplayMode(0, &dm);
+	thisApp = new FormationTacticsApp( junk , dm.w-150, dm.h-100 );
+	SDL_SetWindowPosition(thisApp->window, 100, 0 );
 	thisApp->zoom = 30;
 	thisApp->loop( 1000000 );
 	return 0;

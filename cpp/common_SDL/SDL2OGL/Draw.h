@@ -22,7 +22,8 @@ namespace Draw{
 
     void billboardCam( );
     void billboardCamProj( );
-    void drawText    ( const char * str, int itex, float sz, int istart, int iend );
+    void drawText ( const char * str, int itex, float sz, int iend         );
+    void drawText ( const char * str, int itex, float sz, Vec2i block_size );
 
     //GLuint makeTexture( char * fname );
     //GLuint makeTexture( int nx, int ny, float * data );
@@ -41,15 +42,12 @@ namespace Draw{
 
     template<uint32_t _float2RGBA_(float f)>
     GLuint makeTexture( int nx, int ny, float * data ){
-
         GLuint itex=0;
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glGenTextures  ( 1, &itex );
         glBindTexture  ( GL_TEXTURE_2D, itex );
-
         //glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, nx, ny, 0, GL_RED, GL_FLOAT, data);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
         int ntot = nx*ny;
         uint32_t * data_ = new uint32_t[ntot];
         for(int i=0;i<ntot;i++){ data_[i] = _float2RGBA_(data[i]); }

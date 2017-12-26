@@ -12,7 +12,8 @@
 class LTFaction{
 	public:
     char  * name;
-    Vec3f   color;
+    //Vec3f   color;
+    uint32_t color;
 
     std::vector<LTUnit*>  units;
 
@@ -29,8 +30,9 @@ class LTFaction{
         return units[imin];
     };
 
-    LTFaction( char * name_, const Vec3f& color_ ){
-        color.set( color_ );
+    LTFaction( char * name_, uint32_t color_ ){
+        //color.set( color_ );
+        color = color_;
         name = name_;
     };
 

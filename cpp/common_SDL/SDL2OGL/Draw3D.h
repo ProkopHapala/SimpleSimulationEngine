@@ -69,7 +69,8 @@ void drawRectGridLines( Vec2i n, const Vec3d& p0, const Vec3d& da, const Vec3d& 
 
 int drawMesh( const Mesh& mesh  );
 
-void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend );
+//void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend );
+void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int iend );
 
 // from drawUtils.h
 void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b );

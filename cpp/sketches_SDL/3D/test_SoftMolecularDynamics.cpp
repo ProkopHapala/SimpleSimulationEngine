@@ -225,7 +225,8 @@ void TestAppSoftMolDyn::draw(){
         if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f); ;
         Draw3D::drawLine(world.apos[ib.x],world.apos[ib.y]);
         sprintf(str,"%i\0",i);
-        Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0,0);
+        //Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0,0);
+        Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0);
     }
 
     glEnable(GL_LIGHTING);

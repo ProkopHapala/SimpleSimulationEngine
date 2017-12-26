@@ -5,6 +5,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include "Draw.h"
 #include "Draw2D.h"
 
 #include "fastmath.h"
@@ -73,8 +74,8 @@ class LTUnit : public RigidBody2D {
     void setOpponent( LTUnit * opponent_ );
     void setGoal    ( const Vec2d& goal_ );
     void setType    ( LTUnitType* type_ );
-    void render     ( Vec3f& c );
-    void renderJob  ( Vec3f& c );
+    void render     ( uint32_t c );
+    void renderJob  ( uint32_t c );
 
     LTUnit(){};
     LTUnit( LTUnitType* type_, LTFaction* faction_, const Vec2d& pos_ );

@@ -73,7 +73,7 @@ void LTWorld::init(){
     hydraulics.ground = ground;
 
     //world.hydraulics.allocate( 512, 512 );
-    /*
+
     hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
     for( int j=0; j<500; j++ ){
         int isz = 25;
@@ -82,8 +82,8 @@ void LTWorld::init(){
         hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
     }
     for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
-    */
-    for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,500.0); };
+
+    //for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,500.0); };
     //for(int ib=0; ib<ruler.nb; ib++){  for(int ia=0; ia<ruler.na; ia++){  ground[ib*ruler.na+ia] = ia/(float)ruler.na;  } };
 
     //soldierTypes.push_back( SoldierType(){"pikemen",1.0d,0.25d,1.0d} );
@@ -95,13 +95,13 @@ void LTWorld::init(){
 
     LTUnit * u;
 
-    LTFaction* fac1 = new LTFaction( "RedArmy" , {1.0f,0.25f,0.0f} );
+    LTFaction* fac1 = new LTFaction( "RedArmy" , 0xFF0080ff );
     factions.push_back( fac1 );
     u = new LTUnit( &unitTypes[0], fac1, map_center+(Vec2d){-50.0,-30.0} ); fac1->units.push_back(u); units.push_back(u);
     u = new LTUnit( &unitTypes[0], fac1, map_center+(Vec2d){ 0.0,-30.0} ); fac1->units.push_back(u); units.push_back(u);
     u = new LTUnit( &unitTypes[0], fac1, map_center+(Vec2d){+50.0,-30.0} ); fac1->units.push_back(u); units.push_back(u);
 
-    LTFaction* fac2 = new LTFaction( "BlueArmy", {0.0f,0.5f, 1.0f} );
+    LTFaction* fac2 = new LTFaction( "BlueArmy", 0xFFff8000 );
     factions.push_back( fac2 );
     u = new LTUnit( &unitTypes[0], fac2, map_center+(Vec2d){-50.0, 30.0} ); fac2->units.push_back(u); units.push_back(u);
     u = new LTUnit( &unitTypes[0], fac2, map_center+(Vec2d){ 00.0, 30.0} ); fac2->units.push_back(u); units.push_back(u);

@@ -147,10 +147,10 @@ void drawStaticTest2D( const AeroTester& data, int fontTex, float WIDTH, float H
     glColor4f(1.0f,1.0f,1.0f,0.9f);
     t        = data.trjT  [0]; attitude = data.trjPos[0].y;
     sprintf(str, "attitude=%4.3f m\0", attitude );
-    Draw2D::drawText( str, {t,attitude},0.0,fontTex, 10, 0,0 );
+    Draw2D::drawText( str, 0, {t,attitude},0.0,fontTex, 10 );
     t        = data.trjT[n-1]; attitude = data.trjPos[n-1].y;
     sprintf(str, "attitude=%4.3f m\0", attitude );
-    Draw2D::drawText( str, {t,attitude},0.0,fontTex, 10, 0,0 );
+    Draw2D::drawText( str, 0, {t,attitude},0.0,fontTex, 10 );
     //glPopMatrix();
 
     // --- pos.zy
@@ -191,7 +191,7 @@ void drawStaticTest2D( const AeroTester& data, int fontTex, float WIDTH, float H
     glEnd();
     //sprintf(str, "xspan=%4.3f[m] zspan=%4.3f[m] T=%4.3f [s]\0", xmax-xmin, zmax-zmin, data->trjT[iturn]-data->trjT[iturn_old] );
     sprintf(str, "xspan=%4.3f[m] T=%4.3f [s]\0", xmax-xmin, data.trjT[iturn]-data.trjT[iturn_old] );
-	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, {WIDTH*0.5,HEIGHT*0.5},0.0,fontTex, 10, 0,0 );
+	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, 0, {WIDTH*0.5,HEIGHT*0.5},0.0,fontTex, 10 );
 	pos=data.trjPos[iturn    ]; Draw2D::drawPointCross({pos.x*0.02+WIDTH*0.5,pos.z*0.02+HEIGHT*0.5},10);
 	pos=data.trjPos[iturn_old]; Draw2D::drawPointCross({pos.x*0.02+WIDTH*0.5,pos.z*0.02+HEIGHT*0.5},10);
 
@@ -223,7 +223,7 @@ void drawStaticTest2D( const AeroTester& data, int fontTex, float WIDTH, float H
     }
     glEnd();
     sprintf(str, "v=%4.3fm/s(%4.3fkm/h)\0", speed, speed*3.6 );
-	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, {t,speed},0.0,fontTex, 10, 0,0 );
+	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawText( str, 0, {t,speed},0.0,fontTex, 10 );
 
 
     //exit(0);
