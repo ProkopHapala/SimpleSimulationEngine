@@ -1,4 +1,7 @@
 
+#ifndef  tresholdFunctions_h
+#define  tresholdFunctions_h
+
 namespace Treshold{
 
 	// ==== polynom order 0
@@ -185,5 +188,6 @@ namespace Treshold{
         return 1/(a*a*a);
 	};
 
-
 }
+
+#endif

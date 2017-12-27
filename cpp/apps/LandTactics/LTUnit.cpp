@@ -79,6 +79,7 @@ void LTUnit::render( uint32_t color ){
     Draw::setRGBA(color);
     Draw2D::drawCircle_d( pos, radius, 16, false );
     Draw2D::drawVecInPos_d( attentionDir, pos );
+    //printf( " %f %f \n", attentionDir.x, attentionDir.y );
     //printf( "render (%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", pos.x, pos.y, pos.x, c.x, c.y, c.z );
     char str[8];
     sprintf(str,"%4i",n);

@@ -26,6 +26,7 @@
 
 #include "LTUnitType.h"
 #include "LTUnit.h"
+#include "LTShelter.h"
 #include "LTFaction.h"
 #include "LTWorld.h"
 
@@ -80,6 +81,7 @@ class FormationTacticsApp : public AppSDL2OGL {
 	//virtual int tileToList( float x0, float y0, float x1, float y1 );
 
 	double polyLinIntercept( int n, double* xs, double* ys, double y0, double a );
+	void   drawVisibilityIsolines( Vec2d ray0, int ndhs, int nDirs, double phiMin, double phiMax, double dhmin, double dhmax, double tmax );
 
 	FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -162,6 +164,47 @@ double FormationTacticsApp::polyLinIntercept( int n, double* xs, double* ys, dou
     return -1e-8;
 }
 
+
+void FormationTacticsApp::drawVisibilityIsolines( Vec2d ray0, int ndhs, int nDirs, double phiMin, double phiMax, double dhMin, double dhMax, double tmax ){
+    //const int  ndhs = 5;
+    //const int nDirs = 50;
+    double dhs[ndhs];
+    double ts [ndhs];
+    Vec2d  hRays    [nDirs];
+    double horizonts[nDirs*ndhs];
+    // renerate slopes
+    double ddhs = (dhMax-dhMin)/(ndhs-1);
+    for(int i=0; i<ndhs ; i++ ){ dhs[i]=dhMin+ddhs*i; };
+    // generate directions
+    double dphi = (phiMax-phiMin)/(nDirs-1);
+    for(int i=0; i<nDirs; i++ ){ double a = phiMin+dphi*i; hRays[i]=(Vec2d){cos(a),sin(a)}; };
+    // raytrace terrain
+    //double tmax = 200.0;
+    for(int i=0; i<nDirs; i++ ){
+        int nhit = world.ruler.rayHorizonts( ray0, hRays[i], world.ground, 10.0, ndhs, dhs, ts, tmax );
+        for(int j=0; j<ndhs ; j++ ){
+            int ij = j*nDirs + i;
+            if( j<nhit ){ horizonts[ij]=ts[j];    }
+            else        { horizonts[ij]=tmax+1.0; }
+        }
+    };
+    // plot lines
+    float cstep = 1.0f/(ndhs-1);
+    for(int j=0; j<ndhs; j++ ){
+        //glBegin(GL_LINE_LOOP);
+        float c = cstep*j;
+        glBegin(GL_LINE_STRIP);
+            for(int i=0; i<nDirs; i++ ){
+                int ij = j*nDirs + i;
+                double t = horizonts[ij];
+                Vec2d p = ray0 + hRays[i]*t;
+                if( t>tmax ){ glColor3f(0.0f,0.0f,0.0f); }else{ glColor3f(1.0f-c,0.0f,c); };
+                glVertex3f( (float)p.x, (float)p.y, 100.0);
+            }
+        glEnd();
+    }
+}
+
 void FormationTacticsApp::draw(){
     //long tTot = getCPUticks();
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
@@ -211,135 +254,13 @@ void FormationTacticsApp::draw(){
         glColor3f(0.0,1.0,0.0);
         Draw2D::drawCircle_d( currentUnit->pos, 0.5, 16, false );
         currentUnit->renderJob( currentUnit->faction->color );
-    }
-
-    /*
-    double h = world.ruler.getValue( {mouse_begin_x,mouse_begin_y}, world.ground );
-	cmapHeight( h/world.maxHeight );
-    //Draw2D::drawPointCross_d( {mouse_begin_x,mouse_begin_y}, 100 );
-    Draw2D::drawCircle_d( {mouse_begin_x,mouse_begin_y}, 0.35, 8, true );
-    Vec2d  dh  = world.ruler.getDeriv( {mouse_begin_x    ,mouse_begin_y }, world.ground );
-    glColor3f(0.0f,1.0f,0.0f); Draw2D::drawVecInPos_d( dh*-50.0, {mouse_begin_x,mouse_begin_y} );
-    //double hdx = world.ruler.getValue( {mouse_begin_x+0.1,mouse_begin_y    }, world.ground );
-    //double hdy = world.ruler.getValue( {mouse_begin_x    ,mouse_begin_y+0.1}, world.ground );
-    //printf( "(%g,%g) (%g,%g) \n", (hdx-h)/0.1, (hdy-h)/0.1, dh.x, dh.y );
-    */
-
-
-    Vec2d ray0 = (Vec2d){mouse_begin_x,mouse_begin_y};
-    Vec2d hray = (Vec2d){0.0,1.0};   hray.normalize();
-    /*
-    printf("==========\n");
-    hray.normalize();
-    world.ruler.rayStart( ray0, hray );
-    for(int i=0; i<6; i++){
-        int edgeKind = world.ruler.rayStep();
-        Draw::setRGB(0xFF<<(8*edgeKind));
-        Draw2D::drawPointCross_d( ray0 + hray * world.ruler.ray_t, 2 );
-    }
-    */
-
-
-    /*
-    printf("===== frameCount %i \n", frameCount);
-    //double g   = world.ruler.rayView( ray0, hray, 2.0, 0.0, world.ground, 200.0 );
-    int ntg = world.ruler.rayList( ray0, hray, 2.0, world.ntg, world.tgs, world.Ttgs, world.ground, 200.0 );
-    glColor3f(0.0,1.0,0.0);
-    Draw2D::drawLine_d(ray0, (ray0+hray*world.ruler.ray_t) );
-    Draw2D::drawPointCross_d(ray0, 2.0 );
-    Draw2D::drawPointCross_d((ray0+hray*world.ruler.ray_t), 1.0 );
-    */
-
-    const int  ndhs = 5;
-    const int nDirs = 50;
-    double dhs[ndhs];
-    double ts [ndhs];
-
-    Vec2d  hRays[nDirs];
-    double horizonts[nDirs*ndhs];
-
-    //for(int i=0; i<ndhs ; i++ ){ dhs[i]=-0.8 + 0.2*i; };
-    for(int i=0; i<ndhs ; i++ ){ dhs[i]=-1.0/i; };
-    double dphi = 2*M_PI/nDirs;
-    for(int i=0; i<nDirs; i++ ){ double a = dphi*i; hRays[i]=(Vec2d){cos(a),sin(a)}; };
-
-    double tmax = 200.0;
-    for(int i=0; i<nDirs; i++ ){
-        int nhit = world.ruler.rayHorizonts( ray0, hRays[i], world.ground, 10.0, ndhs, dhs, ts, tmax );
-        for(int j=0; j<ndhs ; j++ ){
-            int ij = j*nDirs + i;
-            if( j<nhit ){
-                horizonts[ij]=ts[j];
-            }else{
-                horizonts[ij]=tmax+1.0;
-            }
-        }
-    };
-
-    for(int j=0; j<ndhs ; j++ ){
-        glBegin(GL_LINE_LOOP);
-            for(int i=0; i<nDirs; i++ ){
-                int ij = j*nDirs + i;
-                double t = horizonts[ij];
-                Vec2d p = ray0 + hRays[i]*t;
-                if( t>tmax ){ glColor3f(0.0f,0.0f,0.0f); }else{ glColor3f(0.0f,1.0f,0.0f); };
-                glVertex3f( (float)p.x, (float)p.y, 100.0);
-            }
-        glEnd();
+        drawVisibilityIsolines( currentUnit->pos, 5, 50, 0, 2*M_PI, -0.1, +0.1, 500.0 );
     }
 
 
-    /*
-    const int nSamples = 50;
-    double vals[nSamples];
-    double ts  [nSamples];
-
-    double dt = 5.0;
-
-    glColor3f( 1.0f,1.0f, 1.0f ); Draw2D::drawLine_d( ray0, ray0+hray*(dt*nSamples) );
-
-    xsc = ASPECT_RATIO*zoom/(nSamples*dt);
-    ysc = 0.2;
-
-    world.ruler.sampleLine( nSamples, ray0, hray*dt, world.ground, vals );
-    glColor3f( 0.0f,0.0f,1.0f );
-    glBegin(GL_LINE_STRIP);
-    for( int i=0; i<nSamples; i++ ){
-        glVertex3f( camXmin + i*dt*xsc, camYmin + ysc*vals[i], 100.0 );
-    }
-    glEnd();
-
-    world.ruler.maxRayIter = nSamples;
-    int nstep = world.ruler.rayCut    ( ray0, hray, world.ground, ts, vals, nSamples*dt );
-    glColor3f( 1.0f,0.0f,0.0f );
-    glBegin(GL_LINE_STRIP);
-    for( int i=0; i<nstep; i++ ){
-        glVertex3f( camXmin + ts[i]*xsc, camYmin + ysc*vals[i], 100.0 );
-    }
-    glEnd();
-
-    //for( int i=0; i<nstep; i++ ){ Draw2D::drawPointCross_d( { camXmin + ts[i]*xsc, camYmin + ysc*vals[i] }, 5.0 );  };
-
-    double rayh0 = 10.0;
-    double thit = polyLinIntercept( nSamples, ts, vals, vals[0]+rayh0, dhs[0] );
-    int nhit = world.ruler.rayHorizonts( ray0, hray, world.ground, rayh0, ndhs, dhs, ts, nSamples*dt );
-
-    glBegin(GL_LINES);
-    double z0 = (vals[0]+rayh0);
-    for( int i=0; i<ndhs; i++ ){
-        glColor3f( 0.0f,1.0f,0.0f );
-        glVertex3f( camXmin, camYmin + ysc*  z0                                 , 100.0 );
-        glVertex3f( camXmax, camYmin + ysc*( z0 + dhs[i]*(camXmax-camXmin)/xsc ), 100.0 );
-        //glVertex3f( camXmin + (ts[i]/dt)*(ASPECT_RATIO*zoom/nSamples), camYmin + 0.2*( z0 + hray[i]*ts[i] ), 100.0 );
-        glColor3f( 0.0f,1.0f,1.0f );
-        if( i<=nhit ){
-            glVertex3f( camXmin + ts[i]*xsc, camYmin, 100.0 );
-            glVertex3f( camXmin + ts[i]*xsc, camYmax, 100.0 );
-        }
-    }
-    glEnd();
-    */
-
+    //Vec2d ray0 = (Vec2d){mouse_begin_x,mouse_begin_y};
+    //Vec2d hray = (Vec2d){0.0,1.0};   hray.normalize();
+    //drawVisibilityIsolines( ray0, 5, 50, 0, 2*M_PI, -0.1, +0.1, 500.0 );
 
 
 };

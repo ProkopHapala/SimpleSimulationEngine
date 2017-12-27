@@ -21,6 +21,7 @@
 //#include "TerrainCubic.h"
 
 #include "LTUnit.h"
+#include "LTShelter.h"
 
 
 enum LTSObjKind{
@@ -46,6 +47,9 @@ class LTWorld{
     //std::vector<BattleLine*> battleLines;
     std::vector<LTUnit*>    units;
     std::vector<LTFaction*> factions;
+
+    std::vector<LTShelterType> shelterTypes;
+    std::vector<LTShelter>     shelters;
 
     SimplexRuler       ruler;
     Ruler2DFast        square_ruler;
