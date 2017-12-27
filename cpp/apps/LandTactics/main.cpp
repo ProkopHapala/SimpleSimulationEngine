@@ -50,6 +50,18 @@ void cmapHeight(double g){
     //return g;
 }
 
+/*
+void drawStaticObject( LTStaticObject& o ){
+    glBegin(GL_LINE_LOOP);
+    glVertex3f( );
+    glVertex3f( );
+    glVertex3f( );
+    glVertex3f( );
+    glEnd();
+    Draw2D::drawShape( o.pos, o.rot, o.type->glo );
+}
+*/
+
 class FormationTacticsApp : public AppSDL2OGL {
 	public:
     LTWorld world;
@@ -230,6 +242,14 @@ void FormationTacticsApp::draw(){
 	Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, world.ruler.na, world.ground, 0.0, world.maxHeight );
 	glPopMatrix();
 
+	//printf( "world.objects.size %i \n", world.objects.size() );
+	glColor3f(0.5,0.5,0.5);
+	for( LTStaticObject& o : world.objects ){
+        //Draw2D::drawShape( o.pos, o.dir, o.type->glo );
+        o.view();
+        //o.type->render( o.pos, o.dir );
+    }
+    //exit(0);
 
     //float camMargin = ( camXmax - camXmin )*0.1;
     //float camMargin = 0;

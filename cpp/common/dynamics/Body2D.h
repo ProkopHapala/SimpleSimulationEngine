@@ -16,8 +16,7 @@ class KinematicBody2D {
 	inline void setAngle( double phi_ ){  phi = phi_; rot.fromAngle( phi_ ); }
 };
 
-class PointBody2D{
-	public:
+class PointBody2D{ public:
 	// parameters
 	double mass;
 	// auxiliary parameters
@@ -52,8 +51,7 @@ class PointBody2D{
 
 };
 
-class RigidBody2D : public PointBody2D {
-	public:
+class RigidBody2D : public PointBody2D { public:
 	static constexpr double ROT_NORM2_PREC = 1e-6;
 	// parameters
 	double	I;

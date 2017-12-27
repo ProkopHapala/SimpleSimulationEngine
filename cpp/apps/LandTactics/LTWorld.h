@@ -23,20 +23,6 @@
 #include "LTUnit.h"
 #include "LTShelter.h"
 
-
-enum LTSObjKind{
-    tree, house, rocks
-};
-
-class LTStaticObject{ public:
-    // this object should represent Trees, Houses, Rocks ...
-    LTSObjKind kind; int id; // void * ptr;
-    Vec2d  pos;
-    double radius;
-    //Vec2d dir;
-    //Vec3d span;
-};
-
 class LTMapSquare{ public:
     std::vector<LTStaticObject*> objects;
     //vector<LTUnit>  objects;
@@ -45,19 +31,19 @@ class LTMapSquare{ public:
 class LTWorld{
 	public:
     //std::vector<BattleLine*> battleLines;
-    std::vector<LTUnit*>    units;
-    std::vector<LTFaction*> factions;
-
-    std::vector<LTShelterType> shelterTypes;
-    std::vector<LTShelter>     shelters;
+    std::vector<LTUnit*>        units;
+    std::vector<LTFaction*>     factions;
+    std::vector<LTObjectType*> objectTypes;
+    //std::vector<LTShelter>     shelters;
 
     SimplexRuler       ruler;
     Ruler2DFast        square_ruler;
     TerrainHydraulics  hydraulics;
     double * ground       = NULL;
 
-    LTStaticObject * objects = NULL;
-    LTMapSquare    * squares = NULL;
+    //LTStaticObject * objects = NULL;
+    std::vector<LTStaticObject>  objects;
+    LTMapSquare    * squares    = NULL;
 
     Vec2d map_center;
     double maxHeight = 500.0;

@@ -68,8 +68,8 @@ inline bool pointInConvexParalelogram( const Vec2TYPE<TYPE>& p, TYPE * buf, int 
 class Rect2d{
 	public:
 	union{
-		struct{ double x0,y0,x1,y1; };
 		struct{ Vec2d a,b; };
+		struct{ double x0,y0,x1,y1; };
 		double array[4];
 	};
 

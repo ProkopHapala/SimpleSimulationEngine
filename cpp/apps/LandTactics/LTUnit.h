@@ -40,8 +40,7 @@ const int Unit_JOB_FIRE_AT_WILL = 10; // fire at any target in range;  choose pr
 
 class LTFaction;
 
-class LTUnit : public RigidBody2D {
-	public:
+class LTUnit : public RigidBody2D { public:
 
     int n=100, ntot=100;
     double suppressed = 0.0; // between one and zero
@@ -53,7 +52,7 @@ class LTUnit : public RigidBody2D {
     LTUnit  * opponent;
     //double    opponent_score = 0.0;
 
-    Vec2d  attentionDir;
+    Vec2d  attentionDir = (Vec2d){1.0,0.0};
     double maxwf = 1.0;
 
     double radius = 15.0;
@@ -70,15 +69,18 @@ class LTUnit : public RigidBody2D {
     void fire_at_unit ( LTUnit * target );
     void update       ( double dt );
     double damage_ramp( double att, double def );
-    void getShot    ( const Vec2d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration );
-    void setOpponent( LTUnit * opponent_ );
-    void setGoal    ( const Vec2d& goal_ );
-    void setType    ( LTUnitType* type_ );
-    void render     ( uint32_t c );
-    void renderJob  ( uint32_t c );
+    void getShot      ( const Vec2d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration );
+    void setOpponent  ( LTUnit * opponent_ );
+    void setGoal      ( const Vec2d& goal_ );
+    void setType      ( LTUnitType* type_ );
+    void render       ( uint32_t c );
+    void renderJob    ( uint32_t c );
+    void view();
 
     LTUnit(){};
     LTUnit( LTUnitType* type_, LTFaction* faction_, const Vec2d& pos_ );
+
+    inline void lookAt( const Vec2d& p ){ attentionDir.set_sub( p, pos ); attentionDir.normalize(); };
 
 };
 

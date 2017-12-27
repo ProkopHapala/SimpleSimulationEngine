@@ -72,6 +72,16 @@ class LTUnitType{
     double shield_endurance  = 100.0;
 */
 
+/*
+    virtual void render( Vec2d pos, Vec2d dir ){};
+    void render_glo( ){
+        glo = glGenLists(1);
+        glNewList(glo, GL_COMPILE);
+            render( {0.0,0.0}, {1.0,0.0} );
+        glEndList();
+    };
+*/
+
 };
 
 #endif

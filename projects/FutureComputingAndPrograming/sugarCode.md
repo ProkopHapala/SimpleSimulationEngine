@@ -1,4 +1,19 @@
 
+## Nicer function declaration and calling
+
+It is quite common that you want to call one function by many different ways. In C or C++ you typically make overloaded functions, or you may use default or named parameters (although in C it is much more cumbersome than in python). Why not just to be able setup local variables within function body in clall?
+
+```
+void myAddFunc( ){
+	double a, b; // locals, you can set them when calling
+	return a+b;
+};
+
+myAddFunc( )(a=16.5, b=18.9);      // returns 16.5+18.9 = 35.4
+
+```
+
+
 
 ## Stack allocation and temp arrays
 

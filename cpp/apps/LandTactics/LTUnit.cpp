@@ -78,7 +78,8 @@ void LTUnit::render( uint32_t color ){
     //glColor3f( c.x, c.y, c.z );
     Draw::setRGBA(color);
     Draw2D::drawCircle_d( pos, radius, 16, false );
-    Draw2D::drawVecInPos_d( attentionDir, pos );
+    Draw2D::drawVecInPos_d( attentionDir*radius*0.5, pos );
+    Draw2D::drawVecInPos_d( rot*radius,          pos );
     //printf( " %f %f \n", attentionDir.x, attentionDir.y );
     //printf( "render (%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", pos.x, pos.y, pos.x, c.x, c.y, c.z );
     char str[8];
@@ -96,6 +97,7 @@ void LTUnit::renderJob( uint32_t c){
 
 LTUnit::LTUnit( LTUnitType* type_, LTFaction* faction_, const Vec2d& pos_ ){
     pos.set(pos_);
+    rot.set(1.0,0.0);
     setType( type_ );
     faction   = faction_ ;
 }

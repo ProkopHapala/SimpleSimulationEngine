@@ -39,8 +39,10 @@ int LTWorld::getUnitAt( const Vec2d& p, LTFaction * faction ){
 
 void LTWorld::initStaticObject(){
 
-    int n = 64;
-    objects = new LTStaticObject[n];
+    int n      = 128;
+    int maxTry = 16;
+    //objects = new LTStaticObject[n];
+    Rect2d span = (Rect2d){ (Vec2d){map_center.x-200.0,map_center.y-200.0}, (Vec2d){map_center.x+200.0,map_center.y+200.0} };
 
     square_ruler.setup( {0.0,0.0}, {100.0,100.0} );
     square_ruler.setN ( {64,64} );
@@ -48,15 +50,41 @@ void LTWorld::initStaticObject(){
 
     int otiles[4];
     for(int i=0; i<n; i++){
-        LTStaticObject * s = new LTStaticObject();
-        s->id     = i;
-        s->kind   = LTSObjKind::tree;
-        s->pos.set( randf(-100.0,100.0)+map_center.x, randf(100.0,100.0)+map_center.y );
-        s->radius = 5.0;
+        //objects.push_back( LTStaticObject() );
+        //LTStaticObject o = objects.back();
+        LTStaticObject o;
 
-        int nret = square_ruler.getOverlapingTiles( s->pos, s->radius, otiles );
-        for( int j=0; j<nret; j++ ){ squares[ otiles[j] ].objects.push_back(s); }
+        o.type = objectTypes[0]; // TODO: change in future
+        //o.id     = i;
+        //o->kind   = LTSObjKind::tree;
+        o.radius = 10.0;
+        //double ri2 = o.radius*o.radius;
+        bool pass = false;
+        for( int itry=0; itry<maxTry; itry++ ){  // check overlap
+            o.pos.set( randf(span.x0,span.x1), randf(span.y0,span.y1) );
+            pass = true;
+            for( LTStaticObject& oj : objects ){ // TODO: this is brute-force ... use square_ruler to accelerate it
+                Vec2d d; d.set_sub( oj.pos, o.pos );
+                double r2 = d.norm2();
+                double Rmin = oj.radius+o.radius;
+                if( r2 < (Rmin*Rmin) ){ pass=false; break; };
+            }
+            //printf( "   itry %i pass: %i \n", itry, pass);
+            if(pass) break;
+        }
+        //printf( "obj %i pass: %i \n", i, pass);
+        if(!pass) break;
+
+        float phi = randf(0.0,M_PI*2);
+        o.dir.set( cos(phi), sin(phi) );
+
+        objects.push_back( o );
+
+        int nret = square_ruler.getOverlapingTiles( o.pos, o.radius, otiles );
+        for( int j=0; j<nret; j++ ){ squares[ otiles[j] ].objects.push_back(&o); }
     }
+
+    printf( "LTWorld::initStaticObject DONE \n" );
 }
 
 void LTWorld::init(){
@@ -90,22 +118,36 @@ void LTWorld::init(){
     //soldierTypes.push_back( {"pikemen",1.0d,0.25d,1.0d, 1.0, 1.0 } );
     //unitTypes.push_back( UnitType() );
 
-    //initStaticObject();
 
+    // init Object Types
+
+    //LTObjectType* ot = new LTObjectType();
+    LTObjectType* ot = new LTRectHouseType();
+    ot->render_glo();
+    objectTypes.push_back(ot);
+
+    initStaticObject();
 
     LTUnit * u;
 
+    Vec2d rot,pLook;
+    rot = (Vec2d){0.0,+1.0};
+    pLook = map_center+(Vec2d){0.0,300.0};
+
     LTFaction* fac1 = new LTFaction( "RedArmy" , 0xFF0080ff );
     factions.push_back( fac1 );
-    u = new LTUnit( &unitTypes[0], fac1, map_center+(Vec2d){-50.0,-30.0} ); fac1->units.push_back(u); units.push_back(u);
-    u = new LTUnit( &unitTypes[0], fac1, map_center+(Vec2d){ 0.0,-30.0} ); fac1->units.push_back(u); units.push_back(u);
-    u = new LTUnit( &unitTypes[0], fac1, map_center+(Vec2d){+50.0,-30.0} ); fac1->units.push_back(u); units.push_back(u);
+    u = new LTUnit( &unitTypes[0], fac1, map_center+(Vec2d){-50.0,-30.0} ); fac1->units.push_back(u); units.push_back(u);  u->lookAt(pLook); u->rot=rot;
+    u = new LTUnit( &unitTypes[0], fac1, map_center+(Vec2d){ 0.0, -30.0} ); fac1->units.push_back(u); units.push_back(u);  u->lookAt(pLook); u->rot=rot;
+    u = new LTUnit( &unitTypes[0], fac1, map_center+(Vec2d){+50.0,-30.0} ); fac1->units.push_back(u); units.push_back(u);  u->lookAt(pLook); u->rot=rot;
+
+    rot = (Vec2d){0.0,-1.0};
+    pLook = map_center+(Vec2d){0.0,-300.0};
 
     LTFaction* fac2 = new LTFaction( "BlueArmy", 0xFFff8000 );
     factions.push_back( fac2 );
-    u = new LTUnit( &unitTypes[0], fac2, map_center+(Vec2d){-50.0, 30.0} ); fac2->units.push_back(u); units.push_back(u);
-    u = new LTUnit( &unitTypes[0], fac2, map_center+(Vec2d){ 00.0, 30.0} ); fac2->units.push_back(u); units.push_back(u);
-    u = new LTUnit( &unitTypes[0], fac2, map_center+(Vec2d){+50.0, 30.0} ); fac2->units.push_back(u); units.push_back(u);
+    u = new LTUnit( &unitTypes[0], fac2, map_center+(Vec2d){-50.0, 30.0} ); fac2->units.push_back(u); units.push_back(u);  u->lookAt(pLook); u->rot=rot;
+    u = new LTUnit( &unitTypes[0], fac2, map_center+(Vec2d){ 00.0, 30.0} ); fac2->units.push_back(u); units.push_back(u);  u->lookAt(pLook); u->rot=rot;
+    u = new LTUnit( &unitTypes[0], fac2, map_center+(Vec2d){+50.0, 30.0} ); fac2->units.push_back(u); units.push_back(u);  u->lookAt(pLook); u->rot=rot;
 
 
 };
