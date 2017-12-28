@@ -29,6 +29,7 @@ class Shooter {
 
     int perFrame = 10;
     double dt    = 0.005d;
+    double time  = 0.0d;
 
     double ground_height = 0.0d; // only if there is no terrain
 

@@ -18,7 +18,10 @@ void DataLine2D::update(){
         double y  = ys[i];
         bounds.x0 = _min(bounds.x0,x);  bounds.x1 = _max(bounds.x1,x);
         bounds.y0 = _min(bounds.y0,y);  bounds.y1 = _max(bounds.y1,y);
+        //printf( "%i (%f,%f) (%f,%f) \n", i, bounds.x0, bounds.y0,  bounds.x1, bounds.y1 );
+        //printf( "%i <%f..%f> <%f..%f> \n", i, bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
     }
+    //printf( "  ---  <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
 };
 
 void DataLine2D::draw(){
@@ -56,10 +59,27 @@ void Plot2D::update(){
     bounds.x0 = +1e-300; bounds.x1 = -1e-300; bounds.y0 = +1e-300; bounds.y0 = -1e-300;
     for( DataLine2D * line : lines ){
         line->update();
-        bounds.x0 = _min(bounds.x0, line->bounds.x0); bounds.x1 = _min(bounds.x1, line->bounds.x1);
-        bounds.y0 = _min(bounds.y0, line->bounds.y0); bounds.y1 = _min(bounds.y1, line->bounds.y1);
+        bounds.x0 = _min(bounds.x0, line->bounds.x0); bounds.x1 = _max(bounds.x1, line->bounds.x1);
+        bounds.y0 = _min(bounds.y0, line->bounds.y0); bounds.y1 = _max(bounds.y1, line->bounds.y1);
+        //printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
     }
+    printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
 };
+
+void Plot2D::autoAxes(double dx, double dy){
+    int n0,n1;
+    n0=(int)(bounds.x0/dx)-1;  axBounds.x0 = dx*n0;
+    n1=(int)(bounds.x1/dx)+1;  axBounds.x1 = dx*n1; nXTicks=(n1-n0)+1;
+    n0=(int)(bounds.y0/dy)-1;  axBounds.y0 = dy*n0;
+    n1=(int)(bounds.y1/dy)+1;  axBounds.y1 = dy*n1; nYTicks=(n1-n0)+1;
+    if( xTicks==NULL ) delete xTicks;
+    if( yTicks==NULL ) delete yTicks;
+    //double x0    = (axBounds.x0 - axPos.x);  x0 = 2*x0 - dx*(int)(x0/dx);
+    //double y0    = (axBounds.y0 - axPos.y);  y0 = 2*y0 - dy*(int)(y0/dy);
+    xTicks = new double[nXTicks]; VecN::arange( nXTicks, axBounds.x0, dx, xTicks );
+    yTicks = new double[nYTicks]; VecN::arange( nYTicks, axBounds.y0, dy, yTicks );
+
+}
 
 void Plot2D::drawAxes(){
 
@@ -104,6 +124,10 @@ void Plot2D::render(){
     //if( tickCaption ){ }
 };
 
+void Plot2D::drawHline ( double y ){ Draw2D::drawLine_d( {axBounds.x0, y}, {axBounds.x1, y} ); };
+void Plot2D::drawVline ( double x ){ Draw2D::drawLine_d( {x, axBounds.y0}, {x, axBounds.y1} ); };
+//void Plot2D::drawCursor( Vec2d p, double sz ){Draw2D::drawPointCross_d(p); };
+
 void Plot2D::view(){
     glCallList( glObj );
     for( DataLine2D* line : lines ){ line->view(); }
@@ -113,21 +137,58 @@ void Plot2D::view(){
 void Plot2D::init( ){
     axBounds.set( {-10.0,-10.0},{10.0,10.0});
     axPos   .set( 0.0,0.0  );
-    init        ( 1.0, 1.0 );
+    //init        ( 1.0, 1.0 );
+    autoAxes( 1.0, 1.0 );
 }
 
-void Plot2D::init( double dx, double dy ){
-    double xspan = axBounds.x1-axBounds.x0;
-    double yspan = axBounds.y1-axBounds.y0;
-    double x0    = (axBounds.x0 - axPos.x);  x0 = 2*x0 - dx*(int)(x0/dx);
-    double y0    = (axBounds.y0 - axPos.y);  y0 = 2*y0 - dy*(int)(y0/dy);
-    nXTicks=(int)((xspan)/dx)+1;
-    nYTicks=(int)((yspan)/dy)+1;
-    xTicks = new double[nXTicks]; VecN::arange( nXTicks, x0, dx, xTicks );
-    yTicks = new double[nYTicks]; VecN::arange( nYTicks, y0, dx, yTicks );
-    printf( "%i %i  %f %f\n", nXTicks, nYTicks, x0, y0 );
-    printf( "%f %f  %f %f  %f %f\n", axBounds.x0, axBounds.y0, axBounds.x1, axBounds.y1, axPos.x, axPos.y );
-    //VecN::print_vector( nXTicks, xTicks );
-    //VecN::print_vector( nYTicks, yTicks );
-    //exit(0);
+
+/////////////////////////////////
+//  class      QuePlot2D
+/////////////////////////////////
+
+void QuePlot2D::init( int n_, int nlines_ ){
+    n=n_;
+    nlines=nlines_;
+    lColors = new uint32_t[nlines];
+    data    = new double* [nlines];
+    ts = new double[n];
+    for(int iline=0; iline<nlines; iline++){
+        data[iline]    = new double[n];
+        lColors[iline] = hash_Wang( iline*5454+1545 );
+    }
+}
+
+
+//int get_index(int )
+
+void QuePlot2D::next(double t){
+    int oip = ip;
+    nsamp++;
+    ip=wrap_index(ip+1);
+    ts[ip] = t;
+    for(int iline=0; iline<nlines; iline++){
+        data[iline][ip] = data[iline][oip];
+    };
 };
+
+
+
+void QuePlot2D::draw( bool xoff, bool yoff ){
+    //int i0     = wrap_index(ip+1);
+    //int nvalid = (nsamp<n)?nsamp:n;
+    int ii0 = nsamp-n+1; if (ii0<0) ii0=0;
+    int i0  = wrap_index( ii0 );
+    //printf( "nvalid %i \n", nvalid );
+    double t0  = ts[i0];
+    for(int iline=0; iline<nlines; iline++){
+        glBegin(GL_LINE_STRIP);
+        Draw::setRGBA(lColors[iline]);
+        double * dline = data[iline];
+        double y0 = dline[i0];
+        for(int ii=ii0; ii<nsamp; ii++){
+            int i = wrap_index( ii );
+            glVertex3f( ts[i]-t0, dline[i]-y0, 0.0);
+        }
+        glEnd();
+    }
+}

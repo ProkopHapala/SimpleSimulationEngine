@@ -141,6 +141,7 @@ void Shooter::update_world( ){
         update_warriors25D();
         update_projectiles3D();
     }
+    time += dt;
 };
 
 

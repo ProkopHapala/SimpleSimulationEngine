@@ -10,8 +10,16 @@
 
 #include "Body.h"
 
-
 double const lowSpeedCuoff = 1e-8;
+
+class AeroSurfaceDebugRecord { public:
+    double ca;
+    double sa;
+    double CD;
+    double CL;
+    Vec3d  force;
+    Vec3d  gdpos;
+};
 
 class AeroSurface : public KinematicBody {
 	public:
@@ -20,7 +28,6 @@ class AeroSurface : public KinematicBody {
 	Vec3d C;     // Aerodynamic coefficients in each direction
 	Vec3d lpos;
 	Mat3d lrot;
-
 
     static constexpr double SAFETY_v = 1e-6;
 	double area   = 1.0;  // [m^2]
@@ -34,8 +41,10 @@ class AeroSurface : public KinematicBody {
 
 	bool useC=false, usePolar=true;
 
-
     bool DEBUGsurf = false;
+
+    AeroSurfaceDebugRecord* dbgRec = NULL;
+
 
 	// ==== function declarations
 
@@ -47,9 +56,7 @@ class AeroSurface : public KinematicBody {
 
     inline void polarModel( double ca, double sa, double& CD, double& CL ){
 		//double abs_sa = fabs( sa );
-
 		//printf("polarModel %f  %f %f %f  %f %f\n", area, CD0, dCD, dCDS, dCL, dCLS);
-
 		double abs_sa = (sa>0)?sa:-sa;
 		double wS     = trashold_cub<double>( abs_sa, sStall, sStall+wStall );
 		double mS     = 1 - wS;
@@ -86,7 +93,8 @@ class AeroSurface : public KinematicBody {
 			if( usePolar ){
                 double CD,CL;
                 polarModel( -cc, cb, CD, CL );
-                if(DEBUGsurf) printf("(%3.3f,%3.3f)  (%3.3f,%3.3f) \n", cc, cb, CD, CL );
+                //if(DEBUGsurf) printf("(%3.3f,%3.3f)  (%3.3f,%3.3f) \n", cc, cb, CD, CL );
+                if(dbgRec){ dbgRec->ca=-cc; dbgRec->sa=cb; dbgRec->CD=CD; dbgRec->CL=CL; };
                 CL*=prefactor; CD*=prefactor;
                 if( (cb*cb) > 1e-8 ){
                     Vec3d airUp;
@@ -113,6 +121,8 @@ class AeroSurface : public KinematicBody {
             }
 			//printf( "vrair %f \n", vrair );
 			//printVec( uair ); printf("uair\n");
+
+			if(dbgRec){ dbgRec->force=force;  dbgRec->gdpos=gdpos; };
 
 			craft->apply_force( force, gdpos );
 

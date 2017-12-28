@@ -13,6 +13,31 @@ myAddFunc( )(a=16.5, b=18.9);      // returns 16.5+18.9 = 35.4
 
 ```
 
+#### Extend function at label
+
+We often want slightly modified version of function which we already have; Templates and lambda function are some tool to solve this. However, they are not convenient, and forces modifie macrostructure of code.  
+
+```
+// function template
+void myFunc{
+	double c = sqrt(a*a + b*b); 
+	@myLabel1 // here we can modify by adding some code
+	double c=c + 10;
+}
+
+// make modified function
+auto modifiedFunc = myFunc.{ 
+	@myLabel1: 
+		c *= 10.0;
+	};
+
+// run modified function
+myFunc.{ 
+	@myLabel1: 
+		c *= 10.0;
+	}();
+
+```
 
 
 ## Stack allocation and temp arrays
@@ -38,6 +63,8 @@ Notes:
 
 ## with struct operations
 
+
+
 #### named bace assignemnt
 
 Today:
@@ -55,6 +82,23 @@ Notes:
 - https://stackoverflow.com/questions/2279180/does-c-have-with-keyword-like-pascal
 - https://stackoverflow.com/questions/3016107/what-is-tagged-structure-initialization-syntax
 - https://stackoverflow.com/questions/5790534/static-structure-initialization-with-tags-in-c
+
+#### match variables by name
+
+```
+class RigidBody{ Vec3f pos; Mat3f rot;   Vec3f vel; Vec3f L; Mat3f invI; };
+class BoundBox{ Vec3f pos; Mat3f rot;   Vec3f span; };
+
+RigidBody rb; 
+ClassBox  bb;
+
+rb =.{pos,rot} bb;  // <=>      rb.pos=rb.pos; rb.rot=rb.rot;
+rb =.{&*} bb; 
+
+rb +=.{pos,rot} bb;  //    rb.pos+=rb.pos; rb.rot+=rb.rot;
+
+
+```
 
 #### Estension methods
 

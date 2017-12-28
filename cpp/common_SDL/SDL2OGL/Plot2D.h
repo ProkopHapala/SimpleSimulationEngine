@@ -73,8 +73,33 @@ class Plot2D{ public:
     void render();
     void view  ();
     void init  ();
-    void init( double dx, double dy );
+    //void init( double dx, double dy );
+    void autoAxes(double dx, double dy);
+
+    void drawHline ( double y );
+    void drawVline ( double x );
+    //void drawCursor( Vec2d p, double sz );
 };
+
+class QuePlot2D{ public:
+    int n;
+    int nlines;
+    uint32_t * lColors;
+    double   * ts;
+    double   ** data;
+
+    int nsamp=0;
+    int ip=0;
+
+    void init( int n_, int nlines_ );
+    void next(double t);
+    void draw( bool xoff, bool yoff );
+
+
+    inline int wrap_index(int i){ return  i>=n? i%n : i; };
+    inline void set_back(int iline, double y ){ data[iline][ip] = y; };
+};
+
 
 #endif
 

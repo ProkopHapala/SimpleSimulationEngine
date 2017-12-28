@@ -47,12 +47,17 @@ int makeBuildingsClusters( int nclustest, int nmin, int nmax, float minx, float 
 	return( ilist );
 }
 
-void renderAeroCraft ( const AeroCraft& craft){
+void renderAeroCraft ( const AeroCraft& craft, bool bPos ){
 	glPushMatrix();
         Mat3d camMat;
         camMat.setT(craft.rotMat);
         float glmat[16];
-        Draw3D::toGLMat( craft.pos, camMat, glmat);
+
+        Vec3d pos;
+        if   (bPos){ pos = craft.pos;            }
+        else       { pos = (Vec3d){0.0,0.0,0.0}; }
+
+        Draw3D::toGLMat( pos, camMat, glmat);
         //printf( "%g %g %g\n", pos.x, pos.y, pos.z);
         //printf( "%g %g %g\n", camMat.ax, camMat.ay, camMat.az);
         //printf( "%g %g %g\n", camMat.bx, camMat.by, camMat.bz);
