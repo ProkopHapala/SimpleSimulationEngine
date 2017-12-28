@@ -29,6 +29,8 @@
 #include "AeroCraft.h"
 #include "AeroCraftWarrior.h"
 
+//#include "AeroCraftControler.h"
+
 #include "FieldPatch.h"
 //#include "AeroCraftWorld.h"
 //#include "AeroCraftGUI.h"
@@ -52,9 +54,9 @@
 // ===== GLOBAL CONSTAMNTS
 // ===============================
 
-Shooter            * world      = NULL;
-AeroCraftControler * autoPilot  = NULL;
-AeroTester         * tester     = NULL;
+Shooter            * world  = NULL;
+AeroCraftControler * pilot  = NULL;
+AeroTester         * tester = NULL;
 
 //AeroTester         tester     ;
 //AeroCraftControler autoPilot1 ;
@@ -83,38 +85,7 @@ void renderAirCraft( AeroCraft& craft ){
 //void rotateTo( int pivot, Mat3d& rot, const Mat3d& rot0, const Vec3d& xhat, const Vec3d& yhat, double step ){
 
 
-void rotateTo( int pivot, Mat3d& rot, const Mat3d& rot0, double dPhi ){
-    //rot.add_mul( rot0, coef ); rot.normalize();
-    /*
-    Vec2d rot0;
-    Vec2d rot;
-    int i3 = pivot*3;
-    Vec3d& piv  = *(Vec3d*)(rot .array+i3);
-    Vec3d& piv0 = *(Vec3d*)(rot0.array+i3);
-    piv.getInPlaneRotation( piv,  xhat, yhat, rot.x,  rot.y  ); //double phi1 = atan2(sa,ca);
-    piv.getInPlaneRotation( piv0, xhat, yhat, rot0.x, rot0.y ); //double phi2 = atan2(sa,ca);
-    rot.set_udiv_cmplx(rot,rot0);
-    rot.fromAngle( dPhi );
-    if( sa > step ){
-        Vec3d uaxis; uaxis.set_cross( xhat, yhat );
-        rot.rotate_csa( ca, sa, uaxis );
-    }else{
-        rot.set(rot0);
-    }
-    */
-    int i3 = pivot*3;
-    Vec3d& piv  = *(Vec3d*)(rot .array+i3);
-    Vec3d& piv0 = *(Vec3d*)(rot0.array+i3);
-    Vec3d ax; ax.set_cross(piv,piv0);
-    double sa = ax.norm();
-    if( sa > dPhi ){
-        ax.mul(1.0/sa);
-        Vec2d csa; csa.fromAngle( dPhi );
-        rot.rotate_csa( csa.x, csa.y, ax );
-    }else{
-        rot.set(rot0);
-    }
-}
+
 
 Terrain25D * prepareTerrain( int nsz, int nsub, double step, double hmax ){
     Terrain25D_bicubic * terrain = new Terrain25D_bicubic();
@@ -237,8 +208,8 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 	// ==== function declarations
 
 	//void reallocateTrj(int n);
-	void resetSteer( );
-	void steerToDir( const Vec3d& dir );
+	//void resetSteer( );
+	//void steerToDir( const Vec3d& dir );
 
 	//void renderSkyBox( float x0, float y0, float z0 );
 	//void drawStaticTest2D();
@@ -283,25 +254,7 @@ void AeroCraftGUI::camera (){
 
 }
 
-void AeroCraftGUI::resetSteer( ){
-    myCraft->panels[0].lrot = myCraft_bak->panels[0].lrot;
-    myCraft->panels[1].lrot = myCraft_bak->panels[1].lrot;
-    myCraft->panels[2].lrot = myCraft_bak->panels[2].lrot;
-    myCraft->panels[3].lrot = myCraft_bak->panels[3].lrot;
-}
 
-void AeroCraftGUI::steerToDir( const Vec3d& dir ){
-    Mat3d rotMatT;
-    rotMatT.setT(myCraft->rotMat);
-    Draw3D::drawMatInPos( rotMatT, myCraft->pos );
-    double dyaw   = rotMatT.a.dot( dir );
-    double dpitch = rotMatT.b.dot( dir );
-    const double acut = 0.1;
-    //double droll = (a>acut)?(a-acut):((a<-acut)?(a+acut):0.0d);
-    double droll = dyaw;
-    resetSteer();
-    myCraft->steerTo( 0.1*droll, 0.5*dpitch+0.5*fabs(dyaw), 0.5*dyaw);
-};
 
 void AeroCraftGUI::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
@@ -369,7 +322,7 @@ void AeroCraftGUI::draw(){
 
 	if(useAutoPilot){
         //printf("autoPiloting frame %i\n", frameCount);
-        autoPilot->control(world->dt); return;
+        pilot->control(world->dt); return;
     }
 
     if(mouseSteer){
@@ -377,13 +330,13 @@ void AeroCraftGUI::draw(){
             double dpitch=mouseY*0.005;
             double dyaw  =mouseX*0.002;
             double droll =0.2*dyaw;
-            resetSteer( );
+            pilot->resetSteer( );
             myCraft->steerTo(droll, dpitch , dyaw);
         }else{
             Mat3d matCam;
             qCamera.toMatrix_T( matCam );
             Draw3D::drawMatInPos(matCam, myCraft->pos);
-            steerToDir( matCam.c );
+            pilot->steerToDir( matCam.c );
         }
     }
 
@@ -469,8 +422,10 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
 
     printf( " === aerocraft \n" );
 
-	myCraft_bak = new AeroCraft();          myCraft_bak->fromFile("data/AeroCraft1.ini");
-	myCraft     = new AeroCraftWarrior();   myCraft    ->fromFile("data/AeroCraft1.ini");
+    //char* fname = "data/AeroCraft1.ini";
+    char* fname = "data/AeroCraftStright1.ini";
+	myCraft_bak = new AeroCraft();          myCraft_bak->fromFile(fname);
+	myCraft     = new AeroCraftWarrior();   myCraft    ->fromFile(fname);
 	//myCraft     = new AeroCraft();   myCraft->fromFile("data/AeroCraft1.ini");
     myCraft->pos.y=200.0;
     myCraft->vel.set_mul( myCraft->rotMat.c, 100.0 );
@@ -481,13 +436,17 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
 
     printf( " === autoPilot1 \n" );
 
-    autoPilot  = new AeroCraftControler();
-    autoPilot->craft=myCraft;
+    pilot  = new AeroCraftControler();
+    pilot->attach( myCraft );
+    pilot->craft0=myCraft_bak;
+
+    pilot->rudder  .setSymetricRange(0.25);
+    pilot->elevator.setSymetricRange(0.25);
 
     printf( " === tester \n" );
 
     tester      = new AeroTester();
-    tester->autoPilot = autoPilot;
+    tester->autoPilot = pilot;
     tester->craft     = myCraft;
     tester->gravityG  = world->gravity;
     //tester->reallocateTrj(int n);
@@ -538,7 +497,7 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
             case SDLK_u : useAutoPilot = !useAutoPilot;    break;
             case SDLK_p : first_person = !first_person; break;
             case SDLK_m : mouseSteer   = !mouseSteer;   break;
-            case SDLK_c : resetSteer( );
+            case SDLK_c : pilot->resetSteer( );
         }; break;
         case SDL_QUIT: SDL_Quit(); exit(1); break;
 
@@ -553,7 +512,7 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_RIGHT:
                     mouseSteer = false;
-                    resetSteer();
+                    pilot->resetSteer();
                     break;
             }
             break;
@@ -567,28 +526,44 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
 	if ( keys[ SDL_SCANCODE_RIGHT ] ) { qCamera.yaw  (  0.005 ); }
 	if ( keys[ SDL_SCANCODE_LEFT  ] ) { qCamera.yaw  ( -0.005 ); }
 
+
+	/*
 	if      ( keys[ SDL_SCANCODE_A ] ){ myCraft->panels[0].lrot.rotate( +AirelonRate, { 1,0,0 } );  myCraft->panels[1].lrot.rotate( -AirelonRate, { 1,0,0 } );    }
 	else if ( keys[ SDL_SCANCODE_D ] ){ myCraft->panels[0].lrot.rotate( -AirelonRate, { 1,0,0 } );  myCraft->panels[1].lrot.rotate( +AirelonRate, { 1,0,0 } );    }
 	else if ( autoRetractAirelon ){
         //rotateTo( 1, myCraft->leftAirelon->lrot,  myCraft_bak->leftAirelon->lrot,  { 0,0,1 }, { 0,1,0 }, AirelonRetractRate );
         //rotateTo( 1, myCraft->rightAirelon->lrot, myCraft_bak->rightAirelon->lrot, { 0,0,1 }, { 0,1,0 }, AirelonRetractRate );
-        rotateTo( 1, myCraft->leftAirelon->lrot,  myCraft_bak->leftAirelon->lrot,  AirelonRetractRate );
-        rotateTo( 1, myCraft->rightAirelon->lrot, myCraft_bak->rightAirelon->lrot, AirelonRetractRate );
+        pilot->rotateTo( 1, myCraft->leftAirelon->lrot,  myCraft_bak->leftAirelon->lrot,  AirelonRetractRate );
+        pilot->rotateTo( 1, myCraft->rightAirelon->lrot, myCraft_bak->rightAirelon->lrot, AirelonRetractRate );
     }
 
     if      ( keys[ SDL_SCANCODE_W ] ){ myCraft->panels[2].lrot.rotate( +ElevatorRate, { 1,0,0 } );  }
 	else if ( keys[ SDL_SCANCODE_S ] ){ myCraft->panels[2].lrot.rotate( -ElevatorRate, { 1,0,0 } );  }
     else if ( autoRetractElevator ){
         //rotateTo( 1, myCraft->elevator->lrot, myCraft_bak->elevator->lrot, { 0,0,1 }, { 0,1,0 }, ElevatorRetractRate );
-        rotateTo( 1, myCraft->elevator->lrot, myCraft_bak->elevator->lrot, ElevatorRetractRate );
+        pilot->rotateTo( 1, myCraft->elevator->lrot, myCraft_bak->elevator->lrot, ElevatorRetractRate );
     }
 
     if      ( keys[ SDL_SCANCODE_Q ] ){ myCraft->panels[3].lrot.rotate( +RudderRate, { 0,1,0 } );  }
 	else if ( keys[ SDL_SCANCODE_E ] ){ myCraft->panels[3].lrot.rotate( -RudderRate, { 0,1,0 } );  }
     else if ( autoRetractRudder ){
         //rotateTo( 1, myCraft->rudder->lrot, myCraft_bak->rudder->lrot, { 0,0,1 }, { 0,1,0 }, RudderRetractRate );
-        rotateTo( 2, myCraft->rudder->lrot, myCraft_bak->rudder->lrot, RudderRetractRate );
+        pilot->rotateTo( 2, myCraft->rudder->lrot, myCraft_bak->rudder->lrot, RudderRetractRate );
     }
+    */
+
+    if      ( keys[ SDL_SCANCODE_A ] ){ pilot->leftAirelon.inc();   pilot->rightAirelon.dec();   }
+	else if ( keys[ SDL_SCANCODE_D ] ){ pilot->leftAirelon.dec();   pilot->rightAirelon.inc();   }
+	else if ( autoRetractAirelon     ){ pilot->leftAirelon.relax(); pilot->rightAirelon.relax(); }
+
+    if      ( keys[ SDL_SCANCODE_W ] ){ pilot->elevator.inc();   }
+	else if ( keys[ SDL_SCANCODE_S ] ){ pilot->elevator.dec();   }
+    else if ( autoRetractElevator    ){ pilot->elevator.relax(); }
+
+    if      ( keys[ SDL_SCANCODE_E ] ){ pilot->rudder.inc();   }
+	else if ( keys[ SDL_SCANCODE_Q ] ){ pilot->rudder.dec();   }
+    else if ( autoRetractRudder      ){ pilot->rudder.relax(); }
+
 
 };
 

@@ -237,12 +237,13 @@ class Mat3TYPE{
 
 // ======= Rotation
 
-	inline void rotate( TYPE angle, const VEC& axis  ){
-		VEC uaxis;
-		uaxis.set( axis * axis.norm() );
+	inline void rotate( TYPE angle, VEC axis  ){
+		//VEC uaxis;
+		//uaxis.set( axis * axis.norm() );
+		axis.normalize();
 		TYPE ca   = cos(angle);
 		TYPE sa   = sin(angle);
- 		rotate_csa( ca, sa, uaxis );
+ 		rotate_csa( ca, sa, axis );
 	};
 
 	inline void rotate_csa( TYPE ca, TYPE sa, const VEC& uaxis ){
@@ -253,6 +254,21 @@ class Mat3TYPE{
 		//b.set(2);
 		//c.set(3);
 	};
+
+	void dRotateToward( int pivot, const MAT& rot0, TYPE dPhi ){
+        int i3 = pivot*3;
+        VEC& piv  = *(VEC*)(     array+i3);
+        VEC& piv0 = *(VEC*)(rot0.array+i3);
+        VEC ax; ax.set_cross(piv,piv0);
+        TYPE sa = ax.norm();
+        if( sa > dPhi ){
+            ax.mul(1.0/sa);
+            Vec2d csa; csa.fromAngle( dPhi );
+            rotate_csa( csa.x, csa.y, ax );
+        }else{
+            set(rot0);
+        }
+    }
 
 	// ==== generation
 
@@ -395,6 +411,10 @@ class Mat3TYPE{
     }
 
 };
+
+
+
+
 
 /*
 class Mat3i : public Mat3TYPE< int   , Vec3i, Mat3i >{};
