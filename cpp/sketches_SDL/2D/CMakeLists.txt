@@ -36,6 +36,10 @@ target_link_libraries( test_TerrainCubic ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2
 add_executable       ( test_TerrainRBF test_TerrainRBF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainRBF> $<TARGET_OBJECTS:TiledView> )
 target_link_libraries( test_TerrainRBF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_CityGen test_CityGen.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainRBF> $<TARGET_OBJECTS:TiledView> )
+target_link_libraries( test_CityGen ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
+
 add_executable       ( test_Tris2Rect test_Tris2Rect.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TiledView> )
 target_link_libraries( test_Tris2Rect ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

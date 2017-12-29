@@ -129,6 +129,8 @@ class Vec2TYPE{
 		return atan2( d, c );
 	}
 
+	inline TYPE totprod(){ return x*y; }
+
 };
 
 using Vec2i = Vec2TYPE<int>;
