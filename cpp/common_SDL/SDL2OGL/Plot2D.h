@@ -94,7 +94,8 @@ class QuePlot2D{ public:
     void init( int n_, int nlines_ );
     void next(double t);
     void draw( bool xoff, bool yoff );
-
+    void drawTrj3D( Vec3i which );
+    void drawTrj3DPoints( Vec3i which, double pointSize );
 
     inline int wrap_index(int i){ return  i>=n? i%n : i; };
     inline void set_back(int iline, double y ){ data[iline][ip] = y; };

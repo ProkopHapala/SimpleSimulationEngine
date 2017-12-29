@@ -3,6 +3,7 @@
 
 #include "Draw.h"
 #include "Draw2D.h"
+#include "Draw3D.h"
 
 #include "Plot2D.h"  // THE HEADER
 
@@ -171,8 +172,6 @@ void QuePlot2D::next(double t){
     };
 };
 
-
-
 void QuePlot2D::draw( bool xoff, bool yoff ){
     //int i0     = wrap_index(ip+1);
     //int nvalid = (nsamp<n)?nsamp:n;
@@ -192,3 +191,42 @@ void QuePlot2D::draw( bool xoff, bool yoff ){
         glEnd();
     }
 }
+
+void QuePlot2D::drawTrj3D( Vec3i which ){
+    int ii0 = nsamp-n+1; if (ii0<0) ii0=0;
+    int i0  = wrap_index( ii0 );
+    glBegin(GL_LINE_STRIP);
+    double * xs = data[which.x];
+    double * ys = data[which.y];
+    double * zs = data[which.z];
+    for(int ii=ii0; ii<nsamp; ii++){
+        int i = wrap_index( ii );
+        glVertex3f( xs[i], ys[i], zs[i] );
+    }
+    glEnd();
+}
+
+void QuePlot2D::drawTrj3DPoints( Vec3i which, double pointSize ){
+    int ii0 = nsamp-n+1; if (ii0<0) ii0=0;
+    int i0  = wrap_index( ii0 );
+
+    double * xs = data[which.x];
+    double * ys = data[which.y];
+    double * zs = data[which.z];
+    if( pointSize > 0 ){
+        for(int ii=ii0; ii<nsamp; ii++){
+            int i = wrap_index( ii );
+            Draw3D::drawPointCross( {xs[i], ys[i], zs[i]}, pointSize );
+        }
+    }else{
+        glBegin(GL_POINTS);
+        for(int ii=ii0; ii<nsamp; ii++){
+            int i = wrap_index( ii );
+            glVertex3f( xs[i], ys[i], zs[i] );
+        }
+        glEnd();
+    }
+}
+
+
+

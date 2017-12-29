@@ -26,8 +26,8 @@ class AeroSurface : public KinematicBody {
 	RigidBody *craft;
 
 	Vec3d C;     // Aerodynamic coefficients in each direction
-	Vec3d lpos;
-	Mat3d lrot;
+	//Vec3d lpos;
+	//Mat3d lrot;
 
     static constexpr double SAFETY_v = 1e-6;
 	double area   = 1.0;  // [m^2]
@@ -66,12 +66,18 @@ class AeroSurface : public KinematicBody {
 		CL     =       ( mS*dCL        + wS*dCLS*ca ) * sa;
 	}
 
+	inline Vec3d getPos(){ Vec3d gp; globalPos( craft->pos, craft->rotMat, gp ); return gp; };
+	//inline Mat3d getRot(){ };
+
 	inline void  applyForce( const Vec3d& vair0 ){
         //printf ( " %lf %lf %lf   %lf %lf %lf\n", lpos.x, lpos.y, lpos.z, C.a, C.b, C.c );
 
 		Mat3d grot;  grot.set_mmul_NT( lrot, craft->rotMat );
 		//Mat3d rotMat; rotMat.setT(craft->rotMat);  grot.set_mmul( lrot, rotMat );
 		Vec3d gdpos; craft->rotMat.dot_to( lpos, gdpos );
+
+		//globalPos( {0.0,0.0} );
+		//globalRot( {} );
 
 		Vec3d uair;
 		uair.set_cross( gdpos, craft->omega ); uair.add( vair0 );

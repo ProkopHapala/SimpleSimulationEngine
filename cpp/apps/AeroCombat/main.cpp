@@ -27,11 +27,13 @@
 
 #include "AeroSurf.h"
 #include "AeroCraft.h"
+#include "AeroCraftControl.h"
 #include "AeroCraftWarrior.h"
 
 //#include "AeroCraftControler.h"
 
 #include "FieldPatch.h"
+#include "Solids.h"
 //#include "AeroCraftWorld.h"
 //#include "AeroCraftGUI.h"
 
@@ -76,16 +78,7 @@ bool STOP    = false;
 // ===== Free Functions
 // ===============================
 
-/*
-void renderAirCraft( AeroCraft& craft ){
-    glVertex2f();
-}
-*/
-
 //void rotateTo( int pivot, Mat3d& rot, const Mat3d& rot0, const Vec3d& xhat, const Vec3d& yhat, double step ){
-
-
-
 
 Terrain25D * prepareTerrain( int nsz, int nsub, double step, double hmax ){
     Terrain25D_bicubic * terrain = new Terrain25D_bicubic();
@@ -201,9 +194,15 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 
 	AeroSurfaceDebugRecord leftWingRec,rightWingRec;
 	Plot2D mainWingLD;
+	Plot2D mainWingPolar;
+	int polarPlotKind=1;
 
 	QuePlot2D historyPlot;
+	QuePlot2D wingsTrj;
 
+	static const int nBaloons=100.0;
+	Vec3d baloons[nBaloons];
+	int gloBaloon;
 
 	// ==== function declarations
 
@@ -230,12 +229,15 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 void AeroCraftGUI::camera (){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-    float fov = VIEW_ZOOM_DEFAULT/zoom;
-    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
+    //float fov = VIEW_ZOOM_DEFAULT/zoom;
+    //glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
+    float camDist = 100.0;
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
+
     Mat3d camMat;
     Vec3f camPos;
     convert(myCraft->pos, camPos );
-    float camDist = 10.0;
+
     if(first_person){
         // third person camera attached to aero-craft
         camMat.setT( myCraft->rotMat );
@@ -255,10 +257,11 @@ void AeroCraftGUI::camera (){
 }
 
 
-
 void AeroCraftGUI::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    glEnable(GL_DEPTH_TEST);
+
 
 	if(staticTest) return;
 
@@ -272,6 +275,27 @@ void AeroCraftGUI::draw(){
         historyPlot.set_back( 2, myCraft->vel.y      *0.02 );
     }
 
+    if( frameCount%10 == 0 ){
+        wingsTrj.next( world->time*0.5 );
+        Vec3d gp;
+        gp = myCraft->leftAirelon ->getPos();
+        wingsTrj.set_back( 0, gp.x );
+        wingsTrj.set_back( 1, gp.y );
+        wingsTrj.set_back( 2, gp.z );
+        gp = myCraft->rightAirelon->getPos();
+        wingsTrj.set_back( 3, gp.x );
+        wingsTrj.set_back( 4, gp.y );
+        wingsTrj.set_back( 5, gp.z );
+        //Draw3D::drawPointCross( gp, 0.2 );
+    }
+    glColor3f( 1.0,0.0,0.0 );
+    //wingsTrj.drawTrj3D( {0,1,2} );
+    wingsTrj.drawTrj3DPoints( {0,1,2}, 0.1 );
+    glColor3f( 0.0,0.0,1.0 );
+    //wingsTrj.drawTrj3D( {3,4,5} );
+    wingsTrj.drawTrj3DPoints( {3,4,5}, 0.1 );
+
+
 	//renderSkyBox(myCraft->pos.x, myCraft->pos.y-1000, myCraft->pos.z, VIEW_DEPTH*0.25 );
 	glEnable(GL_DEPTH_TEST);
 
@@ -280,6 +304,49 @@ void AeroCraftGUI::draw(){
 
 	//world->myCraft->render();
 	renderAeroCraft( *myCraft, true );
+
+
+    Mat3d rot; rot.setT(myCraft->rotMat);
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix();
+        glLoadIdentity();
+        glOrtho( -ASPECT_RATIO*5.0, ASPECT_RATIO*30.0, -5.0,30.0,  -100.0, 100.0);
+        Mat3d camMat;
+        //camMat.setOne();
+        //camMat.fromDirUp({0.0,1.0,0.0},myCraft->rotMat.a);
+        // camera y-axis than along wing
+        camMat.b.set( 0.0,1.0,0.0 );
+        camMat.c.set( rot.a );
+        camMat.c.makeOrtho( camMat.b );
+        camMat.c.normalize();
+        camMat.a.set_cross(camMat.b,camMat.c);
+        // camera along wing than y-axis
+        /*
+        camMat.c.set( rot.a );
+        camMat.b.set( 0.0,1.0,0.0 );
+        camMat.b.makeOrtho( camMat.c );
+        camMat.b.normalize();
+        camMat.a.set_cross(camMat.b,camMat.c);
+        */
+        float glMat[16];
+
+        Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+        //Draw3D::toGLMat( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+        glMultMatrixf( glMat );
+    glMatrixMode (GL_MODELVIEW);
+    glPushMatrix();
+        glLoadIdentity();
+        renderAeroCraft(*myCraft, false);
+
+        Draw3D::drawMatInPos( camMat, {0.0,0.0,0.0} );
+    glMatrixMode( GL_MODELVIEW );
+    glPopMatrix();
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    //Draw3D::drawMatInPos( camMat, myCraft->pos );
+    //Draw3D::drawMatInPos( myCraft->rotMat, myCraft->pos );
+    Draw3D::drawMatInPos( rot, myCraft->pos );
+
 
 	glColor3f(1.0,0.0,0.0);
 	double fsc = 0.001;
@@ -292,29 +359,13 @@ void AeroCraftGUI::draw(){
 	glColor3f(1.0,0.0,1.0); Draw3D::drawVecInPos( myCraft->force*fsc, myCraft->pos );
 	glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( myCraft->vel*vsc,   myCraft->pos );
 
+	for(int i=0; i<nBaloons; i++){
+        Draw3D::drawShape( baloons[i], {10.0,0.0,0.0, 0.0,10.0,0.0, 0.0,0.0,10.0} ,gloBaloon);
+        Draw3D::drawLine( {baloons[i].x,0.0,baloons[i].z}, baloons[i] );
+    }
 
 	//glDisable (GL_LIGHTING);
 	glShadeModel(GL_SMOOTH);
-
-	/*
-
-	if ( buildings_shape >0 ) glCallList( buildings_shape );
-	if ( terrain_shape >0)  {
-		glCallList( terrain_shape   );
-	} else {
-	 	// terrain
-		float groundsz = VIEW_DEPTH;
-		glBegin(GL_QUADS);
-			glColor3f( 0.3, 0.6, 0.1 );
-			glNormal3f(0,1,0);
-			glVertex3f( -groundsz, 0, -groundsz );
-			glVertex3f( +groundsz, 0, -groundsz );
-			glVertex3f( +groundsz, 0, +groundsz );
-			glVertex3f( -groundsz, 0, +groundsz );
-		glEnd();
-	};
-
-	*/
 
 	if(world->terrain) glCallList(world->terrain->shape);
 
@@ -349,6 +400,7 @@ void AeroCraftGUI::drawHUD(){
 	//mpanel.tryRender(); mpanel.draw();
 	//if(focused) Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
 
+	/*
 	if(first_person){
         glPushMatrix();
             float sc = WIDTH*0.01;
@@ -357,6 +409,7 @@ void AeroCraftGUI::drawHUD(){
             renderAeroCraft(*myCraft, false);
         glPopMatrix();
     }
+    */
 
 	if(staticTest){ drawStaticTest2D( *tester, fontTex, WIDTH, HEIGHT ); return; }
 
@@ -372,16 +425,24 @@ void AeroCraftGUI::drawHUD(){
         glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawPointCross({mouseX+WIDTH*0.5,mouseY+HEIGHT*0.5},5.0);
     }
 
-    double phiL = atan2( leftWingRec.sa,  leftWingRec.ca );
-    double phiR = atan2( rightWingRec.sa, rightWingRec.ca );
-
     float sc = WIDTH*0.04;
     glPushMatrix();
+    if(polarPlotKind==1){
+        glTranslatef(200.0,HEIGHT-150.0,200.0);
+        glScalef    (sc*4,sc,WIDTH);
+        mainWingPolar.view();
+        Draw2D::drawLine( {0.0,-1.0}, {0.0,1.0} );
+        glColor3f(1.0,1.0,0.0); Draw2D::drawPointCross( {leftWingRec.CD, leftWingRec.CL}, 0.05 );
+        glColor3f(0.0,1.0,1.0); Draw2D::drawPointCross( {rightWingRec.CD,rightWingRec.CL}, 0.05 );
+    }else if( polarPlotKind==2 ){
+        double phiL = atan2( leftWingRec.sa,  leftWingRec.ca );
+        double phiR = atan2( rightWingRec.sa, rightWingRec.ca );
         glTranslatef(200.0,HEIGHT-150.0,200.0);
         glScalef    (sc,sc,WIDTH);
         mainWingLD.view();
         glColor3f(1.0,1.0,0.0); mainWingLD.drawVline(phiL);
         glColor3f(0.0,1.0,1.0); mainWingLD.drawVline(phiR);
+    }
     glPopMatrix();
 
     glPushMatrix();
@@ -397,6 +458,9 @@ void AeroCraftGUI::drawHUD(){
 }
 
 AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    VIEW_DEPTH = 10000;
+    zoom = 30.0;
 
     printf( " === GUI \n" );
 
@@ -420,6 +484,17 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     printf( " === Environment \n" );
     world->terrain =  prepareTerrain( 128, 2, 100.0, 50 );
 
+    double baloonRande=10000.0;
+    for(int i=0; i<nBaloons; i++){ baloons[i]=(Vec3d){randf(-baloonRande,baloonRande),randf(100.0,500.0),randf(-baloonRande,baloonRande) }; };
+    gloBaloon=glGenLists(1);
+	glNewList( gloBaloon, GL_COMPILE );
+        glEnable    ( GL_LIGHTING );
+        glShadeModel( GL_FLAT     );
+        glColor3f( 0.8f, 0.8f, 0.8f );
+        Draw3D::drawPolygons( Solids::Icosahedron_nfaces,        Solids::Icosahedron_ngons,        Solids::Icosahedron_faces,        Solids::Icosahedron_verts        );
+	glEndList();
+
+
     printf( " === aerocraft \n" );
 
     //char* fname = "data/AeroCraft1.ini";
@@ -440,8 +515,8 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     pilot->attach( myCraft );
     pilot->craft0=myCraft_bak;
 
-    pilot->rudder  .setSymetricRange(0.25);
-    pilot->elevator.setSymetricRange(0.25);
+    pilot->rudder  .setSymetricRange(0.2);
+    pilot->elevator.setSymetricRange(0.2);
 
     printf( " === tester \n" );
 
@@ -465,23 +540,38 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     double phiRange = M_PI*0.5;
     DataLine2D * lLift = new DataLine2D(nsamp); mainWingLD.lines.push_back( lLift ); lLift->linspan(-phiRange,phiRange); lLift->clr = 0xFFff0000;
     DataLine2D * lDrag = new DataLine2D(nsamp); mainWingLD.lines.push_back( lDrag ); lDrag->linspan(-phiRange,phiRange); lDrag->clr = 0xFF0000ff;
+
+    mainWingPolar.init();
+    mainWingPolar.fontTex = fontTex;
+    mainWingPolar.clrGrid = 0xFF404040;
+    DataLine2D * LDpolar = new DataLine2D(nsamp); mainWingPolar.lines.push_back( LDpolar );
+
     for(int i=0; i<nsamp; i++){
         double phi = lLift->xs[i];
         double ca = cos(phi);
         double sa = sin(phi);
         double CD,CL;
         myCraft->leftAirelon->polarModel(ca,sa, CD, CL);
-        lLift->ys[i] = CL;
-        lDrag->ys[i] = CD;
+        lLift->ys[i]   = CL;
+        lDrag->ys[i]   = CD;
+        LDpolar->xs[i] = CD;
+        LDpolar->ys[i] = CL;
     }
     mainWingLD.update();
     mainWingLD.autoAxes(0.5,0.2);
     mainWingLD.render();
 
+    mainWingPolar.update();
+    mainWingPolar.autoAxes(0.1,0.5);
+    mainWingPolar.render();
+
+
     historyPlot.init( 100, 3 );
     historyPlot.lColors[0] = 0xFFff0000;
     historyPlot.lColors[1] = 0xFF007f00;
     historyPlot.lColors[2] = 0xFFff00ff;
+
+    wingsTrj.init( 100, 6 );
 
 };
 
@@ -525,32 +615,6 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
 	if ( keys[ SDL_SCANCODE_UP    ] ) { qCamera.pitch(  0.005 ); }
 	if ( keys[ SDL_SCANCODE_RIGHT ] ) { qCamera.yaw  (  0.005 ); }
 	if ( keys[ SDL_SCANCODE_LEFT  ] ) { qCamera.yaw  ( -0.005 ); }
-
-
-	/*
-	if      ( keys[ SDL_SCANCODE_A ] ){ myCraft->panels[0].lrot.rotate( +AirelonRate, { 1,0,0 } );  myCraft->panels[1].lrot.rotate( -AirelonRate, { 1,0,0 } );    }
-	else if ( keys[ SDL_SCANCODE_D ] ){ myCraft->panels[0].lrot.rotate( -AirelonRate, { 1,0,0 } );  myCraft->panels[1].lrot.rotate( +AirelonRate, { 1,0,0 } );    }
-	else if ( autoRetractAirelon ){
-        //rotateTo( 1, myCraft->leftAirelon->lrot,  myCraft_bak->leftAirelon->lrot,  { 0,0,1 }, { 0,1,0 }, AirelonRetractRate );
-        //rotateTo( 1, myCraft->rightAirelon->lrot, myCraft_bak->rightAirelon->lrot, { 0,0,1 }, { 0,1,0 }, AirelonRetractRate );
-        pilot->rotateTo( 1, myCraft->leftAirelon->lrot,  myCraft_bak->leftAirelon->lrot,  AirelonRetractRate );
-        pilot->rotateTo( 1, myCraft->rightAirelon->lrot, myCraft_bak->rightAirelon->lrot, AirelonRetractRate );
-    }
-
-    if      ( keys[ SDL_SCANCODE_W ] ){ myCraft->panels[2].lrot.rotate( +ElevatorRate, { 1,0,0 } );  }
-	else if ( keys[ SDL_SCANCODE_S ] ){ myCraft->panels[2].lrot.rotate( -ElevatorRate, { 1,0,0 } );  }
-    else if ( autoRetractElevator ){
-        //rotateTo( 1, myCraft->elevator->lrot, myCraft_bak->elevator->lrot, { 0,0,1 }, { 0,1,0 }, ElevatorRetractRate );
-        pilot->rotateTo( 1, myCraft->elevator->lrot, myCraft_bak->elevator->lrot, ElevatorRetractRate );
-    }
-
-    if      ( keys[ SDL_SCANCODE_Q ] ){ myCraft->panels[3].lrot.rotate( +RudderRate, { 0,1,0 } );  }
-	else if ( keys[ SDL_SCANCODE_E ] ){ myCraft->panels[3].lrot.rotate( -RudderRate, { 0,1,0 } );  }
-    else if ( autoRetractRudder ){
-        //rotateTo( 1, myCraft->rudder->lrot, myCraft_bak->rudder->lrot, { 0,0,1 }, { 0,1,0 }, RudderRetractRate );
-        pilot->rotateTo( 2, myCraft->rudder->lrot, myCraft_bak->rudder->lrot, RudderRetractRate );
-    }
-    */
 
     if      ( keys[ SDL_SCANCODE_A ] ){ pilot->leftAirelon.inc();   pilot->rightAirelon.dec();   }
 	else if ( keys[ SDL_SCANCODE_D ] ){ pilot->leftAirelon.dec();   pilot->rightAirelon.inc();   }
