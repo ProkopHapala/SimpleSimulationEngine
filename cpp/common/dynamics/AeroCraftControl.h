@@ -9,27 +9,38 @@
 
 class SurfControl{ public:
 
+    Mat3d rot0;
+
     double val       = 0.0;
-    double maxRate   = 0.01;
-    double relaxRate = maxRate*0.2;
-    double minval    =-0.1;
-    double maxval    = 0.1;
+    double maxRate   = 0.015;
+    double relaxRate = maxRate*0.8;
+    double minval    =-0.2;
+    double maxval    = 0.2;
 
     AeroSurface * surf;
 
-    void setSymetricRange( double mval ){ minval=-mval; maxval=mval; }
-    void apply  ( double dval ){ surf->lrot.rotate( dval, surf->lrot.a );  val+=dval;  }
-    void inc  (){ double dval=maxval-val; dval=_min(dval, maxRate); apply( dval ); }
-    void dec  (){ double dval=minval-val; dval=_max(dval,-maxRate); apply( dval ); }
-    void relax(){ double dval=_clamp(-val,-relaxRate,relaxRate);    apply( dval ); }
-    void toward(double toVal){ double dval=_clamp(-val,-relaxRate,relaxRate); apply( dval );  }
+    void attach( AeroSurface* surf_ ){
+        surf=surf_;
+        rot0 = surf->lrot;
+    }
+
+    inline void rest(){ surf->lrot=rot0; };
+    inline void setSymetricRange( double mval ){ minval=-mval; maxval=mval; }
+    //void dapply  ( double dval ){ surf->lrot.drotate( dval, surf->lrot.a );  val+=dval;  }
+    inline void  apply ( double dval ){ val+=dval; rest(); surf->lrot.rotate( val, surf->lrot.a );    }
+    inline void inc  (){ double dval=maxval-val; dval=_min(dval, maxRate); apply( dval ); }
+    inline void dec  (){ double dval=minval-val; dval=_max(dval,-maxRate); apply( dval ); }
+    inline void relax(){ double dval=_clamp(-val,-relaxRate,relaxRate);    apply( dval ); }
+    inline void toward(double toVal){ double dval=_clamp( _clamp(toVal,minval,maxval)-val, -maxRate,maxRate); apply( dval );  }
+    inline void towardRalative(double toVal){ toward( toVal*(maxval-minval)+minval ); }
+    inline double getRelativeVal(){ return (val-minval)/(maxval-minval); };
 
 };
 
 class AeroCraftControler{
     public:
     AeroCraft * craft  = NULL;
-    AeroCraft * craft0 = NULL;
+    //AeroCraft * craft0 = NULL;
 
     double vvert_target    = 0.0d;
     double vvert_strength  = 0.1d;
@@ -48,10 +59,14 @@ class AeroCraftControler{
 
     void attach( AeroCraft * craft_ ){
         craft             =craft_;
-        leftAirelon .surf =craft->leftAirelon;
-        rightAirelon.surf =craft->rightAirelon;
-        rudder      .surf =craft->rudder;
-        elevator    .surf =craft->elevator;
+        //leftAirelon .surf =craft->leftAirelon;
+        //rightAirelon.surf =craft->rightAirelon;
+        //rudder      .surf =craft->rudder;
+        //elevator    .surf =craft->elevator;
+        leftAirelon .attach(craft->leftAirelon);
+        rightAirelon.attach(craft->rightAirelon);
+        rudder      .attach(craft->rudder);
+        elevator    .attach(craft->elevator);
     }
 
 
@@ -90,7 +105,8 @@ class AeroCraftControler{
 	}
 
     void resetSteer( ){
-        for( int i=0; i<craft->nPanels; i++ ){ craft->panels[i].lrot=craft0->panels[i].lrot; }
+        //for( int i=0; i<craft->nPanels; i++ ){ craft->panels[i].lrot=craft0->panels[i].lrot; }
+
     }
 
     /*

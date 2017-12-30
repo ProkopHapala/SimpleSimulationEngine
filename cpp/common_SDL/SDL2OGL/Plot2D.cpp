@@ -64,7 +64,7 @@ void Plot2D::update(){
         bounds.y0 = _min(bounds.y0, line->bounds.y0); bounds.y1 = _max(bounds.y1, line->bounds.y1);
         //printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
     }
-    printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
+    //printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
 };
 
 void Plot2D::autoAxes(double dx, double dy){

@@ -60,6 +60,7 @@ void drawTriangles      ( int nlinks, const int * links, const Vec3d * points );
 void drawPolygons       ( int nlinks, const int * ns,    const int * links, const Vec3d * points );
 
 void drawKite           ( const Vec3d& pos, const Mat3d& rot, double sz );
+void drawPanel          ( const Vec3d& pos, const Mat3d& rot, const Vec2d& sz );
 
 void drawSimplexGrid( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs, const double * clrs, int ncolors, const uint32_t * colorscale );
 void drawSimplexGridLines( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs );

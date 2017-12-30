@@ -19,7 +19,6 @@ class Projectile3D : public PointBody {
 
     virtual void update( double dt ){
         update_Projectile3D( dt );
-
     };
 
     // TO DO : would be usefull if material of target specified

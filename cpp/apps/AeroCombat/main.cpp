@@ -32,7 +32,7 @@
 
 //#include "AeroCraftControler.h"
 
-#include "FieldPatch.h"
+//#include "FieldPatch.h"
 #include "Solids.h"
 //#include "AeroCraftWorld.h"
 //#include "AeroCraftGUI.h"
@@ -56,6 +56,7 @@
 // ===== GLOBAL CONSTAMNTS
 // ===============================
 
+/*
 Shooter            * world  = NULL;
 AeroCraftControler * pilot  = NULL;
 AeroTester         * tester = NULL;
@@ -73,6 +74,7 @@ int    stepSum=0;
 
 bool loopEnd = false;
 bool STOP    = false;
+*/
 
 // ===============================
 // ===== Free Functions
@@ -148,6 +150,16 @@ Terrain25D * prepareTerrain( int nsz, int nsub, double step, double hmax ){
 }
 
 
+
+
+
+
+
+
+
+
+
+
 // ====================================
 //      AeroCraftGUI
 // ====================================
@@ -155,6 +167,13 @@ Terrain25D * prepareTerrain( int nsz, int nsub, double step, double hmax ){
 class AeroCraftGUI : public AppSDL2OGL_3D { public:
 	//AeroCraftWorld * world;
 	//Shooter * world;
+
+	Shooter            * world  = NULL;
+    AeroCraftControler * pilot  = NULL;
+    AeroTester         * tester = NULL;
+
+    const Uint8 *scanKeys;
+    Uint32 mouseButtons;
 
     int      fontTex;
     GUIPanel   panel;
@@ -167,14 +186,18 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
     bool autoRetractAirelon    = true;
     bool autoRetractRudder     = true;
     bool autoRetractElevator   = false;
+    /*
     float  ElevatorRate = 0.01;
 	float  AirelonRate  = 0.002;
 	float  RudderRate   = 0.01;
     double AirelonRetractRate  = AirelonRate;
     double RudderRetractRate   = RudderRate;
     double ElevatorRetractRate = ElevatorRate;
+    */
 
     bool useAutoPilot = false;
+
+    float camDist = 100.0;
 
 	int perFrame = 10;
 	//double dt = 0.001;
@@ -200,9 +223,12 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 	QuePlot2D historyPlot;
 	QuePlot2D wingsTrj;
 
-	static const int nBaloons=100.0;
+	static const int nBaloons=100;
 	Vec3d baloons[nBaloons];
 	int gloBaloon;
+
+	//static const int nProjectiles=100;
+	//PointBody projectiles[nProjectiles];
 
 	// ==== function declarations
 
@@ -222,22 +248,106 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 	virtual void keyStateHandling( const Uint8 *keys );
     virtual void mouseHandling   ( );
 
+    void camera_FPS     ();
+    void camera_YVel    ();
+    void camera_VelY    ();
+    void camera_FreeLook();
+
 	AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-void AeroCraftGUI::camera (){
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-    //float fov = VIEW_ZOOM_DEFAULT/zoom;
-    //glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
-    float camDist = 100.0;
-    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
 
+void AeroCraftGUI::camera_FPS     (){
+    glLoadIdentity();
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
     Mat3d camMat;
     Vec3f camPos;
     convert(myCraft->pos, camPos );
+    camMat.setT( myCraft->rotMat );
+	float glMat[16];
+	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+	glMultMatrixf( glMat );
+    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
+};
 
+void AeroCraftGUI::camera_YVel   (){
+    glLoadIdentity();
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
+    Mat3d camMat;
+    Vec3f camPos;
+    convert(myCraft->pos, camPos );
+    //camMat.setT( myCraft->rotMat );
+    camMat.b.set( 0.0,1.0,0.0 );
+    camMat.c.set( myCraft->vel );
+    camMat.c.makeOrtho( camMat.b );
+    camMat.c.normalize();
+    camMat.a.set_cross(camMat.b,camMat.c);
+	float glMat[16];
+	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+	glMultMatrixf( glMat );
+    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
+};
+
+void AeroCraftGUI::camera_VelY   (){
+    glLoadIdentity();
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
+    Mat3d camMat;
+    Vec3f camPos;
+    convert(myCraft->pos, camPos );
+    //camMat.setT( myCraft->rotMat );
+
+    camMat.c.set( myCraft->vel );
+    camMat.c.normalize();
+    camMat.b.set( 0.0,1.0,0.0 );
+    camMat.b.makeOrtho( camMat.c );
+    camMat.b.normalize();
+    camMat.a.set_cross(camMat.b,camMat.c);
+
+    /*
+    camMat.b.set( 0.0,1.0,0.0 );
+    camMat.c.set( myCraft->vel );
+    camMat.c.makeOrtho( camMat.b );
+    camMat.c.normalize();
+    camMat.a.set_cross(camMat.b,camMat.c);
+    */
+
+	float glMat[16];
+	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+	glMultMatrixf( glMat );
+    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
+};
+
+
+void AeroCraftGUI::camera_FreeLook(){
+    glLoadIdentity();
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
+    Mat3d camMat;
+    Vec3f camPos;
+    convert(myCraft->pos, camPos );
+    qCamera.toMatrix( camMat );
+    camMat.T();
+	float glMat[16];
+	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+	glMultMatrixf( glMat );
+    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
+};
+
+void AeroCraftGUI::camera (){
+    glMatrixMode( GL_PROJECTION );
+    //if(first_person){ camera_FPS(); }else{ camera_FreeLook(); };
+    if(scanKeys[SDL_SCANCODE_LSHIFT]){ camera_FPS(); }else{ camera_VelY(); };
+    //camera_FPS();
+    //camera_YVel();
+    //camera_VelY();
+    /*
+    glLoadIdentity();
+    //float fov = VIEW_ZOOM_DEFAULT/zoom;
+    //glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
+    Mat3d camMat;
+    Vec3f camPos;
+    convert(myCraft->pos, camPos );
     if(first_person){
         // third person camera attached to aero-craft
         camMat.setT( myCraft->rotMat );
@@ -251,6 +361,7 @@ void AeroCraftGUI::camera (){
 	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
 	glMultMatrixf( glMat );
     glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
+    */
     glMatrixMode (GL_MODELVIEW);
     glLoadIdentity();
 
@@ -262,11 +373,12 @@ void AeroCraftGUI::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
 
-
 	if(staticTest) return;
 
 	world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
 	camera ();
+
+
 
 	if( frameCount%10 == 0 ){
         historyPlot.next( world->time*0.5 );
@@ -305,8 +417,14 @@ void AeroCraftGUI::draw(){
 	//world->myCraft->render();
 	renderAeroCraft( *myCraft, true );
 
+	Mat3d rot; rot.setT(myCraft->rotMat);
 
-    Mat3d rot; rot.setT(myCraft->rotMat);
+	double aimDist = 400.0;
+	double aimSize = 5.0;
+
+	glColor3f(0.0,1.0,1.0); Draw3D::drawPointCross( myCraft->pos+rot.c*aimDist, aimSize );
+	Draw3D::drawLine( myCraft->pos, myCraft->pos+rot.c*aimDist );
+
     glMatrixMode( GL_PROJECTION );
     glPushMatrix();
         glLoadIdentity();
@@ -359,6 +477,21 @@ void AeroCraftGUI::draw(){
 	glColor3f(1.0,0.0,1.0); Draw3D::drawVecInPos( myCraft->force*fsc, myCraft->pos );
 	glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( myCraft->vel*vsc,   myCraft->pos );
 
+    //world->projLifetime=1.0;
+    //if( scanKeys[SDL_SCANCODE_LCTRL] && ( frameCount%10 == 0 ) ){
+    if( ( mouseButtons & SDL_BUTTON(SDL_BUTTON_LEFT) ) && ( frameCount%10 == 0 ) ){
+        myCraft->gun_rot = rot.c;
+        world->fireProjectile( myCraft, 700.0, 0 );
+        printf("n projectiles: %i \n", world->projectiles.size() );
+	}
+	glColor3f(1.0,1.0,1.0);
+	for(Projectile3D* prj : world->projectiles){
+        //Draw3D::drawLine( prj->pos, prj->old_pos );
+        Draw3D::drawPointCross( prj->pos, 1.0 );
+        //printf( " %f, %f, %f\n", prj->pos.z, prj->pos.y, prj->pos.z);
+	}
+
+
 	for(int i=0; i<nBaloons; i++){
         Draw3D::drawShape( baloons[i], {10.0,0.0,0.0, 0.0,10.0,0.0, 0.0,0.0,10.0} ,gloBaloon);
         Draw3D::drawLine( {baloons[i].x,0.0,baloons[i].z}, baloons[i] );
@@ -396,6 +529,7 @@ void AeroCraftGUI::draw(){
 void AeroCraftGUI::drawHUD(){
 
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
 	//panel .tryRender();  panel.draw();
 	//mpanel.tryRender(); mpanel.draw();
 	//if(focused) Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
@@ -411,7 +545,27 @@ void AeroCraftGUI::drawHUD(){
     }
     */
 
-	if(staticTest){ drawStaticTest2D( *tester, fontTex, WIDTH, HEIGHT ); return; }
+    // Control surface state
+    glColor3f(1.0,1.0,1.0);
+    Vec2d s0={WIDTH*0.5,110.0};
+    double sza = 100, szb =10, val;
+    val = (pilot->elevator   .getRelativeVal()*2.0-1.0)*sza;
+    Draw2D::drawLine_d( {s0.x    ,s0.y+sza},{s0.x    ,s0.y-sza} );
+    Draw2D::drawLine_d( {s0.x-szb,s0.y+val},{s0.x+szb,s0.y+val} );
+    //s0.y-=szb;
+    val =-(pilot->leftAirelon.getRelativeVal()*2.0-1.0)*sza;
+    Draw2D::drawLine_d( {s0.x+sza,s0.y    },{s0.x-sza,s0.y    } );
+    Draw2D::drawLine_d( {s0.x+val,s0.y-szb},{s0.x+val,s0.y+szb} );
+    //s0.y+=szb*2;
+    glColor3f(1.0,0.0,1.0);
+    val = (pilot->rudder     .getRelativeVal()*2.0-1.0)*sza;
+    //Draw2D::drawLine_d( {s0.x+sza,s0.y    },{s0.x-sza,s0.y    } );
+    Draw2D::drawLine_d( {s0.x+val,s0.y-szb},{s0.x+val,s0.y+szb} );
+    glColor3f(0.0,1.0,0.0); Draw2D::drawPointCross({s0.x+sza*mouseX*2.0/WIDTH,s0.y+sza*mouseY*2.0/HEIGHT},5.0);
+
+    //glPopMatrix();
+
+	//if(staticTest){ drawStaticTest2D( *tester, fontTex, WIDTH, HEIGHT ); return; }
 
 	char str[256];
 	//sprintf(str, "speed %3.3f attitude %4.3f glideRatio %3.3f \0",world->myCraft->vel.norm(), world->myCraft->pos.y,   -sqrt(sq(world->myCraft->vel.x)+sq(world->myCraft->vel.z))/world->myCraft->vel.y );
@@ -421,9 +575,9 @@ void AeroCraftGUI::drawHUD(){
 	sprintf(str, "attitude %4.3f speed %3.3f vVert %3.3f tgAlfa %3.3f thrust %3.3f \0", myCraft->pos.y, vtot, myCraft->vel.y, myCraft->vel.y/vtot, thrust );
 	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw::drawText( str, fontTex, 10, 0 );
 
-	if(first_person){
-        glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawPointCross({mouseX+WIDTH*0.5,mouseY+HEIGHT*0.5},5.0);
-    }
+	//if(first_person){
+    //    glColor4f(1.0f,1.0f,1.0f,0.9f); Draw2D::drawPointCross({mouseX+WIDTH*0.5,mouseY+HEIGHT*0.5},5.0);
+    //}
 
     float sc = WIDTH*0.04;
     glPushMatrix();
@@ -498,7 +652,8 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     printf( " === aerocraft \n" );
 
     //char* fname = "data/AeroCraft1.ini";
-    char* fname = "data/AeroCraftStright1.ini";
+    //char* fname = "data/AeroCraftStright1.ini";
+    char* fname = "data/AeroCraftMainWing1.ini";
 	myCraft_bak = new AeroCraft();          myCraft_bak->fromFile(fname);
 	myCraft     = new AeroCraftWarrior();   myCraft    ->fromFile(fname);
 	//myCraft     = new AeroCraft();   myCraft->fromFile("data/AeroCraft1.ini");
@@ -513,23 +668,26 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
 
     pilot  = new AeroCraftControler();
     pilot->attach( myCraft );
-    pilot->craft0=myCraft_bak;
+    //pilot->craft0=myCraft_bak;
 
     pilot->rudder  .setSymetricRange(0.2);
     pilot->elevator.setSymetricRange(0.2);
 
     printf( " === tester \n" );
 
+    /*
     tester      = new AeroTester();
     tester->autoPilot = pilot;
     tester->craft     = myCraft;
     tester->gravityG  = world->gravity;
     //tester->reallocateTrj(int n);
+    */
 
+    printf( " === tester \n" );
     first_person = true;
 
     staticTest=false;
-    if( staticTest ) tester->doStaticTesting( 500, 0.01, 300.0, 5.0 );
+    //if( staticTest ) tester->doStaticTesting( 500, 0.01, 300.0, 5.0 );
 
     // Polar Plotting
     mainWingLD.init();
@@ -584,10 +742,15 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
             case SDLK_KP_MINUS : zoom*=VIEW_ZOOM_STEP; printf("zoom: %f \n", zoom); break;
             case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
 
+            case SDLK_LSHIFT   :
+                //SDL_WarpMouseInWindow( window, WIDTH/2, HEIGHT/2);
+                SDL_WarpMouseInWindow( window, WIDTH/2, HEIGHT*(1-pilot->elevator.getRelativeVal()) );
+                mouseHandling();
+
             case SDLK_u : useAutoPilot = !useAutoPilot;    break;
             case SDLK_p : first_person = !first_person; break;
             case SDLK_m : mouseSteer   = !mouseSteer;   break;
-            case SDLK_c : pilot->resetSteer( );
+            //case SDLK_c : pilot->resetSteer( );
         }; break;
         case SDL_QUIT: SDL_Quit(); exit(1); break;
 
@@ -610,6 +773,9 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
 };
 
 void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
+    scanKeys = keys;
+
+    bool RMB = mouseButtons&SDL_BUTTON(SDL_BUTTON_RIGHT);
 
 	if ( keys[ SDL_SCANCODE_DOWN  ] ) { qCamera.pitch( -0.005 ); }
 	if ( keys[ SDL_SCANCODE_UP    ] ) { qCamera.pitch(  0.005 ); }
@@ -618,14 +784,21 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
 
     if      ( keys[ SDL_SCANCODE_A ] ){ pilot->leftAirelon.inc();   pilot->rightAirelon.dec();   }
 	else if ( keys[ SDL_SCANCODE_D ] ){ pilot->leftAirelon.dec();   pilot->rightAirelon.inc();   }
+	else if ( keys[ SDL_SCANCODE_X ] ){ double val=0.5+(mouseX)/float(WIDTH);
+                                        pilot->leftAirelon .towardRalative( 1.0-val );
+                                        pilot->rightAirelon.towardRalative(     val );
+                                      }
 	else if ( autoRetractAirelon     ){ pilot->leftAirelon.relax(); pilot->rightAirelon.relax(); }
 
     if      ( keys[ SDL_SCANCODE_W ] ){ pilot->elevator.inc();   }
 	else if ( keys[ SDL_SCANCODE_S ] ){ pilot->elevator.dec();   }
+	//else if ( keys[ SDL_SCANCODE_Z ] ){ pilot->elevator.towardRelative( mouseY/WIDTH );   }
+    else if ( keys[ SDL_SCANCODE_Z ]||keys[ SDL_SCANCODE_LSHIFT ] || RMB ){ pilot->elevator.towardRalative( 0.5+(mouseY)/float(HEIGHT) ); }                                                  //towardRalative
     else if ( autoRetractElevator    ){ pilot->elevator.relax(); }
 
     if      ( keys[ SDL_SCANCODE_E ] ){ pilot->rudder.inc();   }
 	else if ( keys[ SDL_SCANCODE_Q ] ){ pilot->rudder.dec();   }
+	else if ( keys[ SDL_SCANCODE_LSHIFT ] || RMB ){ pilot->rudder.towardRalative( 0.5+(mouseX)/float(WIDTH) ); }
     else if ( autoRetractRudder      ){ pilot->rudder.relax(); }
 
 
@@ -634,7 +807,7 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
 void AeroCraftGUI:: mouseHandling   ( ){
 	// mouse Camera
 	int mx,my;
-	SDL_GetMouseState(&mx,&my);
+	mouseButtons = SDL_GetMouseState(&mx,&my);
 	int dmx = mx - WIDTH/2; 	int dmy = my - HEIGHT/2 ;
 	mouseX = dmx;
 	mouseY = -dmy;
@@ -649,7 +822,8 @@ AeroCraftGUI * thisApp;
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	SDL_SetRelativeMouseMode( SDL_TRUE );
+	//SDL_SetRelativeMouseMode( SDL_TRUE );
+	SDL_ShowCursor(SDL_DISABLE);
 	SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
 	int junk;

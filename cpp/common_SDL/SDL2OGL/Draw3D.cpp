@@ -566,7 +566,20 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 	    glEnd();
     };
 
-
+    void drawPanel( const Vec3d& pos, const Mat3d& rot, const Vec2d& sz ){
+	    //drawLine( const Vec3d& p1, const Vec3d& p2 );
+	    //double sz = sqrt( area );
+	    //glEnable (GL_LIGHTING);
+	    //glColor3f( 0.5f,0.5f,0.5f );
+	    glBegin  (GL_QUADS);
+		    glNormal3f( rot.b.x, rot.b.y, rot.b.z );
+		    Vec3d p;
+		    p=pos-rot.a*sz.a + rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
+		    p=pos-rot.a*sz.a - rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
+		    p=pos+rot.a*sz.a - rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
+		    p=pos+rot.a*sz.a + rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
+	    glEnd();
+    };
 
     inline void simplex_deriv(
         const Vec2d& da, const Vec2d& db,

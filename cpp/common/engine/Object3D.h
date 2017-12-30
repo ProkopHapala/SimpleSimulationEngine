@@ -8,8 +8,17 @@
 #include "Collisions.h"
 #include "Body.h"
 
-class Object3D {
-	public:
+class Object3D_Interface{ public:
+	//int id, kind, shape;
+	virtual void   updateTransforms( const Vec3d& pos0, const Mat3d& rot0 ) = 0;
+	virtual bool   pointIn         ( const Vec3d& point ) = 0;
+	virtual double ray             ( const Vec3d& ray0, const Vec3d& hRay, Vec3d * normal ) = 0;
+
+	// virtual getAABB();
+	// virtual getBoundingSphere();
+};
+
+class Object3D : public Object3D_Interface { public:
 	int id, kind, shape;
 	// geometry
     Vec3d lpos,span;
