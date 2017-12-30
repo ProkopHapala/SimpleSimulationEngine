@@ -81,12 +81,16 @@ class AeroCraftEditor : public AppSDL2OGL_3D { public:
     bool staticTest = true;
     // - put to Spline manager ? ... make indepemented AeroCraft Test ?
 
+    double AoA       = 0.0;
+    double sideAngle = 0.0;
 	//int fontTex_DEBUG;
 
 	AeroSurfaceDebugRecord leftWingRec,rightWingRec;
 	Plot2D mainWingLD;
 	Plot2D mainWingPolar;
 	int polarPlotKind=1;
+
+	AeroSurfaceDebugRecord* dbgRecs = NULL;
 
 	// ==== function declarations
 
@@ -116,9 +120,36 @@ void AeroCraftEditor::draw(){
 
     renderAeroCraft(*myCraft, false);
 
+    glDisable(GL_LIGHTING);
+
     mouseRay0 = camPos + camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
     //printf( "mouse_begin_x" );
     Draw3D::drawPointCross( mouseRay0, 1.0 );
+
+    //myCraft->mass = 0.0;
+    //Vec2d csa; csa.fromAngle(AoA-M_PI);
+    //Vec3d vwind = (Vec3d){csa.x*sin(sideAngle),csa.y,csa.x*cos(sideAngle)};
+
+    Vec3d vwind = (Vec3d){0.0,0.0,-1.0};
+    myCraft->rotMat.setOne();
+    myCraft->rotMat.rotate(AoA, {1.0,0.0,0.0});
+
+    myCraft->clean_temp();
+
+    //myCraft->applyAeroForces( vwind );
+    myCraft->vel=vwind*-1.0;
+    myCraft->applyAeroForces( {0.0,0.0,0.0} );
+
+    //printf( "v (%f,%f,%f) f (%f,%f,%f) \n", vwind.x,vwind.y,vwind.z, myCraft->force.x,myCraft->force.y,myCraft->force.z  );
+    //printVec( myCraft->pos );
+    //printVec( myCraft->vel );
+    //myCraft->pos.
+    glColor3f(0.0f,0.0f,1.0f);  Draw3D::drawVecInPos( vwind*10.0,     myCraft->pos );
+    glColor3f(1.0f,0.0f,0.0f);
+    Draw3D::drawVecInPos( myCraft->force, myCraft->pos );
+    for( int i=0; i<myCraft->nPanels; i++ ){
+        Draw3D::drawVecInPos( dbgRecs[i].force, myCraft->panels[i].getPos()  );
+	};
 
 };
 
@@ -131,11 +162,11 @@ void AeroCraftEditor::drawHUD(){
 	//mpanel.tryRender(); mpanel.draw();
 	//if(focused) Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
 
-    float sc = WIDTH*0.04;
+    float sc = WIDTH*0.1;
     glPushMatrix();
     if(polarPlotKind==1){
-        glTranslatef(200.0,HEIGHT-150.0,200.0);
-        glScalef    (sc*4,sc,WIDTH);
+        glTranslatef(200.0,HEIGHT-200.0,200.0);
+        glScalef    (sc,sc,WIDTH);
         mainWingPolar.view();
         Draw2D::drawLine( {0.0,-1.0}, {0.0,1.0} );
         glColor3f(1.0,1.0,0.0); Draw2D::drawPointCross( {leftWingRec.CD, leftWingRec.CL}, 0.05 );
@@ -169,8 +200,21 @@ AeroCraftEditor:: AeroCraftEditor( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2O
     printf( " === aerocraft \n" );
 
     //char* fname = "data/AeroCraft1.ini";
-    char* fname = "data/AeroCraftStright1.ini";
+    char* fname = "data/AeroCraftMainWing1.ini";
+    //char* fname = "data/AeroCraftStright1.ini";
 	myCraft     = new AeroCraftWarrior();   myCraft    ->fromFile(fname);
+	myCraft->propelers[0].power = 0;
+
+	double wettedArea = 0.0;
+	dbgRecs = new AeroSurfaceDebugRecord[myCraft->nPanels];
+	for( int i=0; i<myCraft->nPanels; i++ ){
+        myCraft->panels[i].dbgRec = dbgRecs+i;
+        wettedArea += myCraft->panels[i].area;
+	};
+
+
+
+	//myCraft->pos = {0.0,0.0,0.0};
 	//myCraft     = new AeroCraft();   myCraft->fromFile("data/AeroCraft1.ini");
 
     printf( " DEBUG 1 \n" );
@@ -195,11 +239,24 @@ AeroCraftEditor:: AeroCraftEditor( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2O
         double ca = cos(phi);
         double sa = sin(phi);
         double CD,CL;
-        myCraft->leftAirelon->polarModel(ca,sa, CD, CL);
+
+        //myCraft->leftAirelon->polarModel(ca,sa, CD, CL);
+
+        Vec3d vwind = (Vec3d){0.0, sa, ca };
+        myCraft->clean_temp();
+        myCraft->applyAeroForces( vwind );
+
+        printf( "%i %f (%f,%f) (%f,%f,%f) (%f,%f,%f) \n", i, phi, ca, sa,   vwind.x,vwind.y,vwind.z, myCraft->force.x,myCraft->force.y,myCraft->force.z  );
+
+        //myCraft.force.no
+        myCraft->force.mul( 1.0/wettedArea );
+        CD=myCraft->force.z;
+        CL=myCraft->force.y;
+
         lLift->ys[i]   = CL;
         lDrag->ys[i]   = CD;
-        LDpolar->xs[i] =CD;
-        LDpolar->ys[i] =CL;
+        LDpolar->xs[i] = CD;
+        LDpolar->ys[i] = CL;
 
     }
     printf( " DEBUG 5 \n" );
@@ -238,10 +295,16 @@ void AeroCraftEditor:: eventHandling   ( const SDL_Event& event  ){
             }
             break;
     }
+
 };
 
 void AeroCraftEditor:: keyStateHandling( const Uint8 *keys ){
     scanKeys = keys;
+    double dpitch = 0.005;
+    if      ( keys[ SDL_SCANCODE_W ] ){ AoA+=dpitch;   }
+	else if ( keys[ SDL_SCANCODE_S ] ){ AoA-=dpitch;   }
+    if      ( keys[ SDL_SCANCODE_A ] ){ sideAngle+=dpitch;   }
+	else if ( keys[ SDL_SCANCODE_D ] ){ sideAngle-=dpitch;   }
     AppSDL2OGL_3D::keyStateHandling( keys );
 };
 

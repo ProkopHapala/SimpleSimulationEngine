@@ -60,54 +60,13 @@ class AeroCraft : public RigidBody {
 
 	Vec3d totalThrust;
 
-	/*
-	double maxAileron  = 0.1;
-	double maxElevator = 0.5;
-	double maxRudder   = 0.5;
-    */
-
 	// ==== function declarations
 
 	//virtual void render();
-
 	int fromFile( const char * fname );
+	void applyAeroForces( const Vec3d& vwind );
 
 	// ==== inline functions
-
-	inline void applyAeroForces( const Vec3d& vwind ){
-		Vec3d vair = vwind - vel;
-
-        //panels[0].DEBUGsurf = true;
-		for( int i=0; i<nPanels; i++ ){
-            //printf( " %i %i \n", i, nPanels );
-            //panels[i].applyForceSimple( vair );
-            panels[i].applyForce( vair );
-		}
-
-		//Mat3 rmat; rmat.setT(rotMat);
-		totalThrust.set(0.0d);
-		for( int i=0; i<nPropelers; i++ ){
-            Vec3d gdpos,gdir;
-            rotMat.dot_to( propelers[i].dir,  gdir  );
-            rotMat.dot_to( propelers[i].lpos, gdpos );
-            double vdir   = -gdir.dot( vair );  // printf("vdir %g \n", vdir);
-            double thrust = propelers[i].getThrust(vdir);
-            //glColor3d(1.0f,1.0f,0.0f); Draw3D::drawVecInPos( gdir, gdpos+pos );  Draw3D::drawPointCross( gdpos+pos, 0.5 );
-            gdir.mul(thrust);
-            //glColor3d(1.0f,1.0f,0.0f); Draw3D::drawVecInPos( gdir, gdpos+pos );  Draw3D::drawPointCross( gdpos+pos, 0.2 );
-            totalThrust.add(gdir);
-            apply_force( gdir, gdpos );
-		}
-	}
-
-	/*
-	inline void steerTo(double droll, double dpitch, double dyaw){
-        panels[0].lrot.rotate(  _clamp( -droll ,-maxAileron ,maxAileron ), {1.0,0.0,0.0} );
-        panels[1].lrot.rotate(  _clamp( +droll ,-maxAileron ,maxAileron ), {1.0,0.0,0.0} );
-        panels[2].lrot.rotate(  _clamp(  dpitch,-maxElevator,maxElevator), {1.0,0.0,0.0} );
-        panels[3].lrot.rotate(  _clamp( -dyaw  ,-maxRudder  ,maxRudder  ), {0.0,1.0,0.0} );
-    }
-    */
 
 };
 
