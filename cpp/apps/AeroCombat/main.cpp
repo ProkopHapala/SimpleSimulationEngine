@@ -378,16 +378,16 @@ void AeroCraftGUI::draw(){
 
     if(mouseSteer){
         if (first_person){
-            double dpitch=mouseY*0.005;
-            double dyaw  =mouseX*0.002;
-            double droll =0.2*dyaw;
-            pilot->resetSteer( );
-            myCraft->steerTo(droll, dpitch , dyaw);
+            //double dpitch=mouseY*0.005;
+            //double dyaw  =mouseX*0.002;
+            //double droll =0.2*dyaw;
+            //pilot->resetSteer( );
+            //myCraft->steerTo(droll, dpitch , dyaw);
         }else{
             Mat3d matCam;
             qCamera.toMatrix_T( matCam );
             Draw3D::drawMatInPos(matCam, myCraft->pos);
-            pilot->steerToDir( matCam.c );
+            //pilot->steerToDir( matCam.c );
         }
     }
 

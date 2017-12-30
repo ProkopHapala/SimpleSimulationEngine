@@ -21,7 +21,8 @@ class SurfControl{ public:
     void apply  ( double dval ){ surf->lrot.rotate( dval, surf->lrot.a );  val+=dval;  }
     void inc  (){ double dval=maxval-val; dval=_min(dval, maxRate); apply( dval ); }
     void dec  (){ double dval=minval-val; dval=_max(dval,-maxRate); apply( dval ); }
-    void relax(){ double dval=_clamp(-val,-relaxRate,relaxRate);       apply( dval ); }
+    void relax(){ double dval=_clamp(-val,-relaxRate,relaxRate);    apply( dval ); }
+    void toward(double toVal){ double dval=_clamp(-val,-relaxRate,relaxRate); apply( dval );  }
 
 };
 
@@ -64,7 +65,8 @@ class AeroCraftControler{
             double dpitch = dvvert_smooth*vvert_strength*dt;
             //printf("%f %f\n", dpitch, dt );
             //printf("%g %g %g %g\n", craft->vel.y, dvvert, bmix, dvvert_smooth );
-            craft->elevator->lrot.rotate(  _clamp( dpitch,-craft->maxElevator,craft->maxElevator), {1.0,0.0,0.0} );
+            //craft->elevator->lrot.rotate(  _clamp( dpitch,-craft->maxElevator,craft->maxElevator), {1.0,0.0,0.0} );
+            elevator.surf->lrot.rotate(  _clamp( dpitch,elevator.minval,elevator.maxval), {1.0,0.0,0.0} );
         }
         //
         Mat3d rmat; rmat.setT(craft->rotMat);
@@ -75,9 +77,14 @@ class AeroCraftControler{
         roll_err *= (1- roll_damp*roll_err*comega);
         double droll=0;
         if( adjust_roll ){
+            /*
             droll = _clamp( roll_err*roll_strength*dt,-craft->maxAileron,craft->maxAileron);
             craft-> leftAirelon->lrot.rotate(  droll , {1.0,0.0,0.0} );
             craft->rightAirelon->lrot.rotate( -droll , {1.0,0.0,0.0} );
+            */
+            droll = _clamp( roll_err*roll_strength*dt,leftAirelon.minval,leftAirelon.maxval);
+            leftAirelon.surf ->lrot.rotate(  droll , {1.0,0.0,0.0} );
+            rightAirelon.surf->lrot.rotate( -droll , {1.0,0.0,0.0} );
         }
         //printf("autoPilot roll_err %g droll %g    %g \n",roll_err, droll,  roll_err * comega );
 	}
@@ -86,6 +93,7 @@ class AeroCraftControler{
         for( int i=0; i<craft->nPanels; i++ ){ craft->panels[i].lrot=craft0->panels[i].lrot; }
     }
 
+    /*
     void steerToDir( const Vec3d& dir ){
         Mat3d rotMatT;
         rotMatT.setT(craft->rotMat);
@@ -97,7 +105,9 @@ class AeroCraftControler{
         double droll = dyaw;
         resetSteer();
         craft->steerTo( 0.1*droll, 0.5*dpitch+0.5*fabs(dyaw), 0.5*dyaw);
+
     };
+    */
 
 };
 

@@ -60,9 +60,11 @@ class AeroCraft : public RigidBody {
 
 	Vec3d totalThrust;
 
+	/*
 	double maxAileron  = 0.1;
 	double maxElevator = 0.5;
 	double maxRudder   = 0.5;
+    */
 
 	// ==== function declarations
 
@@ -98,12 +100,14 @@ class AeroCraft : public RigidBody {
 		}
 	}
 
+	/*
 	inline void steerTo(double droll, double dpitch, double dyaw){
         panels[0].lrot.rotate(  _clamp( -droll ,-maxAileron ,maxAileron ), {1.0,0.0,0.0} );
         panels[1].lrot.rotate(  _clamp( +droll ,-maxAileron ,maxAileron ), {1.0,0.0,0.0} );
         panels[2].lrot.rotate(  _clamp(  dpitch,-maxElevator,maxElevator), {1.0,0.0,0.0} );
         panels[3].lrot.rotate(  _clamp( -dyaw  ,-maxRudder  ,maxRudder  ), {0.0,1.0,0.0} );
     }
+    */
 
 };
 
