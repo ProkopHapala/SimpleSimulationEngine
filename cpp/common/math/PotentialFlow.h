@@ -5,6 +5,9 @@
 
 /*
 
+References:
+- short overview lif-indced-drag   http://aero.stanford.edu/reports/multop/multop.html
+
 TODO:
  - Eliptical span-wise distribution of lift
 
@@ -12,6 +15,19 @@ TODO:
  = sqrt(L-x) - arcTgh(  )
  https://www.wolframalpha.com/input/?i=integral+sqrt(L%5E2-x%5E2)%2F(x%5E2%2Ba%5E2)+by+x
 
+- solution of this eliptical integral is well described here ( 12.6
+ELLIPTIC LIFT DISTRIBUTION page 18):
+https://web.stanford.edu/~cantwell/AA200_Course_Material/AA200_Course_Notes/AA200_Ch_12_Wings_of_Finite_Span_Cantwell.pdf
+
+
+Integration of linear lift distribution is quite simple
+integral (x^2) / (x^2 + L^2) =  x - L/arctg(x/sqrt(L))
+
+
+integral (x^3) / (x^2 + L^2)  = 0.5*(x^2 - L^2 log( L^2+x^2 ) )
+https://www.wolframalpha.com/input/?i=integral+(x%5E3)+%2F+(x%5E2+%2B+L)
+
+Any function can be inegrated when approximated by some polynominal expansion series (e.g. taylor expansion)
 
 */
 
@@ -47,7 +63,7 @@ inline Vec3d ILineFinite( Vec3d R, Vec3d hL, double l ){
     double c2 = hL.dot( R )/R.norm(); // cos(Theta_2)
     dB.mul( (c2-c1) * VortexQuantum/a );
     */
-    // Optimized:    since a = |hL x R|     dB/a = (hL x R)/|hL x R|^2
+    // Optimized:    since a = |hL x R|     B/a = (hL x R)/|hL x R|^2
     Vec3d B;
     B.set_cross( hL, R );
     double c1 = hL.dot( R )/R.norm();
@@ -93,6 +109,21 @@ inline void horseshoeDecay( Vec3d& B, Vec3d R, Vec3d p0, Vec3d p1, Vec3d hDir, d
     B.add_mul( ILineFinite( R-p0, hDir, l ), strenght );
     //printf( "R(%f,%f,%f) B(%f,%f,%f)\n", R.x, R.y, R.z,  B.x, B.y, B.z );
 }
+
+inline Vec3d ISemiInfSheet( Vec3d R, Vec3d a, Vec3d b, double l ){
+    // one line     ( 1-cos(theta) )/y
+    // cos(theta) = x0/r = x0/sqrt(x0^2+y^2)
+    // Integral_y  (1-x0*y/sqrt(x0^2 + y^2))/y  = log(sqrt(x0^+y^2)+x)
+    Vec3d B; B.set_cross(a,b); B.normalize();
+    double x = a.dot(R); // along semiifinite line
+    double y = b.dot(R); //
+    double x2 = x*x;
+    double y_ = y + l;
+    //printf( "x,y, %f %f %f \n", x,y,y_ );
+    B.mul( VortexQuantum* x*( log(sqrt(x2+y_*y_)+x) - log(sqrt(x2+y*y)+x) ) );
+    return B;
+};
+
 
 #endif
 

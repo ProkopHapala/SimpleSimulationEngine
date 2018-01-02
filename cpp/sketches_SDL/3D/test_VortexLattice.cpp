@@ -117,36 +117,43 @@ void testILineFinite(){
     //Vec3d L  = (Vec3d){4.0,0.5,0.6};
     //Vec3d R0 = (Vec3d){-3.0,1.0,2.0};
 
-    Vec3d L  = (Vec3d){4.0 ,0.0,0.0};
-    Vec3d R0 = (Vec3d){-1.0,1.0,0.0};
+    Vec3d L  = (Vec3d){0.0 ,4.0,0.0};
+    Vec3d R0 = (Vec3d){1.0,1.0,0.0};
 
     double l = L.norm();
     Vec3d hL = L*(1.0/l);
-    Vec3d B_ana = ILineFinite( R0, hL, l );
+    //Vec3d B_ana = ILineFinite( R0, hL, l );
+    Vec3d B_ana = ISemiInfSheet( R0, {1.0,0.0,0.0}, hL, l );
 
     int nsamp=1000;
     Vec3d B_num = (Vec3d){0.0,0.0,0.0};
     double step = 1.0/nsamp;
     Vec3d dL    = L*step;
     Vec3d R     = R0 + dL*0.5;
-    //glBegin(GL_LINE_STRIP);
-    //glColor3f(0.0,0.0,1.0);
+    glBegin(GL_LINE_STRIP);
+    glColor3f(0.0,0.0,1.0);
     for(int i=0; i<nsamp; i++){
-        B_num.add( dBiotSawart( R, dL ) );
+        //B_num.add( dBiotSawart( R, dL ) );
+        B_num.add_mul( ILineSemiInf( R, {1.0,0.0,0.0} ), step*l );
         R.add(dL);
-        //glVertex3f( R.x, B_num.z*10.0, 0 );
+        glVertex3f( l*step*i, B_num.z*10.0, 0 );
     }
-    //glEnd();
-    /*
+    glEnd();
+
     glBegin(GL_LINE_STRIP);
     glColor3f(1.0,0.0,0.0);
     for(int i=0; i<nsamp; i++){
-        B_ana = ILineFinite( R0, hL, l*step*i );
+        //B_ana = ILineFinite( R0, hL, l*step*i );
+        B_ana = ISemiInfSheet( R0, {1.0,0.0,0.0}, hL, l*step*i );
         glVertex3f( l*step*i, B_ana.z*10.0, 0 );
     }
     glEnd();
-    */
-    printf(" B_ana (%f,%f,%f) B_num (%f,%f,%f) \n", B_ana.x,B_ana.y,B_ana.z, B_num.x,B_num.y,B_num.z );
+    //exit(0);
+    glColor3f(0.0,0.0,0.0);
+    Draw3D::drawLine( {0.0,0.0,0.0}, {10.0,0.0,0.0} );
+
+    //printf(" B_ana (%f,%f,%f) B_num (%f,%f,%f) \n", B_ana.x,B_ana.y,B_ana.z, B_num.x,B_num.y,B_num.z );
+    //exit(0);
 }
 
 class TestAppMultipoles : public AppSDL2OGL_3D {
@@ -177,6 +184,7 @@ void TestAppMultipoles::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+	//testILineFinite();
     //if(frameCount==0)testILineFinite();
     //glColor3f(1.0,1.0,1.0);
     //Draw3D::drawLine    ( (Vec3d){1.0,0.0, 0.0},  {-1.0,0.0,0.0} );
@@ -184,12 +192,10 @@ void TestAppMultipoles::draw(){
     //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,10.0},  {-1.0,0.0,0.0} );
 
     plotVortexFilaments( nCPs, CPs, flightDir*-100.0 );
-
     glColor3f(0.0,0.0,0.0);
     //plotVecPlane( {21,21}, { -1.0,0.0,-2.0 }, {0.2,0.0,0.0}, {0.0,0.0,0.2}, 0.02, 1.0, totVelField );
     //plotVecPlane( {5,5}, { -2.0,0.0,-2.0 }, {1.0,0.0,0.0}, {0.0,0.0,1.0}, 0.02, 10.0, totVelField );
     //exit(0);
-
     plotStreamLinePlane( {20,1}, 200, {-1.1,0.0,3.0}, {0.2,0.0,0.0}, {0.0,0.2,0.0}, 0.1, totVelField );
 
 };
