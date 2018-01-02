@@ -141,11 +141,10 @@ class AeroSurface : public KinematicBody {
 		}
 	};
 
+	//inline void setAoA( const Mat3d& lrot0, double AoA ){};
 
-
-
-
-
+	// TODO: this can be probably deleted ?
+	/*
 	inline void  applyForceSimple( const Vec3d& vair0 ){
         //printf ( " %lf %lf %lf   %lf %lf %lf\n", lpos.x, lpos.y, lpos.z, C.a, C.b, C.c );
 
@@ -205,6 +204,7 @@ class AeroSurface : public KinematicBody {
 
 		}
 	};
+	*/
 
 };
 

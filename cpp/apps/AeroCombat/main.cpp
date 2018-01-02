@@ -30,6 +30,8 @@
 #include "AeroCraftControl.h"
 #include "AeroCraftWarrior.h"
 
+#include "DynamicControl.h"
+
 //#include "AeroCraftControler.h"
 
 //#include "FieldPatch.h"
@@ -149,17 +151,6 @@ Terrain25D * prepareTerrain( int nsz, int nsub, double step, double hmax ){
     return terrain;
 }
 
-
-
-
-
-
-
-
-
-
-
-
 // ====================================
 //      AeroCraftGUI
 // ====================================
@@ -171,6 +162,9 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 	Shooter            * world  = NULL;
     AeroCraftControler * pilot  = NULL;
     AeroTester         * tester = NULL;
+
+    DynamicControl rollControl;
+    double roll;
 
     const Uint8 *scanKeys;
     Uint32 mouseButtons;
@@ -367,7 +361,6 @@ void AeroCraftGUI::camera (){
 
 }
 
-
 void AeroCraftGUI::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -375,10 +368,15 @@ void AeroCraftGUI::draw(){
 
 	if(staticTest) return;
 
+    Vec3d Up = {1.0,0.0,0.0};
+	roll = Up.angleInPlane( myCraft->rotMat.b, myCraft->rotMat.a );
+	double dAoA = rollControl.dx_O1( roll, world->dt );
+	// TODO : finish feedback loop
+	//myCraft->leftAirelon->lrot->rotate( dAoA);
+	//myCraft->leftAirelon->lrot->rotate(-dAoA);
+
 	world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
 	camera ();
-
-
 
 	if( frameCount%10 == 0 ){
         historyPlot.next( world->time*0.5 );
@@ -606,6 +604,14 @@ void AeroCraftGUI::drawHUD(){
         Draw::setRGBA(historyPlot.lColors[0]); Draw::drawText( "vel",        fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
         Draw::setRGBA(historyPlot.lColors[1]); Draw::drawText( "attidude\n", fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
         Draw::setRGBA(historyPlot.lColors[2]); Draw::drawText( "vVert\n",    fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef( 100.0, 100.0, 0.0 );
+    glScalef(100.0,100.0,0.0);
+    Draw2D::drawVecInPos_d( {cos(roll),sin(roll)}, {0.0,0.0} );
+    Draw2D::drawLine_d({-1.0, 0.0},{ 1.0, 0.0});
+    Draw2D::drawLine_d({ 0.0,-1.0},{ 0.0, 1.0});
     glPopMatrix();
 
     //glColor3f(1.0f,1.0f,1.0f,0.9f);

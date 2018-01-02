@@ -2,6 +2,21 @@
 #ifndef  PotentialFlow_h
 #define  PotentialFlow_h
 
+
+/*
+
+TODO:
+ - Eliptical span-wise distribution of lift
+
+ Integral( I(x)*(R x dl)/|R|^2 ) = x*sqrt(L^2-x^2)/(x^2 + a^2)
+ = sqrt(L-x) - arcTgh(  )
+ https://www.wolframalpha.com/input/?i=integral+sqrt(L%5E2-x%5E2)%2F(x%5E2%2Ba%5E2)+by+x
+
+
+*/
+
+
+
 // http://s6.aeromech.usyd.edu.au/aerodynamics/index.php/sample-page/subsonic-aerofoil-and-wing-theory/3d-vortex-lattice-method/
 // http://web.mit.edu/16.unified/www/SPRING/fluids/Spring2008/LectureNotes/f06.pdf
 

@@ -202,6 +202,13 @@ class Vec3TYPE{
     inline TYPE dist ( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm (); }
 
     inline TYPE totprod(){ return x*y*z; };
+
+    TYPE angleInPlane( const VEC& a, const VEC& b ){
+        TYPE x = dot(a);
+        TYPE y = dot(b);
+        return atan2( x, y );
+    }
+
 };
 
 template<typename VEC> inline VEC cross( VEC a, VEC b ){ return (VEC){ a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x }; }
