@@ -234,19 +234,25 @@ AeroCraftEditor:: AeroCraftEditor( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2O
     mainWingPolar.clrGrid = 0xFF404040;
     DataLine2D * LDpolar = new DataLine2D(nsamp); mainWingPolar.lines.push_back( LDpolar );
     printf( " DEBUG 4 \n" );
+
+
+    Vec3d vwind = (Vec3d){0.0, 0.0, 1.0 };
     for(int i=0; i<nsamp; i++){
         double phi = lLift->xs[i];
-        double ca = cos(phi);
-        double sa = sin(phi);
+        //double ca = cos(phi);
+        //double sa = sin(phi);
         double CD,CL;
 
         //myCraft->leftAirelon->polarModel(ca,sa, CD, CL);
 
-        Vec3d vwind = (Vec3d){0.0, sa, ca };
+        //Vec3d vwind = (Vec3d){0.0, sa, ca };
+
+        myCraft->rotMat.setOne();
+        myCraft->rotMat.rotate( phi, {1.0,0.0,0.0} );
         myCraft->clean_temp();
         myCraft->applyAeroForces( vwind );
 
-        printf( "%i %f (%f,%f) (%f,%f,%f) (%f,%f,%f) \n", i, phi, ca, sa,   vwind.x,vwind.y,vwind.z, myCraft->force.x,myCraft->force.y,myCraft->force.z  );
+        //printf( "%i %f (%f,%f) (%f,%f,%f) (%f,%f,%f) \n", i, phi, ca, sa,   vwind.x,vwind.y,vwind.z, myCraft->force.x,myCraft->force.y,myCraft->force.z  );
 
         //myCraft.force.no
         myCraft->force.mul( 1.0/wettedArea );

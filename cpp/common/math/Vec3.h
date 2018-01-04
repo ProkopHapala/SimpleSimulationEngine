@@ -206,7 +206,7 @@ class Vec3TYPE{
     TYPE angleInPlane( const VEC& a, const VEC& b ){
         TYPE x = dot(a);
         TYPE y = dot(b);
-        return atan2( x, y );
+        return atan2( y, x );
     }
 
 };

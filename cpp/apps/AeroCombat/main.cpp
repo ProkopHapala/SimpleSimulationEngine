@@ -368,12 +368,19 @@ void AeroCraftGUI::draw(){
 
 	if(staticTest) return;
 
-    Vec3d Up = {1.0,0.0,0.0};
-	roll = Up.angleInPlane( myCraft->rotMat.b, myCraft->rotMat.a );
+	Mat3d rot; rot.setT(myCraft->rotMat);
+
+
+    Vec3d Up = {0.0,1.0,0.0};
+	//roll = Up.angleInPlane( myCraft->rotMat.b, myCraft->rotMat.a );     // the fucking matrix is transposed !!!
+    roll = Up.angleInPlane( rot.a, rot.b );
+    //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( rot.a*10*rot.a.dot({0,1}), myCraft->pos );
+    //glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( rot.b*10, myCraft->pos );
+    rollControl.y0 = 1.0;
 	double dAoA = rollControl.dx_O1( roll, world->dt );
 	// TODO : finish feedback loop
-	//myCraft->leftAirelon->lrot->rotate( dAoA);
-	//myCraft->leftAirelon->lrot->rotate(-dAoA);
+	myCraft->leftAirelon ->lrot.rotate( dAoA,myCraft->leftAirelon ->lrot.a);
+	myCraft->rightAirelon->lrot.rotate(-dAoA,myCraft->leftAirelon ->lrot.a);
 
 	world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
 	camera ();
@@ -415,7 +422,7 @@ void AeroCraftGUI::draw(){
 	//world->myCraft->render();
 	renderAeroCraft( *myCraft, true );
 
-	Mat3d rot; rot.setT(myCraft->rotMat);
+
 
 	double aimDist = 400.0;
 	double aimSize = 5.0;

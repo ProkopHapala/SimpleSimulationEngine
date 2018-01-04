@@ -117,7 +117,7 @@ void testILineFinite(){
     //Vec3d L  = (Vec3d){4.0,0.5,0.6};
     //Vec3d R0 = (Vec3d){-3.0,1.0,2.0};
 
-    Vec3d L  = (Vec3d){0.0 ,4.0,0.0};
+    Vec3d L  = (Vec3d){0.0,4.0,0.0};
     Vec3d R0 = (Vec3d){1.0,1.0,0.0};
 
     double l = L.norm();
@@ -135,8 +135,9 @@ void testILineFinite(){
     for(int i=0; i<nsamp; i++){
         //B_num.add( dBiotSawart( R, dL ) );
         B_num.add_mul( ILineSemiInf( R, {1.0,0.0,0.0} ), step*l );
+        //printf( "%f %f %f\n", R.y, ILineSemiInf( R, {1.0,0.0,0.0} ).norm()/VortexQuantum, B_num.norm()/VortexQuantum );
         R.add(dL);
-        glVertex3f( l*step*i, B_num.z*10.0, 0 );
+        glVertex3f( l*step*i, B_num.z*20.0, 0 );
     }
     glEnd();
 
@@ -145,7 +146,7 @@ void testILineFinite(){
     for(int i=0; i<nsamp; i++){
         //B_ana = ILineFinite( R0, hL, l*step*i );
         B_ana = ISemiInfSheet( R0, {1.0,0.0,0.0}, hL, l*step*i );
-        glVertex3f( l*step*i, B_ana.z*10.0, 0 );
+        glVertex3f( l*step*i, B_ana.z*20.0, 0 );
     }
     glEnd();
     //exit(0);
@@ -153,6 +154,7 @@ void testILineFinite(){
     Draw3D::drawLine( {0.0,0.0,0.0}, {10.0,0.0,0.0} );
 
     //printf(" B_ana (%f,%f,%f) B_num (%f,%f,%f) \n", B_ana.x,B_ana.y,B_ana.z, B_num.x,B_num.y,B_num.z );
+    printf(" |B_ana| %f |B_num| %f \n", B_ana.norm()/VortexQuantum, B_num.norm()/VortexQuantum );
     //exit(0);
 }
 
@@ -173,7 +175,6 @@ class TestAppMultipoles : public AppSDL2OGL_3D {
 
 TestAppMultipoles::TestAppMultipoles( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
-    testILineFinite();
     //exit(0);
 
 
@@ -184,19 +185,24 @@ void TestAppMultipoles::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	//testILineFinite();
+	//LineSemiInf( {0.5,1.5,0.0}, {1.0,0.0,0.0} ); exit(0);
+	//ISemiInfSheet( {1.0,1.0,0.0}, {1.0,0.0,0.0}, {0.0,1.0,0.0}, 4.0 ); exit(0);
+
+	testILineFinite(); //exit(0);
     //if(frameCount==0)testILineFinite();
     //glColor3f(1.0,1.0,1.0);
     //Draw3D::drawLine    ( (Vec3d){1.0,0.0, 0.0},  {-1.0,0.0,0.0} );
     //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,10.0},  { 1.0,0.0,0.0} );
     //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,10.0},  {-1.0,0.0,0.0} );
 
+    /*
     plotVortexFilaments( nCPs, CPs, flightDir*-100.0 );
     glColor3f(0.0,0.0,0.0);
     //plotVecPlane( {21,21}, { -1.0,0.0,-2.0 }, {0.2,0.0,0.0}, {0.0,0.0,0.2}, 0.02, 1.0, totVelField );
     //plotVecPlane( {5,5}, { -2.0,0.0,-2.0 }, {1.0,0.0,0.0}, {0.0,0.0,1.0}, 0.02, 10.0, totVelField );
     //exit(0);
     plotStreamLinePlane( {20,1}, 200, {-1.1,0.0,3.0}, {0.2,0.0,0.0}, {0.0,0.2,0.0}, 0.1, totVelField );
+    */
 
 };
 

@@ -17,7 +17,8 @@ class DynamicControl{ public:
     double dydx = 1.0;   // this could eventually be recalculated for each target y0
 
     double dx_O1( double y, double dt ){ // first order dynamical controler
-        double dydt = (y-oy);
+        double dydt = (y-oy);  oy = y;
+        // dydt = 0;
         // TODO : we should modify this to consider observed output change rate  "dydt"  probely
         double dxmax = vmax*dt;
         double dymax = dxmax*dydx;

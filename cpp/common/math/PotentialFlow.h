@@ -79,7 +79,10 @@ inline Vec3d ILineSemiInf( Vec3d R, Vec3d hL ){
     B.set_cross( hL, R );
     double c1 = hL.dot( R )/R.norm();
     //printf( "(%f,%f,%f)  %f %f %f \n", B.x, B.y, B.z, R.norm(), c1, B.norm2() );
-    B.mul( (1-c1)*VortexQuantum/B.norm2() ); // notice there is no "a"
+    double out = (1-c1)/B.norm2();
+    //printf( "%f %f   %f %f \n", R.x, R.y, c1, out );
+    //B.mul( VortexQuantum*out );
+    B.mul( VortexQuantum*(1-c1)/B.norm2() ); // notice there is no "a"
     return B;
 }
 
@@ -115,12 +118,18 @@ inline Vec3d ISemiInfSheet( Vec3d R, Vec3d a, Vec3d b, double l ){
     // cos(theta) = x0/r = x0/sqrt(x0^2+y^2)
     // Integral_y  (1-x0*y/sqrt(x0^2 + y^2))/y  = log(sqrt(x0^+y^2)+x)
     Vec3d B; B.set_cross(a,b); B.normalize();
-    double x = a.dot(R); // along semiifinite line
-    double y = b.dot(R); //
+    double x  = a.dot(R); // along semiifinite line
+    double y  = b.dot(R); //
     double x2 = x*x;
     double y_ = y + l;
     //printf( "x,y, %f %f %f \n", x,y,y_ );
-    B.mul( VortexQuantum* x*( log(sqrt(x2+y_*y_)+x) - log(sqrt(x2+y*y)+x) ) );
+    //B.mul( VortexQuantum* x*( log(sqrt(x2+y_*y_)+x) - log(sqrt(x2+y*y)+x) ) );
+    B.mul( VortexQuantum* log( ( sqrt(x2+y_*y_)+x )/( sqrt(x2+y*y)+x ) ) );
+    //double r1   = sqrt(x2+y*y  );
+    //double r2   = sqrt(x2+y_*y_);
+    //double out  = log( (r2+x)/(r1+x) );
+    //printf( "%f,   %f,%f   %f,%f   %f \n", x,y,y_, r1,r2, out );
+    //B.mul( VortexQuantum* out );
     return B;
 };
 
