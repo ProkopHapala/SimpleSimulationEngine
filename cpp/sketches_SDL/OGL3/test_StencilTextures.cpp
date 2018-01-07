@@ -37,13 +37,14 @@
 // http://www.valvesoftware.com/publications/2007/SIGGRAPH2007_AlphaTestedMagnification.pdf
 // /home/prokop/Dropbox/MyDevSW/Python/ImageProcessing/DistanceField.py
 
-Shader *shBranches,*shLeafs,*shTex;
+Shader *shModel,*shTex,*shGenSDFTex,*shViewSDFTex;
 
 //GLInstances instances;
 //GLBillboards bilboards;
 //GLuint texture_1;
 
-GLMesh   *mshBranches,*mshLeafs;
+//GLMesh   *mshBranches,*mshLeafs;
+GLMesh  *msh1;
 
 //GLuint       texTest;
 
@@ -52,6 +53,8 @@ GLuint txHi=0,txLo=0,txDist=0;
 GLMesh       *glSprite,*glAtlas;
 GLBillboards bilboards;
 FrameBuffer  frameBuff1;
+FrameBuffer  frameBuff2;
+FrameBuffer  frameBuff3;
 
 
 int frameCount = 0;
@@ -79,33 +82,12 @@ double ticks_per_second=0;
 // =============== Functions
 
 GLMesh* makeQuad3D( Vec2f p0, Vec2f p1, Vec2f u0, Vec2f u1 ){
-    //GLfloat verts = new GLfloat[3*2*3];
-    //GLfloat vUVs  = new GLfloat[3*2*2];
-    //delete [] verts;
     GLfloat verts[] = { p0.x,p0.y,0.0, p1.x,p1.y,0.0, p0.x,p1.y,0.0,   p0.x,p0.y,0.0, p1.x,p1.y,0.0, p1.x,p0.y,0.0 };
     Vec2f vUVs   [] = { u0.x,u0.y,     u1.x,u1.y,     u0.x,u1.y,       u0.x,u0.y,     u1.x,u1.y,     u1.x,u0.y     };
     GLMesh* glquad = new GLMesh();
     glquad->init( 6, 0, NULL, verts, NULL, NULL, vUVs );
     return glquad;
 }
-
-/*
-GLuint makeTestTextureRGBA( int W, int H ){
-    double dx = 1.0d/W;
-    double dy = 1.0d/H;
-    uint32_t * c_img1 = new uint32_t[H*W];
-    for( int iy=0; iy<H; iy++ ){
-        for( int ix=0; ix<W; ix++ ){
-            uint8_t r,g,b,a;
-            r=ix; g=ix^iy; b=iy; a=255;
-            c_img1[ iy*W + ix ] = (a<<24) | (b<<16) | (g<<8) | (r);
-        }
-    }
-    GLuint texID;
-    newTexture2D( texID, W, H, c_img1, GL_RGBA, GL_UNSIGNED_BYTE );
-    return texID;
-}
-*/
 
 float* makeImage( int n ){
     float * out = new float[n*n];
@@ -200,14 +182,21 @@ int setup(){
     qCamera.setOne();
 
     // ==== BEGIN : RENDER TO TEXTURE
+    shModel=new Shader();
+    shModel->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    shModel->getDefaultUniformLocation();
 
     shTex=new Shader();
-    //shTex->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
-    //shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
-    //shTex->init( "common_resources/shaders/texture3D_anim.glslv",   "common_resources/shaders/texture.glslf"   );
-    //shTex->init( "common_resources/shaders/texture3D_anim.glslv",   "common_resources/shaders/texture_anim.glslf"   );
-    shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texSDF.glslf"   );
+    shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
     shTex->getDefaultUniformLocation();
+
+    shViewSDFTex=new Shader();
+    shViewSDFTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texSDF.glslf"   );
+    shViewSDFTex->getDefaultUniformLocation();
+
+    shGenSDFTex=new Shader();
+    shGenSDFTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/genTexSDF.glslf"   );
+    shGenSDFTex->getDefaultUniformLocation();
 
     //glAtlas  = makeQuad3D( {0.0f,0.0f}, {32.0f,2.0f}, {0.0f,0.0f}, {1.f,1.0f} );
     //glquad = makeQuad3D( {0.0f,0.0f}, {0.5f,1.0f}, {0.0f,0.0f}, {0.125f,1.0f} );
@@ -237,24 +226,84 @@ int setup(){
     delete [] fHi; delete [] fLo; delete [] fDist;
 
 
-    /*
+
     //frameBuff1.init( 2048, 64 );
-    frameBuff1.init( 2048, 128 );
-
+    nHi = 1024;
+    frameBuff1.init( nHi, nHi );
     // ===== Prepare texture by rendering
-
     //glBindFramebuffer(GL_FRAMEBUFFER, frameBuff1.buff );
     frameBuff1.bind();
 
     //glClearColor(0.0, 0.0, 0.8, 1.0);
     glClearColor(0.9, 0.9, 0.9, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
-
     Mat4f camMat; camera( 1/16.0, camMat);
-    renderPhases( camMat);
+    //renderPhases( camMat);
+
+    std::vector<Vec3f> verts;
+    std::vector<Vec3f> normals;
+    //pushTris_Treestep( 5, (Vec3f){0.0f,0.0f,0.0f}, (Vec3f){0.0f,1.0f,0.0f}, (Vec3f){1.0f,0.0f,0.0f}, verts, &normals );
+    //for(int i=0; i<branches.size(); i++){ printf("%i (%g,%g,%g)\n", i, branches[i].x, branches[i].y, branches[i].z ); }
+
+    float sz=1.0;
+    for(int i=0; i<10; i++){
+        verts.push_back({randf(-sz,sz),randf(-sz,sz),0.0}); normals.push_back( {0.0,0.0,1.0} );
+        verts.push_back({randf(-sz,sz),randf(-sz,sz),0.0}); normals.push_back( {0.0,1.0,0.0} );
+        verts.push_back({randf(-sz,sz),randf(-sz,sz),0.0}); normals.push_back( {1.0,0.0,0.0} );
+    }
+    msh1 = new GLMesh();
+    msh1->init( verts.size(), 0, NULL, &verts[0],  &normals[0], NULL, NULL );
+    msh1->draw(GL_TRIANGLES);
+
+    // downsample
+    nLo = 32;
+    frameBuff2.init( nLo, nLo );
+    frameBuff2.bind();
+
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_2D, frameBuff1.texRGB );
+    //glUniform1i(sh->getUloc("texture_1"), 0);
+    //glUniform1i(sh->getUloc("baseColor"), 0);
+    //printf( "DEBUG 3 \n" );
+
+    //msh1->draw(GL_TRIANGLES);
+
+    //Mat4f camMat;
+    camera( 1.0, camMat);
+    Mat3f modelMat; modelMat.setOne(); modelMat.mul(16.0f);
+    glEnable    (GL_BLEND);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable   (GL_ALPHA_TEST );
+    Shader * sh;
+    sh = shGenSDFTex;
+    sh->use();
+    sh->set_modelMat( (GLfloat*)&modelMat );
+    sh->set_camPos  ( (const float[]){+8.0,+8.0,-10.0} );
+    sh->set_camMat  ( (GLfloat*)&camMat   );
+
+    int msub = 16;
+    sh->setUniformi("msub",  msub            );
+    //sh->setUniformf("lpix",  1.4*(1.0f/nHi)/(nHi/((float)(nLo*msub)))  );
+    //sh->setUniformf("lpix",  1.4*(1.0f/nHi)*(((float)(nLo*msub))/nHi)  );
+    //sh->setUniformf("lpix",  1.4*(((float)(nLo*msub))/(nHi*nHi))  );
+    sh->setUniformf("lpix",  1.4/(((float)(nLo*msub)))  );
+
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(sh->getUloc("texture_1"), 0);
+    glBindTexture(GL_TEXTURE_2D, frameBuff1.texRGB );   glSprite->draw(GL_TRIANGLES);
+
+    frameBuff3.init( 32, 32 );
+    frameBuff3.bind();
+
+    sh = shTex;
+    sh->use();
+    sh->set_modelMat( (GLfloat*)&modelMat );
+    sh->set_camPos  ( (const float[]){+8.0,+8.0,-10.0} );
+    sh->set_camMat  ( (GLfloat*)&camMat   );
+
+    glBindTexture(GL_TEXTURE_2D, frameBuff1.texRGB );   glSprite->draw(GL_TRIANGLES);
 
     // ==== END   : RENDER TO TEXTURE
-    */
 
     printf( "SETUP DONE \n" );
 
@@ -273,26 +322,41 @@ void draw( ){
     Mat3f modelMat; modelMat.setOne(); modelMat.mul(4.0f);
     //Vec3f modelPos;
 
-    printf( "DEBUG 1 \n" );
+    //printf( "DEBUG 1 \n" );
 
     glEnable    (GL_BLEND);
     glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable   ( GL_ALPHA_TEST );
 
+
+    //printf( "DEBUG 2 \n" );
+
     Shader * sh;
-    sh = shTex;
+    sh = shViewSDFTex;
     sh->use();
     sh->set_modelMat( (GLfloat*)&modelMat );
     sh->set_camPos  ( (GLfloat*)&camPos   );
     sh->set_camMat  ( (GLfloat*)&camMat   );
-    printf( "DEBUG 2 \n" );
 
     glActiveTexture(GL_TEXTURE0);
-    //glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, frameBuff1.texRGB );
+    glBindTexture(GL_TEXTURE_2D, frameBuff1.texRGB );
     glUniform1i(sh->getUloc("texture_1"), 0);
     //glUniform1i(sh->getUloc("baseColor"), 0);
-    printf( "DEBUG 3 \n" );
+    //printf( "DEBUG 3 \n" );
 
+
+    //msh1->draw(GL_TRIANGLES);
+
+    sh->set_camPos  ( (const GLfloat[]){4.5,0.0,-10.0}   );
+    glBindTexture(GL_TEXTURE_2D, frameBuff1.texRGB );   glSprite->draw(GL_TRIANGLES);
+
+    sh->set_camPos  ( (const GLfloat[]){0.0,0.0,-10.0}   );
+    glBindTexture(GL_TEXTURE_2D, frameBuff2.texRGB );   glSprite->draw(GL_TRIANGLES);
+
+    sh->set_camPos  ( (const GLfloat[]){4.5,4.5,-10.0}   );
+    glBindTexture(GL_TEXTURE_2D, frameBuff3.texRGB );   glSprite->draw(GL_TRIANGLES);
+
+    /*
     camPos = {-3.0,0.0,-10.0};
     sh->set_camPos  ( (GLfloat*)&camPos   );
     glBindTexture(GL_TEXTURE_2D, txHi );   glSprite->draw(GL_TRIANGLES);
@@ -304,9 +368,10 @@ void draw( ){
     camPos.x += 4.1;
     sh->set_camPos  ( (GLfloat*)&camPos   );
     glBindTexture(GL_TEXTURE_2D, txDist );   glSprite->draw(GL_TRIANGLES);
+    */
 
     //glSprite->drawPoints(10.0);
-    printf( "DEBUG 4 \n" );
+    //printf( "DEBUG 4 \n" );
 
 
 
