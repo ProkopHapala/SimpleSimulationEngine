@@ -9,6 +9,9 @@
 //#include <string>
 #include "raytrace.h"
 
+#include "Vec2.h"
+#include "Vec3.h"
+
 class GirderParams{  public:
     int n=5;
     int m=2;
@@ -170,6 +173,66 @@ class Truss{ public:
                 edges.push_back( (TrussEdge){i01,i01+dnp,kind_long} );
                 edges.push_back( (TrussEdge){i10,i10+dnp,kind_long} );
                 edges.push_back( (TrussEdge){i11,i11+dnp,kind_long} );
+            }
+            i00+=dnp;
+        }
+    }
+
+
+    void wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width ){
+        int kind_long   = 0;
+        int kind_perp   = 1;
+        int kind_zigIn  = 2;
+        int kind_zigOut = 3;
+        Vec3d dir = p1-p0;
+        double r = dir.normalize();
+        ax.makeOrthoU(dir);
+        Vec3d side; side.set_cross(dir,ax);
+        //double dl = length/(2*n + 1);
+        //int dnb = 2+4+4+4;
+        int dnp = 4;
+        int i00 = points.size();
+
+        Vec2d  rot = {1.0,0.0};
+        Vec2d drot; drot.fromAngle( M_PI/n );
+
+        blocks.push_back( {i00,edges.size()} );
+        for (int i=0; i<n; i++){
+            int i01=i00+1; int i10=i00+2; int i11=i00+3;
+
+            Vec3d R = dir*rot.a + side*rot.b;
+            points.push_back( p0 +  R*(r-width) );
+            points.push_back( p0 +  R*(r+width) );
+            rot.mul_cmplx(drot);
+            R       = dir*rot.a + side*rot.b;
+            points.push_back( p0 + ax*-width + R*r );
+            points.push_back( p0 + ax*+width + R*r );
+            rot.mul_cmplx(drot);
+
+            edges .push_back( (TrussEdge){i00,i01,kind_perp}  );
+            edges .push_back( (TrussEdge){i10,i11,kind_perp}  );
+            edges .push_back( (TrussEdge){i00,i10,kind_zigIn} );
+            edges .push_back( (TrussEdge){i00,i11,kind_zigIn} );
+            edges .push_back( (TrussEdge){i01,i10,kind_zigIn} );
+            edges .push_back( (TrussEdge){i01,i11,kind_zigIn} );
+            if( i<(n-1) ){
+                edges.push_back( (TrussEdge){i10,i00+dnp,kind_zigOut} );
+                edges.push_back( (TrussEdge){i10,i01+dnp,kind_zigOut} );
+                edges.push_back( (TrussEdge){i11,i00+dnp,kind_zigOut} );
+                edges.push_back( (TrussEdge){i11,i01+dnp,kind_zigOut} );
+                edges.push_back( (TrussEdge){i00,i00+dnp,kind_long} );
+                edges.push_back( (TrussEdge){i01,i01+dnp,kind_long} );
+                edges.push_back( (TrussEdge){i10,i10+dnp,kind_long} );
+                edges.push_back( (TrussEdge){i11,i11+dnp,kind_long} );
+            }else{
+                edges.push_back( (TrussEdge){i10,0,kind_zigOut} );
+                edges.push_back( (TrussEdge){i10,1,kind_zigOut} );
+                edges.push_back( (TrussEdge){i11,0,kind_zigOut} );
+                edges.push_back( (TrussEdge){i11,1,kind_zigOut} );
+                edges.push_back( (TrussEdge){i00,0,kind_long} );
+                edges.push_back( (TrussEdge){i01,1,kind_long} );
+                edges.push_back( (TrussEdge){i10,2,kind_long} );
+                edges.push_back( (TrussEdge){i11,3,kind_long} );
             }
             i00+=dnp;
         }

@@ -108,9 +108,15 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     //truss.makeGriders( 6, &trussPlan.edges[0], &trussPlan.points[0], gpar, ups );
     //truss.makeGriders( trussPlan, gpar, ups, NULL );
+
+    truss.wheel( {0.0,0.0,0.0}, {10.0,0.0,0.0}, {0.0,1.0,0.0}, 50, 0.5 );
+
     std::vector<Vec2i> ends;
     truss.makeGriders( trussPlan, gpar, ups, &ends );
     truss.autoBridge(ends.size(), &ends[0], 0.8, 0 );
+
+
+
 
     delete [] gpar;
     //delete [] ups;
@@ -120,10 +126,12 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
 void SpaceCraftEditGUI::draw(){
     //printf( " ==== frame %i \n", frameCount );
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+    //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	glDisable(GL_DEPTH_TEST);
+	//glDisable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
 
     drawTruss( truss );
 
