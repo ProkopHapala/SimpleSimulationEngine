@@ -31,6 +31,7 @@ target_link_libraries( test_SpaceFlightODE  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} $
 add_executable( spaceCraftEditor
     spaceCraftEditor.cpp
     $<TARGET_OBJECTS:SDL2OGL>
+    $<TARGET_OBJECTS:Truss>
     $<TARGET_OBJECTS:SoftBody>
     $<TARGET_OBJECTS:DynamicOpt>
 )
