@@ -109,6 +109,7 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     //truss.makeGriders( 6, &trussPlan.edges[0], &trussPlan.points[0], gpar, ups );
     //truss.makeGriders( trussPlan, gpar, ups, NULL );
 
+
     truss.wheel( {0.0,0.0,0.0}, {10.0,0.0,0.0}, {0.0,1.0,0.0}, 50, 0.5 );
 
     std::vector<Vec2i> ends;
@@ -116,6 +117,8 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     truss.autoBridge(ends.size(), &ends[0], 0.8, 0 );
 
 
+
+    truss.panel( {0.0,0.0,0.0}, {5.0,0.0,0.0}, {0.0,5.0,0.0}, {5.0,5.0,0.0}, {5,5}, 1.0 );
 
 
     delete [] gpar;
@@ -127,7 +130,9 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 void SpaceCraftEditGUI::draw(){
     //printf( " ==== frame %i \n", frameCount );
     //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
-    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+    //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+    //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+    glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	//glDisable(GL_DEPTH_TEST);

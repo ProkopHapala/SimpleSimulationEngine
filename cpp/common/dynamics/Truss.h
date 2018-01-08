@@ -136,6 +136,70 @@ class Truss{ public:
         return imin;
     };
 
+    void panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width ){
+        int kind_long   = 0;
+        int kind_perp   = 1;
+        int kind_zigIn  = 2;
+        int kind_zigOut = 3;
+
+        //int dnb = 2+4+4+4;
+        int i0 = points.size();
+
+        blocks.push_back( {i0,edges.size()} );
+
+        Vec2d step = {1.0/n.a,1.0/n.b};
+
+        int di = 2*n.a-1;
+
+        int i00 = points.size();
+        for (int ib=0; ib<n.b; ib++){
+            double db,mb;
+            db = ib*step.b;     mb=1-db;
+            Vec3d p0  = p00*mb + p10*db;
+            Vec3d p1  = p01*mb + p11*db;
+            db += 0.5*step.b; mb=1-db;
+            Vec3d p0_ = p00*mb + p10*db;
+            Vec3d p1_ = p01*mb + p11*db;
+            for (int ia=0; ia<n.a; ia++){
+                double da,ma;
+                da = ia*step.a; ma = 1-da;
+                Vec3d p   = p0 *ma + p1 *da;
+
+                points.push_back( p              );
+
+
+                int bi = i0+di; if( ib==n.b-2 )bi-=ia;
+                int dia = 2;    if( ib==n.b-1 )dia=1;
+
+                if( ia<(n.a-1) ) edges.push_back( (TrussEdge){i0,i0+dia,kind_perp} );
+                if( ib<(n.b-1) ) edges.push_back( (TrussEdge){i0,bi    ,kind_perp} );
+
+                if( (ia<(n.a-1))&&(ib<(n.b-1)) ){ // diagonal
+                    Vec3d p_  = p0_*ma + p1_*da;
+                    da += 0.5*step.a; ma=1-da;
+                    Vec3d p__ = p0_*ma + p1_*da;
+                    Vec3d up; up.set_cross( p_-p, p__-p ); up.normalize();
+                    points.push_back( p__ + up*width );
+
+                    if( ia<(n.a-2) ) edges.push_back( (TrussEdge){i0+1,i0+1+dia,kind_perp} );
+                    if( ib<(n.b-2) ) edges.push_back( (TrussEdge){i0+1,bi+1    ,kind_perp} );
+
+                    edges .push_back( (TrussEdge){i0+1,i0     ,kind_zigIn} );
+                    edges .push_back( (TrussEdge){i0+1,i0+dia ,kind_zigIn} );
+                    edges .push_back( (TrussEdge){i0+1,bi     ,kind_zigIn} );
+                    if( ib==n.b-2 )dia=1;
+                    edges .push_back( (TrussEdge){i0+1,bi+dia ,kind_zigIn} );
+
+                    i0++;
+                }
+
+                i0++;
+            }
+        }
+    }
+
+
+
     void girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width ){
         int kind_long   = 0;
         int kind_perp   = 1;
@@ -177,7 +241,6 @@ class Truss{ public:
             i00+=dnp;
         }
     }
-
 
     void wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width ){
         int kind_long   = 0;
