@@ -370,17 +370,27 @@ void AeroCraftGUI::draw(){
 
 	Mat3d rot; rot.setT(myCraft->rotMat);
 
+    //autoRetractAirelon   =  false;
+	if(!autoRetractAirelon){
+        Vec3d Up = {0.0,1.0,0.0};
+        //roll = Up.angleInPlane( myCraft->rotMat.b, myCraft->rotMat.a );     // the fucking matrix is transposed !!!
+        roll = Up.angleInPlane( rot.a*-1.0, rot.b );
+        //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( rot.a*10*rot.a.dot({0,1}), myCraft->pos );
+        //glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( rot.b*10, myCraft->pos );
 
-    Vec3d Up = {0.0,1.0,0.0};
-	//roll = Up.angleInPlane( myCraft->rotMat.b, myCraft->rotMat.a );     // the fucking matrix is transposed !!!
-    roll = Up.angleInPlane( rot.a, rot.b );
-    //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( rot.a*10*rot.a.dot({0,1}), myCraft->pos );
-    //glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( rot.b*10, myCraft->pos );
-    rollControl.y0 = 1.0;
-	double dAoA = rollControl.dx_O1( roll, world->dt );
-	// TODO : finish feedback loop
-	myCraft->leftAirelon ->lrot.rotate( dAoA,myCraft->leftAirelon ->lrot.a);
-	myCraft->rightAirelon->lrot.rotate(-dAoA,myCraft->leftAirelon ->lrot.a);
+        rollControl.y0       =  M_PI*0.5; //sqrt(0.5);
+        rollControl.dxdt_max =  1.0;
+        rollControl.dydx     =  0.2; //5.5;
+        rollControl.T        =  10.0;
+        rollControl.xmin     = -0.25;
+        rollControl.xmax     =  0.25;
+
+        double dAoA = rollControl.dx_O1( roll, world->dt );
+        printf( "dAoA %f  %f %f \n", dAoA, roll, rollControl.x  );
+        // TODO : finish feedback loop
+        myCraft->leftAirelon ->lrot.rotate( dAoA,myCraft->leftAirelon ->lrot.a);
+        myCraft->rightAirelon->lrot.rotate(-dAoA,myCraft->leftAirelon ->lrot.a);
+    }
 
 	world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
 	camera ();
