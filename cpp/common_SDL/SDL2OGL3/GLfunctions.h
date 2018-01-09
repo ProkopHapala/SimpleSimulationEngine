@@ -48,7 +48,11 @@ inline void newTexture2D( GLuint& textureID, int W, int H, const void * cbuff, G
     glBindTexture  (GL_TEXTURE_2D, textureID);
     glTexImage2D   (GL_TEXTURE_2D, 0, format, W, H, 0, format, type, cbuff );
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // how to properly minimap:http://www.opengl-tutorial.org/beginners-tutorials/tutorial-5-a-textured-cube/
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    //glActiveTexture(GL_TEXTURE0 );
+    glGenerateMipmap(GL_TEXTURE_2D);
 }
 
 inline void bindTexture( GLuint slot, GLuint textureID, GLuint uloc ){

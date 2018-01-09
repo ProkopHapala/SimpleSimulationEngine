@@ -105,7 +105,8 @@ int setup(){
     shSprite->getDefaultUniformLocation();
 
     shSpriteBlend=new Shader();
-    shSpriteBlend->init( "common_resources/shaders/Bilboard3D.glslv", "common_resources/shaders/texture.glslf" );
+    //shSpriteBlend->init( "common_resources/shaders/Bilboard3D.glslv", "common_resources/shaders/texture.glslf" );
+    shSpriteBlend->init( "common_resources/shaders/Bilboard3D.glslv", "common_resources/shaders/textureMultiMinimap.glslf" );
     shSpriteBlend->getDefaultUniformLocation();
 
     /*
@@ -307,12 +308,13 @@ void init(){
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
 
+    /*
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
     //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
     //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
     glEnable(GL_MULTISAMPLE);
-
+    */
 
     //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
     window = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
