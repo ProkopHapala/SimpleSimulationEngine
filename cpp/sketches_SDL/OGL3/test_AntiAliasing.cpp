@@ -33,8 +33,8 @@
 // =============== Global variables
 
 //const int MaxParticles = 100000;
-const int MaxParticles = 1600;
-//const int MaxParticles = 16;
+//const int MaxParticles = 1600;
+const int MaxParticles = 16;
 //const int MaxParticles = 256;
 //const int MaxParticles = 256*256;
 
@@ -133,7 +133,10 @@ int setup(){
         pos.set( i%nside , (i/nside)%nside , (i/(nside*nside)) ); pos.mul(1.2);
         //sc.set( 1.0,1.0,1.0 );
         //float sz = randf(0.5,1.5); sc.set( sz,sz );
-        sc.set( randf(0.5,1.5),randf(0.5,1.5) );
+
+        //sc.set( randf(0.5,1.5),randf(0.5,1.5) );
+
+        sc.set( 1.0, 1.0 );
 
         *((Vec3f*)(instance_pos+(3*i))) = pos;
         *((Vec2f*)(instance_sc +(2*i))) = sc;
@@ -154,11 +157,16 @@ int setup(){
 
             int nMaxIter = 64;
 
+            /*
             int iters = (nMaxIter-juliaPoint(x*2,y,nMaxIter))*4; if(iters>255)iters=255;
             r=iters; g=0; b=iters*2.0; a=255-iters;
+            */
 
-            //r=ix;  g=iy; b=(ix+iy)/2; a=((((ix+iy)&15)==0)|((ix&15)==0)|((iy&15)==0))*255;
-
+            uint8_t  mask = 31;
+            uint8_t  cut  = 4;
+            //a=(((iy&mask)<cut)|((ix&mask)<cut))*255;
+            a=((((ix+iy)&mask)<cut)|(((ix-iy+mask)&mask)<cut) |  ((ix&mask)<cut)|((iy&mask)<cut))*255;
+            r=ix/2;  g=iy/2; b=(ix+iy)/4;
             c_img1[ iy*imgW + ix ] = (a<<24) | (b<<16) | (g<<8) | (r);
         }
     }
@@ -297,6 +305,15 @@ void init(){
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3); // Opengl 3.2
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
+    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
+    glEnable(GL_MULTISAMPLE);
+
+
     //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
     window = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     if ( !window ) die("Unable to create window");

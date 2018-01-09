@@ -231,6 +231,22 @@ SpaceCraftEditGUI * thisApp;
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+
+	// https://www.opengl.org/discussion_boards/showthread.php/163904-MultiSampling-in-SDL
+	//https://wiki.libsdl.org/SDL_GLattr
+	//SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    //SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    //SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    //SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+    //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    //SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
+    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
+    glEnable(GL_MULTISAMPLE);
+
 	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
 	thisApp = new SpaceCraftEditGUI( junk , 800, 600 );
