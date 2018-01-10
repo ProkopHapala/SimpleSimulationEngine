@@ -30,6 +30,9 @@ target_link_libraries( test_Vegetation ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_L
 add_executable       ( test_StencilTextures test_StencilTextures.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_StencilTextures ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_VolumetricTexture test_VolumetricTexture.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
+target_link_libraries( test_VolumetricTexture ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_RenderToTexture test_RenderToTexture.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_RenderToTexture ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
