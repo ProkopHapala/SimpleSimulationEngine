@@ -18,8 +18,7 @@ operations such as:
 #include "fastmath.h"
 #include "Vec3.h"
 
-class GridRulerInterface{ public:
-};
+class GridRulerInterface{public:};
 
 class CubeGridRuler : public GridRulerInterface { public:
     double step;
@@ -49,7 +48,9 @@ class CubeGridRuler : public GridRulerInterface { public:
         //printf( "(%3.3f,%3.3f,%3.3f) (%i,%i,%i)\n", pos.x, pos.y, pos.z, ipos.x,ipos.y,ipos.z);
     }
 
-    inline int icell( const Vec3d& pos ) const { return ixyz2i( { (int)(pos.x-pos0.x)*invStep, (int)(pos.y-pos0.y)*invStep, (int)(pos.z-pos0.z)*invStep } ); }
+    inline Vec3i ipcell( const Vec3d& pos ) const { return (Vec3i){ (int)(pos.x-pos0.x)*invStep, (int)(pos.y-pos0.y)*invStep, (int)(pos.z-pos0.z)*invStep }; }
+    inline int   icell ( const Vec3d& pos ) const { return ixyz2i(ipcell(pos)); }
+    //inline int   icell ( const Vec3d& pos ) const { return ixyz2i({ (int)(pos.x-pos0.x)*invStep, (int)(pos.y-pos0.y)*invStep, (int)(pos.z-pos0.z)*invStep } ); }
 
     inline Vec3d box2pos( const Vec3i& ipos, const Vec3d& dpos ) const {
         return (Vec3d){

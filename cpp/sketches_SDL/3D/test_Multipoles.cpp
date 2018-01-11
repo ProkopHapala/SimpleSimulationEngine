@@ -17,6 +17,7 @@
 
 #include "Multipoles.h"
 #include "grids3D.h"
+#include "PBCsystem.h"
 #include "MultipoleGrid.h"
 
 #include "AppSDL2OGL_3D.h"
@@ -95,7 +96,24 @@ TestAppMultipoles::TestAppMultipoles( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     // Test PBCsystem
     //system1.lvec.set( {1.0,0.5,0.0},{0.0,1.0,0.5},{0.5,0.0,1.0} );
     //system1.setCell( (Mat3d){ 1.0,0.5,0.0,  0.0,1.0,0.5,   0.5,0.0,1.0 } );
-    system1.setCell( (Mat3d){ 1.0,randf(-0.5,0.5),randf(-0.5,0.5),  randf(-0.5,0.5),1.0,randf(-0.5,0.5),   randf(-0.5,0.5),randf(-0.5,0.5),1.0 } );
+    //system1.setCell( (Mat3d){ 1.0,randf(-0.5,0.5),randf(-0.5,0.5),  randf(-0.5,0.5),1.0,randf(-0.5,0.5),   randf(-0.5,0.5),randf(-0.5,0.5),1.0 } );
+
+    Mat3d lvec = (Mat3d){ 1.0,randf(-0.5,0.5),randf(-0.5,0.5),  randf(-0.5,0.5),1.0,randf(-0.5,0.5),   randf(-0.5,0.5),randf(-0.5,0.5),1.0 };
+    lvec.mul(15.0);
+    system1.setCell( lvec );
+
+    system1.natoms = 50;
+    system1.pos = new Vec3d[system1.natoms];
+	for(int i=0; i<system1.natoms; i++){
+        system1.pos[i] = system1.lvec.a*randf(0.0,1.0) + system1.lvec.b*randf(0.0,1.0) + system1.lvec.c*randf(0.0,1.0);
+	}
+    system1.initRuler( 6.0 );
+
+    system1.atomsToCells();
+
+    //printVec( system1.ruler.n );
+
+    //exit(0);
 }
 
 void TestAppMultipoles::draw(){
@@ -119,14 +137,61 @@ void TestAppMultipoles::draw(){
 	//glColor3f(0.0,0.0,1.0); Draw3D::drawTriclinicBox(system1.lvec, {0.0,0.0,0.0}, {1.0,1.0,1.0} );
 	//glColor3f(1.0,0.0,0.0); Draw3D::drawTriclinicBox(system1.ilvec, {0.0,0.0,0.0}, {1.0,1.0,1.0} );
 
+
+	/*
 	Vec3d pmin={-1.0,-2.0,-3.0};
 	Vec3d pmax={2.5,1.5,0.5};
 	Vec3d cmin,cmax;
 
-	triclinicBounds( system1.lvec, pmin, pmax, cmin, cmax );
+	triclinicBounds( system1.ilvec, pmin, pmax, cmin, cmax );
 
 	glColor3f(0.0,0.0,1.0); Draw3D::drawBBox( pmin, pmax );
 	glColor3f(1.0,0.0,0.0); Draw3D::drawTriclinicBox(system1.ilvec, cmin, cmax );
+	*/
+
+	glColor3f(1.0,1.0,1.0);
+	for(int i=0; i<system1.natoms; i++){
+        Draw3D::drawPointCross( system1.pos[i] ,0.1);
+	}
+
+	/*
+	glColor3f(0.0,0.0,0.0);
+    for(int i=0; i<system1.nAtomPBC; i++){
+        Draw3D::drawPointCross( system1.pbc_pos[i], 0.1 );
+	};
+	*/
+
+	/*
+	glColor3f(0.3,0.3,0.3);
+	for(int ia=system1.pbc0.a; ia<system1.pbc1.a; ia++){
+        for(int ib=system1.pbc0.b; ib<system1.pbc1.b; ib++){
+            for(int ic=system1.pbc0.c; ic<system1.pbc1.c; ic++){
+                Draw3D::drawTriclinicBox(system1.lvec, {ia,ib,ic}, {ia+1,ib+1,ic+1} );
+            }
+        }
+    }
+    */
+
+    for(int icell=0; icell<system1.ruler.ntot; icell++){
+        //int icell = system1.ruler.ixyz2i( {ia,ib,ic} );
+        //printf( "\n", icell );
+
+        if(icell != (frameCount/30)%system1.ruler.ntot ) continue;
+        Draw::color_of_hash( icell + 25545 );
+        int n  = system1.cellNs   [icell];
+        int i0 = system1.cell2atom[icell];
+        for(int i=0; i<n; i++){
+            Draw3D::drawPointCross( system1.pbc_pos[i+i0] ,0.3);
+        }
+
+        Vec3i ip; system1.ruler.i2ixyz( icell, ip );
+        Vec3d p = system1.ruler.box2pos( ip, {0.0,0.0,0.0} );
+        double d = system1.ruler.step;
+        Draw3D::drawBBox( p, p+(Vec3d){d,d,d} );
+    }
+
+	glColor3f(0.0,0.0,1.0); Draw3D::drawBBox( system1.ruler.pos0, system1.ruler.pmax );
+	glColor3f(1.0,0.0,0.0); Draw3D::drawTriclinicBox(system1.lvec, system1.cmin, system1.cmax );
 
 
 };
