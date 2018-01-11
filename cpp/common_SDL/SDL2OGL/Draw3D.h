@@ -75,7 +75,8 @@ void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, 
 
 // from drawUtils.h
 void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b );
-void drawBBox( const Vec3d& p0, const Vec3d& p1 );
+void drawBBox        ( const Vec3d& p0, const Vec3d& p1 );
+void drawTriclinicBox( const Mat3d& lvec_, const Vec3d& c0_, const Vec3d& c1_ );
 int  makeBoxList( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b  );
 void drawAxis( float sc );
 

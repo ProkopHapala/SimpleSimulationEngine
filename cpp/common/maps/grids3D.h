@@ -25,11 +25,22 @@ class CubeGridRuler : public GridRulerInterface { public:
     double step;
     double invStep;
     Vec3d  pos0;
+    Vec3d  pmax;
+    Vec3d  span;
     Vec3i  n;
     int    ntot,nxy;
     //int    nxy;
     inline void setn( Vec3i n_ ){ n = n_; nxy = n.x*n.y; ntot=nxy*n.z; }
     inline void setStep( double step_ ){ step=step_; invStep=1/step; };
+
+
+    inline void setup( Vec3d pmin, Vec3d pmax_, double step ){
+        setStep(step);
+        pos0=pmin;
+        pmax=pmax_;
+        span=pmax-pos0;
+        setn( { (int)(span.z*invStep+1), (int)(span.y*invStep+1), (int)(span.z*invStep+1) } );
+    };
 
     inline void pos2box( const Vec3d& pos, Vec3i& ipos, Vec3d& dpos ) const {
         dpos.x = x2grid( pos.x-pos0.x, step, invStep, ipos.x );
@@ -38,6 +49,8 @@ class CubeGridRuler : public GridRulerInterface { public:
         //printf( "(%3.3f,%3.3f,%3.3f) (%i,%i,%i)\n", pos.x, pos.y, pos.z, ipos.x,ipos.y,ipos.z);
     }
 
+    inline int icell( const Vec3d& pos ) const { return ixyz2i( { (int)(pos.x-pos0.x)*invStep, (int)(pos.y-pos0.y)*invStep, (int)(pos.z-pos0.z)*invStep } ); }
+
     inline Vec3d box2pos( const Vec3i& ipos, const Vec3d& dpos ) const {
         return (Vec3d){
             step*ipos.x + pos0.x + dpos.x,
@@ -45,8 +58,8 @@ class CubeGridRuler : public GridRulerInterface { public:
             step*ipos.z + pos0.z + dpos.z };
     }
 
-    inline int ixyz2i( Vec3i ip         ){ return ip.x + n.x*(ip.y + n.y*ip.z);          }
-    inline int i2ixyz( int i, Vec3i& ip ){ ip.z=i/nxy; i=i%nxy; ip.y=i/n.x; ip.x=i%n.x;  }
+    inline int ixyz2i( Vec3i ip         ) const { return ip.x + n.x*(ip.y + n.y*ip.z);          }
+    inline int i2ixyz( int i, Vec3i& ip ) const { ip.z=i/nxy; i=i%nxy; ip.y=i/n.x; ip.x=i%n.x;  }
 
 };
 

@@ -12,6 +12,8 @@
 #include "grids3D.h"
 #include "Multipoles.h"
 
+#include "PBCsystem.h"
+
 class Atom{  public:
     Vec3d  pos;
     double Q;

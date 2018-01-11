@@ -66,6 +66,8 @@ class TestAppMultipoles : public AppSDL2OGL_3D {
 
     MultipoleGrid grid;
 
+    PBCsystem system1;
+
 	virtual void draw   ();
 	virtual void drawHUD();
 	//virtual void mouseHandling( );
@@ -89,6 +91,11 @@ TestAppMultipoles::TestAppMultipoles( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     printf("DEBUG 1\n");
     grid.atomsToCells( nbodies, pos, charges );
     //exit(0);
+
+    // Test PBCsystem
+    //system1.lvec.set( {1.0,0.5,0.0},{0.0,1.0,0.5},{0.5,0.0,1.0} );
+    //system1.setCell( (Mat3d){ 1.0,0.5,0.0,  0.0,1.0,0.5,   0.5,0.0,1.0 } );
+    system1.setCell( (Mat3d){ 1.0,randf(-0.5,0.5),randf(-0.5,0.5),  randf(-0.5,0.5),1.0,randf(-0.5,0.5),   randf(-0.5,0.5),randf(-0.5,0.5),1.0 } );
 }
 
 void TestAppMultipoles::draw(){
@@ -96,6 +103,7 @@ void TestAppMultipoles::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+	/*
 	for(int i=0; i<nbodies; i++){
         Draw::color_of_hash( 1545464+grid.atom2cell[i]*15464 );
         Draw3D::drawPoint( pos[i] );
@@ -106,6 +114,20 @@ void TestAppMultipoles::draw(){
         Draw3D::drawLine( pos[i], grid.ruler.box2pos( ip, (Vec3d){4.0,4.0,4.0} ) );
         //Draw3D::drawLine( ,  )
 	}
+	*/
+
+	//glColor3f(0.0,0.0,1.0); Draw3D::drawTriclinicBox(system1.lvec, {0.0,0.0,0.0}, {1.0,1.0,1.0} );
+	//glColor3f(1.0,0.0,0.0); Draw3D::drawTriclinicBox(system1.ilvec, {0.0,0.0,0.0}, {1.0,1.0,1.0} );
+
+	Vec3d pmin={-1.0,-2.0,-3.0};
+	Vec3d pmax={2.5,1.5,0.5};
+	Vec3d cmin,cmax;
+
+	triclinicBounds( system1.lvec, pmin, pmax, cmin, cmax );
+
+	glColor3f(0.0,0.0,1.0); Draw3D::drawBBox( pmin, pmax );
+	glColor3f(1.0,0.0,0.0); Draw3D::drawTriclinicBox(system1.ilvec, cmin, cmax );
+
 
 };
 
