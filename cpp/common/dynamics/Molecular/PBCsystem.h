@@ -6,6 +6,10 @@
 #include "Mat3.h"
 #include "grids3D.h"
 
+class AnyShortRangeFF{ public: // Any == naming convetion for interface
+    virtual void processAtomNeighbors( int nbons, int iatom, Vec3d* hbond, double* rbond, int* neigh_is)=0;
+};
+
 inline void triclinicBounds( const Mat3d& lvec, const Vec3d& pmin, const Vec3d& pmax, Vec3d& cmin, Vec3d& cmax ){
     //Vec3d p;, c000,c001,c010,c011,c000,c001,c010,c011;
     Vec3d cs[8];
@@ -24,10 +28,6 @@ inline void triclinicBounds( const Mat3d& lvec, const Vec3d& pmin, const Vec3d& 
         cmax.setIfGreater(cs[i]);
     }
 }
-
-class SymFuncFF_interface{
-    virtual void acumFF( int nbond, Vec3d *hbond, double* rbond, int *btype )=0;
-};
 
 class PBCsystem{ public:
     Mat3d  lvec;
@@ -51,6 +51,8 @@ class PBCsystem{ public:
     int   * atom2cell = NULL;
     int   * pbc_iatom = NULL;
     Vec3d * pbc_pos   = NULL;
+
+    AnyShortRangeFF *SRFF;
 
 
     /*
@@ -173,21 +175,18 @@ class PBCsystem{ public:
         //for(int i=0; i<n; i++){ ps[i]=pos_[i]; }
     }
 
-    void symfunc_R  ( int type0, int type1,            double r1                       ){};
-    void symfunc_Ang( int type0, int type1, int type2, double r1, double r2, double ca ){}; // just placeholder
-
     void gatherSymFunctions( ){
         //int icells[27];
-        Vec3d  *hbond     = new Vec3d [nAtomPBC];
-        double *lbond     = new double[nAtomPBC];
-        int    *neighType = new   int [nAtomPBC];
+        Vec3d  *hbond    = new Vec3d [nAtomPBC];
+        double *lbond    = new double[nAtomPBC];
+        int    *neigh_is = new   int [nAtomPBC];
 
         for(int i=0; i<natoms; i++ ){
             Vec3d p  = pos[i];
             Vec3i ip = ruler.ipcell(p);
             int ii=0;
             int nbonds=0;
-            int typei = type[i];
+            //int typei = type[i];
             for( int ix=-1; ix<2; ix++ ){ for( int iy=-1; iy<2; iy++ ){ for( int iz=-1; iz<2; iz++ ){
                 int icell = ruler.ixyz2i({ip.x+ix,ip.y+iy,ip.z+iz});
                 int j0  = cell2atom[icell];
@@ -199,12 +198,14 @@ class PBCsystem{ public:
                         double r = sqrt(r2);
                         lbond    [nbonds] = r;
                         hbond    [nbonds].set_mul(d,1/r);
-                        neighType[nbonds] = type[pbc_iatom[j]];
+                        //neighType[nbonds] = type[pbc_iatom[j]];
+                        neigh_is[nbonds] = pbc_iatom[j];
                         nbonds++;
                     }
                 }
             }}}
             // TODO: this should be made idependent (class call?,function pointer?, lambda function? )
+            /*
             for(int ib=0; ib<nbonds; ib++){
                 Vec3d  hi    = hbond[ib];
                 double ri    = lbond[ib];
@@ -216,10 +217,13 @@ class PBCsystem{ public:
                     symfunc_Ang( typei, type1, neighType[jb], ri, lbond[jb], ca );
                 }
             }
+            */
+            SRFF->processAtomNeighbors( i, nbonds, hbond, lbond, neigh_is );
         }
         delete [] hbond;
         delete [] lbond;
-        delete [] neighType;
+        //delete [] neighType;
+        delete [] neigh_is;
     }
 
 

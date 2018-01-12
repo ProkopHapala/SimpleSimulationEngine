@@ -18,6 +18,7 @@
 #include "Multipoles.h"
 #include "grids3D.h"
 #include "PBCsystem.h"
+#include "BehlerSymFunc.h"
 #include "MultipoleGrid.h"
 
 #include "AppSDL2OGL_3D.h"
