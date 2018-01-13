@@ -15,7 +15,7 @@
 
 #include "Shader.h"
 #include "GLObject.h"
-#include "SceneNode.h"
+#include "SceneOGL3.h"
 
 const float	VIEW_ZOOM_STEP     = 1.2f;
 const float	VIEW_ZOOM_DEFAULT  = 10.0f;
@@ -24,19 +24,29 @@ const float	VIEW_DEPTH_DEFAULT = 1000.0;
 class ScreenSDL2OGL3{
 	public:
 
+	int id=0;
+
+	// --- camera
+	Quat4f qCamera;
+	Camera cam;
+	/*
     Quat4d qCam;
 	Vec3d  camPos;
 	Mat3d  camRot;
 	Vec2d  tgFrustrum; // tangent of scene frustrum
+	*/
 
-    bool deffered;
+	std::vector<SceneOGL3*> scenes;
+
+	// --- defered rendering
+    bool deffered = false;
 	Shader   * canvasShader;
 	GLObject * canvasQuad;
 	GLuint canvas_depth_tex,canvas_color_tex;
     GLuint FramebufferName = 0;
     GLuint depthrenderbuffer;
 
-    SceneNode3D * scene;
+    //SceneNode3D * scene;
 
 	// World2D* scene;   // TODO
 	int   WIDTH;
@@ -56,8 +66,8 @@ class ScreenSDL2OGL3{
 
 	bool hasFocus;
 	SDL_Window*      window;
-	SDL_Renderer*    renderer;
 	SDL_GLContext    context = NULL;
+	//SDL_Renderer*    renderer;
 
 // ============ function declarations
 
@@ -67,11 +77,11 @@ class ScreenSDL2OGL3{
 	virtual void setupDefferedRender();
 	virtual void setDefaults  ();
 
-	void update( );
+	//void update();
 	bool checkFramebufferStatus();
 
-	int init( int& id, int WIDTH_, int HEIGHT_ );
-	ScreenSDL2OGL3( int& id, int WIDTH_, int HEIGHT_ );
+	int init     ( int WIDTH_, int HEIGHT_ );
+	ScreenSDL2OGL3( int WIDTH_, int HEIGHT_ );
 
 };
 

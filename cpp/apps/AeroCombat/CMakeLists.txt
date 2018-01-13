@@ -31,8 +31,21 @@ add_executable( AeroCraft_editor
 )
 target_link_libraries( AeroCraft_editor ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+find_package(GLEW REQUIRED)
+if (GLEW_FOUND)
+    include_directories(${GLEW_INCLUDE_DIRS})
+    link_libraries(${GLEW_LIBRARIES})
+endif()
+add_executable( AeroCombatOGL3
+	AeroCombatOGL3.cpp 
+	$<TARGET_OBJECTS:SDL2OGL>
+)
+target_link_libraries( AeroCombatOGL3 ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
+
+
+
 add_custom_command(
-    TARGET ${NAME} AeroCraft_editor
+    TARGET ${NAME} AeroCraft_editor AeroCombatOGL3
     #COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${MY_SRC_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data

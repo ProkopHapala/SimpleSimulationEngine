@@ -161,10 +161,12 @@ class Mat4TYPE{
     // http://www.songho.ca/opengl/gl_projectionmatrix.html
     void setOrthographic( TYPE W, TYPE H, TYPE zmin, TYPE zmax ){
         TYPE invdz = -1/(zmin-zmax);
-        //array[0 ]  = 1/W; array[1 ] = 0;   array[2 ] =  0;       array[3 ] = 0;
-        //array[4 ]  = 0;   array[5 ] = 1/H; array[6 ] =  0;       array[7 ] = 0;
-        //array[8 ]  = 0;   array[9 ] = 0;   array[10] = 2*invdz;  array[11] = (zmax+zmin)*invdz;
-        //array[12]  = 0;   array[13] = 0;   array[14] =  0;       array[15] = 1;
+        /*
+        array[0 ]  = 1/W; array[1 ] = 0;   array[2 ] =  0;       array[3 ] = 0;
+        array[4 ]  = 0;   array[5 ] = 1/H; array[6 ] =  0;       array[7 ] = 0;
+        array[8 ]  = 0;   array[9 ] = 0;   array[10] = 2*invdz;  array[11] = (zmax+zmin)*invdz;
+        array[12]  = 0;   array[13] = 0;   array[14] =  0;       array[15] = 1;
+        */
         array[0 ]  = 1/W; array[1 ] = 0;   array[2 ] =  0;                  array[3 ] = 0;
         array[4 ]  = 0;   array[5 ] = 1/H; array[6 ] =  0;                  array[7 ] = 0;
         array[8 ]  = 0;   array[9 ] = 0;   array[10] = 2*invdz;             array[11] = 0;

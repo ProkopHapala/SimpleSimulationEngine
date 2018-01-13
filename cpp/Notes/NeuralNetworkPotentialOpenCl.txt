@@ -1,0 +1,5 @@
+
+﻿## Search neighbors
+ * multiply atoms by PBC  lattice
+    * automatically compute how many periodic replicas we need for particular cutoff
+ * atoms2box: sketches_SDL/3D/test_Multipoles.cpp    MultipoleGrid::atomsToCells( int n, Vec3d * ps, double * Qs )

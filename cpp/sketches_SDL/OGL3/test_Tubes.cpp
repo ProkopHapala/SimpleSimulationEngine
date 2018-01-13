@@ -374,11 +374,17 @@ void init(){
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3); // Opengl 3.2
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2); // Opengl 3.2
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,  24);
+    //printf( "GL_VENDOR  : %s \n", glGetString(GL_VENDOR  ) );
+	//printf( "GL_VERSION : %s \n", glGetString(GL_VERSION ) );
+
     window = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     if ( !window ) die("Unable to create window");
+
     context = SDL_GL_CreateContext( window );
     SDL_GL_SetSwapInterval(1);
+    printf( "GL_VENDOR  : %s \n", glGetString(GL_VENDOR  ) );
+	printf( "GL_VERSION : %s \n", glGetString(GL_VERSION ) );
 
     glewExperimental = true; // Needed for core profile
 	if (glewInit() != GLEW_OK) {
@@ -387,6 +393,12 @@ void init(){
 		quit();
 		//return -1;
 	}
+
+	/*
+    SDL_Window* window2 = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    if ( !window2 ) die("Unable to create window");
+    SDL_GLContext context = SDL_GL_CreateContext( window2 );
+    */
 
 	// vertex array object
 	glGenVertexArrays(1, &vao);  				// Allocate and assign a Vertex Array Object to our handle

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-
+#include <vector>
 #include <GL/glew.h>
 //#define GL_GLEXT_PROTOTYPES
 //#include <GL/gl.h>
@@ -17,106 +17,131 @@
 
 #include "Shader.h"
 #include "GLObject.h"
-#include "SceneNode.h"
+#include "SceneOGL3.h"
 #include "ScreenSDL2OGL3.h"
+#include "AppSDL2OGL3.h"
+
+
+#include "Mesh.h"
+#include "Solids.h"
+#include "GLfunctions.h"
+#include "GLobjects.h"
+#include "GLObject.h"
+#include "Shader.h"
 
 // ========== functions
 
-class TestAppScreenOGL3{
-    public:
+class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
+    //virtual void draw(){}
 
-    int frameCount = 0;
-    bool STOP = false;
+    Shader *sh1;
+    GLMesh *glmesh,*gledges;
 
-    SceneNode3D    * thisNode;
-    ScreenSDL2OGL3 * thisScreen;
+    //int npoints=0;
+    //Vec3f* points=NULL;
 
-    //static const int nBodies = 16;
-    //PointBody bodies[nBodies];      // this would require to decouple "class Body" from SDL2OGL
+    TestAppScreenOGL3():AppSDL2OGL3(),SceneOGL3(){
 
-    void inputHanding ();
-    void init();
-    void draw();
-    void loop( int nframes );
-    void quit();
+        // FIXME: second window does not work :((((
+        //SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+        //screens.push_back( new ScreenSDL2OGL3( 800, 600) );
 
-    TestAppScreenOGL3();
+        for( ScreenSDL2OGL3* screen: screens ) screen->scenes.push_back( this );
 
-};
+        sh1=new Shader();
+        sh1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
+        //sh1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+        //sh1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/cut3DTexture.glslf"   );
+        sh1->getDefaultUniformLocation();
 
-TestAppScreenOGL3::TestAppScreenOGL3(){
+        /*
+        Mesh mesh;
+        mesh.fromFileOBJ( "common_resources/turret.obj" );
+        mesh.polygonsToTriangles(false);
+        mesh.tris2normals(true);
+        mesh.findEdges( );
+        */
 
-    // ------------- object
-/*
-	object1 = new GLObject( );
-	object1->nVert   = 4;
-	object1->vertDim = 2;
-	object1->vertexes = &vertexes[0][0];
-	object1->init();
-*/
+        /*
+        CMesh mesh = Solids::Octahedron;
+        nVerts = countVerts( mesh.nfaces, mesh.ngons );
+        Vec3f * model_vpos = new Vec3f[nVerts];
+        Vec3f * model_vnor = new Vec3f[nVerts];
+        hardFace( mesh.nfaces, mesh.ngons, mesh.faces, mesh.verts, (GLfloat*)model_vpos, (GLfloat*)model_vnor );
+        glmesh = new GLMesh();
+        glmesh->init_d( mesh.points.size(), mesh.triangles.size()*3, ((int*)&mesh.triangles[0]), (double*)&(mesh.points [0]), (double*)&(mesh.normals[0]), NULL, NULL );
+        */
 
-    // ------------- shader
+        /*
+        const CMesh& cmsh = Solids::Icosahedron;
+        glmesh->init_d( cmsh.nvert, cmsh.ntri*3, cmsh., (double*)&(mesh.points [0]), (double*)&(mesh.normals[0]), NULL, NULL );
+        */
+        glmesh = new GLMesh();
+        //glmesh.draw_mode = GL_LINES;
+        //glmesh->init_wireframe( Solids::Icosahedron );
+        glmesh->init_wireframe( Solids::Cube );
 
-/*
-	shader1=new Shader();
-	//shader1->init( "shaders/plain_vert.c", "shaders/sphere_frag.c" );
-	//shader1->init( "shaders/afine2D_vert.c", "shaders/sphere_frag.c" );
-	shader1->init( "shaders/plain_vert.c", "shaders/texture_frag.c" );
+        /*
+        npoints = 100;
+        points  = new Vec3f[npoints];
+        float span=50.0;
+        for(int i=0; i<npoints; i++){ points[i]={randf(-span,span),randf(-span,span),randf(-span,span)}; }
+        */
 
-    resolution[0] = (float)WIDTH;
-    resolution[1] = (float)HEIGHT;
-
-	glUseProgram(shader1->shaderprogram);
-
-    GLuint uloc;
-    uloc = glGetUniformLocation( shader1->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, resolution  );
-*/
-
-}
-
-// FUNCTION ======	inputHanding
-void TestAppScreenOGL3::inputHanding(){
-	SDL_Event event;
-	while(SDL_PollEvent(&event)){
-		if( event.type == SDL_KEYDOWN ){
-			if(event.key.keysym.sym == SDLK_ESCAPE ) { quit(); }
-			if(event.key.keysym.sym == SDLK_SPACE  ) { STOP=!STOP; }
-		}
-		if( event.type == SDL_QUIT){ quit();  };
-	}
-	int mouseX, mouseY;
-	SDL_GetMouseState( &mouseX, &mouseY );
-}
-
-void TestAppScreenOGL3::quit(){
-	//glDeleteVertexArrays(1, &vao);
-    //if( context != NULL ) SDL_GL_DeleteContext( context );
-    //if( window  != NULL ) SDL_DestroyWindow   ( window  );
-    SDL_Quit();
-	exit(0);
-};
-
-void TestAppScreenOGL3::loop( int nframes ){
-    for ( int iframe=1; iframe<nframes; iframe++)    {
- 		if( ( !STOP )&&( thisScreen != NULL ) )
-            thisScreen->draw();
-		inputHanding();
-		frameCount++;
-        SDL_Delay(10);
+        Camera& cam = screens[0]->cam;
+        //cam.zmin   = -1000.0;
+        //cam.zmin = -1000.0; cam.zmax = 1000.0; cam.zoom = 20.00f;
+        cam.zmin = 10.0; cam.zmax = 1000.0; cam.zoom = 20.00f;
+        cam.aspect = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
+        //cam.aspect = (float)screens[0]->WIDTH/(float)screens[0]->HEIGHT;
     }
-}
+
+    virtual void draw( Camera& cam ){
+
+        glClearColor(1.0, 1.0, 1.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
+
+        sh1->use();
+
+        Mat3f mrot; mrot.setOne();
+        sh1->set_modelMat( (GLfloat*)&mrot );
+        sh1->set_modelPos( (const GLfloat[]){0.0f,0.0f,0.0f} );
+        setCamera( *sh1, cam );
+
+        /*
+        setCameraOrtho   (*sh1, cam);
+        sh1->set_modelMat( (GLfloat*)&cam.rot );
+        sh1->set_modelPos( (const GLfloat[]){0.0f,0.0f,0.0f} );
+        //glmesh->draw();
+        */
+
+        float span = 100.0;
+        srand(15454);
+        GLuint ucolor = sh1->getUloc("baseColor");
+        glmesh->preDraw ();
+        for( int i=0; i<100; i++ ){
+            //sh1->set_modelPos( (GLfloat*)(points+i) );
+            Vec3f pos = (Vec3f){ randf(-span,span),randf(-span,span),randf(-span,span) };
+            sh1->set_modelPos( (GLfloat*)&pos );
+            glUniform4f( ucolor, randf(0,1), randf(0,1), randf(0,1), 1.0 );
+            //glUniform4fv( sh1->getUloc("baseColor"), 1,  (const float[]){1.0, 0.0, 0.0, 1.0} );
+            //glmesh->draw();
+            glmesh->drawRaw();
+        }
+
+    };
+
+
+
+};
 
 
 // ================== main
 
-
 TestAppScreenOGL3 * app;
 
 int main(int argc, char *argv[]){
-
     app = new TestAppScreenOGL3( );
-    //app->init();
-	//app->setup();
     app->loop( 1000000 );
     app->quit();
     return 0;

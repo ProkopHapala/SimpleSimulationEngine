@@ -3,26 +3,33 @@
 
 // ============== per frame
 
+/*
 void ScreenSDL2OGL3::update( ){
 	draw( );
 	if( deffered ) drawDeffered( );
 	SDL_GL_SwapWindow(window);
 	//SDL_RenderPresent(renderer);
 };
+*/
 
-void ScreenSDL2OGL3::draw( ){
-
-    glClearColor(0.0, 0.0, 1.0, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
-
-    if( deffered ){ glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName); }
-    else          { glBindFramebuffer(GL_FRAMEBUFFER, 0);               }
-
-    glEnable   ( GL_DEPTH_TEST );
-    glDepthFunc( GL_LESS );
-
-    scene->render( camPos, camRot, tgFrustrum, 1.0 );
-
+void ScreenSDL2OGL3::draw(){
+    //printf( "DEBUG ScreenSDL2OGL3::draw\n" );
+    SDL_GL_MakeCurrent(window,context);
+    //glClearColor(1.0, 1.0, 1.0, 1.0);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
+    for(SceneOGL3* scene: scenes){
+        if( scene){
+            //printf( "DEBUG ScreenSDL2OGL3[%i]::draw\n", id );
+            scene->draw( cam );
+        }
+    }
+    //if( deffered ){ glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName); }
+    //else          { glBindFramebuffer(GL_FRAMEBUFFER, 0);               }
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    //glEnable   ( GL_DEPTH_TEST );
+    //glDepthFunc( GL_LESS );
+    //scene->render( camPos, camRot, tgFrustrum, 1.0 );
+    SDL_GL_SwapWindow(window);
 }
 
 void ScreenSDL2OGL3::drawDeffered( ){
@@ -148,49 +155,36 @@ void ScreenSDL2OGL3::init( int& id, int WIDTH_, int HEIGHT_ ){
 }
 */
 
-int ScreenSDL2OGL3::init( int& id, int WIDTH_, int HEIGHT_ ){
-
+int ScreenSDL2OGL3::init( int WIDTH_, int HEIGHT_ ){
 
     WIDTH  = WIDTH_;
 	HEIGHT = HEIGHT_;
 	setDefaults();
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0){ printf( "Unable to initialize SDL\n" ); return -1; };
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3); // Opengl 3.2
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2); // Opengl 3.2
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    //printf("S DEBUG 1\n");
+    window  = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    //printf("S DEBUG 2\n");
+    context = SDL_GL_CreateContext( window );
+    //printf("S DEBUG 3\n");
+    SDL_GL_SetSwapInterval(1);
+    //printf("S DEBUG 4\n");
 
-    printf( "GL_VENDOR  : %s \n", glGetString(GL_VENDOR)  );
-	printf( "GL_VERSION : %s \n", glGetString(GL_VERSION) );
-
-    window = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     id = SDL_GetWindowID(window); printf( " win id %i \n", id );
 	char str[40];  sprintf(str, " Window id = %d", id );
+	//printf("S DEBUG 4\n");
 	SDL_SetWindowTitle( window, str );
     if ( !window ){  printf( "Unable to initialize SDL\n" ); return -1; };
-
-    context = SDL_GL_CreateContext( window );
-    SDL_GL_SetSwapInterval(1);
-
-	// vertex array object
-	//glGenVertexArrays(1, &vao);  				// Allocate and assign a Vertex Array Object to our handle
-	//glBindVertexArray(vao); 					// Bind our Vertex Array Object as the current used object
+    //printf("S DEBUG 6\n");
+	return id;
 }
 
-ScreenSDL2OGL3::ScreenSDL2OGL3( int& id, int WIDTH_, int HEIGHT_ ){
-	init( id, WIDTH_, HEIGHT_ );
+ScreenSDL2OGL3::ScreenSDL2OGL3( int WIDTH_, int HEIGHT_ ){
+	init( WIDTH_, HEIGHT_ );
+	qCamera.setOne();
 };
 
 
-
-
-
-
-
 // ========= MISC
-
-
 
 bool ScreenSDL2OGL3::checkFramebufferStatus(){
     // check FBO status

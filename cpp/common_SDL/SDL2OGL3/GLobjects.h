@@ -6,6 +6,8 @@
 #include "GLfunctions.h"
 //#include <SDL2/SDL.h>
 
+#include "CMesh.h"
+
 //float * double2float( int n, double * ds ){ float*fs=float[n]; for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; return fs; }
 void double2float( int n, const double * ds, float * fs ){ for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; }
 
@@ -50,6 +52,18 @@ class GLMesh{ public:
         if(c_vUVs ){ double2float( nVerts*2, c_vUVs,fs); newArrayBuffer( vUVs, nVerts*2*sizeof(GLfloat), fs, usage ); }else{ vUVs=0; };
         delete[] fs;
     };
+
+    /*
+    void init_hardTris( const CMesh& msh ){
+        init_d( msh.nvert, msh.ntri, msh.tris, msh.verts, msh.verts, const double * c_vcol, const double * c_vUVs );
+        delete [] normals;
+    }
+    */
+
+    void init_wireframe( const CMesh& msh ){
+        draw_mode = GL_LINES;
+        init_d( msh.nvert, msh.nedge*2, (int*)msh.edges, (double*)msh.verts, NULL, NULL, NULL );
+    }
 
     void deleteBuffs(){ for(int i=0; i<4; i++){ if( buffs[i] ){ glDeleteBuffers(1, &buffs[i] ); } }; }
 
