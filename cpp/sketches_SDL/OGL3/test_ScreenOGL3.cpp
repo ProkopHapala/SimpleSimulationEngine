@@ -21,7 +21,6 @@
 #include "ScreenSDL2OGL3.h"
 #include "AppSDL2OGL3.h"
 
-
 #include "Mesh.h"
 #include "Solids.h"
 #include "GLfunctions.h"
@@ -40,7 +39,7 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
     //int npoints=0;
     //Vec3f* points=NULL;
 
-    TestAppScreenOGL3():AppSDL2OGL3(),SceneOGL3(){
+    TestAppScreenOGL3():AppSDL2OGL3(800,600),SceneOGL3(){
 
         // FIXME: second window does not work :((((
         //SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
@@ -79,7 +78,8 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         glmesh = new GLMesh();
         //glmesh.draw_mode = GL_LINES;
         //glmesh->init_wireframe( Solids::Icosahedron );
-        glmesh->init_wireframe( Solids::Cube );
+        //glmesh->init_wireframe( Solids::Cube );
+        glmesh->init_wireframe( Solids::Octahedron );
 
         /*
         npoints = 100;
@@ -91,7 +91,7 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         Camera& cam = screens[0]->cam;
         //cam.zmin   = -1000.0;
         //cam.zmin = -1000.0; cam.zmax = 1000.0; cam.zoom = 20.00f;
-        cam.zmin = 10.0; cam.zmax = 1000.0; cam.zoom = 20.00f;
+        cam.zmin = 1.0; cam.zmax = 1000.0; cam.zoom = 20.00f;
         cam.aspect = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
         //cam.aspect = (float)screens[0]->WIDTH/(float)screens[0]->HEIGHT;
     }
@@ -115,15 +115,28 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         //glmesh->draw();
         */
 
+        int npoints = 1000;
+        int nx = (int)(sqrt(npoints));
+        int ny = npoints/nx;
+        float step = 2.5;
         float span = 100.0;
         srand(15454);
         GLuint ucolor = sh1->getUloc("baseColor");
         glmesh->preDraw ();
-        for( int i=0; i<100; i++ ){
+        int nviewed = 0;
+        for( int i=0; i<npoints; i++ ){
             //sh1->set_modelPos( (GLfloat*)(points+i) );
-            Vec3f pos = (Vec3f){ randf(-span,span),randf(-span,span),randf(-span,span) };
+            //Vec3f pos = (Vec3f){ randf(-span,span),randf(-span,span),randf(-span,span) };
+            //Vec3f pos = (Vec3f){ randf(-span,span),randf(-span,span),randf(-0,0) };
+            Vec3f pos = (Vec3f){ step*(i/nx),step*(i%nx),0.0 };
             sh1->set_modelPos( (GLfloat*)&pos );
-            glUniform4f( ucolor, randf(0,1), randf(0,1), randf(0,1), 1.0 );
+            //glUniform4f( ucolor, randf(0,1), randf(0,1), randf(0,1), 1.0 );
+            //if( cam.pointInFrustrum(pos) )
+            if( cam.sphereInFrustrum(pos,0.9) )
+                { glUniform4f( ucolor, 1.0, 0.0, 0.0, 1.0 ); nviewed++; }
+            else{ glUniform4f( ucolor, 0.0, 0.0, 1.0, 1.0 ); }
+            printf( "nviewed %i \n", nviewed );
+
             //glUniform4fv( sh1->getUloc("baseColor"), 1,  (const float[]){1.0, 0.0, 0.0, 1.0} );
             //glmesh->draw();
             glmesh->drawRaw();

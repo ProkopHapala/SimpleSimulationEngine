@@ -75,7 +75,8 @@ class ScreenSDL2OGL3{
 	virtual void drawDeffered();
 
 	virtual void setupDefferedRender();
-	virtual void setDefaults  ();
+	virtual void setDefaults        ();
+	//virtual void inputStateHandling ( const Uint8 *keys );
 
 	//void update();
 	bool checkFramebufferStatus();

@@ -25,15 +25,25 @@ class Camera{ public:
     float  zoom  =10.0f;
     float  aspect=1.0;
     float  zmin  =1.0;
-    float  zmax  =1000.0;
+    float  zmax  =1000000.0;
 
     bool pointInFrustrum( Vec3f p ){
         p.sub(pos);
         Vec3f c;
         rot.dot_to( p, c );
-        float y = c.z/(zoom);
-        float x = c.z/(zoom*aspect);
-        return  (c.x>-x)&&(c.x<x) && (c.y>-y)&&(c.x<y) && (c.z>zmin)&&(c.z<zmax);
+        float tgx = c.x*zoom*aspect;
+        float tgy = c.y*zoom;
+        float cz  = c.z*zmin;
+        return (tgx>-cz)&&(tgx<cz) && (tgy>-cz)&&(tgy<cz) && (c.z>zmin)&&(c.z<zmax);
+    }
+
+    bool sphereInFrustrum( Vec3f p, float R ){
+        p.sub(pos);
+        Vec3f c;
+        rot.dot_to( p, c );
+        float my = c.z*zmin/zoom;
+        float mx = my/aspect + R;  my+=R;
+        return (c.x>-mx)&&(c.x<mx) && (c.y>-my)&&(c.y<my) && ((c.z+R)>zmin)&&((c.z-R)<zmax);
     }
 
 };
