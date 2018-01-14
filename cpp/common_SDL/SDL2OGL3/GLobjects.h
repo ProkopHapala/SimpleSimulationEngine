@@ -53,13 +53,6 @@ class GLMesh{ public:
         delete[] fs;
     };
 
-    /*
-    void init_hardTris( const CMesh& msh ){
-        init_d( msh.nvert, msh.ntri, msh.tris, msh.verts, msh.verts, const double * c_vcol, const double * c_vUVs );
-        delete [] normals;
-    }
-    */
-
     void init_wireframe( const CMesh& msh ){
         draw_mode = GL_LINES;
         init_d( msh.nvert, msh.nedge*2, (int*)msh.edges, (double*)msh.verts, NULL, NULL, NULL );

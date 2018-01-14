@@ -27,7 +27,6 @@ inline void push2f( std::vector<float>& vs, const Vec2f& v ){ vs.push_back(v.x);
 inline void push3i( std::vector<int>&   vs, const Vec3i& v ){ vs.push_back(v.x); vs.push_back(v.y); vs.push_back(v.z); }
 inline void push2i( std::vector<int>&   vs, const Vec2i& v ){ vs.push_back(v.x); vs.push_back(v.y); }
 
-
 GLMesh* vecs2mesh( int n, Vec3f* ps, Vec3f* ds, float sc ){
     //int n    = vpos.size();
     Vec3f* vs =new Vec3f[n*2];
@@ -37,6 +36,29 @@ GLMesh* vecs2mesh( int n, Vec3f* ps, Vec3f* ds, float sc ){
     mesh->draw_mode = GL_LINES;
     delete [] vs;
     return mesh;
+}
+
+GLMesh* hardTriangles2mesh( const CMesh& msh ){
+    Vec3f *vs = new Vec3f[msh.ntri*3];
+    Vec3f *ns = new Vec3f[msh.ntri*3];
+    for(int i=0; i<msh.ntri; i++){
+        int i3=i*3;
+        Vec3i iv= msh.tris[i];
+        Vec3f a,b,c,nor;
+        convert( msh.verts[iv.a], a );
+        convert( msh.verts[iv.b], b );
+        convert( msh.verts[iv.c], c );
+        nor.set_cross(a-c,b-c); nor.normalize();
+        vs[i3  ]=a; ns[i3  ]=nor;
+        vs[i3+1]=b; ns[i3+1]=nor;
+        vs[i3+2]=c; ns[i3+2]=nor;
+    };
+    GLMesh* glmesh=new GLMesh();
+    glmesh->init( msh.ntri*3, 0, NULL, vs, ns, NULL, NULL );
+    glmesh->draw_mode = GL_TRIANGLES;
+    delete [] vs;
+    delete [] ns;
+    return glmesh;
 }
 
 //hardMesh( int n, Vec3i* tris, Vec3f* ps ){}

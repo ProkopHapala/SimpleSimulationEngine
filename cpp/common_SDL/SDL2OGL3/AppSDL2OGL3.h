@@ -116,8 +116,8 @@ void AppSDL2OGL3::update(){
         if( keys[ SDL_SCANCODE_A     ] ){ cam.pos.add_mul( cam.rot.a,  keyMoveSpeed ); }
         if( keys[ SDL_SCANCODE_D     ] ){ cam.pos.add_mul( cam.rot.a, -keyMoveSpeed ); }
 
-        if( keys[ SDL_SCANCODE_KP_PLUS  ] ){ cam.zoom/=1.01; }
-        if( keys[ SDL_SCANCODE_KP_MINUS ] ){ cam.zoom*=1.01; }
+        if( keys[ SDL_SCANCODE_KP_PLUS  ] ){ cam.zoom*=1.01; }
+        if( keys[ SDL_SCANCODE_KP_MINUS ] ){ cam.zoom/=1.01; }
         int dmx,dmy;
         Uint32 buttons = SDL_GetRelativeMouseState( &dmx, &dmy);
         if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
