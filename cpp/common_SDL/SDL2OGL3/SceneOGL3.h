@@ -27,7 +27,9 @@ class Camera{ public:
     float  zmin  =1.0;
     float  zmax  =1000000.0;
 
-    bool pointInFrustrum( Vec3f p ){
+    inline void lookAt( Vec3f p, float R ){ pos = p + rot.c*-R; }
+
+    inline bool pointInFrustrum( Vec3f p ) const {
         p.sub(pos);
         Vec3f c;
         rot.dot_to( p, c );
@@ -37,7 +39,7 @@ class Camera{ public:
         return (tgx>-cz)&&(tgx<cz) && (tgy>-cz)&&(tgy<cz) && (c.z>zmin)&&(c.z<zmax);
     }
 
-    bool sphereInFrustrum( Vec3f p, float R ){
+    inline bool sphereInFrustrum( Vec3f p, float R ) const {
         p.sub(pos);
         Vec3f c;
         rot.dot_to( p, c );

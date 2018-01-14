@@ -8,7 +8,10 @@ layout(location = 0) in vec3 vertPos_model;
 layout(location = 1) in vec3 vertNormal_model;
 
 // OUT --- Output data ; will be interpolated for each fragment.
-noperspective out vec3 fragNormal_world;
+//noperspective out vec3 fragNormal_world;
+//noperspective out vec3 fragPos_world;
+smooth out vec3 fragNormal_world;
+smooth out vec3 fragPos_world;
 
 // UNI --- Values that stay constant for the whole mesh.
 uniform vec3 modelPos;
@@ -19,6 +22,7 @@ uniform mat4 camMat;
 void main(){
 	//gl_Position =  MVC * vec4(vertexPosition_modelspace,1);
 	vec3 position_world = modelPos + modelMat * vertPos_model;
+	fragPos_world       = position_world;
 	gl_Position         = camMat   * vec4( position_world-camPos, 1 );
 	fragNormal_world    = modelMat * vertNormal_model;
 

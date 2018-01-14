@@ -27,6 +27,8 @@ class ScreenSDL2OGL3{
 	int id=0;
 
 	// --- camera
+	float  camDist   = 20.0;
+	Vec3f* camLookAt = NULL;
 	Quat4f qCamera;
 	Camera cam;
 	/*
