@@ -28,6 +28,10 @@
 
 //============ Globals
 
+
+TerrainOGL3 terrain1;
+
+
 Shader   *shader1,*shTerrain;
 GLObject *object1,*obj_terrain,*obj_flicker;
 GLMesh   *terrain_mesh,*terrain_mesh2;
@@ -83,6 +87,9 @@ Vec3d terrainFunc( Vec2d p ){ return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0
 //struct S { int a, b, c, d, e; };
 
 void setup(){
+
+
+
 
     //arr_func( 3, (const double[]){1.0,2.0,3.0} );
     //struct S s = { .c = 3, .d=4.0 }; // works only in C99 not in C++11
@@ -173,6 +180,14 @@ void setup(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     */
     newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
+
+    /*
+    Vec2f v1,v2,p; v1.set(1.0,0.0);v2.set(0.0,1.0);
+    p.set(-0.5,-0.5); printf( "%i  (%f,%f) \n", p.isBetweenRotations(v1,v2), p.cross(v1), p.cross(v2) );
+    exit(0);
+    */
+
+    terrain1.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
 
     delete [] height_map;
 
@@ -278,6 +293,8 @@ void draw(){
     //obj_flicker->draw_mode = GL_POINTS; glPointSize( 20.0 ); obj_flicker->draw_default();
     //obj_flicker->draw_mode = GL_LINE_STRIP;  glLineWidth( 5.0 );  obj_flicker->draw_default();
 
+
+    /*
     shTerrain->use();
 
     Vec3f modelPos = {0.0,0.0,0.0};
@@ -291,11 +308,6 @@ void draw(){
     //glBindSampler(0, uloc);
     //glUniform1i(uloc, 0);
 
-    /*
-    glActiveTexture( GL_TEXTURE0 );
-    glBindTexture  ( GL_TEXTURE_2D, txHeight );
-    glUniform1i    ( shTerrain->getUloc("txHeight"), 0 );
-    */
     bindTexture( 0, txHeight, shTerrain->getUloc("txHeight") );
 
     glUniform2fv   ( shTerrain->getUloc("uv_0"    ), 1, (const float[]){0.5f,0.5f} );
@@ -307,6 +319,16 @@ void draw(){
     modelPos = {-100.0f,0.0f,  0.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->draw();
     modelPos = {   0.0f,0.0f,100.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->draw();
     modelPos = {-100.0f,0.0f,100.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->draw();
+
+    */
+
+    terrain1.pos.x = camPos.x;
+    terrain1.pos.z = camPos.z;
+    terrain1.setViewRange( {mRot.c.x, mRot.c.z}, 0.3 );
+    terrain1.sh.use();
+    terrain1.sh.set_camPos( (float*)&camPos );
+    terrain1.sh.set_camMat( (float*)&camMat );
+    terrain1.draw();
 
     SDL_GL_SwapWindow(window);
 }

@@ -94,6 +94,8 @@ class Vec2TYPE{
 	inline void set_perp( const VEC& a )       { x=-a.y; y=a.x; }
 	inline TYPE cross ( const VEC& a ) const { return x*a.y - y*a.x; };
 
+	bool isBetweenRotations( const VEC& a, const VEC& b ){ return (cross(a)<0)&&(cross(b)>0);  }
+
 	inline void     mul_cmplx (               const VEC& b ){                            TYPE x_ =    x*b.x -   y*b.y;         y =    y*b.x +   x*b.y;       x=x_;  }
 	inline void pre_mul_cmplx ( const VEC& a               ){                            TYPE x_ =  a.x*  x - a.y*  y;         y =  a.y*  x + a.x*  y;       x=x_;  }
 	inline void set_mul_cmplx ( const VEC& a, const VEC& b ){                            TYPE x_ =  a.x*b.x - a.y*b.y;         y =  a.y*b.x + a.x*b.y;       x=x_;  }

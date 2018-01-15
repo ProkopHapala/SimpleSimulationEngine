@@ -13,6 +13,8 @@
 #include "GLUtils.h"
 #include "CMesh.h"
 
+#include "TerrainOGL3.h"
+
 //GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Vec3d (vertFunc)(Vec2d) ){
 
 
