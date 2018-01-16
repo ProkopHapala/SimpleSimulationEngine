@@ -28,6 +28,8 @@ class TerrainOGL3{ public:
     Vec2f viewMin = (Vec2f){1.0,0.0};
     Vec2f viewMax = (Vec2f){0.0,1.0};
 
+    int nVertDrawn=0;
+    int nDrawCalls=0;
 
     GLuint txHeight;
     GLuint stripUVs;
@@ -69,7 +71,7 @@ class TerrainOGL3{ public:
         Vec2f rot; rot.x=sqrt(1.0/(1.0+camTg*camTg)); rot.y=rot.x*camTg;
         viewMin.set_udiv_cmplx(camDir,rot);
         viewMax.set_mul_cmplx (camDir,rot);
-        printf(" (%f,%f), (%f,%f), (%f,%f) (%f,%f) \n", camDir.x,camDir.y,  viewMin.x,viewMin.y,   viewMax.x,viewMax.y,    rot.x,rot.y );
+        //printf(" (%f,%f), (%f,%f), (%f,%f) (%f,%f) \n", camDir.x,camDir.y,  viewMin.x,viewMin.y,   viewMax.x,viewMax.y,    rot.x,rot.y );
         //exit(0);
     }
 
@@ -79,6 +81,8 @@ class TerrainOGL3{ public:
         p=pa+dp; op = pa;
         for(int i=0; i<nSamp.a; i++ ){
             if( p.isBetweenRotations(viewMin,viewMax) ){
+                nDrawCalls++;
+                nVertDrawn+=nSamp.b*2;
                 glUniform2f( ulocs.pa, op.x, op.y );
                 glUniform2f( ulocs.pb,  p.x, p.y );
                 glDrawArrays( GL_TRIANGLE_STRIP, 0, nSamp.b );
@@ -89,6 +93,8 @@ class TerrainOGL3{ public:
     }
 
     void draw(){
+        nDrawCalls=0;
+        nVertDrawn=0;
         //sh.use();
         glUniform2f ( ulocs.uv0,      uv0.x, uv0.y );
         glUniform3fv( ulocs.mapScale,1, (GLfloat*)&mapScale );

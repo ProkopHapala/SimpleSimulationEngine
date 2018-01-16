@@ -1,8 +1,0 @@
-//  type   nrow ncol  pos  dir   
-Peltast;    4 20   -70.0 0.0    0.0 1.0
-Swordsman;  4 20   -50.0 0.0    0.0 1.0
-Pikeman;    8 32   -20.0 0.0    0.0 1.0
-Hoplite;    4 20    0.0  0.0    0.0 1.0
-Pikeman;    8 32    20.0 0.0    0.0 1.0
-Swordsman;  4 20    50.0 0.0    0.0 1.0
-Peltast;    4 20    70.0 0.0    0.0 1.0 

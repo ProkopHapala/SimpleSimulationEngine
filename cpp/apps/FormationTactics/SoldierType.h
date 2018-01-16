@@ -7,6 +7,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <unordered_map>
+
 class SoldierType{
 	public:
     //char   * name = "default";
@@ -61,53 +63,113 @@ class SoldierType{
         //printf("1 \n");
         char *str    = strdup(str_);
         printf( "%s\n", str );
-
         char * token = strtok(str, ";"); //printf( ">>%s<<\n", token );
         name = strdup(token);
         //sscanf( token, "%[^\n]s", name );
         printf( "%s\n", name.c_str() );
-
         //printf( " basic \n" );
         token = strtok(NULL, ";"); //printf( ">>%s<<\n", token );
         sscanf( token, "%lf %lf %lf %lf", &mass, &radius, &max_speed, &min_speed );
         //printf( "%lf %lf %lf %lf\n", mass, radius, max_speed, min_speed );
-
         //printf( " time \n" );
         token = strtok(NULL, ";"); //printf( ">>%s<<\n", token );
         sscanf( token, "%lf %lf", &stamina_regain, &time_buffer );
         //printf( "%lf %lf\n", stamina_regain, time_buffer );
-
         //printf( " melee \n" );
         token = strtok(NULL, ";"); //printf( ">>%s<<\n", token );
         sscanf( token, "%lf %lf %lf %lf %lf %lf %lf", &melee_skill, &melee_period, &melee_range, &melee_damage, &melee_penetration, &melee_fStamina, &melee_push );
         //printf( "%lf %lf %lf %lf %lf %lf %lf %lf\n", melee_skill, melee_period, melee_range, melee_damage, melee_penetration, melee_fStamina, melee_push );
-
         //printf( " defence \n" );
         token = strtok(NULL, ";"); //printf( ">>%s<<\n", token );
         sscanf( token, "%lf %lf %lf", &defence_skill, &defence_period, &defence_fStamina );
         //printf( "%lf %lf %lf %lf\n", defence_skill, defence_period, defence_fStamina );
-
         //printf( " fire \n" );
         token = strtok(NULL, ";"); //printf( ">>%s<<\n", token );
         sscanf( token, "%lf %lf %lf %lf %lf %lf %li", &fire_period, &fire_range, &fire_damage, &fire_penetration, &fire_spread, &fire_fStamina, &fire_ammo );
         //printf( "%lf %lf %lf %lf %lf %lf %li\n", fire_period, fire_range, fire_damage, fire_penetration, fire_spread, fire_fStamina, fire_ammo );
-
         //printf( " armor \n" );
         token = strtok(NULL, ";"); //printf( ">>%s<<\n", token );
         sscanf( token, "%lf %lf %lf", &damage_tolerance, &armorFw, &armorBk );
         //printf( "%lf %lf %lf\n", damage_tolerance, armorFw, armorBk );
-
         //printf( " shield \n" );
         token = strtok(NULL, ";"); //printf( ">>%s<<\n", token );
         sscanf( token, "%lf %lf %lf", &shield_cos, &shield_miss, &shield_endurance );
         //printf( "%lf %lf %lf\n", shield_cos, shield_miss, shield_endurance );
-
         //exit(0);
+    };
+
+    char* toStrCaptioned( char * sout ){
+        sout += sprintf( sout, "mass              %f\n", mass             );
+        sout += sprintf( sout, "radius            %f\n", radius           );
+        sout += sprintf( sout, "max_speed         %f\n", min_speed        );
+        sout += sprintf( sout, "min_speed         %f\n", min_speed        );
+        sout += sprintf( sout, "stamina_regain    %f\n", stamina_regain   );
+        sout += sprintf( sout, "time_buffer       %f\n", time_buffer      );
+        sout += sprintf( sout, "melee_skill       %f\n", melee_skill      );
+        sout += sprintf( sout, "melee_period      %f\n", melee_period     );
+        sout += sprintf( sout, "melee_range       %f\n", melee_range      );
+        sout += sprintf( sout, "melee_damage      %f\n", melee_damage     );
+        sout += sprintf( sout, "melee_penetration %f\n", melee_penetration);
+        sout += sprintf( sout, "melee_fStamina    %f\n", melee_fStamina   );
+        sout += sprintf( sout, "melee_push        %f\n", melee_push       );
+        sout += sprintf( sout, "defence_skill     %f\n", defence_skill    );
+        sout += sprintf( sout, "defence_fStamina  %f\n", defence_fStamina );
+        sout += sprintf( sout, "fire_period       %f\n", fire_period      );
+        sout += sprintf( sout, "fire_range        %f\n", fire_range       );
+        sout += sprintf( sout, "fire_damage       %f\n", fire_damage      );
+        sout += sprintf( sout, "fire_penetration  %f\n", fire_penetration );
+        sout += sprintf( sout, "fire_spread       %f\n", fire_spread      );
+        sout += sprintf( sout, "fire_fStamina     %f\n", fire_fStamina    );
+        sout += sprintf( sout, "fire_ammo         %i\n", fire_ammo        );
+        sout += sprintf( sout, "damage_tolerance  %f\n", damage_tolerance );
+        sout += sprintf( sout, "armorFw           %f\n", armorFw          );
+        sout += sprintf( sout, "armorBk           %f\n", armorBk          );
+        sout += sprintf( sout, "shield_cos        %f\n", shield_cos       );
+        sout += sprintf( sout, "shield_miss       %f\n", shield_miss      );
+        sout += sprintf( sout, "shield_endurance  %f\n", shield_endurance );
+        return sout;
+    };
+
+    char* toStrCaptioned_2( char * sout ){
+        sout += sprintf( sout, "mass             %f\n", mass             );
+        sout += sprintf( sout, "radius           %f\n", radius           );
+        sout += sprintf( sout, "max_speed        %f\n", min_speed        );
+        sout += sprintf( sout, "min_speed        %f\n", min_speed        );
+        sout += sprintf( sout, "stamina_regain   %f\n", stamina_regain   );
+        sout += sprintf( sout, "time_buffer      %f\n", time_buffer      );
+        sout += sprintf( sout, ":: melee ::\n");
+        sout += sprintf( sout, "skill            %f\n", melee_skill      );
+        sout += sprintf( sout, "period           %f\n", melee_period     );
+        sout += sprintf( sout, "range            %f\n", melee_range      );
+        sout += sprintf( sout, "damage           %f\n", melee_damage     );
+        sout += sprintf( sout, "penetration      %f\n", melee_penetration);
+        sout += sprintf( sout, "fStamina         %f\n", melee_fStamina   );
+        sout += sprintf( sout, "push             %f\n", melee_push       );
+        sout += sprintf( sout, ":: defence ::\n");
+        sout += sprintf( sout, "skill            %f\n", defence_skill    );
+        sout += sprintf( sout, "fStamina         %f\n", defence_fStamina );
+        sout += sprintf( sout, "demage_tolerance %f\n", damage_tolerance );
+        sout += sprintf( sout, "armorFw          %f\n", armorFw          );
+        sout += sprintf( sout, "armorBk          %f\n", armorBk          );
+        sout += sprintf( sout, "shield_cos       %f\n", shield_cos       );
+        sout += sprintf( sout, "shield_miss      %f\n", shield_miss      );
+        sout += sprintf( sout, "shield_endurance %f\n", shield_endurance );
+        sout += sprintf( sout, ":: fire ::\n");
+        sout += sprintf( sout, "period           %f\n", fire_period      );
+        sout += sprintf( sout, "range            %f\n", fire_range       );
+        sout += sprintf( sout, "damage           %f\n", fire_damage      );
+        sout += sprintf( sout, "penetration      %f\n", fire_penetration );
+        sout += sprintf( sout, "spread           %f\n", fire_spread      );
+        sout += sprintf( sout, "fStamina         %f\n", fire_fStamina    );
+        sout += sprintf( sout, "ammo             %i\n", fire_ammo        );
+        return sout;
     };
 
     SoldierType(){};
     SoldierType( char * str ){ fromString( str); };
 
 };
+
+using SoldierTypeDict = std::unordered_map<std::string,SoldierType*>;
 
 #endif

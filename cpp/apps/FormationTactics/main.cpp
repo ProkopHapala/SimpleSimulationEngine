@@ -7,7 +7,11 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include "Draw.h"
 #include "Draw2D.h"
+#include "SDL_utils.h"
+//#include "GUI.h"
+//#include "Plot2D.h"
 
 #include "fastmath.h"
 #include "Vec2.h"
@@ -21,6 +25,8 @@
 
 #include "Formation.h"
 #include "FormationWorld.h"
+
+char strBuf[0x10000];
 
 /*
 
@@ -49,6 +55,10 @@ class FormationTacticsApp : public AppSDL2OGL, public TiledView {
     int formation_view_mode = 0;
     Formation * currentFormation = NULL;
     Faction   * currentFaction   = NULL;
+
+    int      fontTex;
+
+
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -96,6 +106,9 @@ void FormationTacticsApp::debug_buffinsert( ){
 }
 
 FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+
+    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+
     world.init();
 
     currentFaction   = world.factions[0];  printf( "currentFaction: %s\n", currentFaction->name );
@@ -117,12 +130,10 @@ void FormationTacticsApp::draw(){
     TiledView::draw(  camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin  );
     //printf( " camRect  %f %f %f %f \n", camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin );
 
-
-
     long tComp = getCPUticks();
     world.update( );
+    //world.per_frame = 0;
     tComp = getCPUticks() - tComp;
-
 
     // DEBUG grid insert
     debug_buffinsert( );
@@ -159,12 +170,14 @@ void FormationTacticsApp::draw(){
 
     //printf( " frame %i soldiers %i interactions %i time %i  \n" );
 
-    printf( " frame %i : %i %i   %4.3f %4.3f %4.3f\n", frameCount, world.nSoldiers, world.nSoldierInteractions,
-                                 tComp*1.0e-6, tComp/(double)world.nSoldiers, tComp/(double)world.nSoldierInteractions );
+    //printf( " frame %i : %i %i   %4.3f %4.3f %4.3f\n", frameCount, world.nSoldiers, world.nSoldierInteractions,
+    //                             tComp*1.0e-6, tComp/(double)world.nSoldiers, tComp/(double)world.nSoldierInteractions );
 
     tTot = getCPUticks() - tTot;
     //printf( " frame %i : %i %i   %4.3f %4.3f %4.3f \n", frameCount, world.nSoldiers, world.nSoldierInteractions,
     //       tComp*1.0e-6, tDraw*1.0e-6, tTot*1.0e-6 );
+    //exit(0);
+    //STOP=true;
 };
 
 int FormationTacticsApp::tileToList( float x0, float y0, float x1, float y1 ){
@@ -176,7 +189,16 @@ int FormationTacticsApp::tileToList( float x0, float y0, float x1, float y1 ){
 	return ilist;
 }
 
-void FormationTacticsApp::drawHUD(){}
+void FormationTacticsApp::drawHUD(){
+    if(currentFormation){
+        glPushMatrix();
+        //Draw::drawText( "abcdefghijklmnopqrstuvwxyz \n0123456789 \nABCDEFGHIJKLMNOPQRTSTUVWXYZ \nxvfgfgdfgdfgdfgdfgdfg", fontTex, 8, {10,5} );
+        glTranslatef( 10.0,HEIGHT-20,0.0  ); glColor3f(1.0,0.0,1.0); currentFormation->reportSetup (strBuf); Draw::drawText( strBuf, fontTex, 8, {80,15} );
+        glTranslatef( 300.0,      0.0,0.0 ); glColor3f(0.0,0.5,0.0); currentFormation->reportStatus(strBuf); Draw::drawText( strBuf, fontTex, 8, {80,15} );
+        glTranslatef( 300.0,      0.0,0.0 ); glColor3f(0.0,0.5,0.8); currentFormation->soldiers[0].type->toStrCaptioned(strBuf); Draw::drawText( strBuf, fontTex, 8, {80,15} );
+        glPopMatrix();
+    }
+}
 
 void FormationTacticsApp::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );
@@ -188,13 +210,19 @@ void FormationTacticsApp::eventHandling ( const SDL_Event& event  ){
                 case SDLK_2:  formation_view_mode = VIEW_STAMINA; printf( "view : stamina\n" ); break;
                 case SDLK_3:  formation_view_mode = VIEW_CHARGE;  printf( "view : charge\n"  ); break;
                 case SDLK_4:  formation_view_mode = VIEW_MORAL;   printf( "view : moral\n"   ); break;
+                case SDLK_f:  for(int i=0; i<world.factions.size(); i++){
+                        if( currentFaction==world.factions[i] ){ int i_=(i+1)%world.factions.size(); currentFaction=world.factions[i_]; printf("faction %i\n", i); break; }
+                    } break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     //printf( "left button pressed !!!! " );
-                    if( currentFaction != NULL ) currentFormation = currentFaction->getFormationAt( { mouse_begin_x, mouse_begin_y } );
+                    if( currentFaction != NULL ){
+                        currentFormation = currentFaction->getFormationAt( { mouse_begin_x, mouse_begin_y } );
+                        //currentFormation->soldiers[0].type->toStrCaptioned(strBuf); puts(strBuf);
+                    }
                 break;
                 case SDL_BUTTON_RIGHT:
                     //printf( "left button pressed !!!! " );

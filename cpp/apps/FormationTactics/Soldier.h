@@ -54,9 +54,9 @@ class Soldier : public RigidBody2D{
 
     bool    fire = false;
     uint8_t impair_mask  = 0;   //  0=fit, 1==incapable, 4=deserted, 128==dead    probably bit mask
-    double  moral        = 1.0; // pshycical wellness
-    double  stamina      = 1.0; // pshycical wellness
-    double  time_buf     = 1.0; // action point for attack ( both meele and ranged )
+    double  moral        = 1.0; // psychical wellness
+    double  stamina      = 1.0; // physical  wellness
+    double  time_buf     = 1.0; // action points for attack ( both meele and ranged )
     double  shield       = 1.0;
 
     // ===== inline functions

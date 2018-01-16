@@ -176,8 +176,9 @@ void Formation::setEnds( const Vec2d& pL_, const Vec2d& pR_, double width_ ){
 
 void Formation::setCenterRot( const Vec2d& center_, const Vec2d& dirFw_ ){
     center.set( center_ );
-    dirFw .set( dirFw_ );
+    dirFw .set( dirFw_  );
     dirLf .set_perp ( dirFw );
+    //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) %3.3f %3.3f \n",center.x,center.y, dirFw.x,dirFw.y, width, length );
     p00.set_add_mul( center, dirLf,  length * 0.5d );
     p01.set_add_mul( center, dirLf, -length * 0.5d );
     p10.set_add_mul( p00,    dirFw, -width );
@@ -233,7 +234,7 @@ void Formation::render( const Vec3f& color, int view_type ){
         //Draw2D::drawCircle_d( soldiers[i].pos, 0.5, 8, true );
         Draw2D::drawCircle_d( soldiers[i].pos, 0.25, 8, true );
         //Draw2D::drawLine_d  ( soldiers[i].pos, soldiers[i].pos );
-        Draw2D::drawVecInPos_d( soldiers[i].rot, soldiers[i].pos );
+        Draw2D::drawVecInPos_d( soldiers[i].rot*soldiers[i].type->melee_range, soldiers[i].pos );
 
 
 
@@ -247,6 +248,30 @@ void Formation::render( const Vec3f& color, int view_type ){
     //printf( "============== \n" );
     //exit(0);
 }
+
+char* Formation::reportStatus( char * sout ){
+    sout += sprintf( sout, "able %i alive %i of %i \n", nCapable,nAlive,nSoldiers );
+    sout += sprintf( sout, "order             %f\n", order                  );
+    sout += sprintf( sout, "moral             %f\n", moral                  );
+    sout += sprintf( sout, "stamina           %f\n", stamina                );
+    sout += sprintf( sout, "movingToTarget    %c\n", movingToTarget?'T':'F' );
+    //sout += sprintf( sout, "stamina_regain   %f\n", stamina_regain         );
+    return sout;
+}
+
+char* Formation::reportSetup( char * sout ){
+    sout += sprintf( sout, "Formation %i  %s \n", id, name.c_str()  );
+    sout += sprintf( sout, "n(row,col)    %i(%i,%i) \n", nSoldiers, nrows, ncols );
+    sout += sprintf( sout, "(lengh,width)   (%f,%f)  \n", length,width );
+    sout += sprintf( sout, "(klengh,kwidth) (%f,%f)  \n", kLength, kWidth );
+    sout += sprintf( sout, "maxWill        %f\n", maxWill           );
+    sout += sprintf( sout, "bboxMargin     %f\n", bboxMargin        );
+    sout += sprintf( sout, "maxBbox2       %f\n", maxBbox2          );
+    sout += sprintf( sout, "tAttack        %f\n", tAttack           );
+    sout += sprintf( sout, "melee          %c\n", melee?'T':'F'     );
+    sout += sprintf( sout, "LeaveMenBehind %c\n", shouldLeaveMenBehind?'T':'F' );
+    return sout;
+};
 
 
 Formation::Formation( int id_, int nrows_, int ncols_, SoldierType * type, Faction * faction_ ){
@@ -275,6 +300,7 @@ void Formation::setupSoldiers( SoldierType * type ){
 }
 
 void Formation::deploySoldiers( ){
+    //printf( "length %f width %f \n", length, width  );
     double dlf = length / ncols;
     double dfw = width  / nrows;
     int i=0;

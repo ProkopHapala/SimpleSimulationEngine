@@ -21,7 +21,8 @@ const int VIEW_MORAL   = 4;
 class Formation{
 	public:
     int          id;
-    char       * name;
+    //char       * name;
+    std::string  name;
     Faction    * faction;
     BattleLine * line;
 
@@ -76,6 +77,9 @@ class Formation{
     void update           ( double dt );
     void render           ( const Vec3f& color, int view_type );
 
+    char * reportSetup ( char * sout );
+    char * reportStatus( char * sout );
+
     void setupSoldiers( SoldierType * type );
     void deploySoldiers( );
 
@@ -90,15 +94,13 @@ class Formation{
 
     inline bool checkMenBehind( ){
         double r2box = bbox.a.dist2( bbox.b );
-        return r2box > ( maxBbox2*( width*width + length*length  ) );
+        return r2box > ( maxBbox2*( width*width + length*length  ) ); // maxBbox2 is dimension less
     }
 
     inline void checkTarget( ){
         Vec2d d;
-        d.set_sub( p00, p00target );
-        if( d.norm2() >  0.01 ) return;
-        d.set_sub( p01, p01target );
-        if( d.norm2() >  0.01 ) return;
+        d.set_sub( p00, p00target ); if( d.norm2() >  0.01 ) return;
+        d.set_sub( p01, p01target ); if( d.norm2() >  0.01 ) return;
         movingToTarget = false;
     }
 

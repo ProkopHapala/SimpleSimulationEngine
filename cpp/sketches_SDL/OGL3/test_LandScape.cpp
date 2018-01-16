@@ -24,6 +24,8 @@
 #include "GLObject.h"
 #include "Shader.h"
 
+#include "TerrainOGL3.h"
+
 #include "testUtils.h"
 
 //============ Globals
@@ -330,7 +332,11 @@ void draw(){
     terrain1.sh.set_camMat( (float*)&camMat );
     terrain1.draw();
 
+
     SDL_GL_SwapWindow(window);
+
+    long time_end = getCPUticks();
+    printf(  "nVert %i nDraw %i in %f Mticks/frame\n", terrain1.nVertDrawn, terrain1.nDrawCalls, (time_end-time_start)*1.0e-6 );
 }
 
 // =============================================================

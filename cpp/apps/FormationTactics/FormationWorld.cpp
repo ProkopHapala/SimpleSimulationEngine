@@ -214,7 +214,7 @@ void FormationWorld::init(){
     //SoldierType s;
     //s.fromString( "default;  1.0 0.5 1.0 1.0;  0.01 15.0;  1.0 10.0 1.2 3.0 1.0 0.8 1.0;  1.0 2.0 0.9;  20.0 0.0 3.0 1.0 1.1 0.8 30;  10.0 1.0  0.5;  0.5 0.5 100.0;" );
 
-    loadSoldierTypes( "data/SoldierTypes.dat" );
+    loadSoldierTypes( "data/SoldierTypes.ini" );
     updateSoldierTypeMap();
 
     //printf( "Hoplite -> %s \n", name2soldierType.find("Hoplite")->second->name.c_str() );
@@ -229,11 +229,10 @@ void FormationWorld::init(){
 
     Faction* fac1 = new Faction( "RedArmy" , {1.0f,0.25f,0.0f} );
     factions.push_back( fac1 );
-    //fac1->initFaction( "data/Army1.dat", {0.0,3.0}, {0.0,1.0}, name2soldierType );
-    //exit(0);
+    fac1->initFaction( "data/Army1.ini", {0.0,3.0}, {0.0,-1.0}, name2soldierType );
     //fac1->initFaction( 4, 4, 16, soldierTypes, {+20.0,3.0}, {-20.0,3.0}, 1.0 );
-    fac1->initFaction( nform, nrow, ncol, soldierTypes, {+span,3.0}, {-span,3.0}, 1.0 );
-    fac1->battleLines[0]->setTargetLine( {-10.0,3.0}, {+10.0,3.0} );
+    //fac1->initFaction( nform, nrow, ncol, soldierTypes, {+span,3.0}, {-span,3.0}, 1.0 );
+    //fac1->battleLines[0]->setTargetLine( {-10.0,3.0}, {+10.0,3.0} );
 
     Faction* fac2 = new Faction( "BlueArmy", {0.0f,0.5f, 1.0f} );
     factions.push_back( fac2 );
@@ -254,70 +253,4 @@ void FormationWorld::init(){
 */
 
 };
-
-
-/*
-
-void NBodyWorld::assembleForces( ULONG i ){
-    // BE WARE : particle->force should be cleaned before we start
-    // onside step
-    Particle2D*  buf_i_[256];
-    Particle2D** buf_i = &buf_i_[0];
-    UINT ni = map.HashMap<Particle2D>::getBucketObjects( i, buf_i );
-    for(int ii=0; ii<ni; ii++ ){
-        Particle2D* pi = buf_i[ii];
-        for(int jj=0; jj<ii; jj++ ){
-            Particle2D* pj = buf_i[jj];
-            Vec2d fout;
-            double qq = pi->charge * pj->charge;
-            bool interacts = pairwiseForce( pi->pos, pj->pos, qq, fout );
-            pi->force.add( fout );
-            pj->force.sub( fout );
-            n_interactions++;
-            DEBUG_PLOT_INTERACTION( pi, pj, 0.1f, 0.9f, 0.1f )
-        }
-    }
-    // offside part
-    UHALF ix,iy;
-    map.unfoldBucketInt( i, ix, iy );
-    assembleForces_offside( i, map.getBucketInt( ix-1, iy-1 ), ni, buf_i );
-    assembleForces_offside( i, map.getBucketInt( ix  , iy-1 ), ni, buf_i );
-    assembleForces_offside( i, map.getBucketInt( ix+1, iy-1 ), ni, buf_i );
-    assembleForces_offside( i, map.getBucketInt( ix-1, iy   ), ni, buf_i );
-    //         onside                          ix   iy
-    assembleForces_offside( i, map.getBucketInt( ix+1, iy   ), ni, buf_i );
-    assembleForces_offside( i, map.getBucketInt( ix-1, iy+1 ), ni, buf_i );
-    assembleForces_offside( i, map.getBucketInt( ix  , iy+1 ), ni, buf_i );
-    assembleForces_offside( i, map.getBucketInt( ix+1, iy+1 ), ni, buf_i );
-};
-
-void NBodyWorld::assembleForces_offside( ULONG i, ULONG j, UINT ni, Particle2D** buf_i ){
-    // BE WARE : particle->force should be cleaned before we start
-    //printf( " assembleForces_offside === %i %i %i \n", i, j, ni );
-    //if( activeCellsNeighbors.find(j) != activeCellsNeighbors.end() ){
-    //if( i < j ){ // this will ensure that we do not double-count // WARRNIG : We miss situation when i>j and j is not active cell
-        Particle2D* buf_j[256];
-        UINT nj = map.HashMap<Particle2D>::getBucketObjects( j, buf_j );
-        for(int ii=0; ii<ni; ii++ ){
-            Particle2D* pi = buf_i[ii];
-            for(int jj=0; jj<nj; jj++ ){
-                Particle2D* pj = buf_j[jj];
-                Vec2d fout;
-                double qq = pi->charge * pj->charge;
-                bool interacts = pairwiseForce( pi->pos, pj->pos, qq, fout );
-                fout.mul(0.5d);      // if double counting ( not i<j condition )
-                pi->force.add( fout );
-                pj->force.sub( fout );
-                //printf( " %i %i   %i %i  (%3.3f,%3.3f)(%3.3f,%3.3f)\n",   i, j,  ii, jj,  pi->pos.x,pi->pos.y,  pj->pos.x,pj->pos.y );
-                n_interactions++;
-                DEBUG_PLOT_INTERACTION( pi, pj, 0.9f, 0.1f, 0.9f )
-            }
-        }
-    //}
-};
-
-
-*/
-
-
 
