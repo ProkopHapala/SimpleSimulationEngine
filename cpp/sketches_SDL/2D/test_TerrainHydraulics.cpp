@@ -17,6 +17,14 @@
 #include "TerrainHydraulics.h"
 #include "testUtils.h"
 
+
+#include "GridIndex2D.h"
+#include "Grid2DAlgs.h"
+#include "Grid2DAlgs.cpp" // FIXME
+#include "SquareRuler.h"
+
+//#include "Grid.h"
+
 // ======================  TestApp
 
 class TestAppTerrainHydraulics : public AppSDL2OGL{
@@ -59,6 +67,7 @@ void TestAppTerrainHydraulics::renderMapContent( float x0, float y0, float scale
     Vec2f a,b,p;
     a.set( 1.0d, 0.0d           ); a.mul(scale);
     b.set( 0.5d, 0.86602540378d ); b.mul(scale);
+    //b.set( 0.0d, 1.0 ); b.mul(scale);
     //glDisable(GL_SMOOTH);
     int ii = 0;
     for (int iy=0; iy<terrain.ny-1; iy+=1){
@@ -84,11 +93,13 @@ void TestAppTerrainHydraulics::renderMapContent( float x0, float y0, float scale
 }
 
 TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
-
-    terrain.allocate( 512, 512 );
+    srand(548);
+    terrain.allocate( 512, 512 ); bisecNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
+    //terrain.allocate( 16, 16 ); bisecNoise( 4, terrain.ground, -0.5/16, 0.5/16 );
     //terrain.genTerrainNoise( 14, 0.3, 0.7, 0.6, 45454, {1000.0,1000.0} );
     //terrain.genTerrainNoise( 14, 0.5, 1.0,  0.7, 1.2, 45454, {100.0,100.0} );
-    terrain.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
+    //terrain.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
+
 
 /*
     shape=glGenLists(1);
@@ -122,8 +133,6 @@ void TestAppTerrainHydraulics::draw(){
                 int iy0 = rand()%(terrain.ny-isz);
                 terrain.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
             }
-
-
             /*
             switch(job_type){
                 case 1: {
@@ -156,12 +165,13 @@ void TestAppTerrainHydraulics::draw(){
         if( running ){
             renderMapContent( -0.1*terrain.nx, -0.1*terrain.ny,  0.2, 1.0, 1.0 );
         }else{
+            glDeleteLists(shape,1);
             glNewList( shape, GL_COMPILE );
             renderMapContent( -0.1*terrain.nx, -0.1*terrain.ny,  0.2, 1.0, 1.0 );
             glEndList();
         }
         long tplot = getCPUticks() - t0;
-        printf( " tplot %3.3f Mtick tcomp %3.3f Mtick ( %3.3f ticks/pix ) \n", tplot*1e-6, tcomp*1e-6, ((double)tcomp)/(terrain.ntot*perframe) );
+        //printf( " tplot %3.3f Mtick tcomp %3.3f Mtick ( %3.3f ticks/pix ) \n", tplot*1e-6, tcomp*1e-6, ((double)tcomp)/(terrain.ntot*perframe) );
     }else{
         glCallList( shape );
     }

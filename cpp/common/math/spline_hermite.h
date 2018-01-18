@@ -182,6 +182,31 @@ inline TYPE dval2D( TYPE x, TYPE y, TYPE& dfx, TYPE& dfy, TYPE * f0s, TYPE * f1s
 }
 
 
+template <class TYPE>
+inline TYPE dval2D( TYPE x, TYPE y, TYPE& dfx, TYPE& dfy,
+	TYPE f00, TYPE f01, TYPE f02, TYPE f03,
+	TYPE f10, TYPE f11, TYPE f12, TYPE f13,
+	TYPE f20, TYPE f21, TYPE f22, TYPE f23,
+	TYPE f30, TYPE f31, TYPE f32, TYPE f33
+){
+	TYPE f0,f1,f2,f3;
+	// by x
+    f0  = val<TYPE>( y, f10, f20, 0.5*(f20-f00), 0.5*(f30-f10) );
+	f1  = val<TYPE>( y, f11, f21, 0.5*(f21-f01), 0.5*(f31-f11) );
+	f2  = val<TYPE>( y, f12, f22, 0.5*(f22-f02), 0.5*(f32-f12) );
+	f3  = val<TYPE>( y, f13, f23, 0.5*(f23-f03), 0.5*(f33-f13) );
+	dfx = dval<TYPE>( x, f1, f2, 0.5*(f2-f0), 0.5*(f3-f1) );
+	// by y
+	f0  = val<TYPE>( x, f01, f02, 0.5*(f02-f00), 0.5*(f03-f01) );
+	f1  = val<TYPE>( x, f11, f12, 0.5*(f12-f10), 0.5*(f13-f11) );
+	f2  = val<TYPE>( x, f21, f22, 0.5*(f22-f20), 0.5*(f23-f21) );
+	f3  = val<TYPE>( x, f31, f32, 0.5*(f32-f30), 0.5*(f33-f31) );
+	f20 = 0.5*(f2-f0);
+	f31 = 0.5*(f3-f1);
+	dfy = dval<TYPE>( y, f1, f2, f20, f31 );
+	return val<TYPE>( y, f1, f2, f20, f31 );
+}
+
 
 
 

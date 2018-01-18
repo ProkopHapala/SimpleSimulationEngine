@@ -24,6 +24,7 @@
 #include "GLObject.h"
 #include "Shader.h"
 
+//#include "TerrainSquare.h"
 #include "TerrainOGL3.h"
 
 #include "testUtils.h"

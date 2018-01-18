@@ -55,7 +55,7 @@ class SimplexRuler{
         ind.b = (int)b;
     }
 
-    inline int simplexIndex( const Vec2d& p, Vec2i& ind, Vec2d& dind ) const {
+    inline bool simplexIndex( const Vec2d& p, Vec2i& ind, Vec2d& dind ) const {
         double a = ( invStep * (  p.x - 0.57735026919*p.y   ) ) + MAP_OFFSET;
         double b = ( invStep *    p.y * 1.15470053839       ) + MAP_OFFSET;
     	ind.a  = (int)a;

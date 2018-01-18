@@ -24,7 +24,6 @@
 #include "PointCloudComparator.h"
 #include "SphereTreeND.h"
 
-#include "BasisFunc.h"
 #include "FitFF.h"
 
 //#include "testUtils.h"
