@@ -12,14 +12,16 @@
 #include "FormationTacticsCommon.h"
 #include "Soldier.h"
 
-
 const int VIEW_INJURY  = 1;
 const int VIEW_STAMINA = 2;
 const int VIEW_CHARGE  = 3;
 const int VIEW_MORAL   = 4;
 
-class Formation{
-	public:
+class Formation{ public:
+    static constexpr double leaveBehindMargin = 20.0;
+    static constexpr double maxDistFromCog    = 5.0;
+    static constexpr double KDistFromCog      = 10.0;
+
     int          id;
     //char       * name;
     std::string  name;
@@ -69,7 +71,7 @@ class Formation{
     void applyWillForce( Soldier& soldier );
     void applyWillForce( );
 
-    void leaveMenBehind   ( );
+    int  leaveMenBehind   ( );
     bool eliminateInvalids( );
     void update_bbox      ( );
     int  interact         ( Formation * fb );

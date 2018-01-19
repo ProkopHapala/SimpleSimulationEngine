@@ -76,16 +76,19 @@ void Formation::jumpToTarget( ){
     setEnds( p00target, p01target, width );
 }
 
-void Formation::leaveMenBehind( ){
+int Formation::leaveMenBehind( ){
+    int nleft = 0;
     for( int i=0; i<nCapable; i++ ){
         Vec2d d; d.set_sub( soldiers[i].pos, center );
         double llf = -dirLf.dot( d );
         double lfw = -dirFw.dot( d );
-        if( ( fabs(llf)>(length+bboxMargin) ) || ( fabs(lfw)>(width+bboxMargin) ) ){
+        if( ( fabs(llf)>(length+leaveBehindMargin) ) || ( fabs(lfw)>(width+leaveBehindMargin) ) ){
             //printf( "soldier %i abandoned \n" );
             soldiers[i].impair_mask |= 8;
+            nleft++;
         }
     }
+    return nleft;
 }
 
 bool Formation::eliminateInvalids( ){
@@ -112,22 +115,27 @@ bool Formation::eliminateInvalids( ){
 }
 
 void Formation::moveToTarget( ){
-
-    if( checkMenBehind( ) ){
+    //if( checkMenBehind( ) ){
         //printf( " formation %i cannot move, men stuck ! \n", id );
         if( shouldLeaveMenBehind ){
             //printf( " => leaving men behind ! \n", id );
-            leaveMenBehind( );
+            int nleft = leaveMenBehind();
+            if( nleft>0 ){  printf(" LeftBehind %i Soldiers \n", nleft ); return; }
         }
-        return;
-    }
-
+    //    return;
+    //}
     checkTarget( );
     if( movingToTarget ){
-        double speed = 0.01;
-        Vec2d d1,d0;
-        d0.set_sub( p00target, p00 ); d0.normalize(); p00.add_mul( d0, speed );
-        d1.set_sub( p01target, p01 ); d1.normalize(); p01.add_mul( d1, speed );
+        //double speed = soldiers[0]->type->max_speed;
+        double speed = 0.1;
+
+        Vec2d  dcog = cog - center + dirFw*width*0.5;
+        double lcog = dcog.norm();
+        if(lcog>maxDistFromCog){  dcog.mul( 2.0*fmin( 1.0, KDistFromCog*((lcog/maxDistFromCog)-1.0) )/lcog ); }else{ dcog.mul(0.0); };
+
+        Vec2d d;
+        d.set_sub( p00target, p00 ); d.normalize(); d.add(dcog); p00.add_mul( d, speed/d.norm() );
+        d.set_sub( p01target, p01 ); d.normalize(); d.add(dcog); p01.add_mul( d, speed/d.norm() );
         setEnds( p00, p01, width );
     }
 }

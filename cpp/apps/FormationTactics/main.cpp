@@ -24,6 +24,8 @@
 #include "TiledView.h"
 
 #include "Formation.h"
+#include "PolyLineFormation.h"
+
 #include "FormationWorld.h"
 
 char strBuf[0x10000];

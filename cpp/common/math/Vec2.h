@@ -91,7 +91,9 @@ class Vec2TYPE{
     inline TYPE dist2( const VEC& a) const { VEC d; TYPE dx = x-a.x; TYPE dy = y-a.y; return dx*dx + dy*dy; }
     inline TYPE dist ( const VEC& a) const { return sqrt( dist2(a) ); }
 
-	inline void set_perp( const VEC& a )       { x=-a.y; y=a.x; }
+    inline double makePerpUni( const VEC& a ) { double cdot=x*a.x+y*a.y; x-=a.x*cdot; y-=a.y*cdot; return cdot; }
+
+	inline void set_perp( const VEC& a )     { x=-a.y; y=a.x; }
 	inline TYPE cross ( const VEC& a ) const { return x*a.y - y*a.x; };
 
 	bool isBetweenRotations( const VEC& a, const VEC& b ){ return (cross(a)<0)&&(cross(b)>0);  }
@@ -132,6 +134,13 @@ class Vec2TYPE{
 	}
 
 	inline TYPE totprod(){ return x*y; }
+
+
+	// === static functions:
+
+	static inline TYPE dot      (VEC& a, VEC& b){ return a.x*b.y - a.y*b.x; };
+	static inline TYPE cross    (VEC& a, VEC& b){ return a.x*b.x + a.y*b.y ; };
+	static inline VEC  mul_cmplx(VEC& a, VEC& b){ return (VEC){ a.x*b.x-a.y*b.y, a.y*b.x+a.x*b.y };  }
 
 };
 

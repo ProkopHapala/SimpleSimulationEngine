@@ -67,6 +67,8 @@ int FormationWorld::formationInteractions_buff( ){ // this is version of interac
     for( int i=0; i<formations.size(); i++ ){
         Formation * fi = formations[i];
         double r = RmaxInteract; // FICME - this should be specific for formation pair
+        // TODO:  set ruller centered arround formation cog
+        // TODO:  soldiers outside the box are solved specially
         colruler.setup(  {fi->bbox.x0-3*r,fi->bbox.y0-3*r}, {2*r+0.1,2*r+0.1} );
         //colruler.setup(  {fi->bbox.x0-3*r,fi->bbox.y0-3*r}, {3*r,3*r} );
         double rf = r/colruler.step.x;
