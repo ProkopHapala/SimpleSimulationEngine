@@ -17,7 +17,6 @@
 #include "TerrainHydraulics.h"
 #include "testUtils.h"
 
-
 #include "GridIndex2D.h"
 #include "Grid2DAlgs.h"
 #include "Grid2DAlgs.cpp" // FIXME
@@ -31,9 +30,11 @@ class TestAppTerrainHydraulics : public AppSDL2OGL{
 	public:
     int job_type = 1;
     int perframe = 3;
-    TerrainHydraulics terrain;
+    //TerrainHydraulics terrain;
     int shape;
     bool running = true;
+
+    HydraulicGrid2D terrain;
 
 	// ---- function declarations
 
@@ -70,15 +71,18 @@ void TestAppTerrainHydraulics::renderMapContent( float x0, float y0, float scale
     //b.set( 0.0d, 1.0 ); b.mul(scale);
     //glDisable(GL_SMOOTH);
     int ii = 0;
-    for (int iy=0; iy<terrain.ny-1; iy+=1){
+    for (int iy=0; iy<terrain.n.y-1; iy+=1){
+    //for (int iy=0; iy<terrain.ny-1; iy+=1){
         glBegin( GL_TRIANGLE_STRIP );
-        for (int ix=0; ix<terrain.nx; ix+=1){
+        for (int ix=0; ix<terrain.n.x; ix+=1){
+        //for (int ix=0; ix<terrain.nx; ix+=1){
             p.set( ix*a.x+iy*b.x + x0, ix*a.y+iy*b.y + y0 );
             //val = terrain.ground[ii              ]; w = terrain.water[ii              ];    c = csc * val;  glColor3f(c,c,w);  glVertex3f( p.x    , p.y    , val*hsc );
             //val = terrain.ground[ii + terrain.nx ]; w = terrain.water[ii + terrain.nx ];    c = csc * val;  glColor3f(c,c,w);  glVertex3f( p.x+b.x, p.y+b.y, val*hsc );
 
             terrain_color( ii               ); glVertex3f( p.x    , p.y    , 0 );
-            terrain_color( ii + terrain.nx  ); glVertex3f( p.x+b.x, p.y+b.y, 0 );
+            terrain_color( ii + terrain.n.x  ); glVertex3f( p.x+b.x, p.y+b.y, 0 );
+            //terrain_color( ii + terrain.nx  ); glVertex3f( p.x+b.x, p.y+b.y, 0 );
 
             //val = sin(p.x    )*sin(p.y    ); c = cscale * val;  glColor3f(c,c,c);  glVertex3f( p.x    , p.y    , val*hscale );
             //val = sin(p.x+b.x)*sin(p.y+b.y); c = cscale * val;  glColor3f(c,c,c);  glVertex3f( p.x+b.x, p.y+b.y, val*hscale );
@@ -93,12 +97,19 @@ void TestAppTerrainHydraulics::renderMapContent( float x0, float y0, float scale
 }
 
 TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
-    srand(548);
-    terrain.allocate( 512, 512 ); bisecNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
+    srand(154978);
+    terrain.initNeighs_6(false);
+    //terrain.initNeighsSquareN(8);
+    //terrain.initNeighs_6(true);
+    terrain.allocate( 512, 512 ); terrain.ground[0]=0.4; bisecNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
+    //terrain.allocate( 512, 512 ); terrain.ground[0]=0.2; bisecPaternNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
+    //terrain.allocate( 512, 512 ); terrain.ground[0]=1.0; bisecNoise( 9, terrain.ground, 0, 0 );
     //terrain.allocate( 16, 16 ); bisecNoise( 4, terrain.ground, -0.5/16, 0.5/16 );
     //terrain.genTerrainNoise( 14, 0.3, 0.7, 0.6, 45454, {1000.0,1000.0} );
     //terrain.genTerrainNoise( 14, 0.5, 1.0,  0.7, 1.2, 45454, {100.0,100.0} );
     //terrain.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
+
+    //hydraulics.allocate(512,512); hydraulics.ground[0]=0.4; bisecNoise( 9, hydraulics.ground, -1.0/512, 1.0/512 );
 
 
 /*
@@ -125,13 +136,15 @@ void TestAppTerrainHydraulics::draw(){
         t0 = getCPUticks();
         //perframe = 1;
         for( int i=0; i<perframe; i++ ){
-
             //terrain.errodeDroples( 10000, 100, 0.00, 0.2, 0.5 );
             for( int j=0; j<20; j++ ){
                 int isz = 25;
-                int ix0 = rand()%(terrain.nx-isz);
-                int iy0 = rand()%(terrain.ny-isz);
-                terrain.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
+                //int ix0 = rand()%(terrain.nx-isz);
+                //int iy0 = rand()%(terrain.ny-isz);
+                int ix0 = rand()%(terrain.n.x-isz);
+                int iy0 = rand()%(terrain.n.y-isz);
+                //terrain.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
+                terrain.errodeDroples( 200, 100, 0.02, 0.15, 0.5, {ix0, iy0}, {ix0+isz, iy0+isz} );
             }
             /*
             switch(job_type){
@@ -163,11 +176,13 @@ void TestAppTerrainHydraulics::draw(){
         long tcomp = getCPUticks() - t0;
         t0    = getCPUticks();
         if( running ){
-            renderMapContent( -0.1*terrain.nx, -0.1*terrain.ny,  0.2, 1.0, 1.0 );
+            //renderMapContent( -0.1*terrain.nx, -0.1*terrain.ny,  0.2, 1.0, 1.0 );
+            renderMapContent( -0.1*terrain.n.x, -0.1*terrain.n.y,  0.2, 1.0, 1.0 );
         }else{
             glDeleteLists(shape,1);
             glNewList( shape, GL_COMPILE );
-            renderMapContent( -0.1*terrain.nx, -0.1*terrain.ny,  0.2, 1.0, 1.0 );
+            //renderMapContent( -0.1*terrain.nx, -0.1*terrain.ny,  0.2, 1.0, 1.0 );
+            renderMapContent( -0.1*terrain.n.x, -0.1*terrain.n.y,  0.2, 1.0, 1.0 );
             glEndList();
         }
         long tplot = getCPUticks() - t0;
@@ -175,8 +190,6 @@ void TestAppTerrainHydraulics::draw(){
     }else{
         glCallList( shape );
     }
-
-
     //renderMapContent( );
 
 };
@@ -188,7 +201,7 @@ void TestAppTerrainHydraulics::eventHandling( const SDL_Event& event ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                case SDLK_r:  terrain.initErrosion( 0.8 ); running=true;  break;
+               // case SDLK_r:  terrain.initErrosion( 0.8 ); running=true;  break;
             }
             break;
          /*

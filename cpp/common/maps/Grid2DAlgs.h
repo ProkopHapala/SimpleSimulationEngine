@@ -24,7 +24,7 @@ class Grid2DAlg : public GridIndex2D{ public:
         memcpy(neigh_invDist,SquareNeighsDistInv,  nneigh*sizeof(double));
     }
     void initNeighs_6(bool switched){
-        nneigh = 0;
+        nneigh = 6;
         int  sela[]={0,1,2,3, 4,7};
         int  selb[]={0,1,2,3, 5,6};
         int* sel;
@@ -60,7 +60,6 @@ class HydraulicGrid2D :public Grid2DAlg { public:
     double droplet_h;
     double droplet_w,droplet_disolve,droplet_sediment;
 
-	/*
 	// TODO: Inflow/outflow  +  Rivers
 	bool   isOutflow = true;
 	int    nContour=0,nContour_old=0;
@@ -70,29 +69,19 @@ class HydraulicGrid2D :public Grid2DAlg { public:
 	double * water_    = NULL;
 	std::vector<int>    sinks;
 	std::vector<River*> rivers;
-	*/
-
-
 
 	// ==== function declaration
-    /*
+
     // TODO: Inflow/outflow  +  Rivers
 	void gatherRain( double minSinkFlow );
-	int  traceDroplet( int ix, int iy, int nmax, int * trace );
+	int  traceDroplet( Vec2i ipd, int nmax, int * trace );
 	int  trackRiver( int sink, double minFlow, std::vector<int>& river, std::vector<int>& feeders );
 	int  trackRiverRecursive( int sink, double minFlow, River * mouth );
 	int  findAllRivers( double minFlow );
-    void genTerrainNoise( int n, double scale, double hscale, double fdown, double strength, int seed, const Vec2d& pos0 );
     void init_outflow( double water_level );
     void outflow_step( );
     void extend_outflow( float val, int oi, int i );
-    */
 
-    void initDroplet  ( double w, double disolve, double sediment, Vec2i ipmin, Vec2i ipmax );
-    bool droplet_step ( );
-    void errodeDroples( int n, int nStepMax, double w, double disolve, double sediment, Vec2i ipmin, Vec2i ipmax );
-
-    /*
     // TODO: Inflow/outflow  +  Rivers
 	void allocate_outflow(){
         known     = new bool[ntot];
@@ -102,7 +91,10 @@ class HydraulicGrid2D :public Grid2DAlg { public:
     void deallocate_outflow(){
         delete [] known; delete [] contour1; delete [] contour2;
     }
-    */
+
+    void initDroplet  ( double w, double disolve, double sediment, Vec2i ipmin, Vec2i ipmax );
+    bool droplet_step ( );
+    void errodeDroples( int n, int nStepMax, double w, double disolve, double sediment, Vec2i ipmin, Vec2i ipmax );
 
 	void allocate( int nx_, int ny_ ){
 		n.x = nx_; n.y = ny_; ntot = n.x * n.y;
