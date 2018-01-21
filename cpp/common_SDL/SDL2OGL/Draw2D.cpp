@@ -157,10 +157,25 @@ void Draw2D::drawLines( int n, Vec2d * points ){
 	glBegin   (GL_LINE_STRIP);
 	for( int i=0; i<n; i++ ){
 		Vec2f p1;
-		convert( points[i-1], p1 );
+		convert( points[i], p1 );
 		glVertex3f( p1.x, p1.y, z_layer );
 		//drawLine_d( points[links[i]], points[links[i+1]] );
 		//printf ( " %i %i %i %f %f \n", i, links[i], links[i+1], points[links[i]].x, points[links[i+1]].x );
+	}
+	glEnd();
+};
+
+void Draw2D::drawLines( int n, Vec2d * points, Vec2d * vecs, float sz ){
+	glBegin   (GL_LINES);
+	for( int i=0; i<n; i++ ){
+		Vec2f p1,p2;
+		convert( points[i], p1 );
+		convert( vecs  [i], p2 ); p2.mul(sz); p2.add(p1);
+		glVertex3f( p1.x, p1.y, z_layer );
+		glVertex3f( p2.x, p2.y, z_layer );
+		//drawLine_d( points[links[i]], points[links[i+1]] );
+		//printf ( " %i %i %i %f %f \n", i, links[i], links[i+1], points[links[i]].x, points[links[i+1]].x );
+		//printf ( "plot %i (%f,%f)(%f,%f) \n", i, points[i].x,points[i].y,    vecs[i].x,vecs[i].y );
 	}
 	glEnd();
 };

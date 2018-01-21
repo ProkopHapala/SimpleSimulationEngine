@@ -28,6 +28,12 @@ class FormationWorld{
     std::vector<Faction*>    factions;
     std::vector<SoldierType> soldierTypes;
 
+
+
+
+
+
+
     //std::unordered_map<std::string,SoldierType*> name2soldierType;
     SoldierTypeDict name2soldierType;
 

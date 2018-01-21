@@ -21,6 +21,8 @@
 #include "Formation.h"
 #include "BattleLine.h"
 
+//#include "PolyLineFormation.h"
+
 class Faction{
 	public:
     char  * name;
@@ -28,6 +30,8 @@ class Faction{
 
     std::vector<BattleLine*> battleLines;
     std::vector<Formation*>  formations;
+
+    //std::vector<PolyLineFormation*> polylines;
 
     Formation* getFormationAt(const Vec2d& p ){
         int i=0;
