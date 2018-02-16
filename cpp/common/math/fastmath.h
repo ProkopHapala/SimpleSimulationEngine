@@ -59,6 +59,8 @@ typedef void   (*Func2d3)( double, double,         double&, double&, double& );
 typedef void   (*Func3d3)( double, double, double, double&, double&, double& );
 
 
+
+
 inline double x2grid( double x, double xstep, double invXstep, int& ix ){
     double x_=x*invXstep;
     ix=(int)x_;
@@ -132,6 +134,19 @@ inline T fastExp_n8(T x){
     e*=e; e*=e; e*=e; e*=e;
     e*=e; e*=e; e*=e; e*=e;
     return e;
+}
+
+
+inline double powN(double x, uint8_t n) {
+    uint8_t mask=1;
+    double xi     = x;
+    double result = 1.0;
+    while(mask<n){
+        if(mask&n){ result*=xi; }
+        xi*=xi;
+        mask<<=1;
+    }
+    return result;
 }
 
 // from http://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp/
