@@ -30,10 +30,15 @@ class LTMapSquare{ public:
 
 class LTWorld{
 	public:
+
+	std::vector<LTObjectType> objectTypes;
+	std::vector<LTGunType>    gunTypes;
+	std::vector<LTUnitType>   unitTypes;
+
     //std::vector<BattleLine*> battleLines;
-    std::vector<LTUnit*>        units;
+    std::vector<LTSquad*>       squads;
     std::vector<LTFaction*>     factions;
-    std::vector<LTObjectType*> objectTypes;
+
     //std::vector<LTShelter>     shelters;
 
     SimplexRuler       ruler;
@@ -54,9 +59,9 @@ class LTWorld{
     double  Ttgs   [ntg];
     Vec2d   hitcontours[nAngles*ntg];
 
-    static constexpr int nTypesMax = 16;
-    LTUnitType      unitTypes[nTypesMax];
-    int             nTypes = 0;
+    //static constexpr int nTypesMax = 16;
+    //LTUnitType      unitTypes[nTypesMax];
+    //int             nTypes = 0;
 
     double RmaxInteract = 1.5;
 
@@ -79,6 +84,8 @@ class LTWorld{
     void update();
     void simulationStep( double dt );
     int  getUnitAt( const Vec2d& p, LTFaction * faction );
+    int  loadUnitTypes( char * fname );
+    int  loadGunTypes( char * fname );
 
     inline void setSimParams( double dt_frame_, double per_frame_, double damping_ ){
         dt_frame  = dt_frame_;

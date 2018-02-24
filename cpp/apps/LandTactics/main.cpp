@@ -24,6 +24,7 @@
 #include "TerrainCubic.h"
 #include "TiledView.h"
 
+#include "LTcommon.h"
 #include "LTUnitType.h"
 #include "LTUnit.h"
 #include "LTShelter.h"
@@ -36,6 +37,16 @@
 // font rendering:
 //  http://www.willusher.io/sdl2%20tutorials/2013/12/18/lesson-6-true-type-fonts-with-sdl_ttf
 //  http://stackoverflow.com/questions/28880562/rendering-text-with-sdl2-and-opengl
+
+
+
+/*
+//   Units should have 2 scales of resolution
+// - Company scale (individual units are abstracted out- not rendered, not evaluated)
+// - Detailed scale ( individual units are rendered and evaluated )
+
+
+*/
 
 int   default_font_texture;
 
@@ -67,7 +78,7 @@ class FormationTacticsApp : public AppSDL2OGL {
     LTWorld world;
 
     int formation_view_mode = 0;
-    LTUnit    * currentUnit      = NULL;
+    LTSquad   * currentSquad      = NULL;
     LTFaction * currentFaction   = NULL;
     int       ifaction = 0;
 
@@ -134,7 +145,7 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     camY0 = world.map_center.y;
 
     currentFaction = world.factions[0];  printf( "currentFaction: %s\n", currentFaction->name );
-    currentUnit    = currentFaction->units[0];
+    currentSquad   = currentFaction->squads[0];
 
     //TiledView::init( 6, 6 );
     //tiles    = new int[ nxy ];
@@ -246,7 +257,7 @@ void FormationTacticsApp::draw(){
 	glColor3f(0.5,0.5,0.5);
 	for( LTStaticObject& o : world.objects ){
         //Draw2D::drawShape( o.pos, o.dir, o.type->glo );
-        o.view();
+        //o.view();
         //o.type->render( o.pos, o.dir );
     }
     //exit(0);
@@ -260,21 +271,21 @@ void FormationTacticsApp::draw(){
     //tComp = getCPUticks() - tComp;
 
     long tDraw = getCPUticks();
-    for( LTUnit* u : world.units ){
+    for( LTSquad* u : world.squads ){
         if( (u!= NULL) ){
             // TODO : check if on screen
-            if  ( u == currentUnit ){ u->render( u->faction->color );   }
-            else                    { u->render( u->faction->color );   }
+            if  ( u == currentSquad ){ u->render( u->faction->color, 0 );   }
+            else                     { u->render( u->faction->color, 0 );   }
         }
     }
     tDraw = getCPUticks() - tDraw;
 
-    if( currentUnit != 0 ){
+    if( currentSquad != 0 ){
         //glColor3f(1.0,0.0,1.0);
         glColor3f(0.0,1.0,0.0);
-        Draw2D::drawCircle_d( currentUnit->pos, 0.5, 16, false );
-        currentUnit->renderJob( currentUnit->faction->color );
-        drawVisibilityIsolines( currentUnit->pos, 5, 50, 0, 2*M_PI, -0.1, +0.1, 500.0 );
+        Draw2D::drawCircle_d( currentSquad->pos, 0.5, 16, false );
+        currentSquad->renderJob( currentSquad->faction->color );
+        drawVisibilityIsolines( currentSquad->pos, 5, 50, 0, 2*M_PI, -0.1, +0.1, 500.0 );
     }
 
 
@@ -315,19 +326,19 @@ void FormationTacticsApp::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     //printf( "left button pressed !!!! " );
-                    if( currentFaction != NULL ) currentUnit = currentFaction->getUnitAt( { mouse_begin_x, mouse_begin_y } );
+                    if( currentFaction != NULL ) currentSquad = currentFaction->getUnitAt( { mouse_begin_x, mouse_begin_y } );
                     //bDrawing=true;
                 break;
                 case SDL_BUTTON_RIGHT:
                     //printf( "left button pressed !!!! " );
-                    if( currentUnit != NULL ){
+                    if( currentSquad != NULL ){
                         int imin = world.getUnitAt( { mouse_begin_x, mouse_begin_y }, currentFaction );
                         if( imin > -1 ) {
-                            printf( "target selected %i %i\n", imin, world.units[imin] );
-                            currentUnit->setOpponent( world.units[imin] );
+                            printf( "target selected %i %i\n", imin, world.squads[imin] );
+                            currentSquad->setOpponent( world.squads[imin] );
                         }else{
                             printf( "goal selected (%3.3f,%3.3f)\n", mouse_begin_x, mouse_begin_y );
-                            currentUnit->setGoal  ( { mouse_begin_x, mouse_begin_y } );
+                            currentSquad->setGoal  ( { mouse_begin_x, mouse_begin_y } );
                         }
                     }
                 break;

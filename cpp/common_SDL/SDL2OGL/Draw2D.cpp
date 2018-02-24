@@ -130,6 +130,35 @@ void Draw2D::drawCircle_d( const Vec2d& center_, float radius, int n, bool fille
 };
 
 
+void Draw2D::drawRotRect( Vec2d pos, Vec2d rot, Vec2d sz ){
+    Vec2d rotT; rotT.set_perp(rot);
+    Vec2d p =  pos + rot*(sz.a*-0.5) + rotT*(sz.b*-0.5);
+    glBegin(GL_LINE_LOOP);
+        glVertex2d(p.x,p.y); p.add_mul(rot , sz.a);
+        glVertex2d(p.x,p.y); p.add_mul(rotT, sz.b);
+        glVertex2d(p.x,p.y); p.add_mul(rot ,-sz.a);
+        glVertex2d(p.x,p.y);
+    glEnd();
+};
+
+void Draw2D::drawRotT   ( Vec2d pos, Vec2d rot, Vec2d sz ){
+    Vec2d rotT; rotT.set_perp(rot);
+    Vec2d p;
+    glBegin(GL_LINES);
+        p = pos;                glVertex2d(p.x,p.y); p.add_mul(rot,sz.a); glVertex2d(p.x,p.y);
+        p = pos + rotT*(-sz.b); glVertex2d(p.x,p.y); p.add_mul(rot,sz.b); glVertex2d(p.x,p.y);
+    glEnd();
+};
+
+void Draw2D::drawRotTriangle( Vec2d pos, Vec2d rot, Vec2d sz ){
+    Vec2d rotT; rotT.set_perp(rot);
+    Vec2d p =  pos + rotT*(sz.b*-0.5);
+    glBegin(GL_LINE_LOOP);
+        p = pos + rotT*(sz.b*-0.5); glVertex2d(p.x,p.y);
+        p = pos + rotT*(sz.a     ); glVertex2d(p.x,p.y);
+        p = pos + rotT*(sz.b* 0.5); glVertex2d(p.x,p.y);
+    glEnd();
+}
 
 
 void Draw2D::drawPoints( int npoints, Vec2d * points ){

@@ -23,6 +23,10 @@ void drawRectangle  ( float p1x, float p1y, float p2x, float p2y, bool filled );
 void drawRectangle  ( const Vec2f& p1, const Vec2f& p2, bool filled );
 void drawCircle     ( const Vec2f& center, float radius, int n, bool filled );
 
+void drawRotRect    ( Vec2d pos, Vec2d rot, Vec2d sz );
+void drawRotT       ( Vec2d pos, Vec2d rot, Vec2d sz );
+void drawRotTriangle( Vec2d pos, Vec2d rot, Vec2d sz );
+
 void drawPoint_d       ( const Vec2d& vec                   );
 void drawPointCross_d  ( const Vec2d& vec, double d         );
 void drawVec_d         ( const Vec2d& vec                   );
