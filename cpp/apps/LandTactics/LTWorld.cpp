@@ -87,40 +87,58 @@ void LTWorld::initStaticObject(){
     printf( "LTWorld::initStaticObject DONE \n" );
 }
 
-int LTWorld::loadUnitTypes( char * fname ){
+int LTWorld::loadGunTypes(const char * fname ){
     FILE * pFile;
     const int nbuff = 4096;
     char str[nbuff];
     pFile = fopen ( fname , "r");
     if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
-    fgets ( str, nbuff, pFile);
-    printf(">>%s<<\n", str);
-    while ( fgets ( str , nbuff, pFile) != NULL ){
-        printf("==>>%s<<\n", str);
-        unitTypes.push_back( LTUnitType(str) );
-    }
-    fclose(pFile);
-    return unitTypes.size();
-}
-
-int LTWorld::loadGunTypes( char * fname ){
-    FILE * pFile;
-    const int nbuff = 4096;
-    char str[nbuff];
-    pFile = fopen ( fname , "r");
-    if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
-    fgets ( str, nbuff, pFile);
-    printf(">>%s<<\n", str);
-    while ( fgets ( str , nbuff, pFile) != NULL ){
-        printf("==>>%s<<\n", str);
-        gunTypes.push_back( LTGunType(str) );
+    while ( fgets( str , nbuff, pFile) != NULL ){
+        printf("===str: >>%s<<\n", str);
+        if (str[0]=='#') continue;
+        LTGunType t = LTGunType(str);
+        gunTypes.push_back( t );
     }
     fclose(pFile);
     return gunTypes.size();
 }
 
+int LTWorld::loadUnitTypes(const char * fname ){
+    FILE * pFile;
+    const int nbuff = 4096;
+    char str[nbuff];
+    pFile = fopen ( fname , "r");
+    if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
+    while ( fgets ( str , nbuff, pFile) != NULL ){
+        printf("==>>%s<<\n", str);
+        if (str[0]=='#') continue;
+        LTUnitType t = LTUnitType(str, gunTypeDict);
+        unitTypes.push_back( t );
+    }
+    fclose(pFile);
+    return unitTypes.size();
+}
+
+/*
+int LTWorld::loadSquads(const char * fname ){
+    FILE * pFile;
+    const int nbuff = 4096;
+    char str[nbuff];
+    pFile = fopen ( fname , "r");
+    if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
+    while ( fgets ( str , nbuff, pFile) != NULL ){
+        printf("==>>%s<<\n", str);
+        if (str[0]=='#') continue;
+        LTUnitType t = LTUnitType(str, gunTypeDict);
+        unitTypes.push_back( t );
+    }
+    fclose(pFile);
+    return unitTypes.size();
+}
+*/
+
 void LTWorld::init(){
-    printf( " LTWorld::init() \n" );
+    printf( "========== LTWorld::init() \n" );
     evalAuxSimParams();
 
     ruler.setSize(128,128);
@@ -155,6 +173,20 @@ void LTWorld::init(){
 
 
 
+    //loadGunTypes ("data/GunTypes.ini");
+    //load2vector( "data/GunTypes.ini", gunTypes );
+    processFileLines( "data/GunTypes.ini", [&](char* s){ LTGunType t(s); gunTypes.push_back(t); } );
+    vec2map( gunTypes, gunTypeDict );
+    printDict( gunTypeDict  );
+    //exit(0);
+    printf("DEBUG ==== loadGunTypes DONE \n");
+    //loadUnitTypes("data/UnitTypes.ini");
+    //load2vectorDict( "data/UnitTypes.ini", unitTypes, gunTypeDict );
+    processFileLines( "data/UnitTypes.ini", [&](char* s){ LTUnitType t(s,gunTypeDict); unitTypes.push_back(t); } );
+
+    vec2map( unitTypes, unitTypeDict );
+    printf("DEBUG ==== loadUnitTypes DONE \n");
+
 
     //LTObjectType* ot = new LTObjectType();
     objectTypes.push_back(LTRectHouseType());
@@ -171,11 +203,27 @@ void LTWorld::init(){
     rot = (Vec2d){0.0,+1.0};
     pLook = map_center+(Vec2d){0.0,300.0};
 
-    printf("DEBUG 1 \n");
+    LTFaction* fac1 = new LTFaction( "RedArmy" , 0xFF0080ff );   factions.push_back( fac1 );
+    LTFaction* fac2 = new LTFaction( "BlueArmy", 0xFFff8000 );   factions.push_back( fac2 );
 
-    LTFaction* fac1 = new LTFaction( "RedArmy" , 0xFF0080ff );
-    factions.push_back( fac1 );
-    printf("DEBUG 2 \n");
+    LTFaction* fac;
+    auto lamb_squadLine = [&](char* s) {
+        LTSquad* u=new LTSquad(s,unitTypeDict);
+        fac->squads.push_back(u);
+        squads.push_back(u);
+        u->faction=fac;
+        u->pos.add(map_center);
+        u->populate(u->n);
+    };
+    fac=fac1; processFileLines( "data/Faction1_squads.ini", lamb_squadLine );
+    fac=fac2; processFileLines( "data/Faction2_squads.ini", lamb_squadLine );
+
+    //LTUnitType* ut = unitTypes; // TODO : initialize units from file
+
+    //load2vectorDict( "data/Faction1_squads.ini", fac1->squads, unitTypeDict );
+    //load2vectorDict( "data/Faction2_squads.ini", fac2->squads, unitTypeDict );
+
+    /*
     u = new LTSquad( &unitTypes[0], fac1, map_center+(Vec2d){-50.0,-30.0} ); fac1->squads.push_back(u); squads.push_back(u);  u->lookAt(pLook); u->rot=rot;
     u = new LTSquad( &unitTypes[0], fac1, map_center+(Vec2d){ 0.0, -30.0} ); fac1->squads.push_back(u); squads.push_back(u);  u->lookAt(pLook); u->rot=rot;
     u = new LTSquad( &unitTypes[0], fac1, map_center+(Vec2d){+50.0,-30.0} ); fac1->squads.push_back(u); squads.push_back(u);  u->lookAt(pLook); u->rot=rot;
@@ -183,13 +231,16 @@ void LTWorld::init(){
     rot = (Vec2d){0.0,-1.0};
     pLook = map_center+(Vec2d){0.0,-300.0};
 
-    LTFaction* fac2 = new LTFaction( "BlueArmy", 0xFFff8000 );
-    factions.push_back( fac2 );
     u = new LTSquad( &unitTypes[0], fac2, map_center+(Vec2d){-50.0, 30.0} ); fac2->squads.push_back(u); squads.push_back(u);  u->lookAt(pLook); u->rot=rot;
     u = new LTSquad( &unitTypes[0], fac2, map_center+(Vec2d){ 00.0, 30.0} ); fac2->squads.push_back(u); squads.push_back(u);  u->lookAt(pLook); u->rot=rot;
     u = new LTSquad( &unitTypes[0], fac2, map_center+(Vec2d){+50.0, 30.0} ); fac2->squads.push_back(u); squads.push_back(u);  u->lookAt(pLook); u->rot=rot;
 
+    for( LTSquad* s : squads ){
+        s->populate( 5 );
+    }
+    */
 
+    printf( "========== LTWorld::init() DONE \n" );
 };
 
 

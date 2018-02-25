@@ -35,6 +35,9 @@ class LTWorld{
 	std::vector<LTGunType>    gunTypes;
 	std::vector<LTUnitType>   unitTypes;
 
+	GunTypeDict  gunTypeDict;
+	UnitTypeDict unitTypeDict;
+
     //std::vector<BattleLine*> battleLines;
     std::vector<LTSquad*>       squads;
     std::vector<LTFaction*>     factions;
@@ -84,8 +87,8 @@ class LTWorld{
     void update();
     void simulationStep( double dt );
     int  getUnitAt( const Vec2d& p, LTFaction * faction );
-    int  loadUnitTypes( char * fname );
-    int  loadGunTypes( char * fname );
+    int  loadUnitTypes(const char * fname );
+    int  loadGunTypes (const char * fname );
 
     inline void setSimParams( double dt_frame_, double per_frame_, double damping_ ){
         dt_frame  = dt_frame_;

@@ -79,8 +79,12 @@ class LTSquad : public RigidBody2D { public:
     void renderJob    ( uint32_t c );
     void view();
 
+    void populate( int n);
+    void fromString( const char * s, const UnitTypeDict& dct );
+
     LTSquad(){};
     LTSquad( LTUnitType* type_, LTFaction* faction_, const Vec2d& pos_ );
+    LTSquad( const char * s, const UnitTypeDict& dct ){ fromString(s, dct); }
 
     inline void lookAt( const Vec2d& p ){ attentionDir.set_sub( p, pos ); attentionDir.normalize(); };
 

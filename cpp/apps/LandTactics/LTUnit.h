@@ -26,10 +26,9 @@ class LTUnit : public RigidBody2D { public:
     LTUnitType* type = NULL;
     LTGun guns[nGunMax]; // by default all guns attached to turrer
 
-    bool alive=true;
-    int  wound=0;
-
-    double suppressed;
+    bool   alive=true;
+    int    wound=0;
+    double suppressed=0.0;
 
     Vec2d turret_dir = (Vec2d){1.0,0.0};
 
@@ -50,7 +49,13 @@ class LTUnit : public RigidBody2D { public:
     //void renderJob    ( uint32_t c );
     //void view();
 
-    LTUnit(LTUnitType* type_){ type = type_; };
+    LTUnit(LTUnitType* type_){
+        type = type_;
+        rot  = (Vec2d){1.0,0.0};
+        for(int i=0; i<type->nGun; i++){
+            guns[i].type = type->guns[i];
+        }
+    };
 
 };
 

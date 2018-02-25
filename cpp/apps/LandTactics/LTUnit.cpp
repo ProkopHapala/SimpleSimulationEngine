@@ -12,7 +12,7 @@ void LTUnit::update       ( double dt ){
     suppressed -= type->recovery_rate * dt; if( suppressed<0.0 ) suppressed=0.0;
     dt         *= (1.0-suppressed);
     for(int i=0; i<type->nGun; i++ ){
-        guns[i].timer  += dt*type->guns[i].rps;
+        guns[i].timer  += dt*type->guns[i]->rps;
     }
     //reload     += dt/type->fire_period;
 };
@@ -44,17 +44,18 @@ void LTUnit::getShot( const Vec3d& from, int nburst, double area, double damage_
 
 void LTUnit::render( uint32_t color, int iLOD ){
     Draw::setRGBA(color);
+    //printf( "unit.type->kind %i %s  (%f,%f)  (%f,%f) \n", type->kind, sUnitKind[type->kind], pos.x,pos.y,  rot.x,rot.y );
     switch(type->kind){
         case(UnitKind::inf):
             Draw2D::drawRotT      (pos, rot, {type->sz.a, type->sz.b} );
             break;
         case(UnitKind::gun):
-            Draw2D::drawRotTriangle(pos, rot, {type->sz.a, type->sz.b});
+            Draw2D::drawRotTriangle(pos, rot, {type->sz.a*0.5, type->sz.b});
             Draw2D::drawVecInPos_d (turret_dir*type->sz.a,pos);
             break;
         case(UnitKind::tank):
             Draw2D::drawRotRect   (pos, rot, {type->sz.a, type->sz.b});
-            Draw2D::drawCircle_d  (pos,type->sz.b,16,false);
+            Draw2D::drawCircle_d  (pos,type->sz.b*0.5,16,false);
             Draw2D::drawVecInPos_d(turret_dir*type->sz.a,pos);
             break;
         case(UnitKind::stug):

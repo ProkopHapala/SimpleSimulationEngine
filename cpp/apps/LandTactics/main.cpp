@@ -49,6 +49,7 @@
 */
 
 int   default_font_texture;
+char strBuf[0x10000];
 
 void cmapHeight(double g){
 
@@ -271,11 +272,13 @@ void FormationTacticsApp::draw(){
     //tComp = getCPUticks() - tComp;
 
     long tDraw = getCPUticks();
+    int i=0;
     for( LTSquad* u : world.squads ){
         if( (u!= NULL) ){
             // TODO : check if on screen
-            if  ( u == currentSquad ){ u->render( u->faction->color, 0 );   }
-            else                     { u->render( u->faction->color, 0 );   }
+            printf( "squad %i \n", i ); i++;
+            if  ( u == currentSquad ){ u->render( u->faction->color, 1 );   }
+            else                     { u->render( u->faction->color, 1 );   }
         }
     }
     tDraw = getCPUticks() - tDraw;
@@ -307,7 +310,17 @@ int FormationTacticsApp::tileToList( float x0, float y0, float x1, float y1 ){
 }
 */
 
-void FormationTacticsApp::drawHUD(){}
+void FormationTacticsApp::drawHUD(){
+    if(currentSquad){
+        glPushMatrix();
+        //printf( "currentSquad.type %i %s \n", currentSquad->type, currentSquad->type->name.c_str() );
+        //Draw::drawText( "abcdefghijklmnopqrstuvwxyz \n0123456789 \nABCDEFGHIJKLMNOPQRTSTUVWXYZ \nxvfgfgdfgdfgdfgdfgdfg", fontTex, 8, {10,5} );
+        glTranslatef( 10.0,HEIGHT-20,0.0  ); glColor3f(1.0,0.0,1.0); currentSquad->type->toStrCaptioned(strBuf,true); Draw::drawText( strBuf, default_font_texture, 8, {80,50} );
+        //glTranslatef( 300.0,      0.0,0.0 ); glColor3f(0.0,0.5,0.0); currentFormation->reportStatus(strBuf); Draw::drawText( strBuf, fontTex, 8, {80,15} );
+        //glTranslatef( 300.0,      0.0,0.0 ); glColor3f(0.0,0.5,0.8); currentFormation->soldiers[0].type->toStrCaptioned(strBuf); Draw::drawText( strBuf, fontTex, 8, {80,15} );
+        glPopMatrix();
+    }
+};
 
 void FormationTacticsApp::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );

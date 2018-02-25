@@ -10,8 +10,64 @@
 #include "Vec2.h"
 #include "Vec3.h"
 
-
 const int N_CHAR_TMP = 256;
+
+template <typename Func>
+int processFileLines( char * fname, Func func ){
+FILE * pFile;
+    const int nbuff = 4096;
+    char str[nbuff];
+    pFile = fopen ( fname , "r");
+    if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
+    int n=0;
+    while ( fgets( str , nbuff, pFile) != NULL ){
+        if (str[0]=='#') continue;
+        func( str );
+        n++;
+    }
+    fclose(pFile);
+    return n;
+}
+
+inline char* stripWhite( char* s ){
+    for(;;s++){
+        char c=*s;
+        if(c=='\0') return s;
+        if(c>=33) break;
+    }
+    for( char* s_=s;;s_++ ){
+        if(*s_<33){
+            *s_='\0';
+            return s;
+        }
+    }
+}
+
+
+inline int strcmp_noWhite( const char * s1, const char * s2 ){
+    while( true ){
+        char c=*s1;
+        if(c=='\0') return -1;
+        if(c>=33) break;
+        s1++;
+    }
+    while( true ){
+        char c2=*s2; if(c2=='\0') break;
+        char c1=*s1;
+        int d = c1-c2;
+        if(d) return d;
+        s1++;s2++;
+    }
+    return 0;
+}
+
+inline int str2enum( const char * str, int nnames, const char **names ){
+    for(int i=0; i<nnames; i++ ){
+        //printf( ">>%s<< >>%s<<\n", str, names[i] );
+        if( strcmp_noWhite( str, names[i] ) == 0 ) return i;
+    }
+    return -1;
+}
 
 inline int saveBin( char *fname, int n, char * data ){
     FILE *ptr_myfile;
