@@ -41,7 +41,6 @@ void LTUnit::getShot( const Vec3d& from, int nburst, double area, double damage_
     }
 }
 
-
 void LTUnit::render( uint32_t color, int iLOD ){
     Draw::setRGBA(color);
     //printf( "unit.type->kind %i %s  (%f,%f)  (%f,%f) \n", type->kind, sUnitKind[type->kind], pos.x,pos.y,  rot.x,rot.y );

@@ -37,6 +37,36 @@ int LTWorld::getUnitAt( const Vec2d& p, LTFaction * faction ){
     return imin;
 };
 
+void LTWorld::initLinearObjects(){
+    int n      = 128;
+    double span = 300.0;
+    double maxR = 50.0;
+
+    int iter=0;
+
+    while( linObjects.size()<n ){
+        iter++;
+        if(iter>1000000) break;
+
+        Vec2d p0 = (Vec2d){ map_center.x+randf(-span,span), map_center.y+randf(-span,span) };
+
+        Vec2d dir = (Vec2d){ randf(-1.0,1.0), randf(-1.0,1.0) };
+        dir.mul( randf(maxR*0.2, maxR)/dir.norm() );
+        Vec2d p1 = p0 + dir;
+        // if not intersect
+        Vec2d X;
+        for( LTLinearObject& l : linObjects ){
+            if( 0==l.intersection( p0, p1, X ) ) goto goto_Intersec;
+        }
+        LTLinearObject line;
+        line.p1=p0;
+        line.p2=p1;
+        linObjects.push_back(line);
+        goto_Intersec:;
+    }
+    printf( "initLinearObjects n,iter %i %i \n", n, iter );
+}
+
 void LTWorld::initStaticObject(){
 
     int n      = 128;
@@ -195,7 +225,9 @@ void LTWorld::init(){
     ot->render_glo();
     //objectTypes.push_back(ot);
 
-    initStaticObject();
+    //i0nitStaticObject();
+    initLinearObjects();
+
 
     LTSquad * u;
 

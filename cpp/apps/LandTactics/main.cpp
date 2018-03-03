@@ -258,10 +258,33 @@ void FormationTacticsApp::draw(){
 	glColor3f(0.5,0.5,0.5);
 	for( LTStaticObject& o : world.objects ){
         //Draw2D::drawShape( o.pos, o.dir, o.type->glo );
-        //o.view();
+        o.view();
         //o.type->render( o.pos, o.dir );
     }
     //exit(0);
+
+    for( LTLinearObject& o : world.linObjects ){
+        //printf( " (%f,%f) (%f,%f) \n", o.p1.x, o.p1.y, o.p2.x, o.p2.y );
+        Draw2D::drawLine_d( o.p1, o.p2 );
+    }
+
+    /*
+    LTLinearObject l1,l2;
+    l1.p1 = (Vec2d){0.0,-1.0};   l1.p1.add(world.map_center);
+    l1.p2 = (Vec2d){0.0, 1.0};   l1.p2.add(world.map_center);
+    l2.p1 = (Vec2d){-1.0,-1.0};  l2.p1.add(world.map_center);
+    l2.p2 = (Vec2d){ 1.0, 1.0};  l2.p2.add(world.map_center);
+
+    Draw2D::drawLine_d(l1.p1, l1.p2);
+    Draw2D::drawLine_d(l2.p1, l2.p2);
+    Vec2d X;
+    glColor3f(0.5,0.9,0.5);
+    char c = l1.intersection( l2.p1, l2.p2, X );
+    printf( "intersection mask %i \n", c );
+    if( c==0 ){
+        Draw2D::drawPointCross_d(X, 5.0 );
+    }
+    */
 
     //float camMargin = ( camXmax - camXmin )*0.1;
     //float camMargin = 0;
@@ -276,7 +299,7 @@ void FormationTacticsApp::draw(){
     for( LTSquad* u : world.squads ){
         if( (u!= NULL) ){
             // TODO : check if on screen
-            printf( "squad %i \n", i ); i++;
+            //printf( "squad %i \n", i ); i++;
             if  ( u == currentSquad ){ u->render( u->faction->color, 1 );   }
             else                     { u->render( u->faction->color, 1 );   }
         }

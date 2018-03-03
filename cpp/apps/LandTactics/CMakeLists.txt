@@ -2,7 +2,7 @@
 set( NAME "LandTactics" )
 
 add_executable( ${NAME} 
-	main.cpp LTWorld.cpp LTFaction.cpp LTSquad.cpp LTUnit.cpp LTUnitType.cpp LTcommon.h
+	main.cpp LTWorld.cpp LTSurroundings.cpp LTFaction.cpp LTSquad.cpp LTUnit.cpp LTUnitType.cpp LTcommon.h
 	$<TARGET_OBJECTS:Body2D> 
 	$<TARGET_OBJECTS:SDL2OGL> 
 	$<TARGET_OBJECTS:TerrainHydraulics> 

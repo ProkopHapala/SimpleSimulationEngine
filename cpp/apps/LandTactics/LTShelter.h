@@ -21,6 +21,8 @@
 
 #include "LTUnit.h"
 
+#include "geom2D.h"
+
 
 /*
 TODO:
@@ -90,6 +92,33 @@ class LTStaticObject{ public:
         Draw2D::drawVecInPos_d( dir*radius, pos );
         Draw2D::drawShape( pos, dir, type->glo );
     };
+};
+
+class LTLinearObject{ public:
+    int kind;
+    Vec2d p1,p2;
+    double width;
+
+    Vec2d dp( const Vec2d& p ){ // derivative of distance squared
+        double r2,r2min;
+        Vec2d  dp,dpmin;
+        dpmin=p-p1; r2min=dpmin.norm2();
+        // linar segment
+        Vec2d  d = p2-p1;
+        double c = d.dot(dpmin)/d.norm(); // chan this be optimized ?
+        if(c>0){
+            c/=d.norm();
+            dpmin.add_mul(d,-c);
+            r2min = dpmin.norm2();
+        }
+        dp=p-p2;  r2=dp.norm2();  if(r2<r2min){ r2min=r2; dpmin=dp; }
+        return dpmin;
+    }
+
+    inline char intersection( const Vec2d& op1, const Vec2d& op2, Vec2d& p ){
+        //intersection_st( p1, p2, op1, op2, s, t );
+        return intersection_point(  p1, p2, op1, op2, p );
+    }
 };
 
 /*

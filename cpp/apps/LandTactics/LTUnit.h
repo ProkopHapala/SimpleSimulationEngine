@@ -32,6 +32,9 @@ class LTUnit : public RigidBody2D { public:
 
     Vec2d turret_dir = (Vec2d){1.0,0.0};
 
+    Vec2d willForce;
+    Vec2d goal_pos;
+
     // ===== inline functions
 
     //void move_to_goal ( double dt );

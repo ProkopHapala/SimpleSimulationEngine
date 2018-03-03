@@ -98,8 +98,8 @@ void LTSquad::makeUnits( int n ){
 };
 
 void LTSquad::render( uint32_t color, int iLOD ){
-    printf( "squad \n" );
-    printf( "squad pos (%f,%f) \n", pos.x, pos.y );
+    //printf( "squad \n" );
+    //printf( "squad pos (%f,%f) \n", pos.x, pos.y );
     //glColor3f( c.x, c.y, c.z );
     Draw::setRGBA(color);
     Draw2D::drawCircle_d( pos, radius, 16, false );
@@ -143,7 +143,7 @@ void LTSquad::fromString(const char * str_, const UnitTypeDict& dct ){
     if(it!=dct.end()){
         printf("found >>%s<<\n", s.c_str() );
         type = it->second;
-        printf( "type.name >>%s<< \n", type->name.c_str() );
+        //printf( "type.name >>%s<< \n", type->name.c_str() );
     }else{
         printf("not found >>%s<<\n", s.c_str() );
         exit(-1);
@@ -151,11 +151,11 @@ void LTSquad::fromString(const char * str_, const UnitTypeDict& dct ){
 
     token = strtok(NULL, ";"); //printf( ">>%s<<\n", token );
     sscanf( token, "%li", &ntot ); n=ntot;
-    printf( "n \n", n );
+    //printf( "n \n", n );
 
     token = strtok(NULL, ";"); //printf( ">>%s<<\n", token );
     sscanf( token, "%lf %lf %lf", &pos.x, &pos.y ); n=ntot;
-    printf( "pos (%f,%f,%f) \n",   pos.x,  pos.y );
+    //printf( "pos (%f,%f,%f) \n",   pos.x,  pos.y );
 
     rot.set(1.0,0.0);
     //populate(n);

@@ -174,6 +174,7 @@ inline unsigned char intersection_point (  const Vec2d& l1a, const Vec2d& l1b, c
 	if ( t>1 ) { mask = mask | 2; };
 	if ( s<0 ) { mask = mask | 4; };
 	if ( s>1 ) { mask = mask | 8; };
+	//printf( " s t mask %f,%f %i \n", s, t, mask );
     p.x = l1a.x + (t * dx1 );
     p.y = l1a.y + (t * dy1 );
 	return mask;

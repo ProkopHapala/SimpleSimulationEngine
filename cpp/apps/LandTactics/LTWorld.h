@@ -22,6 +22,7 @@
 
 #include "LTUnit.h"
 #include "LTShelter.h"
+#include "LTSurroundings.h"
 
 class LTMapSquare{ public:
     std::vector<LTStaticObject*> objects;
@@ -34,6 +35,8 @@ class LTWorld{
 	std::vector<LTObjectType> objectTypes;
 	std::vector<LTGunType>    gunTypes;
 	std::vector<LTUnitType>   unitTypes;
+
+	std::vector<LTLinearObject> linObjects;
 
 	GunTypeDict  gunTypeDict;
 	UnitTypeDict unitTypeDict;
@@ -84,11 +87,14 @@ class LTWorld{
 
     void init();
     void initStaticObject();
+    void initLinearObjects();
     void update();
     void simulationStep( double dt );
     int  getUnitAt( const Vec2d& p, LTFaction * faction );
     int  loadUnitTypes(const char * fname );
     int  loadGunTypes (const char * fname );
+
+    //void tryFindBetterPos( LTUnit& u );
 
     inline void setSimParams( double dt_frame_, double per_frame_, double damping_ ){
         dt_frame  = dt_frame_;
