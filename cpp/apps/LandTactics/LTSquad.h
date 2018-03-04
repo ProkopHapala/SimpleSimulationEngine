@@ -47,13 +47,15 @@ class LTSquad : public RigidBody2D { public:
     LTUnitType * type = NULL;
 
     Vec2d   goal;
+    double  goalRadius = 25.0;
     LTSquad  * opponent;
     //double    opponent_score = 0.0;
 
     Vec2d  attentionDir = (Vec2d){1.0,0.0};
     double maxwf = 1.0;
 
-    double radius = 15.0;
+    Rect2d bbox;
+    double radius = 25.0;
 
     int  job         = Unit_JOB_IDLE;
     int  default_job = Unit_JOB_IDLE;
@@ -78,6 +80,8 @@ class LTSquad : public RigidBody2D { public:
     void render       ( uint32_t c, int iLOD );
     void renderJob    ( uint32_t c );
     void view();
+
+    void updateBBox();
 
     void populate( int n);
     void fromString( const char * s, const UnitTypeDict& dct );

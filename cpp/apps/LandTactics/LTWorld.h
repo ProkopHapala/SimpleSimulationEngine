@@ -45,6 +45,7 @@ class LTWorld{
     std::vector<LTSquad*>       squads;
     std::vector<LTFaction*>     factions;
 
+    LTsurrounding tmpSur;
     //std::vector<LTShelter>     shelters;
 
     SimplexRuler       ruler;
@@ -85,6 +86,8 @@ class LTWorld{
     double damp;
     double dt;
 
+    // =========== Functions
+
     void init();
     void initStaticObject();
     void initLinearObjects();
@@ -93,6 +96,10 @@ class LTWorld{
     int  getUnitAt( const Vec2d& p, LTFaction * faction );
     int  loadUnitTypes(const char * fname );
     int  loadGunTypes (const char * fname );
+    void getLinesInCircle ( const Vec2d& pos, double R, std::vector<LTLinearObject*>& out );
+    void getObjectInCircle( const Vec2d& pos, double R, std::vector<LTStaticObject*>& out );
+    void getSurroundings  ( LTsurrounding& sur, LTFaction* fac, const Vec2d& p, double R );
+    void optimizeDeployment( LTSquad* s, double R, int n, int m, bool bJumpToGoal );
 
     //void tryFindBetterPos( LTUnit& u );
 

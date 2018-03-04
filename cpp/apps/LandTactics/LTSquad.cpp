@@ -97,6 +97,15 @@ void LTSquad::makeUnits( int n ){
     }
 };
 
+void LTSquad::updateBBox(){
+    bbox.setEmpty();
+    for( LTUnit& u: units){ bbox.enclose( u.pos ); }
+    bbox.margin( type->sz.a*0.5 );
+    pos    = bbox.cog();
+    radius = 0.5*sqrt( bbox.l2Diag() );
+};
+
+
 void LTSquad::render( uint32_t color, int iLOD ){
     //printf( "squad \n" );
     //printf( "squad pos (%f,%f) \n", pos.x, pos.y );
@@ -130,6 +139,8 @@ void LTSquad::populate(int n){
         u.rot = rot;
         units.push_back(u);
     }
+
+    updateBBox();
 }
 
 void LTSquad::fromString(const char * str_, const UnitTypeDict& dct ){
@@ -169,6 +180,7 @@ void LTSquad::renderJob( uint32_t c){
 
 LTSquad::LTSquad( LTUnitType* type_, LTFaction* faction_, const Vec2d& pos_ ){
     pos.set(pos_);
+    goal=pos;
     rot.set(1.0,0.0);
     setType( type_ );
     faction = faction_ ;

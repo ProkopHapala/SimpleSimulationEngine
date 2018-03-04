@@ -90,6 +90,18 @@ class Rect2d{
         return ( x0 > r.x1 ) || ( x1 < r.x0 ) || ( r.y0 > r.y1 ) || ( y1 < r.y0 );
 	}
 
+	inline void setEmpty(){ x0=1e+300; y0=1e+300; x1=-1e+300; y1=-1e+300; }
+    inline uint8_t enclose( const Vec2d& p ){
+        uint8_t mask=0;
+        if(p.x<x0){ x0=p.x; mask |=1; }
+        if(p.x>x1){ x1=p.x; mask |=4; }
+        if(p.y<y0){ y0=p.y; mask |=2; }
+        if(p.y>y1){ y1=p.y; mask |=8; }
+	}
+    inline void   margin(double R){ x0-=R; y0-=R; x1+=R; y1+=R; }
+	inline Vec2d  cog() const     { return (Vec2d){(x0+x1)*0.5,(y0+y1)*0.5}; }
+	inline double l2Diag() const  { return sq(x1-x0) + sq(y1-y0); }
+
 };
 
 
@@ -135,7 +147,19 @@ class Line2d{
 
 };
 
-inline double line_side     ( const Vec2d& p, const Vec2d& a, const Vec2d& b ){ Line2d l; l.set( a, b ); return l.dist_unitary( p );  }
+inline double line_side   ( const Vec2d& p, const Vec2d& a, const Vec2d& b ){ Line2d l; l.set( a, b ); return l.dist_unitary( p );  }
+
+inline Vec2d dpLineSegment( const Vec2d& pos, const Vec2d& p1, const Vec2d& p2 ){
+    Vec2d d  = p2-p1;
+    Vec2d dp = pos-p1;
+    double c = d.dot( dp );
+    if( c>0 ){
+        double r2 = d.norm2();
+        if(c>r2){ dp=pos-p2;            }
+        else    { dp.add_mul(d,-c/r2 ); }
+    }
+    return dp;
+}
 
 /*
 // not usefull ... use Line2d::intersection_t( const Vec2d& A, const Vec2d& dAB ) instead

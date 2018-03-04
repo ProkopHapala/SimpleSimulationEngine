@@ -22,7 +22,6 @@ void LTWorld::simulationStep( double dt ){
     }
 };
 
-
 int LTWorld::getUnitAt( const Vec2d& p, LTFaction * faction ){
     int imin=-1;
     double r2min = 1e+300;
@@ -37,8 +36,62 @@ int LTWorld::getUnitAt( const Vec2d& p, LTFaction * faction ){
     return imin;
 };
 
+void LTWorld::getLinesInCircle( const Vec2d& pos, double R, std::vector<LTLinearObject*>& out ){
+    // TODO: later this should be optimized using map ruler !!!
+    //printf("==== getLinesInCircle ===");
+    double R2 = R*R;
+    for( LTLinearObject& o : linObjects ){
+        Vec2d dp = o.dp( pos );
+        //printf( " r %f R %f | (%f,%f) (%f,%f) (%f,%f) \n", dp.norm(), R, pos.x, pos.y, o.p1.x, o.p1.y, o.p2.x, o.p2.y );
+        if( R2>dp.norm2() ){
+            //printf( " r %f R %f | (%f,%f) (%f,%f) (%f,%f) \n", dp.norm(), R, pos.x, pos.y, o.p1.x, o.p1.y, o.p2.x, o.p2.y );
+            out.push_back( &o );
+        };
+    }
+    //printf( "getLinesInCircle : found :  %i \n", out.size() );
+}
+
+void LTWorld::getObjectInCircle( const Vec2d& pos, double R, std::vector<LTStaticObject*>& out ){
+    // TODO: later this should be optimized using map ruler !!!
+    double R2 = R*R;
+    for( LTStaticObject& o : objects   ){
+        if( R2>pos.dist2( o.pos ) ){
+            out.push_back( &o );
+        }
+    }
+}
+
+void LTWorld::getSurroundings( LTsurrounding& sur, LTFaction* fac, const Vec2d& pos, double R ){
+    // TODO : it is not clear if sourrounding should be circle, or different shape
+    //    - with circles it is quite hard to ensure that each object is inserted just once, if getSurroundings is called multiple times (disjunct areas)
+    //    - maybe we should rather use unordered_set ?
+    for( LTFaction* f : factions ){
+        if  ( f==fac ){ f->getUnitsInCircle(pos, R, sur.coleagues); }
+        else          { f->getUnitsInCircle(pos, R, sur.enemies  ); }
+    }
+    getLinesInCircle ( pos, R, sur.lobjs );
+    getObjectInCircle( pos, R, sur.objs  );
+};
+
+void LTWorld::optimizeDeployment( LTSquad* s, double R, int n, int m, bool bJumpToGoal ){
+    // TODO : this constr can be actually used for movement of units
+    //   - probable energy gradient in direction toward the target
+    tmpSur.bConstr=true;
+    tmpSur.ConstrPos = s->goal;
+    tmpSur.ConstrRad = s->goalRadius;
+    tmpSur.ConstrE   = -1.0; // TODO: later something more cleaver ( depends on Moral and Order-Strength )
+
+    //printf( "pos (%f,%f) goal (%f,%f)\n", s->pos.x, s->pos.y,   s->goal.x, s->goal.y );
+
+    tmpSur.clear();
+    getSurroundings( tmpSur, s->faction, s->pos, R );
+    for( int i=0; i<m; i++ ){
+        for( LTUnit& u : s->units ){ tmpSur.tryFindBetterPlace( &u, n, bJumpToGoal ); }
+    }
+}
+
 void LTWorld::initLinearObjects(){
-    int n      = 128;
+    int n      = 512;
     double span = 300.0;
     double maxR = 50.0;
 
@@ -55,10 +108,10 @@ void LTWorld::initLinearObjects(){
         Vec2d p1 = p0 + dir;
         // if not intersect
         Vec2d X;
+        LTLinearObject line;
         for( LTLinearObject& l : linObjects ){
             if( 0==l.intersection( p0, p1, X ) ) goto goto_Intersec;
         }
-        LTLinearObject line;
         line.p1=p0;
         line.p2=p1;
         linObjects.push_back(line);
@@ -246,6 +299,7 @@ void LTWorld::init(){
         u->faction=fac;
         u->pos.add(map_center);
         u->populate(u->n);
+        u->goal=u->pos;
     };
     fac=fac1; processFileLines( "data/Faction1_squads.ini", lamb_squadLine );
     fac=fac2; processFileLines( "data/Faction2_squads.ini", lamb_squadLine );

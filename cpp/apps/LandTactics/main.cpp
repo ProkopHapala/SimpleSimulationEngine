@@ -74,6 +74,20 @@ void drawStaticObject( LTStaticObject& o ){
 }
 */
 
+void plotSiteFittness( const LTsurrounding& sur, const LTUnit& u, const Vec2d& pos ){
+    double E = sur.unitPosFittness( &u, pos );
+    sprintf( strBuf, "%3.3f", E );
+    Draw2D::drawText(strBuf, pos, {100.0,20.0}, default_font_texture, 0.5 );
+}
+
+void plotSurrounding( const LTsurrounding& sur, const Vec2d& pos ){
+    glColor3f( 0.0,0.0,1.0 ); for( LTUnit* u : sur.coleagues     ){ Draw2D::drawLine_d( pos, u->pos ); }
+    glColor3f( 1.0,0.0,0.0 ); for( LTUnit* u : sur.enemies       ){ Draw2D::drawLine_d( pos, u->pos ); }
+    glColor3f( 0.5,1.0,0.0 ); for( LTLinearObject* l : sur.lobjs ){ Draw2D::drawLine_d( pos, (l->p1+l->p2)*0.5 ); }
+    glColor3f( 0.0,1.0,0.5 ); for( LTStaticObject* o : sur.objs  ){ Draw2D::drawLine_d( pos, o->pos ); }
+}
+
+
 class FormationTacticsApp : public AppSDL2OGL {
 	public:
     LTWorld world;
@@ -314,11 +328,24 @@ void FormationTacticsApp::draw(){
         drawVisibilityIsolines( currentSquad->pos, 5, 50, 0, 2*M_PI, -0.1, +0.1, 500.0 );
     }
 
+    //world.tmpSur.bConstr=false;
+    world.tmpSur.bConstr=true;
+    world.tmpSur.ConstrPos = currentSquad->goal;
+    world.tmpSur.ConstrRad = currentSquad->goalRadius;
+    world.tmpSur.ConstrE   = -1.0;
+
+    world.tmpSur.clear();
+    world.getSurroundings( world.tmpSur, currentSquad->faction, currentSquad->pos, 50.0 );
+    plotSurrounding( world.tmpSur, {mouse_begin_x,mouse_begin_y} );
+    plotSiteFittness( world.tmpSur, currentSquad->units[0], {mouse_begin_x,mouse_begin_y} );
+
+    world.optimizeDeployment( currentSquad, 50.0, 5, 5, true );
+    //for( LTUnit& u: currentSquad->units ){ u.pos = u.goal_pos; }
+
 
     //Vec2d ray0 = (Vec2d){mouse_begin_x,mouse_begin_y};
     //Vec2d hray = (Vec2d){0.0,1.0};   hray.normalize();
     //drawVisibilityIsolines( ray0, 5, 50, 0, 2*M_PI, -0.1, +0.1, 500.0 );
-
 
 };
 

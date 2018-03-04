@@ -97,9 +97,14 @@ class LTStaticObject{ public:
 class LTLinearObject{ public:
     int kind;
     Vec2d p1,p2;
-    double width;
+    double width = 5.0;
 
-    Vec2d dp( const Vec2d& p ){ // derivative of distance squared
+    // TODO:
+    // more sophisticated system of cover and terrain properties
+    double cover=1.0; // TODO: maybe in future this shoudl be in Type ?
+
+    inline Vec2d dp( const Vec2d& p ){ // derivative of distance squared
+        /*
         double r2,r2min;
         Vec2d  dp,dpmin;
         dpmin=p-p1; r2min=dpmin.norm2();
@@ -113,6 +118,8 @@ class LTLinearObject{ public:
         }
         dp=p-p2;  r2=dp.norm2();  if(r2<r2min){ r2min=r2; dpmin=dp; }
         return dpmin;
+        */
+        return dpLineSegment(p,p1,p2);
     }
 
     inline char intersection( const Vec2d& op1, const Vec2d& op2, Vec2d& p ){

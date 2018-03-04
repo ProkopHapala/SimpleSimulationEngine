@@ -31,6 +31,17 @@ class LTFaction{
         return squads[imin];
     };
 
+    int getUnitsInCircle( const Vec2d& pos, double R, std::vector<LTUnit*>& out ){
+        double R2 = R*R;
+        for( LTSquad* s : squads ){
+            if( pos.dist2(s->pos) > sq( R + s->radius) ) continue;
+            for( LTUnit& u : s->units ){
+                //if( d.norm2() > sq( R + u->type->radius) )
+                if( pos.dist2(u.pos) < R2 ) out.push_back(&u);
+            }
+        }
+    }
+
     LTFaction( char * name_, uint32_t color_ ){
         //color.set( color_ );
         color = color_;

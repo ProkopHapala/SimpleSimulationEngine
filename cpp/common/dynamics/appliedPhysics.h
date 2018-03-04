@@ -23,7 +23,21 @@ inline double gunEnergy( double d, double l, double mPowder, double mProjectile,
     return Wtot*efficiency;
 };
 
-
+inline armorThicnessFactor_MomentumModel( double velocityTangent, double massFactor ){
+//    # https://panzerworld.com/relative-armor-thickness, NIKO HOLKKO, MECHANISMS OF ARMOUR PENETRATION, Bachelor's Thesis, 2015
+//    ### Model 1 - momentum refraction
+//    * Distance Traveled by projectil in armor can be computed by pyctagorean theorem from velocity vII paralel and vT perpendicular to armor plat ( vec{v}=(vII,vT) )
+//       D = D0 * sqrt( 1 + (vII/vT)^2 )
+//    where D0 is nominal(perpendicular) thinkcness of armor
+//    * We assume that upon impact the perpendicular component vT is modified accoding to redistibution of momentum, while vII is unchanged
+//       vT = vT0 * ( m/(m+M) )
+//    where m is mass of projectile and M is effective mass of relevant armor segment
+//    * The effective armor mass M can be calculated assuming some effective contact area S
+//      M = rho * D0 * S
+//    NOTE 1): contact area S can be interpreted as area of plate deformed (bulged) by impacting projectile
+//    NOTE 1): Geometric thicness of sloped armor ( well known cosine rule ) correspond to M=0
+    return sqrt( 1 + sq( (massFactor+1) * velocityTangent ) );
+}
 
 #endif
 
