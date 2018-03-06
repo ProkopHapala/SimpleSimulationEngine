@@ -10,6 +10,7 @@
 
 class MMFFAtom{ public:
     int type;
+    int frag;//=-1;
     Vec3d pos;
     Vec3d REQ;
 };
@@ -56,26 +57,28 @@ class MMFFBuilder{  public:
         int natoms0 = atoms.size();
         if( rigid ){
             Quat4d qrot; qrot.fromMatrix(rot);
+            int ifrag = frags.size();
             for(int i=0; i<mol->natoms; i++){
                 //Vec3d REQi = (Vec3d){1.0,0.03,mol->}; // TO DO : LJq can be set by type
                 //atoms.push_back( (MMFFAtom){mol->atomType[i],mol->pos[i], LJq } );
                 Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y); // REQi.z = 0.0;
                 Vec3d  p; rot.dot_to(mol->pos[i],p); p.add( pos );
-                atoms.push_back( (MMFFAtom){mol->atomType[i], p, REQi } );
+                atoms.push_back( (MMFFAtom){mol->atomType[i], ifrag, p, REQi } );
             }
             frags.push_back( (MMFFfrag){natoms0, atoms.size()-natoms0, pos, qrot, mol}  );
             //size_t mol_id = static_cast<size_t>(mol);
             size_t mol_id = (size_t)(mol);
             auto got = fragTypes.find(mol_id);
             if ( got == fragTypes.end() ) {
-                fragTypes[ mol_id ] = frags.size()-1;
+                fragTypes[ mol_id ] = frags.size()-1; // WTF ?
             }else{}
         }else{
             for(int i=0; i<mol->natoms; i++){
                 //Vec3d LJq = (Vec3d){0.0,0.0,0.0}; // TO DO : LJq can be set by type
-                Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
+                //Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
+                Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y);
                 Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
-                atoms.push_back( (MMFFAtom){mol->atomType[i], p, LJq } );
+                atoms.push_back( (MMFFAtom){mol->atomType[i], -1, p, REQi } );
             }
             for(int i=0; i<mol->nbonds; i++){
                 bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}) } );
@@ -104,6 +107,7 @@ class MMFFBuilder{  public:
         //int * bondTypes = new int[bonds.size()];
         for(int i=0; i<atoms.size(); i++){
             mmff->atypes[i] = atoms[i].type;
+            mmff->atom2frag[i] = atoms[i].frag;
             mmff->apos [i]  = atoms[i].pos;
             mmff->aREQ [i]  = atoms[i].REQ;
             //atomTypes[i]  = atoms[i].type;
@@ -135,6 +139,7 @@ class MMFFBuilder{  public:
         //delete [] atomTypes;
         //delete [] bondTypes;
     }
+
 };
 
 int write2xyz( FILE* pfile, MMFF * mmff, MMFFparams * params ){

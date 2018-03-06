@@ -38,23 +38,33 @@ class Molecule{ public:
     int    * atomType  = NULL;
     int    * bondType  = NULL;
 
-    int   * atom_nb;
-    int   * atom2bond;
+    int   * atom_nb    = NULL;
+    int   * atom2bond  = NULL;
 
     int nang = 0;
-    Vec2i * ang2bond = NULL;
+    Vec2i * ang2bond   = NULL;
     //int * ang2atom = NULL;
 
     std::unordered_map<std::string,int>* atypNames = NULL;
 
     void allocate( int natoms_, int nbonds_ ){
         natoms=natoms_; nbonds=nbonds_;
+
         if(pos      ==NULL) pos       = new Vec3d [natoms];
         //if(charges  ==NULL) charges   = new double[natoms];
         if(REQs     ==NULL) REQs      = new Vec3d [natoms];
         if(bond2atom==NULL) bond2atom = new Vec2i [nbonds];
         if(atomType ==NULL) atomType  = new int   [natoms];
         if(bondType ==NULL) bondType  = new int   [nbonds];
+
+        /*
+        if(pos      )delete [] pos;       pos       = new Vec3d [natoms];
+        //if(charges  ==NULL) charges   = new double[natoms];
+        if(REQs     )delete [] REQs;      REQs      = new Vec3d [natoms];
+        if(bond2atom)delete [] bond2atom; bond2atom = new Vec2i [nbonds];
+        if(atomType )delete [] atomType;  atomType  = new int   [natoms];
+        if(bondType )delete [] bondType;  bondType  = new int   [nbonds];
+        */
     }
 
     int bondsOfAtoms(){
@@ -83,6 +93,13 @@ class Molecule{ public:
             }
             printf("\n");
             a2b+= NBMAX;
+        }
+    }
+
+    void printAtomInfo(){
+        printf("Molecule::printAtomInfo : \n" );
+        for(int i=0; i<natoms; i++){
+            printf( "%i %f %f %f \n", i, REQs[i].x, REQs[i].y, REQs[i].z );
         }
     }
 
@@ -231,6 +248,7 @@ class Molecule{ public:
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         sscanf( line, "%i \n", &natoms );
         printf("%i \n", natoms );
+        //allocate(natoms,0);
         allocate(natoms,nbonds);
         line = fgets( buff, 1024, pFile ); // comment
         for(int i=0; i<natoms; i++){

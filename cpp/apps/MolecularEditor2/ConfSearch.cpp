@@ -222,8 +222,8 @@ void AppMolecularEditor2::initRigidSubstrate(){
     world.gridFF.grid.n    = (Vec3i){60,60,100};
     //world.substrate.grid.n    = (Vec3i){12,12,20};
     world.gridFF.grid.pos0 = (Vec3d){0.0d,0.0d,0.0d};
-    //world.gridFF.loadCell ( "inputs/cel.lvs" );
-    world.gridFF.loadCell ( "inputs/cel_2.lvs" );
+    world.gridFF.loadCell ( "inputs/cel.lvs" );
+    //world.gridFF.loadCell ( "inputs/cel_2.lvs" );
     world.gridFF.grid.printCell();
     //world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
     world.gridFF.loadXYZ  ( "inputs/NaCl_sym.xyz", params );
@@ -243,6 +243,7 @@ void AppMolecularEditor2::initRigidSubstrate(){
     //world.gridFF.evalGridFFs( {0,0,0} );
 
     bool recalcFF = false;
+    //bool recalcFF = true;
     if( recalcFF ){
         world.gridFF.evalGridFFs( {1,1,1} );
         if(world.gridFF.FFelec )  saveBin( "data/FFelec.bin",   world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFelec );
@@ -332,22 +333,36 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //mol.loadXYZ( "inputs/water_ax.xyz" );                           printf( "DEBUG 3.1 \n" );
     //mol.loadXYZ( "inputs/water_ax_q0.xyz" );                        printf( "DEBUG 3.1 \n" );
     //mol.loadXYZ( "inputs/OH_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
-    mol.loadXYZ( "inputs/water_T5_ax.xyz" );                          printf( "DEBUG 3.1 \n" );
+    mol.loadXYZ( "inputs/water_T5_ax.xyz" );    mol.printAtomInfo();                      printf( "DEBUG 3.1 \n" );
     params.assignREs( mol.natoms, mol.atomType, mol.REQs );
     Mat3d rot; rot.setOne();
     builder.insertMolecule( &mol, {0.0,0.0,4.0}, rot, true );          printf( "DEBUG 3.2 \n" );
     builder.insertMolecule( &mol, {4.0,0.0,4.0}, rot, true );
-    builder.insertMolecule( &mol, {0.0,4.0,4.0}, rot, true );
-    builder.insertMolecule( &mol, {4.0,4.0,4.0}, rot, true );
+    //builder.insertMolecule( &mol, {0.0,4.0,4.0}, rot, true );
+    //builder.insertMolecule( &mol, {4.0,4.0,4.0}, rot, true );
+
+    mol.loadXYZ( "inputs/NaIon.xyz" ); mol.printAtomInfo();
+    params.assignREs( mol.natoms, mol.atomType, mol.REQs );
+    builder.insertMolecule( &mol, {2.0,2.0,4.0}, rot, false );
+
+    world.printAtomInfo();
     builder.toMMFF( &world, &params );                                 printf( "DEBUG 3.3 \n" );
+    world.printAtomInfo();
     //world.allocFragment( nFrag );
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); printf( "DEBUG 3.4 \n" );
-    opt.bindArrays( 8*world.nFrag, world.poses, world.poseVs, world.poseFs );
+
+    //opt.bindArrays( 8*world.nFrag, world.poses, world.poseVs, world.poseFs );
+    world.allocateDyn(); printf( "DEBUG 3.4.1  \n" );
+    world.initDyn();     printf( "DEBUG 3.4.2 \n" );
+    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce ); printf( "DEBUG 3.4.3 \n" );
     opt.setInvMass( 1.0 );  printf( "DEBUG 3.5 \n" );
     opt.cleanVel  ( );      printf( "DEBUG 3.6 \n" );
     //exit(0);
     printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
     printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
+    //exit(0);
+
+    //world.printAtomInfo();
     //exit(0);
 
     /*
@@ -413,8 +428,8 @@ void AppMolecularEditor2::draw(){
 
         world.frags2atoms();       //printf( "DEBUG 5.2\n" );
         world.eval_FFgrid();
-        //world.eval_MorseQ_On2(); printf( "DEBUG 5.3\n" );
-        world.eval_MorseQ_Frags(); //printf( "DEBUG 5.3\n" );
+        world.eval_MorseQ_On2(); //printf( "DEBUG 5.3\n" );
+        //world.eval_MorseQ_Frags(); //printf( "DEBUG 5.3\n" );
 
         //exit(0);
         if(ipicked>=0){
@@ -441,8 +456,10 @@ void AppMolecularEditor2::draw(){
         //world.aforce[ipivot].set(0.0);
         //opt.move_LeapFrog(0.01);
         //opt.move_MDquench();
+        world.toDym();
         F2 = opt.move_FIRE();  //printf( "DEBUG 5.5\n" );
         world.checkPoseUnitary();
+        world.fromDym();
 
         //printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
         //printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
@@ -538,6 +555,7 @@ void AppMolecularEditor2::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     ipicked = pickParticle( world.natoms, world.apos, ray0, camMat.c , 0.5 );
+                    printf("ipicked %i \n", ipicked);
                     break;
                 case SDL_BUTTON_RIGHT:
                     ibpicked = world.pickBond( ray0, camMat.c , 0.5 );

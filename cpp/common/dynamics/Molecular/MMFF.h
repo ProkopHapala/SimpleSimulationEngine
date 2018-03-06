@@ -16,14 +16,9 @@
 
 #define SIGN_MASK 2147483648
 
-
 /*
-
 Chimera generuje topologie ... zdrojak C/python
-
 */
-
-
 
 //inline int invIndex( int i ){ return i^SIGN_MASK; }
 
@@ -69,6 +64,7 @@ class MMFF{ public:
 
     // molecular gemeotry
     int    * atypes = NULL;
+    int    * atom2frag = NULL; // [natom], inverted frag2a
     Vec3d  * apos   = NULL;   // atomic position
     //Vec3d  * aLJq   = NULL;
     Vec3d  * aREQ   = NULL;
@@ -79,15 +75,21 @@ class MMFF{ public:
 
     std::vector<MolType> molTypes;
 
-    int nFrag;  // rigid fragments
+    int nFrag=0;  // rigid fragments
     //int *    imolTypes = NULL;
     Vec3d  ** fapos0s = NULL; // position of atoms in rigid fragment
     int    *  frag2a  = NULL; // start of the fragment in forcefield
     int    *  fragNa  = NULL; // lengh of the fragment
     double *  poses   = NULL; // rigd body pose of molecule (pos,qRot);
     double *  poseFs  = NULL; //
-    double *  poseVs  = NULL; //
+    //double *  poseVs  = NULL; //
 
+
+    int nDyn=0;
+    double * dynInvMass = NULL;
+    double * dynPos     = NULL;
+    double * dynVel     = NULL;
+    double * dynForce   = NULL;
 
     //RigidSubstrate substrate;
     GridFF gridFF;
@@ -100,6 +102,7 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     if(apos     ==NULL) apos      = new Vec3d [natoms];
     if(aforce   ==NULL) aforce    = new Vec3d [natoms];
     if(aREQ     ==NULL) aREQ      = new Vec3d [natoms];
+    if(atom2frag==NULL) atom2frag = new int   [natoms];
 
     if(lbond    ==NULL) lbond     = new double[nbonds];
     if(hbond    ==NULL) hbond     = new Vec3d [nbonds];
@@ -129,8 +132,16 @@ void allocFragment( int nFrag_ ){
     fragNa    = new int   [nFrag];    // lengh of the fragment
     poses     = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
     poseFs    = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
-    poseVs    = new double[nFrag*8];
+    //poseVs    = new double[nFrag*8];
     fapos0s   = new Vec3d*[nFrag];
+}
+
+void allocateDyn(){
+    nDyn = getNDym();
+    if(dynInvMass)delete [] dynInvMass; dynInvMass = new double[nDyn];
+    if(dynPos)    delete [] dynPos;     dynPos     = new double[nDyn];
+    if(dynVel)    delete [] dynVel;     dynVel     = new double[nDyn];
+    if(dynForce)  delete [] dynForce;   dynForce   = new double[nDyn];
 }
 
 void deallocate(){
@@ -166,6 +177,64 @@ void genPLQ(){
 }
 
 void translate( Vec3d dpos){ for(int i=0; i<natoms; i++) apos[i].add(dpos); }
+
+int getNDym(){
+    int nfree=0;
+    for(int i=0; i<natoms; i++){  if( 0>atom2frag[i] ){ nfree++;  } }
+    return nFrag*8 + nfree*3;
+}
+
+// TODO :
+// this can be probably optimized if use one array of this structure:
+//       | frag | atomic_free | atomic_frag |
+// then  | frag | atomic_free |               is used for dynamical variables
+// and          | atomic_free | atomic_frag | is used for atom-wise forces
+//  this however assumes that atomic and free forces are re-ordered
+
+void initDyn(){
+    // copy to dynamical variables
+    int off = 8*nFrag;
+    memcpy( dynPos,   poses, sizeof(double)*off );
+    memcpy( dynForce, poseFs, sizeof(double)*off );
+    for( int i=0; i<off; i++ ){ dynVel[i]=0; };
+    Vec3d *pF = (Vec3d*)( dynForce + off );
+    Vec3d *pP = (Vec3d*)( dynPos   + off );
+    Vec3d *pV = (Vec3d*)( dynVel   + off );
+    for(int ia=0; ia<natoms; ia++){
+        if( 0>atom2frag[ia] ){
+            (*pP) = apos[ia];
+            (*pF) = aforce[ia];
+            (*pV).set(0.0);
+            pP++; pF++; pV++;
+        }
+    };
+};
+
+void toDym(){
+    // copy to dynamical variables
+    int off = 8*nFrag;
+    memcpy( dynForce, poseFs, sizeof(double)*off );
+    Vec3d *pF = (Vec3d*)( dynForce + off );
+    for(int ia=0; ia<natoms; ia++){
+        if( 0>atom2frag[ia] ){
+            *pF = aforce[ia];
+            pF++;
+        }
+    };
+}
+
+void fromDym(){
+    // copy from dynamical variables
+    int off = 8*nFrag;
+    memcpy( poses, dynPos, sizeof(double)*off );
+    Vec3d *pP = (Vec3d*)( dynPos + off );
+    for(int ia=0; ia<natoms; ia++){
+        if( 0>atom2frag[ia] ){
+            apos[ia] = *pP;
+            pP++;
+        }
+    };
+}
 
 void frags2atoms(){
     // : fragment pose -> atomic position
@@ -209,9 +278,12 @@ void cleanPoseTemps(){
 void checkPoseUnitary(){
     for( int ifrag=0; ifrag<nFrag; ifrag++ ){
         int ioff = (ifrag<<3) + 4;
-        Quat4d& rot  = *(Quat4d*)(poses+ioff);
-        Quat4d& frot = *(Quat4d*)(poseFs+ioff);
-        Quat4d& vrot = *(Quat4d*)(poseVs+ioff);
+        //Quat4d& rot  = *(Quat4d*)(poses+ioff);
+        //Quat4d& frot = *(Quat4d*)(poseFs+ioff);
+        //Quat4d& vrot = *(Quat4d*)(poseVs+ioff);
+        Quat4d& rot  = *(Quat4d*)(dynPos  +ioff);
+        Quat4d& frot = *(Quat4d*)(dynForce+ioff);
+        Quat4d& vrot = *(Quat4d*)(dynVel  +ioff);
         rot.checkNormalized(1e-4);
         double cdot;
         cdot = rot.dot( frot );  frot.add_mul( rot, -cdot );
@@ -516,6 +588,13 @@ void eval_FFgrid(){
 void printBondParams(){
     for( int i=0; i<nbonds; i++ ){
         printf( "%i (%i,%i) %g %g \n", i, bond2atom[i].x+1, bond2atom[i].y+1, bond_0[i], bond_k[i] );
+    }
+}
+
+void printAtomInfo(){
+    printf("MMFF::printAtomInfo : \n" );
+    for(int i=0; i<natoms; i++){
+        printf( "%i %i %i %f %f %f \n", i, atom2frag[i], atypes[i], aREQ[i].x, aREQ[i].y, aREQ[i].z );
     }
 }
 
