@@ -4,6 +4,11 @@
 
 #include "fastmath.h"
 
+static const double  const_Graviational = 6.674e-11;
+
+
+
+
 inline double kineticEnergy( double v, double mass ){ return 0.5*mass*v*v; }
 
 inline double gunEnergy( double d, double l, double mPowder, double mProjectile, double Vchamber ){
@@ -23,7 +28,7 @@ inline double gunEnergy( double d, double l, double mPowder, double mProjectile,
     return Wtot*efficiency;
 };
 
-inline armorThicnessFactor_MomentumModel( double velocityTangent, double massFactor ){
+inline double armorThicnessFactor_MomentumModel( double velocityTangent, double massFactor ){
 //    # https://panzerworld.com/relative-armor-thickness, NIKO HOLKKO, MECHANISMS OF ARMOUR PENETRATION, Bachelor's Thesis, 2015
 //    ### Model 1 - momentum refraction
 //    * Distance Traveled by projectil in armor can be computed by pyctagorean theorem from velocity vII paralel and vT perpendicular to armor plat ( vec{v}=(vII,vT) )
@@ -38,6 +43,14 @@ inline armorThicnessFactor_MomentumModel( double velocityTangent, double massFac
 //    NOTE 1): Geometric thicness of sloped armor ( well known cosine rule ) correspond to M=0
     return sqrt( 1 + sq( (massFactor+1) * velocityTangent ) );
 }
+
+
+inline Vec3d gravity( const Vec3d& d, double Mm ){
+    double r2 = d.norm2();
+    return d * ( r2 * sqrt(r2) * Mm * const_Graviational );
+}
+
+
 
 #endif
 

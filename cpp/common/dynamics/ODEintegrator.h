@@ -1,6 +1,10 @@
 
 typedef void (*ODEderivFunc)( double t, int n, double * Ys, double * dYs );
 
+class ODEderivObject{ public:
+    virtual void getDerivODE( double t, int n, double * Ys, double * dYs ) = 0;
+};
+
 // =================================================
 // ============ ODEintegrator        ===============
 // =================================================
@@ -14,7 +18,8 @@ class ODEintegrator{
 
 	int    MAX_STEPS = 10000;
 
-	ODEderivFunc getDerivs;
+	ODEderivFunc    getDerivs    = 0;
+	ODEderivObject* derivObj = 0;
 
 	virtual void reallocate( int n_ ){
 		n = n_;
@@ -106,13 +111,21 @@ class ODEintegrator_RKF45 : public ODEintegrator{
 		// predictor step ( get all derivatives )
 
 		//printf( "DEBUG 1.1 \n" );
-		getDerivs( t + at[0]*dt, n, Y   , dY0 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt *   b10*dY0[i];                                                        }
-		getDerivs( t + at[1]*dt, n, Ynew, dY1 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b20*dY0[i] + b21*dY1[i]                                         ); }
-		getDerivs( t + at[2]*dt, n, Ynew, dY2 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b30*dY0[i] + b31*dY1[i] + b32*dY2[i]                            ); }
-		getDerivs( t + at[3]*dt, n, Ynew, dY3 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b40*dY0[i] + b41*dY1[i] + b42*dY2[i] + b43*dY3[i]               ); }
-		getDerivs( t + at[4]*dt, n, Ynew, dY4 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b50*dY0[i] + b51*dY1[i] + b52*dY2[i] + b53*dY3[i] + b54*dY4[i]  ); }
-		getDerivs( t + at[5]*dt, n, Ynew, dY5 );
-
+		if( getDerivs ){
+            getDerivs( t + at[0]*dt, n, Y   , dY0 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt *   b10*dY0[i];                                                        }
+            getDerivs( t + at[1]*dt, n, Ynew, dY1 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b20*dY0[i] + b21*dY1[i]                                         ); }
+            getDerivs( t + at[2]*dt, n, Ynew, dY2 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b30*dY0[i] + b31*dY1[i] + b32*dY2[i]                            ); }
+            getDerivs( t + at[3]*dt, n, Ynew, dY3 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b40*dY0[i] + b41*dY1[i] + b42*dY2[i] + b43*dY3[i]               ); }
+            getDerivs( t + at[4]*dt, n, Ynew, dY4 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b50*dY0[i] + b51*dY1[i] + b52*dY2[i] + b53*dY3[i] + b54*dY4[i]  ); }
+            getDerivs( t + at[5]*dt, n, Ynew, dY5 );
+        }else if (derivObj){
+            derivObj->getDerivODE( t + at[0]*dt, n, Y   , dY0 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt *   b10*dY0[i];                                                        }
+            derivObj->getDerivODE( t + at[1]*dt, n, Ynew, dY1 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b20*dY0[i] + b21*dY1[i]                                         ); }
+            derivObj->getDerivODE( t + at[2]*dt, n, Ynew, dY2 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b30*dY0[i] + b31*dY1[i] + b32*dY2[i]                            ); }
+            derivObj->getDerivODE( t + at[3]*dt, n, Ynew, dY3 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b40*dY0[i] + b41*dY1[i] + b42*dY2[i] + b43*dY3[i]               ); }
+            derivObj->getDerivODE( t + at[4]*dt, n, Ynew, dY4 );  for (int i = 0; i<n; i++) {  Ynew[i] = Y[i] + dt * ( b50*dY0[i] + b51*dY1[i] + b52*dY2[i] + b53*dY3[i] + b54*dY4[i]  ); }
+            derivObj->getDerivODE( t + at[5]*dt, n, Ynew, dY5 );
+        }
 		// construct solutions and error estimator
 		//printf( "DEBUG 1.7 \n" );
 		for (int i = 0; i < n; i++) {

@@ -15,6 +15,15 @@ add_executable( orbitEditor
 )
 target_link_libraries( orbitEditor ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable( spaceTactics
+	spaceTactics.cpp
+	$<TARGET_OBJECTS:Body>
+	$<TARGET_OBJECTS:SDL2OGL>
+	$<TARGET_OBJECTS:Splines>
+)
+target_link_libraries( spaceTactics ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
+
 add_executable( test_OptContinuousThrust
 	test_OptContinuousThrust
 	$<TARGET_OBJECTS:SDL2OGL>
