@@ -8,6 +8,7 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
+#include <string>
 #include "Body.h"
 #include "ODEintegrator.h"
 
@@ -19,9 +20,22 @@ class SpaceCraftBody : public RigidBody{ public:
 */
 
 class SpaceBody : public PointBody  { public:
+
+    std::string name;
+    double radius;
+
     Vec3d * trjPos    = 0; // positions in some times
     //Vec3d * trjVel    = 0; // velocities in some times
     Vec3d * trjThrust = 0; // vector of thrust in time
+
+    inline Vec3d getThrust(int itrj, double du ){
+        //if( trjThrust ){
+            return trjThrust[itrj]*(1-du) + trjThrust[itrj]*du;
+        //}else{
+        //    return (Vec3d){0.0,0.0,0.0};
+        //}
+    }
+    //Vec3d getThrust(double t){};
 
 };
 
@@ -41,7 +55,7 @@ class SpaceBodyIntegrator : public ODEderivObject, public ODEintegrator_RKF45 { 
             Vec3d d;  // d = ( interpolate spline )
             d.sub( p );
             double r2 = d.norm2();
-            f.add( gravity( d, o->mass * centers[i]->mass ) );
+            f.add( centralGravityForce( d, o->mass * centers[i]->mass ) );
         }
         if(o->trjThrust){
             //f.add(  );   interpolate trjThrust

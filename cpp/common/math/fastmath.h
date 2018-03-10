@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <stdint.h>
 
+#include "macroUtils.h"
+
 #include "integerOps.h"
 
 #define GOLDEN_RATIO  1.61803398875
@@ -18,25 +20,14 @@
 
 constexpr double M_TWO_PI = M_PI * 2;
 
-#define SWAP( a, b, TYPE ) { TYPE t = a; a = b; b = t; }
+
 
 //#define sq(a) a*a
 template <class TYPE> inline TYPE sq   (TYPE a){ return a*a; }
 template <class TYPE> inline TYPE clip(TYPE x, TYPE xmin, TYPE xmax ){ if( x<xmin ) return xmin; if( x>xmax ) return xmax; return x; }
 
 
-#define _max(a,b)      ((a>b)?a:b)
-#define _min(a,b)      ((a<b)?a:b)
-#define _abs(a)        ((a>0)?a:-a)
-//#define _clamp(x,a,b)  max(a, min(b, x))
-//#define _clamp(n, lower, upper) if (n < lower) n= lower; else if (n > upper) n= upper
-#define _clamp(a, lower, upper) ((a>lower)?((a<upper)?a:upper):lower)
 
-#define _minit( i, x, imin, xmin )  if( x<xmin ){ xmin=x; imin=i; }
-#define _maxit( i, x, imax, xmax )  if( x>xmax ){ xmax=x; imax=i; }
-
-#define _circ_inc( i, n )   i++; if(i>=n) i=0;
-#define _circ_dec( i, n )   i--; if(i< 0) i=n-1;
 
 typedef int (*Func1i)( int  );
 typedef int (*Func2i)( int, int );

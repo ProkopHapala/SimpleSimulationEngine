@@ -3,6 +3,7 @@
 #define appliedPhysics_h
 
 #include "fastmath.h"
+#include "Vec3.h"
 
 static const double  const_Graviational = 6.674e-11;
 
@@ -45,9 +46,10 @@ inline double armorThicnessFactor_MomentumModel( double velocityTangent, double 
 }
 
 
-inline Vec3d gravity( const Vec3d& d, double Mm ){
+inline Vec3d centralGravityForce( const Vec3d& d, double Mm ){
     double r2 = d.norm2();
-    return d * ( r2 * sqrt(r2) * Mm * const_Graviational );
+    //printf( "centralGravityForce %f %f \n", r2, Mm );
+    return d * (  Mm * const_Graviational / ( r2 * sqrt(r2) ) );
 }
 
 
