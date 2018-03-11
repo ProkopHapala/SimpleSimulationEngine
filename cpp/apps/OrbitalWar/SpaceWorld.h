@@ -23,6 +23,11 @@ class SpaceWorld : public ODEderivObject { public:
     //Vec3d ** trj_Pos = 0;
     double * masses = 0;
 
+    void intertialTansform( Vec3d p0, Vec3d v0 ){
+        for(SpaceBody& b : planets ){ b.pos.add(p0); b.vel.add(v0); };
+        for(SpaceBody& b : ships   ){ b.pos.add(p0); b.vel.add(v0); };
+    };
+
     void addPlanet( std::string name, double mass, double radius, Vec3d pos, Vec3d vel ){
         planets.emplace_back();
         SpaceBody& p = planets.back();

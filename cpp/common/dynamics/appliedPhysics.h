@@ -7,9 +7,6 @@
 
 static const double  const_Graviational = 6.674e-11;
 
-
-
-
 inline double kineticEnergy( double v, double mass ){ return 0.5*mass*v*v; }
 
 inline double gunEnergy( double d, double l, double mPowder, double mProjectile, double Vchamber ){
