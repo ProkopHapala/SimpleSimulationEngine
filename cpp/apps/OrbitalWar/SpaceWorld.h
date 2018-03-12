@@ -38,6 +38,16 @@ class SpaceWorld : public ODEderivObject { public:
         p.vel = vel;
     }
 
+    void addShip( std::string name, double mass, double radius, Vec3d pos, Vec3d vel ){
+        ships.emplace_back();
+        SpaceBody& p = ships.back();
+        p.name = name;
+        p.mass = mass;
+        p.radius = radius;
+        p.pos = pos;
+        p.vel = vel;
+    }
+
     virtual void getDerivODE( double t, int n, double * Ys, double * dYs ){
         int nplanet = planets.size();
         int nship   = ships.size();
@@ -57,21 +67,25 @@ class SpaceWorld : public ODEderivObject { public:
             Vec3d  p   = *(Vec3d*)(Ys+i6);
             Vec3d* pvs =  (Vec3d*)(Ys   );
             //double m = (i<nplanet)? planets[i].mass : ships[i-nplanet].mass;
-            double m = masses[i];
+            //double m = masses[i];
             for( int j=0; j<nplanet; j++ ){
                 if(i!=j){;
                 //gravity( pvs-p, m*planets[j].mass );
                 //printf( " %i %i (%f,%f,%f)\n", i, j,  p.x, p.y, p.z );
-                    f.add( centralGravityForce( (*pvs)-p, m*masses[j] ) );
+                //f.add( centralGravityForce( (*pvs)-p, m*masses[j] ) );
+                f.add( centralGravityForce( (*pvs)-p, masses[j] ) );
                 //printf( " %i %i (%f,%f,%f)\n", i, j,  f.x, f.y, f.z );
                 }
                 pvs+=2;
             }
-            if(i>nplanet){
+            if(i>=nplanet){
                 f.add( ships[i-nplanet].getThrust(itrj,du) );
+                //Vec3d T = ships[i-nplanet].getThrust(itrj,du); f.add( T );
+                //printf( "%s T=( %f %f %f ) \n", ships[i-nplanet].name.c_str(), T.x,T.y,T.z );
             }
             (*(Vec3d*)(dYs+i6  )) = (*(Vec3d*)(Ys+i6+3));
-            (*(Vec3d*)(dYs+i6+3)) = f * (1/masses[i]);
+            //(*(Vec3d*)(dYs+i6+3)) = f * (1/masses[i]);
+            (*(Vec3d*)(dYs+i6+3)) = f;
 
         }
 
@@ -98,11 +112,14 @@ class SpaceWorld : public ODEderivObject { public:
     void allocateTrjs(int n){
         trj_n = n;
         for( SpaceBody& b : planets ){
-            if(b.trjPos) delete [] b.trjPos; b.trjPos = new Vec3d[n];
+            //if(b.trjPos) delete [] b.trjPos; b.trjPos = new Vec3d[n];
+            _realloc(b.trjPos,n+3);
         }
         for( SpaceBody& b : ships ){
-            if(b.trjPos   ) delete [] b.trjPos;    b.trjPos    = new Vec3d[n];
-            if(b.trjThrust) delete [] b.trjThrust; b.trjThrust = new Vec3d[n];
+            //if(b.trjPos   ) delete [] b.trjPos;    b.trjPos    = new Vec3d[n];
+            //if(b.trjThrust) delete [] b.trjThrust; b.trjThrust = new Vec3d[n];
+            _realloc(b.trjPos,n+3);
+            _realloc(b.trjThrust,n+3);
             for(int i=0; i<n*3; i++) ((double*)(b.trjThrust))[i] = 0;
         }
     }
@@ -152,11 +169,12 @@ class SpaceWorld : public ODEderivObject { public:
     }
 
     void predictTrjs( int n, double dt ){
+        trj_dt = dt;
+        ode.t = trj_t0;
         if(n>trj_n ) n=trj_n;
         int nplanet = planets.size();
         int nship   = ships.size();
         // --- initialize
-        ode.t = trj_t0;
         objects2ode();
         // --- run simulation
         for(int i=0; i<n; i++){

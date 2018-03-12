@@ -27,6 +27,9 @@
 
 #include "DynamicOpt.h"
 
+#include "AtomicConfiguration.h"
+#include "DistanceHierarchy.h"
+
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
 
@@ -183,6 +186,8 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
     MMFF        world;
     MMFFBuilder builder;
 
+    DistanceHierarchy<AtomicConfiguration> database;
+
     DynamicOpt  opt;
 
     int     fontTex;
@@ -226,7 +231,8 @@ void AppMolecularEditor2::initRigidSubstrate(){
     //world.gridFF.loadCell ( "inputs/cel_2.lvs" );
     world.gridFF.grid.printCell();
     //world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
-    world.gridFF.loadXYZ  ( "inputs/NaCl_sym.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/NaCl_sym.xyz", params );
+    world.gridFF.loadXYZ  ( "inputs/NaCl_wo4.xyz", params );
     //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Na_add.xyz", params );
     //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Cl_vac.xyz", params );
     //world.gridFF.loadXYZ  ( "inputs/NaCl_sym_Na_vac.xyz", params );
@@ -270,7 +276,7 @@ void AppMolecularEditor2::initRigidSubstrate(){
     //saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
     world.gridFF.evalCombindGridFF( testREQ, FFtot );
-    saveXSF( "FFtot_z.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+    //saveXSF( "FFtot_z.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
     isoOgl = glGenLists(1);
     glNewList(isoOgl, GL_COMPILE);
@@ -343,11 +349,18 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     mol.loadXYZ( "inputs/NaIon.xyz" ); mol.printAtomInfo();
     params.assignREs( mol.natoms, mol.atomType, mol.REQs );
-    builder.insertMolecule( &mol, {2.0,2.0,4.0}, rot, false );
+    builder.insertMolecule( &mol, {4.0,6.0,5.0}, rot, false );
+    builder.insertMolecule( &mol, {4.0,4.0,2.0}, rot, false );
+    builder.insertMolecule( &mol, {4.0,8.0,2.0}, rot, false );
+
+    mol.loadXYZ( "inputs/ClIon.xyz" ); mol.printAtomInfo();
+    params.assignREs( mol.natoms, mol.atomType, mol.REQs );
+    builder.insertMolecule( &mol, {2.0,6.0,2.0}, rot, false );
+    builder.insertMolecule( &mol, {6.0,6.0,2.0}, rot, false );
 
     world.printAtomInfo();
     builder.toMMFF( &world, &params );                                 printf( "DEBUG 3.3 \n" );
-    world.printAtomInfo();
+    world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); printf( "DEBUG 3.4 \n" );
 
@@ -428,7 +441,8 @@ void AppMolecularEditor2::draw(){
 
         world.frags2atoms();       //printf( "DEBUG 5.2\n" );
         world.eval_FFgrid();
-        world.eval_MorseQ_On2(); //printf( "DEBUG 5.3\n" );
+        //world.eval_MorseQ_On2(); //printf( "DEBUG 5.3\n" );
+        world.eval_MorseQ_On2_fragAware();
         //world.eval_MorseQ_Frags(); //printf( "DEBUG 5.3\n" );
 
         //exit(0);
@@ -456,6 +470,12 @@ void AppMolecularEditor2::draw(){
         //world.aforce[ipivot].set(0.0);
         //opt.move_LeapFrog(0.01);
         //opt.move_MDquench();
+
+        for(int i=0; i<world.natoms; i++ ){
+            Draw3D::drawVecInPos( world.aforce[i]*10.0, world.apos[i] );
+        };
+
+
         world.toDym();
         F2 = opt.move_FIRE();  //printf( "DEBUG 5.5\n" );
         world.checkPoseUnitary();

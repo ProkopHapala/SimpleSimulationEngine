@@ -551,6 +551,30 @@ void eval_MorseQ_On2(){
     //exit(0);
 }
 
+void eval_MorseQ_On2_fragAware(){
+    for(int i=0; i<natoms; i++){
+        Vec3d REQi = aREQ[i];
+        Vec3d pi   = apos[i];
+        Vec3d f; f.set(0.0);
+        int ifrag = atom2frag[i];
+        for(int j=0; j<natoms; j++){
+            if( (ifrag>=0) && (ifrag==atom2frag[j]) ){
+                //printf( " %i %i | %i %i \n", i, j, ifrag, atom2frag[j] );
+                continue;
+            }
+            if(i!=j){
+                Vec3d& REQj = aREQ[j];
+                //printf("(%i,%i)", i, j );
+                addAtomicForceMorseQ( pi-apos[j], f, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z, gridFF.alpha );
+            }
+        }
+        aforce[i].add(f);
+    }
+    //exit(0);
+}
+
+
+
 void eval_MorseQ_Frags(){
     // we can use in principle eval_MorseQ_On2, but it will make it less numerically precise due to adding repulasive force between non-bonded atoms
     // also this will allow for more optimizations in future (e.g. per-fragment bounding boxes)

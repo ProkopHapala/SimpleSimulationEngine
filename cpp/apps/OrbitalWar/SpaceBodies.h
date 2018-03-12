@@ -19,6 +19,29 @@ class SpaceCraftBody : public RigidBody{ public:
 }
 */
 
+inline double findNextInd( double t, int imax, const double* ts, int& i ){
+    double tleft;
+    for(;i<imax;i++){
+        //printf("%i %f %f \n", i, t, ts[i] );
+        if(t<ts[i])break;
+    };
+    double ot =  ts[i-1];
+    double dt = (ts[i]-ot);
+    //printf( "findNextInd i=%i t=%f ot=%f ts=%f dt=%f u=%f \n", i, t, ot, ts[i], dt, (t-ot)/dt );
+    return (t-ot)/dt;
+}
+
+void nonUni2spline( double t0, double dt, int n, const double* ts, const Vec3d* ps, int nout, Vec3d* out ){
+    int j=1;
+    for(int i=0; i<nout; i++){
+        double t = dt*i + t0;
+        double u = findNextInd( t, n-1, ts, j);
+        out[i] = ps[j-1]*(1-u) + ps[j]*u;
+        //printf( "%i %i %f %f (%f,%f,%f) \n", i, j, t, u, out[i].x, out[i].y, out[i].z );
+    };
+    //exit(0);
+}
+
 class SpaceBody : public PointBody  { public:
 
     std::string name;
@@ -28,9 +51,12 @@ class SpaceBody : public PointBody  { public:
     //Vec3d * trjVel    = 0; // velocities in some times
     Vec3d * trjThrust = 0; // vector of thrust in time
 
+    SpaceBody* orbCenter=0;
+
     inline Vec3d getThrust(int itrj, double du ){
         //if( trjThrust ){
-            return trjThrust[itrj]*(1-du) + trjThrust[itrj]*du;
+            //printf( "%i %f   (%f,%f,%f)   (%f,%f,%f) \n", itrj, du, trjThrust[itrj].x, trjThrust[itrj].y, trjThrust[itrj].z,  trjThrust[itrj+1].x, trjThrust[itrj+1].y, trjThrust[itrj+1].z );
+            return trjThrust[itrj]*(1-du) + trjThrust[itrj+1]*du;
         //}else{
         //    return (Vec3d){0.0,0.0,0.0};
         //}

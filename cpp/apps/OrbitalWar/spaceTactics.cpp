@@ -61,6 +61,21 @@ void drawPolyLineRef( int n, Vec3d * ps, Vec3d * ps_ref ){   // closed=false
 };
 */
 
+const int nThrusts = 6;
+const double ThrustTimes[nThrusts  ] = {-10.0,35000.0,40000.0,60000.0,65000.0,100000.0};
+const double Thrusts    [nThrusts*3] = {
+    0.000, 0.0,0.0,
+    0.001, 0.0,0.0,
+    -0.200, 0.0,0.0,
+    -0.100, 0.0,0.0,
+    -0.001, 0.0,0.0,
+    0.000, 0.0,0.0
+};
+
+class BodyInteraction{ public:
+    int i,j,kind;
+};
+
 class SpaceTactics : public AppSDL2OGL_3D { public:
     SplineManager splines;
 
@@ -70,16 +85,17 @@ class SpaceTactics : public AppSDL2OGL_3D { public:
     int     nsamp=0;
     double tstart, tend, dt;
 
-    /*
-    bool dragging = false;
-    int iedit=0, ipoint=0;
-    double mouse_t,mouse_val;
-    double timeScale=100.0,valScale=100.0f;
-    */
+
+    std::vector<BodyInteraction> interactions;
+
+    float scF = 1.0;
     double view_scale = 1/1e+9;
     Vec3d  view_shift = (Vec3d){0.0,0.0,0.0};
 
+
+    int iTrjMin=0,iTrjMax=0;
     bool bRefTrj = false;
+    int trjStep = 10;
     SpaceBody* referenceBody = 0;
 
     int          fontTex;
@@ -91,8 +107,11 @@ class SpaceTactics : public AppSDL2OGL_3D { public:
     //Vec3d *  dpos;
     //Vec3d * ddpos;
 
-    void drawTrj( int n, Vec3d * ps );
-    void drawPlanet( SpaceBody& b );
+    void drawTrj    ( int n, Vec3d* ps );
+    void drawBodyTrj( SpaceBody& b );
+    void drawPlanet ( SpaceBody& b );
+    //void drawInteraction( BodyInteraction& bi );
+    void drawInteractionTrj( BodyInteraction& bi );
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -102,6 +121,14 @@ class SpaceTactics : public AppSDL2OGL_3D { public:
     //virtual void mouseHandling( );
 
 	SpaceTactics( int& id, int WIDTH_, int HEIGHT_ );
+
+	inline Vec3d transformTrjPos( Vec3d* ps, int i){
+        //printf("%f %f %f \n", ps[i].x,ps[i].y,ps[i].z );
+	    if( referenceBody ){
+            if( bRefTrj ){ return (ps[i]-view_shift-referenceBody->trjPos[i])*view_scale; }
+            else{          return (ps[i]-view_shift-referenceBody->pos      )*view_scale; }
+        }else{             return (ps[i]-view_shift                         )*view_scale; }
+	};
 
 };
 
@@ -122,8 +149,17 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     referenceBody = &world.planets[4];
 
-    world.addPlanet( "Ship1"  ,   10.00E+3, 2.5E+03, (Vec3d){ -4e+6, 0, 0.0} +referenceBody->pos, (Vec3d){ 0.0, -5.6e+3,0.0}+referenceBody->vel );
-    world.addPlanet( "Ship2"  ,   10.00E+3, 2.5E+03, (Vec3d){ -3e+6, 0, 0.0} +referenceBody->pos, (Vec3d){ 0.0, -5.6e+3,0.0}+referenceBody->vel );
+    world.addShip( "ShipA1",   10.00E+3, 2.5E+03, (Vec3d){ -4e+6, 0, 0.0} +referenceBody->pos, (Vec3d){ 0.0, -5.6e+3,0.0}+referenceBody->vel );
+    world.addShip( "ShipA2",   10.00E+3, 2.5E+03, (Vec3d){ -3e+6, 0, 0.0} +referenceBody->pos, (Vec3d){ 0.0, -5.6e+3,0.0}+referenceBody->vel );
+    world.addShip( "ShipA3",   10.00E+3, 2.5E+03, (Vec3d){ -5e+6, 0, 0.0} +referenceBody->pos, (Vec3d){ 0.0, -5.6e+3,0.0}+referenceBody->vel );
+
+    //world.addShip( "ShipB1",   10.00E+3, 2.5E+03, (Vec3d){ 3e+8, rJup, 0.0}, (Vec3d){ vJup, 26.6e+3,0.0} );
+    //world.addShip( "ShipB2",   10.00E+3, 2.5E+03, (Vec3d){ 4e+8, rJup, 0.0}, (Vec3d){ vJup, 22.6e+3,0.0} );
+    //world.addShip( "ShipB3",   10.00E+3, 2.5E+03, (Vec3d){ 5e+8, rJup, 0.0}, (Vec3d){ vJup, 20.6e+3,0.0} );
+
+    world.addShip( "ShipB1",   10.00E+3, 2.5E+03, (Vec3d){ 0, rJup-4.5e+8, 0.0}, (Vec3d){ vJup+ 20.6e+3,0.0,0.0} );
+    world.addShip( "ShipB2",   10.00E+3, 2.5E+03, (Vec3d){ 0, rJup-4.6e+8, 0.0}, (Vec3d){ vJup+ 20.6e+3,0.0,0.0} );
+    world.addShip( "ShipB3",   10.00E+3, 2.5E+03, (Vec3d){ 0, rJup-4.7e+8, 0.0}, (Vec3d){ vJup+ 20.6e+3,0.0,0.0} );
 
     SpaceBody& jup = world.planets[1];
     world.intertialTansform( jup.pos*-1.0, jup.vel*-1.0 );
@@ -131,10 +167,21 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //referenceBody = &jup;
 
     world.allocateODE ();
-    world.allocateTrjs( 1000 );
+    world.allocateTrjs( 500 );
     //world.allocateTrjs( 20 );
 
-    world.predictTrjs( 100000000, 100.1 );
+    interactions.push_back( {0,3, 0} );
+
+
+    double dt = 200.0;
+    nonUni2spline( 0.0, dt, nThrusts, ThrustTimes, (Vec3d*)Thrusts, world.trj_n, world.ships[3].trjThrust );
+
+    world.predictTrjs( 100000000, dt );
+    //exit(0);
+
+    //for( SpaceBody& b : world.ships ){
+    //    for(int i=0; i<world.trj_n; i++){ printf("%s[%i] T= %f %f %f \n", b.name.c_str(), i, b.trjThrust[i].x, b.trjThrust[i].y, b.trjThrust[i].z ); }
+    //}
     //exit(0);
 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
@@ -151,15 +198,28 @@ void SpaceTactics::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	//glEnable(GL_DEPTH_TEST);
 
-	glColor3f(0.0f,0.0f,0.0f);
-	for(SpaceBody& b : world.planets ){ drawTrj( world.trj_n, b.trjPos ); drawPlanet( b ); }
-    for(SpaceBody& b : world.ships   ){ drawTrj( world.trj_n, b.trjPos ); }
+    //bool bAnimate = false;
+    bool bAnimate = true;
+	if(bAnimate){
+        int nPhases = 10;
+        int nChunk = (world.trj_n/nPhases);
+        iTrjMin = ( ((frameCount/10)%nPhases)*nChunk );
+        //iTrjMax=_min(iTrjMin+nChunk,world.trj_n);
+        iTrjMax=_min(iTrjMin+trjStep,world.trj_n);
+	}else{
+        iTrjMin=0; iTrjMax=world.trj_n;
+	}
 
-    SpaceBody& b = world.planets[2];
+
+	glColor3f(0.0f,0.0f,0.0f); for(SpaceBody& b : world.planets ){ drawBodyTrj( b ); drawPlanet( b ); }
+    glColor3f(0.0f,0.0f,1.0f); for(SpaceBody& b : world.ships   ){ drawBodyTrj( b ); }
+
+    glColor3f(0.0f,0.5f,0.0f); SpaceBody& b = world.planets[2];
     //printf("%s.trj \n", b.name.c_str() );
     //for(int i=0; i<world.trj_n; i++){ printf("%i %f %f %f \n ", i, b.trjPos[i].x, b.trjPos[i].y, b.trjPos[i].z ); };
-
     //exit(0);
+
+    for( BodyInteraction& bi : interactions ){ drawInteractionTrj( bi ); }
 
 };
 
@@ -199,14 +259,12 @@ void SpaceTactics::keyStateHandling( const Uint8 *keys ){
 	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
 
 	double step = 0.05/view_scale;
-    if( keys[ SDL_SCANCODE_W  ] ){ view_shift.y -=step; }
-	if( keys[ SDL_SCANCODE_S  ] ){ view_shift.y +=step; }
-	if( keys[ SDL_SCANCODE_A  ] ){ view_shift.x +=step; }
-	if( keys[ SDL_SCANCODE_D  ] ){ view_shift.x -=step; }
+    if( keys[ SDL_SCANCODE_W  ] ){ view_shift.y +=step; }
+	if( keys[ SDL_SCANCODE_S  ] ){ view_shift.y -=step; }
+	if( keys[ SDL_SCANCODE_A  ] ){ view_shift.x -=step; }
+	if( keys[ SDL_SCANCODE_D  ] ){ view_shift.x +=step; }
 	//printf(" view_shift %g %g %g \n", view_shift.x, view_shift.y, view_shift.z);
 };
-
-
 
 //void SpaceTactics::keyStateHandling( const Uint8 *keys ){ };
 
@@ -217,7 +275,7 @@ void SpaceTactics::drawPlanet( SpaceBody& b ){
     //Draw3D::drawPointCross( p*view_scale, b.radius*view_scale );
     p.mul(view_scale);
     Draw3D::drawPointCross( p, 0.1 );
-    printf( "%s R %f (%f,%f,%f) \n", b.name.c_str(), b.radius*view_scale, p.x, p.y, p.z );
+    //printf( "%s R %f (%f,%f,%f) \n", b.name.c_str(), b.radius*view_scale, p.x, p.y, p.z );
     //Draw3D::drawSphereOctLines(2, b.radius*view_scale, p );
     Draw3D::drawSphere_oct(16, b.radius*view_scale, p );
     //Draw3D::drawSphere_oct(3, 0.2, p );
@@ -244,7 +302,39 @@ void SpaceTactics::drawTrj( int n, Vec3d * ps ){
             glVertex3d( p.x, p.y, p.z );
     }}
     glEnd();
+
 };
+
+void SpaceTactics::drawBodyTrj( SpaceBody& b ){
+    int n = world.trj_n;
+    glBegin(GL_LINE_STRIP);
+    Vec3d p,f;
+    for(int i=0; i<n; i++){ p=transformTrjPos( b.trjPos, i ); glVertex3d( p.x, p.y, p.z ); };
+    glEnd();
+    if( b.trjThrust ){
+        double sc = scF * view_scale * 1e+9;
+        glBegin(GL_LINES );
+        for(int i=iTrjMin; i<iTrjMax; i+=trjStep ){ p=transformTrjPos( b.trjPos, i ); f=b.trjThrust[i]; glVertex3d( p.x, p.y, p.z ); glVertex3d( p.x+f.x*sc, p.y+f.y*sc, p.z+f.z*sc );
+            //if( &b == &world.ships[0] ) printf( "thrust %s[%i] (%f,%f,%f) \n", b.name.c_str(), i, f.x, f.y, f.z );
+        };
+        glEnd();
+    }
+};
+
+
+void SpaceTactics::drawInteractionTrj( BodyInteraction& bi ){
+    int n = world.trj_n;
+    glBegin(GL_LINE_STRIP);
+    Vec3d p;
+    glBegin(GL_LINES );
+    for(int i=iTrjMin; i<iTrjMax; i+=trjStep ){
+        p=transformTrjPos( world.ships[bi.i].trjPos, i ); glVertex3d( p.x, p.y, p.z );
+        p=transformTrjPos( world.ships[bi.j].trjPos, i ); glVertex3d( p.x, p.y, p.z );
+        //if( &b == &world.ships[0] ) printf( "thrust %s[%i] (%f,%f,%f) \n", b.name.c_str(), i, f.x, f.y, f.z );
+    };
+    glEnd();
+};
+
 
 // ===================== MAIN
 

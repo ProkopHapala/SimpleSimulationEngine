@@ -59,6 +59,30 @@ class CubeGridRuler : public GridRulerInterface { public:
             step*ipos.z + pos0.z + dpos.z };
     }
 
+    int overpSphere( Vec3d pos, double r, int* icells ){
+        int n=1;
+        Vec3d dpos; Vec3i ipos;
+        pos2box( pos, ipos,dpos );
+        icells[0]=ixyz2i( ipos );   // insert
+	    int    dix =0,diy =0,diz =0;
+	    double dr2x=0,dr2y=0,dr2z=0;
+	    double mr = 1-r;
+	    if     (  dpos.x < r  ){ icells[n]=ixyz2i( {ipos.x-1, ipos.y  , ipos.z}   ); n++;  dix=-1; dr2x = sq(  dpos.x); }
+	    else if(  dpos.x > mr ){ icells[n]=ixyz2i( {ipos.x+1, ipos.y  , ipos.z}   ); n++;  dix=+1; dr2x = sq(1-dpos.x); }
+	    if     (  dpos.y < r  ){ icells[n]=ixyz2i( {ipos.x  , ipos.y-1, ipos.z}   ); n++;  diy=-1; dr2y = sq(  dpos.y); }
+	    else if(  dpos.y > mr ){ icells[n]=ixyz2i( {ipos.x  , ipos.y+1, ipos.z}   ); n++;  diy=+1; dr2y = sq(1-dpos.y); }
+	    if     (  dpos.z < r  ){ icells[n]=ixyz2i( {ipos.x  , ipos.y  , ipos.z-1} ); n++;  diz=-1; dr2z = sq(  dpos.z); }
+	    else if(  dpos.z > mr ){ icells[n]=ixyz2i( {ipos.x  , ipos.y  , ipos.z+1} ); n++;  diz=+1; dr2z = sq(1-dpos.z); }
+	    double r2 = r*r;
+	    if ( dr2x+dr2y      < r2 ){ icells[n]=ixyz2i( {ipos.x+dix, ipos.y+diy, ipos.z    } ); n++; }
+	    if ( dr2x+dr2z      < r2 ){ icells[n]=ixyz2i( {ipos.x+dix, ipos.y    , ipos.z+diz} ); n++; }
+	    if ( dr2y+dr2z      < r2 ){ icells[n]=ixyz2i( {ipos.x    , ipos.y+diy, ipos.z+diz} ); n++; }
+	    if ( dr2x+dr2y+dr2z < r2 ){ icells[n]=ixyz2i( {ipos.x+dix, ipos.y+diy, ipos.z+diz} ); n++; }
+        return n;
+	    //if( (dix!=0)&&(diy!=0) ){ insert( o, ipos.x+dix, ipos.y+diy ); }
+	    //printf( " %1.3f %1.3f  (%1.3f,%1.3f) (%i,%i) %1.3f \n", r, mr, dpos.x,dpos.y, dix, diy, dr2 );
+    }
+
     inline int ixyz2i( Vec3i ip         ) const { return ip.x + n.x*(ip.y + n.y*ip.z);          }
     inline int i2ixyz( int i, Vec3i& ip ) const { ip.z=i/nxy; i=i%nxy; ip.y=i/n.x; ip.x=i%n.x;  }
 
