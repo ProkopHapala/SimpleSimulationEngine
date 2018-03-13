@@ -11,10 +11,98 @@
 #include "Forces.h"
 #include "GridFF.h"
 
+#include "geom3D.h"
+
 #include "integerOps.h"
 
 
 #define SIGN_MASK 2147483648
+
+void transformAtomRange( int n, Vec3d* inpos, Vec3d* outpos, const Vec3d& p0, const Vec3d& p1, const Mat3d& rot ){
+    Vec3d p;
+    //printf( "p0: (%f,%f,%f) \n", p0.x, p0.y, p0.z );
+    for( int i=0; i<n; i++ ){
+        rot.dot_to( inpos[i]-p0, p );
+        outpos[i] = p + p1;
+    }
+}
+
+class AtomicManipulator{ public:
+    int     npick   =0;
+    int   * picked  =0;
+    int   * counts  =0;
+    Vec3d * goalPos =0;
+
+    int    nMaxCount  = 50;
+    double Rconv      = 0.5;
+    double Fmax       = 1.0;
+    bool   newPerAtom = false;
+
+    bool  bRelative = false;
+    Vec3d goalSpan  = (Vec3d){1.0,1.0,1.0};
+    Vec3d anizo     = (Vec3d){1.0,1.0,1.0};
+
+    int   nenabled=0;
+    int *  enabled=0;
+
+
+    int natoms;
+    Vec3d* aforce;
+    Vec3d* apos;
+
+    void bindAtoms( int natoms_, Vec3d* apos_, Vec3d* aforce_ ){ natoms=natoms_; apos=apos_; aforce=aforce_; }
+
+    void realloc( int n){
+        npick = n;
+        _realloc( picked,  npick );
+        _realloc( goalPos, npick );
+        _realloc( counts,  npick );
+    };
+
+    void genGoal(int i){
+        // should we ensure that goals does not repeat ?
+        int iatom;
+        if( enabled ){ iatom = enabled[rand()%nenabled]; }else{ iatom  = rand()%natoms; };
+        picked [i] = iatom;
+        Vec3d p = (Vec3d){ randf(-goalSpan.x,goalSpan.x), randf(-goalSpan.y,goalSpan.y), randf(-goalSpan.z,goalSpan.z) };
+        if(bRelative) p.add( goalPos[i] );
+        goalPos[i] = p;
+        counts [i] = 0;
+    }
+
+    void genGoals(){ for(int i=0; i<npick; i++){ genGoal(i); }; }
+
+    inline bool forceToTarget( int i, Vec3d pos, double Rconv, double Fmax ){
+        Vec3d d = pos - apos[i];
+        d.mul(anizo);
+        double r2 = d.norm2();
+        if( r2 < Rconv*Rconv ){
+            double k=Fmax/Rconv;
+            aforce[i].add_mul( d, k );
+            return true;
+        }else{
+            aforce[i].add_mul( d, Fmax/sqrt(r2) );
+            return false;
+        }
+    }
+
+    bool forceToGoals(){
+        bool ret=true;
+        for(int i=0; i<npick; i++ ){
+            bool b = forceToTarget( picked[i], goalPos[i], Rconv, Fmax );
+            ret &= b;
+            counts[i]++;
+            if( (b&&newPerAtom) || (counts[i]>nMaxCount) ){
+                printf( "new manipulation goal %i \n", i );
+                genGoal(i);
+            }
+        }
+        return ret;
+    }
+
+};
+
+
 
 /*
 Chimera generuje topologie ... zdrojak C/python
@@ -93,6 +181,15 @@ class MMFF{ public:
 
     //RigidSubstrate substrate;
     GridFF gridFF;
+
+    Box    Collision_box   = (Box){(Vec3d){0.0,0.0,0.0},(Vec3d){10.0,10.0,10.0}};
+    double Collision_Rsc   = 0.5;
+    double Collision_F2max = 1.0;
+
+void setCollisionRF( double Rsc ){
+    Collision_Rsc   = Rsc;
+    Collision_F2max = exp( 2*2*(3.5*(1-Rsc))*gridFF.alpha );
+}
 
 
 void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
@@ -210,15 +307,17 @@ void initDyn(){
     };
 };
 
-void toDym(){
+void toDym( const bool bPos ){
     // copy to dynamical variables
     int off = 8*nFrag;
+    if(bPos) memcpy( dynPos, poses, sizeof(double)*off ); // needed if positions modified outside optimizer
     memcpy( dynForce, poseFs, sizeof(double)*off );
     Vec3d *pF = (Vec3d*)( dynForce + off );
+    Vec3d *pP = (Vec3d*)( dynPos + off   );
     for(int ia=0; ia<natoms; ia++){
         if( 0>atom2frag[ia] ){
-            *pF = aforce[ia];
-            pF++;
+            *pF = aforce[ia]; pF++;
+            if(bPos){ *pP=apos[ia]; pP++; };              // needed if positions modified outside optimizer
         }
     };
 }
@@ -240,6 +339,7 @@ void frags2atoms(){
     // : fragment pose -> atomic position
     //printf( ">>> MMFF::frags2atoms %i \n", nFrag );
     for(int ifrag=0; ifrag<nFrag; ifrag++){
+        //frag2atoms( ifrag, apos+frag2a[ifrag] );
         int im8 = ifrag<<3;
         Vec3d  pos = *((Vec3d* )(poses+im8  ));
         Quat4d rot = *((Quat4d*)(poses+im8+4));
@@ -260,7 +360,6 @@ void frags2atoms(){
     }
     //exit(0);
 }
-
 
 void cleanAtomForce(){
     for(int i=0; i<natoms; i++){ aforce[i].set(0.0); }
@@ -342,8 +441,6 @@ void RBodyForce(){
     }
     //exit(0);
 }
-
-
 
 void ang_b2a(){
     for(int i=0; i<nang; i++){
@@ -534,6 +631,105 @@ void eval_LJq_On2(){
     }
 }
 
+bool getCollosion( int i0, int n, double scR, const bool bFColPauli, Vec3d* poss, Vec3d* forces, double* R2mins ){
+    int i1 = i0+n;
+    bool ret = false;
+    const bool justAny = ( (forces==0)&&(R2mins==0) );
+    if(forces) for(int i=0; i<n; i++){ forces[i].set(0.0); };
+    //if(energys) for(int i=0; i<n; i++){ dforces[i].set(0); };
+    if(R2mins)   for(int i=0; i<n; i++){ R2mins[i]=1e+300; };
+    for( int i=0; i<natoms; i++ ){
+        Vec3d  pi = apos[i];
+        //double ri  = aREQ[i].x;
+        Vec3d REQi =  aREQ[i];
+        if( (i>=i0)&&(i<i1) ) continue;
+        for(int j=0; j<n; j++){
+            Vec3d  d  = poss[j] - pi;
+            double r2 = d.norm2();
+            Vec3d&  REQj = aREQ[i0+j];
+            double R  = ( REQj.x + REQi.x )*scR;
+            double R2 = R*R;
+            if( r2 < R2 ){
+                if(justAny){
+                    return true;
+                }else{
+                    ret=true;
+                    if(R2mins){ double r2m=R2mins[j]; if(r2<r2m)R2mins[j]=r2; };
+                    if(forces){
+                        if (bFColPauli){ addAtomicForceExp( d, forces[j], REQi.x+REQj.x, REQi.y*REQj.y, gridFF.alpha*2 ); }
+                        else           { forces[j].add_mul( d, 1/r2 - 1/R2 );                                             }
+                    };
+                    //if(dforces){ Energy [j].add_mul( d, 1/r2 ) };
+                }
+            }
+        }
+    }
+    return ret;
+}
+
+double getCollisionGrid( int i0, int n, Vec3d* poss, Vec3d* forces ){
+    double F2max=0;
+    Vec3d f,gpos;
+    for(int i=0; i<n; i++){
+        //Vec3d , gridFF.addForce( apos[j], aPLQ[j], aforce[j] );
+        gridFF.grid.cartesian2grid(poss[i],gpos);
+        f = interpolate3DvecWrap( gridFF.FFPauli, gridFF.grid.n, gpos );
+        f.mul( aPLQ[i0+i].x );
+        double fr2 = f.norm2();
+        if( fr2>F2max ) F2max=fr2;
+        if(forces){ forces[i].add( f ); }
+    }
+    return F2max;
+}
+
+//void translate( int i0, int n, Vec3d dpos           ){ ( int i=i0, i<(i0+n); i++ ) apos[i].add(dpos); }
+
+bool tryPose( int i0, int n, Vec3d p0, Vec3d p1, Mat3d rot ){
+
+    Vec3d poss[n]; // Stack Allocation - should we change it ?
+    transformAtomRange( n, apos+i0, poss, p0, p1, rot );
+    double f2 = getCollisionGrid( i0, n, poss, 0 );
+    bool bOK = ( f2<Collision_F2max );
+    if( bOK ) bOK = !getCollosion( i0, n, Collision_Rsc, false, poss, 0, 0 );
+    //bOK=true;
+    if( bOK ){ for(int i=0; i<n; i++) apos[i0+i] = poss[i]; }
+}
+
+bool tryFragPose( int ifrag, bool bRel, Vec3d pos, Quat4d qrot ){
+
+    int i0 = frag2a[ifrag];
+    int n  = fragNa[ifrag];
+    Vec3d poss[n]; // Stack Allocation - should we change it ?
+
+    int im8    = ifrag<<3;
+    Vec3d*  fragPos = ((Vec3d* )(poses+im8  ));
+    Quat4d* fragRot = ((Quat4d*)(poses+im8+4));
+    //printf( "fragPos (%f,%f,%f) \n", fragPos->x, fragPos->y, fragPos->z );
+    if( bRel ){
+        pos.add  ( *fragPos );
+        qrot.qmul( *fragRot ); // Not sure about direction
+    }
+    Mat3d T; qrot.toMatrix(T);
+
+    Vec3d* m_apos = fapos0s[ifrag];
+    for( int j=0; j<n; j++ ){
+        Vec3d Tp;
+        T.dot_to_T( m_apos[j], Tp );
+        poss[j].set_add( pos, Tp );
+    }
+
+    //double f2 = getCollisionGrid( i0, n, poss, 0 );
+    //bool bOK  = ( f2<Try_F2max );
+
+    bool bOK      = Collision_box.pointIn( pos );
+    if( bOK ) bOK = Collision_F2max>getCollisionGrid( i0, n, poss, 0 );
+    if( bOK ) bOK = !getCollosion( i0, n, Collision_Rsc, false, poss, 0, 0 );
+    //bOK=true;
+    //if( bOK ){ for(int i=0; i<n; i++) apos[i0+i] = poss[i]; }
+    if( bOK ){ *fragPos=pos;  *fragRot=qrot; }
+    //printf( "fragPos (%f,%f,%f) \n", fragPos->x, fragPos->y, fragPos->z );
+}
+
 void eval_MorseQ_On2(){
     for(int i=0; i<natoms; i++){
         Vec3d REQi = aREQ[i];
@@ -572,8 +768,6 @@ void eval_MorseQ_On2_fragAware(){
     }
     //exit(0);
 }
-
-
 
 void eval_MorseQ_Frags(){
     // we can use in principle eval_MorseQ_On2, but it will make it less numerically precise due to adding repulasive force between non-bonded atoms

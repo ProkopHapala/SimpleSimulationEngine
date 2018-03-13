@@ -26,8 +26,7 @@ inline double Rbound2( const Vec3d& center, int n, Vec3d * points ){
     return r2max;
 }
 
-class Box{
-    public:
+class Box{ public:
     Vec3d a,b;
 
     void fromPoints( int n, Vec3d * points ){
@@ -40,6 +39,13 @@ class Box{
             if(p.z<a.z){a.z=p.z;}else if(p.z>b.z){b.z=p.z;}
         }
     }
+
+    inline bool pointIn( const Vec3d& p ){
+        return ((p.x>a.x)&&(p.y>a.y)&&(p.z>a.z)&&
+                (p.x<b.x)&&(p.y<b.y)&&(p.z<b.z));
+    }
+
+    inline Vec3d genRandomSample(){ return (Vec3d){randf(a.x,b.x),randf(a.y,b.y),randf(a.z,b.z)}; }
 
 };
 

@@ -15,6 +15,7 @@
 #include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
+#include "quaternion.h"
 
 #include "raytrace.h"
 #include "Molecule.h"
@@ -24,7 +25,6 @@
 #include "IO_utils.h"
 
 //#include "RBMMFF.h"
-
 #include "DynamicOpt.h"
 
 #include "AtomicConfiguration.h"
@@ -195,6 +195,8 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
 
     char str[256];
 
+    AtomicManipulator manipulator;
+
     Vec3d ray0;
     int ipicked  = -1, ibpicked = -1;
     int perFrame =  50;
@@ -203,6 +205,11 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
     double drndp =  0.5;
 
     double  atomSize = 0.25;
+
+    // ==== Functions
+
+    void genNewManipul(int i);
+    bool manipulation();
 
 	virtual void draw   ()  override;
 	virtual void drawHUD()  override;
@@ -396,6 +403,18 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //exit(0);
     initRigidSubstrate();
 
+    manipulator.bindAtoms(world.natoms, world.apos, world.aforce ); printf( "DEBUG 4.1 \n" );
+    manipulator.realloc(1);                                         printf( "DEBUG 4.2 \n" );
+    manipulator.goalSpan.set(5.0,5.0,1.0);                          printf( "DEBUG 4.3 \n" );
+    manipulator.genGoals();                                         printf( "DEBUG 4.4 \n" );
+
+    manipulator.nenabled = 10;
+    manipulator.enabled = new int[manipulator.nenabled];
+    std::memcpy( manipulator.enabled, (const int[]){0,1,2,3,4,5,6,7,8,9}, manipulator.nenabled*sizeof(int) );
+
+    printf( "DEBUG 5 \n" );
+    //exit(0);
+
 }
 
 void AppMolecularEditor2::draw(){
@@ -433,13 +452,24 @@ void AppMolecularEditor2::draw(){
     if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
 
 	double F2;
-	perFrame = 10;
+	perFrame = 1;
 	//delay = 100;
 	for(int itr=0; itr<perFrame; itr++){
 
         world.cleanAtomForce();
 
+        Vec3d d=(Vec3d){1.0,1.0,1.0};
+        Vec3d shift = world.Collision_box.genRandomSample();
+        //Vec3d shift = (Vec3d){ randf(-d.x,d.x),randf(-d.y,d.y),randf(-d.z,d.z) };
+        //Vec3d shift = (Vec3d){ randf(0,d.x),randf(0,d.y),randf(0,d.z) };
+        Quat4d qrot;  qrot.fromUniformS3( {randf(),randf(),randf()} );
+        //Mat3d rot; qrot.toMatrix(rot);
+        //rot.setOne();
+        //world.tryPose( 0, 5, world.apos[0], world.apos[0]+shift, rot );
+        world.tryFragPose( 0, false, shift, qrot );
+
         world.frags2atoms();       //printf( "DEBUG 5.2\n" );
+
         world.eval_FFgrid();
         //world.eval_MorseQ_On2(); //printf( "DEBUG 5.3\n" );
         world.eval_MorseQ_On2_fragAware();
@@ -460,6 +490,11 @@ void AppMolecularEditor2::draw(){
         }
         */
 
+        //manipulator.forceToGoals();
+
+        //world.tryPose( 0, 5, world.apos[0], shift, rot );
+        //SDL_Delay(10);
+
         world.cleanPoseTemps();
         world.aforce2frags();      //printf( "DEBUG 5.4\n" );
 
@@ -475,9 +510,8 @@ void AppMolecularEditor2::draw(){
             Draw3D::drawVecInPos( world.aforce[i]*10.0, world.apos[i] );
         };
 
-
-        world.toDym();
-        F2 = opt.move_FIRE();  //printf( "DEBUG 5.5\n" );
+        world.toDym(true);
+        //F2 = opt.move_FIRE();  //printf( "DEBUG 5.5\n" );
         world.checkPoseUnitary();
         world.fromDym();
 
@@ -486,6 +520,9 @@ void AppMolecularEditor2::draw(){
         //exit(0);
 
     }
+
+    glColor3f(0.0f,0.6f,0.0f); Draw3D::drawBBox ( world.Collision_box.a, world.Collision_box.b );
+    //printf( "Box (%f,%f,%f)  (%f,%f,%f) \n", world.Try_box.a.x, world.Try_box.a.y, world.Try_box.a.z,    world.Try_box.b.x, world.Try_box.b.y, world.Try_box.b.z  );
 
     glColor3f(0.6f,0.6f,0.6f); plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
     //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,1.0},  (Vec3d){0.0,0.0,0.0} );
