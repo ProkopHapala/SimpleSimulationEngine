@@ -49,6 +49,12 @@ class Box{ public:
 
 };
 
+inline bool pointInBox( const Vec3d& p, const Vec3d& a, const Vec3d& b ){
+    return ((p.x>a.x)&&(p.y>a.y)&&(p.z>a.z)&&
+            (p.x<b.x)&&(p.y<b.y)&&(p.z<b.z));
+}
+
+
 inline double dist2_PointBox( const Vec3d& C1, const Vec3d& C2, Vec3d S){
     // from here : http://stackoverflow.com/questions/4578967/cube-sphere-intersection-test
     // assume C1 and C2 are element-wise sorted, if not, do that now

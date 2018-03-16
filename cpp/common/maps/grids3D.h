@@ -64,15 +64,17 @@ class CubeGridRuler : public GridRulerInterface { public:
         Vec3d dpos; Vec3i ipos;
         pos2box( pos, ipos,dpos );
         icells[0]=ixyz2i( ipos );   // insert
+        //printf( "icells[0] %i (%i,%i,%i) (%f,%f,%f)\n", icells[0], ipos.x,ipos.y,ipos.z,   pos.x,pos.y,pos.z );
 	    int    dix =0,diy =0,diz =0;
 	    double dr2x=0,dr2y=0,dr2z=0;
-	    double mr = 1-r;
-	    if     (  dpos.x < r  ){ icells[n]=ixyz2i( {ipos.x-1, ipos.y  , ipos.z}   ); n++;  dix=-1; dr2x = sq(  dpos.x); }
-	    else if(  dpos.x > mr ){ icells[n]=ixyz2i( {ipos.x+1, ipos.y  , ipos.z}   ); n++;  dix=+1; dr2x = sq(1-dpos.x); }
-	    if     (  dpos.y < r  ){ icells[n]=ixyz2i( {ipos.x  , ipos.y-1, ipos.z}   ); n++;  diy=-1; dr2y = sq(  dpos.y); }
-	    else if(  dpos.y > mr ){ icells[n]=ixyz2i( {ipos.x  , ipos.y+1, ipos.z}   ); n++;  diy=+1; dr2y = sq(1-dpos.y); }
-	    if     (  dpos.z < r  ){ icells[n]=ixyz2i( {ipos.x  , ipos.y  , ipos.z-1} ); n++;  diz=-1; dr2z = sq(  dpos.z); }
-	    else if(  dpos.z > mr ){ icells[n]=ixyz2i( {ipos.x  , ipos.y  , ipos.z+1} ); n++;  diz=+1; dr2z = sq(1-dpos.z); }
+	    double mr = step-r;
+	    //printf( "(%f,%f,%f) %f %f \n", dpos.x,dpos.y,dpos.z, r, mr );
+	    if     (  dpos.x < r  ){ icells[n]=ixyz2i( {ipos.x-1, ipos.y  , ipos.z  } ); n++;  dix=-1; dr2x = sq(     dpos.x); }
+	    else if(  dpos.x > mr ){ icells[n]=ixyz2i( {ipos.x+1, ipos.y  , ipos.z  } ); n++;  dix=+1; dr2x = sq(step-dpos.x); }
+	    if     (  dpos.y < r  ){ icells[n]=ixyz2i( {ipos.x  , ipos.y-1, ipos.z  } ); n++;  diy=-1; dr2y = sq(     dpos.y); }
+	    else if(  dpos.y > mr ){ icells[n]=ixyz2i( {ipos.x  , ipos.y+1, ipos.z  } ); n++;  diy=+1; dr2y = sq(step-dpos.y); }
+	    if     (  dpos.z < r  ){ icells[n]=ixyz2i( {ipos.x  , ipos.y  , ipos.z-1} ); n++;  diz=-1; dr2z = sq(     dpos.z); }
+	    else if(  dpos.z > mr ){ icells[n]=ixyz2i( {ipos.x  , ipos.y  , ipos.z+1} ); n++;  diz=+1; dr2z = sq(step-dpos.z); }
 	    double r2 = r*r;
 	    if ( dr2x+dr2y      < r2 ){ icells[n]=ixyz2i( {ipos.x+dix, ipos.y+diy, ipos.z    } ); n++; }
 	    if ( dr2x+dr2z      < r2 ){ icells[n]=ixyz2i( {ipos.x+dix, ipos.y    , ipos.z+diz} ); n++; }

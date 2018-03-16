@@ -24,6 +24,9 @@
 
 #include "IO_utils.h"
 
+
+#include "geom3D.h"
+
 //#include "RBMMFF.h"
 #include "DynamicOpt.h"
 
@@ -66,8 +69,6 @@ Vec3d testREQ,testPLQ;
 
 void colorRB( float f ){ glColor3f( 0.5+f, 0.5, 0.5-f ); }
 
-
-
 void printPoses( int n, double * poses ){
     for( int i=0; i<n; i++ ){
         int i8 = i*8;
@@ -75,6 +76,60 @@ void printPoses( int n, double * poses ){
         printf( "[%04i] %g,%g,%g,%g | %g,%g,%g,%g \n",i, poses[i8+0], poses[i8+1], poses[i8+2], poses[i8+3],    poses[i8+4], poses[i8+5], poses[i8+6], poses[i8+7]  );
     }
 }
+
+void drawMapedPoints( const FastAtomicMetric& D, int itest ){
+    //atomdist.natoms=1;
+    //atomdist.pos[0]=cursor3D;
+    //atomdist.toCells(atomdist.ruler.step*0.5-0.01);
+    Draw3D::drawBBox( D.ruler.pos0, D.ruler.pmax );
+    int j=0;
+    for(int i=0; i<D.natoms; i++){
+        //Draw3D::drawPointCross( atomdist.pos[i], atomdist.Rcut );
+        //Draw3D::drawPointCross( atomdist.pos[i], 0.1 );
+        bool b = ( i == (itest%D.natoms));
+        if(b){ Draw3D::drawSphereOctLines( 16, D.Rcut, D.pos[i] ); }
+        else { Draw3D::drawPointCross( D.pos[i], 0.1 ); }
+        //printf("%i %i \n", i, D.atomNs[i] );
+        for(int jj=0; jj<D.atomNs[i];jj++){
+            if(b){
+                int ic = D.atom2cells[j];
+                Vec3i ip;  D.ruler.i2ixyz ( ic, ip );
+                Vec3d  p = D.ruler.box2pos( ip, {0.0,0.0,0.0} );
+                double d = D.ruler.step;
+                Draw3D::drawBBox( p, p+(Vec3d){d,d,d} );
+            }
+            j++;
+        }
+    }
+}
+
+void drawNeighs( const FastAtomicMetric& D, Vec3d pos ){
+    Draw3D::drawBBox( D.ruler.pos0, D.ruler.pmax );
+    Draw3D::drawSphereOctLines(16,D.Rcut,pos);
+    {
+        //ip = atomdist.ruler.i cursor3D
+        //Vec3i ip;  atomdist.ruler.i2ixyz ( icell, ip );
+        Vec3i ip = D.ruler.ipcell( pos );
+        Vec3d  p = D.ruler.box2pos( ip, {0.0,0.0,0.0} );
+        double d = D.ruler.step;
+        Draw3D::drawBBox( p, p+(Vec3d){d,d,d} );
+    }
+    //printf( "DEBUG 2 \n" );
+    if( pointInBox( pos, D.ruler.pos0, D.ruler.pmax) ){
+        int tmpIs[D.natoms];
+        int nfound = D.findNeighs( pos, D.Rcut, tmpIs );
+        //printf( "DEBUG 3 \n" );
+        //printf( "nfound %i \n", nfound );
+        for(int i=0; i<nfound; i++){
+            Draw3D::drawLine( pos, D.pos[tmpIs[i]] );
+        }
+    }
+    for(int i=0; i<D.natoms; i++){
+        //Draw3D::drawPointCross( atomdist.pos[i], atomdist.Rcut );
+        Draw3D::drawPointCross( D.pos[i], 0.1 );
+    }
+}
+
 
 void drawPPRelaxTrj( int n, double dt, double damp, GridFF& gff, Vec3d pos, Vec3d PRQ ){
     Vec3d vel = (Vec3d){0.0,0.0,0.0};
@@ -186,6 +241,8 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
     MMFF        world;
     MMFFBuilder builder;
 
+    FastAtomicMetric atomdist;
+    AtomicConfiguration conf1;
     DistanceHierarchy<AtomicConfiguration> database;
 
     DynamicOpt  opt;
@@ -201,10 +258,16 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
     int ipicked  = -1, ibpicked = -1;
     int perFrame =  50;
 
+    Vec3d cursor3D=(Vec3d){0.0,0.0,0.0};
+
     double drndv =  10.0;
     double drndp =  0.5;
 
     double  atomSize = 0.25;
+
+    int itest=0;
+
+
 
     // ==== Functions
 
@@ -415,6 +478,52 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     printf( "DEBUG 5 \n" );
     //exit(0);
 
+    conf1.bind( 5, world.atypes, world.apos );
+    //for(int i=0; i<5; i++){ printf( "%i %i(%f,%f,%f) | %i %i(%f,%f,%f)\n", i, world.atypes[i], world.apos[i].x,world.apos[i].y,world.apos[i].z,
+    //                                                                          conf1.types[i],  conf1.pos[i].x, conf1.pos[i].y, conf1.pos[i].z  ); }
+    //exit(0);
+    //conf1.natoms    = 5;
+    //conf1.pos       = world.apos;
+    //conf1.types     = world.atypes;
+
+    /*
+    atomdist.natoms = conf1.n;
+    atomdist.pos    = conf1.pos;
+    atomdist.types  = conf1.types;
+    */
+
+
+    atomdist.copyOf(conf1);
+    /*
+    atomdist.realloc(30);
+    for(int i=0; i<30; i++){ atomdist.pos[i].set(
+        randf(world.Collision_box.a.x,world.Collision_box.b.x),
+        randf(world.Collision_box.a.y,world.Collision_box.b.y),
+        randf(world.Collision_box.a.z,world.Collision_box.b.z)
+    ); }
+    */
+
+
+    atomdist.initRuler( world.Collision_box.a+(Vec3d){-2.0,-2.0,-2.0}, world.Collision_box.b+(Vec3d){3.0,3.0,3.0}, 2.0 );
+    printf( "atomdist.ruler: %i (%i,%i,%i)\n ", atomdist.ruler.ntot, atomdist.ruler.n.x, atomdist.ruler.n.y, atomdist.ruler.n.z );
+
+    //atomdist.toCells( 0.5 );
+    atomdist.toCells();
+
+
+    conf1.pos[0].add(0.1,0.0,0.0);
+
+    for(int i=0; i<5; i++){ printf( "== %i %i(%f,%f,%f) | %i %i(%f,%f,%f)\n", i, world.atypes[i], world.apos[i].x,world.apos[i].y,world.apos[i].z,
+                                                                              atomdist.types[i],  atomdist.pos[i].x, atomdist.pos[i].y, atomdist.pos[i].z  ); }
+
+    double rTrue =((AtomicConfiguration)atomdist).dist(conf1);
+    double rFast = atomdist.dist( conf1 );
+
+    printf( "dist = %f %f \n", rTrue, rFast );
+
+
+    //exit(0);
+
 }
 
 void AppMolecularEditor2::draw(){
@@ -422,11 +531,65 @@ void AppMolecularEditor2::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	//glTranslatef( 0.0, 0.0, -5.0 );
-
 	glColor3f( 0.0f,0.0f,0.0f );
 	//if(isoOgl)
-
 	Draw3D::drawAxis(10);
+
+	/*
+    atomdist.natoms=1;
+	atomdist.toCells( 0.5 );
+
+    //Draw3D::drawSphereOctLines(16,atomdist.Rcut,atomdist.pos[0]);
+	int nCell=-1;
+	int nFilled=0;
+	Draw3D::drawBBox( atomdist.ruler.pos0, atomdist.ruler.pmax );
+	for(int icell=0; icell<atomdist.ruler.ntot; icell++){ if(atomdist.cellNs[icell])nFilled++; };
+	for(int icell=0; icell<atomdist.ruler.ntot; icell++){
+        //if(icell != (frameCount/30)%atomdist.ruler.ntot ) continue;
+        int n = atomdist.cellNs[icell];
+        if(n==0) continue;
+
+        //Draw::color_of_hash( icell + 25545 );
+        //printf("%i %i \n", icell, n);
+        nCell++;
+        //printf( " nCell %i nFilled %i \n", nCell, nFilled );
+        //if( nCell != (frameCount/30)%nFilled) continue;
+
+        for(int jj=0;jj<n; jj++){
+            int j = atomdist.cell2atoms[icell][jj];
+            Draw::color_of_hash( j + 25545 );
+
+            Draw3D::drawPointCross( atomdist.pos[j],atomdist.Rcut);
+            Draw3D::drawSphereOctLines(16,atomdist.Rcut,atomdist.pos[0]);
+        }
+
+        Vec3i ip;  atomdist.ruler.i2ixyz ( icell, ip );
+        Vec3d  p = atomdist.ruler.box2pos( ip, {0.0,0.0,0.0} );
+        double d = atomdist.ruler.step;
+        Draw3D::drawBBox( p, p+(Vec3d){d,d,d} );
+    }
+    */
+
+    //printf( "DEBUG 1 \n" );
+
+
+    double d=0.5;
+    for(int i=0; i<conf1.natoms; i++){ Vec3d p = atomdist.pos[i]; p.add(randf(-d,d),randf(-d,d),randf(-d,d)); conf1.pos[i]=p; };
+
+    double rTrue =((AtomicConfiguration)atomdist).dist(conf1);
+    double rFast = atomdist.dist( conf1 );
+    printf( " rTrue %f rFast %f err %f \n", rTrue, rFast,  rFast-rTrue );
+
+    drawMapedPoints( atomdist, itest );
+    //drawNeighs( atomdist, cursor3D );
+
+
+
+
+
+
+	return;
+
 
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
@@ -573,13 +736,31 @@ void AppMolecularEditor2::draw(){
 };
 
 void  AppMolecularEditor2::keyStateHandling( const Uint8 *keys ){
-    double dstep=0.1;
+    double dstep=0.025;
+    /*
     if( keys[ SDL_SCANCODE_W ] ){ PPpos0.y +=dstep; }
     if( keys[ SDL_SCANCODE_S ] ){ PPpos0.y -=dstep; }
     if( keys[ SDL_SCANCODE_A ] ){ PPpos0.x +=dstep; }
     if( keys[ SDL_SCANCODE_D ] ){ PPpos0.x -=dstep; }
     if( keys[ SDL_SCANCODE_Q ] ){ PPpos0.z +=dstep; }
     if( keys[ SDL_SCANCODE_E ] ){ PPpos0.z -=dstep; }
+    */
+
+    /*
+    if( keys[ SDL_SCANCODE_W ] ){ atomdist.pos[0].y -=dstep; }
+    if( keys[ SDL_SCANCODE_S ] ){ atomdist.pos[0].y +=dstep; }
+    if( keys[ SDL_SCANCODE_A ] ){ atomdist.pos[0].x -=dstep; }
+    if( keys[ SDL_SCANCODE_D ] ){ atomdist.pos[0].x +=dstep; }
+    if( keys[ SDL_SCANCODE_Q ] ){ atomdist.pos[0].z -=dstep; }
+    if( keys[ SDL_SCANCODE_E ] ){ atomdist.pos[0].z +=dstep; }
+    */
+
+    if( keys[ SDL_SCANCODE_W ] ){ cursor3D.y -=dstep; }
+    if( keys[ SDL_SCANCODE_S ] ){ cursor3D.y +=dstep; }
+    if( keys[ SDL_SCANCODE_A ] ){ cursor3D.x -=dstep; }
+    if( keys[ SDL_SCANCODE_D ] ){ cursor3D.x +=dstep; }
+    if( keys[ SDL_SCANCODE_Q ] ){ cursor3D.z -=dstep; }
+    if( keys[ SDL_SCANCODE_E ] ){ cursor3D.z +=dstep; }
 
     if( keys[ SDL_SCANCODE_X ] ){ camPos.z +=0.1; }
     if( keys[ SDL_SCANCODE_Z ] ){ camPos.z -=0.1; }
@@ -599,8 +780,11 @@ void AppMolecularEditor2::eventHandling ( const SDL_Event& event  ){
                 case SDLK_v: for(int i=0; i<world.natoms; i++){ ((Vec3d*)opt.vel)[i].add(randf(-drndv,drndv),randf(-drndv,drndv),randf(-drndv,drndv)); } break;
                 case SDLK_p: for(int i=0; i<world.natoms; i++){ world.apos[i].add(randf(-drndp,drndp),randf(-drndp,drndp),randf(-drndp,drndp)); } break;
 
-                case SDLK_LEFTBRACKET:  if(ibpicked>=0) world.bond_0[ibpicked] += 0.1; break;
-                case SDLK_RIGHTBRACKET: if(ibpicked>=0) world.bond_0[ibpicked] -= 0.1; break;
+                //case SDLK_LEFTBRACKET:  if(ibpicked>=0) world.bond_0[ibpicked] += 0.1; break;
+                //case SDLK_RIGHTBRACKET: if(ibpicked>=0) world.bond_0[ibpicked] -= 0.1; break;
+
+                case SDLK_RIGHTBRACKET: itest++; if(itest>=atomdist.natoms)itest=0;  printf("itest %i\n",itest); break;
+                case SDLK_LEFTBRACKET:  itest--; if(itest<0)itest=atomdist.natoms-1; printf("itest %i\n",itest); break;
 
                 //case SDLK_a: world.apos[1].rotate(  0.1, {0.0,0.0,1.0} ); break;
                 //case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;
