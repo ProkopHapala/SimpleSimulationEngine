@@ -7,6 +7,55 @@
 #include "appliedPhysics.h"
 #include "SpaceBodies.h"
 
+
+namespace Time{
+    static const double
+        minute=60,
+        hour  =3600,
+        day   =86400,
+        week  =day*7,
+        month =2629746,
+        year  =31556952;
+
+    static const int nNice = 9;
+    static const double niceUnits[nNice] = {1,10,minute,minute*10,hour,day,week,month,year};
+
+    /*
+    int toStr(double nsec,char* out){
+        double absval = fabs(nsec);
+        if     ( absval>year   ){ return sprintf(out, "%g y",  nsec/year   ); }
+        else if( absval>month  ){ return sprintf(out, "%2.2f months", nsec/month  ); }
+        else if( absval>week   ){ return sprintf(out, "%2.2f weeks",  nsec/week   ); }
+        else if( absval>hour   ){ return sprintf(out, "%2.2f hours",  nsec/hour   ); }
+        else if( absval>minute ){ return sprintf(out, "%2.2f minutes",nsec/minute ); }
+        else                    { return sprintf(out, "%g sec",    nsec        ); }
+    }
+    */
+
+    int toStr(double nsec,char* out){
+        double absval = fabs(nsec);
+        if     ( absval>(100*year)){ return sprintf(out, "%gy",    nsec/year   ); }
+        if     ( absval>year      ){ return sprintf(out, "%2.2fy", nsec/year   ); }
+        else if( absval>day       ){ return sprintf(out, "%2.2fd", nsec/day    ); }
+        else if( absval>hour      ){ return sprintf(out, "%2.2fh", nsec/hour   ); }
+        else if( absval>minute    ){ return sprintf(out, "%2.2fm", nsec/minute ); }
+        else if( absval>0.1       ){ return sprintf(out, "%2.2fs", nsec        ); }
+        else                       { return sprintf(out, "%gs",    nsec        ); }
+    }
+
+    double niceUnitAbove(double val){
+        int inice = 0;
+        if     (val<niceUnits[0      ] ){ return  pow(10.0,(int)log10(val));              }
+        else if(val>niceUnits[nNice-1] ){ return (pow(10.0,(int)log10(val/year)+1)*year); }
+        else{
+            for(int i=0;i<nNice;i++){ if(val<niceUnits[i]){ inice=i; break; } }
+            return niceUnits[inice];
+        }
+    };
+
+};
+
+
 class SpaceWorld : public ODEderivObject { public:
     std::vector<SpaceBody> planets;
     std::vector<SpaceBody> ships;
@@ -22,6 +71,9 @@ class SpaceWorld : public ODEderivObject { public:
     double trj_dt   = 0.1;
     //Vec3d ** trj_Pos = 0;
     double * masses = 0;
+
+    inline double trjTime2index(double t, int& itrj){ double u=(t-trj_t0)/trj_dt; itrj=(int)u; return u-itrj; };
+    inline double ind2time     ( double ind        ){ return trj_dt*ind+trj_t0; };
 
     void intertialTansform( Vec3d p0, Vec3d v0 ){
         for(SpaceBody& b : planets ){ b.pos.add(p0); b.vel.add(v0); };
@@ -57,9 +109,8 @@ class SpaceWorld : public ODEderivObject { public:
         //Vec3d* dYplanet = (Vec3d*)(dYs          );
         //Vec3d* dYship   = (Vec3d*)(dYs+6*nplanet);
 
-        double u  =(t-trj_t0)/trj_dt;
-        int itrj  = (int)u;
-        double du = u-itrj;
+        int itrj; double du = trjTime2index(t,itrj);
+        //printf("%i %f \n", itrj, du );
 
         for( int i=0; i<nobj; i++ ){
             Vec3d f = (Vec3d){0.0,0.0,0.0};

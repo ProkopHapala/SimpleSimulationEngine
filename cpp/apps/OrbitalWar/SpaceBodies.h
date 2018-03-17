@@ -12,6 +12,8 @@
 #include "Body.h"
 #include "ODEintegrator.h"
 
+#include "spline_hermite.h"
+
 #include "appliedPhysics.h"
 
 /*
@@ -42,16 +44,22 @@ void nonUni2spline( double t0, double dt, int n, const double* ts, const Vec3d* 
     //exit(0);
 }
 
-class SpaceBody : public PointBody  { public:
+//class SpaceBody : public PointBody  { public:
+class SpaceBody : public RigidBody  { public:
 
     std::string name;
     double radius;
+    Vec3d sizes = (Vec3d){1.0,0.5,0.25};
 
     Vec3d * trjPos    = 0; // positions in some times
     //Vec3d * trjVel    = 0; // velocities in some times
     Vec3d * trjThrust = 0; // vector of thrust in time
 
     SpaceBody* orbCenter=0;
+
+    inline Vec3d getTrjPos( int iTrj, double du ){
+        Vec3d p; Spline_Hermite::curve_point( du,trjPos[iTrj-1],trjPos[iTrj],trjPos[iTrj+1],trjPos[iTrj+2], p); return p;
+    };
 
     inline Vec3d getThrust(int itrj, double du ){
         //if( trjThrust ){
