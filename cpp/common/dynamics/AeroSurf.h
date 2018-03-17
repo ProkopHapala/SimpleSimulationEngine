@@ -17,6 +17,7 @@ class AeroSurfaceDebugRecord { public:
     double sa;
     double CD;
     double CL;
+    Vec3d  uair;
     Vec3d  force;
     Vec3d  gdpos;
 };
@@ -82,6 +83,7 @@ class AeroSurface : public KinematicBody {
 		Vec3d uair;
 		uair.set_cross( gdpos, craft->omega ); uair.add( vair0 );
 		//uair.set( vair0 );
+		//printf( "uair (%f,%f,%f) ", uair.x,uair.y,uair.z );
 
 		double vrair2  = uair.norm2();
 		if( vrair2 > lowSpeedCuoff ){
@@ -128,8 +130,8 @@ class AeroSurface : public KinematicBody {
 			//printf( "vrair %f \n", vrair );
 			//printVec( uair ); printf("uair\n");
 
-			if(dbgRec){ dbgRec->force=force;  dbgRec->gdpos=gdpos; };
-
+			if(dbgRec){ dbgRec->force=force;  dbgRec->gdpos=gdpos; dbgRec->uair=uair*sqrt(vrair2); };
+			//printf( "force (%f,%f,%f) \n", force.x,force.y,force.z );
 			craft->apply_force( force, gdpos );
 
 			//drawMatInPos( craft->rotMat, craft->pos );

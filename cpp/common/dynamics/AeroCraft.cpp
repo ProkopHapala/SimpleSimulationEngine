@@ -77,6 +77,7 @@ int AeroCraft::fromFile( const char * fname ){
     vel.set(0,0,0);
     pos.set(0,0,0);
     clean_temp();
+    update_aux(); // MUST BE CALLED BEFORE SIMULATION STARTS !!!
 
     printf("AeroCraft loaded\n");
     fclose(pFile);

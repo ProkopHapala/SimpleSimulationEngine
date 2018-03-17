@@ -159,6 +159,8 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 	//AeroCraftWorld * world;
 	//Shooter * world;
 
+	bool SimOn = true;
+
 	Shooter            * world  = NULL;
     AeroCraftControler * pilot  = NULL;
     AeroTester         * tester = NULL;
@@ -216,6 +218,7 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 
 	QuePlot2D historyPlot;
 	QuePlot2D wingsTrj;
+	QuePlot2D controlTrj;
 
 	static const int nBaloons=100;
 	Vec3d baloons[nBaloons];
@@ -331,31 +334,10 @@ void AeroCraftGUI::camera (){
     glMatrixMode( GL_PROJECTION );
     //if(first_person){ camera_FPS(); }else{ camera_FreeLook(); };
     if(scanKeys[SDL_SCANCODE_LSHIFT]){ camera_FPS(); }else{ camera_VelY(); };
+    //camera_FreeLook();
     //camera_FPS();
     //camera_YVel();
     //camera_VelY();
-    /*
-    glLoadIdentity();
-    //float fov = VIEW_ZOOM_DEFAULT/zoom;
-    //glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
-    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
-    Mat3d camMat;
-    Vec3f camPos;
-    convert(myCraft->pos, camPos );
-    if(first_person){
-        // third person camera attached to aero-craft
-        camMat.setT( myCraft->rotMat );
-        //glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
-    }else{
-        // third person camera attached to aero-craft
-        qCamera.toMatrix( camMat );
-        camMat.T();
-	}
-	float glMat[16];
-	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
-	glMultMatrixf( glMat );
-    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
-    */
     glMatrixMode (GL_MODELVIEW);
     glLoadIdentity();
 
@@ -370,11 +352,27 @@ void AeroCraftGUI::draw(){
 
 	Mat3d rot; rot.setT(myCraft->rotMat);
 
-    //autoRetractAirelon   =  false;
+	/*
+	if(frameCount==0){
+        perFrame = 1;
+        //delay    = 1000;
+        myCraft->leftAirelon ->lrot.rotate( 0.05,myCraft->leftAirelon ->lrot.a);
+        myCraft->rightAirelon->lrot.rotate(-0.05,myCraft->rightAirelon->lrot.a);
+	}
+	*/
+
+    //world->gravity = 0;
+    //perFrame = 1;
+    //delay    = 100;
+    //STOP = true;
+
+    Vec3d goalRoll = camMat.a*mouseX + camMat.b*mouseY; goalRoll.normalize();
+
+    autoRetractAirelon   =  false;
 	if(!autoRetractAirelon){
-        Vec3d Up = {0.0,1.0,0.0};
+        //Vec3d goalRoll  = {0.0,1.0,0.0};
         //roll = Up.angleInPlane( myCraft->rotMat.b, myCraft->rotMat.a );     // the fucking matrix is transposed !!!
-        roll = Up.angleInPlane( rot.a*-1.0, rot.b );
+        roll = goalRoll .angleInPlane( rot.a*-1.0, rot.b );
         //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( rot.a*10*rot.a.dot({0,1}), myCraft->pos );
         //glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( rot.b*10, myCraft->pos );
 
@@ -382,24 +380,54 @@ void AeroCraftGUI::draw(){
         rollControl.dxdt_max =  1.0;
         rollControl.dydx     =  0.2; //5.5;
         rollControl.T        =  10.0;
-        rollControl.xmin     = -0.25;
-        rollControl.xmax     =  0.25;
+        rollControl.xmin     = -0.3;
+        rollControl.xmax     =  0.3;
+        rollControl.K        =  1.5;
 
-        double dAoA = rollControl.dx_O1( roll, world->dt );
-        printf( "dAoA %f  %f %f \n", dAoA, roll, rollControl.x  );
+        //double dAoA = rollControl.dx_O1( roll, world->dt );
+        //printf( "dAoA %f  %f %f \n", dAoA, roll, rollControl.x  );
         // TODO : finish feedback loop
-        myCraft->leftAirelon ->lrot.rotate( dAoA,myCraft->leftAirelon ->lrot.a);
-        myCraft->rightAirelon->lrot.rotate(-dAoA,myCraft->leftAirelon ->lrot.a);
+
+        //rollControl.dx_O2( roll, world->dt );
+
+        if(isnan(roll))exit(0);
+        rollControl.x_O1( roll, world->dt );
+        //rollControl.x=0.25;
+
+        //printf( "y %f vy %f x %f \n", rollControl.oy, rollControl.ovy, rollControl.x );
+
+
+        myCraft->leftAirelon ->lrot = myCraft_bak->leftAirelon ->lrot;
+        myCraft->rightAirelon->lrot = myCraft_bak->rightAirelon->lrot;
+
+        myCraft->leftAirelon ->lrot.rotate( rollControl.x,myCraft->leftAirelon ->lrot.a);
+        myCraft->rightAirelon->lrot.rotate(-rollControl.x,myCraft->rightAirelon->lrot.a);
+
+        //myCraft->leftAirelon ->lrot.rotate( dAoA,myCraft->leftAirelon->lrot.a);
+        //myCraft->rightAirelon->lrot.rotate(-dAoA,myCraft->leftAirelon->lrot.a);
     }
 
-	world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
+	if(SimOn){
+        //printf( "y %f vy %f x %f torq=(%f,%f,%f)     \n", rollControl.oy, rollControl.ovy, rollControl.x, myCraft->torq.x, myCraft->torq.y, myCraft->torq.z );
+        world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
+        //SimOn = false;
+    }
 	camera ();
+
+	glColor3f( 1.0,1.0,1.0); Draw3D::drawVecInPos( goalRoll*5, myCraft->pos );
 
 	if( frameCount%10 == 0 ){
         historyPlot.next( world->time*0.5 );
         historyPlot.set_back( 0, myCraft->vel.norm() *0.02 );
         historyPlot.set_back( 1, myCraft->pos.y      *0.02  );
         historyPlot.set_back( 2, myCraft->vel.y      *0.02 );
+    }
+
+    if( frameCount%5 == 0 ){
+        controlTrj.next( world->time*0.5 );
+        controlTrj.set_back( 0, rollControl.x  );
+        controlTrj.set_back( 1, rollControl.ovy );
+        controlTrj.set_back( 2, rollControl.oy  );
     }
 
     if( frameCount%10 == 0 ){
@@ -480,12 +508,15 @@ void AeroCraftGUI::draw(){
     //Draw3D::drawMatInPos( myCraft->rotMat, myCraft->pos );
     Draw3D::drawMatInPos( rot, myCraft->pos );
 
-
 	glColor3f(1.0,0.0,0.0);
 	double fsc = 0.001;
 	double vsc = 1.1;
 	Draw3D::drawVecInPos( leftWingRec.force*fsc,  leftWingRec.gdpos+myCraft->pos );
 	Draw3D::drawVecInPos( rightWingRec.force*fsc, rightWingRec.gdpos+myCraft->pos );
+
+	glColor3f(0.0,0.0,1.0);
+    Draw3D::drawVecInPos( leftWingRec.uair*vsc,  leftWingRec.gdpos+myCraft->pos );
+	Draw3D::drawVecInPos( rightWingRec.uair*vsc, rightWingRec.gdpos+myCraft->pos );
 	//glColor3f(1.0,0.0,1.0);
 	//Draw3D::drawVecInPos( (leftWingRec.force+rightWingRec.force)*fsc, rightWingRec.gdpos+myCraft->pos );
 	Draw3D::drawVecInPos( (Vec3d){0.0,world->gravity,0.0} *(myCraft->mass*fsc), myCraft->pos );
@@ -560,6 +591,11 @@ void AeroCraftGUI::drawHUD(){
     }
     */
 
+    //printf( " (%i,%i) (%i,%i) \n", WIDTH,HEIGHT, mouseX,mouseY  );
+    //glColor3f(1.0,1.0,1.0); Draw2D::drawLine( {WIDTH*0.5,HEIGHT*0.5}, {WIDTH*0.5+mouseX*2,HEIGHT*0.5+mouseY*2} );
+
+
+
     // Control surface state
     glColor3f(1.0,1.0,1.0);
     Vec2d s0={WIDTH*0.5,110.0};
@@ -577,6 +613,7 @@ void AeroCraftGUI::drawHUD(){
     //Draw2D::drawLine_d( {s0.x+sza,s0.y    },{s0.x-sza,s0.y    } );
     Draw2D::drawLine_d( {s0.x+val,s0.y-szb},{s0.x+val,s0.y+szb} );
     glColor3f(0.0,1.0,0.0); Draw2D::drawPointCross({s0.x+sza*mouseX*2.0/WIDTH,s0.y+sza*mouseY*2.0/HEIGHT},5.0);
+
 
     //glPopMatrix();
 
@@ -601,7 +638,7 @@ void AeroCraftGUI::drawHUD(){
         glScalef    (sc*4,sc,WIDTH);
         mainWingPolar.view();
         Draw2D::drawLine( {0.0,-1.0}, {0.0,1.0} );
-        glColor3f(1.0,1.0,0.0); Draw2D::drawPointCross( {leftWingRec.CD, leftWingRec.CL}, 0.05 );
+        glColor3f(1.0,1.0,0.0); Draw2D::drawPointCross( {leftWingRec.CD, leftWingRec.CL},  0.05 );
         glColor3f(0.0,1.0,1.0); Draw2D::drawPointCross( {rightWingRec.CD,rightWingRec.CL}, 0.05 );
     }else if( polarPlotKind==2 ){
         double phiL = atan2( leftWingRec.sa,  leftWingRec.ca );
@@ -614,6 +651,7 @@ void AeroCraftGUI::drawHUD(){
     }
     glPopMatrix();
 
+    /*
     glPushMatrix();
         glTranslatef(10.0,HEIGHT*0.5,200.0);
         glScalef    (sc,sc,WIDTH);
@@ -621,6 +659,16 @@ void AeroCraftGUI::drawHUD(){
         Draw::setRGBA(historyPlot.lColors[0]); Draw::drawText( "vel",        fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
         Draw::setRGBA(historyPlot.lColors[1]); Draw::drawText( "attidude\n", fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
         Draw::setRGBA(historyPlot.lColors[2]); Draw::drawText( "vVert\n",    fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
+    glPopMatrix();
+    */
+
+    glPushMatrix();
+        glTranslatef(10.0,HEIGHT*0.5,200.0);
+        glScalef    (sc,sc,WIDTH);
+        controlTrj.draw( true, true );
+        Draw::setRGBA(controlTrj.lColors[0]); Draw::drawText( "x\n",  fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
+        Draw::setRGBA(controlTrj.lColors[1]); Draw::drawText( "vy\n", fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
+        Draw::setRGBA(controlTrj.lColors[2]); Draw::drawText( "y\n",  fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
     glPopMatrix();
 
     glPushMatrix();
@@ -656,7 +704,8 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
 
 	world = new Shooter();
     world->perFrame = 1;
-    world->dt       = 0.005d;
+    //world->dt       = 0.005d;
+    world->dt       = 0.002d;
 
     printf( " === Environment \n" );
     world->terrain =  prepareTerrain( 128, 2, 100.0, 50 );
@@ -746,13 +795,14 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     mainWingPolar.autoAxes(0.1,0.5);
     mainWingPolar.render();
 
-
     historyPlot.init( 100, 3 );
     historyPlot.lColors[0] = 0xFFff0000;
     historyPlot.lColors[1] = 0xFF007f00;
     historyPlot.lColors[2] = 0xFFff00ff;
 
     wingsTrj.init( 100, 6 );
+
+    controlTrj.init(100,3);
 
 };
 
@@ -763,7 +813,8 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
             case SDLK_ESCAPE   : SDL_Quit(); exit(1); break;
             case SDLK_KP_PLUS  : zoom/=VIEW_ZOOM_STEP; printf("zoom: %f \n", zoom); break;
             case SDLK_KP_MINUS : zoom*=VIEW_ZOOM_STEP; printf("zoom: %f \n", zoom); break;
-            case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
+            //case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
+            case SDLK_SPACE    : SimOn = !SimOn; printf( SimOn ? " STOPED\n" : " UNSTOPED\n"); break;
 
             case SDLK_LSHIFT   :
                 //SDL_WarpMouseInWindow( window, WIDTH/2, HEIGHT/2);
@@ -773,6 +824,10 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
             case SDLK_u : useAutoPilot = !useAutoPilot;    break;
             case SDLK_p : first_person = !first_person; break;
             case SDLK_m : mouseSteer   = !mouseSteer;   break;
+
+
+            case SDLK_r : myCraft->qrot.roll( 1.0 ); break;
+
             //case SDLK_c : pilot->resetSteer( );
         }; break;
         case SDL_QUIT: SDL_Quit(); exit(1); break;

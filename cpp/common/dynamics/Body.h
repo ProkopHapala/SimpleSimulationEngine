@@ -111,12 +111,13 @@ class RigidBody : public PointBody { public:
         vel.add_mul( force, dt*invMass );
         pos.add_mul( vel, dt   );
         // rotation
+        //update_aux(); // MUST BE HERE, otherwise invI is not initialized in the first step !!!
         L   .add_mul    ( torq, dt  );  // we have to use angular momentum as state variable, omega is not conserved
         invI.dot_to     ( L,   omega );
         //invI.dot_to_T     ( L,   omega );
         //qrot.dRot_exact ( dt,  omega );
         qrot.dRot_taylor2( dt,  omega );
-        update_aux(   );
+        update_aux();
         //printf("force (%3.3f,%3.3f,%3.3f) vel (%3.3f,%3.3f,%3.3f) pos (%3.3f,%3.3f,%3.3f)\n", force.x,force.y,force.z, vel.x,vel.y,vel.z,  pos.x, pos.y, pos.z  );
         //printf("L (%3.3f,%3.3f,%3.3f) omega (%3.3f,%3.3f,%3.3f) qrot (%3.3f,%3.3f,%3.3f,%3.3f)\n", L.x,L.y,L.z, omega.x,omega.y,omega.z,  qrot.x, qrot.y, qrot.z, qrot.w  );
     };
@@ -170,6 +171,7 @@ class RigidBody : public PointBody { public:
         Ibody.invert_to( invIbody );
         qrot.setOne();
         qrot.toMatrix   ( rotMat );
+        update_aux();
 	};
 
     inline void setPose( const Vec3d& pos_, const Vec3d& dir, const Vec3d& up ){
@@ -181,6 +183,7 @@ class RigidBody : public PointBody { public:
         rotMat.c.set_cross( dir, up );
         qrot.fromMatrix   ( rotMat );
         //printf( "pos (%g,%g,%g) qrot (%g,%g,%g,%g)\n", pos.x, pos.x, pos.x, qrot.x,qrot.y,qrot.z,qrot.w );
+        update_aux();
 	}
 
     inline void initSpherical( double mass, double I ){
@@ -191,6 +194,7 @@ class RigidBody : public PointBody { public:
         Ibody.invert_to( invIbody );
         qrot.setOne();
         qrot.toMatrix   ( rotMat );
+        update_aux();
 	};
 
 };
