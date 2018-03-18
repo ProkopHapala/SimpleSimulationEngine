@@ -14,7 +14,7 @@
 //class Warrior3D : public RigidBody { public:
 
 class Warrior3D { public:
-    AnyControler* controler=0;
+    //AnyControler* controler=0;
 
 	int id=-1,kind=-1,glo=0;
     bool    landed  = false;

@@ -48,6 +48,7 @@
 #include "Draw.h"
 #include "Draw3D.h"
 #include "AeroDraw.h"
+#include "AeroCombatHelpers.h"
 #include "AeroTest.h"
 
 #include "GUI.h"
@@ -57,7 +58,7 @@
 #include "GUI.h"
 #include "Plot2D.h"
 
-#include "AeroCraftDesign.h"
+//#include "AeroCraftDesign.h"
 
 
 Vec3d opos=(Vec3d){0.0,0.0,0.0};
@@ -135,11 +136,12 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 
 void AeroCraftGUI::camera (){
     glMatrixMode(GL_PROJECTION); //glLoadIdentity();
+    camera_FPS ( myCraft->pos, myCraft->rotMat );
     //if(first_person){ camera_FPS ( myCraft->pos, myCraft->rotMat ); }else{ camera_FreeLook( myCraft->pos ); };
     //camera_FwUp( myCraft->pos, myCraft->vel, {0.0,1.0,1.0}, false ); //camera_VelY();
     //camera_FwUp( myCraft->pos, myCraft->vel, {0.0,1.0,1.0}, true  ); //camera_YVel();
-    if(scanKeys[SDL_SCANCODE_LSHIFT]){ camera_FPS ( myCraft->pos, myCraft->rotMat );                    }
-    else                             { camera_FwUp( myCraft->pos, myCraft->vel, {0.0,1.0,1.0}, false ); };
+    //if(scanKeys[SDL_SCANCODE_LSHIFT]){ camera_FPS ( myCraft->pos, myCraft->rotMat );                    }
+    //else                             { camera_FwUp( myCraft->pos, myCraft->vel, {0.0,1.0,1.0}, false ); };
     glMatrixMode(GL_MODELVIEW); glLoadIdentity();
 }
 
@@ -153,14 +155,27 @@ void AeroCraftGUI::draw(){
 	if(frameCount>0){ traveledDistance += (myCraft->pos-opos).norm(); }else{ traveledDistance=0; };
 	opos=myCraft->pos;
 
-	printf( " upT %f t %f v %f | d  %f d %f \n", upTime*1e-3, world->time, myCraft->vel.norm(), traveledDistance, world->time*myCraft->vel.norm() );
+	//printf( " upT %f t %f v %f | d  %f d %f \n", upTime*1e-3, world->time, myCraft->vel.norm(), traveledDistance, world->time*myCraft->vel.norm() );
 
 	Mat3d rot;     rot.    setT(myCraft->rotMat);
     //Mat3d camMatT; camMatT.setT(camMat);
 
-    controler.goalRoll = ( camMat.a*mouseX + camMat.b*mouseY ); controler.goalRoll.normalize();
+    controler.goalUp = ( camMat.a*mouseX + camMat.b*mouseY ); controler.goalUp.normalize();
 
-    Draw3D::drawMatInPos( camMat, myCraft->pos );
+    int dmx,dmy;
+    SDL_GetRelativeMouseState(&dmx,&dmy);
+    //SDL_WarpMouse(0, 0);
+    //SDL_WarpMouseInWindow( window, WIDTH*0.5, HEIGHT*0.5 );
+
+    //printf( "dmYX %i %i \n", dmx, dmy );
+	controler.goalDir.add_mul(camMat.a, dmx*0.01);
+	controler.goalDir.add_mul(camMat.b, dmy*-0.01);
+	controler.goalDir.normalize();
+
+    //glColor3f( 1.0,1.0,1.0); Draw3D::drawVecInPos( controler.goalRoll*5, myCraft->pos );
+    glColor3f( 1.0,1.0,1.0); Draw3D::drawVecInPos( controler.goalDir*5, myCraft->pos );
+
+    //Draw3D::drawMatInPos( camMat, myCraft->pos );
     //Draw3D::drawMatInPos( camMatT, myCraft->pos );
     //Draw3D::drawMatInPos( rot   , myCraft->pos );
 
@@ -173,7 +188,7 @@ void AeroCraftGUI::draw(){
     }
 	camera();
 
-	glColor3f( 1.0,1.0,1.0); Draw3D::drawVecInPos( controler.goalRoll*5, myCraft->pos );
+
 
 	if( frameCount%10 == 0 ){
         historyPlot.next( world->time*0.5 );
@@ -183,9 +198,9 @@ void AeroCraftGUI::draw(){
     }
     if( frameCount%5 == 0 ){
         controlTrj.next( world->time*0.5 );
-        controlTrj.set_back( 0, controler.rollControl.x   );
-        controlTrj.set_back( 1, controler.rollControl.ovy );
-        controlTrj.set_back( 2, controler.rollControl.oy  );
+        controlTrj.set_back( 0, controler.roll.x   );
+        controlTrj.set_back( 1, controler.roll.ovy );
+        controlTrj.set_back( 2, controler.roll.oy  );
     }
     if( frameCount%10 == 0 ){
         wingsTrj.next( world->time*0.5 );
@@ -467,16 +482,6 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     //char* fname = "data/AeroCraftStright1.ini";
     char* fname = "data/AeroCraftMainWing1.ini";
 	myCraft     = new AeroCraftWarrior();   myCraft  ->fromFile(fname);
-	controler.craft_bak = new AeroCraft();  controler.craft_bak->fromFile(fname);
-	myCraft->controler   = &controler;
-
-    controler.rollControl.y0       =  0; // M_PI*0.5; //sqrt(0.5);
-    //controler.rollControl.dxdt_max =  1.0;
-    //controler.rollControl.dydx     =  0.2; //5.5;
-    //controler.rollControl.T        =  10.0;
-    controler.rollControl.xmin     = -0.3;
-    controler.rollControl.xmax     =  0.3;
-    controler.rollControl.K        =  1.5;
 
 	//myCraft     = new AeroCraft();   myCraft->fromFile("data/AeroCraft1.ini");
     myCraft->pos.y=200.0;
@@ -485,6 +490,32 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
 
     myCraft->leftAirelon->dbgRec  = &leftWingRec;
     myCraft->rightAirelon->dbgRec = &rightWingRec;
+
+
+    world->controlers.push_back( &controler );
+    controler.craft     = myCraft;
+    controler.craft_bak = new AeroCraft();  controler.craft_bak->fromFile(fname);
+	//myCraft->controler   = &controler;
+	controler.goalDir = myCraft->rotMat.c;
+	controler.bUp   = false;
+    controler.roll.y0 =  0; // M_PI*0.5; //sqrt(0.5);
+    //controler.rollControl.dxdt_max =  1.0;
+    //controler.rollControl.dydx     =  0.2; //5.5;
+    //controler.rollControl.T        =  10.0;
+    controler.roll.xmin = -0.3;
+    controler.roll.xmax =  0.3;
+    controler.roll.K    =  1.5;
+
+    controler.bDir      = true;
+    //controler.roll.y0   =  0;
+    controler.pitch.xmin = -0.3;
+    controler.pitch.xmax =  0.3;
+    controler.pitch.K    =  0.25;
+    //controler.roll.y0   =  0;
+    controler.yaw.xmin = -0.3;
+    controler.yaw.xmax =  0.3;
+    controler.yaw.K    =  0.25;
+
 
     printf( " === autoPilot1 \n" );
 
@@ -556,6 +587,8 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
 
     upTime=0;
 
+    SDL_SetRelativeMouseMode( SDL_TRUE );
+
     //exit(0);
 };
 
@@ -574,7 +607,7 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
                 SDL_WarpMouseInWindow( window, WIDTH/2, HEIGHT*(1-pilot->elevator.getRelativeVal()) );
                 mouseHandling();
 
-            case SDLK_u : useAutoPilot = !useAutoPilot;    break;
+            case SDLK_u : useAutoPilot = !useAutoPilot; break;
             case SDLK_p : first_person = !first_person; break;
             case SDLK_m : mouseSteer   = !mouseSteer;   break;
 
@@ -632,6 +665,16 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
 	else if ( keys[ SDL_SCANCODE_LSHIFT ] || RMB ){ pilot->rudder.towardRalative( 0.5+(mouseX)/float(WIDTH) ); }
     else if ( autoRetractRudder      ){ pilot->rudder.relax(); }
 
+    //if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_D]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
+    if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
+        controler.bActive = false;
+        Mat3d rot; rot.setT(myCraft->rotMat);
+        controler.goalDir = rot.c;
+        controler.goalUp  = rot.b;
+    }else{
+        controler.bActive = true;
+    };
+
 
 };
 
@@ -646,6 +689,11 @@ void AeroCraftGUI:: mouseHandling   ( ){
 	SDL_GetRelativeMouseState(&dmx,&dmy);
 	qCamera.pitch( 0.005* dmy );
 	qCamera.yaw  ( 0.005* dmx );
+    /*
+	controler.goalDir.add_mul(camMat.a, dmx*0.2);
+	controler.goalDir.add_mul(camMat.b, dmy*0.2);
+	controler.goalDir.normalize();
+	*/
 };
 
 AeroCraftGUI * thisApp;

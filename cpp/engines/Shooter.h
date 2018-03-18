@@ -15,6 +15,8 @@
 
 //#include "NBodyWorld2D.h"       // TODO: We would like to add this later
 
+#include "Interfaces.h"
+
 #include "Object3D.h"
 #include "Terrain25D.h"
 #include "Warrior3D.h"
@@ -47,6 +49,7 @@ class Shooter {
 	std::vector<Warrior25D*>    warriors25D;
 	std::vector<Projectile3D*>  projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 	std::vector<Object3D*>      objects;
+	std::vector<AnyControler*>  controlers;
 
 	Terrain25D * terrain = NULL;
 

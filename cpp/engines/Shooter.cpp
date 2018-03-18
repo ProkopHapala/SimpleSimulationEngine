@@ -137,7 +137,8 @@ void Shooter::update_world( ){
 	for( int i=0; i<perFrame; i++ ){
 //        phi += omega * dt;
 //        rot.fromAngle( phi );
-        update_warriors3D();
+        for( AnyControler* c : controlers ) c->update(dt);
+        update_warriors3D ();
         update_warriors25D();
         update_projectiles3D();
         time += dt;
