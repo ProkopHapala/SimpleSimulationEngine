@@ -19,6 +19,7 @@ class AppSDL2OGL_3D : public AppSDL2OGL{
 	Mat3d  camMat;
 	Vec3d  camPos;
 
+	float camDist = 50.0;
 	Vec2i spinning_start;
 
 	bool perspective  = false;
@@ -35,6 +36,11 @@ class AppSDL2OGL_3D : public AppSDL2OGL{
 
 	virtual void draw     ();
 	virtual void camera   ();
+
+	void camera_FPS       ( const Vec3d& pos, const Mat3d& rotMat );
+	void camera_FwUp      ( const Vec3d& pos, const Vec3d& fw, const Vec3d& up, bool upDominant );
+	void camera_FreeLook  ( const Vec3d& pos );
+	void camera_OrthoInset( const Vec2d& p1, const Vec2d& p2, const Vec2d& zrange, const Vec3d& fw, const Vec3d& up, bool upDominant );
 
 	//void orthoCamera      ( );
 	//void perspectiveCamera( );

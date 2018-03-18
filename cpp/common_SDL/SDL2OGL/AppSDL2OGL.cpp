@@ -6,15 +6,23 @@
 
 void AppSDL2OGL::quit(){ SDL_Quit(); loopEnd=true; /*exit(1);*/ };
 
+void AppSDL2OGL::wait(int ms){
+    for( int i=0; i<ms; i+=timeSlice ){
+        uint32_t tnow=SDL_GetTicks();
+        if(tnow>=(upTime+ms)){upTime=tnow; break; }
+        SDL_Delay(timeSlice);
+    }
+};
+
+
 void AppSDL2OGL::loop( int n ){
 	loopEnd = false;
 	for( int iframe=0; iframe<n; iframe++ ){
 		inputHanding();
-		if(!STOP){
-			update();
-		}
+		if(!STOP){update();}
 		//printf(" %i \n", iframe );
-		if( delay>0 ) SDL_Delay( delay );
+        wait(delay);
+		//if( delay>0 ) SDL_Delay( delay );
 		frameCount++;
 		if(loopEnd) break;
 	}

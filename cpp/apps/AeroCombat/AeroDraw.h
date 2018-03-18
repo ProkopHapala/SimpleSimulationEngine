@@ -9,6 +9,73 @@
 #include "Draw2D.h"
 #include "Draw3D.h"
 
+Terrain25D * prepareTerrain( int nsz, int nsub, double step, double hmax ){
+    Terrain25D_bicubic * terrain = new Terrain25D_bicubic();
+    terrain->ruler.setup( (Vec2d){nsz*0.5,nsz*0.5}*-step, (Vec2d){step,step} );
+    terrain->allocate( {nsz,nsz} );
+    terrain->makeRandom( 0.0, hmax );
+
+    terrain->shape = glGenLists(1);
+    glNewList( terrain->shape , GL_COMPILE );
+    //int na=100,nb=100;
+
+    int na = (terrain->ruler.n.a - 3)*nsub;
+    int nb = (terrain->ruler.n.b - 3)*nsub;
+    float da=terrain->ruler.step.a/float(nsub);
+    float db=terrain->ruler.step.b/float(nsub);
+    float x0=terrain->ruler.pos0.x;
+    float y0=terrain->ruler.pos0.y;
+
+    glEnable(GL_LIGHTING);
+    glColor3f (0.5f,0.5f,0.5f);
+    glNormal3f(0.0f,1.0f,0.0f);
+
+    float * oldvals = new float[na*3];
+    for(int ia=0; ia<na; ia++){
+        glBegin(GL_TRIANGLE_STRIP);
+        for(int ib=0; ib<nb; ib++){
+            int i3 = 3*ib;
+            Vec2d dv1,dv2;
+            Vec2d p1; p1.set( (ia  )*da+x0, ib*db+y0 );
+            Vec2d p2; p2.set( (ia+1)*da+x0, ib*db+y0 );
+            float v1,v2;
+            if( ia == 0 ){
+                v1 = (float)terrain->eval( p1, dv1 );
+            }else{
+                v1 = oldvals[i3]; dv1.x=oldvals[i3+1]; dv1.y=oldvals[i3+2];
+            }
+            v2 = (float)terrain->eval( p2, dv2 );
+            oldvals[i3] = v2; oldvals[i3+1] = dv2.x; oldvals[i3+2] = dv2.y;
+            glNormal3f(-dv1.x,1.0,-dv1.y); glVertex3f( (float)p1.x,  v1, (float)p1.y );
+            glNormal3f(-dv2.x,1.0,-dv2.y); glVertex3f( (float)p2.x,  v2, (float)p2.y );
+
+            //glColor3f(v1,0.5,-v1); glVertex3f( (float)p1.x,  v1, (float)p1.y );
+            //glColor3f(v2,0.5,-v2); glVertex3f( (float)p2.x,  v2, (float)p2.y );
+            //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
+        }
+        glEnd();
+    }
+
+    // Normals
+    /*
+    glBegin(GL_LINES);
+    for(int ia=0; ia<na; ia++){
+        for(int ib=0; ib<nb; ib++){
+            int i3 = 3*ib;
+            Vec2d p,dv; p.set( ia*da+x0, ib*db+y0 );
+            double v = (float)terrain->eval( p, dv );
+            glVertex3f( (float)p.x,         v, (float)p.y );
+            glVertex3f( (float)(p.x-dv.x),  v+1.0, (float)(p.y-dv.y) );
+        }
+
+    }
+    glEnd();
+    */
+    glEndList();
+    delete [] oldvals;
+    return terrain;
+}
+
 int makeBuildingsGrid( int nx, int ny, float sx, float sy, float cx, float cy,  float min_height, float max_height ){
 	int ilist=glGenLists(1);
 	glNewList( ilist, GL_COMPILE );
@@ -48,6 +115,48 @@ int makeBuildingsClusters( int nclustest, int nmin, int nmax, float minx, float 
 }
 
 void renderAeroCraft ( const AeroCraft& craft, bool bPos ){
+	glPushMatrix();
+        Mat3d camMat;
+        camMat.setT(craft.rotMat);
+        float glmat[16];
+
+        Vec3d pos;
+        if   (bPos){ pos = craft.pos;            }
+        else       { pos = (Vec3d){0.0,0.0,0.0}; }
+
+        Draw3D::toGLMat( pos, camMat, glmat);
+        //printf( "%g %g %g\n", pos.x, pos.y, pos.z);
+        //printf( "%g %g %g\n", camMat.ax, camMat.ay, camMat.az);
+        //printf( "%g %g %g\n", camMat.bx, camMat.by, camMat.bz);
+        //printf( "%g %g %g\n", camMat.cx, camMat.cy, camMat.cz);
+        glMultMatrixf( glmat );
+        //glDisable (GL_LIGHTING);
+        //glColor3f( 0.3f,0.3f,0.3f );
+
+        Draw3D::drawSphere_oct(1,0.2,{0.0,0.0,0.0});
+
+        //Draw3D::drawLine( {0,0,0},wingLeft .lpos);
+        //Draw3D::drawLine( {0,0,0},wingRight.lpos);
+        //Draw3D::drawLine( {0,0,0},elevator .lpos);
+        //wingLeft .render();
+        //wingRight.render();
+        //rudder   .render();
+        //elevator .render();
+
+
+		for( int i=0; i<craft.nPanels; i++ ){
+            Draw3D::drawLine( {0,0,0}, craft.panels[i].lpos);
+            //printf( "%g %g %g\n", panels[i].lpos.x, panels[i].lpos.y, panels[i].lpos.z);
+            //panels[i].render( );
+            //Draw3D::drawKite( craft.panels[i].lpos, craft.panels[i].lrot, sqrt(craft.panels[i].area) );
+            double sz = sqrt(craft.panels[i].area);
+            Draw3D:: drawPanel( craft.panels[i].lpos, craft.panels[i].lrot, {sz,sz*0.25} );
+		}
+
+	glPopMatrix();
+};
+
+void renderAeroCraftDebug ( const AeroCraft& craft, bool bPos ){
 	glPushMatrix();
         Mat3d camMat;
         camMat.setT(craft.rotMat);

@@ -6,6 +6,90 @@
 
 #include "AppSDL2OGL_3D.h" // THE HEADER
 
+//  camera_FPS( pos, rotMat ){
+
+void AppSDL2OGL_3D::camera_FPS( const Vec3d& pos, const Mat3d& rotMat ){
+    //glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
+    //Mat3d camMat;
+    Vec3f camPos;
+    convert( pos, camPos );
+    camMat.setT( rotMat );
+	float glMat[16];
+	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+	glMultMatrixf( glMat );
+    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
+};
+
+// camera( pos, dir, Up )
+void AppSDL2OGL_3D::camera_FwUp( const Vec3d& pos, const Vec3d& fw, const Vec3d& up, bool upDominant ){
+    //glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
+    //Mat3d camMat;
+    Vec3f camPos;
+    convert( pos, camPos );
+    camMat.b = up;
+    camMat.c = fw;
+    if( upDominant ){
+        camMat.b.normalize();
+        camMat.c.makeOrtho( camMat.b );
+        camMat.c.normalize();
+    }else{
+        camMat.c.normalize();
+        camMat.b.makeOrtho( camMat.c );
+        camMat.b.normalize();
+    }
+    camMat.a.set_cross(camMat.b,camMat.c);
+	float glMat[16];
+	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+	glMultMatrixf( glMat );
+    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
+};
+
+void AppSDL2OGL_3D::camera_FreeLook( const Vec3d& pos ){
+    //glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
+    //Mat3d camMat;
+    Vec3f camPos;
+    convert( pos, camPos );
+    qCamera.toMatrix( camMat );
+    camMat.T();
+	float glMat[16];
+	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+	glMultMatrixf( glMat );
+    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
+};
+
+void AppSDL2OGL_3D::camera_OrthoInset( const Vec2d& p1, const Vec2d& p2, const Vec2d& zrange, const Vec3d& fw, const Vec3d& up, bool upDominant ){
+    //glMatrixMode( GL_PROJECTION ); glPushMatrix();
+    glLoadIdentity();
+    //glOrtho( -ASPECT_RATIO*5.0, ASPECT_RATIO*30.0, -5.0, 30.0,  -100.0, 100.0);
+    //printf( "--- %f %f  %f %f  %f %f \n", -ASPECT_RATIO*5.0, ASPECT_RATIO*30.0, -5.0, 30.0,  -100.0, 100.0  );
+    //printf( "    %f %f  %f %f  %f %f \n", ASPECT_RATIO*p1.x, ASPECT_RATIO*p2.x, p1.y, p2.y,   zrange.a, zrange.b );
+    glOrtho( ASPECT_RATIO*p1.x, ASPECT_RATIO*p2.x, p1.y, p2.y, zrange.a, zrange.b );
+    //Mat3d camMat;
+    camMat.b = up;
+    camMat.c = fw;
+    if( upDominant ){
+        camMat.b.normalize();
+        camMat.c.makeOrtho( camMat.b );
+        camMat.c.normalize();
+    }else{
+        camMat.c.normalize();
+        camMat.b.makeOrtho( camMat.c );
+        camMat.b.normalize();
+    }
+    camMat.a.set_cross(camMat.b,camMat.c);
+    float glMat[16];
+    Draw3D::toGLMatCam( {0.0f,0.0f,0.0f}, camMat, glMat );
+    //Draw3D::toGLMat( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
+    glMultMatrixf( glMat );
+    //glMatrixMode (GL_MODELVIEW);
+}
+
 void AppSDL2OGL_3D::camera(){
 
     float camMatrix[16];

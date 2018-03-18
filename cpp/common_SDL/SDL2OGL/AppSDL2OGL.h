@@ -9,14 +9,16 @@ const float	VIEW_MOVE_STEP     = 0.2f;
 class AppSDL2OGL : public ScreenSDL2OGL{
 	public:
 	bool LMB=false,RMB=false;
-	int frameCount = 0;
-	bool loopEnd   = false, STOP = false;
-	float camStep  = VIEW_MOVE_STEP;
-	int delay = 10;
+	int  upTime=0,delay=20,timeSlice=5,frameCount=0;
+	bool loopEnd    = false, STOP = false;
+	float camStep   = VIEW_MOVE_STEP;
+
 
 // ============ function declarations
 
+    void wait(float ms);
 	virtual void quit(       );
+	void         wait(int ms);
 	virtual void loop( int n );
 	virtual void inputHanding();
 	virtual void eventHandling   ( const SDL_Event& event               );

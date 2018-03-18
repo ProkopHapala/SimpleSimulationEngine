@@ -9,9 +9,12 @@
 #include "Body.h"
 #include "Terrain25D.h" // if we don't use functions from Terrain25D we do not need to link it against Terrain25D.o or Terrain25D.cpp
 
+#include "Interfaces.h"
+
 //class Warrior3D : public RigidBody { public:
 
 class Warrior3D { public:
+    AnyControler* controler=0;
 
 	int id=-1,kind=-1,glo=0;
     bool    landed  = false;
@@ -34,8 +37,6 @@ class Warrior3D { public:
         printf( "pos (%g,%g,%g) qrot (%g,%g,%g,%g)\n", pos.x, pos.x, pos.x, qrot.x,qrot.y,qrot.z,qrot.w );
     }
     */
-
-
 
     //virtual void getPos( ){};
     //virtual void getPos( ){};

@@ -2,6 +2,9 @@
 
 //#define SPEED_TEST
 
+//#include <ctime>
+//#include <iostream>
+
 #include <stdio.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -30,6 +33,8 @@
 #include "AeroCraftControl.h"
 #include "AeroCraftWarrior.h"
 
+#include "AeroControler1.h"
+
 #include "DynamicControl.h"
 
 //#include "AeroCraftControler.h"
@@ -54,102 +59,11 @@
 
 #include "AeroCraftDesign.h"
 
-// ===============================
-// ===== GLOBAL CONSTAMNTS
-// ===============================
 
-/*
-Shooter            * world  = NULL;
-AeroCraftControler * pilot  = NULL;
-AeroTester         * tester = NULL;
+Vec3d opos=(Vec3d){0.0,0.0,0.0};
+double traveledDistance=0;
 
-//AeroTester         tester     ;
-//AeroCraftControler autoPilot1 ;
-//Shooter            world      ;
 
-//SDL_Surface *screen;
-SDL_Event event;
-
-int frameCount=0;
-double tickSum=0;
-int    stepSum=0;
-
-bool loopEnd = false;
-bool STOP    = false;
-*/
-
-// ===============================
-// ===== Free Functions
-// ===============================
-
-//void rotateTo( int pivot, Mat3d& rot, const Mat3d& rot0, const Vec3d& xhat, const Vec3d& yhat, double step ){
-
-Terrain25D * prepareTerrain( int nsz, int nsub, double step, double hmax ){
-    Terrain25D_bicubic * terrain = new Terrain25D_bicubic();
-    terrain->ruler.setup( (Vec2d){nsz*0.5,nsz*0.5}*-step, (Vec2d){step,step} );
-    terrain->allocate( {nsz,nsz} );
-    terrain->makeRandom( 0.0, hmax );
-
-    terrain->shape = glGenLists(1);
-    glNewList( terrain->shape , GL_COMPILE );
-    //int na=100,nb=100;
-
-    int na = (terrain->ruler.n.a - 3)*nsub;
-    int nb = (terrain->ruler.n.b - 3)*nsub;
-    float da=terrain->ruler.step.a/float(nsub);
-    float db=terrain->ruler.step.b/float(nsub);
-    float x0=terrain->ruler.pos0.x;
-    float y0=terrain->ruler.pos0.y;
-
-    glEnable(GL_LIGHTING);
-    glColor3f (0.5f,0.5f,0.5f);
-    glNormal3f(0.0f,1.0f,0.0f);
-
-    float * oldvals = new float[na*3];
-    for(int ia=0; ia<na; ia++){
-        glBegin(GL_TRIANGLE_STRIP);
-        for(int ib=0; ib<nb; ib++){
-            int i3 = 3*ib;
-            Vec2d dv1,dv2;
-            Vec2d p1; p1.set( (ia  )*da+x0, ib*db+y0 );
-            Vec2d p2; p2.set( (ia+1)*da+x0, ib*db+y0 );
-            float v1,v2;
-            if( ia == 0 ){
-                v1 = (float)terrain->eval( p1, dv1 );
-            }else{
-                v1 = oldvals[i3]; dv1.x=oldvals[i3+1]; dv1.y=oldvals[i3+2];
-            }
-            v2 = (float)terrain->eval( p2, dv2 );
-            oldvals[i3] = v2; oldvals[i3+1] = dv2.x; oldvals[i3+2] = dv2.y;
-            glNormal3f(-dv1.x,1.0,-dv1.y); glVertex3f( (float)p1.x,  v1, (float)p1.y );
-            glNormal3f(-dv2.x,1.0,-dv2.y); glVertex3f( (float)p2.x,  v2, (float)p2.y );
-
-            //glColor3f(v1,0.5,-v1); glVertex3f( (float)p1.x,  v1, (float)p1.y );
-            //glColor3f(v2,0.5,-v2); glVertex3f( (float)p2.x,  v2, (float)p2.y );
-            //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", p1.x, p1.y, v1 ,  p2.x, p2.y, v2  );
-        }
-        glEnd();
-    }
-
-    // Normals
-    /*
-    glBegin(GL_LINES);
-    for(int ia=0; ia<na; ia++){
-        for(int ib=0; ib<nb; ib++){
-            int i3 = 3*ib;
-            Vec2d p,dv; p.set( ia*da+x0, ib*db+y0 );
-            double v = (float)terrain->eval( p, dv );
-            glVertex3f( (float)p.x,         v, (float)p.y );
-            glVertex3f( (float)(p.x-dv.x),  v+1.0, (float)(p.y-dv.y) );
-        }
-
-    }
-    glEnd();
-    */
-    glEndList();
-    delete [] oldvals;
-    return terrain;
-}
 
 // ====================================
 //      AeroCraftGUI
@@ -165,8 +79,8 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
     AeroCraftControler * pilot  = NULL;
     AeroTester         * tester = NULL;
 
-    DynamicControl rollControl;
-    double roll;
+    //DynamicControl rollControl;
+    //double roll;
 
     const Uint8 *scanKeys;
     Uint32 mouseButtons;
@@ -182,34 +96,14 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
     bool autoRetractAirelon    = true;
     bool autoRetractRudder     = true;
     bool autoRetractElevator   = false;
-    /*
-    float  ElevatorRate = 0.01;
-	float  AirelonRate  = 0.002;
-	float  RudderRate   = 0.01;
-    double AirelonRetractRate  = AirelonRate;
-    double RudderRetractRate   = RudderRate;
-    double ElevatorRetractRate = ElevatorRate;
-    */
 
     bool useAutoPilot = false;
 
-    float camDist = 100.0;
-
-	int perFrame = 10;
-	//double dt = 0.001;
-
 	AeroCraftWarrior * myCraft;
-	//AeroCraft * myCraft;
-	AeroCraft * myCraft_bak;
-
-	//FieldPatch fieldPatch;
-	//int buildings_shape = -1;
-	//int terrain_shape   = -1;
+	AeroControler1 controler;
 
     bool staticTest = true;
     // - put to Spline manager ? ... make indepemented AeroCraft Test ?
-
-	//int fontTex_DEBUG;
 
 	AeroSurfaceDebugRecord leftWingRec,rightWingRec;
 	Plot2D mainWingLD;
@@ -224,17 +118,7 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 	Vec3d baloons[nBaloons];
 	int gloBaloon;
 
-	//static const int nProjectiles=100;
-	//PointBody projectiles[nProjectiles];
-
 	// ==== function declarations
-
-	//void reallocateTrj(int n);
-	//void resetSteer( );
-	//void steerToDir( const Vec3d& dir );
-
-	//void renderSkyBox( float x0, float y0, float z0 );
-	//void drawStaticTest2D();
 
 	virtual void camera     ();
 	//virtual void cameraHUD();
@@ -245,102 +129,18 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 	virtual void keyStateHandling( const Uint8 *keys );
     virtual void mouseHandling   ( );
 
-    void camera_FPS     ();
-    void camera_YVel    ();
-    void camera_VelY    ();
-    void camera_FreeLook();
-
 	AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-
-void AeroCraftGUI::camera_FPS     (){
-    glLoadIdentity();
-    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
-    Mat3d camMat;
-    Vec3f camPos;
-    convert(myCraft->pos, camPos );
-    camMat.setT( myCraft->rotMat );
-	float glMat[16];
-	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
-	glMultMatrixf( glMat );
-    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
-};
-
-void AeroCraftGUI::camera_YVel   (){
-    glLoadIdentity();
-    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
-    Mat3d camMat;
-    Vec3f camPos;
-    convert(myCraft->pos, camPos );
-    //camMat.setT( myCraft->rotMat );
-    camMat.b.set( 0.0,1.0,0.0 );
-    camMat.c.set( myCraft->vel );
-    camMat.c.makeOrtho( camMat.b );
-    camMat.c.normalize();
-    camMat.a.set_cross(camMat.b,camMat.c);
-	float glMat[16];
-	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
-	glMultMatrixf( glMat );
-    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
-};
-
-void AeroCraftGUI::camera_VelY   (){
-    glLoadIdentity();
-    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
-    Mat3d camMat;
-    Vec3f camPos;
-    convert(myCraft->pos, camPos );
-    //camMat.setT( myCraft->rotMat );
-
-    camMat.c.set( myCraft->vel );
-    camMat.c.normalize();
-    camMat.b.set( 0.0,1.0,0.0 );
-    camMat.b.makeOrtho( camMat.c );
-    camMat.b.normalize();
-    camMat.a.set_cross(camMat.b,camMat.c);
-
-    /*
-    camMat.b.set( 0.0,1.0,0.0 );
-    camMat.c.set( myCraft->vel );
-    camMat.c.makeOrtho( camMat.b );
-    camMat.c.normalize();
-    camMat.a.set_cross(camMat.b,camMat.c);
-    */
-
-	float glMat[16];
-	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
-	glMultMatrixf( glMat );
-    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
-};
-
-
-void AeroCraftGUI::camera_FreeLook(){
-    glLoadIdentity();
-    glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );
-    Mat3d camMat;
-    Vec3f camPos;
-    convert(myCraft->pos, camPos );
-    qCamera.toMatrix( camMat );
-    camMat.T();
-	float glMat[16];
-	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
-	glMultMatrixf( glMat );
-    glTranslatef ( -camPos.x+camMat.cx*camDist, -camPos.y+camMat.cy*camDist, -camPos.z+camMat.cz*camDist );
-};
-
 void AeroCraftGUI::camera (){
-    glMatrixMode( GL_PROJECTION );
-    //if(first_person){ camera_FPS(); }else{ camera_FreeLook(); };
-    if(scanKeys[SDL_SCANCODE_LSHIFT]){ camera_FPS(); }else{ camera_VelY(); };
-    //camera_FreeLook();
-    //camera_FPS();
-    //camera_YVel();
-    //camera_VelY();
-    glMatrixMode (GL_MODELVIEW);
-    glLoadIdentity();
-
+    glMatrixMode(GL_PROJECTION); //glLoadIdentity();
+    //if(first_person){ camera_FPS ( myCraft->pos, myCraft->rotMat ); }else{ camera_FreeLook( myCraft->pos ); };
+    //camera_FwUp( myCraft->pos, myCraft->vel, {0.0,1.0,1.0}, false ); //camera_VelY();
+    //camera_FwUp( myCraft->pos, myCraft->vel, {0.0,1.0,1.0}, true  ); //camera_YVel();
+    if(scanKeys[SDL_SCANCODE_LSHIFT]){ camera_FPS ( myCraft->pos, myCraft->rotMat );                    }
+    else                             { camera_FwUp( myCraft->pos, myCraft->vel, {0.0,1.0,1.0}, false ); };
+    glMatrixMode(GL_MODELVIEW); glLoadIdentity();
 }
 
 void AeroCraftGUI::draw(){
@@ -350,71 +150,30 @@ void AeroCraftGUI::draw(){
 
 	if(staticTest) return;
 
-	Mat3d rot; rot.setT(myCraft->rotMat);
+	if(frameCount>0){ traveledDistance += (myCraft->pos-opos).norm(); }else{ traveledDistance=0; };
+	opos=myCraft->pos;
 
-	/*
-	if(frameCount==0){
-        perFrame = 1;
-        //delay    = 1000;
-        myCraft->leftAirelon ->lrot.rotate( 0.05,myCraft->leftAirelon ->lrot.a);
-        myCraft->rightAirelon->lrot.rotate(-0.05,myCraft->rightAirelon->lrot.a);
-	}
-	*/
+	printf( " upT %f t %f v %f | d  %f d %f \n", upTime*1e-3, world->time, myCraft->vel.norm(), traveledDistance, world->time*myCraft->vel.norm() );
 
-    //world->gravity = 0;
-    //perFrame = 1;
-    //delay    = 100;
-    //STOP = true;
+	Mat3d rot;     rot.    setT(myCraft->rotMat);
+    //Mat3d camMatT; camMatT.setT(camMat);
 
-    Vec3d goalRoll = camMat.a*mouseX + camMat.b*mouseY; goalRoll.normalize();
+    controler.goalRoll = ( camMat.a*mouseX + camMat.b*mouseY ); controler.goalRoll.normalize();
 
-    autoRetractAirelon   =  false;
-	if(!autoRetractAirelon){
-        //Vec3d goalRoll  = {0.0,1.0,0.0};
-        //roll = Up.angleInPlane( myCraft->rotMat.b, myCraft->rotMat.a );     // the fucking matrix is transposed !!!
-        roll = goalRoll .angleInPlane( rot.a*-1.0, rot.b );
-        //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( rot.a*10*rot.a.dot({0,1}), myCraft->pos );
-        //glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( rot.b*10, myCraft->pos );
-
-        rollControl.y0       =  M_PI*0.5; //sqrt(0.5);
-        rollControl.dxdt_max =  1.0;
-        rollControl.dydx     =  0.2; //5.5;
-        rollControl.T        =  10.0;
-        rollControl.xmin     = -0.3;
-        rollControl.xmax     =  0.3;
-        rollControl.K        =  1.5;
-
-        //double dAoA = rollControl.dx_O1( roll, world->dt );
-        //printf( "dAoA %f  %f %f \n", dAoA, roll, rollControl.x  );
-        // TODO : finish feedback loop
-
-        //rollControl.dx_O2( roll, world->dt );
-
-        if(isnan(roll))exit(0);
-        rollControl.x_O1( roll, world->dt );
-        //rollControl.x=0.25;
-
-        //printf( "y %f vy %f x %f \n", rollControl.oy, rollControl.ovy, rollControl.x );
+    Draw3D::drawMatInPos( camMat, myCraft->pos );
+    //Draw3D::drawMatInPos( camMatT, myCraft->pos );
+    //Draw3D::drawMatInPos( rot   , myCraft->pos );
 
 
-        myCraft->leftAirelon ->lrot = myCraft_bak->leftAirelon ->lrot;
-        myCraft->rightAirelon->lrot = myCraft_bak->rightAirelon->lrot;
-
-        myCraft->leftAirelon ->lrot.rotate( rollControl.x,myCraft->leftAirelon ->lrot.a);
-        myCraft->rightAirelon->lrot.rotate(-rollControl.x,myCraft->rightAirelon->lrot.a);
-
-        //myCraft->leftAirelon ->lrot.rotate( dAoA,myCraft->leftAirelon->lrot.a);
-        //myCraft->rightAirelon->lrot.rotate(-dAoA,myCraft->leftAirelon->lrot.a);
-    }
 
 	if(SimOn){
         //printf( "y %f vy %f x %f torq=(%f,%f,%f)     \n", rollControl.oy, rollControl.ovy, rollControl.x, myCraft->torq.x, myCraft->torq.y, myCraft->torq.z );
         world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
         //SimOn = false;
     }
-	camera ();
+	camera();
 
-	glColor3f( 1.0,1.0,1.0); Draw3D::drawVecInPos( goalRoll*5, myCraft->pos );
+	glColor3f( 1.0,1.0,1.0); Draw3D::drawVecInPos( controler.goalRoll*5, myCraft->pos );
 
 	if( frameCount%10 == 0 ){
         historyPlot.next( world->time*0.5 );
@@ -422,14 +181,12 @@ void AeroCraftGUI::draw(){
         historyPlot.set_back( 1, myCraft->pos.y      *0.02  );
         historyPlot.set_back( 2, myCraft->vel.y      *0.02 );
     }
-
     if( frameCount%5 == 0 ){
         controlTrj.next( world->time*0.5 );
-        controlTrj.set_back( 0, rollControl.x  );
-        controlTrj.set_back( 1, rollControl.ovy );
-        controlTrj.set_back( 2, rollControl.oy  );
+        controlTrj.set_back( 0, controler.rollControl.x   );
+        controlTrj.set_back( 1, controler.rollControl.ovy );
+        controlTrj.set_back( 2, controler.rollControl.oy  );
     }
-
     if( frameCount%10 == 0 ){
         wingsTrj.next( world->time*0.5 );
         Vec3d gp;
@@ -460,62 +217,34 @@ void AeroCraftGUI::draw(){
 	//world->myCraft->render();
 	renderAeroCraft( *myCraft, true );
 
-
-
 	double aimDist = 400.0;
 	double aimSize = 5.0;
 
 	glColor3f(0.0,1.0,1.0); Draw3D::drawPointCross( myCraft->pos+rot.c*aimDist, aimSize );
 	Draw3D::drawLine( myCraft->pos, myCraft->pos+rot.c*aimDist );
 
-    glMatrixMode( GL_PROJECTION );
-    glPushMatrix();
-        glLoadIdentity();
-        glOrtho( -ASPECT_RATIO*5.0, ASPECT_RATIO*30.0, -5.0,30.0,  -100.0, 100.0);
-        Mat3d camMat;
-        //camMat.setOne();
-        //camMat.fromDirUp({0.0,1.0,0.0},myCraft->rotMat.a);
-        // camera y-axis than along wing
-        camMat.b.set( 0.0,1.0,0.0 );
-        camMat.c.set( rot.a );
-        camMat.c.makeOrtho( camMat.b );
-        camMat.c.normalize();
-        camMat.a.set_cross(camMat.b,camMat.c);
-        // camera along wing than y-axis
-        /*
-        camMat.c.set( rot.a );
-        camMat.b.set( 0.0,1.0,0.0 );
-        camMat.b.makeOrtho( camMat.c );
-        camMat.b.normalize();
-        camMat.a.set_cross(camMat.b,camMat.c);
-        */
-        float glMat[16];
-
-        Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
-        //Draw3D::toGLMat( { 0.0f, 0.0f, 0.0f}, camMat, glMat );
-        glMultMatrixf( glMat );
-    glMatrixMode (GL_MODELVIEW);
-    glPushMatrix();
+	// ---- Render Aerocraft Inset
+    glMatrixMode( GL_PROJECTION ); glPushMatrix();
+    camera_OrthoInset( {-5,-5}, {30.0,30.0}, {-100.0,100.0}, rot.a, {0.0,1.0,0.0}, true );
+    glMatrixMode (GL_MODELVIEW); glPushMatrix();
         glLoadIdentity();
         renderAeroCraft(*myCraft, false);
-
         Draw3D::drawMatInPos( camMat, {0.0,0.0,0.0} );
-    glMatrixMode( GL_MODELVIEW );
-    glPopMatrix();
-    glMatrixMode( GL_PROJECTION );
-    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );  glPopMatrix();
+    glMatrixMode( GL_PROJECTION ); glPopMatrix();
     //Draw3D::drawMatInPos( camMat, myCraft->pos );
     //Draw3D::drawMatInPos( myCraft->rotMat, myCraft->pos );
     Draw3D::drawMatInPos( rot, myCraft->pos );
 
+
+    // ----  draw AreroCraftDebug
 	glColor3f(1.0,0.0,0.0);
 	double fsc = 0.001;
 	double vsc = 1.1;
-	Draw3D::drawVecInPos( leftWingRec.force*fsc,  leftWingRec.gdpos+myCraft->pos );
+	Draw3D::drawVecInPos( leftWingRec .force*fsc, leftWingRec .gdpos+myCraft->pos );
 	Draw3D::drawVecInPos( rightWingRec.force*fsc, rightWingRec.gdpos+myCraft->pos );
-
 	glColor3f(0.0,0.0,1.0);
-    Draw3D::drawVecInPos( leftWingRec.uair*vsc,  leftWingRec.gdpos+myCraft->pos );
+    Draw3D::drawVecInPos( leftWingRec .uair*vsc, leftWingRec .gdpos+myCraft->pos );
 	Draw3D::drawVecInPos( rightWingRec.uair*vsc, rightWingRec.gdpos+myCraft->pos );
 	//glColor3f(1.0,0.0,1.0);
 	//Draw3D::drawVecInPos( (leftWingRec.force+rightWingRec.force)*fsc, rightWingRec.gdpos+myCraft->pos );
@@ -536,7 +265,6 @@ void AeroCraftGUI::draw(){
         Draw3D::drawPointCross( prj->pos, 1.0 );
         //printf( " %f, %f, %f\n", prj->pos.z, prj->pos.y, prj->pos.z);
 	}
-
 
 	for(int i=0; i<nBaloons; i++){
         Draw3D::drawShape( baloons[i], {10.0,0.0,0.0, 0.0,10.0,0.0, 0.0,0.0,10.0} ,gloBaloon);
@@ -615,6 +343,12 @@ void AeroCraftGUI::drawHUD(){
     glColor3f(0.0,1.0,0.0); Draw2D::drawPointCross({s0.x+sza*mouseX*2.0/WIDTH,s0.y+sza*mouseY*2.0/HEIGHT},5.0);
 
 
+    //printf( "time sec %li \n", time(0)-appTime0 );
+    //printf( "time sec %g sec %li \n", (clock()-appTime0)/clock_per_second, (time(0)-appSec0) );
+    //printf( "time sec %g \n", SDL_GetTicks()*1e-3 );
+
+
+
     //glPopMatrix();
 
 	//if(staticTest){ drawStaticTest2D( *tester, fontTex, WIDTH, HEIGHT ); return; }
@@ -624,7 +358,7 @@ void AeroCraftGUI::drawHUD(){
 	double vtot   = myCraft->vel.norm();
 	//double thrust = world->myCraft->propelers[0].getThrust( vtot );
 	double thrust = myCraft->totalThrust.norm();
-	sprintf(str, "attitude %4.3f speed %3.3f vVert %3.3f tgAlfa %3.3f thrust %3.3f \0", myCraft->pos.y, vtot, myCraft->vel.y, myCraft->vel.y/vtot, thrust );
+	sprintf(str, "T=%3.1fs(%3.1f) attitude %4.3f speed %3.3f vVert %3.3f tgAlfa %3.3f thrust %3.3f \0", upTime*1e-3, world->time, myCraft->pos.y, vtot, myCraft->vel.y, myCraft->vel.y/vtot, thrust );
 	glColor4f(1.0f,1.0f,1.0f,0.9f); Draw::drawText( str, fontTex, 10, 0 );
 
 	//if(first_person){
@@ -671,6 +405,7 @@ void AeroCraftGUI::drawHUD(){
         Draw::setRGBA(controlTrj.lColors[2]); Draw::drawText( "y\n",  fontTex, 0.1, 0 );  glTranslatef(0.0,0.2,0.0);
     glPopMatrix();
 
+    /*
     glPushMatrix();
     glTranslatef( 100.0, 100.0, 0.0 );
     glScalef(100.0,100.0,0.0);
@@ -678,11 +413,16 @@ void AeroCraftGUI::drawHUD(){
     Draw2D::drawLine_d({-1.0, 0.0},{ 1.0, 0.0});
     Draw2D::drawLine_d({ 0.0,-1.0},{ 0.0, 1.0});
     glPopMatrix();
+    */
 
     //glColor3f(1.0f,1.0f,1.0f,0.9f);
 }
 
 AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    //long tick_per_sec = CLOCKS_PER_SEC;
+    //printf( "CLOCKS_PER_SEC %e \n", (double)tick_per_sec );
+    //exit(0);
 
     VIEW_DEPTH = 10000;
     zoom = 30.0;
@@ -703,9 +443,10 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     printf( " === world  \n" );
 
 	world = new Shooter();
-    world->perFrame = 1;
+    //world->perFrame = 1;
     //world->dt       = 0.005d;
-    world->dt       = 0.002d;
+    //world->dt       = 0.002d;
+    world->dt = 0.6*(delay*1.0e-3)/world->perFrame;
 
     printf( " === Environment \n" );
     world->terrain =  prepareTerrain( 128, 2, 100.0, 50 );
@@ -720,14 +461,23 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
         Draw3D::drawPolygons( Solids::Icosahedron_nfaces,        Solids::Icosahedron_ngons,        Solids::Icosahedron_faces,        Solids::Icosahedron_verts        );
 	glEndList();
 
-
     printf( " === aerocraft \n" );
 
     //char* fname = "data/AeroCraft1.ini";
     //char* fname = "data/AeroCraftStright1.ini";
     char* fname = "data/AeroCraftMainWing1.ini";
-	myCraft_bak = new AeroCraft();          myCraft_bak->fromFile(fname);
-	myCraft     = new AeroCraftWarrior();   myCraft    ->fromFile(fname);
+	myCraft     = new AeroCraftWarrior();   myCraft  ->fromFile(fname);
+	controler.craft_bak = new AeroCraft();  controler.craft_bak->fromFile(fname);
+	myCraft->controler   = &controler;
+
+    controler.rollControl.y0       =  0; // M_PI*0.5; //sqrt(0.5);
+    //controler.rollControl.dxdt_max =  1.0;
+    //controler.rollControl.dydx     =  0.2; //5.5;
+    //controler.rollControl.T        =  10.0;
+    controler.rollControl.xmin     = -0.3;
+    controler.rollControl.xmax     =  0.3;
+    controler.rollControl.K        =  1.5;
+
 	//myCraft     = new AeroCraft();   myCraft->fromFile("data/AeroCraft1.ini");
     myCraft->pos.y=200.0;
     myCraft->vel.set_mul( myCraft->rotMat.c, 100.0 );
@@ -804,6 +554,9 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
 
     controlTrj.init(100,3);
 
+    upTime=0;
+
+    //exit(0);
 };
 
 void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
