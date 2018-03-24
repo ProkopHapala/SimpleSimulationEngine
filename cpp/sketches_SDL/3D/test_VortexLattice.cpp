@@ -44,6 +44,9 @@ Vec3d totVelField( Vec3d R ){
         //B.add( horseshoe( R, CPs[i], CPs[i+1], flightDir, Gamas[nCPs] ) );
         horseshoe( B, R, CPs[i], CPs[i+1], flightDir, Gamas[i] );
         //horseshoeDecay( B, R, CPs[i], CPs[i+1], flightDir, Gamas[i], 16.0 );
+        //B.add( sourceDipol( R, {0.0,0.0,0.0,1.0} ) );
+        //B.add( sourceDipol( R+(Vec3d){0.0,0.2,0.0}, {0.0,0.0,1.0,0.0} ) );
+        //B.add( pointSource( R ) * 1.0 );
     }
     //exit(0);
     //printf("=====\n");
@@ -158,7 +161,7 @@ void testILineFinite(){
     //exit(0);
 }
 
-class TestAppMultipoles : public AppSDL2OGL_3D {
+class TestAppVortexLattice : public AppSDL2OGL_3D {
 	public:
 
     MultipoleGrid grid;
@@ -169,18 +172,18 @@ class TestAppMultipoles : public AppSDL2OGL_3D {
 	virtual void eventHandling   ( const SDL_Event& event  );
 	//virtual void keyStateHandling( const Uint8 *keys );
 
-	TestAppMultipoles( int& id, int WIDTH_, int HEIGHT_ );
+	TestAppVortexLattice( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-TestAppMultipoles::TestAppMultipoles( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+TestAppVortexLattice::TestAppVortexLattice( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     //exit(0);
 
 
 }
 
-void TestAppMultipoles::draw(){
+void TestAppVortexLattice::draw(){
     printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -188,26 +191,26 @@ void TestAppMultipoles::draw(){
 	//LineSemiInf( {0.5,1.5,0.0}, {1.0,0.0,0.0} ); exit(0);
 	//ISemiInfSheet( {1.0,1.0,0.0}, {1.0,0.0,0.0}, {0.0,1.0,0.0}, 4.0 ); exit(0);
 
-	testILineFinite(); //exit(0);
+	//testILineFinite(); //exit(0);
     //if(frameCount==0)testILineFinite();
     //glColor3f(1.0,1.0,1.0);
     //Draw3D::drawLine    ( (Vec3d){1.0,0.0, 0.0},  {-1.0,0.0,0.0} );
     //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,10.0},  { 1.0,0.0,0.0} );
     //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,10.0},  {-1.0,0.0,0.0} );
 
-    /*
+
     plotVortexFilaments( nCPs, CPs, flightDir*-100.0 );
     glColor3f(0.0,0.0,0.0);
     //plotVecPlane( {21,21}, { -1.0,0.0,-2.0 }, {0.2,0.0,0.0}, {0.0,0.0,0.2}, 0.02, 1.0, totVelField );
     //plotVecPlane( {5,5}, { -2.0,0.0,-2.0 }, {1.0,0.0,0.0}, {0.0,0.0,1.0}, 0.02, 10.0, totVelField );
     //exit(0);
     plotStreamLinePlane( {20,1}, 200, {-1.1,0.0,3.0}, {0.2,0.0,0.0}, {0.0,0.2,0.0}, 0.1, totVelField );
-    */
+
 
 };
 
 
-void TestAppMultipoles::eventHandling ( const SDL_Event& event  ){
+void TestAppVortexLattice::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
     switch( event.type ){
         case SDL_KEYDOWN :
@@ -221,20 +224,20 @@ void TestAppMultipoles::eventHandling ( const SDL_Event& event  ){
     AppSDL2OGL::eventHandling( event );
 }
 
-void TestAppMultipoles::drawHUD(){
+void TestAppVortexLattice::drawHUD(){
     glDisable ( GL_LIGHTING );
 }
 
 // ===================== MAIN
 
-TestAppMultipoles * thisApp;
+TestAppVortexLattice * thisApp;
 
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
-	thisApp = new TestAppMultipoles( junk , 800, 600 );
+	thisApp = new TestAppVortexLattice( junk , 800, 600 );
 	thisApp->loop( 1000000 );
 	return 0;
 }

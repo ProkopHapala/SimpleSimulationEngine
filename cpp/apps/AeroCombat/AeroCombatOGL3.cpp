@@ -75,6 +75,9 @@
 #include "Shader.h"
 
 
+#include "TerrainOGL3.h"
+
+
 // ====================================
 //      AeroCraftGUI
 // ====================================
@@ -92,6 +95,9 @@ class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
     const Uint8 *scanKeys;
     Uint32 mouseButtons;
+
+    TerrainOGL3 terrain1;
+
 
     /*
     int      fontTex;
@@ -172,6 +178,7 @@ class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 	virtual void update();
     virtual void eventHandling   ( const SDL_Event& event  );
+
     virtual void draw( Camera& cam );
 
 	AeroCraftGUI(int W, int H);
@@ -290,6 +297,24 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     cam.aspect = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
     screen->camLookAt = new Vec3f(); (*screen->camLookAt)={0.0,0.0,0.0};
 
+
+
+    int imgH = 100;
+    int imgW = 100;
+    float * height_map = new float[imgH*imgW];
+    for( int iy=0; iy<imgH; iy++ ){
+        for( int ix=0; ix<imgW; ix++ ){
+            float x = ix*0.1;
+            float y = iy*0.2;
+            height_map[ iy*imgW + ix ] = sin(x)*sin(y)*0.5 + 0.5;
+        }
+    }
+    //newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
+    terrain1.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
+
+    delete [] height_map;
+
+
 };
 
 void AeroCraftGUI::update(){
@@ -308,41 +333,41 @@ void AeroCraftGUI::draw( Camera& cam ){
     Mat3f mrot; mrot.setOne();
     sh1->set_modelMat( (GLfloat*)&mrot );
     sh1->set_modelPos( (const GLfloat[]){0.0f,0.0f,0.0f} );
+
+    //convert( myCraft->pos, cam.pos );
+    cam.lookAt( myCraft->pos, 20.0 );
     setCamera( *sh1, cam );
     //setCameraOrtho(*sh1,cam);
 
+    //sh1->setModelPose( myCraft->pos, myCraft->rotMat );
+    sh1->setModelPoseT( myCraft->pos, myCraft->rotMat );
+    //sh1->set_modelMat( myCraft->rotMat );
+    //Mat3d r; r.setOne(); sh1->set_modelMat( r );
+    //Mat3f r; r.setOne(); sh1->set_modelMat( (float*)&r );
+
+    //sh1->set_modelMat( r );
+    //sh1->setPose( myCraft->pos );
+
+
     GLuint ucolor = sh1->getUloc("baseColor");
-    glUniform4f( ucolor, 0.0, 0.0, 0.0, 1.0 );   glmesh->draw();
-    glUniform4f( ucolor, 1.0, 0.0, 0.0, 1.0 );   msh_normals->draw();
+    glUniform4f( ucolor, 0.0, 0.0, 0.0, 1.0 );  glmesh->draw();
+    glUniform4f( ucolor, 1.0, 0.0, 0.0, 1.0 );  msh_normals->draw();
     //glmesh->draw(GL_TRIANGLES);
 
-    /*
-    int npoints = 1000;
-    int nx = (int)(sqrt(npoints));
-    int ny = npoints/nx;
-    float step = 2.5;
-    float span = 100.0;
-    srand(15454);
-    GLuint ucolor = sh1->getUloc("baseColor");
-    glmesh->preDraw ();
-    int nviewed = 0;
-    for( int i=0; i<npoints; i++ ){
-        //sh1->set_modelPos( (GLfloat*)(points+i) );
-        //Vec3f pos = (Vec3f){ randf(-span,span),randf(-span,span),randf(-span,span) };
-        //Vec3f pos = (Vec3f){ randf(-span,span),randf(-span,span),randf(-0,0) };
-        Vec3f pos = (Vec3f){ step*(i/nx),step*(i%nx),0.0 };
-        sh1->set_modelPos( (GLfloat*)&pos );
-        //glUniform4f( ucolor, randf(0,1), randf(0,1), randf(0,1), 1.0 );
-        //if( cam.pointInFrustrum(pos) )
-        if( cam.sphereInFrustrum(pos,0.9) )
-            { glUniform4f( ucolor, 1.0, 0.0, 0.0, 1.0 ); nviewed++; }
-        else{ glUniform4f( ucolor, 0.0, 0.0, 1.0, 1.0 ); }
-        printf( "nviewed %i \n", nviewed );
-        //glUniform4fv( sh1->getUloc("baseColor"), 1,  (const float[]){1.0, 0.0, 0.0, 1.0} );
-        //glmesh->draw();
-        glmesh->drawRaw();
-    }
-    */
+
+    //printf( "%f %f %f \n", cam.pos.x, cam.pos.y, cam.pos.z );
+
+    // ==== terrain
+    terrain1.pos.x = cam.pos.x;
+    terrain1.pos.z = cam.pos.z;
+    terrain1.pos.y = -100.0;
+    terrain1.setViewRange( { cam.rot.c.x, cam.rot.c.z}, 0.3 );
+    terrain1.sh.use();
+    //terrain1.sh.set_camPos( (float*)&cam.pos );
+    //terrain1.sh.set_camMat( (float*)&cam.rot );
+    setCamera( terrain1.sh, cam );
+    terrain1.draw();
+
 };
 
 void AeroCraftGUI::eventHandling( const SDL_Event& event  ){
@@ -398,43 +423,4 @@ int main(int argc, char *argv[]){
     app->quit();
     return 0;
 }
-
-/*
-int main(int argc, char *argv[]){
-
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) die( "Unable to initialize SDL" );
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3); // Opengl 3.2
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3); // Opengl 3.2
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
-    window = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-    if ( !window ) die("Unable to create window");
-    context = SDL_GL_CreateContext( window );
-    //SDL_GL_SetSwapInterval(1); // VSync On
-    SDL_GL_SetSwapInterval(VSync);
-
-    glewExperimental = true; // Needed for core profile
-	if (glewInit() != GLEW_OK) {
-		fprintf(stderr, "Failed to initialize GLEW\n");
-		getchar();
-		quit();
-		//return -1;
-	}
-
-
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	//SDL_SetRelativeMouseMode( SDL_TRUE );
-	SDL_ShowCursor(SDL_DISABLE);
-	SDL_DisplayMode dm;
-    SDL_GetDesktopDisplayMode(0, &dm);
-	int junk;
-	thisApp = new AeroCraftGUI( junk , dm.w-150, dm.h-100 );
-	SDL_SetWindowPosition(thisApp->window, 100, 0 );
-	thisApp->loop( 1000000 );
-	return 0;
-}
-*/
-
 

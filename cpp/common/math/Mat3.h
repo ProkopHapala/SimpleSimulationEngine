@@ -34,6 +34,10 @@ class Mat3TYPE{
 
 // ====== initialization
 
+	inline Mat3TYPE<double> toDouble()const{ return (Mat3TYPE<double>){ (double)xx,(double)xy,(double)xz, (double)yz,(double)yy,(double)yz, (double)zx,(double)zy,(double)zz }; }
+	inline Mat3TYPE<float > toFloat ()const{ return (Mat3TYPE<float >){ (float)xx,(float)xy,(float)xz,    (float)yz,(float)yy,(float)yz,    (float)zx,(float)zy,(float)zz }; }
+	inline Mat3TYPE<int >   toInt   ()const{ return (Mat3TYPE<int   >){ (int)xx,(int)xy,(int)xz,          (int)yz,(int)yy,(int)yz,          (int)zx,(int)zy,(int)zz }; }
+
 	inline void setOne(        ){ xx=yy=zz=1; xy=xz=yx=yz=zx=zy=0; };
 	inline void set   ( TYPE f ){ xx=yy=zz=f; xy=xz=yx=yz=zx=zy=0; };
 

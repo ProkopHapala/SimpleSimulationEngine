@@ -91,9 +91,7 @@ Vec3d terrainFunc( Vec2d p ){ return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0
 
 void setup(){
 
-
-
-
+/*
     //arr_func( 3, (const double[]){1.0,2.0,3.0} );
     //struct S s = { .c = 3, .d=4.0 }; // works only in C99 not in C++11
 
@@ -106,16 +104,6 @@ void setup(){
     //shader1->init( "common_resources/shaders/pos3D.glslv",   "common_resources/shaders/pos3D.glslf"   );
     //shader1->init( "common_resources/shaders/terrain_world.glslv",   "common_resources/shaders/pos3D.glslf" );
     shader1->getDefaultUniformLocation();
-    /*
-    shader1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
-    GLuint uloc;
-    uloc = glGetUniformLocation( shader1->shaderprogram, "cam_pos"       ); glUniform3fv      (uloc, 1, (GLfloat*)&camPos );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "light_pos"     ); glUniform3fv      (uloc, 1, light_pos         );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "lightColor"    ); glUniform3fv      (uloc, 1, lightColor        );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "diffuseColor"  ); glUniform3fv      (uloc, 1, diffuseColor      );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "ambientColor"  ); glUniform3fv      (uloc, 1, ambientColor      );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "specularColor" ); glUniform3fv      (uloc, 1, specularColor     );
-    */
 
     shTerrain = new Shader();
     //shTerrain->init( "common_resources/shaders/terrain_world.glslv", "common_resources/shaders/color3D.glslf" );
@@ -125,28 +113,12 @@ void setup(){
     //object1 = makeOgl_flat( Solids::Tetrahedron );
     object1 = makeOgl_flat( Solids::Octahedron );
     //object1 = makeOgl_flat( Solids::Icosahedron );
-
     //obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, terrainFunc );
-
     //obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, terrainFunc };
-
     obj_terrain = qaudPatchHard( 100, (Vec2d){-50.0,-50.0}, (Vec2d){1.0,0.0}, (Vec2d){0.0,1.0}, [](Vec2d p)->Vec3d{
         return (Vec3d){p.x*10.0,sin(p.x)*sin(p.y*0.5)*10.0,p.y*10.0}; // lambda
         //return (Vec3d){p.x*10.0,-1.0,p.y*10.0}; // lambda
     } );
-
-    /*
-    //terrain_mesh = qaudPatchSmooth( (Vec2i){40,40}, (Vec2f){-50.0,-50.0}, (Vec2f){1.0,0.0}, (Vec2f){0.0,1.0}, [](Vec2f p,Vec3f& pv,Vec3f& nv)->void{
-    terrain_mesh = qaudPatchSmooth( (Vec2i){40,40}, (Vec2f){-0.0,-0.0}, (Vec2f){8.0,0.0}, (Vec2f){0.0,8.0}, [](Vec2f p,Vec3f& pv,Vec3f& nv)->void{
-        float h    = sin(p.x*0.1)*sin(p.y*0.05)*10.0;
-        float dh_x = cos(p.x*0.1)*sin(p.y*0.05)*10.0*0.1;
-        float dh_y = sin(p.x*0.1)*cos(p.y*0.05)*10.0*0.05;
-        pv = (Vec3f){p.x ,h,p.y };
-        nv = (Vec3f){dh_x,1,dh_y}; nv.normalize();
-        //pv = (Vec3f){p.x ,0.0f,p.y };
-        //nv = (Vec3f){0.0f,1.0f,0.0f};
-    }, NULL );
-    */
 
     terrain_mesh = qaudPatchSmooth( (Vec2i){40,40}, (Vec2f){200.0,200.0}, 1, [](Vec2f p,Vec3f& pv,Vec3f& nv)->void{
         float h    = sin(p.x*0.1)*sin(p.y*0.05)*10.0;
@@ -154,13 +126,11 @@ void setup(){
         float dh_y = sin(p.x*0.1)*cos(p.y*0.05)*10.0*0.05;
         pv = (Vec3f){p.x ,h,p.y };
         nv = (Vec3f){dh_x,1,dh_y}; nv.normalize();
-
-        //pv = (Vec3f){p.x ,0.0f,p.y };
-        //nv = (Vec3f){0.0f,0.0f,0.0f};
     }, NULL );
 
-    terrain_mesh2 = qaudPatchUV( (Vec2i){40,40} );
+    */
 
+    //terrain_mesh2 = qaudPatchUV( (Vec2i){40,40} );
     int imgH = 100;
     int imgW = 100;
     float * height_map = new float[imgH*imgW];
@@ -169,31 +139,13 @@ void setup(){
             float x = ix*0.1;
             float y = iy*0.2;
             height_map[ iy*imgW + ix ] = sin(x)*sin(y)*0.5 + 0.5;
-            //float r = sin(ix*0.1) + 1.0f;
-            //float g = sin(iy*0.1) + 1.0f;
-            //float b = sin((ix+iy)*0.1) + 1.0f;
-            //imgData[ iy*imgW + ix ] =  ((int)(127*r) <<16) | ((int)(127*g)<<8) | ((int)(127*b));
         }
     }
-    /*
-    glGenTextures(0, &txHeight);    // Create one OpenGL texture
-    glBindTexture(GL_TEXTURE_2D, txHeight); // "Bind" the newly created texture : all future texture functions will modify this texture
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, imgW, imgH, 0, GL_RED, GL_FLOAT, height_map );
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    */
-    newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
-
-    /*
-    Vec2f v1,v2,p; v1.set(1.0,0.0);v2.set(0.0,1.0);
-    p.set(-0.5,-0.5); printf( "%i  (%f,%f) \n", p.isBetweenRotations(v1,v2), p.cross(v1), p.cross(v2) );
-    exit(0);
-    */
-
+    //newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
     terrain1.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
-
     delete [] height_map;
 
+    /*
     obj_flicker = makeNTris( 20, [](int i, int iv, Vec3d& p,Vec3d& nv){
         double x = (i>>1)*100.0;
         double y = (iv&1)*20.0;
@@ -211,6 +163,7 @@ void setup(){
     instance_points = new Vec3f[ninstancs];
     //for (int i=0; i<ninstancs; i++){ instance_points[i] = (Vec3f){randf(-15.0,15.0),randf(-15.0,15.0),randf(5.0,100.0)};};
     for (int i=0; i<ninstancs; i++){ instance_points[i] = (Vec3f){0.0,0.0,5.0*i};};
+    */
 
 	qCamera.setOne();
 	delay = 1;
@@ -226,6 +179,9 @@ void draw(){
 
     glEnable( GL_DEPTH_TEST );
     glDepthFunc   ( GL_LESS );
+
+
+
 
     qCamera.toMatrix(mouseMat);
 
@@ -256,6 +212,7 @@ void draw(){
     //camMat.set_mmul( mPersp, mRot );
     Mat3f objRot; objRot.setOne();
 
+    /*
     // ============= Objects
 
     shader1->use();
@@ -296,34 +253,10 @@ void draw(){
     //obj_flicker->draw_mode = GL_POINTS; glPointSize( 20.0 ); obj_flicker->draw_default();
     //obj_flicker->draw_mode = GL_LINE_STRIP;  glLineWidth( 5.0 );  obj_flicker->draw_default();
 
-
-    /*
-    shTerrain->use();
-
-    Vec3f modelPos = {0.0,0.0,0.0};
-    shTerrain->set_camPos  ( (float*)&camPos );
-    shTerrain->set_camMat  ( (float*)&camMat );
-    shTerrain->set_modelMat( (float*)&objRot );
-
-    //uloc = glGetUniformLocation( shader1->shaderprogram, "texture1");
-    //glActiveTexture(GL_TEXTURE0 );
-    //glBindTexture(GL_TEXTURE_2D, txHeight );
-    //glBindSampler(0, uloc);
-    //glUniform1i(uloc, 0);
-
-    bindTexture( 0, txHeight, shTerrain->getUloc("txHeight") );
-
-    glUniform2fv   ( shTerrain->getUloc("uv_0"    ), 1, (const float[]){0.5f,0.5f} );
-    glUniform2fv   ( shTerrain->getUloc("uv_da"   ), 1, (const float[]){100.0f,  0.0f} );
-    glUniform2fv   ( shTerrain->getUloc("uv_db"   ), 1, (const float[]){  0.0f,100.0f} );
-    glUniform3fv   ( shTerrain->getUloc("mapScale"), 1, (const float[]){0.005f,0.005f,20.0f} );
-
-    modelPos = { 0.0f  ,0.0f,  0.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->drawPoints( 3.0f );
-    modelPos = {-100.0f,0.0f,  0.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->draw();
-    modelPos = {   0.0f,0.0f,100.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->draw();
-    modelPos = {-100.0f,0.0f,100.0f}; shTerrain->set_modelPos( (float*)&modelPos ); terrain_mesh2->draw();
-
     */
+
+    printf( "== pos\n %f %f %f \n rot: \n", camPos.x, camPos.y, camPos.z );
+    mRot.print();
 
     terrain1.pos.x = camPos.x;
     terrain1.pos.z = camPos.z;
@@ -333,11 +266,10 @@ void draw(){
     terrain1.sh.set_camMat( (float*)&camMat );
     terrain1.draw();
 
-
     SDL_GL_SwapWindow(window);
 
     long time_end = getCPUticks();
-    printf(  "nVert %i nDraw %i in %f Mticks/frame\n", terrain1.nVertDrawn, terrain1.nDrawCalls, (time_end-time_start)*1.0e-6 );
+    //printf(  "nVert %i nDraw %i in %f Mticks/frame\n", terrain1.nVertDrawn, terrain1.nDrawCalls, (time_end-time_start)*1.0e-6 );
 }
 
 // =============================================================

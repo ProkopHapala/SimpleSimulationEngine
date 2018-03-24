@@ -28,6 +28,7 @@ class Camera{ public:
     float  zmax  =1000000.0;
 
     inline void lookAt( Vec3f p, float R ){ pos = p + rot.c*-R; }
+    inline void lookAt( Vec3d p, float R ){ Vec3f p_; convert(p,p_); lookAt(p_,R); }
 
     inline bool pointInFrustrum( Vec3f p ) const {
         p.sub(pos);

@@ -23,6 +23,10 @@ class Vec3TYPE{
 
 	// ===== methods
 
+	inline Vec3TYPE<double> toDouble()const{ return (Vec3TYPE<double>){ (double)x,(double)y,(double)z}; }
+	inline Vec3TYPE<float > toFloat ()const{ return (Vec3TYPE<float >){ (float)x, (double)y,(double)z}; }
+	inline Vec3TYPE<int >   toInt   ()const{ return (Vec3TYPE<int   >){ (int)x,      (int)y,   (int)z}; }
+
 	// swizzles
 	inline VEC2 xy() const { return {x,y}; };
 	inline VEC2 xz() const { return {x,z}; };

@@ -31,7 +31,19 @@ Any function can be inegrated when approximated by some polynominal expansion se
 
 */
 
+inline Vec3d pointSource( Vec3d R ){
+    double r2 = R.norm2();
+    return R*(1/(r2*sqrt(r2)));
+}
 
+inline Vec3d sourceDipol( const Vec3d& R, const Quat4d& coefs ){
+    // F_dipole = e/(4pi*e0) ( 3<p|rhat>rhat-p )/|r|^3 - delta(r)
+    // F_dipole = 3<p|r>r/|r|^5 - p/r^3
+    double ir2 = 1/R.norm2();
+    double ir3 = ir2*sqrt(ir2);
+    //return R*(( ((Vec3d*)&coefs)->dot(R)*ir2  + coefs.w )*ir3) + p*ir3;
+    return R*(( coefs.f.dot(R)*ir2  + coefs.e )*ir3) + coefs.f*ir3;
+}
 
 // http://s6.aeromech.usyd.edu.au/aerodynamics/index.php/sample-page/subsonic-aerofoil-and-wing-theory/3d-vortex-lattice-method/
 // http://web.mit.edu/16.unified/www/SPRING/fluids/Spring2008/LectureNotes/f06.pdf

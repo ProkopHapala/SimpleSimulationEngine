@@ -70,12 +70,19 @@ class Shader{
 	void setUniformMat3f( const char * name, const Mat3f  m);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix3fv(u, 1, GL_FALSE, modelMat ); };
 	void setUniformMat4f( const char * name, const Mat4f  m);//{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniformMatrix4fv(u, 1, GL_FALSE, camMat   ); };
 
-	inline void set_baseColor( const GLfloat * baseColor ){ glUniform4fv      (uloc_baseColor, 1, baseColor );          };
-	inline void set_modelPos ( const GLfloat * modelPos  ){ glUniform3fv      (uloc_modelPos,  1, modelPos );           };
-    inline void set_modelMat ( const GLfloat * modelMat  ){ glUniformMatrix3fv(uloc_modelMat,  1, GL_FALSE, modelMat ); };
-    inline void set_camMat   ( const GLfloat * camMat    ){ glUniformMatrix4fv(uloc_camMat  ,  1, GL_FALSE, camMat   ); };
-    inline void set_camPos   ( const GLfloat * camPos    ){ glUniform3fv      (uloc_camPos  ,  1, camPos   );           };
-    inline void setPose      ( const GLfloat * modelPos, GLfloat * modelMat, GLfloat * camMat  ){ set_modelPos(modelPos); set_modelMat(modelMat); set_camMat(camMat); };
+	inline void set_baseColor  ( const GLfloat * baseColor ){ glUniform4fv      (uloc_baseColor, 1, baseColor );          };
+	inline void set_modelPos   ( const GLfloat * modelPos  ){ glUniform3fv      (uloc_modelPos,  1, modelPos );           };
+    inline void set_modelMat   ( const GLfloat * modelMat  ){ glUniformMatrix3fv(uloc_modelMat,  1, GL_FALSE, modelMat ); };
+    inline void set_camMat     ( const GLfloat * camMat    ){ glUniformMatrix4fv(uloc_camMat  ,  1, GL_FALSE, camMat   ); };
+    inline void set_camPos     ( const GLfloat * camPos    ){ glUniform3fv      (uloc_camPos  ,  1, camPos   );           };
+    inline void setModelPose   ( const GLfloat * modelPos, GLfloat * modelMat ){ set_modelPos(modelPos); set_modelMat(modelMat); };
+    inline void setModelAndCam ( const GLfloat * modelPos, GLfloat * modelMat, GLfloat * camMat  ){ set_modelPos(modelPos); set_modelMat(modelMat); set_camMat(camMat); };
+
+    inline void set_modelPos   ( const Vec3d& pos  ){ Vec3f pos_; convert(pos,pos_); set_modelPos((float*)&pos_); };
+    inline void set_modelMat   ( const Mat3d& rot  ){ Mat3f rot_; convert(rot,rot_); set_modelMat((float*)&rot_); };
+    inline void set_modelMatT  ( const Mat3d& rot  ){ Mat3f rot_; rot_.setT(rot.toFloat());  set_modelMat((float*)&rot_); };
+    inline void setModelPose   ( const Vec3d& modelPos, const Mat3d& modelMat ){ set_modelPos(modelPos); set_modelMat(modelMat); };
+    inline void setModelPoseT  ( const Vec3d& modelPos, const Mat3d& modelMat ){ set_modelPos(modelPos); set_modelMatT(modelMat); };
 
 };
 
