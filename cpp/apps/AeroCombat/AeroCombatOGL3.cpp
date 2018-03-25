@@ -90,6 +90,8 @@ class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
     AeroCraftControler * pilot  = NULL;
     //AeroTester         * tester = NULL;
 
+
+
     DynamicControl rollControl;
     double roll;
 
@@ -144,8 +146,8 @@ class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 	AeroSurfaceDebugRecord leftWingRec,rightWingRec;
 
 
-    Shader *sh1;
-    GLMesh *glmesh,*gledges,*msh_normals;
+    Shader *sh1,*shDebug,*shTx;
+    GLMesh *glmesh,*gledges,*msh_normals, *glDebug, *glTxDebug;
 	/*
 	Plot2D mainWingLD;
 	Plot2D mainWingPolar;
@@ -195,8 +197,8 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
 
     for( ScreenSDL2OGL3* screen: screens ) screen->scenes.push_back( this );
     printf("DEBUG 3 \n");
-    /*
 
+    /*
     printf( " === GUI \n" );
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono.bmp" );
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA.bmp" );
@@ -215,7 +217,6 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
 	world = new Shooter();
     world->perFrame = 1;
     world->dt       = 0.005d;
-
 
     printf( " === aerocraft \n" );
 
@@ -243,17 +244,33 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
 
     printf( " === tester \n" );
 
+    shDebug=new Shader();
+    //shDebug->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
+    shDebug->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    shDebug->getDefaultUniformLocation();
+
     sh1=new Shader();
     //sh1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
     sh1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
     sh1->getDefaultUniformLocation();
 
+    shTx=new Shader();
+    //sh1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
+    shTx->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
+    shTx->getDefaultUniformLocation();
+
     sh1->use();
     glUniform3f(sh1->getUloc("lightColor"   ), 0.5,0.45,0.4 );
-    glUniform3f(sh1->getUloc("diffuseColor" ), 1.0,1.0,1.0 );
+    glUniform3f(sh1->getUloc("diffuseColor" ), 1.0,1.0,1.0  );
     glUniform3f(sh1->getUloc("ambientColor" ), 0.2,0.25,0.3 );
-    glUniform3f(sh1->getUloc("specularColor"), 2.0,2.0,2.0 );
-    glUniform3f(sh1->getUloc("lightPos"     ), 10.0,10.0,-10.0 );
+    glUniform3f(sh1->getUloc("specularColor"), 2.0,2.0,2.0  );
+    glUniform3f(sh1->getUloc("lightPos"     ), 10.0,-10.0,-10.0 );
+    //glUniform3f(sh1->getUloc("lightPos"     ), 10.0,10.0,10.0 );
+
+    GLMeshBuilder mshDebug;
+    mshDebug.addLine      ( {0.0,0.0,0.0}, {10.0,10.0,10.0}, {1.0,0.0,0.0} );
+    mshDebug.addPointCross( {0.0,0.0,0.0}, 1.0, {0.0,0.0,1.0} );
+    glDebug = mshDebug.makeLineMesh();
 
     GLMeshBuilder mshbuild;
 
@@ -288,7 +305,6 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     //glmesh = mshbuild.normals2GLmesh(0.1);
     //glmesh->draw_mode = GL_LINES;
     msh_normals = mshbuild.normals2GLmesh(0.1);
-
     //glmesh = new GLMesh();
     //glmesh->init_wireframe( Solids::Octahedron );
 
@@ -297,20 +313,42 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     cam.aspect = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
     screen->camLookAt = new Vec3f(); (*screen->camLookAt)={0.0,0.0,0.0};
 
-
-
-    int imgH = 100;
-    int imgW = 100;
+    int imgH = 1024;
+    int imgW = 1024;
     float * height_map = new float[imgH*imgW];
+    Vec2f step = (Vec2f){1.0/imgW,1.0/imgH};
     for( int iy=0; iy<imgH; iy++ ){
         for( int ix=0; ix<imgW; ix++ ){
-            float x = ix*0.1;
-            float y = iy*0.2;
-            height_map[ iy*imgW + ix ] = sin(x)*sin(y)*0.5 + 0.5;
+            float x = ix*step.x-0.5;
+            float y = iy*step.y-0.5;
+
+            float r2 = x*x+y*y;
+            float f = (1-4*r2);
+            if(f<0){ f=0; }else{ f*=f; }
+            //height_map[ iy*imgW + ix ] = (1/(1 + ))*sin(x*5)*sin(y*3)*0.5 + 0.5;
+
+            f*= ( 1 + sin(x*5) * sin(y*8) +  cos(x*15) * cos(y*18)  )*0.3;
+
+            height_map[ iy*imgW + ix ] = f;
         }
     }
+
     //newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
-    terrain1.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
+    //terrain1.init( {50,1000}, 1000.0,  {imgW,imgH},  height_map   );
+    terrain1.init( {200,1000}, 1000.0,  {imgW,imgH},  height_map   );
+    //glUniform3f( terrain1.ulocs.mapScale, 0.0, )
+    terrain1.mapScale.z = 200.0;
+    terrain1.mapScale.y = 0.0005;
+    terrain1.mapScale.x = 0.0005;
+
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+
+    glTxDebug = new GLMesh();
+    //DEFAULT_Bilboard_verts, DEFAULT_Bilboard_verts[]
+    //glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs);
+    glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs_2x2);
 
     delete [] height_map;
 
@@ -321,7 +359,7 @@ void AeroCraftGUI::update(){
     AppSDL2OGL3::update();
 
     Mat3d rot; rot.setT(myCraft->rotMat);
-	world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
+	//world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
 }
 
 void AeroCraftGUI::draw( Camera& cam ){
@@ -331,8 +369,8 @@ void AeroCraftGUI::draw( Camera& cam ){
 
     sh1->use();
     Mat3f mrot; mrot.setOne();
-    sh1->set_modelMat( (GLfloat*)&mrot );
-    sh1->set_modelPos( (const GLfloat[]){0.0f,0.0f,0.0f} );
+    //sh1->set_modelMat( (GLfloat*)&mrot );
+    //sh1->set_modelPos( (const GLfloat[]){0.0f,0.0f,0.0f} );
 
     //convert( myCraft->pos, cam.pos );
     cam.lookAt( myCraft->pos, 20.0 );
@@ -341,6 +379,9 @@ void AeroCraftGUI::draw( Camera& cam ){
 
     //sh1->setModelPose( myCraft->pos, myCraft->rotMat );
     sh1->setModelPoseT( myCraft->pos, myCraft->rotMat );
+
+    //printf("orig "); myCraft->rotMat.printOrtho();
+
     //sh1->set_modelMat( myCraft->rotMat );
     //Mat3d r; r.setOne(); sh1->set_modelMat( r );
     //Mat3f r; r.setOne(); sh1->set_modelMat( (float*)&r );
@@ -348,12 +389,16 @@ void AeroCraftGUI::draw( Camera& cam ){
     //sh1->set_modelMat( r );
     //sh1->setPose( myCraft->pos );
 
-
     GLuint ucolor = sh1->getUloc("baseColor");
     glUniform4f( ucolor, 0.0, 0.0, 0.0, 1.0 );  glmesh->draw();
     glUniform4f( ucolor, 1.0, 0.0, 0.0, 1.0 );  msh_normals->draw();
-    //glmesh->draw(GL_TRIANGLES);
 
+    shDebug->use();
+    setCamera( *shDebug, cam );
+    shDebug->setModelPoseT( myCraft->pos, myCraft->rotMat );
+    glDebug->draw();
+
+    //glmesh->draw(GL_TRIANGLES);
 
     //printf( "%f %f %f \n", cam.pos.x, cam.pos.y, cam.pos.z );
 
@@ -367,6 +412,15 @@ void AeroCraftGUI::draw( Camera& cam ){
     //terrain1.sh.set_camMat( (float*)&cam.rot );
     setCamera( terrain1.sh, cam );
     terrain1.draw();
+
+
+    shTx->use();
+    setCamera( *shTx, cam );
+    shTx->setModelPoseT( myCraft->pos, myCraft->rotMat );
+    glTxDebug->draw();
+
+
+
 
 };
 

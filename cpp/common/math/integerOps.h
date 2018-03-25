@@ -13,6 +13,15 @@ inline int clamp_index_fast( int i, int n){
     return i;
 }
 
+
+inline int wrap_index2d_fast( int ix, int iy, int nx, int ny ){
+    if(ix<0){ return nx+ix; }else if (ix>=nx){ return ix-nx; };
+    if(iy<0){ return ny+iy; }else if (iy>=ny){ return iy-ny; };
+    return iy*nx + ix;
+}
+
+
+
 // ========= Type conversion and packing ===========
 
 inline uint32_t   pack32 (             uint16_t  x, uint16_t y  ){return x|(((uint32_t)y)<<16);};

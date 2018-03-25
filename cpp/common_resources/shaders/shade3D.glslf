@@ -27,7 +27,9 @@ void main(){
 	//gl_FragDepth = gl_FragCoord.z;
 
 	// difuse
-	vec3 l = normalize( fragPos_world-lightPos );
+	//vec3 l = normalize( fragPos_world-lightPos );
+	vec3 l = normalize( lightPos );
+	
 	vec3 E = normalize( camPos-fragPos_world   );
 	vec3 n = normalize( fragNormal_world );
     if( dot(E,n)<0 ) n*=-1.0;

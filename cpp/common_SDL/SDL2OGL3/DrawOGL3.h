@@ -63,6 +63,16 @@ GLMesh* hardTriangles2mesh( const CMesh& msh ){
 
 //hardMesh( int n, Vec3i* tris, Vec3f* ps ){}
 
+
+/*
+class LineMeshBuilder{ public:
+    std::vector<Vec3f> vpos;
+    std::vector<Vec3f> vpos;
+}
+*/
+
+
+
 class GLMeshBuilder{ public:
     bool bnor = true;
     bool bUVs = true;
@@ -82,6 +92,15 @@ class GLMeshBuilder{ public:
         if( bUVs ) pUV =&vUVs[0];
         mesh->init( vpos.size(), inds.size(), &inds[0],&vpos[0],pnor, NULL, pUV);
         mesh->draw_mode = draw_mode;
+        return mesh;
+    }
+
+    GLMesh* makeLineMesh(){
+        GLMesh* mesh=new GLMesh();
+        Vec3f *pnor=NULL;
+        if( bnor ) pnor=&vnor[0];
+        mesh->init( vpos.size(), 0, 0, &vpos[0], pnor, NULL, NULL );
+        mesh->draw_mode = GL_LINES;
         return mesh;
     }
 
@@ -120,6 +139,22 @@ class GLMeshBuilder{ public:
         }
         newSub();
     }
+
+    void addLine( Vec3f p1, Vec3f p2, Vec3f c ){
+        vpos.push_back(p1);  vnor.push_back(c);
+        vpos.push_back(p2);  vnor.push_back(c);
+    };
+
+    void addPointCross( Vec3f p, float d, Vec3f c ){
+        addLine( p+(Vec3f){d,0,0}, p+(Vec3f){-d, 0, 0}, c );
+        addLine( p+(Vec3f){0,d,0}, p+(Vec3f){ 0,-d, 0}, c );
+        addLine( p+(Vec3f){0,0,d}, p+(Vec3f){ 0, 0,-d}, c );
+    };
+
+    void addArrow( Vec3f p1, Vec3f p2, float d, Vec3f c ){
+
+    };
+
     void moveSub     ( int i, Vec3f shift ){ move ( subVertRange(i), shift); }
     void scaleSub    ( int i, Vec3f sc    ){ scale( subVertRange(i), sc   ); }
     void rotateSub   ( int i,  Vec3f p0, Vec3f p1, float angle ){ rotate( subVertRange(i), p0, p1, angle ); }

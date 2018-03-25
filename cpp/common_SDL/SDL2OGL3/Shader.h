@@ -80,7 +80,7 @@ class Shader{
 
     inline void set_modelPos   ( const Vec3d& pos  ){ Vec3f pos_; convert(pos,pos_); set_modelPos((float*)&pos_); };
     inline void set_modelMat   ( const Mat3d& rot  ){ Mat3f rot_; convert(rot,rot_); set_modelMat((float*)&rot_); };
-    inline void set_modelMatT  ( const Mat3d& rot  ){ Mat3f rot_; rot_.setT(rot.toFloat());  set_modelMat((float*)&rot_); };
+    inline void set_modelMatT  ( const Mat3d& rot  ){ Mat3f rot_; rot_.setT(rot.toFloat()); set_modelMat((float*)&rot_); };
     inline void setModelPose   ( const Vec3d& modelPos, const Mat3d& modelMat ){ set_modelPos(modelPos); set_modelMat(modelMat); };
     inline void setModelPoseT  ( const Vec3d& modelPos, const Mat3d& modelMat ){ set_modelPos(modelPos); set_modelMatT(modelMat); };
 

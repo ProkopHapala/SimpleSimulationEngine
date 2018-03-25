@@ -20,6 +20,16 @@ static const float DEFAULT_Bilboard_verts[] = {
     1.0f,1.0f,0.0f,   1.0f,0.0f,0.0f,   0.0f,1.0f,0.0f
 };
 
+static const float DEFAULT_Bilboard_UVs[] = {
+    0.0f,0.0f,   1.0f,0.0f,   0.0f,1.0f,
+    1.0f,1.0f,   1.0f,0.0f,   0.0f,1.0f
+};
+
+static const float DEFAULT_Bilboard_UVs_2x2[] = {
+    0.0f,0.0f,   2.0f,0.0f,   0.0f,2.0f,
+    2.0f,2.0f,   2.0f,0.0f,   0.0f,2.0f
+};
+
 class GLMesh{ public:
     union{
         //struct{ GLuint vpos=0,vnor=0,vcol=0,vUVs=0; }; // union does not work with initializer
