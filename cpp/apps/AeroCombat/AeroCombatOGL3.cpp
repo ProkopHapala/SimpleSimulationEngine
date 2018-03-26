@@ -75,6 +75,10 @@
 #include "Shader.h"
 
 
+#include "SimplexRuler.h"
+#include "Ruler2DFast.h"
+#include "TerrainHydraulics.h"
+
 #include "TerrainOGL3.h"
 
 
@@ -90,13 +94,17 @@ class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
     AeroCraftControler * pilot  = NULL;
     //AeroTester         * tester = NULL;
 
-
-
     DynamicControl rollControl;
     double roll;
 
     const Uint8 *scanKeys;
     Uint32 mouseButtons;
+
+    // Terrain - maybe move to Shooter
+    SimplexRuler       ruler;
+    //Ruler2DFast        square_ruler;
+    TerrainHydraulics  hydraulics;
+    double * ground    = NULL;
 
     TerrainOGL3 terrain1;
 
@@ -313,6 +321,35 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     cam.aspect = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
     screen->camLookAt = new Vec3f(); (*screen->camLookAt)={0.0,0.0,0.0};
 
+
+    double maxHeight = 1;
+
+    int imgH = 1024;
+    int imgW = 1024;
+
+    ruler.setSize(imgW,imgH);
+    ruler.setStep(50);
+    //map_center = (Vec2d){ruler.na*0.75*ruler.step,ruler.nb*0.5*ruler.step};
+    ground = new double[ruler.ntot];
+    hydraulics.setSize(ruler.na,ruler.nb);
+    hydraulics.ground = ground;
+    //world.hydraulics.allocate( 512, 512 );
+    hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
+
+    for( int j=0; j<500; j++ ){
+        int isz = 25;
+        int ix0 = rand()%(hydraulics.nx-isz);
+        int iy0 = rand()%(hydraulics.ny-isz);
+        hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
+    }
+    for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
+
+    printf(" ruler.ntot %i \n", ruler.ntot );
+    float* ground_f = new float[ruler.ntot];
+    for(int i=0; i<ruler.ntot; i++){ ground_f[i] = (float)ground[i]; };
+
+
+    /*
     int imgH = 1024;
     int imgW = 1024;
     float * height_map = new float[imgH*imgW];
@@ -332,14 +369,16 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
             height_map[ iy*imgW + ix ] = f;
         }
     }
-
+    */
     //newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
     //terrain1.init( {50,1000}, 1000.0,  {imgW,imgH},  height_map   );
-    terrain1.init( {200,1000}, 1000.0,  {imgW,imgH},  height_map   );
+
+    //terrain1.init( {200,1000}, 1000.0,  {imgW,imgH},  height_map   );
+    terrain1.init( {200,1000}, 1000.0,  {imgW,imgH},  ground_f   );
     //glUniform3f( terrain1.ulocs.mapScale, 0.0, )
     terrain1.mapScale.z = 200.0;
-    terrain1.mapScale.y = 0.0005;
-    terrain1.mapScale.x = 0.0005;
+    terrain1.mapScale.y = 0.0001;
+    terrain1.mapScale.x = 0.0001;
 
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
@@ -350,7 +389,8 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     //glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs);
     glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs_2x2);
 
-    delete [] height_map;
+    //delete [] height_map;
+    delete [] ground_f;
 
 
 };
@@ -415,10 +455,19 @@ void AeroCraftGUI::draw( Camera& cam ){
 
 
     shTx->use();
-    setCamera( *shTx, cam );
+    setCamera(*shTx, cam);
     shTx->setModelPoseT( myCraft->pos, myCraft->rotMat );
-    glTxDebug->draw();
 
+    /*
+    float zoom = 100;
+    Mat4f camMat; camMat.setOrthographic( zoom, zoom*cam.aspect, -1000, 1000 );
+    shTx->set_camPos( (GLfloat*)&cam.pos );
+    shTx->set_camMat( (GLfloat*)&camMat  );
+    shTx->setModelPoseT( {0.0,0.0,0.0}, {1.0,0.0,0.0,  0.0,1.0,0.0,  0.0,0.0,1.0} );
+    */
+
+
+    glTxDebug->draw();
 
 
 

@@ -38,6 +38,8 @@ if (GLEW_FOUND)
 endif()
 add_executable( AeroCombatOGL3
 	AeroCombatOGL3.cpp 
+	$<TARGET_OBJECTS:TerrainHydraulics> 
+	$<TARGET_OBJECTS:Noise> 
 	$<TARGET_OBJECTS:SDL2OGL3>
 )
 target_link_libraries( AeroCombatOGL3 ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
