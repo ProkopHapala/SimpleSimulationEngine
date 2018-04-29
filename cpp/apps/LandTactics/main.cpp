@@ -38,14 +38,10 @@
 //  http://www.willusher.io/sdl2%20tutorials/2013/12/18/lesson-6-true-type-fonts-with-sdl_ttf
 //  http://stackoverflow.com/questions/28880562/rendering-text-with-sdl2-and-opengl
 
-
-
 /*
 //   Units should have 2 scales of resolution
 // - Company scale (individual units are abstracted out- not rendered, not evaluated)
 // - Detailed scale ( individual units are rendered and evaluated )
-
-
 */
 
 int   default_font_texture;

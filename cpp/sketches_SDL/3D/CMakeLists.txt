@@ -10,8 +10,12 @@ target_link_libraries( test_Projection ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_ConfDynamics test_ConfDynamics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt> )
 target_link_libraries( test_ConfDynamics ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+
 add_executable       ( test_Solids test_Solids.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Solids ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
+add_executable       ( test_SphereSampling test_SphereSampling.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_SphereSampling ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_executable       ( test_Patches test_Patches.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Patches ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
