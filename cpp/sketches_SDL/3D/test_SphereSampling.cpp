@@ -20,7 +20,7 @@
 #include "GLUtils.h"
 
 // ======================  TestApp
-const int nsamp = 32;
+const int nsamp = 64;
 const int npix  = 8*nsamp*nsamp;
 uint32_t pix   [npix];
 
@@ -32,6 +32,40 @@ void sampleOctahedron( Vec3d p, uint8_t& iface, double& a, double& b ){
     a = fabs(p.x);
     b = fabs(p.y);
 }
+
+
+
+void sampleIcosa( Vec3d p, uint8_t& iface, double& a, double& b ){
+//  http://www.kjmaclean.com/Geometry/Icosahedron.html
+//  https://en.wikipedia.org/wiki/Regular_icosahedron
+//  rc = sqrt(10+2*sqrt(5))/4 = sqrt(phi^2 + 1)/2 = 0.95105651629 * a
+//  plate height = phi/(2*sqrt(phi^2+1)).a = 0.42532540417.a  = 0.4472135955 rc
+//  top height   = 1/sqrt(phi^2+1).a       = 0.52573111211.a  = 0.5527864045 rc
+    double phi10 = (atan2( p.z, p.x ) + M_PI) * 0.15915494309 * 10 ;
+    int iphi     = (int)phi10;
+    double dphi  = phi10 - iphi;
+    double hbound = 0.4472135955;
+    //double slope  =
+    if( p.y>hbound ){
+        iface = iphi/2;
+    }else if(p.y<-hbound){
+        iphi--; if(iphi<0)iphi=4;
+        iface = 6+iphi/2;
+    }else{
+        if( iphi&1 ) {
+            if( p.y > ( (dphi-0.5)*hbound*2) ){ iface = 12+iphi/2; }else{ iface = 18+ (iphi-1)/2; };
+        }else{
+            if( p.y > ( (0.5-dphi)*hbound*2) ){ iface = 12+iphi/2; }else{ iface = 18+ (iphi+1)/2; };
+        }
+    };
+    //iface = iphi;
+    //if      ( p.y>hbound ){ iface = 0; }
+    //else if ( p.y<-hbound ){ iface = 1; }
+    //else                  { iface = 2; };
+}
+
+
+
 
 void sampleTri( Vec3d p, Vec3i tri, Vec3d* verts, Vec3d& c ){
     c.a = p.dot( verts[tri.a] );
@@ -100,12 +134,18 @@ TestAppSolids::TestAppSolids( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
         //Draw3D::drawPolygons( Solids::Tetrahedron_nfaces, Solids::Tetrahedron_ngons, Solids::Tetrahedron_faces, Solids::Tetrahedron_verts );
         //glTranslatef(  2.0f, 0.0f, 0.0f );
-        Draw3D::drawPolygons( Solids::Octahedron_nfaces,  Solids::Octahedron_ngons,  Solids::Octahedron_faces,  Solids::Octahedron_verts  );
+        //Draw3D::drawPolygons( Solids::Octahedron_nfaces,  Solids::Octahedron_ngons,  Solids::Octahedron_faces,  Solids::Octahedron_verts  );
         //glTranslatef(  -4.0f, 0.0f, 0.0f );
         //Draw3D::drawPolygons( Solids::Cube_nfaces,        Solids::Cube_ngons,        Solids::Cube_faces,        Solids::Cube_verts        );
 
         //Draw3D::drawPolygons( Solids::RhombicDodecahedron_nfaces,        Solids::RhombicDodecahedron_ngons,        Solids::RhombicDodecahedron_faces,        Solids::RhombicDodecahedron_verts        );
-        //Draw3D::drawPolygons( Solids::Icosahedron_nfaces,        Solids::Icosahedron_ngons,        Solids::Icosahedron_faces,        Solids::Icosahedron_verts        );
+
+        glScalef(0.5,0.5,0.5);
+        //glRotatef( 180.0, 0,1,0 );
+        //glRotatef( -90.0, 0,1,0 );
+        glRotatef( 31.7174744, 0,0,1 ); // arctan (phi-1) in degreers
+
+        Draw3D::drawPolygons( Solids::Icosahedron_nfaces,        Solids::Icosahedron_ngons,        Solids::Icosahedron_faces,        Solids::Icosahedron_verts        );
 
         /*
         int nVert = countVerts( Solids::Icosahedron_nfaces, Solids::Icosahedron_ngons );
@@ -201,8 +241,13 @@ void TestAppSolids::draw   (){
                 float cb = ib*step;
                 float cc = 1-ca-cb;
                 p = (a*ca + b*cb + c*cc);
-                p.normalize()*2.0;
-                Draw::setRGB ( pixF[ ia*nsamp + ib ] );
+                p.normalize();
+                //Draw::setRGB ( pixF[ ia*nsamp + ib ] );
+
+                double fa,fb;
+                sampleIcosa( p, iface, fa, fb );
+                Draw::color_of_hash( iface*144+15465 );
+
                 glVertex3f( (float)p.x, (float)p.y, (float)p.z );
                 //printf( "iab %i %i %i |  (%f,%f,%f) \n", i, ia, ib, p.x, p.y, p.z );
             }
