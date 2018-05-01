@@ -15,6 +15,7 @@
 #include "geom2D.h"
 
 #include "Fluid2D.h"
+//#include "Fluid2D.cpp"
 #include "testUtils.h"
 /*
 #include "TerrainHydraulics.h"
@@ -31,6 +32,15 @@
 
 // ======================  TestApp
 
+
+const int nVSource = 4;
+//const Vec2i pSources[nVSource] = { 16,32,    48,32,      32,16,     32,48   };
+const Vec2i pSources[] = { 16,16+1,    48,16,      16,48-2,     48,48   };
+//const Vec2d vSources[nVSource] = { 0.0,-1.0,  0.0,+1.0,  -1.0,0.0,  1.0,0.0 };
+//const Vec2d vSources[nVSource] = { 0.0,+1.0,  0.0,-1.0,  -1.0,0.0,  1.0,0.0 };
+const Vec2d vSources[] = { 1.0,0.0,  -1.0,0.0,  1.0,0.0,  -1.0,0.0 };
+
+
 class TestAppFluid2D : public AppSDL2OGL{
 	public:
     int job_type = 1;
@@ -39,7 +49,10 @@ class TestAppFluid2D : public AppSDL2OGL{
     int shape;
     bool running = true;
 
-    HydraulicGrid2D terrain;
+    Fluid2D fluid;
+
+    int nParticles;
+    Vec2d * particles = 0;
 
 	// ---- function declarations
 
@@ -48,14 +61,15 @@ class TestAppFluid2D : public AppSDL2OGL{
     virtual void eventHandling( const SDL_Event& event );
 	//virtual int tileToList( float x0, float y0, float x1, float y1 );
 
-    void renderMapContent ( float x0, float y0, float scale, float csc, float hsc );
-    double terrain_color( int i );
+    //void renderMapContent ( float x0, float y0, float scale, float csc, float hsc );
+    //double terrain_color( int i );
 	//void drawSimplexGrid( int n, float step );
 
 	TestAppFluid2D( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
+/*
 double TestAppFluid2D::terrain_color( int i ){
     float g   = terrain.ground[i];
     float w   = terrain.water [i];
@@ -82,62 +96,100 @@ void TestAppFluid2D::renderMapContent( float x0, float y0, float scale, float cs
         for (int ix=0; ix<terrain.n.x; ix+=1){
         //for (int ix=0; ix<terrain.nx; ix+=1){
             p.set( ix*a.x+iy*b.x + x0, ix*a.y+iy*b.y + y0 );
-            //val = terrain.ground[ii              ]; w = terrain.water[ii              ];    c = csc * val;  glColor3f(c,c,w);  glVertex3f( p.x    , p.y    , val*hsc );
-            //val = terrain.ground[ii + terrain.nx ]; w = terrain.water[ii + terrain.nx ];    c = csc * val;  glColor3f(c,c,w);  glVertex3f( p.x+b.x, p.y+b.y, val*hsc );
-
             terrain_color( ii               ); glVertex3f( p.x    , p.y    , 0 );
             terrain_color( ii + terrain.n.x  ); glVertex3f( p.x+b.x, p.y+b.y, 0 );
-            //terrain_color( ii + terrain.nx  ); glVertex3f( p.x+b.x, p.y+b.y, 0 );
-
-            //val = sin(p.x    )*sin(p.y    ); c = cscale * val;  glColor3f(c,c,c);  glVertex3f( p.x    , p.y    , val*hscale );
-            //val = sin(p.x+b.x)*sin(p.y+b.y); c = cscale * val;  glColor3f(c,c,c);  glVertex3f( p.x+b.x, p.y+b.y, val*hscale );
-
-            //glColor3f(randf(),randf(),randf()); glVertex3f( p.x    , p.y    , 0 );
-            //glColor3f(randf(),randf(),randf()); glVertex3f( p.x+b.x, p.y+b.y, 0 );
-            //printf( "%i, %i %f \n", iy, ix, val );
             ii++;
         }
         glEnd();
     }
 }
+*/
 
 TestAppFluid2D::TestAppFluid2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
     srand(154978);
-    //terrain.initNeighs_6(false);
-    //terrain.initNeighsSquareN(8);
-    //terrain.initNeighs_6(true);
-    //terrain.allocate( 512, 512 ); terrain.ground[0]=0.4; bisecNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
-    //terrain.allocate( 512, 512 ); terrain.ground[0]=0.2; bisecPaternNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
-    //terrain.allocate( 512, 512 ); terrain.ground[0]=1.0; bisecNoise( 9, terrain.ground, 0, 0 );
-    //terrain.allocate( 16, 16 ); bisecNoise( 4, terrain.ground, -0.5/16, 0.5/16 );
-    //terrain.genTerrainNoise( 14, 0.3, 0.7, 0.6, 45454, {1000.0,1000.0} );
-    //terrain.genTerrainNoise( 14, 0.5, 1.0,  0.7, 1.2, 45454, {100.0,100.0} );
-    //terrain.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
+    //fluid.allocate( {64,64} );
+    fluid.allocate( {128,128} );
+    //fluid.allocate( {256,256} );
+    //fluid.allocate( {128,256} );
+    fluid.ndiffuse = 2;
 
-    //hydraulics.allocate(512,512); hydraulics.ground[0]=0.4; bisecNoise( 9, hydraulics.ground, -1.0/512, 1.0/512 );
+    nParticles = fluid.ntot;
+    particles = new Vec2d[nParticles];
 
 
-/*
-    shape=glGenLists(1);
-	glNewList( shape, GL_COMPILE );
-        renderMapContent( -0.1*terrain.nx, -0.1*terrain.ny,  0.2, 1.0, 1.0 );
-	glEndList();
-*/
-
-    //for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = terrain.ground[i]; }
-
-    //for (int i=0; i<terrain.ntot; i++){  terrain.water[i] = 1.0; terrain.water_[i] = 1.0; }
-    //terrain.initErrosion( 1.0 );
+    //fluid.source[ fluid.ip2i({16,32}) ] =  1.0;
+    //fluid.source[ fluid.ip2i({48,32}) ] = -1.0;
 
     shape=glGenLists(1);
 }
 
 void TestAppFluid2D::draw(){
-    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glDisable( GL_DEPTH_TEST );
-    long t0;
 
+    //delay = 100;
+    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
+	//glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+	glDisable(GL_LIGHTING);
+	glEnable(GL_BLEND);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glColor4f( 0.5f, 0.5f, 0.5f, 0.05f );
+	glColor4f( 1.0f, 1.0f, 1.0f, 0.05f );
+	Draw2D::drawRectangle( {-100.0,-100.0},{100.0,100.0},true);
+    glDisable(GL_BLEND);
+
+	glDisable( GL_DEPTH_TEST );
+    long t0,t1;
+
+    double vsc = 5;
+    glBegin(GL_LINES);
+    glColor3f(1.0,0.0,0.0);
+    for(int ii=0; ii<nVSource; ii++){
+        const Vec2i& ip = pSources[ii];
+        const Vec2d& v  = vSources[ii];
+        int i = fluid.ip2i( ip );
+        //printf( "%i (%i,%i) (%f,%f) \n", ii, ip.x, ip.y, v.x, v.y  );
+        fluid.vx[i] = v.x;
+        fluid.vy[i] = v.y;
+        Vec2d p = (Vec2d){ ip.x*0.1,ip.y*0.1 };
+        glVertex3f(p.x,p.y,0);
+        glVertex3f(p.x+fluid.vx[i]*vsc,p.y+fluid.vy[i]*vsc,0);
+    }
+    glEnd();
+
+    double dt = 0.1;
+
+    glColor3f(1.0,0.0,1.0);
+    t0 = getCPUticks();
+    fluid.fluidStep( dt );
+    t0 = getCPUticks()-t0;
+
+    //glBegin(GL_LINES);
+    glBegin(GL_POINTS);
+    glColor3f(1.0,0.0,0.0);
+    float psc = 10000.0;
+    for (int iy=1; iy<fluid.n.y-1; iy++){ for (int ix=1; ix<fluid.n.x-1; ix++){
+        int i = fluid.ip2i( {ix,iy} );
+        Vec2d p = (Vec2d){ ix*0.1,iy*0.1 };
+        float c = fluid.p[i]*psc;
+        //if( c<0 ){ glColor3f(1.0,1.0+c,1.0+c); }else{ glColor3f(1-c,1-c,1.0); }
+        //glVertex3f(p.x,p.y,0);
+        //glVertex3f(p.x+fluid.vx[i]*vsc,p.y+fluid.vy[i]*vsc,0);
+    } }
+    glEnd();
+
+    glBegin(GL_POINTS);
+    glColor3f(0.0,0.0,0.0);
+    for(int i=0; i<nParticles; i++){
+        Vec2d& p = particles[i];
+        if( randf()<0.01 ){ p.set(randf(0.0,fluid.n.x),randf(0.0,fluid.n.y)); };
+        double vx = fluid.interpBilinear( p, fluid.vx );
+        double vy = fluid.interpBilinear( p, fluid.vy );
+        p.add_mul( (Vec2d){vx,vy}, dt*50 );
+        glVertex3f( p.x*0.1, p.y*0.1,0.0 );
+    }
+    glEnd();
+
+    printf( " %f Mticks %f op/pix \n", t0*1.0e-6 ,((double)t0)/fluid.ntot );
 };
 
 void TestAppFluid2D::drawHUD(){}

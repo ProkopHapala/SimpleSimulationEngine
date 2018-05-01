@@ -1,8 +1,11 @@
 #ifndef Grid2DAlgs_h
 #define Grid2DAlgs_h
 
+#include <cstring> // memcpy
+
 #include "Vec2.h"
 #include "GridIndex2D.h"
+
 
 static const int    SquareNeighs       []={-1,0, 1,0, 0,-1, 0,1, -1,-1,    -1,+1,     +1,-1,     +1,+1     };
 static const double SquareNeighsDist   []={ 1.0, 1.0,  1.0, 1.0, M_SQRT2,   M_SQRT2,   M_SQRT2,   M_SQRT2  };
@@ -23,6 +26,7 @@ class Grid2DAlg : public GridIndex2D{ public:
         memcpy(neigh_dist,   SquareNeighsDist   ,  nneigh*sizeof(double));
         memcpy(neigh_invDist,SquareNeighsDistInv,  nneigh*sizeof(double));
     }
+
     void initNeighs_6(bool switched){
         nneigh = 6;
         int  sela[]={0,1,2,3, 4,7};
