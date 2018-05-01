@@ -52,6 +52,12 @@ class Grid2DAlg : public GridIndex2D{ public:
 
 };
 
+class River{ public:
+    River* mouth = NULL;
+    std::vector<int>    path;
+    std::vector<double> flow;
+};
+
 class HydraulicGrid2D :public Grid2DAlg { public:
     double * ground  = NULL;
 	double * water   = NULL;

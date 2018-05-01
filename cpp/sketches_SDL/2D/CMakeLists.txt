@@ -30,6 +30,9 @@ target_link_libraries( test_PolyLine ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIB
 add_executable       ( test_SimplexGrid test_SimplexGrid.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:SimplexGrid> )
 target_link_libraries( test_SimplexGrid ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_Fluid2D test_Fluid2D.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Fluid2D> )
+target_link_libraries( test_Fluid2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_TerrainHydraulics test_TerrainHydraulics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainHydraulics> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_TerrainHydraulics ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
