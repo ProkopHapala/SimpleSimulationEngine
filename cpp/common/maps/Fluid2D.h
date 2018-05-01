@@ -30,14 +30,13 @@ class Fluid2D : public Grid2DAlg { public:
     int npressure = 5;
     double	visc = 0.0001*4;
 	double	diff = 3.0;
-	double N_INVERSE = (double)1.0/(double)ntot;
     double dx,dy;
     double dt;
 
 	// QUESTION :   would it be easier to use double * vx,vy instead of Vec2d* v ????
 	//Vec2d  *vel=0,*vel_= 0;
 	double *vx=0,*vy=0,*vx_=0,*vy_=0;
-	double *div,*p;   // not really neede, can be relplaxed by vy_,vx_
+	double *div=0,*p=0;   // not really neede, can be relplaxed by vy_,vx_
 	double *dens=0,*dens_=0;
     double *source=0;
 
@@ -59,7 +58,7 @@ class Fluid2D : public Grid2DAlg { public:
 
     // ===== inline Functions
 
-    double interpBilinear( Vec2d p, double* u ){
+    inline double interpBilinear( Vec2d p, double* u ){
         double x=_clamp(p.x, 0.5, n.x-1.5);  // boundary condition
         double y=_clamp(p.y, 0.5, n.y-1.5);
         int ix0 = (int)x;     //int ix1 = ix+1;
