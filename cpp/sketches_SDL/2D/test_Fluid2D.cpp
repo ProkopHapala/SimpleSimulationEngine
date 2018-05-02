@@ -133,7 +133,8 @@ void TestAppFluid2D::draw(){
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//glColor4f( 0.5f, 0.5f, 0.5f, 0.05f );
-	glColor4f( 1.0f, 1.0f, 1.0f, 0.05f );
+	//glColor4f( 1.0f, 1.0f, 1.0f, 0.05f );
+	glColor4f( 1.0f, 1.0f, 1.0f, 0.2f );
 	Draw2D::drawRectangle( {-100.0,-100.0},{100.0,100.0},true);
     glDisable(GL_BLEND);
 
@@ -177,6 +178,8 @@ void TestAppFluid2D::draw(){
     } }
     glEnd();
 
+
+    /*
     glBegin(GL_POINTS);
     glColor3f(0.0,0.0,0.0);
     for(int i=0; i<nParticles; i++){
@@ -188,6 +191,44 @@ void TestAppFluid2D::draw(){
         glVertex3f( p.x*0.1, p.y*0.1,0.0 );
     }
     glEnd();
+    */
+
+
+    glBegin(GL_LINES);
+    glColor3f(0.0,0.0,0.0);
+    double L = 1.5;
+    for(int i=0; i<nParticles/2; i++){
+        int i2 = i<<1;
+        Vec2d& p1 = particles[i2+0];
+        Vec2d& p2 = particles[i2+1];
+        if( (randf()<0.0001)||(frameCount==1) ){
+            double ang = randf(0.0,M_PI*2);
+            double dx = cos(ang)*L*0.5;
+            double dy = sin(ang)*L*0.5;
+            double x = randf(0.0,fluid.n.x);
+            double y = randf(0.0,fluid.n.y);
+            p1.set(x+dx,y+dy);
+            p2.set(x-dx,y-dy);
+        }else{
+            double vx,vy;
+            vx = fluid.interpBilinear( p1, fluid.vx );
+            vy = fluid.interpBilinear( p1, fluid.vy );
+            p1.add_mul( (Vec2d){vx,vy}, dt*50 );
+            vx = fluid.interpBilinear( p2, fluid.vx );
+            vy = fluid.interpBilinear( p2, fluid.vy );
+            p2.add_mul( (Vec2d){vx,vy}, dt*50 );
+            Vec2d d = p2-p1;
+            double l = d.norm();
+            double c = (l-L*0.5)/l;
+            p1.add_mul(d, c);
+            p2.add_mul(d,-c);
+            //if(i==0) printf("%f %f \n",l,c);
+        };
+        glVertex3f( p1.x*0.1, p1.y*0.1,0.0 );
+        glVertex3f( p2.x*0.1, p2.y*0.1,0.0 );
+    }
+    glEnd();
+
 
     printf( " %f Mticks %f op/pix \n", t0*1.0e-6 ,((double)t0)/fluid.ntot );
 };

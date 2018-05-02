@@ -170,8 +170,8 @@ void Fluid2D::fluidStep(double dt){
 
     diverg( div, p, vx, vy ); boundary_absorb(div);
     //for(int i=0;i<npressure;i++) pressureBlur( div, p );
-    for(int i=0;i<npressure;i++){ diffuse(p,div, visc, dt); SWAP(p,div,double*); }
-    //SWAP(p,div,double*);
+    //for(int i=0;i<npressure;i++){ diffuse(p,div, visc, dt); SWAP(p,div,double*); }
+    SWAP(p,div,double*);
     accelerate( p, vx, vy, 1.0 );
 
     // ==== vel_step
