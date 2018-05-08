@@ -145,6 +145,12 @@ class GLMeshBuilder{ public:
         vpos.push_back(p2);  vnor.push_back(c);
     };
 
+    void addLine( Vec3d p1, Vec3d p2, Vec3f c ){
+        Vec3f p;
+        convert(p1,p); vpos.push_back(p);  vnor.push_back(c);
+        convert(p2,p); vpos.push_back(p);  vnor.push_back(c);
+    };
+
     void addPointCross( Vec3f p, float d, Vec3f c ){
         addLine( p+(Vec3f){d,0,0}, p+(Vec3f){-d, 0, 0}, c );
         addLine( p+(Vec3f){0,d,0}, p+(Vec3f){ 0,-d, 0}, c );

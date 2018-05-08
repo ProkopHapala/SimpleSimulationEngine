@@ -84,6 +84,14 @@ class Shader{
     inline void setModelPose   ( const Vec3d& modelPos, const Mat3d& modelMat ){ set_modelPos(modelPos); set_modelMat(modelMat); };
     inline void setModelPoseT  ( const Vec3d& modelPos, const Mat3d& modelMat ){ set_modelPos(modelPos); set_modelMatT(modelMat); };
 
+    Shader(){};
+	Shader( const char * vertexsource , const char * fragmentsource, bool bFile ){
+        //printf( "bFile %i \n >>%s<< ==\n==\n==\n  >>%s<< ==\n==\n==\n \n", bFile, vertexsource, fragmentsource );
+        if(bFile){ init    (vertexsource, fragmentsource, NULL); }
+        else     { init_str(vertexsource, fragmentsource, NULL); }
+        getDefaultUniformLocation();
+    };
+
 };
 
 #endif

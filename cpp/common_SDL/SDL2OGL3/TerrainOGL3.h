@@ -13,6 +13,8 @@
 #include "GL3Utils.h"
 #include "fastmath.h"
 
+
+
 class TerrainOGL3{ public:
     Shader sh;
     //GLMesh
@@ -212,7 +214,11 @@ class TerrainOGL3{ public:
             //printf( " === %i (%f,%f) (%f,%f)\n", i, p.x, p.y,  p_.x, p_.y  );
             drawStrips( p, p_ );
             p = p_;
+            #ifdef _DEBUG_VIEW_
+            DEBUG_mesh->addLine( pos, {p.x,100.0,p.y},{1.0,0.0,1.0});
+            #endif // _DEBUG_VIEW_
         }
+
         //exit(0);
     }
 

@@ -74,14 +74,18 @@
 #include "GLObject.h"
 #include "Shader.h"
 
-
 #include "SimplexRuler.h"
 #include "Ruler2DFast.h"
 #include "TerrainHydraulics.h"
 
+#define _DEBUG_VIEW_ 1
+#include "DebugView.h"  //do we need it ?
+DEBUG_VIEW_DEFINE()
+
 #include "TerrainOGL3.h"
 
 #include "IO_utils.h"
+
 
 
 // ====================================
@@ -206,6 +210,9 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     printf("DEBUG 2 \n");
     */
 
+    //DEBUG_mesh = new GLMeshBuilder();
+    DEBUG_VIEW_INIT()
+
     for( ScreenSDL2OGL3* screen: screens ) screen->scenes.push_back( this );
     printf("DEBUG 3 \n");
 
@@ -279,7 +286,7 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     //glUniform3f(sh1->getUloc("lightPos"     ), 10.0,10.0,10.0 );
 
     GLMeshBuilder mshDebug;
-    mshDebug.addLine      ( {0.0,0.0,0.0}, {10.0,10.0,10.0}, {1.0,0.0,0.0} );
+    mshDebug.addLine      ( (Vec3f){0.0,0.0,0.0}, {10.0,10.0,10.0}, {1.0,0.0,0.0} );
     mshDebug.addPointCross( {0.0,0.0,0.0}, 1.0, {0.0,0.0,1.0} );
     glDebug = mshDebug.makeLineMesh();
 
@@ -395,6 +402,13 @@ void AeroCraftGUI::draw( Camera& cam ){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
 
+    //DEBUG_mesh->clear();
+    for(int i=0; i<12; i++){ DEBUG_mesh->addLine(
+        ((Vec3d){randf(),randf(),randf()})+myCraft->pos,
+        ((Vec3d){randf(),randf(),randf()})+myCraft->pos,
+        {randf(),randf(),randf()} );
+    }
+
     sh1->use();
     Mat3f mrot; mrot.setOne();
     //sh1->set_modelMat( (GLfloat*)&mrot );
@@ -441,7 +455,6 @@ void AeroCraftGUI::draw( Camera& cam ){
     setCamera( terrain1.sh, cam );
     terrain1.draw();
 
-
     shTx->use();
     setCamera(*shTx, cam);
     shTx->setModelPoseT( myCraft->pos, myCraft->rotMat );
@@ -453,11 +466,10 @@ void AeroCraftGUI::draw( Camera& cam ){
     shTx->set_camMat( (GLfloat*)&camMat  );
     shTx->setModelPoseT( {0.0,0.0,0.0}, {1.0,0.0,0.0,  0.0,1.0,0.0,  0.0,0.0,1.0} );
     */
-
-
     glTxDebug->draw();
 
-
+    //DEBUG_draw(cam,myCraft->pos,myCraft->rotMat);
+    DEBUG_draw(cam,Vec3dZero,Mat3dIdentity);
 
 };
 

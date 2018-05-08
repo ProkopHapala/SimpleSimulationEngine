@@ -432,6 +432,9 @@ using Mat3i = Mat3TYPE< int   >;
 using Mat3f = Mat3TYPE< float >;
 using Mat3d = Mat3TYPE< double>;
 
+static constexpr Mat3d Mat3dIdentity = (Mat3d){1.0d,0.0d,0.0d, 0.0d,1.0d,0.0d,  0.0d,0.0d,1.0d};
+static constexpr Mat3f Mat3fIdentity = (Mat3f){1.0f,0.0f,0.0f, 0.0f,1.0f,0.0f,  0.0f,0.0f,1.0f};
+
 inline void convert( const Mat3f& from, Mat3d& to ){ convert( from.a, to.a ); convert( from.b, to.b ); convert( from.c, to.c ); };
 inline void convert( const Mat3d& from, Mat3f& to ){ convert( from.a, to.a ); convert( from.b, to.b ); convert( from.c, to.c ); };
 

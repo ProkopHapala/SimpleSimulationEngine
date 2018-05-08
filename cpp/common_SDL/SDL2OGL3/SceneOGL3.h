@@ -21,7 +21,8 @@
 
 class Camera{ public:
     Vec3f  pos   =(Vec3f){0.0f,0.0f,-50.0f};
-    Mat3f  rot   =(Mat3f){1.0f,0.0f,0.0f, 0.0f,1.0f,0.0f,  0.0f,0.0f,1.0f };
+    //Mat3f  rot   =(Mat3f){1.0f,0.0f,0.0f, 0.0f,1.0f,0.0f,  0.0f,0.0f,1.0f };
+    Mat3f rot = Mat3fIdentity;
     float  zoom  =10.0f;
     float  aspect=1.0;
     float  zmin  =1.0;

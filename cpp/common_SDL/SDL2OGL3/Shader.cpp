@@ -15,7 +15,7 @@ void checkError( char * errLog, const char * comment ){
 }
 
 void Shader::compileShader( GLenum shaderType, const char* sourceCode, GLuint& shader, char*& errLog ){
-    shader = glCreateShader( shaderType );   // Create an empty vertex shader handle
+    shader = glCreateShader( shaderType );
     errLog = NULL;
     int isCompiled;
     glShaderSource( shader, 1, (const GLchar**)&sourceCode, 0);
@@ -52,39 +52,12 @@ void Shader::compileShaderProgram( GLuint vertexshader, GLuint fragmentshader, G
 }
 
 int Shader::init_str( const char * vertexsource , const char * fragmentsource, const char * GSsrc ){
-    //printf( " DEBUG 1 \n" );
     char * errLog = NULL;
-    compileShader( GL_VERTEX_SHADER,   vertexsource,   vertexshader, errLog   );  checkError( errLog, " Error in Vertex Shader: \n" );
-    //if( errLog != NULL ){
-    //    printf( " Error in Vertex Shader: \n" );
-    //    printf( " %s \n", errLog );
-    //    free( errLog );
-    //    return -1;
-    //}
-    compileShader( GL_FRAGMENT_SHADER, fragmentsource, fragmentshader, errLog  ); checkError( errLog, " Error in Fragment Shader: \n" );
-    //if( errLog != NULL ){
-    //    printf( " Error in Fragment Shader: \n" );
-    //    printf( " %s \n", errLog );
-    //    free( errLog );
-    //    return -2;
-    //}
     geomShader = 0;
-    if( GSsrc  ){
-        compileShader( GL_GEOMETRY_SHADER, GSsrc , geomShader, errLog  ); checkError( errLog, " Error in Geometry Shader: \n" );
-        //if( errLog != NULL ){
-        //    printf( " Error in Geometry Shader: \n" );
-        //    printf( " %s \n", errLog );
-        //    free( errLog );
-        //    return -2;
-        //}
-    }
+    compileShader( GL_VERTEX_SHADER,   vertexsource,   vertexshader, errLog   );  checkError( errLog, " Error in Vertex Shader: \n" );
+    compileShader( GL_FRAGMENT_SHADER, fragmentsource, fragmentshader, errLog  ); checkError( errLog, " Error in Fragment Shader: \n" );
+    if( GSsrc  ){ compileShader( GL_GEOMETRY_SHADER, GSsrc, geomShader, errLog  ); checkError( errLog, " Error in Geometry Shader: \n" ); }
     compileShaderProgram( vertexshader, fragmentshader, geomShader, shaderprogram, errLog ); checkError( errLog, " Error in linking of Shader Program: \n" );
-    //if( errLog != NULL ){
-    //    printf( " Error in linking of Shader Program: \n" );
-    //    printf( " %s \n", errLog );
-    //    free( errLog );
-    //    return -3;
-    //}
 }
 
 int Shader::init( const char * vertName, const char * fragName, const char * GSName ){

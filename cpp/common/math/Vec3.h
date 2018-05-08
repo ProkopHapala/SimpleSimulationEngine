@@ -225,6 +225,22 @@ using Vec3i = Vec3TYPE<int>;
 using Vec3f = Vec3TYPE<float>;
 using Vec3d = Vec3TYPE<double>;
 
+static constexpr Vec3d Vec3dZero = (Vec3d){0.0d,0.0d,0.0d};
+static constexpr Vec3d Vec3dX    = (Vec3d){1.0d,0.0d,0.0d};
+static constexpr Vec3d Vec3dY    = (Vec3d){0.0d,1.0d,0.0d};
+static constexpr Vec3d Vec3dZ    = (Vec3d){0.0d,0.0d,1.0d};
+
+static constexpr Vec3f Vec3fZero = (Vec3f){0.0f,0.0f,0.0f};
+static constexpr Vec3f Vec3fX    = (Vec3f){1.0f,0.0f,0.0f};
+static constexpr Vec3f Vec3fY    = (Vec3f){0.0f,1.0f,0.0f};
+static constexpr Vec3f Vec3fZ    = (Vec3f){0.0f,0.0f,1.0f};
+
+static constexpr Vec3i Vec3iZero = (Vec3i){0,0,0};
+static constexpr Vec3i Vec3iX    = (Vec3i){1,0,0};
+static constexpr Vec3i Vec3iY    = (Vec3i){0,1,0};
+static constexpr Vec3i Vec3iZ    = (Vec3i){0,0,1};
+
+
 inline uint64_t scalar_id  ( const Vec3i& v){ return ( v.x | (((uint64_t)v.y)<<16) | (((uint64_t)v.z)<<32) ); }
 inline Vec3i    from_id    ( uint64_t id   ){
     Vec3i vi;
