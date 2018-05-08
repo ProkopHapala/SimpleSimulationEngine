@@ -1,27 +1,83 @@
 
 #include "TerrainHydraulics.h"  // THE HEADER
 
-void TerrainHydraulics::gatherRain( double minSinkFlow ){
+// ====================    HydraulicGrid2D
+// ====================    DropletErrosion
+
+void HydraulicGrid2D::initDroplet ( double w, double disolve, double sediment, Vec2i ipmin, Vec2i ipmax ){
+    droplet_w        = w;
+    droplet_disolve  = disolve;
+    droplet_sediment = sediment;
+    droplet.x = ipmin.x + rand()%(ipmax.x-ipmin.x);
+    droplet.y = ipmin.y + rand()%(ipmax.y-ipmin.y);
+    droplet_h  = ground[ip2i( droplet )];
+    //printf( "initDroplet  %i %i    %f  \n", droplet_ix, droplet_iy, droplet_h  );
+}
+
+bool HydraulicGrid2D::droplet_step( ){
+    if( !innerIndex(droplet) ) return true;
+    Vec2i ipmin;
+    double h,hmin=droplet_h+droplet_w;
+    bool found=false;
+    for(int ing=0; ing<nneigh; ing++){
+        // Vec2i ip = wrap_index( droplet + neighs[ing] ); // This would be slightly slower
+        Vec2i ip = droplet + neighs[ing];
+        //printf( "ineigh %i (%i,%i) \n", ing, ip.x, ip.y );
+        int i    = ip2i(ip);
+        double h = ground[i];
+        if( h<hmin ){ ipmin = ip; hmin=h; found=true; }
+    }
+    //exit(0);
+    if( found ){
+        int    i  = ip2i( droplet );
+        int    j  = ip2i( ipmin   );
+        double hi = droplet_h;
+        double hj = ground[j];
+        double dh = (hi-hj);
+        //printf( " %f %f %f \n", hi, hj, dh  );
+        if( dh > 0 ){
+            dh *= droplet_disolve;
+            ground[i] = hi - dh;
+            droplet_h = hj + dh*droplet_sediment;
+            ground[j] = droplet_h;
+            //ground[jj] = hj + dh;
+        }
+        droplet = ipmin;
+        //droplet_h   = hmin;
+        //ground[iimin] += mud*f_sediment;
+        return false;
+    }
+    return true;
+}
+
+void HydraulicGrid2D::errodeDroples( int n, int nStepMax, double w, double disolve, double sediment, Vec2i ipmin, Vec2i ipmax ){
+    for(int i=0; i<n; i++ ){
+        initDroplet( w, disolve, sediment, ipmin, ipmax );
+        for(int j=0; j<nStepMax; j++ ){
+            if( droplet_step( ) ) break;
+        }
+    }
+};
+
+// ====================    HydraulicGrid2D
+// ====================    DropletErrosion
+
+double HydraulicGrid2D::gatherRain( double minSinkFlow ){
     double SAFETY = 1e-8;
     sinks.clear();
     for(int i=0; i<ntot; i++){ contour1[i]=i; water[i]=1.0; known[i]=false; }
     quickSort( ground, contour1, 0, ntot);
-    //for(int i=0; i<ntot i++)
-    //for(int ii=0; ii<ntot; ii++){
     for(int ii=ntot; ii>0; ii--){
         int i = contour1[ii];
-        int iy = i/nx;
-        int ix = i%nx;
+        Vec2i ip0 = i2ip(i);
         int imin = -1;
         double val = ground[i]-SAFETY;
-        #define MINSTEP double g=ground[i_]; if(g<val){ imin=i_; val=g; }
-        if( ix>0                ){ int i_=i-1;    MINSTEP }
-        if( ix<(nx-1)           ){ int i_=i+1;    MINSTEP }
-        if( iy>0                ){ int i_=i-nx;   MINSTEP }
-        if( iy<(ny-1)           ){ int i_=i+nx;   MINSTEP }
-        if( (iy>0)&&(ix<(nx-1)) ){ int i_=i-nx+1; MINSTEP }
-        if( (iy<(ny-1))&&(ix>0) ){ int i_=i+nx-1; MINSTEP }
-        #undef MINSTEP
+        for(int ing=0; ing<nneigh; ing++){
+            Vec2i ip = wrap_index( ip0 + neighs[ing] );
+            int j    = ip2i(ip);
+            double g=ground[j]; if(g<val){ imin=j; val=g; }
+        }
+        printf("%i %i %i %f %i\n", ii, i, imin, val, nneigh );
         if(imin>=0){
             water[imin] += water[i];
         }else{
@@ -32,31 +88,29 @@ void TerrainHydraulics::gatherRain( double minSinkFlow ){
     }
     double wmax = 0.0;
     for(int i=0; i<ntot; i++){ wmax = fmax(wmax,water[i]); }
-    printf( "max water %f \n", wmax);
+    //printf( "max water %f \n", wmax);
+    return wmax;
     //for(int i=0; i<ntot; i++){ water[contour1[i]]=i*0.001; }
 }
 
-int TerrainHydraulics::traceDroplet( int ix, int iy, int nmax, int * trace ){
+int HydraulicGrid2D::traceDroplet( Vec2i ipd, int nmax, int * trace ){
     double SAFETY = 1e-8;
     //double SAFETY = -0.5;
-    int i=iy*nx+ix;
+    //int i=ip2i(ip);
     int ii=0;
     for(ii=0; ii<nmax; ii++){
-        int iy = i/nx;
-        int ix = i%nx;
-        int imin = -1;
-        double val = ground[i]-SAFETY;
-        #define MINSTEP double g=ground[i_]; if(g<val){ imin=i_; val=g; }
-        if( ix>0                ){ int i_=i-1;    MINSTEP }
-        if( ix<(nx-1)           ){ int i_=i+1;    MINSTEP }
-        if( iy>0                ){ int i_=i-nx;   MINSTEP }
-        if( iy<(ny-1)           ){ int i_=i+nx;   MINSTEP }
-        if( (iy>0)&&(ix<(nx-1)) ){ int i_=i-nx+1; MINSTEP }
-        if( (iy<(ny-1))&&(ix>0) ){ int i_=i+nx-1; MINSTEP }
-        //printf( "trace[%i] (%i,%i) : %i %g\n", ii, ix, iy,   imin, val );
-        #undef MINSTEP
-        if(imin>=0){
-            i = imin;
+        //ip = i2ip(i);
+        Vec2i ipmin;
+        int   imin=-1;
+        bool found = false;
+        double val = ground[ ip2i(ipd) ]-SAFETY;
+        for(int ing=0; ing<nneigh; ing++){
+            Vec2i ip = wrap_index( ipd + neighs[ing] );
+            int i    = ip2i(ip);
+            double g=ground[i]; if(g<val){ ipmin=ip; imin=i; val=g; }
+        }
+        if(imin){
+            ipd       = ipmin;
             trace[ii] = imin;
         }else{
             break;
@@ -65,31 +119,26 @@ int TerrainHydraulics::traceDroplet( int ix, int iy, int nmax, int * trace ){
     return ii;
 }
 
-int TerrainHydraulics::trackRiver( int sink, double minFlow, std::vector<int>& river, std::vector<int>& feeders ){
+int HydraulicGrid2D::trackRiver( int sink, double minFlow, std::vector<int>& river, std::vector<int>& feeders ){
     river  .clear();
     feeders.clear();
     double SAFETY = 1e-8;
-    int i=sink;
     //printf( " TerrainHydraulics::trackRiver( %i, %f ) \n", sink, minFlow );
     int ii;
+    Vec2i ipd = i2ip(sink);
     for(ii=0; ii<10000; ii++){
-        int iy = i/nx;
-        int ix = i%nx;
+        Vec2i ipmax;
         int imax  = -1;
-        //int imax2 = -1;
-        int nhigh=0;
+        int i     = ip2i(ipd);
         double vallim = water[i]-SAFETY;
         double valmax = 0;
-        //#define MAXSTEP double w=water[i_]; if( (w>minFlow)&&(w<vallim)&&(w>valmax) ){ imax2=imax; imax=i_; valmax=w; }
-        #define MAXSTEP double w=water[i_]; if( (!known[i_])&&(w>minFlow) ){ nhigh++; if( (w<vallim)&&(w>valmax) ){ imax=i_; valmax=w; } }
-        if( ix>0                ){ int i_=i-1;    MAXSTEP }
-        if( ix<(nx-1)           ){ int i_=i+1;    MAXSTEP }
-        if( iy>0                ){ int i_=i-nx;   MAXSTEP }
-        if( iy<(ny-1)           ){ int i_=i+nx;   MAXSTEP }
-        if( (iy>0)&&(ix<(nx-1)) ){ int i_=i-nx+1; MAXSTEP }
-        if( (iy<(ny-1))&&(ix>0) ){ int i_=i+nx-1; MAXSTEP }
-        #undef MAXSTEP
-        //printf( " (%i,%i) %i %f \n", ix,iy,  imax, valmax );
+        int nhigh=0;
+        for(int ing=0; ing<nneigh; ing++){
+            Vec2i ip = wrap_index( ipd + neighs[ing] );
+            int j    = ip2i(ip);
+            double w=water[j]; if( (!known[j])&&(w>minFlow) ){ nhigh++; if( (w<vallim)&&(w>valmax) ){ imax=j; ipmax=ip; valmax=w; } }
+        }
+        printf( "trackRiver %i : (%i,%i) %i %f \n", ii, ipmax.x,ipmax.y,  imax, valmax );
         if(imax>=0){
             //if(imax2>=0) feeders.push_back(i);
             if(nhigh>1){
@@ -98,7 +147,8 @@ int TerrainHydraulics::trackRiver( int sink, double minFlow, std::vector<int>& r
             }
             river.push_back(i);
             known[i]=true;
-            i = imax;
+            //i = imax;
+            ipd = ipmax;
         }else{
             // sink-less pixel
             //known[i] = true;
@@ -113,7 +163,7 @@ int TerrainHydraulics::trackRiver( int sink, double minFlow, std::vector<int>& r
     return ii;
 }
 
-int TerrainHydraulics::trackRiverRecursive( int sink, double minFlow, River * mouth ){
+int HydraulicGrid2D::trackRiverRecursive( int sink, double minFlow, River * mouth ){
     //printf( "trackRiverRecursive  %i \n", sink );
     std::vector<int> feeders;
     River* river = new River();
@@ -132,7 +182,7 @@ int TerrainHydraulics::trackRiverRecursive( int sink, double minFlow, River * mo
     return nriv++;
 }
 
-int TerrainHydraulics::findAllRivers( double minFlow ){
+int HydraulicGrid2D::findAllRivers( double minFlow ){
     for(River * river : rivers) delete river;
     rivers.clear();
     for(int i=0; i<ntot; i++){ known[i]=false; }
@@ -144,31 +194,7 @@ int TerrainHydraulics::findAllRivers( double minFlow ){
     return n;
 }
 
-void TerrainHydraulics::genTerrainNoise( int n, double scale,  double hscale,  double fdown, double strength, int seed, const Vec2d& pos0 ){
-    Vec2d pos,dpos,rot,a,b;
-    rot.fromAngle( seed*0.1 );
-    a.set( 1.0d, 0.0d           ); a.mul(scale);
-    b.set( 0.5d, 0.86602540378d ); b.mul(scale);
-    double vmin=+1e+300,vmax=-1e+300;
-    int ii = 0;
-    for (int iy=0; iy<ny; iy++){
-        for (int ix=0; ix<nx; ix++){
-            pos.set( ix*a.x+iy*b.x +pos0.x, ix*a.y+iy*b.y+pos0.y );
-            Noise::warpNoise3R( pos, rot, fdown, strength, n, dpos );
-            //ground[ii] = 0.5*sin( 1000*dpos.x * dpos.y )+0.5;
-            double val = fabs(dpos.x * dpos.y);
-            ground[ii] = val;
-            if(val<vmin){vmin=val;}
-            if(val>vmax){vmax=val;}
-            ii++;
-        }
-    }
-    printf( " vmin %e vmax %e \n", vmin, vmax );
-    double renorm = hscale/(vmax-vmin);
-    for(int i=0; i<ntot; i++){ ground[i] = renorm*(ground[i]-vmin); }
-}
-
-void TerrainHydraulics::init_outflow( double water_level ){
+void HydraulicGrid2D::init_outflow( double water_level ){
     for (int i=0; i<ntot; i++){
         //water[i] = 1e+300;
         water[i] = water_level;
@@ -176,7 +202,7 @@ void TerrainHydraulics::init_outflow( double water_level ){
     }
 }
 
-void TerrainHydraulics::outflow_step(){
+void HydraulicGrid2D::outflow_step(){
     // clean known
     // swap old and new endpoints
     nContour_old = nContour;  nContour = 0;
@@ -186,22 +212,19 @@ void TerrainHydraulics::outflow_step(){
     if( nContour_old>0 ) printf( "nContour_old %i nContour %i \n", nContour_old, nContour );
     for ( int ii=0; ii<nContour_old; ii++ ){
         int    i   = contour1[ii];
+        Vec2i ip0  = i2ip(i);
         double val = water[i];
         //val +=  dval/( val - ground[i] + 0.1 ); // this is just to simulate non-zero viscosity of watter
-        int iy = i/nx;
-        int ix = i%nx;
         //printf( " %i %i (%i,%i)\n", ii, i, ix, iy );
         // extend in four directions, check boundary overflow
-        if( ix>0      ){  extend_outflow( val, i, i-1   ); }
-        if( ix<(nx-1) ){  extend_outflow( val, i, i+1   ); }
-        if( iy>0      ){  extend_outflow( val, i, i-nx  ); }
-        if( iy<(ny-1) ){  extend_outflow( val, i, i+nx  ); }
-        if( (iy>0)&&(ix<(nx-1)) ){  extend_outflow( val, i, i-nx+1); }
-        if( (iy<(ny-1))&&(ix>0) ){  extend_outflow( val, i, i+nx-1); }
+        for(int ing=0; ing<nneigh; ing++){
+            Vec2i ip = wrap_index( ip0 + neighs[ing] );
+            if( validIndex( ip ) ){ extend_outflow( val, i, ip2i(ip) ); };
+        }
     }
 }
 
-void TerrainHydraulics::extend_outflow( float val, int oi, int i ){
+void HydraulicGrid2D::extend_outflow( float val, int oi, int i ){
     // evaluate objective function for proposed path
     //val += dval*ground[i];
     //printf( " %i val %f g %f w %f k %i \n", i, val, ground[i], water[i], known[i] );
@@ -221,181 +244,5 @@ void TerrainHydraulics::extend_outflow( float val, int oi, int i ){
         } // add to list only if not already known
     }
 }
-
-void TerrainHydraulics::initErrosion( double w ){
-    for (int i=0; i<ntot; i++){
-            if(ground[i]>1.0) ground[i] = 1.0;
-            if(ground[i]<0.0) ground[i] = 0.0;
-            water[i] = w; water_[i] = 0.0;
-    }
-}
-
-int TerrainHydraulics::flow_errosion_step_noRain( ){
-// gradient evaluation
-    int ii = 0;
-    int npix=0;
-    for(int iy=1;iy<ny-1;iy++){
-        for(int ix=1;ix<ny-1;ix++){
-            //int    ii   = xy2i( ix, iy );
-            ii++;
-            double hij  = ground[ii];
-            double dh,dhmin=0,dhmin2=0;
-            int jj,iimin;
-            jj = ii-nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii+nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii-1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii+1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii-nx+1; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii+nx-1; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            if( dhmin<-0.00001 ){
-                double wij       = water[ii];
-                if(wij>0.0001) npix++;
-                double sediment  = wij*c_sediment/(1-dhmin);
-                wij             -= sediment;
-                water_[iimin]   += wij;
-                water[ii]        = 0;
-                double mud =  c_errode * sqrt(wij)*(-dhmin);
-                ground[ii   ]    = hij - mud + sediment;
-                ground[iimin]   += mud*f_sediment;
-            }
-        }
-    }
-    ii =0;
-    for(int iy=0;iy<ny;iy++){
-        for(int ix=0;ix<nx;ix++){
-            double wij = water_[ii];
-            water [ii] = wij;
-            water_[ii] = 0.0;
-            ii++;
-        }
-    }
-    //double * tmp = water; water=water_; water = tmp;
-    return npix;
-}
-
-void TerrainHydraulics::flow_errosion_step( ){
-// gradient evaluation
-//int ii = 0;
-
-    int ii =0;
-    for(int iy=1;iy<ny-1;iy++){
-        for(int ix=1;ix<ny-1;ix++){
-            //int    ii   = xy2i( ix, iy );
-            double hij  = ground[ii];
-            double dh,dhmin=0,dhmin2=0;
-            int jj,iimin;
-
-            jj = ii-nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii+nx  ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii-1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii+1   ; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii-nx+1; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            jj = ii+nx-1; dh = ground[jj]-hij; if( dh<dhmin ){ iimin = jj; dhmin = dh; }
-            //println( i+" "+j+" "+dhmin+" "+dhmin2 );
-            if( dhmin<-0.00001 ){
-                /*
-                double wij       = water[ii];
-                water_[iimin]   += wij;
-                double mud       = wij*10;
-                ground[ii   ]   -= mud;
-                ground[iimin]   += mud;
-                */
-
-                double wij       = water[ii];
-
-                double sediment  = wij*c_sediment/(1-dhmin);
-                wij             -= sediment;
-                water_[iimin]   += wij;
-                //float mud =  c_errode * wij*(-dhmin);
-                double mud =  c_errode * sqrt(wij)*(-dhmin);
-                // double mud =  c_errode * wij*(-dhmin);
-                //mud = fmin( mud, (dhmin2 - dhmin) * 0.1  );   // WTF IS THIS ????
-                ground[ii   ]  = hij - mud + sediment;
-                //h[i][j]            =    f_orig*h_orig[i][j] + mf_orig*hij  - mud + sediment;
-                ground[iimin] += mud*f_sediment;
-            }
-            ii++;
-        }
-    }
-    //printf( "npix %i \n", npix);
-}
-
-void TerrainHydraulics::rain_and_evaporation( ){
-    int ii =0;
-    for(int iy=0;iy<ny;iy++){
-        for(int ix=0;ix<nx;ix++){
-            //int ii     = xy2i( ix, iy );
-            double wij = water_[ii]        +  c_rain;
-            water [ii] = water [ii]*mf_mix +  wij*f_mix;
-            water_[ii] = 0.0;
-            ii++;
-        }
-    }
-}
-
-void TerrainHydraulics::initDroplet ( double w, double disolve, double sediment, int ix0, int iy0, int ix1, int iy1 ){
-    droplet_w        = w;
-    droplet_disolve  = disolve;
-    droplet_sediment = sediment;
-    //droplet_ix = rand()%nx;
-    //droplet_iy = rand()%ny;
-    droplet_ix = ix0 + rand()%(ix1-ix0);
-    droplet_iy = iy0 + rand()%(iy1-iy0);
-    droplet_h  = ground[ xy2i( droplet_ix, droplet_iy ) ];
-    //printf( "initDroplet  %i %i    %f  \n", droplet_ix, droplet_iy, droplet_h  );
-}
-
-bool TerrainHydraulics::droplet_step( ){
-    if( (droplet_ix > 0)&(droplet_ix < nx)&(droplet_iy > 0)&(droplet_iy < ny) ){
-        int    ii   = xy2i( droplet_ix, droplet_iy );
-        int xmin,ymin;
-        double h,hmin=droplet_h+droplet_w;
-        bool found=false;
-        h = ground[ii-nx  ]; if( h<hmin ){ ymin = -1; xmin =  0; hmin = h; found=true; }
-        h = ground[ii+nx  ]; if( h<hmin ){ ymin = +1; xmin =  0; hmin = h; found=true; }
-        h = ground[ii   -1]; if( h<hmin ){ ymin =  0; xmin = -1; hmin = h; found=true; }
-        h = ground[ii   +1]; if( h<hmin ){ ymin =  0; xmin = +1; hmin = h; found=true; }
-        h = ground[ii-nx+1]; if( h<hmin ){ ymin = -1; xmin = +1; hmin = h; found=true; }
-        h = ground[ii+nx-1]; if( h<hmin ){ ymin = +1; xmin = -1; hmin = h; found=true; }
-        //if( (hmin-droplet_h)<-0.00001 ){
-        //found=true;
-        //printf( " %i %i   %i %i   %f %f %f  \n", droplet_ix, droplet_iy,  xmin, ymin, h, hmin, droplet_h  );
-        if( found ){
-                //printf( " found \n" );
-                //int    jj   = xy2i( droplet_ix, droplet_iy );
-
-                //ground[ii   ]  -= droplet_dh;
-                droplet_ix += xmin;
-                droplet_iy += ymin;
-                int    jj       = xy2i( droplet_ix, droplet_iy );
-                //double hi = ground[ii];
-                double hi = droplet_h;
-                double hj = ground[jj];
-                double dh = (hi-hj);
-                //printf( " %f %f %f \n", hi, hj, dh  );
-                if( dh > 0 ){
-                    dh *= droplet_disolve;
-                    ground[ii] = hi - dh;
-                    droplet_h  = hj + dh*droplet_sediment;
-                    ground[jj] = droplet_h;
-                    //ground[jj] = hj + dh;
-                }
-                //droplet_h   = hmin;
-                //ground[iimin] += mud*f_sediment;
-                return false;
-        }
-    }
-    return true;
-}
-
-void TerrainHydraulics::errodeDroples( int n, int nStepMax, double w, double disolve, double sediment, int ix0, int iy0, int ix1, int iy1 ){
-    for(int i=0; i<n; i++ ){
-        initDroplet( w, disolve, sediment, ix0, iy0, ix1, iy1 );
-        for(int j=0; j<nStepMax; j++ ){
-            if( droplet_step( ) ) break;
-        }
-    }
-};
-
 
 

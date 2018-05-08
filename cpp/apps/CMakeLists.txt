@@ -1,3 +1,6 @@
+
+project(Apps)
+
 find_package( OpenGL REQUIRED )
 find_package( GLU    REQUIRED )
 find_package( SDL2   REQUIRED )
@@ -16,8 +19,7 @@ add_subdirectory (CastleBuilder)
 add_subdirectory (OrbitalWar)
 add_subdirectory (Tanks)
 add_subdirectory (NavalBattle)
-
 add_subdirectory (MolecularEditor)
 add_subdirectory (MolecularEditor2)
 
-
+add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} )

@@ -1,4 +1,6 @@
 
+project(sketches_SDL_2D)
+
 add_executable       ( test_AppSDL2OGL test_AppSDL2OGL.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_AppSDL2OGL ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
@@ -33,7 +35,7 @@ target_link_libraries( test_SimplexGrid ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_
 add_executable       ( test_Fluid2D test_Fluid2D.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Fluid2D> )
 target_link_libraries( test_Fluid2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_TerrainHydraulics test_TerrainHydraulics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainHydraulics> $<TARGET_OBJECTS:Noise> )
+add_executable       ( test_TerrainHydraulics test_TerrainHydraulics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainGrid2D> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_TerrainHydraulics ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_executable       ( test_TerrainCubic test_TerrainCubic.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainCubic> $<TARGET_OBJECTS:TiledView> )
@@ -45,7 +47,6 @@ target_link_libraries( test_TerrainRBF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_CityGen test_CityGen.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainRBF> $<TARGET_OBJECTS:TiledView> )
 target_link_libraries( test_CityGen ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-
 add_executable       ( test_Tris2Rect test_Tris2Rect.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TiledView> )
 target_link_libraries( test_Tris2Rect ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
@@ -55,6 +56,8 @@ target_link_libraries( test_GlobOpt2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LI
 
 add_executable       ( test_Plotting2D test_Plotting2D.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:MoleculeWorld2D> $<TARGET_OBJECTS:DynamicOpt> $<TARGET_OBJECTS:Body2D> )
 target_link_libraries( test_Plotting2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
+add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} )
 
 add_custom_command(
     TARGET ${PROJECT_NAME} test_Plotting2D

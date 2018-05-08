@@ -32,7 +32,7 @@ include_directories(
         ${COMMON_SDL_SRCS}/SDL2
         ${COMMON_SDL_SRCS}/SDL2OGL
         ${COMMON_SDL_SRCS}/SDL2OGL3
-        ${MY_SRC_DIR}/engines
+        #${MY_SRC_DIR}/engines
 )
 
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${MY_SRC_DIR}/cmake_utils )
@@ -47,5 +47,5 @@ add_subdirectory( ${MY_SRC_DIR}/tests    ${MY_BIN_SHARE}/tests   )   # currently
 add_subdirectory( ${MY_SRC_DIR}/common_SDL   ${MY_BIN_SHARE}/common_SDL   )
 add_subdirectory( ${MY_SRC_DIR}/libs_SDL     ${MY_BIN_SHARE}/libs_SDL     )
 add_subdirectory( ${MY_SRC_DIR}/sketches_SDL ${MY_BIN_SHARE}/sketches_SDL )
-add_subdirectory( ${MY_SRC_DIR}/engines      ${MY_BIN_SHARE}/engines      )
+#add_subdirectory( ${MY_SRC_DIR}/engines      ${MY_BIN_SHARE}/engines      )
 add_subdirectory( ${MY_SRC_DIR}/apps         ${MY_BIN_SHARE}/apps         )

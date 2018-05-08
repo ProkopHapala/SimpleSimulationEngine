@@ -32,10 +32,14 @@ include_directories(
         ${COMMON_SDL_SRCS}/SDL2
         ${COMMON_SDL_SRCS}/SDL2OGL
         ${COMMON_SDL_SRCS}/SDL2OGL3
-        ${MY_SRC_DIR}/engines
+        #${MY_SRC_DIR}/engines
 )
 
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )
+
+#file (GLOB_RECURSE _ALL_SRCS_ *.h *.cpp *.c )
+file (GLOB_RECURSE _COMMON_SRCS_     ${COMMON_SRCS}/*.h     ${COMMON_SRCS}/*.cpp     ${COMMON_SRCS}/*.c     )
+file (GLOB_RECURSE _COMMON_SDL_SRCS_ ${COMMON_SDL_SRCS}/*.h ${COMMON_SDL_SRCS}/*.cpp ${COMMON_SDL_SRCS}/*.c )
 
 # ==== BUILD TARGETS
 
@@ -47,5 +51,5 @@ add_subdirectory( ${MY_SRC_DIR}/tests    )   # currently empty
 add_subdirectory( ${MY_SRC_DIR}/common_SDL   ${MY_BIN_SHARE}/common_SDL )
 add_subdirectory( ${MY_SRC_DIR}/libs_SDL     )
 add_subdirectory( ${MY_SRC_DIR}/sketches_SDL )
-add_subdirectory( ${MY_SRC_DIR}/engines      )
+#add_subdirectory( ${MY_SRC_DIR}/engines      )
 add_subdirectory( ${MY_SRC_DIR}/apps         )

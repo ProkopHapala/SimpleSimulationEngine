@@ -46,7 +46,12 @@ class TestAppMesh : public AppSDL2OGL_3D {
 
 };
 
+#include <unistd.h>
 TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    char str[1024];
+    getcwd( str, 1024);
+    printf("WORKING_DIRECTORY = >>%s<<", str);
 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 

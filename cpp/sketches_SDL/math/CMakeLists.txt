@@ -1,4 +1,6 @@
 
+project(sketches_SDL_math)
+
 add_executable       ( test_TresholdFunc test_TresholdFunc.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_TresholdFunc ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
@@ -17,4 +19,4 @@ target_link_libraries( test_opt2d ${SDL2_LIBRARY} )
 add_executable       ( test_SpaceFillingCurves test_SpaceFillingCurves.cpp )
 target_link_libraries( test_SpaceFillingCurves ${SDL2_LIBRARY} )
 
-
+add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} )

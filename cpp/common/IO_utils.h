@@ -70,9 +70,9 @@ inline int str2enum( const char * str, int nnames, const char **names ){
 }
 
 inline int saveBin( char *fname, int n, char * data ){
-    FILE *ptr_myfile;
+    FILE *ptr_myfile=0;
     ptr_myfile=fopen( fname,"wb");
-    if (!ptr_myfile){ printf("Unable to open file!"); return -1; }
+    if (!ptr_myfile){ printf("Unable to open file! \n"); return -1; }
     int nchar = 1024;
     for( int i=1; i<=n; i+=nchar ){
         int len = nchar;
@@ -86,7 +86,7 @@ inline int saveBin( char *fname, int n, char * data ){
 inline int loadBin( char *fname, int n, char * data ){
     FILE *ptr_myfile;
     ptr_myfile=fopen( fname,"rb");
-    if (!ptr_myfile){ printf("Unable to open file!"); return -1; }
+    if (!ptr_myfile){ printf("Unable to open file! \n"); return -1; }
     int nchar = 1024;
     for( int i=1; i<=n; i+=nchar ){
         int len = nchar;

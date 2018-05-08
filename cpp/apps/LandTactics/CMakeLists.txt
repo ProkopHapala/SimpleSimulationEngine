@@ -5,7 +5,7 @@ add_executable( ${NAME}
 	main.cpp LTWorld.cpp LTSurroundings.cpp LTFaction.cpp LTSquad.cpp LTUnit.cpp LTUnitType.cpp LTcommon.h
 	$<TARGET_OBJECTS:Body2D> 
 	$<TARGET_OBJECTS:SDL2OGL> 
-	$<TARGET_OBJECTS:TerrainHydraulics> 
+	$<TARGET_OBJECTS:TerrainGrid2D> 
 	$<TARGET_OBJECTS:Noise> 
 	#$<TARGET_OBJECTS:TerrainCubic> 
 	#$<TARGET_OBJECTS:TiledView> 

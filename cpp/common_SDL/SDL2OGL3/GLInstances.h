@@ -57,10 +57,10 @@ class GLInstances{ public:
 // ===== GLInstances
 // =====================
 
-static const float DEFAULT_Bilboard_UVs[] = {
-    0.0f,0.0f,   1.0f,0.0f,   0.0f,1.0f,
-    1.0f,1.0f,   1.0f,0.0f,   0.0f,1.0f
-};
+//static const float DEFAULT_Bilboard_UVs[] = {
+//    0.0f,0.0f,   1.0f,0.0f,   0.0f,1.0f,
+//    1.0f,1.0f,   1.0f,0.0f,   0.0f,1.0f
+//};
 
 class GLBillboards{ public:
     GLuint model_UVs =0;

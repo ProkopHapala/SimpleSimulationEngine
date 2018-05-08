@@ -15,7 +15,6 @@
 #include "Ruler2DFast.h"
 #include "TerrainHydraulics.h"
 
-
 //#include "TileBuffer2D.h"
 //#include "Ruler2DFast.h"
 //#include "TerrainCubic.h"
@@ -50,8 +49,8 @@ class LTWorld{
 
     SimplexRuler       ruler;
     Ruler2DFast        square_ruler;
-    TerrainHydraulics  hydraulics;
-    double * ground       = NULL;
+    HydraulicGrid2D    hydraulics;
+    double * ground    = NULL;
 
     //LTStaticObject * objects = NULL;
     std::vector<LTStaticObject>  objects;

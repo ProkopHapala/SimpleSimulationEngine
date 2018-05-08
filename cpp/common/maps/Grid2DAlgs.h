@@ -5,13 +5,16 @@
 
 #include "Vec2.h"
 #include "GridIndex2D.h"
+//#include "Grid2DAlgs.cpp"
 
 
 static const int    SquareNeighs       []={-1,0, 1,0, 0,-1, 0,1, -1,-1,    -1,+1,     +1,-1,     +1,+1     };
 static const double SquareNeighsDist   []={ 1.0, 1.0,  1.0, 1.0, M_SQRT2,   M_SQRT2,   M_SQRT2,   M_SQRT2  };
 static const double SquareNeighsDistInv[]={ 1.0, 1.0,  1.0, 1.0, M_SQRT1_2, M_SQRT1_2, M_SQRT1_2, M_SQRT1_2};
 
-void bisecNoise( Vec2i n, double * hs, double frndMin, double frndMax );
+//void bisecNoise( Vec2i n, double * hs, double frndMin, double frndMax );
+void bisecNoise      ( int npow, double * hs, double frndMin, double frndMax );
+void bisecPaternNoise( int npow, double * hs, double frndMin, double frndMax );
 
 class Grid2DAlg : public GridIndex2D{ public:
     static const int nNeighMax = 8;
@@ -56,67 +59,7 @@ class Grid2DAlg : public GridIndex2D{ public:
 
 };
 
-class River{ public:
-    River* mouth = NULL;
-    std::vector<int>    path;
-    std::vector<double> flow;
-};
 
-class HydraulicGrid2D :public Grid2DAlg { public:
-    double * ground  = NULL;
-	double * water   = NULL;
-
-    Vec2i  droplet;
-    double droplet_h;
-    double droplet_w,droplet_disolve,droplet_sediment;
-
-	// TODO: Inflow/outflow  +  Rivers
-	bool   isOutflow = true;
-	int    nContour=0,nContour_old=0;
-	bool   * known     = NULL;
-	int    * contour1  = NULL;
-	int    * contour2  = NULL;
-	double * water_    = NULL;
-	std::vector<int>    sinks;
-	std::vector<River*> rivers;
-
-	// ==== function declaration
-
-    // TODO: Inflow/outflow  +  Rivers
-	void gatherRain( double minSinkFlow );
-	int  traceDroplet( Vec2i ipd, int nmax, int * trace );
-	int  trackRiver( int sink, double minFlow, std::vector<int>& river, std::vector<int>& feeders );
-	int  trackRiverRecursive( int sink, double minFlow, River * mouth );
-	int  findAllRivers( double minFlow );
-    void init_outflow( double water_level );
-    void outflow_step( );
-    void extend_outflow( float val, int oi, int i );
-
-    // TODO: Inflow/outflow  +  Rivers
-	void allocate_outflow(){
-        known     = new bool[ntot];
-        contour1  = new int [ntot];
-        contour2  = new int [ntot];
-    }
-    void deallocate_outflow(){
-        delete [] known; delete [] contour1; delete [] contour2;
-    }
-
-    void initDroplet  ( double w, double disolve, double sediment, Vec2i ipmin, Vec2i ipmax );
-    bool droplet_step ( );
-    void errodeDroples( int n, int nStepMax, double w, double disolve, double sediment, Vec2i ipmin, Vec2i ipmax );
-
-	void allocate( int nx_, int ny_ ){
-		n.x = nx_; n.y = ny_; ntot = n.x * n.y;
-		if(ground  ==NULL) ground   = new double[ntot];
-		if(water   ==NULL) water    = new double[ntot];
-	}
-
-    void deallocate( bool all ){
-        delete [] ground;
-        delete [] water;
-    };
-};
 
 class PathFindingGrid2D :public Grid2DAlg{ public:
 

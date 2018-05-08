@@ -229,12 +229,11 @@ void LTWorld::init(){
 
     map_center = (Vec2d){ruler.na*0.75*ruler.step,ruler.nb*0.5*ruler.step};
 
+    /*
     ground = new double[ruler.ntot];
     hydraulics.setSize(ruler.na,ruler.nb);
     hydraulics.ground = ground;
-
     //world.hydraulics.allocate( 512, 512 );
-
     hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
     for( int j=0; j<500; j++ ){
         int isz = 25;
@@ -243,6 +242,30 @@ void LTWorld::init(){
         hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
     }
     for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
+    */
+
+    srand(4545);
+    //ground = new double[ruler.ntot];
+    hydraulics.allocate( {ruler.na,ruler.nb} );
+    ground = hydraulics.ground;
+    //world.hydraulics.allocate( 512, 512 );
+    //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
+    hydraulics.ground[0]=0.4;
+    bisecNoise( 7, hydraulics.ground, -1.0/256, 1.0/256 );
+    hydraulics.initNeighs_6(false);
+    //hydraulics.initNeighs_6(true);
+    // FIXME: segfault if noise is activated
+    for( int j=0; j<500; j++ ){
+        int isz = 25;
+        int ix0 = rand()%(hydraulics.n.x-isz);
+        int iy0 = rand()%(hydraulics.n.y-isz);
+        printf("%i : %i %i\n", j, ix0, iy0);
+        //hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
+        hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, {ix0, iy0}, {ix0+isz, iy0+isz} );
+    }
+    for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
+
+    printf("terrain DONE \n");
 
     //for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,500.0); };
     //for(int ib=0; ib<ruler.nb; ib++){  for(int ia=0; ia<ruler.na; ia++){  ground[ib*ruler.na+ia] = ia/(float)ruler.na;  } };
@@ -252,8 +275,6 @@ void LTWorld::init(){
     //unitTypes.push_back( UnitType() );
 
     // init Object Types
-
-
 
 
     //loadGunTypes ("data/GunTypes.ini");
@@ -280,7 +301,6 @@ void LTWorld::init(){
 
     //i0nitStaticObject();
     initLinearObjects();
-
 
     LTSquad * u;
 

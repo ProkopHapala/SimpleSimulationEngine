@@ -1,4 +1,6 @@
 
+project(sketches_SDL_3D)
+
 include_directories( ${COMMON_SRCS}/dynamics/Molecular )
 
 add_executable       ( test_QuatRotSampling test_QuatRotSampling.cpp $<TARGET_OBJECTS:SDL2OGL> )
@@ -61,6 +63,8 @@ target_link_libraries( test_SoftMolecularDynamics ${OpenGL_LIBRARY} ${GLU_LIBRAR
 
 add_executable       ( test_Stick test_Stick.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
 target_link_libraries( test_Stick ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
+add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} )
 
 add_custom_command(
     TARGET ${PROJECT_NAME} test_GUI test_Solids test_Mesh test_SoftMolecularDynamics

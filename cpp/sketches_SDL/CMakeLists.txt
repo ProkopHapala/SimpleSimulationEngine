@@ -2,6 +2,8 @@ find_package( OpenGL REQUIRED )
 find_package( GLU    REQUIRED )
 find_package( SDL2   REQUIRED )
 
+project(sketches_SDL)
+
 add_subdirectory (math)
 add_subdirectory (network)
 add_subdirectory (2D)

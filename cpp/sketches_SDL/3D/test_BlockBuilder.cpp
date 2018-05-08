@@ -294,7 +294,6 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
     blocks[nBlocks].iz          = 4;
     nBlocks++;
 */
-
 };
 
 

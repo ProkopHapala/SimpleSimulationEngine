@@ -1,5 +1,8 @@
 
 # problem is that these libraries cannot be build from common objects .o; needs "-fPIC" to relocation
+
+project(libs)
+
 #add_subdirectory (libSail)
 add_subdirectory (Molecular)
 #add_subdirectory (Vis3D)

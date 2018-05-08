@@ -81,6 +81,8 @@
 
 #include "TerrainOGL3.h"
 
+#include "IO_utils.h"
+
 
 // ====================================
 //      AeroCraftGUI
@@ -103,7 +105,8 @@ class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
     // Terrain - maybe move to Shooter
     SimplexRuler       ruler;
     //Ruler2DFast        square_ruler;
-    TerrainHydraulics  hydraulics;
+    //TerrainHydraulics  hydraulics;
+    HydraulicGrid2D      hydraulics;
     double * ground    = NULL;
 
     TerrainOGL3 terrain1;
@@ -321,57 +324,42 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     cam.aspect = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
     screen->camLookAt = new Vec3f(); (*screen->camLookAt)={0.0,0.0,0.0};
 
-
     double maxHeight = 1;
 
-    int imgH = 1024;
-    int imgW = 1024;
+    int npow = 10;
+    int imgH = 1<<npow;
+    int imgW = 1<<npow;
+    int ntot = imgH*imgW;
 
-    ruler.setSize(imgW,imgH);
-    ruler.setStep(50);
-    //map_center = (Vec2d){ruler.na*0.75*ruler.step,ruler.nb*0.5*ruler.step};
-    ground = new double[ruler.ntot];
-    hydraulics.setSize(ruler.na,ruler.nb);
-    hydraulics.ground = ground;
-    //world.hydraulics.allocate( 512, 512 );
-    hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
-
-    for( int j=0; j<500; j++ ){
-        int isz = 25;
-        int ix0 = rand()%(hydraulics.nx-isz);
-        int iy0 = rand()%(hydraulics.ny-isz);
-        hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
-    }
-    for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
-
-    printf(" ruler.ntot %i \n", ruler.ntot );
-    float* ground_f = new float[ruler.ntot];
-    for(int i=0; i<ruler.ntot; i++){ ground_f[i] = (float)ground[i]; };
-
-
-    /*
-    int imgH = 1024;
-    int imgW = 1024;
-    float * height_map = new float[imgH*imgW];
-    Vec2f step = (Vec2f){1.0/imgW,1.0/imgH};
-    for( int iy=0; iy<imgH; iy++ ){
-        for( int ix=0; ix<imgW; ix++ ){
-            float x = ix*step.x-0.5;
-            float y = iy*step.y-0.5;
-
-            float r2 = x*x+y*y;
-            float f = (1-4*r2);
-            if(f<0){ f=0; }else{ f*=f; }
-            //height_map[ iy*imgW + ix ] = (1/(1 + ))*sin(x*5)*sin(y*3)*0.5 + 0.5;
-
-            f*= ( 1 + sin(x*5) * sin(y*8) +  cos(x*15) * cos(y*18)  )*0.3;
-
-            height_map[ iy*imgW + ix ] = f;
+    bool newMap = false;
+    //bool newMap = true;
+    float* ground_f = new float[ntot];
+    if( newMap ){
+        srand(15497);
+        hydraulics.allocate({imgW,imgW});
+        //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
+        hydraulics.initNeighs_6(false);
+        //hydraulics.initNeighsSquareMask( 0xff );
+        hydraulics.ground[0]=0.4;
+        bisecNoise( npow, hydraulics.ground, -1.0/256, 1.0/256 );
+        for( int j=0; j<5000; j++ ){
+            int isz = 25;
+            int ix0 = rand()%(hydraulics.n.x-isz);
+            int iy0 = rand()%(hydraulics.n.y-isz);
+            //hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
+            //printf("%i : %i %i\n", j, ix0, iy0);
+            hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, {ix0, iy0}, {ix0+isz, iy0+isz} );
         }
+        for(int i=0; i<hydraulics.ntot; i++){ ground[i] *= maxHeight; };
+        //printf( "ntot %i %i \n", ntot, hydraulics.ntot ); exit(0);
+        for(int i=0; i<hydraulics.ntot; i++){ ground_f[i] = (float)hydraulics.ground[i]; };
+        //generateTerrain();
+        //for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,500.0); };
+        saveBin( "data/ground_f.bin", sizeof(float)*ntot, (char*)ground_f );
+        //saveBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
+    }else{
+        loadBin( "data/ground_f.bin", sizeof(float)*ntot, (char*)ground_f );
     }
-    */
-    //newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
-    //terrain1.init( {50,1000}, 1000.0,  {imgW,imgH},  height_map   );
 
     //terrain1.init( {200,1000}, 1000.0,  {imgW,imgH},  height_map   );
     terrain1.init( {200,1000}, 1000.0,  {imgW,imgH},  ground_f   );

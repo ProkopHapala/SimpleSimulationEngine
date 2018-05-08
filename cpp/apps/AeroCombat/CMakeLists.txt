@@ -38,7 +38,7 @@ if (GLEW_FOUND)
 endif()
 add_executable( AeroCombatOGL3
 	AeroCombatOGL3.cpp 
-	$<TARGET_OBJECTS:TerrainHydraulics> 
+	$<TARGET_OBJECTS:TerrainGrid2D> 
 	$<TARGET_OBJECTS:Noise> 
 	$<TARGET_OBJECTS:SDL2OGL3>
 )

@@ -4,10 +4,10 @@ include_directories(
         ${COMMON_SRCS}/math
 )
 
-add_library( SimplexGrid    OBJECT SimplexGrid.cpp  )
+add_library( TerrainGrid2D  OBJECT  Grid2DAlgs.cpp TerrainHydraulics.cpp )
+add_library( Fluid2D        OBJECT Fluid2D.cpp )
 add_library( TerrainCubic   OBJECT TerrainCubic.cpp )
-add_library( TerrainHydraulics   OBJECT TerrainHydraulics.cpp )
-add_library( Fluid2D             OBJECT Fluid2D.cpp )
+add_library( SimplexGrid    OBJECT SimplexGrid.cpp  )
 add_library( TerrainSimplex      OBJECT TerrainSimplex.cpp )
 add_library( TerrainRBF     OBJECT TerrainRBF.cpp   )
 add_library( TrussBuilder   OBJECT TrussBuilder.cpp )

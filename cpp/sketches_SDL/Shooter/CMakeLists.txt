@@ -1,6 +1,10 @@
 
+project(sketches_SDL_Shooter)
+
 add_executable       ( test_ShotHit test_ShotHit.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_ShotHit ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
+
+add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} )
 
 add_custom_command(
     TARGET ${PROJECT_NAME} test_ShotHit

@@ -56,8 +56,9 @@ class LandCraftApp : public AppSDL2OGL {
 
     SimplexRuler       ruler;
     Ruler2DFast        square_ruler;
-    TerrainHydraulics  hydraulics;
-    double * ground    = NULL;
+    //TerrainHydraulics  hydraulics;
+    HydraulicGrid2D  hydraulics;
+    double * ground   = NULL;
     double * water    = NULL;
 
     Vec2d map_center;
@@ -127,28 +128,25 @@ void LandCraftApp::printASCItable( int imin, int imax  ){
 
 void LandCraftApp::generateTerrain(){
     //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
-    hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, rand(), {100.0,100.0} );
+    //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, rand(), {100.0,100.0} );
 
-    /*
-    // fast with short strokes
+    srand(16464);
+    hydraulics.ground[0]=0.2;
+    bisecNoise( 7, hydraulics.ground, -1.0/256, 1.0/256 );
+    hydraulics.initNeighs_6(false);
+    //hydraulics.errodeDroples( 1000, 100, +0.1, 0.15, 0.9, {10, 10}, {100, 100} );
     for( int j=0; j<500; j++ ){
         int isz = 25;
-        int ix0 = rand()%(hydraulics.nx-isz);
-        int iy0 = rand()%(hydraulics.ny-isz);
-        hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz ); // fast
-    }
-    */
-
-    for( int j=0; j<500; j++ ){
-        int isz = 25;
-        int ix0 = rand()%(hydraulics.nx-isz);
-        int iy0 = rand()%(hydraulics.ny-isz);
+        int ix0 = rand()%(hydraulics.n.x-isz);
+        int iy0 = rand()%(hydraulics.n.y-isz);
+        //printf("%i : %i %i \n", j, ix0, iy0);
         //                         n nStepMax, w,  disolve, sediment, ix0, iy0, ix1, iy1
-        hydraulics.errodeDroples( 400, 500, +0.1, 0.15, 0.9, ix0, iy0, ix0+isz, iy0+isz );
+        //hydraulics.errodeDroples( 400, 500, +0.1, 0.15, 0.9, ix0, iy0, ix0+isz, iy0+isz );
+        hydraulics.errodeDroples( 400, 500, +0.1, 0.15, 0.9, {ix0, iy0}, {ix0+isz, iy0+isz} );
         //hydraulics.errodeDroples( 200, 500,   0.02, 0.1,    0.0,   0,0, hydraulics.nx, hydraulics.ny ); // fast
     }
+    for(int i=0; i<hydraulics.ntot; i++){ ground[i] *= maxHeight; water[i] = ground[i]; }
 
-    for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; water[i] = ground[i]; }
 
     /*
     hydraulics.init_outflow( 500.0 );
@@ -167,6 +165,18 @@ void LandCraftApp::generateTerrain(){
 
 LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
+    /*
+    FILE *ptr_myfile=0;
+    char fname[] = "data/FUCK_YOU.txt";
+    ptr_myfile=fopen( fname,"w");    printf("DEBUG A.1\n", fname );
+    if (!ptr_myfile){ printf("Unable to open file! \n"); exit(-1); }
+    fprintf( ptr_myfile, " FUCK YOU BASTARD !!!!! \n" );   printf("DEBUG A.2  >>%s<<\n", fname );
+    fclose(ptr_myfile);     printf("DEBUG A.2\n", fname );
+
+    saveBin( "test.bin", 454*sizeof(float), (char*)(new float[454]) );
+
+    exit(0);
+    */
 
     FILE* pFile = fopen("data/Technologies.txt", "r" );
     if (!pFile){ printf("Unable to open file!\n"); exit(0); }
@@ -225,9 +235,6 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     vehicle->type = vehicleType;
     vehicles.push_back( vehicle );
 
-
-
-
     cmdPars.execFile( "data/comands.ini" );
 
     /*
@@ -253,15 +260,18 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
 
     trace = new int [nTraceMax];
 
-    ground = new double[ruler.ntot];
-    hydraulics.setSize(ruler.na,ruler.nb);
-    hydraulics.ground = ground;
+    //saveBin( "data/test-1.bin", 454*sizeof(float), (char*)(new float[454]) );
 
+    //exit(-1);
+
+    hydraulics.allocate( {ruler.na,ruler.nb} );
+    hydraulics.initNeighs_6(false);
+    ground = hydraulics.ground;
+    water  = hydraulics.water;
     hydraulics.allocate_outflow();
-    water = new double[ruler.ntot];
-    hydraulics.water = water;
 
     bool newMap = false;
+    //bool newMap = true;
     if( newMap ){
         generateTerrain();
         //for(int i=0; i<ruler.ntot; i++){ ground[i] = randf(0.0,500.0); };
@@ -272,14 +282,19 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
         loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
     }
 
-    //hydraulics.gatherRain( );
+    double wmax = hydraulics.gatherRain( 100.0 ); printf("wmax %f \n",wmax ); // exit(0);
+    terrainViewMode = 2;
+    hydraulics.findAllRivers( 50.0 );
 
     /*
-    hydraulics.nContour = 1;
-    int idrain = hydraulics.nx/2 + hydraulics.nx*hydraulics.ny/2;
-    printf( "idrain  %i \n", idrain   );
-    hydraulics.contour2[0] = idrain;
-    water[idrain]          = ground[idrain];
+    std::vector<int> feeders;
+    River* river = new River();
+    river->mouth=NULL;
+    int n=hydraulics.trackRiver( hydraulics.sinks[0], 50.0, river->path, feeders );
+    //delete river;
+    hydraulics.rivers.push_back( river );
+    printf( "River length %i \n", n );
+    //exit(0);
     */
 
     //TiledView::init( 6, 6 );
@@ -547,7 +562,7 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                     break;
                 case SDLK_t :
                     ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
-                    nTrace = hydraulics.traceDroplet( ihex%hydraulics.nx, ihex/hydraulics.nx, nTraceMax, trace );
+                    nTrace = hydraulics.traceDroplet( {ihex%hydraulics.n.x, ihex/hydraulics.n.x}, nTraceMax, trace );
                     break;
                 //case SDLK_0:  formation_view_mode = 0;            printf( "view : default\n" ); break;
                 //case SDLK_1:  formation_view_mode = VIEW_INJURY;  printf( "view : injury\n"  ); break;

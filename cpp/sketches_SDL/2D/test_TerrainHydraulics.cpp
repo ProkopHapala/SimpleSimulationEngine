@@ -19,7 +19,6 @@
 
 #include "GridIndex2D.h"
 #include "Grid2DAlgs.h"
-#include "Grid2DAlgs.cpp" // FIXME
 #include "SquareRuler.h"
 
 //#include "Grid.h"
@@ -101,7 +100,8 @@ TestAppTerrainHydraulics::TestAppTerrainHydraulics( int& id, int WIDTH_, int HEI
     terrain.initNeighs_6(false);
     //terrain.initNeighsSquareN(8);
     //terrain.initNeighs_6(true);
-    terrain.allocate( 512, 512 ); terrain.ground[0]=0.4; bisecNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
+    //terrain.allocate( 512, 512 ); terrain.ground[0]=0.4; bisecNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
+    terrain.allocate( {512,512} ); terrain.ground[0]=0.4; bisecNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
     //terrain.allocate( 512, 512 ); terrain.ground[0]=0.2; bisecPaternNoise( 9, terrain.ground, -1.0/512, 1.0/512 );
     //terrain.allocate( 512, 512 ); terrain.ground[0]=1.0; bisecNoise( 9, terrain.ground, 0, 0 );
     //terrain.allocate( 16, 16 ); bisecNoise( 4, terrain.ground, -0.5/16, 0.5/16 );
