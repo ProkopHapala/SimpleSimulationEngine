@@ -135,15 +135,11 @@ void GUIAbstractPanel::tryRender(){
             //Draw::drawText( const char * str, int itex, float sz, int istart, int iend ){
             //Draw::drawText( caption,             xmin, ymax-12, 6, fontTex );
             int nchr = strlen(caption);
-            Draw2D::drawText( caption, nchr, {xmin, ymax-12},  0.0, fontTex, 6 );
+            Draw2D::drawText( caption, nchr, {xmin, ymax-12},  0.0, fontTex, textSz );
         }
     glEndList();
     redraw=false;
 };
-
-
-
-
 
 void GUIAbstractPanel::init( int xmin_, int ymin_, int xmax_, int ymax_, int fontTex_ ){
     xmin=xmin_,ymin=ymin_,xmax=xmax_,ymax=ymax_; fontTex=fontTex_;
@@ -176,13 +172,14 @@ void GUIPanel::tryRender(){
         if(isSlider){ Draw::setRGB(barColor); Draw2D::drawRectangle ( xmin, ymax-2, xmin+val2x(value), ymax, true ); }
         Draw  ::setRGB( textColor );
         //Draw2D::drawString ( caption,             xmin, ymin+12, 6, fontTex );
-        //Draw2D::drawString ( val_text, 0, curPos, xmin, ymin,    6, fontTex );
+        //Draw2D::drawString ( val_text, 0, curPos, xmin, ymin,    textSz, fontTex );
         int nch = strlen(caption);
-        Draw2D::drawText( caption, nch, {xmin, ymin+12,}, 0.0,  fontTex, 6 );
+        Draw2D::drawText( caption, nch, {xmin, ymin+12,}, 0.0,  fontTex, textSz );
         nch = inputText.length();
         if( nch > 0 ){
             //Draw2D::drawString ( inputText.c_str(), 0, nch, xmin, ymin,    6, fontTex );
-            Draw2D::drawText( inputText.c_str(), nch, {xmin, ymin}, 0.0, fontTex, 6 );
+            //Draw2D::drawText( inputText.c_str(), nch, {xmin, ymin}, 0.0, fontTex, 6 );
+            Draw2D::drawText( inputText.c_str(), nch, {xmin, ymin}, 0.0, fontTex, textSz );
         }
     glEndList();
     redraw=false;
@@ -299,4 +296,40 @@ GUIAbstractPanel* MultiPanel::onMouse  ( int x, int y, SDL_Event event ){
     return active;
 };
 
+// ==============================
+//     class  DropDownList
+// ==============================
 
+
+void DropDownList ::initMulti( int xmin_, int ymin_, int xmax_, int ymax_, int fontTex_, int nsubs_ ){
+    xmin=xmin_,ymin=ymin_,xmax=xmax_,ymax=ymax_; fontTex=fontTex_;
+};
+
+void DropDownList ::draw  ( ){
+    glCallList( gllist );
+};
+
+void DropDownList ::tryRender( ){
+    GUIAbstractPanel::tryRender();
+    if(bOpened){
+        for(int i=0; i<nSlots; i++){
+            int iItem = i+iItem0;
+            if( iItem<nItems ){
+                int nch = strlen(caption);
+                Draw2D::drawText( labels[iItem], nch, {xmin, ymin}, 0.0, fontTex, textSz );
+                //sprintf( labels[],"val%i",i);
+                //sprintf(subs[i]->caption,"val%i",i);
+            }
+        }
+    }else{
+        //if( iSelected<nItems ){
+        int nch = strlen(caption);
+        Draw2D::drawText( labels[iSelected], nch, {xmin, ymin}, 0.0, fontTex, textSz );
+        //}
+    }
+};
+
+GUIAbstractPanel* DropDownList::onMouse  ( int x, int y, SDL_Event event ){
+    if( check( x, y ) ){ return this; }
+    return 0;
+};

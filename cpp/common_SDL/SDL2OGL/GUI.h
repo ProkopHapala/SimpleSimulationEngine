@@ -53,6 +53,7 @@ class GUITextInput{ public:
 // ==============================
 
 class GUIAbstractPanel{ public:
+    int textSz = 6;
 	int  xmin=256,xmax=128,ymin=0,ymax=0;
 	bool visible=true, disabled=false;
 
@@ -118,6 +119,38 @@ class GUIPanel : public GUIAbstractPanel { public:
 class MultiPanel : public GUIAbstractPanel { public:
     int nsubs;
     GUIPanel ** subs;
+
+    // ==== functions
+
+    void initMulti( int xmin_, int ymin_, int xmax_, int ymax_, int fontTex_, int nsubs_ );
+
+    virtual void draw  ( );
+    virtual void tryRender( );
+    virtual GUIAbstractPanel* onMouse  ( int x, int y, SDL_Event event );
+
+    virtual void onKeyDown( SDL_Event e ){};
+    virtual void onText   ( SDL_Event e ){};
+
+};
+
+// ==============================
+//     class  DropDownList
+// ==============================
+
+static const char* exampleDropDownListItems[3] = {"Item1","Item2","Item3"};
+
+class DropDownList : public GUIAbstractPanel { public:
+    bool bOpened = false;
+    int nSlots=5;
+    //int iSlot0=0;
+
+    int iSelected=0;
+    int iItem0 = 0;
+    int nItems = 0;
+    char** labels = (char**)exampleDropDownListItems;
+
+    //int nsubs;
+    //GUIPanel ** subs;
 
     // ==== functions
 
