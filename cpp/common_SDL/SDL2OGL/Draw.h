@@ -7,8 +7,10 @@
 #include "Vec3.h"
 #include "Mat3.h"
 
-namespace Draw{
+#define  fontSizeDef 7
 
+
+namespace Draw{
     constexpr int     ncolors = 5;
     static uint32_t   colors_rainbow[ncolors] = { 0xFF000000, 0xFFFF0000, 0xFF00FF00, 0xFF00FFFF, 0xFFFFFFFF };
 

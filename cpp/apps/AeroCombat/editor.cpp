@@ -67,10 +67,11 @@
 class AeroCraftEditor : public AppSDL2OGL_3D { public:
 
     int      fontTex;
-    GUIPanel   panel;
-    MultiPanel mpanel;
+    //GUIPanel   panel;
+    //MultiPanel mpanel;
     GUITextInput txt;
-    GUIAbstractPanel*  focused = NULL;
+    //GUIAbstractPanel*  focused = NULL;
+    GUI gui;
 
 	AeroCraftWarrior * myCraft;
 
@@ -188,12 +189,18 @@ AeroCraftEditor:: AeroCraftEditor( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2O
 
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono.bmp" );
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA.bmp" );
+    GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    //fontTex = makeTexture( "common_resources/dejvu_sans_mono_Alpha.bmp" );
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono_Alpha.bmp" );
+
+    /*
     panel.init( 5,5,105,35,  fontTex );
     panel.caption   = "rotation [Rad]"; panel.vmin = -3.14159265359; panel.vmax = 3.14159265359;
     mpanel.initMulti( 120,5,200,120, fontTex , 4 );
     mpanel.caption="MultiPanel_1";
+    */
+
     txt.inputText = "insert number using =+-*/";
     SDL_StartTextInput ();
 
