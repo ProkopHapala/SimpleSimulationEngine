@@ -38,15 +38,12 @@ class TestAppGUI : public AppSDL2OGL_3D {
     int      fontTex;
     int      fontTex3D;
 
-
-    GUIPanel   panel;
-    MultiPanel mpanel;
-    ScisorBox clipBox;
-    DropDownList list1;
-    GUIAbstractPanel*  focused = NULL;
-
     GUI gui;
-
+    //GUIPanel   panel;
+    //MultiPanel mpanel;
+    ScisorBox clipBox;
+    //DropDownList list1;
+    //GUIAbstractPanel*  focused = NULL;
 
     GUITextInput txt;
     Plot2D plot1;
@@ -62,26 +59,11 @@ class TestAppGUI : public AppSDL2OGL_3D {
 
 TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
-    //fontTex = makeTexture( "common_resources/dejvu_sans_mono.bmp" );
-    //fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA.bmp" );
-    //fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     GUI_fontTex = fontTex;
-    //fontTex = makeTexture( "common_resources/dejvu_sans_mono_Alpha.bmp" );
     fontTex3D = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
-    /*
-    list1.initList("DropList1",100.0,300.0,200.0,5);
-    list1.labels.push_back("Item_1");
-    list1.labels.push_back("Item_2");
-    list1.labels.push_back("Item_3");
-    list1.labels.push_back("Item_4");
-    list1.labels.push_back("Item_5");
-    list1.labels.push_back("Item_7");
-    list1.labels.push_back("Item_8");
-    //list1.caption = "DropList1";
-    gui.addPanel( &list1 );
-    */
+
     ((DropDownList*)gui.addPanel( new DropDownList("DropList1",100.0,300.0,200.0,5) ))
         ->addItem("Item_1")
         ->addItem("Item_2")
@@ -110,13 +92,6 @@ TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, 
     ((GUIPanel*)gui.addPanel( new GUIPanel( "rotation [Rad]", 5,5,105,35, true, true ) ))
         ->command = &command_example;
 
-    /*
-    //mpanel.initMulti( 120,5,200,120, fontTex , 4 );
-    mpanel.initMulti( "MultiPanel_1", 120,5,200,fontSizeDef*4, 4 );
-    //mpanel.caption="MultiPanel_1";
-    mpanel.bgColor = 0x9090A0;
-    gui.addPanel( &mpanel );
-    */
     gui.addPanel( new MultiPanel( "MultiPanel_1", 120,5,200,fontSizeDef*4, 4 ) )
         ->bgColor = 0x9090A0;
 
@@ -158,26 +133,14 @@ void TestAppGUI::draw   (){
 
 	glDisable ( GL_LIGHTING );
 
-	//Draw3D::drawText( txt.inputText.c_str(), {1.0,1.0,1.0}, fontTex, 0.3, 0, 0 );
-
 	Draw3D::drawAxis ( 3.0f );
 
 	glColor4f(1.0f,1.0f,1.0f,0.9f);
 	txt.view3D( {1.0,1.0,1.0}, fontTex3D, 0.3 );
 
-	//Rect2d rect = (Rect2f){-5.0,-5,5,5};
-	//Vec2f p1=(Vec2f){-5.0,-5.0},p2=(Vec2f){5.0,5.0};
-	//glColor3f(1.0,0.0,1.0);
-	//Draw2D::drawRectangle(p1,p2, false );
-
-	//glEnable(GL_SCISSOR_BOX);
-	//glEnable(GL_SCISSOR_TEST);
-	//glScissor(300,  200,  200,  200);
 	clipBox.apply();
-	//Draw3D::drawSphere_oct(5,4.0, (Vec3d){0.0,0.0,0.0} );
 	Draw2D::drawText("jkfbksfdfjshbdfs \n sdjfhsdjkfksdh \n djfshdkjfhsdkhf", (Vec2d){-6.0,5.0},(Vec2d){12.0,12.0}, fontTex3D, 1.0 );
     glDisable(GL_SCISSOR_TEST);
-	//Draw3D::drawText( "AHOJ!\0", {1.0,1.0,1.0}, fontTex, 5.0, 0, 0 );
 
 };
 
@@ -186,18 +149,6 @@ void TestAppGUI::drawHUD(){
     glColor3f(1.0,1.0,1.0);
     txt.viewHUD( {100,220}, fontTex );
 
-
-    /*
-    //Draw2D::drawRectangle( {300.0,200.0},{500.0,400.0}, false );
-    //panel.tryRender(); clipBox.draw();
-    clipBox.draw();
-	//panel .tryRender();  panel.draw();
-	//mpanel.tryRender(); mpanel.draw();
-	list1.draw();
-    panel.draw();
-	mpanel.draw();
-	if(focused) Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
-	*/
 	gui.draw();
 
 	glTranslatef( 10.0,300.0,0.0 );
@@ -208,30 +159,10 @@ void TestAppGUI::drawHUD(){
 	glScalef    ( 10.0,10.00,1.0  );
 	plot1.view();
 
-	//glColor3f(1.0f,1.0f,1.0f);
-	//panel.render();
-	//Draw2D::drawRectangle ( 100, 100, 300, 200, false    );
-	//Draw2D::drawLine      ( {0.0f,0.0f},{100.0f, 200.0f} );
 }
 
 void TestAppGUI::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );
-    /*
-    switch( event.type ){
-        case SDL_KEYDOWN:
-            if(focused){ focused->onKeyDown( event ); }else{ txt.onKeyDown(  event ); }; break;
-        case SDL_TEXTINPUT:
-            if(focused){ focused->onText   ( event ); }else{ txt.onText   ( event );  }; break;
-        case SDL_MOUSEBUTTONDOWN:
-            //printf( "%i %i\n", mouseX, mouseY );
-            GUIAbstractPanel* active = NULL; focused=NULL;
-            active = mpanel .onMouse( mouseX, mouseY, event ); if(active) focused=active;
-            active = panel  .onMouse( mouseX, mouseY, event ); if(active) focused=active;
-            active = clipBox.onMouse( mouseX, mouseY, event ); if(active) focused=active;
-            active = list1  .onMouse( mouseX, mouseY, event ); if(active) focused=active;
-            break;
-    };
-    */
     gui.onEvent( mouseX, mouseY, event );
     //GUI_globalEventHandler( &event );
     AppSDL2OGL::eventHandling( event );

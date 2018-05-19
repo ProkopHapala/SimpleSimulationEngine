@@ -5,26 +5,6 @@
 //GUIAbstractPanel* GUI_mouse_panel = 0;
 int GUI_fontTex = 0;
 
-/*
-void GUI_globalEventHandler(const SDL_Event* event ){
-    switch( event->type ){
-        case SDL_MOUSEBUTTONUP:
-            if(event->button.button == SDL_BUTTON_LEFT){
-                GUI_mouse_panel = 0;
-            }
-            break;
-        case SDL_MOUSEMOTION:
-            SDL_MouseMotionEvent* event_ = (SDL_MouseMotionEvent*)event;
-            //if(GUI_mouse_panel) GUI_mouse_panel->moveTo( GUI_mouse_panel->xmin+event->xrel, GUI_mouse_panel->ymin+event->yrel );
-            if(GUI_mouse_panel){
-                //printf(" GUI_globalEventHandler  SDL_MOUSEMOTION  %i %i \n", event_->xrel, -event_->yrel );
-                GUI_mouse_panel->moveBy( event_->xrel, -event_->yrel );
-            }
-            break;
-    }
-};
-*/
-
 // ==============================
 //    class GUITextInput
 // ==============================
@@ -526,3 +506,48 @@ GUIAbstractPanel* DropDownList::onMouse ( int x, int y, const SDL_Event& event, 
     }
     return 0;
 };
+
+// ==============================
+//    class GUI
+// ==============================
+
+GUIAbstractPanel* GUI::addPanel( GUIAbstractPanel* panel ){ panels.push_back(panel); return panels.back(); }
+
+void GUI::onEvent( int mouseX, int mouseY, const SDL_Event& event ){
+    GUIAbstractPanel* active;
+    switch( event.type ){
+        case SDL_KEYDOWN:
+            //if(focused){ focused->onKeyDown( event ); }else{ txt.onKeyDown(  event ); }; break;
+            if(focused){ focused->onKeyDown( event, *this ); }
+            break;
+        case SDL_TEXTINPUT:
+            //if(focused){ focused->onText   ( event ); }else{ txt.onText   ( event );  }; break;
+            if(focused){ focused->onText   ( event ); }
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            active = NULL; focused=NULL;
+            for(GUIAbstractPanel* panel: panels){
+                active =  panel->onMouse( mouseX, mouseY, event, *this );
+                if(active)focused=active;
+            }
+            break;
+        case SDL_MOUSEBUTTONUP:
+            if(event.button.button == SDL_BUTTON_LEFT){
+                dragged = 0;
+            }
+            break;
+        case SDL_MOUSEMOTION:
+            SDL_MouseMotionEvent* event_ = (SDL_MouseMotionEvent*)&event;
+            //if(GUI_mouse_panel) GUI_mouse_panel->moveTo( GUI_mouse_panel->xmin+event->xrel, GUI_mouse_panel->ymin+event->yrel );
+            if(dragged){
+                //printf(" GUI_globalEventHandler  SDL_MOUSEMOTION  %i %i \n", event_->xrel, -event_->yrel );
+                dragged->moveBy( event_->xrel, -event_->yrel );
+            }
+            break;
+    };
+};
+
+void GUI::draw(){
+    for(GUIAbstractPanel* panel: panels){ panel->draw(); }
+    if(focused) Draw2D::drawRectangle(focused->xmin,focused->ymin,focused->xmax,focused->ymax,false);
+}

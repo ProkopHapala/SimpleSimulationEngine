@@ -237,8 +237,6 @@ class DropDownList : public GUIAbstractPanel { public:
 
 };
 
-
-
 // ==============================
 //    class GUI
 // ==============================
@@ -248,45 +246,9 @@ class GUI{ public:
     GUIAbstractPanel* dragged = 0;
     std::vector<GUIAbstractPanel*> panels;
 
-    GUIAbstractPanel* addPanel( GUIAbstractPanel* panel ){ panels.push_back(panel); return panels.back(); }
-
-    void onEvent( int mouseX, int mouseY, const SDL_Event& event ){
-        GUIAbstractPanel* active;
-        switch( event.type ){
-            case SDL_KEYDOWN:
-                //if(focused){ focused->onKeyDown( event ); }else{ txt.onKeyDown(  event ); }; break;
-                if(focused){ focused->onKeyDown( event, *this ); }
-                break;
-            case SDL_TEXTINPUT:
-                //if(focused){ focused->onText   ( event ); }else{ txt.onText   ( event );  }; break;
-                if(focused){ focused->onText   ( event ); }
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                active = NULL; focused=NULL;
-                for(GUIAbstractPanel* panel: panels){
-                    active =  panel->onMouse( mouseX, mouseY, event, *this );
-                    focused=active;
-                }
-                break;
-            case SDL_MOUSEBUTTONUP:
-                if(event.button.button == SDL_BUTTON_LEFT){
-                    dragged = 0;
-                }
-                break;
-            case SDL_MOUSEMOTION:
-                SDL_MouseMotionEvent* event_ = (SDL_MouseMotionEvent*)&event;
-                //if(GUI_mouse_panel) GUI_mouse_panel->moveTo( GUI_mouse_panel->xmin+event->xrel, GUI_mouse_panel->ymin+event->yrel );
-                if(dragged){
-                    //printf(" GUI_globalEventHandler  SDL_MOUSEMOTION  %i %i \n", event_->xrel, -event_->yrel );
-                    dragged->moveBy( event_->xrel, -event_->yrel );
-                }
-                break;
-        };
-    };
-
-    void draw(){
-        for(GUIAbstractPanel* panel: panels){ panel->draw(); }
-    }
+    GUIAbstractPanel* addPanel( GUIAbstractPanel* panel );
+    void onEvent( int mouseX, int mouseY, const SDL_Event& event );
+    void draw();
 
     ~GUI(){
         for(GUIAbstractPanel* panel: panels){ delete panel; }
