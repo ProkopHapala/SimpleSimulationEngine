@@ -384,6 +384,109 @@ int drawSphere_oct( int n, double r_, const Vec3d& pos_ ){
 	return nvert;
 };
 
+/*
+int drawSphereStrip( Vec3f p, Vec3f ax,  int nPhi. int nThet, float R, float sinTheta1, float sinTheta1 ){
+    Vec2f cph, dph, cth,dph;
+    dph.fromAngle( );
+    dph.fromAngle( );
+    cos();
+    for(int ith=0; ith<nTheta; ith++){
+        glBegin(GL_TRIANGLE_STRIP);
+        for(int iph=0; iph<nPhi; iph++){
+            glVertex2d();
+            glVertex2d();
+        }
+        glEnd();
+    }
+};
+*/
+
+
+int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped ){
+    Vec3f ax   = p1-p0;  float L = ax.normalize();
+    Vec3f up,left;       ax.getSomeOrtho(up,left);
+    Vec2f cph=Vec2fX, dph;
+    dph.fromAngle( 2*M_PI/nPhi );
+    // Cylinder
+    Vec2f cth,dth;
+    float dr = (r2-r1);
+    float cv = sqrt(L*L+dr*dr);
+    cth.set( L/cv, -dr/cv );
+    glBegin(GL_TRIANGLE_STRIP);
+    for(int iph=0; iph<(nPhi+1); iph++){
+        Vec3f pa = p0 + left*(cph.x*r1) + up*(cph.y*r1);
+        Vec3f pb = p1 + left*(cph.x*r2) + up*(cph.y*r2);
+        Vec3f na = left*(cph.x) + up*(cph.y)*cth.x + ax*cth.y;
+        Vec3f nb = left*(cph.x) + up*(cph.y)*cth.x + ax*cth.y;
+        glNormal3f(na.x,na.y,na.z); glVertex3f(pa.x,pa.y,pa.z);
+        glNormal3f(nb.x,nb.y,nb.z); glVertex3f(pb.x,pb.y,pb.z);
+        cph.mul_cmplx(dph);
+    }
+    glEnd();
+
+    float DTh,h;
+    int nTheta;
+    // Spherical Cap
+    cph=Vec2fX;
+    cth.set( L/cv, -dr/cv );
+    //dth.fromSin(v1/r1);
+    DTh = (-theta1 - asin(cth.y));
+    nTheta = (int)(fabs(DTh)/dTheta);
+    dth.fromAngle( DTh/nTheta );
+    //printf( " cth (%f,%f)  dth (%f,%f) \n", cth.x, cth.y,  dth.x, dth.y );
+    r1/=cth.x;
+    h  =-cth.y*r1;
+    // Left
+    for(int ith=0; ith<(nTheta+1); ith++){
+        Vec2f cth_ = Vec2f::mul_cmplx(cth,dth);
+        glBegin(GL_TRIANGLE_STRIP);
+        //glBegin(GL_LINES);
+        for(int iph=0; iph<(nPhi+1); iph++){
+            Vec3f pa = p0 + (left*(cph.x*r1) + up*(cph.y*r1))*cth.x  + ax*(h+cth.y*r1);
+            Vec3f pb = p0 + (left*(cph.x*r1) + up*(cph.y*r1))*cth_.x + ax*(h+cth_.y*r1);
+            Vec3f na = left*(cph.x) + up*(cph.y)*cth.x  + ax*cth.y;
+            Vec3f nb = left*(cph.x) + up*(cph.y)*cth_.x + ax*cth_.y;
+            glNormal3f(na.x,na.y,na.z); glVertex3f(pa.x,pa.y,pa.z);
+            glNormal3f(nb.x,nb.y,nb.z); glVertex3f(pb.x,pb.y,pb.z);
+            //na.mul(0.2);
+            //glVertex3f(pa.x,pa.y,pa.z);   glVertex3f(pa.x+na.x,pa.y+na.y,pa.z+na.z);
+            cph.mul_cmplx(dph);
+        }
+        glEnd();
+        //printf( "%i cth (%f,%f)  cth_ (%f,%f) \n", ith, cth.x, cth.y,  cth_.x, cth_.y );
+        cth=cth_;
+    }
+    //return 0;
+    cph=Vec2fX;
+    cth.set( L/cv, -dr/cv );
+    //cth = Vec2fX;
+    //cth.set( dr/cv, L/cv);
+    //dth.fromAngle( asin(v2/r2)/nTheta );
+    DTh    = (theta2-asin(cth.y));
+    nTheta = (int)(fabs(DTh)/dTheta);
+    dth.fromAngle(DTh/nTheta );
+    r2/= cth.x;
+    h  =-cth.y*r2;
+    // Right
+    for(int ith=0; ith<(nTheta+1); ith++){
+        Vec2f cth_ = Vec2f::mul_cmplx(cth,dth);
+        glBegin(GL_TRIANGLE_STRIP);
+        for(int iph=0; iph<(nPhi+1); iph++){
+            Vec3f pa = p1 + (left*(cph.x*r2) + up*(cph.y*r2))*cth.x  + ax*(h+cth.y*r2);
+            Vec3f pb = p1 + (left*(cph.x*r2) + up*(cph.y*r2))*cth_.x + ax*(h+cth_.y*r2);
+            Vec3f na = left*(cph.x) + up*(cph.y)*cth.x  + ax*cth.y;
+            Vec3f nb = left*(cph.x) + up*(cph.y)*cth_.x + ax*cth_.y;
+            glNormal3f(na.x,na.y,na.z); glVertex3f(pa.x,pa.y,pa.z);
+            glNormal3f(nb.x,nb.y,nb.z); glVertex3f(pb.x,pb.y,pb.z);
+            cph.mul_cmplx(dph);
+        }
+        glEnd();
+        cth=cth_;
+    }
+
+};
+
+
 int drawCircleAxis( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis, double dca, double dsa ){
     Vec3d v; v.set(v0);
     glBegin( GL_LINE_LOOP );

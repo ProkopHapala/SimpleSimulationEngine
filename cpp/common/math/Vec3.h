@@ -23,9 +23,21 @@ class Vec3TYPE{
 
 	// ===== methods
 
-	inline Vec3TYPE<double> toDouble()const{ return (Vec3TYPE<double>){ (double)x,(double)y,(double)z}; }
-	inline Vec3TYPE<float > toFloat ()const{ return (Vec3TYPE<float >){ (float)x, (double)y,(double)z}; }
-	inline Vec3TYPE<int >   toInt   ()const{ return (Vec3TYPE<int   >){ (int)x,      (int)y,   (int)z}; }
+	// Automatic conversion (works) but would be problematic
+	//inline operator Vec3TYPE<float >()const{ return (Vec3TYPE<float >){(float)x,(float)y,(float)z}; }
+	//inline operator Vec3TYPE<double>()const{ return (Vec3TYPE<double>){(double)x,(double)y,(double)z}; }
+	//inline operator Vec3TYPE<int   >()const{ return (Vec3TYPE<int   >){(int)x,(int)y,(int)z}; }
+
+	// Explicit conversion
+    inline explicit operator Vec3TYPE<float >()const{ return (Vec3TYPE<float >){(float)x,(float)y,(float)z}; }
+	inline explicit operator Vec3TYPE<double>()const{ return (Vec3TYPE<double>){(double)x,(double)y,(double)z}; }
+	inline explicit operator Vec3TYPE<int   >()const{ return (Vec3TYPE<int   >){(int)x,(int)y,(int)z}; }
+
+	//inline operator (const char*)()const{ return (; }
+
+	//inline Vec3TYPE<double> toDouble()const{ return (Vec3TYPE<double>){ (double)x,(double)y,(double)z}; }
+	//inline Vec3TYPE<float > toFloat ()const{ return (Vec3TYPE<float >){ (float)x, (double)y,(double)z}; }
+	//inline Vec3TYPE<int >   toInt   ()const{ return (Vec3TYPE<int   >){ (int)x,      (int)y,   (int)z}; }
 
 	// swizzles
 	inline VEC2 xy() const { return {x,y}; };
@@ -249,6 +261,12 @@ inline Vec3i    from_id    ( uint64_t id   ){
     vi.z=( id & 0xFFFF );
     return vi;
 }
+
+inline void print(Vec3d p){printf("(%.16g,%.16g,%.16g)", p.x,p.y,p.z);};
+inline void print(Vec3f p){printf("(%.8g,%.8g,%.8g)", p.x,p.y,p.z);};
+//inline void print(Vec3d p){printf("(%lg,%lg,%lg)", p.x,p.y,p.z);};
+//inline void print(Vec3f p){printf("(%g,%g,%g)", p.x,p.y,p.z);};
+inline void print(Vec3i p){printf("(%i,%i,%i)", p.x,p.y,p.z);};
 
 inline void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
 inline void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };

@@ -101,6 +101,16 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         glClearColor(1.0, 1.0, 1.0, 1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 
+        bool bSmoothLines = false;
+        if(bSmoothLines){
+            glEnable (GL_BLEND);
+            glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glEnable (GL_LINE_SMOOTH);
+            glHint (GL_LINE_SMOOTH_HINT, GL_FASTEST);
+            glLineWidth(0.5);
+            //glLineWidth(1.5);
+        }
+
         sh1->use();
 
         Mat3f mrot; mrot.setOne();

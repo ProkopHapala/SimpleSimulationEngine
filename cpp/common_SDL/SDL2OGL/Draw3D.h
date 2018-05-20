@@ -48,6 +48,9 @@ int  drawCylinderStrip  ( int n, float r1, float r2, const Vec3f& base, const Ve
 int  drawSphereTriangle ( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c );
 int  drawSphere_oct     ( int n, double r_, const Vec3d& pos_ );
 
+int  drawCapsula        ( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped );
+
+
 int drawCircleAxis      ( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis, double dca, double dsa );
 int drawCircleAxis      ( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis );
 int drawSphereOctLines  ( int n, double r, const Vec3d& pos );
@@ -170,14 +173,16 @@ inline void toGLMatCam( const Vec3d& pos, const Mat3d& rot, float* glMat ){
 inline void toGLMat( const Vec3d& pos, const Quat4d& qrot, float* glMat ){
     Vec3f pos_;    convert( pos, pos_ );
     Quat4f qrot_;  convert( qrot, qrot_ );
-    Mat3f  rot_;   qrot_.toMatrix_unitary2( rot_ );
+    //Mat3f  rot_;   qrot_.toMatrix_unitary2( rot_ );
+    Mat3f  rot_;   qrot_.toMatrix_unitary( rot_ );
     toGLMat( pos_, rot_, glMat );
 };
 
 inline void toGLMatCam( const Vec3d& pos, const Quat4d& qrot, float* glMat ){
     Vec3f pos_;    convert( pos, pos_ );
     Quat4f qrot_;  convert( qrot, qrot_ );
-    Mat3f  rot_;   qrot_.toMatrix_unitary2( rot_ );
+    //Mat3f  rot_;   qrot_.toMatrix_unitary2( rot_ );
+    Mat3f  rot_;   qrot_.toMatrix_unitary( rot_ );
     toGLMatCam( pos_, rot_, glMat );
 };
 

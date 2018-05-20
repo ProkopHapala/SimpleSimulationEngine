@@ -56,6 +56,10 @@ class Quat4TYPE {
 		TYPE array[4];
 	};
 
+    inline explicit operator Quat4TYPE<double>()const{ return (Quat4TYPE<double>){ (double)x,(double)y,(double)z, (double)w }; }
+    inline explicit operator Quat4TYPE<float> ()const{ return (Quat4TYPE<float>){ (float)x,(float)y,(float)z, (float)w }; }
+    inline explicit operator Quat4TYPE<int>   ()const{ return (Quat4TYPE<int>)  { (int)x,(int)y,(int)z, (int)w }; }
+
     inline void set   ( TYPE f                             ){ x=f;   y=f;   z=f;   w=f;   };
 	inline void set   ( const  QUAT& q                     ){ x=q.x; y=q.y; z=q.z; w=q.w; };
 	inline void set   ( TYPE fx, TYPE fy, TYPE fz, TYPE fw ){ x=fx;  y=fy;  z=fz;  w=fw;  };
@@ -501,7 +505,7 @@ class Quat4TYPE {
 		    result.zz = 1 - (xx + yy);
 	};
 
-
+/*
 	inline void toMatrix_unitary( MAT& result)  const  {
 		TYPE xx = x * x;
 		TYPE xy = x * y;
@@ -522,9 +526,9 @@ class Quat4TYPE {
 		result.zy =     2 * ( yz + xw );
 		result.zz = 1 - 2 * ( xx + yy );
 	};
+*/
 
-
-	inline void toMatrix_unitary2( MAT& result)  const  {
+	inline void toMatrix_unitary( MAT& result)  const  {
 		TYPE x2 = 2*x;
 		TYPE y2 = 2*y;
 		TYPE z2 = 2*z;
@@ -547,6 +551,35 @@ class Quat4TYPE {
 		result.zy =     ( yz + xw );
 		result.zz = 1 - ( xx + yy );
 	};
+
+    inline void toMatrix_unitary_T( MAT& result)  const  {
+		TYPE x2 = 2*x;
+		TYPE y2 = 2*y;
+		TYPE z2 = 2*z;
+		TYPE xx = x2 * x;
+		TYPE xy = x2 * y;
+		TYPE xz = x2 * z;
+		TYPE xw = x2 * w;
+		TYPE yy = y2 * y;
+		TYPE yz = y2 * z;
+		TYPE yw = y2 * w;
+		TYPE zz = z2 * z;
+		TYPE zw = z2 * w;
+		result.xx = 1 - ( yy + zz );
+		result.yx =     ( xy - zw );
+		result.zx =     ( xz + yw );
+		result.xy =     ( xy + zw );
+		result.yy = 1 - ( xx + zz );
+		result.zy =     ( yz - xw );
+		result.xz =     ( xz - yw );
+		result.yz =     ( yz + xw );
+		result.zz = 1 - ( xx + yy );
+	};
+
+    // This allos passing Quad to functions accepting Mat3f (e.g. to plotting functions)
+    //inline explicit operator Mat3TYPE<TYPE>()const{ Mat3TYPE<TYPE> mat; toMatrix_unitary(mat); return mat; }
+    inline Mat3TYPE<TYPE> toMat (){  Mat3TYPE<TYPE> mat; toMatrix_unitary  (mat); return mat; };
+    inline Mat3TYPE<TYPE> toMatT(){  Mat3TYPE<TYPE> mat; toMatrix_unitary_T(mat); return mat; };
 
 	// this will compute force on quaternion from force on some point "p" in coordinate system of the quaternion
 	//   EXAMPLE : if "p" is atom in molecule, it should be local coordinate in molecular local space, not global coordante after quaternion rotation is applied

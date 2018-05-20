@@ -16,6 +16,12 @@ class Vec2TYPE{
 	};
 
 	// ===== methods
+
+    inline explicit operator Vec2TYPE<float >()const{ return (Vec2TYPE<float >){(float)x,(float)y}; }
+	inline explicit operator Vec2TYPE<double>()const{ return (Vec2TYPE<double>){(double)x,(double)y}; }
+	inline explicit operator Vec2TYPE<int   >()const{ return (Vec2TYPE<int   >){(int)x,(int)y}; }
+
+
 	inline void set( TYPE f            ) { x=f;   y=f;   };
     inline void set( TYPE fx, TYPE fy  ) { x=fx;  y=fy;  };
     inline void set( const VEC& v      ) { x=v.x; y=v.y; };
@@ -147,6 +153,19 @@ class Vec2TYPE{
 using Vec2i = Vec2TYPE<int>;
 using Vec2f = Vec2TYPE<float>;
 using Vec2d = Vec2TYPE<double>;
+
+static constexpr Vec2d Vec2dZero = (Vec2d){0.0d,0.0d};
+static constexpr Vec2d Vec2dX    = (Vec2d){1.0d,0.0d};
+static constexpr Vec2d Vec2dY    = (Vec2d){0.0d,1.0d};
+
+static constexpr Vec2f Vec2fZero = (Vec2f){0.0f,0.0f};
+static constexpr Vec2f Vec2fX    = (Vec2f){1.0f,0.0f};
+static constexpr Vec2f Vec2fY    = (Vec2f){0.0f,1.0f};
+
+static constexpr Vec2i Vec2iZero = (Vec2i){0,0};
+static constexpr Vec2i Vec2iX    = (Vec2i){1,0};
+static constexpr Vec2i Vec2iY    = (Vec2i){0,1};
+
 
 inline uint64_t scalar_id  ( const Vec2i& v){ return (((uint64_t)v.a)<<32)|v.b; }
 inline uint64_t symetric_id( const Vec2i& v){ if( v.a>v.b ){ return (((uint64_t)v.b)<<32)|v.a; }else{ return (((uint64_t)v.a)<<32)|v.b; }}

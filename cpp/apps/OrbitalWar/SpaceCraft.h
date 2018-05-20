@@ -61,6 +61,7 @@ class Node{ public:
 class ShipComponent{ public:
     int    id;
     int    kind;
+    int    shape;
     int    p0; // anchor node
     // char name[NAME_LEN];
 	double mass;           // [kg]
@@ -104,8 +105,8 @@ class Rope : public ShipComponent { public:
 class Pipe : public ShipComponent { public:
     int p1; // anchor node; p0 inherate
     double maxFlow;   // units depend on commodity
-	//ShipComponent * a;
-	//ShipComponent * b;
+	ShipComponent * a;
+	ShipComponent * b;
 };
 
 //class Hub : public ShipComponent { public:

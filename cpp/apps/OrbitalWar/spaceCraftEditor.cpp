@@ -19,6 +19,7 @@
 
 #include "Truss.h"
 #include "SpaceCraft.h"
+#include "SpaceCraftDraw.h"
 #include "SoftBody.h"
 
 #include "AppSDL2OGL_3D.h"
@@ -27,33 +28,20 @@
 
 #include "EditSpaceCraft.h"
 
+
+int capsula1=0;
+
 using namespace SpaceCrafting;
 
 enum class EDIT_MODE : int { vertex=0, edge=1, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
 
-void drawTruss( Truss& truss ){
-    //printf("=============\n");
-    for( int i=0; i<truss.blocks.size(); i++ ){
-        Draw::color_of_hash(i+15454);
-        Vec2i bj,bi = truss.blocks[i];
-        if( i==(truss.blocks.size()-1) ){ bj = {truss.points.size(),truss.edges.size()}; }else{ bj = truss.blocks[i+1]; };
-        //Draw3D::drawPoints( bj.a-bi.a, &truss.points[bi.a], 0.1 );
-        glBegin( GL_LINES );
-        for( int j=bi.b; j<bj.b; j++ ){
-            Vec3f a,b;
-            TrussEdge& ed = truss.edges[j];
-            convert( truss.points[ed.a], a ); glVertex3f( a.x, a.y, a.z );
-            convert( truss.points[ed.b], b ); glVertex3f( b.x, b.y, b.z );
 
-            //if(i==(truss.blocks.size()-1)){ printf( "%i %i (%i,%i) (%g,%g,%g) (%g,%g,%g) \n", i, j, ed.a, ed.b, a.x, a.y, a.z,  b.x, b.y, b.z ); }
-        }
-        glEnd();
-    }
-    //printf( "points.size() %i \n", truss.points.size() );
-};
 
 class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 	public:
+
+	bool bSmoothLines = 1;
+	bool bWireframe   = 1;
 
 	SpaceCraft craft;
     Truss      truss;
@@ -78,6 +66,18 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     //truss.loadXYZ(  "data/octShip.xyz" );
 
     //Lua1.init();
+
+    Vec3f pf;
+    Vec3d pd;
+    //pd.set(1.5d,1.800001d,1.9d);
+    pd.set(1.5d,1.800000001d,1.9d);
+    //pd = pf;
+    //pd = (Vec3d)pf;
+    pf = (Vec3f)pd;
+    print(pf);printf(" // pf\n");
+    print(pd);printf(" // pd\n");
+    //exit(0);
+
 
     theSpaceCraft = new SpaceCraft();
 
@@ -116,9 +116,14 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     truss.makeGriders( trussPlan, gpar, ups, &ends );
     truss.autoBridge(ends.size(), &ends[0], 0.8, 0 );
 
-
-
     truss.panel( {0.0,0.0,0.0}, {5.0,0.0,0.0}, {0.0,5.0,0.0}, {5.0,5.0,0.0}, {5,5}, 1.0 );
+
+
+    capsula1 = glGenLists(1);
+    glNewList( capsula1, GL_COMPILE );
+    //Draw3D::drawCylinderStrip  ( 16, 10, 10, {0.0,0.0,-16.0,}, {0.0,0.0,16} );
+    Draw3D::drawCapsula( (Vec3f){0.0,0.0,-1.0}, (Vec3f){0.0,0.0,1.0}, 2.0, 1.0, 0.7, 0.7, 0.2, 32, false );
+    glEndList();
 
 
     delete [] gpar;
@@ -138,7 +143,31 @@ void SpaceCraftEditGUI::draw(){
 	//glDisable(GL_DEPTH_TEST);
 	glEnable(GL_DEPTH_TEST);
 
-    drawTruss( truss );
+
+	glEnable(GL_LIGHTING);
+	glColor3f(1.0,0.5,1.0);
+	glCallList(capsula1);
+
+    // to make nice antialiased lines without supersampling buffer
+    // see  https://www.opengl.org/discussion_boards/showthread.php/176559-GL_LINE_SMOOTH-produces-bold-lines-%28big-width%29
+    // https://www.opengl.org/discussion_boards/showthread.php/170072-GL_POLYGON_SMOOTH-is-it-that-bad
+    if(bSmoothLines){
+        glEnable (GL_BLEND);
+        //glColor4f(0.0,0.0,0.0,0.1);
+        glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable (GL_LINE_SMOOTH);
+        glHint (GL_LINE_SMOOTH_HINT, GL_FASTEST);
+        glLineWidth(0.5);
+        //glLineWidth(1.5);
+	}
+	//glHint (GL_LINE_SMOOTH_HINT, GL_NICEST);
+    if(bWireframe){
+        glEnable(GL_POLYGON_SMOOTH); // THIS WILL MAKE WIREFRAME AS SIDE EFFECT
+        //glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
+        //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+    }
+
+    SpaceCrafting::drawTruss( truss );
 
     //printf( "%i\n", EDIT_MODE::vertex );
     if(picked>=0){
@@ -232,6 +261,7 @@ int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 
+	/*
 	// https://www.opengl.org/discussion_boards/showthread.php/163904-MultiSampling-in-SDL
 	//https://wiki.libsdl.org/SDL_GLattr
 	//SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
@@ -240,12 +270,13 @@ int main(int argc, char *argv[]){
     //SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
     //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     //SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
     //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
     //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
     //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
     glEnable(GL_MULTISAMPLE);
+    */
 
 	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
