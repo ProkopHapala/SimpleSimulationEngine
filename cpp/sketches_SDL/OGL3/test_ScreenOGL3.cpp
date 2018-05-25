@@ -101,6 +101,7 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         glClearColor(1.0, 1.0, 1.0, 1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 
+
         bool bSmoothLines = false;
         if(bSmoothLines){
             glEnable (GL_BLEND);
