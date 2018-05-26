@@ -20,10 +20,13 @@
 #include "GLUtils.h"
 
 // ======================  TestApp
-const int nsamp = 64*4;
+const int nsamp = 8;
+//const int nsamp = 16;
 //const int nsamp = 8;
-const int npix  = 8*nsamp*nsamp;
+const int npix  = 10*nsamp*nsamp;
 uint32_t pix   [npix];
+
+float height[npix];
 
 
 bool debugPlot = false;
@@ -74,6 +77,36 @@ const double oct_polar_verts[] = {
  0.0,-1.0,0.0
 };
 
+
+const int oct_fac2verts[] = {
+0,1,6,10,
+1,2,7,10,
+2,3,8,10,
+3,4,9,10,
+4,0,5,10,
+5,6,0,11,
+6,7,1,11,
+7,8,2,11,
+8,9,3,11,
+9,5,4,11,
+};
+
+const int oct_fac2neigh[] = {
+0,1,6,10,
+1,2,7,10,
+2,3,8,10,
+3,4,9,10,
+4,0,5,10,
+5,6,0,11,
+6,7,1,11,
+7,8,2,11,
+8,9,3,11,
+9,5,4,11,
+};
+
+
+
+
 void sampleOctahedron( Vec3d p, uint8_t& iface, double& a, double& b ){
     //iface = (p.x>0) | ( ((uint8_t)(p.y>0))<<1) | ( ((uint8_t)(p.z>0) )<<2);
     iface = ( ((uint8_t)(p.x>0))<<2) | ( ((uint8_t)(p.y>0))<<1) | ( ((uint8_t)(p.z>0) ));
@@ -101,31 +134,35 @@ void sampleIcosa2quads( Vec3d p, uint8_t& iface, double& a, double& b ){
     iface=i+ioff;
     Vec3d& va=((Vec3d*)oct_polar_verts)[iface  ];
     Vec3d& vb=((Vec3d*)oct_polar_verts)[i2+ioff];
-
     Vec3d& d2=((Vec3d*)oct_edge_planes)[iface+10];
     iface<<=1;
     int ic;
-    if(d2.dot(p) > 0){ // uper half of rect
+    bool bTop = d2.dot(p) > 0;
+    if(bTop){ // uper half of rect
         iface++;
         if(ioff){ ic=i; }else{ic=10;};
     }else{
         if(ioff){ic=11;}else{ ic=i+5+1; if(ic>=10) ic=5; };
     }
     Vec3d& vc = ((Vec3d*)oct_polar_verts)[ic];
-    Vec3d pvc = p-vc;
-    const double renorm = 0.95105651629; // 1/|va-vc|
-    a = pvc.dot(va-vc)*renorm;
-    b = pvc.dot(vb-vc)*renorm;
-
+    Vec3d cs; cs.fromLinearSolution( va, vb, vc,  p );
+    cs.mul(1/(cs.a+cs.b+cs.c));
+    if(bTop){
+        a=1-cs.b;
+        b=1-cs.a;
+    }else{
+        a = cs.a;
+        b = cs.b;
+    }
+    /*
     if(debugPlot ){
         //Draw3D::drawTriangle(va,vb,vc);
         glColor3f(0.0,0.0,0.0); Draw3D::drawLine(p,vc);
         glColor3f(1.0,0.0,0.0); Draw3D::drawLine(va,vc);
         glColor3f(0.0,0.0,1.0); Draw3D::drawLine(vb,vc);
     }
+    */
 }
-
-
 
 
 void sampleTri( Vec3d p, Vec3i tri, Vec3d* verts, Vec3d& c ){
@@ -134,6 +171,133 @@ void sampleTri( Vec3d p, Vec3i tri, Vec3d* verts, Vec3d& c ){
     c.c = p.dot( verts[tri.c] );
     c.mul( 1/(c.a + c.b + c.c) );
 }
+
+void drawDiTri( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d, float* height ){
+    float da = 1.0/(n.a+1);
+    float db = 1.0/(n.b+1);
+    /*
+    glBegin(GL_TRIANGLES);
+    //glVertex3f(a.x,a.y,a.z);  glVertex3f(b.x,b.y,b.z);  glVertex3f(c.x,c.y,c.z);
+    //glVertex3f(a.x,a.y,a.z);  glVertex3f(b.x,b.y,b.z);  glVertex3f(d.x,d.y,d.z);
+    glColor3f(1.0,0.0,0.0); glVertex3f(a.x,a.y,a.z);
+    glColor3f(0.0,0.0,1.0); glVertex3f(b.x,b.y,b.z);
+    glColor3f(0.0,1.0,0.0); glVertex3f(c.x,c.y,c.z);
+    glColor3f(1.0,0.0,0.0); glVertex3f(a.x,a.y,a.z);
+    glColor3f(0.0,0.0,1.0); glVertex3f(b.x,b.y,b.z);
+    glColor3f(0.0,0.0,0.0); glVertex3f(d.x,d.y,d.z);
+    glEnd();
+    return;
+    */
+    glPointSize(5);
+    for( int ia = 0; ia<n.a; ia++ ){
+        float fa  =da*(ia);
+        float fa_ =da*(ia+1);
+        glBegin(GL_TRIANGLE_STRIP);
+        //glBegin(GL_POINTS);
+        for( int ib = 0; ib<n.b+1; ib++ ){
+            Vec3f p;
+            float h, fc;
+            float fb  =(db*ib);
+
+
+
+            fc = (fa_+fb)*0.5;
+            if( fa_>fb ){ float f=(fa_-fb); p = c*(fc-0.5*f) + d*(1-fc-0.5*f)   + a*f; }
+            else        { float f=(fb-fa_); p = c*(fc-0.5*f) + d*(1-fc-0.5*f)   + b*f; }
+            h = height[(ia+1)*n.b+ib]; glColor3f(h,h,h);
+            //p.normalize(); p.mul(1+0.1*(h-0.5));
+            glVertex3f( p.x,  p.y,  p.z  );
+
+            fc = (fa+fb)*0.5;
+            if( fa_>fb ){ float f=(fa-fb); p = c*(fc-0.5*f) + d*(1-fc-0.5*f)   + a*f; }
+            else        { float f=(fb-fa); p = c*(fc-0.5*f) + d*(1-fc-0.5*f)   + b*f; }
+            h = height[ia*n.b+ib]; glColor3f(h,h,h);
+            //p.normalize(); p.mul(1+0.1*(h-0.5));
+            glVertex3f( p.x,  p.y,  p.z  );
+            //glVertex3f( p_.x, p_.y, p_.z );
+            //printf( "%i: %i %i %i | (%f,%f,%f) \n", i, ia, ib, iface, p.x, p.y, p.z );
+        }
+        glEnd();
+    }
+}
+
+void drawDiTri_Inner( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d, float* height ){
+    float da = 1.0/(n.a);
+    float db = 1.0/(n.b);
+    for( int ia = 1; ia<n.a; ia++ ){
+        float fa  =da*(ia-0.5);
+        float fa_ =da*(ia+0.5);
+        glBegin(GL_TRIANGLE_STRIP);
+        for( int ib = 0; ib<n.b; ib++ ){
+            float h;
+            float fb  =(db*(ib+0.5));
+            Vec3f p;
+
+            if( (fa+fb)<1 ){ p = a*fa      + b*fb     + c*(1-fa-fb); }
+            else           { p = a*(1-fb)  + b*(1-fa) + d*(fa+fb-1); }
+            h = height[ia*n.b+ib];
+            glColor3f(h,h,h);
+            //glColor3f(fa,0.0,fb);
+            //p.normalize(); p.mul(1+0.1*(h-0.5));
+            glVertex3f( p.x,  p.y,  p.z  );
+
+            if( (fa_+fb)<1 ){ p = a*fa_    + b*fb     + c*(1-fa_-fb); }
+            else            { p = a*(1-fb)  + b*(1-fa_) + d*(fa_+fb-1); }
+            h = height[(ia+1)*n.b+ib];
+            glColor3f(h,h,h);
+            //glColor3f(fa_,0.0,fb);
+            //p.normalize(); p.mul(1+0.1*(h-0.5));
+            glVertex3f( p.x,  p.y,  p.z  );
+        }
+        glEnd();
+    }
+}
+
+void drawDiTri_edge( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d, bool bT1, bool bT2, float* hs2, float* hs1 ){
+    float da = 1.0/(n.a);
+    float db = 1.0/(n.b);
+    glBegin(GL_TRIANGLE_STRIP);
+    for( int ib = 0; ib<n.b; ib++ ){
+        float fb  =(db*(ib+0.5));
+        float h;
+        Vec3f p;
+
+        p = a*(1-fb) + b*fb + c*(da*0.5);
+        if(bT1){ h = height[ib*n.a]; }else{ h = height[ib]; }; // beginnings
+        glColor3f(h,h,h);
+        //p.normalize(); p.mul(1+0.1*(h-0.5));
+        glVertex3f( p.x,  p.y,  p.z  );
+
+        p = a*(1-fb) + b*fb + d*(da*0.5);
+        if(bT2){ h = height[ib*n.a+1]; }else{ h = height[(n.a-1)+ib]; }; // ends
+        glColor3f(h,h,h);
+        //p.normalize(); p.mul(1+0.1*(h-0.5));
+        glVertex3f( p.x,  p.y,  p.z  );
+    }
+    glEnd();
+}
+
+void drawIcosaMap( Vec2i n, float* height ){
+    int nab = n.a*n.b;
+    Quat4i* f2v = (Quat4i*)oct_fac2verts;
+    Quat4i* f2n = (Quat4i*)oct_fac2neigh;
+    Vec3d* vs = (Vec3d*)oct_polar_verts;
+    for(int i=0; i<10; i++){
+        Quat4i& iv = f2v[i];
+        float* hs = height+nab*i;
+
+        drawDiTri( n, (Vec3f)vs[iv.z], (Vec3f)vs[iv.w], (Vec3f)vs[iv.x], (Vec3f)vs[iv.y],  hs  );
+
+        /*
+        drawDiTri_Inner( n, (Vec3f)vs[iv.x], (Vec3f)vs[iv.y], (Vec3f)vs[iv.z], (Vec3f)vs[iv.w], hs  );
+        int ifc1 =0;
+        float* hs1 = height+nab*i;
+        drawDiTri_edge( n, (Vec3f)vs[iv.y], (Vec3f)vs[iv.z], (Vec3f)vs[iv.x], (Vec3f)vs[iv.y+1], false, false, hs, hs1 );
+        */
+
+    }
+}
+
 
 class TestAppSolids : public AppSDL2OGL_3D {
 	public:
@@ -155,45 +319,11 @@ class TestAppSolids : public AppSDL2OGL_3D {
 TestAppSolids::TestAppSolids( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
-/*
-    //normals =
-	shape=glGenLists(1);
-	glNewList( shape, GL_COMPILE );
-        printf( " Solids::nTetrahedron_tris %i \n", Solids::tetrahedron.nTris );
-        glEnable    ( GL_LIGHTING );
-        glShadeModel( GL_FLAT     );
-        glColor3f( 0.8, 0.8, 0.8 );
-        Draw3D::drawTriangles( Solids::tetrahedron.nTris, (int*)(&Solids::tetrahedron.tris[0][0]), Solids::tetrahedron.verts );
-	glEndList();
-*/
 
-
-/*
-// TEST BY PYTHON
-https://www.tutorialspoint.com/execute_python_online.php
-import numpy as np
-mat = np.array([
-  [1.,0.0,-0.1],
-  [1.,-1.0,0.0],
-  [1.0,1.0,1.0],
-])
-print np.linalg.solve(mat, [0.5,0.9,0.5])
-print np.linalg.solve(mat.transpose(), [0.5,0.9,0.5])
-*/
-
-    Vec3d va,vb,vc,p,o;
-    va.set(1.,0.0,-0.1);
-    vb.set(1.,-1.0,0.0);
-    vc.set(1.0,1.0,1.0);
-    p .set(0.5,0.9,0.5);
-    o.fromLinearSolution(va,vb,vc,p);
-    print(o);
-
-
-    //exit(0);
-
-
-    for( int i=0; i<npix; i++ ){ pix[i]=0; }
+    for( int i=0; i<npix; i++ ){
+        pix[i]=0;
+        height[i] = randf();
+    }
 
     debugPlot = false;
 	shape=glGenLists(1);
@@ -284,6 +414,7 @@ print np.linalg.solve(mat.transpose(), [0.5,0.9,0.5])
         }
 
 
+        /*
         glDisable( GL_LIGHTING );
         glPointSize(1);
         for( int i=0; i<Solids::Octahedron_ntris; i++ ){
@@ -322,8 +453,21 @@ print np.linalg.solve(mat.transpose(), [0.5,0.9,0.5])
                 }
             }
             glEnd();
-
         }
+        */
+
+
+        glScalef(sc,sc,sc);
+        //glEnable(GL_LIGHTING);
+        glDisable(GL_LIGHTING);
+        glShadeModel( GL_SMOOTH     );
+        glColor3f(1.0,1.0,1.0);
+        Vec3d* vs = ((Vec3d*)oct_polar_verts);
+        //drawDiTri( (Vec2i){nsamp,nsamp},  (Vec3f)vs[6], (Vec3f)vs[5], (Vec3f)vs[0], (Vec3f)vs[11], height );
+
+        //drawDiTri_Inner( (Vec2i){nsamp,nsamp},  (Vec3f)vs[6], (Vec3f)vs[5], (Vec3f)vs[0], (Vec3f)vs[11], height );
+        drawIcosaMap( (Vec2i){nsamp,nsamp}, height );
+
 
 
         glPopMatrix();
@@ -392,7 +536,7 @@ void TestAppSolids::draw   (){
         p=  ((Vec3d*)oct_polar_verts)[i];
         sprintf( str, "%i", i );   Draw3D::drawText(str, p, fontTex, 0.02, 0);
         p =  ((Vec3d*)oct_polar_verts)[i+5];
-        sprintf( str, "%i", i+5 ); Draw3D::drawText(str, p, fontTex, 0.01, 0);
+        sprintf( str, "%i", i+5 ); Draw3D::drawText(str, p, fontTex, 0.02, 0);
     }
 
 
