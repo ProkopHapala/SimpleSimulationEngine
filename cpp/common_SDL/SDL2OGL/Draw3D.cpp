@@ -825,6 +825,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         glPushMatrix();
             //glMatrixMode(GL_MODELVIEW);
             //glMatrixMode(GL_PROJECTION);
+            //printf("-- txt p (%f,%f,%f)\n", pos.x, pos.y, pos.z);
             glTranslatef( pos.x, pos.y, pos.z );
             //Draw::billboardCam( );
             Draw::billboardCamProj( );

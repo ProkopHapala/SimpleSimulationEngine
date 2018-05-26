@@ -89,6 +89,7 @@ class Vec3TYPE{
 	inline void sub_mul( const VEC& a, const VEC& b          ){ x-=a.x*b.x;   y-=a.y*b.y;   z-=a.z*b.z; };
 	inline void add_mul( const VEC& a, const VEC& b, TYPE f  ){ x+=a.x*b.x*f; y+=a.y*b.y*f; z+=a.z*b.z*f;   };
 
+
 	inline void set_add_mul( const VEC& a, const VEC& b, TYPE f ){ x= a.x + f*b.x;     y= a.y + f*b.y;     z= a.z + f*b.z;  };
 
 
@@ -228,6 +229,18 @@ class Vec3TYPE{
         return atan2( y, x );
     }
 
+    inline void fromLinearSolution( const VEC& va, const VEC& vb, const VEC& vc, const VEC& p ){
+        // https://en.wikipedia.org/wiki/Cramer%27s_rule
+        // 30 multiplications
+        TYPE Dax = vb.y*vc.z - vb.z*vc.y;
+        TYPE Day = vb.x*vc.z - vb.z*vc.x;
+        TYPE Daz = vb.x*vc.y - vb.y*vc.x;
+        TYPE idet = 1/( va.x*Dax - va.y*Day + va.z*Daz );
+        x =  idet*( p.x*Dax - p.y*Day + p.z*Daz );
+        z = -idet*( p.x*(va.y*vc.z - va.z*vc.y) - p.y*(va.x*vc.z - va.z*vc.x) + p.z*(va.x*vc.y - va.y*vc.x) );
+        y =  idet*( p.x*(vb.y*vc.z - vb.z*vc.y) - p.y*(vb.x*vc.z - vb.z*vc.x) + p.z*(vb.x*vc.y - vb.y*vc.x) );
+    }
+
 };
 
 template<typename VEC> inline VEC cross( VEC a, VEC b ){ return (VEC){ a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x }; }
@@ -253,6 +266,10 @@ static constexpr Vec3i Vec3iY    = (Vec3i){0,1,0};
 static constexpr Vec3i Vec3iZ    = (Vec3i){0,0,1};
 
 
+
+
+
+
 inline uint64_t scalar_id  ( const Vec3i& v){ return ( v.x | (((uint64_t)v.y)<<16) | (((uint64_t)v.z)<<32) ); }
 inline Vec3i    from_id    ( uint64_t id   ){
     Vec3i vi;
@@ -261,6 +278,7 @@ inline Vec3i    from_id    ( uint64_t id   ){
     vi.z=( id & 0xFFFF );
     return vi;
 }
+
 
 inline void print(Vec3d p){printf("(%.16g,%.16g,%.16g)", p.x,p.y,p.z);};
 inline void print(Vec3f p){printf("(%.8g,%.8g,%.8g)", p.x,p.y,p.z);};

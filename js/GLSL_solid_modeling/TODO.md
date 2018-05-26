@@ -3,6 +3,10 @@
 - High quality render vs. interactive preview
 	- Large size image
 	- add all rendering efects
+	- Interactive preview (By just meshes) can react to mouse (mouse picking)
+- Scene composed of multiple shapes with mesh-bounding boxes
+	- Scene description composed of description of mesh BBoxes (CPU side, javascript, C++) and of GLSL shaders inside
+		- Custom scene-descripiton language can reorganize it (put BBox and shader under common class)
 - Multiple pass render 
 	- assembling objects using Depth-buffer
 	- deffered rendering e.g. for SSAO
