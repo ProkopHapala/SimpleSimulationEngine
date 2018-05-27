@@ -61,6 +61,7 @@ void Draw::billboardCamProj( ){
     float glModel[16];
     glGetFloatv (GL_MODELVIEW_MATRIX,  glModel);
     glGetFloatv (GL_PROJECTION_MATRIX, glCam);
+    //glMatrixMode(GL_MODELVIEW);
 
     Mat3f mat;
     mat.a.set(glCam[0],glCam[1],glCam[2]);       mat.a.mul(1/mat.a.norm2());
@@ -103,7 +104,7 @@ void Draw::drawText( const char * str, int itex, float sz, int iend ){
     glDisable  ( GL_BLEND );
     glDisable  ( GL_ALPHA_TEST );
     glDisable  ( GL_TEXTURE_2D );
-    glBlendFunc( GL_ONE, GL_ZERO );
+    //glBlendFunc( GL_ONE, GL_ZERO );
 };
 
 void Draw::drawText( const char * str, int itex, float sz, Vec2i block_size ){

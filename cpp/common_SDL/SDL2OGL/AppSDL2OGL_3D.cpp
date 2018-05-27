@@ -127,10 +127,17 @@ void AppSDL2OGL_3D::camera(){
         }else{
             glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
         }
+        //glMatrixMode (GL_MODELVIEW);
+        //glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
+        //Draw3D::toGLMatCam( camPos*-1.0, camMat, camMatrix );
+        //Mat3d camMatT; camMatT.setT(camMat);
+        //Draw3D::toGLMat( {0.0,0.0,0.0}, camMatT, camMatrix );
+        Draw3D::toGLMatCam( {0.0,0.0,0.0}, camMat, camMatrix );
+        glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
+        //glLoadMatrixf(camMatrix);
+        //glLMultMatrixf(camMatrix);
+        glMultMatrixf(camMatrix);
         glMatrixMode (GL_MODELVIEW);
-
-        Draw3D::toGLMatCam( camPos*-1.0, camMat, camMatrix );
-        glLoadMatrixf(camMatrix);
         glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
 
 	}

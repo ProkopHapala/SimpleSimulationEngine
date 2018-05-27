@@ -18,20 +18,25 @@ namespace Draw3D{
 
 // ==== function declarations
 
-void drawPoint     ( const Vec3d& vec                   );
+void drawPoint     ( const Vec3f& vec                   );
 void drawPointCross( const Vec3f& vec, float  sz        );
-void drawPointCross( const Vec3d& vec, double sz        );
-void drawVec       ( const Vec3d& vec                   );
-void drawVecInPos  ( const Vec3d& v,   const Vec3d& pos );
+void drawVec       ( const Vec3f& vec                   );
 void drawVecInPos  ( const Vec3f& v,   const Vec3f& pos );
-void drawLine      ( const Vec3d& p1,  const Vec3d& p2  );
+void drawLine      ( const Vec3f& p1,  const Vec3f& p2  );
+
 void drawScale     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& a, double tick, double sza, double szb );
+
+inline void drawPoint     ( const Vec3d& vec                   ){drawPoint((Vec3f)vec); }
+inline void drawVec       ( const Vec3d& vec                   ){drawVec  ((Vec3f)vec); }
+inline void drawPointCross( const Vec3d& vec, double sz        ){drawPointCross((Vec3f)vec,sz); }
+inline void drawVecInPos  ( const Vec3d& v,   const Vec3d& pos ){drawVecInPos((Vec3f)v,(Vec3f)pos); }
+inline void drawLine      ( const Vec3d& p1,  const Vec3d& p2  ){drawLine ((Vec3f)p1,(Vec3f)p2); }
 
 void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3 );
 void drawPlanarPolygon( int n, const int * inds, const Vec3d * points );
 void drawPolygonBorder( int n, const int * inds, const Vec3d * points );
 void drawPolygonBorder( int ipl, Mesh& mesh );
-void drawMatInPos ( const Mat3d& mat, const Vec3d& pos );
+void drawMatInPos ( const Mat3f& mat, const Vec3f& pos );
 //void drawShape    ( const Vec2d& pos, const Vec2d& rot, int shape );
 void drawShape    ( const Vec3f& pos, const Mat3f&  rot,  int shape );
 void drawShape    ( const Vec3d& pos, const Mat3d&  rot,  int shape );
@@ -49,7 +54,6 @@ int  drawSphereTriangle ( int n, float r, const Vec3f& pos, const Vec3f& a, cons
 int  drawSphere_oct     ( int n, double r_, const Vec3d& pos_ );
 
 int  drawCapsula        ( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped );
-
 
 int drawCircleAxis      ( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis, double dca, double dsa );
 int drawCircleAxis      ( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis );
@@ -74,7 +78,10 @@ void drawRectGridLines( Vec2i n, const Vec3d& p0, const Vec3d& da, const Vec3d& 
 int drawMesh( const Mesh& mesh  );
 
 //void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend );
-void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int iend );
+void drawText  ( const char * str, const Vec3d& pos, int fontTex, float textSize, int iend );
+//void drawText3D( const char * str, const Vec3d& pos, int fontTex, float textSize, int iend );
+
+void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3f& up, int fontTex, float textSize, int iend );
 
 // from drawUtils.h
 void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b );

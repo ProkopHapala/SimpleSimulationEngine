@@ -34,7 +34,7 @@ void GUITextInput::view3D( const Vec3d& pos, int fontTex, float textSize ){
         Draw::billboardCam( );
         //Draw::drawText( inputText.c_str(), fontTex, textSize, 0, 0 );
         Draw::drawText( inputText.c_str(), fontTex, textSize, 0 );
-        Draw3D::drawLine( {curPos*textSize,0.0,0.0}, {curPos*textSize,textSize*2,0.0} );
+        Draw3D::drawLine( (Vec3f){curPos*textSize,0.0,0.0}, (Vec3f){curPos*textSize,textSize*2,0.0} );
     glPopMatrix();
 }
 
@@ -49,7 +49,7 @@ void GUITextInput::viewHUD( const Vec2i& pos, int fontTex ){
         //Draw::billboardCam();
         //Draw::drawText( inputText.c_str(), fontTex, textSize, 0, 0 );
         Draw::drawText( inputText.c_str(), fontTex, fontSizeDef, 0 );
-        Draw3D::drawLine( {curPos*fontSizeDef,0.0,0.0}, {curPos*fontSizeDef,fontSizeDef*2,0.0} );
+        Draw3D::drawLine( (Vec3f){curPos*fontSizeDef,0.0,0.0}, (Vec3f){curPos*fontSizeDef,fontSizeDef*2,0.0} );
     glPopMatrix();
 }
 

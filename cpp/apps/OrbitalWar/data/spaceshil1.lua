@@ -32,11 +32,36 @@ g4 = Girder( n0, n4, xvec, 20, 2, {10.0,8.0}, "Steel" )
 g5 = Girder( n0, n5, xvec, 30, 2, {10.0,8.0}, "Steel" )
 g6 = Girder( n0, n6, xvec, 80, 2, {10.0,8.0}, "Steel" )
 
+g7 = Girder( n3, n6, xvec, 70, 2, {10.0,8.0}, "Steel" )
+g8 = Girder( n4, n6, xvec, 70, 2, {10.0,8.0}, "Steel" )
+
 --          type     thick[mm]
-Rope(n5,n1, 25, "Kevlar"); Rope(n6,n1, 25, "Kevlar" )
-Rope(n5,n2, 25, "Kevlar"); Rope(n6,n2, 25, "Kevlar" )
-Rope(n5,n3, 25, "Kevlar"); Rope(n6,n3, 25, "Kevlar" )
-Rope(n5,n4, 25, "Kevlar"); Rope(n6,n4, 25, "Kevlar" )
+Rope(n5,n1, 25, "Kevlar"); 
+Rope(n6,n1, 25, "Kevlar" )
+Rope(n5,n2, 25, "Kevlar"); 
+Rope(n6,n2, 25, "Kevlar" )
+Rope(n5,n3, 25, "Kevlar"); 
+--Rope(n6,n3, 25, "Kevlar" )
+Rope(n5,n4, 25, "Kevlar"); 
+--Rope(n6,n4, 25, "Kevlar" )
+
+Rope(n1,n3, 25, "Kevlar");
+Rope(n1,n4, 25, "Kevlar");
+Rope(n2,n3, 25, "Kevlar");
+Rope(n2,n4, 25, "Kevlar");
+
+
+-- =RadiatorType = {"LithiumHeatPipe", 1280.0 }
+
+--Radiator( g5,0.2,0.8, g1,0.2,0.8, 1280.0 )
+Radiator( g6,0.2,0.8, g7,0.1,0.8, 1280.0 )
+Radiator( g6,0.2,0.8, g8,0.1,0.8, 1280.0 )
+
+
+
+Tank( {16,16,16}, zvec, {50.0,10.0}, "H2");
+
+
 
 print("END spaceship");
 

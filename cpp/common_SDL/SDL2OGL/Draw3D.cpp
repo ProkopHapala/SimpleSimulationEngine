@@ -10,7 +10,7 @@
 
 namespace Draw3D{
 
-void drawPoint( const Vec3d& vec ){
+void drawPoint( const Vec3f& vec ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_POINTS);
 		glVertex3d( vec.x, vec.y, vec.z );
@@ -26,7 +26,7 @@ void drawPointCross( const Vec3f& vec, float sz ){
 	glEnd();
 };
 
-void drawPointCross( const Vec3d& vec, double sz ){
+void drawPointCross( const Vec3f& vec, double sz ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glVertex3d( vec.x-sz, vec.y, vec.z ); glVertex3d( vec.x+sz, vec.y, vec.z );
@@ -35,21 +35,21 @@ void drawPointCross( const Vec3d& vec, double sz ){
 	glEnd();
 };
 
-void drawVec( const Vec3d& vec ){
+void drawVec( const Vec3f& vec ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glVertex3d( 0, 0, 0 ); glVertex3d( vec.x, vec.y, vec.z );
 	glEnd();
 };
 
-void drawVecInPos( const Vec3d& v, const Vec3d& pos ){
+void drawVecInPos( const Vec3f& v, const Vec3f& pos ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+v.x, pos.y+v.y, pos.z+v.z );
 	glEnd();
 };
 
-void drawLine( const Vec3d& p1, const Vec3d& p2 ){
+void drawLine( const Vec3f& p1, const Vec3f& p2 ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glVertex3d( p1.x, p1.y, p1.z ); glVertex3d( p2.x, p2.y, p2.z );
@@ -66,9 +66,9 @@ void drawPolyLine( int n, Vec3d * ps, bool closed ){   // closed=false
     glEnd();
 };
 
-void drawScale( const Vec3d& p1, const Vec3d& p2, const Vec3d& up, double tick, double sza, double szb ){
+void drawScale( const Vec3f& p1, const Vec3f& p2, const Vec3f& up, double tick, double sza, double szb ){
 	//glDisable (GL_LIGHTING);
-	Vec3d d,a,b,p;
+	Vec3f d,a,b,p;
 	d.set_sub( p2, p1 );
 	float L = d.norm();
 	int n = (L+0.0001)/tick;
@@ -92,16 +92,9 @@ void drawScale( const Vec3d& p1, const Vec3d& p2, const Vec3d& up, double tick, 
 	glEnd();
 };
 
-void drawVecInPos( const Vec3f& v, const Vec3f& pos ){
-	//glDisable (GL_LIGHTING);
-	glBegin   (GL_LINES);
-		glVertex3f( pos.x, pos.y, pos.z ); glVertex3d( pos.x+v.x, pos.y+v.y, pos.z+v.z );
-	glEnd();
-};
-
-void drawTriangle( const Vec3d& p1, const Vec3d& p2, const Vec3d& p3 ){
+void drawTriangle( const Vec3f& p1, const Vec3f& p2, const Vec3f& p3 ){
     //printf("p1 (%3.3f,%3.3f,%3.3f) p2 (%3.3f,%3.3f,%3.3f) p3 (%3.3f,%3.3f,%3.3f) \n", p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z);
-	Vec3d d1,d2,normal;
+	Vec3f d1,d2,normal;
 	d1.set( p2 - p1 );
 	d2.set( p3 - p1 );
 	normal.set_cross(d1,d2);
@@ -117,7 +110,7 @@ void drawTriangle( const Vec3d& p1, const Vec3d& p2, const Vec3d& p3 ){
 	//drawPointCross( p3, 0.1 );
 };
 
-void drawMatInPos( const Mat3d& mat, const Vec3d& pos ){
+void drawMatInPos( const Mat3f& mat, const Vec3f& pos ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
 		glColor3f( 1, 0, 0 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.xx, pos.y+mat.xy, pos.z+mat.xz );
@@ -830,6 +823,25 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             //Draw::billboardCam( );
             Draw::billboardCamProj( );
             //Draw2D::drawString( inputText.c_str(), 0, 0, textSize, fontTex );
+            Draw::drawText( str, fontTex, textSize, iend );
+        glPopMatrix();
+	};
+
+    void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3f& up, int fontTex, float textSize, int iend ){
+        glDisable    ( GL_LIGHTING   );
+        glDisable    ( GL_DEPTH_TEST );
+        glShadeModel ( GL_FLAT       );
+        glPushMatrix();
+            glTranslatef( pos.x, pos.y, pos.z );
+            Mat3f rot;
+            //rot.fromDirUp(fw,up);
+            rot.fromSideUp(fw,up);
+            float glmat[16];
+            //toGLMatCam( {0.0,0.0,0.0},rot, glmat );
+            toGLMat( {0.0,0.0,0.0},rot, glmat );
+            glMatrixMode(GL_MODELVIEW);
+            //glLoadMatrixf( glmat );
+            glMultMatrixf( glmat );
             Draw::drawText( str, fontTex, textSize, iend );
         glPopMatrix();
 	};

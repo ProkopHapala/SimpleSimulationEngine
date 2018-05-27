@@ -15,5 +15,5 @@ ${COMMON_SRCS}/math/Mesh.cpp
 
 #add_library( GUI      OBJECT GUI.cpp Draw2D.cpp Draw3D.cpp )
 
-file(GLOB SDL2OGL_HEADERS_ *.h )
+file(GLOB SDL2OGL_HEADERS_ *.h *.cpp )
 add_custom_target(SDL2OGL_headers SOURCES ${SDL2OGL_HEADERS_} )

@@ -14,8 +14,9 @@ namespace SpaceCrafting{
 const int NAME_LEN = 16;
 
 class BodyPose{ public:
-    Vec3d   pos;
-    Quat4d  rot;
+    Vec3d pos;
+    //Quat4d  rot;
+    Mat3d rot;
 };
 
 class BBox : public BodyPose{ public:
@@ -41,12 +42,12 @@ class Material : public CatalogItem { public:
  	// What about heat, electricity etc. ?
 };
 
-class Comodity : public CatalogItem { public:
+class Commodity : public CatalogItem { public:
 	double density;      // [kg/m3]
 	// What about heat, electricity etc. ?
 };
 
-class FuelType : public Comodity { public:
+class FuelType : public Commodity { public:
     double EnergyDesity;   // [J/kg]
 };
 
@@ -62,15 +63,22 @@ class ShipComponent{ public:
     int    id;
     int    kind;
     int    shape;
-    int    p0; // anchor node
+    //int    p0; // anchor node
     // char name[NAME_LEN];
 	double mass;           // [kg]
 	//RigidBody pose;
 };
 
-class Tank : public ShipComponent { public:
-	Comodity * typ;
-	double volume;         // [m^3]
+class Modul: public ShipComponent { public:
+    BodyPose pose;
+    double volume;
+};
+
+class Tank : public Modul { public:
+	Commodity * typ;
+	double radius;
+	double length;
+	        // [m^3]
 	double filled;         // [1]
 };
 
@@ -79,9 +87,15 @@ class Tank : public ShipComponent { public:
 //    Vec3d wh;
 //};
 
-class Girder : public ShipComponent { public:
-    int p1; // anchor node; p0 inherate
+
+class NodeLinker : public ShipComponent { public:
+    int p0,p1;
     double length;
+};
+
+class Girder : public NodeLinker { public:
+    //int p1; // anchor node; p0 inherate
+    //double length;
     int nseg;
     int mseg;
     Vec2d wh;  // [m] width and height
@@ -89,21 +103,17 @@ class Girder : public ShipComponent { public:
     //double SPull,SPush;
     //double kPull,kPush;
     Material * material;
-
     Vec2i poitRange;  // index of start and end in Truss
     Vec2i stickRange; // --,,---
     //GirderType * type = NULL;
 };
 
-class Rope : public ShipComponent { public:
-    int p1; // anchor node; p0 inherate
+class Rope : public NodeLinker { public:
     double thick;
-    double length;
     Material * material;
 };
 
 class Pipe : public ShipComponent { public:
-    int p1; // anchor node; p0 inherate
     double maxFlow;   // units depend on commodity
 	ShipComponent * a;
 	ShipComponent * b;
@@ -118,13 +128,16 @@ class Pipe : public ShipComponent { public:
 
 class Plate : public ShipComponent { public:
     double area;
-    int p1,p2; // anchor node; p0 inherate
+    int g1,g2;    // anchor girders
+    Vec2f g1span; // pos along girdes
+    Vec2f g2span;
     //Vec3d normal;
 	//int ntris;
 	//int * tris;  // triangles from points of spaceship
 };
 
 class Radiator : public Plate{ public:
+    double temperature;
 };
 
 class Shield : public Plate{ public:
@@ -141,7 +154,7 @@ class TrusterType : public CatalogItem { public:
 	double veMax;         // maximal exhaust velocity [m/s]
 	bool   exhaustFuel;   // if true the burned fuel is added to propellant mass
 	FuelType  * fuel      = NULL;
-	Comodity  * Propelant = NULL;
+	Commodity  * Propelant = NULL;
 };
 
 class Truster : public ShipComponent { public:
@@ -198,6 +211,10 @@ class SpaceCraft : public CatalogItem { public:
 	std::vector<Pipe>      pipes;
 	// Truss * coarse = NULL;
 	// Truss * fine   = NULL;
+
+	void clear(){
+        nodes.clear(); ropes.clear(); girders.clear(); thrustes.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
+	};
 };
 
 } // namespace SpaceCrafting

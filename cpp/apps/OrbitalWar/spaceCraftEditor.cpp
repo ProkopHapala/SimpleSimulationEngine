@@ -28,13 +28,65 @@
 
 #include "EditSpaceCraft.h"
 
-
-int capsula1=0;
-
 using namespace SpaceCrafting;
 
 enum class EDIT_MODE : int { vertex=0, edge=1, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
 
+
+
+//SpaceCraft craft;
+Truss      truss;
+int glo_truss=0, glo_capsula=0, glo_ship=0;
+
+
+int makeTruss( Truss& truss ){
+
+    //truss.girder1( (Vec3d){-5.0,0.0,0.0}, (Vec3d){5.0,0.0,0.0}, (Vec3d){0.0,1.0,0.0}, 5, 1.0 );
+
+    Truss trussPlan;
+    trussPlan.loadXYZ(  "data/octShip.xyz" );
+    //trussPlan.affineTransform( (Mat3d){5.5,0.0,0.0, 0.0,5.5,0.0, 0.0,0.0,5.5}, false );
+    trussPlan.affineTransform( (Mat3d){6,0.0,0.0, 0.0,6,0.0, 0.0,0.0,6}, false );
+    GirderParams * gpar = new GirderParams [trussPlan.edges.size()];
+    //Vec3d ups  = new Vec3d[trussPlan.edges.size()];
+    Vec3d ups[] = {
+        (Vec3d){0.0,-1.0,0.0},
+        (Vec3d){0.0,+1.0,0.0},
+        (Vec3d){0.0,0.0,-1.0},
+        (Vec3d){0.0,0.0,+1.0},
+        (Vec3d){-1.0,0.0,0.0},
+        (Vec3d){+1.0,0.0,0.0}
+    };
+    //truss.makeGriders( 6, &trussPlan.edges[0], &trussPlan.points[0], gpar, ups );
+    //truss.makeGriders( trussPlan, gpar, ups, NULL );
+    truss.wheel( {0.0,0.0,0.0}, {10.0,0.0,0.0}, {0.0,1.0,0.0}, 50, 0.5 );
+    std::vector<Vec2i> ends;
+    truss.makeGriders( trussPlan, gpar, ups, &ends );
+    truss.autoBridge(ends.size(), &ends[0], 0.8, 0 );
+    truss.panel( {0.0,0.0,0.0}, {5.0,0.0,0.0}, {0.0,5.0,0.0}, {5.0,5.0,0.0}, {5,5}, 1.0 );
+    delete [] gpar;
+
+    int glo = glGenLists(1);
+    glNewList( glo, GL_COMPILE );
+    SpaceCrafting::drawTruss( truss );
+    glEndList();
+
+    return glo;
+
+}
+
+void reloadShip(){
+    theSpaceCraft->clear();
+    //luaL_dofile(theLua, "data/spaceshil1.lua");
+    Lua::dofile(theLua,"data/spaceshil1.lua");
+    //luaL_dostring(theLua, "print('LuaDEBUG 1'); n1 = Node( {-100.0,0.0,0.0} ); print('LuaDEBUG 2'); print(n1)");
+
+    if(glo_ship){ glDeleteLists(glo_ship,1); };
+    glo_ship = glGenLists(1);
+    glNewList( glo_ship, GL_COMPILE );
+    drawSpaceCraft( *theSpaceCraft );
+    glEndList();
+};
 
 
 class SpaceCraftEditGUI : public AppSDL2OGL_3D {
@@ -43,8 +95,7 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 	bool bSmoothLines = 1;
 	bool bWireframe   = 1;
 
-	SpaceCraft craft;
-    Truss      truss;
+
 
     EDIT_MODE edit_mode = EDIT_MODE::vertex;
     //EDIT_MODE edit_mode = EDIT_MODE::edge;
@@ -54,18 +105,23 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 	virtual void draw   ();
 	virtual void drawHUD();
 	//virtual void mouseHandling( );
+	//virtual void camera();
 	virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
+	virtual void keyStateHandling( const Uint8 *keys );
     //virtual void mouseHandling( );
 
 	SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
+
+
+
 SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     //truss.loadXYZ(  "data/octShip.xyz" );
 
     //Lua1.init();
+    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     Vec3f pf;
     Vec3d pd;
@@ -78,59 +134,31 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     print(pd);printf(" // pd\n");
     //exit(0);
 
+    //camera();
 
     theSpaceCraft = new SpaceCraft();
-
     initSpaceCraftingLua();
-    //luaL_dofile(theLua, "data/spaceshil1.lua");
-    Lua::dofile(theLua,"data/spaceshil1.lua");
-    //luaL_dostring(theLua, "print('LuaDEBUG 1'); n1 = Node( {-100.0,0.0,0.0} ); print('LuaDEBUG 2'); print(n1)");
-
-    //exit(0);
-
-    Truss trussPlan;
-    trussPlan.loadXYZ(  "data/octShip.xyz" );
-
-    //trussPlan.affineTransform( (Mat3d){5.5,0.0,0.0, 0.0,5.5,0.0, 0.0,0.0,5.5}, false );
-
-    trussPlan.affineTransform( (Mat3d){6,0.0,0.0, 0.0,6,0.0, 0.0,0.0,6}, false );
-
-    GirderParams * gpar = new GirderParams [trussPlan.edges.size()];
-    //Vec3d ups  = new Vec3d[trussPlan.edges.size()];
-    Vec3d ups[] = {
-        (Vec3d){0.0,-1.0,0.0},
-        (Vec3d){0.0,+1.0,0.0},
-        (Vec3d){0.0,0.0,-1.0},
-        (Vec3d){0.0,0.0,+1.0},
-        (Vec3d){-1.0,0.0,0.0},
-        (Vec3d){+1.0,0.0,0.0}
-    };
-
-    //truss.makeGriders( 6, &trussPlan.edges[0], &trussPlan.points[0], gpar, ups );
-    //truss.makeGriders( trussPlan, gpar, ups, NULL );
+    reloadShip();
 
 
-    truss.wheel( {0.0,0.0,0.0}, {10.0,0.0,0.0}, {0.0,1.0,0.0}, 50, 0.5 );
+    /*
+    glo_truss = makeTruss(truss);
 
-    std::vector<Vec2i> ends;
-    truss.makeGriders( trussPlan, gpar, ups, &ends );
-    truss.autoBridge(ends.size(), &ends[0], 0.8, 0 );
-
-    truss.panel( {0.0,0.0,0.0}, {5.0,0.0,0.0}, {0.0,5.0,0.0}, {5.0,5.0,0.0}, {5,5}, 1.0 );
-
-
-    capsula1 = glGenLists(1);
-    glNewList( capsula1, GL_COMPILE );
+    glo_capsula = glGenLists(1);
+    glNewList( glo_capsula, GL_COMPILE );
     //Draw3D::drawCylinderStrip  ( 16, 10, 10, {0.0,0.0,-16.0,}, {0.0,0.0,16} );
     Draw3D::drawCapsula( (Vec3f){0.0,0.0,-1.0}, (Vec3f){0.0,0.0,1.0}, 2.0, 1.0, 0.7, 0.7, 0.2, 32, false );
     glEndList();
-
-
-    delete [] gpar;
     //delete [] ups;
+    */
 
-    //truss.girder1( (Vec3d){-5.0,0.0,0.0}, (Vec3d){5.0,0.0,0.0}, (Vec3d){0.0,1.0,0.0}, 5, 1.0 );
+
+
 }
+
+//void SpaceCraftEditGUI::camera(){
+//    camera_FreeLook( camPos );
+//}
 
 void SpaceCraftEditGUI::draw(){
     //printf( " ==== frame %i \n", frameCount );
@@ -143,10 +171,11 @@ void SpaceCraftEditGUI::draw(){
 	//glDisable(GL_DEPTH_TEST);
 	glEnable(GL_DEPTH_TEST);
 
-
 	glEnable(GL_LIGHTING);
 	glColor3f(1.0,0.5,1.0);
-	glCallList(capsula1);
+	if(glo_capsula) glCallList(glo_capsula);
+
+
 
     // to make nice antialiased lines without supersampling buffer
     // see  https://www.opengl.org/discussion_boards/showthread.php/176559-GL_LINE_SMOOTH-produces-bold-lines-%28big-width%29
@@ -167,7 +196,13 @@ void SpaceCraftEditGUI::draw(){
         //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
     }
 
-    SpaceCrafting::drawTruss( truss );
+    if(glo_truss) glCallList(glo_truss);
+
+    if(glo_ship) glCallList(glo_ship);
+
+    //Mat3d camMat;
+    //qCamera.toMatrix_T(camMat);
+    Draw3D::drawMatInPos(  (Mat3f)camMat, (Vec3f){0.0,0.0,0.0} );
 
     //printf( "%i\n", EDIT_MODE::vertex );
     if(picked>=0){
@@ -181,11 +216,7 @@ void SpaceCraftEditGUI::draw(){
 
     }
 
-
-
-
     mouse_ray0 = camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
-
     //glColor3f(0.0f,0.0f,0.0f); drawTruss( truss.edges.size(), &truss.edges[0], &truss.points[0] );
     //glColor3f(1.0f,1.0f,1.0f); Draw3D::drawPoints( truss.points.size(), &truss.points[0], 0.1 );
 
@@ -219,6 +250,27 @@ void SpaceCraftEditGUI::mouseHandling( ){
 }
 */
 
+
+
+void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){
+
+    //Mat3d camMat;
+    //qCamera.toMatrix_T(camMat);
+    //Draw3D::drawMatInPos(  (Mat3f)camMat, (Vec3f){0.0,0.0,0.0} );
+    //qCamera.toMatrix(camMat);
+
+    if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
+
+    if( keys[ SDL_SCANCODE_W ] ){ camPos.add_mul( camMat.b, +0.05*zoom ); }
+	if( keys[ SDL_SCANCODE_S ] ){ camPos.add_mul( camMat.b, -0.05*zoom );  }
+	if( keys[ SDL_SCANCODE_A ] ){ camPos.add_mul( camMat.a, -0.05*zoom );  }
+	if( keys[ SDL_SCANCODE_D ] ){ camPos.add_mul( camMat.a, +0.05*zoom );  }
+
+};
+
 void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
     switch( event.type ){
@@ -226,6 +278,8 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 case SDLK_m:  edit_mode = (EDIT_MODE)((((int)edit_mode)+1)%((int)EDIT_MODE::size)); printf("edit_mode %i\n", (int)edit_mode); break;
                 //case SDLK_h:  warrior1->tryJump(); break;
+
+                case SDLK_l: reloadShip();
             }
             break;
         case SDL_MOUSEBUTTONDOWN:

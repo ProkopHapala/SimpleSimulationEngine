@@ -291,6 +291,17 @@ class Mat3TYPE{
 		//a.normalize(); // we don't need this since b,c are orthonormal
 	};
 
+    inline void fromSideUp( const VEC& side, const VEC&  up ){
+		// make orthonormal rotation matrix c=dir; b=(up-<b|c>c)/|b|; a=(c x b)/|a|;
+		a.set(side);
+		//c.normalize(); // we assume dir is already normalized
+		b.set(up);
+		b.add_mul( a, -b.dot(a) );   //
+		b.normalize();
+		c.set_cross(b,a);
+		//a.normalize(); // we don't need this since b,c are orthonormal
+	};
+
 	inline void fromEuler( TYPE phi, TYPE theta, TYPE psi ){
         // http://mathworld.wolfram.com/EulerAngles.html
         TYPE ca=1,sa=0, cb=1,sb=0, cc=1,sc=0;
