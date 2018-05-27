@@ -20,17 +20,24 @@
 #include "GLUtils.h"
 
 // ======================  TestApp
-const int nsamp = 8;
-//const int nsamp = 16;
+//const int nsamp = 8;
+const int nsamp = 16;
 //const int nsamp = 8;
 const int npix  = 10*nsamp*nsamp;
 uint32_t pix   [npix];
 
-float height[npix];
+float heights[npix];
+
+Vec3f samplePs[npix];
 
 
 bool debugPlot = false;
 Vec3d curPos = (Vec3d){5.0,0.0,0.0};
+
+
+char str[2048];
+int  fontTex;
+
 
 const double oct_edge_planes[] = {
 // Equatorial edges [0..10]
@@ -105,7 +112,8 @@ const int oct_fac2neigh[] = {
 };
 
 
-
+bool bNormalize=false;
+bool bRelief=false;
 
 void sampleOctahedron( Vec3d p, uint8_t& iface, double& a, double& b ){
     //iface = (p.x>0) | ( ((uint8_t)(p.y>0))<<1) | ( ((uint8_t)(p.z>0) )<<2);
@@ -172,9 +180,26 @@ void sampleTri( Vec3d p, Vec3i tri, Vec3d* verts, Vec3d& c ){
     c.mul( 1/(c.a + c.b + c.c) );
 }
 
-void drawDiTri( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d, float* height ){
-    float da = 1.0/(n.a+1);
-    float db = 1.0/(n.b+1);
+
+template<typename T>
+void diTri2cartes( T fa, T fb, const Vec3TYPE<T>& a, const Vec3TYPE<T>& b, const Vec3TYPE<T>& c, const Vec3TYPE<T>& d,  Vec3TYPE<T>& p ){
+    T fd = (fa+fb)*0.5;
+    if( fa>fb ){ T f=(fa-fb); p = d*(fd-0.5*f) + c*(1-fd-0.5*f) + a*f; }
+    else       { T f=(fb-fa); p = d*(fd-0.5*f) + c*(1-fd-0.5*f) + b*f; }
+};
+
+void icosa2cartes( int iface, float fa, float fb, Vec3d& p ){
+    Vec2i n = {nsamp,nsamp};
+    int nab = n.a*n.b;
+    Quat4i* f2v  = (Quat4i*)oct_fac2verts;
+    Vec3d*  vs   = (Vec3d*)oct_polar_verts;
+    Quat4i& iv   = f2v[iface];
+    diTri2cartes<double>( fa, fb, vs[iv.z], vs[iv.w], vs[iv.x], vs[iv.y], p );
+};
+
+void drawDiTri( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d, float* hs ){
+    float da = 1.0/n.a;
+    float db = 1.0/n.b;
     /*
     glBegin(GL_TRIANGLES);
     //glVertex3f(a.x,a.y,a.z);  glVertex3f(b.x,b.y,b.z);  glVertex3f(c.x,c.y,c.z);
@@ -188,37 +213,126 @@ void drawDiTri( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, const V
     glEnd();
     return;
     */
-    glPointSize(5);
-    for( int ia = 0; ia<n.a; ia++ ){
+
+    //glPointSize(2);
+    //glPointSize(1);
+
+    int ioff = (hs-heights);
+    //printf("ioff %i %i \n",ioff,ioff/(n.a*n.b));
+    Vec3f* sps = samplePs + ioff;  // a bit hack ... just debug
+
+    for( int ia = 0; ia<n.a-1; ia++ ){
         float fa  =da*(ia);
         float fa_ =da*(ia+1);
         glBegin(GL_TRIANGLE_STRIP);
         //glBegin(GL_POINTS);
-        for( int ib = 0; ib<n.b+1; ib++ ){
+        for( int ib = 0; ib<n.b; ib++ ){
             Vec3f p;
-            float h, fc;
+            float h, fd;
             float fb  =(db*ib);
+            int i;
+            //fd = (fa_+fb)*0.5;
+            //if( fa_>fb ){ float f=(fa_-fb); p = d*(fd-0.5*f) + c*(1-fd-0.5*f)   + a*f; }
+            //else        { float f=(fb-fa_); p = d*(fd-0.5*f) + c*(1-fd-0.5*f)   + b*f; }
+            diTri2cartes<float>( fa_, fb, a,b,c,d, p);
 
-
-
-            fc = (fa_+fb)*0.5;
-            if( fa_>fb ){ float f=(fa_-fb); p = c*(fc-0.5*f) + d*(1-fc-0.5*f)   + a*f; }
-            else        { float f=(fb-fa_); p = c*(fc-0.5*f) + d*(1-fc-0.5*f)   + b*f; }
-            h = height[(ia+1)*n.b+ib]; glColor3f(h,h,h);
-            //p.normalize(); p.mul(1+0.1*(h-0.5));
+            i = (ia+1)*n.b+ib; //if(i>(n.a*n.b)) printf("i = %i", i);
+            h = hs[i];
+            glColor3f(h,h,h);
+            //glColor3f(fa_,h,fb);
+            if(bNormalize) p.normalize();
+            if(bRelief)    p.mul(1+0.1*(h-0.5));
             glVertex3f( p.x,  p.y,  p.z  );
+            sps[i] = p;
 
-            fc = (fa+fb)*0.5;
-            if( fa_>fb ){ float f=(fa-fb); p = c*(fc-0.5*f) + d*(1-fc-0.5*f)   + a*f; }
-            else        { float f=(fb-fa); p = c*(fc-0.5*f) + d*(1-fc-0.5*f)   + b*f; }
-            h = height[ia*n.b+ib]; glColor3f(h,h,h);
-            //p.normalize(); p.mul(1+0.1*(h-0.5));
+            //fd = (fa+fb)*0.5;
+            //if( fa_>fb ){ float f=(fa-fb); p = d*(fd-0.5*f) + c*(1-fd-0.5*f)   + a*f; }
+            //else        { float f=(fb-fa); p = d*(fd-0.5*f) + c*(1-fd-0.5*f)   + b*f; }
+            diTri2cartes<float>( fa, fb, a,b,c,d, p);
+
+            i = ia*n.b+ib;
+            h = hs[i];
+            glColor3f(h,h,h);
+            //glColor3f(fa,h,fb);
+            if(bNormalize) p.normalize();
+            if(bRelief)    p.mul(1+0.1*(h-0.5));
             glVertex3f( p.x,  p.y,  p.z  );
+            sps[i] = p;
+
+            //sprintf( str,"%i,%i|%i", ia,ib,i );
+            //Draw3D::drawText( str, (Vec3d)p, fontTex, 0.02, 0 );
+
             //glVertex3f( p_.x, p_.y, p_.z );
             //printf( "%i: %i %i %i | (%f,%f,%f) \n", i, ia, ib, iface, p.x, p.y, p.z );
         }
         glEnd();
     }
+}
+
+/*
+template<typename T>
+inline T& arrayView( int i, Vec2i view, T * data ){
+    return data[i*view.x+view.y];
+}
+*/
+
+inline int index( int i, Vec2i view ){ return (i*view.x)+view.y; };
+
+void drawDiTri_seam( int n, int n2, const Vec3f& a, const Vec3f& b, const Vec3f& c, float* hs, float* hs2, const Vec2i& view, const Vec2i& view2, float hn ){
+
+    Vec3f* sps  = samplePs + (int)(hs -heights);  // a bit hack ... just debug
+    Vec3f* sps2 = samplePs + (int)(hs2-heights);  // a bit hack ... just debug
+    //printf("sps %i sps2 %i | %i %i \n", sps-samplePs, sps2-samplePs,   sps, sps2  );
+
+    Vec3f db = (b-a)*(1.0/(n ));
+    Vec3f dc = (c-a)*(1.0/(n2));
+    Vec3f p=a;
+    glBegin(GL_TRIANGLE_STRIP);
+    //glBegin(GL_LINES);
+    //glBegin(GL_POINTS);
+    for( int i = 0; i<(n+1); i++ ){
+        float h;
+        int ii;
+        Vec3f p_;
+        ii = index(n-i-1, view2);
+        if(i==n){ h=hn; }else{ h=hs2 [ii]; };
+
+        glColor3f(h,h,h);
+        //glColor3f(1.0,0.0,0.0);
+        p_=p;
+        //p_=sps2[ii];
+        if(bNormalize) p_.normalize();
+        if(bRelief)    p_.mul(1+0.1*(h-0.5));
+        glVertex3f( p_.x,  p_.y,  p_.z  );
+        //glColor3f(1.0,1.0,0.0); glVertex3f( pp.x,  pp.y,  pp.z  );
+        //printf( "(%f,%f,%f)  (%f,%f,%f) \n", p.x, p.y, p.z,  pp.x, pp.y, pp.z );
+
+        if(i<n){
+            //if(bT1){ h = hs[i*n]; }else{ h = hs[i]; };
+            //h = hs2[ia*n.b+ib];
+            ii = index(n-i-1, view); h=hs [ii]; //p_=sps[ii];
+            //p=sps[ii];
+            //printf( "sps  %i %i %f %f %f \n", i, ii, sps[ii].x,  sps[ii].y,  sps[ii].z );
+            //glColor3f(fa,h,fb);
+            glColor3f(h,h,h);
+            //glColor3f(0.0,0.0,1.0);
+            p_ = p + dc;
+            //p_=sps[ii];
+            if(bNormalize) p_.normalize();
+            if(bRelief)    p_.mul(1+0.1*(h-0.5));
+            glVertex3f( p_.x,  p_.y,  p_.z  );
+            //glColor3f(1.0,1.0,0.0); glVertex3f( pp.x,  pp.y,  pp.z  );
+            //glVertex3f( p.x,  p.y,  p.z  );
+            //Draw3D::drawPointCross(p,0.05);
+        }
+        //if(bT1){ h = hs2[i*n]; }else{ h = hs2[i]; };
+
+        //printf( "%i %f %f %f \n", i, p.x,  p.y,  p.z );
+        //printf( "sps2 %i %i %f %f %f \n", i, ii, sps2[ii].x,  sps2[ii].y,  sps2[ii].z );
+        p.add(db);
+    }
+    glEnd();
+
 }
 
 void drawDiTri_Inner( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d, float* height ){
@@ -253,6 +367,7 @@ void drawDiTri_Inner( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, c
     }
 }
 
+/*
 void drawDiTri_edge( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& d, bool bT1, bool bT2, float* hs2, float* hs1 ){
     float da = 1.0/(n.a);
     float db = 1.0/(n.b);
@@ -276,26 +391,49 @@ void drawDiTri_edge( Vec2i n, const Vec3f& a, const Vec3f& b, const Vec3f& c, co
     }
     glEnd();
 }
+*/
 
-void drawIcosaMap( Vec2i n, float* height ){
+void drawIcosaMap( Vec2i n, float* heights ){
     int nab = n.a*n.b;
     Quat4i* f2v = (Quat4i*)oct_fac2verts;
     Quat4i* f2n = (Quat4i*)oct_fac2neigh;
     Vec3d* vs = (Vec3d*)oct_polar_verts;
-    for(int i=0; i<10; i++){
-        Quat4i& iv = f2v[i];
-        float* hs = height+nab*i;
-
+    bNormalize=true;
+    bRelief   =true;
+    for(int i=0; i<5; i++){
+        int i2 = i+1; if(i2>=5) i2=0;
+        Quat4i& iv  = f2v[i];
+        Quat4i& iv2 = f2v[i+5];
+        float* hs   = heights+(nab*i);
+        float* hs2  = heights+(nab*i2);
         drawDiTri( n, (Vec3f)vs[iv.z], (Vec3f)vs[iv.w], (Vec3f)vs[iv.x], (Vec3f)vs[iv.y],  hs  );
+        drawDiTri( n, (Vec3f)vs[iv2.z], (Vec3f)vs[iv2.w], (Vec3f)vs[iv2.x], (Vec3f)vs[iv2.y],  hs+nab*5  );
+        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.y],  (Vec3f)vs[iv.w],  (Vec3f)vs[iv.x],  hs,       hs2,       {n.a,(n.b-1)},  {-1,n.b-1},          0.0           );
+        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.z],  (Vec3f)vs[iv.y],  (Vec3f)vs[iv.x],  hs,       hs2+5*nab, {-1,n.a*n.b-1}, {-n.a,n.a*(n.a-1)},  hs2[0]        );
+        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.z], (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.x], hs+5*nab, hs,        {-1,n.a*n.b-1}, {-n.a,n.a*(n.a-1)}, (hs2+5*nab)[0] );
+        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.w], (Vec3f)vs[iv2.x], hs+5*nab, hs2+5*nab, {n.a,(n.b-1)},  {-1,n.b-1},          0.0           );
+    }
 
-        /*
-        drawDiTri_Inner( n, (Vec3f)vs[iv.x], (Vec3f)vs[iv.y], (Vec3f)vs[iv.z], (Vec3f)vs[iv.w], hs  );
-        int ifc1 =0;
-        float* hs1 = height+nab*i;
-        drawDiTri_edge( n, (Vec3f)vs[iv.y], (Vec3f)vs[iv.z], (Vec3f)vs[iv.x], (Vec3f)vs[iv.y+1], false, false, hs, hs1 );
-        */
+    /*
+    //float hn = 5.0;
+
+    for(int i=0; i<5; i++){
+        Quat4i& iv  = f2v[i];
+        Quat4i& iv2 = f2v[i+5];
+        float* hs = heights+(nab*i);
+        int i2 = i+1; if(i2>=5) i2=0;
+        float * hs2 = heights+(nab*i2);
+        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.y], (Vec3f)vs[iv.w], (Vec3f)vs[iv.x], hs, hs2, {n.a,(n.b-1)}, {-1,n.b-1},10.0 );
+        //drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.y], (Vec3f)vs[iv.z], (Vec3f)vs[iv.x], hs, hs2+5*nab, {1,n.a*(n.b-1)}, {n.a,n.a}, hs2[0]*10 );
+        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.z], (Vec3f)vs[iv.y], (Vec3f)vs[iv.x], hs, hs2+5*nab, {-1,n.a*n.b-1}, {-n.a,n.a*(n.a-1)}, hs2[0] );
+        //drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.z], (Vec3f)vs[iv2.x], hs+5*nab, hs, {1,n.a*(n.b-1)}, {n.a,n.a}, 0 );
+        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.z], (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.x], hs+5*nab, hs, {-1,n.a*n.b-1}, {-n.a,n.a*(n.a-1)}, (hs2+5*nab)[0] );
+        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.w], (Vec3f)vs[iv2.x], hs+5*nab, hs2+5*nab, {n.a,(n.b-1)}, {-1,n.b-1}, 10.0  );
+
 
     }
+    */
+
 }
 
 
@@ -305,8 +443,7 @@ class TestAppSolids : public AppSDL2OGL_3D {
 	int point_cloud;
 	int shape;
 
-	char str[2048];
-	int  fontTex;
+
 
 	// ---- function declarations
 
@@ -322,7 +459,7 @@ TestAppSolids::TestAppSolids( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     for( int i=0; i<npix; i++ ){
         pix[i]=0;
-        height[i] = randf();
+        heights[i] = randf();
     }
 
     debugPlot = false;
@@ -466,9 +603,7 @@ TestAppSolids::TestAppSolids( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         //drawDiTri( (Vec2i){nsamp,nsamp},  (Vec3f)vs[6], (Vec3f)vs[5], (Vec3f)vs[0], (Vec3f)vs[11], height );
 
         //drawDiTri_Inner( (Vec2i){nsamp,nsamp},  (Vec3f)vs[6], (Vec3f)vs[5], (Vec3f)vs[0], (Vec3f)vs[11], height );
-        drawIcosaMap( (Vec2i){nsamp,nsamp}, height );
-
-
+        drawIcosaMap( (Vec2i){nsamp,nsamp}, heights );
 
         glPopMatrix();
 
@@ -562,6 +697,15 @@ void TestAppSolids::draw   (){
     //if( SDL_MOUSEBUTTONDOWN ){ printf("mouse down %i \n", SDL_MOUSEBUTTONDOWN  ); };
 
 
+    /*
+    Quat4i* f2v = (Quat4i*)oct_fac2verts;
+    Quat4i* f2n = (Quat4i*)oct_fac2neigh;
+    Vec3d* vs = (Vec3d*)oct_polar_verts;
+    Quat4i& iv = f2v[0];
+    drawDiTri( {nsamp,nsamp}, (Vec3f)vs[iv.z], (Vec3f)vs[iv.w], (Vec3f)vs[iv.x], (Vec3f)vs[iv.y],  heights  );
+
+    drawDiTri_seam( nsamp, nsamp, (Vec3f)vs[iv.x], (Vec3f)vs[iv.z], (Vec3f)vs[iv.y], heights, heights, {1,nsamp*(nsamp-1)}, {1,0} );
+    */
 
 	Draw3D::drawAxis ( 3.0f );
 
