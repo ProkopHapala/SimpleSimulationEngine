@@ -57,9 +57,13 @@ Rope(n2,n4, 25, "Kevlar");
 Radiator( g6,0.2,0.8, g7,0.1,0.8, 1280.0 )
 Radiator( g6,0.2,0.8, g8,0.1,0.8, 1280.0 )
 
+--      pos,      dir,  {r1,r2,l}, comodity 
+Tank( {16,16,16}, zvec, {12.0,8.0,50.0}, "H2")
 
+--      node1,2, up,  nseg    R     {width,height} 
+Ring( n0, n5, xvec, 16, 160.0, {8.0,5.0}, "Steel" )
 
-Tank( {16,16,16}, zvec, {50.0,10.0}, "H2");
+--  There should be mechanism how to generate nodes on-top of ship components (anchor points)
 
 
 

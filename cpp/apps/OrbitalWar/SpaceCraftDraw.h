@@ -49,7 +49,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft ){
     //for( None nd : nodes ){};
     const std::vector<Node>& nodes   = spaceCraft.nodes;
     const std::vector<Girder>& girders = spaceCraft.girders;
-
+    // --- Ropes
     glDisable(GL_CULL_FACE);
     glLineWidth(0.5);
     glColor3f(0.0,0.0,0.0);
@@ -65,6 +65,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft ){
         Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
         //Draw3D::drawText3D( str, (p0+p1)*0.5, (Vec3f){1.0,0.0,0.0}, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
     };
+    // --- Girders
     glLineWidth(3);
     glEnable(GL_LIGHTING);
     glColor3f(0.1,0.1,0.5);
@@ -73,7 +74,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft ){
         Vec3f p1=(Vec3f)nodes[gd.p1].pos;
         glEnable( GL_BLEND );
         glEnable(GL_DEPTH_TEST);
-        Draw3D::drawLine( nodes[gd.p0].pos,nodes[gd.p1].pos );
+        Draw3D::drawLine( p0,p1 );
         //Draw3D::drawCylinderStrip( 6, 1.0,1.0, p0, p1 );
 
         sprintf( str, "Girder_%03i", gd.id );
@@ -81,7 +82,25 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft ){
         //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
         Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
     };
+    // --- Rings
+    glLineWidth(3);
+    glEnable(GL_LIGHTING);
+    glColor3f(0.1,0.1,0.5);
+    for( const Ring& o : spaceCraft.rings ){
+        Vec3f p0=(Vec3f)nodes[o.p0].pos;
+        Vec3f p1=(Vec3f)nodes[o.p1].pos;
+        Vec3f uax = (p1-p0); uax.normalize();
+        glEnable( GL_BLEND );
+        glEnable(GL_DEPTH_TEST);
+        Draw3D::drawCircleAxis( o.nseg, (p0+p1)*0.5f, (Vec3f)o.up, uax, o.R );
+        //Draw3D::drawCylinderStrip( 6, 1.0,1.0, p0, p1 );
 
+        //sprintf( str, "Girder_%03i", gd.id );
+        //Vec3f d = p1-p0; d.normalize();
+        //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
+        //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
+    };
+    // --- Radiators
     glLineWidth(3);
     printf("");
     glColor3f(0.5,0.5,0.5);
@@ -107,10 +126,11 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft ){
         //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
         //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
     };
+    // --- Tanks
     glShadeModel(GL_SMOOTH);
     glEnable(GL_LIGHTING);
     for( const Tank& o : spaceCraft.tanks ){
-        Draw3D::drawCapsula( (Vec3f)(o.pose.pos+o.pose.rot.c*(o.length*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.length*-0.5)), o.radius, o.radius, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
+        Draw3D::drawCapsula( (Vec3f)(o.pose.pos+o.pose.rot.c*(o.span.c*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.span.c*-0.5)), o.span.a, o.span.b, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
         //sprintf( str, "Radiator_%03i", gd.id );
         //Vec3f d = p1-p0; d.normalize();
         //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );

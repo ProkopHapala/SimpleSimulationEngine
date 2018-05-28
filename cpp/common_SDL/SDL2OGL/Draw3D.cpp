@@ -480,32 +480,63 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
 };
 
 
-int drawCircleAxis( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis, double dca, double dsa ){
-    Vec3d v; v.set(v0);
+int drawParaboloid     ( Vec3f p0, Vec3f ax, float r, float l, float nR, int nPhi, bool capped ){
+    float L = ax.normalize();
+    Vec3f up,left;       ax.getSomeOrtho(up,left);
+    Vec2f cph=Vec2fX, dph;
+    dph.fromAngle( 2*M_PI/nPhi );
+    float dr = r/nR;
+    float a  = 1.0; // TODO
+    for(int ir=0; ir<nR; ir++){
+        glBegin(GL_TRIANGLE_STRIP);
+        //glBegin(GL_LINES);
+        float r1 =(ir-1)*dr;
+        float r2 =(ir  )*dr;
+        for(int iph=0; iph<(nPhi+1); iph++){
+            float h1 = a*r1*r1;
+            float h2 = a*r2*r2;
+            Vec3f pa = p0 + left*(cph.x*r1) + up*(cph.y*r1) + ax*h1;
+            Vec3f pb = p0 + left*(cph.x*r2) + up*(cph.y*r2) + ax*h2;
+            //Vec3f na = left*(cph.x) + up*(cph.y)*cth.x  + ax*cth.;
+            //Vec3f nb = left*(cph.x) + up*(cph.y)*cth_.x + ax*cth_.y;
+            //glNormal3f(na.x,na.y,na.z);
+            glVertex3f(pa.x,pa.y,pa.z);
+            //glNormal3f(nb.x,nb.y,nb.z);
+            glVertex3f(pb.x,pb.y,pb.z);
+            cph.mul_cmplx(dph);
+        }
+        glEnd();
+    }
+
+};
+
+
+int drawCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R, double dca, double dsa ){
+    Vec3f v; v.set(v0);
     glBegin( GL_LINE_LOOP );
     for( int i=0; i<n; i++ ){
-        glVertex3f( (float)( pos.x+v.x ), (float)( pos.y+v.y ), (float)( pos.z+v.z )  );
+        glVertex3f( pos.x+v.x*R, pos.y+v.y*R, pos.z+v.z*R );
         //printf( " drawCircleAxis %i (%3.3f,%3.3f,%3.3f) \n", i, v.x, v.y, v.z );
         v.rotate_csa( dca, dsa, uaxis );
     }
     glEnd();
 }
 
-int drawCircleAxis( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis ){
+int drawCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R ){
     double dphi = 2*M_PI/n;
     double dca  = cos( dphi );
     double dsa  = sin( dphi );
-    return drawCircleAxis( n, pos, v0, uaxis, dca, dsa );
+    return drawCircleAxis( n, pos, v0, uaxis, R, dca, dsa );
 }
 
-int drawSphereOctLines( int n, double r, const Vec3d& pos ){
+int drawSphereOctLines( int n, float r, const Vec3f& pos, float R ){
 	int nvert=0;
     double dphi = 2*M_PI/n;
     double dca  = cos( dphi );
     double dsa  = sin( dphi );
-    nvert += drawCircleAxis( n, pos, {0,r,0}, {1.0d,0.0d,0.0d}, dca, dsa );
-    nvert += drawCircleAxis( n, pos, {0,0,r}, {0.0d,1.0d,0.0d}, dca, dsa );
-    nvert += drawCircleAxis( n, pos, {r,0,0}, {0.0d,0.0d,1.0d}, dca, dsa );
+    nvert += drawCircleAxis( n, pos, {0,r,0}, {1.0d,0.0d,0.0d}, R, dca, dsa );
+    nvert += drawCircleAxis( n, pos, {0,0,r}, {0.0d,1.0d,0.0d}, R, dca, dsa );
+    nvert += drawCircleAxis( n, pos, {r,0,0}, {0.0d,0.0d,1.0d}, R, dca, dsa );
 	return nvert;
 };
 
