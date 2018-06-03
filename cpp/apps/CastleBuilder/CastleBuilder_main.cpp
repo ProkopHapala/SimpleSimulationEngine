@@ -18,7 +18,6 @@
 #include "CastleWorld.h"
 
 #include "testUtils.h"
-
 // ======================  TestApp
 
 class CastleBuilderSingle : public AppSDL2OGL{

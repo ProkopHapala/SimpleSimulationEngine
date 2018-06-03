@@ -29,7 +29,6 @@
 #include "FormationWorld.h"
 
 char strBuf[0x10000];
-
 /*
 
 Performance:

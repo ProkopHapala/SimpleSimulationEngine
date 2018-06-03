@@ -1,10 +1,8 @@
 
-
 //#define SPEED_TEST
 
 //#include <ctime>
 //#include <iostream>
-
 #include <stdio.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -60,11 +58,8 @@
 
 //#include "AeroCraftDesign.h"
 
-
 Vec3d opos=(Vec3d){0.0,0.0,0.0};
 double traveledDistance=0;
-
-
 
 // ====================================
 //      AeroCraftGUI
