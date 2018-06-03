@@ -69,6 +69,7 @@ class Vec3TYPE{
     inline void div( const VEC&  v ) { x/=v.x; y/=v.y; z/=v.z; };
 
     inline void set_inv( const VEC&  v ) { x=1/v.x; y=1/v.y; z=1/v.z; };
+    inline VEC  get_inv()                { VEC o; o.x=1/x; o.y=1/y; o.z=1/z; return o; };
 
     inline void add( TYPE fx, TYPE fy, TYPE fz ) { x+=fx; y+=fy; z+=fz; };
     inline void sub( TYPE fx, TYPE fy, TYPE fz ) { x-=fx; y-=fy; z-=fz; };

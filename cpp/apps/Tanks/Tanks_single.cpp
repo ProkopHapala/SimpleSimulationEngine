@@ -364,17 +364,34 @@ void Tanks_single::draw(){
     for( Warrior3D * w : world.warriors ){
         Tank * tank =  ((Tank*)w);
 
+        Draw3D::drawShape( tank->pos, tank->qrot.get_inv(), tank->hull.glo_armor );
+
+        Mat3d grot;
+        tank->turret.globalRotT(tank->rotMat, grot);
+
+        Draw3D::drawMatInPos( grot*60, tank->pos + (Vec3d){0.0,1.0,0.0} );
+        glColor3f(1.0,1.0,1.0);
+        Draw3D::drawVecInPos( tank->gun_rot, tank->pos + (Vec3d){0.0,1.0,0.0} );
+
+
+        Draw3D::drawShape( tank->pos, grot, tank->turret.glo_armor  );
+
+        /*
         Mat3d grot;
         //globalRot( const Mat3d& rot0, Mat3d& grot );
         tank->turret.globalRotT(tank->rotMat, grot);
-        Draw3D::drawShapeT( tank->pos, tank->qrot, tank->hull.glo_armor  );
+        //Draw3D::drawShapeT( tank->pos, tank->qrot, tank->hull.glo_armor  );
+        Draw3D::drawShape( tank->pos, tank->qrot.get_inv(), tank->hull.glo_armor );
         //Draw3D::drawShapeT( tank->pos, tank->qrot, tank->turret.glo_armor  );
         Draw3D::drawShape( tank->pos, grot, tank->turret.glo_armor  );
         drawTankWheels(tank);
         //Mat3d setT( const MAT& M );
         Mat3d rotMat; tank->qrot.toMatrix_T(rotMat);
-        Draw3D::drawMatInPos( rotMat*10, tank->pos );
+        Draw3D::drawMatInPos( rotMat*60, tank->pos               );
+        Draw3D::drawMatInPos( rotMat*60, tank->turret.pos );
         glColor3f(1.0f,1.0f,1.0f); Draw3D::drawVecInPos( tank->gun_rot*10.0, tank->pos );
+        */
+
     }
 
     //glCallList( warrior1->hull  .glo_captions ); // TODO : does not work because of Draw::billboardCamProj contains ::glGetFloatv (GL_MODELVIEW_MATRIX,  glModel);

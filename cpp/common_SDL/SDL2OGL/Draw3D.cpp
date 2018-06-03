@@ -1,5 +1,5 @@
 
-//#include <SDL2/SDL.h>
+#include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
 #include "Vec2.h"
@@ -56,6 +56,11 @@ void drawLine( const Vec3f& p1, const Vec3f& p2 ){
 	glEnd();
 };
 
+
+
+
+
+
 void drawPolyLine( int n, Vec3d * ps, bool closed ){   // closed=false
     //printf("%i %i\n", n, closed );
     if(closed){ glBegin(GL_LINE_LOOP); }else{ glBegin(GL_LINE_STRIP); }
@@ -66,7 +71,7 @@ void drawPolyLine( int n, Vec3d * ps, bool closed ){   // closed=false
     glEnd();
 };
 
-void drawScale( const Vec3f& p1, const Vec3f& p2, const Vec3f& up, double tick, double sza, double szb ){
+void drawScale( const Vec3f& p1, const Vec3f& p2, const Vec3f& up, float tick, float sza, float szb ){
 	//glDisable (GL_LIGHTING);
 	Vec3f d,a,b,p;
 	d.set_sub( p2, p1 );
@@ -119,34 +124,37 @@ void drawMatInPos( const Mat3f& mat, const Vec3f& pos ){
 	glEnd();
 };
 
-
-void drawShape( const Vec3f& pos, const Mat3f& rot, int shape ){
+void drawShape( const Vec3f& pos, const Mat3f& rot, int shape, bool trasposed ){
 	glPushMatrix();
 	float glMat[16];
-	toGLMat( pos, rot, glMat );
+	if( trasposed ){
+        toGLMatT ( pos, rot, glMat );
+	}else{
+        toGLMat( pos, rot, glMat );
+	}
 	glMultMatrixf( glMat );
 	glCallList( shape );
 	glPopMatrix();
 };
 
-void drawShape( const Vec3d& pos, const Mat3d& rot, int shape ){
+void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape ){
 	glPushMatrix();
 	float glMat[16];
-	toGLMat( pos, rot, glMat );
-	glMultMatrixf( glMat );
-	glCallList( shape );
-	glPopMatrix();
-};
-void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape ){
-	glPushMatrix();
-	float glMat[16];
-	toGLMat( pos, qrot, glMat );
+	toGLMat ( pos, qrot, glMat );
+	/*
+	if( trasposed ){
+        toGLMat ( pos, qrot, glMat );
+	}else{
+        toGLMatT( pos, qrot, glMat );
+	}
+	*/
 	glMultMatrixf( glMat );
 	glCallList( shape );
 	glPopMatrix();
 };
 
 
+/*
 void drawShapeT( const Vec3f& pos, const Mat3f& rot, int shape ){
 	glPushMatrix();
 	float glMat[16];
@@ -174,7 +182,7 @@ void drawShapeT    ( const Vec3d& pos, const Quat4d& qrot, int shape ){
 	glCallList( shape );
 	glPopMatrix();
 };
-
+*/
 
 int drawConeFan( int n, float r, const Vec3f& base, const Vec3f& tip ){
 	int nvert=0;
@@ -360,10 +368,9 @@ int drawSphereTriangle( int n, float r, const Vec3f& pos, const Vec3f& a, const 
 	return nvert;
 };
 
-int drawSphere_oct( int n, double r_, const Vec3d& pos_ ){
+int drawSphere_oct( int n, float r, const Vec3f& pos ){
 	int nvert=0;
-	Vec3f pos,px,mx,py,my,pz,mz;
-	convert( pos_, pos ); float r = (float)r_;
+	Vec3f px,mx,py,my,pz,mz;
 	px.set( 1,0,0); py.set(0, 1,0); pz.set(0,0, 1);
 	mx.set(-1,0,0); my.set(0,-1,0); mz.set(0,0,-1);
 	nvert += drawSphereTriangle( n, r, pos, mz, mx, my );
@@ -511,7 +518,7 @@ int drawParaboloid     ( Vec3f p0, Vec3f ax, float r, float l, float nR, int nPh
 };
 
 
-int drawCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R, double dca, double dsa ){
+int drawCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R, float dca, float dsa ){
     Vec3f v; v.set(v0);
     glBegin( GL_LINE_LOOP );
     for( int i=0; i<n; i++ ){
@@ -523,20 +530,20 @@ int drawCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis
 }
 
 int drawCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R ){
-    double dphi = 2*M_PI/n;
-    double dca  = cos( dphi );
-    double dsa  = sin( dphi );
+    float dphi = 2*M_PI/n;
+    float dca  = cos( dphi );
+    float dsa  = sin( dphi );
     return drawCircleAxis( n, pos, v0, uaxis, R, dca, dsa );
 }
 
-int drawSphereOctLines( int n, float r, const Vec3f& pos, float R ){
+int drawSphereOctLines( int n, float R, const Vec3f& pos ){
 	int nvert=0;
-    double dphi = 2*M_PI/n;
-    double dca  = cos( dphi );
-    double dsa  = sin( dphi );
-    nvert += drawCircleAxis( n, pos, {0,r,0}, {1.0d,0.0d,0.0d}, R, dca, dsa );
-    nvert += drawCircleAxis( n, pos, {0,0,r}, {0.0d,1.0d,0.0d}, R, dca, dsa );
-    nvert += drawCircleAxis( n, pos, {r,0,0}, {0.0d,0.0d,1.0d}, R, dca, dsa );
+    float dphi = 2*M_PI/n;
+    float dca  = cos( dphi );
+    float dsa  = sin( dphi );
+    nvert += drawCircleAxis( n, pos, {0,1,0}, {1.0d,0.0d,0.0d}, R, dca, dsa );
+    nvert += drawCircleAxis( n, pos, {0,0,1}, {0.0d,1.0d,0.0d}, R, dca, dsa );
+    nvert += drawCircleAxis( n, pos, {1,0,0}, {0.0d,0.0d,1.0d}, R, dca, dsa );
 	return nvert;
 };
 
@@ -679,7 +686,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 
     };
 
-    void drawKite( const Vec3d& pos, const Mat3d& rot, double sz ){
+    void drawKite( const Vec3f& pos, const Mat3f& rot, double sz ){
 	    //drawLine( const Vec3d& p1, const Vec3d& p2 );
 	    //double sz = sqrt( area );
 	    //glEnable (GL_LIGHTING);
@@ -693,14 +700,14 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 	    glEnd();
     };
 
-    void drawPanel( const Vec3d& pos, const Mat3d& rot, const Vec2d& sz ){
+    void drawPanel( const Vec3f& pos, const Mat3f& rot, const Vec2f& sz ){
 	    //drawLine( const Vec3d& p1, const Vec3d& p2 );
 	    //double sz = sqrt( area );
 	    //glEnable (GL_LIGHTING);
 	    //glColor3f( 0.5f,0.5f,0.5f );
 	    glBegin  (GL_QUADS);
 		    glNormal3f( rot.b.x, rot.b.y, rot.b.z );
-		    Vec3d p;
+		    Vec3f p;
 		    p=pos-rot.a*sz.a + rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
 		    p=pos-rot.a*sz.a - rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
 		    p=pos+rot.a*sz.a - rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
@@ -842,7 +849,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         }
     }
 
-    void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int iend ){
+    void drawText( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend ){
         glDisable    ( GL_LIGHTING   );
         glDisable    ( GL_DEPTH_TEST );
         glShadeModel ( GL_FLAT       );
@@ -888,6 +895,21 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         glEnd();
     };
 
+    void drawColorScale( int n, Vec3d pos, Vec3d dir, Vec3d up, void (_colorFunc_)(float f) ){
+        glBegin(GL_TRIANGLE_STRIP);
+        double d = 1.0/(n-1);
+        for(int i=0; i<n; i++){
+            double f = i*d;
+            _colorFunc_( f );
+            //glColor3f(1.0,1.0,1.0);
+            Vec3d p = pos + dir*f;
+            glVertex3f( (float)(p.x     ),(float)( p.y     ),(float)( p.z     ) );
+            glVertex3f( (float)(p.x+up.x),(float)( p.y+up.y),(float)( p.z+up.z) );
+            //printf( "(%g,%g,%g) (%g,%g,%g) \n", p.x, p.y, p.z, (float)(pos.x+up.x),(float)( pos.y+up.y),(float)( pos.z+up.z)  );
+        }
+        glEnd();
+    }
+
 // =================
 // from drawUtils.h
 // =================
@@ -906,26 +928,24 @@ void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float 
 
 
 
-void drawBBox( const Vec3d& p0, const Vec3d& p1 ){
+void drawBBox( const Vec3f& p0, const Vec3f& p1 ){
 	glBegin(GL_LINES);
-		glVertex3f( (float)p0.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p1.x, (float)p0.y, (float)p0.z );
-		glVertex3f( (float)p0.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p0.x, (float)p1.y, (float)p0.z );
-		glVertex3f( (float)p0.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p0.x, (float)p0.y, (float)p1.z );
-        glVertex3f( (float)p1.x, (float)p1.y, (float)p1.z ); glVertex3f( (float)p0.x, (float)p1.y, (float)p1.z );
-		glVertex3f( (float)p1.x, (float)p1.y, (float)p1.z ); glVertex3f( (float)p1.x, (float)p0.y, (float)p1.z );
-		glVertex3f( (float)p1.x, (float)p1.y, (float)p1.z ); glVertex3f( (float)p1.x, (float)p1.y, (float)p0.z );
-		glVertex3f( (float)p1.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p1.x, (float)p1.y, (float)p0.z );
-		glVertex3f( (float)p1.x, (float)p0.y, (float)p0.z ); glVertex3f( (float)p1.x, (float)p0.y, (float)p1.z );
-		glVertex3f( (float)p0.x, (float)p1.y, (float)p0.z ); glVertex3f( (float)p1.x, (float)p1.y, (float)p0.z );
-		glVertex3f( (float)p0.x, (float)p1.y, (float)p0.z ); glVertex3f( (float)p0.x, (float)p1.y, (float)p1.z );
-		glVertex3f( (float)p0.x, (float)p0.y, (float)p1.z ); glVertex3f( (float)p1.x, (float)p0.y, (float)p1.z );
-		glVertex3f( (float)p0.x, (float)p0.y, (float)p1.z ); glVertex3f( (float)p0.x, (float)p1.y, (float)p1.z );
+		glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p0.y, p0.z );
+		glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p0.x, p1.y, p0.z );
+		glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p0.x, p0.y, p1.z );
+        glVertex3f( p1.x, p1.y, p1.z ); glVertex3f( p0.x, p1.y, p1.z );
+		glVertex3f( p1.x, p1.y, p1.z ); glVertex3f( p1.x, p0.y, p1.z );
+		glVertex3f( p1.x, p1.y, p1.z ); glVertex3f( p1.x, p1.y, p0.z );
+		glVertex3f( p1.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p0.z );
+		glVertex3f( p1.x, p0.y, p0.z ); glVertex3f( p1.x, p0.y, p1.z );
+		glVertex3f( p0.x, p1.y, p0.z ); glVertex3f( p1.x, p1.y, p0.z );
+		glVertex3f( p0.x, p1.y, p0.z ); glVertex3f( p0.x, p1.y, p1.z );
+		glVertex3f( p0.x, p0.y, p1.z ); glVertex3f( p1.x, p0.y, p1.z );
+		glVertex3f( p0.x, p0.y, p1.z ); glVertex3f(p0.x, p1.y, p1.z );
 	glEnd();
 };
 
-void drawTriclinicBox( const Mat3d& lvec_, const Vec3d& c0_, const Vec3d& c1_ ){
-    Mat3f lvec; convert(lvec_,lvec);
-    Vec3f c0,c1; convert(c0_,c0); convert(c1_,c1);
+void drawTriclinicBox( const Mat3f& lvec, const Vec3f& c0, const Vec3f& c1 ){
     Vec3f p0,p1;
 	glBegin(GL_LINES);
         lvec.dot_to({c0.x,c0.y,c0.z},p0);
@@ -963,6 +983,7 @@ void drawAxis( float sc ){
 		glColor3f( 0, 0, 1 ); glVertex3f( 0, 0, 0 ); glVertex3f( 0, 0, 1*sc );
 	glEnd();
 };
+
 
 }; // namespace Draw3D
 

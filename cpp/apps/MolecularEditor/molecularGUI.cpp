@@ -205,8 +205,13 @@ void MolecularEditorApp::draw(){
 	glEnable(GL_LIGHTING);
     for (int i=0; i<world.nmols; i++){
         if( world.instances[i]->viewlist > 0 ){
+
+            /*
+
+            glPushMatrix();
             Mat3d rotmat;
             float glMat[16];
+
             //rot[i].toMatrix_unitary2( rotmat );
             //rot[i].toMatrix_unitary( rotmat );
             //printf( "%i   (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f,%3.3f)\n", i,  world.pos[i].x,world.pos[i].y,world.pos[i].z,   world.rot[i].x,world.rot[i].y,world.rot[i].z,world.rot[i].w  );
@@ -214,13 +219,19 @@ void MolecularEditorApp::draw(){
             glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.pos[i],1.0);
             Draw3D::toGLMat( world.pos[i], rotmat, glMat ); // somehow not working
             //Draw3D::toGLMat( {0.0,0.0,0.0}, rotmat, glMat );
-            glPushMatrix();
             glMultMatrixf( glMat );
             //glTranslatef( world.pos[i].x,world.pos[i].y,world.pos[i].z );
             //glMultTransposeMatrixf( glMat );
             //glLoadMatrixf( glMat );
+
             glCallList   ( world.instances[i]->viewlist );
             glPopMatrix();
+
+            */
+
+            //Draw3D::drawMatInPos( world.rot[i], world.pos[i] );
+            Draw3D::drawShape( world.pos[i], world.rot[i], world.instances[i]->viewlist );
+
         }
     };
 

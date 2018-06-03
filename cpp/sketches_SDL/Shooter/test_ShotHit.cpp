@@ -109,7 +109,7 @@ TestAppShotHit::TestAppShotHit( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
     glNewList( defaultObjectHitShape , GL_COMPILE );
         glDisable ( GL_LIGHTING );
         Draw3D::drawAxis ( 3.0f );
-        glColor3f( 0.8f, 0.0f, 0.8f ); Draw3D::drawSphereOctLines( 16, 2.0, {0.0,0.0,0.0} );
+        glColor3f( 0.8f, 0.0f, 0.8f ); Draw3D::drawSphereOctLines( 16, 2.0, (Vec3f){0.0,0.0,0.0} );
     glEndList();
 
     objects = new Vec3d[ nobject ];

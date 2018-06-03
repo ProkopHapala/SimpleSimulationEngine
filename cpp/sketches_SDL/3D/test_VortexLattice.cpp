@@ -154,7 +154,7 @@ void testILineFinite(){
     glEnd();
     //exit(0);
     glColor3f(0.0,0.0,0.0);
-    Draw3D::drawLine( {0.0,0.0,0.0}, {10.0,0.0,0.0} );
+    Draw3D::drawLine( (Vec3f){0.0,0.0,0.0}, (Vec3f){10.0,0.0,0.0} );
 
     //printf(" B_ana (%f,%f,%f) B_num (%f,%f,%f) \n", B_ana.x,B_ana.y,B_ana.z, B_num.x,B_num.y,B_num.z );
     printf(" |B_ana| %f |B_num| %f \n", B_ana.norm()/VortexQuantum, B_num.norm()/VortexQuantum );

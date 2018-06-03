@@ -244,7 +244,7 @@ void TestApp_SpaceFlightODE::draw(){
     //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( {0.0,0.0,0.0}, 0.5 );
     glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( {0.0,0.0,0.0}, 0.1 );
     glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross( planet.pos*view_scale, 0.5 );
-    glColor3f(0.0f,0.0f,0.0f); Draw3D::drawCircleAxis( 64, planet.pos*view_scale, {0.0,planet.R*view_scale,0.0}, {0.0,0.0,1.0} );
+    glColor3f(0.0f,0.0f,0.0f); Draw3D::drawCircleAxis( 64, (Vec3f)(planet.pos*view_scale), (Vec3f){0.0,1.0,0.0}, (Vec3f){0.0,0.0,1.0}, planet.R*view_scale );
 
 	glDisable ( GL_LIGHTING );
 

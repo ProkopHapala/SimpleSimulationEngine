@@ -171,7 +171,7 @@ void TestAppCollision::draw(){
             //Draw3D::drawShape( o->controler->pos, o->controler->rotMat, o->shape ); // WRONG : invert rotation
             //Draw3D::drawShape( o->controler->pos, o->controler->qrot, o->shape ); // WRONG : invert rotation
             //Draw3D::drawShapeT( o->controler->pos, o->controler->qrot, o->shape );
-            Draw3D::drawShapeT( o->controler->pos, o->controler->rotMat, o->shape );
+            Draw3D::drawShape( o->controler->pos, o->controler->rotMat, o->shape, true );
         }
     }
 

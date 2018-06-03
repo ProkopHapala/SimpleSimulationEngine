@@ -7,6 +7,7 @@
 #include "Draw.h"
 #include "Draw2D.h"
 #include "Draw3D.h"
+#include "Draw3D_Surf.h"
 #include "SDL_utils.h"
 
 #include <vector>
@@ -82,6 +83,15 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft ){
         //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
         Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
     };
+    glLineWidth(5);
+    glColor3f(0.6,0.1,0.1);
+    for( const Gun& o : spaceCraft.guns ){
+        Vec3f p0=(Vec3f)nodes[ girders[o.suppId].p0 ].pos;
+        Vec3f p1=(Vec3f)nodes[ girders[o.suppId].p1 ].pos;
+        Vec3f d;
+        d = p1-p0; p1=p0+d*o.suppSpan.x;  p0.add_mul( d,o.suppSpan.y);
+        Draw3D::drawLine( p0,p1 );
+    };
     // --- Rings
     glLineWidth(3);
     glEnable(GL_LIGHTING);
@@ -136,6 +146,42 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft ){
         //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
         //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
     };
+
+    // --- Thrusters
+    glLineWidth(1);
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_LIGHTING);
+    for( const Thruster& o : spaceCraft.thrusters ){
+
+        //Draw3D::drawMatInPos( (Mat3f)o.pose.rot*10.0, (Vec3f)o.pose.pos );
+        glPushMatrix();
+        //glTranslatef( o.pose.pos.x, o.pose.pos.y, o.pose.pos.z );
+        Draw3D::rigidTransform( (Vec3f)o.pose.pos, (Mat3f)o.pose.rot, (Vec3f){1.0,1.0,1.0}, false);
+        float R = o.span.b;
+        float L = o.span.c;
+        printf( "Thruster R %f L %f", R, L );
+    //  drawUV_Cone( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire ){
+        //Draw3D::drawUV_Cone( {10,10}, {0.0,0.0}, {1.0,M_PI*2}, o.span.a, o.span.b, o.span.c, 0.5, false );
+        //Draw3D::drawUV_Cone( {10,10}, {0.0,0.0}, {1.0,M_PI*2}, o.span.a, o.span.b, o.span.c, 0.5, true );
+        //Draw3D::drawUV_Teardrop( {10,10}, {0.0,0.0}, {1.0,M_PI*2}, o.span.a, o.span.b*0.1, o.span.c, 0.5, true );
+        Draw3D::drawUV_Parabola( {10,10}, {0.0,0.0}, {1.0,M_PI*2}, R, -L, 0.5, true );
+        //glColor3f(1.0,0.0,0.0);
+        //Draw3D::drawUV_Hyperbola( {20,20}, {0.0,0.0}, {1.0,M_PI*2},  o.span.a, o.span.b, o.span.c, 0.5, true );
+        //Draw3D::drawUV_Hyperbola( {20,20}, {0.0,0.0}, {1.0,M_PI*2},   5.0, 8.0, 5.0, 0.5, true );
+        //glColor3f(0.0,0.0,1.0);
+        //Draw3D::drawUV_Hyperbola( {20,20}, {0.0,0.0}, {1.0,M_PI*2}, -o.span.a, o.span.b, o.span.c, 0.5, true );
+        //Draw3D::drawUV_Hyperbola( {20,20}, {0.0,0.0}, {1.0,M_PI*2},  -5.0, 8.0, 5.0, 0.5, true );
+
+        //Draw3D::drawShere( (Vec3f)(o.pose.pos+o.pose.rot.c*(o.span.c*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.span.c*-0.5)), o.span.a, o.span.b, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
+        //sprintf( str, "Radiator_%03i", gd.id );
+        //Vec3f d = p1-p0; d.normalize();
+        //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
+        //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
+        glPopMatrix();
+    };
+
+    // --- Guns
+
     //for( Rope& rp : ropes ){ drawRope(rp);
     //
     //};

@@ -108,10 +108,19 @@ class Mat3TYPE{
     inline void mul ( TYPE f        ){ a.mul(f);    b.mul(f);    c.mul(f);    };
     inline void mul ( const VEC& va ){ a.mul(va.a); b.mul(va.b); c.mul(va.c); };
 
+    inline void div ( const VEC& va ){ a.mul(1/va.a); b.mul(1/va.b); c.mul(1/va.c); };
+
     inline void mulT ( const VEC& va ){
 		ax*=va.x; ay*=va.y; az*=va.z;
 		bx*=va.x; by*=va.y; bz*=va.z;
 		cx*=va.x; cy*=va.y; cz*=va.z;
+	};
+
+    inline void divT ( const VEC& va ){
+        TYPE fx=1/va.x,fy=1/va.y,fz=1/va.z;
+		ax*=fx; ay*=fy; az*=fz;
+		bx*=fx; by*=fy; bz*=fz;
+		cx*=fx; cy*=fy; cz*=fz;
 	};
 
 

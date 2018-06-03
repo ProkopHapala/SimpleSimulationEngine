@@ -162,7 +162,7 @@ class Collector : public Plate{ public:
 
 // ==== Motors
 
-class TrusterType : public CatalogItem { public:
+class ThrusterType : public CatalogItem { public:
 	double efficiency;    // how much power is used for acceleration of propelant
 	double veMin;         // minimal exhaust velocity [m/s]
 	double veMax;         // maximal exhaust velocity [m/s]
@@ -171,8 +171,8 @@ class TrusterType : public CatalogItem { public:
 	Commodity  * Propelant = NULL;
 };
 
-class Truster : public Modul { public:
-	TrusterType * typ = NULL;
+class Thruster : public Modul { public:
+	ThrusterType * typ = NULL;
 	double thrust;
 	double power;
 	double consumption;
@@ -197,21 +197,34 @@ class Slider : public ShipComponent { public:
 
 class GunType : public CatalogItem { public:
 	double recoil;
-
-
 	// scaling laws - how performace (power, accuracy, penetration, time of flight ...) scales with size ?
 };
 
-class Gun : public ShipComponent{ public:
-	GunType * typ = NULL;
-    double Aperture;      // [m^2]
+// Also Accelerator?
+
+class Accelerator : public ShipComponent{ public:
+    // TODO: can be also attached to Ring ?
+    //       This can be perhaps determined from type
+
+    int   suppType; // ring or girder
+    int   suppId;   // anchor girders
+    Vec2f suppSpan; // pos along girdes
+
     double lenght;        // [m]
     double PowerPeak;     // [W]
     double PulseEnergy;   // [J]
     double PulseDuration; // [s]
-    double divergence;    // [1] tangens of angle
+    double PulsePerios;   // [s]
 
-    std::vector<int> anchors; // anchor points
+    //std::vector<int> anchors; // anchor points
+};
+
+
+class Gun : public Accelerator{ public:
+	GunType * typ = NULL;
+
+    double Aperture;      // [m^2]
+    double divergence;    // [1] tangens of angle
     // attached to girder?
     // incorporated in girder?
 };
@@ -223,7 +236,7 @@ class SpaceCraft : public CatalogItem { public:
     std::vector<Rope>      ropes;
     std::vector<Girder>    girders;
     std::vector<Ring>      rings;
-	std::vector<Truster>   thrustes;
+	std::vector<Thruster>  thrusters;
 	std::vector<Gun>       guns;
 	std::vector<Radiator>  radiators;
 	std::vector<Shield>    shields;
@@ -233,7 +246,7 @@ class SpaceCraft : public CatalogItem { public:
 	// Truss * fine   = NULL;
 
 	void clear(){
-        nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrustes.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
+        nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrusters.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
 	};
 };
 

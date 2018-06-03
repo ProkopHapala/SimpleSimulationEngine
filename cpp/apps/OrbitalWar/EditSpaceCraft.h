@@ -20,6 +20,13 @@ SpaceCraft * theSpaceCraft=0;
 std::unordered_map<std::string,Material*> materials;
 std::unordered_map<std::string,Commodity*> comodities;
 
+constexpr int NBIT_kind = 8;
+constexpr int NBIT_id   = sizeof(int)*8-NBIT_kind;
+constexpr int MASK_id   = (1<<NBIT_id)-1;
+
+inline void i2idKind( int i, int& kind, int& id ){ kind=(i>>NBIT_id);  id=(i&&MASK_id); }
+inline int  idKind2i( int kind, int id ){ return (kind<<NBIT_id)|(MASK_id&&id); }
+
 int l_Material (lua_State * L){
     Material *mat = new Material();
     Lua::dumpStack(L);
@@ -126,6 +133,7 @@ int l_Tank (lua_State * L){
     Tank o;
     Lua::getVec3(L, 1, o.pose.pos   );
     Lua::getVec3(L, 2, o.pose.rot.c );
+    o.pose.rot.c.normalize();
     o.pose.rot.c.getSomeOrtho( o.pose.rot.b, o.pose.rot.a );
     Lua::getVec3(L, 3, o.span );
     const char * matn = Lua::getString(L,4);
@@ -137,12 +145,39 @@ int l_Tank (lua_State * L){
     return 1;
 };
 
+// Radiator( g5,0.2,0.8, g1,0.2,0.8, 1280.0 )
+int l_Thruster (lua_State * L){
+    Thruster o;
+    Lua::getVec3(L, 1, o.pose.pos   );
+    Lua::getVec3(L, 2, o.pose.rot.c );
+    o.pose.rot.c.normalize();
+    o.pose.rot.c.getSomeOrtho( o.pose.rot.b, o.pose.rot.a );
+    Lua::getVec3(L, 3, o.span );
+    const char * skind = Lua::getString(L,4);
+    o.id   = theSpaceCraft->thrusters.size();
+    printf( "Thruster pos (%f,%f,%f) dir (%f,%f,%f) l %f r %f -> %i\n",  o.pose.pos.x,o.pose.pos.x,o.pose.pos.x,  o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,   o.span.b, o.span.c, o.id );
+    theSpaceCraft->thrusters.push_back( o );
 
-int l_Gun     (lua_State * L){ return 0; };
-int l_Truster (lua_State * L){ return 0; };
+    lua_pushnumber(L, o.id);
+    return 1;
+};
 
+int l_Gun     (lua_State * L){
+    Gun o;
+    o.suppId     = Lua::getInt   (L,1);
+    o.suppSpan.x  = Lua::getDouble(L,2);
+    o.suppSpan.y  = Lua::getDouble(L,3);
+    const char * skind = Lua::getString(L,4);
+    //auto it = materials.find(matn);
+    //if( it != materials.end() ){r.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
+    o.id   = theSpaceCraft->guns.size();
+    printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o.suppId, o.suppSpan.x, o.suppSpan.y,   skind, o.id );
+    theSpaceCraft->guns.push_back( o );
+    lua_pushnumber(L, o.id);
+    return 1;
+};
 
-
+//int l_Truster (lua_State * L){ return 0; };
 //int l_Tank    (lua_State * L){ return 0; };
 //int l_Radiator(lua_State * L){ return 0; };
 
@@ -156,7 +191,7 @@ void initSpaceCraftingLua(){
     lua_register(L, "Girder",   l_Girder   );
     lua_register(L, "Ring",     l_Ring     );
     lua_register(L, "Gun",      l_Gun      );
-    lua_register(L, "Truster",  l_Truster  );
+    lua_register(L, "Thruster", l_Thruster );
     lua_register(L, "Tank",     l_Tank     );
     lua_register(L, "Radiator", l_Radiator );
 

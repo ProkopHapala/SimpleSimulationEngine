@@ -68,6 +68,8 @@ class Quat4TYPE {
 	inline void setInverseUnitary( const  QUAT& q){ x=-q.x; y=-q.y; z=-q.z; w=q.w; };
 	inline void setInverse       ( const  QUAT& q){ setInverseUnitary(); mul(1.0d/q.norm2()); };
 
+	inline QUAT get_inv(){ QUAT q; q.x=-x; q.y=-y; q.z=-z; q.w=w; return q; }
+
 
 // ====== basic aritmetic
 
@@ -578,8 +580,8 @@ class Quat4TYPE {
 
     // This allos passing Quad to functions accepting Mat3f (e.g. to plotting functions)
     //inline explicit operator Mat3TYPE<TYPE>()const{ Mat3TYPE<TYPE> mat; toMatrix_unitary(mat); return mat; }
-    inline Mat3TYPE<TYPE> toMat (){  Mat3TYPE<TYPE> mat; toMatrix_unitary  (mat); return mat; };
-    inline Mat3TYPE<TYPE> toMatT(){  Mat3TYPE<TYPE> mat; toMatrix_unitary_T(mat); return mat; };
+    inline Mat3TYPE<TYPE> toMat () const {  Mat3TYPE<TYPE> mat; toMatrix_unitary  (mat); return mat; };
+    inline Mat3TYPE<TYPE> toMatT() const {  Mat3TYPE<TYPE> mat; toMatrix_unitary_T(mat); return mat; };
 
 	// this will compute force on quaternion from force on some point "p" in coordinate system of the quaternion
 	//   EXAMPLE : if "p" is atom in molecule, it should be local coordinate in molecular local space, not global coordante after quaternion rotation is applied

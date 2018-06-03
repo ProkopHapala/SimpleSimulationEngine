@@ -62,7 +62,7 @@ TestAppMousePicking::TestAppMousePicking( int& id, int WIDTH_, int HEIGHT_ ) : A
         glDisable ( GL_LIGHTING );
         Draw3D::drawAxis ( 3.0f );
         //glColor3f( 1.0f, 0.0f, 1.0f ); Draw3D::drawLines   ( Solids::Icosahedron_nedges, Solids::Icosahedron_edges, Solids::Icosahedron_verts                             );
-        glColor3f( 0.8f, 0.0f, 0.8f ); Draw3D::drawSphereOctLines( 16, 2.0, {0.0,0.0,0.0} );
+        glColor3f( 0.8f, 0.0f, 0.8f ); Draw3D::drawSphereOctLines( 16, 2.0, (Vec3f){0.0,0.0,0.0} );
         //glPopMatrix();
     glEndList();
     //objects = new KinematicBody();

@@ -154,7 +154,7 @@ void AppSDL2OGL_3D::draw   (){
 	Draw3D::drawBox       ( -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 0.8f, 0.8f, 0.8f );
 
 	glShadeModel( GL_SMOOTH     );
-	Draw3D::drawSphere_oct( 5, 1.0f, {3.0d,3.0d,3.0d} );
+	Draw3D::drawSphere_oct( 5, 1.0f, (Vec3f){3.0,3.0,3.0} );
 
 	glDisable ( GL_LIGHTING );
 	Draw3D::drawAxis ( 3.0f );
