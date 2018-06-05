@@ -507,6 +507,18 @@ GUIAbstractPanel* DropDownList::onMouse ( int x, int y, const SDL_Event& event, 
     return 0;
 };
 
+
+// ==============================
+//     class  TreeView
+// ==============================
+
+
+void TreeView::initTreeView( const std::string& caption_, int xmin_, int ymin_, int xmax_, int nSlots_ ){
+    caption=caption_;
+    nSlots=nSlots_,xmin=xmin_,ymin=ymin_,xmax=xmax_,ymax=ymin+2*fontSizeDef*(nSlots+1);
+    redraw = true;
+};
+
 // ==============================
 //    class GUI
 // ==============================

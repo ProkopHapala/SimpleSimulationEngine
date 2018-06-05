@@ -28,8 +28,6 @@ extern int GUI_fontTex;
 
 //void GUI_globalEventHandler(const SDL_Event* event );
 
-
-
 class GUI;
 
 
@@ -235,6 +233,78 @@ class DropDownList : public GUIAbstractPanel { public:
     //virtual void onKeyDown( SDL_Event e ){};
     //virtual void onText   ( SDL_Event e ){};
 
+};
+
+
+
+// ==============================
+//     class  TreeView
+// ==============================
+
+#include "Tree.h"
+
+/*
+class TreeViewData : public Tree<std::string,TreeViewData> { public:
+    bool open;
+};
+*/
+
+class TreeViewItem{ public:
+    //bool open=false;
+    bool open=true;
+    int level=0;
+    int nth_line=0;
+    std::string caption;
+
+    TreeViewItem(){};
+    TreeViewItem( std::string caption_){ caption=caption_; };
+};
+
+//class TreeViewTree : public Tree<TreeViewItem> { public:};
+
+typedef Tree<TreeViewItem> TreeViewTree;
+
+//static const char* exampleDropDownListItems[3] = {"Item1","Item2","Item3"};
+class TreeView : public GUIAbstractPanel { public:
+    //typedef Tree<TreeViewItem> TreeT;
+
+    int nSlots = 5;
+    TreeViewTree root;
+    std::vector<TreeViewTree*> lines;
+
+    virtual void tryRender( ){
+        GUIAbstractPanel::tryRender();
+        int yoff = ymax - 4*fontSizeDef;
+        for( TreeViewTree* tr : lines ){
+            if(yoff<=ymin) break;
+            std::string& str = tr->content.caption;
+            Draw2D::drawText( str.c_str(), str.length(), {xmin+2*fontSizeDef*tr->content.level, ymax-yoff}, 0.0, GUI_fontTex, fontSizeDef );
+            yoff-=2*fontSizeDef;
+        }
+    };
+
+    void updateLines( TreeViewTree& node, int level ){
+        printf( "updateLines[%i] : '%s' \n", level, node.content.caption.c_str() );
+        node.content.level = level;
+        lines.push_back( &node );
+        if(node.content.open){
+            for(TreeViewTree& tr: node.branches ){
+                updateLines( tr, level+1 );
+            }
+        }
+    }
+    inline void updateLines(){ updateLines(root,0); };
+
+
+    void initTreeView( const std::string& caption, int xmin_, int ymin_, int xmax_, int nSlots_ );
+
+    TreeView(){}
+    TreeView( const std::string& caption, int xmin, int ymin, int xmax, int nSlots){
+        initTreeView(caption,xmin,ymin,xmax,nSlots);
+    }
+
+    //virtual void onKeyDown( SDL_Event e ){};
+    //virtual void onText   ( SDL_Event e ){};
 };
 
 // ==============================

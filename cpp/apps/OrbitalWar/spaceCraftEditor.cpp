@@ -28,11 +28,110 @@
 
 #include "EditSpaceCraft.h"
 
+#include "Tree.h"
+
 using namespace SpaceCrafting;
 
 enum class EDIT_MODE : int { vertex=0, edge=1, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
 
 
+
+
+// list files in directory
+//  https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
+//
+#include <dirent.h>
+
+int listDirContaining( char * dirName, char * fname_contains, std::vector<std::string>& fnames_found ){
+    DIR *dir=NULL;
+    int n=0;
+    struct dirent *ent=NULL;
+    int i=0;
+    if ( (dir = opendir( dirName )) != NULL) {
+        while ( (ent = readdir (dir)) != NULL) {
+            char* found = strstr( ent->d_name, fname_contains );
+            if( found ){
+                printf("%i %s\n", i, ent->d_name);
+                fnames_found.push_back( ent->d_name );
+                i++;
+            }
+        }
+        n++;
+        closedir(dir);
+    } else {
+        printf("Cannot open directory %s \n", dirName );
+        return -1;
+    }
+    return i;
+}
+
+
+int niters = 0;
+
+#include <unistd.h>
+
+/*
+int dir2tree(TreeViewTree& node, char * name, int level ){
+
+    if (niters >100) return -1;
+    niters++;
+
+    if((name[0]=='.'))return 0;
+
+    for(int i=0; i<level; i++) printf("_");
+
+    node.content.caption = name;
+    DIR *dir=NULL;
+    struct dirent *ent=NULL;
+
+    if( chdir(name)==0 ){
+    //if( (dir = opendir( name )) != NULL){
+        dir = opendir( "." );
+        printf("dir '%s' | %i \n", name, level );
+        while( (ent = readdir(dir)) != NULL){
+            node.branches.push_back( TreeViewTree() );
+            dir2tree( node.branches.back(), ent->d_name, level+1 );
+        }
+        closedir(dir);
+        chdir("..");
+    }else{
+        printf("leaf '%s' | %i \n", name, level );
+    }
+    return 0;
+}
+*/
+
+
+int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="" ){
+
+    if (niters >100) return -1;
+    niters++;
+    if((name[0]=='.'))return 0;
+
+    std::string path;
+    if (prefix.length()==0){
+        path = name;
+    } else{
+        path= (prefix+"/")+name;
+    }
+
+    node.content.caption = name;
+    DIR *dir=NULL;
+    struct dirent *ent=NULL;
+
+    //if( chdir(name)==0 ){
+    if( (dir = opendir( path.c_str() )) != NULL){
+        printf("dir '%s' \n", path.c_str() );
+        while( (ent = readdir(dir)) != NULL){
+            node.branches.push_back( TreeViewTree() );
+            dir2tree( node.branches.back(), ent->d_name, path );
+        }
+        closedir(dir);
+    }else{
+        printf("leaf '%s'\n", path.c_str() );
+    }
+    return 0;
+}
 
 //SpaceCraft craft;
 Truss      truss;
@@ -95,7 +194,8 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 	bool bSmoothLines = 1;
 	bool bWireframe   = 1;
 
-
+	//DropDownList lstLuaFiles;
+    GUI gui;
 
     EDIT_MODE edit_mode = EDIT_MODE::vertex;
     //EDIT_MODE edit_mode = EDIT_MODE::edge;
@@ -114,14 +214,33 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 
 };
 
-
-
-
 SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     //truss.loadXYZ(  "data/octShip.xyz" );
+    DropDownList* lstLuaFiles = new DropDownList("lua files",20,HEIGHT_-100,200,5);
+    TreeView* tvDir       = new TreeView( "DirView",220,HEIGHT_-100,400, 20 );
+
+    gui.addPanel(lstLuaFiles);
+    gui.addPanel(tvDir);
+
+    TreeViewTree tvt;
+
+    //dir2tree(tvt, "data", 0 );
+    dir2tree(tvDir->root, "data" );
+    tvDir->updateLines();
+
+    /*
+    char str[1000];
+    getcwd( str, 1000);
+    printf(" getcwd '%s'\n", str );
+    */
+
+    //std::vector<std::string> luaFiles;
+    listDirContaining( "data", ".lua", lstLuaFiles->labels );
 
     //Lua1.init();
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+
 
     Vec3f pf;
     Vec3d pd;
@@ -224,6 +343,8 @@ void SpaceCraftEditGUI::draw(){
 
 void SpaceCraftEditGUI::drawHUD(){
     glDisable ( GL_LIGHTING );
+
+    gui.draw();
     //glColor3f(1.0f,1.0f,1.0f);   txtStatic.view3D( {5,5}, fontTex, 8 );
     glPopMatrix();
 }
@@ -273,6 +394,8 @@ void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){
 
 void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
+
+    gui.onEvent(mouseX,mouseY,event);
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
