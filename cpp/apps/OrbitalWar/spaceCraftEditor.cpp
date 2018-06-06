@@ -101,12 +101,9 @@ int dir2tree(TreeViewTree& node, char * name, int level ){
 }
 */
 
-
 int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="" ){
 
-    if (niters >100) return -1;
-    niters++;
-    if((name[0]=='.'))return 0;
+    node.content.caption = name;
 
     std::string path;
     if (prefix.length()==0){
@@ -115,7 +112,6 @@ int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="" ){
         path= (prefix+"/")+name;
     }
 
-    node.content.caption = name;
     DIR *dir=NULL;
     struct dirent *ent=NULL;
 
@@ -123,8 +119,12 @@ int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="" ){
     if( (dir = opendir( path.c_str() )) != NULL){
         printf("dir '%s' \n", path.c_str() );
         while( (ent = readdir(dir)) != NULL){
-            node.branches.push_back( TreeViewTree() );
-            dir2tree( node.branches.back(), ent->d_name, path );
+            //printf("dir '%s' \n", path.c_str() );
+            if((ent->d_name[0]=='.'))continue;
+            TreeViewTree* tr = new TreeViewTree();
+            tr->parrent = &node;
+            node.branches.push_back( tr );
+            dir2tree( *node.branches.back(), ent->d_name, path );
         }
         closedir(dir);
     }else{
@@ -216,17 +216,16 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D {
 
 SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     //truss.loadXYZ(  "data/octShip.xyz" );
-    DropDownList* lstLuaFiles = new DropDownList("lua files",20,HEIGHT_-100,200,5);
-    TreeView* tvDir       = new TreeView( "DirView",220,HEIGHT_-100,400, 20 );
+    DropDownList* lstLuaFiles = new DropDownList("lua files",20,HEIGHT_-100,200,5);     gui.addPanel(lstLuaFiles);
 
-    gui.addPanel(lstLuaFiles);
-    gui.addPanel(tvDir);
-
-    TreeViewTree tvt;
 
     //dir2tree(tvt, "data", 0 );
+    TreeView* tvDir           = new TreeView    ( "DirView",220,HEIGHT_-300,400,20 );   gui.addPanel(tvDir);
     dir2tree(tvDir->root, "data" );
     tvDir->updateLines();
+
+
+
 
     /*
     char str[1000];
@@ -342,7 +341,8 @@ void SpaceCraftEditGUI::draw(){
 };
 
 void SpaceCraftEditGUI::drawHUD(){
-    glDisable ( GL_LIGHTING );
+    glDisable( GL_LIGHTING );
+    glDisable(GL_DEPTH_TEST);
 
     gui.draw();
     //glColor3f(1.0f,1.0f,1.0f);   txtStatic.view3D( {5,5}, fontTex, 8 );

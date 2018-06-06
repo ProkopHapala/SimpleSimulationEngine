@@ -91,13 +91,14 @@ class GUIAbstractPanel{ public:
     virtual void              onText( const SDL_Event& e );
 
     virtual void view  ( );
-    virtual void tryRender();
-
-
+    //virtual void tryRender();
+    //void view     ();
+    void tryRender();
+    virtual void render();
 
     // inline fnctions
 
-    inline  void draw      ( ){ tryRender(); view(); };
+    inline void draw      ( ){ tryRender(); view(); };
     inline bool check      ( int  x, int  y ){  return (x>xmin)&&(x<xmax)&&(y>ymin)&&(y<ymax); }
 	inline void toRelative ( int& x, int& y ){ x-=xmin; y-=ymin; }
 
@@ -127,7 +128,8 @@ class GUIPanel : public GUIAbstractPanel { public:
     GUIPanel( const std::string& caption, int xmin, int ymin, int xmax, int ymax, bool isSlider_, bool isButton_ ){ initPanel(caption, xmin,ymin,xmax,ymax); isSlider=isSlider_; isButton=isButton_; };
 
     virtual void view    ();
-	virtual void tryRender();
+	//virtual void tryRender();
+	void render();
     virtual void              onKeyDown( const SDL_Event&  e );
     virtual void              onText( const SDL_Event&  e );
     virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
@@ -153,7 +155,8 @@ class ScisorBox : public GUIAbstractPanel { public:
     ScisorBox( const std::string& caption, int xmin_, int ymin_, int xmax_, int ymax_ ){ initScisor( caption, xmin_, ymin_, xmax_, ymax_ ); };
 
     //virtual void draw     ( );
-    virtual void tryRender( );
+    //virtual void tryRender( );
+    virtual void render( );
     virtual GUIAbstractPanel* onMouse ( int x, int y, const SDL_Event&  event, GUI& gui );
 
     //virtual void onKeyDown( SDL_Event e ){};
@@ -185,7 +188,8 @@ class MultiPanel : public GUIAbstractPanel { public:
     virtual void moveBy(int dx, int dy);
 
     virtual void view  ( );
-    virtual void tryRender( );
+    //virtual void tryRender( );
+    virtual void render( );
     virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui );
 
     //virtual void onKeyDown( SDL_Event e, GUI& gui ){};
@@ -221,13 +225,12 @@ class DropDownList : public GUIAbstractPanel { public:
     DropDownList(){}
     DropDownList( const std::string& caption, int xmin, int ymin, int xmax, int nSlots){ initList(caption,xmin,ymin,xmax,nSlots); }
 
-
-
     virtual void open();
     virtual void close();
 
     //virtual void view ( );
-    virtual void tryRender( );
+    //virtual void tryRender( );
+    virtual void render( );
     virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui );
 
     //virtual void onKeyDown( SDL_Event e ){};
@@ -249,6 +252,21 @@ class TreeViewData : public Tree<std::string,TreeViewData> { public:
 };
 */
 
+/*
+class TreeViewItem{ public:
+    //bool open=false;
+    bool open=true;
+    int level=0;
+    int nth_line=0;
+    std::string caption;
+    Tree<TreeViewItem>* parrent;
+
+    TreeViewItem(){};
+    TreeViewItem( std::string caption_){ caption=caption_; };
+};
+typedef Tree<TreeViewItem> TreeViewTree;
+*/
+
 class TreeViewItem{ public:
     //bool open=false;
     bool open=true;
@@ -259,42 +277,23 @@ class TreeViewItem{ public:
     TreeViewItem(){};
     TreeViewItem( std::string caption_){ caption=caption_; };
 };
-
-//class TreeViewTree : public Tree<TreeViewItem> { public:};
-
-typedef Tree<TreeViewItem> TreeViewTree;
+typedef PTree<TreeViewItem> TreeViewTree;
 
 //static const char* exampleDropDownListItems[3] = {"Item1","Item2","Item3"};
 class TreeView : public GUIAbstractPanel { public:
     //typedef Tree<TreeViewItem> TreeT;
-
+    int iItem0=0;
+    int iSelected=0;
     int nSlots = 5;
     TreeViewTree root;
     std::vector<TreeViewTree*> lines;
 
-    virtual void tryRender( ){
-        GUIAbstractPanel::tryRender();
-        int yoff = ymax - 4*fontSizeDef;
-        for( TreeViewTree* tr : lines ){
-            if(yoff<=ymin) break;
-            std::string& str = tr->content.caption;
-            Draw2D::drawText( str.c_str(), str.length(), {xmin+2*fontSizeDef*tr->content.level, ymax-yoff}, 0.0, GUI_fontTex, fontSizeDef );
-            yoff-=2*fontSizeDef;
-        }
-    };
 
-    void updateLines( TreeViewTree& node, int level ){
-        printf( "updateLines[%i] : '%s' \n", level, node.content.caption.c_str() );
-        node.content.level = level;
-        lines.push_back( &node );
-        if(node.content.open){
-            for(TreeViewTree& tr: node.branches ){
-                updateLines( tr, level+1 );
-            }
-        }
-    }
-    inline void updateLines(){ updateLines(root,0); };
+    virtual void view();
+    virtual void render();
+    void updateLines( TreeViewTree& node, int level );
 
+    inline void updateLines(){ lines.clear(); updateLines(root,0); };
 
     void initTreeView( const std::string& caption, int xmin_, int ymin_, int xmax_, int nSlots_ );
 
@@ -303,6 +302,7 @@ class TreeView : public GUIAbstractPanel { public:
         initTreeView(caption,xmin,ymin,xmax,nSlots);
     }
 
+    virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui );
     //virtual void onKeyDown( SDL_Event e ){};
     //virtual void onText   ( SDL_Event e ){};
 };

@@ -15,7 +15,12 @@ class TreeGen{ public:
 // this can be only specialized
 template<typename T>
 class Tree : public TreeGen<T,Tree<T>> { public:
-    //using TreeT = Tree<T>;
+    T content;
+};
+
+template<typename T>
+class PTree : public TreeGen<T,PTree<T>*> { public:
+    PTree<T>* parrent;
     T content;
 };
 
