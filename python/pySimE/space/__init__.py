@@ -9,15 +9,7 @@ from __future__ import division
 from KosmoSuit_main import *
 from railGun import *
 
-import table_chemicalFuels as fuels
-import table_SolarSystem   as solarSystem
-import table_Materials     as materials
+import data.table_ChemicalFuels as fuels
+import data.table_SolarSystem   as solarSystem
+import data.table_Materials     as materials
 
-
-#from engines import *
-#from orbital import *
-
-
-
-
-	

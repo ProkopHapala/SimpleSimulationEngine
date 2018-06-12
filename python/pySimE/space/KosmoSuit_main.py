@@ -19,7 +19,8 @@ example of use:
 """
 from __future__ import division
 
-import pylab
+#import pylab
+import numpy as np
 
 const_StefanBoltzmann        = 5.67037321e-8     # W m^-2 K^−4
 const_universalGas           = 8.3144621         # J /K /mol 
@@ -33,7 +34,7 @@ const_neutronMass            = 1.674927351e-27   # kg
 const_lightSpeed             = 299792458.0	     # m/s
 const_AU                     = 149597871.0e+3    # m
 const_0celsius               = 273.15            # K   
-cost_VacumPermeability       = 4e-7*pylab.pi 	 # Tesla·m/A
+cost_VacumPermeability       = 4e-7*np.pi 	 # Tesla·m/A
 const_eV                     = 1.60217656535e-19 # J
 
 #execfile( 'table_ChemicalFuels.py' )
@@ -76,42 +77,47 @@ def heatCapacityRatio(degresOfFreedom=3):
 # Example for H2 nuclear	exhaustVelocity(molarMass=2, kappa=1.4, temperature=3500)   = 10092.183149596525
 def exhaustVelocity( energyDensity=None, pressureOut=None, pressureIn=const_atmosphericPressure*25, temperature=3500, kappa=1.666666, molarMass=2 ):
 	if (energyDensity!=None):	# from kinetic energy
-		return pylab.sqrt( 2*energyDensity )
+		return np.sqrt( 2*energyDensity )
 	else:	 # lavalNozzle adiabatic expansion http://en.wikipedia.org/wiki/De_Laval_nozzle
 		gamma = (kappa)/(kappa-1)
 		ExpansionTerm = 1.0
 		if (( pressureOut != None ) ):
 				ExpansionTerm = (1.0 - (pressureOut/pressureIn)**(1/gamma) )
-		return pylab.sqrt(2000.0*const_universalGas*temperature*gamma*ExpansionTerm/molarMass)			
+		return np.sqrt(2000.0*const_universalGas*temperature*gamma*ExpansionTerm/molarMass)			
 
 def tsilkovskyPayload( deltaV=9400, exhaustVelocity=4462 ):
-	return pylab.exp(-float(deltaV)/exhaustVelocity)
+	return np.exp(-1.0*deltaV/exhaustVelocity)
 	
 def tsilkovskyVelocity( massRatio=0.1, exhaustVelocity=4462 ):
-	return exhaustVelocity*-pylab.log(massRatio)
+	return exhaustVelocity*-np.log(massRatio)
 
 def deltaVOberth( deltaV = 10, escapeVeloctiy = 617.5 ):
-	return pylab.sqrt(deltaV**2 + 2.0*escapeVeloctiy*deltaV)	
+	return np.sqrt(deltaV**2 + 2.0*escapeVeloctiy*deltaV)	
 
 # ================== Orbital Dynamics ==============
 
-def gravitationalAcceleration( mass=5.9736e+24 , radius=6378100 ):
-	return const_gravitational*mass/float(radius)**2
+# https://en.wikipedia.org/wiki/Surface_gravity#Mass,_radius_and_surface_gravity
+def gravitationalAcceleration( mass=5.9736e+24 , radius=6378100.0, density=None ):
+    if (density is not None):
+       return (4.0*np.pi/3.0)*const_gravitational*density*radius
+    else:
+        return const_gravitational*mass/(1.0*radius)**2
 
 def orbitalVelocity(  mass=5.9736e+24 , radius=6378100 ):
-	return pylab.sqrt( const_gravitational*mass / float(radius) )	
+	return np.sqrt( const_gravitational*mass / (1.0*radius) )	
 
 # example:    escapeVelocit = sqrt(2)orbitalVelocity
-# example:    escapeVelocity() = 11180.862334866215	for earth from earth surface	 	
-def escapeVelocity( mass=5.9736e+24 , radius=6378100, denisty=None ):
-	if (denisty!=None):
-		return 2.364e-5 * float(radius)*pylab.sqrt(density)   # for spherical body
-	else:	
-		return pylab.sqrt( 2.0*const_gravitational*mass / radius  )	
+# example:    escapeVelocity() = 11180.862334866215	for earth from earth surface
+# https://en.wikipedia.org/wiki/Escape_velocity#Escape_velocity_in_various_situations
+def escapeVelocity( mass=5.9736e+24, radius=6378100, density=None ):
+    if (density is not None):
+        return 2.364e-5 * (1.0*radius)*np.sqrt(density)   # for spherical body
+    else:
+        return np.sqrt( 2.0*const_gravitational*mass / radius  )
 
 # example:    GEO  orbitalPeriod( semimajorAxis=42e+6  ) / 24  = 	3568.9182312398239
 def orbitalPeriod( semimajorAxis = 6378100, mass=5.9736e+24 ):
-	return pylab.pi*2.0*pylab.sqrt( semimajorAxis**3.0 / ( const_gravitational*mass ) )
+	return np.pi*2.0*np.sqrt( semimajorAxis**3 / (1.0*const_gravitational*mass ) )
 	
 def centrifugalAcceleration( velocity=7906, radius=6378100, omega=None):
 	if (omega!=None):
@@ -119,19 +125,19 @@ def centrifugalAcceleration( velocity=7906, radius=6378100, omega=None):
 	else:	
 		return velocity**2/radius
 
-STRGamma = lambda v: 1.0/pylab.sqrt( 1.0-(v/const_lightSpeed)**2)  
+STRGamma = lambda v: 1.0/np.sqrt( 1.0-(v/const_lightSpeed)**2)  
 
 def kineticVelocity( mass=const_protonMass, energy=1e+6*const_eV, relativistic=True  ):
 	if relativistic:
 		E0 = mass*const_lightSpeed**2
-		return const_lightSpeed * pylab.sqrt( 1-(E0/(E0+energy))**2 ) # relativistic http://physics.stackexchange.com/questions/716/relativistic-speed-energy-relation-is-this-correct
+		return const_lightSpeed * np.sqrt( 1-(E0/(E0+energy))**2 ) # relativistic http://physics.stackexchange.com/questions/716/relativistic-speed-energy-relation-is-this-correct
 	else:
-		return pylab.sqrt( 2*energy/mass )
+		return np.sqrt( 2*energy/mass )
 		
 def kineticEnergy( mass=const_protonMass, velocity=0.1*const_lightSpeed, relativistic=True  ):
 	if relativistic:
 		E0 = mass*const_lightSpeed**2
-		#return E0 / pylab.sqrt( 1.0 - (velocity/const_lightSpeed)**2 ) - E0
+		#return E0 / np.sqrt( 1.0 - (velocity/const_lightSpeed)**2 ) - E0
 		return E0 * STRGamma(velocity) - E0
 	else:
 		return 0.5*mass*velocity**2
@@ -146,9 +152,9 @@ def cyclotronRadius( velocity=0.05*const_lightSpeed, magneticB=1.0, mass = const
 
 def cyclotronFrequency( magneticB=1.0, mass = const_protonMass, charge=const_electronCharge, velocity=None  ):
 	if (velocity!=None):	# relativistic
-		return charge*magneticB/( 2.0*pylab.pi*mass*STRGamma(velocity) )
+		return charge*magneticB/( 2.0*np.pi*mass*STRGamma(velocity) )
 	else:
-		return charge*magneticB/( 2.0*pylab.pi*mass )
+		return charge*magneticB/( 2.0*np.pi*mass )
 
 def HelmholzCoilField( current=1, radius=1 ):
 	return 0.7155417528*cost_VacumPermeability*current/radius
@@ -156,7 +162,7 @@ def HelmholzCoilField( current=1, radius=1 ):
 # ============== plazma ======================
 
 def lossCone( fieldRatio = 2.0 ):
-	return 1.0/pylab.arcsin( pylab.sqrt( fieldRatio ) )
+	return 1.0/np.arcsin( np.sqrt( fieldRatio ) )
 
 
 # ============== Optics =====================
@@ -168,7 +174,7 @@ def difractionAperture( radius = 1.0, distance = 384.4e+6, waveLength = 1e-6 ):
 
 def spaceElevatorS( sigma=64e+9, rho=1340.0, omega = 7.2921150e-5, g0=9.780, r0=6371000.0  ):
 	x = ( omega**2 )*r0*g0
-	return pylab.exp( (rho/sigma) *g0*r0*(1+0.5*x-1.5*(x**0.3333333)))	
+	return np.exp( (rho/sigma) *g0*r0*(1+0.5*x-1.5*(x**0.3333333)))	
 	
 # ================ RailGun =================
 
