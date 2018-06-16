@@ -8,6 +8,7 @@
 #include "Vec3.h"
 #include "Mat3.h"
 #include "quaternion.h"
+#include "geom3D.h"
 
 namespace SpaceCrafting{
 
@@ -15,15 +16,19 @@ const int NAME_LEN = 16;
 
 class BodyPose{ public:
     Vec3d pos;
-    //Quat4d  rot;
     Mat3d rot;
+    //Quat4d  rot;
 };
 
+
+/*
+//class BBox : public BodyPose{ public:
 class BBox : public BodyPose{ public:
     //int type;     //  elipsoide, box, ... ?
     Vec3d pmin;
     Vec3d pmax;
 };
+*/
 
 // ==== Materials
 
@@ -71,8 +76,14 @@ class ShipComponent{ public:
 
 class Modul: public ShipComponent { public:
     BodyPose pose;
+    Box      bbox;
     Vec3d    span;
     double   volume;
+
+    void pick(const Vec3d& ro, const Vec3d& rd){
+
+    }
+
 };
 
 class Tank : public Modul { public:
@@ -109,13 +120,14 @@ class Girder : public NodeLinker { public:
     //GirderType * type = NULL;
 };
 
-class Ring : public NodeLinker { public:
+//class Ring : public NodeLinker { public:
+class Ring : public ShipComponent { public:
     //int p1; // anchor node; p0 inherate
     //double length;
+    BodyPose pose;
     int nseg;
     double R;
     Vec2d wh;
-    Vec3d up;
     Material * material;
     Vec2i poitRange;  // index of start and end in Truss
     Vec2i stickRange; // --,,---
@@ -232,6 +244,9 @@ class Gun : public Accelerator{ public:
 // === SpaceShip
 
 class SpaceCraft : public CatalogItem { public:
+
+    std::vector<int>       LODs;
+    Truss truss;
     std::vector<Node>      nodes;
     std::vector<Rope>      ropes;
     std::vector<Girder>    girders;
@@ -247,7 +262,46 @@ class SpaceCraft : public CatalogItem { public:
 
 	void clear(){
         nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrusters.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
+        truss.clear();
 	};
+
+	void pick(Vec3d ro, Vec3d rd){
+
+	}
+
+	void toTruss(Truss& truss){
+        int i=0;
+        truss.newBlock();
+        int ip0 = truss.points.size();
+        for(Node o: nodes){
+            truss.points.push_back( o.pos );
+        }
+        for(Rope o: ropes){
+            truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
+        }
+        for(Girder o: girders){
+            //printf("DEBUG toTruss : girder #%i \n", i);
+            truss.girder1( nodes[o.p0].pos, nodes[o.p1].pos, o.up, o.nseg, o.wh.a );
+            truss.girder1_caps( o.p0, o.p1, 1 );
+
+            Vec2i& bak = truss.blocks.back();
+            o.poitRange  = {bak.x,truss.points.size()};
+            o.stickRange = {bak.y,truss.edges .size()};
+            i++;
+        }
+        i=0;
+        for(Ring o: rings){
+            printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
+            truss.wheel( o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh.a );
+            Vec2i& bak = truss.blocks.back();
+            o.poitRange  = {bak.x,truss.points.size()};
+            o.stickRange = {bak.y,truss.edges .size()};
+            i++;
+        }
+        printf( "npoint %i nstick %i nblocks %i \n", truss.points.size(), truss.edges.size(), truss.blocks.size()  );
+	}
+	void toTruss(){ truss.clear(); toTruss(truss); };
+
 };
 
 } // namespace SpaceCrafting

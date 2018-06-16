@@ -79,7 +79,6 @@ void drawSmoothUVFunc( Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc fun
 
 }
 
-
 template<typename UVfunc>
 void drawWireUVFunc( Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func ){
 
@@ -121,6 +120,68 @@ void drawWireUVFunc( Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func 
             glEnd();
         }
     }
+}
+
+
+template<typename UVfunc>
+void drawExtrudedWireUVFunc( Vec2i n, float thick, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func ){
+
+    float eps = 0.001;
+    Vec2f duv = UVmax-UVmin; duv.mul( {1.0f/n.a,1.0f/n.b} );
+    //int i0=mesh.vpos.size()/3;
+    Vec2f uv;
+    Vec3f p,nr,nrl;
+    for(int ia=0;ia<=n.a;ia++){
+        // strips
+        glBegin(GL_TRIANGLE_STRIP);
+        for(int ib=0;ib<=n.b;ib++){
+            uv.a = UVmin.a+duv.a*ia;
+            uv.b = UVmin.b+duv.b*ib + voff*duv.b*ia;
+            p  = func(uv);
+            nr = getUVFuncNormal(uv,eps,func);
+            nrl.set_cross(func(uv+(Vec2f){0.0,duv.b*0.5})-p, nr); nrl.normalize();
+            glNormal3f(nrl.x,nrl.y,nrl.z);
+            glVertex3f(p.x,p.y,p.z);
+            p.add_mul(nr,thick);
+            glVertex3f(p.x,p.y,p.z);
+        }
+        glEnd();
+        if(ia<n.a){
+            glBegin(GL_TRIANGLE_STRIP);
+            for(int ib=0;ib<=n.b;ib++){
+                uv.a = UVmin.a+duv.a*ia;
+                uv.b = UVmin.b+duv.b*ib + voff*duv.b*ia;
+
+                p  = func(uv);
+                nr = getUVFuncNormal(uv,eps,func);
+                nrl.set_cross(func(uv+(Vec2f){0.0,duv.b*0.5})-p, nr); nrl.normalize();
+                glNormal3f(nrl.x,nrl.y,nrl.z);
+                glVertex3f(p.x,p.y,p.z);
+                p.add_mul(nr,thick);
+                glVertex3f(p.x,p.y,p.z);
+
+                uv.a += duv.a;
+                uv.b += voff*duv.b;
+
+                p  = func(uv);
+                nr = getUVFuncNormal(uv,eps,func);
+                nrl.set_cross(func(uv+(Vec2f){0.0,duv.b*0.5})-p, nr); nrl.normalize();
+                glNormal3f(nrl.x,nrl.y,nrl.z);
+                glVertex3f(p.x,p.y,p.z);
+                p.add_mul(nr,thick);
+                glVertex3f(p.x,p.y,p.z);
+
+            }
+            glEnd();
+        }
+    }
+}
+
+inline Vec3f HarmonicTubeUVfunc( Vec2f p, float R1, float R2, float L, float freq, float amp ){
+    Vec2f csb; csb.fromAngle(p.b);
+    float R = ((1-p.a)*R1 + p.a*R2)*(1.0+amp*cos(freq*p.a));
+    //float R = (1-p.a)*R1 + p.a*R2;
+    return (Vec3f){ csb.a*R, csb.b*R, L*p.a };
 }
 
 inline Vec3f ConeUVfunc( Vec2f p, float R1, float R2, float L ){
@@ -170,31 +231,37 @@ inline Vec3f HyperbolaLUVfunc( Vec2f p, float R, float K ){
     return (Vec3f){csb.a*r,csb.b*r,l };
 }
 
+inline void drawUV_HarmonicTube( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float freq, float amp, bool wire ){
+    auto uvfunc = [&](Vec2f uv){return HarmonicTubeUVfunc(uv,R1,R2,L,freq,amp);};
+    if(wire){ drawWireUVFunc( n, UVmin, UVmax, voff, uvfunc ); }
+    else    { drawSmoothUVFunc( n, UVmin, UVmax,voff, uvfunc ); }
+}
+
 inline void drawUV_Cone( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire ){
     auto uvfunc = [&](Vec2f uv){return ConeUVfunc(uv,R1,R2,L);};
     if(wire){ drawWireUVFunc( n, UVmin, UVmax, voff, uvfunc ); }
     else    { drawSmoothUVFunc( n, UVmin, UVmax,voff, uvfunc ); }
 }
 
-inline void drawUV_Sphere( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float voff,bool wire ){
+inline void drawUV_Sphere( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float voff, bool wire ){
     auto uvfunc = [&](Vec2f uv){return SphereUVfunc(uv,R);};
     if(wire){ drawWireUVFunc  ( n, UVmin, UVmax, voff, uvfunc ); }
     else    { drawSmoothUVFunc( n, UVmin, UVmax,voff, uvfunc ); }
 }
 
-inline void drawUV_Torus( Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float voff,bool wire ){
+inline void drawUV_Torus( Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float voff, bool wire ){
     auto uvfunc = [&](Vec2f uv){return TorusUVfunc(uv,r,R);};
     if(wire){ drawWireUVFunc( n, UVmin, UVmax,voff, uvfunc ); }
     else    { drawSmoothUVFunc( n, UVmin, UVmax,voff, uvfunc ); }
 }
 
-inline void drawUV_Teardrop( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff,bool wire ){
+inline void drawUV_Teardrop( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire ){
     auto uvfunc = [&](Vec2f uv){return TeardropUVfunc(uv,R1,R2,L);};
     if(wire){ drawWireUVFunc( n, UVmin, UVmax,voff, uvfunc ); }
     else    { drawSmoothUVFunc( n, UVmin, UVmax,voff, uvfunc ); }
 }
 
-inline void drawUV_Parabola( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff,bool wire ){
+inline void drawUV_Parabola( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, bool wire ){
     float K = L/(R*R);
     UVmin.a*=R; UVmax.a*=R;
     //printf( "drawUV_Parabola: R %f L %f K %f \n", R, L, K  );
@@ -203,7 +270,14 @@ inline void drawUV_Parabola( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L
     else    { drawSmoothUVFunc( n, UVmin, UVmax,voff, uvfunc ); }
 }
 
-inline void drawUV_Hyperbola( Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float L, float voff,bool wire ){
+inline void drawUV_Parabola_ExtrudedWire( Vec2i n,Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, double thick ){
+    float K = L/(R*R);
+    UVmin.a*=R; UVmax.a*=R;
+    auto uvfunc = [&](Vec2f uv){return ParabolaUVfunc(uv,K);};
+    drawExtrudedWireUVFunc( n,thick, UVmin, UVmax,voff, uvfunc );
+}
+
+inline void drawUV_Hyperbola( Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float L, float voff, bool wire ){
     //printf( "drawUV_Hyperbola: r %f R %f L %f \n", r, R, L  );
     if(r>0){
         float K = R/L;

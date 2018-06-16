@@ -14,13 +14,6 @@
 
 #include "Mesh.h"
 
-
-
-
-
-
-
-
 namespace Draw3D{
 
 //typedef Vec3f (*UVfunc)(Vec2f p);

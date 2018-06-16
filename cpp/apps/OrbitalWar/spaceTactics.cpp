@@ -450,7 +450,6 @@ void SpaceTactics::drawBodyTrj( SpaceBody& b ){
     }
 };
 
-
 void SpaceTactics::drawInteractionTrj( BodyInteraction& bi ){
     int n = world.trj_n;
     glBegin(GL_LINE_STRIP);

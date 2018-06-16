@@ -14,6 +14,7 @@
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Mat3.h"
+#include "raytrace.h"
 
 inline Vec3d cog_of_points ( int n, Vec3d * points ){ Vec3d c;  c.set(0.0); for(int i=0;i<n; i++){ c.add(points[i]); }  c.mul(1.0d/n); return c; }
 inline double Rbound2( const Vec3d& center, int n, Vec3d * points ){
@@ -29,6 +30,21 @@ inline double Rbound2( const Vec3d& center, int n, Vec3d * points ){
 class Box{ public:
     Vec3d a,b;
 
+    inline static bool pointIn( const Vec3d& p, const Vec3d& a, const Vec3d& b ){
+        return ((p.x>a.x)&&(p.y>a.y)&&(p.z>a.z)&&
+                (p.x<b.x)&&(p.y<b.y)&&(p.z<b.z));
+    }
+
+    inline static double dist2( const Vec3d& p, const Vec3d& a, const Vec3d& b ){
+        // from here : http://stackoverflow.com/questions/4578967/cube-sphere-intersection-test
+        // assume C1 and C2 are element-wise sorted, if not, do that now
+        double dist2 = 0.0d;
+        if (p.x < a.x){ dist2 += sq(p.x - a.x); }else if(p.x > b.x){ dist2 += sq(p.x - b.x); };
+        if (p.y < a.y){ dist2 += sq(p.y - a.y); }else if(p.y > b.y){ dist2 += sq(p.y - b.y); };
+        if (p.z < a.z){ dist2 += sq(p.z - a.z); }else if(p.z > b.z){ dist2 += sq(p.z - b.z); };
+        return dist2;
+    }
+
     void fromPoints( int n, Vec3d * points ){
         a.set(points[0]);
         b.set(points[0]);
@@ -40,31 +56,26 @@ class Box{ public:
         }
     }
 
-    inline bool pointIn( const Vec3d& p ){
+    inline bool pointIn( const Vec3d& p ){ return pointIn( p,a, b ); }
+    inline bool dist2  ( const Vec3d& p ){ return pointIn( p,a, b ); }
+
+    inline bool pointRot( const Vec3d& p ){
         return ((p.x>a.x)&&(p.y>a.y)&&(p.z>a.z)&&
                 (p.x<b.x)&&(p.y<b.y)&&(p.z<b.z));
     }
 
     inline Vec3d genRandomSample(){ return (Vec3d){randf(a.x,b.x),randf(a.y,b.y),randf(a.z,b.z)}; }
 
+    inline double ray   ( const Vec3d& ray0, const Vec3d& hRay, Vec3d& hitPos, Vec3d& normal ){ return rayBox( ray0, hRay, a, b, hitPos, normal ); }
+    inline double rayRot( Vec3d ray0, Vec3d hRay, const Mat3d& rot, Vec3d& hitPos, Vec3d& normal ){
+        rot.dot_to(ray0,ray0);
+        rot.dot_to(hRay,hRay);
+        return rayBox( ray0, hRay, a, b, hitPos, normal );
+        rot.dot_to(hitPos,hitPos);
+        rot.dot_to(normal,normal);
+    }
+
 };
-
-inline bool pointInBox( const Vec3d& p, const Vec3d& a, const Vec3d& b ){
-    return ((p.x>a.x)&&(p.y>a.y)&&(p.z>a.z)&&
-            (p.x<b.x)&&(p.y<b.y)&&(p.z<b.z));
-}
-
-
-inline double dist2_PointBox( const Vec3d& C1, const Vec3d& C2, Vec3d S){
-    // from here : http://stackoverflow.com/questions/4578967/cube-sphere-intersection-test
-    // assume C1 and C2 are element-wise sorted, if not, do that now
-    double dist2 = 0.0d;
-    if (S.x < C1.x){ dist2 += sq(S.x - C1.x); }else if(S.x > C2.x){ dist2 += sq(S.x - C2.x); };
-    if (S.y < C1.y){ dist2 += sq(S.y - C1.y); }else if(S.y > C2.y){ dist2 += sq(S.y - C2.y); };
-    if (S.z < C1.z){ dist2 += sq(S.z - C1.z); }else if(S.z > C2.z){ dist2 += sq(S.z - C2.z); };
-    return dist2;
-}
-
 
 // ============ Plane3D
 

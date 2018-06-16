@@ -42,6 +42,7 @@ class Truss{ public:
     std::vector<int>          removed_points;
     std::vector<int>          removed_edges;
 
+    void clear();
     void sticksFormString( char * str );
     int loadXYZ( char* fname );
     int pickVertex( const Vec3d &ray0, const Vec3d &hRay );
@@ -51,10 +52,13 @@ class Truss{ public:
     void panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width );
 
     void girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width );
+    void girder1_caps( int ip0, int ip1, int kind );
     void wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width );
     void makeGriders( int nEdges, TrussEdge* edges, Vec3d* points, GirderParams* params, Vec3d * ups );
     void makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vector<Vec2i>* ends );
     void autoBridge(int n, Vec2i * ips, double rmax, int kind );
+
+    inline Vec2i newBlock(){ Vec2i ps={points.size(),edges.size()}; blocks.push_back( ps ); return ps; };
 
 };
 

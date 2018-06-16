@@ -30,202 +30,83 @@
 
 #include "Tree.h"
 
+#include "spaceCraftEditorUtils.h"
+
 using namespace SpaceCrafting;
 
 enum class EDIT_MODE : int { vertex=0, edge=1, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
-
-
-
-
-// list files in directory
-//  https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
-//
-#include <dirent.h>
-
-int listDirContaining( char * dirName, char * fname_contains, std::vector<std::string>& fnames_found ){
-    DIR *dir=NULL;
-    int n=0;
-    struct dirent *ent=NULL;
-    int i=0;
-    if ( (dir = opendir( dirName )) != NULL) {
-        while ( (ent = readdir (dir)) != NULL) {
-            char* found = strstr( ent->d_name, fname_contains );
-            if( found ){
-                printf("%i %s\n", i, ent->d_name);
-                fnames_found.push_back( ent->d_name );
-                i++;
-            }
-        }
-        n++;
-        closedir(dir);
-    } else {
-        printf("Cannot open directory %s \n", dirName );
-        return -1;
-    }
-    return i;
-}
-
-
-int niters = 0;
-
-#include <unistd.h>
-
-/*
-int dir2tree(TreeViewTree& node, char * name, int level ){
-
-    if (niters >100) return -1;
-    niters++;
-
-    if((name[0]=='.'))return 0;
-
-    for(int i=0; i<level; i++) printf("_");
-
-    node.content.caption = name;
-    DIR *dir=NULL;
-    struct dirent *ent=NULL;
-
-    if( chdir(name)==0 ){
-    //if( (dir = opendir( name )) != NULL){
-        dir = opendir( "." );
-        printf("dir '%s' | %i \n", name, level );
-        while( (ent = readdir(dir)) != NULL){
-            node.branches.push_back( TreeViewTree() );
-            dir2tree( node.branches.back(), ent->d_name, level+1 );
-        }
-        closedir(dir);
-        chdir("..");
-    }else{
-        printf("leaf '%s' | %i \n", name, level );
-    }
-    return 0;
-}
-*/
-
-int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="" ){
-
-    node.content.caption = name;
-
-    std::string path;
-    if (prefix.length()==0){
-        path = name;
-    } else{
-        path= (prefix+"/")+name;
-    }
-
-    DIR *dir=NULL;
-    struct dirent *ent=NULL;
-
-    //if( chdir(name)==0 ){
-    if( (dir = opendir( path.c_str() )) != NULL){
-        printf("dir '%s' \n", path.c_str() );
-        while( (ent = readdir(dir)) != NULL){
-            //printf("dir '%s' \n", path.c_str() );
-            if((ent->d_name[0]=='.'))continue;
-            TreeViewTree* tr = new TreeViewTree();
-            tr->parrent = &node;
-            node.branches.push_back( tr );
-            dir2tree( *node.branches.back(), ent->d_name, path );
-        }
-        closedir(dir);
-    }else{
-        printf("leaf '%s'\n", path.c_str() );
-    }
-    return 0;
-}
 
 //SpaceCraft craft;
 Truss      truss;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 
+//char str[8096];
 
-int makeTruss( Truss& truss ){
-
-    //truss.girder1( (Vec3d){-5.0,0.0,0.0}, (Vec3d){5.0,0.0,0.0}, (Vec3d){0.0,1.0,0.0}, 5, 1.0 );
-
-    Truss trussPlan;
-    trussPlan.loadXYZ(  "data/octShip.xyz" );
-    //trussPlan.affineTransform( (Mat3d){5.5,0.0,0.0, 0.0,5.5,0.0, 0.0,0.0,5.5}, false );
-    trussPlan.affineTransform( (Mat3d){6,0.0,0.0, 0.0,6,0.0, 0.0,0.0,6}, false );
-    GirderParams * gpar = new GirderParams [trussPlan.edges.size()];
-    //Vec3d ups  = new Vec3d[trussPlan.edges.size()];
-    Vec3d ups[] = {
-        (Vec3d){0.0,-1.0,0.0},
-        (Vec3d){0.0,+1.0,0.0},
-        (Vec3d){0.0,0.0,-1.0},
-        (Vec3d){0.0,0.0,+1.0},
-        (Vec3d){-1.0,0.0,0.0},
-        (Vec3d){+1.0,0.0,0.0}
-    };
-    //truss.makeGriders( 6, &trussPlan.edges[0], &trussPlan.points[0], gpar, ups );
-    //truss.makeGriders( trussPlan, gpar, ups, NULL );
-    truss.wheel( {0.0,0.0,0.0}, {10.0,0.0,0.0}, {0.0,1.0,0.0}, 50, 0.5 );
-    std::vector<Vec2i> ends;
-    truss.makeGriders( trussPlan, gpar, ups, &ends );
-    truss.autoBridge(ends.size(), &ends[0], 0.8, 0 );
-    truss.panel( {0.0,0.0,0.0}, {5.0,0.0,0.0}, {0.0,5.0,0.0}, {5.0,5.0,0.0}, {5,5}, 1.0 );
-    delete [] gpar;
-
-    int glo = glGenLists(1);
-    glNewList( glo, GL_COMPILE );
-    SpaceCrafting::drawTruss( truss );
-    glEndList();
-
-    return glo;
-
-}
-
-void reloadShip(){
+void reloadShip( const char* fname  ){
     theSpaceCraft->clear();
     //luaL_dofile(theLua, "data/spaceshil1.lua");
-    Lua::dofile(theLua,"data/spaceshil1.lua");
+    printf("reloadShip('%s')", fname );
+    Lua::dofile(theLua,fname);
     //luaL_dostring(theLua, "print('LuaDEBUG 1'); n1 = Node( {-100.0,0.0,0.0} ); print('LuaDEBUG 2'); print(n1)");
+
+    theSpaceCraft->toTruss();
 
     if(glo_ship){ glDeleteLists(glo_ship,1); };
     glo_ship = glGenLists(1);
     glNewList( glo_ship, GL_COMPILE );
-    drawSpaceCraft( *theSpaceCraft );
+    drawSpaceCraft( *theSpaceCraft, 1 );
     glEndList();
 };
 
+class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
 
-class SpaceCraftEditGUI : public AppSDL2OGL_3D {
-	public:
+	class OnSelectLuaShipScript : public GUIEventCallback{ public:
+        virtual int GUIcallback(GUIAbstractPanel* caller) override {
+            ((DropDownList*)caller)->selectedToStr(str+sprintf(str,"data/"));
+            reloadShip(str);
+        }
+    };
 
 	bool bSmoothLines = 1;
 	bool bWireframe   = 1;
 
 	//DropDownList lstLuaFiles;
     GUI gui;
+    DropDownList* lstLuaFiles;
+    OnSelectLuaShipScript onSelectLuaShipScript;
 
     EDIT_MODE edit_mode = EDIT_MODE::vertex;
     //EDIT_MODE edit_mode = EDIT_MODE::edge;
     int picked = -1;
     Vec3d mouse_ray0;
 
-	virtual void draw   ();
-	virtual void drawHUD();
+    // https://stackoverflow.com/questions/29145476/requiring-virtual-function-overrides-to-use-override-keyword
+
+	virtual void draw   () override;
+	virtual void drawHUD() override;
 	//virtual void mouseHandling( );
 	//virtual void camera();
-	virtual void eventHandling   ( const SDL_Event& event  );
-	virtual void keyStateHandling( const Uint8 *keys );
+	virtual void eventHandling   ( const SDL_Event& event  ) override;
+	virtual void keyStateHandling( const Uint8 *keys ) override;
     //virtual void mouseHandling( );
 
 	SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ );
+
+
+
 
 };
 
 SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     //truss.loadXYZ(  "data/octShip.xyz" );
-    DropDownList* lstLuaFiles = new DropDownList("lua files",20,HEIGHT_-100,200,5);     gui.addPanel(lstLuaFiles);
+    //DropDownList* lstLuaFiles = new DropDownList( "lua files",20,HEIGHT_-100,200,5); gui.addPanel(lstLuaFiles);
+    lstLuaFiles = new DropDownList( "lua files",20,HEIGHT_-100,200,5); gui.addPanel(lstLuaFiles);
+    //lstLuaFiles->onSelect = new OnSelectLuaShipScript();
+    lstLuaFiles->onSelect = &onSelectLuaShipScript;
 
-
-    //dir2tree(tvt, "data", 0 );
-    TreeView* tvDir           = new TreeView    ( "DirView",220,HEIGHT_-300,400,20 );   gui.addPanel(tvDir);
+    TreeView* tvDir      = new TreeView    ( "DirView",20,HEIGHT_-400,200,20 ); gui.addPanel(tvDir);
     dir2tree(tvDir->root, "data" );
     tvDir->updateLines();
-
-
-
 
     /*
     char str[1000];
@@ -239,7 +120,6 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     //Lua1.init();
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
-
 
     Vec3f pf;
     Vec3d pd;
@@ -256,8 +136,8 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     theSpaceCraft = new SpaceCraft();
     initSpaceCraftingLua();
-    reloadShip();
-
+    //reloadShip( "data/spaceshil1.lua" );
+    onSelectLuaShipScript.GUIcallback(lstLuaFiles);
 
     /*
     glo_truss = makeTruss(truss);
@@ -271,7 +151,7 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     */
 
 
-
+    zoom = 1000.0;
 }
 
 //void SpaceCraftEditGUI::camera(){
@@ -293,8 +173,7 @@ void SpaceCraftEditGUI::draw(){
 	glColor3f(1.0,0.5,1.0);
 	if(glo_capsula) glCallList(glo_capsula);
 
-
-
+	/*
     // to make nice antialiased lines without supersampling buffer
     // see  https://www.opengl.org/discussion_boards/showthread.php/176559-GL_LINE_SMOOTH-produces-bold-lines-%28big-width%29
     // https://www.opengl.org/discussion_boards/showthread.php/170072-GL_POLYGON_SMOOTH-is-it-that-bad
@@ -313,6 +192,7 @@ void SpaceCraftEditGUI::draw(){
         //glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
         //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
     }
+    */
 
     if(glo_truss) glCallList(glo_truss);
 
@@ -402,7 +282,10 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
                 case SDLK_m:  edit_mode = (EDIT_MODE)((((int)edit_mode)+1)%((int)EDIT_MODE::size)); printf("edit_mode %i\n", (int)edit_mode); break;
                 //case SDLK_h:  warrior1->tryJump(); break;
 
-                case SDLK_l: reloadShip();
+                case SDLK_l:
+                    //reloadShip( );
+                    onSelectLuaShipScript.GUIcallback(lstLuaFiles);
+                    break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
@@ -438,7 +321,7 @@ int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 
-	/*
+
 	// https://www.opengl.org/discussion_boards/showthread.php/163904-MultiSampling-in-SDL
 	//https://wiki.libsdl.org/SDL_GLattr
 	//SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
@@ -450,14 +333,17 @@ int main(int argc, char *argv[]){
     //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
     //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
     //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
-    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
+    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
     glEnable(GL_MULTISAMPLE);
-    */
+
 
 	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
-	thisApp = new SpaceCraftEditGUI( junk , 800, 600 );
+    SDL_DisplayMode dm;
+    SDL_GetDesktopDisplayMode(0, &dm);
+	thisApp = new SpaceCraftEditGUI( junk , dm.w-150, dm.h-100 );
+	//thisApp = new SpaceCraftEditGUI( junk , 800, 600 );
 	thisApp->loop( 1000000 );
 	return 0;
 }

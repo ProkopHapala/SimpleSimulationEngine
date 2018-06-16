@@ -143,15 +143,17 @@ class Mat3TYPE{
 	}
 
 	inline void dot_to( const VEC&  v, VEC&  vout ) const {
-		vout.x = xx*v.x + xy*v.y + xz*v.z;
-		vout.y = yx*v.x + yy*v.y + yz*v.z;
-		vout.z = zx*v.x + zy*v.y + zz*v.z;
+        TYPE vx=v.x,vy=v.y,vz=v.z; // to make it safe use inplace
+		vout.x = xx*vx + xy*vy + xz*vz;
+		vout.y = yx*vx + yy*vy + yz*vz;
+		vout.z = zx*vx + zy*vy + zz*vz;
 	};
 
 	inline void dot_to_T( const VEC&  v, VEC&  vout ) const {
-		vout.x = xx*v.x + yx*v.y + zx*v.z;
-		vout.y = xy*v.x + yy*v.y + zy*v.z;
-		vout.z = xz*v.x + yz*v.y + zz*v.z;
+        TYPE vx=v.x,vy=v.y,vz=v.z;
+		vout.x = xx*vx + yx*vy + zx*vz;
+		vout.y = xy*vx + yy*vy + zy*vz;
+		vout.z = xz*vx + yz*vy + zz*vz;
 	};
 
 // ====== matrix multiplication

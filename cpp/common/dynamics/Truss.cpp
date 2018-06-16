@@ -3,6 +3,14 @@
 
 //class Truss{ public:
 
+void Truss::clear(){
+    points.clear();
+    edges.clear();
+    blocks.clear();
+    removed_points.clear();
+    removed_edges.clear();
+}
+
 void Truss::sticksFormString( char * str ){
     printf( str );
     char * pch = strtok (str,";\n");
@@ -157,8 +165,6 @@ void Truss::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double w
     }
 }
 
-
-
 void Truss::girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width ){
     int kind_long   = 0;
     int kind_perp   = 1;
@@ -168,6 +174,8 @@ void Truss::girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width ){
     double length = dir.normalize();
     up.makeOrthoU(dir);
     Vec3d side; side.set_cross(dir,up);
+
+    //print(dir); print(up); print(side); printf("dir up side \n");
     double dl = length/(2*n + 1);
     //int dnb = 2+4+4+4;
     int dnp = 4;
@@ -201,6 +209,19 @@ void Truss::girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width ){
     }
 }
 
+void Truss::girder1_caps( int ip0, int ip1, int kind ){
+    int ipbeg = blocks.back().x;
+    int ipend = points.size()-4;
+    edges.push_back( (TrussEdge){ip0,ipbeg+0,kind} );
+    edges.push_back( (TrussEdge){ip0,ipbeg+1,kind} );
+    edges.push_back( (TrussEdge){ip0,ipbeg+2,kind} );
+    edges.push_back( (TrussEdge){ip0,ipbeg+3,kind} );
+    edges.push_back( (TrussEdge){ip1,ipend+0,kind} );
+    edges.push_back( (TrussEdge){ip1,ipend+1,kind} );
+    edges.push_back( (TrussEdge){ip1,ipend+2,kind} );
+    edges.push_back( (TrussEdge){ip1,ipend+3,kind} );
+}
+
 void Truss::wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width ){
     int kind_long   = 0;
     int kind_perp   = 1;
@@ -212,8 +233,10 @@ void Truss::wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width ){
     Vec3d side; side.set_cross(dir,ax);
     //double dl = length/(2*n + 1);
     //int dnb = 2+4+4+4;
+    print(dir); print(ax); print(side); printf("dir up side \n");
     int dnp = 4;
     int i00 = points.size();
+    int i000 = i00;
 
     Vec2d  rot = {1.0,0.0};
     Vec2d drot; drot.fromAngle( M_PI/n );
@@ -247,14 +270,14 @@ void Truss::wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width ){
             edges.push_back( (TrussEdge){i10,i10+dnp,kind_long} );
             edges.push_back( (TrussEdge){i11,i11+dnp,kind_long} );
         }else{
-            edges.push_back( (TrussEdge){i10,0,kind_zigOut} );
-            edges.push_back( (TrussEdge){i10,1,kind_zigOut} );
-            edges.push_back( (TrussEdge){i11,0,kind_zigOut} );
-            edges.push_back( (TrussEdge){i11,1,kind_zigOut} );
-            edges.push_back( (TrussEdge){i00,0,kind_long} );
-            edges.push_back( (TrussEdge){i01,1,kind_long} );
-            edges.push_back( (TrussEdge){i10,2,kind_long} );
-            edges.push_back( (TrussEdge){i11,3,kind_long} );
+            edges.push_back( (TrussEdge){i10,i000+0,kind_zigOut} );
+            edges.push_back( (TrussEdge){i10,i000+1,kind_zigOut} );
+            edges.push_back( (TrussEdge){i11,i000+0,kind_zigOut} );
+            edges.push_back( (TrussEdge){i11,i000+1,kind_zigOut} );
+            edges.push_back( (TrussEdge){i00,i000+0,kind_long} );
+            edges.push_back( (TrussEdge){i01,i000+1,kind_long} );
+            edges.push_back( (TrussEdge){i10,i000+2,kind_long} );
+            edges.push_back( (TrussEdge){i11,i000+3,kind_long} );
         }
         i00+=dnp;
     }

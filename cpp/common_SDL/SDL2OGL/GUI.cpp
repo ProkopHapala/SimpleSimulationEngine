@@ -448,6 +448,11 @@ void DropDownList::initList( const std::string& caption_, int xmin_, int ymin_, 
     redraw = true;
 };
 
+int DropDownList::selectedToStr(char* str){
+    //printf( "DropDownList::selectedToStr  %i '%s' \n", iSelected, labels[iSelected].c_str()  );
+    return sprintf(str,"%s", labels[iSelected].c_str() );
+};
+
 //void DropDownList ::view ( ){
 //    glCallList( gllist );
 //};
@@ -518,12 +523,15 @@ GUIAbstractPanel* DropDownList::onMouse ( int x, int y, const SDL_Event& event, 
         if( event.type == SDL_MOUSEBUTTONDOWN ){
             if(event.button.button == SDL_BUTTON_LEFT){
                 if(bOpened){
-                    int i = ((ymax-y)/(2*fontSizeDef)) - 1;
-                    if( (i>0)&&(i<nSlots) ){
+                    int i = ((ymax-y)/(2*fontSizeDef))-1;
+                    //printf( "i %i \n", i );
+                    if( (i>=0)&&(i<nSlots) ){
                         i += iItem0;
                         i=_min(i,labels.size()-1);
                         i=_max(i,0);
                         iSelected = i;
+                        if(onSelect)onSelect->GUIcallback(this);
+                        //printf( "iSelected %i  iItem0 %i  labels.size() %i  \n", iSelected, iItem0, labels.size() );
                     }
                     close();
                 }else{
@@ -556,7 +564,12 @@ void TreeView::initTreeView( const std::string& caption_, int xmin_, int ymin_, 
 };
 
 void TreeView::render( ){
-    updateLines();
+    //if(content.open){
+        updateLines();
+        ymax=ymin+2*fontSizeDef*(nSlots+1);
+    //}else{
+    //    ymax=ymin+2*fontSizeDef;
+    //}
     GUIAbstractPanel::render();
     //glColor3f(0.0,0.0,1.0); Draw2D::drawPointCross({xmax,ymax},5);
     //glColor3f(1.0,0.0,0.0); Draw2D::drawPointCross({xmin,ymin},5);
@@ -601,6 +614,11 @@ GUIAbstractPanel* TreeView::onMouse( int x, int y, const SDL_Event& event, GUI& 
                         redraw=true;
                     }
                 }
+                gui.dragged = this;
+                //printf("clicked on MultiPanel Title \n");
+                //if(event.button.clicks > 1 ){ // double click
+                //    toggleOpen();
+                //}
             }
         }
         return this;

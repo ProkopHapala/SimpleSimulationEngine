@@ -31,6 +31,15 @@ extern int GUI_fontTex;
 class GUI;
 
 
+class GUIAbstractPanel;
+
+// Alterntively we may use events
+//    https://wiki.libsdl.org/SDL_UserEvent
+//    https://stackoverflow.com/questions/26707536/event-driven-programming-callback-vs-message-polling
+class GUIEventCallback{public:
+    virtual int GUIcallback(GUIAbstractPanel* caller)=0;
+};
+
 // ==============================
 //    class GUITextInput
 // ==============================
@@ -190,7 +199,7 @@ class MultiPanel : public GUIAbstractPanel { public:
     virtual void view  ( );
     //virtual void tryRender( );
     virtual void render( );
-    virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui );
+    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
 
     //virtual void onKeyDown( SDL_Event e, GUI& gui ){};
     //virtual void onText   ( SDL_Event e, GUI& gui ){};
@@ -214,6 +223,8 @@ class DropDownList : public GUIAbstractPanel { public:
     //char** labels = (char**)exampleDropDownListItems;
     std::vector<std::string> labels;
 
+    GUIEventCallback* onSelect = 0;
+
     //int nsubs;
     //GUIPanel ** subs;
 
@@ -221,6 +232,7 @@ class DropDownList : public GUIAbstractPanel { public:
 
     DropDownList* addItem(const std::string& label);
     void initList( const std::string& caption, int xmin_, int ymin_, int xmax_, int nSlots_ );
+    int selectedToStr(char* str);
 
     DropDownList(){}
     DropDownList( const std::string& caption, int xmin, int ymin, int xmax, int nSlots){ initList(caption,xmin,ymin,xmax,nSlots); }
@@ -245,27 +257,6 @@ class DropDownList : public GUIAbstractPanel { public:
 // ==============================
 
 #include "Tree.h"
-
-/*
-class TreeViewData : public Tree<std::string,TreeViewData> { public:
-    bool open;
-};
-*/
-
-/*
-class TreeViewItem{ public:
-    //bool open=false;
-    bool open=true;
-    int level=0;
-    int nth_line=0;
-    std::string caption;
-    Tree<TreeViewItem>* parrent;
-
-    TreeViewItem(){};
-    TreeViewItem( std::string caption_){ caption=caption_; };
-};
-typedef Tree<TreeViewItem> TreeViewTree;
-*/
 
 class TreeViewItem{ public:
     //bool open=false;

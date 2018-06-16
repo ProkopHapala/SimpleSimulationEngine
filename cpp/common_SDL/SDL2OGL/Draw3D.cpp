@@ -416,8 +416,8 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
     for(int iph=0; iph<(nPhi+1); iph++){
         Vec3f pa = p0 + left*(cph.x*r1) + up*(cph.y*r1);
         Vec3f pb = p1 + left*(cph.x*r2) + up*(cph.y*r2);
-        Vec3f na = left*(cph.x) + up*(cph.y)*cth.x + ax*cth.y;
-        Vec3f nb = left*(cph.x) + up*(cph.y)*cth.x + ax*cth.y;
+        Vec3f na = (left*(cph.x) + up*(cph.y)*cth.x + ax*cth.y)*-1.0;
+        Vec3f nb = (left*(cph.x) + up*(cph.y)*cth.x + ax*cth.y)*-1.0;
         glNormal3f(na.x,na.y,na.z); glVertex3f(pa.x,pa.y,pa.z);
         glNormal3f(nb.x,nb.y,nb.z); glVertex3f(pb.x,pb.y,pb.z);
         cph.mul_cmplx(dph);
@@ -444,8 +444,8 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
         for(int iph=0; iph<(nPhi+1); iph++){
             Vec3f pa = p0 + (left*(cph.x*r1) + up*(cph.y*r1))*cth.x  + ax*(h+cth.y*r1);
             Vec3f pb = p0 + (left*(cph.x*r1) + up*(cph.y*r1))*cth_.x + ax*(h+cth_.y*r1);
-            Vec3f na = left*(cph.x) + up*(cph.y)*cth.x  + ax*cth.y;
-            Vec3f nb = left*(cph.x) + up*(cph.y)*cth_.x + ax*cth_.y;
+            Vec3f na = (left*(cph.x) + up*(cph.y)*cth.x  + ax*cth.y)*1.0;
+            Vec3f nb = (left*(cph.x) + up*(cph.y)*cth_.x + ax*cth_.y)*1.0;
             glNormal3f(na.x,na.y,na.z); glVertex3f(pa.x,pa.y,pa.z);
             glNormal3f(nb.x,nb.y,nb.z); glVertex3f(pb.x,pb.y,pb.z);
             //na.mul(0.2);
@@ -474,8 +474,8 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
         for(int iph=0; iph<(nPhi+1); iph++){
             Vec3f pa = p1 + (left*(cph.x*r2) + up*(cph.y*r2))*cth.x  + ax*(h+cth.y*r2);
             Vec3f pb = p1 + (left*(cph.x*r2) + up*(cph.y*r2))*cth_.x + ax*(h+cth_.y*r2);
-            Vec3f na = left*(cph.x) + up*(cph.y)*cth.x  + ax*cth.y;
-            Vec3f nb = left*(cph.x) + up*(cph.y)*cth_.x + ax*cth_.y;
+            Vec3f na = (left*(cph.x) + up*(cph.y)*cth.x  + ax*cth.y)*-1.0;
+            Vec3f nb = (left*(cph.x) + up*(cph.y)*cth_.x + ax*cth_.y)*-1.0;
             glNormal3f(na.x,na.y,na.z); glVertex3f(pa.x,pa.y,pa.z);
             glNormal3f(nb.x,nb.y,nb.z); glVertex3f(pb.x,pb.y,pb.z);
             cph.mul_cmplx(dph);
