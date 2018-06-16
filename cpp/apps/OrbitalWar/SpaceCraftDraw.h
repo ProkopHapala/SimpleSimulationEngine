@@ -119,10 +119,13 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
         d = p1-p0; p1=p0+d*o.suppSpan.x;  p0.add_mul( d,o.suppSpan.y);
         if(iLOD==0) Draw3D::drawLine( p0,p1 );
         if(iLOD>0){
+            glPushMatrix();
+            glTranslatef( p1.x, p1.y, p1.z );
             glEnable( GL_DEPTH_TEST );
             glEnable( GL_LIGHTING   );
             glColor3f(0.9,0.9,0.9);
             Draw3D::drawUV_HarmonicTube( {200,8}, {0.0,0.0},{1.0,2*M_PI}, 2.0, 2.0, d.norm(), 0.0, 100.0*2*M_PI, 0.5, false );
+            glPopMatrix();
         }
     };
     // --- Rings
