@@ -1,10 +1,5 @@
 require( "data/lua/utils" )
 
-origin = {0.0,0.0,0.0}
-xvec   = {1.0,0.0,0.0}
-yvec   = {0.0,1.0,0.0}
-zvec   = {0.0,0.0,1.0}
-
 n0  = Node( origin );
 n1 = Node( { 0.0,0.0,300.0} )
 

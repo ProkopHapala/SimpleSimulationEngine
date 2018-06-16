@@ -5,16 +5,8 @@ require( "data/lua/utils" )
 print("BEGIN spaceship");
 
 -- http://www.mse.mtu.edu/~drjohn/my4150/props.html
-Material{ name="Kevlar", density=1.44e+3, Spull=3.6e+9, Spush=0.0, Kpull=154.0e+9, Kpush=0.0, reflectivity=0.6,  Tmelt=350 }
-Material{ name="Steel" , density=7.89e+3, Spull=1.2e+9, Spush=0.0, Kpull=200.0e+9, Kpush=0.0, reflectivity=0.85, Tmelt=800 }
---Material{ name="Titanium" , density=7.89e+3, Spull=3.6e+9, Spush=0.0, Kpull=154.0e+9, Kpush=0.0, reflectivity=0.7, Tmelt=450 }
 
 --- newSpaceShip( "Ship1" )
-
-origin = {0.0,0.0,0.0}
-xvec   = {1.0,0.0,0.0}
-yvec   = {0.0,1.0,0.0}
-zvec   = {0.0,0.0,1.0}
 
 n0 = Node( origin );
 n1 = Node( {-100.0,   0.0,    0.0} )
@@ -26,9 +18,7 @@ n6 = Node( {   0.0,   0.0,  800.0} )
 
 print( "Lua:Nodes:" , n0,n1,n2,n3,n4,n5,n6 )
 
-
 defGirderWidth = 4.0
-
 
 --         from to  Up nseg,mseg   width, hegith
 g1 = Girder( n0, n1, zvec, 10, 2, {defGirderWidth,defGirderWidth}, "Steel" )

@@ -2,11 +2,6 @@
 require( "data/lua/utils" )
 print("BEGIN spaceship");
 
-origin = {0.0,0.0,0.0}
-xvec   = {1.0,0.0,0.0}
-yvec   = {0.0,1.0,0.0}
-zvec   = {0.0,0.0,1.0}
-
 n0 = Node( origin );
 n1 = Node( {-50.0,   0.0,    0.0} )
 n2 = Node( { 50.0,   0.0,    0.0} )

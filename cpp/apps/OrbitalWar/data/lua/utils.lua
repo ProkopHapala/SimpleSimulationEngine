@@ -1,3 +1,12 @@
+Material{ name="Kevlar", density=1.44e+3, Spull=3.6e+9, Spush=0.0, Kpull=154.0e+9, Kpush=0.0, reflectivity=0.6,  Tmelt=350 }
+Material{ name="Steel" , density=7.89e+3, Spull=1.2e+9, Spush=0.0, Kpull=200.0e+9, Kpush=0.0, reflectivity=0.85, Tmelt=800 }
+--Material{ name="Titanium" , density=7.89e+3, Spull=3.6e+9, Spush=0.0, Kpull=154.0e+9, Kpush=0.0, reflectivity=0.7, Tmelt=450 }
+
+origin = {0.0,0.0,0.0}
+xvec   = {1.0,0.0,0.0}
+yvec   = {0.0,1.0,0.0}
+zvec   = {0.0,0.0,1.0}
+
 function tanks( n,aOff, R, r, L, z0 )
     for i=1,n do
         local a = (i/n + aOff)*2*math.pi 

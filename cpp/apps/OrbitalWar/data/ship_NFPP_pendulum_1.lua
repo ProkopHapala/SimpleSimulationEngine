@@ -1,16 +1,10 @@
 require( "data/lua/utils" )
 
-origin = {0.0,0.0,0.0}
-xvec   = {1.0,0.0,0.0}
-yvec   = {0.0,1.0,0.0}
-zvec   = {0.0,0.0,1.0}
-
 n0 = Node( origin );
 n1 = Node( { 0.0,0.0,600.0} )
 n2 = Node( { 0.0,0.0,-200.0} );
 n3 = Node( { -200.0,0.0,0.0} );
 n4 = Node( {  200.0,0.0,0.0} );
-
 
 g1 = Girder( n2, n1, xvec, 30, 2, {8.0,8.0}, "Steel" )
 g2 = Girder( n3, n1, xvec, 30, 2, {8.0,8.0}, "Steel" )
