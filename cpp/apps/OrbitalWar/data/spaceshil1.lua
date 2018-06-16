@@ -1,5 +1,7 @@
 ﻿--- https://www.lua.org/pil/5.3.html
 
+require( "data/lua/utils" )
+
 print("BEGIN spaceship");
 
 -- http://www.mse.mtu.edu/~drjohn/my4150/props.html
@@ -54,34 +56,11 @@ Rope(n1,n4, 25, "Kevlar");
 Rope(n2,n3, 25, "Kevlar");
 Rope(n2,n4, 25, "Kevlar");
 
-function tanks( n,aOff, R, r, L, z0 )
-    for i=1,n do
-        local a = (i/n + aOff)*2*math.pi 
-        Tank( {math.cos(a)*R,math.sin(a)*R,z0}, zvec, {r,r,L}, "H2")
-    end
-end
-
-function girderFan( n, aOff, w, h, z0,z1,   nseg, thick, shielded )
-    local tipNode = Node({0.0,0.0,z1});
-    local a = aOff*2*math.pi 
-    local gd0  = Girder( tipNode, Node({math.cos(a)*w,math.sin(a)*h,z0}), xvec, nseg, 2, {thick,thick}, "steel")
-    local ogd  = gd0;
-    for i=1,n do
-        local gd=gd0
-        if i<n then
-            local a = (i/n + aOff)*2*math.pi
-            gd = Girder( tipNode, Node({math.cos(a)*w,math.sin(a)*h,z0}), xvec, nseg, 2, {thick,thick},  "steel" )
-        end
-        if shielded then Shield( ogd,0.0,1.0, gd,0.0,1.0 ) end
-        ogd = gd;
-    end
-end
-
 tanks( 6,0.0, 10.0, 5.0, -50.0, -20.0 )
 girderFan( 4, 0.0, 20.0, 40.0,-50.0, -250, 10, 1.0, true )
 girderFan( 4, 0.0, 20.0, 40.0, 20.0,  300, 10, 1.0, true )
 
-girderFan( 8, 0.0, 80.0, 80.0, -340, -150, 10, 1.0, false )
+girderFan( 8, 0.0, 80.0, 80.0, -380, -200, 10, 1.0, false )
 
 -- =RadiatorType = {"LithiumHeatPipe", 1280.0 }
 
@@ -96,7 +75,7 @@ Ring( {20.0,0.0,0.0}, xvec, yvec, 16, 108.0, {4.0,4.0}, "Steel" )
 
 --  There should be mechanism how to generate nodes on-top of ship components (anchor points)
 
-Thruster( {0.0,0.0,-300.0}, zvec, {5.0,100.0,50.0}, "ICF_Ebeam_magNozzle" )
+Thruster( {0.0,0.0,-300.0}, zvec, {5.0,100.0,120.0}, "ICF_Ebeam_magNozzle" )
 -- Thruster( {-16,-16,16}, {1.0,2.0,3.0}, {5.0,100.0,50.0}, "ICF_Ebeam_magNozzle" )
 
 
