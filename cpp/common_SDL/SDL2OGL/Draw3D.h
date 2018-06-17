@@ -129,6 +129,8 @@ inline void drawColorScale( int n, Vec3d pos, Vec3d dir, Vec3d up, void (_colorF
 
 // ==== inline functions
 
+// TODO : This could be perhaps moved to Camera
+
 inline void toGLMat( const Vec3f& pos, const Mat3f& rot, float* glMat ){
     //printf("pos (%3.3f,%3.3f,%3.3f)\n", pos.x,pos.y,pos.z);
 	glMat[0 ] = rot.ax;   glMat[1 ] = rot.ay;   glMat[2 ] = rot.az;   glMat[3 ]  = 0;

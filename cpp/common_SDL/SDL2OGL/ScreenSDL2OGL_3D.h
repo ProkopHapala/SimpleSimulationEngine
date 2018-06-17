@@ -7,17 +7,20 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
+//#include "Camera.h"
+//#include "cameraOGL.h"
+
 #include "ScreenSDL2OGL.h"
 
 class ScreenSDL2OGL_3D : public ScreenSDL2OGL{
 	public:
 
 	//float qCamera   [4];
-	//float qCameraOld[4]; 
+	//float qCameraOld[4];
 	//Vec3d camDir, camUp, camRight;
 
 	Quat4f qCamera   ;
-	Quat4f qCameraOld; 
+	Quat4f qCameraOld;
 	Mat3f  camMat;
 
 	bool  mouse_spinning;
@@ -26,7 +29,7 @@ class ScreenSDL2OGL_3D : public ScreenSDL2OGL{
 
 	virtual void camera      ();
 
-	// TODO 
+	// TODO
 	//void getCameraDirections();
 	//void mouse_camera ( float x, float y );
 

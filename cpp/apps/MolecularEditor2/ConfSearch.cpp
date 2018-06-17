@@ -115,7 +115,7 @@ void drawNeighs( const FastAtomicMetric& D, Vec3d pos ){
         Draw3D::drawBBox( p, p+(Vec3d){d,d,d} );
     }
     //printf( "DEBUG 2 \n" );
-    if( pointInBox( pos, D.ruler.pos0, D.ruler.pmax) ){
+    if( Box::pointIn( pos, D.ruler.pos0, D.ruler.pmax) ){
         int tmpIs[D.natoms];
         int nfound = D.findNeighs( pos, D.Rcut, tmpIs );
         //printf( "DEBUG 3 \n" );

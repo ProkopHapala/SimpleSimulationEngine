@@ -5,8 +5,10 @@
 #include "Vec2.h"
 #include "quaternion.h"
 
-
 #include "AppSDL2OGL.h"
+
+//#include "Camera.h"
+//#include "cameraOGL.h"
 
 class AppSDL2OGL_3D : public AppSDL2OGL{
 	public:

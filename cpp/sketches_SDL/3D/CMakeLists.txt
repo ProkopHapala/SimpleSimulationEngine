@@ -12,7 +12,6 @@ target_link_libraries( test_Projection ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_ConfDynamics test_ConfDynamics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt> )
 target_link_libraries( test_ConfDynamics ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-
 add_executable       ( test_Solids test_Solids.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Solids ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
@@ -25,8 +24,8 @@ target_link_libraries( test_Patches ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBR
 add_executable       ( test_GUI test_GUI.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_GUI ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_MousePicking test_MousePicking.cpp $<TARGET_OBJECTS:SDL2OGL> )
-target_link_libraries( test_MousePicking ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+add_executable       ( test_Camera test_Camera.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_Camera ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 #add_executable       ( test_ShotHit test_ShotHit.cpp $<TARGET_OBJECTS:SDL2OGL> )
 #target_link_libraries( test_ShotHit ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )

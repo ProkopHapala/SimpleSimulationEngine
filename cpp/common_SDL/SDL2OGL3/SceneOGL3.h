@@ -10,6 +10,7 @@
 #include "Mat3.h"
 #include "quaternion.h"
 #include "raytrace.h"
+#include "Camera.h"
 
 #include <GL/glew.h>
 //#define GL_GLEXT_PROTOTYPES
@@ -18,39 +19,6 @@
 
 #include "Shader.h"
 #include "GLObject.h"
-
-class Camera{ public:
-    Vec3f  pos   =(Vec3f){0.0f,0.0f,-50.0f};
-    //Mat3f  rot   =(Mat3f){1.0f,0.0f,0.0f, 0.0f,1.0f,0.0f,  0.0f,0.0f,1.0f };
-    Mat3f rot = Mat3fIdentity;
-    float  zoom  =10.0f;
-    float  aspect=1.0;
-    float  zmin  =1.0;
-    float  zmax  =1000000.0;
-
-    inline void lookAt( Vec3f p, float R ){ pos = p + rot.c*-R; }
-    inline void lookAt( Vec3d p, float R ){ Vec3f p_; convert(p,p_); lookAt(p_,R); }
-
-    inline bool pointInFrustrum( Vec3f p ) const {
-        p.sub(pos);
-        Vec3f c;
-        rot.dot_to( p, c );
-        float tgx = c.x*zoom*aspect;
-        float tgy = c.y*zoom;
-        float cz  = c.z*zmin;
-        return (tgx>-cz)&&(tgx<cz) && (tgy>-cz)&&(tgy<cz) && (c.z>zmin)&&(c.z<zmax);
-    }
-
-    inline bool sphereInFrustrum( Vec3f p, float R ) const {
-        p.sub(pos);
-        Vec3f c;
-        rot.dot_to( p, c );
-        float my = c.z*zmin/zoom;
-        float mx = my/aspect + R;  my+=R;
-        return (c.x>-mx)&&(c.x<mx) && (c.y>-my)&&(c.y<my) && ((c.z+R)>zmin)&&((c.z-R)<zmax);
-    }
-
-};
 
 inline void setCamera(Shader& sh, const Camera& cam){
     Mat4f camMat,mRot,mPersp;
