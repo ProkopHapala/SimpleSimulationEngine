@@ -7,6 +7,8 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include "Draw.h"
+#include "Draw2D.h"
 #include "Draw3D.h"
 #include "Solids.h"
 
@@ -21,6 +23,17 @@
 
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
+#include "SDL_utils.h"
+
+char str[1024];
+
+
+/*
+
+TODO:
+   - When switching perspective and orthographic, try to keep overall zoom
+
+*/
 
 class TestAppCamera : public AppSDL2OGL_3D {
 	public:
@@ -30,7 +43,13 @@ class TestAppCamera : public AppSDL2OGL_3D {
     //std::vector<KinematicBody*> objects;
     int nobject = 100;
     Vec3d* objects;
+
+    int nCPs = 0;
+    Vec3f* CPs=0;
+
     Camera cam;
+
+    int fontTex=0;
 
     int defaultObjectShape, defaultObjectHitShape;
 
@@ -46,6 +65,8 @@ class TestAppCamera : public AppSDL2OGL_3D {
 };
 
 TestAppCamera::TestAppCamera( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     defaultObjectShape = glGenLists(1);
     glNewList( defaultObjectShape , GL_COMPILE );
@@ -70,14 +91,24 @@ TestAppCamera::TestAppCamera( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     cam.zoom   = zoom;
     cam.aspect = ASPECT_RATIO;
 
+    nCPs = 4;
+    CPs = new Vec3f[nCPs];
+
+    CPs[0].set(0.0,0.0,0.0);
+    CPs[1].set(1.0,0.0,0.0);
+    CPs[2].set(0.0,2.0,0.0);
+    CPs[3].set(0.0,0.0,3.0);
+
 }
 
 void TestAppCamera::camera(){
-   // AppSDL2OGL_3D::camera();
-   //Quat4f qCam = (Quat4f)qCamera;
-   ((Quat4f)qCamera).toMatrix(cam.rot);
-   //Cam::ortho( cam, true );
-   Cam::perspective( cam );
+    // AppSDL2OGL_3D::camera();
+    //Quat4f qCam = (Quat4f)qCamera;
+    ((Quat4f)qCamera).toMatrix(cam.rot);
+    //Cam::ortho( cam, true );
+    //Cam::perspective( cam );
+    if (perspective){ Cam::perspective( cam ); }
+    else            { Cam::ortho( cam, true ); }
 }
 
 void TestAppCamera::draw(){
@@ -85,6 +116,7 @@ void TestAppCamera::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+	/*
     for( int i=0; i<nobject; i++ ) {
         glPushMatrix();
         Vec3d * o = objects + i;
@@ -96,11 +128,57 @@ void TestAppCamera::draw(){
         glCallList( defaultObjectShape );
         glPopMatrix();
     }
+    */
+
+    glColor3f(0.7,0.7,0.7);
     Draw3D::drawPanel( Vec3fZero, Mat3fIdentity, {20.0,10.0} );
     Draw3D::drawAxis( 100.0 );
     Draw3D::drawMatInPos( cam.rot, cam.pos );
 
+    glColor3f(0.5,1.0,0.5);
+    for( int i=0; i<nCPs; i++ ) {
+        Draw3D::drawPointCross( CPs[i], 0.2 );
+        //Draw::drawText( );
+    }
+
 };
+
+void TestAppCamera::drawHUD(){
+    glDisable ( GL_LIGHTING );
+    glDisable ( GL_DEPTH_TEST );
+
+    glColor3f( 0.0f, 1.0f, 0.0f );
+    glBegin( GL_LINES );
+    float whalf = WIDTH *0.5;
+    float hhalf = HEIGHT*0.5;
+    glVertex3f( whalf-10,hhalf, 0 ); glVertex3f( whalf+10,hhalf, 0 );
+    glVertex3f( whalf,hhalf-10, 0 ); glVertex3f( whalf,hhalf+10, 0 );
+    glEnd();
+
+    Vec3f pScreen;
+    for( int i=0; i<nCPs; i++ ) {
+        glColor3f(1.0,0.5,1.0);
+
+        Vec2f pix;
+
+        if (perspective){ pix = cam.word2pixPersp( CPs[i], {(float)WIDTH,(float)HEIGHT} ); }
+        else            { pix = cam.word2pixOrtho( CPs[i], {(float)WIDTH,(float)HEIGHT} ); }
+        //cam.word2screenPersp( CPs[i], pScreen );
+        //Draw2D::drawPointCross( (Vec2f){pScreen.x*WIDTH,pScreen.y*HEIGHT} + (Vec2f){WIDTH*0.5f,HEIGHT*0.5f}, 5 );
+        Draw2D::drawPointCross( pix, 5 );
+
+        //cam.word2screenOrtho( CPs[i], pScreen );
+        //Draw2D::drawPointCross( (Vec2f){pScreen.x*WIDTH,pScreen.y*HEIGHT} + (Vec2f){WIDTH*0.5f,HEIGHT*0.5f}, 5 );
+        //Draw2D::drawPointCross( cam.word2pixOrtho( CPs[i], {(float)WIDTH,(float)HEIGHT} ), 5 );
+
+        glColor3f(0.0,0.0,0.0);
+        sprintf( str, "%i", i );
+        Draw2D::drawText( str, 0, (Vec2d)pix, 0.0, fontTex, fontSizeDef );
+    }
+    //glColor3f(0.0,0.0,0.0);
+    //Draw2D::drawText( "abcdefghijklmnopqrstuvwxyz \n0123456789 \nABCDEFGHIJKLMNOPQRTSTUVWXYZ \nxvfgfgdfgdfgdfgdfgdfg", 0, {100.0, 300.0}, 0.0, fontTex, fontSizeDef );
+    //Draw::drawText( "abcdefghijklmnopqrstuvwxyz \n0123456789 \nABCDEFGHIJKLMNOPQRTSTUVWXYZ \nxvfgfgdfgdfgdfgdfgdfg", fontTex, fontSizeDef, {10,5} );
+}
 
 void TestAppCamera::keyStateHandling( const Uint8 *keys ){
     if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  keyRotSpeed ); }
@@ -123,7 +201,7 @@ void TestAppCamera::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                case SDLK_p:  first_person = !first_person; break;
+                //case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
 
                 case SDLK_ESCAPE:   quit(); break;
@@ -137,16 +215,6 @@ void TestAppCamera::eventHandling ( const SDL_Event& event  ){
 }
 
 
-void TestAppCamera::drawHUD(){
-    glDisable ( GL_LIGHTING );
-    glColor3f( 0.0f, 1.0f, 0.0f );
-    glBegin( GL_LINES );
-    float whalf = WIDTH *0.5;
-    float hhalf = HEIGHT*0.5;
-    glVertex3f( whalf-10,hhalf, 0 ); glVertex3f( whalf+10,hhalf, 0 );
-    glVertex3f( whalf,hhalf-10, 0 ); glVertex3f( whalf,hhalf+10, 0 );
-    glEnd();
-}
 
 // ===================== MAIN
 

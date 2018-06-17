@@ -22,30 +22,47 @@ class Camera{ public:
     inline void lookAt( Vec3f p, float R ){ pos = p + rot.c*-R; }
     inline void lookAt( Vec3d p, float R ){ Vec3f p_; convert(p,p_); lookAt(p_,R); }
 
-    inline bool point2pixPersp( Vec3f p ) const {
-        p.sub(pos);
-        Vec3f c;
-        rot.dot_to( p, c );
-        float tgx = c.x*zoom*aspect;
-        float tgy = c.y*zoom;
-        float cz  = c.z*zmin;
-        return (tgx>-cz)&&(tgx<cz) && (tgy>-cz)&&(tgy<cz) && (c.z>zmin)&&(c.z<zmax);
-    }
-
     inline void word2screenOrtho( const Vec3f& pWord, Vec3f& pScreen ) const {
         Vec3f p; p.set_sub(pWord,pos);
         rot.dot_to( p, p );
-        pScreen.x = p.x*zoom*aspect; // tgx
-        pScreen.y = p.y*zoom;        // tgy
-        pScreen.z = p.z*zmin;        // cz
+        pScreen.x = p.x/(2*zoom*aspect);
+        pScreen.y = p.y/(2*zoom);
+        pScreen.z = (p.z-zmin)/(zmax-zmin);
+    }
+
+    inline Vec2f word2pixOrtho( const Vec3f& pWord, const Vec2f& resolution ) const {
+        Vec3f p; p.set_sub(pWord,pos);
+        rot.dot_to( p, p );
+        return Vec2f{ resolution.x*(0.5f+p.x/(2*zoom*aspect)),
+                      resolution.y*(0.5f+p.y/(2*zoom)) };
     }
 
     inline void word2screenPersp( const Vec3f& pWord, Vec3f& pScreen ) const {
         Vec3f p; p.set_sub(pWord,pos);
         rot.dot_to( p, p );
-        pScreen.x = p.x*zoom*aspect; // tgx
-        pScreen.y = p.y*zoom;        // tgy
-        pScreen.z = p.z*zmin;        // cz
+        float resc = zmin/(2*p.z*zoom);
+        pScreen.x = p.x*resc/aspect;
+        pScreen.y = p.y*resc;
+        //pScreen.z = p.z/zmin;        // cz
+        /*
+        (2*zmin)/w      0       0              0            0
+        0          (2*zmin)/h   0              0            0
+        0               0       (zmax+zmin)/(zmax-zmin)    (2*zmin*zmax)/(zmax-zmin)
+        0               0       0               0           -1
+        //------
+        x_  =  ((2*zmin)/w)  * x
+        y_  =  ((2*zmin)/h ) * y
+        z_  =   (zmax+zmin)/(zmax-zmin)
+        */
+    }
+
+    inline Vec2f word2pixPersp( const Vec3f& pWord, const Vec2f& resolution ) const {
+        Vec3f p; p.set_sub(pWord,pos);
+        rot.dot_to( p, p );
+        float resc = zmin/(2*p.z*zoom);
+        return (Vec2f){
+            resolution.x*( 0.5 + p.x*resc/aspect ),
+            resolution.y*( 0.5 + p.y*resc        ) };
     }
 
     inline void pix2rayOrtho( const Vec2f& pix, Vec3f& ro ) const {
