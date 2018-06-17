@@ -170,7 +170,7 @@ void TestAppSoftMolDyn::draw(){
 
 	//ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
 
-    ray0 = camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
+    ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     Draw3D::drawPointCross( ray0, 0.1 );
     //Draw3D::drawVecInPos( camMat.c, ray0 );
     if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
@@ -190,7 +190,7 @@ void TestAppSoftMolDyn::draw(){
 
         //exit(0);
         if(ipicked>=0){
-            Vec3d f = getForceSpringRay( world.apos[ipicked], camMat.c, ray0, -1.0 );
+            Vec3d f = getForceSpringRay( world.apos[ipicked], (Vec3d)cam.rot.c, ray0, -1.0 );
             //printf( "f (%g,%g,%g)\n", f.x, f.y, f.z );
             world.aforce[ipicked].add( f );
         };
@@ -285,10 +285,10 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    ipicked = pickParticle( world.natoms, world.apos, ray0, camMat.c , 0.5 );
+                    ipicked = pickParticle( world.natoms, world.apos, ray0, (Vec3d)cam.rot.c , 0.5 );
                     break;
                 case SDL_BUTTON_RIGHT:
-                    ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
+                    ibpicked = world.pickBond( ray0, (Vec3d)cam.rot.c , 0.5 );
                     printf("ibpicked %i \n", ibpicked);
                     break;
             }

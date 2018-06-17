@@ -5,6 +5,9 @@
 #include "Vec2.h"
 #include "quaternion.h"
 
+#include "Camera.h"
+#include "cameraOGL.h"
+
 #include "AppSDL2OGL.h"
 
 //#include "Camera.h"
@@ -17,9 +20,10 @@ class AppSDL2OGL_3D : public AppSDL2OGL{
 	//Mat3f  camMat;
 	float  mouseRotSpeed = 0.001;
 	float  keyRotSpeed   = 0.01;
-    Quat4d qCamera;
-	Mat3d  camMat;
-	Vec3d  camPos;
+    Quat4f qCamera;
+	//Mat3d  camMat;
+	//Vec3d  camPos;
+	Camera cam;
 
 	float camDist = 50.0;
 	Vec2i spinning_start;

@@ -137,7 +137,7 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
     glEnable     ( GL_LIGHTING         );
 
 
-    camPos.set( 0,0,-10 );
+    cam.pos.set( 0,0,-10 );
 
     Mat3d rotMat;    rotMat.set( {1.0d,0.0d,0.0d}, {0.0d,1.0d,0.0d}, {0.0d,0.0d,1.0d} );
     BlockWorld::setupBlockWorld( {-127.0d,-127.0d,-127.0d}, {1.0d,1.0d,1.0d}, rotMat           );
@@ -331,7 +331,7 @@ void TestAppBlockBuilder::draw   (){
 	Draw3D::drawAxis ( 3.0f );
 
     Vec3d hitPos,normal;
-    double t = rayBox( camMat.c*-10.0, camMat.c, {-0.5,-0.5,-0.5}, {+0.5,+0.5,+0.5},  hitPos, normal );
+    double t = rayBox( (Vec3d)cam.rot.c*-10.0, (Vec3d)cam.rot.c, {-0.5,-0.5,-0.5}, {+0.5,+0.5,+0.5},  hitPos, normal );
     //printf( " camMat.a (%3.3f,%3.3f,%3.3f) \n", camMat.a.x,  camMat.a.y,  camMat.a.z );
     //printf( " %e   (%3.3f,%3.3f,%3.3f) \n", t, hitPos.x, hitPos.y, hitPos.z );
     glColor3f(0.0f,1.0f,1.0f); Draw3D::drawPointCross   ( hitPos, 0.1 );

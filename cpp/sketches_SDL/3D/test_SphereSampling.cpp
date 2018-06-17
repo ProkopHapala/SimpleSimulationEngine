@@ -623,7 +623,7 @@ void TestAppSolids::draw   (){
 
 	glColor3f( 0.0f,1.0f,1.0f );
 
-	curPos = camMat.c*-3.0;
+	curPos = (Vec3d)(cam.rot.c*-3.0);
 	//curPos = (Vec3d){0.2,0.0,1.0};
 
 	Draw3D::drawPointCross( curPos, 0.1 );

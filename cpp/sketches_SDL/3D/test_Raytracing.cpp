@@ -171,19 +171,19 @@ void TestAppRaytracing::draw(){
     }
     */
 
-    Vec3d ray0; ray0.set_add(camPos,{5.3,-5.8,-5.9});
+    Vec3d ray0; ray0.set_add( (Vec3d)cam.pos,{5.3,-5.8,-5.9});
 
     glCallList( defaultObjectShape );
-    t = mesh.ray( ray0, camMat.c, normal );   //raySphere( camPos, camMat.c, 2.0, * );
-    hitpos.set_add_mul( ray0, camMat.c, t);
+    t = mesh.ray( ray0, (Vec3d)cam.rot.c, normal );   //raySphere( camPos, camMat.c, 2.0, * );
+    hitpos.set_add_mul( ray0, (Vec3d)cam.rot.c, t);
     if( t<t_inf ){
         glColor3f( 0.0f, 0.0f, 0.8f );
         Draw3D::drawPointCross( hitpos, 0.2 );
         Draw3D::drawVecInPos  ( normal*10, hitpos );
     };
 
-    t = rayPolygon( ray0, camMat.c, camMat.a, camMat.b, ngons, vertinds, (Vec3d*)verts, normal );   //raySphere( camPos, camMat.c, 2.0, * );
-    hitpos.set_add_mul( ray0, camMat.c, t);
+    t = rayPolygon( ray0, (Vec3d)cam.rot.c, (Vec3d)cam.rot.a, (Vec3d)cam.rot.b, ngons, vertinds, (Vec3d*)verts, normal );   //raySphere( camPos, camMat.c, 2.0, * );
+    hitpos.set_add_mul( ray0, (Vec3d)cam.rot.c, t);
     if( t<t_inf ){
         glColor3f( 0.0f, 0.0f, 0.8f );
         Draw3D::drawPointCross( hitpos, 0.2 );
@@ -196,7 +196,7 @@ void TestAppRaytracing::draw(){
     glDisable(GL_DEPTH_TEST);
     glColor3f( 1.0f, 1.0f, 1.0f );
     Draw3D::drawPointCross( ray0, 1.0 );
-    Draw3D::drawVecInPos  ( camMat.c, ray0 );
+    Draw3D::drawVecInPos  ( (Vec3d)cam.rot.c, ray0 );
 
     //STOP = true;
 

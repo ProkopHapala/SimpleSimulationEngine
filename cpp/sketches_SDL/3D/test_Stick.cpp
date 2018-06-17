@@ -135,7 +135,7 @@ void TestAppStick::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    ray0 = camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
+    ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     Draw3D::drawPointCross( ray0, 0.1 );
     //Draw3D::drawVecInPos( camMat.c, ray0 );
     if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
@@ -206,10 +206,10 @@ void TestAppStick::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    ipicked = pickParticle( world.natoms, world.apos, ray0, camMat.c , 0.5 );
+                    ipicked = pickParticle( world.natoms, world.apos, ray0, (Vec3d)cam.rot.c , 0.5 );
                     break;
                 case SDL_BUTTON_RIGHT:
-                    ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
+                    ibpicked = world.pickBond( ray0, (Vec3d)cam.rot.c , 0.5 );
                     printf("ibpicked %i \n", ibpicked);
                     break;
             }

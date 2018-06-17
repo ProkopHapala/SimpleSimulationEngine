@@ -468,8 +468,8 @@ void TestAppPatches::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                case SDLK_a: center.add(camMat.a*0.1); refresh=true; break;
-                case SDLK_d: center.sub(camMat.a*0.1); refresh=true; break;
+                case SDLK_a: center.add((Vec3d)cam.rot.a*0.1); refresh=true; break;
+                case SDLK_d: center.sub((Vec3d)cam.rot.a*0.1); refresh=true; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             printf("keyPressed\n");

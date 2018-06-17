@@ -187,9 +187,9 @@ void TestAppMesh::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     Vec3d ray0;
-                    ray0.set_lincomb( 1, mouse_begin_x, mouse_begin_y, camPos, camMat.a, camMat.b );
+                    ray0.set_lincomb( 1, mouse_begin_x, mouse_begin_y, (Vec3d)cam.pos, (Vec3d)cam.rot.a, (Vec3d)cam.rot.b );
                     //glColor3f(1,1,1); Draw3D::drawPointCross( ray0, 0.2 );
-                    ipicked= mesh.pickVertex( ray0, camMat.c );
+                    ipicked= mesh.pickVertex( ray0, (Vec3d)cam.rot.c );
                     mouse0.set(mouse_begin_x, mouse_begin_y);
                     dragging=true;
                     break;
@@ -200,9 +200,9 @@ void TestAppMesh::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_LEFT:
                     if(dragging){
                         Vec3d d;
-                        d.set_lincomb( 1, mouse_begin_x, mouse_begin_y, camPos, camMat.a, camMat.b );
+                        d.set_lincomb( 1, mouse_begin_x, mouse_begin_y, (Vec3d)cam.pos, (Vec3d)cam.rot.a, (Vec3d)cam.rot.b );
                         d.sub(mesh.points[ipicked]);
-                        double c = d.dot(camMat.c);  d.add_mul(camMat.c, -c);
+                        double c = d.dot((Vec3d)cam.rot.c);  d.add_mul((Vec3d)cam.rot.c, -c);
                         mesh.points[ipicked].add(d);
 
                         glDeleteLists(mesh.rendered_shape, 1);

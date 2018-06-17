@@ -468,7 +468,7 @@ void TestAppSphereTree::draw   (){
     tview = getCPUticks() - tview;
 
     double t;
-    int isph = raySpheresOnGrid( camMat.c, camMat.c*(-10.0), 10.0, rSphere, t );
+    int isph = raySpheresOnGrid( (Vec3d)cam.rot.c, (Vec3d)cam.rot.c*(-10.0), 10.0, rSphere, t );
     if(isph>=0){
         lpos = sphere_pos[isph];
         glColor3f( 0.0, 1.0, 1.0 );

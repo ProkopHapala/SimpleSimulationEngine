@@ -112,7 +112,7 @@ Chimera generuje topologie ... zdrojak C/python
 
 // compied from RigidMolecule.h      ============>   TODO : make common lib of inter-molecular forcefields formulas
 
-int pickParticle( int n, Vec3d * ps, Vec3d& ray0, Vec3d& hRay, double R ){
+int pickParticle( int n, Vec3d * ps, const Vec3d& ray0, const Vec3d& hRay, double R ){
     double tmin =  1e+300;
     int imin    = -1;
     for(int i=0; i<n; i++){
@@ -248,7 +248,7 @@ void deallocate(){
     if(aPLQ) delete [] aPLQ;
 }
 
-int pickBond( Vec3d& ray0, Vec3d& hRay, double R ){
+int pickBond( const Vec3d& ray0, const Vec3d& hRay, double R ){
     double dist_min =  R;
     int    imin     = -1;
     for(int ib=0; ib<nbonds; ib++){

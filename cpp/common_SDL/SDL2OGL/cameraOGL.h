@@ -13,7 +13,7 @@
 
 namespace Cam{
 
-void ortho( const Camera& cam, bool zsym ){
+inline void ortho( const Camera& cam, bool zsym ){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
     float zmin = cam.zmin; if(zsym) zmin=-cam.zmax;
@@ -27,7 +27,7 @@ void ortho( const Camera& cam, bool zsym ){
 	glTranslatef(-cam.pos.x,-cam.pos.y,-cam.pos.z);
 }
 
-void perspective( const Camera& cam ){
+inline void perspective( const Camera& cam ){
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
     //glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, camDist/zoom, VIEW_DEPTH );

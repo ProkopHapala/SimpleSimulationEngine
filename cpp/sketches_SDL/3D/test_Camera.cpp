@@ -115,8 +115,8 @@ void TestAppCamera::draw(){
     printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	glEnable(GL_DEPTH_TEST);
 
-	/*
     for( int i=0; i<nobject; i++ ) {
         glPushMatrix();
         Vec3d * o = objects + i;
@@ -128,7 +128,6 @@ void TestAppCamera::draw(){
         glCallList( defaultObjectShape );
         glPopMatrix();
     }
-    */
 
     glColor3f(0.7,0.7,0.7);
     Draw3D::drawPanel( Vec3fZero, Mat3fIdentity, {20.0,10.0} );
