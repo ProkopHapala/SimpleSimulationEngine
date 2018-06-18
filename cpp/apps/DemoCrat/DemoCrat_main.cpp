@@ -51,6 +51,7 @@ class DemoCratApp : public AppSDL2OGL { public:
     void        *lib_handle = 0;
     Pprocedure   pplSetup = 0;
     Pprocedure   pplDraw = 0;
+    PmouseFunc   pplOnMouse = 0;
     PDemoFactory pDemoFactory = 0;
     Demo*        demo = 0;
 
@@ -130,10 +131,10 @@ int DemoCratApp::loadDemo( char * fname ){
     pplDraw = (Pprocedure)dlsym(lib_handle, "plDraw");
     if ((error = dlerror())){ printf( "%s\n", error); pplDraw=0; }
 
-    //pplDrawXY = (Pfunc2f)dlsym(lib_handle, "plDrawXY");
-    //if ((error = dlerror())){ printf( "%s\n", error); pplDrawXY=0; }
+    pplOnMouse = (PmouseFunc)dlsym(lib_handle, "plOnMouse");
+    if ((error = dlerror())){ printf( "%s\n", error); pplOnMouse=0; }
 
-    pDemoFactory = (PDemoFactory)dlsym(lib_handle, "MakeDemo");
+    pDemoFactory = (PDemoFactory)dlsym(lib_handle, "CreateDemo");
     if ((error = dlerror())){ printf( "%s\n", error); pDemoFactory=0; }
 
     if(pDemoFactory){
@@ -164,6 +165,9 @@ void DemoCratApp::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
+
+	if(demo) demo->onMouse(mouse_begin_x,mouse_begin_y,0);
+	if(demo) demo->draw();
 };
 
 void DemoCratApp::drawHUD(){

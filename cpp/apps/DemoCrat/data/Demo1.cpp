@@ -38,7 +38,7 @@ class Demo1:  public Demo{  public:
         }
     }
     
-    void draw( float x, float y ){
+    void onMouse( float x, float y, uint8_t buttons ){
         //printf( " plDrawXY \n" );
         move( x, y );
         draw();
@@ -46,6 +46,6 @@ class Demo1:  public Demo{  public:
 
 };
 
-Demo* MakeDemo(){
+Demo* CreateDemo(){
     return (Demo*) ( new Demo1() );
 };
