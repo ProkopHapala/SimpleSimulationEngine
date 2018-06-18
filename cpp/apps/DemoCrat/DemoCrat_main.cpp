@@ -16,7 +16,7 @@
 #include "fastmath.h"
 #include "Vec2.h"
 #include "geom2D.h"
-#include "AppSDL2OGL.h"
+#include "AppSDL2OGL_3D.h"
 
 #include "testUtils.h"
 #include "SDL_utils.h"
@@ -44,9 +44,9 @@ char str[0x10000];
 
 //const char * fflags = "-I.. -I/home/prokop/git/SimpleSimulationEngine/cpp/common/math ";
 //const char * fflags = "-Wall -g -Og  -I.. -I../../../../common/math -I../../../../common/utils ";
-const char * fflags = "-w -I.. -I../../../../common/math -I../../../../common/utils ";
+const char * fflags = "-w -I.. -I../../../../common/math -I../../../../common/utils -I../../../../common/dataStructures  -I../../../../common_SDL/SDL2OGL ";
 
-class DemoCratApp : public AppSDL2OGL { public:
+class DemoCratApp : public AppSDL2OGL_3D { public:
 
     void        *lib_handle = 0;
     Pprocedure   pplSetup = 0;
@@ -147,7 +147,7 @@ int DemoCratApp::loadDemo( char * fname ){
 }
 
 
-DemoCratApp::DemoCratApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+DemoCratApp::DemoCratApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     //default_font_texture = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
@@ -176,7 +176,7 @@ void DemoCratApp::drawHUD(){
 
 void DemoCratApp::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );
-    gui.onEvent(mouseX,HEIGHT-mouseY,event);
+    gui.onEvent(mouseX,mouseY,event);
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
@@ -196,7 +196,7 @@ void DemoCratApp::eventHandling ( const SDL_Event& event  ){
             }
             break;
     };
-    AppSDL2OGL::eventHandling( event );
+    AppSDL2OGL_3D::eventHandling( event );
     camStep = zoom*0.05;
 }
 
