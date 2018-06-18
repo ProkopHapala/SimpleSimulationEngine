@@ -45,12 +45,13 @@ class Truss{ public:
     void clear();
     void sticksFormString( char * str );
     int loadXYZ( char* fname );
-    int pickVertex( const Vec3d &ray0, const Vec3d &hRay );
     void affineTransform( Mat3d mat, bool T );
-    int pickVertex( Vec3d& ray0, Vec3d& hRay, double R );
-    int pickEdge( Vec3d& ray0, Vec3d& hRay, double R );
-    void panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width );
 
+    int pickVertex( const Vec3d &ray0, const Vec3d &hRay ) const;
+    int pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R ) const;
+    int pickEdge( const Vec3d& ray0, const Vec3d& hRay, double R ) const;
+
+    void panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width );
     void girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width );
     void girder1_caps( int ip0, int ip1, int kind );
     void wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width );

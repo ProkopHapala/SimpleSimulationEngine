@@ -156,7 +156,7 @@ void AeroCraftGUI::draw(){
 	Mat3d rot;     rot.    setT(myCraft->rotMat);
     //Mat3d camMatT; camMatT.setT(camMat);
 
-    controler.goalUp = ( camMat.a*mouseX + camMat.b*mouseY ); controler.goalUp.normalize();
+    controler.goalUp = (Vec3d)( cam.rot.a*mouseX + cam.rot.b*mouseY ); controler.goalUp.normalize();
 
     int dmx,dmy;
     SDL_GetRelativeMouseState(&dmx,&dmy);
@@ -164,8 +164,8 @@ void AeroCraftGUI::draw(){
     //SDL_WarpMouseInWindow( window, WIDTH*0.5, HEIGHT*0.5 );
 
     //printf( "dmYX %i %i \n", dmx, dmy );
-	controler.goalDir.add_mul(camMat.a, dmx*0.01);
-	controler.goalDir.add_mul(camMat.b, dmy*-0.01);
+	controler.goalDir.add_mul((Vec3d)cam.rot.a, dmx*0.01);
+	controler.goalDir.add_mul((Vec3d)cam.rot.b, dmy*-0.01);
 	controler.goalDir.normalize();
 
     //glColor3f( 1.0,1.0,1.0); Draw3D::drawVecInPos( controler.goalRoll*5, myCraft->pos );
@@ -240,7 +240,7 @@ void AeroCraftGUI::draw(){
     glMatrixMode (GL_MODELVIEW); glPushMatrix();
         glLoadIdentity();
         renderAeroCraft(*myCraft, false);
-        Draw3D::drawMatInPos( camMat, {0.0,0.0,0.0} );
+        Draw3D::drawMatInPos( cam.rot, {0.0,0.0,0.0} );
     glMatrixMode( GL_MODELVIEW );  glPopMatrix();
     glMatrixMode( GL_PROJECTION ); glPopMatrix();
     //Draw3D::drawMatInPos( camMat, myCraft->pos );
@@ -302,9 +302,9 @@ void AeroCraftGUI::draw(){
             //pilot->resetSteer( );
             //myCraft->steerTo(droll, dpitch , dyaw);
         }else{
-            Mat3d matCam;
+            Mat3f matCam;
             qCamera.toMatrix_T( matCam );
-            Draw3D::drawMatInPos(matCam, myCraft->pos);
+            Draw3D::drawMatInPos(matCam, (Vec3f)myCraft->pos);
             //pilot->steerToDir( matCam.c );
         }
     }

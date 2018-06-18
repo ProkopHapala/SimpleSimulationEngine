@@ -321,8 +321,8 @@ void Tanks_single::draw(){
     world.update_world( );
 
     Vec3d hRay,ray0,normal;
-    hRay.set(camMat.c);
-    ray0.set(camPos);
+    hRay.set((Vec3d)cam.rot.c);
+    ray0.set((Vec3d)cam.pos);
     for( auto o : world.objects ) {
 
         glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos( o->grot.a*o->span.a*1.2, o->gpos );
@@ -356,7 +356,7 @@ void Tanks_single::draw(){
     glCallList( warrior1->hull  .glo_armor    );
     glCallList( warrior1->turret.glo_armor    );
 
-    warrior1->rotateTurretToward( camMat.c );
+    warrior1->rotateTurretToward( (Vec3d)cam.rot.c );
 
 
     //Draw3D::drawShape( warrior1->pos, warrior1->qrot, warrior1->hull  .glo_armor  );
@@ -402,7 +402,7 @@ void Tanks_single::draw(){
     //Vec3d hRay = camMat.c;
     //Vec3d ray0 = camPos;
 
-    hRay = camMat.c; ray0 = camPos;
+    hRay = (Vec3d)cam.rot.c; ray0 = (Vec3d)cam.pos;
     //hRay = warrior1->gun_rot; ray0 = warrior1->pos;
 
     // ray vs tank
@@ -470,7 +470,7 @@ void Tanks_single::keyStateHandling( const Uint8 *keys ){
 
         //camPos.set( warrior1->pos );
         //camPos.set_add( warrior1->pos, {0.0,2.0,0.0} );
-        camPos = warrior1->pos +  (Vec3d){0.0,2.0,0.0} + camMat.c*(-4.0) ;
+        cam.pos = (Vec3f)(warrior1->pos) +  (Vec3f){0.0,2.0,0.0} + cam.rot.c*(-4.0) ;
     }
 
     //if( keys[ SDL_SCANCODE_W ] ){ camPos.add_mul( camMat.c, +0.1 ); }
@@ -492,10 +492,10 @@ void Tanks_single::mouseHandling( ){
 
     camPhi   += mx*0.001;
     camTheta += my*0.001;
-    camMat.a.set( sin(camPhi),0.0,cos(camPhi) );
+    cam.rot.a.set( sin(camPhi),0.0,cos(camPhi) );
     double ct=cos(camTheta),st=sin(camTheta);
-    camMat.b.set(-camMat.a.z*st, ct, camMat.a.x*st);
-    camMat.c.set(-camMat.a.z*ct,-st, camMat.a.x*ct); // up vector
+    cam.rot.b.set(-cam.rot.a.z*st, ct, cam.rot.a.x*st);
+    cam.rot.c.set(-cam.rot.a.z*ct,-st, cam.rot.a.x*ct); // up vector
     //printf("camMat:\n",);
     //printf("camMat: (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n",camMat.ax,camMat.ay,camMat.az,  camMat.bx,camMat.by,camMat.bz, camMat.cx,camMat.cy,camMat.cz);
     //qCamera.fromAngleAxis( camTheta, {sin(camPhi),0, cos(camPhi)} );
@@ -509,9 +509,9 @@ void Tanks_single::camera(){
     glLoadIdentity();
     float fov = VIEW_ZOOM_DEFAULT/zoom;
     glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
-    Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, camMat, camMatrix );
+    Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, cam.rot, camMatrix );
     glMultMatrixf( camMatrix );
-    glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
+    glTranslatef ( -cam.pos.x, -cam.pos.y, -cam.pos.z );
     //glTranslatef ( -10*camMat.c.x, -10*camMat.c.y, -10*camMat.c.z );
     //glTranslatef ( 0.0, -5.0, 0.0 );
     glMatrixMode (GL_MODELVIEW);

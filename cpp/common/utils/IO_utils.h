@@ -7,12 +7,16 @@
 #include <cstdarg>
 #include <cstring>
 
+#include <string>
+#include <vector>
+
 #include "Vec2.h"
 #include "Vec3.h"
 
+
 const int N_CHAR_TMP = 256;
 
-int fileExist(const char * fname ){
+inline int fileExist(const char * fname ){
     FILE *file;
     if ( (file = fopen(fname, "r")) ) {
         fclose(file);
@@ -31,7 +35,7 @@ int fileExist(const char * fname ){
 // list files in directory
 //  https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
 
-int listDirContaining( char * dirName, char * fname_contains, std::vector<std::string>& fnames_found ){
+inline int listDirContaining( char * dirName, char * fname_contains, std::vector<std::string>& fnames_found ){
     DIR *dir=NULL;
     int n=0;
     struct dirent *ent=NULL;

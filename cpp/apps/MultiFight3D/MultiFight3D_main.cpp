@@ -66,7 +66,7 @@ void MultiFight3D_single::draw(){
 
     //printf( "camMat.a (%3.3f,%3.3f,%3.3f) \n", camMat.a.x, camMat.a.y, camMat.a.z );
 
-    warrior1->gun_rot.set( camMat.c );
+    warrior1->gun_rot.set( (Vec3d)cam.rot.c );
     world.update_world( );
 
 
@@ -77,7 +77,7 @@ void MultiFight3D_single::draw(){
         Draw3D::toGLMat( o->lpos, o->lrot, glMat );
         glMultMatrixf( glMat );
 
-        double t = raySphere( camPos, camMat.c, world.objR, o->lpos );
+        double t = raySphere( (Vec3d)cam.pos, (Vec3d)cam.rot.c, world.objR, o->lpos );
         if( ( t>0 ) && (t < 1000.0 ) ){
             //printf( " t %f  pos (%3.3f,%3.3f,%3.3f) \n", t, o->lpos.x, o->lpos.y, o->lpos.z );
             glCallList( world.defaultObjectHitShape );
@@ -126,13 +126,13 @@ void MultiFight3D_single::keyStateHandling( const Uint8 *keys ){
 
         RigidBody* rb = warrior1->asRigidBody();
 
-        if( keys[ SDL_SCANCODE_W ] ){ rb->vel.add_mul( camMat.c, +0.1 ); }
-        if( keys[ SDL_SCANCODE_S ] ){ rb->vel.add_mul( camMat.c, -0.1 ); }
-        if( keys[ SDL_SCANCODE_A ] ){ rb->vel.add_mul( camMat.a, -0.1 ); }
-        if( keys[ SDL_SCANCODE_D ] ){ rb->vel.add_mul( camMat.a, +0.1 ); }
+        if( keys[ SDL_SCANCODE_W ] ){ rb->vel.add_mul( (Vec3d)cam.rot.c, +0.1 ); }
+        if( keys[ SDL_SCANCODE_S ] ){ rb->vel.add_mul( (Vec3d)cam.rot.c, -0.1 ); }
+        if( keys[ SDL_SCANCODE_A ] ){ rb->vel.add_mul( (Vec3d)cam.rot.a, -0.1 ); }
+        if( keys[ SDL_SCANCODE_D ] ){ rb->vel.add_mul( (Vec3d)cam.rot.a, +0.1 ); }
         if( keys[ SDL_SCANCODE_SPACE ] ){ rb->vel.mul( 0.9 ); }
 
-        camPos.set( rb->pos );
+        cam.pos.set( (Vec3f)rb->pos );
     }
 
     //if( keys[ SDL_SCANCODE_W ] ){ camPos.add_mul( camMat.c, +0.1 ); }
@@ -155,7 +155,7 @@ void MultiFight3D_single::mouseHandling( ){
     //printf( " %i %i \n", mx,my );
     //if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
 
-        Quat4d q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
+        Quat4f q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
         qCamera.qmul_T( q );
     //}
     //qCamera.qmul( q );

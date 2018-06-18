@@ -138,7 +138,7 @@ void TestAppShotHit::draw(){
         glTranslatef( o->x, o->y, o->z );
 
         //double t = raySphere( {0.0d,0.0d,0.0d}, camMat.c, 2.0, o->lpos );
-        double t = raySphere( camPos, camMat.c, 2.0, *o );
+        double t = raySphere( (Vec3d)cam.pos, (Vec3d)cam.rot.c, 2.0, *o );
         if( ( t>0 ) && (t < 1000.0 ) ){
             //printf( " t %f  pos (%3.3f,%3.3f,%3.3f) \n", t, o->lpos.x, o->lpos.y, o->lpos.z );
             glCallList( defaultObjectHitShape );
@@ -183,7 +183,7 @@ void TestAppShotHit::mouseHandling( ){
     mouse_begin_y = (2*mouseY-HEIGHT)*zoom/HEIGHT;
     Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
     //if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-        Quat4d q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
+        Quat4f q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
         qCamera.qmul_T( q );
     //}
 }

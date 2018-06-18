@@ -24,6 +24,7 @@
 
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
+#include "IO_utils.h"
 #include "testUtils.h"
 
 #include "EditSpaceCraft.h"
@@ -200,7 +201,7 @@ void SpaceCraftEditGUI::draw(){
 
     //Mat3d camMat;
     //qCamera.toMatrix_T(camMat);
-    Draw3D::drawMatInPos(  (Mat3f)camMat, (Vec3f){0.0,0.0,0.0} );
+    Draw3D::drawMatInPos( cam.rot, (Vec3f){0.0,0.0,0.0} );
 
     //printf( "%i\n", EDIT_MODE::vertex );
     if(picked>=0){
@@ -214,7 +215,7 @@ void SpaceCraftEditGUI::draw(){
 
     }
 
-    mouse_ray0 = camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
+    mouse_ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     //glColor3f(0.0f,0.0f,0.0f); drawTruss( truss.edges.size(), &truss.edges[0], &truss.points[0] );
     //glColor3f(1.0f,1.0f,1.0f); Draw3D::drawPoints( truss.points.size(), &truss.points[0], 0.1 );
 
@@ -265,10 +266,10 @@ void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){
 	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
 
-    if( keys[ SDL_SCANCODE_W ] ){ camPos.add_mul( camMat.b, +0.05*zoom ); }
-	if( keys[ SDL_SCANCODE_S ] ){ camPos.add_mul( camMat.b, -0.05*zoom );  }
-	if( keys[ SDL_SCANCODE_A ] ){ camPos.add_mul( camMat.a, -0.05*zoom );  }
-	if( keys[ SDL_SCANCODE_D ] ){ camPos.add_mul( camMat.a, +0.05*zoom );  }
+    if( keys[ SDL_SCANCODE_W ] ){ cam.pos.add_mul( cam.rot.b, +0.05*zoom ); }
+	if( keys[ SDL_SCANCODE_S ] ){ cam.pos.add_mul( cam.rot.b, -0.05*zoom );  }
+	if( keys[ SDL_SCANCODE_A ] ){ cam.pos.add_mul( cam.rot.a, -0.05*zoom );  }
+	if( keys[ SDL_SCANCODE_D ] ){ cam.pos.add_mul( cam.rot.a, +0.05*zoom );  }
 
 };
 
@@ -291,8 +292,8 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     switch(edit_mode){
-                        case EDIT_MODE::vertex: picked = truss.pickVertex( mouse_ray0, camMat.c, 0.5  ); printf("picked %i\n", picked); break;
-                        case EDIT_MODE::edge  : picked = truss.pickEdge  ( mouse_ray0, camMat.c, 0.25 ); printf("picked %i\n", picked); break;
+                        case EDIT_MODE::vertex: picked = truss.pickVertex( mouse_ray0, (Vec3d)cam.rot.c, 0.5  ); printf("picked %i\n", picked); break;
+                        case EDIT_MODE::edge  : picked = truss.pickEdge  ( mouse_ray0, (Vec3d)cam.rot.c, 0.25 ); printf("picked %i\n", picked); break;
                     }; break;
                 case SDL_BUTTON_RIGHT: break;
             }
@@ -301,7 +302,7 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
                     switch(edit_mode){
-                        case EDIT_MODE::vertex: int ip2 = truss.pickVertex( mouse_ray0, camMat.c, 0.5  ); if((picked>=0)&(ip2!=picked)); truss.edges.push_back((TrussEdge){picked,ip2,0}); break;
+                        case EDIT_MODE::vertex: int ip2 = truss.pickVertex( mouse_ray0, (Vec3d)cam.rot.c, 0.5  ); if((picked>=0)&(ip2!=picked)); truss.edges.push_back((TrussEdge){picked,ip2,0}); break;
                         //case EDIT_MODE::edge  : picked = truss.pickEdge  ( mouse_ray0, camMat.c, 0.25 ); printf("picked %i\n", picked); break;
                     }; break;
                 case SDL_BUTTON_RIGHT:break;

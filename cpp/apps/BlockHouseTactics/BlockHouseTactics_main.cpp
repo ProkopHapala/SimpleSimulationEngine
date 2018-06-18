@@ -103,7 +103,7 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
 
 TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
-    camPos.set( 0,0,-10 );
+    cam.pos.set( 0,0,-10 );
 
 	world.init();
 

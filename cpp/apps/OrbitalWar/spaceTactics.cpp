@@ -332,7 +332,7 @@ void SpaceTactics::mouseHandling( ){
     int mx,my; Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
     //printf( " %i %i \n", mx,my );
     if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-        Quat4d q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
+        Quat4f q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
         qCamera.qmul_T( q );
     }
 

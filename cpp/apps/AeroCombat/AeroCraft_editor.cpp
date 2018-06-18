@@ -122,7 +122,7 @@ void AeroCraftEditor::draw(){
 
     glDisable(GL_LIGHTING);
 
-    mouseRay0 = camPos + camMat.a*mouse_begin_x + camMat.b*mouse_begin_y;
+    mouseRay0 = (Vec3d)(cam.pos + cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     //printf( "mouse_begin_x" );
     Draw3D::drawPointCross( mouseRay0, 1.0 );
 

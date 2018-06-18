@@ -55,7 +55,12 @@ int Truss::loadXYZ( char* fname ){
     printf( "loadXYZ DONE\n");
 }
 
-int Truss::pickVertex( const Vec3d &ray0, const Vec3d &hRay ){
+void Truss::affineTransform( Mat3d mat, bool T ){
+    if( T ) { for(int i=0; i<points.size(); i++){ points[i] = mat.dotT(points[i]); }; }
+    else    { for(int i=0; i<points.size(); i++){ points[i] = mat.dot (points[i]); }; }
+}
+
+int Truss::pickVertex( const Vec3d &ray0, const Vec3d &hRay ) const {
     double r2min=1e+300;
     int imin=0;
     for(int i=0; i<points.size(); i++){
@@ -66,12 +71,7 @@ int Truss::pickVertex( const Vec3d &ray0, const Vec3d &hRay ){
     return imin;
 };
 
-void Truss::affineTransform( Mat3d mat, bool T ){
-    if( T ) { for(int i=0; i<points.size(); i++){ points[i] = mat.dotT(points[i]); }; }
-    else    { for(int i=0; i<points.size(); i++){ points[i] = mat.dot (points[i]); }; }
-}
-
-int Truss::pickVertex( Vec3d& ray0, Vec3d& hRay, double R ){
+int Truss::pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R ) const {
     //double tmin =  1e+300;
     double r2min =  R*R;
     int imin     = -1;
@@ -86,7 +86,7 @@ int Truss::pickVertex( Vec3d& ray0, Vec3d& hRay, double R ){
     return imin;
 }
 
-int Truss::pickEdge( Vec3d& ray0, Vec3d& hRay, double R ){
+int Truss::pickEdge( const Vec3d& ray0, const Vec3d& hRay, double R ) const {
     double dist_min =  R;
     int    imin     = -1;
     for(int ib=0; ib<edges.size(); ib++){
