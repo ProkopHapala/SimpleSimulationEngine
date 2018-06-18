@@ -518,7 +518,9 @@ void DropDownList ::tryRender( ){
 */
 
 GUIAbstractPanel* DropDownList::onMouse ( int x, int y, const SDL_Event& event, GUI& gui ){
+    //printf( "DropDownList::onMouse x,y, %i(%i..%i) %i(%i..%i) \n", x,xmin,xmax,  y,ymin,ymax );
     if( check( x, y ) ){
+        //printf( "DropDownList::onMouse inside \n" );
         //if( event.type == SDL_MOUSEBUTTONUP ){
         if( event.type == SDL_MOUSEBUTTONDOWN ){
             if(event.button.button == SDL_BUTTON_LEFT){
@@ -531,7 +533,7 @@ GUIAbstractPanel* DropDownList::onMouse ( int x, int y, const SDL_Event& event, 
                         i=_max(i,0);
                         iSelected = i;
                         if(onSelect)onSelect->GUIcallback(this);
-                        //printf( "iSelected %i  iItem0 %i  labels.size() %i  \n", iSelected, iItem0, labels.size() );
+                        printf( "iSelected %i  iItem0 %i  labels.size() %i  \n", iSelected, iItem0, labels.size() );
                     }
                     close();
                 }else{

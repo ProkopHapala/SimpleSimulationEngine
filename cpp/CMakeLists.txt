@@ -24,7 +24,8 @@ include_directories(
         ${COMMON_SRCS}/math
         ${COMMON_SRCS}/dynamics
         ${COMMON_SRCS}/maps
-        ${COMMON_SRCS}/optimization
+        #${COMMON_SRCS}/optimization
+        ${COMMON_SRCS}/utils
         ${COMMON_SRCS}/dataStructures
         ${COMMON_SRCS}/engine
         ${COMMON_SDL_SRCS}

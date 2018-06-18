@@ -2,8 +2,7 @@
 set( NAME "algorithms" )
 
 add_executable( ${NAME} 
-	main.cpp 
-	${COMMON_SRCS}/testUtils.h
+	main.cpp
 	arrayAlgs.h
 )
 

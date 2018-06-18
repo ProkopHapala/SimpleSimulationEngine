@@ -226,7 +226,7 @@ void SpaceCraftEditGUI::drawHUD(){
 
     gui.draw();
     //glColor3f(1.0f,1.0f,1.0f);   txtStatic.view3D( {5,5}, fontTex, 8 );
-    glPopMatrix();
+    //glPopMatrix();
 }
 
 //void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){ };
@@ -281,7 +281,6 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 case SDLK_m:  edit_mode = (EDIT_MODE)((((int)edit_mode)+1)%((int)EDIT_MODE::size)); printf("edit_mode %i\n", (int)edit_mode); break;
                 //case SDLK_h:  warrior1->tryJump(); break;
-
                 case SDLK_l:
                     //reloadShip( );
                     onSelectLuaShipScript.GUIcallback(lstLuaFiles);
@@ -298,7 +297,6 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_RIGHT: break;
             }
             break;
-
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:

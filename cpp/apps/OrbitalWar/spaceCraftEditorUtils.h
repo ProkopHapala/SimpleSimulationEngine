@@ -11,6 +11,9 @@
 // list files in directory
 //  https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
 
+/*
+// moved to IO_utils_h
+
 int listDirContaining( char * dirName, char * fname_contains, std::vector<std::string>& fnames_found ){
     DIR *dir=NULL;
     int n=0;
@@ -33,6 +36,7 @@ int listDirContaining( char * dirName, char * fname_contains, std::vector<std::s
     }
     return i;
 }
+*/
 
 /*
 int dir2tree(TreeViewTree& node, char * name, int level ){

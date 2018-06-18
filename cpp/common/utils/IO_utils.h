@@ -12,6 +12,79 @@
 
 const int N_CHAR_TMP = 256;
 
+int fileExist(const char * fname ){
+    FILE *file;
+    if ( (file = fopen(fname, "r")) ) {
+        fclose(file);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+#include <vector>
+#include <unistd.h>
+#include <dirent.h>
+
+//#include "Tree.h"
+
+// list files in directory
+//  https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
+
+int listDirContaining( char * dirName, char * fname_contains, std::vector<std::string>& fnames_found ){
+    DIR *dir=NULL;
+    int n=0;
+    struct dirent *ent=NULL;
+    int i=0;
+    if ( (dir = opendir( dirName )) != NULL) {
+        while ( (ent = readdir (dir)) != NULL) {
+            char* found = strstr( ent->d_name, fname_contains );
+            if( found ){
+                printf("%i %s\n", i, ent->d_name);
+                fnames_found.push_back( ent->d_name );
+                i++;
+            }
+        }
+        n++;
+        closedir(dir);
+    } else {
+        printf("Cannot open directory %s \n", dirName );
+        return -1;
+    }
+    return i;
+}
+
+/*
+int dir2tree(TreeViewTree& node, char * name, int level ){
+
+    if (niters >100) return -1;
+    niters++;
+
+    if((name[0]=='.'))return 0;
+
+    for(int i=0; i<level; i++) printf("_");
+
+    node.content.caption = name;
+    DIR *dir=NULL;
+    struct dirent *ent=NULL;
+
+    if( chdir(name)==0 ){
+    //if( (dir = opendir( name )) != NULL){
+        dir = opendir( "." );
+        printf("dir '%s' | %i \n", name, level );
+        while( (ent = readdir(dir)) != NULL){
+            node.branches.push_back( TreeViewTree() );
+            dir2tree( node.branches.back(), ent->d_name, level+1 );
+        }
+        closedir(dir);
+        chdir("..");
+    }else{
+        printf("leaf '%s' | %i \n", name, level );
+    }
+    return 0;
+}
+*/
+
 template <typename Func>
 int processFileLines( char * fname, Func func ){
 FILE * pFile;
@@ -42,7 +115,6 @@ inline char* stripWhite( char* s ){
         }
     }
 }
-
 
 inline int strcmp_noWhite( const char * s1, const char * s2 ){
     while( true ){
@@ -96,7 +168,6 @@ inline int loadBin( char *fname, int n, char * data ){
     fclose(ptr_myfile);
     return 0;
 }
-
 
 inline char * fgets_comment( char * line, int num, FILE * stream ){
     constexpr int NMaxComment = 10;

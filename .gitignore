@@ -9,6 +9,7 @@
 *.bin
 
 Build
+tmp
 
 *.log
 *.xsf
