@@ -108,12 +108,14 @@ int DemoCratApp::loadDemo( char * fname ){
 
     if( bRecompile || !fileExist(fullname) ) recompileLib( "data/bin", "../", fname, fflags );
 
-    printf( "=== readelf -s data/bin/libDemo1.so | grep draw\n" );
-    system( "readelf -s data/bin/libDemo1.so | grep draw" );
-    printf( "=== readelf -s data/bin/libDemo1.so | grep setup\n" );
-    system( "readelf -s data/bin/libDemo1.so | grep setup" );
-
     printf("loading %s :\n", fullname );
+
+
+    sprintf(str,"readelf -s %s | grep draw", fullname );
+    printf( "=== %s \n", str ); system( str );
+    sprintf(str,"readelf -s %s | grep setup", fullname );
+    printf( "=== %s \n", str ); system( str );
+
 
     void* plib = dlopen( fullname, RTLD_LAZY);
     //if (!plib){ printf( "%s\n", dlerror()); exit(1); }
@@ -125,13 +127,13 @@ int DemoCratApp::loadDemo( char * fname ){
         lib_handle=plib;
     }else{ printf( "%s\n", dlerror()); return -1; }
 
-    pplSetup = (Pprocedure)dlsym(lib_handle, "plSetup");
+    pplSetup = (Pprocedure)dlsym(lib_handle, "setup");
     if ((error = dlerror())){ printf("%s\n", error); pplSetup=0; }
 
-    pplDraw = (Pprocedure)dlsym(lib_handle, "plDraw");
+    pplDraw = (Pprocedure)dlsym(lib_handle, "draw");
     if ((error = dlerror())){ printf( "%s\n", error); pplDraw=0; }
 
-    pplOnMouse = (PmouseFunc)dlsym(lib_handle, "plOnMouse");
+    pplOnMouse = (PmouseFunc)dlsym(lib_handle, "onMouse");
     if ((error = dlerror())){ printf( "%s\n", error); pplOnMouse=0; }
 
     pDemoFactory = (PDemoFactory)dlsym(lib_handle, "CreateDemo");
@@ -166,8 +168,13 @@ void DemoCratApp::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
 
-	if(demo) demo->onMouse(mouse_begin_x,mouse_begin_y,0);
-	if(demo) demo->draw();
+	if(demo){
+        demo->onMouse(mouse_begin_x,mouse_begin_y,0);
+        demo->draw();
+	};
+
+    if(pplOnMouse) pplOnMouse(mouse_begin_x,mouse_begin_y,0);
+    if(pplDraw)    pplDraw();
 };
 
 void DemoCratApp::drawHUD(){

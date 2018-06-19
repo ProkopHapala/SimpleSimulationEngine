@@ -2,6 +2,13 @@
 #ifndef Demo_h
 #define Demo_h
 
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+#include <GL/glu.h>
+
 #include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
@@ -13,16 +20,11 @@ class Demo{  public:
     virtual void onMouse(float x, float y, uint8_t buttons)=0;
 };
 
-// external functions used in plugin  (e.g. implemented in main.cpp)
-void  drawCircle( int n, float R );
-float randf();
-float randf( float min, float max );
-
 // functions exported from plugin
 extern "C" {
-    void plSetup();
-    void plDraw();
-    void plOnMouse( float x, float y, uint8_t buttons );
+    void setup();
+    void draw();
+    void onMouse( float x, float y, uint8_t buttons );
     Demo* CreateDemo();
 }
 

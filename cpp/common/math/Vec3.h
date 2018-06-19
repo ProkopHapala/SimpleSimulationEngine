@@ -126,7 +126,12 @@ class Vec3TYPE{
 		TYPE inVnorm = 1.0d/norm;
 		x *= inVnorm;    y *= inVnorm;    z *= inVnorm;
 		return norm;
-    };
+    }
+    inline VEC normalized() {
+        VEC v; v.set(*this);
+        v.normalize();
+        return v;
+    }
 
     inline VEC getOrtho( VEC& up ) const {
         up.makeOrthoU(*this); up.normalize();
@@ -246,6 +251,22 @@ class Vec3TYPE{
         z =  idet*( p.x*(va.y*vb.z - va.z*vb.y) - p.y*(va.x*vb.z - va.z*vb.x) + p.z*(va.x*vb.y - va.y*vb.x) );
     }
 
+    static inline VEC average( int n, VEC* vs ){
+        VEC v;
+        v.set(0.0);
+        for(int i=0; i<n; i++){ v.add(vs[i]); }
+        v.mul( 1/(TYPE)n);
+        return v;
+    }
+
+    static inline void average( int n, int* selection, VEC* vs ){
+        VEC v;
+        v.set(0.0);
+        for(int i=0; i<n; i++){ v.add(vs[selection[i]]); }
+        v.mul( 1/(TYPE)n );
+        return v;
+    }
+
 };
 
 template<typename VEC> inline VEC cross( VEC a, VEC b ){ return (VEC){ a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x }; }
@@ -270,11 +291,6 @@ static constexpr Vec3i Vec3iX    = (Vec3i){1,0,0};
 static constexpr Vec3i Vec3iY    = (Vec3i){0,1,0};
 static constexpr Vec3i Vec3iZ    = (Vec3i){0,0,1};
 
-
-
-
-
-
 inline uint64_t scalar_id  ( const Vec3i& v){ return ( v.x | (((uint64_t)v.y)<<16) | (((uint64_t)v.z)<<32) ); }
 inline Vec3i    from_id    ( uint64_t id   ){
     Vec3i vi;
@@ -283,7 +299,6 @@ inline Vec3i    from_id    ( uint64_t id   ){
     vi.z=( id & 0xFFFF );
     return vi;
 }
-
 
 inline void print(Vec3d p){printf("(%.16g,%.16g,%.16g)", p.x,p.y,p.z);};
 inline void print(Vec3f p){printf("(%.8g,%.8g,%.8g)", p.x,p.y,p.z);};

@@ -291,7 +291,7 @@ class Mat3TYPE{
 
 	// ==== generation
 
-	inline void fromDirUp( const VEC&  dir, const VEC&  up ){
+	inline void fromDirUp( const VEC& dir, const VEC& up ){
 		// make orthonormal rotation matrix c=dir; b=(up-<b|c>c)/|b|; a=(c x b)/|a|;
 		c.set(dir);
 		//c.normalize(); // we assume dir is already normalized
