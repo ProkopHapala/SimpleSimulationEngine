@@ -164,43 +164,66 @@ class SoftBody{
 		}
 	}
 
-
-
-
-
-
-
 };
 
-
-class SoftBodyLinearized { public:
+class SoftBodyLinearized : public LinSolver { public:
 
     int  npoints;
     Vec3d  * poss    = NULL;
     Vec3d  * Fextern = NULL;
-    Vec3d  * Fwork   = NULL;
+    //Vec3d  * Fwork   = NULL;
 
     int  nsticks;
-    Vec3d  * disps = NULL;
-    Vec2i  * ijs   = NULL;
-    double * l0s   = NULL;
-    double * ks    = NULL;
-    Vec3d  * dirs  = NULL;
+    Vec3d  * disps = NULL;  // displacements
+    Vec2i  * ijs   = NULL;  // links
+    //double * l0s  = NULL;  // stick neutral length
+    double * ks   = NULL;  // stick stiffness
+    Vec3d  * dirs  = NULL;  // stick normalized direction
     //Vec3d  * kDirs;
 
-    void prepare(){
+    void init(int nsticks_, int npoints_, Vec3d* poss_, Vec2i* ijs_, double* ks_=0 ){
+        //_realloc(npoints);
+        //_realloc(ijs,nsticks);
+        nsticks=nsticks_;
+        npoints=npoints_;
+        poss=poss_;
+        ijs=ijs_;
+
+        //LinSolver::init( npoints*3 );
+
+        _realloc(dirs,    nsticks);
+        _realloc(disps,   npoints);
+        //_realloc(Fwork,   npoints);
+        _realloc(Fextern, npoints);
+
+        if(ks_==0){
+            _realloc(ks,nsticks);
+            for(int i=0; i<nsticks; i++){ ks[i]=1.0; }
+        }else{ ks=ks_; }
+        //l0s = l0s_;
+    }
+
+    void prepare(double* l0s){
         // - evaluate stick lengths and normalized directions
+        for(int i=0; i<npoints; i++ ){
+            disps[i]  .set(0.0);
+            Fextern[i].set(0.0);
+        }
         for( int il=0; il<nsticks; il++  ){
-            Vec2i ij    = ijs[il];
+            const Vec2i& ij    = ijs[il];
             Vec3d d     = poss[ij.a] - poss[ij.b];
             double l    = d.norm();
-            double f0   = ks[il]*(l-l0s[il]);
-            d.mul( 1/l );
+            d.mul( 1/l ); // displacement_ij = ( pos_i - pos_j )/f
             dirs[il] = d;
-            d.mul( f0 );
-            Fextern[ij.a].add(d);
-            Fextern[ij.b].sub(d);
+            printf( " %i -> %i,%i  %f,%f,%f   \n", il, ij.a, ij.b, d.x, d.y, d.z );
+            if(l0s){
+                double f0   = ks[il]*(l-l0s[il]);
+                d.mul( f0 );
+                Fextern[ij.a].add(d); // forces due to pre-strain; external force to keep stick under given strain
+                Fextern[ij.b].sub(d);
+            }
         }
+        setLinearProblem( npoints*3, (double*)disps, (double*)Fextern, 0 );
     }
 
     //void disp2force( int nds, int nfs, double * ds_, double * fs_ ){
@@ -210,7 +233,10 @@ class SoftBodyLinearized { public:
         //Vec3d * fs = (Vec3d*)fs;
         //for( int i=0; i<nfs; i++ ){ fs_[i]=0; }
         //for( int i=0; i<n; i++ ){ fs[i].set(0.0); }
-        for( int i=0; i<n; i++ ){ fs[i] = Fextern[i]; }
+        //printf("DEBUG 1.0 \n");
+        //for( int i=0; i<npoints; i++ ){ fs[i] = Fextern[i]; }
+        for( int i=0; i<npoints; i++ ){ fs[i].set(0.0); }
+        //printf("DEBUG 1.1 \n");
         for( int il=0; il<nsticks; il++ ){
             Vec2i ij   = ijs [il];
             Vec3d hat  = dirs[il];
@@ -220,17 +246,27 @@ class SoftBodyLinearized { public:
             //Vec3d f   = kDirs[il] * ( ds[ij.a] - ds[ij.b] );
             fs[ij.a].add(hat);
             fs[ij.b].sub(hat);
+            printf( " %i   %i,%i    %f,%f    %f,%f,%f   %f,%f,%f   %f,%f,%f \n", il, ij.a, ij.b,   dfl,ks[il],  hat.x,hat.y,hat.z,    ds[ij.a].x, ds[ij.a].y, ds[ij.a].z,      ds[ij.b].x, ds[ij.b].y, ds[ij.b].z );
+            //printf( " %i   %i,%i    %f,%f    %f,%f,%f   %f,%f,%f   %f,%f,%f \n", il, ij.a, ij.b,   dfl,ks[il],  hat.x,hat.y,hat.z,    fs[ij.a].x, fs[ij.a].y, fs[ij.a].z,      fs[ij.b].x, fs[ij.b].y, fs[ij.b].z );
         }
+        //printf("DEBUG 1.2 \n");
     };
 
+    virtual void dotFunc( int n, double * x, double * Ax ) override {
+        disp2force( n, (Vec3d*)x, (Vec3d*)Ax );
+    }
+
+    /*
     void solve(){
-        prepare();
+        //prepare();
         //Lingebra::genLinSolve_CG<disp2force>( npoints*3, (double*)disps, (double*)Fextern );
         //SoftBodyLinearized* T;
         Lingebra::genLinSolve_CG( npoints*3, (double*)disps, (double*)Fwork,
             [&](int nds, int nfs, double * ds_, double * fs_){ this->disp2force( nds/3, (Vec3d*)ds_, (Vec3d*)fs_ ); }
+            //[&](){ this->disp2force( , (Vec3d*)disps, (Vec3d*)Fwork ); }
         );
     }
+    */
 
 };
 

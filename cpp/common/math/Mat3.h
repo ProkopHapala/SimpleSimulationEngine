@@ -393,24 +393,24 @@ class Mat3TYPE{
     // http://www.geometrictools.com/Documentation/EigenSymmetric3x3.pdf
     // https://www.geometrictools.com/GTEngine/Include/Mathematics/GteSymmetricEigensolver3x3.h
 	inline void eigenvals( VEC& evs ) const {
-		const double inv3  = 0.33333333333d;
-        const double root3 = 1.73205080757d;
-		double amax = array[0];
+		const TYPE inv3  = 0.33333333333d;
+        const TYPE root3 = 1.73205080757d;
+		TYPE amax = array[0];
 		for(int i=1; i<9; i++){ double a=array[i]; if(a>amax)amax=a; }
-		double c0 = xx*yy*zz + 2*xy*xz*yz -  xx*yz*yz   - yy*xz*xz   -  zz*xy*xy;
-		double c1 = xx*yy - xy*xy + xx*zz - xz*xz + yy*zz - yz*yz;
-		double c2 = xx + yy + zz;
-		double amax2 = amax*amax; c2/=amax; c1/=amax2; c0/=(amax2*amax);
-		double c2Div3 = c2*inv3;
-		double aDiv3  = (c1 - c2*c2Div3)*inv3;
+		TYPE c0 = xx*yy*zz + 2*xy*xz*yz -  xx*yz*yz   - yy*xz*xz   -  zz*xy*xy;
+		TYPE c1 = xx*yy - xy*xy + xx*zz - xz*xz + yy*zz - yz*yz;
+		TYPE c2 = xx + yy + zz;
+		TYPE amax2 = amax*amax; c2/=amax; c1/=amax2; c0/=(amax2*amax);
+		TYPE c2Div3 = c2*inv3;
+		TYPE aDiv3  = (c1 - c2*c2Div3)*inv3;
 		if (aDiv3 > 0.0d) aDiv3 = 0.0d;
-		double mbDiv2 = 0.5d*( c0 + c2Div3*(2.0d*c2Div3*c2Div3 - c1) );
-		double q = mbDiv2*mbDiv2 + aDiv3*aDiv3*aDiv3;
+		TYPE mbDiv2 = 0.5d*( c0 + c2Div3*(2.0d*c2Div3*c2Div3 - c1) );
+		TYPE q = mbDiv2*mbDiv2 + aDiv3*aDiv3*aDiv3;
 		if (q > 0.0) q = 0.0;
-		double magnitude = sqrt(-aDiv3);
-		double angle = atan2( sqrt(-q), mbDiv2 ) * inv3;
-		double cs    = cos(angle);
-		double sn    = sin(angle);
+		TYPE magnitude = sqrt(-aDiv3);
+		TYPE angle = atan2( sqrt(-q), mbDiv2 ) * inv3;
+		TYPE cs    = cos(angle);
+		TYPE sn    = sin(angle);
 		evs.a = amax*( c2Div3 + 2.0*magnitude*cs );
 		evs.b = amax*( c2Div3 - magnitude*(cs + root3*sn) );
 		evs.c = amax*( c2Div3 - magnitude*(cs - root3*sn) );

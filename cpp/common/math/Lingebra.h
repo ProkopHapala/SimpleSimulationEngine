@@ -89,14 +89,106 @@ namespace Lingebra{
             rho = rho2;
             double * swap = r; r = r2; r2 = swap;
         }
-        delete r;
-        delete r2;
-        delete p;
-        delete Ap;
+        delete [] r;
+        delete [] r2;
+        delete [] p;
+        delete [] Ap;
     }
 
+};
+
+
+//template<void dotFunc(int nx, int ny, double* x, double* y)>
+class LinSolver{ public:
+    //static constexpr int       maxIters = 10;
+    //static constexpr double    maxErr2  = 1e-5;
+    int n;
+    // temp
+    int    istep=0;
+    double *  r=0;
+    double *  r2=0;
+    double *  p=0;
+    double *  Ap=0;
+    double rho = 0;
+    double alpha = 0;
+
+    // to solve
+    double* x = 0;
+    double* b = 0;
+    double* M = 0;
+
+    virtual void dotFunc( int n, double * x, double * Ax )=0;
+
+    void realloc(int n_){
+        if(n_!=n){
+            n = n_;
+            _realloc(r,n);
+            _realloc(r2,n);
+            _realloc(p,n);
+            _realloc(Ap,n);
+        }
+    };
+
+    void dealloc(){
+        delete [] r;
+        delete [] r2;
+        delete [] p;
+        delete [] Ap;
+    };
+
+    void setLinearProblem(int n_, double* x_, double* b_, double* M_ = 0 ){
+        realloc(n_);
+        x=x_; b=b_; M=M_;
+    }
+
+    double step_GD(double c){
+        dotFunc  ( n, x, r );
+    }
+
+    double step_CG(){
+        // see https://en.wikipedia.org/wiki/Conjugate_gradient_method
+        //printf( "LinSolver::step_CG %i \n", istep );
+        if(istep==0){
+            dotFunc  ( n, x, r );
+            printf("r   "); VecN::print_vector(n, r);
+            VecN::sub( n, b, r, r ); // r = b - A*x
+            printf("r_  "); VecN::print_vector(n, r);
+            VecN::set( n, r, p );    // p = r
+            rho = VecN::dot(n, r,r);
+            alpha = 0;
+            //printf( "rho %f alpha %f \n", rho, alpha );
+        }else{
+            double rho2 = VecN::dot(n, r2,r2);
+            double beta = rho2 / rho;
+            VecN::fma( n, r2, p, beta, p );
+            rho = rho2;
+            double * tmp = r; r = r2; r2 = tmp;
+        }
+        // NOTE : BCQ can be done if (A.T()*A) is applied instead of A in dotFunc
+        printf("p  "); VecN::print_vector(n, p);
+        dotFunc( n, p, Ap);
+        printf("Ap "); VecN::print_vector(n, Ap);
+        alpha = rho / VecN::dot(n, p, Ap);    // a  = <r|r>/<p|A|p>
+        printf( "rho %f alpha %f \n", rho, alpha );
+        VecN::fma( n, x, p ,  alpha,   x );   // x  = x - a*p
+        VecN::fma( n, r, Ap, -alpha,   r2 );  // r2 = r - a*A|p>
+        double err2 = VecN::dot(n, r2,r2);
+        istep++;
+        return err2;
+        //printf( " iter: %i  err2: %f |  alpha %f \n", i, err2,     alpha );
+        //printf( " iter: %i  err2: %f \n", i, err2 );
+        //if (err2 < maxErr2 ) break;
+    }
+
+    void solve_CG( int maxIters, double maxErr2 ){
+        istep = 0;
+        for ( int i =0; i<maxIters; i++) {
+            if ( step_CG() > maxErr2 ) break;
+        }
+    }
 
 };
+
 
 #endif
 

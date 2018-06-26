@@ -77,6 +77,30 @@ class Box{ public:
 
 };
 
+
+class Triangle3D{
+    public:
+	union{
+		struct{ Vec3d a,b,c; };
+		Vec3d array[3];
+	};
+	inline double normalArea(Vec3d& nr){
+        nr.set_cross(b-a,c-a);
+        return nr.normalize() * 0.5;
+	};
+	inline bool rayIn( const Vec3d& ray0, const Vec3d& hX, const Vec3d& hY ){
+        return rayInTriangle( a-ray0, b-ray0, c-ray0, hX, hY );
+	}
+    inline double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal, bool& inside, const Vec3d& hX, const Vec3d& hY ){
+        return rayTriangle2( ray0, hRay, hX, hY, a,b,c, normal );
+	}
+	inline double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal, bool& inside ){
+        Vec3d hX,hY;
+        hRay.getSomeOrtho(hX,hY);
+        return rayTriangle2( ray0, hRay, hX, hY, a,b,c, normal );
+    }
+};
+
 // ============ Plane3D
 
 class Plane3D{

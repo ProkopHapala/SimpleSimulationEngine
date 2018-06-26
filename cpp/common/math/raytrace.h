@@ -165,6 +165,16 @@ inline double rayTriangle2(
 	return rayPlane( ray0, hRay, normal, a );
 }
 
+inline double rayTriangle2(
+	const Vec3d &ray0, const Vec3d &hRay,
+	const Vec3d &a,    const Vec3d &b,    const Vec3d &c,
+    Vec3d& normal
+){
+    Vec3d hX,hY;
+    hRay.getSomeOrtho(hX,hY);
+	return rayTriangle2( ray0, hRay, hX, hY, a,b,c, normal );
+}
+
 
 
 // =========== Polygon
