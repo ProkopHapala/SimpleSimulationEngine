@@ -50,14 +50,15 @@ class Radiosity{ public:
         double area = tri.normalArea(nr)/ntot;
         int i=0;
         for(int ia=0; ia<n; ia++){
-            for(int ib=0; ib<(n-ia-1); ib++){
+            for(int ib=0; ib<(n-ia); ib++){
                 Vec3d p = tri.c + da*(ia+off) + db*(ib+off);
                 elements.push_back( SurfElement(p,nr,area,isurf) );
                 i++;
+                /*
                 p.add( da*off + db*off );
                 elements.push_back( SurfElement(p,nr,area,isurf) );
                 i++;
-
+                */
                 //printf( "%i isurf %i \n", elements.size(), isurf );
             }
         }
@@ -74,6 +75,14 @@ class Radiosity{ public:
         // Check occlusion - TODO can be made better
         Vec3d hX,hY;
         hRay.getSomeOrtho(hX,hY);
+
+        //glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( hRay*100.0, ray0 );
+        //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( hX*100.0, ray0 );
+        //glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( hY*100.0, ray0 );
+
+        //print( ray0 ); print( hRay ); print( hX ); print( hY ); printf("\n");
+
+
         //printf( "ip1 %i ip2 %i \n", ip1, ip2 );
         for( int i=0; i<triangleObstacles.size(); i++ ){
             if( (i==ip1) || (i==ip2) ) continue;
@@ -93,7 +102,7 @@ class Radiosity{ public:
                 SurfElement& elj = elements[j];
                 if( eli.isurf == elj.isurf ){ M[i*n+j]=0.0; continue; }
 
-                Vec3d  d = eli.pos - eli.pos;
+                Vec3d  d = elj.pos - eli.pos;
                 double r = d.normalize();
                 double coupling = d.dot(eli.normal)*d.dot(elj.normal) / ( r*r + eli.area + elj.area );
 

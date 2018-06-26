@@ -66,11 +66,16 @@ TestAppRadiosity::TestAppRadiosity( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     glNewList( ogl_complings, GL_COMPILE);
     //rad.processTriangles( 2, trinagles, 0.05 );
 
-    rad.addTriangle( (Triangle3D){ (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, (Vec3d){0.0,1.0,0.0}  },   0.1 );
-    rad.addTriangle( (Triangle3D){ (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, (Vec3d){0.0,0.0,1.0}  },   0.1 );
-    rad.triangleObstacles.push_back( (Triangle3D){ (Vec3d){0.2,0.2,0.2}, (Vec3d){1.0,0.0,0.0}, (Vec3d){0.0,1.0,1.0}  } );
+    //rad.addTriangle( (Triangle3D){ (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, (Vec3d){0.0,1.0,0.0}  },   0.1 );
+    //rad.addTriangle( (Triangle3D){ (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, (Vec3d){0.0,0.0,1.0}  },   0.1 );
+    //rad.triangleObstacles.push_back( (Triangle3D){ (Vec3d){0.2,0.2,0.2}, (Vec3d){1.0,0.0,0.0}, (Vec3d){0.0,1.0,1.0}  } );
+
+    rad.addTriangle( (Triangle3D){ (Vec3d){0.0,0.86602540378,0.0}, (Vec3d){0.5,0.0,0.0}, (Vec3d){-0.5,0.0,0.0}  },   0.1 );
+    rad.addTriangle( (Triangle3D){ (Vec3d){0.0,0.0,0.86602540378}, (Vec3d){0.5,0.0,0.0}, (Vec3d){-0.5,0.0,0.0}  },   0.1 );
+    rad.triangleObstacles.push_back( (Triangle3D){ (Vec3d){0.0,0.8,0.8}, (Vec3d){0.5,0.3,0.3}, (Vec3d){-0.5,0.3,0.3}  } );
 
     rad.makeCouplingMatrix();
+
 
     glEndList();
 }
