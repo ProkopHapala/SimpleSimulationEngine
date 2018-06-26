@@ -345,6 +345,13 @@ void Truss::autoBridge(int n, Vec2i * ips, double rmax, int kind ){
     //exit(0);
 };
 
+Vec2i* Truss::getIJs(){
+    Vec2i* ijs = new Vec2i[edges.size()];
+    for(int i=0; i<edges.size(); i++){
+        ijs[i].set(edges[i].a,edges[i].b);
+    }
+    return ijs;
+};
 
 
 

@@ -59,6 +59,10 @@ class Truss{ public:
     void makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vector<Vec2i>* ends );
     void autoBridge(int n, Vec2i * ips, double rmax, int kind );
 
+
+    Vec2i* getIJs();
+
+
     inline Vec2i newBlock(){ Vec2i ps={points.size(),edges.size()}; blocks.push_back( ps ); return ps; };
 
 };

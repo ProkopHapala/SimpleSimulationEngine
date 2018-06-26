@@ -172,6 +172,8 @@ class SoftBodyLinearized : public LinSolver { public:
     Vec3d  * poss    = NULL;
     Vec3d  * Fextern = NULL;
     //Vec3d  * Fwork   = NULL;
+    double * anchorKs = NULL;
+
 
     int  nsticks;
     Vec3d  * disps = NULL;  // displacements
@@ -190,11 +192,11 @@ class SoftBodyLinearized : public LinSolver { public:
         ijs=ijs_;
 
         //LinSolver::init( npoints*3 );
-
         _realloc(dirs,    nsticks);
         _realloc(disps,   npoints);
         //_realloc(Fwork,   npoints);
         _realloc(Fextern, npoints);
+        _realloc(anchorKs, npoints);  for(int i=0; i<npoints; i++){ anchorKs[i]=0.0; }
 
         if(ks_==0){
             _realloc(ks,nsticks);
@@ -215,7 +217,7 @@ class SoftBodyLinearized : public LinSolver { public:
             double l    = d.norm();
             d.mul( 1/l ); // displacement_ij = ( pos_i - pos_j )/f
             dirs[il] = d;
-            printf( " %i -> %i,%i  %f,%f,%f   \n", il, ij.a, ij.b, d.x, d.y, d.z );
+            //printf( " %i -> %i,%i  %f,%f,%f   \n", il, ij.a, ij.b, d.x, d.y, d.z );
             if(l0s){
                 double f0   = ks[il]*(l-l0s[il]);
                 d.mul( f0 );
@@ -235,7 +237,10 @@ class SoftBodyLinearized : public LinSolver { public:
         //for( int i=0; i<n; i++ ){ fs[i].set(0.0); }
         //printf("DEBUG 1.0 \n");
         //for( int i=0; i<npoints; i++ ){ fs[i] = Fextern[i]; }
-        for( int i=0; i<npoints; i++ ){ fs[i].set(0.0); }
+        for( int i=0; i<npoints; i++ ){
+            //fs[i].set(0.0);
+            fs[i].set_mul( ds[i], anchorKs[i] );
+        }
         //printf("DEBUG 1.1 \n");
         for( int il=0; il<nsticks; il++ ){
             Vec2i ij   = ijs [il];
@@ -246,7 +251,7 @@ class SoftBodyLinearized : public LinSolver { public:
             //Vec3d f   = kDirs[il] * ( ds[ij.a] - ds[ij.b] );
             fs[ij.a].add(hat);
             fs[ij.b].sub(hat);
-            printf( " %i   %i,%i    %f,%f    %f,%f,%f   %f,%f,%f   %f,%f,%f \n", il, ij.a, ij.b,   dfl,ks[il],  hat.x,hat.y,hat.z,    ds[ij.a].x, ds[ij.a].y, ds[ij.a].z,      ds[ij.b].x, ds[ij.b].y, ds[ij.b].z );
+            //printf( " %i   %i,%i    %f,%f    %f,%f,%f   %f,%f,%f   %f,%f,%f \n", il, ij.a, ij.b,   dfl,ks[il],  hat.x,hat.y,hat.z,    ds[ij.a].x, ds[ij.a].y, ds[ij.a].z,      ds[ij.b].x, ds[ij.b].y, ds[ij.b].z );
             //printf( " %i   %i,%i    %f,%f    %f,%f,%f   %f,%f,%f   %f,%f,%f \n", il, ij.a, ij.b,   dfl,ks[il],  hat.x,hat.y,hat.z,    fs[ij.a].x, fs[ij.a].y, fs[ij.a].z,      fs[ij.b].x, fs[ij.b].y, fs[ij.b].z );
         }
         //printf("DEBUG 1.2 \n");

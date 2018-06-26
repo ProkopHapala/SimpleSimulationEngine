@@ -141,8 +141,12 @@ class LinSolver{ public:
         x=x_; b=b_; M=M_;
     }
 
-    double step_GD(double c){
+    double step_GD(double dt){
         dotFunc  ( n, x, r );
+        VecN::sub( n, b, r, r );
+        //VecN::add( n, b, r, r );
+        VecN::fma( n, x, r, dt, x );
+        return VecN::dot(n, r,r);
     }
 
     double step_CG(){
@@ -150,9 +154,9 @@ class LinSolver{ public:
         //printf( "LinSolver::step_CG %i \n", istep );
         if(istep==0){
             dotFunc  ( n, x, r );
-            printf("r   "); VecN::print_vector(n, r);
+            //printf("r   "); VecN::print_vector(n, r);
             VecN::sub( n, b, r, r ); // r = b - A*x
-            printf("r_  "); VecN::print_vector(n, r);
+            //printf("r_  "); VecN::print_vector(n, r);
             VecN::set( n, r, p );    // p = r
             rho = VecN::dot(n, r,r);
             alpha = 0;
@@ -165,11 +169,11 @@ class LinSolver{ public:
             double * tmp = r; r = r2; r2 = tmp;
         }
         // NOTE : BCQ can be done if (A.T()*A) is applied instead of A in dotFunc
-        printf("p  "); VecN::print_vector(n, p);
+        //printf("p  "); VecN::print_vector(n, p);
         dotFunc( n, p, Ap);
-        printf("Ap "); VecN::print_vector(n, Ap);
+        //printf("Ap "); VecN::print_vector(n, Ap);
         alpha = rho / VecN::dot(n, p, Ap);    // a  = <r|r>/<p|A|p>
-        printf( "rho %f alpha %f \n", rho, alpha );
+        //printf( "rho %f alpha %f \n", rho, alpha );
         VecN::fma( n, x, p ,  alpha,   x );   // x  = x - a*p
         VecN::fma( n, r, Ap, -alpha,   r2 );  // r2 = r - a*A|p>
         double err2 = VecN::dot(n, r2,r2);
