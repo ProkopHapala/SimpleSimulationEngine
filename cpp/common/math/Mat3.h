@@ -434,13 +434,13 @@ class Mat3TYPE{
 		else                { evec.set_mul( r1xr2, 1/sqrt(d2) ); }
 	}
 
-	void print(){
+	void print() const {
         printf( " %f %f %f \n", ax, ay, az );
         printf( " %f %f %f \n", bx, by, bz );
         printf( " %f %f %f \n", cx, cy, cz );
     }
 
-    void printOrtho(){ printf( " %f %f %f   %f %f %f \n", a.norm2(),b.norm2(),c.norm2(),   a.dot(b),a.dot(c),b.dot(c) ); }
+    void printOrtho() const { printf( " %f %f %f   %f %f %f \n", a.norm2(),b.norm2(),c.norm2(),   a.dot(b),a.dot(c),b.dot(c) ); }
 
 };
 

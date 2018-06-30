@@ -184,8 +184,9 @@ inline void rigidTransform( const Vec3f& pos, Mat3f rot, const Vec3f& sc, bool t
         rot.mul(sc);
         toGLMatT(pos,rot,glMat);
     }else{
-        rot.div(sc);
-        toGLMat(pos,rot,sc, glMat);
+        //rot.div(sc);
+        rot.mul(sc);
+        toGLMat(pos,rot, glMat);
     };
     glMultMatrixf( glMat );
 }

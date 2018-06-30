@@ -12,6 +12,7 @@
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Solids.h"
+#include "Noise.h"
 #include "SphereSampling.h"
 
 #include "Draw.h"
@@ -35,7 +36,7 @@ float heights[npix];
 
 Vec3f samplePs[npix];
 
-const int nCrater = 55;
+const int nCrater = 50;
 Vec3d  craterPos[nCrater];
 double craterSz[nCrater];
 
@@ -45,71 +46,6 @@ Vec3d curPos = (Vec3d){5.0,0.0,0.0};
 
 char str[2048];
 int  fontTex;
-
-
-inline double fhash_Wang( uint32_t h ){
-    return (hash_Wang( h )&(0xffff))/((double)(0xffff));
-}
-
-inline double getSphericalHarmonicRand( Vec2i ns, Vec3d p ){
-    double r = sqrt( p.x*p.x + p.z*p.z );
-    Vec2d cst; cst.set( r, p.y );
-    Vec2d csp; csp.set( p.x/r, p.z/r );
-    Vec2d tn=Vec2dX;
-    Vec2d pn=Vec2dX;
-    // https://en.wikipedia.org/wiki/Spherical_harmonics
-    double h = 0.0;
-    for(int it=0; it<ns.a; it++){
-        pn=Vec2dX;
-        for(int ip=0; ip<ns.b; ip++){
-            h += fhash_Wang( ip*256+it+1545454 )*tn.x*pn.x;
-            h += fhash_Wang( ip*256+it+4479454 )*tn.x*pn.y;
-            h += fhash_Wang( ip*256+it+2545454 )*tn.y*pn.x;
-            h += fhash_Wang( ip*256+it+9545454 )*tn.y*pn.y;
-            pn.mul_cmplx(csp);
-        }
-        tn.mul_cmplx(cst);//inline int index( int i, Vec2i view ){ return (i*view.x)+view.y; };
-    }
-    return h;
-}
-
-inline double getQuadruRand( Vec3d p, uint32_t seed ){
-    //double h = ;
-    double h = 0;
-    h += fhash_Wang( seed+1545454 ) * p.x;
-    h += fhash_Wang( seed+2545454 ) * p.y;
-    h += fhash_Wang( seed+3545454 ) * p.z;
-    h += fhash_Wang( seed+4545454 ) * p.x*p.x;
-    h += fhash_Wang( seed+5545454 ) * p.x*p.y;
-    h += fhash_Wang( seed+6545454 ) * p.x*p.z;
-    h += fhash_Wang( seed+7545454 ) * p.y*p.x;
-    h += fhash_Wang( seed+8545454 ) * p.y*p.y;
-    h += fhash_Wang( seed+9545454 ) * p.y*p.z;
-    h += fhash_Wang( seed+10545454 ) * p.z*p.x;
-    h += fhash_Wang( seed+11545454 ) * p.z*p.y;
-    h += fhash_Wang( seed+12545454 ) * p.z*p.z;
-    return h;
-}
-
-inline double getCraterHeight( Vec3d p, int n, double scr, Vec3d* pos, double* sizes ){
-    double h = 0.0;
-    p.normalize();
-    for(int i=0; i<n; i++ ){
-        Vec3d d   = p - pos[i];
-        double r2 = d.norm();
-        double R2 = sq(scr*sizes[i]);
-        if( r2<R2 ){
-            //h += sizes[i]*(1-r2/R2);
-            r2 /= R2;
-            if( r2>0.25 ){
-                h += sizes[i]*(0.25*0.25/r2 - 0.25*0.25);
-            }else{
-                h += sizes[i]*(r2*4.0 - 0.75);
-            }
-        }
-    }
-    return h*4.0;
-}
 
 class TestAppSphereSampling : public AppSDL2OGL_3D {
 	public:
@@ -164,9 +100,9 @@ TestAppSphereSampling::TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ )
 
                 p.normalize();
                 double h;
-                h = getQuadruRand( p, 35456 )*2;
+                h = Noise::getQuadruRand( p, 35456 )*2*0;
 
-                h += getCraterHeight( p, nCrater, 1.0, craterPos, craterSz )*0.3;
+                h += Noise::getCraterHeight( p, nCrater, 1.0, craterPos, craterSz )*0.3;
                 heights[i] = h; //+ sin( h*4 );
 
             }
@@ -323,7 +259,7 @@ TestAppSphereSampling::TestAppSphereSampling( int& id, int WIDTH_, int HEIGHT_ )
         //drawDiTri( (Vec2i){nsamp,nsamp},  (Vec3f)vs[6], (Vec3f)vs[5], (Vec3f)vs[0], (Vec3f)vs[11], height );
 
         //drawDiTri_Inner( (Vec2i){nsamp,nsamp},  (Vec3f)vs[6], (Vec3f)vs[5], (Vec3f)vs[0], (Vec3f)vs[11], height );
-        drawIcosaMap( (Vec2i){nsamp,nsamp}, heights );
+        drawIcosaMap( (Vec2i){nsamp,nsamp}, heights, 0.1 );
 
         glPopMatrix();
 

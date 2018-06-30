@@ -212,6 +212,10 @@ const  float INV_RAND_MAX = 1.0f/RAND_MAX;
 inline float randf(){ return INV_RAND_MAX*rand(); }
 inline float randf( float min, float max ){ return randf()*( max - min ) + min; }
 
+inline double fhash_Wang( uint32_t h ){
+    return (hash_Wang( h )&(0xffff))/((double)(0xffff));
+}
+
 // there are some examples of hash functions
 // https://en.wikipedia.org/wiki/Linear_congruential_generator
 // https://en.wikipedia.org/wiki/Xorshift

@@ -4,6 +4,7 @@
 
 #include "fastmath.h"
 #include "Vec2.h"
+#include "Vec3.h"
 
 namespace Noise{
 
@@ -28,6 +29,48 @@ inline double interR2( double ar2, double br2, double fa, double fb ){
 inline double getR2( double dx, double dy ){
     return (dx*dx+dy*dy)*0.86602540378;
     //return (dx*dx+dy*dy)*1.5;
+}
+
+inline double getQuadruRand( Vec3d p, uint32_t seed ){
+    //double h = ;
+    double h = 0;
+    h += fhash_Wang( seed+1545454 ) * p.x;
+    h += fhash_Wang( seed+2545454 ) * p.y;
+    h += fhash_Wang( seed+3545454 ) * p.z;
+    h += fhash_Wang( seed+4545454 ) * p.x*p.x;
+    h += fhash_Wang( seed+5545454 ) * p.x*p.y;
+    h += fhash_Wang( seed+6545454 ) * p.x*p.z;
+    h += fhash_Wang( seed+7545454 ) * p.y*p.x;
+    h += fhash_Wang( seed+8545454 ) * p.y*p.y;
+    h += fhash_Wang( seed+9545454 ) * p.y*p.z;
+    h += fhash_Wang( seed+10545454 ) * p.z*p.x;
+    h += fhash_Wang( seed+11545454 ) * p.z*p.y;
+    h += fhash_Wang( seed+12545454 ) * p.z*p.z;
+    return h;
+}
+
+inline double craterProfile( double r2, double fRidge, double hMin, double hMax ){
+    double f2 = fRidge*fRidge;
+    if( r2>f2 ){
+        return ( (1/r2 - 1) )*f2;
+    }else{
+        return ( r2/f2 )-f2;
+    }
+}
+
+inline double getCraterHeight( Vec3d p, int n, double scr, Vec3d* pos, double* sizes ){
+    double h = 0.0;
+    p.normalize();
+    for(int i=0; i<n; i++ ){
+        Vec3d d   = p - pos[i];
+        double r2 = d.norm();
+        double R2 = sq(scr*sizes[i]);
+        if( r2<R2 ){
+            //h += sizes[i]*(1-r2/R2);
+            h += craterProfile( r2/R2, 0.5, 0.25, -0.75 ) * sizes[i];
+        }
+    }
+    return h*4.0;
 }
 
 };

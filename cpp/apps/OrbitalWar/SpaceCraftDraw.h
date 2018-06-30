@@ -16,10 +16,80 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
+#include "Noise.h"
+#include "SphereSampling.h"
+#include "DrawSphereMap.h"
+
 #include "SpaceCraft.h"
 #include "EditSpaceCraft.h"
 
 namespace SpaceCrafting{
+
+int ogl_asteroide=0, ogl_geoSphere=0;
+
+void drawAsteroide( int nsamp, int nCrater, float hscale, bool wire ){
+
+    //const int nsamp = 32;
+    //const int nsamp = 8;
+    const int npix  = 10*nsamp*nsamp;
+    //uint32_t pix   [npix];
+    float*  heights = new float[npix];
+    //Vec3f samplePs[npix];
+    Vec3d*  craterPos = new Vec3d[nCrater];
+    double* craterSz  = new double[nCrater];
+
+    //srand(34646);
+    for(int i=0; i<nCrater; i++){
+        //craterPos[i].setHomogenousSphericalSample( randf(), randf() );
+        craterPos[i].fromRandomSphereSample();
+        //printf( "%i %f %f %f \n", craterPos[i].x, craterPos[i].y, craterPos[i].z);
+        craterSz[i] = randf()+0.4;
+    }
+
+    Vec2d dab = (Vec2d){ 1.0/nsamp, 1.0/nsamp };
+    for(int iface=0; iface<10; iface++ ){
+        for(int ia=0; ia<nsamp; ia++ ){
+            for(int ib=0; ib<nsamp; ib++ ){
+                Vec3d p;
+                SphereSampling::icosa2cartes( (Vec2i){nsamp,nsamp}, iface, ia*dab.a, ib*dab.b, p );
+                int i = iface*nsamp*nsamp + ia*nsamp + ib;
+
+                //heights[i] = getSphericalHarmonicRand( {5,4}, p );
+
+                p.normalize();
+                double h;
+                h = Noise::getQuadruRand( p, 35456 )*2;
+
+                h += Noise::getCraterHeight( p, nCrater, 1.0, craterPos, craterSz )*0.3;
+                heights[i] = h; //+ sin( h*4 );
+
+            }
+        }
+    };
+
+
+    //shape=glGenLists(1);
+	//glNewList( shape, GL_COMPILE );
+        //printf( " Solids::nTetrahedron_tris %i \n", Solids::nTetrahedron_tris );
+        //for(int i=0; i<nCrater; i++){ Draw3D::drawPointCross( craterPos[i], craterSz[i] );}
+    glDisable(GL_LIGHTING);
+    glShadeModel( GL_SMOOTH     );
+
+    if(wire) SphereSampling::drawIcosaMapWire( (Vec2i){nsamp,nsamp}, heights, hscale );
+    else     SphereSampling::drawIcosaMap    ( (Vec2i){nsamp,nsamp}, heights, hscale );
+    //glPopMatrix();
+	//glEndList();
+
+    //float heights = float[npix];
+    //Vec3f samplePs[npix];
+    //Vec3d  craterPos = new Vec3d[nCrater];
+    //double craterSz  = new double[nCrater];
+
+	delete [] heights;
+	delete [] craterPos;
+	delete [] craterSz;
+
+}
 
 void drawTruss( const Truss& truss ){
     //printf("=============\n");
@@ -207,6 +277,23 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
         //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
         glPopMatrix();
     };
+    for( const Rock& o : spaceCraft.rocks ){
+        glPushMatrix();
+        //printf( "rock.pose.rot \n"); o.pose.rot.print(); printf( "Rock pos(%f,%f,%f) span(%f,%f,%f) \n", o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,   o.span.x, o.span.y, o.span.z ); // print(o.pose.rot);
+        Draw3D::rigidTransform( o.pose.pos, o.pose.rot, o.span );
+        //glScalef(100.0,100.0,100.0);
+        glCallList(ogl_asteroide);
+        glPopMatrix();
+    }
+
+    for( const Balloon& o : spaceCraft.balloons ){
+        glPushMatrix();
+        printf( "ballon.pose.rot \n"); o.pose.rot.print(); printf( "ballon pos(%f,%f,%f) span(%f,%f,%f) \n", o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,   o.span.x, o.span.y, o.span.z ); // print(o.pose.rot);
+        Draw3D::rigidTransform( o.pose.pos, o.pose.rot, o.span );
+        //glScalef(100.0,100.0,100.0);
+        glCallList(ogl_geoSphere);
+        glPopMatrix();
+    }
 
     // --- Guns
 

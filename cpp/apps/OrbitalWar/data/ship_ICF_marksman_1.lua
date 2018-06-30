@@ -1,4 +1,4 @@
-﻿--- https://www.lua.org/pil/5.3.html
+--- https://www.lua.org/pil/5.3.html
 
 require( "data/lua/utils" )
 
@@ -99,3 +99,4 @@ Gun ( "XFEL",    {n5,n0,n6}, {-1.0,0.0} )
 Thruster{ n5, maxPower=7.0e+9, maxTrust=10.0e+3, maxVexh=50e+3, nodes={} }
 
 --]=====]
+

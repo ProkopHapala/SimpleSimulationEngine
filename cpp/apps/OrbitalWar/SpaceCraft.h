@@ -94,6 +94,17 @@ class Tank : public Modul { public:
 	double filled;         // [1]
 };
 
+
+class Balloon : public Modul { public:
+
+};
+
+class Rock : public Modul { public:
+
+};
+
+
+
 //class GirderType : public CatalogItem { public:
 //    int mseg;
 //    Vec3d wh;
@@ -257,11 +268,15 @@ class SpaceCraft : public CatalogItem { public:
 	std::vector<Shield>    shields;
 	std::vector<Tank>      tanks;
 	std::vector<Pipe>      pipes;
+
+	std::vector<Balloon>  balloons;
+	std::vector<Rock>     rocks;
 	// Truss * coarse = NULL;
 	// Truss * fine   = NULL;
 
 	void clear(){
         nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrusters.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
+        rocks.clear(); balloons.clear();
         truss.clear();
 	};
 

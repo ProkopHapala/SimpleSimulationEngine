@@ -22,6 +22,9 @@
 #include "SpaceCraftDraw.h"
 #include "SoftBody.h"
 
+#include "SphereSampling.h"
+#include "DrawSphereMap.h"
+
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 #include "IO_utils.h"
@@ -93,9 +96,6 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
 
 	SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ );
 
-
-
-
 };
 
 SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
@@ -108,6 +108,21 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     TreeView* tvDir      = new TreeView    ( "DirView",20,HEIGHT_-400,200,20 ); gui.addPanel(tvDir);
     dir2tree(tvDir->root, "data" );
     tvDir->updateLines();
+
+
+    ogl_asteroide=glGenLists(1);
+	glNewList( ogl_asteroide, GL_COMPILE );
+    drawAsteroide( 32, 50, 0.1, false );
+    //drawAsteroide( 32, 50, 0.1, true );
+    glEndList();
+
+
+    ogl_geoSphere=glGenLists(1);
+	glNewList( ogl_geoSphere, GL_COMPILE );
+    drawAsteroide( 16, 0, 0.0, true );
+    //drawAsteroide( 32, 50, 0.1, true );
+    glEndList();
+
 
     /*
     char str[1000];
@@ -152,6 +167,7 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     */
 
 
+    VIEW_DEPTH = 10000.0;
     zoom = 1000.0;
 }
 
@@ -198,6 +214,15 @@ void SpaceCraftEditGUI::draw(){
     if(glo_truss) glCallList(glo_truss);
 
     if(glo_ship) glCallList(glo_ship);
+
+    /*
+    if(ogl_asteroide){
+        glPushMatrix();
+        glScalef(100,100.0,100.0);
+        glCallList(ogl_asteroide);
+        glPopMatrix();
+    }
+    */
 
     //Mat3d camMat;
     //qCamera.toMatrix_T(camMat);

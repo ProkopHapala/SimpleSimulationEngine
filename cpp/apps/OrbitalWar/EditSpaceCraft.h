@@ -206,6 +206,41 @@ int l_Gun     (lua_State * L){
     return 1;
 };
 
+
+int l_Rock     (lua_State * L){
+    Rock o;
+    Vec3d dir,up;
+    Lua::getVec3(L, 1, o.pose.pos   );
+
+    Lua::getVec3(L, 2, dir );
+    Lua::getVec3(L, 3, up  );
+    o.pose.rot.fromDirUp(dir, up);
+    Lua::getVec3(L, 4, o.span );
+
+    o.id   = theSpaceCraft->rocks.size();
+    //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o., o.suppSpan.x, o.suppSpan.y,   skind, o.id );
+    theSpaceCraft->rocks.push_back( o );
+    lua_pushnumber(L, o.id);
+    return 1;
+};
+
+int l_Balloon     (lua_State * L){
+    Balloon o;
+    Vec3d dir,up;
+    Lua::getVec3(L, 1, o.pose.pos   );
+
+    Lua::getVec3(L, 2, dir );
+    Lua::getVec3(L, 3, up  );
+    o.pose.rot.fromDirUp(dir, up);
+    Lua::getVec3(L, 4, o.span );
+
+    o.id   = theSpaceCraft->balloons.size();
+    //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o., o.suppSpan.x, o.suppSpan.y,   skind, o.id );
+    theSpaceCraft->balloons.push_back( o );
+    lua_pushnumber(L, o.id);
+    return 1;
+};
+
 //int l_Truster (lua_State * L){ return 0; };
 //int l_Tank    (lua_State * L){ return 0; };
 //int l_Radiator(lua_State * L){ return 0; };
@@ -224,7 +259,8 @@ void initSpaceCraftingLua(){
     lua_register(L, "Tank",     l_Tank     );
     lua_register(L, "Radiator", l_Radiator );
     lua_register(L, "Shield",   l_Shield   );
-
+    lua_register(L, "Balloon",  l_Balloon  );
+    lua_register(L, "Rock",     l_Rock     );
 }
 
 }; // namespace SpaceCrafting
