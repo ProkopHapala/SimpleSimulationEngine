@@ -12,7 +12,6 @@ void heightColor(double h){
     float c = h*0.05+0.5;
     if(h>0){ float f =sqrt(h)*0.25;  glColor3f( c, c, c+f); }else{ float f=sqrt(-h)*0.25;  glColor3f( c+f, c, c ); };
     //if(h>0){ glColor3f( 0.0, sin(h*15)*0.5+0.5, sqrt(h)*0.25 ); }else{   glColor3f( sqrt(-h)*0.25, sin(h*15)*0.5+0.5, 0.0 ); };
-
 };
 
 namespace SphereSampling{

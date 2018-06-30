@@ -17,9 +17,9 @@
 class KinematicBody{ public:
 	Vec3d lpos = (Vec3d){0.0,0.0,0.0};
 	Mat3d lrot = (Mat3d){ 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0};
-	inline void globalPos ( const Vec3d& pos0, const Mat3d& rot0, Vec3d& gpos ){ rot0.dot_to     ( lpos, gpos ); gpos.add( pos0 ); }
+	inline void globalPosT( const Vec3d& pos0, const Mat3d& rot0, Vec3d& gpos ){ rot0.dot_to     ( lpos, gpos ); gpos.add( pos0 ); }
 	inline void globalRot (                    const Mat3d& rot0, Mat3d& grot ){ grot.set_mmul   ( lrot, rot0 );                   }
-    inline void globalPosT( const Vec3d& pos0, const Mat3d& rot0, Vec3d& gpos ){ rot0.dot_to_T   ( lpos, gpos ); gpos.add( pos0 ); }
+    inline void globalPos ( const Vec3d& pos0, const Mat3d& rot0, Vec3d& gpos ){ rot0.dot_to_T   ( lpos, gpos ); gpos.add( pos0 ); }
 	inline void globalRotT(                    const Mat3d& rot0, Mat3d& grot ){ grot.set_mmul_NT( lrot, rot0 );                   }
 	//inline void globalRot( const Mat3d& rot0, Mat3d& grot ){ grot.set_mmul_NT( lrot, rot0 ); }
 };
@@ -66,6 +66,36 @@ class PointBody{ public:
 //   CLASS :   RigidBody
 // ========================
 
+inline void pointBodyDynamicsStep( double invMass, double dt, const Vec3d& force, Vec3d& vel, Vec3d& pos ){
+    vel.add_mul( force, dt*invMass );
+    pos.add_mul( vel,   dt );
+    //printf( "dt: %f force: ",dt ); printVec( force ); printf( " vel: " ); printVec( vel ); printf( " pos: " ); printVec( pos ); printf( "\n" );
+};
+
+inline void rigidBodyRotationDynamicsStep_mat( const Vec3d& invIbody, double dt, const Vec3d& torq, Vec3d& L, Mat3d& rotMat, Vec3d& omega ){
+    L   .add_mul( torq, dt  );
+    rotMat.dot_to_T( L,  omega );
+    omega.mul( invIbody );
+    rotMat.dot_to  ( omega, omega );
+    double r2omega = omega.norm2();
+    if( r2omega > 1e-12 ){ // TODO - more efficient would be do this for |L| instead of |omega|
+        double romega = sqrt(r2omega);
+        double dphi = dt*romega;
+        rotMat.rotate_csa( cos(dphi), sin(dphi), omega*(1/romega) );
+    }
+    //return omega;
+};
+
+inline void rigidBodyRotationDynamicsStep_quat( const Vec3d& invIbody, double dt, const Vec3d& torq, Vec3d& L, Quat4d& qrot, Mat3d& rotMat, Vec3d& omega ){
+    L   .add_mul( torq, dt );
+    qrot. toMatrix_unitary_T( rotMat );
+    rotMat.dot_to_T( L,  omega );
+    omega.mul( invIbody );
+    rotMat.dot_to  ( omega, omega );
+    qrot.dRot_taylor2( dt, omega );
+    //return omega;
+};
+
 class RigidBody : public PointBody { public:
 	// parameters
 	Mat3d	Ibody    = (Mat3d){ 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0};
@@ -107,6 +137,8 @@ class RigidBody : public PointBody { public:
 	};
 
     inline void move_RigidBody( double dt ){
+
+        /*
         // postion
         vel.add_mul( force, dt*invMass );
         pos.add_mul( vel, dt   );
@@ -120,22 +152,29 @@ class RigidBody : public PointBody { public:
         update_aux();
         //printf("force (%3.3f,%3.3f,%3.3f) vel (%3.3f,%3.3f,%3.3f) pos (%3.3f,%3.3f,%3.3f)\n", force.x,force.y,force.z, vel.x,vel.y,vel.z,  pos.x, pos.y, pos.z  );
         //printf("L (%3.3f,%3.3f,%3.3f) omega (%3.3f,%3.3f,%3.3f) qrot (%3.3f,%3.3f,%3.3f,%3.3f)\n", L.x,L.y,L.z, omega.x,omega.y,omega.z,  qrot.x, qrot.y, qrot.z, qrot.w  );
+
+        */
+
+        pointBodyDynamicsStep( invMass, dt, force, vel, pos );
+        rigidBodyRotationDynamicsStep_mat( {invIbody.xx,invIbody.yy,invIbody.zz}, dt, torq, L, rotMat, omega );
+
+        //rigidBodyRotationDynamicsStep_quat( {invIbody.xx,invIbody.yy,invIbody.zz}, dt, torq, L, qrot, rotMat, omega );
     };
 
     inline void glob2loc( const Vec3d& gp, Vec3d& lp ) const{
         Vec3d tmp; tmp.set_sub(gp,pos);
-        //rotMat.dot_to( tmp, lp );
-        rotMat.dot_to_T( tmp, lp );
+        rotMat.dot_to( tmp, lp );
+        //rotMat.dot_to_T( tmp, lp );
     };
 
     inline void loc2glob( const Vec3d& lp, Vec3d& gp ) const {
-        //rotMat.dot_to_T( lp, gp );
-        rotMat.dot_to( lp, gp );
+        rotMat.dot_to_T( lp, gp );
+        //rotMat.dot_to( lp, gp );
         gp.add(pos);
     };
 
     inline void velOfPoint( const Vec3d& lp, Vec3d& gv, Vec3d& gdp ) const {
-        rotMat.dot_to( lp, gdp    );
+        rotMat.dot_to_T( lp, gdp    );
         gv.set_cross ( omega, gdp );
         gv.add(vel);
         //gp.add(pos);
@@ -149,8 +188,8 @@ class RigidBody : public PointBody { public:
 
 	inline void apply_anchor( double k, const Vec3d& lpos, const Vec3d& gpos0 ){
 		Vec3d sforce, gdpos;
-		//rotMat.dot_to_T(  lpos, gdpos   );
-		rotMat.dot_to(  lpos, gdpos   );
+		rotMat.dot_to_T(  lpos, gdpos   );
+		//rotMat.dot_to(  lpos, gdpos   );
 		sforce.set   (( gdpos + pos - gpos0 )*(-k) );
 		apply_force  (  sforce, gdpos );
 		//drawLine( gpos0, gdpos + pos  );
@@ -193,7 +232,8 @@ class RigidBody : public PointBody { public:
         Ibody.c.set(0,0,I);
         Ibody.invert_to( invIbody );
         qrot.setOne();
-        qrot.toMatrix   ( rotMat );
+        //qrot.toMatrix( rotMat );
+        qrot.toMatrix_T( rotMat );
         update_aux();
 	};
 

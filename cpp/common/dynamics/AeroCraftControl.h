@@ -84,7 +84,9 @@ class AeroCraftControler{
             elevator.surf->lrot.rotate(  _clamp( dpitch,elevator.minval,elevator.maxval), {1.0,0.0,0.0} );
         }
         //
-        Mat3d rmat; rmat.setT(craft->rotMat);
+        //Mat3d rmat; rmat.setT(craft->rotMat);
+        Mat3d rmat; rmat.set(craft->rotMat);
+
         double roll_err = (roll_target - rmat.a.y);
         double comega   =  craft->omega.dot( rmat.c );
         bool adjust_roll = true;

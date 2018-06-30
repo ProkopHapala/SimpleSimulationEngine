@@ -12,7 +12,7 @@
 void renderAeroCraft ( const AeroCraft& craft, bool bPos ){
 	glPushMatrix();
         Mat3d camMat;
-        camMat.setT(craft.rotMat);
+        camMat.set(craft.rotMat);
         float glmat[16];
 
         Vec3d pos;

@@ -157,10 +157,10 @@ class Tank : public RigidBody, public Warrior3D { public:
 
 	double ray( const Vec3d &ray0_, const Vec3d &hRay_, int& ipl, VehicleBlock*& block, double& effthick, Vec3d& normal ){
         //ray0.sub(pos);
-        //hRay = rotMat.dot( hRay );
-        //ray0 = rotMat.dot( ray0-pos );
-        Vec3d hRay = rotMat.dotT( hRay_ );
-        Vec3d ray0 = rotMat.dotT( ray0_-pos );
+        Vec3d hRay = rotMat.dot( hRay_ );
+        Vec3d ray0 = rotMat.dot( ray0_-pos );
+        //Vec3d hRay = rotMat.dotT( hRay_ );
+        //Vec3d ray0 = rotMat.dotT( ray0_-pos );
 
         Vec3d normal2;
 	    int itr,itr2;
@@ -190,12 +190,15 @@ class Tank : public RigidBody, public Warrior3D { public:
 	}
 
 	inline void getWheelPos( int i, Vec3d& gpos ){
-        rotMat.dot_to( {wheels[i].lpos.x,wheels[i].h,wheels[i].lpos.z}, gpos );
+        rotMat.dot_to_T( {wheels[i].lpos.x,wheels[i].h,wheels[i].lpos.z}, gpos );
         gpos.add(pos);
 	}
 
     void interactTerrain( Terrain25D * terrain ){
-        Mat3d mrot; qrot.toMatrix_T(mrot);
+        //Mat3d mrot; qrot.toMatrix_T(mrot);
+        //Mat3d mrot; qrot.toMatrix_T(mrot);
+        Mat3d mrot = rotMat;
+
         double wheelLock[2]={0.0,0.0};
         wheelLock[0] = 1-clamp(fabs(power_gear[0]), 0.0, 0.7);
         wheelLock[1] = 1-clamp(fabs(power_gear[1]), 0.0, 0.7);

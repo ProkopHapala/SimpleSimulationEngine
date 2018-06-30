@@ -364,10 +364,13 @@ void Tanks_single::draw(){
     for( Warrior3D * w : world.warriors ){
         Tank * tank =  ((Tank*)w);
 
-        Draw3D::drawShape( tank->pos, tank->qrot.get_inv(), tank->hull.glo_armor );
+        //Draw3D::drawShape( tank->pos, tank->qrot.get_inv(), tank->hull.glo_armor );
+        //Draw3D::drawShape( tank->pos, tank->qrot, tank->hull.glo_armor );
+        Draw3D::drawShape( tank->pos, tank->rotMat, tank->hull.glo_armor );
 
         Mat3d grot;
-        tank->turret.globalRotT(tank->rotMat, grot);
+        //tank->turret.globalRotT(tank->rotMat, grot);
+        tank->turret.globalRot(tank->rotMat, grot);
 
         Draw3D::drawMatInPos( grot*60, tank->pos + (Vec3d){0.0,1.0,0.0} );
         glColor3f(1.0,1.0,1.0);
@@ -375,6 +378,8 @@ void Tanks_single::draw(){
 
 
         Draw3D::drawShape( tank->pos, grot, tank->turret.glo_armor  );
+
+        drawTankWheels(tank);
 
         /*
         Mat3d grot;
@@ -417,7 +422,8 @@ void Tanks_single::draw(){
         //Draw3D::drawPointCross( ray0 + hRay*t, 100.5 );
 
         Mat3d grot;
-        block->globalRotT( tank2->rotMat, grot );
+        //block->globalRotT( tank2->rotMat, grot );
+        block->globalRot( tank2->rotMat, grot );
 
         //Draw3D::drawVecInPos( grot.dotT(block->armor[ipl].normal), ray0 + hRay*t );
         //Draw3D::drawVecInPos( grot.dotT(normal), ray0 + hRay*t );

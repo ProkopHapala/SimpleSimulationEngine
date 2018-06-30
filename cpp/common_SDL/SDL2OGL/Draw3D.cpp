@@ -965,6 +965,26 @@ void drawTriclinicBox( const Mat3f& lvec, const Vec3f& c0, const Vec3f& c1 ){
 	glEnd();
 };
 
+void drawTriclinicBoxT( const Mat3f& lvec, const Vec3f& c0, const Vec3f& c1 ){
+    Vec3f p0,p1;
+	glBegin(GL_LINES);
+        lvec.dot_to_T({c0.x,c0.y,c0.z},p0);
+        lvec.dot_to_T({c0.x,c0.y,c1.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        lvec.dot_to_T({c0.x,c1.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        lvec.dot_to_T({c1.x,c0.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+		lvec.dot_to_T({c1.x,c1.y,c1.z},p0);
+        lvec.dot_to_T({c0.x,c1.y,c1.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        lvec.dot_to_T({c1.x,c0.y,c1.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        lvec.dot_to_T({c1.x,c1.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        p0=p1; lvec.dot_to_T({c1.x,c0.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        p0=p1; lvec.dot_to_T({c1.x,c0.y,c1.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        p0=p1; lvec.dot_to_T({c0.x,c0.y,c1.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        p0=p1; lvec.dot_to_T({c0.x,c1.y,c1.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        p0=p1; lvec.dot_to_T({c0.x,c1.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+        p0=p1; lvec.dot_to_T({c1.x,c1.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
+	glEnd();
+};
+
 
 int makeBoxList( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b  ){
 	int ilist=glGenLists(1);

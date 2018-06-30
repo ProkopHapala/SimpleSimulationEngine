@@ -55,7 +55,8 @@ class AeroControler1: public AnyControler{ public:
 
     virtual void update( double dt ){
         if(bActive){
-            Mat3d rot; rot.setT(craft->rotMat);
+            //Mat3d rot; rot.setT(craft->rotMat);
+            Mat3d rot; rot.set(craft->rotMat);
             if(bUp )controlUp     ( rot, dt );
             if(bDir)controlDirTail( rot, dt );
         }

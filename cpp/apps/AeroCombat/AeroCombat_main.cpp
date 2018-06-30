@@ -153,10 +153,13 @@ void AeroCraftGUI::draw(){
 
 	//printf( " upT %f t %f v %f | d  %f d %f \n", upTime*1e-3, world->time, myCraft->vel.norm(), traveledDistance, world->time*myCraft->vel.norm() );
 
-	Mat3d rot;     rot.    setT(myCraft->rotMat);
+	//Mat3d rot;     rot.setT(myCraft->rotMat);
+    Mat3d rot = myCraft->rotMat;
+
     //Mat3d camMatT; camMatT.setT(camMat);
 
-    controler.goalUp = (Vec3d)( cam.rot.a*mouseX + cam.rot.b*mouseY ); controler.goalUp.normalize();
+    controler.goalUp = (Vec3d)( cam.rot.a*mouseX + cam.rot.b*mouseY );
+    controler.goalUp.normalize();
 
     int dmx,dmy;
     SDL_GetRelativeMouseState(&dmx,&dmy);
@@ -175,15 +178,12 @@ void AeroCraftGUI::draw(){
     //Draw3D::drawMatInPos( camMatT, myCraft->pos );
     //Draw3D::drawMatInPos( rot   , myCraft->pos );
 
-
-
 	if(SimOn){
         //printf( "y %f vy %f x %f torq=(%f,%f,%f)     \n", rollControl.oy, rollControl.ovy, rollControl.x, myCraft->torq.x, myCraft->torq.y, myCraft->torq.z );
         world->update_world(); // ALL PHYSICS COMPUTATION DONE HERE
         //SimOn = false;
     }
 	camera();
-
 
 
 	if( frameCount%10 == 0 ){
@@ -294,6 +294,8 @@ void AeroCraftGUI::draw(){
         pilot->control(world->dt); return;
     }
 
+    /*
+
     if(mouseSteer){
         if (first_person){
             //double dpitch=mouseY*0.005;
@@ -308,6 +310,7 @@ void AeroCraftGUI::draw(){
             //pilot->steerToDir( matCam.c );
         }
     }
+    */
 
 };
 
@@ -332,8 +335,6 @@ void AeroCraftGUI::drawHUD(){
 
     //printf( " (%i,%i) (%i,%i) \n", WIDTH,HEIGHT, mouseX,mouseY  );
     //glColor3f(1.0,1.0,1.0); Draw2D::drawLine( {WIDTH*0.5,HEIGHT*0.5}, {WIDTH*0.5+mouseX*2,HEIGHT*0.5+mouseY*2} );
-
-
 
     // Control surface state
     glColor3f(1.0,1.0,1.0);
@@ -669,7 +670,9 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
     //if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_D]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
     if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
         controler.bActive = false;
-        Mat3d rot; rot.setT(myCraft->rotMat);
+        Mat3d rot;
+        //rot.setT(myCraft->rotMat);
+        rot.set(myCraft->rotMat);
         controler.goalDir = rot.c;
         controler.goalUp  = rot.b;
     }else{

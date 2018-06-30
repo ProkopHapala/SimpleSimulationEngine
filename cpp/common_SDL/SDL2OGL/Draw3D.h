@@ -60,6 +60,7 @@ void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3
 void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b );
 void drawBBox        ( const Vec3f& p0, const Vec3f& p1 );
 void drawTriclinicBox( const Mat3f& lvec_, const Vec3f& c0_, const Vec3f& c1_ );
+void drawTriclinicBoxT( const Mat3f& lvec_, const Vec3f& c0_, const Vec3f& c1_ );
 
 void drawAxis( float sc );
 
@@ -90,8 +91,9 @@ inline void drawPanel    ( const Vec3d& pos, const Mat3d& rot, const Vec2d& sz )
 
 inline void drawText     ( const char * str, const Vec3d& pos, int fontTex, float textSize, int iend ){ drawText(str, (Vec3f)pos, fontTex, textSize,iend); };
 
-inline void drawBBox        ( const Vec3d& p0, const Vec3d& p1 )                      { drawBBox       ( (Vec3f)p0, (Vec3f)p1 ); };
-inline void drawTriclinicBox( const Mat3d& lvec_, const Vec3d& c0_, const Vec3d& c1_ ){ drawTriclinicBox( (Mat3f)lvec_, (Vec3f)c0_, (Vec3f) c1_ ); };
+inline void drawBBox         ( const Vec3d& p0, const Vec3d& p1 )                      { drawBBox       ( (Vec3f)p0, (Vec3f)p1 ); };
+inline void drawTriclinicBox ( const Mat3d& lvec_, const Vec3d& c0_, const Vec3d& c1_ ){ drawTriclinicBox( (Mat3f)lvec_, (Vec3f)c0_, (Vec3f) c1_ ); };
+inline void drawTriclinicBoxT( const Mat3d& lvec_, const Vec3d& c0_, const Vec3d& c1_ ){ drawTriclinicBoxT( (Mat3f)lvec_, (Vec3f)c0_, (Vec3f) c1_ ); };
 
 // ========== Arrays // Not easy to convert
 

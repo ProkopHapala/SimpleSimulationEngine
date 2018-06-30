@@ -15,7 +15,8 @@ void AppSDL2OGL_3D::camera_FPS( const Vec3d& pos, const Mat3d& rotMat ){
     //Mat3d camMat;
     Vec3f camPos;
     convert( pos, cam.pos );
-    cam.rot.setT( (Mat3f)rotMat );
+    //cam.rot.setT( (Mat3f)rotMat );
+    cam.rot.set( (Mat3f)rotMat );
 	float glMat[16];
 	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, cam.rot, glMat );
 	glMultMatrixf( glMat );

@@ -26,6 +26,8 @@
 
 // ============= Application
 
+/*
+
 void drawTruss( SoftBody * truss, float vsc, float fsc, bool DEBUG ){
     glBegin( GL_LINES );
     glColor3f(0.0f,0.0f,0.0f);
@@ -67,7 +69,9 @@ void drawTruss( SoftBody * truss, float vsc, float fsc, bool DEBUG ){
     glEnd();
 }
 
+*/
 
+/*
 void drawRigidBody( const RigidBody& rb, int npoints, Vec3d* points ){
     glColor3f(0.0f,0.0f,0.0f);
 
@@ -95,6 +99,7 @@ void drawRigidBody( const RigidBody& rb, int npoints, Vec3d* points ){
         }
     };
 };
+*/
 
 // ==========================
 // TestAppRigidBody
@@ -159,7 +164,11 @@ TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     //rb.L.set(1.0,1.8,1.0);
     srand(10454);
     rb.L.set(randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0));
+
+    rb.L.set(0.0);
     printf("L (%3.3f,%3.3f,%3.3f)\n",rb.L.x,rb.L.y,rb.L.z);
+
+    rb.rotMat.setOne();
 
     //camMat.c.set(rb.L);                     camMat.c.normalize();
     //camMat.a.set_cross(camMat.b,camMat.c);  camMat.a.normalize();
@@ -194,7 +203,7 @@ TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
 
     SpringConstrain * sp;
     sp = new SpringConstrain( 40.0, 0.0, 5.0, o->controler, NULL, mesh->points[0], {4.0,3.0,0.0} ); springs.push_back(sp);
-    sp = new SpringConstrain( 40.0, 0.0, 5.0, o->controler, NULL, mesh->points[2], {6.0,3.0,0.0} ); springs.push_back(sp);
+    sp = new SpringConstrain( 40.0, 0.0, 5.0, o->controler, NULL, mesh->points[1], {6.0,3.0,0.0} ); springs.push_back(sp);
     //sp = new SpringConstrain( 10.0, 0.0, 5.0, o->controler, NULL, mesh->points[3], o->controler->pos ); springs.push_back(sp);
 
 }
@@ -214,6 +223,7 @@ void TestAppRigidBody::draw(){
     //drawTruss( &truss, 1.0, 1.0, false );
 
     // ---- RidigBody basics - drag
+    /*
     Vec3d gdp,gv,gf;
     rb.clean_temp();
     rb.velOfPoint ( {2.0,5.0,6.0}, gv, gdp );
@@ -222,15 +232,35 @@ void TestAppRigidBody::draw(){
     rb.move(dt);
     rb.pos.set(0.0);
     rb.vel.set(0.0);
+    */
 
+    const Uint8 *keys = SDL_GetKeyboardState(NULL);
+    rb.clean_temp();
+    float step = 10.2;
+    rb.L.mul( 1-0.01 );
+    if( keys[ SDL_SCANCODE_W  ] ){ rb.torq.add_mul(rb.rotMat.a,  step ); }
+	if( keys[ SDL_SCANCODE_S  ] ){ rb.torq.add_mul(rb.rotMat.a, -step ); }
+	if( keys[ SDL_SCANCODE_A  ] ){ rb.torq.add_mul(rb.rotMat.b,  step ); }
+	if( keys[ SDL_SCANCODE_D  ] ){ rb.torq.add_mul(rb.rotMat.b, -step ); }
+    if( keys[ SDL_SCANCODE_Q  ] ){ rb.torq.add_mul(rb.rotMat.c,  step ); }
+	if( keys[ SDL_SCANCODE_E  ] ){ rb.torq.add_mul(rb.rotMat.c, -step ); }
+    rb.move(dt);
+    rb.pos.set(0.0);
+    rb.vel.set(0.0);
+    Draw3D::drawTriclinicBoxT( rb.rotMat, {-1.0,-0.5,-0.25}, {1.0,0.5,0.25} );
+    Draw3D::drawMatInPos     ( rb.rotMat, rb.pos );
+
+
+    /*
     glPushMatrix();
-    glTranslatef(-5.0,0.0,0.0);
-    glScalef(0.6,0.6,0.6);
-    drawRigidBody( rb, npoints, (Vec3d*)points );
-    glColor3f(1.0f,1.0f,1.0f);
-    Draw3D::drawPointCross( gdp, 0.2 );
-    Draw3D::drawVecInPos  ( gf*1000.0, gdp );
+        glTranslatef(-5.0,0.0,0.0);
+        glScalef(0.6,0.6,0.6);
+        drawRigidBody( rb, npoints, (Vec3d*)points );
+        glColor3f(1.0f,1.0f,1.0f);
+        Draw3D::drawPointCross( gdp, 0.2 );
+        Draw3D::drawVecInPos  ( gf*1000.0, gdp );
     glPopMatrix();
+    */
 
 
     // ---- RigidBody springs
@@ -253,7 +283,8 @@ void TestAppRigidBody::draw(){
         if(o->controler){
             o->gpos         = o->controler->pos;
             //o->bounds.orientation = o->controler->rotMat;
-            o->grot.setT(o->controler->rotMat);
+            //o->grot.setT(o->controler->rotMat);
+            o->grot.set(o->controler->rotMat);
         };
 	}
     glEnable( GL_LIGHTING );
@@ -276,7 +307,9 @@ void TestAppRigidBody::draw(){
         glColor3f(1.0f,1.0f,1.0f); Draw3D::drawLine( gp1, gp2 );
         //glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos( f, gp1 );
     }
-    Draw3D::drawAxis(1.0);
+
+
+    //Draw3D::drawAxis(1.0);
 
 
 };
