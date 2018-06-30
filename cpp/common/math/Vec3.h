@@ -239,6 +239,20 @@ class Vec3TYPE{
         return atan2( y, x );
     }
 
+    inline void setHomogenousSphericalSample( TYPE u, TYPE v ){
+        double r = sqrt(1-u*u);
+        double c = cos(v);
+        double s = sin(v);
+        //printf( "%f %f  %f %f %f \n", u,v,  r, c, s );
+        x = r*c;
+        y = r*s;
+        z = u;
+    }
+
+    inline void fromRandomSphereSample(){
+        setHomogenousSphericalSample( (randf()*2)-1.0, randf()*2*M_PI );
+    }
+
     inline void fromLinearSolution( const VEC& va, const VEC& vb, const VEC& vc, const VEC& p ){
         // https://en.wikipedia.org/wiki/Cramer%27s_rule
         // 30 multiplications
