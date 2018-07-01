@@ -42,8 +42,8 @@ void drawObstacles( Radiosity& rad ){
 
 void drawElements( Radiosity& rad ){
     for( SurfElement& el : rad.elements ){
-        Draw3D::drawPointCross(el.pos, 0.1);
-        Draw3D::drawVecInPos(el.normal, el.pos);
+        Draw3D::drawPointCross(el.pos, 0.01);
+        Draw3D::drawVecInPos(el.normal*0.05, el.pos);
     }
 }
 

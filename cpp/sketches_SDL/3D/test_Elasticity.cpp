@@ -167,7 +167,9 @@ void TestAppElasticity::draw(){
 	if(bRun){
         double err2  = body.step_CG();
         //double err2 = body.step_GD( 0.1 );
-        printf( "istep %i err2 %f \n", body.istep, sqrt(err2)  );
+        printf( "istep %i err2 %g \n", body.istep, sqrt(err2)  );
+
+        if(err2<1e-8) bRun = false;
 
         //bRun = false;
 

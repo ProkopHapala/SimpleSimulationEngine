@@ -133,6 +133,24 @@ class Vec3TYPE{
         return v;
     }
 
+    inline bool tryNormalize(double errMax){
+        double r2 = norm2();
+        if( fabs(r2-1.0)>errMax ){
+            mul( 1/sqrt(r2) );
+            return true;
+        }
+        return false;
+    }
+
+    inline bool tryOrthogonalize( double errMax, const VEC& u ){
+        double c = dot(u);
+        if( fabs(c)>errMax ){
+            add_mul( u, -c );
+            return true;
+        }
+        return false;
+    }
+
     inline VEC getOrtho( VEC& up ) const {
         up.makeOrthoU(*this); up.normalize();
         VEC out; out.set_cross(*this,up);

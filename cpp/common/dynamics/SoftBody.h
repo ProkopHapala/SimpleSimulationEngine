@@ -67,6 +67,35 @@ class Bond{
 
 };
 
+
+/*
+class BondLinearized{
+    uint16_t  i,j;
+    Vec3d   dir;
+    double  f0;   // force at reference position (pre-strain)
+    double  kPress,kPull;
+
+    inline void linearize( Vec3d* ps, double l0 ){
+        Vec3d  d = ps[j] - ps[j];
+        double l = d.normalize();
+        dir[i] = d;
+
+        f0[i]  = (l-l0)*k0;
+    }
+
+    inline void addForce( Vec3d* disps, Vec3d* forces ) const {
+            Vec3d hat  = dirs[il];
+            double dfl = hat.dot( disps[i] - disps[j] );
+            if( dfl>0 ){ dfl*=kPress; }else{ dfl*=kPull; }
+            hat.mul(dfl);  // f = k * <h|di-dj> * h
+            fs[ij.a].add(hat);
+            fs[ij.b].sub(hat);
+    }
+
+}
+*/
+
+
 /*
 BondType default_BondType = {
     0,          // id
@@ -99,6 +128,11 @@ class SoftBody{
 	double * drag       = NULL;
 	double * invMass    = NULL;
 
+	// linearized Sticks
+	Vec3d  * disps = NULL;
+	Vec3d  * dirs  = NULL;
+    double * f0s   = NULL;
+
 	// bonds
 	int nbonds;
     Bond * bonds        = NULL;
@@ -121,6 +155,11 @@ class SoftBody{
 	void applyConstrains(  );
 	void move_LeapFrog  (  );
 	void step           (  );
+
+	// linearized Sticks
+	void evalForceLinearizedBonds( );
+	void linearizedBonds( );
+	void disp2pos( );
 
     void deallocateAll( );
     void allocate( int npoints_, int nbonds_, int nfix_ );
@@ -156,6 +195,28 @@ class SoftBody{
         forces[bond.i].sub( d );
 	}
 
+    inline void addBondForceLinear( Bond& bond ){
+        Vec3d d; d.set_sub( points[bond.i], points[bond.j] );
+        double  l = d.norm();      // this should be optimized
+        double  f = bond.evalFoce( l );
+        //double  f = evalFoceBreak( l );
+        d.mul( f );
+        /*
+        if( damp_stick > 0 ){
+            Vec3d dv; dv.set_sub( velocities[bond.i], velocities[bond.j] );
+            double vf = dv.dot(d);
+            if(vf<0) d.mul( damp_stick );
+        };
+        */
+        //printf( " bond force %i %i %f %f (%3.3f,%3.3f,%3.3f)\n", bond.i, bond.j, l, f, d.x, d.y, d.z );
+        forces[bond.j].add( d );
+        forces[bond.i].sub( d );
+	}
+
+
+
+
+
 	inline void evalPointForce( int i, const Vec3d& gravity, const Vec3d& airFlow ){
 		forces[i].set_mul( gravity, mass[i] ); // here we clear forces
 		if( viscosity > 0.0 ){
@@ -174,12 +235,11 @@ class SoftBodyLinearized : public LinSolver { public:
     //Vec3d  * Fwork   = NULL;
     double * anchorKs = NULL;
 
-
     int  nsticks;
     Vec3d  * disps = NULL;  // displacements
     Vec2i  * ijs   = NULL;  // links
-    //double * l0s  = NULL;  // stick neutral length
-    double * ks   = NULL;  // stick stiffness
+    double * l0s   = NULL;  // stick neutral length
+    double * ks    = NULL;  // stick stiffness
     Vec3d  * dirs  = NULL;  // stick normalized direction
     //Vec3d  * kDirs;
 
@@ -205,12 +265,7 @@ class SoftBodyLinearized : public LinSolver { public:
         //l0s = l0s_;
     }
 
-    void prepare(double* l0s){
-        // - evaluate stick lengths and normalized directions
-        for(int i=0; i<npoints; i++ ){
-            disps[i]  .set(0.0);
-            Fextern[i].set(0.0);
-        }
+    void prepareSticks( bool bSetL0s ){
         for( int il=0; il<nsticks; il++  ){
             const Vec2i& ij    = ijs[il];
             Vec3d d     = poss[ij.a] - poss[ij.b];
@@ -219,13 +274,34 @@ class SoftBodyLinearized : public LinSolver { public:
             dirs[il] = d;
             //printf( " %i -> %i,%i  %f,%f,%f   \n", il, ij.a, ij.b, d.x, d.y, d.z );
             if(l0s){
-                double f0   = ks[il]*(l-l0s[il]);
-                d.mul( f0 );
-                Fextern[ij.a].add(d); // forces due to pre-strain; external force to keep stick under given strain
-                Fextern[ij.b].sub(d);
+                if(bSetL0s){
+                    l0s[il] = l;
+                }else{
+                    double f0   = ks[il]*(l-l0s[il]);
+                    d.mul( f0 );
+                    Fextern[ij.a].add(d); // forces due to pre-strain; external force to keep stick under given strain
+                    Fextern[ij.b].sub(d);
+                }
             }
         }
+    }
+
+    void prepare( bool bSetL0s ){
+        // - evaluate stick lengths and normalized directions
+        for(int i=0; i<npoints; i++ ){
+            disps[i]  .set(0.0);
+            Fextern[i].set(0.0);
+        }
+        prepareSticks(true);
         setLinearProblem( npoints*3, (double*)disps, (double*)Fextern, 0 );
+    }
+
+    void move(double h){
+        for(int i=0; i<npoints; i++){
+            poss[i].add_mul( disps[i], h );
+            disps[i].set(0.0);
+        };
+        prepareSticks(false);
     }
 
     //void disp2force( int nds, int nfs, double * ds_, double * fs_ ){

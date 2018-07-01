@@ -25,10 +25,12 @@ void hardFace( int n, int * ngons, int * faces, Vec3d * points, GLfloat* verts, 
         int ni = ngons[i];
         Vec3d a = points[facei[0]];
         Vec3d b = points[facei[1]];
+        //printf( " i %i ni %i \n", i, ni );
         for(int j=2; j<ni; j++){
-            Vec3d c = points[facei[2]];
+            Vec3d c = points[facei[j]];
             Vec3d n; n.set_cross(a-c,b-a);
-            n.normalize();
+            double l = n.normalize();
+            //printf( "%i %i %g \n", i, j, l );
             verti[0]=(GLfloat)a.x; verti[1]=(GLfloat)a.y; verti[2]=(GLfloat)a.z;
             verti[3]=(GLfloat)b.x; verti[4]=(GLfloat)b.y; verti[5]=(GLfloat)b.z;
             verti[6]=(GLfloat)c.x; verti[7]=(GLfloat)c.y; verti[8]=(GLfloat)c.z;

@@ -89,6 +89,8 @@ class TrussBuilder{
     Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1, double l0, BondType* type );
     Bond& insertBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1,            BondType* type );
 
+    void insertBox( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, uint8_t mask, BondType* type );
+
     int_fast64_t getBondKey( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 );
     bool         removeBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 );
     bool         removeBond( int_fast32_t i,   int_fast32_t j );

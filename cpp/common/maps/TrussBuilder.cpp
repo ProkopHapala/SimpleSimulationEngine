@@ -10,7 +10,7 @@ int_fast32_t TrussBuilder::insertNode( int_fast16_t ix, int_fast16_t iy, int_fas
     //ID64 index; index.x=ix; index.y=iy; index.z=iz;
     int_fast64_t key = xyz2id( ix, iy, iz );
     int sz0 = nodeIs.size();
-    int_fast32_t& index = nodeIs[key]; // get valid pointer ( if new alocate, if aold take it )
+    int_fast32_t& index = nodeIs[key]; // get valid pointer ( if new alocate, if old take it )
     if( nodeIs.size() > sz0 ){ // new element
         //GridNode& node = nodes[index];
         //node.ix = ix;
@@ -90,6 +90,60 @@ bool TrussBuilder::removeBond( int_fast32_t i, int_fast32_t j ){
     //if( i > j ) { int_fast32_t sw = i; i=j; j=sw; };  // To be sure we canput it also here
     int_fast64_t key = xy2id( i, j );
     return bonds.erase ( key ) >= 0;
+}
+
+void TrussBuilder::insertBox( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, uint8_t mask, BondType* type ){
+    //  ToDo :
+    //   - insert individual faces
+    //   - insert blocks with given width
+    int_fast32_t i000 = insertNode( ix0,   iy0,   iz0   );
+    int_fast32_t i001 = insertNode( ix0,   iy0,   iz0+1 );
+    int_fast32_t i010 = insertNode( ix0,   iy0+1, iz0   );
+    int_fast32_t i011 = insertNode( ix0,   iy0+1, iz0+1 );
+    int_fast32_t i100 = insertNode( ix0+1, iy0,   iz0   );
+    int_fast32_t i101 = insertNode( ix0+1, iy0,   iz0+1 );
+    int_fast32_t i110 = insertNode( ix0+1, iy0+1, iz0   );
+    int_fast32_t i111 = insertNode( ix0+1, iy0+1, iz0+1 );
+    double l1 = 1;
+    double l2 = 1.41421356237;
+    double l3 = 1.73205080757;
+    if( mask & 1 ){
+        insertBond( i000, i001, l1, type );
+        insertBond( i000, i010, l1, type );
+        insertBond( i000, i100, l1, type );
+        insertBond( i111, i110, l1, type );
+        insertBond( i111, i101, l1, type );
+        insertBond( i111, i011, l1, type );
+        insertBond( i001, i011, l1, type );
+        insertBond( i001, i101, l1, type );
+        insertBond( i010, i011, l1, type );
+        insertBond( i010, i110, l1, type );
+        insertBond( i100, i110, l1, type );
+        insertBond( i100, i101, l1, type );
+    }
+    if( mask & 2 ){
+        //z
+        insertBond( i000, i110, l2, type );
+        insertBond( i100, i010, l2, type );
+        insertBond( i001, i111, l2, type );
+        insertBond( i101, i011, l2, type );
+        //y
+        insertBond( i000, i101, l2, type );
+        insertBond( i100, i001, l2, type );
+        insertBond( i010, i111, l2, type );
+        insertBond( i110, i011, l2, type );
+        //x
+        insertBond( i000, i011, l2, type );
+        insertBond( i010, i001, l2, type );
+        insertBond( i100, i111, l2, type );
+        insertBond( i110, i101, l2, type );
+    }
+    if( mask & 4 ){
+        insertBond( i000, i111, l3, type );
+        insertBond( i100, i011, l3, type );
+        insertBond( i010, i101, l3, type );
+        insertBond( i001, i110, l3, type );
+    }
 }
 
 int_fast64_t TrussBuilder::getBondKey( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 ){

@@ -108,9 +108,17 @@ class Radiosity{ public:
 
                 double occlusion = getOcclusion( eli.pos, d, r, eli.isurf, elj.isurf );
 
-                glColor3f( occlusion, 0.0, 1-occlusion ); Draw3D::drawLine( eli.pos, elj.pos );
-
                 coupling*=(1-occlusion);
+
+                //glColor3f( occlusion, 0.0, 1-occlusion );
+                //Draw::colorScale()
+                //float c = sqrt(coupling)*0.3;
+                float c = coupling*0.3;
+                glColor3f( c, c, c );
+                if(occlusion>0.5) glColor3f( 1.0, 0.0, 0.0 );
+                Draw3D::drawLine( eli.pos, elj.pos );
+
+
                 M[i*n+j] = coupling;
                 M[j*n+i] = coupling;
             }

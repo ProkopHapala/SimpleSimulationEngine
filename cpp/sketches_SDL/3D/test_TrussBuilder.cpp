@@ -65,6 +65,9 @@ TestAppTrussBuilder::TestAppTrussBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     builder.init( 256, 256*8, 16 );
 
+    builder.insertBox( ix, iy, iz, 0b111, &builder.bondTypes[iType] );
+    printf( " nnodes %i  nbonds %i \n", builder.nodes.size(), builder.bonds.size() );
+
     cursorShape = glGenLists(1);
     glNewList( cursorShape , GL_COMPILE );
         glPushMatrix();
@@ -228,6 +231,13 @@ void TestAppTrussBuilder::eventHandling ( const SDL_Event& event  ){
                 case SDLK_k: printf("to   file \n"); builder.toFile  ( "truss.txt" ); break;
                 case SDLK_l: printf("from file \n"); builder.fromFile( "truss.txt" ); break;
                 case SDLK_SPACE: running = !running; if(running){ builder.toSoftBody( truss ); }; break;
+                case SDLK_KP_1: builder.insertBox( ix, iy, iz, 1, &builder.bondTypes[iType] ); break;
+                case SDLK_KP_2: builder.insertBox( ix, iy, iz, 2, &builder.bondTypes[iType] ); break;
+                case SDLK_KP_3: builder.insertBox( ix, iy, iz, 3, &builder.bondTypes[iType] ); break;
+                case SDLK_KP_4: builder.insertBox( ix, iy, iz, 4, &builder.bondTypes[iType] ); break;
+                case SDLK_KP_5: builder.insertBox( ix, iy, iz, 5, &builder.bondTypes[iType] ); break;
+                case SDLK_KP_6: builder.insertBox( ix, iy, iz, 6, &builder.bondTypes[iType] ); break;
+                case SDLK_KP_7: builder.insertBox( ix, iy, iz, 7, &builder.bondTypes[iType] ); break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             break;

@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <cstring>
 #include <string>
 
@@ -341,11 +342,65 @@ class Mesh{ public:
         return ed.verts.a;
     }
 
-    int bevelVertex( int i ){
+    int bevelVertex( int i ){}
 
+    int extrudeFace( int i ){}
+
+
+    //std::unordered_map<std::int,Vec2i>::iterator pair_insert( std::unordered_map<int,Vec2i>& mymap, int key, int val ){
+    //    std::unordered_map<std::int,Vec2i>::iterator got = cutted_faces.find( key );
+
+    bool pair_insert( std::unordered_map<int,Vec2i>& mymap, int key, int val ){
+        auto got = mymap.find( key );
+        if( got == mymap.end() ){
+            mymap.insert( { key, (Vec2i){val,-1} } );
+            return false;
+        }else{
+            got->second.b = val;
+            return true;
+        }
     }
 
 
+    int cutByPlane( Vec3d dir, double C ){
+        int ied=0;
+        int ip0 = points.size();
+        int ie0 = edges.size();
+
+        std::unordered_map<int,Vec2i> cutted_faces;
+
+        for( MeshEdge& ed : edges ){
+            Vec3d& pa = points[ed.verts.a];
+            Vec3d& pb = points[ed.verts.b];
+            double ta = dir.dot(pa)-C;
+            double tb = dir.dot(pb)-C;
+            if(  ta*tb < 0 ){
+                double t = ta/(ta-tb);
+                if(ta<0){
+                    t*=-1;
+                    removed_points.push_back(ed.verts.a);
+                    ed.verts.a = points.size();
+                }else{
+                    removed_points.push_back(ed.verts.b);
+                    ed.verts.b = points.size();
+                }
+                points.push_back( pa*(1-t) + pb*t );
+                pair_insert( cutted_faces, ed.faces.a, ied );
+                pair_insert( cutted_faces, ed.faces.b, ied );
+                //cutted_faces.insert( ed.faces.a );
+                //cutted_faces.insert( ed.faces.b );
+            }else{
+                if(ta<0){
+                    removed_edges.push_back(ied);
+                    // TODO - edges between new points
+                    // TODO - faces between new points
+                    // TODO - Remove also faces
+                }
+            }
+            ied++;
+        }
+        // TODO - capped cut ?
+    }
 
 
 // =============================

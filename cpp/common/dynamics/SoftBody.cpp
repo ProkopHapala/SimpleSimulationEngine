@@ -17,6 +17,38 @@ void SoftBody::evalForces( ){
 	//for( int i=0; i<npoints; i++ ){ printf( " point force %i  %f %f %f   %f %f %f \n", i, forces[i].x, forces[i].y, forces[i].z, mass[i], invMass[i], drag[i] ); }
 }
 
+void SoftBody::evalForceLinearizedBonds( ){
+	for( int i=0; i<nbonds; i++ ){
+        const Bond& b  = bonds[i];
+        Vec3d hat = dirs[i];
+        double dl = hat.dot( disps[b.j] - disps[b.i] );
+        if( dl>0 ){ dl*=b.type->kTens; }else{ dl*=b.type->kPress; };
+        hat.mul( dl+f0s[i] );
+        forces[b.i].sub(hat);
+        forces[b.j].add(hat);
+	}
+}
+
+void SoftBody::linearizedBonds( ){
+    //for( int i=0; i<; i++){ disps[i].set(0.0); };
+	for( int i=0; i<nbonds; i++ ){
+        const Bond& b = bonds[i];
+        Vec3d d  = points[b.j] - points[b.i];
+        double l = d.normalize();
+        dirs[i]  = d;
+        double dl = l-b.l0;
+        if( dl>0 ){ dl*=b.type->kTens; }else{ dl*=b.type->kPress; };
+        f0s[i]   = dl;
+	}
+}
+
+void SoftBody::disp2pos( ){
+    for( int i=0; i<npoints; i++){
+        points[i].add( disps[i] );
+        disps[i].set(0.0);
+    };
+}
+
 void SoftBody::applyConstrains(){
 	for( int i=0; i<nfix; i++ ){
 		int ip = fix[i];

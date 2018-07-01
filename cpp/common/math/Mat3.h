@@ -29,6 +29,7 @@ class Mat3TYPE{
 		};
 		struct{	VEC a,b,c; };
 		TYPE array[9];
+		VEC  vecs [3];
 	};
 
 
@@ -155,6 +156,21 @@ class Mat3TYPE{
 		vout.y = xy*vx + yy*vy + zy*vz;
 		vout.z = xz*vx + yz*vy + zz*vz;
 	};
+
+    inline bool tryOrthoNormalize( double errMax, int ia, int ib, int ic ){
+        VEC& a = vecs[ia];
+        VEC& b = vecs[ib];
+        VEC& c = vecs[ic];
+        bool res = false;
+        res |= a.tryNormalize    ( errMax );
+        res |= b.tryOrthogonalize( errMax, a );
+        res |= b.tryNormalize    ( errMax );
+        res |= c.tryOrthogonalize( errMax, a );
+        res |= c.tryOrthogonalize( errMax, b );
+        res |= c.tryNormalize    ( errMax );
+	};
+
+
 
 // ====== matrix multiplication
 
