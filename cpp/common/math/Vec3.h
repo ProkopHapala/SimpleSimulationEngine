@@ -157,8 +157,11 @@ class Vec3TYPE{
         return out;
 	}
 
+
 	inline void getSomeOrtho( VEC& v1, VEC& v2 ) const {
-		if(x<y){
+        TYPE xx = x*x;
+        TYPE yy = y*y;
+		if(xx<yy){
 //			x : y*vz - z*vy;
 //			y : z*vx - x*vz;
 //			z : x*vy - y*vx;
@@ -166,7 +169,7 @@ class Vec3TYPE{
 //			y : z*1 - x*0 ;
 //			z : x*0 - y*1 ;
 //			float vx = 0; float vy = z; float vz =-y;
-			v1.x =  -y*y -z*z;
+			v1.x =  -yy -z*z;
 			v1.y =  x*y;
 			v1.z =  x*z;
 		}else{
@@ -175,7 +178,7 @@ class Vec3TYPE{
 //			z : x*1 - y*0;
 //			float vx = -z; float vy = 0; float vz = x;
 			v1.x =  y*x;
-			v1.y =  -z*z -x*x;
+			v1.y =  -z*z -xx;
 			v1.z =  y*z;
 		}
 		v2.x = y*v1.z - z*v1.y;
