@@ -13,6 +13,8 @@
 #include "GLObject.h"
 #include "Shader.h"
 
+#include "GLfunctions.h"
+
 Shader   * shader1;
 GLObject * object1;
 GLObject * object2;
@@ -107,6 +109,9 @@ void setup(){
     //glActiveTexture(GL_TEXTURE0 );
     //glBindTexture(GL_TEXTURE_2D, textureID );
     //glBindSampler(0, uloc);
+
+
+    //makeRandomTexture( textureID, imgW, imgH );
 
 }
 

@@ -80,6 +80,8 @@ int setup(){
 
     shaderInstance=new Shader();
 	shaderInstance->init( "common_resources/shaders/Instance3D.glslv",   "common_resources/shaders/Instance3D.glslf"   );
+	//shaderInstance->init( "common_resources/shaders/Instance3D.glslv",   "shaders/texture_frag.c"   );
+
     shaderInstance->getDefaultUniformLocation();
 
 	shaderParticle=new Shader();
@@ -206,8 +208,8 @@ void draw( ){
         shaderInstance->set_camMat( (GLfloat*)&camMat );
         glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
-        //instances.draw( GL_TRIANGLES );
-        glLineWidth(3.0); instances.draw( GL_LINE_LOOP );
+        instances.draw( GL_TRIANGLES );
+        //glLineWidth(3.0); instances.draw( GL_LINE_LOOP );
     }
     if(bParticles){
         shaderParticle->use();

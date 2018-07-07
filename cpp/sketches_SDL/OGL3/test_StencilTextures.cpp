@@ -81,6 +81,7 @@ double ticks_per_second=0;
 
 // =============== Functions
 
+/*
 GLMesh* makeQuad3D( Vec2f p0, Vec2f p1, Vec2f u0, Vec2f u1 ){
     GLfloat verts[] = { p0.x,p0.y,0.0, p1.x,p1.y,0.0, p0.x,p1.y,0.0,   p0.x,p0.y,0.0, p1.x,p1.y,0.0, p1.x,p0.y,0.0 };
     Vec2f vUVs   [] = { u0.x,u0.y,     u1.x,u1.y,     u0.x,u1.y,       u0.x,u0.y,     u1.x,u1.y,     u1.x,u0.y     };
@@ -88,6 +89,7 @@ GLMesh* makeQuad3D( Vec2f p0, Vec2f p1, Vec2f u0, Vec2f u1 ){
     glquad->init( 6, 0, NULL, verts, NULL, NULL, vUVs );
     return glquad;
 }
+*/
 
 float* makeImage( int n ){
     float * out = new float[n*n];

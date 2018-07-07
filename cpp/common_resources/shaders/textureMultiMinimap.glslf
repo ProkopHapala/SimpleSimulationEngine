@@ -13,7 +13,7 @@ void main(){
 	gl_FragColor   = c*0.25;
 	
 	//gl_FragColor   = textureLod( texture_1, fUV, 32 );
-	//gl_FragColor   = vec4( fUV, sin(fUV.x)*sin(fUV.y), 1.0 );
+	//gl_FragColor   = vec4( fUV, sin(fUV.x*10.0)*sin(fUV.y*10.0), 1.0 );
 }
 
 

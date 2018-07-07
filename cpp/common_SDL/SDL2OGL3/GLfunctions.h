@@ -63,6 +63,23 @@ inline void bindTexture( GLuint slot, GLuint textureID, GLuint uloc ){
     glUniform1i( uloc, slot );
 }
 
+
+inline void makeRandomTexture( GLuint& textureID, int W, int H, GLenum type=GL_UNSIGNED_BYTE ){
+    float* cbuff  = new float [4*W*H];
+    int i=0;
+    for(int iy=0; iy<H; iy++){
+        for(int ix=0; ix<W; ix++){
+            cbuff[i+0] = randf();
+            cbuff[i+1] = randf();
+            cbuff[i+2] = randf();
+            cbuff[i+3] = randf();
+            i+=4;
+        }
+    }
+    newTexture2D( textureID, W, H, cbuff, GL_RGBA, type );
+    delete [] cbuff;
+}
+
 // ========== Frame Buffer
 
 bool checkFramebufferStatus(){

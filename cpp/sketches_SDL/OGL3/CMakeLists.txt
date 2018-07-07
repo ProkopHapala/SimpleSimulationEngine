@@ -30,6 +30,9 @@ target_link_libraries( test_Atoms ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRAR
 add_executable       ( test_Vegetation test_Vegetation.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_Vegetation ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_Horizont test_Horizont.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
+target_link_libraries( test_Horizont ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_StencilTextures test_StencilTextures.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_StencilTextures ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 

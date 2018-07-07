@@ -18,6 +18,40 @@
 //GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Vec3d (vertFunc)(Vec2d) ){
 
 
+GLMesh* makeQuad3D( Vec2f p0, Vec2f p1, Vec2f u0, Vec2f u1 ){
+    //GLfloat verts = new GLfloat[3*2*3];
+    //GLfloat vUVs  = new GLfloat[3*2*2];
+    //delete [] verts;
+    GLfloat verts[] = { p0.x,p0.y,0.0, p1.x,p1.y,0.0, p0.x,p1.y,0.0,   p0.x,p0.y,0.0, p1.x,p1.y,0.0, p1.x,p0.y,0.0 };
+    Vec2f vUVs   [] = { u0.x,u0.y,     u1.x,u1.y,     u0.x,u1.y,       u0.x,u0.y,     u1.x,u1.y,     u1.x,u0.y     };
+    GLMesh* glquad = new GLMesh();
+    glquad->init( 6, 0, NULL, verts, NULL, NULL, vUVs );
+    return glquad;
+}
+
+template<typename PixFunc>
+GLuint makeTestTextureRGBA( Vec2i sz, PixFunc pixFunc ){
+    double dx = 1.0d/sz.x;
+    double dy = 1.0d/sz.y;
+    uint32_t * c_img1 = new uint32_t[sz.x*sz.y];
+    for( int iy=0; iy<sz.y; iy++ ){
+        for( int ix=0; ix<sz.x; ix++ ){
+            uint8_t r,g,b,a;
+            pixFunc( (Vec2i){ix,iy}, r,g,b,a );
+            //r=ix; g=ix^iy; b=iy; a=255;
+            c_img1[ iy*sz.x + ix ] = (a<<24) | (b<<16) | (g<<8) | (r);
+        }
+    }
+    GLuint texID;
+    newTexture2D( texID, sz.x, sz.y, c_img1, GL_RGBA, GL_UNSIGNED_BYTE );
+    return texID;
+}
+
+GLuint makeTestTextureRGBA_1( Vec2i sz ){
+    makeTestTextureRGBA( sz, [](Vec2i uv, uint8_t& r,uint8_t& g,uint8_t& b,uint8_t& a ){ r=uv.x; g=uv.x^uv.y; b=uv.y; a=255; } );
+};
+
+
 GLObject * makeOgl_flat( const CMesh& mesh ){
     GLObject * ogl = new GLObject();
     ogl->setup( countVerts( mesh.nfaces, mesh.ngons ) );

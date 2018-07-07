@@ -38,9 +38,14 @@ const int MaxParticles = 16;
 //const int MaxParticles = 256;
 //const int MaxParticles = 256*256;
 
-GLfloat *instance_pos,*instance_sc;
 
-Shader *shSprite,*shSpriteBlend;
+
+GLMesh *glSprite=0;
+
+
+GLfloat *instance_pos=0,*instance_sc=0;
+
+Shader *shSprite=0,*shSpriteBlend=0, *shTex=0;
 
 //GLInstances instances;
 GLBillboards bilboards;
@@ -109,6 +114,15 @@ int setup(){
     shSpriteBlend->init( "common_resources/shaders/Bilboard3D.glslv", "common_resources/shaders/textureMultiMinimap.glslf" );
     shSpriteBlend->getDefaultUniformLocation();
 
+    shTex=new Shader();
+    //shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
+    shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
+    //shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/textureMultiMinimap.glslf"   );
+    //shTex->init( "common_resources/shaders/Bilboard3D.glslv", "common_resources/shaders/textureMultiMinimap.glslf" );
+    shTex->getDefaultUniformLocation();
+
+    glSprite  = makeQuad3D( {-1.0f,-1.0f}, {1.0f,1.0f}, {0.0f,0.0f}, {1.0f,1.0f} );
+
     /*
     char* str_glslv_Bilboard3D = filetobuf( "common_resources/shaders/Bilboard3D.glslv"  ); if(str_glslv_Bilboard3D==NULL){ printf("fail to load shader!\n"); exit(1); };
     shSprite=new Shader();
@@ -145,6 +159,8 @@ int setup(){
 
 	bilboards.init( MaxParticles, 6, DEFAULT_Bilboard_UVs, instance_pos, instance_sc );
 
+
+	/*
     int imgH  = 512; int imgW  = 512;
     double dx = 1.0d/(imgW);
     double dy = 1.0d/(imgH);
@@ -158,10 +174,9 @@ int setup(){
 
             int nMaxIter = 64;
 
-            /*
-            int iters = (nMaxIter-juliaPoint(x*2,y,nMaxIter))*4; if(iters>255)iters=255;
-            r=iters; g=0; b=iters*2.0; a=255-iters;
-            */
+
+            //int iters = (nMaxIter-juliaPoint(x*2,y,nMaxIter))*4; if(iters>255)iters=255;
+            //r=iters; g=0; b=iters*2.0; a=255-iters;
 
             uint8_t  mask = 31;
             uint8_t  cut  = 4;
@@ -172,6 +187,13 @@ int setup(){
         }
     }
     newTexture2D( texture_1, imgW, imgH, c_img1, GL_RGBA, GL_UNSIGNED_BYTE );
+    */
+    texture_1 = makeTestTextureRGBA( {512,512}, [](Vec2i uv, uint8_t& r,uint8_t& g,uint8_t& b,uint8_t& a ){
+            uint8_t  mask = 31;
+            uint8_t  cut  = 4;
+            a=((((uv.x+uv.y)&mask)<cut)|(((uv.x-uv.y+mask)&mask)<cut) |  ((uv.x&mask)<cut)|((uv.y&mask)<cut))*255;
+            r=uv.x/2;  g=uv.y/2; b=(uv.x+uv.y)/4;
+     } );
 
     ticks_per_second = calibrate_timer(100);
     //lastTime = glfwGetTime();
@@ -201,27 +223,49 @@ void draw( ){
     camMat.set_mmul_TN( mRot, mPersp );
     //Mat3f objRot; objRot.setOne();
 
-    Shader * sh=shSprite;
-    if( bTransparent ){
-    	glDisable(GL_BLEND);
-        glEnable(GL_DEPTH_TEST);
-    }else{
+    Shader * sh=0;
+    if( bTransparent=1 ){
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         sh=shSpriteBlend;
+    }else{
+    	glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+        sh=shSprite;
     }
 
     sh->use();
+    glUniform1i(sh->getUloc("texture_1"), 0);
     sh->set_camPos( (GLfloat*)&camPos );
     sh->set_camMat( (GLfloat*)&camMat );
 
     glUniformMatrix3fv( sh->getUloc( "camRot" ), 1, GL_FALSE, (GLfloat*)&mouseMat );
-    glUniform4fv( sh->getUloc( "keyColor" ), 1, (const GLfloat[]){1.0f,0.0f,1.0f,10.0f} );
+    //glUniform4fv( sh->getUloc( "keyColor" ), 1, (const GLfloat[]){1.0f,0.0f,1.0f,10.0f} );
 
     //uploadArrayBuffer( instances.pose_Up, instances.nInstances*3*sizeof(GLfloat), instance_Up );
-    bilboards.draw( GL_TRIANGLES );
+    //bilboards.draw( GL_TRIANGLES );
 
+
+    sh = shTex;
+    sh->use();
+    sh->set_camPos ( (GLfloat*)&camPos   );
+    sh->set_camMat ( (GLfloat*)&camMat   );
+    glUniform1i(sh->getUloc("texture_1"), 0);
+    //glUniform1f(sh->getUloc("nPhases"), 32.0f);
+    //glUniform2f(sh->getUloc("uv0s"), 0.0   ,0.0);
+
+    //glUniform4fv( sh->getUloc( "keyColor" ), 1, (const GLfloat[]){1.0f,0.0f,1.0f,10.0f} );
+    for(int i=0; i<10; i++){
+        Mat3f modelMat;
+        //modelMat.fromRand( {randf(),randf(),randf()});
+        modelMat.fromRand( {fhash_Wang(i),fhash_Wang(i+989898),fhash_Wang(i+546545)});
+        sh->set_modelMat( (GLfloat*)&modelMat );
+        //sh->set_modelPos( (const GLfloat[]){0.0f,0.0,10.0f} );
+        const GLfloat pos [] = {fhash_Wang(i+545444),fhash_Wang(i+19898),fhash_Wang(i+746545)};
+        sh->set_modelPos( pos );
+        glSprite->draw(GL_TRIANGLES);
+    }
     //glPointSize(10.0); bilboards.draw( GL_POINTS );
 
 }

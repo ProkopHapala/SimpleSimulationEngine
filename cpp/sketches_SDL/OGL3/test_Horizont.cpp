@@ -26,13 +26,19 @@
 #include "IO_utils.h"
 #include "Shader.h"
 
-#include "GL3Utils.h"
-#include "DrawOGL3.h"
 
-#include "DrawVegetation.h"
+#include "DrawOGL3.h"
 
 #include "Solids.h"
 #include "CMesh.h"
+
+
+#include "CMesh.h"
+
+#include "TerrainOGL3.h"
+#include "HorizontOGL3.h"
+
+
 
 #include "testUtils.h"
 
@@ -76,147 +82,6 @@ double ticks_per_second=0;
 
 // =============== Functions
 
-void camera(float aspect, Mat4f& camMat){
-    Mat4f mRot,mProj;
-    qCamera.toMatrix(mouseMat);
-    mRot.setOne(); mRot.setRot(mouseMat);
-    // float fov = 3.0; mPersp.setPerspective( fov, fov*ASPECT_RATIO, 1.0, 1000.0 );
-    mProj.setOrthographic( 8.0, 8.0*aspect, -1.0, -1000.0);
-    //mProj.setOne();
-    camMat.set_mmul_TN( mRot, mProj );
-}
-
-
-void renderPhases( Mat4f camMat ){
-
-    //Mat4f camMat;  camera( 32, camMat);
-    int nPhases = 32;
-    Mat3f modelMat; modelMat.setOne(); modelMat.mul(0.3);
-    //Vec3f modelPos; modelPos.set(-4.25f,-4.0f,10.0f);
-    Vec3f modelPos; modelPos.set(-8.25f,-0.5f,10.0f);
-    for(int iph=0; iph<nPhases; iph++){
-
-        modelMat.rotate( 2*M_PI/nPhases, (Vec3f){0.0f,1.0f,0.0f});
-        modelPos.add( 0.5f, 0.0f, 0.0f );
-
-        Shader * sh;
-        sh = shBranches;
-        sh->use();
-        sh->set_camPos  ( (GLfloat*)&camPos );
-        sh->set_camMat  ( (GLfloat*)&camMat );
-        sh->set_modelPos( (GLfloat*)&modelPos );
-        sh->set_modelMat( (GLfloat*)&modelMat );
-
-        glEnable(GL_DEPTH_TEST);
-        mshBranches->draw(GL_TRIANGLES);
-        //msh1->draw(GL_TRIANGLES);
-    }
-}
-
-
-void renderPhases2D( Mat4f camMat, int nPhases ){
-    //Mat4f camMat;  camera( 32, camMat);
-    //int nPhases = 32;
-    Mat3f modelMat;
-    //Vec3f modelPos; modelPos.set(-4.25f,-4.0f,10.0f);
-    //Vec3f modelPos; modelPos.set(-8.25f,-0.5f,10.0f);
-    Vec3f modelPos;
-    glEnable(GL_DEPTH_TEST);
-
-    float dth =   0.5*M_PI/nPhases;
-    for(int ith=-nPhases+1;ith<nPhases; ith++){
-        int nph    = nPhases-ith;
-        float dph  = 2*M_PI/nph;
-        for(int iph=0; iph<nph; iph++){
-            modelMat.setOne();
-            modelMat.mul(0.25);
-            /*
-            modelMat.rotate( dph*iph, (Vec3f){0.0f,1.0f,0.0f});
-            modelMat.rotate( dth*ith, (Vec3f){1.0f,0.0f,0.0f});
-            modelPos=(Vec3f){ -7.5+1.0*iph, 7.5-1.0f*ith, 10.0f};
-            */
-
-            modelMat.rotate( dph*iph, (Vec3f){0.0f,1.0f,0.0f});
-            modelMat.rotate( dth*ith, (Vec3f){1.0f,0.0f,0.0f});
-            modelPos=(Vec3f){ -7.5+1.0*(iph+ith),-7.5-1.0f*(+ith-iph), 10.0f};
-
-            Shader * sh;
-            sh = shBranches;
-            sh->use();
-            sh->set_camPos  ( (GLfloat*)&camPos );
-            sh->set_camMat  ( (GLfloat*)&camMat );
-            sh->set_modelPos( (GLfloat*)&modelPos );
-            sh->set_modelMat( (GLfloat*)&modelMat );
-
-            mshBranches->draw(GL_TRIANGLES);
-            msh1->draw(GL_TRIANGLES);
-        }
-    }
-}
-
-void renderPhasesOct( Mat4f camMat, int n ){
-    Mat3f modelMat;
-    Vec3f modelPos;
-    glEnable(GL_DEPTH_TEST);
-
-    Vec3f up=(Vec3f){0.0,1.0,0.0};
-    Vec3f d;
-    float step = 1.0/n;
-    for(int ix=-n;ix<n; ix++){
-        for(int iy=-n;iy<n; iy++){
-            d.x=(ix+0.5);
-            d.z=(iy+0.5);
-            modelPos=(Vec3f){ 1.0*d.x,1.0f*d.z, 10.0f};
-
-            //modelMat.setOne();
-
-            d.mul(step);
-
-            d.y = 1.0-fabs(d.x)-fabs(d.z);
-            if( d.y<0 ){
-                //continue;
-                if(d.x<0.0){d.x+=1.0;}else{d.x-=1.0;}
-                if(d.z<0.0){d.z+=1.0;}else{d.z-=1.0;}
-            }
-            //printf( " %i %i :  %f %f %f \n", ix,iy, d.x, d.y, d.z );
-
-            d.normalize();
-            modelMat.fromDirUp(d,up);
-            modelMat.T();
-            modelMat.mul(0.25);
-
-            Shader * sh;
-            sh = shBranches;
-            sh->use();
-            sh->set_camPos  ( (GLfloat*)&camPos );
-            sh->set_camMat  ( (GLfloat*)&camMat );
-            sh->set_modelPos( (GLfloat*)&modelPos );
-            sh->set_modelMat( (GLfloat*)&modelMat );
-
-            mshBranches->draw(GL_TRIANGLES);
-            msh1->draw(GL_TRIANGLES);
-        }
-    }
-}
-
-Vec2f selectPhaseOct( Vec3f dir, int n ){
-    //Vec3f up=(Vec3f){0.0,1.0,0.0};
-    float step=0.5/n;
-
-    float renorm = 1.0/(fabs(dir.x)+fabs(dir.y)+fabs(dir.z));
-    //float x = (dir.x+1.0)+n;
-    //float y = (dir.z+1.0)+n;
-    Vec2f uv = (Vec2f){ (int)(dir.x*renorm*n+n)*step, (int)(dir.z*renorm*n+n)*step };
-    if( dir.y<0 ){
-        uv.x-=0.5;
-        uv.y-=0.5;
-    };
-    printf( "  (%f,%f,%f)   (%f,%f) %f \n", dir.x, dir.y, dir.z,   uv.x, uv.y,  renorm );
-    return uv;
-    //glUniform2f(sh->getUloc("uv0s"), d.x*n, d.y*n );
-}
-
-
 int setup(){
 
     shBranches=new Shader();
@@ -224,55 +89,15 @@ int setup(){
     shBranches->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/normal2color.glslf"   );
     shBranches->getDefaultUniformLocation();
 
-    shLeafs=new Shader();
-    shLeafs->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/pointSprite.glslf"   );
-    shLeafs->getDefaultUniformLocation();
-
     shTexView=new Shader();
     shTexView->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
     shTexView->getDefaultUniformLocation();
-
-    std::vector<Vec3f> branches;
-    std::vector<Vec3f> leafs;
-    tree_step( 5, (Vec3f){0.0f,0.0f,0.0f}, (Vec3f){0.0f,1.0f,0.0f}, branches, leafs );
-
-    std::vector<Vec3f> verts;
-    std::vector<Vec3f> normals;
-    pushTris_Treestep( 5, (Vec3f){0.0f,0.0f,0.0f}, (Vec3f){0.0f,1.0f,0.0f}, (Vec3f){1.0f,0.0f,0.0f}, verts, &normals );
-
-    //for(int i=0; i<branches.size(); i++){ printf("%i (%g,%g,%g)\n", i, branches[i].x, branches[i].y, branches[i].z ); }
-
-    msh1 = hardTriangles2mesh( Solids::Cube );
-    //msh1 = hardTriangles2mesh( Solids::Octahedron );
-
-
-    mshBranches = new GLMesh();
-    //mshBranches->init( branches.size(), 0, NULL, &branches[0],  NULL, NULL, NULL );
-    mshBranches->init( verts.size(), 0, NULL, &verts[0],  &normals[0], NULL, NULL );
-
-    mshLeafs = new GLMesh();
-    mshLeafs->init( leafs.size(), 0, NULL, &leafs[0],  NULL, NULL, NULL );
 
     //ticks_per_second = calibrate_timer(100);
     //lastTime = glfwGetTime();
     lastTime = 0.0;
     qCamera.setOne();
 
-    // ==== BEGIN : RENDER TO TEXTURE
-
-    shTex=new Shader();
-    //shTex->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
-    //shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
-    //shTex->init( "common_resources/shaders/texture3D_anim.glslv",   "common_resources/shaders/texture.glslf"   );
-    //shTex->init( "common_resources/shaders/texture3D_anim.glslv",   "common_resources/shaders/texture_anim.glslf"   );
-    shTex->init( "common_resources/shaders/textureAtlas3D.glslv",   "common_resources/shaders/texture.glslf"   );
-    shTex->getDefaultUniformLocation();
-
-    glAtlas  = makeQuad3D( {0.0f,0.0f}, {32.0f,32.0f}, {0.0f,0.0f},  {1.f,1.0f} );
-    glAtlas_ = makeQuad3D( {0.0f,0.0f}, {32.0f,32.0f}, {-0.5f,-0.5f},{0.5f,0.5f} );
-
-    //glquad = makeQuad3D( {0.0f,0.0f}, {0.5f,1.0f}, {0.0f,0.0f}, {0.125f,1.0f} );
-    glSprite = makeQuad3D( {0.0f,0.0f}, {8.0f,8.0f}, {0.0f,0.0f}, {1.0f,1.0f} );
 
     //glquad =new GLMesh();
     //glquad->init( 6, 0, NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs );
@@ -282,7 +107,7 @@ int setup(){
 
     //frameBuff1.init( 2048, 64 );
     //frameBuff1.init( 2048, 128 );
-    frameBuff1.init( 2048, 2048 );
+    frameBuff1.init( 4096, 256 );
 
     // ===== Prepare texture by rendering
 
@@ -295,10 +120,10 @@ int setup(){
 
     Mat4f camMat;
     //camera( 1/16.0, camMat);
-    camera( 1.0, camMat);
+    //camera( 1.0, camMat);
     //renderPhases( camMat);
     //renderPhases2D( camMat, 16 );
-    renderPhasesOct( camMat, 8 );
+    //renderPhasesOct( camMat, 8 );
 
     // ==== END   : RENDER TO TEXTURE
 
@@ -311,7 +136,8 @@ void draw( ){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 	// Simulate all particles
 
-	Mat4f camMat;  camera( 1.0, camMat);
+	Mat4f camMat;
+	// camera( 1.0, camMat);
 	//renderPhases(camMat);
 
     Mat3f modelMat; modelMat.setOne(); modelMat.mul(0.5f);
@@ -342,7 +168,6 @@ void draw( ){
     //sh = shTex;
 
 
-
     sh = shTex;
     sh->use();
     sh->set_modelMat( (GLfloat*)&modelMat );
@@ -354,6 +179,8 @@ void draw( ){
 
     //glUniform2f(sh->getUloc("uv0s"), 0.0   ,0.0);
 
+
+    /*
     //float the = +1.5;
     float the = -0.2;
     float phi = frameCount*0.01;
@@ -378,6 +205,16 @@ void draw( ){
     Vec3f mpos = (Vec3f){uv.x*16-4+0.5,uv.y*16-16+0.5,10.0};
     sh->set_modelPos( (GLfloat*)&mpos );
     //mshBranches->draw(GL_TRIANGLES);
+
+
+    */
+
+    sh = shBranches;
+    sh->use();
+    sh->set_camPos  ( (GLfloat*)&camPos );
+    sh->set_camMat  ( (GLfloat*)&camMat );
+    sh->set_modelMat( (GLfloat*)&modelMat );
+
     msh1->draw(GL_TRIANGLES);
 
 
