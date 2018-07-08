@@ -1,338 +1,265 @@
 
-// Copied tutorial from
-//  http://www.opengl-tutorial.org/intermediate-tutorials/billboards-particles/particles-instancing/
-//  https://github.com/opengl-tutorials/ogl/tree/master/tutorial18_billboards_and_particles
 
-#include <stdlib.h>
+//#define SPEED_TEST
+
 #include <stdio.h>
-
-#include <vector>
-#include <algorithm>
-
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <time.h>
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h>
 #include <GL/glew.h>
-#include <SDL2/SDL.h>
 
-#include "Vec2.h"
+#include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
 #include "quaternion.h"
-#include "Mat4.h"
-
-#include "GL3Utils.h"
-#include "GLObject.h"
-#include "GLfunctions.h"
-#include "GLobjects.h"
-#include "GLInstances.h"
-#include "IO_utils.h"
-#include "Shader.h"
-
-
-#include "DrawOGL3.h"
 
 #include "Solids.h"
-#include "CMesh.h"
+
+#include "Shader.h"
+#include "GLObject.h"
+#include "DrawOGL3.h"
+#include "SceneOGL3.h"
+#include "ScreenSDL2OGL3.h"
+#include "AppSDL2OGL3.h"
+
+#include "Mesh.h"
+#include "Solids.h"
+#include "GLfunctions.h"
+#include "GLobjects.h"
+#include "GLObject.h"
+#include "GL3Utils.h"
 
 
-#include "CMesh.h"
+//#include "SimplexRuler.h"
+//#include "Ruler2DFast.h"
+//#include "TerrainHydraulics.h"
+//#include "Terrain25D.h"
+//#include "TerrainOGL3.h"
 
-#include "TerrainOGL3.h"
-#include "HorizontOGL3.h"
+#include "IO_utils.h"
 
-
-
-#include "testUtils.h"
-
-// =============== Global variables
-
-Shader *shBranches,*shLeafs,*shTex,*shTexView;
-
-//GLInstances instances;
-//GLBillboards bilboards;
-//GLuint texture_1;
-
-GLMesh   *mshBranches,*mshLeafs,*msh1;
-
-GLuint       texTest;
-GLMesh       *glSprite,*glAtlas,*glAtlas_;
-GLBillboards bilboards;
-FrameBuffer  frameBuff1;
+// ====================================
+//      AeroCraftGUI
+// ====================================
 
 
-int frameCount = 0;
-double lastTime = 0.0;
+void drawMeshArray( Vec2i ns, Vec2d sz, const GLMesh& glmsh, const Shader& sh,  float zCut , bool side ){
+    for(int ix=-ns.x; ix<ns.x; ix++){
+        for(int iz=0; iz<ns.y; iz++){
+            Vec3d pos = Vec3d{ix*sz.x,0.0,iz*sz.y};
+            if( (pos.z<zCut) != side ){
+                //shTx->setModelPoseT( Vec3dZero, Mat3dIdentity );
+                pos.y = sin(iz*0.5)*cos(ix*0.5)*sin(iz*0.1)*cos(ix*0.1)*5.0   - 5.0;
+                sh.set_modelPos( pos );
+                glmsh.draw();
+            }
+        }
+    }
+}
 
-GLuint vao;     // vertex array object
-int delay = 10;
-int VSync = 0;
-SDL_Window * window     = NULL;
-SDL_GLContext   context = NULL;
-int WIDTH  = 800;
-int HEIGHT = 800;
-float ASPECT_RATIO = HEIGHT/WIDTH;
+class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
-int mouseX, mouseY;
-Quat4f qCamera;
-Mat3f  mouseMat;
-Vec3f  camPos = (Vec3f){ 0.0f, 0.0f, -10.0f };
+    const Uint8 *scanKeys;
+    Uint32 mouseButtons;
 
-bool bTransparent  = false;
+    FrameBuffer  frameBuff1;
 
-long lastCPUtick = 0;
-double ticks_per_second=0;
+    // Terrain - maybe move to Shooter
+    //SimplexRuler       ruler;
+    //Ruler2DFast        square_ruler;
+    //TerrainHydraulics  hydraulics;
+    //HydraulicGrid2D      hydraulics;
+    //double * ground    = NULL;
+    //TerrainOGL3 terrain1;
 
-// =============== Functions
+    float camDist = 100.0;
 
-int setup(){
+    Shader *sh1=0,*shTx=0;
+    GLMesh *glmesh=0,*glScreenMesh=0,*glCamMesh=0;
 
-    shBranches=new Shader();
-    //shBranches->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
-    shBranches->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/normal2color.glslf"   );
-    shBranches->getDefaultUniformLocation();
+	//virtual void update();
+    virtual void eventHandling   ( const SDL_Event& event  );
 
-    shTexView=new Shader();
-    shTexView->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
-    shTexView->getDefaultUniformLocation();
+    virtual void draw( Camera& cam );
 
-    //ticks_per_second = calibrate_timer(100);
-    //lastTime = glfwGetTime();
-    lastTime = 0.0;
-    qCamera.setOne();
+	AeroCraftGUI(int W, int H);
+
+};
+
+AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
+
+    //DEBUG_mesh = new GLMeshBuilder();
+    //DEBUG_VIEW_INIT()
+
+    for( ScreenSDL2OGL3* screen: screens ) screen->scenes.push_back( this );
+
+    //shDebug=new Shader();
+    //shDebug->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    //shDebug->getDefaultUniformLocation();
+
+    sh1=new Shader();
+    sh1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
+    sh1->getDefaultUniformLocation();
+
+    shTx=new Shader();
+    shTx->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
+    shTx->getDefaultUniformLocation();
+
+    sh1->use();
+    glUniform3f(sh1->getUloc("lightColor"   ), 0.5,0.45,0.4 );
+    glUniform3f(sh1->getUloc("diffuseColor" ), 1.0,1.0,1.0  );
+    glUniform3f(sh1->getUloc("ambientColor" ), 0.2,0.25,0.3 );
+    glUniform3f(sh1->getUloc("specularColor"), 2.0,2.0,2.0  );
+    glUniform3f(sh1->getUloc("lightPos"     ), 10.0,-10.0,-10.0 );
+    //glUniform3f(sh1->getUloc("lightPos"     ), 10.0,10.0,10.0 );
 
 
-    //glquad =new GLMesh();
-    //glquad->init( 6, 0, NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs );
-    //glquad->init( 6, 0, NULL, DEFAULT_Bilboard_verts, DEFAULT_Bilboard_verts, NULL, NULL );
 
-    //texTest = makeTestTextureRGBA( 256, 256);
 
-    //frameBuff1.init( 2048, 64 );
-    //frameBuff1.init( 2048, 128 );
-    frameBuff1.init( 4096, 256 );
+
+    glmesh = new GLMesh();
+    glmesh->init_hardface( Solids::Cube );
+
+    //msh_normals = mshbuild.normals2GLmesh(0.1);
+
+    Camera& cam = screens[0]->cam;
+    cam.zmin = 1.0;
+    cam.zmax = 1000.0;
+    cam.zoom = 5.00f;
+    cam.aspect = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
+
+    // fix look-at point
+    //screen->camLookAt = new Vec3f();
+    //(*screen->camLookAt)={0.0,0.0,0.0};
+
+    glCamMesh = cam2mesh( cam );
+
+
+    float sc = 1000.0;
+    float z = sc*1.20710678119; // octagon    a/2 + a*sqrt(2)
+    float x = sc;
+    float y = sc*0.5;
+    float Bilboard_verts[] = {
+        x*-0.5f,y*-0.5f,z*1.0f,   x*+0.5f,y*-0.5f,z*1.0f,   x*-0.5f,y*+0.5f,z*1.0f,
+        x*+0.5f,y*+0.5f,z*1.0f,   x*+0.5f,y*-0.5f,z*1.0f,   x*-0.5f,y*+0.5f,z*1.0f
+    };
+
+    float Bilboard_UVs[] = {
+        0.0f,0.0f,   1.0f,0.0f,   0.0f,1.0f,
+        1.0f,1.0f,   1.0f,0.0f,   0.0f,1.0f
+    };
+
+    glScreenMesh = new GLMesh();
+    glScreenMesh->init( 6, 0,  NULL, Bilboard_verts, NULL, NULL, Bilboard_UVs );
+
+    frameBuff1.init( 2048, 1024 );
 
     // ===== Prepare texture by rendering
-
     //glBindFramebuffer(GL_FRAMEBUFFER, frameBuff1.buff );
     frameBuff1.bind();
 
-    //glClearColor(0.0, 0.0, 0.8, 1.0);
-    glClearColor(0.9, 0.9, 0.9, 0.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
+    glClearColor( 0.6f, 0.5f, 0.5f, 1.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	glEnable(GL_DEPTH_TEST);
 
-    Mat4f camMat;
-    //camera( 1/16.0, camMat);
-    //camera( 1.0, camMat);
-    //renderPhases( camMat);
-    //renderPhases2D( camMat, 16 );
-    //renderPhasesOct( camMat, 8 );
+    sh1->use();
+    cam.lookAt( Vec3dZ, 20.0 );
+    setCamera( *sh1, cam );
+    sh1->setModelPoseT( Vec3dZero, Mat3dIdentity );
+    drawMeshArray( {20,200}, {3.0,3.0} , *glmesh, *sh1,  100.0,  true );
 
-    // ==== END   : RENDER TO TEXTURE
 
-    return 0;
 };
 
-void draw( ){
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); glViewport(0,0,WIDTH,HEIGHT);
-    glClearColor(0.8, 0.8, 0.8, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
-	// Simulate all particles
+//void AeroCraftGUI::update(){
+//    AppSDL2OGL3::update();
+//}
 
-	Mat4f camMat;
-	// camera( 1.0, camMat);
-	//renderPhases(camMat);
+void AeroCraftGUI::draw( Camera& cam ){
 
-    Mat3f modelMat; modelMat.setOne(); modelMat.mul(0.5f);
-    //Vec3f modelPos;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0,0,screen->WIDTH,screen->HEIGHT);
+    glScissor (0,0,screen->WIDTH,screen->HEIGHT);
 
-    //glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, texTest );
+    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    glEnable(GL_DEPTH_TEST);
+
+    sh1->use();
+    //cam.lookAt( Vec3dZ, 20.0 );
+    setCamera( *sh1, cam );
+    //setCameraOrtho(*sh1,cam);
+    //sh1->setModelPose( myCraft->pos, myCraft->rotMat );
+    sh1->setModelPoseT( Vec3dZero, Mat3dIdentity );
+
+    GLuint ucolor = sh1->getUloc("baseColor");
+    glUniform4f( ucolor, 0.0, 0.0, 0.0, 1.0 );
+    glmesh->draw();
+    drawMeshArray( {20,200}, {3.0,3.0} , *glmesh, *sh1,  100.0,  false );
+
+    glUniform4f( ucolor, 1.0, 0.0, 0.0, 1.0 );
+    sh1->setModelPoseT( Vec3dZero, Mat3dIdentity );
+    glCamMesh->draw();
+
+    //glmesh->draw(GL_TRIANGLES);
+    //printf( "%f %f %f \n", cam.pos.x, cam.pos.y, cam.pos.z );
+    shTx->use();
+
     glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, frameBuff1.texRGB );
 
-    // ======= Bare Texture Atlas
-    Shader * sh;
+    setCamera(*shTx, cam);
+    shTx->setModelPoseT( Vec3dZero, Mat3dIdentity );
+    glScreenMesh->draw();
 
+    //DEBUG_draw(cam,myCraft->pos,myCraft->rotMat);
+    //DEBUG_draw(cam,Vec3dZero,Mat3dIdentity);
 
-    //sh = shTex;
-    sh = shTexView;
-    sh->use();
-    sh->set_modelMat( (GLfloat*)&modelMat );
-    sh->set_camPos  ( (GLfloat*)&camPos   );
-    sh->set_camMat  ( (GLfloat*)&camMat   );
-    glUniform1i(sh->getUloc("texture_1"), 0);
+};
 
-    sh->set_modelPos( (const GLfloat[]){-4.0f,-16.0f,5.0f} );
-    glAtlas->draw(GL_TRIANGLES); glAtlas->drawPoints(10.0);
+void AeroCraftGUI::eventHandling( const SDL_Event& event  ){
+    switch( event.type ){
+        case SDL_KEYDOWN :
+        switch( event.key.keysym.sym ){
+            case SDLK_ESCAPE   : SDL_Quit(); exit(1); break;
+            case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
+        }; break;
+        case SDL_QUIT: SDL_Quit(); exit(1); break;
 
-    sh->set_modelPos( (const GLfloat[]){-4.0f-8.0f,-24.0f,5.0f} );
-    glAtlas_->draw(GL_TRIANGLES); glAtlas_->drawPoints(10.0);
+        case SDL_MOUSEBUTTONDOWN:
+            switch( event.button.button ){
+                case SDL_BUTTON_RIGHT:
+                   // mouseSteer = true;
+                    break;
+            }
+            break;
+        case SDL_MOUSEBUTTONUP:
+            switch( event.button.button ){
+                case SDL_BUTTON_RIGHT:
+                  //  mouseSteer = false;
+                 //   pilot->resetSteer();
+                    break;
+            }
+            break;
+    }
 
-    // ======= Animated Texture
-    //sh = shTex;
+};
 
-
-    sh = shTex;
-    sh->use();
-    sh->set_modelMat( (GLfloat*)&modelMat );
-    sh->set_camPos  ( (GLfloat*)&camPos   );
-    sh->set_camMat  ( (GLfloat*)&camMat   );
-
-    glUniform1i(sh->getUloc("texture_1"), 0);
-    //glUniform1f(sh->getUloc("nPhases"), 32.0f);
-
-    //glUniform2f(sh->getUloc("uv0s"), 0.0   ,0.0);
-
-
-    /*
-    //float the = +1.5;
-    float the = -0.2;
-    float phi = frameCount*0.01;
-    Vec2f cst; cst.fromAngle(the);
-    Vec2f uv = selectPhaseOct( (Vec3f){cst.a*cos(phi),cst.b,cst.a*sin(phi)}, 8 );
-    glUniform2f(sh->getUloc("uv0"), uv.x, uv.y );
-    glUniform2f(sh->getUloc("du" ), 1/16.0,0.0 );
-    glUniform2f(sh->getUloc("dv" ), 0.0   ,1/16.0);
-
-    sh->set_modelPos( (const GLfloat[]){0.0f,0.0,10.0f} );
-    glSprite->draw(GL_TRIANGLES);
-    glSprite->drawPoints(10.0);
-
-
-    sh = shBranches;
-    sh->use();
-    sh->set_camPos  ( (GLfloat*)&camPos );
-    sh->set_camMat  ( (GLfloat*)&camMat );
-    sh->set_modelMat( (GLfloat*)&modelMat );
-
-    //camMat.m
-    Vec3f mpos = (Vec3f){uv.x*16-4+0.5,uv.y*16-16+0.5,10.0};
-    sh->set_modelPos( (GLfloat*)&mpos );
-    //mshBranches->draw(GL_TRIANGLES);
-
-
-    */
-
-    sh = shBranches;
-    sh->use();
-    sh->set_camPos  ( (GLfloat*)&camPos );
-    sh->set_camMat  ( (GLfloat*)&camMat );
-    sh->set_modelMat( (GLfloat*)&modelMat );
-
-    msh1->draw(GL_TRIANGLES);
-
-
-
-}
-
-void init();
-void quit();
-void die( char const *msg );
-void inputHanding();
+AeroCraftGUI * app;
 
 int main(int argc, char *argv[]){
-    init();
-	setup();
-    for ( frameCount=1; frameCount<1000000; frameCount++)    {
-
-        draw(); SDL_GL_SwapWindow(window);
- 		//if( !STOP ) draw();
-		inputHanding();
-        SDL_Delay(delay);
-    }
-    quit();
+	SDL_Init(SDL_INIT_VIDEO);
+	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+	//SDL_SetRelativeMouseMode( SDL_TRUE );
+	SDL_ShowCursor(SDL_DISABLE);
+    SDL_DisplayMode dm;
+    SDL_GetDesktopDisplayMode(0, &dm);
+    app = new AeroCraftGUI( dm.w-150, dm.h-100 );
+    app->loop( 1000000 );
+    app->quit();
     return 0;
 }
 
-// FUNCTION ======	inputHanding
-void inputHanding(){
 
-    //float posstep = 0.1f; if(RayTerrain){ posstep = 2.0f; }
-    float step          = 0.1f;
-    float keyRotSpeed   = 0.01f;
 
-    const Uint8 *keys = SDL_GetKeyboardState(NULL);
-
-    if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.roll2  (  (float)keyRotSpeed ); }
-	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.roll2  ( -(float)keyRotSpeed ); }
-	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch2(  (float)keyRotSpeed ); }
-	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch2( -(float)keyRotSpeed ); }
-
-    if( keys[ SDL_SCANCODE_Q  ] ){ camPos.add_mul( mouseMat.c, +step ); }
-	if( keys[ SDL_SCANCODE_E  ] ){ camPos.add_mul( mouseMat.c, -step ); }
-    if( keys[ SDL_SCANCODE_W  ] ){ camPos.add_mul( mouseMat.b, +step ); }
-	if( keys[ SDL_SCANCODE_S  ] ){ camPos.add_mul( mouseMat.b, -step ); }
-	if( keys[ SDL_SCANCODE_A  ] ){ camPos.add_mul( mouseMat.a, -step ); }
-	if( keys[ SDL_SCANCODE_D  ] ){ camPos.add_mul( mouseMat.a, +step ); }
-
-	//if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_A]||keys[ SDL_SCANCODE_D  ]  )printf( "camPos (%g,%g,%g)\n", camPos.x, camPos.y, camPos.z );
-
-	SDL_Event event;
-	while(SDL_PollEvent(&event)){
-		if( event.type == SDL_KEYDOWN ){
-            switch( event.key.keysym.sym ){
-                case SDLK_ESCAPE: quit(); break;
-                case SDLK_t: bTransparent   =!bTransparent;    break;
-                //case SDLK_KP_PLUS:  terrain_size[0] *=1.1; terrain_size[2] *=1.1; break;
-                //case SDLK_KP_MINUS: terrain_size[0] /=1.1; terrain_size[2] /=1.1; break;
-                //case SDLK_r:  world.fireProjectile( warrior1 ); break;
-            }
-            printf( "" );
-		}
-		if( event.type == SDL_QUIT){ quit();  };
-	}
-
-	int dmx,dmy;
-	SDL_GetMouseState( &mouseX, &mouseY );
-    Uint32 buttons = SDL_GetRelativeMouseState( &dmx, &dmy);
-    //printf( " %i %i \n", mx,my );
-    float mouseRotSpeed = 0.002;
-    if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-        Quat4f q; q.fromTrackball( 0, 0, -dmx*mouseRotSpeed, dmy*mouseRotSpeed ); qCamera.qmul_T( q );
-        //qCamera.dyaw2(-dmx*mouseRotSpeed); qCamera.dpitch2(-dmy*mouseRotSpeed);
-        //qCamera.dpitch2(-dmy*mouseRotSpeed); qCamera.dyaw2(-dmx*mouseRotSpeed);
-        //qCamera.normalize();
-
-        //pitch +=  dmy*mouseRotSpeed;
-        //yaw   +=  dmx*mouseRotSpeed;
-        qCamera.toMatrix(mouseMat);
-        printf("mouseMat:\n");
-        mouseMat.print();
-    }
-}
-
-void init(){
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) die( "Unable to initialize SDL" );
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3); // Opengl 3.2
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3); // Opengl 3.2
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
-    window = SDL_CreateWindow("Tutorial2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-    if ( !window ) die("Unable to create window");
-    context = SDL_GL_CreateContext( window );
-    //SDL_GL_SetSwapInterval(1); // VSync On
-    SDL_GL_SetSwapInterval(VSync);
-
-    glewExperimental = true; // Needed for core profile
-	if (glewInit() != GLEW_OK) {
-		fprintf(stderr, "Failed to initialize GLEW\n");
-		getchar();
-		quit();
-		//return -1;
-	}
-
-	// vertex array object
-	glGenVertexArrays(1, &vao);  				// Allocate and assign a Vertex Array Object to our handle
-	glBindVertexArray(vao); 					// Bind our Vertex Array Object as the current used object
-}
-
-void quit(){
-	glDeleteVertexArrays(1, &vao);
-    if( context != NULL ) SDL_GL_DeleteContext( context );
-    if( window  != NULL ) SDL_DestroyWindow   ( window  );
-    SDL_Quit();
-	exit(0);
-};
-
-void die( char const *msg ){
-    printf("%s: %s\n", msg, SDL_GetError());
-    SDL_Quit();
-    exit(1);
-}

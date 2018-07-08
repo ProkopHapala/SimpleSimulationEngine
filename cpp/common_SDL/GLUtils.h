@@ -5,19 +5,19 @@
 #include <GL/gl.h>
 #include "Vec3.h"
 
-float * toFloat(int n, double * arr_){
+inline float * toFloat(int n, double * arr_){
 	float * arr = new GLfloat[n];
 	for(int i=0; i<n; i++){ arr[i] = arr_[i];  }
 	return arr;
 }
 
-int countVerts( int n, int * ngons ){
+inline int countVerts( int n, int * ngons ){
     int nVert = 0;
     for(int i=0; i<n; i++){ nVert += 3*(ngons[i]-2); }
     return nVert;
 }
 
-void hardFace( int n, int * ngons, int * faces, Vec3d * points, GLfloat* verts, GLfloat* normals ){
+inline void hardFace( int n, int * ngons, int * faces, Vec3d * points, GLfloat* verts, GLfloat* normals ){
     int * facei = faces;
     GLfloat * verti = verts;
     GLfloat * normi = normals;

@@ -17,6 +17,38 @@
 
 //GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Vec3d (vertFunc)(Vec2d) ){
 
+GLMesh* cam2mesh( Camera& cam ){
+    GLMesh* msh = new GLMesh();
+    msh->draw_mode = GL_LINES;
+
+    printf( "zoom %g aspect %g zmin %g zmax %g\n", cam.zoom, cam.aspect, cam.zmin, cam.zmax  );
+
+    float tgx = 1.0/(cam.zoom*cam.aspect);
+    float tgy = 1.0/(cam.zoom);
+    float zmin = cam.zmin;
+    float zmax = cam.zmax;
+    //float tgx = 0.5;
+    //float tgy = 0.5;
+    //float zmin = 2.0;
+    //float zmax = 6.0;
+    float xzmin = tgx*zmin;
+    float xzmax = tgx*zmax;
+    float yzmin = tgy*zmin;
+    float yzmax = tgy*zmax;
+    float verts[] = {
+        -xzmin,-yzmin,zmin,
+        -xzmax,-yzmax,zmax,
+        -xzmin,+yzmin,zmin,
+        -xzmax,+yzmax,zmax,
+        +xzmin,-yzmin,zmin,
+        +xzmax,-yzmax,zmax,
+        +xzmin,+yzmin,zmin,
+        +xzmax,+yzmax,zmax
+    };
+    int edges[] = { 0,1, 0,2, 0,4,  1,3,1,5, 2,3, 2,6,    7,5, 7,6, 7,3,  5,4, 6,4    };
+    msh->init( 8, 12*2, edges, verts, NULL, NULL, NULL );
+    return msh;
+}
 
 GLMesh* makeQuad3D( Vec2f p0, Vec2f p1, Vec2f u0, Vec2f u1 ){
     //GLfloat verts = new GLfloat[3*2*3];

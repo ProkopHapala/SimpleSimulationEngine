@@ -109,7 +109,7 @@ void AppSDL2OGL3::update(){
         if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.droll ( -keyRotSpeed ); }
         if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
         if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
-        if( keys[ SDL_SCANCODE_W     ] ){ cam.pos.add_mul( cam.rot.b,  keyMoveSpeed ); }
+        if( keys[ SDL_SCANCODE_W     ] ){ cam.pos.add_mul( cam.rot.b,  keyMoveSpeed ); printf(  "cam.pos %f %f %f \n", cam.pos.x, cam.pos.y, cam.pos.z ); }
         if( keys[ SDL_SCANCODE_S     ] ){ cam.pos.add_mul( cam.rot.b, -keyMoveSpeed ); }
         if( keys[ SDL_SCANCODE_E     ] ){ cam.pos.add_mul( cam.rot.c,  keyMoveSpeed ); }
         if( keys[ SDL_SCANCODE_Q     ] ){ cam.pos.add_mul( cam.rot.c, -keyMoveSpeed ); }

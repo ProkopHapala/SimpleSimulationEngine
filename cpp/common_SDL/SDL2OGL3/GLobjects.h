@@ -7,6 +7,7 @@
 //#include <SDL2/SDL.h>
 
 #include "CMesh.h"
+#include "GLUtils.h"
 
 //float * double2float( int n, double * ds ){ float*fs=float[n]; for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; return fs; }
 void double2float( int n, const double * ds, float * fs ){ for(int i=0; i<n; i++){ fs[i]=(float)ds[i]; }; }
@@ -68,9 +69,20 @@ class GLMesh{ public:
         init_d( msh.nvert, msh.nedge*2, (int*)msh.edges, (double*)msh.verts, NULL, NULL, NULL );
     }
 
+    void init_hardface( const CMesh& msh ){
+        draw_mode = GL_TRIANGLES;
+        int nVerts = countVerts( msh.nfaces, msh.ngons );
+        Vec3f * model_vpos = new Vec3f[nVerts];
+        Vec3f * model_vnor = new Vec3f[nVerts];
+        hardFace( msh.nfaces, msh.ngons, msh.faces, msh.verts, (GLfloat*)model_vpos, (GLfloat*)model_vnor );
+        init( nVerts, 0, nullptr, (float*)model_vpos, (float*)model_vnor, nullptr, nullptr );
+        delete [] model_vpos;
+        delete [] model_vnor;
+    }
+
     void deleteBuffs(){ for(int i=0; i<4; i++){ if( buffs[i] ){ glDeleteBuffers(1, &buffs[i] ); } }; }
 
-    int preDraw (){
+    int preDraw ()const{
         int iarg = 0;
         if(vpos){ bindVertexAttribPointer( iarg, vpos, 3, GL_FLOAT, GL_FALSE );  iarg++; }
         if(vnor){ bindVertexAttribPointer( iarg, vnor, 3, GL_FLOAT, GL_FALSE );  iarg++; }
@@ -78,15 +90,15 @@ class GLMesh{ public:
         if(vUVs){ bindVertexAttribPointer( iarg, vUVs, 2, GL_FLOAT, GL_FALSE );  iarg++; }
         return iarg;
     };
-    void drawRaw( GLenum draw_mode ){
+    void drawRaw( GLenum draw_mode )const{
         if(nInds){ drawElements( draw_mode, inds, nInds ); }else{ glDrawArrays( draw_mode, 0, nVerts); };
     }
-    void postDraw(int narg){ for( int i=0; i<narg; i++ ){ glDisableVertexAttribArray(i); } };
-    void draw( GLenum draw_mode ){ int narg = preDraw(); drawRaw( draw_mode ); postDraw(narg); };
-    void drawRaw(){ drawRaw( draw_mode ); };
-    void draw   (){ draw   ( draw_mode ); };
-    void drawPointsRaw( float sz ){ glPointSize(sz); glDrawArrays( GL_POINTS, 0, nVerts); } // mostly for debugging - ignores indexes
-    void drawPoints   ( float sz ){ int narg = preDraw(); drawPointsRaw(sz); postDraw(narg);}
+    void postDraw(int narg)const{ for( int i=0; i<narg; i++ ){ glDisableVertexAttribArray(i); } };
+    void draw( GLenum draw_mode )const{ int narg = preDraw(); drawRaw( draw_mode ); postDraw(narg); };
+    void drawRaw()const{ drawRaw( draw_mode ); };
+    void draw   ()const{ draw   ( draw_mode ); };
+    void drawPointsRaw( float sz )const{ glPointSize(sz); glDrawArrays( GL_POINTS, 0, nVerts); } // mostly for debugging - ignores indexes
+    void drawPoints   ( float sz )const{ int narg = preDraw(); drawPointsRaw(sz); postDraw(narg);}
 
     //inline GLMesh(){ vpos=0,vnor=0,vcol=0,vUVs=0; };
 };
@@ -133,6 +145,7 @@ class FrameBuffer{ public:
     void bind(){
         glBindFramebuffer(GL_FRAMEBUFFER,buff);
         glViewport(0,0,W,H);
+        glScissor (0,0,W,H);
     }
 };
 
