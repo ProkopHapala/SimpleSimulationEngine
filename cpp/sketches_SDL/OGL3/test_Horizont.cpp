@@ -40,10 +40,6 @@
 
 #include "IO_utils.h"
 
-// ====================================
-//      AeroCraftGUI
-// ====================================
-
 
 void drawMeshArray( Vec2i ns, Vec2d sz, const GLMesh& glmsh, const Shader& sh,  float zCut , bool side ){
     for(int ix=-ns.x; ix<ns.x; ix++){
@@ -59,7 +55,7 @@ void drawMeshArray( Vec2i ns, Vec2d sz, const GLMesh& glmsh, const Shader& sh,  
     }
 }
 
-class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
+class HorizontTestApp : public AppSDL2OGL3, public SceneOGL3 { public:
 
     const Uint8 *scanKeys;
     Uint32 mouseButtons;
@@ -76,6 +72,8 @@ class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
     float camDist = 100.0;
 
+    float screenDist = 100.0;
+
     Shader *sh1=0,*shTx=0;
     GLMesh *glmesh=0,*glScreenMesh=0,*glCamMesh=0;
 
@@ -84,11 +82,11 @@ class AeroCraftGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
     virtual void draw( Camera& cam );
 
-	AeroCraftGUI(int W, int H);
+	HorizontTestApp(int W, int H);
 
 };
 
-AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
+HorizontTestApp::HorizontTestApp(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
 
     //DEBUG_mesh = new GLMeshBuilder();
     //DEBUG_VIEW_INIT()
@@ -137,8 +135,10 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     glCamMesh = cam2mesh( cam );
 
 
-    float sc = 1000.0;
-    float z = sc*1.20710678119; // octagon    a/2 + a*sqrt(2)
+    //float sc = screenDist;
+    float sc = 100.0;
+    float z  = sc*1.20710678119; // octagon    a/2 + a*sqrt(2)
+    screenDist = z;
     float x = sc;
     float y = sc*0.5;
     float Bilboard_verts[] = {
@@ -168,16 +168,16 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     cam.lookAt( Vec3dZ, 20.0 );
     setCamera( *sh1, cam );
     sh1->setModelPoseT( Vec3dZero, Mat3dIdentity );
-    drawMeshArray( {20,200}, {3.0,3.0} , *glmesh, *sh1,  100.0,  true );
+    drawMeshArray( {20,200}, {3.0,3.0} , *glmesh, *sh1,  screenDist,  true );
 
 
 };
 
-//void AeroCraftGUI::update(){
+//void HorizontTestApp::update(){
 //    AppSDL2OGL3::update();
 //}
 
-void AeroCraftGUI::draw( Camera& cam ){
+void HorizontTestApp::draw( Camera& cam ){
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0,0,screen->WIDTH,screen->HEIGHT);
@@ -197,7 +197,7 @@ void AeroCraftGUI::draw( Camera& cam ){
     GLuint ucolor = sh1->getUloc("baseColor");
     glUniform4f( ucolor, 0.0, 0.0, 0.0, 1.0 );
     glmesh->draw();
-    drawMeshArray( {20,200}, {3.0,3.0} , *glmesh, *sh1,  100.0,  false );
+    drawMeshArray( {20,200}, {3.0,3.0} , *glmesh, *sh1,  screenDist,  false );
 
     glUniform4f( ucolor, 1.0, 0.0, 0.0, 1.0 );
     sh1->setModelPoseT( Vec3dZero, Mat3dIdentity );
@@ -218,7 +218,7 @@ void AeroCraftGUI::draw( Camera& cam ){
 
 };
 
-void AeroCraftGUI::eventHandling( const SDL_Event& event  ){
+void HorizontTestApp::eventHandling( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
         switch( event.key.keysym.sym ){
@@ -246,7 +246,7 @@ void AeroCraftGUI::eventHandling( const SDL_Event& event  ){
 
 };
 
-AeroCraftGUI * app;
+HorizontTestApp * app;
 
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
@@ -255,7 +255,7 @@ int main(int argc, char *argv[]){
 	SDL_ShowCursor(SDL_DISABLE);
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
-    app = new AeroCraftGUI( dm.w-150, dm.h-100 );
+    app = new HorizontTestApp( dm.w-150, dm.h-100 );
     app->loop( 1000000 );
     app->quit();
     return 0;
