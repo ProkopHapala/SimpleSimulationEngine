@@ -12,6 +12,7 @@
 #include "GLobjects.h"
 #include "GLUtils.h"
 #include "CMesh.h"
+#include "Camera.h"
 
 #include "TerrainOGL3.h"
 

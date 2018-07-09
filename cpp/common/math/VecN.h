@@ -55,7 +55,7 @@ namespace VecN{
 
 	// =======  initialization and I/O
 
-	inline void arange ( int n, double xmin, double dx  , double* out ){ double x=xmin; for(int i=0; i<n; i++){out[i]=x; x+=dx; /*printf("%i %f\n", i, out[i]);*/ }  }
+	inline void arange ( int n, double xmin, double dx  , double* out ){ double x=xmin; for(int i=0; i<n; i++){out[i]=x; x+=dx; } }
 	inline void linspan( int n, double xmin, double xmax, double* out ){ double dx=(xmax-xmin)/n; arange( n, xmin, dx,out );    }
 
 	inline void random_vector ( int n, double xmin, double xmax, double * out ){

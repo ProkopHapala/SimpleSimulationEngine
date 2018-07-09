@@ -528,32 +528,40 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     pilot->rudder  .setSymetricRange(0.2);
     pilot->elevator.setSymetricRange(0.2);
 
-    printf( " === tester \n" );
+    printf("DEBUG 1 \n");
 
     /*
+    printf( " === tester \n" );
     tester      = new AeroTester();
     tester->autoPilot = pilot;
     tester->craft     = myCraft;
     tester->gravityG  = world->gravity;
     //tester->reallocateTrj(int n);
+    printf( " === tester \n" );
     */
 
-    printf( " === tester \n" );
+   
     first_person = true;
 
     staticTest=false;
     //if( staticTest ) tester->doStaticTesting( 500, 0.01, 300.0, 5.0 );
 
+    printf("DEBUG 2 \n");
+
     // Polar Plotting
     mainWingLD.init();
+    printf("DEBUG 2.1 \n");
     mainWingLD.fontTex = fontTex;
     mainWingLD.clrGrid = 0xFF404040;
     //mainWingLD.clrBg   = 0xFF408080;
+
+    printf("DEBUG 3 \n");
     int nsamp = 100;
     double phiRange = M_PI*0.5;
     DataLine2D * lLift = new DataLine2D(nsamp); mainWingLD.lines.push_back( lLift ); lLift->linspan(-phiRange,phiRange); lLift->clr = 0xFFff0000;
     DataLine2D * lDrag = new DataLine2D(nsamp); mainWingLD.lines.push_back( lDrag ); lDrag->linspan(-phiRange,phiRange); lDrag->clr = 0xFF0000ff;
 
+    printf("DEBUG 4 \n");
     mainWingPolar.init();
     mainWingPolar.fontTex = fontTex;
     mainWingPolar.clrGrid = 0xFF404040;
@@ -570,6 +578,9 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
         LDpolar->xs[i] = CD;
         LDpolar->ys[i] = CL;
     }
+
+    printf("DEBUG 5 \n");
+
     mainWingLD.update();
     mainWingLD.autoAxes(0.5,0.2);
     mainWingLD.render();
@@ -578,12 +589,16 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     mainWingPolar.autoAxes(0.1,0.5);
     mainWingPolar.render();
 
+    printf("DEBUG 6 \n");
+
     historyPlot.init( 100, 3 );
     historyPlot.lColors[0] = 0xFFff0000;
     historyPlot.lColors[1] = 0xFF007f00;
     historyPlot.lColors[2] = 0xFFff00ff;
 
     wingsTrj.init( 100, 6 );
+    
+    printf("DEBUG 7 \n");
 
     controlTrj.init(100,3);
 
@@ -591,6 +606,7 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
 
     SDL_SetRelativeMouseMode( SDL_TRUE );
 
+    printf("setup done \n");
     //exit(0);
 };
 
