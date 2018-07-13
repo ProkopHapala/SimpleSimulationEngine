@@ -24,7 +24,7 @@ target_link_libraries( test_LandScape ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LI
 add_executable       ( test_Instances test_Instances.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_Instances ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_Atoms test_Atoms.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
+add_executable       ( test_Atoms test_Atoms.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( test_Atoms ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
 add_executable       ( test_Vegetation test_Vegetation.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
@@ -33,8 +33,11 @@ target_link_libraries( test_Vegetation ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_L
 add_executable       ( test_Horizont test_Horizont.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_Horizont ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_VAOs test_VAOs.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
+add_executable       ( test_VAOs test_VAOs.cpp $<TARGET_OBJECTS:SDL2OGL3>  )
 target_link_libraries( test_VAOs ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
+
+add_executable       ( test_PatchesOGL3 test_PatchesOGL3.cpp $<TARGET_OBJECTS:SDL2OGL3> )
+target_link_libraries( test_PatchesOGL3 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
 add_executable       ( test_StencilTextures test_StencilTextures.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_StencilTextures ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
@@ -48,7 +51,7 @@ target_link_libraries( test_RenderToTexture ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${G
 add_executable       ( test_Sprites test_Sprites.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_Sprites ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_AntiAliasing test_AntiAliasing.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
+add_executable       ( test_AntiAliasing test_AntiAliasing.cpp $<TARGET_OBJECTS:SDL2OGL3>  )
 target_link_libraries( test_AntiAliasing ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
 add_executable       ( test_MeshOGL3 test_MeshOGL3.cpp $<TARGET_OBJECTS:SDL2OGL3> )
