@@ -38,6 +38,7 @@ class AppSDL2OGL3{ public:
 
     int mouseX, mouseY;
     const Uint8 *keys;
+    Uint32 mouseButtons;
 
     ScreenSDL2OGL3* screen = NULL;
     std::vector<ScreenSDL2OGL3*> screens;
@@ -99,7 +100,7 @@ void AppSDL2OGL3::update(){
 	SDL_Event event;
 	while(SDL_PollEvent(&event)){ eventHandling( event ); }
 	keys = SDL_GetKeyboardState(NULL);
-	SDL_GetMouseState( &mouseX, &mouseY );
+	mouseButtons = SDL_GetMouseState( &mouseX, &mouseY );
     if( screen  ){
         Quat4f& qCamera = screen->qCamera;
         Camera& cam = screen->cam;
