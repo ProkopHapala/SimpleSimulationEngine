@@ -14,8 +14,6 @@
 #include "CMesh.h"
 #include "Camera.h"
 
-#include "TerrainOGL3.h"
-
 //GLObject * qaudPatchHard( int n, Vec2d p0, Vec2d da, Vec2d db, Vec3d (vertFunc)(Vec2d) ){
 
 GLMesh* cam2mesh( Camera& cam ){
@@ -24,8 +22,10 @@ GLMesh* cam2mesh( Camera& cam ){
 
     printf( "zoom %g aspect %g zmin %g zmax %g\n", cam.zoom, cam.aspect, cam.zmin, cam.zmax  );
 
-    float tgx = 1.0/(cam.zoom*cam.aspect);
-    float tgy = 1.0/(cam.zoom);
+    //float tgx = 1.0/(cam.zoom*cam.aspect);
+    //float tgy = 1.0/(cam.zoom);
+    float tgx  = cam.getTgX();
+    float tgy  = cam.getTgY();
     float zmin = cam.zmin;
     float zmax = cam.zmax;
     //float tgx = 0.5;
@@ -240,7 +240,6 @@ GLObject * makeNVerts( int n, Func vertFunc ){
     return ogl;
 }
 
-
 template<typename Func>
 GLObject * makeNTris( int n, Func vertFunc ){
     //GLObject * ogl = new GLObject( 3*2*n*n );
@@ -257,6 +256,202 @@ GLObject * makeNTris( int n, Func vertFunc ){
     }
     ogl->init();
     return ogl;
+}
+
+GLMesh* glQuadGrid( Vec2i ns, bool wire ){
+    int nverts = (ns.x+1)*(ns.y+1);
+    //int nquads = ns.x*ns.y;
+    float dx = 1.0/ns.x;
+    float dy = 1.0/ns.y;
+    Vec3f* verts = new Vec3f[nverts  ];
+    //Vec3i* inds  = new Vec3i[nquads*2];
+    int i=0;
+    for(int iy=0; iy<=ns.y; iy++){
+        for(int ix=0; ix<=ns.x; ix++){
+            verts[i].set( ix*dx, iy*dy, 0.0 );
+            //printf( "%i %g %g %g\n", i, verts[i].x, verts[i].y, verts[i].z);
+            i++;
+        }
+    }
+
+    // indexes
+    i=0;
+    GLMesh* mesh=new GLMesh();
+    int ninds=0;
+    GLuint* inds = 0;
+    if(wire){ // Lines
+        mesh->draw_mode = GL_LINES;
+        ninds = (ns.x*ns.y*3 + ns.x + ns.y)*2;
+        //ninds = ( ns.x + ns.y)*2;
+        //ninds = ns.x*2;
+        //ninds = ns.y*2;
+        inds  = new GLuint[ninds];
+        Vec2i* edges = (Vec2i*)inds;
+
+        for(int iy=0; iy<ns.y; iy++){
+            int i1 = iy*(ns.x+1);
+            int i2 = i1+(ns.x+1);
+            //printf( "i %i nx %i i1 %i i2 %i \n", iy, nx, i1, i2 );
+            for(int ix=0; ix<ns.x; ix++){
+                edges[i].set( i1+ix, i1+ix+1 ); i++;
+                edges[i].set( i1+ix, i2+ix   ); i++;
+                edges[i].set( i1+ix, i2+ix+1 ); i++;
+            }
+        }
+        int i0=ns.y*(ns.x+1);
+        for(int ix=0; ix<ns.x; ix++){ edges[i].set( i0+ix, i0+ix+1 ); i++; };
+        for(int iy=0; iy<ns.y; iy++){ edges[i].set( iy*(ns.x+1)+ns.x, (iy+1)*(ns.x+1)+ns.x ); i++; };
+        //printf( "ninds_ %i ninds %i \n",      ninds_,   ninds );
+    }else{    // Triangles
+        mesh->draw_mode = GL_TRIANGLES;
+        ninds = ns.x*ns.y*2*3;
+        inds  = new GLuint[ninds];
+        Vec3i* tris = (Vec3i*)inds;
+        for(int iy=0; iy<ns.y; iy++){
+            int i1 = iy*(ns.x+1);
+            int i2 = i1+(ns.x+1);
+            for(int ix=0; ix<ns.x; ix++){
+                tris[i  ].set( i1+ix, i2+ix,   i2+ix+1 );
+                tris[i+1].set( i1+ix, i1+ix+1, i2+ix+1 );
+                i+=2;
+            }
+        }
+    }
+
+    //printf( "i %i \n", i, nquads );
+    mesh->init( nverts, ninds, inds, (GLfloat*)verts, NULL, NULL, NULL);
+    delete [] verts;
+    delete [] inds;
+    return mesh;
+}
+
+
+GLMesh* glTriangleGrid( int n, bool wire ){
+    int nverts = (n+1)*n;
+    //int nquads = n*n;
+    float d = 1.0/n;
+    Vec3f* verts = new Vec3f[nverts];
+    //Vec3i* inds  = new Vec3i[nquads];
+    int i=0;
+    for(int iy=0; iy<n+1; iy++){
+        for(int ix=0; ix<=(n-iy); ix++){
+            verts[i].set( ix*d, iy*d, 0.0 );
+            //printf( "%i %g %g %g\n", i, verts[i].x, verts[i].y, verts[i].z);
+            i++;
+        }
+        //printf( "iy %i i %i \n", iy, i );
+    }
+    // indexes
+    i=0;
+    GLMesh* mesh=new GLMesh();
+    int ninds=0;
+    GLuint* inds = 0;
+    if(wire){ // Lines
+        mesh->draw_mode = GL_LINES;
+        ninds = n*(n+1)*3;
+        inds  = new GLuint[ninds];
+        Vec2i* edges = (Vec2i*)inds;
+        int i1 = 0;
+        for(int iy=0; iy<n; iy++){
+            int nx = (n-iy);
+            int i2 = i1+(nx+1);
+            //printf( "i %i nx %i i1 %i i2 %i \n", iy, nx, i1, i2 );
+            for(int ix=0; ix<nx; ix++){
+                edges[i].set( i1+ix,   i1+ix+1 ); i++;
+                edges[i].set( i1+ix+1, i2+ix   ); i++;
+                edges[i].set( i2+ix,   i1+ix   ); i++;
+            }
+            i1 = i2;
+        }
+        //printf( "ninds_ %i ninds %i \n",      ninds_,   ninds );
+    }else{    // Triangles
+        mesh->draw_mode = GL_TRIANGLES;
+        ninds = n*n*3;
+        inds  = new GLuint[ninds];
+        Vec3i* tris = (Vec3i*)inds;
+        int i1 = 0;
+        for(int iy=0; iy<n; iy++){
+            int nx = (n-iy);
+            int i2 = i1+(nx+1);
+            //printf( "i %i nx %i i1 %i i2 %i \n", iy, nx, i1, i2 );
+            for(int ix=0; ix<nx; ix++){
+                tris[i].set( i1+ix, i1+ix+1, i2+ix ); i++;
+                if(ix==(nx-1))continue;
+                tris[i].set( i1+ix+1, i2+ix, i2+ix+1 ); i++;
+            }
+            i1 = i2;
+        }
+    }
+
+    //printf( "i %i \n", i, nquads );
+    mesh->init( nverts, ninds, inds, (GLfloat*)verts, NULL, NULL, NULL);
+    delete [] verts;
+    delete [] inds;
+    return mesh;
+}
+
+GLMesh* glHalfHexGrid( Vec2i ns, bool wire ){
+    int nverts = (ns.y+1)*(ns.x+1+ns.y);
+    float dy = 1.0/ns.y;
+    Vec3f* verts = new Vec3f[nverts];
+    int i=0;
+    for(int iy=0; iy<ns.y+1; iy++){
+        int nx = ns.x + iy;
+        float dx = 1.0/nx;
+        for(int ix=0; ix<(nx+1); ix++){
+            verts[i].set( ix*dx, iy*dy, 0.0 );
+            //printf( "%i %g %g %g\n", i, verts[i].x, verts[i].y, verts[i].z);
+            i++;
+        }
+        //printf( "iy %i i %i \n", iy, i );
+    }
+    // indexes
+    i=0;
+    GLMesh* mesh=new GLMesh();
+    int ninds=0;
+    GLuint* inds = 0;
+    if(wire){ // Lines
+        mesh->draw_mode = GL_LINES;
+        ninds = ns.y*(ns.x*2+ns.y+1)*3 + ns.x*2;
+        inds  = new GLuint[ninds];
+        Vec2i* edges = (Vec2i*)inds;
+        int i1 = 0;
+        //int ninds_=0;
+        for(int ix=0; ix<ns.x; ix++){ edges[i].set( ix, ix+1 ); i++; };
+        for(int iy=0; iy<ns.y; iy++){
+            int nx = ns.x + iy;
+            int i2 = i1+(nx+1);
+            for(int ix=0; ix<=nx; ix++){
+                edges[i].set( i1+ix, i2+ix   ); i++;
+                edges[i].set( i1+ix, i2+ix+1 ); i++;
+                edges[i].set( i2+ix, i2+ix+1 ); i++;
+            }
+            i1 = i2;
+        }
+        //printf( "ninds_ %i ninds %i \n",      ninds_,   ninds );
+    }else{    // Triangles
+        mesh->draw_mode = GL_TRIANGLES;
+        ninds = ns.y*(ns.x*2+ns.y)*3;
+        inds  = new GLuint[ninds];
+        Vec3i* tris = (Vec3i*)inds;
+        int i1 = 0;
+        for(int iy=0; iy<ns.y; iy++){
+            int nx = ns.x + iy;
+            int i2 = i1+(nx+1);
+            for(int ix=0; ix<=nx; ix++){
+                tris[i].set( i1+ix, i2+ix, i2+ix+1 ); i++;
+                if(ix==(nx))continue;
+                tris[i].set( i1+ix, i1+ix+1, i2+ix+1 ); i++;
+            }
+            i1 = i2;
+        }
+    }
+    //printf( "i %i \n", i, nquads );
+
+    mesh->init( nverts, ninds, inds, (GLfloat*)verts, NULL, NULL, NULL);
+    delete [] verts;
+    delete [] inds;
+    return mesh;
 }
 
 

@@ -57,7 +57,7 @@ int heightTextureFromHxy_byte( int nx, int ny, float* height_map, float hsc ){
             int i3 = i*3;
             float dx = hsc*(height_map[wrap_index2d_fast(ix+1,iy  ,nx,ny)]-height_map[wrap_index2d_fast(ix-1,iy  ,nx,ny)]);
             float dy = hsc*(height_map[wrap_index2d_fast(ix  ,iy+1,nx,ny)]-height_map[wrap_index2d_fast(ix  ,iy-1,nx,ny)]);
-            //printf( " %i %i   |  %f %f %f  %f \n", ix, iy, nv.x, nv.y, nv.z, height_map[ i ] );
+            //printf( " (%i,%i)  (%f,%f) %f %\n", ix, iy, dx, dy, height_map[i] );
             hxy[ i3   ] = (uint8_t)( _clamp(dx,-1.0,1.0)*127 + 128 ); // a
             hxy[ i3+1 ] = (uint8_t)( _clamp(dy,-1.0,1.0)*127 + 128 );
             hxy[ i3+2 ] = (uint8_t)( _clamp(height_map[ i ], 0.0,1.0 )*255 );
@@ -101,16 +101,21 @@ class TerrainOGL3Prototype{ public:
     Shader sh;
     Vec2i nSamp;
 
+    Vec2f viewMin  = (Vec2f){ 1.0,   0.0 };
+    Vec2f viewMax  = (Vec2f){ 0.0,   1.0 };
+
     double dist0;
     Vec3f pos      = (Vec3f){ 0.0,   0.0,    0.0 };
     Vec3f mapScale = (Vec3f){ 0.002, 0.002, 20.0 };
     Vec2f uv0      = (Vec2f){ 0.0,   0.0 };
+    float derivScale = 1.0;
 
     GLuint txHeight;
 
     struct { GLuint
         uv0,
         mapScale,
+        derivScale,
         txHeight,
         lightColor,
         diffuseColor,
@@ -124,6 +129,7 @@ class TerrainOGL3Prototype{ public:
         //ulocs.pb=sh.getUloc("pb");
         ulocs0.uv0           = sh.getUloc("uv0"          );
         ulocs0.mapScale      = sh.getUloc("mapScale"     );
+        ulocs0.derivScale    = sh.getUloc("derivScale"   );
         ulocs0.txHeight      = sh.getUloc("txHeight"     );
         ulocs0.lightColor    = sh.getUloc("lightColor"   );
         ulocs0.diffuseColor  = sh.getUloc("diffuseColor" );
@@ -135,12 +141,28 @@ class TerrainOGL3Prototype{ public:
     void setDefaultColors(){
         glUniform3f(ulocs0.lightColor ,    0.50, 0.45, 0.40 );
         glUniform3f(ulocs0.diffuseColor,   1.00, 1.00, 1.00 );
-        glUniform3f(ulocs0.ambientColor ,  0.20, 0.25, 0.30 );
-        glUniform3f(ulocs0.specularColor , 2.00, 2.00, 2.00 );
+        glUniform3f(ulocs0.ambientColor ,  0.10, 0.15, 0.20 );
+        glUniform3f(ulocs0.specularColor , 1.00, 1.00, 1.00 );
         glUniform3f(ulocs0.lightPos,        0.0,+1000.0,0.0 );
     }
 
+    void setViewRange( Vec2f camDir, float camTg ){
+        Vec2f rot; rot.x=sqrt(1.0/(1.0+camTg*camTg)); rot.y=rot.x*camTg;
+        viewMin.set_udiv_cmplx(camDir,rot);
+        viewMax.set_mul_cmplx (camDir,rot);
+        //printf(" (%f,%f), (%f,%f), (%f,%f) (%f,%f) \n", camDir.x,camDir.y,  viewMin.x,viewMin.y,   viewMax.x,viewMax.y,    rot.x,rot.y );
+        //exit(0);
+    }
+
     virtual void draw() = 0;
+
+    virtual void draw(const Camera& cam){
+        //cam.lookAt( Vec3dZ, 20.0 );
+        sh.use();
+        setCamera( sh, cam );
+        draw();
+    }
+
 };
 
 // ===========================
@@ -151,9 +173,6 @@ class TerrainOGL3 : public TerrainOGL3Prototype { public:
 
     int nVertDrawn=0;
     int nDrawCalls=0;
-
-    Vec2f viewMin  = (Vec2f){ 1.0,   0.0 };
-    Vec2f viewMax  = (Vec2f){ 0.0,   1.0 };
 
     //GLuint txHeight;
     GLuint stripUVs;
@@ -204,14 +223,6 @@ class TerrainOGL3 : public TerrainOGL3Prototype { public:
         makeStrip( nSamp.b, 1.0 + 2.0/nSamp.a );
     }
 
-    void setViewRange( Vec2f camDir, float camTg ){
-        Vec2f rot; rot.x=sqrt(1.0/(1.0+camTg*camTg)); rot.y=rot.x*camTg;
-        viewMin.set_udiv_cmplx(camDir,rot);
-        viewMax.set_mul_cmplx (camDir,rot);
-        //printf(" (%f,%f), (%f,%f), (%f,%f) (%f,%f) \n", camDir.x,camDir.y,  viewMin.x,viewMin.y,   viewMax.x,viewMax.y,    rot.x,rot.y );
-        //exit(0);
-    }
-
     void drawStrips( Vec2f pa, Vec2f pb ){
         Vec2f op,dp,p;
         dp = (pb-pa)*(1.0/nSamp.a);
@@ -233,8 +244,9 @@ class TerrainOGL3 : public TerrainOGL3Prototype { public:
         nDrawCalls=0;
         nVertDrawn=0;
         //sh.use();
-        glUniform2f ( ulocs0.uv0,      uv0.x, uv0.y );
+        glUniform2f ( ulocs0.uv0,        uv0.x, uv0.y );
         glUniform3fv( ulocs0.mapScale,1, (GLfloat*)&mapScale );
+        glUniform1f ( ulocs0.derivScale, derivScale );
         sh.set_modelPos( (GLfloat*)&pos );
 
         Vec2f drot; drot.fromAngle( M_PI/3.0 );
@@ -263,6 +275,11 @@ class TerrainOGL3 : public TerrainOGL3Prototype { public:
 
 class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
 
+    //float sc  = 100.0;
+    Vec2f dirHex  = (Vec2f){ 0.5,0.86602540378};
+    Vec2f dirHex2 = (Vec2f){-0.5,0.86602540378};
+
+
     GLMesh *mesh=0;
     //GLuint hexUVs;  // central hexagon - todo later
     //GLuint hexInds
@@ -270,13 +287,14 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
         p00,p01,p10,p11;
     } ulocs;
 
-    void init( Vec2i nSamp_, float dist0_, Vec2i nHeighs, float* height_map ){
+    void init( Vec2i nSamp_, float dist0_, Vec2i nHeighs, float* height_map, float dhsc, bool wire ){
         nSamp = nSamp_;
         dist0 = dist0_;
         sh.init( "common_resources/shaders/terrain_patch.glslv", "common_resources/shaders/terrain_world.glslf" );
         //sh.init( "common_resources/shaders/terrain_strip.glslv", "common_resources/shaders/color3D.glslf" );
 
-        mesh = glHalfHexGrid( {20,20} );
+        //mesh = glHalfHexGrid( nSamp, true );
+        mesh = glHalfHexGrid( nSamp, wire );
 
         sh.use();
         sh.getDefaultUniformLocation();
@@ -291,7 +309,7 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
         printf( "ulocs : ps(%i,%i,%i,%i) %i %i %i \n", ulocs.p11, ulocs.p01, ulocs.p10, ulocs.p11,  ulocs0.uv0, ulocs0.mapScale, txHeight );
         setDefaultColors();
         //txHeight = heightTextureFromHeightsDerivs_byte ( nHeighs.x, nHeighs.y, height_map, 5.0 );
-        txHeight = heightTextureFromHxy_byte ( nHeighs.x, nHeighs.y, height_map, 100.0 );
+        txHeight = heightTextureFromHxy_byte ( nHeighs.x, nHeighs.y, height_map, dhsc );
         //txHeight = heightTextureFromHeightsDerivs_float( nHeighs.x, nHeighs.y, height_map, 5.0 );
         //newTexture2D( txHeight, nHeighs.x, nHeighs.y, height_map, GL_RED, GL_FLOAT );
     }
@@ -300,28 +318,96 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
         //sh.use();
         glUniform2f ( ulocs0.uv0,         uv0.x, uv0.y );
         glUniform3fv( ulocs0.mapScale,1, (GLfloat*)&mapScale );
+        glUniform1f ( ulocs0.derivScale, derivScale );
         sh.set_modelPos( (GLfloat*)&pos );
 
-        Vec2f drot; drot.fromAngle( M_PI/3.0 );
-        Vec2f p = (Vec2f){dist0,0.0};
+        //Vec2f drot; drot.fromAngle( M_PI/3.0 );
+        //Vec2f p = (Vec2f){dist0,0.0};
         //bindVertexAttribPointer( 0, stripUVs, 2, GL_FLOAT, GL_FALSE );
         //bindTexture( 0, txHeight, ulocs.txHeight );
         bindTexture( 0, txHeight, ulocs0.txHeight  );
 
-        // TODO
-        float sc = 100.0;
-        float yh=0.86602540378;
-        glUniform2f( ulocs.p00,  -0.5*sc, yh*sc  );
-        glUniform2f( ulocs.p01,   0.5*sc, yh*sc  );
-        glUniform2f( ulocs.p10,  -1.0*sc, 0.0 );
-        glUniform2f( ulocs.p11,   1.0*sc, 0.0 );
-        mesh->draw();
-        glUniform2f( ulocs.p00,  -0.5*sc, -yh*sc  );
-        glUniform2f( ulocs.p01,   0.5*sc, -yh*sc  );
-        glUniform2f( ulocs.p10,  -1.0*sc, 0.0 );
-        glUniform2f( ulocs.p11,   1.0*sc, 0.0 );
-        mesh->draw();
 
+        //Vec2f rot  = Vec2fX;
+
+        // TODO
+        float fc  = nSamp.y/nSamp.x;
+        float mfc = 1-fc;
+        Vec2f drot = dirHex;
+        Vec2f d    = dirHex*dist0;
+        Vec2f d2   = d*(1+fc);
+
+
+        Vec2f ps[4] = { -d.x, d.y,  d.x, d.y,   -d2.x, d2.y,  d2.x, d2.y  };
+
+        // TODO : we should better use glUniform2fv();
+        int nind = 0;
+        if      ( mesh->draw_mode == GL_TRIANGLES ) nind = nSamp.x*(nSamp.x*2+nSamp.x  )*3;
+        else if ( mesh->draw_mode == GL_LINES     ) nind = nSamp.x*(nSamp.x*2+nSamp.x+1)*3 + nSamp.x*2;
+        int narg = mesh->preDraw();
+
+        glBindBuffer  ( GL_ELEMENT_ARRAY_BUFFER, mesh->inds );
+        glUniform2f( ulocs.p00, -d.x,  d.y     );
+        glUniform2f( ulocs.p01,  d.x,  d.y     );
+        glUniform2f( ulocs.p10, -d2.x, d.y*mfc );
+        glUniform2f( ulocs.p11,  d2.x, d.y*mfc );
+        //mesh->draw();
+        //drawElements( mesh->draw_mode, mesh->inds, nSamp.x*nfac );
+        glDrawElements( mesh->draw_mode, nind, GL_UNSIGNED_INT, (void*)0 );
+
+        glUniform2f( ulocs.p00, -d.x,  -d.y     );
+        glUniform2f( ulocs.p01,  d.x,  -d.y     );
+        glUniform2f( ulocs.p10, -d2.x, -d.y*mfc );
+        glUniform2f( ulocs.p11,  d2.x, -d.y*mfc );
+        //drawElements( mesh->draw_mode, mesh->inds, nSamp.x*nfac );
+        glDrawElements( mesh->draw_mode, nind, GL_UNSIGNED_INT, (void*)0 );
+
+        for(int i=0; i<6; i++){
+            for(int j=0; j<4; j++ ){  ps[j].mul_cmplx(drot); };
+            glUniform2f( ulocs.p00,  ps[0].x, ps[0].y );
+            glUniform2f( ulocs.p01,  ps[1].x, ps[1].y );
+            glUniform2f( ulocs.p10,  ps[2].x, ps[2].y );
+            glUniform2f( ulocs.p11,  ps[3].x, ps[3].y );
+            //drawElements( mesh->draw_mode, mesh->inds, nSamp.x*nfac );
+
+            //float side1 = viewMin.cross(ps[1]);
+            //float side2 = viewMax.cross(ps[0]);
+            //if( (side1>0)||(side2<0) ) continue;  // frustrum inside block
+
+            float side1 = viewMin.cross(ps[0]);
+            float side2 = viewMax.cross(ps[1]);
+            if( (side1<0)||(side2>0) ) continue;
+
+            //if( (side1>0)&&(side2>0) ) continue;
+
+            glDrawElements( mesh->draw_mode, mesh->nInds, GL_UNSIGNED_INT, (void*)0 );
+            //mesh->draw();
+            //rot.mul_cmplx(drot);
+        }
+        mesh->postDraw(narg);
+
+    }
+
+    virtual void draw(const Camera& cam) override{
+        //float cab = dirHex.dot(dirHex2);
+        float f = dist0/nSamp.x;
+        Vec2f p2  = cam.pos.xz();
+        //float ca  = p2.dot(dirHex )/f; ca=round(ca);
+        //float cb  = p2.dot(dirHex2)/f; cb=round(cb);
+        Vec2f cs; cs.fromLinearSolution( dirHex, dirHex2, p2*(1/f) );
+        cs.a=round(cs.a); cs.b=round(cs.b);
+        Vec2f p2_ = ( dirHex*cs.a + dirHex2*cs.b )*f;
+        //Vec2f p2_ = dirHex*cs.a + dirHex2*cs.b;
+        //printf( " (%f,%f) -> (%f,%f)   |  (%f,%f) \n",  p2.x, p2.y, p2_.x, p2_.y,   cs.a, cs.b );
+        pos.x=p2_.x;
+        pos.z=p2_.y;
+
+        Vec2f camDir = (Vec2f){cam.rot.c.x,cam.rot.c.z};
+        camDir.normalize();
+        setViewRange( camDir, cam.getTgX() );
+        //printf( "camDir (%f,%f) vieMin (%f,%f)\n", camDir.x, camDir.y,    viewMin.x, viewMin.y  );
+
+        TerrainOGL3Prototype::draw(cam);
     }
 
 };

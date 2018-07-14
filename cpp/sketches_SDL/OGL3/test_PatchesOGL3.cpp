@@ -81,9 +81,9 @@ HorizontTestApp::HorizontTestApp(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     glUniform3f(sh1->getUloc("lightPos"     ), 10.0,-10.0,-10.0 );
     //glUniform3f(sh1->getUloc("lightPos"     ), 10.0,10.0,10.0 );
 
-    oglQuad1    = glQuadGrid    ( {10,10} );  //oglQuad1->draw_mode = GL_LINE_STRIP;
-    oglTri1     = glTriangleGrid( 10      );  //oglTri1 ->draw_mode = GL_LINE_STRIP;
-    oglHalfHex1 = glHalfHexGrid( {10,10} );   oglHalfHex1 ->draw_mode = GL_LINE_STRIP;
+    oglQuad1    = glQuadGrid    ( {10,10}, true );  //oglQuad1->draw_mode = GL_LINE_STRIP;
+    oglTri1     = glTriangleGrid( 10    , true  );  //oglTri1 ->draw_mode = GL_LINE_STRIP;
+    oglHalfHex1 = glHalfHexGrid( {10,15}, true );   //oglHalfHex1 ->draw_mode = GL_LINE_STRIP;
 
     Camera& cam = screens[0]->cam;
     cam.zmin = 1.0;

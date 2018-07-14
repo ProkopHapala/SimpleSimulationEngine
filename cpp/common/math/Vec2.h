@@ -141,6 +141,13 @@ class Vec2TYPE{
 
 	inline TYPE totprod(){ return x*y; }
 
+	inline void fromLinearSolution( const VEC& va, const VEC& vb, const VEC& rhs ){
+        TYPE invD = 1/va .cross(vb);
+        TYPE Da   =  rhs.cross(vb);
+        TYPE Db   = -rhs.cross(va);
+        x = Da*invD;
+        y = Db*invD;
+	};
 
 	// === static functions:
 

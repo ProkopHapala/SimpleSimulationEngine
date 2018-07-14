@@ -22,6 +22,9 @@ class Camera{ public:
     inline void lookAt( Vec3f p, float R ){ pos = p + rot.c*-R; }
     inline void lookAt( Vec3d p, float R ){ Vec3f p_; convert(p,p_); lookAt(p_,R); }
 
+    inline float getTgX()const{ return 1.0/(zoom*aspect); }
+    inline float getTgY()const{ return 1.0/(zoom);            }
+
     inline void word2screenOrtho( const Vec3f& pWord, Vec3f& pScreen ) const {
         Vec3f p; p.set_sub(pWord,pos);
         rot.dot_to( p, p );

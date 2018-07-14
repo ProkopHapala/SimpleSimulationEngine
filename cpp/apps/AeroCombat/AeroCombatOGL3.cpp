@@ -372,6 +372,7 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     terrain1.mapScale.z = 200.0;
     terrain1.mapScale.y = 0.0001;
     terrain1.mapScale.x = 0.0001;
+    terrain1.derivScale = 0.005;
 
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);

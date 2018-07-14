@@ -14,10 +14,6 @@ extern Shader*        DEBUG_shader;
 //#define DEBUG_VIEW_INIT() DEBUG_mesh = new GLMeshBuilder(); DEBUG_shader = new Shader( DEFAULT_vertex_shader_code, DEFAULT_fragment_shader_code, false);
 #define DEBUG_VIEW_INIT() DEBUG_mesh = new GLMeshBuilder(); DEBUG_shader = new Shader( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf", true);
 
-
-
-
-
 void DEBUG_draw( const Camera& cam, const Vec3d& pos, const Mat3d& rotMat ){
     GLMesh * msh = DEBUG_mesh->makeLineMesh();
     DEBUG_shader->use();

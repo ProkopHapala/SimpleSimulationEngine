@@ -120,12 +120,21 @@ void AppSDL2OGL3::update(){
         if( keys[ SDL_SCANCODE_KP_MINUS ] ){ cam.zoom/=1.01; }
         int dmx,dmy;
         Uint32 buttons = SDL_GetRelativeMouseState( &dmx, &dmy);
-        if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-            Quat4f q; q.fromTrackball( 0, 0, -dmx*mouseRotSpeed, dmy*mouseRotSpeed );
-            //qCamera.qmul_T( q );
-            qCamera.qmul( q );
+        bool polarCamera = true;
+        if(polarCamera){
+            if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+                screen->cam.rot.rotate( dmx*mouseRotSpeed, {0.0,1.0,0.0} );
+                screen->cam.rot.rotate( dmy*mouseRotSpeed,screen->cam.rot.a );
+                qCamera.fromMatrix(screen->cam.rot);
+            }
+        }else{
+            if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+                Quat4f q; q.fromTrackball( 0, 0, -dmx*mouseRotSpeed, dmy*mouseRotSpeed );
+                //qCamera.qmul_T( q );
+                qCamera.qmul( q );
+            }
+            qCamera.toMatrix_T( screen->cam.rot );
         }
-        qCamera.toMatrix_T( screen->cam.rot );
         //printf( "screen->camLookAt %i \n", screen->camLookAt );
         if(screen->camLookAt) cam.lookAt( *screen->camLookAt, screen->camDist );
     }

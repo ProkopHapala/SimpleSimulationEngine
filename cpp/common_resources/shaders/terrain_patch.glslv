@@ -12,12 +12,14 @@ uniform vec3 modelPos;
 uniform vec3 camPos;
 uniform mat4 camMat;
 
-uniform vec2 uv0;
-uniform vec2 p00;
-uniform vec2 p01;
-uniform vec2 p10;
-uniform vec2 p11;
-uniform vec3 mapScale;
+uniform vec2  uv0;
+uniform vec2  p00;
+uniform vec2  p01;
+uniform vec2  p10;
+uniform vec2  p11;
+uniform vec3  mapScale;
+uniform float derivScale;
+
 uniform sampler2D txHeight;
 
 void main(){
@@ -28,7 +30,10 @@ void main(){
     vec4 tx    = textureLod( txHeight, p*mapScale.xy + uv0, 0 );
     //world_nor   = tx.rgb;
     //world_nor   = (tx.rgb-0.5)*2.0;
-    world_nor   = normalize( vec3(tx.xy-0.5,1.0) );
+    float deriv_sc = -2.0*mapScale.z*derivScale;
+    world_nor   = normalize( vec3( (tx.x-0.5)*deriv_sc, 1.0, (tx.y-0.5)*deriv_sc  ) );
+    //world_nor   = vec3( tx.x, 0.0, tx.y );
+    //world_nor   = vec3( 0.0,1.0,0.0 );
     
     float h     = tx.z * mapScale.z;
     world_pos   = vec3( p.x ,h+modelPos.y, p.y );
