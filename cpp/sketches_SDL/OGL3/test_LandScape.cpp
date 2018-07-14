@@ -32,7 +32,8 @@
 //============ Globals
 
 
-TerrainOGL3 terrain1;
+TerrainOGL3       terrain1;
+TerrainOGL3_patch terrain2;
 
 
 Shader   *shader1,*shTerrain;
@@ -143,6 +144,7 @@ void setup(){
     }
     //newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
     terrain1.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
+    terrain2.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
     delete [] height_map;
 
     /*
@@ -258,6 +260,7 @@ void draw(){
     printf( "== pos\n %f %f %f \n rot: \n", camPos.x, camPos.y, camPos.z );
     mRot.print();
 
+    /*
     terrain1.pos.x = camPos.x;
     terrain1.pos.z = camPos.z;
     terrain1.setViewRange( {mRot.c.x, mRot.c.z}, 0.3 );
@@ -265,6 +268,16 @@ void draw(){
     terrain1.sh.set_camPos( (float*)&camPos );
     terrain1.sh.set_camMat( (float*)&camMat );
     terrain1.draw();
+    */
+
+    terrain2.mesh->draw_mode = GL_LINE_STRIP;
+    terrain2.pos.x = camPos.x;
+    terrain2.pos.z = camPos.z;
+    //terrain1.setViewRange( {mRot.c.x, mRot.c.z}, 0.3 );
+    terrain2.sh.use();
+    terrain2.sh.set_camPos( (float*)&camPos );
+    terrain2.sh.set_camMat( (float*)&camMat );
+    terrain2.draw();
 
     SDL_GL_SwapWindow(window);
 
