@@ -79,20 +79,24 @@ LandscapeTestApp::LandscapeTestApp(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
         for( int ix=0; ix<imgW; ix++ ){
             float x = ix*2*(M_PI/imgW);
             float y = iy*4*(M_PI/imgH);
-            height_map[ iy*imgW + ix ] = sin(x)*sin(y)*0.5 + 0.5;
+            //height_map[ iy*imgW + ix ] = sin(x)*sin(y)*0.5 + 0.5;
+            height_map[ iy*imgW + ix ] =randf();
         }
     }
     //newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
     terrain1.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
     //terrain2.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
 
-    terrain2.init( {20,60}, 100.0,  {imgW, imgH},  height_map , 10.0, false  );
+    terrain2.init( {40,120}, 100.0,  {imgW, imgH},  height_map , 10.0, false );
     terrain2.mapScale.z = 50.0;
+    terrain2.mapScale.x = 0.0005;
+    terrain2.mapScale.y = 0.0005;
     terrain2.derivScale = 0.01;
-
+    terrain2.txStep = (Vec2f){ 1.0/imgW, 1.0/imgH };
 
     delete [] height_map;
 
+    camDist = 2.0;
 
 };
 

@@ -19,15 +19,28 @@ uniform vec2  p10;
 uniform vec2  p11;
 uniform vec3  mapScale;
 uniform float derivScale;
+uniform vec2  txStep;
 
 uniform sampler2D txHeight;
+
+vec4 bicubicSample( sampler2D tx, vec2 uv, vec2 d ){
+    // see: https://stackoverflow.com/questions/20052381/glsl-performance-function-return-value-type
+    vec4 p0 = texture2D( tx, uv );
+    vec4 p1 = texture2D( tx, uv + vec2( d.x, d.y) );
+    vec4 p2 = texture2D( tx, uv + vec2(-d.x, d.y) );
+    vec4 p3 = texture2D( tx, uv + vec2( d.x,-d.y) );
+    vec4 p4 = texture2D( tx, uv + vec2(-d.x,-d.y) );
+    return (  2.0*p0  + p1 + p2 + p3 + p4)/6.0;
+}
 
 void main(){
     float muvx = (1.0-vUV.x);
     vec2 p     = (p00*muvx + p01*vUV.x)*(1.0-vUV.y) + (p10*muvx + p11*vUV.x)*vUV.y;
     //p        += normalize(p)*vUV.y + modelPos.xz;
     p          += modelPos.xz;
-    vec4 tx    = textureLod( txHeight, p*mapScale.xy + uv0, 0 );
+    //vec4 tx    = textureLod( txHeight, p*mapScale.xy + uv0, 0 );
+    vec4 tx = bicubicSample( txHeight, p*mapScale.xy + uv0, txStep*0.125 );
+
     //world_nor   = tx.rgb;
     //world_nor   = (tx.rgb-0.5)*2.0;
     float deriv_sc = -2.0*mapScale.z*derivScale;

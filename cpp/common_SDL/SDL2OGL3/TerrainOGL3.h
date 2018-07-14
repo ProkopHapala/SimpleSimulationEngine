@@ -108,6 +108,7 @@ class TerrainOGL3Prototype{ public:
     Vec3f pos      = (Vec3f){ 0.0,   0.0,    0.0 };
     Vec3f mapScale = (Vec3f){ 0.002, 0.002, 20.0 };
     Vec2f uv0      = (Vec2f){ 0.0,   0.0 };
+    Vec2f txStep   = (Vec2f){ 1.0,   1.0 };
     float derivScale = 1.0;
 
     GLuint txHeight;
@@ -117,6 +118,7 @@ class TerrainOGL3Prototype{ public:
         mapScale,
         derivScale,
         txHeight,
+        txStep,
         lightColor,
         diffuseColor,
         ambientColor,
@@ -130,6 +132,7 @@ class TerrainOGL3Prototype{ public:
         ulocs0.uv0           = sh.getUloc("uv0"          );
         ulocs0.mapScale      = sh.getUloc("mapScale"     );
         ulocs0.derivScale    = sh.getUloc("derivScale"   );
+        ulocs0.txStep        = sh.getUloc("txStep"       );
         ulocs0.txHeight      = sh.getUloc("txHeight"     );
         ulocs0.lightColor    = sh.getUloc("lightColor"   );
         ulocs0.diffuseColor  = sh.getUloc("diffuseColor" );
@@ -247,6 +250,7 @@ class TerrainOGL3 : public TerrainOGL3Prototype { public:
         glUniform2f ( ulocs0.uv0,        uv0.x, uv0.y );
         glUniform3fv( ulocs0.mapScale,1, (GLfloat*)&mapScale );
         glUniform1f ( ulocs0.derivScale, derivScale );
+        glUniform2fv( ulocs0.txStep,  1,  (GLfloat*)&txStep );
         sh.set_modelPos( (GLfloat*)&pos );
 
         Vec2f drot; drot.fromAngle( M_PI/3.0 );
@@ -319,6 +323,7 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
         glUniform2f ( ulocs0.uv0,         uv0.x, uv0.y );
         glUniform3fv( ulocs0.mapScale,1, (GLfloat*)&mapScale );
         glUniform1f ( ulocs0.derivScale, derivScale );
+        glUniform2fv( ulocs0.txStep,1,   (GLfloat*)&txStep );
         sh.set_modelPos( (GLfloat*)&pos );
 
         //Vec2f drot; drot.fromAngle( M_PI/3.0 );
