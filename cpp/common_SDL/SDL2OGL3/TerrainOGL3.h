@@ -51,6 +51,9 @@ int heightTextureFromHeightsDerivs_byte( int nx, int ny, float* height_map, floa
 
 int heightTextureFromHxy_byte( int nx, int ny, float* height_map, float hsc ){
     uint8_t * hxy = new uint8_t[nx*ny*3];
+    float inv255 = 1.0/255.0;
+
+
     for( int iy=0; iy<ny; iy++ ){
         for( int ix=0; ix<nx; ix++ ){
             int i  = iy*nx + ix;
@@ -58,9 +61,24 @@ int heightTextureFromHxy_byte( int nx, int ny, float* height_map, float hsc ){
             float dx = hsc*(height_map[wrap_index2d_fast(ix+1,iy  ,nx,ny)]-height_map[wrap_index2d_fast(ix-1,iy  ,nx,ny)]);
             float dy = hsc*(height_map[wrap_index2d_fast(ix  ,iy+1,nx,ny)]-height_map[wrap_index2d_fast(ix  ,iy-1,nx,ny)]);
             //printf( " (%i,%i)  (%f,%f) %f %\n", ix, iy, dx, dy, height_map[i] );
-            hxy[ i3   ] = (uint8_t)( _clamp(dx,-1.0,1.0)*127 + 128 ); // a
-            hxy[ i3+1 ] = (uint8_t)( _clamp(dy,-1.0,1.0)*127 + 128 );
-            hxy[ i3+2 ] = (uint8_t)( _clamp(height_map[ i ], 0.0,1.0 )*255 );
+            //hxy[ i3   ] = (uint8_t)( _clamp(dx,-1.0,1.0)*127 + 128 ); // a
+            //hxy[ i3+1 ] = (uint8_t)( _clamp(dy,-1.0,1.0)*127 + 128 );
+            //hxy[ i3+2 ] = (uint8_t)( _clamp(height_map[ i ], 0.0,1.0 )*255 );
+
+            hxy[ i3   ] = (uint8_t)( dx*127 + 128 ); // a
+            hxy[ i3+1 ] = (uint8_t)( dy*127 + 128 );
+            hxy[ i3+2 ] = (uint8_t)( height_map[ i ]*255 );
+
+            //printf( " (%i,%i)  (%i,%i,%i) \n", ix,iy, hxy[i3], hxy[i3+1], hxy[i3+2] );
+
+            //printf( " (%i,%i) (%f,%f)  (%f,%f) \n", ix,iy, dx, dy, 2.0*(hxy[i3]*inv255-0.5), 2.0*(hxy[i3+1]*inv255-0.5)  );
+
+            //hxy[ i3   ] = (uint8_t)( _clamp(dy,-1.0,1.0)*127 + 128 ); // a
+            //hxy[ i3+1 ] = (uint8_t)( _clamp(dx,-1.0,1.0)*127 + 128 );
+
+            //hxy[ i3+2 ] = (uint8_t)( _clamp(dx,-1.0,1.0)*127 + 128 ); // a
+            //hxy[ i3+1 ] = (uint8_t)( _clamp(dy,-1.0,1.0)*127 + 128 );
+            //hxy[ i3+0 ] = (uint8_t)( _clamp(height_map[ i ], 0.0,1.0 )*255 );
         }
     }
     GLuint txHeight = 0;
@@ -111,6 +129,8 @@ class TerrainOGL3Prototype{ public:
     Vec2f txStep   = (Vec2f){ 1.0,   1.0 };
     float derivScale = 1.0;
 
+    float flexibility = 0.0;
+
     GLuint txHeight;
 
     struct { GLuint
@@ -119,6 +139,7 @@ class TerrainOGL3Prototype{ public:
         derivScale,
         txHeight,
         txStep,
+        flexibility,
         lightColor,
         diffuseColor,
         ambientColor,
@@ -134,6 +155,7 @@ class TerrainOGL3Prototype{ public:
         ulocs0.derivScale    = sh.getUloc("derivScale"   );
         ulocs0.txStep        = sh.getUloc("txStep"       );
         ulocs0.txHeight      = sh.getUloc("txHeight"     );
+        ulocs0.flexibility   = sh.getUloc("flexibility"  );
         ulocs0.lightColor    = sh.getUloc("lightColor"   );
         ulocs0.diffuseColor  = sh.getUloc("diffuseColor" );
         ulocs0.ambientColor  = sh.getUloc("ambientColor" );
@@ -250,6 +272,7 @@ class TerrainOGL3 : public TerrainOGL3Prototype { public:
         glUniform2f ( ulocs0.uv0,        uv0.x, uv0.y );
         glUniform3fv( ulocs0.mapScale,1, (GLfloat*)&mapScale );
         glUniform1f ( ulocs0.derivScale, derivScale );
+        glUniform1f ( ulocs0.flexibility, flexibility );
         glUniform2fv( ulocs0.txStep,  1,  (GLfloat*)&txStep );
         sh.set_modelPos( (GLfloat*)&pos );
 
@@ -288,7 +311,8 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
     //GLuint hexUVs;  // central hexagon - todo later
     //GLuint hexInds
     struct { GLuint
-        p00,p01,p10,p11;
+        //p00,p01,p10,p11;
+        ps;
     } ulocs;
 
     void init( Vec2i nSamp_, float dist0_, Vec2i nHeighs, float* height_map, float dhsc, bool wire ){
@@ -305,12 +329,13 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
 
         TerrainOGL3Prototype::getUlocs();
 
-        ulocs.p00=sh.getUloc("p00");
-        ulocs.p01=sh.getUloc("p01");
-        ulocs.p10=sh.getUloc("p10");
-        ulocs.p11=sh.getUloc("p11");
+        //ulocs.p00=sh.getUloc("p00");
+        //ulocs.p01=sh.getUloc("p01");
+        //ulocs.p10=sh.getUloc("p10");
+        //ulocs.p11=sh.getUloc("p11");
+        ulocs.ps=sh.getUloc("ps");
 
-        printf( "ulocs : ps(%i,%i,%i,%i) %i %i %i \n", ulocs.p11, ulocs.p01, ulocs.p10, ulocs.p11,  ulocs0.uv0, ulocs0.mapScale, txHeight );
+        //printf( "ulocs : ps(%i,%i,%i,%i) %i %i %i \n", ulocs.p11, ulocs.p01, ulocs.p10, ulocs.p11,  ulocs0.uv0, ulocs0.mapScale, txHeight );
         setDefaultColors();
         //txHeight = heightTextureFromHeightsDerivs_byte ( nHeighs.x, nHeighs.y, height_map, 5.0 );
         txHeight = heightTextureFromHxy_byte ( nHeighs.x, nHeighs.y, height_map, dhsc );
@@ -323,6 +348,7 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
         glUniform2f ( ulocs0.uv0,         uv0.x, uv0.y );
         glUniform3fv( ulocs0.mapScale,1, (GLfloat*)&mapScale );
         glUniform1f ( ulocs0.derivScale, derivScale );
+        glUniform1f ( ulocs0.flexibility, flexibility );
         glUniform2fv( ulocs0.txStep,1,   (GLfloat*)&txStep );
         sh.set_modelPos( (GLfloat*)&pos );
 
@@ -352,43 +378,51 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
         int narg = mesh->preDraw();
 
         glBindBuffer  ( GL_ELEMENT_ARRAY_BUFFER, mesh->inds );
-        glUniform2f( ulocs.p00, -d.x,  d.y     );
-        glUniform2f( ulocs.p01,  d.x,  d.y     );
-        glUniform2f( ulocs.p10, -d2.x, d.y*mfc );
-        glUniform2f( ulocs.p11,  d2.x, d.y*mfc );
-        //mesh->draw();
-        //drawElements( mesh->draw_mode, mesh->inds, nSamp.x*nfac );
-        glDrawElements( mesh->draw_mode, nind, GL_UNSIGNED_INT, (void*)0 );
 
-        glUniform2f( ulocs.p00, -d.x,  -d.y     );
-        glUniform2f( ulocs.p01,  d.x,  -d.y     );
-        glUniform2f( ulocs.p10, -d2.x, -d.y*mfc );
-        glUniform2f( ulocs.p11,  d2.x, -d.y*mfc );
-        //drawElements( mesh->draw_mode, mesh->inds, nSamp.x*nfac );
-        glDrawElements( mesh->draw_mode, nind, GL_UNSIGNED_INT, (void*)0 );
+
 
         for(int i=0; i<6; i++){
             for(int j=0; j<4; j++ ){  ps[j].mul_cmplx(drot); };
-            glUniform2f( ulocs.p00,  ps[0].x, ps[0].y );
-            glUniform2f( ulocs.p01,  ps[1].x, ps[1].y );
-            glUniform2f( ulocs.p10,  ps[2].x, ps[2].y );
-            glUniform2f( ulocs.p11,  ps[3].x, ps[3].y );
-            //drawElements( mesh->draw_mode, mesh->inds, nSamp.x*nfac );
+
+            float side1 = viewMin.cross(ps[0]);
+            float side2 = viewMax.cross(ps[1]);
+            //if( (side1<0)||(side2>0) ) continue;
 
             //float side1 = viewMin.cross(ps[1]);
             //float side2 = viewMax.cross(ps[0]);
             //if( (side1>0)||(side2<0) ) continue;  // frustrum inside block
-
-            float side1 = viewMin.cross(ps[0]);
-            float side2 = viewMax.cross(ps[1]);
-            if( (side1<0)||(side2>0) ) continue;
-
             //if( (side1>0)&&(side2>0) ) continue;
-
+            //glUniform2f( ulocs.p00,  ps[0].x, ps[0].y );
+            //glUniform2f( ulocs.p01,  ps[1].x, ps[1].y );
+            //glUniform2f( ulocs.p10,  ps[2].x, ps[2].y );
+            //glUniform2f( ulocs.p11,  ps[3].x, ps[3].y );
+            glUniform2fv( ulocs.ps, 4, (const GLfloat*)ps );
+            //drawElements( mesh->draw_mode, mesh->inds, nSamp.x*nfac );
             glDrawElements( mesh->draw_mode, mesh->nInds, GL_UNSIGNED_INT, (void*)0 );
             //mesh->draw();
             //rot.mul_cmplx(drot);
         }
+
+        //glUniform2fv( ulocs.ps, 4, (const GLfloat*){ -d.x,d.y, d.x,d.y, -d2.x,d.y*mfc, d2.x,d.y*mfc } );
+        //glUniform2f( ulocs.p00, -d.x,  d.y     );
+        //glUniform2f( ulocs.p01,  d.x,  d.y     );
+        //glUniform2f( ulocs.p10, -d2.x, d.y*mfc );
+        //glUniform2f( ulocs.p11,  d2.x, d.y*mfc );
+        ps[0].set(-d.x,d.y); ps[1].set(d.x,d.y); ps[2].set(-d2.x,d.y*mfc); ps[3].set(d2.x, d.y*mfc);
+        glUniform2fv( ulocs.ps, 4, (const GLfloat*)ps );
+        //mesh->draw();
+        //drawElements( mesh->draw_mode, mesh->inds, nSamp.x*nfac );
+        glDrawElements( mesh->draw_mode, nind, GL_UNSIGNED_INT, (void*)0 );
+
+        //glUniform2f( ulocs.p00, -d.x,  -d.y     );
+        //glUniform2f( ulocs.p01,  d.x,  -d.y     );
+        //glUniform2f( ulocs.p10, -d2.x, -d.y*mfc );
+        //glUniform2f( ulocs.p11,  d2.x, -d.y*mfc );
+        ps[0].set(-d.x,-d.y); ps[1].set(d.x,-d.y); ps[2].set(-d2.x,-d.y*mfc); ps[3].set(d2.x, -d.y*mfc);
+        glUniform2fv( ulocs.ps, 4, (const GLfloat*)ps );
+        //drawElements( mesh->draw_mode, mesh->inds, nSamp.x*nfac );
+        glDrawElements( mesh->draw_mode, nind, GL_UNSIGNED_INT, (void*)0 );
+
         mesh->postDraw(narg);
 
     }
@@ -412,7 +446,88 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
         setViewRange( camDir, cam.getTgX() );
         //printf( "camDir (%f,%f) vieMin (%f,%f)\n", camDir.x, camDir.y,    viewMin.x, viewMin.y  );
 
-        TerrainOGL3Prototype::draw(cam);
+        //TerrainOGL3Prototype::draw(cam);
+
+        sh.use();
+        setCamera( sh, cam );
+        draw();
+    }
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ===========================
+// ====  TerrainOGL3_patch
+// ===========================
+
+class TerrainOGL3_normals : public TerrainOGL3Prototype { public:
+
+    GLMesh *mesh=0;
+    //GLuint hexUVs;  // central hexagon - todo later
+    //GLuint hexInds
+    struct { GLuint
+        //p00,p01,p10,p11;
+        ps;
+    } ulocs;
+
+    void init( Vec2i nSamp_, float dist0_, Vec2i nHeighs, float* height_map, float dhsc ){
+        nSamp = nSamp_;
+        dist0 = dist0_;
+        //sh.init( "common_resources/shaders/terrain_normals.glslv", "common_resources/shaders/terrain_world.glslf" );
+        //sh.init( "common_resources/shaders/terrain_normals.glslv", "common_resources/shaders/const3D.glslf" );
+        sh.init( "common_resources/shaders/terrain_normals.glslv", "common_resources/shaders/color3D.glslf" );
+        //sh.init( "common_resources/shaders/terrain_strip.glslv", "common_resources/shaders/color3D.glslf" );
+        //mesh = glHalfHexGrid( nSamp, true );
+        mesh = glNormalGrid( nSamp );
+        sh.use();
+        sh.getDefaultUniformLocation();
+        TerrainOGL3Prototype::getUlocs();
+        ulocs.ps=sh.getUloc("ps");
+        setDefaultColors();
+        txHeight = heightTextureFromHxy_byte ( nHeighs.x, nHeighs.y, height_map, dhsc );
+    }
+
+    virtual void draw() override {
+        //sh.use();
+        glUniform2f ( ulocs0.uv0,         uv0.x, uv0.y );
+        glUniform3fv( ulocs0.mapScale,1, (GLfloat*)&mapScale );
+        glUniform1f ( ulocs0.derivScale, derivScale );
+        glUniform1f ( ulocs0.flexibility, flexibility );
+        glUniform2fv( ulocs0.txStep,1,   (GLfloat*)&txStep );
+        sh.set_modelPos( (GLfloat*)&pos );
+
+        bindTexture( 0, txHeight, ulocs0.txHeight  );
+        Vec2f ps[4];
+        ps[0].set(-dist0,-dist0);
+        ps[1].set(+dist0,-dist0);
+        ps[2].set(-dist0,dist0);
+        ps[3].set(+dist0,dist0);
+        glUniform2fv( ulocs.ps, 4, (const GLfloat*)ps );
+
+        mesh->draw();
+
+    }
+
+    virtual void draw(const Camera& cam) override{
+        pos.x=cam.pos.x;
+        pos.z=cam.pos.z;
+        sh.use();
+        setCamera( sh, cam );
+        draw();
     }
 
 };

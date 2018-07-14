@@ -258,6 +258,28 @@ GLObject * makeNTris( int n, Func vertFunc ){
     return ogl;
 }
 
+GLMesh* glNormalGrid( Vec2i ns ){
+    int nverts = ns.x*ns.y*2;
+    //int nquads = ns.x*ns.y;
+    float dx = 1.0/ns.x;
+    float dy = 1.0/ns.y;
+    Vec3f* verts = new Vec3f[nverts  ];
+    //Vec3i* inds  = new Vec3i[nquads*2];
+    int i=0;
+    for(int iy=0; iy<ns.y; iy++){
+        for(int ix=0; ix<ns.x; ix++){
+            verts[i].set( ix*dx, iy*dy, 0.0 ); i++;
+            verts[i].set( ix*dx, iy*dy, 1.0 ); i++;
+        }
+    }
+    //printf( "i %i \n", i, nquads );
+    GLMesh* mesh=new GLMesh();
+    mesh->draw_mode = GL_LINES;
+    mesh->init( nverts, 0, NULL, (GLfloat*)verts, NULL, NULL, NULL);
+    delete [] verts;
+    return mesh;
+}
+
 GLMesh* glQuadGrid( Vec2i ns, bool wire ){
     int nverts = (ns.x+1)*(ns.y+1);
     //int nquads = ns.x*ns.y;

@@ -52,6 +52,8 @@ class LandscapeTestApp : public AppSDL2OGL3, public SceneOGL3 { public:
     TerrainOGL3       terrain1;
     TerrainOGL3_patch terrain2;
 
+    TerrainOGL3_normals terrNormals;
+
     float camDist = 100.0;
 
     //Shader *sh1=0,*shTx=0;
@@ -78,25 +80,38 @@ LandscapeTestApp::LandscapeTestApp(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     for( int iy=0; iy<imgH; iy++ ){
         for( int ix=0; ix<imgW; ix++ ){
             float x = ix*2*(M_PI/imgW);
-            float y = iy*4*(M_PI/imgH);
+            float y = iy*2*(M_PI/imgH);
             //height_map[ iy*imgW + ix ] = sin(x)*sin(y)*0.5 + 0.5;
-            height_map[ iy*imgW + ix ] =randf();
+            //height_map[ iy*imgW + ix ] = cos(x*20.0)*cos(y*20.0)*0.5 + 0.5;
+            //height_map[ iy*imgW + ix ] = cos(x*20.0)*0.5 + 0.5;
+            height_map[ iy*imgW + ix ] = cos(y*40.0)*0.4 + 0.5 + x*0.01;
+            //height_map[ iy*imgW + ix ] = 0;
+            //height_map[ iy*imgW + ix ] =randf();
         }
     }
+
+    terrNormals.init( {40,40}, 100.0,  {imgW, imgH},  height_map , 1.0 );
+    terrNormals.mapScale.z = 50.0;
+    terrNormals.mapScale.x = 0.0002;
+    terrNormals.mapScale.y = 0.0002;
+    terrNormals.derivScale = 0.02;
+    terrNormals.txStep = (Vec2f){ 1.0/imgW, 1.0/imgH };
+
     //newTexture2D( txHeight, imgW, imgH, height_map, GL_RED, GL_FLOAT );
     terrain1.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
     //terrain2.init( {50,100}, 100.0,  {imgW, imgH},  height_map   );
 
-    terrain2.init( {40,120}, 100.0,  {imgW, imgH},  height_map , 10.0, false );
+    terrain2.init( {40,120}, 100.0,  {imgW, imgH},  height_map , 1.0, false );
     terrain2.mapScale.z = 50.0;
-    terrain2.mapScale.x = 0.0005;
-    terrain2.mapScale.y = 0.0005;
-    terrain2.derivScale = 0.01;
+    terrain2.mapScale.x = 0.0002;
+    terrain2.mapScale.y = 0.0002;
+    terrain2.derivScale = 0.02;
     terrain2.txStep = (Vec2f){ 1.0/imgW, 1.0/imgH };
 
     delete [] height_map;
 
     camDist = 2.0;
+    screen->cam.aspect = screen->HEIGHT / (float)screen->WIDTH;
 
 };
 
@@ -132,9 +147,31 @@ void LandscapeTestApp::draw( Camera& cam ){
     //terrain2.sh.set_camPos( (float*)&camPos );
     //terrain2.sh.set_camMat( (float*)&camMat );
     //terrain2.draw();
+
+    terrain2.flexibility = 0.0;
+    terrain2.mesh->draw_mode = GL_TRIANGLES;
+    terrain2.draw(cam);
+
+
+    terrNormals.mesh->draw_mode = GL_LINES;
+    terrNormals.flexibility = 20.0;
+    terrNormals.draw(cam);
+
+    glPointSize(3.0);
+    terrNormals.mesh->draw_mode = GL_POINTS;
+    terrNormals.flexibility = 0.0;
+    terrNormals.draw(cam);
+
+
+    /*
+    glPointSize(3.0);
+    terrain2.flexibility = 30.0;
+    //terrain2.mesh->draw_mode = GL_LINE_STRIP;
+    terrain2.mesh->draw_mode = GL_POINTS;
     terrain2.draw(cam);
     //SDL_GL_SwapWindow(window);
     //long time_end = getCPUticks();
+    */
 
     DEBUG_mesh->addLine( (Vec3f){0.0,0.0,0.0},  (Vec3f){terrain2.viewMin.x*1000.0, 0.0, terrain2.viewMin.y*1000.0}, {1.0,0.0,0.0} );
     DEBUG_mesh->addLine( (Vec3f){0.0,0.0,0.0},  (Vec3f){terrain2.viewMax.x*1000.0, 0.0, terrain2.viewMax.y*1000.0}, {0.0,0.0,1.0} );

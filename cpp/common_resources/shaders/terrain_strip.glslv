@@ -20,6 +20,8 @@ uniform float derivScale;
 uniform vec2  txStep;
 uniform sampler2D txHeight;
 
+uniform float flexibility;
+
 vec4 bicubicSample( sampler2D tx, vec2 uv, vec2 d ){
     // see: https://stackoverflow.com/questions/20052381/glsl-performance-function-return-value-type
     vec4 p0 = texture2D( tx, uv );

@@ -10,7 +10,7 @@ smooth in vec3 fragColor;
 out vec3 color;
 
 // UNI --- Values that stay constant for the whole mesh
-uniform vec3 light_dir;
+//uniform vec3 light_dir;
 
 void main(){
 	color = fragColor;

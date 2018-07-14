@@ -409,7 +409,7 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     */
 
     terrain2.init( {200,1000}, 1000.0,  {imgW, imgH},  ground_f, 10.0, false  );
-    terrain2.mapScale.z = 250.0;
+    terrain2.mapScale.z = 450.0;
     terrain2.mapScale.y = 0.00005;
     terrain2.mapScale.x = 0.00005;
     terrain2.derivScale = 0.002;
