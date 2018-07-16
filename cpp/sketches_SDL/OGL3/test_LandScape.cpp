@@ -81,12 +81,16 @@ LandscapeTestApp::LandscapeTestApp(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
         for( int ix=0; ix<imgW; ix++ ){
             float x = ix*2*(M_PI/imgW);
             float y = iy*2*(M_PI/imgH);
+            float f = cos(x*10.0)*cos(y*10.0)*0.5 + 0.5;
             //height_map[ iy*imgW + ix ] = sin(x)*sin(y)*0.5 + 0.5;
             //height_map[ iy*imgW + ix ] = cos(x*20.0)*cos(y*20.0)*0.5 + 0.5;
             //height_map[ iy*imgW + ix ] = cos(x*20.0)*0.5 + 0.5;
-            height_map[ iy*imgW + ix ] = cos(y*40.0)*0.4 + 0.5 + x*0.01;
+            //height_map[ iy*imgW + ix ] = cos(y*40.0)*0.4 + 0.5 + x*0.01;
             //height_map[ iy*imgW + ix ] = 0;
             //height_map[ iy*imgW + ix ] =randf();
+            //height_map[ iy*imgW + ix ] = f*f*f*f;
+
+            height_map[ iy*imgW + ix ] = 1/(1+f*f*10000.0);
         }
     }
 
@@ -175,6 +179,9 @@ void LandscapeTestApp::draw( Camera& cam ){
 
     DEBUG_mesh->addLine( (Vec3f){0.0,0.0,0.0},  (Vec3f){terrain2.viewMin.x*1000.0, 0.0, terrain2.viewMin.y*1000.0}, {1.0,0.0,0.0} );
     DEBUG_mesh->addLine( (Vec3f){0.0,0.0,0.0},  (Vec3f){terrain2.viewMax.x*1000.0, 0.0, terrain2.viewMax.y*1000.0}, {0.0,0.0,1.0} );
+
+    DEBUG_drawCamera( cam, {1.0,0.0,1.0} );
+
     DEBUG_draw( cam, (Vec3d)terrain2.pos, Mat3dIdentity );
 
 };

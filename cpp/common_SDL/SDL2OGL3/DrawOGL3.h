@@ -122,7 +122,7 @@ class GLMeshBuilder{ public:
         Vec3f invSc = {1/sc.x,1/sc.y,1/sc.z};
         for(int i=iv.a; i<iv.b; i++){
             vpos[i].mul(sc);
-            vnor[i].mul(invSc); vnor[i].normalize();
+            if(bnor) vnor[i].mul(invSc); vnor[i].normalize();
         }
     }
     void rotate( Vec2i iv, Vec3f p0, Vec3f p1, float angle ){
@@ -130,7 +130,21 @@ class GLMeshBuilder{ public:
         Vec2f cs; cs.fromAngle(angle);
         for(int i=iv.a; i<iv.b; i++){
             Vec3f v = vpos[i]-p0;  v.rotate_csa(cs.a,cs.b,uax); vpos[i]=v+p0;
-            vnor[i].rotate_csa(cs.a,cs.b,uax);
+            if(bnor) vnor[i].rotate_csa(cs.a,cs.b,uax);
+        }
+    }
+
+    void applyMatrix( Vec2i iv, Mat3f mat ){
+        for(int i=iv.a; i<iv.b; i++){
+            mat.dot_to(vpos[i], vpos[i]);
+            if(bnor) mat.dot_to(vnor[i],vnor[i]);
+        }
+    }
+
+    void applyMatrixT( Vec2i iv, Mat3f mat ){
+        for(int i=iv.a; i<iv.b; i++){
+            mat.dot_to_T(vpos[i], vpos[i]);
+            if(bnor) mat.dot_to_T(vnor[i],vnor[i]);
         }
     }
 
@@ -170,9 +184,16 @@ class GLMeshBuilder{ public:
 
     };
 
+    void addLines( int n, int * inds, Vec3f* verts, Vec3f c ){
+        for(int i=0; i<n; i++){
+            int i2=i*2;
+            addLine( verts[inds[i2]], verts[inds[i2+1]], c );
+        }
+    }
+
     void moveSub     ( int i, Vec3f shift ){ move ( subVertRange(i), shift); }
     void scaleSub    ( int i, Vec3f sc    ){ scale( subVertRange(i), sc   ); }
-    void rotateSub   ( int i,  Vec3f p0, Vec3f p1, float angle ){ rotate( subVertRange(i), p0, p1, angle ); }
+    void rotateSub   ( int i, Vec3f p0, Vec3f p1, float angle ){ rotate( subVertRange(i), p0, p1, angle ); }
 
     GLMesh* normals2GLmesh( float sc ){ return vecs2mesh( vpos.size(), &vpos[0], &vnor[0], sc ); }
 };

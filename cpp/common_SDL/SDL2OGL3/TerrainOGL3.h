@@ -386,7 +386,7 @@ class TerrainOGL3_patch : public TerrainOGL3Prototype { public:
 
             float side1 = viewMin.cross(ps[0]);
             float side2 = viewMax.cross(ps[1]);
-            //if( (side1<0)||(side2>0) ) continue;
+            if( (side1<0)||(side2>0) ) continue;
 
             //float side1 = viewMin.cross(ps[1]);
             //float side2 = viewMax.cross(ps[0]);
