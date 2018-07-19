@@ -27,6 +27,15 @@ inline double Rbound2( const Vec3d& center, int n, Vec3d * points ){
     return r2max;
 }
 
+class Sphere{ public:
+    Vec3d   p;
+    double  r;
+};
+
+class Line{ public:
+    Vec3d a,b;
+};
+
 class Box{ public:
     Vec3d a,b;
 
@@ -76,7 +85,6 @@ class Box{ public:
     }
 
 };
-
 
 class Triangle3D{
     public:

@@ -90,7 +90,7 @@ class FastAtomicMetric : public AtomicConfiguration { public:
         //printf("--- toCells 1 \n");
         for(int i=0; i<ruler.ntot; i++){ cellNs[i]=0;             };
         for(int i=0; i<natoms; i++){
-            int nc = ruler.overpSphere( pos[i], Rcut, atom2cells_ );
+            int nc = ruler.overlap_Sphere( pos[i], Rcut, atom2cells_ );
             nprj       +=nc;
             atomNs[i]   =nc;
             for(int j=0; j<nc; j++){

@@ -28,6 +28,7 @@
 // ============= Application
 
 
+class AppSDL2OGL_3D;
 void drawLinearSoftBody(const SoftBodyLinearized& b, float dispsc=1.0, float fsc = 1.0, float clrsc=1.0 ){
 	//printf("DEBUG 3 \n");
 	glBegin(GL_LINES);

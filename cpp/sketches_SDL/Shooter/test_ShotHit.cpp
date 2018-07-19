@@ -20,6 +20,7 @@
 
 #include "Shooter.h"
 
+#include "broadPhaseCollision.h" // Move to Sooter later
 
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"

@@ -26,6 +26,7 @@ include_directories(
         ${COMMON_SRCS}/dynamics
         ${COMMON_SRCS}/maps
         ${COMMON_SRCS}/optimization
+	${COMMON_SRCS}/utils
 	${COMMON_SDL_SRCS}
         ${COMMON_SDL_SRCS}/network
         ${COMMON_SDL_SRCS}/SDL2
