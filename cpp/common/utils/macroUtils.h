@@ -14,6 +14,9 @@
 #define _minit( i, x, imin, xmin )  if( x<xmin ){ xmin=x; imin=i; }
 #define _maxit( i, x, imax, xmax )  if( x>xmax ){ xmax=x; imax=i; }
 
+#define _setmin( xmin, x )  if( x<xmin ){ xmin=x; }
+#define _setmax( xmax, x )  if( x>xmax ){ xmax=x; }
+
 #define _circ_inc( i, n )   i++; if(i>=n) i=0;
 #define _circ_dec( i, n )   i--; if(i< 0) i=n-1;
 

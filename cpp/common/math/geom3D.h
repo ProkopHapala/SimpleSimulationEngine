@@ -65,18 +65,38 @@ class Box{ public:
         }
     }
 
-    inline bool pointIn( const Vec3d& p ){ return pointIn( p,a, b ); }
-    inline bool dist2  ( const Vec3d& p ){ return pointIn( p,a, b ); }
+    inline bool pointIn( const Vec3d& p ) const { return pointIn( p,a, b ); }
+    inline bool dist2  ( const Vec3d& p ) const { return pointIn( p,a, b ); }
 
-    inline bool pointRot( const Vec3d& p ){
+    inline bool pointRot( const Vec3d& p ) const {
         return ((p.x>a.x)&&(p.y>a.y)&&(p.z>a.z)&&
                 (p.x<b.x)&&(p.y<b.y)&&(p.z<b.z));
     }
 
-    inline Vec3d genRandomSample(){ return (Vec3d){randf(a.x,b.x),randf(a.y,b.y),randf(a.z,b.z)}; }
+    inline bool overlap( const Box& box ) const {
+        if ( (box.a.x>b.x) || (box.b.x<a.x) ) return false;
+        if ( (box.a.y>b.y) || (box.b.y<a.y) ) return false;
+        if ( (box.a.z>b.z) || (box.b.z<a.z) ) return false;
+        return true;
+    }
 
-    inline double ray   ( const Vec3d& ray0, const Vec3d& hRay, Vec3d& hitPos, Vec3d& normal ){ return rayBox( ray0, hRay, a, b, hitPos, normal ); }
-    inline double rayRot( Vec3d ray0, Vec3d hRay, const Mat3d& rot, Vec3d& hitPos, Vec3d& normal ){
+    inline void spanAlongDir(const Vec3d hdir, Vec2d& span) const {
+        span = (Vec2d){+1e+300,-1e+300};
+        double xdir;
+        xdir = hdir.dot( {a.x,a.y,a.z} ); _setmin(span.x,xdir); _setmax(span.y,xdir);
+        xdir = hdir.dot( {a.x,a.y,b.z} ); _setmin(span.x,xdir); _setmax(span.y,xdir);
+        xdir = hdir.dot( {a.x,b.y,a.z} ); _setmin(span.x,xdir); _setmax(span.y,xdir);
+        xdir = hdir.dot( {a.x,b.y,b.z} ); _setmin(span.x,xdir); _setmax(span.y,xdir);
+        xdir = hdir.dot( {b.x,a.y,a.z} ); _setmin(span.x,xdir); _setmax(span.y,xdir);
+        xdir = hdir.dot( {b.x,a.y,b.z} ); _setmin(span.x,xdir); _setmax(span.y,xdir);
+        xdir = hdir.dot( {b.x,b.y,a.z} ); _setmin(span.x,xdir); _setmax(span.y,xdir);
+        xdir = hdir.dot( {b.x,b.y,b.z} ); _setmin(span.x,xdir); _setmax(span.y,xdir);
+    }
+
+    inline Vec3d genRandomSample() const { return (Vec3d){randf(a.x,b.x),randf(a.y,b.y),randf(a.z,b.z)}; }
+
+    inline double ray   ( const Vec3d& ray0, const Vec3d& hRay, Vec3d& hitPos, Vec3d& normal ) const { return rayBox( ray0, hRay, a, b, hitPos, normal ); }
+    inline double rayRot( Vec3d ray0, Vec3d hRay, const Mat3d& rot, Vec3d& hitPos, Vec3d& normal )const {
         rot.dot_to(ray0,ray0);
         rot.dot_to(hRay,hRay);
         return rayBox( ray0, hRay, a, b, hitPos, normal );
@@ -92,17 +112,17 @@ class Triangle3D{
 		struct{ Vec3d a,b,c; };
 		Vec3d array[3];
 	};
-	inline double normalArea(Vec3d& nr){
+	inline double normalArea(Vec3d& nr)const{
         nr.set_cross(b-a,c-a);
         return nr.normalize() * 0.5;
 	};
-	inline bool rayIn( const Vec3d& ray0, const Vec3d& hX, const Vec3d& hY ){
+	inline bool rayIn( const Vec3d& ray0, const Vec3d& hX, const Vec3d& hY )const{
         return rayInTriangle( a-ray0, b-ray0, c-ray0, hX, hY );
 	}
-    inline double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal, bool& inside, const Vec3d& hX, const Vec3d& hY ){
+    inline double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal, bool& inside, const Vec3d& hX, const Vec3d& hY )const{
         return rayTriangle2( ray0, hRay, hX, hY, a,b,c, normal );
 	}
-	inline double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal, bool& inside ){
+	inline double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal, bool& inside )const{
         Vec3d hX,hY;
         hRay.getSomeOrtho(hX,hY);
         return rayTriangle2( ray0, hRay, hX, hY, a,b,c, normal );
@@ -135,7 +155,7 @@ class Plane3D{
 		iso /= normal.normalize();
 	};
 
-	double dist( Vec3d point ){ return normal.dot( point ) - iso; };
+	double dist( Vec3d point )const{ return normal.dot( point ) - iso; };
 
 };
 
