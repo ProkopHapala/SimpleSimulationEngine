@@ -257,6 +257,50 @@ int drawCylinderStrip( int n, float r1, float r2, const Vec3f& base, const Vec3f
 	return nvert;
 };
 
+int drawCylinderStrip_wire( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip ){
+	int nvert=0;
+
+	Vec3f a,b,c,c_hat;
+	c.set_sub( tip, base );
+	c_hat.set_mul( c, 1/c.norm() );
+	c_hat.getSomeOrtho( a, b );
+	a.normalize();
+	b.normalize();
+
+    float alfa = 2*M_PI/n;
+    Vec2f rot,drot;
+    rot .set(1.0f,0.0f);
+    drot.set( cos( alfa ), sin( alfa ) );
+
+	Vec3f q; q.set(c); q.add_mul( a, -(r1-r2) );
+	float pnab =  c_hat.dot( q )/q.norm();
+	float pnc  =  sqrt( 1 - pnab*pnab );
+
+	glBegin   ( GL_LINE_LOOP );
+	//glBegin   ( GL_LINES );
+	for(int i=0; i<n; i++ ){
+		Vec3f p;
+		p .set( rot.x*a.x +  rot.y*b.x, rot.x*a.y + rot.y*b.y, rot.x*a.z + rot.y*b.z    );
+		glVertex3f( base.x + r1*p.x, base.y + r1*p.y, base.z + r1*p.z ); nvert++;
+		glVertex3f( tip .x + r2*p.x, tip .y + r2*p.y, tip .z + r2*p.z ); nvert++;
+        rot.mul_cmplx( drot );
+	}
+    for(int i=0; i<n; i++ ){
+		Vec3f p;
+		p .set( rot.x*a.x +  rot.y*b.x, rot.x*a.y + rot.y*b.y, rot.x*a.z + rot.y*b.z    );
+		glVertex3f( base.x + r1*p.x, base.y + r1*p.y, base.z + r1*p.z ); nvert++;
+        rot.mul_cmplx( drot );
+	}
+    for(int i=0; i<n; i++ ){
+		Vec3f p;
+		p .set( rot.x*a.x +  rot.y*b.x, rot.x*a.y + rot.y*b.y, rot.x*a.z + rot.y*b.z    );
+		glVertex3f( tip .x + r2*p.x, tip .y + r2*p.y, tip .z + r2*p.z ); nvert++;
+        rot.mul_cmplx( drot );
+	}
+	glEnd();
+	return nvert;
+};
+
 int drawCone( int n, float phi0, float phi1, float r1, float r2, const Vec3f& base, const Vec3f& tip, bool smooth ){
 	int nvert=0;
 

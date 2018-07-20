@@ -25,6 +25,8 @@ class Warrior3D { public:
     double  until_reaload = 0;
     double  hground       = 0.5;
 
+    Vec3d* pos_ptr=0; // This is idiotic
+
     /*
     void setPose( const Vec3d& pos_, const Vec3d& dir, const Vec3d& up ){
         //w->kind = kind; w->id = warriorCount; warriorCount++;
@@ -42,6 +44,7 @@ class Warrior3D { public:
     //virtual void getPos( ){};
     //virtual void getPos( ){};
 
+    //virtual double asRigidBody( Vec3d ,  ) = 0;
     virtual RigidBody* asRigidBody ( ) = 0;  //{ return cstatic_cast<RigidBody*>(this); };
     virtual void       move_warrior( double dt, Vec3d& wind_speed, Vec3d& gravity, Terrain25D * terrain ) = 0;
 

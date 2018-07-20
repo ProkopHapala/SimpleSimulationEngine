@@ -14,9 +14,9 @@
 // Sweep-and-prune inside larger boxes ?
 
 #include <unordered_map>   // http://www.cplusplus.com/reference/unordered_map/unordered_multimap/
-//#include <unordered_set> 
-//#include <set> 
-#include <map> 
+//#include <unordered_set>
+//#include <set>
+#include <map>
 
 //#include "Projectile3D.h"
 //#include "Gun3D.h"
@@ -33,8 +33,6 @@ class BroadSpaceMapHash{
     std::unordered_multimap<int,int> map;
     bool* isNew = nullptr;
 
-
-
     inline void insertInds(int o, int n, int* inds ){
         for(int i=0; i<n; i++){
             map.insert( {i,o} );
@@ -44,7 +42,7 @@ class BroadSpaceMapHash{
     inline void insert( int o, const Vec3d&      p ){ map.insert( {ruler.icell(p),o} ); };
     inline void insert( int o, const Sphere&     s ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_Sphere  (s.p,s.r    ,inds), inds ); };
     inline void insert( int o, const Box&        b ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_BBox    (b.a,b.b    ,inds), inds ); };
-    inline void insert( int o, const Line&       l ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_Line    (l.a,l.b    ,inds), inds ); };
+    inline void insert( int o, const Line3D&       l ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_Line    (l.a,l.b    ,inds), inds ); };
     inline void insert( int o, const Triangle3D& t ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_Triangle(t.a,t.b,t.c,inds), inds ); };
 
     inline int cell2array( int icell, int* inds ){ // TODO: if we use own hashmap map, we do not have to do this
@@ -68,7 +66,7 @@ class BroadSpaceMapHash{
         int io=0;
         for(int i=0; i<n; i++){                                    // go over cells
             auto range = map.equal_range( cells[i] );             // list all objects in std::unordered_multimap<int,int> map;
-            for(auto it = range.first; it != range.second; it++){  // 
+            for(auto it = range.first; it != range.second; it++){  //
                 outInds[io]=it->second;
                 io++;
             }
@@ -80,7 +78,7 @@ class BroadSpaceMapHash{
         std::unordered_set<int> found;
         for(int i=0; i<n; i++){                                   // go over cells
             auto range = map.equal_range( cells[i] );             // list all objects in std::unordered_multimap<int,int> map;
-            for(auto it = range.first; it != range.second; it++){ // 
+            for(auto it = range.first; it != range.second; it++){ //
                 found.insert(it->second);
             }
         }
@@ -94,7 +92,7 @@ class BroadSpaceMapHash{
         int io=0;
         for(int i=0; i<n; i++){                                    // go over cells
             auto range = map.equal_range( cells[i] );             // list all objects in std::unordered_multimap<int,int> map;
-            for(auto it = range.first; it != range.second; it++){  // 
+            for(auto it = range.first; it != range.second; it++){  //
                 int o = it->second;
                 if( isNew[o] ){
                     objects[io]=o;
@@ -109,7 +107,7 @@ class BroadSpaceMapHash{
 
     inline int overlap( const Sphere&     s, int* inds){ int cells[nIndTmpMax]; return findInCells_paint( ruler.overlap_Sphere  (s.p,s.r    ,cells), cells, inds ); }
     inline int overlap( const Box&        b, int* inds){ int cells[nIndTmpMax]; return findInCells_paint( ruler.overlap_BBox    (b.a,b.b    ,cells), cells, inds ); }
-    inline int overlap( const Line&       l, int* inds){ int cells[nIndTmpMax]; return findInCells_paint( ruler.overlap_Line    (l.a,l.b    ,cells), cells, inds ); }
+    inline int overlap( const Line3D&     l, int* inds){ int cells[nIndTmpMax]; return findInCells_paint( ruler.overlap_Line    (l.a,l.b    ,cells), cells, inds ); }
     inline int overlap( const Triangle3D& t, int* inds){ int cells[nIndTmpMax]; return findInCells_paint( ruler.overlap_Triangle(t.a,t.b,t.c,cells), cells, inds ); }
 
 };
@@ -228,7 +226,7 @@ class SweepAndPrune{  public:
         int io=0;
         for( auto it = xitlow; it!=xittup; ++it ){
             AOO& aoo = it->second;
-            if( bbox.overlap(aoo.bbox) ){  
+            if( bbox.overlap(aoo.bbox) ){
                 inds[io] = aoo.o;
                 io++;
             };
@@ -267,7 +265,7 @@ class PruneAndSweep{
         double xmin = bbox.a.array[axesOrder.x];
         double ymin = bbox.b.array[axesOrder.x];
         for(AOO& aoo: axis[axesOrder.x] ){
-            
+
         }
     }
 

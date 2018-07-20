@@ -20,27 +20,27 @@ body reaction on collision should be specified by user, but rutines for evaluati
 
 */
 
-class CollisionShape{
-	public:
+class CollisionShape{ public:
 	double collision_radius=1.0d;
 	int    displayList;
 	virtual bool colideWithLineSegment( const Vec3d& p1, const Vec3d& p2, const Vec3d& center, Vec3d * where, Vec3d * normal );
 	virtual bool colideWithTerrain    ( Terrain25D * terrain, RigidBody& rb  );
 };
 
-class MeshCollisionShape : public CollisionShape{
-	public:
+class MeshCollisionShape : public CollisionShape{ public:
 	Mesh * mesh;
 	//virtual bool colideWithTerrain( Terrain25D * terrain, const Mat3d& orientation, const Vec3d& cog, Vec3d& force, Vec3d& torq );
 	virtual bool colideWithTerrain( Terrain25D * terrain, RigidBody& rb );
 };
 
 
-class CollisionObject{
-	public:
+class CollisionObject{ public:
 	CollisionShape * collisionShape;
 	virtual bool colideWithLineSegment( const Vec3d& p1, const Vec3d& p2, Vec3d * where, Vec3d * normal ) = 0;
 };
+
+
+
 
 
 #endif

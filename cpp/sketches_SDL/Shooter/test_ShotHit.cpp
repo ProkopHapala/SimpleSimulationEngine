@@ -43,9 +43,12 @@
 
 */
 
-
-
 double projLifetime = 10.0;
+
+double airDensity = 1.27;
+
+const int nshots = 20;
+Vec3d tmpPos[nshots];
 
 
 void checkHit_N2( std::vector<Projectile3D*>& projectiles, std::vector<Vec3d>& objects ){
@@ -74,11 +77,32 @@ void checkHit_N2( std::vector<Projectile3D*>& projectiles, std::vector<Vec3d>& o
     }
 }
 
+
+void drawBurst( Burst3d& burst, Vec3d* tmpPos = 0 ){
+    glColor3f(1.0,0.0,0.0);
+    int n = burst.shots.size();
+    for(int i=0; i<n; i++){
+        Draw3D::drawPointCross( burst.shots[i].pos, 0.1 );
+        if( tmpPos ) Draw3D::drawLine( tmpPos[i], burst.shots[i].pos );
+    }
+    if( tmpPos ){ glColor3f(1.0,1.0,0.0); Draw3D::drawPointCross( tmpPos[n-1], 0.5 ); }
+    glColor3f(0.0,1.0,1.0); Draw3D::drawPointCross( burst.shots[0].pos, 0.5 );
+    glColor3f(0.0,0.5,0.0);
+    Vec3d b = burst.bbox.p+burst.bbox.hdir*burst.bbox.l;
+    Draw3D::drawPointCross( burst.bbox.p, 3.0 );
+    Draw3D::drawPointCross( b           , 3.0 );
+    Draw3D::drawCylinderStrip_wire( 16, burst.bbox.r, burst.bbox.r, (Vec3f)burst.bbox.p, (Vec3f)b );
+}
+
 class TestAppShotHit : public AppSDL2OGL_3D {
 	public:
     //MultiFight3DWorld world;
     double dvel = 10.0;
     Shooter world;
+
+    int glo_burst = 0;
+    ProjectileType projType1;
+    Burst3d burst;
 
     //std::vector<KinematicBody*> objects;
     int nobject = 100;
@@ -88,7 +112,7 @@ class TestAppShotHit : public AppSDL2OGL_3D {
 
 	virtual void draw   ();
 	virtual void drawHUD();
-	virtual void mouseHandling( );
+	//virtual void mouseHandling( );
 	virtual void eventHandling   ( const SDL_Event& event  );
 	//virtual void keyStateHandling( const Uint8 *keys );
 
@@ -119,16 +143,50 @@ TestAppShotHit::TestAppShotHit( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
         objects[i].set( randf(-Lspan,Lspan), randf(-Lspan,Lspan), randf(-Lspan,Lspan) );
     }
 
-    zoom = 16.0;
+    // https://en.wikipedia.org/wiki/5.56%C3%9745mm_NATO
+
+    projType1.mass    = 3.56e-3;
+    projType1.caliber = 5.56e-3;
+    //projType1.explosiveMass = ;
+    projType1.updateAux( 0.3 );
+
+
+    burst.type = &projType1;
+    Vec3d vel0 = {800.0,0.0,0.0};
+    Vec3d pos0 = {0.0,0.0,0.0};
+    double dt = 0.02;
+    double vrnd = 1;
+    double prnd = 1;
+    for(int i=0; i<nshots; i++){
+        Vec3d p = pos0 - vel0*dt*i + (Vec3d){randf(-vrnd,vrnd),randf(-vrnd,vrnd),randf(-vrnd,vrnd)};
+        Vec3d v = vel0 + (Vec3d){randf(-prnd,prnd),randf(-prnd,prnd),randf(-prnd,prnd)};
+        burst.addShot( p, v );
+    }
+
+    burst.move( 0.1, {0.0,-9.81,0.0}, airDensity, tmpPos );
+
+    glo_burst = glGenLists(1);
+    glNewList( glo_burst , GL_COMPILE);
+    drawBurst( burst, tmpPos );
+    glEndList();
+
+    zoom = 160.0;
 
 }
 
 void TestAppShotHit::draw(){
-    printf( " ==== frame %i \n", frameCount );
+   // printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+	if(frameCount%10==0) burst.move( 0.1, {0.0,-9.81,0.0}, airDensity, tmpPos );
 
+	drawBurst( burst, tmpPos );
+
+	glCallList( glo_burst );
+
+
+	/*
     //for( auto o : world.objects ) {
     for( int i=0; i<nobject; i++ ) {
         //float glMat[16];
@@ -148,6 +206,7 @@ void TestAppShotHit::draw(){
         glCallList( defaultObjectShape );
         glPopMatrix();
     }
+    */
 
 };
 
@@ -177,6 +236,7 @@ void TestAppShotHit::drawHUD(){
     glEnd();
 }
 
+/*
 void TestAppShotHit::mouseHandling( ){
     int mx,my;
     SDL_GetMouseState( &mouseX, &mouseY );   mouseY=HEIGHT-mouseY;
@@ -188,6 +248,7 @@ void TestAppShotHit::mouseHandling( ){
         qCamera.qmul_T( q );
     //}
 }
+*/
 
 // ===================== MAIN
 

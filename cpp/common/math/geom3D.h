@@ -32,8 +32,23 @@ class Sphere{ public:
     double  r;
 };
 
-class Line{ public:
+class Line3D{ public:
     Vec3d a,b;
+};
+
+class Capsula3D{ public:
+    Vec3d  p,hdir;
+    double r,l;
+
+    inline double dist2_Cilinder( const Vec3d& pos ) const {
+        Vec3d d; d.set_sub( pos, p );
+        double x  = d.makeOrthoU(hdir);
+        double y2 = d.norm2();
+        double dist2 = 0.0;
+        if (x <0         ){ dist2 += sq(x); }else if(x>l){ dist2 += sq(x-l); };
+        if (y2<sq(r)){ dist2 += sq(sqrt(y2)-r); };
+        return dist2;
+    }
 };
 
 class Box{ public:

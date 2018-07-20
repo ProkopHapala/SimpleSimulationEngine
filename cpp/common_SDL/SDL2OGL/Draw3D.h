@@ -38,8 +38,9 @@ void drawMatInPos ( const Mat3f& mat, const Vec3f& pos );
 void drawShape    ( const Vec3f& pos, const Mat3f&  rot,  int shape, bool transposed = false );
 void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape );
 
-int  drawCylinderStrip  ( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
-int  drawSphereTriangle ( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c );
+int  drawCylinderStrip     ( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
+int  drawCylinderStrip_wire( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
+int  drawSphereTriangle    ( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c );
 
 int  drawCircleAxis     ( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R, float dca, float dsa );
 int  drawCircleAxis     ( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R );

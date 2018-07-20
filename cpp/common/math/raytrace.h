@@ -24,6 +24,15 @@ inline double rayPointDistance2( const Vec3d& ray0, const Vec3d& hRay, const Vec
 	return pt.norm2();
 }
 
+inline double linePointDistance2( const Vec3d& p0, const Vec3d& hdir, const Vec3d& point, double tmax ){
+	Vec3d d;
+	d.set_sub( point, p0 );
+	double t  = hdir.dot( d );
+	if      ( t>tmax ){ d.add_mul( hdir, -tmax ); }
+	else if ( t>0    ){ d.add_mul( hdir, -t    ); }
+	return d.norm2();
+}
+
 inline double raySphere( const Vec3d& ray0, const Vec3d& hRay, double R, const Vec3d& center ){
 	double t0;
 	double rt2 = rayPointDistance2( ray0, hRay, center, t0 );

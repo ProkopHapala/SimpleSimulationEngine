@@ -133,6 +133,62 @@ void Shooter::update_projectiles3D(){
     }
 }
 
+void Shooter::burstObjectCollision( Object3d& obj, Burst3d& burst ){
+    if( sq( obj.R)> burst.bbox.dist2_Cilinder( obj.pos ) ){
+        //int np = burst->shots.size();
+        //for( int i=0; i<np; i++ ){
+        int j = 0;
+        auto ip = burst.shots.begin();
+        while( ip != burst.shots.end() ){
+        // FIXME : to erase particles we need to use iterator
+            //Particle3d& p = burst->shots[i];
+            Particle3d& p = *ip;
+            if( obj.getShot( p.pos, tmpPos[j], *burst.type, dt ) ){
+                burst.hit(j);
+                ip = burst.shots.erase( ip );
+            };
+            ++ip;
+            j++;
+        }
+    };
+}
+
+void Shooter::update_bursts(){
+    //printf( "update_projectiles3D %i\n", projectiles.size() );
+    Vec3d vGrav = (Vec3d){0.0,gravity,0.0};
+    auto it = bursts.begin();
+    while( it != bursts.end() ) {
+        Burst3d * burst = *it;
+
+        double airDensity = 1.27; // TODO : read from atmosphere
+        burst->move( dt, vGrav, airDensity, tmpPos.data() );
+
+        for( Vehicle3d* vh : vehicles ){ // TODO : this is BruteForce - make optimized BroadPhase
+            burstObjectCollision( *vh, *burst );
+            /*
+            if( sq(vh->R)> burst->bbox.dist2_Cilinder( vh->pos ) ){
+                //int np = burst->shots.size();
+                //for( int i=0; i<np; i++ ){
+                int j = 0;
+                auto ip = burst->shots.begin();
+                while( ip != burst->shots.end() ){
+                // FIXME : to erase particles we need to use iterator
+                    //Particle3d& p = burst->shots[i];
+                    Particle3d& p = *ip;
+                    if( vh->getShot( p.pos, tmpPos[j], *burst->type, dt ) ){
+                        burst->hit(j);
+                        ip = burst->shots.erase( ip );
+                    };
+                    ++ip;
+                    j++;
+                }
+            };
+            */
+        }
+        ++it;
+    }
+}
+
 void Shooter::update_world( ){
 	for( int i=0; i<perFrame; i++ ){
 //        phi += omega * dt;
@@ -141,6 +197,7 @@ void Shooter::update_world( ){
         update_warriors3D ();
         update_warriors25D();
         update_projectiles3D();
+        update_bursts();
         time += dt;
     }
 };

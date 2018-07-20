@@ -45,19 +45,29 @@ class Shooter {
 
     int shotsCount=0,warriorCount=0;
 
+    std::vector<Vec3d> tmpPos;
+
 	std::vector<Warrior3D*>     warriors;
 	std::vector<Warrior25D*>    warriors25D;
 	std::vector<Projectile3D*>  projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
 	std::vector<Object3D*>      objects;
 	std::vector<AnyControler*>  controlers;
 
+	std::vector<Vehicle3d*> vehicles;
+	std::vector<Burst3d*>   bursts;
+
 	Terrain25D * terrain = NULL;
 
     // ==== function declarations
 
+
+    void burstObjectCollision( Object3d& obj, Burst3d& burst );
+
+
     virtual void update_warriors3D();
     virtual void update_warriors25D();
     virtual void update_projectiles3D();
+    virtual void update_bursts();
 
     virtual void update_world( );
     virtual void init_world  ( );

@@ -28,6 +28,21 @@ class KinematicBody{ public:
 //   CLASS :   PointBody
 // ========================
 
+template<typename T>
+class Particle3D{ public:
+    Vec3TYPE<T> pos;
+    Vec3TYPE<T> vel;
+
+    inline void move(T dt, const Vec3TYPE<T>& accel ){
+        vel.add_mul( accel, dt );
+		pos.add_mul( vel,   dt );
+    }
+};
+
+typedef Particle3D<float>  Particle3f;
+typedef Particle3D<double> Particle3d;
+
+
 class PointBody{ public:
 	// parameters
 	double	mass    = 1.0;
