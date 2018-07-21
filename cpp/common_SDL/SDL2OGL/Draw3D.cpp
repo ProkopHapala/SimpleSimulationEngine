@@ -412,19 +412,62 @@ int drawSphereTriangle( int n, float r, const Vec3f& pos, const Vec3f& a, const 
 	return nvert;
 };
 
-int drawSphere_oct( int n, float r, const Vec3f& pos ){
+int drawSphereTriangle_wire( int n, float r, const Vec3f& pos, const Vec3f& a, const Vec3f& b, const Vec3f& c ){
+	int nvert=0;
+	float d = 1.0f/n;
+	Vec3f da,db;
+	da.set_sub( a, c ); da.mul( d );
+	db.set_sub( b, c ); db.mul( d );
+	for( int ia=0; ia<n; ia++ ){
+		Vec3f p0,p; p0.set( c );
+		p0.add_mul( da, ia );
+        glBegin   (GL_LINE_STRIP); //glColor3f(0.0,0.0,1.0);
+        p.set(p0); p.normalize();
+        glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+		for( int ib=0; ib<(n-ia); ib++ ){
+			p.set_add( p0, da ); p.normalize();
+			glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+			p.set_add( p0, db ); p.normalize();
+			glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+			p0.add( db );
+		}
+        glEnd();
+		glBegin   (GL_LINE_STRIP);         //glColor3f(1.0,0.0,0.0);
+        for( int ib=0; ib<=(n-ia); ib++ ){
+			//p.set_add( p0, da );
+			p.set(p0); p.normalize();
+			glVertex3f( r*p.x+pos.x, r*p.y+pos.y, r*p.z+pos.z );   nvert++;
+			p0.sub( db );
+		}
+		glEnd();
+	}
+	return nvert;
+};
+
+int drawSphere_oct( int n, float r, const Vec3f& pos, bool wire ){
 	int nvert=0;
 	Vec3f px,mx,py,my,pz,mz;
 	px.set( 1,0,0); py.set(0, 1,0); pz.set(0,0, 1);
 	mx.set(-1,0,0); my.set(0,-1,0); mz.set(0,0,-1);
-	nvert += drawSphereTriangle( n, r, pos, mz, mx, my );
-	nvert += drawSphereTriangle( n, r, pos, mz, my, px );
-	nvert += drawSphereTriangle( n, r, pos, mz, px, py );
-	nvert += drawSphereTriangle( n, r, pos, mz, py, mx );
-	nvert += drawSphereTriangle( n, r, pos, pz, mx, my );
-	nvert += drawSphereTriangle( n, r, pos, pz, my, px );
-	nvert += drawSphereTriangle( n, r, pos, pz, px, py );
-	nvert += drawSphereTriangle( n, r, pos, pz, py, mx );
+	if(wire){
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, mx, my );
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, my, px );
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, px, py );
+        nvert += drawSphereTriangle_wire( n, r, pos, mz, py, mx );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, mx, my );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, my, px );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, px, py );
+        nvert += drawSphereTriangle_wire( n, r, pos, pz, py, mx );
+	}else{
+        nvert += drawSphereTriangle( n, r, pos, mz, mx, my );
+        nvert += drawSphereTriangle( n, r, pos, mz, my, px );
+        nvert += drawSphereTriangle( n, r, pos, mz, px, py );
+        nvert += drawSphereTriangle( n, r, pos, mz, py, mx );
+        nvert += drawSphereTriangle( n, r, pos, pz, mx, my );
+        nvert += drawSphereTriangle( n, r, pos, pz, my, px );
+        nvert += drawSphereTriangle( n, r, pos, pz, px, py );
+        nvert += drawSphereTriangle( n, r, pos, pz, py, mx );
+	}
 	return nvert;
 };
 

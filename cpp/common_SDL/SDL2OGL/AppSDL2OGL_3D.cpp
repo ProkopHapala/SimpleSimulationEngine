@@ -95,7 +95,16 @@ void AppSDL2OGL_3D::camera_OrthoInset( const Vec2d& p1, const Vec2d& p2, const V
 }
 
 void AppSDL2OGL_3D::camera(){
+    ((Quat4f)qCamera).toMatrix(cam.rot);
+    cam.zoom   = zoom;
+    cam.aspect = ASPECT_RATIO;
+    //Cam::ortho( cam, true );
+    //Cam::perspective( cam );
+    if (perspective){ Cam::perspective( cam ); }
+    else            { Cam::ortho( cam, true ); }
 
+
+/*
     float camMatrix[16];
     qCamera.toMatrix_unitary( cam.rot );
     //first_person = true;
@@ -146,6 +155,9 @@ void AppSDL2OGL_3D::camera(){
 
 	}
 	//glMatrixMode (GL_MODELVIEW);
+
+*/
+
 }
 
 void AppSDL2OGL_3D::draw   (){
@@ -203,6 +215,13 @@ void AppSDL2OGL_3D::keyStateHandling( const Uint8 *keys ){
 	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
+
+	if( keys[ SDL_SCANCODE_A ] ){ cam.pos.add_mul( cam.rot.a, -cameraMoveSpeed ); }
+	if( keys[ SDL_SCANCODE_D ] ){ cam.pos.add_mul( cam.rot.a,  cameraMoveSpeed ); }
+    if( keys[ SDL_SCANCODE_W ] ){ cam.pos.add_mul( cam.rot.b,  cameraMoveSpeed ); }
+	if( keys[ SDL_SCANCODE_S ] ){ cam.pos.add_mul( cam.rot.b, -cameraMoveSpeed ); }
+    if( keys[ SDL_SCANCODE_Q ] ){ cam.pos.add_mul( cam.rot.c, -cameraMoveSpeed ); }
+	if( keys[ SDL_SCANCODE_E ] ){ cam.pos.add_mul( cam.rot.c,  cameraMoveSpeed ); }
 
 /*
     if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.yaw  (  keyRotSpeed ); qCamera.normalize(); }

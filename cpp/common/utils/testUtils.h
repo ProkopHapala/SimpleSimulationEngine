@@ -49,6 +49,15 @@ inline uint64_t getCPUticks(){
     return (uint64_t)hi << 32 | lo;
 }
 
+class StopWatch{ public:
+    long t1;
+    double T;
+    void   start(){ t1=getCPUticks(); };
+    double stop (){ T=getCPUticks()-t1; return T; };
+};
+
+static StopWatch stopWatch;
+
 
 void genRandomArray( int n, double * vals, double vmin, double vmax ){
     for( int i=0; i<n; i++ ){ vals[i] = randf( vmin, vmax ); }

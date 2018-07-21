@@ -1,7 +1,22 @@
 
 #include <SDL2/SDL_opengl.h>
-#include "Draw3D.h"
-#include "Solids.h"
+//#include "Draw3D.h"
+//#include "Solids.h"
+
+#include "fastmath.h"
+#include "Vec2.h"
+#include "Vec3.h"
+#include "Mat3.h"
+#include "raytrace.h"
+#include "geom3D.h"
+
+#include "Object3D.h"
+#include "Terrain25D.h"
+#include "Warrior3D.h"
+#include "Warrior25D.h"
+#include "Projectile3D.h"
+
+#include "testUtils.h"
 
 #include "Shooter.h" // THE HEADER
 
@@ -139,23 +154,24 @@ void Shooter::burstObjectCollision( Object3d& obj, Burst3d& burst ){
         //int np = burst->shots.size();
         //for( int i=0; i<np; i++ ){
         //printf( " hit " );
-        printf( " hit (b:%i,o:%i) ", burst.id, obj.id );
+        //printf( " hit (b:%i,o:%i) ", burst.id, obj.id );
         int j = 0;
         auto ip = burst.shots.begin();
         while( ip != burst.shots.end() ){
         // FIXME : to erase particles we need to use iterator
             //Particle3d& p = burst->shots[i];
+            opCount_ShotObject++;
             Particle3d& p = *ip;
             Vec3d op; p.getOldPos(dt,op);
             if( obj.getShot( op, p.pos, *burst.type, dt ) ){
-                printf( "-" );
+                //printf( "-" );
                 burst.hit(j);
-                ip = burst.shots.erase( ip );
+                //ip = burst.shots.erase( ip );
             };
             ++ip;
             j++;
         }
-        printf( "\n" );
+        //printf( "\n" );
     };
     //printf( "\n" );
 }
@@ -164,6 +180,9 @@ void Shooter::update_bursts(){
     //printf( "update_bursts n=%i\n", bursts.size() );
     Vec3d vGrav = (Vec3d){0.0,gravity,0.0};
     auto it = bursts.begin();
+    stopWatch.start();
+
+    opCount_ShotObject = 0;
     while( it != bursts.end() ) {
         Burst3d * burst = *it;
 
@@ -174,11 +193,16 @@ void Shooter::update_bursts(){
             burstObjectCollision( *o, *burst );
         }
 
+        /*
         for( Vehicle3d* vh : vehicles ){ // TODO : this is BruteForce - make optimized BroadPhase
             burstObjectCollision( *vh, *burst );
         }
+        */
         ++it;
     }
+    stopWatch.stop();
+    if(debugFlags&DEBUG_FLAG_SHOTS)printf( " update_bursts  %g [Mticks] nbursts %i objs %i nbboxOps %i nShotOps %i \n", stopWatch.T*1e-6, bursts.size(), objects.size(), bursts.size()*objects.size(), opCount_ShotObject );
+
 }
 
 void Shooter::update_world( ){

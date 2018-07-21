@@ -41,10 +41,14 @@ class Burst3d { public:
 
 	std::vector<Particle3d> shots;
 
-	void updateBBox( Vec3d& p0, Vec3d& p1, double dt ){
-        Vec3d hdir; hdir.set_sub(p1,p0);
-        double lmin = 0.0;
-        double lmax = hdir.normalize();
+
+    void updateBBox( double dt ){
+        Vec3d hdir;
+        bbox.p = shots[0].pos;
+        //hdir = shots[0].vel; hdir.normalize(); // STRATEGY 1
+        Vec3d op0; shots.back().getOldPos(dt,op0); hdir.set_sub(shots[0].pos,op0); hdir.normalize(); // STRATEGY 2
+        double lmin = +1e+300;
+        double lmax = -1e+300;
         float r2max=0.0;
         int n = shots.size();
         //printf( "p0 (%g,%g,%g) p1 (%g,%g,%g) \n", p0.x, p0.y, p0.z, p1.x, p1.y, p1.z );
@@ -53,13 +57,50 @@ class Burst3d { public:
             double r2,l;
             //Vec3d p = shots[i].pos;
             const Particle3d& p = shots[i];
-            d.set_sub( p.pos-p.vel*-dt, p0); l=d.makeOrthoU(hdir); r2=d.norm2(); if(r2>r2max) r2max=r2; if(l>lmax)lmax=l; if(l<lmin)lmin=l; // printf(" fw %i %g %g \n", i, l, lmin);  //d.add_mul( hdir, -hdir.dot(d) );
-            p.getOldPos(dt,d);    d.sub(p0); l=d.makeOrthoU(hdir); r2=d.norm2(); if(r2>r2max) r2max=r2; if(l>lmax)lmax=l; if(l<lmin)lmin=l; // printf(" bk %i %g %g \n", i, l, lmin);
+            d.set_sub( p.pos-p.vel*-dt, bbox.p); l=d.makeOrthoU(hdir); r2=d.norm2(); if(r2>r2max) r2max=r2; if(l>lmax)lmax=l; if(l<lmin)lmin=l; // printf(" fw %i %g %g \n", i, l, lmin);  //d.add_mul( hdir, -hdir.dot(d) );
+            p.getOldPos(dt,d);    d.sub(bbox.p); l=d.makeOrthoU(hdir); r2=d.norm2(); if(r2>r2max) r2max=r2; if(l>lmax)lmax=l; if(l<lmin)lmin=l;
         }
         bbox.r = sqrt(r2max);
         bbox.l = lmax-lmin;
         //printf( "lmin %g lmax %g \n", lmin, lmax );
-        bbox.p.set_add_mul( p0, hdir, lmin );
+        bbox.p.add_mul( hdir, lmin );
+        bbox.hdir=hdir;
+	}
+
+
+	void updateBBox_torq( double dt ){
+        // Explanation
+        //  - We can evaluate how much tilted are particles with respect hdir-axis by averaging 1st-moment
+        //    Sum_i{(d_i-d_av)*(l_i-l_av)} = Sum_i{ d_i*l_i - d_av*l_i - d_i*l_av + d_av*l_av }  = Sum_i {  d_i*l_i - d_av*l_av }
+        //  - The problem is that after corresponding rotation we need to recalculate r,l bounds => we would do it only in next step
+        Vec3d hdir;
+        bbox.p = shots[0].pos;
+        //hdir = shots[0].vel; hdir.normalize(); // STRATEGY 1
+        //Vec3d op0; shots.back().getOldPos(dt,op0); hdir.set_sub(shots[0].pos,op0); hdir.normalize(); // STRATEGY 2
+        double lmin = +1e+300;
+        double lmax = -1e+300;
+        float r2max=0.0;
+        int n = shots.size();
+        //printf( "p0 (%g,%g,%g) p1 (%g,%g,%g) \n", p0.x, p0.y, p0.z, p1.x, p1.y, p1.z );
+        Vec3d torq = Vec3dZero, dav = Vec3dZero;
+        double lav =0;
+        for( int i=0; i<n; i++ ){
+            Vec3d d;
+            double r2,l;
+            //Vec3d p = shots[i].pos;
+            const Particle3d& p = shots[i];
+            d.set_sub( p.pos-p.vel*-dt, bbox.p); l=d.makeOrthoU(hdir); torq.add_mul(d,l); dav.add(d); lav+=l; r2=d.norm2(); if(r2>r2max) r2max=r2; if(l>lmax)lmax=l; if(l<lmin)lmin=l; // printf(" fw %i %g %g \n", i, l, lmin);  //d.add_mul( hdir, -hdir.dot(d) );
+            p.getOldPos(dt,d);    d.sub(bbox.p); l=d.makeOrthoU(hdir); torq.add_mul(d,l); dav.add(d); lav+=l; r2=d.norm2(); if(r2>r2max) r2max=r2; if(l>lmax)lmax=l; if(l<lmin)lmin=l; // printf(" bk %i %g %g \n", i, l, lmin);
+        }
+        double invN = 1.0/shots.size();
+        torq.mul(invN);
+        torq.add_mul( dav, -lav*invN*invN );
+        torq.mul(invN);
+
+        bbox.r = sqrt(r2max);
+        bbox.l = lmax-lmin;
+        //printf( "lmin %g lmax %g \n", lmin, lmax );
+        bbox.p.add_mul( hdir, lmin );
         bbox.hdir=hdir;
 	}
 
@@ -76,13 +117,15 @@ class Burst3d { public:
             //printf( "shot[%i]\n", i );
             Particle3d& p = shots[i];
             //tmpPos[i] = p.pos;
-            Vec3d accel; accel.set_add_mul( accel0, p.vel, p.vel.norm()*balisticCoef );
+            Vec3d accel;
+            //accel=accel0;
+            accel.set_add_mul( accel0, p.vel, p.vel.norm()*-balisticCoef );
             p.move(dt, accel );
             //p.move(dt, accel0 );
             time+=dt;
         }
-        Vec3d op0; shots[n-1].getOldPos(dt,op0);
-        updateBBox( op0, shots[0].pos, dt ); // we asume shot[0] is most forward, shot[n-1] is least
+
+        updateBBox( dt ); // we asume shot[0] is most forward, shot[n-1] is least
         //printf("Burst3d::move DONE\n");
     }
 

@@ -24,9 +24,7 @@
 #include "Projectile3D.h"
 
 // class NonInertWorld : public NBodyWorld2D {       //  TODO:  We would like to add this later
-class Shooter {
-	public:
-
+class Shooter { public:
 	int debug_shit=19;
 
     int perFrame  = 10;
@@ -46,8 +44,6 @@ class Shooter {
     int nMaxBurst       = 10;   // when there is more shots in burst, new burst is created
     int nBurstReserve   = 10;   // optimization - we avoid re-allocation of Burst3d::shots when new shots are added
 
-    int shotsCount=0,warriorCount=0;
-
     // -- types
     std::vector<ProjectileType*> projectile_types;
     std::vector<ObjectType*>     objectTypes;
@@ -65,6 +61,14 @@ class Shooter {
 	std::vector<Burst3d*>   bursts;
 
 	Terrain25D * terrain = NULL;
+
+    // --- Profiling / Debuging / Optimization
+
+    static constexpr int DEBUG_FLAG_SHOTS = 0b1;
+    int debugLevel=0;
+    int debugFlags=0;
+    int shotsCount=0,warriorCount=0;
+    int opCount_ShotObject=0;
 
     // -- Temporaries
     //std::vector<Vec3d> tmpPos; // We probably don't need this if we use

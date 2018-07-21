@@ -17,6 +17,7 @@
 #include "raytrace.h"
 
 inline Vec3d cog_of_points ( int n, Vec3d * points ){ Vec3d c;  c.set(0.0); for(int i=0;i<n; i++){ c.add(points[i]); }  c.mul(1.0d/n); return c; }
+
 inline double Rbound2( const Vec3d& center, int n, Vec3d * points ){
     double r2max=0;
     for(int i=0;i<n; i++){
@@ -40,7 +41,6 @@ class Capsula3D{ public:
     Vec3d  p,hdir;
     double r,l;
 
-
     inline double dist2( const Vec3d& pos ) const {
         Vec3d d; d.set_sub( pos, p );
         double x  = d.makeOrthoU(hdir);
@@ -55,8 +55,9 @@ class Capsula3D{ public:
         double x  = d.makeOrthoU(hdir);
         double y2 = d.norm2();
         double dist2 = 0.0;
-        if (x <0         ){ dist2 += sq(x); }else if(x>l){ dist2 += sq(x-l); };
+        if (x <0    ){ dist2 += sq(x); }else if(x>l){ dist2 += sq(x-l); };
         if (y2>sq(r)){ dist2 += sq(sqrt(y2)-r); };
+        //printf( "x %g y %g dist2 %g  |  l %g r %g \n", x, sqrt(y2), dist2,   l, r );
         return dist2;
     }
 

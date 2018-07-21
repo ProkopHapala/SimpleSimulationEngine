@@ -19,7 +19,8 @@ void AppSDL2OGL::loop( int n ){
 	loopEnd = false;
 	for( int iframe=0; iframe<n; iframe++ ){
 		inputHanding();
-		if(!STOP){update();}
+		//if(!STOP){update();} // DEPRECATED: usually we want to stop physics, not drawing
+		update();
 		//printf(" %i \n", iframe );
         wait(delay);
 		//if( delay>0 ) SDL_Delay( delay );

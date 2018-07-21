@@ -57,7 +57,7 @@ class Object3d{ public:
     virtual double ray( const Vec3d& ray0, const Vec3d& hRay, Vec3d * normal ){ return ray_Sphere( ray0, hRay, normal ); };
 
     virtual bool getShot( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt ){
-        printf(" Object3d::getShot() \n");
+        //printf(" Object3d::getShot() \n");
         return getShot_Sphere(p0,p1);
     };
 
