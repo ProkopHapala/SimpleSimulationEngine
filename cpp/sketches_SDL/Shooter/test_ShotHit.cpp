@@ -44,54 +44,62 @@
 */
 
 double projLifetime = 10.0;
-
 double airDensity = 1.27;
 
-const int nshots = 20;
-Vec3d tmpPos[nshots];
+//const int nshots = 20;
+//Vec3d tmpPos[nshots];
 
-
-void checkHit_N2( std::vector<Projectile3D*>& projectiles, std::vector<Vec3d>& objects ){
-    auto it_proj = projectiles.begin();
-    while( it_proj != projectiles.end() ) {
-        Projectile3D * proj = *it_proj;
-        bool hitted = false;
-        for( Vec3d& o : objects ){
-
-        }
-        /*
-        Vec3d hRay,normal;
-        hRay.set_sub( proj->pos, proj->old_pos );
-        double tmax = hRay.normalize();
-        for( o : objects ){
-            o->ray( proj->old_pos, hRay, &normal );
-            if (hitted) break;
-        }
-        */
-        if( hitted || (proj->time > projLifetime) ){
-            it_proj = projectiles.erase( it_proj );
-            delete proj;
-        }else{
-            ++it_proj;
-        }
+class Target : public Object3d{ public:
+    int nhits=0;
+    int nboxhits=0;
+    //virtual bool getShot( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt ){
+    virtual bool getShot( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt ) override {
+        printf("getShot \n");
+        bool bHit = getShot_Sphere(p0,p1);
+        nboxhits++;
+        if(bHit) nhits++;
+        return bHit;
     }
-}
+    void draw(){
+        glPushMatrix();
+        glTranslatef( pos.x, pos.y, pos.z );
+        glScalef(R,R,R);
+        //glCallList( defaultObjectHitShape );
+        float g = 0.0; if(nboxhits) g=1.0;
+        if(nhits){ glColor3f(1.0,g,0.0); }else{ glColor3f(0.0,g,1.0); }
+        glCallList( type->ogl );
+        glPopMatrix();
+    }
+    Target( double R_, Vec3d pos_, ObjectType* type_, int id_ ){R=R_;pos=pos_;type=type_;id=id_;  };
+};
 
-
-void drawBurst( Burst3d& burst, Vec3d* tmpPos = 0 ){
+void drawBurst( Burst3d& burst, int nseg, double dt ){
     glColor3f(1.0,0.0,0.0);
     int n = burst.shots.size();
+    Vec3d op;
     for(int i=0; i<n; i++){
         Draw3D::drawPointCross( burst.shots[i].pos, 0.1 );
-        if( tmpPos ) Draw3D::drawLine( tmpPos[i], burst.shots[i].pos );
+        //if( tmpPos ) Draw3D::drawLine( tmpPos[i], burst.shots[i].pos );
+        burst.shots[i].getOldPos(dt,op);
+        Draw3D::drawLine( op, burst.shots[i].pos );
     }
-    if( tmpPos ){ glColor3f(1.0,1.0,0.0); Draw3D::drawPointCross( tmpPos[n-1], 0.5 ); }
+    //if( tmpPos ){ glColor3f(1.0,1.0,0.0); Draw3D::drawPointCross( tmpPos[n-1], 0.5 ); }
+    burst.shots[0].getOldPos(dt,op);
+    glColor3f(1.0,1.0,0.0); Draw3D::drawPointCross( op, 0.5 );
     glColor3f(0.0,1.0,1.0); Draw3D::drawPointCross( burst.shots[0].pos, 0.5 );
     glColor3f(0.0,0.5,0.0);
     Vec3d b = burst.bbox.p+burst.bbox.hdir*burst.bbox.l;
     Draw3D::drawPointCross( burst.bbox.p, 3.0 );
     Draw3D::drawPointCross( b           , 3.0 );
-    Draw3D::drawCylinderStrip_wire( 16, burst.bbox.r, burst.bbox.r, (Vec3f)burst.bbox.p, (Vec3f)b );
+    Draw3D::drawCylinderStrip_wire( nseg, burst.bbox.r, burst.bbox.r, (Vec3f)burst.bbox.p, (Vec3f)b );
+}
+
+void fireBurst( Burst3d* burst, int n, double dt, const Vec3d& pos0, const Vec3d& vel0, double vrnd, double prnd ){
+    for(int i=0; i<n; i++){
+        Vec3d p = pos0 - vel0*dt*i + (Vec3d){randf(-vrnd,vrnd),randf(-vrnd,vrnd),randf(-vrnd,vrnd)};
+        Vec3d v = vel0 + (Vec3d){randf(-prnd,prnd),randf(-prnd,prnd),randf(-prnd,prnd)};
+        burst->addShot( p, v );
+    }
 }
 
 class TestAppShotHit : public AppSDL2OGL_3D {
@@ -102,6 +110,7 @@ class TestAppShotHit : public AppSDL2OGL_3D {
 
     int glo_burst = 0;
     ProjectileType projType1;
+    ObjectType     objType1;
     Burst3d burst;
 
     //std::vector<KinematicBody*> objects;
@@ -133,8 +142,9 @@ TestAppShotHit::TestAppShotHit( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
     defaultObjectHitShape = glGenLists(1);
     glNewList( defaultObjectHitShape , GL_COMPILE );
         glDisable ( GL_LIGHTING );
-        Draw3D::drawAxis ( 3.0f );
-        glColor3f( 0.8f, 0.0f, 0.8f ); Draw3D::drawSphereOctLines( 16, 2.0, (Vec3f){0.0,0.0,0.0} );
+        //Draw3D::drawAxis ( 3.0f );
+        //glColor3f( 0.8f, 0.0f, 0.8f );
+        Draw3D::drawSphereOctLines( 16, 2.0, (Vec3f){0.0,0.0,0.0} );
     glEndList();
 
     objects = new Vec3d[ nobject ];
@@ -150,28 +160,33 @@ TestAppShotHit::TestAppShotHit( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
     //projType1.explosiveMass = ;
     projType1.updateAux( 0.3 );
 
+    objType1.ogl = defaultObjectHitShape;
 
-    burst.type = &projType1;
-    Vec3d vel0 = {800.0,0.0,0.0};
-    Vec3d pos0 = {0.0,0.0,0.0};
-    double dt = 0.02;
-    double vrnd = 1;
-    double prnd = 1;
-    for(int i=0; i<nshots; i++){
-        Vec3d p = pos0 - vel0*dt*i + (Vec3d){randf(-vrnd,vrnd),randf(-vrnd,vrnd),randf(-vrnd,vrnd)};
-        Vec3d v = vel0 + (Vec3d){randf(-prnd,prnd),randf(-prnd,prnd),randf(-prnd,prnd)};
-        burst.addShot( p, v );
+    for(int i=0; i<10; i++){
+        Vec3d pos; pos.fromRandomCube(10.0);
+        Vec3d vel;
+        //vel.fromRandomSphereSample();
+        vel.fromRandomSphereSample();
+        vel.mul(800.0);
+        Burst3d* burst = new Burst3d(&projType1, i);
+        fireBurst( burst, 10, 0.02, pos, vel, 1.0, 1.0 );
+        world.bursts.push_back( burst );
     }
 
-    burst.move( 0.1, {0.0,-9.81,0.0}, airDensity, tmpPos );
-
-    glo_burst = glGenLists(1);
-    glNewList( glo_burst , GL_COMPILE);
-    drawBurst( burst, tmpPos );
-    glEndList();
+    double objR = 5.0;
+    for(int i=0; i<50; i++){
+        Vec3d p; p.fromRandomCube(100.0);
+        //Object3d* o = new Object3d( objR, p, &objType1, i );
+        Object3d* o = new Target( objR, p, &objType1, i );
+        //o->pos(,objType1);
+        world.objects.push_back(o);
+    }
 
     zoom = 160.0;
+    world.perFrame = 1;
+    world.update_world();
 
+    printf( "SETUP DONE \n"  );
 }
 
 void TestAppShotHit::draw(){
@@ -179,34 +194,19 @@ void TestAppShotHit::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	if(frameCount%10==0) burst.move( 0.1, {0.0,-9.81,0.0}, airDensity, tmpPos );
+	//if(frameCount%10==0) burst.move( 0.1, {0.0,-9.81,0.0}, airDensity, tmpPos );
 
-	drawBurst( burst, tmpPos );
+	for( Burst3d* burst : world.bursts ){
+        //if(frameCount%10==0) world.update_world();
+        //burst->move( 0.1, {0.0,-9.81,0.0}, airDensity );
+        drawBurst( *burst, 8, world.dt );
+	}
 
-	glCallList( glo_burst );
+	//glCallList( glo_burst );
 
-
-	/*
-    //for( auto o : world.objects ) {
-    for( int i=0; i<nobject; i++ ) {
-        //float glMat[16];
-        glPushMatrix();
-        //Draw3D::toGLMat( o->lpos, o->lrot, glMat );
-        //glMultMatrixf( glMat );
-        Vec3d * o = objects + i;
-        glTranslatef( o->x, o->y, o->z );
-
-        //double t = raySphere( {0.0d,0.0d,0.0d}, camMat.c, 2.0, o->lpos );
-        double t = raySphere( (Vec3d)cam.pos, (Vec3d)cam.rot.c, 2.0, *o );
-        if( ( t>0 ) && (t < 1000.0 ) ){
-            //printf( " t %f  pos (%3.3f,%3.3f,%3.3f) \n", t, o->lpos.x, o->lpos.y, o->lpos.z );
-            glCallList( defaultObjectHitShape );
-        }
-
-        glCallList( defaultObjectShape );
-        glPopMatrix();
+    for( Object3d* o : world.objects ){
+        if(o->type == &objType1 ) ((Target*)o)->draw();
     }
-    */
 
 };
 
@@ -235,20 +235,6 @@ void TestAppShotHit::drawHUD(){
     glVertex3f( whalf,hhalf-10, 0 ); glVertex3f( whalf,hhalf+10, 0 );
     glEnd();
 }
-
-/*
-void TestAppShotHit::mouseHandling( ){
-    int mx,my;
-    SDL_GetMouseState( &mouseX, &mouseY );   mouseY=HEIGHT-mouseY;
-    mouse_begin_x = (2*mouseX-WIDTH )*zoom/HEIGHT;
-    mouse_begin_y = (2*mouseY-HEIGHT)*zoom/HEIGHT;
-    Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
-    //if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-        Quat4f q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
-        qCamera.qmul_T( q );
-    //}
-}
-*/
 
 // ===================== MAIN
 

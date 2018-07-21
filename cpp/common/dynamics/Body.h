@@ -37,6 +37,8 @@ class Particle3D{ public:
         vel.add_mul( accel, dt );
 		pos.add_mul( vel,   dt );
     }
+
+    inline void getOldPos(double dt, Vec3d& op) const { op.set_add_mul(pos,vel,-dt); }
 };
 
 typedef Particle3D<float>  Particle3f;

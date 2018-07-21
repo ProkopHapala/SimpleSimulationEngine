@@ -155,6 +155,8 @@ class Tanks_single : public AppSDL2OGL_3D {
     //Warrior3D *warrior1;
     Tank *warrior1;
 
+    std::vector<Object3D*> objects;
+
     int hitShape, warriorShape, objectShape;
 
     double camPhi,camTheta;
@@ -210,7 +212,6 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         //o->bounds.orientation.set({});
         //o->bounds.span.set(o->bounds.orientation.a.normalize(),o->bounds.orientation.a.normalize(),o->bounds.orientation.a.normalize());
 
-
         o->lrot.fromRand( {randf(0,1),randf(0,1),randf(0,1)} );
         o->grot = o->lrot;
         o->span.set( randf(0.2,2.0), randf(0.2,2.0), randf(0.2,2.0) );
@@ -233,7 +234,8 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         //o->bounds.pos.set( {0.0,0.0,0.0} );
         o->shape= sphereShape;
         o->id = i;
-        world.objects.push_back(o);
+        //world.objects.push_back(o);
+        objects.push_back(o);
 
     }
 
@@ -323,7 +325,7 @@ void Tanks_single::draw(){
     Vec3d hRay,ray0,normal;
     hRay.set((Vec3d)cam.rot.c);
     ray0.set((Vec3d)cam.pos);
-    for( auto o : world.objects ) {
+    for( auto o : objects ) {
 
         glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos( o->grot.a*o->span.a*1.2, o->gpos );
         glColor3f(0.0f,1.0f,0.0f); Draw3D::drawVecInPos( o->grot.b*o->span.b*1.2, o->gpos );
@@ -435,9 +437,6 @@ void Tanks_single::draw(){
             Draw3D::drawPolygonBorder( ipl, *block );
         glPopMatrix();
         char str[64];
-
-
-
 
         sprintf(str,"%4.0fmm\0", effthick );
         Draw3D::drawText(str, ray0 + hRay*t, fontTex, 0.2, 0 );

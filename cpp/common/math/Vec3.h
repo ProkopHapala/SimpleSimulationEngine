@@ -274,6 +274,8 @@ class Vec3TYPE{
         setHomogenousSphericalSample( (randf()*2)-1.0, randf()*2*M_PI );
     }
 
+    inline void fromRandomCube( double d ){ x=randf(-d,d); y=randf(-d,d); z=randf(-d,d); }
+
     inline void fromLinearSolution( const VEC& va, const VEC& vb, const VEC& vc, const VEC& p ){
         // https://en.wikipedia.org/wiki/Cramer%27s_rule
         // 30 multiplications
@@ -312,16 +314,19 @@ using Vec3f = Vec3TYPE<float>;
 using Vec3d = Vec3TYPE<double>;
 
 static constexpr Vec3d Vec3dZero = (Vec3d){0.0d,0.0d,0.0d};
+static constexpr Vec3d Vec3dOne  = (Vec3d){1.0d,1.0d,1.0d};
 static constexpr Vec3d Vec3dX    = (Vec3d){1.0d,0.0d,0.0d};
 static constexpr Vec3d Vec3dY    = (Vec3d){0.0d,1.0d,0.0d};
 static constexpr Vec3d Vec3dZ    = (Vec3d){0.0d,0.0d,1.0d};
 
 static constexpr Vec3f Vec3fZero = (Vec3f){0.0f,0.0f,0.0f};
+static constexpr Vec3f Vec3fOne  = (Vec3f){1.0f,1.0f,1.0f};
 static constexpr Vec3f Vec3fX    = (Vec3f){1.0f,0.0f,0.0f};
 static constexpr Vec3f Vec3fY    = (Vec3f){0.0f,1.0f,0.0f};
 static constexpr Vec3f Vec3fZ    = (Vec3f){0.0f,0.0f,1.0f};
 
 static constexpr Vec3i Vec3iZero = (Vec3i){0,0,0};
+static constexpr Vec3i Vec3iOne  = (Vec3i){1,1,1};
 static constexpr Vec3i Vec3iX    = (Vec3i){1,0,0};
 static constexpr Vec3i Vec3iY    = (Vec3i){0,1,0};
 static constexpr Vec3i Vec3iZ    = (Vec3i){0,0,1};

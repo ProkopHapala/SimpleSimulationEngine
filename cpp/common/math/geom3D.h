@@ -40,15 +40,63 @@ class Capsula3D{ public:
     Vec3d  p,hdir;
     double r,l;
 
+
+    inline double dist2( const Vec3d& pos ) const {
+        Vec3d d; d.set_sub( pos, p );
+        double x  = d.makeOrthoU(hdir);
+        double y2 = d.norm2();
+        double dist2 = y2;
+        if (x <0    ){ dist2 += sq(x); }else if(x>l){ dist2 += sq(x-l); };
+        return dist2;
+    }
+
     inline double dist2_Cilinder( const Vec3d& pos ) const {
         Vec3d d; d.set_sub( pos, p );
         double x  = d.makeOrthoU(hdir);
         double y2 = d.norm2();
         double dist2 = 0.0;
         if (x <0         ){ dist2 += sq(x); }else if(x>l){ dist2 += sq(x-l); };
-        if (y2<sq(r)){ dist2 += sq(sqrt(y2)-r); };
+        if (y2>sq(r)){ dist2 += sq(sqrt(y2)-r); };
         return dist2;
     }
+
+    void enclosePoints( int n, Vec3d* ps ){
+        double lmin = 0.0;
+        double lmax = l;
+        double r2max=0.0;
+        for( int i=0; i<n; i++ ){
+            Vec3d d; d.set_sub( ps[i], p );
+            double r2i,li;
+            li =d.makeOrthoU(hdir);
+            r2i=d.norm2();
+            if(r2i>r2max)r2max=r2i;
+            double dr2 = r2max-r2i;
+            if      (li>lmax) if( sq(li-lmax)>dr2 ){ lmax=li-sqrt(dr2);  }
+            else if (li<lmin) if( sq(li-lmin)>dr2 ){ lmin=sqrt(dr2)-li;  }
+        }
+        r = sqrt(r2max);
+        l = lmax-lmin;
+        p.set_add_mul( p, hdir, lmin );
+	}
+
+    void enclosePoints_Cylinder( int n, Vec3d* ps ){
+        double lmin =0.0;
+        double lmax =l;
+        double r2max=0.0;
+        for( int i=0; i<n; i++ ){
+            Vec3d d; d.set_sub( ps[i], p );
+            double r2i,li;
+            li =d.makeOrthoU(hdir);
+            r2i=d.norm2();
+            if(r2i>r2max)r2max=r2i;
+            if      (li>lmax){lmax=li;}
+            else if (li<lmin){lmin=li;}
+        }
+        r = sqrt(r2max);
+        l = lmax-lmin;
+        p.set_add_mul( p, hdir, lmin );
+	}
+
 };
 
 class Box{ public:

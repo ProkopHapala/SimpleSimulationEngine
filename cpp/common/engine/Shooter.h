@@ -29,9 +29,10 @@ class Shooter {
 
 	int debug_shit=19;
 
-    int perFrame = 10;
-    double dt    = 0.005d;
-    double time  = 0.0d;
+    int perFrame  = 10;
+    double dt     = 0.005d;
+    double inv_dt = 1/dt;
+    double time   = 0.0d;
 
     double ground_height = 0.0d; // only if there is no terrain
 
@@ -41,28 +42,36 @@ class Shooter {
 
     Vec3d wind_speed,watter_speed;
 
-    double projLifetime = 10.0;
+    double projLifetime = 10.0; //
+    int nMaxBurst       = 10;   // when there is more shots in burst, new burst is created
+    int nBurstReserve   = 10;   // optimization - we avoid re-allocation of Burst3d::shots when new shots are added
 
     int shotsCount=0,warriorCount=0;
 
-    std::vector<Vec3d> tmpPos;
+    // -- types
+    std::vector<ProjectileType*> projectile_types;
+    std::vector<ObjectType*>     objectTypes;
+    std::vector<VehicleType*>    vehicleTypes;
 
-	std::vector<Warrior3D*>     warriors;
-	std::vector<Warrior25D*>    warriors25D;
-	std::vector<Projectile3D*>  projectiles;  // see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
-	std::vector<Object3D*>      objects;
-	std::vector<AnyControler*>  controlers;
+    // -- Objects
+	std::vector<Warrior3D*>      warriors;     // DEPRECATED : use Vehicle3d instead
+	std::vector<Warrior25D*>     warriors25D;  // TODO : is it worth it? used just for optimization in some Tactics games ?
+	std::vector<Projectile3D*>   projectiles;  // Reserve some size? see http://stackoverflow.com/questions/11457571/how-to-set-initial-size-of-stl-vector
+	//std::vector<Object3D*>       objects;      // DEPRECATED : use Object3d instead
+	std::vector<AnyControler*>   controlers;
 
+	std::vector<Object3d*>  objects;
 	std::vector<Vehicle3d*> vehicles;
 	std::vector<Burst3d*>   bursts;
 
 	Terrain25D * terrain = NULL;
 
+    // -- Temporaries
+    //std::vector<Vec3d> tmpPos; // We probably don't need this if we use
+
     // ==== function declarations
 
-
     void burstObjectCollision( Object3d& obj, Burst3d& burst );
-
 
     virtual void update_warriors3D();
     virtual void update_warriors25D();

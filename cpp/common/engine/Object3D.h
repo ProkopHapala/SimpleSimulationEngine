@@ -18,17 +18,26 @@ class BodyControler{ public:
 class VisualShape{ public:
 };
 
-class VehicleType{ public:
+class ObjectType{ public:
+    Vec3d span     = Vec3dZero;
+    CollisionShape * shape = 0;         // in case can be also used to store visual shape ?
+    //VisualShape    * visualShape = 0; // DEPRECATED: for drawing complex shapes, can be added in derived types
+    int ogl=0;                          // for drawing simple shapes usually sufficient
+};
+
+class VehicleType : ObjectType { public:
 };
 
 class Object3d{ public:
-    int id,kind;
-    Vec3d pos;                      // global pos  (we do not need local pos - that is eventually done by controler)
-    Mat3d rot;                      // global rot
-    double R;                       // radisus for spherical bounding box
-    BodyControler  * control     = 0; // this can modify/override state of object
-    CollisionShape * colShape    = 0;
-    VisualShape    * visualShape = 0;
+    int id=-1;
+    //int kind=-1;                      // DEPRECATED : we use type instead
+    Vec3d pos=Vec3dZero;                // global pos  (we do not need local pos - that is eventually done by controler)
+    Mat3d rot=Mat3dIdentity;            // global rot
+    double R=0;                         // radisus for spherical bounding box
+    BodyControler  * control = 0;       // this can modify/override state of object
+    //CollisionShape * colShape    = 0; // DEPRECATED: inside type
+    //VisualShape    * visualShape = 0; // DEPRECATED: inside type
+    ObjectType * type = 0;              //
 
     inline bool pointIn_Sphere( const Vec3d& p ){
         return sq(R)>pos.dist2(p);
@@ -48,20 +57,27 @@ class Object3d{ public:
     virtual double ray( const Vec3d& ray0, const Vec3d& hRay, Vec3d * normal ){ return ray_Sphere( ray0, hRay, normal ); };
 
     virtual bool getShot( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt ){
+        printf(" Object3d::getShot() \n");
         return getShot_Sphere(p0,p1);
     };
 
+    Object3d(){};
+    Object3d( double R_, Vec3d pos_, ObjectType* type_, int id_ ){R=R_;pos=pos_;type=type_;id=id_;  };
+    //Object3d( double R, Vec3d pos ){};
 };
 
 class Vehicle3d : public Object3d {  public:
-    Vec3d  vel;
-    Vec3d  angMomentum;
-    double mass;
-    Vec3d  invIbody;     // This may be in type, but 1) this is faster 2) mass distribution may change during simulation
-    VehicleType * type;
+    Vec3d  vel=Vec3dZero;
+    Vec3d  angMomentum=Vec3dZero;
+    double mass=1.0;
+    Vec3d  invIbody=Vec3dOne;  // This may be in type, but 1) this is faster 2) mass distribution may change during simulation
+    //VehicleType * type;      // DEPRECATED: we rather cast Object3d::type
 };
 
-
+////////////////////////////////////////
+//        Object3D ( DEPRECATED )
+//////////////////////////////////
+// - currently used only in "Tanks" demo
 
 
 class Object3D_Interface{ public:
