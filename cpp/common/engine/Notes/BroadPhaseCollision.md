@@ -55,3 +55,10 @@
     - for all directions [i] sweep over burstList[i] and objectList[i] simultaneously and search collision
  - **choice of directions** - We would like to collide those projectiles with compact (sphere-like, box-like) objects which are scattered mostly in xz-plane ( vertical spread along y-axis is much smaller especially for objects on the ground). Also projectiles are often affected by gravity (especially bombs) and their trajectory is cureved in y-direction, thus v_y component is not conserved during flight. Threfore best choice of direction is azimuthal in xz-plane. We do not want to much directions as we have to keep sorted lists of all scene objects along each of them. Reasonable choice is therefore 4 directions ( x,z,zx,xy ) or 6-8 max.
 - **Amortization of sorting cost** - due to temporal coherency (i.e. objects does not move so much between frames, especially for slow ground vehicles) the lists are almost sorted from previous frame. We use cheap updates by insertion sort, or shell sort (https://www.toptal.com/developers/sorting-algorithms/nearly-sorted-initial-order)
+
+
+
+# AABB Tree
+- https://www.azurefromthetrenches.com/introductory-guide-to-aabb-tree-collision-detection/
+- https://github.com/lohedges/aabbcc
+

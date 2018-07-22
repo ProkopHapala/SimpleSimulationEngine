@@ -15,7 +15,7 @@ const double t_inf = 1e+300;
 
 inline void setToRay( const Vec3d& ro, const Vec3d& rd, Vec3d& p ){
     Vec3d d; d.set_sub(p,ro); d.makeOrthoU(rd);
-    printf( "setToRay %g %g %g \n", d.x, d.y, d.z );
+    //printf( "setToRay %g %g %g \n", d.x, d.y, d.z );
     p.sub(d);
 }
 

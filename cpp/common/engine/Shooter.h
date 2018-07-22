@@ -56,9 +56,10 @@ class Shooter { public:
 	//std::vector<Object3D*>       objects;      // DEPRECATED : use Object3d instead
 	std::vector<AnyControler*>   controlers;
 
-	std::vector<Object3d*>  objects;
-	std::vector<Vehicle3d*> vehicles;
-	std::vector<Burst3d*>   bursts;
+	std::vector<Object3d*>  objects;    // mostly static objects - position does not updates each frame
+	std::vector<Vehicle3d*> vehicles;   // any dynamic object (governed by physical simulation)
+	//std::vector<Agent3d*>   agents;   // agent - actively moving object (replaces Warrior)
+	std::vector<Burst3d*>   bursts;     // bunches of projectiles
 
 	Terrain25D * terrain = NULL;
 

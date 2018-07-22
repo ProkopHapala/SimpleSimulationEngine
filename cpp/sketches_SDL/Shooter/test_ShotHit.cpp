@@ -46,9 +46,6 @@
 double projLifetime = 10.0;
 double airDensity = 1.27;
 
-//const int nshots = 20;
-//Vec3d tmpPos[nshots];
-
 class Target : public Object3d{ public:
     int nhits=0;
     int nboxhits=0;
@@ -103,20 +100,13 @@ void fireBurst( Burst3d* burst, int n, double dt, const Vec3d& pos0, const Vec3d
     }
 }
 
-class TestAppShotHit : public AppSDL2OGL_3D {
-	public:
-    //MultiFight3DWorld world;
+class TestAppShotHit : public AppSDL2OGL_3D { public:
     double dvel = 10.0;
     Shooter world;
 
     int glo_burst = 0;
     ProjectileType projType1;
     ObjectType     objType1;
-    Burst3d burst;
-
-    //std::vector<KinematicBody*> objects;
-    int nobject = 100;
-    Vec3d* objects;
 
     int defaultObjectShape, defaultObjectHitShape;
 
@@ -146,12 +136,6 @@ TestAppShotHit::TestAppShotHit( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
         //Draw3D::drawSphereOctLines( 16, 2.0, (Vec3f){0.0,0.0,0.0} );
         Draw3D::drawSphere_oct( 3, 1.0, (Vec3f){0.0,0.0,0.0}, true );
     glEndList();
-
-    objects = new Vec3d[ nobject ];
-    float Lspan = 50.0;
-    for( int i=0; i<nobject; i++ ){
-        objects[i].set( randf(-Lspan,Lspan), randf(-Lspan,Lspan), randf(-Lspan,Lspan) );
-    }
 
     // https://en.wikipedia.org/wiki/5.56%C3%9745mm_NATO
 

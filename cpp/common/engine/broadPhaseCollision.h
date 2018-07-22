@@ -10,6 +10,10 @@
 // http://www.cs.jhu.edu/~cohen/Publications/icollide.pdf
 
 
+// IDEA - Fast Update Of Polar Basis For Point Clusters
+//  - instead of diagonalization of 3x3 matrix, we may just do few(1-5) steps of PowerIteration
+//  - bounds are calculated for previous orientation => does not have to screen points twice
+
 
 // Sweep-and-prune inside larger boxes ?
 
@@ -175,19 +179,45 @@ struct SAPitem{
     // TODO: perhaps it can be more efficient use independnet arrays per each axis
     void* o;
     Vec2f span;
+    inline bool operator < (const SAPitem& o) const{ return (span.x < o.span.x); }
 };
 
-class SAPbuff{
+
+static int collideCrossSAP_Objects( std::vector<SAPitem>& sweepi, std::vector<SAPitem>& sweepj, bool inv=false ){
+    int ni = sweepi.size();
+    int nj = sweepj.size();
+    int ncol=0;
+    for(int i=0; i<ni; i++ ){
+        const SAPitem& itemi = sweepi[i];
+        Object3d* oi = (Object3d*)itemi.o;
+        const Vec2f& spani = itemi.span;
+        int j0 = 0;
+        while( sweepj[j0].span.x<spani.x ){ j0++; if(j0>=nj) return ncol;  }
+        int j = j0;
+        while( sweepj[j].span.x<spani.y ){
+            Object3d* oj = (Object3d*)sweepj[j].o;
+            if(inv){ oj->collide(oi); }else{ oi->collide(oj); };
+            //println( "add "+i+" "+j+" "+collisions.size()+" ("+pi.x+","+pi.y+") "+" ("+set2[j].x+","+set2[j].y+") " );
+            j++;
+            if(j>=nj) break;
+        }
+    }
+    return ncol;
+}
+
+class SAPbuff{ public:
     // TODO:
     //  - This is general version, we may define specialized versions (e.g. along cartesian axis) later
     //  - We may cast generatized version to this version later
+    //  - We sould store permutation, so that we can update particles
     int ndirs;
     Vec3d* dirs = 0;
     //std::vector<int>[ndirs] sweeps;
     std::vector<std::vector<SAPitem>> sweeps; // TODO: should be later optimized to 2D array?
 
-    void init( int ndirs_, Vec3d* directions, int nItemGeuss ){
+    void init( int ndirs_, Vec3d* dirs_, int nItemGeuss ){
         ndirs=ndirs_;
+        dirs = dirs_;
         sweeps.resize(ndirs);
         int i=0;
         for( int i=0; i<ndirs; i++ ){
@@ -203,68 +233,63 @@ class SAPbuff{
         }
     }
 
-    void addObjects_sphere(int n, const Object3d* objs){
-        for(int i=0; i<n; i++){
-            const Object3d* o = objs+i;
-            addSphere( o, o->pos, o->R);
+    inline void addObject( Object3d* o ){
+        for(int idir=0; idir<ndirs; idir++){
+            sweeps[idir].push_back( { (void*)o, o->spanAlongDir(dirs[idir]) } ); // we can better use insertion sort or something like that
         }
     }
 
-    void updateObjects_sphere(){
+    void addObjects(int n, Object3d** objs){ for(int i=0; i<n; i++){ addObject( objs[i] ); } }
+
+    void updateObjects(){
         for(int idir=0; idir<ndirs; idir++){
             Vec3d dir = dirs[idir];
             std::vector<SAPitem>& sweep = sweeps[idir];
             for(SAPitem& item : sweep){
-                const Object3d& o = *(Object3d*)item.o;
-                double x = dir.dot( o.pos );
-                item.span.set( x-o.R,x+o.R );
+                //const Object3d& o = *(Object3d*)item.o;
+                //double x = dir.dot( o.pos );
+                //item.span.set( x-o.R,x+o.R );
+                item.span = ((Object3d*)item.o)->spanAlongDir(dir);
             }
         }
     }
 
     int collideSelfObjects(int idir){
+        //printf("collideSelfObjects \n");
         std::vector<SAPitem>& sweep = sweeps[idir];
         int n = sweep.size();
-        int ncol=0;
+        int ncol=0,ncomp=0,nhit=0;
+
+        //for(SAPitem& item : sweep){
+        //    printf( "-- span.x=%g \n", item.span.x  );
+        //}
         for( int i=0; i<n; i++){
+            //printf( "i=%i \n", i  );
+            //printf( "i=%i span.x=%g \n", i, sweep[i].span.x  );
             const SAPitem& itemi = sweep[i];
             Object3d* oi = (Object3d*)itemi.o;
             const Vec2f& spani = itemi.span;
-            double xmax = spani.x;
+            double xmax = spani.y;
+            //printf( "%i(%g,%g)\n", i, spani.x, spani.y  );
             for( int j=i+1; j<n; j++){
                 const SAPitem& itemj = sweep[j];
+                //printf( "(%i,%i) i.%g >? j.%g  \n", i,j, xmax, itemj.span.x ); ncomp++;
                 if ( itemj.span.x > xmax ) break; // cannot colide, and the later j also not
                 Object3d* oj = (Object3d*)itemj.o;
-                if( oi->collide_Object3d(oj) ){ // fast Bounding-Sphere test
-                    oi->collide( oj );
-                };
+                nhit+=
+                oi->collide(oj);
                 ncol++;
             }
         }
+        //printf( "collideSelfObjects : ncomps %i ncadidates : %i nhits %i | nBrute %i \n", ncomp, ncol, nhit, n*(n-1)/2 );
         return ncol;
     }
 
-    static int collideCrossObjects( std::vector<SAPitem>& sweepi, std::vector<SAPitem>& sweepj ){
-        int ni = sweepi.size();
-        int nj = sweepj.size();
-        int ncol=0;
-        for(int i=0; i<ni; i++ ){
-            const SAPitem& itemi = sweepi[i];
-            Object3d* oi = (Object3d*)itemi.o;
-            const Vec2f& spani = itemi.span;
-            int j0 = 0;
-            while( sweepj[j0].span.x<spani.x ){ j0++; if(j0>=nj) return ncol;  }
-            int j = j0;
-            while( sweepj[j].span.x<spani.y ){
-                Object3d* oj = (Object3d*)sweepj[j].o;
-                if( oi->collide_Object3d(oj) ){ // fast Bounding-Sphere test
-                    oi->collide( oj );
-                };
-                //println( "add "+i+" "+j+" "+collisions.size()+" ("+pi.x+","+pi.y+") "+" ("+set2[j].x+","+set2[j].y+") " );
-                j++;
-                if(j>=nj) break;
-            }
-        }
+    int collideCrossObjects(int idir, std::vector<SAPitem>& sweepj ){
+        std::vector<SAPitem>& sweepi = sweeps[idir];
+        int ncol = 0;
+        ncol+=collideCrossSAP_Objects( sweepi, sweepj, false );
+        ncol+=collideCrossSAP_Objects( sweepj, sweepi, true  );
         return ncol;
     }
 
@@ -272,8 +297,19 @@ class SAPbuff{
         // TODO: std::sort (quicksort) may not be optimal, std::stable_sort (with insertion sort) may be faster for almost-sorted array
         //http://www.cplusplus.com/reference/algorithm/stable_sort/
         //https://stackoverflow.com/questions/23985891/what-is-the-difference-between-stdsort-and-stdstable-sort
-        for( auto sweep : sweeps ){
-            std::sort( sweep.begin(), sweep.end(), [](const SAPitem& a, const SAPitem& b){ return a.span.x>b.span.x; } );
+        int ncomp=0;
+        //for( auto& sweep : sweeps ){
+        for( std::vector<SAPitem>& sweep: sweeps ){
+        std::sort( sweep.begin(), sweep.end() );
+        //    std::sort( sweep.begin(), sweep.end(), [](const SAPitem& a, const SAPitem& b){ return a.span.x<b.span.x; } );
+        /*
+        std::sort( sweep.begin(), sweep.end(), [&](const SAPitem& a, const SAPitem& b){
+            ncomp++;
+            bool out  = a.span.x<b.span.x;
+            printf( "compare %i %i a(%g,%g) b(%g,%g) \n", ncomp, out, a.span.x, a.span.y, b.span.x, b.span.y );
+            return out; }
+        );
+        */
         }
     }
 };

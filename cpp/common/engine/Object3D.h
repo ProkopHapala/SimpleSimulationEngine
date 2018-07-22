@@ -26,7 +26,7 @@ class ObjectType{ public:
     int ogl=0;                          // for drawing simple shapes usually sufficient
 };
 
-class VehicleType : ObjectType { public:
+class VehicleType : public ObjectType { public:
 };
 
 class Object3d{ public:
@@ -40,33 +40,47 @@ class Object3d{ public:
     //VisualShape    * visualShape = 0; // DEPRECATED: inside type
     ObjectType * type = 0;              //
 
-    inline bool hitPoint_Object3d( const Vec3d& p, double r ){
+    inline bool hitPoint_Object3d( const Vec3d& p, double r ) const {
         return sq(R+r)>pos.dist2(p);
     };
 
-    inline bool hitLine_Object3d( const Vec3d& p0, const Vec3d& p1, double r ){
+    inline bool hitLine_Object3d( const Vec3d& p0, const Vec3d& p1, double r ) const {
         Vec3d hdir; hdir.set_sub(p1,p0);
         double l = hdir.normalize();
         double t; return sq(R+r)>linePointDistance2( p0, hdir, pos, l );
     };
 
-    inline bool hitRay_Object3d( const Vec3d& ray0, const Vec3d& hRay ){
+    inline bool hitRay_Object3d( const Vec3d& ray0, const Vec3d& hRay ) const {
         double t; return sq(R)>rayPointDistance2( ray0, hRay, pos, t );
     };
 
-    inline double ray_Object3d( const Vec3d& ray0, const Vec3d& hRay, Vec3d* normal ){
+    inline double ray_Object3d( const Vec3d& ray0, const Vec3d& hRay, Vec3d* normal ) const {
         double t = raySphere( ray0, hRay, R, pos );
         if(normal)sphereNormal( t, ray0, hRay, pos, *normal );
     };
 
     //inline bool collide_Object3d( Object3d* obj ){ return hitPoint(obj->pos, obj->R); }
-    inline bool collide_Object3d( Object3d* obj ){ return sq(R+obj->R)>pos.dist2(obj->pos); }
+    inline bool collideBoundingSpheres( Object3d* obj ) const { return sq(R+obj->R)>pos.dist2(obj->pos); }
 
-    virtual bool   collide ( Object3d* obj )                                                             { return collide_Object3d(obj);                         };
-    virtual bool   hitPoint( const Vec3d& p, double r=0.0 )                                              { return hitPoint_Object3d( p    , r );                 };
-    virtual bool   hitLine ( const Vec3d& p0, const Vec3d& p1, double r=0.0 )                            { return hitLine_Object3d( p0, p1, r );                 };
-    virtual double ray     ( const Vec3d& ray0, const Vec3d& hRay, Vec3d* normal )                       { return ray_Object3d( ray0, hRay, normal );            };
-    virtual bool   getShot ( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt ){ return hitLine_Object3d(p0,p1, prjType.caliber*0.5 ); };
+    // TODO: maybe we can move all virtual functions into "type" ? ... perhaps not
+    virtual bool   collideNarrow( Object3d* obj )                                                             { return true; };
+    virtual bool   hitPoint( const Vec3d& p, double r=0.0 )                                              const{ return hitPoint_Object3d( p    , r );                 };
+    virtual bool   hitLine ( const Vec3d& p0, const Vec3d& p1, double r=0.0 )                            const{ return hitLine_Object3d( p0, p1, r );                 };
+    virtual double ray     ( const Vec3d& ray0, const Vec3d& hRay, Vec3d* normal )                       const{ return ray_Object3d( ray0, hRay, normal );            };
+    virtual bool   getShot ( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt )     { return hitLine_Object3d(p0,p1, prjType.caliber*0.5 ); };
+
+    inline Vec2f spanAlongDir(Vec3d& hdir)const{
+        double x = hdir.dot(pos);
+        return (Vec2f){x-R,x+R};
+    }
+
+    inline  bool   collide( Object3d* obj ){
+        bool hit = collideBoundingSpheres(obj);
+        if( hit ) hit = collideNarrow(obj);
+        //if( hit ) hit = type ->collideNarrow(obj); // Where should be the virtual function ?
+        //if( hit ) hit = shape->collideNarrow(obj);
+        return hit;
+    };
 
     Object3d(){};
     Object3d( double R_, Vec3d pos_, ObjectType* type_, int id_ ){R=R_;pos=pos_;type=type_;id=id_;  };
