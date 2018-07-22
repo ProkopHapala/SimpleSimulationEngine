@@ -54,6 +54,9 @@ target_link_libraries( test_VortexLattice ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL
 add_executable       ( test_Collision test_Collision.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Collisions> )
 target_link_libraries( test_Collision ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
 
+add_executable       ( test_AABBTree test_AABBTree.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_AABBTree ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_BlockBuilder test_BlockBuilder.cpp $<TARGET_OBJECTS:SDL2OGL>  )
 target_link_libraries( test_BlockBuilder ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
