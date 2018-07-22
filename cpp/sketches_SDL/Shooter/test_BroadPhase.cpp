@@ -17,31 +17,11 @@
 #include "raytrace.h"
 //#include "Body.h"
 
-
 #include "Shooter.h"
-
 #include "broadPhaseCollision.h" // Move to Sooter later
 
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
-
-
-/*
-## TODO:
- - using Sooter
- - moving porejectiles along predefined paths (Lissajous curves?)
- - Projectiles ejected from user camera (fixed position or simple movement)
- - NxM problem (N bodies, M projectiles) each frame
-## HOW TO:
- #### Naieve NxM
- #### Hashmap
-   - large boxes, insert & remove only when leave the box
-   - Test my version of hashmap vs STL
- #### Projectile Bunches
-   - projectile fired from automatic canones are grouped to sommon bounding object
-   - when projectiles are scattered ( e.g. when they hit something ) they are released from bunch
-
-*/
 
 double projLifetime = 10.0;
 double airDensity = 1.27;
@@ -55,7 +35,7 @@ class Target : public Object3d{ public:
     //virtual bool getShot( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt ){
     virtual bool getShot( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt ) override {
         //printf("getShot \n");
-        bool bHit = Object3d::getShot(p0,p1,prjType,dt); // TODO: does it doe virtual dispatch ?
+        bool bHit = Object3d::getShot(p0,p1,prjType,dt);
         //bool bHit = hitLine_Object3d(p0,p1, prjType.caliber*0.5 );
         nboxhits++;
         if(bHit) nhits++;
@@ -103,7 +83,7 @@ void fireBurst( Burst3d* burst, int n, double dt, const Vec3d& pos0, const Vec3d
     }
 }
 
-class TestAppShotHit : public AppSDL2OGL_3D {
+class TestAppBroadPhase : public AppSDL2OGL_3D {
 	public:
     //MultiFight3DWorld world;
     double dvel = 10.0;
@@ -126,11 +106,11 @@ class TestAppShotHit : public AppSDL2OGL_3D {
 	virtual void eventHandling   ( const SDL_Event& event  );
 	//virtual void keyStateHandling( const Uint8 *keys );
 
-	TestAppShotHit( int& id, int WIDTH_, int HEIGHT_ );
+	TestAppBroadPhase( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-TestAppShotHit::TestAppShotHit( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+TestAppBroadPhase::TestAppBroadPhase( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     defaultObjectShape = glGenLists(1);
     glNewList( defaultObjectShape , GL_COMPILE );
@@ -196,7 +176,7 @@ TestAppShotHit::TestAppShotHit( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
     printf( "SETUP DONE \n"  );
 }
 
-void TestAppShotHit::draw(){
+void TestAppBroadPhase::draw(){
    // printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -250,7 +230,7 @@ void TestAppShotHit::draw(){
 
 };
 
-void TestAppShotHit::eventHandling ( const SDL_Event& event  ){
+void TestAppBroadPhase::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
     switch( event.type ){
         case SDL_KEYDOWN :
@@ -272,7 +252,7 @@ void TestAppShotHit::eventHandling ( const SDL_Event& event  ){
 }
 
 
-void TestAppShotHit::drawHUD(){
+void TestAppBroadPhase::drawHUD(){
     glDisable ( GL_LIGHTING );
     glColor3f( 0.0f, 1.0f, 0.0f );
     glBegin( GL_LINES );
@@ -285,14 +265,14 @@ void TestAppShotHit::drawHUD(){
 
 // ===================== MAIN
 
-TestAppShotHit * thisApp;
+TestAppBroadPhase * thisApp;
 
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
-	thisApp = new TestAppShotHit( junk , 800, 600 );
+	thisApp = new TestAppBroadPhase( junk , 800, 600 );
 	thisApp->loop( 1000000 );
 	return 0;
 }

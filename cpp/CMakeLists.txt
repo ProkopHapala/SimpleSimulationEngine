@@ -13,11 +13,15 @@ SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${AXULIARY_COMPILE_FLAGS}" )
 
 # ==== DIRS
 
-SET( MY_SRC_DIR "${CMAKE_SOURCE_DIR}" )
+SET( MY_SRC_DIR    "${CMAKE_SOURCE_DIR}" )
 SET( MY_BIN_SHARE  "${MY_SRC_DIR}/Build"       )
 
-SET( COMMON_SRCS     "${MY_SRC_DIR}/common"     )
-SET( COMMON_SDL_SRCS "${MY_SRC_DIR}/common_SDL" )
+
+SET( COMMON_SRCS       "${MY_SRC_DIR}/common"     )
+SET( COMMON_SDL_SRCS  "${MY_SRC_DIR}/common_SDL" )
+SET( COMMON_RESOURCES "${MY_SRC_DIR}/common_resources"       )
+SET( COMMON_SHADERS   "${MY_SRC_DIR}/common_resources/shaders" )
+
 include_directories(
         ${COMMON_SRCS}
         ${COMMON_SRCS}/algorithms
@@ -41,6 +45,7 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )
 #file (GLOB_RECURSE _ALL_SRCS_ *.h *.cpp *.c )
 file (GLOB_RECURSE _COMMON_SRCS_     ${COMMON_SRCS}/*.h     ${COMMON_SRCS}/*.cpp     ${COMMON_SRCS}/*.c     )
 file (GLOB_RECURSE _COMMON_SDL_SRCS_ ${COMMON_SDL_SRCS}/*.h ${COMMON_SDL_SRCS}/*.cpp ${COMMON_SDL_SRCS}/*.c )
+file (GLOB_RECURSE _COMMON_SHADERS_  ${COMMON_SHADERS}/*.glslv  ${COMMON_SHADERS}/*.glslf    )
 
 # ==== BUILD TARGETS
 

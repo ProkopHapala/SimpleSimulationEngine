@@ -4,6 +4,7 @@
 #include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
+#include "raytrace.h"
 #include "geom3D.h"
 #include "Collisions.h"
 #include "Body.h"
@@ -39,27 +40,33 @@ class Object3d{ public:
     //VisualShape    * visualShape = 0; // DEPRECATED: inside type
     ObjectType * type = 0;              //
 
-    inline bool pointIn_Sphere( const Vec3d& p ){
-        return sq(R)>pos.dist2(p);
+    inline bool hitPoint_Object3d( const Vec3d& p, double r ){
+        return sq(R+r)>pos.dist2(p);
     };
 
-    inline bool ray_Sphere( const Vec3d& ray0, const Vec3d& hRay, Vec3d * normal ){
+    inline bool hitLine_Object3d( const Vec3d& p0, const Vec3d& p1, double r ){
+        Vec3d hdir; hdir.set_sub(p1,p0);
+        double l = hdir.normalize();
+        double t; return sq(R+r)>linePointDistance2( p0, hdir, pos, l );
+    };
+
+    inline bool hitRay_Object3d( const Vec3d& ray0, const Vec3d& hRay ){
         double t; return sq(R)>rayPointDistance2( ray0, hRay, pos, t );
     };
 
-    inline bool getShot_Sphere( const Vec3d& p0, const Vec3d& p1 ){
-        Vec3d hdir; hdir.set_sub(p1,p0);
-        double l = hdir.normalize();
-        double t; return sq(R)>linePointDistance2( p0, hdir, pos, l );
+    inline double ray_Object3d( const Vec3d& ray0, const Vec3d& hRay, Vec3d* normal ){
+        double t = raySphere( ray0, hRay, R, pos );
+        if(normal)sphereNormal( t, ray0, hRay, pos, *normal );
     };
 
-    virtual bool pointIn( const Vec3d& p ){ return pointIn_Sphere( p ); };
-    virtual double ray( const Vec3d& ray0, const Vec3d& hRay, Vec3d * normal ){ return ray_Sphere( ray0, hRay, normal ); };
+    //inline bool collide_Object3d( Object3d* obj ){ return hitPoint(obj->pos, obj->R); }
+    inline bool collide_Object3d( Object3d* obj ){ return sq(R+obj->R)>pos.dist2(obj->pos); }
 
-    virtual bool getShot( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt ){
-        //printf(" Object3d::getShot() \n");
-        return getShot_Sphere(p0,p1);
-    };
+    virtual bool   collide ( Object3d* obj )                                                             { return collide_Object3d(obj);                         };
+    virtual bool   hitPoint( const Vec3d& p, double r=0.0 )                                              { return hitPoint_Object3d( p    , r );                 };
+    virtual bool   hitLine ( const Vec3d& p0, const Vec3d& p1, double r=0.0 )                            { return hitLine_Object3d( p0, p1, r );                 };
+    virtual double ray     ( const Vec3d& ray0, const Vec3d& hRay, Vec3d* normal )                       { return ray_Object3d( ray0, hRay, normal );            };
+    virtual bool   getShot ( const Vec3d& p0, const Vec3d& p1, const ProjectileType& prjType, double dt ){ return hitLine_Object3d(p0,p1, prjType.caliber*0.5 ); };
 
     Object3d(){};
     Object3d( double R_, Vec3d pos_, ObjectType* type_, int id_ ){R=R_;pos=pos_;type=type_;id=id_;  };

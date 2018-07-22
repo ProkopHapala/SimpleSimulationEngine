@@ -76,7 +76,7 @@ target_link_libraries( test_SSAO ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY
 add_executable       ( test_ScreenOGL3 test_ScreenOGL3.cpp $<TARGET_OBJECTS:SDL2OGL3> )
 target_link_libraries( test_ScreenOGL3 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
-add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} )
+add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} ${_COMMON_SHADERS_} )
 
 add_custom_command(
     TARGET ${PROJECT_NAME} test_DiffractShader test_SphereShader test_OrbitalRayMarch test_Texture test_SSAO test_ScreenOGL3 test_MeshOGL3 test_Instances

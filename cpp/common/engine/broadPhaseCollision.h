@@ -17,6 +17,7 @@
 //#include <unordered_set>
 //#include <set>
 #include <map>
+#include <algorithm>
 
 //#include "Projectile3D.h"
 //#include "Gun3D.h"
@@ -26,6 +27,10 @@
 #include "grids3D.h"
 
 #include "arrayAlgs.h"
+
+
+
+
 
 class BroadSpaceMapHash{
     int nIndTmpMax = 256;
@@ -166,9 +171,131 @@ int sweepAndPrune_simple( int n, Box* boxes, Vec3i axes, Vec2i* collisions ){
     return ncol;
 }
 
+struct SAPitem{
+    // TODO: perhaps it can be more efficient use independnet arrays per each axis
+    void* o;
+    Vec2f span;
+};
+
+class SAPbuff{
+    // TODO:
+    //  - This is general version, we may define specialized versions (e.g. along cartesian axis) later
+    //  - We may cast generatized version to this version later
+    int ndirs;
+    Vec3d* dirs = 0;
+    //std::vector<int>[ndirs] sweeps;
+    std::vector<std::vector<SAPitem>> sweeps; // TODO: should be later optimized to 2D array?
+
+    void init( int ndirs_, Vec3d* directions, int nItemGeuss ){
+        ndirs=ndirs_;
+        sweeps.resize(ndirs);
+        int i=0;
+        for( int i=0; i<ndirs; i++ ){
+            sweeps[i].reserve(nItemGeuss);
+        }
+    }
+
+    inline void addSphere(const void* o, const Vec3d& p, double R){
+        // TODO: more effcient can be first add all objects to one axis-sweep, than loop over each axis per object
+        for(int i=0; i<ndirs; i++){
+            double x = dirs[i].dot(p);
+            sweeps[i].push_back( { (void*)o, (float)(x-R), (float)(x+R) } ); // we can better use insertion sort or something like that
+        }
+    }
+
+    void addObjects_sphere(int n, const Object3d* objs){
+        for(int i=0; i<n; i++){
+            const Object3d* o = objs+i;
+            addSphere( o, o->pos, o->R);
+        }
+    }
+
+    void updateObjects_sphere(){
+        for(int idir=0; idir<ndirs; idir++){
+            Vec3d dir = dirs[idir];
+            std::vector<SAPitem>& sweep = sweeps[idir];
+            for(SAPitem& item : sweep){
+                const Object3d& o = *(Object3d*)item.o;
+                double x = dir.dot( o.pos );
+                item.span.set( x-o.R,x+o.R );
+            }
+        }
+    }
+
+    int collideSelfObjects(int idir){
+        std::vector<SAPitem>& sweep = sweeps[idir];
+        int n = sweep.size();
+        int ncol=0;
+        for( int i=0; i<n; i++){
+            const SAPitem& itemi = sweep[i];
+            Object3d* oi = (Object3d*)itemi.o;
+            const Vec2f& spani = itemi.span;
+            double xmax = spani.x;
+            for( int j=i+1; j<n; j++){
+                const SAPitem& itemj = sweep[j];
+                if ( itemj.span.x > xmax ) break; // cannot colide, and the later j also not
+                Object3d* oj = (Object3d*)itemj.o;
+                if( oi->collide_Object3d(oj) ){ // fast Bounding-Sphere test
+                    oi->collide( oj );
+                };
+                ncol++;
+            }
+        }
+        return ncol;
+    }
+
+    static int collideCrossObjects( std::vector<SAPitem>& sweepi, std::vector<SAPitem>& sweepj ){
+        int ni = sweepi.size();
+        int nj = sweepj.size();
+        int ncol=0;
+        for(int i=0; i<ni; i++ ){
+            const SAPitem& itemi = sweepi[i];
+            Object3d* oi = (Object3d*)itemi.o;
+            const Vec2f& spani = itemi.span;
+            int j0 = 0;
+            while( sweepj[j0].span.x<spani.x ){ j0++; if(j0>=nj) return ncol;  }
+            int j = j0;
+            while( sweepj[j].span.x<spani.y ){
+                Object3d* oj = (Object3d*)sweepj[j].o;
+                if( oi->collide_Object3d(oj) ){ // fast Bounding-Sphere test
+                    oi->collide( oj );
+                };
+                //println( "add "+i+" "+j+" "+collisions.size()+" ("+pi.x+","+pi.y+") "+" ("+set2[j].x+","+set2[j].y+") " );
+                j++;
+                if(j>=nj) break;
+            }
+        }
+        return ncol;
+    }
+
+    void sort(){
+        // TODO: std::sort (quicksort) may not be optimal, std::stable_sort (with insertion sort) may be faster for almost-sorted array
+        //http://www.cplusplus.com/reference/algorithm/stable_sort/
+        //https://stackoverflow.com/questions/23985891/what-is-the-difference-between-stdsort-and-stdstable-sort
+        for( auto sweep : sweeps ){
+            std::sort( sweep.begin(), sweep.end(), [](const SAPitem& a, const SAPitem& b){ return a.span.x>b.span.x; } );
+        }
+    }
+};
 
 
+template<class A,class B,int NAXIS, int NAMAX, int NBMAX>
+class CrossSAP{
+    static constexpr int naxis  = NAXIS;
+    static constexpr int namax  = NAMAX;
+    static constexpr int nbmax  = NBMAX;
+    Vec3d dirs[NAXIS];
 
+    int na=0,nb=0;
+    A*    aos [NAXIS][NAMAX];
+    float amin[NAXIS][NAMAX];
+    float amax[NAXIS][NAMAX];
+
+    B*    bos [NAXIS][NBMAX];
+    float bmin[NAXIS][NBMAX];
+    float bmax[NAXIS][NBMAX];
+
+};
 
 
 /*
