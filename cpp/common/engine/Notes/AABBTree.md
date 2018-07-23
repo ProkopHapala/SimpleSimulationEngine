@@ -18,4 +18,9 @@
 
 ## Balancing
  - It is rather easy to balance by swaping sub-nodes on the same level, especially for binary tree
+    Consider 2 levels with 4 nodes, there are 3 possible arrangements:
+        AA  AB  AB
+        BB  AB  BA
+    - therefore given configuration ((1,2),(3,4)) we generate new ((1,3),(2,4)) and ((1,4),(2,3)) and test if cost of such configuration is lower.
+
 
