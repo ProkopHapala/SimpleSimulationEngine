@@ -20,6 +20,7 @@
 #include "AppSDL2OGL_3D.h"
 
 #include "AABBTree3D.h"
+#include "kBoxes.h"
 
 // ======================  TestApp
 

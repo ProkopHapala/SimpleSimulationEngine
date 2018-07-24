@@ -143,6 +143,32 @@ class Box{ public:
         if ( (box.a.z>b.z) || (box.b.z<a.z) ) return false;
         return true;
     }
+    
+    inline void combine( const Box& A, const Box& B ){
+        a.x = (A.a.x<B.a.x) ? A.a.x : B.a.x;
+        a.y = (A.a.y<B.a.y) ? A.a.y : B.a.y;
+        a.z = (A.a.z<B.a.z) ? A.a.z : B.a.z;
+        b.x = (A.b.x>B.b.x) ? A.b.x : B.b.x;
+        b.y = (A.b.y>B.b.y) ? A.b.y : B.b.y;
+        b.z = (A.b.z>B.b.z) ? A.b.z : B.b.z;
+    }
+    
+    inline void enclose( const Box& B ){
+        // is this "if" faster than branch-less SIMD operation with ternary operator ?
+        if(B.a.x<a.x){ a.x = B.a.x; };
+        if(B.a.y<a.x){ a.y = B.a.y; };
+        if(B.a.z<a.z){ a.z = B.a.z; };
+        if(B.b.x<b.x){ b.x = B.b.x; };
+        if(B.b.y<b.y){ b.y = B.b.y; };
+        if(B.b.z<b.x){ b.z = B.b.z; };
+    }
+    
+    inline Vec3d  center  ()const{ Vec3d c; c.set_add(b,a); c.mul(0.5); return c; }
+    inline double volume  ()const{ Vec3d d; d.set_sub(b,a); return d.x*d.y*d.z; }
+    inline double surfArea()const{ 
+        Vec3d d; d.set_sub(b,a);
+        return 2.0*(  d.x*d.y + d.x*d.z + d.y*d.x ); 
+    }
 
     inline void spanAlongDir(const Vec3d hdir, Vec2d& span) const {
         span = (Vec2d){+1e+300,-1e+300};
