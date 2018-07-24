@@ -39,6 +39,9 @@ inline void     unpack64 ( uint64_t i, uint16_t& x, uint16_t& y, uint16_t& z, ui
 
 // ========= Hashing ===========
 
+// References:
+// FNV hashes used in Bullet3 HashMap  http://www.isthe.com/chongo/tech/comp/fnv/
+
 inline int rand_hash ( int r ){	return 1664525*r ^ 1013904223; }
 
 inline int rand_hash2( int r ){

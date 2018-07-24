@@ -68,6 +68,8 @@ class AABBTree6{
 // See Reference Here:
 // - https://github.com/erincatto/Box2D/blob/master/Box2D/Collision/b2DynamicTree.cpp
 // - https://github.com/bulletphysics/bullet3/blob/master/src/Bullet3Collision/BroadPhaseCollision/b3DynamicBvh.cpp
+// Balancing by Tree Rotation AVL
+// - https://www.geeksforgeeks.org/avl-tree-set-1-insertion/
 
 struct AABBCellBin{   // NOTE: this is data cell in array, not Node class
     Box3f     span;    //
