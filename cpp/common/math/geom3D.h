@@ -103,6 +103,20 @@ class Capsula3D{ public:
 class Box{ public:
     Vec3d a,b;
 
+    // ==== functions
+
+    inline void setSymetric( const Vec3d& v ){ b={fabs(v.x),fabs(v.y),fabs(v.z)};  a.set_mul(b,-1); };
+    inline void setSymetric( double f ){ f=fabs(f); a.set(-f,-f,-f); b.set(f,f,f); };
+    inline void shift      ( const Vec3d& v ){ a.add(v); b.add(v);   };
+    inline void scale      ( const Vec3d& v ){ a.mul(v); b.mul(v);   };
+    inline void scale      ( double f ){ a.mul(f); b.mul(f);   };
+
+    inline void setOrdered(const Vec3d& a_,const Vec3d& b_){
+        if(a_.x<b_.x){ a.x=a_.x; b.x=b_.x; }else{  a.x=b_.x; b.x=a_.x; };
+        if(a_.y<b_.y){ a.y=a_.y; b.y=b_.y; }else{  a.y=b_.y; b.y=a_.y; };
+        if(a_.z<b_.z){ a.z=a_.z; b.z=b_.z; }else{  a.z=b_.z; b.z=a_.z; };
+    };
+
     inline static bool pointIn( const Vec3d& p, const Vec3d& a, const Vec3d& b ){
         return ((p.x>a.x)&&(p.y>a.y)&&(p.z>a.z)&&
                 (p.x<b.x)&&(p.y<b.y)&&(p.z<b.z));
@@ -143,7 +157,7 @@ class Box{ public:
         if ( (box.a.z>b.z) || (box.b.z<a.z) ) return false;
         return true;
     }
-    
+
     inline void combine( const Box& A, const Box& B ){
         a.x = (A.a.x<B.a.x) ? A.a.x : B.a.x;
         a.y = (A.a.y<B.a.y) ? A.a.y : B.a.y;
@@ -152,22 +166,23 @@ class Box{ public:
         b.y = (A.b.y>B.b.y) ? A.b.y : B.b.y;
         b.z = (A.b.z>B.b.z) ? A.b.z : B.b.z;
     }
-    
+
     inline void enclose( const Box& B ){
         // is this "if" faster than branch-less SIMD operation with ternary operator ?
         if(B.a.x<a.x){ a.x = B.a.x; };
-        if(B.a.y<a.x){ a.y = B.a.y; };
+        if(B.a.y<a.y){ a.y = B.a.y; };
         if(B.a.z<a.z){ a.z = B.a.z; };
-        if(B.b.x<b.x){ b.x = B.b.x; };
-        if(B.b.y<b.y){ b.y = B.b.y; };
-        if(B.b.z<b.x){ b.z = B.b.z; };
+        if(B.b.x>b.x){ b.x = B.b.x; };
+        if(B.b.y>b.y){ b.y = B.b.y; };
+        if(B.b.z>b.z){ b.z = B.b.z; };
     }
-    
-    inline Vec3d  center  ()const{ Vec3d c; c.set_add(b,a); c.mul(0.5); return c; }
-    inline double volume  ()const{ Vec3d d; d.set_sub(b,a); return d.x*d.y*d.z; }
-    inline double surfArea()const{ 
+
+    inline Vec3d  center    ()const{ Vec3d c; c.set_add(b,a); c.mul(0.5); return c; }
+    inline Vec3d  dimensions()const{ Vec3d d; d.set_sub(b,a); return d;           }
+    inline double volume    ()const{ Vec3d d; d.set_sub(b,a); return d.x*d.y*d.z; }
+    inline double surfArea()const{
         Vec3d d; d.set_sub(b,a);
-        return 2.0*(  d.x*d.y + d.x*d.z + d.y*d.x ); 
+        return 2.0*(  d.x*d.y + d.x*d.z + d.y*d.x );
     }
 
     inline void spanAlongDir(const Vec3d hdir, Vec2d& span) const {
