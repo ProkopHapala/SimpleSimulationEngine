@@ -10,6 +10,10 @@ target_link_libraries( test_ShotHit ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBR
 add_executable       ( test_SweepAndPrune test_SweepAndPrune.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_SweepAndPrune ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
 
+
+add_executable       ( test_BoxAndSweep test_BoxAndSweep.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_BoxAndSweep ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
+
 add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} )
 
 add_custom_command(

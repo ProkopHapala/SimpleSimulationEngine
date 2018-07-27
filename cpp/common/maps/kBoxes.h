@@ -7,6 +7,9 @@
 #include <vector>
 #include "geom3D.h"
 
+#include "sweep.h"
+#include "arrayAlgs.h"
+
 // Inspired by k-Means algorithm and AABB-Tree
 //  Pseudocode:
 //  a. construction
@@ -88,6 +91,15 @@ class KBoxes{ public:
 
     double costDisolveTrashold = 1e+6; // We should think how to set this number properly
 
+
+    // Sweep temps
+    bool bSweep = false;
+    int*         Kpermut=0;
+    sweep::Span* Kintervals=0;
+    sweep::Span* Bintervals=0;
+
+
+
     // ========== Functions
 
     void reserveBodies( int n, bool bPermut ){
@@ -103,64 +115,15 @@ class KBoxes{ public:
         }
     }
 
-    /*
-    void pickPivots( int K, int n, int* picked ){
-        branches.reserve(K);
-        branches.erase();
-        //_realloc( bounds, K );
-        //_realloc( ranges, K );
-        //int occupied[K];
-        int i=0;
-         // https://stackoverflow.com/questions/196017/unique-non-repeating-random-numbers-in-o1
-        // https://en.wikipedia.org/wiki/Linear-feedback_shift_register
-        // https://en.wikipedia.org/wiki/Maximum_length_sequence
-        // random numbers should not repeate, but after modulo N they can
-        while(i<K){
-            int ii = rand()%n;
-            bool isNew = true;
-            for(int j=0;j<i;j++){ // check if new - can we do it in less than O(K^2) steps ?
-                if( occupied[j] == ii ){ isNew = false; break; };
-                // TODO: alternatively we can check some heuristics to minimize overlap with previous
-            }
-            if(isNew){
-                occupied[i] = ii;
-                branches[i].span = bodies[ii];
-            }
-        }
+    void realocSweep( int nk, int n ){
+        //Kpermut     = new int        [ nk ];
+        //Kintervals  = new sweep::Span[ nk ];
+        //Bintervals  = new sweep::Span[ n ];
+        _realloc(Kpermut    ,nk );
+        _realloc(Kintervals ,nk );
+        _realloc(Bintervals ,n  );
+        for(int i=0; i<nk; i++){ Kpermut[i]=i; };
     }
-    */
-
-    /*
-    void pickPivotsKMeans( int K ){
-        Vec3d cpos[K];
-        int   cns [K];
-        for(int i=0; i<K; i++){
-            cpos.set(randf(),randf(),randf());
-        }
-        for(int i=0; i<nbodies; i++ ){
-            int rmin=1e+300;
-            int imin;
-            for(int k=0; k<K; k++ ){
-                cpos[k].;
-
-            };
-        };
-    }
-    */
-
-    /*
-    void applyKMeans(int K){
-        for(int i=0; i<nbodies; i++ ){
-            int rmin=1e+300;
-            int imin;
-            for(int k=0; k<K; k++ ){
-                branches[k].span.a.add();
-
-            };
-        };
-        span.
-    }
-    */
 
     inline double insertCost( int i, const Box& box ){
         Box b;
@@ -169,9 +132,9 @@ class KBoxes{ public:
         //return b.volume();  // TODO: think more about this function
         //return b.surfArea();  // TODO: think more about this function
 
-        return box.center().dist2( branches[i].span.center() );
+        //return box.center().dist2( branches[i].span.center() );
 
-        //return sq( box.center().x - branches[i].span.center().x );    // Good in combination with line-sweep
+        return sq( box.center().x - branches[i].span.center().x );    // Good in combination with line-sweep
         //return (b.dimensions() - branches[i].span.dimensions()).norm2();
 
     }
@@ -211,11 +174,33 @@ class KBoxes{ public:
         }
     }
 
-    void build( int K, int nbodies_, bool bakePermut_, Box* bodies_ ){
+
+    void updateSweep( bool almostSorted=true ){
+        //TODO: perhaps we should use better sort-algorithm
+        // update Kboxes (branches)
+        int nk = branches.size();
+        for(int i=0; i<nk; i++){
+            Box& span =  branches[i].span;
+            Kintervals[i] = (sweep::Span){(float)span.a.x,(float)span.b.x};
+        };
+        sort_permut( nk, Kpermut, Kintervals, almostSorted ); //printf( "insertSort N: %i niters: %i \n",  nk, niter );
+        // update bodies (leafs)
+        for(int i=0; i<nbodies; i++){
+            Box& span =  bodies[i];
+            Bintervals[i] = (sweep::Span){(float)span.a.y,(float)span.b.y};
+        };
+        for(int i=0; i<nk; i++){
+            KBox& B =  branches[i];
+            sort_permut( B.n, permut+B.i0, Bintervals, almostSorted );
+        };
+    }
+
+    void build( int K, int nbodies_, bool bakePermut_, Box* bodies_, bool bSweep_=false ){
         bakePermut=bakePermut_;
         nbodies=nbodies_;
         bodies = bodies_;
         reserveBodies( nbodies, bakePermut );
+
         //pickPivots( K, n );
         // insert pick pivots
         //   - TODO: maybe would be more efficient to use K-Means to pick pivots?
@@ -234,6 +219,11 @@ class KBoxes{ public:
         if(bakePermut){
             applyPermut( nbodies, permut, bodies, bodiesPremuted );
             // TODO: we probably do not need to keep both arrays in memory
+        }
+        bSweep = bSweep_;
+        if(bSweep){
+            realocSweep( K, nbodies );
+            updateSweep( false );
         }
         printf(" KBoxes::build DONE! \n");
     }
@@ -359,6 +349,21 @@ class KBoxes{ public:
             }
         }
     }
+
+    int collideSelfSweep(){
+        int nk = branches.size();
+        Int2 Kcols[nk*(nk-1)/2];
+        int nkcol  = sweep::collideSelf( nk, Kpermut, Kintervals, Kcols );
+        Int2* colPairs = (Int2*)collisionPairs.data();
+        int ncol=0;
+        for(int i=0; i<nkcol; i++){
+            KBox& Bi = branches[Kcols[i].i];
+            KBox& Bj = branches[Kcols[i].j];
+            // TODO: this can be perhaps still optimized if we test againts overlap(Bi,Bj)   ?????
+            ncol+= sweep::collideCross(  Bi.n, permut+Bi.i0, Bintervals, Bj.n, permut+Bj.i0, Bintervals, colPairs+ncol, false );
+        };
+        return ncol;
+    };
 
 };
 

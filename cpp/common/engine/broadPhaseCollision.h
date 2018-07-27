@@ -210,7 +210,7 @@ class SAPbuff{ public:
     //  - This is general version, we may define specialized versions (e.g. along cartesian axis) later
     //  - We may cast generatized version to this version later
     //  - We sould store permutation, so that we can update particles
-    int ndirs;
+    int    ndirs;
     Vec3d* dirs = 0;
     //std::vector<int>[ndirs] sweeps;
     std::vector<std::vector<SAPitem>> sweeps; // TODO: should be later optimized to 2D array?
@@ -313,7 +313,6 @@ class SAPbuff{ public:
         }
     }
 };
-
 
 template<class A,class B,int NAXIS, int NAMAX, int NBMAX>
 class CrossSAP{

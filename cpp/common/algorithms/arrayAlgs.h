@@ -19,6 +19,40 @@ inline int insertN( int i0, int len, TYPE * x, TYPE * x ){
 }
 */
 
+
+template<typename T>
+int insertSort( int n, int* permut, T* data ){
+    //https://en.wikipedia.org/wiki/Insertion_sort
+    int niter=0;
+    int i=1;
+    for(int i=1; i<n; i++){
+        int ix = permut[i];
+        const T& x = data[ix];
+        int j=i-1;
+        while( data[permut[j]]>x && (j>=0) ){
+            permut[j+1] = permut[j];
+            j=j-1; // backward iteration is not that great, but we already have it in cache
+            niter++;
+        }
+        niter++;
+        permut[j+1] = ix;
+    }
+    return niter;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //1 2 1 2.0000
 template< class TYPE >
 inline int binSearchBetween( TYPE x, int imax, TYPE * xs ){
@@ -59,12 +93,12 @@ inline void permute( int * permut, TYPE * input, TYPE * output, int p, int q ){
 template< class TYPE >
 int quickSort_partition( TYPE * A, int * permut, int p, int q){
     //printf( " quickSort_partition %i %i \n", p, q );
-    TYPE x = A[ permut[p] ];
+    const TYPE& x = A[ permut[p] ];
     int i = p;
     int j;
     for( j = p+1; j<q; j++ ){
         //printf( " %i %i %i %i \n", permut[p], permut[j],  A[ permut[p] ], A[ permut[j] ] );
-        if( A[ permut[j] ] <= x ){
+        if( A[ permut[j] ] < x ){
             i++;
             SWAP( permut[i], permut[j], int );
         }
@@ -91,7 +125,7 @@ int quickSort_partition_inplace( TYPE * A, int p, int q){
     int j;
     for( j = p+1; j<q; j++ ){
         //printf( " %i %i %i %i \n", p, j,  A[ p ], A[ j ] );
-        if( A[j] <= x ){
+        if( A[j] < x ){
             i++;
             SWAP( A[i], A[j], TYPE );
         }
@@ -107,6 +141,12 @@ void quickSort_inplace( TYPE * A, int p, int q){
         quickSort_inplace<TYPE>( A, p  , r );
         quickSort_inplace<TYPE>( A, r+1, q );
     }
+}
+
+template<typename T>
+int sort_permut( int n, int* permut, T* data, bool almostSorted ){
+    if(almostSorted){ insertSort( n, permut, data   ); }
+    else            { quickSort( data, permut, 0, n ); };
 }
 
 
