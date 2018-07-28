@@ -28,6 +28,8 @@
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
 
+#include "AABBTree3D.h"
+
 const int ndirs = 1;
 Vec3d dirs[ndirs] = { {1.0,0.0,0.0} };
 
@@ -220,7 +222,7 @@ void TestAppSweepAndPrune::draw(){
         t1up = getCPUticks();
         //kboxes.updateStable();
         if(bFullUpdate){ kboxes.updateSweep();           }
-        else           { kboxes.updateSweepStable(true); }
+        else           { kboxes.updateSweepStable(true,true); }
         Tup = getCPUticks()-t1up;
 
         t1col = getCPUticks();

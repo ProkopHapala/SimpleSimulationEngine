@@ -218,7 +218,7 @@ class KBoxes{ public:
         }
     }
 
-    void updateSweepStable( bool almostSorted=true ){
+    void updateSweepStable( bool kSorted=true, bool bSorted=true ){
         int nk = branches.size();
         for(int i=0; i<nk; i++){
             Box& span =  branches[i].span;
@@ -228,10 +228,10 @@ class KBoxes{ public:
             Box& span =  bodies[i];
             Bintervals[i] = (sweep::Span){(float)span.a.y,(float)span.b.y};
         }
-        sort_permut( nk, Kpermut, Kintervals, false, almostSorted ); //printf( "insertSort N: %i niters: %i \n",  nk, niter );
+        sort_permut( nk, Kpermut, Kintervals, false, kSorted ); //printf( "insertSort N: %i niters: %i \n",  nk, niter );
         for(int i=0; i<nk; i++){
             KBox& B =  branches[i];
-            sort_permut( B.n, permut+B.i0, Bintervals, false, almostSorted );
+            sort_permut( B.n, permut+B.i0, Bintervals, false, bSorted );
         }
         //printf("updateSweep  1.3 \n");
     }
@@ -246,7 +246,9 @@ class KBoxes{ public:
     void updateSweep(){
         rebuildSweep();
         updatePermut();
-        updateSweepStable();
+        //updateSweepStable(false,true);
+        updateSweepStable(true,false);
+        //updateSweepStable(true,true);
     }
 
     void build( int K, int nbodies_, bool bakePermut_, Box* bodies_, bool bSweep_=false ){
