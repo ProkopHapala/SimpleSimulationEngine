@@ -17,6 +17,9 @@ class Vec2TYPE{
 
 	// ===== methods
 
+	inline void order       (){ if(a>b){ SWAP(a,b,TYPE); }; }
+	inline void orderReverse(){ if(a<b){ SWAP(a,b,TYPE); }; }
+
     inline explicit operator Vec2TYPE<float >()const{ return (Vec2TYPE<float >){(float)x,(float)y}; }
 	inline explicit operator Vec2TYPE<double>()const{ return (Vec2TYPE<double>){(double)x,(double)y}; }
 	inline explicit operator Vec2TYPE<int   >()const{ return (Vec2TYPE<int   >){(int)x,(int)y}; }

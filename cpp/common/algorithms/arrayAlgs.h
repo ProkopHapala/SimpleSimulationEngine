@@ -6,6 +6,8 @@
 #define SWAP(x, y, TYPE) {TYPE tmp = x; x = y; y = tmp;}
 
 
+#include "stdio.h"
+
 /*
 template<class TYPE>
 inline TYPE * insertN( int i, int nTo, int nFrom, TYPE * to, TYPE * from ){
@@ -29,7 +31,7 @@ int insertSort( int n, int* permut, T* data ){
         int ix = permut[i];
         const T& x = data[ix];
         int j=i-1;
-        while( data[permut[j]]>x && (j>=0) ){
+        while( data[permut[j]] > x && (j>=0) ){
             permut[j+1] = permut[j];
             j=j-1; // backward iteration is not that great, but we already have it in cache
             niter++;
@@ -40,17 +42,25 @@ int insertSort( int n, int* permut, T* data ){
     return niter;
 }
 
-
-
-
-
-
-
-
-
-
-
-
+template<typename T>
+int insertSort_reverse( int n, int* permut, T* data ){
+    //https://en.wikipedia.org/wiki/Insertion_sort
+    int niter=0;
+    int i=1;
+    for(int i=1; i<n; i++){
+        int ix = permut[i];
+        const T& x = data[ix];
+        int j=i-1;
+        while( data[permut[j]] > x && (j>=0) ){
+            permut[j+1] = permut[j];
+            j=j-1; // backward iteration is not that great, but we already have it in cache
+            niter++;
+        }
+        niter++;
+        permut[j+1] = ix;
+    }
+    return niter;
+}
 
 
 //1 2 1 2.0000
@@ -118,6 +128,40 @@ void quickSort( TYPE * A, int * permut, int p, int q){
 }
 
 template< class TYPE >
+int quickSort_partition_reverse( TYPE * A, int * permut, int p, int q){
+    //printf( " quickSort_partition %i %i \n", p, q );
+    const TYPE& x = A[ permut[p] ];
+    int i = p;
+    int j;
+    for( j = p+1; j > q; j++ ){
+        //printf( " %i %i %i %i \n", permut[p], permut[j],  A[ permut[p] ], A[ permut[j] ] );
+        if( A[ permut[j] ] < x ){
+            i++;
+            SWAP( permut[i], permut[j], int );
+        }
+    }
+    SWAP( permut[i], permut[p], int );
+    return i;
+}
+
+template< class TYPE >
+void quickSort_reverse( TYPE * A, int * permut, int p, int q){
+    //printf( " quickSort %i %i \n", p, q );
+    if( p > q){
+        int r = quickSort_partition<TYPE>( A, permut, p, q );
+        quickSort<TYPE>( A, permut, p  , r );
+        quickSort<TYPE>( A, permut, r+1, q );
+    }
+}
+
+
+
+
+
+
+
+
+template< class TYPE >
 int quickSort_partition_inplace( TYPE * A, int p, int q){
     //printf( " substep %i %i \n", p, q );
     TYPE x = A[p];
@@ -144,9 +188,23 @@ void quickSort_inplace( TYPE * A, int p, int q){
 }
 
 template<typename T>
-int sort_permut( int n, int* permut, T* data, bool almostSorted ){
-    if(almostSorted){ insertSort( n, permut, data   ); }
-    else            { quickSort( data, permut, 0, n ); };
+int sort_permut( int n, int* permut, T* data, bool bReverse=false, bool almostSorted=false ){
+    /*
+    if(bReverse){
+        if(almostSorted){ printf( "insertSort_reverse \n" ); insertSort_reverse( n, permut, data    );  }
+        else            { printf( "quickSort_reverse  \n" ); quickSort_reverse ( data, permut, 0, n ); };
+    }else{
+        if(almostSorted){ printf( "insertSort \n" );          insertSort( n, permut, data   );  }
+        else            { printf( "quickSort  \n" );          quickSort( data, permut, 0, n );  };
+    }
+    */
+    if(bReverse){
+        if(almostSorted){ insertSort_reverse( n, permut, data    ); }
+        else            { quickSort_reverse ( data, permut, 0, n ); };
+    }else{
+        if(almostSorted){ insertSort( n, permut, data   );  }
+        else            { quickSort( data, permut, 0, n );  };
+    }
 }
 
 
