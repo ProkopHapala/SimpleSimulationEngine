@@ -15,18 +15,18 @@ Size:
 
 
 class HashMap64{ public:
-	uint8_t  power;
-	uint32_t capacity;
-	uint32_t mask;
-	uint32_t filled=0;
+	uint8_t  power    = 0;
+	uint32_t capacity = 0;
+	uint32_t mask     = 0;
+	uint32_t filled   = 0;
 	float    maxFillRatio = 0.6;
 	float    begFillRatio = 0.3;
 
 	int DEBUG_counter;
 
-	uint64_t EMPTY_I = -1;
-	uint64_t EMPTY_P = -1;
-	uint32_t EMPTY_H = -1;
+	uint64_t EMPTY_I = 0xFFFFFFFFFFFFFFFFL;
+	uint64_t EMPTY_P = 0xFFFFFFFFFFFFFFFFL;
+	uint32_t EMPTY_H = 0xFFFFFFFF;
 
 	uint64_t*  store;  // pointer or index of stored object
 	uint64_t*  iboxs;  // unique box index
@@ -44,9 +44,13 @@ class HashMap64{ public:
 		//i = 1664525*(i+15445) ^ 1013904223; return (1664525*i ^ 1013904223) & mask;
 		//return ((i >> power)^i) & mask;
 		//return (i*2654435761 >> 16)&mask;   // Knuth's multiplicative method
-
-		return ( ibox * 11400714819323198549L )&mask;  // Knuth's multiplicative method  64bit
-
+        //printf( "hash ibox %li ", ibox );
+		//return (ibox*2654435761 >> 16)&mask;   // Knuth's multiplicative method
+		//return ( ( (ibox * 11400714819323198549L) >> 32 ) + ibox )&mask;  // Knuth's multiplicative method  64bit
+		//return ( ( (ibox * 11400714819323198549L) >> 32 )  ^  ( ( (ibox>>32) * 11400714819323198549L) >> 32 )  )&mask;
+		return ( ( ( ibox * 11400714819323198549L )  ^  ( (ibox>>32) * 11400714819323198549L ) ) >> 32 )&mask;
+		//return ( ( ( ((uint32_t)ibox)*265443576) ^ ( (uint32_t)(ibox>>32)*265443576) ) >> 16 )&mask;
+		//return ( ibox )&mask;  // Knuth's multiplicative method  64bit
 		//i = ((i >> 16) ^ i) * 0x45d9f3b; i = ((i >> 16) ^ i) * 0x45d9f3b; return  ((i >> 16) ^ i)&mask;
 		//i = ((i >> 16) ^ i) * 0x45d9f3b; return  ((i >> 16) ^ i)&mask;
 		//i = ((i >> 16) ^ i) * 0x3335b369; i = ((i >> 16) ^ i) * 0x3335b369; return  ((i >> 16) ^ i)&mask;
@@ -58,7 +62,8 @@ class HashMap64{ public:
 		hashs[ i ] =  h;
 	}
 
-	void init(	int power_ ){
+	void init( int power_ ){
+        filled     = 0;
 		power      = power_;
 		capacity   = 1<<power;
 		mask       = capacity-1;
@@ -68,7 +73,7 @@ class HashMap64{ public:
 		hashs      = new uint32_t[capacity];
 		iboxs      = new uint64_t[capacity];
 		for (int i=0; i<capacity; i++){
-			hits  [i] =  0    ;
+			hits  [i] =  0;
 			set( i, EMPTY_P, EMPTY_I, EMPTY_H );
 		}
 	}
@@ -85,7 +90,7 @@ class HashMap64{ public:
 					j++;
 				}
 				n--;
-			};
+			}
 			i=(i+1)&mask;
 			DEBUG_counter++;
 		}
@@ -98,19 +103,24 @@ class HashMap64{ public:
 		int n = hits[h];
 		int i = h;
 		int j =0;
+		//printf( "getAllInBoxOnce i: %i\n", i);
 		while( n>0 ){
+            //printf( "getAllInBoxOnce n: %i\n", n);
 			if( hashs[i]==h ){
 				if( iboxs[i]==ibox ){
                     uint32_t io = (uint32_t)store[i]; // Take Low bytes
-                    if( isOld[io] ) continue;
-                    isOld[io] = true;
-					outi[j]   = i;
-					j++;
+                    //printf( "io: %i \n", io);
+                    if( !isOld[io] ){
+                        isOld[io] = true;
+                        outi[j]   = i;
+                        j++;
+					}
 				}
 				n--;
-			};
+			}
 			i=(i+1)&mask;
-			DEBUG_counter++;
+			//printf( "getAllInBoxOnce i: %i\n", i);
+			DEBUG_counter++; if(DEBUG_counter>capacity){  printf("getAllInBoxOnce: infinite loop \n"); exit(0); }
 		}
 		return j;
 	}
@@ -145,9 +155,10 @@ class HashMap64{ public:
 		filled++;
 	}
 	inline int insert( uint64_t p, uint64_t ibox, uint32_t h ){
-		 checkResize();
+        //printf( "insert( p %li ibox %li h %li \n", p, ibox, h );
+        checkResize();
 		int i = h;
-		while( store[i] != 0  ) i=(i+1)&mask;
+		while( store[i] != EMPTY_P ) i=(i+1)&mask;
 		insert( p, ibox, h, i );
 		return i;
 	};
@@ -161,27 +172,50 @@ class HashMap64{ public:
 	void remove( int i ){ uint32_t h = hash( iboxs[i] ); remove( i, h ); };
 
 	void resize( int power_ ){
+        printf( "HashMap64:resize power %i\n", power );
 		int old_capacity = capacity;
-		uint64_t*  old_store = store;
-		uint64_t*  old_iboxs = iboxs;
-		uint32_t*  old_hashs = hashs;
-		delete hits;
+        uint64_t*  old_store = store;
+        uint64_t*  old_iboxs = iboxs;
+        uint32_t*  old_hashs = hashs;
+        if( old_capacity > 0 ) delete [] hits;
 		init( power_ );
-		for (int i=0; i<old_capacity; i++){
-			insert( old_store[i], old_iboxs[i], old_hashs[i] );
+		if( old_capacity > 0 ){
+            for (int i=0; i<old_capacity; i++){
+                if( old_store[i] != EMPTY_P ){
+                    insert( old_store[i], old_iboxs[i], old_hashs[i] );
+                }
+            }
+            delete [] old_store;
+            delete [] old_hashs;
+            delete [] old_iboxs;
 		}
-		delete old_store;
-		delete old_hashs;
-		delete old_iboxs;
 	}
 
 	void checkResize(){
 	   if( filled > capacity * maxFillRatio ){
 	        power++;
-            while( (1<<power)*begFillRatio < filled ) power++;
-	        resize( power+1 );
+            while( ((1<<power)*begFillRatio) < filled ) power++;
+
+            printf( "checkResize n %i n*f %i nMaxNew %i pow %i \n", filled, (int)(filled/begFillRatio), 1<<power, power );
+	        resize( power );
 	   };
 	}
+
+	int reserve( int n ){
+        int nTarget = (int)(n/begFillRatio)+1;
+        //printf( "nTarget  %i \n", nTarget );
+        if( nTarget > capacity ){
+            while( (1<<power) < nTarget ){
+                //printf( "power %i n %i \n", power, (1<<power) );
+                power++;
+                //if(power>16) break;
+            }
+            resize( power );
+        }
+        return capacity;
+	}
+
+	inline int nbytes(){ return sizeof(*this) + ( capacity*(  sizeof(uint64_t)*2 +  sizeof(uint32_t) + sizeof(uint16_t)  ) ); }
 
 };
 

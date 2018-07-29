@@ -10,15 +10,15 @@ template <class TYPE1 > class HashMap{ public:
 	int DEBUG_counter;
 
 	TYPE1*  store;
-	int*    hits;  // number of objects with this hash 
-	int*    iboxs; // unique box index 
+	int*    hits;  // number of objects with this hash
+	int*    iboxs; // unique box index
 	int*    hashs; // hash   // not necessary to store, can be quickly computed from ibox
 
     // https://stackoverflow.com/questions/6943493/hash-table-with-64-bit-values-as-key
-	inline int  hash( unsigned int i ){ 
-		// see http://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key 
-		//return  ( 2166136261UL ^ i * 16777619 ) & mask; 
-		//return  ( 2166136261UL ^ (i * 16777619) ) & mask; 
+	inline int  hash( unsigned int i ){
+		// see http://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
+		//return  ( 2166136261UL ^ i * 16777619 ) & mask;
+		//return  ( 2166136261UL ^ (i * 16777619) ) & mask;
 		//i = 1664525*(i+15445) ^ 1013904223; return (1664525*i ^ 1013904223) & mask;
 		//return ((i >> power)^i) & mask;
 		return (i*2654435761 >> 16)&mask;   // Knuth's multiplicative method
@@ -28,7 +28,7 @@ template <class TYPE1 > class HashMap{ public:
 	}
 
 	inline void set( int i, TYPE1 p, int ibox, int h ){
-		store  [ i ] =  p; 
+		store  [ i ] =  p;
 		iboxs  [ i ] =  ibox;
 		hashs  [ i ] =  h;
 	}
@@ -38,13 +38,13 @@ template <class TYPE1 > class HashMap{ public:
 		capacity   = 1<<power;
 		mask       = capacity-1;
 		//printf( "  power %i capacity %i mask %i \n ", power, capacity, mask );
-		store      = new TYPE1 [capacity]; 
-		hits       = new int   [capacity]; 
+		store      = new TYPE1 [capacity];
+		hits       = new int   [capacity];
 		hashs      = new int   [capacity];
 		iboxs      = new int   [capacity];
-		for (int i=0; i<capacity; i++){ 
-			hits  [i] =  0    ; 
-			set( i, NULL, 0xFFFFFFFF, 0xFFFFFFFF ); 
+		for (int i=0; i<capacity; i++){
+			hits  [i] =  0    ;
+			set( i, NULL, 0xFFFFFFFF, 0xFFFFFFFF );
 		}
 	}
 
@@ -54,12 +54,12 @@ template <class TYPE1 > class HashMap{ public:
 		int i = h;
 		int j =0;
 		while( n>0 ){
-			if( hashs[i]==h ){ 
+			if( hashs[i]==h ){
 				if( iboxs[i]==ibox ){
-					outi[j] = i; 
+					outi[j] = i;
 					j++;
 				}
-				n--; 
+				n--;
 			};
 			i=(i+1)&mask;
 			DEBUG_counter++;
@@ -77,12 +77,12 @@ template <class TYPE1 > class HashMap{ public:
 		while( n>0 ){
 			int ib = iboxs[i];
 			int ih = hash( ib );
-			if( ih==h ){ 
+			if( ih==h ){
 				if( ib==ibox ){
-					outi[j] = i; 
+					outi[j] = i;
 					j++;
 				}
-				n--; 
+				n--;
 			};
 			i=(i+1)&mask;
 			DEBUG_counter++;
@@ -92,13 +92,13 @@ template <class TYPE1 > class HashMap{ public:
 
 	inline int insert( TYPE1 p, int ibox, int h, int i ){
 		hits   [h] ++;
-		set( i, p, ibox, h ); 
+		set( i, p, ibox, h );
 		filled++;
-	} 
+	}
 	inline int insert( TYPE1 p, int ibox, int h ){
 		if ( (filled<<1) > capacity ) resize( power+1 );
 		int i = h;
-		while( store[i] != NULL  ) i=(i+1)&mask; 
+		while( store[i] != NULL  ) i=(i+1)&mask;
 		insert( p, ibox, h, i );
 		return i;
 	};
@@ -107,22 +107,22 @@ template <class TYPE1 > class HashMap{ public:
 	void remove( int i, int h ){
 		filled--;
 		hits  [ hash[i] ] -- ;
-		set( i, NULL, 0xFFFFFFFF, 0xFFFFFFFF ); 
+		set( i, NULL, 0xFFFFFFFF, 0xFFFFFFFF );
 	};
 
 	void resize( int power_ ){
 		int old_capacity = capacity;
-		TYPE1*  old_store = store; 
+		TYPE1*  old_store = store;
 		int*    old_hashs = hashs;
 		int*    old_iboxs = iboxs;
-		delete hits;
+		delete [] hits;
 		init( power_ );
-		for (int i=0; i<old_capacity; i++){ 
+		for (int i=0; i<old_capacity; i++){
 			insert( old_store[i], old_iboxs[i], old_hashs[i] );
 		}
-		delete old_store;
-		delete old_hashs;
-		delete old_iboxs;
+		delete [] old_store;
+		delete [] old_hashs;
+		delete [] old_iboxs;
 	}
 
 };

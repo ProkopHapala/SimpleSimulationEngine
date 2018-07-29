@@ -23,12 +23,28 @@ class HashMap3D : public HashMap64{ public:
     CubeGridRulerUnbound  ruler;
     HashMap64             hmap;
 
-    int        nIndTmpMax = 256;
+    int   nMaxCell   = 256;
+    int   nMaxFound  = 4096;
+    int   nbodies    = 0;
+
     uint64_t * tmpCells = 0;
-    int      * tmpInds  = 0;
+    int      * tmpFound = 0;
     bool     * isOld    = 0;  // This array keeps track if particular object was already touched
 
+    int realloc( int n ){
+        _realloc(tmpCells,nMaxCell);   //printf( " DEBUG 1 \n"  );
+        _realloc(tmpFound,nMaxFound);  //printf( " DEBUG 2 \n"  );
+        return hmap.reserve( n );      //printf( " DEBUG 3 \n" );
+    }
+
+    int setBodyBuff(int nbodies_){
+        nbodies = nbodies_;
+        _realloc(isOld,nbodies);
+        for(int i=0; i<nbodies; i++){ isOld[i] = false; }
+    }
+
     inline void insertInds(int o, int n, uint64_t* inds ){
+        //printf( "insertInds o %i n %i \n", o, n );
         for(int i=0; i<n; i++){
             hmap.insert( o, inds[i] );
         }
@@ -36,19 +52,21 @@ class HashMap3D : public HashMap64{ public:
 
     inline void insert( int o, const Box& b ){ insertInds( o, ruler.overlap_BBox(b.a,b.b,tmpCells), tmpCells ); };
 
-    inline int collide( int o, Box* boxes, Vec2i* colPairs, bool bSelf ){
-        const Box& b = boxes[o];
+    inline int collide( int o, const Box& b, Box* boxes, Vec2i* colPairs ){
         int ncell = ruler.overlap_BBox(b.a,b.b,tmpCells);
+        //printf( "collide ncell %i \n", ncell );
         int nfound=0;
         for(int i=0; i<ncell; i++){
-            nfound += hmap.getAllInBoxOnce( tmpCells[i], tmpInds+nfound, isOld );
+            //printf( "collide cell[%i] : %li \n", i, tmpCells[i] );
+            nfound += hmap.getAllInBoxOnce( tmpCells[i], tmpFound+nfound, isOld );
         }
+        //printf( "collide nfound %i \n", nfound );
         int ncol = 0;
         for(int ii=0; ii<nfound; ii++){
-            int i    =           tmpInds[ii];
+            int i    =           tmpFound[ii];
             int oi    = (uint32_t)hmap.store[i];
             isOld[oi] = false;
-            if( (o==oi) & bSelf ) continue;
+            if( o==oi ) continue;
             if( b.overlap(boxes[oi]) ){
                 colPairs[ncol] = {o,oi};
                 ncol++;
@@ -56,6 +74,8 @@ class HashMap3D : public HashMap64{ public:
         }
         return ncol;
     }
+
+    //inline int nbytes(){ return sizeof(*this) + ( capacity*(  sizeof(uint64_t)*2 +  sizeof(uint32_t) + sizeof(uint16_t)  ) ); }
 
 };
 

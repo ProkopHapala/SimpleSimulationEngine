@@ -20,24 +20,38 @@ operations such as:
 
 class GridRulerInterface{public:};
 
-int constexpr NBIT3D   = (int)(64/3);
-int constexpr OFFSET3D = 1<<(NBIT3D-1);
-int constexpr XMASK3D = (1<<(NBIT3D))-1;
-int constexpr YMASK3D = XMASK3D<<NBIT3D;
-int constexpr ZMASK3D = YMASK3D<<NBIT3D;
+uint64_t constexpr NBIT3D   = (int)(64/3);
+uint64_t constexpr OFFSET3D = 1<<(NBIT3D-1);
+uint64_t constexpr XMASK3D = (1<<(NBIT3D))-1;
+uint64_t constexpr YMASK3D = XMASK3D<<NBIT3D;
+uint64_t constexpr ZMASK3D = YMASK3D<<NBIT3D;
 
 class CubeGridRulerUnbound : public GridRulerInterface { public:
     // This should work for points in range ( -2^20 .. +2^20 ) == ( -1e+6 .. +1e+6 )
-    double step;
-    double invStep;
+    double step    = 1;
+    double invStep = 1;
 
-    inline void     ipcell  ( const Vec3d& pos, Vec3i& ipos ) const { ipos.x=(int)(pos.x*invStep); ipos.y=(int)(pos.y*invStep); ipos.z=(int)(pos.z*invStep); }
-    inline uint64_t pos2long( const Vec3d& pos              ) const { Vec3i ip; ipcell(pos,ip); return ixyz2long(ip); };
+    inline void setStep( double step_ ){ step=step_; invStep=1/step; };
+
+    inline void     ipcell  ( const Vec3d& pos, Vec3i& ipos ) const {
+        ipos.x=(int)(pos.x*invStep);  if(pos.x<0) ipos.x--;
+        ipos.y=(int)(pos.y*invStep);  if(pos.y<0) ipos.y--;
+        ipos.z=(int)(pos.z*invStep);  if(pos.z<0) ipos.z--;
+    }
+    inline uint64_t pos2long( const Vec3d& pos              ) const {
+        Vec3i ip; ipcell(pos,ip);
+        //printf( "pos2long (%g,%g,%g) -> (%i,%i,%i) -> %li \n", pos.x, pos.y, pos.z, ip.x, ip.y, ip.z,  ixyz2long(ip)  );
+        return ixyz2long(ip);
+    };
+
+    inline void ixyz2pos( const Vec3i& ip, Vec3d& pos ) const { pos.x=ip.x*step; pos.y=ip.y*step; pos.z=ip.z*step; }
+    inline void long2pos( uint64_t i, Vec3d& pos      ) const { Vec3i ip; long2ixyz(i,ip); ixyz2pos(ip,pos); }
 
     int overlap_BBox(const Vec3d& p0, const Vec3d& p1, uint64_t* icells ) const {
         Vec3i ip0; ipcell( p0, ip0 );
         Vec3i ip1; ipcell( p1, ip1 );
         ip1.x++; ip1.y++; ip1.z++;
+        //printf( " overlap_BBox (%i,%i,%i) (%i,%i,%i) \n", ip0.x, ip0.y, ip0.z, ip1.x, ip1.y, ip1.z );
         int n=0;
         for(int ix=ip0.x; ix<ip1.x; ix++){
             for(int iy=ip0.y; iy<ip1.y; iy++){
@@ -50,8 +64,11 @@ class CubeGridRulerUnbound : public GridRulerInterface { public:
         return n;
     }
 
-    inline uint64_t ixyz2long( Vec3i      ip         ) const { return (ip.x+OFFSET3D) + ( ( (ip.y+OFFSET3D) + ((ip.z+OFFSET3D)<<NBIT3D) )<<NBIT3D );  }
-    inline void     long2ixyz( uint64_t i, Vec3i& ip ) const { ip.x = i&XMASK3D; ip.y = (i&YMASK3D)>>NBIT3D; ip.z = (i&ZMASK3D)>>(NBIT3D*2); }
+    inline uint64_t ixyz2long( const Vec3i& ip ) const {
+        //printf( "ixyz2long (%i,%i,%i) -> %li \n", ip.x, ip.y, ip.z, (ip.x+OFFSET3D) + ( ( (ip.y+OFFSET3D) + ((ip.z+OFFSET3D)<<NBIT3D) )<<NBIT3D ) );
+        return (ip.x+OFFSET3D) + ( ( (ip.y+OFFSET3D) + ((ip.z+OFFSET3D)<<NBIT3D) )<<NBIT3D );
+    }
+    inline void     long2ixyz( uint64_t i, Vec3i& ip ) const { ip.x = (i&XMASK3D) - OFFSET3D; ip.y = ((i&YMASK3D)>>NBIT3D)-OFFSET3D; ip.z = ((i&ZMASK3D)>>(NBIT3D*2))-OFFSET3D; }
 
 };
 

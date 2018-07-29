@@ -25,8 +25,7 @@ inline ULONG  hashFunc( ULONG i ) {
 // TODO: maybe optimal would be put several objects per bucket
 
 template <class TYPE >
-class HashMapField{
-	public:
+class HashMapField{ public:
 	TYPE*  object;  // pointer is also unique identifier
 	ULONG   bucket;  // unique index of bucket
 	UINT    n;       // number of stored objects with this hash
@@ -126,7 +125,7 @@ class HashMap{
 			p_field++;
 		}
 		//printf( " -- resize to power %i (capacity %i filled %i) \n", power, capacity, filled );
-		delete old_fields;
+		delete [] old_fields;
 		//exit(0);
 	}
 

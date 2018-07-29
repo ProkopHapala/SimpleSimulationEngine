@@ -15,17 +15,17 @@ Size:
 
 template<typename T>
 class HashMapT64{ public:
-	uint8_t  power;
-	uint32_t capacity;
-	uint32_t mask;
-	uint32_t filled=0;
+	uint8_t  power    =0;
+	uint32_t capacity =0;
+	uint32_t mask     =0;
+	uint32_t filled   =0;
 	float    maxFillRatio = 0.6;
 	float    begFillRatio = 0.3;
 
-    T        EMPTY_O = -1;
-	uint32_t EMPTY_H = -1;
+    T        EMPTY_O; // TO BE SET
+	uint32_t EMPTY_H = 0xFFFFFFFF;
 
-	int DEBUG_counter;
+	int DEBUG_counter=0;
 
 	T*         store;  // pointer or index of stored object
 	uint32_t*  hashs;  // hash   // not necessary to store, can be quickly computed from ibox
@@ -51,7 +51,8 @@ class HashMapT64{ public:
 		hashs[ i ] =  h;
 	}
 
-	void init(	int power_ ){
+	void init( int power_, T EMPTY_O_ ){
+        EMPTY_O    = EMPTY_O;
 		power      = power_;
 		capacity   = 1<<power;
 		mask       = capacity-1;
@@ -109,21 +110,29 @@ class HashMapT64{ public:
 		uint32_t   old_capacity = capacity;
 		uint32_t*  old_hashs    = hashs;
         T*         old_store    = store;
-		delete hits;
+		delete [] hits;
 		init( power_ );
 		for (int i=0; i<old_capacity; i++){
 			insert( old_store[i], old_hashs[i] );
 		}
-		delete old_store;
-		delete old_hashs;
+		delete [] old_store;
+		delete [] old_hashs;
 	}
 
 	void checkResize(){
 	   if( filled > capacity * maxFillRatio ){
 	        power++;
             while( (1<<power)*begFillRatio < filled ) power++;
-	        resize( power+1 );
+	        resize( power );
 	   };
+	}
+
+	void reserve( int n ){
+        int nTarget = (int)(n/begFillRatio)+1;
+        if( nTarget > capacity ){
+            while( (1<<power) < nTarget )power++;
+            resize( power );
+        }
 	}
 
 };

@@ -117,6 +117,12 @@ class Box{ public:
         if(a_.z<b_.z){ a.z=a_.z; b.z=b_.z; }else{  a.z=b_.z; b.z=a_.z; };
     };
 
+    inline void order(){
+        if(a.x>b.x){ double f=a.x; a.x=b.x; b.x=f; };
+        if(a.y>b.y){ double f=a.y; a.y=b.y; b.y=f; };
+        if(a.z>b.z){ double f=a.z; a.z=b.z; b.z=f; };
+    };
+
     inline static bool pointIn( const Vec3d& p, const Vec3d& a, const Vec3d& b ){
         return ((p.x>a.x)&&(p.y>a.y)&&(p.z>a.z)&&
                 (p.x<b.x)&&(p.y<b.y)&&(p.z<b.z));
