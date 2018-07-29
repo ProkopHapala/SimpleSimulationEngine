@@ -8,7 +8,7 @@
 #include "Vec2.h"
 #include "geom2D.h"
 
-#include "HashMap.h"
+#include "HashMap_temp.h"
 //#include "Map2D.h"
 
 typedef unsigned short  UHALF;

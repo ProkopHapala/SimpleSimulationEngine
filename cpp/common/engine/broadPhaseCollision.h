@@ -32,10 +32,6 @@
 
 #include "arrayAlgs.h"
 
-
-
-
-
 class BroadSpaceMapHash{
     int nIndTmpMax = 256;
     CubeGridRuler ruler;
@@ -51,7 +47,7 @@ class BroadSpaceMapHash{
     inline void insert( int o, const Vec3d&      p ){ map.insert( {ruler.icell(p),o} ); };
     inline void insert( int o, const Sphere&     s ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_Sphere  (s.p,s.r    ,inds), inds ); };
     inline void insert( int o, const Box&        b ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_BBox    (b.a,b.b    ,inds), inds ); };
-    inline void insert( int o, const Line3D&       l ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_Line    (l.a,l.b    ,inds), inds ); };
+    inline void insert( int o, const Line3D&     l ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_Line    (l.a,l.b    ,inds), inds ); };
     inline void insert( int o, const Triangle3D& t ){ int inds[nIndTmpMax]; insertInds( o, ruler.overlap_Triangle(t.a,t.b,t.c,inds), inds ); };
 
     inline int cell2array( int icell, int* inds ){ // TODO: if we use own hashmap map, we do not have to do this

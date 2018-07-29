@@ -1,7 +1,7 @@
+#ifndef HashMap_h
+#define HashMap_h
 
-
-template <class TYPE1 > class HashMap{
-	public:
+template <class TYPE1 > class HashMap{ public:
 	int power;
 	int mask;
 	int capacity;
@@ -14,6 +14,7 @@ template <class TYPE1 > class HashMap{
 	int*    iboxs; // unique box index 
 	int*    hashs; // hash   // not necessary to store, can be quickly computed from ibox
 
+    // https://stackoverflow.com/questions/6943493/hash-table-with-64-bit-values-as-key
 	inline int  hash( unsigned int i ){ 
 		// see http://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key 
 		//return  ( 2166136261UL ^ i * 16777619 ) & mask; 
@@ -125,4 +126,6 @@ template <class TYPE1 > class HashMap{
 	}
 
 };
+
+#endif
 

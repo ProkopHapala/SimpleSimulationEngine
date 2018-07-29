@@ -1,6 +1,6 @@
 
-#ifndef  HashMap_h
-#define  HashMap_h
+#ifndef  HashMap_temp_h
+#define  HashMap_temp_h
 
 #include <stdio.h>
 

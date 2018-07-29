@@ -21,6 +21,54 @@ inline int insertN( int i0, int len, TYPE * x, TYPE * x ){
 }
 */
 
+inline int objects2cells( int nobj, int ncell, int* obj2cell, int* cellNs, int* cellI0s, int* permut ){
+    int nmax = 0;
+    for(int i=0; i<nobj; i++ ){
+        cellNs[ obj2cell[i] ]++;
+    }
+    int ntot=0;
+    for(int k=0; k<ncell; k++ ){
+        cellI0s[k]=ntot;
+        int& ni = cellNs[k];
+        ntot   += ni;
+        if( ni>nmax ) nmax=ni;
+        ni=0;
+    }
+    for(int i=0; i<nobj; i++){
+        int k =  obj2cell[i];
+        int j =  cellI0s[k] + cellNs[k];
+        permut[j] = i;
+        cellNs[k]++;
+    }
+    return nmax;
+}
+
+struct I0n{
+    int i0,n;
+};
+
+inline int objects2cells( int nobj, int ncell, int* obj2cell, I0n* cells, int* permut ){
+    int nmax = 0;
+    for(int i=0; i<nobj; i++ ){
+        cells[ obj2cell[i] ].n++;
+    }
+    int ntot=0;
+    for(int k=0; k<ncell; k++ ){
+        cells[k].i0 = ntot;
+        int& ni     = cells[k].n;
+        ntot       += ni;
+        if( ni>nmax ) nmax=ni;
+        ni=0;
+    }
+    for(int i=0; i<nobj; i++){
+        int k =  obj2cell[i];
+        int j =  cells[k].i0 + cells[k].n;
+        permut[j] = i;
+        cells[k].n++;
+    }
+    return nmax;
+}
+
 
 template<typename T>
 int insertSort( int n, int* permut, T* data ){

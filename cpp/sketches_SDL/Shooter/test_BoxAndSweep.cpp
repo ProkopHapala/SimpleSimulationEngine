@@ -58,7 +58,7 @@ void collideSelfBruteForce(int n, Box* bodies, std::vector<Vec2i>& colPairs ){
     }
 }
 
-class TestAppSweepAndPrune : public AppSDL2OGL_3D { public:
+class TestAppBoxAndSweep : public AppSDL2OGL_3D { public:
     Shooter world;
 
     int ipicked;
@@ -89,11 +89,11 @@ class TestAppSweepAndPrune : public AppSDL2OGL_3D { public:
 	virtual void eventHandling   ( const SDL_Event& event  );
 	//virtual void keyStateHandling( const Uint8 *keys );
 
-	TestAppSweepAndPrune( int& id, int WIDTH_, int HEIGHT_ );
+	TestAppBoxAndSweep( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-TestAppSweepAndPrune::TestAppSweepAndPrune( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+TestAppBoxAndSweep::TestAppBoxAndSweep( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
 
     long t1; double T;
@@ -192,7 +192,7 @@ TestAppSweepAndPrune::TestAppSweepAndPrune( int& id, int WIDTH_, int HEIGHT_ ) :
     printf( "SETUP DONE \n"  );
 }
 
-void TestAppSweepAndPrune::draw(){
+void TestAppBoxAndSweep::draw(){
    // printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -268,7 +268,7 @@ void TestAppSweepAndPrune::draw(){
 
 };
 
-void TestAppSweepAndPrune::drawHUD(){
+void TestAppBoxAndSweep::drawHUD(){
     glDisable ( GL_LIGHTING );
     glColor3f( 0.0f, 1.0f, 0.0f );
 
@@ -283,7 +283,7 @@ void TestAppSweepAndPrune::drawHUD(){
 
 }
 
-void TestAppSweepAndPrune::eventHandling ( const SDL_Event& event  ){
+void TestAppBoxAndSweep::eventHandling ( const SDL_Event& event  ){
     /*
     //printf( "NonInert_seats::eventHandling() \n" );
     switch( event.type ){
@@ -301,14 +301,14 @@ void TestAppSweepAndPrune::eventHandling ( const SDL_Event& event  ){
 
 // ===================== MAIN
 
-TestAppSweepAndPrune * thisApp;
+TestAppBoxAndSweep * thisApp;
 
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
-	thisApp = new TestAppSweepAndPrune( junk , 800, 600 );
+	thisApp = new TestAppBoxAndSweep( junk , 800, 600 );
 	thisApp->loop( 1000000 );
 	return 0;
 }

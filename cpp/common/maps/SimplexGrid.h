@@ -6,7 +6,7 @@
 #include "Vec2.h"
 #include "Vec3.h"
 
-#include "HashMap.h"
+#include "HashMap_temp.h"
 
 typedef unsigned short  UHALF;
 const UHALF MAP_OFFSET = 0x7FFF;
