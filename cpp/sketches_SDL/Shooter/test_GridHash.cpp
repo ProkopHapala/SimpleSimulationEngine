@@ -23,6 +23,7 @@
 
 #include "grids3D.h"
 #include "HashMapT64.h"
+#include "HashMap64.h"
 #include "HashMap3D.h"
 //#include "GridMap3D.h"   //   objects2cells instead of open-indexing
 
@@ -45,13 +46,62 @@ HashMap vs GridMap
     - Array Based Map
     - Array Based SkipMap
 
+[Mticks]: build 1.73258 col 5.37771 brute 205.428 | ncol 3438 ref 3438
+[Mticks]: build 1.69094 col 5.41739 brute 205.648 | ncol 3446 ref 3446
+[Mticks]: build 1.90722 col 5.61058 brute 208.294 | ncol 3444 ref 3444
+[Mticks]: build 1.73773 col 5.41648 brute 210.531 | ncol 3446 ref 3446
+[Mticks]: build 1.73743 col 5.41527 brute 207.719 | ncol 3460 ref 3460
+[Mticks]: build 1.69063 col 5.52472 brute 213.158 | ncol 3404 ref 3404
+[Mticks]: build 1.69083 col 5.43928 brute 207.623 | ncol 3368 ref 3368
+[Mticks]: build 1.78166 col 5.47265 brute 207.541 | ncol 3394 ref 3394
+[Mticks]: build 1.81032 col 5.772 brute 206.514 | ncol 3402 ref 3402
+[Mticks]: build 1.83466 col 5.42177 brute 207.632 | ncol 3376 ref 3376
+[Mticks]: build 2.22474 col 6.59574 brute 213.105 | ncol 3430 ref 3430
+
+
+
 */
 
-void collideBruteForce(int n, int o, const Box& b, Box* bodies, std::vector<Vec2i>& colPairs ){
+
+void countBucket(const HashMap64& hmap, int h){
+    int DEBUG_counter=0;
+    int n = hmap.hits[h];
+    int i = h;
+    //printf( "countBucket hits[%i] == %i \n", h, n );
+    while( n>0 ){
+        if( hmap.hashs[i]==h ){ n--; }
+        i=(i+1)&hmap.mask;
+        DEBUG_counter++;
+        if(DEBUG_counter>hmap.capacity){
+            printf("hits[%i] == %i but just %i found \n", h, hmap.hits[h], h-n );
+            return;
+        }
+    }
+}
+
+void countObjects(const HashMap64& hmap){
+    int nI = 0;
+    int nP = 0;
+    int nH = 0;
+    int nhitsum = 0;
+    for(int i=0; i<hmap.capacity; i++){
+        if( hmap.iboxs[i] != hmap.EMPTY_I ){ nI++; }
+        if( hmap.store[i] != hmap.EMPTY_P ){ nP++; }
+        if( hmap.hashs[i] != hmap.EMPTY_H ){ nH++; }
+        nhitsum += hmap.hits[i];
+    }
+    printf( "countObjects: filled %i nI %i nP %i nH %i nhitsum %i \n", hmap.filled, nI, nP, nH, nhitsum );
+    for(int i=0; i<hmap.capacity; i++){
+        countBucket(hmap, i);
+    }
+}
+
+void collideBruteForce(int n, int o, const Box& b, Box* boxes, std::vector<Vec2i>& colPairs ){
     for(int j=0; j<n; j++){
         if( j==o ) continue;
-        if( b.overlap( bodies[j] ) ){
+        if( b.overlap( boxes[j] ) ){
             colPairs.push_back( {o,j} );
+            //printf( "Ref[%i] (%g,%g,%g) (%g,%g,%g) j %i\n", colPairs.size(), boxes[j].a.x, boxes[j].a.y, boxes[j].a.z,     boxes[j].b.x, boxes[j].b.y, boxes[j].b.z, j );
         }
     }
 }
@@ -72,12 +122,15 @@ class TestAppGridHash : public AppSDL2OGL_3D { public:
 
     HashMap3D hmap;
     std::vector<Box> bodies;
+    //std::vector<Box> bodies2;
 
     Box cursor;
     Vec2i * colPairs = 0;
     int ncol = 0;
 
     std::vector<Vec2i> colPairsRef;
+
+    bool bMove = true;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -114,11 +167,11 @@ TestAppGridHash::TestAppGridHash( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     //Box span; span.setSymetric(1.0); span.a=Vec3dZero;
     printf( "span (%g,%g,%g)  (%g,%g,%g) \n", span.a.x,span.a.y,span.a.z,   span.b.x,span.b.y,span.b.z );
 
-    int nbodies = 50;
+    int nbodies = 8000;
     //for(int i=0;i<160;i++){
     Vec3d c = Vec3dZero;
     for(int i=0;i<nbodies;i++){
-        c.add_mul( span.genRandomSample(), 0.3 );
+        c.add_mul( span.genRandomSample(), 1.3 );
         bodies.push_back( {c, c+span.genRandomSample()} );
         bodies.back().order();
     }
@@ -126,11 +179,18 @@ TestAppGridHash::TestAppGridHash( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     //bodies.push_back( { (Vec3d){-3.5,0.5,-6.5}, (Vec3d){-2.6,0.6,6.6}} );
 
     int ncap = hmap.realloc( bodies.size() );
-    hmap.ruler.setStep( 1.0 );
+    hmap.ruler.setStep( 2.5 );
     hmap.setBodyBuff( bodies.size() );
+    t1 = getCPUticks();
     for(int i=0;i<bodies.size();i++){
         hmap.insert(i,bodies[i]);
     }
+    T = getCPUticks()-t1; printf( "build hmap    %g [Mticks]  %g [/body] \n", T*1.0e-6, T/bodies.size() );
+
+    printf( "hmap power %i capacity %i filled %i ratio %g \n", hmap.hmap.power, hmap.hmap.capacity, hmap.hmap.filled, hmap.hmap.filled/(float)hmap.hmap.capacity );
+
+    countObjects(hmap.hmap);
+    //printf( "hmap.DEBUG_ninserts %i \n", hmap.DEBUG_ninserts );
 
     cursor.a.set(-0.5,0.23,1.2);
     cursor.b.set(0.5,0.8,0.2);
@@ -139,12 +199,33 @@ TestAppGridHash::TestAppGridHash( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     printf( "boides:    n %i nbytes %i \n", bodies.size(),      bodies.size()*sizeof(Box) );
     printf( "hmap.hmap: n %i nbytes %i \n", hmap.hmap.capacity, hmap.hmap.nbytes()        );
 
-    colPairs = new Vec2i[1000];
+    colPairs = new Vec2i[10000];
     ncol     = hmap.collide( -1, cursor, bodies.data(), colPairs );
 
     collideBruteForce( bodies.size(), -1, cursor, bodies.data(), colPairsRef );
 
     printf( "ncol %i ref %i \n", ncol, colPairsRef.size() );
+
+    // ==== colide NxN (self)
+
+    ncol = 0;
+    t1 = getCPUticks();
+    for(int i=0; i<bodies.size(); i++){
+        ncol += hmap.collide( i, bodies[i], bodies.data(), colPairs );
+    }
+    T = getCPUticks()-t1; printf( "self+NxN hmap    %g [Mticks] \n", T*1.0e-6 );
+
+    colPairsRef.reserve( bodies.size()*bodies.size() );
+    colPairsRef.clear();
+    t1 = getCPUticks();
+    for(int i=0; i<bodies.size(); i++){
+        collideBruteForce( bodies.size(), i, bodies[i], bodies.data(), colPairsRef );
+    }
+    T = getCPUticks()-t1; printf( "self+NxN brute   %g [Mticks] \n", T*1.0e-6 );
+
+    printf( "self-NxN: ncol %i ref %i \n", ncol, colPairsRef.size() );
+
+    //exit(0);
 
     printf( "SETUP DONE \n"  );
 }
@@ -153,6 +234,72 @@ void TestAppGridHash::draw(){
    // printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    if( bMove ){
+        float dt = 0.1;
+        float fvel  = 0.3;
+        float fdiff = 0.1;
+        for( Box& b : bodies){
+            Vec3d vel,diff;
+            vel.set( randf(-fvel,fvel), randf(-fvel,fvel), randf(-fvel,fvel) );
+            diff.set( randf(-fdiff,fdiff), randf(-fdiff,fdiff), randf(-fdiff,fdiff) );
+            b.a.add_lincomb( dt, vel, dt, diff );
+            diff.set( randf(-fdiff,fdiff), randf(-fdiff,fdiff), randf(-fdiff,fdiff) );
+            b.b.add_lincomb( dt, vel, dt, diff );
+            b.order();
+        }
+    }
+
+    {
+
+        long   t1build, t1col, t1brute;
+        double Tbuild,  Tcol,  Tbrute;
+
+        // TODO : we can speed up update ~2x if we do not rebuild map each frame
+        //        but instead we reisert bboxes which entered new cells
+        //    - conservative update - boxes which leaved cell but did not entered new does not need to be updated
+
+        t1build = getCPUticks();
+        hmap.hmap.clear();
+        for(int i=0;i<bodies.size();i++){
+            hmap.insert(i,bodies[i]);
+        }
+        Tbuild = getCPUticks()-t1build;
+        //printf( "hmap power %i capacity %i filled %i ratio %g \n", hmap.hmap.power, hmap.hmap.capacity, hmap.hmap.filled, hmap.hmap.filled/(float)hmap.hmap.capacity );
+
+        ncol = 0;
+        t1col = getCPUticks();
+        for(int i=0; i<bodies.size(); i++){
+            //printf( "col %i %i \n", i, ncol );
+            ncol += hmap.collide( i, bodies[i], bodies.data(), colPairs );
+        }
+        Tcol = getCPUticks()-t1col;
+
+        colPairsRef.clear();
+        t1brute = getCPUticks();
+        for(int i=0; i<bodies.size(); i++){
+            collideBruteForce( bodies.size(), i, bodies[i], bodies.data(), colPairsRef );
+        }
+        Tbrute = getCPUticks()-t1brute;
+
+        printf( "[Mticks]: build %g col %g brute %g | ncol %i ref %i \n", Tbuild*1.0e-6, Tcol*1.0e-6, Tbrute*1.0e-6, ncol, colPairsRef.size() );
+
+        if( ncol != colPairsRef.size() ){
+            printf( "ERROR ncol(%i) != ref(%i) \n", ncol, colPairsRef.size() );
+            countObjects( hmap.hmap );
+
+            for(int i=0; i<bodies.size(); i++){
+                ncol = hmap.collide( i, bodies[i], bodies.data(), colPairs );
+                colPairsRef.clear();
+                collideBruteForce( bodies.size(), i, bodies[i], bodies.data(), colPairsRef );
+                if( ncol != colPairsRef.size() ){
+                    printf( "body[%i]   ncol(%i) != ref(%i) \n", i, ncol, colPairsRef.size() );
+                }
+            }
+            exit(0);
+            bMove = false;
+        }
+    }
 
 	glColor3f(1.0,0.0,0.0);
 	Draw3D::drawBBox(cursor.a,cursor.b);
@@ -187,18 +334,17 @@ void TestAppGridHash::draw(){
             printf( " ncol(%i) != ref(%i) \n", ncol, colPairsRef.size() );
         }
     }
-
     glColor3f(1.0,1.0,0.0);
     for( int i=0; i<ncol; i++ ){
         //printf( "col pair (%i,%i)\n",  p.x, p.y );
         Draw3D::drawLine( cursor.center(), bodies[colPairs[i].b].center() );
     }
+
     //exit(0);
 };
 
 void TestAppGridHash::drawHUD(){
     glDisable ( GL_LIGHTING );
-
 
     float y0    = 200;
     float hstep = 3;

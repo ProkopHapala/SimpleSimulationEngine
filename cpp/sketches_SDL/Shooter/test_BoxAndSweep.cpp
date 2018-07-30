@@ -210,6 +210,7 @@ void TestAppBoxAndSweep::draw(){
             b.a.add_lincomb( dt, vel, dt, diff );
             diff.set( randf(-fdiff,fdiff), randf(-fdiff,fdiff), randf(-fdiff,fdiff) );
             b.b.add_lincomb( dt, vel, dt, diff );
+            b.order();
         }
 
         //kboxes.update();

@@ -23,6 +23,9 @@ class HashMap3D : public HashMap64{ public:
     CubeGridRulerUnbound  ruler;
     HashMap64             hmap;
 
+    bool bDEBUG = true;
+    //int DEBUG_ninserts = 0;
+
     int   nMaxCell   = 256;
     int   nMaxFound  = 4096;
     int   nbodies    = 0;
@@ -46,6 +49,7 @@ class HashMap3D : public HashMap64{ public:
     inline void insertInds(int o, int n, uint64_t* inds ){
         //printf( "insertInds o %i n %i \n", o, n );
         for(int i=0; i<n; i++){
+            //DEBUG_ninserts++;
             hmap.insert( o, inds[i] );
         }
     }
@@ -54,20 +58,27 @@ class HashMap3D : public HashMap64{ public:
 
     inline int collide( int o, const Box& b, Box* boxes, Vec2i* colPairs ){
         int ncell = ruler.overlap_BBox(b.a,b.b,tmpCells);
+
+        if(bDEBUG){ if(ncell>nMaxCell){ printf("ncell(%i) > nMaxCell(%i)\n", ncell, nMaxCell); exit(0); }   };
+
         //printf( "collide ncell %i \n", ncell );
         int nfound=0;
         for(int i=0; i<ncell; i++){
-            //printf( "collide cell[%i] : %li \n", i, tmpCells[i] );
             nfound += hmap.getAllInBoxOnce( tmpCells[i], tmpFound+nfound, isOld );
+            //printf( "collide cell[%i] : %li nfound %i \n", i, tmpCells[i], nfound );
         }
+        if(bDEBUG){ if(nfound>nMaxFound){ printf("ncell(%i) > nMaxCell(%i)\n", nfound, nMaxFound); exit(0); }   };
+
         //printf( "collide nfound %i \n", nfound );
         int ncol = 0;
         for(int ii=0; ii<nfound; ii++){
             int i    =           tmpFound[ii];
             int oi    = (uint32_t)hmap.store[i];
+            //printf( "%i store[%i] %li  oi %i  o %i\n", ii, i, oi, hmap.store[i], o );
             isOld[oi] = false;
             if( o==oi ) continue;
             if( b.overlap(boxes[oi]) ){
+                //printf( "col[%i] (%g,%g,%g) (%g,%g,%g) j %i \n", ncol, boxes[oi].a.x, boxes[oi].a.y, boxes[oi].a.z,     boxes[oi].b.x, boxes[oi].b.y, boxes[oi].b.z, oi );
                 colPairs[ncol] = {o,oi};
                 ncol++;
             }

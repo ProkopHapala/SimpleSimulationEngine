@@ -20,7 +20,7 @@ class HashMap64{ public:
 	uint32_t mask     = 0;
 	uint32_t filled   = 0;
 	float    maxFillRatio = 0.6;
-	float    begFillRatio = 0.3;
+	//float    begFillRatio = 0.3;
 
 	int DEBUG_counter;
 
@@ -62,8 +62,15 @@ class HashMap64{ public:
 		hashs[ i ] =  h;
 	}
 
-	void init( int power_ ){
+    void clear(){
         filled     = 0;
+        for (int i=0; i<capacity; i++){
+			hits[i] =  0;
+			set( i, EMPTY_P, EMPTY_I, EMPTY_H );
+		}
+	}
+
+	void init( int power_ ){
 		power      = power_;
 		capacity   = 1<<power;
 		mask       = capacity-1;
@@ -72,10 +79,7 @@ class HashMap64{ public:
 		hits       = new uint16_t[capacity];
 		hashs      = new uint32_t[capacity];
 		iboxs      = new uint64_t[capacity];
-		for (int i=0; i<capacity; i++){
-			hits  [i] =  0;
-			set( i, EMPTY_P, EMPTY_I, EMPTY_H );
-		}
+        clear();
 	}
 
 	inline int getAllInBox( uint64_t ibox, uint32_t h, int* outi ){
@@ -172,37 +176,39 @@ class HashMap64{ public:
 	void remove( int i ){ uint32_t h = hash( iboxs[i] ); remove( i, h ); };
 
 	void resize( int power_ ){
-        printf( "HashMap64:resize power %i\n", power );
 		int old_capacity = capacity;
         uint64_t*  old_store = store;
         uint64_t*  old_iboxs = iboxs;
-        uint32_t*  old_hashs = hashs;
-        if( old_capacity > 0 ) delete [] hits;
+        //uint32_t*  old_hashs = hashs;
+        if( old_capacity > 0 ){
+            delete [] hits;
+            delete [] hashs;
+        }
 		init( power_ );
 		if( old_capacity > 0 ){
             for (int i=0; i<old_capacity; i++){
                 if( old_store[i] != EMPTY_P ){
-                    insert( old_store[i], old_iboxs[i], old_hashs[i] );
+                    insert( old_store[i], old_iboxs[i] );
                 }
             }
             delete [] old_store;
-            delete [] old_hashs;
+            //delete [] old_hashs;
             delete [] old_iboxs;
 		}
+		printf( "HashMap64:resized power %i capacity %i filled %i ratio %g \n", power, capacity, filled, filled/(float)capacity );
 	}
 
 	void checkResize(){
 	   if( filled > capacity * maxFillRatio ){
-	        power++;
-            while( ((1<<power)*begFillRatio) < filled ) power++;
-
-            printf( "checkResize n %i n*f %i nMaxNew %i pow %i \n", filled, (int)(filled/begFillRatio), 1<<power, power );
+	        //power++;
+            while( ((1<<power)*maxFillRatio) < filled ) power++;
+            //printf( "checkResize n %i n*f %i nMaxNew %i pow %i \n", filled, (int)(filled/begFillRatio), 1<<power, power );
 	        resize( power );
 	   };
 	}
 
 	int reserve( int n ){
-        int nTarget = (int)(n/begFillRatio)+1;
+        int nTarget = (int)(n/maxFillRatio)+1;
         //printf( "nTarget  %i \n", nTarget );
         if( nTarget > capacity ){
             while( (1<<power) < nTarget ){
