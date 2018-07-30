@@ -8,7 +8,7 @@ if( UNIX )
 endif()
 #SET( AXULIARY_COMPILE_FLAGS "-w -O3") 
 # -O3 and -Ofast does not work for SDL2_net
-SET( AXULIARY_COMPILE_FLAGS "-w -O2 -fPIC")
+SET( AXULIARY_COMPILE_FLAGS "-w -O2 -fPIC -march=native ")
 SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${AXULIARY_COMPILE_FLAGS}" )
 
 # ==== DIRS

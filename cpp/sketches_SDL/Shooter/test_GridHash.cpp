@@ -54,7 +54,7 @@ HashMap vs GridMap
 [Mticks]: build 1.69063 col 5.52472 brute 213.158 | ncol 3404 ref 3404
 [Mticks]: build 1.69083 col 5.43928 brute 207.623 | ncol 3368 ref 3368
 [Mticks]: build 1.78166 col 5.47265 brute 207.541 | ncol 3394 ref 3394
-[Mticks]: build 1.81032 col 5.772 brute 206.514 | ncol 3402 ref 3402
+[Mticks]: build 1.81032 col 5.77200 brute 206.514 | ncol 3402 ref 3402
 [Mticks]: build 1.83466 col 5.42177 brute 207.632 | ncol 3376 ref 3376
 [Mticks]: build 2.22474 col 6.59574 brute 213.105 | ncol 3430 ref 3430
 
