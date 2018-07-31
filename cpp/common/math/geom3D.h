@@ -16,6 +16,41 @@
 #include "Mat3.h"
 #include "raytrace.h"
 
+
+/*
+
+ToDo:
+
+classes should be differentiated by underlaying data-type, and casted between them
+LineSegment{ Vec3d a ,b;                        }
+LineSegment{ Vec3d p0,hdir; double l;           }
+Capsula    { Vec3d p0,hdir; double l; double r; }
+LineSegment{ Vec3d a,b;  }
+Ray        { Vec3d p0,hdir;  }
+AABB{ Vec3d a,b; }
+
+Sphere{ Vec3d pos; double r;         }
+Plane { Vec3d dir; double c;         }
+Slab  { Vec3d dir; double cmin,cmax; }
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 inline Vec3d cog_of_points ( int n, Vec3d * points ){ Vec3d c;  c.set(0.0); for(int i=0;i<n; i++){ c.add(points[i]); }  c.mul(1.0d/n); return c; }
 
 inline double Rbound2( const Vec3d& center, int n, Vec3d * points ){
