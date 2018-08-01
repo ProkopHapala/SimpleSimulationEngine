@@ -55,8 +55,12 @@ GLMesh* makeQuad3D( Vec2f p0, Vec2f p1, Vec2f u0, Vec2f u1 ){
     //GLfloat verts = new GLfloat[3*2*3];
     //GLfloat vUVs  = new GLfloat[3*2*2];
     //delete [] verts;
-    GLfloat verts[] = { p0.x,p0.y,0.0, p1.x,p1.y,0.0, p0.x,p1.y,0.0,   p0.x,p0.y,0.0, p1.x,p1.y,0.0, p1.x,p0.y,0.0 };
-    Vec2f vUVs   [] = { u0.x,u0.y,     u1.x,u1.y,     u0.x,u1.y,       u0.x,u0.y,     u1.x,u1.y,     u1.x,u0.y     };
+    //GLfloat verts[] = { p0.x,p0.y,0.0, p1.x,p1.y,0.0, p0.x,p1.y,0.0,   p0.x,p0.y,0.0, p1.x,p1.y,0.0, p1.x,p0.y,0.0 };
+    //Vec2f vUVs   [] = { u0.x,u0.y,     u1.x,u1.y,     u0.x,u1.y,       u0.x,u0.y,     u1.x,u1.y,     u1.x,u0.y     };
+    //GLfloat verts[] = { p0.x,p0.y,0.0, p1.x,p1.y,0.0, p0.x,p1.y,0.0,   p0.x,p0.y,0.0, p1.x,p0.y,0.0,  p1.x,p1.y,0.0  };
+    //Vec2f vUVs   [] = { u0.x,u0.y,     u1.x,u1.y,     u0.x,u1.y,       u0.x,u0.y,     u1.x,u0.y,      u1.x,u1.y      };
+    GLfloat verts[] = { p0.x,p0.y,0.0, p0.x,p1.y,0.0, p1.x,p1.y,0.0,    p0.x,p0.y,0.0, p1.x,p1.y,0.0, p1.x,p0.y,0.0 };
+    Vec2f vUVs   [] = { u0.x,u0.y,     u0.x,u1.y,     u1.x,u1.y,        u0.x,u0.y,     u1.x,u1.y,     u1.x,u0.y     };
     GLMesh* glquad = new GLMesh();
     glquad->init( 6, 0, NULL, verts, NULL, NULL, vUVs );
     return glquad;

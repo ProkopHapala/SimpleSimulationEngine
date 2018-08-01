@@ -75,13 +75,80 @@ uniform sampler3D texture_1;
 
 uniform  float txScale;
 
-
 out vec4 gl_FragColor;
+
+
+const float safeFator = 1.0;
+
+/*
+float rayMarchDistTexture( inout vec3 p, vec3 dp, float iso, float overshoot ){
+    //float t = 0.0;
+    float dist;
+    for(int i=0; i<32; i++){
+        dist = textureLod( texture_1, p+vec3(0.5), 0 ).r;
+        dist -= trashold;
+        float dt = overshoot+safeFato*max(0.0,dist); // overexted make sense in combination with regula-falsi
+        if(dist<0.0) break;
+        //t += dt;
+        p += dp*dt;
+    }
+    return dist;
+}
+*/
+
+float distField( vec3 p){
+    return textureLod( texture_1, p, 0 ).r;
+}
+
+vec3 getGradient( vec3 p, float d ){
+    // TODO - perhaps we can use hardware derivatives?
+    float y = distField(p); // should be zero? why to compute it again ?
+    return vec3( distField( p+vec3(d,0.0,0.0) ) - y,
+                 distField( p+vec3(0.0,d,0.0) ) - y,
+                 distField( p+vec3(0.0,0.0,d) ) - y  ) / d;
+}
+
+float rayMarchDistTexture2( inout vec3 p, vec3 dp, float iso, float overshoot ){
+    float t = 0.0;
+    float y,oy;
+    float dt;
+    for(int i=0; i<32; i++){
+        y  = distField(p) - iso;
+        dt = overshoot+safeFator*max(0.0,y); // overexted make sense in combination with regula-falsi
+        if(y<0.0) break;
+        if(t>1.7) return t;
+        t += dt;
+        oy = y;
+        p += dp*dt;
+    }
+    // linear regresion ( 1 iter of regula-falsa .. we can do more )
+    float f = -oy/(y-oy);
+    dt *= (f-1.0);
+    t += dt;
+    p += dp*dt;
+    return t;
+}
+
+float rayMarchShadow( inout vec3 p, vec3 dp, float iso, float dt0, float dtfac, float dens2 ){
+    float t = 0.0;
+    float y;
+    float dt    = dt0;
+    float light = 1.0;
+    for(int i=0; i<16; i++){
+        y      = distField(p) - iso;
+        light *= clamp(1 + y*dens2, 0.0, 1.0 );
+        dt *= dtfac;
+        t  += dt;
+        p  += dp*dt;
+        if( (p.x<0.1)||(p.x>0.9)||(p.y<0.1)||(p.y>0.9)||(p.z<0.1)||(p.z>0.9) ) return light;
+        //if(t>1.7) return light;
+    }
+    return light;
+}
 
 void main(){
     
-    vec3  p     = fragUVW;
-    
+    //vec3  p     = fragUVW*txScale;
     
     /*
     float cover = 0.0;
@@ -185,6 +252,8 @@ void main(){
     gl_FragColor = vec4(vec3(sum),cover );
     */
     
+
+/*
     float trashold = 0.05;
     vec3 dp     = normalize(fragUVWdir);
     float sum = 0.0;
@@ -198,10 +267,26 @@ void main(){
         if(dist<trashold) break;
         //if( sum>3.0 ) discard;
     }
-    
-    gl_FragColor = vec4(vec3(sum*0.3), 1.0 );  // ray length
+*/
+
+
+    vec3 lightDir = normalize(vec3(0.0,1.0,-0.5));
+
+    vec3 p = fragUVW*txScale + vec3(0.5);
+    vec3 dp = normalize(fragUVWdir);
+    p+=dp*0.1;
+    float t = rayMarchDistTexture2( p, dp, 0.03, 0.2/16.0 );
+    if( (p.x<0.1)||(p.x>0.9)||(p.y<0.1)||(p.y>0.9)||(p.z<0.1)||(p.z>0.9) ) discard;
+    vec3  normal = normalize( getGradient( p, 0.01 ) );
+    float light = 1.0;
+
+    light = max(0.0,dot( lightDir, normal )) + 0.2;
+    //light     =  rayMarchShadow( p, vec3(0.0,1.0,0.0), 0.1, 0.05, 1.0, 2.5 );
+    gl_FragColor = vec4( (normal*0.5 + 0.5)*light, 1.0 );
+
+    //gl_FragColor = vec4(vec3(t*0.3), 1.0 );  // ray length
     //gl_FragColor = vec4(vec3(it*0.025), 1.0 ); // iteration count
 
-    vec4 rgba = textureLod( texture_1, p*txScale+vec3(0.5), 0 );
+    //vec4 rgba = textureLod( texture_1, p*txScale+vec3(0.5), 0 );
     //gl_FragColor = vec4( vec3(rgba.x),1.0);
 }

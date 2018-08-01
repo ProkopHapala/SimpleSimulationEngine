@@ -28,6 +28,7 @@
 #include "GLfunctions.h"
 #include "GLobjects.h"
 #include "GLObject.h"
+#include "GL3Utils.h"
 #include "Shader.h"
 
 // =============== Global variables
@@ -40,6 +41,7 @@ double lastTime = 0.0;
 
 // =============== Functions
 
+/*
 GLMesh* makeQuad3D( Vec2f p0, Vec2f p1, Vec2f u0, Vec2f u1 ){
     GLfloat verts[]  = { p0.x,p0.y,0.0, p1.x,p1.y,0.0, p0.x,p1.y,0.0,  p0.x,p0.y,0.0, p1.x,p1.y,0.0, p1.x,p0.y,0.0 };
     //Vec2f vUVs   [] = { u0.x,u0.y,     u1.x,u1.y,     u0.x,u1.y,       u0.x,u0.y,     u1.x,u1.y,     u1.x,u0.y     };
@@ -49,6 +51,7 @@ GLMesh* makeQuad3D( Vec2f p0, Vec2f p1, Vec2f u0, Vec2f u1 ){
     glquad->init( 6, 0, NULL, verts, NULL, colors, NULL );
     return glquad;
 }
+*/
 
 uint8_t* makeImage3DRGBA( int nx, int ny, int nz ){
     int i = 0;
@@ -149,8 +152,8 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
     //virtual void draw(){}
     //Shader *sh1;
 
-    Shader *sh1;
-    GLMesh *msh1;
+    Shader *sh1,*sh2;
+    GLMesh *msh1,*msh2;
     GLuint  tx3D_1;
 
     //int npoints=0;
@@ -164,10 +167,10 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
 
         // from here: http://moddb.wikia.com/wiki/OpenGL:Tutorials:3D_Textures
         glEnable(GL_TEXTURE_3D);
-        int NX=16,NY=16,NZ=16;
+        int NX=32,NY=32,NZ=32;
         //int NX=64,NY=64,NZ=64;
         uint8_t* buff     = makeImage3D( NX, NY, NZ );
-        uint8_t* buffDist = makeImage3DDistance( NX, NY, NZ, 8, 16, buff );
+        uint8_t* buffDist = makeImage3DDistance( NX, NY, NZ, 16, 16, buff );
 
         glGenTextures(1, &tx3D_1);
         glBindTexture(GL_TEXTURE_3D, tx3D_1);
@@ -193,17 +196,22 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         sh1=new Shader();
         //sh1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
         //sh1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
-        //sh1->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/cut3DTexture.glslf"   );
         //sh1->init( "common_resources/shaders/rayMarch3DTexture.glslv",   "common_resources/shaders/rayMarch3DTexture.glslf"   );
         sh1->init( "common_resources/shaders/rayMarch3DTexture.glslv","common_resources/shaders/rayMarchCloudTexture3D.glslf"   );
         sh1->getDefaultUniformLocation();
 
-        //msh1 = makeQuad3D( {0.0f,0.0f}, {1.0f,1.0f}, {0.0f,0.0f}, {1.0f,1.0f} );
+        sh2=new Shader();
+        sh2->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/cut3DTexture.glslf"   );
+        sh2->getDefaultUniformLocation();
+
+        
         //msh1 = new GLMesh(); msh1->init_wireframe( Solids::Octahedron );
         //msh1 = new GLMesh(); msh1->init_wireframe( Solids::Octahedron );
         //msh1 = hardTriangles2mesh( Solids::Octahedron );
         //msh1 = hardTriangles2mesh( Solids::Icosahedron );
         msh1 = hardTriangles2mesh( Solids::Cube );
+
+        msh2 = makeQuad3D( {0.0f,0.0f}, {1.0f,1.0f}, {0.0f,0.0f}, {1.0f,1.0f} );
 
         Camera& cam = screens[0]->cam;
         cam.zmin = 1.0; cam.zmax = 1000.0; cam.zoom = 20.00f;
@@ -239,8 +247,21 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         glUniform1f(sh->getUloc("txScale"  ), 0.5);
         glUniform3f(sh->getUloc("txOffset"), 0.0,0.0,frameCount*0.01);
 
-        //msh1->draw(GL_TRIANGLES);
+        msh1->draw(GL_TRIANGLES);
         msh1->draw();
+
+        double fjunk;
+
+        sh=sh2;
+        sh->use();
+        mrot.setOne();
+        sh->set_modelMat( (GLfloat*)&mrot );
+        sh->set_modelPos( (const GLfloat[]){0.0f,0.0f,0.0f} );
+        setCamera( *sh1, cam );
+        glUniform3f(sh->getUloc("txOffset"), 0.0,0.0, modf( frameCount/500.0, &fjunk )  );
+
+        msh2->draw();
+
     };
 
 
