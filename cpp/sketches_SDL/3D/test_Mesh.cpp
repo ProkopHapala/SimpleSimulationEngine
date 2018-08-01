@@ -30,6 +30,8 @@ class TestAppMesh : public AppSDL2OGL_3D {
 
     Mesh mesh;
 
+    Mesh mesh2;
+
     bool dragging;
     Vec2f mouse0;
     int ipicked;
