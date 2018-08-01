@@ -148,13 +148,28 @@ uint8_t* makeImage3D( int nx, int ny, int nz ){
     return buff;
 }
 
+uint8_t* makeImage3DWhiteNoise( int nx, int ny, int nz ){
+    int i = 0;
+    uint8_t * buff = new uint8_t[nx*ny*nz];
+    float dx=1.0/nx; float dy=1.0/ny; float dz=1.0/nz;
+    for(int iz=0; iz<nz; iz++){
+        for(int iy=0; iy<ny; iy++){
+            for(int ix=0; ix<nx; ix++){
+                buff[i] = rand()&0xFF;
+                i++;
+            }
+        }
+    }
+    return buff;
+}
+
 class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
     //virtual void draw(){}
     //Shader *sh1;
 
     Shader *sh1,*sh2;
     GLMesh *msh1,*msh2;
-    GLuint  tx3D_1;
+    GLuint  tx3D_1,tx3D_2;
 
     //int npoints=0;
     //Vec3f* points=NULL;
@@ -173,24 +188,33 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         uint8_t* buffDist = makeImage3DDistance( NX, NY, NZ, 16, 16, buff );
 
         glGenTextures(1, &tx3D_1);
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_3D, tx3D_1);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         //glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         //glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        //glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        //glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        //glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP);
-
         //glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, NX, NY, NZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, buff);
         //glTexImage3D(GL_TEXTURE_3D,0,GL_INTENSITY,NX,NY,NZ,0,GL_LUMINANCE,GL_UNSIGNED_BYTE,buff);
         //glTexImage3D(GL_TEXTURE_3D,0,GL_RED,NX,NY,NZ,0,GL_RED,GL_UNSIGNED_BYTE,buff);
         glTexImage3D(GL_TEXTURE_3D,0,GL_RED,NX,NY,NZ,0,GL_RED,GL_UNSIGNED_BYTE,buffDist);
         //glBindTexture(GL_TEXTURE_3D, tx3D_1);
+
+        buff = makeImage3DWhiteNoise(NX,NY,NZ);
+        glGenTextures(1, &tx3D_2);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_3D, tx3D_2);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+        glTexImage3D(GL_TEXTURE_3D,0,GL_RED,NX,NY,NZ,0,GL_RED,GL_UNSIGNED_BYTE,buff);
+
+        delete [] buffDist;
         delete [] buff;
 
         sh1=new Shader();
@@ -241,9 +265,11 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         sh->set_modelPos( (const GLfloat[]){0.0f,0.0f,0.0f} );
         setCamera( *sh1, cam );
 
-        glActiveTexture(GL_TEXTURE0);
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, tx3D_1);
+        glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, tx3D_2);
         glBindTexture(GL_TEXTURE_3D, tx3D_1);
-        glUniform1i(sh->getUloc("texture_1"), 0  );
+        glUniform1i(sh->getUloc("texture_1"),     0  );
+        glUniform1i(sh->getUloc("texture_noise"), 1  );
         glUniform1f(sh->getUloc("txScale"  ), 0.5);
         glUniform3f(sh->getUloc("txOffset"), 0.0,0.0,frameCount*0.01);
 

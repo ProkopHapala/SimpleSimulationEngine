@@ -72,6 +72,7 @@ vec3  sphericalTransmittanceGradient(vec2 L, float r, float h, float z){
 noperspective in vec3 fragUVW;
 noperspective in vec3 fragUVWdir;
 uniform sampler3D texture_1; 
+uniform sampler3D texture_noise;
 
 uniform  float txScale;
 
@@ -96,27 +97,106 @@ float rayMarchDistTexture( inout vec3 p, vec3 dp, float iso, float overshoot ){
 }
 */
 
-float distField( vec3 p){
-    return textureLod( texture_1, p, 0 ).r;
+vec3 bump( vec3 p, float freq ){
+ return vec3(
+        textureLod( texture_noise, p*freq+vec3(0.5,0.0,0.0), 0 ).r-0.5,
+        textureLod( texture_noise, p*freq+vec3(0.0,0.5,0.0), 0 ).r-0.5,
+        textureLod( texture_noise, p*freq+vec3(0.0,0.0,0.5), 0 ).r-0.5
+    );
 }
 
-vec3 getGradient( vec3 p, float d ){
-    // TODO - perhaps we can use hardware derivatives?
-    float y = distField(p); // should be zero? why to compute it again ?
-    return vec3( distField( p+vec3(d,0.0,0.0) ) - y,
-                 distField( p+vec3(0.0,d,0.0) ) - y,
-                 distField( p+vec3(0.0,0.0,d) ) - y  ) / d;
+float distField( vec3 p, float iso){
+    //return textureLod( texture_1, p, 0 ).r - iso;
+    //return textureLod( texture_1, p + bump( p, 3.0 )*0.04 , 0 ).r - iso;
+    return textureLod( texture_1, p, 0 ).r - iso*( 1 + 0.5*textureLod( texture_noise, p*8.0, 0 ).r );
+    //float fbig  = textureLod( texture_1, p, 0 ).r - iso;
+    //float ffine = textureLod( texture_noise, p*5.0, 0 ).r;
+    //return (fbig>0)? fbig : ffine*fbig;
 }
+
+float distFieldFine( vec3 p, float iso){
+    return textureLod( texture_1, p, 0 ).r - iso;
+    //return textureLod( texture_1, p + bump( p, 3.0 )*0.02 , 0 ).r;
+    //return textureLod( texture_1, p, 0 ).r - iso*( 1 + 0.5*textureLod( texture_noise, p*8.0, 0 ).r );
+    //float fbig  = textureLod( texture_1, p, 0 ).r - iso;
+    //float ffine = textureLod( texture_noise, p*5.0, 0 ).r;
+    //return (fbig>0)? fbig : ffine*fbig;
+}
+
+vec3 getGradient( vec3 p, float d, float iso){
+    // TODO - perhaps we can use hardware derivatives?
+    //float y = distField(p,iso); // should be zero? why to compute it again ?
+    //return vec3( distField( p+vec3(d,0.0,0.0), iso) - y,
+    //             distField( p+vec3(0.0,d,0.0), iso) - y,
+    //             distField( p+vec3(0.0,0.0,d), iso) - y  ) / d;
+    float y = distFieldFine(p,iso); // should be zero? why to compute it again ?
+    return vec3( distFieldFine( p+vec3(d,0.0,0.0), iso) - y,
+                 distFieldFine( p+vec3(0.0,d,0.0), iso) - y,
+                 distFieldFine( p+vec3(0.0,0.0,d), iso) - y  ) / d;
+}
+
+vec3 getGradient2( vec3 p, float d, float iso){
+    return vec3( distFieldFine( p+vec3(d,0.0,0.0), iso) - distFieldFine( p+vec3(-d,0.0,0.0), iso),
+                 distFieldFine( p+vec3(0.0,d,0.0), iso) - distFieldFine( p+vec3(0.0,-d,0.0), iso),
+                 distFieldFine( p+vec3(0.0,0.0,d), iso) - distFieldFine( p+vec3(0.0,0.0,-d), iso) ) / (d*2);
+}
+
+
 
 float rayMarchDistTexture2( inout vec3 p, vec3 dp, float iso, float overshoot ){
     float t = 0.0;
     float y,oy;
     float dt;
     for(int i=0; i<32; i++){
-        y  = distField(p) - iso;
+        y  = distField(p, iso);
         dt = overshoot+safeFator*max(0.0,y); // overexted make sense in combination with regula-falsi
         if(y<0.0) break;
         if(t>1.7) return t;
+        t += dt;
+        oy = y;
+        p += dp*dt;
+    }
+    // linear regresion ( 1 iter of regula-falsa .. we can do more )
+    float f = -oy/(y-oy);
+    dt *= (f-1.0);
+    t += dt;
+    p += dp*dt;
+    return t;
+}
+
+float rayMarchDistTexture2Leafs( inout vec3 p, vec3 dp, float iso, float overshoot ){
+    float t = 0.0;
+    float y,oy;
+    float dt;
+    for(int i=0; i<16; i++){
+        y  = distField(p,iso);
+        dt = overshoot+safeFator*max(0.0,y); // overexted make sense in combination with regula-falsi
+        if( y<0 ){
+            float mask = textureLod( texture_noise, p*5.0, 0 ).r;
+            if (mask>0.5) return t;
+        }
+        t += dt;
+        oy = y;
+        p += dp*dt;
+    }
+    return t;
+}
+
+float rayMarchDistTexture2Bumpy( inout vec3 p, vec3 dp, float iso, float overshoot ){
+    float t = 0.0;
+    float y,oy;
+    float dt;
+    for(int i=0; i<16; i++){
+        y  = distField(p, iso);
+        if( y<0 ){
+            float mask = 0.5 - textureLod( texture_noise, p*5.0, 0 ).r;
+            //y += 0.5 - maks;
+            //if( y<0.0 ) break;
+            dt = 0.01;
+            if(mask<0) break;
+        }else{
+            dt = overshoot+safeFator*max(0.0,y);
+        }
         t += dt;
         oy = y;
         p += dp*dt;
@@ -135,7 +215,7 @@ float rayMarchShadow( inout vec3 p, vec3 dp, float iso, float dt0, float dtfac, 
     float dt    = dt0;
     float light = 1.0;
     for(int i=0; i<16; i++){
-        y      = distField(p) - iso;
+        y      = distField(p, iso);
         light *= clamp(1 + y*dens2, 0.0, 1.0 );
         dt *= dtfac;
         t  += dt;
@@ -147,142 +227,51 @@ float rayMarchShadow( inout vec3 p, vec3 dp, float iso, float dt0, float dtfac, 
 }
 
 void main(){
-    
-    //vec3  p     = fragUVW*txScale;
-    
-    /*
-    float cover = 0.0;
-    float t     = 0.0;
-    vec3 dp     = fragUVWdir*0.01;
-    for(int i=0; i<64; i++ ){
-        float dens = textureLod( texture_1, p*txScale-vec3(0.5), 0 ).r;
-        cover += dens;
-        if(cover>=1.0) break;
-        float dt = 1/(0.1+dens);
-        //t += 0.5;
-        t += dt;
-        p += dp*dt; // TODO  non-uniform step need to modify integration scheme
-    }
-    //gl_FragColor = vec4(vec3(1-t*0.005),1.0);
-    gl_FragColor = vec4(vec3(1.0,0.0,0.0),1-t*0.001);
-    */
-    
-    /*
-    vec3 dp     = fragUVWdir*0.1;
-    float cover = 0.0;
-    for(int i=0; i<16; i++ ){
-        float dens = textureLod( texture_1, p*txScale+vec3(0.5), 0 ).r;
-        cover += dens;
-        p += dp; // TODO  non-uniform step need to modify integration scheme
-    }
-    gl_FragColor = vec4(vec3(1.0,0.0,0.0),cover );
-    */
-    
-    
-    // self-shade - this kind of works but very costly
-    /*
-    vec3 dpp    = normalize(vec3(0.0,1.0,0.5))*0.1;
-    vec3 dp     = fragUVWdir*0.1;
-    float cover = 0.0;
-    float light = 0.0;
-    
-    for(int i=0; i<16; i++ ){
-        float dens = textureLod( texture_1, p*txScale+vec3(0.5), 0 ).r;
-        cover += dens;
-        float enlight = 1.0;
-        
-        if(dens>0.05){ // march toward light
-            vec3 pp  = p;
-            for(int i=0; i<16; i++ ){
-                pp += dpp;
-                float dens2 = textureLod( texture_1, pp*txScale+vec3(0.5), 0 ).r;
-                enlight *= (1-dens2*5.0);
-            }
-        }
-        
-        light += dens*enlight;
-        if(cover>1.0) break;
-        p += dp; // TODO  non-uniform step need to modify integration scheme
-    }
-    gl_FragColor = vec4(vec3(light),cover );
-    */
-    
-    /*
-    /// Self Shade cog - cast ray from density centre of mass 
-    vec3  dp     = fragUVWdir*0.1;
-    float cover  = 0.0;
-    vec3  cog    = vec3(0.0);
-    for(int i=0; i<64; i++ ){
-        float dens = textureLod( texture_1, p*txScale+vec3(0.5), 0 ).r;
-        cover += dens;
-        cog   += p*dens*max(0.0,1-cover);
-        if(cover>1.0) break;
-        p += dp; // TODO  non-uniform step need to modify integration scheme
-    }
-
-    dp    = normalize(vec3(0.0,1.0,0.5))*0.05;
-    float light = 1.0;
-    p = cog/cover;
-    for(int i=0; i<32; i++ ){
-        p += dp;
-        float dens = textureLod( texture_1, p*txScale+vec3(0.5), 0 ).r;
-        light *= max(0.0,1-dens*0.5);
-    }
-    gl_FragColor = vec4(vec3(light*light),cover );
-    */
-    
-    /*
-    // efficient ray-marching
-    // we need to modify texture as signed-distance-field
-    //https://www.shadertoy.com/view/XsSBWc
-    //float it = 0.0;
-    float sum = 1.0;
-    for(int i=0; i<64; i++){
-        vec3 pos = ro + t*rd;
-        float f = textureLod( texture_1, p*txScale+vec3(0.5), 0 ).r;
-        float dens = f*f;
-        // --- nonuniform walk occluding
-        float dt    = 0.05/(dens*8.0 + 1.0 );
-        float da    = dens*dt*4.0;
-        float wa    = 1.0-clrsum.a; wa=clamp(wa,0.0,1.0); 
-        sum +=  da * wa;
-        p += dp*dt;
-        it+= (1.0/64.0);
-    }
-    gl_FragColor = vec4(vec3(sum),cover );
-    */
-    
-
-/*
-    float trashold = 0.05;
-    vec3 dp     = normalize(fragUVWdir);
-    float sum = 0.0;
-    float it = 0.0;
-    for(int i=0; i<32; i++){
-        float dist = textureLod( texture_1, p*txScale+vec3(0.5), 0 ).r;
-        float dt = (0.0+max(0,dist-trashold) ); // overexted make sense in combination with regula-falsi
-        it  +=1.0;
-        sum += dt;
-        p += dp*dt;
-        if(dist<trashold) break;
-        //if( sum>3.0 ) discard;
-    }
-*/
-
 
     vec3 lightDir = normalize(vec3(0.0,1.0,-0.5));
 
     vec3 p = fragUVW*txScale + vec3(0.5);
     vec3 dp = normalize(fragUVWdir);
     p+=dp*0.1;
-    float t = rayMarchDistTexture2( p, dp, 0.03, 0.2/16.0 );
-    if( (p.x<0.1)||(p.x>0.9)||(p.y<0.1)||(p.y>0.9)||(p.z<0.1)||(p.z>0.9) ) discard;
-    vec3  normal = normalize( getGradient( p, 0.01 ) );
-    float light = 1.0;
 
-    light = max(0.0,dot( lightDir, normal )) + 0.2;
+    float iso = 0.06;
+
+    float t = rayMarchDistTexture2( p, dp, 0.04, 0.7/16.0 );
+    //float t = rayMarchDistTexture2Leafs( p, dp, 0.06, 0.5/16.0 );
+    //float t = rayMarchDistTexture2Bumpy( p, dp, 0.06, 0.5/16.0 );
+
+    /*
+    float mask;
+    mask = textureLod( texture_noise, p*5.0, 0 ).r;
+    if(mask<0.5) float t = rayMarchDistTexture2( p, dp, 0.05, 0.2/16.0 );
+    mask = textureLod( texture_noise, p*5.0, 0 ).r;
+    if(mask<0.5) float t = rayMarchDistTexture2( p, dp, 0.04, 0.2/16.0 );
+    mask = textureLod( texture_noise, p*5.0, 0 ).r;
+    if(mask<0.5) float t = rayMarchDistTexture2( p, dp, 0.02, 0.2/16.0 );
+    */
+
+    if( (p.x<0.1)||(p.x>0.9)||(p.y<0.1)||(p.y>0.9)||(p.z<0.1)||(p.z>0.9) ) discard;
+
+    //p += bump(p, 5.0) * (0.5/16.0);
+    //p += dp * normalize( grad );
+
+    vec3  grad   = getGradient( p, 0.5/16.0, iso );     // larger derivative step "d" leads to smooth shading, smaller makes flat shading
+    //vec3  grad   = getGradient2( p, 0.25/16.0, iso );
+
+    //float d = (0.25/16.0);
+    //vec3  grad = ( getGradient( p+vec3(d,0.0,0.0), 0.01, iso ) +
+    //               getGradient( p+vec3(0.0,d,0.0), 0.01, iso ) +
+    //               getGradient( p+vec3(0.0,0.0,d), 0.01, iso ) ) * 0.3;
+
+    //grad        += bump(p, 5.0);
+    vec3  normal = normalize( grad );
+
+    float light  = 1.0;
+    light = max(0.0,dot( lightDir, normal ))*0.8 + 0.2;
+    //light = textureLod( texture_noise, p*5.0, 0 ).r;
     //light     =  rayMarchShadow( p, vec3(0.0,1.0,0.0), 0.1, 0.05, 1.0, 2.5 );
-    gl_FragColor = vec4( (normal*0.5 + 0.5)*light, 1.0 );
+    //gl_FragColor = vec4( (normal*0.5 + 0.5)*light, 1.0 );
+    gl_FragColor = vec4( vec3(light), 1.0 );
 
     //gl_FragColor = vec4(vec3(t*0.3), 1.0 );  // ray length
     //gl_FragColor = vec4(vec3(it*0.025), 1.0 ); // iteration count
@@ -290,3 +279,7 @@ void main(){
     //vec4 rgba = textureLod( texture_1, p*txScale+vec3(0.5), 0 );
     //gl_FragColor = vec4( vec3(rgba.x),1.0);
 }
+
+
+
+
