@@ -24,6 +24,8 @@ void main(){
 
     //vec3 dg = dp*invGridStep;
 
+    vec4  color = vec4(0.0);
+
     for(int i=0; i<16; i++){
        vec3 ts  = p*invDp;
        vec3 tds = fract( ts ); // how much remains to next slice in each x,y,z direction ?
@@ -37,8 +39,11 @@ void main(){
             if(tds.y<tds.z){ uv=p.xz + vec2(1,tids.y); p += dp*tds.y; } // y=min
             else           { uv=p.xy + vec2(2,tids.z); p += dp*tds.z; } // z=min
        }
-       float x = texture( texture_1, uv, ).r;
+       float val = texture( texture_1, uv, );
+       color += val;
+       if(color.a>1.0) break;
     }
+    gl_FragColor = color;
 }
 
 
