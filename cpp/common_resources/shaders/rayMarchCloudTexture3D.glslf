@@ -106,9 +106,9 @@ vec3 bump( vec3 p, float freq ){
 }
 
 float distField( vec3 p, float iso){
-    //return textureLod( texture_1, p, 0 ).r - iso;
+    return textureLod( texture_1, p, 0 ).r - iso;
     //return textureLod( texture_1, p + bump( p, 3.0 )*0.04 , 0 ).r - iso;
-    return textureLod( texture_1, p, 0 ).r - iso*( 1 + 0.5*textureLod( texture_noise, p*8.0, 0 ).r );
+    //return textureLod( texture_1, p, 0 ).r - iso*( 1 + 0.5*textureLod( texture_noise, p*8.0, 0 ).r );
     //float fbig  = textureLod( texture_1, p, 0 ).r - iso;
     //float ffine = textureLod( texture_noise, p*5.0, 0 ).r;
     //return (fbig>0)? fbig : ffine*fbig;
@@ -236,7 +236,7 @@ void main(){
 
     float iso = 0.06;
 
-    float t = rayMarchDistTexture2( p, dp, 0.04, 0.7/16.0 );
+    float t = rayMarchDistTexture2( p, dp, 0.04, 0.1/16.0 );
     //float t = rayMarchDistTexture2Leafs( p, dp, 0.06, 0.5/16.0 );
     //float t = rayMarchDistTexture2Bumpy( p, dp, 0.06, 0.5/16.0 );
 
@@ -255,6 +255,7 @@ void main(){
     //p += bump(p, 5.0) * (0.5/16.0);
     //p += dp * normalize( grad );
 
+    //vec3  grad   = getGradient( p, 0.01, iso );
     vec3  grad   = getGradient( p, 0.5/16.0, iso );     // larger derivative step "d" leads to smooth shading, smaller makes flat shading
     //vec3  grad   = getGradient2( p, 0.25/16.0, iso );
 
@@ -270,8 +271,8 @@ void main(){
     light = max(0.0,dot( lightDir, normal ))*0.8 + 0.2;
     //light = textureLod( texture_noise, p*5.0, 0 ).r;
     //light     =  rayMarchShadow( p, vec3(0.0,1.0,0.0), 0.1, 0.05, 1.0, 2.5 );
-    //gl_FragColor = vec4( (normal*0.5 + 0.5)*light, 1.0 );
-    gl_FragColor = vec4( vec3(light), 1.0 );
+    gl_FragColor = vec4( (normal*0.5 + 0.5)*light, 1.0 );
+    //gl_FragColor = vec4( vec3(light), 1.0 );
 
     //gl_FragColor = vec4(vec3(t*0.3), 1.0 );  // ray length
     //gl_FragColor = vec4(vec3(it*0.025), 1.0 ); // iteration count

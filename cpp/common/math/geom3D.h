@@ -76,20 +76,33 @@ class LineInterval3d{ public:
     Vec3d  p0,hdir;
     double t0,t1;
 
-    inline void fromPlanes( Vec3d& dir1, double c1, Vec3d& dir2, double c2 ){
+    inline bool fromPlanes( Vec3d& dir1, double c1, Vec3d& dir2, double c2 ){
         double s = dir1.dot(dir2);
+        if( s*s>0.999 ) return false;
         double s2=s*s;
         double denom = 1/(1-s2);
-        p0.set_lincomb(  (c1-c2*s2)*denom, dir1, (c2-c1*s2)*denom,  dir2 );
+        p0.set_lincomb(  (c1-c2*s)*denom, dir1, (c2-c1*s)*denom,  dir2 );
         hdir.set_cross( dir1, dir2 );
         hdir.mul( sqrt(denom) );
+        //printf( " s %g denom %g hdir (%g,%g,%g) p0 (%g,%g,%g) \n", s, denom, hdir.x, hdir.y, hdir.z,   p0.x, p0.y, p0.z );
+        t0 = -1e+300;
+        t1 =  1e+300;
+        return true;
     };
 
     inline int trim( Vec3d& dir, double c ){
-        double s =   dir.dot(hdir);
-        double t  = ( c - dir.dot(p0) )/s;
-        if( s<0 ){ if(t>t0){t0=t; return -1; }; }
+        double s = dir.dot(hdir);
+        double d = c - dir.dot(p0);
+        if( s*s<0.0001 ){
+            printf( "perpendiculer \n" );
+            if( d > 0 ){ double t=t0; t0=t1; t1=t; }; // always outside
+            return 0;
+        }
+        double t = d/s;
+        //printf( " s %g c %g cp0 %g t %g | p0 (%g,%g,%g) dir (%g,%g,%g)  %g \n", s, c, dir.dot(p0), t,    p0.x,p0.y,p0.z,  dir.x,dir.y,dir.z , dir.dot(p0)  );
+        if( s>0 ){ if(t>t0){t0=t; return -1; }; }
         else     { if(t<t1){t1=t; return  1; }; }
+        printf( "no-trim \n" );
         return 0;
         //return t1<t0;
     };
