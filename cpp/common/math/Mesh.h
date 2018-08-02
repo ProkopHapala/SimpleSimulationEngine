@@ -18,10 +18,17 @@
 
 
 // implementation
+#include "integerOps.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
+
+
+inline uint32_t vertIdjk( uint8_t i, uint8_t j, uint8_t k ){
+    if(j>k){uint8_t t=j; j=k; k=t; }
+    return pack32(i,j,k,0);
+}
 
 class Mesh{ public:
     int    rendered_shape;
@@ -358,6 +365,54 @@ class Mesh{ public:
         }else{
             got->second.b = val;
             return true;
+        }
+    }
+
+    void fromPlanes(int n, Plane3D* planes ){
+        std::unordered_map<uint32_t,int> verts;
+        int nv =0;
+        for(int i=0; i<n; i++){
+            for(int j=i; j<n; j++){
+                LineInterval3d lij;
+                lij.fromPlanes( planes[i].normal, planes[i].iso, planes[j].normal, planes[j].iso );
+                MeshEdge eij;
+                decltype(verts.find(0)) it;
+                uint32_t iv0,iv1;
+                for( int k=i; k<n; k++ ){
+                    if(k==j) continue;
+                    int side = lij.trim( planes[k].normal, planes[k].iso );
+                    if( lij.t0>lij.t1 ) goto lineVanish;
+                    if( side>0 ) eij.verts.a = k;
+                    if( side<0 ) eij.verts.b = k;
+                }
+                // try insert endpoint 1
+                iv0 = vertIdjk( i, j, eij.verts.a );
+                it = verts.find(iv0);
+                if(  it == verts.end() ){
+                    nv++;
+                    verts.insert({iv0,nv});
+                    points.push_back( lij.endPoint0() );
+                    eij.verts.a = nv;
+                }else{
+                    eij.verts.a = it->second;
+                }
+                // try insert endpoint 2
+                iv1 = vertIdjk( i, j, eij.verts.b );
+                it = verts.find(iv1);
+                if(  it == verts.end() ){
+                    nv++;
+                    verts.insert({iv1,nv});
+                    points.push_back( lij.endPoint1() );
+                    eij.verts.b = nv;
+                }else{
+                    eij.verts.b = it->second;
+                }
+                eij.faces.a = i;
+                eij.faces.b = j;
+                edges.push_back( eij );
+            lineVanish:
+                ;
+            }
         }
     }
 

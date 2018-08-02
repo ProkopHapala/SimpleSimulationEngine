@@ -72,6 +72,33 @@ class Line3D{ public:
     Vec3d a,b;
 };
 
+class LineInterval3d{ public:
+    Vec3d  p0,hdir;
+    double t0,t1;
+
+    inline void fromPlanes( Vec3d& dir1, double c1, Vec3d& dir2, double c2 ){
+        double s = dir1.dot(dir2);
+        double s2=s*s;
+        double denom = 1/(1-s2);
+        p0.set_lincomb(  (c1-c2*s2)*denom, dir1, (c2-c1*s2)*denom,  dir2 );
+        hdir.set_cross( dir1, dir2 );
+        hdir.mul( sqrt(denom) );
+    };
+
+    inline int trim( Vec3d& dir, double c ){
+        double s =   dir.dot(hdir);
+        double t  = ( c - dir.dot(p0) )/s;
+        if( s<0 ){ if(t>t0){t0=t; return -1; }; }
+        else     { if(t<t1){t1=t; return  1; }; }
+        return 0;
+        //return t1<t0;
+    };
+
+    inline Vec3d endPoint0(){ return p0+hdir*t0; };
+    inline Vec3d endPoint1(){ return p0+hdir*t1; };
+
+};
+
 class Capsula3D{ public:
     Vec3d  p,hdir;
     double r,l;
@@ -566,8 +593,7 @@ class Polygon{
 
 };
 
-class MeshEdge{
-    public:
+class MeshEdge{ public:
     Vec2i verts;
     Vec2i faces;
 
