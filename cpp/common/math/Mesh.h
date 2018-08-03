@@ -63,9 +63,7 @@ class Mesh{ public:
 
     std::vector<int> tri2poly;
 
-
-
-    std::vector<LineInterval3d> lijsDEBUG;
+    //std::vector<LineInterval3d> lijsDEBUG;
 
     // ==== functions
 
@@ -408,7 +406,7 @@ class Mesh{ public:
                     //printf( "end not trimmed %i %i \n", eij.verts.a, eij.verts.b );
                     continue; // DEBUG
                 }
-                lijsDEBUG.push_back(lij);
+                //lijsDEBUG.push_back(lij);
                 // try insert endpoint 1
                 eij.faces.a = i;
                 eij.faces.b = j;
