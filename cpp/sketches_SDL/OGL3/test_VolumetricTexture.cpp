@@ -163,13 +163,71 @@ uint8_t* makeImage3DWhiteNoise( int nx, int ny, int nz ){
     return buff;
 }
 
+uint8_t* makeImageAtlas2D( int mx, int my, int nx, int ny ){
+    int i = 0;
+    uint8_t * buff = new uint8_t[mx*my*nx*ny];
+    float dx=1.0/nx; float dy=1.0/ny;
+    int oy  = nx*mx;
+    int ojx = nx;
+    int ojy = nx*ny*mx;
+    for(int jy=0; jy<my; jy++){
+        for(int iy=0; iy<ny; iy++){
+            for(int jx=0; jx<mx; jx++){
+                uint8_t* buffo = buff + jy*ojy + jx*ojx + iy*oy;
+                for(int ix=0; ix<nx; ix++){
+                    float x = (ix-nx/2)*dx;
+                    float y = (iy-ny/2)*dy;
+                    float r2 = sqrt(x*x + y*y);
+                    buffo[ix] = 255*( cos( 10.0*(x*(jx+1)))*0.25+cos( 10.0*y*(jy+1) )*0.25 + 0.5 );
+                    //buffo[ix] = 255*( cos(r2*20)*0.5 + 0.5 );
+                }
+            }
+        }
+    }
+    return buff;
+}
+
+uint32_t* makeImageAtlas2D_RGBA( int mx, int my, int nx, int ny ){
+    int i = 0;
+    uint32_t * buff = new uint32_t[mx*my*nx*ny];
+    float dx=1.0/nx; float dy=1.0/ny;
+    int oy  = nx*mx;
+    int ojx = nx;
+    int ojy = nx*ny*mx;
+    for(int jy=0; jy<my; jy++){
+        for(int iy=0; iy<ny; iy++){
+            for(int jx=0; jx<mx; jx++){
+                uint32_t* buffo = buff + jy*ojy + jx*ojx + iy*oy;
+                for(int ix=0; ix<nx; ix++){
+                    float x = (ix-nx/2)*dx;
+                    float y = (iy-ny/2)*dy;
+                    float r2 = x*x + y*y;
+                    float z  = jx-1.5;
+                    float z2 = z*z;
+                    //float f = cos( 10.0*(x*(jx+1)))*0.25+cos( 10.0*y*(jy+1) )*0.25 + 0.5;
+                    //float f = exp( -4.0*(r2+z2*0.125) );
+                    float f = 1.0; if( (r2+z2*0.25*0.25) >0.25) f=0.0;
+                    uint8_t b = 255*f;
+                    //buffo[ix] = (b<<24) || ( b<<(8*jy) );
+                    uint8_t a = 255*f;
+                    //uint8_t a = rand()&0b10000000;
+                    buffo[ix] = (a<<24)| (b<<(jy*8));
+                    //buffo[ix] = rand()&0xFF000000;
+                    //buffo[ix] = 255*( cos(r2*20)*0.5 + 0.5 );
+                }
+            }
+        }
+    }
+    return buff;
+}
+
 class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
     //virtual void draw(){}
     //Shader *sh1;
 
-    Shader *sh1,*sh2;
+    Shader *sh1,*sh2,*sh3;
     GLMesh *msh1,*msh2;
-    GLuint  tx3D_1,tx3D_2;
+    GLuint  tx3D_1,tx3D_2,tx2D_1;
 
     //int npoints=0;
     //Vec3f* points=NULL;
@@ -180,6 +238,8 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         //screens.push_back( new ScreenSDL2OGL3( 800, 600) );
         for( ScreenSDL2OGL3* screen: screens ) screen->scenes.push_back( this );
 
+        uint8_t *buff=0,*buffDist=0;
+        /*
         // from here: http://moddb.wikia.com/wiki/OpenGL:Tutorials:3D_Textures
         glEnable(GL_TEXTURE_3D);
         int NX=32,NY=32,NZ=32;
@@ -202,6 +262,8 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         //glTexImage3D(GL_TEXTURE_3D,0,GL_RED,NX,NY,NZ,0,GL_RED,GL_UNSIGNED_BYTE,buff);
         glTexImage3D(GL_TEXTURE_3D,0,GL_RED,NX,NY,NZ,0,GL_RED,GL_UNSIGNED_BYTE,buffDist);
         //glBindTexture(GL_TEXTURE_3D, tx3D_1);
+        delete [] buffDist;
+        delete [] buff;
 
         buff = makeImage3DWhiteNoise(NX,NY,NZ);
         glGenTextures(1, &tx3D_2);
@@ -213,9 +275,21 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
         glTexImage3D(GL_TEXTURE_3D,0,GL_RED,NX,NY,NZ,0,GL_RED,GL_UNSIGNED_BYTE,buff);
-
-        delete [] buffDist;
         delete [] buff;
+
+        */
+
+        //buff = makeImageAtlas2D( 4, 3, 64, 64 );
+        buff = (uint8_t*)makeImageAtlas2D_RGBA( 4, 3, 64, 64 );
+        glGenTextures(1, &tx2D_1 );
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, tx2D_1  );
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        //glTexImage2D   (GL_TEXTURE_2D,0,GL_RED,4*64,3*64,0,GL_RED,GL_UNSIGNED_BYTE,buff);
+        glTexImage2D   (GL_TEXTURE_2D,0,GL_RGBA,4*64,3*64,0, GL_RGBA,GL_UNSIGNED_BYTE,buff);
 
         sh1=new Shader();
         //sh1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
@@ -228,7 +302,11 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         sh2->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/cut3DTexture.glslf"   );
         sh2->getDefaultUniformLocation();
 
-        
+        sh3=new Shader();
+        sh3->init( "common_resources/shaders/rayMarch3DTexture.glslv","common_resources/shaders/sliceMarch.glslf"   );
+        sh3->getDefaultUniformLocation();
+
+
         //msh1 = new GLMesh(); msh1->init_wireframe( Solids::Octahedron );
         //msh1 = new GLMesh(); msh1->init_wireframe( Solids::Octahedron );
         //msh1 = hardTriangles2mesh( Solids::Octahedron );
@@ -246,10 +324,10 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
 
     virtual void draw( Camera& cam ){
         //glClearColor(1.0, 1.0, 1.0, 1.0);
-        glClearColor(0.0, 0.0, 1.0, 1.0);
+        //glClearColor(0.0, 0.0, 1.0, 1.0);
+        glClearColor(0.5, 0.5, 0.5, 1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
         glEnable(GL_DEPTH_TEST);
-
 
         glEnable(GL_BLEND);
         glEnable(GL_CULL_FACE);
@@ -258,23 +336,34 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
 
-        Shader* sh=sh1;
+
+        //Shader* sh=sh1;
+        Shader* sh=sh3;
         sh->use();
         Mat3f mrot; mrot.setOne();
         sh->set_modelMat( (GLfloat*)&mrot );
         sh->set_modelPos( (const GLfloat[]){0.0f,0.0f,0.0f} );
         setCamera( *sh1, cam );
 
+        /*
         glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, tx3D_1);
         glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, tx3D_2);
-        glBindTexture(GL_TEXTURE_3D, tx3D_1);
         glUniform1i(sh->getUloc("texture_1"),     0  );
         glUniform1i(sh->getUloc("texture_noise"), 1  );
         glUniform1f(sh->getUloc("txScale"  ), 0.5);
         glUniform3f(sh->getUloc("txOffset"), 0.0,0.0,frameCount*0.01);
+        */
+
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, tx2D_1 ) ;
+        glUniform1i(sh->getUloc("texture_1"),     0  );
+        glUniform1i(sh->getUloc("texture_noise"), 1  );
+        glUniform1f(sh->getUloc("txScale"  ),     0.5);
 
         msh1->draw(GL_TRIANGLES);
         msh1->draw();
+
+
+
 
         double fjunk;
 
