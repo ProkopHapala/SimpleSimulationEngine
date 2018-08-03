@@ -43,7 +43,7 @@ void drawPlane( Plane3D& p ){
     glEnd();
 }
 
-int nplanes = 7;
+int nplanes = 18;
 Plane3D planes[] = {
     +1.0, 0.0, 0.0,  -1.0,
     -1.0, 0.0, 0.0,  -1.0,
@@ -70,10 +70,11 @@ Plane3D planes[] = {
 
 };
 
+char str[1024];
 
-class TestAppMesh : public AppSDL2OGL_3D {
-	public:
+class TestAppMesh : public AppSDL2OGL_3D { public:
 
+    
     Mesh mesh;
     Mesh mesh2;
 
@@ -99,7 +100,6 @@ class TestAppMesh : public AppSDL2OGL_3D {
 #include <unistd.h>
 TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
-    char str[1024];
     getcwd( str, 1024);
     printf("WORKING_DIRECTORY = >>%s<<", str);
 
@@ -177,7 +177,6 @@ TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id
 
     l12.trim(plane3.normal, plane3.C);
     l12.trim(plane4.normal, plane4.C);
-
     printf( "l12 t (%g,%g) \n", l12.t0, l12.t1 );
     */
 
@@ -189,7 +188,7 @@ TestAppMesh::TestAppMesh( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id
     */
 
     for(int i=0; i<18; i++){
-        float d=0.0;
+        float d=0.3;
         planes[i].normal.add(randf(-d,d),randf(-d,d),randf(-d,d));
         planes[i].normal.normalize();
     }
@@ -212,17 +211,14 @@ void TestAppMesh::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+    //glEnable( GL_LIGHTING );
+    //glEnable(GL_DEPTH_TEST);
+    //glCallList(mesh.rendered_shape);
 
-	/*
-    glEnable( GL_LIGHTING );
-    glEnable(GL_DEPTH_TEST);
-    glCallList(mesh.rendered_shape);
-
+    /*
     glDisable( GL_LIGHTING );
     Draw3D::drawAxis(1.0);
-
     glDisable( GL_DEPTH_TEST );
-
     */
 
     /*
@@ -235,12 +231,7 @@ void TestAppMesh::draw(){
     */
 
 
-
-
-
-
     /*
-
     glColor3f(0.0,0.0,1.0);
     char str[256];
     for(int i=0; i<mesh.points.size(); i++){
@@ -265,43 +256,69 @@ void TestAppMesh::draw(){
         Vec3d& p = mesh.points[i];
         Draw3D::drawText(str, c, fontTex, 0.03, 0);
     }
-
     */
 
-
+    /*
     glColor3f(1.0,1.0,1.0);
     for( LineInterval3d& lij : mesh2.lijsDEBUG ){
-        Draw3D::drawPointCross( lij.p0, 0.1 ); Draw3D::drawVecInPos( lij.hdir, lij.p0 );
+        //Draw3D::drawPointCross( lij.p0, 0.1 ); 
+        //Draw3D::drawVecInPos( lij.hdir, lij.p0 );
+        Vec3d p0,p1;
+        p0=lij.endPoint0();
+        p1=lij.endPoint1();
+        Draw3D::drawPointCross( p0, 0.1 ); 
+        Draw3D::drawPointCross( p1, 0.1 ); 
+        Draw3D::drawLine      ( p0, p1 );
     }
-
+    //exit(0);
+    */
+    
     glColor3f(0.0,0.0,0.0);
     for( MeshEdge& edge: mesh2.edges ){
         Vec3d& a =  mesh2.points[ edge.verts.a ];
         Vec3d& b =  mesh2.points[ edge.verts.b ];
-
         //Draw3D::drawPointCross( l12.p0, 0.1 ); Draw3D::drawVecInPos( l12.hdir, l12.p0 );
-
         //printf( "edge %i(%g,%g,%g) %i(%g,%g,%g) \n", edge.verts.a, a.x,a.y,a.z,   edge.verts.b, b.x,b.y,b.z );
         Draw3D::drawLine( a, b );
     }
     //exit(0);
-
-
+    
+    
     for( Vec3d& p: mesh2.points ){
+        glEnable(GL_DEPTH_TEST);
         Draw3D::drawPointCross( p, 0.1 );
     }
-
-    for(int i=0; i<nplanes; i++){
-        Draw::color_of_hash(i*4456464+54844);
-        drawPlane( planes[i] );
+    
+    int i=0;
+    for( Polygon* pl: mesh2.polygons ){
+        Draw::color_of_hash(i*4456464+54844); i++;
+        glBegin(GL_TRIANGLE_FAN);
+        for( int i : pl->ipoints ){
+            Vec3d& v = mesh2.points[i];
+            glVertex3f( v.x,v.y,v.z  );
+        }
+        glEnd();
     }
 
-
-
+    /*
+    for(int i=0; i<nplanes; i++){
+        Draw::color_of_hash(i*4456464+54844);
+        glEnable(GL_DEPTH_TEST);
+        drawPlane( planes[i] );
+        sprintf(str,"%i", i );
+        Draw3D::drawText(str, planes[i].normal*planes[i].iso, fontTex, 0.02, 0);
+    }
+    glEnable(GL_DEPTH_TEST);
+    */
+   
     /*
     glColor3f(0.5,0.0,0.0); drawPlane( plane1 );
     glColor3f(0.0,0.0,0.5); drawPlane( plane2 );
     glColor3f(1.0,1.0,1.0); Draw3D::drawPointCross( l12.p0, 0.1 ); Draw3D::drawVecInPos( l12.hdir, l12.p0 );
+    
+    glColor3f(0.0,0.0,0.0);
+    Vec3d p1,p2; p1=l12.endPoint0(); p2=l12.endPoint1();
+    Draw3D::drawPointCross( p1, 0.1 ); Draw3D::drawPointCross( p2, 0.1 ); Draw3D::drawLine( p1, p2 );
     */
 
     /*
@@ -309,10 +326,8 @@ void TestAppMesh::draw(){
     glColor3f(0.0,0.0,0.5); drawPlane( plane4 );
     glColor3f(1.0,1.0,1.0);
     Draw3D::drawPointCross( l12.p0, 0.1 ); Draw3D::drawVecInPos( l12.hdir, l12.p0 );
-    Vec3d p1,p2; p1=l12.endPoint0(); p2=l12.endPoint1();
-    Draw3D::drawPointCross( p1, 0.1 ); Draw3D::drawPointCross( p2, 0.1 ); Draw3D::drawLine( p1, p2 );
     */
-
+    
     //glColor3f(0,0,0); Draw3D::drawPointCross( mesh.points[ipicked], 0.2 );
 
 };
@@ -326,6 +341,23 @@ void TestAppMesh::eventHandling ( const SDL_Event& event  ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
+                case SDLK_t: 
+                    plane1.normal.fromRandomSphereSample();
+                    plane2.normal.fromRandomSphereSample();
+                    float perturb = 0.3;
+                    plane2.normal = plane1.normal*(perturb-1) + plane2.normal*perturb;
+                    plane2.normal.normalize();
+                    plane1.iso = randf(-0.7,-1.8);
+                    plane1.iso = randf(-0.7,-1.8);
+                    perturb = 0.5;
+                    l12.p0.fromRandomCube(0.5);
+                    l12.hdir.fromRandomSphereSample();
+                    l12.hdir = plane1.normal*(perturb-1) + l12.hdir*perturb;
+                    l12.hdir.normalize();
+                    l12.infiniteSpan();
+                    l12.trim(plane1.normal, plane1.C);
+                    l12.trim(plane2.normal, plane2.C);
+                    printf( "%g %g (%g,%g%g) (%g,%g%g)\n", l12.t0, l12.t1,    l12.p0.x,l12.p0.y,l12.p0.z,    l12.hdir.x,l12.hdir.y,l12.hdir.z );
             }
             break;
         case SDL_MOUSEBUTTONDOWN:

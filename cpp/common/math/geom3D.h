@@ -85,8 +85,7 @@ class LineInterval3d{ public:
         hdir.set_cross( dir1, dir2 );
         hdir.mul( sqrt(denom) );
         //printf( " s %g denom %g hdir (%g,%g,%g) p0 (%g,%g,%g) \n", s, denom, hdir.x, hdir.y, hdir.z,   p0.x, p0.y, p0.z );
-        t0 = -1e+300;
-        t1 =  1e+300;
+        infiniteSpan();
         return true;
     };
 
@@ -94,7 +93,7 @@ class LineInterval3d{ public:
         double s = dir.dot(hdir);
         double d = c - dir.dot(p0);
         if( s*s<0.0001 ){
-            printf( "perpendiculer \n" );
+            //printf( "perpendiculer \n" );
             if( d > 0 ){ double t=t0; t0=t1; t1=t; }; // always outside
             return 0;
         }
@@ -102,11 +101,12 @@ class LineInterval3d{ public:
         //printf( " s %g c %g cp0 %g t %g | p0 (%g,%g,%g) dir (%g,%g,%g)  %g \n", s, c, dir.dot(p0), t,    p0.x,p0.y,p0.z,  dir.x,dir.y,dir.z , dir.dot(p0)  );
         if( s>0 ){ if(t>t0){t0=t; return -1; }; }
         else     { if(t<t1){t1=t; return  1; }; }
-        printf( "no-trim \n" );
+        //printf( "no-trim \n" );
         return 0;
         //return t1<t0;
     };
 
+    inline Vec3d infiniteSpan(){ t0 = -1e+300; t1 =  1e+300; }
     inline Vec3d endPoint0(){ return p0+hdir*t0; };
     inline Vec3d endPoint1(){ return p0+hdir*t1; };
 

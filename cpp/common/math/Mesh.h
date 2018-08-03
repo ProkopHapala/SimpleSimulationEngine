@@ -376,18 +376,18 @@ class Mesh{ public:
 
     void fromPlanes(int n, Plane3D* planes ){
         std::unordered_map<uint32_t,int> verts;
+        std::vector<int> faceEdges[n];
         int nv =0;
         for(int i=0; i<n; i++){
+            //int ie0=edges.size();
             for(int j=i+1; j<n; j++){
                 LineInterval3d lij;
-                printf( "===(%i,%i) (%g,%g,%g) (%g,%g,%g) \n", i, j, planes[i].normal.x, planes[i].normal.y, planes[i].normal.z,   planes[j].normal.x, planes[j].normal.y, planes[j].normal.z );
+                //printf( "===(%i,%i) (%g,%g,%g) (%g,%g,%g) \n", i, j, planes[i].normal.x, planes[i].normal.y, planes[i].normal.z,   planes[j].normal.x, planes[j].normal.y, planes[j].normal.z );
                 if( !lij.fromPlanes( planes[i].normal, planes[i].iso, planes[j].normal, planes[j].iso ) ){
-                    printf("colinear intersection %i,%i \n", i,j  );
+                    //printf("colinear intersection %i,%i \n", i,j  );
                     continue;
                 }
-
-                lijsDEBUG.push_back(lij);
-
+                //lijsDEBUG.push_back(lij);
                 MeshEdge eij;
                 decltype(verts.find(0)) it;
                 uint32_t iv0,iv1;
@@ -397,32 +397,33 @@ class Mesh{ public:
                     if( (k==i)||(k==j) ){ continue; }
                     int side = lij.trim( planes[k].normal, planes[k].iso );
                     if( lij.t0>lij.t1 ){
-                        printf( "   line Vanish (%i,%i,%i) \n", i,j,k );
+                        //printf( "   line Vanish (%i,%i,%i) \n", i,j,k );
                         goto lineVanish;
                     };
                     //printf( "side %i \n", side );
-                    if     ( side>0 ){ eij.verts.a = k; }
-                    else if( side<0 ){ eij.verts.b = k; }
+                    if     ( side>0 ){ eij.verts.b = k; }
+                    else if( side<0 ){ eij.verts.a = k; }
                 }
                 if( (eij.verts.a<0) or (eij.verts.b<0) ){
-                    printf( "end not trimmed %i %i \n", eij.verts.a, eij.verts.b );
+                    //printf( "end not trimmed %i %i \n", eij.verts.a, eij.verts.b );
                     continue; // DEBUG
                 }
+                lijsDEBUG.push_back(lij);
                 // try insert endpoint 1
                 eij.faces.a = i;
                 eij.faces.b = j;
-                printf( "   edge (%i,%i)(%i,%i) \n", eij.faces.a, eij.faces.b, eij.verts.a, eij.verts.b );
+                //printf( "   edge (%i,%i)(%i,%i) \n", eij.faces.a, eij.faces.b, eij.verts.a, eij.verts.b );
                 iv0 = vertIdjk( i, j, eij.verts.a );
                 it = verts.find(iv0);
                 if(  it == verts.end() ){
                     //nv = points.size();
-                    printf( "   new point (%i,%i,%i) -> %i #%i\n", i, j, eij.verts.a, nv, iv0 );
+                    //printf( "   new point (%i,%i,%i) -> %i #%i\n", i, j, eij.verts.a, nv, iv0 );
                     verts.insert({iv0,nv});
                     eij.verts.a = nv;
                     points.push_back( lij.endPoint0() );
                     nv++;
                 }else{
-                    printf( "   old point (%i,%i,%i) -> %i #%i\n", i, j, eij.verts.a, it->second, iv0 );
+                    //printf( "   old point (%i,%i,%i) -> %i #%i\n", i, j, eij.verts.a, it->second, iv0 );
                     eij.verts.a = it->second;
                 }
                 // try insert endpoint 2
@@ -430,20 +431,75 @@ class Mesh{ public:
                 it = verts.find(iv1);
                 if(  it == verts.end() ){
                     //nv = points.size();
-                    printf( "   new point (%i,%i,%i) -> %i #%i \n", i, j, eij.verts.b, nv, iv1 );
+                    //printf( "   new point (%i,%i,%i) -> %i #%i \n", i, j, eij.verts.b, nv, iv1 );
                     verts.insert({iv1,nv});
                     eij.verts.b = nv;
                     points.push_back( lij.endPoint1() );
                     nv++;
                 }else{
-                    printf( "   old point (%i,%i,%i) -> %i #%i\n", i, j, eij.verts.b, it->second, iv1 );
+                    //printf( "   old point (%i,%i,%i) -> %i #%i\n", i, j, eij.verts.b, it->second, iv1 );
                     eij.verts.b = it->second;
                 }
-
+                //eij.verts.a = points.size(); points.push_back( lij.endPoint0() );
+                //eij.verts.b = points.size(); points.push_back( lij.endPoint1() );
+                faceEdges[i].push_back( edges.size() );
+                faceEdges[j].push_back( edges.size() );
                 edges.push_back( eij );
             lineVanish:
                 ;
             }
+            // order edges to make a polygon
+            //int ne = edges.size() - ie0;
+            
+            if( faceEdges[i].size()>0 ){
+                //printf( " face: %i nedges %i \n", i, faceEdges[i].size() );
+                Polygon * pl = new Polygon();
+                //int ieo   = -1;
+                int ie    = faceEdges[i][0];
+                int iv    = edges[ie].verts.a;
+                int ivEnd = edges[ie].verts.b;
+                //printf( "%i(%i,%i)\n", ie, iv, ivEnd );
+                //for(int iter=0; iter<ne; iter++){
+                // todo - we can perhaps sort it by faster algorithms but for small number of edges-per-polygon it is not worth it
+                int ndone=0;
+                while( iv != ivEnd ){
+                    int ivNew = -1;
+                    int j;
+                    //for( j : faceEdges[i]){
+                    for(int jj=0; jj<faceEdges[i].size(); jj++){
+                        j = faceEdges[i][jj];
+                        if(ie==j) continue;
+                        //if((ie==j)||(ie==ieo)) continue;
+                        if      (edges[j].verts.a == iv){ ivNew=edges[j].verts.b; break; }
+                        else if (edges[j].verts.b == iv){ ivNew=edges[j].verts.a; break; };
+                    }
+                    if(ivNew>=0){ // anything was found ?
+                        pl->ipoints.push_back(iv);
+                        pl->iedges .push_back(ie);
+                        //ieo = ie;
+                        ie  = j;
+                        //printf( "ie %i %i iv %i->%i \n", ie, j, iv, ivNew );
+                        iv = ivNew;
+                    }else                         { printf("error: cannot find %i \n", iv );      return; }
+                    if(ndone>=faceEdges[i].size()){ printf("error: cannot close polygon \n", iv ); return; }
+                    ndone++;
+                }
+                pl->ipoints.push_back(iv);
+                pl->iedges .push_back(ie);
+                polygons.push_back(pl);
+            }
+            /*
+            // using map point->edge we can do polygon search in linear time 
+            if( faceEdges[i].size()>2 ){
+                Vec2i v2e[faceEdges[i].size()];
+                for(int ie : faceEdges[i]){
+                    edges[ie].vert.a;
+                }
+                pl->ipoints.push_back(iv);
+                pl->iedges .push_back(ie);
+                polygons.push_back(pl);
+            }
+            */
         }
     }
 
