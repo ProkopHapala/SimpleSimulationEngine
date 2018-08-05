@@ -21,12 +21,19 @@ class AeroControler1: public AnyControler{ public:
 
     // ========= Functions
 
+    void updateDirs(){
+        goalDir = craft->rotMat.c;
+        goalUp  = craft->rotMat.b;
+    }
+
     void setup( bool bUp_, bool bDir_, AeroCraft* craft_, AeroCraft *craft_bak_ ){
         craft     = craft_;
         craft_bak = craft_bak_;
         goalDir   = craft->rotMat.c;
         bUp       = bUp_;
         bDir      = bDir_;
+
+        updateDirs();
     }
 
     void controlUp( const Mat3d& rot, double dt ){

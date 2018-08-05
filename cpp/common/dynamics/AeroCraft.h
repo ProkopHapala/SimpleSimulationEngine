@@ -48,8 +48,7 @@ class Propeler{
 
 };
 
-class AeroCraft : public RigidBody {
-	public:
+class AeroCraft : public RigidBody { public:
 
 	int nPanels = 0, nPropelers= 0;
 	AeroSurface * panels      =NULL;

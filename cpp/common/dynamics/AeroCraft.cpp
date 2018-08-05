@@ -14,6 +14,7 @@ void AeroCraft::applyAeroForces( const Vec3d& vwind ){
         //printf( " %i %i \n", i, nPanels );
         //panels[i].applyForceSimple( vair );
         panels[i].applyForce( vair );
+        //printf(  "panel %i force (%g,%g,%g) torq (%g,%g,%g) \n", i,  force.x,force.y,force.z,   torq.x,torq.y,torq.z );
     }
     //Mat3 rmat; rmat.setT(rotMat);
     totalThrust.set(0.0d);

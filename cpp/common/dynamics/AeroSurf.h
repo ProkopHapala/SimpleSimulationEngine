@@ -42,7 +42,7 @@ class AeroSurface : public KinematicBody {
 
 	bool useC=false, usePolar=true;
 
-    bool DEBUGsurf = false;
+    //bool DEBUGsurf = false;
 
     AeroSurfaceDebugRecord* dbgRec = NULL;
 
@@ -106,11 +106,19 @@ class AeroSurface : public KinematicBody {
                 //if(DEBUGsurf) printf("(%3.3f,%3.3f)  (%3.3f,%3.3f) \n", cc, cb, CD, CL );
                 if(dbgRec){ dbgRec->ca=-cc; dbgRec->sa=cb; dbgRec->CD=CD; dbgRec->CL=CL; };
                 CL*=prefactor; CD*=prefactor;
-                if( (cb*cb) > 1e-8 ){
+
+                double cb2 = cb*cb;
+                if( (cb2>0.000001)&&(cb2<0.999999) ){
                     Vec3d airUp;
                     airUp.set_add_mul(grot.b,uair,-cb);
+                    //printf(  " airUp (%g,%g,%g) cabc (%g,%g,%g) \n", airUp.x,airUp.y,airUp.z,  ca,cb,cc );
                     airUp.normalize();
                     force.set_lincomb( CL, airUp, CD, uair );
+
+                    //printf(  " uair (%g,%g,%g) airUp (%g,%g,%g) \n", uair.x, uair.y, uair.z, airUp.x,airUp.y,airUp.z);
+                    //printf(  " CLD %g,%g force (%g,%g,%g) \n", CL,CD, force.x,force.y,force.z);
+
+
                     //glColor3f( 1.0f,0.0f,0.0f ); Draw3D::drawVecInPos( uair   ,    craft->pos + gdpos );
                     //glColor3f( 0.0f,0.0f,1.0f ); Draw3D::drawVecInPos( grot.b ,    craft->pos + gdpos );
                     //glColor3f( 0.0f,1.0f,0.0f ); Draw3D::drawVecInPos( airUp  ,    craft->pos + gdpos );

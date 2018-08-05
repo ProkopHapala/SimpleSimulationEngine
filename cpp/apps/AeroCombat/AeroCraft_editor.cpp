@@ -118,7 +118,7 @@ void AeroCraftEditor::draw(){
 
     glColor3f(1.0,1.0,1.0);
 
-    renderAeroCraft(*myCraft, false);
+    renderAeroCraft(*myCraft, false, -1.0 );
 
     glDisable(GL_LIGHTING);
 

@@ -87,7 +87,7 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
 
 	Shooter            * world  = NULL;
     AeroCraftControler * pilot  = NULL;
-    AeroTester         * tester = NULL;
+    //AeroTester         * tester = NULL;
 
     //DynamicControl rollControl;
     //double roll;
@@ -117,7 +117,10 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
     bool staticTest = true;
     // - put to Spline manager ? ... make indepemented AeroCraft Test ?
 
-	AeroSurfaceDebugRecord leftWingRec,rightWingRec;
+	//AeroSurfaceDebugRecord leftWingRec,rightWingRec;
+	std::vector<AeroSurfaceDebugRecord> dbgRects;
+	//AeroSurfaceDebugRecord *leftWingRec,*rightWingRec;
+
 	Plot2D mainWingLD;
 	Plot2D mainWingPolar;
 	int polarPlotKind=1;
@@ -147,12 +150,13 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
     void logAeroCraftTrj();
     void controlAeroCraft();
     void drawAerocraftInset();
-    void drawAerocraftDebug();
+    //void drawAerocraftDebug();
 
     void drawControlSurfaceStateHUD();
     void drawPolarPlotHUD();
     void drawAeroCraftTrjHUD();
     void writeAeroCraftStateHUD();
+    void drawCompassHUD( const Vec2d& pos2d, const Vec2d& dir2d );
 
 	AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -169,20 +173,17 @@ void AeroCraftGUI::camera (){
     glMatrixMode(GL_MODELVIEW); glLoadIdentity();
 }
 
-
-
-
 void AeroCraftGUI::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
 
-
 	//printf( " upT %f t %f v %f | d  %f d %f \n", upTime*1e-3, world->time, myCraft->vel.norm(), traveledDistance, world->time*myCraft->vel.norm() );
 	//Mat3d rot;     rot.setT(myCraft->rotMat);
     //Mat3d rot = myCraft->rotMat;
 
-    controlAeroCraft();
+    controler.bActive = false;
+    //controlAeroCraft();
 
 	if(SimOn){
         //printf( "y %f vy %f x %f torq=(%f,%f,%f)     \n", rollControl.oy, rollControl.ovy, rollControl.x, myCraft->torq.x, myCraft->torq.y, myCraft->torq.z );
@@ -200,9 +201,11 @@ void AeroCraftGUI::draw(){
 	glEnable    (GL_LIGHTING);
 	glShadeModel(GL_FLAT);
 
-	renderAeroCraft( *myCraft, true );
+	//renderAeroCraftVectors( *myCraft, 0.01, 1.0, true );
+
+	glColor3f( 0.7,0.7,0.7 );
+	renderAeroCraft( *myCraft, true, 1.0 );
     drawAerocraftInset();
-	drawAerocraftDebug();
 
 	// ------ Aim & Shoot
 	double aimDist = 400.0;
@@ -232,10 +235,14 @@ void AeroCraftGUI::draw(){
 	glShadeModel(GL_SMOOTH);
 	if(world->terrain) glCallList(world->terrain->shape);
 	//Draw3D::drawAxis( 1000 );
+
+	/*
 	if(useAutoPilot){
         //printf("autoPiloting frame %i\n", frameCount);
         pilot->control(world->dt); return;
     }
+    */
+
 };
 
 void AeroCraftGUI::drawHUD(){
@@ -249,6 +256,8 @@ void AeroCraftGUI::drawHUD(){
     drawPolarPlotHUD();
     drawAeroCraftTrjHUD();
     writeAeroCraftStateHUD();
+
+    drawCompassHUD( myCraft->pos.xz(), myCraft->rotMat.c.xz() );
 
     //glColor3f(1.0f,1.0f,1.0f,0.9f);
 }
@@ -286,13 +295,23 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     //char* fname = "data/AeroCraft1.ini";
     //char* fname = "data/AeroCraftStright1.ini";
     char* fname = "data/AeroCraftMainWing1.ini";
-	myCraft     = new AeroCraftWarrior();   myCraft  ->fromFile(fname);
+	myCraft     = new AeroCraftWarrior();
+	myCraft  ->fromFile(fname);
 	//myCraft     = new AeroCraft();   myCraft->fromFile("data/AeroCraft1.ini");
+
+	//myCraft->rotMat.rotate( M_PI/2, {0.0,1.0,0.0} );
+
     myCraft->pos.y=200.0;
     myCraft->vel.set_mul( myCraft->rotMat.c, 100.0 );
     world->registrWarrior(myCraft);
-    myCraft->leftAirelon->dbgRec  = &leftWingRec;
-    myCraft->rightAirelon->dbgRec = &rightWingRec;
+
+
+
+
+    dbgRects.resize( myCraft->nPanels );
+    for(int i=0; i<myCraft->nPanels; i++){
+        myCraft->panels[i].dbgRec=&dbgRects[i];
+    };
 
     printf( " === Init controlers \n" );
 
@@ -302,7 +321,6 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     pilot->elevator.setSymetricRange(0.2);
 
     world->controlers.push_back( &controler );
-
     controler.setup(false,true,myCraft,new AeroCraft());
     controler.craft_bak->fromFile(fname);
 	controler.roll.setup (0,-0.3,+0.3,1.50);
@@ -340,10 +358,13 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
             case SDLK_KP_MINUS : zoom*=VIEW_ZOOM_STEP; printf("zoom: %f \n", zoom); break;
             //case SDLK_SPACE    : STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
             case SDLK_SPACE    : SimOn = !SimOn; printf( SimOn ? " STOPED\n" : " UNSTOPED\n"); break;
+
+            /*
             case SDLK_LSHIFT   :
                 //SDL_WarpMouseInWindow( window, WIDTH/2, HEIGHT/2);
                 SDL_WarpMouseInWindow( window, WIDTH/2, HEIGHT*(1-pilot->elevator.getRelativeVal()) );
                 mouseHandling();
+            */
             case SDLK_u : useAutoPilot = !useAutoPilot; break;
             case SDLK_p : first_person = !first_person; break;
             case SDLK_m : mouseSteer   = !mouseSteer;   break;
@@ -351,6 +372,7 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
             //case SDLK_c : pilot->resetSteer( );
         }; break;
         case SDL_QUIT: SDL_Quit(); exit(1); break;
+
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_RIGHT:
@@ -366,6 +388,7 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
                     break;
             }
             break;
+
     }
 };
 
@@ -381,6 +404,8 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
 
     if      ( keys[ SDL_SCANCODE_A ] ){ pilot->leftAirelon.inc();   pilot->rightAirelon.dec();   }
 	else if ( keys[ SDL_SCANCODE_D ] ){ pilot->leftAirelon.dec();   pilot->rightAirelon.inc();   }
+
+
 	else if ( keys[ SDL_SCANCODE_X ] ){ double val=0.5+(mouseX)/float(WIDTH);
                                         pilot->leftAirelon .towardRalative( 1.0-val );
                                         pilot->rightAirelon.towardRalative(     val );
@@ -398,6 +423,7 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
 	else if ( keys[ SDL_SCANCODE_LSHIFT ] || RMB ){ pilot->rudder.towardRalative( 0.5+(mouseX)/float(WIDTH) ); }
     else if ( autoRetractRudder      ){ pilot->rudder.relax(); }
 
+    /*
     //if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_D]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
     if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
         controler.bActive = false;
@@ -409,7 +435,7 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
     }else{
         controler.bActive = true;
     };
-
+    */
 
 };
 
@@ -495,11 +521,13 @@ void AeroCraftGUI::logAeroCraftTrj(){
 }
 
 void AeroCraftGUI::controlAeroCraft(){
-    Mat3d rot = myCraft->rotMat;
+    //Mat3d rot = myCraft->rotMat;
     controler.goalUp = (Vec3d)( cam.rot.a*mouseX + cam.rot.b*mouseY );
     controler.goalUp.normalize();
+
     int dmx,dmy;
     SDL_GetRelativeMouseState(&dmx,&dmy);
+    controler.goalDir = (Vec3d)cam.rot.c;
 	controler.goalDir.add_mul((Vec3d)cam.rot.a, dmx* 0.003);
 	controler.goalDir.add_mul((Vec3d)cam.rot.b, dmy*-0.003);
 	controler.goalDir.normalize();
@@ -513,30 +541,11 @@ void AeroCraftGUI::drawAerocraftInset(){
     camera_OrthoInset( {-5,-5}, {30.0,30.0}, {-100.0,100.0}, rot.a, {0.0,1.0,0.0}, true );
     glMatrixMode (GL_MODELVIEW); glPushMatrix();
         glLoadIdentity();
-        renderAeroCraft(*myCraft, false);
+        renderAeroCraft(*myCraft, false, 1.0 );
+        renderAeroCraftVectors( *myCraft, 0.01, 1.0, false );
         Draw3D::drawMatInPos( cam.rot, {0.0,0.0,0.0} );
     glMatrixMode( GL_MODELVIEW );  glPopMatrix();
     glMatrixMode( GL_PROJECTION ); glPopMatrix();
-    //Draw3D::drawMatInPos( camMat, myCraft->pos );
-    //Draw3D::drawMatInPos( myCraft->rotMat, myCraft->pos );
-    //Draw3D::drawMatInPos( rot, myCraft->pos );
-}
-
-void AeroCraftGUI::drawAerocraftDebug(){
-    // ----  draw AreroCraftDebug
-	glColor3f(1.0,0.0,0.0);
-	double fsc = 0.001;
-	double vsc = 1.1;
-	Draw3D::drawVecInPos( leftWingRec .force*fsc, leftWingRec .gdpos+myCraft->pos );
-	Draw3D::drawVecInPos( rightWingRec.force*fsc, rightWingRec.gdpos+myCraft->pos );
-	glColor3f(0.0,0.0,1.0);
-    Draw3D::drawVecInPos( leftWingRec .uair*vsc, leftWingRec .gdpos+myCraft->pos );
-	Draw3D::drawVecInPos( rightWingRec.uair*vsc, rightWingRec.gdpos+myCraft->pos );
-	//glColor3f(1.0,0.0,1.0);
-	//Draw3D::drawVecInPos( (leftWingRec.force+rightWingRec.force)*fsc, rightWingRec.gdpos+myCraft->pos );
-	Draw3D::drawVecInPos( (Vec3d){0.0,world->gravity,0.0} *(myCraft->mass*fsc), myCraft->pos );
-	glColor3f(1.0,0.0,1.0); Draw3D::drawVecInPos( myCraft->force*fsc, myCraft->pos );
-	glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( myCraft->vel*vsc,   myCraft->pos );
 }
 
 void AeroCraftGUI::drawControlSurfaceStateHUD(){
@@ -564,20 +573,36 @@ void AeroCraftGUI::drawPolarPlotHUD(){
     if(polarPlotKind<=0) return;
     glPushMatrix();
     glTranslatef(WIDTH-300,HEIGHT-200.0,200.0);
+
+    AeroSurfaceDebugRecord* leftWingRec = myCraft->leftAirelon->dbgRec;
+    AeroSurfaceDebugRecord* rightWingRec = myCraft->rightAirelon->dbgRec;
     if(polarPlotKind==1){
         glScalef    (sc*4,sc,WIDTH);
         mainWingPolar.view();
         Draw2D::drawLine( {0.0,-1.0}, {0.0,1.0} );
-        glColor3f(1.0,1.0,0.0); Draw2D::drawPointCross( {leftWingRec.CD, leftWingRec.CL},  0.05 );
-        glColor3f(0.0,1.0,1.0); Draw2D::drawPointCross( {rightWingRec.CD,rightWingRec.CL}, 0.05 );
+        glColor3f(1.0,1.0,0.0); Draw2D::drawPointCross( {leftWingRec->CD, leftWingRec->CL},  0.05 );
+        glColor3f(0.0,1.0,1.0); Draw2D::drawPointCross( {rightWingRec->CD,rightWingRec->CL}, 0.05 );
     }else if( polarPlotKind==2 ){
         glScalef    (sc,sc,WIDTH);
-        double phiL = atan2( leftWingRec.sa,  leftWingRec.ca );
-        double phiR = atan2( rightWingRec.sa, rightWingRec.ca );
+        double phiL = atan2( leftWingRec->sa,  leftWingRec->ca );
+        double phiR = atan2( rightWingRec->sa, rightWingRec->ca );
         mainWingLD.view();
         glColor3f(1.0,1.0,0.0); mainWingLD.drawVline(phiL);
         glColor3f(0.0,1.0,1.0); mainWingLD.drawVline(phiR);
     }
+    glPopMatrix();
+}
+
+void AeroCraftGUI::drawCompassHUD( const Vec2d& pos2d, const Vec2d& dir2d ){
+    glPushMatrix();
+    glTranslatef(WIDTH-50,50,1.0);
+    glScalef(50.0,50.0,1.0);
+    Draw2D::drawCircle( {0.0,0.0}, 1.0, 16, false );
+    Draw2D::drawLine({-1.0,0.0},{1.0,0.0});
+    Draw2D::drawLine({0.0,-1.0},{0.0,1.0});
+    Draw2D::drawLine_d({0.0,0.0}, dir2d );
+    //Draw::drawText( "x", fontTex, fontSizeDef, 0 );
+    //Draw::drawText( "y", fontTex, fontSizeDef, 0 );
     glPopMatrix();
 }
 
@@ -620,6 +645,8 @@ void AeroCraftGUI::writeAeroCraftStateHUD(){
     s+=sprintf(s,"pos  (%g,%g,%g) \n", pos .x, pos .y, pos .z  );
     s+=sprintf(s,"vel  (%g,%g,%g) \n", vel .x, vel .y, vel .z  );
     s+=sprintf(s,"vdir (%g,%g,%g) \n", vdir.x, vdir.y, vdir.z );
+    //s+=sprintf(s,"vdir (%g,%g,%g) \n", vdir.x, vdir.y, vdir.z );
+    glPushMatrix();
     glColor4f(1.0f,1.0f,1.0f,0.9f);
     glTranslatef( 10.0, HEIGHT-20, 0.0 );
     Draw::drawText( str, fontTex, fontSizeDef, {40,40} );
