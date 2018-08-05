@@ -5,6 +5,32 @@
 #include <GL/gl.h>
 #include "Terrain25D.h"
 
+void evalAeroFoceRotated( Vec3d vel, AeroCraft& craft, Vec3d& force, Vec3d& torq ){
+    craft.rotMat.dot_to_T( vel, craft.vel );
+    craft.clean_temp();
+    craft.applyAeroForces( Vec3dZero      );
+    //craft.panels[0].applyForce( craft.vel );
+    //craft.panels[1].applyForce( craft.vel );
+    //craft.panels[2].applyForce( craft.vel );
+    //craft.panels[3].applyForce( craft.vel );
+    //craft.panels[4].applyForce( craft.vel );
+    craft.rotMat.dot_to  ( craft.force, force );
+    craft.rotMat.dot_to  ( craft.torq,  torq  );
+}
+
+void evalAeroFoceAtRotations( int n, Vec3d vel, Vec3d ax, AeroCraft& craft ){
+    Vec3d force,torq;
+    double dphi = 2*M_PI/n;
+    for(int i=0; i<n; i++){
+        double angle = dphi*i;
+        craft.rotMat = Mat3dIdentity;
+        craft.rotMat.rotate(angle,ax);
+        evalAeroFoceRotated(vel, craft, force, torq );
+        //printf( "evalAeroFoceAtRotations: rot %i %1.3f force %10.5e(%10.5e,%10.5e,%10.5e) torq %10.5e(%10.5e,%10.5e,%10.5e) \n", i, angle, force.norm(), force.x,force.y,force.z,  torq.norm(), torq.x,torq.y,torq.z );
+        printf( "rot %i %1.3f force %10.5e(%10.5e,%10.5e,%10.5e) torq %10.5e(%10.5e,%10.5e,%10.5e) \n", i, angle, force.norm(), force.x,force.y,force.z,  torq.norm(), torq.x,torq.y,torq.z );
+    }
+}
+
 Terrain25D * prepareTerrain( int nsz, int nsub, double step, double hmax ){
     Terrain25D_bicubic * terrain = new Terrain25D_bicubic();
     terrain->ruler.setup( (Vec2d){nsz*0.5,nsz*0.5}*-step, (Vec2d){step,step} );

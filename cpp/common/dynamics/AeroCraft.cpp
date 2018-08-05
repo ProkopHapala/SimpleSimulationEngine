@@ -16,13 +16,15 @@ void AeroCraft::applyAeroForces( const Vec3d& vwind ){
         panels[i].applyForce( vair );
         //printf(  "panel %i force (%g,%g,%g) torq (%g,%g,%g) \n", i,  force.x,force.y,force.z,   torq.x,torq.y,torq.z );
     }
+
     //Mat3 rmat; rmat.setT(rotMat);
     totalThrust.set(0.0d);
     for( int i=0; i<nPropelers; i++ ){
         if( propelers[i].power > 0 ){
             Vec3d gdpos,gdir;
-            rotMat.dot_to( propelers[i].dir,  gdir  );
-            rotMat.dot_to( propelers[i].lpos, gdpos );
+            rotMat.dot_to_T( propelers[i].dir,  gdir  );
+            //printf( "prop.fw %g \n", rotMat.c.dot(gdir)  );
+            rotMat.dot_to_T( propelers[i].lpos, gdpos );
             double vdir   = -gdir.dot( vair );  // printf("vdir %g \n", vdir);
             double thrust = propelers[i].getThrust(vdir);
             //glColor3d(1.0f,1.0f,0.0f); Draw3D::drawVecInPos( gdir, gdpos+pos );  Draw3D::drawPointCross( gdpos+pos, 0.5 );
@@ -30,8 +32,10 @@ void AeroCraft::applyAeroForces( const Vec3d& vwind ){
             //glColor3d(1.0f,1.0f,0.0f); Draw3D::drawVecInPos( gdir, gdpos+pos );  Draw3D::drawPointCross( gdpos+pos, 0.2 );
             totalThrust.add(gdir);
             apply_force( gdir, gdpos );
+            //printf( " thrust.fw %g |thrust| %g %g \n", rotMat.c.dot(gdir), gdir.norm(), thrust  );
         }
     }
+
 }
 
 double AeroCraft::getTotalPower() const{

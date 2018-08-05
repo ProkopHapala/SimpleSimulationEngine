@@ -182,8 +182,8 @@ void AeroCraftGUI::draw(){
 	//Mat3d rot;     rot.setT(myCraft->rotMat);
     //Mat3d rot = myCraft->rotMat;
 
-    controler.bActive = false;
-    //controlAeroCraft();
+    //controler.bActive = false;
+    controlAeroCraft();
 
 	if(SimOn){
         //printf( "y %f vy %f x %f torq=(%f,%f,%f)     \n", rollControl.oy, rollControl.ovy, rollControl.x, myCraft->torq.x, myCraft->torq.y, myCraft->torq.z );
@@ -301,12 +301,11 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
 
 	//myCraft->rotMat.rotate( M_PI/2, {0.0,1.0,0.0} );
 
+	//evalAeroFoceAtRotations( 8, {0.0,0.0,100.0}, {0.0,1.0,0.0}, *myCraft );
+
     myCraft->pos.y=200.0;
     myCraft->vel.set_mul( myCraft->rotMat.c, 100.0 );
     world->registrWarrior(myCraft);
-
-
-
 
     dbgRects.resize( myCraft->nPanels );
     for(int i=0; i<myCraft->nPanels; i++){
@@ -527,7 +526,7 @@ void AeroCraftGUI::controlAeroCraft(){
 
     int dmx,dmy;
     SDL_GetRelativeMouseState(&dmx,&dmy);
-    controler.goalDir = (Vec3d)cam.rot.c;
+    //controler.goalDir = (Vec3d)cam.rot.c;
 	controler.goalDir.add_mul((Vec3d)cam.rot.a, dmx* 0.003);
 	controler.goalDir.add_mul((Vec3d)cam.rot.b, dmy*-0.003);
 	controler.goalDir.normalize();

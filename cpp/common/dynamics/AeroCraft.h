@@ -24,6 +24,7 @@ class Propeler{
         // dm = S * v0
         // F = dm * Dv
         // P = F * v0 + 0.5*dm*(Dv**2) = S*(v0**2)*Dv + 0.5*S*v0*(Dv**2)
+        //printf( "v0 %g \n", v0 );
         double density = 1.22;
         double dm = density*area*(v0+vstatic);
         double a  = 0.5*dm;
@@ -31,7 +32,7 @@ class Propeler{
         double c  = -power;
         double Dv1,Dv2;
         quadratic_roots( a, b, c,  Dv1, Dv2 );
-        return dm * Dv1 * efficiency - dm*v0*CD;
+        return dm * Dv2 * efficiency - dm*v0*CD;
     }
 
     inline void fromString( const char * str ){
