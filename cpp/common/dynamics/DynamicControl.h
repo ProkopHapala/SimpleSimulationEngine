@@ -28,6 +28,10 @@ class DynamicControl{ public:
     // axuliary
     double vy,ovy;
 
+    // ==== functions
+
+    void setup( double y0_, double xmin_, double xmax_, double K_ ){ y0=y0_; xmin=xmin_; xmax=xmax_; K=K_; }
+
 
     double dx_O1( double y, double dt ){ // first order dynamical controler
 

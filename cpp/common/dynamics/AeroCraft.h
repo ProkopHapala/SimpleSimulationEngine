@@ -24,7 +24,8 @@ class Propeler{
         // dm = S * v0
         // F = dm * Dv
         // P = F * v0 + 0.5*dm*(Dv**2) = S*(v0**2)*Dv + 0.5*S*v0*(Dv**2)
-        double dm = area*(v0+vstatic);
+        double density = 1.22;
+        double dm = density*area*(v0+vstatic);
         double a  = 0.5*dm;
         double b  = dm*v0;
         double c  = -power;
@@ -40,7 +41,8 @@ class Propeler{
                     &area, &power, &efficiency, &CD
                 );
         dir.normalize();
-        vstatic = pow(4*power/area,0.333333);
+        double density = 1.22;
+        vstatic = pow(power/(density*area),0.333333);
         printf ( "%lf %lf %lf %lf\n", area, power, efficiency, CD );
     }
 
@@ -65,6 +67,9 @@ class AeroCraft : public RigidBody {
 	//virtual void render();
 	int fromFile( const char * fname );
 	void applyAeroForces( const Vec3d& vwind );
+
+
+	double getTotalPower() const;
 
 	// ==== inline functions
 

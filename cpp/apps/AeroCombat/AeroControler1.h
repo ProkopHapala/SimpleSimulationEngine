@@ -15,9 +15,19 @@ class AeroControler1: public AnyControler{ public:
     DynamicControl pitch;
     DynamicControl yaw;
 
-    bool bActive=true, bUp=false,bDir = false;
+    bool bActive=true, bUp=false, bDir = false;
     Vec3d goalUp  = (Vec3d){0.0,1.0,0.0};;
-    Vec3d goalDir =(Vec3d){0.0,0.0,1.0};
+    Vec3d goalDir = (Vec3d){0.0,0.0,1.0};
+
+    // ========= Functions
+
+    void setup( bool bUp_, bool bDir_, AeroCraft* craft_, AeroCraft *craft_bak_ ){
+        craft     = craft_;
+        craft_bak = craft_bak_;
+        goalDir   = craft->rotMat.c;
+        bUp       = bUp_;
+        bDir      = bDir_;
+    }
 
     void controlUp( const Mat3d& rot, double dt ){
         //double roll = goalRoll.angleInPlane( rot.a*-1.0, rot.b );
@@ -27,8 +37,7 @@ class AeroControler1: public AnyControler{ public:
         craft->rightAirelon->lrot = craft_bak->rightAirelon->lrot;
         craft->leftAirelon ->lrot.rotate( roll.x,craft->leftAirelon ->lrot.a);
         craft->rightAirelon->lrot.rotate(-roll.x,craft->rightAirelon->lrot.a);
-    };
-
+    }
 
     void controlDirTail( const Mat3d& rot, double dt ){
 
@@ -60,7 +69,7 @@ class AeroControler1: public AnyControler{ public:
             if(bUp )controlUp     ( rot, dt );
             if(bDir)controlDirTail( rot, dt );
         }
-    };
+    }
 
 };
 

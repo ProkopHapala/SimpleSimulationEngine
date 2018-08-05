@@ -13,12 +13,17 @@
 /////////////////////////////////
 
 void DataLine2D::update(){
-    bounds.x0 = +1e-300; bounds.x1 = -1e-300; bounds.y0 = +1e-300; bounds.y0 = -1e-300;
+    bounds.x0 = +1e-300;
+    bounds.x1 = -1e-300;
+    bounds.y0 = +1e-300;
+    bounds.y1 = -1e-300;
     for(int i=0; i<n; i++){
         double x  = xs[i];
         double y  = ys[i];
-        bounds.x0 = _min(bounds.x0,x);  bounds.x1 = _max(bounds.x1,x);
-        bounds.y0 = _min(bounds.y0,y);  bounds.y1 = _max(bounds.y1,y);
+        bounds.x0 = _min(bounds.x0,x);
+        bounds.x1 = _max(bounds.x1,x);
+        bounds.y0 = _min(bounds.y0,y);
+        bounds.y1 = _max(bounds.y1,y);
         //printf( "%i (%f,%f) (%f,%f) \n", i, bounds.x0, bounds.y0,  bounds.x1, bounds.y1 );
         //printf( "%i <%f..%f> <%f..%f> \n", i, bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
     }
@@ -57,24 +62,31 @@ void DataLine2D::view(){
 /////////////////////////////////
 
 void Plot2D::update(){
-    bounds.x0 = +1e-300; bounds.x1 = -1e-300; bounds.y0 = +1e-300; bounds.y0 = -1e-300;
+    //printf( "Plot2D::update \n" );
+    bounds.x0 = +1e+300;
+    bounds.x1 = -1e+300;
+    bounds.y0 = +1e+300;
+    bounds.y1 = -1e+300;
     for( DataLine2D * line : lines ){
         line->update();
-        bounds.x0 = _min(bounds.x0, line->bounds.x0); bounds.x1 = _max(bounds.x1, line->bounds.x1);
-        bounds.y0 = _min(bounds.y0, line->bounds.y0); bounds.y1 = _max(bounds.y1, line->bounds.y1);
-        //printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
+        bounds.x0 = _min(bounds.x0, line->bounds.x0);
+        bounds.x1 = _max(bounds.x1, line->bounds.x1);
+        bounds.y0 = _min(bounds.y0, line->bounds.y0);
+        bounds.y1 = _max(bounds.y1, line->bounds.y1);
+        //printf( "--    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
     }
     //printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
 };
 
 void Plot2D::autoAxes(double dx, double dy){
+    printf( "Plot2D::autoAxes \n" );
     int n0,n1;
     n0=(int)(bounds.x0/dx)-1;  axBounds.x0 = dx*n0;
     n1=(int)(bounds.x1/dx)+1;  axBounds.x1 = dx*n1; nXTicks=(n1-n0)+1;
-    printf("%g %g %g  %i %i %i nXTicks \n", bounds.x0, bounds.x1, dx, n0, n1, nXTicks );
+    printf("%g %g %g  %i %i %i nXTicks \n", bounds.x0, bounds.x1, dx,   n0, n1, nXTicks );
     n0=(int)(bounds.y0/dy)-1;  axBounds.y0 = dy*n0;
     n1=(int)(bounds.y1/dy)+1;  axBounds.y1 = dy*n1; nYTicks=(n1-n0)+1;
-    printf("%g %g %g  %i %i %i nYTicks \n", bounds.y0, bounds.y1, dy, n0, n1, nYTicks );
+    printf("%g %g %g  %i %i %i nYTicks \n", bounds.y0, bounds.y1, dy,   n0, n1, nYTicks );
 
     if( xTicks==NULL ) delete xTicks;
     if( yTicks==NULL ) delete yTicks;
@@ -83,7 +95,7 @@ void Plot2D::autoAxes(double dx, double dy){
     //printf("DEBUG 2.1.1\n");
     xTicks = new double[nXTicks]; VecN::arange( nXTicks, axBounds.x0, dx, xTicks );
     //printf("DEBUG 2.1.2 %i\n", nYTicks );
-    yTicks = new double[nYTicks]; 
+    yTicks = new double[nYTicks];
     //printf("DEBUG 2.1.3\n");
     VecN::arange( nYTicks, axBounds.y0, dy, yTicks );
     //printf("DEBUG 2.1.4\n");

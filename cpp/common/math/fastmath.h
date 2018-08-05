@@ -248,8 +248,13 @@ inline bool quadratic_roots( double a, double b, double c,  double& x1, double& 
     if (D < 0) return false;
     double sqrtD = sqrt( D );
     double ia    = -0.5d/a;
-    x1         = ( b - sqrtD )*ia;
-    x2         = ( b + sqrtD )*ia;
+    if( ia>0 ){
+        x1       = ( b - sqrtD )*ia;
+        x2       = ( b + sqrtD )*ia;
+    }else{
+        x1       = ( b + sqrtD )*ia;
+        x2       = ( b - sqrtD )*ia;
+    }
     //printf( "  a,b,c, %f %f %f  x1,x2 %f %f \n", a,b,c, x1, x2 );
     return true;
 }

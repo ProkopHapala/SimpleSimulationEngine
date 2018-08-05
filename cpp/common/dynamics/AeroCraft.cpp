@@ -33,15 +33,21 @@ void AeroCraft::applyAeroForces( const Vec3d& vwind ){
     }
 }
 
+double AeroCraft::getTotalPower() const{
+    double power=0;
+    for(int i=0; i<nPropelers; i++){ power+=propelers[i].power; }
+    return power;
+};
+
 int AeroCraft::fromFile( const char * fname ){
     const int nbuf = 1024;
     char buf  [nbuf];
     FILE * pFile;
     pFile = fopen (fname,"r");
-    printf(" loading molTypes from: >>%s<<\n", fname );
+    printf(" AeroCraft::fromFile: >>%s<<\n", fname );
 
     fscanf (pFile, " %lf %lf %lf %lf\n", &mass, &Ibody.xx, &Ibody.yy, &Ibody.zz );
-    printf( " %lf %lf %lf %lf\n", mass, Ibody.xx, Ibody.yy, Ibody.zz );
+    printf(        " %lf %lf %lf %lf\n",  mass,  Ibody.xx,  Ibody.yy,  Ibody.zz );
 
     fscanf ( pFile, "%i\n", &nPanels);
     panels = new AeroSurface[nPanels];
