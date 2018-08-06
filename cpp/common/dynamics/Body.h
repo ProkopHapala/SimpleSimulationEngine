@@ -30,10 +30,12 @@ class KinematicBody{ public:
 
 template<typename T>
 class Particle3D{ public:
+    double age;
     Vec3TYPE<T> pos;
     Vec3TYPE<T> vel;
 
     inline void move(T dt, const Vec3TYPE<T>& accel ){
+        age += dt;
         vel.add_mul( accel, dt );
 		pos.add_mul( vel,   dt );
     }
@@ -91,15 +93,15 @@ inline void pointBodyDynamicsStep( double invMass, double dt, const Vec3d& force
 
 inline void rigidBodyRotationDynamicsStep_mat( const Mat3d& invIbody, double dt, const Vec3d& torq, Vec3d& L, Mat3d& rotMat, Vec3d& omega ){
     L   .add_mul( torq, dt  );
-    
+
     rotMat.dot_to_T  ( L,  omega    );
     invIbody.dot_to  ( omega, omega );
     rotMat.dot_to    ( omega, omega );
-    
+
     //rotMat.dot_to    ( L,  omega    );
     //invIbody.dot_to  ( omega, omega );
     //rotMat.dot_to_T  ( omega, omega );
-    
+
     double r2omega = omega.norm2();
     if( r2omega > 1e-12 ){ // TODO - more efficient would be do this for |L| instead of |omega|
         double romega = sqrt(r2omega);
@@ -230,14 +232,14 @@ class RigidBody : public PointBody { public:
         //printf("L (%3.3f,%3.3f,%3.3f) omega (%3.3f,%3.3f,%3.3f) qrot (%3.3f,%3.3f,%3.3f,%3.3f)\n", L.x,L.y,L.z, omega.x,omega.y,omega.z,  qrot.x, qrot.y, qrot.z, qrot.w  );
         */
         pointBodyDynamicsStep( invMass, dt, force, vel, pos );
-        
+
         // --- Fast
         //rotMat.orthogonalize_taylor3(2,1,0);
         //rigidBodyRotationDynamicsStep_mat_taylor( invIbody, dt, torq, L, rotMat, omega );
         // --- Stable
         rotMat.orthogonalize(2,1,0);
         rigidBodyRotationDynamicsStep_mat( invIbody, dt, torq, L, rotMat, omega );
-        
+
         //rigidBodyRotationDynamicsStep_quat( {invIbody.xx,invIbody.yy,invIbody.zz}, dt, torq, L, qrot, rotMat, omega );
     };
 
@@ -328,7 +330,7 @@ class RigidBody : public PointBody { public:
         //update_aux();
 	};
 	*/
-	
+
 	inline void setInertia_box( double m, const Vec3d& halfSpan ){
         // https://en.wikipedia.org/wiki/List_of_moments_of_inertia
         setMass( m );

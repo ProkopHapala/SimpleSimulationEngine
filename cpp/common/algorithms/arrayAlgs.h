@@ -21,6 +21,19 @@ inline int insertN( int i0, int len, TYPE * x, TYPE * x ){
 }
 */
 
+template< typename T, typename CondFunc >
+inline int prune( int n, T* arr, CondFunc cond ){
+    int nlast = n-1;
+    for(int i=0; i<nlast; i++){
+        if( cond( arr[i] ) ){
+            arr[i] = arr[nlast];
+            nlast--;
+        }
+    }
+    return nlast+1;
+}
+
+
 inline int objects2cells( int nobj, int ncell, int* obj2cell, int* cellNs, int* cellI0s, int* permut ){
     int nmax = 0;
     for(int i=0; i<nobj; i++ ){

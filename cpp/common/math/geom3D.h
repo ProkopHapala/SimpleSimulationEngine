@@ -63,12 +63,21 @@ inline double Rbound2( const Vec3d& center, int n, Vec3d * points ){
     return r2max;
 }
 
-class Sphere{ public:
+class Sphere3d{ public:
     Vec3d   p;
     double  r;
+
+    inline double ray( const Vec3d& ray0, const Vec3d& hRay ){
+        return raySphere( ray0, hRay, r, p );
+    }
+
+    //inline void normal( Vec3d& normal ){
+    //    sphereNormal( double t, ray0, hRay, p, normal ){
+    //};
+
 };
 
-class Line3D{ public:
+class Line3d{ public:
     Vec3d a,b;
 };
 

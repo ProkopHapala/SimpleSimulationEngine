@@ -4,7 +4,7 @@
 project(libs)
 
 #add_subdirectory (libSail)
-#add_subdirectory (libFlight)
+add_subdirectory (libFlight)
 add_subdirectory (Molecular)
 #add_subdirectory (Vis3D)
 add_subdirectory (Shock)

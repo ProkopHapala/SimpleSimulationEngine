@@ -32,12 +32,13 @@ class Projectile3D : public PointBody { public:
 
 class Burst3d { public:
     int    id=-1;
-    double time=0;
+    double age=0;
     bool   discard=false;    // NOT NECESSARY  ... we may simply shift it to     1e+300 or to NaN
 
     ProjectileType* type = 0;
 
     Capsula3D bbox;
+    Box       aabb; // We may have easily two bounding boxes
 
 	std::vector<Particle3d> shots;
 
@@ -122,18 +123,19 @@ class Burst3d { public:
             accel.set_add_mul( accel0, p.vel, p.vel.norm()*-balisticCoef );
             p.move(dt, accel );
             //p.move(dt, accel0 );
-            time+=dt;
+            age+=dt;
         }
-
         updateBBox( dt ); // we asume shot[0] is most forward, shot[n-1] is least
         //printf("Burst3d::move DONE\n");
     }
 
-    void addShot( Vec3d& pos, Vec3d& vel ){
-        shots.push_back( (Particle3d){pos,vel} );
+    void addShot( const Vec3d& pos, const Vec3d& vel ){
+        shots.push_back( (Particle3d){0.0,pos,vel} );
     }
 
-    inline void hit( int i){ };
+    inline void hit( int i){
+        shots[i].age = 1e+300;
+    };
 
     Burst3d(){};
     Burst3d( ProjectileType* type_, int id_ ){ type=type_; id=id_; }
