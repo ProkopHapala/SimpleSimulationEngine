@@ -156,6 +156,18 @@ class Vec3TYPE{
         VEC out; out.set_cross(*this,up);
         return out;
 	}
+	
+	
+	inline VEC normalize_taylor3(){
+        // sqrt(1+x) ~= 1 + 0.5*x - 0.125*x*x
+        // sqrt(r2) = sqrt((r2-1)+1) ~= 1 + 0.5*(r2-1) 
+        // 1/sqrt(1+x) ~= 1 - 0.5*x + (3/8)*x^2 - (5/16)*x^3 + (35/128)*x^4 - (63/256)*x^5  
+        TYPE dr2    = x*x+y*y+z*z-1;
+        TYPE renorm = 1 + dr2*( -0.5d + dr2*( 0.375d + dr2*-0.3125d ) );
+        x*=renorm;
+        y*=renorm;
+        z*=renorm;
+	}
 
 
 	inline void getSomeOrtho( VEC& v1, VEC& v2 ) const {
@@ -185,6 +197,60 @@ class Vec3TYPE{
 		v2.y = z*v1.x - x*v1.z;
 		v2.z = x*v1.y - y*v1.x;
 	}
+
+    inline void drotate_omega(const VEC& w){
+        TYPE dx =y*w.z-z*w.y; 
+        TYPE dy =z*w.x-x*w.z; 
+        TYPE dz =x*w.y-y*w.x;
+        //x+=dx; y+=dy; z+=dz;
+        x-=dx; y-=dy; z-=dz;
+    }
+    
+    inline void drotate_omega2(const VEC& w){
+        TYPE dx  = y*w.z- z*w.y; 
+        TYPE dy  = z*w.x- x*w.z; 
+        TYPE dz  = x*w.y- y*w.x;
+        TYPE ddx =dy*w.z-dz*w.y; 
+        TYPE ddy =dz*w.x-dx*w.z; 
+        TYPE ddz =dx*w.y-dy*w.x;
+        //x+=dx - ddx*0.5; 
+        //y+=dy - ddy*0.5; 
+        //z+=dz - ddz*0.5;
+        x-=dx - ddx*0.5; 
+        y-=dy - ddy*0.5; 
+        z-=dz - ddz*0.5;
+    }
+    
+    inline void drotate_omega_csa(const VEC& w, TYPE ca, TYPE sa){
+        TYPE dx  =  y*w.z -  z*w.y;
+        TYPE dy  =  z*w.x -  x*w.z;
+        TYPE dz  =  x*w.y -  y*w.x;
+        TYPE ddx = dy*w.z - dz*w.y;
+        TYPE ddy = dz*w.x - dx*w.z;
+        TYPE ddz = dx*w.y - dy*w.x;
+        //x+=dx*sa + ddx*ca;
+        //y+=dy*sa + ddy*ca;
+        //z+=dz*sa + ddz*ca;
+        x-=dx*sa + ddx*ca;
+        y-=dy*sa + ddy*ca;
+        z-=dz*sa + ddz*ca;
+    }
+    
+    inline void drotate_omega6(const VEC& w){
+        /*
+        constexpr TYPE c2 = -1.0d/2;
+        constexpr TYPE c3 = -1.0d/6;
+        constexpr TYPE c4 =  1.0d/24;
+        constexpr TYPE c5 =  1.0d/120;
+        constexpr TYPE c6 = -1.0d/720;
+        TYPE r2  = w.x*w.x + w.y*w.y + w.z*w.z;
+        TYPE sa  =   1 + r2*( c3 + c5*r2 );
+        TYPE ca  =  c2 + r2*( c4 + c6*r2 );
+        */
+        TYPE ca,sa;
+        sincosR2_taylor(w.norm2(), sa, ca );
+        drotate_omega_csa(w,ca,sa);
+    }
 
 	// Rodrigues rotation formula: v' = cosa*v + sina*(uaxis X v) + (1-cosa)*(uaxis . v)*uaxis
 	inline void rotate( TYPE angle, const VEC& axis  ){
@@ -261,9 +327,9 @@ class Vec3TYPE{
     }
 
     inline void setHomogenousSphericalSample( TYPE u, TYPE v ){
-        double r = sqrt(1-u*u);
-        double c = cos(v);
-        double s = sin(v);
+        TYPE  r = sqrt(1-u*u);
+        TYPE  c = cos(v);
+        TYPE  s = sin(v);
         //printf( "%f %f  %f %f %f \n", u,v,  r, c, s );
         x = r*c;
         y = r*s;
@@ -271,7 +337,7 @@ class Vec3TYPE{
     }
 
     inline void fromRandomSphereSample(){
-        setHomogenousSphericalSample( (randf()*2)-1.0, randf()*2*M_PI );
+        setHomogenousSphericalSample( (randf()*2)-1, randf()*2*M_PI );
     }
 
     inline void fromRandomCube( double d ){ x=randf(-d,d); y=randf(-d,d); z=randf(-d,d); }

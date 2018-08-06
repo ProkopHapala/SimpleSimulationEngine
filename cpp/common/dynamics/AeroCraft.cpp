@@ -51,6 +51,8 @@ int AeroCraft::fromFile( const char * fname ){
     pFile = fopen (fname,"r");
     printf(" AeroCraft::fromFile: >>%s<<\n", fname );
 
+    Mat3d Ibody = Mat3dZero;
+
     fscanf (pFile, " %lf %lf %lf %lf\n", &mass, &Ibody.xx, &Ibody.yy, &Ibody.zz );
     printf(        " %lf %lf %lf %lf\n",  mass,  Ibody.xx,  Ibody.yy,  Ibody.zz );
 
@@ -81,14 +83,14 @@ int AeroCraft::fromFile( const char * fname ){
     }
 
     Ibody.invert_to( invIbody );
-    qrot.setOne();
-    qrot.toMatrix(rotMat);
+    //qrot.setOne();
+    //qrot.toMatrix(rotMat);
     L.set(0,0,0);
     setMass( mass );
     vel.set(0,0,0);
     pos.set(0,0,0);
     clean_temp();
-    update_aux(); // MUST BE CALLED BEFORE SIMULATION STARTS !!!
+    //update_aux(); // MUST BE CALLED BEFORE SIMULATION STARTS !!!
 
     printf("AeroCraft loaded\n");
     fclose(pFile);

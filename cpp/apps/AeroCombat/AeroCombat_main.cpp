@@ -367,7 +367,7 @@ void AeroCraftGUI:: eventHandling   ( const SDL_Event& event  ){
             case SDLK_u : useAutoPilot = !useAutoPilot; break;
             case SDLK_p : first_person = !first_person; break;
             case SDLK_m : mouseSteer   = !mouseSteer;   break;
-            case SDLK_r : myCraft->qrot.roll( 1.0 ); break;
+            //case SDLK_r : myCraft->qrot.roll( 1.0 ); break;
             //case SDLK_c : pilot->resetSteer( );
         }; break;
         case SDL_QUIT: SDL_Quit(); exit(1); break;

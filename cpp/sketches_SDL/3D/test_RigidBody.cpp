@@ -24,6 +24,64 @@
 #include "testUtils.h"
 
 
+void testApprox_Vec3Normalize(){
+    Vec3d v;
+    v.fromRandomSphereSample();
+    double d = 1e-12;
+    for(int i=0; i<12; i++){
+        Vec3d v_;
+        v_ = v*(1+d);
+        printf("%e", v_.norm()-1 );
+        v_.normalize_taylor3();
+        printf("-> %e \n", v_.norm()-1 );
+        d*=10;
+    }
+}
+
+
+void testApprox_Vec3Rotate(){
+    Vec3d v;
+    Vec3d omg;
+    v.  fromRandomSphereSample();
+    omg.fromRandomSphereSample();
+    double d = 1e-12;
+    glColor3f(1.0,1.0,1.0); Draw3D::drawVec( omg  );
+    glColor3f(0.0,0.0,0.0); Draw3D::drawVec( v  );
+    printf("=== testApprox_Vec3Rotate\n");
+    for(int i=0; i<20; i++){
+        d = 0.05*i;    
+        Vec3d omg_;
+        Vec3d v1=v,v2=v;
+        double angle = d;
+        omg_ = omg*angle;
+        v1.rotate       (angle,omg);
+        //v2.drotate_omega(omg_);
+        //v2.drotate_omega2(omg_);
+        v2.drotate_omega6(omg_);
+        printf("alfa %g err %e \n", angle, (v1-v2).norm() );
+        glColor3f(0.0,0.0,1.0); Draw3D::drawVec( v1 );
+        glColor3f(1.0,0.0,0.0); Draw3D::drawVec( v2 );
+        //d*=10;
+    }
+    exit(0);
+}
+
+void testApprox_Mat3Orthonormalize(){
+    Quat4d  qrot; qrot.fromUniformS3( {randf(),randf(),randf()} );
+    printf( "qrot %g %g %g %g\n", qrot.x, qrot.y, qrot.z, qrot.w );
+    Mat3d   mrot; qrot.toMatrix(mrot);
+    printf("mrot: "); mrot.printOrthoErr();
+    double d = 1e-6;    
+    for(int i=0; i<30; i++){
+        Mat3d   m = mrot;
+        for(int j=0;j<9;j++){ m.array[j]+=randf(-d,d); }
+        m.orthogonalize_taylor3(2,1,0);
+        printf("m(%e): ", d); m.printOrthoErr();
+        d*=2;
+    }
+    exit(0);
+}
+
 // ============= Application
 
 /*
@@ -128,10 +186,13 @@ class TestAppRigidBody : public AppSDL2OGL_3D {
 	virtual void drawHUD();
 	//virtual void mouseHandling( );
 	virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
+	virtual void keyStateHandling( const Uint8 *keys );
 
 	TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ );
 
+};
+
+void TestAppRigidBody::keyStateHandling( const Uint8 *keys ){
 };
 
 TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
@@ -216,6 +277,11 @@ void TestAppRigidBody::draw(){
     int perFrame = 1;
 	double dt    = 0.01;
 
+    srand(54564564);    
+    //testApprox_Vec3Normalize( ); exit(0);
+    //testApprox_Vec3Rotate(); return;
+    //testApprox_Mat3Orthonormalize();
+    
 	// ---- soft body test
     //truss.dt   = dt;
     //truss.damp = 0.0;
@@ -322,6 +388,7 @@ void TestAppRigidBody::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
+                case SDLK_r:  rb.rotMat = Mat3dIdentity;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             break;

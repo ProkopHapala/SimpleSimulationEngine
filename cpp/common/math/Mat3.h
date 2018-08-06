@@ -171,6 +171,30 @@ class Mat3TYPE{
 	};
 
 
+    inline bool orthogonalize( int ia, int ib, int ic ){
+        VEC& a = vecs[ia];
+        VEC& b = vecs[ib];
+        VEC& c = vecs[ic];
+        a.normalize ();
+        b.makeOrthoU(a);
+        b.normalize ();
+        c.makeOrthoU(a);
+        c.makeOrthoU(b);
+        c.normalize();
+	};
+	
+	inline bool orthogonalize_taylor3( int ia, int ib, int ic ){
+        VEC& a = vecs[ia];
+        VEC& b = vecs[ib];
+        VEC& c = vecs[ic];
+        a.normalize_taylor3();
+        b.makeOrthoU(a);
+        b.normalize_taylor3();
+        c.makeOrthoU(a);
+        c.makeOrthoU(b);
+        c.normalize_taylor3();
+	};
+	
 
 // ====== matrix multiplication
 
@@ -289,7 +313,16 @@ class Mat3TYPE{
 		//b.set(2);
 		//c.set(3);
 	};
-
+	
+	inline void drotate_omega6( const VEC& w ){
+        // consider not-normalized vector omega
+        TYPE ca,sa;
+        sincosR2_taylor(w.norm2(), sa, ca );
+        a.drotate_omega_csa(w,ca,sa);
+        b.drotate_omega_csa(w,ca,sa);
+        c.drotate_omega_csa(w,ca,sa);
+	};
+	
 	void dRotateToward( int pivot, const MAT& rot0, TYPE dPhi ){
         int i3 = pivot*3;
         VEC& piv  = *(VEC*)(     array+i3);
@@ -456,7 +489,8 @@ class Mat3TYPE{
         printf( " %f %f %f \n", cx, cy, cz );
     }
 
-    void printOrtho() const { printf( " %f %f %f   %f %f %f \n", a.norm2(),b.norm2(),c.norm2(),   a.dot(b),a.dot(c),b.dot(c) ); }
+    void printOrtho() const { printf( " %f %f %f   %e %e %e \n", a.norm2(),b.norm2(),c.norm2(),   a.dot(b),a.dot(c),b.dot(c) ); }
+    void printOrthoErr() const { printf( " %e %e %e   %e %e %e \n", a.norm()-1,b.norm()-1,c.norm()-1,   a.dot(b),a.dot(c),b.dot(c) ); }
 
 };
 
@@ -475,7 +509,10 @@ using Mat3f = Mat3TYPE< float >;
 using Mat3d = Mat3TYPE< double>;
 
 static constexpr Mat3d Mat3dIdentity = (Mat3d){1.0d,0.0d,0.0d, 0.0d,1.0d,0.0d,  0.0d,0.0d,1.0d};
+static constexpr Mat3d Mat3dZero     = (Mat3d){0.0d,0.0d,0.0d, 0.0d,0.0d,0.0d,  0.0d,0.0d,0.0d};
+
 static constexpr Mat3f Mat3fIdentity = (Mat3f){1.0f,0.0f,0.0f, 0.0f,1.0f,0.0f,  0.0f,0.0f,1.0f};
+static constexpr Mat3f Mat3fZero     = (Mat3f){0.0f,0.0f,0.0f, 0.0f,0.0f,0.0f,  0.0f,0.0f,0.0f};
 
 inline void convert( const Mat3f& from, Mat3d& to ){ convert( from.a, to.a ); convert( from.b, to.b ); convert( from.c, to.c ); };
 inline void convert( const Mat3d& from, Mat3f& to ){ convert( from.a, to.a ); convert( from.b, to.b ); convert( from.c, to.c ); };
