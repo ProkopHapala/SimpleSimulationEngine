@@ -112,7 +112,7 @@ TestAppCollision::TestAppCollision( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     o->initOne();
     //o->bounds.pos.set(-1.0,4.0,-2.0);
     o->controler = new RigidBody();
-    o->controler->initOne();
+    o->controler->setInertia_box(1.0,{1.0,1.0,1.0} );
     o->controler->pos.set(-2.0,4.0,1.0);
     MeshCollisionShape * coll = new MeshCollisionShape();
     coll->mesh = mesh;

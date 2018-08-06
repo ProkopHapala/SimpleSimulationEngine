@@ -51,10 +51,10 @@ int AeroCraft::fromFile( const char * fname ){
     pFile = fopen (fname,"r");
     printf(" AeroCraft::fromFile: >>%s<<\n", fname );
 
-    Mat3d Ibody = Mat3dZero;
+    Vec3d Ispan;
 
-    fscanf (pFile, " %lf %lf %lf %lf\n", &mass, &Ibody.xx, &Ibody.yy, &Ibody.zz );
-    printf(        " %lf %lf %lf %lf\n",  mass,  Ibody.xx,  Ibody.yy,  Ibody.zz );
+    fscanf (pFile, " %lf %lf %lf %lf\n", &mass, &Ispan.x, &Ispan.y, &Ispan.z );
+    printf(        " %lf %lf %lf %lf\n",  mass,  Ispan.x,  Ispan.y,  Ispan.z );
 
     fscanf ( pFile, "%i\n", &nPanels);
     panels = new AeroSurface[nPanels];
@@ -82,11 +82,12 @@ int AeroCraft::fromFile( const char * fname ){
         //propelers[i].craft = this;
     }
 
-    Ibody.invert_to( invIbody );
+    //Ibody.invert_to( invIbody );
     //qrot.setOne();
     //qrot.toMatrix(rotMat);
     L.set(0,0,0);
-    setMass( mass );
+    //setMass( mass );
+    setInertia_box(mass, Ispan);
     vel.set(0,0,0);
     pos.set(0,0,0);
     clean_temp();

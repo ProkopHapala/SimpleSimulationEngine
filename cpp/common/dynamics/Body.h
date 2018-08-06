@@ -91,10 +91,15 @@ inline void pointBodyDynamicsStep( double invMass, double dt, const Vec3d& force
 
 inline void rigidBodyRotationDynamicsStep_mat( const Mat3d& invIbody, double dt, const Vec3d& torq, Vec3d& L, Mat3d& rotMat, Vec3d& omega ){
     L   .add_mul( torq, dt  );
-    rotMat.dot_to_T  ( L,  omega );
-    //omega .mul     ( invIbody     );  // we don't need invI !!!!
-    invIbody.dot_to_T( omega, omega );
+    
+    rotMat.dot_to_T  ( L,  omega    );
+    invIbody.dot_to  ( omega, omega );
     rotMat.dot_to    ( omega, omega );
+    
+    //rotMat.dot_to    ( L,  omega    );
+    //invIbody.dot_to  ( omega, omega );
+    //rotMat.dot_to_T  ( omega, omega );
+    
     double r2omega = omega.norm2();
     if( r2omega > 1e-12 ){ // TODO - more efficient would be do this for |L| instead of |omega|
         double romega = sqrt(r2omega);
@@ -108,9 +113,9 @@ inline void rigidBodyRotationDynamicsStep_mat_taylor( const Mat3d& invIbody, dou
     L     .add_mul   ( torq, dt       );
     rotMat.dot_to_T  ( L,  omega      );
     //omega .mul     ( invIbody     );  // we don't need invI !!!!
-    invIbody.dot_to_T( omega, omega );
+    invIbody.dot_to  ( omega, omega );
     rotMat.dot_to    ( omega, omega );
-    rotMat.drotate_omega6(omega);
+    rotMat.drotate_omega6(omega*dt);
     //return omega;
 };
 
@@ -118,8 +123,8 @@ inline void rigidBodyRotationDynamicsStep_quat( const Mat3d& invIbody, double dt
     qrot  .toMatrix_unitary_T( rotMat );
     L     .add_mul   ( torq, dt     );
     rotMat.dot_to_T  ( L,  omega    );
-    //omega .mul       ( invIbody     );
-    invIbody.dot_to_T( omega, omega );
+    //omega .mul     ( invIbody     );
+    invIbody.dot_to  ( omega, omega );
     rotMat.dot_to    ( omega, omega );
     qrot.dRot_taylor2( dt, omega    );
     //return omega;
@@ -225,8 +230,14 @@ class RigidBody : public PointBody { public:
         //printf("L (%3.3f,%3.3f,%3.3f) omega (%3.3f,%3.3f,%3.3f) qrot (%3.3f,%3.3f,%3.3f,%3.3f)\n", L.x,L.y,L.z, omega.x,omega.y,omega.z,  qrot.x, qrot.y, qrot.z, qrot.w  );
         */
         pointBodyDynamicsStep( invMass, dt, force, vel, pos );
-        rotMat.orthogonalize_taylor3(2,1,0);
+        
+        // --- Fast
+        //rotMat.orthogonalize_taylor3(2,1,0);
+        //rigidBodyRotationDynamicsStep_mat_taylor( invIbody, dt, torq, L, rotMat, omega );
+        // --- Stable
+        rotMat.orthogonalize(2,1,0);
         rigidBodyRotationDynamicsStep_mat( invIbody, dt, torq, L, rotMat, omega );
+        
         //rigidBodyRotationDynamicsStep_quat( {invIbody.xx,invIbody.yy,invIbody.zz}, dt, torq, L, qrot, rotMat, omega );
     };
 
@@ -273,7 +284,7 @@ class RigidBody : public PointBody { public:
 	}
 */
 
-	inline void initOne(){
+	inline void initInertiaOne(){
 	    setMass( 1.0 );
 	    //invIbody = Vec3dOne;
         //Ibody.a.set(1,0,0);
@@ -290,7 +301,7 @@ class RigidBody : public PointBody { public:
 
     inline void setPose( const Vec3d& pos_, const Vec3d& dir, const Vec3d& up ){
         //w->kind = kind; w->id = warriorCount; warriorCount++;
-        initOne();
+        //initOne();
         pos.set           ( pos_    );
         rotMat.a.set      ( dir     );
         rotMat.b.set      ( up      );
@@ -300,6 +311,7 @@ class RigidBody : public PointBody { public:
         //update_aux();
 	}
 
+    /*
     inline void initSpherical( double mass, double I ){
 	    setMass( mass );
 	    //invIbody.set(1/I);
@@ -315,6 +327,18 @@ class RigidBody : public PointBody { public:
         //qrot.toMatrix_T( rotMat );
         //update_aux();
 	};
+	*/
+	
+	inline void setInertia_box( double m, const Vec3d& halfSpan ){
+        // https://en.wikipedia.org/wiki/List_of_moments_of_inertia
+        setMass( m );
+        double xx = m*halfSpan.x*halfSpan.x;
+        double yy = m*halfSpan.y*halfSpan.y;
+        double zz = m*halfSpan.z*halfSpan.z;
+	    invIbody.a.set( 3/(yy+zz), 0, 0 );
+        invIbody.b.set( 0, 3/(xx+zz), 0 );
+        invIbody.c.set( 0, 0, 3/(yy+xx) );
+	}
 
 };
 

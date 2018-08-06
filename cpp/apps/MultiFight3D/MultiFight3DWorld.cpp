@@ -29,7 +29,7 @@ SomeWarrior3D* MultiFight3DWorld::makeWarrior( const Vec3d& pos, const Vec3d& di
     w->Ibody.c.set(0,0,1);
     w->Ibody.invert_to( w->invIbody );
     */
-    w->initSpherical(1,1);
+    w->setInertia_box(1.0,{1.0,1.0,1.0});
 
     //printf( " I invI  %f %f \n", ship1->I, ship1->invI );
     //w->setDefaults();

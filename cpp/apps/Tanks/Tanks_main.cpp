@@ -259,7 +259,7 @@ Tanks_single::Tanks_single( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     warrior1->hull  .polygonsToTriangles( true );
     warrior1->turret.polygonsToTriangles( true );
 
-    warrior1->initSpherical( 5.0, 10.0 );
+    warrior1->setInertia_box( 5.0, {3.0,3.0,6.0} );
 
     double maxThick = fmax( warrior1->hull.getMaxArmor(), warrior1->turret.getMaxArmor() );
 
