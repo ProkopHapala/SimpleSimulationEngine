@@ -6,29 +6,41 @@
 
 template <class TYPE>
 inline TYPE sin_taylor2( TYPE a ){
-	const TYPE c3 = 1.0d/6;
-	const TYPE c5 = 1.0d/120;
+	constexpr TYPE c3 = 1.0d/6;
+	constexpr TYPE c5 = 1.0d/120;
 	TYPE a2 = a*a;
 	return    a * ( 1 - a2*( c3 - c5*a2 ) );
 }
 
 template <class TYPE>
 inline TYPE cos_taylor2( TYPE a ){
-	const TYPE c2 = 1.0d/2;
-	const TYPE c4 = 1.0d/24;
+	constexpr TYPE c2 = 1.0d/2;
+	constexpr TYPE c4 = 1.0d/24;
 	TYPE a2 = a*a;
 	return    1 - a2*( c2 - c4*a2 );
 }
 
 template <class TYPE>
 inline void sincos_taylor2( TYPE a, TYPE& sa, TYPE& ca ){
-	const TYPE c2 = 1.0d/2;
-	const TYPE c3 = 1.0d/6;
-	const TYPE c4 = 1.0d/24;
-	const TYPE c5 = 1.0d/120;
+	constexpr TYPE c2 = 1.0d/2;
+	constexpr TYPE c3 = 1.0d/6;
+	constexpr TYPE c4 = 1.0d/24;
+	constexpr TYPE c5 = 1.0d/120;
 	TYPE a2 = a*a;
 	sa   = a * ( 1 - a2*( c3 - c5*a2 ) ) ;
 	ca   =       1 - a2*( c2 - c4*a2 )   ;
+}
+
+template <class TYPE>
+inline void sincosR2_taylor( TYPE r2, TYPE& sa, TYPE& ca ){
+    constexpr TYPE c2 = -1.0d/2;
+    constexpr TYPE c3 = -1.0d/6;
+    constexpr TYPE c4 =  1.0d/24;
+    constexpr TYPE c5 =  1.0d/120;
+    constexpr TYPE c6 = -1.0d/720;
+    //TYPE r2  = w.x*w.x + w.y*w.y + w.z*w.z;
+    sa  =   1 + r2*( c3 + c5*r2 );
+    ca  =  c2 + r2*( c4 + c6*r2 );
 }
 
 template <class TYPE>

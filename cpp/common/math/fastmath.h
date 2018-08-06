@@ -177,6 +177,22 @@ inline double fastPrecisePow(double a, double b) {
   return r * u.d;
 }
 
+// sqrt(1+dx) taylor(dx=0)
+// http://m.wolframalpha.com/input/?i=sqrt%281%2Bx%29+taylor+x%3D0
+template <typename T> inline T sqrt1_taylor1( T dx ){ return 1 + dx*  0.5d; }
+template <typename T> inline T sqrt1_taylor2( T dx ){ return 1 + dx*( 0.5d + dx*  -0.125d ); }
+template <typename T> inline T sqrt1_taylor3( T dx ){ return 1 + dx*( 0.5d + dx*( -0.125d + dx*  0.0625d ) ); }
+template <typename T> inline T sqrt1_taylor4( T dx ){ return 1 + dx*( 0.5d + dx*( -0.125d + dx*( 0.0625d + dx *  -0.0390625d ) ) ); }
+template <typename T> inline T sqrt1_taylor5( T dx ){ return 1 + dx*( 0.5d + dx*( -0.125d + dx*( 0.0625d + dx *( -0.0390625d + dx * 0.02734375d ) ) ) ); }
+
+// 1/sqrt(1+dx) taylor(dx=0)
+// http://m.wolframalpha.com/input/?i=1%2Fsqrt%281%2Bx%29+taylor+x%3D0
+template <typename T> inline T invSqrt1_taylor1( T dx ){ return 1 + dx*  -0.5d; }
+template <typename T> inline T invSqrt1_taylor2( T dx ){ return 1 + dx*( -0.5d + dx*  0.375d ); }
+template <typename T> inline T invSqrt1_taylor3( T dx ){ return 1 + dx*( -0.5d + dx*( 0.375d + dx*  -0.3125d ) ); }
+template <typename T> inline T invSqrt1_taylor4( T dx ){ return 1 + dx*( -0.5d + dx*( 0.375d + dx*( -0.3125d + dx * 0.2734375d ) ) ); }
+template <typename T> inline T invSqrt1_taylor5( T dx ){ return 1 + dx*( -0.5d + dx*( 0.375d + dx*( -0.3125d + dx *(0.2734375d + dx * -0.24609375d ) ) ) ); }
+
 /*
 template <class FLOAT,class INT> INT fastFloor( FLOAT x ){
     if( x > 0 ){

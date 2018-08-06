@@ -23,83 +23,62 @@
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
 
-
-// ============= Application
-
-/*
-
-void drawTruss( SoftBody * truss, float vsc, float fsc, bool DEBUG ){
-    glBegin( GL_LINES );
-    glColor3f(0.0f,0.0f,0.0f);
-    for( int i=0; i<truss->nbonds; i++ ){
-        Bond& bond = truss->bonds[i];
-        Vec3d& pi  = truss->points[bond.i];
-        Vec3d& pj  = truss->points[bond.j];
-        glVertex3f( (float)pi.x, (float)pi.y, (float)pi.z );
-        glVertex3f( (float)pj.x, (float)pj.y, (float)pj.z );
-        if( DEBUG ){
-            printf( " %i  %i %i   (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f)\n",  i,   bond.i, bond.j,  pi.x, pi.y, pi.z,  pj.x, pj.y, pj.z  );
-        }
+void testApprox_Vec3Normalize(){
+    Vec3d v;
+    v.fromRandomSphereSample();
+    double d = 1e-12;
+    for(int i=0; i<12; i++){
+        Vec3d v_;
+        v_ = v*(1+d);
+        printf("%e", v_.norm()-1 );
+        v_.normalize_taylor3();
+        printf("-> %e \n", v_.norm()-1 );
+        d*=10;
     }
-    if(vsc>0.0){
-        glColor3f(0.0f,0.0f,1.0f);
-        for( int i=0; i<truss->npoints; i++ ){
-            Vec3d p,v;
-            p = truss->points[i]; v = truss->velocities[i];
-            glVertex3f( (float)p.x, (float)p.y, (float)p.z );
-            glVertex3f( (float)(p.x+vsc*v.x), (float)(p.y+vsc*v.y), (float)(p.z+vsc*v.z) );
-        }
-    }
-    if(fsc>0.0){
-        glColor3f(1.0f,0.0f,0.0f);
-        for( int i=0; i<truss->npoints; i++ ){
-            Vec3d p,f;
-            p = truss->points[i]; f = truss->forces[i];
-            glVertex3f( (float)p.x, (float)p.y, (float)p.z );
-            glVertex3f( (float)(p.x+fsc*f.x), (float)(p.y+fsc*f.y), (float)(p.z+fsc*f.z) );
-        }
-    }
-    for( int i=0; i<truss->nfix; i++ ){
-        Vec3d p = truss->points[truss->fix[i]];
-        Draw3D::drawPointCross( p, 0.3 );
-        if( DEBUG ){
-            printf( " fix %i %i (%3.3f,%3.3f,%3.3f) \n",  i,   truss->fix[i], p.x, p.y, p.z  );
-        }
-    }
-    glEnd();
 }
 
-*/
+void testApprox_Vec3Rotate(){
+    Vec3d v;
+    Vec3d omg;
+    v.  fromRandomSphereSample();
+    omg.fromRandomSphereSample();
+    double d = 1e-12;
+    glColor3f(1.0,1.0,1.0); Draw3D::drawVec( omg  );
+    glColor3f(0.0,0.0,0.0); Draw3D::drawVec( v  );
+    printf("=== testApprox_Vec3Rotate\n");
+    for(int i=0; i<20; i++){
+        d = 0.05*i;    
+        Vec3d omg_;
+        Vec3d v1=v,v2=v;
+        double angle = d;
+        omg_ = omg*angle;
+        v1.rotate       (angle,omg);
+        //v2.drotate_omega(omg_);
+        //v2.drotate_omega2(omg_);
+        v2.drotate_omega6(omg_);
+        printf("alfa %g err %e \n", angle, (v1-v2).norm() );
+        glColor3f(0.0,0.0,1.0); Draw3D::drawVec( v1 );
+        glColor3f(1.0,0.0,0.0); Draw3D::drawVec( v2 );
+        //d*=10;
+    }
+    exit(0);
+}
 
-/*
-void drawRigidBody( const RigidBody& rb, int npoints, Vec3d* points ){
-    glColor3f(0.0f,0.0f,0.0f);
-
-    glPushMatrix();
-    float glMat[16];
-    Mat3d rotT;
-    rotT.setT(rb.rotMat);
-    Draw3D::toGLMat( rb.pos, rotT, glMat );
-    glMultMatrixf( glMat );
-    if( points ) for(int i=0; i<npoints; i++) Draw3D::drawPointCross(points[i],0.3);
-    glPopMatrix();
-
-    glColor3f(1.0f,0.0f,1.0f); Draw3D::drawVecInPos( rb.L,     {0.0,0.0,0.0} );
-    glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos( rb.omega, {0.0,0.0,0.0} );
-
-    if( points ){
-        for(int i=0; i<npoints; i++){
-            Vec3d p,v;
-            //rb.rotMat.dot_to_T(points[i], p);
-            //v.set_cross( p, rb.omega );        // omega is in global coordinates
-            rb.velOfPoint( points[i], v, p );
-            p.add(rb.pos);
-            Draw3D::drawVecInPos  ( v, p );
-            Draw3D::drawPointCross( p, 0.2 );
-        }
-    };
-};
-*/
+void testApprox_Mat3Orthonormalize(){
+    Quat4d  qrot; qrot.fromUniformS3( {randf(),randf(),randf()} );
+    printf( "qrot %g %g %g %g\n", qrot.x, qrot.y, qrot.z, qrot.w );
+    Mat3d   mrot; qrot.toMatrix(mrot);
+    printf("mrot: "); mrot.printOrthoErr();
+    double d = 1e-6;    
+    for(int i=0; i<30; i++){
+        Mat3d   m = mrot;
+        for(int j=0;j<9;j++){ m.array[j]+=randf(-d,d); }
+        m.orthogonalize_taylor3(2,1,0);
+        printf("m(%e): ", d); m.printOrthoErr();
+        d*=2;
+    }
+    exit(0);
+}
 
 // ==========================
 // TestAppRigidBody
@@ -128,10 +107,13 @@ class TestAppRigidBody : public AppSDL2OGL_3D {
 	virtual void drawHUD();
 	//virtual void mouseHandling( );
 	virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
+	virtual void keyStateHandling( const Uint8 *keys );
 
 	TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ );
 
+};
+
+void TestAppRigidBody::keyStateHandling( const Uint8 *keys ){
 };
 
 TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
@@ -159,15 +141,19 @@ TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
 
     // TODO : test fly-wheel  https://en.wikipedia.org/wiki/Rigid_body_dynamics#/media/File:Gyroscope_precession.gif
 
-    rb.initOne();
+    //rb.initOne();
     //rb.L.set(1.0,0.0,0.0);
     //rb.L.set(1.0,1.8,1.0);
-    srand(10454);
-    rb.L.set(randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0));
+    //srand(10454);
+    //rb.L.set(randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0));
+    //rb.L.set(0.0);
+    //printf("L (%3.3f,%3.3f,%3.3f)\n",rb.L.x,rb.L.y,rb.L.z);
 
-    rb.L.set(0.0);
-    printf("L (%3.3f,%3.3f,%3.3f)\n",rb.L.x,rb.L.y,rb.L.z);
-
+    //rb.invIbody.a.set(1.0,0.0,0.0 );
+    //rb.invIbody.b.set(0.0,0.5,0.0 );
+    //rb.invIbody.c.set(0.0,0.0,0.25);
+    
+    rb.setInertia_box( 1.0, {1.0,0.5,0.25} ); 
     rb.rotMat.setOne();
 
     //camMat.c.set(rb.L);                     camMat.c.normalize();
@@ -192,7 +178,7 @@ TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     o->initOne();
     //o->bounds.pos.set(-1.0,4.0,-2.0);
     o->controler = new RigidBody();
-    o->controler->initOne();
+    o->controler->setInertia_box( 1.0, {1.0,1.0,1.0} );
     //o->controler->initSpherical( 1.0, 2.0 );
     o->controler->pos.set(5.0,0.0,0.0);
     MeshCollisionShape * coll = new MeshCollisionShape();
@@ -214,8 +200,13 @@ void TestAppRigidBody::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     int perFrame = 1;
-	double dt    = 0.01;
+	double dt    = 0.003;
 
+    srand(54564564);    
+    //testApprox_Vec3Normalize( ); exit(0);
+    //testApprox_Vec3Rotate(); return;
+    //testApprox_Mat3Orthonormalize();
+    
 	// ---- soft body test
     //truss.dt   = dt;
     //truss.damp = 0.0;
@@ -237,7 +228,7 @@ void TestAppRigidBody::draw(){
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
     rb.clean_temp();
     float step = 10.2;
-    rb.L.mul( 1-0.01 );
+    //rb.L.mul( 1-0.01 );
     if( keys[ SDL_SCANCODE_W  ] ){ rb.torq.add_mul(rb.rotMat.a,  step ); }
 	if( keys[ SDL_SCANCODE_S  ] ){ rb.torq.add_mul(rb.rotMat.a, -step ); }
 	if( keys[ SDL_SCANCODE_A  ] ){ rb.torq.add_mul(rb.rotMat.b,  step ); }
@@ -247,8 +238,12 @@ void TestAppRigidBody::draw(){
     rb.move(dt);
     rb.pos.set(0.0);
     rb.vel.set(0.0);
+    glColor3f(0.0,0.0,0.0);
     Draw3D::drawTriclinicBoxT( rb.rotMat, {-1.0,-0.5,-0.25}, {1.0,0.5,0.25} );
     Draw3D::drawMatInPos     ( rb.rotMat, rb.pos );
+    glColor3f(1.0,1.0,1.0); Draw3D::drawVec( rb.L );
+    
+    //printf( " omega %g L %g I %g \n", rb.omega.norm(), rb.L.norm(),   rb.L.norm()/rb.omega.norm()  );
 
 
     /*
@@ -322,6 +317,7 @@ void TestAppRigidBody::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
+                case SDLK_r:  rb.rotMat = Mat3dIdentity; rb.L=Vec3dZero;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             break;

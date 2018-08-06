@@ -22,11 +22,14 @@ SomeWarrior3D* MultiFight3DWorld::makeWarrior( const Vec3d& pos, const Vec3d& di
     SomeWarrior3D* w = new SomeWarrior3D();
     //w->loadFromFile( filename );
     //w->from_mass_points( 2, mass, (Vec2d*)poss );
+    /*
     w->setMass( 1.0 );
     w->Ibody.a.set(1,0,0);
     w->Ibody.b.set(0,1,0);
     w->Ibody.c.set(0,0,1);
     w->Ibody.invert_to( w->invIbody );
+    */
+    w->setInertia_box(1.0,{1.0,1.0,1.0});
 
     //printf( " I invI  %f %f \n", ship1->I, ship1->invI );
     //w->setDefaults();
@@ -37,7 +40,7 @@ SomeWarrior3D* MultiFight3DWorld::makeWarrior( const Vec3d& pos, const Vec3d& di
     w->rotMat.a.set      ( dir     );
     w->rotMat.b.set      ( up      );
     w->rotMat.c.set_cross( dir, up );
-    w->qrot.fromMatrix   ( w->rotMat );
+    //w->qrot.fromMatrix   ( w->rotMat );
 
     w->shape = shape;
 

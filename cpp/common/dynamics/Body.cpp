@@ -36,13 +36,14 @@ void RigidBody::from_mass_points( int n, double* amass, Vec3d* apos ){
 	//printf( " a1.1 \n" );
 	for(int i=0;  i<n; i++){
 		//printf( " %f %f %f \n", apos[i].x, apos[i].y, apos[i].z );
-		pos .add_mul( apos[i], amass[i] );
+		pos  .add_mul( apos[i], amass[i] );
 		mass +=                amass[i];
 	};
 	//printf( " a2 \n" );
 	invMass = 1/mass;
 	pos.mul( invMass );
 	//printf( " a3 \n" );
+	Mat3d Ibody = Mat3dZero;
 	for(int i=0;  i<n; i++){
 		double mi = amass[i];
 		Vec3d d; d.set( apos[i] - pos );
@@ -76,8 +77,8 @@ void RigidBody::render(){
 
 void RigidBody::init( ){
 	clean_temp( );
-	qrot.toMatrix   ( rotMat );
-	Mat3d tmp; tmp.set_mmul_NT(  invIbody, rotMat  ); invI.set_mmul( rotMat, tmp );
+	//qrot.toMatrix   ( rotMat );
+	//Mat3d tmp; tmp.set_mmul_NT(  invIbody, rotMat  ); invI.set_mmul( rotMat, tmp );
 }
 
 // ===============================
