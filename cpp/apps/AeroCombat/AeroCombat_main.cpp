@@ -422,7 +422,7 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
 	else if ( keys[ SDL_SCANCODE_LSHIFT ] || RMB ){ pilot->rudder.towardRalative( 0.5+(mouseX)/float(WIDTH) ); }
     else if ( autoRetractRudder      ){ pilot->rudder.relax(); }
 
-    /*
+
     //if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_D]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
     if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
         controler.bActive = false;
@@ -434,7 +434,7 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
     }else{
         controler.bActive = true;
     };
-    */
+
 
 };
 
