@@ -491,7 +491,8 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     atomdist.pos    = conf1.pos;
     atomdist.types  = conf1.types;
     */
-
+    
+    printf( "DEBUG 6 \n" );
 
     atomdist.copyOf(conf1);
     /*
@@ -503,6 +504,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     ); }
     */
 
+    printf( "DEBUG 7 \n" );
 
     atomdist.initRuler( world.Collision_box.a+(Vec3d){-2.0,-2.0,-2.0}, world.Collision_box.b+(Vec3d){3.0,3.0,3.0}, 2.0 );
     printf( "atomdist.ruler: %i (%i,%i,%i)\n ", atomdist.ruler.ntot, atomdist.ruler.n.x, atomdist.ruler.n.y, atomdist.ruler.n.z );
@@ -511,17 +513,18 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     atomdist.toCells();
 
 
+    printf( "DEBUG 8 \n" );
+    
     conf1.pos[0].add(0.1,0.0,0.0);
 
     for(int i=0; i<5; i++){ printf( "== %i %i(%f,%f,%f) | %i %i(%f,%f,%f)\n", i, world.atypes[i], world.apos[i].x,world.apos[i].y,world.apos[i].z,
                                                                               atomdist.types[i],  atomdist.pos[i].x, atomdist.pos[i].y, atomdist.pos[i].z  ); }
-
     double rTrue =((AtomicConfiguration)atomdist).dist(conf1);
     double rFast = atomdist.dist( conf1 );
 
     printf( "dist = %f %f \n", rTrue, rFast );
 
-
+    printf( "SETUP DONE !\n" );
     //exit(0);
 
 }
