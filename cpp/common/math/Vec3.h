@@ -52,60 +52,60 @@ class Vec3TYPE{
 	inline VEC zxy() const { return {z,x,y}; };
 	inline VEC zyx() const { return {z,y,x}; };
 
-	inline void set( TYPE f                    ) { x=f;   y=f;   z=f;   };
-    inline void set( TYPE fx, TYPE fy, TYPE fz ) { x=fx;  y=fy;  z=fz;  };
-    inline void set( const VEC& v              ) { x=v.x; y=v.y; z=v.z; };
-	inline void set( TYPE* arr                 ) { x=arr[0]; y=arr[1]; z=arr[2]; };
+	inline VEC& set( TYPE f                    ) { x=f;   y=f;   z=f;   return *this; };
+    inline VEC& set( TYPE fx, TYPE fy, TYPE fz ) { x=fx;  y=fy;  z=fz;  return *this; };
+    inline VEC& set( const VEC& v              ) { x=v.x; y=v.y; z=v.z; return *this; };
+	inline VEC& set( TYPE* arr                 ) { x=arr[0]; y=arr[1]; z=arr[2]; return *this; };
 
-    inline void get( TYPE& fx, TYPE& fy, TYPE& fz ) { fx=x;  fy=y;  fz=z;           };
-	inline void get( TYPE* arr                    ) { arr[0]=x; arr[1]=y; arr[2]=z; };
+    inline void get( TYPE& fx, TYPE& fy, TYPE& fz ) { fx=x;  fy=y;  fz=z;           return *this; };
+	inline void get( TYPE* arr                    ) { arr[0]=x; arr[1]=y; arr[2]=z; return *this; };
 
-    inline void add( TYPE f ) { x+=f; y+=f; z+=f; };
-    inline void mul( TYPE f ) { x*=f; y*=f; z*=f; };
+    inline VEC& add( TYPE f ) { x+=f; y+=f; z+=f; return *this;};
+    inline VEC& mul( TYPE f ) { x*=f; y*=f; z*=f; return *this;};
 
-    inline void add( const VEC&  v ) { x+=v.x; y+=v.y; z+=v.z; };
-    inline void sub( const VEC&  v ) { x-=v.x; y-=v.y; z-=v.z; };
-    inline void mul( const VEC&  v ) { x*=v.x; y*=v.y; z*=v.z; };
-    inline void div( const VEC&  v ) { x/=v.x; y/=v.y; z/=v.z; };
+    inline VEC& add( const VEC&  v ) { x+=v.x; y+=v.y; z+=v.z; return *this;};
+    inline VEC& sub( const VEC&  v ) { x-=v.x; y-=v.y; z-=v.z; return *this;};
+    inline VEC& mul( const VEC&  v ) { x*=v.x; y*=v.y; z*=v.z; return *this;};
+    inline VEC& div( const VEC&  v ) { x/=v.x; y/=v.y; z/=v.z; return *this;};
 
-    inline void set_inv( const VEC&  v ) { x=1/v.x; y=1/v.y; z=1/v.z; };
+    inline VEC& set_inv( const VEC&  v ) { x=1/v.x; y=1/v.y; z=1/v.z; return *this; };
     inline VEC  get_inv()                { VEC o; o.x=1/x; o.y=1/y; o.z=1/z; return o; };
 
-    inline void add( TYPE fx, TYPE fy, TYPE fz ) { x+=fx; y+=fy; z+=fz; };
-    inline void sub( TYPE fx, TYPE fy, TYPE fz ) { x-=fx; y-=fy; z-=fz; };
-    inline void mul( TYPE fx, TYPE fy, TYPE fz ) { x*=fx; y*=fy; z*=fz; };
-    inline void div( TYPE fx, TYPE fy, TYPE fz ) { x/=fx; y/=fy; z/=fz; };
+    inline VEC& add( TYPE fx, TYPE fy, TYPE fz ) { x+=fx; y+=fy; z+=fz; return *this;};
+    inline VEC& sub( TYPE fx, TYPE fy, TYPE fz ) { x-=fx; y-=fy; z-=fz; return *this;};
+    inline VEC& mul( TYPE fx, TYPE fy, TYPE fz ) { x*=fx; y*=fy; z*=fz; return *this;};
+    inline VEC& div( TYPE fx, TYPE fy, TYPE fz ) { x/=fx; y/=fy; z/=fz; return *this;};
 
-	inline void set_add( const VEC& a, TYPE f ){ x=a.x+f; y=a.y+f; z=a.z+f; };
-	inline void set_mul( const VEC& a, TYPE f ){ x=a.x*f; y=a.y*f; z=a.z*f; };
-	inline void set_mul( const VEC& a, const VEC& b, TYPE f ){ x=a.x*b.x*f; y=a.y*b.y*f; z=a.z*b.z*f; };
+	inline VEC& set_add( const VEC& a, TYPE f ){ x=a.x+f; y=a.y+f; z=a.z+f; return *this;};
+	inline VEC& set_mul( const VEC& a, TYPE f ){ x=a.x*f; y=a.y*f; z=a.z*f; return *this;};
+	inline VEC& set_mul( const VEC& a, const VEC& b, TYPE f ){ x=a.x*b.x*f; y=a.y*b.y*f; z=a.z*b.z*f; return *this; };
 
-	inline void set_add( const VEC& a, const VEC& b ){ x=a.x+b.x; y=a.y+b.y; z=a.z+b.z; };
-	inline void set_sub( const VEC& a, const VEC& b ){ x=a.x-b.x; y=a.y-b.y; z=a.z-b.z; };
-	inline void set_mul( const VEC& a, const VEC& b ){ x=a.x*b.x; y=a.y*b.y; z=a.z*b.z; };
-	inline void set_div( const VEC& a, const VEC& b ){ x=a.x/b.x; y=a.y/b.y; z=a.z/b.z; };
+	inline VEC& set_add( const VEC& a, const VEC& b ){ x=a.x+b.x; y=a.y+b.y; z=a.z+b.z; return *this; };
+	inline VEC& set_sub( const VEC& a, const VEC& b ){ x=a.x-b.x; y=a.y-b.y; z=a.z-b.z; return *this; };
+	inline VEC& set_mul( const VEC& a, const VEC& b ){ x=a.x*b.x; y=a.y*b.y; z=a.z*b.z; return *this; };
+	inline VEC& set_div( const VEC& a, const VEC& b ){ x=a.x/b.x; y=a.y/b.y; z=a.z/b.z; return *this; };
 
-	inline void add_mul( const VEC& a, TYPE f                ){ x+=a.x*f;     y+=a.y*f;     z+=a.z*f;   };
-	inline void add_mul( const VEC& a, const VEC& b          ){ x+=a.x*b.x;   y+=a.y*b.y;   z+=a.z*b.z; };
-	inline void sub_mul( const VEC& a, const VEC& b          ){ x-=a.x*b.x;   y-=a.y*b.y;   z-=a.z*b.z; };
-	inline void add_mul( const VEC& a, const VEC& b, TYPE f  ){ x+=a.x*b.x*f; y+=a.y*b.y*f; z+=a.z*b.z*f;   };
-
-
-	inline void set_add_mul( const VEC& a, const VEC& b, TYPE f ){ x= a.x + f*b.x;     y= a.y + f*b.y;     z= a.z + f*b.z;  };
+	inline VEC& add_mul( const VEC& a, TYPE f                ){ x+=a.x*f;     y+=a.y*f;     z+=a.z*f;   return *this;};
+	inline VEC& add_mul( const VEC& a, const VEC& b          ){ x+=a.x*b.x;   y+=a.y*b.y;   z+=a.z*b.z; return *this;};
+	inline VEC& sub_mul( const VEC& a, const VEC& b          ){ x-=a.x*b.x;   y-=a.y*b.y;   z-=a.z*b.z; return *this;};
+	inline VEC& add_mul( const VEC& a, const VEC& b, TYPE f  ){ x+=a.x*b.x*f; y+=a.y*b.y*f; z+=a.z*b.z*f;   return *this;};
 
 
-	inline void set_lincomb( TYPE fa, const VEC& a, TYPE fb, const VEC& b ){ x = fa*a.x + fb*b.x;  y = fa*a.y + fb*b.y;  z = fa*a.z + fb*b.z; };
-	inline void add_lincomb( TYPE fa, const VEC& a, TYPE fb, const VEC& b ){ x+= fa*a.x + fb*b.x;  y+= fa*a.y + fb*b.y;  z+= fa*a.z + fb*b.z; };
-
-	inline void set_lincomb( TYPE fa, TYPE fb, TYPE fc, const VEC& a, const VEC& b, const VEC& c ){ x = fa*a.x + fb*b.x + fc*c.x;  y = fa*a.y + fb*b.y + fc*c.y;  z = fa*a.z + fb*b.z + fc*c.z; };
-	inline void add_lincomb( TYPE fa, TYPE fb, TYPE fc, const VEC& a, const VEC& b, const VEC& c ){ x+= fa*a.x + fb*b.x + fc*c.x;  y+= fa*a.y + fb*b.y + fc*c.y;  z+= fa*a.z + fb*b.z + fc*c.z; };
-
-    inline void set_lincomb( const VEC& fs, const VEC& a, const VEC& b, const VEC& c ){ x = fs.a*a.x + fs.b*b.x + fs.c*c.x;  y = fs.a*a.y + fs.b*b.y + fs.c*c.y;  z = fs.a*a.z + fs.b*b.z + fs.c*c.z; };
-	inline void add_lincomb( const VEC& fs, const VEC& a, const VEC& b, const VEC& c ){ x+= fs.a*a.x + fs.b*b.x + fs.c*c.x;  y+= fs.a*a.y + fs.b*b.y + fs.c*c.y;  z+= fs.a*a.z + fs.b*b.z + fs.c*c.z; };
+	inline VEC& set_add_mul( const VEC& a, const VEC& b, TYPE f ){ x= a.x + f*b.x;     y= a.y + f*b.y;     z= a.z + f*b.z;  return *this;};
 
 
-    inline void set_cross( const VEC& a, const VEC& b ){ x =a.y*b.z-a.z*b.y; y =a.z*b.x-a.x*b.z; z =a.x*b.y-a.y*b.x; };
-	inline void add_cross( const VEC& a, const VEC& b ){ x+=a.y*b.z-a.z*b.y; y+=a.z*b.x-a.x*b.z; z+=a.x*b.y-a.y*b.x; };
+	inline VEC& set_lincomb( TYPE fa, const VEC& a, TYPE fb, const VEC& b ){ x = fa*a.x + fb*b.x;  y = fa*a.y + fb*b.y;  z = fa*a.z + fb*b.z; return *this;};
+	inline VEC& add_lincomb( TYPE fa, const VEC& a, TYPE fb, const VEC& b ){ x+= fa*a.x + fb*b.x;  y+= fa*a.y + fb*b.y;  z+= fa*a.z + fb*b.z; return *this;};
+
+	inline VEC& set_lincomb( TYPE fa, TYPE fb, TYPE fc, const VEC& a, const VEC& b, const VEC& c ){ x = fa*a.x + fb*b.x + fc*c.x;  y = fa*a.y + fb*b.y + fc*c.y;  z = fa*a.z + fb*b.z + fc*c.z; return *this;};
+	inline VEC& add_lincomb( TYPE fa, TYPE fb, TYPE fc, const VEC& a, const VEC& b, const VEC& c ){ x+= fa*a.x + fb*b.x + fc*c.x;  y+= fa*a.y + fb*b.y + fc*c.y;  z+= fa*a.z + fb*b.z + fc*c.z; return *this;};
+
+    inline VEC& set_lincomb( const VEC& fs, const VEC& a, const VEC& b, const VEC& c ){ x = fs.a*a.x + fs.b*b.x + fs.c*c.x;  y = fs.a*a.y + fs.b*b.y + fs.c*c.y;  z = fs.a*a.z + fs.b*b.z + fs.c*c.z; return *this;};
+	inline VEC& add_lincomb( const VEC& fs, const VEC& a, const VEC& b, const VEC& c ){ x+= fs.a*a.x + fs.b*b.x + fs.c*c.x;  y+= fs.a*a.y + fs.b*b.y + fs.c*c.y;  z+= fs.a*a.z + fs.b*b.z + fs.c*c.z; return *this;};
+
+
+    inline VEC& set_cross( const VEC& a, const VEC& b ){ x =a.y*b.z-a.z*b.y; y =a.z*b.x-a.x*b.z; z =a.x*b.y-a.y*b.x; return *this;};
+	inline VEC& add_cross( const VEC& a, const VEC& b ){ x+=a.y*b.z-a.z*b.y; y+=a.z*b.x-a.x*b.z; z+=a.x*b.y-a.y*b.x; return *this;};
 
 	TYPE makeOrthoU( const VEC& a ){ TYPE c = dot(a);          add_mul(a, -c); return c; }
 	TYPE makeOrtho ( const VEC& a ){ TYPE c = dot(a)/a.norm(); add_mul(a, -c); return c; }
@@ -113,7 +113,7 @@ class Vec3TYPE{
     inline VEC operator+ ( TYPE f   ) const { VEC vo; vo.x=x+f; vo.y=y+f; vo.z=z+f; return vo; };
     inline VEC operator* ( TYPE f   ) const { VEC vo; vo.x=x*f; vo.y=y*f; vo.z=z*f; return vo; };
 
-    inline VEC operator+ ( const VEC& vi ) const { VEC vo; vo.x=x+vi.x; vo.y=y+vi.y; vo.z=z+vi.z; return vo; };
+    inline VEC operator+ ( const VEC& vi ) const { VEC vo; vo.x=x+vi.x; vo.y=y+vi.y; vo.z=z+vi.z; return vo;  };
     inline VEC operator- ( const VEC& vi ) const { VEC vo; vo.x=x-vi.x; vo.y=y-vi.y; vo.z=z-vi.z; return vo; };
     inline VEC operator* ( const VEC& vi ) const { VEC vo; vo.x=x*vi.x; vo.y=y*vi.y; vo.z=z*vi.z; return vo; };
     inline VEC operator/ ( const VEC& vi ) const { VEC vo; vo.x=x/vi.x; vo.y=y/vi.y; vo.z=z/vi.z; return vo; };
@@ -156,17 +156,18 @@ class Vec3TYPE{
         VEC out; out.set_cross(*this,up);
         return out;
 	}
-	
-	
-	inline VEC normalize_taylor3(){
+
+
+	inline VEC& normalize_taylor3(){
         // sqrt(1+x) ~= 1 + 0.5*x - 0.125*x*x
-        // sqrt(r2) = sqrt((r2-1)+1) ~= 1 + 0.5*(r2-1) 
-        // 1/sqrt(1+x) ~= 1 - 0.5*x + (3/8)*x^2 - (5/16)*x^3 + (35/128)*x^4 - (63/256)*x^5  
+        // sqrt(r2) = sqrt((r2-1)+1) ~= 1 + 0.5*(r2-1)
+        // 1/sqrt(1+x) ~= 1 - 0.5*x + (3/8)*x^2 - (5/16)*x^3 + (35/128)*x^4 - (63/256)*x^5
         TYPE dr2    = x*x+y*y+z*z-1;
         TYPE renorm = 1 + dr2*( -0.5d + dr2*( 0.375d + dr2*-0.3125d ) );
         x*=renorm;
         y*=renorm;
         z*=renorm;
+        return *this;
 	}
 
 
@@ -198,30 +199,32 @@ class Vec3TYPE{
 		v2.z = x*v1.y - y*v1.x;
 	}
 
-    inline void drotate_omega(const VEC& w){
-        TYPE dx =y*w.z-z*w.y; 
-        TYPE dy =z*w.x-x*w.z; 
+    inline VEC& drotate_omega(const VEC& w){
+        TYPE dx =y*w.z-z*w.y;
+        TYPE dy =z*w.x-x*w.z;
         TYPE dz =x*w.y-y*w.x;
         //x+=dx; y+=dy; z+=dz;
         x-=dx; y-=dy; z-=dz;
+        return *this;
     }
-    
-    inline void drotate_omega2(const VEC& w){
-        TYPE dx  = y*w.z- z*w.y; 
-        TYPE dy  = z*w.x- x*w.z; 
+
+    inline VEC& drotate_omega2(const VEC& w){
+        TYPE dx  = y*w.z- z*w.y;
+        TYPE dy  = z*w.x- x*w.z;
         TYPE dz  = x*w.y- y*w.x;
-        TYPE ddx =dy*w.z-dz*w.y; 
-        TYPE ddy =dz*w.x-dx*w.z; 
+        TYPE ddx =dy*w.z-dz*w.y;
+        TYPE ddy =dz*w.x-dx*w.z;
         TYPE ddz =dx*w.y-dy*w.x;
-        //x+=dx - ddx*0.5; 
-        //y+=dy - ddy*0.5; 
+        //x+=dx - ddx*0.5;
+        //y+=dy - ddy*0.5;
         //z+=dz - ddz*0.5;
-        x-=dx - ddx*0.5; 
-        y-=dy - ddy*0.5; 
+        x-=dx - ddx*0.5;
+        y-=dy - ddy*0.5;
         z-=dz - ddz*0.5;
+        return *this;
     }
-    
-    inline void drotate_omega_csa(const VEC& w, TYPE ca, TYPE sa){
+
+    inline VEC& drotate_omega_csa(const VEC& w, TYPE ca, TYPE sa){
         TYPE dx  =  y*w.z -  z*w.y;
         TYPE dy  =  z*w.x -  x*w.z;
         TYPE dz  =  x*w.y -  y*w.x;
@@ -234,9 +237,10 @@ class Vec3TYPE{
         x-=dx*sa + ddx*ca;
         y-=dy*sa + ddy*ca;
         z-=dz*sa + ddz*ca;
+        return *this;
     }
-    
-    inline void drotate_omega6(const VEC& w){
+
+    inline VEC& drotate_omega6(const VEC& w){
         /*
         constexpr TYPE c2 = -1.0d/2;
         constexpr TYPE c3 = -1.0d/6;
@@ -253,15 +257,16 @@ class Vec3TYPE{
     }
 
 	// Rodrigues rotation formula: v' = cosa*v + sina*(uaxis X v) + (1-cosa)*(uaxis . v)*uaxis
-	inline void rotate( TYPE angle, const VEC& axis  ){
+	inline VEC& rotate( TYPE angle, const VEC& axis  ){
 		VEC uaxis;
 		uaxis.set( axis * axis.norm() );
 		TYPE ca   = cos(angle);
 		TYPE sa   = sin(angle);
  		rotate_csa( ca, sa, uaxis );
+ 		return *this;
 	};
 
-	inline void rotate_csa( TYPE ca, TYPE sa, const VEC& uaxis ){
+	inline VEC& rotate_csa( TYPE ca, TYPE sa, const VEC& uaxis ){
 		TYPE cu = (1-ca)*dot(uaxis);
 		TYPE utx  = uaxis.y*z - uaxis.z*y;
 		TYPE uty  = uaxis.z*x - uaxis.x*z;
@@ -270,9 +275,10 @@ class Vec3TYPE{
 		TYPE y_ = ca*y + sa*uty + cu*uaxis.y;
 		       z  = ca*z + sa*utz + cu*uaxis.z;
 		x = x_; y = y_;
+		return *this;
 	};
 
-	inline void rotateTo( const VEC& rot0, double coef ){
+	inline VEC& rotateTo( const VEC& rot0, double coef ){
         //rot.add_mul( rot0, coef ); rot.normalize();
         VEC ax; ax.set_cross( *this, rot0 );
         double sa2 = ax.norm2();
@@ -283,6 +289,7 @@ class Vec3TYPE{
         }else{
             set(rot0);
         }
+        return *this;
     }
 
     inline void getInPlaneRotation( const VEC& rot0, const VEC& xhat, const VEC& yhat, double& ca, double& sa ){
@@ -308,8 +315,8 @@ class Vec3TYPE{
     inline bool isGreater( const VEC& vmin ) const { return (x>vmin.x)&&(y>vmin.y)&&(x>vmin.z); }
     inline bool isBetween( const VEC& vmin, const VEC& vmax ) const { return (x>vmin.x)&&(x<vmax.x)&&(y>vmin.y)&&(y<vmax.y)&&(z>vmin.z)&&(z<vmax.z); }
 
-    inline void setIfLower  (const VEC& a){ if(a.x<x)x=a.x;if(a.y<y)y=a.y;if(a.z<z)z=a.z; }
-    inline void setIfGreater(const VEC& a){ if(a.x>x)x=a.x;if(a.y>y)y=a.y;if(a.z>z)z=a.z; }
+    inline VEC& setIfLower  (const VEC& a){ if(a.x<x)x=a.x;if(a.y<y)y=a.y;if(a.z<z)z=a.z; return *this; }
+    inline VEC& setIfGreater(const VEC& a){ if(a.x>x)x=a.x;if(a.y>y)y=a.y;if(a.z>z)z=a.z; return *this; }
     //inline VEC min(VEC a){ return {fmin(x,a.x),fmin(y,a.y),fmin(z,a.z)}; };
     //inline VEC max(VEC a){ return {fmax(x,a.x),fmax(y,a.y),fmax(z,a.z)}; };
     //inline VEC set_min(VEC a,VEC b){ return {fmin(x,a.x),fmin(y,a.y),fmin(z,a.z)}; };
@@ -326,7 +333,7 @@ class Vec3TYPE{
         return atan2( y, x );
     }
 
-    inline void setHomogenousSphericalSample( TYPE u, TYPE v ){
+    inline VEC& setHomogenousSphericalSample( TYPE u, TYPE v ){
         TYPE  r = sqrt(1-u*u);
         TYPE  c = cos(v);
         TYPE  s = sin(v);
@@ -334,15 +341,17 @@ class Vec3TYPE{
         x = r*c;
         y = r*s;
         z = u;
+        return *this;
     }
 
-    inline void fromRandomSphereSample(){
+    inline VEC& fromRandomSphereSample(){
         setHomogenousSphericalSample( (randf()*2)-1, randf()*2*M_PI );
+        return *this;
     }
 
-    inline void fromRandomCube( double d ){ x=randf(-d,d); y=randf(-d,d); z=randf(-d,d); }
+    inline VEC& fromRandomCube( double d ){ x=randf(-d,d); y=randf(-d,d); z=randf(-d,d);  return *this; }
 
-    inline void fromLinearSolution( const VEC& va, const VEC& vb, const VEC& vc, const VEC& p ){
+    inline VEC& fromLinearSolution( const VEC& va, const VEC& vb, const VEC& vc, const VEC& p ){
         // https://en.wikipedia.org/wiki/Cramer%27s_rule
         // 30 multiplications
         TYPE Dax = vb.y*vc.z - vb.z*vc.y;
@@ -352,6 +361,7 @@ class Vec3TYPE{
         x =  idet*( p.x*Dax - p.y*Day + p.z*Daz );
         y = -idet*( p.x*(va.y*vc.z - va.z*vc.y) - p.y*(va.x*vc.z - va.z*vc.x) + p.z*(va.x*vc.y - va.y*vc.x) );
         z =  idet*( p.x*(va.y*vb.z - va.z*vb.y) - p.y*(va.x*vb.z - va.z*vb.x) + p.z*(va.x*vb.y - va.y*vb.x) );
+        return *this;
     }
 
     static inline VEC average( int n, VEC* vs ){
