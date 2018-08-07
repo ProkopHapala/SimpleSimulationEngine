@@ -37,6 +37,24 @@ void printMat( const Mat3d& mat  ){
 // CPU ticks timer
 // http://stackoverflow.com/questions/6432669/variance-in-rdtsc-overhead
 
+#define DBGL printf( "DEBUG LINE %i \n", __LINE__);
+
+#define DEBUG printf( "DEBUG LINE %i %s %s \n", __LINE__, __FUNCTION__, __FILE__ );
+
+//void dbg(char* s){ printf("DEBUG (%s) \n", s); };
+
+#define DBG(format,args...) { printf("DEBUG "); printf(format,## args); }
+
+/*
+int  dbg(int priority, const char *format, ...){
+    va_list args;
+    va_start(args, format);
+    if(priority & PRIO_LOG) vprintf(format, args);
+    va_end(args);
+}
+*/
+
+
 inline uint64_t getCPUticks(){
     uint32_t lo, hi;
     __asm__ __volatile__ (

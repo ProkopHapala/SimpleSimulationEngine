@@ -62,12 +62,12 @@ class FastAtomicMetric : public AtomicConfiguration { public:
     //int   * atom2cell = 0;
 
     // this may be just local in function
-    int* atom2cells;
-    int* atomNs;
+    int* atom2cells = 0;
+    int* atomNs     = 0;
 
     //void makeCell2atom(  ){}
 
-    void initRuler( Vec3d pmin, Vec3d pmax, double step ){
+    void initRuler( Vec3d pmin, Vec3d pmax, double step ){ 
         ruler.setup( pmin, pmax, step );
         _realloc(cellNs    ,ruler.ntot);
         _realloc(cell2atoms,ruler.ntot);
@@ -83,10 +83,14 @@ class FastAtomicMetric : public AtomicConfiguration { public:
         //Rcut=Rcut_;
         //int* atom2cells = new int[natoms*8];
         //int* atomNs     = new int[natoms  ];
+        DEBUG
+        DBG( "toCells natoms, atom2cells, atomNs %i %i %i \n", natoms, atom2cells, atomNs );
+        //printf( "toCells natoms, atom2cells, atomNs %i %i %i \n", natoms, atom2cells, atomNs );
         _realloc(atom2cells,natoms*8);
-        _realloc(atomNs,natoms      );
+        _realloc(atomNs    ,natoms  );
         int* atom2cells_=atom2cells;
         nprj=0;
+        DEBUG
         //printf("--- toCells 1 \n");
         for(int i=0; i<ruler.ntot; i++){ cellNs[i]=0;             };
         for(int i=0; i<natoms; i++){
@@ -99,8 +103,8 @@ class FastAtomicMetric : public AtomicConfiguration { public:
             };
             //printf( "|atom %i N %i %i \n", i, atomNs[i], nprj );
             atom2cells_+=nc;
-
         }
+        DEBUG
         //printf( "nprj %i \n", nprj );
         _realloc( cell2atomBuff, nprj);
           // printf("toCells 2 \n");
@@ -111,6 +115,7 @@ class FastAtomicMetric : public AtomicConfiguration { public:
         for(int i=0; i<ruler.ntot; i++){ cell2atoms[i]=cell2atomBuff+i0; i0+=cellNs[i]; cellNs[i]=0; // this can be much simplified if we allocate uper bound for cell2atomBuff
             //printf( "%i %i %i \n", i, cell2atoms[i]-cell2atomBuff, cellNs[i] );
         };
+        DEBUG
         //printf("toCells 4 \n");
         //for(int i=0; i<ruler.ntot; i++){ cellNs[i]=0; };                                   printf("toCells 5 \n");
         int ia=-1,nprj_=0;
@@ -122,6 +127,7 @@ class FastAtomicMetric : public AtomicConfiguration { public:
             cellNs[ic]++;
             //printf( " %i [%i][%i] ia %i N %i \n", i, ic, j, ia, cellNs[ic] );
         };
+        DEBUG
         for(int i=0; i<nprj; i++){ };
         //printf("toCells 6 \n");
         //delete [] atom2cells;

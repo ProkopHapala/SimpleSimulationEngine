@@ -2,8 +2,9 @@
 set( NAME "MolecularEditorOCL" )
 
 #add_library( MolecularEngine OBJECT MolecularWorld.cpp MoleculeType.cpp AtomTypes.cpp  )
+SET( MOLECULAR_EDITOR_SRCS       ${MY_SRC_DIR}/apps/MolecularEditor2 )
 
-include_directories( ${COMMON_SRCS}/dynamics/Molecular )
+include_directories( ${COMMON_SRCS}/dynamics/Molecular ${MOLECULAR_EDITOR_SRCS} )
 
 add_executable( ${NAME}_main
     ${NAME}_main.cpp 
@@ -14,7 +15,6 @@ add_executable( ${NAME}_main
 
 target_link_libraries( ${NAME}_main ${OpenCL_LIBRARY} ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-SET( MOLECULAR_EDITOR_SRCS       ${MY_SRC_DIR}/apps/MolecularEditor2 )
 #add_custom_target( ${NAME}_src_dep SOURCES ${MOLECULAR_EDITOR_SRCS} )
 
 add_custom_command(

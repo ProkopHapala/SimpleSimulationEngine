@@ -5,6 +5,9 @@
 #include <vector>
 #include <math.h>
 
+
+#include "testUtils.h"
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw.h"
@@ -34,8 +37,8 @@
 #include "DistanceHierarchy.h"
 
 #include "AppSDL2OGL_3D.h"
-#include "testUtils.h"
 
+#include "MolecularDraw.h"
 
 /*
 
@@ -65,174 +68,6 @@ Vec3d testREQ,testPLQ;
 // ==========================
 // AppMolecularEditor2
 // ==========================
-
-
-void colorRB( float f ){ glColor3f( 0.5+f, 0.5, 0.5-f ); }
-
-void printPoses( int n, double * poses ){
-    for( int i=0; i<n; i++ ){
-        int i8 = i*8;
-        //printf( "force[%04i] %g,%g,%g,%g|%g,%g,%g,%g\n",i, opt.force[i8+0], opt.force[i8+1], opt.force[i8+2], opt.force[i8+3],    opt.force[i8+4], opt.force[i8+5], opt.force[i8+6], opt.force[i8+7]  );
-        printf( "[%04i] %g,%g,%g,%g | %g,%g,%g,%g \n",i, poses[i8+0], poses[i8+1], poses[i8+2], poses[i8+3],    poses[i8+4], poses[i8+5], poses[i8+6], poses[i8+7]  );
-    }
-}
-
-void drawMapedPoints( const FastAtomicMetric& D, int itest ){
-    //atomdist.natoms=1;
-    //atomdist.pos[0]=cursor3D;
-    //atomdist.toCells(atomdist.ruler.step*0.5-0.01);
-    Draw3D::drawBBox( D.ruler.pos0, D.ruler.pmax );
-    int j=0;
-    for(int i=0; i<D.natoms; i++){
-        //Draw3D::drawPointCross( atomdist.pos[i], atomdist.Rcut );
-        //Draw3D::drawPointCross( atomdist.pos[i], 0.1 );
-        bool b = ( i == (itest%D.natoms));
-        if(b){ Draw3D::drawSphereOctLines( 16, D.Rcut, D.pos[i] ); }
-        else { Draw3D::drawPointCross( D.pos[i], 0.1 ); }
-        //printf("%i %i \n", i, D.atomNs[i] );
-        for(int jj=0; jj<D.atomNs[i];jj++){
-            if(b){
-                int ic = D.atom2cells[j];
-                Vec3i ip;  D.ruler.i2ixyz ( ic, ip );
-                Vec3d  p = D.ruler.box2pos( ip, {0.0,0.0,0.0} );
-                double d = D.ruler.step;
-                Draw3D::drawBBox( p, p+(Vec3d){d,d,d} );
-            }
-            j++;
-        }
-    }
-}
-
-void drawNeighs( const FastAtomicMetric& D, Vec3d pos ){
-    Draw3D::drawBBox( D.ruler.pos0, D.ruler.pmax );
-    Draw3D::drawSphereOctLines(16,D.Rcut,pos);
-    {
-        //ip = atomdist.ruler.i cursor3D
-        //Vec3i ip;  atomdist.ruler.i2ixyz ( icell, ip );
-        Vec3i ip = D.ruler.ipcell( pos );
-        Vec3d  p = D.ruler.box2pos( ip, {0.0,0.0,0.0} );
-        double d = D.ruler.step;
-        Draw3D::drawBBox( p, p+(Vec3d){d,d,d} );
-    }
-    //printf( "DEBUG 2 \n" );
-    if( Box::pointIn( pos, D.ruler.pos0, D.ruler.pmax) ){
-        int tmpIs[D.natoms];
-        int nfound = D.findNeighs( pos, D.Rcut, tmpIs );
-        //printf( "DEBUG 3 \n" );
-        //printf( "nfound %i \n", nfound );
-        for(int i=0; i<nfound; i++){
-            Draw3D::drawLine( pos, D.pos[tmpIs[i]] );
-        }
-    }
-    for(int i=0; i<D.natoms; i++){
-        //Draw3D::drawPointCross( atomdist.pos[i], atomdist.Rcut );
-        Draw3D::drawPointCross( D.pos[i], 0.1 );
-    }
-}
-
-
-void drawPPRelaxTrj( int n, double dt, double damp, GridFF& gff, Vec3d pos, Vec3d PRQ ){
-    Vec3d vel = (Vec3d){0.0,0.0,0.0};
-    glBegin(GL_LINE_STRIP);
-    for(int i=0; i<n; i++){
-        Vec3d f = (Vec3d){0.0,0.0,0.0};
-        gff.addForce( pos, PRQ, f);
-        vel.mul(damp);
-        vel.add_mul( f  , dt);
-        pos.add_mul( vel, dt );
-        glVertex3f(pos.x,pos.y,pos.z);
-        //printf( " %i (%g,%g,%g) (%g,%g,%g) \n", i, pos.x,pos.y,pos.z,  f.x,f.y,f.z );
-    }
-    glEnd();
-    //exit(0);
-}
-
-void drawGridForceAlongLine( int n, GridFF& gff, Vec3d pos0, Vec3d dpos, Vec3d PRQ, double fsc ){
-    Vec3d pos = pos0;
-	for( int i=0; i<n; i++ ){
-        Vec3d f = (Vec3d){0.0,0.0,0.0};
-        gff.addForce( pos, PRQ, f);
-        //printf( " %i (%g,%g,%g) (%g,%g,%g) \n", i, pos.x,pos.y,pos.z,  f.x,f.y,f.z );
-        Draw3D::drawVecInPos( f*fsc, pos );
-        Draw3D::drawPointCross( pos, 0.1 );
-        pos.add(dpos);
-	}
-}
-
-void plotSurfPlane( Vec3d normal, double c0, Vec2d d, Vec2i n ){
-    Vec3d da,db;
-    normal.getSomeOrtho( da,db );
-    da.mul( d.a/da.norm() );
-    db.mul( d.b/db.norm() );
-    //glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(normal, {0.0,0.0,0.0} );
-    //glColor3f(0.0f,1.0f,0.0f); Draw3D::drawVecInPos(da*10, {0.0,0.0,0.0} );
-    //glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos(db*10, {0.0,0.0,0.0} );
-    Draw3D::drawRectGridLines( n*2, (da*-n.a)+(db*-n.b) + normal*c0, da, db );
-}
-
-void renderSubstrate( int n, Vec3d * points, GLenum mode ){
-    //printf( "iso_points.size() %i \n", iso_points.size() );
-    if( mode == GL_POINTS ){
-        glBegin(GL_POINTS);
-        for(int i=0; i<iso_points.size(); i++){ glVertex3f( iso_points[i].x, iso_points[i].y, iso_points[i].z      ); }
-        glEnd();
-    }
-}
-
-void renderSubstrate_( const GridShape& grid, Vec3d * FF, Vec3d * FFel, double isoval, bool sign ){
-    //printf( "iso_points.size() %i \n", iso_points.size() );
-    Vec3d * pos     = new Vec3d[grid.n.x * grid.n.y];
-    Vec3d * normals = new Vec3d[grid.n.x * grid.n.y];
-    //printf( " -- DEBUG 1 \n" );
-    getIsoSurfZ( grid, isoval, sign, FF, pos, normals );
-
-    //printf( " -- DEBUG 2 \n" );
-
-    //glEnable(GL_LIGHTING);
-    for ( int ib=1; ib<grid.n.y; ib++ ){
-        glBegin(GL_TRIANGLE_STRIP);
-        for ( int ia=0; ia<grid.n.x; ia++ ){
-            int ip1 = (ib-1)*grid.n.x + ia;
-            int ip2 = (ib  )*grid.n.x + ia;
-            //printf( "iba (%i,%i) pos (%g,%g,%g)\n", ib,ia, pos[ip1].x,pos[ip1].y,pos[ip1].z );
-            //glColor3f(pos[ip1].z*5-2,1.0f,1.0f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
-            //glColor3f(pos[ip2].z*5-2,1.0f,1.0f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
-
-
-            Vec3d gpos,fel1,fel2;
-            grid.cartesian2grid( pos[ip1], gpos); fel1 = interpolate3DvecWrap( FFel, grid.n, gpos );
-            grid.cartesian2grid( pos[ip2], gpos); fel2 = interpolate3DvecWrap( FFel, grid.n, gpos );
-
-
-            //glColor3f(0.7f,0.7f,0.7f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
-            //glColor3f(0.8f,0.7f,0.7f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
-
-            //glColor3f( fel1.x, fel1.y, fel1.z ); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
-            //glColor3f( fel2.x, fel2.y, fel2.z ); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
-
-            colorRB( fel1.z ); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
-            colorRB( fel2.z ); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
-        }
-        glEnd();
-    }
-    //printf( " -- DEBUG 3 \n" );
-    delete [] pos;
-    delete [] normals;
-    //exit(0);
-}
-
-void viewSubstrate( int nx, int ny, int isoOgl, Vec3d a, Vec3d b ){
-    glPushMatrix();
-    for( int ix = -nx; ix<=nx; ix++ ){
-        for( int iy = -ny; iy<=ny; iy++ ){
-            Vec3d pos = a*ix + b*iy;
-            glTranslatef(pos.x, pos.y, pos.z);
-            glCallList(isoOgl);
-            glTranslatef(-pos.x, -pos.y, -pos.z);
-        }
-    }
-    glPopMatrix();
-}
 
 class AppMolecularEditor2 : public AppSDL2OGL_3D {
 	public:
@@ -406,13 +241,13 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //exit(0);
 
     // ---- Rigid Body Molecules
-    //mol.loadXYZ( "inputs/water_ax.xyz" );                           printf( "DEBUG 3.1 \n" );
-    //mol.loadXYZ( "inputs/water_ax_q0.xyz" );                        printf( "DEBUG 3.1 \n" );
-    //mol.loadXYZ( "inputs/OH_ax.xyz" );                              printf( "DEBUG 3.1 \n" );
-    mol.loadXYZ( "inputs/water_T5_ax.xyz" );    mol.printAtomInfo();                      printf( "DEBUG 3.1 \n" );
+    //mol.loadXYZ( "inputs/water_ax.xyz" );                           
+    //mol.loadXYZ( "inputs/water_ax_q0.xyz" );                        
+    //mol.loadXYZ( "inputs/OH_ax.xyz" );                              
+    mol.loadXYZ( "inputs/water_T5_ax.xyz" );    mol.printAtomInfo();   DEBUG
     params.assignREs( mol.natoms, mol.atomType, mol.REQs );
     Mat3d rot; rot.setOne();
-    builder.insertMolecule( &mol, {0.0,0.0,4.0}, rot, true );          printf( "DEBUG 3.2 \n" );
+    builder.insertMolecule( &mol, {0.0,0.0,4.0}, rot, true );          DEBUG
     builder.insertMolecule( &mol, {4.0,0.0,4.0}, rot, true );
     //builder.insertMolecule( &mol, {0.0,4.0,4.0}, rot, true );
     //builder.insertMolecule( &mol, {4.0,4.0,4.0}, rot, true );
@@ -429,17 +264,17 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     builder.insertMolecule( &mol, {6.0,6.0,2.0}, rot, false );
 
     world.printAtomInfo();
-    builder.toMMFF( &world, &params );                                 printf( "DEBUG 3.3 \n" );
+    builder.toMMFF( &world, &params );                                 DEBUG
     world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
-    //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); printf( "DEBUG 3.4 \n" );
+    //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); 
 
     //opt.bindArrays( 8*world.nFrag, world.poses, world.poseVs, world.poseFs );
-    world.allocateDyn(); printf( "DEBUG 3.4.1  \n" );
-    world.initDyn();     printf( "DEBUG 3.4.2 \n" );
-    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce ); printf( "DEBUG 3.4.3 \n" );
-    opt.setInvMass( 1.0 );  printf( "DEBUG 3.5 \n" );
-    opt.cleanVel  ( );      printf( "DEBUG 3.6 \n" );
+    world.allocateDyn(); 
+    world.initDyn();     
+    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce ); DEBUG
+    opt.setInvMass( 1.0 );  
+    opt.cleanVel  ( );      
     //exit(0);
     printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
     printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
@@ -457,7 +292,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //params.fillBondParams( world.nbonds, world.bond2atom, mol.bondType, mol.atomType, world.bond_0, world.bond_k );
     */
 
-    printf( "DEBUG 4 \n" );
+    DEBUG
 
     //printf( "bond 8 %g \n", world.bond_0[8] );
     //printf( "bond 9 %g \n", world.bond_0[9] );
@@ -466,16 +301,16 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //exit(0);
     initRigidSubstrate();
 
-    manipulator.bindAtoms(world.natoms, world.apos, world.aforce ); printf( "DEBUG 4.1 \n" );
-    manipulator.realloc(1);                                         printf( "DEBUG 4.2 \n" );
-    manipulator.goalSpan.set(5.0,5.0,1.0);                          printf( "DEBUG 4.3 \n" );
-    manipulator.genGoals();                                         printf( "DEBUG 4.4 \n" );
+    manipulator.bindAtoms(world.natoms, world.apos, world.aforce ); 
+    manipulator.realloc(1);                                        
+    manipulator.goalSpan.set(5.0,5.0,1.0);                          
+    manipulator.genGoals();                                         
 
     manipulator.nenabled = 10;
     manipulator.enabled = new int[manipulator.nenabled];
     std::memcpy( manipulator.enabled, (const int[]){0,1,2,3,4,5,6,7,8,9}, manipulator.nenabled*sizeof(int) );
 
-    printf( "DEBUG 5 \n" );
+    DEBUG
     //exit(0);
 
     conf1.bind( 5, world.atypes, world.apos );
@@ -492,7 +327,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     atomdist.types  = conf1.types;
     */
     
-    printf( "DEBUG 6 \n" );
+    DEBUG 
 
     atomdist.copyOf(conf1);
     /*
@@ -504,7 +339,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     ); }
     */
 
-    printf( "DEBUG 7 \n" );
+    DEBUG
 
     atomdist.initRuler( world.Collision_box.a+(Vec3d){-2.0,-2.0,-2.0}, world.Collision_box.b+(Vec3d){3.0,3.0,3.0}, 2.0 );
     printf( "atomdist.ruler: %i (%i,%i,%i)\n ", atomdist.ruler.ntot, atomdist.ruler.n.x, atomdist.ruler.n.y, atomdist.ruler.n.z );
@@ -513,7 +348,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     atomdist.toCells();
 
 
-    printf( "DEBUG 8 \n" );
+    DEBUG
     
     conf1.pos[0].add(0.1,0.0,0.0);
 
@@ -573,25 +408,19 @@ void AppMolecularEditor2::draw(){
     }
     */
 
-    //printf( "DEBUG 1 \n" );
-
-
+    /*
+    // ========= Draw AtomicConfiguration
     double d=0.5;
     for(int i=0; i<conf1.natoms; i++){ Vec3d p = atomdist.pos[i]; p.add(randf(-d,d),randf(-d,d),randf(-d,d)); conf1.pos[i]=p; };
-
     double rTrue =((AtomicConfiguration)atomdist).dist(conf1);
     double rFast = atomdist.dist( conf1 );
     printf( " rTrue %f rFast %f err %f \n", rTrue, rFast,  rFast-rTrue );
-
     drawMapedPoints( atomdist, itest );
     //drawNeighs( atomdist, cursor3D );
+    */
 
 
-
-
-
-
-	return;
+	//return;
 
 
 	glEnable(GL_LIGHTING);

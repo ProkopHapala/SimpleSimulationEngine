@@ -7,6 +7,9 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+
+#include "testUtils.h"
+
 #include "Draw.h"
 #include "Draw3D.h"
 #include "SDL_utils.h"
@@ -21,15 +24,13 @@
 #include "MMFF.h"
 #include "MMFFBuilder.h"
 
-
 //#include "RBMMFF.h"
-
 
 #include "DynamicOpt.h"
 
 #include "AppSDL2OGL_3D.h"
-#include "testUtils.h"
 
+#include "MolecularDraw.h"
 
 /*
 
@@ -59,95 +60,6 @@ Vec3d testREQ,testPLQ;
 // ==========================
 // AppMolecularEditor2
 // ==========================
-
-void drawPPRelaxTrj( int n, double dt, double damp, GridFF& gff, Vec3d pos, Vec3d PRQ ){
-    Vec3d vel = (Vec3d){0.0,0.0,0.0};
-    glBegin(GL_LINE_STRIP);
-    for(int i=0; i<n; i++){
-        Vec3d f = (Vec3d){0.0,0.0,0.0};
-        gff.addForce( pos, PRQ, f);
-        vel.mul(damp);
-        vel.add_mul( f  , dt);
-        pos.add_mul( vel, dt );
-        glVertex3f(pos.x,pos.y,pos.z);
-        //printf( " %i (%g,%g,%g) (%g,%g,%g) \n", i, pos.x,pos.y,pos.z,  f.x,f.y,f.z );
-    }
-    glEnd();
-    //exit(0);
-}
-
-void drawGridForceAlongLine( int n, GridFF& gff, Vec3d pos0, Vec3d dpos, Vec3d PRQ, double fsc ){
-    Vec3d pos = pos0;
-	for( int i=0; i<n; i++ ){
-        Vec3d f = (Vec3d){0.0,0.0,0.0};
-        gff.addForce( pos, PRQ, f);
-        //printf( " %i (%g,%g,%g) (%g,%g,%g) \n", i, pos.x,pos.y,pos.z,  f.x,f.y,f.z );
-        Draw3D::drawVecInPos( f*fsc, pos );
-        Draw3D::drawPointCross( pos, 0.1 );
-        pos.add(dpos);
-	}
-}
-
-void plotSurfPlane( Vec3d normal, double c0, Vec2d d, Vec2i n ){
-    Vec3d da,db;
-    normal.getSomeOrtho( da,db );
-    da.mul( d.a/da.norm() );
-    db.mul( d.b/db.norm() );
-    //glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(normal, {0.0,0.0,0.0} );
-    //glColor3f(0.0f,1.0f,0.0f); Draw3D::drawVecInPos(da*10, {0.0,0.0,0.0} );
-    //glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos(db*10, {0.0,0.0,0.0} );
-    Draw3D::drawRectGridLines( n*2, (da*-n.a)+(db*-n.b) + normal*c0, da, db );
-}
-
-void renderSubstrate( int n, Vec3d * points, GLenum mode ){
-    //printf( "iso_points.size() %i \n", iso_points.size() );
-    if( mode == GL_POINTS ){
-        glBegin(GL_POINTS);
-        for(int i=0; i<iso_points.size(); i++){ glVertex3f( iso_points[i].x, iso_points[i].y, iso_points[i].z      ); }
-        glEnd();
-    }
-}
-
-void renderSubstrate_( const GridShape& grid, Vec3d * FF, double isoval, bool sign ){
-    //printf( "iso_points.size() %i \n", iso_points.size() );
-    Vec3d * pos     = new Vec3d[grid.n.x * grid.n.y];
-    Vec3d * normals = new Vec3d[grid.n.x * grid.n.y];
-    //printf( " -- DEBUG 1 \n" );
-    getIsoSurfZ( grid, isoval, sign, FF, pos, normals );
-    //printf( " -- DEBUG 2 \n" );
-    //glEnable(GL_LIGHTING);
-    for ( int ib=1; ib<grid.n.y; ib++ ){
-        glBegin(GL_TRIANGLE_STRIP);
-        for ( int ia=0; ia<grid.n.x; ia++ ){
-            int ip1 = (ib-1)*grid.n.x + ia;
-            int ip2 = (ib  )*grid.n.x + ia;
-            printf( "iba (%i,%i) pos (%g,%g,%g)\n", ib,ia, pos[ip1].x,pos[ip1].y,pos[ip1].z );
-            //glColor3f(pos[ip1].z*5-2,1.0f,1.0f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
-            //glColor3f(pos[ip2].z*5-2,1.0f,1.0f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
-            glColor3f(0.7f,0.7f,0.7f); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
-            glColor3f(0.8f,0.7f,0.7f); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
-        }
-        glEnd();
-    }
-    //printf( " -- DEBUG 3 \n" );
-    delete [] pos;
-    delete [] normals;
-    //exit(0);
-}
-
-
-void viewSubstrate( int nx, int ny, int isoOgl, Vec3d a, Vec3d b ){
-    glPushMatrix();
-    for( int ix = -nx; ix<=nx; ix++ ){
-        for( int iy = -ny; iy<=ny; iy++ ){
-            Vec3d pos = a*ix + b*iy;
-            glTranslatef(pos.x, pos.y, pos.z);
-            glCallList(isoOgl);
-            glTranslatef(-pos.x, -pos.y, -pos.z);
-        }
-    }
-    glPopMatrix();
-}
 
 class AppMolecularEditor2 : public AppSDL2OGL_3D {
 	public:
@@ -353,6 +265,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
     //renderSubstrate_( world.gridFF.grid, FFtot, 0.1, true );
     renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
+    //renderSubstrate_( world.gridFF.grid, FFtot, world.gridFF.FFelec, 0.01, true );
     Draw3D::drawAxis(1.0);
     glEndList();
 
