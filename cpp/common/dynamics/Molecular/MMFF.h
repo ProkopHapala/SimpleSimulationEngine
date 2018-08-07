@@ -172,7 +172,7 @@ class MMFF{ public:
     double *  poseFs  = NULL; //
     //double *  poseVs  = NULL; //
 
-
+    // WHAT IS THIS?  - perhaps dynamic moleculers for ConfSearch ?
     int nDyn=0;
     double * dynInvMass = NULL;
     double * dynPos     = NULL;

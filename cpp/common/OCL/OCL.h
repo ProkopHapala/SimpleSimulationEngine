@@ -52,7 +52,7 @@ class OCLsystem{
     cl_device_id     device;        // compute device id
     cl_context       context;       // compute context
     cl_command_queue commands;      // compute command queue
-    cl_program       program;       // compute program
+    cl_program       program;       // compute program - TODO FIXME: There could be more than one !!!!
 
     std::vector<cl_kernel> kernels;
     std::vector<OCLBuffer> buffers;
@@ -108,6 +108,7 @@ class OCLsystem{
         return source;
     }
 
+    // TODO : newProgram instead ?
     int buildProgram( char * fname ){
         char * kernelsource = getKernelSource( fname);
         // Create the comput program from the source buffer
@@ -126,11 +127,16 @@ class OCLsystem{
             printf("%s\n", tmpstr);
             return -1;
         }
+        //delete [] kernelsource; // TODO ??????
         return err;
     }
 
     inline int upload  (int i){ return buffers[i].toGPU(commands);    };
     inline int download(int i){ return buffers[i].fromGPU(commands);  };
+    
+    inline int upload  (int i, void* p_cpu ){ buffers[i].p_cpu=p_cpu; return buffers[i].toGPU(commands);    };
+    inline int download(int i, void* p_cpu ){ buffers[i].p_cpu=p_cpu; return buffers[i].fromGPU(commands);  };
+    
     inline int copy    (int from, int to, int from0, int to0, int n){ return clEnqueueCopyBuffer(commands,buffers[from].p_gpu,buffers[to].p_gpu,from0,to0,n,0,NULL,NULL); };
     inline int copyBuff(int from, int to                           ){ int n=buffers[from].n; int n_=buffers[to].n; if(n_<n)n=n_; return clEnqueueCopyBuffer(commands,buffers[from].p_gpu,buffers[to].p_gpu,0,0,n,0,NULL,NULL); };
 
@@ -243,5 +249,10 @@ class OCLtask{
     OCLtask          ( OCLsystem  * cl_, size_t ikernel_, size_t dim_, size_t global_, size_t local_ ): cl(cl_),ikernel(ikernel_),dim(dim_){ global[0]=global_;global[1]=global_; local[0]=local_;local[1]=local_; };
     OCLtask(){};
 };
+
+// ========== Helper functions for coverting buffers to OpenCL format
+
+
+
 
 #endif
