@@ -81,6 +81,15 @@ const char *OCL_err_code (cl_int err_in){
     }
 }
 
+void OCL_buildProgramFailure( cl_program program, cl_device_id device ){
+    size_t log_size;
+    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+    char *log = new char[log_size];
+    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
+    printf("%s\n", log);
+    delete [] log;
+}
+
 void OCL_check_error(cl_int err, const char *operation, char *filename, int line){
     if (err != CL_SUCCESS){
         fprintf(stderr, "Error during operation '%s', ", operation);

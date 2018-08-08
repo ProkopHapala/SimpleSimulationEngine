@@ -76,6 +76,9 @@ class AppMolecularEditorOCL : public AppSDL2OGL_3D {
 	MMFFparams  params;
     MMFF        world;
     MMFFBuilder builder;
+    
+    OCLsystem* cl;
+    GridFF_OCL gridFFocl;
 
     FastAtomicMetric atomdist;
     AtomicConfiguration conf1;
@@ -154,17 +157,24 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
     world.gridFF.allocateFFs();
     //world.gridFF.evalGridFFs( {0,0,0} );
 
+    cl = new OCLsystem();  DEBUG
+    cl->init();            DEBUG
+    gridFFocl.init( cl, "cl/FF.cl" ); DEBUG
+    //gridFFocl.evalGridFFs(world.gridFF, {1,1,1} ); DEBUG
+
+
     bool recalcFF = false;
     //bool recalcFF = true;
+    int ngtot =  world.gridFF.grid.getNtot();
     if( recalcFF ){
         world.gridFF.evalGridFFs( {1,1,1} );
-        if(world.gridFF.FFelec )  saveBin( "data/FFelec.bin",   world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFelec );
-        if(world.gridFF.FFPauli)  saveBin( "data/FFPauli.bin",  world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
-        if(world.gridFF.FFLondon) saveBin( "data/FFLondon.bin", world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
+        if(world.gridFF.FFelec )  saveBin( "data/FFelec.bin",   ngtot*sizeof(Vec3d), (char*)world.gridFF.FFelec );
+        if(world.gridFF.FFPauli)  saveBin( "data/FFPauli.bin",  ngtot*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
+        if(world.gridFF.FFLondon) saveBin( "data/FFLondon.bin", ngtot*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
     }else{
-        if(world.gridFF.FFelec )  loadBin( "data/FFelec.bin",   world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFelec );
-        if(world.gridFF.FFPauli)  loadBin( "data/FFPauli.bin",  world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
-        if(world.gridFF.FFLondon) loadBin( "data/FFLondon.bin", world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
+        if(world.gridFF.FFelec )  loadBin( "data/FFelec.bin",   ngtot*sizeof(Vec3d), (char*)world.gridFF.FFelec );
+        if(world.gridFF.FFPauli)  loadBin( "data/FFPauli.bin",  ngtot*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
+        if(world.gridFF.FFLondon) loadBin( "data/FFLondon.bin", ngtot*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
     }
 
 

@@ -49,13 +49,18 @@ class OCLsystem{
     // http://stackoverflow.com/questions/20105566/advantages-of-a-program-containing-several-opencl-kernels-versus-several-program
     public:
     cl_int           err;           // error code returned from OpenCL calls
-    cl_device_id     device;        // compute device id
-    cl_context       context;       // compute context
-    cl_command_queue commands;      // compute command queue
-    cl_program       program;       // compute program - TODO FIXME: There could be more than one !!!!
+    cl_device_id     device   = 0;        // compute device id
+    cl_context       context  = 0;       // compute context
+    cl_command_queue commands = 0;      // compute command queue
+    cl_program       program  = 0;       // compute program - TODO FIXME: There could be more than one !!!!
 
     std::vector<cl_kernel> kernels;
     std::vector<OCLBuffer> buffers;
+
+    void check_programSet (){ if(program ==0){ printf("ERROR OCLsystem program  not set \n"); exit(-1); } }
+    void check_contextSet (){ if(context ==0){ printf("ERROR OCLsystem context  not set \n"); exit(-1); } }
+    void check_deviceSet  (){ if(device  ==0){ printf("ERROR OCLsystem device   not set \n"); exit(-1); } }
+    void check_commandsSet(){ if(commands==0){ printf("ERROR OCLsystem commands not set \n"); exit(-1); } }
 
     int init(){
         cl_uint deviceIndex = 0;
@@ -73,14 +78,17 @@ class OCLsystem{
     }
 
     int newKernel( char * name ){
+        check_programSet();
         int err; kernels.push_back( clCreateKernel( program, name, &err ) );  OCL_checkError(err, "clCreateKernel"); return kernels.size()-1;
     }
 
     int newBuffer( char* name, size_t n, size_t typesize, void * p_cpu, cl_mem_flags flags ){
+        check_contextSet();
         buffers.push_back( OCLBuffer( name, n, typesize, p_cpu, flags ) ); int i=buffers.size()-1; int err=buffers[i].initOnGPU(context); OCL_checkError(err, "initOnGPU"); return i;
     }
 
     int newBufferImage2D( char* name, size_t nx, size_t ny, size_t typesize, void * p_cpu, cl_mem_flags flags, cl_image_format imageFormat ){
+        check_contextSet();
         buffers.push_back( OCLBuffer( name, nx*ny, typesize, p_cpu, flags ) );
         int i=buffers.size()-1;
         buffers[i].img_dims    = 2;
@@ -110,21 +118,18 @@ class OCLsystem{
 
     // TODO : newProgram instead ?
     int buildProgram( char * fname ){
-        char * kernelsource = getKernelSource( fname);
+        check_deviceSet();
+        char * kernelsource = getKernelSource( fname );
         // Create the comput program from the source buffer
         program = clCreateProgramWithSource(context, 1, (const char **) & kernelsource, NULL, &err);
         char tmpstr[1024];
         sprintf(tmpstr,"Creating program with %s", fname);
         OCL_checkError(err, tmpstr);
         free(kernelsource);
-        // Build the program
         err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
         if (err != CL_SUCCESS){
-            size_t len;
-            //char buffer[2048];
-            printf("Error: Failed to build program executable!\n%s\n", OCL_err_code(err));
-            clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, sizeof(tmpstr), tmpstr, &len);
-            printf("%s\n", tmpstr);
+            printf( " ERROR in clBuildProgram %s \n", fname);
+            OCL_buildProgramFailure( program, device );
             return -1;
         }
         //delete [] kernelsource; // TODO ??????
@@ -199,8 +204,8 @@ class OCLtask{
     //cl_kernel  * kernel;
     size_t      ikernel   = 0;
     size_t      dim       = 1;
-    size_t      global[2] = {0,0};
-    size_t      local [2] = {0,0};
+    size_t      global[3] = {0,0,0};
+    size_t      local [3] = {0,0,0};
 
     std::vector<OCLarg> args;
 

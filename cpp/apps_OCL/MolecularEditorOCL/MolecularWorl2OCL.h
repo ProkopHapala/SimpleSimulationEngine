@@ -15,8 +15,8 @@ class GridFF_OCL{ public:
     OCLsystem* cl = 0;
     OCLtask *task_FFPLE = 0;
 
-    int nAtoms=0;
-    int nGrid=0;
+    int nAtoms = 0;
+    int nGrid  = 0;
     
     int id_FFPauli    = -1;
     int id_FFLondon   = -1;
@@ -34,8 +34,17 @@ class GridFF_OCL{ public:
     };
 */
 
-    void init( OCLsystem* cl_, char* fname, int nAtoms, int nGrid){
-        //cl.init();
+    void init( OCLsystem* cl_, char* fname ){
+        cl = cl_; 
+        int err = cl->buildProgram( fname );                              
+        OCL_checkError(err, "cl.buildProgram");
+        
+        int id_evalPLE = cl->newKernel("evalPLE"); DEBUG
+        task_FFPLE = new OCLtask( cl, id_evalPLE, 1, -1, 32 ); DEBUG
+    }
+    
+    void prepareBuffers( int nAtoms, int nGrid ){
+    
         id_atoms      = cl->newBuffer( "atoms",      nAtoms*8, sizeof(float), NULL, CL_MEM_READ_ONLY  );
         id_gridPoints = cl->newBuffer( "gridPoints", nGrid*4,  sizeof(float), NULL, CL_MEM_READ_ONLY );      
         //id_FFPauli    = cl->newBuffer( "FFPauli",    nGrid*4, sizeof(float), NULL, CL_MEM_READ_WRITE );
@@ -45,7 +54,7 @@ class GridFF_OCL{ public:
         id_FFLondon   = cl->newBuffer( "FFLondon",   nGrid*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY );
         id_FFelec     = cl->newBuffer( "FFelec",     nGrid*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY );
         
-        task_FFPLE = new OCLtask( cl, cl->newKernel("evalPLE"), 1, nGrid, 32 );
+        task_FFPLE->global[0] = nGrid; 
         task_FFPLE->args = { INTarg(nAtoms), BUFFarg(id_atoms), BUFFarg(id_gridPoints), BUFFarg(id_FFPauli), BUFFarg(id_FFLondon), BUFFarg(id_FFelec) };
         task_FFPLE->print_arg_list();
     }
@@ -94,6 +103,14 @@ class GridFF_OCL{ public:
             float4ToVec3d( n, buff, FFelec );
         }
         delete [] buff;
+    }
+    
+    void evalGridFFs( GridFF& gridFF, Vec3i& nPBC ){
+        prepareBuffers( gridFF.natoms, gridFF.grid.getNtot() );
+        uploadAtoms( gridFF.natoms, gridFF.apos, gridFF.aREQs );
+        task_FFPLE->enque();
+        downloadFF( gridFF.grid.getNtot(), gridFF.FFPauli, gridFF.FFLondon, gridFF.FFelec );
+        clFinish(cl->commands);
     }
         
 };
