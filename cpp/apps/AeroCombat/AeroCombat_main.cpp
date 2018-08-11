@@ -318,6 +318,8 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     pilot->attach( myCraft );
     pilot->rudder  .setSymetricRange(0.2);
     pilot->elevator.setSymetricRange(0.2);
+    pilot->leftAirelon .setSymetricRange(0.1);
+    pilot->rightAirelon.setSymetricRange(0.1);
 
     world->controlers.push_back( &controler );
     controler.setup(false,true,myCraft,new AeroCraft());
@@ -423,8 +425,8 @@ void AeroCraftGUI:: keyStateHandling( const Uint8 *keys ){
     else if ( autoRetractRudder      ){ pilot->rudder.relax(); }
 
 
-    if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_D]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
-    //if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
+    //if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_D]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
+    if( keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q] ){
         controler.bActive = false;
         Mat3d rot;
         //rot.setT(myCraft->rotMat);
@@ -530,7 +532,9 @@ void AeroCraftGUI::controlAeroCraft(){
 	controler.goalDir.add_mul((Vec3d)cam.rot.a, dmx* 0.003);
 	controler.goalDir.add_mul((Vec3d)cam.rot.b, dmy*-0.003);
 	controler.goalDir.normalize();
-    glColor3f( 1.0,1.0,1.0); Draw3D::drawVecInPos( controler.goalDir*5, myCraft->pos );
+    glColor3f( 1.0,1.0,1.0);
+    Draw3D::drawVecInPos( controler.goalDir*5, myCraft->pos );
+    Draw3D::drawPointCross( myCraft->pos + controler.goalDir*5, 0.5 );
 }
 
 void AeroCraftGUI::drawAerocraftInset(){

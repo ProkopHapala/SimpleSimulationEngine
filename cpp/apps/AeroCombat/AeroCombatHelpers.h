@@ -5,6 +5,8 @@
 #include <GL/gl.h>
 #include "Terrain25D.h"
 
+#include "AeroTest.h"
+
 void evalAeroFoceRotated( Vec3d vel, AeroCraft& craft, Vec3d& force, Vec3d& torq ){
     craft.rotMat.dot_to_T( vel, craft.vel );
     craft.clean_temp();

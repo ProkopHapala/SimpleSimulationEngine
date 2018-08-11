@@ -18,7 +18,8 @@ def recompile(path):
 recompile(LIB_PATH_CPP)
 
 libSDL = ctypes.CDLL( "/usr/lib/x86_64-linux-gnu/libSDL2.so", ctypes.RTLD_GLOBAL )
-libGL  = ctypes.CDLL( "/usr/lib/x86_64-linux-gnu/libGL.so",   ctypes.RTLD_GLOBAL )
+#libGL  = ctypes.CDLL( "/usr/lib/x86_64-linux-gnu/libGL.so",   ctypes.RTLD_GLOBAL )
+libGL  = ctypes.CDLL( "/usr/lib/nvidia-375/libGL.so",   ctypes.RTLD_GLOBAL )
 
 lib = ctypes.CDLL( LIB_PATH_CPP+"/libVis3D.so" )
 

@@ -3,7 +3,7 @@
 #define AeroDraw_h
 
 #include "AeroCraft.h"
-#include "AeroTest.h"
+//#include "AeroTest.h"
 
 #include "Draw.h"
 #include "Draw2D.h"

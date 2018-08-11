@@ -204,7 +204,7 @@ void AppSDL2OGL_3D::eventHandling ( const SDL_Event& event  ){
                     break;
             }
             break;
-            */
+        */
     };
     AppSDL2OGL::eventHandling( event );
 }
