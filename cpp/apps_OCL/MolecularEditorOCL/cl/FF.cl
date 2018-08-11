@@ -1,5 +1,6 @@
 
 #define R2SAFE          1e-4f
+#define RSAFE           1.0e-4f
 #define COULOMB_CONST   14.399644f  // [eV/e]
 
 float4 getCoulomb( float4 atom, float3 pos ){
@@ -160,6 +161,79 @@ __kernel void evalMorse(
     // http://www.informit.com/articles/article.aspx?p=1732873&seqNum=3
     FE[iG] = fe;
 }
+
+
+
+__kernel void evalPLE(
+    const int   nAtoms,
+    const uint4 nGrid,
+    const uint4 npbc,
+    const float4 pos0,
+    const float4 dA,
+    const float4 dB,
+    const float4 dC,
+    const float alpha,
+    __global float8*   atoms,
+    __global float4*   FFPauli,
+    __global float4*   FFLondon,
+    __global float4*   FFelec 
+){
+    __local float8 lATOMs[32];
+    const int iG = get_global_id (0);
+    const int iL = get_local_id  (0);
+    const int nL = get_local_size(0);
+
+    // determine grid point position
+    if(iG > (nGrid.x*nGrid.y*nGrid.z) ) return;
+    uint ia =  iG %  nGrid.x;
+    uint ib = (iG /  nGrid.x) % nGrid.y;
+    uint ic =  iG / (nGrid.x*nGrid.y);
+    float3 pos = pos + dA.xyz*ia + dB.xyz*ib + dC.xyz*ic;
+
+    float3 A = dA.xyz*nGrid.x;
+    float3 B = dB.xyz*nGrid.y;
+    float3 C = dC.xyz*nGrid.z;
+
+    float4 fp  = (float4) (0.0f, 0.0f, 0.0f, 0.0f);
+    float4 fl  = (float4) (0.0f, 0.0f, 0.0f, 0.0f);
+    float4 fe  = (float4) (0.0f, 0.0f, 0.0f, 0.0f);
+
+    for (int i0=0; i0<nAtoms; i0+= nL ){
+        int i = i0 + iL;
+        //if(i>=nAtoms) break; // wrong !!!!
+        lATOMs[iL] = atoms[i];
+        barrier(CLK_LOCAL_MEM_FENCE);
+        for (int j=0; j<nL; j++){
+            if( (j+i0)<nAtoms ){
+                float3 dpos0 = pos - lATOMs[j].xyz;
+                float3 REQi  = lATOMs[j].s456;
+                // fe += getMorse( pos - lATOMs[j].xyz, lREAs[j].xyz );
+                for (int jc=-npbc.z; jc<=npbc.z; jc++){
+                    for (int jb=-npbc.z; jb<=npbc.y; jb++){
+                        float3 dp = dpos0 + C*jc + B*jb + A*-npbc.z;
+                        for (int ja=-npbc.z; ja<=npbc.x; ja++){
+
+                            float   r    = sqrt( dot(dp,dp) );
+                            float  ir    = 1.0f/(r+RSAFE);
+                            float expar  = exp( alpha*(r-REQi.x) );
+                            float fexp   = alpha*expar*REQi.y*ir;
+                            fp.xyz       += dp * ( -fexp*expar*2.0f );                // repulsive part of Morse
+                            fl.xyz       += dp * ( -fexp           );                // attractive part of Morse
+                            fe.xyz       += dp * ( COULOMB_CONST*REQi.z*ir*ir*ir );  // Coulomb
+                            // ToDo ... Energy as well ?
+                            dp += A;
+                        }
+                    }
+                }
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    FFPauli [iG] = fp;
+    FFLondon[iG] = fl;
+    FFelec  [iG] = fe;
+}
+
 
 
 
