@@ -9,12 +9,154 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "Vec2.h"
 #include "Vec3.h"
-
+#include "quaternion.h"
 
 const int N_CHAR_TMP = 256;
+
+template <typename T> void toBuff  (  const T& v, void* buff, int& i){ (*(T*)(buff+i))=v; i+=sizeof(T); };
+template <typename T> void fromBuff(        T& v, void* buff, int& i){ v=*((T*)(buff+i)); i+=sizeof(T); };
+
+inline int print(       char*   v){ return printf( "%s", v ); };
+inline int print(       float   v){ return printf( "%g", v ); };
+inline int print(       double  v){ return printf( "%g", v ); };
+inline int print(       int     v){ return printf( "%i", v ); };
+inline int print( const Vec2f&  v){ return printf( "%lg %g", v.x, v.y ); };
+inline int print( const Vec2d&  v){ return printf( "%lg %g", v.x, v.y ); };
+inline int print( const Vec2i&  v){ return printf( "%li %i", v.x, v.y ); };
+inline int print( const Vec3f&  v){ return printf( "%g %g %g", v.x, v.y, v.z ); };
+inline int print( const Vec3d&  v){ return printf( "%g %g %g", v.x, v.y, v.z ); };
+inline int print( const Vec3i&  v){ return printf( "%i %i %i", v.x, v.y, v.z ); };
+inline int print( const Quat4f& v){ return printf( "%g %g %g %g", v.x, v.y, v.z, v.w ); };
+inline int print( const Quat4d& v){ return printf( "%g %g %g %g", v.x, v.y, v.z, v.w ); };
+inline int print( const Quat4i& v){ return printf( "%i %i %i %i", v.x, v.y, v.z, v.w ); };
+
+inline int fprint(FILE* sbuff,       char*   v){ return fprintf(sbuff, "%s ", v ); };
+inline int fprint(FILE* sbuff,       float   v){ return fprintf(sbuff, "%g ", v ); };
+inline int fprint(FILE* sbuff,       double  v){ return fprintf(sbuff, "%g ", v ); };
+inline int fprint(FILE* sbuff,       int     v){ return fprintf(sbuff, "%i ", v ); };
+inline int fprint(FILE* sbuff, const Vec2f&  v){ return fprintf(sbuff, "%lg %g ", v.x, v.y ); };
+inline int fprint(FILE* sbuff, const Vec2d&  v){ return fprintf(sbuff, "%lg %g ", v.x, v.y ); };
+inline int fprint(FILE* sbuff, const Vec2i&  v){ return fprintf(sbuff, "%li %i ", v.x, v.y ); };
+inline int fprint(FILE* sbuff, const Vec3f&  v){ return fprintf(sbuff, "%g %g %g ", v.x, v.y, v.z ); };
+inline int fprint(FILE* sbuff, const Vec3d&  v){ return fprintf(sbuff, "%g %g %g ", v.x, v.y, v.z ); };
+inline int fprint(FILE* sbuff, const Vec3i&  v){ return fprintf(sbuff, "%i %i %i ", v.x, v.y, v.z ); };
+inline int fprint(FILE* sbuff, const Quat4f& v){ return fprintf(sbuff, "%g %g %g %g ", v.x, v.y, v.z, v.w ); };
+inline int fprint(FILE* sbuff, const Quat4d& v){ return fprintf(sbuff, "%g %g %g %g ", v.x, v.y, v.z, v.w ); };
+inline int fprint(FILE* sbuff, const Quat4i& v){ return fprintf(sbuff, "%i %i %i %i ", v.x, v.y, v.z, v.w ); };
+
+inline int sprint(char* sbuff,       char*   v){ return sprintf(sbuff, "%s ", v ); };
+inline int sprint(char* sbuff,       float   v){ return sprintf(sbuff, "%g ", v ); };
+inline int sprint(char* sbuff,       double  v){ return sprintf(sbuff, "%g ", v ); };
+inline int sprint(char* sbuff,       int     v){ return sprintf(sbuff, "%i ", v ); };
+inline int sprint(char* sbuff, const Vec2f&  v){ return sprintf(sbuff, "%lg %g ", v.x, v.y ); };
+inline int sprint(char* sbuff, const Vec2d&  v){ return sprintf(sbuff, "%lg %g ", v.x, v.y ); };
+inline int sprint(char* sbuff, const Vec2i&  v){ return sprintf(sbuff, "%li %i ", v.x, v.y ); };
+inline int sprint(char* sbuff, const Vec3f&  v){ return sprintf(sbuff, "%g %g %g ", v.x, v.y, v.z ); };
+inline int sprint(char* sbuff, const Vec3d&  v){ return sprintf(sbuff, "%g %g %g ", v.x, v.y, v.z ); };
+inline int sprint(char* sbuff, const Vec3i&  v){ return sprintf(sbuff, "%i %i %i ", v.x, v.y, v.z ); };
+inline int sprint(char* sbuff, const Quat4f& v){ return sprintf(sbuff, "%g %g %g %g ", v.x, v.y, v.z, v.w ); };
+inline int sprint(char* sbuff, const Quat4d& v){ return sprintf(sbuff, "%g %g %g %g ", v.x, v.y, v.z, v.w ); };
+inline int sprint(char* sbuff, const Quat4i& v){ return sprintf(sbuff, "%i %i %i %i ", v.x, v.y, v.z, v.w ); };
+
+inline int sscan(char* sbuff, char*&  v){ int n; sscanf(sbuff, "%s%n", &v, &n );                                  return n; };
+inline int sscan(char* sbuff, float&  v){ int n; sscanf(sbuff, "%f%n", &v , &n);                                  return n; };
+inline int sscan(char* sbuff, double& v){ int n; sscanf(sbuff, "%lf%n", &v , &n);                                 return n; };
+inline int sscan(char* sbuff, int&    v){ int n; sscanf(sbuff, "%i%n", &v , &n);                                  return n; };
+inline int sscan(char* sbuff, Vec2f&  v){ int n; sscanf(sbuff, "%f %f%n", &v.x, &v.y , &n);                       return n; };
+inline int sscan(char* sbuff, Vec2d&  v){ int n; sscanf(sbuff, "%lf %lf%n", &v.x, &v.y , &n);                     return n; };
+inline int sscan(char* sbuff, Vec2i&  v){ int n; sscanf(sbuff, "%i %i%n", &v.x, &v.y , &n);                       return n; };
+inline int sscan(char* sbuff, Vec3f&  v){ int n; sscanf(sbuff, "%f %f %f%n",    &v.x, &v.y, &v.z , &n);           return n; };
+inline int sscan(char* sbuff, Vec3d&  v){ int n; sscanf(sbuff, "%lf %lf %lf%n",    &v.x, &v.y, &v.z , &n);        return n; };
+inline int sscan(char* sbuff, Vec3i&  v){ int n; sscanf(sbuff, "%i %i %i%n",    &v.x, &v.y, &v.z , &n);           return n; };
+inline int sscan(char* sbuff, Quat4f& v){ int n; sscanf(sbuff, "%f %f %f %f%n", &v.x, &v.y, &v.z, &v.w , &n);     return n; };
+inline int sscan(char* sbuff, Quat4d& v){ int n; sscanf(sbuff, "%lf %lf %lf %lf%n", &v.x, &v.y, &v.z, &v.w , &n); return n; };
+inline int sscan(char* sbuff, Quat4i& v){ int n; sscanf(sbuff, "%i %i %i %i%n",    &v.x, &v.y, &v.z, &v.w , &n);  return n; };
+
+//#define OPT(OP,) OP(tok)
+//#define OPT(OP,tok) OP(tok)
+//#define DO_10(OP,tok,...) OP(tok) DO_9(__VA_ARGS__)
+
+#define _sprintf( sbuff, format, ... ){ sbuff+=sprintf( sbuff, format, __VA_ARGS__); }
+#define _sprint ( sbuff, tok ){ sbuff+=sprint( sbuff, tok ); }
+#define _sscan  ( sbuff, tok ){ sbuff+=sscan( sbuff, tok ); }
+
+#define _lprint(         tok        ) {         printf(        " %s: ",#tok);          print(      tok); }
+#define _lfprint( fout,  tok        ) {         fprintf( fout,  " %s: ",#tok);        fprint(fout, tok); }
+#define _lsprint( sbuff, tok        ) { sbuff+= sprintf( sbuff, " %s: ",#tok); sbuff+=sprint(sbuff,tok); }
+//define _lscan  ( sbuff, tok       ) { sbuff+= sprintf( sbuff, " %s: ",#tok); sbuff+=sprint(sbuff,tok); }
+//#define _lsprint_( sbuff, tok, ... ) { _lsprint(sbuff,tok); _lsprint_(sbuff,__VA_OPT__); }
+//#define _lsprint_( sbuff, tok, ... ) { _lsprint(sbuff,tok); _lsprint_(sbuff,__VA_ARGS__); } // C-macros are stupid. non recursive, this would not work
+
+#define _toDict( mp, tok ){ mp[#tok] = tok; }
+#define _fromDict( mp, tok ){ tok = mp[#tok]; }
+
+char * fgetsNonComment(char * str, int num, FILE * stream, char commentChar, int nMaxTry = 100 ){
+    char* s = nullptr;
+    // no more than 100 comments expected, ensure we don't get stuck in infinite loop
+    for (int i = 0; i < nMaxTry; i++) {
+        s = fgets(str, num, stream);
+        //printf("fgetsNonComment [%i] '%s'", i, s );
+        if (s){
+            if (s[0] == commentChar)continue;
+        }
+        break;
+    }
+    //printf( "fgetsNonComment '%s'", s );
+    return s;
+}
+
+//  TODO:
+// Universal data loading idea:
+//  - load all data to std::map<string,string> "craft.velocity"->"0.0 1.0 3.0"
+//  - pull named tokens from map and parse them to data   "0.0 1.0 3.0" - > (Vec3d){0.0,1.0,30.}
+
+// TODO: GUI should have also such macros
+//       - bind pointers &float to data item to GUI sliders
+
+
+/*
+// making named items in dictionary
+
+#define _toDict  ( char* mp, tok ){ sbuff+=sprint("%s",#tok); sbuff+=sprint(sbuff,tok); }
+#define _fromDict( char* mp, tok ){ sbuff+=sprint("%s",#tok); sbuff+=sprint(sbuff,tok); }
+
+template <typename T> void toBuff  (  const T& v, void* buff, int& i){ (*(T*)(buff+i))=v; i+=sizeof(T); };
+
+#define _toSDict  ( mp, tok ){ sbuff+=sprint("%s",#tok); sbuff+=sprint(sbuff,tok); }
+#define _fromSDict( mp, tok ){ sbuff+=sprint("%s",#tok); sbuff+=sprint(sbuff,tok); }
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 inline int fileExist(const char * fname ){
     FILE *file;
