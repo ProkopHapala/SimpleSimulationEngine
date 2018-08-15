@@ -268,6 +268,8 @@ void AeroCraftGUI::drawHUD(){
 
 AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+
+    /*
     char* sbuff = &str[0];
     float myX = 5.3;
     Vec3d myVec = {16.3,18.9,19.12};
@@ -315,6 +317,7 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     printf("\n");
     
     exit(0);
+    */
 
 
     printf( " === GUI \n" );

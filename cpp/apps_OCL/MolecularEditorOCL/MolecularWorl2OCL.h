@@ -14,9 +14,13 @@ class GridFF_OCL{ public:
 
     OCLsystem* cl = 0;
     OCLtask *task_FFPLE = 0;
+    
+    Quat4i nGrid=Quat4iZero,npbc=Quat4iZero;
+    Quat4f pos0=Quat4fZero,dA=Quat4fZero,dB=Quat4fZero,dC=Quat4fZero;
+    float alpha = 0.0;
 
     int nAtoms = 0;
-    int nGrid  = 0;
+    int nGridTot  = 0;
     
     int id_FFPauli    = -1;
     int id_FFLondon   = -1;
@@ -43,24 +47,77 @@ class GridFF_OCL{ public:
         task_FFPLE = new OCLtask( cl, id_evalPLE, 1, -1, 32 ); DEBUG
     }
     
-    void prepareBuffers( int nAtoms, int nGrid ){
-    
-        id_atoms      = cl->newBuffer( "atoms",      nAtoms*8, sizeof(float), NULL, CL_MEM_READ_ONLY  );
-        id_gridPoints = cl->newBuffer( "gridPoints", nGrid*4,  sizeof(float), NULL, CL_MEM_READ_ONLY );      
-        //id_FFPauli    = cl->newBuffer( "FFPauli",    nGrid*4, sizeof(float), NULL, CL_MEM_READ_WRITE );
-        //id_FFLondon   = cl->newBuffer( "FFLondon",   nGrid*4, sizeof(float), NULL, CL_MEM_READ_WRITE );
-        //id_FFelec     = cl->newBuffer( "FFelec",     nGrid*4, sizeof(float), NULL, CL_MEM_READ_WRITE );
-        id_FFPauli    = cl->newBuffer( "FFPauli",    nGrid*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY );
-        id_FFLondon   = cl->newBuffer( "FFLondon",   nGrid*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY );
-        id_FFelec     = cl->newBuffer( "FFelec",     nGrid*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY );
+    void prepareBuffers( int nAtoms_, int nGrid_ ){
+        nAtoms = nAtoms_;
+        nGridTot  = nGrid_;
+        DEBUG
         
-        task_FFPLE->global[0] = nGrid; 
-        task_FFPLE->args = { INTarg(nAtoms), BUFFarg(id_atoms), BUFFarg(id_gridPoints), BUFFarg(id_FFPauli), BUFFarg(id_FFLondon), BUFFarg(id_FFelec) };
-        task_FFPLE->print_arg_list();
+        id_atoms      = cl->newBuffer( "atoms",      nAtoms*8, sizeof(float), NULL, CL_MEM_READ_ONLY  ); DEBUG
+        id_gridPoints = cl->newBuffer( "gridPoints", nGridTot*4,  sizeof(float), NULL, CL_MEM_READ_ONLY );     DEBUG 
+        //id_FFPauli    = cl->newBuffer( "FFPauli",    nGridTot*4, sizeof(float), NULL, CL_MEM_READ_WRITE );
+        //id_FFLondon   = cl->newBuffer( "FFLondon",   nGridTot*4, sizeof(float), NULL, CL_MEM_READ_WRITE );
+        //id_FFelec     = cl->newBuffer( "FFelec",     nGridTot*4, sizeof(float), NULL, CL_MEM_READ_WRITE );
+        id_FFPauli    = cl->newBuffer( "FFPauli",    nGridTot*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY ); DEBUG
+        id_FFLondon   = cl->newBuffer( "FFLondon",   nGridTot*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY ); DEBUG
+        id_FFelec     = cl->newBuffer( "FFelec",     nGridTot*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY ); DEBUG
+        
+        DEBUG
+        
+        //task_FFPLE->global[0] = nGrid; 
+        //task_FFPLE->args = { INTarg(nAtoms), BUFFarg(id_atoms), BUFFarg(id_gridPoints), BUFFarg(id_FFPauli), BUFFarg(id_FFLondon), BUFFarg(id_FFelec) };
+        //task_FFPLE->print_arg_list();
+                
+        DEBUG
+    }
+    
+    
+    void setupKernel( GridFF& gridFF ){
+    
+        task_FFPLE->global[0] = nGridTot; 
+        //task_FFPLE->args = { INTarg(nAtoms), BUFFarg(id_atoms), BUFFarg(id_gridPoints), BUFFarg(id_FFPauli), BUFFarg(id_FFLondon), BUFFarg(id_FFelec) };
+        //task_FFPLE->print_arg_list();
+        //__kernel void evalPLE(
+        //    const int   nAtoms,
+        //    const uint4 nGrid,
+        //    const uint4 npbc,
+        //    const float4 pos0,
+        //    const float4 dA,
+        //    const float4 dB,
+        //    const float4 dC,
+        //    const float alpha,
+        //    __global float8*   atoms,
+        //    __global float4*   FFPauli,
+        //    __global float4*   FFLondon,
+        //    __global float4*   FFelec 
+        //){
+        
+        nGrid.setXYZ( gridFF.grid.n );
+        npbc  = {1,1,1,0};
+        pos0.setXYZ( (Vec3f)gridFF.grid.pos0    );
+        dA  .setXYZ( (Vec3f)gridFF.grid.dCell.a );
+        dB  .setXYZ( (Vec3f)gridFF.grid.dCell.b );
+        dC  .setXYZ( (Vec3f)gridFF.grid.dCell.c );
+        alpha = gridFF.alpha;
+        
+        task_FFPLE->args = { 
+            INTarg(nAtoms), 
+            REFarg(nGrid),
+            REFarg(npbc),
+            REFarg(pos0),
+            REFarg(dA),
+            REFarg(dB),
+            REFarg(dC),
+            FLOATarg(alpha),
+            BUFFarg(id_atoms), 
+            //BUFFarg(id_gridPoints), 
+            BUFFarg(id_FFPauli), 
+            BUFFarg(id_FFLondon), 
+            BUFFarg(id_FFelec)
+        };
     }
     
     void uploadAtoms(int n, Vec3d* apos, Vec3d* REQs ){
-        if( nAtoms!=n ){ printf("ERROR: GridFF_OCL::uploadAtoms() Wrong Number  of Atoms \n"); exit(0); }
+        if( nAtoms!=n ){ printf("ERROR: GridFF_OCL::uploadAtoms() Wrong Number  of Atoms: n(%i) != nAtoms(%i) \n, ", n, nAtoms ); exit(0); }
         float * buff = new float[n*8];
         Vec3dTofloat8( n, apos, REQs, buff );
         cl->upload( id_atoms, buff );
@@ -88,6 +145,7 @@ class GridFF_OCL{ public:
     }
     
     void downloadFF(int n, Vec3d* FFPauli, Vec3d* FFLondon, Vec3d* FFelec ){
+        if( nGridTot!=n ){ printf("ERROR: GridFF_OCL::downloadFF() Wrong number of grid points: n(%i) != nGrid(%i) \n, ", n, nGridTot ); exit(0); }
         float * buff = new float[n*8];
         if(FFPauli ){  cl->download( id_FFPauli, buff );  float4ToVec3d( n, buff, FFPauli  ); }
         if(FFLondon){  cl->download( id_FFLondon, buff ); float4ToVec3d( n, buff, FFLondon ); }
@@ -95,12 +153,14 @@ class GridFF_OCL{ public:
         delete [] buff;
     }
     
-    void evalGridFFs( GridFF& gridFF, Vec3i& nPBC ){
-        prepareBuffers( gridFF.natoms, gridFF.grid.getNtot() );
-        uploadAtoms( gridFF.natoms, gridFF.apos, gridFF.aREQs );
-        task_FFPLE->enque();
-        downloadFF( gridFF.grid.getNtot(), gridFF.FFPauli, gridFF.FFLondon, gridFF.FFelec );
-        clFinish(cl->commands);
+    void evalGridFFs( GridFF& gridFF, const Vec3i& nPBC ){
+        printf( "gridFF.natoms %i \n", gridFF.natoms );
+        prepareBuffers( gridFF.natoms, gridFF.grid.getNtot() ); DEBUG
+        setupKernel( gridFF );
+        uploadAtoms( gridFF.natoms, gridFF.apos, gridFF.aREQs ); DEBUG
+        task_FFPLE->enque(); DEBUG
+        downloadFF( gridFF.grid.getNtot(), gridFF.FFPauli, gridFF.FFLondon, gridFF.FFelec ); DEBUG
+        clFinish(cl->commands); DEBUG
     }
         
 };

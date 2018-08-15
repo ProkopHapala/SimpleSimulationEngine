@@ -105,6 +105,13 @@ class GridFF{ public:
         grid.pos0  = pos0;
         allocateFFs();
     }
+    
+    void setAtoms( int natoms_, Vec3d * apos_, Vec3d * REQs_ ){
+        natoms = natoms_;
+        //atypes = new int  [natoms];
+        apos   = apos_;
+        aREQs  = REQs_;
+    }
 
     void evalGridFFel(int natoms, Vec3d * apos, Vec3d * aREQs, Vec3d * FF ){
         //interateGrid3D( (Vec3d){0.0,0.0,0.0}, grid.n, grid.dCell, [=](int ibuff, Vec3d p)->void{

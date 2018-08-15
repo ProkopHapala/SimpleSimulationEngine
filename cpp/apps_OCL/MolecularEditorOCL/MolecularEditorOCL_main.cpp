@@ -157,10 +157,12 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
     world.gridFF.allocateFFs();
     //world.gridFF.evalGridFFs( {0,0,0} );
 
+    //world.gridFF.setAtoms( int natoms, Vec3d * apos_, Vec3d * REQs_ );
+
     cl = new OCLsystem();  DEBUG
     cl->init();            DEBUG
     gridFFocl.init( cl, "cl/FF.cl" ); DEBUG
-    //gridFFocl.evalGridFFs(world.gridFF, {1,1,1} ); DEBUG
+    gridFFocl.evalGridFFs(world.gridFF, {1,1,1} ); DEBUG
 
 
     bool recalcFF = false;
@@ -177,8 +179,7 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
         if(world.gridFF.FFLondon) loadBin( "data/FFLondon.bin", ngtot*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
     }
 
-
-    //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
+    //world.gridFF.evalGridFFs( world.natoms, world.apos, world.REQs );
 
     int iatom = 11;
     printf( "testREQ   (%g,%g,%g) -> PLQ (%g,%g,%g) \n",        testREQ.x, testREQ.y, testREQ.z, testPLQ.x, testPLQ.y, testPLQ.z   );

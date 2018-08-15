@@ -10,12 +10,12 @@
 class OCLBuffer{
     public:
     void       * p_cpu = NULL;
-    cl_mem       p_gpu;
+    cl_mem       p_gpu    = 0;
     size_t       n        = 0;
     size_t       typesize = 0;
     bool         read_on_finish = false;
     cl_mem_flags flags    = CL_MEM_READ_WRITE;
-    char       * name      = NULL;
+    char       * name     = NULL;
     // following is needed only for images
     bool img_dims = 0;
     int  nImg[3]  = {0,0,0};
@@ -24,7 +24,10 @@ class OCLBuffer{
     inline int initOnGPU ( cl_context& context ){
         int err;
         if( flags == CL_MEM_WRITE_ONLY ){  p_gpu = clCreateBuffer(context, flags, typesize * n, NULL,    &err);
-        }else{                 if(p_cpu)  p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }
+        }else{   p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err);
+            //if(p_cpu){ p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }
+            //else     { p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }; 
+        }
         return err;
     }
 
@@ -136,11 +139,11 @@ class OCLsystem{
         return err;
     }
 
-    inline int upload  (int i){ return buffers[i].toGPU(commands);    };
-    inline int download(int i){ return buffers[i].fromGPU(commands);  };
+    inline int upload  (int i){ return buffers[i].toGPU  (commands); };
+    inline int download(int i){ return buffers[i].fromGPU(commands); };
     
-    inline int upload  (int i, void* p_cpu ){ buffers[i].p_cpu=p_cpu; return buffers[i].toGPU(commands);    };
-    inline int download(int i, void* p_cpu ){ buffers[i].p_cpu=p_cpu; return buffers[i].fromGPU(commands);  };
+    inline int upload  (int i, void* p_cpu ){ buffers[i].p_cpu=p_cpu; return buffers[i].toGPU  (commands); };
+    inline int download(int i, void* p_cpu ){ buffers[i].p_cpu=p_cpu; return buffers[i].fromGPU(commands); };
     
     inline int copy    (int from, int to, int from0, int to0, int n){ return clEnqueueCopyBuffer(commands,buffers[from].p_gpu,buffers[to].p_gpu,from0,to0,n,0,NULL,NULL); };
     inline int copyBuff(int from, int to                           ){ int n=buffers[from].n; int n_=buffers[to].n; if(n_<n)n=n_; return clEnqueueCopyBuffer(commands,buffers[from].p_gpu,buffers[to].p_gpu,0,0,n,0,NULL,NULL); };
@@ -177,25 +180,31 @@ class OCLsystem{
 #define OCL_INT    2
 #define OCL_FLOAT  3
 #define OCL_LBUFF  4
+#define OCL_PTR    5
 
-#define BUFFarg(X)   OCLarg( X, OCL_BUFF  )
-#define INTarg(X)    OCLarg( X, OCL_INT   )
-#define FLOATarg(X)  OCLarg( (float)X     )
-#define LBUFFarg(X)  OCLarg( X, OCL_LBUFF )
+#define BUFFarg(X)  OCLarg( X, OCL_BUFF  )
+#define INTarg(X)   OCLarg( X, OCL_INT   )
+#define FLOATarg(X) OCLarg( (float)X     )
+#define LBUFFarg(X) OCLarg( X, OCL_LBUFF )
+#define PTRarg(X,n) OCLarg( (void*)X, OCL_PTR, n )
+#define REFarg(X)   OCLarg( (void*)&X, sizeof(X) )
 
 class OCLarg{
     public:
     int  kind=0;
+    int  nbytes=0;
     union{
         float  f;
         int    i;
+        void*  ptr;
     };
     inline void setFloat(  float f_ ){ f=f_; kind=OCL_FLOAT; }
     inline void setInt  (  int   i_ ){ i=i_; kind=OCL_FLOAT; }
     inline void setBuff (  int   i_ ){ i=i_; kind=OCL_BUFF;  }
     OCLarg(){};
-    OCLarg(  float f_            ):f(f_){ kind=OCL_FLOAT; }
-    OCLarg(  int   i_, int kind_ ):i(i_), kind(kind_){ }
+    OCLarg( float f_                ):f(f_), kind(OCL_FLOAT) {}
+    OCLarg( int   i_,   int kind_   ):i(i_), kind(kind_)     {}
+    OCLarg( void* ptr_, int nbytes_ ):ptr(ptr_), kind(OCL_PTR), nbytes(nbytes_){ }
 };
 
 class OCLtask{
@@ -214,19 +223,23 @@ class OCLtask{
         cl_kernel kernel = cl->kernels[ikernel];
         for(int i=0; i<args.size(); i++){
             OCLarg& arg = args[i];
+            printf( "useArgs args[%i].kind: %i\n", i, arg.kind );
             switch(arg.kind){
-                case OCL_BUFF:  err |= clSetKernelArg( kernel, i, sizeof(cl_mem), &(cl->buffers[arg.i].p_gpu) );  OCL_checkError(err, "setAsArg"); break;
+                case OCL_BUFF:  
+                    printf( "buffArg args[%i] ibuff %i p_gpu %i \n", i, arg.i, cl->buffers[arg.i].p_gpu );
+                    err |= clSetKernelArg( kernel, i, sizeof(cl_mem), &(cl->buffers[arg.i].p_gpu) );  OCL_checkError(err, "setAsArg"); break;
                 //case OCL_BUFF:  err |= cl->buffers[arg.i].setAsArg( kernel, i );                                OCL_checkError(err, "setAsArg"); break;
                 case OCL_INT:   err |= clSetKernelArg( kernel, i, sizeof(int),    &(arg.i) );                     OCL_checkError(err, "setAsArg"); break;
                 case OCL_FLOAT: err |= clSetKernelArg( kernel, i, sizeof(float),  &(arg.f) );                     OCL_checkError(err, "setAsArg"); break;
                 case OCL_LBUFF: err |= clSetKernelArg( kernel, i, arg.i,  NULL );                                 OCL_checkError(err, "setAsArg"); break;
+                case OCL_PTR:   err |= clSetKernelArg( kernel, i, arg.nbytes,  arg.ptr );                         OCL_checkError(err, "setAsArg"); break;
             }
         }
         return err;
     }
 
     inline int enque_raw(  ){
-        //printf("enque_raw %i %i (%i,%i) (%i,%i)\n", ikernel, dim, global[0],global[1], local[0],local[1]);
+        printf("enque_raw %i %i (%i,%i,%i) (%i,%i,%i)\n", ikernel, dim, global[0],global[1],global[2], local[0],local[1],local[2] );
         if(local[0]==0){ return clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, NULL,  0, NULL, NULL );   }
         else{            return clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL );   }
     }
@@ -250,8 +263,8 @@ class OCLtask{
         printf(")\n");
     }
 
-    inline void setup( OCLsystem  * cl_, size_t ikernel_, size_t dim_, size_t global_, size_t local_ ){ cl=cl_; ikernel=ikernel_; dim=dim_;  global[0]=global_;global[1]=global_; local[0]=local_;local[1]=local_; };
-    OCLtask          ( OCLsystem  * cl_, size_t ikernel_, size_t dim_, size_t global_, size_t local_ ): cl(cl_),ikernel(ikernel_),dim(dim_){ global[0]=global_;global[1]=global_; local[0]=local_;local[1]=local_; };
+    inline void setup( OCLsystem  * cl_, size_t ikernel_, size_t dim_, size_t global_, size_t local_ ){ cl=cl_; ikernel=ikernel_; dim=dim_;  global[0]=global_;global[1]=global_;global[2]=global_; local[0]=local_;local[1]=local_;local[2]=local_; };
+    OCLtask          ( OCLsystem  * cl_, size_t ikernel_, size_t dim_, size_t global_, size_t local_ ): cl(cl_),ikernel(ikernel_),dim(dim_){ global[0]=global_;global[1]=global_;global[2]=global_; local[0]=local_;local[1]=local_;local[2]=local_; };
     OCLtask(){};
 };
 

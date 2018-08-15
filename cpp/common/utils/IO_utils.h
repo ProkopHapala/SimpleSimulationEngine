@@ -24,15 +24,16 @@ inline int print(       char*   v){ return printf( "%s", v ); };
 inline int print(       float   v){ return printf( "%g", v ); };
 inline int print(       double  v){ return printf( "%g", v ); };
 inline int print(       int     v){ return printf( "%i", v ); };
-inline int print( const Vec2f&  v){ return printf( "%lg %g", v.x, v.y ); };
-inline int print( const Vec2d&  v){ return printf( "%lg %g", v.x, v.y ); };
-inline int print( const Vec2i&  v){ return printf( "%li %i", v.x, v.y ); };
-inline int print( const Vec3f&  v){ return printf( "%g %g %g", v.x, v.y, v.z ); };
-inline int print( const Vec3d&  v){ return printf( "%g %g %g", v.x, v.y, v.z ); };
-inline int print( const Vec3i&  v){ return printf( "%i %i %i", v.x, v.y, v.z ); };
-inline int print( const Quat4f& v){ return printf( "%g %g %g %g", v.x, v.y, v.z, v.w ); };
-inline int print( const Quat4d& v){ return printf( "%g %g %g %g", v.x, v.y, v.z, v.w ); };
-inline int print( const Quat4i& v){ return printf( "%i %i %i %i", v.x, v.y, v.z, v.w ); };
+// Moved to Vec2.h, Vec3.h, quaternion.h
+//inline int print( const Vec2f&  v){ return printf( "%lg %g", v.x, v.y ); };
+//inline int print( const Vec2d&  v){ return printf( "%lg %g", v.x, v.y ); };
+//inline int print( const Vec2i&  v){ return printf( "%li %i", v.x, v.y ); };
+//inline int print( const Vec3f&  v){ return printf( "%g %g %g", v.x, v.y, v.z ); };
+//inline int print( const Vec3d&  v){ return printf( "%g %g %g", v.x, v.y, v.z ); };
+//inline int print( const Vec3i&  v){ return printf( "%i %i %i", v.x, v.y, v.z ); };
+//inline int print( const Quat4f& v){ return printf( "%g %g %g %g", v.x, v.y, v.z, v.w ); };
+//inline int print( const Quat4d& v){ return printf( "%g %g %g %g", v.x, v.y, v.z, v.w ); };
+//inline int print( const Quat4i& v){ return printf( "%i %i %i %i", v.x, v.y, v.z, v.w ); };
 
 inline int fprint(FILE* sbuff,       char*   v){ return fprintf(sbuff, "%s ", v ); };
 inline int fprint(FILE* sbuff,       float   v){ return fprintf(sbuff, "%g ", v ); };
@@ -94,7 +95,7 @@ inline int sscan(char* sbuff, Quat4i& v){ int n; sscanf(sbuff, "%i %i %i %i%n", 
 #define _toDict( mp, tok ){ mp[#tok] = tok; }
 #define _fromDict( mp, tok ){ tok = mp[#tok]; }
 
-char * fgetsNonComment(char * str, int num, FILE * stream, char commentChar, int nMaxTry = 100 ){
+inline char * fgetsNonComment(char * str, int num, FILE * stream, char commentChar, int nMaxTry = 100 ){
     char* s = nullptr;
     // no more than 100 comments expected, ensure we don't get stuck in infinite loop
     for (int i = 0; i < nMaxTry; i++) {

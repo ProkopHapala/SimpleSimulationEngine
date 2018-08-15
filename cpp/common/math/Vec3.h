@@ -422,16 +422,20 @@ inline Vec3i    from_id    ( uint64_t id   ){
     return vi;
 }
 
+inline void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
+inline void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };
+
+inline Vec3f toFloat( const Vec3d& from){ return (Vec3f){(float)from.x,(float)from.y,(float)from.z}; }
+
 //inline void print(Vec3d p){printf("(%.16g,%.16g,%.16g)", p.x,p.y,p.z);};
 //inline void print(Vec3f p){printf("(%.8g,%.8g,%.8g)", p.x,p.y,p.z);};
 //inline void print(Vec3d p){printf("(%lg,%lg,%lg)", p.x,p.y,p.z);};
 //inline void print(Vec3f p){printf("(%g,%g,%g)", p.x,p.y,p.z);};
 //inline void print(Vec3i p){printf("(%i,%i,%i)", p.x,p.y,p.z);};
 
-inline void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
-inline void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };
-
-inline Vec3f toFloat( const Vec3d& from){ return (Vec3f){(float)from.x,(float)from.y,(float)from.z}; }
+inline int print( const Vec3f&  v){ return printf( "%g %g %g", v.x, v.y, v.z ); };
+inline int print( const Vec3d&  v){ return printf( "%g %g %g", v.x, v.y, v.z ); };
+inline int print( const Vec3i&  v){ return printf( "%i %i %i", v.x, v.y, v.z ); };
 
 #endif
 

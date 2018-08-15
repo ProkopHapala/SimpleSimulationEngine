@@ -176,7 +176,6 @@ static constexpr Vec2i Vec2iZero = (Vec2i){0,0};
 static constexpr Vec2i Vec2iX    = (Vec2i){1,0};
 static constexpr Vec2i Vec2iY    = (Vec2i){0,1};
 
-
 inline uint64_t scalar_id  ( const Vec2i& v){ return (((uint64_t)v.a)<<32)|v.b; }
 inline uint64_t symetric_id( const Vec2i& v){ if( v.a>v.b ){ return (((uint64_t)v.b)<<32)|v.a; }else{ return (((uint64_t)v.a)<<32)|v.b; }}
 
@@ -184,6 +183,10 @@ inline void convert( const Vec2f& from, Vec2d& to ){ to.x=from.x;        to.y=fr
 inline void convert( const Vec2d& from, Vec2f& to ){ to.x=(float)from.x; to.y=(float)from.y; };
 
 inline Vec2f toFloat( const Vec2d& from){ return (Vec2f){(float)from.x,(float)from.y}; }
+
+inline int print( const Vec2f&  v){ return printf( "%lg %g", v.x, v.y ); };
+inline int print( const Vec2d&  v){ return printf( "%lg %g", v.x, v.y ); };
+inline int print( const Vec2i&  v){ return printf( "%li %i", v.x, v.y ); };
 
 #endif
 

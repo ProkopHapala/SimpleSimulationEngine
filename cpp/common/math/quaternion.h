@@ -64,6 +64,7 @@ class Quat4TYPE {
 	inline void set   ( const  QUAT& q                     ){ x=q.x; y=q.y; z=q.z; w=q.w; };
 	inline void set   ( TYPE fx, TYPE fy, TYPE fz, TYPE fw ){ x=fx;  y=fy;  z=fz;  w=fw;  };
 	inline void setOne(  ){ x=y=z=0; w=1; };
+	inline void setXYZ( const VEC& v){ x=v.x; y=v.y; z=v.z; };
 
 	inline void setInverseUnitary( const  QUAT& q){ x=-q.x; y=-q.y; z=-q.z; w=q.w; };
 	inline void setInverse       ( const  QUAT& q){ setInverseUnitary(); mul(1.0d/q.norm2()); };
@@ -664,6 +665,8 @@ using Quat4i = Quat4TYPE< int>;
 using Quat4f = Quat4TYPE< float>;
 using Quat4d = Quat4TYPE< double >;
 
+static constexpr Quat4i Quat4iZero = (Quat4i){0,0,0,0};
+static constexpr Quat4i Quat4iOne  = (Quat4i){1,1,1,1};
 
 static constexpr Quat4d Quat4dZero = (Quat4d){0.0d,0.0d,0.0d,0.0d};
 static constexpr Quat4d Quat4dOne  = (Quat4d){0.0d,0.0d,0.0d,1.0d};
@@ -681,6 +684,9 @@ static constexpr Quat4f Quat4fOne  = (Quat4f){0.0f,0.0f,0.0f,1.0d};
 inline void convert( const Quat4f& from, Quat4d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z;        to.w=from.w;        };
 inline void convert( const Quat4d& from, Quat4f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; to.w=(float)from.w; };
 
+inline int print( const Quat4f& v){ return printf( "%g %g %g %g", v.x, v.y, v.z, v.w ); };
+inline int print( const Quat4d& v){ return printf( "%g %g %g %g", v.x, v.y, v.z, v.w ); };
+inline int print( const Quat4i& v){ return printf( "%i %i %i %i", v.x, v.y, v.z, v.w ); };
 
 #endif
 
