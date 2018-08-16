@@ -9,9 +9,10 @@
 void float4ToVec3d(int n, float* fs, Vec3d* vs ){
     for(int i=0; i<n; i++ ){  
         int i4 = i<<2;
+        //if( (i%100) == 0 ) printf( "fs[%i] = %f %f %f %f \n" , i, fs[i4+0], fs[i4+1], fs[i4+2], fs[i4+3] ) ;
         vs[i].x=fs[i4+0];
         vs[i].y=fs[i4+1];
-        vs[i].y=fs[i4+2];
+        vs[i].z=fs[i4+2];
     }
 }
 

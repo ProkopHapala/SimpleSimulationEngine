@@ -162,9 +162,13 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
     cl = new OCLsystem();  DEBUG
     cl->init();            DEBUG
     gridFFocl.init( cl, "cl/FF.cl" ); DEBUG
-    gridFFocl.evalGridFFs(world.gridFF, {1,1,1} ); DEBUG
+    gridFFocl.evalGridFFs(world.gridFF, {1,1,1} ); DEBUG    
+    world.gridFF.grid.saveXSF( "FFPauli.xsf", world.gridFF.FFPauli, 2 );
+    
+    //exit(0);
 
 
+    /*
     bool recalcFF = false;
     //bool recalcFF = true;
     int ngtot =  world.gridFF.grid.getNtot();
@@ -178,6 +182,7 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
         if(world.gridFF.FFPauli)  loadBin( "data/FFPauli.bin",  ngtot*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
         if(world.gridFF.FFLondon) loadBin( "data/FFLondon.bin", ngtot*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
     }
+    */
 
     //world.gridFF.evalGridFFs( world.natoms, world.apos, world.REQs );
 

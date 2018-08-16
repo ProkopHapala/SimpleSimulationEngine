@@ -146,10 +146,10 @@ class GridFF_OCL{ public:
     
     void downloadFF(int n, Vec3d* FFPauli, Vec3d* FFLondon, Vec3d* FFelec ){
         if( nGridTot!=n ){ printf("ERROR: GridFF_OCL::downloadFF() Wrong number of grid points: n(%i) != nGrid(%i) \n, ", n, nGridTot ); exit(0); }
-        float * buff = new float[n*8];
-        if(FFPauli ){  cl->download( id_FFPauli, buff );  float4ToVec3d( n, buff, FFPauli  ); }
-        if(FFLondon){  cl->download( id_FFLondon, buff ); float4ToVec3d( n, buff, FFLondon ); }
-        if(FFelec  ){  cl->download( id_FFelec , buff );  float4ToVec3d( n, buff, FFelec   ); }
+        float * buff = new float[n*4];
+        if(FFPauli ){  cl->download( id_FFPauli,  buff ); float4ToVec3d( n, buff, FFPauli  ); printf("FFPauli  downloaded\n"); }
+        if(FFLondon){  cl->download( id_FFLondon, buff ); float4ToVec3d( n, buff, FFLondon ); printf("FFLondon downloaded\n"); }
+        if(FFelec  ){  cl->download( id_FFelec ,  buff ); float4ToVec3d( n, buff, FFelec   ); printf("FFelec   downloaded\n"); }
         delete [] buff;
     }
     
