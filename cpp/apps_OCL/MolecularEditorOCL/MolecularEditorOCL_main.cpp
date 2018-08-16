@@ -163,7 +163,9 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
     cl->init();            DEBUG
     gridFFocl.init( cl, "cl/FF.cl" ); DEBUG
     gridFFocl.evalGridFFs(world.gridFF, {1,1,1} ); DEBUG    
-    world.gridFF.grid.saveXSF( "FFPauli.xsf", world.gridFF.FFPauli, 2 );
+    world.gridFF.grid.saveXSF( "FFPauli_z.xsf",  world.gridFF.FFPauli, 2 );
+    world.gridFF.grid.saveXSF( "FFLondon_z.xsf", world.gridFF.FFLondon, 2 );
+    world.gridFF.grid.saveXSF( "FFelec_z.xsf",   world.gridFF.FFelec, 2 );
     
     //exit(0);
 
@@ -198,7 +200,7 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
     //saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
     world.gridFF.evalCombindGridFF( testREQ, FFtot );
-    //saveXSF( "FFtot_z.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+    saveXSF( "FFtot_z.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
     isoOgl = glGenLists(1);
     glNewList(isoOgl, GL_COMPILE);

@@ -209,7 +209,6 @@ __kernel void evalPLE(
     if( iG==0 ) printf("dB (%f,%f,%f)   \n",   dB.x,   dB.y,   dB.z );
     if( iG==0 ) printf("dC (%f,%f,%f)   \n",   dC.x,   dC.y,   dC.z );
 
-
     const int n0x = -npbc.x;
     const int n1x =  npbc.x+1;
     const int n0y = -npbc.y;
