@@ -15,6 +15,19 @@ __constant sampler_t sampler_1 = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_REPEAT
 inline float3 rotMat( float3 v, float3 a, float3 b, float3 c ){ return (float3)(dot(v,a),dot(v,b),dot(v,c)); }
 inline float3 rotMatT( float3 v,  float3 a, float3 b, float3 c  ){ return a*v.x + b*v.y + c*v.z; }
 
+
+inline float3 rotQuat( float4 q, float3 v ){
+    // http://www.geeks3d.com/20141201/how-to-rotate-a-vertex-by-a-quaternion-in-glsl/
+    //return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+    //https://blog.molecular-matters.com/2013/05/24/a-faster-quaternion-vector-multiplication/
+    float3 t = 2 * cross( q.xyz, v );
+    return v + t * q.w + cross( q.xyz , t );
+    // https://gamedev.stackexchange.com/questions/28395/rotating-vector3-by-a-quaternion
+    //return 2.0 * dot(q.xyz, v) * q.xyz + ( q.w*q.w - dot(q.xyz,q.xyz) ) * v + 2.0 * q.w * cross(q.xyz, v);
+}
+
+
+
 float3 tipForce( float3 dpos, float4 stiffness, float4 dpos0 ){
     float r = sqrt( dot( dpos,dpos) );
     return  (dpos-dpos0.xyz) * stiffness.xyz              // harmonic 3D
@@ -77,18 +90,21 @@ __kernel void getForceRigidSystemSurfGrid(
     __read_only image3d_t  imgLondon,
     __read_only image3d_t  imgElec,
     // found - previously found molecular configurations
-    __global  int2*    molTypes,        // molTypes[type.x:type.y]
+    __global  int2*    mol2atoms,    // mol2atoms[type.x:type.y]
     //__global  int2*  confs,        // pointer to poses ... since we have constant number of molecules, we dont need this
     __global  float8*  atomsInTypes, // atoms in molecule types
-    __global  float8*  poses,         // pos, qrot
+    __global  float8*  poses,        // pos, qrot
+    __global  float8*  fposes,       // force acting on pos, qrot
     float4 dinvA,
     float4 dinvB,
     float4 dinvC,
-    float4 dpos0,
     int nSystems,
     int nMols, // nMols should be approx local size
     float alpha
 ){
+
+    __local float8 lATOMs[32]; // here we store atoms of molecule j
+
     //const int iG = get_global_id (0);
     const int nL      = get_local_size(0);
     // we asume there is nMol and nAtoms < local_size
@@ -97,70 +113,93 @@ __kernel void getForceRigidSystemSurfGrid(
     const int isystem = get_group_id(0);
 
     //if( isystem > nSystems ) return;  // perhaps not needed if global_size set properly
+    //if( imol > nMols ) return;
 
-    __local float8 lATOMs[32]; // here we store atoms of molecule j
-
-    float4 forceE = (0.0,0.0,0.0,0.0);
-    float4 torq   = (0.0,0.0,0.0,0.0); // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
+    float4 forceE = (float4)(0.0,0.0,0.0,0.0);
+    float4 torq   = (float4)(0.0,0.0,0.0,0.0); // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
 
     const int molOffset = isystem * nMols;
-    float4 mposi = poses[nmolOffset+imol].xyz;
-    float4 qroti = poses[nmolOffset+imol].hi;
+    const int oimol     = molOffset+imol;
+    const int iatomi    = mol2atoms[oimol].x;
+    const int natomi    = mol2atoms[oimol].y;
+    float4 mposi        = poses[oimol].lo;
+    float4 qroti        = poses[oimol].hi;
 
-    for(int jmol=0; jmol<nMol; jmol++){
-        // transform to world coords, store to local mem
-        float4 qrotj = poses[jmol].hi;
+    // ==== Molecule - Grid interaction
 
-        types
-        float8 atomj = atomsInTypes[iL];
-        atomj.xyz    = rotQuat( qrotj, atomj.xyz ) + poses[jmol].xyz;
-        //atomj.s4 = ; // pauli   -- NOT POSSIBLE
-        //atomj.s5 = ; // london
-        lATOMs[iL]   = atomj;
+    // TODO: we may store transformed atoms of imol to local mem ?
+    for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
+        float4 adposi = atomsInTypes[iatomi+ia].lo;
+        adposi.xyz    = rotQuat( qroti, adposi.xyz );
+        float3 aposi  = adposi.xyz + mposi.xyz;
+        float3 REQi   = atomsInTypes[iatomi+ia].s456;
+
+        // molecule grid interactions
+        //float eps    = sqrt(REQi.y); //  THIS SHOULD BE ALREADY DONE
+        float expar    = exp(-alpha*REQi.x);
+        float cPauli   =    REQi.y*expar*expar;
+        float cLondon  = -2*REQi.y*expar;
+        float4 fe = (float4)(0.0,0.0,0.0,0.0);
+        fe += cPauli   * interpFE( aposi, dinvA.xyz, dinvB.xyz, dinvC.xyz, imgPauli  );
+        fe += cLondon  * interpFE( aposi, dinvA.xyz, dinvB.xyz, dinvC.xyz, imgLondon );
+        fe += REQi.z   * interpFE( aposi, dinvA.xyz, dinvB.xyz, dinvC.xyz, imgElec   );
+
+        forceE += fe;
+        torq   += cross(adposi, fe);
+    }
+
+    // ==== Molecule - Molecule Interaction
+
+    for(int jmol=0; jmol<nMols; jmol++){
+
+        // transform atoms of jmol to world coords and store them local memory
+        const int ojmol     = molOffset+jmol;
+        const int iatomj = mol2atoms[ojmol].x;
+        const int natomj = mol2atoms[ojmol].y;
+        if(iL<natomj){
+            float8 atomj = atomsInTypes[iatomj+iL];
+            atomj.xyz    = rotQuat( poses[ojmol].hi, atomj.xyz ) + poses[ojmol].xyz;
+            lATOMs[iL]   = atomj;
+        }
 
         barrier(CLK_LOCAL_MEM_FENCE);
-        if (jmol==imol) || (imol>nMols) continue; // prevent self-interaction and reading outside buffer
-        for(int ia=0; ia<nai; ia++){ // atoms of molecule i
+        if ( (jmol==imol) || (imol>nMols) ) continue; // prevent self-interaction and reading outside buffer
+        for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
             //float3 aposi = lATOMs[ia].xyz;
             //float3 REQi  = lATOMs[ia].s456;
-            float3 aposi = rotQuat( qroti, atomsInTypes[iL].xyz ) + mposi;
-            float3 REQi  = atomsInTypes[iL].s456;
+            float4 adposi = atomsInTypes[iatomi+ia].lo;
+            adposi.xyz    = rotQuat( qroti, adposi.xyz );
+            float3 aposi  = adposi.xyz + mposi.xyz;
+            float3 REQi   = atomsInTypes[iatomi+ia].s456;
+
             // molecule-molecule interaction
-            for(int ja=0; ja<naj; ja++){ // atoms of molecule j
-                float3 dp   = lATOMs[ja].xyz - aposi; // already transformed
+            float4 fe = (float4)(0.0,0.0,0.0,0.0);
+            for(int ja=0; ja<natomj; ja++){            // atoms of molecule j
+                float3 dp   = lATOMs[ja].xyz - aposi;  // already transformed
                 float3 REQj = lATOMs[ja].s456;
                 // force
-
                 float r0    = REQj.x + REQi.x;
                 float eps   = REQj.y * REQi.y; 
+                float cElec = REQj.z * REQi.z * COULOMB_CONST;
                 float r     = sqrt( dot(dp,dp)+R2SAFE );
                 float expar = exp( alpha*(r-r0));
                 float ir    = 1/r;
-                float fr    = eps*2*alpha*( expar*expar - expar ) + 14.3996448915f*REQj.z/( r*r + R2ELEC );
-                fe.xyz     += dp*(fr*ir);
-                fe.w       += eps*( expar*expar - 2*expar ) + 14.3996448915f*REQj.z/(r); // Energy
-
+                float fr    = eps*2*alpha*( expar*expar - expar ) + cElec*ir*ir;
+                fe.xyz     += dp *( fr*ir );
+                fe.w       += eps*( expar*expar - 2*expar ) + cElec*ir; // Energy
             }
-            // molecule grid interactions
-            //float eps   = sqrt(REQ.y); //  THIS SHOULD BE ALREADY DONE
-            float expar = exp(-alpha*REQi.x);
-            float CP    =    REQi.y*expar*expar;
-            float CL    = -2*REQi.y*expar;
-            fe += cPauli  * interpFE( pos, dinvA.xyz, dinvB.xyz, dinvC.xyz, imgPauli  );
-            fe += cLondon * interpFE( pos, dinvA.xyz, dinvB.xyz, dinvC.xyz, imgLondon );
-            fe += REQ.z   * interpFE( pos, dinvA.xyz, dinvB.xyz, dinvC.xyz, imgElec   );
+
+            forceE += fe;
+            torq   += cross(adposi, fe);
+
         }
         barrier(CLK_LOCAL_MEM_FENCE);
-
     }
 
-    forceE += fe;
-    torq   += cross(dpos, fe.xyz);
+    if (imol>nMols) return;
 
-    fpose[nmolOffset+imol].lo = forceE;
-    fpose[nmolOffset+imol].hi = torq;
-
-    // project atmic force on molecular pos
+    fposes[oimol].lo = forceE;
+    fposes[oimol].hi = torq;
 
 }
 

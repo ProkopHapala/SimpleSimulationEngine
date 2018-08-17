@@ -78,7 +78,8 @@ class AppMolecularEditorOCL : public AppSDL2OGL_3D {
     MMFFBuilder builder;
     
     OCLsystem* cl;
-    GridFF_OCL gridFFocl;
+    GridFF_OCL              gridFFocl;
+    RigidMolecularWorldOCL  clworld;
 
     FastAtomicMetric atomdist;
     AtomicConfiguration conf1;
@@ -159,9 +160,6 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
 
     //world.gridFF.setAtoms( int natoms, Vec3d * apos_, Vec3d * REQs_ );
 
-    cl = new OCLsystem();  DEBUG
-    cl->init();            DEBUG
-    gridFFocl.init( cl, "cl/FF.cl" ); DEBUG
     gridFFocl.evalGridFFs(world.gridFF, {1,1,1} ); DEBUG    
     world.gridFF.grid.saveXSF( "FFPauli_z.xsf",  world.gridFF.FFPauli, 2 );
     world.gridFF.grid.saveXSF( "FFLondon_z.xsf", world.gridFF.FFLondon, 2 );
@@ -216,6 +214,11 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
 
 AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+    cl = new OCLsystem();  DEBUG
+    cl->init();
+    gridFFocl.init( cl, "cl/FF.cl" ); DEBUG
+    clworld  .init( cl, "cl/relaxMolecules.cl" ); DEBUG
+    
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     ogl_sph = glGenLists(1);
@@ -319,7 +322,13 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     //Vec2i iat = bond2atom[9];
     //exit(0);
     initRigidSubstrate();
-
+    
+    DEBUG
+    
+    
+    
+    
+    
     manipulator.bindAtoms(world.natoms, world.apos, world.aforce ); 
     manipulator.realloc(1);                                        
     manipulator.goalSpan.set(5.0,5.0,1.0);                          

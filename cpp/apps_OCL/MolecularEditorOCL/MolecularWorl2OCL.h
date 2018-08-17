@@ -1,14 +1,144 @@
 #ifndef MolecularWorldOCL_h
 #define MolecularWorldOCL_h
 
+#include <vector>
+
+#include <CL/cl.h>
+
 #include "OCL.h"
 #include "MMFF.h" // we can perhaps make some #ifdef OCL insde MMFF.h
+#include "Molecule.h"
 #include "arrayConvert.h"
 
 /*
 ToDo:
  - make evaluation of gridFF inside OpenCL kernel
 */
+
+// =======================
+//   MolecularWorldOCL
+// =======================
+
+class RigidMolecularWorldOCL{ public:
+
+    OCLsystem* cl = 0;
+    OCLtask *task_getForceRigidSystemSurfGrid = 0;
+
+    int nSystems  = 0;
+    int nMols     = 0;
+    int nMolTypes = 0;
+    
+    //int nAtomsInTypes = 0; // derived 
+    int nMolInstances = 0; // derived
+   
+    Quat4f pos0=Quat4fZero, dA=Quat4fZero, dB=Quat4fZero, dC=Quat4fZero;
+    float alpha = 0.0;
+    
+    std::vector<float8> atomsInTypes;
+    std::vector<int2>   molTypes;
+    
+    int2   * mol2atoms    = 0;
+    float8 * poses        = 0;
+    float8 * fposes       = 0; 
+    
+    cl_mem img_FFPauli;   //  = -1;
+    cl_mem img_FFLondon;  //  = -1;
+    cl_mem img_FFelec;    //  = -1;
+    int id_mol2atoms    = -1;
+    int id_atomsInTypes = -1;
+    int id_poses        = -1;
+    int id_fposes       = -1;
+    
+    // ==== Functions
+    
+    void init( OCLsystem* cl_, char* fname ){
+        cl = cl_; 
+        int err = cl->buildProgram( fname );                              
+        OCL_checkError(err, "cl.buildProgram");
+        
+        int id_evalPLE = cl->newKernel("getForceRigidSystemSurfGrid"); DEBUG;
+        task_getForceRigidSystemSurfGrid = new OCLtask( cl, id_evalPLE, 1, -1, 32 ); DEBUG;
+    }
+    
+    void addMolType( const Molecule& molecule ){
+        molTypes.push_back( (int2){ atomsInTypes.size(), molecule.natoms} );
+        for( int ia=0; ia<molecule.natoms; ia++ ){
+            float8 atom;
+            *((Vec3f*)(((float*)&atom)+0)) = (Vec3f)molecule.pos [ia];
+            *((Vec3f*)(((float*)&atom)+4)) = (Vec3f)molecule.REQs[ia]; 
+            atomsInTypes.push_back( atom );
+        }
+    }
+    
+    inline void setMolInstance( int i, int iType ){ mol2atoms[i] = molTypes[iType]; }
+    
+    void prepareBuffers( int nSystems_, int nMols_, Vec3i nGrid, float* FFpauli, float* FFlondon, float* FFelec ){
+        int err;
+        nMols    = nMols_;
+        nSystems = nSystems_;
+        nMolInstances = nMols * nSystems;
+        mol2atoms    = new int2  [nMolInstances]; 
+        poses        = new float8[nMolInstances]; 
+        fposes       = new float8[nMolInstances];
+                
+        id_mol2atoms    = cl->newBuffer( "molTypes",     nMolInstances, sizeof(int2)  , NULL,                CL_MEM_READ_WRITE ); DEBUG;
+        id_atomsInTypes = cl->newBuffer( "atomsInTypes", nMolInstances, sizeof(float8), atomsInTypes.data(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR ); DEBUG;
+        
+        id_poses        = cl->newBuffer( "poses",        nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
+        id_fposes       = cl->newBuffer( "fposes",       nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
+      
+        cl_image_format imgFormat = (cl_image_format){CL_RGBA,CL_FLOAT};
+        img_FFPauli  = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFpauli,  &err ); OCL_checkError(err, "clCreateImage3D img_FFPauli" );
+        img_FFLondon = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFlondon, &err ); OCL_checkError(err, "clCreateImage3D img_FFLondon");
+        img_FFelec   = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFelec,   &err ); OCL_checkError(err, "clCreateImage3D img_FFelec"  );
+    
+    }
+    
+    void setupKernel( GridShape& grid, float alpha_ ){        
+        //__kernel void getForceRigidSystemSurfGrid(
+        //    __read_only image3d_t  imgPauli,
+        //    __read_only image3d_t  imgLondon,
+        //    __read_only image3d_t  imgElec,
+        //    // found - previously found molecular configurations
+        //    __global  int2*    id_mol2atoms, // molTypes[type.x:type.y]
+        //    //__global  int2*  confs,        // pointer to poses ... since we have constant number of molecules, we dont need this
+        //    __global  float8*  atomsInTypes, // atoms in molecule types
+        //    __global  float8*  poses,        // pos, qrot
+        //    float4 dinvA,
+        //    float4 dinvB,
+        //    float4 dinvC,
+        //    int nSystems,
+        //    int nMols, // nMols should be approx local size
+        //    float alpha
+        task_getForceRigidSystemSurfGrid->global[0] = nSystems; 
+        //pos0.setXYZ( (Vec3f)grid.pos0    );
+        dA  .setXYZ( (Vec3f)grid.dCell.a );
+        dB  .setXYZ( (Vec3f)grid.dCell.b );
+        dC  .setXYZ( (Vec3f)grid.dCell.c );
+        alpha = alpha_;
+        task_getForceRigidSystemSurfGrid->args = { 
+            LBUFFarg(img_FFPauli), 
+            LBUFFarg(img_FFLondon), 
+            LBUFFarg(img_FFelec),
+            BUFFarg(id_mol2atoms),
+            BUFFarg(id_atomsInTypes),
+            BUFFarg(id_poses),
+            BUFFarg(id_fposes),
+            REFarg(dA),
+            REFarg(dB),
+            REFarg(dC),
+            INTarg(nSystems),
+            INTarg(nMols),
+            FLOATarg(alpha)
+        };
+    }
+    
+};
+
+
+// =======================
+//      GridFF_OCL
+// =======================
 
 class GridFF_OCL{ public:
 
@@ -19,7 +149,7 @@ class GridFF_OCL{ public:
     Quat4f pos0=Quat4fZero,dA=Quat4fZero,dB=Quat4fZero,dC=Quat4fZero;
     float alpha = 0.0;
 
-    int nAtoms = 0;
+    int nAtoms    = 0;
     int nGridTot  = 0;
     
     int id_FFPauli    = -1;
@@ -30,21 +160,13 @@ class GridFF_OCL{ public:
     
     // ==== Functions
 
-/*
-    void init(OCLsystem* cl_, char* fname ){ 
-        cl=cl_; 
-        int err = cl->buildProgram( fname );                              
-        OCL_checkError(err, "cl.buildProgram");
-    };
-*/
-
     void init( OCLsystem* cl_, char* fname ){
         cl = cl_; 
         int err = cl->buildProgram( fname );                              
         OCL_checkError(err, "cl.buildProgram");
         
         int id_evalPLE = cl->newKernel("evalPLE"); DEBUG
-        task_FFPLE = new OCLtask( cl, id_evalPLE, 1, -1, 32 ); DEBUG
+        task_FFPLE = new OCLtask( cl, id_evalPLE, 1, -1, 32 ); DEBUG;
     }
     
     void prepareBuffers( int nAtoms_, int nGrid_ ){
@@ -61,13 +183,13 @@ class GridFF_OCL{ public:
         id_FFLondon   = cl->newBuffer( "FFLondon",   nGridTot*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY ); DEBUG
         id_FFelec     = cl->newBuffer( "FFelec",     nGridTot*4, sizeof(float), NULL, CL_MEM_WRITE_ONLY ); DEBUG
         
-        DEBUG
+        DEBUG;
         
         //task_FFPLE->global[0] = nGrid; 
         //task_FFPLE->args = { INTarg(nAtoms), BUFFarg(id_atoms), BUFFarg(id_gridPoints), BUFFarg(id_FFPauli), BUFFarg(id_FFLondon), BUFFarg(id_FFelec) };
         //task_FFPLE->print_arg_list();
                 
-        DEBUG
+        DEBUG;
     }
     
     
@@ -159,38 +281,11 @@ class GridFF_OCL{ public:
         setupKernel( gridFF );
         uploadAtoms( gridFF.natoms, gridFF.apos, gridFF.aREQs ); DEBUG
         task_FFPLE->enque(); DEBUG
-        downloadFF( gridFF.grid.getNtot(), gridFF.FFPauli, gridFF.FFLondon, gridFF.FFelec ); DEBUG
-        clFinish(cl->commands); DEBUG
+        downloadFF( gridFF.grid.getNtot(), gridFF.FFPauli, gridFF.FFLondon, gridFF.FFelec ); DEBUG;
+        clFinish(cl->commands); DEBUG;
     }
         
 };
 
-class MolecularWorldOCL{ public:
-
-
-    void prepareBuffers( const MMFF& mmff ){
-        //natoms=0, nbonds=0, nang=0, ntors=0;
-        //Vec2i  * bond2atom = NULL;
-        //double * bond_0    = NULL;  // [A]
-        //double * bond_k    = NULL;  // [eV/A] ?
-        //Vec2i  * ang2bond  = NULL;
-        //Vec3i  * ang2atom  = NULL;
-        //Vec2d  * ang_0     = NULL; // [1]
-        //double * ang_k     = NULL; // [eV/A^2]
-        //Vec3i  * tors2bond = NULL;
-        //Quat4i * tors2atom = NULL;
-        //Vec2d  * tors_0    = NULL; // [1]
-        //double * tors_k    = NULL; // [eV/A^2]
-    
-        //cl.init();
-        /*
-        cl.newBuffer( "molecule",   nAtoms*8,       sizeof(float), (float*)molecule,  CL_MEM_READ_ONLY );
-        cl.newBuffer( "pos",        nMols*8,        sizeof(float), (float*)pos,       CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
-        cl.newBuffer( "force",      nMols*8,        sizeof(float), (float*)force,     CL_MEM_READ_WRITE );
-        cl.newBuffer( "atomsT",     nAtoms*nMols*4, sizeof(float), (float*)atomsT_,   CL_MEM_READ_WRITE );
-        */
-    }
-    
-};
 
 #endif

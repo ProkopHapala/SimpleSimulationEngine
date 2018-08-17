@@ -7,6 +7,9 @@
 #include "OCLerrors.h"
 #include "OCL_device_picker.h"
 
+struct float8 { float x,y,z,w,hx,hy,hz,hw; };
+struct int2   { int x,y; };
+
 class OCLBuffer{
     public:
     void       * p_cpu = NULL;
@@ -34,7 +37,10 @@ class OCLBuffer{
     inline int initOnGPUImage( cl_context& context ){
         int err;
         //p_gpu = clCreateBuffer(context, flags, typesize * n, NULL,  &err);
-        p_gpu = clCreateImage2D(context, flags, &imageFormat, nImg[0],nImg[1], 0, p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
+        switch(img_dims){
+            case 2: p_gpu = clCreateImage2D(context, flags, &imageFormat, nImg[0],nImg[1],          0,    p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
+            case 3: p_gpu = clCreateImage3D(context, flags, &imageFormat, nImg[0],nImg[1], nImg[2], 0, 0, p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
+        }
         return err;
     }
 
@@ -101,7 +107,19 @@ class OCLsystem{
         int err=buffers[i].initOnGPUImage(context); OCL_checkError(err, "initOnGPUImage");
         return i;
     }
-
+    
+    int newBufferImage3D( char* name, size_t nx, size_t ny, size_t nz, size_t typesize, void * p_cpu, cl_mem_flags flags, cl_image_format imageFormat ){
+        check_contextSet();
+        buffers.push_back( OCLBuffer( name, nx*ny, typesize, p_cpu, flags ) );
+        int i=buffers.size()-1;
+        buffers[i].img_dims    = 3;
+        buffers[i].nImg[0]     = nx;
+        buffers[i].nImg[1]     = ny;
+        buffers[i].nImg[2]     = nz;
+        buffers[i].imageFormat = imageFormat;
+        int err=buffers[i].initOnGPUImage(context); OCL_checkError(err, "initOnGPUImage");
+        return i;
+    }
 
     int initBuffers   (){ int err = CL_SUCCESS; for(int i=0; i<buffers.size(); i++){  err |= buffers[i].initOnGPU ( context );     }; return err; }
     //int releaseBuffers(){ for(int i=0; i<buffers; i++){ clReleaseMemObject(buffers[i].p_gpu); } }
