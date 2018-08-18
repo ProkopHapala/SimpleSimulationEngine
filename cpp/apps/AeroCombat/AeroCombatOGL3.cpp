@@ -83,6 +83,7 @@ DEBUG_VIEW_DEFINE()
 
 #include "TerrainOGL3.h"
 
+#include "SDL_utils.h"
 #include "IO_utils.h"
 
 
@@ -408,12 +409,31 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     terrain1.derivScale = 0.002;
     */
 
-    terrain2.init( {200,1000}, 1000.0,  {imgW, imgH},  ground_f, 10.0, false  );
+
+    // === CR MAP FROM http://srtm.csi.cgiar.org/SELECTION/inputCoord.asp
+    // see https://gamedev.stackexchange.com/questions/162830/how-to-extract-terrain-heightmap-from-some-free-online-map-openstreetmap-google
+    Vec2i imgSz;
+    int nbpix;
+    float * ground_f_ = loadDataImageFloat( "/home/prokop/Dropbox/gitData/SimpleSimulationEngine/srtm_CR.bmp", 1.0, imgSz, nbpix );
+
+
+    //terrain2.init( {200,1000}, 1000.0,  {imgW, imgH},  ground_f, 10.0, false  );
+    terrain2.init( {200,1000}, 1000.0,  imgSz,  ground_f_, 10.0, false  );
     terrain2.mapScale.z = 450.0;
     terrain2.mapScale.y = 0.00005;
     terrain2.mapScale.x = 0.00005;
     terrain2.derivScale = 0.002;
-    terrain2.txStep = (Vec2f){ 1.0/imgW, 1.0/imgH };
+    //terrain2.txStep = (Vec2f){ 1.0/imgW, 1.0/imgH };
+    terrain2.txStep = (Vec2f){ 1.0/imgSz.x, 1.0/imgSz.y };
+
+
+    /*
+    int txCR = makeTexture( "/home/prokop/Dropbox/gitData/SimpleSimulationEngine/srtm_CR.bmp" );
+    terrain2.txHeight  = txCR;
+    //terrain2.nHeighs   = {8456,4816};
+    terrain2.txStep    = (Vec2f){ 1.0/8456, 1.0/4816 };
+    */
+
 
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);

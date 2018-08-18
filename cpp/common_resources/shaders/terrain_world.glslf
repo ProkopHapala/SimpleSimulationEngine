@@ -51,14 +51,15 @@ void main(){
 	vec3 R = reflect( l,n);
 	float cosAlpha = clamp( dot( E,R ), 0.0,1.0 );
 	
-	//color = ambientColor*(1+0.5*fract(world_pos.y*1.0) ) + lightColor*( diffuseColor*cosTheta  +  specularColor*pow(cosAlpha,16.0) );
+	color = ambientColor*(1+0.5*fract(world_pos.y*1.0) ) + lightColor*( diffuseColor*cosTheta  +  specularColor*pow(cosAlpha,16.0) );
 	
 	//color = sin(world_pos*1.0);
-	color = vec3( sin(world_pos.y*1.0) , log( world_pos.y)-2,  log( world_pos.y)-3 );
+	//color = vec3( sin(world_pos.y*1.0) , log( world_pos.y)-2,  log( world_pos.y)-3 );
+	
+	//color    = world_nor * 10.0;  color.y  = 0.0;  color   += vec3(0.5);
 	
 	//color = world_nor;
 	
-
 	//gl_FragDepth = -dist;
 	//gl_FragDepth = gl_FragCoord.z;
 }

@@ -5,6 +5,35 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+
+
+
+float* loadDataImageFloat( char * fname, float hsc, Vec2i& sz, int& BytesPerPixel ){
+    //SDL_Surface * surf = IMG_Load( fname );
+    SDL_Surface * surf = SDL_LoadBMP( fname );
+    if ( surf ){
+        sz            = {surf->w,surf->h};
+        BytesPerPixel = surf->format->BytesPerPixel;
+        int ntot      = sz.x * sz.y * BytesPerPixel ;
+        float * ret   = new float[ntot];
+        float renorm  = hsc / 256.0;
+        for(int i=0; i<ntot; i++){
+            ret[i] = renorm * ((uint8_t*)surf->pixels)[i];
+        }
+        SDL_FreeSurface( surf );
+        return ret;
+    }else{ printf( "cannot load %s\n", fname  ); }
+    return 0;
+};
+
+
+
+
+
+
+
+
+
 GLuint makeTexture( char * fname ){
 
     //SDL_Surface * surf = IMG_Load( fname );

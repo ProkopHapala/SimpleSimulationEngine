@@ -83,6 +83,11 @@ int heightTextureFromHxy_byte( int nx, int ny, float* height_map, float hsc ){
     }
     GLuint txHeight = 0;
     newTexture2D( txHeight, nx, ny, hxy, GL_RGB, GL_UNSIGNED_BYTE );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+
+
     delete [] hxy;
     return txHeight;
 }
