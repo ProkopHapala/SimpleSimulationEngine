@@ -666,19 +666,35 @@ using Quat4f = Quat4TYPE< float>;
 using Quat4d = Quat4TYPE< double >;
 
 static constexpr Quat4i Quat4iZero = (Quat4i){0,0,0,0};
-static constexpr Quat4i Quat4iOne  = (Quat4i){1,1,1,1};
+static constexpr Quat4i Quat4iOnes = (Quat4i){1,1,1,1};
 
 static constexpr Quat4d Quat4dZero = (Quat4d){0.0d,0.0d,0.0d,0.0d};
-static constexpr Quat4d Quat4dOne  = (Quat4d){0.0d,0.0d,0.0d,1.0d};
+static constexpr Quat4d Quat4dOnes = (Quat4d){0.0d,0.0d,0.0d,1.0d};
 //static constexpr Quat4d Quat4dX    = (Quat4d){1.0d,0.0d,0.0d,0.0d};
 //static constexpr Quat4d Quat4dY    = (Quat4d){0.0d,1.0d,0.0d,0.0d};
 //static constexpr Quat4d Quat4dZ    = (Quat4d){0.0d,0.0d,1.0d,0.0d};
 
 static constexpr Quat4f Quat4fZero = (Quat4f){0.0f,0.0f,0.0f,0.0d};
-static constexpr Quat4f Quat4fOne  = (Quat4f){0.0f,0.0f,0.0f,1.0d};
+static constexpr Quat4f Quat4fOnes = (Quat4f){0.0f,0.0f,0.0f,1.0d};
 //static constexpr Quat4f Quat4fX   = (Quat4f){1.0f,0.0f,0.0f,0.0d};
 //static constexpr Quat4f Quat4fY   = (Quat4f){0.0f,1.0f,0.0f,0.0d};
 //static constexpr Quat4f Quat4fZ   = (Quat4f){0.0f,0.0f,1.0f,0.0d};
+
+
+
+// default quaternion poses
+// http://www.euclideanspace.com/maths/geometry/rotations/conversions/eulerToQuaternion/steps/index.htm
+// https://www.quantstart.com/articles/Mathematical-Constants-in-C
+/*
+static constexpr Quat4d Quat4dIdentity = (Quat4d){0.0d,0.0d,0.0d,0.0d};
+static constexpr Quat4d Quat4dY90      = (Quat4d){0.0d,M_SQRT1_2,0.0d,M_SQRT1_2};
+static constexpr Quat4d Quat4dY180     = (Quat4d){0.0d,1.0,0.0d,0.0};
+static constexpr Quat4d Quat4dY270     = (Quat4d){0.0d,-M_SQRT1_2,0.0d,M_SQRT1_2};
+static constexpr Quat4d Quat4dY1       = (Quat4d){0.0d,M_SQRT1_2,0.0d,M_SQRT1_2};
+*/
+
+
+
 
 
 inline void convert( const Quat4f& from, Quat4d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z;        to.w=from.w;        };
