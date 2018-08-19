@@ -8,13 +8,14 @@
 
 
 
-float* loadDataImageFloat( char * fname, float hsc, Vec2i& sz, int& BytesPerPixel ){
+float* loadDataImageFloat( char * fname, float hsc, int& nx, int& ny, int& BytesPerPixel ){
     //SDL_Surface * surf = IMG_Load( fname );
     SDL_Surface * surf = SDL_LoadBMP( fname );
     if ( surf ){
-        sz            = {surf->w,surf->h};
+        nx = surf->w;
+        ny = surf->h;
         BytesPerPixel = surf->format->BytesPerPixel;
-        int ntot      = sz.x * sz.y * BytesPerPixel ;
+        int ntot      = nx * ny * BytesPerPixel ;
         float * ret   = new float[ntot];
         float renorm  = hsc / 256.0;
         for(int i=0; i<ntot; i++){

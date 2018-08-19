@@ -414,7 +414,7 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     // see https://gamedev.stackexchange.com/questions/162830/how-to-extract-terrain-heightmap-from-some-free-online-map-openstreetmap-google
     Vec2i imgSz;
     int nbpix;
-    float * ground_f_ = loadDataImageFloat( "/home/prokop/Dropbox/gitData/SimpleSimulationEngine/srtm_CR.bmp", 1.0, imgSz, nbpix );
+    float * ground_f_ = loadDataImageFloat( "/home/prokop/Dropbox/gitData/SimpleSimulationEngine/srtm_CR.bmp", 1.0, imgSz.x, imgSz.y, nbpix );
 
 
     //terrain2.init( {200,1000}, 1000.0,  {imgW, imgH},  ground_f, 10.0, false  );

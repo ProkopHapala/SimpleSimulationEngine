@@ -37,16 +37,46 @@
 
 char* work_dir = 0;
 
+int camType = 2;
+
 FlightWorld* world = 0;
 std::vector<AeroSurfaceDebugRecord> dbgRects;
 char str[2<<16];
 
+void drawBurst( Burst3d& burst, int nseg, float shotSz, bool bBox, double dt ){
+    glColor3f(1.0,1.0,0.0);
+    int n = burst.shots.size();
+    Vec3d op;
+    for(int i=0; i<n; i++){
+        Draw3D::drawPointCross( burst.shots[i].pos, shotSz );
+        //if( tmpPos ) Draw3D::drawLine( tmpPos[i], burst.shots[i].pos );
+        burst.shots[i].getOldPos(dt,op);
+        Draw3D::drawLine( op, burst.shots[i].pos );
+    }
+    //if( tmpPos ){ glColor3f(1.0,1.0,0.0); Draw3D::drawPointCross( tmpPos[n-1], 0.5 ); }
+    if(bBox){
+        burst.shots[0].getOldPos(dt,op);
+        glColor3f(1.0,1.0,0.0); Draw3D::drawPointCross( op, 0.5 );
+        glColor3f(0.0,1.0,1.0); Draw3D::drawPointCross( burst.shots[0].pos, 0.5 );
+        glColor3f(0.0,0.5,0.0);
+        Vec3d b = burst.bbox.p+burst.bbox.hdir*burst.bbox.l;
+        Draw3D::drawPointCross( burst.bbox.p, 3.0 );
+        Draw3D::drawPointCross( b           , 3.0 );
+        Draw3D::drawCylinderStrip_wire( nseg, burst.bbox.r, burst.bbox.r, (Vec3f)burst.bbox.p, (Vec3f)b );
+    }
+}
+
+
 class AppFlightView : public AppSDL2OGL_3D { public:
 
     int fontTex   = 0;
+    int txGround  = 0;
     int gloTarget = 0;
     AeroCraft *myCraft = 0;
     //GUI gui;
+
+
+
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -82,8 +112,33 @@ AppFlightView::AppFlightView( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     fontTex = makeTextureHard( str );
     //GUI_fontTex = fontTex;
 
+    int imgW=1024,imgH=1024;
+    uint8_t* pixels = new uint8_t[imgH*imgW*4];
+    for(int iy=0; iy<imgH; iy++){ for(int ix=0; ix<imgW; ix++){
+        int i = (iy*imgW+ix)*4;
+        pixels[i+0] = ix ^ iy;
+        pixels[i+1] = 128;
+        pixels[i+2] = ix ^ iy;
+        pixels[i+3] = 255;
+    } }
+
+    glEnable(GL_TEXTURE_2D);
+    glActiveTexture(GL_TEXTURE0);
+    glGenTextures  ( 1, (GLuint*)&txGround  );
+    glBindTexture  ( GL_TEXTURE_2D, txGround  );
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_R, imgW, imgH, 0,  GL_R, GL_UNSIGNED_BYTE, pixels );
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgW, imgH, 0,  GL_RGBA, GL_UNSIGNED_BYTE, pixels );
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    //glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glDisable(GL_TEXTURE_2D);
+    delete [] pixels;
+
     zoom = 30.0;
-    VIEW_DEPTH = 10000;
+    VIEW_DEPTH = 50000;
 };
 
 void AppFlightView::draw(  ) {
@@ -100,24 +155,58 @@ void AppFlightView::draw(  ) {
     //AeroCraft* craft = &world->craft1;
 
     //camera_FPS ( craft->pos, craft->rotMat );
-    qCamera.toMatrix( cam.rot );
-    cam.pos = (Vec3f)myCraft->pos;
-    camera_FwUp( myCraft->pos, (Vec3d)cam.rot.c, {0.0,1.0,0.0}, false );
+
+    /*
+    switch( camType ){
+        case 1:
+            qCamera.toMatrix( cam.rot );
+            cam.pos = (Vec3f)myCraft->pos;
+            camera_FwUp( myCraft->pos, (Vec3d)cam.rot.c, {0.0,1.0,0.0}, false );
+            break;
+        case 2:
+            camera_FPS( myCraft->pos, myCraft->rotMat );
+            break;
+    }
+    */
+
+    int mx,my; Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
+    //printf( " %i %i \n", mx,my );
+    if ( buttons & SDL_BUTTON(SDL_BUTTON_RIGHT) ) {
+        Quat4f q; q.fromTrackball( 0, 0, -mx*mouseRotSpeed, my*mouseRotSpeed );
+        qCamera.qmul_T( q );
+        qCamera.toMatrix( cam.rot );
+        cam.pos = (Vec3f)myCraft->pos;
+        camera_FwUp( myCraft->pos, (Vec3d)cam.rot.c, {0.0,1.0,0.0}, false );
+    }else{
+        camera_FPS( myCraft->pos, myCraft->rotMat );
+        qCamera.fromMatrix( (Mat3f)myCraft->rotMat );
+    }
+
+
     glMatrixMode(GL_MODELVIEW); glLoadIdentity();
 
-    Draw3D::drawMatInPos( Mat3dIdentity*30.0, myCraft->pos );
+    //Draw3D::drawMatInPos( Mat3dIdentity*30.0, myCraft->pos );
 
     renderAeroCraft       ( *myCraft, true, 1.0 );
-    renderAeroCraftVectors( *myCraft, 0.01, 1.0, true );
+    //renderAeroCraftVectors( *myCraft, 0.01, 1.0, true );
 
     glColor3f( 0.5, 0.7, 0.5 );
-    Draw3D::drawPanel( Vec3dZero, Mat3dIdentity, {5000.0,5000.0} ); // ground
+    glEnable     ( GL_TEXTURE_2D );
+    glBindTexture( GL_TEXTURE_2D, txGround );
+    Draw3D::drawPanel( Vec3dZero, Mat3dIdentity, {50000.0,50000.0} ); // ground
+    glDisable    ( GL_TEXTURE_2D );
 
     //printf("nTargets %i \n", world->nTargets);
     glColor3d(0.0,0.0,0.0);
     for(int i=0; i<world->nTargets; i++ ){
         //printf("%i (%g,%g,%g) %g \n", i, world->targets[i].p.x, world->targets[i].p.y, world->targets[i].p.z, world->targets[i].r );
         Draw3D::drawShape( world->targets[i].p, Mat3dIdentity*world->targets[i].r, gloTarget, false );
+    }
+
+    //glEnable(GL_BLEND);
+    for(Burst3d& burst : world->bursts){
+        //drawBurst( burst, 8, 1.0, true, world->dt );
+        drawBurst( burst, 8, 1.0, false, world->dt );
     }
 
 };
@@ -152,6 +241,19 @@ void AppFlightView::writeAeroCraftStateHUD(){
     s+=sprintf(s,"pos  (%g,%g,%g) \n", pos .x, pos .y, pos .z  );
     s+=sprintf(s,"vel  (%g,%g,%g) \n", vel .x, vel .y, vel .z  );
     s+=sprintf(s,"vdir (%g,%g,%g) \n", vdir.x, vdir.y, vdir.z );
+
+    s+=sprintf(s,"--- control --- \n", vdir.x, vdir.y, vdir.z );
+    s+=sprintf(s,"pitch    %g \n", world->controlsState[iPitch].x );
+    s+=sprintf(s,"yaw      %g \n", world->controlsState[iYaw  ].x );
+    s+=sprintf(s,"roll     %g \n", world->controlsState[iRoll ].x );
+    s+=sprintf(s,"throttle %g \n", world->controlsState[iThrottle ].x );
+
+    //s+=sprintf(s,"--- Pro --- \n", vdir.x, vdir.y, vdir.z );
+    int nprj=0;
+    for(Burst3d& burst : world->bursts){ nprj += burst.shots.size(); };
+    s+=sprintf(s," N burst       %i \n",  world->bursts.size() );
+    s+=sprintf(s," N projectiles %i \n", nprj );
+
     //s+=sprintf(s,"vdir (%g,%g,%g) \n", vdir.x, vdir.y, vdir.z );
     glPushMatrix();
     glColor4f(1.0f,1.0f,1.0f,0.9f);

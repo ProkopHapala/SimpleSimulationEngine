@@ -112,11 +112,16 @@ class Burst3d { public:
         int n = shots.size();
         //Vec3d tmpPos[n];
         double balisticCoef = airDensity * type->balisticCoef;
+        //printf( "balisticCoef %g \n", balisticCoef );
         // TODO : we can calculate p.vel.norm() and supersonic drag by taylor expansion
         // double rv0 = shots[0].vel.norm();
         for( int i=0; i<n; i++ ){
-            //printf( "shot[%i]\n", i );
+
             Particle3d& p = shots[i];
+            //printf( "shot[%i] p (%g,%g,%g) v (%g,%g,%g)\n", i, p.pos.x, p.pos.y, p.pos.z, p.vel.x, p.vel.y, p.vel.z );
+
+            //if( (p.vel.norm()<100.0) ) printf( "shot[%i] p (%g,%g,%g) v (%g,%g,%g)\n", i, p.pos.x, p.pos.y, p.pos.z, p.vel.x, p.vel.y, p.vel.z );
+
             //tmpPos[i] = p.pos;
             Vec3d accel;
             //accel=accel0;
@@ -126,11 +131,14 @@ class Burst3d { public:
             age+=dt;
         }
         updateBBox( dt ); // we asume shot[0] is most forward, shot[n-1] is least
+
+        //printf( "BBox %g %g %g \n", bbox.p.x, bbox.p.y, bbox.p.z );
         //printf("Burst3d::move DONE\n");
     }
 
     void addShot( const Vec3d& pos, const Vec3d& vel ){
         shots.push_back( (Particle3d){0.0,pos,vel} );
+        //Particle3d& p = shots.back(); printf( "add shot[%i] p (%g,%g,%g) v (%g,%g,%g)\n", shots.size(), p.pos.x, p.pos.y, p.pos.z, p.vel.x, p.vel.y, p.vel.z );
     }
 
     inline void hit( int i){

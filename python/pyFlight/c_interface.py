@@ -67,10 +67,10 @@ def fly( pos, vel, rot, nsub=10, dt=0.01 ):
     lib.fly( n, nsub, dt, pos, vel, rot )
 
 #void flyAndShootTargets( int nsub, double dt, double* controlBuff, double* stateBuff, int* targetShot ){
-lib.flyAndShootTargets.argtypes = [c_int, c_double, array1d, array1d, array1d]
+lib.flyAndShootTargets.argtypes = [c_int, c_double, array1d, array1d, array2d]
 lib.flyAndShootTargets.restype  = None
-def flyAndShootTargets( controlBuff, stateBuff, targetShot, nsub=10, dt=0.01 ):
-    lib.flyAndShootTargets( nsub, dt, controlBuff, stateBuff, targetShot )
+def flyAndShootTargets( controlBuff, stateBuff, targetHits, nsub=10, dt=0.01 ):
+    lib.flyAndShootTargets( nsub, dt, controlBuff, stateBuff, targetHits )
 
 #void setTargets( int nsub, double dt, double* controlBuff, double* stateBuff, int* targetShot ){
 lib.setTargets.argtypes = [c_int, array2d ]

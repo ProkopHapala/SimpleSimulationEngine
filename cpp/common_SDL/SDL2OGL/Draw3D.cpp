@@ -795,10 +795,10 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 	    glBegin  (GL_QUADS);
 		    glNormal3f( rot.b.x, rot.b.y, rot.b.z );
 		    Vec3f p;
-		    p=pos-rot.a*sz.a + rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
-		    p=pos-rot.a*sz.a - rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
-		    p=pos+rot.a*sz.a - rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
-		    p=pos+rot.a*sz.a + rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
+		    glTexCoord2f(0.0,1.0); p=pos-rot.a*sz.a + rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
+		    glTexCoord2f(0.0,0.0); p=pos-rot.a*sz.a - rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
+		    glTexCoord2f(1.0,0.0); p=pos+rot.a*sz.a - rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
+		    glTexCoord2f(1.0,1.0); p=pos+rot.a*sz.a + rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
 	    glEnd();
     };
 

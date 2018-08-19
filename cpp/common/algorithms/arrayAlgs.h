@@ -23,9 +23,14 @@ inline int insertN( int i0, int len, TYPE * x, TYPE * x ){
 
 template< typename T, typename CondFunc >
 inline int prune( int n, T* arr, CondFunc cond ){
+    if(n==1) if( cond( arr[0] ) ) {return 0;} else {return 1; };
     int nlast = n-1;
     for(int i=0; i<nlast; i++){
         if( cond( arr[i] ) ){
+            while( cond( arr[nlast] ) ){
+                nlast--;
+                if( i>=nlast ) return 0;
+            }
             arr[i] = arr[nlast];
             nlast--;
         }

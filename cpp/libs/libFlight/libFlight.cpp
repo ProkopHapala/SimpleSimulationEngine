@@ -24,9 +24,40 @@ extern "C"{
 void* getWorldPointer(){ return &world; };
 
 void loadFromFile( char* fname ){
+
+
+    int nint = 10
+    //int nint = 1
+    , nleft = nint;
+
+    //int arr[nint] = {0,1,2,3,-4,5,-6,7,-8,9,10,11,-12,13};
+    //int arr[nint] = {-1,-2,-3,-4,-5,-6,-7,-8,-9,-10};
+    int arr[nint] = {1,2,-3,-4,5,6,7,8,-9,-10};
+    //int arr[nint] = {-1};
+
+    nleft = prune( nint, arr , [](int i){  return i<0; } );
+    printf( "nint %i nleft %i \n", nint, nleft );
+    for(int i=0; i<nint; i++){ if(i==nleft)printf(" | "); printf( " %i", arr[i] ); } printf("\n");
+    //exit(0);
+
+
     world.craft1   .fromFile(fname);
     world.craft_bak.fromFile(fname);
-    world.shotType.balisticCoef = 1.0;
+
+    world.shotType.mass    = 42e-3;   // kg
+    world.shotType.caliber = 12.7e-3; // m
+    world.shotType.updateAux(0.33);
+    world.shotType.balisticCoef = 0.0;
+    printf( "projectile ballistic coef: %g ", world.shotType.balisticCoef );
+
+
+    world.controlsState[iPitch    ].setLimits( 0.5, -0.2,0.2 );
+    world.controlsState[iYaw      ].setLimits( 0.5, -0.2,0.2 );
+    world.controlsState[iRoll     ].setLimits( 0.5, -0.2,0.2 );
+    world.controlsState[iThrottle ].setLimits( 0.5,  0.0,1.0 );
+    for(int i=0; i<world.nControls; i++) world.controlsState[i].x = 0.0;
+    world.controlsState[iThrottle ].x = 1.0;
+
 }
 
 void setPose( double* pos, double* vel, double* rot ){
@@ -50,6 +81,6 @@ void setTargets( int n, double* targets_){
 
 void setWing( int i, double angle ){ world.setWing( i, angle ); };
 void fly    ( int n, int nsub, double dt, Vec3d* pos, Vec3d* vel, Mat3d* rot ){ world.fly( n, nsub, dt, (Vec3d*)pos, (Vec3d*)vel, (Mat3d*)rot ); };
-void flyAndShootTargets( int nsub, double dt, double* controlBuff, double* stateBuff, int* targetShot ){ world.flyAndShootTargets( nsub, dt, controlBuff, stateBuff, targetShot ); };
+void flyAndShootTargets( int nsub, double dt, double* controlBuff, double* stateBuff, double* targetShot ){ world.flyAndShootTargets( nsub, dt, controlBuff, stateBuff, targetShot ); };
 
 } // extern "C"
