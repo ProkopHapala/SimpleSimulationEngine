@@ -613,9 +613,10 @@ class Quat4TYPE {
 
 	inline TYPE outproject( const QUAT& q ){ TYPE cdot = dot(q); add_mul( q, -cdot ); return cdot; };
 
-	inline void fromMatrix( const VEC& a, const VEC& b, const VEC& c ) { fromMatrix( a.x,  a.y,  a.z,  b.x,  b.y,  b.z,  c.x,  c.y,  c.z  );  }
-	inline void fromMatrix( const MAT& M                             ) { fromMatrix( M.ax, M.ay, M.az, M.bx, M.by, M.bz, M.cx, M.cy, M.cz );  }
-	inline void fromMatrix( TYPE m00, TYPE m01, TYPE m02,    TYPE m10, TYPE m11, TYPE m12,        TYPE m20, TYPE m21, TYPE m22) {
+	inline void fromMatrix ( const VEC& a, const VEC& b, const VEC& c ) { fromMatrix( a.x,  a.y,  a.z,  b.x,  b.y,  b.z,  c.x,  c.y,  c.z  );  }
+	inline void fromMatrix ( const MAT& M                             ) { fromMatrix( M.ax, M.ay, M.az, M.bx, M.by, M.bz, M.cx, M.cy, M.cz );  }
+	inline void fromMatrixT( const MAT& M                             ) { fromMatrix( M.ax, M.bx, M.cx, M.ay, M.by, M.cy, M.az, M.bz, M.cz );  }
+	inline void fromMatrix ( TYPE m00, TYPE m01, TYPE m02,    TYPE m10, TYPE m11, TYPE m12,        TYPE m20, TYPE m21, TYPE m22) {
         // Use the Graphics Gems code, from
         // ftp://ftp.cis.upenn.edu/pub/graphics/shoemake/quatut.ps.Z
         TYPE t = m00 + m11 + m22;
@@ -685,15 +686,46 @@ static constexpr Quat4f Quat4fOnes = (Quat4f){0.0f,0.0f,0.0f,1.0d};
 // default quaternion poses
 // http://www.euclideanspace.com/maths/geometry/rotations/conversions/eulerToQuaternion/steps/index.htm
 // https://www.quantstart.com/articles/Mathematical-Constants-in-C
-/*
-static constexpr Quat4d Quat4dIdentity = (Quat4d){0.0d,0.0d,0.0d,0.0d};
-static constexpr Quat4d Quat4dY90      = (Quat4d){0.0d,M_SQRT1_2,0.0d,M_SQRT1_2};
-static constexpr Quat4d Quat4dY180     = (Quat4d){0.0d,1.0,0.0d,0.0};
-static constexpr Quat4d Quat4dY270     = (Quat4d){0.0d,-M_SQRT1_2,0.0d,M_SQRT1_2};
-static constexpr Quat4d Quat4dY1       = (Quat4d){0.0d,M_SQRT1_2,0.0d,M_SQRT1_2};
-*/
+//qCamera.fromMatrixT( (Mat3f){ -1.0,0.0,0.0,  0.0,0.0, 1.0,  0.0, 1.0,0.0 } );  _Lprint( qCamera, "\nmXZY" );
+//qCamera.fromMatrixT( (Mat3f){  1.0,0.0,0.0,  0.0,0.0,-1.0,  0.0, 1.0,0.0 } );  _Lprint( qCamera, "\nXmZY" );
+//qCamera.fromMatrixT( (Mat3f){  1.0,0.0,0.0,  0.0,0.0, 1.0,  0.0,-1.0,0.0 } );  _Lprint( qCamera, "\nXZmY" );
+//qCamera.fromMatrixT( (Mat3f){ 0.0,-1.0,0.0,   1.0,0.0,0.0,   0.0,0.0, 1.0 } ); _Lprint( qCamera, "\nmYXZ" );
+//qCamera.fromMatrixT( (Mat3f){ 0.0, 1.0,0.0,  -1.0,0.0,0.0,   0.0,0.0, 1.0 } ); _Lprint( qCamera, "\nYmXZ" );
+//qCamera.fromMatrixT( (Mat3f){ 0.0, 1.0,0.0,   1.0,0.0,0.0,   0.0,0.0,-1.0 } ); _Lprint( qCamera, "\nYXmZ" );
+//qCamera.fromMatrixT( (Mat3f){ 0.0,-1.0,0.0,  0.0,0.0, 1.0,   1.0,0.0,0.0  } ); _Lprint( qCamera, "\nmYZX" );
+//qCamera.fromMatrixT( (Mat3f){ 0.0, 1.0,0.0,  0.0,0.0,-1.0,   1.0,0.0,0.0  } ); _Lprint( qCamera, "\nYmZX" );
+//qCamera.fromMatrixT( (Mat3f){ 0.0, 1.0,0.0,  0.0,0.0, 1.0,  -1.0,0.0,0.0  } ); _Lprint( qCamera, "\nYZmX" );
+//qCamera.fromMatrixT( (Mat3f){ 0.0,0.0,-1.0,   0.0, 1.0,0.0,   1.0,0.0,0.0  } ); _Lprint( qCamera, "\nmZYX" );
+//qCamera.fromMatrixT( (Mat3f){ 0.0,0.0, 1.0,   0.0,-1.0,0.0,   1.0,0.0,0.0  } ); _Lprint( qCamera, "\nZmYX" );
+//qCamera.fromMatrixT( (Mat3f){ 0.0,0.0, 1.0,   0.0, 1.0,0.0,  -1.0,0.0,0.0  } ); _Lprint( qCamera, "\nZYmX" );
+//static constexpr Quat4f Quat4fXYZ      = (Quat4f){       0.0,        0.0,       0.0,       1.0 };
+//static constexpr Quat4f Quat4fmXYmZ    = (Quat4f){       0.0,        1.0,       0.0,       0.0 };
+//static constexpr Quat4f Quat4fmXZY     = (Quat4f){       0.0,  M_SQRT1_2, M_SQRT1_2,       0.0 };
+//static constexpr Quat4f Quat4fXmZY     = (Quat4f){-M_SQRT1_2,        0.0,       0.0, M_SQRT1_2 };
+//static constexpr Quat4f Quat4fXZmY     = (Quat4f){ M_SQRT1_2,        0.0,       0.0, M_SQRT1_2 };
+//static constexpr Quat4f Quat4fmZYX     = (Quat4f){       0.0,  M_SQRT1_2,       0.0, M_SQRT1_2 };
+//static constexpr Quat4f Quat4fZmYX     = (Quat4f){ M_SQRT1_2,        1.0, M_SQRT1_2,       0.0 };
+//static constexpr Quat4f Quat4fZYmX     = (Quat4f){       0.0, -M_SQRT1_2,       0.0, M_SQRT1_2 };
+//static constexpr Quat4f Quat4fFront    = Quat4fmXYmZ;
+//static constexpr Quat4f Quat4fBack     = Quat4fXYZ;
+//static constexpr Quat4f Quat4fTop      = Quat4fXmZY;
+//static constexpr Quat4f Quat4fBotton   = Quat4fXZmY;
+//static constexpr Quat4f Quat4fLeft     = Quat4fmZYX;
+//static constexpr Quat4f Quat4fRight    = Quat4fZYmX;
 
+static constexpr Quat4f Quat4fBack     = (Quat4f){       0.0,        0.0,       0.0,       1.0 };
+static constexpr Quat4f Quat4fFront    = (Quat4f){       0.0,        1.0,       0.0,       0.0 };
+static constexpr Quat4f Quat4fTop      = (Quat4f){-M_SQRT1_2,        0.0,       0.0, M_SQRT1_2 };
+static constexpr Quat4f Quat4fBotton   = (Quat4f){ M_SQRT1_2,        0.0,       0.0, M_SQRT1_2 };
+static constexpr Quat4f Quat4fLeft     = (Quat4f){       0.0,  M_SQRT1_2,       0.0, M_SQRT1_2 };
+static constexpr Quat4f Quat4fRight    = (Quat4f){       0.0, -M_SQRT1_2,       0.0, M_SQRT1_2 };
 
+static constexpr Quat4d Quat4dBack     = (Quat4d){       0.0,        0.0,       0.0,       1.0 };
+static constexpr Quat4d Quat4dFront    = (Quat4d){       0.0,        1.0,       0.0,       0.0 };
+static constexpr Quat4d Quat4dTop      = (Quat4d){-M_SQRT1_2,        0.0,       0.0, M_SQRT1_2 };
+static constexpr Quat4d Quat4dBotton   = (Quat4d){ M_SQRT1_2,        0.0,       0.0, M_SQRT1_2 };
+static constexpr Quat4d Quat4dLeft     = (Quat4d){       0.0,  M_SQRT1_2,       0.0, M_SQRT1_2 };
+static constexpr Quat4d Quat4dRight    = (Quat4d){       0.0, -M_SQRT1_2,       0.0, M_SQRT1_2 };
 
 
 

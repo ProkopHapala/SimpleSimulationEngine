@@ -88,6 +88,9 @@ inline int sscan(char* sbuff, Quat4i& v){ int n; sscanf(sbuff, "%i %i %i %i%n", 
 #define _lprint(         tok        ) {         printf(        " %s: ",#tok);          print(      tok); }
 #define _lfprint( fout,  tok        ) {         fprintf( fout,  " %s: ",#tok);        fprint(fout, tok); }
 #define _lsprint( sbuff, tok        ) { sbuff+= sprintf( sbuff, " %s: ",#tok); sbuff+=sprint(sbuff,tok); }
+#define _Lprint(         tok, s     ) {         printf(         " %s: ",s);          print(      tok); }
+#define _Lfprint( fout,  tok, s     ) {         fprintf( fout,  " %s: ",s);        fprint(fout, tok); }
+#define _Lsprint( sbuff, tok, s     ) { sbuff+= sprintf( sbuff, " %s: ",s); sbuff+=sprint(sbuff,tok); }
 //define _lscan  ( sbuff, tok       ) { sbuff+= sprintf( sbuff, " %s: ",#tok); sbuff+=sprint(sbuff,tok); }
 //#define _lsprint_( sbuff, tok, ... ) { _lsprint(sbuff,tok); _lsprint_(sbuff,__VA_OPT__); }
 //#define _lsprint_( sbuff, tok, ... ) { _lsprint(sbuff,tok); _lsprint_(sbuff,__VA_ARGS__); } // C-macros are stupid. non recursive, this would not work

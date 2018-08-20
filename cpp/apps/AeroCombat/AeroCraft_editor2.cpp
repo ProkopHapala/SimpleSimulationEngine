@@ -34,7 +34,7 @@
 //#include "FieldPatch.h"
 #include "Solids.h"
 //#include "AeroCraftWorld.h"
-//#include "AeroCraftEditor.h"
+//#include "AeroCraftEditor2.h"
 
 #include "SDL_utils.h"
 #include "Draw.h"
@@ -51,7 +51,16 @@
 
 #include "AeroCraftDesign.h"
 
+//#include "AeroTester.h"
+
 #include "IO_utils.h"
+
+/*
+
+TODO:
+ - We can easily solve aerodynamics real-time using vortex lattice method
+
+*/
 
 // ===============================
 // ===== GLOBAL CONSTAMNTS
@@ -61,11 +70,20 @@
 // ===== Free Functions
 // ===============================
 
+
+
+
+
+
+
+
+
+
 // ====================================
-//      AeroCraftEditor
+//      AeroCraftEditor2
 // ====================================
 
-class AeroCraftEditor : public AppSDL2OGL_3D { public:
+class AeroCraftEditor2 : public AppSDL2OGL_3D { public:
 
     int      fontTex;
     //GUIPanel   panel;
@@ -75,6 +93,9 @@ class AeroCraftEditor : public AppSDL2OGL_3D { public:
     GUI gui;
 
 	AeroCraftWarrior * myCraft;
+
+	AeroCraftDesign design;
+
 
     const Uint8 *scanKeys;
     Uint32 mouseButtons;
@@ -105,11 +126,11 @@ class AeroCraftEditor : public AppSDL2OGL_3D { public:
 	virtual void keyStateHandling( const Uint8 *keys );
     //virtual void mouseHandling   ( );
 
-	AeroCraftEditor( int& id, int WIDTH_, int HEIGHT_ );
+	AeroCraftEditor2( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-void AeroCraftEditor::draw(){
+void AeroCraftEditor2::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
@@ -120,7 +141,9 @@ void AeroCraftEditor::draw(){
 
     glColor3f(1.0,1.0,1.0);
 
-    renderAeroCraft(*myCraft, false, -1.0 );
+    //renderAeroCraft(*myCraft, false, -1.0 );
+
+    draw_(design);
 
     glDisable(GL_LIGHTING);
 
@@ -158,7 +181,7 @@ void AeroCraftEditor::draw(){
 
 };
 
-void AeroCraftEditor::drawHUD(){
+void AeroCraftEditor2::drawHUD(){
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
 
@@ -189,7 +212,7 @@ void AeroCraftEditor::drawHUD(){
 
 }
 
-AeroCraftEditor:: AeroCraftEditor( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+AeroCraftEditor2:: AeroCraftEditor2( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono.bmp" );
     //fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA.bmp" );
@@ -207,6 +230,69 @@ AeroCraftEditor:: AeroCraftEditor( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2O
 
     txt.inputText = "insert number using =+-*/";
     SDL_StartTextInput ();
+
+    printf( " === AeroCraft Design \n" );
+
+
+    design.wings.resize(3);
+    // main
+    //                          dx, dy, z, chord, twist, profile
+    design.wings[0].symmetric = true;
+    design.wings[0].pos.y = -0.4;
+    design.wings[0].addSection( 0.0, 0.0, 0.3,  1.0, 0.0, 0 );
+    design.wings[0].addSection( 2.5, 0.2, 0.25, 0.8, 0.0, 0 );
+    design.wings[0].addSection( 1.5, 0.4, 0.1,  0.5, 0.0, 0 );
+    // elevator
+    design.wings[1].symmetric = true;
+    design.wings[1].pos.z = -4.0;
+    design.wings[1].addSection( 0.0, 0.0, 0.0, 0.5, 0.0, 0 );
+    design.wings[1].addSection( 1.0, 0.1, 0.0, 0.3, 0.0, 0 );
+    // rudder
+    design.wings[2].pos.z = -4.0;
+    design.wings[2].roll  =  M_PI_2;
+    design.wings[2].addSection( 0.0, 0.0, 0.0, 0.5, 0.0, 0 );
+    design.wings[2].addSection( 1.0, 0.0, 0.0, 0.3, 0.0, 0 );
+
+    design.fuselages.resize(1);
+    design.fuselages[0].addSection( {0.0,0.1,-4.0}, {0.1,0.1},  0.0, 0.0,  0.0 );
+
+    //design.fuselages[0].addSection( {0.0,0.1,-3.0}, {0.2,0.25}, 0.0, 0.0,  0.0 );
+    //design.fuselages[0].addSection( {0.0,0.1,-0.5}, {0.4,0.5},  0.0, 0.0,  0.0 );
+
+    design.fuselages[0].addSection( {0.0,0.1,-3.0}, {0.2,0.25}, 0.0, 0.0,  -0.5 );
+    design.fuselages[0].addSection( {0.0,0.1,-0.55}, {0.4,0.55},  0.0, 0.0,  -0.5 );
+
+    //design.fuselages[0].addSection( {0.0,0.0,-0.0}, {0.6,0.6}, -0.3,-0.3,  0.2 );
+    //design.fuselages[0].addSection( {0.0,0.0, 1.5}, {0.6,0.6}, -0.3,-0.3,  0.2 );
+
+    design.fuselages[0].addSection( {0.0,0.0,-0.0}, {0.5,0.5},  0.0, 0.0,  0.0 );
+    design.fuselages[0].addSection( {0.0,0.0, 1.5}, {0.5,0.5},  0.0, 0.0,  0.0 );
+    design.fuselages[0].addSection( {0.0,0.0, 2.0}, {0.1,0.1},  0.0, 0.0,  0.0 );
+
+    design.guns.resize(4);
+    design.guns[0].set( (Vec3d){ 2.0,0.0,-0.5},   ((Vec3d){0.0,0.0,1.0})*1.8, 0, (Vec2i){48,5} );
+    design.guns[1].set( (Vec3d){-2.0,0.0,-0.5},   ((Vec3d){0.0,0.0,1.0})*1.8, 0, (Vec2i){48,5} );
+    design.guns[2].set( (Vec3d){ 0.3,0.4,+0.5}, ((Vec3d){0.0,0.0,1.0})*1.8, 0, (Vec2i){48,5} );
+    design.guns[3].set( (Vec3d){-0.3,0.4,+0.5}, ((Vec3d){0.0,0.0,1.0})*1.8, 0, (Vec2i){48,5} );
+
+
+
+    float lightPos [] = { -1.0f, -1.0f, 1.0f, 0.0f  };
+    //float ambient  [] = { 0.1f, 0.15f, 0.25f, 1.0f };
+	float diffuse  [] = { 0.5f, 0.5f,  0.7f,  1.0f };
+	float specular [] = { 1.0f, 1.0f,  1.0f,  1.0f };
+	float black    [] = { 0.0f, 0.0f,  0.0f,  0.0f };
+	//float shininess[] = { 80.0f                    };
+
+	// second light
+	glLightfv    ( GL_LIGHT1, GL_POSITION,  lightPos );
+	glLightfv    ( GL_LIGHT1, GL_DIFFUSE,   diffuse  );
+	glLightfv    ( GL_LIGHT1, GL_AMBIENT,   black  );
+	glLightfv    ( GL_LIGHT0, GL_AMBIENT,   black  );
+	glLightfv    ( GL_LIGHT1, GL_SPECULAR,  specular );
+	//glLightfv    ( GL_LIGHT1, GL_AMBIENT,  ambient  );
+    glEnable     ( GL_LIGHT1           );
+
 
     printf( " === aerocraft \n" );
 
@@ -291,7 +377,7 @@ AeroCraftEditor:: AeroCraftEditor( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2O
 
 };
 
-void AeroCraftEditor:: eventHandling   ( const SDL_Event& event  ){
+void AeroCraftEditor2:: eventHandling   ( const SDL_Event& event  ){
 
     switch( event.type ){
         case SDL_KEYDOWN :
@@ -327,7 +413,7 @@ void AeroCraftEditor:: eventHandling   ( const SDL_Event& event  ){
 
 };
 
-void AeroCraftEditor:: keyStateHandling( const Uint8 *keys ){
+void AeroCraftEditor2:: keyStateHandling( const Uint8 *keys ){
     scanKeys = keys;
     double dpitch = 0.005;
     if      ( keys[ SDL_SCANCODE_W ] ){ AoA+=dpitch;   }
@@ -337,7 +423,7 @@ void AeroCraftEditor:: keyStateHandling( const Uint8 *keys ){
     AppSDL2OGL_3D::keyStateHandling( keys );
 };
 
-AeroCraftEditor * thisApp;
+AeroCraftEditor2 * thisApp;
 
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
@@ -346,7 +432,7 @@ int main(int argc, char *argv[]){
 	SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
 	int junk;
-	thisApp = new AeroCraftEditor( junk , dm.w-150, dm.h-100 );
+	thisApp = new AeroCraftEditor2( junk , dm.w-150, dm.h-100 );
 	SDL_SetWindowPosition(thisApp->window, 100, 0 );
 	thisApp->loop( 1000000 );
 	return 0;

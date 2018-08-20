@@ -52,21 +52,30 @@ void ScreenSDL2OGL::updateMousePos ( int x, int y ){
 // ============== initialization
 
 void ScreenSDL2OGL::setupRenderer(){
+    //float white    [] = { 1.0f, 1.0f,  1.0f,  1.0f };
 	float ambient  [] = { 0.1f, 0.15f, 0.25f, 1.0f };
 	float diffuse  [] = { 0.9f, 0.8f,  0.7f,  1.0f };
 	float specular [] = { 1.0f, 1.0f,  1.0f,  1.0f };
 	float shininess[] = { 80.0f                    };
-	float lightPos [] = { 1.0f, 1.0f, +1.0f, 0.0f  };
-	glMaterialfv ( GL_FRONT_AND_BACK, GL_AMBIENT,   ambient);
-	glMaterialfv ( GL_FRONT_AND_BACK, GL_DIFFUSE,   diffuse);
+	float lightPos [] = { 1.0f, -1.0f, 1.0f, 0.0f  };
+
+	//glMaterialfv ( GL_FRONT_AND_BACK, GL_AMBIENT,   ambient);
+	//glMaterialfv ( GL_FRONT_AND_BACK, GL_DIFFUSE,   diffuse);
 	glMaterialfv ( GL_FRONT_AND_BACK, GL_SPECULAR,  specular);
 	glMaterialfv ( GL_FRONT_AND_BACK, GL_SHININESS, shininess);
+
 	glEnable     ( GL_COLOR_MATERIAL    );
-	glLightfv    ( GL_LIGHT0, GL_POSITION, lightPos );
-	glLightfv    ( GL_LIGHT0, GL_AMBIENT,  ambient  );
+	glLightfv    ( GL_LIGHT0, GL_POSITION,  lightPos );
+	glLightfv    ( GL_LIGHT0, GL_DIFFUSE,   diffuse  );
+	glLightfv    ( GL_LIGHT0, GL_AMBIENT,   ambient  );
+	glLightfv    ( GL_LIGHT0, GL_SPECULAR,  specular );
+	//glLightfv    ( GL_LIGHT0, GL_AMBIENT,  ambient  );
 	glEnable     ( GL_LIGHTING         );
 	glEnable     ( GL_LIGHT0           );
 	glEnable     ( GL_NORMALIZE        );
+
+	glLightModeli( GL_LIGHT_MODEL_TWO_SIDE, 1 );
+
 	glEnable     ( GL_DEPTH_TEST       );
 	glHint       ( GL_LINE_SMOOTH_HINT, GL_NICEST );
 	glShadeModel ( GL_SMOOTH           );

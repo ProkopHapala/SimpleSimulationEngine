@@ -165,14 +165,17 @@ using Vec2f = Vec2TYPE<float>;
 using Vec2d = Vec2TYPE<double>;
 
 static constexpr Vec2d Vec2dZero = (Vec2d){0.0d,0.0d};
+static constexpr Vec2d Vec2dOnes = (Vec2d){1.0d,1.0d};
 static constexpr Vec2d Vec2dX    = (Vec2d){1.0d,0.0d};
 static constexpr Vec2d Vec2dY    = (Vec2d){0.0d,1.0d};
 
 static constexpr Vec2f Vec2fZero = (Vec2f){0.0f,0.0f};
+static constexpr Vec2f Vec2fOnes = (Vec2f){1.0f,1.0f};
 static constexpr Vec2f Vec2fX    = (Vec2f){1.0f,0.0f};
 static constexpr Vec2f Vec2fY    = (Vec2f){0.0f,1.0f};
 
 static constexpr Vec2i Vec2iZero = (Vec2i){0,0};
+static constexpr Vec2i Vec2iOnes = (Vec2i){1,1};
 static constexpr Vec2i Vec2iX    = (Vec2i){1,0};
 static constexpr Vec2i Vec2iY    = (Vec2i){0,1};
 
