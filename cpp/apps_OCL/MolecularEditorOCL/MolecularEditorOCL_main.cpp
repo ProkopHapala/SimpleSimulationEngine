@@ -274,6 +274,8 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     //builder.insertMolecule( &mol, {0.0,4.0,4.0}, rot, true );
     //builder.insertMolecule( &mol, {4.0,4.0,4.0}, rot, true );
 
+    clworld.addMolType( mol );
+
     mol.loadXYZ( "inputs/NaIon.xyz" ); mol.printAtomInfo();
     params.assignREs( mol.natoms, mol.atomType, mol.REQs );
     builder.insertMolecule( &mol, {4.0,6.0,5.0}, rot, false );
@@ -325,9 +327,40 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     
     DEBUG
     
+    int nMols    = 2;
+    int nSystems = 5;
     
+    //clworld.prepareBuffers( nSystems, nMols, world.gridFF.grid.n, world.gridFF.FFPauli_f, world.gridFF.FFLondon_f, world.gridFF.FFelec_f );
+    clworld.prepareBuffers( nSystems, nMols, world.gridFF );
     
+    DEBUG
     
+    int i=0;
+    for(int isys=0; isys<nSystems; isys++){
+        for(int imol=0; imol<nMols; imol++){
+            clworld.mol2atoms[i].x = 0;  // molecule type 0 - watter
+            clworld.mol2atoms[i].y = 3;  // 3 atoms per molecule 
+            ( (Vec3f* )&clworld.poses[i].x  )->set( randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0) );
+            //( (Quat4f*)&clworld.poses[i].hx )->setOne();
+            ( (Quat4f*)&clworld.poses[i].hx )->setRandomRotation();
+        }
+    }
+    
+    DEBUG
+    
+    clworld.upload_mol2atoms();  DEBUG
+    clworld.upload_poses();      DEBUG  // PO SEM DOBRE
+    clworld.setupKernel( world.gridFF.grid, world.gridFF.alpha ); 
+    clworld.task_getForceRigidSystemSurfGrid->enque();  DEBUG
+    clworld.download_poses();    DEBUG
+    clworld.download_fposes();   DEBUG
+    clFinish(cl->commands);      DEBUG;
+
+
+
+
+
+
     
     manipulator.bindAtoms(world.natoms, world.apos, world.aforce ); 
     manipulator.realloc(1);                                        

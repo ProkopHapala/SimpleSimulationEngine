@@ -41,9 +41,14 @@ class RigidMolecularWorldOCL{ public:
     float8 * poses        = 0;
     float8 * fposes       = 0; 
     
-    cl_mem img_FFPauli;   //  = -1;
-    cl_mem img_FFLondon;  //  = -1;
-    cl_mem img_FFelec;    //  = -1;
+    //cl_mem img_FFPauli;   //  = -1;
+    //cl_mem img_FFLondon;  //  = -1;
+    //cl_mem img_FFelec;    //  = -1;
+    
+    int id_FFPauli;   //  = -1;
+    int id_FFLondon;  //  = -1;
+    int id_FFelec;    //  = -1;
+    
     int id_mol2atoms    = -1;
     int id_atomsInTypes = -1;
     int id_poses        = -1;
@@ -88,11 +93,26 @@ class RigidMolecularWorldOCL{ public:
         id_fposes       = cl->newBuffer( "fposes",       nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
       
         cl_image_format imgFormat = (cl_image_format){CL_RGBA,CL_FLOAT};
-        img_FFPauli  = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFpauli,  &err ); OCL_checkError(err, "clCreateImage3D img_FFPauli" );
-        img_FFLondon = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFlondon, &err ); OCL_checkError(err, "clCreateImage3D img_FFLondon");
-        img_FFelec   = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFelec,   &err ); OCL_checkError(err, "clCreateImage3D img_FFelec"  );
+        //img_FFPauli  = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFpauli,  &err ); OCL_checkError(err, "clCreateImage3D img_FFPauli" );
+        //img_FFLondon = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFlondon, &err ); OCL_checkError(err, "clCreateImage3D img_FFLondon");
+        //img_FFelec   = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFelec,   &err ); OCL_checkError(err, "clCreateImage3D img_FFelec"  );
+    
+        id_FFPauli  = cl->newBufferImage3D( "FFPauli",  nGrid.x, nGrid.y, nGrid.z, sizeof(float), FFpauli,  CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RG, CL_FLOAT} );
+        id_FFLondon = cl->newBufferImage3D( "FFLondon", nGrid.x, nGrid.y, nGrid.z, sizeof(float), FFlondon, CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RG, CL_FLOAT} );
+        id_FFelec   = cl->newBufferImage3D( "FFelec",   nGrid.x, nGrid.y, nGrid.z, sizeof(float), FFelec,   CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RG, CL_FLOAT} );
+        
+        printf( " id_FFPauli, id_FFLondon, id_FFelec %i %i %i  | sizeof(cl_mem) %i \n ", id_FFPauli, id_FFLondon, id_FFelec , sizeof(cl_mem) );
     
     }
+    
+    void prepareBuffers( int nSystems_, int nMols_, GridFF& gridFF ){
+        prepareBuffers( nSystems_, nMols_, gridFF.grid.n, (float*)gridFF.FFPauli_f, (float*)gridFF.FFLondon_f, (float*)gridFF.FFelec_f );
+    }
+    
+    void upload_mol2atoms(){ cl->upload  ( id_mol2atoms,  mol2atoms ); }
+    void upload_poses    (){ cl->upload  ( id_poses,      poses     ); }
+    void download_poses  (){ cl->download( id_poses,      poses     ); }
+    void download_fposes (){ cl->download( id_fposes,     fposes    ); }
     
     void setupKernel( GridShape& grid, float alpha_ ){        
         //__kernel void getForceRigidSystemSurfGrid(
@@ -110,16 +130,24 @@ class RigidMolecularWorldOCL{ public:
         //    int nSystems,
         //    int nMols, // nMols should be approx local size
         //    float alpha
-        task_getForceRigidSystemSurfGrid->global[0] = nSystems; 
+        
+        task_getForceRigidSystemSurfGrid->dim       = 1;
+        task_getForceRigidSystemSurfGrid->local [0] = 32;
+        task_getForceRigidSystemSurfGrid->global[0] = nSystems* task_getForceRigidSystemSurfGrid->local[0]; 
         //pos0.setXYZ( (Vec3f)grid.pos0    );
         dA  .setXYZ( (Vec3f)grid.dCell.a );
         dB  .setXYZ( (Vec3f)grid.dCell.b );
         dC  .setXYZ( (Vec3f)grid.dCell.c );
         alpha = alpha_;
         task_getForceRigidSystemSurfGrid->args = { 
-            LBUFFarg(img_FFPauli), 
-            LBUFFarg(img_FFLondon), 
-            LBUFFarg(img_FFelec),
+            //LBUFFarg(img_FFPauli), 
+            //LBUFFarg(img_FFLondon), 
+            //LBUFFarg(img_FFelec),
+            
+            BUFFarg(id_FFPauli), 
+            BUFFarg(id_FFLondon), 
+            BUFFarg(id_FFelec),    
+            
             BUFFarg(id_mol2atoms),
             BUFFarg(id_atomsInTypes),
             BUFFarg(id_poses),
@@ -132,6 +160,7 @@ class RigidMolecularWorldOCL{ public:
             FLOATarg(alpha)
         };
     }
+    
     
 };
 
@@ -190,8 +219,7 @@ class GridFF_OCL{ public:
         //task_FFPLE->print_arg_list();
                 
         DEBUG;
-    }
-    
+    }    
     
     void setupKernel( GridFF& gridFF ){
     
@@ -275,13 +303,29 @@ class GridFF_OCL{ public:
         delete [] buff;
     }
     
+    void downloadFF( GridFF& gridFF ){
+        int n = gridFF.grid.getNtot();
+        if( nGridTot!=n){ printf("ERROR: GridFF_OCL::downloadFF() Wrong number of grid points: n(%i) != nGrid(%i) \n, ", n, nGridTot ); exit(0); }
+        
+        gridFF.FFPauli_f  = new Quat4f[nGridTot];
+        gridFF.FFLondon_f = new Quat4f[nGridTot];
+        gridFF.FFelec_f   = new Quat4f[nGridTot];
+        
+        bool copyToDouble = true;
+        
+        if(gridFF.FFPauli_f ){  cl->download( id_FFPauli,  (float*)gridFF.FFPauli_f  ); if(copyToDouble ) float4ToVec3d( n, (float*)gridFF.FFPauli_f,  gridFF.FFPauli  ); printf("FFPauli  downloaded\n"); }
+        if(gridFF.FFLondon_f){  cl->download( id_FFLondon, (float*)gridFF.FFLondon_f ); if(copyToDouble ) float4ToVec3d( n, (float*)gridFF.FFLondon_f, gridFF.FFLondon ); printf("FFLondon downloaded\n"); }
+        if(gridFF.FFelec_f  ){  cl->download( id_FFelec ,  (float*)gridFF.FFelec_f   ); if(copyToDouble ) float4ToVec3d( n, (float*)gridFF.FFelec_f ,  gridFF.FFelec   ); printf("FFelec   downloaded\n"); }
+    }
+    
     void evalGridFFs( GridFF& gridFF, const Vec3i& nPBC ){
         printf( "gridFF.natoms %i \n", gridFF.natoms );
         prepareBuffers( gridFF.natoms, gridFF.grid.getNtot() ); DEBUG
         setupKernel( gridFF );
         uploadAtoms( gridFF.natoms, gridFF.apos, gridFF.aREQs ); DEBUG
         task_FFPLE->enque(); DEBUG
-        downloadFF( gridFF.grid.getNtot(), gridFF.FFPauli, gridFF.FFLondon, gridFF.FFelec ); DEBUG;
+        //downloadFF( gridFF.grid.getNtot(), gridFF.FFPauli, gridFF.FFLondon, gridFF.FFelec ); DEBUG;
+        downloadFF( gridFF );
         clFinish(cl->commands); DEBUG;
     }
         

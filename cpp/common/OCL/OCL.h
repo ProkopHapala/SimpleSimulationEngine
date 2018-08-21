@@ -10,6 +10,9 @@
 struct float8 { float x,y,z,w,hx,hy,hz,hw; };
 struct int2   { int x,y; };
 
+
+//void print( cl_mem cmem ){ printf( "\n", cmem.  ); };
+
 class OCLBuffer{
     public:
     void       * p_cpu = NULL;
@@ -20,7 +23,7 @@ class OCLBuffer{
     cl_mem_flags flags    = CL_MEM_READ_WRITE;
     char       * name     = NULL;
     // following is needed only for images
-    bool img_dims = 0;
+    int  img_dims = 0;
     int  nImg[3]  = {0,0,0};
     cl_image_format imageFormat;
 
@@ -31,6 +34,7 @@ class OCLBuffer{
             //if(p_cpu){ p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }
             //else     { p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }; 
         }
+        printf( "initOnGPUImage p_gpu: %li \n", p_gpu );
         return err;
     }
 
@@ -38,9 +42,16 @@ class OCLBuffer{
         int err;
         //p_gpu = clCreateBuffer(context, flags, typesize * n, NULL,  &err);
         switch(img_dims){
-            case 2: p_gpu = clCreateImage2D(context, flags, &imageFormat, nImg[0],nImg[1],          0,    p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
-            case 3: p_gpu = clCreateImage3D(context, flags, &imageFormat, nImg[0],nImg[1], nImg[2], 0, 0, p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
+            case 2: 
+                printf( " initOnGPUImage: clCreateImage2D \n" );
+                p_gpu = clCreateImage2D(context, flags, &imageFormat, nImg[0],nImg[1],          0,    p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
+                break;
+            case 3: 
+                printf( " initOnGPUImage: clCreateImage3D \n" );
+                p_gpu = clCreateImage3D(context, flags, &imageFormat, nImg[0],nImg[1], nImg[2], 0, 0, p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
+                break;
         }
+        printf( "initOnGPUImage img_dims: %i p_gpu: %li    %i \n", img_dims, p_gpu );
         return err;
     }
 
@@ -117,7 +128,8 @@ class OCLsystem{
         buffers[i].nImg[1]     = ny;
         buffers[i].nImg[2]     = nz;
         buffers[i].imageFormat = imageFormat;
-        int err=buffers[i].initOnGPUImage(context); OCL_checkError(err, "initOnGPUImage");
+        printf( "newBufferImage3D buffers[%i].img_dims %i \n", i, buffers[i].img_dims  );
+        int err=buffers[i].initOnGPUImage(context); OCL_checkError(err, "initOnGPUImage" );
         return i;
     }
 
@@ -245,7 +257,7 @@ class OCLtask{
             switch(arg.kind){
                 case OCL_BUFF:  
                     printf( "buffArg args[%i] ibuff %i p_gpu %i \n", i, arg.i, cl->buffers[arg.i].p_gpu );
-                    err |= clSetKernelArg( kernel, i, sizeof(cl_mem), &(cl->buffers[arg.i].p_gpu) );  OCL_checkError(err, "setAsArg"); break;
+                    err |= clSetKernelArg( kernel, i, sizeof(cl_mem), &(cl->buffers[arg.i].p_gpu) );              OCL_checkError(err, "setAsArg"); break;
                 //case OCL_BUFF:  err |= cl->buffers[arg.i].setAsArg( kernel, i );                                OCL_checkError(err, "setAsArg"); break;
                 case OCL_INT:   err |= clSetKernelArg( kernel, i, sizeof(int),    &(arg.i) );                     OCL_checkError(err, "setAsArg"); break;
                 case OCL_FLOAT: err |= clSetKernelArg( kernel, i, sizeof(float),  &(arg.f) );                     OCL_checkError(err, "setAsArg"); break;

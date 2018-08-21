@@ -10,9 +10,14 @@
 
 class GridFF{ public:
     GridShape   grid;
-    Vec3d  *FFPauli  = NULL;
-    Vec3d  *FFLondon = NULL;
-    Vec3d  *FFelec   = NULL;
+    Vec3d  *FFPauli    = NULL;
+    Vec3d  *FFLondon   = NULL;
+    Vec3d  *FFelec     = NULL;
+    
+    Quat4f *FFPauli_f  = NULL;
+    Quat4f *FFLondon_f = NULL;
+    Quat4f *FFelec_f   = NULL;
+    
     //Vec3d  *FFtot    = NULL; // total FF is not used since each atom-type has different linear combination
 
     int  natoms     = 0;

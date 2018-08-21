@@ -238,6 +238,7 @@ class Quat4TYPE {
         w = b*cos(u.z);
     }
 
+    inline void setRandomRotation(){ fromUniformS3( {randf(), randf(), randf()} ); }
 
 
 	inline void fromAngleAxis( TYPE angle, const VEC& axis ){
