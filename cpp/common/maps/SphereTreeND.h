@@ -104,7 +104,7 @@ class SphereTreeND{
     SphereNodeND* findClosestBranch( double * vec, double dist2max, double& d2min ){
         d2min                 = 1e+300;
         SphereNodeND* sph_min = NULL;
-        for(auto sph : branches ){
+        for(SphereNodeND* sph: branches ){
             double r2 = dist2limited( nDim, vec, sph->center, dist2max );
             if( r2 > dist2max ) continue;
             if( r2 < d2min    ){ sph_min = sph;  d2min=r2; }
@@ -118,7 +118,7 @@ class SphereTreeND{
         double dist2max  = R_overlap*R_overlap;
         double d2min     = 1e+300;
         SphereNodeND* sph_min = NULL;
-        for(auto sph : branches ){
+        for(SphereNodeND* sph: branches ){
             //double dist2i = sph->dist2( nDim, vec, dist2max );
             double dist2i = dist2limited( nDim, vec, sph->center, dist2max  );
             if( dist2i > dist2max ) continue;
@@ -148,7 +148,7 @@ class SphereTreeND{
         double d2min = 1e+300;
         SphereNodeND* sph_min = NULL;
         //for( int i=0; branches.size(); i++ ){
-        for(auto sph : branches ){
+        for(SphereNodeND* sph: branches ){
             //SphereNodeND* sph = branches[i];
             //double dist2i = sph->dist2( nDim, vec, dist2max );
             double dist2i = dist2limited( nDim, vec, sph->center, dist2max  );
