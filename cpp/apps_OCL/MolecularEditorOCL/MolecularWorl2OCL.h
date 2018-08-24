@@ -10,6 +10,10 @@
 #include "Molecule.h"
 #include "arrayConvert.h"
 
+#include "Vec3.h"
+#include "Mat3.h"
+#include "quaternion.h"
+
 /*
 ToDo:
  - make evaluation of gridFF inside OpenCL kernel
@@ -18,6 +22,18 @@ ToDo:
 // =======================
 //   MolecularWorldOCL
 // =======================
+
+void frag2atoms(const Vec3f& pos, const Quat4f& qrot, int n, float8* atom0s, float8* atoms ){
+    Mat3f mrot; qrot.toMatrix(mrot);
+    printf( "pos (%g,%g,%g) qrot (%g,%g,%g,%g)", pos.x,pos.y,pos.z,   qrot.x,qrot.y,qrot.z,qrot.w );
+    for( int j=0; j<n; j++ ){
+        Vec3f Mp;
+        atoms[j] = atom0s[j];
+        mrot.dot_to_T( *((Vec3f*)(atom0s+j)), Mp );
+        ((Vec3f*)(atoms+j))->set_add( pos, Mp );
+        printf( "atom %i  xyz(%g,%g,%g) REQ(%g,%g,%g) \n", j ,atoms[j].x, atoms[j].y, atoms[j].z,  atoms[j].hx, atoms[j].hy, atoms[j].hz  ); 
+    }
+}
 
 class RigidMolecularWorldOCL{ public:
 
@@ -75,7 +91,9 @@ class RigidMolecularWorldOCL{ public:
         }
     }
     
-    inline void setMolInstance( int i, int iType ){ mol2atoms[i] = molTypes[iType]; }
+    inline void setMolInstance( int isystem, int imol, int iType ){
+        mol2atoms[ nMols*isystem + imol ] = molTypes[iType]; 
+    }
     
     void prepareBuffers( int nSystems_, int nMols_, Vec3i nGrid, float* FFpauli, float* FFlondon, float* FFelec ){
         int err;
@@ -161,7 +179,86 @@ class RigidMolecularWorldOCL{ public:
         };
     }
     
+    int system2atoms( int isystem, float8* atoms ){
+        int isoff   = isystem * nMols;
+        int atom_count = 0;
+        float8* atom0s = atomsInTypes.data();
+        for(int imol=0; imol<nMols; imol++){
+            float* posi     = (float*)(poses+isoff+imol);
+            const int2& m2a = mol2atoms[imol];
+            printf( "isystem %i imol %i m2a (%i,%i) atom_count %i %i \n", isystem, imol, m2a.x, m2a.y, atom_count, atom_count );
+            frag2atoms( *((Vec3f*)(posi)), *((Quat4f*)(posi+4)), m2a.y, atom0s+m2a.x, atoms+atom_count );
+            atom_count += m2a.y;
+        }
+        return atom_count;
+    }
     
+    int evalForceCPU( int isystem, const GridFF& gridFF, float8* atoms ){
+        int isoff   = isystem * nMols;
+        //float8* atom0s = atomsInTypes.data();
+        Vec3f force = Vec3fZero;
+        Vec3f torq  = Vec3fZero;
+        float* atomi = ((float*)(atoms));
+        for( int imol=0; imol<nMols; imol++ ){
+            int natomi = mol2atoms[isoff+imol].y;
+            
+            for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
+                
+                const Vec3f& aposi  = *(Vec3f*)(atomi  );
+                const Vec3f& REQi   = *(Vec3f*)(atomi+4);
+        
+                // molecule grid interactions
+                //float eps    = sqrt(REQi.y); //  THIS SHOULD BE ALREADY DONE
+                float expar    = exp(-alpha*REQi.x);
+                float cPauli   =    REQi.y*expar*expar;
+                float cLondon  = -2*REQi.y*expar;
+                
+                Vec3d fd = Vec3dZero;
+                gridFF.addForce( (Vec3d)aposi, (Vec3d){cPauli,cLondon,REQi.z}, fd );
+                Vec3f f = (Vec3f)fd;
+        
+                force.add(f);
+                torq.add_cross(aposi, f);
+                
+                atomi+=8;
+            } // ia
+       
+            // ==== Molecule - Molecule Interaction
+            for(int jmol=0; jmol<nMols; jmol++){
+                if ( jmol==imol ) continue; // prevent self-interaction and reading outside buffer
+                int   natomj = mol2atoms[isoff+jmol].y;
+                float* atomj = ((float*)(atoms));
+                for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
+                    Vec3f aposi  = *(Vec3f*)(atomi  );
+                    Vec3f REQi   = *(Vec3f*)(atomi+4);
+                    // molecule-molecule interaction
+                    
+                    Vec3f f = Vec3fZero;
+                    for(int ja=0; ja<natomj; ja++){            // atoms of molecule j
+                        const Vec3f& dp   = *(Vec3f*)(atomj  ) - aposi;
+                        const Vec3f& REQj = *(Vec3f*)(atomj+4);
+                        
+                        // force
+                        float r0    = REQj.x + REQi.x;
+                        float eps   = REQj.y * REQi.y; 
+                        float cElec = REQj.z * REQi.z * COULOMB_CONST;
+                        float r     = sqrt( dp.dot(dp)+R2SAFE );
+                        float expar = exp( alpha*(r-r0));
+                        float ir    = 1/r;
+                        float fr    = eps*2*alpha*( expar*expar - expar ) + cElec*ir*ir;
+                        f.add_mul( dp,  fr*ir );
+                        //f   += eps*( expar*expar - 2*expar ) + cElec*ir; // Energy
+                    } // ja
+        
+                    force.add(f);
+                    torq.add_cross(aposi, f);
+                    
+                    atomj+=8;
+                } // ia
+            } // jmol
+        } // imol
+    } // evalForceCPU
+   
 };
 
 

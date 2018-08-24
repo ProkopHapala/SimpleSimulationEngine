@@ -74,7 +74,7 @@ void ScreenSDL2OGL::setupRenderer(){
 	glEnable     ( GL_LIGHT0           );
 	glEnable     ( GL_NORMALIZE        );
 
-	glLightModeli( GL_LIGHT_MODEL_TWO_SIDE, 1 );
+	//glLightModeli( GL_LIGHT_MODEL_TWO_SIDE, 1 );
 
 	glEnable     ( GL_DEPTH_TEST       );
 	glHint       ( GL_LINE_SMOOTH_HINT, GL_NICEST );

@@ -141,18 +141,19 @@ void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape ){
 	glPushMatrix();
 	float glMat[16];
 	toGLMat ( pos, qrot, glMat );
-	/*
-	if( trasposed ){
-        toGLMat ( pos, qrot, glMat );
-	}else{
-        toGLMatT( pos, qrot, glMat );
-	}
-	*/
 	glMultMatrixf( glMat );
 	glCallList( shape );
 	glPopMatrix();
 };
 
+void drawShape    ( const Vec3f& pos, const Quat4f& qrot, const Vec3f& scale, int shape ){
+	glPushMatrix();
+	float glMat[16];
+	toGLMat ( pos, qrot, scale, glMat );
+	glMultMatrixf( glMat );
+	glCallList( shape );
+	glPopMatrix();
+};
 
 /*
 void drawShapeT( const Vec3f& pos, const Mat3f& rot, int shape ){

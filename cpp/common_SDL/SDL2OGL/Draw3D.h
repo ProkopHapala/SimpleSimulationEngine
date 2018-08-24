@@ -37,6 +37,7 @@ void drawMatInPos ( const Mat3f& mat, const Vec3f& pos );
 
 void drawShape    ( const Vec3f& pos, const Mat3f&  rot,  int shape, bool transposed = false );
 void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape );
+void drawShape    ( const Vec3f& pos, const Quat4f& qrot, const Vec3f& scale, int shape );
 
 int  drawCylinderStrip     ( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
 int  drawCylinderStrip_wire( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
@@ -83,6 +84,7 @@ inline void drawMatInPos ( const Mat3d& mat, const Vec3d& pos ){  drawMatInPos( 
 
 inline void drawShape    ( const Vec3d& pos, const Mat3d&  rot,  int shape, bool transposed = false ){ drawShape( (Vec3f)pos, (Mat3f)rot, shape, transposed ); };
 inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, shape); };
+inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, Vec3d& scale, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, (Vec3f)scale, shape); };
 
 inline int  drawCircleAxis     ( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis, double R ){ return drawCircleAxis( n, (Vec3f)pos, (Vec3f)v0, (Vec3f)uaxis, R ); };
 inline int  drawSphereOctLines ( int n, double R, const Vec3d& pos ){ return drawSphereOctLines ( n, R, (Vec3f)pos ); };
@@ -168,6 +170,7 @@ inline void toGLMatCam( const Vec3f& pos, const Mat3f& rot, float* glMat ){
 
 inline void toGLMat( const Vec3f& pos, Mat3f rot, const Vec3f& sc, float* glMat ){
     rot.mul(sc);
+    //rot.print();
     toGLMat( pos, rot, glMat );
 };
 

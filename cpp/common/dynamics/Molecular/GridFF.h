@@ -96,7 +96,7 @@ class GridFF{ public:
         return natoms;
     }
 
-    inline void addForce( Vec3d pos, Vec3d PLQ, Vec3d& f ){
+    inline void addForce( Vec3d pos, Vec3d PLQ, Vec3d& f ) const {
         Vec3d gpos;
         grid.cartesian2grid(pos, gpos);
         f.add_mul( interpolate3DvecWrap( FFPauli,  grid.n, gpos ) , PLQ.x );

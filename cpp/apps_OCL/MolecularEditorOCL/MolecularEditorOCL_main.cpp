@@ -68,7 +68,37 @@ Vec3d testREQ,testPLQ;
 
 // ==========================
 // AppMolecularEditorOCL
-// ==========================
+// ==========================75
+
+void drawAtomsF8( int n, float8 * atoms, float sc, int oglSphere ){
+    for(int i=0; i<n; i++){
+        float* atomi = ((float*)(atoms+i));
+        float r = atomi[4]*sc;
+        float q = atomi[6];
+        glColor3f( 0.5+q, 0.5, 0.5-q );
+        Draw3D::drawShape( *(Vec3f*)atomi, {0.0,0.0,0.0,1.0}, (Vec3f){r,r,r}, oglSphere );
+    }
+}
+
+void drawRigidMolForce( const Vec3f& pos, const Quat4f& qrot, const Vec3f& fpos, const Vec3f& torq, int n, float8 * atom0s,  float rsc, float fsc ){
+    Mat3f mrot; qrot.toMatrix(mrot);
+    for(int i=0; i<n; i++){
+    
+        Vec3f Mp;
+        //p = *((Vec3f*)(atom0s+j));
+        mrot.dot_to_T( *((Vec3f*)(atom0s+i)), Mp );
+        Mp.add( pos );
+        
+        Vec3f f; 
+        f.set_cross(torq,Mp);
+        f.add(fpos);
+       
+        //Draw3D::drawShape( pi, {0.0,0.0,0.0,1.0}, (Vec3f){r,r,r}, oglSphere );
+        Draw3D::drawPointCross( Mp, rsc   );
+        Draw3D::drawVecInPos  ( f*fsc, Mp );
+    }
+}
+
 
 class AppMolecularEditorOCL : public AppSDL2OGL_3D {
 	public:
@@ -106,6 +136,14 @@ class AppMolecularEditorOCL : public AppSDL2OGL_3D {
     double  atomSize = 0.25;
 
     int itest=0;
+    
+    
+    
+    
+    // TEMP
+    int isystem = 0;
+    float8* atoms_tmp=0;  // = new float8[100];
+    int atom_count=0;    //= clworld.system2atoms( 0, atoms );
 
 
 
@@ -327,8 +365,8 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     
     DEBUG
     
-    int nMols    = 2;
-    int nSystems = 5;
+    int nMols    = 4;
+    int nSystems = 3;
     
     //clworld.prepareBuffers( nSystems, nMols, world.gridFF.grid.n, world.gridFF.FFPauli_f, world.gridFF.FFLondon_f, world.gridFF.FFelec_f );
     clworld.prepareBuffers( nSystems, nMols, world.gridFF );
@@ -336,13 +374,20 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     DEBUG
     
     int i=0;
+    float span = 5.0;
     for(int isys=0; isys<nSystems; isys++){
         for(int imol=0; imol<nMols; imol++){
-            clworld.mol2atoms[i].x = 0;  // molecule type 0 - watter
-            clworld.mol2atoms[i].y = 3;  // 3 atoms per molecule 
-            ( (Vec3f* )&clworld.poses[i].x  )->set( randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0) );
+            //clworld.mol2atoms[i].x = 0;  // molecule type 0 - watter
+            //clworld.mol2atoms[i].y = 3;  // 3 atoms per molecule 
+            //clworld.setMolInstance( isys, imol, 0 );
+            clworld.mol2atoms[i] = clworld.molTypes[0]; // water 3 atoms
+            
+            *( (Vec3f* )&clworld.poses[i].x  ) = (Vec3f){ randf(-span,span), randf(-span,span), randf(0.0,3.0) } + (Vec3f){0.0, 0.0, 8.0};
+            //( (Vec3f* )&clworld.poses[i].x  )->set( randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0) );
             //( (Quat4f*)&clworld.poses[i].hx )->setOne();
             ( (Quat4f*)&clworld.poses[i].hx )->setRandomRotation();
+            //printf( "  \n",     );
+            i++;
         }
     }
     
@@ -355,12 +400,14 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     clworld.download_poses();    DEBUG
     clworld.download_fposes();   DEBUG
     clFinish(cl->commands);      DEBUG;
-
-
-
-
-
-
+    
+    DEBUG
+    
+    atoms_tmp = new float8[1000];
+    atom_count = clworld.system2atoms( isystem, atoms_tmp );
+    
+    
+    
     
     manipulator.bindAtoms(world.natoms, world.apos, world.aforce ); 
     manipulator.realloc(1);                                        
@@ -501,6 +548,41 @@ void AppMolecularEditorOCL::draw(){
     //return;
 
 	//ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
+	
+	
+	drawAtomsF8(atom_count, atoms_tmp, 0.25, ogl_sph);
+	
+	
+	{
+	    int isoff   = isystem * clworld.nMols;
+        int atom_count = 0;
+        float8* atom0s = clworld.atomsInTypes.data();
+        for(int imol=0; imol<clworld.nMols; imol++){
+            float* posi     = (float*)(clworld.poses+isoff+imol);
+            float* fsi      = (float*)(clworld.poses+isoff+imol);
+            const int2& m2a = clworld.mol2atoms[imol];
+            //printf( "isystem %i imol %i m2a (%i,%i) atom_count %i %i \n", isystem, imol, m2a.x, m2a.y, atom_count, atom_count );
+            //frag2atoms( *((Vec3f*)(posi)), *((Quat4f*)(posi+4)), m2a.y, atom0s+m2a.x, atoms+atom_count );
+            drawRigidMolForce( *((Vec3f*)(posi)), *((Quat4f*)(posi+4)), *((Vec3f*)(fsi)), *((Vec3f*)(fsi+4)), m2a.y, atom0s+m2a.x,  0.25, 10.0 );
+            
+            //atom_count += m2a.y;
+        }
+        //return atom_count;
+    }
+        
+	
+	
+	
+	return;
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
     ray0 = (Vec3d)(cam.pos + cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     Draw3D::drawPointCross( ray0, 0.1 );
@@ -683,6 +765,14 @@ void AppMolecularEditorOCL::eventHandling ( const SDL_Event& event  ){
                 //case SDLK_d: world.apos[1].rotate( -0.1, {0.0,0.0,1.0} ); break;
                 //case SDLK_w: world.apos[1].mul( 1.1 ); break;
                 //case SDLK_s: printf("saving ... "); save2xyz( "out.xyz", &world, &params ); printf("... DONE "); break;
+                
+                
+                case SDLK_n: 
+                    isystem++; if(isystem>=clworld.nSystems)isystem=0; 
+                    atom_count = clworld.system2atoms( isystem, atoms_tmp );
+                    break;
+                
+                
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
