@@ -48,7 +48,7 @@ inline Vec3d sourceDipol( const Vec3d& R, const Quat4d& coefs ){
 // http://s6.aeromech.usyd.edu.au/aerodynamics/index.php/sample-page/subsonic-aerofoil-and-wing-theory/3d-vortex-lattice-method/
 // http://web.mit.edu/16.unified/www/SPRING/fluids/Spring2008/LectureNotes/f06.pdf
 
-const double VortexQuantum = 1.0/( 4*M_PI );
+constexpr double VortexQuantum = 1.0/( 4*M_PI );
 
 inline Vec3d dBiotSawart( Vec3d R, Vec3d dI ){
     // https://en.wikipedia.org/wiki/Biot%E2%80%93Savart_law
@@ -91,7 +91,7 @@ inline Vec3d ILineSemiInf( Vec3d R, Vec3d hL ){
     B.set_cross( hL, R );
     double c1 = hL.dot( R )/R.norm();
     //printf( "(%f,%f,%f)  %f %f %f \n", B.x, B.y, B.z, R.norm(), c1, B.norm2() );
-    double out = (1-c1)/B.norm2();
+    //double out = (1-c1)/B.norm2();
     //printf( "%f %f   %f %f \n", R.x, R.y, c1, out );
     //B.mul( VortexQuantum*out );
     B.mul( VortexQuantum*(1-c1)/B.norm2() ); // notice there is no "a"
@@ -107,21 +107,21 @@ inline Vec3d ILineSemiInfDecay( Vec3d R, Vec3d hL, double w2 ){
     return B;
 }
 
-inline void horseshoe( Vec3d& B, Vec3d R, Vec3d p0, Vec3d p1, Vec3d hDir, double strenght ){
-    B.add_mul( ILineSemiInf( R-p0, hDir ), -strenght );
-    B.add_mul( ILineSemiInf( R-p1, hDir ),  strenght );
+inline void horseshoe( Vec3d& B, Vec3d R, Vec3d p0, Vec3d p1, Vec3d hDir, double strength ){
+    B.add_mul( ILineSemiInf( R-p0, hDir ), -strength );
+    B.add_mul( ILineSemiInf( R-p1, hDir ),  strength );
     hDir.set_sub(p0,p1);
     double l = hDir.normalize();
-    B.add_mul( ILineFinite( R-p0, hDir, l ), strenght );
+    B.add_mul( ILineFinite( R-p0, hDir, l ), strength );
     //printf( "R(%f,%f,%f) B(%f,%f,%f)\n", R.x, R.y, R.z,  B.x, B.y, B.z );
 }
 
-inline void horseshoeDecay( Vec3d& B, Vec3d R, Vec3d p0, Vec3d p1, Vec3d hDir, double strenght, double w2 ){
-    B.add_mul( ILineSemiInfDecay( R-p0, hDir, w2 ), -strenght );
-    B.add_mul( ILineSemiInfDecay( R-p1, hDir, w2 ),  strenght );
+inline void horseshoeDecay( Vec3d& B, Vec3d R, Vec3d p0, Vec3d p1, Vec3d hDir, double strength, double w2 ){
+    B.add_mul( ILineSemiInfDecay( R-p0, hDir, w2 ), -strength );
+    B.add_mul( ILineSemiInfDecay( R-p1, hDir, w2 ),  strength );
     hDir.set_sub(p0,p1);
     double l = hDir.normalize();
-    B.add_mul( ILineFinite( R-p0, hDir, l ), strenght );
+    B.add_mul( ILineFinite( R-p0, hDir, l ), strength );
     //printf( "R(%f,%f,%f) B(%f,%f,%f)\n", R.x, R.y, R.z,  B.x, B.y, B.z );
 }
 

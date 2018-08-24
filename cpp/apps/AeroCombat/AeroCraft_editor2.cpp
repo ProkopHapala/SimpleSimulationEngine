@@ -12,6 +12,7 @@
 #include "Vec3.h"
 #include "Mat3.h"
 #include "quaternion.h"
+#include "geom3D.h"
 #include "Draw3D.h"
 //#include "testUtils.h"
 
@@ -48,6 +49,8 @@
 
 #include "GUI.h"
 #include "Plot2D.h"
+
+#include "PotentialFlow.h"
 
 #include "AeroCraftDesign.h"
 

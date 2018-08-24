@@ -42,8 +42,8 @@ Vec3d totVelField( Vec3d R ){
     B.add( vInf );
     for(int i=0; i<nCPs-1; i++){
         //B.add( horseshoe( R, CPs[i], CPs[i+1], flightDir, Gamas[nCPs] ) );
-        horseshoe( B, R, CPs[i], CPs[i+1], flightDir, Gamas[i] );
-        //horseshoeDecay( B, R, CPs[i], CPs[i+1], flightDir, Gamas[i], 16.0 );
+        //horseshoe( B, R, CPs[i], CPs[i+1], flightDir, Gamas[i] );
+        horseshoeDecay( B, R, CPs[i], CPs[i+1], flightDir, Gamas[i], 0.01 );
         //B.add( sourceDipol( R, {0.0,0.0,0.0,1.0} ) );
         //B.add( sourceDipol( R+(Vec3d){0.0,0.2,0.0}, {0.0,0.0,1.0,0.0} ) );
         //B.add( pointSource( R ) * 1.0 );
@@ -202,6 +202,7 @@ void TestAppVortexLattice::draw(){
     plotVortexFilaments( nCPs, CPs, flightDir*-100.0 );
     glColor3f(0.0,0.0,0.0);
     //plotVecPlane( {21,21}, { -1.0,0.0,-2.0 }, {0.2,0.0,0.0}, {0.0,0.0,0.2}, 0.02, 1.0, totVelField );
+    //plotVecPlane( {81,11}, { -1.0,0.0,-2.0 }, {0.05,0.0,0.0}, {0.0,0.0,0.2}, 0.02, 1.0, totVelField );
     //plotVecPlane( {5,5}, { -2.0,0.0,-2.0 }, {1.0,0.0,0.0}, {0.0,0.0,1.0}, 0.02, 10.0, totVelField );
     //exit(0);
     plotStreamLinePlane( {20,1}, 200, {-1.1,0.0,3.0}, {0.2,0.0,0.0}, {0.0,0.2,0.0}, 0.1, totVelField );

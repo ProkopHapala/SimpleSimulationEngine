@@ -12,59 +12,40 @@
 #include "GUI.h"
 #include "AeroCraft.h"
 
-/*
-struct WingSegment{
-    double  x;     // leading edge pos y
-    double  z;     // leading edge pos x
-    double  chord;
-    double  twist;      // angle
-    //Vec2d  vtwist;    // twist by complex number
-    //double thickness; // ? in profile - affects also bending strength
-    //double camber;    // ? in profile
-    int profile;
-};
+#include "quaternion.h"
+#include "geom3D.h"
 
-class Wing{ public:
-    Vec3d pos;
-    Mat3d rotMat;
-    std::vector<WingSegment> segments;
+#include "PotentialFlow.h"
 
-    double area;
-    double eInducedDrag; // shape factor of induced drag
+class PotentialFlowSystem{ public:
+    std::vector<Vec2i>  wings;
+    std::vector<Vec3d>  vorts;  // vortex line control points
+    std::vector<Rayt3d> panels; // (pos,normal)
+    double * derr      = 0;     // derivatives of panel strenght
+    double * strenghts = 0;     // vortex strenghts
+    double * areas     = 0;     // panel areas
+    double vortexDamp2 = 0.01;  // damping of vortex with distance along traling filament - necessary to avoid singularities
 
-    void addSegment( double dx, double z, double chord, double twist, int profile ){
-        double x0 = segments.back().x;
-        segments.push_back( { x0+dx, z, chord, twist, profile } );
-    };
-
-    double getArea(){
-        double ox = segments[0].x;
-        double oc = segments[0].chord;
-        double A = 0.0;
-        for( int i=1; i<segments.size(); i++ ){
-            double x = segments[i].x;
-            double c = segments[i].chord;
-            A += (x-ox)*(c+oc); // trapezoides
-            ox=x; oc=c;
+    Vec3d evalVelocity( const Vec3d& R, const Vec3d& flightDir ){
+        Vec3d B = Vec3dZero;
+        int n   = vorts.size();
+        for(int i=0; i<n; i++){
+            horseshoeDecay( B, R, vorts[i], vorts[i+1], flightDir, strenghts[i], vortexDamp2 );
         }
-        A*=0.5;
-        area = A;
-        return A;
-    };
+        return B;
+    }
 
-    // TODO: vortex latticle method - induced drag ?
+    Vec3d evalErrGrad( Vec3d vair ){
+        Vec3d vhat = vair; vhat.normalize();
+        for(int i=0; i<panels.size(); i++){
+            Vec3d v = evalVelocity( panels[i].p0, vhat );  // get air velocity at control point
+            v.add(vair);
+            derr[i] = v.dot( panels[i].hdir );                       // project along surface normal
+        }
+    }
+
+
 };
-
-class AeroCraftModel{ public:
-    std::vector<Wing> wings;
-    //std::vector<HitBox> hitBoxes;
-    //std::vector<Component> component;
-    //std::vector<Engine> engines;
-    //std::vector<Gun> guns;
-    //std::vector<CockPit> cockpits;
-};
-
-*/
 
 // ===============
 // ====  Wings
@@ -215,6 +196,39 @@ class AeroCraftDesign{ public:
     double wettedArea = 0.0;
     double mass       = 0.0;
     Mat3d  Ibody      = Mat3dZero;
+
+    void toFlowSystem( PotentialFlowSystem& pf ){
+
+        for(WingDesign& wd : wings ){
+            int i0 = pf.vorts.size();
+            pf.wings.push_back( {i0,wd.sections.size()} );
+            Vec3d op1,op2,nr;
+            for(WingSection& ws: wd.sections ){
+                double ca = cos(ws.twist + wd.pitch);
+                double sa = sin(ws.twist + wd.pitch);
+                double z2 = ws.z-ws.chord;
+                Vec3d p1  = {ws.x, ws.y + ws.z*sa, ws.z*ca},
+                      p2  = {ws.x, ws.y + z2  *sa,   z2*ca};
+                Vec3d pv  =  p1*0.75 + p2*0.25;
+                Vec3d pp  = (p1 + p2 + op1 + op2)*0.25;
+                nr.set_cross( p1-op2, p2-op1 );
+                double area = nr.normalize();
+                //double strenght = area * ;
+                pf.vorts.push_back( pv );
+                //strenghts[]; // determined from size of panel ?
+                // should we store panel area ?
+                pf.panels.push_back( {pp,nr,area} );
+                op1=p1; op2=p2;
+            }
+        }
+
+        for(FuselageDesign& fd : fuselages ){
+            for(FuselageSection& fs : fd.sections ){
+                // TODO
+            }
+        }
+
+    }
 
 };
 

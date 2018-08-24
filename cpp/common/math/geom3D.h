@@ -78,7 +78,12 @@ class Sphere3d{ public:
 };
 
 class Line3d{ public:
-    Vec3d a,b;
+    Vec3d  a,b;
+};
+
+struct Rayt3d{
+    Vec3d  p0,hdir;
+    double t;
 };
 
 class LineInterval3d{ public:
