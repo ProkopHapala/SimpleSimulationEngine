@@ -99,6 +99,8 @@ class AeroCraftEditor2 : public AppSDL2OGL_3D { public:
 
 	AeroCraftDesign design;
 
+	PotentialFlowSystem flowSystem;
+
 
     const Uint8 *scanKeys;
     Uint32 mouseButtons;
@@ -147,6 +149,11 @@ void AeroCraftEditor2::draw(){
     //renderAeroCraft(*myCraft, false, -1.0 );
 
     draw_(design);
+    draw_( flowSystem, 1.0, 5.0 );
+
+    glColor3f( 0.6,0.6,0.6 );
+    //plotVecPlane(flowSystem, {41,31}, { -6.0,-0.15,2.0 }, {0.3,0.0,0.0}, {0.0,0.0,-0.3}, 0.02, 1.0 );
+    plotStreamLinePlane(flowSystem, {41,1}, 200, {-6.0,-1.0,2.0}, {0.3,0.0,0.0}, {0.0,0.3,0.0}, 0.05 );
 
     glDisable(GL_LIGHTING);
 
@@ -245,6 +252,9 @@ AeroCraftEditor2:: AeroCraftEditor2( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL
     design.wings[0].addSection( 0.0, 0.0, 0.3,  1.0, 0.0, 0 );
     design.wings[0].addSection( 2.5, 0.2, 0.25, 0.8, 0.0, 0 );
     design.wings[0].addSection( 1.5, 0.4, 0.1,  0.5, 0.0, 0 );
+    //design.wings[0].addSection( 2.5, 0.0, 0.25, 0.8, 0.0, 0 );
+    //design.wings[0].addSection( 1.5, 0.0, 0.1,  0.5, 0.0, 0 );
+
     // elevator
     design.wings[1].symmetric = true;
     design.wings[1].pos.z = -4.0;
@@ -259,11 +269,11 @@ AeroCraftEditor2:: AeroCraftEditor2( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL
     design.fuselages.resize(1);
     design.fuselages[0].addSection( {0.0,0.1,-4.0}, {0.1,0.1},  0.0, 0.0,  0.0 );
 
-    //design.fuselages[0].addSection( {0.0,0.1,-3.0}, {0.2,0.25}, 0.0, 0.0,  0.0 );
-    //design.fuselages[0].addSection( {0.0,0.1,-0.5}, {0.4,0.5},  0.0, 0.0,  0.0 );
+    design.fuselages[0].addSection( {0.0,0.1,-3.0}, {0.2,0.25}, 0.0, 0.0,  0.0 );
+    design.fuselages[0].addSection( {0.0,0.1,-0.5}, {0.4,0.5},  0.0, 0.0,  0.0 );
 
-    design.fuselages[0].addSection( {0.0,0.1,-3.0}, {0.2,0.25}, 0.0, 0.0,  -0.5 );
-    design.fuselages[0].addSection( {0.0,0.1,-0.55}, {0.4,0.55},  0.0, 0.0,  -0.5 );
+    //design.fuselages[0].addSection( {0.0,0.1,-3.0}, {0.2,0.25}, 0.0, 0.0,  -0.5 );
+    //design.fuselages[0].addSection( {0.0,0.1,-0.55}, {0.4,0.55},  0.0, 0.0,  -0.5 );
 
     //design.fuselages[0].addSection( {0.0,0.0,-0.0}, {0.6,0.6}, -0.3,-0.3,  0.2 );
     //design.fuselages[0].addSection( {0.0,0.0, 1.5}, {0.6,0.6}, -0.3,-0.3,  0.2 );
@@ -279,6 +289,17 @@ AeroCraftEditor2:: AeroCraftEditor2( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL
     design.guns[3].set( (Vec3d){-0.3,0.4,+0.5}, ((Vec3d){0.0,0.0,1.0})*1.8, 0, (Vec2i){48,5} );
 
 
+    design.toFlowSystem( flowSystem );
+
+    flowSystem.alloc();
+
+    flowSystem.setVair( {0.0,0.25,-1.0} );
+    flowSystem.initialStrenghts();
+
+    flowSystem.printVorts();
+    //exit(0);
+
+    printf( " === Graphics settings \n" );
 
     float lightPos [] = { -1.0f, -1.0f, 1.0f, 0.0f  };
     //float ambient  [] = { 0.1f, 0.15f, 0.25f, 1.0f };

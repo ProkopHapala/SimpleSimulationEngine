@@ -37,12 +37,14 @@ inline Vec3d pointSource( Vec3d R ){
 }
 
 inline Vec3d sourceDipol( const Vec3d& R, const Quat4d& coefs ){
+    // https://en.wikipedia.org/wiki/Dipole#Field_from_an_electric_dipole
     // F_dipole = e/(4pi*e0) ( 3<p|rhat>rhat-p )/|r|^3 - delta(r)
     // F_dipole = 3<p|r>r/|r|^5 - p/r^3
     double ir2 = 1/R.norm2();
     double ir3 = ir2*sqrt(ir2);
     //return R*(( ((Vec3d*)&coefs)->dot(R)*ir2  + coefs.w )*ir3) + p*ir3;
     return R*(( coefs.f.dot(R)*ir2  + coefs.e )*ir3) + coefs.f*ir3;
+    //return R*(( coefs.f.dot(R)*ir2  + coefs.e )*ir3);
 }
 
 // http://s6.aeromech.usyd.edu.au/aerodynamics/index.php/sample-page/subsonic-aerofoil-and-wing-theory/3d-vortex-lattice-method/
