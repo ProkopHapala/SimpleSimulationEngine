@@ -6,6 +6,10 @@
 #include "Vec2.h"
 #include "Vec3.h"
 
+
+
+#define COULOMB_CONST  14.3996448915f
+
 #define RSAFE   1.0e-4f
 #define R2SAFE  1.0e-8f
 #define F2MAX   10.0f
@@ -16,7 +20,7 @@ inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps,
     double ir   = sqrt(ir2);
     double ir2_ = ir2*r0*r0;
     double ir6  = ir2_*ir2_*ir2_;
-    double fr   = ( ( 1 - ir6 )*ir6*12*eps + ir*q*-14.3996448915f )*ir2;
+    double fr   = ( ( 1 - ir6 )*ir6*12*eps + ir*q*-COULOMB_CONST )*ir2;
     f.add_mul( dp, fr );
 }
 
@@ -27,7 +31,7 @@ inline void addAtomicForceMorseQ( const Vec3d& dp, Vec3d& f, double r0, double e
     double expar = exp( alpha*(r-r0));
     //double E     = eps*( expar*expar - 2*expar );
     double ir    = 1/r;
-    double fr    = eps*2*alpha*( expar*expar - expar ) + 14.3996448915f*q/( r*r + R2ELEC );
+    double fr    = eps*2*alpha*( expar*expar - expar ) + COULOMB_CONST*q/( r*r + R2ELEC );
     //printf( " %g -> %g | (%g,%g,%g) %g\n" , r, fr,  r0, eps,  q, alpha );
     f.add_mul( dp, fr*ir );
 }

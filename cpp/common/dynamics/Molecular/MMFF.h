@@ -18,6 +18,24 @@
 
 #define SIGN_MASK 2147483648
 
+
+
+template<typename T>
+void frag2atoms(const Vec3TYPE<T>& pos, const Quat4TYPE<T>& qrot, int n, Vec3TYPE<T>* apos0, Vec3TYPE<T>* apos ){
+    Mat3TYPE<T> mrot; qrot.toMatrix(mrot);
+    for( int j=0; j<n; j++ ){
+        Vec3TYPE<T> Mp;
+        mrot.dot_to_T( apos0[j], Mp );
+        apos[j].set_add( pos, Mp );
+        //printf( "%i %i  (%g,%g,%g) (%g,%g,%g) \n", ifrag, j,  m_apos[j].x, m_apos[j].y, m_apos[j].z,   Tp.x, Tp.y, Tp.z  );
+    }
+}
+
+
+
+
+
+
 void transformAtomRange( int n, Vec3d* inpos, Vec3d* outpos, const Vec3d& p0, const Vec3d& p1, const Mat3d& rot ){
     Vec3d p;
     //printf( "p0: (%f,%f,%f) \n", p0.x, p0.y, p0.z );
@@ -341,8 +359,10 @@ void frags2atoms(){
     for(int ifrag=0; ifrag<nFrag; ifrag++){
         //frag2atoms( ifrag, apos+frag2a[ifrag] );
         int im8 = ifrag<<3;
-        Vec3d  pos = *((Vec3d* )(poses+im8  ));
-        Quat4d rot = *((Quat4d*)(poses+im8+4));
+        Vec3d   pos = *((Vec3d* )(poses+im8  ));
+        Quat4d  rot = *((Quat4d*)(poses+im8+4));
+        frag2atoms( pos, rot, fragNa[ifrag], fapos0s[ifrag], apos+frag2a[ifrag] );
+        /*
         Mat3d T; rot.toMatrix(T);
         int ia = frag2a[ifrag];
         int na = fragNa[ifrag];
@@ -357,6 +377,7 @@ void frags2atoms(){
             //printf( "%i %i  (%g,%g,%g) (%g,%g,%g) \n", ifrag, j,  m_apos[j].x, m_apos[j].y, m_apos[j].z,   Tp.x, Tp.y, Tp.z  );
             ia++;
         }
+        */
     }
     //exit(0);
 }
