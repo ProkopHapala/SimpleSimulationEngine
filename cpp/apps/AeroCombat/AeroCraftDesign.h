@@ -20,14 +20,18 @@
 class PotentialFlowSystem{ public:
     // TODO: perhaps we need more control points (panels) per horse_shoe
     std::vector<Vec2i>    wings;
-    std::vector<Vec3d>    vorts;  // vortex line control points
-    std::vector<Rayt3d>   panels; // (pos,normal)
+    std::vector<Vec3d>    vorts;   // vortex line control points
+    std::vector<Rayt3d>   wpanels; // (pos,normal)
     std::vector<Sphere3d> sources;
+    std::vector<Rayt3d>   panels; // (pos,normal)
     double * derr      = 0;     // derivatives of panel strenght
     double * strenghts = 0;     // vortex strenghts
+    double * M = 0;
     //double * areas     = 0;   // panel areas now in panels[i].t;
     double vortexDamp2 = 0.01;  // damping of vortex with distance along traling filament - necessary to avoid singularities
 
+    int nVorts = 0;
+    int nCoefs = 0;
     double airSpeed;
     Vec3d  vair;
     Vec3d  hair = Vec3dZ*-1.0;
@@ -39,9 +43,14 @@ class PotentialFlowSystem{ public:
     }
 
     void alloc(){
-        _realloc(strenghts, panels.size() + sources.size()*3 );
-        _realloc(derr,      panels.size()                    );
+        nVorts = 0;
+        for(Vec2i w : wings){ nVorts+=(w.y-1); }
+        nCoefs = nVorts + sources.size()*3;
+        _realloc(strenghts, nCoefs        );
+        _realloc(derr,      panels.size() );
     }
+
+    void allocCouplings(){ _realloc( M, panels.size()*nCoefs ); }
 
     void initialStrenghts(){
         int ip=0;
@@ -49,8 +58,8 @@ class PotentialFlowSystem{ public:
         for( const Vec2i& w : wings ){
             for(int ii=1; ii<w.y; ii++){
                 //int iv=ii+w.x;
-                strenghts[ip] = -hair.dot( panels[ip].hdir ) * panels[ip].t;
-                printf( "initial %i strenghts[%i] %g %g (%g,%g,%g)\n", ii, ip, strenghts[ip], panels[ip].t,  panels[ip].hdir.x, panels[ip].hdir.y, panels[ip].hdir.z );
+                strenghts[ip] = -hair.dot( wpanels[ip].hdir ) * wpanels[ip].t;
+                printf( "initial %i strenghts[%i] %g %g (%g,%g,%g)\n", ii, ip, strenghts[ip], wpanels[ip].t,  wpanels[ip].hdir.x, wpanels[ip].hdir.y, wpanels[ip].hdir.z );
                 ip++;
             }
         }
@@ -74,7 +83,6 @@ class PotentialFlowSystem{ public:
 
     Vec3d evalVelocity( const Vec3d& R ) const {
         Vec3d B = Vec3dZero;
-        int n   = vorts.size();
         int ip  = 0;
         for( const Vec2i& w : wings ){
             for(int ii=1; ii<w.y; ii++){
@@ -94,7 +102,7 @@ class PotentialFlowSystem{ public:
         return B;
     }
 
-    Vec3d evalErrGrad(){
+    void evalErrGrad(){
         for(int i=0; i<panels.size(); i++){
             Vec3d v = evalVelocity( panels[i].p0 );  // get air velocity at control point
             v.add(vair);
@@ -102,16 +110,49 @@ class PotentialFlowSystem{ public:
         }
     }
 
+    void evalCouplings(){
+        for(int j=0; j<panels.size(); j++){
+            double* Mj = M + nCoefs*j;
+            int ip=0;
+            Vec3d p = panels[ip].p0;
+            for( const Vec2i& w : wings ){
+                for(int ii=1; ii<w.y; ii++){
+                    int iv = w.x + ii;
+                    Vec3d B = Vec3dZero;
+                    horseshoeDecay( B, p, vorts[iv-1], vorts[iv], hair, 1.0, vortexDamp2 );
+                    *Mj = B.dot( panels[j].hdir ); Mj++;
+                    //ip++;
+
+                }
+            }
+            //Vec3d* sp = (Vec3d*)(Mj+ip);
+            for(int i=0; i<sources.size(); i++){
+                Vec3d dp,B;
+                dp = p-sources[i].p;
+                B = sourceDipol( dp, (Quat4d){1,0,0,0} ); *Mj = B.dot( panels[j].hdir ); Mj++;
+                B = sourceDipol( dp, (Quat4d){0,1,0,0} ); *Mj = B.dot( panels[j].hdir ); Mj++;
+                B = sourceDipol( dp, (Quat4d){0,0,1,0} ); *Mj = B.dot( panels[j].hdir ); Mj++;
+            }
+            //Vec3d v = evalVelocity( panels[i].p0 );  // get air velocity at control point
+            //v.add(vair);
+        }
+    }
+
 };
 
 void draw_( PotentialFlowSystem& fs, float psc, float vsc ){
     int ip  = 0;
+    glColor3f(0.5,0.0,0.0);
+    for(Rayt3d& pr : fs.panels ){
+        Draw3D::drawVecInPos( pr.hdir*pr.t*psc, pr.p0  );
+        ip++;
+    }
     for( Vec2i& iw : fs.wings){
-        glColor3f(0.5,0.0,0.0);
-        for(int ii=1; ii<iw.y; ii++){
-            Draw3D::drawVecInPos( fs.panels[ip].hdir*fs.panels[ip].t*psc, fs.panels[ip].p0  );
-            ip++;
-        }
+        //glColor3f(0.5,0.0,0.0);
+        //for(int ii=1; ii<iw.y; ii++){
+        //    Draw3D::drawVecInPos( fs.panels[ip].hdir*fs.panels[ip].t*psc, fs.panels[ip].p0  );
+        //    ip++;
+        //}
         Vec3d op;
         for(int ii=0; ii<iw.y; ii++){
             int iv=ii+iw.x;
@@ -320,7 +361,7 @@ class AeroCraftDesign{ public:
     Mat3d  Ibody      = Mat3dZero;
 
 
-    void toFlowSystem( PotentialFlowSystem& pf, const WingSection& ws, const Vec3d& pos, const Mat3d& rot, Vec3d& op1, Vec3d& op2, bool& prev ){
+    void toFlowSystem( PotentialFlowSystem& pf, const WingSection& ws, const Vec3d& pos, const Mat3d& rot, Vec3d& op1, Vec3d& op2, bool& prev, const Vec2i& nsp ){
         double ca = cos(ws.twist);
         double sa = sin(ws.twist);
         double z2 = ws.z-ws.chord;
@@ -329,17 +370,29 @@ class AeroCraftDesign{ public:
         rot.dot_to_T( {ws.x, ws.y + z2  *sa,   z2*ca},p2);  p2.add(pos);
         Vec3d pv  =  p1*0.75 + p2*0.25;
         //double strenght = area * ;
-        printf( "vorts.push[%i] (%g,%g,%g) \n", pf.vorts.size(), pv.x, pv.y, pv.z );
+        //printf( "vorts.push[%i] (%g,%g,%g) \n", pf.vorts.size(), pv.x, pv.y, pv.z );
         pf.vorts.push_back( pv );
         //strenghts[]; // determined from size of panel ?
         // should we store panel area ?
         if( prev ){
-            Vec3d pp  = (p1 + p2 + op1 + op2)*0.25;
+
             Vec3d nr; nr.set_cross( p1-op2, p2-op1 );
             double area = nr.normalize();
             //printf( "panels.push[%i] (%g,%g,%g) (%g,%g,%g) %g \n", pf.panels.size(), pp.x,pp.y,pp.z,   nr.x,nr.y,nr.z,  area  );
-            pf.panels.push_back( {pp,nr,area} );
-            Rayt3d& pb=pf.panels.back(); printf( "panels.push[%i] (%g,%g,%g) (%g,%g,%g) %g \n", pf.panels.size()-1, pb.p0.x,pb.p0.y,pb.p0.z,   pb.hdir.x,pb.hdir.y,pb.hdir.z,  pb.t  );
+            pf.wpanels.push_back( { (p1+op2+ p2+op1)*0.5, nr, area } );
+            double dx = 1.0/nsp.x;
+            double dy = 1.0/nsp.y;
+            for(int ix=0; ix<nsp.x; ix++ ){
+                double fx = dx*(ix+0.5);
+                double mx = 1-fx;
+                for(int iy=0; iy<nsp.y; iy++ ){
+                    double fy = dy*(iy+0.5);
+                    //printf( " ixy (%i,%i) fxy (%g,%g) dxy (%g,%g) \n", ix,iy, fx,fy, dx, dy  );
+                    Vec3d pp  = (op1*mx + p1*fx)*(1-fy) + (op2*mx + p2*fx)*fy;
+                    pf.panels.push_back( {pp,nr,area} );
+                    //Rayt3d& pb=pf.panels.back(); printf( "panels.push[%i] (%g,%g,%g) (%g,%g,%g) %g \n", pf.panels.size()-1, pb.p0.x,pb.p0.y,pb.p0.z,   pb.hdir.x,pb.hdir.y,pb.hdir.z,  pb.t  );
+                }
+            }
         }else{
             prev=true;
         }
@@ -347,7 +400,7 @@ class AeroCraftDesign{ public:
     }
 
 
-    void toFlowSystem( PotentialFlowSystem& pf ){
+    void toFlowSystem( PotentialFlowSystem& pf, Vec2i nsp ){
         for(WingDesign& wd : wings ){
             Mat3d rot = Mat3dIdentity;
             rot.rotate( wd.roll,  {0.0,0.0,1.0} );
@@ -358,13 +411,13 @@ class AeroCraftDesign{ public:
                 rot.a.mul(-1);
                 bool prev = false;
                 int i0 = pf.vorts.size();
-                for(int i=ns-1; i>=0; i-- ){ toFlowSystem( pf, wd.sections[i], wd.pos, rot, op1, op2, prev ); }
+                for(int i=ns-1; i>=0; i-- ){ toFlowSystem( pf, wd.sections[i], wd.pos, rot, op1, op2, prev, nsp ); }
                 pf.wings.push_back( {i0,pf.vorts.size()-i0} );
                 rot.a.mul(-1);
             }
             bool prev = false;
             int i0 = pf.vorts.size();
-            for(int i=0; i<ns; i++ )       { toFlowSystem( pf, wd.sections[i], wd.pos, rot, op1, op2, prev ); }
+            for(int i=0; i<ns; i++ )       { toFlowSystem( pf, wd.sections[i], wd.pos, rot, op1, op2, prev, nsp ); }
             pf.wings.push_back( {i0,pf.vorts.size()-i0} );
         }
 
