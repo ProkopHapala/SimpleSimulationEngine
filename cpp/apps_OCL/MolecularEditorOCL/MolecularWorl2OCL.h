@@ -212,13 +212,12 @@ class RigidMolecularWorldOCL{ public:
             Vec3f torq  = Vec3fZero;
             int natomi = mol2atoms[isoff+imol].y;
             
-            /*
             Quat4f*  atomi = ((Quat4f*)atomim);
             Vec3f*  fatomi = fatomim;
             for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
                 
-                const Vec3f& aposi  = *(Vec3f*)(atomi  );
-                const Vec3f& REQi   = *(Vec3f*)(atomi+4);
+                const Vec3f& aposi  = atomi[0].f;
+                const Vec3f& REQi   = atomi[1].f;
         
                 // molecule grid interactions
                 //float eps    = sqrt(REQi.y); //  THIS SHOULD BE ALREADY DONE
@@ -227,20 +226,21 @@ class RigidMolecularWorldOCL{ public:
                 float cLondon  = -2*REQi.y*expar;
                 
                 Vec3d fd = Vec3dZero;
-                gridFF.addForce( (Vec3d)aposi, (Vec3d){cPauli,cLondon,REQi.z}, fd );
+                gridFF.addForce( (Vec3d)aposi, (Vec3d){cPauli,cLondon,REQi.z*0}, fd );
                 Vec3f f = (Vec3f)fd;
         
                 if(fatoms){
-                    fatomi->add( f );
-                    fatomi+=2;
+                    fatomi[ia] = f ;
+                    //printf( "FMG: imol %i ia %i f(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z );
+                    printf( "FMG: imol %i ia %i f(%g,%g,%g) fatomi(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z, fatomi[ia].x, fatomi[ia].y, fatomi[ia].z );
                 }
                         
                 force.add(f);
-                torq.add_cross(aposi, f);
+                //torq.add_cross(aposi, f);
                 
-                atomi+=8;
+                atomi+=2;
             } // ia
-            */
+            
             
             // ==== Molecule - Molecule Interaction
             float8* atomjm = atoms;
@@ -275,20 +275,22 @@ class RigidMolecularWorldOCL{ public:
                             float r     = sqrt( dp.dot(dp)+R2SAFE );
                             float expar = exp( alpha*(r-r0));
                             float ir    = 1/r;
-                            float fr    = eps*2*alpha*( expar*expar - expar ) + cElec*ir*ir;
-                            f.add_mul( dp,  fr*ir );
+                            float fr    = eps*2*alpha*( expar*expar - expar ) 
+                                        + cElec*ir*ir;
+                            //f.add_mul( dp,  fr*ir );
                             //f   += eps*( expar*expar - 2*expar ) + cElec*ir; // Energy
                             //atomj+=8;
                             atomj+=2;
                         } // ja
-            
-                        force.add(f);
-                        torq.add_cross(aposi-posei->f, f);
-                        
+
                         if(fatoms){
-                            fatomi->add( f );
-                            fatomi +=2;
+                            fatomi[ia].add( f );
+                            //printf( "FMM: imol %i ia %i f(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z );
+                            printf( "FMG: imol %i ia %i f(%g,%g,%g) fatomi(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z, fatomi[ia].x, fatomi[ia].y, fatomi[ia].z );
                         }
+                                    
+                        force.add(f);
+                        torq .add_cross(aposi-posei->f, f);
                         
                         //atomi+=8;
                         atomi+=2;
@@ -313,7 +315,8 @@ class RigidMolecularWorldOCL{ public:
 
             //printf( "imol %i (%g,%g,%g,%g|%g,%g,%g,%g) \n", imol, fs[0], fs[1], fs[2], fs[3], fs[4], fs[5], fs[6], fs[7] );
             
-            atomim += natomi;
+            atomim  += natomi;
+            fatomim += natomi;
             posei  +=2;
         } // imol
     } // evalForceCPU

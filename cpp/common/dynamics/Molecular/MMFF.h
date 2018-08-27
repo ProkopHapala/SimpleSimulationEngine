@@ -135,6 +135,8 @@ int pickParticle( int n, Vec3d * ps, const Vec3d& ray0, const Vec3d& hRay, doubl
     int imin    = -1;
     for(int i=0; i<n; i++){
         double ti = raySphere( ray0, hRay, R, ps[i] );
+        //printf( "atom %i t %g %g hRay(%g,%g,%g) ps(%g,%g,%g) \n", i, ti, tmin, hRay.x,hRay.y,hRay.z,  ps[i].x, ps[i].y, ps[i].z );
+        //printf( "atom %i t %g %g %g ray0(%g,%g,%g) ps(%g,%g,%g) \n", i, ti, R, tmin, ray0.x,ray0.y,ray0.z,  ps[i].x, ps[i].y, ps[i].z );
         if(ti<tmin){ imin=i; tmin=ti; }
     }
     return imin;
