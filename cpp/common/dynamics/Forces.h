@@ -40,7 +40,7 @@ inline void addAtomicForceQ( const Vec3d& dp, Vec3d& f, double q ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     double ir2  = 1/( dp.norm2() + R2SAFE );
     double ir   = sqrt(ir2);
-    double fr   = ( ir*q*-14.3996448915f )*ir2;
+    double fr   = ( ir*q*-COULOMB_CONST )*ir2;
     f.add_mul( dp, fr );
 }
 

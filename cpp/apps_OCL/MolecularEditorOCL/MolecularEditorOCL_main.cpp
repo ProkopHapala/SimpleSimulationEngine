@@ -80,7 +80,16 @@ void drawAtomsF8( int n, float8 * atoms, float sc, int oglSphere ){
     }
 }
 
-void drawRigidMolForce( const Vec3f& pos, const Quat4f& qrot, const Vec3f& fpos, const Vec3f& torq, int n, float8 * atom0s,  float rsc, float fsc ){
+void drawAtomsForces( int n, float8 * atoms, Vec3f * fatoms, float rsc, float fsc ){
+    Quat4f* ps = (Quat4f*) atoms;
+    for(int i=0; i<n; i++){
+        Vec3f p = ps[i*2].f;
+        Draw3D::drawPointCross( p, rsc           );
+        Draw3D::drawVecInPos  ( fatoms[i]*fsc, p );
+    }
+}
+
+void drawRigidMolAtomForce( const Vec3f& pos, const Quat4f& qrot, const Vec3f& fpos, const Vec3f& torq, int n, const float8 * atom0s,  float rsc, float fsc ){
     Mat3f mrot; qrot.toMatrix(mrot);
     for(int i=0; i<n; i++){
     
@@ -99,6 +108,55 @@ void drawRigidMolForce( const Vec3f& pos, const Quat4f& qrot, const Vec3f& fpos,
     }
 }
 
+void drawRigidMolAtomCOG( const Vec3f& pos, const Quat4f& qrot, int n, const float8 * atom0s,  float rsc ){
+    Mat3f mrot; qrot.toMatrix(mrot);
+    for(int i=0; i<n; i++){
+        Vec3f Mp;
+        //p = *((Vec3f*)(atom0s+j));
+        mrot.dot_to_T( *((Vec3f*)(atom0s+i)), Mp );
+        Mp.add( pos );       
+        //Draw3D::drawShape( pi, {0.0,0.0,0.0,1.0}, (Vec3f){r,r,r}, oglSphere );
+        Draw3D::drawPointCross( Mp, rsc   );
+        Draw3D::drawLine      ( Mp, pos   );
+    }
+}
+
+void drawRigidMolSystem(const RigidMolecularWorldOCL& clworld, int isystem ){
+    int isoff   = isystem * clworld.nMols;
+    int atom_count = 0;
+    const float8* atom0s   = clworld.atomsInTypes.data();
+    Quat4f* posi     = (Quat4f*)(clworld. poses+isoff);
+    //Quat4f* fsi      = (Quat4f*)(clworld.fposes+isoff);
+    for(int imol=0; imol<clworld.nMols; imol++){
+        //float* posi     = (float*)(clworld. poses+isoff+imol);
+        //float* fsi      = (float*)(clworld.fposes+isoff+imol);
+        const int2& m2a = clworld.mol2atoms[imol];
+        //printf( "isystem %i imol %i m2a (%i,%i) atom_count %i %i \n", isystem, imol, m2a.x, m2a.y, atom_count, atom_count );
+        //frag2atoms( *((Vec3f*)(posi)), *((Quat4f*)(posi+4)), m2a.y, atom0s+m2a.x, atoms+atom_count );
+        //drawRigidMolAtomForce( posi[0].f, posi[1], fsi[0].f, fsi[1].f, m2a.y, atom0s+m2a.x,  0.25, 10.0 );
+        drawRigidMolAtomCOG( posi[0].f, posi[1], m2a.y, atom0s+m2a.x,  0.25 );
+                
+        posi+=2;
+        //fsi +=2;
+        //atom_count += m2a.y;
+    }
+    //return atom_count;
+}
+
+void drawRigidMolSystemForceTorq(const RigidMolecularWorldOCL& clworld, int isystem, float fsc, float tsc ){
+    int isoff   = isystem * clworld.nMols;
+    int atom_count = 0;
+    const float8* atom0s   = clworld.atomsInTypes.data();
+    Quat4f* posi     = (Quat4f*)(clworld. poses+isoff);
+    Quat4f* fsi      = (Quat4f*)(clworld.fposes+isoff);
+    for(int imol=0; imol<clworld.nMols; imol++){
+        //Draw3D::drawPointCross( posi[0].f, rsc   );
+        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fsi[0].f*fsc, posi[0].f );  // force
+        glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( fsi[1].f*tsc, posi[0].f );  // torq    
+        posi+=2;
+        fsi +=2;
+    }
+}
 
 class AppMolecularEditorOCL : public AppSDL2OGL_3D {
 	public:
@@ -143,7 +201,8 @@ class AppMolecularEditorOCL : public AppSDL2OGL_3D {
     // TEMP
     int isystem = 0;
     float8* atoms_tmp=0;  // = new float8[100];
-    int atom_count=0;    //= clworld.system2atoms( 0, atoms );
+    Vec3f* fatoms_tmp=0;
+    int atom_count=0;     //= clworld.system2atoms( 0, atoms );
 
 
 
@@ -365,7 +424,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     
     DEBUG
     
-    int nMols    = 4;
+    int nMols    = 2;
     int nSystems = 3;
     
     //clworld.prepareBuffers( nSystems, nMols, world.gridFF.grid.n, world.gridFF.FFPauli_f, world.gridFF.FFLondon_f, world.gridFF.FFelec_f );
@@ -403,11 +462,9 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     
     DEBUG
     
-    atoms_tmp = new float8[1000];
+    atoms_tmp  = new float8[1000];
+    fatoms_tmp = new Vec3f [1000];
     atom_count = clworld.system2atoms( isystem, atoms_tmp );
-    
-    
-    
     
     manipulator.bindAtoms(world.natoms, world.apos, world.aforce ); 
     manipulator.realloc(1);                                        
@@ -550,39 +607,21 @@ void AppMolecularEditorOCL::draw(){
 	//ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
 	
 	
-	drawAtomsF8(atom_count, atoms_tmp, 0.25, ogl_sph);
+	printf( " # =========== frame %i \n", frameCount );
 	
+	float dt = 0.1;
+	int isystem = 0;
+	clworld.system2atoms( isystem, atoms_tmp );
+	clworld.evalForceCPU( isystem, world.gridFF, atoms_tmp, fatoms_tmp  );
+	clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
 	
-	{
-	    int isoff   = isystem * clworld.nMols;
-        int atom_count = 0;
-        float8* atom0s = clworld.atomsInTypes.data();
-        for(int imol=0; imol<clworld.nMols; imol++){
-            float* posi     = (float*)(clworld.poses+isoff+imol);
-            float* fsi      = (float*)(clworld.poses+isoff+imol);
-            const int2& m2a = clworld.mol2atoms[imol];
-            //printf( "isystem %i imol %i m2a (%i,%i) atom_count %i %i \n", isystem, imol, m2a.x, m2a.y, atom_count, atom_count );
-            //frag2atoms( *((Vec3f*)(posi)), *((Quat4f*)(posi+4)), m2a.y, atom0s+m2a.x, atoms+atom_count );
-            drawRigidMolForce( *((Vec3f*)(posi)), *((Quat4f*)(posi+4)), *((Vec3f*)(fsi)), *((Vec3f*)(fsi+4)), m2a.y, atom0s+m2a.x,  0.25, 10.0 );
-            
-            //atom_count += m2a.y;
-        }
-        //return atom_count;
-    }
+	//drawAtomsF8(atom_count, atoms_tmp, 0.25, ogl_sph);
+	
+	glColor3f(0.0,0.0,0.0); drawRigidMolSystem( clworld, isystem );
+	drawRigidMolSystemForceTorq(  clworld, isystem, 10.0, 10.0 );
+	glColor3f(1.0,0.0,1.0); drawAtomsForces( atom_count, atoms_tmp, fatoms_tmp, 0.0, 10.0 );
         
-	
-	
-	
 	return;
-	
-	
-	
-	
-	
-	
-	
-	
-	
 
     ray0 = (Vec3d)(cam.pos + cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     Draw3D::drawPointCross( ray0, 0.1 );
