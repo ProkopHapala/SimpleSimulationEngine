@@ -146,7 +146,7 @@ void AppMolecularEditor2::initRigidSubstrate(){
     world.translate( {0.0,0.0,4.5} );
 
     //testREQ = (Vec3d){ 2.181, 0.0243442, 0.0}; // Xe
-    testREQ = (Vec3d){ 1.487, 0.0006808, 0.0}; // H
+    testREQ = (Vec3d){ 1.487, sqrt(0.0006808), 0.0}; // H
     testPLQ = REQ2PLQ( testREQ, -1.6 );//
 
     world.genPLQ();
@@ -166,7 +166,6 @@ void AppMolecularEditor2::initRigidSubstrate(){
         if(world.gridFF.FFLondon) loadBin( "data/FFLondon.bin", world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
     }
 
-
     //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
 
     int iatom = 11;
@@ -181,7 +180,7 @@ void AppMolecularEditor2::initRigidSubstrate(){
     //saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
     world.gridFF.evalCombindGridFF( testREQ, FFtot );
-    //saveXSF( "FFtot_z.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+    saveXSF( "FFtot_z.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
     isoOgl = glGenLists(1);
     glNewList(isoOgl, GL_COMPILE);
@@ -218,6 +217,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     //AtomType atyp;
     //atyp.fromString( "CA 6 4 4 1 2.00 0.09 0x11EEAA" );
+    builder.params = &params;
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
     params.loadBondTypes( "common_resources/BondTypes.dat" );
     //for(auto kv : params.atypNames) { printf( ">>%s<< %i \n", kv.first.c_str(), kv.second ); };
@@ -264,7 +264,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     builder.insertMolecule( &mol, {6.0,6.0,2.0}, rot, false );
 
     world.printAtomInfo();
-    builder.toMMFF( &world, &params );                                 DEBUG
+    builder.toMMFF( &world );                                 DEBUG
     world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); 

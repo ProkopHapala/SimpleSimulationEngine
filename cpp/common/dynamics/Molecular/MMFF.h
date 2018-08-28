@@ -27,6 +27,7 @@ void frag2atoms(const Vec3TYPE<T>& pos, const Quat4TYPE<T>& qrot, int n, Vec3TYP
         Vec3TYPE<T> Mp;
         mrot.dot_to_T( apos0[j], Mp );
         apos[j].set_add( pos, Mp );
+        printf( "frag2atoms[%i]  (%g,%g,%g) (%g,%g,%g) \n", j,  apos0[j].x, apos0[j].y, apos0[j].z,   apos[j].x, apos[j].y, apos[j].z  );
         //printf( "%i %i  (%g,%g,%g) (%g,%g,%g) \n", ifrag, j,  m_apos[j].x, m_apos[j].y, m_apos[j].z,   Tp.x, Tp.y, Tp.z  );
     }
 }
@@ -364,22 +365,6 @@ void frags2atoms(){
         Vec3d   pos = *((Vec3d* )(poses+im8  ));
         Quat4d  rot = *((Quat4d*)(poses+im8+4));
         frag2atoms( pos, rot, fragNa[ifrag], fapos0s[ifrag], apos+frag2a[ifrag] );
-        /*
-        Mat3d T; rot.toMatrix(T);
-        int ia = frag2a[ifrag];
-        int na = fragNa[ifrag];
-        //printf( "ia na %i %i \n", ia, na );
-        //MolType& mtyp = mTypes[imolTypes[i]];
-        //Vec3d * m_apos = mTypes[imolTypes[ifrag]].apos;
-        Vec3d * m_apos = fapos0s[ifrag];
-        for( int j=0; j<na; j++ ){
-            Vec3d Tp;
-            T.dot_to_T( m_apos[j], Tp );
-            apos[ia].set_add( pos, Tp );
-            //printf( "%i %i  (%g,%g,%g) (%g,%g,%g) \n", ifrag, j,  m_apos[j].x, m_apos[j].y, m_apos[j].z,   Tp.x, Tp.y, Tp.z  );
-            ia++;
-        }
-        */
     }
     //exit(0);
 }

@@ -234,7 +234,7 @@ class Molecule{ public:
     }
 
 
-    int loadXYZ( char* fname ){
+    int loadXYZ(const char* fname ){
         // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
         // http://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
         FILE * pFile = fopen(fname,"r");

@@ -111,6 +111,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //AtomType atyp;
     //atyp.fromString( "CA 6 4 4 1 2.00 0.09 0x11EEAA" );
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
+    builder.params = &params;
 
     //for(auto kv : params.atypNames) { printf( ">>%s<< %i \n", kv.first.c_str(), kv.second ); };
 
@@ -161,8 +162,8 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     builder.insertMolecule (&mol, {5.0,0.0,0.0}, rot, false );
     builder.insertMolecule (&mol, {0.0,5.0,0.0}, rot, false );
     builder.insertMolecule (&mol, {5.0,5.0,0.0}, rot, false );
-    builder.assignAtomTypes(&params );
-    builder.toMMFF (&world, &params);
+    builder.assignAtomTypes();
+    builder.toMMFF ( &world );
 
     world.ang_b2a();           //exit(0);
     world.printBondParams();   //exit(0);

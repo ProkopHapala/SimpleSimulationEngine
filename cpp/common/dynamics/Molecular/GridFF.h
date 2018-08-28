@@ -99,6 +99,7 @@ class GridFF{ public:
     inline void addForce( Vec3d pos, Vec3d PLQ, Vec3d& f ) const {
         Vec3d gpos;
         grid.cartesian2grid(pos, gpos);
+        printf( "pos: (%g,%g,%g) PLQ: (%g,%g,%g) \n", pos.x, pos.y, pos.z,  PLQ.x, PLQ.y, PLQ.z );
         f.add_mul( interpolate3DvecWrap( FFPauli,  grid.n, gpos ) , PLQ.x );
         f.add_mul( interpolate3DvecWrap( FFLondon, grid.n, gpos ) , PLQ.y );
         f.add_mul( interpolate3DvecWrap( FFelec,   grid.n, gpos ) , PLQ.z );

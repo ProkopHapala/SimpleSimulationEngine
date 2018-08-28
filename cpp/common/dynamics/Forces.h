@@ -62,13 +62,18 @@ inline void addAtomicForceExp( const Vec3d& dp, Vec3d& f, double r0, double eps,
     //f.add_mul( dp, 1/(dp.norm2()+R2SAFE) ); // WARRNING DEBUG !!!!
 }
 
-inline Vec3d REQ2PLQ( Vec3d REQ, double alpha ){
-    double eps   = sqrt(REQ.y);
+inline Vec3d REQ2PLQ( const Vec3d& REQ, double alpha ){
+    //double eps   = sqrt(REQ.y);  // this is expected to be already done
+    double eps   = REQ.y; 
     double expar = exp(-alpha*REQ.x);
-    double CP =    eps*expar*expar;
-    double CL = -2*eps*expar;
+    double CP    =    eps*expar*expar;
+    double CL    = -2*eps*expar;
     //printf( "REQ2PLQ: %g %g %g  ->  %g %g\n", REQ.x, eps, alpha,   CP, CL );
     return (Vec3d){ CP, CL, REQ.z };
+}
+
+inline Vec3d REnergyQ2PLQ( const Vec3d& REQ, double alpha ){
+    return REQ2PLQ( {REQ.x, sqrt(REQ.y), REQ.z}, alpha );
 }
 
 inline Vec3d getForceSpringPlane( const Vec3d& p, const Vec3d& normal, double c0, double k ){

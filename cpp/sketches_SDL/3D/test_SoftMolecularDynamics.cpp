@@ -80,6 +80,8 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     mol.atypNames = &params.atypNames;
     params.loadBondTypes( "common_resources/BondTypes.dat");
 
+    builder.params = &params;
+
     mol.loadMol("common_resources/propylacid.mol");
     mol.bondsOfAtoms();   mol.printAtom2Bond();
     mol.autoAngles();
@@ -102,7 +104,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     builder.insertMolecule(&mol, {5.0,0.0,0.0}, rot, false );
     builder.insertMolecule(&mol, {0.0,5.0,0.0}, rot, false );
     builder.insertMolecule(&mol, {5.0,5.0,0.0}, rot, false );
-    builder.toMMFF(&world, &params);
+    builder.toMMFF(&world );
 
     world.ang_b2a();
 

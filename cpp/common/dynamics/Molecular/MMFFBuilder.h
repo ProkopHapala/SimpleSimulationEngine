@@ -1,11 +1,13 @@
 #ifndef MMFFBuilder_h
 #define MMFFBuilder_h
 
+#include <string>
 #include <vector>
 #include <unordered_map>
 
 #include "Molecule.h"
 #include "MMFF.h"
+#include "MMFFparams.h"
 
 
 class MMFFAtom{ public:
@@ -41,6 +43,10 @@ class MMFFfrag{ public:
 };
 
 class MMFFBuilder{  public:
+
+    MMFFparams*  params = NULL;
+    std::unordered_map<std::string,int> molTypeDict;
+    std::vector<Molecule*> molTypes;
     std::vector<MMFFAtom>  atoms;
     std::vector<MMFFBond>  bonds;
     std::vector<MMFFAngle> angles;
@@ -48,7 +54,24 @@ class MMFFBuilder{  public:
     std::vector<MMFFfrag>       frags;
     std::unordered_map<size_t,size_t> fragTypes;
 
-    void insertMolecule( Molecule * mol, Vec3d pos, Mat3d rot, bool rigid ){
+    int loadMolType(const char* fname ){
+        Molecule* mol = new Molecule();
+        mol->atypNames = &params->atypNames;
+        printf("mol->atypNames %i %i \n", mol->atypNames, &params->atypNames );
+        mol->loadXYZ( fname );
+        molTypes.push_back(mol);
+        return molTypes.size()-1;
+    }
+    
+    int loadMolType(const std::string& fname, const std::string& label ){
+        printf( "fname:`%s` label:`%s` \n", fname.c_str(), label.c_str()  );
+        int itype = loadMolType( fname.c_str() );
+        printf( "fname:`%s` label:`%s` itype %i \n", fname.c_str(), label.c_str(), itype  );
+        molTypeDict[label] = itype;
+        return itype;
+    };
+
+    void insertMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot, bool rigid ){
         int natom0  = atoms.size();
         int nbond0  = bonds.size();
         int nangle0 = angles.size();
@@ -88,8 +111,16 @@ class MMFFBuilder{  public:
             }
         }
     }
+    
+    void insertMolecule( int itype, const Vec3d& pos, const Mat3d& rot, bool rigid ){
+        insertMolecule( molTypes[itype], pos, rot, rigid );
+    };
+    
+    void insertMolecule( const std::string& molName, const Vec3d& pos, const Mat3d& rot, bool rigid ){
+        insertMolecule( molTypes[ molTypeDict[molName] ], pos, rot, rigid );
+    };
 
-    void assignAtomTypes( MMFFparams * params ){
+    void assignAtomTypes(){
         for(int i=0; i<atoms.size(); i++){
             //mmff->aLJq [i]  = atoms[i].type;
             int ityp = atoms[i].type;
@@ -100,7 +131,7 @@ class MMFFBuilder{  public:
         }
     }
 
-    void toMMFF( MMFF * mmff, MMFFparams * params ){
+    void toMMFF( MMFF * mmff ){
         mmff->deallocate();
         mmff->allocate( atoms.size(), bonds.size(), angles.size(), 0 );
         //int * atomTypes = new int[atoms.size()];

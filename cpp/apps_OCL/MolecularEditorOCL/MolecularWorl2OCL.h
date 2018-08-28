@@ -29,7 +29,8 @@ void frag2atoms(const Vec3f& pos, const Quat4f& qrot, int n, float8* atom0s, flo
     for( int j=0; j<n; j++ ){
         Vec3f Mp;
         atoms[j] = atom0s[j];
-        mrot.dot_to_T( *((Vec3f*)(atom0s+j)), Mp );
+        //mrot.dot_to_T( *((Vec3f*)(atom0s+j)), Mp );  // this is in  MMFF::frag2atoms
+        mrot.dot_to( *((Vec3f*)(atom0s+j)), Mp );
         ((Vec3f*)(atoms+j))->set_add( pos, Mp );
         printf( "atom %i  xyz(%g,%g,%g) REQ(%g,%g,%g) \n", j ,atoms[j].x, atoms[j].y, atoms[j].z,  atoms[j].hx, atoms[j].hy, atoms[j].hz  ); 
     }
@@ -88,6 +89,7 @@ class RigidMolecularWorldOCL{ public:
             //float8 atom = (float8){ (float4){ (float3)(Vec3f)molecule.pos [ia], 0.0},  (float3)(float4){(Vec3f)molecule.REQs[ia], 0.0}  };
             *((Vec3f*)(((float*)&atom)+0)) = (Vec3f)molecule.pos [ia];
             *((Vec3f*)(((float*)&atom)+4)) = (Vec3f)molecule.REQs[ia]; 
+            atom.hy = sqrt(atom.hy); // eps_ii 
             atomsInTypes.push_back( atom );
         }
     }
@@ -198,6 +200,7 @@ class RigidMolecularWorldOCL{ public:
     }
     
     int evalForceCPU( int isystem, const GridFF& gridFF, float8* atoms, Vec3f* fatoms=0 ){
+        printf("evalForceCPU \n");
         int isoff   = isystem * nMols;
         //float8* atom0s = atomsInTypes.data();
         
@@ -221,22 +224,32 @@ class RigidMolecularWorldOCL{ public:
         
                 // molecule grid interactions
                 //float eps    = sqrt(REQi.y); //  THIS SHOULD BE ALREADY DONE
+                
+                //float eps   = sqrt(REQi.y);
+                //float expar = exp(-alpha*REQi.x);
+                //float CP =    eps*expar*expar;
+                //float CL = -2*eps*expar;
+                
                 float expar    = exp(-alpha*REQi.x);
-                float cPauli   =    REQi.y*expar*expar;
-                float cLondon  = -2*REQi.y*expar;
+                float CP  =    REQi.y*expar*expar;
+                float CL  = -2*REQi.y*expar;
                 
                 Vec3d fd = Vec3dZero;
-                gridFF.addForce( (Vec3d)aposi, (Vec3d){cPauli,cLondon,REQi.z*0}, fd );
+                gridFF.addForce( (Vec3d)aposi, (Vec3d){CP,CL,REQi.z}, fd );
                 Vec3f f = (Vec3f)fd;
+        
+        
+                //f = (Vec3f){0.1,0.0,0.0};
         
                 if(fatoms){
                     fatomi[ia] = f ;
                     //printf( "FMG: imol %i ia %i f(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z );
-                    printf( "FMG: imol %i ia %i f(%g,%g,%g) fatomi(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z, fatomi[ia].x, fatomi[ia].y, fatomi[ia].z );
+                    //printf( "FMG: imol %i ia %i f(%g,%g,%g) fatomi(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z, fatomi[ia].x, fatomi[ia].y, fatomi[ia].z );
                 }
                         
                 force.add(f);
-                //torq.add_cross(aposi, f);
+                torq.add_cross(aposi-posei->f, f);
+                //printf( "%i tq.f %g tq.r %g r.r %g tq.tq %g \n", ia, torq.dot(f), torq.dot(aposi-posei->f), (aposi-posei->f).norm(), torq.norm() );
                 
                 atomi+=2;
             } // ia
@@ -291,6 +304,7 @@ class RigidMolecularWorldOCL{ public:
                                     
                         force.add(f);
                         torq .add_cross(aposi-posei->f, f);
+                        //torq .add_cross(f, aposi-posei->f);
                         
                         //atomi+=8;
                         atomi+=2;
@@ -321,27 +335,17 @@ class RigidMolecularWorldOCL{ public:
         } // imol
     } // evalForceCPU
     
-    
-    
     void moveSystemGD( int isystem, float dt, float sct, float scr ){
         int isoff   = isystem * nMols;
         Quat4f* ps = (Quat4f*)( poses + isoff); 
         Quat4f* fs = (Quat4f*)(fposes + isoff); 
         for(int imol=0; imol<nMols; imol++){
-            ps[0].f.add_mul   ( fs[0].f , dt*sct );
-            ps[1]  .dRot_exact( dt*scr,  fs[1].f );
+            ps[0].f.add_mul   ( fs[0].f, dt*sct  );
+            ps[1]  .dRot_exact( dt*scr , fs[1].f );
             ps+=2; fs+=2;
         }
     }
-    
-    /*
-    void gradientDescent( float dt, float sct, float scr ){
-        for(int isys=0; isys<nSystems; isys++){
-            
-        }
-    }
-    */
-   
+       
 };
 
 
