@@ -768,10 +768,11 @@ void eval_MorseQ_On2_fragAware(){
             }
             if(i!=j){
                 Vec3d& REQj = aREQ[j];
-                //printf("(%i,%i)", i, j );
+                //printf("(%i,%i) (%i,%i)", ifrag, i, atom2frag[j], j );
                 addAtomicForceMorseQ( pi-apos[j], f, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z, gridFF.alpha );
             }
         }
+        //printf( "FMM: imol %i ia %i f(%g,%g,%g) \n", ifrag, i, f.x,f.y,f.z );
         aforce[i].add(f);
     }
     //exit(0);

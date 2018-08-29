@@ -210,6 +210,8 @@ class RigidMolecularWorldOCL{ public:
         float8*  atomim  = atoms;
         Vec3f*   fatomim = fatoms;
         
+        const double R2ELEC = 1.0;
+        
         for( int imol=0; imol<nMols; imol++ ){
             Vec3f force = Vec3fZero;
             Vec3f torq  = Vec3fZero;
@@ -285,13 +287,14 @@ class RigidMolecularWorldOCL{ public:
                             float r0    = REQj.x + REQi.x;
                             float eps   = REQj.y * REQi.y; 
                             float cElec = REQj.z * REQi.z * COULOMB_CONST;
-                            float r     = sqrt( dp.dot(dp)+R2SAFE );
+                            float r     = sqrt( dp.dot(dp) + +R2SAFE );
                             float expar = exp( alpha*(r-r0));
-                            float ir    = 1/r;
-                            float fr    = eps*2*alpha*( expar*expar - expar ) 
-                                        + cElec*ir*ir;
-                            //f.add_mul( dp,  fr*ir );
-                            //f   += eps*( expar*expar - 2*expar ) + cElec*ir; // Energy
+                            float fr    = eps*2*alpha*( expar*expar - expar ) - cElec/( r*r + R2ELEC );
+                            
+                            //double fr    = eps*2*alpha*( expar*expar - expar ) + COULOMB_CONST*qq/( r*r + R2ELEC );       
+                            //printf( " (%i,%i) (%i,%i) r %g expar %g fr %g kqq %g a %g eps %g \n", imol, ia, jmol, ja, r, expar, fr, cElec, alpha, eps );
+                            f.add_mul( dp,  fr/r );
+                            //e   += eps*( expar*expar - 2*expar ) + cElec*ir; // Energy
                             //atomj+=8;
                             atomj+=2;
                         } // ja
@@ -299,7 +302,7 @@ class RigidMolecularWorldOCL{ public:
                         if(fatoms){
                             fatomi[ia].add( f );
                             //printf( "FMM: imol %i ia %i f(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z );
-                            printf( "FMG: imol %i ia %i f(%g,%g,%g) fatomi(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z, fatomi[ia].x, fatomi[ia].y, fatomi[ia].z );
+                            //printf( "FMG: imol %i ia %i f(%g,%g,%g) fatomi(%g,%g,%g) \n", imol, ia, f.x,f.y,f.z, fatomi[ia].x, fatomi[ia].y, fatomi[ia].z );
                         }
                                     
                         force.add(f);
@@ -324,7 +327,7 @@ class RigidMolecularWorldOCL{ public:
             fs[0].f = force;
             fs[1].f = torq;
             //printf( "imol %i force(%g,%g,%g)    torq (%g,%g,%g,%g) \n",  imol, force.x, force.y, force.z,    torq.x, torq.y, torq.z );
-            printf( "imol %i fs[0](%g,%g,%g,%g) fs[1](%g,%g,%g,%g) \n", imol, fs[0].x, fs[0].y, fs[0].z, fs[0].w,  fs[1].x, fs[1].y, fs[1].z, fs[1].w );
+            //printf( "imol %i fs[0](%g,%g,%g,%g) fs[1](%g,%g,%g,%g) \n", imol, fs[0].x, fs[0].y, fs[0].z, fs[0].w,  fs[1].x, fs[1].y, fs[1].z, fs[1].w );
             fs+=2;
 
             //printf( "imol %i (%g,%g,%g,%g|%g,%g,%g,%g) \n", imol, fs[0], fs[1], fs[2], fs[3], fs[4], fs[5], fs[6], fs[7] );

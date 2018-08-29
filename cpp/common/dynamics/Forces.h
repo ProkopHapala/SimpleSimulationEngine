@@ -14,33 +14,33 @@
 #define R2SAFE  1.0e-8f
 #define F2MAX   10.0f
 
-inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double q ){
+inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double qq ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     double ir2  = 1/( dp.norm2() + R2SAFE );
     double ir   = sqrt(ir2);
     double ir2_ = ir2*r0*r0;
     double ir6  = ir2_*ir2_*ir2_;
-    double fr   = ( ( 1 - ir6 )*ir6*12*eps + ir*q*-COULOMB_CONST )*ir2;
+    double fr   = ( ( 1 - ir6 )*ir6*12*eps + ir*qq*-COULOMB_CONST )*ir2;
     f.add_mul( dp, fr );
 }
 
-inline void addAtomicForceMorseQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double q, double alpha ){
+inline void addAtomicForceMorseQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double qq, double alpha ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     const double R2ELEC = 1.0;
     double r     = sqrt( dp.norm2()+R2SAFE );
     double expar = exp( alpha*(r-r0));
     //double E     = eps*( expar*expar - 2*expar );
-    double ir    = 1/r;
-    double fr    = eps*2*alpha*( expar*expar - expar ) + COULOMB_CONST*q/( r*r + R2ELEC );
+    double fr    = eps*2*alpha*( expar*expar - expar ) + COULOMB_CONST*qq/( r*r + R2ELEC );
     //printf( " %g -> %g | (%g,%g,%g) %g\n" , r, fr,  r0, eps,  q, alpha );
-    f.add_mul( dp, fr*ir );
+    //printf( " r %g expar %g fr %g kqq %g a %g eps %g \n" , r, expar, fr, COULOMB_CONST*qq, alpha, eps );
+    f.add_mul( dp, fr/r );
 }
 
-inline void addAtomicForceQ( const Vec3d& dp, Vec3d& f, double q ){
+inline void addAtomicForceQ( const Vec3d& dp, Vec3d& f, double qq ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     double ir2  = 1/( dp.norm2() + R2SAFE );
     double ir   = sqrt(ir2);
-    double fr   = ( ir*q*-COULOMB_CONST )*ir2;
+    double fr   = ( ir*qq*-COULOMB_CONST )*ir2;
     f.add_mul( dp, fr );
 }
 

@@ -357,42 +357,6 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     //mol.atypNames = &params.atypNames;
     //exit(0);
 
-    /*
-    // ---- Rigid Body Molecules
-    //mol.loadXYZ( "inputs/water_ax.xyz" );                           
-    //mol.loadXYZ( "inputs/water_ax_q0.xyz" );                        
-    //mol.loadXYZ( "inputs/OH_ax.xyz" );                              
-    mol.loadXYZ( "inputs/water_T5_ax.xyz" );    mol.printAtomInfo();   DEBUG
-    params.assignREs( mol.natoms, mol.atomType, mol.REQs );
-    Mat3d rot; rot.setOne();
-    builder.insertMolecule( &mol, {0.0,0.0,8.0}, rot, true );          DEBUG
-    //builder.insertMolecule( &mol, {2.0,2.0,8.0}, rot, true );          DEBUG
-    //builder.insertMolecule( &mol, {0.0,0.0,4.0}, rot, true );          DEBUG
-    //builder.insertMolecule( &mol, {4.0,0.0,4.0}, rot, true );
-    //builder.insertMolecule( &mol, {0.0,4.0,4.0}, rot, true );
-    //builder.insertMolecule( &mol, {4.0,4.0,4.0}, rot, true );
-    clworld.addMolType( mol );
-
-    mol.loadXYZ( "inputs/NaIon.xyz" ); mol.printAtomInfo();
-    params.assignREs( mol.natoms, mol.atomType, mol.REQs );
-    //builder.insertMolecule( &mol, {4.0,6.0,5.0}, rot, false );
-    //builder.insertMolecule( &mol, {4.0,4.0,2.0}, rot, false );
-    //builder.insertMolecule( &mol, {4.0,8.0,2.0}, rot, false );
-    clworld.addMolType( mol );
-
-    mol.loadXYZ( "inputs/ClIon.xyz" ); mol.printAtomInfo();
-    params.assignREs( mol.natoms, mol.atomType, mol.REQs );
-    //builder.insertMolecule( &mol, {2.0,6.0,2.0}, rot, false );
-    //builder.insertMolecule( &mol, {6.0,6.0,2.0}, rot, false );
-    clworld.addMolType( mol );
-    
-    mol.loadXYZ( "inputs/OHion.xyz" ); mol.printAtomInfo();
-    params.assignREs( mol.natoms, mol.atomType, mol.REQs );
-    //builder.insertMolecule( &mol, {2.0,6.0,2.0}, rot, false );
-    //builder.insertMolecule( &mol, {6.0,6.0,2.0}, rot, false );
-    clworld.addMolType( mol );
-    */
-    
     DEBUG
     builder.loadMolType( "inputs/water_T5_ax.xyz", "H2O" );
     builder.loadMolType( "inputs/NaIon.xyz", "Na+" );
@@ -409,6 +373,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     Mat3d rot; rot.setOne();
     //builder.insertMolecule( "OH-", {0.0,0.0,8.0}, rot, true );
     builder.insertMolecule( "H2O", {0.0,0.0,8.0}, rot, true );
+    builder.insertMolecule( "H2O", {3.0,3.0,8.0}, rot, true );
     DEBUG
 
     world.printAtomInfo();
@@ -591,8 +556,7 @@ void AppMolecularEditorOCL::draw(){
 	
 	clworld.system2atoms( isystem, atoms_tmp );
 	clworld.evalForceCPU( isystem, world.gridFF, atoms_tmp, fatoms_tmp );
-	clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
-	
+
 	//drawAtomsF8(atom_count, atoms_tmp, 0.25, ogl_sph);
 	
 	glColor3f(0.0,0.0,0.0); drawRigidMolSystem( clworld, isystem );
@@ -603,12 +567,20 @@ void AppMolecularEditorOCL::draw(){
 	
 	world.cleanAtomForce();
 	world.frags2atoms(); 
-	world.eval_FFgrid();
+	//world.eval_FFgrid();
+	world.eval_MorseQ_On2_fragAware();
+	world.cleanPoseTemps();
+    world.aforce2frags();      //printf( "DEBUG 5.4\n" );
 	
 	Quat4f*  ps = (Quat4f*)clworld.poses;
 	Quat4d* wps = (Quat4d*)  world.poses;
-	printf( "  world pose p(%5.5e,%5.5e,%5.5e) q(%5.5e,%5.5e,%5.5e,%5.5e) \n",  wps[0].f.x, wps[0].f.y, wps[0].f.z,  wps[1].x, wps[1].y, wps[1].z, wps[1].w );
-	printf( "clworld pose p(%5.5e,%5.5e,%5.5e) q(%5.5e,%5.5e,%5.5e,%5.5e) \n",   ps[0].f.x,  ps[0].f.y,  ps[0].f.z,   ps[1].x,  ps[1].y,  ps[1].z,  ps[1].w );
+	Quat4f*  fs = (Quat4f*)clworld.fposes;
+	Quat4d* wfs = (Quat4d*)  world.poseFs;
+	for (int i=0; i<clworld.nMols; i++ ){
+        printf( "  world pose imol %i p(%5.5e,%5.5e,%5.5e) q(%5.5e,%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", i,  wps[0].f.x, wps[0].f.y, wps[0].f.z,   wps[1].x, wps[1].y, wps[1].z, wps[1].w,  wfs[0].f.x, wfs[0].f.y, wfs[0].f.z );
+        printf( "clworld pose imol %i p(%5.5e,%5.5e,%5.5e) q(%5.5e,%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", i,   ps[0].f.x,  ps[0].f.y,  ps[0].f.z,   ps[1].x,  ps[1].y,  ps[1].z,  ps[1].w,    fs[0].f.x,  fs[0].f.y,  fs[0].f.z );
+        ps+=2; wps+=2; fs+=2; wfs+=2;
+	}
 	for( int ia=0; ia<world.natoms; ia++ ){
         Vec3d& p  =world.apos  [ia];
         Vec3d& f  =world.aforce[ia];
@@ -624,6 +596,7 @@ void AppMolecularEditorOCL::draw(){
 	
 	//exit(0);
 	
+	clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
 	drawCPU();
 
 };
@@ -664,7 +637,7 @@ void AppMolecularEditorOCL::drawCPU(){
 	perFrame = 1;
 	//delay = 100;
 	for(int itr=0; itr<perFrame; itr++){
-        stepCPU( F2, false );
+       stepCPU( F2, false );
     }
     
     glEnable(GL_LIGHTING);
