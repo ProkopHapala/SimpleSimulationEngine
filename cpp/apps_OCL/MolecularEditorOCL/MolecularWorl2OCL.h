@@ -107,8 +107,8 @@ class RigidMolecularWorldOCL{ public:
         poses        = new float8[nMolInstances]; 
         fposes       = new float8[nMolInstances];
                 
-        id_mol2atoms    = cl->newBuffer( "molTypes",     nMolInstances, sizeof(int2)  , NULL,                CL_MEM_READ_WRITE ); DEBUG;
-        id_atomsInTypes = cl->newBuffer( "atomsInTypes", nMolInstances, sizeof(float8), atomsInTypes.data(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR ); DEBUG;
+        id_mol2atoms    = cl->newBuffer( "molTypes",     nMolInstances,       sizeof(int2)  , NULL,                CL_MEM_READ_WRITE ); DEBUG;
+        id_atomsInTypes = cl->newBuffer( "atomsInTypes", atomsInTypes.size(), sizeof(float8), atomsInTypes.data(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR ); DEBUG;
         
         id_poses        = cl->newBuffer( "poses",        nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
         id_fposes       = cl->newBuffer( "fposes",       nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
@@ -118,9 +118,9 @@ class RigidMolecularWorldOCL{ public:
         //img_FFLondon = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFlondon, &err ); OCL_checkError(err, "clCreateImage3D img_FFLondon");
         //img_FFelec   = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFelec,   &err ); OCL_checkError(err, "clCreateImage3D img_FFelec"  );
     
-        id_FFPauli  = cl->newBufferImage3D( "FFPauli",  nGrid.x, nGrid.y, nGrid.z, sizeof(float), FFpauli,  CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RG, CL_FLOAT} );
-        id_FFLondon = cl->newBufferImage3D( "FFLondon", nGrid.x, nGrid.y, nGrid.z, sizeof(float), FFlondon, CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RG, CL_FLOAT} );
-        id_FFelec   = cl->newBufferImage3D( "FFelec",   nGrid.x, nGrid.y, nGrid.z, sizeof(float), FFelec,   CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RG, CL_FLOAT} );
+        id_FFPauli  = cl->newBufferImage3D( "FFPauli",  nGrid.x, nGrid.y, nGrid.z, sizeof(float), FFpauli,  CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RGBA, CL_FLOAT} );
+        id_FFLondon = cl->newBufferImage3D( "FFLondon", nGrid.x, nGrid.y, nGrid.z, sizeof(float), FFlondon, CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RGBA, CL_FLOAT} );
+        id_FFelec   = cl->newBufferImage3D( "FFelec",   nGrid.x, nGrid.y, nGrid.z, sizeof(float), FFelec,   CL_MEM_READ_ONLY  | CL_MEM_COPY_HOST_PTR , {CL_RGBA, CL_FLOAT} );
         
         printf( " id_FFPauli, id_FFLondon, id_FFelec %i %i %i  | sizeof(cl_mem) %i \n ", id_FFPauli, id_FFLondon, id_FFelec , sizeof(cl_mem) );
     
@@ -156,9 +156,9 @@ class RigidMolecularWorldOCL{ public:
         task_getForceRigidSystemSurfGrid->local [0] = 32;
         task_getForceRigidSystemSurfGrid->global[0] = nSystems* task_getForceRigidSystemSurfGrid->local[0]; 
         //pos0.setXYZ( (Vec3f)grid.pos0    );
-        dA  .setXYZ( (Vec3f)grid.dCell.a );
-        dB  .setXYZ( (Vec3f)grid.dCell.b );
-        dC  .setXYZ( (Vec3f)grid.dCell.c );
+        dA  .setXYZ( (Vec3f)grid.diCell.a*(1.0/grid.n.a) );
+        dB  .setXYZ( (Vec3f)grid.diCell.b*(1.0/grid.n.b) );
+        dC  .setXYZ( (Vec3f)grid.diCell.c*(1.0/grid.n.c) );
         alpha = alpha_;
         task_getForceRigidSystemSurfGrid->args = { 
             //LBUFFarg(img_FFPauli), 
@@ -236,11 +236,13 @@ class RigidMolecularWorldOCL{ public:
                 float CP  =    REQi.y*expar*expar;
                 float CL  = -2*REQi.y*expar;
                 
+                //printf( "CPU fgrid: imol %i ia %i ", imol, ia );
+                
                 Vec3d fd = Vec3dZero;
                 gridFF.addForce( (Vec3d)aposi, (Vec3d){CP,CL,REQi.z}, fd );
                 Vec3f f = (Vec3f)fd;
         
-        
+                printf( "CPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z, CP,CL,REQi.z, f.x, f.y, f.z );
                 //f = (Vec3f){0.1,0.0,0.0};
         
                 if(fatoms){

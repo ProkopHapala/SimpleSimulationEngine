@@ -372,8 +372,8 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     DEBUG
     Mat3d rot; rot.setOne();
     //builder.insertMolecule( "OH-", {0.0,0.0,8.0}, rot, true );
-    builder.insertMolecule( "H2O", {0.0,0.0,8.0}, rot, true );
-    builder.insertMolecule( "H2O", {3.0,3.0,8.0}, rot, true );
+    builder.insertMolecule( "H2O", {0.9,1.1,8.0}, rot, true );
+    builder.insertMolecule( "H2O", {4.0,4.0,8.0}, rot, true );
     DEBUG
 
     world.printAtomInfo();
@@ -594,7 +594,7 @@ void AppMolecularEditorOCL::draw(){
         printf( "clworld %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) req(%5.5e,%5.5e,%5.5e) \n", ia, p_.x,p_.y,p_.z,  f_.x,f_.y,f_.z,  req_.x,req_.y,req_.z );
 	}
 	
-	//exit(0);
+	exit(0);
 	
 	clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
 	drawCPU();

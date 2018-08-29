@@ -1,14 +1,10 @@
 
 // https://www.khronos.org/registry/OpenCL/sdk/1.1/docs/man/xhtml/sampler_t.html
 
-
-
 #define R2ELEC 1.0
 #define R2SAFE          1e-4f
 #define RSAFE           1.0e-4f
 #define COULOMB_CONST   14.399644f  // [eV/e]
-
-
 
 __constant sampler_t sampler_1 = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
 
@@ -112,6 +108,14 @@ __kernel void getForceRigidSystemSurfGrid(
     const int iL      = get_local_id(0);
     const int isystem = get_group_id(0);
 
+
+    if( get_global_id(0)==0 ){
+        printf( "GPU nGlobal %i nLocal %i nSystems %i nMols %i \n", (int)get_global_size(0), nL, nSystems, nMols );
+        printf( "dinvA (%g,%g,%g,%g)\n", dinvA.x, dinvA.y, dinvA.z );
+        printf( "dinvB (%g,%g,%g,%g)\n", dinvB.x, dinvB.y, dinvB.z );
+        printf( "dinvC (%g,%g,%g,%g)\n", dinvC.x, dinvC.y, dinvC.z);
+    }
+
     //if( isystem > nSystems ) return;  // perhaps not needed if global_size set properly
     //if( imol > nMols ) return;
 
@@ -125,6 +129,13 @@ __kernel void getForceRigidSystemSurfGrid(
     float4 mposi        = poses[oimol].lo;
     float4 qroti        = poses[oimol].hi;
 
+    if( get_global_id(0)==0 ){ 
+        printf( "GPU i0,n(%i,%i) p(%g,%g,%g) q(%g,%g,%g,%g) \n", iatomi, natomi,  mposi.x,mposi.y,mposi.z,  qroti.x,qroti.y,qroti.z,qroti.w  );
+        for(int ia=0; ia<natomi; ia++){
+            float8 ai = atomsInTypes[iatomi+ia];
+            printf( "ia %i %i xyz(%g,%g,%g,%g) REQ(%g,%g,%g,%g)\n", ia, iatomi+ia, ai.x, ai.y, ai.z, ai.w,  ai.s4, ai.s5, ai.s6, ai.s7 );
+        }
+    }
     // ==== Molecule - Grid interaction
 
     // TODO: we may store transformed atoms of imol to local mem ?
@@ -140,13 +151,22 @@ __kernel void getForceRigidSystemSurfGrid(
         float cPauli   =    REQi.y*expar*expar;
         float cLondon  = -2*REQi.y*expar;
         float4 fe = (float4)(0.0,0.0,0.0,0.0);
-        fe += cPauli   * interpFE( aposi, dinvA.xyz, dinvB.xyz, dinvC.xyz, imgPauli  );
-        fe += cLondon  * interpFE( aposi, dinvA.xyz, dinvB.xyz, dinvC.xyz, imgLondon );
-        fe += REQi.z   * interpFE( aposi, dinvA.xyz, dinvB.xyz, dinvC.xyz, imgElec   );
+        const float4 coord = (float4)( dot(aposi,dinvA.xyz),dot(aposi,dinvB.xyz),dot(aposi,dinvC.xyz), 0.0f );
+        
+        fe += cPauli *read_imagef( imgPauli, sampler_1, coord );
+        fe += cLondon*read_imagef( imgLondon, sampler_1, coord );
+        fe += REQi.z *read_imagef( imgElec, sampler_1, coord );
+        
+        //fe = read_imagef( imgLondon, sampler_1, coord );
+
+        //if( isystem==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  fe.x, fe.y, fe.z );
+        //if( isystem==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) g(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  coord.x,coord.y,coord.z,  fe.x, fe.y, fe.z );
+        if( isystem==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  cPauli,cLondon,REQi.z,  fe.x, fe.y, fe.z );
 
         forceE += fe;
         torq   += cross(adposi, fe);
     }
+    return;
 
     // ==== Molecule - Molecule Interaction
 
@@ -181,12 +201,13 @@ __kernel void getForceRigidSystemSurfGrid(
                 float r0    = REQj.x + REQi.x;
                 float eps   = REQj.y * REQi.y; 
                 float cElec = REQj.z * REQi.z * COULOMB_CONST;
-                float r     = sqrt( dot(dp,dp)+R2SAFE );
+                float r     = sqrt( dot(dp,dp) + R2SAFE );
                 float expar = exp( alpha*(r-r0));
-                float ir    = 1/r;
-                float fr    = eps*2*alpha*( expar*expar - expar ) + cElec*ir*ir;
-                fe.xyz     += dp *( fr*ir );
-                fe.w       += eps*( expar*expar - 2*expar ) + cElec*ir; // Energy
+                float fr    = eps*2*alpha*( expar*expar - expar ) - cElec/( r*r + R2ELEC );
+                fe.xyz     += dp *( fr/r );
+                fe.w       += eps*( expar*expar - 2*expar ) + cElec/( r ); // Energy - TODO there should be approx of arctan(x)
+
+                if( isystem==0 ) printf( "GPU (%i,%i) (%i,%i) r %g expar %g fr %g kqq %g a %g eps %g \n", imol, ia, jmol, ja, r, expar, fr, cElec, alpha, eps );
             }
 
             forceE += fe;
@@ -197,6 +218,8 @@ __kernel void getForceRigidSystemSurfGrid(
     }
 
     if (imol>nMols) return;
+
+    if( isystem==0 ) printf( "GPU imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
 
     fposes[oimol].lo = forceE;
     fposes[oimol].hi = torq;
