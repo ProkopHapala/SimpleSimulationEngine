@@ -67,6 +67,26 @@ void move_FIRE( float3 f, float3 p, float3 v, float2 RP, float4 RP0 ){
     p +=  v * RP.x;
 }
 
+__kernel void getFEtot(
+    __read_only image3d_t  imgPauli,
+    __read_only image3d_t  imgLondon,
+    __read_only image3d_t  imgElec,
+    __global  float4*  poss,
+    __global  float4*  FEs,
+    float4 dinvA,
+    float4 dinvB,
+    float4 dinvC,
+    float4 PLQ
+){
+    float3 pos   = poss[ get_global_id (0) ].xyz;
+    float4 coord = (float4)( dot(pos,dinvA.xyz),dot(pos,dinvB.xyz),dot(pos,dinvC.xyz), 0.0f );
+    float4 fe;
+    fe  = PLQ.x * read_imagef( imgPauli,  sampler_1, coord );
+    fe += PLQ.y * read_imagef( imgLondon, sampler_1, coord );
+    fe += PLQ.z * read_imagef( imgElec,   sampler_1, coord );
+    FEs[ get_global_id (0) ] = fe;
+}
+
 /*
 Purpose,
     have N systems each composed of M molecules each composed of K atoms

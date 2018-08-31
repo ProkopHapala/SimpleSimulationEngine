@@ -407,6 +407,40 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     
     DEBUG
     
+    //testREQ = (Vec3d){ 1.487, sqrt(0.0006808), 0.0 };
+    { printf( "// ======== CHECK GPU FORCE GRID INTERPOLATION \n" );
+    
+        int nPoss = 100; 
+        clworld.prepareBuffers_getFEtot( nPoss );
+        clworld.setupKernel_getFEtot( world.gridFF.grid, testREQ, world.gridFF.alpha, nPoss ); 
+        
+        Vec3f p0 = (Vec3f){0.5,0.5,12.0};
+        Vec3f p1 = (Vec3f){0.5,0.5,2.0};
+        for(int i=0; i<nPoss; i++ ){
+            float f = i/(float)nPoss;
+            clworld.poss[i].f = ( p0*(1-f) + p1*f );
+            clworld.poss[i].e = 0;
+            Vec3f&  p  = clworld.poss[i].f;
+            //printf( "%i : %g p(%g,%g,%g) \n", i, f, p.x,p.y,p.z  );
+        }
+        
+        clworld.upload_poss();
+        clworld.task_getFEtot->enque();
+        clworld.download_FEs();
+        clFinish(cl->commands);
+        
+        for(int i=0; i<nPoss; i++ ){
+            Vec3f&  p  = clworld.poss[i].f;
+            Quat4f& fe = clworld.FEs [i];
+            //printf( "%i : p(%g,%g,%g)  fe(%g,%g,%g,%g) \n", i, p.x,p.y,p.z, fe.x,fe.y,fe.z,fe.w  );
+            
+            printf( "%i p %5.5e %5.5e %5.5e fe %5.5e %5.5e %5.5e %5.5e \n", i, p.x,p.y,p.z, fe.x,fe.y,fe.z,fe.w  );
+        }
+    }
+    
+    exit(0);
+    
+    
     printf( " SETUP CLWORLD nSystem %i nMols %i \n", nSystems, nMols );
     
     int i=0;
@@ -436,8 +470,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     DEBUG
     
     clworld.updateMolStats();
-    clworld.setupKernel( world.gridFF.grid, world.gridFF.alpha ); 
-    
+    clworld.setupKernel_getForceRigidSystemSurfGrid( world.gridFF.grid, world.gridFF.alpha ); 
     clworld.upload_mol2atoms();  DEBUG
     clworld.upload_poses();      DEBUG  // PO SEM DOBRE
     clworld.task_getForceRigidSystemSurfGrid->enque();  DEBUG
@@ -591,7 +624,7 @@ void AppMolecularEditorOCL::draw(){
 	//exit(0);
 	
 	clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
-    //drawCPU();
+    drawCPU();
 
 };
 

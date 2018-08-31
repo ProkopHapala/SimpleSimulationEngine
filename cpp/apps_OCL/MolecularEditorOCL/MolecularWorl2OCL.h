@@ -40,7 +40,10 @@ class RigidMolecularWorldOCL{ public:
 
     OCLsystem* cl = 0;
     OCLtask *task_getForceRigidSystemSurfGrid = 0;
-
+    OCLtask *task_getFEtot = 0;
+    
+    bool bGetFEtot = true;
+    
     int nSystems  = 0;
     int nMols     = 0;
     int nMolTypes = 0;
@@ -49,7 +52,7 @@ class RigidMolecularWorldOCL{ public:
     //int nAtomsInTypes = 0; // derived 
     int nMolInstances = 0; // derived
    
-    Quat4f pos0=Quat4fZero, dA=Quat4fZero, dB=Quat4fZero, dC=Quat4fZero;
+    Quat4f pos0=Quat4fZero, dA=Quat4fZero, dB=Quat4fZero, dC=Quat4fZero, testPLQ=Quat4fZero;
     float alpha = 0.0;
     
     std::vector<float8> atomsInTypes;
@@ -58,6 +61,9 @@ class RigidMolecularWorldOCL{ public:
     int2   * mol2atoms    = 0;
     float8 * poses        = 0;
     float8 * fposes       = 0; 
+    
+    Quat4f * poss      = 0;
+    Quat4f * FEs       = 0; 
     
     //cl_mem img_FFPauli;   //  = -1;
     //cl_mem img_FFLondon;  //  = -1;
@@ -72,6 +78,9 @@ class RigidMolecularWorldOCL{ public:
     int id_poses        = -1;
     int id_fposes       = -1;
     
+    int id_poss         = -1;
+    int id_FEs          = -1;
+    
     // ==== Functions
     
     void init( OCLsystem* cl_, char* fname ){
@@ -79,8 +88,13 @@ class RigidMolecularWorldOCL{ public:
         int err = cl->buildProgram( fname );                              
         OCL_checkError(err, "cl.buildProgram");
         
-        int id_evalPLE = cl->newKernel("getForceRigidSystemSurfGrid"); DEBUG;
+        int id_evalPLE = cl->newKernel("getForceRigidSystemSurfGrid");               DEBUG;
         task_getForceRigidSystemSurfGrid = new OCLtask( cl, id_evalPLE, 1, -1, 32 ); DEBUG;
+        
+        if( bGetFEtot ){  
+            int id_getFEtot   = cl->newKernel("getFEtot");              DEBUG;
+            task_getFEtot = new OCLtask( cl, id_getFEtot, 1, -1, 1 );  DEBUG;
+        }
     }
     
     void addMolType( const Molecule& molecule ){
@@ -105,6 +119,13 @@ class RigidMolecularWorldOCL{ public:
             if( nAtomInMolMax < mol2atoms[i].y ) nAtomInMolMax =  mol2atoms[i].y;
         }    
     }
+    
+    void prepareBuffers_getFEtot( int nPoss ){ 
+        FEs  = new Quat4f[nPoss];
+        poss = new Quat4f[nPoss];
+        id_poss = cl->newBuffer( "poss",  nPoss, sizeof(Quat4f), NULL, CL_MEM_READ_WRITE  ); DEBUG;
+        id_FEs  = cl->newBuffer( "FEs",   nPoss, sizeof(Quat4f), NULL, CL_MEM_READ_WRITE  ); DEBUG;
+    };
     
     void prepareBuffers( int nSystems_, int nMols_, Vec3i nGrid, float* FFpauli, float* FFlondon, float* FFelec ){
         int err;
@@ -143,7 +164,49 @@ class RigidMolecularWorldOCL{ public:
     void download_poses  (){ cl->download( id_poses,      poses     ); }
     void download_fposes (){ cl->download( id_fposes,     fposes    ); }
     
-    void setupKernel( GridShape& grid, float alpha_ ){        
+    void upload_poss  ( ){ cl->upload  ( id_poss, poss ); }
+    void download_FEs ( ){ cl->download( id_FEs,  FEs  ); }
+    
+    void setupKernel_getFEtot( GridShape& grid, Vec3d testREQ, float alpha_, int nPoss ){        
+        //__kernel void getFEtot(
+        //    __read_only image3d_t  imgPauli,
+        //    __read_only image3d_t  imgLondon,
+        //    __read_only image3d_t  imgElec,
+        //    __global  float4*  poss,
+        //    __global  float4*  FEs,
+        //    float4 dinvA,
+        //    float4 dinvB,
+        //    float4 dinvC,
+        //    float4 PLQ
+        
+        int nLoc = _max( nMols, nAtomInMolMax );
+        
+        task_getFEtot->dim       = 1;
+        task_getFEtot->local [0] = 1;
+        task_getFEtot->global[0] = nPoss; 
+        //pos0.setXYZ( (Vec3f)grid.pos0    );
+        dA.f = (Vec3f)grid.diCell.a*(1.0/grid.n.a);
+        dB.f = (Vec3f)grid.diCell.b*(1.0/grid.n.b);
+        dC.f = (Vec3f)grid.diCell.c*(1.0/grid.n.c);
+        testPLQ.f = (Vec3f)REQ2PLQ( testREQ, alpha );
+        
+        alpha = alpha_;
+        task_getFEtot->args = {             
+            BUFFarg(id_FFPauli), 
+            BUFFarg(id_FFLondon), 
+            BUFFarg(id_FFelec),    
+            
+            BUFFarg(id_poss),
+            BUFFarg(id_FEs),
+            REFarg(dA),
+            REFarg(dB),
+            REFarg(dC),
+            REFarg(testPLQ)
+        };
+    }
+    
+    
+    void setupKernel_getForceRigidSystemSurfGrid( GridShape& grid, float alpha_ ){        
         //__kernel void getForceRigidSystemSurfGrid(
         //    __read_only image3d_t  imgPauli,
         //    __read_only image3d_t  imgLondon,
