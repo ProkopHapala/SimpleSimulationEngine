@@ -400,7 +400,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     
     //int nMols  = 1;
     int nMols    = world.nFrag;
-    int nSystems = 1;
+    int nSystems = 3;
     
     //clworld.prepareBuffers( nSystems, nMols, world.gridFF.grid.n, world.gridFF.FFPauli_f, world.gridFF.FFLondon_f, world.gridFF.FFelec_f );
     clworld.prepareBuffers( nSystems, nMols, world.gridFF );
@@ -411,31 +411,17 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     
     int i=0;
     float span = 5.0;
+    Quat4f*  ps = (Quat4f*)clworld.poses;
     for(int isys=0; isys<nSystems; isys++){
-        Quat4f*  ps = (Quat4f*)clworld.poses;
         Quat4d* wps = (Quat4d*)  world.poses;
-        for(int imol=0; imol<nMols; imol++){
-            /*
-            //clworld.mol2atoms[i].x = 0;  // molecule type 0 - watter
-            //clworld.mol2atoms[i].y = 3;  // 3 atoms per molecule 
-            //clworld.setMolInstance( isys, imol, 0 );
-            //clworld.mol2atoms[i] = clworld.molTypes[0]; // water 3 atoms
-            clworld.mol2atoms[i] = clworld.molTypes[1]; // Na 1 atom
-            //clworld.mol2atoms[i] = clworld.molTypes[2]; // Cl 3 atoms
-            
-            *( (Vec3f* )&clworld.poses[i].x  ) = (Vec3f){ randf(-span,span), randf(-span,span), randf(0.0,1.0) } + (Vec3f){0.0, 0.0, 7.0};
-            //( (Vec3f* )&clworld.poses[i].x  )->set( randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0) );
-            //( (Quat4f*)&clworld.poses[i].hx )->setOne();
-            ( (Quat4f*)&clworld.poses[i].hx )->setRandomRotation();
-            //printf( "  \n",     );
-            */
-            
+        for(int imol=0; imol<nMols; imol++){            
             //double *  poses   = NULL; // rigd body pose of molecule (pos,qRot);
             //double *  poseFs  = NULL; //
             clworld.mol2atoms[i] = clworld.molTypes[0];
             //clworld.mol2atoms[i] = clworld.molTypes[3];
             ps[0] = (Quat4f)wps[0];
             ps[1] = (Quat4f)wps[1];
+            ps[1].setRandomRotation();
             
             printf( "  world pose p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e,%5.5e) \n",  wps[0].f.x, wps[0].f.y, wps[0].f.z,  wps[1].x, wps[1].x, wps[1].x, wps[1].w );
             printf( "clworld pose p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e,%5.5e) \n",   ps[0].f.x,  ps[0].f.y,  ps[0].f.z,   ps[1].x,  ps[1].x,  ps[1].x,  ps[1].w );
@@ -449,9 +435,11 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     
     DEBUG
     
+    clworld.updateMolStats();
+    clworld.setupKernel( world.gridFF.grid, world.gridFF.alpha ); 
+    
     clworld.upload_mol2atoms();  DEBUG
     clworld.upload_poses();      DEBUG  // PO SEM DOBRE
-    clworld.setupKernel( world.gridFF.grid, world.gridFF.alpha ); 
     clworld.task_getForceRigidSystemSurfGrid->enque();  DEBUG
     clworld.download_poses();    DEBUG
     clworld.download_fposes();   DEBUG
@@ -551,12 +539,16 @@ void AppMolecularEditorOCL::draw(){
 	printf( " # =========== frame %i \n", frameCount );
 	
 	float dt = 0.5;
-	int isystem = 0;
+	int isys = 0;
 	//*(Vec3f*)(clworld.poses+isystem*clworld.nMols+itest) = (Vec3f)cursor3D;
 	
-	clworld.system2atoms( isystem, atoms_tmp );
-	clworld.evalForceCPU( isystem, world.gridFF, atoms_tmp, fatoms_tmp );
-
+	for(int isys=0; isys<clworld.nSystems; isys++ ){
+        printf( "isys %i \n", isys  );
+        //clworld.system2atoms( isys, atoms_tmp );
+        //clworld.evalForceCPU( isys, world.gridFF, atoms_tmp, fatoms_tmp );
+        
+        clworld.evalForceGPU();
+    }
 	//drawAtomsF8(atom_count, atoms_tmp, 0.25, ogl_sph);
 	
 	glColor3f(0.0,0.0,0.0); drawRigidMolSystem( clworld, isystem );
@@ -564,13 +556,15 @@ void AppMolecularEditorOCL::draw(){
 	glColor3f(1.0,0.0,1.0); drawAtomsForces( atom_count, atoms_tmp, fatoms_tmp, 0.0, 100.0 );
    
 	//return;
-	
+		
+	/*
 	world.cleanAtomForce();
 	world.frags2atoms(); 
 	//world.eval_FFgrid();
 	world.eval_MorseQ_On2_fragAware();
 	world.cleanPoseTemps();
     world.aforce2frags();      //printf( "DEBUG 5.4\n" );
+	*/
 	
 	Quat4f*  ps = (Quat4f*)clworld.poses;
 	Quat4d* wps = (Quat4d*)  world.poses;
@@ -594,10 +588,10 @@ void AppMolecularEditorOCL::draw(){
         printf( "clworld %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) req(%5.5e,%5.5e,%5.5e) \n", ia, p_.x,p_.y,p_.z,  f_.x,f_.y,f_.z,  req_.x,req_.y,req_.z );
 	}
 	
-	exit(0);
+	//exit(0);
 	
 	clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
-	drawCPU();
+    //drawCPU();
 
 };
 

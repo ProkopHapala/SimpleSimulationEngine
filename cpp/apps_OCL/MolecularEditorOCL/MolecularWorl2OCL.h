@@ -25,14 +25,14 @@ ToDo:
 
 void frag2atoms(const Vec3f& pos, const Quat4f& qrot, int n, float8* atom0s, float8* atoms ){
     Mat3f mrot; qrot.toMatrix(mrot);
-    printf( "pos (%g,%g,%g) qrot (%g,%g,%g,%g) \n", pos.x,pos.y,pos.z,   qrot.x,qrot.y,qrot.z,qrot.w );
+    //printf( "pos (%g,%g,%g) qrot (%g,%g,%g,%g) \n", pos.x,pos.y,pos.z,   qrot.x,qrot.y,qrot.z,qrot.w );
     for( int j=0; j<n; j++ ){
         Vec3f Mp;
         atoms[j] = atom0s[j];
         //mrot.dot_to_T( *((Vec3f*)(atom0s+j)), Mp );  // this is in  MMFF::frag2atoms
         mrot.dot_to( *((Vec3f*)(atom0s+j)), Mp );
         ((Vec3f*)(atoms+j))->set_add( pos, Mp );
-        printf( "atom %i  xyz(%g,%g,%g) REQ(%g,%g,%g) \n", j ,atoms[j].x, atoms[j].y, atoms[j].z,  atoms[j].hx, atoms[j].hy, atoms[j].hz  ); 
+        //printf( "atom %i  xyz(%g,%g,%g) REQ(%g,%g,%g) \n", j ,atoms[j].x, atoms[j].y, atoms[j].z,  atoms[j].hx, atoms[j].hy, atoms[j].hz  ); 
     }
 }
 
@@ -44,6 +44,7 @@ class RigidMolecularWorldOCL{ public:
     int nSystems  = 0;
     int nMols     = 0;
     int nMolTypes = 0;
+    int nAtomInMolMax  = 0;
     
     //int nAtomsInTypes = 0; // derived 
     int nMolInstances = 0; // derived
@@ -96,6 +97,13 @@ class RigidMolecularWorldOCL{ public:
     
     inline void setMolInstance( int isystem, int imol, int iType ){
         mol2atoms[ nMols*isystem + imol ] = molTypes[iType]; 
+    }
+    
+    void updateMolStats(){
+        nAtomInMolMax = 0;
+        for(int i=0; i<nMolInstances; i++){
+            if( nAtomInMolMax < mol2atoms[i].y ) nAtomInMolMax =  mol2atoms[i].y;
+        }    
     }
     
     void prepareBuffers( int nSystems_, int nMols_, Vec3i nGrid, float* FFpauli, float* FFlondon, float* FFelec ){
@@ -152,8 +160,10 @@ class RigidMolecularWorldOCL{ public:
         //    int nMols, // nMols should be approx local size
         //    float alpha
         
+        int nLoc = _max( nMols, nAtomInMolMax );
+        
         task_getForceRigidSystemSurfGrid->dim       = 1;
-        task_getForceRigidSystemSurfGrid->local [0] = 32;
+        task_getForceRigidSystemSurfGrid->local [0] = nLoc;
         task_getForceRigidSystemSurfGrid->global[0] = nSystems* task_getForceRigidSystemSurfGrid->local[0]; 
         //pos0.setXYZ( (Vec3f)grid.pos0    );
         dA  .setXYZ( (Vec3f)grid.diCell.a*(1.0/grid.n.a) );
@@ -181,6 +191,13 @@ class RigidMolecularWorldOCL{ public:
             FLOATarg(alpha)
         };
     }
+    
+    void evalForceGPU(){
+       upload_poses   ();
+       task_getForceRigidSystemSurfGrid->enque();
+       download_fposes();  
+       clFinish(cl->commands);      
+    };
     
     int system2atoms( int isystem, float8* atoms ){
         int isoff   = isystem * nMols;
@@ -242,7 +259,7 @@ class RigidMolecularWorldOCL{ public:
                 gridFF.addForce( (Vec3d)aposi, (Vec3d){CP,CL,REQi.z}, fd );
                 Vec3f f = (Vec3f)fd;
         
-                printf( "CPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z, CP,CL,REQi.z, f.x, f.y, f.z );
+                //printf( "CPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z, CP,CL,REQi.z, f.x, f.y, f.z );
                 //f = (Vec3f){0.1,0.0,0.0};
         
                 if(fatoms){
@@ -294,7 +311,7 @@ class RigidMolecularWorldOCL{ public:
                             float fr    = eps*2*alpha*( expar*expar - expar ) - cElec/( r*r + R2ELEC );
                             
                             //double fr    = eps*2*alpha*( expar*expar - expar ) + COULOMB_CONST*qq/( r*r + R2ELEC );       
-                            //printf( " (%i,%i) (%i,%i) r %g expar %g fr %g kqq %g a %g eps %g \n", imol, ia, jmol, ja, r, expar, fr, cElec, alpha, eps );
+                            //printf( "CPU (%i,%i) (%i,%i) r %g expar %g fr %g kqq %g a %g eps %g \n", imol, ia, jmol, ja, r, expar, fr, cElec, alpha, eps );
                             f.add_mul( dp,  fr/r );
                             //e   += eps*( expar*expar - 2*expar ) + cElec*ir; // Energy
                             //atomj+=8;
@@ -325,6 +342,8 @@ class RigidMolecularWorldOCL{ public:
             //float*  fs     = (float*)(fposes+isoff+imol);
             //*((Vec3f*)(fs  )) = force;
             //*((Vec3f*)(fs+4)) = torq;
+            
+            printf( "CPU imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", imol, force.x, force.y, force.z, torq.x, torq.y, torq.z );
             
             fs[0].f = force;
             fs[1].f = torq;
