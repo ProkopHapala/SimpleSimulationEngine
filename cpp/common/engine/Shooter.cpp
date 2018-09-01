@@ -129,7 +129,7 @@ void Shooter::update_projectiles3D(){
         bool hitted = false;
         //hitted |= proj->check_hit_ground( );
         //hitted |= proj->check_hit_vector<Frigate2D>( warriors );
-        for( o : objects ){
+        for(Object3d* o : objects ){
             o->ray( proj->old_pos, hRay, &normal );
             if (hitted) break;
         }

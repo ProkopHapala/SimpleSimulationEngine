@@ -173,7 +173,7 @@ int HydraulicGrid2D::trackRiverRecursive( int sink, double minFlow, River * mout
     int nriv=1;
     if( river->path.size() > 5 ){
         rivers.push_back(river);
-        for( ifeeder : feeders ){
+        for(int ifeeder : feeders ){
             nriv+=trackRiverRecursive( ifeeder, minFlow, river );
         }
     }else{

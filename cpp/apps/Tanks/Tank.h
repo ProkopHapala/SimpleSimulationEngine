@@ -137,7 +137,8 @@ class Tank : public RigidBody, public Warrior3D { public:
 
     void rotateTurretToward( const Vec3d& dir ){
         Mat3d grot;
-        turret.globalRotT(rotMat, grot);
+        //turret.globalRotT(rotMat, grot);
+        turret.globalRot(rotMat, grot);
 
         double sa,ca,sa_;
 
@@ -177,12 +178,14 @@ class Tank : public RigidBody, public Warrior3D { public:
             //normal     = lrot.dotT(normal);
         }
         normal.normalize();
-        normal = rotMat.dot(normal);
+        normal = rotMat.dotT(normal);
+        //normal = rotMat.dot(normal);
         if( itr>=0 ){
             ipl = block->tri2poly[itr];
             double thick    = block->armor[ipl].thickness;
             //double cdot     = block->armor[ipl].normal.dot( hRay );
             normal = block->lrot.dotT(normal);
+            //normal = block->lrot.dot(normal);
             double cdot     = normal.dot( hRay_ );
             effthick = thick/-cdot;
         }

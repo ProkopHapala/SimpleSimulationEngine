@@ -102,8 +102,11 @@ inline void drawTriclinicBoxT( const Mat3d& lvec_, const Vec3d& c0_, const Vec3d
 // ========== Arrays // Not easy to convert
 
 void drawPlanarPolygon( int n, const int * inds, const Vec3d * points );
+void drawPolygonNormal( int n, const int * inds, const Vec3d * points );
 void drawPolygonBorder( int n, const int * inds, const Vec3d * points );
+void drawPlanarPolygon( int ipl, Mesh& mesh );
 void drawPolygonBorder( int ipl, Mesh& mesh );
+void drawPolygonNormal( int ipl, Mesh& mesh );
 
 //void drawShapeT   ( const Vec3f& pos, const Mat3f&  rot,  int shape );
 //void drawShapeT   ( const Vec3d& pos, const Mat3d&  rot,  int shape );
