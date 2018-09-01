@@ -101,6 +101,9 @@ class AeroCraftEditor2 : public AppSDL2OGL_3D { public:
 
 	PotentialFlowSystem flowSystem;
 
+    double Fconv = 1e-6;
+    double Ftot  = 1.0;
+
 
     const Uint8 *scanKeys;
     Uint32 mouseButtons;
@@ -148,12 +151,17 @@ void AeroCraftEditor2::draw(){
 
     //renderAeroCraft(*myCraft, false, -1.0 );
 
+    if( Ftot > Fconv ){
+        Ftot = flowSystem.stepGD( -0.1 );
+    }
+
     draw_(design);
-    draw_( flowSystem, 1.0, 5.0 );
+    draw_( flowSystem, 1.0, 5.0, true );
 
     glColor3f( 0.6,0.6,0.6 );
     //plotVecPlane(flowSystem, {41,31}, { -6.0,-0.15,2.0 }, {0.3,0.0,0.0}, {0.0,0.0,-0.3}, 0.02, 1.0 );
-    plotStreamLinePlane(flowSystem, {41,1}, 200, {-6.0,-1.0,2.0}, {0.3,0.0,0.0}, {0.0,0.3,0.0}, 0.05 );
+    //plotStreamLinePlane(flowSystem, {41,1}, 200, {-6.0,-1.0,2.0}, {0.3,0.0,0.0}, {0.0,0.3,0.0}, 0.05 );
+    plotStreamLinePlane(flowSystem, {41,1}, 200, {-6.0,-0.8,2.0}, {0.3,0.0,0.0}, {0.0,0.3,0.0}, 0.05 );
 
     glDisable(GL_LIGHTING);
 
@@ -187,7 +195,7 @@ void AeroCraftEditor2::draw(){
 	};
 
 
-	Draw3D::drawMatInPos( Mat3dIdentity*10.0, Vec3dZero );
+	//Draw3D::drawMatInPos( Mat3dIdentity*10.0, Vec3dZero );
 
 };
 
@@ -250,10 +258,10 @@ AeroCraftEditor2:: AeroCraftEditor2( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL
     design.wings[0].symmetric = true;
     design.wings[0].pos.y = -0.4;
     design.wings[0].addSection( 0.0, 0.0, 0.3,  1.0, 0.0, 0 );
-    design.wings[0].addSection( 2.5, 0.2, 0.25, 0.8, 0.0, 0 );
-    design.wings[0].addSection( 1.5, 0.4, 0.1,  0.5, 0.0, 0 );
-    //design.wings[0].addSection( 2.5, 0.0, 0.25, 0.8, 0.0, 0 );
-    //design.wings[0].addSection( 1.5, 0.0, 0.1,  0.5, 0.0, 0 );
+    //design.wings[0].addSection( 2.5, 0.2, 0.25, 0.8, 0.0, 0 );
+    //design.wings[0].addSection( 1.5, 0.4, 0.1,  0.5, 0.0, 0 );
+    design.wings[0].addSection( 2.5, 0.0, 0.25, 0.8, 0.0, 0 );
+    design.wings[0].addSection( 1.5, 0.0, 0.1,  0.5, 0.0, 0 );
 
     // elevator
     design.wings[1].symmetric = true;
