@@ -189,6 +189,7 @@ __kernel void evalPLE(
     uint ib = (iG /  nGrid.x) % nGrid.y;
     uint ic =  iG / (nGrid.x*nGrid.y);
     float3 pos = pos + dA.xyz*ia + dB.xyz*ib + dC.xyz*ic;
+    //float3 pos = pos + dA.xyz*(ia+0.5f) + dB.xyz*(ib+0.5f) + dC.xyz*(ic+0.5f);
 
     float3 A = dA.xyz*nGrid.x;
     float3 B = dB.xyz*nGrid.y;
@@ -203,11 +204,11 @@ __kernel void evalPLE(
     //FFelec  [iG] = (float4)(iG,iG,iG,iG);
     //if( (iG%100) == 0 ) printf("ig %i \n", iG);
 
-    if( iG==0 ) printf("npbc (%i,%i,%i) \n", npbc.x, npbc.y, npbc.z );
-    if( iG==0 ) printf("pos0 (%f,%f,%f) \n", pos0.x, pos0.y, pos0.z );
-    if( iG==0 ) printf("dA (%f,%f,%f)   \n",   dA.x,   dA.y,   dA.z );
-    if( iG==0 ) printf("dB (%f,%f,%f)   \n",   dB.x,   dB.y,   dB.z );
-    if( iG==0 ) printf("dC (%f,%f,%f)   \n",   dC.x,   dC.y,   dC.z );
+    //if( iG==0 ) printf("npbc (%i,%i,%i) \n", npbc.x, npbc.y, npbc.z );
+    //if( iG==0 ) printf("pos0 (%f,%f,%f) \n", pos0.x, pos0.y, pos0.z );
+    //if( iG==0 ) printf("dA (%f,%f,%f)   \n",   dA.x,   dA.y,   dA.z );
+    //if( iG==0 ) printf("dB (%f,%f,%f)   \n",   dB.x,   dB.y,   dB.z );
+    //if( iG==0 ) printf("dC (%f,%f,%f)   \n",   dC.x,   dC.y,   dC.z );
 
     const int n0x = -npbc.x;
     const int n1x =  npbc.x+1;
@@ -237,16 +238,16 @@ __kernel void evalPLE(
         //if(i>=nAtoms) break; // wrong !!!!
         lATOMs[iL] = atoms[i];
         //if( (iG%1000) == 0 ) printf("nAtoms %i i %i xyz (%f,%f,%f) req (%f,%f,%f)  \n", nAtoms, i, atoms[i].x, atoms[i].y, atoms[i].z, atoms[i].s4, atoms[i].s5, atoms[i].s6 );
-        if( iG == 0 ) printf("nAtoms %i i %i xyz (%f,%f,%f) req (%f,%f,%f)  \n", nAtoms, i, atoms[i].x, atoms[i].y, atoms[i].z, atoms[i].s4, atoms[i].s5, atoms[i].s6 );
+        //if( iG == 0 ) printf("nAtoms %i i %i xyz (%f,%f,%f) req (%f,%f,%f)  \n", nAtoms, i, atoms[i].x, atoms[i].y, atoms[i].z, atoms[i].s4, atoms[i].s5, atoms[i].s6 );
         barrier(CLK_LOCAL_MEM_FENCE);
         for (int j=0; j<nL; j++){
-            if( iG == 0 ) printf("i0 %i j %i i0+j %i \n", i0, j, i0+j );
+            //if( iG == 0 ) printf("i0 %i j %i i0+j %i \n", i0, j, i0+j );
             if( (j+i0)<nAtoms ){
                 float3 dpos0 = pos - lATOMs[j].xyz;
                 float3 REQi  = lATOMs[j].s456;
 
-                if( iG == 0 ) printf("i dpos0 (%f,%f,%f) REQi (%f,%f,%f) \n", dpos0.x, dpos0.y, dpos0.z, REQi.x, REQi.y, REQi.z );
-                if( iG == 0 ) printf("i %i (%i,%i,%i) .. (%i,%i,%i) \n", i0+j, n0x,n0y,n0z,   n1x,n1y,n1z );
+                //if( iG == 0 ) printf("i dpos0 (%f,%f,%f) REQi (%f,%f,%f) \n", dpos0.x, dpos0.y, dpos0.z, REQi.x, REQi.y, REQi.z );
+                //if( iG == 0 ) printf("i %i (%i,%i,%i) .. (%i,%i,%i) \n", i0+j, n0x,n0y,n0z,   n1x,n1y,n1z );
                 // fe += getMorse( pos - lATOMs[j].xyz, lREAs[j].xyz );
                 //for (int jc=-npbc.z; jc<=npbc.z; jc++){ // for some reason does not work
                 for (int jc=n0z; jc<n1z; jc++){
@@ -267,7 +268,7 @@ __kernel void evalPLE(
                             float expar  = exp( alpha*(r-REQi.x) );
                             float fexp   = alpha*expar*REQi.y*ir;
 
-                            if( iG==0 ) printf("ia %i jpbc (%i,%i,%i) r %f expar %e fexp %e \n", i0+j, ja,jb,jc,  r, expar, fexp );
+                            //if( iG==0 ) printf("ia %i jpbc (%i,%i,%i) r %f expar %e fexp %e \n", i0+j, ja,jb,jc,  r, expar, fexp );
 
                             fp.xyz       += dp * ( -fexp*expar*2.0f );                // repulsive part of Morse
                             fl.xyz       += dp * ( -fexp           );                // attractive part of Morse

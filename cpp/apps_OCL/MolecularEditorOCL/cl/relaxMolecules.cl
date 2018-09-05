@@ -73,12 +73,14 @@ __kernel void getFEtot(
     __read_only image3d_t  imgElec,
     __global  float4*  poss,
     __global  float4*  FEs,
+    float4 pos0,
     float4 dinvA,
     float4 dinvB,
     float4 dinvC,
     float4 PLQ
 ){
-    float3 pos   = poss[ get_global_id (0) ].xyz;
+    if( get_global_id (0)==0 ) printf( "GPU PLQ %g %g %g \n", PLQ.x, PLQ.y, PLQ.z );
+    float3 pos   = poss[ get_global_id (0) ].xyz + pos0.xyz;
     float4 coord = (float4)( dot(pos,dinvA.xyz),dot(pos,dinvB.xyz),dot(pos,dinvC.xyz), 0.0f );
     float4 fe;
     fe  = PLQ.x * read_imagef( imgPauli,  sampler_1, coord );
@@ -106,6 +108,7 @@ __kernel void getForceRigidSystemSurfGrid(
     __global  float8*  atomsInTypes, // atoms in molecule types
     __global  float8*  poses,        // pos, qrot
     __global  float8*  fposes,       // force acting on pos, qrot
+    float4 pos0,
     float4 dinvA,
     float4 dinvB,
     float4 dinvC,
@@ -209,7 +212,7 @@ __kernel void getForceRigidSystemSurfGrid(
         for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
             float4 adposi = atomsInTypes[iatomi+ia].lo;
             adposi.xyz    = rotQuat( qroti, adposi.xyz );
-            float3 aposi  = adposi.xyz + mposi.xyz;
+            float3 aposi  = adposi.xyz + mposi.xyz + pos0.xyz;
             float3 REQi   = atomsInTypes[iatomi+ia].s456;
 
             // molecule grid interactions
