@@ -103,61 +103,6 @@ void AppSDL2OGL_3D::camera(){
     if (perspective){ Cam::perspective( cam ); }
     else            { Cam::ortho( cam, true ); }
 
-
-/*
-    float camMatrix[16];
-    qCamera.toMatrix_unitary( cam.rot );
-    //first_person = true;
-    //perspective  = true;
-	if(first_person){
-        glMatrixMode (GL_PROJECTION);
-        glLoadIdentity();
-        if( perspective ){
-            //glFrustum( left, right, bottom, top, near, far );
-            //glFrustum( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, 5, 20 );
-            float fov = VIEW_ZOOM_DEFAULT/zoom;
-            glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
-        }else{
-            glOrtho  ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
-        }
-        //Draw3D::toGLMatCam( camPos, camMat, camMatrix ); // this does not work properly
-        //camMat.a.mul(-1.0);
-        //camMat.b.mul(-1.0);
-        //camMat.c.mul(-1.0);
-        Draw3D::toGLMatCam( {0.0d,0.0d,0.0d}, cam.rot, camMatrix );
-        glMultMatrixf( camMatrix );
-        glTranslatef ( -cam.pos.x, -cam.pos.y, -cam.pos.z );
-        glMatrixMode (GL_MODELVIEW);
-        glLoadIdentity();
-	}else{
-        glMatrixMode( GL_PROJECTION );
-        glLoadIdentity();
-        if( perspective ){
-            //glFrustum( left, right, bottom, top, near, far );
-            //glFrustum( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, 5, 20 );
-            float fov = VIEW_ZOOM_DEFAULT/zoom;
-            glFrustum( -ASPECT_RATIO, ASPECT_RATIO, -1, 1, 1*fov, VIEW_DEPTH*fov );
-        }else{
-            glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
-        }
-        //glMatrixMode (GL_MODELVIEW);
-        //glTranslatef ( -camPos.x, -camPos.y, -camPos.z );
-        //Draw3D::toGLMatCam( camPos*-1.0, camMat, camMatrix );
-        //Mat3d camMatT; camMatT.setT(camMat);
-        //Draw3D::toGLMat( {0.0,0.0,0.0}, camMatT, camMatrix );
-        Draw3D::toGLMatCam( {0.0,0.0,0.0}, cam.rot, camMatrix );
-        glTranslatef ( -cam.pos.x, -cam.pos.y, -cam.pos.z );
-        //glLoadMatrixf(camMatrix);
-        //glLMultMatrixf(camMatrix);
-        glMultMatrixf(camMatrix);
-        glMatrixMode (GL_MODELVIEW);
-        glTranslatef ( -cam.pos.x, -cam.pos.y, -cam.pos.z );
-
-	}
-	//glMatrixMode (GL_MODELVIEW);
-
-*/
-
 }
 
 void AppSDL2OGL_3D::draw   (){

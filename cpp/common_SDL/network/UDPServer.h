@@ -39,7 +39,7 @@ class UDPServer {
 	int nMaxClients = 0;
 	int nClients    = 0;
 	IPaddress * clients;
-	bool      * connected = false;
+	bool      connected = false;
 
     virtual bool onSend   ( int iClient       );
     virtual void onRecieve( int iClient       );

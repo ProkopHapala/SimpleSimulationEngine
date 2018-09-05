@@ -639,9 +639,9 @@ void drawPlanarPolygon( int n, const int * inds, const Vec3d * points ){
     if( n < 3 ) return;
 
     Vec3f a,b,c,normal;
-    convert( points[inds[0]], a );
-    convert( points[inds[1]], b );
-    convert( points[inds[2]], c );
+    a = (Vec3f) points[inds[0]];
+    b = (Vec3f) points[inds[1]];
+    c = (Vec3f) points[inds[2]];
     normal.set_cross( a-b, b-c );
     normal.normalize( );
 
@@ -656,19 +656,22 @@ void drawPlanarPolygon( int n, const int * inds, const Vec3d * points ){
         //average.add( a );
     }
     glEnd();
+}
 
-/*
-    glDisable ( GL_LIGHTING );
-    glColor3f( 0.0f, 0.0f, 0.0f );
-    average.mul(1.0d/n);
+void drawPolygonNormal( int n, const int * inds, const Vec3d * points ){
+    if( n < 3 ) return;
+
+    Vec3f a,b,c,normal;
+    a = (Vec3f) points[inds[0]];
+    b = (Vec3f) points[inds[1]];
+    c = (Vec3f) points[inds[2]];
+    normal.set_cross( a-b, b-c );
+    normal.normalize( );
+
     glBegin( GL_LINES );
-        glVertex3f( average.x, average.y, average.z );
-        average.add( normal );
-        glVertex3f( average.x, average.y, average.z );
+        glVertex3f( a.x, a.y, a.z );
+        glVertex3f( a.x+normal.x, a.y+normal.y, a.z+normal.z );
     glEnd();
-    printf( " %i %i %i : %f \n", inds[0], inds[1], inds[2], average.dot(normal) );
-*/
-
 }
 
 void drawPolygonBorder( int n, const int * inds, const Vec3d * points ){
@@ -681,10 +684,21 @@ void drawPolygonBorder( int n, const int * inds, const Vec3d * points ){
     glEnd();
 }
 
+void drawPlanarPolygon( int ipl, Mesh& mesh ){
+    Polygon * pl = mesh.polygons[ipl];
+    Draw3D:: drawPlanarPolygon( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
+}
+
+void drawPolygonNormal( int ipl, Mesh& mesh ){
+    Polygon * pl = mesh.polygons[ipl];
+    Draw3D:: drawPolygonNormal( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
+}
+
 void drawPolygonBorder( int ipl, Mesh& mesh ){
     Polygon * pl = mesh.polygons[ipl];
     Draw3D:: drawPolygonBorder( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
 }
+
 
 void drawPoints( int n, const  Vec3d * points, float sz ){
     if(sz<=0){

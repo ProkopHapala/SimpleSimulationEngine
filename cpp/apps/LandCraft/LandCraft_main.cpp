@@ -471,7 +471,7 @@ void LandCraftApp::draw(){
         //printf( " path size: %i \n", river->path.size() );
         glBegin(GL_LINE_STRIP);
         Draw::color_of_hash( river->path[0]+54877 );
-        for( i : river->path ){
+        for(int i : river->path ){
             Vec2d p;
             ruler.nodePoint(i,p);
             glVertex3f( p.x, p.y, 100.0 );

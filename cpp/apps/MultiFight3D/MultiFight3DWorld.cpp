@@ -100,7 +100,7 @@ void MultiFight3DWorld::update_world( ){
             //hitted |= proj->check_hit_vector<Frigate2D>( warriors );
             Vec3d normal;
             //hitted = collideWithWorld ( proj->pos, proj->vel, normal );
-            for( o : objects ){
+            for( KinematicBody* o : objects ){
                 hitted = collideWithObject( o->lpos, objR, proj->pos, proj->vel, normal );
                 if (hitted) break;
             }
