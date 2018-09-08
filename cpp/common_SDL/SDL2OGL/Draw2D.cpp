@@ -584,5 +584,25 @@ void Draw2D::draw_attached_vec( const Vec2d& pos, const Vec2d& rot, const Vec2d&
 };
 
 
+void Draw2D::drawTriaglePatchBas( Vec2i i0, Vec2i n, int NX, int* basins, double vmin, double vmax ){
+    Vec2f a,b,p;
+    a.set( 1.0d, 0.0d           ); //a.mul(scale);
+    b.set( 0.5d, 0.86602540378d ); //b.mul(scale);
+    //glDisable(GL_SMOOTH);
+    //int ii = 0;
+    double renorm=1.0d/(vmax-vmin);
+    for (int iy=0; iy<n.y-1; iy++){
+        glBegin( GL_TRIANGLE_STRIP );
+        int ii = (i0.y+iy)*NX + i0.x;
+        for (int ix=0; ix<n.x; ix++){
+            p.set( ix*a.x+iy*b.x, ix*a.y+iy*b.y );
+            Draw::color_of_hash( 5454+basins[ii]*14787979 );
+            glVertex3f( p.x    , p.y    , 0 );
+            glVertex3f( p.x+b.x, p.y+b.y, 0 );
+            ii++;
+        }
+        glEnd();
+    }
+}
 
 //}; // namespace Draw2D

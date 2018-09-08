@@ -23,6 +23,17 @@ class Grid2DAlg : public GridIndex2D{ public:
     double neigh_dist    [nNeighMax];
     double neigh_invDist [nNeighMax];
 
+    void set( const Grid2DAlg& rf ){
+        n   =rf.n;
+        ntot=rf.ntot;
+        nneigh  = rf.nneigh; printf( "nneigh %i %i \n" , nneigh, rf.nneigh );
+        for( int i=0; i<nneigh; i++ ){
+            neighs       [i] = rf.neighs        [i];
+            neigh_dist   [i] = rf.neigh_dist    [i];
+            neigh_invDist[i] = rf.neigh_invDist [i];
+        }
+    }
+
     void initNeighsSquareN( int n ){ // typically 4 or 8
         nneigh = n;
         memcpy(neighs,       SquareNeighs       ,2*nneigh*sizeof(int)   );
@@ -59,10 +70,10 @@ class Grid2DAlg : public GridIndex2D{ public:
 
 };
 
-
-
+/*
 class PathFindingGrid2D :public Grid2DAlg{ public:
 
 };
+*/
 
 #endif

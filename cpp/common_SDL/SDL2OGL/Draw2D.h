@@ -137,6 +137,8 @@ void drawTriaglePatch( Vec2i i0, Vec2i n, int NX, double * height, double vmin, 
     }
 }
 
+void drawTriaglePatchBas( Vec2i i0, Vec2i n, int NX, int* basins, double vmin, double vmax );
+
 
 }; // namespace Draw2D
 

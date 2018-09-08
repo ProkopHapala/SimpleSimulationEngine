@@ -51,7 +51,6 @@ char strBuf[0x10000];
 
 #include "LTdraw.h"
 
-
 class FormationTacticsApp : public AppSDL2OGL {
 	public:
     LTWorld world;
@@ -109,6 +108,15 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     default_font_texture     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     GUI_fontTex = default_font_texture;
 
+    int nCenters = 15;
+    world.pathFinder.nContour = nCenters;
+    for(int i=0; i<nCenters; i++){
+        world.pathFinder.contour2[i] = world.pathFinder.ip2i( {rand()%world.pathFinder.n.x, rand()%world.pathFinder.n.y} );
+    }
+
+    world.pathFinder.pepare();
+
+    zoom = 1000.00;
 
     printf( "default_font_texture :  %i \n", default_font_texture );
 
@@ -120,6 +128,7 @@ void FormationTacticsApp::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
 
+/*
 	if(bDrawing){
         Vec2i ind;Vec2d dind;
         //int i = world.ruler.simplexIndex({mouse_begin_x,mouse_begin_y},ind,dind)>>1;
@@ -129,6 +138,41 @@ void FormationTacticsApp::draw(){
         //printf("i %i (%i,%i) \n",i, ind.x, ind.y );
         world.ground[i] = randf(0.0,1.0);
 	}
+	*/
+
+
+
+
+
+	/*
+	world.pathFinder.path_step();
+
+	if( world.pathFinder.nContour == 0 ){
+
+        if( world.pathFinder.pass.size() == 0 ){
+            world.pathFinder.findConnections();
+            //printf( " pass.size:  %i \n" , world.pathFinder.pass.size() );
+            for( auto& item : world.pathFinder.pass ){
+                printf( "pass %i %i %i %i \n", item.first&0xFFFF, item.first>>32, item.second.x, item.second.y );
+            }
+        }
+
+        for( auto& item : world.pathFinder.pass ){
+            //PathFinder
+            Vec2d p;
+            Vec2i ip1 = world.pathFinder.i2ip( item.second.x);
+            Vec2i ip2 = world.pathFinder.i2ip( item.second.y);
+            world.ruler.nodePoint( ip1, p   );
+            //printf( " point %i %i %g %g\n", ip1.x, ip2.x, p.x, p.y );
+            Draw2D::drawPointCross_d( p, 10.0 );
+        }
+
+        exit(0);
+	}
+	*/
+
+
+
 
     //glDisable    ( GL_LIGHTING   );
     //glDisable    ( GL_DEPTH_TEST );
@@ -137,7 +181,17 @@ void FormationTacticsApp::draw(){
 	glPushMatrix();
 	glScalef(world.ruler.step,world.ruler.step,1.0);
 	Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, world.ruler.na, world.ground, 0.0, world.maxHeight );
+
+	//Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, world.ruler.na, world.pathFinder.moveCosts, 0.0, world.maxHeight );
+	//Draw2D::drawTriaglePatchBas( {0,0}, {128,128}, world.ruler.na, world.pathFinder.toBasin, 0.0, world.maxHeight );
+
 	glPopMatrix();
+
+
+
+	//return;
+
+
 
 	//printf( "world.objects.size %i \n", world.objects.size() );
 	glColor3f(0.5,0.5,0.5);
@@ -152,6 +206,11 @@ void FormationTacticsApp::draw(){
         //printf( " (%f,%f) (%f,%f) \n", o.p1.x, o.p1.y, o.p2.x, o.p2.y );
         Draw2D::drawLine_d( o.p1, o.p2 );
     }
+
+
+
+
+
 
     //float camMargin = ( camXmax - camXmin )*0.1;
     //float camMargin = 0;

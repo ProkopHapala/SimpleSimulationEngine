@@ -14,6 +14,7 @@
 #include "SimplexRuler.h"
 #include "Ruler2DFast.h"
 #include "TerrainHydraulics.h"
+#include "PathFinder.h"
 
 //#include "TileBuffer2D.h"
 //#include "Ruler2DFast.h"
@@ -50,6 +51,7 @@ class LTWorld{
     SimplexRuler       ruler;
     Ruler2DFast        square_ruler;
     HydraulicGrid2D    hydraulics;
+    PathFinder         pathFinder;
     double * ground    = NULL;
 
     //LTStaticObject * objects = NULL;

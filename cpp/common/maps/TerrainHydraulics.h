@@ -30,6 +30,15 @@ class HydraulicGrid2D :public Grid2DAlg { public:
 	std::vector<int>    sinks;
 	std::vector<River*> rivers;
 
+
+	// PathFinder
+    //std::vector<int> rivers;
+    double* moveCost = NULL;
+    int* toBasin     = NULL;
+    int* toTile      = NULL;
+
+
+
 	// ==== function declaration
 
     // TODO: Inflow/outflow  +  Rivers
@@ -72,6 +81,7 @@ class HydraulicGrid2D :public Grid2DAlg { public:
         delete [] ground;
         delete [] water;
     };
+
 };
 
 #endif

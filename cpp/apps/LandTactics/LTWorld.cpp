@@ -249,6 +249,7 @@ void LTWorld::init(){
     srand(4545);
     //ground = new double[ruler.ntot];
     hydraulics.allocate( {ruler.na,ruler.nb} );
+
     ground = hydraulics.ground;
     //world.hydraulics.allocate( 512, 512 );
     //hydraulics.genTerrainNoise( 8, 2.0, 1.0,  0.5, 0.8, 45454, {100.0,100.0} );
@@ -261,11 +262,18 @@ void LTWorld::init(){
         int isz = 25;
         int ix0 = rand()%(hydraulics.n.x-isz);
         int iy0 = rand()%(hydraulics.n.y-isz);
-        printf("%i : %i %i\n", j, ix0, iy0);
+        //printf("%i : %i %i\n", j, ix0, iy0);
         //hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, ix0, iy0, ix0+isz, iy0+isz );
         hydraulics.errodeDroples( 200, 100, 0.02, 0.15, 0.5, {ix0, iy0}, {ix0+isz, iy0+isz} );
     }
     for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
+
+    //pathFinder.n=
+    pathFinder.set ( hydraulics );
+    pathFinder.bind( hydraulics.ground, nullptr );
+    pathFinder.allocate();
+
+    printf( "pathFinder.nneigh %i \n", pathFinder.nneigh );
 
     printf("terrain DONE \n");
 
