@@ -37,7 +37,7 @@ class LTUnit : public RigidBody2D { public:
 
     // ===== inline functions
 
-    //void move_to_goal ( double dt );
+    void move_to_goal ( double dt );
     //void fire_at_unit ( LTUnit * target );
     //void update       ( double dt );
     //double damage_ramp( double att, double def );
@@ -45,7 +45,7 @@ class LTUnit : public RigidBody2D { public:
     //void setGoal      ( const Vec2d& goal_ );
     void setType( LTUnitType* type_ );
     void update ( double dt );
-    void render ( uint32_t color, int iLOD);
+    void render ( uint32_t color, int iLOD) const;
 
     void getShot( const Vec3d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration );
 

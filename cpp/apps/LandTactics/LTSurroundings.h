@@ -46,7 +46,8 @@ class LTsurrounding{ public:
         double invR2 = 1/(Rdeploy*Rdeploy);
         for( LTUnit* uu : coleagues ){
             if(uu!=u){
-                overlap += 1/( 1.0 + invR2*uu->pos.dist2( p ) ); // lorenz repulsion of neighbors
+                //overlap += 1/( 1.0 + invR2*uu->pos.dist2( p ) ); // lorenz repulsion of neighbors
+                overlap += 1/( 1.0 + invR2*uu->goal_pos.dist2( p ) );
             }
         }
         //printf( "overlap %f (%i) cover %f (%i)  \n", overlap, coleagues.size(), cover, lobjs.size() );
@@ -58,6 +59,9 @@ class LTsurrounding{ public:
     };
 
     void tryFindBetterPlace( LTUnit* u, int n, bool bJumpToGoal )const{
+
+        // rather use goal_pos instead of pos
+
         Vec2d   p0 = u->goal_pos;
         double  E0 = unitPosFittness(u,p0);
         for(int i=0; i<n; i++){
@@ -69,7 +73,7 @@ class LTsurrounding{ public:
             if( E>E0 ){ E0 = E; p0 = p; };
         }
         u->goal_pos = p0;
-        if( bJumpToGoal ) u->pos = u->goal_pos;
+        //if( bJumpToGoal ) u->pos = u->goal_pos;
     }
 
 };

@@ -43,7 +43,7 @@ void LTSquad::update( double dt ){
         case Unit_JOB_GOTO:         move_to_goal( dt ); break;
         case Unit_JOB_FIRE_AT_UNIT: if(opponent==NULL){ job=default_job; break;} if( reload > 1.0 ) fire_at_squad( opponent ); break;
     }
-    for( LTUnit u: units ){
+    for( LTUnit& u: units ){
         u.update( dt);
     };
 }
@@ -106,7 +106,7 @@ void LTSquad::updateBBox(){
 };
 
 
-void LTSquad::render( uint32_t color, int iLOD ){
+void LTSquad::render( uint32_t color, int iLOD, bool bDrawGoal ){
     //printf( "squad \n" );
     //printf( "squad pos (%f,%f) \n", pos.x, pos.y );
     //glColor3f( c.x, c.y, c.z );
@@ -122,9 +122,12 @@ void LTSquad::render( uint32_t color, int iLOD ){
     Draw2D::drawText( str, 0, {pos.x,pos.y}, 0.0, default_font_texture, 2.0 );
 
     if(iLOD>0){
-        for( LTUnit u: units ){
+        for(const LTUnit& u: units ){
             //printf( "unit \n"  );
             u.render( color, iLOD );
+            if( bDrawGoal ){
+               Draw2D::drawLine_d( u.goal_pos, u.pos );
+            }
         }
     }
 
@@ -137,6 +140,7 @@ void LTSquad::populate(int n){
         LTUnit u(type);
         u.pos.set( pos.x+randf(-rs,rs), pos.y+randf(-rs,rs) );
         u.rot = rot;
+        u.goal_pos = u.pos;
         units.push_back(u);
     }
 

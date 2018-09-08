@@ -14,8 +14,25 @@ void LTUnit::update       ( double dt ){
     for(int i=0; i<type->nGun; i++ ){
         guns[i].timer  += dt*type->guns[i]->rps;
     }
+    // TODO : balance between movement and fire
+    move_to_goal(dt);
     //reload     += dt/type->fire_period;
 };
+
+void LTUnit::move_to_goal( double dt ){
+    Vec2d d;
+    d.set_sub( goal_pos, pos );
+    double r2 = d.norm2();
+    double vdt = type->maxSpeed * dt;  // TODO actual speed is not max speed
+    if( r2 > sq(vdt) ){
+        d.mul( 1/sqrt(r2) );
+        rot = d;
+        pos.add_mul( d, vdt );
+    }else{
+        pos.set(goal_pos);
+        //job = default_job;
+    }
+}
 
 void LTUnit::getShot( const Vec3d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration ){
     // evaluate expected damage
@@ -41,7 +58,7 @@ void LTUnit::getShot( const Vec3d& from, int nburst, double area, double damage_
     }
 }
 
-void LTUnit::render( uint32_t color, int iLOD ){
+void LTUnit::render( uint32_t color, int iLOD ) const {
     Draw::setRGBA(color);
     //printf( "unit.type->kind %i %s  (%f,%f)  (%f,%f) \n", type->kind, sUnitKind[type->kind], pos.x,pos.y,  rot.x,rot.y );
     switch(type->kind){

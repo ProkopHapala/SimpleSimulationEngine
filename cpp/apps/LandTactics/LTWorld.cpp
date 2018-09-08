@@ -86,7 +86,9 @@ void LTWorld::optimizeDeployment( LTSquad* s, double R, int n, int m, bool bJump
     tmpSur.clear();
     getSurroundings( tmpSur, s->faction, s->pos, R );
     for( int i=0; i<m; i++ ){
-        for( LTUnit& u : s->units ){ tmpSur.tryFindBetterPlace( &u, n, bJumpToGoal ); }
+        for( LTUnit& u : s->units ){
+            tmpSur.tryFindBetterPlace( &u, n, bJumpToGoal );
+        }
     }
 }
 
