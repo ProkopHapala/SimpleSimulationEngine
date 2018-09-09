@@ -25,8 +25,9 @@ class PathFinder :public Grid2DAlg { public:
 	//std::vector<int>    sinks;
 	//std::vector<River*> rivers;
 
-	std::vector<Vec2i>            centers;
+	std::vector<Vec2i>                 centers;
 	std::unordered_map<uint64_t,Vec2i> pass;
+	std::vector<Way*>                  paths;
 
 
 	// PathFinder
@@ -56,7 +57,6 @@ class PathFinder :public Grid2DAlg { public:
         delete [] toBasin; delete toTile; delete moveCosts;
     }
 
-
     inline double heightCost(double dh){
         double val = ch2 * dh*dh;
         if( dh>0 ){ val+=chplus*dh; }else{ val-=chminus*dh; }
@@ -70,10 +70,12 @@ class PathFinder :public Grid2DAlg { public:
             toTile [i]   = -1;
             toBasin[i]   = -1;
         }
+        nContour = centers.size();
         for(int i=0; i<nContour; i++){
-            int ii = contour2[i];
+            int ii = ip2i( centers[i] );
+            contour2[i] = ii;
             //printf( "pepare %i: %i \n", i, ii );
-            toBasin  [ii] = ii;
+            toBasin  [ii] = i;
             toTile   [ii] = ii;
             moveCosts[ii] = 0.0;
         }
@@ -122,10 +124,13 @@ class PathFinder :public Grid2DAlg { public:
                 int ibas = toBasin[i0];
                 for(int ing=0; ing<nneigh; ing++){
                     Vec2i dip = neighs[ing];
-                    if( ( (dip.x>0)||(dip.y>0) ) && validIndex( ip0 ) ){
-                        int j    = ip2i( ip0+dip );
+                    if( ( (dip.x>0)||(dip.y>0) ) ){
+                        Vec2i jp = ip0 + dip;
+                        if( !validIndex( jp ) ) continue;
+                        int j    = ip2i( jp );
                         int jbas = toBasin[j];
                         if(jbas==ibas) continue;
+                        //pass.insert( {pass.size(),(Vec2i){i0,j}} );
                         uint64_t id = symetric_id( (Vec2i){ ibas, jbas } );
                         auto found = pass.find(id);
                         if( found != pass.end() ){
@@ -135,16 +140,48 @@ class PathFinder :public Grid2DAlg { public:
                             double ocost = moveCosts[ops.x] + moveCosts[ops.y];
                             ocost += heightCost( height[ops.x] - height[ops.y] );
                             if(cost<ocost){
-                                printf( "replace bas(%i,%i)==(%i,%i) %i %i %g %g \n", ibas, jbas, id&0xFFFF, id>>32, i0, j, cost, ocost  );
+                                //printf( "replace bas(%i,%i)==(%i,%i) %i %i %g %g \n", ibas, jbas, id&0xFFFF, id>>32, i0, j, cost, ocost  );
                                 found->second = Vec2i{i0,j};
                             };
                         }else{
-                            printf( "instert  bas(%i,%i)==(%i,%i) %i %i \n", ibas, jbas, id&0xFFFF, id>>32, i0, j  );
+                            //printf( "instert  bas(%i,%i)==(%i,%i) %i %i \n", ibas, jbas, id&0xFFFF, id>>32, i0, j  );
                             pass.insert({id,(Vec2i){i0,j}});
                         }
                     }
                 }
             }
+        }
+    }
+
+    void track( Way& way, int i1, int i2){
+        std::vector<int> w1;
+        int i;
+        i = i1;
+        w1.push_back(i);
+        while(true){
+            int i_ = toTile[i];
+            if(i==i_) break;
+            w1.push_back(i_);
+            i=i_;
+        };
+        for(int i=w1.size()-1; i>=0; i--){
+            way.path.push_back( w1[i] );
+        }
+        i = i2;
+        way.path.push_back(i);
+        while(true){
+            int i_ = toTile[i];
+            if(i==i_) break;
+            way.path.push_back(i_);
+            i=i_;
+        };
+    }
+
+    void makePaths(){
+        for( auto& item : pass ){
+            Way* w = new Way();
+            track( *w, item.second.x, item.second.y);
+            paths.push_back( w );
         }
     }
 

@@ -14,18 +14,6 @@ void cmapHeight(double g){
     //return g;
 }
 
-/*
-void drawStaticObject( LTStaticObject& o ){
-    glBegin(GL_LINE_LOOP);
-    glVertex3f( );
-    glVertex3f( );
-    glVertex3f( );
-    glVertex3f( );
-    glEnd();
-    Draw2D::drawShape( o.pos, o.rot, o.type->glo );
-}
-*/
-
 void plotSiteFittness( const LTsurrounding& sur, const LTUnit& u, const Vec2d& pos ){
     double E = sur.unitPosFittness( &u, pos );
     sprintf( strBuf, "%3.3f", E );
@@ -37,6 +25,42 @@ void plotSurrounding( const LTsurrounding& sur, const Vec2d& pos ){
     glColor3f( 1.0,0.0,0.0 ); for( LTUnit* u : sur.enemies       ){ Draw2D::drawLine_d( pos, u->pos ); }
     glColor3f( 0.5,1.0,0.0 ); for( LTLinearObject* l : sur.lobjs ){ Draw2D::drawLine_d( pos, (l->p1+l->p2)*0.5 ); }
     glColor3f( 0.0,1.0,0.5 ); for( LTStaticObject* o : sur.objs  ){ Draw2D::drawLine_d( pos, o->pos ); }
+}
+
+void drawPath( SimplexRuler& ruler, const Way& way ){
+    glBegin(GL_LINE_STRIP);
+    Vec2i oip=Vec2iZero;
+    for( int i : way.path ){
+        Vec2d p;
+        Vec2i ip = ruler.i2ip( i );
+        ruler.nodePoint( ip, p );
+        Vec2i dip = ip-oip;
+        if( (dip.x>1)||(dip.x<-1)||(dip.y>1)||(dip.y<-1) ){
+            glEnd();
+            glBegin(GL_LINE_STRIP);
+        }
+        oip=ip;
+        glVertex3f(p.x, p.y, 0.0 );
+    }
+    glEnd();
+}
+
+void drawRiver( SimplexRuler& ruler, const River& river ){
+    glBegin(GL_LINE_STRIP);
+    Vec2i oip=Vec2iZero;
+    for( int i : river.path ){
+        Vec2d p;
+        Vec2i ip = ruler.i2ip( i );
+        ruler.nodePoint( ip, p );
+        Vec2i dip = ip-oip;
+        if( (dip.x>1)||(dip.x<-1)||(dip.y>1)||(dip.y<-1) ){
+            glEnd();
+            glBegin(GL_LINE_STRIP);
+        }
+        oip=ip;
+        glVertex3f(p.x, p.y, 0.0 );
+    }
+    glEnd();
 }
 
 

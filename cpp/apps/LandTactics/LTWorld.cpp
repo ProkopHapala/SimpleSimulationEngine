@@ -246,6 +246,8 @@ void LTWorld::init(){
     for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
     */
 
+    printf("=== Terrain: height map \n");
+
     srand(4545);
     //ground = new double[ruler.ntot];
     hydraulics.allocate( {ruler.na,ruler.nb} );
@@ -268,10 +270,27 @@ void LTWorld::init(){
     }
     for(int i=0; i<ruler.ntot; i++){ ground[i] *= maxHeight; };
 
-    //pathFinder.n=
+    printf("=== Terrain: Rivers \n");
+
+    hydraulics.allocate_outflow();
+    double wmax = hydraulics.gatherRain( 100.0 ); printf("wmax %f \n",wmax ); // exit(0);
+    //terrainViewMode = 2;
+    hydraulics.findAllRivers( 50.0 );
+
     pathFinder.set ( hydraulics );
     pathFinder.bind( hydraulics.ground, nullptr );
     pathFinder.allocate();
+
+    printf("=== Terrain: Ways \n");
+
+    int nCenters = 15;
+    for(int i=0; i<nCenters; i++){
+        pathFinder.centers.push_back( {rand()%pathFinder.n.x, rand()%pathFinder.n.y}  );
+    }
+    pathFinder.pepare();
+    while( pathFinder.nContour ){ pathFinder.path_step(); }
+    pathFinder.findConnections();
+    pathFinder.makePaths();
 
     printf( "pathFinder.nneigh %i \n", pathFinder.nneigh );
 

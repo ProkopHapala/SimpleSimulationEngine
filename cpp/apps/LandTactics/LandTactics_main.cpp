@@ -108,13 +108,12 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     default_font_texture     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     GUI_fontTex = default_font_texture;
 
-    int nCenters = 15;
-    world.pathFinder.nContour = nCenters;
-    for(int i=0; i<nCenters; i++){
-        world.pathFinder.contour2[i] = world.pathFinder.ip2i( {rand()%world.pathFinder.n.x, rand()%world.pathFinder.n.y} );
-    }
 
-    world.pathFinder.pepare();
+    //printf( " pass.size:  %i \n" , world.pathFinder.pass.size() );
+    //for( auto& item : world.pathFinder.pass ){
+    //    printf( "pass %i %i %i %i \n", item.first&0xFFFF, item.first>>32, item.second.x, item.second.y );
+    //}
+
 
     zoom = 1000.00;
 
@@ -143,37 +142,6 @@ void FormationTacticsApp::draw(){
 
 
 
-
-	/*
-	world.pathFinder.path_step();
-
-	if( world.pathFinder.nContour == 0 ){
-
-        if( world.pathFinder.pass.size() == 0 ){
-            world.pathFinder.findConnections();
-            //printf( " pass.size:  %i \n" , world.pathFinder.pass.size() );
-            for( auto& item : world.pathFinder.pass ){
-                printf( "pass %i %i %i %i \n", item.first&0xFFFF, item.first>>32, item.second.x, item.second.y );
-            }
-        }
-
-        for( auto& item : world.pathFinder.pass ){
-            //PathFinder
-            Vec2d p;
-            Vec2i ip1 = world.pathFinder.i2ip( item.second.x);
-            Vec2i ip2 = world.pathFinder.i2ip( item.second.y);
-            world.ruler.nodePoint( ip1, p   );
-            //printf( " point %i %i %g %g\n", ip1.x, ip2.x, p.x, p.y );
-            Draw2D::drawPointCross_d( p, 10.0 );
-        }
-
-        exit(0);
-	}
-	*/
-
-
-
-
     //glDisable    ( GL_LIGHTING   );
     //glDisable    ( GL_DEPTH_TEST );
     glShadeModel ( GL_SMOOTH     );
@@ -187,11 +155,37 @@ void FormationTacticsApp::draw(){
 
 	glPopMatrix();
 
+	glColor3f(1.0,1.0,1.0);
 
+	for( Vec2i& ip : world.pathFinder.centers ){
+        Vec2d p;
+        world.ruler.nodePoint( ip, p );
+        Draw2D::drawPointCross_d(p, 50.0);
+        Draw2D::drawCircle_d(p, 50.0, 8, false );
+	}
 
-	//return;
+	glDisable(GL_DEPTH_TEST);
+    for( auto& item : world.pathFinder.pass ){
+        //PathFinder
+        Vec2d p1,p2;
+        Vec2i ip1 = world.pathFinder.i2ip( item.second.x);
+        Vec2i ip2 = world.pathFinder.i2ip( item.second.y);
+        world.ruler.nodePoint( ip1, p1   );
+        world.ruler.nodePoint( ip2, p2   );
+        //printf( " point %i %i %g %g\n", ip1.x, ip2.x, p.x, p.y );
+        //Draw2D::z_layer = 1.0;
+        //Draw2D::drawPointCross_d( p, 10.0 );
+        Draw2D::drawLine_d( p1, p2 );
+    }
 
+    for(Way* w: world.pathFinder.paths ){
+        drawPath( world.ruler, *w );
+    }
 
+    for( River* river: world.hydraulics.rivers ){
+        Draw::color_of_hash( river->path[0]+54877 );
+        drawRiver( world.ruler, *river );
+    }
 
 	//printf( "world.objects.size %i \n", world.objects.size() );
 	glColor3f(0.5,0.5,0.5);
@@ -200,16 +194,13 @@ void FormationTacticsApp::draw(){
         o.view();
         //o.type->render( o.pos, o.dir );
     }
-    //exit(0);
+    //exit(0)
+
 
     for( LTLinearObject& o : world.linObjects ){
         //printf( " (%f,%f) (%f,%f) \n", o.p1.x, o.p1.y, o.p2.x, o.p2.y );
         Draw2D::drawLine_d( o.p1, o.p2 );
     }
-
-
-
-
 
 
     //float camMargin = ( camXmax - camXmin )*0.1;
@@ -260,10 +251,11 @@ void FormationTacticsApp::draw(){
 void FormationTacticsApp::drawHUD(){
 
     if(currentSquad){
+        glColor3f(1.0,1.0,1.0);
         glPushMatrix();
         //printf( "currentSquad.type %i %s \n", currentSquad->type, currentSquad->type->name.c_str() );
         //Draw::drawText( "abcdefghijklmnopqrstuvwxyz \n0123456789 \nABCDEFGHIJKLMNOPQRTSTUVWXYZ \nxvfgfgdfgdfgdfgdfgdfg", fontTex, 8, {10,5} );
-        glTranslatef( 10.0,HEIGHT-20,0.0  ); glColor3f(1.0,0.0,1.0); currentSquad->type->toStrCaptioned(strBuf,true); Draw::drawText( strBuf, default_font_texture, fontSizeDef, {80,50} );
+        glTranslatef( 10.0,HEIGHT-20,0.0  ); currentSquad->type->toStrCaptioned(strBuf,true); Draw::drawText( strBuf, default_font_texture, fontSizeDef, {80,50} );
         //glTranslatef( 300.0,      0.0,0.0 ); glColor3f(0.0,0.5,0.0); currentFormation->reportStatus(strBuf); Draw::drawText( strBuf, fontTex, 8, {80,15} );
         //glTranslatef( 300.0,      0.0,0.0 ); glColor3f(0.0,0.5,0.8); currentFormation->soldiers[0].type->toStrCaptioned(strBuf); Draw::drawText( strBuf, fontTex, 8, {80,15} );
         glPopMatrix();
