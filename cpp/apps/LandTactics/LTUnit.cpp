@@ -13,6 +13,7 @@ void LTUnit::update       ( double dt ){
     dt         *= (1.0-suppressed);
     for(int i=0; i<type->nGun; i++ ){
         guns[i].timer  += dt*type->guns[i]->rps;
+        //fireGun( i, *target );
     }
     // TODO : balance between movement and fire
     move_to_goal(dt);
@@ -32,6 +33,31 @@ void LTUnit::move_to_goal( double dt ){
         pos.set(goal_pos);
         //job = default_job;
     }
+}
+
+void LTUnit::fireGun( int i, LTUnit& target ){
+    LTGun&     gun   = guns[i];
+    if( gun.timer > 0.0 ){
+        const LTGunType& gtype = *gun.type;
+        double dh  = 0.0; // TODO : we need to sample terrain here
+        Vec3d hdir = (Vec3d){ target.pos.x-pos.x, dh,  target.pos.y-pos.y };
+        double r   = hdir.normalize();
+
+        double hit_prob =  1/(1 + sq( gtype.getSpread(r) / target.getProjectedArea( hdir ) ) );
+
+        double velocity = gtype.getVelocityDecay(r);
+        double Ek       = gtype.getKineticDamage(r,dh);
+        target.getShot( hdir, gtype.nburst, gtype.crossArea, gtype.ExDMG, Ek, gtype.AP );
+
+    }
+};
+
+double LTUnit::getProjectedArea( Vec3d from ){
+    Vec2d p = from.xz();
+    p.udiv_cmplx(rot);
+    from.x=p.x;
+    from.z=p.y;
+    return type->szAreas.dot( from );
 }
 
 void LTUnit::getShot( const Vec3d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration ){

@@ -6,6 +6,12 @@
 ////            LTGunType
 //////////////////////////////////////////
 
+void LTGunType::updateAux(){
+    crossArea   = caliber*caliber*0.25*M_PI;
+    balisicCoef = crossArea/pMass;
+    //AP = ; // ?
+};
+
 void LTGunType::fromString(const char * str_ ){
     //printf("1 \n");
     char *str    = strdup(str_);
@@ -47,6 +53,12 @@ char* LTGunType::toStrCaptioned( char * sout ){
 //////////////////////////////////////////
 ////            LTUnitType
 //////////////////////////////////////////
+
+void  LTUnitType::updateAux(){
+    szAreas.x = sz.y*sz.z;
+    szAreas.y = sz.x*sz.z;
+    szAreas.z = sz.x*sz.y;
+};
 
 void LTUnitType::fromString(const char * str_, GunTypeDict& gunTypeDict ){
     //printf("1 \n");
@@ -95,6 +107,7 @@ void LTUnitType::fromString(const char * str_, GunTypeDict& gunTypeDict ){
             exit(-1);
         };
     }
+    updateAux();
 };
 
 char* LTUnitType::toStrCaptioned( char * sout, bool bGunDetials ){

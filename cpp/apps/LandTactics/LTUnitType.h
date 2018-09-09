@@ -99,17 +99,18 @@ void printDict( std::unordered_map<K,T*>& dct ){
 
 class LTGunType{ public:
     std::string name = "defaultGunType";
-    double rps=0.1;         // [1] round per second
-    int    nburst;
-    //double coolDown;      // time
-    double vMuzzle=1000;    // [m/s]
-    double caliber=0.00762; // [m]
-    double pMass   =0.001;  // [kg]  projectile mass
-    double balisicCoef=caliber*caliber*0.25*M_PI*pMass;   // [m^2/kg] aerodynamic_decceleration a = balisicCoef * v^2 * airDensity
+    double rps    = 0.1;           // [1] round per second
+    int    nburst = 1;
+    //double coolDown;             // time
+    double vMuzzle     = 1000;     // [m/s]
+    double caliber     = 0.00762;  // [m]
+    double pMass       = 0.001;    // [kg]  projectile mass
+    double crossArea   = caliber*caliber*0.25*M_PI;
+    double balisicCoef = crossArea/pMass;   // [m^2/kg] aerodynamic_decceleration a = balisicCoef * v^2 * airDensity
               // [kg]         projectile mass
-    double AP=100;          // [mm]s
-    double ExDMG=4e+6;      // [J] after penetration damage
-    int    dmgType;         // e.g. KineticEnergy, Explosive, Flame ...
+    double AP      = 100;   // [mm]s
+    double ExDMG   = 4e+6;  // [J] after penetration damage
+    int    dmgType = 0;     // e.g. KineticEnergy, Explosive, Flame ...
 
     //double period       = 20.0;
     //double range        = 0.0; // if this is <1.0 unit is not ranged;   We may modify this later based on physics
@@ -121,9 +122,11 @@ class LTGunType{ public:
     void fromString(const char * str_ );
     char* toStrCaptioned( char * sout );
 
-    inline double getVelocityDecay(double dist)               { return exp(-balisicCoef*dist);  };
-    inline double getSpread(double dist)                      { return sq(spread*dist); };
-    inline double getKineticDamage(double dist,double dHeight){ return pMass * ( sq( vMuzzle * getVelocityDecay(dist) ) - dHeight*GravityAcc );   };
+    void updateAux();
+
+    inline double getVelocityDecay(double dist)               const { return exp(-balisicCoef*dist);  };
+    inline double getSpread(double dist)                      const { return sq(spread*dist); };
+    inline double getKineticDamage(double dist,double dHeight)const { return pMass * ( sq( vMuzzle * getVelocityDecay(dist) ) - dHeight*GravityAcc );   };
 
     LTGunType(){};
     LTGunType( char * fname ){ fromString(fname); }
@@ -142,6 +145,7 @@ class LTUnitType{ public:
     //double height;
     //double Rturret;
     Vec3d sz;
+    Vec3d szAreas;
 
     int nGun=1;
     LTGunType* guns[nGunMax];
@@ -164,6 +168,7 @@ class LTUnitType{ public:
     //double hit_area         = 1.0;
     double recovery_rate   = 10.0;
 
+    void  updateAux();
     void  fromString(const char * str_, GunTypeDict& gunTypeDict );
     char* toStrCaptioned( char * sout, bool bGunDetials );
 

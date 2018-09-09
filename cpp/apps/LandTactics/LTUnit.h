@@ -31,13 +31,16 @@ class LTUnit : public RigidBody2D { public:
     double suppressed=0.0;
 
     Vec2d turret_dir = (Vec2d){1.0,0.0};
-
     Vec2d willForce;
     Vec2d goal_pos;
+
+    LTUnit* target = 0;
 
     // ===== inline functions
 
     void move_to_goal ( double dt );
+    double getProjectedArea( Vec3d from );
+    void fireGun( int i, LTUnit& target );
     //void fire_at_unit ( LTUnit * target );
     //void update       ( double dt );
     //double damage_ramp( double att, double def );

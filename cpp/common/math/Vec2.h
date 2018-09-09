@@ -108,10 +108,11 @@ class Vec2TYPE{
 	bool isBetweenRotations( const VEC& a, const VEC& b ){ return (cross(a)<0)&&(cross(b)>0);  }
 
 	inline void     mul_cmplx (               const VEC& b ){                            TYPE x_ =    x*b.x -   y*b.y;         y =    y*b.x +   x*b.y;       x=x_;  }
+	inline void     udiv_cmplx(               const VEC& b ){                            TYPE x_ =    x*b.x +   y*b.y;         y =    y*b.x -   x*b.y;       x=x_;  }
 	inline void pre_mul_cmplx ( const VEC& a               ){                            TYPE x_ =  a.x*  x - a.y*  y;         y =  a.y*  x + a.x*  y;       x=x_;  }
 	inline void set_mul_cmplx ( const VEC& a, const VEC& b ){                            TYPE x_ =  a.x*b.x - a.y*b.y;         y =  a.y*b.x + a.x*b.y;       x=x_;  }
 	inline void set_udiv_cmplx( const VEC& a, const VEC& b ){                            TYPE x_ =  a.x*b.x + a.y*b.y;         y =  a.y*b.x - a.x*b.y;       x=x_;  }
-	inline void set_div_cmplx ( const VEC& a, const VEC& b ){ TYPE ir2 = 1/b.norm2();  TYPE x_ = (a.x*b.x + a.y*b.y)*ir2;    y = (a.y*b.x - a.x*b.y)*ir2;  x=x_;  }
+	inline void set_div_cmplx ( const VEC& a, const VEC& b ){ TYPE ir2 = 1/b.norm2();  TYPE x_ = (a.x*b.x + a.y*b.y)*ir2;    y = (a.y*b.x - a.x*b.y)*ir2;    x=x_;  }
 
 	inline void fromAngle        ( TYPE phi ){	x = cos( phi );	y = sin( phi );	    }
 	inline void fromAngle_taylor2( TYPE phi ){	sincos_taylor2<TYPE>( phi, y, x );	}
