@@ -8,6 +8,14 @@
 
 //  camera_FPS( pos, rotMat ){
 
+
+
+
+
+
+
+
+
 void AppSDL2OGL_3D::camera_FPS( const Vec3d& pos, const Mat3d& rotMat ){
     //glMatrixMode( GL_PROJECTION );
     glLoadIdentity();

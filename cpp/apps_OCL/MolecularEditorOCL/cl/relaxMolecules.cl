@@ -6,9 +6,51 @@
 #define RSAFE           1.0e-4f
 #define COULOMB_CONST   14.399644f  // [eV/e]
 
-__constant sampler_t sampler_1 = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
 
-inline float3 rotMat( float3 v, float3 a, float3 b, float3 c ){ return (float3)(dot(v,a),dot(v,b),dot(v,c)); }
+#define PRECISE_INTERPOLATION
+
+//__constant sampler_t sampler_1 = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
+__constant sampler_t sampler_1 = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_REPEAT | CLK_FILTER_LINEAR;
+__constant sampler_t sampler_2 = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_REPEAT | CLK_FILTER_NEAREST;
+
+/*
+
+If the sampler is specified as using unnormalized coordinates (floating-point or integer
+coordinates), filter mode set to CLK_FILTER_NEAREST and addressing mode set to one of the
+following modes - CLK_ADDRESS_NONE, CLK_ADDRESS_CLAMP_TO_EDGE or
+CLK_ADDRESS_CLAMP, the location of the image element in the image given by (i, j, k) in
+section 8.2 will be computed without any loss of precision.
+
+For all other sampler combinations of normalized or unnormalized coordinates, filter and
+addressing modes, the relative error or precision of the addressing mode calculations and the
+image filter operation are not defined by this revision of the OpenCL specification. To ensure a
+minimum precision of image addressing and filter calculations across any OpenCL device, for
+these sampler combinations, developers should unnormalize the image coordinate in the kernel
+and implement the linear filter in the kernel with appropriate calls to read_image{f|i|ui} with a
+sampler that uses unnormalized coordinates, filter mode set to CLK_FILTER_NEAREST,
+addressing mode set to CLK_ADDRESS_NONE, CLK_ADDRESS_CLAMP_TO_EDGE or
+CLK_ADDRESS_CLAMP and finally performing the interpolation of color values read from the
+image to generate the filtered color value. 
+
+*/
+
+
+inline float4 read_imagef_trilin( __read_only image3d_t imgIn, float4 coord ){
+    float4 icoord;
+    float4 fc     =  fract( coord, &icoord );
+    float4 mc     = (float4)(1.0,1.0,1.0,1.0) - fc;
+    return  
+     (( read_imagef( imgIn, sampler_2, icoord+(float4)(0.0,0.0,0.0,0.0) ) * mc.x
+      + read_imagef( imgIn, sampler_2, icoord+(float4)(1.0,0.0,0.0,0.0) ) * fc.x )*mc.y
+     +( read_imagef( imgIn, sampler_2, icoord+(float4)(0.0,1.0,0.0,0.0) ) * mc.x
+      + read_imagef( imgIn, sampler_2, icoord+(float4)(1.0,1.0,0.0,0.0) ) * fc.x )*fc.y )*mc.z
+    +(( read_imagef( imgIn, sampler_2, icoord+(float4)(0.0,0.0,1.0,0.0) ) * mc.x
+      + read_imagef( imgIn, sampler_2, icoord+(float4)(1.0,0.0,1.0,0.0) ) * fc.x )*mc.y
+     +( read_imagef( imgIn, sampler_2, icoord+(float4)(0.0,1.0,1.0,0.0) ) * mc.x
+      + read_imagef( imgIn, sampler_2, icoord+(float4)(1.0,1.0,1.0,0.0) ) * fc.x )*fc.y )*fc.z;
+}; 
+
+inline float3 rotMat ( float3 v, float3 a, float3 b, float3 c ){ return (float3)(dot(v,a),dot(v,b),dot(v,c)); }
 inline float3 rotMatT( float3 v,  float3 a, float3 b, float3 c  ){ return a*v.x + b*v.y + c*v.z; }
 
 
@@ -81,16 +123,22 @@ __kernel void getFEgrid(
 ){
     const float3 pos   = poss[ get_global_id (0) ].xyz + pos0.xyz;
     const float3 PLQ   = PLQs[ get_global_id (0) ].xyz;
-    const float4 coord = (float4)( dot(pos,dinvA.xyz),dot(pos,dinvB.xyz),dot(pos,dinvC.xyz), 0.0f );
-    
+    float4 coord = (float4)( dot(pos,dinvA.xyz),dot(pos,dinvB.xyz),dot(pos,dinvC.xyz), 0.0f );
     float4 fe;
+    #ifdef PRECISE_INTERPOLATION
+    coord += (float4)(-0.5,-0.5,-0.5,0.0);
+    fe  = PLQ.x * read_imagef_trilin( imgPauli,  coord );
+    fe += PLQ.y * read_imagef_trilin( imgLondon, coord );
+    fe += PLQ.z * read_imagef_trilin( imgElec,   coord );
+    #else
     fe  = PLQ.x * read_imagef( imgPauli,  sampler_1, coord );
     fe += PLQ.y * read_imagef( imgLondon, sampler_1, coord );
     fe += PLQ.z * read_imagef( imgElec,   sampler_1, coord );
+    #endif
     FEs[ get_global_id (0) ] = fe;
 
     //if( get_global_id (0)==0 ) printf( "GPU PLQ %g %g %g \n", PLQ.x, PLQ.y, PLQ.z );
-    printf( "GPU %i pos(%g,%g,%g) PLQ(%g,%g,%g) fe(%g,%g,%g) \n", get_global_id(0), pos.x, pos.y, pos.z, PLQ.x, PLQ.y, PLQ.z, fe.x,fe.y,fe.z );
+    //printf( "GPU %i pos(%g,%g,%g) PLQ(%g,%g,%g) fe(%g,%g,%g) \n", get_global_id(0), pos.x, pos.y, pos.z, PLQ.x, PLQ.y, PLQ.z, fe.x,fe.y,fe.z );
 }
 
 /*

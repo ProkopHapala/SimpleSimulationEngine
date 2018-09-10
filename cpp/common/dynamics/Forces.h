@@ -6,8 +6,6 @@
 #include "Vec2.h"
 #include "Vec3.h"
 
-
-
 #define COULOMB_CONST  14.3996448915f
 
 #define RSAFE   1.0e-4f

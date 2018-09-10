@@ -227,11 +227,19 @@ class RigidMolecularWorldOCL{ public:
         task_getFEgrid->dim       = 1;
         task_getFEgrid->local [0] = 1;
         task_getFEgrid->global[0] = nAtoms;
+
+
         pos0.f = (Vec3f)( grid.dCell.a + grid.dCell.b + grid.dCell.c )*0.5;
         printf( " pos0 : %g %g %g \n", pos0.x, pos0.y, pos0.z );
+        /*
         dA.f   = (Vec3f)grid.diCell.a*(1.0/grid.n.a);
         dB.f   = (Vec3f)grid.diCell.b*(1.0/grid.n.b);
         dC.f   = (Vec3f)grid.diCell.c*(1.0/grid.n.c);
+        */
+
+        dA.f   = (Vec3f)grid.diCell.a;
+        dB.f   = (Vec3f)grid.diCell.b;
+        dC.f   = (Vec3f)grid.diCell.c;
 
         task_getFEgrid->args = {
             BUFFarg(id_FFPauli),

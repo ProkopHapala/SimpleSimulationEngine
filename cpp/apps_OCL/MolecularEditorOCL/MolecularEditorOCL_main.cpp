@@ -59,12 +59,19 @@ TO DO:
  - correct angular forcefield to repdesent kinked groups ( e.g. -OH )
 */
 
+
+char str[8000];
+int     fontTex;
+
 std::vector<Vec3d> iso_points;
 int isoOgl;
 
 Vec3d PPpos0 = (Vec3d){1.3,1.7, 1.5};
 
 Vec3d testREQ,testPLQ;
+
+
+
 
 // ==========================
 // AppMolecularEditorOCL
@@ -74,6 +81,8 @@ void drawFreeAtoms( int n, Quat4f * poss, Quat4f * forces, float sc, float fsc )
     for(int i=0; i<n; i++){
         glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( poss[i].f, sc            );
         glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( forces[i].f*fsc, poss[i].f );
+        //sprintf( str, "HEAY %i", i);
+        //Draw3D::drawText( str, poss[i].f, fontTex, 60, 8 );
     }
 }
 
@@ -182,7 +191,6 @@ class AppMolecularEditorOCL : public AppSDL2OGL_3D { public:
 
     DynamicOpt  opt;
 
-    int     fontTex;
     int     ogl_sph;
 
     char str[256];
@@ -418,6 +426,15 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
 
 
     /*
+    GPU 1 pos(4.10676,3.82665,3.86912) PLQ(3.04128,-0.563395,0.197332) fe(5.58798e-05,8.68301e-05,4.14168e-05)
+    GPU 3 pos(1.23503,6.10534,3.51844) PLQ(19.4103,-2.72196,-0.394664) fe(-0.000478156,-4.1545e-05,-0.000109768)
+    GPU 2 pos(4.10676,3.82665,3.86912) PLQ(3.04128,-0.563395,0.197332) fe(5.58798e-05,8.68301e-05,4.14168e-05)
+    GPU 4 pos(4.10699,3.82666,3.8691) PLQ(3.04128,-0.563395,0.197332) fe(5.58798e-05,8.68301e-05,4.14168e-05)
+    GPU 0 pos(-0.00444163,0.0904121,5.77591) PLQ(19.4103,-2.72196,-0.394664) fe(9.65953e-05,-7.58072e-05,0.00016078)
+    GPU 5 pos(4.10699,3.82666,3.8691) PLQ(3.04128,-0.563395,0.197332) fe(5.58798e-05,8.68301e-05,4.14168e-05)
+    */
+
+
     //testREQ = (Vec3d){ 1.487, sqrt(0.0006808), 0.0 };
     { printf( "// ======== CHECK GPU FORCE GRID INTERPOLATION \n" );
 
@@ -428,13 +445,22 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
         clworld.prepareBuffers_getFEgrid( nPoss );
         clworld.setupKernel_getFEgrid( world.gridFF.grid );
 
+        testPLQ.z = +0.197332;
+
+        testPLQ.set(0.0,0.0,1.0);
+
+        printf( "CPU PLQ %g %g %g \n", testPLQ.x, testPLQ.y, testPLQ.z );
         for( int i=0; i<clworld.nAtoms; i++ ){
             //clworld.PLQs[i].f = (Vec3f) REQ2PLQ( testREQ, clworld.alpha );
             clworld.PLQs[i].f = (Vec3f)testPLQ;
         }
 
-        Vec3f p0 = (Vec3f){0.5,0.5,12.0};
-        Vec3f p1 = (Vec3f){0.5,0.5,2.0};
+
+        Vec3f p0 = (Vec3f){4.10676,3.82665,3.86912+1.0};
+        Vec3f p1 = (Vec3f){4.10676,3.82665,3.86912-1.0};
+
+        //Vec3f p0 = (Vec3f){0.5,0.5,12.0};
+        //Vec3f p1 = (Vec3f){0.5,0.5,2.0};
         //Vec3f p0 = (Vec3f){0.5,0.5,4.0};
         //Vec3f p1 = (Vec3f){5.5,5.5,4.0};
 
@@ -455,8 +481,6 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
 
         //testPLQ = (Vec3d)clworld.testPLQ.f;
 
-        printf( "CPU PLQ %g %g %g \n", testPLQ.x, testPLQ.y, testPLQ.z );
-
         for(int i=0; i<nPoss; i++ ){
             Vec3d f = Vec3dZero;
             float c = i/(float)nPoss;
@@ -473,9 +497,9 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
         }
         fclose(fout);
     }
-    */
 
-    //exit(0);
+
+    exit(0);
 
 
     printf( " SETUP CLWORLD nSystem %i nMols %i \n", nSystems, nMols );
