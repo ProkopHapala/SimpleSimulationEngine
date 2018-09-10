@@ -7,14 +7,14 @@
 #include "OCLerrors.h"
 #include "OCL_device_picker.h"
 
-struct float3 { 
+struct float3 {
 	union{
 		struct{ float x,y,z; };
 		float array[3];
-	}; 
+	};
 };
 
-struct float4 { 
+struct float4 {
 	union{
 		struct{ float x,y,z,w;     };
 		struct{ float3 f; float e; };
@@ -28,7 +28,7 @@ struct float8 {
 		struct{ float4 lo,hi; };
 		float array[8];
 	};
-    //float x,y,z,w,hx,hy,hz,hw; 
+    //float x,y,z,w,hx,hy,hz,hw;
 };
 
 struct int2   { int x,y; };
@@ -55,7 +55,7 @@ class OCLBuffer{
         if( flags == CL_MEM_WRITE_ONLY ){  p_gpu = clCreateBuffer(context, flags, typesize * n, NULL,    &err);
         }else{   p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err);
             //if(p_cpu){ p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }
-            //else     { p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); }; 
+            //else     { p_gpu = clCreateBuffer(context, flags, typesize * n, p_cpu,   &err); };
         }
         printf( "initOnGPUImage p_gpu: %li \n", p_gpu );
         return err;
@@ -65,11 +65,11 @@ class OCLBuffer{
         int err;
         //p_gpu = clCreateBuffer(context, flags, typesize * n, NULL,  &err);
         switch(img_dims){
-            case 2: 
+            case 2:
                 printf( " initOnGPUImage: clCreateImage2D \n" );
                 p_gpu = clCreateImage2D(context, flags, &imageFormat, nImg[0],nImg[1],          0,    p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
                 break;
-            case 3: 
+            case 3:
                 printf( " initOnGPUImage: clCreateImage3D \n" );
                 p_gpu = clCreateImage3D(context, flags, &imageFormat, nImg[0],nImg[1], nImg[2], 0, 0, p_cpu, &err);   // TODO: ??? nx=nImg[0] ny=nImg[1]  ???
                 break;
@@ -141,7 +141,7 @@ class OCLsystem{
         int err=buffers[i].initOnGPUImage(context); OCL_checkError(err, "initOnGPUImage");
         return i;
     }
-    
+
     int newBufferImage3D( char* name, size_t nx, size_t ny, size_t nz, size_t typesize, void * p_cpu, cl_mem_flags flags, cl_image_format imageFormat ){
         check_contextSet();
         buffers.push_back( OCLBuffer( name, nx*ny, typesize, p_cpu, flags ) );
@@ -194,10 +194,10 @@ class OCLsystem{
 
     inline int upload  (int i){ return buffers[i].toGPU  (commands); };
     inline int download(int i){ return buffers[i].fromGPU(commands); };
-    
+
     inline int upload  (int i, void* p_cpu ){ buffers[i].p_cpu=p_cpu; return buffers[i].toGPU  (commands); };
     inline int download(int i, void* p_cpu ){ buffers[i].p_cpu=p_cpu; return buffers[i].fromGPU(commands); };
-    
+
     inline int copy    (int from, int to, int from0, int to0, int n){ return clEnqueueCopyBuffer(commands,buffers[from].p_gpu,buffers[to].p_gpu,from0,to0,n,0,NULL,NULL); };
     inline int copyBuff(int from, int to                           ){ int n=buffers[from].n; int n_=buffers[to].n; if(n_<n)n=n_; return clEnqueueCopyBuffer(commands,buffers[from].p_gpu,buffers[to].p_gpu,0,0,n,0,NULL,NULL); };
 
@@ -276,10 +276,10 @@ class OCLtask{
         cl_kernel kernel = cl->kernels[ikernel];
         for(int i=0; i<args.size(); i++){
             OCLarg& arg = args[i];
-            printf( "useArgs args[%i].kind: %i\n", i, arg.kind );
+            //printf( "useArgs args[%i].kind: %i\n", i, arg.kind );
             switch(arg.kind){
-                case OCL_BUFF:  
-                    printf( "buffArg args[%i] ibuff %i p_gpu %i \n", i, arg.i, cl->buffers[arg.i].p_gpu );
+                case OCL_BUFF:
+                    //printf( "buffArg args[%i] ibuff %i p_gpu %i \n", i, arg.i, cl->buffers[arg.i].p_gpu );
                     err |= clSetKernelArg( kernel, i, sizeof(cl_mem), &(cl->buffers[arg.i].p_gpu) );              OCL_checkError(err, "setAsArg"); break;
                 //case OCL_BUFF:  err |= cl->buffers[arg.i].setAsArg( kernel, i );                                OCL_checkError(err, "setAsArg"); break;
                 case OCL_INT:   err |= clSetKernelArg( kernel, i, sizeof(int),    &(arg.i) );                     OCL_checkError(err, "setAsArg"); break;
@@ -292,7 +292,7 @@ class OCLtask{
     }
 
     inline int enque_raw(  ){
-        printf("enque_raw %i %i (%i,%i,%i) (%i,%i,%i)\n", ikernel, dim, global[0],global[1],global[2], local[0],local[1],local[2] );
+        //printf("enque_raw %i %i (%i,%i,%i) (%i,%i,%i)\n", ikernel, dim, global[0],global[1],global[2], local[0],local[1],local[2] );
         if(local[0]==0){ return clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, NULL,  0, NULL, NULL );   }
         else{            return clEnqueueNDRangeKernel( cl->commands, cl->kernels[ikernel], dim, NULL, global, local, 0, NULL, NULL );   }
     }

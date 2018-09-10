@@ -67,26 +67,30 @@ void move_FIRE( float3 f, float3 p, float3 v, float2 RP, float4 RP0 ){
     p +=  v * RP.x;
 }
 
-__kernel void getFEtot(
+__kernel void getFEgrid(
     __read_only image3d_t  imgPauli,
     __read_only image3d_t  imgLondon,
     __read_only image3d_t  imgElec,
+    __global  float4*  PLQs,    // const memory ?
     __global  float4*  poss,
     __global  float4*  FEs,
     float4 pos0,
     float4 dinvA,
     float4 dinvB,
-    float4 dinvC,
-    float4 PLQ
+    float4 dinvC
 ){
-    if( get_global_id (0)==0 ) printf( "GPU PLQ %g %g %g \n", PLQ.x, PLQ.y, PLQ.z );
-    float3 pos   = poss[ get_global_id (0) ].xyz + pos0.xyz;
-    float4 coord = (float4)( dot(pos,dinvA.xyz),dot(pos,dinvB.xyz),dot(pos,dinvC.xyz), 0.0f );
+    const float3 pos   = poss[ get_global_id (0) ].xyz + pos0.xyz;
+    const float3 PLQ   = PLQs[ get_global_id (0) ].xyz;
+    const float4 coord = (float4)( dot(pos,dinvA.xyz),dot(pos,dinvB.xyz),dot(pos,dinvC.xyz), 0.0f );
+    
     float4 fe;
     fe  = PLQ.x * read_imagef( imgPauli,  sampler_1, coord );
     fe += PLQ.y * read_imagef( imgLondon, sampler_1, coord );
     fe += PLQ.z * read_imagef( imgElec,   sampler_1, coord );
     FEs[ get_global_id (0) ] = fe;
+
+    //if( get_global_id (0)==0 ) printf( "GPU PLQ %g %g %g \n", PLQ.x, PLQ.y, PLQ.z );
+    printf( "GPU %i pos(%g,%g,%g) PLQ(%g,%g,%g) fe(%g,%g,%g) \n", get_global_id(0), pos.x, pos.y, pos.z, PLQ.x, PLQ.y, PLQ.z, fe.x,fe.y,fe.z );
 }
 
 /*
@@ -106,6 +110,7 @@ __kernel void getForceRigidSystemSurfGrid(
     __global  int2*    mol2atoms,    // mol2atoms[type.x:type.y]
     //__global  int2*  confs,        // pointer to poses ... since we have constant number of molecules, we dont need this
     __global  float8*  atomsInTypes, // atoms in molecule types
+    __global  float4*  PLQinTypes,   // atoms in molecule types
     __global  float8*  poses,        // pos, qrot
     __global  float8*  fposes,       // force acting on pos, qrot
     float4 pos0,
@@ -127,7 +132,7 @@ __kernel void getForceRigidSystemSurfGrid(
     const int isys  = get_group_id(0);
     
     if( get_global_id(0)==0 ){
-        printf( "GPU nGlobal %i nLocal %i nSystems %i nMols %i \n", (int)get_global_size(0), nL, nSystems, nMols );
+        //printf( "GPU nGlobal %i nLocal %i nSystems %i nMols %i \n", (int)get_global_size(0), nL, nSystems, nMols );
         //printf( "dinvA (%g,%g,%g,%g)\n", dinvA.x, dinvA.y, dinvA.z );
         //printf( "dinvB (%g,%g,%g,%g)\n", dinvB.x, dinvB.y, dinvB.z );
         //printf( "dinvC (%g,%g,%g,%g)\n", dinvC.x, dinvC.y, dinvC.z);
@@ -145,11 +150,11 @@ __kernel void getForceRigidSystemSurfGrid(
 
     if( get_local_id(0)==0 ){
     //if( get_global_id(0)==0 ){ 
-        printf( "GPU isystem %i \n", isys );
-        printf( "GPU isys,oimol(%i,%i) i0,n(%i,%i) p(%g,%g,%g) q(%g,%g,%g,%g) \n", isys, oimol, iatomi, natomi,  mposi.x,mposi.y,mposi.z,  qroti.x,qroti.y,qroti.z,qroti.w  );
+        //printf( "GPU isystem %i \n", isys );
+        //printf( "GPU isys,oimol(%i,%i) i0,n(%i,%i) p(%g,%g,%g) q(%g,%g,%g,%g) \n", isys, oimol, iatomi, natomi,  mposi.x,mposi.y,mposi.z,  qroti.x,qroti.y,qroti.z,qroti.w  );
         for(int ia=0; ia<natomi; ia++){
             float8 ai = atomsInTypes[iatomi+ia];
-            printf( "GPU isys %i ia %i %i xyz(%g,%g,%g,%g) REQ(%g,%g,%g,%g)\n", isys, imol, ia, iatomi+ia, ai.x, ai.y, ai.z, ai.w,  ai.s4, ai.s5, ai.s6, ai.s7 );
+            //printf( "GPU isys %i ia %i %i xyz(%g,%g,%g,%g) REQ(%g,%g,%g,%g)\n", isys, imol, ia, iatomi+ia, ai.x, ai.y, ai.z, ai.w,  ai.s4, ai.s5, ai.s6, ai.s7 );
         }
     }
 
@@ -197,8 +202,8 @@ __kernel void getForceRigidSystemSurfGrid(
                 //if( isys==0 ) printf( "GPU (%i,%i) (%i,%i) r %g expar %g fr %g kqq %g a %g eps %g \n", imol, ia, jmol, ja, r, expar, fr, cElec, alpha, eps );
             }
 
-            forceE += fe;
-            torq   += cross(adposi, fe);
+            //forceE += fe;
+            //torq   += cross(adposi, fe);
 
         }
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -210,22 +215,27 @@ __kernel void getForceRigidSystemSurfGrid(
         // TODO: we may store transformed atoms of imol to local mem ?
         
         for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
-            float4 adposi = atomsInTypes[iatomi+ia].lo;
+            const float4 adposi = atomsInTypes[iatomi+ia].lo;
             adposi.xyz    = rotQuat( qroti, adposi.xyz );
-            float3 aposi  = adposi.xyz + mposi.xyz + pos0.xyz;
-            float3 REQi   = atomsInTypes[iatomi+ia].s456;
+            const float3 aposi  = adposi.xyz + mposi.xyz + pos0.xyz;
 
-            // molecule grid interactions
-            //float eps    = sqrt(REQi.y); //  THIS SHOULD BE ALREADY DONE
+            float4 fe = (float4)(0.0,0.0,0.0,0.0);
+            const float4 coord = (float4)( dot(aposi,dinvA.xyz),dot(aposi,dinvB.xyz),dot(aposi,dinvC.xyz), 0.0f );
+
+            
+            float3 REQi   = atomsInTypes[iatomi+ia].s456;
             float expar    = exp(-alpha*REQi.x);
             float cPauli   =    REQi.y*expar*expar;
             float cLondon  = -2*REQi.y*expar;
-            float4 fe = (float4)(0.0,0.0,0.0,0.0);
-            const float4 coord = (float4)( dot(aposi,dinvA.xyz),dot(aposi,dinvB.xyz),dot(aposi,dinvC.xyz), 0.0f );
-            
             fe += cPauli *read_imagef( imgPauli,  sampler_1, coord );
             fe += cLondon*read_imagef( imgLondon, sampler_1, coord );
             fe += REQi.z *read_imagef( imgElec,   sampler_1, coord );
+            
+            
+            const float3 PLQi   = PLQinTypes[iatomi+ia].xyz;
+            //fe += PLQi.x*read_imagef( imgPauli,  sampler_1, coord );
+            //fe += PLQi.y*read_imagef( imgLondon, sampler_1, coord );
+            //fe += PLQi.z*read_imagef( imgElec,   sampler_1, coord );
             
             //fe = read_imagef( imgLondon, sampler_1, coord );
 
@@ -233,22 +243,24 @@ __kernel void getForceRigidSystemSurfGrid(
             //if( isys==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) g(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  coord.x,coord.y,coord.z,  fe.x, fe.y, fe.z );
             //if( isys==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  cPauli,cLondon,REQi.z,  fe.x, fe.y, fe.z );
 
+            //if( isys==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  fe.x, fe.y, fe.z );
+            //if( (isys==0) && (imol==0) && (ia==0) ) printf( "GPU fgrid: iG %i imol %i ia %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n",  
+            //                                                 get_global_id(0), imol, ia, aposi.x, aposi.y, aposi.z,  fe.x, fe.y, fe.z);
+
+            //if( (isys==0) && (imol==0) ) printf( "GPU fgrid: iG %i imol %i ia %i REPLQ(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) \n",   get_global_id(0), imol, ia, cPauli, cLondon, REQi.z,  PLQi.x, PLQi.y, PLQi.z  );
+            //if( (isys==0) && (imol==0) ) printf( "GPU imol %i ia %i RE(%5.5e,%5.5e)->PL(%5.5e,%5.5e) PL(%5.5e,%5.5e) \n", imol, ia, REQi.x, REQi.y, cPauli, cLondon, PLQi.x, PLQi.y  );
+
             forceE += fe;
             torq   += cross(adposi, fe);
         }
-        
 
         //if( isys==0 ) printf( "GPU imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
-        printf( "GPU isystem %i imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", isys, imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
+        //printf( "GPU isystem %i imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", isys, imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
 
         fposes[oimol].lo = forceE;
         fposes[oimol].hi = torq;
     }
 }
-
-
-
-
 
 
 

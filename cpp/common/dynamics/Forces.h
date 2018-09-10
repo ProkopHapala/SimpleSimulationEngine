@@ -64,7 +64,7 @@ inline void addAtomicForceExp( const Vec3d& dp, Vec3d& f, double r0, double eps,
 
 inline Vec3d REQ2PLQ( const Vec3d& REQ, double alpha ){
     //double eps   = sqrt(REQ.y);  // this is expected to be already done
-    double eps   = REQ.y; 
+    double eps   = REQ.y;
     double expar = exp(-alpha*REQ.x);
     double CP    =    eps*expar*expar;
     double CL    = -2*eps*expar;

@@ -36,18 +36,30 @@ void frag2atoms(const Vec3f& pos, const Quat4f& qrot, int n, float8* atom0s, flo
     }
 }
 
+void frag2atoms(const Vec3f& pos, const Quat4f& qrot, int n, float8* atom0s, Quat4f* aposs ){
+    Mat3f mrot; qrot.toMatrix(mrot);
+    Quat4f* a0s = (Quat4f*)atom0s;
+    for( int j=0; j<n; j++ ){
+        Vec3f Mp;
+        mrot.dot_to( a0s[0].f, Mp );
+        aposs[j].f.set_add( pos, Mp );
+        atom0s += 2;
+    }
+}
+
 class RigidMolecularWorldOCL{ public:
 
     OCLsystem* cl = 0;
     OCLtask *task_getForceRigidSystemSurfGrid = 0;
-    OCLtask *task_getFEtot = 0;
+    OCLtask *task_getFEgrid = 0;
 
-    bool bGetFEtot = true;
+    bool bGetFEgrid = true;
 
     int nSystems  = 0;
     int nMols     = 0;
     int nMolTypes = 0;
     int nAtomInMolMax  = 0;
+    int nAtoms = 0;
 
     //int nAtomsInTypes = 0; // derived
     int nMolInstances = 0; // derived
@@ -58,12 +70,15 @@ class RigidMolecularWorldOCL{ public:
     std::vector<float8> atomsInTypes;
     std::vector<int2>   molTypes;
 
+    Quat4f * PLQinTypes   = 0;
+
     int2   * mol2atoms    = 0;
     float8 * poses        = 0;
     float8 * fposes       = 0;
 
     Quat4f * poss      = 0;
     Quat4f * FEs       = 0;
+    Quat4f * PLQs      = 0;
 
     //cl_mem img_FFPauli;   //  = -1;
     //cl_mem img_FFLondon;  //  = -1;
@@ -75,11 +90,14 @@ class RigidMolecularWorldOCL{ public:
 
     int id_mol2atoms    = -1;
     int id_atomsInTypes = -1;
+    int id_PLQinTypes   = -1;
     int id_poses        = -1;
     int id_fposes       = -1;
 
     int id_poss         = -1;
     int id_FEs          = -1;
+    int id_PLQs         = -1;
+
 
     // ==== Functions
 
@@ -91,9 +109,9 @@ class RigidMolecularWorldOCL{ public:
         int id_evalPLE = cl->newKernel("getForceRigidSystemSurfGrid");               DEBUG;
         task_getForceRigidSystemSurfGrid = new OCLtask( cl, id_evalPLE, 1, -1, 32 ); DEBUG;
 
-        if( bGetFEtot ){
-            int id_getFEtot   = cl->newKernel("getFEtot");              DEBUG;
-            task_getFEtot = new OCLtask( cl, id_getFEtot, 1, -1, 1 );  DEBUG;
+        if( bGetFEgrid ){
+            int id_getFEgrid = cl->newKernel("getFEgrid");              DEBUG;
+            task_getFEgrid   = new OCLtask( cl, id_getFEgrid, 1, -1, 1 );  DEBUG;
         }
     }
 
@@ -120,11 +138,23 @@ class RigidMolecularWorldOCL{ public:
         }
     }
 
-    void prepareBuffers_getFEtot( int nPoss ){
-        FEs  = new Quat4f[nPoss];
-        poss = new Quat4f[nPoss];
-        id_poss = cl->newBuffer( "poss",  nPoss, sizeof(Quat4f), NULL, CL_MEM_READ_WRITE  ); DEBUG;
-        id_FEs  = cl->newBuffer( "FEs",   nPoss, sizeof(Quat4f), NULL, CL_MEM_READ_WRITE  ); DEBUG;
+    int countAtomsInSystem( int iSystem ){
+        int na = 0;
+        int sysOff = nMols*iSystem;
+        for(int i=0; i<nMols; i++){
+            na += mol2atoms[sysOff+i].y;
+        }
+        return na;
+    }
+
+    void prepareBuffers_getFEgrid( int nAtoms_ ){
+        nAtoms = nAtoms_;
+        FEs  = new Quat4f[nAtoms];
+        poss = new Quat4f[nAtoms];
+        PLQs = new Quat4f[nAtoms];
+        id_poss = cl->newBuffer( "poss", nAtoms, sizeof(Quat4f), NULL, CL_MEM_READ_WRITE  ); DEBUG;
+        id_FEs  = cl->newBuffer( "FEs",  nAtoms, sizeof(Quat4f), NULL, CL_MEM_READ_WRITE  ); DEBUG;
+        id_PLQs = cl->newBuffer( "PLQs", nAtoms, sizeof(Quat4f), NULL, CL_MEM_READ_WRITE  ); DEBUG;
     };
 
     void prepareBuffers( int nSystems_, int nMols_, Vec3i nGrid, float* FFpauli, float* FFlondon, float* FFelec ){
@@ -135,9 +165,11 @@ class RigidMolecularWorldOCL{ public:
         mol2atoms    = new int2  [nMolInstances];
         poses        = new float8[nMolInstances];
         fposes       = new float8[nMolInstances];
+        PLQinTypes   = new Quat4f[atomsInTypes.size()];
 
         id_mol2atoms    = cl->newBuffer( "molTypes",     nMolInstances,       sizeof(int2)  , NULL,                CL_MEM_READ_WRITE ); DEBUG;
         id_atomsInTypes = cl->newBuffer( "atomsInTypes", atomsInTypes.size(), sizeof(float8), atomsInTypes.data(), CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR ); DEBUG;
+        id_PLQinTypes   = cl->newBuffer( "PLQinTypes"  , atomsInTypes.size(), sizeof(Quat4f), NULL,          CL_MEM_READ_WRITE ); DEBUG;
 
         id_poses        = cl->newBuffer( "poses",        nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
         id_fposes       = cl->newBuffer( "fposes",       nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
@@ -165,48 +197,56 @@ class RigidMolecularWorldOCL{ public:
     void download_fposes (){ cl->download( id_fposes,     fposes    ); }
 
     void upload_poss  ( ){ cl->upload  ( id_poss, poss ); }
+    void upload_PLQs  ( ){ cl->upload  ( id_PLQs, PLQs ); }
     void download_FEs ( ){ cl->download( id_FEs,  FEs  ); }
 
-    void setupKernel_getFEtot( GridShape& grid, Vec3d testREQ, float alpha_, int nPoss ){
-        //__kernel void getFEtot(
-        //    __read_only image3d_t  imgPauli,
-        //    __read_only image3d_t  imgLondon,
-        //    __read_only image3d_t  imgElec,
-        //    __global  float4*  poss,
-        //    __global  float4*  FEs,
-        //    float4 dinvA,
-        //    float4 dinvB,
-        //    float4 dinvC,
-        //    float4 PLQ
+    void upload_PLQinTypes(){
+        //_realloc(  );
+        Quat4f * atoms = (Quat4f*)atomsInTypes.data();
+        for(int i=0; i<atomsInTypes.size(); i++){
+            PLQinTypes[i].f = (Vec3f)REQ2PLQ( (Vec3d)atoms[1].f, alpha );
+            PLQinTypes[i].w = 0;
+            printf( "PLQinTypes %i RE(%5.5e,%5.5e) PL(%5.5e,%5.5e)\n", i, atoms[1].f.x, atoms[1].f.y, PLQinTypes[i].f.x, PLQinTypes[i].f.y );
+            atoms+=2;
+        }
+        cl->upload  ( id_PLQinTypes,  PLQinTypes );
+    }
 
-        int nLoc = _max( nMols, nAtomInMolMax );
+    void setupKernel_getFEgrid( GridShape& grid ){
+        //__read_only image3d_t  imgPauli,
+        //__read_only image3d_t  imgLondon,
+        //__read_only image3d_t  imgElec,
+        //__global  float4*  PLQs,
+        //__global  float4*  poss,
+        //__global  float4*  FEs,
+        //float4 pos0,
+        //float4 dinvA,
+        //float4 dinvB,
+        //float4 dinvC
 
-        task_getFEtot->dim       = 1;
-        task_getFEtot->local [0] = 1;
-        task_getFEtot->global[0] = nPoss;
+        task_getFEgrid->dim       = 1;
+        task_getFEgrid->local [0] = 1;
+        task_getFEgrid->global[0] = nAtoms;
         pos0.f = (Vec3f)( grid.dCell.a + grid.dCell.b + grid.dCell.c )*0.5;
         printf( " pos0 : %g %g %g \n", pos0.x, pos0.y, pos0.z );
         dA.f   = (Vec3f)grid.diCell.a*(1.0/grid.n.a);
         dB.f   = (Vec3f)grid.diCell.b*(1.0/grid.n.b);
         dC.f   = (Vec3f)grid.diCell.c*(1.0/grid.n.c);
-        testPLQ.f = (Vec3f)REQ2PLQ( testREQ, alpha );
 
-        alpha = alpha_;
-        task_getFEtot->args = {
+        task_getFEgrid->args = {
             BUFFarg(id_FFPauli),
             BUFFarg(id_FFLondon),
             BUFFarg(id_FFelec),
 
+            BUFFarg(id_PLQs),
             BUFFarg(id_poss),
             BUFFarg(id_FEs),
             REFarg(pos0),
             REFarg(dA),
             REFarg(dB),
             REFarg(dC),
-            REFarg(testPLQ)
         };
     }
-
 
     void setupKernel_getForceRigidSystemSurfGrid( GridShape& grid, float alpha_ ){
         //__kernel void getForceRigidSystemSurfGrid(
@@ -224,6 +264,8 @@ class RigidMolecularWorldOCL{ public:
         //    int nSystems,
         //    int nMols, // nMols should be approx local size
         //    float alpha
+
+        upload_PLQinTypes();
 
         int nLoc = _max( nMols, nAtomInMolMax );
 
@@ -246,6 +288,7 @@ class RigidMolecularWorldOCL{ public:
 
             BUFFarg(id_mol2atoms),
             BUFFarg(id_atomsInTypes),
+            BUFFarg(id_PLQinTypes),
             BUFFarg(id_poses),
             BUFFarg(id_fposes),
             REFarg(pos0),
@@ -264,6 +307,37 @@ class RigidMolecularWorldOCL{ public:
        download_fposes();
        clFinish(cl->commands);
     };
+
+    int system2PLQs( int isystem, Quat4f* PLQs ){
+        int isoff   = isystem * nMols;
+        int atom_count = 0;
+        Quat4f* atom0s = (Quat4f*)atomsInTypes.data();
+        for(int imol=0; imol<nMols; imol++){
+            const int2& m2a = mol2atoms[imol];
+            Quat4f * a0s = atom0s + m2a.x;
+            for(int i=0; i<m2a.y; i++){
+                    printf( "system2PLQs imol %i ia %i \n", imol, i );
+                    PLQs->f = (Vec3f) REQ2PLQ( (Vec3d)a0s[1].f, alpha );
+                    a0s+=2;
+                    PLQs++;
+            }
+            atom_count += m2a.y;
+        }
+        return atom_count;
+    }
+
+    int system2poss( int isystem, Quat4f* poss ){
+        int isoff   = isystem * nMols;
+        int atom_count = 0;
+        float8* atom0s = atomsInTypes.data();
+        for(int imol=0; imol<nMols; imol++){
+            Quat4f* posi     = (Quat4f*)(poses+isoff+imol);
+            const int2& m2a = mol2atoms[imol];
+            frag2atoms( posi[0].f, posi[1], m2a.y, atom0s+m2a.x, poss+atom_count );
+            atom_count += m2a.y;
+        }
+        return atom_count;
+    }
 
     int system2atoms( int isystem, float8* atoms ){
         int isoff   = isystem * nMols;
@@ -425,15 +499,35 @@ class RigidMolecularWorldOCL{ public:
         } // imol
     } // evalForceCPU
 
-    void moveSystemGD( int isystem, float dt, float sct, float scr ){
+    int getFEgridCPU( const GridFF& gridFF ){
+        for(int ia=0; ia<nAtoms; ia++){
+            printf( " getFEgridCPU[%i] poss(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) \n", ia, poss[ia].f.x,poss[ia].f.y,poss[ia].f.z,   PLQs[ia].f.x,PLQs[ia].f.y,PLQs[ia].f.z );
+            Vec3d fd = Vec3dZero;
+            gridFF.addForce( (Vec3d)poss[ia].f, (Vec3d)PLQs[ia].f, fd );
+            FEs[ia].f = (Vec3f)fd;
+        }
+    }
+
+    double moveSystemGD( int isystem, float dt, float sct, float scr ){
+        double F2tot = 0;
         int isoff   = isystem * nMols;
         Quat4f* ps = (Quat4f*)( poses + isoff);
         Quat4f* fs = (Quat4f*)(fposes + isoff);
         for(int imol=0; imol<nMols; imol++){
-            ps[0].f.add_mul   ( fs[0].f, dt*sct  );
-            ps[1]  .dRot_exact( dt*scr , fs[1].f );
+            ps[0].f.add_mul   ( fs[0].f, dt*sct  );       F2tot += fs[0].f.norm2();
+            ps[1]  .dRot_exact( dt*scr , fs[1].f );       F2tot += fs[0].f.norm2();
             ps+=2; fs+=2;
         }
+        return F2tot;
+    }
+
+    double moveGDAtoms( float dt ){
+        double F2tot = 0;
+        for(int ia=0; ia<nAtoms; ia++){
+            poss[ia].f.add_mul( FEs[ia].f, dt );
+            F2tot += FEs[ia].f.norm2();
+        }
+        return F2tot;
     }
 
 };

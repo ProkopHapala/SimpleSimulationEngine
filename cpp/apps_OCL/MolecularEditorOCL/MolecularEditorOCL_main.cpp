@@ -70,6 +70,13 @@ Vec3d testREQ,testPLQ;
 // AppMolecularEditorOCL
 // ==========================75
 
+void drawFreeAtoms( int n, Quat4f * poss, Quat4f * forces, float sc, float fsc ){
+    for(int i=0; i<n; i++){
+        glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( poss[i].f, sc            );
+        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( forces[i].f*fsc, poss[i].f );
+    }
+}
+
 void drawAtomsF8( int n, float8 * atoms, float sc, int oglSphere ){
     for(int i=0; i<n; i++){
         float* atomi = ((float*)(atoms+i));
@@ -84,7 +91,7 @@ void drawAtomsForces( int n, float8 * atoms, Vec3f * fatoms, float rsc, float fs
     Quat4f* ps = (Quat4f*) atoms;
     for(int i=0; i<n; i++){
         const Vec3f& p = ps[i*2].f;
-        printf( "atoms[%i] f(%g,%g,%g)  \n", i, fatoms[i].x, fatoms[i].y, fatoms[i].z );
+        //printf( "atoms[%i] f(%g,%g,%g) \n", i, fatoms[i].x, fatoms[i].y, fatoms[i].z );
         Draw3D::drawPointCross( p, rsc           );
         Draw3D::drawVecInPos  ( fatoms[i]*fsc, p );
     }
@@ -358,7 +365,8 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     //exit(0);
 
     DEBUG
-    builder.loadMolType( "inputs/water_T5_ax.xyz", "H2O" );
+    //builder.loadMolType( "inputs/water_T5_ax.xyz", "H2O" );
+    builder.loadMolType( "inputs/water_ax.xyz", "H2O" );
     builder.loadMolType( "inputs/NaIon.xyz", "Na+" );
     builder.loadMolType( "inputs/ClIon.xyz", "Cl-" );
     builder.loadMolType( "inputs/OHion.xyz", "OH-" );
@@ -403,10 +411,13 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     int nSystems = 3;
 
     //clworld.prepareBuffers( nSystems, nMols, world.gridFF.grid.n, world.gridFF.FFPauli_f, world.gridFF.FFLondon_f, world.gridFF.FFelec_f );
+    clworld.alpha = world.gridFF.alpha;
     clworld.prepareBuffers( nSystems, nMols, world.gridFF );
 
     DEBUG
 
+
+    /*
     //testREQ = (Vec3d){ 1.487, sqrt(0.0006808), 0.0 };
     { printf( "// ======== CHECK GPU FORCE GRID INTERPOLATION \n" );
 
@@ -414,8 +425,13 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
         fout = fopen( "Fgrid.log", "w"  );
 
         int nPoss = 1000;
-        clworld.prepareBuffers_getFEtot( nPoss );
-        clworld.setupKernel_getFEtot( world.gridFF.grid, testREQ, world.gridFF.alpha, nPoss );
+        clworld.prepareBuffers_getFEgrid( nPoss );
+        clworld.setupKernel_getFEgrid( world.gridFF.grid );
+
+        for( int i=0; i<clworld.nAtoms; i++ ){
+            //clworld.PLQs[i].f = (Vec3f) REQ2PLQ( testREQ, clworld.alpha );
+            clworld.PLQs[i].f = (Vec3f)testPLQ;
+        }
 
         Vec3f p0 = (Vec3f){0.5,0.5,12.0};
         Vec3f p1 = (Vec3f){0.5,0.5,2.0};
@@ -429,24 +445,15 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
             Vec3f&  p  = clworld.poss[i].f;
             //printf( "%i : %g p(%g,%g,%g) \n", i, f, p.x,p.y,p.z  );
         }
-
+        clworld.upload_PLQs();
         clworld.upload_poss();
-        clworld.task_getFEtot->enque();
+        clworld.task_getFEgrid->enque();
         clworld.download_FEs();
         clFinish(cl->commands);
 
-        /*
-        for(int i=0; i<nPoss; i++ ){
-            Vec3f&  p  = clworld.poss[i].f;
-            Quat4f& fe = clworld.FEs [i];
-            //printf( "%i : p(%g,%g,%g)  fe(%g,%g,%g,%g) \n", i, p.x,p.y,p.z, fe.x,fe.y,fe.z,fe.w  );
-            printf( "Fgrid GPU : %i p %5.5e %5.5e %5.5e f %5.5e %5.5e %5.5e \n", i, p.x,p.y,p.z, fe.x,fe.y,fe.z  );
-        }
-        */
-
         //REQ2PLQ( testREQ, alpha );
 
-        testPLQ = (Vec3d)clworld.testPLQ.f;
+        //testPLQ = (Vec3d)clworld.testPLQ.f;
 
         printf( "CPU PLQ %g %g %g \n", testPLQ.x, testPLQ.y, testPLQ.z );
 
@@ -466,8 +473,9 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
         }
         fclose(fout);
     }
+    */
 
-    exit(0);
+    //exit(0);
 
 
     printf( " SETUP CLWORLD nSystem %i nMols %i \n", nSystems, nMols );
@@ -506,6 +514,23 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     clworld.download_poses();    DEBUG
     clworld.download_fposes();   DEBUG
     clFinish(cl->commands);      DEBUG;
+
+
+    int nAtoms =  clworld.countAtomsInSystem( 0 ); DEBUG;
+    clworld.prepareBuffers_getFEgrid( nAtoms );         DEBUG;
+    printf( "nAtoms %i \n", nAtoms );
+    clworld.system2PLQs( 0, clworld.PLQs );        DEBUG;
+    clworld.system2poss( 0, clworld.poss );        DEBUG;
+    clworld.upload_PLQs();
+    clworld.setupKernel_getFEgrid( world.gridFF.grid ); DEBUG;
+
+    //clworld.upload_PLQs();
+    //clworld.upload_poss();
+    //clworld.task_getFEgrid->enque();
+    //clworld.download_FEs();
+    //clFinish(cl->commands);
+
+    //exit(0);
 
     DEBUG
 
@@ -588,11 +613,9 @@ void AppMolecularEditorOCL::draw(){
     return;
     */
 
-
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
 	viewSubstrate( 2, 2, isoOgl, world.gridFF.grid.cell.a, world.gridFF.grid.cell.b );
-
 
     Draw3D::drawPointCross( ray0, 0.1 );
     //Draw3D::drawVecInPos( camMat.c, ray0 );
@@ -600,17 +623,47 @@ void AppMolecularEditorOCL::draw(){
 
 	printf( " # =========== frame %i \n", frameCount );
 
-	float dt = 0.5;
+	float dt = 1.0;
 	int isys = 0;
+
+	//clworld.getFEgridCPU( world.gridFF );
+
+	clworld.upload_poss();
+    clworld.task_getFEgrid->enque();
+    clworld.download_FEs();
+    clFinish(cl->commands);
+
+	clworld. moveGDAtoms( dt );
+
+	drawFreeAtoms( clworld.nAtoms, clworld.poss, clworld.FEs, 0.5, 100.0 );
+
+	return;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	//*(Vec3f*)(clworld.poses+isystem*clworld.nMols+itest) = (Vec3f)cursor3D;
 
 	for(int isys=0; isys<clworld.nSystems; isys++ ){
-        printf( "isys %i \n", isys  );
+        //printf( "isys %i \n", isys  );
         //clworld.system2atoms( isys, atoms_tmp );
         //clworld.evalForceCPU( isys, world.gridFF, atoms_tmp, fatoms_tmp );
-
-        clworld.evalForceGPU();
     }
+    clworld.evalForceGPU();
 	//drawAtomsF8(atom_count, atoms_tmp, 0.25, ogl_sph);
 
 	glColor3f(0.0,0.0,0.0); drawRigidMolSystem( clworld, isystem );
@@ -628,6 +681,7 @@ void AppMolecularEditorOCL::draw(){
     world.aforce2frags();      //printf( "DEBUG 5.4\n" );
 	*/
 
+	/*
 	Quat4f*  ps = (Quat4f*)clworld.poses;
 	Quat4d* wps = (Quat4d*)  world.poses;
 	Quat4f*  fs = (Quat4f*)clworld.fposes;
@@ -642,19 +696,21 @@ void AppMolecularEditorOCL::draw(){
         Vec3d& f  =world.aforce[ia];
         Vec3d& req=world.aREQ  [ia];
         //printf( "world %i p(%g,%g,%g) f(%g,%g,%g) req(%g,%g,%g) \n", ia, p.x,p.y,p.z,  f.x,f.y,f.z,  req.x,req.y,req.z );
-        printf( "  world %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) req(%5.5e,%5.5e,%5.5e) \n", ia, p.x,p.y,p.z,  f.x,f.y,f.z,  req.x,req.y,req.z );
+        //printf( "  world %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) req(%5.5e,%5.5e,%5.5e) \n", ia, p.x,p.y,p.z,  f.x,f.y,f.z,  req.x,req.y,req.z );
 
         Vec3f& p_  =*(Vec3f*)(atoms_tmp +ia);
         Vec3f& f_  =         fatoms_tmp[ia];
         Vec3f& req_=*(Vec3f*)(((float*)(atoms_tmp+ia))+4);
-        printf( "clworld %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) req(%5.5e,%5.5e,%5.5e) \n", ia, p_.x,p_.y,p_.z,  f_.x,f_.y,f_.z,  req_.x,req_.y,req_.z );
+        //printf( "clworld %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) req(%5.5e,%5.5e,%5.5e) \n", ia, p_.x,p_.y,p_.z,  f_.x,f_.y,f_.z,  req_.x,req_.y,req_.z );
 	}
+	*/
 
 	//exit(0);
 
-	clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
-    drawCPU();
+	double F2tot = clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
+	printf( "frame %i |F| %i %g \n", frameCount, sqrt(F2tot) );
 
+    //drawCPU();
 };
 
 void AppMolecularEditorOCL::stepCPU( double& F2, bool randomConf ){
@@ -716,15 +772,29 @@ void AppMolecularEditorOCL::drawCPU(){
 void  AppMolecularEditorOCL::keyStateHandling( const Uint8 *keys ){
     double dstep=0.025;
 
+    /*
     if( keys[ SDL_SCANCODE_W ] ){ cursor3D.y -=dstep; }
     if( keys[ SDL_SCANCODE_S ] ){ cursor3D.y +=dstep; }
     if( keys[ SDL_SCANCODE_A ] ){ cursor3D.x -=dstep; }
     if( keys[ SDL_SCANCODE_D ] ){ cursor3D.x +=dstep; }
     if( keys[ SDL_SCANCODE_Q ] ){ cursor3D.z -=dstep; }
     if( keys[ SDL_SCANCODE_E ] ){ cursor3D.z +=dstep; }
+    */
 
     if( keys[ SDL_SCANCODE_X ] ){ cam.pos.z +=0.1; }
     if( keys[ SDL_SCANCODE_Z ] ){ cam.pos.z -=0.1; }
+
+    if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
+
+    if( keys[ SDL_SCANCODE_A ] ){ cam.pos.add_mul( cam.rot.a, -cameraMoveSpeed ); }
+	if( keys[ SDL_SCANCODE_D ] ){ cam.pos.add_mul( cam.rot.a,  cameraMoveSpeed ); }
+    if( keys[ SDL_SCANCODE_W ] ){ cam.pos.add_mul( cam.rot.b,  cameraMoveSpeed ); }
+	if( keys[ SDL_SCANCODE_S ] ){ cam.pos.add_mul( cam.rot.b, -cameraMoveSpeed ); }
+    if( keys[ SDL_SCANCODE_Q ] ){ cam.pos.add_mul( cam.rot.c, -cameraMoveSpeed ); }
+	if( keys[ SDL_SCANCODE_E ] ){ cam.pos.add_mul( cam.rot.c,  cameraMoveSpeed ); }
 
     //AppSDL2OGL_3D::keyStateHandling( keys );
 };
