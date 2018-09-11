@@ -64,7 +64,23 @@ inline float3 rotQuat( float4 q, float3 v ){
     //return 2.0 * dot(q.xyz, v) * q.xyz + ( q.w*q.w - dot(q.xyz,q.xyz) ) * v + 2.0 * q.w * cross(q.xyz, v);
 }
 
-
+inline float4 drotQuat_exact( float4 q, float4 tq ){
+    float r = length( tq );
+    float a = r * 0.5;
+    //float2 csa = (float2)(cos(a),sin(a)/r);
+    tq.xyz *= sin(a)/(r+1.0e-8f);
+    return q*cos(a) + (float4){
+        tq.x*q.w + tq.y*q.z - tq.z*q.y,
+       -tq.x*q.z + tq.y*q.w + tq.z*q.x,
+        tq.x*q.y - tq.y*q.x + tq.z*q.w,
+       -tq.x*q.x - tq.y*q.y - tq.z*q.z,
+       // dot(tq.xy,q.wz) - tq.z*q.y,
+       // dot(tq.yz,q.wx) - tq.x*q.z,
+       // dot(tq.xz,q.yw) - tq.y*q.z,
+       //-dot(tq,q.xyz),
+    };
+    //return q.wzyz*tq.x + q.zwxy*tq.y + q.yxwz*tq.z + q.xyzw*tq.w;
+}
 
 float3 tipForce( float3 dpos, float4 stiffness, float4 dpos0 ){
     float r = sqrt( dot( dpos,dpos) );
@@ -167,7 +183,9 @@ __kernel void getForceRigidSystemSurfGrid(
     float4 dinvC,
     int nSystems,
     int nMols, // nMols should be approx local size
-    float alpha
+    float alpha,
+    float dt,
+    int nStep
 ){
 
     __local float8 lATOMs[32]; // here we store atoms of molecule j
@@ -184,6 +202,7 @@ __kernel void getForceRigidSystemSurfGrid(
         //printf( "dinvA (%g,%g,%g,%g)\n", dinvA.x, dinvA.y, dinvA.z );
         //printf( "dinvB (%g,%g,%g,%g)\n", dinvB.x, dinvB.y, dinvB.z );
         //printf( "dinvC (%g,%g,%g,%g)\n", dinvC.x, dinvC.y, dinvC.z);
+        //printf( "GPU nStep %i dt %f \n", nStep, dt );
     }
 
     //if( isys > nSystems ) return;  // perhaps not needed if global_size set properly
@@ -206,108 +225,124 @@ __kernel void getForceRigidSystemSurfGrid(
         }
     }
 
-    float4 forceE = (float4)(0.0,0.0,0.0,0.0);
-    float4 torq   = (float4)(0.0,0.0,0.0,0.0); // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
+    for(int iStep=0; iStep<nStep; iStep++ ){
 
-    // ==== Molecule - Molecule Interaction
+        float4 forceE = (float4)(0.0,0.0,0.0,0.0);
+        float4 torq   = (float4)(0.0,0.0,0.0,0.0); // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
 
-    for(int jmol=0; jmol<nMols; jmol++){
+        // ==== Molecule - Molecule Interaction
 
-        // transform atoms of jmol to world coords and store them local memory
-        const int ojmol  = molOffset+jmol;
-        const int iatomj = mol2atoms[ojmol].x;
-        const int natomj = mol2atoms[ojmol].y;
-        if(iL<natomj){
-            float8 atomj = atomsInTypes[iatomj+iL];
-            atomj.xyz    = rotQuat( poses[ojmol].hi, atomj.xyz ) + poses[ojmol].xyz;
-            lATOMs[iL]   = atomj;
-        }
+        for(int jmol=0; jmol<nMols; jmol++){
 
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if ( (jmol==imol) || (imol>=nMols) ) continue; // prevent self-interaction and reading outside buffer
-        for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
-            float4 adposi = atomsInTypes[iatomi+ia].lo;
-            adposi.xyz    = rotQuat( qroti, adposi.xyz );
-            float3 aposi  = adposi.xyz + mposi.xyz;
-            float3 REQi   = atomsInTypes[iatomi+ia].s456;
-
-            // molecule-molecule interaction
-            float4 fe = (float4)(0.0,0.0,0.0,0.0);
-
-            for(int ja=0; ja<natomj; ja++){            // atoms of molecule j
-                float3 dp   = lATOMs[ja].xyz - aposi;  // already transformed
-                float3 REQj = lATOMs[ja].s456;
-                // force
-                float r0    = REQj.x + REQi.x;
-                float eps   = REQj.y * REQi.y; 
-                float cElec = REQj.z * REQi.z * COULOMB_CONST;
-                float r     = sqrt( dot(dp,dp) + R2SAFE );
-                float expar = exp( alpha*(r-r0));
-                float fr    = eps*2*alpha*( expar*expar - expar ) - cElec/( r*r + R2ELEC );
-                fe.xyz     += dp *( fr/r );
-                fe.w       += eps*( expar*expar - 2*expar ) + cElec/( r ); // Energy - TODO there should be approx of arctan(x)
-
-                //if( isys==0 ) printf( "GPU (%i,%i) (%i,%i) r %g expar %g fr %g kqq %g a %g eps %g \n", imol, ia, jmol, ja, r, expar, fr, cElec, alpha, eps );
+            // transform atoms of jmol to world coords and store them local memory
+            const int ojmol  = molOffset+jmol;
+            const int iatomj = mol2atoms[ojmol].x;
+            const int natomj = mol2atoms[ojmol].y;
+            if(iL<natomj){
+                float8 atomj = atomsInTypes[iatomj+iL];
+                atomj.xyz    = rotQuat( poses[ojmol].hi, atomj.xyz ) + poses[ojmol].xyz;
+                lATOMs[iL]   = atomj;
             }
 
-            //forceE += fe;
-            //torq   += cross(adposi, fe);
+            barrier(CLK_LOCAL_MEM_FENCE);
+            if ( (jmol==imol) || (imol>=nMols) ) continue; // prevent self-interaction and reading outside buffer
+            for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
+                float4 adposi = atomsInTypes[iatomi+ia].lo;
+                adposi.xyz    = rotQuat( qroti, adposi.xyz );
+                float3 aposi  = adposi.xyz + mposi.xyz;
+                float3 REQi   = atomsInTypes[iatomi+ia].s456;
 
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
+                // molecule-molecule interaction
+                float4 fe = (float4)(0.0,0.0,0.0,0.0);
 
-    if ( imol<nMols ){
-        // ==== Molecule - Grid interaction
+                for(int ja=0; ja<natomj; ja++){            // atoms of molecule j
+                    float3 dp   = lATOMs[ja].xyz - aposi;  // already transformed
+                    float3 REQj = lATOMs[ja].s456;
+                    // force
+                    float r0    = REQj.x + REQi.x;
+                    float eps   = REQj.y * REQi.y; 
+                    float cElec = REQj.z * REQi.z * COULOMB_CONST;
+                    float r     = sqrt( dot(dp,dp) + R2SAFE );
+                    float expar = exp( alpha*(r-r0));
+                    float fr    = eps*2*alpha*( expar*expar - expar ) - cElec/( r*r + R2ELEC );
+                    fe.xyz     += dp *( fr/r );
+                    fe.w       += eps*( expar*expar - 2*expar ) + cElec/( r ); // Energy - TODO there should be approx of arctan(x)
 
-        // TODO: we may store transformed atoms of imol to local mem ?
-        
-        for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
-            const float4 adposi = atomsInTypes[iatomi+ia].lo;
-            adposi.xyz    = rotQuat( qroti, adposi.xyz );
-            const float3 aposi  = adposi.xyz + mposi.xyz + pos0.xyz;
+                    //if( isys==0 ) printf( "GPU (%i,%i) (%i,%i) r %g expar %g fr %g kqq %g a %g eps %g \n", imol, ia, jmol, ja, r, expar, fr, cElec, alpha, eps );
+                }
 
-            float4 fe = (float4)(0.0,0.0,0.0,0.0);
-            const float4 coord = (float4)( dot(aposi,dinvA.xyz),dot(aposi,dinvB.xyz),dot(aposi,dinvC.xyz), 0.0f );
+                //forceE += fe;
+                //torq   += cross(adposi, fe);
 
-            
-            float3 REQi   = atomsInTypes[iatomi+ia].s456;
-            float expar    = exp(-alpha*REQi.x);
-            float cPauli   =    REQi.y*expar*expar;
-            float cLondon  = -2*REQi.y*expar;
-            fe += cPauli *read_imagef( imgPauli,  sampler_1, coord );
-            fe += cLondon*read_imagef( imgLondon, sampler_1, coord );
-            fe += REQi.z *read_imagef( imgElec,   sampler_1, coord );
-            
-            
-            const float3 PLQi   = PLQinTypes[iatomi+ia].xyz;
-            //fe += PLQi.x*read_imagef( imgPauli,  sampler_1, coord );
-            //fe += PLQi.y*read_imagef( imgLondon, sampler_1, coord );
-            //fe += PLQi.z*read_imagef( imgElec,   sampler_1, coord );
-            
-            //fe = read_imagef( imgLondon, sampler_1, coord );
-
-            //if( isys==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  fe.x, fe.y, fe.z );
-            //if( isys==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) g(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  coord.x,coord.y,coord.z,  fe.x, fe.y, fe.z );
-            //if( isys==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  cPauli,cLondon,REQi.z,  fe.x, fe.y, fe.z );
-
-            //if( isys==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  fe.x, fe.y, fe.z );
-            //if( (isys==0) && (imol==0) && (ia==0) ) printf( "GPU fgrid: iG %i imol %i ia %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n",  
-            //                                                 get_global_id(0), imol, ia, aposi.x, aposi.y, aposi.z,  fe.x, fe.y, fe.z);
-
-            //if( (isys==0) && (imol==0) ) printf( "GPU fgrid: iG %i imol %i ia %i REPLQ(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) \n",   get_global_id(0), imol, ia, cPauli, cLondon, REQi.z,  PLQi.x, PLQi.y, PLQi.z  );
-            //if( (isys==0) && (imol==0) ) printf( "GPU imol %i ia %i RE(%5.5e,%5.5e)->PL(%5.5e,%5.5e) PL(%5.5e,%5.5e) \n", imol, ia, REQi.x, REQi.y, cPauli, cLondon, PLQi.x, PLQi.y  );
-
-            forceE += fe;
-            torq   += cross(adposi, fe);
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
         }
 
-        //if( isys==0 ) printf( "GPU imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
-        //printf( "GPU isystem %i imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", isys, imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
+        if ( imol<nMols ){
+            // ==== Molecule - Grid interaction
 
-        fposes[oimol].lo = forceE;
-        fposes[oimol].hi = torq;
-    }
+            // TODO: we may store transformed atoms of imol to local mem ?
+            
+            for(int ia=0; ia<natomi; ia++){ // atoms of molecule i
+                const float4 adposi = atomsInTypes[iatomi+ia].lo;
+                adposi.xyz    = rotQuat( qroti, adposi.xyz );
+                const float3 aposi  = adposi.xyz + mposi.xyz + pos0.xyz;
+
+                float4 fe = (float4)(0.0,0.0,0.0,0.0);
+                const float4 coord = (float4)( dot(aposi,dinvA.xyz),dot(aposi,dinvB.xyz),dot(aposi,dinvC.xyz), 0.0f );
+
+                float3 REQi    = atomsInTypes[iatomi+ia].s456;
+                float expar    = exp(-alpha*REQi.x);
+                float cPauli   =    REQi.y*expar*expar;
+                float cLondon  = -2*REQi.y*expar;
+                fe += cPauli *read_imagef( imgPauli,  sampler_1, coord );
+                fe += cLondon*read_imagef( imgLondon, sampler_1, coord );
+                fe += REQi.z *read_imagef( imgElec,   sampler_1, coord );
+                
+                //const float3 PLQi   = PLQinTypes[iatomi+ia].xyz;
+                //fe += PLQi.x*read_imagef( imgPauli,  sampler_1, coord );
+                //fe += PLQi.y*read_imagef( imgLondon, sampler_1, coord );
+                //fe += PLQi.z*read_imagef( imgElec,   sampler_1, coord );
+                //fe = read_imagef( imgLondon, sampler_1, coord );
+
+                //if( isys==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  fe.x, fe.y, fe.z );
+                //if( isys==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) g(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  coord.x,coord.y,coord.z,  fe.x, fe.y, fe.z );
+                //if( isys==0 && imol==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  cPauli,cLondon,REQi.z,  fe.x, fe.y, fe.z );
+
+                //if( isys==0 ) printf( "GPU fgrid: imol %i ia %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, aposi.x, aposi.y, aposi.z,  fe.x, fe.y, fe.z );
+                //if( isys==0 ) printf( "GPU fgrid: imol %i ia %i pg(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, ia, coord.x, coord.y, coord.z,  fe.x, fe.y, fe.z );
+                //if( (isys==0) && (imol==0) && (ia==0) ) printf( "GPU fgrid: iG %i imol %i ia %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n",  
+                //                                                 get_global_id(0), imol, ia, aposi.x, aposi.y, aposi.z,  fe.x, fe.y, fe.z);
+
+                //if( (isys==0) && (imol==0) ) printf( "GPU fgrid: iG %i imol %i ia %i REPLQ(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) \n",   get_global_id(0), imol, ia, cPauli, cLondon, REQi.z,  PLQi.x, PLQi.y, PLQi.z  );
+                //if( (isys==0) && (imol==0) ) printf( "GPU imol %i ia %i RE(%5.5e,%5.5e)->PL(%5.5e,%5.5e) PL(%5.5e,%5.5e) \n", imol, ia, REQi.x, REQi.y, cPauli, cLondon, PLQi.x, PLQi.y  );
+
+                forceE += fe;
+                torq   += cross(adposi, fe);
+
+
+                //if( isys==0 ) printf( "GPU imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
+                //printf( "GPU isystem %i imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", isys, imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
+
+            } // ia
+
+            fposes[oimol].lo = forceE;
+            fposes[oimol].hi = torq;
+
+            // Gradient-descent step  moveSystemGD
+            //dt = 0.1;
+            if(dt>-1e-8){
+                //if( isys==0 ) printf( "GPU fgrid: imol %i p(%5.5e,%5.5e,%5.5e) q(%5.5e,%5.5e,%5.5e,%5.5e) \n", imol, poses[oimol].x, poses[oimol].y, poses[oimol].z,  poses[oimol].s4, poses[oimol].s5, poses[oimol].s6, poses[oimol].s7 );
+                //if( isys==0 ) printf( "GPU move: imol %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, poses[oimol].x, poses[oimol].y, poses[oimol].z,  fposes[oimol].x, fposes[oimol].y, fposes[oimol].z );
+                poses[oimol].xyz += forceE.xyz * dt;
+                poses[oimol].hi   = drotQuat_exact( poses[oimol].hi, torq * dt );
+                iStep++;
+            }
+
+        } // imol<nMols
+
+    } // iStep;
+
 }
 
 

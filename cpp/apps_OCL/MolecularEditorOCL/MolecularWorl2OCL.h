@@ -66,6 +66,8 @@ class RigidMolecularWorldOCL{ public:
 
     Quat4f pos0=Quat4fZero, dA=Quat4fZero, dB=Quat4fZero, dC=Quat4fZero, testPLQ=Quat4fZero;
     float alpha = 0.0;
+    float dt    = 0.0;
+    int nStep   = 0;
 
     std::vector<float8> atomsInTypes;
     std::vector<int2>   molTypes;
@@ -256,7 +258,7 @@ class RigidMolecularWorldOCL{ public:
         };
     }
 
-    void setupKernel_getForceRigidSystemSurfGrid( GridShape& grid, float alpha_ ){
+    void setupKernel_getForceRigidSystemSurfGrid( GridShape& grid, float alpha_, float dt_, int nStep_ ){
         //__kernel void getForceRigidSystemSurfGrid(
         //    __read_only image3d_t  imgPauli,
         //    __read_only image3d_t  imgLondon,
@@ -273,6 +275,9 @@ class RigidMolecularWorldOCL{ public:
         //    int nMols, // nMols should be approx local size
         //    float alpha
 
+        dt = dt_;
+        nStep = nStep_;
+
         upload_PLQinTypes();
 
         int nLoc = _max( nMols, nAtomInMolMax );
@@ -281,9 +286,12 @@ class RigidMolecularWorldOCL{ public:
         task_getForceRigidSystemSurfGrid->local [0] = nLoc;
         task_getForceRigidSystemSurfGrid->global[0] = nSystems* task_getForceRigidSystemSurfGrid->local[0];
         pos0.f = (Vec3f)( grid.dCell.a + grid.dCell.b + grid.dCell.c )*0.5;
-        dA  .setXYZ( (Vec3f)grid.diCell.a*(1.0/grid.n.a) );
-        dB  .setXYZ( (Vec3f)grid.diCell.b*(1.0/grid.n.b) );
-        dC  .setXYZ( (Vec3f)grid.diCell.c*(1.0/grid.n.c) );
+        //dA  .setXYZ( (Vec3f)grid.diCell.a*(1.0/grid.n.a) );
+        //dB  .setXYZ( (Vec3f)grid.diCell.b*(1.0/grid.n.b) );
+        //dC  .setXYZ( (Vec3f)grid.diCell.c*(1.0/grid.n.c) );
+        dA  .setXYZ( (Vec3f)grid.diCell.a );
+        dB  .setXYZ( (Vec3f)grid.diCell.b );
+        dC  .setXYZ( (Vec3f)grid.diCell.c );
         alpha = alpha_;
         task_getForceRigidSystemSurfGrid->args = {
             //LBUFFarg(img_FFPauli),
@@ -305,7 +313,9 @@ class RigidMolecularWorldOCL{ public:
             REFarg(dC),
             INTarg(nSystems),
             INTarg(nMols),
-            FLOATarg(alpha)
+            FLOATarg(alpha),
+            FLOATarg(dt),
+            INTarg(nStep)
         };
     }
 
@@ -314,6 +324,14 @@ class RigidMolecularWorldOCL{ public:
        task_getForceRigidSystemSurfGrid->enque();
        download_fposes();
        clFinish(cl->commands);
+    };
+
+    void relaxStepGPU( int nStep, float dt ){
+        task_getForceRigidSystemSurfGrid->args[15].f = dt;
+        task_getForceRigidSystemSurfGrid->args[16].i = nStep;
+        task_getForceRigidSystemSurfGrid->enque();
+        download_poses();
+        clFinish(cl->commands);
     };
 
     int system2PLQs( int isystem, Quat4f* PLQs ){

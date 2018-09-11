@@ -498,9 +498,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
         fclose(fout);
     }
 
-
-    exit(0);
-
+    //exit(0);
 
     printf( " SETUP CLWORLD nSystem %i nMols %i \n", nSystems, nMols );
 
@@ -531,15 +529,18 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     DEBUG
 
     clworld.updateMolStats();
-    clworld.setupKernel_getForceRigidSystemSurfGrid( world.gridFF.grid, world.gridFF.alpha );
+    clworld.setupKernel_getForceRigidSystemSurfGrid( world.gridFF.grid, world.gridFF.alpha, 0.5, 1 );
     clworld.upload_mol2atoms();  DEBUG
     clworld.upload_poses();      DEBUG  // PO SEM DOBRE
+
+    /*
     clworld.task_getForceRigidSystemSurfGrid->enque();  DEBUG
     clworld.download_poses();    DEBUG
     clworld.download_fposes();   DEBUG
     clFinish(cl->commands);      DEBUG;
+    */
 
-
+    /*
     int nAtoms =  clworld.countAtomsInSystem( 0 ); DEBUG;
     clworld.prepareBuffers_getFEgrid( nAtoms );         DEBUG;
     printf( "nAtoms %i \n", nAtoms );
@@ -547,6 +548,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     clworld.system2poss( 0, clworld.poss );        DEBUG;
     clworld.upload_PLQs();
     clworld.setupKernel_getFEgrid( world.gridFF.grid ); DEBUG;
+    */
 
     //clworld.upload_PLQs();
     //clworld.upload_poss();
@@ -650,6 +652,7 @@ void AppMolecularEditorOCL::draw(){
 	float dt = 1.0;
 	int isys = 0;
 
+	/*
 	//clworld.getFEgridCPU( world.gridFF );
 
 	clworld.upload_poss();
@@ -662,22 +665,7 @@ void AppMolecularEditorOCL::draw(){
 	drawFreeAtoms( clworld.nAtoms, clworld.poss, clworld.FEs, 0.5, 100.0 );
 
 	return;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	*/
 
 
 	//*(Vec3f*)(clworld.poses+isystem*clworld.nMols+itest) = (Vec3f)cursor3D;
@@ -687,8 +675,11 @@ void AppMolecularEditorOCL::draw(){
         //clworld.system2atoms( isys, atoms_tmp );
         //clworld.evalForceCPU( isys, world.gridFF, atoms_tmp, fatoms_tmp );
     }
-    clworld.evalForceGPU();
+    //clworld.evalForceGPU();
 	//drawAtomsF8(atom_count, atoms_tmp, 0.25, ogl_sph);
+
+	clworld.relaxStepGPU( 10, 0.5 );
+	clworld.system2atoms( isys, atoms_tmp );
 
 	glColor3f(0.0,0.0,0.0); drawRigidMolSystem( clworld, isystem );
 	drawRigidMolSystemForceTorq(  clworld, isystem, 100.0, 1000.0 );
@@ -731,8 +722,12 @@ void AppMolecularEditorOCL::draw(){
 
 	//exit(0);
 
-	double F2tot = clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
-	printf( "frame %i |F| %i %g \n", frameCount, sqrt(F2tot) );
+	//clworld.task_getForceRigidSystemSurfGrid->enque();
+
+
+
+	//double F2tot = clworld.moveSystemGD( isystem, dt, 1.0, 1.0 );
+	//printf( "frame %i |F| %i %g \n", frameCount, sqrt(F2tot) );
 
     //drawCPU();
 };
