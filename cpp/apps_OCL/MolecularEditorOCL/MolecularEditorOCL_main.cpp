@@ -41,6 +41,8 @@
 
 #include "MolecularWorl2OCL.h"
 
+#include "testUtils.h"
+
 /*
 
 TO DO:
@@ -69,6 +71,8 @@ int isoOgl;
 Vec3d PPpos0 = (Vec3d){1.3,1.7, 1.5};
 
 Vec3d testREQ,testPLQ;
+
+
 
 
 
@@ -208,11 +212,12 @@ class AppMolecularEditorOCL : public AppSDL2OGL_3D { public:
 
     double  atomSize = 0.25;
 
-    int itest=0;
+    int itest = 0;
+    int isystem = 0;
 
 
     // TEMP
-    int isystem = 0;
+
     float8* atoms_tmp=0;  // = new float8[100];
     Vec3f* fatoms_tmp=0;
     int atom_count=0;     //= clworld.system2atoms( 0, atoms );
@@ -416,7 +421,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
 
     //int nMols  = 1;
     int nMols    = world.nFrag;
-    int nSystems = 3;
+    int nSystems = 1000;
 
     //clworld.prepareBuffers( nSystems, nMols, world.gridFF.grid.n, world.gridFF.FFPauli_f, world.gridFF.FFLondon_f, world.gridFF.FFelec_f );
     clworld.alpha = world.gridFF.alpha;
@@ -516,8 +521,8 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
             ps[1] = (Quat4f)wps[1];
             ps[1].setRandomRotation();
 
-            printf( "  world pose p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e,%5.5e) \n",  wps[0].f.x, wps[0].f.y, wps[0].f.z,  wps[1].x, wps[1].x, wps[1].x, wps[1].w );
-            printf( "clworld pose p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e,%5.5e) \n",   ps[0].f.x,  ps[0].f.y,  ps[0].f.z,   ps[1].x,  ps[1].x,  ps[1].x,  ps[1].w );
+            //printf( "  world pose p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e,%5.5e) \n",  wps[0].f.x, wps[0].f.y, wps[0].f.z,  wps[1].x, wps[1].x, wps[1].x, wps[1].w );
+            //printf( "clworld pose p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e,%5.5e) \n",   ps[0].f.x,  ps[0].f.y,  ps[0].f.z,   ps[1].x,  ps[1].x,  ps[1].x,  ps[1].w );
             ps +=2;
             wps+=2;
             i++;
@@ -533,6 +538,11 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     clworld.upload_mol2atoms();  DEBUG
     clworld.upload_poses();      DEBUG  // PO SEM DOBRE
 
+    long t1;
+    t1=getCPUticks();
+    clworld.relaxStepGPU( 1000, 0.5 );
+    double T = (getCPUticks()-t1);
+    printf( "relaxStepGPU time %3.3e \n", T  );
     /*
     clworld.task_getForceRigidSystemSurfGrid->enque();  DEBUG
     clworld.download_poses();    DEBUG
@@ -647,10 +657,10 @@ void AppMolecularEditorOCL::draw(){
     //Draw3D::drawVecInPos( camMat.c, ray0 );
     if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
 
-	printf( " # =========== frame %i \n", frameCount );
+	//printf( " # =========== frame %i isystem %i \n", frameCount, isystem );
 
 	float dt = 1.0;
-	int isys = 0;
+	//isys = 0;
 
 	/*
 	//clworld.getFEgridCPU( world.gridFF );
@@ -667,7 +677,6 @@ void AppMolecularEditorOCL::draw(){
 	return;
 	*/
 
-
 	//*(Vec3f*)(clworld.poses+isystem*clworld.nMols+itest) = (Vec3f)cursor3D;
 
 	for(int isys=0; isys<clworld.nSystems; isys++ ){
@@ -678,12 +687,14 @@ void AppMolecularEditorOCL::draw(){
     //clworld.evalForceGPU();
 	//drawAtomsF8(atom_count, atoms_tmp, 0.25, ogl_sph);
 
-	clworld.relaxStepGPU( 10, 0.5 );
-	clworld.system2atoms( isys, atoms_tmp );
+	//clworld.relaxStepGPU( 5, 0.5 );
+	clworld.system2atoms( isystem, atoms_tmp );
 
 	glColor3f(0.0,0.0,0.0); drawRigidMolSystem( clworld, isystem );
 	drawRigidMolSystemForceTorq(  clworld, isystem, 100.0, 1000.0 );
 	glColor3f(1.0,0.0,1.0); drawAtomsForces( atom_count, atoms_tmp, fatoms_tmp, 0.0, 100.0 );
+
+
 
 	//return;
 
@@ -800,6 +811,9 @@ void  AppMolecularEditorOCL::keyStateHandling( const Uint8 *keys ){
     if( keys[ SDL_SCANCODE_E ] ){ cursor3D.z +=dstep; }
     */
 
+    //if( keys[ SDL_SCANCODE_RIGHTBRACKET ] ){ isystem++; if(isystem>=clworld.nSystems) isystem=0;  }
+    //if( keys[ SDL_SCANCODE_LEFTBRACKET  ] ){ isystem--; if(isystem<0) isystem=clworld.nSystems-1; }
+
     if( keys[ SDL_SCANCODE_X ] ){ cam.pos.z +=0.1; }
     if( keys[ SDL_SCANCODE_Z ] ){ cam.pos.z -=0.1; }
 
@@ -837,8 +851,11 @@ void AppMolecularEditorOCL::eventHandling ( const SDL_Event& event  ){
                 //case SDLK_LEFTBRACKET:  itest--; if(itest<0)itest=atomdist.natoms-1; printf("itest %i\n",itest); break;
 
 
-                case SDLK_RIGHTBRACKET: itest++; if(itest>=clworld.nMols)itest=0;  printf("itest %i\n",itest); break;
-                case SDLK_LEFTBRACKET:  itest--; if(itest<0)itest=clworld.nMols-1; printf("itest %i\n",itest); break;
+                case SDLK_RIGHTBRACKET: isystem++; if(isystem>=clworld.nSystems) isystem=0;  printf("isystem %i\n",isystem);  break;
+                case SDLK_LEFTBRACKET:  isystem--; if(isystem<0) isystem=clworld.nSystems-1; printf("isystem %i\n",isystem);  break;
+
+                //case SDLK_RIGHTBRACKET: itest++; if(itest>=clworld.nMols)itest=0;  printf("itest %i\n",itest); break;
+                //case SDLK_LEFTBRACKET:  itest--; if(itest<0)itest=clworld.nMols-1; printf("itest %i\n",itest); break;
 
 
                 case SDLK_n:

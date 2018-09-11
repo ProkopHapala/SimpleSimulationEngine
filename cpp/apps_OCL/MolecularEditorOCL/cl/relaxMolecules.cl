@@ -214,6 +214,11 @@ __kernel void getForceRigidSystemSurfGrid(
     const int natomi    = mol2atoms[oimol].y;
     float4 mposi        = poses[oimol].lo;
     float4 qroti        = poses[oimol].hi;
+    float4 forceE       = (float4)(0.0,0.0,0.0,0.0);
+    float4 torq         = (float4)(0.0,0.0,0.0,0.0); // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
+
+    float4 forceV       = (float4)(0.0,0.0,0.0,0.0);
+    float4 torqV        = (float4)(0.0,0.0,0.0,0.0); // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
 
     if( get_local_id(0)==0 ){
     //if( get_global_id(0)==0 ){ 
@@ -227,8 +232,8 @@ __kernel void getForceRigidSystemSurfGrid(
 
     for(int iStep=0; iStep<nStep; iStep++ ){
 
-        float4 forceE = (float4)(0.0,0.0,0.0,0.0);
-        float4 torq   = (float4)(0.0,0.0,0.0,0.0); // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
+        forceE = (float4)(0.0,0.0,0.0,0.0);
+        torq   = (float4)(0.0,0.0,0.0,0.0);
 
         // ==== Molecule - Molecule Interaction
 
@@ -271,8 +276,8 @@ __kernel void getForceRigidSystemSurfGrid(
                     //if( isys==0 ) printf( "GPU (%i,%i) (%i,%i) r %g expar %g fr %g kqq %g a %g eps %g \n", imol, ia, jmol, ja, r, expar, fr, cElec, alpha, eps );
                 }
 
-                //forceE += fe;
-                //torq   += cross(adposi, fe);
+                forceE += fe;
+                torq   += cross(adposi, fe);
 
             }
             barrier(CLK_LOCAL_MEM_FENCE);
@@ -326,22 +331,33 @@ __kernel void getForceRigidSystemSurfGrid(
 
             } // ia
 
-            fposes[oimol].lo = forceE;
-            fposes[oimol].hi = torq;
-
             // Gradient-descent step  moveSystemGD
             //dt = 0.1;
             if(dt>-1e-8){
                 //if( isys==0 ) printf( "GPU fgrid: imol %i p(%5.5e,%5.5e,%5.5e) q(%5.5e,%5.5e,%5.5e,%5.5e) \n", imol, poses[oimol].x, poses[oimol].y, poses[oimol].z,  poses[oimol].s4, poses[oimol].s5, poses[oimol].s6, poses[oimol].s7 );
                 //if( isys==0 ) printf( "GPU move: imol %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, poses[oimol].x, poses[oimol].y, poses[oimol].z,  fposes[oimol].x, fposes[oimol].y, fposes[oimol].z );
-                poses[oimol].xyz += forceE.xyz * dt;
-                poses[oimol].hi   = drotQuat_exact( poses[oimol].hi, torq * dt );
-                iStep++;
+                //if( isys==0 && imol==0 ) printf( "GPU move: step %i imol %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", iStep, imol, mposi.x, mposi.y, mposi.z,  forceE.x, forceE.y, forceE.z );
+                //mposi.xyz += forceE.xyz * dt;
+                //qroti      = drotQuat_exact( qroti, torq * dt );
+
+                float damp = 0.9;
+                forceV.xyz = forceV.xyz*damp + forceE.xyz * dt;
+                torqV.xyz  = torqV.xyz *damp + torq.xyz   * dt; 
+                mposi.xyz += forceV.xyz * dt;
+                qroti      = drotQuat_exact( qroti, torqV * dt );
+
             }
 
         } // imol<nMols
 
     } // iStep;
+
+    if ( imol<nMols ){
+        fposes[oimol].lo  = forceE;
+        fposes[oimol].hi  = torq;
+         poses[oimol].lo  = mposi;
+         poses[oimol].hi  = qroti;
+    }
 
 }
 
