@@ -67,6 +67,7 @@ class RigidMolecularWorldOCL{ public:
     Quat4f pos0=Quat4fZero, dA=Quat4fZero, dB=Quat4fZero, dC=Quat4fZero, testPLQ=Quat4fZero;
     float alpha = 0.0;
     float dt    = 0.0;
+    float damp  = 0.9;
     int nStep   = 0;
 
     std::vector<float8> atomsInTypes;
@@ -76,6 +77,7 @@ class RigidMolecularWorldOCL{ public:
 
     int2   * mol2atoms    = 0;
     float8 * poses        = 0;
+    float8 * vposes       = 0;
     float8 * fposes       = 0;
 
     Quat4f * poss      = 0;
@@ -94,6 +96,7 @@ class RigidMolecularWorldOCL{ public:
     int id_atomsInTypes = -1;
     int id_PLQinTypes   = -1;
     int id_poses        = -1;
+    int id_vposes       = -1;
     int id_fposes       = -1;
 
     int id_poss         = -1;
@@ -167,6 +170,7 @@ class RigidMolecularWorldOCL{ public:
         mol2atoms    = new int2  [nMolInstances];
         poses        = new float8[nMolInstances];
         fposes       = new float8[nMolInstances];
+        vposes       = new float8[nMolInstances];
         PLQinTypes   = new Quat4f[atomsInTypes.size()];
 
         id_mol2atoms    = cl->newBuffer( "molTypes",     nMolInstances,       sizeof(int2)  , NULL,                CL_MEM_READ_WRITE ); DEBUG;
@@ -175,6 +179,7 @@ class RigidMolecularWorldOCL{ public:
 
         id_poses        = cl->newBuffer( "poses",        nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
         id_fposes       = cl->newBuffer( "fposes",       nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
+        id_vposes       = cl->newBuffer( "vposes",       nMolInstances, sizeof(float8), NULL, CL_MEM_READ_WRITE  ); DEBUG;
 
         cl_image_format imgFormat = (cl_image_format){CL_RGBA,CL_FLOAT};
         //img_FFPauli  = clCreateImage3D( cl->context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, &imgFormat, nGrid.x, nGrid.y, nGrid.z, 0, 0, FFpauli,  &err ); OCL_checkError(err, "clCreateImage3D img_FFPauli" );
@@ -195,8 +200,12 @@ class RigidMolecularWorldOCL{ public:
 
     void upload_mol2atoms(){ cl->upload  ( id_mol2atoms,  mol2atoms ); }
     void upload_poses    (){ cl->upload  ( id_poses,      poses     ); }
+    void upload_vposes   (){ cl->upload  ( id_vposes,     vposes    ); }
     void download_poses  (){ cl->download( id_poses,      poses     ); }
     void download_fposes (){ cl->download( id_fposes,     fposes    ); }
+    void download_vposes (){ cl->download( id_vposes,     vposes    ); }
+
+    void clean_vposes(){ float* vs = (float*)vposes; for(int i=0; i<nMolInstances*8; i++) vs[i]=0.0f; };
 
     void upload_poss  ( ){ cl->upload  ( id_poss, poss ); }
     void upload_PLQs  ( ){ cl->upload  ( id_PLQs, PLQs ); }
@@ -260,20 +269,25 @@ class RigidMolecularWorldOCL{ public:
 
     void setupKernel_getForceRigidSystemSurfGrid( GridShape& grid, float alpha_, float dt_, int nStep_ ){
         //__kernel void getForceRigidSystemSurfGrid(
-        //    __read_only image3d_t  imgPauli,
-        //    __read_only image3d_t  imgLondon,
-        //    __read_only image3d_t  imgElec,
-        //    // found - previously found molecular configurations
-        //    __global  int2*    id_mol2atoms, // molTypes[type.x:type.y]
-        //    //__global  int2*  confs,        // pointer to poses ... since we have constant number of molecules, we dont need this
-        //    __global  float8*  atomsInTypes, // atoms in molecule types
-        //    __global  float8*  poses,        // pos, qrot
-        //    float4 dinvA,
-        //    float4 dinvB,
-        //    float4 dinvC,
-        //    int nSystems,
-        //    int nMols, // nMols should be approx local size
-        //    float alpha
+        // 0    __read_only image3d_t  imgPauli,
+        // 1  __read_only image3d_t  imgLondon,
+        // 2   __read_only image3d_t  imgElec,
+        // 3   __global  int2*    mol2atoms,    // mol2atoms[type.x:type.y]
+        // 4  __global  float8*  atomsInTypes, // atoms in molecule types
+        // 5   __global  float4*  PLQinTypes,   // atoms in molecule types
+        // 6   __global  float8*  poses,        // pos, qrot
+        // 7   __global  float8*  fposes,       // force acting on pos, qrot
+        // 8   __global  float8*  vposes,       // force acting on pos, qrot
+        // 9   float4 pos0,
+        // 10   float4 dinvA,
+        // 11  float4 dinvB,
+        // 12   float4 dinvC,
+        // 13   int nSystems,
+        // 14   int nMols, // nMols should be approx local size
+        // 15   float alpha,
+        // 16   float dt,
+        // 17   float damp,
+        // 28   int nStep
 
         dt = dt_;
         nStep = nStep_;
@@ -286,36 +300,30 @@ class RigidMolecularWorldOCL{ public:
         task_getForceRigidSystemSurfGrid->local [0] = nLoc;
         task_getForceRigidSystemSurfGrid->global[0] = nSystems* task_getForceRigidSystemSurfGrid->local[0];
         pos0.f = (Vec3f)( grid.dCell.a + grid.dCell.b + grid.dCell.c )*0.5;
-        //dA  .setXYZ( (Vec3f)grid.diCell.a*(1.0/grid.n.a) );
-        //dB  .setXYZ( (Vec3f)grid.diCell.b*(1.0/grid.n.b) );
-        //dC  .setXYZ( (Vec3f)grid.diCell.c*(1.0/grid.n.c) );
         dA  .setXYZ( (Vec3f)grid.diCell.a );
         dB  .setXYZ( (Vec3f)grid.diCell.b );
         dC  .setXYZ( (Vec3f)grid.diCell.c );
         alpha = alpha_;
         task_getForceRigidSystemSurfGrid->args = {
-            //LBUFFarg(img_FFPauli),
-            //LBUFFarg(img_FFLondon),
-            //LBUFFarg(img_FFelec),
-
-            BUFFarg(id_FFPauli),
-            BUFFarg(id_FFLondon),
-            BUFFarg(id_FFelec),
-
-            BUFFarg(id_mol2atoms),
-            BUFFarg(id_atomsInTypes),
-            BUFFarg(id_PLQinTypes),
-            BUFFarg(id_poses),
-            BUFFarg(id_fposes),
-            REFarg(pos0),
-            REFarg(dA),
-            REFarg(dB),
-            REFarg(dC),
-            INTarg(nSystems),
-            INTarg(nMols),
-            FLOATarg(alpha),
-            FLOATarg(dt),
-            INTarg(nStep)
+            BUFFarg(id_FFPauli),       // 0
+            BUFFarg(id_FFLondon),      // 1
+            BUFFarg(id_FFelec),        // 2
+            BUFFarg(id_mol2atoms),     // 3
+            BUFFarg(id_atomsInTypes),  // 4
+            BUFFarg(id_PLQinTypes),    // 5
+            BUFFarg(id_poses),         // 6
+            BUFFarg(id_fposes),        // 7
+            BUFFarg(id_vposes),        // 8
+            REFarg(pos0),              // 9
+            REFarg(dA),                // 10
+            REFarg(dB),                // 11
+            REFarg(dC),                // 12
+            INTarg(nSystems),          // 13
+            INTarg(nMols),             // 14
+            FLOATarg(alpha),           // 15
+            FLOATarg(dt),              // 16
+            FLOATarg(damp),            // 17
+            INTarg(nStep)              // 18
         };
     }
 
@@ -327,8 +335,10 @@ class RigidMolecularWorldOCL{ public:
     };
 
     void relaxStepGPU( int nStep, float dt ){
-        task_getForceRigidSystemSurfGrid->args[15].f = dt;
-        task_getForceRigidSystemSurfGrid->args[16].i = nStep;
+        task_getForceRigidSystemSurfGrid->args[15].f = alpha;
+        task_getForceRigidSystemSurfGrid->args[16].f = dt;
+        task_getForceRigidSystemSurfGrid->args[17].f = damp;
+        task_getForceRigidSystemSurfGrid->args[18].i = nStep;
         task_getForceRigidSystemSurfGrid->enque();
         download_poses();
         clFinish(cl->commands);

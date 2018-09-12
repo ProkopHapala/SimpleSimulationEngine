@@ -213,7 +213,7 @@ class AppMolecularEditorOCL : public AppSDL2OGL_3D { public:
     double  atomSize = 0.25;
 
     int itest = 0;
-    int isystem = 0;
+    int isystem = 1;
 
 
     // TEMP
@@ -422,6 +422,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     //int nMols  = 1;
     int nMols    = world.nFrag;
     int nSystems = 1000;
+    //int nSystems = 2;
 
     //clworld.prepareBuffers( nSystems, nMols, world.gridFF.grid.n, world.gridFF.FFPauli_f, world.gridFF.FFLondon_f, world.gridFF.FFelec_f );
     clworld.alpha = world.gridFF.alpha;
@@ -535,14 +536,26 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
 
     clworld.updateMolStats();
     clworld.setupKernel_getForceRigidSystemSurfGrid( world.gridFF.grid, world.gridFF.alpha, 0.5, 1 );
-    clworld.upload_mol2atoms();  DEBUG
-    clworld.upload_poses();      DEBUG  // PO SEM DOBRE
+    clworld.upload_mol2atoms(); DEBUG
+    clworld.upload_poses();     DEBUG
+    //clworld.clean_vposes();     DEBUG
+    //clworld.upload_vposes();    DEBUG
 
     long t1;
     t1=getCPUticks();
     clworld.relaxStepGPU( 1000, 0.5 );
+    //clworld.relaxStepGPU( 3, 0.5 );
+
+    //clworld.relaxStepGPU( 3, 0.5 );
+
+    //clworld.relaxStepGPU( 1, 0.5 ); clworld.relaxStepGPU( 1, 0.5 ); clworld.relaxStepGPU( 1, 0.5 );
+
     double T = (getCPUticks()-t1);
     printf( "relaxStepGPU time %3.3e \n", T  );
+
+    //exit(0);
+
+
     /*
     clworld.task_getForceRigidSystemSurfGrid->enque();  DEBUG
     clworld.download_poses();    DEBUG
@@ -687,14 +700,13 @@ void AppMolecularEditorOCL::draw(){
     //clworld.evalForceGPU();
 	//drawAtomsF8(atom_count, atoms_tmp, 0.25, ogl_sph);
 
-	//clworld.relaxStepGPU( 5, 0.5 );
+	if(frameCount<500) clworld.relaxStepGPU( 1, 0.5 );
+
 	clworld.system2atoms( isystem, atoms_tmp );
 
 	glColor3f(0.0,0.0,0.0); drawRigidMolSystem( clworld, isystem );
 	drawRigidMolSystemForceTorq(  clworld, isystem, 100.0, 1000.0 );
 	glColor3f(1.0,0.0,1.0); drawAtomsForces( atom_count, atoms_tmp, fatoms_tmp, 0.0, 100.0 );
-
-
 
 	//return;
 

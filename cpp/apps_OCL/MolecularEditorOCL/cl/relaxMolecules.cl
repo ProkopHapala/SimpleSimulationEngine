@@ -177,6 +177,7 @@ __kernel void getForceRigidSystemSurfGrid(
     __global  float4*  PLQinTypes,   // atoms in molecule types
     __global  float8*  poses,        // pos, qrot
     __global  float8*  fposes,       // force acting on pos, qrot
+    __global  float8*  vposes,       // force acting on pos, qrot
     float4 pos0,
     float4 dinvA,
     float4 dinvB,
@@ -185,10 +186,12 @@ __kernel void getForceRigidSystemSurfGrid(
     int nMols, // nMols should be approx local size
     float alpha,
     float dt,
+    float damp,
     int nStep
 ){
 
     __local float8 lATOMs[32]; // here we store atoms of molecule j
+    __local float8 lPOSES[8];  // here we store atoms of molecule j
 
     //const int iG = get_global_id (0);
     const int nL    = get_local_size(0);
@@ -197,13 +200,15 @@ __kernel void getForceRigidSystemSurfGrid(
     const int iL    = get_local_id(0);
     const int isys  = get_group_id(0);
     
+/*
     if( get_global_id(0)==0 ){
-        //printf( "GPU nGlobal %i nLocal %i nSystems %i nMols %i \n", (int)get_global_size(0), nL, nSystems, nMols );
+        printf( "GPU nGlobal %i nLocal %i nSystems %i nMols %i \n", (int)get_global_size(0), nL, nSystems, nMols );
         //printf( "dinvA (%g,%g,%g,%g)\n", dinvA.x, dinvA.y, dinvA.z );
         //printf( "dinvB (%g,%g,%g,%g)\n", dinvB.x, dinvB.y, dinvB.z );
         //printf( "dinvC (%g,%g,%g,%g)\n", dinvC.x, dinvC.y, dinvC.z);
-        //printf( "GPU nStep %i dt %f \n", nStep, dt );
+        printf( "GPU nStep %i dt %f damp %f \n", nStep, dt, damp );
     }
+*/
 
     //if( isys > nSystems ) return;  // perhaps not needed if global_size set properly
     //if( imol > nMols ) return;
@@ -217,18 +222,21 @@ __kernel void getForceRigidSystemSurfGrid(
     float4 forceE       = (float4)(0.0,0.0,0.0,0.0);
     float4 torq         = (float4)(0.0,0.0,0.0,0.0); // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
 
-    float4 forceV       = (float4)(0.0,0.0,0.0,0.0);
-    float4 torqV        = (float4)(0.0,0.0,0.0,0.0); // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
+    float4 forceV       = vposes[oimol].lo;
+    float4 torqV        = vposes[oimol].hi; // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
 
+/*
     if( get_local_id(0)==0 ){
     //if( get_global_id(0)==0 ){ 
         //printf( "GPU isystem %i \n", isys );
         //printf( "GPU isys,oimol(%i,%i) i0,n(%i,%i) p(%g,%g,%g) q(%g,%g,%g,%g) \n", isys, oimol, iatomi, natomi,  mposi.x,mposi.y,mposi.z,  qroti.x,qroti.y,qroti.z,qroti.w  );
+        printf( "GPU natomi %i \n", natomi );
         for(int ia=0; ia<natomi; ia++){
             float8 ai = atomsInTypes[iatomi+ia];
-            //printf( "GPU isys %i ia %i %i xyz(%g,%g,%g,%g) REQ(%g,%g,%g,%g)\n", isys, imol, ia, iatomi+ia, ai.x, ai.y, ai.z, ai.w,  ai.s4, ai.s5, ai.s6, ai.s7 );
+            printf( "GPU isys %i ia %i %i xyz(%g,%g,%g,%g) REQ(%g,%g,%g,%g)\n", isys, imol, ia, iatomi+ia, ai.x, ai.y, ai.z, ai.w,  ai.s4, ai.s5, ai.s6, ai.s7 );
         }
     }
+*/
 
     for(int iStep=0; iStep<nStep; iStep++ ){
 
@@ -236,6 +244,10 @@ __kernel void getForceRigidSystemSurfGrid(
         torq   = (float4)(0.0,0.0,0.0,0.0);
 
         // ==== Molecule - Molecule Interaction
+
+        lPOSES[iL].lo = mposi;
+        lPOSES[iL].hi = qroti;
+        barrier(CLK_LOCAL_MEM_FENCE);
 
         for(int jmol=0; jmol<nMols; jmol++){
 
@@ -245,8 +257,15 @@ __kernel void getForceRigidSystemSurfGrid(
             const int natomj = mol2atoms[ojmol].y;
             if(iL<natomj){
                 float8 atomj = atomsInTypes[iatomj+iL];
-                atomj.xyz    = rotQuat( poses[ojmol].hi, atomj.xyz ) + poses[ojmol].xyz;
+                //atomj.xyz    = rotQuat( poses[ojmol].hi, atomj.xyz ) + poses[ojmol].xyz; // TODO: we store poses in local memory
+                atomj.xyz    = rotQuat( lPOSES[jmol].hi, atomj.xyz ) + lPOSES[jmol].xyz; 
                 lATOMs[iL]   = atomj;
+
+                //if( (isys==1) )  printf( "GPU lATOM imol %i jmol %i ja %i pi %5.5e %5.5e %5.5e p %5.5e %5.5e %5.5e q %5.5e %5.5e %5.5e %5.5e \n", imol, jmol, iL, atomj.x,atomj.y,atomj.z, 
+                //        poses[ojmol].x,poses[ojmol].y,poses[ojmol].z,
+                //        poses[ojmol].hi.x,poses[ojmol].hi.y,poses[ojmol].hi.z,poses[ojmol].hi.w        
+                //);
+
             }
 
             barrier(CLK_LOCAL_MEM_FENCE);
@@ -274,12 +293,22 @@ __kernel void getForceRigidSystemSurfGrid(
                     fe.w       += eps*( expar*expar - 2*expar ) + cElec/( r ); // Energy - TODO there should be approx of arctan(x)
 
                     //if( isys==0 ) printf( "GPU (%i,%i) (%i,%i) r %g expar %g fr %g kqq %g a %g eps %g \n", imol, ia, jmol, ja, r, expar, fr, cElec, alpha, eps );
+
+                    //if( (isys==1) && (iStep==1) && (jmol==0) ) 
+                    //if( (isys==1)  ) 
+                    //if( (iStep==1) ) 
+                    //if( (jmol==0) ) 
+                    //if( (isys==1) && (jmol==0) ) 
+                    //if (isys==1) printf( "GPU fm imol %i jmol %i ia %i ja %i dp  %5.5e %5.5e %5.5e pi %5.5e %5.5e %5.5e f %5.5e %5.5e %5.5e \n", imol, jmol, ia, ja, dp.x,dp.y,dp.z, adposi.x, adposi.y, adposi.z, fe.x,fe.y,fe.z );
                 }
 
                 forceE += fe;
                 torq   += cross(adposi, fe);
 
             }
+
+            //if(isys == 1 ) printf( "%i imol %i p  %5.5e %5.5e %5.5e f %5.5e %5.5e %5.5e \n", iStep, imol, mposi.x,mposi.y,mposi.z, forceE.x, forceE.y, forceE.z );
+
             barrier(CLK_LOCAL_MEM_FENCE);
         }
 
@@ -325,7 +354,6 @@ __kernel void getForceRigidSystemSurfGrid(
                 forceE += fe;
                 torq   += cross(adposi, fe);
 
-
                 //if( isys==0 ) printf( "GPU imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
                 //printf( "GPU isystem %i imol %i f(%g,%g,%g) tq(%g,%g,%g) \n", isys, imol, forceE.x, forceE.y, forceE.z, torq.x, torq.y, torq.z );
 
@@ -337,17 +365,24 @@ __kernel void getForceRigidSystemSurfGrid(
                 //if( isys==0 ) printf( "GPU fgrid: imol %i p(%5.5e,%5.5e,%5.5e) q(%5.5e,%5.5e,%5.5e,%5.5e) \n", imol, poses[oimol].x, poses[oimol].y, poses[oimol].z,  poses[oimol].s4, poses[oimol].s5, poses[oimol].s6, poses[oimol].s7 );
                 //if( isys==0 ) printf( "GPU move: imol %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", imol, poses[oimol].x, poses[oimol].y, poses[oimol].z,  fposes[oimol].x, fposes[oimol].y, fposes[oimol].z );
                 //if( isys==0 && imol==0 ) printf( "GPU move: step %i imol %i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", iStep, imol, mposi.x, mposi.y, mposi.z,  forceE.x, forceE.y, forceE.z );
+
+                //if(isys == 1 && imol==1 ) printf( "%i p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) v(%5.5e,%5.5e,%5.5e) \n", iStep, mposi.x,mposi.y,mposi.z, forceE.x, forceE.y, forceE.z, forceV.x, forceV.y, forceV.z );
+                //if(isys == 1 && imol==1 ) printf( "%i p %5.5e %5.5e %5.5e f %5.5e %5.5e %5.5e v %5.5e %5.5e %5.5e \n", iStep, mposi.x,mposi.y,mposi.z, forceE.x, forceE.y, forceE.z, forceV.x, forceV.y, forceV.z );
+
+                //if(isys == 1 ) printf( "%i imol %i p  %5.5e %5.5e %5.5e f %5.5e %5.5e %5.5e v %5.5e %5.5e %5.5e \n", iStep, imol, mposi.x,mposi.y,mposi.z, forceE.x, forceE.y, forceE.z, forceV.x, forceV.y, forceV.z );
+
+                //if(isys == 1 && imol==1 ) printf( "%i |f| %5.5e |tq| %5.5e p(%5.5e,%5.5e,%5.5e)\n", iStep, dot( forceE.xyz,forceE.xyz), dot(torq.xyz,torq.xyz), mposi.x,mposi.y,mposi.z );
+                //if(isys == 1 && imol==1 ) printf( "%i |f| %5.5e |tq| %5.5e p(%5.5e,%5.5e,%5.5e)\n", iStep, dot( forceE.xyz,forceE.xyz), dot(torq.xyz,torq.xyz), mposi.x,mposi.y,mposi.z );
+
                 //mposi.xyz += forceE.xyz * dt;
                 //qroti      = drotQuat_exact( qroti, torq * dt );
 
-                float damp = 0.9;
                 forceV.xyz = forceV.xyz*damp + forceE.xyz * dt;
-                torqV.xyz  = torqV.xyz *damp + torq.xyz   * dt; 
+                torqV.xyz  = torqV.xyz *damp + torq.xyz   * dt;
                 mposi.xyz += forceV.xyz * dt;
                 qroti      = drotQuat_exact( qroti, torqV * dt );
 
             }
-
         } // imol<nMols
 
     } // iStep;
@@ -355,6 +390,8 @@ __kernel void getForceRigidSystemSurfGrid(
     if ( imol<nMols ){
         fposes[oimol].lo  = forceE;
         fposes[oimol].hi  = torq;
+        vposes[oimol].lo  = forceV;
+        vposes[oimol].hi  = torqV;
          poses[oimol].lo  = mposi;
          poses[oimol].hi  = qroti;
     }
