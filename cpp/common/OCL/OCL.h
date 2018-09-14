@@ -7,31 +7,7 @@
 #include "OCLerrors.h"
 #include "OCL_device_picker.h"
 
-struct float3 {
-	union{
-		struct{ float x,y,z; };
-		float array[3];
-	};
-};
-
-struct float4 {
-	union{
-		struct{ float x,y,z,w;     };
-		struct{ float3 f; float e; };
-		float array[4];
-	};
-};
-
-struct float8 {
-	union{
-		struct{ float x,y,z,w,hx,hy,hz,hw; };
-		struct{ float4 lo,hi; };
-		float array[8];
-	};
-    //float x,y,z,w,hx,hy,hz,hw;
-};
-
-struct int2   { int x,y; };
+#include "datatypes.h"
 
 
 //void print( cl_mem cmem ){ printf( "\n", cmem.  ); };

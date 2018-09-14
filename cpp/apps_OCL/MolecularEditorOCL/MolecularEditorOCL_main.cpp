@@ -40,6 +40,7 @@
 #include "MolecularDraw.h"
 
 #include "MolecularWorl2OCL.h"
+#include "MolecularConfiguration.h"
 
 #include "testUtils.h"
 
@@ -521,6 +522,23 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
             ps[0] = (Quat4f)wps[0];
             ps[1] = (Quat4f)wps[1];
             ps[1].setRandomRotation();
+
+            // random position without collision
+            /*
+            float r2=0.0;
+            while(r2<9.0){
+                ps[0].f.x = randf( 0.0, 10.0);
+                ps[0].f.y = randf( 8.0, 8.5 );
+                ps[0].f.z = randf( 0.0, 10.0);
+                Quat4f*  psj = (Quat4f*)clworld.poses;
+                r2=1e+30;
+                for(int jmol=0; jmol<imol; jmol++){
+                    float r2j = ps[0].f.dist2( psj[0].f );
+                    if(r2j<r2) r2=r2j;
+                    psj+=2;
+                }
+            }
+            */
 
             //printf( "  world pose p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e,%5.5e) \n",  wps[0].f.x, wps[0].f.y, wps[0].f.z,  wps[1].x, wps[1].x, wps[1].x, wps[1].w );
             //printf( "clworld pose p(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e,%5.5e) \n",   ps[0].f.x,  ps[0].f.y,  ps[0].f.z,   ps[1].x,  ps[1].x,  ps[1].x,  ps[1].w );
