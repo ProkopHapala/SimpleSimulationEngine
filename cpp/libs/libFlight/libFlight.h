@@ -198,11 +198,15 @@ class FlightWorld{ public:
             time+=dt;
         }
         Vec3d * v3stateBuff = (Vec3d*)stateBuff;
-        v3stateBuff[0] = craft1.pos;
-        v3stateBuff[1] = craft1.vel;
-        v3stateBuff[2] = craft1.rotMat.c;
-        v3stateBuff[3] = craft1.rotMat.b;
-        for(int i=0; i<nControls; i++){ stateBuff[12+i] = controlsState[i].x; }
+        v3stateBuff[0] = craft1.pos;      // 0
+        v3stateBuff[1] = craft1.vel;      // 3
+        v3stateBuff[2] = craft1.rotMat.c; // 6
+        v3stateBuff[3] = craft1.rotMat.b; // 9
+        v3stateBuff[4] = craft1.omega;    // 12
+        v3stateBuff[5] = craft1.force;    // 15
+        v3stateBuff[6] = craft1.torq;     // 18
+        for(int i=0; i<nControls; i++){ stateBuff[21+i] = controlsState[i].x; } // 22
+        // enum { iPitch=0, iYaw=1, iRoll=2, iThrottle=3, iTrigger=4 };
     }
 
 };

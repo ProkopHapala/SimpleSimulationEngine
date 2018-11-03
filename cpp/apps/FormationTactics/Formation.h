@@ -28,6 +28,8 @@ class Formation{ public:
     Faction    * faction;
     BattleLine * line;
 
+    Vec2d fire_target;
+
     double maxWill    = 1.0;
     double bboxMargin = 0.0;
     double maxBbox2   = 4.0;

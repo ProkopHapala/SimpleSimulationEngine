@@ -7,6 +7,16 @@ import pyFlight as flight
 from pynput import keyboard
 import time
 
+def printFormatedState(stateBuff):
+    print "position:          ", stateBuff[ 0: 3]
+    print "velocity:          ", stateBuff[ 3: 6]
+    print "forward direction: ", stateBuff[ 6: 9]
+    print "up direction:      ", stateBuff[ 9:12]
+    print "angular velocity:  ", stateBuff[12:15]
+    print "force:             ", stateBuff[15:18]
+    print "torque:            ", stateBuff[18:21]
+    print "pitch: ",stateBuff[21], " yaw: ",stateBuff[22], " roll : ",stateBuff[23], " throttle: ",stateBuff[24]
+
 # --- set workdir with configuration of aircraft, textures etc.
 work_dir = "/home/prokop/git/SimpleSimulationEngine/cpp/Build/apps/AeroCombat"
 flight.loadFromFile( work_dir+"/data/AeroCraftMainWing1.ini" )
@@ -33,7 +43,27 @@ flight.setTargets( targets )
 # ---  initialize C-interface buffers
 iPitch=0; iYaw=1; iRoll=2; iThrottle=3; iTrigger=4
 controlBuff  = np.zeros(5)                   # python->C [pich,yaw,roll,throttle,trigger] differeces (rate-of-change)
-stateBuff    = np.zeros(4*3 + 4)             # C->python [ pos.xyz, vel.xyz, forward.xyz, up.xyz       pich,yaw,roll,throttle  ]
+
+#stateBuff    = np.zeros(4*3 + 4)             # C->python [ pos.xyz, vel.xyz, forward.xyz, up.xyz       pich,yaw,roll,throttle  ]
+stateBuff    = np.zeros(7*3 + 4)
+
+
+'''
+stateBuff contains:
+stateBuff[ 0: 3] = position       (x,y,z)
+stateBuff[ 3: 6] = velocity       ( ~d position/dt )
+stateBuff[ 6: 9] = forward vector (rotationMatrix.c)
+stateBuff[ 9:12] = up vector      (rotationMatrix.b)
+stateBuff[12:15] = angular velocity vector (~d rotation/dt)
+stateBuff[15:18] = force                   (~d velocity/dt)
+stateBuff[18:21] = torque                  (~d omega   /dt)
+stateBuff[21]    = pith (absolute, not rate of change)
+stateBuff[22]    = yaw
+stateBuff[23]    = roll
+stateBuff[24]    = throttle
+'''
+
+
 targetHits   = np.zeros( (len(targets),2) )  # C->python if hit [ageMin,ageMax] of projectiles which hit it, if no-hit [+1e+300,-1e+300]
 
 # ========= BEGIN Keyboard interface 
@@ -122,7 +152,7 @@ while GO_ON: # repeat until pressed key "c"
         #print "python shoot"
         controlBuff[iTrigger ] =  1.0  # shoot when >0.5  
     if not ( keyDict["a"] or keyDict["d"] ):               # if roll keys not active, retract ailerons to neutral position
-        controlBuff[iRoll ] = stateBuff[12+iRoll]*-10.0    # dRoll/dt =  roll * -10
+        controlBuff[iRoll ] = stateBuff[21+iRoll]*-10.0    # dRoll/dt =  roll * -10
     #if(niter==0):
     #    controlBuff[iTrigger] = 1
     #flight.fly( poss, vels, rots, nsub=10, dt=0.001 )
@@ -130,6 +160,8 @@ while GO_ON: # repeat until pressed key "c"
     # !!!!! HERE WE CALL THE SIMULATION !!!!!
     flight.flyAndShootTargets( controlBuff, stateBuff, targetHits, nsub=10, dt=0.003 )
     #print "control state ", stateBuff[12:]
+    
+    printFormatedState(stateBuff)
     
     if( stateBuff[1]<0.0 ):
         print " pos.y < 0.0  =>  YOU CRASHED TO GROUND !!!"

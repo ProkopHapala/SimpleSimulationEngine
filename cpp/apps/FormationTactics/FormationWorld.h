@@ -20,6 +20,22 @@
 #include "BattleLine.h"
 #include "Faction.h"
 
+#include "geom2D.h"
+
+/*
+class TargetArea{ public:
+    double rateOfFire;
+    SoldierType* type = 0; //
+    Formation*   from = 0;
+    Formation*   attached = 0;
+    Ellipse2D spot;
+
+    double getShotDensity(const Vec2d& p){
+        double dens = spot.pointDistInterp(p);
+    };
+}
+*/
+
 
 class FormationWorld{
 	public:
@@ -27,12 +43,6 @@ class FormationWorld{
     std::vector<Formation*>  formations;
     std::vector<Faction*>    factions;
     std::vector<SoldierType> soldierTypes;
-
-
-
-
-
-
 
     //std::unordered_map<std::string,SoldierType*> name2soldierType;
     SoldierTypeDict name2soldierType;

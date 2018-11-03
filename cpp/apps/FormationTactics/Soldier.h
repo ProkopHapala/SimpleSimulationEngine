@@ -167,6 +167,13 @@ class Soldier : public RigidBody2D{
         return true;
     }
 
+    void shoot( Vec2d p ){
+        // no dealy
+        Vec2d d  = p-pos;
+        double r = d.normalize();
+        //double v =
+    }
+
     void attack_melee( Soldier * enemy ){
         time_buf -= type->melee_period;
         stamina  *= type->melee_fStamina;

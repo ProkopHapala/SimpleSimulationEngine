@@ -228,13 +228,33 @@ class Segment2d{
 
 };
 
+struct Ellipse2D{
+    Vec2d pos;
+    Vec2d dir;
+    Vec2d sz;
+
+    inline bool pointIn( Vec2d p ){
+        p.sub(pos);
+        double a = dir.dot     (p);
+        double b = dir.dot_perp(p);
+        return ( sq(a/sz.a) + sq(b/sz.b) ) > 1.0;
+    }
+
+    inline bool pointDistInterp( Vec2d p ){
+        p.sub(pos);
+        double a = dir.dot     (p);
+        double b = dir.dot_perp(p);
+        return 1.0 - sq(a/sz.a) + sq(b/sz.b);
+    }
+
+};
+
 
 /////////////////////////
 //   CLASS :   Triangle2d
 //////////////////////////
 
-class Triangle2d{
-	public:
+class Triangle2d{ public:
 	int id;
 	Vec2d *a,*b,*c;
 	inline      Triangle2d( int id_ ){ id=id_;  };
