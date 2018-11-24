@@ -115,4 +115,40 @@ class Formation{ public:
 
 };
 
+struct SalvoTarget{
+    double t;
+    //int type;
+    void * ptr;
+};
+
+struct SalvoBin{
+    int nprj;
+    double t0;
+};
+
+class Salvo{ public:
+    Vec2d fw;
+    Vec2d left;
+    double xmin,xmax;
+    double t_span = 2.0;
+    //Vec2d p0,p1;
+    double tgElev; // tangent of elevation
+    double dbin;
+    int    nbin=0, perBin=3;
+    //double t;
+    int nprj;
+
+    SalvoBin*    bins;
+    SalvoTarget* targets;
+    // may have projectiles in bins
+
+    // function declaration
+
+    int  build        ( Formation& f, double d, char* buff );
+    void clearTargets ( Formation& f );
+    void gatherShots  ( Formation& f );
+    void gatherTargets( Formation& f );
+
+};
+
 #endif

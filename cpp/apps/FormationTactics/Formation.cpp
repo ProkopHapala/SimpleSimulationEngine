@@ -333,3 +333,73 @@ void Formation::deploySoldiers( ){
     }
 */
 }
+
+
+// ======== Salvo
+
+int Salvo::build( Formation& f, double d, char* buff ){
+    xmin=-1e+300,xmax=1e+300;
+    for( int i=0; i<f.nSoldiers; i++ ){
+        double x = left.dot( f.soldiers[i].pos );
+        xmin=_min(x,xmin);
+        xmax=_max(x,xmax);
+    }
+    double l = xmax-xmin;
+    int nbin = (int)(l/d);
+    dbin     = l/nbin;
+    // allocation ... should we use simply "new" ?
+    //   TODO: allocator object
+    char* buff_=buff;
+    bins     = (SalvoBin*)   buff_; buff_ += sizeof(SalvoBin   ) * nbin;
+    targets  = (SalvoTarget*)buff_; buff_ += sizeof(SalvoTarget) * nbin * perBin;
+
+    for(int i=0; i<nbin; i++){
+        bins[i].nprj=0;
+        bins[i].t0  =-1e+300;
+    }
+    return buff_ - buff;
+};
+
+void Salvo::gatherShots( Formation& f ){
+    for( int i=0; i<f.nSoldiers; i++ ){            // find front soldiers
+        double t = fw  .dot( f.soldiers[i].pos );
+        double x = left.dot( f.soldiers[i].pos );
+        int ibin = (int)((x-xmin)/dbin);
+        bins[ibin].t0 = _max(t, bins[ibin].t0  );
+        // project on line
+    }
+    for( int i=0; i<f.nSoldiers; i++ ){            // gather shots from all soldiers max t_span from front
+        double t = fw  .dot( f.soldiers[i].pos );
+        double x = left.dot( f.soldiers[i].pos );
+        int ibin = (int)((x-xmin)/dbin);
+        if( (bins[ibin].t0-t)<t_span ){
+            bins[ibin].nprj++;
+        };
+        // project on line
+    }
+};
+
+void Salvo::clearTargets( Formation& f ){
+    for(int i=0; i<(nbin*perBin); i++){
+        targets[i].ptr = 0;
+        targets[i].t   = 1e+300;
+    }
+}
+
+void Salvo::gatherTargets( Formation& f ){
+    for( int i=0; i<f.nSoldiers; i++ ){            // find front soldiers
+        double t = fw  .dot( f.soldiers[i].pos );
+        double x = left.dot( f.soldiers[i].pos );
+        int ibin = (int)((x-xmin)/dbin);
+        if( t < bins[ibin].t0) continue;
+        SalvoTarget* btargets = targets + ibin*perBin;
+        for( int j=0; i<perBin; j++ ){
+            if(btargets[j].t < t){
+                if(j>0){ btargets[j-1] = btargets[j]; }
+                btargets[j-1] = (SalvoTarget){ t, &f.soldiers[i] };
+            }
+        }
+    }
+}
+
+//Salvo::scanHits(){};
