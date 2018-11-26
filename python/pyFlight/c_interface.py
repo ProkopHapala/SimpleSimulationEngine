@@ -94,7 +94,7 @@ class FlightView():
         
         self.libSDL = ctypes.CDLL( "/usr/lib/x86_64-linux-gnu/libSDL2.so", ctypes.RTLD_GLOBAL )
         #self.libGL  = ctypes.CDLL( "/usr/lib/x86_64-linux-gnu/libGL.so",   ctypes.RTLD_GLOBAL )
-        self.libGL  = ctypes.CDLL( "/usr/lib/nvidia-375/libGL.so",   ctypes.RTLD_GLOBAL )
+        self.libGL  = ctypes.CDLL( "/usr/lib32/nvidia-384/libGL.so",   ctypes.RTLD_GLOBAL )
         
         #self.libSDL = ctypes.CDLL( "libSDL2.so", ctypes.RTLD_GLOBAL )
         #self.libGL  = ctypes.CDLL( "libGL.so",   ctypes.RTLD_GLOBAL )
