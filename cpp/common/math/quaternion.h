@@ -102,7 +102,20 @@ class Quat4TYPE {
         if( (d2>D2) || (d2<-D2) ){ //printf( "renorm\n" );
             TYPE inorm = 1/sqrt( r2 );
             x *= inorm;    y *= inorm;    z *= inorm;   w *= inorm;
-		}
+        }
+    }
+
+    inline VEC& normalize_taylor3(){
+        // sqrt(1+x) ~= 1 + 0.5*x - 0.125*x*x
+        // sqrt(r2) = sqrt((r2-1)+1) ~= 1 + 0.5*(r2-1)
+        // 1/sqrt(1+x) ~= 1 - 0.5*x + (3/8)*x^2 - (5/16)*x^3 + (35/128)*x^4 - (63/256)*x^5
+        TYPE dr2    = x*x+y*y+z*z+w*w-1;
+        TYPE renorm = 1 + dr2*( -0.5d + dr2*( 0.375d + dr2*-0.3125d ) );
+        x*=renorm;
+        y*=renorm;
+        z*=renorm;
+        w*=renorm;
+        return *this;
     }
 
 // ====== Quaternion multiplication
@@ -714,12 +727,16 @@ static constexpr Quat4f Quat4fOnes = (Quat4f){0.0f,0.0f,0.0f,1.0d};
 //static constexpr Quat4f Quat4fLeft     = Quat4fmZYX;
 //static constexpr Quat4f Quat4fRight    = Quat4fZYmX;
 
+static constexpr Quat4f Quat4fIdentity = (Quat4f){       0.0,        0.0,       0.0,       1.0 };
+
 static constexpr Quat4f Quat4fBack     = (Quat4f){       0.0,        0.0,       0.0,       1.0 };
 static constexpr Quat4f Quat4fFront    = (Quat4f){       0.0,        1.0,       0.0,       0.0 };
 static constexpr Quat4f Quat4fTop      = (Quat4f){-M_SQRT1_2,        0.0,       0.0, M_SQRT1_2 };
 static constexpr Quat4f Quat4fBotton   = (Quat4f){ M_SQRT1_2,        0.0,       0.0, M_SQRT1_2 };
 static constexpr Quat4f Quat4fLeft     = (Quat4f){       0.0,  M_SQRT1_2,       0.0, M_SQRT1_2 };
 static constexpr Quat4f Quat4fRight    = (Quat4f){       0.0, -M_SQRT1_2,       0.0, M_SQRT1_2 };
+
+static constexpr Quat4d Quat4dIdentity = (Quat4d){       0.0,        0.0,       0.0,       1.0 };
 
 static constexpr Quat4d Quat4dBack     = (Quat4d){       0.0,        0.0,       0.0,       1.0 };
 static constexpr Quat4d Quat4dFront    = (Quat4d){       0.0,        1.0,       0.0,       0.0 };
