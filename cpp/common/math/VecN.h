@@ -17,6 +17,9 @@ namespace VecN{
     inline double sum2(int n, double* a            ){ double sum =0; for (int i=0; i<n; i++ ){ double ai=a[i]; sum+=ai*ai;  } return sum; };
     inline double min (int n, double* a            ){ double amax=-1e+300; for (int i=0; i<n; i++ ){ double ai=a[i]; amax=_max(amax,ai); } return amax; };
     inline double max (int n, double* a            ){ double amin=+1e+300; for (int i=0; i<n; i++ ){ double ai=a[i]; amin=_min(amin,ai); } return amin; };
+
+    inline double minmax(int n, double* a, double& vmin, double& vmax ){ vmin=+1e+300; vmax=-1e+300; for (int i=0; i<n; i++ ){ double ai=a[i]; vmin=_min(vmin,ai); vmax=_max(vmax,ai); } };
+
     inline int    imin(int n, double* a ){ double amin=+1e+300; int im=-1; for (int i=0; i<n; i++ ){ double ai=a[i]; if(ai<amin){amin=ai;im=i;} } return im;  }
     inline int    imax(int n, double* a ){ double amax=-1e+300; int im=-1; for (int i=0; i<n; i++ ){ double ai=a[i]; if(ai>amax){amax=ai;im=i;} } return im;  }
 

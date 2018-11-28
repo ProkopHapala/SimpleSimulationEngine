@@ -14,6 +14,7 @@
 #include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
+#include "VecN.h"
 
 /*
 #include "Multipoles.h"
@@ -29,17 +30,82 @@
 
 #include "RARFF.h"
 
-
 #define R2SAFE  1.0e-8f
 
 // ======= THE CLASS
 
+void makeSamples( Vec2i ns, Vec3d p0, Vec3d a, Vec3d b, Vec3d *ps ){
+    Vec3d da=a*(1.0d/ns.x);
+    Vec3d db=b*(1.0d/ns.y);
+    //printf( "da (%g,%g,%g)\n", da.x,da.y,da.z );
+    //printf( "db (%g,%g,%g)\n", db.x,db.y,db.z );
+    for(int ib=0; ib<ns.y; ib++){
+        Vec3d p = p0+db*ib;
+        for(int ia=0; ia<ns.x; ia++){
+            *ps = p;
+            p.add(da);
+            ps++;
+        }
+    }
+}
+
+void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc ){
+    glBegin(GL_LINES);
+    for(int i=0; i<n; i++){
+        Vec3d p=ps[i];        glVertex3f(p.x,p.y,p.z);
+        p.add_mul( vs[i], sc); glVertex3f(p.x,p.y,p.z);
+    }
+    glEnd();
+}
+
+void drawScalarArray(int n, Vec3d* ps, double* vs, double vmin, double vmax ){
+    glBegin(GL_POINTS);
+    double sc = 1/(vmax-vmin);
+    for(int i=0; i<n; i++){
+        Vec3d p=ps[i];
+        double c = (vs[i]-vmin)*sc;
+        glColor3f(c,c,c);
+        glVertex3f(p.x,p.y,p.z);
+        //printf( "i %i p(%g,%g,%g) v: %g c: %g\n", i, p.x,p.y,p.z, vs[i], c );
+    }
+    glEnd();
+}
+
+//void drawRigidAtom( const Vec3d& pos, Vec3d* bhs ){
+void drawRigidAtom( RigidAtom& atom ){
+    Vec3d bhs[N_BOND_MAX];
+    rotateVectors<double>(N_BOND_MAX, atom.qrot, atom.type->bh0s, bhs );
+    Draw3D::drawPointCross( atom.pos, 0.1 );
+    //for(int i=0; i<N_BOND_MAX; i++){
+    for(int i=0; i<atom.type->nbond; i++){
+        //printf( "%i (%g,%g,%g)\n", i, type1.bh0s[i].x, type1.bh0s[i].y, type1.bh0s[i].z );
+        //printf( "%i (%g,%g,%g)\n", i, bhs[i].x, bhs[i].y, bhs[i].z );
+        Draw3D::drawVecInPos( bhs[i], atom.pos );
+    }
+}
+
+
+template<typename Func> void numDeriv( Vec3d p, double d, Vec3d& f, Func func){
+    //double e0 = Efunc(p);
+    double d_=d*0.5;
+    p.x+=d_; f.x = func(p); p.x-=d; f.x-=func(p); p.x+=d_;
+    p.y+=d_; f.y = func(p); p.y-=d; f.y-=func(p); p.y+=d_;
+    p.z+=d_; f.z = func(p); p.z-=d; f.z-=func(p); p.z+=d_;
+    f.mul(1/d);
+}
+
 class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     RigidAtom     atom1;
-    RigidAtomType type1; 
+    RigidAtomType type1,type2; 
 
-    RARFF grid;
+    RARFF ff;
+
+    double Emin,Emax;
+    int     npoints;
+    Vec3d*  points  =0;
+    double* Energies=0;
+    Vec3d * Forces  =0;
 
     virtual void draw   ();
     virtual void drawHUD();
@@ -53,10 +119,125 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
 TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+
+    // for exp
+    type1.nbond = 3;  // number bonds
+    type1.rbond0 = 0.5;
+    type1.acore =  4.0;
+    type1.bcore = -0.7;
+    type1.abond =  3.0;
+    type1.bbond = -1.1;
+    type1.bh0s = (Vec3d*)sp2_hs;
+    type1.print();
     //exit(0);
 
+    type2.nbond = 4;  // number bonds
+    type2.rbond0 = 0.5;
+    type2.acore =  4.0;
+    type2.bcore = -0.7;
+    type2.abond =  3.0;
+    type2.bbond = -1.1;
+    type2.bh0s = (Vec3d*)sp3_hs;
+    type2.print();
+    //exit(0);
+
+
+/*
+    // for overlap
+    type1.nbond = 3;  // number bonds
+    type1.rbond0 = 0.5;
+    type1.acore =  4.0;
+    type1.bcore = -0.7;
+    type1.abond =  2.0;
+    type1.bbond = -1.5;
+*/
+
+
+    //exit(0);
+
+    /*
+    ff.realloc(4);
+    for(int i=0; i<ff.natom; i++){ ff.atoms[i].type=&type1; };
+    //ff.atoms[0].setPose( (Vec3d){0.0,0.0,0.0}, Quat4dIdentity );
+    //ff.atoms[1].setPose( (Vec3d){1.0,1.5,0.0}, Quat4dIdentity );
+    //ff.atoms[2].setPose( (Vec3d){1.0,0.0,0.0}, Quat4dIdentity );
+    //ff.atoms[3].setPose( (Vec3d){0.0,1.0,0.0}, Quat4dIdentity );
+    */
+
+    int nang    = 6;
+    ff.realloc(nang+2);
+    for(int i=0; i<ff.natom; i++){ ff.atoms[i].type=&type1; };
+    //double dang = 2*M_PI/(nang +0.5);
+    double dang = 2*M_PI/(nang +0.0);
+    for(int i=0; i<nang; i++){
+        
+        double ang = i*dang;
+        double sa=sin(ang);
+        double ca=cos(ang);
+
+        double sa_=sin(ang*0.5);
+        double ca_=cos(ang*0.5);
+        //ff.atoms[i].type=&type1;
+        ff.atoms[i].pos  = (Vec3d ){ca,sa,0};
+        ff.atoms[i].qrot = (Quat4d){0.0,0.0,-sa_,ca_};
+    }
+
+    ff.atoms[6].setPose( (Vec3d){2.0,0.0,0.0}, Quat4dIdentity ); // ff.atoms[6].type=&type2;
+    ff.atoms[7].setPose( (Vec3d){0.0,2.0,0.0}, Quat4dIdentity ); // ff.atoms[7].type=&type2;
+
+
+    atom1.type = &type1;
     atom1.pos  = Vec3dZero;
     atom1.qrot = Quat4dIdentity;
+
+    int nx      = 100;
+    int ny      = 100;
+    npoints = nx*ny;
+
+    _realloc(points  ,npoints);
+    _realloc(Energies,npoints);
+    _realloc(Forces  ,npoints);
+
+    makeSamples({nx,ny},{-5.0,-5.0,0.2},{10.0,0.0,0.0},{0.0,10.0,0.0},points);
+
+    RigidAtomType pairType;
+    pairType.combine(type1,type1);
+
+    printf("pairType: \n");
+    pairType.print();
+    //exit(0);
+
+    
+    Vec3d bhs[N_BOND_MAX];
+    rotateVectors<double>(N_BOND_MAX, atom1.qrot, atom1.type->bh0s, bhs );
+    for(int i=0; i<npoints; i++){
+        Vec3d torq;
+        Vec3d dij   = points[i] - atom1.pos;
+        Energies[i] = ff.pairEF( dij, pairType, bhs, Forces[i], torq );
+        //printf( "%i p:(%g,%g,%g) E: %g\n", i, points[i].x, points[i].y, points[i].z, Energies[i] );
+    }
+    //exit(0);
+    
+    /*
+    Vec3d p0 = (Vec3d){0.0,0.0,0.0};
+    Vec3d dp = (Vec3d){0.1,0.0,0.0};
+    for(int i=0; i<30; i++){
+        Vec3d f,fnum,torq;
+        Vec3d dij   = (p0+dp*i) - atom1.pos;
+        double E = ff.pairEF( dij, pairType, bhs, f, torq );
+        numDeriv( dij, 0.01, fnum, [&](Vec3d p){
+            Vec3d f_,tq_;
+            return ff.pairEF( p, pairType, bhs, f_, tq_ );
+        } );
+        printf( "%i p(%g,%g,%g) E %g f(%g,%g,%g) fnum(%g,%g,%g) \n", i, dij.x, dij.y, dij.z, E,   f.x,f.y,f.z,  fnum.x,fnum.y,fnum.z );
+    }
+    exit(0);
+    */
+
+    ff.cleanAtomForce();
+    ff.interEF();
+
+    VecN::minmax(npoints, Energies, Emin, Emax);
 
 }
 
@@ -66,21 +247,35 @@ void TestAppRARFF::draw(){
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 
-    Vec3d bhs[N_BOND_MAX];
+    ff.cleanAtomForce();
+    ff.interEF();
+    ff.move(0.001);
 
-    rotateVectors<double>(N_BOND_MAX, atom1.qrot, type1.bh0s, bhs );
 
-    atom1.torq = (Vec3d){0.1,0.0,0.0};
-    atom1.moveRotGD(0.8);
-    printf( "qrot (%g,%g,%g,%g)\n", atom1.qrot.x, atom1.qrot.y, atom1.qrot.z, atom1.qrot.w );
+    //Vec3d bhs[N_BOND_MAX];
+    //atom1.torq = (Vec3d){0.1,0.0,0.0};
+    //atom1.moveRotGD(0.8);
+    //printf( "qrot (%g,%g,%g,%g)\n", atom1.qrot.x, atom1.qrot.y, atom1.qrot.z, atom1.qrot.w );
+    
+    glColor3f(1.0,1.0,1.0);
+    //drawRigidAtom( atom1 );
 
-    glColor3f(0.0,0.0,0.0);
-    Draw3D::drawPointCross( atom1.pos, 0.1 );
-    for(int i=0; i<N_BOND_MAX; i++){
-        //printf( "%i (%g,%g,%g)\n", i, type1.bh0s[i].x, type1.bh0s[i].y, type1.bh0s[i].z );
-        //printf( "%i (%g,%g,%g)\n", i, bhs[i].x, bhs[i].y, bhs[i].z );
-        Draw3D::drawVecInPos( bhs[i], atom1.pos );
-    }
+    double fsc = 0.1;
+    double tsc = 0.1;
+    for(int i=0; i<ff.natom; i++){ 
+        glColor3f(1.0,1.0,1.0); drawRigidAtom(ff.atoms[i]); 
+        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( ff.atoms[i].force*fsc, ff.atoms[i].pos  );
+        glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( ff.atoms[i].torq*tsc,  ff.atoms[i].pos  );
+    };
+
+
+    printf("npoints %i Emin %g Emax %g \n",npoints, Emin, Emax);
+    glPointSize(5);
+    drawScalarArray( npoints, points, Energies, Emin, Emax );
+/*
+    glColor3f(0.0,1.0,0.0);
+    drawVectorArray( npoints, points, Forces, 0.02 );
+*/
 
     Draw3D::drawAxis( 1.0);
 
