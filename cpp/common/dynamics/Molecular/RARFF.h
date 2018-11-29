@@ -70,7 +70,8 @@ void rotateVectors(int n, const Quat4TYPE<T>& qrot, Vec3TYPE<T>* h0s, Vec3TYPE<T
     qrot.toMatrix(mrot);
     for( int j=0; j<n; j++ ){
         Vec3TYPE<T> h;
-        mrot.dot_to_T    ( h0s[j], h );
+        //mrot.dot_to_T    ( h0s[j], h );
+        mrot.dot_to      ( h0s[j], h );
         hs[j] = h;
         //ps[j].set_add_mul( pos, p_, r0 );
     }
@@ -83,6 +84,8 @@ struct RigidAtomType{
     double bcore = -0.7;
     double abond = -2.0;
     double bbond = -1.1;
+    double c6    = -100.0;
+    double R2vdW =  8.0;
     Vec3d* bh0s = (Vec3d*)sp3_hs;
 
     inline void combine(const RigidAtomType& a, const RigidAtomType& b ){
@@ -92,12 +95,17 @@ struct RigidAtomType{
         abond  = -(a.abond  * b.abond); 
         bbond  = a.bbond  + b.bbond ;
         rbond0 = a.rbond0 + b.rbond0;
+
+        c6    = -(a.c6  * b.c6); 
+        R2vdW = a.R2vdW + a.R2vdW;
     }
 
     void print(){
         printf( "nbond %i rbond0 %g\n", nbond, rbond0 );
         printf( "abond %g bbond  %g\n", abond, bbond );
         printf( "acore %g bcore  %g\n", acore, bcore );
+        printf( "c6 %g r2vdW  %g\n", c6, R2vdW );
+        //exit(0);
     }
 };
 
@@ -109,7 +117,13 @@ struct RigidAtom{
     Vec3d torq;
     Vec3d force;
 
+    Vec3d omega;
+    Vec3d vel;
+
+    inline void cleanAux(){  vel=Vec3dZero; omega=Vec3dZero; torq=Vec3dZero; force=Vec3dZero; };
+
     inline void cleanForceTorq(){ torq=Vec3dZero; force=Vec3dZero; };
+
     inline void setPose(const Vec3d& pos_, const Quat4d& qrot_ ){ pos=pos_; qrot=qrot_; };
 
     inline void moveRotGD(double dt){   
@@ -119,12 +133,35 @@ struct RigidAtom{
 
     inline void movePosGD(double dt){ pos.add_mul(force,dt); }
 
+    inline void moveMDdamp( double dt, double invRotMass, double damp ){
+
+        vel  .set_lincomb( damp, vel,   dt,             force );
+        omega.set_lincomb( damp, omega, dt*invRotMass,  torq  );
+
+        pos.add_mul    ( vel, dt    );
+        qrot.dRot_exact( dt,  omega );
+        qrot.normalize();
+    }
+
+/*
+    inline moveMDcos( double dt, double invRotMass, damp ){
+        //calculate damp for the whole thing 
+        //double cvel = vel  .dot(force)/sqrt( vel.norm2()*vel.norm2() );
+        //double crot = omega.dot(torq )/sqrt( vel.norm2()*vel.norm2() );
+        vel  .set_lincomb( damp, dt,          , vel, force );
+        omega.set_lincomb( damp, dt*invRotMass, vel, torq  );
+        pos.add_mul(force,dt);
+        qrot.dRot_exact( dt, torq );
+        qrot.normalize();
+    }
+*/
+
 };
 
 
 class RARFF{ public:
 
-    double invMassRot = 2.0;
+    double invRotMass = 2.0;
 
     int natom    =0;
     RigidAtomType* types=0;
@@ -135,24 +172,35 @@ class RARFF{ public:
         _realloc(atoms,natom);
     }
 
-    inline double pairEF( const Vec3d& dij, const RigidAtomType& type, Vec3d* bhs, Vec3d& force, Vec3d& torq ){
-        double rij = dij.norm() + R1SAFE;
+    inline double pairEF( const Vec3d& dij, RigidAtomType& type, Vec3d* bhs, Vec3d& force, Vec3d& torq ){
+    //inline double pairEF( const Vec3d& dij, const RigidAtomType& type, Vec3d* bhs, Vec3d& force, Vec3d& torq ){
 
-        double eij = type.acore*exp(type.bcore*rij);
+        double r2  = dij.norm2();
+        double rij = sqrt( r2 + R2SAFE);
+
+        double eij  = type.acore*exp(type.bcore*rij);
+
+        //type.R2vdW =  16.0;
+        //type.c6    = -10000.0;
+
+        double ir2vdW = 1/(r2 + type.R2vdW);
+        double evdW   =  type.c6*ir2vdW*ir2vdW*ir2vdW;
+
         //Vec3d  fij = dij*( -eij*type.bcore );
         //printf( "fij (%g,%g,%g)\n", fij.x,fij.y,fij.z );
         //force.add(fij);
 
         //force=dij*(( -eij*type.bcore )/rij);
-        force=dij*(( eij*type.bcore )/rij);
+        force=dij*( eij*type.bcore/rij - 6*evdW*ir2vdW );
         torq =Vec3dZero;
 
-        double E = eij;
+        double E = eij + evdW;
         //double E = 0;
 
         //printf("\n", type.nbond );
 
         // bonds interactions
+        
         
         for(int ib=0; ib<type.nbond; ib++){
         //for(int ib=0; ib<1; ib++){
@@ -160,7 +208,6 @@ class RARFF{ public:
                 Vec3d  db = bhs[ib]*type.rbond0;
 
                 Vec3d  d  = dij - db;
-                //double r  = d.norm() + R1SAF
 
                 const double R2BOND = 0.1;
                 double r  = sqrt( d.norm2() + R2BOND );
@@ -174,7 +221,8 @@ class RARFF{ public:
                 E += e;
                 Vec3d f =  d*fr;
                 force.add( f );
-                torq .add_cross( f, db            );
+                //torq .add_cross( f, db            );
+                torq .sub_cross( f, db            );
         }
         
 
@@ -216,50 +264,38 @@ class RARFF{ public:
                 atomi.force.add(force);
                 atomj.force.sub(force);
 
-                /*
-                // core-core interactions
-
-                double acore = typei.acore * typej.acore ;  // TODO
-                double bcore = typei.bcore + typej.bcore ;
-                double abond = typei.abond * typej.abond ; 
-                double bbond = typei.bbond + typej.bbond ;
-
-                Vec3d  dij = atomj.pos - pi;
-                double rij = dij.norm();
-
-                double eij = acore*exp(bcore*rij);
-                Vec3d  fij = dij*( eij*bcore );
-
-                atomi.force.sub(fij);
-                atomj.force.add(fij);
-
-                double rbond0 = typei.rbond0 + typej.rbond0;
-
-                // bonds interactions
-                for(int ib=0; ib<nbi; ib++){
-
-                        Vec3d  db = bhs[ib]*rbond0;
-
-                        Vec3d  d  = dij + db;
-                        double r  = d.norm();
-
-                        double e = abond*exp(bbond*r);
-                        Vec3d f  = d*( e*bbond );
-
-                        atomi.torq .add_cross(f,db);
-                        atomi.force.add(f);
-                        atomj.force.sub(f);
-
-                }
-                */
             }
         }
     }
 
+    void getCos( double& cosdRot, double& cosdPos ){
+        double crot=0, cpos=0, r2f=0, r2tq=0, r2vel=0, r2omg=0;
+        for(int i=0; i<natom; i++){
+            RigidAtom& atomi = atoms[i];
+            crot  += atomi.torq .dot(atomi.omega);
+            r2tq  += atomi.torq .norm2();
+            r2omg += atomi.omega.norm2();
+
+            cpos  += atomi.force.dot(atomi.vel);
+            r2f   += atomi.force.norm2();
+            r2vel += atomi.vel  .norm2();
+        }
+        cosdRot = crot/sqrt(r2tq*r2omg);
+        cosdPos = cpos/sqrt(r2f *r2vel);
+        //return  + ;
+    }
+
+
     void move(double dt){
         for(int i=0; i<natom; i++){
-            atoms[i].moveRotGD(dt*invMassRot);
+            atoms[i].moveRotGD(dt*invRotMass);
             atoms[i].movePosGD(dt);
+        }
+    }
+
+    void moveMDdamp(double dt, double damp){
+        for(int i=0; i<natom; i++){
+           atoms[i].moveMDdamp( dt, invRotMass, damp);
         }
     }
 

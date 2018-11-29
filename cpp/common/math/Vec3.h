@@ -112,6 +112,7 @@ class Vec3TYPE{
 
     inline VEC& set_cross( const VEC& a, const VEC& b ){ x =a.y*b.z-a.z*b.y; y =a.z*b.x-a.x*b.z; z =a.x*b.y-a.y*b.x; return *this;};
 	inline VEC& add_cross( const VEC& a, const VEC& b ){ x+=a.y*b.z-a.z*b.y; y+=a.z*b.x-a.x*b.z; z+=a.x*b.y-a.y*b.x; return *this;};
+	inline VEC& sub_cross( const VEC& a, const VEC& b ){ x-=a.y*b.z-a.z*b.y; y-=a.z*b.x-a.x*b.z; z-=a.x*b.y-a.y*b.x; return *this;};
 
 	TYPE makeOrthoU( const VEC& a ){ TYPE c = dot(a);          add_mul(a, -c); return c; }
 	TYPE makeOrtho ( const VEC& a ){ TYPE c = dot(a)/a.norm(); add_mul(a, -c); return c; }
@@ -356,6 +357,7 @@ class Vec3TYPE{
     }
 
     inline VEC& fromRandomCube( double d ){ x=randf(-d,d); y=randf(-d,d); z=randf(-d,d);  return *this; }
+    inline VEC& fromRandomBox( const VEC& vmin, const VEC& vmax ){ x=randf(vmin.x,vmax.x); y=randf(vmin.y,vmax.y); z=randf(vmin.z,vmax.z);  return *this; }
 
     inline VEC& fromLinearSolution( const VEC& va, const VEC& vb, const VEC& vc, const VEC& p ){
         // https://en.wikipedia.org/wiki/Cramer%27s_rule
