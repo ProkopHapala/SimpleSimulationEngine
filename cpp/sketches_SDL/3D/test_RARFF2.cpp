@@ -30,7 +30,8 @@
 
 //#include "MMFF.h"
 
-#include "RARFF.h"
+//#include "RARFF.h"
+#include "RARFF2.h"
 
 #define R2SAFE  1.0e-8f
 
@@ -103,7 +104,7 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     bool bRun = true;
 
-    RARFF ff;
+    RARFF2 ff;
 
     Plot2D plot1;
 
@@ -131,7 +132,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     // for exp
     type1.nbond = 3;  // number bonds
-    type1.rbond0 = 0.5;
+    type1.rbond0 = 0.7;
     type1.acore =  4.0;
     type1.bcore = -0.7;
     type1.abond =  3.0;
@@ -200,6 +201,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 */
 
 
+    /*
     srand(0);
     //srand(2);
 
@@ -211,8 +213,11 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         ff.atoms[i].qrot.setRandomRotation();
         ff.atoms[i].cleanAux();
     }
+    */
 
-
+    ff.realloc(2);
+    ff.atoms[0].setPose( (Vec3d){0.0,0.0,0.0}, Quat4dIdentity );  ff.atoms[0].type=&type1;
+    ff.atoms[1].setPose( (Vec3d){2.0,1.0,0.0}, Quat4dFront    );  ff.atoms[1].type=&type1;
 
     //ff.realloc(2);
     //ff.atoms[0].setPose( (Vec3d){1.0,0.0, -1.0}, Quat4dIdentity ); ff.atoms[0].type=&type2;
@@ -222,10 +227,19 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.atoms[0].setPose( (Vec3d){0.2,1.0, -1.0}, Quat4dIdentity ); ff.atoms[0].type=&type1;
     //ff.atoms[1].setPose( (Vec3d){1.0,0.0, -1.0}, Quat4dFront    ); ff.atoms[1].type=&type1;
 
-
     atom1.type = &type1;
     atom1.pos  = Vec3dZero;
     atom1.qrot = Quat4dIdentity;
+
+    RigidAtomType pairType;
+    pairType.combine(type1,type1);
+    printf(" >>> pairType: <<<<\n");
+    pairType.print();
+
+    ff.projectBonds();
+    ff.pairEF( 0, 1, 3,3, pairType );
+    //exit(0);
+
 
     int nx      = 100;
     int ny      = 100;
@@ -237,26 +251,19 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     makeSamples({nx,ny},{-5.0,-5.0,0.2},{10.0,0.0,0.0},{0.0,10.0,0.0},points);
 
-    RigidAtomType pairType;
-    pairType.combine(type1,type1);
-
-    printf(" >>> pairType: <<<<\n");
-    pairType.print();
     //exit(0);
 
-
-    Vec3d bhs[N_BOND_MAX];
-    rotateVectors<double>(N_BOND_MAX, atom1.qrot, atom1.type->bh0s, bhs );
+    ff.projectBonds();
     for(int i=0; i<npoints; i++){
-        Vec3d torq;
-        Vec3d dij   = points[i] - atom1.pos;
-        Energies[i] = ff.pairEF( dij, pairType, bhs, Forces[i], torq );
-        //printf( "%i p:(%g,%g,%g) E: %g\n", i, points[i].x, points[i].y, points[i].z, Energies[i] );
+        ff.atoms[1].pos  = points[i];
+        Energies[i]   = ff.pairEF( 0, 1, 3,3, pairType );
+        Forces[i]     = ff.atoms[0].force;
+        printf( "%i p:(%g,%g,%g) E: %g\n", i, points[i].x, points[i].y, points[i].z, Energies[i] );
     }
     //exit(0);
 
 
-
+    /*
     // PLOT FOCRE FIELD
 
     DataLine2D * line_Er = new DataLine2D(100);
@@ -303,12 +310,15 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     }
     //exit(0);
     plot1.render();
+    */
 
     // PLOT FOCRE FIELD 1D
 
     ff.cleanAtomForce();
     ff.interEF();
     VecN::minmax(npoints, Energies, Emin, Emax);
+
+    Emax = -Emin;
 
 }
 
@@ -318,6 +328,7 @@ void TestAppRARFF::draw(){
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
 
+    bRun = false;
     if(bRun){
         ff.cleanAtomForce();
         ff.interEF();
@@ -350,12 +361,10 @@ void TestAppRARFF::draw(){
         glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( ff.atoms[i].torq*tsc,  ff.atoms[i].pos  );
     };
 
-
-/*
     printf("npoints %i Emin %g Emax %g \n",npoints, Emin, Emax);
     glPointSize(5);
     drawScalarArray( npoints, points, Energies, Emin, Emax );
-*/
+
 /*
     glColor3f(0.0,1.0,0.0);
     drawVectorArray( npoints, points, Forces, 0.02 );

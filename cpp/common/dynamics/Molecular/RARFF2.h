@@ -159,78 +159,115 @@ struct RigidAtom{
 };
 
 
-class RARFF{ public:
+class RARFF2{ public:
 
     double invRotMass = 2.0;
 
-    int natom    =0;
-    RigidAtomType* types=0;
-    RigidAtom*     atoms=0;
+    int natom            =0;
+    RigidAtomType* types =0;
+    RigidAtom*     atoms =0;
+    Vec3d*         hbonds=0;
+    Vec3d*         fbonds=0;
 
     void realloc(int natom_){
         natom=natom_;
-        _realloc(atoms,natom);
+        _realloc(atoms,natom   );
+        _realloc(hbonds,natom*4);
+        _realloc(fbonds,natom*4);
     }
 
-    inline double pairEF( const Vec3d& dij, RigidAtomType& type, Vec3d* bhs, Vec3d& force, Vec3d& torq ){
+    inline double pairEF( int ia, int ja, int nbi, int nbj, RigidAtomType& type){
     //inline double pairEF( const Vec3d& dij, const RigidAtomType& type, Vec3d* bhs, Vec3d& force, Vec3d& torq ){
 
+        //printf( "==================== pairEF : \n" );
+        Vec3d  dij = atoms[ja].pos - atoms[ia].pos;
         double r2  = dij.norm2();
         double rij = sqrt( r2 + R2SAFE);
+        Vec3d hij  = dij*(1/rij);
 
-        double eij  = type.acore*exp(type.bcore*rij);
+        //type.bcore  = -1.8;
+        //type.acore  =  1.0;
+        //type.rbond0 =  1.2;
 
-        //type.R2vdW =  16.0;
-        //type.c6    = -10000.0;
+        double expar = exp(type.bcore*(rij-type.rbond0) );
+        double E     =    type.acore*expar*expar;
+        double Eb    = -2*type.acore*expar;
 
-        double ir2vdW = 1/(r2 + type.R2vdW);
-        double evdW   =  type.c6*ir2vdW*ir2vdW*ir2vdW;
-
-        //Vec3d  fij = dij*( -eij*type.bcore );
-        //printf( "fij (%g,%g,%g)\n", fij.x,fij.y,fij.z );
-        //force.add(fij);
-
-        //force=dij*(( -eij*type.bcore )/rij);
-        force=dij*( eij*type.bcore/rij - 6*evdW*ir2vdW );
-        torq =Vec3dZero;
-
-        double E = eij + evdW;
-        //double E = 0;
-
-        //printf("\n", type.nbond );
-
-        // bonds interactions
+        //E += Eb;
+        //E = 0;
 
 
-        for(int ib=0; ib<type.nbond; ib++){
+        //E += Eb;
+        //double E = sq( 1-exp( -1.8*(rij-1.4) ) );
+        //double Eb = 0;
+        //return E;
+        double fr    =  2*type.bcore* E ;
+        double frb   =    type.bcore* Eb;
+
+        Vec3d force=hij*fr;
+
+        Vec3d* his = hbonds+ia*N_BOND_MAX;
+        Vec3d* hjs = hbonds+ja*N_BOND_MAX;
+        Vec3d* fis = fbonds+ia*N_BOND_MAX;
+        Vec3d* fjs = fbonds+ja*N_BOND_MAX;
+
+        //torq =Vec3dZero;
+        //printf( "eij %g \n", eij );
+        //printf( "hij (%g,%g,%g) \n", dij.x, dij.y, dij.z, hij.x, hij.y, hij.z );
+
+
+        //printf("nbi %i nbj %i \n", nbi, nbj);
+        for(int ib=0; ib<nbi; ib++){
         //for(int ib=0; ib<1; ib++){
+            const Vec3d& hi = his[ib];
+            Vec3d& fi       = fis[ib];
+            double ci       = hij.dot( hi );   // ci = <hi|hij>
+            //printf( "ci  %g \n", ci );
+            if(ci<0) continue;
 
-                Vec3d  db = bhs[ib]*type.rbond0;
+            for(int jb=0; jb<nbj; jb++){
+            //for(int jb=0; jb<1; jb++){
+                const Vec3d& hj = hjs[jb];
+                double cj       = hij.dot( hj );  // cj  = <hj|hij>
+                double cij      = hi .dot( hj );  // cij = <hj|hi>
 
-                Vec3d  d  = dij - db;
+                //printf( "  ia(%i,%i) ib(%i,%i) nb(%i,%i)  c i,j,ij %g %g %g \n", ia, ja, ib, jb,  nbi,nbj,   ci, cj, cij );
 
-                const double R2BOND = 0.1;
-                double r  = sqrt( d.norm2() + R2BOND );
+                if( (cj>0)||(cij>0) ) continue;
 
-                double e,fr;
-                e  = type.abond*exp(type.bbond*r);
-                fr = e*type.bbond/r;
-                //overlapFE(r,type.abond,-type.bbond,e,fr);
+                Vec3d& fj = fjs[jb];
 
-                //printf( "ib %i rij %g r %g eij %g e %g abond  %g  acore %g \n", ib, rij, r, eij, e, type.abond, type.acore  );
-                E += e;
-                Vec3d f =  d*fr;
-                force.add( f );
-                //torq .add_cross( f, db            );
-                torq .sub_cross( f, db            );
+                double cc  = ci*cj*cij;
+                double cc2 = cc*cc;
+                double e   = cc2*cc2;
+                double de  = 4*cc2*cc;
+
+                //printf( "e %g Eb %g \n", e, Eb );
+
+                E += e * Eb;
+
+                // derivative by dij
+                Vec3d f; // d_E/d_hij
+                force.x = ( cj*hi.x + ci*hj.x )*cij*de*Eb +    hij.x*frb*e;
+                force.y = ( cj*hi.y + ci*hj.y )*cij*de*Eb +    hij.y*frb*e;
+                force.z = ( cj*hi.z + ci*hj.z )*cij*de*Eb +    hij.z*frb*e;
+
+                fi.x = ( cij*cj*hij.x + ci*cj*hj.x )*de*Eb;
+                fi.x = ( cij*cj*hij.y + ci*cj*hj.y )*de*Eb;
+                fi.x = ( cij*cj*hij.z + ci*cj*hj.z )*de*Eb;
+
+                fj.x = ( cij*ci*hij.x + ci*cj*hi.x )*de*Eb;
+                fj.x = ( cij*ci*hij.y + ci*cj*hi.y )*de*Eb;
+                fj.x = ( cij*ci*hij.z + ci*cj*hi.z )*de*Eb;
+
+            }
         }
 
 
+        //printf( "E %g \n", E );
         //exit(0);
         return E;
     }
-
-    void cleanAtomForce(){ for(int i=0; i<natom; i++){ atoms[i].cleanForceTorq(); } }
 
     double interEF(){
         //Vec3d bps[N_BOND_MAX];
@@ -238,33 +275,24 @@ class RARFF{ public:
         double E = 0;
 
         for(int i=0; i<natom; i++){
-        //for(int i=0; i<1; i++){
-        //for(int i=1; i<2; i++){
             RigidAtom&     atomi = atoms[i];
             RigidAtomType& typei = *atomi.type;
             //int            nbi   = typei.nbond;
             Vec3d           pi   = atomi.pos;
-
-            rotateVectors<double>(N_BOND_MAX, atomi.qrot, typei.bh0s, bhs );
-
             for(int j=0; j<natom; j++){
-                RigidAtom&     atomj = atoms[j];
-                //RigidAtomType& typej = *atomi.type;
-
+                RigidAtom&    atomj = atoms[j];
                 RigidAtomType pairType;
                 pairType.combine( typei, *atomj.type );
-
-                Vec3d  dij = atomj.pos - pi;
-
-                Vec3d force=Vec3dZero;
-                Vec3d torq =Vec3dZero;
-                E += pairEF(dij,pairType,bhs,force,torq);
-
-                atomi.torq .add(torq);
-                atomi.force.add(force);
-                atomj.force.sub(force);
-
+                E += pairEF( i, j, atomi.type->nbond, atomj.type->nbond, pairType );
             }
+        }
+    }
+
+    void cleanAtomForce(){ for(int i=0; i<natom; i++){ atoms[i].cleanForceTorq(); } }
+
+    double projectBonds(){
+        for(int i=0; i<natom; i++){
+            rotateVectors( N_BOND_MAX, atoms[i].qrot, atoms[i].type->bh0s, hbonds + i*N_BOND_MAX );
         }
     }
 
