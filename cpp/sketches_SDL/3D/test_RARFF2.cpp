@@ -316,7 +316,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
         //printf( "line_Er %i x %g y %g dy %g dyn %g \n", i, line_Er->xs[i], line_Er->ys[i], line_Fr->ys[i], line_Frn->ys[i] );
     }
-    exit(0);
+    //exit(0);
     plot1.render();
     
 
@@ -328,6 +328,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     Emax = -Emin;
 
+
+    ff.atoms[1].pos = (Vec3d){1.0,1.0,1.0};
+
 }
 
 void TestAppRARFF::draw(){
@@ -336,15 +339,21 @@ void TestAppRARFF::draw(){
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
 
-    bRun = false;
+    //bRun = false;
     if(bRun){
         ff.cleanAtomForce();
         ff.interEF();
-        ff.evalTorques();
+        //ff.evalTorques();
+        printf( " fatom[0] (%g,%g,%g) fatom[1] (%g,%g,%g) \n", ff.atoms[0].force.x,ff.atoms[0].force.y,ff.atoms[0].force.z,    ff.atoms[1].force.x,ff.atoms[1].force.y,ff.atoms[1].force.z );
         //ff.move(0.005);
+        ff.move(0.001);
+        printf( "  atom[0] (%g,%g,%g)  atom[1] (%g,%g,%g) \n", ff.atoms[0].pos.x,ff.atoms[0].pos.y,ff.atoms[0].pos.z,    ff.atoms[1].pos.x,ff.atoms[1].pos.y,ff.atoms[1].pos.z );
         //ff.moveMDdamp(0.1, 0.9);
     }
-
+    if( frameCount>10 ){
+        //bRun=0;
+        //exit(0);
+    }
 
     glColor3f(1.0,1.0,1.0);
     //drawRigidAtom( atom1 );
@@ -363,9 +372,11 @@ void TestAppRARFF::draw(){
         glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( ff.atoms[i].torq*tsc,  ff.atoms[i].pos  );
     };
 
+/*
     printf("npoints %i Emin %g Emax %g \n",npoints, Emin, Emax);
     glPointSize(5);
     drawScalarArray( npoints, points, Energies, Emin, Emax );
+*/
 
 /*
     glColor3f(0.0,1.0,0.0);

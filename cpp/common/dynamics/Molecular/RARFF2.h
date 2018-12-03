@@ -293,18 +293,18 @@ class RARFF2{ public:
                 //printf( "fx,e,de,cjhi,cihj,cij %g %g %g (%g=%g*%g) (%g=%g*%g) %g \n", force.x, e, de, cj*hi.x,cj,hi.x,    ci*hj.x,ci,hj.x,    cij );
 
                 fi.x += ( cij*cj*hij.x + ci*cj*hj.x )*de*Eb;
-                fi.x += ( cij*cj*hij.y + ci*cj*hj.y )*de*Eb;
-                fi.x += ( cij*cj*hij.z + ci*cj*hj.z )*de*Eb;
+                fi.y += ( cij*cj*hij.y + ci*cj*hj.y )*de*Eb;
+                fi.z += ( cij*cj*hij.z + ci*cj*hj.z )*de*Eb;
 
                 fj.x += ( cij*ci*hij.x + ci*cj*hi.x )*de*Eb;
-                fj.x += ( cij*ci*hij.y + ci*cj*hi.y )*de*Eb;
-                fj.x += ( cij*ci*hij.z + ci*cj*hi.z )*de*Eb;
+                fj.y += ( cij*ci*hij.y + ci*cj*hi.y )*de*Eb;
+                fj.z += ( cij*ci*hij.z + ci*cj*hi.z )*de*Eb;
 
             }
         }
 
-        atoms[ja].force.add(force);
-        atoms[ia].force.sub(force);
+        atoms[ja].force.sub(force);
+        atoms[ia].force.add(force);
 
         //printf( "E %g \n", E );
         //exit(0);
@@ -354,7 +354,7 @@ class RARFF2{ public:
 
     void move(double dt){
         for(int i=0; i<natom; i++){
-            atoms[i].moveRotGD(dt*invRotMass);
+            //atoms[i].moveRotGD(dt*invRotMass);
             atoms[i].movePosGD(dt);
         }
     }
