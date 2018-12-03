@@ -91,9 +91,13 @@ void drawRigidAtom( RigidAtom& atom ){
 template<typename Func> void numDeriv( Vec3d p, double d, Vec3d& f, Func func){
     //double e0 = Efunc(p);
     double d_=d*0.5;
-    p.x+=d_; f.x = func(p); p.x-=d; f.x-=func(p); p.x+=d_;
-    p.y+=d_; f.y = func(p); p.y-=d; f.y-=func(p); p.y+=d_;
-    p.z+=d_; f.z = func(p); p.z-=d; f.z-=func(p); p.z+=d_;
+    //p.x+=d_; f.x = func(p); p.x-=d; f.x-=func(p); p.x+=d_;
+    //p.y+=d_; f.y = func(p); p.y-=d; f.y-=func(p); p.y+=d_;
+    //p.z+=d_; f.z = func(p); p.z-=d; f.z-=func(p); p.z+=d_;
+    Vec3d p0=p;
+    p.x=p0.x+d_; f.x = func(p); p.x-=d; f.x-=func(p); p.x+=d_;
+    p.y=p0.y+d_; f.y = func(p); p.y-=d; f.y-=func(p); p.y+=d_;
+    p.z=p0.z+d_; f.z = func(p); p.z-=d; f.z-=func(p); p.z+=d_;
     f.mul(1/d);
 }
 
@@ -262,8 +266,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     }
     //exit(0);
 
-
-    /*
+    
     // PLOT FOCRE FIELD
 
     DataLine2D * line_Er = new DataLine2D(100);
@@ -288,29 +291,34 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     plot1.lines.push_back( line_Frn );
     plot1.render();
 
-    Vec3d p0 = (Vec3d){0.0,0.0,0.0};
-    Vec3d dp = (Vec3d){1.0,0.0,0.0};   dp.normalize();
+    Vec3d p0 = (Vec3d){0.1, 0.2,0.3};
+    Vec3d dp = (Vec3d){1.0, 0.0,0.0};   dp.normalize();
 
     for(int i=0; i<line_Er->n; i++){
-        Vec3d f,fnum,torq;
+        Vec3d f,fnum;
         double x = line_Er->xs[i];
-        Vec3d dij   = (p0+dp*x) - atom1.pos;
-        double E = ff.pairEF( dij, pairType, bhs, f, torq );
-        numDeriv( dij, 0.01, fnum, [&](Vec3d p){
-            Vec3d f_,tq_;
-            return ff.pairEF( p, pairType, bhs, f_, tq_ );
+        Vec3d p = (p0+dp*x);
+        ff.atoms[1].pos = p;
+        ff.cleanAtomForce();
+        double E = ff.pairEF( 0,1,3,3, pairType );
+        f        = ff.atoms[1].force;
+        //printf("fnum: \n");
+        numDeriv( p, 0.01, fnum, [&](Vec3d p){
+            ff.atoms[1].pos=p;
+            //printf("fnum p : %g %g %g \n", p.x, p.y, p.z );
+            return ff.pairEF( 0,1,3,3, pairType );
         } );
-        //printf( "%i p(%g,%g,%g) E %g f(%g,%g,%g) fnum(%g,%g,%g) \n", i, dij.x, dij.y, dij.z, E,   f.x,f.y,f.z,  fnum.x,fnum.y,fnum.z );
+        printf( "%i p(%g,%g,%g) E %g f(%g,%g,%g) fnum(%g,%g,%g) \n", i, p.x,p.y,p.z, E,   f.x,f.y,f.z,  fnum.x,fnum.y,fnum.z );
 
-        line_Er ->ys[i]  = E*10.0;
-        line_Fr ->ys[i] = dp.dot(f   )*-10.0;
-        line_Frn->ys[i] = dp.dot(fnum)*-10.0;
+        line_Er ->ys[i] = E*10.0;
+        line_Fr ->ys[i] = dp.dot(f   );
+        line_Frn->ys[i] = dp.dot(fnum);
 
-        printf( "line_Er %i x %g y %g dy %g dyn %g \n", i, line_Er->xs[i], line_Er->ys[i], line_Fr->ys[i], line_Frn->ys[i] );
+        //printf( "line_Er %i x %g y %g dy %g dyn %g \n", i, line_Er->xs[i], line_Er->ys[i], line_Fr->ys[i], line_Frn->ys[i] );
     }
-    //exit(0);
+    exit(0);
     plot1.render();
-    */
+    
 
     // PLOT FOCRE FIELD 1D
 
@@ -332,23 +340,11 @@ void TestAppRARFF::draw(){
     if(bRun){
         ff.cleanAtomForce();
         ff.interEF();
+        ff.evalTorques();
         //ff.move(0.005);
-        ff.moveMDdamp(0.1, 0.9);
-
-        /*
-        double cosdRot,cosdPos;
-        ff.getCos( cosdRot, cosdPos );
-        double damp = fmax( 0.9, fmin(cosdRot,cosdPos) );
-        printf( "cosdRot %g cosdRot %g damp %g \n", cosdRot, cosdPos, damp );
-        ff.moveMDdamp(0.1, damp );
-        */
-
+        //ff.moveMDdamp(0.1, 0.9);
     }
 
-    //Vec3d bhs[N_BOND_MAX];
-    //atom1.torq = (Vec3d){0.1,0.0,0.0};
-    //atom1.moveRotGD(0.8);
-    //printf( "qrot (%g,%g,%g,%g)\n", atom1.qrot.x, atom1.qrot.y, atom1.qrot.z, atom1.qrot.w );
 
     glColor3f(1.0,1.0,1.0);
     //drawRigidAtom( atom1 );
@@ -357,6 +353,12 @@ void TestAppRARFF::draw(){
     double tsc = 0.1;
     for(int i=0; i<ff.natom; i++){
         glColor3f(1.0,1.0,1.0); drawRigidAtom(ff.atoms[i]);
+
+        for(int ib=0; ib<ff.atoms[i].type->nbond; ib++){
+            int io=4*i+ib;
+            glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( ff.fbonds[io]*fsc, ff.atoms[i].pos+ff.hbonds[io] );
+        }
+
         glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( ff.atoms[i].force*fsc, ff.atoms[i].pos  );
         glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( ff.atoms[i].torq*tsc,  ff.atoms[i].pos  );
     };
