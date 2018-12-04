@@ -169,8 +169,8 @@ class RARFF2{ public:
     void realloc(int natom_){
         natom=natom_;
         _realloc(atoms,natom   );
-        _realloc(hbonds,natom*4);
-        _realloc(fbonds,natom*4);
+        _realloc(hbonds,natom*N_BOND_MAX);
+        _realloc(fbonds,natom*N_BOND_MAX);
     }
 
     inline double pairEF( int ia, int ja, int nbi, int nbj, RigidAtomType& type){
@@ -292,13 +292,13 @@ class RARFF2{ public:
                 //printf( "e,de,fx,hi,hj,hij,ci,cj,cij %g %g %g (%g,%g,%g) (%g,%g,%g) \n", e, de, force.x, hi.x, hj.x, hij.x, ci, cj, cij );
                 //printf( "fx,e,de,cjhi,cihj,cij %g %g %g (%g=%g*%g) (%g=%g*%g) %g \n", force.x, e, de, cj*hi.x,cj,hi.x,    ci*hj.x,ci,hj.x,    cij );
 
-                fi.x += ( cij*cj*hij.x + ci*cj*hj.x )*de*Eb;
-                fi.y += ( cij*cj*hij.y + ci*cj*hj.y )*de*Eb;
-                fi.z += ( cij*cj*hij.z + ci*cj*hj.z )*de*Eb;
+                fi.x -= ( cij*cj*hij.x + ci*cj*hj.x )*de*Eb;
+                fi.y -= ( cij*cj*hij.y + ci*cj*hj.y )*de*Eb;
+                fi.z -= ( cij*cj*hij.z + ci*cj*hj.z )*de*Eb;
 
-                fj.x += ( cij*ci*hij.x + ci*cj*hi.x )*de*Eb;
-                fj.y += ( cij*ci*hij.y + ci*cj*hi.y )*de*Eb;
-                fj.z += ( cij*ci*hij.z + ci*cj*hi.z )*de*Eb;
+                fj.x -= ( cij*ci*hij.x + ci*cj*hi.x )*de*Eb;
+                fj.y -= ( cij*ci*hij.y + ci*cj*hi.y )*de*Eb;
+                fj.z -= ( cij*ci*hij.z + ci*cj*hi.z )*de*Eb;
 
             }
         }
@@ -333,7 +333,11 @@ class RARFF2{ public:
         return E;
     }
 
-    void cleanAtomForce(){ for(int i=0; i<natom; i++){ atoms[i].cleanForceTorq(); } }
+    void cleanAtomForce(){ 
+        for(int i=0; i<natom; i++){  atoms[i].cleanForceTorq(); }
+        int nval = natom*N_BOND_MAX*3;
+        for(int i=0; i<nval; i++){ ((double*)fbonds)[i]=0; }
+    }
 
     double projectBonds(){
         for(int i=0; i<natom; i++){
@@ -347,6 +351,8 @@ class RARFF2{ public:
             //Vec3d torq = Vec3dZero; 
             for(int ib=0; ib<atomi.type->nbond; ib++){
                 int io = 4*ia+ib;
+                fbonds[io].makeOrthoU(hbonds[io]);
+                //printf( "ia %i ib %i f(%g,%g,%g)\n", ia, ib,  fbonds[io].x,fbonds[io].y,fbonds[io].z );
                 atoms[ia].torq.add_cross( hbonds[io], fbonds[io] );
             }
         }
@@ -354,7 +360,7 @@ class RARFF2{ public:
 
     void move(double dt){
         for(int i=0; i<natom; i++){
-            //atoms[i].moveRotGD(dt*invRotMass);
+            atoms[i].moveRotGD(dt*invRotMass);
             atoms[i].movePosGD(dt);
         }
     }

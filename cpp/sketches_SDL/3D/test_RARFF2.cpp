@@ -182,7 +182,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 /*
     int nang    = 6;
     ff.realloc(nang+3);
-    for(int i=0; i<ff.natom; i++){ ff.atoms[i].type=&type2; };
+    for(int i=0; i<ff.natom; i++){ ff.atoms[i].type=&type1; };
     //double dang = 2*M_PI/(nang +0.5);
     double dang = 2*M_PI/(nang +0.0);
     for(int i=0; i<nang; i++){
@@ -205,7 +205,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 */
 
 
-    /*
+    
     srand(0);
     //srand(2);
 
@@ -217,11 +217,11 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         ff.atoms[i].qrot.setRandomRotation();
         ff.atoms[i].cleanAux();
     }
-    */
+    
 
-    ff.realloc(2);
-    ff.atoms[0].setPose( (Vec3d){0.0,0.0,0.0}, Quat4dIdentity );  ff.atoms[0].type=&type1;
-    ff.atoms[1].setPose( (Vec3d){2.0,1.0,0.0}, Quat4dFront    );  ff.atoms[1].type=&type1;
+    //ff.realloc(2);
+    //ff.atoms[0].setPose( (Vec3d){0.0,0.0,0.0}, Quat4dIdentity );  ff.atoms[0].type=&type1;
+    //ff.atoms[1].setPose( (Vec3d){2.0,1.0,0.0}, Quat4dFront    );  ff.atoms[1].type=&type1;
 
     //ff.realloc(2);
     //ff.atoms[0].setPose( (Vec3d){1.0,0.0, -1.0}, Quat4dIdentity ); ff.atoms[0].type=&type2;
@@ -342,13 +342,14 @@ void TestAppRARFF::draw(){
     //bRun = false;
     if(bRun){
         ff.cleanAtomForce();
+        ff.projectBonds();
         ff.interEF();
-        //ff.evalTorques();
-        printf( " fatom[0] (%g,%g,%g) fatom[1] (%g,%g,%g) \n", ff.atoms[0].force.x,ff.atoms[0].force.y,ff.atoms[0].force.z,    ff.atoms[1].force.x,ff.atoms[1].force.y,ff.atoms[1].force.z );
+        ff.evalTorques();
+        //printf( " fatom[0] (%g,%g,%g) fatom[1] (%g,%g,%g) \n", ff.atoms[0].force.x,ff.atoms[0].force.y,ff.atoms[0].force.z,    ff.atoms[1].force.x,ff.atoms[1].force.y,ff.atoms[1].force.z );
         //ff.move(0.005);
-        ff.move(0.001);
-        printf( "  atom[0] (%g,%g,%g)  atom[1] (%g,%g,%g) \n", ff.atoms[0].pos.x,ff.atoms[0].pos.y,ff.atoms[0].pos.z,    ff.atoms[1].pos.x,ff.atoms[1].pos.y,ff.atoms[1].pos.z );
-        //ff.moveMDdamp(0.1, 0.9);
+        //ff.move(0.0002);
+        //printf( "  atom[0] (%g,%g,%g)  atom[1] (%g,%g,%g) \n", ff.atoms[0].pos.x,ff.atoms[0].pos.y,ff.atoms[0].pos.z,    ff.atoms[1].pos.x,ff.atoms[1].pos.y,ff.atoms[1].pos.z );
+        ff.moveMDdamp(0.01, 0.9);
     }
     if( frameCount>10 ){
         //bRun=0;
@@ -361,15 +362,16 @@ void TestAppRARFF::draw(){
     double fsc = 0.1;
     double tsc = 0.1;
     for(int i=0; i<ff.natom; i++){
-        glColor3f(1.0,1.0,1.0); drawRigidAtom(ff.atoms[i]);
+        //glColor3f(1.0,1.0,1.0); drawRigidAtom(ff.atoms[i]);
 
         for(int ib=0; ib<ff.atoms[i].type->nbond; ib++){
             int io=4*i+ib;
+            glColor3f(1.0,1.0,1.0); Draw3D::drawVecInPos( ff.hbonds[io], ff.atoms[i].pos );
             glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( ff.fbonds[io]*fsc, ff.atoms[i].pos+ff.hbonds[io] );
         }
 
-        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( ff.atoms[i].force*fsc, ff.atoms[i].pos  );
-        glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( ff.atoms[i].torq*tsc,  ff.atoms[i].pos  );
+        //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( ff.atoms[i].force*fsc, ff.atoms[i].pos  );
+        //glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( ff.atoms[i].torq*tsc,  ff.atoms[i].pos  );
     };
 
 /*
