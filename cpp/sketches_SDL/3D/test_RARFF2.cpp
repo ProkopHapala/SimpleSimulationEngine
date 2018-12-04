@@ -106,6 +106,8 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
     RigidAtom     atom1;
     RigidAtomType type1,type2;
 
+    int oglSph=0;
+
     bool bRun = true;
 
     RARFF2 ff;
@@ -132,25 +134,22 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
 TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     // for exp
-    type1.nbond = 3;  // number bonds
-    type1.rbond0 = 0.7;
-    type1.acore =  4.0;
-    type1.bcore = -0.7;
-    type1.abond =  3.0;
-    type1.bbond = -1.1;
+    type1.nbond  = 3;  // number bonds
+    type1.rbond0 =  0.6;
+    type1.aMorse =  1.0;
+    type1.bMorse = -0.7;
     type1.bh0s = (Vec3d*)sp2_hs;
     type1.print();
     //exit(0);
 
-    type2.nbond = 4;  // number bonds
-    type2.rbond0 = 0.5;
-    type2.acore =  4.0;
-    type2.bcore = -0.7;
-    type2.abond =  3.0;
-    type2.bbond = -1.1;
+    type2.nbond  = 4;  // number bonds
+    type2.rbond0 =  0.75;
+    type2.aMorse =  1.0;
+    type2.bMorse = -0.7;
     type2.bh0s = (Vec3d*)sp3_hs;
     type2.print();
     //exit(0);
@@ -204,8 +203,6 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.atoms[8].setPose( (Vec3d){0.0,0.0,-2.0}, Quat4dIdentity );  ff.atoms[7].type=&type2;
 */
 
-
-    
     srand(0);
     //srand(2);
 
@@ -331,6 +328,12 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     ff.atoms[1].pos = (Vec3d){1.0,1.0,1.0};
 
+    oglSph = glGenLists(1);
+    glNewList(oglSph, GL_COMPILE);
+        //Draw3D::drawSphere_oct( 3, 1.0, (Vec3d){0.0,0.0,0.0} );
+        Draw3D::drawSphere_oct( 3, 0.2, (Vec3d){0.0,0.0,0.0} );
+    glEndList();
+
 }
 
 void TestAppRARFF::draw(){
@@ -349,7 +352,7 @@ void TestAppRARFF::draw(){
         //ff.move(0.005);
         //ff.move(0.0002);
         //printf( "  atom[0] (%g,%g,%g)  atom[1] (%g,%g,%g) \n", ff.atoms[0].pos.x,ff.atoms[0].pos.y,ff.atoms[0].pos.z,    ff.atoms[1].pos.x,ff.atoms[1].pos.y,ff.atoms[1].pos.z );
-        ff.moveMDdamp(0.01, 0.9);
+        ff.moveMDdamp(0.05, 0.9);
     }
     if( frameCount>10 ){
         //bRun=0;
@@ -363,6 +366,9 @@ void TestAppRARFF::draw(){
     double tsc = 0.1;
     for(int i=0; i<ff.natom; i++){
         //glColor3f(1.0,1.0,1.0); drawRigidAtom(ff.atoms[i]);
+
+        glColor3f(0.3,0.3,0.3);
+        Draw3D::drawShape( ff.atoms[i].pos , Mat3dIdentity, oglSph );
 
         for(int ib=0; ib<ff.atoms[i].type->nbond; ib++){
             int io=4*i+ib;

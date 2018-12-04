@@ -26,6 +26,18 @@ Optimization:
     - This makes only sense if we use forcefield with cheap evaluation of torque for fixed distance
         - we can perhaps save sqrt() calculation
 
+
+Simple reactive force-field for mix of sp2 and sp3 hybridized atoms. Energy is based on Morse potential where the attractive term is multiplied by product of cosines between oriented dangling-bonds  sticking out  of atoms (the white sticks). 
+
+More specifically for two atoms with positions pi,pj (dij=pi-pj, rij=|dij|, hij = dij/rij )
+
+energy is computed as 
+E = exp( -2a(rij-r0)) - 2 K exp( -a(rij-r0) )
+
+where rij is distance  K = (ci.cj.cj) where ci=dot(hi,hij), cj=dot(hj,hij), cij=dot(hi,hj) and where hi, hj are normalized vector in direction of bonds
+
+
+
 */
 
 #define N_BOND_MAX 4
@@ -76,32 +88,29 @@ void rotateVectors(int n, const Quat4TYPE<T>& qrot, Vec3TYPE<T>* h0s, Vec3TYPE<T
 
 struct RigidAtomType{
     int    nbond = 4;  // number bonds
-    double rbond0 = 0.5;
-    double acore =  4.0;
-    double bcore = -0.7;
-    double abond = -2.0;
-    double bbond = -1.1;
+
+    double rbond0 =  0.5;
+    double aMorse =  4.0;
+    double bMorse = -0.7;
+
     double c6    = -100.0;
     double R2vdW =  8.0;
     Vec3d* bh0s = (Vec3d*)sp3_hs;
 
     inline void combine(const RigidAtomType& a, const RigidAtomType& b ){
-        nbond  = a.nbond;
-        acore  = a.acore  * b.acore ;  // TODO
-        bcore  = a.bcore  + b.bcore ;
-        abond  = -(a.abond  * b.abond);
-        bbond  = a.bbond  + b.bbond ;
-        rbond0 = a.rbond0 + b.rbond0;
+        nbond   = a.nbond;
+        aMorse  = a.aMorse * b.aMorse;  // TODO
+        bMorse  = a.bMorse + b.bMorse;
+        rbond0  = a.rbond0 + b.rbond0;
 
         c6    = -(a.c6  * b.c6);
         R2vdW = a.R2vdW + a.R2vdW;
     }
 
     void print(){
-        printf( "nbond %i rbond0 %g\n", nbond, rbond0 );
-        printf( "abond %g bbond  %g\n", abond, bbond );
-        printf( "acore %g bcore  %g\n", acore, bcore );
-        printf( "c6    %g r2vdW  %g\n", c6, R2vdW );
+        printf( "nbond  %i rbond0 %g\n", nbond, rbond0 );
+        printf( "aMorse %g bMorse %g\n", aMorse, bMorse );
+        printf( "c6     %g r2vdW  %g\n", c6, R2vdW );
         //exit(0);
     }
 };
@@ -205,9 +214,9 @@ class RARFF2{ public:
         //double Eb=0,frb=0;
 
 
-        double expar = exp( type.bcore*(rij-type.rbond0) );
-        double E     =    type.acore*expar*expar;
-        double Eb    = -2*type.acore*expar;
+        double expar = exp( type.bMorse*(rij-type.rbond0) );
+        double E     =    type.aMorse*expar*expar;
+        double Eb    = -2*type.aMorse*expar;
 
         //E += Eb;
         //E  = 0;
@@ -218,8 +227,8 @@ class RARFF2{ public:
 
         //E=0; 
         //Eb=0;
-        double fr    =  2*type.bcore* E ;
-        double frb   =    type.bcore* Eb;
+        double fr    =  2*type.bMorse* E ;
+        double frb   =    type.bMorse* Eb;
 
         //printf( "fr %g  frnum %g \n", fr, (E - type.acore*exp( 2*type.bcore*(rij-type.rbond0+0.01) )) / 0.01 );
 
