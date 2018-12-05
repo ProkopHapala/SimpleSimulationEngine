@@ -134,7 +134,6 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
 TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
-
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     // for exp
@@ -203,9 +202,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.atoms[8].setPose( (Vec3d){0.0,0.0,-2.0}, Quat4dIdentity );  ff.atoms[7].type=&type2;
 */
 
+
     srand(0);
     //srand(2);
-
     int nat = 12;
     ff.realloc(nat);
     for(int i=0; i<nat; i++){
@@ -214,7 +213,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         ff.atoms[i].qrot.setRandomRotation();
         ff.atoms[i].cleanAux();
     }
-    
+
 
     //ff.realloc(2);
     //ff.atoms[0].setPose( (Vec3d){0.0,0.0,0.0}, Quat4dIdentity );  ff.atoms[0].type=&type1;
@@ -241,7 +240,6 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.pairEF( 0, 1, 3,3, pairType );
     //exit(0);
 
-
     int nx      = 100;
     int ny      = 100;
     npoints = nx*ny;
@@ -263,7 +261,6 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     }
     //exit(0);
 
-    
     // PLOT FOCRE FIELD
 
     DataLine2D * line_Er = new DataLine2D(100);

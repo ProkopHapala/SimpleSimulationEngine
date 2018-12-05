@@ -36,8 +36,6 @@ E = exp( -2a(rij-r0)) - 2 K exp( -a(rij-r0) )
 
 where rij is distance  K = (ci.cj.cj) where ci=dot(hi,hij), cj=dot(hj,hij), cij=dot(hi,hj) and where hi, hj are normalized vector in direction of bonds
 
-
-
 */
 
 #define N_BOND_MAX 4
@@ -93,7 +91,7 @@ struct RigidAtomType{
     double aMorse =  4.0;
     double bMorse = -0.7;
 
-    double c6    = -100.0;
+    double c6    = -15.0;
     double R2vdW =  8.0;
     Vec3d* bh0s = (Vec3d*)sp3_hs;
 
@@ -213,6 +211,8 @@ class RARFF2{ public:
         //double fr = 2*rij;
         //double Eb=0,frb=0;
 
+        double ir2vdW = 1/(r2 + type.R2vdW);
+        double evdW   =  type.c6*ir2vdW*ir2vdW*ir2vdW;
 
         double expar = exp( type.bMorse*(rij-type.rbond0) );
         double E     =    type.aMorse*expar*expar;
@@ -225,9 +225,11 @@ class RARFF2{ public:
         //double Eb = 0;
         //return E;
 
-        //E=0; 
+        //evdW = 0;
+        E +=evdW; 
         //Eb=0;
-        double fr    =  2*type.bMorse* E ;
+        double fr    =  2*type.bMorse* E +   6*evdW*ir2vdW;
+        //double fr    =   6*evdW*ir2vdW;
         double frb   =    type.bMorse* Eb;
 
         //printf( "fr %g  frnum %g \n", fr, (E - type.acore*exp( 2*type.bcore*(rij-type.rbond0+0.01) )) / 0.01 );
