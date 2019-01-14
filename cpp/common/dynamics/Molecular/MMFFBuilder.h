@@ -57,6 +57,7 @@ class MMFFBuilder{  public:
     int loadMolType(const char* fname ){
         Molecule* mol = new Molecule();
         mol->atypNames = &params->atypNames;
+        if(params) params->assignREs( mol->natoms, mol->atomType, mol->REQs );
         printf("mol->atypNames %i %i \n", mol->atypNames, &params->atypNames );
         mol->loadXYZ( fname );
         molTypes.push_back(mol);

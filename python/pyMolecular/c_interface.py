@@ -87,8 +87,8 @@ def getInstancePointer( ):
 	n   = lib.getOptSize       ()
 	arr = np.ctypeslib.as_array(p,shape=(n,))
 	return arr 
-	
-# ---- testing	
+
+# ---- testing
 
 # void initComparator( int n, double * points ){
 lib.initComparator.argtypes   = [ c_int, array2d ]
@@ -102,7 +102,7 @@ lib.compDistance.argtypes   = [ array2d ]
 lib.compDistance.restype    = c_double
 def compDistance( points ):
     return lib.compDistance( points )
-	
+
 # void initComparatorT( int n, double * points, int * types ){
 lib.initComparatorT.argtypes   = [ c_int, array2d, array1i ]
 lib.initComparatorT.restype    = None
@@ -125,7 +125,7 @@ def getPlaneWaveDescriptor( points, ks, center=np.zeros(3) ):
     coefs = np.zeros( nk )
     lib.getPlaneWaveDescriptor( center, len(points), points, nk, ks, coefs )
     return coefs
-	
+
 #void testMultipole( int order, int np, double * ps, double * Qs,    int nsamples, double * psamples, double * Eref, double * Eaprox
 lib.testMultipole.argtypes   = [ c_int, c_int, array2d, array1d,  c_int, array2d, array1d, array1d ]
 lib.testMultipole.restype    = None

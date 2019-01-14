@@ -121,6 +121,7 @@ void initParams( char* fname_atomTypes, char* fname_bondTypes ){
     builder.params = &params;
     if(fname_atomTypes) params.loadAtomTypes( fname_atomTypes );
     if(fname_bondTypes) params.loadBondTypes( fname_bondTypes );
+    printf("initParams done! \n");
 }
 
 int loadMolType   ( const char* fname ){ return builder.loadMolType(fname ); };
@@ -168,6 +169,10 @@ double relaxNsteps( int nsteps, double F2conf ){
         //world.fromDym();
     }
     return F2;
+}
+
+void save2xyz( char * fname ){
+    save2xyz( fname, &world, &params ); 
 }
 
 } // extern "C"{

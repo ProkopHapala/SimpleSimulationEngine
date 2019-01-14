@@ -273,8 +273,8 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     world.allocateDyn(); 
     world.initDyn();     
     opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce ); DEBUG
-    opt.setInvMass( 1.0 );  
-    opt.cleanVel  ( );      
+    opt.setInvMass( 1.0 );
+    opt.cleanVel  ( );
     //exit(0);
     printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
     printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
