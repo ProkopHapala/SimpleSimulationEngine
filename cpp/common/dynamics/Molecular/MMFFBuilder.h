@@ -71,7 +71,7 @@ class MMFFBuilder{  public:
         return itype;
     };
 
-    void insertMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot, bool rigid ){
+    int insertMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot, bool rigid ){
         int natom0  = atoms.size();
         int nbond0  = bonds.size();
         int nangle0 = angles.size();
@@ -95,6 +95,7 @@ class MMFFBuilder{  public:
             if ( got == fragTypes.end() ) {
                 fragTypes[ mol_id ] = frags.size()-1; // WTF ?
             }else{}
+            return ifrag;
         }else{
             for(int i=0; i<mol->natoms; i++){
                 //Vec3d LJq = (Vec3d){0.0,0.0,0.0}; // TO DO : LJq can be set by type
@@ -109,15 +110,16 @@ class MMFFBuilder{  public:
             for(int i=0; i<mol->nang; i++){
                 angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}) } );
             }
+            return -1;
         }
     }
     
-    void insertMolecule( int itype, const Vec3d& pos, const Mat3d& rot, bool rigid ){
-        insertMolecule( molTypes[itype], pos, rot, rigid );
+    int insertMolecule( int itype, const Vec3d& pos, const Mat3d& rot, bool rigid ){
+        return insertMolecule( molTypes[itype], pos, rot, rigid );
     };
     
-    void insertMolecule( const std::string& molName, const Vec3d& pos, const Mat3d& rot, bool rigid ){
-        insertMolecule( molTypes[ molTypeDict[molName] ], pos, rot, rigid );
+    int insertMolecule( const std::string& molName, const Vec3d& pos, const Mat3d& rot, bool rigid ){
+        return insertMolecule( molTypes[ molTypeDict[molName] ], pos, rot, rigid );
     };
 
     void assignAtomTypes(){
