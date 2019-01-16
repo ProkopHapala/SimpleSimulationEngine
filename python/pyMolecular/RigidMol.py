@@ -92,9 +92,9 @@ def prepareOpt( ):
 
 #double relaxNsteps( int nsteps, double F2conf ){
 lib.relaxNsteps.argtypes = [c_int, c_double]
-lib.relaxNsteps.restype  = None
+lib.relaxNsteps.restype  = c_double
 def relaxNsteps( nsteps, F2conf ):
-    lib.relaxNsteps( nsteps, F2conf )
+    return lib.relaxNsteps( nsteps, F2conf )
 
 #void save2xyz( char * fname ){
 lib.save2xyz.argtypes = [c_char_p]
@@ -102,9 +102,23 @@ lib.save2xyz.restype  = None
 def save2xyz( fname ):
     lib.save2xyz( fname )
 
+#write2xyz( int i ){
+lib.write2xyz.argtypes = [c_int]
+lib.write2xyz.restype  = None
+def write2xyz( i ):
+    lib.write2xyz( i )
 
+#openf(char* fname, int i, char* mode ){
+lib.openf.argtypes = [c_char_p, c_int, c_char_p ]
+lib.openf.restype  = c_int
+def openf( fname, i, mode ):
+    return lib.openf( fname, i, mode )
 
-
+#closef(int i){
+lib.closef.argtypes = [c_int]
+lib.closef.restype  = None
+def closef( i ):
+    lib.closef( i )
 
 
 

@@ -70,6 +70,8 @@ MMFFBuilder builder;
 
 DynamicOpt  opt;
 
+std::vector<FILE*> files;
+
 //FastAtomicMetric    atomdist;
 //AtomicConfiguration conf1;
 //DistanceHierarchy<AtomicConfiguration> database;
@@ -84,10 +86,11 @@ void initRigidSubstrate( char* fname, int* ns, double* pos0, double* cell ){
     //for(auto kv : params.atypNames) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
     world.gridFF.grid.n    = *(Vec3i*)ns;
     world.gridFF.grid.pos0 = *(Vec3d*)pos0;
+    //world.gridFF.loadCell ( "inputs/cel.lvs" );
+    world.gridFF.grid.setCell( *(Mat3d*)cell );
     world.gridFF.grid.printCell();
     world.gridFF.loadXYZ     ( fname, params );
     world.translate          ( *(Vec3d*)pos0 );
-    world.genPLQ();
     world.gridFF.allocateFFs();
     //world.gridFF.evalGridFFs( {0,0,0} );
 }
@@ -108,10 +111,10 @@ void loadGridFF(){
     if(world.gridFF.FFLondon) loadBin( "data/FFLondon.bin", world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
 }
 
-void debugSaveGridFF(const char* fname, double* testREQ ){
+void debugSaveGridFF( char* fname, double* testREQ ){
     Vec3d * FFtot = new Vec3d[world.gridFF.grid.getNtot()];
     world.gridFF.evalCombindGridFF( *(Vec3d*)testREQ, FFtot );
-    saveXSF( "FFtot_z.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+    saveXSF( fname, world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
     delete [] FFtot;
 }
 
@@ -128,8 +131,8 @@ int loadMolType   ( const char* fname ){ return builder.loadMolType(fname ); };
 int insertMolecule( int itype, double* pos, double* rot, bool rigid ){ return builder.insertMolecule( itype, *(Vec3d*)pos, *(Mat3d*)rot, rigid ); };
 
 void bakeMMFF(){
-    world.printAtomInfo();
-    builder.toMMFF( &world );                                 DEBUG
+    builder.toMMFF( &world );
+    world.genPLQ();
     world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); 
@@ -139,34 +142,40 @@ void prepareOpt(){
     //opt.bindArrays( 8*world.nFrag, world.poses, world.poseVs, world.poseFs );
     world.allocateDyn(); 
     world.initDyn();     
-    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce ); DEBUG
+    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce );
     opt.setInvMass( 1.0 );
     opt.cleanVel  ( );
     //exit(0);
     //printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
     //printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
+    //DEBUG
 }
 
 double relaxNsteps( int nsteps, double F2conf ){
     double F2=1e+300;
+    //DEBUG
     for(int itr=0; itr<nsteps; itr++){
+        //printf( "===== relaxNsteps itr %i \n", itr );
         world.cleanAtomForce();
         world.frags2atoms();
-        world.eval_FFgrid();
+        if( world.gridFF.FFPauli ) world.eval_FFgrid();
         world.eval_MorseQ_On2_fragAware();
 
         world.cleanPoseTemps();
         world.aforce2frags();   
 
+        world.toDym(true);
+
         //for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.01,0.0}); } // gradient descent
         //opt.move_LeapFrog(0.01);
         //opt.move_MDquench();
         F2 = opt.move_FIRE();
+        //printf( "F2 %g dt %g \n", F2, opt.dt );
         if(F2<F2conf) break;
 
-        //world.toDym(true);
-        //world.checkPoseUnitary();
-        //world.fromDym();
+        world.checkPoseUnitary();
+        world.fromDym();
+        //DEBUG
     }
     return F2;
 }
@@ -174,5 +183,35 @@ double relaxNsteps( int nsteps, double F2conf ){
 void save2xyz( char * fname ){
     save2xyz( fname, &world, &params ); 
 }
+
+void write2xyz( int i ){
+     if( (i>=0)&&(i<files.size()) ){ write2xyz( files[i], &world, &params );  }
+}
+
+void closef(int i){ if( (i>=0)&&(i<files.size()) ) if( files[i] ) fclose( files[i] ); }
+
+int openf(char* fname, int i, char* mode ){
+    if((i<0)||(i>=files.size())){
+        i = files.size();
+        files.push_back(NULL);
+    }else{
+        closef(i);
+    }
+    files[i] = fopen(fname, "w");
+    return files.size()-1;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 } // extern "C"{

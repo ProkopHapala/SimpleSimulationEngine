@@ -27,7 +27,7 @@ void frag2atoms(const Vec3TYPE<T>& pos, const Quat4TYPE<T>& qrot, int n, Vec3TYP
         Vec3TYPE<T> Mp;
         mrot.dot_to_T( apos0[j], Mp );
         apos[j].set_add( pos, Mp );
-        printf( "frag2atoms[%i]  (%g,%g,%g) (%g,%g,%g) \n", j,  apos0[j].x, apos0[j].y, apos0[j].z,   apos[j].x, apos[j].y, apos[j].z  );
+        //printf( "frag2atoms[%i]  (%g,%g,%g) (%g,%g,%g) \n", j,  apos0[j].x, apos0[j].y, apos0[j].z,   apos[j].x, apos[j].y, apos[j].z  );
         //printf( "%i %i  (%g,%g,%g) (%g,%g,%g) \n", ifrag, j,  m_apos[j].x, m_apos[j].y, m_apos[j].z,   Tp.x, Tp.y, Tp.z  );
     }
 }
@@ -400,6 +400,7 @@ void checkPoseUnitary(){
 
 void aforce2frags(){
     // : atomic force -> force on fragment pose
+    //printf( "aforce2frags nFrag %i \n", nFrag );
     for(int ifrag=0; ifrag<nFrag; ifrag++){
         int ia = frag2a[ifrag];
         int na = fragNa[ifrag];
@@ -408,10 +409,12 @@ void aforce2frags(){
         double * pose_i  = poses +im8;
         double * poseF_i = poseFs+im8;
         for( int j=0; j<na; j++ ){
+            //printf( "atom %i pos (%g,%g,%g) force (%g,%g,%g) \n", poseF_i[0], poseF_i[0], poseF_i[0] poseF_i[0], poseF_i[0], poseF_i[0] );
             ((Quat4d*)(pose_i+4))->addForceFromPoint( m_apos[j], aforce[ia], *((Quat4d*)(poseF_i+4)) );
             ((Vec3d *)(poseF_i)) ->add( aforce[ia] );
             ia++;
         }
+        //printf( "ifrag %i fpose (%g,%g,%g,%g, %g,%g,%g,%g,) \n", poseF_i[0], poseF_i[1], poseF_i[2], poseF_i[3], poseF_i[4], poseF_i[5], poseF_i[6], poseF_i[7] );
     }
 }
 
@@ -756,6 +759,7 @@ void eval_MorseQ_On2(){
 }
 
 void eval_MorseQ_On2_fragAware(){
+    //printf("eval_MorseQ_On2_fragAware natoms %i \n", natoms );
     for(int i=0; i<natoms; i++){
         Vec3d REQi = aREQ[i];
         Vec3d pi   = apos[i];
@@ -807,6 +811,7 @@ void eval_MorseQ_Frags(){
 }
 
 void eval_FFgrid(){
+    //printf( "eval_FFgrid natoms %i \n", natoms );
     for(int i=0; i<natoms; i++){
         gridFF.addForce( apos[i], aPLQ[i], aforce[i] );
     }
@@ -821,7 +826,8 @@ void printBondParams(){
 void printAtomInfo(){
     printf("MMFF::printAtomInfo : \n" );
     for(int i=0; i<natoms; i++){
-        printf( "%i %i %i %f %f %f \n", i, atom2frag[i], atypes[i], aREQ[i].x, aREQ[i].y, aREQ[i].z );
+        printf( " i %i atom2frag[i] %i atypes[i] %i aREQ[i] (%g,%g,%g) \n", i, atom2frag[i], atypes[i], aREQ[i].x, aREQ[i].y, aREQ[i].z );
+        //printf( "%i %i %i %f %f %f \n", i, atom2frag[i], atypes[i], aREQ[i].x, aREQ[i].y, aREQ[i].z );
     }
 }
 

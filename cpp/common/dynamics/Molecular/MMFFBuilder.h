@@ -57,9 +57,9 @@ class MMFFBuilder{  public:
     int loadMolType(const char* fname ){
         Molecule* mol = new Molecule();
         mol->atypNames = &params->atypNames;
-        if(params) params->assignREs( mol->natoms, mol->atomType, mol->REQs );
-        printf("mol->atypNames %i %i \n", mol->atypNames, &params->atypNames );
+        //printf("mol->atypNames %i %i \n", mol->atypNames, &params->atypNames );
         mol->loadXYZ( fname );
+        if(params) params->assignREs( mol->natoms, mol->atomType, mol->REQs );
         molTypes.push_back(mol);
         return molTypes.size()-1;
     }
@@ -145,6 +145,7 @@ class MMFFBuilder{  public:
             mmff->apos [i]  = atoms[i].pos;
             mmff->aREQ [i]  = atoms[i].REQ;
             //atomTypes[i]  = atoms[i].type;
+            printf( "iatom %i atype %i ifrag %i pos (%g,%g,%g) REQ (%g,%g,%g) \n", i, atoms[i].type, atoms[i].frag, atoms[i].pos.x,atoms[i].pos.y,atoms[i].pos.z, atoms[i].REQ.x,atoms[i].REQ.y,atoms[i].REQ.z );
         }
         for(int i=0; i<bonds.size(); i++){
             mmff->bond2atom[i] = bonds[i].atoms;
@@ -182,7 +183,7 @@ int write2xyz( FILE* pfile, MMFF * mmff, MMFFparams * params ){
     for(int i=0; i<mmff->natoms; i++){
         int ityp   = mmff->atypes[i];
         Vec3d&  pi = mmff->apos[i];
-        printf( "%i %i (%g,%g,%g) %s \n", i, ityp, pi.x,pi.y,pi.z, params->atypes[ityp].name );
+        //printf( "write2xyz %i %i (%g,%g,%g) %s \n", i, ityp, pi.x,pi.y,pi.z, params->atypes[ityp].name );
         fprintf( pfile, "%s   %15.10f   %15.10f   %15.10f \n", params->atypes[ityp].name, pi.x,pi.y,pi.z );
     };
     return mmff->natoms;

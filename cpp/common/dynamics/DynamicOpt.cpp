@@ -65,6 +65,7 @@ double DynamicOpt::move_FIRE(){
 		ff += fi*fi;
 		vv += vi*vi;
 		vf += vi*fi;
+        //printf( "move_FIRE %i f %g v %g p %g \n", i, force[i], vel[i], pos[i] );
 	}
 	//printf( "DEBUG 5.5.2 \n" );
 	if( vf < 0.0 ){
