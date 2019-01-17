@@ -3,9 +3,34 @@
 import sys
 import os
 import numpy as np
-import pyMolecular.RigidMol as rmol
+import pyMolecular.RigidMol  as rmol
+import pyMolecular.atomicUtils as au
+
+#import pyMolecular.RigidMol
+
 
 os.chdir("/u/25/prokoph1/unix/git/SimpleSimulationEngine/cpp/Build/apps/MolecularEditor2")
+
+#Cu          = np.genfromtxt  ( "inputs/Campher.xyz",      dtype= None, skip_header=2 )
+#atoms       = np.genfromtxt  ( "inputs/Cu111_6x6_2L.xyz", dtype= None, skip_header=2 )
+#print "atoms", atoms
+
+Campher = au.loadAtoms( "inputs/Campher.xyz" );      #print Campher
+Surf    = au.loadAtoms( "inputs/Cu111_6x6_2L.xyz" ); #print Surf
+
+nAtomCampher = len(Campher[0])
+es   = Campher[0] + Surf[0]
+xyzs = np.hstack( [np.array( Campher[1:4] ), np.array( Surf [1:4] )] ).transpose().copy()
+
+'''
+print "============================="
+print "xyzs.shape", xyzs.shape
+print "xyzs", xyzs
+print es
+au.saveXYZ( es, xyzs, "test_Cu+Campher.xyz" )
+'''
+
+#exit()
 
 # ========= Molecules
 
@@ -20,9 +45,9 @@ rmol.save2xyz( "world_debug_00.xyz" )
 
 # ========= RigidSurface
 
+
 rmol.initRigidSubstrate ( "inputs/Cu111_6x6_2L.xyz", np.array([60,60,100],dtype=np.int32), np.array([0.0,0.0,0.0]), np.array([[15.31593,0.0,0.0],[0.0,13.26399,0.0],[0.0,0.0,20.0]]) )
 #rmol.initRigidSubstrate( "inputs/NaCl_wo4.xyz", np.array([60,60,100],dtype=np.int32), np.array([0.0,0.0,0.0]), np.array([[12.0173,0.0,0.0],[0.0,12.0173,0.0],[0.0,0.0,20.0]]) )
-
 
 if os.path.isfile("data/FFPauli.bin"):
     print "gridFF found on disk => loading "
@@ -40,12 +65,26 @@ rmol.bakeMMFF()
 
 rmol.prepareOpt()
 
-fout = rmol.openf( "movie.xyz", -1, "w" )
+rmol.setOptFIRE( dt_max=0.2, dt_min=0.01, damp_max=0.1, minLastNeg=5, finc=1.1, fdec=0.5, falpha=0.98, kickStart=1.0 )
 
-for i in range(550):
+poses = rmol.getPoses();    #print "rmol.getPoses() ", poses_
+apos  = rmol.getAtomPos();  #print "rmol.getAtomPos() ", apos
+
+#fout = rmol.openf( "movie.xyz", -1, "w" )
+fout = open( "movie.xyz",'w')
+for i in range(200):
     print ">>> i ", i
     F2 = rmol.relaxNsteps( 1, 0.0 ); 
     print "|F| ", np.sqrt(F2)
-    rmol.write2xyz( fout )
+    xyzs[:nAtomCampher,:] = apos[:,:]
+    au.writeToXYZ( fout, es, xyzs )
+    #rmol.write2xyz( fout )
     #rmol.save2xyz( "world_debug_%03i.xyz" %i )
+fout.close() 
+
+
+
+
+
+
 

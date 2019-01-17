@@ -114,7 +114,7 @@ class MMFFparams{ public:
             if(line==NULL) break;
             //printf("%s",line);
             sscanf(  line, "%i %i %i %lf %lf\n", &bt.at1, &bt.at2, &bt.order, &bt.length, &bt.stiffness );
-            printf(        "%i %i %i %lf %lf\n",  bt.at1,  bt.at2,  bt.order,  bt.length,  bt.stiffness );
+            //printf(        "%i %i %i %lf %lf\n",  bt.at1,  bt.at2,  bt.order,  bt.length,  bt.stiffness );
             uint64_t id = getBondTypeId( bt.at1, bt.at2, bt.order );
             //printf( ":: (%i,%i,%i) -> %i \n", bt.at1, bt.at2, bt.order, id );
             //bt.at1--; bt.at2--;

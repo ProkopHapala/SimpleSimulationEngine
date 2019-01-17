@@ -152,7 +152,7 @@ class Molecule{ public:
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         sscanf( line, "%i %i\n", &natoms, &nbonds );
-        printf("%i %i \n", natoms, nbonds );
+        //printf("%i %i \n", natoms, nbonds );
         allocate(natoms,nbonds);
         for(int i=0; i<natoms; i++){
             //char ch;
@@ -160,7 +160,7 @@ class Molecule{ public:
             double junk;
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
             sscanf( line, "%lf %lf %lf %s %lf %lf\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name, &junk, &REQs[i].z );
-            printf(       "%lf %lf %lf %s %lf %lf\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name,  junk,  REQs[i].z );
+            //printf(       "%lf %lf %lf %s %lf %lf\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name,  junk,  REQs[i].z );
             // atomType[i] = atomChar2int( ch );
             auto it = atypNames->find( at_name );
             if( it != atypNames->end() ){
@@ -247,7 +247,7 @@ class Molecule{ public:
         int nl;
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         sscanf( line, "%i \n", &natoms );
-        printf("%i \n", natoms );
+        //printf("%i \n", natoms );
         //allocate(natoms,0);
         allocate(natoms,nbonds);
         line = fgets( buff, 1024, pFile ); // comment
@@ -258,8 +258,8 @@ class Molecule{ public:
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
             double Q;
             int nret = sscanf( line, "%s %lf %lf %lf %lf\n", at_name, &pos[i].x, &pos[i].y, &pos[i].z, &Q );
-            if( nret == 5 ){  REQs[i].z=Q; };
-            printf(       "%s %lf %lf %lf  %lf\n",  at_name, pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z );
+            if( nret == 5 ){  REQs[i].z=Q; }else{ REQs[i].z=0; };
+            //printf(       "%s %lf %lf %lf  %lf\n",  at_name, pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z );
             // atomType[i] = atomChar2int( ch );
             auto it = atypNames->find( at_name );
             if( it != atypNames->end() ){

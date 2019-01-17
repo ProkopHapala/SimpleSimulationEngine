@@ -201,11 +201,56 @@ def saveAtoms( atoms, fname, xyz=True ):
     if xyz==True : fout.write("\n") 
     for i,atom in enumerate( atoms ):
         #print( i, atom )
-        fout.write("%i %f %f %f\n"  %( atom[0], atom[1], atom[2], atom[3] ) )
+        if isinstance( atom[0], str ):
+            fout.write("%s %f %f %f\n"  %( atom[0], atom[1], atom[2], atom[3] ) )
+        else:
+            fout.write("%i %f %f %f\n"  %( atom[0], atom[1], atom[2], atom[3] ) )
     fout.close() 
-    
-    
-    
+
+def writeToXYZ( fout, es, xyzs ):
+    fout.write("%i\n"  %len(xyzs) )
+    fout.write("\n") 
+    for i,xyz in enumerate( xyzs ):
+        fout.write("%s %f %f %f\n"  %( es[i], xyz[0], xyz[1], xyz[2] ) )
+
+def saveXYZ( es, xyzs, fname ):
+    fout = open(fname,'w')
+    writeToXYZ( fout, es, xyzs )
+    fout.close() 
+
+def loadAtoms( name ):
+    f = open(name,"r")
+    n=0;
+    l = f.readline()
+    try:
+        n=int(l)
+    except:
+        raise ValueError("First line of a xyz file should contain the number of atoms. Aborting...")
+    line = f.readline() 
+    if (n>0):
+        n=int(l)
+        e=[];x=[];y=[]; z=[]; q=[]
+        i = 0;
+        for line in f:
+            words=line.split()
+            nw = len( words)
+            ie = None
+            if( nw >=4 ):
+                e.append( words[0] )
+                x.append( float(words[1]) )
+                y.append( float(words[2]) )
+                z.append( float(words[3]) )
+                if ( nw >=5 ):
+                    q.append( float(words[4]) )
+                else:
+                    q.append( 0.0 )
+                i+=1
+            else:
+                print " skipped line : ", line
+    f.close()
+    return [ e,x,y,z,q ]
+
+
 #def loadCoefs( characters=['s','px','py','pz'] ):
 def loadCoefs( characters=['s'] ):
     dens = None

@@ -1,5 +1,5 @@
 import numpy as np
-from   ctypes import c_int, c_double, c_bool, c_float, c_char_p, c_bool
+from   ctypes import c_int, c_double, c_bool, c_float, c_char_p, c_bool, c_void_p
 import ctypes
 import os
 
@@ -120,6 +120,26 @@ lib.closef.restype  = None
 def closef( i ):
     lib.closef( i )
 
+lib.getPoses.argtypes = [ctypes.POINTER(c_int)]
+lib.getPoses.restype  = ctypes.POINTER(c_double)
+def getPoses():
+    n=c_int(0)
+    ptr = lib.getPoses(ctypes.byref(n))
+    #print "n",n
+    return np.ctypeslib.as_array(ptr, shape=(n.value,8))
 
+lib.getAtomPos.argtypes = [ctypes.POINTER(c_int)]
+lib.getAtomPos.restype  = ctypes.POINTER(c_double)
+def getAtomPos():
+    n=c_int(0)
+    ptr = lib.getAtomPos(ctypes.byref(n));
+    #print "n",n
+    return np.ctypeslib.as_array( ptr, shape=(n.value,3))
+
+#void setOptFIRE( double dt_max, double dt_min, double damp_max, int    minLastNeg, double finc, double fdec, double falpha, double kickStart ){
+lib.setOptFIRE.argtypes = [ c_double, c_double, c_double, c_int    , c_double , c_double , c_double , c_double  ]
+lib.setOptFIRE.restype  = None
+def setOptFIRE( dt_max=0.05, dt_min=0.005, damp_max=0.1, minLastNeg=5, finc=1.1, fdec=0.5, falpha=0.98, kickStart=1.0 ):
+    lib.setOptFIRE( dt_max, dt_min, damp_max, minLastNeg, finc, fdec, falpha, kickStart )
 
 

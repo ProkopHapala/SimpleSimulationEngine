@@ -88,7 +88,7 @@ void initRigidSubstrate( char* fname, int* ns, double* pos0, double* cell ){
     world.gridFF.grid.pos0 = *(Vec3d*)pos0;
     //world.gridFF.loadCell ( "inputs/cel.lvs" );
     world.gridFF.grid.setCell( *(Mat3d*)cell );
-    world.gridFF.grid.printCell();
+    //world.gridFF.grid.printCell();
     world.gridFF.loadXYZ     ( fname, params );
     world.translate          ( *(Vec3d*)pos0 );
     world.gridFF.allocateFFs();
@@ -124,7 +124,7 @@ void initParams( char* fname_atomTypes, char* fname_bondTypes ){
     builder.params = &params;
     if(fname_atomTypes) params.loadAtomTypes( fname_atomTypes );
     if(fname_bondTypes) params.loadBondTypes( fname_bondTypes );
-    printf("initParams done! \n");
+    //printf("initParams done! \n");
 }
 
 int loadMolType   ( const char* fname ){ return builder.loadMolType(fname ); };
@@ -133,7 +133,7 @@ int insertMolecule( int itype, double* pos, double* rot, bool rigid ){ return bu
 void bakeMMFF(){
     builder.toMMFF( &world );
     world.genPLQ();
-    world.printAtomInfo(); //exit(0);
+    //world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); 
 }
@@ -149,6 +149,26 @@ void prepareOpt(){
     //printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
     //printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
     //DEBUG
+}
+
+void setOptFIRE(
+	double dt_max,
+	double dt_min,
+	double damp_max,
+	int    minLastNeg,
+	double finc,
+	double fdec,
+	double falpha,
+	double kickStart
+    ){
+	opt.minLastNeg   = minLastNeg;
+	opt.finc         = finc;
+	opt.fdec         = fdec;
+	opt.falpha       = falpha;
+	opt.kickStart    = kickStart;
+	opt.dt_max       = dt_max;
+	opt.dt_min       = dt_min;
+	opt.damp_max     = damp_max;
 }
 
 double relaxNsteps( int nsteps, double F2conf ){
@@ -201,17 +221,7 @@ int openf(char* fname, int i, char* mode ){
     return files.size()-1;
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
+double* getPoses  (int* n){ *n=world.nFrag;  return world.poses;         }
+double* getAtomPos(int* n){ *n=world.natoms; return (double*)world.apos; }
 
 } // extern "C"{

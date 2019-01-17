@@ -289,7 +289,7 @@ void genPLQ(){
     if(aPLQ==NULL) aPLQ = new Vec3d[natoms];
     for(int i=0; i<natoms; i++){
         aPLQ[i] = REQ2PLQ( aREQ[i], gridFF.alpha );
-        printf( "genPLQ %i (%g,%g,%g)->(%g,%g,%g) \n", i, aREQ[i].x, aREQ[i].y, aREQ[i].z,   aPLQ[i].x, aPLQ[i].y, aPLQ[i].z );
+        //printf( "genPLQ %i (%g,%g,%g)->(%g,%g,%g) \n", i, aREQ[i].x, aREQ[i].y, aREQ[i].z,   aPLQ[i].x, aPLQ[i].y, aPLQ[i].z );
     }
     //exit(0);
 }

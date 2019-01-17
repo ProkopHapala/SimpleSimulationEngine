@@ -67,7 +67,7 @@ class GridFF{ public:
         int nl;
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         sscanf( line, "%i %i\n", &natoms );
-        printf("%i \n", natoms );
+        //printf("%i \n", natoms );
         allocateAtoms(natoms);
         line = fgets( buff, 1024, pFile );
         for(int i=0; i<natoms; i++){
@@ -91,7 +91,7 @@ class GridFF{ public:
                 //aLJq[i].x  = 0.0d;
                 //aLJq[i].x  = 0.0d;
             }
-            printf(  "%i : >>%s<< %i (%g,%g,%g) %i (%g,%g,%g)\n", i, at_name, atypes[i],  apos[i].x,  apos[i].y,  apos[i].z, atypes[i], aREQs[i].x, aREQs[i].y, aREQs[i].z );
+            //printf(  "%i : >>%s<< %i (%g,%g,%g) %i (%g,%g,%g)\n", i, at_name, atypes[i],  apos[i].x,  apos[i].y,  apos[i].z, atypes[i], aREQs[i].x, aREQs[i].y, aREQs[i].z );
         }
         return natoms;
     }
