@@ -124,10 +124,11 @@ void initParams( char* fname_atomTypes, char* fname_bondTypes ){
     builder.params = &params;
     if(fname_atomTypes) params.loadAtomTypes( fname_atomTypes );
     if(fname_bondTypes) params.loadBondTypes( fname_bondTypes );
+    printf( "params.atypNames.size() %i \n", params.atypNames.size() );
     //printf("initParams done! \n");
 }
 
-int loadMolType   ( const char* fname ){ return builder.loadMolType(fname ); };
+int loadMolType   ( char* fname ){ return builder.loadMolType(fname ); };
 int insertMolecule( int itype, double* pos, double* rot, bool rigid ){ return builder.insertMolecule( itype, *(Vec3d*)pos, *(Mat3d*)rot, rigid ); };
 
 void clear(){

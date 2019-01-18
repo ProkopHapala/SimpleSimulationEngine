@@ -62,7 +62,7 @@ class MMFFparams{ public:
     double default_bond_stiffness   = 1.0;
 
     int loadAtomTypes(char * fname){
-
+        printf( "loadAtomTypes %s \n", fname );
         FILE * pFile = fopen(fname,"r");
         if( pFile == NULL ){
             printf("cannot find %s\n", fname );
@@ -73,24 +73,34 @@ class MMFFparams{ public:
         int nl;
 
         AtomType atyp;
-        int i;
-        for(int i; i<0xFFFF; i++){
+        int i=0;
+        for(i=0; i<0xFFFF; i++){
+        //for(int i; i<0xFFFF; i++){
+            printf( "loadAtomTypes %i \n", i );
             line = fgets( buff, 1024, pFile );
             if(line==NULL) break;
             atyp.fromString( line );
             atypes.push_back(atyp);
             atypNames[atyp.name] = atypes.size()-1;
+
+            char str[1000];
+            atyp.toString( str );
+            printf( "%i %s %i %s \n", i, atyp.name, atypNames[atyp.name], str );
         }
         return i;
     }
 
     void assignREs( int n, int * itypes, Vec3d * REQs ){
+        printf( "assignREs %i   %i %i %i \n", n,  itypes, REQs, atypes );
         for(int i=0; i<n; i++){
             //mmff->aLJq [i]  = atoms[i].type;
             //int ityp = atoms[i].type;
+            printf( "i %i \n", i );
             int ityp = itypes[i];
+            printf( "ityp %i \n", ityp );
             REQs[i].x = atypes[ityp].RvdW;
             REQs[i].y = atypes[ityp].EvdW;
+            printf( "assignREs i %i ityp %i RE  %g %g  \n", i, ityp, atypes[ityp].RvdW, atypes[ityp].EvdW );
             //REQs.z = 0;
             //atomTypes[i]  = atoms[i].type;
         }

@@ -266,7 +266,14 @@ class Molecule{ public:
                 //atomType[i] = atomChar2int( at_name[0] );
                 atomType[i] = -1;
             }
+            printf( " i %i name %s ityp %i \n", i, at_name, atomType[i] );
         }
+
+        printf( "atypNames.size() %i \n", atypNames->size() );
+        //for ( auto element : *atypNames ){
+	    //    printf(  "atypNames[%s]-> %i \n", element.first.c_str(), element.second );
+        //}
+        printf("loadXYZ DONE \n");
         return natoms;
     }
 

@@ -63,13 +63,13 @@ class MMFFBuilder{  public:
     }
 
     int loadMolType(const char* fname ){
-        Molecule* mol = new Molecule();
-        mol->atypNames = &params->atypNames;
+        Molecule* mol = new Molecule();      printf( "DEBUG 1.1.1 \n" );
+        mol->atypNames = &params->atypNames; printf( "DEBUG 1.1.2 \n" );
         //printf("mol->atypNames %i %i \n", mol->atypNames, &params->atypNames );
-        mol->loadXYZ( fname );
-        if(params) params->assignREs( mol->natoms, mol->atomType, mol->REQs );
-        molTypes.push_back(mol);
-        return molTypes.size()-1;
+        mol->loadXYZ( fname );             printf( "DEBUG 1.1.3 \n" );
+        if(params) params->assignREs( mol->natoms, mol->atomType, mol->REQs ); printf( "DEBUG 1.1.4 \n" );
+        molTypes.push_back(mol);  printf( "DEBUG 1.1.5 \n" );
+        return molTypes.size()-1; printf( "DEBUG 1.1.6 \n" );
     }
     
     int loadMolType(const std::string& fname, const std::string& label ){
