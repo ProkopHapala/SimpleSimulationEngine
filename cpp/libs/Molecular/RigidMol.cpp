@@ -130,10 +130,14 @@ void initParams( char* fname_atomTypes, char* fname_bondTypes ){
 int loadMolType   ( const char* fname ){ return builder.loadMolType(fname ); };
 int insertMolecule( int itype, double* pos, double* rot, bool rigid ){ return builder.insertMolecule( itype, *(Vec3d*)pos, *(Mat3d*)rot, rigid ); };
 
+void clear(){
+    builder.clear();
+}
+
 void bakeMMFF(){
     builder.toMMFF( &world );
     world.genPLQ();
-    //world.printAtomInfo(); //exit(0);
+    world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); 
 }
@@ -148,7 +152,7 @@ void prepareOpt(){
     //exit(0);
     //printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
     //printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
-    //DEBUG
+    DEBUG
 }
 
 void setOptFIRE(
@@ -182,20 +186,22 @@ double relaxNsteps( int nsteps, double F2conf ){
         world.eval_MorseQ_On2_fragAware();
 
         world.cleanPoseTemps();
-        world.aforce2frags();   
+        world.aforce2frags();
 
         world.toDym(true);
-
         //for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.01,0.0}); } // gradient descent
         //opt.move_LeapFrog(0.01);
         //opt.move_MDquench();
         F2 = opt.move_FIRE();
         //printf( "F2 %g dt %g \n", F2, opt.dt );
         if(F2<F2conf) break;
-
         world.checkPoseUnitary();
         world.fromDym();
         //DEBUG
+
+        //printf( ">> itr %i F2 %g dt %g qrot (%g,%g,%g,%g) int %li \n", itr, F2, opt.dt, world.poses[4], world.poses[5], world.poses[6], world.poses[7], world.gridFF.FFPauli );
+        printf( ">> itr %i F2 %g dt %g poses (%g,%g,%g,%g, %g,%g,%g,%g) \n", itr, F2, world.poses[0], world.poses[1], world.poses[2], world.poses[3], world.poses[4], world.poses[5], world.poses[6], world.poses[7] );
+
     }
     return F2;
 }

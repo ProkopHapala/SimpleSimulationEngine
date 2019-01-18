@@ -216,6 +216,7 @@ void setCollisionRF( double Rsc ){
 void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     natoms=natoms_; nbonds=nbonds_; nang=nang_; ntors=ntors_;
     printf( "MMFF::allocate natoms: %i  nbonds: %i  nang: %i ntors: %i \n", natoms, nbonds, nang, ntors );
+    /*
     if(atypes   ==NULL) atypes    = new int   [natoms];
     if(apos     ==NULL) apos      = new Vec3d [natoms];
     if(aforce   ==NULL) aforce    = new Vec3d [natoms];
@@ -233,6 +234,22 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     if(ang2atom ==NULL) ang2atom  = new Vec3i [nang];
     if(ang_0    ==NULL) ang_0     = new Vec2d [nang];
     if(ang_k    ==NULL) ang_k     = new double[nang];
+    */
+
+    _realloc( atypes, natoms );
+    _realloc( apos      , natoms );
+    _realloc( aforce    , natoms );
+    _realloc( aREQ      , natoms );
+    _realloc( atom2frag , natoms );
+    _realloc( lbond     , nbonds );
+    _realloc( hbond     , nbonds );
+    _realloc( bond2atom , nbonds );
+    _realloc( bond_0    , nbonds );
+    _realloc( bond_k    , nbonds );
+    _realloc( ang2bond  , nang   );
+    _realloc( ang2atom  , nang   );
+    _realloc( ang_0     , nang   );
+    _realloc( ang_k     , nang   );
 
     /*
     tors2bond = new Vec3i [ntors];
@@ -246,20 +263,35 @@ void allocFragment( int nFrag_ ){
     nFrag = nFrag_;
     printf( "MMFF::allocFragment nFrags: %i  nPosses: %i \n", nFrag, nFrag*8 );
     //imolTypes = new int[nFrag];
+    /*
     frag2a    = new int   [nFrag];    // start of the fragment in forcefield
     fragNa    = new int   [nFrag];    // lengh of the fragment
     poses     = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
     poseFs    = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
     //poseVs    = new double[nFrag*8];
     fapos0s   = new Vec3d*[nFrag];
+    */
+    _realloc( frag2a    , nFrag   );    // start of the fragment in forcefield
+    _realloc( fragNa    , nFrag   );    // lengh of the fragment
+    _realloc( poses     , nFrag*8 );  // rigd body pose of molecule (pos,qRot);
+    _realloc( poseFs    , nFrag*8 );  // rigd body pose of molecule (pos,qRot);
+    //_realloc( poseVs  , nFrag*8 );
+    _realloc( fapos0s   , nFrag   );
 }
 
 void allocateDyn(){
     nDyn = getNDym();
+    printf( "allocateDyn nFrag %i natom %i nDyn %i \n", nFrag, natoms, nDyn );
+    /*
     if(dynInvMass)delete [] dynInvMass; dynInvMass = new double[nDyn];
     if(dynPos)    delete [] dynPos;     dynPos     = new double[nDyn];
     if(dynVel)    delete [] dynVel;     dynVel     = new double[nDyn];
     if(dynForce)  delete [] dynForce;   dynForce   = new double[nDyn];
+    */
+    _realloc( dynInvMass, nDyn );
+    _realloc( dynPos    , nDyn );
+    _realloc( dynVel    , nDyn );
+    _realloc( dynForce  , nDyn );
 }
 
 void deallocate(){
@@ -311,8 +343,8 @@ int getNDym(){
 
 void initDyn(){
     // copy to dynamical variables
-    int off = 8*nFrag;
-    memcpy( dynPos,   poses, sizeof(double)*off );
+    int off = nFrag*8;
+    memcpy( dynPos,   poses,  sizeof(double)*off );
     memcpy( dynForce, poseFs, sizeof(double)*off );
     for( int i=0; i<off; i++ ){ dynVel[i]=0; };
     Vec3d *pF = (Vec3d*)( dynForce + off );
@@ -320,7 +352,7 @@ void initDyn(){
     Vec3d *pV = (Vec3d*)( dynVel   + off );
     for(int ia=0; ia<natoms; ia++){
         if( 0>atom2frag[ia] ){
-            (*pP) = apos[ia];
+            (*pP) = apos  [ia];
             (*pF) = aforce[ia];
             (*pV).set(0.0);
             pP++; pF++; pV++;
@@ -414,6 +446,9 @@ void aforce2frags(){
             ((Vec3d *)(poseF_i)) ->add( aforce[ia] );
             ia++;
         }
+
+        ((Quat4d*)(poseF_i+4))->sub_paralel( *(Quat4d*)(pose_i+4) ); // remove component of force which breaks normalization
+
         //printf( "ifrag %i fpose (%g,%g,%g,%g, %g,%g,%g,%g,) \n", poseF_i[0], poseF_i[1], poseF_i[2], poseF_i[3], poseF_i[4], poseF_i[5], poseF_i[6], poseF_i[7] );
     }
 }
@@ -814,6 +849,7 @@ void eval_FFgrid(){
     //printf( "eval_FFgrid natoms %i \n", natoms );
     for(int i=0; i<natoms; i++){
         gridFF.addForce( apos[i], aPLQ[i], aforce[i] );
+        //printf( " aforce[%i] (%g,%g,%g) \n", i, aforce[i].x, aforce[i].y, aforce[i].z );
     }
 }
 

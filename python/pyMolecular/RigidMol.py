@@ -5,9 +5,10 @@ import os
 
 LIB_PATH      = os.path.dirname( os.path.realpath(__file__) )
 LIB_PATH_CPP  = os.path.normpath(LIB_PATH+'../../../'+'/cpp/Build/libs/Molecular')
+#LIB_PATH_CPP  = os.path.normpath(LIB_PATH+'../../../'+'/cpp/Build-debug/libs/Molecular')
 
 def recompile(path):
-    print( path )
+    print( "recompile path :", path )
     dir_bak = os.getcwd()
     os.chdir( path)
     os.system("make" )
@@ -77,6 +78,12 @@ lib.insertMolecule.argtypes = [c_int, array1d, array2d, c_bool]
 lib.insertMolecule.restype  = c_int
 def insertMolecule( itype, pos, rot, rigid ):
     return lib.insertMolecule( itype, pos, rot, rigid )
+
+#void bakeMMFF(){
+lib.clear.argtypes = []
+lib.clear.restype  = None
+def clear( ):
+    lib.clear( )
 
 #void bakeMMFF(){
 lib.bakeMMFF.argtypes = []

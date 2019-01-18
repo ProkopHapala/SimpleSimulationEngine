@@ -49,22 +49,20 @@ class Molecule{ public:
 
     void allocate( int natoms_, int nbonds_ ){
         natoms=natoms_; nbonds=nbonds_;
-
+        /*
         if(pos      ==NULL) pos       = new Vec3d [natoms];
         //if(charges  ==NULL) charges   = new double[natoms];
         if(REQs     ==NULL) REQs      = new Vec3d [natoms];
         if(bond2atom==NULL) bond2atom = new Vec2i [nbonds];
         if(atomType ==NULL) atomType  = new int   [natoms];
         if(bondType ==NULL) bondType  = new int   [nbonds];
-
-        /*
-        if(pos      )delete [] pos;       pos       = new Vec3d [natoms];
-        //if(charges  ==NULL) charges   = new double[natoms];
-        if(REQs     )delete [] REQs;      REQs      = new Vec3d [natoms];
-        if(bond2atom)delete [] bond2atom; bond2atom = new Vec2i [nbonds];
-        if(atomType )delete [] atomType;  atomType  = new int   [natoms];
-        if(bondType )delete [] bondType;  bondType  = new int   [nbonds];
         */
+        _realloc( pos       , natoms );
+        //_realloc( charges   , natoms );
+        _realloc( REQs      , natoms );
+        _realloc( atomType  , natoms );
+        _realloc( bondType  , nbonds );
+        _realloc( bond2atom , nbonds );
     }
 
     int bondsOfAtoms(){
@@ -199,7 +197,7 @@ class Molecule{ public:
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         sscanf( line, "%i %i\n", &natoms, &nbonds );
-        printf("%i %i \n", natoms, nbonds );
+        //printf("natoms, nbonds %i %i \n", natoms, nbonds );
         allocate(natoms,nbonds);
 
         int istr_x      =0;
@@ -213,7 +211,7 @@ class Molecule{ public:
             char at_name[8];
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
             sscanf( line, "%lf %lf %lf %s\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name );
-            printf(       "%lf %lf %lf %s\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name );
+            //printf(       "%lf %lf %lf %s\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name );
             // atomType[i] = atomChar2int( ch );
             auto it = atypNames->find( at_name );
             if( it != atypNames->end() ){
@@ -247,7 +245,7 @@ class Molecule{ public:
         int nl;
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         sscanf( line, "%i \n", &natoms );
-        //printf("%i \n", natoms );
+        printf("natoms %i \n", natoms );
         //allocate(natoms,0);
         allocate(natoms,nbonds);
         line = fgets( buff, 1024, pFile ); // comment
@@ -258,8 +256,8 @@ class Molecule{ public:
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
             double Q;
             int nret = sscanf( line, "%s %lf %lf %lf %lf\n", at_name, &pos[i].x, &pos[i].y, &pos[i].z, &Q );
-            if( nret == 5 ){  REQs[i].z=Q; }else{ REQs[i].z=0; };
-            //printf(       "%s %lf %lf %lf  %lf\n",  at_name, pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z );
+            if( nret >= 5 ){  REQs[i].z=Q; }else{ REQs[i].z=0; };
+            printf(       "mol[%i] %s %lf %lf %lf  %lf    *atypNames %i\n", i,  at_name, pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z, atypNames );
             // atomType[i] = atomChar2int( ch );
             auto it = atypNames->find( at_name );
             if( it != atypNames->end() ){

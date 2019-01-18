@@ -51,8 +51,16 @@ class MMFFBuilder{  public:
     std::vector<MMFFBond>  bonds;
     std::vector<MMFFAngle> angles;
     std::vector<MMFFmol>   mols;
-    std::vector<MMFFfrag>       frags;
+    std::vector<MMFFfrag>  frags;
     std::unordered_map<size_t,size_t> fragTypes;
+
+    void clear(){
+        atoms.clear();
+        bonds.clear();
+        mols .clear();
+        frags.clear();
+        fragTypes.clear();
+    }
 
     int loadMolType(const char* fname ){
         Molecule* mol = new Molecule();
@@ -135,7 +143,7 @@ class MMFFBuilder{  public:
     }
 
     void toMMFF( MMFF * mmff ){
-        mmff->deallocate();
+        //mmff->deallocate();
         mmff->allocate( atoms.size(), bonds.size(), angles.size(), 0 );
         //int * atomTypes = new int[atoms.size()];
         //int * bondTypes = new int[bonds.size()];

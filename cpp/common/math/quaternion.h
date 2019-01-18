@@ -118,6 +118,11 @@ class Quat4TYPE {
         return *this;
     }
 
+    inline void sub_paralel(const QUAT& qrot){
+        TYPE c = dot(qrot);
+        add_mul(qrot,-c);
+    }
+
 // ====== Quaternion multiplication
 
 	inline void setQmul( const QUAT& a, const QUAT& b) {
