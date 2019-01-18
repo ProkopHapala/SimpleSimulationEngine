@@ -96,7 +96,7 @@ def getSurfConfs( rots, molFile, pos=[ 5.78, 6.7, 12.24 ], nMaxIter=200, Fconv=0
     rot0  = np.array([[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]])    ;print "DEBUG 0.2"
     rmol.insertMolecule( mol, np.array(pos), rot0, True )            ;print "DEBUG 0.3"
 
-    exit()
+    #exit()
 
     print "DEBUG 1"
 
@@ -131,7 +131,7 @@ def getSurfConfs( rots, molFile, pos=[ 5.78, 6.7, 12.24 ], nMaxIter=200, Fconv=0
 
             #print "|F| ", np.sqrt(F2)
             #xyzs[:nAtomMol,:] = apos[:,:]
-            au.writeToXYZ( fout, es, xyzs )
+            #au.writeToXYZ( fout, es, xyzs )
             #rmol.write2xyz( fout )
             #rmol.save2xyz( "world_debug_%03i.xyz" %i )
         #print "rot  ", rot
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     #print "========== Campher.xyz ==========="
     #nAtomMol = len(campher[0])
     #es, xyzs = combineGeoms(campher,surf)
-    #rots_ = getSurfConfs( rots, "inputs/Campher.xyz", pos=[ 5.78, 6.7, 12.24 ], nMaxIter=10, Fconv=0 )
+    rots_ = getSurfConfs( rots, "inputs/Campher.xyz", pos=[ 5.78, 6.7, 12.24 ], nMaxIter=10, Fconv=0 )
     #print "rots_", rots_
     print ">>>> ALL DONE <<<<"
 

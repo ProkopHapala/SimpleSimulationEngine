@@ -288,10 +288,11 @@ void allocateDyn(){
     if(dynVel)    delete [] dynVel;     dynVel     = new double[nDyn];
     if(dynForce)  delete [] dynForce;   dynForce   = new double[nDyn];
     */
-    _realloc( dynInvMass, nDyn );
-    _realloc( dynPos    , nDyn );
-    _realloc( dynVel    , nDyn );
-    _realloc( dynForce  , nDyn );
+    printf("DEBUG b.0 |  %i %i %i %i \n", dynPos, dynVel, dynForce, dynInvMass );
+    _realloc( dynPos    , nDyn ); printf("DEBUG b.1 \n");
+    _realloc( dynVel    , nDyn ); printf("DEBUG b.2 \n");
+    _realloc( dynForce  , nDyn ); printf("DEBUG b.3 \n");
+    _realloc( dynInvMass, nDyn ); printf("DEBUG b.4 \n");
 }
 
 void deallocate(){
