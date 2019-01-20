@@ -91,16 +91,16 @@ class MMFFparams{ public:
     }
 
     void assignREs( int n, int * itypes, Vec3d * REQs ){
-        printf( "assignREs %i   %i %i %i \n", n,  itypes, REQs, atypes );
+        //printf( "assignREs %i   %i %i %i \n", n,  itypes, REQs, atypes );
         for(int i=0; i<n; i++){
             //mmff->aLJq [i]  = atoms[i].type;
             //int ityp = atoms[i].type;
-            printf( "i %i \n", i );
+            //printf( "i %i \n", i );
             int ityp = itypes[i];
-            printf( "ityp %i \n", ityp );
+            //printf( "ityp %i \n", ityp );
             REQs[i].x = atypes[ityp].RvdW;
             REQs[i].y = atypes[ityp].EvdW;
-            printf( "assignREs i %i ityp %i RE  %g %g  \n", i, ityp, atypes[ityp].RvdW, atypes[ityp].EvdW );
+            //printf( "assignREs i %i ityp %i RE  %g %g  \n", i, ityp, atypes[ityp].RvdW, atypes[ityp].EvdW );
             //REQs.z = 0;
             //atomTypes[i]  = atoms[i].type;
         }

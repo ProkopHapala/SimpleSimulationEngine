@@ -55,21 +55,23 @@ class MMFFBuilder{  public:
     std::unordered_map<size_t,size_t> fragTypes;
 
     void clear(){
-        atoms.clear();
-        bonds.clear();
-        mols .clear();
-        frags.clear();
+        //printf( "DEBUG MMFFBuilder.clear \n");
+        atoms.clear(); //printf("DEBUG a.1 \n");
+        bonds.clear(); //printf("DEBUG a.2 \n");
+        mols .clear(); //printf("DEBUG a.3 \n");
+        frags.clear(); //printf("DEBUG a.4 \n");
         fragTypes.clear();
+        //printf( "DEBUG MMFFBuilder.clear DONE \n");
     }
 
     int loadMolType(const char* fname ){
-        Molecule* mol = new Molecule();      printf( "DEBUG 1.1.1 \n" );
-        mol->atypNames = &params->atypNames; printf( "DEBUG 1.1.2 \n" );
+        Molecule* mol = new Molecule();      //printf( "DEBUG 1.1.1 \n" );
+        mol->atypNames = &params->atypNames; //printf( "DEBUG 1.1.2 \n" );
         //printf("mol->atypNames %i %i \n", mol->atypNames, &params->atypNames );
-        mol->loadXYZ( fname );             printf( "DEBUG 1.1.3 \n" );
-        if(params) params->assignREs( mol->natoms, mol->atomType, mol->REQs ); printf( "DEBUG 1.1.4 \n" );
-        molTypes.push_back(mol);  printf( "DEBUG 1.1.5 \n" );
-        return molTypes.size()-1; printf( "DEBUG 1.1.6 \n" );
+        mol->loadXYZ( fname );             //printf( "DEBUG 1.1.3 \n" );
+        if(params) params->assignREs( mol->natoms, mol->atomType, mol->REQs ); //printf( "DEBUG 1.1.4 \n" );
+        molTypes.push_back(mol);  //printf( "DEBUG 1.1.5 \n" );
+        return molTypes.size()-1; //printf( "DEBUG 1.1.6 \n" );
     }
     
     int loadMolType(const std::string& fname, const std::string& label ){

@@ -145,16 +145,16 @@ void bakeMMFF(){
 
 void prepareOpt(){
     //opt.bindArrays( 8*world.nFrag, world.poses, world.poseVs, world.poseFs );
-    printf("DEBUG a.0\n");
-    world.allocateDyn();   printf("DEBUG a.1\n");
-    world.initDyn();       printf("DEBUG a.2\n");
-    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce );  printf("DEBUG a.3\n");
-    opt.setInvMass( 1.0 ); printf("DEBUG a.4\n");
-    opt.cleanVel  ( );     printf("DEBUG a.5\n");
+    //printf("DEBUG a.0\n");
+    world.allocateDyn();   //printf("DEBUG a.1\n");
+    world.initDyn();       //printf("DEBUG a.2\n");
+    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce, world.dynInvMass );  //printf("DEBUG a.3\n");
+    opt.setInvMass( 1.0 ); //printf("DEBUG a.4\n");
+    opt.cleanVel  ( );     //printf("DEBUG a.5\n");
     //exit(0);
     //printf("POSE_pos   : \n"); printPoses( world.nFrag, world.poses  );
     //printf("POSE_Force : \n"); printPoses( world.nFrag, world.poseFs );
-    DEBUG
+    //DEBUG
 }
 
 void setOptFIRE(

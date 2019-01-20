@@ -23,5 +23,6 @@
 //#define _realloc(TYPE,arr,n){ if(var) delete [] arr; arr=new TYPE[n]; }
 
 template<typename T> inline void _realloc(T*& arr, int n){ if(arr) delete [] arr; arr=new T[n]; }
+template<typename T> inline void _dealloc(T*& arr       ){ if(arr) delete [] arr; arr=0; }
 
 #endif

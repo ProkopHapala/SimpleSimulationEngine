@@ -88,17 +88,17 @@ def initSurf( surfFile, cell, ns=[60,60,100] ):
 
 def getSurfConfs( rots, molFile, pos=[ 5.78, 6.7, 12.24 ], nMaxIter=200, Fconv=0.01 ):
 
-    print "DEBUG 0"
+    #print "DEBUG 0"
 
     rmol.clear()
 
-    mol   = rmol.loadMolType( molFile )                              ;print "DEBUG 0.1" 
-    rot0  = np.array([[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]])    ;print "DEBUG 0.2"
-    rmol.insertMolecule( mol, np.array(pos), rot0, True )            ;print "DEBUG 0.3"
+    mol   = rmol.loadMolType( molFile )                              ; #print "DEBUG 0.1" 
+    rot0  = np.array([[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]])    ; #print "DEBUG 0.2"
+    rmol.insertMolecule( mol, np.array(pos), rot0, True )            ; #print "DEBUG 0.3"
 
     #exit()
 
-    print "DEBUG 1"
+    #print "DEBUG 1"
 
     #rmol.save2xyz( "world_debug_00.xyz" )
 
@@ -106,9 +106,9 @@ def getSurfConfs( rots, molFile, pos=[ 5.78, 6.7, 12.24 ], nMaxIter=200, Fconv=0
 
     rmol.bakeMMFF();   #print "DEBUG 1.1"
     rmol.prepareOpt(); #print "DEBUG 1.2"
-    rmol.setOptFIRE( dt_max=0.2, dt_min=0.01, damp_max=0.1, minLastNeg=5, finc=1.1, fdec=0.5, falpha=0.98, kickStart=1.0 ); print "DEBUG 1.3"
+    rmol.setOptFIRE( dt_max=0.2, dt_min=0.01, damp_max=0.1, minLastNeg=5, finc=1.1, fdec=0.5, falpha=0.98, kickStart=1.0 ); #print "DEBUG 1.3"
 
-    print "DEBUG 3"
+    #print "DEBUG 3"
 
     #poses = rmol.getPoses();    #print "rmol.getPoses() ", poses_
     #apos  = rmol.getAtomPos();  #print "rmol.getAtomPos() ", apos
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     #surf    = au.loadAtoms( "inputs/Cu111_6x6_2L.xyz" ); #print Surf
 
     #cell = [[15.31593,0.0,0.0],[0.0,13.26399,0.0],[0.0,0.0,20.0]]
-    rots  = sphereTangentSpace(n=5)
+    rots  = sphereTangentSpace(n=1)
 
     print " rmol.initParams( ) "
     rmol.initParams( "common_resources/AtomTypes.dat", "common_resources/BondTypes.dat" )
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     #print "========== Campher.xyz ==========="
     #nAtomMol = len(campher[0])
     #es, xyzs = combineGeoms(campher,surf)
-    rots_ = getSurfConfs( rots, "inputs/Campher.xyz", pos=[ 5.78, 6.7, 12.24 ], nMaxIter=10, Fconv=0 )
+    rots_ = getSurfConfs( rots, "inputs/Campher.xyz", pos=[ 5.78, 6.7, 12.24 ], nMaxIter=3, Fconv=0 )
     #print "rots_", rots_
     print ">>>> ALL DONE <<<<"
 

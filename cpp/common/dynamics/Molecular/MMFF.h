@@ -216,30 +216,11 @@ void setCollisionRF( double Rsc ){
 void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     natoms=natoms_; nbonds=nbonds_; nang=nang_; ntors=ntors_;
     printf( "MMFF::allocate natoms: %i  nbonds: %i  nang: %i ntors: %i \n", natoms, nbonds, nang, ntors );
-    /*
-    if(atypes   ==NULL) atypes    = new int   [natoms];
-    if(apos     ==NULL) apos      = new Vec3d [natoms];
-    if(aforce   ==NULL) aforce    = new Vec3d [natoms];
-    if(aREQ     ==NULL) aREQ      = new Vec3d [natoms];
-    if(atom2frag==NULL) atom2frag = new int   [natoms];
-
-    if(lbond    ==NULL) lbond     = new double[nbonds];
-    if(hbond    ==NULL) hbond     = new Vec3d [nbonds];
-
-    if(bond2atom==NULL) bond2atom = new Vec2i [nbonds];
-    if(bond_0   ==NULL) bond_0    = new double[nbonds];
-    if(bond_k   ==NULL) bond_k    = new double[nbonds];
-
-    if(ang2bond ==NULL) ang2bond  = new Vec2i [nang];
-    if(ang2atom ==NULL) ang2atom  = new Vec3i [nang];
-    if(ang_0    ==NULL) ang_0     = new Vec2d [nang];
-    if(ang_k    ==NULL) ang_k     = new double[nang];
-    */
-
     _realloc( atypes, natoms );
     _realloc( apos      , natoms );
     _realloc( aforce    , natoms );
     _realloc( aREQ      , natoms );
+    _realloc( aPLQ      , natoms );
     _realloc( atom2frag , natoms );
     _realloc( lbond     , nbonds );
     _realloc( hbond     , nbonds );
@@ -250,7 +231,6 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     _realloc( ang2atom  , nang   );
     _realloc( ang_0     , nang   );
     _realloc( ang_k     , nang   );
-
     /*
     tors2bond = new Vec3i [ntors];
     tors2atom = new Quat4i[ntors];
@@ -263,14 +243,6 @@ void allocFragment( int nFrag_ ){
     nFrag = nFrag_;
     printf( "MMFF::allocFragment nFrags: %i  nPosses: %i \n", nFrag, nFrag*8 );
     //imolTypes = new int[nFrag];
-    /*
-    frag2a    = new int   [nFrag];    // start of the fragment in forcefield
-    fragNa    = new int   [nFrag];    // lengh of the fragment
-    poses     = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
-    poseFs    = new double[nFrag*8];  // rigd body pose of molecule (pos,qRot);
-    //poseVs    = new double[nFrag*8];
-    fapos0s   = new Vec3d*[nFrag];
-    */
     _realloc( frag2a    , nFrag   );    // start of the fragment in forcefield
     _realloc( fragNa    , nFrag   );    // lengh of the fragment
     _realloc( poses     , nFrag*8 );  // rigd body pose of molecule (pos,qRot);
@@ -281,25 +253,37 @@ void allocFragment( int nFrag_ ){
 
 void allocateDyn(){
     nDyn = getNDym();
-    printf( "allocateDyn nFrag %i natom %i nDyn %i \n", nFrag, natoms, nDyn );
-    /*
-    if(dynInvMass)delete [] dynInvMass; dynInvMass = new double[nDyn];
-    if(dynPos)    delete [] dynPos;     dynPos     = new double[nDyn];
-    if(dynVel)    delete [] dynVel;     dynVel     = new double[nDyn];
-    if(dynForce)  delete [] dynForce;   dynForce   = new double[nDyn];
-    */
-    printf("DEBUG b.0 |  %i %i %i %i \n", dynPos, dynVel, dynForce, dynInvMass );
-    _realloc( dynPos    , nDyn ); printf("DEBUG b.1 \n");
-    _realloc( dynVel    , nDyn ); printf("DEBUG b.2 \n");
-    _realloc( dynForce  , nDyn ); printf("DEBUG b.3 \n");
-    _realloc( dynInvMass, nDyn ); printf("DEBUG b.4 \n");
+    _realloc( dynPos    , nDyn ); //printf("DEBUG b.1 \n");
+    _realloc( dynVel    , nDyn ); //printf("DEBUG b.2 \n");
+    _realloc( dynForce  , nDyn ); //printf("DEBUG b.3 \n");
+    _realloc( dynInvMass, nDyn ); //printf("DEBUG b.4 \n");
 }
 
 void deallocate(){
-    delete [] apos;     delete [] aforce;   delete [] aREQ;
-    delete [] lbond;    delete [] hbond;    delete [] bond2atom; delete [] bond_0; delete [] bond_k;
-    delete [] ang2bond; delete [] ang2atom; delete [] ang_0;     delete [] ang_k;
-    if(aPLQ) delete [] aPLQ;
+    _dealloc( apos );     _dealloc( aforce );   _dealloc( aREQ );      _dealloc( aPLQ );
+    _dealloc( lbond );    _dealloc( hbond );    _dealloc( bond2atom ); _dealloc( bond_0 );  _dealloc( bond_k );
+    _dealloc( ang2bond ); _dealloc( ang2atom ); _dealloc( ang_0 );     _dealloc( ang_k ); 
+    //delete [] apos;     delete [] aforce;   delete [] aREQ;      delete [] aPLQ;
+    //delete [] lbond;    delete [] hbond;    delete [] bond2atom; delete [] bond_0; delete [] bond_k;
+    //delete [] ang2bond; delete [] ang2atom; delete [] ang_0;     delete [] ang_k;
+    //if(aPLQ) delete [] aPLQ;
+}
+
+void deallocFragment( int nFrag_ ){
+    //printf( "MMFF::deallocFragment" );
+    _dealloc( frag2a    );
+    _dealloc( fragNa    );
+    _dealloc( poses     );
+    _dealloc( poseFs    );
+    //_dealloc( poseVs  );
+    _dealloc( fapos0s   );
+}
+
+void deallocateDyn(){
+    _dealloc( dynPos     ); //printf("DEBUG b.1 \n");
+    _dealloc( dynVel     ); //printf("DEBUG b.2 \n");
+    _dealloc( dynForce   ); //printf("DEBUG b.3 \n");
+    _dealloc( dynInvMass ); //printf("DEBUG b.4 \n");
 }
 
 int pickBond( const Vec3d& ray0, const Vec3d& hRay, double R ){
@@ -319,7 +303,7 @@ int pickBond( const Vec3d& ray0, const Vec3d& hRay, double R ){
 }
 
 void genPLQ(){
-    if(aPLQ==NULL) aPLQ = new Vec3d[natoms];
+    //if(aPLQ==NULL) aPLQ = new Vec3d[natoms];
     for(int i=0; i<natoms; i++){
         aPLQ[i] = REQ2PLQ( aREQ[i], gridFF.alpha );
         //printf( "genPLQ %i (%g,%g,%g)->(%g,%g,%g) \n", i, aREQ[i].x, aREQ[i].y, aREQ[i].z,   aPLQ[i].x, aPLQ[i].y, aPLQ[i].z );

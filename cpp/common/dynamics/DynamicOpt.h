@@ -67,13 +67,14 @@ class DynamicOpt{
 
 	// ==== inline functions
 
-	//inline void bindArrays( int n_, double * pos_, double * vel_, double * force_, double * invMasses_==NULL ){
-	inline void bindArrays( int n_, double * pos_, double * vel_, double * force_ ){
+    void bindArrays( int n_, double * pos_, double * vel_, double * force_, double * invMasses_=NULL ){
+	//void bindArrays( int n_, double * pos_, double * vel_, double * force_, double * invMasses_ ){
+	//inline void bindArrays( int n_, double * pos_, double * vel_, double * force_ ){
 		n = n_;
 		pos   = pos_;
 		vel   = vel_;
 		force = force_;
-        //invMasses==invMasses_;
+        invMasses=invMasses_;
 	}
 
 	inline void allocate( int n_ ){

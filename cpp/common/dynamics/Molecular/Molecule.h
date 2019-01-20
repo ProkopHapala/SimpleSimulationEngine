@@ -231,7 +231,6 @@ class Molecule{ public:
         return natoms + nbonds;
     }
 
-
     int loadXYZ(const char* fname ){
         // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
         // http://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
@@ -245,7 +244,7 @@ class Molecule{ public:
         int nl;
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         sscanf( line, "%i \n", &natoms );
-        printf("natoms %i \n", natoms );
+        //printf("natoms %i \n", natoms );
         //allocate(natoms,0);
         allocate(natoms,nbonds);
         line = fgets( buff, 1024, pFile ); // comment
@@ -257,7 +256,7 @@ class Molecule{ public:
             double Q;
             int nret = sscanf( line, "%s %lf %lf %lf %lf\n", at_name, &pos[i].x, &pos[i].y, &pos[i].z, &Q );
             if( nret >= 5 ){  REQs[i].z=Q; }else{ REQs[i].z=0; };
-            printf(       "mol[%i] %s %lf %lf %lf  %lf    *atypNames %i\n", i,  at_name, pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z, atypNames );
+            //printf(       "mol[%i] %s %lf %lf %lf  %lf    *atypNames %i\n", i,  at_name, pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z, atypNames );
             // atomType[i] = atomChar2int( ch );
             auto it = atypNames->find( at_name );
             if( it != atypNames->end() ){
@@ -266,17 +265,27 @@ class Molecule{ public:
                 //atomType[i] = atomChar2int( at_name[0] );
                 atomType[i] = -1;
             }
-            printf( " i %i name %s ityp %i \n", i, at_name, atomType[i] );
+            //printf( " i %i name %s ityp %i \n", i, at_name, atomType[i] );
         }
 
-        printf( "atypNames.size() %i \n", atypNames->size() );
+        //printf( "atypNames.size() %i \n", atypNames->size() );
         //for ( auto element : *atypNames ){
 	    //    printf(  "atypNames[%s]-> %i \n", element.first.c_str(), element.second );
         //}
-        printf("loadXYZ DONE \n");
+        //printf("loadXYZ DONE \n");
         return natoms;
     }
 
+    void dealloc(){
+        _dealloc( pos       );
+        _dealloc( bond2atom );
+        _dealloc( REQs      );
+        _dealloc( atomType  );
+        _dealloc( bondType  );
+        _dealloc( atom_nb   );
+        _dealloc( atom2bond );
+        _dealloc( ang2bond  );
+    }
 
 };
 
