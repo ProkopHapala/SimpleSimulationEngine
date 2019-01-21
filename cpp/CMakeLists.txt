@@ -3,14 +3,29 @@ project ( SimpleSimulationEngine )
 
 # ==== FLAGS
 
+set(default_build_type Release)
 if( UNIX )
     SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=gnu++0x" )
 endif()
-#SET( AXULIARY_COMPILE_FLAGS "-w -O3") 
+
+
+# https://stackoverflow.com/questions/7724569/debug-vs-release-in-cmake
+#message ( "CMAKE_CXX_FLAGS_DEBUG   ${CMAKE_CXX_FLAGS_DEBUG}  " )
+#message ( "CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE}" )
+message ( "CMAKE_BUILD_TYPE   ${CMAKE_BUILD_TYPE}  " )
+#if (  (CMAKE_BUILD_TYPE) AND (CMAKE_BUILD_TYPE MATCHES Debug))
+#    message("debug mode FFLAGS : " )
+#    SET( AXULIARY_COMPILE_FLAGS "-Wall -g -Og -fPIC ")
+#else ()
+#    message("release mode FFLAGS : " )
+#    SET( AXULIARY_COMPILE_FLAGS "-w -O2 -fPIC -march=native ")
+#endif ()
 # -O3 and -Ofast does not work for SDL2_net
-#SET( AXULIARY_COMPILE_FLAGS "-w -O2 -fPIC -march=native ")
-SET( AXULIARY_COMPILE_FLAGS "-w -g -Og -fPIC ")
+#SET( AXULIARY_COMPILE_FLAGS "-w -O3") 
+SET( AXULIARY_COMPILE_FLAGS "-w -O2 -fPIC -march=native ")
+#SET( AXULIARY_COMPILE_FLAGS "-w -g -Og -fPIC ")
 SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${AXULIARY_COMPILE_FLAGS}" )
+message ( "CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} )
 
 # ==== DIRS
 

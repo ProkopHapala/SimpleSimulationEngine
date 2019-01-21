@@ -47,6 +47,7 @@ class MMFFBuilder{  public:
     MMFFparams*  params = NULL;
     std::unordered_map<std::string,int> molTypeDict;
     std::vector<Molecule*> molTypes;
+
     std::vector<MMFFAtom>  atoms;
     std::vector<MMFFBond>  bonds;
     std::vector<MMFFAngle> angles;
@@ -54,10 +55,17 @@ class MMFFBuilder{  public:
     std::vector<MMFFfrag>  frags;
     std::unordered_map<size_t,size_t> fragTypes;
 
+    void clearMolTypes( bool deep ){
+        if(deep){ for(Molecule* mol : molTypes ){ mol->dealloc(); delete mol; } }
+        molTypeDict.clear();
+        molTypes.clear();
+    }
+
     void clear(){
         //printf( "DEBUG MMFFBuilder.clear \n");
         atoms.clear(); //printf("DEBUG a.1 \n");
         bonds.clear(); //printf("DEBUG a.2 \n");
+        angles.clear();
         mols .clear(); //printf("DEBUG a.3 \n");
         frags.clear(); //printf("DEBUG a.4 \n");
         fragTypes.clear();
@@ -73,11 +81,19 @@ class MMFFBuilder{  public:
         molTypes.push_back(mol);  //printf( "DEBUG 1.1.5 \n" );
         return molTypes.size()-1; //printf( "DEBUG 1.1.6 \n" );
     }
+
+    int registerRigidMolType( int natoms, Vec3d* pos, Vec3d* REQs, int* atomType ){
+        Molecule* mol = new Molecule();
+        mol->allocate( natoms, 0 );
+        for(int i=0; i<mol->natoms; i++){ mol->pos[i]=pos[i]; mol->REQs[i]=REQs[i]; mol->atomType[i]=atomType[i]; }
+        molTypes.push_back(mol);
+        return molTypes.size()-1;
+    }
     
     int loadMolType(const std::string& fname, const std::string& label ){
-        printf( "fname:`%s` label:`%s` \n", fname.c_str(), label.c_str()  );
+        //printf( "fname:`%s` label:`%s` \n", fname.c_str(), label.c_str()  );
         int itype = loadMolType( fname.c_str() );
-        printf( "fname:`%s` label:`%s` itype %i \n", fname.c_str(), label.c_str(), itype  );
+        //printf( "fname:`%s` label:`%s` itype %i \n", fname.c_str(), label.c_str(), itype  );
         molTypeDict[label] = itype;
         return itype;
     };

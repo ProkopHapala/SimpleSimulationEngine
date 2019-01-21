@@ -31,7 +31,7 @@ class AtomType{ public:
     double    EvdW;
 
     char* toString( char * str ){
-        sprintf( str, "printf: %s %i %i %i %i %lf %lf %x", name,  iZ,   neval,  valence,   sym,    RvdW, EvdW,   color );
+        sprintf( str, "%s %i %i %i %i %lf %lf %x", name,  iZ,   neval,  valence,   sym,    RvdW, EvdW,   color );
         return str;
     }
 
@@ -62,7 +62,7 @@ class MMFFparams{ public:
     double default_bond_stiffness   = 1.0;
 
     int loadAtomTypes(char * fname){
-        printf( "loadAtomTypes %s \n", fname );
+        //printf( "loadAtomTypes %s \n", fname );
         FILE * pFile = fopen(fname,"r");
         if( pFile == NULL ){
             printf("cannot find %s\n", fname );
@@ -76,16 +76,16 @@ class MMFFparams{ public:
         int i=0;
         for(i=0; i<0xFFFF; i++){
         //for(int i; i<0xFFFF; i++){
-            printf( "loadAtomTypes %i \n", i );
+            //printf( "loadAtomTypes %i \n", i );
             line = fgets( buff, 1024, pFile );
             if(line==NULL) break;
             atyp.fromString( line );
             atypes.push_back(atyp);
             atypNames[atyp.name] = atypes.size()-1;
 
-            char str[1000];
-            atyp.toString( str );
-            printf( "%i %s %i %s \n", i, atyp.name, atypNames[atyp.name], str );
+            //char str[1000];
+            //atyp.toString( str );
+            //printf( "%i %s %i %s \n", i, atyp.name, atypNames[atyp.name], str );
         }
         return i;
     }
@@ -143,7 +143,7 @@ class MMFFparams{ public:
     }
 
     void fillBondParams( int nbonds, Vec2i * bond2atom, int * bondOrder, int * atomType, double * bond_0, double * bond_k ){
-        printf("fillBondParams: %i\n", nbonds);
+        //printf("fillBondParams: %i\n", nbonds);
         for(int i=0; i<nbonds; i++){
             Vec2i ib = bond2atom[i];
             getBondParams( atomType[ib.x], atomType[ib.y], bondOrder[i], bond_0[i], bond_k[i] );

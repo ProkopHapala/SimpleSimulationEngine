@@ -73,11 +73,24 @@ lib.loadMolType.restype  = c_int
 def loadMolType( fname ):
     return lib.loadMolType( fname )
 
+#int registerRigidMolType( int natom, Vec3d* apos, Vec3d* REQs, int* atomType ){ 
+lib.registerRigidMolType.argtypes = [c_int, array2d, array2d, array1i ]
+lib.registerRigidMolType.restype  = c_int
+def registerRigidMolType( apos, REQs, atomType ):
+    natoms = len(apos)
+    return lib.registerRigidMolType( natoms, apos, REQs, atomType )
+
 #int insertMolecule( int itype, double* pos, double* rot, bool rigid ){
 lib.insertMolecule.argtypes = [c_int, array1d, array2d, c_bool]
 lib.insertMolecule.restype  = c_int
 def insertMolecule( itype, pos, rot, rigid ):
     return lib.insertMolecule( itype, pos, rot, rigid )
+
+#void clearMolTypes( bool deep){
+lib.clearMolTypes.argtypes = [c_bool]
+lib.clearMolTypes.restype  = None
+def clearMolTypes( deep=True ):
+    lib.clearMolTypes( deep )
 
 #void bakeMMFF(){
 lib.clear.argtypes = []
@@ -148,5 +161,18 @@ lib.setOptFIRE.argtypes = [ c_double, c_double, c_double, c_int    , c_double , 
 lib.setOptFIRE.restype  = None
 def setOptFIRE( dt_max=0.05, dt_min=0.005, damp_max=0.1, minLastNeg=5, finc=1.1, fdec=0.5, falpha=0.98, kickStart=1.0 ):
     lib.setOptFIRE( dt_max, dt_min, damp_max, minLastNeg, finc, fdec, falpha, kickStart )
+
+# ========= Python Functions
+
+def loadAtomTypeNames( fname ):
+    dct={}
+    fin = open( fname, 'r' )
+    for i,line in enumerate(fin):
+        aName=line.split()[0].strip()
+        dct[aName]=i
+    fin.close()
+    return dct
+
+
 
 

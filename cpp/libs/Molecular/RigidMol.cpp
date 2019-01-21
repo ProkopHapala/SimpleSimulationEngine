@@ -124,21 +124,21 @@ void initParams( char* fname_atomTypes, char* fname_bondTypes ){
     builder.params = &params;
     if(fname_atomTypes) params.loadAtomTypes( fname_atomTypes );
     if(fname_bondTypes) params.loadBondTypes( fname_bondTypes );
-    printf( "params.atypNames.size() %i \n", params.atypNames.size() );
+    //printf( "params.atypNames.size() %i \n", params.atypNames.size() );
     //printf("initParams done! \n");
 }
 
+int registerRigidMolType( int natom, Vec3d* apos, Vec3d* REQs, int* atomType ){ return builder.registerRigidMolType( natom, (Vec3d*)apos, (Vec3d*)REQs, atomType ); };
 int loadMolType   ( char* fname ){ return builder.loadMolType(fname ); };
 int insertMolecule( int itype, double* pos, double* rot, bool rigid ){ return builder.insertMolecule( itype, *(Vec3d*)pos, *(Mat3d*)rot, rigid ); };
 
-void clear(){
-    builder.clear();
-}
+void clear(){ builder.clear(); }
+void clearMolTypes(bool deep){ builder.clearMolTypes(deep); }
 
 void bakeMMFF(){
     builder.toMMFF( &world );
     world.genPLQ();
-    world.printAtomInfo(); //exit(0);
+    //world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); 
 }
@@ -202,7 +202,7 @@ double relaxNsteps( int nsteps, double F2conf ){
         //DEBUG
 
         //printf( ">> itr %i F2 %g dt %g qrot (%g,%g,%g,%g) int %li \n", itr, F2, opt.dt, world.poses[4], world.poses[5], world.poses[6], world.poses[7], world.gridFF.FFPauli );
-        printf( ">> itr %i F2 %g dt %g poses (%g,%g,%g,%g, %g,%g,%g,%g) \n", itr, F2, world.poses[0], world.poses[1], world.poses[2], world.poses[3], world.poses[4], world.poses[5], world.poses[6], world.poses[7] );
+        //printf( ">> itr %i F2 %g dt %g poses (%g,%g,%g,%g, %g,%g,%g,%g) \n", itr, F2, world.poses[0], world.poses[1], world.poses[2], world.poses[3], world.poses[4], world.poses[5], world.poses[6], world.poses[7] );
 
     }
     return F2;

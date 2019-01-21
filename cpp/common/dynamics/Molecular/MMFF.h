@@ -215,7 +215,7 @@ void setCollisionRF( double Rsc ){
 
 void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
     natoms=natoms_; nbonds=nbonds_; nang=nang_; ntors=ntors_;
-    printf( "MMFF::allocate natoms: %i  nbonds: %i  nang: %i ntors: %i \n", natoms, nbonds, nang, ntors );
+    //printf( "MMFF::allocate natoms: %i  nbonds: %i  nang: %i ntors: %i \n", natoms, nbonds, nang, ntors );
     _realloc( atypes, natoms );
     _realloc( apos      , natoms );
     _realloc( aforce    , natoms );
@@ -241,7 +241,7 @@ void allocate( int natoms_, int nbonds_, int nang_, int ntors_ ){
 
 void allocFragment( int nFrag_ ){
     nFrag = nFrag_;
-    printf( "MMFF::allocFragment nFrags: %i  nPosses: %i \n", nFrag, nFrag*8 );
+    //printf( "MMFF::allocFragment nFrags: %i  nPosses: %i \n", nFrag, nFrag*8 );
     //imolTypes = new int[nFrag];
     _realloc( frag2a    , nFrag   );    // start of the fragment in forcefield
     _realloc( fragNa    , nFrag   );    // lengh of the fragment

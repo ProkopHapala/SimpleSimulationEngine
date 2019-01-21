@@ -10,6 +10,7 @@
 #include "Vec2.h"
 #include "Vec3.h"
 
+/*
 inline int atomChar2int(char ch ){
     int i = -1;
     switch(ch){
@@ -24,6 +25,7 @@ inline int atomChar2int(char ch ){
     }
     return i;
 }
+*/
 
 inline int otherAtom( Vec2i ib, int ia ){ return (ia==ib.x)?ib.y:ib.x; }
 
@@ -49,14 +51,6 @@ class Molecule{ public:
 
     void allocate( int natoms_, int nbonds_ ){
         natoms=natoms_; nbonds=nbonds_;
-        /*
-        if(pos      ==NULL) pos       = new Vec3d [natoms];
-        //if(charges  ==NULL) charges   = new double[natoms];
-        if(REQs     ==NULL) REQs      = new Vec3d [natoms];
-        if(bond2atom==NULL) bond2atom = new Vec2i [nbonds];
-        if(atomType ==NULL) atomType  = new int   [natoms];
-        if(bondType ==NULL) bondType  = new int   [nbonds];
-        */
         _realloc( pos       , natoms );
         //_realloc( charges   , natoms );
         _realloc( REQs      , natoms );
@@ -97,7 +91,7 @@ class Molecule{ public:
     void printAtomInfo(){
         printf("Molecule::printAtomInfo : \n" );
         for(int i=0; i<natoms; i++){
-            printf( "%i %f %f %f \n", i, REQs[i].x, REQs[i].y, REQs[i].z );
+            printf( "atom[%i] pos (%g,%g,%g) REQs(%g,%g,%g) \n", i, pos[i].x,pos[i].y,pos[i].z, REQs[i].x, REQs[i].y, REQs[i].z );
         }
     }
 
