@@ -164,7 +164,7 @@ class RARFF{ public:
     double invRotMass = 2.0;
 
     int natom    =0;
-    RigidAtomType* types=0;
+    //RigidAtomType* types=0;
     RigidAtom*     atoms=0;
 
     void realloc(int natom_){
