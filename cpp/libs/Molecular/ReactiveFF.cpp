@@ -79,6 +79,7 @@ int*    getTypes (){ return (int*)   ff.types;  }
 double* getPoss  (){ return (double*)ff.poss;   }
 double* getQrots (){ return (double*)ff.qrots;  }
 double* getHbonds(){ return (double*)ff.hbonds; }
+double* getEbonds(){ return (double*)ff.ebonds; }
 
 void setTypes( int natoms, int* types ){
     for(int i=0; i<natoms; i++){ ff.types[i]=atomTypes[types[i]]; };

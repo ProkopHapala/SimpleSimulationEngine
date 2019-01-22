@@ -168,6 +168,7 @@ class RARFF2arr{ public:
     Vec3d*  vels   = 0;
 
     // aux
+    double*        ebonds=0;
     Vec3d*         hbonds=0;
     Vec3d*         fbonds=0;
 
@@ -184,6 +185,7 @@ class RARFF2arr{ public:
         _realloc(torqs  ,natom);
         _realloc(omegas ,natom);
         _realloc(vels   ,natom);
+        _realloc(ebonds ,natom*N_BOND_MAX);
         _realloc(hbonds ,natom*N_BOND_MAX);
         _realloc(fbonds ,natom*N_BOND_MAX);
     }
@@ -225,6 +227,8 @@ class RARFF2arr{ public:
         Vec3d* fis = fbonds+ia*N_BOND_MAX;
         Vec3d* fjs = fbonds+ja*N_BOND_MAX;
 
+        double* eis = ebonds+ia*N_BOND_MAX;
+        double* ejs = ebonds+ja*N_BOND_MAX;
 
         for(int ib=0; ib<nbi; ib++){
             const Vec3d& hi = his[ib];
@@ -246,7 +250,10 @@ class RARFF2arr{ public:
                 double e   = cc2*cc2;
                 double de  = 4*cc2*cc;
 
-                E += e * Eb;
+                double eEb = e * Eb;
+                eis[ib]+=eEb*0.5;
+                ejs[jb]+=eEb*0.5;
+                E += eEb;
 
                 force.x += Eb*de*cij*( cj*( hi.x*dxx + hi.y*dxy + hi.z*dxz )     +    ci*( hj.x*dxx + hj.y*dxy + hj.z*dxz )   )  + hij.x*frb*e;
                 force.y += Eb*de*cij*( cj*( hi.x*dxy + hi.y*dyy + hi.z*dyz )     +    ci*( hj.x*dxy + hj.y*dyy + hj.z*dyz )   )  + hij.y*frb*e;
@@ -297,8 +304,8 @@ class RARFF2arr{ public:
             torqs [i]=Vec3dZero; 
             forces[i]=Vec3dZero;
         }
-        int nval = natom*N_BOND_MAX*3;
-        for(int i=0; i<nval; i++){ ((double*)fbonds)[i]=0; }
+        int nb   = natom*N_BOND_MAX;    for(int i=0; i<nb;   i++){ ebonds[i]=0; }
+        int nval = natom*N_BOND_MAX*3;  for(int i=0; i<nval; i++){ ((double*)fbonds)[i]=0;}
     }
 
     double evalF2rot(){ double F2=0; for(int i=0; i<natom; i++){ F2+=torqs [i].norm2(); }; return F2; }

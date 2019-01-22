@@ -214,7 +214,8 @@ def writeToXYZ( fout, es, xyzs ):
         fout.write("%s %f %f %f\n"  %( es[i], xyz[0], xyz[1], xyz[2] ) )
 
 def saveXYZ( es, xyzs, fname ):
-    fout = open(fname,'w')
+    print ">>>>>",fname,"<<<<<"
+    fout = open(fname, "w")
     writeToXYZ( fout, es, xyzs )
     fout.close() 
 

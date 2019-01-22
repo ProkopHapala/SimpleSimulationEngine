@@ -65,6 +65,12 @@ lib.getHbonds.restype  = ctypes.POINTER(c_double)
 def getHbonds(natom):
     return np.ctypeslib.as_array( lib.getHbonds( ), shape=(natom,4,3) )
 
+#double* getEbonds(){ 
+lib.getEbonds.argtypes = []
+lib.getEbonds.restype  = ctypes.POINTER(c_double)
+def getEbonds(natom):
+    return np.ctypeslib.as_array( lib.getEbonds( ), shape=(natom,4) )
+
 #void setTypes( int natoms, int* types ){
 lib.setTypes.argtypes = [c_int, array1i]
 lib.setTypes.restype  = None
