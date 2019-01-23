@@ -47,11 +47,25 @@ RARFF2arr  ff;
 //std::list<RigidAtomType>  atomTypes;
 std::vector<RigidAtomType*> atomTypes;
 
+
+// surface
+struct {
+    Vec3d  h  =  Vec3dZ;
+    double K  =  1.0;
+    double x0 =  0.0;
+} surf;
+
+struct {
+    Vec3d p0,p1;
+    double K    =  1.0;
+    double fmax =  0.0;
+} box;
+
 extern "C"{
 
 // ========= Grid initialization
 
-int insertAtomType( int nbond, int ihyb, double rbond0, double aMorse, double bMorse, double c6, double R2vdW ){
+int insertAtomType( int nbond, int ihyb, double rbond0, double aMorse, double bMorse, double c6, double R2vdW, double Epz ){
     RigidAtomType* atyp = new RigidAtomType();
     atomTypes.push_back( atyp );
     //RigidAtomType& atyp = atomTypes.back();
@@ -59,6 +73,7 @@ int insertAtomType( int nbond, int ihyb, double rbond0, double aMorse, double bM
     atyp->rbond0 =  rbond0;
     atyp->aMorse =  aMorse;
     atyp->bMorse =  bMorse;
+    atyp->Epz    =  Epz;
     atyp->c6     =  c6;
     atyp->R2vdW  =  R2vdW;
     printf("insertAtomType %i %i  %g %g %g %g %g ", nbond, ihyb, rbond0, aMorse, bMorse, c6, R2vdW );
@@ -81,6 +96,8 @@ double* getQrots (){ return (double*)ff.qrots;  }
 double* getHbonds(){ return (double*)ff.hbonds; }
 double* getEbonds(){ return (double*)ff.ebonds; }
 
+
+
 void setTypes( int natoms, int* types ){
     for(int i=0; i<natoms; i++){ ff.types[i]=atomTypes[types[i]]; };
 }
@@ -97,12 +114,27 @@ void setAtoms( int natoms, int* types, double* apos, double* qrots[i]){
 }
 */
 
+void setSurf(double K, double x0, double* h ){
+    surf.h  =  *(Vec3d*)h;
+    surf.K  =  K;
+    surf.x0 =  x0;
+}
+
+void setBox(double K, double fmax, double* p0, double* p1 ){
+    box.p0  =  *(Vec3d*)p0;
+    box.p1  =  *(Vec3d*)p1;
+    box.K    =  K;
+    box.fmax =  fmax;
+}
+
 double relaxNsteps( int nsteps, double F2conf, double dt, double damp ){
     double F2=1.0;
     for(int itr=0; itr<nsteps; itr++){
         ff.cleanAtomForce();
         ff.projectBonds();
         ff.interEF();
+        if( surf.K < 0.0 ){ ff.applyForceHarmonic1D( surf.h, surf.x0, surf.K); }
+        if( box .K < 0.0 ){ ff.applyForceBox       ( box.p0, box.p1, box.K, box.fmax); }
         ff.evalTorques();
         F2 = ff.evalF2pos() + ff.evalF2rot(); // some scaling ?
         //printf( "itr %i F2 %g \n", itr, F2 ); 

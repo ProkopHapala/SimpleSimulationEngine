@@ -91,8 +91,9 @@ struct RigidAtomType{
     double aMorse =  4.0;
     double bMorse = -0.7;
 
-    double c6    = -15.0;
-    double R2vdW =  8.0;
+    double Epz    =  0.5;
+    double c6     = -15.0;
+    double R2vdW  =  8.0;
     Vec3d* bh0s = (Vec3d*)sp3_hs;
 
     inline void combine(const RigidAtomType& a, const RigidAtomType& b ){
@@ -101,6 +102,7 @@ struct RigidAtomType{
         bMorse  = a.bMorse + b.bMorse;
         rbond0  = a.rbond0 + b.rbond0;
 
+        Epz   = a.Epz * b.Epz;
         c6    = -(a.c6  * b.c6);
         R2vdW = a.R2vdW + a.R2vdW;
     }
@@ -269,6 +271,22 @@ class RARFF2arr{ public:
 
             }
         }
+
+        //printf( "%i,%i nbi %i nbj %i \n", ia, ja, nbi, nbj );
+        if( (nbi==3)&&(nbj==3) ){ // align pz-pz in sp2-sp2 pair
+            const Vec3d& hi = his[3];
+            const Vec3d& hj = hjs[3];
+            Vec3d&       fi = fis[3];
+            Vec3d&       fj = fjs[3];
+            double cdot = hi.dot(hj);
+            //double E    = Epz * ( cdot*cdot );
+            double de = -2*cdot*type.Epz*Eb;
+            //printf( "cdot %g Epz %g de %g \n", cdot, type.Epz, de );
+            fi.add_mul(hj,de);
+            fj.add_mul(hi,de);
+            //force      // TODO: proper derivatives of energy
+        }
+
         forces[ja].sub(force);
         forces[ia].add(force);
         return E;
@@ -280,7 +298,8 @@ class RARFF2arr{ public:
         for(int i=0; i<natom; i++){
             RigidAtomType& typei = *types[i];
             Vec3d           pi   = poss[i];
-            for(int j=0; j<natom; j++){
+            for(int j=i+1; j<natom; j++){
+            //for(int j=0; j<natom; j++){
                 RigidAtomType pairType;
                 pairType.combine( typei, *types[j] );
                 E += pairEF( i, j, typei.nbond, types[j]->nbond, pairType );
@@ -317,12 +336,42 @@ class RARFF2arr{ public:
         }
     }
 
+    void applyForceHarmonic1D(const Vec3d& h, double x0, double K){
+        //printf( "applyForceHarmonic1D %g %g (%g,%g,%g) \n", x0, K, h.x,h.y,h.z  );
+        for(int ia=0; ia<natom; ia++){ 
+            double x = h.dot(poss[ia])-x0;
+            forces[ia].add_mul( h, K*x );
+        }
+    }
+
+    void applyForceBox(const Vec3d& p0, const Vec3d& p1, double K, double fmax){
+        //printf( "applyForceHarmonic1D %g %g (%g,%g,%g) (%g,%g,%g) \n", K, fmax, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z  );
+        double f2max = fmax*fmax;
+        for(int ia=0; ia<natom; ia++){
+            Vec3d p = poss[ia];
+            Vec3d f;
+            Vec3d d0,d1;
+            d0=p-p0;
+            d1=p-p1;
+            if( d0.x<0 ){ f.x=K*d0.x; }else if( d1.x>0 ){ f.x=K*d1.x; };
+            if( d0.y<0 ){ f.y=K*d0.y; }else if( d1.y>0 ){ f.y=K*d1.y; };
+            if( d0.z<0 ){ f.z=K*d0.z; }else if( d1.z>0 ){ f.z=K*d1.z; };
+            double f2 = f.norm2();
+            if( f2>f2max ){
+                f.mul( sqrt(f2max/f2) );
+            }
+            //printf( "ia %i (%g,%g,%g) (%g,%g,%g) \n", ia, p.x,p.y,p.z,  f.x,f.y,f.z ); 
+            forces[ia].add(f);
+        }
+    }
+
     void evalTorques(){
         for(int ia=0; ia<natom; ia++){
             //RigidAtom& atomi = atoms[ia];
             //Vec3d torq = Vec3dZero;
             int nbi =  types[ia]->nbond;
-            for(int ib=0; ib<nbi; ib++){
+            //for(int ib=0; ib<nbi; ib++){
+            for(int ib=0; ib<N_BOND_MAX; ib++){
                 int io = 4*ia+ib;
                 fbonds[io].makeOrthoU(hbonds[io]);
                 //printf( "ia %i ib %i f(%g,%g,%g)\n", ia, ib,  fbonds[io].x,fbonds[io].y,fbonds[io].z );

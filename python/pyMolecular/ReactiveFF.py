@@ -29,11 +29,11 @@ array3d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=3, flags='CONTIGUOUS')
 
 # ========= C functions
 
-#void insertAtomType( int nbond, int ihyb, double rbond0, double aMorse, double bMorse, double c6, double R2vdW ){
-lib.insertAtomType.argtypes = [ c_int, c_int, c_double, c_double, c_double, c_double, c_double ]
+#void insertAtomType( int nbond, int ihyb, double rbond0, double aMorse, double bMorse, double c6, double R2vdW, double Epz ){
+lib.insertAtomType.argtypes = [ c_int, c_int, c_double, c_double, c_double, c_double, c_double, c_double ]
 lib.insertAtomType.restype  = c_int
-def insertAtomType( nbond, ihyb, rbond0, aMorse, bMorse, c6, R2vdW ):
-    return lib.insertAtomType( nbond, ihyb, rbond0, aMorse, bMorse, c6, R2vdW )
+def insertAtomType( nbond, ihyb, rbond0, aMorse, bMorse, c6, R2vdW, Epz ):
+    return lib.insertAtomType( nbond, ihyb, rbond0, aMorse, bMorse, c6, R2vdW, Epz )
 
 #void ralloc(int natom){
 lib.ralloc.argtypes = []
@@ -77,6 +77,17 @@ lib.setTypes.restype  = None
 def setTypes(natom, itypes):
     lib.setTypes(natom, itypes)
 
+#void setSurf(double K, double x0, double* h ){
+lib.setSurf.argtypes = [c_double, c_double, array1d]
+lib.setSurf.restype  = None
+def setSurf(K=-1.0, x0=0.0, h=np.array([0.0,0.0,1.0]) ):
+    lib.setSurf(K, x0, h)
+
+#void setBox(double K, double fmax, double* p0, double* p1 ){
+lib.setBox.argtypes = [c_double, c_double, array1d, array1d]
+lib.setBox.restype  = None
+def setBox( p0, p1, K=-1.0, fmax=1.0 ):
+    lib.setBox(K, fmax, p0, p1)
 
 #double relaxNsteps( int nsteps, double F2conf ){
 lib.relaxNsteps.argtypes = [ c_int, c_double, c_double, c_double ]
