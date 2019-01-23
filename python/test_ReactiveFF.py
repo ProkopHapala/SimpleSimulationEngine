@@ -31,11 +31,17 @@ def h2bonds( itypes, poss, hbonds, bsc=1.1 ):
     itypes_[mask,4  ] = 1
     return xyzs.reshape(-1,3), itypes_.reshape(-1)
 
-def removeSaturatedBonds(ebonds, itypes, xyzs, Ecut=-0.1 ):
+def ebond2caps( ebonds, Ecut=-0.1 ):
+    caps = np.zeros(ebonds.shape,dtype=np.int32) - 1
+    caps[ebonds>Ecut] = 1;
+    return caps
+
+def removeSaturatedBonds(caps, itypes, xyzs,  ):
     itypes = itypes.reshape(-1,5)
     xyzs   = xyzs  .reshape(-1,5,3)
     #print ebonds
-    mask   = ebonds > Ecut
+    #mask  = ebonds > Ecut
+    mask   = caps >= 0
     mask[ itypes[:,4]==0,3] = False
     #print mask
     xyzs_   = [ xyzs  [:,0,:], xyzs  [mask[:,0],1,:], xyzs  [mask[:,1],2,:], xyzs  [mask[:,2],3,:], xyzs  [mask[:,3],4,:] ]
@@ -79,6 +85,7 @@ if __name__ == "__main__":
     qrots  = rff.getQrots(natom)
     hbonds = rff.getHbonds(natom)
     ebonds = rff.getEbonds(natom)
+    caps   = rff.getBondCaps(natom)
     #itypes  = np.random.randint( 2, size=natom, dtype=np.int32 ); print "itypes", itypes
     itypes  = (np.random.rand( natom )*1.3 ).astype(np.int32); print "itypes", itypes
     rff.setTypes( natom, itypes )
@@ -93,7 +100,7 @@ if __name__ == "__main__":
 
     #rff.relaxNsteps( nsteps=2000, F2conf=0.0, dt=0.05, damp=0.9 )
 
-    t1 = time.clock();
+    '''
     fout = open( "rff_movie.xyz",'w')
     for itr in range(50):
         F2 = rff.relaxNsteps( nsteps=50, F2conf=0.0, dt=0.15, damp=0.9 )
@@ -103,6 +110,26 @@ if __name__ == "__main__":
         #print "itypes_,xyzs shapes : ", itypes_.shape,xyzs.shape
         xyzs, itypes_ = removeSaturatedBonds(ebonds, itypes_, xyzs, Ecut=-0.1 )
         #print ebonds
+        au.writeToXYZ( fout, itypes_, xyzs  )
+    fout.close()
+    t2 = time.clock();
+    '''
+    
+    t1 = time.clock();
+    fout = open( "rff_movie.xyz",'w')
+    for itr in range(10):
+        F2 = rff.relaxNsteps( nsteps=50, F2conf=0.0, dt=0.15, damp=0.9 )
+        print ">> itr ", itr," F2 ", F2 #, caps
+        xyzs, itypes_ = h2bonds( itypes, poss, hbonds, bsc=1.1 )
+        xyzs, itypes_ = removeSaturatedBonds(caps, itypes_, xyzs )
+        au.writeToXYZ( fout, itypes_, xyzs  )
+    rff.passivateBonds( -0.1 );
+    print "passivation ", caps
+    for itr in range(30):
+        F2 = rff.relaxNsteps( nsteps=50, F2conf=0.0, dt=0.05, damp=0.9 )
+        print ">> itr ", itr," F2 ", F2 #, caps
+        xyzs, itypes_ = h2bonds( itypes, poss, hbonds, bsc=1.1 )
+        xyzs, itypes_ = removeSaturatedBonds(caps, itypes_, xyzs )
         au.writeToXYZ( fout, itypes_, xyzs  )
     fout.close()
     t2 = time.clock();

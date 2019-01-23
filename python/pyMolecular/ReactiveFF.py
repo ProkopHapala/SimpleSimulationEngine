@@ -71,6 +71,12 @@ lib.getEbonds.restype  = ctypes.POINTER(c_double)
 def getEbonds(natom):
     return np.ctypeslib.as_array( lib.getEbonds( ), shape=(natom,4) )
 
+#double* getBondCaps(){ 
+lib.getBondCaps.argtypes = []
+lib.getBondCaps.restype  = ctypes.POINTER(c_int)
+def getBondCaps(natom):
+    return np.ctypeslib.as_array( lib.getBondCaps( ), shape=(natom,4) )
+
 #void setTypes( int natoms, int* types ){
 lib.setTypes.argtypes = [c_int, array1i]
 lib.setTypes.restype  = None
@@ -88,6 +94,12 @@ lib.setBox.argtypes = [c_double, c_double, array1d, array1d]
 lib.setBox.restype  = None
 def setBox( p0, p1, K=-1.0, fmax=1.0 ):
     lib.setBox(K, fmax, p0, p1)
+
+#int passivateBonds( double Ecut ){
+lib.passivateBonds.argtypes = [c_double]
+lib.passivateBonds.restype  = c_int
+def passivateBonds( Ecut=-0.1 ):
+    return lib.passivateBonds( Ecut )
 
 #double relaxNsteps( int nsteps, double F2conf ){
 lib.relaxNsteps.argtypes = [ c_int, c_double, c_double, c_double ]

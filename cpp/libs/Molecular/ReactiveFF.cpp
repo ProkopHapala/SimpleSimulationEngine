@@ -95,8 +95,7 @@ double* getPoss  (){ return (double*)ff.poss;   }
 double* getQrots (){ return (double*)ff.qrots;  }
 double* getHbonds(){ return (double*)ff.hbonds; }
 double* getEbonds(){ return (double*)ff.ebonds; }
-
-
+double* getBondCaps(){ return (double*)ff.bondCaps; }
 
 void setTypes( int natoms, int* types ){
     for(int i=0; i<natoms; i++){ ff.types[i]=atomTypes[types[i]]; };
@@ -126,6 +125,8 @@ void setBox(double K, double fmax, double* p0, double* p1 ){
     box.K    =  K;
     box.fmax =  fmax;
 }
+
+int passivateBonds( double Ecut ){ return ff.passivateBonds( Ecut ); }
 
 double relaxNsteps( int nsteps, double F2conf, double dt, double damp ){
     double F2=1.0;

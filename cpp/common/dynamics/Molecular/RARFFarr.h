@@ -154,6 +154,17 @@ struct RigidAtom{
 
 class RARFF2arr{ public:
 
+    double lcap       =   1.0;
+    double aMorseCap  =   1.0;
+    double bMorseCap  =  -0.7;
+
+    double Ecap   = 0.000681; // H
+    double Rcap   = 1.4+1.4;  // H
+    double r2cap  = Rcap*Rcap; 
+    double r6cap  = r2cap*r2cap*r2cap;
+    double c6cap  = 2*Ecap*(r6cap); 
+    double c12cap =   Ecap*(r6cap*r6cap);
+
     double invRotMass = 2.0;
 
     int natom            =0;
@@ -173,6 +184,7 @@ class RARFF2arr{ public:
     double*        ebonds=0;
     Vec3d*         hbonds=0;
     Vec3d*         fbonds=0;
+    int  *         bondCaps = 0;
 
     //double F2pos=0;
     //double F2rot=0;
@@ -190,6 +202,7 @@ class RARFF2arr{ public:
         _realloc(ebonds ,natom*N_BOND_MAX);
         _realloc(hbonds ,natom*N_BOND_MAX);
         _realloc(fbonds ,natom*N_BOND_MAX);
+        _realloc(bondCaps ,natom*N_BOND_MAX);
     }
 
     inline double pairEF( int ia, int ja, int nbi, int nbj, RigidAtomType& type){
@@ -232,20 +245,50 @@ class RARFF2arr{ public:
         double* eis = ebonds+ia*N_BOND_MAX;
         double* ejs = ebonds+ja*N_BOND_MAX;
 
+        int* capis = bondCaps+ia*N_BOND_MAX;
+        int* capjs = bondCaps+ja*N_BOND_MAX;
+
         for(int ib=0; ib<nbi; ib++){
             const Vec3d& hi = his[ib];
             Vec3d& fi       = fis[ib];
             double ci       = hij.dot( hi );   // ci = <hi|hij>
             if(ci<0) continue;
 
+            bool capi = ( capis[ib] >= 0 );
+
             for(int jb=0; jb<nbj; jb++){
                 const Vec3d& hj = hjs[jb];
+                Vec3d& fj = fjs[jb];
+
+
+                if( capi && (capjs[jb]>=0) ){ // repulsion of capping atoms
+                    Vec3d pi = poss[ia] + hi*lcap;
+                    Vec3d pj = poss[ja] + hj*lcap;
+
+                    Vec3d  dij   = pi-pj;
+                    double r2    = dij.norm2() + R2SAFE;
+                    
+                    // Morse
+                    double rij   = sqrt( r2 );
+                    double e     = aMorseCap * exp( bMorseCap*rij );
+                    Vec3d  f     = dij * (-bMorseCap * e / rij);
+
+                    // Lenard-Jones
+                    //double ir2 = 1/r2;
+                    //double ir6 = r2*r2*r2;
+                    //Vec3d  f   = dij * ( ( 6*c6cap - 12*c12cap*ir6 ) * ir6 * -ir2 );
+
+                    force.add(f);
+                    f.mul(1.0/lcap);
+                    fi.add(f);
+                    fj.sub(f);
+                    continue;
+                }
+
                 double cj       = hij.dot( hj );  // cj  = <hj|hij>
                 double cij      = hi .dot( hj );  // cij = <hj|hi>
 
                 if( (cj>0)||(cij>0) ) continue;
-
-                Vec3d& fj = fjs[jb];
 
                 double cc  = ci*cj*cij;
                 double cc2 = cc*cc;
@@ -310,10 +353,16 @@ class RARFF2arr{ public:
 
     void cleanAux(){
         for(int i=0; i<natom; i++){  
-            vels  [i]=Vec3dZero; 
-            omegas[i]=Vec3dZero; 
-            torqs [i]=Vec3dZero; 
+            vels  [i]=Vec3dZero;
+            omegas[i]=Vec3dZero;
+            torqs [i]=Vec3dZero;
             forces[i]=Vec3dZero;
+        }
+        int nb   = natom*N_BOND_MAX;
+        for(int i=0; i<nb;   i++){ 
+            ebonds  [i]=0;
+            bondCaps[i]=-1;
+            fbonds  [i].set(0.0);
         }
     }
 
@@ -324,6 +373,7 @@ class RARFF2arr{ public:
             forces[i]=Vec3dZero;
         }
         int nb   = natom*N_BOND_MAX;    for(int i=0; i<nb;   i++){ ebonds[i]=0; }
+        //printf("\n"); for(int i=0; i<nb;   i++){ printf("%i ", bondCaps[i] ); }; printf("\n");
         int nval = natom*N_BOND_MAX*3;  for(int i=0; i<nval; i++){ ((double*)fbonds)[i]=0;}
     }
 
@@ -369,7 +419,7 @@ class RARFF2arr{ public:
         for(int ia=0; ia<natom; ia++){
             //RigidAtom& atomi = atoms[ia];
             //Vec3d torq = Vec3dZero;
-            int nbi =  types[ia]->nbond;
+            //int nbi =  types[ia]->nbond;
             //for(int ib=0; ib<nbi; ib++){
             for(int ib=0; ib<N_BOND_MAX; ib++){
                 int io = 4*ia+ib;
@@ -398,6 +448,20 @@ class RARFF2arr{ public:
             poss  [i].add_mul    ( vels[i], dt    );
             qrots [i].dRot_exact ( dt,  omegas[i] );
             qrots [i].normalize();
+        }
+    }
+
+    int passivateBonds( double Ecut ){
+        printf( " c6cap, c12cap %g %g \n", c6cap, c12cap );
+        for(int i=0; i<natom*N_BOND_MAX; i++){ bondCaps[i]=-1; };
+        for(int ia=0; ia<natom; ia++){
+            int nbi =  types[ia]->nbond;
+            for(int ib=0; ib<nbi; ib++){
+                int i = ia*N_BOND_MAX + ib;
+                if(ebonds[i]>Ecut){
+                    bondCaps[i]=1;
+                };
+            }
         }
     }
 
