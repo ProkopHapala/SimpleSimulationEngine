@@ -42,10 +42,12 @@ def ralloc(natom):
     lib.ralloc(natom)
 
 #int*    getTypes(){ 
-lib.getPoss.argtypes = []
-lib.getPoss.restype  = ctypes.POINTER(c_int)
+lib.getTypes.argtypes = []
+lib.getTypes.restype  = ctypes.POINTER(c_int)
 def getTypes(natom):
-    return np.ctypeslib.as_array( lib.getTypes( ), shape=(natom))
+    ptr = lib.getTypes( )
+    print ptr 
+    return np.ctypeslib.as_array( ptr, shape=(natom,))
 
 #double* getPoss (){ 
 lib.getPoss.argtypes = []
