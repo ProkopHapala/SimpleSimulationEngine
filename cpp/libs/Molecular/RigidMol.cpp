@@ -95,6 +95,11 @@ void initRigidSubstrate( char* fname, int* ns, double* pos0, double* cell ){
     //world.gridFF.evalGridFFs( {0,0,0} );
 }
 
+void setCoulombMirror(double* hdir,double* p0){
+    world.setCoulombMirror( *(Vec3d*) hdir, *(Vec3d*) p0);
+    world.bMirror = true;
+}
+
 void recalcGridFF( int* ns){
     world.gridFF.evalGridFFs( *(Vec3i*)ns );
 }
@@ -185,6 +190,7 @@ double relaxNsteps( int nsteps, double F2conf ){
         world.cleanAtomForce();
         world.frags2atoms();
         if( world.gridFF.FFPauli ) world.eval_FFgrid();
+        if( world.bMirror        ) world.eval_CoulombMirror_On2( world.mirror_hdir, world.mirror_c0 );
         world.eval_MorseQ_On2_fragAware();
 
         world.cleanPoseTemps();

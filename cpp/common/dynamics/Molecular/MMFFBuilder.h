@@ -35,6 +35,7 @@ class MMFFmol{ public:
 };
 
 class MMFFfrag{ public:
+    //int imolType;
     int atom0, natom;
     Vec3d  pos;
     Quat4d rot;
@@ -54,6 +55,8 @@ class MMFFBuilder{  public:
     std::vector<MMFFmol>   mols;
     std::vector<MMFFfrag>  frags;
     std::unordered_map<size_t,size_t> fragTypes;
+    std::unordered_map<size_t,size_t> mol2molType;
+
 
     void clearMolTypes( bool deep ){
         if(deep){ for(Molecule* mol : molTypes ){ mol->dealloc(); delete mol; } }
@@ -78,6 +81,8 @@ class MMFFBuilder{  public:
         //printf("mol->atypNames %i %i \n", mol->atypNames, &params->atypNames );
         mol->loadXYZ( fname );             //printf( "DEBUG 1.1.3 \n" );
         if(params) params->assignREs( mol->natoms, mol->atomType, mol->REQs ); //printf( "DEBUG 1.1.4 \n" );
+        int ityp = molTypes.size();
+        mol2molType[(size_t)mol]=ityp;
         molTypes.push_back(mol);  //printf( "DEBUG 1.1.5 \n" );
         return molTypes.size()-1; //printf( "DEBUG 1.1.6 \n" );
     }
@@ -86,6 +91,8 @@ class MMFFBuilder{  public:
         Molecule* mol = new Molecule();
         mol->allocate( natoms, 0 );
         for(int i=0; i<mol->natoms; i++){ mol->pos[i]=pos[i]; mol->REQs[i]=REQs[i]; mol->atomType[i]=atomType[i]; }
+        int ityp = molTypes.size();
+        mol2molType[(size_t)mol]=ityp;
         molTypes.push_back(mol);
         return molTypes.size()-1;
     }
@@ -108,6 +115,7 @@ class MMFFBuilder{  public:
         if( rigid ){
             Quat4d qrot; qrot.fromMatrix(rot);
             int ifrag = frags.size();
+            printf( "insertMolecule mol->natoms %i \n", mol->natoms );
             for(int i=0; i<mol->natoms; i++){
                 //Vec3d REQi = (Vec3d){1.0,0.03,mol->}; // TO DO : LJq can be set by type
                 //atoms.push_back( (MMFFAtom){mol->atomType[i],mol->pos[i], LJq } );
@@ -146,6 +154,7 @@ class MMFFBuilder{  public:
     };
     
     int insertMolecule( const std::string& molName, const Vec3d& pos, const Mat3d& rot, bool rigid ){
+        printf( "insertMolecule molName %s itype %i \n", molName.c_str(), molTypeDict[molName] );
         return insertMolecule( molTypes[ molTypeDict[molName] ], pos, rot, rigid );
     };
 

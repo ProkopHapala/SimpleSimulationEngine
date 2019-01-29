@@ -8,6 +8,13 @@ struct int2   { int x,y; };
 
 //======= float
 
+struct float2 {
+	union{
+		struct{ float x,y; };
+		float array[2];
+	};
+};
+
 struct float3 {
 	union{
 		struct{ float x,y,z; };

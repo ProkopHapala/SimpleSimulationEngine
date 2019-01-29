@@ -178,6 +178,7 @@ __kernel void getForceRigidSystemSurfGrid(
     __global  float8*  poses,        // pos, qrot
     __global  float8*  fposes,       // force acting on pos, qrot
     __global  float8*  vposes,       // force acting on pos, qrot
+    __global  float2*  invMasses,    // mass pos, rot
     float4 pos0,
     float4 dinvA,
     float4 dinvB,
@@ -225,6 +226,7 @@ __kernel void getForceRigidSystemSurfGrid(
     float4 forceV       = vposes[oimol].lo;
     float4 torqV        = vposes[oimol].hi; // WHAT IS DIFFERENCE BETWEEN dqrot/dforce and torq?
 
+    float2 invMass      = invMasses[oimol]; // used also for fixing DOFs
 /*
     if( get_local_id(0)==0 ){
     //if( get_global_id(0)==0 ){ 
@@ -377,8 +379,13 @@ __kernel void getForceRigidSystemSurfGrid(
                 //mposi.xyz += forceE.xyz * dt;
                 //qroti      = drotQuat_exact( qroti, torq * dt );
 
-                forceV.xyz = forceV.xyz*damp + forceE.xyz * dt;
-                torqV.xyz  = torqV.xyz *damp + torq.xyz   * dt;
+                if(isys == 1 && imol==1 ) printf( "invMasses %i (%g,%g)  f %g %g  t %g %g T %g \n", iStep, invMass.x, invMass.y, length(forceV.xyz), length(forceE.xyz), length(torqV.xyz), length(torq.xyz), dt );
+                //printf( "invMasses %i (%i,%i) (%g,%g)\n", iStep, isys, imol, invMass.x, invMass.y );
+
+                forceV.xyz = forceV.xyz*damp + forceE.xyz * ( dt * invMass.x );
+                torqV.xyz  = torqV.xyz *damp + torq  .xyz * ( dt * invMass.y );
+                //forceV.xyz = forceV.xyz*damp + forceE.xyz * dt;
+                //torqV.xyz  = torqV.xyz *damp + torq  .xyz * dt;
                 mposi.xyz += forceV.xyz * dt;
                 qroti      = drotQuat_exact( qroti, torqV * dt );
 
