@@ -64,8 +64,11 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     //ff.loadFromFile_bas( "data/CH4.bas" );
-    //ff.loadFromFile_bas( "data/C2H6.bas" );
-    ff.loadFromFile_bas( "data/C2.bas" );
+    ff.loadFromFile_bas( "data/C2H6.bas" );
+    //ff.loadFromFile_bas( "data/C2.bas" );
+    //ff.loadFromFile_bas( "data/H2.bas" );
+    //ff.loadFromFile_bas( "data/C2e2.bas" );
+    //ff.loadFromFile_bas( "data/H-e.bas" );
     printf( " ff.na, ff.ne %i %i \n", ff.na, ff.ne );
 
     ff.clearForce();
@@ -89,7 +92,13 @@ void TestAppRARFF::draw(){
     ff.forceAE();
     ff.forceAA();
     //if(bRun) ff.move( 0.1, 0.9 );
-    if(bRun) ff.run( 1, 0.1, 0.9 );
+    if(bRun) ff.run( 1, 0.1, 0.5 );
+
+    Vec3d d = ff.apos[0]-ff.apos[1];
+
+    //printf("C1-C2 %g C1-e %g C2-e %g \n", (ff.apos[0]-ff.apos[1]).norm(), 
+    //                                      (ff.apos[0]-ff.epos[0]).norm(), 
+    //                                      (ff.apos[1]-ff.epos[0]).norm() );
 
     double fsc = 1.0;
     glColor3f(0.0,0.0,0.0);

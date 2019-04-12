@@ -37,14 +37,20 @@ inline double fr_aa(double r, double s){
     return 1/(r*r+s*s);
 };
 
+inline double interp_gx4(double r2, double y1, double y2 ){
+    double c = (1-r2);
+    c*=c;
+    return c*y1 + (1-c)*y2;
+}
+
 class EFF{ public:
 
     //double dvmax = 0.1;
     //double dpmax = 0.1;
 
     double emass = 1.0;
-    double see = 1.0;
-    double saa = 0.1;
+    double see   = 0.5;
+    double saa   = 0.1;
 
     double sa2  = saa*saa;
     double se2  = see*see;
@@ -106,10 +112,12 @@ class EFF{ public:
             Vec3d pi = epos[i];
             for(int j=0; j<i; j++){
                 Vec3d  d = epos[j] - pi;
-                double r = d.norm();
+                double r2 = d.norm2();
+                double r  = sqrt(r2);
                 //fr       = Aee*exp(Bee*r);
                 //double fr = frEFF_r2( r*r, 1.0, invSee );
                 double fr = 4/(r*r + se2);
+                //double fr = 4*interp_gx4(r2, 4.0*r-2.0, 1.0/r2 );
                 //printf(" fee %i %i %g %g \n", i, j, r, fr);
                 Vec3d f = d*(fr/r);
                 double fmax=0;
@@ -128,12 +136,15 @@ class EFF{ public:
             double qi = aQ[i];
             for(int j=0; j<ne; j++){
                 Vec3d  d = epos[j] - pi;
-                double r = d.norm();
+                double r2 = d.norm2();
+                double r  = sqrt(r2);
                 //double fr = qi* frEFF_r2( r*r, 1.0, invSae );
                 //double fr = 2*qi*(  -2/(r*r + se2) + 1/(r*r + sa2) );
                 //double fr = 2*qi*(  -2/(r*r + sea2) + 1/(r*r + sa2) );
-                double fr = 2*qi*(  -1/(r*r + sea2) + 4*exp(-3*r) );
+                double fr = 2*qi*( -1/(r*r + 0.15) + 5*exp(-8*r*r) );
                 //printf(" fae %i %i %g %g \n", i, j, r, fr);
+                //double fr = interp_gx4(r2*4.0, 14.0, -1.0/r2 );
+
                 Vec3d f = d*(fr/r);
                 aforce[i].sub(f);
                 eforce[j].add(f);
@@ -148,9 +159,11 @@ class EFF{ public:
             double qi = aQ[i];
             for(int j=0; j<i; j++){
                 Vec3d  d  = apos[j] - pi;
-                double r  = d.norm();
+                double r2 = d.norm2();
+                double r  = sqrt(r2);
                 //double fr = aQ[j]*qi * frEFF_r2( r*r, 1.0, invSaa );
                 double fr = aQ[j]*qi/(r*r + sa2);
+                //double fr = aQ[j]*qi * interp_gx4(r2, 0, 1/r2 );
                 //printf(" faa %i %i %g %g \n", i, j, r, fr);
                 Vec3d f   = d*(fr/r);
                 aforce[i].sub(f);
@@ -175,7 +188,7 @@ class EFF{ public:
         }
     }
 
-    double getSafeTimeStep(double dt_, double dvmax, double dpmax){
+    double getSafeTimeStep(double dt_, double dpmax, double dvmax ){
         double dt = dt_;
         double fm = getFmax();
         double vm = getVmax();
@@ -193,46 +206,46 @@ class EFF{ public:
             forceEE();
             forceAE();
             forceAA();
-            double dt_ = getSafeTimeStep(dt, 0.1, 0.1 );
+            double dt_ = getSafeTimeStep(dt, 0.1, 10.0 );
             move(dt_, damp);
         }
     }
 
-bool loadFromFile_bas( char const* filename ){
-    printf(" filename: >>%s<< \n", filename );
-    FILE * pFile;
-    pFile = fopen (filename,"r");
-    fscanf (pFile, " %i %i\n", &na, &ne );
-    printf("na %i ne %i \n", na, ne );
-    realloc( na, ne );
-    char buf[1024];
-    int ntot=na+ne;
-    int ia=0,ie=0;
-    double Qasum = 0.0;
-    for (int i=0; i<ntot; i++){
-        double x,y,z;
-        int e;
-        fgets( buf, 256, pFile); //printf( ">%s<\n", buf );
-        int nw = sscanf (buf, " %i %lf %lf %lf", &e, &x, &y, &z );
-        if( e==0){
-            epos[ie]=(Vec3d){x,y,z};
-            ie++;
-            printf( " e[%i] ", ie );
-        }else{
-            apos[ia]=(Vec3d){x,y,z};
-            aQ  [ia]=e;  // change this later
-            Qasum += e;
-            ia++;
-            printf( " a[%i] ", ia );
-        };
-        printf( " %i %f %f %f  \n", e, x,y,z );
+    bool loadFromFile_bas( char const* filename ){
+        printf(" filename: >>%s<< \n", filename );
+        FILE * pFile;
+        pFile = fopen (filename,"r");
+        fscanf (pFile, " %i %i\n", &na, &ne );
+        printf("na %i ne %i \n", na, ne );
+        realloc( na, ne );
+        char buf[1024];
+        int ntot=na+ne;
+        int ia=0,ie=0;
+        double Qasum = 0.0;
+        for (int i=0; i<ntot; i++){
+            double x,y,z;
+            int e;
+            fgets( buf, 256, pFile); //printf( ">%s<\n", buf );
+            int nw = sscanf (buf, " %i %lf %lf %lf", &e, &x, &y, &z );
+            if( e==0){
+                epos[ie]=(Vec3d){x,y,z};
+                ie++;
+                printf( " e[%i] ", ie );
+            }else{
+                apos[ia]=(Vec3d){x,y,z};
+                aQ  [ia]=e;  // change this later
+                Qasum += e;
+                ia++;
+                printf( " a[%i] ", ia );
+            };
+            printf( " %i %f %f %f  \n", e, x,y,z );
+        }
+        clearVel();
+        clearForce();
+        printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - 2*ne, Qasum, ne );
+        fclose (pFile);
+        return 0;
     }
-    clearVel();
-    clearForce();
-    printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - 2*ne, Qasum, ne );
-    fclose (pFile);
-    return 0;
-}
 
 };
 
