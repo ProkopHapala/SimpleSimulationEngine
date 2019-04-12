@@ -18,7 +18,7 @@
 #include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
-#include "VecN.h"
+//#include "VecN.h"
 
 /*
 #include "Multipoles.h"
