@@ -255,10 +255,15 @@ void getIsoSurfZ( const GridShape& grid, double isoval, bool sign, Vec3d  *FF, V
             double fc = 1-((ofz-isoval)/(ofz-fz));
             //double fc = 0;
             int ibxy  = ib*nx + ia;
+            //printf( "ibxy %i %i \n", ibxy, ibuff );
             pos   [ibxy] = grid.dCell.a*ia + grid.dCell.b*ib + grid.dCell.c*(ic+fc);
-            normal[ibxy] = FF[ibuff-1];
+            //DEBUG
+            //normal[ibxy] = FF[ibuff-1];
+            normal[ibxy] = FF[ibuff];
+            //DEBUG
             normal[ibxy].normalize();
             //normal[ibxy] = interpolate3DvecWrap( FF, grid.n, {ia,ib, ic+fc } );
+            //printf("done \n");
         }
     }
 }

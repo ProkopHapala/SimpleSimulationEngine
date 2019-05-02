@@ -246,6 +246,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     world.gridFF.evalGridFFs( {0,0,0} );
     //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
 
+    DEBUG
     int iatom = 11;
     printf( "testREQ   (%g,%g,%g) -> PLQ (%g,%g,%g) \n",        testREQ.x, testREQ.y, testREQ.z, testPLQ.x, testPLQ.y, testPLQ.z   );
     printf( "aREQs[%i] (%g,%g,%g) -> PLQ (%g,%g,%g) \n", iatom, world.aREQ[iatom].x, world.aREQ[iatom].y, world.aREQ[iatom].z, world.aPLQ[iatom].x, world.aPLQ[iatom].y, world.aPLQ[iatom].z );
@@ -257,19 +258,24 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //world.gridFF.evalCombindGridFF_CheckInterp( (Vec3d){ 2.181, 0.0243442, 0.0}, FFtot );
     //saveXSF( "FFtot_z_CheckInterp.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
 
+    DEBUG
     world.gridFF.evalCombindGridFF            ( testREQ, FFtot );
     saveXSF( "FFtot_z.xsf",             world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
+    DEBUG
 
     isoOgl = glGenLists(1);
     glNewList(isoOgl, GL_COMPILE);
     //getIsovalPoints_a( world.gridFF.grid, 0.1, FFtot, iso_points );
     //renderSubstrate( iso_points.size(), &iso_points[0], GL_POINTS );
     //renderSubstrate_( world.gridFF.grid, FFtot, 0.1, true );
+
+    DEBUG
     renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
+    DEBUG
     //renderSubstrate_( world.gridFF.grid, FFtot, world.gridFF.FFelec, 0.01, true );
     Draw3D::drawAxis(1.0);
     glEndList();
-
+    DEBUG
 }
 
 void AppMolecularEditor2::draw(){

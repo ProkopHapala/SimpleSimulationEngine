@@ -306,7 +306,8 @@ if __name__ == "__main__":
     print " ================ START "
     print " ================ START "
 
-    os.chdir( "/u/25/prokoph1/unix/git/SimpleSimulationEngine/cpp/Build/apps/MolecularEditor2" )
+    #os.chdir( "/u/25/prokoph1/unix/git/SimpleSimulationEngine/cpp/Build/apps/MolecularEditor2" )
+    os.chdir( "/home/prokop/git/SimpleSimulationEngine/cpp/Build/apps/MolecularEditor2")
 
     water   = au.loadAtoms( "inputs/water_T5_ax.xyz" );  #print Campher
     campher = au.loadAtoms( "inputs/Campher.xyz" );      #print Campher
