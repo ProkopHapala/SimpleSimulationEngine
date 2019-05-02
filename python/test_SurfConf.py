@@ -22,6 +22,15 @@ def convGeom(mol):
     xyzs = np.array( mol[1:4] ).transpose().copy()
     return es, xyzs
 
+def assignREQ( es, atomTypes_dct ):
+    n = len(es)
+    REQs = np.zeros( (n,3) )
+    for i,e in enumerate(es):
+        t=atomTypes_dct[ e ]
+        REQs[i,0] = t[0];
+        REQs[i,1] = t[1];
+    return REQs
+
 def rotDistPivot( rot1, rot2, ipiv=2):
     #print rot1[:,ipiv], rot2[:,ipiv]
     d = rot1[:,ipiv]-rot2[:,ipiv]
@@ -210,7 +219,14 @@ def getSurfConfs( rots, molFile, pos=[ 5.78, 6.7, 12.24 ], nMaxIter=200, Fconv=0
     atomTypes =  np.array(  [ atomTypeNames[e] for e in es[:nAtomMol] ], dtype=np.int32 )
     print atomTypes
     apos = xyzs[:nAtomMol,:]
-    REQs = np.array( [ [1.5, 0.01, 0.0]*len(apos) ] )
+    #REQs = np.array( [ [1.5, 0.01, 0.0], ]*len(apos) )                  # REQs are not set
+    REQs = assignREQ( es[:nAtomMol], atomTypes_dct )
+    #print "REQs ======= ", REQs, " apos.shape ", apos.shape, " qs.shape ", qs.shape
+    REQs[:,2] = qs[:]
+    #print "REQs ======= ", REQs, " apos.shape ", apos.shape, " qs.shape ", qs.shape
+    #exit()
+    #print REQs; exit()
+
     mol = rmol.registerRigidMolType( apos, REQs, atomTypes )
 
     rot0  = np.array([[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]])    ; #print "DEBUG 0.2"
@@ -247,6 +263,7 @@ def getSurfConfs( rots, molFile, pos=[ 5.78, 6.7, 12.24 ], nMaxIter=200, Fconv=0
         #print "rot ", irot, rot,"\n -> ", rot_
     '''
 
+    '''
     rots_ = []
     fout = open( "movie_%s_rots.xyz" %(mol_name) ,'w')
     for irot,rot in enumerate(rots):
@@ -262,9 +279,9 @@ def getSurfConfs( rots, molFile, pos=[ 5.78, 6.7, 12.24 ], nMaxIter=200, Fconv=0
             rots_.append(rot_)
     fout.close()
     print "len(rots_)", len(rots_)
-    
-
     '''
+
+    
     rots_ = []
     for irot,rot in enumerate(rots):
         #fout = rmol.openf( "movie.xyz", -1, "w" )
@@ -273,7 +290,7 @@ def getSurfConfs( rots, molFile, pos=[ 5.78, 6.7, 12.24 ], nMaxIter=200, Fconv=0
         fout = open( "movie_%s_%03i.xyz" %(mol_name,irot) ,'w')
         q = mat2quat(rot)
         print "q ", q
-        #poses[0,4:8] = q
+        poses[0,4:8] = q
         for i in range(nMaxIter):
             #F2 = rmol.relaxNsteps( nMaxIter, Fconv**2 ); 
             F2 = rmol.relaxNsteps( 1, 0.0 ); 
@@ -289,13 +306,14 @@ def getSurfConfs( rots, molFile, pos=[ 5.78, 6.7, 12.24 ], nMaxIter=200, Fconv=0
         #print "rot_ ", rot_
         #print "irot  -", irot
         fout.close()
-    '''
+    
 
     #del  poses
     #del  apos
     return rots_
 
 #  >> itr 0 F2 0.557349 dt 0.05 qrot (-0.353364,-0.352836,-0.612781,0.612486) int 139984312000528 
+
 
 
 
@@ -309,11 +327,31 @@ if __name__ == "__main__":
     #os.chdir( "/u/25/prokoph1/unix/git/SimpleSimulationEngine/cpp/Build/apps/MolecularEditor2" )
     os.chdir( "/home/prokop/git/SimpleSimulationEngine/cpp/Build/apps/MolecularEditor2")
 
+    #FFparams=np.genfromtxt("inputs/atomtypes.ini",dtype=[('rmin',np.float64),('epsilon',np.float64),('alpha',np.float64),('atom',np.int),('symbol', '|S10')],usecols=(0,1,2,3,4))
+    #print "FFparams[:,3]", FFparams[:,3]
+    #print "FFparams ", FFparams;  
+
+    #"H   1 1 1 0     1.487   0.0006808   0xFFFFFF"
+    atomTypes_dat =np.genfromtxt("common_resources/AtomTypes.dat",dtype=[('symbol', '|S4'),('i1',np.int32),('i2',np.int32),('i3',np.int32),('i4',np.int32),('R',np.float64),('eps',np.float64),('alpha',np.int32)],usecols=(0,1,2,3,4,5,6))
+    print "atomTypes_dat ", atomTypes_dat
+
+    #for a in atomTypes_dat:
+    #    print a
+    #    print a[0]
+    #    print a[1]
+    atomTypes_dct = { a[0]:(a[5],a[6]) for a in atomTypes_dat }
+    print "atomTypes_dct ", atomTypes_dct
+
     water   = au.loadAtoms( "inputs/water_T5_ax.xyz" );  #print Campher
     campher = au.loadAtoms( "inputs/Campher.xyz" );      #print Campher
     surf    = au.loadAtoms( "inputs/Cu111_6x6_2L.xyz" ); #print Surf
 
+    #print water
+    #exit()
+
     cell = [[15.31593,0.0,0.0],[0.0,13.26399,0.0],[0.0,0.0,20.0]]
+
+    '''
     #rots  = sphereTangentSpace(n=100)
     rots  = randomRotations(n=10000)
     rots = pruneRots(rots, dcut=0.3, ipiv=2)
@@ -323,6 +361,8 @@ if __name__ == "__main__":
     drawRots( rots, lenght=0.1)
     plt.show()
     #exit()
+    '''
+    rots  = randomRotations(n=5)
 
     print " rmol.initParams( ) "
     rmol.initParams( "common_resources/AtomTypes.dat", "common_resources/BondTypes.dat" )
@@ -330,7 +370,9 @@ if __name__ == "__main__":
     print "atomTypeNames", atomTypeNames
     initSurf( "inputs/Cu111_6x6_2L.xyz", cell, ns=[60,60,100] )
     
+    rmol.setCoulombMirror( np.array([0.0,0.0,1.0]), np.array([0.0,0.0,7.0]) )
     
+    '''
     print "========== water_T5_ax.xyz ==========="
     print "========== water_T5_ax.xyz ==========="
     print "========== water_T5_ax.xyz ==========="
@@ -340,12 +382,14 @@ if __name__ == "__main__":
     rots_ = getSurfConfs( rots, "inputs/water_T5_ax.xyz", pos=[ 5.78, 6.7, 10.00 ],  nMaxIter=100, Fconv=0 )
     rots_ = pruneRots(rots_, dcut=0.01, ipiv=2)
     print "len(rots_)", len(rots_)
-    
+    '''
 
     #print "========== Campher.xyz ==========="
     #print "========== Campher.xyz ==========="
     #print "========== Campher.xyz ==========="
     nAtomMol = len(campher[0])
+    qs       = np.array(campher[4])
+    print "qs ", qs
     es, xyzs = combineGeoms(campher,surf)
     #es, xyzs = convGeom(campher)
     rots_ = getSurfConfs( rots, "inputs/Campher.xyz", pos=[ 5.78, 6.7, 12.24 ], nMaxIter=100, Fconv=0 )

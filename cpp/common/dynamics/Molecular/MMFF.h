@@ -64,7 +64,6 @@ class AtomicManipulator{ public:
     int   nenabled=0;
     int *  enabled=0;
 
-
     int natoms;
     Vec3d* aforce;
     Vec3d* apos;
@@ -206,6 +205,16 @@ class MMFF{ public:
     Box    Collision_box   = (Box){(Vec3d){0.0,0.0,0.0},(Vec3d){10.0,10.0,10.0}};
     double Collision_Rsc   = 0.5;
     double Collision_F2max = 1.0;
+
+    //double mirror_p0 = ;
+    double mirror_c0   = 0.0;
+    Vec3d  mirror_hdir = Vec3dZ;
+    bool   bMirror     = false;
+
+void setCoulombMirror(const Vec3d& hdir, const Vec3d& p0){
+    mirror_hdir = hdir;
+    mirror_c0   = mirror_hdir.dot(p0);
+}
 
 void setCollisionRF( double Rsc ){
     Collision_Rsc   = Rsc;
@@ -829,6 +838,34 @@ void eval_MorseQ_Frags(){
     }
     //exit(0);
 }
+
+
+void eval_CoulombMirror_On2(const Vec3d& hdir, double c0 ){
+    //printf("eval_CoulombMirror_On2 (%g,%g,%g) %g \n", hdir.x,hdir.y,hdir.z, c0);
+    for(int i=0; i<natoms; i++){
+        Vec3d REQi = aREQ[i];
+        Vec3d pi   = apos[i];
+        //double c = hdir.dot(pi) - c0;
+        //pi.add_mul( hdir, 2*c0 );
+        Vec3d f; f.set(0.0);
+        for(int j=0; j<natoms; j++){
+            Vec3d& REQj = aREQ[j];
+            //addAtomicForceMorseQ( pi-apos[j], f, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z, gridFF.alpha );
+            Vec3d pj = apos[j];
+            double c = hdir.dot(pj) - c0;
+            pj.add_mul( hdir, 2*c0 );
+            pj.sub(pi);
+            //printf( "j %i (%g,%g,%g) %g,%g \n", j, pj.x,pj.y,pj.z,  REQi.z, REQj.z  );
+            addAtomicForceQ( pj, f, REQi.z*REQj.z );
+        }
+        //printf( " %i (%g,%g,%g) (%g,%g,%g)\n", i, aforce[i].x,aforce[i].y,aforce[i].z ,  f.x,f.y,f.z  );
+        aforce[i].add(f);
+        
+    }
+
+    //exit(0);
+}
+
 
 void eval_FFgrid(){
     //printf( "eval_FFgrid natoms %i \n", natoms );
