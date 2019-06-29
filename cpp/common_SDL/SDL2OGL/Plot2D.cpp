@@ -132,7 +132,6 @@ void Plot2D::drawAxes(){
 
 void Plot2D::render(){
     //void drawGrid( bounds.x0, bounds.y0, bounds.x0, bounds.x0, dx, dy );
-
     if( glObj ) glDeleteLists(glObj,1);
     glObj = glGenLists(1);
     glNewList(glObj, GL_COMPILE);

@@ -36,6 +36,9 @@
 #include "Economy.h"
 #include "Roads.h"
 
+#include "GUI.h"
+#include "Plot2D.h"
+
 
 // font rendering:
 //  http://www.willusher.io/sdl2%20tutorials/2013/12/18/lesson-6-true-type-fonts-with-sdl_ttf
@@ -89,7 +92,12 @@ class LandCraftApp : public AppSDL2OGL {
 
     CommandParser cmdPars;
 
+    Plot2D riverProfile;
+    Plot2D roadProfile;
+
+    int      fontTex = 0;
     //GLuint       itex;
+    GUI gui;
 
     // ==== function declaration
     void printASCItable( int imin, int imax  );
@@ -111,6 +119,7 @@ class LandCraftApp : public AppSDL2OGL {
 	void terrainColor( int i );
 	void drawTerrain( Vec2i i0, Vec2i n, int NX );
 	void drawRoad( Road* road );
+	void addRiverPlot(int iRiver);
 
 	LandCraftApp( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -163,7 +172,42 @@ void LandCraftApp::generateTerrain(){
 }
 
 
+
+void LandCraftApp::addRiverPlot(int iRiver){
+
+    River* thisRiver = hydraulics.rivers[iRiver];
+    DataLine2D * riverH1 = new DataLine2D(thisRiver->path.size());
+    riverProfile.lines.push_back( riverH1 );
+    riverH1->linspan(0,thisRiver->path.size());
+    int ii=0;
+    for( int i : thisRiver->path ){
+        //hydraulics.i2ip(i);
+        riverH1->ys[ii] = hydraulics.ground[i];
+        //printf( "road[%i] h %g \n", ii, p.height );
+        ii++;
+    };
+    //exit(0);
+    riverH1->clr = hash_Wang( (iRiver+15464)*5646 );
+
+    //DataLine2D * lDrag = new DataLine2D(nsamp); mainWingL.lines.push_back( lDrag ); lDrag->linspan(-phiRange,phiRange); lDrag->clr = 0xFF0000ff;
+    riverProfile.update();
+    riverProfile.autoAxes(0.5,0.2);
+    riverProfile.render();
+}
+
+
+
 LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+
+    default_font_texture = makeTexture(  "common_resources/dejvu_sans_mono.bmp" );
+    //default_font_texture = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    //itex = makeTexture(  "data/tank.bmp" );
+    //itex = makeTexture(  "data/nehe.bmp" );
+    printf( "default_font_texture :  %i \n", default_font_texture );
+
+    fontTex     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    GUI_fontTex = fontTex;
+
 
     /*
     FILE *ptr_myfile=0;
@@ -206,50 +250,7 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
      printf("===========\n");
     //exit(0);
 
-    Road* road  = new Road();
-    roads.push_back( road );
 
-    roadBuilder.road = road;
-
-    //std::list<int> lst;
-    //lst.push_back(15454);
-    //printf( " %i \n", *(lst.end()) );  //  Returns an iterator to the element following the last element of the container. This element acts as a placeholder; attempting to access it results in undefined behavior.;
-
-    //printf( " %i \n", lst.back() );
-
-    //RoadTile rt =   (RoadTile){(uint16_t)10,(uint16_t)15,(double)154.0};
-    //rt.print();
-    roadBuilder.path.push_back( (RoadTile){10,15,0.0} );
-    //roadBuilder.path.push_back ( rt );
-    //roadBuilder.path.end()->print();
-    roadBuilder.pushStright ( {55,38}     );
-    roadBuilder.writeIt();
-
-    //exit(0);
-
-    RoadVehicleType* vehicleType= new RoadVehicleType();
-    vehicleTypes.push_back(vehicleType);
-
-    RoadVehicle* vehicle = new RoadVehicle();
-    vehicle->road = road;
-    vehicle->type = vehicleType;
-    vehicles.push_back( vehicle );
-
-    cmdPars.execFile( "data/comands.ini" );
-
-    /*
-    for(int i=0; i<100; i++){
-        //Vec3d hs = {0.0,1.0,1.0};
-        Vec3d hs = {randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};
-        Vec2d p  = {0.2, 0.2};
-        double h   = trinagleInterp( toBaricentric(p), hs );
-        double hdx = trinagleInterp( toBaricentric({p.x+0.1,p.y }), hs );
-        double hdy = trinagleInterp( toBaricentric({p.x,p.y+0.1 }), hs );
-        Vec2d  dh  = trinagleDeriv ( hs );
-        printf( " %i (%g,%g) (%g,%g) \n", i, (hdx-h)/0.1, (hdy-h)/0.1, dh.x, dh.y );
-    }
-    exit(0);
-    */
 
     printASCItable( 33, 127  );
 
@@ -286,6 +287,89 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     terrainViewMode = 2;
     hydraulics.findAllRivers( 50.0 );
 
+
+
+    // plot rivers
+    riverProfile.init();
+    riverProfile.fontTex = fontTex;
+    riverProfile.clrGrid = 0xFF404040;
+    addRiverPlot(0);
+    addRiverPlot(1);
+    addRiverPlot(2);
+    addRiverPlot(3);
+
+    Road* road  = new Road();
+    roads.push_back( road );
+
+    roadBuilder.road = road;
+
+    //std::list<int> lst;
+    //lst.push_back(15454);
+    //printf( " %i \n", *(lst.end()) );  //  Returns an iterator to the element following the last element of the container. This element acts as a placeholder; attempting to access it results in undefined behavior.;
+
+    //printf( " %i \n", lst.back() );
+
+    //RoadTile rt =   (RoadTile){(uint16_t)10,(uint16_t)15,(double)154.0};
+    //rt.print();
+    roadBuilder.path.push_back( (RoadTile){10,15,0.0} );
+    //roadBuilder.path.push_back ( rt );
+    //roadBuilder.path.end()->print();
+    roadBuilder.pushStright ( {55,38}     );
+    for( RoadTile& p : roadBuilder.path ){
+        int i     = hydraulics.ip2i( (Vec2i){p.ia,p.ib} );
+        p.height = hydraulics.ground[i];
+        //printf( "road (%i,%i)%i  (%i) %g \n", p.ia,p.ib, i, hydraulics.n.x, p.height );
+    };
+    //exit(0);
+    roadBuilder.writeIt();
+
+    // plot road profile
+    roadProfile.init();
+    roadProfile.fontTex = fontTex;
+    roadProfile.clrGrid = 0xFF404040;
+    DataLine2D * roadH1 = new DataLine2D(roadBuilder.path.size());
+    roadProfile.lines.push_back( roadH1 );
+    roadH1->linspan(0,roadBuilder.path.size());
+    int ii=0;
+    for( const RoadTile& p : roadBuilder.path ){
+        roadH1->ys[ii] = p.height;
+        //printf( "road[%i] h %g \n", ii, p.height );
+        ii++;
+    };
+    //exit(0);
+    roadH1->clr = 0xFFff0000;
+    //DataLine2D * lDrag = new DataLine2D(nsamp); mainWingL.lines.push_back( lDrag ); lDrag->linspan(-phiRange,phiRange); lDrag->clr = 0xFF0000ff;
+    roadProfile.update();
+    roadProfile.autoAxes(0.5,0.2);
+    roadProfile.render();
+
+    //exit(0);
+
+    RoadVehicleType* vehicleType= new RoadVehicleType();
+    vehicleTypes.push_back(vehicleType);
+
+    RoadVehicle* vehicle = new RoadVehicle();
+    vehicle->road = road;
+    vehicle->type = vehicleType;
+    vehicles.push_back( vehicle );
+
+    cmdPars.execFile( "data/comands.ini" );
+
+    /*
+    for(int i=0; i<100; i++){
+        //Vec3d hs = {0.0,1.0,1.0};
+        Vec3d hs = {randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};
+        Vec2d p  = {0.2, 0.2};
+        double h   = trinagleInterp( toBaricentric(p), hs );
+        double hdx = trinagleInterp( toBaricentric({p.x+0.1,p.y }), hs );
+        double hdy = trinagleInterp( toBaricentric({p.x,p.y+0.1 }), hs );
+        Vec2d  dh  = trinagleDeriv ( hs );
+        printf( " %i (%g,%g) (%g,%g) \n", i, (hdx-h)/0.1, (hdy-h)/0.1, dh.x, dh.y );
+    }
+    exit(0);
+    */
+
+
     /*
     std::vector<int> feeders;
     River* river = new River();
@@ -301,11 +385,7 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     //tiles    = new int[ nxy ];
     //TiledView::renderAll( -10, -10, 10, 10 );
 
-    default_font_texture = makeTexture(  "common_resources/dejvu_sans_mono.bmp" );
-    //default_font_texture = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
-    //itex = makeTexture(  "data/tank.bmp" );
-    //itex = makeTexture(  "data/nehe.bmp" );
-    printf( "default_font_texture :  %i \n", default_font_texture );
+
 
 }
 
@@ -413,7 +493,7 @@ void LandCraftApp::draw(){
         Draw2D::drawCircle_d( p, 25, 16, false );
 	}
 
-	/*
+    /*
 	// test of hexIndex
     glBegin(GL_POINTS);
     for( int ix=0; ix<50; ix++ ){
@@ -479,6 +559,12 @@ void LandCraftApp::draw(){
         glEnd();
     }
 
+
+
+
+
+
+
     //float camMargin = ( camXmax - camXmin )*0.1;
     //float camMargin = 0;
     //TiledView::draw(  camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin  );
@@ -506,7 +592,19 @@ int LandCraftApp::tileToList( float x0, float y0, float x1, float y1 ){
 }
 */
 
-void LandCraftApp::drawHUD(){}
+void LandCraftApp::drawHUD(){
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+
+    //gui.draw();
+
+    //roadProfile.view();
+    riverProfile.view();
+    //glColor3f(1.0,1.0,0.0); mainWingLD.drawVline(phiL);
+    //glColor3f(0.0,1.0,1.0); mainWingLD.drawVline(phiR);
+
+}
 
 void LandCraftApp::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );

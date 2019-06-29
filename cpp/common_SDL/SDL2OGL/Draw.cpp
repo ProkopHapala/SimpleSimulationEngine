@@ -15,9 +15,10 @@ void Draw::setRGBA( uint32_t i ){
 };
 
 void Draw::color_of_hash( int i ){
-	constexpr float inv255 = 1.0f/255.0f;
+	//constexpr float inv255 = 1.0f/255.0f;
 	int h = hash_Wang( i );
-	glColor3f( (h&0xFF)*inv255, ((h>>8)&0xFF)*inv255, ((h>>16)&0xFF)*inv255 );
+	setRGB( h );
+	//glColor3f( (h&0xFF)*inv255, ((h>>8)&0xFF)*inv255, ((h>>16)&0xFF)*inv255 );
 };
 
 void Draw::colorScale( double d, int ncol, const uint32_t * colors ){

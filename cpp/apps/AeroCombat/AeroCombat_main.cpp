@@ -95,10 +95,10 @@ class AeroCraftGUI : public AppSDL2OGL_3D { public:
     //DynamicControl rollControl;
     //double roll;
 
-    const Uint8 *scanKeys;
+    const Uint8 *scanKeys = 0;
     Uint32 mouseButtons;
 
-    int      fontTex;
+    int      fontTex = 0;
     /*
     GUIPanel   panel;
     MultiPanel mpanel;
@@ -273,49 +273,49 @@ AeroCraftGUI:: AeroCraftGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D(
     char* sbuff = &str[0];
     float myX = 5.3;
     Vec3d myVec = {16.3,18.9,19.12};
-    
+
     _lsprint( sbuff, myX   );
     _lsprint( sbuff, myVec );
     //_lsprint_( sbuff, myX, myVec );
-    puts( str ); 
-    
+    puts( str );
+
     //_lprint( myX   );
     //_lprint( myVec );
-    
+
     float myX_   = 0.0;
     Vec3d myVec_ = {0.0,0.0,0.0};
-    
-    
+
+
     printf( " // --- string I/O  \n" );
-    
+
     sbuff = &str[0];
     sbuff+=sprint( sbuff, myX   );
     sbuff+=sprint( sbuff, myVec );
     puts( str );
-    
+
     sbuff = &str[0];
     sbuff+=sscan( sbuff, myX_   );
     sbuff+=sscan( sbuff, myVec_ );
-    
+
     _lprint( myX_   );
     _lprint( myVec_ );
     printf("\n");
-    
+
     printf( " //--- buffer I/O  \n" );
-    
+
     int i=0;
     toBuff  (  myX ,   str, i);
     toBuff  (  myVec , str, i);
-    
+
     myX_=0; myVec_.set(0.0);
     i=0;
     fromBuff(  myX_,   str, i);
     fromBuff(  myVec_, str, i);
-    
+
     _lprint( myX_   );
     _lprint( myVec_ );
     printf("\n");
-    
+
     exit(0);
     */
 
