@@ -485,7 +485,8 @@ void DropDownList ::render(){
     //bOpened = true;
     if(bOpened){
         Draw  ::setRGB( 0x00FF00 );
-        Draw2D::drawRectangle ( xmin, ymax-(iSelected+2)*(fontSizeDef*2), xmax, ymax-(iSelected+1)*(fontSizeDef*2), true );
+        int icur = iSelected-iItem0;
+        if((icur>=0)&&(icur<nSlots)) Draw2D::drawRectangle ( xmin, ymax-(icur+2)*(fontSizeDef*2), xmax, ymax-(icur+1)*(fontSizeDef*2), true );
         Draw  ::setRGB( textColor );
         if(caption.length()>0) {
             Draw2D::drawText( caption.c_str(), caption.length(), {xmin, ymax-fontSizeDef*2},  0.0, GUI_fontTex, fontSizeDef );
@@ -519,6 +520,7 @@ void DropDownList ::tryRender( ){
 
 GUIAbstractPanel* DropDownList::onMouse ( int x, int y, const SDL_Event& event, GUI& gui ){
     //printf( "DropDownList::onMouse x,y, %i(%i..%i) %i(%i..%i) \n", x,xmin,xmax,  y,ymin,ymax );
+    //if( event.type == SDL_MOUSEWHEEL ){ printf( " SDL_MOUSEWHEEL !!! \n" ); };
     if( check( x, y ) ){
         //printf( "DropDownList::onMouse inside \n" );
         //if( event.type == SDL_MOUSEBUTTONUP ){
@@ -541,6 +543,11 @@ GUIAbstractPanel* DropDownList::onMouse ( int x, int y, const SDL_Event& event, 
                 }
                 redraw = true;
             }
+        }else if( event.type == SDL_MOUSEWHEEL ){
+            //printf( " SDL_MOUSEWHEEL \n" );
+            if     (event.wheel.y < 0){ iItem0 = _min( iItem0+1, labels.size()-nSlots ); }
+            else if(event.wheel.y > 0){ iItem0 = _max( iItem0-1, 0                    ); }
+            redraw = true;
         }
         return this;
     }
@@ -635,8 +642,8 @@ GUIAbstractPanel* TreeView::onMouse( int x, int y, const SDL_Event& event, GUI& 
 
 GUIAbstractPanel* GUI::addPanel( GUIAbstractPanel* panel ){ panels.push_back(panel); return panels.back(); }
 
-void GUI::onEvent( int mouseX, int mouseY, const SDL_Event& event ){
-    GUIAbstractPanel* active;
+GUIAbstractPanel* GUI::onEvent( int mouseX, int mouseY, const SDL_Event& event ){
+    GUIAbstractPanel* active = 0;
     switch( event.type ){
         case SDL_KEYDOWN:
             //if(focused){ focused->onKeyDown( event ); }else{ txt.onKeyDown(  event ); }; break;
@@ -646,6 +653,7 @@ void GUI::onEvent( int mouseX, int mouseY, const SDL_Event& event ){
             //if(focused){ focused->onText   ( event ); }else{ txt.onText   ( event );  }; break;
             if(focused){ focused->onText   ( event ); }
             break;
+        case SDL_MOUSEWHEEL:
         case SDL_MOUSEBUTTONDOWN:
             active = NULL; focused=NULL;
             for(GUIAbstractPanel* panel: panels){
@@ -667,6 +675,7 @@ void GUI::onEvent( int mouseX, int mouseY, const SDL_Event& event ){
             }
             break;
     };
+    return active;
 };
 
 void GUI::draw(){

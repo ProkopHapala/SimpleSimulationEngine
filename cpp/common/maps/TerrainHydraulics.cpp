@@ -138,7 +138,7 @@ int HydraulicGrid2D::trackRiver( int sink, double minFlow, std::vector<int>& riv
             int j    = ip2i(ip);
             double w=water[j]; if( (!known[j])&&(w>minFlow) ){ nhigh++; if( (w<vallim)&&(w>valmax) ){ imax=j; ipmax=ip; valmax=w; } }
         }
-        printf( "trackRiver %i : (%i,%i) %i %f \n", ii, ipmax.x,ipmax.y,  imax, valmax );
+        //printf( "trackRiver %i : (%i,%i) %i %f \n", ii, ipmax.x,ipmax.y,  imax, valmax );
         if(imax>=0){
             //if(imax2>=0) feeders.push_back(i);
             if(nhigh>1){
@@ -173,6 +173,13 @@ int HydraulicGrid2D::trackRiverRecursive( int sink, double minFlow, River * mout
     int nriv=1;
     if( river->path.size() > 5 ){
         rivers.push_back(river);
+
+        // save flow
+        river->flow.reserve(river->path.size());
+        for( int i=0; i<river->path.size(); i++ ){
+            river->flow[i] = water[river->path[i]];
+        }
+
         for(int ifeeder : feeders ){
             nriv+=trackRiverRecursive( ifeeder, minFlow, river );
         }
@@ -209,7 +216,7 @@ void HydraulicGrid2D::outflow_step(){
     int * tmp = contour1; contour1 = contour2; contour2 = tmp;
     for ( int ii=0; ii<nContour_old; ii++ ){ known[contour1[ii]] = false; }
     // check all countor point neighbors for possible path extension
-    if( nContour_old>0 ) printf( "nContour_old %i nContour %i \n", nContour_old, nContour );
+    //if( nContour_old>0 ) printf( "nContour_old %i nContour %i \n", nContour_old, nContour );
     for ( int ii=0; ii<nContour_old; ii++ ){
         int    i   = contour1[ii];
         Vec2i ip0  = i2ip(i);

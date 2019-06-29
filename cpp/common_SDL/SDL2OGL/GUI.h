@@ -308,7 +308,7 @@ class GUI{ public:
     std::vector<GUIAbstractPanel*> panels;
 
     GUIAbstractPanel* addPanel( GUIAbstractPanel* panel );
-    void onEvent( int mouseX, int mouseY, const SDL_Event& event );
+    GUIAbstractPanel* onEvent( int mouseX, int mouseY, const SDL_Event& event );
     void draw();
 
     ~GUI(){

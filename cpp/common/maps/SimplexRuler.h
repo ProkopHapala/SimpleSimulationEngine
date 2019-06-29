@@ -87,6 +87,15 @@ class SimplexRuler{
         return na*ib+ia;
     }
 
+    /*
+    inline stepTo( Vec2d dp, Vec2i dip ){
+        // a = x
+        // b = 0.5*x + 0.86602540378*y
+        dp =
+    };
+    */
+
+
     inline void nodePoint( const Vec2i& ind, Vec2d& p ) const {
         double ib_ = ind.b-MAP_OFFSET;
         p.x = step * ( (ind.a-MAP_OFFSET) + 0.5*ib_ );

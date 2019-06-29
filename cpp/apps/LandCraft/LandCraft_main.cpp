@@ -39,6 +39,8 @@
 #include "GUI.h"
 #include "Plot2D.h"
 
+#include <algorithm>
+
 
 // font rendering:
 //  http://www.willusher.io/sdl2%20tutorials/2013/12/18/lesson-6-true-type-fonts-with-sdl_ttf
@@ -54,8 +56,7 @@ void cmapHeight(double g){
     //return g;
 }
 
-class LandCraftApp : public AppSDL2OGL {
-	public:
+class LandCraftApp : public AppSDL2OGL { public:
 
     SimplexRuler       ruler;
     Ruler2DFast        square_ruler;
@@ -98,6 +99,9 @@ class LandCraftApp : public AppSDL2OGL {
     int      fontTex = 0;
     //GLuint       itex;
     GUI gui;
+    DropDownList* riverList = 0;
+
+    int iBuildStartHex = -1;
 
     // ==== function declaration
     void printASCItable( int imin, int imax  );
@@ -119,7 +123,11 @@ class LandCraftApp : public AppSDL2OGL {
 	void terrainColor( int i );
 	void drawTerrain( Vec2i i0, Vec2i n, int NX );
 	void drawRoad( Road* road );
-	void addRiverPlot(int iRiver);
+	void drawRiver( River* road );
+
+	void addRoadStright( Vec2i p1, Vec2i p2 );
+	void addRoadPlot(Road* road);
+	void addRiverPlot(int iRiver, float scFlow);
 
 	LandCraftApp( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -171,21 +179,55 @@ void LandCraftApp::generateTerrain(){
 
 }
 
+void LandCraftApp::addRoadStright( Vec2i p1, Vec2i p2 ){
+    Road* road  = new Road();
+    roads.push_back( road );
+    roadBuilder.road = road;
+    roadBuilder.path.clear();
+    //std::list<int> lst;
+    //lst.push_back(15454);
+    //printf( " %i \n", *(lst.end()) );  //  Returns an iterator to the element following the last element of the container. This element acts as a placeholder; attempting to access it results in undefined behavior.;
+    //printf( " %i \n", lst.back() );
+    //RoadTile rt =   (RoadTile){(uint16_t)10,(uint16_t)15,(double)154.0};
+    //rt.print();
+    //roadBuilder.path.push_back( (RoadTile){10,15,0.0} );
+    roadBuilder.path.push_back( (RoadTile){p1.x,p1.y,0.0} );
+    //roadBuilder.path.push_back ( rt );
+    //roadBuilder.path.end()->print();
+    //roadBuilder.pushStright ( {55,38}     );
+    roadBuilder.pushStright ( p2  );
+    for( RoadTile& p : roadBuilder.path ){
+        int i     = hydraulics.ip2i( (Vec2i){p.ia,p.ib} );
+        //p.height = hydraulics.ground[i];
+        //printf( "road (%i,%i)%i  (%i) %g \n", p.ia,p.ib, i, hydraulics.n.x, p.height );
+    };
+    //exit(0);
+    roadBuilder.writeIt();
+}
 
-
-void LandCraftApp::addRiverPlot(int iRiver){
+void LandCraftApp::addRiverPlot(int iRiver, float scFlow){
 
     River* thisRiver = hydraulics.rivers[iRiver];
     DataLine2D * riverH1 = new DataLine2D(thisRiver->path.size());
     riverProfile.lines.push_back( riverH1 );
     riverH1->linspan(0,thisRiver->path.size());
     int ii=0;
-    for( int i : thisRiver->path ){
-        //hydraulics.i2ip(i);
-        riverH1->ys[ii] = hydraulics.ground[i];
-        //printf( "road[%i] h %g \n", ii, p.height );
-        ii++;
-    };
+    if(scFlow>0){
+        for( int i : thisRiver->path ){
+            //hydraulics.i2ip(i);
+            //riverH1->ys[ii] = hydraulics.water[i] * scFlow;
+            riverH1->ys[ii] = thisRiver->flow[ii] * scFlow;
+            //riverH1->ys[ii] = thisRiver->flow[ii];
+            //printf( "road[%i] h flow %g \n", ii, riverH1->ys[ii] );
+            ii++;
+        };
+    }else{
+        for( int i : thisRiver->path ){
+            riverH1->ys[ii] = hydraulics.ground[i];
+            //printf( "road[%i] h height %g \n", ii, riverH1->ys[ii] );
+            ii++;
+        };
+    }
     //exit(0);
     riverH1->clr = hash_Wang( (iRiver+15464)*5646 );
 
@@ -195,6 +237,33 @@ void LandCraftApp::addRiverPlot(int iRiver){
     riverProfile.render();
 }
 
+
+void LandCraftApp::addRoadPlot(Road* road){
+    int n = road->n;
+
+    DataLine2D * roadH1 = new DataLine2D(n);
+    roadProfile.lines.push_back( roadH1 );
+    roadH1->linspan(0,n);
+
+    DataLine2D * roadH2 = new DataLine2D(n);
+    roadProfile.lines.push_back( roadH2 );
+    roadH2->linspan(0,n);
+
+    for( int ii=0; ii<n; ii++ ){
+        RoadTile& p = road->path[ii];
+        int i = hydraulics.ip2i({p.ia,p.ib});
+        double h = hydraulics.ground[i];
+        double w = hydraulics.water [i];
+        roadH1->ys[ii] = w;
+        roadH2->ys[ii] = h;
+        //roadH2->ys[ii] = h + w;
+        //printf( "road[%i] h %g w %g w+h %g p.h %g \n", ii, h,w,h+w, p.height );
+    };
+    //exit(0);
+    roadH2->clr = 0xFF0000ff;
+    roadH1->clr = 0xFFff0000;
+    //DataLine2D * lDrag = new DataLine2D(nsamp); mainWingL.lines.push_back( lDrag ); lDrag->linspan(-phiRange,phiRange); lDrag->clr = 0xFF0000ff;
+}
 
 
 LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
@@ -287,17 +356,31 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     terrainViewMode = 2;
     hydraulics.findAllRivers( 50.0 );
 
+    std::sort(hydraulics.rivers.begin(), hydraulics.rivers.end(), [](River* a, River* b) { return a->path.size() > b->path.size(); } );
 
+    //DropDownList* riverList = new DropDownList("Rivers",100.0,300.0,200.0,5);
+    riverList = new DropDownList("Rivers",20.0,HEIGHT-100.0,200.0,5);
+    gui.addPanel( riverList );
+    //printf( "FOUND %i RIVERS \n", hydraulics.rivers.size() );
+    for(int i=0; i<hydraulics.rivers.size(); i++ ){
+        std::string name = "river " + std::to_string(i) +  " ("+ std::to_string( hydraulics.rivers[i]->path.size() )  +")";
+        //printf( "%s \n", name.c_str() );
+        riverList->addItem( name );
+    };
+    //exit(0);
 
     // plot rivers
     riverProfile.init();
     riverProfile.fontTex = fontTex;
     riverProfile.clrGrid = 0xFF404040;
-    addRiverPlot(0);
-    addRiverPlot(1);
-    addRiverPlot(2);
-    addRiverPlot(3);
+    addRiverPlot(6,-1);
+    addRiverPlot(6,0.1);
+    //exit(0);
+    //addRiverPlot(2);
+    //addRiverPlot(3);
 
+
+    /*
     Road* road  = new Road();
     roads.push_back( road );
 
@@ -317,28 +400,21 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     roadBuilder.pushStright ( {55,38}     );
     for( RoadTile& p : roadBuilder.path ){
         int i     = hydraulics.ip2i( (Vec2i){p.ia,p.ib} );
-        p.height = hydraulics.ground[i];
+        //p.height = hydraulics.ground[i];
         //printf( "road (%i,%i)%i  (%i) %g \n", p.ia,p.ib, i, hydraulics.n.x, p.height );
     };
     //exit(0);
     roadBuilder.writeIt();
+    */
+
+    addRoadStright( {10,15}, {55,38} );
 
     // plot road profile
     roadProfile.init();
     roadProfile.fontTex = fontTex;
     roadProfile.clrGrid = 0xFF404040;
-    DataLine2D * roadH1 = new DataLine2D(roadBuilder.path.size());
-    roadProfile.lines.push_back( roadH1 );
-    roadH1->linspan(0,roadBuilder.path.size());
-    int ii=0;
-    for( const RoadTile& p : roadBuilder.path ){
-        roadH1->ys[ii] = p.height;
-        //printf( "road[%i] h %g \n", ii, p.height );
-        ii++;
-    };
-    //exit(0);
-    roadH1->clr = 0xFFff0000;
-    //DataLine2D * lDrag = new DataLine2D(nsamp); mainWingL.lines.push_back( lDrag ); lDrag->linspan(-phiRange,phiRange); lDrag->clr = 0xFF0000ff;
+    addRoadPlot(roads[0]);
+
     roadProfile.update();
     roadProfile.autoAxes(0.5,0.2);
     roadProfile.render();
@@ -349,7 +425,7 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     vehicleTypes.push_back(vehicleType);
 
     RoadVehicle* vehicle = new RoadVehicle();
-    vehicle->road = road;
+    vehicle->road = roads[0];
     vehicle->type = vehicleType;
     vehicles.push_back( vehicle );
 
@@ -431,6 +507,44 @@ void LandCraftApp::drawTerrain( Vec2i i0, Vec2i n, int NX ){
     }
 }
 
+
+void LandCraftApp::drawRiver( River* river ){
+    //printf( " path size: %i \n", river->path.size() );
+    //Draw::color_of_hash( river->path[0]+54877 );
+    //glLineWidth(10.0);
+
+
+    glBegin(GL_LINES);
+    int ii=0;
+    Vec2d p;
+    ruler.nodePoint( river->path[0],p);
+    glBegin(GL_LINES);
+    for(int i : river->path ){
+        glLineWidth( river->flow[ii]*0.005 );
+        glBegin(GL_LINES);
+        glVertex3f( p.x, p.y, 100.0 );
+        ruler.nodePoint(i,p);
+        glVertex3f( p.x, p.y, 100.0 );
+        glEnd();
+        ii++;
+    }
+    //glEnd();
+
+    /*
+    //int ii=0;
+    glBegin(GL_LINE_STRIP);
+    Vec2d p;
+    for(int i : river->path ){
+        //glLineWidth( river->flow[ii]*0.01 );
+        ruler.nodePoint(i,p);
+        glVertex3f( p.x, p.y, 100.0 );
+        //ii++;
+    }
+    glEnd();
+    */
+}
+
+
 void LandCraftApp::drawRoad( Road* road ){
     glBegin( GL_LINE_STRIP );
     RoadTile* path = road->path;
@@ -451,6 +565,7 @@ void LandCraftApp::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
+    glShadeModel ( GL_SMOOTH );
 
 	if(bDrawing){
         Vec2i ind;Vec2d dind;
@@ -547,23 +662,30 @@ void LandCraftApp::draw(){
     }
     */
 
+
+    /*
+    // draw all rivers
     for( River* river: hydraulics.rivers ){
         //printf( " path size: %i \n", river->path.size() );
-        glBegin(GL_LINE_STRIP);
         Draw::color_of_hash( river->path[0]+54877 );
-        for(int i : river->path ){
-            Vec2d p;
-            ruler.nodePoint(i,p);
-            glVertex3f( p.x, p.y, 100.0 );
-        }
-        glEnd();
+        drawRiver( river );
+
+        //glBegin(GL_LINE_STRIP);
+        //for(int i : river->path ){
+        //    Vec2d p;
+        //    ruler.nodePoint(i,p);
+        //    glVertex3f( p.x, p.y, 100.0 );
+        //}
+        //glEnd();
+
     }
+    */
 
-
-
-
-
-
+    //River* thisRiver = ;
+    glLineWidth( 3 );
+    glColor3f( 0.0,1.0,0.0 );
+    drawRiver( hydraulics.rivers[riverList->iSelected] );
+    glLineWidth( 1 );
 
     //float camMargin = ( camXmax - camXmin )*0.1;
     //float camMargin = 0;
@@ -573,11 +695,9 @@ void LandCraftApp::draw(){
     //update( );
     //tComp = getCPUticks() - tComp;
 
-
-
     //printf("===== frameCount %i \n", frameCount);
 
-
+    Draw2D::drawPointCross({mouse_begin_x,mouse_begin_y}, 100.0);
 
 };
 
@@ -597,10 +717,14 @@ void LandCraftApp::drawHUD(){
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
 
-    //gui.draw();
+    gui.draw();
 
-    //roadProfile.view();
+    glPushMatrix();
+    //glTranslatef(WIDTH-300,HEIGHT-200.0,200.0);
+    roadProfile.view();
+    glTranslatef(100,0.0,0.0);
     riverProfile.view();
+    glPopMatrix();
     //glColor3f(1.0,1.0,0.0); mainWingLD.drawVline(phiL);
     //glColor3f(0.0,1.0,1.0); mainWingLD.drawVline(phiR);
 
@@ -610,6 +734,7 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
     //printf( "NBodyWorldApp::eventHandling() \n" );
     int ihex;
     double val;
+    GUIAbstractPanel* activeGUIPanel = gui.onEvent(mouseX,mouseY,event);
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
@@ -669,34 +794,70 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
                 //case SDLK_4:  formation_view_mode = VIEW_MORAL;   printf( "view : moral\n"   ); break;
                 //case   SDLK_n: ifaction++; if(ifaction>=factions.size()) ifaction=0; currentFaction = factions[ifaction]; printf("ifaction %i\n",ifaction); break;
             }
+
+            roadProfile.clear();
+            addRoadPlot(roads[0]);
+            roadProfile.update();
+            roadProfile.autoAxes(0.5,0.2);
+            roadProfile.render();
+
             break;
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
-                    drawHeight = ground[ihex];
-                    printf( "drawHeight %f \n", drawHeight );
-                    //printf( " (%f,%f) %i  \n", mouse_begin_x, mouse_begin_y, ihex );
-                    //hydraulics.water[ihex] = 1000.0;
-                    //printf( "left button pressed !!!! " );
-                    //if( currentFaction != NULL ) currentUnit = currentFaction->getUnitAt( { mouse_begin_x, mouse_begin_y } );
-                    //bDrawing=true;
+
+                    if( activeGUIPanel == 0 ){
+
+                        ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
+                        drawHeight = ground[ihex];
+                        printf( "drawHeight %f \n", drawHeight );
+                        //printf( " (%f,%f) %i  \n", mouse_begin_x, mouse_begin_y, ihex );
+                        //hydraulics.water[ihex] = 1000.0;
+                        //printf( "left button pressed !!!! " );
+                        //if( currentFaction != NULL ) currentUnit = currentFaction->getUnitAt( { mouse_begin_x, mouse_begin_y } );
+                        //bDrawing=true;
+
+                    }
+
+                    else if( activeGUIPanel == riverList ){
+                        riverProfile.clear();
+                        //iCurrentRiver = riverList.iSelected;
+                        addRiverPlot(riverList->iSelected,  -1 );
+                        addRiverPlot(riverList->iSelected,  0.1);
+                    }
+
                     break;
                 case SDL_BUTTON_RIGHT:
-                    printf( "left button pressed !!!! " );
+                    //printf( "left button pressed !!!! " );
+                    iBuildStartHex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
                     break;
             }
             break;
-            /*
+
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
-                case SDL_BUTTON_LEFT:
-                    //printf( "left button pressed !!!! " );
-                    picked = NULL;
+                case SDL_BUTTON_RIGHT:
+                    if( iBuildStartHex>=0 ){
+                        int ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
+                        for(Road* road : roads){ delete road; }
+                        roads.clear();
+                        addRoadStright( ruler.i2ip(iBuildStartHex), ruler.i2ip(ihex) );
+
+                        roadProfile.clear();
+                        addRoadPlot(roads[0]);
+                        roadProfile.update();
+                        roadProfile.autoAxes(0.5,0.2);
+                        roadProfile.render();
+                    }
+                    iBuildStartHex=-1;
                     break;
             }
             break;
-            */
+
+        case SDL_MOUSEWHEEL:
+            //if( event.type == SDL_MOUSEWHEEL ){
+            //printf( " SDL_MOUSEWHEEL \n" );
+            break;
     };
     AppSDL2OGL::eventHandling( event );
     camStep = zoom*0.05;
@@ -706,6 +867,10 @@ void LandCraftApp::mouseHandling( ){
     uint32_t buttons = SDL_GetMouseState( &mouseX, &mouseY );
     mouseY=HEIGHT-mouseY;
     defaultMouseHandling( mouseX, mouseY );
+    mouse_begin_y = mouseUp_(mouseY) + camY0;
+    //printf( "mouse %g %g \n", mouse_begin_x, mouse_begin_y );
+    //mouse_begin_y = -mouse_begin_y;
+    //mouse_begin_y = HEIGHT - mouse_begin_y;
     if( buttons & SDL_BUTTON(SDL_BUTTON_LEFT) ){
         int ihex = ruler.hexIndex( {mouse_begin_x, mouse_begin_y} );
         hydraulics.ground[ihex] = drawHeight;

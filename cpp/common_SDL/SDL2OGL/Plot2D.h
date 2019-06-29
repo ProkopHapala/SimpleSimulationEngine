@@ -44,6 +44,12 @@ class DataLine2D{ public:
 
     inline DataLine2D();
     inline DataLine2D(int n_){ allocate(n_); }
+
+    ~DataLine2D(){
+        if(xs) delete [] xs;
+        if(ys) delete [] ys;
+        if( glObj ) glDeleteLists(glObj,1);
+    }
 };
 
 class Plot2D{ public:
@@ -76,6 +82,8 @@ class Plot2D{ public:
     void init  ();
     //void init( double dx, double dy );
     void autoAxes(double dx, double dy);
+    void clear(bool bDeep=true);
+    void erase(int i);
 
     void drawHline ( double y );
     void drawVline ( double x );

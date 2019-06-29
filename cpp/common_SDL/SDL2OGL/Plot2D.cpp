@@ -114,6 +114,7 @@ void Plot2D::drawAxes(){
         Draw::setRGBA(clrTicksX); Draw2D::drawGrid( nYTicks, yTicks, axPos.x, axPos.y+tickSz,     false );  Draw2D::drawLine( {axBounds.x0,axPos   .y }, {axBounds.x1,axPos   .y } );
     }
 
+
     if(fontTex){
         char str[16];
         Draw::setRGBA(clrTicksX);
@@ -127,6 +128,7 @@ void Plot2D::drawAxes(){
             Draw2D::drawText(str, 0, {axPos.x,yTicks[i]}, 0.0, fontTex, tickSz );
         }
     }
+
 
 }
 
@@ -161,6 +163,20 @@ void Plot2D::init( ){
     autoAxes( 1.0, 1.0 );
 }
 
+void Plot2D::clear( bool bDeep ){
+    if(bDeep){
+        for(DataLine2D* line: lines ){
+            delete line;
+        }
+    }
+    lines.clear();
+    init();
+}
+
+void Plot2D::erase( int i ){
+    delete lines[i];
+    lines.erase( lines.begin() + i );
+}
 
 /////////////////////////////////
 //  class      QuePlot2D
