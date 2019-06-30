@@ -77,7 +77,7 @@ double HydraulicGrid2D::gatherRain( double minSinkFlow ){
             int j    = ip2i(ip);
             double g=ground[j]; if(g<val){ imin=j; val=g; }
         }
-        printf("%i %i %i %f %i\n", ii, i, imin, val, nneigh );
+        //printf("%i %i %i %f %i\n", ii, i, imin, val, nneigh );
         if(imin>=0){
             water[imin] += water[i];
         }else{

@@ -42,6 +42,11 @@
 #include <algorithm>
 
 
+
+
+#include "hydraulics1D.h"
+
+
 // font rendering:
 //  http://www.willusher.io/sdl2%20tutorials/2013/12/18/lesson-6-true-type-fonts-with-sdl_ttf
 //  http://stackoverflow.com/questions/28880562/rendering-text-with-sdl2-and-opengl
@@ -57,6 +62,11 @@ void cmapHeight(double g){
 }
 
 class LandCraftApp : public AppSDL2OGL { public:
+
+
+    Hydraulics1D hydro1d;
+
+
 
     SimplexRuler       ruler;
     Ruler2DFast        square_ruler;
@@ -462,6 +472,16 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     //TiledView::renderAll( -10, -10, 10, 10 );
 
 
+    //hydro1d.realloc(256);
+    //hydro1d.clear();
+    //bisectNoise1D(8,hydro1d.ground,-1.0,0.0);
+    hydro1d.realloc(512);
+    hydro1d.clear();
+    bisectNoise1D(9,hydro1d.ground,-1.0,0.0);
+    //hydro1d.realloc(16);
+    //hydro1d.clear();
+    //bisectNoise1D(4,hydro1d.ground,-1.0,0.0);
+    VecN::set(hydro1d.n,5.0,hydro1d.water);
 
 }
 
@@ -566,6 +586,36 @@ void LandCraftApp::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
     glShadeModel ( GL_SMOOTH );
+
+    printf( "frame %i \n", frameCount );
+    for(int i=0; i<10; i++)
+    //hydro1d.step( 9.0, 10.0 );
+    hydro1d.step( 0.0, 0.0 );
+    //hydro1d.step( 0.008, 0.01 );
+    //hydro1d.step( 0.08, 0.1 );
+
+    double wtot1 = VecN::sum(hydro1d.n,hydro1d.water);
+    //hydro1d.deepAccel(0.1);
+    double wtot2 = VecN::sum(hydro1d.n,hydro1d.water);
+    printf( "water %g -> %g \n", wtot1, wtot2 );
+    //Draw2D::plot( , );
+    double dx = 3.0;
+    glColor3f(0,0,1);
+    glBegin(GL_LINE_STRIP);
+    for(int i=0;i<hydro1d.n;i++){
+        double h = hydro1d.ground[i] + hydro1d.water[i];
+        //double g = hydro1d.ground[i];
+        glVertex3f( i*dx, h, 0.0 );
+    }
+    glEnd();
+    glColor3f(1,0,0);
+    Draw2D::plot(hydro1d.n,dx, hydro1d.ground);
+
+
+
+    return;
+
+
 
 	if(bDrawing){
         Vec2i ind;Vec2d dind;

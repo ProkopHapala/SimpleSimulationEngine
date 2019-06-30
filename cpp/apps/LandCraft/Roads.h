@@ -124,7 +124,7 @@ class RoadBuilder{ public:    // makes road easy to edit
             };
             //process(x,y);
             path.push_back( {x,y,0.0} );
-            printf("iter %i x,y %i,%i    -> %i,%i \n", iter, x,y, ip.x, ip.y   );
+            //printf("iter %i x,y %i,%i    -> %i,%i \n", iter, x,y, ip.x, ip.y   );
             xerr = x - ip.x;
             yerr = y - ip.y;
             int err_=xerr*xerr+yerr*yerr;

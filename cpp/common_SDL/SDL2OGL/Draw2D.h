@@ -45,6 +45,7 @@ void drawLines         ( int nlinks, int * links, Vec2d * points );
 void drawConvexPolygon ( int n, Vec2d * points, bool filled );
 void drawPolarFunc     ( double x0, double y0, double fscale, int n, double phi0, double * data );
 
+void plot         ( int n, float dx,    double * ys );
 void plot         ( int n, double * xs, double * ys );
 void plot_cross   ( int n, double * xs, double * ys, double sz );
 void plot_X       ( int n, double * xs, double * ys, double sz );

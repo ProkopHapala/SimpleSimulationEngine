@@ -244,6 +244,18 @@ void Draw2D::drawPolarFunc( double x0, double y0, double fscale, int n, double p
 		glEnd();
 };
 
+
+void Draw2D::plot( int n, float dx, double * ys ){
+    glBegin(GL_LINE_STRIP);
+    for( int i=0; i<n; i++ ){
+        //printf("Draw2D::plot i,x,y %i %f %f\n", i, xs[i], ys[i] );
+        glVertex3f( i*dx, (float)ys[i], z_layer );
+    }
+    glEnd();
+    //exit(0);
+};
+
+
 void Draw2D::plot( int n, double * xs, double * ys ){
     glBegin(GL_LINE_STRIP);
     for( int i=0; i<n; i++ ){

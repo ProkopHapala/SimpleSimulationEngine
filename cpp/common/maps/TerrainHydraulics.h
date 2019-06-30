@@ -51,6 +51,7 @@ class HydraulicGrid2D :public Grid2DAlg { public:
     void outflow_step( );
     void extend_outflow( float val, int oi, int i );
 
+
     // TODO: Inflow/outflow  +  Rivers
 	void allocate_outflow(){
         //known     = new bool[ntot];
