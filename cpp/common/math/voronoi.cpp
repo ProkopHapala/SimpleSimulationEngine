@@ -14,19 +14,6 @@ int Vec2dCompare(const void *p1, const void *p2){
 	return 0;
 }
 
-/*
-Vec2d::Vec2d(double nx, double ny){
-	x = nx;
-	y = ny;
-}
-
-Vec2d::Vec2d(){
-	x = 0.0;
-	y = 0.0;
-}
-*/
-
-
 Voronoi::Voronoi(){
 	siteidx = 0;
 	sites = 0;

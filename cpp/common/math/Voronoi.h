@@ -177,7 +177,7 @@ namespace VoronoiNamespace{
     //   Voronoi
 	//===============
 
-	class Voronoi{
+	class Voronoi{ 
         public:
 		Voronoi();
 		Edges *			GetEdges( Vertices * v, double w, double h ); // main algorithm

@@ -11,15 +11,15 @@
 #include "AppSDL2OGL.h"
 #include "testUtils.h"
 
-#include "voronoi.h"
+#include "Voronoi.h"
 
+using namespace VoronoiNamespace;
 
 class TestAppVoronoi : public AppSDL2OGL { public:
 
-    Voronoi* vdg;
-    std::vector<Vec2d*> ver;
-    std::vector<VEdge> edges;
-
+    Voronoi voronoi;
+    Edges    edges;
+    Vertices vertices;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -32,77 +32,87 @@ class TestAppVoronoi : public AppSDL2OGL { public:
 
 TestAppVoronoi::TestAppVoronoi( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-for (std::vector<Vec2d*>::iterator i = ver.begin(); i != ver.end(); i++)
-		delete((*i));
-	ver.clear();
-	edges.clear();
+    voronoi.edges    = &edges;
+    //voronoi.vertices = &vertices;
+
     /*
-	ver.push_back( new (Vec2d){-0.1, -0.1} );
-	ver.push_back( new (Vec2d){ 0.1,  0.1} );
-	ver.push_back( new (Vec2d){-0.5,  1  } );
-	ver.push_back( new (Vec2d){-0.5, -1  } );
-	ver.push_back( new (Vec2d){ 1  , -0.5} );
-	ver.push_back( new (Vec2d){-1  , -0.5} );
-	ver.push_back( new (Vec2d){ 0  ,  1  } );
-	ver.push_back( new (Vec2d){ 0  , -1  } );
-	ver.push_back( new (Vec2d){ 1  ,  0  } );
-	ver.push_back( new (Vec2d){-1  ,  0  } );
-	ver.push_back( new (Vec2d){ 0.5,  1  } );
-	ver.push_back( new (Vec2d){ 0.5, -1  } );
-	ver.push_back( new (Vec2d){ 1  ,  0.5} );
-	ver.push_back( new (Vec2d){-1  ,  0.5} );
-	ver.push_back( new (Vec2d){-1  ,  1  } );
-	ver.push_back( new (Vec2d){-1  , -1  } );
-	ver.push_back( new (Vec2d){ 1  ,  1  } );
-	ver.push_back( new (Vec2d){ 1  , -1  } );
+    // warrning :  FOR THIS DEGENERATE POINTS SEEMS TO FAIL
+	vertices.push_back( new (Vec2d){-0.1, -0.1} );
+	vertices.push_back( new (Vec2d){ 0.1,  0.1} );
+	vertices.push_back( new (Vec2d){-0.5,  1  } );
+	vertices.push_back( new (Vec2d){-0.5, -1  } );
+	vertices.push_back( new (Vec2d){ 1  , -0.5} );
+	vertices.push_back( new (Vec2d){-1  , -0.5} );
+	vertices.push_back( new (Vec2d){ 0  ,  1  } );
+	vertices.push_back( new (Vec2d){ 0  , -1  } );
+	vertices.push_back( new (Vec2d){ 1  ,  0  } );
+	vertices.push_back( new (Vec2d){-1  ,  0  } );
+	vertices.push_back( new (Vec2d){ 0.5,  1  } );
+	vertices.push_back( new (Vec2d){ 0.5, -1  } );
+	vertices.push_back( new (Vec2d){ 1  ,  0.5} );
+	vertices.push_back( new (Vec2d){-1  ,  0.5} );
+	vertices.push_back( new (Vec2d){-1  ,  1  } );
+	vertices.push_back( new (Vec2d){-1  , -1  } );
+	vertices.push_back( new (Vec2d){ 1  ,  1  } );
+	vertices.push_back( new (Vec2d){ 1  , -1  } );
     */
+
 
     Vec2d span = (Vec2d){3.0,5.0};
     for(int i=0; i<100; i++){
-        ver.push_back( new (Vec2d){ randf(-span.x,span.x)  , randf(-span.y,span.y)  } );
+        //ver.push_back( new (Vec2d){ randf(-span.x,span.x)  , randf(-span.y,span.y)  } );
+        vertices.push_back( new (Vec2d){ randf(-span.x,span.x)  , randf(-span.y,span.y)  } );
     }
 
-	vdg = new Voronoi();
-	double minY = -10;
-	double maxY = 10;
-	edges = vdg->ComputeVoronoiGraph(ver, minY, maxY);
-	//delete vdg;
+
+    voronoi.GetEdges(&vertices, 20, 20);
+    printf( "edges.size() %i \n", edges.size()  );
+    int n=0;
+    for ( VEdge* e : edges ){
+        Vec2d& p1 = *e->start;
+        Vec2d& p2 = *e->end;
+        printf( "edge[%i] %g,%g %g,%g \n", n, p1.x, p1.y, p1.x, p1.y );
+        n++;
+    };
+
 }
 
 void TestAppVoronoi::draw(){
+
     glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
 
-    // draw points
-    glColor3f(1,1,1);
-	//glBegin(GL_POINTS);
-	for (std::vector<Vec2d*>::iterator i = ver.begin(); i != ver.end(); i++){
-		//glVertex2d((*i)->x, (*i)->y);
-        Draw2D::drawPointCross_d( **i, 0.1 );
-    }
-    //glEnd();
+    glDisable(GL_LIGHTING);
 
-    // Draw Voronoi Edges
-    glColor3f(0,0,1);
-	glBegin(GL_LINES);
-	for (std::vector<VEdge>::iterator j = edges.begin(); j != edges.end(); j++){
-		glVertex2d(j->VertexA.x, j->VertexA.y);
-		glVertex2d(j->VertexB.x, j->VertexB.y);
-	}
-	glEnd();
-    
-    glColor3f(1,0,0);
-    glBegin(GL_LINES);
-    int ne = 0; 
-    for( GraphEdge& e : vdg->graph_edges ){
-        //printf( " %i (%g,%g)  (%g,%g) \n", e.x1, e.y1, e.x2, e.y2 );
-        glVertex2d( e.x1, e.y1 );
-        glVertex2d( e.x2, e.y2 );
-        ne++;
+    // draw points
+    glColor3f(1.0,1.0,1.0);
+	for ( Vec2d* p : vertices ){
+        Draw2D::drawPointCross_d( *p, 0.1 );
     }
-    //printf( "n edges %i \n", ne );
-    glEnd();
+
+    // draw edges
+    glColor3f(0.0,0.0,1.0);
+	glBegin(GL_LINES);
+	for ( VEdge* e : edges ){
+       Vec2d& p1 = *e->start;
+       Vec2d& p2 = *e->end;
+       glVertex2d( p1.x, p1.y );
+       glVertex2d( p2.x, p2.y );
+    }
+	glEnd();
+
+    // draw edges
+    glColor3f(1.0,0.0,0.0);
+	glBegin(GL_LINES);
+	for ( VEdge* e : edges ){
+       Vec2d& p1 = *e->left;
+       Vec2d& p2 = *e->right;
+       glVertex2d( p1.x, p1.y );
+       glVertex2d( p2.x, p2.y );
+    }
+	glEnd();
+
 
     glFlush();
 };
