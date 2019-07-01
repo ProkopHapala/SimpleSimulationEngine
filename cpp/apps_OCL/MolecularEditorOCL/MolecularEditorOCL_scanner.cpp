@@ -340,8 +340,8 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     //builder.loadMolType( "inputs/NaIon.xyz", "Na+" );
     //builder.loadMolType( "inputs/ClIon.xyz", "Cl-" );
     //builder.loadMolType( "inputs/OHion.xyz", "OH-" );
-
-    builder.loadMolType( "inputs/Campher.xyz", "Campher" );
+    builder.loadMolType( "inputs/water_ax.xyz", "Campher" );
+    //builder.loadMolType( "inputs/Campher.xyz", "Campher" );
     builder.loadMolType( "inputs/ClIon.xyz"  , "Cl-"     );
 
     DEBUG
@@ -381,7 +381,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
 
     //int nMols  = 1;
     int nMols    = world.nFrag;
-    int nSystems = 1000;
+    int nSystems = 100;
     //int nSystems = 2;
 
     //clworld.prepareBuffers( nSystems, nMols, world.gridFF.grid.n, world.gridFF.FFPauli_f, world.gridFF.FFLondon_f, world.gridFF.FFelec_f );
@@ -454,8 +454,9 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
 
     int i=0;
     float span = 5.0;
+    //Quat4f*  ps = (Quat4f*)clworld.poses;
     Quat4f*  ps = (Quat4f*)clworld.poses;
-    Quat4f*  ps = (Quat4f*)clworld.poses;
+    float*   ms = (float* )clworld.invMasses;
     for(int isys=0; isys<nSystems; isys++){
         Quat4d* wps = (Quat4d*)  world.poses;
         for(int imol=0; imol<nMols; imol++){
@@ -467,16 +468,26 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
             //i = builder.fragTypes[ (size_t) builder.frags[].mol ];
             int imoltype = builder.mol2molType[ (size_t) builder.frags[imol].mol ];
             clworld.mol2atoms[i] = clworld.molTypes[imoltype];
-            printf( "isys,imol %i,%i %i \n", isys, imol, imoltype );
+            
             //clworld.mol2atoms[i] = clworld.molTypes[0];
             ps[0] = (Quat4f)wps[0];
             ps[1] = (Quat4f)wps[1];
             ps[1].setRandomRotation();
+            //ps[1].setOne();
 
-            // assign atom types
-            //if(  )
-            //ms[0] = 0;
-            //ms[1] = 0;
+            ps[0].x += isys / 10;
+            ps[0].y += isys % 10;
+            //ps[0].z += ps[0].x * 0.5;
+
+            if(imol==0){ 
+                ms[0] = 0;
+                ms[1] = 0;
+            }else{
+                ms[0] = 1;
+                ms[1] = 1;
+            }
+
+            printf( "isys,imol,imoltype %i,%i %i mass %f pos (%g,%g,%g) \n", isys, imol, imoltype,   *ms, ps[0].x,ps[0].y,ps[0].z );
 
             ms +=2;
             ps +=2;
@@ -499,9 +510,23 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     //clworld.clean_vposes();     DEBUG
     //clworld.upload_vposes();    DEBUG
 
+    printf( "clFlush: %s \n ", OCL_err_code( clFlush(cl->commands) ) );
+    
     long t1;
     t1=getCPUticks();
-    clworld.relaxStepGPU( 1000, 0.5 );
+    //clworld.relaxStepGPU( 1000, 0.5 );   
+    
+    
+    int err = clworld.relaxStepGPU( 500, 0.5 );
+    if(err!=CL_SUCCESS){
+        printf( "runtime error in clworld.relaxStepGPU %s \n", OCL_err_code(err) );
+        exit(0);
+    }
+    
+    //exit(0);
+    //printf( "clFinish: %s \n ", OCL_err_code( clworld.relaxStepGPU( 1000, 0.5 ) ) );
+    
+    //clworld.relaxStepGPU( 1, 0.5 );
     //clworld.relaxStepGPU( 3, 0.5 );
 
     //clworld.relaxStepGPU( 3, 0.5 );
@@ -557,7 +582,9 @@ void AppMolecularEditorOCL::draw(){
 	float dt = 1.0;
 	//isys = 0;
 
-	if(frameCount<500) clworld.relaxStepGPU( 1, 0.5 );
+    printf("go to:  clworld.relaxStepGPU \n");
+	//if(frameCount<500) 
+	clworld.relaxStepGPU( 1, 0.5 );
 
 	clworld.system2atoms( isystem, atoms_tmp );
 

@@ -24,9 +24,25 @@
 
 //#include "MMFF.h"
 
-#include "eFF.h"
+//#include "eFF.h"
+#include "e2FF.h"
 
 #define R2SAFE  1.0e-8f
+
+/*
+int pickParticle( int n, Vec3d * ps, const Mat3d& cam, double R ){
+    double tmin =  1e+300;
+    int imin    = -1;
+    for(int i=0; i<n; i++){
+        double x = cam.a.dot(ps[i]);
+        doyble y = cam.b.dot(ps[i]);
+        double ti = raySphere( ray0, hRay, R, ps[i] );
+        if(ti<tmin){ imin=i; tmin=ti; }
+    }
+    return imin;
+}
+*/
+
 
 // ======= THE CLASS
 
@@ -37,7 +53,9 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     bool bRun = false;
 
-    EFF ff;
+//    EFF ff;
+    E2FF ff;
+    int ipicked  = -1, ibpicked = -1;
 
     //Plot2D plot1;
 
@@ -64,7 +82,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     //ff.loadFromFile_bas( "data/CH4.bas" );
-    ff.loadFromFile_bas( "data/C2H6.bas" );
+    //ff.loadFromFile_bas( "data/C2H6.bas" );
+    ff.loadFromFile_bas( "data/C2H6_e2FF.bas" );
     //ff.loadFromFile_bas( "data/C2.bas" );
     //ff.loadFromFile_bas( "data/H2.bas" );
     //ff.loadFromFile_bas( "data/C2e2.bas" );
@@ -110,9 +129,12 @@ void TestAppRARFF::draw(){
     }
 
     glColor3f(1.0,1.0,1.0);
-    for(int i=0; i<ff.ne; i++){
-        Draw3D::drawPointCross( ff.epos  [i],     0.1 );
-        Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
+    //for(int i=0; i<ff.ne; i++){
+    //    Draw3D::drawPointCross( ff.epos  [i],     0.1 );
+    //    Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
+    //}
+    for(int i=0; i<ff.ne; i+=2){
+        Draw3D::drawLine(ff.epos[i],ff.epos[i+1] );
     }
 
     //exit(0);
@@ -129,6 +151,15 @@ void TestAppRARFF::drawHUD(){
 
 }
 
+/*
+void TestAppRARFF::mouseHandling( ){
+    int mx,my; Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
+    if ( buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+        
+    }
+    AppSDL2OGL_3D::mouseHandling( );
+};
+*/
 
 void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
@@ -139,6 +170,21 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
                 case SDLK_o:  perspective  = !perspective; break;
                 case SDLK_SPACE: bRun = !bRun;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
+            }
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:
+                    //ipicked = pickParticle( ff.natoms, ff.apos, ray0, (Vec3d)cam.rot.c , 0.5 );
+                break;
+            }
+            break;
+        case SDL_MOUSEBUTTONUP:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:
+                    //ibpicked = pickParticle( ff.natoms, ff.apos, ray0, (Vec3d)cam.rot.c , 0.5 );
+                    //printf( "dist %i %i = ", ipicked, ibpicked );
+                    break;
             }
             break;
     };

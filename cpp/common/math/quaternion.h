@@ -105,7 +105,7 @@ class Quat4TYPE {
         }
     }
 
-    inline VEC& normalize_taylor3(){
+    inline QUAT& normalize_taylor3(){
         // sqrt(1+x) ~= 1 + 0.5*x - 0.125*x*x
         // sqrt(r2) = sqrt((r2-1)+1) ~= 1 + 0.5*(r2-1)
         // 1/sqrt(1+x) ~= 1 - 0.5*x + (3/8)*x^2 - (5/16)*x^3 + (35/128)*x^4 - (63/256)*x^5
@@ -214,7 +214,13 @@ class Quat4TYPE {
 		}
     };
 
+    inline QUAT operator+ ( TYPE f   ) const { QUAT vo; vo.x=x+f; vo.y=y+f; vo.z=z+f; vo.w=w+f; return vo; };
+    inline QUAT operator* ( TYPE f   ) const { QUAT vo; vo.x=x*f; vo.y=y*f; vo.z=z*f; vo.w=w*f; return vo; };
 
+    inline QUAT operator+ ( const QUAT& vi ) const { QUAT vo; vo.x=x+vi.x; vo.y=y+vi.y; vo.z=z+vi.z; vo.w=w+vi.w; return vo;  };
+    inline QUAT operator- ( const QUAT& vi ) const { QUAT vo; vo.x=x-vi.x; vo.y=y-vi.y; vo.z=z-vi.z; vo.w=w-vi.w; return vo; };
+    inline QUAT operator* ( const QUAT& vi ) const { QUAT vo; vo.x=x*vi.x; vo.y=y*vi.y; vo.z=z*vi.z; vo.w=w*vi.w; return vo; };
+    inline QUAT operator/ ( const QUAT& vi ) const { QUAT vo; vo.x=x/vi.x; vo.y=y/vi.y; vo.z=z/vi.z; vo.w=w/vi.w; return vo; };
 
 // ======= metric
     // https://fgiesen.wordpress.com/2013/01/07/small-note-on-quaternion-distance-metrics/
@@ -630,6 +636,7 @@ class Quat4TYPE {
 
 	}
 
+    //TYPE makeOrthoU( const VEC& a ){ TYPE c = dot(a);          add_mul(a, -c); return c; }
 	inline TYPE outproject( const QUAT& q ){ TYPE cdot = dot(q); add_mul( q, -cdot ); return cdot; };
 
 	inline void fromMatrix ( const VEC& a, const VEC& b, const VEC& c ) { fromMatrix( a.x,  a.y,  a.z,  b.x,  b.y,  b.z,  c.x,  c.y,  c.z  );  }

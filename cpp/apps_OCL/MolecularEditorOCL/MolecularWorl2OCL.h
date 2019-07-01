@@ -338,21 +338,21 @@ class RigidMolecularWorldOCL{ public:
         };
     }
 
-    void evalForceGPU(){
+    int evalForceGPU(){
        upload_poses   ();
        task_getForceRigidSystemSurfGrid->enque();
        download_fposes();
-       clFinish(cl->commands);
+       return clFinish(cl->commands);
     };
 
-    void relaxStepGPU( int nStep, float dt ){
+    int relaxStepGPU( int nStep, float dt ){
         task_getForceRigidSystemSurfGrid->args[16].f = alpha;
         task_getForceRigidSystemSurfGrid->args[17].f = dt;
         task_getForceRigidSystemSurfGrid->args[18].f = damp;
         task_getForceRigidSystemSurfGrid->args[19].i = nStep;
         task_getForceRigidSystemSurfGrid->enque();
         download_poses();
-        clFinish(cl->commands);
+        return clFinish(cl->commands);
     };
 
     int system2PLQs( int isystem, Quat4f* PLQs ){
@@ -733,7 +733,7 @@ class GridFF_OCL{ public:
         if(gridFF.FFelec_f  ){  cl->download( id_FFelec ,  (float*)gridFF.FFelec_f   ); if(copyToDouble ) float4ToVec3d( n, (float*)gridFF.FFelec_f ,  gridFF.FFelec   ); printf("FFelec   downloaded\n"); }
     }
 
-    void evalGridFFs( GridFF& gridFF, const Vec3i& nPBC ){
+    int evalGridFFs( GridFF& gridFF, const Vec3i& nPBC ){
         printf( "gridFF.natoms %i \n", gridFF.natoms );
         prepareBuffers( gridFF.natoms, gridFF.grid.getNtot() ); DEBUG
         setupKernel( gridFF );
@@ -741,7 +741,7 @@ class GridFF_OCL{ public:
         task_FFPLE->enque(); DEBUG
         //downloadFF( gridFF.grid.getNtot(), gridFF.FFPauli, gridFF.FFLondon, gridFF.FFelec ); DEBUG;
         downloadFF( gridFF );
-        clFinish(cl->commands); DEBUG;
+        return clFinish(cl->commands); DEBUG;
     }
 
 };

@@ -32,6 +32,9 @@ target_link_libraries( test_NBodyWorld ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_PolyLine test_PolyLine.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_PolyLine ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_Voronoi test_Voronoi.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:voronoi> )
+target_link_libraries( test_Voronoi ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_SimplexGrid test_SimplexGrid.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:SimplexGrid> )
 target_link_libraries( test_SimplexGrid ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

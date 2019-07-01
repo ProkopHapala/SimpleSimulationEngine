@@ -1,6 +1,11 @@
 
 // https://www.khronos.org/registry/OpenCL/sdk/1.1/docs/man/xhtml/sampler_t.html
 
+
+#pragma OPENCL EXTENSION cl_amd_printf : enable
+#pragma OPENCL EXTENSION cl_intel_printf : enable
+
+
 #define R2ELEC 1.0
 #define R2SAFE          1e-4f
 #define RSAFE           1.0e-4f
@@ -239,17 +244,22 @@ __kernel void getForceRigidSystemSurfGrid(
         }
     }
 */
+    //if( get_global_id(0)==0 ){printf( "inside cl::getForceRigidSystemSurfGrid nStep %i %i \n", nStep, natomi );}
 
     for(int iStep=0; iStep<nStep; iStep++ ){
+
+        //if( get_global_id(0)==0 ) printf( " iStep- %i \n", iStep );
+        //return;
 
         forceE = (float4)(0.0,0.0,0.0,0.0);
         torq   = (float4)(0.0,0.0,0.0,0.0);
 
         // ==== Molecule - Molecule Interaction
-
         lPOSES[iL].lo = mposi;
         lPOSES[iL].hi = qroti;
         barrier(CLK_LOCAL_MEM_FENCE);
+
+
 
         for(int jmol=0; jmol<nMols; jmol++){
 
@@ -306,13 +316,14 @@ __kernel void getForceRigidSystemSurfGrid(
 
                 forceE += fe;
                 torq   += cross(adposi, fe);
-
             }
 
             //if(isys == 1 ) printf( "%i imol %i p  %5.5e %5.5e %5.5e f %5.5e %5.5e %5.5e \n", iStep, imol, mposi.x,mposi.y,mposi.z, forceE.x, forceE.y, forceE.z );
 
+
             barrier(CLK_LOCAL_MEM_FENCE);
-        }
+        } // jmol
+
 
         if ( imol<nMols ){
             // ==== Molecule - Grid interaction
@@ -379,7 +390,7 @@ __kernel void getForceRigidSystemSurfGrid(
                 //mposi.xyz += forceE.xyz * dt;
                 //qroti      = drotQuat_exact( qroti, torq * dt );
 
-                if(isys == 1 && imol==1 ) printf( "invMasses %i (%g,%g)  f %g %g  t %g %g T %g \n", iStep, invMass.x, invMass.y, length(forceV.xyz), length(forceE.xyz), length(torqV.xyz), length(torq.xyz), dt );
+                //if( (isys == 1) && (imol== 1) ) printf( "iStep %i na %i invmass (%g,%g)  |f| %g %g  |tq| %g %g dt %g \n", iStep, natomi, invMass.x, invMass.y, length(forceV.xyz), length(forceE.xyz), length(torqV.xyz), length(torq.xyz), dt );
                 //printf( "invMasses %i (%i,%i) (%g,%g)\n", iStep, isys, imol, invMass.x, invMass.y );
 
                 forceV.xyz = forceV.xyz*damp + forceE.xyz * ( dt * invMass.x );
@@ -392,7 +403,10 @@ __kernel void getForceRigidSystemSurfGrid(
             }
         } // imol<nMols
 
+
     } // iStep;
+
+    //if( get_global_id(0)==0 ) printf( " finalized \n" );
 
     if ( imol<nMols ){
         fposes[oimol].lo  = forceE;

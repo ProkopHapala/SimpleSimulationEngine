@@ -1,6 +1,7 @@
 add_library( Lingebra OBJECT Lingebra.cpp )
 add_library( Convex2d OBJECT Convex2d.cpp )
 add_library( Voronoi  OBJECT Voronoi.cpp  )
+add_library( voronoi  OBJECT voronoi.cpp  )
 add_library( Noise    OBJECT Noise.cpp    )
 add_library( Splines  OBJECT SplineManager.cpp  )
 add_library( Mesh     OBJECT Mesh.cpp  )
