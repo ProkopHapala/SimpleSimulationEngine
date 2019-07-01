@@ -2,24 +2,30 @@
 
 #include "voronoi.h"
 
-int VoronoiPointCompare(const void *p1, const void *p2){
-	VoronoiPoint *s1 = (VoronoiPoint*)p1, *s2 = (VoronoiPoint*)p2;
+
+// from here: https://github.com/SahibYar/Voronoi-Fortune-Algorithm
+
+int Vec2dCompare(const void *p1, const void *p2){
+	Vec2d *s1 = (Vec2d*)p1, *s2 = (Vec2d*)p2;
 	if (s1->y < s2->y) return -1;
-	if (s1->y > s2->y) return 1;
+	if (s1->y > s2->y) return  1;
 	if (s1->x < s2->x) return -1;
-	if (s1->x > s2->x) return 1;
+	if (s1->x > s2->x) return  1;
 	return 0;
 }
 
-VoronoiPoint::VoronoiPoint(double nx, double ny){
+/*
+Vec2d::Vec2d(double nx, double ny){
 	x = nx;
 	y = ny;
 }
 
-VoronoiPoint::VoronoiPoint(){
+Vec2d::Vec2d(){
 	x = 0.0;
 	y = 0.0;
 }
+*/
+
 
 Voronoi::Voronoi(){
 	siteidx = 0;
@@ -34,9 +40,15 @@ Voronoi::Voronoi(){
 }
 
 Voronoi::~Voronoi(){
+	delete[] sites;
+	delete[] PQhash;
+	delete[] currentMemoryBlock;
+	delete[] allEdges;
+	delete[] iteratorEdges;
+	delete[] ELhash;
 }
 
-vector<VEdge> Voronoi::ComputeVoronoiGraph(vector<VoronoiPoint*> p, double minY, double maxY){
+std::vector<VEdge> Voronoi::ComputeVoronoiGraph(std::vector<Vec2d*> p, double minY, double maxY){
 	iteratorEdges = allEdges;
 	cleanup();
 	cleanupEdges();
@@ -61,20 +73,14 @@ vector<VEdge> Voronoi::ComputeVoronoiGraph(vector<VoronoiPoint*> p, double minY,
 		sites[i].coord.x = p[i]->x;
 		sites[i].coord.y = p[i]->y;
 		sites[i].sitenbr = i;
-		sites[i].refcnt = 0;
-
-		if (p[i]->x < xmin)
-			xmin = p[i]->x;
-		else if (p[i]->x > xmax)
-			xmax = p[i]->x;
-
-		if (p[i]->y < ymin)
-			ymin = p[i]->y;
-		else if (p[i]->y > ymax)
-			ymax = p[i]->y;
+		sites[i].refcnt  = 0;
+		if      (p[i]->x < xmin) { xmin = p[i]->x; }
+		else if (p[i]->x > xmax) { xmax = p[i]->x; }
+		if      (p[i]->y < ymin) { ymin = p[i]->y; }
+		else if (p[i]->y > ymax) { ymax = p[i]->y; }
 	}
 
-	qsort(sites, nsites, sizeof(*sites), VoronoiPointCompare);
+	qsort(sites, nsites, sizeof(*sites), Vec2dCompare);
 
 	siteidx = 0;
 	geominit();
@@ -84,6 +90,7 @@ vector<VEdge> Voronoi::ComputeVoronoiGraph(vector<VoronoiPoint*> p, double minY,
 		minY = maxY;
 		maxY = temp;
 	}
+    // WTF ? twice the same ?
 	if (minY > maxY){
 		temp = minY;
 		minY = maxY;
@@ -97,13 +104,15 @@ vector<VEdge> Voronoi::ComputeVoronoiGraph(vector<VoronoiPoint*> p, double minY,
 	siteidx = 0;
 	voronoi(triangulate);
 
+/*
 	p.clear();
 	cleanup();
 	cleanupEdges();
 	clean();
+*/
 	return total_edges;
-
 }
+
 void Voronoi::clean(){
 	delete[] sites;
 	delete[] PQhash;
@@ -181,7 +190,7 @@ Halfedge *  Voronoi::ELgethash(int b){
 	return ((Halfedge *)NULL);
 }
 
-Halfedge *  Voronoi::ELleftbnd(VoronoiPoint *p){
+Halfedge *  Voronoi::ELleftbnd(Vec2d *p){
 	int i, bucket;
 	Halfedge *he;
 
@@ -269,14 +278,15 @@ Edge * Voronoi::bisect(Site *s1, Site *s2){
 	ady = dy>0 ? dy : -dy;
 	newedge->c = (double)(s1->coord.x * dx + s1->coord.y * dy + (dx*dx + dy*dy)*0.5);//get the slope of the line
 
-	if (adx>ady)
-	{
-		newedge->a = 1.0; newedge->b = dy / dx; newedge->c /= dx;//set formula of line, with x fixed to 1
+	if (adx>ady){
+		newedge->a = 1.0; 
+        newedge->b = dy / dx; 
+        newedge->c /= dx;//set formula of line, with x fixed to 1
+	}else{
+		newedge->b = 1.0; 
+        newedge->a = dx / dy; 
+        newedge->c /= dy;//set formula of line, with y fixed to 1
 	}
-	else
-	{
-		newedge->b = 1.0; newedge->a = dx / dy; newedge->c /= dy;//set formula of line, with y fixed to 1
-	};
 
 	newedge->edgenbr = nedges;
 
@@ -284,7 +294,7 @@ Edge * Voronoi::bisect(Site *s1, Site *s2){
 	return(newedge);
 }
 
-Site * Voronoi::intersect(Halfedge *el1, Halfedge *el2, VoronoiPoint *p){
+Site * Voronoi::intersect(Halfedge *el1, Halfedge *el2, Vec2d *p){
 	Edge *e1, *e2, *e;
 	Halfedge *el;
 	double d, xint, yint;
@@ -330,7 +340,7 @@ Site * Voronoi::intersect(Halfedge *el1, Halfedge *el2, VoronoiPoint *p){
 	return(v);
 }
 
-int Voronoi::right_of(Halfedge *el, VoronoiPoint *p){
+int Voronoi::right_of(Halfedge *el, Vec2d *p){
 	Edge *e;
 	Site *topsite;
 	int right_of_site, above, fast;
@@ -460,8 +470,8 @@ int Voronoi::PQempty(){
 }
 
 
-VoronoiPoint Voronoi::PQ_min(){
-	VoronoiPoint answer;
+Vec2d Voronoi::PQ_min(){
+	Vec2d answer;
 
 	while (PQhash[PQmin].PQnext == (Halfedge *)NULL) { PQmin += 1; };
 	answer.x = PQhash[PQmin].PQnext->vertex->coord.x;
@@ -479,8 +489,7 @@ Halfedge * Voronoi::PQextractmin(){
 }
 
 
-bool Voronoi::PQinitialize()
-{
+bool Voronoi::PQinitialize(){
 	int i;
 
 	PQcount = 0;
@@ -526,8 +535,7 @@ char *  Voronoi::getfree(Freelist *fl){
 
 
 
-void Voronoi::makefree(Freenode *curr, Freelist *fl)
-{
+void Voronoi::makefree(Freenode *curr, Freelist *fl){
 	curr->nextfree = fl->head;
 	fl->head = curr;
 }
@@ -561,8 +569,7 @@ void  Voronoi::cleanup(){
 	currentMemoryBlock = allMemoryList;
 }
 
-void Voronoi::cleanupEdges()
-{
+void Voronoi::cleanupEdges(){
 	GraphEdge* geCurrent = 0, *gePrev = 0;
 	geCurrent = gePrev = allEdges;
 
@@ -591,8 +598,7 @@ char * Voronoi::myalloc(unsigned n){
 	return(t);
 }
 
-void  Voronoi::line(double x1, double y1, double x2, double y2)
-{
+void  Voronoi::line(double x1, double y1, double x2, double y2){
 	pushGraphEdge(x1, y1, x2, y2);
 
 }
@@ -650,26 +656,30 @@ void  Voronoi::clip_line(Edge *e){
 		if (((y1> pymax) & (y2>pymax)) | ((y1<pymin)&(y2<pymin))) return;
 		if (y1> pymax) { y1 = pymax; x1 = (e->c - y1) / e->a; }
 		if (y1<pymin)  { y1 = pymin; x1 = (e->c - y1) / e->a; }
-		if (y2>pymax)  { y2 = pymax; x2 = (e->c - y2) / e->a; };
-		if (y2<pymin)  { y2 = pymin; x2 = (e->c - y2) / e->a; };
+		if (y2>pymax)  { y2 = pymax; x2 = (e->c - y2) / e->a; }
+		if (y2<pymin)  { y2 = pymin; x2 = (e->c - y2) / e->a; }
 	};
 
 	VEdge ee;
-	ee.Left_Site = e->Sites[0]->coord;
+	ee.Left_Site  = e->Sites[0]->coord;
 	ee.Right_Site = e->Sites[1]->coord;
-	ee.VertexA.x = x1;
-	ee.VertexA.y = y1;
-	ee.VertexB.x = x2;
-	ee.VertexB.y = y2;
+	ee.VertexA.x  = x1;
+	ee.VertexA.y  = y1;
+	ee.VertexB.x  = x2;
+	ee.VertexB.y  = y2;
 
-	total_edges.push_back(ee);
+	total_edges.push_back(ee);  // insert new edge
+    graph_edges.push_back( (GraphEdge){ e->Sites[0]->coord.x, e->Sites[0]->coord.y, e->Sites[1]->coord.x, e->Sites[1]->coord.y,0 } );
+
+    printf( "(%g,%g)--(%g,%g) \n", e->Sites[0]->coord.x, e->Sites[0]->coord.y, e->Sites[1]->coord.x, e->Sites[1]->coord.y );
+
 	line(x1, y1, x2, y2);
 }
 
 bool  Voronoi::voronoi(int triangulate){
 	Site *newsite, *bot, *top, *temp, *p;
 	Site *v;
-	VoronoiPoint newintstar;
+	Vec2d newintstar;
 	int pm;
 	Halfedge *lbnd, *rbnd, *llbnd, *rrbnd, *bisector;
 	Edge *e;
@@ -705,13 +715,13 @@ bool  Voronoi::voronoi(int triangulate){
 			}
 			newsite = nextone();
 		} else if (!PQempty()) {
-			lbnd = PQextractmin();
+			lbnd  = PQextractmin();
 			llbnd = ELleft(lbnd);
-			rbnd = ELright(lbnd);
+			rbnd  = ELright(lbnd);
 			rrbnd = ELright(rbnd);
-			bot = leftreg(lbnd);
-			top = rightreg(rbnd);
-			v = lbnd->vertex;
+			bot   = leftreg(lbnd);
+			top   = rightreg(rbnd);
+			v     = lbnd->vertex;
 			makevertex(v);
 			endpoint(lbnd->ELedge, lbnd->ELpm, v);
 			endpoint(rbnd->ELedge, rbnd->ELpm, v);
