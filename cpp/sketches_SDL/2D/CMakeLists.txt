@@ -38,6 +38,9 @@ target_link_libraries( test_Voronoi ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBR
 add_executable       ( test_Voronoi2 test_Voronoi2.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Voronoi> )
 target_link_libraries( test_Voronoi2 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_Mech2D test_Mech2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_Mech2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_SimplexGrid test_SimplexGrid.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:SimplexGrid> )
 target_link_libraries( test_SimplexGrid ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

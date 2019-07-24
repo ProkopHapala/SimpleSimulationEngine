@@ -23,6 +23,20 @@
 ////////////////////////////////
 
 
+
+template <class TYPE>
+inline double triangleArea( const Vec2TYPE<TYPE>& a, const Vec2TYPE<TYPE>& b, const Vec2TYPE<TYPE>& c ){ 
+    //https://www.mathopenref.com/coordtrianglearea.html
+    return ( a.x*(b.y-c.y) + b.x*(c.y-a.y) + c.x*(a.y-b.y) )*0.5; 
+}
+
+template <class TYPE>
+inline void dtriangleArea( const Vec2TYPE<TYPE>& b, const Vec2TYPE<TYPE>& c, Vec2TYPE<TYPE>& da ){ 
+    da.x =  (b.y-c.y)*0.5;
+    da.y = -(b.x-c.x)*0.5;
+}
+
+
 template <class TYPE>
 inline bool pointInRect( const Vec2TYPE<TYPE>& p, TYPE x0, TYPE y0, TYPE x1, TYPE y1 ){ return ( p.x > x0 ) && ( p.x < x1 ) && ( p.y > y0 ) && ( p.y < y1 ); };
 
