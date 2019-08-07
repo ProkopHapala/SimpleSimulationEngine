@@ -10,6 +10,14 @@
 
 /*
 
+Idea
+-----
+
+visco-elestic simulation with Multi-Materials on using arbitrary triangular mesh
+ * mass is stored in triangle COG
+ * each triangle has different material
+
+
 ToDo:
 -----
     1) Swap edges
@@ -114,12 +122,12 @@ double momentum2verts(){
         fvs[vi.a].add( pi );
         fvs[vi.b].add( pi );
         fvs[vi.c].add( pi );
-        
+
         //const Vec2d& dcog = dcogs[i];
         //vs[vi.a] += pi*dcog.a; // maybe we need inverse?
         //vs[vi.b] += pi*dcog.b;
         //vs[vi.c] += pi*dcog.c;
-        
+
         //const Vec2d& invmi = invm[i]; // inverse mass of vertex with respect to volume ( ToDo - may be 2x2 tensor ?)
         //vs[vi.a] += pi*invmi.a;
         //vs[vi.b] += pi*invmi.b;
@@ -160,7 +168,7 @@ double updateVolume(){
 
 /*
 double getPressure(int i){
-    
+
     const Vec3i& t = t2v[i];
     double V   = triangleArea(pos[t.a],pos[t.b],pos[t.c]);
     volume  [i] = V;
@@ -182,7 +190,7 @@ double getForces(){
             dEdV           = Us[i]/V; // pressure from EOS
         }
 
-        Vec2d  dVdr; 
+        Vec2d  dVdr;
         const Vec2d& pa = pos[vi.a];
         const Vec2d& pb = pos[vi.b];
         const Vec2d& pc = pos[vi.c];
@@ -214,7 +222,7 @@ double step(double dt){
 //double EOS(int imat, double mass, double V, double& p, double& T){
 //    // https://en.wikipedia.org/wiki/Internal_energy
 //    // U = pV = nRT
-//    
+//
 //    T = U/(C*mass);
 //   p = U/V;
 //};
@@ -229,9 +237,9 @@ double EOS_U2p(int imat, double U, double V){
 };
 
 bool mergeCond(int i, int j){ // check if merging does not cause too much error
-    double dE = 
+    double dE =
     pressure[i]*volume[i] + pressure[j]*volume[j]  -  (pressure[i]+pressure[j])/ + *volume[j]  // pressure energy loss
-    ps[i].norm2(i)/mass   + ps[j].norm2()/mass[j]  -  ;                 // kinetic energy loss 
+    ps[i].norm2(i)/mass   + ps[j].norm2()/mass[j]  -  ;                 // kinetic energy loss
 }
 
 */
@@ -242,7 +250,7 @@ bool trySwapEdge(int i, int j, int ie){
     const Vec2i& vi = e2v[ie];
     const Vec2d dp  = pos[vi.b]- pos[vi.a];
     double l2_new    = dp.norm2();
-    
+
     double minLfactor = 1.5;
     if( sq(els[ie]*minLfactor) > l2_new ){ // check if new edge sufficiently shorter
 
@@ -263,7 +271,7 @@ bool trySwapEdge(int i, int j, int ie){
 
         if( dEp*dEp + dEk*dEk < maxEerr2 ){  // check energy error due to merging
             // swap edge
-            
+
         }
 
     }
@@ -276,7 +284,7 @@ reorganize mesh such that for two triangles sharing an edge, the longer edges ar
      --------       -------
     /     . /      /\     /
    /    .  /      /  \    /
-  /   .   /  --> /    \   / 
+  /   .   /  --> /    \   /
  /  .    /      /      \  /
 / .     /      /        \ /
  --------      --------

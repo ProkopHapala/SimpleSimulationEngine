@@ -13,8 +13,8 @@ add_executable( ${NAME}_main
 
 target_link_libraries( ${NAME}_main ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-#file(GLOB math_HEADERS_ *.h )
-#add_custom_target(math_headers SOURCES ${math_HEADERS_} )
+file(GLOB ${NAME}_HEADERS_ *.h )
+add_custom_target( ${NAME}_headers SOURCES ${${NAME}_HEADERS_} )
 
 #file( COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR} )
 

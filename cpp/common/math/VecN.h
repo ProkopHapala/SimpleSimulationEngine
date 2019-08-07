@@ -12,11 +12,12 @@ namespace VecN{
 
     // =======  iterration over array
 
-	inline double dot (int n, double* a, double* b ){ double sum =0; for (int i=0; i<n; i++ ){ sum+= a[i]*b[i];             } return sum; }
-	inline double sum (int n, double* a            ){ double sum =0; for (int i=0; i<n; i++ ){ sum+= a[i];                  } return sum; };
-    inline double sum2(int n, double* a            ){ double sum =0; for (int i=0; i<n; i++ ){ double ai=a[i]; sum+=ai*ai;  } return sum; };
-    inline double min (int n, double* a            ){ double amax=-1e+300; for (int i=0; i<n; i++ ){ double ai=a[i]; amax=_max(amax,ai); } return amax; };
-    inline double max (int n, double* a            ){ double amin=+1e+300; for (int i=0; i<n; i++ ){ double ai=a[i]; amin=_min(amin,ai); } return amin; };
+	inline double dot    (int n, double* a, double* b ){ double sum =0; for (int i=0; i<n; i++ ){ sum+= a[i]*b[i];             } return sum; }
+	inline double sum    (int n, double* a            ){ double sum =0; for (int i=0; i<n; i++ ){ sum+= a[i];                  } return sum; };
+    inline double sum2   (int n, double* a            ){ double sum =0; for (int i=0; i<n; i++ ){ double ai=a[i]; sum+=ai*ai;  } return sum; };
+    inline double min    (int n, double* a            ){ double amax=-1e+300; for (int i=0; i<n; i++ ){ double ai=a[i]; amax=fmax(amax,ai); } return amax; };
+    inline double max    (int n, double* a            ){ double amin=+1e+300; for (int i=0; i<n; i++ ){ double ai=a[i]; amin=fmin(amin,ai); } return amin; };
+    inline double absmax (int n, double* a            ){ double amax=0;       for (int i=0; i<n; i++ ){ double ai=a[i]; amax=fmax(amax,fabs(ai)); } return amax; };
 
     inline double minmax(int n, double* a, double& vmin, double& vmax ){ vmin=+1e+300; vmax=-1e+300; for (int i=0; i<n; i++ ){ double ai=a[i]; vmin=_min(vmin,ai); vmax=_max(vmax,ai); } };
 
