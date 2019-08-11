@@ -18,6 +18,7 @@ class Vec3TYPE{
 	union{
 		struct{ TYPE x,y,z; };
 		struct{ TYPE a,b,c; };
+		struct{ TYPE i,j,k; };
 		TYPE array[3];
 	};
 

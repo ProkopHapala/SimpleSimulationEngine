@@ -182,7 +182,7 @@ class Mat3TYPE{
         c.makeOrthoU(b);
         c.normalize();
 	};
-	
+
 	inline bool orthogonalize_taylor3( int ia, int ib, int ic ){
         VEC& a = vecs[ia];
         VEC& b = vecs[ib];
@@ -194,7 +194,7 @@ class Mat3TYPE{
         c.makeOrthoU(b);
         c.normalize_taylor3();
 	};
-	
+
 
 // ====== matrix multiplication
 
@@ -313,7 +313,7 @@ class Mat3TYPE{
 		//b.set(2);
 		//c.set(3);
 	};
-	
+
 	inline void drotate_omega6( const VEC& w ){
         // consider not-normalized vector omega
         TYPE ca,sa;
@@ -322,7 +322,7 @@ class Mat3TYPE{
         b.drotate_omega_csa(w,ca,sa);
         c.drotate_omega_csa(w,ca,sa);
 	};
-	
+
 	void dRotateToward( int pivot, const MAT& rot0, TYPE dPhi ){
         int i3 = pivot*3;
         VEC& piv  = *(VEC*)(     array+i3);
@@ -361,6 +361,18 @@ class Mat3TYPE{
 		c.set_cross(b,a);
 		//a.normalize(); // we don't need this since b,c are orthonormal
 	};
+
+	inline void fromCrossSafe( const Vec3d& v1, const Vec3d& v2 ){
+        b.set_cross( v1, v2 );
+        a.set_sub(v2,v1); a.normalize();
+        double r2b = b.norm2();
+        if( r2b<1e-15 ){
+            a.getSomeOrtho(b,c);
+        }else{
+            b.mul( 1/sqrt(r2b) );
+            c.set_cross(b,a);
+        }
+	}
 
 	inline void fromEuler( TYPE phi, TYPE theta, TYPE psi ){
         // http://mathworld.wolfram.com/EulerAngles.html
