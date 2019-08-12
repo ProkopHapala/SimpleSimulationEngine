@@ -22,6 +22,14 @@
 
 //#define _realloc(TYPE,arr,n){ if(var) delete [] arr; arr=new TYPE[n]; }
 
+//#define BEGIN_WITH(x) { \
+//    auto &_ = x;
+//#define END_WITH() }
+
+template <typename T> int signum(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
 template<typename T> inline void _realloc(T*& arr, int n){ if(arr) delete [] arr; arr=new T[n]; }
 template<typename T> inline void _dealloc(T*& arr       ){ if(arr) delete [] arr; arr=0; }
 

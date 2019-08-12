@@ -142,7 +142,7 @@ class MoleculeWorld{
 
         nMols = nMols_;
         mols = new int[nMols]; notFixed = new bool[nMols];
-        optimizer.allocate( nMols * 3 );
+        optimizer.realloc( nMols * 3 );
         pos = (Vec2d*)optimizer.pos; vpos = (Vec2d*)optimizer.vel; fpos = (Vec2d*)optimizer.force;	// positions of molecules, velocities and forces
         rot = optimizer.pos+2*nMols; vrot = optimizer.force+2*nMols; frot = optimizer.force+2*nMols;	// rotations of molecules, velocities and forces
 

@@ -241,9 +241,9 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //exit(0);
 
     // ---- Rigid Body Molecules
-    //mol.loadXYZ( "inputs/water_ax.xyz" );                           
-    //mol.loadXYZ( "inputs/water_ax_q0.xyz" );                        
-    //mol.loadXYZ( "inputs/OH_ax.xyz" );                              
+    //mol.loadXYZ( "inputs/water_ax.xyz" );
+    //mol.loadXYZ( "inputs/water_ax_q0.xyz" );
+    //mol.loadXYZ( "inputs/OH_ax.xyz" );
     mol.loadXYZ( "inputs/water_T5_ax.xyz" );    mol.printAtomInfo();   DEBUG
     params.assignREs( mol.natoms, mol.atomType, mol.REQs );
     Mat3d rot; rot.setOne();
@@ -267,12 +267,12 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     builder.toMMFF( &world );                                 DEBUG
     world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
-    //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); 
+    //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs );
 
     //opt.bindArrays( 8*world.nFrag, world.poses, world.poseVs, world.poseFs );
-    world.allocateDyn(); 
-    world.initDyn();     
-    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce ); DEBUG
+    world.allocateDyn();
+    world.initDyn();
+    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce, NULL ); DEBUG
     opt.setInvMass( 1.0 );
     opt.cleanVel  ( );
     //exit(0);
@@ -301,10 +301,10 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //exit(0);
     initRigidSubstrate();
 
-    manipulator.bindAtoms(world.natoms, world.apos, world.aforce ); 
-    manipulator.realloc(1);                                        
-    manipulator.goalSpan.set(5.0,5.0,1.0);                          
-    manipulator.genGoals();                                         
+    manipulator.bindAtoms(world.natoms, world.apos, world.aforce );
+    manipulator.realloc(1);
+    manipulator.goalSpan.set(5.0,5.0,1.0);
+    manipulator.genGoals();
 
     manipulator.nenabled = 10;
     manipulator.enabled = new int[manipulator.nenabled];
@@ -326,8 +326,8 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     atomdist.pos    = conf1.pos;
     atomdist.types  = conf1.types;
     */
-    
-    DEBUG 
+
+    DEBUG
 
     atomdist.copyOf(conf1);
     /*
@@ -349,7 +349,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
 
     DEBUG
-    
+
     conf1.pos[0].add(0.1,0.0,0.0);
 
     for(int i=0; i<5; i++){ printf( "== %i %i(%f,%f,%f) | %i %i(%f,%f,%f)\n", i, world.atypes[i], world.apos[i].x,world.apos[i].y,world.apos[i].z,

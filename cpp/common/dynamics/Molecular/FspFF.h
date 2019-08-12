@@ -186,40 +186,35 @@ void evalBond(int ibond){
     hdir[b.i].set(ph);
     hdir[b.j].set(ph);
     */
-    f.add_mul(hforce[b.i],0.5);
-    f.add_mul(hforce[b.j],0.5);
-
 
     //aforce[ia].add(f);
     //aforce[ja].sub(f);
     //printf( "bond %i hs(%i,%i) dp(%g,%g,%g) %g \n", ibond, b.i, b.j, dp.x, dp.y, dp.z, l );
     //printf( "bond %i hs(%i,%i) h(%g,%g,%g) %g \n", ibond, b.i, b.j, f.x, f.y, f.z, l );
 
-    f.mul( (l-lk.x)*lk.y );
+    f.mul( (l-lk.a)*lk.b );
+
+    f.set(0.); // DEBUG : remove bond force
+
+
+    aforce[ia].add(hforce[b.j]);
+    aforce[ja].add(hforce[b.i]);
+    //f.add(hforce[b.i]); f.add(hforce[b.j]);
+    //f.add_mul(hforce[b.i],0.5); f.add_mul(hforce[b.j],0.5);
+    hforce[b.i].set(0.); hforce[b.j].set(0.); // DEBUG : should not affect anything
 
     glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( f, hdir[b.i] );
 
-    aforce[ia].add(f);
-    aforce[ja].sub(f);
-
+    /*
     if( substract_LJq ){
         addAtomicForceLJQ( dp, f, aREQs[ia].x+aREQs[ja].x, -aREQs[ia].y*aREQs[ja].y, aREQs[ia].z*aREQs[ja].z );
         //addAtomicForceMorseQ( dp, f, aREQ[iat.x].x+aREQ[iat.y].x, -aREQ[iat.x].y*aREQ[iat.y].y, aREQ[iat.x].z*aREQ[iat.y].z, gridFF.alpha );
     }
-}
+    */
 
-/*
-void bondRecoil(){
-    for(int ib=0; ib<nbonds; ib++){
-        const Vec2i& b   = bondIs[ibond];
-        int ia = b.i>>2;
-        int ja = b.j>>2;
-        Vec3d f = hforce[b.i] + hforce[b.i];
-        aforce[ia].add(f);
-        aforce[ja].sub(f);
-    }
+    aforce[ia].add(f);
+    aforce[ja].sub(f);
 }
-*/
 
 inline void evalBondPiForce(int ibond){
     // NOTE: this cannot be in bondForce, since some hdirs may not be updated yet
@@ -239,7 +234,6 @@ inline void evalBondPiForce(int ibond){
         aforce[ja].add(fja); hforce[j].sub(fja);
     }
 }
-
 
 void evalAtom(int ia){
 
@@ -288,7 +282,7 @@ void evalAtom(int ia){
                 //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fja*0.5,apos[ia]+hj*0.5 );
 
             }
-
+/*
             if(conf.b<N_BOND_MAX){
                 Vec3d hi   = pi-pa;
                 Mat3Sd D;
@@ -319,30 +313,14 @@ void evalAtom(int ia){
                     //fa.sub(fia); fa   .sub(fja);
                 }
             }
+*/
             if(i>=conf.c){ glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fi, pi ); }
         }else{           // pi
+/*
             double c,dfc;
             Vec3d fia,fja;
             const Vec3d& hi = hs[i];
 
-            /*
-            // Note: moving this here is more elegant but D-mat must be recalculated
-            for(int j=0; j<conf.b; j++){  // pi-electron
-                // ToDo : proper dhat
-                const Vec3d& hj = hs[j]-pa;
-                c   = hi.dot(hj);
-                dfc = Kp*2*c;
-
-                double ir2 = 1/(hj.norm2() + 1e+16);
-                double ir  = sqrt(it);
-
-                Mat3Sd D;
-                D.from_dhat(hj);
-                Ds.dhat_dot( hj, fia );
-                fja.mul(dfc*ir2*ir);
-                fia.set_mul(hi,dfc);
-            }
-            */
             for(int j=i+1; j<N_BOND_MAX; j++){ // pi-pi
                 const Vec3d& hj = hs[j];
                 c   = hi.dot(hj);
@@ -353,7 +331,7 @@ void evalAtom(int ia){
                 //fi.add(fia); fs[j].add(fja);
                 //fa.sub(fia); fa   .sub(fja);
             }
-
+*/
         }
 
     }
@@ -367,6 +345,193 @@ void evalAtom(int ia){
 }
 
 
+inline void evalBonds       (){ for(int i=0; i<nbond; i++){ evalBond(i);        } }
+inline void evalBondPiForces(){ for(int i=0; i<nbond; i++){ evalBondPiForce(i); } }
+inline void evalAtoms       (){ for(int i=0; i<natom; i++){ evalAtom(i);        } //exit(0);
+}
+
+
+void evalLJQs(){
+    for(int i=0; i<natom; i++){
+        const Vec3d& REQi = aREQs[i];
+        const Vec3d& pi   = apos[i];
+        Vec3d fi; fi.set(0.0);
+        /*
+        for(int j=0; j<natoms; j++){
+            if(i!=j){
+                Vec3d& ljq_j = aREQ[j];
+                double rij = ljq_i.x+ljq_j.x;
+                double eij = ljq_i.y*ljq_j.y;
+                double qq  = ljq_i.z*ljq_j.z;
+                addAtomicForceLJQ( pi-pos[j], f, rij, -eij, qq );
+            }
+        }
+        force[i].add(f);
+        */
+        for(int j=0; j<i; j++){
+            Vec3d  fij;fij.set(0.);
+            Vec3d& REQj = aREQs[j];
+            addAtomicForceLJQ( pi-apos[j], fij, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z );
+            aforce[j].sub(fij);
+            aforce[j].add(fij);
+            //fi      .add(fij);
+        }
+        //force[i].add(fi);
+    }
+}
+
+void evalLJQs(int n, const Vec3d* REQs, const Vec3d* ps, Vec3d* fs, const Vec3d& REQi, const Vec3d& pi, Vec3d& fi){
+    for(int j=0; j<n; j++){    // atom-atom
+        Vec3d  fij; fij.set(0.);
+        const Vec3d& REQj = REQs[j];
+        addAtomicForceLJQ( pi-ps[j], fij, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z );
+        aforce[j].sub(fij);
+        fi       .add(fij);
+        //fi      .add(fij);
+    }
+}
+
+void evalLJQs_H(){
+    for(int i=0; i<natom; i++){ evalLJQs( natom,   aREQs,   apos,   aforce,  aREQs  [i],   apos[i],   aforce[i] ); }
+    for(int i=0; i<natom; i++){ evalLJQs( ncap,  capREQs, capPos, capForce,  aREQs  [i], capPos[i], capForce[i] ); }
+    for(int i=0; i<ncap;  i++){ evalLJQs( ncap,  capREQs, capPos, capForce,  capREQs[i], capPos[i], capForce[i] ); }
+}
+
+void evalForces(){
+    cleanForce();
+    projectBondCenter();
+    //projectCaps();
+    //evalLJQs();
+    evalAtoms();
+    evalBonds();
+    //evalBondPiForces();
+}
+
+void moveGD(double dt){
+    for(int i=0; i<nDOF; i++){ dofs[i].add_mul( fdofs[i], dt ); }
+}
+
+void setBondsAndHydrogens( Vec2i* bond2atom, Vec2i* Hps ){
+    for(int ia=0; ia<natom; ia++){
+        aconf[ia].a=0;
+    }
+    for(int ib=0; ib<nbond; ib++){
+        const Vec2i& ba = bond2atom[ib];
+        Vec3i& ci    = aconf[ba.i];
+        Vec3i& cj    = aconf[ba.j];
+        bondIs[ib].a = ba.i*N_BOND_MAX + ci.a; ci.a++;
+        bondIs[ib].b = ba.j*N_BOND_MAX + cj.a; cj.a++;
+        printf( "bond %i a2b(%i,%i) -> bIs(%i,%i) \n", ib, ba.i, ba.j, bondIs[ib].a, bondIs[ib].b );
+    }
+    for(int ia=0; ia<natom; ia++){
+        const Vec2i& hp = Hps[ia];
+        Vec3i& c = aconf[ia];
+        // like this    [ sigmaBonds | hydrogens | epairs | pi ]
+        c.c =c.a;      // end of bonds ( start of hydrogens )
+        c.a+=hp.a; // end of sigma bonds (to atoms & hydrogens), not epairs
+        c.b =4-hp.b;   // end of sigma&epairs is what lefts after assign pi bonds
+    }
+}
+
+
+
+void guessOrbs(){
+    // TODO: bonds should be before hydrogens, otherwise it is huge problem
+    //cleanForce();
+    //for(int i=0; i<nbond; i++){ evalBond(i);         }
+    projectBondCenter();
+    for(int ia=0; ia<natom; ia++){
+        Vec3d  pa = apos[ia];
+        Vec3i& c  = aconf[ia];
+        Vec3d* hs = hdir + ia*N_BOND_MAX;
+        int nb = c.c; // number of defined bonds
+        Mat3d m;
+        if      (nb==3){ // defined by 3 sigma bonds
+            m.b.set_cross( hs[1]-hs[0], hs[2]-hs[0] );
+            m.b.mul( -1/m.b.norm() );
+            if(c.b==4){ // sp3 no-pi
+                if( 0 < m.b.dot( hs[0]+hs[1]+hs[2]+pa*3 ) ){ m.b.mul(-1.); }
+                hs[3]=pa+m.b;
+            }else{
+                hs[3]=m.b;
+            }
+
+        }else if(nb==2){ // defined by 2 sigma bonds
+            m.fromCrossSafe( hs[0]-pa, hs[1]-pa );
+            if      (c.b==4){ // -CH2- like sp3 no-pi
+                const double cb = 0.81649658092; // sqrt(2/3)
+                const double cc = 0.57735026919;  // sqrt(1/3)
+                hs[nb  ] = pa+m.c*cc+m.b*cb;
+                hs[nb+1] = pa+m.c*cc-m.b*cb;
+            }else if(c.b==3){ // =CH- like  sp 1-pi
+                hs[nb  ] = pa+m.c;
+                hs[nb+1] = m.b;
+                printf("like =CH- H(%g,%g,%g) pi(%g,%g,%g,) \n", hs[nb].x, hs[nb].y, hs[nb].z, hs[nb+1].x, hs[nb+1].y, hs[nb+1].z );
+            }else{            // #C- like sp 2-pi
+                hs[nb  ] = m.c;
+                hs[nb+1] = m.b;
+            }
+        }else if(nb==1){
+            m.c = hs[0]-pa; m.c.normalize();
+            m.c.getSomeOrtho(m.b,m.a);
+            if      (c.b==4){ // -CH3 like sp3 no-pi
+                const double ca = 0.81649658092;  // sqrt(2/3)
+                const double cb = 0.47140452079;  // sqrt(2/9)
+                const double cc =-0.33333333333;  // 1/3
+                hs[nb  ] = pa+m.c*cc + m.b*(cb*2) ;
+                hs[nb+1] = pa+m.c*cc - m.b* cb    + m.a*ca;
+                hs[nb+2] = pa+m.c*cc - m.b* cb    - m.a*ca;
+            }else if(c.b==3){ // =CH2 like sp2 1-pi
+                const double ca = 0.87758256189;  // 1/2
+                const double cc =-0.5;            // sqrt(1/8)
+                hs[nb  ] = pa+m.c*cc + m.a*ca;
+                hs[nb+1] = pa+m.c*cc - m.a*ca;
+                hs[nb+2] = m.b;
+            }else{            // #CH sp  2-pi
+                hs[nb  ] = pa+m.c*-1;
+                hs[nb+1] = m.b;
+                hs[nb+2] = m.a;
+            }
+        }else{
+            printf( " WARRNING: atom %i not bonded to anything\n", ia );
+        }
+    }
+}
+
+
+///============= Backup
+///============= Backup : Dirctions instead of positions
+///============= Backup : Dirctions instead of positions
+///============= Backup
+
+/*
+void bondRecoil(){
+    for(int ib=0; ib<nbonds; ib++){
+        const Vec2i& b   = bondIs[ibond];
+        int ia = b.i>>2;
+        int ja = b.j>>2;
+        Vec3d f = hforce[b.i] + hforce[b.i];
+        aforce[ia].add(f);
+        aforce[ja].sub(f);
+    }
+}
+*/
+
+/*
+void projectCaps(){
+    int ic=0;
+    for(int ia=0; ia<natom; ia++){
+        const Vec3d& pi = apos[ia];
+        //const Vec3d* hs = hdir[ia<<2];
+        int ih = ia*N_BOND_MAX;
+        for(int j=aconf[ia].c; j<aconf[ia].a; j++){ // all sigma bonds
+            //capPos[ic] = pi + hs[j] * R;
+            capPos[ic] = pi + hdir[ih+j];
+            ic++;
+        }
+    }
+};
+*/
 
 /*
 void evalAtom(int ia){
@@ -471,114 +636,6 @@ void evalAtom(int ia){
 }
 */
 
-inline void evalBonds       (){ for(int i=0; i<nbond; i++){ evalBond(i);        } }
-inline void evalBondPiForces(){ for(int i=0; i<nbond; i++){ evalBondPiForce(i); } }
-inline void evalAtoms       (){ for(int i=0; i<natom; i++){ evalAtom(i);        } //exit(0);
-}
-
-
-
-
-/*
-void projectCaps(){
-    int ic=0;
-    for(int ia=0; ia<natom; ia++){
-        const Vec3d& pi = apos[ia];
-        //const Vec3d* hs = hdir[ia<<2];
-        int ih = ia*N_BOND_MAX;
-        for(int j=aconf[ia].c; j<aconf[ia].a; j++){ // all sigma bonds
-            //capPos[ic] = pi + hs[j] * R;
-            capPos[ic] = pi + hdir[ih+j];
-            ic++;
-        }
-    }
-};
-*/
-
-void evalLJQs(){
-    for(int i=0; i<natom; i++){
-        const Vec3d& REQi = aREQs[i];
-        const Vec3d& pi   = apos[i];
-        Vec3d fi; fi.set(0.0);
-        /*
-        for(int j=0; j<natoms; j++){
-            if(i!=j){
-                Vec3d& ljq_j = aREQ[j];
-                double rij = ljq_i.x+ljq_j.x;
-                double eij = ljq_i.y*ljq_j.y;
-                double qq  = ljq_i.z*ljq_j.z;
-                addAtomicForceLJQ( pi-pos[j], f, rij, -eij, qq );
-            }
-        }
-        force[i].add(f);
-        */
-        for(int j=0; j<i; j++){
-            Vec3d  fij;fij.set(0.);
-            Vec3d& REQj = aREQs[j];
-            addAtomicForceLJQ( pi-apos[j], fij, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z );
-            aforce[j].sub(fij);
-            aforce[j].add(fij);
-            //fi      .add(fij);
-        }
-        //force[i].add(fi);
-    }
-}
-
-void evalLJQs(int n, const Vec3d* REQs, const Vec3d* ps, Vec3d* fs, const Vec3d& REQi, const Vec3d& pi, Vec3d& fi){
-    for(int j=0; j<n; j++){    // atom-atom
-        Vec3d  fij; fij.set(0.);
-        const Vec3d& REQj = REQs[j];
-        addAtomicForceLJQ( pi-ps[j], fij, REQi.x+REQj.x, -REQi.y*REQj.y, REQi.z*REQj.z );
-        aforce[j].sub(fij);
-        fi       .add(fij);
-        //fi      .add(fij);
-    }
-}
-
-void evalLJQs_H(){
-    for(int i=0; i<natom; i++){ evalLJQs( natom,   aREQs,   apos,   aforce,  aREQs  [i],   apos[i],   aforce[i] ); }
-    for(int i=0; i<natom; i++){ evalLJQs( ncap,  capREQs, capPos, capForce,  aREQs  [i], capPos[i], capForce[i] ); }
-    for(int i=0; i<ncap;  i++){ evalLJQs( ncap,  capREQs, capPos, capForce,  capREQs[i], capPos[i], capForce[i] ); }
-}
-
-void evalForces(){
-    cleanForce();
-    projectBondCenter();
-    //projectCaps();
-    //evalLJQs();
-    evalAtoms();
-    evalBonds();
-    //evalBondPiForces();
-
-    for(int i=0; i<natom; i++){ glColor3f(1.0,0.0,1.0); Draw3D::drawVecInPos( aforce[i], apos[i] ); }
-}
-
-void moveGD(double dt){
-    for(int i=0; i<nDOF; i++){ dofs[i].add_mul( fdofs[i], dt ); }
-}
-
-void setBondsAndHydrogens( Vec2i* bond2atom, Vec2i* Hps ){
-    for(int ia=0; ia<natom; ia++){
-        aconf[ia].a=0;
-    }
-    for(int ib=0; ib<nbond; ib++){
-        const Vec2i& ba = bond2atom[ib];
-        Vec3i& ci    = aconf[ba.i];
-        Vec3i& cj    = aconf[ba.j];
-        bondIs[ib].a = ba.i*N_BOND_MAX + ci.a; ci.a++;
-        bondIs[ib].b = ba.j*N_BOND_MAX + cj.a; cj.a++;
-        printf( "bond %i a2b(%i,%i) -> bIs(%i,%i) \n", ib, ba.i, ba.j, bondIs[ib].a, bondIs[ib].b );
-    }
-    for(int ia=0; ia<natom; ia++){
-        const Vec2i& hp = Hps[ia];
-        Vec3i& c = aconf[ia];
-        // like this    [ sigmaBonds | hydrogens | epairs | pi ]
-        c.c =c.a;      // end of bonds ( start of hydrogens )
-        c.a+=hp.a; // end of sigma bonds (to atoms & hydrogens), not epairs
-        c.b =4-hp.b;   // end of sigma&epairs is what lefts after assign pi bonds
-    }
-}
-
 /*
 void guessOrbs(){
     // TODO: bonds should be before hydrogens, otherwise it is huge problem
@@ -638,70 +695,6 @@ void guessOrbs(){
     }
 }
 */
-
-void guessOrbs(){
-    // TODO: bonds should be before hydrogens, otherwise it is huge problem
-    //cleanForce();
-    //for(int i=0; i<nbond; i++){ evalBond(i);         }
-    projectBondCenter();
-    for(int ia=0; ia<natom; ia++){
-        Vec3d  pa = apos[ia];
-        Vec3i& c  = aconf[ia];
-        Vec3d* hs = hdir + ia*N_BOND_MAX;
-        int nb = c.c; // number of defined bonds
-        Mat3d m;
-        if      (nb==3){ // defined by 3 sigma bonds
-            m.b.set_cross( hs[1]-hs[0], hs[2]-hs[0] );
-            m.b.mul( -1/m.b.norm() );
-            if(c.b==4){ // sp3 no-pi
-                if( 0 < m.b.dot( hs[0]+hs[1]+hs[2]+pa*3 ) ){ m.b.mul(-1.); }
-                hs[3]=pa+m.b;
-            }else{
-                hs[3]=m.b;
-            }
-
-        }else if(nb==2){ // defined by 2 sigma bonds
-            m.fromCrossSafe( hs[0]-pa, hs[1]-pa );
-            if      (c.b==4){ // -CH2- like sp3 no-pi
-                const double cb = 0.81649658092; // sqrt(2/3)
-                const double cc = 0.57735026919;  // sqrt(1/3)
-                hs[nb  ] = pa+m.c*cc+m.b*cb;
-                hs[nb+1] = pa+m.c*cc-m.b*cb;
-            }else if(c.b==3){ // =CH- like  sp 1-pi
-                hs[nb  ] = pa+m.c;
-                hs[nb+1] = m.b;
-                printf("like =CH- H(%g,%g,%g) pi(%g,%g,%g,) \n", hs[nb].x, hs[nb].y, hs[nb].z, hs[nb+1].x, hs[nb+1].y, hs[nb+1].z );
-            }else{            // #C- like sp 2-pi
-                hs[nb  ] = m.c;
-                hs[nb+1] = m.b;
-            }
-        }else if(nb==1){
-            m.c = hs[0]-pa; m.c.normalize();
-            m.c.getSomeOrtho(m.b,m.a);
-            if      (c.b==4){ // -CH3 like sp3 no-pi
-                const double ca = 0.81649658092;  // sqrt(2/3)
-                const double cb = 0.47140452079;  // sqrt(2/9)
-                const double cc =-0.33333333333;  // 1/3
-                hs[nb  ] = pa+m.c*cc + m.b*(cb*2) ;
-                hs[nb+1] = pa+m.c*cc - m.b* cb    + m.a*ca;
-                hs[nb+2] = pa+m.c*cc - m.b* cb    - m.a*ca;
-            }else if(c.b==3){ // =CH2 like sp2 1-pi
-                const double ca = 0.87758256189;  // 1/2
-                const double cc =-0.5;            // sqrt(1/8)
-                hs[nb  ] = pa+m.c*cc + m.a*ca;
-                hs[nb+1] = pa+m.c*cc - m.a*ca;
-                hs[nb+2] = m.b;
-            }else{            // #CH sp  2-pi
-                hs[nb  ] = pa+m.c*-1;
-                hs[nb+1] = m.b;
-                hs[nb+2] = m.a;
-            }
-        }else{
-            printf( " WARRNING: atom %i not bonded to anything\n", ia );
-        }
-    }
-}
-
 
 }; // FFsp
 

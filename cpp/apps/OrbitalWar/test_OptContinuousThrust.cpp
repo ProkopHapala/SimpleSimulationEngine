@@ -117,9 +117,9 @@ TestApp_OptContinuousThrust::TestApp_OptContinuousThrust( int& id, int WIDTH_, i
         CPs[i].set( x, y, 0.0 );
     }
 
-    optimizer.bindArrays( nCP*3, (double*)CPs, (double*)vCPs, (double*)fCPs );
+    optimizer.bindArrays( nCP*3, (double*)CPs, (double*)vCPs, (double*)fCPs, NULL );
     optimizer.setInvMass(1.0);
-    optimizer.initOpt( 0.1, 0.9 );
+    optimizer.initOpt( 0.1, 0.5 );
 
 }
 

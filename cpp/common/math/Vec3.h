@@ -397,6 +397,8 @@ template<typename VEC> inline VEC add  ( VEC a, VEC b ){ return (VEC){ a.x+b.x, 
 using Vec3i = Vec3TYPE<int>;
 using Vec3f = Vec3TYPE<float>;
 using Vec3d = Vec3TYPE<double>;
+using Vec3i8  = Vec3TYPE<int8_t>;
+using Vec3ui8 = Vec3TYPE<uint8_t>;
 
 static constexpr Vec3d Vec3dZero = (Vec3d){0.0d,0.0d,0.0d};
 static constexpr Vec3d Vec3dOne  = (Vec3d){1.0d,1.0d,1.0d};
@@ -425,10 +427,16 @@ inline Vec3i    from_id    ( uint64_t id   ){
     return vi;
 }
 
-inline void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
-inline void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };
+template<typename T1,typename T2>
+inline void convert(const Vec3TYPE<T1>& i, Vec3TYPE<T2> o){  o.x=(T2)i.x; o.y=(T2)i.y; o.z=(T2)i.z; };
 
-inline Vec3f toFloat( const Vec3d& from){ return (Vec3f){(float)from.x,(float)from.y,(float)from.z}; }
+template<typename T1,typename T2>
+inline Vec3TYPE<T2> cast(const Vec3TYPE<T1>& i){ Vec3TYPE<T2> o; o.x=(T2)i.x; o.y=(T2)i.y; o.z=(T2)i.z; return o; };
+
+
+//inline void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
+//inline void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };
+//inline Vec3f toFloat( const Vec3d& from){ return (Vec3f){(float)from.x,(float)from.y,(float)from.z}; }
 
 //inline void print(Vec3d p){printf("(%.16g,%.16g,%.16g)", p.x,p.y,p.z);};
 //inline void print(Vec3f p){printf("(%.8g,%.8g,%.8g)", p.x,p.y,p.z);};

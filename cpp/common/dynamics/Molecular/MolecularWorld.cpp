@@ -596,7 +596,7 @@ void MolecularWorld::initParams( ){
     //optimizer->dt = 0.05;
     //optimizer->damping = 0.05;
     optimizer = new DynamicOpt();
-    optimizer->allocate( nparams );
+    optimizer->realloc( nparams );
     //optimizer->bindArrays( int n_, double * pos_, double * vel_, double * force_ );
     optimizer->initOpt( 0.01, 0.1 );
 

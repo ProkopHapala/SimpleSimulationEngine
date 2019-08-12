@@ -113,7 +113,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     world.printBondParams();
     //exit(0);
 
-    opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce );
+    opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce, NULL );
     opt.setInvMass( 1.0 );
     opt.cleanVel( );
 

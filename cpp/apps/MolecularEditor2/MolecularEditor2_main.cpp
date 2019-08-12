@@ -168,7 +168,8 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     world.ang_b2a();           //exit(0);
     world.printBondParams();   //exit(0);
 
-    opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce );
+    //opt.bindOrAllocate( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce, NULL );
+    opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce, NULL );
     opt.setInvMass( 1.0 );
     opt.cleanVel( );
 

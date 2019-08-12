@@ -206,7 +206,7 @@ class RBodyConfDyn{
 
 
     void init( int nConfsMax_ ){
-        optimizer.allocate( 7 );
+        optimizer.realloc( 7 );
         pos   = (Vec3d* )(optimizer.pos  );
         rot   = (Quat4d*)(optimizer.pos+3);
         vpos  = (Vec3d* )(optimizer.vel  );
