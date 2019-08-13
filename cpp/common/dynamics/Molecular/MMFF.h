@@ -271,7 +271,7 @@ void allocateDyn(){
 void deallocate(){
     _dealloc( apos );     _dealloc( aforce );   _dealloc( aREQ );      _dealloc( aPLQ );
     _dealloc( lbond );    _dealloc( hbond );    _dealloc( bond2atom ); _dealloc( bond_0 );  _dealloc( bond_k );
-    _dealloc( ang2bond ); _dealloc( ang2atom ); _dealloc( ang_0 );     _dealloc( ang_k ); 
+    _dealloc( ang2bond ); _dealloc( ang2atom ); _dealloc( ang_0 );     _dealloc( ang_k );
     //delete [] apos;     delete [] aforce;   delete [] aREQ;      delete [] aPLQ;
     //delete [] lbond;    delete [] hbond;    delete [] bond2atom; delete [] bond_0; delete [] bond_k;
     //delete [] ang2bond; delete [] ang2atom; delete [] ang_0;     delete [] ang_k;
@@ -860,7 +860,7 @@ void eval_CoulombMirror_On2(const Vec3d& hdir, double c0 ){
         }
         //printf( " %i (%g,%g,%g) (%g,%g,%g)\n", i, aforce[i].x,aforce[i].y,aforce[i].z ,  f.x,f.y,f.z  );
         aforce[i].add(f);
-        
+
     }
 
     //exit(0);

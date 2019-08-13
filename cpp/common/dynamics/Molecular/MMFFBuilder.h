@@ -7,6 +7,7 @@
 
 #include "Molecule.h"
 #include "MMFF.h"
+#include "MMFFmini.h"
 #include "MMFFparams.h"
 
 
@@ -96,7 +97,7 @@ class MMFFBuilder{  public:
         molTypes.push_back(mol);
         return molTypes.size()-1;
     }
-    
+
     int loadMolType(const std::string& fname, const std::string& label ){
         //printf( "fname:`%s` label:`%s` \n", fname.c_str(), label.c_str()  );
         int itype = loadMolType( fname.c_str() );
@@ -148,11 +149,11 @@ class MMFFBuilder{  public:
             return -1;
         }
     }
-    
+
     int insertMolecule( int itype, const Vec3d& pos, const Mat3d& rot, bool rigid ){
         return insertMolecule( molTypes[itype], pos, rot, rigid );
     };
-    
+
     int insertMolecule( const std::string& molName, const Vec3d& pos, const Mat3d& rot, bool rigid ){
         printf( "insertMolecule molName %s itype %i \n", molName.c_str(), molTypeDict[molName] );
         return insertMolecule( molTypes[ molTypeDict[molName] ], pos, rot, rigid );
@@ -208,6 +209,25 @@ class MMFFBuilder{  public:
         //params.fillBondParams( mmff->nbonds, mmff->bond2atom, bondTypes, atomTypes, mmff->bond_0, mmff->bond_k );
         //delete [] atomTypes;
         //delete [] bondTypes;
+    }
+
+    void toMMFFmini( MMFFmini * mmff ){
+        //mmff->deallocate();
+        mmff->realloc( atoms.size(), bonds.size(), angles.size(), 0 );
+        for(int i=0; i<atoms.size(); i++){
+            mmff->apos [i]  = atoms[i].pos;
+        }
+        for(int i=0; i<bonds.size(); i++){
+            mmff->bond2atom[i] = bonds[i].atoms;
+            Vec2i ib           = bonds[i].atoms;
+            params->getBondParams( atoms[ib.x].type, atoms[ib.y].type, bonds[i].type, mmff->bond_l0[i], mmff->bond_k[i] );
+            //bondTypes[i]       = bonds[i].type;
+        }
+        for(int i=0; i<angles.size(); i++){
+            mmff->ang2bond[i] = angles[i].bonds;
+            mmff->ang_cs0[i] = {1.0,0.0}; // TODO FIXME
+            mmff->ang_k[i] = 0.5;       // TODO FIXME
+        }
     }
 
 };

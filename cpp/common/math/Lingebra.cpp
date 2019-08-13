@@ -707,5 +707,81 @@ void jacobi_eigenvalue ( int n, double a[], int it_max, double v[], double d[], 
 */
 
 
+
+
+
+
+
+
+
+
+
+
+void aproxOrthoNormStep(int nv, int m, double * M ){
+    for(int i=0;i<nv;i++){
+        double* vi = M+i*m;
+        for(int j=0;j<j;j++){
+            double* vj = M+j*m;
+            double cij = 0;
+            for(int k=0;k<m;k++){ cij += vi[k]*vj[k]; }
+            // approx half angle
+            // cos(a/2) = sqrt((cos(a)+1)/2) = sqrt( 1 +   (cos(a)-1)/2 )  =  sqrt( 1 +   x )
+            double x  = (cij-1)*0.5;
+            // taylor for sqrt( 1 +   x )
+            double ch = -(1 + x*(0.5 + x*(-0.125 + x*0.0625)));
+            for(int k=0;k<m;k++){
+                double vik = vi[k];
+                vi[k]+=vj[k]*ch;
+                vj[k]+=vik  *ch;
+            }
+        }
+    }
+}
+
+
+void orthtoForce(int nv, int m, double * P, double * F ){
+    for(int i=0;i<nv;i++){
+        double* pi = P+i*m;
+        double* fi = F+i*m;
+        double  cii = 0; 
+        for(int k=0;k<m;k++){ cii += pi[k]*pi[k]; }
+        // approx half angle
+        // cos(a/2) = sqrt((cos(a)+1)/2) = sqrt( 1 +   (cos(a)-1)/2 )  =  sqrt( 1 +   x )
+        double x  = (cii-1);
+        // taylor for sqrt( 1 +   x )
+        double ch = -x*( -0.5d + x*( 0.375d + x*-0.3125d ) );
+        for(int k=0;k<m;k++){ fi[k]+=pi[k]*ch; }
+        for(int j=0;j<j;j++){
+            double* pj = P+j*m;
+            double* fj = F+j*m;
+            double cij = 0;
+            for(int k=0;k<m;k++){ cij += pi[k]*pj[k]; }
+            // approx half angle
+            // cos(a/2) = sqrt((cos(a)+1)/2) = sqrt( 1 +   (cos(a)-1)/2 )  =  sqrt( 1 +   x )
+            double x  = (cij-1)*0.5;
+            // taylor for sqrt( 1 +   x )
+            double ch = -(1 + x*(0.5 + x*(-0.125 + x*0.0625)));
+            for(int k=0;k<m;k++){ fi[k]+=pj[k]*ch; }
+            for(int k=0;k<m;k++){ fj[k]+=pi[k]*ch; }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 };
 
