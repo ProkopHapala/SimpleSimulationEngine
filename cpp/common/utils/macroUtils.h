@@ -30,7 +30,9 @@ template <typename T> int signum(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
-template<typename T> inline void _realloc(T*& arr, int n){ if(arr) delete [] arr; arr=new T[n]; }
-template<typename T> inline void _dealloc(T*& arr       ){ if(arr) delete [] arr; arr=0; }
+
+template<typename T> inline void _realloc(T*& arr, int n){ if(arr){ delete [] arr;} arr=new T[n]; }
+template<typename T> inline void _dealloc(T*& arr       ){ if(arr){ delete [] arr;} arr=0;        }
+template<typename T> inline bool _bindOrRealloc(T* from, T*& arr, int n){ if(from){arr=from;}else{_realloc(arr,n);} }
 
 #endif

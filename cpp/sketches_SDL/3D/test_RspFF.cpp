@@ -33,6 +33,7 @@
 //#include "RARFF.h"
 //#include "RspFF.h"
 //#include "FspFF.h"
+#include "NBFF.h"
 #include "FspFFclean.h"
 
 #include "DynamicOpt.h"

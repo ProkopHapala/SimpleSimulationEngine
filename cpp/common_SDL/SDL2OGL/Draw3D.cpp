@@ -56,10 +56,20 @@ void drawLine( const Vec3f& p1, const Vec3f& p2 ){
 	glEnd();
 };
 
-
-
-
-
+void drawArrow( const Vec3f& p1, const Vec3f& p2, float sz ){
+	//glDisable (GL_LIGHTING);
+	Vec3f up,lf,p;
+    Vec3f fw = p2-p1; fw.normalize();
+    fw.getSomeOrtho(up,lf);
+    fw.mul(sz); lf.mul(sz); up.mul(sz);
+	glBegin   (GL_LINES);
+		glVertex3d( p1.x, p1.y, p1.z ); glVertex3d( p2.x, p2.y, p2.z );
+		p = p2 - fw + up; glVertex3d( p.x, p.y, p.z ); glVertex3d( p2.x, p2.y, p2.z );
+        p = p2 - fw - up; glVertex3d( p.x, p.y, p.z ); glVertex3d( p2.x, p2.y, p2.z );
+        p = p2 - fw + lf; glVertex3d( p.x, p.y, p.z ); glVertex3d( p2.x, p2.y, p2.z );
+        p = p2 - fw - lf; glVertex3d( p.x, p.y, p.z ); glVertex3d( p2.x, p2.y, p2.z );
+	glEnd();
+};
 
 void drawPolyLine( int n, Vec3d * ps, bool closed ){   // closed=false
     //printf("%i %i\n", n, closed );

@@ -27,7 +27,7 @@ void drawPointCross( const Vec3f& vec, float  sz        );
 void drawVec       ( const Vec3f& vec                   );
 void drawVecInPos  ( const Vec3f& v,   const Vec3f& pos );
 void drawLine      ( const Vec3f& p1,  const Vec3f& p2  );
-
+void drawArrow     ( const Vec3f& p1,  const Vec3f& p2, float sz );
 
 void drawScale     ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& a, float tick, float sza, float szb );
 
@@ -74,7 +74,7 @@ inline void drawVec       ( const Vec3d& vec                   ){drawVec  ((Vec3
 inline void drawPointCross( const Vec3d& vec, double sz        ){drawPointCross((Vec3f)vec,sz); }
 inline void drawVecInPos  ( const Vec3d& v,   const Vec3d& pos ){drawVecInPos((Vec3f)v,(Vec3f)pos); }
 inline void drawLine      ( const Vec3d& p1,  const Vec3d& p2  ){drawLine ((Vec3f)p1,(Vec3f)p2); }
-
+inline void drawArrow     ( const Vec3d& p1,  const Vec3d& p2, float sz  ){drawArrow((Vec3f)p1,(Vec3f)p2, sz); }
 
 inline void drawScale     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& a, double tick, double sza, double szb ){  drawScale( (Vec3f)p1, (Vec3f)p2, (Vec3f)a, tick,sza,szb); };
 

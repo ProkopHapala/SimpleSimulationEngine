@@ -267,7 +267,7 @@ class Vec3TYPE{
 	// Rodrigues rotation formula: v' = cosa*v + sina*(uaxis X v) + (1-cosa)*(uaxis . v)*uaxis
 	inline VEC& rotate( TYPE angle, const VEC& axis  ){
 		VEC uaxis;
-		uaxis.set( axis * axis.norm() );
+		uaxis.set_mul( axis, 1/axis.norm() );
 		TYPE ca   = cos(angle);
 		TYPE sa   = sin(angle);
  		rotate_csa( ca, sa, uaxis );
