@@ -229,20 +229,25 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         2.0
     };
     */
+
+    // ============ Build molecule
+
     MMFFAtom brushAtom{ };
     MMFFBond brushBond{ };
 
     for(int i=0;i<natom;i++){
+        brushAtom.pos = apos0[i];
         builder.insertAtom(brushAtom, true);
     }
     for(int i=0;i<nbond;i++){
+        brushBond.atoms=bong2atom[i];
         builder.insertBond(brushBond);
     }
     for(int i=0;i<natom;i++){
-        //makeSPConf(i,0,int ne);
+        builder.makeSPConf(i,0,0);
         //builder.makeSPConf(i);
     }
-
+    //exit(0);
 
     ff.realloc(natom,nbond,nang,ntors);
 

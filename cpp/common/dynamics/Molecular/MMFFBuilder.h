@@ -56,11 +56,12 @@ class MMFFAtomConf{ public:
         n++;
         return true;
     };
-    inline bool addBond( Vec2i b ){
-        if     (b.i==iatom){ addNeigh(b.j,nbond); }
-        else if(b.j==iatom){ addNeigh(b.i,nbond); }
-        return false;
-    }
+
+    //inline bool addBond( Vec2i b ){
+    //    if     (b.i==iatom){ addNeigh(b.j,nbond); }
+    //    else if(b.j==iatom){ addNeigh(b.i,nbond); }
+    //    return false;
+    //}
     inline bool addBond (int i){ return addNeigh(i,nbond); };
     inline bool addH    (     ){ return addNeigh((int)NeighType::H    ,nH ); };
     inline bool addPi   (     ){ return addNeigh((int)NeighType::pi   ,npi); };
@@ -298,23 +299,33 @@ class MMFFBuilder{  public:
 
     // ============= Add Capping Hydrogens
 
-    inline bool getAtomConf(int ia,MMFFAtomConf* conf){ int ic=atoms[ia].iconf; if(ic>=0){ conf=&confs[ic];return true;}return false; };
+    bool getAtomConf(int ia,MMFFAtomConf* conf){ int ic=atoms[ia].iconf; if(ic>=0){ conf=&confs[ic];return true;}return false; };
 
-    void insertAtom(const MMFFAtom& atom, bool bConf ){
+    MMFFAtomConf* insertAtom(const MMFFAtom& atom, bool bConf ){
         atoms.push_back(atom);
         if(bConf){
-        atoms.back().iconf = confs.size();
+            int ic = confs.size();
+            int ia = atoms.size()-1;
+            printf( "insertAtom ia %i ic %i \n", ia, ic );
+            atoms.back().iconf = ic;
             confs.push_back(MMFFAtomConf());
-            //const MMFFAtomConf& c = confs.back();
+            MMFFAtomConf& c = confs.back();
+            c.iatom = ia;
+            return &c;
         }
+        return 0;
     }
 
     void insertBond(const MMFFBond& bond ){
+        int ib = bonds.size();
         bonds.push_back(bond);
         int ic = atoms[bond.atoms.i].iconf;
         int jc = atoms[bond.atoms.j].iconf;
-        if(ic>=0){ confs[ic].addBond(bond.atoms.j); }
-        if(jc>=0){ confs[jc].addBond(bond.atoms.i); }
+        //if(ic>=0){ confs[ic].addBond(bond.atoms.j); }
+        //if(jc>=0){ confs[jc].addBond(bond.atoms.i); }
+        printf( "insertBond %i(%i,%i) to %i,%i\n", ib, bond.atoms.i,bond.atoms.j, ic, jc );
+        if(ic>=0){ confs[ic].addBond(ib); }
+        if(jc>=0){ confs[jc].addBond(ib); }
     }
 
     void addCap(int ia,Vec3d& hdir, MMFFAtom* atomj, int btype){
@@ -389,11 +400,12 @@ class MMFFBuilder{  public:
         int ic = atoms[ia].iconf;
         MMFFAtomConf& conf = confs[ic];
         conf.clearNonBond();
-        int n  = 4-conf.nbond-npi;   // number
+        int nb = conf.nbond;
+        int n  = 4-nb-npi;   // number
         int nH = n-ne;
+        printf( "ia %i nb %i npi %i ne %i n %i nH %i ne %i \n", ia, nb,npi,ne,n,nH,ne );
         //Mat3d m;
         Vec3d hs[4];
-        int nb = conf.nbond;
         for(int i=0;i<nb;i++){
             int ib = conf.neighs[i];
             int ja = bonds[ib].getNeighborAtom(ia);
