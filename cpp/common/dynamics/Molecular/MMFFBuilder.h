@@ -403,7 +403,7 @@ class MMFFBuilder{  public:
         int nb = conf.nbond;
         int n  = 4-nb-npi;   // number
         int nH = n-ne;
-        printf( "ia %i nb %i npi %i ne %i n %i nH %i ne %i \n", ia, nb,npi,ne,n,nH,ne );
+        printf( "ia %i nb,npi %i,%i   n,nH,ne %i,%i,%i \n", ia,   nb,npi,  n,nH,ne );
         //Mat3d m;
         Vec3d hs[4];
         for(int i=0;i<nb;i++){

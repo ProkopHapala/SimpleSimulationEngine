@@ -68,6 +68,9 @@ class MMFFmini{ public:
     Vec3d  * hbond  = 0;   // normalized bond unitary vectors
 
 
+
+
+
 void realloc( int natoms_, int nbonds_, int nang_, int ntors_ ){
     natoms=natoms_; nbonds=nbonds_; nang=nang_; ntors=ntors_;
     //printf( "MMFF::allocate natoms: %i  nbonds: %i  nang: %i ntors: %i \n", natoms, nbonds, nang, ntors );

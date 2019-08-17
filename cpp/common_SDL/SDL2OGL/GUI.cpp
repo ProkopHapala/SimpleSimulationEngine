@@ -531,7 +531,7 @@ GUIAbstractPanel* DropDownList::onMouse ( int x, int y, const SDL_Event& event, 
                     //printf( "i %i \n", i );
                     if( (i>=0)&&(i<nSlots) ){
                         i += iItem0;
-                        i=_min(i,labels.size()-1);
+                        i=_min(i,(int)labels.size()-1);
                         i=_max(i,0);
                         iSelected = i;
                         if(onSelect)onSelect->GUIcallback(this);
@@ -545,7 +545,7 @@ GUIAbstractPanel* DropDownList::onMouse ( int x, int y, const SDL_Event& event, 
             }
         }else if( event.type == SDL_MOUSEWHEEL ){
             //printf( " SDL_MOUSEWHEEL \n" );
-            if     (event.wheel.y < 0){ iItem0 = _min( iItem0+1, labels.size()-nSlots ); }
+            if     (event.wheel.y < 0){ iItem0 = _min( iItem0+1, (int)labels.size()-nSlots ); }
             else if(event.wheel.y > 0){ iItem0 = _max( iItem0-1, 0                    ); }
             redraw = true;
         }
@@ -613,7 +613,7 @@ GUIAbstractPanel* TreeView::onMouse( int x, int y, const SDL_Event& event, GUI& 
                 int i = ((ymax-y)/(2*fontSizeDef)) - 1;
                 if( (i>0)&&(i<nSlots) ){
                     i += iItem0;
-                    i=_min(i,lines.size()-1);
+                    i=_min(i,(int)lines.size()-1);
                     i=_max(i,0);
                     iSelected = i;
                 }
