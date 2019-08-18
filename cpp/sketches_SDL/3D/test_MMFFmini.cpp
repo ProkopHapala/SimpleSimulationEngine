@@ -105,6 +105,9 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 
 TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+    MMFFAtom a{1.0,0.0,0.0};
+    printf( "print (%g,%g,%g)\n", a.pos.x, a.pos.y,a.pos.z );
+
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     double l0    = 1.5;
@@ -114,7 +117,8 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     int tors_n = 3;
 
-    const int natom=4,nbond=3,nang=2,ntors=1;
+    //const int natom=4,nbond=3,nang=2,ntors=1;
+    const int natom=4,nbond=3,nang=0,ntors=0;
     Vec3d apos0[] = {
         {-2.0,0.0,0.0},  // 0
         {-1.0,2.0,0.0},  // 1
@@ -239,31 +243,49 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     // ============ Build molecule
 
-    MMFFAtom brushAtom{ };
-    MMFFBond brushBond{ };
+    MMFFAtom brushAtom{ -1, -1,-1, Vec3dZero, MMFFAtom::defaultREQ };
+    MMFFBond brushBond{ -1, -1,-1, 1.5, 25.0 };
 
+    builder.capBond = MMFFBond{ -1, -1,-1, 1.07, 15.0 };
+
+    printf( "----- Atoms \n" );
     for(int i=0;i<natom;i++){
         brushAtom.pos = apos0[i];
         builder.insertAtom(brushAtom, true);
     }
+    printf( "----- Bonds \n" );
     for(int i=0;i<nbond;i++){
         brushBond.atoms=bong2atom[i];
         builder.insertBond(brushBond);
     }
+    printf( "----- Confs \n" );
     for(int i=0;i<natom;i++){
         builder.makeSPConf(i,0,0);
         //builder.makeSPConf(i);
     }
+    //exit(0);
+    printf( "----- toMMFF \n" );
+    builder.autoAngles( 2.5, 1.25 );
+    printf( "----- toMMFF \n" );
 
-
-
-    //builder.toMMFFmini( &ff );
-
+    MMFFDihedral brushDihedral{ -1,   -1,-1,-1,    3, 0.5 };
+    println(brushDihedral);
     //exit(0);
 
+    builder.insertDihedralByAtom( {0,1,2,3}, brushDihedral );
+
+    if( !builder.checkBondsSorted() ){
+        if( !builder.sortBonds() ){
+            printf( " ERROR in builder.sortBonds() => exit \n" );
+            exit(0);
+        }
+    }
+    //exit(0);
+    builder.toMMFFmini( ff );
+
+    //exit(0);
+    /*
     ff.realloc(natom,nbond,nang,ntors);
-
-
     printf( "DEBUG 1 \n" );
     for(int i=0; i<ff.natoms; i++){
         ff.apos[i] = apos0[i];
@@ -289,9 +311,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     ff.angles_bond2atom  ();
     ff.torsions_bond2atom();
     printf( "DEBUG 4 \n" );
-
-
-
+    */
 
     nff.bindOrRealloc( ff.natoms, ff.nbonds, ff.apos, ff.aforce, 0, ff.bond2atom );
     //nff.setREQs(0,nff.n, {1.4,0.0}  )
@@ -300,6 +320,11 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     opt.bindOrAlloc( 3*ff.natoms, (double*)ff.apos, 0, (double*)ff.aforce, 0 );
     //opt.setInvMass( 1.0 );
     opt.cleanVel( );
+
+    if( !checkParisSorted( nff.nmask, nff.pairMask ) ){
+        printf( "ERROR: nff.pairMask is not sorted => exit \n" );
+        exit(0);
+    };
 
     printf( "DEBUG 5 \n" );
 
@@ -346,7 +371,6 @@ void TestAppSoftMolDyn::draw(){
     //ff.apos[0].set(-2.0,0.0,0.0);
     perFrame = 1;
     //perFrame = 50;
-	double F2;
 	for(int itr=0; itr<perFrame; itr++){
         printf( "======= frame %i \n", frameCount );
 
@@ -355,8 +379,9 @@ void TestAppSoftMolDyn::draw(){
 	    // rotate arom[0]
         //ff.apos[0] = ff.apos[1] + (ff.apos[0]-ff.apos[1]).rotate( 2*M_PI/perFrame, ff.apos[2]-ff.apos[1] );
 
-        ff.eval();
-        nff.evalLJQ_sortedMask();
+        double E=0;
+        E += ff.eval();
+        E += nff.evalLJQ_sortedMask();
 
         //for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
         //printf( "DEBUG x.1 \n" );
@@ -390,9 +415,10 @@ void TestAppSoftMolDyn::draw(){
         //opt.move_LeapFrog(0.01);
         //opt.move_MDquench();
 
-        opt.move_GD(0.01);
-        //F2 = opt.move_FIRE();
+        //opt.move_GD(0.001);
+        double f2 = opt.move_FIRE();
         //exit(0);
+        //printf( "E %g |F| %g \n", E, sqrt(f2) );
 
     }
 
@@ -408,23 +434,38 @@ void TestAppSoftMolDyn::draw(){
     //printf( "DEBUG run 2 \n" );
     // draw Bonds
     glColor3f(0.0f,0.0f,0.0f);
-    /*
+
     for(int i=0; i<ff.nbonds; i++){
         Vec2i ib = ff.bond2atom[i];
         glColor3f(0.0f,0.0f,0.0f);
         //if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f);
         Draw3D::drawLine(ff.apos[ib.x],ff.apos[ib.y]);
-        sprintf(str,"%i\0",i);
+        //sprintf(str,"%i\0",i);
         //Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0,0);
-        Draw3D::drawText(str, (ff.apos[ib.x]+ff.apos[ib.y])*0.5, fontTex, 0.02, 0);
+        //Draw3D::drawText(str, (ff.apos[ib.x]+ff.apos[ib.y])*0.5, fontTex, 0.02, 0);
     }
-    */
-    //};
-    // draw Atoms
-    double fsc = 1.0;
+
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
+
+    glColor3f(1.0f,1.0f,1.0f);
+
+    for(int i=0; i<ff.nang; i++){
+        Vec3i ia = ff.ang2atom[i];
+        //glColor3f(0.0f,0.0f,0.0f);
+        //if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f);
+        //Draw3D::drawTriangle(ff.apos[ia.x],ff.apos[ia.y],ff.apos[ia.z]);
+        //sprintf(str,"%i\0",i);
+        //Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0,0);
+        //Draw3D::drawText(str, (ff.apos[ib.x]+ff.apos[ib.y])*0.5, fontTex, 0.02, 0);
+    }
+
+
+    //};
+    // draw Atoms
+    double fsc = 1.0;
+
     for(int i=0; i<ff.natoms; i++){
         //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x,ff.apos[i].y,ff.apos[i].z );
         //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.apos[i],0.2);
@@ -464,6 +505,9 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
                 //case SDLK_p:  first_person = !first_person; break;
                 //case SDLK_o:  perspective  = !perspective; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
+
+                case SDLK_LEFTBRACKET:  ff.i_DEBUG=(ff.i_DEBUG+1)%ff.nang; break;
+                case SDLK_RIGHTBRACKET: ff.i_DEBUG=(ff.i_DEBUG+1)%ff.nang; break;
 
                 //case SDLK_v: for(int i=0; i<world.natoms; i++){ ((Vec3d*)opt.vel)[i].add(randf(-drndv,drndv),randf(-drndv,drndv),randf(-drndv,drndv)); } break;
                 //case SDLK_p: for(int i=0; i<world.natoms; i++){ world.apos[i].add(randf(-drndp,drndp),randf(-drndp,drndp),randf(-drndp,drndp)); } break;

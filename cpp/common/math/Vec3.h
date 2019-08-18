@@ -25,8 +25,13 @@ class Vec3TYPE{
 	// Constructors would prevent us from making Unions etc. so don't do it
 	// https://stackoverflow.com/questions/4178175/what-are-aggregates-and-pods-and-how-why-are-they-special
 	// but here it seems to work  https://www.youtube.com/watch?v=14Cyfz_tE20&index=10&list=PLlrATfBNZ98fqE45g3jZA_hLGUrD4bo6_
+	//Vec3TYPE() = default;
+	//constexpr Vec3TYPE(TYPE x_, TYPE y_, TYPE z_ ): x(x_),y(y_),z(z_){};
 	//constexpr Vec3TYPE() = default;
 	//constexpr Vec3TYPE(TYPE x_, TYPE y_, TYPE z_ ): x(x_),y(y_),z(z_){};
+
+
+
 
 	// ===== methods
 

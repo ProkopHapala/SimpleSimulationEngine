@@ -60,6 +60,10 @@ class Quat4TYPE {
     inline explicit operator Quat4TYPE<float> ()const{ return (Quat4TYPE<float>){ (float)x,(float)y,(float)z, (float)w }; }
     inline explicit operator Quat4TYPE<int>   ()const{ return (Quat4TYPE<int>)  { (int)x,(int)y,(int)z, (int)w }; }
 
+    //inline       TYPE& operator[](int i){ return array[i]; }
+    //inline const TYPE& operator[](int i){ return array[i]; }
+
+
     inline void set   ( TYPE f                             ){ x=f;   y=f;   z=f;   w=f;   };
 	inline void set   ( const  QUAT& q                     ){ x=q.x; y=q.y; z=q.z; w=q.w; };
 	inline void set   ( TYPE fx, TYPE fy, TYPE fz, TYPE fw ){ x=fx;  y=fy;  z=fz;  w=fw;  };

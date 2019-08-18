@@ -8,6 +8,22 @@ Non-Bonded Force-Field
 
 //#include "Forces.h"
 
+bool checkParisSorted( int n, Vec2i* pairs ){
+    int ia=-1,ja=-1;
+    for(int i=0;i<n; i++){
+        const Vec2i& b = pairs[i];
+        printf( "pair[%i] %i,%i | %i %i  | %i %i %i ", i, b.i, b.j,   ia,ja ,   b.i>=b.j,  b.i<ia, b.j<=ja );
+        if(b.i>=b.j){ return false; }
+        if(b.i<ia)  { return false; }
+        else if (b.i>ia){ia=b.i; ja=-1; };
+        if(b.j<=ja){ return false; }
+        ja=b.j;
+        printf("\n");
+    }
+    return true;
+}
+
+
 inline void combineREQ(const Vec3d& a, const Vec3d& b, Vec3d& out){
     out.a=a.a+b.a; // radius
     out.b=a.b*b.b; // epsilon
@@ -27,7 +43,7 @@ inline double addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, const Vec3d& REQ ){
     double fr   = ( ( 1 - ir6 )*12*vdW - Eel )*ir2;
     //printf( " (%g,%g,%g) r %g fr %g \n", dp.x,dp.y,dp.z, 1/ir, fr );
     f.add_mul( dp, fr );
-    return  ( 2 - ir6 )*vdW + Eel ;
+    return  ( ir6 - 2 )*vdW + Eel;
 }
 
 // =========== SR repulsion functions
@@ -126,8 +142,9 @@ void cleanForce(){
     for(int i=0; i<n; i++){ fs[i].set(0.); }
 }
 
-void evalLJQs(){
+double evalLJQs(){
     const int N=n;
+    double E=0;
     for(int i=0; i<N; i++){
         Vec3d fi = Vec3dZero;
         Vec3d pi = ps[i];
@@ -135,17 +152,20 @@ void evalLJQs(){
         for(int j=i+1; j<N; j++){    // atom-atom
             Vec3d fij = Vec3dZero;
             Vec3d REQij; combineREQ( REQs[j], REQi, REQij );
-            addAtomicForceLJQ( ps[j]-pi, fij, REQij );
+            E += addAtomicForceLJQ( ps[j]-pi, fij, REQij );
             fs[j].sub(fij);
             fi   .add(fij);
         }
         fs[i].add(fi);
     }
+    return E;
 }
 
-void evalLJQ_sortedMask(){
+double evalLJQ_sortedMask(){
+
     int im=0;
     const int N=n;
+    double E=0;
     for(int i=0; i<N; i++){
         Vec3d fi = Vec3dZero;
         Vec3d pi = ps[i];
@@ -156,17 +176,26 @@ void evalLJQ_sortedMask(){
             }
             Vec3d fij = Vec3dZero;
             Vec3d REQij; combineREQ( REQs[j], REQi, REQij );
-            addAtomicForceLJQ( ps[j]-pi, fij, REQij );
-            //glColor3f(0.0,1.0,0.0); Draw3D::drawLine( ps[j],pi);
-            //printf("%i %i %g \n", i, j, fij.norm());
-            //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fij*-1000,ps[j]);
-            //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fij*1000 ,ps[i]);
+            double E = addAtomicForceLJQ( ps[j]-pi, fij, REQij );
+
+            /*
+            if(E>100.0){
+                printf( "%i %i  %g \n", i, j, E );
+                //glColor3f(0.0,1.0,0.0); Draw3D::drawLine( ps[j],pi);
+                //printf("%i %i %g \n", i, j, fij.norm());
+                //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fij*-1000,ps[j]);
+                //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fij*1000 ,ps[i]);
+            }
+            */
             fs[j].sub(fij);
             fi   .add(fij);
 
         }
         fs[i].add(fi);
     }
+    //exit(0);
+    return E;
+
 }
 
 // ============= Short Range Force using neighbor list
@@ -206,17 +235,19 @@ void makeSRList(){
     }
 }
 
-void evalSRlist(){
+double evalSRlist(){
+    double E=0;
     double w2 = sq(sr_w);
     for(const Vec2i& ij : neighList ){
         Vec3d fij = Vec3dZero;
         double Rij = (REQs[ij.i].x+REQs[ij.i].y)* sr_Rscale;
         //addForceR2   ( ps[ij.j]-ps[ij.i], fij, Rij*Rij, sr_K     );
         //addForceR2inv( ps[ij.j]-ps[ij.i], fij, Rij*Rij, sr_K, w2 );
-        addForceR2inv( ps[ij.j]-ps[ij.i], fij, Rij*Rij, sr_K, w2 );
+        E += addForceR2inv( ps[ij.j]-ps[ij.i], fij, Rij*Rij, sr_K, w2 );
         fs[ij.i].sub(fij);
         fs[ij.j].add(fij);
     }
+    return E;
 }
 
 };

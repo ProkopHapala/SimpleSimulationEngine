@@ -24,11 +24,21 @@ inline void pairs2triple( const  Vec2i b1, const Vec2i b2, Vec3i& tri, bool& fli
 */
 
 inline void pairs2triple( const  Vec2i b1, const Vec2i b2, Vec3i& tri, bool& flip1, bool& flip2 ){
+    if     ( b1.y == b2.x ){ tri.set( b1.x, b1.y, b2.y ); flip1=false; flip2=false; printf(" y-x \n"); }
+    else if( b1.y == b2.y ){ tri.set( b1.x, b1.y, b2.x ); flip1=false; flip2=true;  printf(" y-y \n"); }
+    else if( b1.x == b2.x ){ tri.set( b1.y, b1.x, b2.y ); flip1=true;  flip2=false; printf(" x-x \n"); }
+    else if( b1.x == b2.y ){ tri.set( b1.y, b1.x, b2.x ); flip1=true;  flip2=true;  printf(" x-y \n"); }
+}
+
+
+/*
+inline void pairs2triple( const  Vec2i b1, const Vec2i b2, Vec3i& tri, bool& flip1, bool& flip2 ){
     if     ( b1.x == b2.x ){ tri.set( b1.y, b1.x, b2.y ); flip1=false; flip1=false; }
     else if( b1.x == b2.y ){ tri.set( b1.y, b1.x, b2.x ); flip1=false; flip1=true;  }
     else if( b1.y == b2.x ){ tri.set( b1.x, b1.y, b2.y ); flip1=true;  flip1=false; }
     else if( b1.y == b2.y ){ tri.set( b1.x, b1.y, b2.x ); flip1=true;  flip1=true;  }
 }
+*/
 
 class MMFFmini{ public:
     int  natoms=0, nbonds=0, nang=0, ntors=0;
@@ -118,13 +128,23 @@ void dealloc(){
     _dealloc( tors_k    );
 }
 
+inline void setAngleParam(int i, double a0, double k){
+    a0=a0*0.5; // we store half angle
+    ang_cs0[i].fromAngle(a0);
+    //ang_cs0[i] = (Vec2d){cos(a0),sin(a0)};
+    ang_k  [i]=k;
+};
+inline void setBondParam(int i, double l0, double k){ bond_l0[i] = l0; bond_k[i]  = k; };
+inline void setTorsParam(int i, int     n, double k){ tors_n [i] =  n; tors_k[i]  = k; };
+
 inline void readSignedBond(int& i, Vec3d& h){ if(i&SIGN_MASK){ i&=0xFFFF; h = hbond[i]; h.mul(-1.0d); }else{ h = hbond[i]; }; };
 
 void cleanAtomForce(){ for(int i=0; i<natoms; i++){ aforce[i].set(0.0); } }
 
-
 // ============== Evaluation
 
+
+int i_DEBUG = 0;
 
 double eval_bond(int ib){
     //printf( "bond %i\n", ib );
@@ -137,14 +157,14 @@ double eval_bond(int ib){
     hbond [ib] = f;
     const double k = bond_k[ib];
     double dl = (l-bond_l0[ib]);
-    f.mul( dl*k );
+    f.mul( dl*k*2 );
     aforce[iat.x].add( f );
     aforce[iat.y].sub( f );
     return k*dl*dl;
 }
 
 double eval_angle(int ig){
-    //if(ig!=0) return 0;
+    //if(ig!=i_DEBUG) return 0;
     // efficient angular forcefield of cos(a/2) which prevent vanishing derivative of cos(a)
     // E = K*cos(a/2) = K*|ha+hb|/2
     Vec2i ib = ang2bond[ig];
@@ -173,17 +193,27 @@ double eval_angle(int ig){
 
     // angular force
     Vec3d h; h.set_add( ha, hb );
+    //Vec3d h; h.set_sub( hb, ha );
     double c2 = h.norm2()*0.25d;               // cos(a/2) = |ha+hb|
     double s2 = 1-c2;
     //printf( "ang[%i] (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) c2 %g s2 %g \n", ig, ha.x,ha.y,ha.z,  hb.x,hb.y,hb.z,  h.x,h.y,h.z,   c2, s2 );
     double c  = sqrt(c2);
     double s  = sqrt(s2);
-    const Vec2d& cs0 = ang_cs0[ig];
+    //const Vec2d cs0 = ang_cs0[ig];
+    Vec2d cs = ang_cs0[ig];
     const double k   = ang_k  [ig];
-    double E         = k*( cs0.x*c -cs0.y*s - 1);  // just for debug ?
-    double fr        = k*( cs0.x*s +cs0.y*c    );
 
-    //printf( "ang[%i] cs0(%g,%g) cs(%g,%g) %g  \n", cs0.x,cs0.y, c,s, fr/k );
+    cs.udiv_cmplx({c,s});
+    double E         =  k*( 1 - cs.x );  // just for debug ?
+    double fr        = -k*(     cs.y );
+
+    //printf(  "E %g c %g \n", E, cs.x  );
+
+    //printf( "ang[%i] cs(%g,%g)%g  rcs(%g,%g)%g    %g %g %g \n",  c,s, atan2(s,c)*180/M_PI, cs.x,cs.y,atan2(cs.y,cs.x)*180/M_PI,  fr/k, E, k );
+
+    //double E         = k*( cs0.x*c -cs0.y*s - 1);  // just for debug ?
+    //double fr        = k*( cs0.x*s +cs0.y*c    );
+    //printf( "ang[%i] cs0(%g,%g)%g cs(%g,%g)%g    %g %g %g \n", cs0.x,cs0.y,atan2(cs0.y,cs0.x)*180/M_PI, c,s, atan2(s,c)*180/M_PI,   fr/k, E, k );
 
     // project to per leaver
     c2 *=-2;
@@ -196,10 +226,39 @@ double eval_angle(int ig){
 
     //printf( "ang[%i] %g (%g,%g,%g) (%g,%g,%g)\n", ig,  c, fa.x,fa.y,fa.z,   fb.x,fb.y,fb.z );
 
-    //glColor3f(1.0,0.0,0.0); double fsc=100.0;
-    //Draw3D::drawVecInPos( fa*fsc, apos[ia.x] );
-    //Draw3D::drawVecInPos( fb*fsc, apos[ia.z] );
-    //Draw3D::drawVecInPos( (fa+fb)*-fsc, apos[ia.y] );
+    /*
+    //i_DEBUG = 9;
+    if(ig==i_DEBUG){
+
+
+        Vec2i ib_ = ang2bond[ig];
+        Vec2i b1,b2;
+        b1 = bond2atom[ib.i];
+        b2 = bond2atom[ib.j];
+        bool flip1,flip2;
+        pairs2triple( b1, b2, ang2atom[ig], flip1, flip2 );
+
+        //printf( "ang[%i] (%i,%i)  (%i,%i)%i  (%i,%i)%i   \n", ig,   ib_.j, ib_.j,   b1.i,b1.j,flip1,    b2.i,b2.j,flip2  );
+        //printf( "ang[%i] cs(%g,%g)%g  rcs(%g,%g)%g    %g %g %g \n",  c,s, atan2(s,c)*180/M_PI, cs.x,cs.y,atan2(cs.y,cs.x)*180/M_PI,  fr/k, E, k );
+        glColor3f(1.0,0.0,0.0); double fsc=100.0;
+        Draw3D::drawVecInPos( fa*fsc, apos[ia.x] );
+        Draw3D::drawVecInPos( fb*fsc, apos[ia.z] );
+        //Draw3D::drawVecInPos( (fa+fb)*-fsc, apos[ia.y] );
+        Draw3D::drawVecInPos( fa*-fsc, apos[ia.y] );
+        Draw3D::drawVecInPos( fb*-fsc, apos[ia.y] );
+        glColor3f(0.0,1.0,0.0);
+        Draw3D::drawArrow( apos[ia.x],apos[ia.y], 0.1 );
+        Draw3D::drawArrow( apos[ia.y],apos[ia.z], 0.1 );
+
+        glColor3f(0.0,1.0,0.0); Draw3D::drawArrow( apos[ia.b],apos[ia.b]+h, 0.1 );
+        glColor3f(1.0,0.0,0.0); Draw3D::drawArrow( apos[ia.b],apos[ia.b]+ha, 0.1 );
+        glColor3f(0.0,0.0,1.0); Draw3D::drawArrow( apos[ia.b],apos[ia.b]+hb, 0.1 );
+
+        //Draw3D::drawArrow( apos[ia.x],apos[ia.y], 0.1 );
+        //Draw3D::drawArrow( apos[ia.y],apos[ia.z], 0.1 );
+        //Draw3D::d
+    }
+    */
 
     // to atoms
     aforce[ia.x].add(fa); aforce[ia.y].sub(fa);
@@ -251,17 +310,20 @@ double eval_torsion(int it){
     }
 
     const double k = tors_k[it];
-    double E   = k*csn.x;
-    double fr  = k*csn.y;
+    double E   =  k  *(1-csn.x);
+    double fr  =  k*n*   csn.y;
 
-    //glColor3f(1.0,0.0,1.0); Draw3D::drawVecInPos(hab.normalized()*E, apos[ia.x]);
-    //glColor3f(1.0,1.0,1.0); Draw3D::drawVecInPos(ha.normalized()*E, apos[ia.x]);
 
     fa.mul(fr*ira);
     fb.mul(fr*irb);
 
-    //glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fa, apos[ia.x]); Draw3D::drawVecInPos(fb, apos[ia.w]);
-
+    float fsc = 1000.0;
+    glColor3f(1.0,0.0,1.0);  Draw3D::drawVecInPos(hab.normalized()*E, apos[ia.x]);
+    glColor3f(1.0,1.0,1.0);  Draw3D::drawVecInPos(ha.normalized()*E, apos[ia.x]);
+    glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fa*fsc, apos[ia.x]);
+    glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fa*fsc*-1, apos[ia.y]);
+    glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fb*fsc*-1, apos[ia.z]);
+    glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fb*fsc, apos[ia.w]);
     //printf("tors[%i] (%i,%i,%i,%i)\n", it, ia.x, ia.y, ia.z, ia.w );
 
     // to atoms
@@ -291,11 +353,13 @@ double eval_torsions(){
     return E;
 }
 
-void eval(){
+double eval(){
     cleanAtomForce();
-    eval_bonds();
-    eval_angles();
-    eval_torsions();
+    double Eb = eval_bonds();
+    double Ea = eval_angles();
+    double Et = eval_torsions();
+    printf( "Eb %g Ea %g Et %g\n", Eb, Ea, Et );
+    return Eb+Ea+Et;
 };
 
 // ============== Preparation
