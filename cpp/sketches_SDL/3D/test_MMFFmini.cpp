@@ -99,67 +99,11 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 
 
 
-#include "NDarray.h"
-using namespace NDarray;
 
+
+//template<typename T> std::function<T(const T&,const T&         )> F2;
 
 TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
-
-
-    /*
-    printf( "----\n" );
-    (1<9_r).print();
-    (1<9_s).print();
-
-    //( 4_s | 1>>9/-2_s ).print();
-
-    printf( "----\n" );
-    (-5_s).print();
-    (5/-1_s).print();
-    (1<5/-1_s).print();
-    //(1,9,-1_s).print();
-    printf( "----\n" );
-    //(3>>-6_r/2|Scan(4)|Scan(1,9,-1)).print();
-    (3<-6_r/2 , 4_s , 1<9/-1_s).print();
-    (3<-6_r/2 , 4_s , 1<9/-1_s, 3<19/3_s).print();
-    */
-
-    VecN<double> v{1.0d,1.3d,1.5d};
-
-    v.print();
-    v.apply( [](double& f,double _)->double{ f=f*f; return 0; } );
-
-    std::function<void(double&,double&)> f = o_max<double>;
-    v.apply_(f);
-    v.apply_(o_max<double>);
-
-    //print( v.apply_( o_max ) );
-    v.print();
-
-
-    //A* pa = new A{ A{1}+A{3}  };
-    //pa->print();
-
-
-    //(A{1},A{3}).print();
-
-    //printf( "(%i,%i)\n", t.ts[0].i, t.ts[1].i );
-
-
-    //(Scan(1)|Scan(1)).print();
-    //VecN a{0.5,1,0,3,5,6,65848,8487,0.1};
-    //exit(0);
-
-
-
-
-
-
-
-
-
-
-
 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 

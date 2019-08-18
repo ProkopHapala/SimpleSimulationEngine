@@ -4,7 +4,13 @@
 #add_executable       ( test_Diagonalization test_Diagonalization.cpp )
 #target_link_libraries( test_Diagonalization )
 
-add_library(Test_Lingebra SHARED Test_Lingebra.cpp $<TARGET_OBJECTS:Lingebra> )
+#add_library(test_Num SHARED test_Num.cpp )
+
+add_executable       ( test_NumT test_NumT.cpp )
+target_link_libraries( test_NumT )
+
+add_library(test_Lingebra SHARED test_Lingebra.cpp $<TARGET_OBJECTS:Lingebra> )
+
 
 add_custom_command(
      TARGET ${PROJECT_NAME} Test_Lingebra
