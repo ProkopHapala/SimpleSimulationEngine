@@ -466,7 +466,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         Draw3D::drawSphere_oct( 2, 0.25, {0.0,0.0,0.0} );
     glEndList();
 
-    exit(0);
+    //exit(0);
 
 }
 
