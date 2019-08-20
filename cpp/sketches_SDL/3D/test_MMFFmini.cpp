@@ -100,10 +100,193 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 
 
 
+bool bPrint = true;
+
+
+inline double cos_func(double ca, double cb, double cab ){  return ( cab - ca*cb )/sqrt( (1-ca*ca)*(1-cb*cb) ); }
+
+inline void ddot_num(Vec3d h, Vec3d h2, Vec3d& f, double d){
+    h.normalize(); h2.normalize();
+    h.x+=d; h.normalize(); f.x=h.dot(h2); h.x-=2*d; h.normalize(); f.x-=h.dot(h2); h.x+=d;
+    h.y+=d; h.normalize(); f.y=h.dot(h2); h.y-=2*d; h.normalize(); f.y-=h.dot(h2); h.y+=d;
+    h.z+=d; h.normalize(); f.z=h.dot(h2); h.z-=2*d; h.normalize(); f.z-=h.dot(h2); h.z+=d;
+    f.mul(1/(d*2));
+}
+
+//inline double evalTorq(Vec3d& ha,Vec3d& hb,Vec3d& hab,   Vec3d& f1, Vec3d& f2, Vec3d& f2, Vec3d& f4 ){
+inline double evalTorq(Vec3d& ha,Vec3d& hb,Vec3d& hab,   Vec3d& fa, Vec3d& fb, Vec3d& fab ){
+
+    double invra  = 1.0d/ha .normalize();
+    double invrb  = 1.0d/hb .normalize();
+    double invrab = 1.0d/hab.normalize();
+
+    //double invra3 = invra*invra*invra;
+    //double invrb3 = invrb*invrb*invrb;
+    //double invrc3 = invrc*invrc*invrc;
+
+    // check
+    Vec3d haT = ha - hab*hab.dot(ha); haT.normalize();
+    Vec3d hbT = hb - hab*hab.dot(hb); hbT.normalize();
+    double cT = haT.dot(hbT);
+
+
+    double ca   = hab.dot(ha);
+    double cb   = hab.dot(hb);
+    double cab  = ha .dot(hb);
+    double sa2  = (1-ca*ca);
+    double sb2  = (1-cb*cb);
+    double invs = 1/sqrt( sa2*sb2 );
+    double c    = ( cab - ca*cb )*invs;  //  c = <  ha - <ha|hab>hab   | hb - <hb|hab>hab    >
+
+    //double c   = cos_func(ca,cb,cab);
+
+    //printf( "<fa|fb> %g cT %g cS %g \n", cs.x, cT, cS );
+
+    // derivatives to get forces
+
+    double invs3 = invs*invs*invs;
+    double dcab  = invs;                           // dc/dcab = dc/d<ha|hb>
+    double dca   = (1-cb*cb)*(ca*cab - cb)*invs3;  // dc/dca  = dc/d<ha|hab>
+    double dcb   = (1-ca*ca)*(cb*cab - ca)*invs3;  // dc/dca  = dc/d<hb|hab>
+
+    fa =Vec3dZero;
+    fb =Vec3dZero;
+    fab=Vec3dZero;
+
+    Mat3Sd J;
+
+    J.from_dhat(ha);    // -- by ha
+    J.mad_ddot(hab,fa, dca ); // dca /dha = d<ha|hab>/dha
+    J.mad_ddot(hb ,fa, dcab); // dcab/dha = d<ha|hb> /dha
+
+    J.from_dhat(hb);    // -- by hb
+    J.mad_ddot(hab,fb, dcb ); // dcb /dhb = d<hb|hab>/dha
+    J.mad_ddot(ha ,fb, dcab); // dcab/dhb = d<hb|ha> /dha
+
+    J.from_dhat(hab);         // -- by hab
+    J.mad_ddot(ha,fab, dca);  // dca/dhab = d<ha|hab>/dhab
+    J.mad_ddot(hb,fab, dcb);  // dcb/dhab = d<hb|hab>/dhab
+    // derivative cab = <ha|hb>
+
+    fa .mul(invra *invra *invra );
+    fb .mul(invrb *invrb *invrb );
+    fab.mul(invrab*invrab*invrab);
+
+    if(bPrint){
+
+        double d=0.001d;
+        double dcaE  =( cos_func(ca+d,cb  ,cab  ) - cos_func(ca-d,cb  ,cab  ) )/(2*d);
+        double dcbE  =( cos_func(ca  ,cb+d,cab  ) - cos_func(ca  ,cb-d,cab  ) )/(2*d);
+        double dcabE =( cos_func(ca  ,cb  ,cab+d) - cos_func(ca  ,cb  ,cab-d) )/(2*d);
+
+
+        Vec3d fE=Vec3dZero,f=Vec3dZero,ferr;
+        Vec3d h;
+        h=ha;
+
+        ddot_num(ha,hab,fE,d); f=Vec3dZero; J.from_dhat(ha   );   J.dhat_dot(hab,f);
+        printf( "d<a|ab>/da err %g : anal  (%g,%g,%g)  | num  (%g,%g,%g) \n", (f-fE).norm(), f.x,f.y,f.z,   fE.x,fE.y,fE.z );
+        ddot_num(ha,hb,fE,d);  f=Vec3dZero; J.from_dhat(ha   );   J.dhat_dot(hb,f);
+        printf( "d<a|b>/dha  err %g : anal  (%g,%g,%g)  | num  (%g,%g,%g) \n",(f-fE).norm(), f.x,f.y,f.z,   fE.x,fE.y,fE.z );
+
+        ddot_num(hb,hab,fE,d); f=Vec3dZero; J.from_dhat(hb   );   J.dhat_dot(hab,f);
+        printf( "d<b|ab>/da err %g : anal  (%g,%g,%g)  | num  (%g,%g,%g) \n",(f-fE).norm(), f.x,f.y,f.z,   fE.x,fE.y,fE.z );
+        ddot_num(hb,ha,fE,d);  f=Vec3dZero; J.from_dhat(hb   );   J.dhat_dot(ha,f);
+        printf( "d<a|b>/db  err %g : anal  (%g,%g,%g)  | num  (%g,%g,%g) \n",(f-fE).norm(), f.x,f.y,f.z,   fE.x,fE.y,fE.z );
+
+        ddot_num(hab,ha,fE,d); f=Vec3dZero; J.from_dhat(hab   );   J.dhat_dot(ha,f);
+        printf( "d<a|ab>/dab err %g : anal  (%g,%g,%g)  | num  (%g,%g,%g) \n",(f-fE).norm(), f.x,f.y,f.z,   fE.x,fE.y,fE.z );
+        ddot_num(hab,hb,fE,d);  f=Vec3dZero; J.from_dhat(hab   );   J.dhat_dot(hb,f);
+        printf( "d<b|ab>/dab err %g : anal  (%g,%g,%g)  | num  (%g,%g,%g) \n",(f-fE).norm(), f.x,f.y,f.z,   fE.x,fE.y,fE.z );
+
+        printf( "dca,dcb,dcab : anal  (%g,%g,%g)  | num  (%g,%g,%g) \n", dca,dcb,dcab,   dcaE,dcbE,dcabE );
+        printf( "c,cT   %g %g       ca,cb,cab (%g, %g, %g) \n",  c,cT,  ca,cb, cab );
+        printf( " <ha|fa> %g <hb|fb> %g <hab|fa> %g <hab|fb> %g \n", ha.dot(fa), hb.dot(fb), hab.dot(fa), hab.dot(fb) );
+
+    }
+    //if(bPrint) printf( "n", fa.dot(fb), fa.dot(fb), fa.dot(fb), fa.dot(fb), );
+
+    /*
+    aforce[ia.x].add(fa*-1);
+    aforce[ia.y].add(fa-fab);
+    aforce[ia.z].add(fab-fb);
+    aforce[ia.w].add(fb);
+    */
+    return c;
+}
+
+
+template<typename Func>
+double checkDeriv(Func getEF,const Vec3d p0, double d, Vec3d& fE, Vec3d& f ){
+    getEF(p0,f);
+    for(int i=0;i<3;i++){
+        double E0,E1;
+        Vec3d p=p0;
+        p .array[i]-=d;   E0=getEF(p,f);
+        p .array[i]+=d*2; E1=getEF(p,f);
+        p .array[i]-=d;
+        fE.array[i]=(E1-E0)/(2*d);
+    }
+    double err = (f-fE).norm();
+    printf( " |f-fE|: %g   fE(%g,%g,%g)   f(%g,%g,%g) \n", err, fE.x, fE.y, fE.z, f.x,f.y,f.z );
+    return err;
+}
+
 
 //template<typename T> std::function<T(const T&,const T&         )> F2;
 
 TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+
+    Vec3d ha      =(Vec3d){1.0, 1.0,-0.2};
+    Vec3d hb      =(Vec3d){1.0,-1.0,+0.3};
+    Vec3d hab     =(Vec3d){0.1, 0.2, 1.0};
+
+    //ha.normalize();
+    //hb.normalize();
+    //hab.normalize();
+    Vec3d fa,fb,fab;
+    evalTorq( ha,hb,hab,  fa,fb,fab );
+    bPrint=false;
+
+    auto getEF_a  = [&](Vec3d p,Vec3d& f)->double{ return evalTorq( p,hb,hab,  f,fb,fab ); };
+    auto getEF_b  = [&](Vec3d p,Vec3d& f)->double{ return evalTorq( ha,p,hab,  fa,f,fab ); };
+    auto getEF_ab = [&](Vec3d p,Vec3d& f)->double{ return evalTorq( ha,hb,p,   fa,fb,f  ); };
+
+    Vec3d f,fE;
+    printf("ha  "); checkDeriv(getEF_a , ha, 0.001d,  fE, f );
+    printf("hb  "); checkDeriv(getEF_b , hb, 0.001d,  fE, f );
+    printf("hab "); checkDeriv(getEF_ab, hab,0.001d,  fE, f );
+
+    //exit(0);
+    /*
+    double ds = 0.02;
+    Vec3d& h  = ha0;
+    Vec3d& f  =
+    h   = ha;
+    for(int i=0;i<3;i++){
+        double E0,E1;
+        h.array[i]-=ds*0.5;  E0= torqForce( ha,hb,hab,   fa,fb,fab );
+        h.array[i]+=ds;      E1= torqForce( ha,hb,hab,   fa,fb,fab );
+        double fE.array[i]=(E1-E0)/ds;
+    }
+    torqForce( ha,hb,hab, fa,fb,fab );
+
+    printf( "fE(%g,%g,%g) fE(%g,%g,%g)\n", fE.x, fE.y, fE.z, f.x,f.y,f.z );
+    */
+
+
+
+
+    /*
+    for(int i=0; i<n; i++){
+        ha.x+=dx;
+        double E  = torqForce( ha,hb,hab,   f1,f2,f2,f4 );
+        double fx = (E-oE)/dx;
+        printf( f1 );
+    }
+    */
+
 
     MMFFAtom a{1.0,0.0,0.0};
     printf( "print (%g,%g,%g)\n", a.pos.x, a.pos.y,a.pos.z );
@@ -116,6 +299,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     double Ktors = 1.0;
 
     int tors_n = 3;
+
 
     //const int natom=4,nbond=3,nang=2,ntors=1;
     const int natom=4,nbond=3,nang=0,ntors=0;
@@ -143,59 +327,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         2.0,
     };
 
-    /*
-    const int natom=7,nbond=7,nang=10;
-    Vec3d apos0[] = {
-        {-2.0,0.0,0.0},  // 0
-        {-1.0,2.0,0.0},  // 1
-        {+1.0,2.0,0.0},  // 2
-        {+2.0,0.0,0.0},  // 3
-        {+0.0,-1.0,0.0},  // 4
-
-        {+0.0,0.0,+1.0},   // 5
-        {+0.0,0.0,-1.0}   // 6
-    };
-    Vec2i bong2atom[] = {
-        {0,1},  // 0
-        {1,2},  // 1
-        {2,3},  // 2
-        {3,4},  // 3
-        {4,0},  // 4
-
-        {5,0},  // 5
-        {6,0},  // 6
-    };
-    Vec2i ang2bond[] = {
-        {0,1},  // 0
-        {1,2},  // 1
-        {2,3},  // 2
-        {3,4},  // 3
-        {4,0},  // 4
-
-        {5,6},  // 5
-
-        {0,5},  // 6
-        {0,6},  // 7
-        {4,5},  // 8
-        {4,6}   // 9
-    };
-    double a0s[] ={
-        2.0,
-        2.0,
-        2.0,
-        2.0,
-        1.0,
-
-        2.0,
-
-        2.0,
-        2.0,
-        2.0,
-        2.0
-    };
-    */
-
-    /*
+/*
     const int natom=5+2,nbond=4+3,nang=6;
     Vec3d apos0[] = {
         { 0.5, 0.5, 0.5},  // 0
@@ -326,8 +458,6 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         exit(0);
     };
 
-    printf( "DEBUG 5 \n" );
-
     ogl_sph = glGenLists(1);
     glNewList( ogl_sph, GL_COMPILE );
         //glEnable( GL_LIGHTING );
@@ -335,6 +465,8 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         //Draw3D::drawSphere_oct(3, 0.5, {0.0,0.0,0.0} );
         Draw3D::drawSphere_oct( 2, 0.25, {0.0,0.0,0.0} );
     glEndList();
+
+    exit(0);
 
 }
 
@@ -382,6 +514,12 @@ void TestAppSoftMolDyn::draw(){
         double E=0;
         E += ff.eval();
         E += nff.evalLJQ_sortedMask();
+
+
+        Vec3d cog,fsum,torq;
+        checkForceInvariatns( ff.natoms, ff.aforce, ff.apos, cog, fsum, torq );
+        printf( "fsum %g torq %g   cog (%g,%g,%g) \n", fsum.norm(), torq.norm(), cog.x, cog.y, cog.z );
+
 
         //for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
         //printf( "DEBUG x.1 \n" );

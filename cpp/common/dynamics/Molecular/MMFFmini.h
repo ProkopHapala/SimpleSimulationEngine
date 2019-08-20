@@ -24,10 +24,10 @@ inline void pairs2triple( const  Vec2i b1, const Vec2i b2, Vec3i& tri, bool& fli
 */
 
 inline void pairs2triple( const  Vec2i b1, const Vec2i b2, Vec3i& tri, bool& flip1, bool& flip2 ){
-    if     ( b1.y == b2.x ){ tri.set( b1.x, b1.y, b2.y ); flip1=false; flip2=false; printf(" y-x \n"); }
-    else if( b1.y == b2.y ){ tri.set( b1.x, b1.y, b2.x ); flip1=false; flip2=true;  printf(" y-y \n"); }
-    else if( b1.x == b2.x ){ tri.set( b1.y, b1.x, b2.y ); flip1=true;  flip2=false; printf(" x-x \n"); }
-    else if( b1.x == b2.y ){ tri.set( b1.y, b1.x, b2.x ); flip1=true;  flip2=true;  printf(" x-y \n"); }
+    if     ( b1.y == b2.x ){ tri.set( b1.x, b1.y, b2.y ); flip1=false; flip2=false;  }
+    else if( b1.y == b2.y ){ tri.set( b1.x, b1.y, b2.x ); flip1=false; flip2=true;   }
+    else if( b1.x == b2.x ){ tri.set( b1.y, b1.x, b2.y ); flip1=true;  flip2=false;  }
+    else if( b1.x == b2.y ){ tri.set( b1.y, b1.x, b2.x ); flip1=true;  flip2=true;   }
 }
 
 
@@ -39,6 +39,22 @@ inline void pairs2triple( const  Vec2i b1, const Vec2i b2, Vec3i& tri, bool& fli
     else if( b1.y == b2.y ){ tri.set( b1.x, b1.y, b2.x ); flip1=true;  flip1=true;  }
 }
 */
+
+void sum(int n, Vec3d* ps, Vec3d& psum){ for(int i=0;i<n;i++){ psum.add(ps[i]); } };
+
+void sumTroq(int n, Vec3d* fs, Vec3d* ps, const Vec3d& cog, const Vec3d& fav, Vec3d& torq){
+    for(int i=0;i<n;i++){  torq.add_cross(ps[i]-cog,fs[i]-fav);  }
+};
+
+void checkForceInvariatns( int n, Vec3d* fs, Vec3d* ps, Vec3d& cog, Vec3d& fsum, Vec3d& torq ){
+    cog=Vec3dZero;
+    fsum=Vec3dZero;
+    torq=Vec3dZero;
+    double dw = 1.d/n;
+    sum(n, ps, cog ); cog.mul(dw);
+    sum(n, fs, fsum); //cog.mul(dw);
+    sumTroq(n, fs, ps, cog, fsum*dw, torq );
+}
 
 class MMFFmini{ public:
     int  natoms=0, nbonds=0, nang=0, ntors=0;
@@ -260,6 +276,7 @@ double eval_angle(int ig){
     }
     */
 
+
     // to atoms
     aforce[ia.x].add(fa); aforce[ia.y].sub(fa);
     aforce[ia.z].add(fb); aforce[ia.y].sub(fb);
@@ -267,7 +284,109 @@ double eval_angle(int ig){
     return E;
 }
 
+
+
 double eval_torsion(int it){
+
+    Vec3i  ib = tors2bond[it];
+    Quat4i ia = tors2atom[it];
+
+    // -- read bond direction ( notice orientation sign A->B vs. A<-B )
+    Vec3d ha,hb,hab;
+    //if(ib.a&SIGN_MASK){ ib.a&=0xFFFF; ha = hbond[ib.a]; ha.mul(-1.0d); }else{ ha = hbond[ib.a]; };
+    //if(ib.b&SIGN_MASK){ ib.b&=0xFFFF; hb = hbond[ib.b]; hb.mul(-1.0d); }else{ hb = hbond[ib.b]; };
+    //if(ib.c&SIGN_MASK){ ib.c&=0xFFFF; hc = hbond[ib.b]; hc.mul(-1.0d); }else{ hb = hbond[ib.b]; };
+    readSignedBond(ib.x, ha);
+    readSignedBond(ib.y, hab);
+    readSignedBond(ib.z, hb);
+
+    double ca   = hab.dot(ha);
+    double cb   = hab.dot(hb);
+    double cab  = ha .dot(hb);
+    double sa2  = (1-ca*ca);
+    double sb2  = (1-cb*cb);
+    double invs = 1/sqrt( sa2*sb2 );
+    //double c    = ;  //  c = <  ha - <ha|hab>hab   | hb - <hb|hab>hab    >
+
+    Vec2d cs,csn;
+    cs.x = ( cab - ca*cb )*invs;
+    cs.y = sqrt(1-cs.x*cs.x); // can we avoid this sqrt ?
+
+    const int n = tors_n[it];
+    for(int i=0; i<n-1; i++){
+        csn.mul_cmplx(cs);
+    }
+
+
+    // check here : https://www.wolframalpha.com/input/?i=(x+%2B+isqrt(1-x%5E2))%5En+derivative+by+x
+
+    const double k = tors_k[it];
+    double E   =  k  *(1-csn.x);
+    double dcn =  k*n*   csn.x;
+    //double fr  =  k*n*   csn.y;
+
+    //double c   = cos_func(ca,cb,cab);
+
+    //printf( "<fa|fb> %g cT %g cS %g \n", cs.x, cT, cS );
+
+    // derivatives to get forces
+
+    double invs2 = invs*invs;
+    dcn *= invs;
+    double dcab  = dcn;                           // dc/dcab = dc/d<ha|hb>
+    double dca   = (1-cb*cb)*(ca*cab - cb)*dcn;  // dc/dca  = dc/d<ha|hab>
+    double dcb   = (1-ca*ca)*(cb*cab - ca)*dcn;  // dc/dca  = dc/d<hb|hab>
+
+    Vec3d fa,fb,fab;
+
+    fa =Vec3dZero;
+    fb =Vec3dZero;
+    fab=Vec3dZero;
+
+    Mat3Sd J;
+
+    J.from_dhat(ha);    // -- by ha
+    J.mad_ddot(hab,fa, dca ); // dca /dha = d<ha|hab>/dha
+    J.mad_ddot(hb ,fa, dcab); // dcab/dha = d<ha|hb> /dha
+
+    J.from_dhat(hb);    // -- by hb
+    J.mad_ddot(hab,fb, dcb ); // dcb /dhb = d<hb|hab>/dha
+    J.mad_ddot(ha ,fb, dcab); // dcab/dhb = d<hb|ha> /dha
+
+    J.from_dhat(hab);         // -- by hab
+    J.mad_ddot(ha,fab, dca);  // dca/dhab = d<ha|hab>/dhab
+    J.mad_ddot(hb,fab, dcb);  // dcb/dhab = d<hb|hab>/dhab
+    // derivative cab = <ha|hb>
+
+    fa .mul( 1/lbond[ib.a] );
+    fb .mul( 1/lbond[ib.c] );
+    fab.mul( 1/lbond[ib.b] );
+
+    aforce[ia.x].sub(fa);
+    aforce[ia.y].add(fa -fab);
+    aforce[ia.z].add(fab-fb);
+    aforce[ia.w].add(fb);
+
+    /*
+    {
+        double fsc = 100.0;
+        glColor3f(1.0,0.0,1.0);  Draw3D::drawVecInPos(hab.normalized()*E, apos[ia.x]);
+        glColor3f(1.0,1.0,1.0);  Draw3D::drawVecInPos(ha.normalized()*E, apos[ia.x]);
+        glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fa*fsc, apos[ia.x]);
+        glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fa*fsc*-1, apos[ia.y]);
+        glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fb*fsc*-1, apos[ia.z]);
+        glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fb*fsc, apos[ia.w]);
+
+    }
+    */
+
+    return E;
+}
+
+
+
+
+double _bak_eval_torsion(int it){
     // efficient angular forcefield of cos(a/2) which prevent vanishing derivative of cos(a)
     // E = K*cos(a/2) = K*|ha+hb|/2
     Vec3i  ib = tors2bond[it];
@@ -316,7 +435,7 @@ double eval_torsion(int it){
 
     fa.mul(fr*ira);
     fb.mul(fr*irb);
-
+    /*
     float fsc = 1000.0;
     glColor3f(1.0,0.0,1.0);  Draw3D::drawVecInPos(hab.normalized()*E, apos[ia.x]);
     glColor3f(1.0,1.0,1.0);  Draw3D::drawVecInPos(ha.normalized()*E, apos[ia.x]);
@@ -325,13 +444,14 @@ double eval_torsion(int it){
     glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fb*fsc*-1, apos[ia.z]);
     glColor3f(1.0,0.0,0.0);  Draw3D::drawVecInPos(fb*fsc, apos[ia.w]);
     //printf("tors[%i] (%i,%i,%i,%i)\n", it, ia.x, ia.y, ia.z, ia.w );
-
+    */
+    /*
     // to atoms
     aforce[ia.x].add(fa);
-    aforce[ia.y].sub(fa);
-    aforce[ia.z].sub(fb);
+    aforce[ia.y].sub((fa+fb)*0.5);
+    aforce[ia.z].sub((fb+fa)*0.5);
     aforce[ia.w].add(fb);
-
+    */
     return E;
 }
 
@@ -375,7 +495,7 @@ void angles_bond2atom(){
         pairs2triple( b1, b2, ang2atom[i], flip1, flip2 );
         if(!flip1){ ang2bond[i].i|=SIGN_MASK; };
         if( flip2){ ang2bond[i].j|=SIGN_MASK; };
-        printf( "ang[%i] ((%i,%i)(%i,%i))->(%i,%i,%i) (%i,%i)==(%i,%i) \n", i, b1.x,b1.y, b2.x,b2.y, ang2atom[i].x,ang2atom[i].y,ang2atom[i].z,ang2bond[i].x&0xFFFF, ang2bond[i].y&0xFFFF,ang2bond[i].x,        ang2bond[i].y         );
+        //printf( "ang[%i] ((%i,%i)(%i,%i))->(%i,%i,%i) (%i,%i)==(%i,%i) \n", i, b1.x,b1.y, b2.x,b2.y, ang2atom[i].x,ang2atom[i].y,ang2atom[i].z,ang2bond[i].x&0xFFFF, ang2bond[i].y&0xFFFF,ang2bond[i].x,        ang2bond[i].y         );
     }
 }
 
@@ -392,7 +512,7 @@ void torsions_bond2atom(){
         if( flip1 ){ tors2bond[i].i|=SIGN_MASK; };
         if( flip12){ tors2bond[i].j|=SIGN_MASK; };
         if( flip2 ){ tors2bond[i].j|=SIGN_MASK; };
-        printf( "tors[%i] ((%i,%i)(%i,%i)(%i,%i))->(%i,%i,%i,%i) (%i,%i,%i)==(%i,%i,%i) \n", i, b1.x,b1.y, b12.x,b12.y, b2.x,b2.y,tors2atom[i].x,tors2atom[i].y,tors2atom[i].z,tors2atom[i].w,tors2bond[i].x&0xFFFF, tors2bond[i].y&0xFFFF, tors2bond[i].z&0xFFFF,tors2bond[i].x,        tors2bond[i].y,        tors2bond[i].z         );
+        //printf( "tors[%i] ((%i,%i)(%i,%i)(%i,%i))->(%i,%i,%i,%i) (%i,%i,%i)==(%i,%i,%i) \n", i, b1.x,b1.y, b12.x,b12.y, b2.x,b2.y,tors2atom[i].x,tors2atom[i].y,tors2atom[i].z,tors2atom[i].w,tors2bond[i].x&0xFFFF, tors2bond[i].y&0xFFFF, tors2bond[i].z&0xFFFF,tors2bond[i].x,        tors2bond[i].y,        tors2bond[i].z         );
     }
 }
 

@@ -30,31 +30,6 @@ Flexible Atom sp-hybridization forcefield
 
 #define N_BOND_MAX 4
 
-struct Mat3Sd{ // symmetric 3x3 matrix
-
-    double xx,yy,zz,xy,xz,yz;
-
-    inline void from_dhat(const Vec3d& h){
-        //double ir  = irs[i];
-        double hxx  = h.x*h.x;
-        double hyy  = h.y*h.y;
-        double hzz  = h.z*h.z;
-        xy=-h.x*h.y;
-        xz=-h.x*h.z;
-        yz=-h.y*h.z;
-        xx=(hyy+hzz);
-        yy=(hxx+hzz);
-        zz=(hxx+hyy);
-    }
-
-    inline void dhat_dot( const Vec3d& h, Vec3d& f ){
-        f.x = h.x*xx + h.y*xy + h.z*xz;
-        f.y = h.x*xy + h.y*yy + h.z*yz;
-        f.z = h.x*xz + h.y*yz + h.z*zz;
-    }
-
-};
-
 class FspFF{ public:
 
     bool substract_LJq = true;

@@ -97,7 +97,7 @@ struct MMFFAtomConf{
         neighs[n]=ia;
         ninc++;
         n++;
-        printf( "bond.addNeigh %i %i\n", n, ninc );
+        //printf( "bond.addNeigh %i %i\n", n, ninc );
         return true;
     };
 
@@ -106,7 +106,7 @@ struct MMFFAtomConf{
     //    else if(b.j==iatom){ addNeigh(b.i,nbond); }
     //    return false;
     //}
-    inline bool addBond (int i){ printf("addBond\n"); return addNeigh(i,nbond); };
+    inline bool addBond (int i){ return addNeigh(i,nbond); };
     inline bool addH    (     ){ return addNeigh((int)NeighType::H    ,nH ); };
     inline bool addPi   (     ){ return addNeigh((int)NeighType::pi   ,npi); };
     inline bool addEpair(     ){ return addNeigh((int)NeighType::epair,ne ); };
@@ -254,7 +254,7 @@ class MMFFBuilder{  public:
         if( rigid ){
             Quat4d qrot; qrot.fromMatrix(rot);
             int ifrag = frags.size();
-            printf( "insertMolecule mol->natoms %i \n", mol->natoms );
+            //printf( "insertMolecule mol->natoms %i \n", mol->natoms );
             for(int i=0; i<mol->natoms; i++){
                 //Vec3d REQi = (Vec3d){1.0,0.03,mol->}; // TO DO : LJq can be set by type
                 //atoms.push_back( (MMFFAtom){mol->atomType[i],mol->pos[i], LJq } );
@@ -293,7 +293,7 @@ class MMFFBuilder{  public:
     };
 
     int insertMolecule( const std::string& molName, const Vec3d& pos, const Mat3d& rot, bool rigid ){
-        printf( "insertMolecule molName %s itype %i \n", molName.c_str(), molTypeDict[molName] );
+        //printf( "insertMolecule molName %s itype %i \n", molName.c_str(), molTypeDict[molName] );
         return insertMolecule( molTypes[ molTypeDict[molName] ], pos, rot, rigid );
     };
 
@@ -350,14 +350,14 @@ class MMFFBuilder{  public:
     }
 
     void toMMFFmini( MMFFmini& ff ){
-        printf( "na %i nb %i nA %i \n", atoms.size(), bonds.size(), dihedrals.size() );
+        //printf( "na %i nb %i nA %i \n", atoms.size(), bonds.size(), dihedrals.size() );
         //mmff->deallocate();
         ff.realloc( atoms.size(), bonds.size(), angles.size(), dihedrals.size() );
         for(int i=0; i<atoms.size(); i++){
             ff.apos [i]  = atoms[i].pos;
 
-            println(atoms[i]);
-            if( atoms[i].iconf>=0 ) println(confs[atoms[i].iconf]);
+            //println(atoms[i]);
+            //if( atoms[i].iconf>=0 ) println(confs[atoms[i].iconf]);
         }
         for(int i=0; i<bonds.size(); i++){
             const MMFFBond& b  = bonds[i];
@@ -369,20 +369,20 @@ class MMFFBuilder{  public:
                 //printf( "no params \n" );
                 ff.setBondParam(i, b.l0, b.k );
             }
-            printf( "bond[%i] (%i,%i) %g %g | %g %g\n", i, ff.bond2atom[i].i, ff.bond2atom[i].j, ff.bond_l0[i], ff.bond_k[i], b.l0, b.k );
+            //printf( "bond[%i] (%i,%i) %g %g | %g %g\n", i, ff.bond2atom[i].i, ff.bond2atom[i].j, ff.bond_l0[i], ff.bond_k[i], b.l0, b.k );
             //bondTypes[i]       = bonds[i].type;
         }
         for(int i=0; i<angles.size(); i++){
             const MMFFAngle& a  = angles[i];
             ff.ang2bond[i] = a.bonds;
             ff.setAngleParam(i, a.a0, a.k );
-            printf( "angle[%i] (%i,%i) (%g,%g) %g\n", i, ff.ang2bond[i].i, ff.ang2bond[i].j, ff.ang_cs0[i].x, ff.ang_cs0[i].y, ff.ang_k[i] );
+            //printf( "angle[%i] (%i,%i) (%g,%g) %g\n", i, ff.ang2bond[i].i, ff.ang2bond[i].j, ff.ang_cs0[i].x, ff.ang_cs0[i].y, ff.ang_k[i] );
         }
         for(int i=0; i<dihedrals.size(); i++){
             const MMFFDihedral& d  = dihedrals[i];
             ff.tors2bond[i] = d.bonds;
             ff.setTorsParam( i, d.n, d.k );
-            printf( "dihedrals[%i] (%i,%i,%i) %i %g\n", i, ff.tors2bond[i].a, ff.tors2bond[i].b, ff.tors2bond[i].c, ff.tors_n[i], ff.tors_k[i] );
+            //printf( "dihedrals[%i] (%i,%i,%i) %i %g\n", i, ff.tors2bond[i].a, ff.tors2bond[i].b, ff.tors2bond[i].c, ff.tors_n[i], ff.tors_k[i] );
         }
         ff.angles_bond2atom();
         ff.torsions_bond2atom();
@@ -422,7 +422,7 @@ class MMFFBuilder{  public:
         if(bConf){
             int ic = confs.size();
             int ia = atoms.size()-1;
-            printf( "insertAtom ia %i ic %i \n", ia, ic );
+            //printf( "insertAtom ia %i ic %i \n", ia, ic );
             atoms.back().iconf = ic;
             confs.push_back(MMFFAtomConf());
             MMFFAtomConf& c = confs.back();
@@ -439,7 +439,7 @@ class MMFFBuilder{  public:
         int jc = atoms[bond.atoms.j].iconf;
         //if(ic>=0){ confs[ic].addBond(bond.atoms.j); }
         //if(jc>=0){ confs[jc].addBond(bond.atoms.i); }
-        printf( "insertBond %i(%i,%i) to c(%i,%i) l0 %g k %g\n", ib, bond.atoms.i,bond.atoms.j, ic, jc, bond.l0, bond.k );
+        //printf( "insertBond %i(%i,%i) to c(%i,%i) l0 %g k %g\n", ib, bond.atoms.i,bond.atoms.j, ic, jc, bond.l0, bond.k );
         if(ic>=0){ confs[ic].addBond(ib); }
         if(jc>=0){ confs[jc].addBond(ib); }
     }
@@ -523,8 +523,8 @@ class MMFFBuilder{  public:
         int nb = conf.nbond;
         int n  = 4-nb-npi;   // number
         int nH = n-ne;
-        printf("-- "); println(conf);
-        printf( "ia %i nb,npi %i,%i   n,nH,ne %i,%i,%i \n", ia,   nb,npi,  n,nH,ne );
+        //printf("-- "); println(conf);
+        //printf( "ia %i nb,npi %i,%i   n,nH,ne %i,%i,%i \n", ia,   nb,npi,  n,nH,ne );
         //Mat3d m;
         Vec3d hs[4];
         for(int i=0;i<nb;i++){
@@ -544,7 +544,7 @@ class MMFFBuilder{  public:
         if(bDummyPi){
             for(int i=0; i<npi; i++){ addCap(ia,hs[i+n+nb],&capAtomPi,0); }
         }
-        printf("-> "); println(conf);
+        //printf("-> "); println(conf);
     }
 
     bool makeSPConf(int ia){
@@ -561,7 +561,7 @@ class MMFFBuilder{  public:
     void addAnglesToBond( int ib, int n, int* neighs, double a0, double k ){
         for(int j=0; j<n; j++){
             angles.push_back( (MMFFAngle){-1,(Vec2i){ neighs[ib], neighs[j]}, a0,k} );
-            printf("ib %i,%i  %i,%i  | %i \n", ib, j, neighs[ib], neighs[j], n );
+            //printf("ib %i,%i  %i,%i  | %i \n", ib, j, neighs[ib], neighs[j], n );
             //printf("agle[%i] a0,k %g,%g ", angles.size()-1, a0, k);
             //println(angles.back());
         }
@@ -579,7 +579,7 @@ class MMFFBuilder{  public:
         //constexpr
         static const double a0s[]{ 0.0d, 0.0d, M_PI, 120*M_PI/180, 109.5*M_PI/180 };
         double a0 = a0s[nsigma];
-        printf( "atom[%i] ns %i a0,ks %g %g   {%g,%g,%g,%g} %g \n", ia, nsigma, a0, ksigma, a0s[0],a0s[1],a0s[2],a0s[3] , a0s[nsigma] );
+        //printf( "atom[%i] ns %i a0,ks %g %g   {%g,%g,%g,%g} %g \n", ia, nsigma, a0, ksigma, a0s[0],a0s[1],a0s[2],a0s[3] , a0s[nsigma] );
         addAnglesUpToN( nsigma, conf.neighs, a0, ksigma );
     }
     void autoAngles(double ksigma, double kpi){
@@ -616,7 +616,7 @@ class MMFFBuilder{  public:
         int ia=-1,ja=-1;
         for(int i=0;i<bonds.size(); i++){
             const Vec2i& b = bonds[i].atoms;
-            printf( "pair[%i] %i,%i | %i %i  | %i %i %i \n", i, b.i, b.j,   ia,ja ,   b.i>=b.j,  b.i<ia, b.j<=ja );
+            //printf( "pair[%i] %i,%i | %i %i  | %i %i %i \n", i, b.i, b.j,   ia,ja ,   b.i>=b.j,  b.i<ia, b.j<=ja );
             if(b.i>=b.j){ return false; }
             if(b.i<ia)  { return false; }
             else if (b.i>ia){ia=b.i; ja=-1; };
@@ -627,7 +627,7 @@ class MMFFBuilder{  public:
     }
 
     bool sortBonds(){
-        printf( "sortBonds \n" );
+        //printf( "sortBonds \n" );
         // sort bonds so that
         //   1) (b.i<b.j)
         //   1) if(bk.i) (b.i<b.j)
@@ -682,7 +682,7 @@ class MMFFBuilder{  public:
         for(int i=0; i<nb;i++){
             bback[i].atoms.order();
             bonds[i]=bback[i];
-            printf( " bond[%i] (%i,%i) \n", i, bback[i].atoms.i, bback[i].atoms.j );
+            //printf( " bond[%i] (%i,%i) \n", i, bback[i].atoms.i, bback[i].atoms.j );
         }
         for(int i=0; i<angles.size();i++){
             Vec2i& bs = angles[i].bonds;

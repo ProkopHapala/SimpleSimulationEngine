@@ -12,13 +12,12 @@ bool checkParisSorted( int n, Vec2i* pairs ){
     int ia=-1,ja=-1;
     for(int i=0;i<n; i++){
         const Vec2i& b = pairs[i];
-        printf( "pair[%i] %i,%i | %i %i  | %i %i %i ", i, b.i, b.j,   ia,ja ,   b.i>=b.j,  b.i<ia, b.j<=ja );
+        //printf( "pair[%i] %i,%i | %i %i  | %i %i %i ", i, b.i, b.j,   ia,ja ,   b.i>=b.j,  b.i<ia, b.j<=ja );
         if(b.i>=b.j){ return false; }
         if(b.i<ia)  { return false; }
         else if (b.i>ia){ia=b.i; ja=-1; };
         if(b.j<=ja){ return false; }
         ja=b.j;
-        printf("\n");
     }
     return true;
 }
