@@ -43,7 +43,7 @@ _inline_T const T& _min  (const T& a, const T& b) { return !(a>b)?a:b; }
 _inline_T const T& _max  (const T& a, const T& b) { return !(a<b)?a:b; }
 _inline_T const T& _clamp(const T& a, const T& amax, const T& amin){ return _max(amin,_min(amax,a)); }
 
-_inline_T const T& _abs  (const T& a ){ return !(a<0)?a:-a; }
+_inline_T T        _abs  (const T& a ){ return !(a<0)?a:-a; }
 _inline_T int      signum(T val)      { return (T(0) < val) - (val < T(0)); }
 
 // ======= allocation

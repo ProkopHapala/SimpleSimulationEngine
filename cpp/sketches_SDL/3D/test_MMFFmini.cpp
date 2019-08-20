@@ -23,6 +23,7 @@
 #include "NBFF.h"
 #include "MMFFBuilder.h"
 #include "DynamicOpt.h"
+#include "QEq.h"
 
 //#include "NBSRFF.h"
 //#include "IO_utils.h"

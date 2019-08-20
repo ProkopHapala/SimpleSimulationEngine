@@ -111,6 +111,7 @@ struct MMFFAtomConf{
     inline bool addPi   (     ){ return addNeigh((int)NeighType::pi   ,npi); };
     inline bool addEpair(     ){ return addNeigh((int)NeighType::epair,ne ); };
     inline int  clearNonBond(){ n=nbond; npi=0;ne=0;nH=0; };
+    inline bool setNonBond(int npi_,int ne_){ npi=npi_; int ne=ne_; n=nbond+npi+ne+nH; }
 
     void print()const{ printf( "AtomConf{ ia %i, n %i nb %i np %i ne %i nH %i (%i,%i,%i,%i) }", iatom, n, nbond, npi, ne, nH , neighs[0],neighs[1],neighs[2],neighs[3] ); }
 };

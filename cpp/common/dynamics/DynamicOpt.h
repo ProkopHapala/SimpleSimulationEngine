@@ -22,6 +22,7 @@ class DynamicOpt{ public:
 
     double f_limit      = 10.0;
     double v_limit      = 10.0;
+    //double l_limit      = 0.1;
     double dr_limit     = 0.1;
     //double fscale_safe  = 1;
     double scale_dt  = 1;

@@ -172,11 +172,21 @@ double DynamicOpt::move_FIRE(){
 
 	double dt_=dt;
 
-    if( ff>(f_limit*f_limit )){
-        dt_*=sqrt(f_limit/sqrt(ff));
-        //printf( "force too large: %g => limit dt: %g \n", f, dt_ );
-    };
+    //if( ff>(f_limit*f_limit )){
+    //    dt_*=sqrt(f_limit/sqrt(ff));
+    //   //printf( "force too large: %g => limit dt: %g \n", f, dt_ );
+    //};
 
+    if( ff>(f_limit*f_limit) ){
+        double f = sqrt(ff);
+        if( ff>(100*f_limit*f_limit) ){
+            cleanVel();
+            move_GD( dr_limit/f ); // do GD step of length == l_limit
+            return ff;
+        }
+        //printf( "force too large: %g => limit dt: %g \n", f, dt_ );
+        dt_*=sqrt( f_limit/f );
+    };
 
     /*
     // dr_limit
