@@ -24,38 +24,38 @@
 
 
 
-template <class TYPE>
-inline double triangleArea( const Vec2TYPE<TYPE>& a, const Vec2TYPE<TYPE>& b, const Vec2TYPE<TYPE>& c ){ 
+template <class T>
+inline double triangleArea( const Vec2T<T>& a, const Vec2T<T>& b, const Vec2T<T>& c ){
     //https://www.mathopenref.com/coordtrianglearea.html
-    return ( a.x*(b.y-c.y) + b.x*(c.y-a.y) + c.x*(a.y-b.y) )*0.5; 
+    return ( a.x*(b.y-c.y) + b.x*(c.y-a.y) + c.x*(a.y-b.y) )*0.5;
 }
 
-template <class TYPE>
-inline void dtriangleArea( const Vec2TYPE<TYPE>& b, const Vec2TYPE<TYPE>& c, Vec2TYPE<TYPE>& da ){ 
+template <class T>
+inline void dtriangleArea( const Vec2T<T>& b, const Vec2T<T>& c, Vec2T<T>& da ){
     da.x =  (b.y-c.y)*0.5;
     da.y = -(b.x-c.x)*0.5;
 }
 
 
-template <class TYPE>
-inline bool pointInRect( const Vec2TYPE<TYPE>& p, TYPE x0, TYPE y0, TYPE x1, TYPE y1 ){ return ( p.x > x0 ) && ( p.x < x1 ) && ( p.y > y0 ) && ( p.y < y1 ); };
+template <class T>
+inline bool pointInRect( const Vec2T<T>& p, T x0, T y0, T x1, T y1 ){ return ( p.x > x0 ) && ( p.x < x1 ) && ( p.y > y0 ) && ( p.y < y1 ); };
 
-template <class TYPE>
-inline bool pointInRect( const Vec2TYPE<TYPE>& p, const Vec2TYPE<TYPE>& vmax, const Vec2TYPE<TYPE>& vmin ){ return ( p.x > vmin.x ) && ( p.x < vmax.x ) && ( p.y > vmin.y ) && ( p.y < vmax.y ); };
+template <class T>
+inline bool pointInRect( const Vec2T<T>& p, const Vec2T<T>& vmax, const Vec2T<T>& vmin ){ return ( p.x > vmin.x ) && ( p.x < vmax.x ) && ( p.y > vmin.y ) && ( p.y < vmax.y ); };
 
-template <class TYPE>
-inline bool pointInCircle( const Vec2TYPE<TYPE>& p, const Vec2TYPE<TYPE>& center, TYPE rmax ){
-	Vec2TYPE<TYPE> d;
+template <class T>
+inline bool pointInCircle( const Vec2T<T>& p, const Vec2T<T>& center, T rmax ){
+	Vec2T<T> d;
 	d.set_sub( p, center );
-	TYPE r2 = d.norm2();
+	T r2 = d.norm2();
 	return (r2 < ( rmax * rmax ) );
 }
 
-template <class TYPE>
-inline bool pointInConvexPolygon( const Vec2TYPE<TYPE>& p, TYPE * buf, int n ){
+template <class T>
+inline bool pointInConvexPolygon( const Vec2T<T>& p, T * buf, int n ){
     //printf( " point %f %f \n", p.x, p.y );
 	for ( int i=0; i<n; i++ ){
-		TYPE cv = p.dot( *(Vec2d*)buf );
+		T cv = p.dot( *(Vec2d*)buf );
         //printf( " dir %f %f   cv %f %f   \n", (*(Vec2d*)buf).x, (*(Vec2d*)buf).y,    cv, buf[2] );
 		if( cv < buf[2] ) return false;
 		buf += 3;
@@ -64,10 +64,10 @@ inline bool pointInConvexPolygon( const Vec2TYPE<TYPE>& p, TYPE * buf, int n ){
 	return true;
 }
 
-template <class TYPE>
-inline bool pointInConvexParalelogram( const Vec2TYPE<TYPE>& p, TYPE * buf, int n ){
+template <class T>
+inline bool pointInConvexParalelogram( const Vec2T<T>& p, T * buf, int n ){
 	for ( int i=0; i<n; i++ ){
-		TYPE cv = p.dot( *buf );
+		T cv = p.dot( *buf );
 		if( ( cv < buf[2] ) || ( cv > buf[3] ) ) return false;
 		buf += 4;
 	}

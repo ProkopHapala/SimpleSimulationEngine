@@ -19,7 +19,7 @@
 #define SIGN_MASK 2147483648
 
 
-
+/*
 template<typename T>
 void frag2atoms(const Vec3TYPE<T>& pos, const Quat4TYPE<T>& qrot, int n, Vec3TYPE<T>* apos0, Vec3TYPE<T>* apos ){
     Mat3TYPE<T> mrot; qrot.toMatrix(mrot);
@@ -31,7 +31,7 @@ void frag2atoms(const Vec3TYPE<T>& pos, const Quat4TYPE<T>& qrot, int n, Vec3TYP
         //printf( "%i %i  (%g,%g,%g) (%g,%g,%g) \n", ifrag, j,  m_apos[j].x, m_apos[j].y, m_apos[j].z,   Tp.x, Tp.y, Tp.z  );
     }
 }
-
+*/
 
 
 
@@ -389,8 +389,9 @@ void frags2atoms(){
         //frag2atoms( ifrag, apos+frag2a[ifrag] );
         int im8 = ifrag<<3;
         Vec3d   pos = *((Vec3d* )(poses+im8  ));
-        Quat4d  rot = *((Quat4d*)(poses+im8+4));
-        frag2atoms( pos, rot, fragNa[ifrag], fapos0s[ifrag], apos+frag2a[ifrag] );
+        Quat4d  qrot = *((Quat4d*)(poses+im8+4));
+        //frag2atoms( pos, rot, fragNa[ifrag], fapos0s[ifrag], apos+frag2a[ifrag] );
+        qrot.rotatePoints0( fragNa[ifrag], fapos0s[ifrag], apos+frag2a[ifrag], pos, true );
     }
     //exit(0);
 }

@@ -64,6 +64,7 @@ inline void overlapFE(double r, double amp, double beta, double& e, double& fr )
     fr = (expar*(6 + 5*x +            x*x )*beta*0.33333333)/r;
 }
 
+/*
 template<typename T>
 void rotateVectors(int n, const Quat4TYPE<T>& qrot, Vec3TYPE<T>* h0s, Vec3TYPE<T>* hs ){
     Mat3TYPE<T> mrot;
@@ -76,6 +77,7 @@ void rotateVectors(int n, const Quat4TYPE<T>& qrot, Vec3TYPE<T>* h0s, Vec3TYPE<T
         //ps[j].set_add_mul( pos, p_, r0 );
     }
 }
+*/
 
 struct RigidAtomType{
     int    nbond = 4;  // number bonds
@@ -245,7 +247,8 @@ class RARFF{ public:
             //int            nbi   = typei.nbond;
             Vec3d           pi   = atomi.pos;
 
-            rotateVectors<double>(N_BOND_MAX, atomi.qrot, typei.bh0s, bhs );
+            //rotateVectors<double>(N_BOND_MAX, atomi.qrot, typei.bh0s, bhs );
+            atomi.qrot.rotateVectors(N_BOND_MAX, typei.bh0s, bhs, false );
 
             for(int j=0; j<natom; j++){
                 RigidAtom&     atomj = atoms[j];

@@ -127,6 +127,12 @@ inline T fastExp_n8(T x){
     return e;
 }
 
+inline double pow3(double x) { return x*x*x; }
+inline double pow4(double x) { x*=x;            return x*x;     }
+inline double pow5(double x) { double x2=x*x;   return x2*x2*x; }
+inline double pow6(double x) { x*=x;            return x*x*x;   }
+inline double pow7(double x) { double x3=x*x*x; return x3*x3*x; }
+inline double pow8(double x) { x*=x; x*=x;      return x*x;     }
 
 inline double powN(double x, uint8_t n) {
     uint8_t mask=1;

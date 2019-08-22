@@ -67,7 +67,7 @@ void AppSDL2OGL_3D::camera_FreeLook( const Vec3d& pos ){
     //Vec3f camPos;
     convert( pos, cam.pos );
     qCamera.toMatrix( cam.rot );
-    cam.rot.T();
+    cam.rot.makeT();
 	float glMat[16];
 	Draw3D::toGLMatCam( { 0.0f, 0.0f, 0.0f}, cam.rot, glMat );
 	glMultMatrixf( glMat );

@@ -76,7 +76,10 @@ void drawScalarArray(int n, Vec3d* ps, double* vs, double vmin, double vmax ){
 //void drawRigidAtom( const Vec3d& pos, Vec3d* bhs ){
 void drawRigidAtom( RigidAtom& atom ){
     Vec3d bhs[N_BOND_MAX];
-    rotateVectors<double>(N_BOND_MAX, atom.qrot, atom.type->bh0s, bhs );
+
+    //rotateVectors<double>(N_BOND_MAX, atom.qrot, atom.type->bh0s, bhs );
+    atom.qrot.rotateVectors(N_BOND_MAX, atom.type->bh0s, bhs, false );
+
     Draw3D::drawPointCross( atom.pos, 0.1 );
     //for(int i=0; i<N_BOND_MAX; i++){
     for(int i=0; i<atom.type->nbond; i++){
@@ -246,7 +249,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
 
     Vec3d bhs[N_BOND_MAX];
-    rotateVectors<double>(N_BOND_MAX, atom1.qrot, atom1.type->bh0s, bhs );
+    //rotateVectors<double>(N_BOND_MAX, atom1.qrot, atom1.type->bh0s, bhs );
+    atom1.qrot.rotateVectors(N_BOND_MAX, atom1.type->bh0s, bhs, false );
     for(int i=0; i<npoints; i++){
         Vec3d torq;
         Vec3d dij   = points[i] - atom1.pos;

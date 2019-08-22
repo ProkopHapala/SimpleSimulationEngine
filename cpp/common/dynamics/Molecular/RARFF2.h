@@ -27,11 +27,11 @@ Optimization:
         - we can perhaps save sqrt() calculation
 
 
-Simple reactive force-field for mix of sp2 and sp3 hybridized atoms. Energy is based on Morse potential where the attractive term is multiplied by product of cosines between oriented dangling-bonds  sticking out  of atoms (the white sticks). 
+Simple reactive force-field for mix of sp2 and sp3 hybridized atoms. Energy is based on Morse potential where the attractive term is multiplied by product of cosines between oriented dangling-bonds  sticking out  of atoms (the white sticks).
 
 More specifically for two atoms with positions pi,pj (dij=pi-pj, rij=|dij|, hij = dij/rij )
 
-energy is computed as 
+energy is computed as
 E = exp( -2a(rij-r0)) - 2 K exp( -a(rij-r0) )
 
 where rij is distance  K = (ci.cj.cj) where ci=dot(hi,hij), cj=dot(hj,hij), cij=dot(hi,hj) and where hi, hj are normalized vector in direction of bonds
@@ -71,6 +71,7 @@ inline void overlapFE(double r, double amp, double beta, double& e, double& fr )
     fr = (expar*(6 + 5*x +            x*x )*beta*0.33333333)/r;
 }
 
+/*
 template<typename T>
 void rotateVectors(int n, const Quat4TYPE<T>& qrot, Vec3TYPE<T>* h0s, Vec3TYPE<T>* hs ){
     Mat3TYPE<T> mrot;
@@ -83,6 +84,7 @@ void rotateVectors(int n, const Quat4TYPE<T>& qrot, Vec3TYPE<T>* h0s, Vec3TYPE<T
         //ps[j].set_add_mul( pos, p_, r0 );
     }
 }
+*/
 
 struct RigidAtomType{
     int    nbond = 4;  // number bonds
@@ -226,7 +228,7 @@ class RARFF2{ public:
         //return E;
 
         //evdW = 0;
-        E +=evdW; 
+        E +=evdW;
         //Eb=0;
         double fr    =  2*type.bMorse* E +   6*evdW*ir2vdW;
         //double fr    =   6*evdW*ir2vdW;
@@ -344,7 +346,7 @@ class RARFF2{ public:
         return E;
     }
 
-    void cleanAtomForce(){ 
+    void cleanAtomForce(){
         for(int i=0; i<natom; i++){  atoms[i].cleanForceTorq(); }
         int nval = natom*N_BOND_MAX*3;
         for(int i=0; i<nval; i++){ ((double*)fbonds)[i]=0; }
@@ -352,14 +354,14 @@ class RARFF2{ public:
 
     double projectBonds(){
         for(int i=0; i<natom; i++){
-            rotateVectors( N_BOND_MAX, atoms[i].qrot, atoms[i].type->bh0s, hbonds + i*N_BOND_MAX );
+            atoms[i].qrot.rotateVectors( N_BOND_MAX, atoms[i].type->bh0s, hbonds + i*N_BOND_MAX, false );
         }
     }
 
     void evalTorques(){
         for(int ia=0; ia<natom; ia++){
             RigidAtom& atomi = atoms[ia];
-            //Vec3d torq = Vec3dZero; 
+            //Vec3d torq = Vec3dZero;
             for(int ib=0; ib<atomi.type->nbond; ib++){
                 int io = 4*ia+ib;
                 fbonds[io].makeOrthoU(hbonds[io]);

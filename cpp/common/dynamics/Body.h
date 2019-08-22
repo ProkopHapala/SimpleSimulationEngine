@@ -31,10 +31,10 @@ class KinematicBody{ public:
 template<typename T>
 class Particle3D{ public:
     double age;
-    Vec3TYPE<T> pos;
-    Vec3TYPE<T> vel;
+    Vec3T<T> pos;
+    Vec3T<T> vel;
 
-    inline void move(T dt, const Vec3TYPE<T>& accel ){
+    inline void move(T dt, const Vec3T<T>& accel ){
         age += dt;
         vel.add_mul( accel, dt );
 		pos.add_mul( vel,   dt );

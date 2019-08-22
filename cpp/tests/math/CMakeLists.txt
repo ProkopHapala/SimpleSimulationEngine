@@ -13,7 +13,7 @@ add_library(test_Lingebra SHARED test_Lingebra.cpp $<TARGET_OBJECTS:Lingebra> )
 
 
 add_custom_command(
-     TARGET ${PROJECT_NAME} Test_Lingebra
+     TARGET ${PROJECT_NAME} test_Lingebra
      COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/py ${CMAKE_CURRENT_BINARY_DIR}/py
 #    COMMAND ${CMAKE_COMMAND} -E create_symlink ${MY_SRC_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
 )

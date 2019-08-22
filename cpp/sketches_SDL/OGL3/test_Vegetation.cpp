@@ -182,7 +182,7 @@ void renderPhasesOct( Mat4f camMat, int n ){
 
             d.normalize();
             modelMat.fromDirUp(d,up);
-            modelMat.T();
+            modelMat.makeT();
             modelMat.mul(0.25);
 
             Shader * sh;

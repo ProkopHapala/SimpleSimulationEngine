@@ -327,7 +327,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         2.0,
         2.0,
     };
-
+    DEBUG
 /*
     const int natom=5+2,nbond=4+3,nang=6;
     Vec3d apos0[] = {

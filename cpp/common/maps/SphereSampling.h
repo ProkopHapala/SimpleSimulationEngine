@@ -147,7 +147,7 @@ void sampleTri( Vec3d p, Vec3i tri, Vec3d* verts, Vec3d& c ){
 
 
 template<typename T>
-void diTri2cartes( T fa, T fb, const Vec3TYPE<T>& a, const Vec3TYPE<T>& b, const Vec3TYPE<T>& c, const Vec3TYPE<T>& d,  Vec3TYPE<T>& p ){
+void diTri2cartes( T fa, T fb, const Vec3T<T>& a, const Vec3T<T>& b, const Vec3T<T>& c, const Vec3T<T>& d,  Vec3T<T>& p ){
     T fd = (fa+fb)*0.5;
     if( fa>fb ){ T f=(fa-fb); p = d*(fd-0.5*f) + c*(1-fd-0.5*f) + a*f; }
     else       { T f=(fb-fa); p = d*(fd-0.5*f) + c*(1-fd-0.5*f) + b*f; }

@@ -827,6 +827,29 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 	    glEnd();
     };
 
+    void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc ){
+        glBegin(GL_LINES);
+        for(int i=0; i<n; i++){
+            Vec3d p=ps[i];        glVertex3f(p.x,p.y,p.z);
+            p.add_mul( vs[i], sc); glVertex3f(p.x,p.y,p.z);
+        }
+        glEnd();
+    }
+
+    void drawScalarArray(int n, Vec3d* ps, double* vs, double vmin, double vmax ){
+        glBegin(GL_POINTS);
+        double sc = 1/(vmax-vmin);
+        for(int i=0; i<n; i++){
+            Vec3d p=ps[i];
+            double c = (vs[i]-vmin)*sc;
+            glColor3f(c,c,c);
+            glVertex3f(p.x,p.y,p.z);
+            //printf( "i %i p(%g,%g,%g) v: %g c: %g\n", i, p.x,p.y,p.z, vs[i], c );
+        }
+        glEnd();
+    }
+
+
     inline void simplex_deriv(
         const Vec2d& da, const Vec2d& db,
         double p7, double p8, double p9, double p4, double p5, double p6, double p2, double p3,
