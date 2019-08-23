@@ -12,6 +12,49 @@
 #define R2SAFE  1.0e-8f
 #define F2MAX   10.0f
 
+
+inline double evalCos2(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, double c0){
+    double c    = hi.dot(hj) - c0;
+    double dfc  =  k*-2*c;
+    fi.add_mul(hj,dfc);
+    fj.add_mul(hi,dfc);
+    return k*c*c;
+}
+
+inline double evalCos2_o(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, double c0){
+    double c    = hi.dot(hj) - c0;
+    double dfc  =  k*-2*c;
+    double dfcc = -c*dfc;
+    fi.add_lincomb( dfc,hj, dfcc,hi );
+    fj.add_lincomb( dfc,hi, dfcc,hj );
+    return k*c*c;
+}
+
+inline double evalCosHalf(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, Vec2d cs ){
+    Vec3d h; h.set_add( hi, hj );
+    double c2 = h.norm2()*0.25d;               // cos(a/2) = |ha+hb|
+    double s2 = 1-c2;
+    //printf( "ang[%i] (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) c2 %g s2 %g \n", ig, ha.x,ha.y,ha.z,  hb.x,hb.y,hb.z,  h.x,h.y,h.z,   c2, s2 );
+    double c = sqrt(c2);
+    double s = sqrt(s2);
+    cs.udiv_cmplx({c,s});
+    double E         =  k*( 1 - cs.x );  // just for debug ?
+    double fr        = -k*(     cs.y );
+    // project to per leaver
+    //c2 *=-2;
+    //double lw     = 2*s*c;       //    |h - 2*c2*a| =  1/(2*s*c) = 1/sin(a)
+    //double fra    = fr/(lbond[ib.a]*lw);
+    //double frb    = fr/(lbond[ib.b]*lw);
+    fr /= 2*c*s;  // 1/sin(2a)
+    c2 *=-2*fr;
+    Vec3d fa,fb;
+    fi.set_lincomb( fr,h,  c2,hi );  //fa = (h - 2*c2*a)*fr / ( la* |h - 2*c2*a| );
+    fj.set_lincomb( fr,h,  c2,hj );  //fb = (h - 2*c2*b)*fr / ( lb* |h - 2*c2*b| );
+    return E;
+}
+
+
+
 inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double qq ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     double ir2  = 1/( dp.norm2() + R2SAFE );
@@ -20,6 +63,18 @@ inline void addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, double r0, double eps,
     double ir6  = ir2_*ir2_*ir2_;
     double fr   = ( ( 1 - ir6 )*ir6*12*eps + ir*qq*-COULOMB_CONST )*ir2;
     f.add_mul( dp, fr );
+}
+
+inline void addAtomicForceMorse( const Vec3d& dp, Vec3d& f, double r0, double eps, double beta ){
+    //Vec3f dp; dp.set_sub( p2, p1 );
+    const double R2ELEC = 1.0;
+    double r     = sqrt( dp.norm2()+R2SAFE );
+    double expar = exp ( beta*(r-r0) );
+    //double E     = eps*( expar*expar - 2*expar );
+    double fr    = eps*2*beta*( expar*expar - expar );
+    //printf( " %g -> %g | (%g,%g,%g) %g\n" , r, fr,  r0, eps,  q, alpha );
+    //printf( " r %g expar %g fr %g kqq %g a %g eps %g \n" , r, expar, fr, COULOMB_CONST*qq, alpha, eps );
+    f.add_mul( dp, fr/r );
 }
 
 inline void addAtomicForceMorseQ( const Vec3d& dp, Vec3d& f, double r0, double eps, double qq, double alpha ){

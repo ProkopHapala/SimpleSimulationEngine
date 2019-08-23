@@ -41,7 +41,6 @@ class TestAppFARFF: public AppSDL2OGL_3D { public:
     DynamicOpt opt;
 
 
-
     Plot2D plot1;
 
     double  Emin,Emax;
@@ -66,11 +65,11 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
-    srand(0);
+    srand(15480);
     //srand(2);
-    int nat = 3;
+    int nat = 15;
     ff.realloc(nat);
-    double sz = 3;
+    double sz = 4;
 
     for(int ia=0; ia<nat; ia++){
         ff.apos[ia].fromRandomBox( (Vec3d){-sz,-sz,-1.0},(Vec3d){sz,sz,1.0} );
@@ -78,7 +77,7 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         double rnd=randf(); if(rnd>0.7){ if(rnd<0.9){ ff.aconf[ia].a=3; }else{ ff.aconf[ia].a=2; }  }
         for(int j=0; j<N_BOND_MAX; j++){
             int io = j+ia*N_BOND_MAX;
-            printf( "atom[%i] %i %i \n", ia, j, io );
+            //printf( "atom[%i] %i %i \n", ia, j, io );
             ff.opos[io].fromRandomSphereSample();
         }
     }
@@ -90,20 +89,21 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     int ia,io;
     ia=0; io=ia*N_BOND_MAX;
-    ff.apos [ia].set( 0.1,0.0,0.0);
-    ff.aconf[ia].set(4,4,4);
+    ff.apos [ia].set( 0.0,0.0,0.0);
+    ff.aconf[ia].set(3,4,4);
     ff.opos [io+0].set(-1.0,0.0,-0.1);
     ff.opos [io+1].set(+1.0,0.0,-0.1);
-    ff.opos [io+2].set(0.0,+1.0,0.3);
-    ff.opos [io+3].set(0.0,-1.0,0.3);
+    ff.opos [io+2].set(0.0,+1.0, 1.3);
+    ff.opos [io+3].set(0.0,-1.0,-1.3);
 
     ia=1; io=ia*N_BOND_MAX;
     ff.apos [ia].set(-1.0,0.0,0.0);
-    ff.aconf[ia].set(4,4,4);
-    ff.opos [io+0].set(-1.0,0.0,-0.1);
-    ff.opos [io+1].set( 1.0,0.0,-0.1);
+    ff.aconf[ia].set(3,4,4);
+    ff.opos [io+0].set(+1.0,0.0,-0.1);
+    ff.opos [io+1].set(-1.0,0.0,-0.1);
     ff.opos [io+2].set(0.0,+1.0,+0.1);
     ff.opos [io+3].set(0.0,-1.0,+0.1);
+
     ia=2; io=ia*N_BOND_MAX;
     ff.apos [ia].set(+1.2,0.0,0.0);
     ff.aconf[ia].set(4,4,4);
@@ -113,8 +113,36 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.opos [io+3].set(0.0,-1.0,-0.1);
 
 
-    ff.cleanForce();
-    ff.eval();
+    // =========== check numerical derivatives
+
+    /*
+    auto check_froce_atom0 = [&](const Vec3d& p,Vec3d& f)->double{
+        ff.apos[0] = p;
+        ff.cleanForce();
+        double E = ff.eval();
+        f = ff.aforce[0] * -1;
+        return E;
+    };
+
+    auto check_froce_orb0 = [&](Vec3d h,Vec3d& f)->double{
+        //printf( "check_froce_orb0 h (%g,%g,%g)\n", h.x, h.y, h.z );
+        ff.opos[0] = h;
+        ff.cleanForce();
+        double E = ff.eval();
+        ff.oforce[0].makeOrthoU(ff.opos[0]);
+        f = ff.oforce[0] * -1;
+        return E;
+    };
+
+    Vec3d fE,f, p = {-1.0,0.2,0.3}; p.normalize();
+    printf("Atom[0] "); checkDeriv(check_froce_atom0,{1.0,1.0,1.0}, 0.0001,fE, f );
+    printf("Orb [0] "); checkDeriv(check_froce_orb0 ,p, 0.0001,fE, f );
+    //exit(0);
+    */
+
+
+    //ff.cleanForce();
+    //ff.eval();
 
 
     opt.bindOrAlloc( 3*ff.nDOF, (double*)ff.dofs, 0, (double*)ff.fdofs, 0 );
@@ -141,9 +169,9 @@ void TestAppFARFF::draw(){
         ff.eval();
         //ff.apos[0].set(.0);
 
-        if(bRun)ff.moveGD(0.001, 1, 1);
+        //if(bRun)ff.moveGD(0.001, 1, 1);
 
-        //F2 = opt.move_FIRE();
+        F2 = opt.move_FIRE();
 
         //for(int i=0; )printf( "",  )
 

@@ -22,7 +22,7 @@ Flexible Atom sp-hybridization forcefield
 #include "Vec2.h"
 #include "Vec3.h"
 //#include "quaternion.h"
-//#include "Forces.h"
+#include "Forces.h"
 
 //include "geom3D.h"
 //#include "integerOps.h"
@@ -37,6 +37,9 @@ constexpr static const Vec2d sp_cs0s[] = {
 {  -0.5d, 0.86602540378d}, // 3, sp2
 {-1/3.0d, 0.94280904158d}, // 4, sp3
 };
+
+ // |f-fE|: 27.9227   fE(8.31683,-3.56436,-4.75248)   f(-14.405,6.17289,8.2313)
+
 
 struct FlexibleAtomType{
 
@@ -53,10 +56,10 @@ struct FlexibleAtomType{
     //double Kae   =  20.0; // atom-electron strenght
 
     double Wee  =  1.0;   // electon-electron width
-    double Kee  = -20.0;  // electon-electron strenght
-    double Kpp  = -20.0;  // onsite  p-p orthogonalization strenght
+    double Kee  = 10.0;  // electon-electron strenght
+    double Kpp  = 10.0;  // onsite  p-p orthogonalization strenght
 
-    double Kpi  = -2.0;   // offsite p-p alignment         strenght
+    double Kpi  =  2.0;   // offsite p-p alignment         strenght
     //double Kpe  = -15.0;  // onsite  p-s orthogonalization strenght
 
 
@@ -77,7 +80,7 @@ struct FlexiblePairType{
     double aMorse =  4.0;  // EBond
     double bMorse = -1.0*2;  // kBond
 
-    double Kpi    =  -0.5;  // kPz
+    double Kpi    =   0.5;  // kPz
     //double vdW_R2 =  8.0;  // RcutVdW
     double vdW_c6 = -15.0; // c6
     double vdW_w6 =  pow6( 2.0 );
@@ -106,9 +109,8 @@ struct FlexiblePairType{
 
 class FARFF{ public:
 
-    constexpr static const double R2SAFE = 1e-6;
-
-    bool substract_LJq = true;
+    bool   substract_LJq = true;
+    double Eatoms=0,Epairs=0;
 
     FlexibleAtomType atype0;
     FlexiblePairType ptype0;
@@ -179,71 +181,6 @@ void cleanForce(){
     for(int i=0;i<natom;i++){ aenergy[i]=0;       }
 }
 
-inline double evalSigmaRepulse(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, double w2){
-    Vec3d d; d.set_sub( hj, hi);
-    double ir2  = 1/( d.norm2() + w2 );
-    double fr   = k*2*ir2*ir2;
-    d.mul( fr );
-    fi.add(d);
-    fj.sub(d);
-    return k*ir2;
-}
-
-inline double evalPiOrtho(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k ){
-    double c    = hi.dot(hj);
-    double dfc  = k*2*c;
-    //double dfcc = -c*dfc;
-    fi.add_mul(hj,dfc);
-    fj.add_mul(hi,dfc);
-    //fia.set_mul(hj,dfc);   fia.add_mul(hi,-c*dfc); // project out norm
-    //fja.set_mul(hi,dfc);   fja.add_mul(hj,-c*dfc);
-    //fi.add_lincomb( dfc, hj, dfcc, hi );
-    //fj.add_lincomb( dfc, hi, dfcc, hj );
-    //fi.add(fia); fj.add(fja);
-    return k*c*c;
-    //fa.sub(fia); fa   .sub(fja);
-}
-
-inline double evalCos2(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, double c0){
-    double c    = hi.dot(hj) - c0;
-    double dfc  =  k*2*c;
-    fi.add_mul(hj,dfc);
-    fj.add_mul(hi,dfc);
-    return k*c*c;
-}
-
-inline double evalCos2_o(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, double c0){
-    double c    = hi.dot(hj) - c0;
-    double dfc  =  k*2*c;
-    double dfcc = -c*dfc;
-    fi.add_lincomb( dfc,hj, dfcc,hi );
-    fj.add_lincomb( dfc,hi, dfcc,hj );
-    return k*c*c;
-}
-
-inline double evalCosHalf(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, Vec2d cs ){
-    Vec3d h; h.set_add( hi, hj );
-    double c2 = h.norm2()*0.25d;               // cos(a/2) = |ha+hb|
-    double s2 = 1-c2;
-    //printf( "ang[%i] (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) c2 %g s2 %g \n", ig, ha.x,ha.y,ha.z,  hb.x,hb.y,hb.z,  h.x,h.y,h.z,   c2, s2 );
-    double c = sqrt(c2);
-    double s = sqrt(s2);
-    cs.udiv_cmplx({c,s});
-    double E         =  k*( 1 - cs.x );  // just for debug ?
-    double fr        = -k*(     cs.y );
-    // project to per leaver
-    //c2 *=-2;
-    //double lw     = 2*s*c;       //    |h - 2*c2*a| =  1/(2*s*c) = 1/sin(a)
-    //double fra    = fr/(lbond[ib.a]*lw);
-    //double frb    = fr/(lbond[ib.b]*lw);
-    fr /= 2*c*s;  // 1/sin(2a)
-    c2 *=-2*fr;
-    Vec3d fa,fb;
-    fi.set_lincomb( fr,h,  c2,hi );  //fa = (h - 2*c2*a)*fr / ( la* |h - 2*c2*a| );
-    fj.set_lincomb( fr,h,  c2,hj );  //fb = (h - 2*c2*b)*fr / ( lb* |h - 2*c2*b| );
-    return E;
-}
-
 double evalAtom(int ia){
     //printf( "atom[%i] \n", ia );
 
@@ -271,28 +208,17 @@ double evalAtom(int ia){
 
     //int j_DEBUG=0;
     // -- repulsion between sigma bonds
-    for(int i=0; i<nsigma; i++){
+    for(int i=1; i<nsigma; i++){
         const Vec3d& hi = hs[i];
         Vec3d&       fi = fs[i];
         for(int j=0; j<i; j++){ // electron-electron
-            //E += evalSigmaRepulse( hi, hs[j], fi, fs[j], type.Kee, w2ee );
-            //E += evalCos2(hi,hs[j],fi,fs[j],type.Kee,cs0.x);
+            E += evalCos2  (hi,hs[j],fi,fs[j],type.Kee,cs0.x);
             //E += evalCos2_o(hi,hs[j],fi,fs[j],type.Kee,cs0.x);
 
-
-            //printf( "a[%i] ss[%i,%i]  \n", ia, i, j );
-            Vec3d fi_,fj_;
-            //E += evalSigmaRepulse( hi, hs[j], fi_, fj_, type.Kee, w2ee );
-            E += evalCos2(hi,hs[j],fi_,fj_,type.Kee,cs0.x);
-            fi_.makeOrthoU(hi); fj_.makeOrthoU(hs[j]);
-            fi.add(fi_);fs[j].add(fj_);
-            //if((ia==0)&&(j_DEBUG==i_DEBUG)){
-                glColor3f(0.0,1.0,1.0);
-                Draw3D::drawVecInPos(fi_,hs[i]+apos[ia]);
-                Draw3D::drawVecInPos(fj_,hs[j]+apos[ia]);
-            //}
-            //j_DEBUG++;
-
+            //Mat3Sd Ji,Jj;   // This gives exactly the same result for normalized vectors
+            //Ji.from_dhat(hi   ); Ji.mad_ddot(hs[j],fs[i], 2*type.Kee*c );
+            //Jj.from_dhat(hs[j]); Jj.mad_ddot(hi   ,fs[j], 2*type.Kee*c );
+            //E+=type.Kee*c*c;
 
         }
     }
@@ -302,25 +228,8 @@ double evalAtom(int ia){
         const Vec3d& hi = hs[i];
         Vec3d&       fi = fs[i];
         for(int j=0; j<i; j++){
-            //E += evalPiOrtho( hi, hs[j], fi, fs[j], type.Kpp   );
-            //E += evalCos2   ( hi, hs[j], fi, fs[j], type.Kpp, 0);
+            E += evalCos2   ( hi, hs[j], fi, fs[j], type.Kpp, 0);
         }
-    }
-
-    // remove normal forces ?  - Do it here? or elesewhere?
-    //for(int i=0; i<N_BOND_MAX; i++){ fs[i].makeOrthoU(hs[i]); }
-
-    // out-project force component which destroy normalization
-    //aforce[ia].add(fa);
-    //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( aforce[ia], pa );
-    //aforce[ia].set(0.); // DEBUG
-
-    // DEBUG
-    if(ia==0){
-        //for(int i=0; i<N_BOND_MAX; i++){ fs[i].makeOrthoU(hs[i]); }
-        glColor3f(0.0,1.0,0.0);
-        //for(int i=0;i<nsigma; i++){ Draw3D::drawVecInPos(fs[i],hs[i]+apos[ia]); }
-        Draw3D::drawVecInPos(fs[0],hs[0]+apos[ia]);
     }
 
     return E;
@@ -337,46 +246,20 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
     int nbj = confj.a;
 
     Vec3d  hij; hij.set_sub( apos[ja], apos[ia] );   // = apos[ja] - apos[ia];
+
     double r2   = hij.norm2() + R2SAFE;
     double r    = sqrt( r2 );
     double invr = 1/r;
     hij.mul(invr); // = dij*(1/rij);
 
-
-    double dxy=-hij.x*hij.y*invr;
-    double dxz=-hij.x*hij.z*invr;
-    double dyz=-hij.y*hij.z*invr;
-    double xx  = hij.x*hij.x;
-    double yy  = hij.y*hij.y;
-    double zz  = hij.z*hij.z;
-    double dxx=(yy+zz)*invr;
-    double dyy=(xx+zz)*invr;
-    double dzz=(xx+yy)*invr;
-
-    /*
-    double ir3 = 1/(r*r2);
-    double xx  = dij.x*dij.x;
-    double yy  = dij.y*dij.y;
-    double zz  = dij.z*dij.z;
-
-    double dxy=-dij.x*dij.y*ir3;
-    double dxz=-dij.x*dij.z*ir3;
-    double dyz=-dij.y*dij.z*ir3;
-    double dxx=(yy+zz)*ir3;
-    double dyy=(xx+zz)*ir3;
-    double dzz=(xx+yy)*ir3;
-    */
-
-    //double ir2vdW = 1/(r2 + type.vdW_w6 );
-
-
-    double r6     = r2*r2*r2;
+    double r4     = r2*r2;
+    double r6     = r4*r2;
     double invVdW = 1/( r6 + type.vdW_w6 );
     double EvdW   = type.vdW_c6*invVdW;
-    double fvdW   = -6*EvdW*invVdW*r6;
+    double fvdW   = -6*EvdW*invVdW*r4*r;
 
     // todo: replace this by other short range force ... so we can cutoff bonds
-    double expar =  exp( type.bMorse*( r - type.rbond0 ) );
+    double expar =    exp( type.bMorse*( r - type.rbond0 ) );
     double Esr   =    type.aMorse*expar*expar;
     double Eb    = -2*type.aMorse*expar;
     double fsr   =  2*type.bMorse*Esr;
@@ -388,8 +271,13 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
     //printf( "r[%i,%i] %g   | Rb %g   EvdW %g \n", ia,ja, r,  type.rbond0, EvdW );
 
     //DEBUG
+    //force.set(.0);
+    //E=Eb+Esr;
+    //E+=Eb;
     //force.add_mul(hij, frb );
-    //nbi=nbj=1;
+    //printf( "pair[%i,%i] r %g \n", ia, ja,  r );
+    //aforce[ia].add(force); aforce[ja].sub(force); return E;
+
 
 
     Mat3Sd Jbond;
@@ -406,9 +294,9 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
     double* ejs = oenergy+joff;
 
 
-    double ccut    = 0.8;
-    double invcut  = 1-ccut;
-    double invcut2 = invcut*invcut;
+    //double ccut    = 0.8;
+    //double invcut  = 1-ccut;
+    //double invcut2 = invcut*invcut;
 
 
     for(int ib=0; ib<nbi; ib++){
@@ -442,126 +330,62 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
             double e   = cc2*cc2;
             double de  = 4*cc2*cc;
 
-            /*
-            if(cc<ccut)continue;
-            double ccm = cc-ccut;
-            double e  = invcut2*ccm*ccm;
-            double de = 2*invcut2*ccm;
-            */
+            //if(cc<ccut)continue;
+            //double ccm = cc-ccut;
+            //double e  = invcut2*ccm*ccm;
+            //double de = 2*invcut2*ccm;
 
             // # = w*cc/(1+cc+w) =   w*(1+cc+w-(1+w))/(1+cc+w) = w - w*(1+w)/(1-cc+w)
             // # = w*cc/(1-cc+w) =  -w*(1-cc+w-(1+w))/(1-cc+w) = w + w*(1+w)/(1-cc+w)
-            //const double wBond  = 0.1;
+            //const double wBond  = 0.05;
             //const double wwBond = wBond*(1+wBond);
-            //double invcc   = 1/(1-cc+wBond);
+            //double invcc   = 1/(1+cc+wBond);
             //double invccww = wwBond*invcc;
-            //double e       = invccww - wBond;
-            //double de      = invccww*invcc;
+            //double e       = (invccww + wBond);
+            //double de      = -invccww*invcc;
 
 
-            double eEb = e*Eb*0.5;
+            double eEb = e*Eb*0.5d;
             eis[ib]+=eEb;
             ejs[jb]+=eEb;
             E += eEb+eEb;
 
 
-            //double deEb     =    Eb*de;
+            double deEb     =    Eb*de;
             //double deEbcicj = -deEb*ci*cj;
-            //double deEbinvr = deEb*invr;
-            /*
-            Jbond.mad_ddot( hi, force, deEbcijinvr*cj );
-            Jbond.mad_ddot( hj, force, deEbcijinvr*ci );
-            force.add_mul ( hij, frb*e );
-            fi.add_lincomb( -cj*deEbcij, hij,    deEbcicj,  hj );
-            fj.add_lincomb( -ci*deEbcij, hij,    deEbcicj,  hi );
-            */
+            double deEbinvr =  deEb*invr;
 
+            //Vec3d fi_=Vec3dZero,fj_=Vec3dZero,force_=Vec3dZero,force__=Vec3dZero; // DEBUG
 
-            Vec3d fi_,fj_,force_; // DEBUG
-            /*
-            Jbond.mad_ddot( hi, force_, deEbcijinvr*cj );
-            Jbond.mad_ddot( hj, force_, deEbcijinvr*ci );
-            force_.add_mul ( hij, frb*e );
-            fi_.set_lincomb( -cj*deEbcij, hij,    deEbcicj,  hj );
-            fj_.set_lincomb( -ci*deEbcij, hij,    deEbcicj,  hi );
-            */
-            // without orthogonalized force
+            //force.add_mul( hi, -deEbinvr*cj );
+            //force.add_mul( hj, -deEbinvr*ci );
+            Jbond.mad_ddot( hi, force, deEbinvr*cj );
+            Jbond.mad_ddot( hj, force, deEbinvr*ci );
+            force.add_mul(hij, e*frb);
 
+            fi.add_mul( hij, -cj*deEb );
+            fj.add_mul( hij, -ci*deEb );
 
-            //printf( "a[%i,%i]o[%i,%i] cc %g c(%g,%g,%g) e %g  f(%g,%g,%g) \n", ia,ja,ib,jb, cc,  ci,cj,cij,  e,  force.x,force.y,force.z );
-
-            //frb=0; // DEBUG
-
-
-            Vec3d fij_i=Vec3dZero,fij_j=Vec3dZero;
-            fij_i.x = Eb*de*cj*( hi.x*dxx + hi.y*dxy + hi.z*dxz );
-            fij_i.y = Eb*de*cj*( hi.x*dxy + hi.y*dyy + hi.z*dyz );
-            fij_i.z = Eb*de*cj*( hi.x*dxz + hi.y*dyz + hi.z*dzz );
-            fij_j.x = Eb*de*ci*( hj.x*dxx + hj.y*dxy + hj.z*dxz );
-            fij_j.y = Eb*de*ci*( hj.x*dxy + hj.y*dyy + hj.z*dyz );
-            fij_j.z = Eb*de*ci*( hj.x*dxz + hj.y*dyz + hj.z*dzz );
-            force_.add(fij_i); force_.add(fij_j);
-
-
-            //force_.x = Eb*de*( cj*( hi.x*dxx + hi.y*dxy + hi.z*dxz )     +    ci*( hj.x*dxx + hj.y*dxy + hj.z*dxz )   )  + hij.x*frb*e;
-            //force_.y = Eb*de*( cj*( hi.x*dxy + hi.y*dyy + hi.z*dyz )     +    ci*( hj.x*dxy + hj.y*dyy + hj.z*dyz )   )  + hij.y*frb*e;
-            //force_.z = Eb*de*( cj*( hi.x*dxz + hi.y*dyz + hi.z*dzz )     +    ci*( hj.x*dxz + hj.y*dyz + hj.z*dzz )   )  + hij.z*frb*e;
-
-
-            fi_.x = -Eb*de*( cj*hij.x );
-            fi_.y = -Eb*de*( cj*hij.y );
-            fi_.z = -Eb*de*( cj*hij.z );
-
-            fj_.x = -Eb*de*( ci*hij.x );
-            fj_.y = -Eb*de*( ci*hij.y );
-            fj_.z = -Eb*de*( ci*hij.z );
-
-
-            fi_.makeOrthoU(hi);
-            fj_.makeOrthoU(hj);
-            fi.add(fi_); fj.add(fj_);
-            //aforce[ia].add(fi_); aforce[ja].add(fj_);
-
-            //if((ia==0)&&(ja==1)){
-            //if(ia==0){
-                printf( "a[%i,%i]o[%i,%i] r %g Eb %g cc %g(%g,%g) e %g de %g |fia| %g |fi| %g \n", ia,ja,ib,jb, r, Eb,   cc,  ci,cj,  e, de , force_.norm(), fi_.norm() );
-                glColor3f(1,0,0);
-                Draw3D::drawVecInPos( force_, apos[ia] );
-                //Draw3D::drawVecInPos( fij_i, apos[ia] );
-                //Draw3D::drawVecInPos( fij_j, apos[ia] );
-                glColor3f(1,0,1);
-                Draw3D::drawVecInPos( fi_, apos[ia]+hi );
-                Draw3D::drawVecInPos( fj_, apos[ja]+hj );
-                //Draw3D::drawVecInPos( hij*(-cj*deEbcij) + hj*(deEbcicj), apos[ia]+hi );
-                //Draw3D::drawVecInPos( hij*(-ci*deEbcij) + hi*(deEbcicj), apos[ia]+hj );
-            //}
-
-            force_.add_mul(hij, e*frb);
-
-
-
-            force.add(force_);
+            //force.add(force_);
         }
     }
 
-    /*
+
     // ---------- Pi-Pi interaction
-    //
     //printf( "%i,%i nbi %i nbj %i \n", ia, ja, nbi, nbj );
     if( (nbi==3)&&(nbj==3) ){ // align pz-pz in sp2-sp2 pair
         const Vec3d& hi = his[3];
         const Vec3d& hj = hjs[3];
         Vec3d&       fi = fis[3];
         Vec3d&       fj = fjs[3];
-        double cdot = hi.dot(hj);
+        double c = hi.dot(hj);
         //double E    = Epz * ( cdot*cdot );
-        double de = -2*cdot*type.Epz*Eb;
+        double de = -2*c*type.Kpi*Eb;
         //printf( "cdot %g Epz %g de %g \n", cdot, type.Epz, de );
         fi.add_mul(hj,de);
         fj.add_mul(hi,de);
         //force      // TODO: proper derivatives of energy
     }
-    */
 
     aforce[ia].add(force);
     aforce[ja].sub(force);
@@ -569,20 +393,24 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
 }
 
 double evalPairs(){
-    double E = 0;
+    Epairs = 0;
     for(int i=0; i<natom; i++){
         //FlexiblePairType& typei = *types[i];    // TODO add pairs later
         for(int j=i+1; j<natom; j++){
             //FlexiblePairType pairType;
             //pairType.combine( typei, *types[j] );
             //E += pairEF( i, j, typei.nbond, types[j]->nbond, pairType );
-            E += evalPair( i, j, ptype0 );
+            Epairs += evalPair( i, j, ptype0 );
         }
     }
-    return E;
+    return Epairs;
 }
 
-inline void evalAtoms(){ for(int i=0; i<natom; i++){ evalAtom(i);        } }
+inline double evalAtoms(){
+    Eatoms=0;
+    for(int i=0; i<natom; i++){ Eatoms+=evalAtom(i);        }
+    return Eatoms;
+}
 
 
 void normalizeOrbs(){
@@ -616,14 +444,15 @@ void removeNormalForces(){
     }
 }
 
-void eval(){
+double eval(){
     //cleanForce();
     normalizeOrbs();
-    evalAtoms (); // do this first to orthonormalize ?
+    Eatoms=evalAtoms(); // do this first to orthonormalize ?
     //transferOrbRecoil();
-    evalPairs ();
+    Epairs=evalPairs();
     //transferOrbRecoil();
     removeNormalForces();
+    return Eatoms + Epairs;
 }
 
 void moveGD(double dt, bool bAtom, bool bOrbital ){

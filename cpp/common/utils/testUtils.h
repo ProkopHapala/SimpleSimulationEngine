@@ -60,6 +60,23 @@ int  dbg(int priority, const char *format, ...){
 */
 
 
+template<typename Func>
+double checkDeriv(Func getEF,const Vec3d p0, double d, Vec3d& fE, Vec3d& f ){
+    getEF(p0,f);
+    for(int i=0;i<3;i++){
+        double E0,E1;
+        Vec3d p=p0;
+        p .array[i]-=d;   E0=getEF(p,f);
+        p .array[i]+=d*2; E1=getEF(p,f);
+        p .array[i]-=d;
+        fE.array[i]=(E1-E0)/(2*d);
+    }
+    double err = (f-fE).norm();
+    printf( " |f-fE|: %g   fE(%g,%g,%g)   f(%g,%g,%g) \n", err, fE.x, fE.y, fE.z, f.x,f.y,f.z );
+    return err;
+}
+
+
 inline uint64_t getCPUticks(){
     uint32_t lo, hi;
     __asm__ __volatile__ (
