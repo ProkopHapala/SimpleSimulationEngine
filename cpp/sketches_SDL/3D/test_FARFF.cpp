@@ -25,6 +25,8 @@
 
 //#include "RARFFarr.h"
 
+
+int i_DEBUG = 0;
 #include "DynamicOpt.h"
 #include "FlexibleAtomReactiveFF.h"
 
@@ -32,7 +34,7 @@
 
 class TestAppFARFF: public AppSDL2OGL_3D { public:
 
-    bool bRun = true;
+    bool bRun = false;
     int perFrame = 1;
 
     FARFF ff;
@@ -66,7 +68,7 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     srand(0);
     //srand(2);
-    int nat = 10;
+    int nat = 3;
     ff.realloc(nat);
     double sz = 3;
 
@@ -81,32 +83,39 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         }
     }
 
-    /*
+
+    //ff.atype0.Kee = -0.5;
+    //ff.atype0.Kpp = 0;
+
+
     int ia,io;
     ia=0; io=ia*N_BOND_MAX;
-    ff.apos [ia].set(-1.0,0.0,0.0);
-    ff.aconf[ia].set(1,4,4);
-    ff.opos [io].set(1.0,0.0,0.0);
+    ff.apos [ia].set( 0.1,0.0,0.0);
+    ff.aconf[ia].set(4,4,4);
+    ff.opos [io+0].set(-1.0,0.0,-0.1);
+    ff.opos [io+1].set(+1.0,0.0,-0.1);
+    ff.opos [io+2].set(0.0,+1.0,0.3);
+    ff.opos [io+3].set(0.0,-1.0,0.3);
+
     ia=1; io=ia*N_BOND_MAX;
-    ff.apos [ia].set(+2.0,0.0,0.0);
-    ff.aconf[ia].set(1,4,4);
-    ff.opos [io].set(-1.0,0.0,0.0);
-    */
+    ff.apos [ia].set(-1.0,0.0,0.0);
+    ff.aconf[ia].set(4,4,4);
+    ff.opos [io+0].set(-1.0,0.0,-0.1);
+    ff.opos [io+1].set( 1.0,0.0,-0.1);
+    ff.opos [io+2].set(0.0,+1.0,+0.1);
+    ff.opos [io+3].set(0.0,-1.0,+0.1);
+    ia=2; io=ia*N_BOND_MAX;
+    ff.apos [ia].set(+1.2,0.0,0.0);
+    ff.aconf[ia].set(4,4,4);
+    ff.opos [io+0].set(-1.0,0.0,+0.1);
+    ff.opos [io+1].set( 1.0,0.0,+0.1);
+    ff.opos [io+2].set(0.0,+1.0,-0.1);
+    ff.opos [io+3].set(0.0,-1.0,-0.1);
 
-
-    ff.cleanForce();
-
-
-
-    DEBUG
-
-
-    DEBUG
 
     ff.cleanForce();
     ff.eval();
 
-    DEBUG
 
     opt.bindOrAlloc( 3*ff.nDOF, (double*)ff.dofs, 0, (double*)ff.fdofs, 0 );
     //opt.setInvMass( 1.0 );
@@ -123,15 +132,18 @@ void TestAppFARFF::draw(){
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
 
+    //if(bRun){
     for(int itr=0;itr<perFrame;itr++){
-        printf( " ==== frame %i \n", frameCount );
+        printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
         double F2 = 1.0;
 
         ff.cleanForce();
         ff.eval();
-        //ff.moveGD(0.005, 1, 1);
+        //ff.apos[0].set(.0);
 
-        F2 = opt.move_FIRE();
+        if(bRun)ff.moveGD(0.001, 1, 1);
+
+        //F2 = opt.move_FIRE();
 
         //for(int i=0; )printf( "",  )
 
@@ -147,6 +159,7 @@ void TestAppFARFF::draw(){
         */
 
     }
+    //}
 
     //Vec3d bhs[N_BOND_MAX];
     //atom1.torq = (Vec3d){0.1,0.0,0.0};
@@ -160,12 +173,12 @@ void TestAppFARFF::draw(){
     double tsc = 0.1;
     for(int i=0; i<ff.natom; i++){
         glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross(ff.apos[i], 0.1 );
-        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( ff.aforce[i]*fsc, ff.apos[i]  );
+        //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( ff.aforce[i]*fsc, ff.apos[i]  );
         for(int j=0;j<N_BOND_MAX; j++){
             int io = j + i*N_BOND_MAX;
             if( j<ff.aconf[i].a ){
                 glColor3f(0.0,0.0,0.0); Draw3D::drawVecInPos( ff.opos[io],   ff.apos[i] );
-                glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( ff.oforce[io], ff.apos[i]+ff.opos[io] );
+                //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( ff.oforce[io], ff.apos[i]+ff.opos[io] );
             }else{
                 glColor3f(0.0,0.5,0.0); Draw3D::drawLine    ( ff.apos[i]+ff.opos[io]*0.5, ff.apos[i]-ff.opos[io]*0.5 );
             }
@@ -184,7 +197,7 @@ void TestAppFARFF::draw(){
     drawVectorArray( npoints, points, Forces, 0.02 );
 */
 
-    Draw3D::drawAxis( 1.0);
+    //Draw3D::drawAxis( 1.0);
 
     //exit(0);
 };
@@ -218,6 +231,10 @@ void TestAppFARFF::eventHandling ( const SDL_Event& event  ){
                 case SDLK_o:  perspective  = !perspective; break;
                 case SDLK_SPACE: bRun = !bRun;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
+
+
+                //case SDLK_LEFTBRACKET:  i_DEBUG=(i_DEBUG+1)%6; break;
+                case SDLK_RIGHTBRACKET: i_DEBUG=(i_DEBUG+1)%6; printf("i_DEBUG %i\n", i_DEBUG); break;
             }
             break;
     };

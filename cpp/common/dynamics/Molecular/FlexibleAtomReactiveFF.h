@@ -30,6 +30,14 @@ Flexible Atom sp-hybridization forcefield
 
 #define N_BOND_MAX 4
 
+constexpr static const Vec2d sp_cs0s[] = {
+{   0.0d,0.0d}, // 0, 0
+{   1.0d,0.0d}, // 1, sp0
+{  -1.0d,0.0d}, // 2, sp1
+{  -0.5d, 0.86602540378d}, // 3, sp2
+{-1/3.0d, 0.94280904158d}, // 4, sp3
+};
+
 struct FlexibleAtomType{
 
     double rbond0 =  0.8;  // Rbond
@@ -67,9 +75,9 @@ struct FlexiblePairType{
 
     double rbond0 =  1.6;  // Rbond
     double aMorse =  4.0;  // EBond
-    double bMorse = -0.7;  // kBond
+    double bMorse = -1.0*2;  // kBond
 
-    double Kpi    =  0.5;  // kPz
+    double Kpi    =  -0.5;  // kPz
     //double vdW_R2 =  8.0;  // RcutVdW
     double vdW_c6 = -15.0; // c6
     double vdW_w6 =  pow6( 2.0 );
@@ -171,19 +179,19 @@ void cleanForce(){
     for(int i=0;i<natom;i++){ aenergy[i]=0;       }
 }
 
-inline double evalSigmaRepulse(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double K, double w2){
+inline double evalSigmaRepulse(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, double w2){
     Vec3d d; d.set_sub( hj, hi);
     double ir2  = 1/( d.norm2() + w2 );
-    double fr   = K*2*ir2*ir2;
+    double fr   = k*2*ir2*ir2;
     d.mul( fr );
     fi.add(d);
     fj.sub(d);
-    return K*ir2;
+    return k*ir2;
 }
 
-inline double evalPiOrtho(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double K ){
+inline double evalPiOrtho(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k ){
     double c    = hi.dot(hj);
-    double dfc  =  K*2*c;
+    double dfc  = k*2*c;
     //double dfcc = -c*dfc;
     fi.add_mul(hj,dfc);
     fj.add_mul(hi,dfc);
@@ -192,26 +200,49 @@ inline double evalPiOrtho(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj
     //fi.add_lincomb( dfc, hj, dfcc, hi );
     //fj.add_lincomb( dfc, hi, dfcc, hj );
     //fi.add(fia); fj.add(fja);
-    return K*c;
+    return k*c*c;
     //fa.sub(fia); fa   .sub(fja);
 }
 
-/*
-inline double evalNormal(const Vec3d& hi, Vec3d& fi, double K ){
-    double c = hi.dot(hj);
-    double dfc  =  K*2*c;
-    //double dfcc = -c*dfc;
+inline double evalCos2(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, double c0){
+    double c    = hi.dot(hj) - c0;
+    double dfc  =  k*2*c;
     fi.add_mul(hj,dfc);
     fj.add_mul(hi,dfc);
-    //fia.set_mul(hj,dfc);   fia.add_mul(hi,-c*dfc); // project out norm
-    //fja.set_mul(hi,dfc);   fja.add_mul(hj,-c*dfc);
-    //fi.add_lincomb( dfc, hj, dfcc, hi );
-    //fj.add_lincomb( dfc, hi, dfcc, hj );
-    //fi.add(fia); fj.add(fja);
-    return K*c;
-    //fa.sub(fia); fa   .sub(fja);
+    return k*c*c;
 }
-*/
+
+inline double evalCos2_o(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, double c0){
+    double c    = hi.dot(hj) - c0;
+    double dfc  =  k*2*c;
+    double dfcc = -c*dfc;
+    fi.add_lincomb( dfc,hj, dfcc,hi );
+    fj.add_lincomb( dfc,hi, dfcc,hj );
+    return k*c*c;
+}
+
+inline double evalCosHalf(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, Vec2d cs ){
+    Vec3d h; h.set_add( hi, hj );
+    double c2 = h.norm2()*0.25d;               // cos(a/2) = |ha+hb|
+    double s2 = 1-c2;
+    //printf( "ang[%i] (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) c2 %g s2 %g \n", ig, ha.x,ha.y,ha.z,  hb.x,hb.y,hb.z,  h.x,h.y,h.z,   c2, s2 );
+    double c = sqrt(c2);
+    double s = sqrt(s2);
+    cs.udiv_cmplx({c,s});
+    double E         =  k*( 1 - cs.x );  // just for debug ?
+    double fr        = -k*(     cs.y );
+    // project to per leaver
+    //c2 *=-2;
+    //double lw     = 2*s*c;       //    |h - 2*c2*a| =  1/(2*s*c) = 1/sin(a)
+    //double fra    = fr/(lbond[ib.a]*lw);
+    //double frb    = fr/(lbond[ib.b]*lw);
+    fr /= 2*c*s;  // 1/sin(2a)
+    c2 *=-2*fr;
+    Vec3d fa,fb;
+    fi.set_lincomb( fr,h,  c2,hi );  //fa = (h - 2*c2*a)*fr / ( la* |h - 2*c2*a| );
+    fj.set_lincomb( fr,h,  c2,hj );  //fb = (h - 2*c2*b)*fr / ( lb* |h - 2*c2*b| );
+    return E;
+}
 
 double evalAtom(int ia){
     //printf( "atom[%i] \n", ia );
@@ -226,20 +257,43 @@ double evalAtom(int ia){
     //Vec3d fa    = Vec3dZero;
     double E    = 0;
     const double w2ee   = sq(atype0.Wee);
-    const int    nsigma = conf.a;
+    int    nsigma = conf.a;
+
+    Vec2d cs0 = sp_cs0s[nsigma];
+    //printf( "cs0.x %g \n", cs0.x );
+    //cs0.x = 0.8; nsigma=3;
 
     // -- normalize all orbital directions
-    for(int i=0; i<N_BOND_MAX; i++){
-        //hs[i].normalize();
-        hs[i].normalize_taylor3();
-    }
+    //for(int i=0; i<N_BOND_MAX; i++){
+    //    //hs[i].normalize();
+    //    hs[i].normalize_taylor3();
+    //}
 
+    //int j_DEBUG=0;
     // -- repulsion between sigma bonds
     for(int i=0; i<nsigma; i++){
         const Vec3d& hi = hs[i];
         Vec3d&       fi = fs[i];
         for(int j=0; j<i; j++){ // electron-electron
-            E += evalSigmaRepulse( hi, hs[j], fi, fs[j], type.Kee, w2ee );
+            //E += evalSigmaRepulse( hi, hs[j], fi, fs[j], type.Kee, w2ee );
+            //E += evalCos2(hi,hs[j],fi,fs[j],type.Kee,cs0.x);
+            //E += evalCos2_o(hi,hs[j],fi,fs[j],type.Kee,cs0.x);
+
+
+            //printf( "a[%i] ss[%i,%i]  \n", ia, i, j );
+            Vec3d fi_,fj_;
+            //E += evalSigmaRepulse( hi, hs[j], fi_, fj_, type.Kee, w2ee );
+            E += evalCos2(hi,hs[j],fi_,fj_,type.Kee,cs0.x);
+            fi_.makeOrthoU(hi); fj_.makeOrthoU(hs[j]);
+            fi.add(fi_);fs[j].add(fj_);
+            //if((ia==0)&&(j_DEBUG==i_DEBUG)){
+                glColor3f(0.0,1.0,1.0);
+                Draw3D::drawVecInPos(fi_,hs[i]+apos[ia]);
+                Draw3D::drawVecInPos(fj_,hs[j]+apos[ia]);
+            //}
+            //j_DEBUG++;
+
+
         }
     }
 
@@ -248,7 +302,8 @@ double evalAtom(int ia){
         const Vec3d& hi = hs[i];
         Vec3d&       fi = fs[i];
         for(int j=0; j<i; j++){
-            E += evalPiOrtho( hi, hs[j], fi, fs[j], type.Kpp );
+            //E += evalPiOrtho( hi, hs[j], fi, fs[j], type.Kpp   );
+            //E += evalCos2   ( hi, hs[j], fi, fs[j], type.Kpp, 0);
         }
     }
 
@@ -260,8 +315,13 @@ double evalAtom(int ia){
     //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( aforce[ia], pa );
     //aforce[ia].set(0.); // DEBUG
 
-
-
+    // DEBUG
+    if(ia==0){
+        //for(int i=0; i<N_BOND_MAX; i++){ fs[i].makeOrthoU(hs[i]); }
+        glColor3f(0.0,1.0,0.0);
+        //for(int i=0;i<nsigma; i++){ Draw3D::drawVecInPos(fs[i],hs[i]+apos[ia]); }
+        Draw3D::drawVecInPos(fs[0],hs[0]+apos[ia]);
+    }
 
     return E;
 }
@@ -358,7 +418,7 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
 
         double       ci = hij.dot( hi );   // ci = <hi|hij>
 
-        if(ci<0) continue;
+        if(ci<=0) continue;
         //if(ci<ccut) continue;
 
         //bool capi = ( capis[ib] >= 0 );
@@ -369,19 +429,18 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
                   Vec3d& fj = fjs[jb];
 
             double cj       = hij.dot( hj );  // cj  = <hj|hij>
-            double cij      = hi .dot( hj );  // cij = <hj|hi>
 
-            if( (cj>0)||(cij>0) ) continue; // avoid symmetric image of bond
+            // avoid symmetric image of bond
+            //double cij      = hi .dot( hj );  // cij = <hj|hi>
+            //if( (cj>0)||(cij>0) ) continue;
+            //double cc  = ci*cj*cij;
 
-            // --- more-concentrated ToDo - use lorenz ?
-            double cc  = ci*cj*cij;
-            //double cc  = -ci*cj;
+            if(cj>=0) continue; // avoid symmetric image of bond
+            double cc  = ci*cj;
 
-            /*
             double cc2 = cc*cc;
             double e   = cc2*cc2;
             double de  = 4*cc2*cc;
-            */
 
             /*
             if(cc<ccut)continue;
@@ -392,12 +451,12 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
 
             // # = w*cc/(1+cc+w) =   w*(1+cc+w-(1+w))/(1+cc+w) = w - w*(1+w)/(1-cc+w)
             // # = w*cc/(1-cc+w) =  -w*(1-cc+w-(1+w))/(1-cc+w) = w + w*(1+w)/(1-cc+w)
-            const double wBond  = 0.1;
-            const double wwBond = wBond*(1+wBond);
-            double invcc   = 1/(1-cc+wBond);
-            double invccww = wwBond*invcc;
-            double e       = invccww - wBond;
-            double de      = invccww*invcc;
+            //const double wBond  = 0.1;
+            //const double wwBond = wBond*(1+wBond);
+            //double invcc   = 1/(1-cc+wBond);
+            //double invccww = wwBond*invcc;
+            //double e       = invccww - wBond;
+            //double de      = invccww*invcc;
 
 
             double eEb = e*Eb*0.5;
@@ -406,36 +465,82 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
             E += eEb+eEb;
 
 
-            double deEb     =    Eb*de;
-            double deEbcij  =  deEb*cij;
-            double deEbcicj = -deEb*ci*cj;
-            double deEbcijinvr = deEbcij*invr;
+            //double deEb     =    Eb*de;
+            //double deEbcicj = -deEb*ci*cj;
+            //double deEbinvr = deEb*invr;
+            /*
             Jbond.mad_ddot( hi, force, deEbcijinvr*cj );
             Jbond.mad_ddot( hj, force, deEbcijinvr*ci );
             force.add_mul ( hij, frb*e );
-
             fi.add_lincomb( -cj*deEbcij, hij,    deEbcicj,  hj );
             fj.add_lincomb( -ci*deEbcij, hij,    deEbcicj,  hi );
+            */
+
+
+            Vec3d fi_,fj_,force_; // DEBUG
+            /*
+            Jbond.mad_ddot( hi, force_, deEbcijinvr*cj );
+            Jbond.mad_ddot( hj, force_, deEbcijinvr*ci );
+            force_.add_mul ( hij, frb*e );
+            fi_.set_lincomb( -cj*deEbcij, hij,    deEbcicj,  hj );
+            fj_.set_lincomb( -ci*deEbcij, hij,    deEbcicj,  hi );
+            */
+            // without orthogonalized force
 
 
             //printf( "a[%i,%i]o[%i,%i] cc %g c(%g,%g,%g) e %g  f(%g,%g,%g) \n", ia,ja,ib,jb, cc,  ci,cj,cij,  e,  force.x,force.y,force.z );
 
-            printf( "a[%i,%i]o[%i,%i] cc %g c(%g,%g,%g) e %g \n", ia,ja,ib,jb, cc,  ci,cj,cij,  e,  force.x,force.y,force.z );
+            //frb=0; // DEBUG
 
-            /*
-            force.x += Eb*de*cij*( cj*( hi.x*dxx + hi.y*dxy + hi.z*dxz )     +    ci*( hj.x*dxx + hj.y*dxy + hj.z*dxz )   )  + hij.x*frb*e;
-            force.y += Eb*de*cij*( cj*( hi.x*dxy + hi.y*dyy + hi.z*dyz )     +    ci*( hj.x*dxy + hj.y*dyy + hj.z*dyz )   )  + hij.y*frb*e;
-            force.z += Eb*de*cij*( cj*( hi.x*dxz + hi.y*dyz + hi.z*dzz )     +    ci*( hj.x*dxz + hj.y*dyz + hj.z*dzz )   )  + hij.z*frb*e;
 
-            fi.x -= ( cij*cj*hij.x + ci*cj*hj.x )*de*Eb;
-            fi.y -= ( cij*cj*hij.y + ci*cj*hj.y )*de*Eb;
-            fi.z -= ( cij*cj*hij.z + ci*cj*hj.z )*de*Eb;
+            Vec3d fij_i=Vec3dZero,fij_j=Vec3dZero;
+            fij_i.x = Eb*de*cj*( hi.x*dxx + hi.y*dxy + hi.z*dxz );
+            fij_i.y = Eb*de*cj*( hi.x*dxy + hi.y*dyy + hi.z*dyz );
+            fij_i.z = Eb*de*cj*( hi.x*dxz + hi.y*dyz + hi.z*dzz );
+            fij_j.x = Eb*de*ci*( hj.x*dxx + hj.y*dxy + hj.z*dxz );
+            fij_j.y = Eb*de*ci*( hj.x*dxy + hj.y*dyy + hj.z*dyz );
+            fij_j.z = Eb*de*ci*( hj.x*dxz + hj.y*dyz + hj.z*dzz );
+            force_.add(fij_i); force_.add(fij_j);
 
-            fj.x -= ( cij*ci*hij.x + ci*cj*hi.x )*de*Eb;
-            fj.y -= ( cij*ci*hij.y + ci*cj*hi.y )*de*Eb;
-            fj.z -= ( cij*ci*hij.z + ci*cj*hi.z )*de*Eb;
-            */
 
+            //force_.x = Eb*de*( cj*( hi.x*dxx + hi.y*dxy + hi.z*dxz )     +    ci*( hj.x*dxx + hj.y*dxy + hj.z*dxz )   )  + hij.x*frb*e;
+            //force_.y = Eb*de*( cj*( hi.x*dxy + hi.y*dyy + hi.z*dyz )     +    ci*( hj.x*dxy + hj.y*dyy + hj.z*dyz )   )  + hij.y*frb*e;
+            //force_.z = Eb*de*( cj*( hi.x*dxz + hi.y*dyz + hi.z*dzz )     +    ci*( hj.x*dxz + hj.y*dyz + hj.z*dzz )   )  + hij.z*frb*e;
+
+
+            fi_.x = -Eb*de*( cj*hij.x );
+            fi_.y = -Eb*de*( cj*hij.y );
+            fi_.z = -Eb*de*( cj*hij.z );
+
+            fj_.x = -Eb*de*( ci*hij.x );
+            fj_.y = -Eb*de*( ci*hij.y );
+            fj_.z = -Eb*de*( ci*hij.z );
+
+
+            fi_.makeOrthoU(hi);
+            fj_.makeOrthoU(hj);
+            fi.add(fi_); fj.add(fj_);
+            //aforce[ia].add(fi_); aforce[ja].add(fj_);
+
+            //if((ia==0)&&(ja==1)){
+            //if(ia==0){
+                printf( "a[%i,%i]o[%i,%i] r %g Eb %g cc %g(%g,%g) e %g de %g |fia| %g |fi| %g \n", ia,ja,ib,jb, r, Eb,   cc,  ci,cj,  e, de , force_.norm(), fi_.norm() );
+                glColor3f(1,0,0);
+                Draw3D::drawVecInPos( force_, apos[ia] );
+                //Draw3D::drawVecInPos( fij_i, apos[ia] );
+                //Draw3D::drawVecInPos( fij_j, apos[ia] );
+                glColor3f(1,0,1);
+                Draw3D::drawVecInPos( fi_, apos[ia]+hi );
+                Draw3D::drawVecInPos( fj_, apos[ja]+hj );
+                //Draw3D::drawVecInPos( hij*(-cj*deEbcij) + hj*(deEbcicj), apos[ia]+hi );
+                //Draw3D::drawVecInPos( hij*(-ci*deEbcij) + hi*(deEbcicj), apos[ia]+hj );
+            //}
+
+            force_.add_mul(hij, e*frb);
+
+
+
+            force.add(force_);
         }
     }
 
@@ -458,8 +563,8 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
     }
     */
 
-    aforce[ja].sub(force);
     aforce[ia].add(force);
+    aforce[ja].sub(force);
     return E;
 }
 
@@ -479,17 +584,45 @@ double evalPairs(){
 
 inline void evalAtoms(){ for(int i=0; i<natom; i++){ evalAtom(i);        } }
 
+
+void normalizeOrbs(){
+    // ToDo : is this numerically stable? if normal forces are very hi ?
+    for(int i=0; i<norb; i++){
+        //opos[i].normalize();
+        opos[i].normalize_taylor3();
+    }
+}
+
+void transferOrbRecoil(){
+    // ToDo : is this numerically stable? if normal forces are very hi ?
+    for(int i=0; i<norb; i++){
+        //aforce[i>>2].sub( oforce[i] );
+        int ia=i>>2;
+        Vec3d f = oforce[i]*-1;
+        aforce[ia].add( f );
+
+        //glColor3f(1,1,0); Draw3D::drawVecInPos( oforce[i], apos[ia] );
+        if((ia==0)&&(i-(ia<<2)==0) ){ glColor3f(1,1,0); Draw3D::drawVecInPos( f, apos[ia] ); }
+    }
+}
+
 void removeNormalForces(){
     // ToDo : is this numerically stable? if normal forces are very hi ?
     for(int i=0; i<norb; i++){
         oforce[i].makeOrthoU(opos[i]);
+        //Vec3d fT = opos[i]*opos[i].dot(oforce[i]);
+        //oforce[i   ].sub( fT );
+        //aforce[i>>2].add( fT );
     }
 }
 
 void eval(){
     //cleanForce();
+    normalizeOrbs();
     evalAtoms (); // do this first to orthonormalize ?
+    //transferOrbRecoil();
     evalPairs ();
+    //transferOrbRecoil();
     removeNormalForces();
 }
 
@@ -630,6 +763,210 @@ void evalAtom(int ia){
 }
 
 */
+
+
+/*
+
+double evalPair( int ia, int ja, FlexiblePairType& type){
+//double evalPair( int ia, int ja, int nbi, int nbj ){
+    const Vec3ui8& confi = aconf[ia];
+    const Vec3ui8& confj = aconf[ja];
+    int nbi = confi.a;
+    int nbj = confj.a;
+
+    Vec3d  hij; hij.set_sub( apos[ja], apos[ia] );   // = apos[ja] - apos[ia];
+    double r2   = hij.norm2() + R2SAFE;
+    double r    = sqrt( r2 );
+    double invr = 1/r;
+    hij.mul(invr); // = dij*(1/rij);
+
+
+    double dxy=-hij.x*hij.y*invr;
+    double dxz=-hij.x*hij.z*invr;
+    double dyz=-hij.y*hij.z*invr;
+    double xx  = hij.x*hij.x;
+    double yy  = hij.y*hij.y;
+    double zz  = hij.z*hij.z;
+    double dxx=(yy+zz)*invr;
+    double dyy=(xx+zz)*invr;
+    double dzz=(xx+yy)*invr;
+
+
+    //double ir3 = 1/(r*r2);
+    //double xx  = dij.x*dij.x;
+    //double yy  = dij.y*dij.y;
+    //double zz  = dij.z*dij.z;
+
+    //double dxy=-dij.x*dij.y*ir3;
+    //double dxz=-dij.x*dij.z*ir3;
+    //double dyz=-dij.y*dij.z*ir3;
+    //double dxx=(yy+zz)*ir3;
+    //double dyy=(xx+zz)*ir3;
+    //double dzz=(xx+yy)*ir3;
+
+
+    //double ir2vdW = 1/(r2 + type.vdW_w6 );
+
+
+    double r6     = r2*r2*r2;
+    double invVdW = 1/( r6 + type.vdW_w6 );
+    double EvdW   = type.vdW_c6*invVdW;
+    double fvdW   = -6*EvdW*invVdW*r6;
+
+    // todo: replace this by other short range force ... so we can cutoff bonds
+    double expar =  exp( type.bMorse*( r - type.rbond0 ) );
+    double Esr   =    type.aMorse*expar*expar;
+    double Eb    = -2*type.aMorse*expar;
+    double fsr   =  2*type.bMorse*Esr;
+    double frb   =    type.bMorse*Eb;
+
+    double E = Esr + EvdW;
+
+    Vec3d force; force.set_mul( hij, fsr + fvdW );
+    //printf( "r[%i,%i] %g   | Rb %g   EvdW %g \n", ia,ja, r,  type.rbond0, EvdW );
+
+    //DEBUG
+    //force.add_mul(hij, frb );
+    //nbi=nbj=1;
+
+
+    Mat3Sd Jbond;
+    Jbond.from_dhat(hij);
+
+    const int ioff= ia*N_BOND_MAX;
+    const int joff= ja*N_BOND_MAX;
+    Vec3d* his = opos  +ioff;
+    Vec3d* hjs = opos  +joff;
+    Vec3d* fis = oforce+ioff;
+    Vec3d* fjs = oforce+joff;
+
+    double* eis = oenergy+ioff;
+    double* ejs = oenergy+joff;
+
+
+    double ccut    = 0.8;
+    double invcut  = 1-ccut;
+    double invcut2 = invcut*invcut;
+
+
+    for(int ib=0; ib<nbi; ib++){
+
+        const Vec3d& hi = his[ib];
+              Vec3d& fi = fis[ib];
+
+        double       ci = hij.dot( hi );   // ci = <hi|hij>
+
+        if(ci<0) continue;
+        //if(ci<ccut) continue;
+
+        //bool capi = ( capis[ib] >= 0 );
+
+        for(int jb=0; jb<nbj; jb++){
+
+            const Vec3d& hj = hjs[jb];
+                  Vec3d& fj = fjs[jb];
+
+            double cj       = hij.dot( hj );  // cj  = <hj|hij>
+            double cij      = hi .dot( hj );  // cij = <hj|hi>
+
+            if( (cj>0)||(cij>0) ) continue; // avoid symmetric image of bond
+
+            // --- more-concentrated ToDo - use lorenz ?
+            double cc  = ci*cj*cij;
+            //double cc  = -ci*cj;
+
+
+            //double cc2 = cc*cc;
+            //double e   = cc2*cc2;
+            //double de  = 4*cc2*cc;
+
+
+
+            //if(cc<ccut)continue;
+            //double ccm = cc-ccut;
+            //double e  = invcut2*ccm*ccm;
+            //double de = 2*invcut2*ccm;
+
+
+            // # = w*cc/(1+cc+w) =   w*(1+cc+w-(1+w))/(1+cc+w) = w - w*(1+w)/(1-cc+w)
+            // # = w*cc/(1-cc+w) =  -w*(1-cc+w-(1+w))/(1-cc+w) = w + w*(1+w)/(1-cc+w)
+            const double wBond  = 0.1;
+            const double wwBond = wBond*(1+wBond);
+            double invcc   = 1/(1-cc+wBond);
+            double invccww = wwBond*invcc;
+            double e       = invccww - wBond;
+            double de      = invccww*invcc;
+
+
+            double eEb = e*Eb*0.5;
+            eis[ib]+=eEb;
+            ejs[jb]+=eEb;
+            E += eEb+eEb;
+
+
+            double deEb     =    Eb*de;
+            double deEbcij  =  deEb*cij;
+            double deEbcicj = -deEb*ci*cj;
+            double deEbcijinvr = deEbcij*invr;
+
+            //Jbond.mad_ddot( hi, force, deEbcijinvr*cj );
+            //Jbond.mad_ddot( hj, force, deEbcijinvr*ci );
+            //force.add_mul ( hij, frb*e );
+            //fi.add_lincomb( -cj*deEbcij, hij,    deEbcicj,  hj );
+            //fj.add_lincomb( -ci*deEbcij, hij,    deEbcicj,  hi );
+
+
+
+            Vec3d fi_,fj_,force_; // DEBUG
+            Jbond.mad_ddot( hi, force_, deEbcijinvr*cj );
+            Jbond.mad_ddot( hj, force_, deEbcijinvr*ci );
+            force_.add_mul ( hij, frb*e );
+            fi_.set_lincomb( -cj*deEbcij, hij,    deEbcicj,  hj );
+            fj_.set_lincomb( -ci*deEbcij, hij,    deEbcicj,  hi );
+            // without orthogonalized force
+
+
+
+
+            //printf( "a[%i,%i]o[%i,%i] cc %g c(%g,%g,%g) e %g  f(%g,%g,%g) \n", ia,ja,ib,jb, cc,  ci,cj,cij,  e,  force.x,force.y,force.z );
+
+            printf( "a[%i,%i]o[%i,%i] cc %g c(%g,%g,%g) e %g \n", ia,ja,ib,jb, cc,  ci,cj,cij,  e,  force.x,force.y,force.z );
+
+
+            force_.x = Eb*de*cij*( cj*( hi.x*dxx + hi.y*dxy + hi.z*dxz )     +    ci*( hj.x*dxx + hj.y*dxy + hj.z*dxz )   )  + hij.x*frb*e;
+            force_.y = Eb*de*cij*( cj*( hi.x*dxy + hi.y*dyy + hi.z*dyz )     +    ci*( hj.x*dxy + hj.y*dyy + hj.z*dyz )   )  + hij.y*frb*e;
+            force_.z = Eb*de*cij*( cj*( hi.x*dxz + hi.y*dyz + hi.z*dzz )     +    ci*( hj.x*dxz + hj.y*dyz + hj.z*dzz )   )  + hij.z*frb*e;
+
+            fi_.x = -( cij*cj*hij.x + ci*cj*hj.x )*de*Eb;
+            fi_.y = -( cij*cj*hij.y + ci*cj*hj.y )*de*Eb;
+            fi_.z = -( cij*cj*hij.z + ci*cj*hj.z )*de*Eb;
+
+            fj_.x = -( cij*ci*hij.x + ci*cj*hi.x )*de*Eb;
+            fj_.y = -( cij*ci*hij.y + ci*cj*hi.y )*de*Eb;
+            fj_.z = -( cij*ci*hij.z + ci*cj*hi.z )*de*Eb;
+
+
+            fi_.makeOrthoU(hi);
+            fj_.makeOrthoU(hj);
+            fi.add(fi_); fj.add(fj_);
+            //aforce[ia].add(fi_); aforce[ja].add(fj_);
+            force.add(force_);
+            //if((ia==0)&&(ja==1)){
+            if(ia==0){
+                glColor3f(1,0,0);
+                Draw3D::drawVecInPos( force_, apos[ia] );
+                glColor3f(1,0,1);
+                Draw3D::drawVecInPos( fi_, apos[ia]+hi );
+                Draw3D::drawVecInPos( fj_, apos[ja]+hj );
+                //Draw3D::drawVecInPos( hij*(-cj*deEbcij) + hj*(deEbcicj), apos[ia]+hi );
+                //Draw3D::drawVecInPos( hij*(-ci*deEbcij) + hi*(deEbcicj), apos[ia]+hj );
+            }
+
+        }
+    }
+
+*/
+
 
 }; // FFsp
 
