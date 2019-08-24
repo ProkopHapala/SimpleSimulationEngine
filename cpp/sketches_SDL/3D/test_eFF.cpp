@@ -24,10 +24,10 @@
 
 //#include "MMFF.h"
 
-//#include "eFF.h"
-#include "e2FF.h"
-
 #define R2SAFE  1.0e-8f
+
+#include "eFF.h"
+#include "e2FF.h"
 
 /*
 int pickParticle( int n, Vec3d * ps, const Mat3d& cam, double R ){
@@ -53,8 +53,8 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     bool bRun = false;
 
-//    EFF ff;
-    E2FF ff;
+    EFF  ff;
+    E2FF ff2;
     int ipicked  = -1, ibpicked = -1;
 
     //Plot2D plot1;
@@ -83,19 +83,46 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     //ff.loadFromFile_bas( "data/CH4.bas" );
     //ff.loadFromFile_bas( "data/C2H6.bas" );
-    ff.loadFromFile_bas( "data/C2H6_e2FF.bas" );
+    //ff.loadFromFile_bas( "data/C_eFF.bas" );
+    ff.loadFromFile_bas( "data/CH4_eFF.bas" );
+    //ff.loadFromFile_bas( "data/C2H6_e2FF.bas" );
     //ff.loadFromFile_bas( "data/C2.bas" );
     //ff.loadFromFile_bas( "data/H2.bas" );
     //ff.loadFromFile_bas( "data/C2e2.bas" );
     //ff.loadFromFile_bas( "data/H-e.bas" );
+
+
+    ff.autoAbWs( default_AbWs );
+
+    double sz = 0.51;
+    // break symmetry
+    for(int i=0; i<ff.na; i++){ ff.apos[i].add( randf(-sz,sz),randf(-sz,sz),randf(-sz,sz) );  }
+
+
+
+    /*
     printf( " ff.na, ff.ne %i %i \n", ff.na, ff.ne );
 
     ff.clearForce();
-    ff.clearVel();
-    ff.forceEE();
-    ff.forceAE();
-    ff.forceAA();
-    
+    //ff.clearVel();
+    ff.evalEE();
+    ff.evalAE();
+    ff.evalAA();
+    */
+
+
+
+
+
+    for(int i=0; i<ff.na; i++){
+        printf( "A_pos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z );
+    }
+    for(int i=0; i<ff.ne; i++){
+        printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
+    }
+
+    //exit(0);
+
     //ff.move( 0.01, 0.9 );
 
 }
@@ -107,21 +134,24 @@ void TestAppRARFF::draw(){
     glEnable(GL_DEPTH_TEST);
 
     ff.clearForce();
-    ff.forceEE();
-    ff.forceAE();
-    ff.forceAA();
-    //if(bRun) ff.move( 0.1, 0.9 );
-    if(bRun) ff.run( 1, 0.1, 0.5 );
+    ff.evalEE();
+    ff.evalAE();
+    ff.evalAA();
+
+    ff.aforce[0].set(0.);
+    if(bRun) ff.move_GD( 0.01 );
+    //if(bRun) ff.run( 1, 0.1, 0.5 );
 
     Vec3d d = ff.apos[0]-ff.apos[1];
 
-    //printf("C1-C2 %g C1-e %g C2-e %g \n", (ff.apos[0]-ff.apos[1]).norm(), 
-    //                                      (ff.apos[0]-ff.epos[0]).norm(), 
+    //printf("C1-C2 %g C1-e %g C2-e %g \n", (ff.apos[0]-ff.apos[1]).norm(),
+    //                                      (ff.apos[0]-ff.epos[0]).norm(),
     //                                      (ff.apos[1]-ff.epos[0]).norm() );
 
     double fsc = 1.0;
     glColor3f(0.0,0.0,0.0);
     for(int i=0; i<ff.na; i++){
+        //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z );
         Draw3D::drawPointCross( ff.apos  [i]    , ff.aQ  [i]*0.1 );
         Draw3D::drawVecInPos(   ff.aforce[i]*fsc, ff.apos[i] );
         //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.apos[i].x,ff.apos[i].y,ff.apos[i].z );
@@ -129,13 +159,14 @@ void TestAppRARFF::draw(){
     }
 
     glColor3f(1.0,1.0,1.0);
-    //for(int i=0; i<ff.ne; i++){
-    //    Draw3D::drawPointCross( ff.epos  [i],     0.1 );
-    //    Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
-    //}
-    for(int i=0; i<ff.ne; i+=2){
-        Draw3D::drawLine(ff.epos[i],ff.epos[i+1] );
+    for(int i=0; i<ff.ne; i++){
+        //printf( "epos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
+        Draw3D::drawPointCross( ff.epos  [i],     0.1 );
+        Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
     }
+    //for(int i=0; i<ff.ne; i+=2){
+    //    Draw3D::drawLine(ff.epos[i],ff.epos[i+1] );
+    //}
 
     //exit(0);
 
@@ -155,7 +186,7 @@ void TestAppRARFF::drawHUD(){
 void TestAppRARFF::mouseHandling( ){
     int mx,my; Uint32 buttons = SDL_GetRelativeMouseState( &mx, &my);
     if ( buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-        
+
     }
     AppSDL2OGL_3D::mouseHandling( );
 };

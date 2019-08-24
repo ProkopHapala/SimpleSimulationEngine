@@ -233,14 +233,14 @@ struct VecN{
         T* to=data; for(const T& t: ts){ *to=t; to++; };
     }
 
-    void print(){
+    void print()const{
         printf( "{ " );
         for(int i=0;i<n;i++){
-            NDarray::print(data[i]);
+            NumT::print(data[i]);
         };
         printf( " }" );
     }
-    void println(){ print(); print("\n"); }
+    //void println()const{ print(); print("\n"); }
 
     using Func1T = Func1<T>;
     using Func2T = Func2<T>;

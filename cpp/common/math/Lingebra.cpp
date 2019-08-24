@@ -362,7 +362,14 @@ inline void jacobi_rot( double* g_, double* h_, double s, double tau ){
     double g=*g_; double h=*h_;
     *g_ = g - s * ( h + g * tau );
     *h_ = h + s * ( g - h * tau );
-};
+}
+
+
+inline void jacobi_rot_cs( double* g_, double* h_, double c, double s ){
+    double g=*g_; double h=*h_;
+    *g_ = c*g - s*h;
+    *h_ = s*g + c*h;
+}
 
 void jacobi_rotation( int n, double* A, double* V, int k, int l ){
     //  https://en.wikipedia.org/wiki/Jacobi_rotation
@@ -386,33 +393,49 @@ void jacobi_rotation( int n, double* A, double* V, int k, int l ){
     for (int i = k + 1; i < l; i++ ){ jacobi_rot( A+(k*n+i), A+(i*n+l), s, tau ); }
     for (int i = l + 1; i < n; i++ ){ jacobi_rot( A+(k*n+i), A+(l*n+i), s, tau ); }
     for (int i = 0    ; i < n; i++ ){ jacobi_rot( V+(i*n+k), V+(i*n+l), s, tau ); }
-    /*
-    for i in range(k){      // Case of i < k
-        double g = A[i*n+k];
-        double h = A[i*n+l];
-        A[i*n+k] = g - s*(h + tau*g);
-        A[i*n+l] = h + s*(g - tau*h);
-    }
-    for i in range(k+1,l){  // Case of k < i < l
-        double g = A[k*n+i];
-        double h = A[i*n+l];
-        A[k*n+i] = g - s*(h + tau*g);
-        A[i*n+l] = h + s*(g - tau*h);
-    }
-    for i in range(l+1,n){  // Case of i > l
-        double g = A[k*n+i];
-        double h = A[l*n+i];
-        A[k*n+i] = g - s*(h + tau*g);
-        A[l*n+i] = h + s*(g - tau*h);
-    }
-    for i in range(n){      // Update transformation matrix
-        double g = V[i*n+k];
-        double h = V[i*n+l];
-        V[i*n+k] = g - s*(h + tau*g);
-        V[i*n+l] = h + s*(g - tau*h);
-    }
-    */
 }
+
+void jacobi_rotation_small( int n, double* A, double* V, int k, int l ){
+    //  https://en.wikipedia.org/wiki/Jacobi_rotation
+    // this version is optimized for small matrices (like 3x3, 4x4 etc. )
+    const int kn=k*n;
+    const int ln=l*n;
+    double * Ak = A+kn;
+    double * Al = A+ln;
+    double aDiff = Al[l] - Ak[k];
+    double akl   = Ak[l];
+    double t;
+    if ( fabs(akl) < fabs(aDiff)*1.0e-36d ){
+        t = akl/aDiff;
+    }else{
+        double phi = aDiff/(2*akl);
+        t = 1/(fabs(phi) + sqrt(phi*phi + 1));
+        if (phi < 0.0) t = -t;
+    }
+    double c    = 1/sqrt(t*t + 1);
+    double s    = t*c;
+    double tau  = s/(1+c);
+    double takl = t*akl;
+    Ak[l] = 0;
+    Ak[k] -= takl;
+    Al[l] += takl;
+    for (int in = 0  ; in<kn; in+=n ){ jacobi_rot( A+(in+k),  A+(in +l), s, tau ); }
+    for (int i  = k+1; i <l;  i++   ){ jacobi_rot( Ak+i,      A+(i*n+l), s, tau ); } // is the same as  Al+i
+    for (int i  = l+1; i <n;  i++   ){ jacobi_rot( Ak+i,      Al+i,      s, tau ); }
+    //for (int i = 0    ; i < n; i++ ){ jacobi_rot( V+(i*n+k), V+(i*n+l), s, tau ); }
+    double * Vk = V+kn;
+    double * Vl = V+ln;
+    for (int i = 0    ; i < n; i++ ){ jacobi_rot( Vk+i, Vl+i, s, tau ); }   // Much faster if the matrix is transposed
+
+}
+
+
+
+
+
+
+
+
 
 template<double func(double x)>
 inline int getMaxIndex(int n, double* v ){
@@ -743,7 +766,7 @@ void orthtoForce(int nv, int m, double * P, double * F ){
     for(int i=0;i<nv;i++){
         double* pi = P+i*m;
         double* fi = F+i*m;
-        double  cii = 0; 
+        double  cii = 0;
         for(int k=0;k<m;k++){ cii += pi[k]*pi[k]; }
         // approx half angle
         // cos(a/2) = sqrt((cos(a)+1)/2) = sqrt( 1 +   (cos(a)-1)/2 )  =  sqrt( 1 +   x )

@@ -1,6 +1,6 @@
 
-#ifndef EFF_h
-#define EFF_h
+#ifndef E2FF_h
+#define E2FF_h
 
 #include "fastmath.h"
 //#include "Vec2.h"
@@ -11,26 +11,24 @@
 
 /*
 Erf approximation:
-# Gaussian:    F = (x2-1)**2 / sqrtPi     
+# Gaussian:    F = (x2-1)**2 / sqrtPi
 # Erf          E = x*(1 + x2 * ( -0.66666666666 + 0.2*x2 ) ) * (2/(16.0/15.0))
 */
 
 
-struct EFFAtomType{
+struct EFF2AtomType{
     double Q; // nuncear charge
     double A; // prefactor
     double B; // exponential beta
 };
 
-inline double frEFF_r2( double r2, double s1, double s2 ){
-    return (1/(1 + s1*r2) - 1/(1 + s2*r2))/( 1/s1 + 1/s2 );
-}
 
-inline double fr_ee(double r, double s){ 
+
+inline double fr_ee(double r, double s){
     return 1/(r*r+s*s);
 };
 
-inline double fr_ae(double r, double s){ 
+inline double fr_ae(double r, double s){
     return exp(5*r) - 1/(r*r+s*s);
 };
 
@@ -38,11 +36,17 @@ inline double fr_aa(double r, double s){
     return 1/(r*r+s*s);
 };
 
+/*
 inline double interp_gx4(double r2, double y1, double y2 ){
     double c = (1-r2);
     c*=c;
     return c*y1 + (1-c)*y2;
 }
+
+inline double frEFF_r2( double r2, double s1, double s2 ){
+    return (1/(1 + s1*r2) - 1/(1 + s2*r2))/( 1/s1 + 1/s2 );
+}
+*/
 
 class E2FF{ public:
 
@@ -59,57 +63,128 @@ class E2FF{ public:
     double se2  = see*see;
     double sea2 = see*see;
 
-    int ne=0,na=0;
+    int ne=0,na=0,nDOFs=0;
     //int*   atype  =0;
 
     double* aQ    =0;
     Vec3d* apos   =0;
-    Mat4d* aorbs  =0;
     Vec3d* aforce =0;
-    Vec3d* avel   =0;
+    Mat4d* aorbs  =0;
 
     //double* espin =0;
     Vec3d* epos   =0;
-    Vec3d* edir   =0;
     Vec3d* eforce =0;
-    Vec3d* evel   =0;
+    //Vec3d* edir   =0;
+
+    Vec3d  *pDOFs=0,*fDOFs=0;
+
+    double Eee=0,Eae=0,Eaa=0;
 
     void realloc(int na_, int ne_){
         na=na_; ne=ne_;
+        nDOFs=na+ne;
+        _realloc( pDOFs,   nDOFs);
+        _realloc( fDOFs,   nDOFs);
+
         _realloc( aQ  ,   na);
-        _realloc( apos,   na);
+        //_realloc( apos,   na);
+        //_realloc( aforce, na);
+        //_realloc( avel,   na);
         _realloc( aorbs,  na);
-        _realloc( aforce, na);
-        _realloc( avel,   na);
 
         //_realloc( espin  ,ne);
-        _realloc( epos   ,ne);
-        _realloc( eforce ,ne);
-        _realloc( evel   ,ne);
+        //_realloc( epos   ,ne);
+        //_realloc( eforce ,ne);
+        //_realloc( evel   ,ne);
+
+        apos   = pDOFs;
+        aforce = fDOFs + na;
+
+        epos   = pDOFs;
+        eforce = fDOFs + na;
+
     }
 
     void clearForce(){
-        for(int i=0; i<ne; i++){ eforce[i].set(0.0); };
-        for(int i=0; i<na; i++){ aforce[i].set(0.0); };
+        for(int i=0; i<nDOFs; i++){ fDOFs[i]=Vec3dZero; };
     }
 
-    void clearVel(){
-        for(int i=0; i<ne; i++){ evel[i].set(0.0); };
-        for(int i=0; i<na; i++){ avel[i].set(0.0); };
+    double evalEE(){
+        Eee=0;
+        double invSee = 1/(see*see);
+        for(int i=0; i<ne; i++){
+            Vec3d pi = epos[i];
+            for(int j=0; j<i; j++){
+                Vec3d  d = epos[j] - pi;
+                double r2 = d.norm2();
+                double r  = sqrt(r2);
+                //fr       = Aee*exp(Bee*r);
+                //double fr = frEFF_r2( r*r, 1.0, invSee );
+                double fr = 4/(r*r + se2);
+                //double fr = 4*interp_gx4(r2, 4.0*r-2.0, 1.0/r2 );
+                //printf(" fee %i %i %g %g \n", i, j, r, fr);
+                Vec3d f = d*(fr/r);
+                double fmax=0;
+                eforce[i].sub(f);
+                eforce[j].add(f);
+            }
+        }
+        return Eee;
     }
 
-    double getFmax(){
-        double fm=0;
-        for(int i=0; i<ne; i++){ fm=fmax(fm,eforce[i].norm2()); };
-        for(int i=0; i<na; i++){ fm=fmax(fm,aforce[i].norm2()); };
-        return fm;
+    double evalAE(){
+        Eae=0;
+        //double see2 = see*see;
+        //double saa2 = saa*saa;
+        double invSae = 1/( see*see + saa*saa );
+        for(int i=0; i<na; i++){
+            Vec3d pi = apos[i];
+            double qi = aQ[i];
+            for(int j=0; j<ne; j++){
+                Vec3d  d = epos[j] - pi;
+                double r2 = d.norm2();
+                double r  = sqrt(r2);
+                //double fr = qi* frEFF_r2( r*r, 1.0, invSae );
+                //double fr = 2*qi*(  -2/(r*r + se2) + 1/(r*r + sa2) );
+                //double fr = 2*qi*(  -2/(r*r + sea2) + 1/(r*r + sa2) );
+                double fr = 2*qi*( -1/(r*r + 0.15) + 10*exp(-8*r*r) );
+                //printf(" fae %i %i %g %g \n", i, j, r, fr);
+                //double fr = interp_gx4(r2*4.0, 14.0, -1.0/r2 );
+
+                Vec3d f = d*(fr/r);
+                aforce[i].sub(f);
+                eforce[j].add(f);
+            }
+        }
+        return Eae;
     }
 
-    double getVmax(){
-        double vm=0;
-        for(int i=0; i<ne; i++){ vm=fmax(vm,evel[i].norm2()); };
-        for(int i=0; i<na; i++){ vm=fmax(vm,avel[i].norm2()); };
-        return vm;
+    double evalAA(){
+        Eaa=0;
+        double invSaa = 1/(saa*saa);
+        for(int i=0; i<na; i++){
+            Vec3d pi = apos[i];
+            double qi = aQ[i];
+            for(int j=0; j<i; j++){
+                Vec3d  d  = apos[j] - pi;
+                double r2 = d.norm2();
+                double r  = sqrt(r2);
+                //double fr = aQ[j]*qi * frEFF_r2( r*r, 1.0, invSaa );
+                double fr = aQ[j]*qi/(r*r + sa2);
+                //double fr = aQ[j]*qi * interp_gx4(r2, 0, 1/r2 );
+                //printf(" faa %i %i %g %g \n", i, j, r, fr);
+                Vec3d f   = d*(fr/r);
+                aforce[i].sub(f);
+                aforce[j].add(f);
+            }
+        }
+        return Eaa;
+    }
+
+    void move_GD(double dt){
+        for(int i=0;i<nDOFs;i++){
+            pDOFs[i].add_mul(fDOFs[i],dt);
+        }
     }
 
     void constrain_e_pairs(){
@@ -170,114 +245,6 @@ class E2FF{ public:
         }
     }
 
-
-    void forceEE(){
-        double invSee = 1/(see*see);
-        for(int i=0; i<ne; i++){
-            Vec3d pi = epos[i];
-            for(int j=0; j<i; j++){
-                Vec3d  d = epos[j] - pi;
-                double r2 = d.norm2();
-                double r  = sqrt(r2);
-                //fr       = Aee*exp(Bee*r);
-                //double fr = frEFF_r2( r*r, 1.0, invSee );
-                double fr = 4/(r*r + se2);
-                //double fr = 4*interp_gx4(r2, 4.0*r-2.0, 1.0/r2 );
-                //printf(" fee %i %i %g %g \n", i, j, r, fr);
-                Vec3d f = d*(fr/r);
-                double fmax=0;
-                eforce[i].sub(f);
-                eforce[j].add(f);
-            }
-        }
-    }
-
-    void forceAE(){
-        //double see2 = see*see;
-        //double saa2 = saa*saa;
-        double invSae = 1/( see*see + saa*saa );
-        for(int i=0; i<na; i++){
-            Vec3d pi = apos[i];
-            double qi = aQ[i];
-            for(int j=0; j<ne; j++){
-                Vec3d  d = epos[j] - pi;
-                double r2 = d.norm2();
-                double r  = sqrt(r2);
-                //double fr = qi* frEFF_r2( r*r, 1.0, invSae );
-                //double fr = 2*qi*(  -2/(r*r + se2) + 1/(r*r + sa2) );
-                //double fr = 2*qi*(  -2/(r*r + sea2) + 1/(r*r + sa2) );
-                double fr = 2*qi*( -1/(r*r + 0.15) + 10*exp(-8*r*r) );
-                //printf(" fae %i %i %g %g \n", i, j, r, fr);
-                //double fr = interp_gx4(r2*4.0, 14.0, -1.0/r2 );
-
-                Vec3d f = d*(fr/r);
-                aforce[i].sub(f);
-                eforce[j].add(f);
-            }
-        }
-    }
-
-    void forceAA(){
-        double invSaa = 1/(saa*saa);
-        for(int i=0; i<na; i++){
-            Vec3d pi = apos[i];
-            double qi = aQ[i];
-            for(int j=0; j<i; j++){
-                Vec3d  d  = apos[j] - pi;
-                double r2 = d.norm2();
-                double r  = sqrt(r2);
-                //double fr = aQ[j]*qi * frEFF_r2( r*r, 1.0, invSaa );
-                double fr = aQ[j]*qi/(r*r + sa2);
-                //double fr = aQ[j]*qi * interp_gx4(r2, 0, 1/r2 );
-                //printf(" faa %i %i %g %g \n", i, j, r, fr);
-                Vec3d f   = d*(fr/r);
-                aforce[i].sub(f);
-                aforce[j].add(f);
-            }
-        }
-    }
-
-    void move(double dt, double damp){
-        //for(int isub=0; i<; i++)   // sub electron step ?
-        for(int i=0;i<ne;i++){
-            Vec3d& v = evel[i];
-            v.mul(damp);
-            v.add_mul( eforce[i], dt );
-            epos[i].add_mul( v,  dt );
-        }
-        for(int i=0;i<na;i++){
-            Vec3d& v = avel[i];
-            v.mul(damp);
-            v.add_mul( aforce[i], dt );
-            apos[i].add_mul( v,  dt );
-        }
-    }
-
-    double getSafeTimeStep(double dt_, double dpmax, double dvmax ){
-        double dt = dt_;
-        double fm = getFmax();
-        double vm = getVmax();
-        //if( fm*dt > dvmax ) dt_=dvmax/fm;
-        //if( vm*dt > dpmax ) dt_=dpmax/vm;
-        dt=fmin( dt, dvmax/fm );
-        dt=fmin( dt, dpmax/vm );
-        //printf( "fmax %g vmax %g dt %g \n", fm, vm, dt );
-        return dt;
-    }
-
-    int run(int nStep, double dt, double damp){
-        for(int i=0;i<nStep; i++){
-            clearForce();
-            forceEE();
-            forceAE();
-            forceAA();
-            force_e_pairs(10.0);
-            double dt_ = getSafeTimeStep(dt, 0.1, 10.0 );
-            move(dt_, damp);
-            //constrain_e_pairs();
-        }
-    }
-
     bool loadFromFile_bas( char const* filename ){
         printf(" filename: >>%s<< \n", filename );
         FILE * pFile;
@@ -307,7 +274,7 @@ class E2FF{ public:
             };
             printf( " %i %f %f %f  \n", e, x,y,z );
         }
-        clearVel();
+        //clearVel();
         clearForce();
         printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - 2*ne, Qasum, ne );
         fclose (pFile);
