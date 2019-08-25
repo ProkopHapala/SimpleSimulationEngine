@@ -65,7 +65,8 @@ target_link_libraries( test_CityGen ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBR
 add_executable       ( test_Tris2Rect test_Tris2Rect.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TiledView> )
 target_link_libraries( test_Tris2Rect ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-include_directories( ${COMMON_SRCS}/dynamics/Molecular )
+#include_directories( ${COMMON_SRCS}/dynamics/Molecular )
+include_directories( ${COMMON_SRCS}/molecular )
 add_executable       ( test_GlobOpt2D test_GlobOpt2D.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:MoleculeWorld2D> $<TARGET_OBJECTS:DynamicOpt> $<TARGET_OBJECTS:Body2D> )
 target_link_libraries( test_GlobOpt2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

@@ -1,16 +1,11 @@
 
 project(sketches_SDL_3D)
 
-include_directories( ${COMMON_SRCS}/dynamics/Molecular )
-
 add_executable       ( test_QuatRotSampling test_QuatRotSampling.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_QuatRotSampling ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_executable       ( test_Projection test_Projection.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Projection ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_ConfDynamics test_ConfDynamics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt> )
-target_link_libraries( test_ConfDynamics ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_executable       ( test_Solids test_Solids.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Solids ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
@@ -45,9 +40,6 @@ target_link_libraries( test_Mesh ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY
 add_executable       ( test_RigidBody test_RigidBody.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Collisions> )
 target_link_libraries( test_RigidBody ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} Shooter )
 
-add_executable       ( test_Multipoles test_Multipoles.cpp $<TARGET_OBJECTS:SDL2OGL> )
-target_link_libraries( test_Multipoles ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
 add_executable       ( test_VortexLattice test_VortexLattice.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_VortexLattice ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
@@ -66,47 +58,15 @@ target_link_libraries( test_TrussBuilder  ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL
 add_executable       ( test_SphereTree test_SphereTree.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:SoftBody> $<TARGET_OBJECTS:DynamicOpt>  )
 target_link_libraries( test_SphereTree  ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_SoftMolecularDynamics test_SoftMolecularDynamics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_SoftMolecularDynamics ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-
-add_executable       ( test_eFF test_eFF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_eFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_MMFFmini test_MMFFmini.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_MMFFmini ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_FARFF test_FARFF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_FARFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_RARFF test_RARFF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_RARFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_RARFF2 test_RARFF2.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_RARFF2 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_RspFF test_RspFF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_RspFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_FTRFF test_FTRFF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_FTRFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_RRFF test_RRFF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_RRFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_EOFF test_EOFF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_EOFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_ESFF test_ESFF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_ESFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
-
-add_executable       ( test_Stick test_Stick.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
+#include_directories( ${COMMON_SRCS}/dynamics/Molecular )
+include_directories( ${COMMON_SRCS}/molecular )
+add_executable       ( test_Stick test_Stick.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>   )
 target_link_libraries( test_Stick ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} )
 
 add_custom_command(
-    TARGET ${PROJECT_NAME} test_GUI test_Solids test_Mesh test_SoftMolecularDynamics test_eFF
+    TARGET ${PROJECT_NAME} test_GUI test_Solids test_Mesh
     #COMMAND ln -sf ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
     #COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_SOURCE_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${MY_SRC_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources

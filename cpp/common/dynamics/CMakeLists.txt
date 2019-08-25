@@ -21,7 +21,7 @@ add_library( CommodityNetwork OBJECT CommodityNetwork.cpp )
 #add_library( MoleculeWorld2D OBJECT MoleculeWorld2D.cpp )
 #add_library( MolecularEngine OBJECT MolecularWorld.cpp MoleculeType.cpp AtomTypes.cpp  )
 
-add_subdirectory (Molecular)
+#add_subdirectory (Molecular)
 
 file(GLOB dynamics_HEADERS_ *.h )
 add_custom_target(dynamics_headers SOURCES ${dynamics_HEADERS_} )

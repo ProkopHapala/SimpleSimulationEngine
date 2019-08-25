@@ -1,6 +1,7 @@
 add_subdirectory (algorithms)
 add_subdirectory (math)
 add_subdirectory (dynamics)
+add_subdirectory (molecular)
 add_subdirectory (maps)
 add_subdirectory (dataStructures)
 add_subdirectory (engine)

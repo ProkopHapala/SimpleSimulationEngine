@@ -1,7 +1,8 @@
 
 set( NAME "MolecularEditor2" )
 
-include_directories( ${COMMON_SRCS}/dynamics/Molecular )
+#include_directories( ${COMMON_SRCS}/dynamics/Molecular )
+include_directories( ${COMMON_SRCS}/molecular )
 
 add_executable( ${NAME}_main
 	${NAME}_main.cpp 

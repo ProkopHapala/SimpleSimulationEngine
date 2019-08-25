@@ -6,7 +6,8 @@ set( NAME "MolecularEditor" )
 
 #add_library( MolecularEngine OBJECT MolecularWorld.cpp MoleculeType.cpp AtomTypes.cpp  )
 
-include_directories( ${COMMON_SRCS}/dynamics/Molecular )
+#include_directories( ${COMMON_SRCS}/dynamics/Molecular )
+include_directories( ${COMMON_SRCS}/molecular )
 
 add_executable( ${NAME}_main
 	${NAME}_main.cpp 
