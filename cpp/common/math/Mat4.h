@@ -32,13 +32,14 @@ class Mat4T{
 			T dx,dy,dz,dw;
 		};
 		struct{	VEC a,b,c,d; };
-		T array[16];
-		T arr2d[4][4];
+		VEC  vecs [4];
+		T    array[16];
+		T    arr2d[4][4];
 	};
 
 // ====== initialization
 
-	inline void setOne(        ){ xx=yy=zz=ww=1; xy=xz=xw=yx=yz=yw=zx=zy=zw=wx=wy=wz=0; };
+	inline void setOne(     ){ xx=yy=zz=ww=1; xy=xz=xw=yx=yz=yw=zx=zy=zw=wx=wy=wz=0; };
 	inline void set   ( T f ){ xx=yy=zz=ww=f; xy=xz=xw=yx=yz=yw=zx=zy=zw=wx=wy=wz=0; };
 
 	inline void set_outer  ( const VEC& a, const VEC& b ){
@@ -46,7 +47,7 @@ class Mat4T{
 		yx=a.y*b.x; yy=a.y*b.y; yz=a.y*b.z; yw=a.y*b.w;
 		zx=a.z*b.x; zy=a.z*b.y; zz=a.z*b.z; zw=a.z*b.w;
 		wx=a.w*b.x; wy=a.w*b.y; wz=a.w*b.z; ww=a.w*b.w;
-	};
+	}
 
 	inline void diag_add( T f ){ xx+=f; yy+=f; zz+=f; ww+=f; };
 
@@ -177,6 +178,61 @@ class Mat4T{
         xx=M.xx; xy=M.xy; xz=M.xz;
 		yx=M.yx; yy=M.yy; yz=M.yz;
 		zx=M.zx; zy=M.zy; zz=M.zz;
+    }
+
+    inline void add_mul(const MAT& m,const VEC& v){
+        for(int i=0; i<4; i++){ vecs[i].add_mul( m.vecs[i], v.array[i] ); }
+    }
+
+    inline void add_mul(const MAT& m,T f){
+        for(int i=0; i<4; i++){ vecs[i].add_mul( m.vecs[i], f ); }
+    }
+
+    inline void makeOrthoU(const MAT& m ){
+        for(int i=0; i<4; i++){ vecs[i].makeOrthoU( m.vecs[i] ); }
+    }
+
+    void normalize(){ for(int i=0;i<4;i++)vecs[i].normalize(); };
+
+    inline T getOrthoForces(MAT& f){
+        T c2sum=0;
+        for(int i=1;i<4;i++){
+            for(int j=0;j<i;j++){
+                T c = -vecs[i].dot(vecs[j]);
+                f.vecs[i].add_mul( vecs[j], c );
+                f.vecs[j].add_mul( vecs[i], c );
+                c2sum+=c*c;
+                //printf( "getOrthoForces[%i,%i] c %g \n", i, j, c );
+            }
+        }
+        return c2sum;
+    }
+
+    inline T orthoStep(const T sc){
+        T err2 = 0;
+        MAT f; f.set((T)0);
+        for(int i=0;i<4;i++){ err2+=sq( vecs[i].normalize_taylor3() ); }
+        err2+=getOrthoForces(f);
+        for(int i=0;i<4;i++){ vecs[i].add_mul( f.vecs[i], sc ); }
+        return err2;
+    }
+
+    inline int orthoRun(const T err2conv,const int nMaxIter ){
+        T err2;
+        MAT f;
+        int itr;
+        for(itr=0;itr<nMaxIter;itr++){
+            err2=0;
+            f.set((T)0);
+            //for(int i=0;i<4;i++){ err2+=vecs[i].normalize_taylor3(); }
+            for(int i=0;i<4;i++){ err2+=sq( vecs[i].normalize_hybrid( 0.04d+err2conv ) ); }
+            err2+=getOrthoForces(f);
+            //for(int i=0;i<4;i++){ vecs[i].add_mul( f.vecs[i], 0.5d ); }
+            add_mul( f, 0.5d );
+            //printf( "orthoRun[%i] %g\n", itr, err2 );
+            if(err2<err2conv) break;
+        }
+        return itr;
     }
 
     //void setPos( Vec3T<T> p ){ xw=p.x; yw=p.y; xw=p.z; }

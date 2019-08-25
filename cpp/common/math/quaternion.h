@@ -52,7 +52,8 @@ class Quat4T {
 	public:
 	union{
 		struct{ T x,y,z,w; };
-		struct{ VEC f;T e; };
+		struct{ VEC f;T e; }; // like force and energy
+		struct{ VEC p;T s; }; // like molecular orbital basiset
 		T array[4];
 	};
 
@@ -109,23 +110,34 @@ class Quat4T {
         }
     }
 
-    inline QUAT& normalize_taylor3(){
+    inline T normalize_taylor3(){
         // sqrt(1+x) ~= 1 + 0.5*x - 0.125*x*x
         // sqrt(r2) = sqrt((r2-1)+1) ~= 1 + 0.5*(r2-1)
         // 1/sqrt(1+x) ~= 1 - 0.5*x + (3/8)*x^2 - (5/16)*x^3 + (35/128)*x^4 - (63/256)*x^5
         T dr2    = x*x+y*y+z*z+w*w-1;
-        T renorm = 1 + dr2*( -0.5d + dr2*( 0.375d + dr2*-0.3125d ) );
-        x*=renorm;
-        y*=renorm;
-        z*=renorm;
-        w*=renorm;
-        return *this;
+        T invr = 1 + dr2*( -0.5d + dr2*( 0.375d + dr2*-0.3125d ) );
+        x*=invr;
+        y*=invr;
+        z*=invr;
+        w*=invr;
+        return dr2;
     }
 
-    inline void sub_paralel(const QUAT& qrot){
-        T c = dot(qrot);
-        add_mul(qrot,-c);
+    inline T normalize_hybrid(T dr4max){
+        T dr2    = x*x+y*y+z*z+w*w-1;
+        T dr4    = dr2*dr2;
+        T invr;
+        if(dr4<dr4max){ invr = 1 + dr2*-0.5d + dr4*( 0.375d + dr2*-0.3125d ); }
+        else          { invr = 1/sqrt(dr2+1); };
+        x*=invr;
+        y*=invr;
+        z*=invr;
+        w*=invr;
+        return dr2;
     }
+
+    inline T makeOrthoU(const QUAT& q){ T c = dot(q);           add_mul(q,-c); return c; }
+    inline T makeOrtho (const QUAT& q){ T c = dot(q)/q.norm2(); add_mul(q,-c); return c; }
 
 // ====== Quaternion multiplication
 

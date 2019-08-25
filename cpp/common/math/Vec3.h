@@ -120,8 +120,8 @@ class Vec3T{
 	inline VEC& add_cross( const VEC& a, const VEC& b ){ x+=a.y*b.z-a.z*b.y; y+=a.z*b.x-a.x*b.z; z+=a.x*b.y-a.y*b.x; return *this;};
 	inline VEC& sub_cross( const VEC& a, const VEC& b ){ x-=a.y*b.z-a.z*b.y; y-=a.z*b.x-a.x*b.z; z-=a.x*b.y-a.y*b.x; return *this;};
 
-	T makeOrthoU( const VEC& a ){ T c = dot(a);          add_mul(a, -c); return c; }
-	T makeOrtho ( const VEC& a ){ T c = dot(a)/a.norm(); add_mul(a, -c); return c; }
+	T makeOrthoU( const VEC& a ){ T c = dot(a);           add_mul(a, -c); return c; }
+	T makeOrtho ( const VEC& a ){ T c = dot(a)/a.norm2(); add_mul(a, -c); return c; }
 
     inline VEC operator+ ( T f   ) const { VEC vo; vo.x=x+f; vo.y=y+f; vo.z=z+f; return vo; };
     inline VEC operator* ( T f   ) const { VEC vo; vo.x=x*f; vo.y=y*f; vo.z=z*f; return vo; };
@@ -363,6 +363,7 @@ class Vec3T{
         return *this;
     }
 
+    inline VEC& addRandomCube( double d ){ x+=randf(-d,d); y+=randf(-d,d); z+=randf(-d,d);  return *this; }
     inline VEC& fromRandomCube( double d ){ x=randf(-d,d); y=randf(-d,d); z=randf(-d,d);  return *this; }
     inline VEC& fromRandomBox( const VEC& vmin, const VEC& vmax ){ x=randf(vmin.x,vmax.x); y=randf(vmin.y,vmax.y); z=randf(vmin.z,vmax.z);  return *this; }
 
@@ -434,7 +435,7 @@ inline Vec3i    from_id    ( uint64_t id   ){
 }
 
 template<typename T1,typename T2>
-inline void convert(const Vec3T<T1>& i, Vec3T<T2> o){  o.x=(T2)i.x; o.y=(T2)i.y; o.z=(T2)i.z; };
+inline void convert(const Vec3T<T1>& i, Vec3T<T2>& o){  o.x=(T2)i.x; o.y=(T2)i.y; o.z=(T2)i.z; };
 
 template<typename T1,typename T2>
 inline Vec3T<T2> cast(const Vec3T<T1>& i){ Vec3T<T2> o; o.x=(T2)i.x; o.y=(T2)i.y; o.z=(T2)i.z; return o; };
