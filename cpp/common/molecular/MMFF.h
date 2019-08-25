@@ -442,7 +442,7 @@ void aforce2frags(){
             ia++;
         }
 
-        ((Quat4d*)(poseF_i+4))->sub_paralel( *(Quat4d*)(pose_i+4) ); // remove component of force which breaks normalization
+        ((Quat4d*)(poseF_i+4))->makeOrthoU( *(Quat4d*)(pose_i+4) ); // remove component of force which breaks normalization
 
         //printf( "ifrag %i fpose (%g,%g,%g,%g, %g,%g,%g,%g,) \n", poseF_i[0], poseF_i[1], poseF_i[2], poseF_i[3], poseF_i[4], poseF_i[5], poseF_i[6], poseF_i[7] );
     }
