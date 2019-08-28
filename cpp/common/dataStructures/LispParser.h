@@ -1,6 +1,6 @@
 
-#ifndef StructParser_h
-#define StructParser_h
+#ifndef LispParser_h
+#define LispParser_h
 
 #include <vector>
 #include <cstdio>
@@ -8,7 +8,9 @@
 
 #include "parsing.h"
 
-class StructParser{ public:
+// inspired by http://zserge.com/jsmn.html and https://github.com/zserge/jsmn
+
+class LispParser{ public:
     std::vector<ParserItem> items;
 
     int ich;
@@ -16,19 +18,19 @@ class StructParser{ public:
     char * str;
 
     // params
-    char cOPEN  = '{';
-    char cCLOSE = '}';
-    char cNEXT  = ';';
+    char cOPEN  = '(';
+    char cCLOSE = ')';
+    char cNEXT  = ',';
 
     void parseString( int nch_, char * str_ ){
         str = str_;
         nch = nch_;
         ich = 0;
         //printf( "%s\n", str );
-        parse( 0, 0, -1 );
+        parse( 0, 0, nullptr );
     }
 
-    int parse( int ich0, int level, int parent ){
+    int parse( int ich0, int level, ParserItem* parent ){
         int oi      = ich0;
         ich         = oi;
         int nbranch =  0;
@@ -40,10 +42,10 @@ class StructParser{ public:
             //printf( "%i : %c\n", ich, ch );
             if (ch==cNEXT){
                 if( iCur<0 ){
-                    items.push_back( (ParserItem){oi,ich-oi,0,0,0, level, parent} );
-                    printf("LEAF item[%i] %i %i : %.*s\n", items.size()-1, level, parent,   ich-oi,str+oi );
+                    items.push_back( (ParserItem){oi,ich,0,0,0, level} );
+                    //printf(" item[%i] (%i,%i) : %.*s\n", items.size(), oi, ich, ich-oi, str+oi );
                 }else{
-                    items[iCur].nch = ich-oi;
+                    items[iCur].iend = ich;
                     //printf( " finished %i \n", ich );
                 }
                 nbranch++;
@@ -52,13 +54,13 @@ class StructParser{ public:
             //}
             }else if (ch==cOPEN) {
                 iCur = items.size();
-                items.push_back( (ParserItem){oi,0,ich-oi,0,0,level, parent} );
-                printf("NODE item[%i] %i %i : %.*s\n",  items.size()-1,    level, parent,    ich-oi,str+oi );
-                parse( ich+1, level+1, iCur );
+                items.push_back( (ParserItem){oi,0,ich-oi,0,0} );
+                //printf(" item[%i] (%i,%i) : %.*s\n", items.size(), oi, ich, ich-oi, str+oi );
+                parse( ich+1, level+1, &items[iCur] );
             }else if (ch==cCLOSE) {
-                if( parent>=0 ){
-                    items[parent].nbranch = nbranch;
-                    items[parent].nitem   = items.size()-parent;
+                if( parent ){
+                    parent->nbranch = nbranch;
+                    parent->nitem   = items.size()-( parent - &items[0] );
                 }
                 return 0;
             }
@@ -89,19 +91,7 @@ class StructParser{ public:
         for( int i=0; i<items.size(); i++ ){
         //for( ParserItem& item : items ){
             ParserItem& it = items[i];
-            //printf("%03i (%04i,%02i) %02i(%02i,%02i) : ", i, it.ibeg, it.iend-it.ibeg, it.level, it.nbranch, it.nitem );
-            printf("%03i (%04i,%04i) (%02i,%02i) %03i %03i : ", i, it.ibeg, it.nch,  it.nbranch,it.nitem, it.level, it.parent );
-            printf("%*c"   , 4*it.level, ' ' );
-            //printf("%.*s\n", it.iend-it.ibeg, str + it.ibeg );
-            if( (it.nbranch+it.nitem)>0 ){
-                printf("%.*s", it.nch_name, str + it.ibeg );
-                printf("|" );
-                //printf("%.*s\n", it.iend-it.ibeg-it.nch_name, str + it.ibeg+it.nch_name );
-                printf("%.*s\n", it.nch-it.nch_name, str + it.ibeg+it.nch_name );
-            }else{
-                //printf("%.*s\n", it.iend-it.ibeg, str + it.ibeg );
-                printf("%.*s\n", it.nch, str + it.ibeg );
-            }
+            printf("%06i (%i,%i) : ", i, it.ibeg, it.iend );  printf("%*c", 4*it.level, ' ' );  printf("%.*s\n", it.iend-it.ibeg, str + it.ibeg );
         }
     }
 
