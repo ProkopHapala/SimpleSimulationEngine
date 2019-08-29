@@ -8,6 +8,8 @@
 
 #include "parsing.h"
 
+namespace parsing{
+
 class StructParser{ public:
     std::vector<ParserItem> items;
 
@@ -106,6 +108,8 @@ class StructParser{ public:
     }
 
 };
+
+}
 
 #endif
 

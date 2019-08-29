@@ -137,7 +137,19 @@ void genRandomArray( int n, double * vals, double vmin, double vmax ){
     } while (0) \
 
 
-
+#define SPEED_TEST_FUNC_NM( caption, func, n, m ) \
+    do{                                    \
+    double sum  = 0.0;                     \
+    long tstart = getCPUticks();           \
+    for(int j=0; j<m; j++){                \
+        for( int i=0; i<n; i++ ){          \
+            sum += func;                   \
+        }                                  \
+    }                                      \
+    long time   = getCPUticks() - tstart;  \
+    int ncall = n*m;                       \
+    printf( "%s : %3.3f ticks/call ( %g %g ) | %g \n", caption, time/double(ncall), (double)time, (double)ncall, sum );   \
+    } while (0) \
 
 
 

@@ -3,6 +3,9 @@
 
 #include <cstring>
 
+using namespace parsing;
+
+
 StructParser parser;
 
 //LispParser parser;

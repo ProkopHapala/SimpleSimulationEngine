@@ -7,6 +7,8 @@
 
 namespace Lang{
 
+using namespace parsing;
+
 struct Node{
     //int parsing;
     ParserItem* token=0;
