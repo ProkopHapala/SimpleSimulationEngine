@@ -2,6 +2,8 @@
 #ifndef  binarySwitch_h
 #define  binarySwitch_h
 
+#include <cstdint>
+
 /*
 template <class T, uint8_t npow, size_t n >
 size_t binarySwitch(T c, T* levels){

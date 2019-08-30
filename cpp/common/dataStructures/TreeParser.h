@@ -23,323 +23,330 @@ There are 4 kinds of chains with    ( decreasing coupling strength )  <=>  (  in
 
 namespace parsing{
 
-//                                                     !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
-char charTypes_1[] = "                                 +`++++`()++;+++aaaaaaaaaa+;+++++aaaaaaaaaaaaaaaaaaaaaaaaaa(+)+aaaaaaaaaaaaaaaaaaaaaaaaaaaa(+)+";
-//char charTypes_1[] = "                               -a----a()--,---aaaaaaaaaa-------aaaaaaaaaaaaaaaaaaaaaaaaaa(-)-aaaaaaaaaaaaaaaaaaaaaaaaaaaa(-)-";
-//char charTypes[] = "                                 -'----'()--,---0000000000-------aaaaaaaaaaaaaaaaaaaaaaaaaa(-)-a'aaaaaaaaaaaaaaaaaaaaaaaaaa(-)-";
-//char charPrior_1[] = "                              13 3354 2256 63500000000009 78783000000000000000000000000002 240 000000000000000000000000002423";
-char charCoule_1[] = "                                 5 5555   551595          2055555                           5 5                             5 5";
-char charCompl_1[] = "                                        )(/- + *            > <                            ] [                             } { ";
 
-struct ParserGlobalState{
-/*
-    int    level    = 0    ;
-    char   cQuote   = 0    ;    // are we in some litaral?      '"`    ?
-    char   cBracket = ' '  ;
-    char   cPrev    = '('  ;    // previous kind
-    char   cChain   = ' '  ;    // type of current chain
-    char   chPrior  = ' '  ;    // chain priority
-    char   oct      = ' '  ;
-    int    parNode  = 0    ;    // parent node
-    int    curNode  = 0    ;    // current node
-    int    ic       = 0    ;    // position in string
- */
-
-    int    level    = 0    ;
-    char   cQuote   = 0    ;    // are we in some litaral?      '"`    ?
-    char   cBracket = ' '  ;
-
-    //char   cSuper  = '('   ;    // previous kind
-    char   cPrev   = '('   ;    // previous kind
-    char   pSuper  = '('   ;    //
-
-    char   iSuper  = -1    ;    // previous kind
-    char   iPrev   = -1    ;    // previous kind
-
-    char   oct      = ' '  ;
-    int    ic       = 0    ;    // position in string
-
+enum class TupleKind {
+name=0,
+op  =1,
+expr=3,
+lst =9,
 };
 
 
 
 
+//                                                      !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+char charTypes_1[]  = "                                 +`++++`()++;+++aaaaaaaaaa+;+++++aaaaaaaaaaaaaaaaaaaaaaaaaa(+)+aaaaaaaaaaaaaaaaaaaaaaaaaaaa(+)+";
+//char charTypes_1[]  = "                               -a----a()--,---aaaaaaaaaa-------aaaaaaaaaaaaaaaaaaaaaaaaaa(-)-aaaaaaaaaaaaaaaaaaaaaaaaaaaa(-)-";
+//char charTypes[]  = "                                 -'----'()--,---0000000000-------aaaaaaaaaaaaaaaaaaaaaaaaaa(-)-a'aaaaaaaaaaaaaaaaaaaaaaaaaa(-)-";
+//char charPrior_1[]  = "                                13 3354 2256 63500000000009 78783000000000000000000000000002 240 000000000000000000000000002423";
+char charPrior_1[]  = "                                01 1111   1181110000000000191111100000000000000000000000000   13 00000000000000000000000000 1 1";
+//char charCouple_1[] = "                                 5 5555   551595          2055555                           5 5                             5 5";
+char charCompl_1[]  = "                                        )(/- + *            > <                            ] [                             } { ";
 
+struct ParserGlobalState{
+    //Tuple  tup;
+    char   cQuote   = 0     ;  // are we in some litaral?      '"`    ?
+    //char   cBracket = ' ' ;
+    //char   cMode    = ' ' ;
+    char   cPrev    = ' '   ;  // _ a +
+    char   ctSep    = ' '   ;  // _ ; ( )    previous separator
+    char   chSep    = ' '   ;
+    //int   iSuper  = -1    ;   // previous kind
+    //int   iPrev   = -1    ;   // previous kind
+    char    icur    = 0    ;    // current tuple
+    char   oct      = ' '  ;
+    int    ic       = 0    ;    // position in string
 
-
-/*
-struct ParserLocalState{ // this should be on stack
-    int    parent;
-    //int    oi;           // previous position for calling recursion
-
-    ParserLocalState(int parent):parent(parent){};
-}
-*/
+    //int level  = 0;
+};
 
 class TreeParser{ public:
-    std::vector<ParserNode> items;
+    //std::vector<ParserNode> items;
+    //std::vector<Break> breaks;
+
+    std::vector<Tuple> items;
 
     int nch;
     char * str;
 
     ParserGlobalState gs;
 
-    bool bBanEmptyNode       = false;
+    //bool bBanEmptyNode       = false;
+    bool bBanEmptyNode       = true;
     bool bEmptyChainOperator = true;
-
-
-    // params
-    /*
-    char cOPEN   = '(';
-    char cCLOSE  = ')';
-    char cNEXT   = ',';
-    char cOP     = '-';
-    char cQUOTE  = '`';
-    */
+    bool bBanRightDanglingOperator = true;
 
     //temp
     char ch;
     char ct;
+    char cp;
 
     inline int fail(){
         gs.ic = nch+1;
         return -1;
     }
 
-    inline void reconectTree( int iUp, int iDown ){
-        int ipar = items[iDown].parent;
-        items[iDown].parent = iUp;
-        items[iUp  ].parent = ipar;
+    inline void changeTuple( char cKind ){ items[gs.icur].cKind = cKind; }
+
+    inline void startTupleBra( char cKind, char bra  ){
+        //printf( "startTuple  (%c |%c|%i)", cKind, bra,bra==' ' );
+        //int level = 0; if(gs.icur>0){level=items[gs.icur].level + 1;}
+
+        items.push_back( Tuple( cKind, bra, gs.ic, gs.icur ) );
+        //items.back().level = gs.level;
+        gs.icur = items.size()-1;
+        printf( "new[%i] ", gs.icur ); items.back().print(); puts(" ");
+        //gs.level++;
+
     }
 
-    inline void finishNode( ){
-        printf( "finishNode \n" );
-        items[gs.curNode].nc = gs.ic - items[gs.curNode].ic0;
-        int ipar  = items[gs.curNode].parent;
-        if(ipar<0){
-            printf( "ERROR: str[%i] exit from top-node \n", gs.ic );
-            fail();
-            return;
+    inline void startTuple( char cKind  ){ startTupleBra( cKind, '_'  ); }
+
+    bool endTuple( ){
+        //printf( "finishNode \n" );
+        Tuple& it = items[gs.icur];
+        if( bBanEmptyNode && (it.cKind==' ') ){ printf( "ERROR str[%i]: tuple [%i] ended empty \n", gs.ic ); exit(0); return false; }
+        it.nc = gs.ic - it.ic;
+        int iSup  = it.iSuper;
+        if(iSup<0)                            { printf( "ERROR str[%i]: exit from top-node \n",     gs.ic ); exit(0); return false; }
+        //printf( "endTuple (( it[%i] cK %c   `%.*s` ))   %i->%i \n",gs.icur,  it.cKind,  it.nc, str+it.ic,  gs.icur, iSup );
+        printf( "end[%i] ", gs.icur ); items.back().print(); puts(" ");
+        gs.icur = iSup;
+        //gs.level--;
+        return true;
+    }
+
+    inline void reconectWrap( int iUp, int iDown ){
+        printf( "reconect %i under %i \n", iDown, iUp );
+        int iSup = items[iDown].iSuper;
+        printf( "Dw[%i].Sup=%i   Up[%i].Sup=%i \n",  items[iDown].iSuper,iUp,   iUp, iSup );
+        items[iUp  ].iSuper = iSup;
+        items[iDown].iSuper = iUp;
+
+        items[iUp  ].ic = items[iDown].ic;
+
+        //int lev = items[iDown].level;
+        //items[iUp  ].level = lev;
+        //items[iDown].level = lev+1;
+
+        printf( "iUp[%i] ", iUp   ); items[iUp  ].print(); puts(" ");
+        printf( "iDw[%i] ", iDown ); items[iDown].print(); puts(" ");
+    }
+
+    void wrapTuple( char cKind ){
+        //printf( "(wrapTuple %c)", cKind );
+        int iDown = gs.icur;
+        endTuple();
+        startTuple( cKind );
+        reconectWrap( gs.icur, iDown );
+    }
+
+    void wrapTupleAndSub( char cKind, char ct ){
+        wrapTuple ( cKind   );
+        startTuple( ct );
+    }
+
+
+    /*
+    void makeNested( char cSuper, char cSub ){
+        int iDown = gs.icur;
+        endTuple();
+        char cKind = items[gs.icur].cKind;
+        if( cKind != cSuper ){
+            char phas  = charCouple_1 [ cKind  ];
+            char pwant = charCouple_1 [ cSuper ];
+            if(phas>pwant){
+
+            }else{
+
+            }
+            wrapTuple( char cKind );
         }
-        gs.curNode = ipar;
-        gs.level--;
+        startTuple( cSub, ' ' );
     }
-
-    inline void startNode( char kind ){
-        printf( "startNode %c ic %i parent %i \n", kind, gs.ic, gs.curNode );
-        //items.emplace_back( kind, gs.ic, gs.curNode  );
-        items.push_back( ParserNode( kind, gs.ic, gs.iSuper, gs.iPrev ) );
-        //items.push_back( ParserNode(kind, gs.ic, gs.curNode, gs.prev ) );
-        items.back().level = gs.level;
-        gs.curNode=items.size()-1;
-        gs.cPrev = kind;
-        gs.level++;
-    }
-
-    inline void superNode( char kind ){
-
-        int iDown = gs.curNode;
-
-        printf( "superNode %c iDown %i \n", kind, iDown );
-        items[iDown].level++;
-        finishNode();
-        startNode( kind );
-        items.back().ic0 = items[iDown].ic0;
-        reconectTree( gs.curNode, iDown );
-    }
-
-    //inline namedBracket(){
-    //    items[curNode].kind='F';
-    //}
+    */
 
 
-    inline void nextInChain( char ct, char ch ){
-        char coupling = charCoule_1[ch];
-        if( coupling < gs.chCoupling ){   // split chains
-            superNode(ct);
-        }else{                            // next
-            startNode(ct);
+    void treeInsert( char cWant ){
+        char pwant  = charPrior_1[ cWant ];
+        char cKind  = items[gs.icur].cKind;
+        char phave  = charPrior_1[ cKind ];
+        int  iDown  = -1;
+        int levelUp=0;
+        while( pwant > phave ){
+            iDown  = gs.icur;
+            if( items[gs.icur].bra != '_' ){
+                printf( "item[%i]HIT-BRAKET|%c|%i(pwant %i(%c)have %i(%c))\n", gs.icur, items[gs.icur].bra, items[gs.icur].bra=='_', pwant-'0',cWant, phave-'0',cKind );
+                //endTuple();
+                startTuple( cWant );
+                reconectWrap( gs.icur, iDown );
+                return;
+            }
+            //printf( "while[%i] icur %i bra |%c| %i \n", levelUp, gs.icur, items[gs.icur].bra, ' '==items[gs.icur].bra ); if(levelUp>5) exit(0);
+            endTuple();
+            levelUp++;
+            cKind  = items[gs.icur].cKind;
+            phave  = charPrior_1[ cKind ];
+        }
+        //printf( "treeInsert lUp %i pwant %i(%c) phave %i(%c) \n", levelUp, pwant-'0',cWant, phave-'0',cKind );
+        if( pwant < phave  ){ // we got higher than we wanted => make sub node
+            startTuple( cWant );
+            if(iDown>0) reconectWrap( gs.icur, iDown );
         }
     }
 
+    void putUnderCommon( char cSuper, char ct, char bra ){
+        treeInsert( cSuper );
+        startTupleBra( ct, bra );
+    }
+
+    void endTupleRecur(char ch, char ct){
+        char prior  = charPrior_1[ ch ];
+        char cKind  = items[gs.icur].cKind;
+        char cPrior = charPrior_1[ cKind ];
+        int  iDown  = -1;
+        while( prior > cPrior ){
+            //wrapTuple();
+            iDown  = gs.icur;
+            endTuple();
+            cKind  = items[gs.icur].cKind;
+            cPrior = charPrior_1[ cKind ];
+        }
+        // we know that prior <= cPrior
+
+        //if( prior == cPrior ){   //   (  ,  (()+()) ,  )
+        //    addSub(' ');
+        //}else{
+        //    wrapTuple(iclosed);  //      ;( (()+()) ,  )
+        //}
+        startTuple( ct );
+        if(iDown>0) reconectWrap( gs.icur, iDown );
+    }
+
+    bool closeBracket(char ket){
+        char bra  = charCompl_1[ket];
+        char cBra = items[gs.icur].bra;
+        while ( cBra=='_' ){
+            endTuple();
+            cBra = items[gs.icur].bra;
+        }
+        if( bra == cBra ){
+            endTuple();
+            return true;
+        }
+        return false;
+    }
 
 
-    int parse( ){
-        while( gs.ic < nch ){
-            //char ch = str[ich];
-            ch = str[gs.ic];         // current character
-            ct = charTypes_1[ ch ];  // type of current character
-            cp = charPrior_1[ ch ];  // character priority
+    int parse(){
+        for(gs.ic=0; gs.ic<nch; gs.ic++ ){
 
+            ch = str        [ gs.ic ]; // current character
+            ct = charTypes_1[ ch    ]; // type of current character
 
-            printf( "str[%i] %c -> %c \n", gs.ic, ch, ct );
+            //  -   for the moment   we create formula-kind of tuples with alternating   aaaa_++++_BBB   parts
+            char cKind = items[gs.icur].cKind;
+            char ctK   = charTypes_1[ cKind ];
 
-            // ========== quotation
-            if( gs.cQuote ){ // in quotation
-                if(gs.cQuote==ch){ gs.cQuote=0; }
-                gs.ic++; continue;
-            }else{        // not int quotatio
-                if(ct=='"'){
-                    gs.cQuote=ch;
-                    gs.ic++; continue;
+            printf( "====== parse[%i]  %c : %c    cK %c  iCur %i  \n",   gs.ic,  ch, ct,  cKind,  gs.icur     );
+
+            if       ( ct=='a'){
+
+                if ( (cKind == '_') || (ctK == ';') ){
+                    startTuple( 'a' );
+                }else if ( (gs.cPrev ==')') || (cKind=='+') || ( (cKind=='a') && (gs.oct==' ') ) ){
+                    //wrapTupleAndSub( '_', ct );       printf(" wrapAndSub   ");
+                    putUnderCommon( '_', ct, '_' );
+                }else if ( cKind==' ' ){
+                    changeTuple( 'a' );
                 }
+
+            }else if( ct=='+'){
+
+                if ( (cKind == '_') || (ctK == ';') ){
+                    startTuple( '+' );
+                }else if (  (gs.cPrev ==')') || (ctK=='a' ) ){
+                    //wrapTupleAndSub( '_', ct );       printf(" wrapAndSub   ");
+                    putUnderCommon( '_', ct, '_' );
+                }else if ( cKind==' ' ){
+                    changeTuple( 'a' );
+                }
+
+            }else if( ct==';' ){
+
+                if     ( cKind == '+' ){ if(bBanRightDanglingOperator){ printf( "ERROR str[%i]: operator before   spearator %c \n", gs.ic, ch ); return -1;  }}
+                else if( cKind == ' ' ){ if(bBanEmptyNode            ){ printf( "ERROR str[%i]: empty node before spearator %c \n", gs.ic, ch ); return -1;  }}
+                //endTupleRecur(ch, ct );
+                treeInsert( ch );
+            }else if( ct=='(' ){
+
+                if ( (cKind == '_') || (cKind == ';') ){
+                    startTupleBra( ' ', ch );
+                } else if( (gs.cPrev ==')') || (cKind=='+') || (cKind=='a' )){
+                    wrapTupleAndSub( '_', ' ' );
+                    items[gs.icur].bra = ch;
+                }
+
+            }else if( ct==')'){
+                if( gs.cPrev == '+'   ){ printf( "ERROR str[%i]: operator before bracket %c \n",             gs.ic, ch                     ); return -1; }
+                if( !closeBracket(ch) ){ printf( "ERROR str[%i]: closing bracket %c while %c is opended \n", gs.ic, ch, items[gs.icur].bra ); return -1; }
             }
 
+            printf( "\n "   );
 
-
-
-
-
-
-            // ========== not quotation
-
-            //if (  ct== ' ' ){       // space
-            //    gs.bSpace = true;
-            //} else
-
-
-            if ( ct!=gs.ctPrev ){
-
-
-            }
-
-
-
-
-
-            if       ( ct== 'a' ) {       // Name
-            //    a after a       check previous space, if space    super-node-'_'   (if allowed)      active plit_&_push_down by "_chain" operator
-            //    a after )       super-node-'_'  (if allowed)                                         split_&_push_down by "_chain" operator  (if allowed)
-            //    a after (       start sub-node
-            //    a after +       start sub-node
-            //    a after ;       start sub-node
-                if ( gs.cPrev=='a' ){
-                    if( gs.oct==' ' ){
-                        superNode( '_' );
-                        startNode( 'a' );
-                    }
-                }else if ( gs.cPrev==')' ){
-                    printf( " )a a_a   cPrev %c \n", gs.cPrev );
-                    superNode( '_' );
-                    startNode( 'a' );
-                }else{
-                    printf( " +a ;a  cPrev %c \n", gs.cPrev );
-                    startNode( 'a' );         // +a  ;a
-                }
-            }else if (  ct== '+' ){
-            //    + after a       finish a, super-node-'+'
-            //    + after )       finish ), super-node-'+'
-            //    + after (       start sub-node  unary-operator
-            //    + after +       ignore (chain operators)
-            //    + after ;       start sub-node  unary-operator
-                if( (gs.cPrev == 'a')||( gs.cPrev ==')' ) ){
-                    //finishNode();
-                    //nextInList( ct, ch );
-                    if( gs.cSuper=='+' ){
-                        superNode( '+' );
-                    }else{
-                        superNode( '+' );
-                    }
-                }else if( gs.cPrev =='(' ){
-                    startNode( '~' );
-                }else if( gs.cPrev ==';' ){
-                    startNode( '~' );
-                }
-            }else if (  ct== ';'  ){   // separator
-            //    ; after a       finish a, super-node-';'
-            //    ; after )       finish ), sub-node-';'
-            //    ; after (       if(bEmptyNode)  start-sub-node, finish-sub-node,  start sub-node
-            //    ; after +       ERROR: dangling +
-            //    ; after ;       if(bEmptyNode)  start-sub-node, finish-sub-node,  start sub-node
-                if ( (gs.cPrev=='a')||(gs.cPrev==')') ){
-                    //finishNode();
-                    //nextInList( ct, ch );
-                    if( gs.cSuper=='+' ){
-                        hyperNode( ';' );
-                    }else {
-                        superNode( ';' );
-                    }
-                //}else if (gs.cPrev==')'){
-                //    //finishNode();
-                //    nextInList( ct, ch );
-                }else if (gs.cPrev=='('){
-                    startNode ('0');
-                    gs.cPrev=';';
-                }else if (gs.cPrev=='+'){
-                    printf("ERROR: str[%i] dangling operator before separator * %c \n", gs.ic, ch );
-                    return fail();
-                }else if( (gs.cPrev==';')  ){   // empty node - may be disabled
-                    if( bBanEmptyNode && (gs.cPrev==';') ){
-                        printf("ERROR: str[%i] chained separator %c, but empty nodes not allowed\n", gs.ic, ch );
-                        return fail();
-                    }
-                    finishNode();
-                    startNode (';');
-                }
-            }else if ( ct== '(' ){    // open bracket
-            //    ( after a       Funtion call;    super-node-'_'                   change a-node to a(-node (namedBracket)
-            //    ( after )       split_&_push_down by "_chain" operator  (if allowed)
-            //    ( after (       start sub-node (
-            //    ( after +       start sub-node (
-            //    ( after ;       start sub-node (
-                if( (gs.cPrev=='a') || (gs.cPrev==')') ){  // named bracket
-                    superNode( '_' );
-                    startNode( '(' );
-                }else{
-                    startNode( '(' );
-                }
-                gs.cBracket = charCompl_1[ch];
-            }else if ( ct== ')' ) {        // close bracket
-            //    ) after a       finish a, finish bracket
-            //    ) after )       finish )
-            //    ) after (       finish empty bracket (if allowed)
-            //    ) after +       ERROR - usaturated +
-            //    ) after ;       finish empty ;, finish bracket
-                if( ch != gs.cBracket ){
-                    printf( " ERROR: str[%i] closing wrong bracket %c instead of %c \n",  gs.ic, ch, gs.cBracket );
-                    return fail();
-                }
-
-                if( (gs.cPrev == 'a')||(gs.cPrev ==')') ){
-                    finishNode();
-                }else if( gs.cPrev =='(' ){
-                    if(bBanEmptyNode){
-                        printf( " ERROR: str[%i] empty brackets not allowed \n",  gs.ic );
-                        return fail();
-                    }
-                    finishNode();
-                }else if( gs.cPrev ==';' ){
-                    finishNode();
-                }
-                gs.cPrev=')';
-            }
-
-            gs.oct=ct;
-            gs.ic++;
+            gs.oct = ct;
         }
         return 0;
     }
 
+
     void parseString( int nch_, char * str_ ){
-
-
-
-        str = str_;
-        nch = nch_;
-
-        //items.emplace_back( '(', 0, -1, -1 );
-        items.push_back( ParserNode( '(', 0, -1 ) );
-
-        gs.ic      = 0   ;
-        gs.oct     = ' ' ;
-        gs.level   = 0   ;
-        gs.curNode = 0   ;
-        gs.cQuote  = 0   ;
-        gs.cPrev   = '(' ;
-
-
+        str   = str_;
+        nch   = nch_;
         //printf( "%s\n", str );
-        parse( );
+
+        //items.reserve( 10 + (nch/20) );
+
+
+
+        //Tuple  tup;
+        //gs.cQuote   = 0     ;  // are we in some litaral?      '"`    ?
+        gs.cPrev    = ' '   ;  // _ a +
+        gs.icur     = -1    ;    // current tuple
+        gs.oct      = ' '   ;
+
+        gs.ic       = 0     ;    // position in string
+        //gs.level    = 0     ;
+
+        startTupleBra( ';', '(' );
+        items.back().level = 0;
+
+        parse();
+    }
+
+    int evalLevel(int i){
+        int level = 1;
+        int j = items[i].iSuper;
+        //printf("===== %i \n", i );
+        //printf( "[%i]  %i->%i L=%i | %i \n", i, i, j, level, items[j].level );
+        while( items[j].level < 0 ){
+            //printf( "[%i]  %i->%i L=%i | %i \n", i, j, items[j].iSuper, level, items[j].level );
+            j = items[j].iSuper;
+            level++;
+        }
+        //printf("level %i \n", level);
+        level += items[j].level;
+        items[i].level = level;
+        j = items[i].iSuper;
+        for(int i=0;i<level;i++){
+            level--;
+            items[j].level = level;
+            j = items[j].iSuper;
+        }
+    }
+
+    void evalAllLevels(){
+        for(int i=1;i<items.size();i++){  evalLevel(i);  }
     }
 
     void checkTables(){
@@ -353,198 +360,47 @@ class TreeParser{ public:
     void printItems(){
         printf("=============\n");
         for( int i=0; i<items.size(); i++ ){
-            const ParserNode& it = items[i];
-            printf( "it[%i]    %.*s \n",i,     it.nc, str+it.ic0 );
+            const Tuple& it = items[i];
+            //printf("%*c"   , 4*it.level, ' ' );
+            //printf( "it[%i]@%i `%c`%i %c    `%.*s` \n",i,it.iSuper,    it.bra,it.bra=='_',  it.cKind,  it.nc, str+it.ic );
+            printf( "it[%02i]@%i `%c`%i %c    ",i,it.iSuper,    it.bra,it.bra=='_',  it.cKind );
+            //printf( "%*c", 4*it.level, ' ' );
+
+            printf( "L[%02i]%*c  ", it.level, 4*it.level );
+            //printf("\033[0;36m");
+            //printf("\033[0;%02im",  i+30   );
+            printf( "`%.*s` \n",  it.nc, str+it.ic );
+            printf("\033[0m");
         }
     }
 
 
 
-    /*
-
-        inline void nextInList( char ct, char ch ){
-
-    }
-
-    int parse( ){
-        while( gs.ic < nch ){
-            //char ch = str[ich];
-            ch = str[gs.ic];         // current character
-            ct = charTypes_1[ ch ];  // type of current character
-
-            printf( "str[%i] %c -> %c \n", gs.ic, ch, ct );
-
-            // ========== quotation
-            if( gs.cQuote ){ // in quotation
-                if(gs.cQuote==ch){ gs.cQuote=0; }
-                gs.ic++; continue;
-            }else{        // not int quotatio
-                if(ct=='"'){
-                    gs.cQuote=ch;
-                    gs.ic++; continue;
-                }
-            }
-
-            // ========== not quotation
-
-            //if (  ct== ' ' ){       // space
-            //    gs.bSpace = true;
-            //} else
-
-            if       ( ct== 'a' ) {       // Name
-            //    a after a       check previous space, if space    super-node-'_'   (if allowed)      active plit_&_push_down by "_chain" operator
-            //    a after )       super-node-'_'  (if allowed)                                         split_&_push_down by "_chain" operator  (if allowed)
-            //    a after (       start sub-node
-            //    a after +       start sub-node
-            //    a after ;       start sub-node
-                if ( gs.cPrev=='a' ){
-                    if( gs.oct==' ' ){
-                        superNode( '_' );
-                        startNode( 'a' );
+    void printLevelColor(){
+        int nMaxLevel=10;
+        for(int ilev=0; ilev<nMaxLevel; ilev++){
+            int ic = 0;
+            for(int i=0;i<items.size();i++){
+                const Tuple& it = items[i];
+                if( it.level==ilev){
+                    int ncleft = (it.ic+1)-ic;
+                    if(ncleft>0){
+                        printf("%*c", ncleft );
+                        ic+=ncleft;
                     }
-                }else if ( gs.cPrev==')' ){
-                    printf( " )a a_a   cPrev %c \n", gs.cPrev );
-                    superNode( '_' );
-                    startNode( 'a' );
-                }else{
-                    printf( " +a ;a  cPrev %c \n", gs.cPrev );
-                    startNode( 'a' );         // +a  ;a
+                    printf("\033[0;%02im",  31+(i%8) );
+                    printf( "%.*s",  it.nc, str+it.ic );
+                    ic+=it.nc;
                 }
-            }else if (  ct== '+' ){
-            //    + after a       finish a, super-node-'+'
-            //    + after )       finish ), super-node-'+'
-            //    + after (       start sub-node  unary-operator
-            //    + after +       ignore (chain operators)
-            //    + after ;       start sub-node  unary-operator
-                if( gs.cPrev == 'a' ){
-                    //finishNode();
-                    superNode( '+' );
-                }else if( gs.cPrev ==')' ){
-                    //finishNode();
-                    superNode( '+' );
-                }else if( gs.cPrev =='(' ){
-                    startNode( '~' );
-                }else if( gs.cPrev ==';' ){
-                    superNode( '~' );
-                }
-            }else if (  ct== ';'  ){   // separator
-            //    ; after a       finish a, super-node-';'
-            //    ; after )       finish ), sub-node-';'
-            //    ; after (       if(bEmptyNode)  start-sub-node, finish-sub-node,  start sub-node
-            //    ; after +       ERROR: dangling +
-            //    ; after ;       if(bEmptyNode)  start-sub-node, finish-sub-node,  start sub-node
-                if (gs.cPrev=='a'){
-                    //finishNode();
-                    superNode(';');
-                }else if (gs.cPrev==')'){
-                    finishNode();
-                    startNode(';');
-                }else if (gs.cPrev=='('){
-                    startNode ('0');
-                    gs.cPrev=';';
-                }else if (gs.cPrev=='+'){
-                    printf("ERROR: str[%i] dangling operator before separator * %c \n", gs.ic, ch );
-                    return fail();
-                }else if( (gs.cPrev==';')  ){   // empty node - may be disabled
-                    if( bBanEmptyNode && (gs.cPrev==';') ){
-                        printf("ERROR: str[%i] chained separator %c, but empty nodes not allowed\n", gs.ic, ch );
-                        return fail();
-                    }
-                    finishNode();
-                    startNode (';');
-                }
-            }else if ( ct== '(' ){    // open bracket
-            //    ( after a       Funtion call;    super-node-'_'                   change a-node to a(-node (namedBracket)
-            //    ( after )       split_&_push_down by "_chain" operator  (if allowed)
-            //    ( after (       start sub-node (
-            //    ( after +       start sub-node (
-            //    ( after ;       start sub-node (
-                if( (gs.cPrev=='a') || (gs.cPrev==')') ){  // named bracket
-                    superNode( '_' );
-                    startNode( '(' );
-                }else{
-                    startNode( '(' );
-                }
-                gs.cBracket = charCompl_1[ch];
-            }else if ( ct== ')' ) {        // close bracket
-            //    ) after a       finish a, finish bracket
-            //    ) after )       finish )
-            //    ) after (       finish empty bracket (if allowed)
-            //    ) after +       ERROR - usaturated +
-            //    ) after ;       finish empty ;, finish bracket
-                if( ch != gs.cBracket ){
-                    printf( " ERROR: str[%i] closing wrong bracket %c instead of %c \n",  gs.ic, ch, gs.cBracket );
-                    return fail();
-                }
-
-                if( (gs.cPrev == 'a')||(gs.cPrev ==')') ){
-                    finishNode();
-                }else if( gs.cPrev =='(' ){
-                    if(bBanEmptyNode){
-                        printf( " ERROR: str[%i] empty brackets not allowed \n",  gs.ic );
-                        return fail();
-                    }
-                    finishNode();
-                }else if( gs.cPrev ==';' ){
-                    finishNode();
-                }
-                gs.cPrev=')';
             }
-
-            gs.oct=ct;
-            gs.ic++;
-        }
-        return 0;
-    }
-
-
-    */
-
-
-
-
-
-    /*
-
-    int get( const char * name ){
-        // use like:  parser.get( "Name1.Name3.Name6" );
-        // fast search for named item within string
-        const char *  id  = name;
-        int nch     = strchr( id, '.') - id;
-        int iit = 0;
-        while(iit < items.size() ){
-            ParserItem& it = items[iit];
-            if( strncmp( id, str+it.ibeg,  nch ) == 0 ){ // found
-                id  += nch;
-                nch  = strchr( id, '.') - id;
-            }else{
-                iit += it.nitem;  // skip all sub-items
-            }
-        }
-
-    }
-
-    void printItemStruct(){
-        for( int i=0; i<items.size(); i++ ){
-        //for( ParserItem& item : items ){
-            ParserItem& it = items[i];
-            //printf("%03i (%04i,%02i) %02i(%02i,%02i) : ", i, it.ibeg, it.iend-it.ibeg, it.level, it.nbranch, it.nitem );
-            printf("%03i (%04i,%04i) (%02i,%02i) %03i %03i : ", i, it.ibeg, it.nch,  it.nbranch,it.nitem, it.level, it.parent );
-            printf("%*c"   , 4*it.level, ' ' );
-            //printf("%.*s\n", it.iend-it.ibeg, str + it.ibeg );
-            if( (it.nbranch+it.nitem)>0 ){
-                printf("%.*s", it.nch_name, str + it.ibeg );
-                printf("|" );
-                //printf("%.*s\n", it.iend-it.ibeg-it.nch_name, str + it.ibeg+it.nch_name );
-                printf("%.*s\n", it.nch-it.nch_name, str + it.ibeg+it.nch_name );
-            }else{
-                //printf("%.*s\n", it.iend-it.ibeg, str + it.ibeg );
-                printf("%.*s\n", it.nch, str + it.ibeg );
-            }
+            printf("\033[0m");
+            printf("\n");
         }
     }
 
-    */
+
+
+
 
 };
 

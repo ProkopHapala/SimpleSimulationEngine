@@ -33,7 +33,7 @@ struct ParserItem{
     //int type;
 };
 
-struct ParserNode{
+struct Node{
     char kind ;     // in case of bracket this is  "open"-"close"
     char cBond;     // which kind of character bind to the previous token ?
     int  parent;
@@ -44,12 +44,47 @@ struct ParserNode{
     int nbranch = -1 ;
     int level   = -1 ;
 
+    Node() = default;
+    Node(char kind, int ic0, int parent, char  ) : kind(kind),ic0(ic0),parent(parent){};
+
+};
 
 
+struct Tuple{
+    char bra   ='_';   //   ( { [ _
+    char cKind;  //   a o _ + ;
+    //char pSep;   //   separator priority
 
-    ParserNode() = default;
-    ParserNode(char kind, int ic0, int parent, char  ) : kind(kind),ic0(ic0),parent(parent){};
+    int  iPrev  = -1 ;
+    int  iSuper = -1 ;
 
+    int  ic;
+    int  nc     = -1 ;
+    int nbranch = -1 ;
+    int level   = -1 ;
+
+    Tuple() = default;
+
+    Tuple(char cKind, char bra, int ic, int iSuper ) : cKind(cKind),bra(bra),ic(ic),iSuper(iSuper){
+        //bra     = '_';
+        iPrev   = -1 ;
+        iSuper  = -1 ;
+        nc      = -1 ;
+        nbranch = -1 ;
+        level   = -1 ;
+    };
+
+    void print(){ printf( "Tuple{bra`%c` kind`%c` iSup%i lev%i ic%i}",   bra,  cKind,  iSuper, level, ic); };
+
+    //Tuple(char cKind, char cBracket, int ic, int iSuper, int iPrev  ) : cKind(cKind),bra(bra),ic(ic),iSuper(iSuper),iPrev(iPrev){};
+
+};
+
+struct Break{
+    int  ic;
+    char cl,cr;
+    char cb;
+    Break(int ic, char cl, char cr, char cb ): ic(ic), cl(cl), cr(cr), cb(cb) {}
 };
 
 }
