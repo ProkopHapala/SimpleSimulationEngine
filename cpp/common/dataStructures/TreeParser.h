@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "macroUtils.h"
 #include "parsing.h"
 
 
@@ -129,43 +130,45 @@ class TreeParser{ public:
         //items[iUp  ].level = lev;
         //items[iDown].level = lev+1;
 
+        _swap( items[iUp  ].bra, items[iDown ].bra );
+
         printf( "iUp[%i] ", iUp   ); items[iUp  ].print(); puts(" ");
         printf( "iDw[%i] ", iDown ); items[iDown].print(); puts(" ");
     }
 
-    void wrapTuple( char cKind ){
-        //printf( "(wrapTuple %c)", cKind );
-        int iDown = gs.icur;
-        endTuple();
-        startTuple( cKind );
-        reconectWrap( gs.icur, iDown );
-    }
+    //void wrapTuple( char cKind ){
+    //    //printf( "(wrapTuple %c)", cKind );
+    //    int iDown = gs.icur;
+    //    endTuple();
+    //    startTuple( cKind );
+    //    reconectWrap( gs.icur, iDown );
+    //}
 
-    void wrapTupleAndSub( char cKind, char ct ){
-        wrapTuple ( cKind   );
-        startTuple( ct );
-    }
+    //void wrapTupleAndSub( char cKind, char ct ){
+    //    wrapTuple ( cKind   );
+    //    startTuple( ct );
+    //}
 
 
-    /*
-    void makeNested( char cSuper, char cSub ){
-        int iDown = gs.icur;
-        endTuple();
-        char cKind = items[gs.icur].cKind;
-        if( cKind != cSuper ){
-            char phas  = charCouple_1 [ cKind  ];
-            char pwant = charCouple_1 [ cSuper ];
-            if(phas>pwant){
 
-            }else{
+    // ---- DOES NOT WORK - because child nodes are not reconnected
+    //void pseudoWrap( int iDown, int cWant ){
+    //    //startTuple( cWant );
+    //    //reconectWrap( gs.icur, iDown );
+    //    char ocK = items[iDown].cKind;
+    //    items[iDown].cKind = cWant;
+    //    //startTuple( ocK );
+    //    int ic = items[iDown].ic;
+    //   gs.icur = iDown;
+    //    items.push_back( Tuple( ocK, '_', ic, gs.icur ) );
+    //    items.back().nc =  gs.ic - ic;
+    //}
 
-            }
-            wrapTuple( char cKind );
+    void finishLastRec(){
+        while( items[gs.icur].level != 0 ){
+            endTuple();
         }
-        startTuple( cSub, ' ' );
     }
-    */
-
 
     void treeInsert( char cWant ){
         char pwant  = charPrior_1[ cWant ];
@@ -180,6 +183,7 @@ class TreeParser{ public:
                 //endTuple();
                 startTuple( cWant );
                 reconectWrap( gs.icur, iDown );
+                //pseudoWrap( iDown, cWant );
                 return;
             }
             //printf( "while[%i] icur %i bra |%c| %i \n", levelUp, gs.icur, items[gs.icur].bra, ' '==items[gs.icur].bra ); if(levelUp>5) exit(0);
@@ -188,10 +192,12 @@ class TreeParser{ public:
             cKind  = items[gs.icur].cKind;
             phave  = charPrior_1[ cKind ];
         }
-        //printf( "treeInsert lUp %i pwant %i(%c) phave %i(%c) \n", levelUp, pwant-'0',cWant, phave-'0',cKind );
+        printf( "treeInsert lUp %i pwant %i(%c) phave %i(%c) \n", levelUp, pwant-'0',cWant, phave-'0',cKind );
         if( pwant < phave  ){ // we got higher than we wanted => make sub node
             startTuple( cWant );
             if(iDown>0) reconectWrap( gs.icur, iDown );
+            //if(iDown>0){ pseudoWrap( iDown, cWant ); }
+            //else       { startTuple( cWant );        }
         }
     }
 
@@ -200,28 +206,28 @@ class TreeParser{ public:
         startTupleBra( ct, bra );
     }
 
-    void endTupleRecur(char ch, char ct){
-        char prior  = charPrior_1[ ch ];
-        char cKind  = items[gs.icur].cKind;
-        char cPrior = charPrior_1[ cKind ];
-        int  iDown  = -1;
-        while( prior > cPrior ){
-            //wrapTuple();
-            iDown  = gs.icur;
-            endTuple();
-            cKind  = items[gs.icur].cKind;
-            cPrior = charPrior_1[ cKind ];
-        }
-        // we know that prior <= cPrior
-
-        //if( prior == cPrior ){   //   (  ,  (()+()) ,  )
-        //    addSub(' ');
-        //}else{
-        //    wrapTuple(iclosed);  //      ;( (()+()) ,  )
-        //}
-        startTuple( ct );
-        if(iDown>0) reconectWrap( gs.icur, iDown );
-    }
+    //void endTupleRecur(char ch, char ct){
+    //    char prior  = charPrior_1[ ch ];
+    //    char cKind  = items[gs.icur].cKind;
+    //    char cPrior = charPrior_1[ cKind ];
+    //    int  iDown  = -1;
+    //    while( prior > cPrior ){
+    //       //wrapTuple();
+    //        iDown  = gs.icur;
+    //        endTuple();
+    //        cKind  = items[gs.icur].cKind;
+    //        cPrior = charPrior_1[ cKind ];
+    //    }
+    //    // we know that prior <= cPrior
+    //
+    //    //if( prior == cPrior ){   //   (  ,  (()+()) ,  )
+    //    //    addSub(' ');
+    //    //}else{
+    //    //    wrapTuple(iclosed);  //      ;( (()+()) ,  )
+    //    //}
+    //    startTuple( ct );
+    //    if(iDown>0) reconectWrap( gs.icur, iDown );
+    //}
 
     bool closeBracket(char ket){
         char bra  = charCompl_1[ket];
@@ -258,7 +264,7 @@ class TreeParser{ public:
                     //wrapTupleAndSub( '_', ct );       printf(" wrapAndSub   ");
                     putUnderCommon( '_', ct, '_' );
                 }else if ( cKind==' ' ){
-                    changeTuple( 'a' );
+                    changeTuple( 'a' ); printf( "changeTuple\n" );
                 }
 
             }else if( ct=='+'){
@@ -283,7 +289,10 @@ class TreeParser{ public:
                 if ( (cKind == '_') || (cKind == ';') ){
                     startTupleBra( ' ', ch );
                 } else if( (gs.cPrev ==')') || (cKind=='+') || (cKind=='a' )){
-                    wrapTupleAndSub( '_', ' ' );
+                    //wrapTupleAndSub( '_', ' ' );
+                    printf( "ct=='('  to putUnderCommon   \n" );
+                    putUnderCommon( '_', ' ', ch );
+                    //treeInsert( ch );
                     items[gs.icur].bra = ch;
                 }
 
@@ -296,6 +305,7 @@ class TreeParser{ public:
 
             gs.oct = ct;
         }
+        finishLastRec();
         return 0;
     }
 

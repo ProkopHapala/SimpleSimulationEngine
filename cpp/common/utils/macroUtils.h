@@ -39,6 +39,9 @@
 #define _template_TN     template<typename T,size_t N>
 #define _inline_T        template<typename T> inline
 
+
+_inline_T void _swap (T& a, T& b) { T t=a; a=b; b=t; }
+
 _inline_T const T& _min  (const T& a, const T& b) { return !(a>b)?a:b; }
 _inline_T const T& _max  (const T& a, const T& b) { return !(a<b)?a:b; }
 _inline_T const T& _clamp(const T& a, const T& amax, const T& amin){ return _max(amin,_min(amax,a)); }
