@@ -460,8 +460,34 @@ struct Mat3S{ // symmetric 3x3 matrix
 
     // TODO : This should be good also for rotation matrix (?)
 
-    T xx,yy,zz,
-      yz,xz,xy;
+    T xx,yy,zz;
+    union{
+        struct{ T yz,xz,xy; };
+        struct{ T zy,zx,yx; };
+    };
+
+    inline void set(T f){
+        xx=yy=zz=f;
+        xy=xz=yz=f;
+    }
+
+    inline void from_outer(const Vec3T<T>& h){
+        xy=h.x*h.y;
+        xz=h.x*h.z;
+        yz=h.y*h.z;
+        xx=h.x*h.x;
+        yy=h.y*h.y;
+        zz=h.z*h.z;
+    }
+
+    inline void add_outer(const Vec3T<T>& h){
+        xy+=h.x*h.y;
+        xz+=h.x*h.z;
+        yz+=h.y*h.z;
+        xx+=h.x*h.x;
+        yy+=h.y*h.y;
+        zz+=h.z*h.z;
+    }
 
     inline void from_dhat(const Vec3T<T>& h){
         // derivatives of normalized vector

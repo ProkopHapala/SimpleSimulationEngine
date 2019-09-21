@@ -171,15 +171,15 @@ class MMFF{ public:
     double * tors_k    = NULL; // [eV/A^2]
 
     // molecular gemeotry
-    int    * atypes = NULL;
+    int    * atypes    = NULL;
     int    * atom2frag = NULL; // [natom], inverted frag2a
-    Vec3d  * apos   = NULL;   // atomic position
-    //Vec3d  * aLJq   = NULL;
-    Vec3d  * aREQ   = NULL;
-    Vec3d  * aPLQ   = NULL;   // this is used for grid-accelerated factorized potential
-    double * lbond  = NULL;   // bond lengths
-    Vec3d  * hbond  = NULL;   // normalized bond unitary vectors
-    Vec3d  * aforce = NULL;
+    Vec3d  * apos      = NULL;   // atomic position
+    //Vec3d  * aLJq    = NULL;
+    Vec3d  * aREQ      = NULL;
+    Vec3d  * aPLQ      = NULL;   // this is used for grid-accelerated factorized potential
+    double * lbond     = NULL;   // bond lengths
+    Vec3d  * hbond     = NULL;   // normalized bond unitary vectors
+    Vec3d  * aforce    = NULL;
 
     std::vector<MolType> molTypes;
 
@@ -280,12 +280,12 @@ void deallocate(){
 
 void deallocFragment( int nFrag_ ){
     //printf( "MMFF::deallocFragment" );
-    _dealloc( frag2a    );
-    _dealloc( fragNa    );
-    _dealloc( poses     );
-    _dealloc( poseFs    );
-    //_dealloc( poseVs  );
-    _dealloc( fapos0s   );
+    _dealloc( frag2a   );
+    _dealloc( fragNa   );
+    _dealloc( poses    );
+    _dealloc( poseFs   );
+    //_dealloc( poseVs );
+    _dealloc( fapos0s  );
 }
 
 void deallocateDyn(){
@@ -388,7 +388,7 @@ void frags2atoms(){
     for(int ifrag=0; ifrag<nFrag; ifrag++){
         //frag2atoms( ifrag, apos+frag2a[ifrag] );
         int im8 = ifrag<<3;
-        Vec3d   pos = *((Vec3d* )(poses+im8  ));
+        Vec3d   pos  = *((Vec3d* )(poses+im8  ));
         Quat4d  qrot = *((Quat4d*)(poses+im8+4));
         //frag2atoms( pos, rot, fragNa[ifrag], fapos0s[ifrag], apos+frag2a[ifrag] );
         qrot.rotatePoints0( fragNa[ifrag], fapos0s[ifrag], apos+frag2a[ifrag], pos, true );

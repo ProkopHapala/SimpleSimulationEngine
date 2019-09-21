@@ -31,7 +31,8 @@ class Mat4T{
 			T cx,cy,cz,cw;
 			T dx,dy,dz,dw;
 		};
-		struct{	VEC a,b,c,d; };
+		struct{	VEC a,b,c,d;    };
+		struct{	VEC px,py,pz,s; };
 		VEC  vecs [4];
 		T    array[16];
 		T    arr2d[4][4];

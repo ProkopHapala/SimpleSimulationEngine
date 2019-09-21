@@ -139,7 +139,7 @@ inline T val2D( T x, T y,
 }
 
 template <class T>
-inline T val( T x, T * fs ){
+inline T val( T x, const T * fs ){
 	T f0 = *fs; fs++;
 	T f1 = *fs; fs++;
 	T f2 = *fs; fs++;
@@ -148,7 +148,7 @@ inline T val( T x, T * fs ){
 }
 
 template <class T>
-inline T val2D( T x, T y, T * f0s, T * f1s, T * f2s, T * f3s ){
+inline T val2D( T x, T y, const  T * f0s, const  T * f1s, const  T * f2s, const  T * f3s ){
 	T f0 = val<T>( x, f0s );
 	T f1 = val<T>( x, f1s );
 	T f2 = val<T>( x, f2s );
@@ -158,7 +158,7 @@ inline T val2D( T x, T y, T * f0s, T * f1s, T * f2s, T * f3s ){
 
 
 template <class T>
-inline T dval2D( T x, T y, T& dfx, T& dfy, T * f0s, T * f1s, T * f2s, T * f3s ){
+inline T dval2D( T x, T y, T& dfx, T& dfy,const  T * f0s,const  T * f1s,const  T * f2s,const  T * f3s ){
 	T f00=f0s[0]; T f01=f0s[1]; T f02=f0s[2]; T f03=f0s[3];
 	T f10=f1s[0]; T f11=f1s[1]; T f12=f1s[2]; T f13=f1s[3];
 	T f20=f2s[0]; T f21=f2s[1]; T f22=f2s[2]; T f23=f2s[3];
