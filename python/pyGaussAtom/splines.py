@@ -51,6 +51,6 @@ def evalValTableDeriv( x, ys, dys, xstep ):
     invstep = 1/xstep
     s = x*invstep
     i = s.astype(dtype=np.int)
-    return hermite( s-i, ys[i],ys[i+1], dys[i], dys[i+1] )
+    return hermite( s-i, ys[i],ys[i+1], dys[i]*xstep, dys[i+1]*xstep )
 
 

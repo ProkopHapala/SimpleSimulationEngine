@@ -2,8 +2,34 @@
 import numpy as np
 
 from scipy.special import hyp1f1
+from scipy.special import erf as erf_scipy
 #import sympy.mpmath as mpm
 #import mpmath as mpm
+
+'''
+
+
+NOTE:
+BoysF is used for Coulomb integrals like :
+
+Vpq = Integral{   exp(-p*(r1)^2) * exp(-q*(r2)^2)  /|r1-r2| }
+
+Vpq = 2*pi^(5/2) / ( p*q*sqrt(p+q) ) * BoysF( a*r^2 )
+
+F0() is related to error-function erf()
+
+F0(x) = sqrt(pi/(4x)) * erf( sqrt(x) ) 
+
+Vpq = (pi/sqrt(p*q))^3 * erf( sqrt(a) * r ) / r
+
+=> It makes sense to tabulate rather F0(x^2)
+
+'''
+
+
+
+
+
 
 import splines
 
@@ -143,7 +169,24 @@ def fitPowerSeries( x, y_ref, basis=None, nmax=4 ):
     return coefs
 '''
 
-
+def erf_p6(x):
+    '''
+    https://en.wikipedia.org/wiki/Error_function
+    Abramowitz and Stegun 
+    erf = 1 - 1/(1+a1*x +a2*x^2 +a3*x^3 +a4*x^4 +a5*x^5 +a6*x^6 )^16
+    '''
+    a1 = 0.0705230784
+    a2 = 0.0422820123
+    a3 = 0.0092705272
+    a4 = 0.0001520143
+    a5 = 0.0002765672
+    a6 = 0.0000430638
+    f  = 1/( 1 + x*( a1 + x*( a2 + x*( a3 + x*( a4 + x*(a5 + x*a6 )  ) ) ) ) )
+    f *=f  # f^2
+    f *=f  # f^4
+    f *=f  # f^8
+    f *=f  # f^16
+    return 1 - f
 
 # ================== Main
 
@@ -161,42 +204,108 @@ if __name__ == "__main__":
         ys_hi = BoysF_approx3( xs, n,              ); plt.plot(xs,ys_hi  , c=colors[n],ls=':' )
     '''
     
-    ys_ref = BoysF_scipy( xs, 0, bPref=False ); plt.plot( xs, ys_ref, label='ref' )
-    
-    xstep=1.0
-    sp_ys,sp_xs = splines.getSamples( lambda x: BoysF_scipy(x,0), 15, xmin=0.0, dx=xstep )
-    plt.plot( sp_xs, sp_ys, 'x'  )
-    ys_sp = splines.evalValTable( xs, sp_ys, xstep ) ;        
-    plt.plot( xs, ys_sp , label="sp" )
-    
-    sp_ys,sp_xs = splines.getSamples( lambda x: BoysF_scipy(x,0), 15*2, xmin=0.0, dx=xstep*0.5 )
-    plt.plot( sp_xs, sp_ys, 'x'  )
-    ys_sp_2 = splines.evalValTable( xs, sp_ys, xstep*0.5 ) ;
-    plt.plot( xs, ys_sp_2 , label="sp" )
-    
-    sp_ys,sp_dys,sp_xs = splines.getSamplesDeriv( lambda x: BoysF_scipy(x,0), 15, xmin=0.0, dx=xstep )
-    ys_sp_ = splines.evalValTableDeriv( xs, sp_ys, sp_dys, xstep ) ;
-    plt.plot( xs, ys_sp_ , label="spDeriv" )
-    
-    sp_ys,sp_dys,sp_xs = splines.getSamplesDeriv( lambda x: BoysF_scipy(x,0), 15, xmin=0.0, dx=xstep, fddx=0.025 )
-    ys_sp__ = splines.evalValTableDeriv( xs, sp_ys, sp_dys, xstep ) ;
-    plt.plot( xs, ys_sp__ , label="hi" )
-    
-    ys_hi = BoysF_high( xs, 0 )
+    bErrFunc = False
+    if bErrFunc:
+        ys_ref = erf_scipy( xs );   plt.plot(xs,ys_ref, label='erf_ref' )
+        ys_p6  = erf_p6   ( xs );   plt.plot(xs,ys_p6,  label='erf_p6'  )
+        
+        plt.legend(); plt.grid()
+        
+        plt.figure()
+        plt.plot(xs,abs(ys_p6-ys_ref), label='erf_ref' )
+        plt.yscale('log')
+        plt.legend(); plt.grid()
+        plt.show()
+        
+        exit(0)
     
     
-    plt.legend()
-    plt.grid()
+
     
-    plt.figure()
-    plt.plot(xs, abs(ys_sp -ys_ref ), label="sp" )
-    plt.plot(xs, abs(ys_sp_2 -ys_ref ), label="sp2" )
-    plt.plot(xs, abs(ys_sp_-ys_ref ), label="Deriv")
-    plt.plot(xs, abs(ys_sp__-ys_ref), label="Deriv")
-    plt.plot(xs, abs(ys_hi-ys_ref), label="hi")
-    plt.yscale('log')
-    plt.legend()
+    bBoysX = False
+    if bBoysX:
+        ys_ref = BoysF_scipy( xs, 0, bPref=False ); plt.plot( xs, ys_ref, label='ref' )
+        
+        
+        func = lambda x: BoysF_scipy(x,0)
+        
+        xstep=1.0
+        sp_ys,sp_xs = splines.getSamples( func, 15, xmin=0.0, dx=xstep )
+        plt.plot( sp_xs, sp_ys, 'x'  )
+        ys_sp = splines.evalValTable( xs, sp_ys, xstep ) ;        
+        plt.plot( xs, ys_sp , label="sp" )
+        
+        sp_ys,sp_xs = splines.getSamples( func, 15*2, xmin=0.0, dx=xstep*0.5 )
+        plt.plot( sp_xs, sp_ys, 'x'  )
+        ys_sp_2 = splines.evalValTable( xs, sp_ys, xstep*0.5 ) ;
+        plt.plot( xs, ys_sp_2 , label="sp" )
+        
+        sp_ys,sp_dys,sp_xs = splines.getSamplesDeriv( func, 15, xmin=0.0, dx=xstep )
+        ys_sp_ = splines.evalValTableDeriv( xs, sp_ys, sp_dys, xstep ) ;
+        plt.plot( xs, ys_sp_ , label="spDeriv" )
+        
+        sp_ys,sp_dys,sp_xs = splines.getSamplesDeriv( func, 15, xmin=0.0, dx=xstep, fddx=0.025 )
+        ys_sp__ = splines.evalValTableDeriv( xs, sp_ys, sp_dys, xstep ) ;
+        plt.plot( xs, ys_sp__ , label="hi" )
+        
+        ys_hi = BoysF_high( xs, 0 )
+        
+        
+        plt.legend()
+        plt.grid()
+        
+        plt.figure()
+        plt.plot(xs, abs(ys_sp -ys_ref ), label="sp" )
+        plt.plot(xs, abs(ys_sp_2 -ys_ref ), label="sp2" )
+        plt.plot(xs, abs(ys_sp_-ys_ref ), label="Deriv")
+        plt.plot(xs, abs(ys_sp__-ys_ref), label="Deriv")
+        plt.plot(xs, abs(ys_hi-ys_ref), label="hi")
+        plt.yscale('log')
+        plt.legend()
     
+    bBoysX2 = True
+    if bBoysX2:
+        xs  = np.linspace(0.0,3.8,500)
+        x2s = xs**2
+        ys_ref = BoysF_scipy( x2s, 0, bPref=False ); plt.plot( xs, ys_ref, label='ref' )
+
+        xstep=0.25
+        
+        func = lambda x: BoysF_scipy(x**2,0)
+        
+        sp_ys,sp_xs = splines.getSamples( func, 15, xmin=0.0, dx=xstep )
+        plt.plot( sp_xs, sp_ys, 'x'  )
+        ys_sp = splines.evalValTable( xs, sp_ys, xstep ) ;        
+        plt.plot( xs, ys_sp , label="sp" )
+        
+        
+        sp_ys,sp_xs = splines.getSamples( func, 15*2, xmin=0.0, dx=xstep*0.5 )
+        plt.plot( sp_xs, sp_ys, 'x'  )
+        ys_sp_2 = splines.evalValTable( xs, sp_ys, xstep*0.5 ) ;
+        plt.plot( xs, ys_sp_2 , label="sp2x" )
+        
+        sp_ys,sp_dys,sp_xs = splines.getSamplesDeriv( func, 15, xmin=0.0, dx=xstep )
+        ys_sp_ = splines.evalValTableDeriv( xs, sp_ys, sp_dys, xstep ) ;
+        plt.plot( xs, ys_sp_ , label="spDeriv" )
+        
+        sp_ys,sp_dys,sp_xs = splines.getSamplesDeriv( func, 15, xmin=0.0, dx=xstep, fddx=0.025 )
+        ys_sp__ = splines.evalValTableDeriv( xs, sp_ys, sp_dys, xstep ) ;
+        plt.plot( xs, ys_sp__ , label="sp_0.025" )
+        
+        ys_hi = BoysF_high( x2s, 0 );   plt.plot( xs, ys_hi , label="hi" )
+        
+        plt.ylim(0.0,1.2)
+        plt.legend()
+        plt.grid()
+        
+        plt.figure()
+        plt.plot(xs, abs(ys_sp -ys_ref ), label="sp" )
+        plt.plot(xs, abs(ys_sp_2 -ys_ref ), label="sp2" )
+        plt.plot(xs, abs(ys_sp_-ys_ref ), label="Deriv")
+        plt.plot(xs, abs(ys_sp__-ys_ref), label="Deriv")
+        plt.plot(xs, abs(ys_hi-ys_ref), label="hi")
+        plt.yscale('log')
+        plt.legend()
     
     '''
     n = 10
