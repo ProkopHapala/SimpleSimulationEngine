@@ -74,6 +74,25 @@ class Molecule{ public:
         }
     }
 
+    void findBonds_brute(double Rmax){
+        double R2max = sq(Rmax);
+        std::vector<Vec2i> pairs;
+        for(int i=0;i<natoms;i++){
+            const Vec3d& pi = pos[i];
+            for(int j=0;j<i;j++){
+                Vec3d d; d.set_sub(pos[j],pi);
+                double r2 = d.norm2();
+                //printf( "%i,%i %g %g  (%g,%g,%g)  (%g,%g,%g) \n", i, j, r2, R2max, pi.x,pi.y,pi.z,    pos[j].x,pos[j].y,pos[j].z );
+                if(r2<R2max){
+                    pairs.push_back({i,j});
+                }
+            }
+        }
+        nbonds=pairs.size();
+        _realloc(bond2atom,nbonds);
+        for(int i=0;i<nbonds;i++){  bond2atom[i]=pairs[i]; }
+    }
+
     void printAtom2Bond(){
         int * a2b = atom2bond;
         for(int ia=0; ia<natoms; ia++){
@@ -269,6 +288,40 @@ class Molecule{ public:
         //printf("loadXYZ DONE \n");
         return natoms;
     }
+
+    int loadXYZ_bas(const char* fname ){
+        // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
+        // http://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){
+            printf("cannot find %s\n", fname );
+            return -1;
+        }
+        char buff[1024];
+        char * line;
+        int nl;
+        line = fgets( buff, 1024, pFile ); //printf("%s",line);
+        sscanf( line, "%i \n", &natoms );
+        //printf("natoms %i \n", natoms );
+        //allocate(natoms,0);
+        nbonds=0;
+        allocate(natoms,nbonds);
+        //line = fgets( buff, 1024, pFile ); // comment
+        for(int i=0; i<natoms; i++){
+            //char ch;
+            //char at_name[8];
+            //double junk;
+            line = fgets( buff, 1024, pFile );  //printf("%s",line);
+            double Q;
+            int nret = sscanf( line, "%i %lf %lf %lf %lf\n", &atomType[i], &pos[i].x, &pos[i].y, &pos[i].z, &Q );
+            if( nret >= 5 ){  REQs[i].z=Q; }else{ REQs[i].z=0; };
+            printf(       "mol[%i] %i %lf %lf %lf  %lf    n", i,  atomType[i], pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z  );
+            // atomType[i] = atomChar2int( ch );
+        }
+        return natoms;
+    }
+
+
 
     void dealloc(){
         _dealloc( pos       );

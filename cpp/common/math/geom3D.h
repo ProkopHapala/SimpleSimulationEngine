@@ -306,6 +306,13 @@ class Box{ public:
 
 };
 
+
+class Tetrahedron{ public:
+    Vec3d a,b,c,d;
+
+};
+
+
 class Triangle3D{
     public:
 	union{
@@ -341,6 +348,11 @@ class Plane3D{
 
 	void set( const Vec3d& normal_, double iso_ ){ normal.set(normal_); iso=iso_; };
 	void set( double x_, double y_, double z_, double C_){ x=x_; y=y_; z=z_; C=C_; };
+
+	void fromVec(const Vec3d& v){
+        normal=v;
+        iso = normal.normalize();
+	}
 
 	void fromPoints_noNorm( const Vec3d& a, const Vec3d& b, const Vec3d& c ){
         Vec3d ab,bc;

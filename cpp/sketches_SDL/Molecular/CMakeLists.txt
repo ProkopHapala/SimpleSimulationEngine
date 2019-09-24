@@ -49,6 +49,8 @@ target_link_libraries( test_EOFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY
 add_executable       ( test_ESFF test_ESFF.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
 target_link_libraries( test_ESFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_BondAdaptedMesh test_BondAdaptedMesh.cpp $<TARGET_OBJECTS:SDL2OGL>  )
+target_link_libraries( test_BondAdaptedMesh ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_custom_target( ${PROJECT_NAME}_src_dep SOURCES ${_COMMON_SRCS_} ${_COMMON_SDL_SRCS_} )
 

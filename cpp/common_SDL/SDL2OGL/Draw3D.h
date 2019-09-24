@@ -22,6 +22,15 @@ namespace Draw3D{
 
 // ========== Float Versions
 
+inline void vertex(Vec3f v ){ glVertex3f(v.x,v.y,v.z); }
+inline void vertex(Vec3d v ){ glVertex3f(v.x,v.y,v.z); }
+
+inline void color (Vec3f v ){ glColor3f (v.x,v.y,v.z); }
+inline void color (Vec3d v ){ glColor3f (v.x,v.y,v.z); }
+
+inline void normal(Vec3f v ){ glNormal3f(v.x,v.y,v.z); }
+inline void normal(Vec3d v ){ glNormal3f(v.x,v.y,v.z); }
+
 void drawPoint     ( const Vec3f& vec                   );
 void drawPointCross( const Vec3f& vec, float  sz        );
 void drawVec       ( const Vec3f& vec                   );
