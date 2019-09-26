@@ -7,47 +7,83 @@
 //                    Adaptive Simpson
 // ====================================================
 
-namespace AdaptiveSimpson {
 
 
-double integrateRecur(
-    double (*f)(double),
-    double a, double b, double eps,
-    double Iab, double fa, double fb, double fm, int depth
+namespace AdaptiveIntegral{
+
+
+double trapezRecur( double (*func)(double), double xa, double xb, double fa, double fb, double Iab, int depth, double eps ){
+    double h4   = (xb-xa)*.25;
+    double xm   = (xa+xb)*.5;
+    double fm   = func(xm);
+    double Iam  = (fa+fm)*h4;
+    double Imb  = (fm+fb)*h4;
+    double Iamb = Iam+Imb;
+    double delta = Iab-Iamb;
+    // ToDo: there is no higher order correction like for Sympson ?
+    //printf( "err : %g   | [%g,%g] depth %i \n", delta, xa,xb, depth );
+    if( depth <= 0 || fabs(delta) < 3*eps ){ return Iamb; }
+    eps*=.5;
+    depth--;
+    return trapezRecur( func, xa, xm, fa, fm, Iam, depth, eps )
+        +  trapezRecur( func, xm, xb, fm, fb, Imb, depth, eps );
+}
+
+double trapez(
+    double (*func)(double),        // function ptr to integrate
+    double xa, double xb,         // interval [a,b]
+    double eps,             // error tolerance
+    int depth                // recursion cap
+){
+    //errno = 0;
+    double h = xb - xa;
+    if (h == 0) return 0;
+    double fa = func(xa), fb = func(xb);
+    double Iab = (h/2)*(fa + fb);
+    return trapezRecur( func, xa, xb, fa, fb, Iab, depth, eps );
+}
+
+
+
+double simpsonRecur(
+    double (*func)(double),
+    double xa, double xb, double Iab,
+    double fa, double fb, double fm,
+    int depth, double eps
 ){
     //double m   = (a + b)/2,  h   = (b - a)/2;
     //double lm  = (a + m)/2,  rm  = (m + b)/2;
-
-    double m   = (a + b)*.5,  h6 = (b - a)*0.08333333333;
-    double lm  = (a + m)*.5,  rm = (m + b)*.5;
+    double xm   = (xa + xb)*.5,  h6  = (xb - xa)*0.08333333333;
+    double xlm  = (xa + xm)*.5,  xrm = (xm + xb)*.5;
     // serious numerical trouble: it won't converge
     //if ((eps/2 == eps) || (a == lm)) { errno = EDOM; return whole; }
-    double flm   = f(lm),      frm = f(rm);
+    double flm   = func(xlm),      frm = func(xrm);
     double Iam   = h6 * (fa + 4*flm + fm);
     double Imb   = h6 * (fm + 4*frm + fb);
     double delta = Iam + Imb - Iab;
     //if (rec <= 0 && errno != EDOM) errno = ERANGE;  // depth limit too shallow
     // Lyness 1969 + Richardson extrapolation; see article
     //if ( depth <= 0 || fabs(delta) <= 15*eps) return Iam + Imb + (delta)/15;
+    //printf( "err : %g   | [%g,%g] depth %i \n", delta, xa,xb, depth );
     if ( depth <= 0 || fabs(delta) <= 15*eps) return Iam + Imb + delta*0.06666666666;
     depth--;
     eps*=.5;
-    return integrateRecur(f, a, m, eps, Iam, fa, fm, flm, depth )
-         + integrateRecur(f, m, b, eps, Imb, fm, fb, frm, depth );
+    return simpsonRecur(func, xa, xm, Iam, fa, fm, flm, depth, eps )
+         + simpsonRecur(func, xm, xb, Imb, fm, fb, frm, depth, eps );
 }
 
-double integrate(
-    double (*f)(double),        // function ptr to integrate
-    double a, double b,         // interval [a,b]
-    double epsilon,             // error tolerance
-    int maxDepth                // recursion cap
+double simpson(
+    double (*func)(double),        // function ptr to integrate
+    double xa, double xb,         // interval [a,b]
+    double eps,             // error tolerance
+    int depth                // recursion cap
 ){
     //errno = 0;
-    double h = b - a;
+    double h = xb - xa;
     if (h == 0) return 0;
-    double fa = f(a), fb = f(b), fm = f((a + b)/2);
+    double fa = func(xa), fb = func(xb), fm = func((xa + xb)/2);
     double Iab = (h/6)*(fa + 4*fm + fb);
-    return integrateRecur(f, a, b, epsilon, Iab, fa, fb, fm, maxDepth);
+    return simpsonRecur(func, xa, xb, Iab, fa, fb, fm, depth, eps);
 }
 
 
