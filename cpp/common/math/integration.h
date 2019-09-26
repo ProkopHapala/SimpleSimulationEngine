@@ -2,6 +2,59 @@
 #ifndef  integration_h
 #define  integration_h
 
+
+// ====================================================
+//                    Adaptive Simpson
+// ====================================================
+
+namespace AdaptiveSimpson {
+
+
+double integrateRecur(
+    double (*f)(double),
+    double a, double b, double eps,
+    double Iab, double fa, double fb, double fm, int depth
+){
+    //double m   = (a + b)/2,  h   = (b - a)/2;
+    //double lm  = (a + m)/2,  rm  = (m + b)/2;
+
+    double m   = (a + b)*.5,  h6 = (b - a)*0.08333333333;
+    double lm  = (a + m)*.5,  rm = (m + b)*.5;
+    // serious numerical trouble: it won't converge
+    //if ((eps/2 == eps) || (a == lm)) { errno = EDOM; return whole; }
+    double flm   = f(lm),      frm = f(rm);
+    double Iam   = h6 * (fa + 4*flm + fm);
+    double Imb   = h6 * (fm + 4*frm + fb);
+    double delta = Iam + Imb - Iab;
+    //if (rec <= 0 && errno != EDOM) errno = ERANGE;  // depth limit too shallow
+    // Lyness 1969 + Richardson extrapolation; see article
+    //if ( depth <= 0 || fabs(delta) <= 15*eps) return Iam + Imb + (delta)/15;
+    if ( depth <= 0 || fabs(delta) <= 15*eps) return Iam + Imb + delta*0.06666666666;
+    depth--;
+    eps*=.5;
+    return integrateRecur(f, a, m, eps, Iam, fa, fm, flm, depth )
+         + integrateRecur(f, m, b, eps, Imb, fm, fb, frm, depth );
+}
+
+double integrate(
+    double (*f)(double),        // function ptr to integrate
+    double a, double b,         // interval [a,b]
+    double epsilon,             // error tolerance
+    int maxDepth                // recursion cap
+){
+    //errno = 0;
+    double h = b - a;
+    if (h == 0) return 0;
+    double fa = f(a), fb = f(b), fm = f((a + b)/2);
+    double Iab = (h/6)*(fa + 4*fm + fb);
+    return integrateRecur(f, a, b, epsilon, Iab, fa, fb, fm, maxDepth);
+}
+
+
+}; // namespace AdaptiveSimpson
+
+
+
 // ====================================================
 //                    Newton-Cotes
 // ====================================================
