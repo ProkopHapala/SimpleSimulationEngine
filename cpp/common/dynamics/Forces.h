@@ -13,6 +13,37 @@
 #define F2MAX   10.0f
 
 
+void sum(int n, Vec3d* ps, Vec3d& psum){ for(int i=0;i<n;i++){ psum.add(ps[i]); } };
+
+void sumTroq(int n, Vec3d* fs, Vec3d* ps, const Vec3d& cog, const Vec3d& fav, Vec3d& torq){
+    for(int i=0;i<n;i++){  torq.add_cross(ps[i]-cog,fs[i]-fav);  }
+    //for(int i=0;i<n;i++){  torq.add_cross(ps[i],fs[i]);  }
+}
+
+void checkForceInvariatns( int n, Vec3d* fs, Vec3d* ps, Vec3d& cog, Vec3d& fsum, Vec3d& torq ){
+    cog =Vec3dZero;
+    fsum=Vec3dZero;
+    torq=Vec3dZero;
+    double dw = 1./n;
+    sum(n, ps, cog ); cog.mul(dw);
+    sum(n, fs, fsum); //cog.mul(dw);
+    sumTroq(n, fs, ps, cog, fsum*dw, torq );
+}
+
+inline double boxForce1D(double x, double xmin, double xmax, double k){
+    double f=0;
+    if(k<0) return 0;
+    if(x>xmax){ f+=k*(xmax-x); }
+    if(x<xmin){ f+=k*(xmin-x); }
+    return f;
+}
+
+inline bool boxForce(const Vec3d p, Vec3d& f,const Vec3d& pmin, const Vec3d& pmax, const Vec3d& k){
+    f.x+=boxForce1D( p.x, pmin.x, pmax.x, k.x);
+    f.y+=boxForce1D( p.y, pmin.y, pmax.y, k.y);
+    f.z+=boxForce1D( p.z, pmin.z, pmax.z, k.z);
+}
+
 inline double evalCos2(const Vec3d& hi, const Vec3d& hj, Vec3d& fi, Vec3d& fj, double k, double c0){
     double c    = hi.dot(hj) - c0;
     double dfc  =  k*-2*c;

@@ -130,8 +130,7 @@ void drawLines          ( int nlinks, const int * links, const Vec3d * points );
 void drawTriangles      ( int nlinks, const int * links, const Vec3d * points );
 void drawPolygons       ( int nlinks, const int * ns,    const int * links, const Vec3d * points );
 
-
-void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc );
+void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc, double lmax );
 void drawScalarArray(int n, Vec3d* ps, double* vs, double vmin, double vmax );
 
 

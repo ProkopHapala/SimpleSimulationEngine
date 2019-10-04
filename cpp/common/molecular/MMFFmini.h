@@ -40,6 +40,7 @@ inline void pairs2triple( const  Vec2i b1, const Vec2i b2, Vec3i& tri, bool& fli
 }
 */
 
+/*
 void sum(int n, Vec3d* ps, Vec3d& psum){ for(int i=0;i<n;i++){ psum.add(ps[i]); } };
 
 void sumTroq(int n, Vec3d* fs, Vec3d* ps, const Vec3d& cog, const Vec3d& fav, Vec3d& torq){
@@ -55,6 +56,7 @@ void checkForceInvariatns( int n, Vec3d* fs, Vec3d* ps, Vec3d& cog, Vec3d& fsum,
     sum(n, fs, fsum); //cog.mul(dw);
     sumTroq(n, fs, ps, cog, fsum*dw, torq );
 }
+*/
 
 class MMFFmini{ public:
     int  natoms=0, nbonds=0, nang=0, ntors=0;

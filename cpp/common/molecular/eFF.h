@@ -6,7 +6,7 @@
 //#include "Vec2.h"
 #include "Vec3.h"
 #include "quaternion.h"
-//#include "Forces.h"
+#include "Forces.h"
 
 /*
 Erf approximation:
@@ -74,8 +74,9 @@ inline double addPairEF_expQ( const Vec3d& d, Vec3d& f, double w2, double qq, do
     double r2     = d.norm2();
     double r      = sqrt( r2+R2SAFE );
     double invrw2 = 1/( r2 + w2 );
-    double E      =  qq*sqrt(invrw2);
-    double fr     = -qq*invrw2;
+    double invrw  = sqrt(invrw2);
+    double E      =  qq*invrw;
+    double fr     = -qq*invrw2*invrw*r;
     if( bExp<0 ){
         double Eexp  = aExp*exp( bExp*r );
         fr          += bExp*Eexp;
@@ -104,12 +105,15 @@ class EFF{ public:
     double sea2 = see*see;
     */
 
-    double wee = 1.0;
+    double wee = 2.0;
     double wae = 1.0;
-    double waa = 0.1;
+    double waa = 0.25;
 
-    double bAE = -5.0;
-    double aAE = 20.0;
+    double bEE = -1.0;
+    double aEE = 2.0;
+
+    double bAE = -4.0;
+    double aAE = 10.0;
 
     int ne=0,na=0,nDOFs=0;
     //int*   atype  =0;
@@ -167,12 +171,13 @@ double evalEE(){
         Vec3d pi = epos[i];
         for(int j=0; j<i; j++){
             Vec3d f;
-            Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
+            Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, bEE, aEE );
+            //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
             eforce[j].sub(f);
             eforce[i].add(f);
             glColor3f(1.0,0.0,0.0);
-            Draw3D::drawVecInPos( f*-1, epos[j] );
-            Draw3D::drawVecInPos( f   , pi      );
+            //Draw3D::drawVecInPos( f*-1, epos[j] );
+            //Draw3D::drawVecInPos( f   , pi      );
         }
     }
     return Eee;
@@ -194,8 +199,8 @@ double evalAE(){
             eforce[j].sub(f);
             aforce[i].add(f);
             glColor3f(1.0,0.0,1.0);
-            Draw3D::drawVecInPos( f*-1, epos[j] );
-            Draw3D::drawVecInPos( f   , pi      );
+            //Draw3D::drawVecInPos( f*-1, epos[j] );
+            //Draw3D::drawVecInPos( f   , pi      );
         }
     }
     return Eae;
@@ -214,12 +219,21 @@ double evalAA(){
             aforce[j].sub(f);
             aforce[i].add(f);
             glColor3f(1.0,0.0,0.0);
-            Draw3D::drawVecInPos( f*-1, apos[j] );
-            Draw3D::drawVecInPos( f   , pi      );
+            //Draw3D::drawVecInPos( f*-1, apos[j] );
+            //Draw3D::drawVecInPos( f   , pi      );
         }
     }
     return Eaa;
 }
+
+double eval(){
+    return
+      evalEE()
+    + evalAE()
+    + evalAA()
+    ;
+}
+
 
 void move_GD(double dt){
     for(int i=0;i<nDOFs;i++){

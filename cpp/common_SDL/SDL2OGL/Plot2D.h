@@ -3,6 +3,7 @@
 #define  Plot2D_h
 
 #include <vector>
+#include <string>
 
 #include "fastmath.h"
 #include "Vec2.h"
@@ -30,6 +31,7 @@ class DataLine2D{ public:
     char     pointStyle =' ';
     float    pointSize  =0.1;
     uint32_t clr        =0xFFFF00FF;
+    std::string label;
 
 
     void update();
@@ -41,8 +43,9 @@ class DataLine2D{ public:
     inline void allocate( int n_ ){ n=n_; xs=new double[n]; ys=new double[n]; };
 
     inline void linspan(double xmin, double xmax){ VecN::linspan(n,xmin,xmax,xs); };
+    inline void arange (double xmin, double dx  ){ VecN::arange (n,xmin,dx,xs);   };
 
-    inline DataLine2D();
+    inline DataLine2D()=default;
     inline DataLine2D(int n_){ allocate(n_); }
 
     ~DataLine2D(){
@@ -50,6 +53,11 @@ class DataLine2D{ public:
         if(ys) delete [] ys;
         if( glObj ) glDeleteLists(glObj,1);
     }
+};
+
+template<typename Func>
+void evalLine( DataLine2D& l, Func func ){
+    for(int i=0; i<l.n; i++){ l.ys[i]=func(l.xs[i]); }
 };
 
 class Plot2D{ public:
@@ -75,11 +83,14 @@ class Plot2D{ public:
     char   * tickFormat = "%2.2f\0";
     int      fontTex=0;
 
+
     void update();
     void drawAxes();
     void render();
     void view  ();
     void init  ();
+    void xsharingLines(int nl, int np);
+    void xsharingLines(int nl, int np, double xmin, double dx);
     //void init( double dx, double dy );
     void autoAxes(double dx, double dy);
     void clear(bool bDeep=true);

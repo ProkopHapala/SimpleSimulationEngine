@@ -36,21 +36,7 @@
 
 // ======= THE CLASS
 
-void makeSamples( Vec2i ns, Vec3d p0, Vec3d a, Vec3d b, Vec3d *ps ){
-    Vec3d da=a*(1.0d/ns.x);
-    Vec3d db=b*(1.0d/ns.y);
-    //printf( "da (%g,%g,%g)\n", da.x,da.y,da.z );
-    //printf( "db (%g,%g,%g)\n", db.x,db.y,db.z );
-    for(int ib=0; ib<ns.y; ib++){
-        Vec3d p = p0+db*ib;
-        for(int ia=0; ia<ns.x; ia++){
-            *ps = p;
-            p.add(da);
-            ps++;
-        }
-    }
-}
-
+/*
 void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc ){
     glBegin(GL_LINES);
     for(int i=0; i<n; i++){
@@ -72,6 +58,7 @@ void drawScalarArray(int n, Vec3d* ps, double* vs, double vmin, double vmax ){
     }
     glEnd();
 }
+*/
 
 //void drawRigidAtom( const Vec3d& pos, Vec3d* bhs ){
 void drawRigidAtom( RigidAtom& atom ){

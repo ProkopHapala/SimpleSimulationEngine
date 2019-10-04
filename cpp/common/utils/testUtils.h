@@ -103,7 +103,38 @@ void genRandomArray( int n, double * vals, double vmin, double vmax ){
     for( int i=0; i<n; i++ ){ vals[i] = randf( vmin, vmax ); }
 }
 
+void makeSamples2D( Vec2i ns, Vec3d p0, Vec3d da, Vec3d db, Vec3d *ps ){
+    //Vec3d da=a*(1.0d/ns.x);
+    //Vec3d db=b*(1.0d/ns.y);
+    //printf( "da (%g,%g,%g)\n", da.x,da.y,da.z );
+    //printf( "db (%g,%g,%g)\n", db.x,db.y,db.z );
+    for(int ib=0; ib<ns.y; ib++){
+        Vec3d p = p0+db*ib;
+        for(int ia=0; ia<ns.x; ia++){
+            *ps = p;
+            p.add(da);
+            ps++;
+        }
+    }
+}
 
+//template<void func(Vec3d pos, Vec3d& fout)>
+template <typename Func>
+void sampleFroce(Func func, int n, Vec3d *ps, Vec3d *fs ){
+    for(int i=0; i<n; i++){ func(ps[i],fs[i]); }
+}
+
+//template<void func(Vec3d pos, Vec3d& fout)>
+template <typename Func>
+int sampleFroce(Func func, Vec2i ns, Vec3d p0, Vec3d a, Vec3d b, Vec3d*&ps, Vec3d*&fs ){
+    int ntot = ns.x*ns.y;
+    ps = new Vec3d[ntot];
+    fs = new Vec3d[ntot];
+    makeSamples2D(ns, p0, a, b, ps);
+    //sampleFroce<func>( ntot, ps, fs, func );
+    sampleFroce( func, ntot, ps, fs  );
+    return ntot;
+}
 
 #define SPEED_TEST_FUNC( caption, func, xmin, xmax, ncall ) \
     do{                                    \

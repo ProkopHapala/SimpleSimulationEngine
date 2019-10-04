@@ -73,9 +73,9 @@ void Plot2D::update(){
         bounds.x1 = _max(bounds.x1, line->bounds.x1);
         bounds.y0 = _min(bounds.y0, line->bounds.y0);
         bounds.y1 = _max(bounds.y1, line->bounds.y1);
-        //printf( "--    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
+        printf( "--    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
     }
-    //printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
+    printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
 };
 
 void Plot2D::autoAxes(double dx, double dy){
@@ -83,10 +83,10 @@ void Plot2D::autoAxes(double dx, double dy){
     int n0,n1;
     n0=(int)(bounds.x0/dx)-1;  axBounds.x0 = dx*n0;
     n1=(int)(bounds.x1/dx)+1;  axBounds.x1 = dx*n1; nXTicks=(n1-n0)+1;
-    printf("%g %g %g  %i %i %i nXTicks \n", bounds.x0, bounds.x1, dx,   n0, n1, nXTicks );
+    printf("x(%g:%g) dx %g nx(%i:%i) nXTicks %i \n", bounds.x0, bounds.x1, dx,   n0, n1, nXTicks );
     n0=(int)(bounds.y0/dy)-1;  axBounds.y0 = dy*n0;
     n1=(int)(bounds.y1/dy)+1;  axBounds.y1 = dy*n1; nYTicks=(n1-n0)+1;
-    printf("%g %g %g  %i %i %i nYTicks \n", bounds.y0, bounds.y1, dy,   n0, n1, nYTicks );
+    printf("y(%g:%g) dy %g ny(%i:%i) nYTicks %i \n", bounds.y0, bounds.y1, dy,   n0, n1, nYTicks );
 
     if( xTicks==NULL ) delete xTicks;
     if( yTicks==NULL ) delete yTicks;
@@ -143,7 +143,7 @@ void Plot2D::render(){
     for( DataLine2D* line : lines ){ line->render(); }
     // TO DO :
     //if( tickCaption ){ }
-};
+}
 
 void Plot2D::drawHline ( double y ){ Draw2D::drawLine_d( {axBounds.x0, y}, {axBounds.x1, y} ); };
 void Plot2D::drawVline ( double x ){ Draw2D::drawLine_d( {x, axBounds.y0}, {x, axBounds.y1} ); };
@@ -153,7 +153,28 @@ void Plot2D::view(){
     glCallList( glObj );
     for( DataLine2D* line : lines ){ line->view(); }
    // printf( "%i \n", glObj);
-};
+}
+
+void Plot2D::xsharingLines(int nl, int np){
+    double * xs = new double[np];
+    for(int il=0; il<nl; il++){
+        lines.push_back( new DataLine2D() );
+        lines.back()->n=np;
+        lines.back()->xs=xs;
+        lines.back()->ys=new double[np];
+    }
+}
+
+void Plot2D::xsharingLines(int nl, int np, double xmin, double dx){
+    double * xs = new double[np];
+    VecN::arange (np,xmin,dx,xs);
+    for(int il=0; il<nl; il++){
+        lines.push_back( new DataLine2D() );
+        lines.back()->n=np;
+        lines.back()->xs=xs;
+        lines.back()->ys=new double[np];
+    }
+}
 
 void Plot2D::init( ){
     //axBounds.set( {-10.0,-10.0},{10.0,10.0});

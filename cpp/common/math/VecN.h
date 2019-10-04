@@ -8,6 +8,11 @@
 
 #include <fastmath.h>
 
+template<typename Func>
+void evalFunc1D(Func func, int n, double * xs, double * ys){
+    for(int i=0; i<n; i++){ ys[i]=func(xs[i]); }
+};
+
 namespace VecN{
 
     // =======  iterration over array

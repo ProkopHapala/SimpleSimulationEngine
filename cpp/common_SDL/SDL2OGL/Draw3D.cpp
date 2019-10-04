@@ -827,9 +827,11 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 	    glEnd();
     };
 
-    void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc ){
+    void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc, double lmax ){
         glBegin(GL_LINES);
+        double l2max=sq(lmax/sc);
         for(int i=0; i<n; i++){
+            if(lmax>0){ if(vs[i].norm2()>l2max ) continue; }
             Vec3d p=ps[i];        glVertex3f(p.x,p.y,p.z);
             p.add_mul( vs[i], sc); glVertex3f(p.x,p.y,p.z);
         }
