@@ -237,7 +237,7 @@ int dir2tree(TreeViewTree& node, char * name, int level ){
 
 template <typename Func>
 int processFileLines( char * fname, Func func ){
-FILE * pFile;
+    FILE * pFile;
     const int nbuff = 4096;
     char str[nbuff];
     pFile = fopen ( fname , "r");

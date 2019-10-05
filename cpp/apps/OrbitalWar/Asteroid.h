@@ -1,7 +1,7 @@
 
 
 //   From:
-//   ftp://ftp.lowell.edu/pub/elgb/astorb.html 
+//   ftp://ftp.lowell.edu/pub/elgb/astorb.html
 
 
 #ifndef  Asteroid_h
@@ -9,7 +9,7 @@
 
 #include <math.h>
 
-constexpr const double DEG_2_RAD = M_PI/180; 
+constexpr const double DEG_2_RAD = M_PI/180;
 
 //double julian_date_conv( double day, double month, double year ){
 double jd_conv( double day, double month, double year ){
@@ -31,10 +31,12 @@ double jd_conv( double day, double month, double year ){
 double true_anomaly( double ma, double ec ){
     // https://en.wikipedia.org/wiki/True_anomaly
     // fast approximation https://en.wikipedia.org/wiki/True_anomaly#From_the_mean_anomaly
+    // https://en.wikipedia.org/wiki/Equation_of_the_center#Series_expansion
+    double errConv = 1e-6
     double e,diff,f;
     e=ma;
     diff=1.0;
-    while(diff>0.00001) {
+    while(diff>errConv) {
         e = ma + ec*sin(e);
         diff= abs(e-ec*sin(e)-ma);
     }
@@ -51,17 +53,19 @@ void get_position_2d( double a, double e, double i, double lo, double so, double
 
     double p=a*(1-e*e);
     double ang=true_anomaly(m,e); // Mean-anomaly to True anomaly
-    double rad=p/(1+e*cos(ang));
-    double tx=rad*cos(ang);
-    double ty=rad*sin(ang);
+    double cos_ang = cos(ang);
+    double sin_ang = sin(ang);
+    double rad=p/(1+e*cos_ang);
+    double tx=rad*cos_ang; // longer axis
+    double ty=rad*sin_ang; // shorter axis
 
     double cos_l = cos(l);
     double sin_l = sin(l);
-    
+
     double cos_s = cos(s);
     double sin_s = sin(s);
 
-    //   calculate the rotation matrix 
+    //   calculate the rotation matrix
     xx=  cos_s*cos_l - sin_s*sin_l;
     xy= -sin_s*cos_l - cos_s*sin_l;
     yx=  cos_s*sin_l + sin_s*cos_l*cos_inc;
@@ -76,11 +80,11 @@ int  draw_orbit( double a, double e, double i, double lo, double so ){
     //double inc = i *DEG_2_RAD;
     //double l   = lo*DEG_2_RAD;
     //double s   = so*DEG_2_RAD;
-    double p   = a *(1-e*e);
+    double p   = a *(1-e*e);    //  semi-latus rectum   https://en.wikipedia.org/wiki/Ellipse#Polar_form_relative_to_focus
 
     double cos_l = cos(l);
     double sin_l = sin(l);
-    
+
     double cos_s = cos(s);
     double sin_s = sin(s);
 
@@ -102,11 +106,11 @@ int  draw_orbit( double a, double e, double i, double lo, double so ){
         double r = p/( 1 + e*cos_ang );
         tx=r*cos_ang;
         ty=r*sin_ang;
-        
+
         x = x0 + scale*( tx*xx + ty*xy );
         y = y0 + scale*( tx*yx + ty*yy );
         z = z0 + scale*( tx*zx + ty*zy );
-        
+
         //x = sx/2 + scale*( tx*xx + ty*xy );
         //y = sy/2 - scale*( tx*yx + ty*yy );
         //draw_pixel(bm,sx,sy,x,y,0xff00);
@@ -119,8 +123,8 @@ struct Asteroid{
     double e;   // excentricity
     double m0;  // magnitude ?
     double md;
-    
-    
+
+
     double a;
     double lo;
     double so;
@@ -132,18 +136,18 @@ struct Asteroid{
     double yy;
     */
     int type;
-    
+
     // ---- Functions
-    
+
     void fromString(char* s, double jd ){
-        constexpr const double DEG_2_RAD = M_PI/180; 
+        constexpr const double DEG_2_RAD = M_PI/180;
         //double lo,so;
         char blah[256];
         char date[16];
         sscanf(inp,"%104c %s %lf %lf %lf %lf %lf %lf %[^\n]s", blah, date, &ma, &so, &lo, &i, &e, &a, blah );
         fgetc(inp);
         double q=a*(1-e);
-        //if(q<min){ // objects which are too far out won't be included 
+        //if(q<min){ // objects which are too far out won't be included
         //double y,m,d,epoch,period,m_now;
         double d = atof(&date[6]);   date[6]=0;
         double m = atof(&date[4]);   date[4]=0;
@@ -157,7 +161,7 @@ struct Asteroid{
         md=2*M_PI/period;
         ma=ma*DEG_2_RAD;
         m0=ma + (jd-epoch)*md;
-        
+
         p=a*(1-e*e);
         if     (q<1  ){ type=2; }
         else if(q<1.3){ type=1; }
@@ -172,8 +176,8 @@ struct Asteroid{
 };
 
 
-// loads the asteroid file and calculate the rotation matrix 
-// objects which are too far out won't be included 
+// loads the asteroid file and calculate the rotation matrix
+// objects which are too far out won't be included
 
 /* draws the terrestrial planet */
 void draw_solar_system(char *bm,int sx,int sy,double jd,double scale){
@@ -215,13 +219,13 @@ double x,y,m_now;
   y=sy/2-scale*y;
   fill_circle(bm,sx,sy,x,y,4,0xffff);
 
-  // Mars 
+  // Mars
   draw_orbit(bm,sx,sy,1.5237118,0.0934472,1.84990,49.5629,286.4653,scale);
   m_now = 10.2393 +  (jd - 2450840.5 ) * 0.5240224;
   get_position(1.5237118,0.0934472,1.84990,49.5629,286.4653,m_now,&x,&y);
   x=sx/2+scale*x;
   y=sy/2-scale*y;
-  fill_circle(bm,sx,sy,x,y,4,0xffff); 
+  fill_circle(bm,sx,sy,x,y,4,0xffff);
 
 }
 

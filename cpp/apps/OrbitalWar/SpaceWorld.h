@@ -235,6 +235,41 @@ class SpaceWorld : public ODEderivObject { public:
         }
     }
 
+    int load_astorb(char* fname, int n_reserve){
+        //printf( "load_astorb \n" );
+        FILE * pFile;
+        const int nbuff = 1024;
+        char str[nbuff];
+        pFile = fopen ( fname, "r");
+        if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
+        planets.reserve( n_reserve );
+        int n=0;
+        //printf( "TO FGETS \n" );
+        while ( fgets( str , nbuff, pFile) != NULL ){
+            //printf( "%s", str );
+            SpaceBody b;
+            b.fromString_astorb(str);
+            planets.push_back(b);
+            n++;
+        }
+        fclose(pFile);
+        return n;
+    }
+
+    int pickPlanet( const Vec3d& ro, const Vec3d& rd, double epoch ){
+        double t_ray;
+        double r2min = 1e+300;
+        int imin     = -1;
+        for(int i=0; i<planets.size(); i++){
+            if( !planets[i].orbit ) continue;
+            Vec3d p = planets[i].orbit->pointAtEpoch( epoch );
+            double r2 = rayPointDistance2( ro, rd, p, t_ray );
+            if(r2<r2min){ imin=i; r2min=r2; }
+        }
+        printf( "pickPlanet %i %g  ro(%g,%g,%g) rd(%g,%g,%g) \n", imin, r2min,   ro.x,ro.y,ro.z,    rd.x,rd.y,rd.z  );
+        return imin;
+    }
+
 };
 
 #endif

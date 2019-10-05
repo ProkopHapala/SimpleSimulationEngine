@@ -2,6 +2,11 @@
 #ifndef  gonioApprox_h
 #define  gonioApprox_h
 
+//   speed-accuracy sin/cos approx using Chebyshev
+// https://stackoverflow.com/questions/345085/how-do-trigonometric-functions-work/345117#345117
+// http://lolengine.net/blog/2011/12/21/better-function-approximations
+
+
 // ========= Polar -> Cartesian ===========
 
 template <class TYPE>

@@ -406,6 +406,22 @@ class Mat3T{
 		yz =  cb;
 	};
 
+
+    inline void fromEuler_orb( T inc, T lan, T apa ){
+        T ci=cos(inc), si=sin(inc); // inc  inclination
+        T cl=cos(lan), sl=sin(lan); // lan  longitude ascedning node  capital omega
+        T ca=cos(apa), sa=sin(apa); // apa  argument of periapsis     small omega
+        xx =  cl*ca - sl*sa*ci;
+		xy =  sl*ca + cl*sa*ci;
+		xz =  sa*si;
+		yx = -cl*sa - sl*ca*ci;
+		yy = -sl*sa + cl*ca*ci;
+		yz =  ca*si;
+		zx =  sl*si;
+		zy = -cl*si;
+		zz =  ci;
+	};
+
 	// http://www.realtimerendering.com/resources/GraphicsGems/gemsiii/rand_rotation.c
     // http://www.realtimerendering.com/resources/GraphicsGems/gemsiii/rand_rotation.c
     // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.53.1357&rep=rep1&type=pdf
