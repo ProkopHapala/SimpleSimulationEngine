@@ -34,18 +34,18 @@ inline double getR2( double dx, double dy ){
 inline double getQuadruRand( Vec3d p, uint32_t seed ){
     //double h = ;
     double h = 0;
-    h += fhash_Wang( seed+1545454 ) * p.x;
-    h += fhash_Wang( seed+2545454 ) * p.y;
-    h += fhash_Wang( seed+3545454 ) * p.z;
-    h += fhash_Wang( seed+4545454 ) * p.x*p.x;
-    h += fhash_Wang( seed+5545454 ) * p.x*p.y;
-    h += fhash_Wang( seed+6545454 ) * p.x*p.z;
-    h += fhash_Wang( seed+7545454 ) * p.y*p.x;
-    h += fhash_Wang( seed+8545454 ) * p.y*p.y;
-    h += fhash_Wang( seed+9545454 ) * p.y*p.z;
-    h += fhash_Wang( seed+10545454 ) * p.z*p.x;
-    h += fhash_Wang( seed+11545454 ) * p.z*p.y;
-    h += fhash_Wang( seed+12545454 ) * p.z*p.z;
+    h += (fhash_Wang( seed*53507 )-0.5) * p.x;
+    h += (fhash_Wang( seed*55399 )-0.5) * p.y;
+    h += (fhash_Wang( seed*56479 )-0.5) * p.z;
+    h += (fhash_Wang( seed*57737 )-0.5) * p.x*p.x;
+    h += (fhash_Wang( seed*61153 )-0.5) * p.x*p.y;
+    h += (fhash_Wang( seed*56681 )-0.5) * p.x*p.z;
+    h += (fhash_Wang( seed*59183 )-0.5) * p.y*p.x;
+    h += (fhash_Wang( seed*60887 )-0.5) * p.y*p.y;
+    h += (fhash_Wang( seed*61487 )-0.5) * p.y*p.z;
+    h += (fhash_Wang( seed*65027 )-0.5) * p.z*p.x;
+    h += (fhash_Wang( seed*64877 )-0.5) * p.z*p.y;
+    h += (fhash_Wang( seed*64969 )-0.5) * p.z*p.z;
     return h;
 }
 

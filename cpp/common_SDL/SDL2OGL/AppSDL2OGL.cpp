@@ -21,24 +21,76 @@ void AppSDL2OGL::loop( int n ){
 		inputHanding();
 		//if(!STOP){update();} // DEPRECATED: usually we want to stop physics, not drawing
 		update();
+		for(ScreenSDL2OGL* w : child_windows){
+            if(w) w->update();
+        }
 		//printf(" %i \n", iframe );
         wait(delay);
 		//if( delay>0 ) SDL_Delay( delay );
-		frameCount++;
+		//frameCount++;
 		if(loopEnd) break;
 	}
 }
 
 void AppSDL2OGL::inputHanding(){
+    // https://stackoverflow.com/questions/24918626/sdl-window-input-focus-and-sdl-window-mouse-focus
+    // SDL_WINDOW_INPUT_GRABBED set with SDL_SetWindowGrab and forces the mouse to stay inside the window (so the window has both mouse and keyboard focus).
+    // SDL_WINDOW_INPUT_FOCUS flag indicates whether the window is active or not (has keyboard input, and probably other controller inputs too).
+    // SDL_WINDOW_MOUSE_FOCUS indicates whether the mouse is hovering over the window, even if the window is not active.
+    //printf("DEBUG AppSDL2OGL::inputHanding 0 \n");
+    wflags = SDL_GetWindowFlags(window);
+    bool bFocus =  wflags & SDL_WINDOW_INPUT_FOCUS;
+    //printf( "window[%i] inputHanding   %i %i \n", id, wflags&SDL_WINDOW_INPUT_FOCUS, SDL_WINDOW_INPUT_FOCUS );
+    //if( wflags & SDL_WINDOW_INPUT_FOCUS ){
+    //printf( "window[%i] inputHanding \n", id );
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
-	keyStateHandling ( keys );
-	mouseHandling( );
+    if( bFocus ){
+        //printf( "window[%i] inputHanding has focus \n", id );
+        keyStateHandling( keys );
+        mouseHandling( );
+    }
+    //printf("DEBUG AppSDL2OGL::inputHanding 1 \n");
+    bool focuses[child_windows.size()];
+    for(int i=0; i<child_windows.size(); i++){
+        ScreenSDL2OGL* w = child_windows[i];
+        if(w==0){ focuses[i] = 0; continue; }
+        focuses[i] = SDL_WINDOW_INPUT_FOCUS & SDL_GetWindowFlags(w->window);
+        if( focuses[i] ){
+            w->keyStateHandling ( keys );
+            w->mouseHandling( );
+        }
+    }
     SDL_Event		 event;
-	while(SDL_PollEvent(&event)){
-	    eventHandling( event );
-	}
+    //printf("DEBUG AppSDL2OGL::inputHanding 2 \n");
+    while(SDL_PollEvent(&event)){
+        if( bFocus ){ eventHandling( event ); }
+        for(int i=0; i<child_windows.size(); i++){
+            if( focuses[i] ){
+                child_windows[i]->eventHandling( event );
+                if( !child_windows[i] ) focuses[i] = 0;
+            }
+        }
+    }
+    //printf("DEBUG AppSDL2OGL::inputHanding 3 \n");
 }
 
+
+void AppSDL2OGL::eventHandling( const SDL_Event& event ){
+    switch( event.type ){
+        case SDL_KEYDOWN :
+            switch( event.key.keysym.sym ){
+                case SDLK_ESCAPE:   quit(); break;
+            } break;
+        case SDL_WINDOWEVENT:
+            switch (event.window.event) {
+                case SDL_WINDOWEVENT_CLOSE: quit(); break;
+            } break;
+        case SDL_QUIT: quit(); break;
+    };
+    ScreenSDL2OGL::eventHandling(event);
+};
+
+/*
 void AppSDL2OGL::eventHandling( const SDL_Event& event ){
     switch( event.type ){
         case SDL_MOUSEBUTTONDOWN:
@@ -73,15 +125,15 @@ void AppSDL2OGL::mouseHandling( ){
     SDL_GetMouseState( &mouseX, &mouseY ); //mouseY=HEIGHT-mouseY; // this is done in mouseUp()
     defaultMouseHandling( mouseX, mouseY );
 }
+*/
 
-void AppSDL2OGL::defaultMouseHandling( const int& mouseX, const int& mouseY ){
-	mouse_begin_x = mouseRight( mouseX ) + camX0;
-	mouse_begin_y = mouseUp   ( mouseY ) + camY0;
-    fWIDTH  = zoom*ASPECT_RATIO;
-	fHEIGHT = zoom;
-	camXmin = camX0 - fWIDTH; camYmin = camY0 - fHEIGHT;
-	camXmax = camX0 + fWIDTH; camYmax = camY0 + fHEIGHT;
-};
+void AppSDL2OGL::removeChild(ScreenSDL2OGL* child){
+    for(int i=0; i<child_windows.size(); i++){
+        if(child_windows[i]==child){
+            child_windows[i] = 0;
+        }
+    }
+}
 
 AppSDL2OGL::AppSDL2OGL( int& id, int WIDTH_, int HEIGHT_ ) : ScreenSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 

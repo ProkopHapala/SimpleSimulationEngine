@@ -13,8 +13,7 @@
 //#include "Camera.h"
 //#include "cameraOGL.h"
 
-class AppSDL2OGL_3D : public AppSDL2OGL{
-	public:
+class AppSDL2OGL_3D : public AppSDL2OGL{ public:
 	bool mouseSpinning = false;
 	//Quat4f qCamera;
 	//Mat3f  camMat;

@@ -26,10 +26,12 @@
 
 #include "SpaceBodies.h"
 #include "SpaceWorld.h"
+#include "RublePile.h"
 
 #include "SpaceDraw.h"
 
 #include "AppSDL2OGL_3D.h"
+#include "ScreenSDL2OGL_3D.h"
 #include "GUI.h"
 #include "testUtils.h"
 
@@ -45,6 +47,94 @@ char strBuf[0x10000];
 
 */
 
+void drawEifelTower(){
+    float h4=325;
+    float w3=10.0,   h3=276.13;
+    float w2=20.0,   h2=115.73;
+    float w1=60.24/2,h1=57.63;
+    float w0=124.9/2,h0=0.0;
+    glBegin(GL_LINES);
+    glVertex3f( w3, w3,h3); glVertex3f(0,0,h4);
+    glVertex3f(-w3, w3,h3); glVertex3f(0,0,h4);
+    glVertex3f( w3,-w3,h3); glVertex3f(0,0,h4);
+    glVertex3f(-w3,-w3,h3); glVertex3f(0,0,h4);
+
+    glVertex3f( w2, w2,h2); glVertex3f( w3, w3,h3);
+    glVertex3f(-w2, w2,h2); glVertex3f(-w3, w3,h3);
+    glVertex3f( w2,-w2,h2); glVertex3f( w3,-w3,h3);
+    glVertex3f(-w2,-w2,h2); glVertex3f(-w3,-w3,h3);
+
+    glVertex3f( w1, w1,h1); glVertex3f( w2, w2,h2);
+    glVertex3f(-w1, w1,h1); glVertex3f(-w2, w2,h2);
+    glVertex3f( w1,-w1,h1); glVertex3f( w2,-w2,h2);
+    glVertex3f(-w1,-w1,h1); glVertex3f(-w2,-w2,h2);
+
+    glVertex3f( w0, w0,h0); glVertex3f( w1, w1,h0);
+    glVertex3f(-w0, w0,h0); glVertex3f(-w1, w1,h0);
+    glVertex3f( w0,-w0,h0); glVertex3f( w1,-w1,h0);
+    glVertex3f(-w0,-w0,h0); glVertex3f(-w1,-w1,h0);
+
+    glEnd();
+}
+
+
+
+
+class PlanetView : public ScreenSDL2OGL_3D { public:
+    RublePile* asteroid = 0;
+    int fontTex;
+
+    PlanetView( int& id, int WIDTH_, int HEIGHT_ ): ScreenSDL2OGL_3D( id, WIDTH_, HEIGHT_ ){}
+
+    ~PlanetView(){
+        printf( "~PlanetView \n" );
+        if(asteroid)delete asteroid;
+        //ScreenSDL2OGL_3D::~ScreenSDL2OGL_3D();
+        printf( "~PlanetView DONE \n" );
+    }
+
+    virtual void draw(){
+        glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+        glEnable(GL_DEPTH_TEST);
+
+        if(frameCount==1){
+            cam.zmax = asteroid->radius * 4.0;
+            zoom = 25000.0f;
+        }
+        //printf("cam.zoom %g \n", cam.zoom  );
+
+        double r = asteroid->radius;
+        Draw3D::drawBBox( {0.0f,0.0f,0.0f}, asteroid->radius );
+
+        //asteroid->relaxBoulders(0.25,1);
+
+        //printf( "PlanetView.draw() \n" );
+        SpaceDraw::rublePile( *asteroid );
+        //printf( "PlanetView::draw \n"  );
+        //Draw3D::drawAxis( 1.0 );
+
+        glColor3f(0.48f,0.48f,0.48f); Draw3D::drawRectGridLines( {20,20}, {-10000.0 ,-10000.0},  {1000.0,0.0,0.0},  {0.0,1000.0,0.0} );
+        glColor3f(0.52f,0.52f,0.52f); Draw3D::drawRectGridLines( {20,20}, {-100000.0,-100000.0}, {10000.0,0.0,0.0}, {0.0,10000.0,0.0} );
+
+        glColor3f(0.0f,0.0f,0.0f);
+        //glTranslatef( asteroid->radius , asteroid->radius , asteroid->radius );
+        glTranslatef( 0,0, asteroid->radius*1.5 );
+        drawEifelTower();
+
+    }
+
+    virtual void drawHUD(){
+        glPushMatrix();
+        glDisable(GL_DEPTH_TEST);
+        glColor3f( 0.0,0.0,0.0 );
+        glTranslatef( 10.0,HEIGHT-20,0.0  ); asteroid->infoToBuff(strBuf); Draw::drawText( strBuf, fontTex, fontSizeDef, {80,15} );
+        glPopMatrix();
+    }
+
+
+};
 
 class SolarSystemMap : public AppSDL2OGL_3D { public:
     typedef AppSDL2OGL_3D Super;
@@ -60,6 +150,8 @@ class SolarSystemMap : public AppSDL2OGL_3D { public:
     int ipick = 1;
 
     GLint olg_orbits = 0;
+
+    PlanetView* planetView = 0;
 
     //float scF = 1.0; float scSz = 0.2;
     //double view_scale = 1/1e+9;
@@ -93,6 +185,8 @@ class SolarSystemMap : public AppSDL2OGL_3D { public:
 	//virtual void keyStateHandling( const Uint8 *keys );
     //virtual void mouseHandling( );
 
+    virtual void removeChild(ScreenSDL2OGL* child);
+
 	SolarSystemMap( int& id, int WIDTH_, int HEIGHT_ );
 
 	/*
@@ -112,7 +206,14 @@ class SolarSystemMap : public AppSDL2OGL_3D { public:
 
 };
 
+void SolarSystemMap::removeChild(ScreenSDL2OGL* child){
+    if(child==planetView){ planetView=0; };
+    AppSDL2OGL_3D::removeChild(child);
+}
+
 SolarSystemMap::SolarSystemMap( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    srand(45454);
 
     //world.addPlanet( "Sun"  , 100000000000.0, 1.0, { 0.0, 0.0, 0.0}, {0.0,0.0,0.0} );
     //world.addPlanet( "Earth",   1000000000.0, 0.1, {10.0, 0.0, 0.0}, {0.0,1.0,0.0} );
@@ -154,7 +255,9 @@ SolarSystemMap::SolarSystemMap( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
     //bRefTrj = false;
 
 
-    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    //fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+
     //txtPop   .inputText = "txtPop";
     txtStatic.inputText = "txtStatic";
 
@@ -223,6 +326,8 @@ void SolarSystemMap::draw(){
     //glColor3f(0.0f,0.0f,1.0f); for(SpaceBody& b : world.ships   ){ drawBodyTrj( b ); }
 
     Draw3D::drawAxis(1.0);
+
+
 };
 
 void SolarSystemMap::drawHUD(){
@@ -240,6 +345,7 @@ void SolarSystemMap::drawHUD(){
 }
 
 void SolarSystemMap::mouseHandling( ){
+    //printf( "window[%i] HasFocus \n", id );
     SDL_GetMouseState( &mouseX, &mouseY );   mouseY=HEIGHT-mouseY;
     mouse_begin_x = (2*mouseX-WIDTH )*zoom/HEIGHT;
     mouse_begin_y = (2*mouseY-HEIGHT)*zoom/HEIGHT;
@@ -254,6 +360,34 @@ void SolarSystemMap::mouseHandling( ){
         //if( mouseY<20 ){ timeCur = x2t(mouseX); Time::toStr(timeCur,strBuf); printf( "%s\n", strBuf );  };
         Vec3d mpos = (Vec3d)( cam.pos + cam.rot.a*mouse_begin_x +   cam.rot.b*mouse_begin_y );
         ipick = world.pickPlanet( mpos, (Vec3d)cam.rot.c, epoch );
+
+        if(ipick>=0){
+            int junk;
+            if(!planetView){
+                printf( " new PlanetView \n" );
+                planetView = new PlanetView( junk, 800, 600 );
+                planetView->fontTex = fontTex;
+                planetView->parent    = this;
+                planetView->iinparent = child_windows.size();
+                child_windows.push_back(planetView);
+                printf( " child_windows.push_back(planetView) \n" );
+            }else{
+                if(planetView->asteroid) delete planetView->asteroid;
+            }
+
+            planetView->asteroid       =  new RublePile();
+            planetView->asteroid->body = &world.planets[ipick];
+            double mass = world.planets[ipick].mass;
+            printf( "mass %g \n", mass );
+            srand( ipick + 4654646 );
+            int nfrag = 1<<(rand()%4);
+            planetView->asteroid->makeRublePile(nfrag,8,20,mass,mass*0.01,mass,2.0);
+            //for(Boulder& b : planetView->asteroid->boulders ){ printf( "pos(%g,%g,%g,) rot(%g,%g,%g,)(%g,%g,%g,)(%g,%g,%g,)\n", b.pos.x, b.pos.y, b.pos.z,   b.rotMat.a.x,b.rotMat.a.y,b.rotMat.a.z,  b.rotMat.b.x,b.rotMat.b.y,b.rotMat.b.z,  b.rotMat.c.x,b.rotMat.c.y,b.rotMat.c.z   ); }
+            //exit(0);
+            //planetView->asteroid->relaxBoulders(0.5,10);
+            planetView->asteroid->relaxBoulders(0.25,50);
+
+        }
     }
     //Super::mouseHandling();
 };

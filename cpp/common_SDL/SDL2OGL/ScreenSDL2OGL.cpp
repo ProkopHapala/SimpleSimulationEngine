@@ -1,57 +1,11 @@
 
 #include "ScreenSDL2OGL.h" // THE HEADER
 
+//#include "testUtils.h"
+
 // ============== per frame
 
-void ScreenSDL2OGL::update( ){
-	//SDL_RenderPresent(renderer);
-	//glPushMatrix();
-	if( GL_LOCK ){ printf("ScreenSDL2OGL::update GL_LOCK\n"); return; }
-	GL_LOCK = true;
-	camera();
-	draw();
-	cameraHUD();
-	drawHUD();
-	//glPopMatrix();
-	//glFlush();
-	SDL_RenderPresent(renderer);
-    GL_LOCK = false;
-};
-
-void ScreenSDL2OGL::draw   (){
-    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-};
-
-void ScreenSDL2OGL::drawHUD(){ };
-
-void ScreenSDL2OGL::inputHanding(){};
-
-void ScreenSDL2OGL::camera(){
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-	glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
-	glTranslatef( -camX0, -camY0, 0.0f );
-	glMatrixMode (GL_MODELVIEW);
-}
-
-void ScreenSDL2OGL::cameraHUD(){
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity();
-	glOrtho ( 0, WIDTH, 0, HEIGHT, -VIEW_DEPTH, +VIEW_DEPTH );
-	glMatrixMode (GL_MODELVIEW);
-	glLoadIdentity();
-}
-
-void ScreenSDL2OGL::updateMousePos ( int x, int y ){
-    mouse_begin_x = mouseRight( x );
-    mouse_begin_y = mouseUp   ( y );
-}
-
-
-// ============== initialization
-
-void ScreenSDL2OGL::setupRenderer(){
+void setupOpenGLglobals(){
     //float white    [] = { 1.0f, 1.0f,  1.0f,  1.0f };
 	float ambient  [] = { 0.1f, 0.15f, 0.25f, 1.0f };
 	float diffuse  [] = { 0.9f, 0.8f,  0.7f,  1.0f };
@@ -82,6 +36,115 @@ void ScreenSDL2OGL::setupRenderer(){
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
 
+void ScreenSDL2OGL::update( ){
+	//SDL_RenderPresent(renderer);
+	//glPushMatrix();
+	if( GL_LOCK ){ printf("ScreenSDL2OGL::update GL_LOCK\n"); return; }
+	GL_LOCK = true;
+	//printf( " window[%i] SDL_GL_MakeCurrent \n", id );
+    SDL_GL_MakeCurrent(window, glctx);
+	camera();
+	draw();
+	cameraHUD();
+	drawHUD();
+	//glPopMatrix();
+	//glFlush();
+	//SDL_RenderPresent(renderer);
+	frameCount++;
+    SDL_GL_SwapWindow(window);
+    //printf( " window[%i] SDL_GL_SwapWindow \n", id );
+    GL_LOCK = false;
+};
+
+void ScreenSDL2OGL::draw   (){
+    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+};
+
+void ScreenSDL2OGL::drawHUD(){ };
+
+//void ScreenSDL2OGL::inputHanding(){};
+
+void ScreenSDL2OGL::eventHandling( const SDL_Event& event ){
+    switch( event.type ){
+        case SDL_MOUSEBUTTONDOWN:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:  LMB = true;  break;
+                case SDL_BUTTON_RIGHT: RMB = true;  break;
+            };  break;
+        case SDL_MOUSEBUTTONUP:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:  LMB = false; break;
+                case SDL_BUTTON_RIGHT: RMB = false; break;
+            }; break;
+        case SDL_KEYDOWN :
+            switch( event.key.keysym.sym ){
+                //case SDLK_ESCAPE:   quit(); break;
+                //case SDLK_SPACE:    STOP = !STOP; printf( STOP ? " STOPED\n" : " UNSTOPED\n"); break;
+                case SDLK_KP_MINUS: zoom*=VIEW_ZOOM_STEP; break;
+                case SDLK_KP_PLUS:  zoom/=VIEW_ZOOM_STEP; break;
+            } break;
+        case SDL_WINDOWEVENT:
+            switch (event.window.event) {
+                case SDL_WINDOWEVENT_CLOSE:
+                    //SDL_Log("Window %d closed", event->window.windowID);
+                    printf( "window[%i] SDL_WINDOWEVENT_CLOSE \n", id );
+                    delete this;
+                    printf( "window[%i] delete this done \n", id );
+                    return;
+                    break;
+            } break;
+        //case SDL_QUIT: quit(); break;
+    };
+};
+
+void ScreenSDL2OGL::keyStateHandling( const Uint8 *keys ){
+    if( keys[ SDL_SCANCODE_LEFT  ] ){ camX0 -= camStep; }
+	if( keys[ SDL_SCANCODE_RIGHT ] ){ camX0 += camStep; }
+	if( keys[ SDL_SCANCODE_UP    ] ){ camY0 += camStep; }
+	if( keys[ SDL_SCANCODE_DOWN  ] ){ camY0 -= camStep; }
+};
+
+void ScreenSDL2OGL::mouseHandling( ){
+    SDL_GetMouseState( &mouseX, &mouseY ); //mouseY=HEIGHT-mouseY; // this is done in mouseUp()
+    defaultMouseHandling( mouseX, mouseY );
+}
+
+
+void ScreenSDL2OGL::camera(){
+    glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+	glOrtho ( -zoom*ASPECT_RATIO, zoom*ASPECT_RATIO, -zoom, zoom, -VIEW_DEPTH, +VIEW_DEPTH );
+	glTranslatef( -camX0, -camY0, 0.0f );
+	glMatrixMode (GL_MODELVIEW);
+}
+
+void ScreenSDL2OGL::cameraHUD(){
+    glMatrixMode( GL_PROJECTION );
+    glLoadIdentity();
+	glOrtho ( 0, WIDTH, 0, HEIGHT, -VIEW_DEPTH, +VIEW_DEPTH );
+	glMatrixMode (GL_MODELVIEW);
+	glLoadIdentity();
+}
+
+//void ScreenSDL2OGL::updateMousePos ( int x, int y ){
+//    mouse_begin_x = mouseRight( x );
+//    mouse_begin_y = mouseUp   ( y );
+//}
+
+void ScreenSDL2OGL::defaultMouseHandling( const int& mouseX, const int& mouseY ){
+	mouse_begin_x = mouseRight( mouseX ) + camX0;
+	mouse_begin_y = mouseUp   ( mouseY ) + camY0;
+    fWIDTH  = zoom*ASPECT_RATIO;
+	fHEIGHT = zoom;
+	camXmin = camX0 - fWIDTH; camYmin = camY0 - fHEIGHT;
+	camXmax = camX0 + fWIDTH; camYmax = camY0 + fHEIGHT;
+};
+
+// ============== initialization
+
+
+
 void ScreenSDL2OGL::setDefaults(){
 	VIEW_DEPTH   = VIEW_DEPTH_DEFAULT;
 	ASPECT_RATIO = WIDTH/(float)HEIGHT;
@@ -91,19 +154,34 @@ void ScreenSDL2OGL::setDefaults(){
 	mouse_begin_y  = 0;
 }
 
-void ScreenSDL2OGL::init( int& id, int WIDTH_, int HEIGHT_ ){
+#define DEBUG_ printf( "DEBUG LINE %i %s %s \n", __LINE__, __FUNCTION__, __FILE__ );
+
+void ScreenSDL2OGL::init( int& id_, int WIDTH_, int HEIGHT_ ){
 	WIDTH  = WIDTH_;
 	HEIGHT = HEIGHT_;
 	setDefaults();
-	SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, SDL_WINDOW_OPENGL, &window, &renderer);
+	// modified according to : http://forums.libsdl.org/viewtopic.php?p=40286
+	window = SDL_CreateWindow( "Some_Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
+	glctx  = SDL_GL_CreateContext(window);
+    //SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, SDL_WINDOW_OPENGL, &window, &renderer);
 	id = SDL_GetWindowID(window); printf( " win id %i \n", id );
+	id_=id;
 	char str[40];  sprintf(str, " Window id = %d", id );
 	SDL_SetWindowTitle( window, str );
-	setupRenderer();
+	//setupRenderer();
+	setupOpenGLglobals();
 	//printf( " ASPECT_RATIO %f \n", ASPECT_RATIO );
 }
 
 ScreenSDL2OGL::ScreenSDL2OGL( int& id, int WIDTH_, int HEIGHT_ ){
 	init( id, WIDTH_, HEIGHT_ );
-};
+}
 
+ScreenSDL2OGL::~ScreenSDL2OGL(){
+    printf(" ScreenSDL2OGL::~ScreenSDL2OGL() \n");
+    SDL_DestroyWindow(window);
+    if(parent) parent->removeChild(this);
+    printf(" ScreenSDL2OGL::~ScreenSDL2OGL() DONE \n");
+}
+
+void ScreenSDL2OGL::removeChild(ScreenSDL2OGL* child){};

@@ -17,6 +17,8 @@
 
 #include "SpaceBodies.h"
 
+#include "DrawSphereMap.h"
+
 
 namespace SpaceDraw{
 
@@ -77,7 +79,17 @@ void orbit_epochs( int n, const Orbit& orbit, double epoch0, double epoch1 ){
     glEnd();
 }
 
+void boulder(const Boulder& b){
+    //printf( "boulder span (%g,%g,%g)\n", b.span.x, b.span.y, b.span.z );
+    glPushMatrix();
+    Draw3D::rigidTransform( b.pos, b.rotMat, b.span );
+    SphereSampling::drawIcosaMap( (Vec2i){b.nsamp,b.nsamp}, b.heights, b.hscale );
+    glPopMatrix();
+}
 
+void rublePile(const RublePile& rb){
+    for( const Boulder& b : rb.boulders){ boulder(b); }
+}
 
 // ================ From spaceTactics
 

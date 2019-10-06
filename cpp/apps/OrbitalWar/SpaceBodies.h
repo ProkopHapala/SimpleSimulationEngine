@@ -198,6 +198,7 @@ struct Orbit{
 class SpaceBody : public RigidBody  { public:
 
     std::string name;
+    char Stype[16];
     double radius;
     Vec3d sizes = (Vec3d){1.0,0.5,0.25};
 
@@ -249,7 +250,23 @@ class SpaceBody : public RigidBody  { public:
         s[183] = 0; // behind semimajor-axis
 
         name   = s+7;
-        radius = atof( s+59 ) * 0.5;
+        radius = atof( s+59 ) * 0.5 * 1000.0;  // [m]
+
+        double density = 2000.0;                         // [kg/m^3]
+        double volume = radius*radius*radius*4./3.*M_PI; // [m^3]
+        mass = volume * density;                         // [kg]
+
+        //sscanf(s+65,"%s", &Stype ); // spectral type
+        //strncpy( Stype, s+66, 16 );
+        char c;
+        //for(int i=0;i<16;i++){ Stype[i]=s[66+i]; }; Stype[15]=0;
+        //c = s[65];
+        printf( "%s \n", s );
+        printf( "Stype '%c' '%c' '%c' '%c' '%c' '%c' '%c' '%c' '%c' \n", s[60],s[61],s[62],s[63],s[64],s[65],s[66], s[67], s[68]  );
+        //printf( "Stype '%c' '%c' '%c' '%c' '%c' '%c' '%c' '%c' '%c' \n", s[60],s[61],s[62],s[63],s[64],s[65],s[66]s[67] );
+        //printf( "Stype `%s` \n", Stype );
+        //strncpy( Stype, s+66, 16 );
+        //exit(0);
 
         char sdate[16];
         // 13 Mean anomaly, deg.
@@ -279,7 +296,7 @@ class SpaceBody : public RigidBody  { public:
         orbit = new Orbit();
         orbit->fromElements( el );
 
-        printf( "%s R %g date{%s} e %g a %g so,lo,inc (%g,%g,%g) ma %g epoch %g T %g \n", name.c_str(), radius, sdate,  el.eccentricity, el.semi_major,   el.arg_periapsis, el.node_longitude, el.inclination,   el.mean_anomaly, el.epoch, el.period );
+        printf( "%s R,m %g,%g date{%s} e %g a %g so,lo,inc (%g,%g,%g) ma %g epoch %g T %g \n", name.c_str(), radius, mass, sdate,  el.eccentricity, el.semi_major,   el.arg_periapsis, el.node_longitude, el.inclination,   el.mean_anomaly, el.epoch, el.period );
 
     }
 

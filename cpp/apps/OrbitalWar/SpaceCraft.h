@@ -10,6 +10,8 @@
 #include "quaternion.h"
 #include "geom3D.h"
 
+#include "Truss.h"
+
 namespace SpaceCrafting{
 
 const int NAME_LEN = 16;

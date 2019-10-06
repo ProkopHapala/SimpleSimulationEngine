@@ -324,29 +324,7 @@ void drawIcosaMap( Vec2i n, float* heights, float hscale ){
         drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.z],  (Vec3f)vs[iv.y],  (Vec3f)vs[iv.x],  hs,       hs2+5*nab, {-1,n.a*n.b-1}, {-n.a,n.a*(n.a-1)},  hs2[0]        , hscale );
         drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.z], (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.x], hs+5*nab, hs,        {-1,n.a*n.b-1}, {-n.a,n.a*(n.a-1)}, (hs2+5*nab)[0] , hscale );
         drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.w], (Vec3f)vs[iv2.x], hs+5*nab, hs2+5*nab, {n.a,(n.b-1)},  {-1,n.b-1},          0.0           , hscale );
-
     }
-
-    /*
-    //float hn = 5.0;
-
-    for(int i=0; i<5; i++){
-        Quat4i& iv  = f2v[i];
-        Quat4i& iv2 = f2v[i+5];
-        float* hs = heights+(nab*i);
-        int i2 = i+1; if(i2>=5) i2=0;
-        float * hs2 = heights+(nab*i2);
-        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.y], (Vec3f)vs[iv.w], (Vec3f)vs[iv.x], hs, hs2, {n.a,(n.b-1)}, {-1,n.b-1},10.0 );
-        //drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.y], (Vec3f)vs[iv.z], (Vec3f)vs[iv.x], hs, hs2+5*nab, {1,n.a*(n.b-1)}, {n.a,n.a}, hs2[0]*10 );
-        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv.z], (Vec3f)vs[iv.y], (Vec3f)vs[iv.x], hs, hs2+5*nab, {-1,n.a*n.b-1}, {-n.a,n.a*(n.a-1)}, hs2[0] );
-        //drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.z], (Vec3f)vs[iv2.x], hs+5*nab, hs, {1,n.a*(n.b-1)}, {n.a,n.a}, 0 );
-        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.z], (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.x], hs+5*nab, hs, {-1,n.a*n.b-1}, {-n.a,n.a*(n.a-1)}, (hs2+5*nab)[0] );
-        drawDiTri_seam( n.a, n.b, (Vec3f)vs[iv2.y], (Vec3f)vs[iv2.w], (Vec3f)vs[iv2.x], hs+5*nab, hs2+5*nab, {n.a,(n.b-1)}, {-1,n.b-1}, 10.0  );
-
-
-    }
-    */
-
 }
 
 

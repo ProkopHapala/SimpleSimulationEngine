@@ -1063,8 +1063,6 @@ void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float 
 	glEnd();
 };
 
-
-
 void drawBBox( const Vec3f& p0, const Vec3f& p1 ){
 	glBegin(GL_LINES);
 		glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p0.y, p0.z );
@@ -1081,6 +1079,8 @@ void drawBBox( const Vec3f& p0, const Vec3f& p1 ){
 		glVertex3f( p0.x, p0.y, p1.z ); glVertex3f(p0.x, p1.y, p1.z );
 	glEnd();
 };
+
+void drawBBox( const Vec3f& p, float r ){ drawBBox( (Vec3f){p.x-r,p.y-r,p.z-r}, (Vec3f){p.x+r,p.y+r,p.z+r} ); };
 
 void drawTriclinicBox( const Mat3f& lvec, const Vec3f& c0, const Vec3f& c1 ){
     Vec3f p0,p1;
