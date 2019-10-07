@@ -325,6 +325,18 @@ class Vec3T{
 		return ab.dot(ap) / ab.norm(ab);
 	}
 
+	inline int maxComponent(){ return (x>y)?((x>z)?0:2):((y>z)?1:2); };
+	inline int minComponent(){ return (x<y)?((x<z)?0:2):((y<z)?1:2); };
+
+	inline void minmaxComponent(int& imin, int& imax){
+        if(x>y){ imax=(x>z)?0:2; imin=(y<z)?1:2; }else{ imax=(y>z)?1:2; imin=(x<z)?0:2; };
+    }
+
+	//inline int maxComponentAbs(){
+    //    Vec3d  tmp; tmp.x=fabs(x); tmp.y=fabs(y); tmp.z=fabs(z);
+    //    return tmp.maxComponent();
+	//}
+
     inline bool isLower  ( const VEC& vmax ) const { return (x<vmax.x)&&(y<vmax.y)&&(x<vmax.z); }
     inline bool isGreater( const VEC& vmin ) const { return (x>vmin.x)&&(y>vmin.y)&&(x>vmin.z); }
     inline bool isBetween( const VEC& vmin, const VEC& vmax ) const { return (x>vmin.x)&&(x<vmax.x)&&(y>vmin.y)&&(y<vmax.y)&&(z>vmin.z)&&(z<vmax.z); }

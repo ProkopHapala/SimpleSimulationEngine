@@ -12,6 +12,7 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
+#include "CMesh.h"
 #include "Mesh.h"
 
 namespace Draw3D{
@@ -130,6 +131,9 @@ void drawPoints         ( int n, const Vec3d * points, float sz );
 void drawLines          ( int nlinks, const int * links, const Vec3d * points );
 void drawTriangles      ( int nlinks, const int * links, const Vec3d * points );
 void drawPolygons       ( int nlinks, const int * ns,    const int * links, const Vec3d * points );
+void drawMeshWireframe  ( const CMesh& msh );
+void drawMeshPolygons   ( const CMesh& msh );
+void drawMesh           ( const CMesh& msh, uint32_t cpoly, uint32_t cwire );
 
 void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc, double lmax );
 void drawScalarArray(int n, Vec3d* ps, double* vs, double vmin, double vmax );

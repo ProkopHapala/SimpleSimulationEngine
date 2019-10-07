@@ -55,8 +55,9 @@ target_link_libraries( test_BlockBuilder ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2
 add_executable       ( test_TrussBuilder   test_TrussBuilder.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TrussBuilder> $<TARGET_OBJECTS:SoftBody> $<TARGET_OBJECTS:DynamicOpt>  )
 target_link_libraries( test_TrussBuilder  ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_SphereTree test_SphereTree.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:SoftBody> $<TARGET_OBJECTS:DynamicOpt>  )
-target_link_libraries( test_SphereTree  ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+add_executable       ( test_SphereGaussSeidel test_SphereGaussSeidel.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_SphereGaussSeidel ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 
 #include_directories( ${COMMON_SRCS}/dynamics/Molecular )
 include_directories( ${COMMON_SRCS}/molecular )

@@ -730,7 +730,7 @@ void drawPoints( int n, const  Vec3d * points, float sz ){
         }
         glEnd();
 	}
-};
+}
 
 void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 	int n2 = nlinks<<1;
@@ -745,7 +745,9 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
         glVertex3f( b.x, b.y, b.z );
 	}
 	glEnd();
-};
+}
+
+void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges, msh.verts ); }
 
     void drawTriangles( int nlinks, const int * links, const Vec3d * points ){
         int n2 = nlinks*3;
@@ -766,7 +768,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             glVertex3f( c.x, c.y, c.z );
         }
         glEnd();
-    };
+    }
 
 
     void drawPolygons( int nlinks, const int * ns, const int * links, const Vec3d * points ){
@@ -796,7 +798,13 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             */
         }
 
-    };
+    }
+
+    void drawMeshPolygons( const CMesh& msh ){ drawPolygons( msh.nfaces,  msh.ngons, msh.faces, msh.verts ); };
+    void drawMesh( const CMesh& msh, uint32_t cpoly, uint32_t cwire ){
+        if( cpoly>0 ){ Draw::setRGBA(cpoly); drawPolygons( msh.nfaces,  msh.ngons, msh.faces, msh.verts );  };
+        if( cwire>0 ){ Draw::setRGBA(cwire); drawLines   ( msh.nedge, (int*)msh.edges, msh.verts );         };
+    }
 
     void drawKite( const Vec3f& pos, const Mat3f& rot, double sz ){
 	    //drawLine( const Vec3d& p1, const Vec3d& p2 );
@@ -810,7 +818,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 		    glVertex3d( pos.x+sz*rot.a.x, pos.y+sz*rot.a.y, pos.z+sz*rot.a.z );
 		    glVertex3d( pos.x+sz*rot.c.x, pos.y+sz*rot.c.y, pos.z+sz*rot.c.z );
 	    glEnd();
-    };
+    }
 
     void drawPanel( const Vec3f& pos, const Mat3f& rot, const Vec2f& sz ){
 	    //drawLine( const Vec3d& p1, const Vec3d& p2 );
@@ -825,7 +833,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 		    glTexCoord2f(1.0,0.0); p=pos+rot.a*sz.a - rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
 		    glTexCoord2f(1.0,1.0); p=pos+rot.a*sz.a + rot.c*sz.b; glVertex3f( p.x, p.y, p.z );
 	    glEnd();
-    };
+    }
 
     void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc, double lmax ){
         glBegin(GL_LINES);
@@ -859,7 +867,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
     ){
         deriv.x = da.x*(p6-p4) + db.x*(p8-p2) + (da.x-db.x)*(p3-p7);
         deriv.y = da.y*(p6-p4) + db.y*(p8-p2) + (da.y-db.y)*(p3-p7);
-    };
+    }
 
     void drawSimplexGrid( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs, const double * clrs, int ncolors, const uint32_t * cscale ){
         //const double * heights
@@ -1000,7 +1008,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             //Draw2D::drawString( inputText.c_str(), 0, 0, textSize, fontTex );
             Draw::drawText( str, fontTex, textSize, iend );
         glPopMatrix();
-	};
+	}
 
     void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3f& up, int fontTex, float textSize, int iend ){
         glDisable    ( GL_LIGHTING   );
@@ -1019,7 +1027,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             glMultMatrixf( glmat );
             Draw::drawText( str, fontTex, textSize, iend );
         glPopMatrix();
-	};
+	}
 
 	void drawCurve( float tmin, float tmax, int n, Func1d3 func ){
         glBegin(GL_LINE_STRIP);
@@ -1030,7 +1038,7 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
             glVertex3f( (float)x, (float)y, (float)z );
         }
         glEnd();
-    };
+    }
 
     void drawColorScale( int n, Vec3d pos, Vec3d dir, Vec3d up, void (_colorFunc_)(float f) ){
         glBegin(GL_TRIANGLE_STRIP);
@@ -1061,7 +1069,7 @@ void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float 
 		glNormal3f(0,+1,1); glVertex3f( x1, y1, z1 ); glVertex3f( x0, y1, z1 ); glVertex3f( x0, y1, z0 ); glVertex3f( x1, y1, z0 );
 		glNormal3f(+1,0,0); glVertex3f( x1, y1, z1 ); glVertex3f( x1, y0, z1 ); glVertex3f( x1, y0, z0 ); glVertex3f( x1, y1, z0 );
 	glEnd();
-};
+}
 
 void drawBBox( const Vec3f& p0, const Vec3f& p1 ){
 	glBegin(GL_LINES);
@@ -1078,7 +1086,7 @@ void drawBBox( const Vec3f& p0, const Vec3f& p1 ){
 		glVertex3f( p0.x, p0.y, p1.z ); glVertex3f( p1.x, p0.y, p1.z );
 		glVertex3f( p0.x, p0.y, p1.z ); glVertex3f(p0.x, p1.y, p1.z );
 	glEnd();
-};
+}
 
 void drawBBox( const Vec3f& p, float r ){ drawBBox( (Vec3f){p.x-r,p.y-r,p.z-r}, (Vec3f){p.x+r,p.y+r,p.z+r} ); };
 
@@ -1100,7 +1108,7 @@ void drawTriclinicBox( const Mat3f& lvec, const Vec3f& c0, const Vec3f& c1 ){
         p0=p1; lvec.dot_to({c0.x,c1.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
         p0=p1; lvec.dot_to({c1.x,c1.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
 	glEnd();
-};
+}
 
 void drawTriclinicBoxT( const Mat3f& lvec, const Vec3f& c0, const Vec3f& c1 ){
     Vec3f p0,p1;
@@ -1120,7 +1128,7 @@ void drawTriclinicBoxT( const Mat3f& lvec, const Vec3f& c0, const Vec3f& c1 ){
         p0=p1; lvec.dot_to_T({c0.x,c1.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
         p0=p1; lvec.dot_to_T({c1.x,c1.y,c0.z},p1); glVertex3f( p0.x, p0.y, p0.z ); glVertex3f( p1.x, p1.y, p1.z );
 	glEnd();
-};
+}
 
 
 int makeBoxList( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b  ){
@@ -1139,7 +1147,7 @@ void drawAxis( float sc ){
 		glColor3f( 0, 1, 0 ); glVertex3f( 0, 0, 0 ); glVertex3f( 0, 1*sc, 0 );
 		glColor3f( 0, 0, 1 ); glVertex3f( 0, 0, 0 ); glVertex3f( 0, 0, 1*sc );
 	glEnd();
-};
+}
 
 
 }; // namespace Draw3D

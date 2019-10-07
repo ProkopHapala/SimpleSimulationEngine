@@ -16,6 +16,7 @@
 #include "quaternion.h"
 
 #include "SpaceBodies.h"
+#include "RublePile.h"
 
 #include "DrawSphereMap.h"
 

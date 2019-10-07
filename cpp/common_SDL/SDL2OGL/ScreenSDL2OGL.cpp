@@ -5,35 +5,108 @@
 
 // ============== per frame
 
-void setupOpenGLglobals(){
-    //float white    [] = { 1.0f, 1.0f,  1.0f,  1.0f };
-	float ambient  [] = { 0.1f, 0.15f, 0.25f, 1.0f };
-	float diffuse  [] = { 0.9f, 0.8f,  0.7f,  1.0f };
-	float specular [] = { 1.0f, 1.0f,  1.0f,  1.0f };
-	float shininess[] = { 80.0f                    };
-	float lightPos [] = { 1.0f, -1.0f, 1.0f, 0.0f  };
-
-	//glMaterialfv ( GL_FRONT_AND_BACK, GL_AMBIENT,   ambient);
-	//glMaterialfv ( GL_FRONT_AND_BACK, GL_DIFFUSE,   diffuse);
-	glMaterialfv ( GL_FRONT_AND_BACK, GL_SPECULAR,  specular);
-	glMaterialfv ( GL_FRONT_AND_BACK, GL_SHININESS, shininess);
+void setLightingNormal(){
+//float white    [] = { 1.0f, 1.0f,  1.0f,  1.0f };
+	float ambient  []{ 1.0f, 1.0f, 1.0f, 1.0f };
+	float diffuse  []{ 2.0f, 1.0f, 1.0f, 1.0f };
+	float specular []{ 1.0f, 1.0f, 1.0f, 1.0f };
+	float shininess[]{ 128, 1.0f }; // exponent for specular
+	float emission []{ 0.0f, 0.0f, 0.0f, 1.0f }; // as light source
 
 	glEnable     ( GL_COLOR_MATERIAL    );
-	glLightfv    ( GL_LIGHT0, GL_POSITION,  lightPos );
-	glLightfv    ( GL_LIGHT0, GL_DIFFUSE,   diffuse  );
-	glLightfv    ( GL_LIGHT0, GL_AMBIENT,   ambient  );
-	glLightfv    ( GL_LIGHT0, GL_SPECULAR,  specular );
-	//glLightfv    ( GL_LIGHT0, GL_AMBIENT,  ambient  );
+    glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT,   ambient   );
+	glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE,   diffuse   );
+	glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR,  specular  );
+	glMaterialfv( GL_FRONT_AND_BACK, GL_SHININESS, shininess );
+	glMaterialfv( GL_FRONT_AND_BACK, GL_EMISSION,  emission  );
+
+    float lightPos   []{ 1.0f, -1.0f, 1.0f, 0.0f  };
+    glLightfv    ( GL_LIGHT0, GL_POSITION,  lightPos );
+    //float l_ambient  []{ 0.1f*0, 0.15f*0, 0.2f*0,  1.0f };
+    float l_ambient  []{ 0.15f, 0.20f, 0.25f,  1.0f };
+    //float l_ambient  []{ 0.2f, 0.2f, 0.2f,  1.0f };
+	float l_diffuse  []{ 0.9f, 0.85f, 0.8f,  1.0f };
+	float l_specular []{ 1.0f, 1.0f,  1.0f,  1.0f };
+    glLightfv    ( GL_LIGHT0, GL_AMBIENT,   l_ambient  );
+	glLightfv    ( GL_LIGHT0, GL_DIFFUSE,   l_diffuse  );
+	glLightfv    ( GL_LIGHT0, GL_SPECULAR,  l_specular );
+
+	glLightModeli( GL_LIGHT_MODEL_LOCAL_VIEWER, 1 );
+
+	//float ambient_lm  []{ 0.15f, 0.2f, 0.25f, 1.0f };
+	float ambient_lm  []{ 0.2f, 0.2f, 0.2f, 1.0f };
+	glLightModelfv( GL_LIGHT_MODEL_AMBIENT, ambient_lm );
+
 	glEnable     ( GL_LIGHTING         );
 	glEnable     ( GL_LIGHT0           );
 	glEnable     ( GL_NORMALIZE        );
-
-	//glLightModeli( GL_LIGHT_MODEL_TWO_SIDE, 1 );
 
 	glEnable     ( GL_DEPTH_TEST       );
 	glHint       ( GL_LINE_SMOOTH_HINT, GL_NICEST );
 	glShadeModel ( GL_SMOOTH           );
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+    //glLightModeli( GL_LIGHT_MODEL_TWO_SIDE, 1 );
+}
+
+void setLightingRGB(){
+//float white    [] = { 1.0f, 1.0f,  1.0f,  1.0f };
+	float ambient  []{ 1.0f, 1.0f, 1.0f, 1.0f };
+	float diffuse  []{ 2.0f, 1.0f, 1.0f, 1.0f };
+	float specular []{ 1.0f, 1.0f, 1.0f, 1.0f };
+	float shininess[]{ 128, 1.0f }; // exponent for specular
+	float emission []{ 0.0f, 0.0f, 0.0f, 1.0f }; // as light source
+
+	glEnable     ( GL_COLOR_MATERIAL    );
+    glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT,   ambient   );
+	glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE,   diffuse   );
+	glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR,  specular  );
+	glMaterialfv( GL_FRONT_AND_BACK, GL_SHININESS, shininess );
+	glMaterialfv( GL_FRONT_AND_BACK, GL_EMISSION,  emission  );
+
+    float lightPos_r   []{ -1.0f,  0.0f,  0.0f, 0.0f  };
+    float lightPos_g   []{  0.0f, -1.0f,  0.0f, 0.0f  };
+    float lightPos_b   []{  0.0f,  0.0f, -1.0f, 0.0f  };
+
+	glEnable     ( GL_LIGHTING         );
+
+	glEnable     ( GL_NORMALIZE        );
+	glEnable     ( GL_LIGHT0           );
+    glEnable     ( GL_LIGHT1           );
+    glEnable     ( GL_LIGHT2           );
+
+    glLightfv    ( GL_LIGHT0, GL_POSITION,  lightPos_r );
+    glLightfv    ( GL_LIGHT1, GL_POSITION,  lightPos_g );
+    glLightfv    ( GL_LIGHT2, GL_POSITION,  lightPos_b );
+
+    float l_ambient  []{ 0.1f, 0.1f, 0.1f,  1.0f };
+	float l_specular []{ 1.0f, 1.0f,  1.0f,  1.0f };
+
+	float r_diffuse  []{ 0.8f, 0.2f, 0.2f,  1.0f };
+	float g_diffuse  []{ 0.2f, 0.8f, 0.2f,  1.0f };
+	float b_diffuse  []{ 0.2f, 0.2f, 0.8f,  1.0f };
+    glLightfv    ( GL_LIGHT0, GL_AMBIENT,   l_ambient  );
+	glLightfv    ( GL_LIGHT0, GL_DIFFUSE,   r_diffuse  );
+	glLightfv    ( GL_LIGHT0, GL_SPECULAR,  l_specular );
+
+    glLightfv    ( GL_LIGHT1, GL_AMBIENT,   l_ambient  );
+	glLightfv    ( GL_LIGHT1, GL_DIFFUSE,   g_diffuse );
+	glLightfv    ( GL_LIGHT1, GL_SPECULAR,  l_specular );
+
+    glLightfv    ( GL_LIGHT2, GL_AMBIENT,   l_ambient  );
+	glLightfv    ( GL_LIGHT2, GL_DIFFUSE,   b_diffuse  );
+	glLightfv    ( GL_LIGHT2, GL_SPECULAR,  l_specular );
+
+	glLightModeli( GL_LIGHT_MODEL_LOCAL_VIEWER, 1 );
+
+	//float ambient_lm  []{ 0.15f, 0.2f, 0.25f, 1.0f };
+	float ambient_lm  []{ 0.2f, 0.2f, 0.2f, 1.0f };
+	glLightModelfv( GL_LIGHT_MODEL_AMBIENT, ambient_lm );
+
+	glEnable     ( GL_DEPTH_TEST       );
+	glHint       ( GL_LINE_SMOOTH_HINT, GL_NICEST );
+	glShadeModel ( GL_SMOOTH           );
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+    //glLightModeli( GL_LIGHT_MODEL_TWO_SIDE, 1 );
 }
 
 void ScreenSDL2OGL::update( ){
@@ -169,7 +242,8 @@ void ScreenSDL2OGL::init( int& id_, int WIDTH_, int HEIGHT_ ){
 	char str[40];  sprintf(str, " Window id = %d", id );
 	SDL_SetWindowTitle( window, str );
 	//setupRenderer();
-	setupOpenGLglobals();
+	//setupOpenGLglobals();
+	setLightingNormal();
 	//printf( " ASPECT_RATIO %f \n", ASPECT_RATIO );
 }
 

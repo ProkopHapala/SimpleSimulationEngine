@@ -282,16 +282,16 @@ void init( int w, int h, void* world_, char* work_dir_ ){
 }
 
 bool draw(){
-
     //thisApp->update();
-
     if( thisApp->GL_LOCK ) return true;
+    SDL_GL_MakeCurrent(thisApp->window, thisApp->glctx);
     thisApp->inputHanding();
     thisApp->GL_LOCK = true;
-	thisApp->draw();
-	thisApp->cameraHUD();
-	thisApp->drawHUD();
-	SDL_RenderPresent(thisApp->renderer);
+    thisApp->draw();
+    thisApp->cameraHUD();
+    thisApp->drawHUD();
+    //SDL_RenderPresent(thisApp->renderer);
+    SDL_GL_SwapWindow(thisApp->window);
     thisApp->GL_LOCK = false;
     return thisApp->GL_LOCK;
 

@@ -12,7 +12,9 @@ const float	VIEW_DEPTH_DEFAULT = 1000.0;
 const float	VIEW_MOVE_STEP     = 0.2f;
 
 
-void setupOpenGLglobals();
+//void setupOpenGLglobals();
+void setLightingRGB();
+void setLightingNormal();
 
 class ScreenSDL2OGL{
 	public:
