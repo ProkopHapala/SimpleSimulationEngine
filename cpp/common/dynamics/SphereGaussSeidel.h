@@ -8,7 +8,26 @@
 // ToDo : see /home/prokop/git/SimpleSimulationEngine/cpp/sketches_SDL/Shooter/test_BoxAndSweep.cpp
 
 
+
+
+
+
+
+
+
 /*
+
+
+To Do:
+
+Icosahedral:
+/home/prokop/git/SimpleSimulationEngine/cpp/common/maps/SphereSampling.h
+
+
+
+
+
+
 
 Volume fraction : solid / circumscribed sphere
 
@@ -43,6 +62,67 @@ https://math.stackexchange.com/questions/1718062/which-archimedean-solid-takes-u
 https://en.wikipedia.org/wiki/Snub_cube
 
 */
+
+
+
+//Icosahedral Face
+//  /home/prokop/git/SimpleSimulationEngine/cpp/common/maps/SphereSampling.h
+
+void getIcosaFace( Vec3d p, uint8_t& iface ){
+//  http://www.kjmaclean.com/Geometry/Icosahedron.html
+//  https://en.wikipedia.org/wiki/Regular_icosahedron
+//  rc = sqrt(10+2*sqrt(5))/4 = sqrt(phi^2 + 1)/2 = 0.95105651629 * a
+//  plate height = phi/(2*sqrt(phi^2+1)).a = 0.42532540417.a  = 0.4472135955 rc
+//  top height   = 1/sqrt(phi^2+1).a       = 0.52573111211.a  = 0.5527864045 rc
+    double phi10 = (atan2( p.z, p.x )+ M_PI) * 1.5915494309;  //  1.5915494309 = 10/(2*pi)
+    int iphi     = (int)phi10;
+    int ioff,i;
+    Vec3d& d1=((Vec3d*)oct_edge_planes)[iphi];
+    if( d1.dot(p)>0 ){ ioff=0; i=iphi/2; }else{ ioff=5; i=(iphi+1)/2;  if(i>=5) i=0; };
+    int i2 = i+1; if(i2>=5) i2=0;
+    iface=i+ioff;
+    Vec3d& d2=((Vec3d*)oct_edge_planes)[iface+10];
+    iface<<=1;
+    if( d2.dot(p) > 0 ){ // uper half of rect
+        iface++;
+    }
+}
+
+static const double oct_edge_planes[] = {
+// Equatorial edges [0..10]
+ 0.2628655560595669, 0.5257311121191337,-0.8090169943749476,
+-0.6881909602355869, 0.5257311121191336, 0.5000000000000000,
+ 0.85065080835204,   0.5257311121191337, 0.0,
+-0.6881909602355869, 0.5257311121191336,-0.5000000000000000,
+ 0.262865556059567,  0.5257311121191337, 0.8090169943749475,
+ 0.2628655560595667, 0.5257311121191337,-0.8090169943749476,
+-0.6881909602355868, 0.5257311121191336, 0.5000000000000000,
+ 0.85065080835204,   0.5257311121191336, 0.0,
+-0.688190960235587,  0.5257311121191337,-0.5000000000000000,
+ 0.2628655560595671, 0.5257311121191337, 0.8090169943749475,
+// Upper Cap edges
+ 0.42532540417602,   0.85065080835204,  0.3090169943749475,
+-0.1624598481164531, 0.85065080835204,  0.5,
+-0.5257311121191336, 0.85065080835204,  0.0,
+-0.1624598481164533, 0.85065080835204, -0.5,
+ 0.42532540417602,   0.85065080835204, -0.3090169943749476,
+ // Bottom Cap edges
+-0.5257311121191336, 0.85065080835204,  0.0,
+-0.1624598481164533, 0.85065080835204, -0.5,
+ 0.4253254041760200, 0.85065080835204, -0.3090169943749476,
+ 0.4253254041760201, 0.85065080835204,  0.3090169943749473,
+-0.1624598481164531, 0.85065080835204,  0.5,
+
+};
+
+
+// Octahedral Face
+
+int assignOctahedronFace( Vec3d p ){
+    return ( ((uint8_t)(p.x>0))<<2) | ( ((uint8_t)(p.y>0))<<1) | ( ((uint8_t)(p.z>0) ));
+}
+//  Truncating plane is in 2/3 of the face => coordinates ( (2/3)*v, (1/3)*sqrt(a) ) = normal
+
 
 
 
