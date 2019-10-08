@@ -14,16 +14,15 @@
 //    BondTypes
 // ==================
 
-class BondType{
-	public:
+class BondType{ public:
 	int id;
 	double linearDensity;
     double kPress,kTens;  // stiffness
 	double sPress,sTens;  // strength
 };
 
-class Bond{
-    public:
+class Bond{ public:
+
     uint16_t  id;        // unique indentifier
     uint16_t  i,j;       // end node index
     //double mass;
@@ -116,8 +115,7 @@ static const BondType default_BondType = {
 //    SoftBody
 // ==================
 
-class SoftBody{
-	public:
+class SoftBody{ public:
 	// points
 	int npoints;
 	Vec3d  * points     = NULL;
@@ -172,7 +170,7 @@ class SoftBody{
 
 	// ===== inline functions
 
-	inline double getBondLength( uint16_t i, uint16_t j ){
+	inline double getBondLength( uint16_t i, uint16_t j )const{
 		Vec3d d; d.set_sub( points[i], points[j] );
 		return d.norm();
 	}
@@ -226,6 +224,11 @@ class SoftBody{
 	}
 
 };
+
+
+// ==================
+//    SoftBodyLinearized
+// ==================
 
 class SoftBodyLinearized : public LinSolver { public:
 
