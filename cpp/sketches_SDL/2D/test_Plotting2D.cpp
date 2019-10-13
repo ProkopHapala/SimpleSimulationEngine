@@ -54,33 +54,6 @@ cos_sin(6,3)  : 28.037 ticks/call ( 2.80372e+08 1e+07 ) | 45488.8
 
 */
 
-inline void cos_sin_( double x_, double& ca, double& sa ){
-    constexpr const double inv2pi = 1/(M_PI/4);
-    x_*=inv2pi;
-    int ix = (int)x_;
-    if(x_<0)ix--;
-    double x = x_ - ix;
-    if(ix&1)x=x-1;
-    double xx = x*x;
-    double c,s;
-
-    c = cos_xx_8 (xx);
-    //c = cos_xx_8 (xx);
-    //c = cos_xx_10(xx);
-
-    s = x*sin_xx_6 (xx);
-    //s = x*sin_xx_8 (xx);
-    //s = x*sin_xx_10(xx);
-
-    ix++;
-    if(ix&2){ ca=-s;sa=c; }else{ ca=c; sa=s; };
-    if(ix&4){ ca=-ca; sa=-sa; }
-    //sa = x;
-    //sa=(ix-3)&7;
-    //sa=(ix+1)&4;
-}
-
-
 class TestAppPlotting : public AppSDL2OGL{
 	public:
 
@@ -120,16 +93,22 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     int nsamp = 1000;
     DataLine2D * lcos     = new DataLine2D(nsamp,-3*M_PI,5*M_PI); //lcos.pointStyle();
     DataLine2D * lsin     = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
+    DataLine2D * lsqrt    = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
     DataLine2D * lcos_ref = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
     DataLine2D * lsin_ref = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
+
+    DataLine2D * lsqrt_ref = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
 
     DataLine2D * lcos_err = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
     DataLine2D * lsin_err = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
 
+    DataLine2D * lsqrt_err = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
+
     for(int i=0; i<nsamp; i++){
         lcos_ref->ys[i] = cos(lcos_ref->xs[i]);
         lsin_ref->ys[i] = sin(lsin_ref->xs[i]);
-        cos_sin_( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i] );
+        lsqrt_ref->ys[i] = 1/sqrt(lsqrt_ref->xs[i]);
+        cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i] );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,1 );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,2 );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,3 );
@@ -139,24 +118,40 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 6,1 );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 6,2 );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 6,3 );
+        lsqrt->ys[i]    = fastInvSqrt( lsqrt_ref->xs[i] );
         lcos_err->ys[i] = log10( fabs( lcos->ys[i] - lcos_ref->ys[i] ) );
         lsin_err->ys[i] = log10( fabs( lsin->ys[i] - lsin_ref->ys[i] ) );
+        lsqrt_err->ys[i] = log10( fabs( lsqrt->ys[i] - lsqrt_ref->ys[i] ) );
         //printf( "[%i]: x %g err %g %g \n", i, lcos_ref->xs[i], lcos_err->ys[i], lsin_err->ys[i] );
     }
 
     lcos_ref->clr = 0xFFFF0000;
     lsin_ref->clr = 0xFF0000FF;
+
     lcos->clr     = 0xFFFFFF00;
     lsin->clr     = 0xFF00FFFF;
+
     lcos_err->clr = 0xFFFF7F00;
     lsin_err->clr = 0xFF007FFF;
 
+    lsqrt_ref->clr = 0xFF00FF00;
+    lsqrt->clr     = 0xFF007F00;
+    lsqrt_err->clr = 0xFF407F40;
+
+    plot1.lines.push_back( lsqrt_ref);
+    plot1.lines.push_back( lsqrt    );
+    plot1.lines.push_back( lsqrt_err);
+
+
     plot1.lines.push_back( lcos_ref );
     plot1.lines.push_back( lsin_ref );
+
     plot1.lines.push_back( lcos     );
     plot1.lines.push_back( lsin     );
+
     plot1.lines.push_back( lcos_err );
     plot1.lines.push_back( lsin_err );
+
     plot1.render();
 
     //return;
@@ -170,7 +165,10 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     double c=0,s=0;
     double dn=1./n;
 
-    TEST_ERROR_PROC_N( "cos_sin()    ", {double x=xs[i]; cos_sin_(x,c,s); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
+
+    TEST_ERROR_PROC_N( "fastInvSqrt() ",{double x=xs[i]; c=fastInvSqrt(x); c-=1/sqrt(x); STORE_ERROR(c) }, n );
+
+    TEST_ERROR_PROC_N( "cos_sin()     ", {double x=xs[i]; cos_sin(x,c,s); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
 
     TEST_ERROR_PROC_N( "cos_sin(2,1) ", {double x=xs[i]; cos_sin(x,c,s,2,1); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
     TEST_ERROR_PROC_N( "cos_sin(2,2) ", {double x=xs[i]; cos_sin(x,c,s,2,2); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
@@ -185,6 +183,9 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     TEST_ERROR_PROC_N( "cos_sin(6,3) ", {double x=xs[i]; cos_sin(x,c,s,6,3); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
 
     SPEED_TEST_PROC_NM( "junk;        ", {double x=xs[i];s+=x;c+=x;sum=c+s;}, n, m );
+
+    SPEED_TEST_PROC_NM( "1/sqrt()      ", {sum+=1/sqrt(xs[i]);      }, n, m );
+    SPEED_TEST_PROC_NM( "fastInvSqrt() ", {sum+=fastInvSqrt(xs[i]); }, n, m );
 
     SPEED_TEST_PROC_NM( "cos();sin()  ", {double x=xs[i];sum+=cos(x)+sin(x);      }, n, m );
     SPEED_TEST_PROC_NM( "sincos()     ", {sincos (xs[i],&c,&s);sum+=c+s; }, n, m );

@@ -91,6 +91,51 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     np.set_printoptions(precision=16, linewidth=200 )
 
+
+    # acosf implementation:
+    # https://github.com/bminor/glibc/blob/master/sysdeps/ieee754/flt-32/e_acosf.c
+
+
+    #xs     = np.linspace( -1.0, 1.0, 100 )
+    #xs__    = np.linspace( 0, 1.0, 100 )**2 - 1
+    xs      = np.linspace( -0.75, 0.75, 100 )
+    xs_     = np.linspace(  0.75, 1.000, 100 )
+    y_ref   = np.arcsin(xs)
+    y_ref_  = np.arcsin(xs_)
+    coef0s =  [0,1.0]
+    k = (y_ref_[-1]-y_ref_[0])/0.25
+    coef0s_ =  [ y_ref_[0]-k*xs_[0] , k ]
+    for maxOrder in [8,10,12,14]:
+        coefs, ys = polyFitFunc( xs, y_ref, coef0s, range(3,maxOrder,2) )
+        printHornerPolynom(coefs)
+        y_err = ys - y_ref
+
+        #plt.plot(xs,y_ref, '-',label='ref'   )
+        #plt.plot(xs,ys   , ':',label='approx')
+
+        plt.plot(xs,abs(y_err), '-',label='error'); plt.yscale('log')
+
+        #coefs2, ys_ = polyFitFunc( xs_, y_ref_, coef0s_, range(3,6) )
+        ys_ = np.polyval( coef0s_[::-1], xs_ )
+        # sin(y) = x
+        # y : y - sin(y)/sin'(y) = y - tan(y)
+        #printHornerPolynom(coefs2)
+        y_err_ = ys_ - y_ref_
+
+        #plt.plot(xs_,y_ref_   , '-',label='ref')
+        #plt.plot(xs_,ys_   , ':',label='approx')
+
+        plt.plot(xs_,abs(y_err_), ':',label='error'); plt.yscale('log')
+
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+
+
+    exit()
+
     dsc    = np.pi/4
     xs     = np.linspace( -1.0, 1.0, 100 )
     #y_ref  = np.cos(xs*dsc)

@@ -183,6 +183,22 @@ inline double fastPrecisePow(double a, double b) {
   return r * u.d;
 }
 
+
+inline float fastInvSqrt( float x ){
+	long i;
+	float xh, y;
+	xh  = x*0.5f;
+	y   = x;
+	i   = *(long*)&y;               // cast float->int
+	i   = 0x5f3759df-(i>>1);
+	y   = *(float*)&i;              // cast back
+	y   = y * ( 1.5f - (xh*y*y) );   // 1st iteration
+	y   = y * ( 1.5f - (xh*y*y) );   // 2nd iteration, this can be removed
+	return y;
+}
+
+
+
 // sqrt(1+dx) taylor(dx=0)
 // http://m.wolframalpha.com/input/?i=sqrt%281%2Bx%29+taylor+x%3D0
 template <typename T> inline T sqrt1_taylor1( T dx ){ return 1 + dx*  0.5d; }
