@@ -47,6 +47,8 @@ class DataLine2D{ public:
 
     inline DataLine2D()=default;
     inline DataLine2D(int n_){ allocate(n_); }
+    inline DataLine2D(int n_,double*xs_){ n=n_; xs=xs_; ys=new double[n]; }
+    inline DataLine2D(int n_,double xmin,double xmax){ allocate(n_); linspan(xmin,xmax); }
 
     ~DataLine2D(){
         if(xs) delete [] xs;

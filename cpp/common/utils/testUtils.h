@@ -136,6 +136,24 @@ int sampleFroce(Func func, Vec2i ns, Vec3d p0, Vec3d a, Vec3d b, Vec3d*&ps, Vec3
     return ntot;
 }
 
+#define STORE_ERROR(err)                    \
+    {                                       \
+        err_sum += err*err;                 \
+        err_max = fmax(err_max,fabs(err));  \
+    }
+
+#define TEST_ERROR_PROC_N( caption, proc, n ) \
+    do{                                    \
+    double err_sum  = 0.0;                  \
+    double err_max  = 0.0;                  \
+    for( int i=0; i<n; i++ ){               \
+        proc;                               \
+    }                                       \
+    printf( "%s MaxErr: %g RMSE: %g \n", caption, err_max, sqrt(err_sum/n) );   \
+    } while (0) \
+
+
+
 #define SPEED_TEST_FUNC( caption, func, xmin, xmax, ncall ) \
     do{                                    \
     double sum  = 0.0;                     \
@@ -182,7 +200,19 @@ int sampleFroce(Func func, Vec2i ns, Vec3d p0, Vec3d a, Vec3d b, Vec3d*&ps, Vec3
     printf( "%s : %3.3f ticks/call ( %g %g ) | %g \n", caption, time/double(ncall), (double)time, (double)ncall, sum );   \
     } while (0) \
 
-
+#define SPEED_TEST_PROC_NM( caption, proc, n, m ) \
+    do{                                    \
+    double sum  = 0.0;                     \
+    long tstart = getCPUticks();           \
+    for(int j=0; j<m; j++){                \
+        for( int i=0; i<n; i++ ){          \
+            proc;                          \
+        }                                  \
+    }                                      \
+    long time   = getCPUticks() - tstart;  \
+    int ncall = n*m;                       \
+    printf( "%s : %3.3f ticks/call ( %g %g ) | %g \n", caption, time/double(ncall), (double)time, (double)ncall, sum );   \
+    } while (0) \
 
 #endif
 
