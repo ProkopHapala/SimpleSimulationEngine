@@ -56,6 +56,28 @@ inline void rot_csa( TYPE ca, TYPE sa, TYPE& ux, TYPE& uy ){
 	ux  = ux_;
 }
 
+
+inline sincos( double x, double& ca, double& sa, const int deg ){
+    //Taylor Cos [ 1./479001600,  -1./3628800,   1./40320,  -1./720,  1./24,  -1./2, 1. ]
+    //Taylor Sin [ 1./6227020800, -1./39916800,  1./362880, -1./5040, 1./120, -1./6, 1. ]
+    constexpr const double inv2pi = 1/(2*M_PI);
+    constexpr const double CS[]{ 1.0,1.0,  -1./2,-1./6,   1./24,1./120,  -1./720,-1./5040,  1./40320,1./362880,   -1./3628800,-1./39916800,   1./479001600,1./6227020800  };
+    double s   = x_*inv2pi;
+    double d   = s-(int)s;
+    double d2  = d*d;
+    double m   = 1-d;
+    //double m2  = m*m;
+    double d2n=d2;
+    //double m2n=m2;
+    double sa=0,ca=1;
+    for(int i=0; i<deg; i+=2){
+        ca += CS[i  ]*d2n;
+        sa += CS[i+1]*d2n;
+        d2n*=d2;
+        //m2n*=m2;
+    }
+}
+
 // ========= Cartesian -> Polar ===========
 
 inline double atan_poly( double a ){

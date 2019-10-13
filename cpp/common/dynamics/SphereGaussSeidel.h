@@ -67,27 +67,6 @@ https://en.wikipedia.org/wiki/Snub_cube
 
 //Icosahedral Face
 //  /home/prokop/git/SimpleSimulationEngine/cpp/common/maps/SphereSampling.h
-
-void getIcosaFace( Vec3d p, uint8_t& iface ){
-//  http://www.kjmaclean.com/Geometry/Icosahedron.html
-//  https://en.wikipedia.org/wiki/Regular_icosahedron
-//  rc = sqrt(10+2*sqrt(5))/4 = sqrt(phi^2 + 1)/2 = 0.95105651629 * a
-//  plate height = phi/(2*sqrt(phi^2+1)).a = 0.42532540417.a  = 0.4472135955 rc
-//  top height   = 1/sqrt(phi^2+1).a       = 0.52573111211.a  = 0.5527864045 rc
-    double phi10 = (atan2( p.z, p.x )+ M_PI) * 1.5915494309;  //  1.5915494309 = 10/(2*pi)
-    int iphi     = (int)phi10;
-    int ioff,i;
-    Vec3d& d1=((Vec3d*)oct_edge_planes)[iphi];
-    if( d1.dot(p)>0 ){ ioff=0; i=iphi/2; }else{ ioff=5; i=(iphi+1)/2;  if(i>=5) i=0; };
-    int i2 = i+1; if(i2>=5) i2=0;
-    iface=i+ioff;
-    Vec3d& d2=((Vec3d*)oct_edge_planes)[iface+10];
-    iface<<=1;
-    if( d2.dot(p) > 0 ){ // uper half of rect
-        iface++;
-    }
-}
-
 static const double oct_edge_planes[] = {
 // Equatorial edges [0..10]
  0.2628655560595669, 0.5257311121191337,-0.8090169943749476,
@@ -114,6 +93,29 @@ static const double oct_edge_planes[] = {
 -0.1624598481164531, 0.85065080835204,  0.5,
 
 };
+
+
+void getIcosaFace( Vec3d p, uint8_t& iface ){
+//  http://www.kjmaclean.com/Geometry/Icosahedron.html
+//  https://en.wikipedia.org/wiki/Regular_icosahedron
+//  rc = sqrt(10+2*sqrt(5))/4 = sqrt(phi^2 + 1)/2 = 0.95105651629 * a
+//  plate height = phi/(2*sqrt(phi^2+1)).a = 0.42532540417.a  = 0.4472135955 rc
+//  top height   = 1/sqrt(phi^2+1).a       = 0.52573111211.a  = 0.5527864045 rc
+    double phi10 = (atan2( p.z, p.x )+ M_PI) * 1.5915494309;  //  1.5915494309 = 10/(2*pi)
+    int iphi     = (int)phi10;
+    int ioff,i;
+    Vec3d& d1=((Vec3d*)oct_edge_planes)[iphi];
+    if( d1.dot(p)>0 ){ ioff=0; i=iphi/2; }else{ ioff=5; i=(iphi+1)/2;  if(i>=5) i=0; };
+    int i2 = i+1; if(i2>=5) i2=0;
+    iface=i+ioff;
+    Vec3d& d2=((Vec3d*)oct_edge_planes)[iface+10];
+    iface<<=1;
+    if( d2.dot(p) > 0 ){ // uper half of rect
+        iface++;
+    }
+}
+
+
 
 
 // Octahedral Face
