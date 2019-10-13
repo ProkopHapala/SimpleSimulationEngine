@@ -60,11 +60,66 @@ def getHermitePoly( xs, H, yds ):
     coefs = np.dot( H, yds ) #  ;print "cC ", cC
     return np.polyval( coefs[::-1], xs )
 
+def makePolynomBasis( xs, orders ):
+    Bas = np.empty( ( len(orders), len(xs) ) )
+    for i,k in enumerate( orders ):
+        Bas[i,:] = xs**k
+    return Bas
+
+def polyFit( xs, y_ref, orders ):
+    Bas    = makePolynomBasis( xs, orders )
+    #print Bas.shape, xs.shape
+    coefs_ = np.linalg.lstsq( Bas.T, y_ref )[0]
+    coefs  = np.zeros( orders[-1]+1 )
+    #print len(coefs_),len(coefs), orders
+    for i,k in enumerate(orders):
+        #print i,k
+        coefs[k] = coefs_[i]
+    return coefs
+
+
+def polyFitFunc( xs, y_ref, coef0, orders, nps=100 ):
+    coef0 = np.array( coef0 )
+    y0s   = np.polyval( coef0[::-1], xs )
+    coefs = polyFit( xs, y_ref-y0s, orders )
+    coefs[:len(coef0)] = coef0[:]
+    ys = np.polyval( coefs[::-1], xs )
+    return coefs, ys
+
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-
     np.set_printoptions(precision=16, linewidth=200 )
+
+    dsc    = np.pi/4
+    xs     = np.linspace( -1.0, 1.0, 100 )
+    #y_ref  = np.cos(xs*dsc)
+    y_ref  = np.sin(xs*dsc)
+    #coef0s =  [1,0,-0.5*dsc*dsc,0]
+    #coef0s =  [0,dsc,0,(-1./6)*dsc*dsc*dsc]
+    coef0s =  [0,dsc,0 ]
+    #coef0s =  [0,1,0,0]
+    for maxOrder in [8,10,12]:
+        coefs, ys = polyFitFunc( xs, y_ref, coef0s, range(3,maxOrder,2) )
+        #ys = np.polyval( coef0s[::-1], xs )
+        #print "coefs ", coefs
+        #print " ", coefs
+        printHornerPolynom(coefs)
+        y_err = ys - y_ref
+
+        #plt.plot(xs,y_ref, '-',label='ref'   )
+        #plt.plot(xs,ys   , ':',label='approx')
+
+        plt.plot(xs,abs(y_err), ':',label='error')
+        plt.yscale('log')
+
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    exit()
+
+
 
     TaylorCos = [ 1., -1./2, 1./24,  -1./720,  1./40320,  -1./3628800,  1./479001600  ]
     TaylorSin = [ 1., -1./6, 1./120, -1./5040, 1./362880, -1./39916800, 1./6227020800 ]

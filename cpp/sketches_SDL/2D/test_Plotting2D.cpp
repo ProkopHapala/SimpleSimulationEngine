@@ -54,6 +54,32 @@ cos_sin(6,3)  : 28.037 ticks/call ( 2.80372e+08 1e+07 ) | 45488.8
 
 */
 
+inline void cos_sin_( double x_, double& ca, double& sa ){
+    constexpr const double inv2pi = 1/(M_PI/4);
+    x_*=inv2pi;
+    int ix = (int)x_;
+    if(x_<0)ix--;
+    double x = x_ - ix;
+    if(ix&1)x=x-1;
+    double xx = x*x;
+    double c,s;
+
+    c = cos_xx_8 (xx);
+    //c = cos_xx_8 (xx);
+    //c = cos_xx_10(xx);
+
+    s = x*sin_xx_6 (xx);
+    //s = x*sin_xx_8 (xx);
+    //s = x*sin_xx_10(xx);
+
+    ix++;
+    if(ix&2){ ca=-s;sa=c; }else{ ca=c; sa=s; };
+    if(ix&4){ ca=-ca; sa=-sa; }
+    //sa = x;
+    //sa=(ix-3)&7;
+    //sa=(ix+1)&4;
+}
+
 
 class TestAppPlotting : public AppSDL2OGL{
 	public:
@@ -103,8 +129,8 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     for(int i=0; i<nsamp; i++){
         lcos_ref->ys[i] = cos(lcos_ref->xs[i]);
         lsin_ref->ys[i] = sin(lsin_ref->xs[i]);
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i] );
-        cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,1 );
+        cos_sin_( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i] );
+        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,1 );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,2 );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,3 );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 4,1 );
@@ -133,6 +159,7 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     plot1.lines.push_back( lsin_err );
     plot1.render();
 
+    //return;
 
     const int n = 1000;
     const int m = 10000;
@@ -143,7 +170,7 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     double c=0,s=0;
     double dn=1./n;
 
-    TEST_ERROR_PROC_N( "cos_sin()    ", {double x=xs[i]; cos_sin(x,c,s); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
+    TEST_ERROR_PROC_N( "cos_sin()    ", {double x=xs[i]; cos_sin_(x,c,s); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
 
     TEST_ERROR_PROC_N( "cos_sin(2,1) ", {double x=xs[i]; cos_sin(x,c,s,2,1); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
     TEST_ERROR_PROC_N( "cos_sin(2,2) ", {double x=xs[i]; cos_sin(x,c,s,2,2); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
