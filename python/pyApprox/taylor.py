@@ -92,10 +92,29 @@ if __name__ == "__main__":
     np.set_printoptions(precision=16, linewidth=200 )
 
 
+    # tg
+    xmax = np.pi/4
+    xs     = np.linspace( -xmax, xmax, 100 )
+    y_ref  = np.tan(xs)
+    coef0s =  [0,1.0,0.0,1./3]
+    for maxOrder in [8,10,12,14]:
+        coefs, ys = polyFitFunc( xs, y_ref, coef0s, range(5,maxOrder,2) )
+        printHornerPolynom(coefs)
+        y_err   = ys - y_ref
+        ctg_err = 1/ys - 1/y_ref
+        plt.plot(xs,abs(y_err), '-',label=('tan_%i' %maxOrder ) )
+        plt.plot(xs,abs(ctg_err), ':',label=('cotg_%i' %maxOrder) )
+    
+    plt.yscale('log')
+    plt.legend()
+    plt.grid()
+    plt.title( "Polynominal Approx tan(x)" )
+    plt.show()
+    exit()
+
+
     # acosf implementation:
     # https://github.com/bminor/glibc/blob/master/sysdeps/ieee754/flt-32/e_acosf.c
-
-
     #xs     = np.linspace( -1.0, 1.0, 100 )
     #xs__    = np.linspace( 0, 1.0, 100 )**2 - 1
     xs      = np.linspace( -0.75, 0.75, 100 )

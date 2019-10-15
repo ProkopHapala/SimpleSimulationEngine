@@ -121,6 +121,19 @@ inline void cos_sin( double x_, double& ca, double& sa, const int order, const i
     sa=s;
 }
 
+inline double tan_xx_6 (double xx){ return 1 +xx*(0.3333333333333333 +xx*(0.1257172468409968 +xx*(0.08367259233981537 ))) ;};
+inline double tan_xx_8 (double xx){ return 1 +xx*(0.3333333333333333 +xx*(0.1346369234100504 +xx*(0.04494732376211282 +xx*(0.04030214559905823 ))));};
+inline double tan_xx_10(double xx){ return 1 +xx*(0.3333333333333333 +xx*(0.1331377015490709 +xx*(0.05602812424047391 +xx*(0.0144884610558432  +xx*(0.01919844564346994 )))));};
+inline double tan_xx_12(double xx){ return 1 +xx*(0.3333333333333333 +xx*(0.1333599255952193 +xx*(0.05357641184260721 +xx*(0.02397340014368198 +xx*(0.003720346570791119 +xx*0.009082932867935635 )))));};
+
+//inline double tan_xx_12(double xx){ return 1 +xx*(0.3333333333333333); };
+
+inline double tan_xx_12_(double xx){
+    double x4=xx*xx;
+    return 1 + xx*( 0.3333333333333333 + x4*( 0.05357641184260721 +x4*(0.003720346570791119 )))
+             + x4*( 0.1333599255952193 + x4*( 0.02397340014368198 +x4*(0.009082932867935635 )));
+}
+
 // ========= Cartesian -> Polar ===========
 
 inline double atan_poly( double a ){

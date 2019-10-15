@@ -94,6 +94,7 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     DataLine2D * lcos     = new DataLine2D(nsamp,-3*M_PI,5*M_PI); //lcos.pointStyle();
     DataLine2D * lsin     = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
     DataLine2D * lsqrt    = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
+
     DataLine2D * lcos_ref = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
     DataLine2D * lsin_ref = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
 
@@ -103,6 +104,11 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     DataLine2D * lsin_err = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
 
     DataLine2D * lsqrt_err = new DataLine2D(nsamp,-3*M_PI,5*M_PI);
+
+    DataLine2D * ltan     = new DataLine2D(nsamp,-M_PI/4,M_PI/4);
+    DataLine2D * ltan_ref = new DataLine2D(nsamp,-M_PI/4,M_PI/4);
+    DataLine2D * ltan_err = new DataLine2D(nsamp,-M_PI/4,M_PI/4);
+
 
     for(int i=0; i<nsamp; i++){
         lcos_ref->ys[i] = cos(lcos_ref->xs[i]);
@@ -122,6 +128,11 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         lcos_err->ys[i] = log10( fabs( lcos->ys[i] - lcos_ref->ys[i] ) );
         lsin_err->ys[i] = log10( fabs( lsin->ys[i] - lsin_ref->ys[i] ) );
         lsqrt_err->ys[i] = log10( fabs( lsqrt->ys[i] - lsqrt_ref->ys[i] ) );
+
+        double x = ltan_ref->xs[i];
+        ltan->ys[i]     = x*tan_xx_12( x*x );
+        ltan_ref->ys[i] = tan(ltan_ref->xs[i]);
+        ltan_err->ys[i] = log10( fabs( ltan->ys[i] - ltan_ref->ys[i] ) );
         //printf( "[%i]: x %g err %g %g \n", i, lcos_ref->xs[i], lcos_err->ys[i], lsin_err->ys[i] );
     }
 
@@ -138,10 +149,13 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     lsqrt->clr     = 0xFF007F00;
     lsqrt_err->clr = 0xFF407F40;
 
-    plot1.lines.push_back( lsqrt_ref);
-    plot1.lines.push_back( lsqrt    );
-    plot1.lines.push_back( lsqrt_err);
+    ltan_ref->clr = 0xFF00FF00;
+    ltan->clr     = 0xFF007F00;
+    ltan_err->clr = 0xFF407F40;
 
+    //plot1.lines.push_back( lsqrt_ref);
+    //plot1.lines.push_back( lsqrt    );
+    //plot1.lines.push_back( lsqrt_err);
 
     plot1.lines.push_back( lcos_ref );
     plot1.lines.push_back( lsin_ref );
@@ -152,19 +166,32 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     plot1.lines.push_back( lcos_err );
     plot1.lines.push_back( lsin_err );
 
+    plot1.lines.push_back( ltan     );
+    plot1.lines.push_back( ltan_ref );
+    plot1.lines.push_back( ltan_err );
+
+
     plot1.render();
 
     //return;
 
     const int n = 1000;
-    const int m = 10000;
+    const int m = 1000;
     double xs[n];
-    for(int i=0; i<n; i++){ xs[i]=randf(-30.0,30.0); }
+    double xs_[n];
+    for(int i=0; i<n; i++){
+        xs [i]=randf(-30.0,30.0);
+        xs_[i]=randf(-M_PI/4,M_PI/4);
+    }
     //VecN::arange(n,-30.0,60./n,xs);
 
     double c=0,s=0;
     double dn=1./n;
 
+
+    //TEST_ERROR_PROC_N( "tan() "       ,{double x=xs[i]; c=tan(x);        c-=1/sqrt(x); STORE_ERROR(c) }, n );
+    TEST_ERROR_PROC_N( "tan_xx_12 () ",{double x=xs_[i]; c=x*tan_xx_12 (x*x); c-=tan(x); STORE_ERROR(c) }, n );
+    TEST_ERROR_PROC_N( "tan_xx_12_() ",{double x=xs_[i]; c=x*tan_xx_12_(x*x); c-=tan(x); STORE_ERROR(c) }, n );
 
     TEST_ERROR_PROC_N( "fastInvSqrt() ",{double x=xs[i]; c=fastInvSqrt(x); c-=1/sqrt(x); STORE_ERROR(c) }, n );
 
@@ -183,6 +210,11 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     TEST_ERROR_PROC_N( "cos_sin(6,3) ", {double x=xs[i]; cos_sin(x,c,s,6,3); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
 
     SPEED_TEST_PROC_NM( "junk;        ", {double x=xs[i];s+=x;c+=x;sum=c+s;}, n, m );
+
+
+    SPEED_TEST_PROC_NM( "tan() "      , {sum+= c=tan(xs_[i]);      }, n, m );
+    SPEED_TEST_PROC_NM( "tan_xx_12 ()" ,{double x=xs_[i]; sum+=x*tan_xx_12 (x*x); }, n, m );
+    SPEED_TEST_PROC_NM( "tan_xx_12_()" ,{double x=xs_[i]; sum+=x*tan_xx_12_(x*x); }, n, m );
 
     SPEED_TEST_PROC_NM( "1/sqrt()      ", {sum+=1/sqrt(xs[i]);      }, n, m );
     SPEED_TEST_PROC_NM( "fastInvSqrt() ", {sum+=fastInvSqrt(xs[i]); }, n, m );
