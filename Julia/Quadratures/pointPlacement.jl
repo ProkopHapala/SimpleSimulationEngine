@@ -1,7 +1,36 @@
 
 
-#=
 
+
+
+#=
+To Do : 
+
+Use Static Arrays for better performance of 2D,3D points,vectors and matrices
+https://github.com/JuliaArrays/StaticArrays.jl
+
+Performance optimization tips:
+https://docs.julialang.org/en/v1/manual/performance-tips/
+
+
+* Optimization variables
+http://www.juliaopt.org/JuMP.jl/v0.19.0/variables/
+
+
+
+
+
+=#
+
+
+
+
+
+
+
+
+
+#=
 
 Julia Cheatsheet
 https://juliadocs.github.io/Julia-Cheat-Sheet/
