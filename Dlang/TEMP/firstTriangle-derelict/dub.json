@@ -1,0 +1,11 @@
+{
+	"name": "firstTriangle.x",
+	"authors": ["prokop"],
+	"dependencies": {
+		"derelict-sdl2": "~>2.1.0",
+		"derelict-gl3": "~>1.0.18"
+	},
+	"description": "A minimal D application.",
+	"copyright": "fuck you",
+	"license": "MIT"
+}

@@ -8,6 +8,12 @@
 *.so
 *.bin
 
+.dub
+*.dlangidews
+*.settings
+*.wssettings
+*.selections.json
+
 Build
 tmp
 
