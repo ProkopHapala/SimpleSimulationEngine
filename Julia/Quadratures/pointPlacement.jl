@@ -14,11 +14,9 @@ https://docs.julialang.org/en/v1/manual/performance-tips/
 
 
 * Optimization variables
-http://www.juliaopt.org/JuMP.jl/v0.19.0/variables/
-
-
-
-
+  http://www.juliaopt.org/JuMP.jl/v0.19.0/variables/
+   * Lazy broadcasting:
+     http://www.cityinthesky.co.uk/2019/01/working-with-broadcasting-in-julia/
 
 =#
 
@@ -36,6 +34,8 @@ Julia Cheatsheet
 https://juliadocs.github.io/Julia-Cheat-Sheet/
 https://cheatsheets.quantecon.org/
 https://learnxinyminutes.com/docs/julia/
+https://juliabyexample.helpmanual.io/
+https://julia.guide/broadcasting
 
 
 

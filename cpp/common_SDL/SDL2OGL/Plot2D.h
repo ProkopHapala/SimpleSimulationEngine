@@ -49,6 +49,7 @@ class DataLine2D{ public:
     inline DataLine2D(int n_){ allocate(n_); }
     inline DataLine2D(int n_,double*xs_){ n=n_; xs=xs_; ys=new double[n]; }
     inline DataLine2D(int n_,double xmin,double xmax){ allocate(n_); linspan(xmin,xmax); }
+    inline DataLine2D(int n_,double xmin,double xmax,uint32_t clr_){ allocate(n_); linspan(xmin,xmax); clr=clr_; }
 
     ~DataLine2D(){
         if(xs) delete [] xs;
@@ -76,6 +77,11 @@ class Plot2D{ public:
     Rect2d axBounds;
     float tickSz = 0.1;
 
+    inline DataLine2D* add(DataLine2D* dline){
+        lines.push_back(dline);
+        return dline;
+    };
+
     bool     grid       =true;
     bool     tickCaption=false;
     uint32_t clrBg      = 0x00f0f0f0;
@@ -84,6 +90,7 @@ class Plot2D{ public:
     uint32_t clrTicksY  = 0xFF000000;
     char   * tickFormat = "%2.2f\0";
     int      fontTex=0;
+
 
 
     void update();

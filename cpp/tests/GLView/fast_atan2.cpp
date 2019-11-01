@@ -1,72 +1,32 @@
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <vector>
-#include <math.h>
+#include <cmath>
+#include <cstdio>
+#include "GLView.h"
 
-#include "fastmath.h"
-#include "Vec2.h"
-#include "geom2D.h"
+#include "Draw2D.h"
+#include "Plot2D.h"
+#include "PlotScreen2D.h"
+#include "testUtils.h"
 
+#include "SDL_utils.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
-#include "Draw2D.h"
-#include "AppSDL2OGL.h"
-#include "SDL_utils.h"
 
-#include "Plot2D.h"
-#include "PlotScreen2D.h"
+// ===== Globals
 
-#include "testUtils.h"
+Plot2D plot1;
+int fontTex;
 
-// ======================  TestApp
+void my_draw(){
+    glClearColor( 1.0f, 1.0f, 1.0f, 0.0f );
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    glDisable( GL_DEPTH_TEST );
+    //plot1.drawAxes();
+    plot1.view();
+}
 
-/*
-
-Results Sin-Cos approx
-
-cos_sin()     MaxErr: 4.21802e-10 RMSE: 1.06433e-10
-cos_sin(2,1)  MaxErr: 1.88677e-05 RMSE: 5.66393e-06
-cos_sin(2,2)  MaxErr: 6.16719e-07 RMSE: 1.77133e-07
-cos_sin(2,3)  MaxErr: 1.94899e-08 RMSE: 5.53645e-09
-cos_sin(4,1)  MaxErr: 5.14595e-08 RMSE: 1.36165e-08
-cos_sin(4,2)  MaxErr: 4.21802e-10 RMSE: 1.06433e-10
-cos_sin(4,3)  MaxErr: 3.33356e-12 RMSE: 8.31634e-13
-cos_sin(6,1)  MaxErr: 8.7447e-11 RMSE: 2.09387e-11
-cos_sin(6,2)  MaxErr: 1.80411e-13 RMSE: 4.09557e-14
-cos_sin(6,3)  MaxErr: 4.60743e-15 RMSE: 1.68924e-15
-junk;         : 3.369 ticks/call ( 3.36924e+07 1e+07 ) | 9.75056e+06
-cos();sin()   : 81.565 ticks/call ( 8.15651e+08 1e+07 ) | 45488.8
-sincos()      : 80.077 ticks/call ( 8.00774e+08 1e+07 ) | 45488.8
-cos_sin( )    : 20.017 ticks/call ( 2.0017e+08 1e+07 ) | 45488.8
-cos_sin(2,1)  : 17.144 ticks/call ( 1.71439e+08 1e+07 ) | 45487.3
-cos_sin(2,2)  : 20.379 ticks/call ( 2.0379e+08 1e+07 ) | 45488.8
-cos_sin(2,3)  : 23.491 ticks/call ( 2.34906e+08 1e+07 ) | 45488.8
-cos_sin(4,1)  : 19.112 ticks/call ( 1.9112e+08 1e+07 ) | 45488.8
-cos_sin(4,2)  : 22.704 ticks/call ( 2.2704e+08 1e+07 ) | 45488.8
-cos_sin(4,3)  : 25.384 ticks/call ( 2.5384e+08 1e+07 ) | 45488.8
-cos_sin(6,1)  : 20.930 ticks/call ( 2.09297e+08 1e+07 ) | 45488.8
-cos_sin(6,2)  : 23.869 ticks/call ( 2.38689e+08 1e+07 ) | 45488.8
-cos_sin(6,3)  : 28.037 ticks/call ( 2.80372e+08 1e+07 ) | 45488.8
-
-
-*/
-
-class TestAppPlotting : public AppSDL2OGL{
-	public:
-
-    Plot2D plot1;
-    int fontTex;
-
-	virtual void draw   ();
-    //virtual void eventHandling( const SDL_Event& event );
-
-	TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ );
-};
-
-TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+int main(){
 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
@@ -183,43 +143,9 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     SPEED_TEST_PROC_NM( "cos_sin(6,2) ", {cos_sin(xs[i],c,s,6,2);sum+=c+s; }, n, m );
     SPEED_TEST_PROC_NM( "cos_sin(6,3) ", {cos_sin(xs[i],c,s,6,3);sum+=c+s; }, n, m );
 
+
+    init( 640, 480 );
+    set_draw_function( my_draw );
+    run_Nframes(5000);
+
 }
-
-void TestAppPlotting::draw(){
-    glClearColor( 1.0f, 1.0f, 1.0f, 0.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glDisable( GL_DEPTH_TEST );
-
-	//plot1.drawAxes();
-    plot1.view();
-};
-
-// ===================== MAIN
-
-TestAppPlotting * testApp;
-
-int main(int argc, char *argv[]){
-
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	int junk;
-	testApp = new TestAppPlotting( junk , 800, 600 );
-	testApp->loop( 1000000 );
-	return 0;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
