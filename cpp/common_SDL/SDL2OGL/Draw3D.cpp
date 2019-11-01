@@ -1,6 +1,7 @@
 
-#include <SDL2/SDL.h>
+//#include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+//#include <GLU.h>
 
 #include "Vec2.h"
 #include "Draw.h"
@@ -9,6 +10,17 @@
 
 
 namespace Draw3D{
+
+
+void vertex(Vec3f v ){ glVertex3f(v.x,v.y,v.z); }
+void vertex(Vec3d v ){ glVertex3f(v.x,v.y,v.z); }
+
+void color (Vec3f v ){ glColor3f (v.x,v.y,v.z); }
+void color (Vec3d v ){ glColor3f (v.x,v.y,v.z); }
+
+void normal(Vec3f v ){ glNormal3f(v.x,v.y,v.z); }
+void normal(Vec3d v ){ glNormal3f(v.x,v.y,v.z); }
+
 
 void drawPoint( const Vec3f& vec ){
 	//glDisable (GL_LIGHTING);

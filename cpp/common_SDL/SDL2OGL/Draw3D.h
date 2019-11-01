@@ -2,6 +2,9 @@
 #ifndef  Draw3D_h
 #define  Draw3D_h
 
+
+#include <SDL2/SDL_opengl.h>
+
 #include <math.h>
 #include <cstdlib>
 #include <stdio.h>
@@ -23,14 +26,15 @@ namespace Draw3D{
 
 // ========== Float Versions
 
-inline void vertex(Vec3f v ){ glVertex3f(v.x,v.y,v.z); }
-inline void vertex(Vec3d v ){ glVertex3f(v.x,v.y,v.z); }
+void vertex(Vec3f v );
+void vertex(Vec3d v );
 
-inline void color (Vec3f v ){ glColor3f (v.x,v.y,v.z); }
-inline void color (Vec3d v ){ glColor3f (v.x,v.y,v.z); }
+void color (Vec3f v );
+void color (Vec3d v );
 
-inline void normal(Vec3f v ){ glNormal3f(v.x,v.y,v.z); }
-inline void normal(Vec3d v ){ glNormal3f(v.x,v.y,v.z); }
+void normal(Vec3f v );
+void normal(Vec3d v );
+
 
 void drawPoint     ( const Vec3f& vec                   );
 void drawPointCross( const Vec3f& vec, float  sz        );

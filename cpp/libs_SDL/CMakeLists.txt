@@ -9,5 +9,6 @@ project(libs_SDL)
 #add_subdirectory (Molecular)
 add_subdirectory (Vis3D)
 add_subdirectory (FlightView)
+add_subdirectory (GLView)
 #add_subdirectory (Shock)
 

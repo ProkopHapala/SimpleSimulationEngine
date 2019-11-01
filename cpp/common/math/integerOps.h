@@ -64,4 +64,4 @@ inline unsigned int hash_Knuth( unsigned int i ){
 	return ( i * 2654435761 >> 16 );
 }
 
-#endif﻿
+#endif
