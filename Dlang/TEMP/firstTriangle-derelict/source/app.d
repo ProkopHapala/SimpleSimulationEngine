@@ -8,7 +8,7 @@ import glUtils;
 
 import shaders;
 
-version(linux){pragma(lib, "dl");}
+//version(linux){pragma(lib, "dl");}
 
 WindowSDL window1;
 //GLuint programID;

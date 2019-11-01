@@ -56,7 +56,6 @@ inline void rot_csa( TYPE ca, TYPE sa, TYPE& ux, TYPE& uy ){
 	ux  = ux_;
 }
 
-
 inline double cos_xx_6 (double xx){ return 1 +xx*(-0.3084251375340424 +xx*(0.01585247243656319 +xx*(-0.0003206691702035272 ))); }
 inline double cos_xx_8 (double xx){ return 1 +xx*(-0.3084251375340424 +xx*(0.01585433742711407 +xx*(-0.0003259583464414167 +xx*(3.539800057252972e-06 )))); }
 inline double cos_xx_10(double xx){ return 1 +xx*(-0.3084251375340424 +xx*(0.01585434422879243 +xx*(-0.0003259917751184507 +xx*(3.590575024064454e-06 +xx*(-2.430825694459951e-08 ))))); }
@@ -64,7 +63,6 @@ inline double cos_xx_10(double xx){ return 1 +xx*(-0.3084251375340424 +xx*(0.015
 inline double sin_xx_6 (double xx){ return 0.7853981633974483 +xx*(-0.08074544390600076 +xx*(0.002490020287907521 +xx*(-3.596176288784333e-05 ))); }
 inline double sin_xx_8 (double xx){ return 0.7853981633974483 +xx*(-0.08074551202387524 +xx*(0.002490393182719242 +xx*(-3.657233242102226e-05 +xx*(3.089664734016052e-07 )))); }
 inline double sin_xx_10(double xx){ return 0.7853981633974483 +xx*(-0.08074551218802455 +xx*(0.002490394567124187 +xx*(-3.65761914008964e-05  +xx*(3.133376118159403e-07 +xx*(-1.736214417895343e-09 ))))); }
-
 
 inline void cos_sin( double x_, double& ca, double& sa ){
     constexpr const double inv2pi = 1/(M_PI/4);

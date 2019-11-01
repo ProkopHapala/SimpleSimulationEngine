@@ -1,11 +1,13 @@
 {
 	"name": "firstTriangle.x",
 	"authors": ["prokop"],
+	"description": "A minimal D application.",
+	"copyright": "fuck you",
+	"license": "MIT",
 	"dependencies": {
 		"derelict-sdl2": "~>2.1.0",
 		"derelict-gl3": "~>1.0.18"
 	},
-	"description": "A minimal D application.",
-	"copyright": "fuck you",
-	"license": "MIT"
+	"dflags-ldc": ["-link-defaultlib-shared"],
+	"dflags-dmd": ["-defaultlib=libphobos2.so"],
 }
