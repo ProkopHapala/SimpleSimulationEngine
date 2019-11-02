@@ -450,7 +450,7 @@ void Draw2D::drawShape( const Vec2d& pos, const Vec2d& rot, int shape ){
 // ===== image and sprite-text
 
 
-void Draw2D::renderImage( GLuint itex, const Rect2d& rec ){
+void Draw2D::renderImage( int itex, const Rect2d& rec ){
     glEnable( GL_TEXTURE_2D );
     glBindTexture( GL_TEXTURE_2D, itex );
     glColor3f(1.0f,1.0f,1.0f);

@@ -3,6 +3,7 @@
 #include <cstdio>
 #include "GLView.h"
 
+#include "Draw.h"
 #include "Draw2D.h"
 #include "Plot2D.h"
 #include "PlotScreen2D.h"
@@ -10,8 +11,34 @@
 
 #include "SDL_utils.h"
 
+#include "gonioApprox.h"
+
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+
+/*
+
+Results:
+
+ACCURACY:
+atan2_a1      MaxErr: 2.90068e-05 RMSE: 1.08498e-05 
+atan2_a2      MaxErr: 1.69537e-05 RMSE: 8.26705e-06 
+atan2_a3      MaxErr: 1.69537e-05 RMSE: 8.26705e-06 
+atan2_nvidia  MaxErr: 3.41833e-06 RMSE: 1.52343e-06 
+
+SPEED:
+junk;           : 0.923 ticks/call ( 922786 1e+06 ) | 248552 
+atan2()         : 66.998 ticks/call ( 6.69982e+07 1e+06 ) | -25546.6 
+atan2_a1()      : 4.034 ticks/call ( 4.03435e+06 1e+06 ) | -25546.7 
+atan2_a2()      : 10.090 ticks/call ( 1.00904e+07 1e+06 ) | -25546.3 
+atan2_a3()      : 6.713 ticks/call ( 6.71309e+06 1e+06 ) | -25546.3 
+atan2_nvidia()  : 16.877 ticks/call ( 1.68767e+07 1e+06 ) | -25546.7 
+
+*/
+
+
+
 
 // ===== Globals
 
@@ -19,16 +46,23 @@ Plot2D plot1;
 int fontTex;
 
 void my_draw(){
+
+    //printf(" my_draw ! %i %i %g \n", plot1.lines.size(), plot1.lines.back()->n, plot1.lines.back()->ys[2]  );
     glClearColor( 1.0f, 1.0f, 1.0f, 0.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glDisable( GL_DEPTH_TEST );
     //plot1.drawAxes();
+
+    Draw2D::drawLine({-1,0},{1,0});
+
+    plot1.drawAxes();
     plot1.view();
+
 }
 
-int main(){
+void setup(){
 
-    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     Func1d myFunc = &sin;
 
@@ -37,115 +71,105 @@ int main(){
 
     int nsamp = 1000;
 
-    DataLine2D * lcos_ref  = plot1.add( new DataLine2D(nsamp,-3*M_PI,5*M_PI, 0xFFFF0000) );
-    DataLine2D * lcos      = plot1.add( new DataLine2D(nsamp,-3*M_PI,5*M_PI, 0xFFFFFF00) );
-    DataLine2D * lcos_err  = plot1.add( new DataLine2D(nsamp,-3*M_PI,5*M_PI, 0xFFFF7F00) );
+    double xmin=-3*M_PI;
+    double xmax= 5*M_PI;
+    //Draw::icolorScale(0.1);
+    
+    DataLine2D * l_ref  = plot1.add( new DataLine2D(nsamp,xmin,xmax, 0xFF000000 ) );
+    DataLine2D * l0     = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.5) ) );
+    DataLine2D * l1     = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.2) ) );
+    //DataLine2D * l2     = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.4) ) );
+    //DataLine2D * l3     = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.6) ) );
+    //DataLine2D * l4     = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.8) ) );
 
-    DataLine2D * lsin_ref  = plot1.add( new DataLine2D(nsamp,-3*M_PI,5*M_PI,0xFF0000FF) );
-    DataLine2D * lsin      = plot1.add( new DataLine2D(nsamp,-3*M_PI,5*M_PI,0xFF00FFFF) );
-    DataLine2D * lsin_err  = plot1.add( new DataLine2D(nsamp,-3*M_PI,5*M_PI,0xFF007FFF) );
+    DataLine2D * lerr0  = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.5) ) );
+    DataLine2D * lerr1  = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.25) ) );
+    //DataLine2D * lerr2  = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.45) ) );
+    //DataLine2D * lerr3  = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.65) ) );
+    //DataLine2D * lerr4  = plot1.add( new DataLine2D(nsamp,xmin,xmax, Draw::icolorScale(0.85) ) );
 
-    DataLine2D * lsqrt_ref = plot1.add( new DataLine2D(nsamp,-3*M_PI,5*M_PI,0xFF00FF00) );
-    DataLine2D * lsqrt     = plot1.add( new DataLine2D(nsamp,-3*M_PI,5*M_PI,0xFF007F00) );
-    DataLine2D * lsqrt_err = plot1.add( new DataLine2D(nsamp,-3*M_PI,5*M_PI,0xFF407F40) );
-
-    DataLine2D * ltan_ref  = plot1.add( new DataLine2D(nsamp,-M_PI/4,M_PI/4,0xFF00FF00) );
-    DataLine2D * ltan      = plot1.add( new DataLine2D(nsamp,-M_PI/4,M_PI/4,0xFF007F00) );
-    DataLine2D * ltan_err  = plot1.add( new DataLine2D(nsamp,-M_PI/4,M_PI/4,0xFF407F40) );
+    //printf( "colors %i %i %i %i \n", plot1.lines[0]->clr, plot1.lines[1]->clr, plot1.lines[2]->clr, plot1.lines[3]->clr, plot1.lines[3]->clr );
 
     for(int i=0; i<nsamp; i++){
-        lcos_ref->ys[i] = cos(lcos_ref->xs[i]);
-        lsin_ref->ys[i] = sin(lsin_ref->xs[i]);
-        lsqrt_ref->ys[i] = 1/sqrt(lsqrt_ref->xs[i]);
-        cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i] );
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,1 );
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,2 );
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 2,3 );
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 4,1 );
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 4,2 );
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 4,3 );
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 6,1 );
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 6,2 );
-        //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 6,3 );
-        lsqrt->ys[i]    = fastInvSqrt( lsqrt_ref->xs[i] );
-        lcos_err->ys[i] = log10( fabs( lcos->ys[i] - lcos_ref->ys[i] ) );
-        lsin_err->ys[i] = log10( fabs( lsin->ys[i] - lsin_ref->ys[i] ) );
-        lsqrt_err->ys[i] = log10( fabs( lsqrt->ys[i] - lsqrt_ref->ys[i] ) );
+        double phi = l_ref->xs[i];
+        double x = cos( phi );
+        double y = sin( phi );
+        //printf(  "%i %g (%g,%g)\n", i, phi, x, y );
+        l_ref->ys[i] = atan2(y,x);
+        //l1->ys[i] = atan2_a1(y,x);
+        //l2->ys[i] = atan2_a2(y,x);
+        //l3->ys[i] = atan2_a3(y,x);
+        //l4->ys[i] = atan2_nvidia(y,x);
 
-        double x = ltan_ref->xs[i];
-        ltan->ys[i]     = x*tan_xx_12( x*x );
-        ltan_ref->ys[i] = tan(ltan_ref->xs[i]);
-        ltan_err->ys[i] = log10( fabs( ltan->ys[i] - ltan_ref->ys[i] ) );
-        //printf( "[%i]: x %g err %g %g \n", i, lcos_ref->xs[i], lcos_err->ys[i], lsin_err->ys[i] );
+        l0->ys[i] = atan2_a1(y,x);
+        l1->ys[i] = atan2_t<atan2_xx_8 >(y,x);
+        //l2->ys[i] = atan2_t<atan2_xx_8 >(y,x);
+        //l3->ys[i] = atan2_t<atan2_xx_10>(y,x);
+        //l4->ys[i] = atan2_t<atan2_xx_12>(y,x);
+
+        lerr0->ys[i] = log10( fabs( l0->ys[i] - l_ref->ys[i] ) );
+        lerr1->ys[i] = log10( fabs( l1->ys[i] - l_ref->ys[i] ) );
+        //lerr2->ys[i] = log10( fabs( l2->ys[i] - l_ref->ys[i] ) );
+        //lerr3->ys[i] = log10( fabs( l3->ys[i] - l_ref->ys[i] ) );
+        //lerr4->ys[i] = log10( fabs( l4->ys[i] - l_ref->ys[i] ) );
     }
 
     plot1.render();
 
     //return;
 
+    
     const int n = 1000;
     const int m = 1000;
-    double xs[n];
-    double xs_[n];
+    double xs [n];
+    double ys [n];
     for(int i=0; i<n; i++){
-        xs [i]=randf(-30.0,30.0);
-        xs_[i]=randf(-M_PI/4,M_PI/4);
+        xs[i]=randf(-30.0,30.0);
+        ys[i]=randf(-30.0,30.0);
     }
     //VecN::arange(n,-30.0,60./n,xs);
 
     double c=0,s=0;
     double dn=1./n;
 
+    TEST_ERROR_PROC_N( "atan2_a1     ",{double x=xs[i]; double y=ys[i]; c=atan2_a1    (y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
 
-    //TEST_ERROR_PROC_N( "tan() "       ,{double x=xs[i]; c=tan(x);        c-=1/sqrt(x); STORE_ERROR(c) }, n );
-    TEST_ERROR_PROC_N( "tan_xx_12 () ",{double x=xs_[i]; c=x*tan_xx_12 (x*x); c-=tan(x); STORE_ERROR(c) }, n );
-    TEST_ERROR_PROC_N( "tan_xx_12_() ",{double x=xs_[i]; c=x*tan_xx_12_(x*x); c-=tan(x); STORE_ERROR(c) }, n );
+    TEST_ERROR_PROC_N( "atan2_t6     ",{double x=xs[i]; double y=ys[i]; c=atan2_t<atan2_xx_6 >(y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
+    TEST_ERROR_PROC_N( "atan2_t8     ",{double x=xs[i]; double y=ys[i]; c=atan2_t<atan2_xx_8 >(y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
+    TEST_ERROR_PROC_N( "atan2_t10    ",{double x=xs[i]; double y=ys[i]; c=atan2_t<atan2_xx_10>(y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
+    TEST_ERROR_PROC_N( "atan2_t12    ",{double x=xs[i]; double y=ys[i]; c=atan2_t<atan2_xx_12>(y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
+    TEST_ERROR_PROC_N( "atan2_t14    ",{double x=xs[i]; double y=ys[i]; c=atan2_t<atan2_xx_14>(y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
 
-    TEST_ERROR_PROC_N( "fastInvSqrt() ",{double x=xs[i]; c=fastInvSqrt(x); c-=1/sqrt(x); STORE_ERROR(c) }, n );
+    //TEST_ERROR_PROC_N( "atan2_a2     ",{double x=xs[i]; double y=ys[i]; c=atan2_a2    (y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
+    //TEST_ERROR_PROC_N( "atan2_a3     ",{double x=xs[i]; double y=ys[i]; c=atan2_a3    (y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
+    //TEST_ERROR_PROC_N( "atan2_nvidia ",{double x=xs[i]; double y=ys[i]; c=atan2_nvidia(y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
+    //TEST_ERROR_PROC_N( "atan2_fnvidia ",{double x=xs[i]; double y=ys[i]; c=atan2_nvidia_fabs(y,x); c-=atan2(y,x); STORE_ERROR(c) }, n );
 
-    TEST_ERROR_PROC_N( "cos_sin()     ", {double x=xs[i]; cos_sin(x,c,s); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
+    SPEED_TEST_PROC_NM( "junk;          ", { sum+=xs[i]; sum+=ys[i]; }, n, m );
 
-    TEST_ERROR_PROC_N( "cos_sin(2,1) ", {double x=xs[i]; cos_sin(x,c,s,2,1); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
-    TEST_ERROR_PROC_N( "cos_sin(2,2) ", {double x=xs[i]; cos_sin(x,c,s,2,2); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
-    TEST_ERROR_PROC_N( "cos_sin(2,3) ", {double x=xs[i]; cos_sin(x,c,s,2,3); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
+    SPEED_TEST_PROC_NM( "atan2        " , {sum+= c=atan2       (ys[i],xs[i]); }, n, m );
+    SPEED_TEST_PROC_NM( "atan2_a1     " , {sum+= c=atan2_a1    (ys[i],xs[i]); }, n, m );
 
-    TEST_ERROR_PROC_N( "cos_sin(4,1) ", {double x=xs[i]; cos_sin(x,c,s,4,1); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
-    TEST_ERROR_PROC_N( "cos_sin(4,2) ", {double x=xs[i]; cos_sin(x,c,s,4,2); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
-    TEST_ERROR_PROC_N( "cos_sin(4,3) ", {double x=xs[i]; cos_sin(x,c,s,4,3); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
+    SPEED_TEST_PROC_NM( "atan2_t6     " , {sum+= c=atan2_t<atan2_xx_6 >(ys[i],xs[i]); }, n, m );
+    SPEED_TEST_PROC_NM( "atan2_t8     " , {sum+= c=atan2_t<atan2_xx_8 >(ys[i],xs[i]); }, n, m );
+    SPEED_TEST_PROC_NM( "atan2_t10    " , {sum+= c=atan2_t<atan2_xx_10>(ys[i],xs[i]); }, n, m );
+    SPEED_TEST_PROC_NM( "atan2_t12    " , {sum+= c=atan2_t<atan2_xx_12>(ys[i],xs[i]); }, n, m );
+    SPEED_TEST_PROC_NM( "atan2_t14    " , {sum+= c=atan2_t<atan2_xx_14>(ys[i],xs[i]); }, n, m );
 
-    TEST_ERROR_PROC_N( "cos_sin(6,1) ", {double x=xs[i]; cos_sin(x,c,s,6,1); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
-    TEST_ERROR_PROC_N( "cos_sin(6,2) ", {double x=xs[i]; cos_sin(x,c,s,6,2); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
-    TEST_ERROR_PROC_N( "cos_sin(6,3) ", {double x=xs[i]; cos_sin(x,c,s,6,3); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
+    //SPEED_TEST_PROC_NM( "atan2_a2()     " , {sum+= c=atan2_a2    (ys[i],xs[i]); }, n, m );
+    //SPEED_TEST_PROC_NM( "atan2_a3()     " , {sum+= c=atan2_a3    (ys[i],xs[i]); }, n, m );
+    //SPEED_TEST_PROC_NM( "atan2_nvidia() " , {sum+= c=atan2_nvidia(ys[i],xs[i]); }, n, m );
+    //SPEED_TEST_PROC_NM( "atan2_fnvidia()", {sum+= c=atan2_nvidia_fabs(ys[i],xs[i]); }, n, m );
 
-    SPEED_TEST_PROC_NM( "junk;        ", {double x=xs[i];s+=x;c+=x;sum=c+s;}, n, m );
+}
 
-
-    SPEED_TEST_PROC_NM( "tan() "      , {sum+= c=tan(xs_[i]);      }, n, m );
-    SPEED_TEST_PROC_NM( "tan_xx_12 ()" ,{double x=xs_[i]; sum+=x*tan_xx_12 (x*x); }, n, m );
-    SPEED_TEST_PROC_NM( "tan_xx_12_()" ,{double x=xs_[i]; sum+=x*tan_xx_12_(x*x); }, n, m );
-
-    SPEED_TEST_PROC_NM( "1/sqrt()      ", {sum+=1/sqrt(xs[i]);      }, n, m );
-    SPEED_TEST_PROC_NM( "fastInvSqrt() ", {sum+=fastInvSqrt(xs[i]); }, n, m );
-
-    SPEED_TEST_PROC_NM( "cos();sin()  ", {double x=xs[i];sum+=cos(x)+sin(x);      }, n, m );
-    SPEED_TEST_PROC_NM( "sincos()     ", {sincos (xs[i],&c,&s);sum+=c+s; }, n, m );
-    SPEED_TEST_PROC_NM( "cos_sin( )   ", {cos_sin(xs[i],c,s);sum+=c+s; }, n, m );
-
-    SPEED_TEST_PROC_NM( "cos_sin(2,1) ", {cos_sin(xs[i],c,s,2,1);sum+=c+s; }, n, m );
-    SPEED_TEST_PROC_NM( "cos_sin(2,2) ", {cos_sin(xs[i],c,s,2,2);sum+=c+s; }, n, m );
-    SPEED_TEST_PROC_NM( "cos_sin(2,3) ", {cos_sin(xs[i],c,s,2,3);sum+=c+s; }, n, m );
-
-    SPEED_TEST_PROC_NM( "cos_sin(4,1) ", {cos_sin(xs[i],c,s,4,1);sum+=c+s; }, n, m );
-    SPEED_TEST_PROC_NM( "cos_sin(4,2) ", {cos_sin(xs[i],c,s,4,2);sum+=c+s; }, n, m );
-    SPEED_TEST_PROC_NM( "cos_sin(4,3) ", {cos_sin(xs[i],c,s,4,3);sum+=c+s; }, n, m );
-
-    SPEED_TEST_PROC_NM( "cos_sin(6,1) ", {cos_sin(xs[i],c,s,6,1);sum+=c+s; }, n, m );
-    SPEED_TEST_PROC_NM( "cos_sin(6,2) ", {cos_sin(xs[i],c,s,6,2);sum+=c+s; }, n, m );
-    SPEED_TEST_PROC_NM( "cos_sin(6,3) ", {cos_sin(xs[i],c,s,6,3);sum+=c+s; }, n, m );
-
+int main(){
 
     init( 640, 480 );
     set_draw_function( my_draw );
-    run_Nframes(5000);
 
+    setup();
+
+    run_Nframes(5000);
+    
 }

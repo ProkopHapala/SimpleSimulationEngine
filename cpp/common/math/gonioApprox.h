@@ -134,6 +134,13 @@ inline double tan_xx_12_(double xx){
 
 // ========= Cartesian -> Polar ===========
 
+inline double atan2_xx_6 (double xx){ return -1 +xx*(0.3271414224903835 +xx*(-0.1584645896620068 +xx*(0.04626030273606059 ) ) ); };
+//inline double atan2_xx_8 (double xx){ return -1 +xx*(0.331768825725     +xx*(-0.184940152398     +xx*(0.091121250024      +xx*(-0.0233480867489     ) ) ) ); };
+inline double atan2_xx_8 (double xx){ return -1 +xx*(0.3319089228367821 +xx*(-0.1858750170176101 +xx*(0.09293719121053462 +xx*(-0.02441667691946986 ) ) ) ); };
+inline double atan2_xx_10(double xx){ return -1 +xx*(0.3330176488472483 +xx*(-0.1956751542049746 +xx*(0.12132313880689250 +xx*(-0.05764138590306975 +xx*(0.01358448668618405 ) ) ) ) ); };
+inline double atan2_xx_12(double xx){ return -1 +xx*(0.3332653548010540 +xx*(-0.1987725193225652 +xx*(0.13468905116342580 +xx*(-0.08358586640953759 +xx*(0.03683379230278266 +xx*(-0.007828996358246611 ) ) ) ) ) ); };
+inline double atan2_xx_14(double xx){ return -1 +xx*(0.3333190269289065 +xx*(-0.1996711468724480 +xx*(0.14004322605623570 +xx*(-0.09876163152183830 +xx*(0.05901114389963034 +xx*(-0.02396583101041806 +xx*(0.004627201618174669 ) ) ) ) ) ) ); }; 
+
 inline double atan_poly( double a ){
   return a * ( 1 + a * ( 0.00317436203193 + a * ( -0.362955638193 + a * ( 0.0920711110177 + a*( 0.105247322934 + a*-0.0521389943934 ) ) ) ) );
   /*
@@ -147,21 +154,41 @@ inline double atan2_a1( double y, double x ){
   //http://pubs.opengroup.org/onlinepubs/009695399/functions/atan2.html
   //Volkan SALMA
   double a, angle;
-  double abs_y = fabs(y) + 1e-10f;      // kludge to prevent 0/0 condition
+  double abs_y = fabs(y) + 1e-14;      // kludge to prevent 0/0 condition
+  //double x_ = x + abs_y;
+  //double y_ = x - abs_y;
   if ( x < 0 ){
     a     = ( x + abs_y ) / ( abs_y - x );
-    angle = 2.35619449019d;
+    //a     = -x_/y_;
+    angle = 2.35619449019;
   }else{
-    a     = ( x - abs_y ) / ( x + abs_y );
-    angle = 0.78539816339d;
+    a     = ( x - abs_y ) / ( abs_y + x );
+    //a     = y_/x_;
+    angle = 0.78539816339;
   }
   double aa = a * a;
   //angle += a * ( -0.9817d + 0.1963d * aa );
-  // angle +=  a * ( -1 + aa*( 0.326388646629 + aa*( -0.155559850719 + aa*0.0437730406925 ) ) );
+  //angle +=  a * ( -1 + aa*( 0.326388646629 + aa*( -0.155559850719 + aa*0.0437730406925 ) ) );
   angle +=  a * ( -1 + aa*( 0.331768825725 + aa*( -0.184940152398 + aa*( 0.091121250024 -0.0233480867489*aa ) ) ) );
   return  ( y<0 )? -angle : angle ;
 }
 
+template<double (*xx_poly)(double)>
+inline double atan2_t( double y, double x ){
+  //http://pubs.opengroup.org/onlinepubs/009695399/functions/atan2.html
+  //Volkan SALMA
+  double a, angle;
+  double abs_y = fabs(y) + 1e-14;      // kludge to prevent 0/0 condition
+  if ( x < 0 ){
+    a     = ( x + abs_y ) / ( abs_y - x );
+    angle = 2.35619449019;
+  }else{
+    a     = ( x - abs_y ) / ( abs_y + x );
+    angle = 0.78539816339;
+  }
+  angle += a * xx_poly(a*a);
+  return  ( y<0 )? -angle : angle;
+}
 
 inline double atan2_a2( double y, double x ){
   double absx,absy;
@@ -172,6 +199,8 @@ inline double atan2_a2( double y, double x ){
   if( absx > absy ){ a = absy / absx;       }else{ a = absx / absy; kind |= 1; }
   //double alfa = atan_poly( a );
   double alfa = a * ( 1 + a * ( 0.00317436203193 + a * ( -0.362955638193 + a * ( 0.0920711110177 + a*( 0.105247322934 + a*-0.0521389943934 ) ) ) ) );
+  //double aa = a*a;
+  //double alfa =  a * ( -1 + aa*( 0.331768825725 + aa*( -0.184940152398 + aa*( 0.091121250024 -0.0233480867489*aa ) ) ) );
   switch( kind ){
     case 0:  return -3.14159265359 + alfa;
     case 1:  return -1.57079632679 - alfa;
@@ -248,6 +277,32 @@ inline float atan2_nvidia( float y, float x ){
   t3 = t0 * t3;
 
   t3 = ( _abs(y) > _abs(x) ) ? 1.570796327 - t3 : t3;
+  t3 = (x < 0) ?  3.141592654 - t3 : t3;
+  t3 = (y < 0) ? -t3 : t3;
+
+  return t3;
+}
+
+inline float atan2_nvidia_fabs( float y, float x ){
+  float t0, t1, t2, t3, t4;
+
+  t3 = fabs(x);
+  t1 = fabs(y);
+  t0 = fmax(t3, t1);
+  t1 = fmin(t3, t1);
+  t3 = 1 / t0;
+  t3 = t1 * t3;
+
+  t4 = t3 * t3;
+  t0 =         - 0.013480470;
+  t0 = t0 * t4 + 0.057477314;
+  t0 = t0 * t4 - 0.121239071;
+  t0 = t0 * t4 + 0.195635925;
+  t0 = t0 * t4 - 0.332994597;
+  t0 = t0 * t4 + 0.999995630;
+  t3 = t0 * t3;
+
+  t3 = ( fabs(y) > fabs(x) ) ? 1.570796327 - t3 : t3;
   t3 = (x < 0) ?  3.141592654 - t3 : t3;
   t3 = (y < 0) ? -t3 : t3;
 

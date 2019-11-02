@@ -7,7 +7,11 @@
 #include "Vec3.h"
 #include "Mat3.h"
 
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+
 #define  fontSizeDef 7
+
 
 
 namespace Draw{
@@ -17,8 +21,8 @@ namespace Draw{
 	void setRGB ( uint32_t i );
 	void setRGBA( uint32_t i );
 
-
-	void colorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
+	void      colorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
+    uint32_t icolorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
 
 	void color_of_hash( int i  );
 

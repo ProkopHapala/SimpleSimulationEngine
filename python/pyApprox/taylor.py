@@ -55,6 +55,19 @@ def printHornerPolynom(coefs):
         print ")",
     print
 
+def printHornerPolynom_EvenOdd(coefs):
+    print "even: ", coefs[0],
+    for c in coefs[2::2]:
+        print "+xx*(%.16g" %c,
+    for c in coefs[2::2]: print ")",
+    print "\nodd: x*(", coefs[1],
+    for c in coefs[3::2]:
+        print "+xx*(%.16g" %c,
+    for c in coefs[1::2]: print ")",
+    #for c in coefs[1:]:
+    #    print ")",
+    print
+
 
 def getHermitePoly( xs, H, yds ):
     coefs = np.dot( H, yds ) #  ;print "cC ", cC
@@ -77,7 +90,6 @@ def polyFit( xs, y_ref, orders ):
         coefs[k] = coefs_[i]
     return coefs
 
-
 def polyFitFunc( xs, y_ref, coef0, orders, nps=100 ):
     coef0 = np.array( coef0 )
     y0s   = np.polyval( coef0[::-1], xs )
@@ -86,13 +98,102 @@ def polyFitFunc( xs, y_ref, coef0, orders, nps=100 ):
     ys = np.polyval( coefs[::-1], xs )
     return coefs, ys
 
-
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     np.set_printoptions(precision=16, linewidth=200 )
 
+    #phis   = np.linspace( -np.pi/3, np.pi/3, 1000 )
+    #phis   = np.linspace( 0, np.pi/3, 1000 )
+    phis   = np.linspace( np.pi/3, 2*np.pi/3, 1000 )
+    xs     = np.cos(phis)
+    ys     = np.sin(phis)
+    y_ref  = phis/(np.pi/3) - 1.5
+    print "y_ref[-1]-y_ref[0] ", y_ref[-1]-y_ref[0] 
+    #args   = ys/xs  
+    #args   = -xs/ys
+    args   = -0.86602540378*xs/ys  
 
-    # tg
+    plt.plot(phis, y_ref, '-',label="y_ref"    )
+    plt.plot(phis, args , '-',label="args" )
+
+    #coef0s = [0,1]
+    coef0s = [0]
+    #for maxOrder in [6,8,10,12,14,16,18,20,22]:
+    for maxOrder in [6,8,10,12,14]:
+        #coefs, ys = polyFitFunc( xs, y_ref, coef0s, range(5,maxOrder,2) )
+        coefs, ys = polyFitFunc( args, y_ref, coef0s, range(1,maxOrder,2) )
+        #coefs, ys = polyFitFunc( args, y_ref, coef0s, range(1,maxOrder) )
+        #print maxOrder,":  "; printHornerPolynom(coefs)
+        print maxOrder,":  "; printHornerPolynom_EvenOdd(coefs)
+        y_err   = ys - y_ref
+        #plt.plot(phis, ys       , ':',label=('y_%i' %maxOrder ) )
+        plt.plot(phis,abs(y_err), '-',label=('err_%i' %maxOrder ) )
+
+    plt.yscale('log')
+    plt.legend()
+    plt.grid()
+    plt.title( "Polynominal Approx tan(x)" )
+    plt.show()
+    exit()
+
+
+
+    '''
+    # ========= PolyFit :  ata2(y,x)
+
+    def atan2_pre(y,x, y_ref):
+        abs_y = abs(y) + 1e-14;
+        mask_x = x<0
+        mask_y = y<0
+        a         = (( x - abs_y ) / ( abs_y + x ))
+        a[mask_x] = (( x + abs_y ) / ( abs_y - x ))[mask_x]
+        #angle         = x*0 + 0.78539816339
+        #angle[mask_x] =       2.35619449019
+        #a[mask_y] *= -1
+        y_ref[mask_y] *= -1
+        y_ref[x<0 ] -=  2.35619449019
+        y_ref[x>=0] -=  0.78539816339
+        #y_ref[mask_y] *= -1
+        return a, y_ref
+
+    def atan2(y,x):
+        a, angle = atan2_pre(y,x, x*0); angle*=-1
+        aa     = a * a
+        #a[y<0] *= -1
+        angle += a * ( -1 + aa*( 0.331768825725 + aa*( -0.184940152398 + aa*( 0.091121250024 -0.0233480867489*aa ) ) ) )
+        #angle[y<0] *= -1
+        return angle 
+
+    xmax   = np.pi*0.5
+    phis   = np.linspace( -xmax, xmax, 1000 )
+    xs = np.cos(phis)
+    ys = np.sin(phis)
+    y_ref  = np.arctan2(ys,xs)
+    y      = atan2(ys,xs)
+    args,  y_ref_mod = atan2_pre( ys, xs, y_ref )
+    #plt.plot(phis,args*-1     , '-',label="a" )
+    #plt.plot(phis,y_ref_mod, '-',label="y_ref_mod" )
+    coef0s =  [0,-1.0]
+    for maxOrder in [8,10,12,14,16]:
+        #coefs, ys = polyFitFunc( xs, y_ref, coef0s, range(5,maxOrder,2) )
+        coefs, ys = polyFitFunc( args, y_ref_mod, coef0s, range(3,maxOrder,2) )
+        printHornerPolynom(coefs)
+        y_err   = ys - y_ref_mod
+        #ctg_err = 1/ys - 1/y_ref
+        plt.plot(phis,abs(y_err), '-',label=('tan_%i' %maxOrder ) )
+        #plt.plot(args,abs(ctg_err), ':',label=('cotg_%i' %maxOrder) )
+    #plt.plot(phis, y_ref, '-',label="atan2_ref"    )
+    #plt.plot(phis, y    , '-',label="atan2_approx" )
+    plt.yscale('log')
+    plt.legend()
+    plt.grid()
+    plt.title( "Polynominal Approx tan(x)" )
+    plt.show()
+    exit()
+    '''
+
+    '''
+    # ========= PolyFit :  tan(x)
     xmax = np.pi/4
     xs     = np.linspace( -xmax, xmax, 100 )
     y_ref  = np.tan(xs)
@@ -111,8 +212,10 @@ if __name__ == "__main__":
     plt.title( "Polynominal Approx tan(x)" )
     plt.show()
     exit()
+    '''
 
-
+    '''
+    # ========= PolyFit :   acos
     # acosf implementation:
     # https://github.com/bminor/glibc/blob/master/sysdeps/ieee754/flt-32/e_acosf.c
     #xs     = np.linspace( -1.0, 1.0, 100 )
@@ -149,12 +252,13 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid()
     plt.show()
-
-
-
-
     exit()
+    '''
 
+
+
+    '''
+    # ========= PolyFit :   sin, cos
     dsc    = np.pi/4
     xs     = np.linspace( -1.0, 1.0, 100 )
     #y_ref  = np.cos(xs*dsc)
@@ -182,8 +286,12 @@ if __name__ == "__main__":
     plt.show()
 
     exit()
+    '''
 
 
+
+    '''
+    Hermite spline nth-degree Spline with n-de
 
     TaylorCos = [ 1., -1./2, 1./24,  -1./720,  1./40320,  -1./3628800,  1./479001600  ]
     TaylorSin = [ 1., -1./6, 1./120, -1./5040, 1./362880, -1./39916800, 1./6227020800 ]
@@ -192,7 +300,6 @@ if __name__ == "__main__":
     print "TaylorCos", printHornerPolynom( [ c*(dsc**(i*2  )) for i,c in enumerate(TaylorCos)  ] )
     print "TaylorSin", printHornerPolynom( [ c*(dsc**(i*2+1)) for i,c in enumerate(TaylorSin)  ] )
     exit()
-
 
     nderiv = 5
 
@@ -248,7 +355,6 @@ if __name__ == "__main__":
     yds=np.array([
         #[  1., 0.,-1., 0., 1.,       0.,-1., 0.,+1., 0.,   ],
         #[  0., 1., 0.,-1., 0.,       1., 0.,-1., 0., 1.,   ],
-
         [  1., 0., -1., 0., 1.,        s, -s, -s, s, s     ],    # cos
         [  0., 1.,  0.,-1., 0.,        s,  s, -s,-s,+s     ],    # sin
     ])
@@ -278,9 +384,11 @@ if __name__ == "__main__":
         plt.grid()
 
     plt.show()
-
+    '''
 
     '''
+    # ======== Cos
+
     import matplotlib.pyplot as plt
 
     xs = np.linspace( -np.pi/2, np.pi/2, 100 )

@@ -76,7 +76,13 @@ inline double clamp_abs( double x, double xmax ){
     return x;
 }
 
-inline int fastFloor( float f ){ int i=(int)f; if(f<0)i--; return i; }
+//inline int   fastFloor( float f         ){ int i=(int)f; if(f<0)i--; return i; }
+//inline float fastFract( float f         ){ return f-fastFloor(f);              }
+//inline float fastModf ( float f, int& i ){ i=fastFloor(f); return f-i;         }
+
+inline int    fastFloor( double f         ){ int i=(int)f; if(f<0)i--; return i; }
+inline double fastFract( double f         ){ return f-fastFloor(f);              }
+inline double fastModf ( double f, int& i ){ i=fastFloor(f); return f-i;         }
 
 #include "gonioApprox.h"
 
@@ -228,11 +234,13 @@ template <class FLOAT,class INT> INT fastFloor( FLOAT x ){
 };
 */
 
+/*
 inline int fastFloor( double x ){
      int ix = static_cast <int>(x);
      if( x < 0 ) ix--;
      return ix;
 }
+*/
 
 
 /*

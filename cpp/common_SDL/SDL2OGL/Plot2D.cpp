@@ -43,19 +43,29 @@ void DataLine2D::draw(){
     }
 }
 
-void DataLine2D::render(){
+int DataLine2D::render(){
     if( glObj ) glDeleteLists(glObj,1);
     glObj = glGenLists(1);
+    //printf( " 1 DataLine2D::render() %i \n", glObj  );
     glNewList(glObj, GL_COMPILE);
     draw();
     glEndList( );
+    //printf( " 2 DataLine2D::render() %i \n", glObj  );
+    return glObj;
 };
 
 void DataLine2D::view(){
     Draw::setRGBA(clr);
+    //printf( "DEBUG DataLine2D::view() %i \n", glObj  );
     glCallList( glObj );
     //printf("%i\n", glObj);
 };
+
+DataLine2D::~DataLine2D(){
+    if(xs) delete [] xs;
+    if(ys) delete [] ys;
+    if( glObj ) glDeleteLists(glObj,1);
+}
 
 /////////////////////////////////
 //  class      Plot2D
@@ -132,7 +142,7 @@ void Plot2D::drawAxes(){
 
 }
 
-void Plot2D::render(){
+int Plot2D::render(){
     //void drawGrid( bounds.x0, bounds.y0, bounds.x0, bounds.x0, dx, dy );
     if( glObj ) glDeleteLists(glObj,1);
     glObj = glGenLists(1);
@@ -140,9 +150,15 @@ void Plot2D::render(){
     if( (clrBg&0xFF000000) ){ Draw::setRGBA( clrBg ); Draw2D::drawRectangle_d( axBounds.a, axBounds.b, true ); }
     drawAxes();
     glEndList( );
-    for( DataLine2D* line : lines ){ line->render(); }
+    //int i=0;
+    for( DataLine2D* line : lines ){
+        //printf( "render line[%i]\n", i ); 
+        line->render();
+        //i++; 
+    }
     // TO DO :
     //if( tickCaption ){ }
+    return glObj;
 }
 
 void Plot2D::drawHline ( double y ){ Draw2D::drawLine_d( {axBounds.x0, y}, {axBounds.x1, y} ); };

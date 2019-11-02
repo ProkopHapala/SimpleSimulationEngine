@@ -35,7 +35,7 @@ class DataLine2D{ public:
 
 
     void update();
-    void render();
+    int  render();
     void draw();
     void view();
 
@@ -51,11 +51,7 @@ class DataLine2D{ public:
     inline DataLine2D(int n_,double xmin,double xmax){ allocate(n_); linspan(xmin,xmax); }
     inline DataLine2D(int n_,double xmin,double xmax,uint32_t clr_){ allocate(n_); linspan(xmin,xmax); clr=clr_; }
 
-    ~DataLine2D(){
-        if(xs) delete [] xs;
-        if(ys) delete [] ys;
-        if( glObj ) glDeleteLists(glObj,1);
-    }
+    ~DataLine2D();
 };
 
 template<typename Func>
@@ -95,7 +91,7 @@ class Plot2D{ public:
 
     void update();
     void drawAxes();
-    void render();
+    int  render();
     void view  ();
     void init  ();
     void xsharingLines(int nl, int np);

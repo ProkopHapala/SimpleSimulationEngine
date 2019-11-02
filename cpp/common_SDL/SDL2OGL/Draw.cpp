@@ -35,6 +35,19 @@ void Draw::colorScale( double d, int ncol, const uint32_t * colors ){
     );
 };
 
+uint32_t Draw::icolorScale( double d, int ncol, const uint32_t * colors ){
+    constexpr float inv255 = 1.0f/255.0f;
+    d*=(ncol-1);
+    int icol = (int)d;
+    d-=icol; double md = 1-d;
+    uint32_t clr1=colors[icol];
+    uint32_t clr2=colors[icol];
+    return 0xFF000000
+        | (((uint32_t)( d*(  colors[icol]    &0xFF) + md*( colors[icol]     &0xFF )))    )
+        | (((uint32_t)( d*((colors[icol]>>8 )&0xFF) + md*((colors[icol]>>8 )&0xFF )))<<8 )
+        | (((uint32_t)( d*((colors[icol]>>16)&0xFF) + md*((colors[icol]>>16)&0xFF )))<<16);
+};
+
 /*
 void Draw::setColorInt32( uint32_t clr ) {
     constexpr float i255 = 1/255.0f;

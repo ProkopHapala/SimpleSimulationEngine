@@ -25,6 +25,27 @@
 
 namespace Draw3D{
 
+template<void colorFunc(double f)>
+void drawTriaglePatch( Vec2i i0, Vec2i n, int NX, double * height, double vmin, double vmax ){
+    Vec2f a,b,p;
+    a.set( 1.0d, 0.0d           ); //a.mul(scale);
+    b.set( 0.5d, 0.86602540378d ); //b.mul(scale);
+    //glDisable(GL_SMOOTH);
+    //int ii = 0;
+    double renorm=1.0d/(vmax-vmin);
+    for (int iy=0; iy<n.y-1; iy++){
+        glBegin( GL_TRIANGLE_STRIP );
+        int ii = (i0.y+iy)*NX + i0.x;
+        for (int ix=0; ix<n.x; ix++){
+            p.set( ix*a.x+iy*b.x, ix*a.y+iy*b.y );
+            colorFunc( (height[ii     ]-vmin)*renorm ); glVertex3f( p.x    , p.y    , 0 );
+            colorFunc( (height[ii + NX]-vmin)*renorm ); glVertex3f( p.x+b.x, p.y+b.y, 0 );
+            ii++;
+        }
+        glEnd();
+    }
+}
+
 template<typename UVfunc>
 Vec3f getUVFuncNormal( Vec2f uv, float eps,  UVfunc func ){
     Vec2f o;
