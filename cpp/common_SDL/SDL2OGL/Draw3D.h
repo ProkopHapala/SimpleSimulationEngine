@@ -35,7 +35,6 @@ void color (Vec3d v );
 void normal(Vec3f v );
 void normal(Vec3d v );
 
-
 void drawPoint     ( const Vec3f& vec                   );
 void drawPointCross( const Vec3f& vec, float  sz        );
 void drawVec       ( const Vec3f& vec                   );

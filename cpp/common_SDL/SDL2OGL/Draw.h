@@ -12,19 +12,18 @@
 
 #define  fontSizeDef 7
 
-
-
 namespace Draw{
+
     constexpr int     ncolors = 5;
     static uint32_t   colors_rainbow[ncolors] = { 0xFF000000, 0xFFFF0000, 0xFF00FF00, 0xFF00FFFF, 0xFFFFFFFF };
 
-	void setRGB ( uint32_t i );
-	void setRGBA( uint32_t i );
+    void setRGB ( uint32_t i );
+    void setRGBA( uint32_t i );
 
-	void      colorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
+    void      colorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
     uint32_t icolorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
 
-	void color_of_hash( int i  );
+    void color_of_hash( int i  );
 
     void billboardCam( );
     void billboardCamProj( );
@@ -34,8 +33,10 @@ namespace Draw{
     //GLuint makeTexture( char * fname );
     //GLuint makeTexture( int nx, int ny, float * data );
 
+    inline int list(int ogl=0){ if(ogl)glDeleteLists(ogl,1); ogl=glGenLists(1); glNewList(ogl,GL_COMPILE); return ogl; };
+
     inline void printGLmat( float * glMat ){
-    	printf( "  %f %f %f %f  \n", glMat[ 0], glMat[ 1], glMat[ 2], glMat[ 3] );
+        printf( "  %f %f %f %f  \n", glMat[ 0], glMat[ 1], glMat[ 2], glMat[ 3] );
         printf( "  %f %f %f %f  \n", glMat[ 4], glMat[ 5], glMat[ 6], glMat[ 7] );
         printf( "  %f %f %f %f  \n", glMat[ 8], glMat[ 9], glMat[10], glMat[11] );
         printf( "  %f %f %f %f  \n", glMat[12], glMat[13], glMat[14], glMat[15] );

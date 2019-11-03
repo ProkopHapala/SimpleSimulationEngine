@@ -92,7 +92,7 @@ class Plot2D{ public:
     void update();
     void drawAxes();
     int  render();
-    void view  ();
+    void view  (bool bAxes=true);
     void init  ();
     void xsharingLines(int nl, int np);
     void xsharingLines(int nl, int np, double xmin, double dx);

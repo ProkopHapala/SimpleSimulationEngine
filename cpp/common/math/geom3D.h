@@ -120,7 +120,7 @@ class LineInterval3d{ public:
         //return t1<t0;
     };
 
-    inline Vec3d infiniteSpan(){ t0 = -1e+300; t1 =  1e+300; }
+    inline void  infiniteSpan(){ t0 = -1e+300; t1 =  1e+300; }
     inline Vec3d endPoint0(){ return p0+hdir*t0; };
     inline Vec3d endPoint1(){ return p0+hdir*t1; };
 
@@ -384,14 +384,15 @@ inline bool dist_Box( const Vec3d& point,    const Vec3d& pos, const Mat3d& orie
     return dm;
 };
 
-
+/*
 inline double ray_Box( const Vec3d& ray0, const Vec3d& hRay,    const Vec3d& pos, const Mat3d& orientation, const Vec3d& span ){
     // WARRNING: unfinished
     Vec3d d ;
     d.set_sub(ray0, pos);
     d = orientation.dot( d );
-
+    return ;
 }
+*/
 
 
 // ============ Ellipsoide
@@ -491,7 +492,7 @@ class Ellipsoide{
 	Vec3d span;
     Mat3d orientation;
 
-    inline bool initOne(){
+    inline void initOne(){
         pos.set(0.0,0.0,0.0);
         span.set(1.0,1.0,1.0);
         orientation.a.set(1.0,0.0,0.0);
@@ -499,7 +500,7 @@ class Ellipsoide{
         orientation.c.set(0.0,0.0,1.0);
     }
 
-    inline bool fromVecs( const Mat3d& mat ){
+    inline void fromVecs( const Mat3d& mat ){
         orientation.set(mat);
         span.a = orientation.a.normalize();
         span.b = orientation.b.normalize();

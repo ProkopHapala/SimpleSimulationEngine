@@ -165,8 +165,8 @@ void Plot2D::drawHline ( double y ){ Draw2D::drawLine_d( {axBounds.x0, y}, {axBo
 void Plot2D::drawVline ( double x ){ Draw2D::drawLine_d( {x, axBounds.y0}, {x, axBounds.y1} ); };
 //void Plot2D::drawCursor( Vec2d p, double sz ){Draw2D::drawPointCross_d(p); };
 
-void Plot2D::view(){
-    glCallList( glObj );
+void Plot2D::view(bool bAxes){
+    if(bAxes) glCallList( glObj );
     for( DataLine2D* line : lines ){ line->view(); }
    // printf( "%i \n", glObj);
 }

@@ -168,10 +168,11 @@ class Mat3T{
         res |= c.tryOrthogonalize( errMax, a );
         res |= c.tryOrthogonalize( errMax, b );
         res |= c.tryNormalize    ( errMax );
+		return res;
 	};
 
 
-    inline bool orthogonalize( int ia, int ib, int ic ){
+    inline void orthogonalize( int ia, int ib, int ic ){
         VEC& a = vecs[ia];
         VEC& b = vecs[ib];
         VEC& c = vecs[ic];
@@ -183,7 +184,7 @@ class Mat3T{
         c.normalize();
 	};
 
-	inline bool orthogonalize_taylor3( int ia, int ib, int ic ){
+	inline void orthogonalize_taylor3( int ia, int ib, int ic ){
         VEC& a = vecs[ia];
         VEC& b = vecs[ib];
         VEC& c = vecs[ic];

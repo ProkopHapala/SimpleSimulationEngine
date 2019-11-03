@@ -111,6 +111,7 @@ class Rect2d{
         if(p.x>x1){ x1=p.x; mask |=4; }
         if(p.y<y0){ y0=p.y; mask |=2; }
         if(p.y>y1){ y1=p.y; mask |=8; }
+		return mask;
 	}
     inline void   margin(double R){ x0-=R; y0-=R; x1+=R; y1+=R; }
 	inline Vec2d  cog() const     { return (Vec2d){(x0+x1)*0.5,(y0+y1)*0.5}; }

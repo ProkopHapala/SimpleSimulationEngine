@@ -155,9 +155,10 @@ class Mesh{ public:
         int i=0;
         for(auto kv : edge_map) {
             edges.push_back( kv.second );
-            printf( "%i (%i,%i)(%i,%i)\n", i, kv.second.verts.a, kv.second.verts.b, kv.second.faces.a, kv.second.faces.b );
+            //printf( "%i (%i,%i)(%i,%i)\n", i, kv.second.verts.a, kv.second.verts.b, kv.second.faces.a, kv.second.faces.b );
             i++;
         }
+        return i;
     }
 
 
@@ -282,14 +283,14 @@ class Mesh{ public:
 
     /// Topology operations
 
-    int insertEdgeVertex( int ied ){
+    void insertEdgeVertex( int ied ){
         int ip = points.size();
         MeshEdge& ed = edges[ied];
         Vec3d p = (points[ed.verts.a] + points[ed.verts.b])*0.5;
         points.push_back(p);
         int ito; Polygon * pl;
 
-        printf("%i %i\n", ed.verts.a, ed.verts.b );
+        //printf("%i %i\n", ed.verts.a, ed.verts.b );
         // insert to 1
         pl  = polygons[ed.faces.a];
         ito = pl->findEdgeIndex( ed.verts.a, ed.verts.b );
@@ -353,9 +354,9 @@ class Mesh{ public:
         return ed.verts.a;
     }
 
-    int bevelVertex( int i ){}
+    //int bevelVertex( int i ){}
 
-    int extrudeFace( int i ){}
+    //int extrudeFace( int i ){}
 
 
     //std::unordered_map<std::int,Vec2i>::iterator pair_insert( std::unordered_map<int,Vec2i>& mymap, int key, int val ){
@@ -479,7 +480,7 @@ class Mesh{ public:
                         //printf( "ie %i %i iv %i->%i \n", ie, j, iv, ivNew );
                         iv = ivNew;
                     }else                         { printf("error: cannot find %i \n", iv );      return; }
-                    if(ndone>=faceEdges[i].size()){ printf("error: cannot close polygon \n", iv ); return; }
+                    if(ndone>=faceEdges[i].size()){ printf("error: cannot close polygon %i \n", iv ); return; }
                     ndone++;
                 }
                 pl->ipoints.push_back(iv);
@@ -538,6 +539,7 @@ class Mesh{ public:
             }
             ied++;
         }
+        return ied;
         // TODO - capped cut ?
     }
 
