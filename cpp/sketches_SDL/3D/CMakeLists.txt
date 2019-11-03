@@ -31,6 +31,9 @@ target_link_libraries( test_Raytracing ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_Radiosity test_Radiosity.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Radiosity ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_Scatterer test_Scatterer.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_Scatterer ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_Elasticity test_Elasticity.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Truss> $<TARGET_OBJECTS:SoftBody> $<TARGET_OBJECTS:DynamicOpt> )
 target_link_libraries( test_Elasticity ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY}  )
 

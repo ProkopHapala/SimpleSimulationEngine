@@ -353,6 +353,28 @@ class Vec3T{
 
     inline T totprod(){ return x*y*z; };
 
+    inline void octDir( int iface ){
+        // mix-weights for inverse mapping of octahedron
+        if(iface&1) a=-a;
+        if(iface&2) b=-b;
+        if(iface&4) c=-c;
+        //double invr = fastInv1sqrt(  );
+        //return {a*invr,b*invr,c*invr};
+    }
+
+    inline int octFace()const{ return (x>0)|((y>0)<<1)|((z>0)<<2); }
+
+    inline int octCoord( VEC& d )const{
+        int    i=0;
+        //double r=0;
+        if(x>0){ i|=1; d.x=x; }else{ d.x=-x; };
+        if(y>0){ i|=2; d.y=y; }else{ d.y=-y; };
+        if(z>0){ i|=4; d.z=z; }else{ d.z=-z; };
+        double invr=1/(d.x+d.y+d.z);
+        d.x*=invr; d.y*=invr; d.z*=invr;
+        return i;
+    }
+
     T angleInPlane( const VEC& a, const VEC& b ){
         T x = dot(a);
         T y = dot(b);

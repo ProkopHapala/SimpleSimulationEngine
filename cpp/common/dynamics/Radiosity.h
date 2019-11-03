@@ -7,43 +7,22 @@
 #include "geom3D.h"
 #include "raytrace.h"
 #include "CMesh.h"
+
+#include "TriangleRayTracer.h"
+
 #include "Lingebra.h"
 
 // See:
 // https://en.wikipedia.org/wiki/Radiosity_(computer_graphics)
 
-class SurfElement{ public:
-    Vec3d pos;    //= Vec3dZero;
-    Vec3d normal; //= Vec3dZ;
-    double area;  //= 0.0;
-    int isurf;//   = -1;   // helps with raytracing
-
-    static inline double geomCoupling( const Vec3d& n, const Vec3d& p, const Vec3d& n0, const Vec3d& p0 ){
-        Vec3d d = p - p0;
-        double r = d.normalize();
-        double c  = d.dot(n );
-        double c0 = d.dot(n0);
-        // Area is multiplied posteriori
-        return c0*c/(r*r);
-        //return c0*c/(r*r + area + area0); // correction for small size
-    }
-
-    inline double coupling( const SurfElement& b ){
-        return geomCoupling( normal, pos, b.pos, b.normal );
-    }
-
-    SurfElement(){ isurf=-1; };
-    SurfElement(Vec3d p, Vec3d nr, double area_,int isurf_):pos(p),normal(nr),area(area_),isurf(isurf_){};
-};
-
-class Radiosity : public LinSolver { public:
+class Radiosity : public TriangleRayTracer, public LinSolver { public:
     double couplingTrashold  = 1e-8;
 
     //int nObstacles=0;
     //Triangle3D* obstacles=0;
 
-    std::vector<Triangle3D> triangleObstacles;
-    std::vector<SurfElement> elements;
+    //std::vector<Triangle3D> triangleObstacles;
+    //std::vector<SurfElement> elements;
     double* M=0;
 
     // work arrays
@@ -60,7 +39,7 @@ class Radiosity : public LinSolver { public:
         allocateWork( n );
         setLinearProblem( n, vals, sources );
     }
-
+    /*
     inline int trinagleToElements( int n, Triangle3D tri, int isurf ){
         const double off = 1.0/3;
         int ntot = n*n;
@@ -75,11 +54,11 @@ class Radiosity : public LinSolver { public:
                 Vec3d p = tri.c + da*(ia+off) + db*(ib+off);
                 elements.push_back( SurfElement(p,nr,area,isurf) );
                 i++;
-                /*
-                p.add( da*off + db*off );
-                elements.push_back( SurfElement(p,nr,area,isurf) );
-                i++;
-                */
+
+                //p.add( da*off + db*off );
+                //elements.push_back( SurfElement(p,nr,area,isurf) );
+                //i++;
+
                 //printf( "%i isurf %i \n", elements.size(), isurf );
 
                 //printf( "%i  A %g \n", elements.size(), area );
@@ -129,6 +108,7 @@ class Radiosity : public LinSolver { public:
         }
         return 0.0;
     }
+    */
 
     inline int makeCouplingMatrix(){
         int n = elements.size();

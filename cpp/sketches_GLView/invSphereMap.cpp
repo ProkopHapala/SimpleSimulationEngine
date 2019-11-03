@@ -37,6 +37,7 @@ Plot2D plot1;
 
 
 // Inverse Finbonachi on sphere
+// https://www.shadertoy.com/view/lllXz4
 // https://www.shadertoy.com/view/XlfyWl
 // Spherical Fibonacci Mapping
 // http://lgdv.cs.fau.de/publications/publication/Pub.2015.tech.IMMD.IMMD9.spheri/
