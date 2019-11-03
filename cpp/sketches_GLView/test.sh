@@ -21,17 +21,25 @@ ERRFLAGS="-Wno-missing-braces -Werror=return-type"
 #CFLAGS="-std=c++17 -O3    -march=native -mtune=native"
 CFLAGS="-std=c++17 -Ofast -march=native -mtune=native"
 
-IFLAGS="-I../../common/math -I../../common_SDL/SDL2OGL -I../../common_SDL/ -I../../common/utils -I../../common/dataStructures -I../../common_SDL/SDL2OGL -I../../libs_SDL/GLView -I/usr/include" 
-LFLAGS="-L../../Build/libs_SDL/GLView -lGLView -lGL -lSDL2"
+PREDIR="../"
+PREI="-I"$PREDIR
+
+echo "PREI " $PREI
+
+#IFLAGS="-I../../common/math -I../../common_SDL/SDL2OGL -I../../common_SDL/ -I../../common/utils -I../../common/dataStructures -I../../common_SDL/SDL2OGL -I../../libs_SDL/GLView -I/usr/include" 
+IFLAGS=$PREI"common/math "$PREI"common_SDL/SDL2OGL "$PREI"common_SDL/ "$PREI"common/utils "$PREI"common/dataStructures "$PREI"common_SDL/SDL2OGL "$PREI"libs_SDL/GLView -I/usr/include" 
+
+echo "IFLAGS " $IFLAGS
+
+LFLAGS="-L"$PREDIR"Build/libs_SDL/GLView -lGLView -lGL -lSDL2"
+
+src_path=$PREDIR/libs_SDL/GLView
+bin_path=$PREDIR/Build/libs_SDL/GLView
 
 # ================ Main
 
 mkdir $build_path
-
-"
 dirbak=`pwd`
-src_path=../../libs_SDL/GLView
-bin_path=../../Build/libs_SDL/GLView
 cd $bin_path
 make GLView
 #echo "!!! ==== GLView compiled ... go back .. "
@@ -39,7 +47,6 @@ cd $dirbak
 
 ln -f -s $bin_path/libGLView.so  $build_path/libGLView.so
 ln -f -s $bin_path/libGLView.so  libGLView.so
-"
 
 
 rm $build_path/$target.x
