@@ -26,12 +26,13 @@ void Draw::colorScale( double d, int ncol, const uint32_t * colors ){
     d*=(ncol-1);
     int icol = (int)d;
     d-=icol; double md = 1-d;
-    uint32_t clr1=colors[icol];
-    uint32_t clr2=colors[icol];
+    //printf( "d,md %g %g \n", d, md );
+    uint32_t clr1=colors[icol  ];
+    uint32_t clr2=colors[icol+1];
     glColor3f(
-        ( d*(  colors[icol]    &0xFF) + md*( colors[icol]     &0xFF ))*inv255,
-        ( d*((colors[icol]>>8 )&0xFF) + md*((colors[icol]>>8 )&0xFF ))*inv255,
-        ( d*((colors[icol]>>16)&0xFF) + md*((colors[icol]>>16)&0xFF ))*inv255
+        ( d*( clr2     &0xFF) + md*( clr1     &0xFF ))*inv255,
+        ( d*((clr2>>8 )&0xFF) + md*((clr1>>8 )&0xFF ))*inv255,
+        ( d*((clr2>>16)&0xFF) + md*((clr1>>16)&0xFF ))*inv255
     );
 };
 
@@ -40,12 +41,12 @@ uint32_t Draw::icolorScale( double d, int ncol, const uint32_t * colors ){
     d*=(ncol-1);
     int icol = (int)d;
     d-=icol; double md = 1-d;
-    uint32_t clr1=colors[icol];
-    uint32_t clr2=colors[icol];
+    uint32_t clr1=colors[icol  ];
+    uint32_t clr2=colors[icol+1];
     return 0xFF000000
-        | (((uint32_t)( d*(  colors[icol]    &0xFF) + md*( colors[icol]     &0xFF )))    )
-        | (((uint32_t)( d*((colors[icol]>>8 )&0xFF) + md*((colors[icol]>>8 )&0xFF )))<<8 )
-        | (((uint32_t)( d*((colors[icol]>>16)&0xFF) + md*((colors[icol]>>16)&0xFF )))<<16);
+        | (((uint32_t)( d*( clr2     &0xFF) + md*( clr1     &0xFF )))    )
+        | (((uint32_t)( d*((clr2>>8 )&0xFF) + md*((clr1>>8 )&0xFF )))<<8 )
+        | (((uint32_t)( d*((clr2>>16)&0xFF) + md*((clr1>>16)&0xFF )))<<16);
 };
 
 /*

@@ -847,7 +847,7 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
 	    glEnd();
     }
 
-    void drawVectorArray(int n, Vec3d* ps, Vec3d* vs, double sc, double lmax ){
+    void drawVectorArray(int n,const  Vec3d* ps,const  Vec3d* vs, double sc, double lmax ){
         glBegin(GL_LINES);
         double l2max=sq(lmax/sc);
         for(int i=0; i<n; i++){
@@ -858,18 +858,104 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
         glEnd();
     }
 
-    void drawScalarArray(int n, Vec3d* ps, double* vs, double vmin, double vmax ){
+
+    void drawScalarArray(int n,const Vec3d* ps,const double* vs, double vmin, double vmax, const uint32_t * colors, int ncol ){
         glBegin(GL_POINTS);
         double sc = 1/(vmax-vmin);
         for(int i=0; i<n; i++){
             Vec3d p=ps[i];
             double c = (vs[i]-vmin)*sc;
-            glColor3f(c,c,c);
+            if(colors){
+                Draw::colorScale(c,ncol,colors);
+            }else{
+                glColor3f(c,c,c);
+            }
             glVertex3f(p.x,p.y,p.z);
             //printf( "i %i p(%g,%g,%g) v: %g c: %g\n", i, p.x,p.y,p.z, vs[i], c );
         }
         glEnd();
     }
+
+    void drawScalarField( Vec2i ns, const Vec3d* ps,const  double* data,  double vmin, double vmax, const uint32_t * colors, int ncol ){
+        //printf( " debug_draw_GridFF \n" );
+        double z0  = 1.5;
+        double dz0 = 0.1;
+        double clsc = 1/(vmax-vmin);
+        glShadeModel(GL_SMOOTH);
+        //glEnable( GL_POLYGON_SMOOTH);
+        for(int iy=1;iy<ns.y;iy++){
+            glBegin( GL_TRIANGLE_STRIP );
+            for(int ix=0;ix<ns.x;ix++){
+                Vec3d p;
+                int i = (iy-1)*ns.x + ix;
+                //glColor3f ( data[i].x+0.5, data[i].y+0.5, 0.5 );
+                double c = clamp( clsc*(data[i]-vmin), 0, 1 );
+                if(colors){ Draw::colorScale( c,ncol,colors); }else{ glColor3f(c,c,c); }
+                //p = (gsh.dCell.a*(ix + (gsh.n.x*-0.5))) + (gsh.dCell.b*(iy-1 + (gsh.n.y*-0.5) ));
+                p = ps[i];
+                glVertex3f(p.x,p.y,p.z);
+
+                i += ns.x;
+                //glColor3f ( data[i].x+0.5, data[i].y+0.5, 0.5 );
+                c = clamp(  clsc*(data[i]-vmin), 0, 1 );
+                if(colors){ Draw::colorScale( c,ncol,colors); }else{ glColor3f(c,c,c); }
+                p = ps[i];
+                glVertex3f(p.x,p.y,p.z);
+            }
+            glEnd();
+        }
+    }
+
+    void drawScalarGrid(Vec2i ns, const Vec3d& p0, const Vec3d& a, const Vec3d& b,const double* data,  double vmin, double vmax, const uint32_t * colors, int ncol ){
+        //printf( " debug_draw_GridFF \n" );
+        double z0  = 1.5;
+        double dz0 = 0.1;
+        double clsc = 1/(vmax-vmin);
+        glShadeModel(GL_SMOOTH);
+        //glEnable( GL_POLYGON_SMOOTH);
+        for(int iy=1;iy<ns.y;iy++){
+            glBegin( GL_TRIANGLE_STRIP );
+            for(int ix=0;ix<ns.x;ix++){
+                Vec3d p;
+                int i = (iy-1)*ns.x + ix;
+                //glColor3f ( data[i].x+0.5, data[i].y+0.5, 0.5 );
+                double c = clamp( clsc*(data[i]-vmin), 0, 1 );
+                if(colors){ Draw::colorScale( c,ncol,colors); }else{ glColor3f(c,c,c); }
+                //p = (gsh.dCell.a*(ix + (gsh.n.x*-0.5))) + (gsh.dCell.b*(iy-1 + (gsh.n.y*-0.5) ));
+                p = a*ix + b*(iy-1) + p0;
+                glVertex3f(p.x,p.y,p.z);
+
+                i += ns.x;
+                //glColor3f ( data[i].x+0.5, data[i].y+0.5, 0.5 );
+                c = clamp(  clsc*(data[i]-vmin), 0, 1 );
+                if(colors){ Draw::colorScale( c,ncol,colors); }else{ glColor3f(c,c,c); }
+                p.add(b);
+                glVertex3f(p.x,p.y,p.z);
+            }
+            glEnd();
+        }
+    }
+
+    void drawColorScale( int n, const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const uint32_t * colors, int ncol ){
+        //printf( " debug_draw_GridFF \n" );
+        double step = 1./(n-1);
+        //glBegin( GL_LINE_STRIP );
+        glShadeModel(GL_SMOOTH);
+        glBegin( GL_TRIANGLE_STRIP );
+        for(int iy=0;iy<n;iy++){
+            double c = iy*step;
+            Draw::colorScale( c,ncol,colors);
+            //glColor3f(1.,1.,1.);
+            Vec3d p = fw*c + p0;
+            //printf( "%i %g (%g,%g,%g)\n", iy, c, p.x,p.y,p.z );
+            glVertex3f(p.x,p.y,p.z);
+            p.add(up);
+            //printf( "%i %g (%g,%g,%g)\n", iy, c, p.x,p.y,p.z );
+            glVertex3f(p.x,p.y,p.z);
+        }
+        glEnd();
+    }
+
 
 
     inline void simplex_deriv(

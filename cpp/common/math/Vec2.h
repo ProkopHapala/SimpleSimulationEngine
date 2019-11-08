@@ -154,6 +154,8 @@ class Vec2T{
         y = Db*invD;
 	};
 
+	inline void enclose(T v){ x=fmin(x,v); y=fmax(y,v); }
+
 	// === static functions:
 
 	static inline T dot      (VEC& a, VEC& b){ return a.x*b.y - a.y*b.x; };
