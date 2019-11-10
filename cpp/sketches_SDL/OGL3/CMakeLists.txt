@@ -21,6 +21,9 @@ target_link_libraries( test_ShaderDepth ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_
 add_executable       ( test_LandScape test_LandScape.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_LandScape ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_DrawOGL3 test_DrawOGL3.cpp $<TARGET_OBJECTS:SDL2OGL3> )
+target_link_libraries( test_DrawOGL3 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_Instances test_Instances.cpp $<TARGET_OBJECTS:SDL2OGL3> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_Instances ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${GLEW_LIBRARY} ${SDL2_LIBRARY} )
 

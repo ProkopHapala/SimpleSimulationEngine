@@ -84,6 +84,7 @@ class GLMesh{ public:
 
     int preDraw ()const{
         int iarg = 0;
+        if(inds){ glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, inds ); };
         if(vpos){ bindVertexAttribPointer( iarg, vpos, 3, GL_FLOAT, GL_FALSE );  iarg++; }
         if(vnor){ bindVertexAttribPointer( iarg, vnor, 3, GL_FLOAT, GL_FALSE );  iarg++; }
         if(vcol){ bindVertexAttribPointer( iarg, vcol, 3, GL_FLOAT, GL_FALSE );  iarg++; }
@@ -91,7 +92,13 @@ class GLMesh{ public:
         return iarg;
     };
     void drawRaw( GLenum draw_mode )const{
-        if(nInds){ drawElements( draw_mode, inds, nInds ); }else{ glDrawArrays( draw_mode, 0, nVerts); };
+        //if(nInds){ drawElements( draw_mode, inds, nInds ); }else{ glDrawArrays( draw_mode, 0, nVerts); };
+        if(nInds){ glDrawElements( draw_mode,nInds,GL_UNSIGNED_INT,(void*)0 ); }else{ glDrawArrays( draw_mode, 0, nVerts); };
+    }
+    void drawRaw( GLenum draw_mode, int i0, int n )const{
+        // https://stackoverflow.com/questions/9431923/using-an-offset-with-vbos-in-opengl
+        //if(nInds){ drawElements( draw_mode, inds, nInds ); }else{ glDrawArrays( draw_mode, 0, nVerts); };
+        if(nInds){ glDrawElements( draw_mode,n,GL_UNSIGNED_INT, (void*)(i0 * sizeof(GLuint)) ); }else{ glDrawArrays( draw_mode, i0, n); };
     }
     void postDraw(int narg)const{ for( int i=0; i<narg; i++ ){ glDisableVertexAttribArray(i); } };
     void draw( GLenum draw_mode )const{ int narg = preDraw(); drawRaw( draw_mode ); postDraw(narg); };

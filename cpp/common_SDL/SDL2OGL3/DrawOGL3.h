@@ -196,7 +196,7 @@ class GLMeshBuilder{ public:
     void rotateSub   ( int i, Vec3f p0, Vec3f p1, float angle ){ rotate( subVertRange(i), p0, p1, angle ); }
 
     GLMesh* normals2GLmesh( float sc ){ return vecs2mesh( vpos.size(), &vpos[0], &vnor[0], sc ); }
-};
+}; // class GLMeshBuilder
 
 template<typename UVfunc>
 void UVFunc2smooth( Vec2i n, Vec2f UVmin, Vec2f UVmax, UVfunc func, GLMeshBuilder& mesh ){
