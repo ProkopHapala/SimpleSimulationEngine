@@ -17,6 +17,7 @@
 #include "GLobjects.h"
 
 #include "CMesh.h"
+#include "UVfuncs.h"
 
 Vec3f (*UVfunc)(Vec2f p);
 
@@ -198,13 +199,19 @@ class GLMeshBuilder{ public:
     GLMesh* normals2GLmesh( float sc ){ return vecs2mesh( vpos.size(), &vpos[0], &vnor[0], sc ); }
 }; // class GLMeshBuilder
 
+
+
+//   ======  UV Draw Templates
+
+
+
 template<typename UVfunc>
-void UVFunc2smooth( Vec2i n, Vec2f UVmin, Vec2f UVmax, UVfunc func, GLMeshBuilder& mesh ){
+void UVFunc2smooth( Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, GLMeshBuilder& mesh ){
     mesh.draw_mode = GL_TRIANGLES;
     Vec2f duv = UVmax-UVmin; duv.mul( {1.0f/n.a,1.0f/n.b} );
     //int i0=mesh.vpos.size()/3;
     for(int ia=0;ia<=n.a;ia++){
-        Vec2f uv = { UVmin.a+duv.a*ia, UVmin.b };
+        Vec2f uv = { UVmin.a+duv.a*ia, UVmin.b+voff*duv.b*ia };
         for(int ib=0;ib<=n.b;ib++){
             int i=mesh.vpos.size();
             Vec3f p = func(uv);
@@ -216,6 +223,7 @@ void UVFunc2smooth( Vec2i n, Vec2f UVmin, Vec2f UVmax, UVfunc func, GLMeshBuilde
             }
             if(mesh.bUVs) mesh.vUVs.push_back( uv );
             if(mesh.bnor){
+                /*
                 float h=0.01;
                 Vec2f o;
                 Vec3f nor,da,db;
@@ -224,7 +232,8 @@ void UVFunc2smooth( Vec2i n, Vec2f UVmin, Vec2f UVmax, UVfunc func, GLMeshBuilde
                 o=uv; if(ib>0  )o.b+=h; db.set(func(o));
                 o=uv; if(ib<n.b)o.b-=h; db.sub(func(o));
                 nor.set_cross(db,da); nor.normalize();
-                mesh.vnor.push_back(nor);
+                */
+                mesh.vnor.push_back( getUVFuncNormal(uv,0.01,func) );
                 //push3f(mesh.vnor,p);
             };
             uv.b+=duv.b;
@@ -234,12 +243,12 @@ void UVFunc2smooth( Vec2i n, Vec2f UVmin, Vec2f UVmax, UVfunc func, GLMeshBuilde
 }
 
 template<typename UVfunc>
-void UVFunc2wire( Vec2i n, Vec2f UVmin, Vec2f UVmax, UVfunc func, GLMeshBuilder& mesh ){
+void UVFunc2wire( Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, GLMeshBuilder& mesh ){
     mesh.draw_mode = GL_LINES;
     Vec2f duv = UVmax-UVmin; duv.mul( {1.0f/n.a,1.0f/n.b} );
     //int i0=mesh.vpos.size()/3;
     for(int ia=0;ia<=n.a;ia++){
-        Vec2f uv = { UVmin.a+duv.a*ia, UVmin.b };
+        Vec2f uv = { UVmin.a+duv.a*ia, UVmin.b+voff*duv.b*ia };
         for(int ib=0;ib<=n.b;ib++){
             int i=mesh.vpos.size();
             Vec3f p = func(uv);
@@ -254,83 +263,169 @@ void UVFunc2wire( Vec2i n, Vec2f UVmin, Vec2f UVmax, UVfunc func, GLMeshBuilder&
     mesh.newSub();
 }
 
-Vec3f ConeUVfunc( Vec2f p, float R1, float R2, float L ){
-    Vec2f csb; csb.fromAngle(p.b);
-    float R = (1-p.a)*R1 + p.a*R2;
-    return (Vec3f){csb.a*R,csb.b*R,L*p.a };
+
+template<typename UVfunc>
+void drawExtrudedWireUVFunc( Vec2i n, float thick, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc func, GLMeshBuilder& mesh ){
+    mesh.draw_mode = GL_TRIANGLES;
+
+    float eps = 0.001;
+    Vec2f duv = UVmax-UVmin; duv.mul( {1.0f/n.a,1.0f/n.b} );
+    //int i0=mesh.vpos.size()/3;
+    for(int ia=0;ia<=n.a;ia++){
+        Vec2f uv = { UVmin.a+duv.a*ia, UVmin.b+voff*duv.b*ia };
+        for(int ib=0;ib<=n.b;ib++){
+            int i=mesh.vpos.size();
+            Vec3f p = func(uv);
+            Vec3f nr = getUVFuncNormal(uv,eps,func);
+            mesh.vpos.push_back( p          );
+            mesh.vpos.push_back( p+nr*thick );
+            if( (ia>0) && (ib>0) ){
+                int nb = n.b+1;
+                push3i( mesh.inds, {i-nb,i-1,i     } );
+                push3i( mesh.inds, {i-nb,i-1,i-nb-1} );
+            }
+            if(mesh.bnor){
+                Vec3f nrl;
+                nrl.set_cross(func(uv+(Vec2f){0.0,duv.b*0.5})-p, nr); nrl.normalize();
+                mesh.vnor.push_back( nrl );
+                mesh.vnor.push_back( nrl );
+                //push3f(mesh.vnor,p);
+            };
+            //int nb = n.b+1;
+            //if (ia<n.a){ push2i( mesh.inds, {i,i+nb } ); }
+            //if (ib<n.b){ push2i( mesh.inds, {i,i+1  } ); }
+            //if(mesh.bUVs) push(mesh.vUVs, uv );
+            uv.b+=duv.b;
+        }
+    }
+    mesh.newSub();
+
+
+    /*
+    Vec2f uv;
+    Vec3f p,nr,nrl;
+    for(int ia=0;ia<=n.a;ia++){
+        // strips
+        glBegin(GL_TRIANGLE_STRIP);
+        for(int ib=0;ib<=n.b;ib++){
+            uv.a = UVmin.a+duv.a*ia;
+            uv.b = UVmin.b+duv.b*ib + voff*duv.b*ia;
+            p  = func(uv);
+            nr = getUVFuncNormal(uv,eps,func);
+            nrl.set_cross(func(uv+(Vec2f){0.0,duv.b*0.5})-p, nr); nrl.normalize();
+            glNormal3f(nrl.x,nrl.y,nrl.z);
+            glVertex3f(p.x,p.y,p.z);
+            p.add_mul(nr,thick);
+            glVertex3f(p.x,p.y,p.z);
+        }
+        glEnd();
+        if(ia<n.a){
+            glBegin(GL_TRIANGLE_STRIP);
+            for(int ib=0;ib<=n.b;ib++){
+                uv.a = UVmin.a+duv.a*ia;
+                uv.b = UVmin.b+duv.b*ib + voff*duv.b*ia;
+
+                p  = func(uv);
+                nr = getUVFuncNormal(uv,eps,func);
+                nrl.set_cross(func(uv+(Vec2f){0.0,duv.b*0.5})-p, nr); nrl.normalize();
+                glNormal3f(nrl.x,nrl.y,nrl.z);
+                glVertex3f(p.x,p.y,p.z);
+                p.add_mul(nr,thick);
+                glVertex3f(p.x,p.y,p.z);
+
+                uv.a += duv.a;
+                uv.b += voff*duv.b;
+
+                p  = func(uv);
+                nr = getUVFuncNormal(uv,eps,func);
+                nrl.set_cross(func(uv+(Vec2f){0.0,duv.b*0.5})-p, nr); nrl.normalize();
+                glNormal3f(nrl.x,nrl.y,nrl.z);
+                glVertex3f(p.x,p.y,p.z);
+                p.add_mul(nr,thick);
+                glVertex3f(p.x,p.y,p.z);
+
+            }
+            glEnd();
+        }
+    }
+    */
 }
 
-inline Vec2f naca4digit( float u, float *coefs ){
-    float c = coefs[0];
-    float t = coefs[1];
-    //float p  = coefs.b;
-    //float m  = coefs.c;
-    //if(u<0) t = -t;
-    float x,y;
-    if(u<0)t=-t;
-    u  = fabs(u);
-    x  =  u*u;
-    //y = 5*t*u*(1-u);
-    y =  5*t*( +0.2969*u+x*(-0.1260+x*(-0.3516+x*( +0.2843 - 0.1015*x ))));
-    return {c*x,c*y};
-}
+// ================== UV FUNCS
 
-Vec3f NACA4digitUVfunc( Vec2f p, float *coefs1, float *coefs2, float L ){
-    Vec2f p1= naca4digit( p.a, coefs1 );
-    Vec2f p2= naca4digit( p.a, coefs2 );
-    float m = 1-p.b;
-    //return (Vec3f){ m*p1.x+p.b*p2.x, m*p1.y+p.b*p2.y, L*p.b };
-    return (Vec3f){ L*p.b, m*p1.y+p.b*p2.y, -(m*p1.x+p.b*p2.x)  };
-}
-
-Vec3f TeardropUVfunc( Vec2f p, float R1, float R2, float L ){
-    Vec2f csa; csa.fromAngle(p.a*M_PI-M_PI*0.5);
-    Vec2f csb; csb.fromAngle(p.b);
-    float f =  0.5-csa.b*0.5;
-    float R = (1-f)*R1 + f*R2;
-    return (Vec3f){csa.a*csb.a*R,csa.a*csb.b*R,csa.b*R-L*f };
-}
-
-Vec3f SphereUVfunc( Vec2f p, float R ){
-    Vec2f csa; csa.fromAngle(p.a);
-    Vec2f csb; csb.fromAngle(p.b);
-    return (Vec3f){csa.a*csb.a*R,csa.a*csb.b*R,csa.b*R };
-}
-
-Vec3f TorusUVfunc( Vec2f p, float r, float R ){
-    Vec2f csa; csa.fromAngle(p.a);
-    Vec2f csb; csb.fromAngle(p.b);
-    return (Vec3f){csb.a*(R+r*csa.a),csb.b*(R+r*csa.a),r*csa.b};
-}
-
-void Cone2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, bool wire, GLMeshBuilder& mesh ){
+void Cone2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire, GLMeshBuilder& mesh ){
     auto uvfunc = [&](Vec2f uv){return ConeUVfunc(uv,R1,R2,L);};
-    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, uvfunc, mesh ); }
-    else    { UVFunc2smooth( n, UVmin, UVmax, uvfunc, mesh ); }
+    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, voff, uvfunc, mesh ); }
+    else    { UVFunc2smooth( n, UVmin, UVmax, voff, uvfunc, mesh ); }
 }
 
-void Sphere2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, bool wire, GLMeshBuilder& mesh ){
+void Sphere2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float voff, bool wire, GLMeshBuilder& mesh ){
     auto uvfunc = [&](Vec2f uv){return SphereUVfunc(uv,R);};
-    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, uvfunc, mesh ); }
-    else    { UVFunc2smooth( n, UVmin, UVmax, uvfunc, mesh ); }
+    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, voff, uvfunc, mesh ); }
+    else    { UVFunc2smooth( n, UVmin, UVmax, voff, uvfunc, mesh ); }
 }
 
-void Torus2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, bool wire, GLMeshBuilder& mesh ){
+void Torus2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float voff, bool wire, GLMeshBuilder& mesh ){
     auto uvfunc = [&](Vec2f uv){return TorusUVfunc(uv,r,R);};
-    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, uvfunc, mesh ); }
-    else    { UVFunc2smooth( n, UVmin, UVmax, uvfunc, mesh ); }
+    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, voff, uvfunc, mesh ); }
+    else    { UVFunc2smooth( n, UVmin, UVmax, voff, uvfunc, mesh ); }
 }
 
-void Teardrop2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, bool wire, GLMeshBuilder& mesh ){
+void Teardrop2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire, GLMeshBuilder& mesh ){
     auto uvfunc = [&](Vec2f uv){return TeardropUVfunc(uv,R1,R2,L);};
-    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, uvfunc, mesh ); }
-    else    { UVFunc2smooth( n, UVmin, UVmax, uvfunc, mesh ); }
+    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, voff, uvfunc, mesh ); }
+    else    { UVFunc2smooth( n, UVmin, UVmax, voff, uvfunc, mesh ); }
 }
 
-void NACASegment2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float *coefs1, float *coefs2, float L, bool wire, GLMeshBuilder& mesh ){
+void NACASegment2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float *coefs1, float *coefs2, float L, float voff, bool wire, GLMeshBuilder& mesh ){
     auto uvfunc = [&](Vec2f uv){return NACA4digitUVfunc(uv,coefs1,coefs2,L);};
-    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, uvfunc, mesh ); }
-    else    { UVFunc2smooth( n, UVmin, UVmax, uvfunc, mesh ); }
+    if(wire){ UVFunc2wire  ( n, UVmin, UVmax, voff, uvfunc, mesh ); }
+    else    { UVFunc2smooth( n, UVmin, UVmax, voff, uvfunc, mesh ); }
+}
+
+
+
+
+inline void HarmonicTube2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float freq, float amp, bool wire, GLMeshBuilder& mesh ){
+    auto uvfunc = [&](Vec2f uv){return HarmonicTubeUVfunc(uv,R1,R2,L,freq,amp);};
+    if(wire){ UVFunc2wire( n, UVmin, UVmax, voff, uvfunc, mesh ); }
+    else    { UVFunc2smooth( n, UVmin, UVmax,voff, uvfunc, mesh ); }
+}
+
+inline void Parabola2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, bool wire, GLMeshBuilder& mesh ){
+    float K = L/(R*R);
+    UVmin.a*=R; UVmax.a*=R;
+    //printf( "drawUV_Parabola: R %f L %f K %f \n", R, L, K  );
+    auto uvfunc = [&](Vec2f uv){return ParabolaUVfunc(uv,K);};
+    if(wire){ UVFunc2wire( n, UVmin, UVmax,voff, uvfunc, mesh ); }
+    else    { UVFunc2smooth( n, UVmin, UVmax,voff, uvfunc, mesh ); }
+}
+
+/*
+inline void Parabola_ExtrudedWire( Vec2i n,Vec2f UVmin, Vec2f UVmax, float R, float L, float voff, double thick, GLMeshBuilder& mesh ){
+    float K = L/(R*R);
+    UVmin.a*=R; UVmax.a*=R;
+    auto uvfunc = [&](Vec2f uv){return ParabolaUVfunc(uv,K);};
+    drawExtrudedWireUVFunc( n,thick, UVmin, UVmax,voff, uvfunc );
+}
+*/
+
+inline void Hyperbola2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float r, float R, float L, float voff, bool wire, GLMeshBuilder& mesh ){
+    //printf( "drawUV_Hyperbola: r %f R %f L %f \n", r, R, L  );
+    if(r>0){
+        float K = R/L;
+        UVmin.a*=L; UVmax.a*=L;
+        auto uvfunc = [&](Vec2f uv){return HyperbolaLUVfunc(uv,r,K);};
+        if(wire){ UVFunc2wire( n, UVmin, UVmax,voff, uvfunc, mesh ); }
+        else    { UVFunc2smooth( n, UVmin, UVmax,voff, uvfunc, mesh ); }
+    }else{
+        r=-r;
+        float K = L/R;
+        UVmin.a*=R; UVmax.a*=R;
+        auto uvfunc = [&](Vec2f uv){return HyperbolaRUVfunc(uv,r,K);};
+        if(wire){ UVFunc2wire( n, UVmin, UVmax,voff, uvfunc, mesh ); }
+        else    { UVFunc2smooth( n, UVmin, UVmax,voff, uvfunc, mesh ); }
+    }
 }
 
 #endif

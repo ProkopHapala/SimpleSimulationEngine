@@ -21,6 +21,8 @@
 #include "Mesh.h"
 #include "Draw3D.h"
 
+#include "UVfuncs.h"
+
 //#include <SDL2/SDL_opengl.h>
 
 namespace Draw3D{
@@ -44,24 +46,6 @@ void drawTriaglePatch( Vec2i i0, Vec2i n, int NX, double * height, double vmin, 
         }
         glEnd();
     }
-}
-
-template<typename UVfunc>
-Vec3f getUVFuncNormal( Vec2f uv, float eps,  UVfunc func ){
-    Vec2f o;
-    Vec3f nor,da,db;
-    /*
-    o=uv; o.a+=eps; if(o.a>1)o.a=1; da.set(func(o));
-    o=uv; o.a-=eps; if(o.a<0)o.a=0; da.sub(func(o));
-    o=uv; o.b+=eps; if(o.b>1)o.b=1; db.set(func(o));
-    o=uv; o.b-=eps; if(o.b<0)o.b=0; db.sub(func(o));
-    */
-    o=uv; o.a+=eps; da.set(func(o));
-    o=uv; o.a-=eps; da.sub(func(o));
-    o=uv; o.b+=eps; db.set(func(o));
-    o=uv; o.b-=eps; db.sub(func(o));
-    nor.set_cross(db,da); nor.normalize();
-    return nor;
 }
 
 template<typename UVfunc>
@@ -198,59 +182,6 @@ void drawExtrudedWireUVFunc( Vec2i n, float thick, Vec2f UVmin, Vec2f UVmax, flo
     }
 }
 
-inline Vec3f HarmonicTubeUVfunc( Vec2f p, float R1, float R2, float L, float freq, float amp ){
-    Vec2f csb; csb.fromAngle(p.b);
-    float R = ((1-p.a)*R1 + p.a*R2)*(1.0+amp*cos(freq*p.a));
-    //float R = (1-p.a)*R1 + p.a*R2;
-    return (Vec3f){ csb.a*R, csb.b*R, L*p.a };
-}
-
-inline Vec3f ConeUVfunc( Vec2f p, float R1, float R2, float L ){
-    Vec2f csb; csb.fromAngle(p.b);
-    float R = (1-p.a)*R1 + p.a*R2;
-    return (Vec3f){csb.a*R,csb.b*R,L*p.a };
-}
-
-inline Vec3f SphereUVfunc( Vec2f p, float R ){
-    Vec2f csa; csa.fromAngle(p.a);
-    Vec2f csb; csb.fromAngle(p.b);
-    return (Vec3f){csa.a*csb.a*R,csa.a*csb.b*R,csa.b*R };
-}
-
-inline Vec3f TorusUVfunc( Vec2f p, float r, float R ){
-    Vec2f csa; csa.fromAngle(p.a);
-    Vec2f csb; csb.fromAngle(p.b);
-    return (Vec3f){csb.a*(R+r*csa.a),csb.b*(R+r*csa.a),r*csa.b};
-}
-
-inline Vec3f TeardropUVfunc( Vec2f p, float R1, float R2, float L ){
-    Vec2f csa; csa.fromAngle(p.a*M_PI-M_PI*0.5);
-    Vec2f csb; csb.fromAngle(p.b);
-    float f =  0.5-csa.b*0.5;
-    float R = (1-f)*R1 + f*R2;
-    return (Vec3f){csa.a*csb.a*R,csa.a*csb.b*R,csa.b*R-L*f };
-}
-
-inline Vec3f ParabolaUVfunc( Vec2f p, float K ){
-    Vec2f csb; csb.fromAngle(p.b);
-    float r = p.a;
-    float l = p.a*p.a*K;
-    return (Vec3f){csb.a*r,csb.b*r,l };
-}
-
-inline Vec3f HyperbolaRUVfunc( Vec2f p, float R, float K ){
-    Vec2f csb; csb.fromAngle(p.b);
-    float r = p.a;
-    float l = K*sqrt( p.a*p.a + R*R); // - K*R;
-    return (Vec3f){csb.a*r,csb.b*r,l };
-}
-
-inline Vec3f HyperbolaLUVfunc( Vec2f p, float R, float K ){
-    Vec2f csb; csb.fromAngle(p.b);
-    float l = p.a;
-    float r = K*sqrt( p.a*p.a + R*R);
-    return (Vec3f){csb.a*r,csb.b*r,l };
-}
 
 inline void drawUV_HarmonicTube( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, float freq, float amp, bool wire ){
     auto uvfunc = [&](Vec2f uv){return HarmonicTubeUVfunc(uv,R1,R2,L,freq,amp);};

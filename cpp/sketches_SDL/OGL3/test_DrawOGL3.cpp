@@ -41,6 +41,12 @@
 #include "ScreenSDL2OGL3.h"
 #include "AppSDL2OGL3.h"
 
+//#include "Draw3D_Surf.h"
+//#include "SpaceCraftDraw.h"
+//#include "DrawSphereMap.h"
+
+
+
 #define _DEBUG_VIEW_ 1
 #include "DebugView.h"  //do we need it ?
 DEBUG_VIEW_DEFINE()
@@ -153,17 +159,25 @@ HorizontTestApp::HorizontTestApp(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     //Cone2Mesh( {20,20}, {0.01,0.0}, {0.99,M_PI*2.0},     1.0,0.2,3.0, false, mshbuild );
     //Sphere2Mesh  ( {20,20}, {-M_PI*0.4,0.0}, {M_PI*0.4,M_PI},     1.0        , false, mshbuild );
     //Torus2Mesh   ( {20,20}, {0.0,0.0},       {M_PI*2.0,M_PI*2.0}, 0.5,1.5,     false, mshbuild );
-    Teardrop2Mesh( {20,16}, {0.01,0.0}, {0.99,M_PI*2.0},   0.8,0.2,6.0, false, mshbuild );    mshbuild.moveSub ( 0, {0.0,0.0,1.0} );
+    Teardrop2Mesh( {20,16}, {0.01,0.0}, {0.99,M_PI*2.0},   0.8,0.2,6.0, 0.5, false, mshbuild );    mshbuild.moveSub ( 0, {0.0,0.0,1.0} );
     //Sphere2Mesh  ( {20,20}, {-M_PI*0.49,0.0}, {M_PI*0.49,M_PI},     1.0 , false, mshbuild ); mshbuild.scaleSub( 1, {0.5,0.5,1.0} );
-    Teardrop2Mesh( {10,8}, {0.01,0.0}, {0.99,M_PI}, 0.5,0.1,1.0, false, mshbuild ); mshbuild.moveSub( 1, {0.0,0.45,-1.5} );
+    Teardrop2Mesh( {10,8}, {0.01,0.0}, {0.99,M_PI}, 0.5,0.1,1.0, 0.0, false, mshbuild ); mshbuild.moveSub( 1, {0.0,0.45,-1.5} );
     float naca1[4]={2.0,0.15,0.0,0.0};
     float naca2[4]={1.0,0.15,0.0,0.0};
-    NACASegment2Mesh( {20,2}, {-1.0,0.0}, {1.0,1.0}, naca1,naca2, 5.0, false, mshbuild );
+    NACASegment2Mesh( {20,2}, {-1.0,0.0}, {1.0,1.0}, naca1, naca2, 5.0, 0.0, false, mshbuild );
+
     //NACASegment2Mesh( {20,2}, {-1.0,0.0}, {1.0,1.0}, naca1,naca2, 5.0, false, mshbuild );
     mshbuild.duplicateSub( 2 ); mshbuild.scaleSub( 3, {-1.0,1.0,1.0} );
     mshbuild.duplicateSub( 2 ); mshbuild.scaleSub( 4, { 0.4,0.5,0.5} ); mshbuild.moveSub( 4, {0.0,0.0,-4.0} );
     mshbuild.duplicateSub( 2 ); mshbuild.scaleSub( 5, {-0.4,0.5,0.5} ); mshbuild.moveSub( 5, {0.0,0.0,-4.0} );
     mshbuild.duplicateSub( 2 ); mshbuild.scaleSub( 6, {-0.4,0.5,0.5} ); mshbuild.moveSub( 6, {0.0,0.0,-4.0} );  mshbuild.rotateSub( 6,{0.0,0.0,0.0},{0.0,0.0,1.0}, -M_PI*0.5 );
+
+
+    Parabola2Mesh( {20,10}, {-1.5,-0.5*M_PI}, {1.0,0}, 2.0, 4.0, 0.0, false, mshbuild );
+
+    Hyperbola2Mesh( {20,20}, {-1.5,0.0}, {1.0,M_PI}, 1.5, 2.0, 4.0, 0.0, false, mshbuild );
+
+
 
     //mshbuild.moveSub( 0, {1.0,2.0,3.0} );
     //mshbuild.rotateSub( 0, {0.0,0.0,0.0}, {1.0,0.0,0.0}, M_PI*0.5 );
@@ -239,18 +253,20 @@ void HorizontTestApp::draw( Camera& cam ){
     int narg;
     GLuint ucolor = sh1->getUloc("baseColor");
     glUniform4f( ucolor, 0.0, 0.0, 0.0, 1.0 );
-    //glmesh->draw();
+    glmesh->draw();
+    /*
     narg = glmesh->preDraw();
-    glmesh->drawRaw(GL_TRIANGLES, (frameCount*8)%glmesh->nInds , glmesh->nInds );
+    glmesh->drawRaw(GL_TRIANGLES, (frameCount*9)%glmesh->nInds , glmesh->nInds );
     glmesh->postDraw( narg );
-
+    */
 
     glUniform4f( ucolor, 1.0, 0.0, 0.0, 1.0 );
-    //msh_normals->draw();
+    msh_normals->draw();
+    /*
     narg = msh_normals->preDraw();
     msh_normals->drawRaw(GL_LINES, (frameCount*8)%msh_normals->nVerts , msh_normals->nVerts );
     msh_normals->postDraw( narg );
-
+    */
 
     /*
     shDebug->use();
