@@ -8,6 +8,32 @@
 #include "quaternion.h"
 #include "Forces.h"
 
+
+
+/*
+
+eFF : Electron Force Field
+---------------------------
+
+[1] http://aip.scitation.org/doi/10.1063/1.3272671
+The dynamics of highly excited electronic systems: Applications of the electron force field
+Julius T. Su, William A. Goddard
+
+[2] http://dx.doi.org/10.1016/j.mechmat.2015.02.008
+Non-adiabatic dynamics modeling framework for materials in extreme conditions
+Hai Xiao, Andrés Jaramillo-Botero, Patrick L. Theofanis, William A. Goddard,
+
+NOTES:
+-------
+
+1) It seems that decrease of kinetic energy by sharing electron between two atoms is dominant contribution which makes formation of bonds fabourable
+    * H2 Molecule perhaps cannot be stable without this contribution ( i.e. with fixed radius of electron blobs )
+
+*/
+
+
+
+
 /*
 Erf approximation:
 # Gaussian:    F = (x2-1)**2 / sqrtPi

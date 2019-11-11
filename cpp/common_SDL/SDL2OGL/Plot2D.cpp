@@ -1,6 +1,8 @@
 
 #include <SDL2/SDL_opengl.h>
 
+#include <stdio.h>
+
 #include "Draw.h"
 #include "Draw2D.h"
 #include "Draw3D.h"
@@ -62,7 +64,7 @@ void DataLine2D::view(){
 };
 
 DataLine2D::~DataLine2D(){
-    if(xs) delete [] xs;
+    if(xs &&(!bSharedX) ) delete [] xs;
     if(ys) delete [] ys;
     if( glObj ) glDeleteLists(glObj,1);
 }
@@ -152,9 +154,9 @@ int Plot2D::render(){
     glEndList( );
     //int i=0;
     for( DataLine2D* line : lines ){
-        //printf( "render line[%i]\n", i ); 
+        //printf( "render line[%i]\n", i );
         line->render();
-        //i++; 
+        //i++;
     }
     // TO DO :
     //if( tickCaption ){ }
@@ -171,6 +173,7 @@ void Plot2D::view(bool bAxes){
    // printf( "%i \n", glObj);
 }
 
+/*
 void Plot2D::xsharingLines(int nl, int np){
     double * xs = new double[np];
     for(int il=0; il<nl; il++){
@@ -180,16 +183,34 @@ void Plot2D::xsharingLines(int nl, int np){
         lines.back()->ys=new double[np];
     }
 }
+*/
 
-void Plot2D::xsharingLines(int nl, int np, double xmin, double dx){
-    double * xs = new double[np];
-    VecN::arange (np,xmin,dx,xs);
-    for(int il=0; il<nl; il++){
-        lines.push_back( new DataLine2D() );
-        lines.back()->n=np;
-        lines.back()->xs=xs;
-        lines.back()->ys=new double[np];
+void Plot2D::xsharingLines(int nl, int np, double xmin, double dx, uint32_t* colors, int ncol){
+    //double * xs = new double[np];
+    //VecN::arange (np,xmin,dx,xs);
+    float dc = 1./nl;
+    if(colors==0){ colors=Draw::colors_rainbow; ncol=Draw::ncolors; }
+    uint32_t col;
+    if(ncol>0){Draw::colorScale(0,ncol,colors);}else{ col=colors[0]; }
+    lines.push_back( new DataLine2D(np,xmin,dx,col) );
+    double* xs = lines.back()->xs;
+    for(int il=1; il<nl; il++){
+        if(ncol>0){Draw::colorScale(dc*il,ncol,colors);}else{ col=colors[il]; }
+        lines.push_back( new DataLine2D(np,xs,col) );
     }
+}
+
+//void savetxt(const char* fname, int n=-1, int* ils=0 ){
+void Plot2D::savetxt(const char* fname){
+    FILE* fout = fopen(fname,"w");
+    for(int ip=0; lines[0]->n; ip++){
+        fprintf( fout, " %g ", lines[0]->xs[ip] );
+        for(int il=0; il<lines.size(); il++){
+            fprintf( fout, " %g ", lines[il]->ys[ip] );
+        }
+        printf("\n");
+    }
+    fclose(fout);
 }
 
 void Plot2D::init( ){

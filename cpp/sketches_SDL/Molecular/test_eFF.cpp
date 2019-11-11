@@ -141,27 +141,38 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     double w2aa = sq(ff.waa);
     double qaa  =  4*4;
     double qae  = -1.0;
+        printf( " w2 ee,ae,aa(%g,%g,%g)  w ee,ae,aa(%g,%g,%g)  \n", w2ee, w2ae, w2aa   ,  ff.wee, ff.wae, ff.waa  );
+    */
 
-    printf( " w2 ee,ae,aa(%g,%g,%g)  w ee,ae,aa(%g,%g,%g)  \n", w2ee, w2ae, w2aa   ,  ff.wee, ff.wae, ff.waa  );
+    int ielem = 1;
+    double QQae = -1.0;
+    double QQaa = +1.0;
+    double QQee = QE*QE;
+    double w2ee = ff.wee*ff.wee;
+    Vec3d  eAbw = default_eAbWs[ielem];
+    Vec3d  aAbw; combineAbW( default_eAbWs[ielem] , default_eAbWs[ielem], aAbw );
 
-    plot1.xsharingLines(4, 100, 0.0, 0.1);
-    DataLine2D *l,*l_;
+    plot1.xsharingLines( 4, 100, 0.0, 0.1 );
 
-    l=plot1.lines[0]; l->clr=0xFFFF0000; l->label="Eee"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee, +1.0,  ff.bEE, ff.aEE  ); } );
-    l=plot1.lines[1]; l->clr=0xFFFF00FF; l->label="Eae"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ae, qae,   ff.bAE, ff.aAE  ); } );
+    DataLine2D *l;
+    l=plot1.lines[0]; l->clr=0xFFFF0000; l->label="Eee"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEE    , ff.aEE     ); } );
+    l=plot1.lines[1]; l->clr=0xFFFF8000; l->label="EeeP"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEEpair, ff.aEEpair ); } );
+    l=plot1.lines[2]; l->clr=0xFFFF00FF; l->label="Eae"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, eAbw.z, QQae,  eAbw.y,    eAbw.x     ); } );
+    l=plot1.lines[3]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, aAbw.z, QQaa,  aAbw.y,    aAbw.x     ); } );
     //l=plot1.lines[3]; l->clr=0xFF0080FF; l->label="Faa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); } );
 
-    l=plot1.lines[2]; l->clr=0xFFFF8000; l->label="Fee"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ee, +1.0, ff.bEE, ff.aEE  ); return -f.x; } );
-    l=plot1.lines[3]; l->clr=0xFFFF80FF; l->label="Fae"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ae, qae,  ff.bAE, ff.aAE  ); return -f.x; } );
+    //l=plot1.lines[2]; l->clr=0xFFFF8000; l->label="Fee"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ee, +1.0, bEE, aEE  ); return -f.x; } );
+    //l=plot1.lines[3]; l->clr=0xFFFF80FF; l->label="Fae"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ae, qae,  bAE, aAE  ); return -f.x; } );
     //l=plot1.lines[2]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); return f.x; } );
 
     plot1.update();
     plot1.autoAxes(0.5,0.5);
     printf( "axBound %g,%g %g,%g \n", plot1.axBounds.a.x, plot1.axBounds.a.y, plot1.axBounds.b.x, plot1.axBounds.b.y );
     plot1.render();
-    */
 
-        // ===== SETUP GEOM
+    return;
+
+    // ===== SETUP GEOM
 
     //ff.loadFromFile_bas( "data/CH4.bas" );
     //ff.loadFromFile_bas( "data/C2H6.bas" );
@@ -294,6 +305,11 @@ void TestAppRARFF::draw(){
 
     glDisable(GL_LIGHTING);
 
+
+
+
+    return;
+
     if(bRun){
         for(int itr=0;itr<perFrame;itr++){
             printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
@@ -372,9 +388,9 @@ void TestAppRARFF::draw(){
 
 
 void TestAppRARFF::drawHUD(){
-	//glTranslatef( 100.0, 100.0, 0.0 );
-	//glScalef    (  10.0,  10.0, 1.0 );
-	//plot1.view();
+	glTranslatef( 100.0, 250.0, 0.0 );
+	glScalef    (  100.0, 100.0, 1.0 );
+	plot1.view();
 }
 
 /*

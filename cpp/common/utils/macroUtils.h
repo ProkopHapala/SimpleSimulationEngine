@@ -28,6 +28,23 @@
 
 // ============= sorting
 
+template<typename  T>
+struct Arr{
+    T*   data;
+    int  n;
+    bool own;
+
+    //Arr(T* data_){own=true; };
+    Arr() = default;
+    Arr(int n_           ){ own=true;  n=n_; data=new T[n]; };
+    Arr(int n_ , T* data_){ own=false; n=n_; data=data_;    };
+    ~Arr(){ if(own&&data)delete[]data; }
+
+    T& operator[](int i){
+        //if (index >= size) { printf( "Array index [%i] out of bound [%i] \n", i, n ); exit(0); }
+        return data[i];
+    }
+};
 
 #define _forN(i,n)         for(int i=0 ;i<n;i++)
 #define _for0N(i,i0,n)     for(int i=i0;i<n;i+=d)

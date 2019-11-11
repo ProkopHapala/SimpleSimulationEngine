@@ -16,9 +16,15 @@ const int nYTicks_def = 11;
 const int dXTicks_def = 1.0;
 const int dYTicks_def = 1.0;
 
+// =======================
+// ====  DataLine2D
+// =======================
+
 class DataLine2D{ public:
     // data
-    int      n     =0;
+    int      n = 0;
+    bool   bSharedX =false;
+    //Arr xs;
     double * xs    =NULL;
     double * ys    =NULL;
     Func1d   yfunc =NULL;
@@ -40,16 +46,17 @@ class DataLine2D{ public:
     void view();
 
     inline void set     ( int n_, double * xs_, double * ys_){ n=n_; xs=xs_; ys=ys_; };
-    inline void allocate( int n_ ){ n=n_; xs=new double[n]; ys=new double[n]; };
+    inline void allocate( int n_ ){ n=n_; xs=new double[n]; ys=new double[n]; bSharedX=false; };
 
     inline void linspan(double xmin, double xmax){ VecN::linspan(n,xmin,xmax,xs); };
     inline void arange (double xmin, double dx  ){ VecN::arange (n,xmin,dx,xs);   };
 
     inline DataLine2D()=default;
     inline DataLine2D(int n_){ allocate(n_); }
-    inline DataLine2D(int n_,double*xs_){ n=n_; xs=xs_; ys=new double[n]; }
-    inline DataLine2D(int n_,double xmin,double xmax){ allocate(n_); linspan(xmin,xmax); }
-    inline DataLine2D(int n_,double xmin,double xmax,uint32_t clr_){ allocate(n_); linspan(xmin,xmax); clr=clr_; }
+    inline DataLine2D(int n_,double*xs_){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; }
+    //inline DataLine2D(int n_,double xmin,double xmax){ allocate(n_); linspan(xmin,xmax);  }
+    inline DataLine2D(int n_,double xmin,double dx, uint32_t clr_=0xFFFF00FF){ allocate(n_); arange(xmin,dx); clr=clr_; }
+    inline DataLine2D(int n_, double*xs_, uint32_t clr_=0xFFFF00FF ){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; clr=clr_; }
 
     ~DataLine2D();
 };
@@ -58,6 +65,10 @@ template<typename Func>
 void evalLine( DataLine2D& l, Func func ){
     for(int i=0; i<l.n; i++){ l.ys[i]=func(l.xs[i]); }
 };
+
+// =======================
+// ====  Plot2D
+// =======================
 
 class Plot2D{ public:
     // data
@@ -94,17 +105,29 @@ class Plot2D{ public:
     int  render();
     void view  (bool bAxes=true);
     void init  ();
-    void xsharingLines(int nl, int np);
-    void xsharingLines(int nl, int np, double xmin, double dx);
+    //void xsharingLines(int nl, int np);
+    //void xsharingLines(int nl, int np, double xmin, double dx);
     //void init( double dx, double dy );
+    void xsharingLines(int nl, int np, double xmin=0.0, double dx=0.1, uint32_t* colors=0, int ncol=-1);
     void autoAxes(double dx, double dy);
     void clear(bool bDeep=true);
     void erase(int i);
 
+    void savetxt(const char* fname);
+
     void drawHline ( double y );
     void drawVline ( double x );
     //void drawCursor( Vec2d p, double sz );
+
+    //void addDataLineSequence( int nl, int np, uint32_t colors, int ncol=-1 ){}
+
+    Plot2D()=default;
+    ~Plot2D(){};
 };
+
+// =======================
+// ====  QuePlot2D
+// =======================
 
 class QuePlot2D{ public:
     int n;
