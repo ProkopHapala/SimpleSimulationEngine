@@ -160,7 +160,7 @@ inline double addKineticGauss( double s, double& fs ){
     return is2;
 }
 
-inline double CoulombGauss( double r, double s, double& fr, double& fs, double qq ){
+inline double CoulombGauss( double r, double qq, double s, double& fr, double& fs ){
     // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
     constexpr const double const_F2 = -2.*sqrt(2./M_PI);
     //double s2   = si*si + sj*sj;
@@ -180,14 +180,14 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     return const_El_eVA * e1 * e2;
 }
 
-inline double addCoulombGauss( const Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj, double qq ){
+inline double addCoulombGauss( const Vec3d& dR, Vec3d& f, double qq, double si, double sj, double& fsi, double& fsj ){
 
     double s2   = si*si + sj*sj;
     double s    = sqrt(s2);
     double r    = dR.norm();
 
     double fs,fr;
-    double E = CoulombGauss( r, s, fr, fs, qq );
+    double E = CoulombGauss( r, qq, s, fr, fs );
 
     fsi += fs*si;
     fsj += fs*sj;
@@ -334,7 +334,7 @@ inline double PauliSGauss_syn( double S, double& fS, double rho ){
 
 }
 
-inline double addPauliGauss( Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
+inline double getPauliGauss( Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
 
     double r2 = dR.norm2();
     r2 *= KRSrho.x*KRSrho.x;
@@ -393,20 +393,17 @@ class EFF{ public:
     double sea2 = see*see;
     */
 
-    constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 };
-    //Vec3d KRSrho = { 1.125, 0.9, 0.2 };
-
     //double wee = 2.0;
     //double wae = 1.0;
     //double wee = 0.5;
-    //double wee = 0.5;
+    double wee = 0.5;
     //double wae = 0.25;
     //double waa = 0.25;
 
-    //double bEE     = -1.0;
-    //double aEE     =  2.0;
-    //double bEEpair = -1.0;
-    //double aEEpair =  0.1;
+    double bEE     = -1.0;
+    double aEE     =  2.0;
+    double bEEpair = -1.0;
+    double aEEpair =  0.1;
 
     //double bAE = -6.0;
     //double aAE = 100.0;
@@ -425,8 +422,8 @@ class EFF{ public:
     int8_t * espin  =0;
     Vec3d  * epos   =0;
     Vec3d  * eforce =0;
-    double * esize  =0;
-    double * fsize  =0;
+    doube  * esize  =0;
+    doube  * fsize  =0;
 
     double* pDOFs =0;
     double* fDOFs =0;
@@ -463,30 +460,27 @@ void realloc(int na_, int ne_){
 }
 
 void clearForce(){
-    for(int i=0; i<nDOFs; i++){ fDOFs[i]=0; };
-    //for(int i=0; i<nDOFs; i++){ fDOFs[i]=Vec3dZero; };
+    for(int i=0; i<nDOFs; i++){ fDOFs[i]=Vec3dZero; };
 }
 
 double evalEE(){
     Eee=0;
-    //double w2ee = wee*wee;
-    const double qq = QE*QE;
+    double w2ee = wee*wee;
     for(int i=0; i<ne; i++){
         Vec3d  pi    = epos[i];
-        double si    = esize[i];
-        int8_t spini = espin[i];
-        double& fsi  = esize[i];
-        Vec3d&  fpi  = eforce[i];
+        double spini = espin[i];
         for(int j=0; j<i; j++){
-            Vec3d f=Vec3dZero;
-            Vec3d   dR  = epos [j] - pi;
-            double  sj  = esize[j];
-            double& fsj = esize[i];
-            Eee += addCoulombGauss( dR, f, si, sj, fsi, fsj, qq );
-            Eee += addPauliGauss  ( dR, f, si, sj, fsi, fsj, spini=espin[j], KRSrho );
+            Vec3d f;
+            double A=aEEpair;
+            double B=bEEpair;
+            if ( espin[j]==spini ){
+                A=aEE;
+                B=bEE;
+            }
+            Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, QE*QE, B*0, A );
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
             eforce[j].sub(f);
-            fpi      .add(f);
+            eforce[i].add(f);
             //glColor3f(1.0,0.0,0.0);
             //Draw3D::drawVecInPos( f*-1, epos[j] );
             //Draw3D::drawVecInPos( f   , pi      );
@@ -555,8 +549,7 @@ double eval(){
 
 void move_GD(double dt){
     for(int i=0;i<nDOFs;i++){
-        //pDOFs[i].add_mul(fDOFs[i],dt);
-        pDOFs[i] += fDOFs[i] * dt;
+        pDOFs[i].add_mul(fDOFs[i],dt);
     }
 }
 

@@ -148,17 +148,17 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     double QQae = -1.0;
     double QQaa = +1.0;
     double QQee = QE*QE;
-    double w2ee = ff.wee*ff.wee;
+    //double w2ee = ff.wee*ff.wee;
     Vec3d  eAbw = default_eAbWs[ielem];
     Vec3d  aAbw; combineAbW( default_eAbWs[ielem] , default_eAbWs[ielem], aAbw );
 
     plot1.xsharingLines( 4, 100, 0.0, 0.1 );
 
     DataLine2D *l;
-    l=plot1.lines[0]; l->clr=0xFFFF0000; l->label="Eee"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEE    , ff.aEE     ); } );
-    l=plot1.lines[1]; l->clr=0xFFFF8000; l->label="EeeP"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEEpair, ff.aEEpair ); } );
-    l=plot1.lines[2]; l->clr=0xFFFF00FF; l->label="Eae"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, eAbw.z, QQae,  eAbw.y,    eAbw.x     ); } );
-    l=plot1.lines[3]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, aAbw.z, QQaa,  aAbw.y,    aAbw.x     ); } );
+    //l=plot1.lines[0]; l->clr=0xFFFF0000; l->label="Eee"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEE    , ff.aEE     ); } );
+    //l=plot1.lines[1]; l->clr=0xFFFF8000; l->label="EeeP"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEEpair, ff.aEEpair ); } );
+    //l=plot1.lines[2]; l->clr=0xFFFF00FF; l->label="Eae"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, eAbw.z, QQae,  eAbw.y,    eAbw.x     ); } );
+    //l=plot1.lines[3]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, aAbw.z, QQaa,  aAbw.y,    aAbw.x     ); } );
     //l=plot1.lines[3]; l->clr=0xFF0080FF; l->label="Faa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); } );
 
     //l=plot1.lines[2]; l->clr=0xFFFF8000; l->label="Fee"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ee, +1.0, bEE, aEE  ); return -f.x; } );
