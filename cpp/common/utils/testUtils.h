@@ -59,9 +59,22 @@ int  dbg(int priority, const char *format, ...){
 }
 */
 
+template<typename Func>
+double checkDeriv(Func getEF, double x, double dx, double& fE, double& f ){
+    double f1=0,f2=0;
+    double e1 = getEF(x   ,f1);
+    double e2 = getEF(x+dx,f2);
+    f   = (f1+f2)*0.5;
+    fE  = (e2-e1)/dx;
+    double err = f - fE;
+    printf( " |f-fE|: %g f %g fE %g E %g \n", err, f, fE, (e1+e2)*0.5 );
+    return err;
+}
 
 template<typename Func>
-double checkDeriv(Func getEF,const Vec3d p0, double d, Vec3d& fE, Vec3d& f ){
+double checkDeriv3d(Func getEF,const Vec3d p0, double d, Vec3d& fE, Vec3d& f ){
+    fE=Vec3dZero;
+    f =Vec3dZero;
     getEF(p0,f);
     for(int i=0;i<3;i++){
         double E0,E1;

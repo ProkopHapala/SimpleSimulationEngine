@@ -129,6 +129,67 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
+    double qqee = 1.0;
+    double r0   = 1.5;
+    double sj0  = 0.7;
+    double si0  = 0.58;
+    double S0   = 0.0638745;
+
+    //[&]func_dR( Vec3d& p, Vec3d f ){ addKineticGauss( double s, double& fs ); }
+
+    auto func_ds = [&]( double x, double& f  )->double{
+        //addKineticGauss( double s, double& fs );
+        double fr,fsj;
+        Vec3d fvec=Vec3dZero; f=0;
+        //double e = CoulombGauss( r0, x, fr, f, qqee );           f*=x;
+        //double e = getDeltaTGauss( r0*r0, x, sj0, fr, f, fsj );
+        //double e = getOverlapSGauss( r0*r0, x, sj0, fr, f, fsj );
+        double e = addPauliGauss( (Vec3d){0.0,0.0,r0}, fvec, x, sj0, f, fsj, true, ff.KRSrho );
+        return e;
+    };
+
+    auto func_dr = [&]( double x, double& f  )->double{
+        //addKineticGauss( double s, double& fs );
+        double fsi,fsj;
+        Vec3d fvec=Vec3dZero;
+        //double e = CoulombGauss  ( x, si0, f, fsi, qqee );      f*=x;
+        //double e = getDeltaTGauss( x*x, si0, sj0, f, fsi, fsj );  f*=x;
+        //double e = getOverlapSGauss( x*x, si0, sj0, f, fsi, fsj ); f*=x;
+        //double e = PauliSGauss_anti( x, f, 0.2 );
+        //double e = PauliSGauss_syn ( x, f, 0.2 );
+        double e = addPauliGauss( {0.0,0.0,x}, fvec, si0, sj0, f, fsj, true, ff.KRSrho ); f=fvec.z;
+        return e;
+    };
+
+    /*
+    auto func_dS[&]( const Vec3d& p, Vec3d& f )->double{
+         double fsi,fsj;
+         addPauliGauss( p, f, si0, sj0, double& fsi, fsj, bool anti, const Vec3d& KRSrho );
+    }
+    */
+
+    double fE,f;
+
+    //double x = 1.35;
+
+    //checkDeriv( KineticGauss, x, 0.001, fE, f );
+    //checkDeriv( func_ds, si0, 0.001, fE, f );
+    checkDeriv( func_dr, r0 , 0.001, fE, f );
+    //checkDeriv( func_dr, S0, 0.001, fE, f );
+
+    //checkDeriv3d(Func getEF,const Vec3d p0, double d, Vec3d& fE, Vec3d& f );
+    //checkDeriv  (Func getEF,const Vec3d p0, double d, Vec3d& fE, Vec3d& f );
+
+    exit(0);
+
+
+
+
+
+
+
+
+
     // ===== EVAL FF 1D Curves
 
     //ff.wee = 0.25;
@@ -145,9 +206,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     */
 
     int ielem = 1;
-    double QQae = -1.0;
-    double QQaa = +1.0;
-    double QQee = QE*QE;
+    //double QQae = -1.0;
+    //double QQaa = +1.0;
+    //double QQee = QE*QE;
     //double w2ee = ff.wee*ff.wee;
     Vec3d  eAbw = default_eAbWs[ielem];
     Vec3d  aAbw; combineAbW( default_eAbWs[ielem] , default_eAbWs[ielem], aAbw );
@@ -155,6 +216,10 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     plot1.xsharingLines( 4, 100, 0.0, 0.1 );
 
     DataLine2D *l;
+
+
+
+
     //l=plot1.lines[0]; l->clr=0xFFFF0000; l->label="Eee"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEE    , ff.aEE     ); } );
     //l=plot1.lines[1]; l->clr=0xFFFF8000; l->label="EeeP"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEEpair, ff.aEEpair ); } );
     //l=plot1.lines[2]; l->clr=0xFFFF00FF; l->label="Eae"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, eAbw.z, QQae,  eAbw.y,    eAbw.x     ); } );

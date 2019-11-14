@@ -90,17 +90,27 @@ def El( r, qq, si, sj ):
     s = np.sqrt( si**2 + sj**2 )
     #print "El ", s.shape
     #print "El ",  const_El_eVA * (qq/r) * spc.erf( sqrt2 * r/s )
+    #print "El r s qq", r, s, qq
+    #print "El const_El_eVA ", const_El_eVA
+    #print "El (qq/r)*const_El_eVA ", (qq/r)*const_El_eVA
+    #print "El (sqrt2 * r/s) ", (sqrt2 * r/s)
+    #print "El erf( sqrt2 * r/s ) ", spc.erf( sqrt2 * r/s )
     return const_El_eVA * (qq/r) * spc.erf( sqrt2 * r/s )
 
 def El_dr( r, qq, si, sj ):
+    qq = qq*const_El_eVA 
     s2 = si**2 + sj**2
     s  = np.sqrt(s2)
     e1 = (qq/r)
     e2 = spc.erf( sqrt2 * r/s )
     f1 = -qq/(r*r)
     f2 = np.exp( -2.*r*r/s2 ) *(2.*np.sqrt(2./np.pi))/s
+    #print "El_dr : e1 ", e1
+    #print "El_dr : e2 ", e2
+    #print "El_dr : f1 ", f1
+    #print "El_dr : f2 ", f2
     #print "El_dr ", -const_El_eVA * ( f1*e2 + e1*f2 )
-    return const_El_eVA * ( f1*e2 + e1*f2 )
+    return ( f1*e2 + e1*f2 )
 
 def El_ds( r, qq, si, sj ):
     s2 = si**2 + sj**2
@@ -130,9 +140,16 @@ def getT( r, si, sj ):
     si2 = si**2
     sj2 = sj**2
     r2  = r**2
-
     s2 = si2 + sj2
     s4 = s2*s2
+
+    #print "getT r2 si2 sj2 s2 is4 ", r2, si2, sj2, s2, 1/s4
+
+    e1 =  1.5*s2/(si2*sj2)
+    e2 = -2.*( 3.*s2 - 2.*r2 )/s4
+    #print "getT e1", e1
+    #print "getT e2", e2
+    #print "getT T ", const_K_eVA * (e1 + e2 )
 
     #return const_K * ( 1.5*( 1./si2 + 1./sj2 ) )   - 2.*( 3.*(si2+sj2) - 2.*r2 )/( si2 + sj2 )**2 )
     return const_K_eVA * ( 1.5*s2/(si2*sj2) - 2.*( 3.*s2 - 2.*r2 )/s4 )
@@ -146,9 +163,10 @@ def getT_ds( r, si, sj ):
     si2 = si**2
     sj2 = sj**2
     r2  = r**2
-
     s2  = si2 + sj2
+
     b  =  4.*( 3.*s2 - 4.*r2 )/(s2*s2*s2)
+    #print "getT B ", b
     return const_K_eVA*( -3./(si2*si) + b*si ), const_K_eVA*( -3./(sj2*sj) + b*sj )
 
 def getT_dr( r, si, sj ):
@@ -159,6 +177,8 @@ def getT_dr( r, si, sj ):
     sj2 = sj**2
     s2 = si2 + sj2
     s4 = s2*s2
+
+    #print "getT B ", (8./s4)
     #r2  = r**2
     return const_K_eVA * (8./s4) * r
 
@@ -189,6 +209,12 @@ def getS_ds( r, si, sj ):
     e2 = np.exp( -r2/s2 )
     f1 = 3.*( 2.*(si*sj)/s2 )**0.5 * ( si2 - sj2 )/s4 # * sj
     f2 = np.exp( -r2/s2 ) * (2.*r2/s4)               # * si
+
+    #print "getS e1 ", e1
+    #print "getS e2 ", e2
+    #print "getS f1 ", f1
+    #print "getS f2 ", f2
+
     #f  = e1*f2 + e2*f1
     return  e1*f2*si - e2*f1*sj, e1*f2*sj + e2*f1*si
 
@@ -243,9 +269,15 @@ def EPauli_ds( r, si, sj, anti=False, rho=0.2, kr=1.125, ks=0.9 ):
     S  = getS( r, si, sj )
     dTi,dTj = getT_ds( r, si, sj )
     dSi,dSj = getS_ds( r, si, sj )
-    ES  = EPaul_S2( S*S, anti=anti, rho=rho )*ks
-    dES = EPaul_dS(   S, anti=anti, rho=rho )*ks
-    return dTi*ES + T*dES*dSi,   dTj*ES + T*dES*dSj
+    ES  = EPaul_S2( S*S, anti=anti, rho=rho )
+    dES = EPaul_dS(   S, anti=anti, rho=rho )
+
+    print "EPauli_ds r2, si, sj ", r*r, si, sj
+    print "EPauli_ds T,dTsi,dTsj  ", T,dTi,dTj
+    print "EPauli_ds S,dSsi,dSsj  ", S,dSi,dSj
+    print "EPauli_ds S,eS,fS   ", S,ES,dES
+
+    return (dTi*ES + T*dES*dSi)*ks,   (dTj*ES + T*dES*dSj)*ks
 
 def EPauli_dr( r, si, sj, anti=False, rho=0.2, kr=1.125, ks=0.9 ):
     r  = r *kr
@@ -255,9 +287,12 @@ def EPauli_dr( r, si, sj, anti=False, rho=0.2, kr=1.125, ks=0.9 ):
     S  = getS( r, si, sj )
     dT = getT_dr( r, si, sj )
     dS = getS_dr( r, si, sj )
-    ES  = EPaul_S2( S*S, anti=anti, rho=rho )*kr
-    dES = EPaul_dS(   S, anti=anti, rho=rho )*kr
-    return dT*ES + T*dES*dS
+    ES  = EPaul_S2( S*S, anti=anti, rho=rho )
+    dES = EPaul_dS(   S, anti=anti, rho=rho )
+    print "EPauli_dr T,dTr  ", T,dT, dT/r
+    print "EPauli_dr S,dSr  ", S,dS, dS/r
+    print "EPauli_dr fr1,fr2 fr ", dT*ES/r, T*dES*dS/r, (dT*ES + T*dES*dS)*kr/r, r
+    return (dT*ES + T*dES*dS)*kr
 
 def numDeriv( x, y ):
     dy =  (y[2:]-y[:-2]) / (x[2:]-x[:-2])
@@ -292,9 +327,41 @@ if __name__ == "__main__":
     S  = np.arange( 1.25, 5.0, 0.05 )
     r  = 1.5 + 0.*s
     #sj = 0.7 + 0.*s
+    r0 = 1.5
     sj = 0.7
     si = 0.58
     qq = 1.0
+    S0 = 0.0638745
+
+    #print "El E   \n", El   ( r0, qq, si, 0. )
+    #print "El ds  \n", El_ds( r0, qq, si, 0. )
+    #print "El dr  \n", El_dr( r0, qq, si, 0. )
+
+    #print "getT E   \n", getT   ( r0, si, sj )
+    #print "getT ds  \n", getT_ds( r0, si, sj )
+    #print "getT dr  \n", getT_dr( r0, si, sj )
+
+    #print "getS E   \n", getS   ( r0, si, sj )
+    #print "getS ds  \n", getS_ds( r0, si, sj )
+    #print "getS dr  \n", getS_dr( r0, si, sj )
+
+    #print "EPaul_S2 anti ", EPaul_S2( S0*S0, anti=True )
+    #print "EPaul_dS anti ", EPaul_dS( S0   , anti=True )
+
+    #print "EPaul_S2 syn  ", EPaul_S2( S0*S0, anti=False )
+    #print "EPaul_dS syn  ", EPaul_dS( S0   , anti=False )
+
+
+    print "getS E   \n", EPauli   ( r0, si, sj, anti=True)
+    print "getS ds  \n", EPauli_ds( r0, si, sj, anti=True)
+    print "getS dr  \n", EPauli_dr( r0, si, sj, anti=True)
+
+    #print "getS E   \n", EPauli   ( r, x, sj, anti=False)
+    #print "getS ds  \n", EPauli_dr( r, x, sj, anti=False)
+    #print "getS dr  \n", EPauli_dr( r, x, sj, anti=False)
+
+    exit()
+
 
     #checkNumDeriv( s, Kinetic, Kinetic_ds, "dKinetic" )
     #checkNumDeriv( s, lambda x: El(r,qq,x,sj), lambda x : El_ds(r,qq,x,sj)[0], "dEl_ds" )
