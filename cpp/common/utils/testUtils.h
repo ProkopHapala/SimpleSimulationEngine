@@ -149,7 +149,9 @@ int sampleVecField(Func func, Vec2i ns, Vec3d p0, Vec3d a, Vec3d b, Vec3d*&ps, V
 template <typename Func>
 void sampleScalarField(Func func, int n, Vec3d *ps, double *Es, Vec2d& val_range ){
     val_range={+1e+300,-1e+300};
-    for(int i=0; i<n; i++){ double Ei=func(ps[i]); Es[i]=Ei; val_range.enclose( Ei );  }
+    for(int i=0; i<n; i++){ double Ei=func(ps[i]); Es[i]=Ei; val_range.enclose( Ei );
+        printf( "sampleScalarField [%i] p(%g,%g,%g) -> %g \n", i, ps[i].x,ps[i].y,ps[i].z,  Ei  );
+    }
 }
 
 //template<void func(Vec3d pos, Vec3d& fout)>
@@ -161,6 +163,7 @@ int sampleScalarField(Func func, Vec2i ns, Vec3d p0, Vec3d a, Vec3d b, Vec3d*&ps
     makeSamples2D(ns, p0, a, b, ps);
     //sampleFroce<func>( ntot, ps, fs, func );
     sampleScalarField( func, ntot, ps, Es,  val_range );
+    //delete ps;
     return ntot;
 }
 

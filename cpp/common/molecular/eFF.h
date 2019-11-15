@@ -187,7 +187,7 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     return e1 * e2;
 }
 
-inline double addCoulombGauss( const Vec3d& dR, Vec3d& f, double si, double& fsi, double qq ){
+inline double addCoulombGauss( const Vec3d& dR, double si, Vec3d& f, double& fsi, double qq ){
 
     double r    = dR.norm();
 
@@ -199,7 +199,7 @@ inline double addCoulombGauss( const Vec3d& dR, Vec3d& f, double si, double& fsi
     return E;
 }
 
-inline double addCoulombGauss( const Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj, double qq ){
+inline double addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, double qq ){
 
     double s2   = si*si + sj*sj;
     double s    = sqrt(s2);
@@ -399,7 +399,7 @@ inline double PauliSGauss_syn( double S, double& fS, double rho ){
 
 }
 
-inline double addPauliGauss( const Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
+inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
 
     double r2 = dR.norm2();
     r2 *= KRSrho.x*KRSrho.x;
@@ -500,7 +500,7 @@ class EFF{ public:
     double* pDOFs =0;
     double* fDOFs =0;
 
-    double Ek=0, Eee=0, EeePaul=0, Eae=0, Eaa=0;
+    double Ek=0, Eee=0,Eae=0,Eaa=0, EeePaul=0,EaePaul=0;
 
 void realloc(int na_, int ne_){
     na=na_; ne=ne_;
@@ -526,7 +526,7 @@ void realloc(int na_, int ne_){
 
     epos   = (Vec3d*)(pDOFs + na*3);
     eforce = (Vec3d*)(fDOFs + na*3);
-    esize  =          fDOFs + na*3 + ne*3;
+    esize  =          pDOFs + na*3 + ne*3;
     fsize  =          fDOFs + na*3 + ne*3;
 
 }
@@ -539,7 +539,8 @@ void clearForce(){
 double evalKinetic(){
     Ek=0;
     for(int i=0; i<ne; i++){
-        Ek += addKineticGauss( esize[i], esize[i] );
+        Ek += addKineticGauss( esize[i], fsize[i] );
+        if( i_DEBUG>0 ) printf( "evalKinetic[%i] s %g -> f %g Ek %g  ->   f(%g,%g,%g) fs %g \n", i, esize[i], fsize[i], Ek );
     }
     return Ek;
 }
@@ -550,19 +551,20 @@ double evalEE(){
     //double w2ee = wee*wee;
     const double qq = QE*QE;
     for(int i=0; i<ne; i++){
-        Vec3d  pi    = epos[i];
-        double si    = esize[i];
-        int8_t spini = espin[i];
-        double& fsi  = esize[i];
+        Vec3d    pi  = epos[i];
         Vec3d&  fpi  = eforce[i];
+        double   si  = esize[i];
+        double& fsi  = fsize[i];
+        int8_t spini = espin[i];
         for(int j=0; j<i; j++){
             Vec3d f=Vec3dZero;
             Vec3d   dR  = epos [j] - pi;
             double  sj  = esize[j];
-            double& fsj = esize[i];
-            Eee     += addCoulombGauss( dR, f, si, sj, fsi, fsj, qq );
-            EeePaul += addPauliGauss  ( dR, f, si, sj, fsi, fsj, spini!=espin[j], KRSrho );
+            double& fsj = fsize[i];
+            Eee     += addCoulombGauss( dR, si, sj, f, fsi, fsj, qq );
+            EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
+            if( i_DEBUG>0 ) printf( "evalEE[%i,%i] dR(%g,%g,%g) s(%g,%g) q %g  ->   f(%g,%g,%g) fs(%g,%g) \n", i,j, dR.x,dR.y,dR.z, si,sj, qq,   f.x,f.y,f.z, fsi,fsj );
             eforce[j].sub(f);
             fpi      .add(f);
             //glColor3f(1.0,0.0,0.0);
@@ -575,6 +577,7 @@ double evalEE(){
 
 double evalAE(){
     Eae=0;
+    EaePaul=0;
     //double see2 = see*see;
     //double saa2 = saa*saa;
     //double invSae = 1/( see*see + saa*saa );
@@ -589,9 +592,11 @@ double evalAE(){
             //printf(  "a[%i]e[%i] r %g\n", i, j, (epos[j]-pi).norm() );
             Vec3d   dR  = epos [j] - pi;
             double fs_junk;
-            Eee               += addCoulombGauss( dR, f, esize[j], fsize[j], qqi );
-            if(qqi<-1.00001) EeePaul += addPauliGauss  ( dR, f, esize[j], abwi.z, fsize[j], fs_junk, false, KRSrho );
-
+            double  sj  = esize[j];
+            double& fsj = fsize[j];
+            Eae                      += addCoulombGauss( dR, sj,         f, fsj,          qqi );
+            if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );
+            if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             eforce[j].sub(f);
             aforce[i].add(f);
             //glColor3f(1.0,0.0,1.0);
@@ -599,7 +604,7 @@ double evalAE(){
             //Draw3D::drawVecInPos( f   , pi      );
         }
     }
-    return Eae;
+    return Eae+EaePaul;
 }
 
 double evalAA(){

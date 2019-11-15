@@ -62,11 +62,92 @@ int genFieldMap( int ogl, Vec2i ns, const Vec3d* ps, const double* Es, double vm
     //val_range={Es[0]-clSz,Es[0]+clSz};
     //Draw3D::drawScalarGrid( {100,100}, {-5.0,-5.0,0.0}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, Es, val_range.x, val_range.y, Draw::colors_RWB, Draw::ncolors );
     //Draw3D::drawScalarArray( ps, Es, val_range.x, val_range.y, Draw::colors_RWB, Draw::ncolors );
+    DEBUG
+    printf( "%i %i %li %g %g %li %i \n", ns.x,ns.y, (long)Es, vmin, vmax, (long)Draw::colors_RWB, Draw::ncolors );
     Draw3D::drawScalarField( ns, ps, Es, vmin, vmax, Draw::colors_RWB, Draw::ncolors );
+    DEBUG
     Draw3D::drawColorScale( 20, {5.0,-5.0,0.0}, Vec3dY*10, Vec3dX*0.5, Draw::colors_RWB, Draw::ncolors );
+    DEBUG
     //exit(0);
     glEndList();
     return ogl;
+}
+
+
+void checkDerivs( Vec3d KRSrho ){
+
+    double qqee = 1.0;
+    double r0   = 1.5;
+    double sj0  = 0.7;
+    double si0  = 0.58;
+    double S0   = 0.0638745;
+
+    auto func_ds = [&]( double x, double& f  )->double{
+        //addKineticGauss( double s, double& fs );
+        double fr,fsj;
+        Vec3d fvec=Vec3dZero; f=0;
+        //double e = CoulombGauss( r0, x, fr, f, qqee );           f*=x;
+        //double e = getDeltaTGauss( r0*r0, x, sj0, fr, f, fsj );
+        //double e = getOverlapSGauss( r0*r0, x, sj0, fr, f, fsj );
+        double e = addPauliGauss( (Vec3d){0.0,0.0,r0}, x, sj0, fvec, f, fsj, true, KRSrho );
+        return e;
+    };
+
+    auto func_dr = [&]( double x, double& f  )->double{
+        //addKineticGauss( double s, double& fs );
+        double fsi,fsj;
+        Vec3d fvec=Vec3dZero;
+        //double e = CoulombGauss  ( x, si0, f, fsi, qqee );      f*=x;
+        //double e = getDeltaTGauss( x*x, si0, sj0, f, fsi, fsj );  f*=x;
+        //double e = getOverlapSGauss( x*x, si0, sj0, f, fsi, fsj ); f*=x;
+        //double e = PauliSGauss_anti( x, f, 0.2 );
+        //double e = PauliSGauss_syn ( x, f, 0.2 );
+        double e = addPauliGauss( {0.0,0.0,x}, si0, sj0, fvec, f, fsj, true, KRSrho ); f=fvec.z;
+        return e;
+    };
+
+    double fE,f;
+
+    //checkDeriv( KineticGauss, x, 0.001, fE, f );
+    //checkDeriv( func_ds, si0, 0.001, fE, f );
+    checkDeriv( func_dr, r0 , 0.001, fE, f );
+    //checkDeriv( func_dr, S0, 0.001, fE, f );
+
+}
+
+int makePlots( Plot2D& plot ){
+
+    int ielem = 1;
+    double QQae = -1.0;
+    double QQaa = +1.0;
+    double QQee = QE*QE;
+
+    double bEE     = -1.0;
+    double aEE     =  2.0;
+    double bEEpair = -1.0;
+    double aEEpair =  0.1;
+
+    double w2ee = 1.5;
+
+    Vec3d  eAbw = default_eAbWs[ielem];
+    Vec3d  aAbw; combineAbW( default_eAbWs[ielem] , default_eAbWs[ielem], aAbw );
+    plot.xsharingLines( 4, 100, 0.0, 0.1 );
+    DataLine2D *l;
+    l=plot.lines[0]; l->clr=0xFFFF0000; l->label="Eee"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, bEE    , aEE     ); } );
+    l=plot.lines[1]; l->clr=0xFFFF8000; l->label="EeeP"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,  QQee, bEEpair, aEEpair ); } );
+    l=plot.lines[2]; l->clr=0xFFFF00FF; l->label="Eae"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, eAbw.z, QQae, eAbw.y,  eAbw.x     ); } );
+    l=plot.lines[3]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, aAbw.z, QQaa, aAbw.y,  aAbw.x     ); } );
+    //l=plot.lines[3]; l->clr=0xFF0080FF; l->label="Faa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); } );
+
+    //l=plot.lines[2]; l->clr=0xFFFF8000; l->label="Fee"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ee, +1.0, bEE, aEE  ); return -f.x; } );
+    //l=plot.lines[3]; l->clr=0xFFFF80FF; l->label="Fae"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ae, qae,  bAE, aAE  ); return -f.x; } );
+    //l=plot.lines[2]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); return f.x; } );
+
+    plot.update();
+    plot.autoAxes(0.5,0.5);
+    printf( "axBound %g,%g %g,%g \n", plot.axBounds.a.x, plot.axBounds.a.y, plot.axBounds.b.x, plot.axBounds.b.y );
+    plot.render();
+
 }
 
 
@@ -123,119 +204,65 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ );
 
+
+    void init2DMap();
+
 };
+
+void TestAppRARFF::init2DMap(){
+
+// ===== EVAL FF 2D MAP
+
+    Vec3d  *ps=0,*fs=0;
+    double *Es=0;
+
+    ipicked = 1;
+
+    FFfunc = [&](const Vec3d& p, Vec3d& f)->void{
+        ff.apos[ipicked] = p;
+        //ff.epos[0] = p; // force on one electron
+        ff.clearForce();
+        ff.eval();
+        //f = ff.eforce[0];
+        f = ff.aforce[ipicked];
+    };
+
+    Efunc = [&](const Vec3d& p)->double{
+        ff.apos[ipicked] = p; // force on one electron
+        ff.clearForce();
+        double E = ff.eval();
+        //f = ff.eforce[0];
+        return E;
+    };
+
+    //exit(0);
+    //ff.move( 0.01, 0.9 );
+
+    Vec3d pa0 = ff.apos[ipicked];
+    field_ns = {100,100};
+    //int nptot = sampleVecField<fffunc>( (Vec2i){60,60}, (Vec3d){-3.0,-3.0,0.0}, (Vec3d){0.1,0.0,0.0}, (Vec3d){0.0,0.1,0.0}, ps, fs );
+    //int nptot = sampleVecField( fffunc, (Vec2i){60,60}, (Vec3d){-3.0,-3.0,0.0}, (Vec3d){0.1,0.0,0.0}, (Vec3d){0.0,0.1,0.0}, ps, fs );
+    //int nptot = sampleVecField( fffunc, {100,100}, {-5.0,-5.0,0.0}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, ps, fs );
+    //int nptot =
+    sampleScalarField( Efunc, field_ns, {-5.0,-5.0,+0.1}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, field_ps, field_Es, Erange );
+    ff.apos[ipicked] = pa0;
+
+    E0 = field_Es[0];
+    printf( "val_range: %g %g %g \n", Erange.x, Erange.y, field_Es[0] );
+    Espread = 3.0;
+
+    ogl_fs = genFieldMap( ogl_fs, field_ns, field_ps, field_Es, E0-Espread, E0+Espread );
+
+    //return
+
+}
 
 TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
-    double qqee = 1.0;
-    double r0   = 1.5;
-    double sj0  = 0.7;
-    double si0  = 0.58;
-    double S0   = 0.0638745;
-
-    //[&]func_dR( Vec3d& p, Vec3d f ){ addKineticGauss( double s, double& fs ); }
-
-    auto func_ds = [&]( double x, double& f  )->double{
-        //addKineticGauss( double s, double& fs );
-        double fr,fsj;
-        Vec3d fvec=Vec3dZero; f=0;
-        //double e = CoulombGauss( r0, x, fr, f, qqee );           f*=x;
-        //double e = getDeltaTGauss( r0*r0, x, sj0, fr, f, fsj );
-        //double e = getOverlapSGauss( r0*r0, x, sj0, fr, f, fsj );
-        double e = addPauliGauss( (Vec3d){0.0,0.0,r0}, fvec, x, sj0, f, fsj, true, ff.KRSrho );
-        return e;
-    };
-
-    auto func_dr = [&]( double x, double& f  )->double{
-        //addKineticGauss( double s, double& fs );
-        double fsi,fsj;
-        Vec3d fvec=Vec3dZero;
-        //double e = CoulombGauss  ( x, si0, f, fsi, qqee );      f*=x;
-        //double e = getDeltaTGauss( x*x, si0, sj0, f, fsi, fsj );  f*=x;
-        //double e = getOverlapSGauss( x*x, si0, sj0, f, fsi, fsj ); f*=x;
-        //double e = PauliSGauss_anti( x, f, 0.2 );
-        //double e = PauliSGauss_syn ( x, f, 0.2 );
-        double e = addPauliGauss( {0.0,0.0,x}, fvec, si0, sj0, f, fsj, true, ff.KRSrho ); f=fvec.z;
-        return e;
-    };
-
-    /*
-    auto func_dS[&]( const Vec3d& p, Vec3d& f )->double{
-         double fsi,fsj;
-         addPauliGauss( p, f, si0, sj0, double& fsi, fsj, bool anti, const Vec3d& KRSrho );
-    }
-    */
-
-    double fE,f;
-
-    //double x = 1.35;
-
-    //checkDeriv( KineticGauss, x, 0.001, fE, f );
-    //checkDeriv( func_ds, si0, 0.001, fE, f );
-    checkDeriv( func_dr, r0 , 0.001, fE, f );
-    //checkDeriv( func_dr, S0, 0.001, fE, f );
-
-    //checkDeriv3d(Func getEF,const Vec3d p0, double d, Vec3d& fE, Vec3d& f );
-    //checkDeriv  (Func getEF,const Vec3d p0, double d, Vec3d& fE, Vec3d& f );
-
-    exit(0);
-
-
-
-
-
-
-
-
-
-    // ===== EVAL FF 1D Curves
-
-    //ff.wee = 0.25;
-    //ff.wae = 0.25;
-    //ff.waa = 0.25;
-
-    /*
-    double w2ee = sq(ff.wee);
-    double w2ae = sq(ff.wae);
-    double w2aa = sq(ff.waa);
-    double qaa  =  4*4;
-    double qae  = -1.0;
-        printf( " w2 ee,ae,aa(%g,%g,%g)  w ee,ae,aa(%g,%g,%g)  \n", w2ee, w2ae, w2aa   ,  ff.wee, ff.wae, ff.waa  );
-    */
-
-    int ielem = 1;
-    //double QQae = -1.0;
-    //double QQaa = +1.0;
-    //double QQee = QE*QE;
-    //double w2ee = ff.wee*ff.wee;
-    Vec3d  eAbw = default_eAbWs[ielem];
-    Vec3d  aAbw; combineAbW( default_eAbWs[ielem] , default_eAbWs[ielem], aAbw );
-
-    plot1.xsharingLines( 4, 100, 0.0, 0.1 );
-
-    DataLine2D *l;
-
-
-
-
-    //l=plot1.lines[0]; l->clr=0xFFFF0000; l->label="Eee"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEE    , ff.aEE     ); } );
-    //l=plot1.lines[1]; l->clr=0xFFFF8000; l->label="EeeP"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, ff.bEEpair, ff.aEEpair ); } );
-    //l=plot1.lines[2]; l->clr=0xFFFF00FF; l->label="Eae"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, eAbw.z, QQae,  eAbw.y,    eAbw.x     ); } );
-    //l=plot1.lines[3]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, aAbw.z, QQaa,  aAbw.y,    aAbw.x     ); } );
-    //l=plot1.lines[3]; l->clr=0xFF0080FF; l->label="Faa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); } );
-
-    //l=plot1.lines[2]; l->clr=0xFFFF8000; l->label="Fee"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ee, +1.0, bEE, aEE  ); return -f.x; } );
-    //l=plot1.lines[3]; l->clr=0xFFFF80FF; l->label="Fae"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ae, qae,  bAE, aAE  ); return -f.x; } );
-    //l=plot1.lines[2]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); return f.x; } );
-
-    plot1.update();
-    plot1.autoAxes(0.5,0.5);
-    printf( "axBound %g,%g %g,%g \n", plot1.axBounds.a.x, plot1.axBounds.a.y, plot1.axBounds.b.x, plot1.axBounds.b.y );
-    plot1.render();
-
-    return;
+    //checkDerivs( ff.KRSrho );    exit(0);
+    //makePlots( plot1 );           exit(0);
 
     // ===== SETUP GEOM
 
@@ -298,57 +325,23 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.autoAbWs( default_aAbWs, default_eAbWs );
     //exit(0);
 
+    // ==== Test Eval
+
+    i_DEBUG = 1;
+    ff.eval();
+    printf( "Ek %g Eaa %g Eae %g Eee %g EeePaul %g \n", ff.Ek, ff.Eaa, ff.Eae, ff.Eee, ff.EeePaul );
+    i_DEBUG = 0;
+
+    //exit(0);
+
+    // ==== Bind Optimizer
+
     opt.bindOrAlloc( 3*ff.nDOFs, (double*)ff.pDOFs, 0, (double*)ff.fDOFs, 0 );
     opt.cleanVel( );
     opt.initOpt( 0.05, 0.2 );
 
-    // ===== EVAL FF 2D MAP
+    init2DMap();
 
-
-
-    i_DEBUG = 1;
-    ff.eval();
-    i_DEBUG = 0;
-
-    Vec3d  *ps=0,*fs=0;
-    double *Es=0;
-
-    ipicked = 1;
-
-    FFfunc = [&](const Vec3d& p, Vec3d& f)->void{
-        ff.apos[ipicked] = p;
-        //ff.epos[0] = p; // force on one electron
-        ff.clearForce();
-        ff.eval();
-        //f = ff.eforce[0];
-        f = ff.aforce[ipicked];
-    };
-
-    Efunc = [&](const Vec3d& p)->double{
-        ff.apos[ipicked] = p; // force on one electron
-        ff.clearForce();
-        double E = ff.eval();
-        //f = ff.eforce[0];
-        return E;
-    };
-
-    //exit(0);
-    //ff.move( 0.01, 0.9 );
-
-    Vec3d pa0 = ff.apos[ipicked];
-    field_ns = {100,100};
-    //int nptot = sampleVecField<fffunc>( (Vec2i){60,60}, (Vec3d){-3.0,-3.0,0.0}, (Vec3d){0.1,0.0,0.0}, (Vec3d){0.0,0.1,0.0}, ps, fs );
-    //int nptot = sampleVecField( fffunc, (Vec2i){60,60}, (Vec3d){-3.0,-3.0,0.0}, (Vec3d){0.1,0.0,0.0}, (Vec3d){0.0,0.1,0.0}, ps, fs );
-    //int nptot = sampleVecField( fffunc, {100,100}, {-5.0,-5.0,0.0}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, ps, fs );
-    //int nptot =
-    sampleScalarField( Efunc, field_ns, {-5.0,-5.0,+0.1}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, field_ps, field_Es, Erange );
-    ff.apos[ipicked] = pa0;
-
-    E0 = field_Es[0];
-    printf( "val_range: %g %g %g \n", Erange.x, Erange.y, field_Es[0] );
-    Espread = 3.0;
-
-    ogl_fs = genFieldMap( ogl_fs, field_ns, field_ps, field_Es, E0-Espread, E0+Espread );
 
     //setGeom(ff);
     //double sz = 0.51;
@@ -356,7 +349,6 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //for(int i=0; i<ff.na; i++){ ff.apos[i].add( randf(-sz,sz),randf(-sz,sz),randf(-sz,sz) );  }
     for(int i=0; i<ff.na; i++){ printf( "A_pos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z ); }
     for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
-
 
     //ff.apos[0].z = 2.0;
 
@@ -370,10 +362,7 @@ void TestAppRARFF::draw(){
 
     glDisable(GL_LIGHTING);
 
-
-
-
-    return;
+    //return;
 
     if(bRun){
         for(int itr=0;itr<perFrame;itr++){
