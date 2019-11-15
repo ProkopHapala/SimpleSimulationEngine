@@ -150,7 +150,7 @@ template <typename Func>
 void sampleScalarField(Func func, int n, Vec3d *ps, double *Es, Vec2d& val_range ){
     val_range={+1e+300,-1e+300};
     for(int i=0; i<n; i++){ double Ei=func(ps[i]); Es[i]=Ei; val_range.enclose( Ei );
-        printf( "sampleScalarField [%i] p(%g,%g,%g) -> %g \n", i, ps[i].x,ps[i].y,ps[i].z,  Ei  );
+       // printf( "sampleScalarField [%i] p(%g,%g,%g) -> %g \n", i, ps[i].x,ps[i].y,ps[i].z,  Ei  );
     }
 }
 

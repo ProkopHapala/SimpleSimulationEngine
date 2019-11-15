@@ -92,7 +92,7 @@ class Plot2D{ public:
     bool     grid       =true;
     bool     tickCaption=false;
     uint32_t clrBg      = 0x00f0f0f0;
-    uint32_t clrGrid    = 0xFFE0E0E0;
+    uint32_t clrGrid    = 0xFF858585;
     uint32_t clrTicksX  = 0xFF000000;
     uint32_t clrTicksY  = 0xFF000000;
     char   * tickFormat = "%2.2f\0";

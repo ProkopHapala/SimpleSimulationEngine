@@ -31,9 +31,6 @@ NOTES:
 
 */
 
-
-
-
 /*
 Erf approximation:
 # Gaussian:    F = (x2-1)**2 / sqrtPi
@@ -68,7 +65,7 @@ const double const_Ke_eVA = const_K_eVA*1.5;
 // ToDo : Later properly
 constexpr static const Vec3d default_eAbWs[] = {
 { 0.0,  0.0, 0.0},  // Q = 0 //
-{ 0.0,  0.0, 0.25},  // Q = 1 // H
+{ 0.0,  0.0, 0.01},  // Q = 1 // H
 {10.0, -3.0, 0.25},  // Q = 2 // Be?
 {10.0, -3.0, 0.25},  // Q = 3 // B
 {10.0, -3.0, 0.25},  // Q = 4 // C
@@ -76,18 +73,11 @@ constexpr static const Vec3d default_eAbWs[] = {
 
 constexpr static const Vec3d default_aAbWs[] = {
 { 0.0,  0.0, 0.1},  // Q = 0 //
-{ 0.0,  0.0, 0.25},  // Q = 1 // H
+{ 0.0,  0.0, 0.01},  // Q = 1 // H
 {20.0, -5.0, 0.25},  // Q = 2 // Be?
 {20.0, -5.0, 0.25},  // Q = 3 // B
 {20.0, -5.0, 0.25},  // Q = 4 // C
 };
-
-
-//double bAE = -6.0;
-//double aAE = 100.0;
-
-
-
 
 struct EFFAtomType{
     double Q; // nuncear charge
@@ -109,40 +99,12 @@ inline void combineAbW( const Vec3d& abwi, const Vec3d& abwj, Vec3d& abw ){
     abw.z = abwi.z+abwj.z;
 };
 
-/*
-inline double fr_ee(double r, double w){
-    return 1/( r*r + w*w );
-};
-
-inline double fr_ae(double r, double w, double Q){
-    return exp(5*r) - Q/( r*r + w*w );
-};
-
-inline double fr_aa(double r, double s){
-    return 1/( r*r+ w*w );
-};
-*/
-
-/*
-inline double addPairEF_ee( const Vec3d& d, Vec3d& f, double w ){
-    return 1/( r*r + w*w );
-};
-
-inline double addPairEF_ae( const Vec3d& d, Vec3d& f, double w, double q, double aPuli, double beta ){
-    return exp(5*r) - Q/( r*r + w*w );
-};
-
-inline double addPairEF_aa( const Vec3d& d, Vec3d& f, double w, double qq, ){
-    return qq/( r*r+ w*w );
-};
-*/
-
 inline double addPairEF_expQ( const Vec3d& d, Vec3d& f, double w2, double qq, double bExp, double aExp ){
     double r2     = d.norm2();
     double invrw2 = 1./( r2 + w2 );
     double invrw  = sqrt(invrw2);
-    double E      =  qq*invrw;
-    double fr     = -qq*invrw2*invrw;
+    double E      =  const_El_eVA*qq*invrw;
+    double fr     = -E*invrw2;
     if( bExp<0 ){
         double r      = sqrt( r2+R2SAFE );
         double Eexp  = aExp*exp( bExp*r );
@@ -156,144 +118,57 @@ inline double addPairEF_expQ( const Vec3d& d, Vec3d& f, double w2, double qq, do
 inline double addKineticGauss( double s, double& fs ){
     double is  = 1/s;
     double is2 = is*is*const_Ke_eVA;
-    fs += -2.*is2*is;
+    fs += 2.*is2*is;
     return is2;
 }
 
 inline double CoulombGauss( double r, double s, double& fr, double& fs, double qq ){
     // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
-    constexpr const double const_F2 = -2.*sqrt(2./M_PI);
-
-    double ir   = 1./r;
-    double is   = 1./s;
+    //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
+    constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
+    double ir   = 1./r; //(r+1.e-8);
+    double is   = 1./s; //(s+1.e-8);
     double r_s  = r*is;
     double r_2s = M_SQRT2 * r_s;
     double e1   = qq*ir * const_El_eVA;
-    double e2   = erf( r_2s );
+    double e2   = erf(  r_2s      );
     double g    = exp( -r_2s*r_2s ) * const_F2;
     double f1   = -e1*ir;
     double f2   = g*is;
     double e1f2 = e1*f2;
     fr = (f1*e2 + e1f2)*ir;
     fs =          e1f2 *r_s * is;
-
+    //printf( "CoulombGauss r,s,q %g %g %g -> fr,fs %g %g \n", r, s, qq , fr, fs );
     //printf( "CoulombGauss : e1 %g \n", e1 );
     //printf( "CoulombGauss : e2 %g \n", e2 );
     //printf( "CoulombGauss : f1 %g \n", f1 );
     //printf( "CoulombGauss : f2 %g \n", f2 );
     //printf( "CoulombGauss : fr %g \n", fr );
     //printf( "CoulombGauss : fs %g \n", fs );
-
     return e1 * e2;
 }
 
-inline double addCoulombGauss( const Vec3d& dR, double si, Vec3d& f, double& fsi, double qq ){
-
+inline double addCoulombGauss( const Vec3d& dR, double s, Vec3d& f, double& fsi, double qq ){
     double r    = dR.norm();
-
     double fr,fs;
-    double E = CoulombGauss( r, si, fr, fs, qq );
-
-    fsi += fs*si;
+    double E = CoulombGauss( r, s, fr, fs, qq );
+    fsi += fs*s;
     f.add_mul( dR, fr );
     return E;
 }
 
 inline double addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, double qq ){
-
     double s2   = si*si + sj*sj;
     double s    = sqrt(s2);
     double r    = dR.norm();
-
     double fs,fr;
     double E = CoulombGauss( r, s, fr, fs, qq );
-
     fsi += fs*si;
     fsj += fs*sj;
     f.add_mul( dR, fr );
     return E;
 
 }
-
-/*
-inline double addCoulombGauss( const Vec3d& dR, Vec3d& f, double qq, double si, double sj, double& fsi, double& fsj ){
-
-    // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
-
-    constexpr const double const_F2 = -2.*sqrt(2./M_PI);
-
-    double s2   = si*si + sj*sj;
-    double s    = sqrt(s2);
-    double r    = dR.norm();
-    double ir   = 1./r;
-    double is   = 1./s;
-    double r_s  = r*is;
-    double r_2s = M_SQRT2 * r_s;
-    double e1   = qq*ir * const_El_eVA;
-    double e2   = erf( r_2s );
-    double f1   = -e1*ir;
-    double g    = exp( -r_2s*r_2s );
-    double f2   = const_F2*g*is;
-    double fr   = f1*e2 + f2;
-    f.add_mul( dR, fr*ir );
-
-    double fs  = f2*is;
-    fsi += fs*(si*is);
-    fsj += fs*(sj*is);
-
-    return const_El_eVA * e1 * e2;
-}
-*/
-
-/*
-//inline double getDeltaTGauss( const Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj ){
-inline double getDeltaTGauss( double r2, double si, double sj,  double& fr, double& fsi, double& fsj ){
-    double si2  = si*si;
-    double sj2  = sj*sj;
-    double isi2 = 1./si2;
-    double isj2 = 1./sj2;
-    double s2   = si2 + sj2;
-    double is2  = 1./s2;
-    double is4  = is2 * is2;
-    //double r2   = dR.norm2();
-
-    double B   =  4.*( 3.*s2 - 4.*r2 )*is4*is2;
-    fsi = const_K_eVA*( -3.*isi2*isi2 + B*si )*si;
-    fsj = const_K_eVA*( -3.*isj2*isj2 + B*sj )*sj;
-    //f.add_mul( dR, const_K_eVA * (8.*is4) );
-    fr  = const_K_eVA*(8.*is4);
-
-    return const_K_eVA * ( 1.5*s2*isi2*isj2 - 2.*( 3.*s2 - 2.*r2 )*is4 );
-}
-
-
-//inline double getOverlapSGauss( const Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj ){
-inline double getOverlapSGauss( double r2, double si, double sj, double& fr, double& fsi, double& fsj ){
-    double si2  = si*si;
-    double sj2  = sj*sj;
-    double isi2 = 1./si2;
-    double isj2 = 1./sj2;
-    double s2   = si2 + sj2;
-    double is2  = 1./s2;
-    double is4  = is2 * is2;
-    //double r2   = dR.norm2();
-
-    double a2   = 2.*(si*sj)*is2;
-    double a    = sqrt(a2);
-    double e1   = a2*a;
-    double e2   = exp( -r2*is2 );
-
-    double f1   = 3.*a  * (si2-sj2)*is4;
-    double f2   = 2.*e2 * r2*is4;
-
-    fsi = e1*f2*si - e2*f1*sj;
-    fsj = e1*f2*sj + e2*f1*si;
-    //f.add_mul( dR, e1*e2*(-2.*is2) );
-    fr  = e1*e2*(-2.*is2);
-    return e1 * e2;
-}
-*/
-
 
 //inline double getDeltaTGauss( const Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj ){
 inline double getDeltaTGauss( double r2, double si, double sj,  double& dTr, double& dTsi, double& dTsj,
@@ -505,12 +380,12 @@ class EFF{ public:
 void realloc(int na_, int ne_){
     na=na_; ne=ne_;
     nDOFs=na*3+ne*4;
-    _realloc( pDOFs,   nDOFs);
-    _realloc( fDOFs,   nDOFs);
+    _realloc( pDOFs, nDOFs);
+    _realloc( fDOFs, nDOFs);
 
-    _realloc( aQ  ,   na);
-    _realloc( aAbWs,  na);
-    _realloc( eAbWs,  na);
+    _realloc( aQ  ,  na);
+    _realloc( aAbWs, na);
+    _realloc( eAbWs, na);
     //_realloc( apos,   na);
     //_realloc( aforce, na);
     //_realloc( avel,   na);
@@ -576,7 +451,7 @@ double evalEE(){
 }
 
 double evalAE(){
-    Eae=0;
+    Eae    =0;
     EaePaul=0;
     //double see2 = see*see;
     //double saa2 = saa*saa;
@@ -595,7 +470,7 @@ double evalAE(){
             double  sj  = esize[j];
             double& fsj = fsize[j];
             Eae                      += addCoulombGauss( dR, sj,         f, fsj,          qqi );
-            if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );
+            //if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );
             if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             eforce[j].sub(f);
             aforce[i].add(f);

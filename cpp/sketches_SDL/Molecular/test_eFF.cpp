@@ -62,12 +62,9 @@ int genFieldMap( int ogl, Vec2i ns, const Vec3d* ps, const double* Es, double vm
     //val_range={Es[0]-clSz,Es[0]+clSz};
     //Draw3D::drawScalarGrid( {100,100}, {-5.0,-5.0,0.0}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, Es, val_range.x, val_range.y, Draw::colors_RWB, Draw::ncolors );
     //Draw3D::drawScalarArray( ps, Es, val_range.x, val_range.y, Draw::colors_RWB, Draw::ncolors );
-    DEBUG
     printf( "%i %i %li %g %g %li %i \n", ns.x,ns.y, (long)Es, vmin, vmax, (long)Draw::colors_RWB, Draw::ncolors );
     Draw3D::drawScalarField( ns, ps, Es, vmin, vmax, Draw::colors_RWB, Draw::ncolors );
-    DEBUG
     Draw3D::drawColorScale( 20, {5.0,-5.0,0.0}, Vec3dY*10, Vec3dX*0.5, Draw::colors_RWB, Draw::ncolors );
-    DEBUG
     //exit(0);
     glEndList();
     return ogl;
@@ -115,7 +112,7 @@ void checkDerivs( Vec3d KRSrho ){
 
 }
 
-int makePlots( Plot2D& plot ){
+int makePlots( Plot2D& plot, EFF& ff ){
 
     int ielem = 1;
     double QQae = -1.0;
@@ -131,17 +128,65 @@ int makePlots( Plot2D& plot ){
 
     Vec3d  eAbw = default_eAbWs[ielem];
     Vec3d  aAbw; combineAbW( default_eAbWs[ielem] , default_eAbWs[ielem], aAbw );
-    plot.xsharingLines( 4, 100, 0.0, 0.1 );
-    DataLine2D *l;
-    l=plot.lines[0]; l->clr=0xFFFF0000; l->label="Eee"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,   QQee, bEE    , aEE     ); } );
-    l=plot.lines[1]; l->clr=0xFFFF8000; l->label="EeeP"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2ee,  QQee, bEEpair, aEEpair ); } );
-    l=plot.lines[2]; l->clr=0xFFFF00FF; l->label="Eae"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, eAbw.z, QQae, eAbw.y,  eAbw.x     ); } );
-    l=plot.lines[3]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, aAbw.z, QQaa, aAbw.y,  aAbw.x     ); } );
-    //l=plot.lines[3]; l->clr=0xFF0080FF; l->label="Faa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); } );
 
+    int np = 100;
+
+    plot.xsharingLines( 3, np, 0.0, 0.05 );
+    DataLine2D *l;
+    l=plot.lines[0]; l->clr=0xFFFF0000; l->label="Eee";    evalLine( *l, [&](double x){ double fs,fr,E; E=CoulombGauss( x, 2.0, fr, fs, 1.0 ); return E;    } );
+    l=plot.lines[1]; l->clr=0xFF0000FF; l->label="Fee";    evalLine( *l, [&](double x){ double fs,fr,E; E=CoulombGauss( x, 2.0, fr, fs, 1.0 ); return fr*x; } );
+    l=plot.lines[2]; l->clr=0xFFFF00FF; l->label="FeeNum"; evalLine( *l, [&](double x){ double fs,fr,E1,E2,s=2.0,dx=0.001;
+        E1=CoulombGauss( x-dx, s, fr, fs, 1.0 );
+        E2=CoulombGauss( x+dx, s, fr, fs, 1.0 );
+        return (E2-E1)/(2*dx);
+    } );
+    //l=plot.lines[2]; l->clr=0xFFFF00FF; l->label="Eae";  evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, eAbw.z, QQae, eAbw.y,  eAbw.x     ); } );
+    //l=plot.lines[3]; l->clr=0xFF0000FF; l->label="Eaa";  evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, aAbw.z, QQaa, aAbw.y,  aAbw.x     ); } );
+    //l=plot.lines[3]; l->clr=0xFF0080FF; l->label="Faa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); } );
     //l=plot.lines[2]; l->clr=0xFFFF8000; l->label="Fee"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ee, +1.0, bEE, aEE  ); return -f.x; } );
     //l=plot.lines[3]; l->clr=0xFFFF80FF; l->label="Fae"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2ae, qae,  bAE, aAE  ); return -f.x; } );
     //l=plot.lines[2]; l->clr=0xFF0000FF; l->label="Eaa"; evalLine( *l, [&](double x){ Vec3d f=Vec3dZero;  addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); return f.x; } );
+
+
+    /*
+
+    plot.xsharingLines( 7, np, 0.0, 0.05 );
+    double fc = 0.2;
+
+    plot.lines[0]->clr = 0xFFFFFFFF; // Etot
+    plot.lines[1]->clr = 0xFF0000FF; // Eaa
+    plot.lines[2]->clr = 0xFFFF00FF; // Eae
+    plot.lines[3]->clr = 0xFFFF0000; // Eee
+    plot.lines[4]->clr = 0xFF00FF00; // Ek
+    plot.lines[5]->clr = 0xFFFFFF00; // EeePaul
+    plot.lines[6]->clr = 0xFF8F008F; // Eae*-0.25
+
+    ff.apos[0]= Vec3dZero;
+    ff.apos[1]= Vec3dZero;
+    ff.epos[0]= Vec3dZero;
+    ff.epos[1]= Vec3dZero;
+
+    double sc=0.2;
+
+    for(int i=0; i<np; i++){
+        double x = i*0.1;
+
+        ff.apos[0].x = -x;
+        ff.apos[1].x =  x;
+        ff.epos[0].x = -x;
+        ff.epos[1].x =  x;
+
+        double Etot = ff.eval();
+        plot.lines[0]->ys[i] = sc*Etot;
+        plot.lines[1]->ys[i] = sc*ff.Eaa;
+        plot.lines[2]->ys[i] = sc*ff.Eae;
+        plot.lines[6]->ys[i] = sc*ff.Eae*-0.5;
+        plot.lines[3]->ys[i] = sc*ff.Eee;
+        plot.lines[4]->ys[i] = sc*ff.Ek;
+        plot.lines[5]->ys[i] = sc*ff.EeePaul;
+        printf( "makePlots[%i] %g -> %g (%g,%g(4*%g),%g) %g,%g \n", i, x,   Etot, ff.Eaa,ff.Eae,ff.Eae*0.5,ff.Eee, ff.Ek, ff.EeePaul );
+    }
+    */
 
     plot.update();
     plot.autoAxes(0.5,0.5);
@@ -172,7 +217,9 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
     int perFrame = 1;
 
     //E2FF ff2;
-    int ipicked  = -1;
+
+    bool bMapElectron = false;
+    int ipicked  = 0;
 
     // DEBUG STUFF
     GLint ogl_fs = 0;
@@ -205,55 +252,46 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
     TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ );
 
 
-    void init2DMap();
+    void init2DMap( int n, double dx );
 
 };
 
-void TestAppRARFF::init2DMap(){
+void TestAppRARFF::init2DMap( int n, double dx ){
 
 // ===== EVAL FF 2D MAP
 
-    Vec3d  *ps=0,*fs=0;
-    double *Es=0;
+    //Vec3d  *ps=0,*fs=0;
+    //double *Es=0;
 
     ipicked = 1;
 
     FFfunc = [&](const Vec3d& p, Vec3d& f)->void{
-        ff.apos[ipicked] = p;
-        //ff.epos[0] = p; // force on one electron
+        if(bMapElectron){ ff.epos[ipicked] = p; }else{ ff.apos[ipicked] = p; }
+         // force on one electron
         ff.clearForce();
         ff.eval();
-        //f = ff.eforce[0];
-        f = ff.aforce[ipicked];
+        if(bMapElectron){ f = ff.eforce[ipicked]; }else{ f = ff.aforce[ipicked]; }
     };
 
     Efunc = [&](const Vec3d& p)->double{
-        ff.apos[ipicked] = p; // force on one electron
+        //ff.apos[ipicked] = p; // force on one electron
+        if(bMapElectron){ ff.epos[ipicked] = p; }else{ ff.apos[ipicked] = p; }
         ff.clearForce();
         double E = ff.eval();
-        //f = ff.eforce[0];
         return E;
     };
 
-    //exit(0);
-    //ff.move( 0.01, 0.9 );
-
-    Vec3d pa0 = ff.apos[ipicked];
-    field_ns = {100,100};
-    //int nptot = sampleVecField<fffunc>( (Vec2i){60,60}, (Vec3d){-3.0,-3.0,0.0}, (Vec3d){0.1,0.0,0.0}, (Vec3d){0.0,0.1,0.0}, ps, fs );
-    //int nptot = sampleVecField( fffunc, (Vec2i){60,60}, (Vec3d){-3.0,-3.0,0.0}, (Vec3d){0.1,0.0,0.0}, (Vec3d){0.0,0.1,0.0}, ps, fs );
-    //int nptot = sampleVecField( fffunc, {100,100}, {-5.0,-5.0,0.0}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, ps, fs );
-    //int nptot =
-    sampleScalarField( Efunc, field_ns, {-5.0,-5.0,+0.1}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, field_ps, field_Es, Erange );
-    ff.apos[ipicked] = pa0;
+    Vec3d pa0;// = ff.apos[ipicked];
+    if(bMapElectron){ pa0 = ff.epos[ipicked]; }else{ pa0 = ff.apos[ipicked]; }
+    field_ns = {n,n};
+    sampleScalarField( Efunc, field_ns, {-(dx*n)/2,-(dx*n)/2,+0.1}, {dx,0.0,0.0}, {0.0,dx,0.0}, field_ps, field_Es, Erange );
+    if(bMapElectron){ ff.epos[ipicked] = pa0; }else{ ff.apos[ipicked] = pa0; }
 
     E0 = field_Es[0];
     printf( "val_range: %g %g %g \n", Erange.x, Erange.y, field_Es[0] );
     Espread = 3.0;
 
     ogl_fs = genFieldMap( ogl_fs, field_ns, field_ps, field_Es, E0-Espread, E0+Espread );
-
-    //return
 
 }
 
@@ -265,7 +303,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //makePlots( plot1 );           exit(0);
 
     // ===== SETUP GEOM
-
+    char* fname = "data/H2_eFF_spin.xyz";
+    //char* fname = "data/H_eFF.xyz";
     //ff.loadFromFile_bas( "data/CH4.bas" );
     //ff.loadFromFile_bas( "data/C2H6.bas" );
     //ff.loadFromFile_bas( "data/C_eFF.bas" );
@@ -277,7 +316,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.loadFromFile_bas( "data/H-e.bas" );
     //ff.loadFromFile_xyz( "data/C2H4_eFF_pairs.xyz" );
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
-    ff.loadFromFile_xyz( "data/H2_eFF_spin.xyz" );
+    ff.loadFromFile_xyz( fname  );
 
     /*
     ff.realloc( 1, 2 );
@@ -325,23 +364,29 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.autoAbWs( default_aAbWs, default_eAbWs );
     //exit(0);
 
+    VecN::set(ff.ne,4.0,ff.esize);
+
     // ==== Test Eval
 
     i_DEBUG = 1;
     ff.eval();
     printf( "Ek %g Eaa %g Eae %g Eee %g EeePaul %g \n", ff.Ek, ff.Eaa, ff.Eae, ff.Eee, ff.EeePaul );
     i_DEBUG = 0;
-
     //exit(0);
+
+     makePlots( plot1, ff );
+
+     ff.loadFromFile_xyz( fname  );
 
     // ==== Bind Optimizer
 
-    opt.bindOrAlloc( 3*ff.nDOFs, (double*)ff.pDOFs, 0, (double*)ff.fDOFs, 0 );
+    init2DMap( 100, 0.1 );
+
+    opt.bindOrAlloc( ff.nDOFs, ff.pDOFs, 0, ff.fDOFs, 0 );
     opt.cleanVel( );
     opt.initOpt( 0.05, 0.2 );
 
-    init2DMap();
-
+    ff.eval();
 
     //setGeom(ff);
     //double sz = 0.51;
@@ -359,7 +404,6 @@ void TestAppRARFF::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
-
     glDisable(GL_LIGHTING);
 
     //return;
@@ -379,7 +423,9 @@ void TestAppRARFF::draw(){
             //ff.apos[0].set(.0);
             //if(bRun)ff.moveGD(0.001, 1, 1);
 
-            F2 = opt.move_FIRE();
+            ff.move_GD( 0.0001 );
+
+            //F2 = opt.move_FIRE();
 
             printf( " |F| %g \n", sqrt(F2) );
             if(!(F2<1000000.0))perFrame=0;
@@ -405,7 +451,6 @@ void TestAppRARFF::draw(){
 
     glCallList(ogl_fs);
     //Draw3D::drawColorScale( 20, {0.0,0.0,0.0}, Vec3dY, Vec3dX, Draw::colors_rainbow, Draw::ncolors );
-    //plot1.view();
 
     //printf( "apos (%g,%g,%g) \n", ff.apos[0].x, ff.apos[0].y, ff.apos[0].z );
 
@@ -424,8 +469,9 @@ void TestAppRARFF::draw(){
     for(int i=0; i<ff.ne; i++){
         //printf( "epos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
         if(ff.espin[i]>0){ glColor3f(0.0,0.5,1.0); }else{ glColor3f(1.0,0.5,0.0); };
-        Draw3D::drawPointCross( ff.epos  [i],     Qsz );
+        Draw3D::drawPointCross( ff.epos  [i], ff.esize[i] );
         Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
+        Draw3D::drawSphereOctLines( 8, ff.esize[i], ff.epos[i] );
     }
 
     //for(int i=0; i<ff.ne; i+=2){
@@ -438,13 +484,16 @@ void TestAppRARFF::draw(){
     //ff.aforce[1].set(0.);
     //if(bRun) ff.move_GD( 0.01 );
 
+    glDisable(GL_DEPTH_TEST);
+    plot1.view();
+
 };
 
 
 void TestAppRARFF::drawHUD(){
 	glTranslatef( 100.0, 250.0, 0.0 );
 	glScalef    (  100.0, 100.0, 1.0 );
-	plot1.view();
+	//plot1.view();
 }
 
 /*
