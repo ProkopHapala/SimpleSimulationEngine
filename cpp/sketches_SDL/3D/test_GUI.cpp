@@ -19,6 +19,8 @@
 #include "Draw3D.h"
 #include "AppSDL2OGL_3D.h"
 
+#include "Table.h"
+
 #include "GUI.h"
 #include "Plot2D.h"
 

@@ -9,6 +9,8 @@
 #include "Draw2D.h"
 #include "Draw3D.h"
 
+#include "Table.h"
+
 #include <string>
 
 /*
@@ -297,6 +299,34 @@ class TreeView : public GUIAbstractPanel { public:
     //virtual void onKeyDown( SDL_Event e ){};
     //virtual void onText   ( SDL_Event e ){};
 };
+
+
+//static const char* exampleDropDownListItems[3] = {"Item1","Item2","Item3"};
+class TableView : public GUIAbstractPanel { public:
+    //typedef Tree<TreeViewItem> TreeT;
+    Table* table  = 0;
+    int i0=0,j0= 0;
+    int imax=0,jmax=0;
+    int i,j       = 0;
+    std::vector<TreeViewTree*> lines;
+
+    //virtual void view();
+    //virtual void render();
+    //void updateLines( TreeViewTree& node, int level );
+    //inline void updateLines(){ lines.clear(); updateLines(root,0); };
+
+    //void initTableView( const std::string& caption, int xmin_, int ymin_, int xmax_, int nSlots_ );
+
+    TableView()=default;
+    //TreeView( const std::string& caption, int xmin, int ymin, int xmax, int nSlots){
+    //    initTreeView(caption,xmin,ymin,xmax,nSlots);
+    //}
+
+    //virtual GUIAbstractPanel* onMouse  ( int x, int y, const SDL_Event& event, GUI& gui );
+    //virtual void onKeyDown( SDL_Event e ){};
+    //virtual void onText   ( SDL_Event e ){};
+};
+
 
 // ==============================
 //    class GUI
