@@ -33,15 +33,30 @@ struct Atribute{
     int      nsub;    // number of sub units. e.g. Vec3
     //int      nbypes;  // number of bytes per item
     DataType type;    // type for conversion, necessarily exact - Float/Double can exchange
+
+    Atribute() = default;
+    Atribute(int offset_,int nsub_,DataType type_):offset(offset_),nsub(nsub_),type(type_){};
 };
 
-class Table{
+class Table{ public:
+    int n;
     int   itemsize = 0; // number of bytes per item
-    void* data     = 0; // pointer with data buffer of unknown type
+    char* data     = 0; // pointer with data buffer of unknown type
 
     std::unordered_map<std::string,int> name2column;
     std::vector       <Atribute>        columns;
 
+    void bind(void* data_, int itemsize_){
+        data=(char*)data_;
+        itemsize=itemsize_;
+    }
+
+    int addColum(void* ptr, int nsub, DataType type){
+        columns.push_back( Atribute( ((char*)ptr)-((char*)data), nsub, type ) );
+        return columns.size()-1;
+    }
+
+    /*
     void print(int i, int j){
         const Atribute& kind = columns[j];
         void* off = data+itemsize*i+kind.offset;
@@ -53,6 +68,20 @@ class Table{
             case DataType::Double :{ double* arr=(double*)off; for(int i=0; i<kind.nsub; i++){ printf( "%g \n",  arr[i] ); }} break;
             case DataType::String :{ char*   arr=(char  *)off; for(int i=0; i<kind.nsub; i++){ printf( "%s \n",  arr[i] ); }} break;
         }
+    }
+    */
+
+    char* toStr(int i, int j, char* s){
+        const Atribute& kind = columns[j];
+        void* off = data+itemsize*i+kind.offset;
+        switch(kind.type){
+            case DataType::Bool   :{ bool*   arr=(bool  *)off; for(int i=0; i<kind.nsub; i++){ s+=sprintf(s,"%c ",  arr[i]?'T':'F' ); }} break;
+            case DataType::Int    :{ int*    arr=(int   *)off; for(int i=0; i<kind.nsub; i++){ s+=sprintf(s,"%i ",  arr[i] ); }} break;
+            case DataType::Float  :{ float*  arr=(float *)off; for(int i=0; i<kind.nsub; i++){ s+=sprintf(s,"%g ",  arr[i] ); }} break;
+            case DataType::Double :{ double* arr=(double*)off; for(int i=0; i<kind.nsub; i++){ s+=sprintf(s,"%g ",  arr[i] ); }} break;
+            case DataType::String :{ char*   arr=(char  *)off; for(int i=0; i<kind.nsub; i++){ s+=sprintf(s,"%s ",  arr[i] ); }} break;
+        }
+        return s;
     }
 
 /*

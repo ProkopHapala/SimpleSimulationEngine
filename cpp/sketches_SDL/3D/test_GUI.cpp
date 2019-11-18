@@ -31,6 +31,14 @@
 //  * https://github.com/wjakob/nanogui
 //  * https://github.com/ocornut/imgui
 
+struct TestStruct{
+    int    inum = 115;
+    double dnum = 11.1154546;
+    double fvoid= 0.0;
+    float  fnum = 11.115;
+    Vec3d  dvec = (Vec3d){ 1.1545, 2.166, 3.1545};
+};
+
 void command_example( double value ){
     printf( "I'm writting value : %6.6f \n", value );
 }
@@ -65,6 +73,31 @@ TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, 
     GUI_fontTex = fontTex;
     fontTex3D = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
+    // ====== Table
+    Table* tab1 = new Table();
+    tab1->n      =  120;
+    TestStruct* tab_data = new TestStruct[tab1->n];
+    for(int i=0; i<tab1->n; i++){ tab_data[i].inum = i; tab_data[i].fnum = i*0.1; tab_data[i].dnum = sq(i*0.1); }
+    //char* tab_data_ = (char*)tab_data;
+    //char* pinum     = (char*)&(tab_data->inum);
+    //int ipinum      = pinum - tab_data_;
+    //tab1->data       = (char*)tab_data;
+    tab1->bind(tab_data, sizeof(*tab_data) );
+    /*
+    tab1->columns.push_back( Atribute( ((char*)&(tab_data->inum))-((char*)tab_data), 1, DataType::Int   ) );
+    tab1->columns.push_back( Atribute( ((char*)&(tab_data->fnum))-((char*)tab_data), 1, DataType::Float ) );
+    tab1->columns.push_back( Atribute( ((char*)&(tab_data->dnum))-((char*)tab_data), 1, DataType::Double) );
+    tab1->columns.push_back( Atribute( ((char*)&(tab_data->dvec))-((char*)tab_data), 3, DataType::Double) );
+    */
+
+    tab1->addColum( &(tab_data->inum), 1, DataType::Int    );
+    tab1->addColum( &(tab_data->fnum), 1, DataType::Float  );
+    tab1->addColum( &(tab_data->dnum), 1, DataType::Double );
+    tab1->addColum( &(tab_data->dvec), 3, DataType::Double );
+
+    gui.addPanel( new TableView( tab1, "tab1", 150.0, 250.0,  0, 0, 5, 3 ) );
+
+    return;
 
     ((DropDownList*)gui.addPanel( new DropDownList("DropList1",100.0,300.0,200.0,5) ))
         ->addItem("Item_1")
@@ -75,8 +108,6 @@ TestAppGUI::TestAppGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, 
         ->addItem("Item_6")
         ->addItem("Item_7")
         ->addItem("Item_8");
-
-
 
     clipBox.initScisor("Scissor_1",300,200,500,400);
     //clipBox.caption = "Scissor_1";
