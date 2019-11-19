@@ -48,6 +48,22 @@ int pickParticle( int n, Vec3d * ps, const Mat3d& cam, double R ){
 */
 
 
+void printFFInfo(const EFF& ff){
+    printf( "=== ElectronForcefield(ne %i,na %i) \n", ff.ne, ff.na );
+    double Eel   = ff.Eaa + ff.Eae + ff.Eee;
+    double EPaul = ff.EeePaul + ff.EaePaul;
+    double Etot  = ff.Ek + Eel + EPaul;
+    printf( "Etot %g Ek %g Eel %g(ee %g, ea %g aa %g)  EPaul %g(ee %g, ae %g) \n", Etot, ff.Ek, Eel, ff.Eee,ff.Eae,ff.Eaa,   EPaul, ff.EeePaul, ff.EaePaul );
+    for(int i=0; i<ff.na; i++){
+        printf( "a[%i] xyzs(%g,%g,%g) fxyzs(%g,%g,%g) \n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z, ff.aforce[i].x, ff.aforce[i].y, ff.aforce[i].z );
+    }
+    for(int i=0; i<ff.ne; i++){
+        printf( "e[%i] xyzs(%g,%g,%g,%g) fxyzs(%g,%g,%g,%g) \n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z, ff.esize[i], ff.eforce[i].x, ff.eforce[i].y, ff.eforce[i].z, ff.fsize[i] );
+    }
+}
+
+
+
 int genFieldMap( int ogl, Vec2i ns, const Vec3d* ps, const double* Es, double vmin, double vmax ){
     //printf( "val_range: %g %g %g \n", val_range.x, val_range.y, Es[0] );
     //float clSz = 3.0;
@@ -374,9 +390,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     i_DEBUG = 0;
     //exit(0);
 
-     makePlots( plot1, ff );
+    //makePlots( plot1, ff );
+    //ff.loadFromFile_xyz( fname  );
 
-     ff.loadFromFile_xyz( fname  );
 
     // ==== Bind Optimizer
 
@@ -423,9 +439,9 @@ void TestAppRARFF::draw(){
             //ff.apos[0].set(.0);
             //if(bRun)ff.moveGD(0.001, 1, 1);
 
-            ff.move_GD( 0.0001 );
+            //ff.move_GD( 0.0001 );
 
-            //F2 = opt.move_FIRE();
+            F2 = opt.move_FIRE();
 
             printf( " |F| %g \n", sqrt(F2) );
             if(!(F2<1000000.0))perFrame=0;
@@ -515,9 +531,11 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
 
+                case SDLK_i: printFFInfo(ff);
                 case SDLK_LEFTBRACKET :  Espread *= 1.2; ogl_fs=genFieldMap(ogl_fs, field_ns, field_ps, field_Es, E0-Espread, E0+Espread ); break;
                 case SDLK_RIGHTBRACKET:  Espread /= 1.2; ogl_fs=genFieldMap(ogl_fs, field_ns, field_ps, field_Es, E0-Espread, E0+Espread ); break;
-                case SDLK_e:
+                case SDLK_e: bMapElectron=!bMapElectron;
+                case SDLK_f:
                     pa0 = ff.apos[ipicked];
                     sampleScalarField( Efunc, field_ns, {-5.0,-5.0,+0.1}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, field_ps, field_Es, Erange );
                     E0 = field_Es[0];

@@ -138,6 +138,7 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     double e1f2 = e1*f2;
     fr = (f1*e2 + e1f2)*ir;
     fs =          e1f2 *r_s * is;
+    //printf( "CoulombGauss: E %g fr %g fs %g \n", e1*e2, fr, fs );
     //printf( "CoulombGauss r,s,q %g %g %g -> fr,fs %g %g \n", r, s, qq , fr, fs );
     //printf( "CoulombGauss : e1 %g \n", e1 );
     //printf( "CoulombGauss : e2 %g \n", e2 );
@@ -163,6 +164,7 @@ inline double addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, 
     double r    = dR.norm();
     double fs,fr;
     double E = CoulombGauss( r, s, fr, fs, qq );
+    //printf( "addCoulombGauss: fs %g s[i,j](%g,%g) fs[i,j](%g,%g) \n", fs, si,sj, fs*si, fs*sj );
     fsi += fs*si;
     fsj += fs*sj;
     f.add_mul( dR, fr );
@@ -415,7 +417,7 @@ double evalKinetic(){
     Ek=0;
     for(int i=0; i<ne; i++){
         Ek += addKineticGauss( esize[i], fsize[i] );
-        if( i_DEBUG>0 ) printf( "evalKinetic[%i] s %g -> f %g Ek %g  ->   f(%g,%g,%g) fs %g \n", i, esize[i], fsize[i], Ek );
+        if( i_DEBUG>0 ) printf( "evalKinetic[%i] s %g -> f %g Ek %g \n", i, esize[i], fsize[i], Ek );
     }
     return Ek;
 }
@@ -435,7 +437,7 @@ double evalEE(){
             Vec3d f=Vec3dZero;
             Vec3d   dR  = epos [j] - pi;
             double  sj  = esize[j];
-            double& fsj = fsize[i];
+            double& fsj = fsize[j];
             Eee     += addCoulombGauss( dR, si, sj, f, fsi, fsj, qq );
             EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
@@ -447,6 +449,7 @@ double evalEE(){
             //Draw3D::drawVecInPos( f   , pi      );
         }
     }
+    if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalEE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
     return Eee+EeePaul;
 }
 
@@ -479,6 +482,7 @@ double evalAE(){
             //Draw3D::drawVecInPos( f   , pi      );
         }
     }
+    if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalAE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
     return Eae+EaePaul;
 }
 
