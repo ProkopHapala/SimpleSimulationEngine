@@ -5,6 +5,7 @@
 
 import numpy as np
 
+
 def polyAprox( func=None, xs=None, ys=None, xmin=0.0, xmax=1.0,  nps=100, ndeg=6 ):
     if xs is None:
         xs = np.linspace( xmin, xmax, nps )
@@ -102,6 +103,30 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     np.set_printoptions(precision=16, linewidth=200 )
 
+    import scipy.special as spc
+    #xs    = np.linspace( 1e-6, 2.0, 1000 )
+    xs    = np.linspace( 2.0, 4.0, 1000 )
+    y_ref = spc.erf( xs )/xs
+    #y_ref = xs/spc.erf( xs )-xs
+    #y_ref = xs/spc.erf( xs )
+    plt.plot(xs, y_ref    , '-',label=('y_ref' ) )
+    for maxOrder in [6,8,10,12,16,18]:
+        #coefs, ys = polyFitFunc( xs, y_ref, [], range(0,maxOrder,2) )
+        coefs, ys = polyFitFunc( xs, y_ref, [], range(0,maxOrder,2) )
+        #coefs, ys = polyFitFunc( xs, y_ref, [], range(0,maxOrder,1) )
+        y_err   = ys - y_ref
+        plt.plot(xs, ys       , ':',label=('y_%i' %maxOrder ) )
+        plt.plot(xs,abs(y_err), '-',label=('err_%i' %maxOrder ) )
+        print maxOrder,":  "; printHornerPolynom_EvenOdd(coefs)
+    plt.yscale('log')
+    plt.legend()
+    plt.grid()
+    plt.title( "Polynominal Approx tan(x)" )
+    plt.show()
+    exit()
+
+    '''
+    # ====== approx atan2()
     #phis   = np.linspace( -np.pi/3, np.pi/3, 1000 )
     #phis   = np.linspace( 0, np.pi/3, 1000 )
     phis   = np.linspace( np.pi/3, 2*np.pi/3, 1000 )
@@ -135,7 +160,7 @@ if __name__ == "__main__":
     plt.title( "Polynominal Approx tan(x)" )
     plt.show()
     exit()
-
+    '''
 
 
     '''
