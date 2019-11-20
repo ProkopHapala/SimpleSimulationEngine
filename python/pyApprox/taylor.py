@@ -80,6 +80,14 @@ def makePolynomBasis( xs, orders ):
         Bas[i,:] = xs**k
     return Bas
 
+def polySolve( xs, y_ref, orders ):
+    Bas    = makePolynomBasis( xs, orders )
+    coefs_ = np.linalg.solve( Bas.T, y_ref )[0]
+    coefs  = np.zeros( orders[-1]+1 )
+    for i,k in enumerate(orders):
+        coefs[k] = coefs_[i]
+    return coefs
+
 def polyFit( xs, y_ref, orders ):
     Bas    = makePolynomBasis( xs, orders )
     #print Bas.shape, xs.shape
@@ -104,20 +112,48 @@ if __name__ == "__main__":
     np.set_printoptions(precision=16, linewidth=200 )
 
     import scipy.special as spc
-    #xs    = np.linspace( 1e-6, 2.0, 1000 )
-    xs    = np.linspace( 2.0, 4.0, 1000 )
-    y_ref = spc.erf( xs )/xs
+    #xs    = np.linspace( 1e-6, 1.0, 1000 )
+    xs    = np.linspace( 0.0, 1.0, 12  )
+    xs_   = np.linspace( 1.0, 4.5, 1000 )
+    #xs =(xs **2)*(4.5-1) + 1
+    xs =(xs **2)*(4.5)+1e-6
+    xs_=xs_
+    #xs    = np.linspace( 1.0, 10.0, 1000 )
+    #x_ = 1./xs
+    #y_ref = spc.erf( xs )/xs
+    #y_ref = spc.erf( x_ )/x_
     #y_ref = xs/spc.erf( xs )-xs
+    y_ref   = (xs/spc.erf( xs )-xs)**(1./8)
+    y_ref_  = (xs_/spc.erf( xs_ )-xs_)**(1./8)
+    y_ref__ = xs_/spc.erf( xs_ )
     #y_ref = xs/spc.erf( xs )
-    plt.plot(xs, y_ref    , '-',label=('y_ref' ) )
-    for maxOrder in [6,8,10,12,16,18]:
-        #coefs, ys = polyFitFunc( xs, y_ref, [], range(0,maxOrder,2) )
-        coefs, ys = polyFitFunc( xs, y_ref, [], range(0,maxOrder,2) )
-        #coefs, ys = polyFitFunc( xs, y_ref, [], range(0,maxOrder,1) )
-        y_err   = ys - y_ref
-        plt.plot(xs, ys       , ':',label=('y_%i' %maxOrder ) )
-        plt.plot(xs,abs(y_err), '-',label=('err_%i' %maxOrder ) )
+    #plt.plot(xs, y_ref    , '-',label=('y_ref' ) )
+    plt.plot(xs_, y_ref__    , '-',label=('y_ref' ) )
+    #plt.plot(xs, xs       , '--',label=('y=x' ) )
+    #for maxOrder in [6,8,10,12,16,18]:
+    #coefs0 = np.array([0.,1.])
+    coefs0 = np.array([])
+    #coefs0 = []
+    #ys0 = np.polyval( coefs0[::-1], xs )
+    #plt.plot(xs, ys0    , '-',label=('y0' ) )
+    
+    #for maxOrder in [4,6,8,12,14,16,18]:
+    #for maxOrder in [4,6,8,10,12,14,16,18]:
+    for maxOrder in [4,6,8,10,12,14,16]:
+        #coefs, ys = polyFitFunc( xs, y_ref, coefs0, range(0,maxOrder,2) )
+        #coefs, ys = polyFitFunc( xs, y_ref, coefs0, range(0,maxOrder,2) )
+        coefs, ys = polyFitFunc( xs, y_ref, coefs0, range(0,maxOrder,1) )
+        #y_err   = ys - y_ref
+        ys_     = np.polyval(coefs[::-1],xs_)
+        y_err_  = ys_ - y_ref_
+        ys__    = ys_**8 + xs_
+        y_err__ = ys__ - y_ref__
+        #plt.plot(xs, ys       , ':',label=('y_%i' %maxOrder ) )
+        #plt.plot(xs,abs(y_err), '-',label=('err_%i' %maxOrder ) )
+        plt.plot(xs_,ys__, ':',label=('err_%i' %maxOrder ) )
+        plt.plot(xs_,abs(y_err__), '-',label=('err_%i' %maxOrder ) )
         print maxOrder,":  "; printHornerPolynom_EvenOdd(coefs)
+    
     plt.yscale('log')
     plt.legend()
     plt.grid()

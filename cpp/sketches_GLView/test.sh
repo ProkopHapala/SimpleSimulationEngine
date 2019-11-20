@@ -45,13 +45,17 @@ make GLView
 #echo "!!! ==== GLView compiled ... go back .. "
 cd $dirbak
 
-ln -f -s $bin_path/libGLView.so  $build_path/libGLView.so
-ln -f -s $bin_path/libGLView.so  libGLView.so
+#ln -f -s $bin_path/libGLView.so  libGLView.so
+#ln -f -s libGLView.so  $build_path/libGLView.so
+#cp libGLView.so $build_path
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$bin_path
+
 
 
 rm $build_path/$target.x
 #g++ -o testGLV.x test.cpp $IFLAGS $LFLAGS 
 $CPPC -o $build_path/$target.x $target.cpp $CFLAGS $ERRFLAGS $IFLAGS $LFLAGS 
+
 
 #gcc -o testGLV.x test.c $LFLAGS -lGLV -lGL -lSDL2
 #tcc -o testGLV.x test.c $LFLAGS -lGLV -lGL -lSDL2
