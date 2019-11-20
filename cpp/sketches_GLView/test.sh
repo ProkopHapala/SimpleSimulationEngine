@@ -27,7 +27,7 @@ PREI="-I"$PREDIR
 echo "PREI " $PREI
 
 #IFLAGS="-I../../common/math -I../../common_SDL/SDL2OGL -I../../common_SDL/ -I../../common/utils -I../../common/dataStructures -I../../common_SDL/SDL2OGL -I../../libs_SDL/GLView -I/usr/include" 
-IFLAGS=$PREI"common/math "$PREI"common_SDL/SDL2OGL "$PREI"common_SDL/ "$PREI"common/utils "$PREI"common/dataStructures "$PREI"common_SDL/SDL2OGL "$PREI"libs_SDL/GLView -I/usr/include" 
+IFLAGS=$PREI"common/math "$PREI"common/CombatModels "$PREI"common_SDL/SDL2OGL "$PREI"common_SDL/ "$PREI"common/utils "$PREI"common/dataStructures "$PREI"common_SDL/SDL2OGL "$PREI"libs_SDL/GLView -I/usr/include" 
 
 echo "IFLAGS " $IFLAGS
 
