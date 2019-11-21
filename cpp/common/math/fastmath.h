@@ -126,6 +126,21 @@ inline double erfx_e9( double x ){
     return 1./( t + x );
 }
 
+inline double exp_p8( double x ){
+    // optimized for decreasing exp(-x)
+    if(x>25) return 0;
+    x *= 0.125;
+    double xx = x*x;
+    //double even = 1.0 +xx*(0.5000000000000000 +xx*(0.04166189077950237  +xx*(0.001321435070258156  ) ) );
+    //double odd  = 1.0 +xx*(0.1666664718006032 +xx*(0.008304046626191663 +xx*(0.0001332637951696261 ) ) );
+    //double p   = even + x*odd;
+    double p = (1+x) + 
+               xx*( 0.5000000000000000   + 0.1666664718006032   *x +
+               xx*( 0.04166189077950237  + 0.008304046626191663 *x +
+               xx*( 0.001321435070258156 + 0.0001332637951696261*x ) ) );
+    p*=p; p*=p; p*=p; 
+    return p;
+}
 
 template <typename T>
 inline T fastExp(T x, size_t n ){

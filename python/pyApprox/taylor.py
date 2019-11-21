@@ -3,6 +3,53 @@
 
 # https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.polynomial.chebyshev.Chebyshev.fit.html
 
+
+
+'''
+
+Numerical Approximation Techniques & Tricks
+
+lets approximate function y=y(x)
+
+1) Taylor Series - provide very good approximation around a point, but accuracy quickly decrease with distance from the point
+2) Linear Fitting
+    y = sum_i{ a_i b_i(x) } where a_i is coefficient and b_i(x) is basis function non-lineralily transforming x. For computational convenience and speed are relevant only following functions:
+    2) Polynominal bais: b_i = x^i
+    3) Hramonic series:  b_i = 1/x^i
+3) Non-linear fitting
+
+1) Non-lineary Transform of the function followed by fitting:
+    1) Invert the function ( 1/y ), then fit using basis:
+        1/y = sum_i{ a_i b_i(x) }     =>     y = 1/(sum_i{ a_i b_i(x) }) 
+    2) n-th Suare Root of the function
+        y^(1/n) = sum_i{ a_i b_i(x) }     =>     y = ( sum_i{ a_i b_i(x) } )^(n) 
+2) Non-lineary Transform of the argument followed by fitting:
+    1) Invert the argument:
+        y = sum_i{ a_i b_i( 1/x ) }
+    2)  Polynominal of argument
+        p = sum_i{ c_i u_i( x ) }
+        y = sum_i{ a_i b_i( p ) } 
+
+'''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import numpy as np
 
 
@@ -111,6 +158,37 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     np.set_printoptions(precision=16, linewidth=200 )
 
+    #xs    = np.linspace( 0.0, 2.5, 100 )
+    xs    = np.linspace( 0.0, 1.0, 6 ); xs*=xs; xs*=1.5
+    npow = 3
+    x_     = np.linspace( 0.0, 40.0, 1000 )
+    y_ref  = np.exp( -xs )
+    y_ref_ = np.exp( -x_ )
+    #plt.plot(xs, y_ref, '-',label=('y_ref' ) )
+    plt.plot( x_, y_ref_, '-',label=('y_ref' ) )
+    coefs0 = np.array([1.0,1.0,0.5])
+    #coefs0 = np.array([1.0,1.0,0.5,1./6,1./24.])
+    
+    for maxOrder in [6,7,8,9]:
+        coefs, y = polyFitFunc( -xs, y_ref, coefs0, range(3,maxOrder,1) )
+        #coefs, y = polyFitFunc( -xs, y_ref, coefs0, range(5,maxOrder,1) )
+        y_       = np.polyval(coefs[::-1], -x_/(2**npow) )
+        y_ = y_**(2**npow)
+        #plt.plot(xs, y         , ':',label=('y_%i' %maxOrder ) )
+        #plt.plot(xs, abs(y-y_ref) , '-',label=('err_%i' %maxOrder ) )
+        plt.plot(x_, y_            , ':',label=('y_%i' %maxOrder ) )
+        plt.plot(x_, abs(y_-y_ref_) , '-',label=('err_%i' %maxOrder ) )
+        print maxOrder,":  "; printHornerPolynom_EvenOdd(coefs)
+    
+    plt.yscale('log')
+    plt.ylim(1.e-16,1.4)
+    plt.legend()
+    plt.grid()
+    plt.title( "Polynominal Approx exp(-x)" )
+    plt.show()
+
+
+    '''
     import scipy.special as spc
     #xs    = np.linspace( 1e-6, 1.0, 1000 )
     xs    = np.linspace( 0.0, 1.0, 12  )
@@ -160,6 +238,7 @@ if __name__ == "__main__":
     plt.title( "Polynominal Approx tan(x)" )
     plt.show()
     exit()
+    '''
 
     '''
     # ====== approx atan2()
