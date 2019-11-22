@@ -29,6 +29,48 @@ NOTES:
 1) It seems that decrease of kinetic energy by sharing electron between two atoms is dominant contribution which makes formation of bonds fabourable
     * H2 Molecule perhaps cannot be stable without this contribution ( i.e. with fixed radius of electron blobs )
 
+
+Params
+
+            a             b             c           d           e           s-core
+Al     0.486000       1.049000      0.207000                              1.660000
+Si     0.320852       2.283269      0.814857                              1.691398
+C     22.721015       0.728733      1.103199     17.695345    6.693621    0.621427
+O     25.080199       0.331574      1.276183     12.910142    3.189333    0.167813
+
+s—p (Eq. (5)) C
+O a
+0.486000
+0.320852
+
+22.721015 25.080199
+b
+1.049000
+2.283269
+0.728733
+0.331574
+c
+0.207000
+0.814857
+1.103199
+1.276183
+d
+17.695345
+12.910142
+e
+6.693621
+3.189333
+score (bohr)
+1.660000
+1.691398
+0.621427
+0.167813
+
+
+
+
+
+
 */
 
 /*
@@ -78,6 +120,25 @@ constexpr static const Vec3d default_aAbWs[] = {
 {20.0, -5.0, 0.25},  // Q = 3 // B
 {20.0, -5.0, 0.25},  // Q = 4 // C
 };
+
+constexpr static const  double default_EPCs[] = {
+// s-core       a                b               c             d             e
+ 0.621427,   22.721015,       0.728733,      1.103199,     17.695345,    6.693621,  // C
+ 0.167813,   25.080199,       0.331574,      1.276183,     12.910142,    3.189333,  // O
+ 1.660000,    0.486000,       1.049000,      0.207000,     -1       ,   -1       ,  // Al
+ 1.691398,    0.320852,       2.283269,      0.814857,     -1       ,  - 1       ,  // Si
+};
+
+// Reformulate    d=b  ,   e=c
+/*
+constexpr static const default_EPCs[] = {
+// s-core        a               b              c             d               e
+ 0.621427,   22.721015,      17.695345,      6.693621,     ,    ,  // C
+ 0.167813,   25.080199,      12.910142,      3.189333,     ,    ,  // O
+ 1.660000,    0.486000,       1.049000,      0.207000,     -1       ,   -1       ,  // Al
+ 1.691398,    0.320852,       2.283269,      0.814857,     -1       ,  - 1       ,  // Si
+};
+*/
 
 struct EFFAtomType{
     double Q; // nuncear charge
@@ -228,6 +289,94 @@ inline double getOverlapSGauss( double r2, double si, double sj, double& dSr, do
 }
 
 
+//inline double getOverlapSGauss( const Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj ){
+inline double getDensOverlapGauss_S( double r2, double amp, double si, double sj, double& dSr, double& dSsi, double& dSsj,
+    double si2, double sj2, double is2, double is4
+){
+
+    double a    = 2.*(si*sj)*is2;
+    double a2   = a*a;
+    double e1   = amp * a*a2;
+    double e2   = exp( -2*r2*is2 );
+
+    double f1   = 6.*amp*a2 * (si2-sj2)*is4;
+    double f2   = 4.*e2 * r2*is4;
+
+    dSsi = e1*f2*si - e2*f1*sj;
+    dSsj = e1*f2*sj + e2*f1*si;
+    dSr  = e1*e2*(-4.*is2);
+
+    return e1 * e2;
+}
+
+//inline double getOverlapSGauss( const Vec3d& dR, Vec3d& f, double si, double sj, double& fsi, double& fsj ){
+inline double getDensOverlapGauss_P( double r2, double amp, double si, double sj, double& dSr, double& dSsi, double& dSsj,
+    double si2, double sj2, double is2, double is4
+){
+
+    double a    = 2.*(si*sj)*is2;
+    double a2   = a*a;
+    double a4   = a2*a2;
+    double e1   = amp*a4*a;
+    double e2   = exp( -2*r2*is2 );
+
+    double isi  = 1/si;
+    //double ris  = r*isi;     // si is core radius
+    double ris2 = r2*isi*isi;
+
+    double f1   = 10.*amp * a4 * (si2-sj2)*is4;
+    double f2   = 4.*e2 * r2*is4;
+    double E    = e1*e2*ris2;
+    double dEs  = E*-2*isi;
+    dSsi = dEs + e1*f2*si - e2*f1*sj;
+    dSsj = dEs + e1*f2*sj + e2*f1*si;
+    dSr  = E*( -2*isi  +    -4.*is2 );
+
+    return E;
+}
+
+/*
+inline double PauliGauss_S( double r, double s, double* params, double& fr, double& fs ){
+    double a = params[0];
+
+    double w  = 2.*(si*sj)*is2;
+
+    double b = params[1];
+    double c = params[2];
+    double r2 = r*r;
+    double s2 = s*s;
+    double invs = 1/( c + s2 );
+    double beta = -b*invs;
+    double E =  a * exp( beta*r2 );
+    fr = E  * beta * 2;   // dont forget multiply by vec_r
+    fs = fr * r2*invs2;   // dont forget muliply by s
+    return E;
+}
+
+inline double PauliGauss_P( double r, double s, double& fr, double& fs ){
+    double a = params[0];
+    double b = params[1];
+    double c = params[2];
+    double d = params[3];
+    double e = params[4];
+    //double r2 = r*r;
+    double s2 = s*s;
+
+    double r_   = (r-c*s);
+    double r_2  = r_*r_;
+    double invs = 1/( c + s2 );
+    double beta = -d*invs;
+
+    double e1 = 2*(b*b+s*s)/(s*b);
+
+    double e2 =  exp( -beta*r_2 );
+
+    double E =  a * e1  * r_2 *  e2;
+    return
+
+}
+*/
+
 inline double getDeltaTGauss( double r2, double si, double sj,  double& dTr, double& dTsi, double& dTsj ){
     double si2  = si*si;
     double sj2  = sj*sj;
@@ -319,6 +468,53 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     return T * eS;
 
 }
+
+inline double addPauliGaussS( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
+
+    double r2 = dR.norm2();
+    r2 *= KRSrho.x*KRSrho.x;
+    si *= KRSrho.y;
+    sj *= KRSrho.y;
+    double r = sqrt(r2);
+
+    double si2  = si*si;
+    double sj2  = sj*sj;
+    //double isi2 = 1./si2;
+    //double isj2 = 1./sj2;
+    double s2   = si2 + sj2;
+    double is2  = 1./s2;
+    double is4  = is2 * is2;
+
+    double dTr,dTsi,dTsj;
+    double dSr,dSsi,dSsj;
+    double T = getDeltaTGauss  ( r2, si, sj, dTr, dTsi, dTsj, 1./si2, 1./sj2,s2,is2,is4 );
+    double S = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj,    si2,    sj2,is2,is4 );
+
+    double eS,fS;
+    if(anti){
+        eS = PauliSGauss_anti( S, fS, KRSrho.z );
+    }else{
+        eS = PauliSGauss_anti( S, fS, KRSrho.z );
+    }
+
+    double TfS = T*fS;
+    fsi +=         (dTsi*eS + TfS*dSsi)*KRSrho.y;
+    fsj +=         (dTsj*eS + TfS*dSsj)*KRSrho.y;
+    f.add_mul( dR, (dTr *eS + TfS*dSr )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
+
+    //printf( "addPauliGauss r2, si, sj %g %g %g \n", r2, si, sj );
+    //printf( "addPauliGauss T,dTr,dTsi,dTsj %g %g %g %g \n", T,dTr,dTsi,dTsj );
+    //printf( "addPauliGauss S,dSr,dSsi,dSs  %g %g %g %g \n", S,dSr,dSsi,dSsj );
+    //printf( "addPauliGauss S, eS, fS  %g %g %g \n", S, eS, fS  );
+    //printf( "addPauliGauss fr1, fr2 fr %g %g %g %g \n", dTr*eS, TfS*dSr, (dTr *eS + TfS*dSr )*KRSrho.x, dR.z );
+    //printf( "---------------------- \n" );
+
+    return T * eS;
+
+}
+
+
+
 
 
 inline double interp_gx4(double r2, double y1, double y2 ){
