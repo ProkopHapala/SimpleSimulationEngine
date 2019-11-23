@@ -95,6 +95,7 @@ Inf_AAGM (MANPADS)
 
 MG:
  - huge firepower against infantry in defence
+ - significant supperssion
  - not as efficient in offence
  - slightly decreased movement speed
  - huge ammo consumption
@@ -195,23 +196,65 @@ struct WeaponType{
     double indirect_reach;       // 
     double indirect_supression;  // supression in idirect or direct fire
     double movePenalty;  // [0.0..1.] decreased firepower when moving
-    double firepower[4]; // against armor-class : light[<10mm], medium[<50mm], heavy[<500mm], super heavy[>500mm]
-    double damage   [4]; // damage caused to diven armor-class
     double supply;       // supply consumed when fireing [/attack round]
+    double firepower[4]; // against armor-class : light[<10mm], medium[<50mm], heavy[<500mm], super heavy[>500mm]
+    //double damage   [4]; // damage caused to diven armor-class
+
+    int fromString(const char* s){
+        return sscanf( s, "%lf %lf %lf %lf %lf    %lf %lf %lf %lf  \n",
+            &direct_reach, &indirect_reach, &indirect_supression, &movePenalty, &supply,
+            &firepower[0],&firepower[1],&firepower[2],&firepower[3]
+            //&damage[0],   &damage[1],   &damage[2],   &damage[3] 
+        );
+    }
+
+    int info(char* s){
+        return sprintf( s, "reach %g / %g %g \n movePen %g \n supply %g \n fire[%g,%g,%g,%g] \n ", 
+            direct_reach, indirect_reach, indirect_supression, movePenalty, supply,
+            firepower[0],firepower[1],firepower[2],firepower[3]
+            //damage[0],   damage[1],   damage[2],   damage[3] 
+        );
+    }
 };
 
 // ==============================================
 
 struct UnitType{
+    int    armorClass;     // light[<10mm], medium[<50mm], heavy[<500mm], super heavy[>500mm]
     double size;           // [m]   => visibility and hit probability
-    int    armorClass;     // light[<10mm], medium[<50mm], heavy[<500mm], super heavy[>500mm] 
     double supply;         // [kg/day]
     double weight;         // strategic   speed
+    double baseCost;
     double speed_transit;  // [km/h] operational speed
     double speed_combat;   // [km/h] tactical    speed
-    double baseCost;
-    WeaponType primary;    // this weapon is prefered
-    WeaponType secondary;  // used only when primary cannot be used
+    WeaponType* primary;    // this weapon is prefered
+    WeaponType* secondary;  // used only when primary cannot be used
+
+    int fromString(const char* s){
+        return  sscanf( s, "%i %lf %lf %lf %lf   %lf %lf  \n", 
+            &armorClass,
+            &size, &weight, &supply, &baseCost, 
+            &speed_transit, &speed_combat   
+            //primary, secondary,
+        );
+    }
+
+    int info(char* s, bool bDeep){
+        char *s0 = s;
+        s+=sprintf( s, " armor %i size %g weight %g \n supply %g cost %g \n speed %g / %g \n", 
+            armorClass,
+            size, weight, supply, baseCost, 
+            speed_transit, speed_combat   
+            //primary, secondary,
+        );
+        //printf( " s-s0 %i \n", s-s0);
+        if(bDeep){
+            if(primary  ){ s+=sprintf(s,"primary:\n"  );   s+=primary  ->info(s); }
+            if(secondary){ s+=sprintf(s,"secondary:\n");   s+=secondary->info(s); }
+        }
+        return s-s0;
+    }
+
 };
 
 // ==============================================
@@ -286,8 +329,8 @@ double assembleFirePower( const double* attraction ){
     for(const UnitState& unit : composition.units){
         double activity  = unit.n * unit.safeAmmo * unit.supressed;
         double safeAmmo2 = unit.safeAmmo*unit.safeAmmo;
-        const double* fps1 = unit.type->primary  .firepower;
-        const double* fps2 = unit.type->secondary.firepower;
+        const double* fps1 = unit.type->primary  ->firepower;
+        const double* fps2 = unit.type->secondary->firepower;
         for(int i=0; i<4; i++){
             double fp1 = fps1[i];
             double fp2 = fps2[i];
