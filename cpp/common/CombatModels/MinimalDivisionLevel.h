@@ -176,20 +176,44 @@ Close Air Support
  - huge fuel consumption when used recklessly
  - very costly - especially when destroyed
 
-
 */
 
 #ifndef MinimalDivisionLevel_h
 #define MinimalDivisionLevel_h
 
+int iDEBUG=0;
 
-double firePowerSaturation( double fp, double vis ){
+
+inline double firePowerSaturation( double fp, double vis ){
+    //return vis*erf(fp/vis);
+    if(fp==0) return fp;
     return erf(vis/fp);
     //  firepower cannot be higher than visibility
 }
 
+/*
+inline double fpDecay( double  dist, double reach ){
+    double  c = dist/reach;
+    return  1 - c*c;
+}
+*/
 
-// ==============================================
+// ==================================
+// =====   BattleField
+// ==================================
+
+struct BattleField{
+    // weather
+    //  - air - cloudy
+    //  - fog
+    //  - mud
+    // terrain
+    double maxCamo;
+};
+
+// ==================================
+// =====  WeaponType
+// ==================================
 
 struct WeaponType{
     double direct_reach;    // distance
@@ -215,9 +239,17 @@ struct WeaponType{
             //damage[0],   damage[1],   damage[2],   damage[3] 
         );
     }
+
+    inline double getDirectDecay(double dist){
+        double  c = dist/direct_reach;
+        if(c>1) return 0;
+        return  1 - c*c;
+    }
 };
 
-// ==============================================
+// ==================================
+// =====  UnitType
+// ==================================
 
 struct UnitType{
     int    armorClass;     // light[<10mm], medium[<50mm], heavy[<500mm], super heavy[>500mm]
@@ -257,7 +289,9 @@ struct UnitType{
 
 };
 
-// ==============================================
+// ==================================
+// =====  UnitState
+// ==================================
 
 struct UnitState{
     UnitType* type;
@@ -271,52 +305,213 @@ struct UnitState{
     double stealth;        // how much the unit risk to be uncovered, high-profile action e.g. run or fire decrease stealth
     double safeAmmo;       // [0.0..1.0] determine trade-off between ammo supply consumtion and firepower
 
+    double debug_got_shot;
 
-void getFire( double firepower_got ){} 
+    UnitState()=default;
+
+    void init( UnitType* type_, int n_ ){
+        type=type_; n=n_; ntot=0;
+        cost = type->baseCost;
+        supressed  = 1.0;
+        safeAmmo   = 1.0;
+        dug        = 1.0;
+        camo       = 1.0;
+        stealth    = 1.0;
+    }
+
+    UnitState(UnitType* type_, int n_){
+        init(type_, n_); 
+    }
+
+void getFire( double firepower_got ){
+    debug_got_shot = firepower_got;
+} 
 
 double visibilityFunction( double invDist2, double maxCamo ){
     // maxCamo determined by terrain
-    return (1. - maxCamo*camo*stealth )*type->size*invDist2;
+    //double hidden = 1. - maxCamo*camo*stealth;
+    double hidden = maxCamo*camo*stealth;
+    double cross  = type->size*invDist2;
+    //printf("visibilityFunction: cross %g(size %g invDist2 %g) * hidden %g (maxCamo %g camo %g stealth %g) \n",  cross, type->size, invDist2, hidden, maxCamo, camo, stealth );
+    return hidden*cross;
 }
 
 };
 
-// ==============================================
+// ==================================
+// =====   Division
+// ==================================
 
 struct Division{
     int n_inf; // number of infantery
     UnitType transport;
-    std::vector<UnitState> units;
-};
-
-// ==============================================
-
-struct BattleField{
-    // weather
-    //  - air - cloudy
-    //  - fog
-    //  - mud
-    // terrain
-    double maxCamo;
+    std::vector<UnitState*> units;
 };
 
 
-// ==============================================
+
+// ==================================
+// =====   CombatSide
+// ==================================
+
+struct CombatSideTemp{
+    double ammo_spend;
+    double primary_firepower[4];
+    double secondary_firepower[4];
+};
 
 struct CombatSide{
+    Division composition;
     double firepower        [4]; // total amount of firepower in each category {light, medium, heavy, superheavy}
     double target_attraction[4]; // total visibility in each category          {light, medium, heavy, superheavy}
-    Division composition;
+    double totalVisibility;
 
+void accumUnit(UnitState& unit, double dist, const BattleField& conds, CombatSideTemp& tmp ){
+    // ---- shot Attraction
+    double invDist2 = 1/(dist*dist);
+    double visibility = unit.visibilityFunction( invDist2, conds.maxCamo );
+    totalVisibility  += visibility;
+    //double attaction  = attractivityFunction( unit.type.size, unit.value, unit.camo, unit.stealth );
+    double hitProb      = erf( visibility );
+    unit.shot_attaction = unit.cost * hitProb;
+    target_attraction[ unit.type->armorClass ] += unit.n * unit.shot_attaction;
+    if(iDEBUG>0) printf( "armor[%i] visibility %g hitProb %g cost %g attraction %g \n" , unit.type->armorClass, visibility, hitProb, unit.cost, unit.shot_attaction );
+    //return;
+
+    // ---- FirePower
+    //const UnitState& unit  = *unit_;
+    double activity  = unit.n * fmin( unit.safeAmmo, unit.supressed );
+    double safeAmmo2 = unit.safeAmmo*unit.safeAmmo;
+    
+    const double *fps1,*fps2;
+    double fdec1,fdec2; 
+    fps1 = unit.type->primary->firepower;
+    fdec1 = unit.type->primary->getDirectDecay( dist );
+    //const double* fps2;
+    if(unit.type->secondary){ 
+        //fps2 = unit.type->secondary->firepower * fpDecay( dist, unit.type->secondary->direct_reach );
+        fps2  = unit.type->secondary->firepower;
+        fdec2 = unit.type->secondary->getDirectDecay( dist );;
+    }else{ fps2 = 0 ;};
+    //printf( " activity %g fp1,2 %g,%g  \n", activity, fps1, fps2 );
+    for(int i=0; i<4; i++){
+        double fp1,fp2;
+        double dfp1,dfp2;
+        fp1  = fps1[i];
+        dfp1 = activity * fp1 * fdec1;
+        tmp.primary_firepower  [i] += dfp1;
+        if(fps2){
+            fp2  = fps2[i]*fdec2;
+            dfp2 = activity * fp2 * fdec2;
+            tmp.secondary_firepower[i] += dfp2;
+        }else{
+            fp2=0;
+        }
+        tmp.ammo_spend += (fp1 + fp2)*safeAmmo2;
+        if(iDEBUG>0) printf( "->fp[%i] activ %g fp(%g,%g) fdec(%g,%g) dfp(%g,%g) \n", i, activity,  fp1,fp2,  fdec1,fdec2,  dfp1,dfp2 );
+    }
+}
+
+// Maybe call it rather Fire-Attractivity or Fire-Magnet
+void gather( const BattleField& conds, double invDist2, CombatSideTemp& tmp ){
+    //double invDist2 = 1/(dist*dist);
+    totalVisibility=0;
+    tmp.ammo_spend =0;
+    for(int i=0; i<4; i++){ 
+        tmp.primary_firepower  [i]=0;
+        tmp.secondary_firepower[i]=0;
+        target_attraction      [i]=0; 
+    }
+    for(UnitState* unit : composition.units){
+        //printf("unit->type->armorClass %i \n", unit->type->armorClass );
+        accumUnit( *unit, invDist2, conds, tmp );
+    }
+}
+
+inline void match( const double* attraction, CombatSideTemp& tmp ){
+    for(int i=0; i<4; i++){
+        double fp1 = tmp.primary_firepower  [i];
+        double fp2 = tmp.secondary_firepower[i];
+        double vis = attraction[i];
+        double f1 = firePowerSaturation( fp1,     vis );
+        double f2 = firePowerSaturation( fp1+fp2, vis );
+        firepower[i] = f1*fp1 + f2*fp2;
+        if(iDEBUG>0) printf( "->match[%i] vis %g fp(%g,%g) f(%g,%g) dfp(%g,%g) \n", i, vis, fp1, fp2, f1, f2, fp1*f1, fp2*f2 );
+    }
+}
+
+void distributeFirePower( const double* firepower){ 
+    double normalized_firepower[4];
+    for(int i=0; i<4; i++){
+        double att = target_attraction[i];
+        if(att>0){ normalized_firepower[i] = firepower[i] / att; }else{ normalized_firepower[i]=0; };
+        //normalized_firepower[i] = firepower[i] * invAttraction[i]; 
+        if(iDEBUG>0) printf( "normalized_firepower[%i] %g <= fp %g att %g \n", i, normalized_firepower[i], firepower[i], att );
+    };
+    for(UnitState* unit : composition.units){
+        int iclass = unit->type->armorClass;
+        double firepower_got = unit->n * unit->shot_attaction * normalized_firepower[iclass];
+        unit->getFire( firepower_got ); // internal damage model
+        if(iDEBUG>0) printf( "unit.armor[%i] got_fp %g attraction %g norm_fp %g \n", iclass, firepower_got,  unit->shot_attaction, normalized_firepower[iclass] );
+    }
+}
+
+};
+
+// ==================================
+// =====   CombatSide
+// ==================================
+
+struct Combat{
+    double dist;
+    BattleField conds;
+    CombatSide attacker;
+    CombatSide defender;
+
+void round(){
+    /*
+    attacker.assembleTargetAttraction( conds, dist );
+    defender.assembleTargetAttraction( conds, dist );
+    attacker.assembleFirePower( defender.target_attraction );
+    defender.assembleFirePower( attacker.target_attraction );
+    */
+    //double attfp1[4],attfp2[4],deffp1[4],deffp1[4];
+    if(iDEBUG>0)printf( "=======combat round dist %g \n", dist );
+    CombatSideTemp atttmp, deftmp;
+    //double invDist2 = 1/(dist*dist);
+    if(iDEBUG>0)printf( "attacker::gather \n");
+    attacker.gather( conds, dist, atttmp );
+    if(iDEBUG>0)printf( "defender::gather \n");
+    defender.gather( conds, dist, deftmp );
+    //return;
+    if(iDEBUG>0)printf( "attacker.match -> defender \n");
+    attacker.match( defender.target_attraction,  atttmp );
+    if(iDEBUG>0)printf( "defender.match -> attacker \n");
+    defender.match( attacker.target_attraction,  deftmp );
+
+    // distribute firepower and take damage
+    if(iDEBUG>0)printf( "attacker take fire \n");
+    attacker.distributeFirePower( defender.firepower );
+    if(iDEBUG>0)printf( "defender take fire \n");
+    defender.distributeFirePower( attacker.firepower );
+    //attacker.tryAdvance(); // if remain some action points
+    //defender.tryRetreat();
+}
+
+
+
+/*
 // Maybe call it rather Fire-Attractivity or Fire-Magnet
 double assembleTargetAttraction( const BattleField& conds, double dist ){
     double totalVisibility = 0;
     double invDist2 = 1/(dist*dist);
-    for(UnitState& unit : composition.units){
-        double visibility = unit.visibilityFunction( invDist2, conds.maxCamo );
+    for(UnitState* unit : composition.units){
+        double visibility = unit->visibilityFunction( invDist2, conds.maxCamo );
+        totalVisibility += visibility;
         //double attaction  = attractivityFunction( unit.type.size, unit.value, unit.camo, unit.stealth );
-        unit.shot_attaction = unit.cost * erf( visibility );
-        for(int i=0; i<4; i++) target_attraction[ unit.type->armorClass ] += unit.n * unit.shot_attaction;
+        unit->shot_attaction = unit->cost * erf( visibility );
+        target_attraction[ unit->type->armorClass ] += unit->n * unit->shot_attaction;
+        printf( "armor[%i] visibility %g cost %g attraction %g \n" , unit->type->armorClass, visibility, unit->cost, unit->shot_attaction );
     }
     return totalVisibility;
     // evaluate how attractive is each unit for enemy to shoot at
@@ -326,11 +521,12 @@ double assembleFirePower( const double* attraction ){
     double primary_firepower  [4];
     double secondary_firepower[4];
     double ammo_spend = 0;
-    for(const UnitState& unit : composition.units){
-        double activity  = unit.n * unit.safeAmmo * unit.supressed;
-        double safeAmmo2 = unit.safeAmmo*unit.safeAmmo;
-        const double* fps1 = unit.type->primary  ->firepower;
-        const double* fps2 = unit.type->secondary->firepower;
+    for(const UnitState* unit : composition.units){
+        //const UnitState& unit  = *unit_;
+        double activity  = unit->n * unit->safeAmmo * unit->supressed;
+        double safeAmmo2 = unit->safeAmmo*unit->safeAmmo;
+        const double* fps1 = unit->type->primary  ->firepower;
+        const double* fps2 = unit->type->secondary->firepower;
         for(int i=0; i<4; i++){
             double fp1 = fps1[i];
             double fp2 = fps2[i];
@@ -341,7 +537,7 @@ double assembleFirePower( const double* attraction ){
     }
     for(int i=0; i<4; i++){
         double fp1 = primary_firepower[i];
-        double fp2 = primary_firepower[i];
+        double fp2 = secondary_firepower[i];
         double vis = attraction[i];
         fp1 *= firePowerSaturation( fp1,     vis );
         fp2 *= firePowerSaturation( fp1+fp2, vis );
@@ -351,41 +547,8 @@ double assembleFirePower( const double* attraction ){
     // choose targets accorgint to attraction
     // if there is not enought visible/attractive targets, we try use secondary weapon
 }
+*/
 
-void distributeFirePower( const double* firepower){ 
-    double normalized_firepower[4];
-    for(int i=0; i<4; i++){ 
-        normalized_firepower[i] = firepower[i] / target_attraction[i];
-        //normalized_firepower[i] = firepower[i] * invAttraction[i]; 
-    };
-    for(UnitState& unit : composition.units){
-        int iclass = unit.type->armorClass;
-        double firepower_got = unit.shot_attaction * normalized_firepower[iclass];
-        unit.getFire( firepower_got ); // internal damage model
-    }
-}
-
-};
-
-// ==============================================
-
-struct Combat{
-    double dist;
-    BattleField conds;
-    CombatSide Attacker;
-    CombatSide Defender;
-
-void round(){
-    Defender.assembleTargetAttraction( conds, dist );
-    Defender.assembleTargetAttraction( conds, dist );
-    Attacker.assembleFirePower ( Defender.target_attraction );
-    Defender.assembleFirePower ( Attacker.target_attraction );
-    // distribute firepower and take damage
-    Attacker.distributeFirePower( Defender.firepower );
-    Defender.distributeFirePower( Attacker.firepower );
-    //Attacker.tryAdvance(); // if remain some action points
-    //Defender.tryRetreat();
-}
 
 };
 
