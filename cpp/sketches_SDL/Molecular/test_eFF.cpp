@@ -31,7 +31,7 @@ int i_DEBUG = 0;
 #include "eFF.h"
 #include "e2FF.h"
 
-
+#include "Forces.h"
 
 /*
 int pickParticle( int n, Vec3d * ps, const Mat3d& cam, double R ){
@@ -102,7 +102,9 @@ void checkDerivs( Vec3d KRSrho ){
         //double e = CoulombGauss( r0, x, fr, f, qqee );           f*=x;
         //double e = getDeltaTGauss( r0*r0, x, sj0, fr, f, fsj );
         //double e = getOverlapSGauss( r0*r0, x, sj0, fr, f, fsj );
-        double e = addPauliGauss( (Vec3d){0.0,0.0,r0}, x, sj0, fvec, f, fsj, true, KRSrho );
+        //double e = addPauliGauss( (Vec3d){0.0,0.0,r0}, x, sj0, fvec, f, fsj, true, KRSrho );
+        //double e = addDensOverlapGauss_S( (Vec3d){0.0,0.0,r0}, x, sj0, 1.0, fvec, f, fsj );
+        double e = addDensOverlapGauss_P( (Vec3d){0.0,0.0,r0}, x, sj0, 1.0, fvec, f, fsj );
         return e;
     };
 
@@ -115,16 +117,19 @@ void checkDerivs( Vec3d KRSrho ){
         //double e = getOverlapSGauss( x*x, si0, sj0, f, fsi, fsj ); f*=x;
         //double e = PauliSGauss_anti( x, f, 0.2 );
         //double e = PauliSGauss_syn ( x, f, 0.2 );
-        double e = addPauliGauss( {0.0,0.0,x}, si0, sj0, fvec, f, fsj, true, KRSrho ); f=fvec.z;
+        //double e = addPauliGauss( {0.0,0.0,x}, si0, sj0, fvec, f, fsj, true, KRSrho ); f=fvec.z;
+        //double e = addDensOverlapGauss_S( (Vec3d){0.0,0.0,x}, si0, sj0, 1.0, fvec, fsi, fsj ); f=fvec.z;
+        double e = addDensOverlapGauss_P( (Vec3d){0.0,0.0,x}, si0, sj0, 1.0, fvec, fsi, fsj ); f=fvec.z;
         return e;
     };
 
     double fE,f;
 
     //checkDeriv( KineticGauss, x, 0.001, fE, f );
-    //checkDeriv( func_ds, si0, 0.001, fE, f );
+    checkDeriv( func_ds, si0, 0.001, fE, f );
     checkDeriv( func_dr, r0 , 0.001, fE, f );
     //checkDeriv( func_dr, S0, 0.001, fE, f );
+
 
 }
 
@@ -315,60 +320,15 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
-    //checkDerivs( ff.KRSrho );    exit(0);
+    checkDerivs( ff.KRSrho );   // exit(0);
     //makePlots( plot1 );           exit(0);
 
     // ===== SETUP GEOM
-    char* fname = "data/H2_eFF_spin.xyz";
-    //char* fname = "data/H_eFF.xyz";
-    //ff.loadFromFile_bas( "data/CH4.bas" );
-    //ff.loadFromFile_bas( "data/C2H6.bas" );
-    //ff.loadFromFile_bas( "data/C_eFF.bas" );
-    //ff.loadFromFile_bas( "data/CH4_eFF.bas" );
-    //ff.loadFromFile_bas( "data/C2H6_e2FF.bas" );
-    //ff.loadFromFile_bas( "data/C2.bas" );
-    //ff.loadFromFile_bas( "data/H2.bas" );
-    //ff.loadFromFile_bas( "data/C2e2.bas" );
-    //ff.loadFromFile_bas( "data/H-e.bas" );
-    //ff.loadFromFile_xyz( "data/C2H4_eFF_pairs.xyz" );
+    char* fname = "data/H_eFF.xyz";
+    //char* fname = "data/H2_eFF_spin.xyz";
+    //char* fname = "data/C2H4_eFF_spin.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
     ff.loadFromFile_xyz( fname  );
-
-    /*
-    ff.realloc( 1, 2 );
-    ff.aQ  [0] = +1.0;
-    ff.apos[0] = (Vec3d){ 0.0, 0.0,0.0};
-    ff.epos[0] = (Vec3d){+1.0, 0.0,0.0};
-    ff.epos[1] = (Vec3d){-1.0, 0.0,0.0};
-    */
-
-    /*
-    ff.realloc( 1, 4 );
-    ff.aQ  [0] = +4.0;
-    ff.apos[0] = (Vec3d){0.0,0.0,0.0};
-    ff.epos[0] = (Vec3d){+1.0, 0.0,0.0};
-    ff.epos[1] = (Vec3d){-1.0, 0.0,0.0};
-    ff.epos[2] = (Vec3d){ 0.0,+1.0,0.0};
-    ff.epos[3] = (Vec3d){ 0.0,-1.0,0.0};
-    */
-
-    /*
-    ff.realloc( 2, 8 );
-    ff.aQ  [0] = +4.0;
-    ff.aQ  [1] = +4.0;
-    ff.apos[0] = (Vec3d){-1.0,0.0,0.0};
-    ff.apos[1] = (Vec3d){ 1.0,0.0,0.0};
-
-    ff.epos[0] = (Vec3d){ 0.0,+0.5,0.0};
-    ff.epos[1] = (Vec3d){-2.0, 0.0,0.0};
-    ff.epos[2] = (Vec3d){-1.0,+1.0,0.0};
-    ff.epos[3] = (Vec3d){-1.0,-1.0,0.0};
-
-    ff.epos[4] = (Vec3d){ 0.0,-0.5,0.0};
-    ff.epos[5] = (Vec3d){+2.0, 0.0,0.0};
-    ff.epos[6] = (Vec3d){+1.0,+1.0,0.0};
-    ff.epos[7] = (Vec3d){+1.0,-1.0,0.0};
-    */
 
     //setGeom(ff);
     //double sz = 0.51;
@@ -380,7 +340,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.autoAbWs( default_aAbWs, default_eAbWs );
     //exit(0);
 
-    VecN::set(ff.ne,4.0,ff.esize);
+    //VecN::set(ff.ne,4.0,ff.esize);
 
     // ==== Test Eval
 
