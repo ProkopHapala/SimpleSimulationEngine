@@ -142,6 +142,20 @@ def EPauli( r, si, sj, anti=False, rho=0.2, kr=1.125, ks=0.9 ):
     else:
         return T * ( (S2/(1.-S2))   + ( 1.-rho )*(S2/(1.+S2)) )
 
+def DensOverlap( r, si, sj, amp=10 ):
+    s2 = si**2+sj**2
+    #amp *= 1.4/s2
+    #amp *= 0.7/(si*sj)
+    #amp *= (1/si**2 + 1/sj**2)
+    #amp  *= (si**2+sj**2)/(si*sj)**2
+    #amp  *= (si+sj)**2/(si*sj)**2
+    amp  *= (1+(si-sj)**2)/min(si,sj)**2
+    #amp  *= 0.5*(1+4*(si-sj)**2) *( 1/si**2 + 1/sj**2 )
+    a  = 2*si*sj/s2
+    e1 = amp*a**3
+    e2 = np.exp( -2*(r**2/s2) )
+    return e1*e2
+
 def Hatom( s ):
     Ek  = Kinetic( s )
     Eae = El_ae( 0.01, -1., s )
@@ -195,33 +209,36 @@ if __name__ == "__main__":
 
     # ============= e-e
 
-    rs = np.arange( 0.1, 10.0, 0.05 )
+    rs = np.arange( 0.1, 6.0, 0.05 )
     ss = [0.5, 1.0, 1.5 ]
 
     rho=0.2; kr=1.125; ks=0.9
 
-    plt.figure(figsize=(6,12))
-    for i,s in enumerate(ss):
-        Eee = El_ee( rs, +1., s, s )
-        r_ = rs*kr
-        s_ = s*ks
-        T = getT( r_, s_, s_ )
-        S = getS( r_, s_, s_ )
-        S2 = S**2
-        EPminus  =  T * ( rho*S2/(1.+S2) )
-        EPplus   =  T * ( (S2/(1.-S2))  + ( 1.-rho )*(S2/(1.+S2)) )
-        plt.subplot(3,1,i+1)
-        plt.plot( rs, S,   ':', label="S" )
-        #plt.plot( xs, T,   ':', label="T" )
-        plt.plot( rs, Eee ,   'r', label="Eee" )
-        plt.plot( rs, EPplus, 'b', label="EP+" )
-        plt.plot( rs, EPminus,'c', label="EP-" )
-        plt.title( 'sigma %g' %s )
-        plt.legend()
-        plt.grid()
-        #plt.plot( ys, Etot, 'k', label="Etot" )
+    plt.figure(figsize=(13,10))
+    for i,si in enumerate(ss):
+        for j,sj in enumerate(ss):
+            Eee = El_ee( rs, +1., si, sj )
+            r_ = rs*kr
+            #s_ = s*ks
+            T = getT( r_, si*ks, sj*ks )
+            S = getS( r_, si*ks, sj*ks )
+            S2 = S**2
+            EPminus  =  T * ( rho*S2/(1.+S2) )
+            EPplus   =  T * ( (S2/(1.-S2))  + ( 1.-rho )*(S2/(1.+S2)) )
+            EPdens   =   DensOverlap( rs, si, sj )
+            plt.subplot(3,3,3*j+i+1)
+            plt.plot( rs, S,   ':', label="S" )
+            #plt.plot( xs, T,   ':', label="T" )
+            plt.plot( rs, Eee ,   'r', label="Eee" )
+            plt.plot( rs, EPplus, 'b', label="EP+" )
+            plt.plot( rs, EPminus,'c', label="EP-" )
+            plt.plot( rs, EPdens, 'm', label="EPdens"  )
+            plt.title( 'sigma (%g,%g)' %(si,sj) )
+            plt.legend()
+            plt.grid()
+            #plt.plot( ys, Etot, 'k', label="Etot" )
 
-    #plt.show(); exit()
+    plt.show(); exit()
 
     # ============= H-atom
 
