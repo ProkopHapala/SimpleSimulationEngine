@@ -27,16 +27,17 @@ namespace Draw3D{
 
 // ========== Float Versions
 
-void vertex(Vec3f v );
-void vertex(Vec3d v );
+void vertex(const Vec3f& v );
+void vertex(const Vec3d& v );
 
-void color (Vec3f v );
-void color (Vec3d v );
+void color (const Vec3f& v );
+void color (const Vec3d& v );
 
-void normal(Vec3f v );
-void normal(Vec3d v );
+void normal(const Vec3f& v );
+void normal(const Vec3d& v );
 
 void drawPoint     ( const Vec3f& vec                   );
+void drawPointCross_bare( const Vec3f& vec, float sz    );
 void drawPointCross( const Vec3f& vec, float  sz        );
 void drawVec       ( const Vec3f& vec                   );
 void drawVecInPos  ( const Vec3f& v,   const Vec3f& pos );
@@ -47,7 +48,7 @@ void drawScale     ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& a, float ti
 
 void drawTriangle ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& p3 );
 
-void drawMatInPos ( const Mat3f& mat, const Vec3f& pos );
+void drawMatInPos ( const Mat3f& mat, const Vec3f& pos, const Vec3f& sc=Vec3fOne );
 
 void drawShape    ( const Vec3f& pos, const Mat3f&  rot,  int shape, bool transposed = false );
 void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape );
@@ -95,7 +96,7 @@ inline void drawScale     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& a, d
 
 inline void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3 ){ drawTriangle( (Vec3f)p1, (Vec3f)p2, (Vec3f)p3 ); };
 
-inline void drawMatInPos ( const Mat3d& mat, const Vec3d& pos ){  drawMatInPos( (Mat3f)mat, (Vec3f)pos ); };
+inline void drawMatInPos ( const Mat3d& mat, const Vec3d& pos, const Vec3d& sc=Vec3dOne ){  drawMatInPos( (Mat3f)mat, (Vec3f)pos, (Vec3f)sc ); };
 
 inline void drawShape    ( const Vec3d& pos, const Mat3d&  rot,  int shape, bool transposed = false ){ drawShape( (Vec3f)pos, (Mat3f)rot, shape, transposed ); };
 inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, shape); };
@@ -152,6 +153,9 @@ void drawSimplexGridLinesToned( int na, int nb, const Vec2d& da, const Vec2d& db
 void drawRectGridLines( Vec2i n, const Vec3d& p0, const Vec3d& da, const Vec3d& db );
 
 int drawMesh( const Mesh& mesh  );
+
+void drawTetraIso( Vec3f** ps, Quat4d vals );
+void drawSimplexLines( Vec3f** ps );
 
 //void drawText( const char * str, const Vec3d& pos, int fontTex, float textSize, int istart, int iend );
 

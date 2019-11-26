@@ -11,16 +11,14 @@
 
 namespace Draw3D{
 
+void vertex(const Vec3f& v ){ glVertex3f(v.x,v.y,v.z); }
+void vertex(const Vec3d& v ){ glVertex3f(v.x,v.y,v.z); }
 
-void vertex(Vec3f v ){ glVertex3f(v.x,v.y,v.z); }
-void vertex(Vec3d v ){ glVertex3f(v.x,v.y,v.z); }
+void color (const Vec3f& v ){ glColor3f (v.x,v.y,v.z); }
+void color (const Vec3d& v ){ glColor3f (v.x,v.y,v.z); }
 
-void color (Vec3f v ){ glColor3f (v.x,v.y,v.z); }
-void color (Vec3d v ){ glColor3f (v.x,v.y,v.z); }
-
-void normal(Vec3f v ){ glNormal3f(v.x,v.y,v.z); }
-void normal(Vec3d v ){ glNormal3f(v.x,v.y,v.z); }
-
+void normal(const Vec3f& v ){ glNormal3f(v.x,v.y,v.z); }
+void normal(const Vec3d& v ){ glNormal3f(v.x,v.y,v.z); }
 
 void drawPoint( const Vec3f& vec ){
 	//glDisable (GL_LIGHTING);
@@ -29,13 +27,17 @@ void drawPoint( const Vec3f& vec ){
 	glEnd();
 };
 
+void drawPointCross_bare( const Vec3f& vec, float sz ){
+    glVertex3f( vec.x-sz, vec.y, vec.z ); glVertex3f( vec.x+sz, vec.y, vec.z );
+    glVertex3f( vec.x, vec.y-sz, vec.z ); glVertex3f( vec.x, vec.y+sz, vec.z );
+    glVertex3f( vec.x, vec.y, vec.z-sz ); glVertex3f( vec.x, vec.y, vec.z+sz );
+}
+
 void drawPointCross( const Vec3f& vec, float sz ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
-		glVertex3f( vec.x-sz, vec.y, vec.z ); glVertex3f( vec.x+sz, vec.y, vec.z );
-		glVertex3f( vec.x, vec.y-sz, vec.z ); glVertex3f( vec.x, vec.y+sz, vec.z );
-		glVertex3f( vec.x, vec.y, vec.z-sz ); glVertex3f( vec.x, vec.y, vec.z+sz );
-	glEnd();
+	drawPointCross_bare(vec,sz );
+    glEnd();
 };
 
 void drawPointCross( const Vec3f& vec, double sz ){
@@ -119,30 +121,127 @@ void drawScale( const Vec3f& p1, const Vec3f& p2, const Vec3f& up, float tick, f
 	glEnd();
 };
 
-void drawTriangle( const Vec3f& p1, const Vec3f& p2, const Vec3f& p3 ){
-    //printf("p1 (%3.3f,%3.3f,%3.3f) p2 (%3.3f,%3.3f,%3.3f) p3 (%3.3f,%3.3f,%3.3f) \n", p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z);
-	Vec3f d1,d2,normal;
+void drawTriangle_bare( const Vec3f& p1, const Vec3f& p2, const Vec3f& p3 ){
+    //glNormal3d( normal.x, normal.y, normal.z );
+    Vec3f d1,d2,nr;
 	d1.set( p2 - p1 );
 	d2.set( p3 - p1 );
-	normal.set_cross(d1,d2);
-	normal.normalize();
+	nr.set_cross(d1,d2);
+	nr.normalize();
+	glNormal3d( nr.x, nr.y, nr.z );
+    glVertex3d( p1.x, p1.y, p1.z );
+    glVertex3d( p2.x, p2.y, p2.z );
+    glVertex3d( p3.x, p3.y, p3.z );
+    /*
+    glColor3f(0.0,0.0,0.0);
+    glVertex3d( p1.x, p1.y, p1.z ); glVertex3d( p2.x, p2.y, p2.z );
+    glVertex3d( p2.x, p2.y, p2.z ); glVertex3d( p3.x, p3.y, p3.z );
+    glVertex3d( p3.x, p3.y, p3.z ); glVertex3d( p1.x, p1.y, p1.z );
+    glColor3f(1.0,1.0,1.0);
+    nr.mul(0.1);
+    glVertex3d( p1.x, p1.y, p1.z ); glVertex3d( p1.x+nr.x, p1.y+nr.y, p1.z+nr.z );
+    glVertex3d( p2.x, p2.y, p2.z ); glVertex3d( p2.x+nr.x, p2.y+nr.y, p2.z+nr.z );
+    glVertex3d( p3.x, p3.y, p3.z ); glVertex3d( p3.x+nr.x, p3.y+nr.y, p3.z+nr.z );
+    */
+}
+
+void drawTriangle( const Vec3f& p1, const Vec3f& p2, const Vec3f& p3 ){
 	glBegin   (GL_TRIANGLES);
-		glNormal3d( normal.x, normal.y, normal.z );
-		glVertex3d( p1.x, p1.y, p1.z );
-		glVertex3d( p2.x, p2.y, p2.z );
-		glVertex3d( p3.x, p3.y, p3.z );
+        drawTriangle_bare( p1, p2, p3 );
 	glEnd();
-	//drawPointCross( p1, 0.1 );
-	//drawPointCross( p2, 0.1 );
-	//drawPointCross( p3, 0.1 );
 };
 
-void drawMatInPos( const Mat3f& mat, const Vec3f& pos ){
+void drawQuad_bare( const Vec3f& p1, const Vec3f& p2, const Vec3f& p3, const Vec3f& p4 ){
+    //glNormal3d( normal.x, normal.y, normal.z );
+    double r13=(p3-p1).norm2();
+    double r24=(p4-p2).norm2();
+    if(r13>r24){ drawTriangle_bare( p1, p2, p4 ); drawTriangle_bare( p2, p3, p4 ); }
+    else       { drawTriangle_bare( p1, p2, p3 ); drawTriangle_bare( p3, p4, p1 ); }
+}
+
+Vec3f lincomb(const Vec3f& p1, const Vec3f& p2, double v1, double v2 ){
+    double f  = v1/(v1-v2);
+    Vec3f p;
+    p.set_lincomb( 1-f, p1, f, p2 );
+    return p;
+}
+
+void drawTetraIso( Vec3f** ps, Quat4d vals ){
+    bool b0 = vals.x>0;
+    bool b1 = vals.y>0;
+    bool b2 = vals.z>0;
+    bool b3 = vals.w>0;
+    int n01 = b0+b1;
+    int n23 = b2+b3;
+    int n   = n01+n23;
+    if( n==0 || n==4 ) return;
+    int i1,i2;
+    int j1,j2,j3;
+    if(n==1){        // triangle
+        if(n01){
+            if(b0){ i1=0; j1=1; j2=2; j3=3; } // b1
+            else  { i1=1; j1=0; j2=3; j3=2; } // b2
+        }else{
+            if(b2){ i1=2; j1=3; j2=0; j3=1; } // b3
+            else  { i1=3; j1=2; j2=1; j3=0; } // b4
+        }
+        drawTriangle_bare(
+            lincomb(*ps[i1],*ps[j1],vals.array[i1],vals.array[j1]),
+            lincomb(*ps[i1],*ps[j2],vals.array[i1],vals.array[j2]),
+            lincomb(*ps[i1],*ps[j3],vals.array[i1],vals.array[j3])
+        );
+    }else if (n==3){ // triangle
+        if(n01==1){
+            if(!b0){ i1=0; j1=1; j2=3; j3=2; } // b1
+            else   { i1=1; j1=0; j2=2; j3=3; } // b2
+        }else{
+            if(!b2){ i1=2; j1=1; j2=0; j3=3; } // b3
+            else   { i1=3; j1=1; j2=2; j3=0; } // b4
+        }
+        //printf("n=3 %i | %i %i %i   (%i%i%i%i)\n", i1, j1, j2, j3, b0,b1,b2,b3 );
+        drawTriangle_bare(
+            lincomb(*ps[i1],*ps[j1],-vals.array[i1],-vals.array[j1]),
+            lincomb(*ps[i1],*ps[j2],-vals.array[i1],-vals.array[j2]),
+            lincomb(*ps[i1],*ps[j3],-vals.array[i1],-vals.array[j3])
+        );
+    }else if (n==2){ // quad
+        if(n01==1){
+            if(b0){
+                if(b2){ i1=0; i2=2; j1=3; j2=1; } // b1-b3 | b2-b4
+                else  { i1=0; i2=3; j1=1; j2=2; } // b1-b4 | b2-b3
+            }else{
+                if(b3){ j1=0; j2=2; i1=3; i2=1; } // b2-b3 | b1-b4
+                else  { j1=0; j2=3; i1=1; i2=2; } // b2-b4 | b1-b3
+            }
+        }else{
+            if(n01==2){ i1=0; i2=1; j1=2; j2=3; }
+            else      { j1=0; j2=1; i1=2; i2=3; }
+        }
+        //printf("n=%i  %i,%i|%i,%i   (%i%i%i%i)\n", n, i1, i2, j1, j2, b0,b1,b2,b3 )
+        drawQuad_bare(
+            lincomb(*ps[i1],*ps[j1],vals.array[i1],vals.array[j1]),
+            lincomb(*ps[i1],*ps[j2],vals.array[i1],vals.array[j2]),
+            lincomb(*ps[i2],*ps[j2],vals.array[i2],vals.array[j2]),
+            lincomb(*ps[i2],*ps[j1],vals.array[i2],vals.array[j1])
+        );
+    }
+};
+
+void drawSimplexLines( Vec3f** ps ){
+    vertex( *ps[0] ); vertex( *ps[1] );
+    vertex( *ps[0] ); vertex( *ps[2] );
+    vertex( *ps[0] ); vertex( *ps[3] );
+    vertex( *ps[1] ); vertex( *ps[2] );
+    vertex( *ps[1] ); vertex( *ps[3] );
+    vertex( *ps[2] ); vertex( *ps[3] );
+}
+
+void drawMatInPos( const Mat3f& mat, const Vec3f& pos, const Vec3f& sc ){
 	//glDisable (GL_LIGHTING);
 	glBegin   (GL_LINES);
-		glColor3f( 1, 0, 0 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.xx, pos.y+mat.xy, pos.z+mat.xz );
-		glColor3f( 0, 1, 0 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.yx, pos.y+mat.yy, pos.z+mat.yz );
-		glColor3f( 0, 0, 1 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.zx, pos.y+mat.zy, pos.z+mat.zz );
+		glColor3f( 1, 0, 0 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.xx*sc.x, pos.y+mat.xy*sc.x, pos.z+mat.xz*sc.x );
+		glColor3f( 0, 1, 0 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.yx*sc.y, pos.y+mat.yy*sc.y, pos.z+mat.yz*sc.y );
+		glColor3f( 0, 0, 1 ); glVertex3d( pos.x, pos.y, pos.z ); glVertex3d( pos.x+mat.zx*sc.z, pos.y+mat.zy*sc.z, pos.z+mat.zz*sc.z );
 	glEnd();
 };
 
