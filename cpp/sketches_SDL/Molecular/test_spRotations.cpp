@@ -55,7 +55,10 @@ double hrot_sp( const Vec3d& dh, const Quat4d& c1, const Quat4d& c2, const Vec3d
 }
 
 inline double slater( Vec3d p, const Quat4d& c, double beta ){
+    //double DEBUG_xy = p.y;
+    //double DEBUG_z  = p.z;
     double r = p.normalize();
+    //printf( "slater xy %g z %g %g \n", DEBUG_xy, DEBUG_z, r );
     double e = exp( -beta*r );
     return e*( c.s + c.p.dot(p) );
 }
@@ -245,11 +248,12 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     };
 
     auto wf2D_1 = [&](double rxy, double z)->double{
+        //printf( "wf2D_1 xy %g z %g \n", rxy, z );
         return slater( {0,rxy,z}, psi1, beta1 );
     };
 
     auto wf2D_2 = [&](double rxy, double z)->double{
-        return slater( {0,rxy,z}, psi2, beta1 );
+        return slater( {0,rxy,z}, psi2, beta2 );
     };
 
     // ===== Check Numerical Integral
@@ -261,32 +265,132 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     //void projectFr( Func func, int nr, int nz, double dz, const double* rs, double* f );
 
     // ===== Check Numerical Integral
-    beta1=2; beta2=2;
+    beta1=1.8; beta2=1.8;
     p1 = (Vec3d ){ 0.0,0.0,0.0};
     p2 = (Vec3d ){ 0.0,0.0,0.0};  // position of atoms 1,2
-    psi1=(Quat4d){ 0.0, 0.0, 0.0, 1.0 };
-    psi2=(Quat4d){ 0.0, 0.0, 0.0, 1.0 };
+    //psi1=(Quat4d){ 0.0, 0.0, 0.0, 1.0 };
+    //psi2=(Quat4d){ 0.0, 0.0, 0.0, 1.0 };
+    //psi1=(Quat4d){ 0.0, 0.0, 1.0, 0.0 };
+    //psi2=(Quat4d){ 0.0, 0.0, 1.0, 0.0 };
+    psi1=(Quat4d){ 0.0, 1.0, 0.0, 0.0 };
+    psi2=(Quat4d){ 0.0, 1.0, 0.0, 0.0 };
 
     double* IsRef = new double[n];
     double* Is2D  = new double[n];
-    integrateCylFunc( wf2D_1, wf2D_2, 0, n, dx, Is2D, 0., 0. );
+
 
     plot1.init();
     plot1.clrGrid = 0xFF858585;
     DataLine2D* lref = plot1.add( new DataLine2D(n,0,dx,0xFF000000) );
-    DataLine2D* l2D  = plot1.add( new DataLine2D(n,0,dx,0xFF008000) );
+    //DataLine2D* l2D  = plot1.add( new DataLine2D(n,0,dx,0xFF008000) );
+
+    DataLine2D* lss  = plot1.add( new DataLine2D(n,0,dx,0xFF00FF00) );
+    DataLine2D* lsz  = plot1.add( new DataLine2D(n,0,dx,0xFF0080FF) );
+    DataLine2D* lzs  = plot1.add( new DataLine2D(n,0,dx,0xFF00FFFF) );
+    DataLine2D* lzz  = plot1.add( new DataLine2D(n,0,dx,0xFF0000FF) );
+    DataLine2D* lyy  = plot1.add( new DataLine2D(n,0,dx,0xFFFF0000) );
+
 
     Vec3d pmin={-4,-4,-4};
     Vec3d pmax={4,4,4+xmax};
+    double Rmax = pmax.y;
+
+    //integrateCylFunc( wf2D_1, wf2D_2, 0, n, dx, Rmax, Is2D, 1., 1. );
+
+    double dr   = 0.1;
+    int    nr   = Rmax/dr + 3;
+    double* frs = new double[nr];
+
+    for(int ir=0; ir<nr; ir++){
+        double r = ((ir-1)*dr); // WARRNING : don't forget [-1] !!!!
+        frs[ir] = exp(-beta1*r);
+    }
+
+    double *Iss = new double[n];
+    double *Isz = new double[n];
+    double *Izs = new double[n];
+    double *Izz = new double[n];
+    double *Iyy = new double[n];
+
+    const double* fr1[]={ frs, frs, frs };
+    const double* fr2[]={ frs, frs, frs };
+    double*       Is []={ Iss, Isz, Izs, Izz, Iyy };
+
+    integrateSP( nr, 0, n, dx, Rmax, dr, fr1, fr2, Is );
+
+    //double rs[1] = {0.2};
+    //projectFr(         1, n, nr, dx, dr, 1.0, rs, frs, Isz, 0 );
+    //projectFr( wf2D_1, 1, n,     dx, 1.0, rs,      Isz    );
+
+    //exit(0);
+
+    /*
+    int nint    = n;
+    double dz   = dx;
+    double Rmax = pmax.y;
+
+    constexpr const int nr = 14;
+    constexpr const double *ws_ = GaussQuadrature::ws_14;
+    constexpr const double *rs  = GaussQuadrature::xs_14;
+    double *ws=new double[nr];
+    double cw = Rmax*Rmax*(M_PI*2)*dz;
+    for(int i=0; i<nr; i++){ ws[i] = ws_[i]*rs[i]*cw; };
+    const int nz  = nint+1;
+    const int nrz = nr*nz;
+    double * f1s  = new double[nrz];
+    double * f2s  = new double[nrz];
+    projectFr( wf2D_1, nr, nz, dz, Rmax, rs, f1s);
+    projectFr( wf2D_2, nr, nz, dz, Rmax, rs, f2s);
+    for(int i=0; i<nint; i++){ Is2D[i]=0; }
+    intCyl_shift( nr, nz, nint, f1s, f2s, ws, Is2D,  1, 1 );
+
+    DataLine2D* lw1  = plot1.add( new DataLine2D(n,0,dx,0xFFFF4000) );
+    DataLine2D* lw2  = plot1.add( new DataLine2D(n,0,dx,0xFF0040FF) );
+    int iroff = (nr-1)*nz;
+    for(int i=0; i<n; i++){
+        lw1->ys[i] = f1s[iroff+i];
+        lw2->ys[i] = f2s[iroff+i];
+        printf( "lw1[%i] x,y %g,%g \n", i, lw1->xs[i], lw1->ys[i] );
+    }
+    */
+
+    /*
+    {
+        int nn=10;
+        double fs1[nn];
+        double fs2[nn];
+        double fh1[nn];
+        double fh2[nn];
+        for( int i=0; i<nn; i++ ){ fs1[i]=0; fs2[i]=0; fh1[i]=0; fh2[i]=0; }
+        int i0=nn/2;
+        fs1[i0-1]=0.5; fs1[i0]=1; fs1[i0+1]=0.5;
+        fs2[i0-1]=0.5; fs2[i0]=1; fs2[i0+1]=0.5;
+        fh1[0]=1; fh1[1]=0.5;
+        fh2[0]=1; fh2[1]=0.5;
+        for( int ishift=0; ishift<5; ishift++ ){
+            double I1 = dot_rolled     ( nn, ishift, fs1, fs2 );
+            double I2 = dot_shifted_sym( nn, ishift, fh1, fh2, 1, 1 );
+            printf( "ishift %i I1 %g  I2 %g \n", ishift, I1, I2 );
+        }
+    }
+    exit(0);
+    */
+
     for(int i=0; i<n; i++){
         //double x = i*dx;
         double x = lref->xs[i];
         p2.z = x;
-        double Iref = integrateMidpoint3D( wf, 0.1, pmin, pmax  );
+        //double Iref =0;
+        double Iref = integrateMidpoint3D( wf, 0.2, pmin, pmax );
         IsRef[i] = Iref;
-        lref->ys[i] = Iref;
-        l2D ->ys[i] = Is2D[i];
-        printf( "Iref[%02i] x,f(x):  %g    %g %g \n", i, x, Iref, Is2D[i] );
+        lref->ys[i] = Iref   ;
+        //l2D ->ys[i] = Is2D[i];
+        lss ->ys[i] = Iss [i];
+        lsz ->ys[i] = Isz [i];
+        lzs ->ys[i] = Izs [i];
+        lzz ->ys[i] = Izz [i];
+        lyy ->ys[i] = Iyy [i];
+        //printf( "Iref[%02i] x,f(x):  %g    %g %g   %g %g \n", i, x, Iref, Is2D[i], Iss[i], Isz[i] );
     }
     plot1.render();
 

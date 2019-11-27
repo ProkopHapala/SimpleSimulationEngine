@@ -140,12 +140,55 @@ inline T val2D( T x, T y,
 
 template <class T>
 inline T val( T x, const T * fs ){
-	T f0 = *fs; fs++;
-	T f1 = *fs; fs++;
-	T f2 = *fs; fs++;
-	T f3 = *fs;
+	T f0 = fs[0];
+	T f1 = fs[1];
+	T f2 = fs[2];
+	T f3 = fs[3];
 	return val<T>( x, f1, f2, (f2-f0)*0.5, (f3-f1)*0.5 );
 }
+
+template <class T>
+inline T dval( T x, const T * fs ){
+	T f0 = fs[0];
+	T f1 = fs[1];
+	T f2 = fs[2];
+	T f3 = fs[3];
+	return dval<T>( x, f1, f2, (f2-f0)*0.5, (f3-f1)*0.5 );
+}
+
+template <class T>
+inline T ddval( T x, const T * fs ){
+	T f0 = fs[0];
+	T f1 = fs[1];
+	T f2 = fs[2];
+	T f3 = fs[3];
+	return ddval<T>( x, f1, f2, (f2-f0)*0.5, (f3-f1)*0.5 );
+}
+
+template <class T>
+inline T value( T s, const T* ys ){
+    //double  s  = r*invdr;
+    int    is  = (int)s+1;
+    T      dr  = s - is;
+    return val<T>( dr, ys+is );
+}
+
+template <class T>
+inline T deriv( T s, const T* ys ){
+    //double  s  = r*invdr;
+    int    is  = (int)s+1;
+    T      dr  = s - is;
+    return dval<T>( dr, ys+is );
+}
+
+template <class T>
+inline T dderiv( T s, const T* ys ){
+    //double  s  = r*invdr;
+    int    is  = (int)s+1;
+    T      dr  = s - is;
+    return ddval<T>( dr, ys+is );
+}
+
 
 template <class T>
 inline T val2D( T x, T y, const  T * f0s, const  T * f1s, const  T * f2s, const  T * f3s ){
