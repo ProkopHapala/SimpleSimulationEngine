@@ -117,9 +117,12 @@ void mulYz( int nr, int nz, double dz, double* rs, double* fin, double* fout ){
 */
 
 void integrateSP( int nrf, int order, int nint, double dz, double Rmax, double frStep, const double** fr1, const double** fr2, double** Is ){
-    constexpr const int nr = 8;
-    constexpr const double *ws_ = GaussQuadrature::ws_8;
-    constexpr const double *rs  = GaussQuadrature::xs_8;
+    //constexpr const int nr = 8;
+    //constexpr const double *ws_ = GaussQuadrature::ws_8;
+    //constexpr const double *rs  = GaussQuadrature::xs_8;
+    constexpr const int nr = 14;
+    constexpr const double *ws_ = GaussQuadrature::ws_14;
+    constexpr const double *rs  = GaussQuadrature::xs_14;
 
     double cw = Rmax*Rmax*(M_PI*2)*dz;
     double *ws=new double[nr];

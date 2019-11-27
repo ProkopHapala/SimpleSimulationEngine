@@ -26,6 +26,8 @@
 #include "AOIntegrals.h"
 #include "AOrotations.h"
 
+#include "testUtils.h"
+
 //#include "MMFF.h"
 //#define R2SAFE  1.0e-8f
 
@@ -316,7 +318,10 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     const double* fr2[]={ frs, frs, frs };
     double*       Is []={ Iss, Isz, Izs, Izz, Iyy };
 
+    long t1 = getCPUticks();
     integrateSP( nr, 0, n, dx, Rmax, dr, fr1, fr2, Is );
+    long t12 = getCPUticks() - t1;
+    printf( "time{integrateSP} %g [Mtick] | n(%i,%i,%i) %g tick/op \n", t12*1e-6, 14, n, n, t12/(double)(14*n*n) );
 
     //double rs[1] = {0.2};
     //projectFr(         1, n, nr, dx, dr, 1.0, rs, frs, Isz, 0 );
