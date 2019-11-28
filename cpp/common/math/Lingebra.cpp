@@ -12,11 +12,20 @@ Should matrix be stored as array of pointers A[i][j] or as plain array A[i+j*n] 
 namespace Lingebra {
 
 // creates double** from any continuous memory block folowing *p
-double ** from_continuous( int m, int n, double *p ){
-    double ** A = new double*[m];
+//double ** from_continuous( int m, int n, double *p, double ** A=0 ){
+double ** from_continuous( int m, int n, double *p, double ** A ){
+    if(A==0) A = new double*[m];
     for (int i=0; i<m; i++ ){ A[i] = &(p[i*n]); }
     return A;
 }
+
+/*
+void from_continuous( int m, int n, double *p, double** A ){
+    //double ** A = new double*[m];
+    for (int i=0; i<m; i++ ){ A[i] = &(p[i*n]); }
+    return A;
+}
+*/
 
 double ** new_matrix( int m, int n ){
     double ** A = new double*[m];
@@ -36,6 +45,11 @@ void transpose( int m, int n, double** A, double** TA ){
         }
     }
 }
+
+void symCopy ( int n, double* A, bool toLower ){
+    if ( toLower ){ for (int i=0;i<n;i++){ for (int j=0;j<i;j++){ A[i*n+j] = A[j*n+i]; } } }
+    else          { for (int i=0;i<n;i++){ for (int j=0;j<i;j++){ A[j*n+i] = A[i*n+j]; } } }
+};
 
 void dot( int m, int n, double** A, double* x, double* out ){
     for (int i=0; i<m; i++ ){
@@ -792,19 +806,59 @@ void orthtoForce(int nv, int m, double * P, double * F ){
 
 
 
+void polyProject( int n, int m, double* xs, double* ys, double* BB, double* By ){
+    double bas[m];  // eventually we can use any function instead of xns
+    for(int ip=0; ip<n; ip++ ){
+        double x  = xs[ip];
+        double y  = ys[ip];
+        //printf( "polyProject[%i] %g %g \n", ip, x, y );
+        double xn = 1; bas[0]=xn;
+        for(int i=1;i<m;i++){ xn*=x; bas[i]=xn; }
+        for(int i=0;i<m;i++){
+            double bi  = bas[i];
+            By[i]      += bi*y;
+            for(int j=0;j<=i;j++){ BB[i*m+j] += bi*bas[j]; }
+        }
+    }
+    symCopy( m, BB, false );
+    /*
+    printf("n %i \n", n );
+    printf( "By[:] " ); for(int j=0;j<m;j++){ printf( " %5.5e ",  By[j] ); } printf( "\n" );
+    for(int i=0;i<m;i++){
+        printf( "BB[%i,:] ", i );
+        for(int j=0;j<m;j++){ printf( " %5.5e ",  BB[i*m+j] ); }
+        printf( "\n" );
+    }
+    */
+}
 
+void polyFit( int n, int m, double* xs, double* ys, double* coefs ){
+    // --- build linear system
+    const int mm = m*m;
+    double BB[mm];
+    double By [m];
+    VecN::set( mm, 0., BB );
+    VecN::set(  m, 0., By );
+    polyProject( n, m, xs, ys, BB, By );
+    // --- solve
+    double*BB_[m];
+    int  index[m];
+    from_continuous( m, m, BB, BB_ );
+    linSolve_gauss ( m, BB_, By, index, coefs );
+}
 
-
-
-
-
-
-
-
-
-
-
-
+void polyeval( int n, int m, double* xs, double* ys, double* coefs ){
+    for(int ip=0; ip<n; ip++){
+        double x  = xs   [ip];
+        double y  = coefs[0];
+        double xn = x;
+        for(int i=1; i<m; i++){
+            y += coefs[i]*xn;
+            xn*=x;
+        }
+        ys[ip]=y;
+    }
+}
 
 };
 

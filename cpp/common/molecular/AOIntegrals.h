@@ -7,6 +7,36 @@
 #include "spline_hermite.h"
 #include "integration.h"
 
+double hrot_pp( const Vec3d& dh, const Vec3d& p1, const Vec3d& p2, const Vec2d& H ){
+    Mat3d rot;
+    rot.fromDirUp(dh,p1);
+    Vec3d c1,c2;
+    rot.dot_to( p1, c1 );
+    rot.dot_to( p2, c2 );
+    return (c1.x*c2.x + c1.y*c2.y)*H.x + c1.z*c2.z*H.y;
+}
+
+double hrot_sp( const Vec3d& dh, const Quat4d& c1, const Quat4d& c2, const Vec3d& H ){
+
+    Mat3d rot;
+    rot.fromDirUp(dh,c1.p);
+    Vec3d p1,p2;
+    rot.dot_to( c1.p, p1 );
+    rot.dot_to( c2.p, p2 );
+
+    return (p1.x*p2.x + p1.y*p2.y)*H.y + p1.z*p2.z*H.z + c1.s*c2.s*H.x;
+
+}
+
+inline double slater( Vec3d p, const Quat4d& c, double beta ){
+    //double DEBUG_xy = p.y;
+    //double DEBUG_z  = p.z;
+    double r = p.normalize();
+    //printf( "slater xy %g z %g %g \n", DEBUG_xy, DEBUG_z, r );
+    double e = exp( -beta*r );
+    return e*( c.s + c.p.dot(p) );
+}
+
 double dot_shifted( int n, int ioff, const double* f1, const double* f2 ){
     double sum = 0;
     int n_ = n-ioff;

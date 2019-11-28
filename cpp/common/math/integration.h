@@ -179,7 +179,25 @@ constexpr const static double ws_35[35] = {
 //                    Adaptive Simpson
 // ====================================================
 
-
+//template<double (*func)(const Vec3d& p) >
+template< typename Func >
+double integrateMidpoint3D( Func func, double h, Vec3d pmin, Vec3d pmax ){
+    Vec3d dp = pmax-pmin;
+    double invh = 1/h;
+    Vec3i n = { round(dp.x*invh), round(dp.y*invh), round(dp.z*invh) };
+    Vec3d d = { dp.x/n.x, dp.y/n.x, dp.z/n.x };
+    pmin.add_mul( d, 0.5 );
+    double sum = 0;
+    for(int ix=0; ix<n.x; ix++){
+        for(int iy=0; iy<n.y; iy++){
+            for(int iz=0; iz<n.z; iz++){
+                Vec3d p = pmin + (Vec3d){d.x*ix,d.y*iy,d.z*iz};
+                sum +=  func(p);
+            }
+        }
+    }
+    return sum * d.totprod();
+}
 
 namespace AdaptiveIntegral{
 

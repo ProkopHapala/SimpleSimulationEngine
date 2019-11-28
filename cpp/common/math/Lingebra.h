@@ -19,12 +19,16 @@ namespace Lingebra{
 
 	// ==== function declarations
 
-    double ** from_continuous( int m, int n, double *p );
+    //double ** from_continuous( int m, int n, double *p );
+    double ** from_continuous( int m, int n, double *p, double ** A=0 );
 	double ** new_matrix     ( int m, int n );
 	double ** delete_matrix  ( int m,        double** A );
 	void transpose           ( int m, int n, double** A, double** TA );
 	void dot                 ( int m, int n, double** A, double* x, double* out );
 	void dotT                ( int m, int n, double** A, double* x, double* out );
+
+    void symCopy             ( int m, double* A, bool toLower );
+
 
 	void mmul_ik_kj( int ni, int nj, int nk, double** A, double** B, double** out );
 	void mmul_ik_jk( int ni, int nj, int nk, double** A, double** B, double** out );
@@ -47,6 +51,10 @@ namespace Lingebra{
 	int eig_Jacobi( int n, double* A, double* V, double* es, double tol, int nMaxIter  );
 	double eig_Jacobi_init( int n, double* A, double* V, int* mjs, int& imax, int& jmax );
 	void eig_Jacobi_step  ( int n, double* A, double* V, int* mjs, int& imax, int& jmax, double& vmax );
+
+	void polyProject( int n, int m, double* xs, double* ys, double* BB, double* By );
+	void polyFit    ( int n, int m, double* xs, double* ys, double* coefs );
+	void polyeval   ( int n, int m, double* xs, double* ys, double* coefs );
 
 	// ==== inline function
 
