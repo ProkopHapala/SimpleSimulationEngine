@@ -52,10 +52,6 @@ namespace Lingebra{
 	double eig_Jacobi_init( int n, double* A, double* V, int* mjs, int& imax, int& jmax );
 	void eig_Jacobi_step  ( int n, double* A, double* V, int* mjs, int& imax, int& jmax, double& vmax );
 
-	void polyProject( int n, int m, double* xs, double* ys, double* BB, double* By );
-	void polyFit    ( int n, int m, double* xs, double* ys, double* coefs );
-	void polyeval   ( int n, int m, double* xs, double* ys, double* coefs );
-
 	// ==== inline function
 
 	inline void set( int m, int n, double   f,             double** out ){  for (int i=0; i<m; i++ ){ VecN::set( n, f,       out[i] );  } }

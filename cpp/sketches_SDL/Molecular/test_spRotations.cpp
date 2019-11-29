@@ -32,6 +32,7 @@
 #include "testUtils.h"
 
 #include "Lingebra.h"
+#include "approximation.h"
 
 //#include "MMFF.h"
 //#define R2SAFE  1.0e-8f
@@ -267,15 +268,31 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         //printf( "Iref[%02i] x,f(x):  %g    %g %g   %g %g \n", i, x, Iref, Is2D[i], Iss[i], Isz[i] );
     }
 
-    int npoly = 5;
+    int npoly = 6;
     double coefs[npoly];
-    Lingebra::polyFit ( lsz->n,   npoly, lsz->xs,   lsz->ys,   coefs );
-    Lingebra::polyeval( lpoly->n, npoly, lpoly->xs, lpoly->ys, coefs );
+    Approx ::polyFit ( lsz->n,   npoly, lsz->xs,   lsz->ys,   coefs );
+    Approx ::polyeval( lpoly->n, npoly, lpoly->xs, lpoly->ys, coefs );
     //polyfit( n, 5, xs, double* ys, double* BB, double* By );
     for(int i=0; i<lpoly->n; i++){ printf( "lpoly[%i] %g -> %g | %g \n", i, lpoly->xs[i], lpoly->ys[i], lsz->ys[i] ); }
-    for(int i=0; i<npoly; i++){ printf( "poly[%i] %g \n", i, coefs[i] ); }
+    for(int i=0; i<npoly;    i++){ printf( "poly[%i] %g \n", i, coefs[i] ); }
 
-    //exit(0);
+
+    int i0 = 10;
+    int n_ = n-i0;
+    int    npows = 4;
+    double ypows[npows]{ 1., 1./2, 1./4, 1./8 };
+    double errs [2*npows];
+    double coefss[npoly*npows];
+
+    Approx::ypowsApprox( npows, n_, npoly, lsz->xs+i0, lzs->ys+i0, coefss, ypows, errs );
+    for(int i=0; i<npows; i++){
+        //printf( "[%i] ypow %g err %g rmse %g \n", i, ypows[i], errs[i*2], errs[i*2+1] );
+        printf( "[%i] ypow %g err %g rmse %g \n", i, ypows[i], errs[i*2], sqrt(errs[i*2+1]/n_) );
+    }
+
+
+
+    exit(0);
 
     plot1.render();
 
