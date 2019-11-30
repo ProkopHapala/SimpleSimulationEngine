@@ -122,3 +122,9 @@ class GLView{ public:
     inline bool wait_LOCK( int n, int ms ){ if(!GL_LOCK) return true; for(int i=0; i<n; i++){ SDL_Delay(ms); if(!GL_LOCK) return true; } return false; }
 
 };
+
+
+
+
+
+GLView* getGLViewInstance();

@@ -470,11 +470,18 @@ void GLView::drawCrosshair( float sz ){
 
 // ==================== Main
 
-
-
 GLView * thisApp = 0;
 
+GLView* getGLViewInstance( ){ return thisApp; };
+
+
 extern "C"{
+
+void getMousePos(double* x, double* y){
+    *x = thisApp->mouse_begin_x;
+    *y = thisApp->mouse_begin_y;
+}
+
 
 //void init( int w, int h, void* world_, char* work_dir_ ){
 void init( int w, int h ){

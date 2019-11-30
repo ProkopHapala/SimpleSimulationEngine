@@ -1,6 +1,15 @@
 
 /*
 
+ToDo:
+ - Moral system (organization)
+ - Advance system
+ - Limit concentration
+    - Higher losses from artilery when concentrated
+ - Surprise - firepower of defender in first round is limited
+
+=======================
+
 Model is based on ratio of several different kinds of units:
 - Infantry
 - Tanks (Armor)
@@ -191,6 +200,12 @@ inline double firePowerSaturation( double fp, double vis ){
     //  firepower cannot be higher than visibility
 }
 
+inline double supress_func(double shots){
+    return exp(-shots);
+}
+
+
+
 /*
 inline double fpDecay( double  dist, double reach ){
     double  c = dist/reach;
@@ -287,6 +302,10 @@ struct UnitType{
         return s-s0;
     }
 
+    double battlefield_speed(const BattleField& cond){
+        return speed_combat; // ToDo : effect of terrain and weather
+    }
+
 };
 
 // ==================================
@@ -304,8 +323,10 @@ struct UnitState{
     double dug;            // [0.0..1.0] entranchement level ... how much more difficult it is to be hit (basically multiply size)
     double stealth;        // how much the unit risk to be uncovered, high-profile action e.g. run or fire decrease stealth
     double safeAmmo;       // [0.0..1.0] determine trade-off between ammo supply consumtion and firepower
+    double moral;          // [0.0..1.0]
 
-    double debug_got_shot;
+    //double debug_got_shot;
+    double got_fire;
 
     UnitState()=default;
 
@@ -324,8 +345,21 @@ struct UnitState{
     }
 
 void getFire( double firepower_got ){
-    debug_got_shot = firepower_got;
-} 
+    double invn = 1./n;
+    got_fire    = firepower_got*invn; // ToDo - perhaps += in odrer to consider indirect fire and bombardment
+    supressed  = supress_func(got_fire);
+    if(iDEBUG>0) printf( "firepower_got %g got_fire %g supressed %g \n", firepower_got, got_fire, supressed  );
+}
+
+void  updateDamage( const BattleField& cond, double dt){
+    //moral     -= got_per_unit*dt;   // this is done elsewhere
+};
+
+double advance_speed( const BattleField& cond ){
+    double suppress2 = supressed*supressed;
+    //printf( "suppress2 %g \n", suppress2 );
+    return type->battlefield_speed(cond)*suppress2;
+}
 
 double visibilityFunction( double invDist2, double maxCamo ){
     // maxCamo determined by terrain
@@ -365,6 +399,8 @@ struct CombatSide{
     double firepower        [4]; // total amount of firepower in each category {light, medium, heavy, superheavy}
     double target_attraction[4]; // total visibility in each category          {light, medium, heavy, superheavy}
     double totalVisibility;
+    double advanced;             // how much the unit advanced or retreated form target line
+    double target_dist = 0;      // distance to which we try to advance
 
 void accumUnit(UnitState& unit, double dist, const BattleField& conds, CombatSideTemp& tmp ){
     // ---- shot Attraction
@@ -375,7 +411,7 @@ void accumUnit(UnitState& unit, double dist, const BattleField& conds, CombatSid
     double hitProb      = erf( visibility );
     unit.shot_attaction = unit.cost * hitProb;
     target_attraction[ unit.type->armorClass ] += unit.n * unit.shot_attaction;
-    if(iDEBUG>0) printf( "armor[%i] visibility %g hitProb %g cost %g attraction %g \n" , unit.type->armorClass, visibility, hitProb, unit.cost, unit.shot_attaction );
+    //if(iDEBUG>0) printf( "armor[%i] visibility %g hitProb %g cost %g attraction %g \n" , unit.type->armorClass, visibility, hitProb, unit.cost, unit.shot_attaction );
     //return;
 
     // ---- FirePower
@@ -408,7 +444,7 @@ void accumUnit(UnitState& unit, double dist, const BattleField& conds, CombatSid
             fp2=0;
         }
         tmp.ammo_spend += (fp1 + fp2)*safeAmmo2;
-        if(iDEBUG>0) printf( "->fp[%i] activ %g fp(%g,%g) fdec(%g,%g) dfp(%g,%g) \n", i, activity,  fp1,fp2,  fdec1,fdec2,  dfp1,dfp2 );
+        //if(iDEBUG>0) printf( "->fp[%i] activ %g fp(%g,%g) fdec(%g,%g) dfp(%g,%g) \n", i, activity,  fp1,fp2,  fdec1,fdec2,  dfp1,dfp2 );
     }
 }
 
@@ -436,25 +472,78 @@ inline void match( const double* attraction, CombatSideTemp& tmp ){
         double f1 = firePowerSaturation( fp1,     vis );
         double f2 = firePowerSaturation( fp1+fp2, vis );
         firepower[i] = f1*fp1 + f2*fp2;
-        if(iDEBUG>0) printf( "->match[%i] vis %g fp(%g,%g) f(%g,%g) dfp(%g,%g) \n", i, vis, fp1, fp2, f1, f2, fp1*f1, fp2*f2 );
+        //if(iDEBUG>0) printf( "->match[%i] vis %g fp(%g,%g) f(%g,%g) dfp(%g,%g) \n", i, vis, fp1, fp2, f1, f2, fp1*f1, fp2*f2 );
     }
 }
 
-void distributeFirePower( const double* firepower){ 
+/*
+void distributeFirePower( const double* firepower, double dt ){ 
     double normalized_firepower[4];
     for(int i=0; i<4; i++){
         double att = target_attraction[i];
         if(att>0){ normalized_firepower[i] = firepower[i] / att; }else{ normalized_firepower[i]=0; };
         //normalized_firepower[i] = firepower[i] * invAttraction[i]; 
-        if(iDEBUG>0) printf( "normalized_firepower[%i] %g <= fp %g att %g \n", i, normalized_firepower[i], firepower[i], att );
+        //if(iDEBUG>0) printf( "normalized_firepower[%i] %g <= fp %g att %g \n", i, normalized_firepower[i], firepower[i], att );
     };
     for(UnitState* unit : composition.units){
         int iclass = unit->type->armorClass;
         double firepower_got = unit->n * unit->shot_attaction * normalized_firepower[iclass];
-        unit->getFire( firepower_got ); // internal damage model
-        if(iDEBUG>0) printf( "unit.armor[%i] got_fp %g attraction %g norm_fp %g \n", iclass, firepower_got,  unit->shot_attaction, normalized_firepower[iclass] );
+        unit->getFire( firepower_got, dt ); // internal damage model
+        //if(iDEBUG>0) printf( "unit.armor[%i] got_fp %g attraction %g norm_fp %g \n", iclass, firepower_got,  unit->shot_attaction, normalized_firepower[iclass] );
     }
 }
+
+double tryAdvance( const BattleField& conds, double dt ){  // ToDo: this may be possible to integrate within distributeFirePower 
+    double vmin = 1e+300;
+    for(UnitState* unit : composition.units ){
+        double vi = unit->advance_speed(conds);
+        vmin = fmin(vmin,vi);
+    }
+    printf( "speed %g dt %g \n", vmin, dt );
+    // ToDo: if the advance is hampered by single exceptionally slow unit, it may be reasonable to assign it to second wave ????
+    return vmin*dt;
+}
+*/
+
+double moveUnderFire( const BattleField& conds, const double* firepower, double dt_max, double dist ){ 
+    double normalized_firepower[4];
+    for(int i=0; i<4; i++){
+        double att = target_attraction[i];
+        if(att>0){ normalized_firepower[i] = firepower[i] / att; }else{ normalized_firepower[i]=0; };
+        //normalized_firepower[i] = firepower[i] * invAttraction[i]; 
+        //if(iDEBUG>0) printf( "normalized_firepower[%i] %g <= fp %g att %g \n", i, normalized_firepower[i], firepower[i], att );
+    };
+    double vmin = 1e+300;
+    //printf("----- %i \n", composition.units.size() );
+    for(UnitState* unit : composition.units){
+        int iclass = unit->type->armorClass;
+        double firepower_got = unit->n * unit->shot_attaction * normalized_firepower[iclass];
+        if(iDEBUG>0) printf( "unit->n %i ", unit->n );
+        unit->getFire( firepower_got ); // internal damage model
+        double vi = unit->advance_speed(conds);
+        vmin = fmin(vmin,vi);
+        //if(iDEBUG>0) printf( "unit.armor[%i] got_fp %g attraction %g norm_fp %g \n", iclass, firepower_got,  unit->shot_attaction, normalized_firepower[iclass] );
+    }
+    double dt_need = (dist-target_dist)/vmin; // time the wave need to advance to target distance
+    double dt      = fmin( dt_need, dt_max );
+    advanced+=vmin*dt;
+    if(iDEBUG>0) printf( "speed %g dt %g ddist %g advanced %g \n", vmin, dt, dt*vmin, advanced );
+    return dt;
+}
+
+void updateDamage( const BattleField& conds, double dt ){ 
+    for(UnitState* unit : composition.units){  // this can be esily moved under "Division" class 
+        unit->updateDamage( conds, dt );
+    }
+}
+
+void clearTemp(){ 
+    for(UnitState* unit : composition.units){  // this can be esily moved under "Division" class 
+        unit->supressed = 1;
+        unit->moral     = 1;
+    }
+}
+
 
 };
 
@@ -468,7 +557,7 @@ struct Combat{
     CombatSide attacker;
     CombatSide defender;
 
-void round(){
+double round(double dt_max, double advance_dist ){
     /*
     attacker.assembleTargetAttraction( conds, dist );
     defender.assembleTargetAttraction( conds, dist );
@@ -476,29 +565,63 @@ void round(){
     defender.assembleFirePower( attacker.target_attraction );
     */
     //double attfp1[4],attfp2[4],deffp1[4],deffp1[4];
-    if(iDEBUG>0)printf( "=======combat round dist %g \n", dist );
+    //if(iDEBUG>0)printf( "=======combat round dist %g \n", dist );
     CombatSideTemp atttmp, deftmp;
     //double invDist2 = 1/(dist*dist);
-    if(iDEBUG>0)printf( "attacker::gather \n");
+    //if(iDEBUG>0)printf( "attacker::gather \n");
     attacker.gather( conds, dist, atttmp );
-    if(iDEBUG>0)printf( "defender::gather \n");
+    //if(iDEBUG>0)printf( "defender::gather \n");
     defender.gather( conds, dist, deftmp );
     //return;
-    if(iDEBUG>0)printf( "attacker.match -> defender \n");
+    //if(iDEBUG>0)printf( "attacker.match -> defender \n");
     attacker.match( defender.target_attraction,  atttmp );
-    if(iDEBUG>0)printf( "defender.match -> attacker \n");
+    //if(iDEBUG>0)printf( "defender.match -> attacker \n");
     defender.match( attacker.target_attraction,  deftmp );
 
-    // distribute firepower and take damage
-    if(iDEBUG>0)printf( "attacker take fire \n");
-    attacker.distributeFirePower( defender.firepower );
-    if(iDEBUG>0)printf( "defender take fire \n");
-    defender.distributeFirePower( attacker.firepower );
-    //attacker.tryAdvance(); // if remain some action points
-    //defender.tryRetreat();
+    // ---- distribute firepower and take damage
+    //if(iDEBUG>0)printf( "attacker take fire \n");
+    if(iDEBUG>0) printf("att \n"); 
+    double dt = attacker.moveUnderFire( conds, defender.firepower, dt_max, advance_dist );
+    //if(iDEBUG>0)printf( "defender take fire \n");
+    if(iDEBUG>0) printf("def \n"); 
+    defender.moveUnderFire( conds, attacker.firepower, 0, 0 );
+
+    attacker.updateDamage( conds, dt );
+    defender.updateDamage( conds, dt );
+
+    dist = -(defender.advanced + attacker.advanced);
+    return dt;
+    // ---- movement
+    //double advance_dist = attacker.tryAdvance(conds, dt ); // if remain some action points
+    //printf( "advance_dist %g \n", advance_dist );
+    //defender.tryRetreat(conds); // if defender is superior in ranged weapons it may be advantagenous to retreat, also if defenders moral break, it is forced to retreat
+    //double dist = fmin( attacker.target_dist, dist-advance_dist );
 }
 
+double run(double dt_max, double fdist ){
+    const int nMaxIter = 10;  
+    for(int i=0; i<nMaxIter; i++){
+        //attacker. fdist;
+        if(iDEBUG>0) printf( "combat.run[%i] dt_max %g dist %g advance_dist %g \n", i, dt_max, dist, fdist*dist );
+        dt_max -= round( dt_max, fdist*dist );
+        if(iDEBUG>0) printf( "combat.run[%i] t_left %g dist %g \n\n", i, dt_max, dist );
+        if(dt_max < 1.) break;                // time out
+        if( attacker.advanced > 0 ) break;    // attacker reached the target
+        //if( attacker.moral > 0 ) break;     // attacket retreat
+        //if( defender.advanced > 0 ) break;  // defender retreat / surrender
+    }
+    return dt_max;
+};
 
+void start(double dist_){
+    dist=dist_;
+
+    attacker.clearTemp();
+    defender.clearTemp();
+
+    attacker.advanced = -dist;
+    defender.advanced = 0;
+}
 
 /*
 // Maybe call it rather Fire-Attractivity or Fire-Magnet

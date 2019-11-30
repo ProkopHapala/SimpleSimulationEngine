@@ -55,8 +55,8 @@ class DataLine2D{ public:
     inline DataLine2D(int n_){ allocate(n_); }
     inline DataLine2D(int n_,double*xs_){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; }
     //inline DataLine2D(int n_,double xmin,double xmax){ allocate(n_); linspan(xmin,xmax);  }
-    inline DataLine2D(int n_,double xmin,double dx, uint32_t clr_=0xFFFF00FF){ allocate(n_); arange(xmin,dx); clr=clr_; }
-    inline DataLine2D(int n_, double*xs_, uint32_t clr_=0xFFFF00FF ){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; clr=clr_; }
+    inline DataLine2D(int n_,double xmin,double dx, uint32_t clr_=0xFFFF00FF, std::string label_="" ){ allocate(n_); arange(xmin,dx);                 clr=clr_; label=label_; }
+    inline DataLine2D(int n_, double*xs_,           uint32_t clr_=0xFFFF00FF, std::string label_="" ){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; clr=clr_; label=label_; }
 
     ~DataLine2D();
 };
@@ -83,12 +83,18 @@ class Plot2D{ public:
     Vec2d  axPos;
     Rect2d axBounds;
     float tickSz = 0.1;
+    Vec2f legend_pos={0.,0.};
+
+    std::string xlabel="";
+    std::string ylabel="";
 
     inline DataLine2D* add(DataLine2D* dline){
         lines.push_back(dline);
         return dline;
     };
 
+    bool     logX = false;
+    bool     logY = false;
     bool     grid       =true;
     bool     tickCaption=false;
     uint32_t clrBg      = 0x00f0f0f0;
@@ -102,7 +108,7 @@ class Plot2D{ public:
 
     void update();
     void drawAxes();
-    int  render();
+    int  render(bool bLegend=true);
     void view  (bool bAxes=true);
     void init  ();
     //void xsharingLines(int nl, int np);

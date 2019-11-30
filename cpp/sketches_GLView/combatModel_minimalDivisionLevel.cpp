@@ -57,9 +57,24 @@ void my_draw(){
     plot1.drawAxes();
     plot1.view();
 
+    Vec2d mouse_pos;
+    getMousePos(&mouse_pos.x,&mouse_pos.y);
+    char str[256];
+    //sprintf(str,"mpos(%g %g)", mouse_pos.x, mouse_pos.y );
+    //sprintf(str,"%3.3f %3.3f", mouse_pos.x, mouse_pos.y );
+    sprintf(str,"%3.3f %3.3f", pow(10,mouse_pos.x), pow(10,mouse_pos.y) );
+    Draw2D::drawText(str, mouse_pos, {10,10}, fontTex, 0.1);
+
 }
 
 void setup(){
+
+    //printf("\033c");
+    printf( "======================\n");
+    printf( "======================\n");
+    printf( "======================\n");
+    printf( "======================\n");
+    printf( "setup() \n");
 
     fontTex = makeTexture( "../common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     plot1.init();
@@ -115,37 +130,52 @@ void setup(){
     unit_ATR.type->info(stmp,true); printf( "defender unit_ATR  : \n %s\n", stmp );
     combat1.defender.composition.units.push_back(&unit_ATR);
 
-    iDEBUG = 1;
-    combat1.dist=10.0;
-    combat1.round();
 
-    combat1.dist=1000.0;
-    combat1.round();
+    //iDEBUG = 1;
+    //combat1.dist=10.0;
+    //combat1.round();
+    //combat1.dist=1000.0;
+    //combat1.round();
+
+    long t0 = getCPUticks();
+    combat1.start(1000.0              );  // from 1 kilometer
+    combat1.run  (3600.0, 1-0.61803398875 );  // one hour
+    //exit(0);
+    long t10 = t0 - getCPUticks();
+    printf( "time{Combat::run} %g [kTicks] \n", t10*1e-3 );
 
     int nsamp = 15;
-    DataLine2D * l_tank = plot1.add( new DataLine2D(nsamp,0,1.0,      0xFF0000FF ) );
-    DataLine2D * l_inf  = plot1.add( new DataLine2D(nsamp,l_tank->xs, 0xFFFF0000 ) );
-    DataLine2D * l_ATR  = plot1.add( new DataLine2D(nsamp,l_tank->xs, 0xFFFF8000 ) );
+    DataLine2D * l_tank = plot1.add( new DataLine2D(nsamp,0,1.0,      0xFF0000FF, "tank" )  );
+    DataLine2D * l_inf  = plot1.add( new DataLine2D(nsamp,l_tank->xs, 0xFFFF0000, "inf" )  );
+    DataLine2D * l_ATR  = plot1.add( new DataLine2D(nsamp,l_tank->xs, 0xFFFF8000, "ATR" )  );
 
     iDEBUG = 0;
     for(int i=0; i<nsamp; i++){
         //double dist = 0.1;
-        combat1.dist= 10*i*i;
+        combat1.start( pow(2, i) );
         //l_tank->xs[i] = log10(combat1.dist);
-        l_tank->xs[i] = i;
+        l_tank->xs[i] = log10(combat1.dist);
         //unit_inf .debug_got_shot=0;
         //unit_tank.debug_got_shot=0;
         //unit_ATR.debug_got_shot=0;
         //printf( "dist %g ", combat1.dist );
-        combat1.round();
-        l_tank->ys[i]=log10(unit_tank.debug_got_shot);
-        l_inf ->ys[i]=log10(unit_inf.debug_got_shot);
-        l_ATR ->ys[i]=log10(unit_ATR.debug_got_shot);
-        printf( "dist %g fp12 %g %g | fp21 %g \n", combat1.dist, unit_inf.debug_got_shot, unit_ATR.debug_got_shot, unit_tank.debug_got_shot );
+        combat1.round(0,0);
+        l_tank->ys[i]=log10(unit_tank.got_fire);
+        l_inf ->ys[i]=log10(unit_inf.got_fire);
+        l_ATR ->ys[i]=log10(unit_ATR.got_fire);
+        printf( "dist %g fp12 %g %g | fp21 %g \n", combat1.dist, unit_inf.got_fire, unit_ATR.got_fire, unit_tank.got_fire );
         //printf( "dist %g fp12 %g %g | fp21 %g \n", dist, l_inf ->ys[i]), log10(l_ATR ->ys[i]), log10(l_tank->ys[i]) );
     }
 
-    plot1.render();
+
+    plot1.logX = true;
+    plot1.logY = true;
+    plot1.clrGrid   = 0xFFE0E0E0;
+    plot1.clrTicksX = 0xFFA0A0A0;
+    plot1.clrTicksY = 0xFFA0A0A0;
+    plot1.xlabel="log dist[m]";
+    plot1.ylabel="log got_shot";
+    plot1.render(true);
 
     //exit(0);
     
@@ -153,11 +183,10 @@ void setup(){
 
 int main(){
 
-    setup();
-
-    init( 640, 480 );
+    //init( 640, 480 );
+    init( 1024, 768 );
     set_draw_function( my_draw );
     setup();
-    run_Nframes(5000);
+    run_Nframes(500000);
 
 }
