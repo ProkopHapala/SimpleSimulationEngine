@@ -141,7 +141,7 @@ void Plot2D::drawAxes(){
         Draw2D::drawText( ylabel.c_str(), 0, (Vec2d){0.0,-tickSz*ylabel.length()}, 90.0, fontTex, tickSz );
         for(int i=0; i<nYTicks; i++){
             sprintf(str,tickFormat,yTicks[i]);
-            if(logX) { sprintf(str,tickFormat,pow(10,yTicks[i])); }
+            if(logY) { sprintf(str,tickFormat,pow(10,yTicks[i])); }
             else     { sprintf(str,tickFormat,yTicks[i]); }
             Draw2D::drawText(str, 0, {axPos.x,yTicks[i]}, 0.0, fontTex, tickSz );
         }
