@@ -225,7 +225,6 @@ void linSolve_gauss( int n, double ** A, double * b, int * index, double * x ) {
 		}
 	}
 
-
 	// Perform backward substitutions
 	x[n-1] = b[index[n-1]]/A[index[n-1]][n-1];
 	for (int i=n-2; i>=0; --i) {

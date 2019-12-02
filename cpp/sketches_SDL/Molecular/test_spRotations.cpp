@@ -277,6 +277,7 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     for(int i=0; i<npoly;    i++){ printf( "poly[%i] %g \n", i, coefs[i] ); }
 
 
+    /*
     int i0 = 10;
     int n_ = n-i0;
     int    npows = 4;
@@ -289,8 +290,34 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         //printf( "[%i] ypow %g err %g rmse %g \n", i, ypows[i], errs[i*2], errs[i*2+1] );
         printf( "[%i] ypow %g err %g rmse %g \n", i, ypows[i], errs[i*2], sqrt(errs[i*2+1]/n_) );
     }
+    */
 
 
+    // ======= test AutoAprox
+
+    Approx::AutoApprox aaprox;
+
+    int npoints = 100;
+    int npows  = 4;
+    int npolys = 12;
+    double pows [npows] {1,2,4,8};
+    int    polys[npolys]{0,1,2,3,4,5,6,7,8,9,10,11,12};
+    aaprox.bindOrRealloc( npolys, npows, npoints, polys, pows );
+    for(int i=0; i<npoints; i++){
+        double x         = i*0.1;
+        aaprox.xs    [i] = x;
+        //aaprox.ys_ref[i] = exp(-x);
+        aaprox.ys_ref[i] = x*exp(-x);
+        //aaprox.ys_ref[i] = pow(x,3);
+    }
+    aaprox.preparePowers();
+
+    for(int i=0; i<aaprox.npows; i++){
+        int order = aaprox.tryVariant(10, 50, i );
+        printf("[%i] pow %g err %g coefs[%i]: ", i, aaprox.pows[i], aaprox.err, order );
+        for(int j=0; j<order; j++ ) printf( "%g ", i, aaprox.coefs[j] );
+        printf("\n");
+    }
 
     exit(0);
 
