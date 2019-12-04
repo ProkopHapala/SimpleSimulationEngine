@@ -29,6 +29,26 @@
 // ============= sorting
 
 template<typename  T>
+struct Buf{
+    T*   data=0;
+    bool own=false;
+
+    void bind(T* data_){ data=data_; };
+    bool alloc(int n  ){ own=true; data=new T[n]; };
+    //bool realloc(int n){ bool b=false; if(data){ delete [] data; b=true; }; data=new T[n]; return b; };
+    //Arr(T* data_){own=true; };
+    Buf() = default;
+    Buf(int n   ):own{true} {data=new T[n]; };
+    Buf(T* data_):own{false},data{data_}{};
+    ~Buf(){ if(own&&data)delete[]data; }
+
+    T& operator[](int i){
+        //if (index >= size) { printf( "Array index [%i] out of bound [%i] \n", i, n ); exit(0); }
+        return data[i];
+    }
+};
+
+template<typename  T>
 struct Arr{
     T*   data;
     int  n;

@@ -298,27 +298,37 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     Approx::AutoApprox aaprox;
 
     int npoints = 100;
-    int npows  = 4;
-    int npolys = 12;
-    double pows [npows] {1,2,4,8};
-    int    polys[npolys]{0,1,2,3,4,5,6,7,8,9,10,11,12};
+    int npows   = 4;
+    int npolys  = 15;
+    //double pows [npows] {1,2,4,8};
+    double pows [npows] {-1,-2,-4,-8};
+    int    polys[npolys]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
     aaprox.bindOrRealloc( npolys, npows, npoints, polys, pows );
+    aaprox.ws.alloc(aaprox.np);
+    //aaprox.ws = aaprox.ys_ref;
+     DEBUG
     for(int i=0; i<npoints; i++){
         double x         = i*0.1;
         aaprox.xs    [i] = x;
-        //aaprox.ys_ref[i] = exp(-x);
-        aaprox.ys_ref[i] = x*exp(-x);
+        aaprox.ys_ref[i] = exp(-x);
+        //aaprox.ws    [i] = exp(-x*(7./8));
+        aaprox.ws    [i] = exp(-x*(9./8.));
+        //aaprox.ync   [i] = 1+x;
+        //aaprox.ws    [i] = exp(-x);
+        //aaprox.ys_ref[i] = x*exp(-x);
         //aaprox.ys_ref[i] = pow(x,3);
     }
+    DEBUG
     aaprox.preparePowers();
-
+    DEBUG
     for(int i=0; i<aaprox.npows; i++){
         int order = aaprox.tryVariant(10, 50, i );
+        if(order<0){ order=aaprox.npoly; printf("(not converged)"); }
         printf("[%i] pow %g err %g coefs[%i]: ", i, aaprox.pows[i], aaprox.err, order );
         for(int j=0; j<order; j++ ) printf( "%g ", i, aaprox.coefs[j] );
         printf("\n");
     }
-
+     DEBUG
     exit(0);
 
     plot1.render();
