@@ -318,17 +318,19 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         //aaprox.ys_ref[i] = x*exp(-x);
         //aaprox.ys_ref[i] = pow(x,3);
     }
+    aaprox.reallocAux();
     DEBUG
     aaprox.preparePowers();
     DEBUG
     for(int i=0; i<aaprox.npows; i++){
         int order = aaprox.tryVariant(10, 50, i );
+        //int order = aaprox.ascendingPolyFit_(10, 50, i );
         if(order<0){ order=aaprox.npoly; printf("(not converged)"); }
         printf("[%i] pow %g err %g coefs[%i]: ", i, aaprox.pows[i], aaprox.err, order );
         for(int j=0; j<order; j++ ) printf( "%g ", i, aaprox.coefs[j] );
         printf("\n");
     }
-     DEBUG
+    DEBUG
     exit(0);
 
     plot1.render();

@@ -57,15 +57,16 @@ void polyProject( int n, int m, double* xs, double* ys, double* BB, double* By )
 void polyProject( int n, int m, int* pows, double* xs, double* ys, double* BB, double* By, double* ws=0 ){
     double bas[m];  // eventually we can use any function instead of xns
     int maxOrder = pows[m-1];
+
     //printf("polyProject: n %i m %i maxOrder %i \n", n, m, maxOrder );
     for(int ip=0; ip<n; ip++ ){
         double x  = xs[ip];
         double y  = ys[ip];
         double w  = 1;
         if(ws){ w = ws[ip]; y*=w; }
-        //printf( "polyProject[%i] %g %g \n", ip, x, y );
         double xn = 1;
         int ipow  = 0;
+        //printf( "xyw %g %g %g \n",  x, y, w );
         for(int i=0;i<=maxOrder;i++){
             if(i==pows[ipow]){
                 bas[ipow]=xn*w;
@@ -78,11 +79,13 @@ void polyProject( int n, int m, int* pows, double* xs, double* ys, double* BB, d
         for(int i=0;i<m;i++){
             double bi  = bas[i];
             By[i]      += bi*y;
+            //printf( "By[%i] %g %g %g \n", i, bi, y, By[i] );
             for(int j=0;j<=i;j++){
                 //if(ip==0) printf( "i %i j %i i*m+j %i \n", i, j, i*m+j );
                 BB[i*m+j] += bi*bas[j];
             }
         }
+        //printf( "polyProject[%i] %g %g \n", ip, x, y );
     }
     Lingebra::symCopy( m, BB, false );
 }
@@ -117,6 +120,7 @@ void polyeval( int n, int m, double* xs, double* ys, double* coefs ){
 
 void polyeval( int n, int m,  int* pows, double* xs, double* ys, double* coefs ){
     int maxOrder = pows[m-1];
+    //for(int i=0;i<=maxOrder;i++){ printf( "coefs[%i] %g \n ", i, coefs[i] ); }
     for(int ip=0; ip<n; ip++){
         double x  = xs[ip];
         double y  = 0;
@@ -129,6 +133,7 @@ void polyeval( int n, int m,  int* pows, double* xs, double* ys, double* coefs )
             }
             xn*=x;
         }
+        //printf( "polyeval[%i] %g %g %g \n", ip, x, y, xn );
         ys[ip]=y;
     }
 }
@@ -437,6 +442,7 @@ class AutoApprox{ public:
 
     inline double* getYrefPow(int ipow ){ return ys_trans + ipow*np; }
 
+
     int tryVariant( int i0, int i1, int ipow ){
         //double evalError( xs+i0, ys_trans + ipow*np + i0, powered=false, bool relative=false, double* ys_test=0, double* pows=0 ){
         int     ni   = i1-i0;
@@ -444,7 +450,6 @@ class AutoApprox{ public:
         int i = ascendingPolyFit( err, ipoly0, npoly, ipolys, ni, xs+i0, getYrefPow(ipow)+i0, ys_test, coefs, ws.data, pows[ipow], bRelativeError );
         return i;
     }
-
 
     // ======= ascendingPolyFit
 
@@ -460,6 +465,7 @@ class AutoApprox{ public:
     }
 
     double checkError( double alpha, int i0, int n ){
+        //printf( "checkError \n" );
         errmax =0;  // ToDo make this class variable
         err2   =0;
         for(int i=0; i<n; i++){
@@ -467,13 +473,13 @@ class AutoApprox{ public:
             double y    = ys_test[i0+i];
             double yref = ys_ref [i0+i];
             //if(ynf)   y*=ynf;
-            if(ync.data)   y+=ync[i];
-
-            if(alpha==1){ derr =      y          - yref; }
-            else        { derr = pow( y, alpha ) - yref; }
+            if(ync.data)   y+=ync.data[i0+i];
+            if(alpha!=1){ y = pow( y, alpha ); }
+            derr =      y - yref;
             if(bRelativeError) derr/=(yref+errTol);
             errmax  = fmax( errmax, fabs(derr) );
             err2   += derr*derr;
+            //printf( "[%i] y %g ys_test %g yref %g derr %g errmax %g \n", i, y, ys_test[i0+i], yref, derr, errmax );
         }
         //errRMS = sqrt(err2/n);
         return errmax;
@@ -481,23 +487,51 @@ class AutoApprox{ public:
 
     int ascendingPolyFit_(int i0, int i1, int ipow ){
         int n = i1-i0;
+        //printf("i0 %i i1 %i ipow %i n %i \n", i0, i1, ipow, n ); exit(0);
+
         double* xs_ = xs               + i0;
         double* ys_ = getYrefPow(ipow) + i0;
         double mm = npoly*npoly;
-        VecN::set( mm, 0., BB );
+        VecN::set( mm,    0., BB );
         VecN::set( npoly, 0., By );
-        polyProject( n, npows, ipolys, xs_, ys_, BB, By, ws.data );
+        DEBUG
+        polyProject( n, npoly, ipolys, xs_, ys_, BB, By, ws.data );
         int m_conv=-1;
+        DEBUG
         Lingebra::from_continuous( npoly, npoly, BBcp, BB_ );
+        DEBUG
+
+        /*
+        //for(int i=0;i<npoly;i++){ Bycp[i] = By[i];  int ioff=i*npoly; for(int j=0;j<npoly;j++){ BBcp[ioff+j] = BB[ioff+j]; }; }
+        for(int i=0;i<npoly;i++){
+            for(int j=0;j<npoly;j++){ printf("%3.3f ", BB[i*npoly+j] ); };
+            printf(" BB By %g \n", By[i] );
+        }
+
+        for(int i=0;i<npoly;i++){
+            for(int j=0;j<npoly;j++){ printf("%3.3f ", BB_[i][j] ); };
+            printf(" BB_ \n");
+        }
+        */
+        //return 0;
 
         for( int ipw=ipoly0; ipw<npoly; ipw++ ){
+            //printf( "=================== ipw %i \n", ipw );
             for(int i=0;i<ipw;i++){ Bycp[i] = By[i];  int ioff=i*npoly; for(int j=0;j<ipw;j++){ BBcp[ioff+j] = BB[ioff+j]; }; }  // must copy otherwise linSolve_gauss destroy it
+
+            //for(int i=0;i<ipw;i++){
+            //    for(int j=0;j<ipw;j++){ printf("%3.3f ", BB_[i][j] ); };
+            //    //printf(" BB_ Bycp %g \n", Bycp[i] );
+            //}
             Lingebra::linSolve_gauss ( ipw, BB_, Bycp, index, coefs );
-            polyeval( n, ipw, ipolys, xs+i0, ys_test, coefs );
+            //for(int i=0;i<ipw;i++){ printf("coefs[%i] %g \n", i, coefs[i] ); }
+            polyeval  ( n, ipw, ipolys, xs, ys_test+i0, coefs );
             checkError( pows[ipow], i0, n );
-            printf( "multiFitAndCheck[%i] m1[%i] errmax %g rmse %g \n", ipw, pows[ipw], errmax, sqrt(err2/n) );
+
+            printf( "multiFitAndCheck[%i] errmax %g rmse %g \n", ipw, errmax, sqrt(err2/n) );
             if(errmax<errTol){ m_conv=ipw; break; }
             if(bAllCoefs) coefs+=ipw;
+
         }
         return m_conv;
     }
