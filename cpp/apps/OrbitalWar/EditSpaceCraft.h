@@ -17,7 +17,7 @@ char str[4096];
 int fontTex = 0;
 lua_State  * theLua=0;
 SpaceCraft * theSpaceCraft=0;
-std::unordered_map<std::string,Material*> materials;
+std::unordered_map<std::string,Material*>  materials;
 std::unordered_map<std::string,Commodity*> comodities;
 
 constexpr int NBIT_kind = 8;

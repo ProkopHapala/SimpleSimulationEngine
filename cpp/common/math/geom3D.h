@@ -79,6 +79,13 @@ class Sphere3d{ public:
 
 class Line3d{ public:
     Vec3d  a,b;
+
+    void fromSubLine( const Vec3d& a_, const Vec3d& b_, double ca, double cb ){
+        Vec3d d; d.set_sub(b_,a_);
+        a.set_add_mul( a_, d, ca);
+        b.set_add_mul( a_, d, cb);
+    }
+
 };
 
 struct Rayt3d{
@@ -313,6 +320,12 @@ class Tetrahedron{ public:
 };
 
 
+
+inline double normalAreaTriangle( Vec3d& nr, const Vec3d& a, const Vec3d& b, const Vec3d& c ){
+    nr.set_cross(b-a,c-a);
+    return nr.normalize() * 0.5;
+}
+
 class Triangle3D{
     public:
 	union{
@@ -320,9 +333,10 @@ class Triangle3D{
 		Vec3d array[3];
 	};
 	inline double normalArea(Vec3d& nr)const{
-        nr.set_cross(b-a,c-a);
-        return nr.normalize() * 0.5;
-	};
+        //nr.set_cross(b-a,c-a);
+        //return nr.normalize() * 0.5;
+        return normalAreaTriangle( nr, a,b,c );
+	}
 	inline bool rayIn( const Vec3d& ray0, const Vec3d& hX, const Vec3d& hY )const{
         return rayInTriangle( a-ray0, b-ray0, c-ray0, hX, hY );
 	}
@@ -335,6 +349,42 @@ class Triangle3D{
         return rayTriangle2( ray0, hRay, hX, hY, a,b,c, normal );
     }
 };
+
+
+class Quad3d{ public:
+    // two triangles abc,  acd (cad)
+	union{
+		struct{ Vec3d a,b,c,d; };
+		struct{ Vec3d p00,p01,p10,p11; };
+		struct{ Line3d l1,l2; };
+		Vec3d array[4];
+	};
+	inline double normalArea(Vec3d& nr)const{
+        return  normalAreaTriangle( nr, a,b,c );
+              + normalAreaTriangle( nr, a,c,d );
+	};
+	inline bool rayIn( const Vec3d& ray0, const Vec3d& hX, const Vec3d& hY )const{
+        Vec3d a_=a-ray0;
+        Vec3d b_=b-ray0;
+        Vec3d c_=c-ray0;
+        Vec3d d_=d-ray0;
+        return rayInTriangle( a_, b_, d_, hX, hY ) || rayInTriangle( a_, d_, c_, hX, hY );
+	}
+    inline double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal, const Vec3d& hX, const Vec3d& hY )const{
+        //printf( "====== abcd (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) \n", a.x,a.y,a.z,  b.x,b.y,b.z,  c.x,c.y,c.z,  d.x,d.y,d.z );
+        double t =         rayTriangle2( ray0, hRay, hX, hY, a,b,d, normal );
+        //printf( "triangle 1 : %g \n", t );
+        if(t>0.9*t_inf){ t=rayTriangle2( ray0, hRay, hX, hY, a,d,c, normal );}
+        //printf( "triangle 2 : %g \n", t );
+        return t;
+	}
+	inline double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal )const{
+        Vec3d hX,hY;
+        hRay.getSomeOrtho(hX,hY);
+        return ray( ray0, hRay, normal, hX, hY );
+    }
+};
+
 
 // ============ Plane3D
 

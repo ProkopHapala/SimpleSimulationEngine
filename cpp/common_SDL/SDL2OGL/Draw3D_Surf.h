@@ -54,7 +54,7 @@ void drawSmoothUVFunc( Vec2i n, Vec2f UVmin, Vec2f UVmax, float voff, UVfunc fun
     float eps = 0.001;
     Vec2f duv = UVmax-UVmin; duv.mul( {1.0f/n.a,1.0f/n.b} );
     //int i0=mesh.vpos.size()/3;
-    printf( "n (%i,%i) duv (%f,%f) \n", n.a, n.b, duv.a, duv.b  );
+    //printf( "n (%i,%i) duv (%f,%f) \n", n.a, n.b, duv.a, duv.b  );
     Vec2f uv;
     for(int ia=0;ia<=n.a;ia++){
         glBegin(GL_TRIANGLE_STRIP);

@@ -135,6 +135,15 @@ void drawPlate( const Plate& o, const Node* nodes, const Girder* girders ){
     //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
 }
 
+void drawPlateContour( const Plate& o, const Node* nodes, const Girder* girders, bool filled ){
+    Quad3d qd;
+    qd.l1.fromSubLine( nodes[ girders[o.g1].p0 ].pos, nodes[ girders[o.g1].p1 ].pos, o.g1span.x, o.g1span.y );
+    qd.l2.fromSubLine( nodes[ girders[o.g2].p0 ].pos, nodes[ girders[o.g2].p1 ].pos, o.g2span.x, o.g2span.y );
+    //printf( );
+    Draw3D::drawQuad(qd, filled);
+    //Draw3D::drawQuad_bare();
+}
+
 void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
     //nodes,ropes;girders;thrustes;guns;radiators;shields;tanks;pipes;
     //for( None nd : nodes ){};
@@ -255,7 +264,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
         Draw3D::rigidTransform( (Vec3f)o.pose.pos, (Mat3f)o.pose.rot, (Vec3f){1.0,1.0,1.0}, false);
         float R = o.span.b;
         float L = o.span.c;
-        printf( "Thruster R %f L %f", R, L );
+        //printf( "Thruster R %f L %f", R, L );
     //  drawUV_Cone( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire ){
         //Draw3D::drawUV_Cone( {10,10}, {0.0,0.0}, {1.0,M_PI*2}, o.span.a, o.span.b, o.span.c, 0.5, false );
         //Draw3D::drawUV_Cone( {10,10}, {0.0,0.0}, {1.0,M_PI*2}, o.span.a, o.span.b, o.span.c, 0.5, true );

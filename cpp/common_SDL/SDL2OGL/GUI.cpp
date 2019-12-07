@@ -189,15 +189,18 @@ void GUIPanel::render(){
         Draw::setRGB(barColor);
         //Draw2D::drawRectangle ( xmin, ymax-2 xmin+val2x(value), ymax, true );
         //Draw2D::drawRectangle ( xmin, ymax-2*fontSizeDef, xmin+val2x(value), ymax, true );
-        Draw2D::drawRectangle ( xmin, ymax-4*fontSizeDef, xmin+val2x(value), ymax-2*fontSizeDef, true );
+        Draw2D::drawRectangle ( xmin, ymin, xmin+val2x(value), ymax-2*fontSizeDef, true );
     }
     Draw  ::setRGB( textColor );
-    //int nch = strlen(caption);
+    int nch0 = caption.length();
     //Draw2D::drawText( caption, nch, {xmin, ymin+fontSizeDef*2,}, 0.0,  GUI_fontTex, fontSizeDef );
     Draw2D::drawText( caption.c_str(), caption.length(), {xmin, ymax-fontSizeDef*2}, 0.0,  GUI_fontTex, fontSizeDef );
     int nch = inputText.length();
     if( nch > 0 ){
-        Draw2D::drawText( inputText.c_str(), nch, {xmin, ymin}, 0.0, GUI_fontTex, fontSizeDef );
+        Draw  ::setRGB( 0xFFFFFFFF );
+        Draw2D::drawRectangle( xmin+nch0*fontSizeDef, ymax-2*fontSizeDef, xmax, ymax, true );
+        Draw  ::setRGB( textColor );
+        Draw2D::drawText( inputText.c_str(), nch, {xmin+fontSizeDef*nch0, ymin}, 0.0, GUI_fontTex, fontSizeDef );
     }
 }
 
@@ -260,14 +263,15 @@ GUIAbstractPanel* GUIPanel::onMouse( int x, int y, const SDL_Event& event, GUI& 
     GUIAbstractPanel* active = NULL;
     if( check( x, y ) ){
         toRelative(x,y);
-        //printf( "  panel.onMouse %i %i \n", x, y );
+        printf( "  panel.onMouse %i %i \n", x, y );
         if( ( event.type == SDL_MOUSEBUTTONDOWN ) ){
             active = this;
             if(isSlider && (event.button.button==SDL_BUTTON_RIGHT)){
                 //value=( x*(vmax-vmin)/(xmax-xmin) ) + vmin;
                 value=x2val(x);
                 //sprintf(val_text, "%3.3f", value );
-                inputText = std::to_string(value);
+                //inputText = std::to_string(value);
+                val2text();
                 redraw=true;
             }
             if(isButton && (event.button.button==SDL_BUTTON_LEFT ) ){
@@ -391,9 +395,11 @@ void MultiPanel::toggleOpen(){
 
 void MultiPanel::view( ){
     glCallList( gllist );
+    //printf( "opened %i \n", opened );
     if(opened){
         for(int i=0; i<nsubs; i++){
-            subs[i]->draw();
+            subs[i]->tryRender();
+            subs[i]->view();
         }
     }
 };
@@ -409,8 +415,10 @@ void MultiPanel::tryRender( ){
 
 void MultiPanel::render( ){
     GUIAbstractPanel::render();
-    for(int i=0; i<nsubs; i++){
-        subs[i]->render();
+    if(opened){
+        for(int i=0; i<nsubs; i++){
+            subs[i]->render();
+        }
     }
 };
 

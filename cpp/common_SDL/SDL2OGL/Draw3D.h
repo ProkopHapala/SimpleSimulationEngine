@@ -48,6 +48,9 @@ void drawScale     ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& a, float ti
 
 void drawTriangle ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& p3 );
 
+void drawQuad     ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& p3, const Vec3f& p4, bool filled );
+
+
 void drawMatInPos ( const Mat3f& mat, const Vec3f& pos, const Vec3f& sc=Vec3fOne );
 
 void drawShape    ( const Vec3f& pos, const Mat3f&  rot,  int shape, bool transposed = false );
@@ -95,6 +98,9 @@ inline void drawArrow     ( const Vec3d& p1,  const Vec3d& p2, float sz  ){drawA
 inline void drawScale     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& a, double tick, double sza, double szb ){  drawScale( (Vec3f)p1, (Vec3f)p2, (Vec3f)a, tick,sza,szb); };
 
 inline void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3 ){ drawTriangle( (Vec3f)p1, (Vec3f)p2, (Vec3f)p3 ); };
+inline void drawQuad     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3, const Vec3d& p4, bool filled ){ drawQuad((Vec3f)p1,(Vec3f)p2,(Vec3f)p3,(Vec3f)p4, filled ); }
+inline void drawQuad     ( const Quad3d& qd, bool filled ){ drawQuad(qd.l1.a,qd.l1.b,qd.l2.b,qd.l2.a, filled); }
+
 
 inline void drawMatInPos ( const Mat3d& mat, const Vec3d& pos, const Vec3d& sc=Vec3dOne ){  drawMatInPos( (Mat3f)mat, (Vec3f)pos, (Vec3f)sc ); };
 

@@ -79,7 +79,7 @@ inline double rayLine( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p0, co
     double c2   = d.dot(hL);
     t1 =   (c1-c2*crl)/(1-crl*crl);
     t2 =  -(c2-c1*crl)/(1-crl*crl);
-    return fabs(c);
+    return fabs(c); // distance
     //return (c1-c2*crl)/(1-crl*crl);
     //return
 }
@@ -90,6 +90,7 @@ inline double rayPlane( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& norma
 	double nh = normal.dot( hRay  );
 	double np = normal.dot( point );
 	double n0 = normal.dot( ray0  );
+	//printf( "rayPlane %g | %g %g %g\n", ( np - n0 ) / nh, nh, np, n0 );
 	//return ( n0 + np ) / nh;
 	return ( np - n0 ) / nh;
 }
@@ -170,13 +171,19 @@ inline double rayTriangle2(
 	const Vec3d &a,    const Vec3d &b,    const Vec3d &c,
     Vec3d& normal
 ){
+    //printf( "abc (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) \n", a.x,a.y,a.z,  b.x,b.y,b.z,  c.x,c.y,c.z );
     if( !rayInTriangle( a-ray0, b-ray0, c-ray0, hX, hY ) ) return t_inf;
     //printf("ray is in triangle\n");
 	Vec3d ab,ac;
 	ab.set_sub( b, a );
 	ac.set_sub( c, a );
 	normal.set_cross( ab, ac );
-
+	//printf( "rayTriangle2 ab(%g,%g,%g) ac(%g,%g,%g) normal(%g,%g,%g)\n",  ab.x,ab.y,ab.z,  ac.x,ac.y,ac.z,  normal.x,normal.y,normal.z );
+	double r2 = normal.norm2();
+	if(r2<1.e-32){ return t_inf; }
+	//printf( "rayTriangle2 ab (%g,%g,%g)\n", ab.x, ab.y, ab.z );
+	//printf( "rayTriangle2 ac (%g,%g,%g)\n", ac.x, ac.y, ac.z );
+    //printf( "rayTriangle2 normal (%g,%g,%g)\n", normal.x, normal.y, normal.z );
 	return rayPlane( ray0, hRay, normal, a );
 }
 

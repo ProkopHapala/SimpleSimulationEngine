@@ -116,6 +116,10 @@ class Rock : public Modul { public:
 class NodeLinker : public ShipComponent { public:
     int p0,p1;
     double length;
+
+    void ray( const Vec3d& ro, const Vec3d& rd ){
+
+    }
 };
 
 class Girder : public NodeLinker { public:
@@ -168,11 +172,12 @@ class Pipe : public ShipComponent { public:
 class Plate : public ShipComponent { public:
     double area;
     int g1,g2;    // anchor girders
-    Vec2f g1span; // pos along girdes
-    Vec2f g2span;
+    Vec2d g1span; // pos along girdes
+    Vec2d g2span;
     //Vec3d normal;
 	//int ntris;
 	//int * tris;  // triangles from points of spaceship
+
 };
 
 class Radiator : public Plate{ public:
@@ -256,6 +261,9 @@ class Gun : public Accelerator{ public:
 
 // === SpaceShip
 
+
+enum class ComponetKind:int{ Node, Rope, Girder, Ring, Thruster, Gun, Radiator, Shield, Tank, Pipe, Balloon, Rock };
+
 class SpaceCraft : public CatalogItem { public:
 
     std::vector<int>       LODs;
@@ -276,15 +284,92 @@ class SpaceCraft : public CatalogItem { public:
 	// Truss * coarse = NULL;
 	// Truss * fine   = NULL;
 
+	// aux
+	int pickedTyp = -1;
+
+
+
+
 	void clear(){
         nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrusters.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
         rocks.clear(); balloons.clear();
         truss.clear();
 	};
 
-	void pick(Vec3d ro, Vec3d rd){
-
+	inline void linker2line( const NodeLinker& o, Line3d& l ){ l.a=nodes[o.p0].pos; l.b=nodes[o.p1].pos; }
+	inline void plate2quad ( const Plate& o, Quad3d& qd ){
+        //qd.l1.a=nodes[ girders[o.g1].p0 ].pos;
+        //qd.l1.b=nodes[ girders[o.g1].p1 ].pos;
+        //qd.l2.a=nodes[ girders[o.g2].p0 ].pos;
+        //qd.l2.b=nodes[ girders[o.g2].p1 ].pos;
+        //Vec3d d;
+        //d = p01-p00; qd.p01=qd.p00+d*o.g1span.x;  qd.p00.add_mul( d,o.g1span.y);
+        //d = p11-p10; qd.p11=qd.p10+d*o.g2span.x;  qd.p10.add_mul( d,o.g2span.y);
+        qd.l1.fromSubLine( nodes[ girders[o.g1].p0 ].pos, nodes[ girders[o.g1].p1 ].pos, o.g1span.x, o.g1span.y );
+        qd.l2.fromSubLine( nodes[ girders[o.g2].p0 ].pos, nodes[ girders[o.g2].p1 ].pos, o.g2span.x, o.g2span.y );
 	}
+
+    inline double rayPlate( const Plate& plate, const Vec3d& ro, const Vec3d& rd, Vec3d& normal, const Vec3d& hX, const Vec3d& hY ){
+        Quad3d qd;
+        //getQuad(qd);
+        plate2quad(plate, qd);
+        return qd.ray(ro, rd, normal, hX, hY );
+	}
+
+    inline double rayLinkLine( const NodeLinker& o, const Vec3d& ro, const Vec3d& rd, double rmax ){
+        Vec3d lp0=nodes[o.p0].pos;
+        Vec3d lpd=nodes[o.p1].pos-lp0;
+        double lmax = lpd.normalize();
+        double t,l;
+        double r = rayLine(ro, rd, lp0, lpd, t, l );
+        //printf( "rayLinkLine t,l,r %g %g %g \n", t,l,r );
+        if( (r>rmax) || (l>lmax) || (l<0) ) return t_inf;
+        return t;
+	}
+
+	int pick(Vec3d ro, Vec3d rd, double rmax = 1.0 ){
+        Quad3d qd;
+        Vec3d  nr;
+        Vec3d hX,hY;
+        rd.getSomeOrtho(hX,hY);
+        int imin=-1;
+        pickedTyp=-1;
+        double tmin = t_inf;
+        for(int i=0; i<radiators.size(); i++){
+            //plate2quad( plate, qd );
+            double t = rayPlate( radiators[i], ro, rd, nr, hX, hY );
+            //printf( "pick.radiators[%i] t %g tmin %g \n", i, t, tmin );
+            if(t<tmin){ tmin=t; imin=i; pickedTyp=(int)ComponetKind::Radiator; }
+        };
+        for(int i=0; i<shields.size(); i++){
+            double t = rayPlate( shields[i], ro, rd, nr, hX, hY );
+            //printf( "pick.shields[%i] t %g tmin %g \n", i, t, tmin );
+            if(t<tmin){ tmin=t; imin=i; pickedTyp=(int)ComponetKind::Shield; }
+        }
+        //double rmax = 5.0;
+        for(int i=0; i<girders.size(); i++){
+            double t = rayLinkLine( girders[i], ro, rd, rmax );
+            //printf( "pick.girders[%i] t %g tmin %g \n", i, t, tmin );
+            if(t<tmin){ tmin=t; imin=i; pickedTyp=(int)ComponetKind::Girder; }
+        }
+        for(int i=0; i<ropes.size(); i++){
+            double t = rayLinkLine( ropes[i], ro, rd, rmax );
+            //printf( "pick.girders[%i] t %g tmin %g \n", i, t, tmin );
+            if(t<tmin){ tmin=t; imin=i; pickedTyp=(int)ComponetKind::Rope; }
+        }
+        //return tmin<0.9*t_inf;
+        return imin;
+	}
+
+	ShipComponent* getPicked( int picked ){
+	    switch( (ComponetKind)pickedTyp){
+            case ComponetKind::Radiator : return &radiators[picked]; break;
+            case ComponetKind::Shield   : return &shields  [picked]; break;
+            case ComponetKind::Girder   : return &girders  [picked]; break;
+            case ComponetKind::Rope     : return &ropes    [picked]; break;
+        }
+        return 0;
+    }
 
 	void toTruss(Truss& truss){
         int i=0;
@@ -308,7 +393,7 @@ class SpaceCraft : public CatalogItem { public:
         }
         i=0;
         for(Ring o: rings){
-            printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
+            //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
             truss.wheel( o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh.a );
             Vec2i& bak = truss.blocks.back();
             o.poitRange  = {bak.x,truss.points.size()};

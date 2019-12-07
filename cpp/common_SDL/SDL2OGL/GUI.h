@@ -135,8 +135,11 @@ class GUIPanel : public GUIAbstractPanel { public:
 
     // ==== functions
 
-    GUIPanel(){};
-    GUIPanel( const std::string& caption, int xmin, int ymin, int xmax, int ymax, bool isSlider_, bool isButton_ ){ initPanel(caption, xmin,ymin,xmax,ymax); isSlider=isSlider_; isButton=isButton_; };
+    GUIPanel()=default;
+    GUIPanel( const std::string& caption, int xmin, int ymin, int xmax, int ymax, bool isSlider_, bool isButton_ ){
+        initPanel(caption, xmin,ymin,xmax,ymax); isSlider=isSlider_; isButton=isButton_;
+        command=0;
+    };
 
     virtual void view    ();
 	//virtual void tryRender();
@@ -146,6 +149,7 @@ class GUIPanel : public GUIAbstractPanel { public:
     virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
 
 	// ===== inline functions
+    inline  void  val2text()         { inputText = std::to_string(value); };
 	inline double x2val( float  x   ){ return ( x*(vmax-vmin)/(xmax-xmin) )+ vmin; };
 	inline float  val2x( double val ){ return (val-vmin)*(xmax-xmin)/(vmax-vmin);  };
 
@@ -187,10 +191,10 @@ class MultiPanel : public GUIAbstractPanel { public:
 
     // ==== functions
 
-    void initMulti( const std::string& caption, int xmin_, int ymin_, int xmax_, int ymax_, int nsubs_ );
+    void initMulti( const std::string& caption, int xmin_, int ymin_, int xmax_, int dy, int nsubs_ );
 
     MultiPanel(){};
-    MultiPanel(const std::string& caption, int xmin, int ymin, int xmax, int ymax, int nsubs){ initMulti( caption, xmin, ymin, xmax, ymax, nsubs ); }
+    MultiPanel(const std::string& caption, int xmin, int ymin, int xmax, int dy, int nsubs){ initMulti( caption, xmin, ymin, xmax, dy, nsubs ); }
 
     virtual void open();
     virtual void close();

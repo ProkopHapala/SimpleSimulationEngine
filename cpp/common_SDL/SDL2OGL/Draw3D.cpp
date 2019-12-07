@@ -159,6 +159,17 @@ void drawQuad_bare( const Vec3f& p1, const Vec3f& p2, const Vec3f& p3, const Vec
     else       { drawTriangle_bare( p1, p2, p3 ); drawTriangle_bare( p3, p4, p1 ); }
 }
 
+
+void drawQuad     ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& p3, const Vec3f& p4, bool filled ){
+    int primitive;
+    if(filled){ primitive=GL_TRIANGLE_FAN; }else{ primitive=GL_LINE_LOOP; }
+    glBegin(primitive);
+    //printf( " drawQuad (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) \n", p1.x,p1.y,p1.z,  p2.x,p2.y,p2.z,  p3.x,p3.y,p3.z, p4.x,p4.y,p4.z  );
+    vertex(p1); vertex(p2); vertex(p3); vertex(p4);
+    glEnd();
+}
+
+
 Vec3f lincomb(const Vec3f& p1, const Vec3f& p2, double v1, double v2 ){
     double f  = v1/(v1-v2);
     Vec3f p;
