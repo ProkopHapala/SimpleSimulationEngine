@@ -149,7 +149,16 @@ void drawTriangle( const Vec3f& p1, const Vec3f& p2, const Vec3f& p3 ){
 	glBegin   (GL_TRIANGLES);
         drawTriangle_bare( p1, p2, p3 );
 	glEnd();
-};
+}
+
+void drawTriangle ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& p3, bool filled ){
+    int primitive;
+    if(filled){ primitive=GL_TRIANGLE_FAN; }else{ primitive=GL_LINE_LOOP; }
+    glBegin(primitive);
+    vertex(p1); vertex(p2); vertex(p3);
+    glEnd();
+}
+
 
 void drawQuad_bare( const Vec3f& p1, const Vec3f& p2, const Vec3f& p3, const Vec3f& p4 ){
     //glNormal3d( normal.x, normal.y, normal.z );

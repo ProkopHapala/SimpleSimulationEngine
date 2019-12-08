@@ -33,6 +33,9 @@
 
 #include "EditSpaceCraft.h"
 
+#include "TriangleRayTracer.h"
+#include "Radiosity.h"
+
 #include "Tree.h"
 
 #include "spaceCraftEditorUtils.h"
@@ -48,11 +51,31 @@ int glo_truss=0, glo_capsula=0, glo_ship=0;
 //char str[8096];
 
 
+double elementSize  = 5.;
+
+
 void renderShip(){
     if(glo_ship){ glDeleteLists(glo_ship,1); };
     glo_ship = glGenLists(1);
     glNewList( glo_ship, GL_COMPILE );
     drawSpaceCraft( *theSpaceCraft, 1 );
+
+    //theSpaceCraft->plate2raytracer( theSpaceCraft->shields[0], radiositySolver, elementSize, true );
+    //theSpaceCraft->plate2raytracer( theSpaceCraft->shields[1], radiositySolver, elementSize, true );
+    //theSpaceCraft->plate2raytracer( theSpaceCraft->shields[2], radiositySolver, elementSize, true );
+    theSpaceCraft->toRayTracer( radiositySolver, elementSize );
+
+    // radiosity samples
+    glColor3f(.0,.0,.0);
+    glBegin(GL_LINES);
+    TriangleRayTracer& rt = radiositySolver;
+    for( const SurfElement& s: rt.elements ){
+        Draw3D::vertex( s.pos );
+        Draw3D::vertex( s.pos+s.normal*elementSize );
+    }
+    glEnd();
+
+
     glEndList();
 }
 

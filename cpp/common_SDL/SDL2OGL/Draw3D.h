@@ -47,6 +47,7 @@ void drawArrow     ( const Vec3f& p1,  const Vec3f& p2, float sz );
 void drawScale     ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& a, float tick, float sza, float szb );
 
 void drawTriangle ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& p3 );
+void drawTriangle ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& p3, bool filled );
 
 void drawQuad     ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& p3, const Vec3f& p4, bool filled );
 
@@ -98,6 +99,8 @@ inline void drawArrow     ( const Vec3d& p1,  const Vec3d& p2, float sz  ){drawA
 inline void drawScale     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& a, double tick, double sza, double szb ){  drawScale( (Vec3f)p1, (Vec3f)p2, (Vec3f)a, tick,sza,szb); };
 
 inline void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3 ){ drawTriangle( (Vec3f)p1, (Vec3f)p2, (Vec3f)p3 ); };
+inline void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3, bool filled ){ drawTriangle( (Vec3f)p1, (Vec3f)p2, (Vec3f)p3, filled ); };
+inline void drawTriangle ( const Triangle3D& tri, bool filled ){ drawTriangle( (Vec3f)tri.a, (Vec3f)tri.b, (Vec3f)tri.c, filled ); };
 inline void drawQuad     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3, const Vec3d& p4, bool filled ){ drawQuad((Vec3f)p1,(Vec3f)p2,(Vec3f)p3,(Vec3f)p4, filled ); }
 inline void drawQuad     ( const Quad3d& qd, bool filled ){ drawQuad(qd.l1.a,qd.l1.b,qd.l2.b,qd.l2.a, filled); }
 

@@ -9,6 +9,9 @@
 #include "SpaceCraft.h"
 //#include "LuaClass.h"
 
+#include "TriangleRayTracer.h"
+#include "Radiosity.h"
+
 //using namespace SpaceCrafting;
 
 namespace SpaceCrafting{
@@ -19,6 +22,9 @@ lua_State  * theLua=0;
 SpaceCraft * theSpaceCraft=0;
 std::unordered_map<std::string,Material*>  materials;
 std::unordered_map<std::string,Commodity*> comodities;
+
+Radiosity radiositySolver;
+
 
 constexpr int NBIT_kind = 8;
 constexpr int NBIT_id   = sizeof(int)*8-NBIT_kind;

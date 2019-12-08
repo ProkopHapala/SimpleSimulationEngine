@@ -10,6 +10,9 @@
 #include "quaternion.h"
 #include "geom3D.h"
 
+#include "TriangleRayTracer.h"
+#include "Radiosity.h"
+
 #include "Truss.h"
 
 namespace SpaceCrafting{
@@ -403,6 +406,18 @@ class SpaceCraft : public CatalogItem { public:
         printf( "npoint %i nstick %i nblocks %i \n", truss.points.size(), truss.edges.size(), truss.blocks.size()  );
 	}
 	void toTruss(){ truss.clear(); toTruss(truss); };
+
+    inline double plate2raytracer( const Plate& o, TriangleRayTracer& raytracer, double elemMaxSize, bool active ){
+        Quad3d qd;
+        plate2quad(o, qd);
+        raytracer.addTriangle( {qd.l1.a,qd.l1.b,qd.l2.b}, elemMaxSize, active );
+        raytracer.addTriangle( {qd.l1.a,qd.l2.b,qd.l2.a}, elemMaxSize, active );
+	}
+
+	void toRayTracer( TriangleRayTracer& raytracer, double elemMaxSize ){
+        for(int i=0; i<radiators.size(); i++){ plate2raytracer( radiators[i], raytracer, elemMaxSize, true ); }
+        for(int i=0; i<shields.size();   i++){ plate2raytracer( shields  [i], raytracer, elemMaxSize, true ); }
+	}
 
 };
 

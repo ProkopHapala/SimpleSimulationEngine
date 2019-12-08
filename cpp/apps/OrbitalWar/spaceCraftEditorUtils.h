@@ -5,8 +5,20 @@
 #include "Tree.h"
 #include "Truss.h"
 
+//#include "TriangleRayTracer.h"
+//#include "Radiosity.h"
+
 #include <unistd.h>
 #include <dirent.h>
+
+
+
+
+
+
+
+
+
 
 // list files in directory
 //  https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c

@@ -8,6 +8,8 @@
 #include "CMesh.h"
 #include "Lingebra.h"
 
+#include "Draw3D.h" // DEBUG
+
 class SurfElement{ public:
     Vec3d pos;    //= Vec3dZero;
     Vec3d normal; //= Vec3dZ;
@@ -37,6 +39,11 @@ class TriangleRayTracer{ public:
     std::vector<Triangle3D>  triangleObstacles;
     std::vector<SurfElement> elements;
 
+    void clearTriangles(){
+        triangleObstacles.clear();
+        elements.clear();
+    }
+
     inline int trinagleToElements( int n, Triangle3D tri, int isurf ){
         const double off = 1.0/3;
         int ntot = n*n;
@@ -55,9 +62,84 @@ class TriangleRayTracer{ public:
         }
     }
 
+    inline double trapezElements(
+        const Vec3d& nr, const Vec3d& p0, const Vec3d& a, const Vec3d& b, int isurf,
+        double invStep, double xmax, double k, double y0
+    ){
+        double areaSum = 0;
+        double na = (int)(xmax*invStep+0.5);  if(na==0)na=1;
+        double dx = xmax/na;
+        double kdx = k*dx;
+        double x = dx*0.5;
+        //double yo = y0;
+        double ymax = y0  + k*x;
+        //printf( "trapezElements xmax %g k %g y0 %g dx %g \n", xmax, k, y0, dx );
+        for(int ia=0;ia<na; ia++){
+            //double ymax = k*x + y0;
+            int nb      = (int)(ymax*invStep+0.5); if(nb==0)nb=1;
+            //double dy   = 0.5*(ymax+yo)/nb;
+            double dy   = ymax/nb;
+            double area = dy*dx;
+            Vec3d pa = p0 + a*x;
+            for(int ib=0;ib<nb; ib++){
+                elements.push_back( SurfElement(pa+b*(dy*(ib+0.5)),nr,area,isurf) );
+                areaSum+=area;
+            }
+            //yo = ymax;
+            ymax += kdx;
+            x+=dx;
+        }
+        return areaSum;
+    }
+
+    inline double trinagleToElements2( double maxSize, Triangle3D tri, int isurf ){
+        Vec3d  ds []{tri.c-tri.b, tri.a-tri.c, tri.b-tri.a };
+        double r2s[]{ds[0].norm2(),ds[1].norm2(),ds[2].norm2()};
+
+        //printf( "r2s %g %g %g \n", r2s[0], r2s[1], r2s[2] );
+
+        int i0,i1,i2;
+        if(r2s[0]>r2s[1]){ if(r2s[0]>r2s[2]){i0=0;i1=1;i2=2;}else{i0=2;i1=0;i2=1;} }
+        else             { if(r2s[1]>r2s[2]){i0=1;i1=2;i2=0;}else{i0=2;i1=0;i2=1;} }
+        double r  =sqrt(r2s[i0]);
+        double ir =1/r;
+        Vec3d  h  =ds[i0]*ir;
+
+        double la  = h.dot( ds[i1] );
+        Vec3d  b   = ds[i1] - h*la;
+        double lb  = b.normalize();
+        if(la<0){ la=-la; h.mul(-1.); int i=i1;i1=i2;i2=i; }
+        double la2 = r-la;
+
+        //printf( ">r2s %g %g %g | %g %g %g \n", r2s[i0], r2s[i1], r2s[i2], la, la2, r );
+
+        double invStep = 1/maxSize;
+
+        Vec3d nr; nr.set_cross( h, b ); nr.normalize();
+
+        /*
+        glColor3f(1.,0.,0.); Draw3D::drawPointCross( tri.array[i1], maxSize );
+        //glColor3f(0.,1.,0.); Draw3D::drawTriangle( tri.array[i2], false );
+        glColor3f(0.,0.,1.); Draw3D::drawPointCross( tri.array[i2], maxSize );
+        glColor3f(1.,1.,1.); Draw3D::drawTriangle( tri, false );
+        glColor3f(1.,0.,0.); Draw3D::drawVecInPos( b*lb, tri.array[i1]      );
+        glColor3f(0.,0.,1.); Draw3D::drawVecInPos( b*lb, tri.array[i2]      );
+        glColor3f(.5,.5,.0); Draw3D::drawVecInPos( b*lb, tri.array[i1]+h*la );
+        //glColor3f(.0,.5,.5); Draw3D::drawVecInPos( b*lb, tri.array[i2]+h*(-la2) );
+        */
+
+
+        //int na1 = (int)(     la *invStep + 0.5 ); if(na1==0)na1=1;
+        //int na2 = (int)( ((r-la)*invStep + 0.5 ); if(na2==0)na2=1;
+        //int nb  = (int)(     lb *invStep + 0.5 ); if(nb ==0)nb =1;
+        return trapezElements( nr,tri.array[i1],h    ,b,isurf, invStep,  la,   lb/la , 0 )
+             + trapezElements( nr,tri.array[i2],h*-1.,b,isurf, invStep,  la2,  lb/la2, 0 );
+    }
+
     inline void addTriangle( Triangle3D tri, double elemMaxSize, bool active ){
         // ToDo : automatic step bases on size (elemMaxSize)
-        if(active)trinagleToElements( 5, tri, triangleObstacles.size() );
+        //if(active)trinagleToElements( 5, tri, triangleObstacles.size() );
+        if(active)trinagleToElements2( elemMaxSize, tri, triangleObstacles.size() );
         triangleObstacles.push_back( tri );
     };
 
