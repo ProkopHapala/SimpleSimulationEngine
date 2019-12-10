@@ -214,6 +214,15 @@ void realloc(int na_, int ne_){
 
 }
 
+void dealloc(){
+    delete [] pDOFs;
+    delete [] fDOFs;
+    delete [] aQ   ;
+    delete [] aAbWs;
+    delete [] eAbWs;
+    delete [] espin;
+}
+
 void clearForce(){
     for(int i=0; i<nDOFs; i++){ fDOFs[i]=0; };
     //for(int i=0; i<nDOFs; i++){ fDOFs[i]=Vec3dZero; };
@@ -279,8 +288,8 @@ double evalAE(){
             double fs_junk;
             double  sj  = esize[j];
             double& fsj = fsize[j];
-            Eae                      += addCoulombGauss      ( dR,sj,             f, fsj, qqi     );
-            //if(qqi<-1.00001) EeePaul += addDensOverlapGauss_S( dR,sj,abwi.z, amp, f, fsj, fs_junk );
+            //Eae                      += addCoulombGauss      ( dR,sj,            f, fsj, qqi     );
+            if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, -40.*abwi.y, f, fsj, fs_junk );
             //if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );
 
             if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
@@ -323,10 +332,10 @@ double evalAA(){
 
 double eval(){
     return
-    evalKinetic()
-    + evalEE()
+    //evalKinetic()
+    //+ evalEE()
     + evalAE()
-    + evalAA()
+    //+ evalAA()
     ;
 }
 

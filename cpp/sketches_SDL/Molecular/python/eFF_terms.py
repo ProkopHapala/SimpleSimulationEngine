@@ -104,6 +104,18 @@ def getT( r, si, sj ):
     #return const_K * ( 1.5*( (si2+sj2)/(si2*sj2) )   - 2.*( 3.*(si2+sj2) - 2.*r2 )/( si2 + sj2 )**2 )
     return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 )   - 2.*( 3.*(si2+sj2) - 2.*r2 )/( si2 + sj2 )**2 )
 
+def getAmp( si, sj ):
+    si2 = si**2
+    sj2 = sj**2
+    #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 )   - 2.*( 3.*(si2+sj2) - 2.*0 )/( si2 + sj2 )**2 )
+    #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 )   - 2.*( 1.*(si2+sj2) )/( si2 + sj2 )**2 )
+    #return const_K_eVA * 2.2*( 1.5*( 1/si2 + 1/sj2 ) - 4.9/( si2 + sj2 ) )
+    return const_K_eVA * 2.2*( 1.5*( (si2 + sj2)/(si2*sj2) ) - 4.9/( si2 + sj2 ) )
+    #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 ) ) 
+    #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 )  - 2.*3./( si2 + sj2 ) )
+
+
+
 def getS( r, si, sj ):
     #print "getS si, sj ", si, sj
     #   r = r * 1.125
@@ -149,7 +161,7 @@ def DensOverlap( r, si, sj, amp=10 ):
     #amp *= (1/si**2 + 1/sj**2)
     #amp  *= (si**2+sj**2)/(si*sj)**2
     #amp  *= (si+sj)**2/(si*sj)**2
-    amp  *= (1+(si-sj)**2)/min(si,sj)**2
+    #amp  *= (1+(si-sj)**2)/min(si,sj)**2
     #amp  *= 0.5*(1+4*(si-sj)**2) *( 1/si**2 + 1/sj**2 )
     a  = 2*si*sj/s2
     e1 = amp*a**3
@@ -210,7 +222,8 @@ if __name__ == "__main__":
     # ============= e-e
 
     rs = np.arange( 0.1, 6.0, 0.05 )
-    ss = [0.5, 1.0, 1.5 ]
+    #ss = [0.5, 1.0, 1.5 ]
+    ss = [0.25, 1.0, 2.5 ]
 
     rho=0.2; kr=1.125; ks=0.9
 
@@ -225,14 +238,24 @@ if __name__ == "__main__":
             S2 = S**2
             EPminus  =  T * ( rho*S2/(1.+S2) )
             EPplus   =  T * ( (S2/(1.-S2))  + ( 1.-rho )*(S2/(1.+S2)) )
-            EPdens   =   DensOverlap( rs, si, sj )
+
+            #amp  = 10*(1+(si-sj)**2)/min(si,sj)**2
+            #amp  = 10/min(si,sj)**2
+            #amp  = 10*(1+0.6*abs(si-sj))/min(si,sj)**2
+            #amp  = 10*(si/sj+sj/si)
+            #amp  = 10
+            #amp  = T*1.8
+            amp   = getAmp( si, sj )
+
+            EPdens   =   DensOverlap( rs, si, sj, amp=amp )
             plt.subplot(3,3,3*j+i+1)
-            plt.plot( rs, S,   ':', label="S" )
+
+            #plt.plot( rs, S,   ':', label="S" )
             #plt.plot( xs, T,   ':', label="T" )
-            plt.plot( rs, Eee ,   'r', label="Eee" )
+            #plt.plot( rs, Eee ,   'r', label="Eee" )
             plt.plot( rs, EPplus, 'b', label="EP+" )
-            plt.plot( rs, EPminus,'c', label="EP-" )
-            plt.plot( rs, EPdens, 'm', label="EPdens"  )
+            #plt.plot( rs, EPminus,'c', label="EP-" )
+            plt.plot( rs, EPdens,  'm', label="EPdens"  )
             plt.title( 'sigma (%g,%g)' %(si,sj) )
             plt.legend()
             plt.grid()

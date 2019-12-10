@@ -116,17 +116,16 @@ void Plot2D::autoAxes(double dx, double dy){
 void Plot2D::drawAxes(){
 
     //Draw2D::drawPointCross({0.0,0.0},100.0);
-
-    if(grid){
+    //grid=false;
+    if(bGrid){
         Draw::setRGBA(clrGrid);
         Draw2D::drawGrid( nXTicks, xTicks, axBounds.y0, axBounds.y1, true  );
         Draw2D::drawGrid( nYTicks, yTicks, axBounds.x0, axBounds.x1, false );
-    }else{
+    }
+    if(bAxes){
         Draw::setRGBA(clrTicksY); Draw2D::drawGrid( nXTicks, xTicks, axPos.x, axPos.x+tickSz,     true  );  Draw2D::drawLine( {axPos   .x ,axBounds.y0}, {axPos   .x ,axBounds.y1} );
         Draw::setRGBA(clrTicksX); Draw2D::drawGrid( nYTicks, yTicks, axPos.x, axPos.y+tickSz,     false );  Draw2D::drawLine( {axBounds.x0,axPos   .y }, {axBounds.x1,axPos   .y } );
     }
-
-    
 
     if(fontTex){
         char str[16];

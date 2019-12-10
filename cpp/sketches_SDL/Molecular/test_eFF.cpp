@@ -216,6 +216,57 @@ int makePlots( Plot2D& plot, EFF& ff ){
 
 }
 
+int makePlots2( Plot2D& plot ){
+
+    EFF ff;
+    ff.realloc(1,1);
+
+    int np = 60;
+    plot.xsharingLines( 3, np, 0.0, 0.05 );
+    double fc = 0.2;
+
+    plot.lines[0]->clr = 0xFFFF0000; // Etot
+    plot.lines[1]->clr = 0xFF00FF00; // F-pos
+    plot.lines[2]->clr = 0xFF0000FF; // F-size
+
+    ff.aQ   [0]= 4;
+    ff.apos [0]= Vec3dZero;
+    ff.epos [0]= Vec3dZero;
+    ff.esize[0]=1.0;
+
+    ff.autoAbWs( default_aAbWs, default_eAbWs );
+
+    double sc=0.05;
+    double Etot;
+    for(int i=0; i<np; i++){
+        double x = i*0.1;
+        //ff.apos[0].x = -x;
+        ff.epos[0].x = -x;
+
+        ff.esize[0]=0.5; plot.lines[0]->ys[i] = sc* ff.eval();
+        ff.esize[0]=1.0; plot.lines[1]->ys[i] = sc* ff.eval();
+        ff.esize[0]=1.5; plot.lines[2]->ys[i] = sc* ff.eval();
+
+        /*
+        ff.clearForce();
+        Etot = ff.eval();
+        plot.lines[0]->ys[i] = sc*Etot;
+        plot.lines[1]->ys[i] = sc*ff.eforce[0].x;
+        plot.lines[2]->ys[i] = sc*ff.fsize [0];
+        */
+        //printf( "makePlots2[%i] %g -> E %g fe %g fize %g \n", i, x, Etot, ff.eforce[0].x, ff.fsize[0] );
+        //printf( "makePlots[%i] %g -> %g (%g,%g(4*%g),%g) %g,%g \n", i, x,   Etot, ff.Eaa,ff.Eae,ff.Eae*0.5,ff.Eee, ff.Ek, ff.EeePaul );
+    }
+
+
+    plot.update();
+    plot.autoAxes(0.5,0.5);
+    printf( "axBound %g,%g %g,%g \n", plot.axBounds.a.x, plot.axBounds.a.y, plot.axBounds.b.x, plot.axBounds.b.y );
+    plot.render();
+
+    ff.dealloc();
+
+}
 
 void applyCartesianBoxForce( const Vec3d& pmin, const Vec3d& pmax,const Vec3d& k, int n, const Vec3d* ps, Vec3d* fs ){
     for(int i=0;i<n; i++){ boxForce( ps[i], fs[i], pmin, pmax, k ); }
@@ -321,14 +372,17 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     checkDerivs( ff.KRSrho );   // exit(0);
-    //makePlots( plot1 );           exit(0);
+    //makePlots( plot1 );          exit(0);
+
+    makePlots2( plot1 ); return;
+
 
     // ===== SETUP GEOM
-    char* fname = "data/H_eFF.xyz";
+    //char* fname = "data/H_eFF.xyz";
     //char* fname = "data/H2_eFF_spin.xyz";
-    //char* fname = "data/C2H4_eFF_spin.xyz";
+    char* fname = "data/C2H4_eFF_spin.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
-    ff.loadFromFile_xyz( fname  );
+    ff.loadFromFile_xyz( fname );
 
     //setGeom(ff);
     //double sz = 0.51;
@@ -397,11 +451,14 @@ void TestAppRARFF::draw(){
             //ff.evalAA();
             ff.eval();
             //ff.apos[0].set(.0);
-            //if(bRun)ff.moveGD(0.001, 1, 1);
+
+
+            VecN::set( ff.na*3, 0.0, (double*)ff.aforce );
+            if(bRun)ff.move_GD(0.001 );
 
             //ff.move_GD( 0.0001 );
 
-            F2 = opt.move_FIRE();
+            //F2 = opt.move_FIRE();
 
             printf( " |F| %g \n", sqrt(F2) );
             if(!(F2<1000000.0))perFrame=0;
@@ -468,7 +525,7 @@ void TestAppRARFF::draw(){
 
 void TestAppRARFF::drawHUD(){
 	glTranslatef( 100.0, 250.0, 0.0 );
-	glScalef    (  100.0, 100.0, 1.0 );
+	glScalef    ( 100.0, 100.0, 1.0 );
 	//plot1.view();
 }
 

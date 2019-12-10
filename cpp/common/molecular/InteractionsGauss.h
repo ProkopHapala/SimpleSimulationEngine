@@ -127,12 +127,13 @@ inline double addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, 
 inline double DensOverlapGauss_S( double r2, double amp, double si, double sj, double& dSr, double& dSsi, double& dSsj,
     double si2, double sj2, double is2, double is4
 ){
-
+    // eq. 12 in (Xiao, H., et. al. Mechanics of Materials, 90, 243–252 (2015). https://doi.org/10.1016/j.mechmat.2015.02.008 )
+    // E = (2/(si/sj+si/sj))^3 * exp( -2*r^2/(si^2+sj^2) )
     double a    = 2.*(si*sj)*is2;
     double a2   = a*a;
-    double Aa2  = amp*a2;
-    double e1   = Aa2*a;
-    double e2   = exp( -2*r2*is2 );
+    double Aa2  = const_K_eVA*amp*a2;
+    double e1   = Aa2*a;              // (2/(si/sj+si/sj))^3
+    double e2   = exp( -2*r2*is2 );   // exp( -2*r^2/(si^2+sj^2) )
 
     double E    = e1*e2;
     double f1e2 = 6.*e2*Aa2*(si2-sj2)*is4;
@@ -149,14 +150,15 @@ inline double DensOverlapGauss_S( double r2, double amp, double si, double sj, d
 inline double DensOverlapGauss_P( double r2, double amp, double si, double sj, double& dSr, double& dSsi, double& dSsj,
     double si2, double sj2, double is2, double is4
 ){
-
+    // eq. 12 in (Xiao, H., et. al. Mechanics of Materials, 90, 243–252 (2015). https://doi.org/10.1016/j.mechmat.2015.02.008 )
+    // E = (2/(si/sj+si/sj))^5 * (r12-s2/sqrt2)^2 * exp( -2*(r^2-sj/sqrt2)/(si^2+sj^2) )
     double isi  = 1/si;
     double a    = 2.*(si*sj)*is2;
     double a2   = a *a;
     double a4   = a2*a2;
-    double e1   = amp*a4*a;
-    double e2   = exp( -2*r2*is2 );
-    double e3   = r2*isi*isi;
+    double e1   = const_K_eVA*amp*a4*a;   //  (2/(si/sj+si/sj))^5
+    double e2   = exp( -2*r2*is2 );       //  exp( -2*(r^2-sj/sqrt2)/(si^2+sj^2) )
+    double e3   = r2*isi*isi;             //  (r12-s2/sqrt2)^2
 
     double de1 = 5*(si2-sj2)*is2;
     double de2 = 4*r2*is4;
@@ -191,6 +193,7 @@ inline double addDensOverlapGauss_S( const Vec3d& dR, double si, double sj, doub
     double is4  = is2 * is2;
     double fr,fi,fj;
     double E = DensOverlapGauss_S( r2,amp,si,sj,    fr,fi,fj, si2, sj2, is2, is4 );
+    printf(  " dR.x %g amp %g si %g sj %g -> %g \n ", dR.x, amp, si, sj, E );
     fsi += fi;
     fsj += fj;
     f.add_mul( dR, fr );

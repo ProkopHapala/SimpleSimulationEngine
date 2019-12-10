@@ -93,9 +93,10 @@ class Plot2D{ public:
         return dline;
     };
 
-    bool     logX = false;
-    bool     logY = false;
-    bool     grid       =true;
+    bool     logX  = false;
+    bool     logY  = false;
+    bool     bGrid = true;
+    bool     bAxes = true;
     bool     tickCaption=false;
     uint32_t clrBg      = 0x00f0f0f0;
     uint32_t clrGrid    = 0xFF858585;
