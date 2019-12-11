@@ -110,7 +110,11 @@ def getAmp( si, sj ):
     #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 )   - 2.*( 3.*(si2+sj2) - 2.*0 )/( si2 + sj2 )**2 )
     #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 )   - 2.*( 1.*(si2+sj2) )/( si2 + sj2 )**2 )
     #return const_K_eVA * 2.2*( 1.5*( 1/si2 + 1/sj2 ) - 4.9/( si2 + sj2 ) )
-    return const_K_eVA * 2.2*( 1.5*( (si2 + sj2)/(si2*sj2) ) - 4.9/( si2 + sj2 ) )
+    #return const_K_eVA * 2.2*( 1.5*( (si2 + sj2)/(si2*sj2) ) - 4.9/( si2 + sj2 ) )
+    #return const_K_eVA * 2.2*( 1.5*(si2*si2 + sj2*sj2) - 1.9*(si2*sj2)  )/((si2*sj2)*(si2+sj2))
+    #return const_K_eVA * 2.2*( 1.5*(si2*si2 + sj2*sj2) - 1.9*(si2*sj2)  )/((si2*sj2)*(si2+sj2))
+    return const_K_eVA * 3.3*( si2*si2 + sj2*sj2 - 1.25*(si2*sj2) )/((si2*sj2)*(si2+sj2))
+    #return const_K_eVA * 3.14*( si2*si2 + sj2*sj2 - 1.25*(si2*sj2) )/((si2*sj2)*(si2+sj2))
     #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 ) ) 
     #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 )  - 2.*3./( si2 + sj2 ) )
 

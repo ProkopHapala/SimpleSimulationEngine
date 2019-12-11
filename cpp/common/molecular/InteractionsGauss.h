@@ -131,7 +131,7 @@ inline double DensOverlapGauss_S( double r2, double amp, double si, double sj, d
     // E = (2/(si/sj+si/sj))^3 * exp( -2*r^2/(si^2+sj^2) )
     double a    = 2.*(si*sj)*is2;
     double a2   = a*a;
-    double Aa2  = const_K_eVA*amp*a2;
+    double Aa2  = amp*a2;
     double e1   = Aa2*a;              // (2/(si/sj+si/sj))^3
     double e2   = exp( -2*r2*is2 );   // exp( -2*r^2/(si^2+sj^2) )
 
@@ -141,6 +141,44 @@ inline double DensOverlapGauss_S( double r2, double amp, double si, double sj, d
 
     dSsi = e1f2*si - f1e2*sj;
     dSsj = e1f2*sj + f1e2*si;
+    dSr  = E   *(-4.*is2);
+
+    return E;
+}
+
+inline double DensOverlapGauss_Snorm( double r2, double amp, double si, double sj, double& dSr, double& dSsi, double& dSsj,
+    double si2, double sj2, double is2, double is4
+){
+    // eq. 12 in (Xiao, H., et. al. Mechanics of Materials, 90, 243–252 (2015). https://doi.org/10.1016/j.mechmat.2015.02.008 )
+    // E = (2/(si/sj+si/sj))^3 * exp( -2*r^2/(si^2+sj^2) )
+
+    amp*= const_K_eVA;
+
+    double a    = 2.*(si*sj)*is2;
+    double a2   = a*a;
+    double e1   = a2*a;              // (2/(si/sj+si/sj))^3
+    double e2   = exp( -2*r2*is2 );   // exp( -2*r^2/(si^2+sj^2) )
+
+    // prefactr derived from T :  e0    = (     si^4 +   sj^4 - 1.25*(si^2*sj^2) )/((si^2*sj^2)*(si^2+sj^2))
+    // and its derivative        de0/da = ( 4.5*si^4 - 2*sj^4 - 4.0 *(si^2*sj^2) )/((si^3     )*(si^2+sj^2)**2)
+    double sisj   = si*sj;
+    double sisj2  = sisj*sisj;
+    //double isisj2 = 1/sisj2;
+    double si4    = si2*si2;
+    double sj4    = sj2*sj2;
+    double pre    = amp * 3.3;
+    double e0     = pre * (     si4 +  sj4 - 1.25*sisj2 )*is2/sisj2;
+    //double e0     = amp;
+    double e0si   = pre * ( 4.5*si4 -2*sj4 - 4*sisj2 )*is4/(si2*si);
+    double e0sj   = pre * ( 4.5*sj4 -2*si4 - 4*sisj2 )*is4/(sj2*sj);
+
+    double e1e2 = e1*e2;
+    double E    = e1e2*e0;
+    double f1e2 = 6.*e2*a2*(si2-sj2)*is4;
+    double e1f2 = 4.*e1e2 * r2      *is4;
+
+    dSsi = (e1f2*si - f1e2*sj)*e0 + e1e2*e0si;
+    dSsj = (e1f2*sj + f1e2*si)*e0 + e1e2*e0sj;
     dSr  = E   *(-4.*is2);
 
     return E;
@@ -156,7 +194,7 @@ inline double DensOverlapGauss_P( double r2, double amp, double si, double sj, d
     double a    = 2.*(si*sj)*is2;
     double a2   = a *a;
     double a4   = a2*a2;
-    double e1   = const_K_eVA*amp*a4*a;   //  (2/(si/sj+si/sj))^5
+    double e1   = amp*a4*a;   //  (2/(si/sj+si/sj))^5
     double e2   = exp( -2*r2*is2 );       //  exp( -2*(r^2-sj/sqrt2)/(si^2+sj^2) )
     double e3   = r2*isi*isi;             //  (r12-s2/sqrt2)^2
 
@@ -191,9 +229,17 @@ inline double addDensOverlapGauss_S( const Vec3d& dR, double si, double sj, doub
     double s2   = si2 + sj2;
     double is2  = 1./s2;
     double is4  = is2 * is2;
+
+
+    //double amp_ = amp * const_K_eVA * 2.2*( 1.5*( (si2 + sj2)/(si2*sj2) ) - 4.9/( si2 + sj2 ) );
+    //double amp_ = amp * const_K_eVA * ( 3.3*s2/(si2*sj2) - 10.78*is2 );
+    //double amp_ = amp * const_K_eVA * ( 3.3*s2*s2 - 10.78*si2*sj2 )/(si2*sj2*is2)  );
+
+
     double fr,fi,fj;
-    double E = DensOverlapGauss_S( r2,amp,si,sj,    fr,fi,fj, si2, sj2, is2, is4 );
-    printf(  " dR.x %g amp %g si %g sj %g -> %g \n ", dR.x, amp, si, sj, E );
+    //double E = DensOverlapGauss_S( r2,amp,si,sj,    fr,fi,fj, si2, sj2, is2, is4 );
+    double E = DensOverlapGauss_Snorm( r2,amp,si,sj,    fr,fi,fj, si2, sj2, is2, is4 );
+    //printf(  " dR.x %g amp %g si %g sj %g -> %g \n ", dR.x, amp, si, sj, E );
     fsi += fi;
     fsj += fj;
     f.add_mul( dR, fr );
@@ -338,6 +384,7 @@ inline double getOverlapSGauss( double r2, double si, double sj, double& dSr, do
     double is2  = 1./s2;
     double is4  = is2 * is2;
     //printf( "getDeltaSGauss: r2, si2, sj2, s2, s4 %g %g %g %g %g \n", r2, si2, sj2, s2, is4 );
+
     return getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj, si2,sj2,is2,is4 );
 }
 
@@ -386,11 +433,8 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     double S = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj,    si2,    sj2,is2,is4 );
 
     double eS,fS;
-    if(anti){
-        eS = PauliSGauss_anti( S, fS, KRSrho.z );
-    }else{
-        eS = PauliSGauss_anti( S, fS, KRSrho.z );
-    }
+    if(anti){ eS = PauliSGauss_anti( S, fS, KRSrho.z ); }
+    else    { eS = PauliSGauss_syn ( S, fS, KRSrho.z ); }
 
     double TfS = T*fS;
     fsi +=         (dTsi*eS + TfS*dSsi)*KRSrho.y;

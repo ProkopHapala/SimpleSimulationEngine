@@ -152,6 +152,52 @@ int makePlots( Plot2D& plot, EFF& ff ){
 
     int np = 100;
 
+    plot.xsharingLines( 3, np, 0.001, 0.05 );
+    DataLine2D *l;
+    double si = 1.0;
+    double sj = 1.0;
+    l=plot.lines[0]; l->clr=0xFFFF0000; l->label="EDens"; evalLine( *l, [&](double x){ double fsi,fsj,E; Vec3d f; E=addDensOverlapGauss_S( {0,0,x}, si, sj, 1.0, f, fsi, fsj );                     return E; } );
+    l=plot.lines[1]; l->clr=0xFF0000FF; l->label="EPaul"; evalLine( *l, [&](double x){ double fsi,fsj,E; Vec3d f; E=addPauliGauss        ( {0,0,x}, si, sj,      f, fsi, fsj, true,  EFF::KRSrho ); return E; } );
+    l=plot.lines[2]; l->clr=0xFF0080FF; l->label="EPaul"; evalLine( *l, [&](double x){ double fsi,fsj,E; Vec3d f; E=addPauliGauss        ( {0,0,x}, si, sj,      f, fsi, fsj, false, EFF::KRSrho ); return E; } );
+
+
+    /*
+    // --- derivative along pos.z
+    plot.xsharingLines( 3, np, 0.001, 0.05 );
+    DataLine2D *l;
+    double si = 1.25;
+    double sj = 0.8;
+
+    l=plot.lines[0]; l->clr=0xFFFFFFFF; l->label="EDens"; evalLine( *l, [&](double x){ double fsi,fsj,E; Vec3d f=Vec3dZero; E=addDensOverlapGauss_S( {0,0,x}, si, sj, 1.0, f, fsi, fsj ); return E; } );
+    l=plot.lines[1]; l->clr=0xFF0000FF; l->label="F1";    evalLine( *l, [&](double x){ double fsi,fsj,E; Vec3d f=Vec3dZero; E=addDensOverlapGauss_S( {0,0,x}, si, sj, 1.0, f, fsi, fsj ); return f.z; } );
+    l=plot.lines[2]; l->clr=0xFF0080FF; l->label="FeeNum"; evalLine( *l, [&](double x){ double fsi,fsj,E1,E2,dx=0.001; Vec3d f=Vec3dZero;
+        E1=addDensOverlapGauss_S( {0,0,x-dx}, si, sj, 1.0, f, fsi, fsj );
+        E2=addDensOverlapGauss_S( {0,0,x+dx}, si, sj, 1.0, f, fsi, fsj );
+        return (E2-E1)/(2*dx);
+    } );
+    */
+
+    /*
+    // --- derivative along si
+    plot.xsharingLines( 3, np, 0.25, 0.05 );
+    DataLine2D *l;
+    double sj = 1.0;
+    l=plot.lines[0]; l->clr=0xFFFFFFFF; l->label="EDens";  evalLine( *l, [&](double x){ double fsi,fsj,E; Vec3d f=Vec3dZero; E=addDensOverlapGauss_S( {0,0,1}, x, sj, 1.0, f, fsi, fsj ); return E; } );
+    l=plot.lines[1]; l->clr=0xFF0000FF; l->label="F1";     evalLine( *l, [&](double x){ double fsi,fsj,E; Vec3d f=Vec3dZero; E=addDensOverlapGauss_S( {0,0,1}, x, sj, 1.0, f, fsi, fsj ); return fsi; } );
+    l=plot.lines[2]; l->clr=0xFF0080FF; l->label="FeeNum"; evalLine( *l, [&](double x){ double fsi,fsj,E1,E2,dx=0.001; Vec3d f=Vec3dZero;
+        E1=addDensOverlapGauss_S( {0,0,1}, x-dx, sj, 1.0, f, fsi, fsj );
+        E2=addDensOverlapGauss_S( {0,0,1}, x+dx, sj, 1.0, f, fsi, fsj );
+        return (E2-E1)/(2*dx);
+    } );
+    */
+    //l=plot.lines[0]; l->clr=0xFF0000FF; l->label="F0";    evalLine( *l, [&](double x){ return 0; } );
+    //l=plot.lines[2]; l->clr=0xFF0000FF; l->label="F2";    evalLine( *l, [&](double x){ return 0; } );
+
+    for(int i=0;i<np;i++){
+        printf( " %i %g -> %g %g %g \n", i, l->xs[i],  plot.lines[0]->ys[i], plot.lines[1]->ys[i], plot.lines[2]->ys[i] );
+    }
+
+    /*
     plot.xsharingLines( 3, np, 0.0, 0.05 );
     DataLine2D *l;
     l=plot.lines[0]; l->clr=0xFFFF0000; l->label="Eee";    evalLine( *l, [&](double x){ double fs,fr,E; E=CoulombGauss( x, 2.0, fr, fs, 1.0 ); return E;    } );
@@ -161,6 +207,10 @@ int makePlots( Plot2D& plot, EFF& ff ){
         E2=CoulombGauss( x+dx, s, fr, fs, 1.0 );
         return (E2-E1)/(2*dx);
     } );
+    */
+
+
+
     //l=plot.lines[2]; l->clr=0xFFFF00FF; l->label="Eae";  evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, eAbw.z, QQae, eAbw.y,  eAbw.x     ); } );
     //l=plot.lines[3]; l->clr=0xFF0000FF; l->label="Eaa";  evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, aAbw.z, QQaa, aAbw.y,  aAbw.x     ); } );
     //l=plot.lines[3]; l->clr=0xFF0080FF; l->label="Faa"; evalLine( *l, [&](double x){ Vec3d f;  return addPairEF_expQ( {x,0,0}, f, w2aa, qaa, 0,      0           ); } );
@@ -370,11 +420,11 @@ void TestAppRARFF::init2DMap( int n, double dx ){
 TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    plot1.fontTex=fontTex;
 
     checkDerivs( ff.KRSrho );   // exit(0);
-    //makePlots( plot1 );          exit(0);
-
-    makePlots2( plot1 ); return;
+    makePlots( plot1, ff );   return; //      exit(0);
+    //makePlots2( plot1 ); return;
 
 
     // ===== SETUP GEOM
