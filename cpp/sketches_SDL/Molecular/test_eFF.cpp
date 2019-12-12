@@ -437,7 +437,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/CH4_eFF_flat_spin.xyz";
     //char* fname = "data/CH4_eFF_spin.xyz";
     //char* fname = "data/C2_eFF_spin.xyz";
-    char* fname = "data/C2H4_eFF_spin.xyz";
+    //char* fname = "data/C2H4_eFF_spin.xyz";
+    char* fname = "data/C2H4_eFF_spin_.xyz";
     //char* fname = "data/C2H6_eFF_spin.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
     ff.loadFromFile_xyz( fname );
@@ -524,7 +525,9 @@ void TestAppRARFF::draw(){
         }
     }
 
-    printf( "e[0] r %g s %g \n", ff.epos[0].norm(), ff.esize[0] );
+    //printf( "e[0] r %g s %g \n", ff.epos[0].norm(), ff.esize[0] );
+
+    //printf( "r07 r %g s %g \n", ff.epos[0].norm(), ff.esize[0] );
 
     // --- Constrain in Z
     //double Kz = 1.0;
@@ -548,6 +551,7 @@ void TestAppRARFF::draw(){
 
     //printf( "apos (%g,%g,%g) \n", ff.apos[0].x, ff.apos[0].y, ff.apos[0].z );
 
+    char strtmp[256];
     double Qsz = 0.05;
     double fsc = 1.0;
     glColor3f(0.0,0.0,0.0);
@@ -557,6 +561,8 @@ void TestAppRARFF::draw(){
         Draw3D::drawVecInPos(   ff.aforce[i]*fsc, ff.apos[i] );
         //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.apos[i].x,ff.apos[i].y,ff.apos[i].z );
         //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.aforce[i].x, ff.aforce[i].y, ff.aforce[i].z );
+        sprintf(strtmp,"%i",i);
+        Draw3D::drawText(strtmp, ff.apos[i], fontTex, 0.02, 0);
     }
 
     //glColor3f(1.0,1.0,1.0);
@@ -566,6 +572,8 @@ void TestAppRARFF::draw(){
         Draw3D::drawPointCross( ff.epos  [i], ff.esize[i] );
         Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
         Draw3D::drawSphereOctLines( 8, ff.esize[i], ff.epos[i] );
+        sprintf(strtmp,"%i",i);
+        Draw3D::drawText(strtmp, ff.epos[i], fontTex, 0.02, 0);
     }
 
     //for(int i=0; i<ff.ne; i+=2){

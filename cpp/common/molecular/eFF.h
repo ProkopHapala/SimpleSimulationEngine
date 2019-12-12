@@ -59,9 +59,9 @@ Erf approximation:
 constexpr static const Vec3d default_eAbWs[] = {
 { 0.0,  0.0, 0.0},  // Q = 0 //
 { 0.0,  0.0, 0.01}, // Q = 1 // H
-{ 4.0, -3.0, 0.1},  // Q = 2 // Be?
-{ 4.0, -3.0, 0.1},  // Q = 3 // B
-{ 4.0, -3.0, 0.1},  // Q = 4 // C
+{ 2.0, -3.0, 0.1},  // Q = 2 // Be?
+{ 2.0, -3.0, 0.1},  // Q = 3 // B
+{ 2.0, -3.0, 0.1},  // Q = 4 // C
 };
 
 constexpr static const Vec3d default_aAbWs[] = {
