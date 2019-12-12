@@ -430,13 +430,15 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     // ===== SETUP GEOM
     //char* fname = "data/H_eFF.xyz";
     //char* fname = "data/H2_eFF_spin.xyz";
+    //char* fname = "data/Ce1_eFF.xyz";
+    //char* fname = "data/Ce2_eFF.xyz";
     //char* fname = "data/Ce4_eFF.xyz";
     //char* fname = "data/CH3_eFF_spin.xyz";
     //char* fname = "data/CH4_eFF_flat_spin.xyz";
-    char* fname = "data/CH4_eFF_spin.xyz";
-    //char* fname = "data/C2H6_eFF_spin.xyz";
+    //char* fname = "data/CH4_eFF_spin.xyz";
     //char* fname = "data/C2_eFF_spin.xyz";
-    //char* fname = "data/C2H4_eFF_spin.xyz";
+    char* fname = "data/C2H4_eFF_spin.xyz";
+    //char* fname = "data/C2H6_eFF_spin.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
     ff.loadFromFile_xyz( fname );
 
@@ -469,7 +471,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     opt.bindOrAlloc( ff.nDOFs, ff.pDOFs, 0, ff.fDOFs, 0 );
     opt.cleanVel( );
-    opt.initOpt( 0.05, 0.2 );
+    opt.initOpt( 0.005, 0.1 );
+    opt.f_limit = 1000.0;
 
     ff.eval();
 
@@ -509,6 +512,7 @@ void TestAppRARFF::draw(){
 
 
             //VecN::set( ff.na*3, 0.0, (double*)ff.aforce ); // FIX ATOMS
+            VecN::set( ff.ne, 0.0, ff.fsize ); // FIX ELECTRON SIZE
             //if(bRun)ff.move_GD(0.001 );
 
             //ff.move_GD( 0.0001 );

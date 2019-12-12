@@ -120,12 +120,14 @@ inline void addAtomicForceMorseQ( const Vec3d& dp, Vec3d& f, double r0, double e
     f.add_mul( dp, fr/r );
 }
 
-inline void addAtomicForceQ( const Vec3d& dp, Vec3d& f, double qq ){
+inline double addAtomicForceQ( const Vec3d& dp, Vec3d& f, double qq ){
     //Vec3f dp; dp.set_sub( p2, p1 );
     double ir2  = 1/( dp.norm2() + R2SAFE );
     double ir   = sqrt(ir2);
-    double fr   = ( ir*qq*-COULOMB_CONST )*ir2;
+    double E    = COULOMB_CONST*qq*ir;
+    double fr   = -E*ir2;
     f.add_mul( dp, fr );
+    return E;
 }
 
 inline void addAtomicForceLJ( const Vec3d& dp, Vec3d& f, double r0, double eps ){

@@ -6,7 +6,7 @@
 //#include "Vec2.h"
 #include "Vec3.h"
 #include "quaternion.h"
-//#include "Forces.h"
+#include "Forces.h"
 
 
 #include "InteractionsGauss.h"
@@ -67,9 +67,9 @@ constexpr static const Vec3d default_eAbWs[] = {
 constexpr static const Vec3d default_aAbWs[] = {
 { 0.0,  0.0, 0.1},  // Q = 0 //
 { 0.0,  0.0, 0.01},  // Q = 1 // H
-{ 1.0, -5.0, 0.25},  // Q = 2 // Be?
-{ 1.0, -5.0, 0.25},  // Q = 3 // B
-{ 1.0, -5.0, 0.25},  // Q = 4 // C
+{ 1.0, -5.0, 0.1},  // Q = 2 // Be?
+{ 1.0, -5.0, 0.1},  // Q = 3 // B
+{ 1.0, -5.0, 0.1},  // Q = 4 // C
 };
 
 constexpr static const  double default_EPCs[] = {
@@ -319,7 +319,9 @@ double evalAA(){
             Vec3d  abw;
             combineAbW( abwi, aAbWs[j], abw );
             //if( (i_DEBUG>0) && (1==qi==aQ[j]) ){ printf( " abw(H-H): %i,%i A %g B %g w %g \n", i,j, abw.x, abw.y, abw.z ); }
-            Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
+            //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
+            //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
+            Eaa +=  addAtomicForceQ( apos[j]-pi, f, qi*aQ[j] );
             //   ToDo : Pauli Repulsion of core electrons ?????
             aforce[j].sub(f);
             aforce[i].add(f);
@@ -384,7 +386,8 @@ bool loadFromFile_xyz( char const* filename ){
             epos[ie]=(Vec3d){x,y,z};
             if     (e==-1){ espin[ie]= 1; }
             else if(e==-2){ espin[ie]=-1; }
-            esize[ie] = 1.0;
+            //esize[ie] = 1.0;
+            esize[ie] = 0.5;
             //esize[ie] = 0.25;
             ie++;
             //printf( " e[%i] ", ie );
