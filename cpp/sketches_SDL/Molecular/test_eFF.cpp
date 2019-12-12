@@ -423,14 +423,20 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     plot1.fontTex=fontTex;
 
     checkDerivs( ff.KRSrho );   // exit(0);
-    makePlots( plot1, ff );   return; //      exit(0);
-    //makePlots2( plot1 ); return;
+    //makePlots( plot1, ff );  // return; //      exit(0);
+    makePlots2( plot1 ); //return;
 
 
     // ===== SETUP GEOM
     //char* fname = "data/H_eFF.xyz";
     //char* fname = "data/H2_eFF_spin.xyz";
-    char* fname = "data/C2H4_eFF_spin.xyz";
+    //char* fname = "data/Ce4_eFF.xyz";
+    //char* fname = "data/CH3_eFF_spin.xyz";
+    //char* fname = "data/CH4_eFF_flat_spin.xyz";
+    char* fname = "data/CH4_eFF_spin.xyz";
+    //char* fname = "data/C2H6_eFF_spin.xyz";
+    //char* fname = "data/C2_eFF_spin.xyz";
+    //char* fname = "data/C2H4_eFF_spin.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
     ff.loadFromFile_xyz( fname );
 
@@ -457,10 +463,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //makePlots( plot1, ff );
     //ff.loadFromFile_xyz( fname  );
 
-
     // ==== Bind Optimizer
 
-    init2DMap( 100, 0.1 );
+    //init2DMap( 100, 0.1 );
 
     opt.bindOrAlloc( ff.nDOFs, ff.pDOFs, 0, ff.fDOFs, 0 );
     opt.cleanVel( );
@@ -494,7 +499,7 @@ void TestAppRARFF::draw(){
             double F2 = 1.0;
 
             ff.clearForce();
-            applyCartesianBoxForce( {0.0,0.0,0.0}, {0.0,0.0,0.0}, {0,0,50.0}, ff.na, ff.apos, ff.aforce );
+            //applyCartesianBoxForce( {0.0,0.0,0.0}, {0.0,0.0,0.0}, {0,0,50.0}, ff.na, ff.apos, ff.aforce );
             //applyCartesianBoxForce( {0.0,0.0,0.0}, {0.0,0.0,0.0}, {0,0,5.0}, ff.ne, ff.epos, ff.eforce );
             //ff.evalEE();
             //ff.evalAE();
@@ -503,17 +508,19 @@ void TestAppRARFF::draw(){
             //ff.apos[0].set(.0);
 
 
-            VecN::set( ff.na*3, 0.0, (double*)ff.aforce );
-            if(bRun)ff.move_GD(0.001 );
+            //VecN::set( ff.na*3, 0.0, (double*)ff.aforce ); // FIX ATOMS
+            //if(bRun)ff.move_GD(0.001 );
 
             //ff.move_GD( 0.0001 );
 
-            //F2 = opt.move_FIRE();
+            F2 = opt.move_FIRE();
 
             printf( " |F| %g \n", sqrt(F2) );
-            if(!(F2<1000000.0))perFrame=0;
+            //if(!(F2<1000000.0))perFrame=0;
         }
     }
+
+    printf( "e[0] r %g s %g \n", ff.epos[0].norm(), ff.esize[0] );
 
     // --- Constrain in Z
     //double Kz = 1.0;
@@ -567,8 +574,8 @@ void TestAppRARFF::draw(){
     //ff.aforce[1].set(0.);
     //if(bRun) ff.move_GD( 0.01 );
 
-    glDisable(GL_DEPTH_TEST);
-    plot1.view();
+    //glDisable(GL_DEPTH_TEST);
+    //plot1.view();
 
 };
 

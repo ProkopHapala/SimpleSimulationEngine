@@ -58,18 +58,18 @@ Erf approximation:
 // ToDo : Later properly
 constexpr static const Vec3d default_eAbWs[] = {
 { 0.0,  0.0, 0.0},  // Q = 0 //
-{ 0.0,  0.0, 0.01},  // Q = 1 // H
-{10.0, -3.0, 0.25},  // Q = 2 // Be?
-{10.0, -3.0, 0.25},  // Q = 3 // B
-{10.0, -3.0, 0.25},  // Q = 4 // C
+{ 0.0,  0.0, 0.01}, // Q = 1 // H
+{ 4.0, -3.0, 0.1},  // Q = 2 // Be?
+{ 4.0, -3.0, 0.1},  // Q = 3 // B
+{ 4.0, -3.0, 0.1},  // Q = 4 // C
 };
 
 constexpr static const Vec3d default_aAbWs[] = {
 { 0.0,  0.0, 0.1},  // Q = 0 //
 { 0.0,  0.0, 0.01},  // Q = 1 // H
-{20.0, -5.0, 0.25},  // Q = 2 // Be?
-{20.0, -5.0, 0.25},  // Q = 3 // B
-{20.0, -5.0, 0.25},  // Q = 4 // C
+{ 1.0, -5.0, 0.25},  // Q = 2 // Be?
+{ 1.0, -5.0, 0.25},  // Q = 3 // B
+{ 1.0, -5.0, 0.25},  // Q = 4 // C
 };
 
 constexpr static const  double default_EPCs[] = {
@@ -244,7 +244,7 @@ double evalEE(){
     const double qq = QE*QE;
     for(int i=0; i<ne; i++){
         Vec3d    pi  = epos[i];
-        Vec3d&  fpi  = eforce[i];
+        Vec3d&   fi  = eforce[i];
         double   si  = esize[i];
         double& fsi  = fsize[i];
         int8_t spini = espin[i];
@@ -255,11 +255,12 @@ double evalEE(){
             double& fsj = fsize[j];
             Eee     += addCoulombGauss( dR, si, sj, f, fsi, fsj, qq );
             EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
-            //if( spini==espin[j] ) EeePaul += addDensOverlapGauss_S( dR,si,sj, amp, f, fsi, fsj );
+            //if( spini==espin[j] ) EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, false, KRSrho );
+            //if( spini==espin[j] ) EeePaul += addDensOverlapGauss_S( dR,si,sj, 1, f, fsi, fsj );
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
             if( i_DEBUG>0 ) printf( "evalEE[%i,%i] dR(%g,%g,%g) s(%g,%g) q %g  ->   f(%g,%g,%g) fs(%g,%g) \n", i,j, dR.x,dR.y,dR.z, si,sj, qq,   f.x,f.y,f.z, fsi,fsj );
             eforce[j].sub(f);
-            fpi      .add(f);
+            fi       .add(f);
             //glColor3f(1.0,0.0,0.0);
             //Draw3D::drawVecInPos( f*-1, epos[j] );
             //Draw3D::drawVecInPos( f   , pi      );
@@ -285,14 +286,14 @@ double evalAE(){
             //Eae += addPairEF_expQ( epos[j]-pi, f, abwi.z, qi*QE, abwi.y, abwi.x );
             //printf(  "a[%i]e[%i] r %g\n", i, j, (epos[j]-pi).norm() );
             Vec3d   dR  = epos [j] - pi;
-            double fs_junk;
+            double  fs_junk;
             double  sj  = esize[j];
             double& fsj = fsize[j];
-            //Eae                      += addCoulombGauss      ( dR,sj,            f, fsj, qqi     );
-            if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, -40.*abwi.y, f, fsj, fs_junk );
+            Eae                      += addCoulombGauss      ( dR,sj,                 f, fsj, qqi     );
+            if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );
             //if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );
 
-            if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
+            //if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             eforce[j].sub(f);
             aforce[i].add(f);
             //glColor3f(1.0,0.0,1.0);
@@ -332,10 +333,10 @@ double evalAA(){
 
 double eval(){
     return
-    //evalKinetic()
-    //+ evalEE()
+    evalKinetic()
+    + evalEE()
     + evalAE()
-    //+ evalAA()
+    + evalAA()
     ;
 }
 
@@ -384,8 +385,9 @@ bool loadFromFile_xyz( char const* filename ){
             if     (e==-1){ espin[ie]= 1; }
             else if(e==-2){ espin[ie]=-1; }
             esize[ie] = 1.0;
+            //esize[ie] = 0.25;
             ie++;
-            printf( " e[%i] ", ie );
+            //printf( " e[%i] ", ie );
         }else{
             apos[ia]=(Vec3d){x,y,z};
             aQ  [ia]=e;  // change this later
