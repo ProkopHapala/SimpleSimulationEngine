@@ -133,6 +133,35 @@ void checkDerivs( Vec3d KRSrho ){
 
 }
 
+void checkDerivs2(){
+
+    double d = 0.0001;
+    double E1,E2;
+
+    EFF ff;
+    ff.realloc(2,2);
+    ff.aQ   [0]= 4;
+    ff.aQ   [1]= 4;
+    ff.autoAbWs( default_aAbWs, default_eAbWs );
+
+    ff.apos [0]= {+0.7,+0.2,0.0};
+    ff.apos [1]= {-0.7,-0.2,0.0};
+    ff.epos [0]= {+0.1,+0.6,0.0};
+    ff.epos [1]= {-0.1,-0.6,0.0};
+    ff.esize[0]=0.5;
+    ff.esize[1]=2.0;
+
+    // a1_r
+    ff.apos [0].x-=d; E1=ff.eval();    ff.apos[0].x+=2*d; E2=ff.eval();     ff.apos [0].x-=d; ff.clearForce(); ff.eval(); printf("f/fE  apos[0]  %g / %g | %g \n", ff.aforce[0].x, -(E2-E1)/(2*d), ff.aforce[0].y );
+    //ff.apos[1].x-=d; E1=ff.eval();    ff.apos[1].x+=2*d; E2=ff.eval();    ff.apos[1].x-=d; printf("dar1 %g / %g \n",    ff.aforce[1].x, (E2-E1)/(2*d) );
+    ff.epos [0].x-=d; E1=ff.eval();    ff.epos [0].x+=2*d; E2=ff.eval();    ff.epos [0].x-=d; ff.clearForce(); ff.eval(); printf("f/fE  epos[0] %g / %g | %g \n", ff.eforce[0].x, -(E2-E1)/(2*d), ff.eforce[0].y );
+    ff.epos [1].x-=d; E1=ff.eval();    ff.epos [1].x+=2*d; E2=ff.eval();    ff.epos [1].x-=d; ff.clearForce(); ff.eval(); printf("f/fE  epos[1] %g / %g | %g \n", ff.eforce[1].x, -(E2-E1)/(2*d), ff.eforce[1].y );
+    ff.esize[0]  -=d; E1=ff.eval();    ff.esize[0]  +=2*d; E2=ff.eval();    ff.esize[0]  -=d; ff.clearForce(); ff.eval(); printf("f/fE esize[0] %g / %g \n",      ff.fsize[0],    -(E2-E1)/(2*d) );
+    ff.esize[1]  -=d; E1=ff.eval();    ff.esize[1]  +=2*d; E2=ff.eval();    ff.esize[1]  -=d; ff.clearForce(); ff.eval(); printf("f/fE esize[1] %g / %g \n",      ff.fsize[1],    -(E2-E1)/(2*d) );
+    //exit(0);
+
+}
+
 int makePlots( Plot2D& plot, EFF& ff ){
 
     int ielem = 1;
@@ -426,6 +455,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //makePlots( plot1, ff );  // return; //      exit(0);
     makePlots2( plot1 ); //return;
 
+    checkDerivs2();
+
 
     // ===== SETUP GEOM
     //char* fname = "data/H_eFF.xyz";
@@ -440,6 +471,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/C2H4_eFF_spin.xyz";
     char* fname = "data/C2H4_eFF_spin_.xyz";
     //char* fname = "data/C2H6_eFF_spin.xyz";
+    //char* fname = "data/C2H6_eFF_spin_.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
     ff.loadFromFile_xyz( fname );
 
@@ -511,9 +543,8 @@ void TestAppRARFF::draw(){
             ff.eval();
             //ff.apos[0].set(.0);
 
-
             //VecN::set( ff.na*3, 0.0, (double*)ff.aforce ); // FIX ATOMS
-            VecN::set( ff.ne, 0.0, ff.fsize ); // FIX ELECTRON SIZE
+            //VecN::set( ff.ne, 0.0, ff.fsize ); // FIX ELECTRON SIZE
             //if(bRun)ff.move_GD(0.001 );
 
             //ff.move_GD( 0.0001 );

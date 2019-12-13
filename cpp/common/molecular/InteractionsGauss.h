@@ -139,8 +139,8 @@ inline double DensOverlapGauss_S( double r2, double amp, double si, double sj, d
     double f1e2 = 6.*e2*Aa2*(si2-sj2)*is4;
     double e1f2 = 4.*E     * r2      *is4;
 
-    dSsi = e1f2*si - f1e2*sj;
-    dSsj = e1f2*sj + f1e2*si;
+    dSsi = -(e1f2*si - f1e2*sj);
+    dSsj = -(e1f2*sj + f1e2*si);
     dSr  = E   *(-4.*is2);
 
     return E;
@@ -177,8 +177,8 @@ inline double DensOverlapGauss_Snorm( double r2, double amp, double si, double s
     double f1e2 = 6.*e2*a2*(si2-sj2)*is4;
     double e1f2 = 4.*e1e2 * r2      *is4;
 
-    dSsi = (e1f2*si - f1e2*sj)*e0 + e1e2*e0si;
-    dSsj = (e1f2*sj + f1e2*si)*e0 + e1e2*e0sj;
+    dSsi = -((e1f2*si - f1e2*sj)*e0 + e1e2*e0si);
+    dSsj = -((e1f2*sj + f1e2*si)*e0 + e1e2*e0sj);
     dSr  = E   *(-4.*is2);
 
     return E;
@@ -437,8 +437,8 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     else    { eS = PauliSGauss_syn ( S, fS, KRSrho.z ); }
 
     double TfS = T*fS;
-    fsi +=         (dTsi*eS + TfS*dSsi)*KRSrho.y;
-    fsj +=         (dTsj*eS + TfS*dSsj)*KRSrho.y;
+    fsi +=         -(dTsi*eS + TfS*dSsi)*KRSrho.y;
+    fsj +=         -(dTsj*eS + TfS*dSsj)*KRSrho.y;
     f.add_mul( dR, (dTr *eS + TfS*dSr )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
 
     //printf( "addPauliGauss r2, si, sj %g %g %g \n", r2, si, sj );

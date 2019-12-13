@@ -289,9 +289,9 @@ double evalAE(){
             double  fs_junk;
             double  sj  = esize[j];
             double& fsj = fsize[j];
-            Eae                      += addCoulombGauss      ( dR,sj,                 f, fsj, qqi     );
-            if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );
-            //if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );
+            Eae                      += addCoulombGauss      ( dR,sj,                 f, fsj, qqi     );     // correct
+            if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
+            //if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );     // correct
 
             //if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             eforce[j].sub(f);
