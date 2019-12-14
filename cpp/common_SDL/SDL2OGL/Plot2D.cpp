@@ -15,10 +15,10 @@
 /////////////////////////////////
 
 void DataLine2D::update(){
-    bounds.x0 = +1e-300;
-    bounds.x1 = -1e-300;
-    bounds.y0 = +1e-300;
-    bounds.y1 = -1e-300;
+    bounds.x0 = +1e+300;
+    bounds.x1 = -1e+300;
+    bounds.y0 = +1e+300;
+    bounds.y1 = -1e+300;
     for(int i=0; i<n; i++){
         double x  = xs[i];
         double y  = ys[i];
@@ -26,10 +26,10 @@ void DataLine2D::update(){
         bounds.x1 = _max(bounds.x1,x);
         bounds.y0 = _min(bounds.y0,y);
         bounds.y1 = _max(bounds.y1,y);
-        //printf( "%i (%f,%f) (%f,%f) \n", i, bounds.x0, bounds.y0,  bounds.x1, bounds.y1 );
+        //printf( "DataLine2D::update[%i] %g(%g,%g) %g(%g,%g) \n", i, x,bounds.x0,bounds.x1, y,bounds.y0, bounds.y1 );
         //printf( "%i <%f..%f> <%f..%f> \n", i, bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
     }
-    //printf( "  ---  <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
+    //printf( " DataLine2D::update <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
 };
 
 void DataLine2D::draw(){
@@ -79,15 +79,17 @@ void Plot2D::update(){
     bounds.x1 = -1e+300;
     bounds.y0 = +1e+300;
     bounds.y1 = -1e+300;
+    int i=0;
     for( DataLine2D * line : lines ){
         line->update();
         bounds.x0 = _min(bounds.x0, line->bounds.x0);
         bounds.x1 = _max(bounds.x1, line->bounds.x1);
         bounds.y0 = _min(bounds.y0, line->bounds.y0);
         bounds.y1 = _max(bounds.y1, line->bounds.y1);
-        printf( "--    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
+        //printf( "Plot2D::update.l[%i]    <%f..%f> <%f..%f> \n", i, bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
+        i++;
     }
-    printf( "    <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
+    printf( "Plot2D::update:  <%f..%f> <%f..%f> \n", bounds.x0, bounds.x1,  bounds.y0, bounds.y1 );
 };
 
 void Plot2D::autoAxes(double dx, double dy){
@@ -116,17 +118,16 @@ void Plot2D::autoAxes(double dx, double dy){
 void Plot2D::drawAxes(){
 
     //Draw2D::drawPointCross({0.0,0.0},100.0);
-
-    if(grid){
+    //grid=false;
+    if(bGrid){
         Draw::setRGBA(clrGrid);
         Draw2D::drawGrid( nXTicks, xTicks, axBounds.y0, axBounds.y1, true  );
         Draw2D::drawGrid( nYTicks, yTicks, axBounds.x0, axBounds.x1, false );
-    }else{
+    }
+    if(bAxes){
         Draw::setRGBA(clrTicksY); Draw2D::drawGrid( nXTicks, xTicks, axPos.x, axPos.x+tickSz,     true  );  Draw2D::drawLine( {axPos   .x ,axBounds.y0}, {axPos   .x ,axBounds.y1} );
         Draw::setRGBA(clrTicksX); Draw2D::drawGrid( nYTicks, yTicks, axPos.x, axPos.y+tickSz,     false );  Draw2D::drawLine( {axBounds.x0,axPos   .y }, {axBounds.x1,axPos   .y } );
     }
-
-    
 
     if(fontTex){
         char str[16];

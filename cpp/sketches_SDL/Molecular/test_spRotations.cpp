@@ -110,7 +110,7 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         double w1 = slater( p-p1, psi1, beta1 );
         double w2 = slater( p-p2, psi2, beta2 );
         //printf( "%g | %g %g \n", w1*w2, w1, w2 );
-        return  w1 * w2;
+        return w1 * w2;
         //return  w2;
     };
 
