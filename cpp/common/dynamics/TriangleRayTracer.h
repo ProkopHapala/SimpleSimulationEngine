@@ -16,18 +16,24 @@ class SurfElement{ public:
     double area;  //= 0.0;
     int isurf;//   = -1;   // helps with raytracing
 
-    static inline double geomCoupling( const Vec3d& n, const Vec3d& p, const Vec3d& n0, const Vec3d& p0 ){
-        Vec3d d = p - p0;
-        double r = d.normalize();
-        double c  = d.dot(n );
-        double c0 = d.dot(n0);
+    static inline double geomCoupling( const Vec3d& n, const Vec3d& p, const Vec3d& n0, const Vec3d& p0, double area0 ){
+        //Vec3d  d = elj.pos - eli.pos;
+        //double r2 = d.normalize();
+        //double coupling = d.dot(eli.normal)*d.dot(elj.normal)/r2;
+        //if( fabs(coupling) < couplingTrashold ){ M[i*n+j]=0.0; continue; };
+        //coupling /= ( r2 + eli.area + elj.area );
+
+        Vec3d d   = p - p0;
+        double r2 = d.norm2();
+        double c  = d.dot(n ); // not normalized
+        double c0 = d.dot(n0); // not normalized
         // Area is multiplied posteriori
-        return c0*c/(r*r);
+        return c0*c/(r2*(r2+area0)); // first r2 is normalization of c0*c; second is distance
         //return c0*c/(r*r + area + area0); // correction for small size
     }
 
-    inline double coupling( const SurfElement& b ){
-        return geomCoupling( normal, pos, b.pos, b.normal );
+    inline double geomCoupling( const SurfElement& b ){
+        return geomCoupling( normal, pos, b.pos, b.normal, b.area + area );
     }
 
     SurfElement(){ isurf=-1; };
