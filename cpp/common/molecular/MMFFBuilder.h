@@ -10,6 +10,8 @@
 #include "MMFFmini.h"
 #include "MMFFparams.h"
 
+#include "eFF.h"
+
 //namespace MMFF{
 
 /*
@@ -389,6 +391,60 @@ class MMFFBuilder{  public:
         ff.torsions_bond2atom();
         //exit(0);
     }
+
+    void toEFF( EFF& ff, const EFFAtomType* params, double esize, double dpair ){
+        //int ne = bonds.size() * 2; // ToDo
+        int ne = 0;
+        int na = 0;
+        DEBUG
+        for(int i=0; i<atoms.size(); i++){
+            int ityp = atoms[i].type;
+            if( ityp==capAtomEpair.type || ityp==capAtomPi.type ) continue;
+            na++;
+            ne += params[ ityp ].ne;
+            printf( "[%i] ityp %i ne %i  %i \n", i, ityp, params[ityp].ne, ne );
+        }
+        DEBUG
+        printf( "na %i ne %i | %i \n", atoms.size(), ne, bonds.size()*2 );
+        ff.realloc( na, ne );
+        DEBUG
+        for(int i=0; i<na; i++){
+            int ityp = atoms[i].type;
+            if( ityp==capAtomEpair.type || ityp==capAtomPi.type ) continue;
+            //printf( "[%i] ityp %i \n" );
+            ff.apos [i]  = atoms[i].pos;
+            ff.aQ   [i]  = params[ ityp ].ne; // ToDo
+        }
+        DEBUG
+        for(int i=0; i<bonds.size(); i++){
+            const MMFFBond& b  = bonds[i];
+            const Vec2i& ib    = b.atoms;
+            double c1=0.5-dpair;
+            double c2=1-c1;
+            int i2 = i*2;
+            ff.epos [i2] = atoms[ib.a].pos*c1 + atoms[ib.b].pos*c2;
+            ff.esize[i2] = esize;
+            ff.espin[i2] = 1;
+            i2++;
+            ff.epos [i2] = atoms[ib.a].pos*c2 + atoms[ib.b].pos*c1;
+            ff.esize[i2] = esize;
+            ff.espin[i2] = -1;
+            //break;
+        }
+        DEBUG
+        // ToDo:  pi-bonds & e-pairs
+
+    }
+
+    /*
+    int countValenceElectrons(){
+        int ne=0;
+        for(int i=0; i<atoms.size(); i++){
+
+        }
+    }
+    */
+
 
     // ============= Add Capping Hydrogens
 

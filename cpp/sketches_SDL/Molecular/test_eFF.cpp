@@ -31,6 +31,8 @@ int i_DEBUG = 0;
 #include "eFF.h"
 #include "e2FF.h"
 
+#include "MMFFBuilder.h"
+
 #include "Forces.h"
 
 /*
@@ -360,10 +362,14 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
     //RigidAtom     atom1;
     //RigidAtomType type1,type2;
 
+
     bool bRun = false;
 
     EFF  ff;
     DynamicOpt opt;
+
+
+    MMFFBuilder builder;
 
     int perFrame = 1;
 
@@ -374,6 +380,7 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     // DEBUG STUFF
     GLint ogl_fs = 0;
+    GLint oglSph = 0;
 
     Plot2D plot1;
 
@@ -475,12 +482,62 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
     ff.loadFromFile_xyz( fname );
 
+
+
+
+
+
+    // ================== Brush using
+
+    //const int natom=4,nbond=3,nang=2,ntors=1;
+    const int natom=4,nbond=3;
+    Vec3d apos0[] = {
+        {-2.0,0.0,0.0},  // 0
+        {-1.0,2.0,0.0},  // 1
+        {+1.0,2.0,0.0},  // 2
+        {+2.0,0.0,1.0},  // 3
+    };
+    Vec2i bong2atom[] = {
+        {0,1},  // 0
+        {1,2},  // 1
+        {2,3},  // 2
+    };
+
+    // ============ Build molecule
+
+    MMFFAtom brushAtom{  6, -1,-1, Vec3dZero, MMFFAtom::defaultREQ };
+    MMFFBond brushBond{ -1, -1,-1, 1.5, 25.0 };
+
+    builder.capBond = MMFFBond{ -1, -1,-1, 1.07, 15.0 };
+    builder.capAtom = { 1, -1,-1, Vec3dZero, MMFFAtom::defaultREQ };
+
+    printf( "----- Atoms \n" );
+    for(int i=0;i<natom;i++){
+        brushAtom.pos = apos0[i];
+        builder.insertAtom(brushAtom, true);
+    }
+    printf( "----- Bonds \n" );
+    for(int i=0;i<nbond;i++){
+        brushBond.atoms=bong2atom[i];
+        builder.insertBond(brushBond);
+    }
+    printf( "----- Confs \n" );
+    for(int i=0;i<natom;i++){
+        builder.makeSPConf(i,0,0);
+        //builder.makeSPConf(i);
+    }
+    //builder.toMMFFmini( ff );
+    DEBUG
+    builder.toEFF( ff, EFFparams, 0.5, 0.025 );
+    DEBUG
+
     //setGeom(ff);
     //double sz = 0.51;
     // break symmetry
     //for(int i=0; i<ff.na; i++){ ff.apos[i].add( randf(-sz,sz),randf(-sz,sz),randf(-sz,sz) );  }
     for(int i=0; i<ff.na; i++){ printf( "A_pos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z ); }
     for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
+    //exit(0);
 
     ff.autoAbWs( default_aAbWs, default_eAbWs );
     //exit(0);
@@ -504,7 +561,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     opt.bindOrAlloc( ff.nDOFs, ff.pDOFs, 0, ff.fDOFs, 0 );
     opt.cleanVel( );
-    opt.initOpt( 0.005, 0.1 );
+    opt.initOpt( 0.05, 0.1 );
     opt.f_limit = 1000.0;
 
     ff.eval();
@@ -518,6 +575,10 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     //ff.apos[0].z = 2.0;
 
+    oglSph=Draw::list(oglSph);
+    Draw3D::drawSphere_oct(3,1.0d,(Vec3d){0.,0.,0.});
+    glEndList();
+
 }
 
 void TestAppRARFF::draw(){
@@ -529,9 +590,10 @@ void TestAppRARFF::draw(){
 
     //return;
 
+    perFrame=1; // ToDo : why it does not work properly for  perFrame>1 ?
     if(bRun){
         for(int itr=0;itr<perFrame;itr++){
-            printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
+            //printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
             double F2 = 1.0;
 
             ff.clearForce();
@@ -551,7 +613,7 @@ void TestAppRARFF::draw(){
 
             F2 = opt.move_FIRE();
 
-            printf( " |F| %g \n", sqrt(F2) );
+            printf( "=== frame[%i][%i] |F| %g \n", frameCount, itr, sqrt(F2) );
             //if(!(F2<1000000.0))perFrame=0;
         }
     }
@@ -597,14 +659,23 @@ void TestAppRARFF::draw(){
     }
 
     //glColor3f(1.0,1.0,1.0);
+
+
+    glEnable(GL_BLEND);
     for(int i=0; i<ff.ne; i++){
         //printf( "epos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
-        if(ff.espin[i]>0){ glColor3f(0.0,0.5,1.0); }else{ glColor3f(1.0,0.5,0.0); };
+        //if(ff.espin[i]>0){ glColor3f(0.0,0.5,1.0); }else{ glColor3f(1.0,0.5,0.0); };
+        if(ff.espin[i]>0){ glColor4f(0.0,0.5,1.0, 0.25); }else{ glColor4f(1.0,0.5,0.0, 0.25 ); };
+        Draw3D::drawShape(ff.epos[i], Mat3dIdentity*ff.esize[i], oglSph, false );
+        //Draw3D::drawSphere_oct(3,ff.esize[i],ff.epos[i]);
+
+        /*
         Draw3D::drawPointCross( ff.epos  [i], ff.esize[i] );
         Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
         Draw3D::drawSphereOctLines( 8, ff.esize[i], ff.epos[i] );
         sprintf(strtmp,"%i",i);
         Draw3D::drawText(strtmp, ff.epos[i], fontTex, 0.02, 0);
+        */
     }
 
     //for(int i=0; i<ff.ne; i+=2){

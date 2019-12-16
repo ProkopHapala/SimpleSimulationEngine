@@ -92,14 +92,33 @@ constexpr static const default_EPCs[] = {
 */
 
 struct EFFAtomType{
-    double Q; // nuncear charge
-    double wa;
-    double Aa; // prefactor
-    double Ba; // exponential beta
-    double we;
-    double Ae; // prefactor
-    double Be; // exponential beta
+    int ne;       // number of valence electrons
+    double Rcore; // core electron radius
+    double Acore; // core electron repulsion (depend on number of core electrons)
+    // ToDo : maybe distinct core radius for pi-electrons (?)
+    //double RcoreP; // core electron radius
+    //double AcoreP; // core electron repulsion (depend on number of core electrons)
 };
+
+
+EFFAtomType EFFparams[11]{
+    {0,0.,0.}, // void ... (or electron?)
+    {1,0.,0.}, // H
+    {2,0.,0.}, // He // only core ?
+
+    {1,0.1,2.0}, // Li
+    {2,0.1,2.0}, // Be
+    {3,0.1,2.0}, // B
+    {4,0.1,2.0}, // C
+    {5,0.1,2.0}, // N
+    {6,0.1,2.0}, // O
+    {7,0.1,2.0}, // F
+    {8,0.1,2.0}  // Ne // only core ?
+};
+
+
+
+
 
 inline double frEFF_r2( double r2, double w1, double w2 ){
     return ( 1/(1 + w1*r2) - 1/(1 + w2*r2) )/( 1/w1 + 1/w2 );
