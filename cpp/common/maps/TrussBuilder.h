@@ -45,11 +45,10 @@ inline int_fast64_t xy2id( int_fast32_t ix, int_fast32_t iy ){
     //return iy << 32;
 }
 
-inline int_fast64_t id2xy( int_fast64_t id, int_fast32_t ix, int_fast32_t iy ){
+inline void id2xy( int_fast64_t id, int_fast32_t ix, int_fast32_t iy ){
     iy=( id & 0xFFFF0000 ) >> 32;
     ix=( id & 0x0000FFFF );
 }
-
 
 // ====================
 // ==== TrussBuilder
@@ -95,7 +94,7 @@ class TrussBuilder{
     bool         removeBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 );
     bool         removeBond( int_fast32_t i,   int_fast32_t j );
 
-    bool removeNodesWithoutBond( );
+    void removeNodesWithoutBond( );
 
     void  init( int nNodesGuess, int nBondsGuess, int nBondsTypesGuess );
     void  toSoftBody( SoftBody& truss );

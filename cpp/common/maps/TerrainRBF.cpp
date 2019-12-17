@@ -83,6 +83,7 @@ int TerrainRBF::insertRBFs( int n_, RBF2D * rbfs_ ){
     rbfs   = rbfs_;
     int ninserts = 0;
     for( int i=0; i<nrbfs; i++ ){ ninserts += insertRBF( rbfs+i ); }
+    return ninserts;
 }
 
 /*

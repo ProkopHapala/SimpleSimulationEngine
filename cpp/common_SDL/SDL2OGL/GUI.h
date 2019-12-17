@@ -93,6 +93,7 @@ class GUIAbstractPanel{ public:
 
     GUIAbstractPanel(){};
     GUIAbstractPanel( const std::string& caption, int xmin, int ymin, int xmax, int ymax ){ initPanel(caption, xmin,ymin,xmax,ymax); };
+    virtual ~GUIAbstractPanel(){};
 
 	virtual void moveTo(int x, int y);
 	virtual void moveBy(int dx,int dy);

@@ -23,7 +23,10 @@ class AABBNode3D{
     bool insert( O o, Box box){
         if( span ){
         }
+
+        return false;
     }
+
 };
 
 struct Box3f{
@@ -77,8 +80,8 @@ struct AABBCellBin{   // NOTE: this is data cell in array, not Node class
     Box   span;    // TODO Box3f to save some cache
     int   subs;    // pointer to branches or leafs data block, if top bit set it is pointer to body
     int   parrent; // index of parrent
-    inline float insertCostBranch(const Box3f& box,Box3f& tmpBox1) const { };
-    inline float insertCostLeaf  (const Box3f& box,Box3f& tmpBox1) const { };
+    inline float insertCostBranch(const Box3f& box,Box3f& tmpBox1) const { return 0.; };
+    inline float insertCostLeaf  (const Box3f& box,Box3f& tmpBox1) const { return 0.; };
 };
 
 
@@ -266,7 +269,7 @@ void removeLeaf(int leaf){
 // Returns the new root index.
 // https://www.geeksforgeeks.org/avl-tree-set-1-insertion/
 
-inline int rotate( int iA, int iB, int iC, int iF, int iG ){
+inline void rotate( int iA, int iB, int iC, int iF, int iG ){
     nodes[iG].parent = iA;
 
     nodes[iA].child2 = iG;

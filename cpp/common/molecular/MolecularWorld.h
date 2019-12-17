@@ -103,10 +103,10 @@ class MolecularWorld{
     int  getAtomPos    ( Vec3d * buff );
 
     uint32_t atom2map ( int i, int ix, int iy, int iz );
-    int      atom2map ( int i, double r );
-    int      atoms2map( );
+    void     atom2map ( int i, double r );
+    void     atoms2map( );
     //int      check_collision( int imol, const Vec3d& pos, const Quat4d& qrot );
-    int      collisionForce( int imol, const Vec3d& pos, const Quat4d& qrot,  Vec3d& fpos, Quat4d& frot );
+    void     collisionForce( int imol, const Vec3d& pos, const Quat4d& qrot,  Vec3d& fpos, Quat4d& frot );
 
 	int  exportAtomsXYZ( FILE * pFile, const char * comment );
 	int  saveInstances ( char const* fileName );

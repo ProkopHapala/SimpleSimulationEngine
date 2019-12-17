@@ -34,7 +34,7 @@ double TerrainCubic::getVal( double x, double y ){
     */
 };
 
-int TerrainCubic::rayLine( Vec2d hdir, Vec2d p0, double hg0, double dr, double rmax, int ntg, double * tgs, Vec3d * poss ){
+void TerrainCubic::rayLine( Vec2d hdir, Vec2d p0, double hg0, double dr, double rmax, int ntg, double * tgs, Vec3d * poss ){
     double h0 = getVal( p0.x, p0.y )+hg0;
     double r  = 0.0d;
     for(int itg=0; itg<ntg; itg++){
@@ -55,6 +55,7 @@ int TerrainCubic::rayLine( Vec2d hdir, Vec2d p0, double hg0, double dr, double r
             }
         }
     }
+
 }
 
 int TerrainCubic::renderRect( double x0, double y0, double x1, double y1, int nx ){

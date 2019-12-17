@@ -237,9 +237,9 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     auto getEF_ab = [&](Vec3d p,Vec3d& f)->double{ return evalTorq( ha,hb,p,   fa,fb,f  ); };
 
     Vec3d f,fE;
-    printf("ha  "); checkDeriv(getEF_a , ha, 0.001d,  fE, f );
-    printf("hb  "); checkDeriv(getEF_b , hb, 0.001d,  fE, f );
-    printf("hab "); checkDeriv(getEF_ab, hab,0.001d,  fE, f );
+    printf("ha  "); checkDeriv3d(getEF_a , ha, 0.001d,  fE, f );
+    printf("hb  "); checkDeriv3d(getEF_b , hb, 0.001d,  fE, f );
+    printf("hab "); checkDeriv3d(getEF_ab, hab,0.001d,  fE, f );
 
     //exit(0);
     /*

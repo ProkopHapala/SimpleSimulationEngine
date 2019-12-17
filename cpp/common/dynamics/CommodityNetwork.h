@@ -146,6 +146,7 @@ struct Factory{
         for( auto it : currentTenchnology->produces ){ stored[it.first] += it.second*N; }
         return N;
         */
+        return -1; // just place-holder
     }
 
 };
@@ -287,9 +288,9 @@ struct Car{
             road=0;
             city=&where;
             where.parkUsed+=space;
-        }else{
-            return false;
-        };
+            return true;
+        }
+        return false;
     }
 
     void unload(City* city){ ammount -= city->addCommodity( ammount, *cargo ); }

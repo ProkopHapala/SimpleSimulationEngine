@@ -31,7 +31,7 @@ class AeroSurf2D : public KinematicBody2D {
 	//bool loadPolar    ( char const* filename );
 	//void plot_polar   ( double x0, double y0, double fscale, double phi0 );
 	//virtual void draw ( RigidBody2D& platform );
-	double fromString ( char * s );
+	void fromString ( char * s );
 	char * toString   ( );
 	void assertAeroForce( RigidBody2D& platform, const Vec2d& vel, double density );
 

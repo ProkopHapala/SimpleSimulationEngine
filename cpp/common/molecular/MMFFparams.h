@@ -153,4 +153,4 @@ class MMFFparams{ public:
 
 };
 
-#endif﻿
+#endif

@@ -291,7 +291,7 @@ inline int str2enum( const char * str, int nnames, const char **names ){
     return -1;
 }
 
-inline int saveBin( char *fname, int n, char * data ){
+inline int saveBin( const char *fname, int n, char * data ){
     FILE *ptr_myfile=0;
     ptr_myfile=fopen( fname,"wb");
     if (!ptr_myfile){ printf("Unable to open file! \n"); return -1; }
@@ -305,7 +305,7 @@ inline int saveBin( char *fname, int n, char * data ){
     return 0;
 }
 
-inline int loadBin( char *fname, int n, char * data ){
+inline int loadBin( const char *fname, int n, char * data ){
     FILE *ptr_myfile;
     ptr_myfile=fopen( fname,"rb");
     if (!ptr_myfile){ printf("Unable to open file! \n"); return -1; }

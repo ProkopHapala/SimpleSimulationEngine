@@ -56,8 +56,8 @@ class Shader{
 	int  init                ( const char * vertName,      const char * fragName,       const char * GSName=NULL );
 	void destory             (                                                                           );
 
-	inline int    init_default (){ init_str(DEFAULT_vertex_shader_code, DEFAULT_fragment_shader_code, NULL);     };
-	inline void   use          (){glUseProgram(shaderprogram);}
+	inline int    init_default (){ return init_str(DEFAULT_vertex_shader_code, DEFAULT_fragment_shader_code, NULL);     };
+	inline void   use          (){ glUseProgram(shaderprogram); }
 	inline GLuint getUloc( char * name ){ return glGetUniformLocation(shaderprogram,name); };
 
 	void getDefaultUniformLocation();

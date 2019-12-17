@@ -56,10 +56,10 @@ struct HalfChannel{
 
 struct Channel{
     //int i,j; // scattering elements between which the flux is
-    HalfChannel ends[2];
     Vec3d  dir;
     //double flux;
     //double Kgeom; //  through space gemetric coupling |  ToDo : how it should be normalized? How to choose angular width ?
+    HalfChannel ends[2];
 
     inline void transfer(){
         ends[1].transfer(ends[0].fluxIn);
@@ -111,13 +111,13 @@ struct ScatterElem{
         return exp( beta*cosa*(thick0 + thick1) ); // ToDo: scattering probabilities should depend on width of channels between which it scatters
     }
 
-    double scatterBiDir( Channel& chi, Channel& chj, int iend, int jend ){
+    void scatterBiDir( Channel& chi, Channel& chj, int iend, int jend ){
         double amp = scatterAmp( chi.dir, chj.dir );
         chj.ends[jend].influx( amp * chi.ends[iend].fluxOut );
         chi.ends[iend].influx( amp * chj.ends[jend].fluxOut );
         //chj.ends[jend].fluxIn += amp * chi.ends[iend].fluxOut;
         //chi.ends[iend].fluxIn += amp * chj.ends[jend].fluxOut;
-    };
+    }
 
 };
 

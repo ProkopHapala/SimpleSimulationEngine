@@ -3,9 +3,9 @@
 #define  arrayAlgs_h
 
 // from here  http://stackoverflow.com/questions/3982348/implement-generic-swap-macro-in-c
-#define SWAP(x, y, TYPE) {TYPE tmp = x; x = y; y = tmp;}
+//#define SWAP(x, y, TYPE) {TYPE tmp = x; x = y; y = tmp;}
 
-
+#include "macroUtils.h"
 #include "stdio.h"
 
 /*
@@ -23,7 +23,7 @@ inline int insertN( int i0, int len, TYPE * x, TYPE * x ){
 
 template< typename T, typename CondFunc >
 inline int prune( int n, T* arr, CondFunc cond ){
-    if(n==1) if( cond( arr[0] ) ) {return 0;} else {return 1; };
+    if(n==1){ if( cond( arr[0] ) ) {return 0;} else {return 1; } };
     int nlast = n-1;
     for(int i=0; i<nlast; i++){
         if( cond( arr[i] ) ){
@@ -149,7 +149,7 @@ inline int binSearchFrom( TYPE x, int n, TYPE * xs ){
 	int   i = 1;
 	do{
         i  = i << 1;
-		if(i>n) if(xs[n]>x){ return binSearchBetween( x, n, xs ); }else{ return -1; };
+		if(i>n){ if(xs[n]>x){ return binSearchBetween( x, n, xs ); }else{ return -1; } }
 		//printf("binSearchForm    %i %f %f \n", i, xs[i], x);
 	}while( xs[i] < x );
 	return binSearchBetween( x, i, xs );
@@ -254,7 +254,7 @@ void quickSort_inplace( TYPE * A, int p, int q){
 }
 
 template<typename T>
-int sort_permut( int n, int* permut, T* data, bool bReverse=false, bool almostSorted=false ){
+void sort_permut( int n, int* permut, T* data, bool bReverse=false, bool almostSorted=false ){
     /*
     if(bReverse){
         if(almostSorted){ printf( "insertSort_reverse \n" ); insertSort_reverse( n, permut, data    );  }

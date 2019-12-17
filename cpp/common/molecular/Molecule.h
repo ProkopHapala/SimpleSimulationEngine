@@ -59,7 +59,7 @@ class Molecule{ public:
         _realloc( bond2atom , nbonds );
     }
 
-    int bondsOfAtoms(){
+    void bondsOfAtoms(){
         atom_nb   = new int[natoms];
         atom2bond = new int[natoms*NBMAX];
         for(int i=0; i<natoms; i++){ atom_nb[i]=0; }

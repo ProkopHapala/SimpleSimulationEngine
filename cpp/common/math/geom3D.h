@@ -168,8 +168,8 @@ class Capsula3D{ public:
             r2i=d.norm2();
             if(r2i>r2max)r2max=r2i;
             double dr2 = r2max-r2i;
-            if      (li>lmax) if( sq(li-lmax)>dr2 ){ lmax=li-sqrt(dr2);  }
-            else if (li<lmin) if( sq(li-lmin)>dr2 ){ lmin=sqrt(dr2)-li;  }
+            if      (li>lmax){ if( sq(li-lmax)>dr2 ){ lmax=li-sqrt(dr2);  } }
+            else if (li<lmin){ if( sq(li-lmin)>dr2 ){ lmin=sqrt(dr2)-li;  } }
         }
         r = sqrt(r2max);
         l = lmax-lmin;

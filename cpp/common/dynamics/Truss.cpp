@@ -12,10 +12,10 @@ void Truss::clear(){
 }
 
 void Truss::sticksFormString( char * str ){
-    printf( str );
+    //puts( str );
     char * pch = strtok (str,";\n");
     while (pch != NULL){
-        printf ("%s\n",pch);
+        //printf ("%s\n",pch);
         TrussEdge edge;
         edge.fromString( pch );
         edges.push_back(edge);
@@ -53,6 +53,7 @@ int Truss::loadXYZ( char* fname ){
         points.push_back(p);
     }
     printf( "loadXYZ DONE\n");
+    return nvert;
 }
 
 void Truss::affineTransform( Mat3d mat, bool T ){

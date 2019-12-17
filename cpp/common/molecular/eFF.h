@@ -206,7 +206,7 @@ class EFF{ public:
 
 void realloc(int na_, int ne_){
     na=na_; ne=ne_;
-    nDOFs=na*3+ne*4;
+    nDOFs=na*3+ne*3 + ne;
     _realloc( pDOFs, nDOFs);
     _realloc( fDOFs, nDOFs);
 
@@ -363,10 +363,29 @@ double eval(){
 
 
 void move_GD(double dt){
+    double sum = 0;
     for(int i=0;i<nDOFs;i++){
         //pDOFs[i].add_mul(fDOFs[i],dt);
+        sum += fDOFs[i];
         pDOFs[i] += fDOFs[i] * dt;
     }
+    //printf( "move_GD sum %g ", sum );
+}
+
+void move_GD_noAlias(double dt){
+    Vec3d fe=Vec3dZero,fa=Vec3dZero;
+    double fs=0;
+    for(int i=0;i<na;i++){
+        apos[i].add_mul( aforce[i], dt );
+        fa.add( aforce[i] );
+    }
+    for(int i=0;i<ne;i++){
+        epos [i].add_mul( eforce[i], dt );
+        fe.add( aforce[i] );
+        esize[i] += fsize[i] * dt;
+        fs += fsize[i];
+    }
+    printf( "fs %g fe(%g,%g,%g) fa(%g,%g,%g)\n", fs, fe.x,fe.y,fe.z, fa.x,fa.y,fa.z );
 }
 
 void autoAbWs( const Vec3d * AAs, const Vec3d * AEs ){

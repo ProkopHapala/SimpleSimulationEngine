@@ -84,10 +84,10 @@ class BehlerNNFF : public AnyShortRangeFF { public:
 
     //inline int iSfNeigh3( ){}
     inline int iSfNeigh3( int iTypePair, int  ){
-
+        return 0; // place-holder
     }
 
-    int allocateSF( int nTypes_, int mSfRad_, int mSfAng_ ){
+    void allocateSF( int nTypes_, int mSfRad_, int mSfAng_ ){
         mSfRad     = mSfRad_;
         mSfAng     = mSfAng_;
         nTypes     = nTypes_;
@@ -134,7 +134,8 @@ class BehlerNNFF : public AnyShortRangeFF { public:
             dy *= y*dfc;
             y  *= y*fc;
         }
-    };
+        return y;
+    }
 
     inline double symfunc_Ang( int iatom, int ipar, double ra, double rb, const Vec3d& ha, const Vec3d& hb, Vec3d * dsf ){
         //int nsf    = nsfsA  [ipar];
@@ -155,6 +156,7 @@ class BehlerNNFF : public AnyShortRangeFF { public:
         //df_drik = faN1*( pfc*( rinvijik - costheta/r2ik ) + fa* pfcij*pdfcik/rik )  !  df/drik
         //df_drjk = faN1*( pfc*( rinvijik                 )                        )  !  why    rinvijik  ?
 
+        double E=0;
 
         double invRa   = 1/ra;
         double invRb   = 1/rb;
@@ -204,7 +206,8 @@ class BehlerNNFF : public AnyShortRangeFF { public:
             //zptr[k] -= p2 * dzik - p3 * dzjk;
 
         }
-    };
+        return E;
+    }
 
     void assembleAngForce( int nbonds, int kAtom, int* neigh_is){
         int type0 = types[ kAtom ];
@@ -255,11 +258,10 @@ class BehlerNNFF : public AnyShortRangeFF { public:
     }
 
     double getEnergy(){
-
+        return 0.;
     }
 
     void getForces(){
-
     }
 
 };

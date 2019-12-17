@@ -84,7 +84,7 @@ class StructParser{ public:
                 iit += it.nitem;  // skip all sub-items
             }
         }
-
+        return iit;
     }
 
     void printItemStruct(){

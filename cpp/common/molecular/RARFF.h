@@ -269,6 +269,7 @@ class RARFF{ public:
 
             }
         }
+        return E;
     }
 
     void getCos( double& cosdRot, double& cosdPos ){

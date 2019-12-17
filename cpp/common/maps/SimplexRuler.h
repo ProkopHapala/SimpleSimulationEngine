@@ -145,7 +145,7 @@ class SimplexRuler{
     inline void setSize( int na_, int nb_ ){ na=na_; nb=nb_; ntot=na*nb; };
     inline void setStep( double step_     ){ step = step_; invStep = 1.0d/step; };
 
-    int rayStart( Vec2d ray0, Vec2d hray ){
+    void rayStart( Vec2d ray0, Vec2d hray ){
         // dlat/dt
         ray_d.a = hray.dot( { 0.0d        ,1.15470053839*invStep} );
         ray_d.b = hray.dot( { 1.0d*invStep,0.57735026919*invStep} );
@@ -210,7 +210,7 @@ class SimplexRuler{
         return edgeKind;
     }
 
-    double sampleLine( int n, Vec2d p, Vec2d dp, const double * vmap, double* vals ){
+    void sampleLine( int n, Vec2d p, Vec2d dp, const double * vmap, double* vals ){
         //Vec3d d = p2 - p; d.mul( 1/(n-1) );
         //Vec3d p;
         for(int i=0; i<n; i++){ vals[i] = getValue( p, vmap ); p.add(dp); }

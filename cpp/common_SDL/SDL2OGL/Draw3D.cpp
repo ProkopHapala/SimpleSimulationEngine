@@ -632,6 +632,7 @@ int drawSphereStrip( Vec3f p, Vec3f ax,  int nPhi. int nThet, float R, float sin
 
 
 int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped ){
+    int nvert=0;
     Vec3f ax   = p1-p0;  float L = ax.normalize();
     Vec3f up,left;       ax.getSomeOrtho(up,left);
     Vec2f cph=Vec2fX, dph;
@@ -650,6 +651,7 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
         glNormal3f(na.x,na.y,na.z); glVertex3f(pa.x,pa.y,pa.z);
         glNormal3f(nb.x,nb.y,nb.z); glVertex3f(pb.x,pb.y,pb.z);
         cph.mul_cmplx(dph);
+        nvert+=2;
     }
     glEnd();
 
@@ -677,6 +679,7 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
             Vec3f nb = (left*(cph.x) + up*(cph.y)*cth_.x + ax*cth_.y)*1.0;
             glNormal3f(na.x,na.y,na.z); glVertex3f(pa.x,pa.y,pa.z);
             glNormal3f(nb.x,nb.y,nb.z); glVertex3f(pb.x,pb.y,pb.z);
+            nvert+=2;
             //na.mul(0.2);
             //glVertex3f(pa.x,pa.y,pa.z);   glVertex3f(pa.x+na.x,pa.y+na.y,pa.z+na.z);
             cph.mul_cmplx(dph);
@@ -707,16 +710,18 @@ int  drawCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float th
             Vec3f nb = (left*(cph.x) + up*(cph.y)*cth_.x + ax*cth_.y)*-1.0;
             glNormal3f(na.x,na.y,na.z); glVertex3f(pa.x,pa.y,pa.z);
             glNormal3f(nb.x,nb.y,nb.z); glVertex3f(pb.x,pb.y,pb.z);
+            nvert+=2;
             cph.mul_cmplx(dph);
         }
         glEnd();
         cth=cth_;
     }
-
-};
+    return nvert;
+}
 
 
 int drawParaboloid     ( Vec3f p0, Vec3f ax, float r, float l, float nR, int nPhi, bool capped ){
+    int nvert=0;
     float L = ax.normalize();
     Vec3f up,left;       ax.getSomeOrtho(up,left);
     Vec2f cph=Vec2fX, dph;
@@ -739,23 +744,26 @@ int drawParaboloid     ( Vec3f p0, Vec3f ax, float r, float l, float nR, int nPh
             glVertex3f(pa.x,pa.y,pa.z);
             //glNormal3f(nb.x,nb.y,nb.z);
             glVertex3f(pb.x,pb.y,pb.z);
+            nvert+=2;
             cph.mul_cmplx(dph);
         }
         glEnd();
     }
-
-};
+    return nvert;
+}
 
 
 int drawCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R, float dca, float dsa ){
+    int nvert=0;
     Vec3f v; v.set(v0);
     glBegin( GL_LINE_LOOP );
     for( int i=0; i<n; i++ ){
-        glVertex3f( pos.x+v.x*R, pos.y+v.y*R, pos.z+v.z*R );
+        glVertex3f( pos.x+v.x*R, pos.y+v.y*R, pos.z+v.z*R ); nvert++;
         //printf( " drawCircleAxis %i (%3.3f,%3.3f,%3.3f) \n", i, v.x, v.y, v.z );
         v.rotate_csa( dca, dsa, uaxis );
     }
     glEnd();
+    return nvert;
 }
 
 int drawCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R ){
@@ -774,7 +782,7 @@ int drawSphereOctLines( int n, float R, const Vec3f& pos ){
     nvert += drawCircleAxis( n, pos, {0,0,1}, {0.0d,1.0d,0.0d}, R, dca, dsa );
     nvert += drawCircleAxis( n, pos, {1,0,0}, {0.0d,0.0d,1.0d}, R, dca, dsa );
 	return nvert;
-};
+}
 
 void drawPlanarPolygon( int n, const int * inds, const Vec3d * points ){
     if( n < 3 ) return;
@@ -1206,9 +1214,12 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
     }
 
     int drawMesh( const Mesh& mesh  ){
+        int nvert=0;
         for( Polygon* pl : mesh.polygons ){
             Draw3D::drawPlanarPolygon( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
+            nvert +=pl->ipoints.size();
         }
+        return nvert;
     }
 
     void drawText( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend ){

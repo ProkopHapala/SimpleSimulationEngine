@@ -10,7 +10,7 @@
 #include "MMFFmini.h"
 #include "MMFFparams.h"
 
-#include "eFF.h"
+//#include "eFF.h"
 
 //namespace MMFF{
 
@@ -112,8 +112,8 @@ struct MMFFAtomConf{
     inline bool addH    (     ){ return addNeigh((int)NeighType::H    ,nH ); };
     inline bool addPi   (     ){ return addNeigh((int)NeighType::pi   ,npi); };
     inline bool addEpair(     ){ return addNeigh((int)NeighType::epair,ne ); };
-    inline int  clearNonBond(){ n=nbond; npi=0;ne=0;nH=0; };
-    inline bool setNonBond(int npi_,int ne_){ npi=npi_; int ne=ne_; n=nbond+npi+ne+nH; }
+    inline void clearNonBond(){ n=nbond; npi=0;ne=0;nH=0; };
+    inline void setNonBond(int npi_,int ne_){ npi=npi_; int ne=ne_; n=nbond+npi+ne+nH; }
 
     void print()const{ printf( "AtomConf{ ia %i, n %i nb %i np %i ne %i nH %i (%i,%i,%i,%i) }", iatom, n, nbond, npi, ne, nH , neighs[0],neighs[1],neighs[2],neighs[3] ); }
 };
@@ -392,6 +392,7 @@ class MMFFBuilder{  public:
         //exit(0);
     }
 
+#ifdef EFF_h
     void toEFF( EFF& ff, const EFFAtomType* params, double esize, double dpair ){
         //int ne = bonds.size() * 2; // ToDo
         int ne = 0;
@@ -444,7 +445,7 @@ class MMFFBuilder{  public:
         }
     }
     */
-
+#endif  // EFF_h
 
     // ============= Add Capping Hydrogens
 

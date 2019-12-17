@@ -126,7 +126,7 @@ extern "C"{
     int getAtomPos  ( double * buff ){ return world.getAtomPos  ( (Vec3d*)buff ); };
     int getAtomTypes( int    * buff ){ return world.getAtomTypes(         buff ); };
 
-    int atoms2map(){world.atoms2map();};
+    void atoms2map(){ world.atoms2map();};
 
     double collisionForce( int imol, double * pose, double * fpose ){
         world.collisionForce(  imol,  *((Vec3d*)pose), *((Quat4d*)(pose+3)),  *((Vec3d*)fpose), *((Quat4d*)(fpose+3)) );

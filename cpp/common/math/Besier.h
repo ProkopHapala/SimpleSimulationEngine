@@ -50,7 +50,7 @@
 
 namespace Besier{
 
-    inline double triangleBasisO3( double a, double b, double * bas ){
+    inline void triangleBasisO3( double a, double b, double * bas ){
         double c  = 1-a-b;
         double a2 = a*a;
         bas[0]    = a2*a;      // a3
@@ -67,7 +67,7 @@ namespace Besier{
         bas[9]    = 6*a*b*c;   // abc
     }
 
-    inline double triangleBasisO2( double a, double b, double * bas ){
+    inline void triangleBasisO2( double a, double b, double * bas ){
         double c  = 1-a-b;
         bas[0]    = a*a;    // a3
         bas[1]    = b*b;    // b3

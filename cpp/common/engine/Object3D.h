@@ -42,22 +42,23 @@ class Object3d{ public:
 
     inline bool hitPoint_Object3d( const Vec3d& p, double r ) const {
         return sq(R+r)>pos.dist2(p);
-    };
+    }
 
     inline bool hitLine_Object3d( const Vec3d& p0, const Vec3d& p1, double r ) const {
         Vec3d hdir; hdir.set_sub(p1,p0);
         double l = hdir.normalize();
         double t; return sq(R+r)>linePointDistance2( p0, hdir, pos, l );
-    };
+    }
 
     inline bool hitRay_Object3d( const Vec3d& ray0, const Vec3d& hRay ) const {
         double t; return sq(R)>rayPointDistance2( ray0, hRay, pos, t );
-    };
+    }
 
     inline double ray_Object3d( const Vec3d& ray0, const Vec3d& hRay, Vec3d* normal ) const {
         double t = raySphere( ray0, hRay, R, pos );
         if(normal)sphereNormal( t, ray0, hRay, pos, *normal );
-    };
+        return t;
+    }
 
     //inline bool collide_Object3d( Object3d* obj ){ return hitPoint(obj->pos, obj->R); }
     inline bool collideBoundingSpheres( Object3d* obj ) const { return sq(R+obj->R)>pos.dist2(obj->pos); }
@@ -137,7 +138,7 @@ class Object3D : public Object3D_Interface { public:
         // distance from bounding ellipsoide
         //return bounds.pointIn( point );
         return 0>dist_Ellipsoide( point, gpos, grot, span );
-    };
+    }
 
     virtual double ray( const Vec3d& ray0, const Vec3d& hRay, Vec3d * normal ){
         // distance from bounding volume
@@ -145,10 +146,10 @@ class Object3D : public Object3D_Interface { public:
         //return bounds.ray( hRay, ray0, normal );
         //normal_Ellipsoide( const Vec3d& phit, const Vec3d& pos, const Mat3d& orientation, const Vec3d& invspan );
         return ray_Ellipsoide( ray0, hRay, normal, gpos, grot, span );
-    };
+    }
 
 
-    inline bool initOne(){
+    inline void initOne(){
         lpos.set(0.0,0.0,0.0);
         span.set(1.0,1.0,1.0);
         lrot.a.set(1.0,0.0,0.0);
@@ -157,7 +158,7 @@ class Object3D : public Object3D_Interface { public:
         gpos=lpos; grot=lrot;
     }
 
-    inline bool fromVecs( const Mat3d& mat ){
+    inline void fromVecs( const Mat3d& mat ){
         lrot.set(mat);
         span.a = lrot.a.normalize();
         span.b = lrot.b.normalize();

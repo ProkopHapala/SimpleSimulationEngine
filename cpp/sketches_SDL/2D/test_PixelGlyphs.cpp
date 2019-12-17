@@ -138,7 +138,7 @@ void TestAppPixelGlyphs::draw(){
 void TestAppPixelGlyphs::drawHUD(){
     //printf( "drawGUI \n");
     //Draw2D::drawText( );
-    const char testStr[] = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+    const char testStr[] = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
     int sz = 7;
 
     const char testTextBlock[] = R"(

@@ -44,7 +44,7 @@ class Truss{ public:
 
     void clear();
     void sticksFormString( char * str );
-    int loadXYZ( char* fname );
+    int  loadXYZ( char* fname );
     void affineTransform( Mat3d mat, bool T );
 
     int pickVertex( const Vec3d &ray0, const Vec3d &hRay ) const;
@@ -58,7 +58,6 @@ class Truss{ public:
     void makeGriders( int nEdges, TrussEdge* edges, Vec3d* points, GirderParams* params, Vec3d * ups );
     void makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vector<Vec2i>* ends );
     void autoBridge(int n, Vec2i * ips, double rmax, int kind );
-
 
     Vec2i* getIJs();
 

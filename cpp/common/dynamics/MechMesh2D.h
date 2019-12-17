@@ -103,7 +103,7 @@ void realloc(int nverts_, int nedges_, int ntris_ ){
     _realloc( Us       ,ntris); // internal energy
 }
 
-double updateVerts(double dt){
+void updateVerts(double dt){
     for(int i=0; i<nverts; i++){
         Vec2d& vi = vels[i];
         vi.add_mul(fvs[i],dt*invMass[i]);
@@ -177,7 +177,7 @@ double getPressure(int i){
 }
 */
 
-double getForces(){
+void getForces(){
     // F_vert = dE/d(r_vert) = Sum_i (dE/dV_i)*( dV_i/d(r_vert) )
     for(int i=0; i<ntris; i++){
         const  Vec3i& vi = t2v[i];
@@ -203,7 +203,7 @@ double getForces(){
 }
 
 
-double step(double dt){
+void step(double dt){
 /*
     updateVolume  ();
     pressure2edges();

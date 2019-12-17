@@ -68,7 +68,7 @@ void drawIso( Func func, Vec3i n, Vec3d pmin, Mat3d dcell, double iso ){
 }
 
 template< typename Func >
-double drawIso( Func func, double h, Vec3d pmin, Vec3d pmax, double  iso ){
+void drawIso( Func func, double h, Vec3d pmin, Vec3d pmax, double  iso ){
     Vec3d dp = pmax-pmin;
     double invh = 1/h;
     Vec3i n = { round(dp.x*invh), round(dp.y*invh), round(dp.z*invh) };

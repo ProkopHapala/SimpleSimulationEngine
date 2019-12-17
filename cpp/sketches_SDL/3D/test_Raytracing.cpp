@@ -54,9 +54,9 @@ class TriangleMesh{
                 t_min = t;
                 normal = normal_;
             }
-        };
-
-    };
+        }
+        return t_min;
+    }
 
 };
 

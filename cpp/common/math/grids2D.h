@@ -12,7 +12,7 @@
 //   4 5 6
 //    2 3
 
-inline double subLoopTile(
+inline void subLoopTile(
     double p7, double p8, double p9, double p4, double p5, double p6, double p2, double p3,
     double& o5, double& o6, double& o8, double& o9
 ){
@@ -24,7 +24,7 @@ inline double subLoopTile(
     o6 = (p5+p6)*c_para + (p3+p8)*c_perp;
     o8 = (p5+p8)*c_para + (p6+p7)*c_perp;
     o9 = (p6+p8)*c_para + (p5+p9)*c_perp;
-};
+}
 
 double * subdivideLoopGrid( int nx, int ny, double * ps, double * ps_ ){
     int nx_=nx<<1;

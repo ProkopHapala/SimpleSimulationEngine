@@ -122,16 +122,16 @@ void AeroSurf2D::draw( RigidBody2D& platform ){
 };
 */
 
-double AeroSurf2D::fromString( char * s ){
+void AeroSurf2D::fromString( char * s ){
 	double angle;
 	//printf( "%s \n", s );
 	sscanf ( s, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &pos.x, &pos.y, &angle, &area, &CD0, &dCD, &dCDS, &dCL, &dCLS, &sStall, &wStall );
 	setAngle( angle );
 	printf( "%s \n", toString( ) );
-};
+}
 
 char * AeroSurf2D::toString( ){
 	char * s = new char[1000];
 	sprintf ( s, "%g %g %g %g %g %g %g %g %g %g %g", pos.x, pos.y, phi, area, CD0, dCD, dCDS, dCL, dCLS, sStall, wStall );
 	return s;
-};
+}

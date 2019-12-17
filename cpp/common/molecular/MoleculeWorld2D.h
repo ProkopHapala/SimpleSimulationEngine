@@ -61,6 +61,8 @@ inline bool pairwiseForce( const Vec2d& pa, const Vec2d& pb, double qq, double R
     double fr  = s6*s6 - s6 +qq*s2;
     Fout.set( d.x*fr, d.y*fr );
 
+    return true;
+
     //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) \n", pa.x ,pa.y,  pb.x ,pb.y );
     //printf( " (%3.3f,%3.3f) (%3.3f,%3.3f) (%3.3f,%3.3f)  %3.3f %3.3f %3.3f  (%3.3f,%3.3f) \n", pa.x ,pa.y,  pb.x ,pb.y, d.x, d.y,  r2, s2, fr, Fout.x, Fout.y );
 
@@ -77,7 +79,7 @@ inline bool pairwiseForce( const Vec2d& pa, const Vec2d& pb, double qq, double R
     }
     */
 
-};
+}
 
 
 

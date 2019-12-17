@@ -157,12 +157,13 @@ int_fast64_t TrussBuilder::getBondKey( int_fast16_t ix0, int_fast16_t iy0, int_f
 bool TrussBuilder::removeBond( int_fast16_t ix0, int_fast16_t iy0, int_fast16_t iz0, int_fast16_t ix1, int_fast16_t iy1, int_fast16_t iz1 ){
     int_fast64_t key = getBondKey( ix0, iy0, iz0, ix1, iy1, iz1 );
     if( key >= 0 ){
-        return bonds.erase ( key ) > 0;
+        return bonds.erase( key ) > 0;
     }
+    return false;
 }
 
 
-bool TrussBuilder::removeNodesWithoutBond( ){
+void TrussBuilder::removeNodesWithoutBond( ){
     int  * permut = new int[nodes.size()];
     for(int i=0; i<nodes.size(); i++ ){
         permut[i] = -1;

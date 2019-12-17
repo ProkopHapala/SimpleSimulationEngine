@@ -42,7 +42,7 @@ class TileBuffer3D{
 		buff[ (i*M)+im ] = o;
 	}
 
-	int clear( int ix, int iy, int iz ){
+	void clear( int ix, int iy, int iz ){
 		int i     = xyz2i( ix, iy, iz );
 		int ni    = counts[i];
 		counts[i] = 0;

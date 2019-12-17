@@ -40,6 +40,7 @@ class Radiosity : public TriangleRayTracer, public LinSolver { public:
         _realloc(M,n*n);
         for(int i=0; i<n; i++) M[i*n+i] = 0.0;
         //for(int i=0; i<n; i++) M[i*n+i] = 1.0;
+        int nvalid = 0;
         for(int i=0; i<n; i++){
             SurfElement& eli = elements[i];
             for(int j=0; j<i; j++){
@@ -80,8 +81,10 @@ class Radiosity : public TriangleRayTracer, public LinSolver { public:
 
                 M[i*n+j] = coupling;
                 M[j*n+i] = coupling;
+                nvalid++;
             }
         }
+        return nvalid;
     }
 
     inline void processTriangles( int ntri, Triangle3D* tris, double sz ){

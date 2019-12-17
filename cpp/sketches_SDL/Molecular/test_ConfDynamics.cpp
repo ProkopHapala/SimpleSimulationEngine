@@ -38,6 +38,7 @@ double externalForces(int n, double* pose, double* force){
     constexpr double k=-0.2;
     //for(int i=0; i<3; i++){ force[i]+=k*pos[i]; }   // parabolic well on positions
 
+    double E = 0;
     Vec3d   pos = *(Vec3d*)pose;
     Vec3d* fpos =  (Vec3d*)force;
     for(int i=0; i<nsubstrate; i++){
@@ -45,8 +46,8 @@ double externalForces(int n, double* pose, double* force){
         double ir2 = 1/( 0.25*dpos.norm2() + 0.1);
         fpos->add_mul( dpos, (ir2*ir2 - ir2)  );
     }
-
-};
+    return E;
+}
 
 
 void plotFFplan( int na, int nb, const Vec3d& da, const Vec3d& db, Vec3d pos0, double fscale ){

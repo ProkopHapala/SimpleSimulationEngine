@@ -136,7 +136,7 @@ void scanResidua( int n, int i0, double dx,  int nE, double Emin, double Emax,
 	}
 }
 
-double lincomb( int i0, int i1, double fa, double fb, double * a, double * b, double * out ){
+void lincomb( int i0, int i1, double fa, double fb, double * a, double * b, double * out ){
 	for( int i=i0; i<i1; i++ ){ out[i] = fa*a[i] + fb*b[i]; }
 }
 

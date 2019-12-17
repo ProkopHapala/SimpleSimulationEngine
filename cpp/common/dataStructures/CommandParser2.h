@@ -113,7 +113,7 @@ class CommandParser2{ public:
             case 2: printf( " %s  \n",  (char*) (variables[i].pointer) ); break;
             default: printf( "[Unknown] \n" ); break;
         }
-    };
+    }
 
     void pushArgString(){
         buff[iBuf]='\0';
@@ -122,7 +122,7 @@ class CommandParser2{ public:
         argTypes[nArgs]=2;
         //printf( "pushArg[%i] buff='%s' String '%s' '%s' \n", nArgs, buff, argStrings[nArgs].c_str(), ((std::string*)args[nArgs])->c_str() );
         nArgs++; iBuf=0;
-    };
+    }
 
     int  pushArgFloat (){ buff[iBuf]='\0';
         int iret = sscanf( buff, "%lf", &argFloats[nArgs] );
@@ -132,7 +132,7 @@ class CommandParser2{ public:
         if(iret!=1){printf("argument [%i] >>%s<< is not Float \n",nArgs,buff);};
         nArgs++; iBuf=0;
         return iret;
-    };
+    }
 
     int  pushArgInt   (){ buff[iBuf]='\0';
         int iret = sscanf( buff, "%li", &argInts[nArgs] );
@@ -141,9 +141,9 @@ class CommandParser2{ public:
         //printf( "pushArg[%i] buff='%s' Int %li %li \n", nArgs, buff, argInts[nArgs], *(long*)args[nArgs] );
         if(iret!=1){printf("argument [%i] >>%s<< is not Int   \n",nArgs,buff);};
         nArgs++; iBuf=0;  return iret;
-    };
+    }
 
-    int  pushArgName  (){ buff[iBuf]='\0';
+    int pushArgName  (){ buff[iBuf]='\0';
         std::string vname = buff;
         auto got = name2variable.find(vname);
         if ( got == name2variable.end() ){ printf( "Varaible '%s' not known \n", vname.c_str() ); return -1; }
@@ -154,7 +154,8 @@ class CommandParser2{ public:
             argTypes[nArgs] = var.type;
         };
         nArgs++; iBuf=0;
-    };
+        return 0;
+    }
 
     int execFunction(){
         // check function exist
@@ -180,8 +181,9 @@ class CommandParser2{ public:
         if( bRet ){
             name2variable.insert({retName,variables.size()});
             variables.push_back({func.retType,ret,retName});
-        };
-    };
+        }
+        return 0;
+    }
 
     inline void clearExecTemps(){ nArgs=0;bRet=false; }
 
@@ -204,6 +206,7 @@ class CommandParser2{ public:
                         switch( nameType ){
                             case NameType::Func: buff[iBuf]='\0'; funcName=buff;  iBuf=0; break;
                             case NameType::Var:  pushArgName(); break;
+
                         }
                         inWhat = TokenType::none;
                         //if( c=='"' ){ inWhat = TokenType::string; }else{ inWhat = TokenType::string; }
@@ -262,7 +265,7 @@ class CommandParser2{ public:
             printf( "Type >>%s<< already known => IGNORED \n", str.c_str() );
             return -1;
         };
-    };
+    }
 
     // https://stackoverflow.com/questions/9626722/c-string-array-initialization
     int registerFunction (std::string fname, std::string retType, Strings const& argTypes ){
@@ -284,7 +287,7 @@ class CommandParser2{ public:
         functions.push_back( {argTypes.size(),iret,argTypeIs,fname} );
         printFunction(functions.size()-1);
         return 0;
-    };
+    }
 
     inline int checkFunc(int i, const char * fname){
         //printf( "checkFunc functions[%i].name=='%s' | fname='%s' \n", i, functions[i].name.c_str(), fname );
@@ -292,8 +295,9 @@ class CommandParser2{ public:
             int icmp = strcmp( fname, functions[i].name.c_str() );
             if(icmp!=0) printf( "ERROR functions[%i].name=='%s' not '%s' \n", i, functions[i].name.c_str(), fname );
             return icmp;
-        };
-    };
+        }
+        return -1;
+    }
 
     virtual void* callTable( int ifunc, int nArgs, void** args )=0;
 

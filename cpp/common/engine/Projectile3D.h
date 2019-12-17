@@ -28,6 +28,8 @@ class Projectile3D : public PointBody { public:
     // TO DO : would be usefull if material of target specified
     //virtual void hit(){}
 
+    virtual ~Projectile3D(){};
+
 };
 
 class Burst3d { public:

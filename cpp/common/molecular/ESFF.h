@@ -78,6 +78,7 @@ class ESFF{ public:
 
             }
         }
+        return Eaa;
     }
 
     // electorn-ion interaction
@@ -105,6 +106,7 @@ class ESFF{ public:
                 feps[je].add( f );
             }
         }
+        return Eae;
     }
 
     // electron-electron interaction
@@ -130,10 +132,11 @@ class ESFF{ public:
                 fess[j] = -S*si;
             }
         }
+        return Eee;
     }
 
 
-    double moveSpinGD (double dt){
+    void moveSpinGD (double dt){
         for(int i=0; i<nelec; i++){
             double s = ess[i] + fess[i]*dt;
             if(s<-1.0) s=-1.0;
@@ -142,8 +145,8 @@ class ESFF{ public:
         }
     }
 
-    double moveElecGD (double dt){ for(int i=0; i<nelec; i++){ eps[i].add_mul(feps[i],dt); } }
-    double moveAtomsGD(double dt){ for(int i=0; i<natom; i++){ aps[i].add_mul(faps[i],dt); } }
+    void moveElecGD (double dt){ for(int i=0; i<nelec; i++){ eps[i].add_mul(feps[i],dt); } }
+    void moveAtomsGD(double dt){ for(int i=0; i<natom; i++){ aps[i].add_mul(faps[i],dt); } }
 
 
 };

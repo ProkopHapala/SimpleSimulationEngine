@@ -334,7 +334,7 @@ class TreeParser{ public:
         parse();
     }
 
-    int evalLevel(int i){
+    void evalLevel(int i){
         int level = 1;
         int j = items[i].iSuper;
         //printf("===== %i \n", i );

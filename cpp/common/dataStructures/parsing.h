@@ -45,7 +45,7 @@ struct Node{
     int level   = -1 ;
 
     Node() = default;
-    Node(char kind, int ic0, int parent, char  ) : kind(kind),ic0(ic0),parent(parent){};
+    Node(char kind, int ic0, int parent, char  ) : kind(kind),parent(parent),ic0(ic0){};
 
 };
 
@@ -65,7 +65,7 @@ struct Tuple{
 
     Tuple() = default;
 
-    Tuple(char cKind, char bra, int ic, int iSuper ) : cKind(cKind),bra(bra),ic(ic),iSuper(iSuper){
+    Tuple(char cKind, char bra, int ic, int iSuper ) : bra(bra),cKind(cKind),iSuper(iSuper),ic(ic){
         //bra     = '_';
         iPrev   = -1 ;
         iSuper  = -1 ;

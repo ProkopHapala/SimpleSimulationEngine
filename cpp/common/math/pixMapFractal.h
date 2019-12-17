@@ -22,4 +22,4 @@ inline int binaryPixMapFrac( int nbit, int nbitend, int ix, int iy, int * patter
     return ipatern;
 }
 
-#endif﻿
+#endif

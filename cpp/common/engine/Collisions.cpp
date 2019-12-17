@@ -55,8 +55,10 @@ bool CollisionShape::colideWithTerrain( Terrain25D * terrain, RigidBody& rb ){
     double dh = h+collision_radius-rb.pos.y;
     if(dh>0){
         rb.force.add(-dv.x*dh,dh,-dv.y*dh);
-    };
-};
+        return true;
+    }
+    return false;
+}
 
 // ========================
 // ==== MeshCollisionShape
@@ -65,6 +67,7 @@ bool CollisionShape::colideWithTerrain( Terrain25D * terrain, RigidBody& rb ){
 bool MeshCollisionShape::colideWithTerrain( Terrain25D * terrain, RigidBody& rb ){
     //torq.set(0.0);
     //force.set(0.0);
+    bool b=false;
     for(int i=0; i<mesh->points.size(); i++){
         Vec3d gdp,gv,gp;
         rb.velOfPoint(mesh->points[i], gv, gdp);
@@ -82,10 +85,11 @@ bool MeshCollisionShape::colideWithTerrain( Terrain25D * terrain, RigidBody& rb 
             f.set(-dv.x*dh*clat, dh*cvert, -dv.y*dh*clat);
             rb.apply_force(f,gdp);
             //glColor3f( 0.8f,0.0f,0.0f); Draw3D::drawVecInPos( f, p+rb.pos );
+            b &= true;
         }
-
     }
-};
+    return b;
+}
 
 // =====================
 // ==== CollisionObject

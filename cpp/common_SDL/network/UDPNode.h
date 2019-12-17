@@ -88,14 +88,19 @@ class UDPNode{
 		//printf( " tryReceive: \n" );
 		if ( SDLNet_UDP_Recv( socket, packet ) )	{
 			onRecieve();
+			return true;
 		}
+		return false;
 	}
 
 	bool receiveQuedPackets( ){
 		//printf( " receiveQuedPackets: \n" );
+		bool b=false;
 		while ( SDLNet_UDP_Recv( socket, packet ) )	{
 			onRecieve();
+			b=true;
 		}
+		return b;
 	}
 
 	// ---- other

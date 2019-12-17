@@ -416,7 +416,7 @@ uint32_t MolecularWorld::atom2map( int i, int ix, int iy, int iz ){
     return key;
 }
 
-int MolecularWorld::atom2map( int i, double r ){
+void MolecularWorld::atom2map( int i, double r ){
 
 /*
     for( int i=0; i<10; i++ ){
@@ -470,7 +470,7 @@ int MolecularWorld::atom2map( int i, double r ){
 
 }
 
-int MolecularWorld::atoms2map( ){
+void MolecularWorld::atoms2map( ){
     getAtomPos( atoms_pos );
     atomsMap.clear();
     for(int i=0; i<nAtoms; i++){
@@ -479,7 +479,7 @@ int MolecularWorld::atoms2map( ){
 }
 
 
-int MolecularWorld::collisionForce( int imol, const Vec3d& pos, const Quat4d& qrot,  Vec3d& fpos, Quat4d& frot ){
+void MolecularWorld::collisionForce( int imol, const Vec3d& pos, const Quat4d& qrot,  Vec3d& fpos, Quat4d& frot ){
     MoleculeType * molj = instances[imol];
     int npj = molj->natoms;
     transformPoints( pos, qrot, npj, molj->xyzs, Tps_j );

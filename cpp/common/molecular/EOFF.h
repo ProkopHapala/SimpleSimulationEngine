@@ -63,6 +63,7 @@ inline double FE_ir2(const Vec3d d, Vec3d& f, double cir2){
     double e = cir2*ir2;
     //f.add_mul( dic, (eic)/r2 );
     f.set_mul( d, e/r2 );
+    return e;
 }
 
 inline double FE_r2ir2(const Vec3d d, Vec3d& f, double cr2, double cir2){
@@ -71,6 +72,7 @@ inline double FE_r2ir2(const Vec3d d, Vec3d& f, double cr2, double cir2){
     double e = cir2*ir2 + cr2*r2;
     //f.add_mul( dic, (eic)/r2 );
     f.set_mul( d, e/r2 );
+    return e;
 }
 
 inline double setDistance(Vec3d& p, const Vec3d p0, double r0){
@@ -93,7 +95,8 @@ struct EOFFAtom{
     //Vec3d  orb_v[N_ATOM_ORB];
     //evalEnergyForce( );
 
-    int intraEF(){
+    double intraEF(){
+        double Ein= 0;
         //Vec3d orb_h[N_ATOM_ORB];
         for(int i=0; i<N_ATOM_ORB; i++){
             // NOTE: orbital position fixed on radius
@@ -106,11 +109,13 @@ struct EOFFAtom{
             // TODO: we may rather use radial forcefield instead of radial ?
             for(int j=0; j<N_ATOM_ORB; j++){
                 Vec3d fij;
-                E += FE_ir2( orb_p[j]-orb_p[i], fij, type->oo_ir2);
+                Ein += FE_ir2( orb_p[j]-orb_p[i], fij, type->oo_ir2);
                 orb_f[i].sub(fij);
                 orb_f[j].add(fij);
             }
         }
+        //E+=Ein;
+        return Ein;
     }
 
     void moveGD(double dt){
@@ -260,8 +265,7 @@ class EOFF{ public:
                 //atomi.orb_f[io].add(fik);
             }
         } // ko
-
-
+        return Eoo;
     }
 
 

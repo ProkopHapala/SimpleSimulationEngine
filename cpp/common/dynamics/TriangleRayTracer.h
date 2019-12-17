@@ -57,15 +57,18 @@ class TriangleRayTracer{ public:
         Vec3d da = (tri.a - tri.c)*(1.0/n);
         Vec3d db = (tri.b - tri.c)*(1.0/n);
         Vec3d nr;
+        int nnew=0;
         double area = tri.normalArea(nr)/ntot;
         int i=0;
         for(int ia=0; ia<n; ia++){
             for(int ib=0; ib<(n-ia); ib++){
                 Vec3d p = tri.c + da*(ia+off) + db*(ib+off);
                 elements.push_back( SurfElement(p,nr,area,isurf) );
+                nnew++;
                 i++;
             }
         }
+        return nnew;
     }
 
     inline double trapezElements(

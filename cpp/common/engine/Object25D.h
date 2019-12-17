@@ -32,21 +32,23 @@ class Object25D {
 	}
 
     virtual bool pointIn( const Vec2d& point ){
+        return false; // place holder
         // distance from bounding ellipsoide
         //return bounds.pointIn( point );
         //return 0>dist_Ellipsoide( point, gpos, grot, span );
-    };
+    }
 
     virtual double ray( const Vec2d& ray0, const Vec2d& hRay, Vec2d * normal ){
+        return 1e+300; // place holder
         // distance from bounding volume
         // transform space
         //return bounds.ray( hRay, ray0, normal );
         //normal_Ellipsoide( const Vec3d& phit, const Vec3d& pos, const Mat3d& orientation, const Vec3d& invspan );
         //return ray_Ellipsoide( ray0, hRay, normal, gpos, grot, span );
-    };
+    }
 
 
-    inline bool initOne(){
+    inline void initOne(){
     //    lpos.set(0.0,0.0,0.0);
     //    span.set(1.0,1.0,1.0);
     //    lrot.a.set(1.0,0.0,0.0);

@@ -147,7 +147,7 @@ class SplineManager{
 
     int insertPoint( double t, int m_, const int * which, double * val, double * dval ){
         // if val[which] or dval[which] not avaible it will be computed from interpolation
-
+        return -1; // just place holder
     }
 
 };

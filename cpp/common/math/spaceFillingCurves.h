@@ -94,4 +94,4 @@ inline void d2xy(int n, int d, int *x, int *y) {
 
 }
 
-#endif﻿
+#endif

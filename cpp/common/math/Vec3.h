@@ -268,6 +268,7 @@ class Vec3T{
         T ca,sa;
         sincosR2_taylor(w.norm2(), sa, ca );
         drotate_omega_csa(w,ca,sa);
+        return *this;
     }
 
 	// Rodrigues rotation formula: v' = cosa*v + sina*(uaxis X v) + (1-cosa)*(uaxis . v)*uaxis

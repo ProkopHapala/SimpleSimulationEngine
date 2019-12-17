@@ -734,6 +734,7 @@ bool tryPose( int i0, int n, Vec3d p0, Vec3d p1, Mat3d rot ){
     if( bOK ) bOK = !getCollosion( i0, n, Collision_Rsc, false, poss, 0, 0 );
     //bOK=true;
     if( bOK ){ for(int i=0; i<n; i++) apos[i0+i] = poss[i]; }
+    return bOK;
 }
 
 bool tryFragPose( int ifrag, bool bRel, Vec3d pos, Quat4d qrot ){
@@ -769,6 +770,7 @@ bool tryFragPose( int ifrag, bool bRel, Vec3d pos, Quat4d qrot ){
     //if( bOK ){ for(int i=0; i<n; i++) apos[i0+i] = poss[i]; }
     if( bOK ){ *fragPos=pos;  *fragRot=qrot; }
     //printf( "fragPos (%f,%f,%f) \n", fragPos->x, fragPos->y, fragPos->z );
+    return bOK;
 }
 
 void eval_MorseQ_On2(){

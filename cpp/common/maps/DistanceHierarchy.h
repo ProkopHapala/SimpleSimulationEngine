@@ -2,7 +2,7 @@
 #ifndef  DistanceHierarchy_h
 #define  DistanceHierarchy_h
 
-#include <vector>;
+#include <vector>
 
 template <typename T>
 class DHSearch{ public:

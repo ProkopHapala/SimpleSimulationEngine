@@ -161,6 +161,7 @@ double TestAppTileTree2D::get_speed( int ntry, double xmin, double ymin, double 
         sum += x + y + val;
     }
     printf( " sum %e \n", sum );
+    return sum;
 }
 
 void TestAppTileTree2D::set_speed_ref( int ntry, double xmin, double ymin, double xmax, double ymax ){
@@ -205,6 +206,7 @@ double TestAppTileTree2D::get_speed_ref( int ntry, double xmin, double ymin, dou
         sum += x + y + val;
     }
     printf( " sum %e \n", sum );
+    return sum;
 }
 
 void TestAppTileTree2D::eventHandling( const SDL_Event& event ){

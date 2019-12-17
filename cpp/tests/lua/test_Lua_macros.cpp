@@ -84,7 +84,6 @@ MAKE_FUNC(func5,double,float,int,long,float,double)
     #define LUA_PUSH_int(a)    lua_pushnumber(L,a)
     #define LUA_PUSH_float(a)  lua_pushnumber(L,a)
     #define LUA_PUSH_double(a) lua_pushnumber(L,a)
-    #define LUA_PUSH_float(a)  lua_pushstring(L,a)
 
 //#define LUA_ARGS_2(T1,T2)  LUA_GET_##T1(1), LUA_GET_##T2(2)
 

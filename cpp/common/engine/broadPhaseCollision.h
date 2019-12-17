@@ -369,11 +369,11 @@ class SweepAndPrune{  public:
     Vec3d dir;
     double maxSize=10.0;
     //std::set<int, decltype(comp_bbox_x)>; // sweep(comp_bbox_x);
-    std::map<double,AOO> sweep;
+    std::map<double,AOO> sweep; // unordered (?)
 
-    int insert( int o, const Box& bbox ){
+    void insert( int o, const Box& bbox ){
         //spanAlongDir();
-        sweep.insert( { bbox.a.x, (AOO){o,bbox}} );
+        sweep.insert( { bbox.a.x, (AOO){o,bbox}} ).first;
     }
 
     int overlap( const Box& bbox, int *inds ){

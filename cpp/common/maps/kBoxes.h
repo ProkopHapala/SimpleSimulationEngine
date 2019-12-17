@@ -367,7 +367,7 @@ class KBoxes{ public:
         if(bSweep) updateSweepStable( true );
     }
 
-    int collideBranch( const KBox& Bi ){
+    void collideBranch( const KBox& Bi ){
         int i0=Bi.i0;
         int n =Bi.n;
         for( int jj=i0; jj<i0+n; jj++ ){
@@ -382,7 +382,7 @@ class KBoxes{ public:
         }
     }
 
-    int collideBranches( const KBox& Bi, const KBox& Bj ){
+    void collideBranches( const KBox& Bi, const KBox& Bj ){
         // TODO : optimization where we fist check shared BBox
         for( int jj=Bj.i0; jj<Bj.i0+Bj.n; jj++ ){
             int jb  = permut[jj];
@@ -400,7 +400,7 @@ class KBoxes{ public:
         }
     }
 
-    int collideBranchesNew( const KBox& Bi, const KBox& Bj ){
+    void collideBranchesNew( const KBox& Bi, const KBox& Bj ){
         // TODO : optimization where we fist check shared BBox
         //printf(" collideBranchesNew \n");
         int isel[Bi.n];
@@ -427,7 +427,7 @@ class KBoxes{ public:
         }
     }
 
-    int collideSelf(){
+    void collideSelf(){
         collisionPairs.clear();
         int K = branches.size();
         for( int i=0; i<K; i++ ){
@@ -441,7 +441,7 @@ class KBoxes{ public:
         }
     }
 
-    int collideSelfNew(){
+    void collideSelfNew(){
         collisionPairs.clear();
         int K = branches.size();
         for( int i=0; i<K; i++ ){
@@ -455,7 +455,7 @@ class KBoxes{ public:
         }
     }
 
-    int collideBranches_permuted( const KBox& Bi, const KBox& Bj ){
+    void collideBranches_permuted( const KBox& Bi, const KBox& Bj ){
         for( int jj=Bj.i0; jj<Bj.i0+Bj.n; jj++ ){
             const Box& bj = bodiesPremuted[jj];
             for( int ii=Bi.i0; ii<Bi.i0+Bi.n; ii++ ){
@@ -468,7 +468,7 @@ class KBoxes{ public:
         }
     }
 
-    int collideSelf_permuted(){
+    void collideSelf_permuted(){
         int K = branches.size();
         for( int i=0; i<K; i++ ){
             const KBox& Bi = branches[i];
@@ -551,7 +551,7 @@ class KBoxes{ public:
 };
 
 template<typename Lambda>
-int collideKBoxes( KBoxes& kA, KBoxes& kB, Lambda callback ){
+void collideKBoxes( KBoxes& kA, KBoxes& kB, Lambda callback ){
     int Ka = kA.branches.size();
     int Kb = kB.branches.size();
     for( int i=0; i<Ka; i++ ){
@@ -573,7 +573,7 @@ int collideKBoxes( KBoxes& kA, KBoxes& kB, Lambda callback ){
 }
 
 template<typename Lambda>
-int collideKBoxes_permuted( KBoxes& kA, KBoxes& kB, Lambda callback ){
+void collideKBoxes_permuted( KBoxes& kA, KBoxes& kB, Lambda callback ){
     int Ka = kA.branches.size();
     int Kb = kB.branches.size();
     for( int i=0; i<Ka; i++ ){

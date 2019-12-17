@@ -148,7 +148,11 @@ void FormationTacticsApp::draw(){
 
 	glPushMatrix();
 	glScalef(world.ruler.step,world.ruler.step,1.0);
-	Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, world.ruler.na, world.ground, 0.0, world.maxHeight );
+
+
+
+	// TODO !!!! This function Draw2D::drawTriaglePatch<>() is somehow lost !!!!
+	//Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, world.ruler.na, world.ground, 0.0, world.maxHeight );
 
 	//Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, world.ruler.na, world.pathFinder.moveCosts, 0.0, world.maxHeight );
 	//Draw2D::drawTriaglePatchBas( {0,0}, {128,128}, world.ruler.na, world.pathFinder.toBasin, 0.0, world.maxHeight );

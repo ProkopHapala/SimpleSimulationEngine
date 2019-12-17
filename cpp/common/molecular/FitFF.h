@@ -19,10 +19,10 @@ class AtomPair{ public:
     int paramOffset;
 };
 
-void* relocate( int nbytes, void* arr ){
+void* relocate( int nbytes, char* arr ){
     void* arr_ = new char[nbytes];
     memcpy( arr_, arr, nbytes );
-    delete arr;
+    delete [] arr;
     return arr_;
 };
 
@@ -44,8 +44,8 @@ class FitStructure{ public:
     AtomPair* pairs = NULL;
     //std::vector<AtomPair> pairs;
 
-    double basisEF      ( double r, double* params, double& F ){};
-    double basisVarDeriv( double r, double* params, double* dparams, double Ffactor, double Eerr ){};
+    double basisEF      ( double r, double* params, double& F ){ return 0.; };
+    double basisVarDeriv( double r, double* params, double* dparams, double Ffactor, double Eerr ){ return 0.; };
 
     //int makePairList( double Rcut, Mat3d lvec, Vec3i npbc, int natoms, Vec3d* poss, int ntypes, int* types, int paramPerType, std::vector<AtomPair>& pairs ){
     int makePairs( double Rcut, Vec3i npbc, int ntypes, int paramPerType ){
@@ -78,7 +78,7 @@ class FitStructure{ public:
             }
         }
         npairs=n;
-        pairs = (AtomPair*)relocate( npairs*sizeof(AtomPair), pairs );
+        pairs = (AtomPair*)relocate( npairs*sizeof(AtomPair), (char*)pairs );
         return n;
     }
 

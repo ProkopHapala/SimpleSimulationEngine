@@ -47,7 +47,7 @@ struct AOPairType{
 
     }
 
-    double outer(const Vec3d& hdir, double r, Mat4d& M ){
+    void outer(const Vec3d& hdir, double r, Mat4d& M ){
         //Vec3d up,side;
         // non-zero integrals are ss, sz, zs,  zz, yy, xx,
         //Mat3d rot;

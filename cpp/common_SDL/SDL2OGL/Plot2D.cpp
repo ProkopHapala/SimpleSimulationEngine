@@ -207,7 +207,7 @@ void Plot2D::xsharingLines(int nl, int np, double xmin, double dx, uint32_t* col
     //VecN::arange (np,xmin,dx,xs);
     float dc = 1./nl;
     if(colors==0){ colors=Draw::colors_rainbow; ncol=Draw::ncolors; }
-    uint32_t col;
+    uint32_t col=0;
     if(ncol>0){Draw::colorScale(0,ncol,colors);}else{ col=colors[0]; }
     lines.push_back( new DataLine2D(np,xmin,dx,col) );
     double* xs = lines.back()->xs;

@@ -88,7 +88,7 @@ class SphereNodeND{
     std::vector<int>    leafs; // int can be both branch and leaf
 
     // try shift sphere center toward 'vec' by least amout that sphere contains vec, check if all leafs are still inside sthis sphereNode
-    inline bool tryShift( int n, double * vec, double R ){};
+    inline bool tryShift( int n, double * vec, double R ){ return false; }; // just placeholder
 
 };
 
@@ -134,14 +134,16 @@ class SphereTreeND{
 
     bool insert( double * vec, int id, SphereNodeND* sph_min, double d2min ){
         //double dist2max = R_contain*R_contain;
-        if( d2min > (R_contain*R_contain) ){ // new node required ?
+        bool b=d2min > (R_contain*R_contain);
+        if( b ){ // new node required ?
             // tryShift( int n, double * vec, double R )  // posibly in future ?
             sph_min = new SphereNodeND();
             sph_min->center = vec;
             branches.push_back(sph_min);
         }
         sph_min->leafs.push_back(id);
-    };
+        return b;
+    }
 
     void insert( double * vec, int id ){
         double dist2max = R_contain*R_contain;

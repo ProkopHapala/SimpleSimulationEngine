@@ -169,9 +169,11 @@ class CubeGridRuler : public GridRulerInterface { public:
     }
 
     int overlap_Line(const Vec3d& p0, const Vec3d& p1, int* icells ){
+        return -1;
     }
 
     int overlap_Triangle(const Vec3d& pa, const Vec3d& pb, const Vec3d& pc, int* icells ){
+        return -1;
     }
 
     inline uint64_t ixyz2long( Vec3i      ip         ) const { return (ip.x+OFFSET3D) + ( ( (ip.y+OFFSET3D) + ((ip.z+OFFSET3D)<<NBIT3D) )<<NBIT3D );  }

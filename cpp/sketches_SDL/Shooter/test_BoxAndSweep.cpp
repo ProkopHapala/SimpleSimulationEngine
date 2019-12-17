@@ -135,17 +135,17 @@ TestAppBoxAndSweep::TestAppBoxAndSweep( int& id, int WIDTH_, int HEIGHT_ ) : App
 
     kboxes.collisionPairs.clear();
     t1 = getCPUticks();
-    ncol = kboxes.collideSelf();
+    kboxes.collideSelf();
     T = getCPUticks()-t1; printf( "kboxes.collideSelf      %g [Mticks] | npairs %i \n", T*1.0e-6, kboxes.collisionPairs.size() );
 
     kboxes.collisionPairs.clear();
     t1 = getCPUticks();
-    ncol = kboxes.collideSelf();
+    kboxes.collideSelf();
     T = getCPUticks()-t1; printf( "kboxes.collideSelfNew   %g [Mticks] | npairs %i \n", T*1.0e-6, kboxes.collisionPairs.size() );
 
     kboxes.collisionPairs.clear();
     t1 = getCPUticks();
-    ncol = kboxes.collideSelfSweep();
+    kboxes.collideSelfSweep();
     T = getCPUticks()-t1; printf( "kboxes.collideSelfSweep %g | npairs %i \n", T*1.0e-6, kboxes.collisionPairs.size() );
 
     t1 = getCPUticks();
@@ -154,7 +154,7 @@ TestAppBoxAndSweep::TestAppBoxAndSweep( int& id, int WIDTH_, int HEIGHT_ ) : App
 
     kboxes.collisionPairs.clear();
     t1 = getCPUticks();
-    ncol = kboxes.collideSelfSweep();
+    kboxes.collideSelfSweep();
     T = getCPUticks()-t1; printf( "kboxes.collideSelfSweep %g | npairs %i \n", T*1.0e-6, kboxes.collisionPairs.size() );
 
 

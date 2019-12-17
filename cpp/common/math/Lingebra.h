@@ -22,7 +22,7 @@ namespace Lingebra{
     //double ** from_continuous( int m, int n, double *p );
     double ** from_continuous( int m, int n, double *p, double ** A=0 );
 	double ** new_matrix     ( int m, int n );
-	double ** delete_matrix  ( int m,        double** A );
+	void      delete_matrix  ( int m,        double** A );
 	void transpose           ( int m, int n, double** A, double** TA );
 	void dot                 ( int m, int n, double** A, double* x, double* out );
 	void dotT                ( int m, int n, double** A, double* x, double* out );

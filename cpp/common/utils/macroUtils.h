@@ -34,7 +34,7 @@ struct Buf{
     bool own=false;
 
     void bind(T* data_){ data=data_; };
-    bool alloc(int n  ){ own=true; data=new T[n]; };
+    void alloc(int n  ){ own=true; data=new T[n]; };
     //bool realloc(int n){ bool b=false; if(data){ delete [] data; b=true; }; data=new T[n]; return b; };
     //Arr(T* data_){own=true; };
     Buf() = default;

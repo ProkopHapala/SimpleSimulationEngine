@@ -164,7 +164,7 @@ void checkDerivs2(){
 
 }
 
-int makePlots( Plot2D& plot, EFF& ff ){
+void makePlots( Plot2D& plot, EFF& ff ){
 
     int ielem = 1;
     double QQae = -1.0;
@@ -297,7 +297,7 @@ int makePlots( Plot2D& plot, EFF& ff ){
 
 }
 
-int makePlots2( Plot2D& plot ){
+void makePlots2( Plot2D& plot ){
 
     EFF ff;
     ff.realloc(1,1);
@@ -581,6 +581,39 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
 }
 
+Vec3d v3sum(int n, Vec3d* fs){
+    Vec3d f=Vec3dZero;
+    for(int i=0; i<n; i++){ f.add(fs[i]); }
+    return f;
+}
+
+
+bool checkScalar(const char* s, double v, double vmin, double vmax){
+    bool b = false;
+    if( v<vmin ){
+        printf("%s %g<min(%g)\n", s, v, vmin);
+        b = true;
+    }
+    if( v<vmax ){
+        printf("%s %g<min(%g)\n", s, v, vmin);
+        b = true;
+    }
+    return b;
+}
+
+bool checkFinite(const EFF& ff, double vmin, double vmax ){
+    bool bErr = false;
+
+    //Vec3d  pe = v3sum( ff.ne, ff.epos );      bErr &= checkScalar( "fe", pe.norm(), vmin, vmax);
+    //Vec3d  pa = v3sum( ff.na, ff.apos );      bErr &= checkScalar( "fa", pa.norm(), vmin, vmax);
+    //double ps = VecN::sum( ff.ne, ff.esize ); bErr &= checkScalar( "fs", ps       , vmin, vmax);
+
+    //Vec3d  fe = v3sum( ff.ne, ff.eforce );    bErr &= checkScalar( "fe", fe.norm(), vmin, vmax);
+    //Vec3d  fa = v3sum( ff.na, ff.aforce );    bErr &= checkScalar( "fa", fa.norm(), vmin, vmax);
+    double fs = VecN::sum( ff.ne, ff.fsize );   bErr &= checkScalar( "fs", fs       , vmin, vmax);
+    return bErr;
+}
+
 void TestAppRARFF::draw(){
     //printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
@@ -590,13 +623,21 @@ void TestAppRARFF::draw(){
 
     //return;
 
-    perFrame=1; // ToDo : why it does not work properly for  perFrame>1 ?
+
+    double vminOK = 1e-6;
+    double vmaxOK = 1e+3;
+
+    perFrame=10; // ToDo : why it does not work properly for  perFrame>1 ?
+
+    double sum = 0;
     if(bRun){
         for(int itr=0;itr<perFrame;itr++){
             //printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
             double F2 = 1.0;
 
             ff.clearForce();
+            //VecN::sum( ff.ne*3, ff.eforce );
+
             //applyCartesianBoxForce( {0.0,0.0,0.0}, {0.0,0.0,0.0}, {0,0,50.0}, ff.na, ff.apos, ff.aforce );
             //applyCartesianBoxForce( {0.0,0.0,0.0}, {0.0,0.0,0.0}, {0,0,5.0}, ff.ne, ff.epos, ff.eforce );
             //ff.evalEE();
@@ -605,13 +646,20 @@ void TestAppRARFF::draw(){
             ff.eval();
             //ff.apos[0].set(.0);
 
+            //checkFinite( ff, vminOK, vmaxOK );
+
+            //printf( "fa1(%g,%g,%g) fe1(%g,%g,%g)\n", fa1.x,fa1.x,fa1.x,   fe1.x,fe1.x,fe1.x );
+
             //VecN::set( ff.na*3, 0.0, (double*)ff.aforce ); // FIX ATOMS
             //VecN::set( ff.ne, 0.0, ff.fsize ); // FIX ELECTRON SIZE
             //if(bRun)ff.move_GD(0.001 );
 
-            //ff.move_GD( 0.0001 );
+            //ff.move_GD( 0.001 );
+            ff.move_GD_noAlias( 0.0001 );
 
-            F2 = opt.move_FIRE();
+            //F2 = opt.move_FIRE();
+
+            //checkFinite( ff, vminOK, vmaxOK );
 
             printf( "=== frame[%i][%i] |F| %g \n", frameCount, itr, sqrt(F2) );
             //if(!(F2<1000000.0))perFrame=0;

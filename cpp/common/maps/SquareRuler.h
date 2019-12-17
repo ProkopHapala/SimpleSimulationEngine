@@ -99,15 +99,15 @@ class SquareRuler : public GridIndex2D { public:
 
     inline void setStep( double step_ ){ step = step_; invStep = 1.0d/step; };
 
-    int rayStart( Vec2d ray0, Vec2d hray ){}
-    int rayStep(){}
+    void rayStart( Vec2d ray0, Vec2d hray ){}
+    void rayStep(){}
 
-    double sampleLine( int n, Vec2d p, Vec2d dp, const double * vmap, double* vals ){
+    void sampleLine( int n, Vec2d p, Vec2d dp, const double * vmap, double* vals ){
         for(int i=0; i<n; i++){ vals[i] = getValue_cubic( p, vmap ); p.add(dp); }
     }
 
-    int rayCut( Vec2d ray0, Vec2d hray, const double * vmap, double * ts, double* vals, double tmax ){}
-    int rayHorizonts( Vec2d p, Vec2d hray, const double * vmap, double rayh0, int ndhs, double * dhs, double * ts, double tmax ){}
+    void rayCut( Vec2d ray0, Vec2d hray, const double * vmap, double * ts, double* vals, double tmax ){}
+    void rayHorizonts( Vec2d p, Vec2d hray, const double * vmap, double rayh0, int ndhs, double * dhs, double * ts, double tmax ){}
 
 };
 

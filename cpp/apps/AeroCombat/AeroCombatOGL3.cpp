@@ -333,12 +333,13 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
     //Cone2Mesh( {20,20}, {0.01,0.0}, {0.99,M_PI*2.0},     1.0,0.2,3.0, false, mshbuild );
     //Sphere2Mesh  ( {20,20}, {-M_PI*0.4,0.0}, {M_PI*0.4,M_PI},     1.0        , false, mshbuild );
     //Torus2Mesh   ( {20,20}, {0.0,0.0},       {M_PI*2.0,M_PI*2.0}, 0.5,1.5,     false, mshbuild );
-    Teardrop2Mesh( {20,16}, {0.01,0.0}, {0.99,M_PI*2.0},   0.8,0.2,6.0, false, mshbuild );    mshbuild.moveSub ( 0, {0.0,0.0,1.0} );
-    //Sphere2Mesh  ( {20,20}, {-M_PI*0.49,0.0}, {M_PI*0.49,M_PI},     1.0 , false, mshbuild ); mshbuild.scaleSub( 1, {0.5,0.5,1.0} );
-    Teardrop2Mesh( {10,8}, {0.01,0.0}, {0.99,M_PI}, 0.5,0.1,1.0, false, mshbuild ); mshbuild.moveSub( 1, {0.0,0.45,-1.5} );
+    // void Teardrop2Mesh( Vec2i n, Vec2f UVmin, Vec2f UVmax, float R1, float R2, float L, float voff, bool wire, GLMeshBuilder& mesh ){
+    Teardrop2Mesh( {20,16}, {0.01,0.0}, {0.99,M_PI*2.0},   0.8,0.2,6.0, 0.5, false, mshbuild );    mshbuild.moveSub ( 0, {0.0,0.0,1.0} );
+    //Sphere2Mesh  ( {20,20}, {-M_PI*0.49,0.0}, {M_PI*0.49,M_PI},     1.0, 0.5, false, mshbuild ); mshbuild.scaleSub( 1, {0.5,0.5,1.0} );
+    Teardrop2Mesh( {10,8}, {0.01,0.0}, {0.99,M_PI}, 0.5,0.1,1.0, 0.5, false, mshbuild ); mshbuild.moveSub( 1, {0.0,0.45,-1.5} );
     float naca1[4]={2.0,0.15,0.0,0.0};
     float naca2[4]={1.0,0.15,0.0,0.0};
-    NACASegment2Mesh( {20,2}, {-1.0,0.0}, {1.0,1.0}, naca1,naca2, 5.0, false, mshbuild );
+    NACASegment2Mesh( {20,2}, {-1.0,0.0}, {1.0,1.0}, naca1,naca2, 5.0, 0.5, false, mshbuild );
     //NACASegment2Mesh( {20,2}, {-1.0,0.0}, {1.0,1.0}, naca1,naca2, 5.0, false, mshbuild );
     mshbuild.duplicateSub( 2 ); mshbuild.scaleSub( 3, {-1.0,1.0,1.0} );
     mshbuild.duplicateSub( 2 ); mshbuild.scaleSub( 4, { 0.4,0.5,0.5} ); mshbuild.moveSub( 4, {0.0,0.0,-4.0} );

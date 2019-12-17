@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
- 
+
 #include <SDL2/SDL.h>
 #include "SDL2/SDL_net.h"
 
@@ -16,8 +16,8 @@ class TestServer : public UDPNode {
 	double restitution = -0.8;
 	double gravity     = -9.81;
 
-	double move( double dt ){
-		 
+	void move( double dt ){
+
 		vx += ( vx * friction           ) * dt;
 		vy += ( vy * friction + gravity ) * dt;
 
@@ -31,11 +31,12 @@ class TestServer : public UDPNode {
 
 		iframe++;
 		t+=dt;
+		//return t;
 	}
 
 	virtual bool onSend(){
-		int ibyte = 0;	
-		((double *)(packet->data+ibyte))[0] = t;       ibyte+=sizeof(double);	
+		int ibyte = 0;
+		((double *)(packet->data+ibyte))[0] = t;       ibyte+=sizeof(double);
 		((double *)(packet->data+ibyte))[0] = x;       ibyte+=sizeof(double);
  		((double *)(packet->data+ibyte))[0] = y;       ibyte+=sizeof(double);
 		((double *)(packet->data+ibyte))[0] = vx;      ibyte+=sizeof(double);
@@ -45,7 +46,7 @@ class TestServer : public UDPNode {
 		return true;
 	}
 
-	virtual void onRecieve(){ 
+	virtual void onRecieve(){
 		//printPacketInfo( );
 		//printf( "recieved: %s \n", (char*)packet->data );
 		for( int i=0; i<packet->len; i++ ){
@@ -65,7 +66,7 @@ int main(int argc, char **argv){
 
 	server.init_UDP      ( 0, 2000, 512      );
 	server.tryConnect_UDP( "localhost", 2001 );
-	
+
 	while (true){
 		server.receiveQuedPackets( );
 		server.move( 0.01 );

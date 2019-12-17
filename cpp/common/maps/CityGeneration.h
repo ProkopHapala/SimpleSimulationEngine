@@ -65,6 +65,7 @@ class QuadNode{ public:
         Vec2d* ps0 = &ps[0];
         Vec2d c00=*(ps0+i00),c01=*(ps0+i01),c10=*(ps0+i10),c11=*(ps0+i11);
         isp0 = ps.size();
+        int nnew=0;
         for(int ib=0; ib<=n.b; ib++){
             double b,mb; b=getButEdge(ib-1,n.b-1,bs,0.0,1.0); mb=1-b;
             //printf( "ia %i %f %f \n", ia, a, ma  );
@@ -76,8 +77,10 @@ class QuadNode{ public:
                 //printf( "(%i,%i) (%f,%f) (%f,%f) \n", ia,ib,  a,b, v.x,v.y  );
                 //if((ia>0)&&(ib>0))printf( "(%i,%i) %i \n", ia,ib, ps.size() );
                 ps.push_back( v );
+                nnew++;
             }
         }
+        return nnew;
     }
 
     int makeSubPoints2( Vec2i n_, Vec2d jitter, std::vector<Vec2d>& ps ){
@@ -87,6 +90,7 @@ class QuadNode{ public:
         isp0 = ps.size();
         double step_a = 1.0d/n.a;
         double step_b = 1.0d/n.b;
+        int nnew=0;
         for(int ib=0; ib<=n.b; ib++){
             for(int ia=0; ia<=n.a; ia++){
                 double a,b,ma,mb;
@@ -98,8 +102,10 @@ class QuadNode{ public:
                 b = ( ib + b )*step_b; mb=1-b;
                 Vec2d v = (c00*ma + c01*a)*mb  +  (c10*ma + c11*a)*b;
                 ps.push_back( v );
+                nnew++;
             }
         }
+        return nnew;
     }
 
     int makeSubQuads( ){

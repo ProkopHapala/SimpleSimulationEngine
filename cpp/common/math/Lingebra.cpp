@@ -33,7 +33,7 @@ double ** new_matrix( int m, int n ){
     return A;
 }
 
-double ** delete_matrix( int m, double** A ){
+void delete_matrix( int m, double** A ){
     for (int i=0; i<m; i++ ){ delete A[i]; }
     delete [] A;
 }
@@ -756,7 +756,7 @@ void jacobi_eigenvalue ( int n, double a[], int it_max, double v[], double d[], 
 void aproxOrthoNormStep(int nv, int m, double * M ){
     for(int i=0;i<nv;i++){
         double* vi = M+i*m;
-        for(int j=0;j<j;j++){
+        for(int j=0;j<i;j++){
             double* vj = M+j*m;
             double cij = 0;
             for(int k=0;k<m;k++){ cij += vi[k]*vj[k]; }
@@ -787,7 +787,7 @@ void orthtoForce(int nv, int m, double * P, double * F ){
         // taylor for sqrt( 1 +   x )
         double ch = -x*( -0.5d + x*( 0.375d + x*-0.3125d ) );
         for(int k=0;k<m;k++){ fi[k]+=pi[k]*ch; }
-        for(int j=0;j<j;j++){
+        for(int j=0;j<i;j++){
             double* pj = P+j*m;
             double* fj = F+j*m;
             double cij = 0;

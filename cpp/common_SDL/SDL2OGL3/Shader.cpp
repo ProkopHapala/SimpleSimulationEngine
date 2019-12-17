@@ -58,6 +58,7 @@ int Shader::init_str( const char * vertexsource , const char * fragmentsource, c
     compileShader( GL_FRAGMENT_SHADER, fragmentsource, fragmentshader, errLog  ); checkError( errLog, " Error in Fragment Shader: \n" );
     if( GSsrc  ){ compileShader( GL_GEOMETRY_SHADER, GSsrc, geomShader, errLog  ); checkError( errLog, " Error in Geometry Shader: \n" ); }
     compileShaderProgram( vertexshader, fragmentshader, geomShader, shaderprogram, errLog ); checkError( errLog, " Error in linking of Shader Program: \n" );
+    return 0;
 }
 
 int Shader::init( const char * vertName, const char * fragName, const char * GSName ){
