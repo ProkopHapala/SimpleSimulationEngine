@@ -223,6 +223,7 @@ void realloc(int na_, int ne_){
     //_realloc( eforce ,ne);
     //_realloc( evel   ,ne);
 
+/*
     apos   = (Vec3d*)pDOFs;
     aforce = (Vec3d*)fDOFs;
 
@@ -230,6 +231,17 @@ void realloc(int na_, int ne_){
     eforce = (Vec3d*)(fDOFs + na*3);
     esize  =          pDOFs + na*3 + ne*3;
     fsize  =          fDOFs + na*3 + ne*3;
+*/
+
+
+    _realloc(apos  ,na );
+    _realloc(aforce,na );
+
+    _realloc(epos  ,ne );
+    _realloc(eforce,ne );
+    _realloc(esize ,ne );
+    _realloc(fsize ,ne );
+
 
 }
 
@@ -242,16 +254,11 @@ void dealloc(){
     delete [] espin;
 }
 
-void clearForce(){
-    for(int i=0; i<nDOFs; i++){ fDOFs[i]=0; };
-    //for(int i=0; i<nDOFs; i++){ fDOFs[i]=Vec3dZero; };
-}
-
 double evalKinetic(){
     Ek=0;
     for(int i=0; i<ne; i++){
         Ek += addKineticGauss( esize[i], fsize[i] );
-        if( i_DEBUG>0 ) printf( "evalKinetic[%i] s %g -> f %g Ek %g \n", i, esize[i], fsize[i], Ek );
+        //if( i_DEBUG>0 ) printf( "evalKinetic[%i] s %g -> f %g Ek %g \n", i, esize[i], fsize[i], Ek );
     }
     return Ek;
 }
@@ -273,11 +280,11 @@ double evalEE(){
             double  sj  = esize[j];
             double& fsj = fsize[j];
             Eee     += addCoulombGauss( dR, si, sj, f, fsi, fsj, qq );
-            EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
-            //if( spini==espin[j] ) EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, false, KRSrho );
+            //EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
+            if( spini==espin[j] ) EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, false, KRSrho );
             //if( spini==espin[j] ) EeePaul += addDensOverlapGauss_S( dR,si,sj, 1, f, fsi, fsj );
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
-            if( i_DEBUG>0 ) printf( "evalEE[%i,%i] dR(%g,%g,%g) s(%g,%g) q %g  ->   f(%g,%g,%g) fs(%g,%g) \n", i,j, dR.x,dR.y,dR.z, si,sj, qq,   f.x,f.y,f.z, fsi,fsj );
+            //if( i_DEBUG>0 ) printf( "evalEE[%i,%i] dR(%g,%g,%g) s(%g,%g) q %g  ->   f(%g,%g,%g) fs(%g,%g) \n", i,j, dR.x,dR.y,dR.z, si,sj, qq,   f.x,f.y,f.z, fsi,fsj );
             eforce[j].sub(f);
             fi       .add(f);
             //glColor3f(1.0,0.0,0.0);
@@ -285,7 +292,7 @@ double evalEE(){
             //Draw3D::drawVecInPos( f   , pi      );
         }
     }
-    if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalEE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
+    //if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalEE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
     return Eee+EeePaul;
 }
 
@@ -309,18 +316,19 @@ double evalAE(){
             double  sj  = esize[j];
             double& fsj = fsize[j];
             Eae                      += addCoulombGauss      ( dR,sj,                 f, fsj, qqi     );     // correct
-            if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
+            //if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
             //if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );     // correct
 
             //if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             eforce[j].sub(f);
             aforce[i].add(f);
-            //glColor3f(1.0,0.0,1.0);
+
+            glColor3f(1.0,0.0,1.0);
             //Draw3D::drawVecInPos( f*-1, epos[j] );
-            //Draw3D::drawVecInPos( f   , pi      );
+            Draw3D::drawVecInPos( f   , pi      );
         }
     }
-    if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalAE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
+    //if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalAE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
     return Eae+EaePaul;
 }
 
@@ -345,8 +353,8 @@ double evalAA(){
             aforce[j].sub(f);
             aforce[i].add(f);
             //glColor3f(1.0,0.0,0.0);
-            //Draw3D::drawVecInPos( f*-1, apos[j] );
-            //Draw3D::drawVecInPos( f   , pi      );
+            Draw3D::drawVecInPos( f*-1, apos[j] );
+            Draw3D::drawVecInPos( f   , pi      );
         }
     }
     return Eaa;
@@ -361,6 +369,19 @@ double eval(){
     ;
 }
 
+void clearForce(){
+    for(int i=0; i<nDOFs; i++){ fDOFs[i]=0; }
+}
+
+void clearForce_noAlias(){
+    for(int i=0;i<na;i++){
+        aforce[i]=Vec3dZero;
+    }
+    for(int i=0;i<ne;i++){
+        eforce[i]=Vec3dZero;
+        fsize[i]=0;
+    }
+}
 
 void move_GD(double dt){
     double sum = 0;
@@ -373,19 +394,19 @@ void move_GD(double dt){
 }
 
 void move_GD_noAlias(double dt){
-    Vec3d fe=Vec3dZero,fa=Vec3dZero;
-    double fs=0;
+    //Vec3d fe=Vec3dZero,fa=Vec3dZero;
+    //double fs=0;
     for(int i=0;i<na;i++){
         apos[i].add_mul( aforce[i], dt );
-        fa.add( aforce[i] );
+        //fa.add( aforce[i] );
     }
     for(int i=0;i<ne;i++){
         epos [i].add_mul( eforce[i], dt );
-        fe.add( aforce[i] );
-        esize[i] += fsize[i] * dt;
-        fs += fsize[i];
+        //fe.add( aforce[i] );
+        //esize[i] += fsize[i] * dt;
+        //fs += fsize[i];
     }
-    printf( "fs %g fe(%g,%g,%g) fa(%g,%g,%g)\n", fs, fe.x,fe.y,fe.z, fa.x,fa.y,fa.z );
+    //printf( "fs %g fe(%g,%g,%g) fa(%g,%g,%g)\n", fs, fe.x,fe.y,fe.z, fa.x,fa.y,fa.z );
 }
 
 void autoAbWs( const Vec3d * AAs, const Vec3d * AEs ){

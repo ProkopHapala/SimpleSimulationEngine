@@ -29,9 +29,8 @@ message ( "CMAKE_BUILD_TYPE   ${CMAKE_BUILD_TYPE}  " )
 #SET( AXULIARY_COMPILE_FLAGS "-w -O2 -fPIC -march=native ")
 #SET( AXULIARY_COMPILE_FLAGS "-O2 -fPIC -march=native ")
 SET( IGNORE_WARRNING_FLAGS "-Wno-maybe-uninitialized -Wno-char-subscripts -Wno-write-strings -Wno-format -Wno-parentheses -Wno-unused-but-set-variable  -Wno-narrowing -Wno-unused-result  -Wno-sign-compare -Wno-strict-aliasing -Wno-unused-variable -Wno-unused-value -Wno-comment -Wno-misleading-indentation " )
-SET( AXULIARY_COMPILE_FLAGS "-O2 -fPIC -march=native -fno-strict-aliasing " )
-
-#SET( AXULIARY_COMPILE_FLAGS "-w -g -Og -fPIC ")
+#SET( AXULIARY_COMPILE_FLAGS "-O2 -fPIC -march=native " )
+SET( AXULIARY_COMPILE_FLAGS "-g -Og -fPIC -fno-strict-aliasing ")
 SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${AXULIARY_COMPILE_FLAGS} ${IGNORE_WARRNING_FLAGS}" )
 message ( "CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} )
 

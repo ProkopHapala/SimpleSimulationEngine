@@ -473,10 +473,10 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/Ce4_eFF.xyz";
     //char* fname = "data/CH3_eFF_spin.xyz";
     //char* fname = "data/CH4_eFF_flat_spin.xyz";
-    //char* fname = "data/CH4_eFF_spin.xyz";
+    char* fname = "data/CH4_eFF_spin.xyz";
     //char* fname = "data/C2_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin.xyz";
-    char* fname = "data/C2H4_eFF_spin_.xyz";
+    //char* fname = "data/C2H4_eFF_spin_.xyz";
     //char* fname = "data/C2H6_eFF_spin.xyz";
     //char* fname = "data/C2H6_eFF_spin_.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
@@ -484,11 +484,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
 
 
-
-
-
-    // ================== Brush using
-
+    // ================== Generate Atomic
+    /*
     //const int natom=4,nbond=3,nang=2,ntors=1;
     const int natom=4,nbond=3;
     Vec3d apos0[] = {
@@ -527,9 +524,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         //builder.makeSPConf(i);
     }
     //builder.toMMFFmini( ff );
-    DEBUG
     builder.toEFF( ff, EFFparams, 0.5, 0.025 );
-    DEBUG
+    */
+
 
     //setGeom(ff);
     //double sz = 0.51;
@@ -587,6 +584,17 @@ Vec3d v3sum(int n, Vec3d* fs){
     return f;
 }
 
+Vec3d v3min(int n, Vec3d* fs){
+    Vec3d f={1e+300,1e+300,1e+300};
+    for(int i=0; i<n; i++){ f.setIfLower( fs[i] ); }
+    return f;
+}
+
+Vec3d v3max(int n, Vec3d* fs){
+    Vec3d f={-1e+300,-1e+300,-1e+300};
+    for(int i=0; i<n; i++){ f.setIfGreater( fs[i] ); }
+    return f;
+}
 
 bool checkScalar(const char* s, double v, double vmin, double vmax){
     bool b = false;
@@ -603,6 +611,28 @@ bool checkScalar(const char* s, double v, double vmin, double vmax){
 
 bool checkFinite(const EFF& ff, double vmin, double vmax ){
     bool bErr = false;
+    Vec3d pmin,pmax,  fmin,fmax, psum,fsum;
+    pmin = v3min( ff.ne, ff.epos );  pmax = v3max( ff.ne, ff.epos );
+    fmin = v3min( ff.ne, ff.eforce); fmax = v3max( ff.ne, ff.eforce );
+    fsum = v3sum( ff.ne, ff.eforce); Vec3d ftot = fsum;
+    psum = v3sum( ff.ne, ff.epos  ); Vec3d ptot = psum;
+    //printf("pe min(%g,%g,%g) max(%g,%g,%g) | fe min(%g,%g,%g) max(%g,%g,%g) \n", pmin.x,pmin.y,pmin.z,   pmax.x,pmax.y,pmax.z,     fmin.x,fmin.y,fmin.z, fmax.x,fmax.y,fmax.z );
+    //printf("fe sum(%g,%g,%g) min(%g,%g,%g) max(%g,%g,%g) \n", fsum.x,fsum.y,fsum.z,     fmin.x,fmin.y,fmin.z, fmax.x,fmax.y,fmax.z );
+    printf("fe sum(%g,%g,%g) pe sum(%g,%g,%g) \n", fsum.x,fsum.y,fsum.z,  psum.x,psum.y,psum.z   );
+
+    pmin = v3min( ff.na, ff.apos   ); pmax = v3max( ff.na, ff.apos   );
+    fmin = v3min( ff.na, ff.aforce ); fmax = v3max( ff.na, ff.aforce );
+    fsum = v3sum( ff.na, ff.aforce ); ptot.add(psum);
+    psum = v3sum( ff.na, ff.apos   ); ftot.add(fsum);
+    //printf("pa min(%g,%g,%g) max (%g,%g,%g) | fa min(%g,%g,%g) max(%g,%g,%g) \n", pmin.x,pmin.y,pmin.z,   pmax.x,pmax.y,pmax.z,    fmin.x,fmin.y,fmin.z, fmax.x,fmax.y,fmax.z );
+    //printf("fa sum(%g,%g,%g) min(%g,%g,%g) max(%g,%g,%g) \n", fsum.x,fsum.y,fsum.z,     fmin.x,fmin.y,fmin.z, fmax.x,fmax.y,fmax.z );
+    printf("fe sum(%g,%g,%g) pe sum(%g,%g,%g) \n", fsum.x,fsum.y,fsum.z,  psum.x,psum.y,psum.z   );
+    printf( "ftot (%g,%g,%g) ptot (%g,%g,%g)\n", ftot.x, ftot.y, ftot.z,     ptot.x, ptot.y, ptot.z );
+
+    //fmin = v3min( ff.ne, ff.epos ); pmax = v3max( ff.ne, ff.epos ); printf("pe min(%g,%g,%g) max (%g,%g,%g)\n", pmin.x,pmin.y,pmin.z,   pmax.x,pmax.y,pmax.z );
+    //fmin = v3min( ff.na, ff.apos ); pmax = v3max( ff.na, ff.apos ); printf("pa min(%g,%g,%g) max (%g,%g,%g)\n", pmin.x,pmin.y,pmin.z,   pmax.x,pmax.y,pmax.z );
+
+    //pmin = v3min( ff.ne, ff.epos ); pmax = v3max( ff.ne, ff.epos ); printf("pe min(%g,%g,%g) max (%g,%g,%g)\n", pmin.x,pmin.y,pmin.z,   pmax.x,pmax.y,pmax.z );
 
     //Vec3d  pe = v3sum( ff.ne, ff.epos );      bErr &= checkScalar( "fe", pe.norm(), vmin, vmax);
     //Vec3d  pa = v3sum( ff.na, ff.apos );      bErr &= checkScalar( "fa", pa.norm(), vmin, vmax);
@@ -610,7 +640,7 @@ bool checkFinite(const EFF& ff, double vmin, double vmax ){
 
     //Vec3d  fe = v3sum( ff.ne, ff.eforce );    bErr &= checkScalar( "fe", fe.norm(), vmin, vmax);
     //Vec3d  fa = v3sum( ff.na, ff.aforce );    bErr &= checkScalar( "fa", fa.norm(), vmin, vmax);
-    double fs = VecN::sum( ff.ne, ff.fsize );   bErr &= checkScalar( "fs", fs       , vmin, vmax);
+    //double fs = VecN::sum( ff.ne, ff.fsize );   bErr &= checkScalar( "fs", fs       , vmin, vmax);
     return bErr;
 }
 
@@ -627,7 +657,7 @@ void TestAppRARFF::draw(){
     double vminOK = 1e-6;
     double vmaxOK = 1e+3;
 
-    perFrame=10; // ToDo : why it does not work properly for  perFrame>1 ?
+    perFrame=1; // ToDo : why it does not work properly for  perFrame>1 ?
 
     double sum = 0;
     if(bRun){
@@ -635,7 +665,8 @@ void TestAppRARFF::draw(){
             //printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
             double F2 = 1.0;
 
-            ff.clearForce();
+            //ff.clearForce();
+            ff.clearForce_noAlias();
             //VecN::sum( ff.ne*3, ff.eforce );
 
             //applyCartesianBoxForce( {0.0,0.0,0.0}, {0.0,0.0,0.0}, {0,0,50.0}, ff.na, ff.apos, ff.aforce );
@@ -661,7 +692,8 @@ void TestAppRARFF::draw(){
 
             //checkFinite( ff, vminOK, vmaxOK );
 
-            printf( "=== frame[%i][%i] |F| %g \n", frameCount, itr, sqrt(F2) );
+            printf( "Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
             //if(!(F2<1000000.0))perFrame=0;
         }
     }
