@@ -27,6 +27,16 @@
 #define R2SAFE  1.0e-8f
 
 int i_DEBUG = 0;
+
+int DEBUG_i = 0;
+int DEBUG_j = 0;
+
+Vec3d* DEBUG_fe_ae =0;
+Vec3d* DEBUG_fa_ae =0;
+Vec3d* DEBUG_fe_ee =0;
+Vec3d* DEBUG_fa_aa =0;
+
+
 #include "DynamicOpt.h"
 #include "eFF.h"
 #include "e2FF.h"
@@ -49,6 +59,17 @@ int pickParticle( int n, Vec3d * ps, const Mat3d& cam, double R ){
 }
 */
 
+
+void cleanDebugForce(int ne, int na){
+    for(int i=0; i<ne; i++){
+        DEBUG_fe_ae[i]=Vec3dZero;
+        DEBUG_fe_ee[i]=Vec3dZero;
+    }
+    for(int i=0; i<na; i++){
+        DEBUG_fa_ae[i]=Vec3dZero;
+        DEBUG_fa_aa[i]=Vec3dZero;
+    }
+};
 
 void printFFInfo(const EFF& ff){
     printf( "=== ElectronForcefield(ne %i,na %i) \n", ff.ne, ff.na );
@@ -458,11 +479,12 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     plot1.fontTex=fontTex;
 
-    checkDerivs( ff.KRSrho );   // exit(0);
+    //checkDerivs( ff.KRSrho );   // exit(0);
     //makePlots( plot1, ff );  // return; //      exit(0);
-    makePlots2( plot1 ); //return;
 
-    checkDerivs2();
+    //makePlots2( plot1 ); //return;
+
+    //checkDerivs2();
 
 
     // ===== SETUP GEOM
@@ -473,19 +495,18 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/Ce4_eFF.xyz";
     //char* fname = "data/CH3_eFF_spin.xyz";
     //char* fname = "data/CH4_eFF_flat_spin.xyz";
-    char* fname = "data/CH4_eFF_spin.xyz";
+    //char* fname = "data/CH4_eFF_spin.xyz";
     //char* fname = "data/C2_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin_.xyz";
-    //char* fname = "data/C2H6_eFF_spin.xyz";
+    char* fname = "data/C2H6_eFF_spin.xyz";
     //char* fname = "data/C2H6_eFF_spin_.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
-    ff.loadFromFile_xyz( fname );
-
+    //ff.loadFromFile_xyz( fname );
 
 
     // ================== Generate Atomic
-    /*
+
     //const int natom=4,nbond=3,nang=2,ntors=1;
     const int natom=4,nbond=3;
     Vec3d apos0[] = {
@@ -525,8 +546,14 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     }
     //builder.toMMFFmini( ff );
     builder.toEFF( ff, EFFparams, 0.5, 0.025 );
-    */
 
+
+    DEBUG
+
+    DEBUG_fe_ae = new Vec3d[ff.ne];
+    DEBUG_fa_ae = new Vec3d[ff.na];
+    DEBUG_fe_ee = new Vec3d[ff.ne];
+    DEBUG_fa_aa = new Vec3d[ff.na];
 
     //setGeom(ff);
     //double sz = 0.51;
@@ -536,6 +563,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
     //exit(0);
 
+    DEBUG
     ff.autoAbWs( default_aAbWs, default_eAbWs );
     //exit(0);
 
@@ -543,6 +571,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     // ==== Test Eval
 
+    DEBUG
     i_DEBUG = 1;
     ff.eval();
     printf( "Ek %g Eaa %g Eae %g Eee %g EeePaul %g \n", ff.Ek, ff.Eaa, ff.Eae, ff.Eee, ff.EeePaul );
@@ -576,6 +605,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     Draw3D::drawSphere_oct(3,1.0d,(Vec3d){0.,0.,0.});
     glEndList();
 
+    DEBUG
 }
 
 Vec3d v3sum(int n, Vec3d* fs){
@@ -653,11 +683,10 @@ void TestAppRARFF::draw(){
 
     //return;
 
-
     double vminOK = 1e-6;
     double vmaxOK = 1e+3;
 
-    perFrame=1; // ToDo : why it does not work properly for  perFrame>1 ?
+    perFrame=10; // ToDo : why it does not work properly for  perFrame>1 ?
 
     double sum = 0;
     if(bRun){
@@ -665,8 +694,9 @@ void TestAppRARFF::draw(){
             //printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
             double F2 = 1.0;
 
-            //ff.clearForce();
-            ff.clearForce_noAlias();
+            ff.clearForce();
+            //ff.clearForce_noAlias();
+            cleanDebugForce( ff.ne, ff.na);
             //VecN::sum( ff.ne*3, ff.eforce );
 
             //applyCartesianBoxForce( {0.0,0.0,0.0}, {0.0,0.0,0.0}, {0,0,50.0}, ff.na, ff.apos, ff.aforce );
@@ -676,7 +706,6 @@ void TestAppRARFF::draw(){
             //ff.evalAA();
             ff.eval();
             //ff.apos[0].set(.0);
-
             //checkFinite( ff, vminOK, vmaxOK );
 
             //printf( "fa1(%g,%g,%g) fe1(%g,%g,%g)\n", fa1.x,fa1.x,fa1.x,   fe1.x,fe1.x,fe1.x );
@@ -686,9 +715,9 @@ void TestAppRARFF::draw(){
             //if(bRun)ff.move_GD(0.001 );
 
             //ff.move_GD( 0.001 );
-            ff.move_GD_noAlias( 0.0001 );
+            //if(bRun) ff.move_GD_noAlias( 0.0001 );
 
-            //F2 = opt.move_FIRE();
+            F2 = opt.move_FIRE();
 
             //checkFinite( ff, vminOK, vmaxOK );
 
@@ -724,6 +753,7 @@ void TestAppRARFF::draw(){
 
     //printf( "apos (%g,%g,%g) \n", ff.apos[0].x, ff.apos[0].y, ff.apos[0].z );
 
+
     char strtmp[256];
     double Qsz = 0.05;
     double fsc = 1.0;
@@ -731,32 +761,40 @@ void TestAppRARFF::draw(){
     for(int i=0; i<ff.na; i++){
         //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z );
         Draw3D::drawPointCross( ff.apos  [i]    , ff.aQ  [i]*Qsz );
-        Draw3D::drawVecInPos(   ff.aforce[i]*fsc, ff.apos[i] );
+        //Draw3D::drawVecInPos(   ff.aforce[i]*fsc, ff.apos[i] );
         //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.apos[i].x,ff.apos[i].y,ff.apos[i].z );
         //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.aforce[i].x, ff.aforce[i].y, ff.aforce[i].z );
-        sprintf(strtmp,"%i",i);
-        Draw3D::drawText(strtmp, ff.apos[i], fontTex, 0.02, 0);
+        //sprintf(strtmp,"%i",i);
+        //Draw3D::drawText(strtmp, ff.apos[i], fontTex, 0.02, 0);
+
+        //glColor3f(0.,0.,0.); Draw3D::drawVecInPos( ff.aforce[i],   ff.apos[i] );
+        //glColor3f(0.,1.,0.); Draw3D::drawVecInPos( DEBUG_fa_ae[i], ff.apos[i] );
+        //glColor3f(1.,0.,0.); Draw3D::drawVecInPos( DEBUG_fa_aa[i], ff.apos[i] );
+
     }
 
     //glColor3f(1.0,1.0,1.0);
-
-
     glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendFunc(GL_DST_COLOR, GL_SRC_ALPHA);
     for(int i=0; i<ff.ne; i++){
         //printf( "epos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
         //if(ff.espin[i]>0){ glColor3f(0.0,0.5,1.0); }else{ glColor3f(1.0,0.5,0.0); };
-        if(ff.espin[i]>0){ glColor4f(0.0,0.5,1.0, 0.25); }else{ glColor4f(1.0,0.5,0.0, 0.25 ); };
+        if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, 0.2); }else{ glColor4f(1.0,0.0,0.0, 0.2 ); };
         Draw3D::drawShape(ff.epos[i], Mat3dIdentity*ff.esize[i], oglSph, false );
         //Draw3D::drawSphere_oct(3,ff.esize[i],ff.epos[i]);
 
-        /*
-        Draw3D::drawPointCross( ff.epos  [i], ff.esize[i] );
-        Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
-        Draw3D::drawSphereOctLines( 8, ff.esize[i], ff.epos[i] );
-        sprintf(strtmp,"%i",i);
-        Draw3D::drawText(strtmp, ff.epos[i], fontTex, 0.02, 0);
-        */
+        //glColor3f(1.,1.,1.); Draw3D::drawVecInPos( ff.eforce  [i], ff.epos[i] );
+        //glColor3f(1.,0.,1.); Draw3D::drawVecInPos( DEBUG_fe_ae[i], ff.epos[i] );
+
+        //Draw3D::drawPointCross( ff.epos  [i], ff.esize[i] );
+        //Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
+        //Draw3D::drawSphereOctLines( 8, ff.esize[i], ff.epos[i] );
+        //sprintf(strtmp,"%i",i);
+        //Draw3D::drawText(strtmp, ff.epos[i], fontTex, 0.02, 0);
+
     }
+
 
     //for(int i=0; i<ff.ne; i+=2){
     //    Draw3D::drawLine(ff.epos[i],ff.epos[i+1] );

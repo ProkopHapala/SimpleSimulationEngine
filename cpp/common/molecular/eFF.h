@@ -223,7 +223,6 @@ void realloc(int na_, int ne_){
     //_realloc( eforce ,ne);
     //_realloc( evel   ,ne);
 
-/*
     apos   = (Vec3d*)pDOFs;
     aforce = (Vec3d*)fDOFs;
 
@@ -231,17 +230,13 @@ void realloc(int na_, int ne_){
     eforce = (Vec3d*)(fDOFs + na*3);
     esize  =          pDOFs + na*3 + ne*3;
     fsize  =          fDOFs + na*3 + ne*3;
-*/
 
-
-    _realloc(apos  ,na );
-    _realloc(aforce,na );
-
-    _realloc(epos  ,ne );
-    _realloc(eforce,ne );
-    _realloc(esize ,ne );
-    _realloc(fsize ,ne );
-
+    //_realloc(apos  ,na );
+    //_realloc(aforce,na );
+    //_realloc(epos  ,ne );
+    //_realloc(eforce,ne );
+    //_realloc(esize ,ne );
+    //_realloc(fsize ,ne );
 
 }
 
@@ -269,15 +264,15 @@ double evalEE(){
     //double w2ee = wee*wee;
     const double qq = QE*QE;
     for(int i=0; i<ne; i++){
-        Vec3d    pi  = epos[i];
-        Vec3d&   fi  = eforce[i];
-        double   si  = esize[i];
-        double& fsi  = fsize[i];
-        int8_t spini = espin[i];
+        const Vec3d    pi  = epos[i];
+        //Vec3d&   fi  = eforce[i];
+        const int8_t spini = espin[i];
+        const double   si  = esize[i];
+        double&       fsi  = fsize[i];
         for(int j=0; j<i; j++){
-            Vec3d f=Vec3dZero;
-            Vec3d   dR  = epos [j] - pi;
-            double  sj  = esize[j];
+            Vec3d  f  = Vec3dZero;
+            const Vec3d  dR = epos [j] - pi;
+            const double sj = esize[j];
             double& fsj = fsize[j];
             Eee     += addCoulombGauss( dR, si, sj, f, fsi, fsj, qq );
             //EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
@@ -286,10 +281,15 @@ double evalEE(){
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
             //if( i_DEBUG>0 ) printf( "evalEE[%i,%i] dR(%g,%g,%g) s(%g,%g) q %g  ->   f(%g,%g,%g) fs(%g,%g) \n", i,j, dR.x,dR.y,dR.z, si,sj, qq,   f.x,f.y,f.z, fsi,fsj );
             eforce[j].sub(f);
-            fi       .add(f);
-            //glColor3f(1.0,0.0,0.0);
-            //Draw3D::drawVecInPos( f*-1, epos[j] );
-            //Draw3D::drawVecInPos( f   , pi      );
+            eforce[i].add(f);
+
+            //DEBUG_fa_aa[j].sub(f);
+            //DEBUG_fa_aa[i].add(f);
+            //if( (i==DEBUG_i)&&(j==DEBUG_j) ){
+            //    glColor3f(1.0,0.0,0.0);
+            //    Draw3D::drawVecInPos( f*-1., epos[j] );
+            //    Draw3D::drawVecInPos( f   , pi      );
+            //}
         }
     }
     //if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalEE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
@@ -304,28 +304,31 @@ double evalAE(){
     //double invSae = 1/( see*see + saa*saa );
     //double w2ae = wae*wae;
     for(int i=0; i<na; i++){
-        Vec3d  pi   = apos[i];
-        double qqi  = aQ[i]*QE;
-        Vec3d  abwi = eAbWs[i];
+        const Vec3d  pi   = apos[i];
+        const double qqi  = aQ[i]*QE;
+        const Vec3d  abwi = eAbWs[i];
         for(int j=0; j<ne; j++){
             Vec3d f=Vec3dZero;
-            //Eae += addPairEF_expQ( epos[j]-pi, f, abwi.z, qi*QE, abwi.y, abwi.x );
-            //printf(  "a[%i]e[%i] r %g\n", i, j, (epos[j]-pi).norm() );
-            Vec3d   dR  = epos [j] - pi;
-            double  fs_junk;
-            double  sj  = esize[j];
+            const Vec3d   dR  = epos [j] - pi;
+            const double  sj  = esize[j];
             double& fsj = fsize[j];
+            double  fs_junk;
+            //Eae += addPairEF_expQ( epos[j]-pi, f, abwi.z, qi*QE, abwi.y, abwi.x );
             Eae                      += addCoulombGauss      ( dR,sj,                 f, fsj, qqi     );     // correct
-            //if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
+            if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
             //if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );     // correct
 
             //if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             eforce[j].sub(f);
             aforce[i].add(f);
 
-            glColor3f(1.0,0.0,1.0);
-            //Draw3D::drawVecInPos( f*-1, epos[j] );
-            Draw3D::drawVecInPos( f   , pi      );
+            //DEBUG_fe_ae[j].sub(f);
+            //DEBUG_fa_ae[i].add(f);
+            //if( (i==DEBUG_i)&&(j==DEBUG_j) ){
+            //    glColor3f(1.0,1.0,1.0); Draw3D::drawLine    ( pi, epos[j]    );
+            //    glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( f*-1., epos[j] );
+            //    glColor3f(1.0,0.0,1.0); Draw3D::drawVecInPos( f    , pi      );
+            //}
         }
     }
     //if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalAE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
@@ -338,23 +341,31 @@ double evalAA(){
     //double invSaa = 1/(saa*saa);
     //double w2aa = waa*waa;
     for(int i=0; i<na; i++){
-        Vec3d  pi   = apos[i];
-        double qi   = aQ[i];
-        Vec3d  abwi = aAbWs[i];
+        const Vec3d  pi   = apos[i];
+        const double qi   = aQ[i];
+        const Vec3d  abwi = aAbWs[i];
         for(int j=0; j<i; j++){
-            Vec3d f;
+            Vec3d f = Vec3dZero; // HERE WAS THE ERROR (missing initialization !!!! )
             Vec3d  abw;
             combineAbW( abwi, aAbWs[j], abw );
+            const Vec3d dR  = apos[j] - pi;
             //if( (i_DEBUG>0) && (1==qi==aQ[j]) ){ printf( " abw(H-H): %i,%i A %g B %g w %g \n", i,j, abw.x, abw.y, abw.z ); }
             //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
             //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
-            Eaa +=  addAtomicForceQ( apos[j]-pi, f, qi*aQ[j] );
+            Eaa +=  addAtomicForceQ( dR, f, qi*aQ[j] );
             //   ToDo : Pauli Repulsion of core electrons ?????
             aforce[j].sub(f);
             aforce[i].add(f);
-            //glColor3f(1.0,0.0,0.0);
-            Draw3D::drawVecInPos( f*-1, apos[j] );
-            Draw3D::drawVecInPos( f   , pi      );
+
+            //DEBUG_fa_aa[j].sub(f);
+            //DEBUG_fa_aa[i].add(f);
+            //if( (i==DEBUG_i)&&(j==DEBUG_j) ){
+            //    glColor3f(1.0,0.0,0.0);
+            //    //Draw3D::drawVecInPos( dR*-1., apos[j] );
+            //    //Draw3D::drawVecInPos( dR    , pi      );
+            //    Draw3D::drawVecInPos( f*-1., apos[j] );
+            //   Draw3D::drawVecInPos( f    , pi      );
+            //}
         }
     }
     return Eaa;
@@ -403,7 +414,7 @@ void move_GD_noAlias(double dt){
     for(int i=0;i<ne;i++){
         epos [i].add_mul( eforce[i], dt );
         //fe.add( aforce[i] );
-        //esize[i] += fsize[i] * dt;
+        esize[i] += fsize[i] * dt;
         //fs += fsize[i];
     }
     //printf( "fs %g fe(%g,%g,%g) fa(%g,%g,%g)\n", fs, fe.x,fe.y,fe.z, fa.x,fa.y,fa.z );
