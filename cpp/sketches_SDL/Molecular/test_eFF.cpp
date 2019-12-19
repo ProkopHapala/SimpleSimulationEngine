@@ -38,8 +38,9 @@ Vec3d* DEBUG_fa_aa =0;
 
 
 #include "DynamicOpt.h"
+#include "InteractionsGauss.h"
 #include "eFF.h"
-#include "e2FF.h"
+//#include "e2FF.h" // old currently not working
 
 #include "MMFFBuilder.h"
 

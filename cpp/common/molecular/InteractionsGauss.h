@@ -96,6 +96,40 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     return e1 * e2;
 }
 
+/*
+inline double CoulombGauss_FixSize( double r, double s, double& fr, double qq ){
+    // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
+    //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
+    constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
+    double ir   = 1./r; //(r+1.e-8);
+    double is   = 1./s; //(s+1.e-8);
+    double r_s  = r*is;
+    double r_2s = M_SQRT2 * r_s;
+    double e1   = qq*ir * const_El_eVA;
+    double e2   = erf(  r_2s );
+    double g    = exp( -r_2s*r_2s ) * const_F2;
+    double f1   = -e1*ir;
+    double f2   = g*is;
+    fr = (f1*e2 + e1*f2)*ir;
+    return e1 * e2;
+}
+*/
+
+// version of CoulombGauss optimized for fixed size of electron clouds
+inline double CoulombGauss_FixSize( double r, double beta, double& fr, double qq ){
+    // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
+    //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
+    constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
+    double ir = 1./r;
+    double r_b  = beta * r;
+    double e1   = qq*ir * const_El_eVA;
+    double e2   = erf(  r_b  );
+    double f1   = -e1*ir;
+    double f2   = exp( -r_b*r_b ) * const_F2 * beta;
+    fr = (f1*e2 + e1*f2)*ir;
+    return e1 * e2;
+}
+
 inline double addCoulombGauss( const Vec3d& dR, double s, Vec3d& f, double& fsi, double qq ){
     double r    = dR.norm();
     double fr,fs;
