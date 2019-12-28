@@ -207,6 +207,7 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
         virtual int GUIcallback(GUIAbstractPanel* caller) override {
             ((DropDownList*)caller)->selectedToStr(str+sprintf(str,"data/"));
             reloadShip(str);
+            return 0;
         }
     };
 

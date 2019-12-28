@@ -29,6 +29,12 @@
 #include "GUI.h"
 #include "testUtils.h"
 
+#include "appliedPhysics.h"
+#include "spaceCombat.h"
+
+
+
+
 /*
 
 
@@ -74,6 +80,103 @@ const double Thrusts    [nThrusts*3] = {
     -0.001, 0.0,0.0,
     0.000, 0.0,0.0
 };
+
+
+
+
+
+
+
+
+
+
+void print_AblationRocket( double length, double pressure,  double caliber, double thickness, double dens, double molarMass, double temperature ){
+    // (Force/area) / (mass/area)
+    // s = 0.5 * a * t^2   ;   t = sqrt( 2*s/a )
+    double area        = diskArea(0.5*caliber);
+    double volume      = area*thickness;
+    double mass        = volume*dens;
+
+    double massPerArea = thickness*dens;
+    double accel     = pressure / massPerArea;
+    double t         = accelTime( accel, length );
+    double vMuzzle   = accel * t;
+
+    double vexh      = meanThermalVelocity( temperature, molarMass );
+    //double areaMassFlow = pressure / vexh;
+
+    double massRatio  = exp( vMuzzle/vexh );
+    double mPropelant = (massRatio-1.) * mass;
+
+    double Emuzzle    = 0.5*mass*vMuzzle*vMuzzle;
+    double Ewaste     = 0.5*mPropelant*vexh*vexh;
+    double Etot       = Emuzzle + Ewaste;
+    double efficiency = Emuzzle/Etot;
+
+    double power      = Etot/t;
+
+    printf( "caliber %g [mm] thick %g [mm] dens %g [kg/l] \n", caliber*1000., thickness*1000.,  dens/1000. );
+    printf( " -> area %g [m^2] volume %g [l] mass %g [kg] \n",  area, volume*1000., mass );
+    printf( "areaMass %g [g/cm^2] pMax %g [GPa] length %g [m]\n", massPerArea/10., pressure*1e-9, length );
+    printf( " -> accel %g [g] t %g [s] vMuzzle %g [km/s] \n", accel/9.81, t, vMuzzle*1e-3 );
+
+    printf( " molarMass %g [g/mol] temperature %g [K] \n", molarMass, temperature );
+    printf( " -> vexh %g [km/s] massRatio %g [1] EMuzzle %g [MJ] ETot %g [MJ] \n", vexh*1e-3, massRatio, Emuzzle*1e-6, Etot*1e-6 );
+    printf( " -> efficiency %g [1] power %g [GW] \n", efficiency, power*1e-9 );
+
+    const int nacc  = 5;
+    const int ndist = 5;
+    double dists [ndist]{1e+5, 1e+6, 1e+7, 1e+8, 1e+9}; // [m]
+    double accels[nacc ]{0.01,0.1,1.0,10.0,100.0};      // [g]
+
+    printf    ( "               ", dist );
+    for(int j=0; j<nacc; j++){
+        printf( "%3.3e ", accels[j] );
+    }
+    printf( "\n", dist );
+    for(int i=0; i<ndist; i++){
+        double dist = dists[i];
+        double t_fly  = dist/vMuzzle + t;
+        printf( "%3.3e[km] %3.3e[s] : ", dist/1000., t_fly );
+        for(int j=0; j<nacc; j++){
+            double spread = 0.5*accels[j]*sq(t_fly);
+            //printf( "%3.3e|%3.3e ", spread, t_fly );
+            //printf( "%3.3e ", spread );
+            printf( "%3.3e[km] ", spread*1e-3 );
+            //printf( "%3.3e ", t_fly );
+        }
+        printf( "\n", dist );
+    }
+
+}
+
+
+void print_Laser( double wavelenght, double aperture, double distance, double power ){
+    double r = difractionLimit_spot( wavelenght, aperture, distance );
+    double intensity = power/(r*r);
+    //double Efield = ;
+
+    double time = distance/const_LightSpeed;
+    printf( " wavelenght %g [um] aperture %g [m] distance %g [km] time %g [s] \n",  wavelenght*1e+6, aperture, distance*1e-3, time );
+    printf( " r_spot %g [m] power %g [MW] -> Intensity %g [W/cm^2] \n", r, power*1e-6, intensity*1e-4  );
+    printf(" ======================== \n ");
+}
+
+
+
+
+void print_WibleShield(double v0, double mass, double shieldMass, double standOff ){
+    double tg        = kineticDispersion( v0, mass, shieldMass );
+    double spread    = tg * standOff;
+    double area      = M_PI * spread*spread;
+    double E         = 0.5*mass*v0*v0;
+    double intensity = E/area;
+    printf( "v0 %g [km/s] mass %g [kg] shieldMass %g [kg] E %g [MJ] \n", v0*1e-3, mass, shieldMass, E*1e-6  );
+    printf( "tg %g [1] spead %g [m] area %g [m^2] intensity %g [J/cm^2] \n", tg, spread, area, intensity*1e-4 );
+}
+
+
+
 
 class SpaceTactics : public AppSDL2OGL_3D { public:
     typedef AppSDL2OGL_3D Super;
@@ -208,6 +311,31 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     exit(0);
     */
     zoom = 5;
+
+    double wavelenght = 1e-6;  // [m]
+    double aperture   = 30;    // [m]
+    double distance   = 1e+8;  // [m]
+    double power      = 1e+11; // [W]
+    print_Laser( wavelenght, aperture, distance, power );
+
+
+    double v0         = 20e+3; // [m/s]
+    double mass       = 1.0;   // [kg]
+    double shieldMass = 0.2;   // [kg]
+    double standOff   = 20.0;  // [m]
+    print_WibleShield( v0, mass, shieldMass, standOff );
+
+    //
+    double length      = 100;   // [m]
+    double maxPressure = 2e+9;  // [Pa]
+    double caliber     = 0.2;   // [m]
+    double thickness   = 0.01;  // [m]
+    double dens        = 18000; // [kg/m^3]
+    double molarMass   = 0.006; // [kg/mol]
+    double temperature = 50000; // [K]
+    print_AblationRocket( length, maxPressure, caliber, thickness, dens, molarMass, temperature );
+
+    exit(0);
 
 }
 

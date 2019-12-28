@@ -40,7 +40,7 @@ class HashMap3D : public HashMap64{ public:
         return hmap.reserve( n );      //printf( " DEBUG 3 \n" );
     }
 
-    int setBodyBuff(int nbodies_){
+    void setBodyBuff(int nbodies_){
         nbodies = nbodies_;
         _realloc(isOld,nbodies);
         for(int i=0; i<nbodies; i++){ isOld[i] = false; }

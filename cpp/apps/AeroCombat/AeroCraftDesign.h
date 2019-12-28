@@ -2,7 +2,7 @@
 #ifndef AeroCraftDesign_h
 #define AeroCraftDesign_h
 
-#include <vector>;
+#include <vector>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>

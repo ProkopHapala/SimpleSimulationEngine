@@ -86,7 +86,7 @@ class HashMapT64{ public:
 	}
 	inline uint32_t getAllInBox( uint64_t ibox, int* outi ){ uint32_t h = hash( ibox ); return getAllInBox( ibox, h, outi ); }
 
-	inline uint32_t insert( const T& o, uint32_t h, uint32_t i ){
+	inline void insert( const T& o, uint32_t h, uint32_t i ){
 		hits   [h] ++;
 		set( i, o, h );
 		filled++;
@@ -97,7 +97,7 @@ class HashMapT64{ public:
 		while( !store[i].isEmptyCell() ) i=(i+1)&mask;
 		insert( o, h, i );
 		return i;
-	};
+	}
 	inline uint32_t insert( const T& o ){ uint32_t h = hash( o.getCellIndex() ); return insert( o, h );   }
 
 	void remove( int i, uint32_t h ){

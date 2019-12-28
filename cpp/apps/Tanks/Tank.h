@@ -88,6 +88,7 @@ class VehicleBlock : public KinematicBody, public Mesh { public:
             printf( "%i %s %lf", mat_name, &thickness );
             armor.push_back((ArmorPlate){thickness});
         }
+        return polygons.size();
     }
 
     void fromString( char * str ){
@@ -248,9 +249,10 @@ class Tank : public RigidBody, public Warrior3D { public:
         if( pFile == NULL ){ printf("cannot find %s\n", fname ); return -1; }
         char buff[1024];
         char * line;
-        int nl;
+        int nl=0;
         line = fgets( buff, 1024, pFile ); hull  .fromString( line );
         line = fgets( buff, 1024, pFile ); turret.fromString( line );
+        return 2;
     }
 
 };

@@ -62,6 +62,7 @@ class DemoCratApp : public AppSDL2OGL_3D { public:
             //((DropDownList*)caller)->selectedToStr(str+sprintf(str,"data/"));
             ((DropDownList*)caller)->selectedToStr(str);
             app->loadDemo(str);
+            return 0;
         }
     };
 

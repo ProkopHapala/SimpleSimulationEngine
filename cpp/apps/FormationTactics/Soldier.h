@@ -61,6 +61,9 @@ class Soldier : public RigidBody2D{
 
     // ===== inline functions
 
+    virtual ~Soldier(){};
+
+
     inline void   clean_temp   ( ){ force.set(0.0); willForce.set(0.0); attentionDir.set(0.0); opponent=NULL; opponent_score=0; }
     inline double action_period( ){ return fire ? type->fire_period : type->melee_period; }
 

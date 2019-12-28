@@ -115,7 +115,7 @@ class BlockHouseWorld{
     void  blocks2truss( );
 
     void setDefaultWallType();
-    int  init();
+    void  init();
 
     int findBlock        ( uint8_t ix, uint8_t iy, uint8_t iz );
     int changeBlock      ( uint8_t ix, uint8_t iy, uint8_t iz, uint8_t iSide, uint8_t type );

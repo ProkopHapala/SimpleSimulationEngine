@@ -85,8 +85,8 @@ GLuint makeTestTextureRGBA( Vec2i sz, PixFunc pixFunc ){
 }
 
 GLuint makeTestTextureRGBA_1( Vec2i sz ){
-    makeTestTextureRGBA( sz, [](Vec2i uv, uint8_t& r,uint8_t& g,uint8_t& b,uint8_t& a ){ r=uv.x; g=uv.x^uv.y; b=uv.y; a=255; } );
-};
+    return makeTestTextureRGBA( sz, [](Vec2i uv, uint8_t& r,uint8_t& g,uint8_t& b,uint8_t& a ){ r=uv.x; g=uv.x^uv.y; b=uv.y; a=255; } );
+}
 
 
 GLObject * makeOgl_flat( const CMesh& mesh ){

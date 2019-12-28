@@ -136,6 +136,8 @@ class Faction{
         }
         fclose(pFile);
         //exit(0);
+
+        return i;
     }
 
     Faction( char * name_, const Vec3f& color_ ){

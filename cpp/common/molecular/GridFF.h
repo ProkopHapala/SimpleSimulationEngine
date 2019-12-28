@@ -13,11 +13,11 @@ class GridFF{ public:
     Vec3d  *FFPauli    = NULL;
     Vec3d  *FFLondon   = NULL;
     Vec3d  *FFelec     = NULL;
-    
+
     Quat4f *FFPauli_f  = NULL;
     Quat4f *FFLondon_f = NULL;
     Quat4f *FFelec_f   = NULL;
-    
+
     //Vec3d  *FFtot    = NULL; // total FF is not used since each atom-type has different linear combination
 
     int  natoms     = 0;
@@ -54,6 +54,7 @@ class GridFF{ public:
         fscanf( pFile, "%lf %lf %lf", &grid.cell.b.x, &grid.cell.b.y, &grid.cell.b.z );
         fscanf( pFile, "%lf %lf %lf", &grid.cell.c.x, &grid.cell.c.y, &grid.cell.c.z );
         grid.updateCell();
+        return 0;
     }
 
     int loadXYZ( char * fname, MMFFparams& params ){
@@ -100,11 +101,11 @@ class GridFF{ public:
         Vec3d gpos;
         grid.cartesian2grid(pos, gpos);
         //printf( "pos: (%g,%g,%g) PLQ: (%g,%g,%g) \n", pos.x, pos.y, pos.z,  PLQ.x, PLQ.y, PLQ.z );
-        
+
         f.add_mul( interpolate3DvecWrap( FFPauli,  grid.n, gpos ) , PLQ.x );
         f.add_mul( interpolate3DvecWrap( FFLondon, grid.n, gpos ) , PLQ.y );
         f.add_mul( interpolate3DvecWrap( FFelec,   grid.n, gpos ) , PLQ.z );
-        
+
         //f = interpolate3DvecWrap( FFLondon,  grid.n, gpos );
         //printf( "p(%5.5e,%5.5e,%5.5e) g(%5.5e,%5.5e,%5.5e) f(%5.5e,%5.5e,%5.5e) \n", pos.x, pos.y, pos.z, gpos.x, gpos.y, gpos.z, f.x,f.y,f.z );
     }
@@ -115,7 +116,7 @@ class GridFF{ public:
         grid.pos0  = pos0;
         allocateFFs();
     }
-    
+
     void setAtoms( int natoms_, Vec3d * apos_, Vec3d * REQs_ ){
         natoms = natoms_;
         //atypes = new int  [natoms];

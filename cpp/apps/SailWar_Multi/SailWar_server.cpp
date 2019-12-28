@@ -103,7 +103,7 @@ void SailWar_server::draw(){
 		//printf( " draw (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) %3.3f \n", p->pos.x,p->pos.y,p->pos.z, p->vel.x,p->vel.y,p->vel.z, p->mass );
 	}
 
-};
+}
 
 void SailWar_server::drawHUD(){
     /*
@@ -115,7 +115,7 @@ void SailWar_server::drawHUD(){
 	glColor3f( 0.2f, 0.5f, 0.2f );  Draw2D::drawVecInPos_d  ( ( *(Vec2d*)&(wind_speed))*10.1, compass_pos );
 	glColor3f( 0.2f, 0.2f, 0.8f );  Draw2D::drawVecInPos_d  ( watter_speed*10.1, compass_pos );
     */
-};
+}
 
 //////////////////////////////////
 //      overide UDPNode
@@ -131,7 +131,7 @@ void SailWar_server::onRecieve( int iClient ){
 	if( keys[ 3 ] ){ thisShip->mast.setAngle  ( thisShip->mast.phi   - 0.01 );  }
     if( keys[ 4 ] ){ thisShip->fire_left ( &projectiles );                      }
     if( keys[ 5 ] ){ thisShip->fire_right( &projectiles );                      }
-};
+}
 
 bool SailWar_server::onSend   ( int iClient ){
 
@@ -163,14 +163,15 @@ bool SailWar_server::onSend   ( int iClient ){
 	}
 
     packet->len = buff - (char*)packet->data;
-};
+    return true;
+}
 
 int SailWar_server::onConnect( IPaddress client ){
     //makeShip( { 3.0, -3.0}, M_PI*0.6, "data/FrigateType.txt", defaultShipShape, defaultCollisionShape );
     makeShip( { randf(-5.0,5.0), randf(-5.0,5.0)}, M_PI*0.6, "data/FrigateType.txt", defaultShipShape, defaultCollisionShape );
     printf( " new Player [ %i ] initialized \n", ships.size() );
     return UDPServer::onConnect( client );
-};
+}
 
 // ============== main
 

@@ -43,7 +43,7 @@ class GridShape {
 		//n.set( n_ );
 		cell.set( cell_ );
         updateCell();
-	};
+	}
 
 	//inline void set( int * n_, double * cell_ ){ set( *(Vec3d*) n_, *(Mat3d*)cell_ ); };
 
@@ -51,13 +51,13 @@ class GridShape {
 		cpos.set_mul( dCell.a, gpos.x );
 		cpos.add_mul( dCell.b, gpos.y );
 		cpos.add_mul( dCell.c, gpos.z );
-	};
+	}
 
 	inline void cartesian2grid( const Vec3d& cpos, Vec3d& gpos ) const {
 		gpos.a = cpos.dot( diCell.a );
 		gpos.b = cpos.dot( diCell.b );
 		gpos.c = cpos.dot( diCell.c );
-	};
+	}
 
 	void printCell() const {
 	    printf( " n      %i %i %i \n", n.x,        n.y,       n.z        );

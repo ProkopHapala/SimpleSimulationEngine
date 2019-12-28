@@ -149,7 +149,9 @@ bool TestAppSailPolar::trySaveToShipPolar( double mast_angle, double rudder_angl
     double angle   = atan2( thisShip->vel.y, thisShip->vel.x ) + M_PI;
     int ipolar     = ( angle - angle_min ) / dangle;
     //printf( " %i %f : %i %f %f   %f %f \n", i, rudder_angle, ipolar, angle,  speed_angles[ipolar], speed, rudder_angle );
+    bool b=false;
     if ( speed > speeds[ipolar] ){
+        b=true;
         //printf( " %i %f : %i %f %f   %f %f \n", i, rudder_angle, ipolar, angle,  speed_angles[ipolar], speed, rudder_angle );
         speed_angles  [ipolar] = angle;
         speeds        [ipolar] = speed;
@@ -166,7 +168,8 @@ bool TestAppSailPolar::trySaveToShipPolar( double mast_angle, double rudder_angl
         glColor3f( 0.8f, 0.0f, 0.8f ); Draw2D::drawPointCross_d( {angle,rudder_angle}, 0.1 );
         glColor3f( 0.0f, 0.6f, 0.8f ); Draw2D::drawPointCross_d( {angle,mast_angle}  , 0.1 );
     }
-};
+    return b;
+}
 
 int TestAppSailPolar::makeShipPolar_constMast( int n, double rudder_min, double rudder_max, double mast_angle, double ship_angle, bool reseting ){
     printf( " --- makeShipPolar for mast_angle %f ship_angle %f \n", mast_angle, ship_angle );

@@ -45,7 +45,7 @@ void drawBspline1D( int nsub ){
 
     double odynum  = 0;
     double oddynum = 0;
-    for( int i=0; i<nCP-2; i++ ){
+    for( int i=0; i<nCP-3; i++ ){
         double u = 0;
         double c0 = CPs1D[i  ];
         double c1 = CPs1D[i+1];

@@ -102,7 +102,7 @@ void BlockHouseWorld::setDefaultWallType(){
     }
 }
 
-int BlockHouseWorld::init(){
+void BlockHouseWorld::init(){
     rotations[0].set(  {+1.0,0.0,0.0}, {0.0,+1.0,0.0}, {0.0,0.0,+1.0} ); // roof
     rotations[1].set(  {+1.0,0.0,0.0}, {0.0,+1.0,0.0}, {0.0,0.0,-1.0} ); // floor
     rotations[2].set(  {0.0,0.0,+1.0}, {0.0,+1.0,0.0}, {+1.0,0.0,0.0} ); // wall

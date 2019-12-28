@@ -63,6 +63,7 @@ inline double obliqueIncidence( double vr, Vec2d& rot, double thick, double cali
     // calculate energy which pass the armor of given thickness
     double effective_thickness = thick/rot.x;
     double Eout = flatIncidence( vr, effective_thickness, caliber, mass, mat );
+    return Eout;
 }
 
 inline Vec3d penetrate( Vec3d v, Vec3d nor, double thick, double caliber, double mass, const Material& mat ){

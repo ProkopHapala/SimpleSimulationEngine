@@ -21,6 +21,8 @@ class Projectile : public PointBody {
 	void ground_hit( );
 	bool check_hit_ground(  );
 
+	virtual ~Projectile(){};
+
 	template <typename T> bool check_hit_vector( std::vector<T*>& objlist );
 	//template <typename T> bool check_hit( T* obj );
 	void update_old_pos();

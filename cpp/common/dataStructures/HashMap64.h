@@ -153,7 +153,7 @@ class HashMap64{ public:
 		return j;
 	}
 
-	inline int insert( uint64_t p, uint64_t ibox, uint32_t h, int i ){
+	inline void insert( uint64_t p, uint64_t ibox, uint32_t h, int i ){
 		hits   [h] ++;
 		set( i, p, ibox, h );
 		filled++;

@@ -214,7 +214,7 @@ class SphereTreeND{
     }
 */
 
-    int insert( int n, double * xs, int level, int isup ){
+    void insert( int n, double * xs, int level, int isup ){
         //SphereNodeND * sup;
         printf( " insert level %i isup %i \n", level, isup );
         printf( "leafs.size() %i \n", leafs.size() );
@@ -242,9 +242,10 @@ class SphereTreeND{
         leafs.push_back(xs);
         printf( "leafs.size() %i \n", leafs.size() );
         printf( " ==== DONE insert === \n" );
+        return ;
     }
 
-    int insert( int n, double * xs ){
+    void insert( int n, double * xs ){
         int closest; int level = nLevel;
         int nsup = findNeighAtLevel( n, xs, level, closest );
         insert( n, xs, level, closest );

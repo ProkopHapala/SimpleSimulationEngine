@@ -9,10 +9,11 @@ class Projectile2D : public PointBody2D {
 	public:
     double time;
 
+    virtual ~Projectile2D(){};
     virtual void move( double dt ){
         time += dt;
         move_PointBody2D(dt);
-    };
+    }
 
 };
 

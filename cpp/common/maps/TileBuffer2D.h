@@ -42,6 +42,7 @@ class TileBuffer2D{
 		int ni    = counts[i];
 		counts[i] = 0;
 		count    -= ni;
+		return ni;
 	}
 
 	void clear( ){

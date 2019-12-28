@@ -352,7 +352,7 @@ class RARFF2{ public:
         for(int i=0; i<nval; i++){ ((double*)fbonds)[i]=0; }
     }
 
-    double projectBonds(){
+    void projectBonds(){
         for(int i=0; i<natom; i++){
             atoms[i].qrot.rotateVectors( N_BOND_MAX, atoms[i].type->bh0s, hbonds + i*N_BOND_MAX, false );
         }
