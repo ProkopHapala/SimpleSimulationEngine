@@ -124,10 +124,36 @@ void Draw2D::drawCircle( const Vec2f& center, float radius, int n, bool filled )
 	glEnd();
 };
 
+
 void Draw2D::drawCircle_d( const Vec2d& center_, float radius, int n, bool filled ){
 	Vec2f center; convert( center_, center );
 	drawCircle( center, radius, n , filled );
 };
+
+void Draw2D::drawArc( const Vec2f& center, float radius, float a0, float a1, float dang, bool filled ){
+    //printf( " z_layer %3.3f \n", z_layer );
+	if( filled){ glBegin(GL_TRIANGLE_FAN); }else{ glBegin(GL_LINE_STRIP); };
+	float phi = a1-a0;
+	int n =  floor( phi/dang + 1.0 );
+	if(n<0) n=-n;
+	dang  = phi/n;
+	//Vec2f rot;  rot.fromAngle( a0   );
+	//printf( "\n", phi, dang );
+	Vec2f drot; drot.fromAngle( dang );
+	drot.mul(1.002); // DEBUG
+	Vec2f v;    v   .fromAngle( a0   ); v.mul(radius);
+	for ( int i=0; i<n+1; i++ ){
+		glVertex3f( center.x + v.x, center.y + v.y, z_layer );
+		v.mul_cmplx( drot );
+	}
+	glEnd();
+};
+
+void Draw2D::drawArc_d( const Vec2d& center_, float radius, float a0, float a1, float dang, bool filled ){
+	Vec2f center; convert( center_, center );
+	drawArc( center, radius,  a0, a1, dang,  filled );
+};
+
 
 
 void Draw2D::drawRotRect( Vec2d pos, Vec2d rot, Vec2d sz ){

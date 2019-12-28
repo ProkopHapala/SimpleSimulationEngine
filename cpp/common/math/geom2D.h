@@ -299,6 +299,123 @@ inline double area2D_Triangle( const Vec2d& V0, const Vec2d& V1, const Vec2d& V2
 }
 */
 
+struct Ray2d{
+    Vec2d p0;  //
+    Vec2d dir; // normalized
+    double l;  // length
+
+    void getEnd(Vec2d& p1){
+        p1.set_add_mul( p0, dir, l );
+    }
+    void fromPoints(const Vec2d& p0_, const Vec2d& p1){
+        p0=p0_; dir.set_sub( p1, p0 ); l=dir.normalize();
+    }
+};
+
+struct Circle2d{
+    Vec2d  p0;
+    double r;
+
+    void fromCenterAndPoint(const Vec2d& p0_, const Vec2d& p1_){
+        p0=p0_;
+        r = (p0_-p1_).norm();
+    }
+
+    void from2points(const Vec2d& p0_, const Vec2d& p1_){
+        p0 = (p0_+p1_)*0.5;
+        r  = (p0_-p1_).norm()*0.5;
+    }
+
+    void from3points(const Vec2d& p1, const Vec2d& p2, const Vec2d& p3 ){
+
+        // https://www.geeksforgeeks.org/equation-of-circle-when-three-points-on-the-circle-are-given/
+
+        Vec2d d12 = p1-p2;
+        Vec2d d23 = p2-p3;
+        Vec2d d31 = p3-p1;
+        double r2_1 = p1.norm2();
+        double r2_2 = p2.norm2();
+        double r2_3 = p3.norm2();
+
+        //denom = 0.5/( x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2) );
+        //r     = sqrt( ( (x1-x2)**2 + (y1-y2)**2) * ((x1-x3)**2 + (y1-y3)**2) * ((x2-x3)**2 + (y2-y3)**2) ) * denom;
+        //p0.x  = ( (x1**2 + y1**2)*(y2-y3)   +   (x2**2 + y2**2)*(y3-y1)   +   (x3**2+y3**2)*(y1-y2)      ) * denom;
+        //p0.y  = ( (x1**2 + y1**2)*(x3-x2)   +   (x2**2 + y2**2)*(x1-x3)   +   (x3**2+y3**2)*(x2-x1)      ) * denom;
+
+        double denom = 0.5/( p1.x*d23.y + p2.x*d31.y + p3.x*d12.y );
+        //if(denom<0)denom=-denom;
+        r     = sqrt( d12.norm2()  *   d23.norm2()  *   d31.norm2() ) *  denom;
+        if(r<0)r=-r;
+        p0.x  = (     r2_1*d23.y   +   r2_2*d31.y   +   r2_3*d12.y  ) *  denom;
+        p0.y  = (     r2_1*d23.x   +   r2_2*d31.x   +   r2_3*d12.x  ) * -denom;
+
+    }
+
+    void fromCorner( const Vec2d& pc, const Vec2d& d1, const Vec2d& d2, double r_ ){
+        r = r_;
+        Vec2d d    = d1 + d2;
+        double c   = d.dot(d1);
+        //double l   = d.norm();
+        double l2  = d.norm2();
+        d.mul( r/sqrt( (l2-c*c) )  );
+        //d.mul( r/(c*l) );
+        p0 = pc + d;
+    }
+};
+
+
+struct Arc2d{
+    //Circle2d* circ;
+    int icirc;
+    double angs[2];
+
+    void getDir1  ( int ip, Vec2d& d )const{ d.fromAngle(angs[ip]); };
+    //void getDir2(Vec2d& d)const{ d.fromAngle(angs[1]); };
+    void getPoint1( int ip, Vec2d& p, const Circle2d* c )const{ getDir1(ip,p); c+=icirc; p.mul(c->r); p.add(c->p0); };
+    //void getPoint2(Vec2d& p, const Circle2d* c)const{ getDir2(p); c+=icirc; p.mul(c->r); p.add(c->p0); };
+
+    void dirFromPoint( int ip, const Vec2d& p, const Circle2d* c ){
+        c+=icirc;
+        Vec2d d = p - c->p0;
+        angs[ip] = atan2(d.x,d.y);
+    };
+
+    void fromCenter2points( const Vec2d& p0, const Vec2d& p1, const Vec2d& p2 ){
+        Vec2d d;
+        d = p1-p0; angs[0] = atan2(d.y,d.x);
+        d = p2-p0; angs[1] = atan2(d.y,d.x);
+        //if(angs[0]>angs[1]) _swap(angs[0],angs[1]);
+    }
+
+    void fromCenterPoints( const Vec2d& p0, const Vec2d& p1, const Vec2d& p2, const Vec2d& p3 ){
+        Vec2d d;
+        d  = p1-p0; angs[0] = atan2(d.y,d.x);
+        d  = p2-p0; angs[1] = atan2(d.y,d.x);
+        //if(angs[0]>angs[1]) _swap(angs[0],angs[1]);
+        d  = p3-p0; double a = atan2(d.y,d.x);
+        //if(angs[0]>a) angs[0]-=2*M_PI;
+        //if(angs[1]<a) angs[1]+=2*M_PI;
+        if(angs[0]>angs[1])_swap(angs[0],angs[1]);
+        if(angs[0]>a){ angs[1]-=2*M_PI; _swap(angs[0],angs[1]); }
+        if(angs[1]<a){ angs[0]+=2*M_PI; _swap(angs[0],angs[1]); }
+        //if(angs[1]<a) angs[1]+=2*M_PI;
+    }
+
+    void fromCorner( const Vec2d& d1, const Vec2d& d2 ){
+        angs[0] = atan2(d1.y,d1.x) - M_PI_2;
+        angs[1] = atan2(d2.y,d2.x) + M_PI_2;
+        printf( "angs %g %g \n", angs[0], angs[1] );
+        //double a = atan2(d3.y,d3.x);
+        //if( (angs[1]-angs[0])> M_PI ){ angs[1]-=M_PI; angs[0]+=M_PI; }
+        //if( (angs[1]-angs[0])<-M_PI ){ angs[1]-=M_PI; angs[0]+=M_PI; }
+        //if(angs[0]>angs[1])_swap(angs[0],angs[1]);
+        //if(angs[0]>a && angs[1]>a ){ angs[1]-=2*M_PI; _swap(angs[0],angs[1]); }
+        //if(angs[1]<a && angs[0]<a ){ angs[0]+=2*M_PI; _swap(angs[0],angs[1]); }
+    }
+
+};
+
+
 #endif
 
 
