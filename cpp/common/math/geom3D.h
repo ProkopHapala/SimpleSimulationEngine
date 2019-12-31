@@ -404,6 +404,12 @@ class Plane3D{
         iso = normal.normalize();
 	}
 
+    void fromPointAndNormal( const Vec3d& normal_, const Vec3d& p0 ){
+        normal = normal_;
+        C = normal.dot(p0);
+	};
+
+
 	void fromPoints_noNorm( const Vec3d& a, const Vec3d& b, const Vec3d& c ){
         Vec3d ab,bc;
 		ab.set_sub(b,a);
