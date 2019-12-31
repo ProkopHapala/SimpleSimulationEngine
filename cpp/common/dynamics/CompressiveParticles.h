@@ -84,6 +84,10 @@ double overlap( const Vec3d& dR, double si, double sj, double pi, double pj, Vec
         //printf( "dl %g ksij %g %g fp(%g,%g,%g) \n", dl, ksi, ksj, fp.x, fp.y, fp.z  );
 
         // = pushing one pressurized sphere into the other
+    }else{
+        fp  = Vec3dZero;
+        fsi = 0; //  pj*const_Vsphere *   d(  si*si*( (si + sj) - l ) ) /dsi
+        fsj = 0;
     }
     return E;
 }
@@ -92,7 +96,7 @@ double overlap( const Vec3d& dR, double si, double sj, double pi, double pj, Vec
 class CompressiveParticles{ public:
 
     double kappa = 1.6666; // https://en.wikipedia.org/wiki/Heat_capacity_ratio    monoatomic 5/3=1.666, diatomic 1.4
-    double Kwall = 1.0e+8;
+    double Kwall = 1.0e+11;
 
     int n;
     double* mass = 0;
@@ -162,6 +166,7 @@ double evalPairs(){
         double Ri     = Rs [i];
         double pressi = press[i];
         for(int j=0; j<i; j++){
+            //Vec3d  fp=Vec3dZero;
             Vec3d  fp;
             double fri,frj;
             Epair += overlap( pos[j]-posi, Ri, Rs[j], pressi, press[j], fp, fri, frj );
@@ -226,8 +231,8 @@ double moveMD(double dt){
         double dp = dt/mi;
 
         vpos[i].add_mul( fpos[i], dp );
-        //pos [i].add_mul( vpos[i], dt );
-        //Ek   += 0.5*mi*vpos[i].norm2();
+        pos [i].add_mul( vpos[i], dt );
+        Ek   += 0.5*mi*vpos[i].norm2();
 
         double fpress = press[i]*sq(Rs[i])*(4*M_PI); // pressure force   (dU/dr)
 

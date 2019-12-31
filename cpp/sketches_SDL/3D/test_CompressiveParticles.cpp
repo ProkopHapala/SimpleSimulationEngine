@@ -52,11 +52,9 @@ TestAppCompressive::TestAppCompressive( int& id, int WIDTH_, int HEIGHT_ ) : App
 
     solver.realloc( 40, 2 );
     //solver.realloc( 1, 2 );
-
     solver.walls[0].fromPointAndNormal( {0.5,  1.0, 0.0}, {0.0,-1.0,0.0} );
     solver.walls[1].fromPointAndNormal( {0.5, -1.0, 0.0}, {0.0, 1.0,0.0} );
     solver.clearVelocity();
-
     double r = 0.1;
     for(int i=0; i<solver.n; i++){
         solver.pos [i].set( r*(i%4),r*(i/4 - 5), 0 );
@@ -64,6 +62,20 @@ TestAppCompressive::TestAppCompressive( int& id, int WIDTH_, int HEIGHT_ ) : App
         solver.vpos[i] = Vec3dX * -1.0e+4;
         solver.setDensity( i, 534, 0.006, 10000, r*0.4 ); // lithium
     }
+
+    /*
+    solver.realloc( 6, 2 );
+    solver.walls[0].fromPointAndNormal( {0.5,  1.0, 0.0}, {0.0,-1.0,0.0} );
+    solver.walls[1].fromPointAndNormal( {0.5, -1.0, 0.0}, {0.0, 1.0,0.0} );
+    solver.clearVelocity();
+    double r = 0.1;
+    for(int i=0; i<solver.n; i++){
+        solver.pos [i].set( r*(i%2),r*(i/2), 0 );
+        //solver.vpos[i] = Vec3dX * -1.0e+4;
+        solver.vpos[i] = Vec3dX * 0;
+        solver.setDensity( i, 534, 0.006, 10000, r*0.4 ); // lithium
+    }
+    */
 
 
     /*
