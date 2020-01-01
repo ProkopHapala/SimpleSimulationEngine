@@ -51,7 +51,7 @@ double compressAdiabat( double dR, double kappa, double& R, double& p ){
     //double V2 = R*R*R;
     double factor = pow( oR/R, 3*kappa );
     p *= factor;
-    printf( "factor %g [1] p %g [GPa]\n",  factor,  p*1e-9  );
+    //printf( "factor %g [1] p %g [GPa]\n",  factor,  p*1e-9  );
 }
 
 
@@ -80,7 +80,7 @@ double overlap( const Vec3d& dR, double si, double sj, double pi, double pj, Vec
         fsi =  KK*ksi; //  pj*const_Vsphere *   d(  si*si*( (si + sj) - l ) ) /dsi
         fsj =  KK*ksj;
 
-        printf( "K %g pi,j %g %g si,j %g %g -> fsi,j %g %g \n", dl, pi, pj, si, sj, fsi, fsj );
+        //printf( "K %g pi,j %g %g si,j %g %g -> fsi,j %g %g \n", dl, pi, pj, si, sj, fsi, fsj );
         //printf( "dl %g ksij %g %g fp(%g,%g,%g) \n", dl, ksi, ksj, fp.x, fp.y, fp.z  );
 
         // = pushing one pressurized sphere into the other
@@ -238,7 +238,7 @@ double moveMD(double dt){
 
         vRs[i] *= (1-rDamp);
         vRs[i] += ( fRs[i] + fpress )*(dp*cR);
-        printf( " fRs[%i] %g[GPs] fpress %g[GPa] vR %g[km/s] \n", i, fRs[i]*1e-9, fpress*1e-9, vRs[i]*1e-3 );
+        //printf( " fRs[%i] %g[GPs] fpress %g[GPa] vR %g[km/s] \n", i, fRs[i]*1e-9, fpress*1e-9, vRs[i]*1e-3 );
         //vRs[i] +=  fRs[i]*(dp*cR);
         //compressAdiabat( vRs[i]*dt, kappa, Rs[i], Us[i] );
         compressAdiabat( vRs[i]*dt, kappa, Rs[i], press[i] );

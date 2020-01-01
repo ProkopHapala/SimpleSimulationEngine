@@ -114,8 +114,8 @@ void TestAppCompressive::draw(){
     for(int i=0; i<solver.n; i++){
         //printf( "[%i] pos(%g,%g,%g) r %g \n", i, solver.pos[i].x, solver.pos[i].y, solver.pos[i].z, solver.Rs[i] );
         glColor3f(0.0,0.0,0.0); Draw3D::drawSphereOctLines( 16, solver.Rs[i], solver.pos[i] );
-        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( solver.fpos[i]*fsc, solver.pos[i] );
-        glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( solver.vpos[i]*vsc, solver.pos[i] );
+        //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( solver.fpos[i]*fsc, solver.pos[i] );
+        //glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( solver.vpos[i]*vsc, solver.pos[i] );
 	}
 
 	// --- draw walls

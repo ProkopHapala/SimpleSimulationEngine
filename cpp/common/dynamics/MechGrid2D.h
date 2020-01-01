@@ -36,6 +36,8 @@ class MechGrid2D{ public:
     Vec2d* s_edge = 0; // position of boundary between materials on the edge
     Vec2d* force;
 
+
+
     void pressure2force(){
         int i=0;
         for(int iy=1;iy<ns.y; iy++){
