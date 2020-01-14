@@ -60,6 +60,7 @@ void renderShip(){
     glNewList( glo_ship, GL_COMPILE );
     drawSpaceCraft( *theSpaceCraft, 1 );
 
+    radiositySolver.clearTriangles();
     //theSpaceCraft->plate2raytracer( theSpaceCraft->shields[0], radiositySolver, elementSize, true );
     //theSpaceCraft->plate2raytracer( theSpaceCraft->shields[1], radiositySolver, elementSize, true );
     //theSpaceCraft->plate2raytracer( theSpaceCraft->shields[2], radiositySolver, elementSize, true );
@@ -74,7 +75,6 @@ void renderShip(){
         Draw3D::vertex( s.pos+s.normal*elementSize );
     }
     glEnd();
-
 
     glEndList();
 }

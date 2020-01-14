@@ -312,6 +312,8 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     */
     zoom = 5;
 
+
+
     double wavelenght = 1e-6;  // [m]
     double aperture   = 30;    // [m]
     double distance   = 1e+8;  // [m]
@@ -335,7 +337,7 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     double temperature = 50000; // [K]
     print_AblationRocket( length, maxPressure, caliber, thickness, dens, molarMass, temperature );
 
-    exit(0);
+    //exit(0);
 
 }
 

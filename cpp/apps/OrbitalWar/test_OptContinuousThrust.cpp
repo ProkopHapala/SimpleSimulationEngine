@@ -85,7 +85,8 @@ void drawBspline1D( int nsub ){
 
 class TestApp_OptContinuousThrust : public AppSDL2OGL_3D {
 	public:
-
+    bool bRun = true;
+	int perFrame = 10;
 	DynamicOpt optimizer;
     //DEGUB
     //Vec3d *  dpos;
@@ -135,11 +136,15 @@ void TestApp_OptContinuousThrust::draw(){
     //delay = 1000;
     //delay = 200;
 
-    double sumT2 = getTrajectoryVariation( nCP, CPs, fCPs, 1.0 );
-    printf( "%i sumT2 = %g \n", frameCount, sumT2 );
 
-    optimizer.move_FIRE();
 
+    if(bRun){
+        for(int i=0; i<perFrame; i++){
+            double sumT2 = getTrajectoryVariation( nCP, CPs, fCPs, 1.0 );
+            printf( "%i sumT2 = %g \n", frameCount, sumT2 );
+            optimizer.move_FIRE();
+        }
+    }
     for(int i=0; i<nCP; i++){
         Vec3d p = CPs[i];
         //p.x = i;
