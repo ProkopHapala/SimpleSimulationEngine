@@ -364,7 +364,7 @@ void SpaceTactics::draw(){
 
 	world.trjTime2index(timeCur,SpaceDraw::iTrjMin); SpaceDraw::iTrjMax=SpaceDraw::iTrjMin+1;
 
-	glColor3f(0.0f,0.0f,0.0f); for(SpaceBody& b : world.planets ){ SpaceDraw::bodyTrj( b ); SpaceDraw::planet( b, SpaceDraw::iTrjMin, 0 ); }
+	glColor3f(0.0f,0.0f,0.0f); for(SpaceBody& b : world.planets ){ SpaceDraw::bodyTrj( b ); SpaceDraw::planet( b, SpaceDraw::iTrjMin, 0, fontTex, zoom ); }
     glColor3f(0.0f,0.0f,1.0f); for(SpaceBody& b : world.ships   ){ SpaceDraw::bodyTrj( b ); SpaceDraw::ship  ( b, SpaceDraw::iTrjMin, 0 );  }
 
     glColor3f(0.0f,0.5f,0.0f); SpaceBody& b = world.planets[2];

@@ -104,7 +104,7 @@ inline Vec3d transformTrjPos( Vec3d* ps, int i){
 
 
 
-void planet( const SpaceBody& b, int iTrj, double du ){
+void planet( const SpaceBody& b, int iTrj, double du, int ifont=0, double zoom=0 ){
     Vec3d p;
     if(iTrj>0){
         p = b.getTrjPos(iTrj,du);
@@ -117,6 +117,16 @@ void planet( const SpaceBody& b, int iTrj, double du ){
     p.mul(view_scale);
     Draw3D::drawPointCross( p, 0.1 );
     Draw3D::drawSphere_oct(16, b.radius*view_scale, p );
+
+    //printf( "p(%g,%g,%g) \n", p.x, p.y, p.z );
+
+    if(ifont!=0) Draw3D::drawText( b.name.c_str(), p, ifont, 0.01, 0 );
+    //if(ifont!=0) Draw3D::drawText( "ahoj", p, ifont, 0.02, 0 );
+    //Draw3D::drawText( "ahoj", (Vec3d){0.0,0.0,0.0}, ifont, 0.02, 0 );
+
+    //Draw2D::drawText()
+    //Draw2D::drawText( "ahoj", {0.0,0.0}, {8,5}, ifont, 8 );
+
 }
 
 
