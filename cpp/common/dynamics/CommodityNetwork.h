@@ -13,6 +13,21 @@
 #include "str2tree.h"
 
 
+
+/*
+
+Economy Model 1
+----------------
+
+Solve interaction between two basic problems
+ * Production - "Factory" is instance of certain "Technology" which converts input{set of goods} to output{set of goods}
+ * Transport  - "Car" assigned to certain road transport goods from city "A" to city "B" if cost(B) > cost{A}+transport_cost
+
+*/
+
+
+
+
 namespace CommodityNetwork{
 
 struct Car;
@@ -51,7 +66,7 @@ struct CommodityState{
     double demand =0;      // expected ammount to be cosumed
     double price  =1;
 
-    CommodityState( );
+    CommodityState( ) = default;
     CommodityState( CommodityType& type_ ){
         type = &type_; ammount=0; supply=0; demand=0; price=type_.price_normal;
     };
@@ -118,7 +133,7 @@ struct Technology{
 
 struct Factory{
     double space           = 0;
-    const Technology* tech = 0;
+    const Technology* tech = 0; // to do  - why const ?
 
     /*
     bool setTechnology( Technology* tech_ ){
@@ -130,7 +145,7 @@ struct Factory{
     }
     */
 
-    double produce(double N){
+    double produce( double dt, double Nmax, std::unordered_map<int,CommodityState*>& goods ){
         // check max possible
         /*
         for( auto it : currentTenchnology->consumes ){
@@ -146,7 +161,11 @@ struct Factory{
         for( auto it : currentTenchnology->produces ){ stored[it.first] += it.second*N; }
         return N;
         */
-        return -1; // just place-holder
+        double N = fmin( Nmax, dt*space/tech->unit_space );
+        printf( "produce Nmax %g dt %g space %g/%g N %g \n", Nmax, dt, space, tech->unit_space, N );
+        for( auto it : tech->consumes ){ goods[it.first]->ammount -= it.second*N; }
+        for( auto it : tech->produces ){ goods[it.first]->ammount += it.second*N; }
+        return N; // just place-holder
     }
 
 };
@@ -157,17 +176,19 @@ struct City{
     //city<>
     double parkUsed    =0;
     double parkCapacity=0;
-    std::vector<StoreState>                 stores;
+    std::vector<StoreState>                 stores;   // ????? Do We Need this when there is "goods"
     //std::list<Cars> cars;
     std::unordered_map<int,CommodityState*> goods;     // cargo_id -> store
     std::unordered_map<int,Factory*>        factories; // tech_id  -> Factory
 
     void registerCommodity( CommodityType& type ){
+        //printf( "register: %s \n", type.name.c_str() );
         auto got=goods.find(type.id);
         if( got==goods.end() ){
             //CommodityState* s = new CommodityState{ &type, 0, 0, 0, type.price_normal };
             CommodityState* s = new CommodityState(type);
             goods.insert( {type.id, s} );
+            //printf( ".... registered \n" );
             /*
             CommodityType* type=0;
             double ammount=0;      // current ammount
@@ -178,6 +199,13 @@ struct City{
         }
     }
 
+    /*
+    CommodityState* getGoods( const char* name ){
+        int id_Iron = goodsDict[name]->id;
+        return cities[1]->goods[id_Iron];
+    }
+    */
+
     bool registerTech( const Technology& tech, std::vector<CommodityType*>& goodsTypes ){
         auto got = factories.find(tech.id);
         if(got!=factories.end()) return true;
@@ -185,6 +213,7 @@ struct City{
         for( auto it : tech.produces ){ registerCommodity( *goodsTypes[it.first] ); }
         //for( auto it : tech.produces ){ outPrice += goods[it.first]->price; }
         Factory* fac = new Factory();
+        fac->space = 10.0;
         fac->tech=&tech;
         factories.insert({tech.id,fac});
         return false;
@@ -200,13 +229,34 @@ struct City{
         for( auto it : tech.produces ){ outPrice += goods[it.first]->price; }
         // ToDo : consider storare and factory space
         // ToDo : consider absent commodities
-        return outPrice - inPrice;
+        //printf( "rank price: in(%g) >? out(%g) \n", outPrice, inPrice );
+        return outPrice - inPrice; // netGain
+    }
+
+    double maxTech( const Technology& tech ){
+        double limit = 1e+300;
+        for( auto it : tech.consumes ){
+            printf( "consume %s : %g / %g = %g \n", goods[it.first]->type->name.c_str(), goods[it.first]->ammount, it.second, goods[it.first]->ammount/it.second );
+            limit = fmin( limit, goods[it.first]->ammount/it.second );
+        }
+        printf( "limit N %g \n", limit );
+        return limit; // max number units which can be produced using stored input resources
+    }
+
+    double produce( double dt ){
+        for(auto it: factories){
+            Factory* fc = it.second;
+            if( rankTech( *fc->tech ) > 0 ){
+                double   N = maxTech( *fc->tech );
+                fc->produce( dt, N, goods );
+            }
+        }
     }
 
     double addCommodity( double N, const CommodityType& cargo ){
         StoreState& ss  = stores[ cargo.storeKind ];
         double dv       = N * cargo.transport_volume;
-        dv              = fmax( dv, ss.volumeMax - ss.volume );
+        dv              = fmax( dv, ss.volumeMax - ss.volume ); // ToDo : consider both mass and weight for transport
         double da  = dv/cargo.transport_volume;
         ss.volume  +=dv;
 
@@ -231,6 +281,15 @@ struct City{
         }
         */
         return da;
+    }
+
+    int goodsInfo( char* str ){
+        char* str0=str;
+        for( auto it : goods ){
+            const CommodityState* gs = it.second;
+            str += sprintf( str, "%s %g\n", gs->type->name.c_str(), gs->ammount );
+        }
+        return str-str0;
     }
 
     //void unload(Car& c){
@@ -329,17 +388,44 @@ class Economy{ public:
     std::vector<Car*>  cars;
     std::vector<Road*> roads;
 
+    int insert( CommodityType* cargo ){
+        //CommodityType* cargo = new CommodityType( strGoods[i].c_str() );
+        cargo->id = goods.size();
+        goods    .push_back( cargo );
+        goodsDict.insert( {cargo->name, cargo} );
+        printf( "Comodity %i %s \n", cargo->id, cargo->name.c_str() );
+        return cargo->id ;
+    }
+
+    int insert( Technology* tech ){
+        //Technology* tech = new Technology( &strTech[i][0], goodsDict );
+        tech->id = technologies.size();
+        technologies  .push_back( tech );
+        technologyDict.insert( {tech->name, tech} );
+        printf( "Technology %i %s nConsume %i nPoduce %i \n", tech->id, tech->name.c_str(), tech->consumes.size(), tech->produces.size() );
+        return tech->id;
+    }
+
     void step(double dt){
+        // --- Transport
+        /*
         for(Car* c:cars){
             if(c->city) c->tryLoad();
             if(c->road) c->move(dt);
             if(c->city) c->tryUndload();
         }
-        //for(Car* c:cars){
-        //    c->tryUndload();
-        //}
+        */
+        for(City* ct : cities){
+            ct->produce( dt );
+            //char str[1024];
+            //ct->goodsInfo( str );
+            //printf( "=== city[%i]\n%s", ct->id, str );
+        }
     }
 
+    CommodityState* getGoodsInCity(int icity, const char* name ){
+        return cities[1]->goods[goodsDict[name]->id];
+    }
 };
 
 
