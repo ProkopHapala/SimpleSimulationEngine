@@ -162,7 +162,7 @@ struct Factory{
         return N;
         */
         double N = fmin( Nmax, dt*space/tech->unit_space );
-        printf( "produce Nmax %g dt %g space %g/%g N %g \n", Nmax, dt, space, tech->unit_space, N );
+        //printf( "produce Nmax %g dt %g space %g/%g N %g \n", Nmax, dt, space, tech->unit_space, N );
         for( auto it : tech->consumes ){ goods[it.first]->ammount -= it.second*N; }
         for( auto it : tech->produces ){ goods[it.first]->ammount += it.second*N; }
         return N; // just place-holder
@@ -236,16 +236,17 @@ struct City{
     double maxTech( const Technology& tech ){
         double limit = 1e+300;
         for( auto it : tech.consumes ){
-            printf( "consume %s : %g / %g = %g \n", goods[it.first]->type->name.c_str(), goods[it.first]->ammount, it.second, goods[it.first]->ammount/it.second );
+            //printf( "consume %s : %g / %g = %g \n", goods[it.first]->type->name.c_str(), goods[it.first]->ammount, it.second, goods[it.first]->ammount/it.second );
             limit = fmin( limit, goods[it.first]->ammount/it.second );
         }
-        printf( "limit N %g \n", limit );
+        //printf( "limit N %g \n", limit );
         return limit; // max number units which can be produced using stored input resources
     }
 
     double produce( double dt ){
         for(auto it: factories){
             Factory* fc = it.second;
+            if(fc->space<=0) continue;
             if( rankTech( *fc->tech ) > 0 ){
                 double   N = maxTech( *fc->tech );
                 fc->produce( dt, N, goods );
@@ -259,28 +260,16 @@ struct City{
         dv              = fmax( dv, ss.volumeMax - ss.volume ); // ToDo : consider both mass and weight for transport
         double da  = dv/cargo.transport_volume;
         ss.volume  +=dv;
-
         goods[cargo.id]->ammount +=da; // ToDo: check if the commodity is known ?
-
-        /*
-        auto got = goods.find( cargo.id );
-        if ( got != goods.end() ){
-            got->second->ammount +=da;
-        }else{
-            // ToDo - is this even possible ?
-            //        import or produce unknown commodity ?
-            CommodityState* snew = new CommodityState();
-            {
-                //snew.id  =
-                snew->type    = &cargo;
-                snew->ammount = da;
-                snew->demand  = 0;
-                snew->price   = cargo.price_normal;
-            }
-            goods.insert( {cargo.id,snew} );
-        }
-        */
         return da;
+    }
+
+    double takeCommodity( double Nmax, const CommodityType& cargo ){
+        double N        = fmin( N, goods[cargo.id]->ammount );
+        StoreState& ss  = stores[ cargo.storeKind ];
+        ss.volume      -= N * cargo.transport_volume;
+        goods[cargo.id]->ammount -= N; // ToDo: check if the commodity is known ?
+        return N;
     }
 
     int goodsInfo( char* str ){
@@ -303,15 +292,33 @@ struct Road{
     City *a=0,*b=0;
     double length=0;
 
-    void rankTransfer(){
-        for( auto it : a->goods ){
-            auto got = b->goods.find(it.first);
-            if(got!=b->goods.end()){
-
+    CommodityState* optTransfer(bool bSwap, double maxVol, double& outN){
+        City *A,*B;
+        if(bSwap){ A=b;B=a; }else{ A=a;B=b; }
+        //int    best_id    =-1;
+        CommodityState* best_cargo = 0;
+        double best_profit= 0;
+        //double best_N     = 0;
+        for( auto it : A->goods ){
+            auto got = B->goods.find(it.first);
+            if(got!=B->goods.end()){
+                double profit = got->second->price - it.second->price;
+                double maxN   = maxVol/it.second->type->transport_volume;
+                double N      = fmin(it.second->ammount, maxN );
+                profit *= N;
+                if(profit>best_profit){
+                    best_cargo  = it.second;
+                    best_profit= profit;
+                    //best_id    = it.first;
+                    outN       = N;
+                }
             }
         }
+        //return id;
+        return best_cargo;
     }
 
+    //double evalProfit(){}
 
 };
 
@@ -344,7 +351,7 @@ struct Car{
     bool tryPark(City& where){
         double space = type->parkSpace;
         if( where.parkUsed + space < where.parkCapacity ){
-            road=0;
+            //road=0;
             city=&where;
             where.parkUsed+=space;
             return true;
@@ -353,21 +360,52 @@ struct Car{
     }
 
     void unload(City* city){ ammount -= city->addCommodity( ammount, *cargo ); }
+    //void load  (City* city){ ammount += city->takeCommodity( ammount, *cargo ); }
 
+    void loadProfitableCargo( bool bSwap ){
+        double N;
+        cargo = road->optTransfer( bSwap, type->capacity_volume, N)->type;
+        if(cargo){
+            City* ct  = bSwap?road->b:road->a;
+            ammount += ct->takeCommodity( N, *cargo );
+        }
+    }
+
+    /*
     void tryUndload(){
         if (heading > 0){
-            if ( fpos>1.0 ){
-                unload(road->b);
+            if ( fpos>=1.0 ){
+                loadProfitableCargo(false);
             }
         }else{
-            if( fpos<0.0 ){
-                unload(road->b);
+            if( fpos>=0.0 ){
+                loadProfitableCargo(true);
             }
         }
     }
 
     void tryLoad(){
+        if (heading > 0){
+            if ( fpos<=1.0 ){
+                loadProfitableCargo( bool bSwap );
+            }
+        }else{
+            if( fpos<0.0 ){
+                loadProfitableCargo( bool bSwap );
+            }
+        }
+    }
+    */
 
+    void tryTerminal(){
+        printf( "Car[%i] City[%i->%i] fpos %g heading %g \n", id, road->a->id, road->b->id, fpos, heading );
+        if (heading > 0){
+            if      ( fpos>=1.0 ){ unload(road->b); }
+            else if ( fpos<=0.0 ){ loadProfitableCargo(false); }
+        }else{
+            if      ( fpos<=0.0 ){ unload(road->a); }
+            else if ( fpos>=1.0 ){ loadProfitableCargo(true);  }
+        }
     }
 
 };
@@ -408,13 +446,15 @@ class Economy{ public:
 
     void step(double dt){
         // --- Transport
-        /*
+
         for(Car* c:cars){
-            if(c->city) c->tryLoad();
-            if(c->road) c->move(dt);
-            if(c->city) c->tryUndload();
+            //if(c->city) c->tryLoad();
+            printf( "car[%i]road=%li \n", c->id, (long)c->road );
+            //printf( "car[%i] road[%i,%i] \n", c->id, c->road->a->id, c->road->b->id );
+            //if(c->road){ c->tryTerminal(); c->move(dt); }
+            //if(c->city) c->tryUndload();
         }
-        */
+
         for(City* ct : cities){
             ct->produce( dt );
             //char str[1024];

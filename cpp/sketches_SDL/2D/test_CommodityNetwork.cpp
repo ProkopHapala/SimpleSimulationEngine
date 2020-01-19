@@ -27,7 +27,7 @@ class TestAppCommodityNetwork : public AppSDL2OGL { public:
 
     bool bRun = false;
     int iStep =0;
-    double dt = 0.1;
+    double dt = 0.01;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -47,14 +47,19 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
 
     //Vec2d* p = new Vec2d{1.0,2.0};
 
-    int nGoods = 5;
+    int nGoods = 8;
     std::string strGoods[nGoods] = {
     //  name &transport_weight, &density, &price_max, &price_normal
-        "Lime    1.0 1.3 1000.0   12.0" ,
+        "Lime    1.0 3.3 1000.0   12.0" ,
         "Coal    1.0 1.3 1000.0   33.0" ,
         "IronOre 1.0 2.5 1000.0   95.0",
         "Iron    1.0 7.8 10000.0 300.0" ,
-        "Steel   1.0 7.8 10000.0 712.0"
+        "Steel   1.0 7.8 10000.0 712.0",
+
+        "Coke    1.0 1.2 2000.0   50.0" ,
+        "Pitch   1.0 0.9 10000.0 100.0" ,
+        "Sulphur 1.0 2.0 10000.0 150.0" ,
+
     };
     for(int i=0; i<nGoods; i++){
         /*
@@ -68,14 +73,16 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
     }
 
 
-    int nTech = 1;
+    int nTech = 3;
     std::string strTech[nTech] = {
     //             &cycle_time, &unit_space        consumes                  produces       machines
         //"SteelMaking 1.0 1.0 | Iron=10.0  Coal=20.0   |  Steel=9.0   |  people=1"
         //"SteelMaking, 1.0, 1.0| Iron=10.0, Coal=20.0 | Steel=9.0 | people=1"
-
-        "IronMaking{{1.0;2.0};consume{{IronOre;10.0};{Coal;20.0};{Lime;20.0}};produce{{Iron;9.0}};machines{{people;1}}}"
+        //"IronMaking{{1.0;2.0};consume{{IronOre;10.0};{Coal;20.0};{Lime;20.0}};produce{{Iron;9.0}};machines{{people;1}}}",
         //"SteelMaking{{1.0;2.0};consume{{Iron;10.0};{Coal;20.0}};produce{{Steel;9.0}};machines{{people;1}}}"
+        "IronMaking{{1.0;2.0};consume{{IronOre;10.0};{Coke;20.0};{Lime;20.0}};produce{{Iron;9.0}};machines{{people;1}}}",
+        "SteelMaking{{1.0;2.0};consume{{Iron;10.0};{Coke;20.0}};produce{{Steel;9.0}};machines{{people;1}}}",
+        "Coking{{1.0;2.0};consume{{Coal;10.0}};produce{{Coke;7.5};{Pitch;1.0};{Sulphur;0.1}};machines{{people;1}}}"
     };
     for(int i=0; i<nTech; i++){
         /*
@@ -104,20 +111,11 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
     //    economy.cities.push_back();
     //};
 
-
-    CarType* carType0 = new CarType();{
-        carType0->id              = 0;
-        carType0->parkSpace       = 1;
-        carType0->capacity_weight = 1;
-        carType0->capacity_volume = 1;
-        carType0->speed           = 1;
-    };
-
-    int carPerCity = 3;
-    economy.cities.resize( cityPoss.size() );
-
     // ---- set cities
 
+    DEBUG
+
+    economy.cities.resize( cityPoss.size() );
     for( int ic=0;ic<cityPoss.size();ic++ ){
         City* city = new City();
         economy.cities[ic] = city;
@@ -132,23 +130,65 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
         printf( "City %i nGoods %i nTech %i\n", ic, city->goods.size(), city->factories.size() );
 
         printf("City %i Goods: ", ic ); for(auto it: city->goods){ printf( "{%s %g $%g}", it.second->type->name.c_str(), it.second->ammount, it.second->price ); } printf("\n", ic );
-        //printf( "\n" );
+
+    }
+
+    DEBUG
+
+    // ----- create roads
+    economy.roads.reserve(nRoad);
+    for(int i=0; i<nRoad; i++){
+        Road* rd = new Road();{
+            rd->id = i;
+            rd->a  = economy.cities[ links[i].a ];
+            rd->b  = economy.cities[ links[i].b ];
+            rd->length = (cityPoss[links[i].a] - cityPoss[links[i].b]).norm();
+        }
+        //printf( "  %i %i \n",   links[i].a, links[i].b );
+        printf( "road %i %i    %i %i \n", rd->a->id, rd->b->id,    links[i].a, links[i].b );
+        economy.roads.push_back( rd );
+    }
+
+    DEBUG
+
+     // ----- create cars
+
+    CarType* carType0 = new CarType();{
+        carType0->id              = 0;
+        carType0->parkSpace       = 1;
+        carType0->capacity_weight = 1;
+        carType0->capacity_volume = 1;
+        carType0->speed           = 1;
+    };
+
+    printf( "==== Cars \n" );
+
+    int carPerCity = 1;
+
+    //for( int ic=0;ic<cityPoss.size();ic++ ){
+    for( int ird=0;ird<economy.roads.size();ird++ ){
+        //City* city = economy.cities[ic] = city;
+        Road* rd = economy.roads[ird];
         for(int i=0; i<carPerCity; i++){
-            printf( "car[%i] \n", i );
             Car* c = new Car();
             c->type = carType0;
             //c->park = city;
-            c->tryPark(*city);
+            c->road = rd;
+            c->tryPark(*rd->a);
+            c->fpos = -0.1;
+            printf( "Car[%i] road %li (%i,%i)\n", economy.cars.size(),  (long)rd, rd->a->id, rd->b->id );
             economy.cars.push_back(c);
         }
     }
+
+    printf( "==== Cars DONE \n" );
 
     // ---- set comodity states
     CommodityState* gs;
     //int id_Iron = economy.goodsDict["Iron"]->id;
     //gs = economy.cities[1]->goods[id_Iron];
-    gs=economy.getGoodsInCity( 1, "IronOre"); gs->ammount = 1000.0;
-    gs=economy.getGoodsInCity( 1, "Coal"   ); gs->ammount = 400.0;
+    gs=economy.getGoodsInCity( 1, "IronOre"); gs->ammount = 200.0;
+    gs=economy.getGoodsInCity( 1, "Coal"   ); gs->ammount = 1400.0;
     gs=economy.getGoodsInCity( 1, "Lime"   ); gs->ammount = 600.0;
 
     //int id_Coal = economy.goodsDict["Coal"]->id;
@@ -163,21 +203,7 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
 
     DEBUG
 
-    // ----- create roads
 
-    economy.roads.reserve(nRoad);
-    for(int i=0; i<nRoad; i++){
-        Road* rd = new Road();
-        {
-            rd->id = i;
-            rd->a  = economy.cities[ links[i].a ];
-            rd->b  = economy.cities[ links[i].b ];
-            rd->length = (cityPoss[links[i].a] - cityPoss[links[i].b]).norm();
-        }
-        //printf( "  %i %i \n",   links[i].a, links[i].b );
-        printf( "road %i %i    %i %i \n", rd->a->id, rd->b->id,    links[i].a, links[i].b );
-        economy.roads.push_back( rd );
-    }
 
     printf( " ===== SETUP DONE ==== \n" );
 
@@ -230,7 +256,7 @@ void TestAppCommodityNetwork::drawHUD(){
     economy.cities[ipick]->goodsInfo( strtemp );
     //sprintf( strtemp, "AHOJ !!! \n" );
     //printf( "=== city[%i]\n%s", ct->id, str );
-    Draw2D::drawText( strtemp, {100,100}, {160,6*fontSizeDef}, fontTex, fontSizeDef );
+    Draw2D::drawText( strtemp, {100,100}, {160,16*fontSizeDef}, fontTex, fontSizeDef );
 }
 
 void TestAppCommodityNetwork::mouseHandling( ){
