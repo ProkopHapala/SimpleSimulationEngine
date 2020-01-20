@@ -265,9 +265,10 @@ struct City{
     }
 
     double takeCommodity( double Nmax, const CommodityType& cargo ){
-        double N        = fmin( N, goods[cargo.id]->ammount );
-        StoreState& ss  = stores[ cargo.storeKind ];
-        ss.volume      -= N * cargo.transport_volume;
+        printf( "takeCommodity %s %g %i \n", cargo.name.c_str(), Nmax, cargo.id );
+        double N        = fmin( Nmax, goods[cargo.id]->ammount );
+        //StoreState& ss  = stores[ cargo.storeKind ];
+        //ss.volume      -= N * cargo.transport_volume;
         goods[cargo.id]->ammount -= N; // ToDo: check if the commodity is known ?
         return N;
     }
@@ -299,13 +300,16 @@ struct Road{
         CommodityState* best_cargo = 0;
         double best_profit= 0;
         //double best_N     = 0;
+        printf( "A,B %i,%i \n", A->id, B->id );
         for( auto it : A->goods ){
             auto got = B->goods.find(it.first);
             if(got!=B->goods.end()){
+                //printf( "optTransfer: found %i \n", it.first );
                 double profit = got->second->price - it.second->price;
                 double maxN   = maxVol/it.second->type->transport_volume;
                 double N      = fmin(it.second->ammount, maxN );
                 profit *= N;
+                if(profit!=0)printf( "====optTransfer: %s N %g profit %g=%g-%g \n", got->second->type->name.c_str(), N, profit,  got->second->price, it.second->price );
                 if(profit>best_profit){
                     best_cargo  = it.second;
                     best_profit= profit;
@@ -314,6 +318,9 @@ struct Road{
                 }
             }
         }
+        //printf( "optTransfer: DONE \n" );
+        //printf( "optTransfer: best %li \n", (long)best_cargo );
+        if(best_cargo)printf( "optTransfer: best %s profit %g outN %g \n", best_cargo->type->name.c_str(), best_profit, outN );
         //return id;
         return best_cargo;
     }
@@ -340,11 +347,12 @@ struct Car{
     Road*           road=0;
     City*           city=0;
     double       ammount=0;
-    double       heading=0;   // direction of transport
+    double       heading=1;   // direction of transport
     double          fpos=0.5; // position on the road
 
     virtual void move(double dt){
-        double v = fmax( type->speed, heading );
+        //double v = fmax( type->speed, heading );
+        double v = type->speed * heading;
         fpos += v*dt/road->length;
     }
 
@@ -359,16 +367,37 @@ struct Car{
         return false;
     }
 
-    void unload(City* city){ ammount -= city->addCommodity( ammount, *cargo ); }
+    void depart(){
+        if      (fpos<0){
+            fpos=0; heading=1;
+        }else if(fpos>1){
+            fpos=1; heading=-1;
+        }
+    }
+
+
+    void unload(City* city){
+        printf("unload %i\n", city->id); if(cargo){ ammount -= city->addCommodity( ammount, *cargo ); }
+        heading=0;
+    }
     //void load  (City* city){ ammount += city->takeCommodity( ammount, *cargo ); }
 
     void loadProfitableCargo( bool bSwap ){
         double N;
-        cargo = road->optTransfer( bSwap, type->capacity_volume, N)->type;
-        if(cargo){
+        printf("loadProfitableCargo swap:%i\n", bSwap );
+        CommodityState* cs = road->optTransfer( bSwap, type->capacity_volume, N);
+        printf( "loadProfitableCargo done road->optTransfer \n" );
+        if(cs){
+            cargo = cs->type;
             City* ct  = bSwap?road->b:road->a;
+            printf("loadProfitableCargo city %i \n", ct->id );
             ammount += ct->takeCommodity( N, *cargo );
+            depart();
+            printf("loadProfitableCargo ammount %g \n", ammount );
+        }else{
+            heading=0;
         }
+        printf( "loadProfitableCargo DONE \n" );
     }
 
     /*
@@ -398,13 +427,23 @@ struct Car{
     */
 
     void tryTerminal(){
+        //if(heading == 0) return;
         printf( "Car[%i] City[%i->%i] fpos %g heading %g \n", id, road->a->id, road->b->id, fpos, heading );
+        /*
         if (heading > 0){
             if      ( fpos>=1.0 ){ unload(road->b); }
             else if ( fpos<=0.0 ){ loadProfitableCargo(false); }
         }else{
             if      ( fpos<=0.0 ){ unload(road->a); }
             else if ( fpos>=1.0 ){ loadProfitableCargo(true);  }
+        }
+        */
+        if      ( fpos<=0.0  ){
+            if(heading<0){ unload(road->b);            }
+            else         { loadProfitableCargo(false); }
+        }else if ( fpos>=1.0 ){
+            if(heading>0){ unload(road->b);            }
+            else         { loadProfitableCargo(true);  }
         }
     }
 
@@ -451,16 +490,17 @@ class Economy{ public:
             //if(c->city) c->tryLoad();
             printf( "car[%i]road=%li \n", c->id, (long)c->road );
             //printf( "car[%i] road[%i,%i] \n", c->id, c->road->a->id, c->road->b->id );
-            //if(c->road){ c->tryTerminal(); c->move(dt); }
             //if(c->city) c->tryUndload();
+            if(c->road){ c->tryTerminal(); c->move(dt); }
         }
-
+        /*
         for(City* ct : cities){
             ct->produce( dt );
             //char str[1024];
             //ct->goodsInfo( str );
             //printf( "=== city[%i]\n%s", ct->id, str );
         }
+        */
     }
 
     CommodityState* getGoodsInCity(int icity, const char* name ){

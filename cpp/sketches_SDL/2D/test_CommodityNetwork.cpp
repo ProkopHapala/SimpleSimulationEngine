@@ -189,12 +189,12 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
     //gs = economy.cities[1]->goods[id_Iron];
     gs=economy.getGoodsInCity( 1, "IronOre"); gs->ammount = 200.0;
     gs=economy.getGoodsInCity( 1, "Coal"   ); gs->ammount = 1400.0;
-    gs=economy.getGoodsInCity( 1, "Lime"   ); gs->ammount = 600.0;
+    gs=economy.getGoodsInCity( 1, "Lime"   ); gs->ammount = 600.0;   gs->price = 10;
 
     //int id_Coal = economy.goodsDict["Coal"]->id;
     //1gs = economy.cities[1]->goods[id_Coal];
     //gs->ammount = 4000.0;
-    gs->price   = 30;
+    //gs->price   = 30;
 
     for( int ic=0;ic<economy.cities.size(); ic++ ){
         City* city = economy.cities[ic];
