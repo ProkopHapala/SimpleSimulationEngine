@@ -13,7 +13,11 @@
 #include "GUI.h"
 #include "testUtils.h"
 
+//#include "testUtils.h"
+
 #include "CommodityNetwork.h"
+
+
 
 using namespace CommodityNetwork;
 
@@ -138,6 +142,7 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
     // ----- create roads
     economy.roads.reserve(nRoad);
     for(int i=0; i<nRoad; i++){
+        /*
         Road* rd = new Road();{
             rd->id = i;
             rd->a  = economy.cities[ links[i].a ];
@@ -147,6 +152,8 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
         //printf( "  %i %i \n",   links[i].a, links[i].b );
         printf( "road %i %i    %i %i \n", rd->a->id, rd->b->id,    links[i].a, links[i].b );
         economy.roads.push_back( rd );
+        */
+        economy.newRoad( links[i].a, links[i].b, (cityPoss[links[i].a] - cityPoss[links[i].b]).norm() );
     }
 
     DEBUG
@@ -168,9 +175,13 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
     //for( int ic=0;ic<cityPoss.size();ic++ ){
     for( int ird=0;ird<economy.roads.size();ird++ ){
         //City* city = economy.cities[ic] = city;
-        Road* rd = economy.roads[ird];
+        //Road* rd = economy.roads[ird];
         for(int i=0; i<carPerCity; i++){
+            economy.addCar( ird, carType0 );
+            economy.cars.back()->fpos  = -0.1;
+            /*
             Car* c = new Car();
+            c->id = economy.cars
             c->type = carType0;
             //c->park = city;
             c->road = rd;
@@ -178,6 +189,7 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
             c->fpos = -0.1;
             printf( "Car[%i] road %li (%i,%i)\n", economy.cars.size(),  (long)rd, rd->a->id, rd->b->id );
             economy.cars.push_back(c);
+            */
         }
     }
 
@@ -189,7 +201,8 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
     //gs = economy.cities[1]->goods[id_Iron];
     gs=economy.getGoodsInCity( 1, "IronOre"); gs->ammount = 200.0;
     gs=economy.getGoodsInCity( 1, "Coal"   ); gs->ammount = 1400.0;
-    gs=economy.getGoodsInCity( 1, "Lime"   ); gs->ammount = 600.0;   gs->price = 10;
+    gs=economy.getGoodsInCity( 1, "Lime"   ); gs->ammount = 600.0;  // gs->price = 10;
+    gs=economy.getGoodsInCity( 2, "Lime"   ); gs->price   = 14;
 
     //int id_Coal = economy.goodsDict["Coal"]->id;
     //1gs = economy.cities[1]->goods[id_Coal];
@@ -222,7 +235,7 @@ void TestAppCommodityNetwork::draw(){
 
     if(bRun){
         iStep++;
-        printf(" ======== iStep %i \n", iStep );
+        //printf(" ======== iStep %i \n", iStep );
         economy.step( dt );
     }
 
@@ -244,6 +257,7 @@ void TestAppCommodityNetwork::draw(){
         if(c->road){
             Vec2d p; p.set_lincomb( 1-c->fpos, cityPoss[c->road->a->id], c->fpos, cityPoss[c->road->b->id] );
             Draw2D::drawPointCross_d( p, 0.1 );
+            Draw2D::drawCircle_d( p, c->ammount*0.02, 16, false );
         }
         //printf( "road %i %i \n", rd->a->id, rd->b->id );
 	}
@@ -252,11 +266,10 @@ void TestAppCommodityNetwork::draw(){
 
 void TestAppCommodityNetwork::drawHUD(){
     //char str[1024];
-    int ipick = 1;
-    economy.cities[ipick]->goodsInfo( strtemp );
-    //sprintf( strtemp, "AHOJ !!! \n" );
-    //printf( "=== city[%i]\n%s", ct->id, str );
-    Draw2D::drawText( strtemp, {100,100}, {160,16*fontSizeDef}, fontTex, fontSizeDef );
+    //int ipick = 1;
+    economy.cities[0]->goodsInfo( strtemp ); Draw2D::drawText( strtemp, {000,120}, {160,16*fontSizeDef}, fontTex, fontSizeDef );
+    economy.cities[1]->goodsInfo( strtemp ); Draw2D::drawText( strtemp, {200,120}, {160,16*fontSizeDef}, fontTex, fontSizeDef );
+    economy.cities[2]->goodsInfo( strtemp ); Draw2D::drawText( strtemp, {400,120}, {160,16*fontSizeDef}, fontTex, fontSizeDef );
 }
 
 void TestAppCommodityNetwork::mouseHandling( ){

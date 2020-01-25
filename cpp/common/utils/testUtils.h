@@ -12,25 +12,25 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
-void _endl(){ printf("\n"); };
+inline void _endl(){ printf("\n"); };
 
-void printArray( int n, double * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }; printf("\n"); };
-void printArray( int n, float  * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }; printf("\n"); };
-void printArray( int n, int    * vec ){	for (int i=0; i<n; i++){ printf( " %i ", vec[i] ); }; printf("\n"); };
+inline void printArray( int n, double * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }; printf("\n"); };
+inline void printArray( int n, float  * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }; printf("\n"); };
+inline void printArray( int n, int    * vec ){	for (int i=0; i<n; i++){ printf( " %i ", vec[i] ); }; printf("\n"); };
 
-void printVec( const Vec2d& v ){ printf( " %f %f \n", v.x, v.y ); };
-void printVec( const Vec2f& v ){ printf( " %f %f \n", v.x, v.y );};
-void printVec( const Vec2i& v ){ printf( " %i %i \n", v.x, v.y );};
+inline void printVec( const Vec2d& v ){ printf( " %f %f \n", v.x, v.y ); };
+inline void printVec( const Vec2f& v ){ printf( " %f %f \n", v.x, v.y );};
+inline void printVec( const Vec2i& v ){ printf( " %i %i \n", v.x, v.y );};
 
-void printVec( const Vec3d& v ){ printf( " %f %f %f \n", v.x, v.y, v.z );};
-void printVec( const Vec3f& v ){ printf( " %f %f %f \n", v.x, v.y, v.z );};
-void printVec( const Vec3i& v ){ printf( " %i %i %i \n", v.x, v.y, v.z );};
+inline void printVec( const Vec3d& v ){ printf( " %f %f %f \n", v.x, v.y, v.z );};
+inline void printVec( const Vec3f& v ){ printf( " %f %f %f \n", v.x, v.y, v.z );};
+inline void printVec( const Vec3i& v ){ printf( " %i %i %i \n", v.x, v.y, v.z );};
 
-void printQuat( const Quat4d& q ){	printf( " %f %f %f %f \n", q.x, q.y, q.z, q.w ); }
-void printQuat( const Quat4f& q ){	printf( " %f %f %f %f \n", q.x, q.y, q.z, q.w ); }
-void printQuat( const Quat4i& q ){ 	printf( " %i %i %i %i \n", q.x, q.y, q.z, q.w ); }
+inline void printQuat( const Quat4d& q ){	printf( " %f %f %f %f \n", q.x, q.y, q.z, q.w ); }
+inline void printQuat( const Quat4f& q ){	printf( " %f %f %f %f \n", q.x, q.y, q.z, q.w ); }
+inline void printQuat( const Quat4i& q ){ 	printf( " %i %i %i %i \n", q.x, q.y, q.z, q.w ); }
 
-void printMat( const Mat3d& mat  ){
+inline void printMat( const Mat3d& mat  ){
 	printf( " %f %f %f \n", mat.ax, mat.ay, mat.az );
 	printf( " %f %f %f \n", mat.bx, mat.by, mat.bz );
 	printf( " %f %f %f \n", mat.cx, mat.cy, mat.cz );
@@ -112,11 +112,11 @@ class StopWatch{ public:
 static StopWatch stopWatch;
 
 
-void genRandomArray( int n, double * vals, double vmin, double vmax ){
+inline void genRandomArray( int n, double * vals, double vmin, double vmax ){
     for( int i=0; i<n; i++ ){ vals[i] = randf( vmin, vmax ); }
 }
 
-void makeSamples2D( Vec2i ns, Vec3d p0, Vec3d da, Vec3d db, Vec3d *ps ){
+inline void makeSamples2D( Vec2i ns, Vec3d p0, Vec3d da, Vec3d db, Vec3d *ps ){
     for(int ib=0; ib<ns.y; ib++){
         Vec3d p = p0+db*ib;
         for(int ia=0; ia<ns.x; ia++){

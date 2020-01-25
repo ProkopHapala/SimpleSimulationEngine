@@ -12,20 +12,25 @@
 #include "fastmath.h"
 #include "str2tree.h"
 
+#include "testUtils.h"
+
 
 
 /*
 
 Economy Model 1
 ----------------
-
 Solve interaction between two basic problems
  * Production - "Factory" is instance of certain "Technology" which converts input{set of goods} to output{set of goods}
  * Transport  - "Car" assigned to certain road transport goods from city "A" to city "B" if cost(B) > cost{A}+transport_cost
 
 */
 
+static const int nMaxStoreKind = 3;
+static int       counter_commodityType = 0;
 
+
+static double reserveOffset = 100;
 
 
 namespace CommodityNetwork{
@@ -54,22 +59,44 @@ struct CommodityType{
         char tmp[256]; sscanf( s, "%s %lf %lf %lf %lf", tmp, &transport_weight, &density, &price_max, &price_normal ); name=std::string(tmp);
         transport_volume = transport_weight/density;
     }
-    CommodityType();
-    CommodityType(const char* s){fromString(s);}
+
+    void init0(){
+        id=0;
+        storeKind=0;
+        density         =1;
+        transport_weight=1; // transport weight can difer from unit weight due to container
+        transport_volume=1;
+        price_max       =1;
+        price_normal    =1;
+    };
+
+    CommodityType() = default;
+    CommodityType(const char* s){ fromString(s); storeKind=0; id=counter_commodityType; counter_commodityType++; }
 };
 
 struct CommodityState{
     //int id=0;
     CommodityType* type=0;
     double ammount=0;      // current ammount
+    double reserve=0;
     double supply =0;      // expected ammount to arrive by import and production
     double demand =0;      // expected ammount to be cosumed
     double price  =1;
 
     CommodityState( ) = default;
     CommodityState( CommodityType& type_ ){
-        type = &type_; ammount=0; supply=0; demand=0; price=type_.price_normal;
+        type = &type_; ammount=0; reserve=0; supply=0; demand=0; price=type_.price_normal;
     };
+
+    void updatePrice(){
+        double surplus = ammount - reserve;
+        double change  = supply  - demand;
+        double timeFrame = 5.0;
+        surplus += change*timeFrame;
+        double price_mod = clamp( surplus / (  reserve + reserveOffset ), -1.0, 1.0 );
+        price = type->price_normal * ( 1 - 0.5*price_mod );
+    }
+
 };
 
 struct Technology{
@@ -170,16 +197,36 @@ struct Factory{
 
 };
 
+struct TradeStats{
+    CommodityState* best_cargo   = 0;
+    double          best_profit  = 0;
+    double          total_profit = 0;
+    void evalRoad( City *A, City *B );
+};
+
+struct Road{
+    int id;
+    City *a=0,*b=0;
+    double length=0;
+    TradeStats tradeStats[2];
+
+    void evalTradeStats();
+    CommodityState* optTransfer(bool bSwap, double maxVol, double& outN, double& best_profit);
+
+};
 
 struct City{
     int id=0;
     //city<>
     double parkUsed    =0;
     double parkCapacity=0;
-    std::vector<StoreState>                 stores;   // ????? Do We Need this when there is "goods"
+    double carDemand   =0;
+    //std::vector<StoreState>              stores;   // ????? Do We Need this when there is "goods"
+    StoreState stores[nMaxStoreKind];
     //std::list<Cars> cars;
     std::unordered_map<int,CommodityState*> goods;     // cargo_id -> store
     std::unordered_map<int,Factory*>        factories; // tech_id  -> Factory
+    std::vector<Road*> roads;
 
     void registerCommodity( CommodityType& type ){
         //printf( "register: %s \n", type.name.c_str() );
@@ -188,6 +235,7 @@ struct City{
             //CommodityState* s = new CommodityState{ &type, 0, 0, 0, type.price_normal };
             CommodityState* s = new CommodityState(type);
             goods.insert( {type.id, s} );
+            //stores[type->storeKind] = ;
             //printf( ".... registered \n" );
             /*
             CommodityType* type=0;
@@ -257,7 +305,10 @@ struct City{
     double addCommodity( double N, const CommodityType& cargo ){
         StoreState& ss  = stores[ cargo.storeKind ];
         double dv       = N * cargo.transport_volume;
+        //printf( "dv %g \n", dv );
+        //printf( "ss.volumeMax %g ss.volume %g \n", ss.volumeMax, ss.volume );
         dv              = fmax( dv, ss.volumeMax - ss.volume ); // ToDo : consider both mass and weight for transport
+        //printf( "dv %g \n", dv );
         double da  = dv/cargo.transport_volume;
         ss.volume  +=dv;
         goods[cargo.id]->ammount +=da; // ToDo: check if the commodity is known ?
@@ -265,7 +316,7 @@ struct City{
     }
 
     double takeCommodity( double Nmax, const CommodityType& cargo ){
-        printf( "takeCommodity %s %g %i \n", cargo.name.c_str(), Nmax, cargo.id );
+        //printf( "takeCommodity %s %g %i \n", cargo.name.c_str(), Nmax, cargo.id );
         double N        = fmin( Nmax, goods[cargo.id]->ammount );
         //StoreState& ss  = stores[ cargo.storeKind ];
         //ss.volume      -= N * cargo.transport_volume;
@@ -275,59 +326,94 @@ struct City{
 
     int goodsInfo( char* str ){
         char* str0=str;
-        for( auto it : goods ){
+        str += sprintf( str, "carDemand %g$ \n", carDemand );
+        for( auto& it : goods ){
             const CommodityState* gs = it.second;
-            str += sprintf( str, "%s %g\n", gs->type->name.c_str(), gs->ammount );
+            str += sprintf( str, "%s$%3.0f %g[kg]\n", gs->type->name.c_str(), gs->price, gs->ammount );
         }
         return str-str0;
     }
 
+    void updatePrices(){
+        for( auto& it : goods ){
+            it.second->updatePrice();
+        }
+        double exportProfit = 0;
+        for(const Road* rd: roads){
+            if(rd->a==this){ exportProfit += rd->tradeStats[0].total_profit; }else{ exportProfit += rd->tradeStats[1].total_profit; }
+        }
+        carDemand = exportProfit * 0.5;
+    }
     //void unload(Car& c){
     //    c.ammount -= addCommodity( c.ammount, *c.cargo );
     //}
 
 };
 
-struct Road{
-    int id;
-    City *a=0,*b=0;
-    double length=0;
-
-    CommodityState* optTransfer(bool bSwap, double maxVol, double& outN){
-        City *A,*B;
-        if(bSwap){ A=b;B=a; }else{ A=a;B=b; }
-        //int    best_id    =-1;
-        CommodityState* best_cargo = 0;
-        double best_profit= 0;
-        //double best_N     = 0;
-        printf( "A,B %i,%i \n", A->id, B->id );
-        for( auto it : A->goods ){
-            auto got = B->goods.find(it.first);
-            if(got!=B->goods.end()){
-                //printf( "optTransfer: found %i \n", it.first );
-                double profit = got->second->price - it.second->price;
-                double maxN   = maxVol/it.second->type->transport_volume;
-                double N      = fmin(it.second->ammount, maxN );
-                profit *= N;
-                if(profit!=0)printf( "====optTransfer: %s N %g profit %g=%g-%g \n", got->second->type->name.c_str(), N, profit,  got->second->price, it.second->price );
-                if(profit>best_profit){
-                    best_cargo  = it.second;
-                    best_profit= profit;
-                    //best_id    = it.first;
-                    outN       = N;
-                }
+inline void TradeStats::evalRoad( City *A, City *B ){
+    //City *A,*B;
+    //if(bSwap){ A=road.b;B=road.a; }else{ A=road.a;B=road.b; }
+    best_cargo=0;
+    best_profit=0;
+    total_profit=0;
+    for( auto it : A->goods ){
+        auto got = B->goods.find(it.first);
+        double Nexport = fmax( 0, it.second->ammount - it.second->reserve );
+        if(got!=B->goods.end()){
+            double unit_profit = got->second->price - it.second->price;
+            if(unit_profit<=0) continue;
+            //double maxN   = maxVol/it.second->type->transport_volume;
+            //double ammount=0;      // current ammount
+            //double reserve=0;
+            total_profit  += unit_profit * Nexport;
+            if(unit_profit>best_profit){
+                //printf( "trade[%i->%i] d$ %g (%g$,%g[kg])->(%g$,%g[kg]) \n", A->id, B->id, unit_profit, it.second->price, it.second->ammount, got->second->price, got->second->ammount );
+                best_cargo    = it.second;
+                best_profit   = unit_profit;
             }
         }
-        //printf( "optTransfer: DONE \n" );
-        //printf( "optTransfer: best %li \n", (long)best_cargo );
-        if(best_cargo)printf( "optTransfer: best %s profit %g outN %g \n", best_cargo->type->name.c_str(), best_profit, outN );
-        //return id;
-        return best_cargo;
     }
+    //printf( "trade[%i->%i]  d$ %g \n", A->id, B->id, total_profit );
+}
 
-    //double evalProfit(){}
-
+inline void Road::evalTradeStats(){
+    tradeStats[0].evalRoad( a, b );
+    tradeStats[1].evalRoad( b, a );
+    //printf( "road[%i][%i->%i] export %g inport %g \n", id, a->id, b->id, tradeStats[0].total_profit, tradeStats[1].total_profit );
 };
+
+inline CommodityState* Road::optTransfer(bool bSwap, double maxVol, double& outN, double& best_profit){
+    City *A,*B;
+    if(bSwap){ A=b;B=a; }else{ A=a;B=b; }
+    //int    best_id    =-1;
+    CommodityState* best_cargo = 0;
+    best_profit= 0;
+    //double best_N     = 0;
+    //printf( "A,B %i,%i \n", A->id, B->id );
+    for( auto it : A->goods ){
+        auto got = B->goods.find(it.first);
+        if(got!=B->goods.end()){
+            //printf( "optTransfer: found %i \n", it.first );
+            double profit = got->second->price - it.second->price;
+            double maxN   = maxVol/it.second->type->transport_volume;
+            double N      = fmin(it.second->ammount, maxN );
+            profit *= N;
+            //if(profit!=0)printf( "====optTransfer: %s N %g profit %g=%g-%g \n", got->second->type->name.c_str(), N, profit,  got->second->price, it.second->price );
+            if(profit>best_profit){
+                best_cargo  = it.second;
+                best_profit= profit;
+                //best_id    = it.first;
+                outN       = N;
+            }
+        }
+    }
+    //printf( "optTransfer: DONE \n" );
+    //printf( "optTransfer: best %li \n", (long)best_cargo );
+    //if(best_cargo)printf( "optTransfer: best %s profit %g outN %g \n", best_cargo->type->name.c_str(), best_profit, outN );
+    //return id;
+    return best_cargo;
+}
+
 
 struct CarType{
     int id;
@@ -335,6 +421,7 @@ struct CarType{
     double capacity_weight = 1;
 	double capacity_volume = 1;
 	double speed           = 1;
+	double costPerKm       = 1;
 	//double loadTime;
 	//double consumption;
 };
@@ -375,77 +462,54 @@ struct Car{
         }
     }
 
-
     void unload(City* city){
-        printf("unload %i\n", city->id); if(cargo){ ammount -= city->addCommodity( ammount, *cargo ); }
+        //printf("car[%i].unload %i\n", id, city->id);
+        if(cargo){
+            ammount -= city->addCommodity( ammount, *cargo );
+            printf( "unload car[%i] city[%i] \n", id, city->id );
+        }
         heading=0;
     }
     //void load  (City* city){ ammount += city->takeCommodity( ammount, *cargo ); }
 
-    void loadProfitableCargo( bool bSwap ){
-        double N;
-        printf("loadProfitableCargo swap:%i\n", bSwap );
-        CommodityState* cs = road->optTransfer( bSwap, type->capacity_volume, N);
-        printf( "loadProfitableCargo done road->optTransfer \n" );
-        if(cs){
-            cargo = cs->type;
-            City* ct  = bSwap?road->b:road->a;
-            printf("loadProfitableCargo city %i \n", ct->id );
-            ammount += ct->takeCommodity( N, *cargo );
+    void tryDepartWithCargo( bool bSwap ){
+        double N, profit;
+        //printf("loadProfitableCargo swap:%i\n", bSwap );
+        double jurneyCost = road->length * type->costPerKm;
+        CommodityState* cs = road->optTransfer( bSwap, type->capacity_volume, N, profit );
+        //printf( "loadProfitableCargo done road->optTransfer \n" );
+        double dCarDemand = road->b->carDemand - road->a->carDemand;
+        if(bSwap)dCarDemand=-dCarDemand;
+        //printf( "profit %g dCarDemand %g jurneyCost %g \n", profit, dCarDemand, jurneyCost );
+        if(dCarDemand>0)profit+=dCarDemand;
+        if( profit > jurneyCost ){
+            if(cs){
+                cargo     = cs->type;
+                City* ct  = bSwap?road->b:road->a;
+                //printf("loadProfitableCargo city %i \n", ct->id );
+                ammount += ct->takeCommodity( N, *cargo );
+                //printf("loadProfitableCargo ammount %g \n", ammount );
+            }
             depart();
-            printf("loadProfitableCargo ammount %g \n", ammount );
         }else{
             heading=0;
         }
-        printf( "loadProfitableCargo DONE \n" );
+        //printf( "loadProfitableCargo DONE \n" );
     }
-
-    /*
-    void tryUndload(){
-        if (heading > 0){
-            if ( fpos>=1.0 ){
-                loadProfitableCargo(false);
-            }
-        }else{
-            if( fpos>=0.0 ){
-                loadProfitableCargo(true);
-            }
-        }
-    }
-
-    void tryLoad(){
-        if (heading > 0){
-            if ( fpos<=1.0 ){
-                loadProfitableCargo( bool bSwap );
-            }
-        }else{
-            if( fpos<0.0 ){
-                loadProfitableCargo( bool bSwap );
-            }
-        }
-    }
-    */
 
     void tryTerminal(){
         //if(heading == 0) return;
-        printf( "Car[%i] City[%i->%i] fpos %g heading %g \n", id, road->a->id, road->b->id, fpos, heading );
-        /*
-        if (heading > 0){
-            if      ( fpos>=1.0 ){ unload(road->b); }
-            else if ( fpos<=0.0 ){ loadProfitableCargo(false); }
-        }else{
-            if      ( fpos<=0.0 ){ unload(road->a); }
-            else if ( fpos>=1.0 ){ loadProfitableCargo(true);  }
-        }
-        */
+        //printf( "Car[%i] City[%i->%i] fpos %g heading %g \n", id, road->a->id, road->b->id, fpos, heading );
         if      ( fpos<=0.0  ){
-            if(heading<0){ unload(road->b);            }
-            else         { loadProfitableCargo(false); }
+            if(heading<0){ unload(road->a);           }
+            else         { tryDepartWithCargo(false); }
         }else if ( fpos>=1.0 ){
-            if(heading>0){ unload(road->b);            }
-            else         { loadProfitableCargo(true);  }
+            if(heading>0){ unload(road->b);           }
+            else         { tryDepartWithCargo(true);  }
         }
     }
+
+    //void tryChangeRoad( ){}
 
 };
 
@@ -483,28 +547,51 @@ class Economy{ public:
         return tech->id;
     }
 
-    void step(double dt){
-        // --- Transport
+    void newRoad(int i, int j, double length ){
+        Road* rd = new Road();
+        rd->id = roads.size();
+        rd->a  = cities[ i ];
+        rd->b  = cities[ j ];
+        roads.push_back(rd);
+        cities[ i ]->roads.push_back( rd );
+        cities[ j ]->roads.push_back( rd );
+        rd->length = length;
+        //rd->length = (cityPoss[links[i].a] - cityPoss[links[i].b]).norm();
+    }
 
-        for(Car* c:cars){
-            //if(c->city) c->tryLoad();
-            printf( "car[%i]road=%li \n", c->id, (long)c->road );
-            //printf( "car[%i] road[%i,%i] \n", c->id, c->road->a->id, c->road->b->id );
-            //if(c->city) c->tryUndload();
-            if(c->road){ c->tryTerminal(); c->move(dt); }
-        }
-        /*
+    void addCar( int iRoad, CarType* carType ){
+        Car* c  = new Car();
+        c->id   = cars.size();
+        c->type = carType;
+        //c->park = city;
+        Road* rd = roads[iRoad];
+        c->road  = rd;
+        c->tryPark(*rd->a);
+        //c->fpos  = -0.1;
+        //printf( "Car[%i] road %li (%i,%i)\n", c->id,  (long)rd, rd->a->id, rd->b->id );
+        cars.push_back(c);
+    }
+
+    void step(double dt){
         for(City* ct : cities){
+            ct->updatePrices();
             ct->produce( dt );
-            //char str[1024];
-            //ct->goodsInfo( str );
-            //printf( "=== city[%i]\n%s", ct->id, str );
         }
-        */
+        for( Road* rd: roads){
+            rd->evalTradeStats();
+        }
+        for(Car* c:cars){
+            if(c->road){
+                c->tryTerminal();
+                if( fabs(c->heading)>1e-6 ){
+                    c->move(dt);
+                }
+            }
+        }
     }
 
     CommodityState* getGoodsInCity(int icity, const char* name ){
-        return cities[1]->goods[goodsDict[name]->id];
+        return cities[icity]->goods[goodsDict[name]->id];
     }
 };
 
