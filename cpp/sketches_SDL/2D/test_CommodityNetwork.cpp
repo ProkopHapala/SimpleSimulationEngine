@@ -31,7 +31,7 @@ class TestAppCommodityNetwork : public AppSDL2OGL { public:
 
     bool bRun = false;
     int iStep =0;
-    double dt = 0.01;
+    double dt = 0.1;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -99,6 +99,15 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
         economy.insert( new Technology( &strTech[i][0], economy.goodsDict ) );
     }
 
+    int nResource=4;
+    std::string strResources[nResource] = {
+        //CommodityType &sustainable_rate[kg/time], &deposit[kg], &dificulty[$], &developed[1], &recovery_type[1]
+        "IronOre 0.0 2000000.0 100.0 0.0 0",
+        "Lime    0.0 2000000.0 100.0 0.0 0",
+        "Coal    0.0 2000000.0 100.0 0.0 0",
+        "Agriculture 100.0 2000.0 100.0 0.0 0"
+    };
+
 
     //exit(0);
     // make cities
@@ -117,8 +126,6 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
 
     // ---- set cities
 
-    DEBUG
-
     economy.cities.resize( cityPoss.size() );
     for( int ic=0;ic<cityPoss.size();ic++ ){
         City* city = new City();
@@ -127,17 +134,15 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
         city->parkCapacity = 1000.0;
 
         // register each tech in each city
-        for( Technology* tech : economy.technologies ){
-            printf( "Register Tech %i %s \n", tech->id, tech->name.c_str() );
-            city->registerTech(*tech, economy.goods );
-        }
+        //for( Technology* tech : economy.technologies ){
+        //    printf( "Register Tech %i %s \n", tech->id, tech->name.c_str() );
+        //    city->registerTech(*tech, economy.goods );
+        //}
         printf( "City %i nGoods %i nTech %i\n", ic, city->goods.size(), city->factories.size() );
 
         printf("City %i Goods: ", ic ); for(auto it: city->goods){ printf( "{%s %g $%g}", it.second->type->name.c_str(), it.second->ammount, it.second->price ); } printf("\n", ic );
 
     }
-
-    DEBUG
 
     // ----- create roads
     economy.roads.reserve(nRoad);
@@ -155,8 +160,6 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
         */
         economy.newRoad( links[i].a, links[i].b, (cityPoss[links[i].a] - cityPoss[links[i].b]).norm() );
     }
-
-    DEBUG
 
      // ----- create cars
 
@@ -195,6 +198,7 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
 
     printf( "==== Cars DONE \n" );
 
+    /*
     // ---- set comodity states
     CommodityState* gs;
     //int id_Iron = economy.goodsDict["Iron"]->id;
@@ -203,24 +207,24 @@ TestAppCommodityNetwork::TestAppCommodityNetwork( int& id, int WIDTH_, int HEIGH
     gs=economy.getGoodsInCity( 1, "Coal"   ); gs->ammount = 1400.0;
     gs=economy.getGoodsInCity( 1, "Lime"   ); gs->ammount = 600.0;  // gs->price = 10;
     gs=economy.getGoodsInCity( 2, "Lime"   ); gs->price   = 14;
+    */
 
-    //int id_Coal = economy.goodsDict["Coal"]->id;
-    //1gs = economy.cities[1]->goods[id_Coal];
-    //gs->ammount = 4000.0;
-    //gs->price   = 30;
+    economy.addFactory( 1, "IronMaking"  ,  1.0 );
+    economy.addFactory( 1, "SteelMaking" ,  1.0 );
+    economy.addFactory( 2, "Coking"      ,  1.0 );
+
+    //CommodityType &sustainable_rate[kg/time], &deposit[kg], &dificulty[$], &developed[1], &recovery_type[1]
+    //"IronOre 0.0 2000000.0 100.0 0.0 0",
+    economy.addResource( 0, "Lime    0.0 2000000.0 5.0  10.0 0" );
+    economy.addResource( 1, "IronOre 0.0 2000000.0 20.0 12.0 0" );
+    economy.addResource( 2, "Coal    0.0 2000000.0 8.0  15.0 0" );
 
     for( int ic=0;ic<economy.cities.size(); ic++ ){
         City* city = economy.cities[ic];
         printf("City %i Goods: ", ic ); for(auto it: city->goods){ printf( "{%s %g $%g}", it.second->type->name.c_str(), it.second->ammount, it.second->price ); } printf("\n", ic );
     }
 
-    DEBUG
-
-
-
     printf( " ===== SETUP DONE ==== \n" );
-
-    DEBUG
 
 } // TestAppCommodityNetwork::TestAppCommodityNetwork
 
@@ -262,6 +266,8 @@ void TestAppCommodityNetwork::draw(){
         //printf( "road %i %i \n", rd->a->id, rd->b->id );
 	}
 
+
+	//delay = 500;
 }
 
 void TestAppCommodityNetwork::drawHUD(){
@@ -270,6 +276,17 @@ void TestAppCommodityNetwork::drawHUD(){
     economy.cities[0]->goodsInfo( strtemp ); Draw2D::drawText( strtemp, {000,120}, {160,16*fontSizeDef}, fontTex, fontSizeDef );
     economy.cities[1]->goodsInfo( strtemp ); Draw2D::drawText( strtemp, {200,120}, {160,16*fontSizeDef}, fontTex, fontSizeDef );
     economy.cities[2]->goodsInfo( strtemp ); Draw2D::drawText( strtemp, {400,120}, {160,16*fontSizeDef}, fontTex, fontSizeDef );
+
+    char* s = strtemp;
+    for(int ic=0; ic<economy.cars.size(); ic++){
+        Car* cr = economy.cars[ic];
+        if( cr->cargo ){
+            s+=sprintf( s, "car[%i] %s %g \n", ic, cr->cargo->name.c_str(), cr->ammount );
+        }else{
+            s+=sprintf( s, "car[%i] --- \n", ic );
+        }
+    }
+    Draw2D::drawText( strtemp, {0,300}, {160,16*fontSizeDef}, fontTex, fontSizeDef );
 }
 
 void TestAppCommodityNetwork::mouseHandling( ){

@@ -24,12 +24,16 @@ Solve interaction between two basic problems
  * Production - "Factory" is instance of certain "Technology" which converts input{set of goods} to output{set of goods}
  * Transport  - "Car" assigned to certain road transport goods from city "A" to city "B" if cost(B) > cost{A}+transport_cost
 
+ ToDo:
+  - Energy (Electricity), Agricultural Land, Workforce, Computing Power .... these are resources which cannot be stored !!!
+  - Possibly we should merge resource-extraction and production? ... Natural Resource may be just an other input in Technology/Factory ???
+
 */
 
 static const int nMaxStoreKind = 3;
 static int       counter_commodityType = 0;
 
-
+static double priceConvRate = 0.1;
 static double reserveOffset = 100;
 
 
@@ -88,13 +92,14 @@ struct CommodityState{
         type = &type_; ammount=0; reserve=0; supply=0; demand=0; price=type_.price_normal;
     };
 
-    void updatePrice(){
+    void updatePrice(double dt){
         double surplus = ammount - reserve;
         double change  = supply  - demand;
         double timeFrame = 5.0;
         surplus += change*timeFrame;
-        double price_mod = clamp( surplus / (  reserve + reserveOffset ), -1.0, 1.0 );
-        price = type->price_normal * ( 1 - 0.5*price_mod );
+        double price_mod    = clamp( surplus / (  reserve + reserveOffset ), -1.0, 1.0 );
+        double price_target = type->price_normal * ( 1 - 0.5*price_mod );
+        price += (price_target-price)*priceConvRate*dt;
     }
 
 };
@@ -211,8 +216,25 @@ struct Road{
     TradeStats tradeStats[2];
 
     void evalTradeStats();
-    CommodityState* optTransfer(bool bSwap, double maxVol, double& outN, double& best_profit);
+    //CommodityState* optTransfer(bool bSwap, double maxVol, double& outN, double& best_profit);
+    CommodityState*   optTransfer(bool bSwap, double maxVol, double maxMass, double& outN, double& best_profit);
 
+};
+
+struct Resource{
+    CommodityType*  type;
+    int             recovery_type;
+    double          sustainable_rate; // sustainable rate of exploitation/recovery
+    double          deposit;
+    double          dificulty; // [$/kg] abstract number which determine how difficult it is to develop this resource
+    double          developed;
+
+    void fromString(const char* s, std::unordered_map<std::string,CommodityType*>& goodDict ){
+        char stmp[256];
+        sscanf(s,"%s %lf %lf %lf %lf %i \n", &stmp, &sustainable_rate, &deposit, &dificulty, &developed, &recovery_type );
+        type = goodDict[stmp];
+        printf( " %s %lf %lf %lf %lf %i \n", type->name.c_str(), sustainable_rate, deposit, dificulty, developed, recovery_type );
+    }
 };
 
 struct City{
@@ -226,7 +248,8 @@ struct City{
     //std::list<Cars> cars;
     std::unordered_map<int,CommodityState*> goods;     // cargo_id -> store
     std::unordered_map<int,Factory*>        factories; // tech_id  -> Factory
-    std::vector<Road*> roads;
+    std::vector<Road*>     roads;
+    std::vector<Resource*> resources;
 
     void registerCommodity( CommodityType& type ){
         //printf( "register: %s \n", type.name.c_str() );
@@ -255,13 +278,22 @@ struct City{
     */
 
     bool registerTech( const Technology& tech, std::vector<CommodityType*>& goodsTypes ){
+        printf( "registerTech %s city[%i] \n", tech.name.c_str(), id );
         auto got = factories.find(tech.id);
         if(got!=factories.end()) return true;
         for( auto it : tech.consumes ){ registerCommodity( *goodsTypes[it.first] ); }
         for( auto it : tech.produces ){ registerCommodity( *goodsTypes[it.first] ); }
         //for( auto it : tech.produces ){ outPrice += goods[it.first]->price; }
+        return false;
+    }
+
+    bool buildFactory( double size, const Technology& tech, std::vector<CommodityType*>& goodsTypes ){
+        if( registerTech( tech, goodsTypes ) ){
+            factories[tech.id]->space += size;
+            return true;
+        }
         Factory* fac = new Factory();
-        fac->space = 10.0;
+        fac->space   = size;
         fac->tech=&tech;
         factories.insert({tech.id,fac});
         return false;
@@ -302,6 +334,16 @@ struct City{
         }
     }
 
+    double extractResources( double dt ){
+        // ToDo : Possibly we should merge resource-extraction and production?
+        for( Resource* rs: resources){
+            // ToDo: check store size
+            double N = rs->developed*dt;
+            addCommodity( N, *rs->type );
+            rs->deposit += ( rs->sustainable_rate * dt - N );
+        }
+    }
+
     double addCommodity( double N, const CommodityType& cargo ){
         StoreState& ss  = stores[ cargo.storeKind ];
         double dv       = N * cargo.transport_volume;
@@ -326,23 +368,25 @@ struct City{
 
     int goodsInfo( char* str ){
         char* str0=str;
-        str += sprintf( str, "carDemand %g$ \n", carDemand );
+        str += sprintf( str, "City[%i] car$%g \n", id, carDemand );
         for( auto& it : goods ){
             const CommodityState* gs = it.second;
-            str += sprintf( str, "%s$%3.0f %g[kg]\n", gs->type->name.c_str(), gs->price, gs->ammount );
+            str += sprintf( str, "%s$%i %5.1f[kg]\n", gs->type->name.c_str(), (int)gs->price, gs->ammount );
         }
         return str-str0;
     }
 
-    void updatePrices(){
+    void updatePrices( double dt ){
         for( auto& it : goods ){
-            it.second->updatePrice();
+            it.second->updatePrice( dt );
         }
         double exportProfit = 0;
         for(const Road* rd: roads){
             if(rd->a==this){ exportProfit += rd->tradeStats[0].total_profit; }else{ exportProfit += rd->tradeStats[1].total_profit; }
         }
-        carDemand = exportProfit * 0.5;
+
+        //carDemand = exportProfit * 0.5;
+        carDemand += (exportProfit-carDemand)*priceConvRate*dt;
     }
     //void unload(Car& c){
     //    c.ammount -= addCommodity( c.ammount, *c.cargo );
@@ -382,7 +426,7 @@ inline void Road::evalTradeStats(){
     //printf( "road[%i][%i->%i] export %g inport %g \n", id, a->id, b->id, tradeStats[0].total_profit, tradeStats[1].total_profit );
 };
 
-inline CommodityState* Road::optTransfer(bool bSwap, double maxVol, double& outN, double& best_profit){
+inline CommodityState* Road::optTransfer(bool bSwap, double maxVol, double maxMass, double& outN, double& best_profit){
     City *A,*B;
     if(bSwap){ A=b;B=a; }else{ A=a;B=b; }
     //int    best_id    =-1;
@@ -395,7 +439,7 @@ inline CommodityState* Road::optTransfer(bool bSwap, double maxVol, double& outN
         if(got!=B->goods.end()){
             //printf( "optTransfer: found %i \n", it.first );
             double profit = got->second->price - it.second->price;
-            double maxN   = maxVol/it.second->type->transport_volume;
+            double maxN   = fmax( maxMass/it.second->type->transport_weight, maxVol/it.second->type->transport_volume );
             double N      = fmin(it.second->ammount, maxN );
             profit *= N;
             //if(profit!=0)printf( "====optTransfer: %s N %g profit %g=%g-%g \n", got->second->type->name.c_str(), N, profit,  got->second->price, it.second->price );
@@ -418,8 +462,8 @@ inline CommodityState* Road::optTransfer(bool bSwap, double maxVol, double& outN
 struct CarType{
     int id;
     double parkSpace       = 1;
-    double capacity_weight = 1;
-	double capacity_volume = 1;
+    double capacity_weight = 5.0;
+	double capacity_volume = 5.0;
 	double speed           = 1;
 	double costPerKm       = 1;
 	//double loadTime;
@@ -466,7 +510,8 @@ struct Car{
         //printf("car[%i].unload %i\n", id, city->id);
         if(cargo){
             ammount -= city->addCommodity( ammount, *cargo );
-            printf( "unload car[%i] city[%i] \n", id, city->id );
+            if(ammount<1e-3) cargo = 0;
+            //printf( "unload car[%i] city[%i] \n", id, city->id );
         }
         heading=0;
     }
@@ -476,7 +521,7 @@ struct Car{
         double N, profit;
         //printf("loadProfitableCargo swap:%i\n", bSwap );
         double jurneyCost = road->length * type->costPerKm;
-        CommodityState* cs = road->optTransfer( bSwap, type->capacity_volume, N, profit );
+        CommodityState* cs = road->optTransfer( bSwap, type->capacity_volume, type->capacity_weight, N, profit );
         //printf( "loadProfitableCargo done road->optTransfer \n" );
         double dCarDemand = road->b->carDemand - road->a->carDemand;
         if(bSwap)dCarDemand=-dCarDemand;
@@ -572,9 +617,25 @@ class Economy{ public:
         cars.push_back(c);
     }
 
+    void addResource( int icity, const char* s){
+        Resource* rs = new Resource();
+        rs->fromString( s, goodsDict );
+        cities[icity]->resources.push_back( rs );
+        cities[icity]->registerCommodity( *rs->type );
+    }
+
+    bool addFactory( int icity, const char* techName, double size ){
+        auto got = technologyDict.find( techName );
+        if( got == technologyDict.end() ) return false;
+        //cities[icity]->registerTech( *got->second, goods );
+        cities[icity]->buildFactory( size, *got->second, goods );
+        return true;
+    }
+
     void step(double dt){
         for(City* ct : cities){
-            ct->updatePrices();
+            ct->updatePrices( dt );
+            ct->extractResources( dt );
             ct->produce( dt );
         }
         for( Road* rd: roads){
