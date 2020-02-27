@@ -91,10 +91,10 @@ void drawAsteroide( int nsamp, int nCrater, float hscale, bool wire ){
 
 }
 
-void drawTruss( const Truss& truss ){
+void drawTruss( const Truss& truss, bool bColor ){
     //printf("=============\n");
     for( int i=0; i<truss.blocks.size(); i++ ){
-        Draw::color_of_hash(i+15454);
+        if(bColor) Draw::color_of_hash(i+15454);
         Vec2i bj,bi = truss.blocks[i];
         if( i==(truss.blocks.size()-1) ){ bj = {truss.points.size(),truss.edges.size()}; }else{ bj = truss.blocks[i+1]; };
         //Draw3D::drawPoints( bj.a-bi.a, &truss.points[bi.a], 0.1 );
@@ -144,7 +144,7 @@ void drawPlateContour( const Plate& o, const Node* nodes, const Girder* girders,
     //Draw3D::drawQuad_bare();
 }
 
-void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
+void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bColor ){
     //nodes,ropes;girders;thrustes;guns;radiators;shields;tanks;pipes;
     //for( None nd : nodes ){};
     const std::vector<Node>& nodes   = spaceCraft.nodes;
@@ -155,8 +155,8 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
 
     if( iLOD>0 ){
         glLineWidth(1.0);
-        glColor3f(0.0,0.0,0.0);
-        drawTruss( spaceCraft.truss );
+        if(bColor)glColor3f(0.0,0.0,0.0);
+        drawTruss( spaceCraft.truss, bColor );
     }
 
     glLineWidth(0.5);
@@ -167,16 +167,18 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
         glEnable( GL_BLEND );
         glEnable(GL_DEPTH_TEST);
         if(iLOD==0) Draw3D::drawLine( p0,p1 );
-        sprintf( str, "rope_%03i", rp.id );
-        Vec3f d = p1-p0; d.normalize();
-        //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
-        Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
-        //Draw3D::drawText3D( str, (p0+p1)*0.5, (Vec3f){1.0,0.0,0.0}, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
+        if(bText){
+            sprintf( str, "rope_%03i", rp.id );
+            Vec3f d = p1-p0; d.normalize();
+            //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
+            Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
+            //Draw3D::drawText3D( str, (p0+p1)*0.5, (Vec3f){1.0,0.0,0.0}, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
+        }
     };
     // --- Girders
     glLineWidth(3);
     glEnable(GL_LIGHTING);
-    glColor3f(0.1,0.1,0.5);
+    if(bColor)glColor3f(0.1,0.1,0.5);
     for( const Girder& gd : spaceCraft.girders ){
         Vec3f p0=(Vec3f)nodes[gd.p0].pos;
         Vec3f p1=(Vec3f)nodes[gd.p1].pos;
@@ -184,13 +186,15 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
         glEnable(GL_DEPTH_TEST);
         if(iLOD==0) Draw3D::drawLine( p0,p1 );
         //Draw3D::drawCylinderStrip( 6, 1.0,1.0, p0, p1 );
-        sprintf( str, "Girder_%03i", gd.id );
-        Vec3f d = p1-p0; d.normalize();
-        //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
-        Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
+        if(bText){
+            sprintf( str, "Girder_%03i", gd.id );
+            Vec3f d = p1-p0; d.normalize();
+            //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
+            Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
+        }
     };
     glLineWidth(5);
-    glColor3f(0.6,0.1,0.1);
+    if(bColor)glColor3f(0.6,0.1,0.1);
     for( const Gun& o : spaceCraft.guns ){
         Vec3f p0=(Vec3f)nodes[ girders[o.suppId].p0 ].pos;
         Vec3f p1=(Vec3f)nodes[ girders[o.suppId].p1 ].pos;
@@ -210,7 +214,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
     // --- Rings
     glLineWidth(3);
     glEnable(GL_LIGHTING);
-    glColor3f(0.1,0.1,0.5);
+    if(bColor)glColor3f(0.1,0.1,0.5);
     for( const Ring& o : spaceCraft.rings ){
         //Vec3f p0=(Vec3f)nodes[o.p0].pos;
         //Vec3f p1=(Vec3f)nodes[o.p1].pos;
@@ -228,7 +232,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
     // --- Radiators
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
-    glColor3f(0.3,0.1,0.1); // ToDo by temperature
+    if(bColor)glColor3f(0.3,0.1,0.1); // ToDo by temperature
     for( const Radiator& o : spaceCraft.radiators ){
         drawPlate(o, nodes.data(), girders.data());
     };
@@ -237,14 +241,14 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
     glShadeModel(GL_FLAT);
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
-    glColor3f(0.9,0.9,0.9);
+    if(bColor)glColor3f(0.9,0.9,0.9);
     for( const Shield& o : spaceCraft.shields ){
         drawPlate(o, nodes.data(), girders.data() );
     };
     // --- Tanks
     glShadeModel(GL_SMOOTH);
     glEnable(GL_LIGHTING);
-    glColor3f(0.5,0.5,0.5);
+    if(bColor)glColor3f(0.5,0.5,0.5);
     for( const Tank& o : spaceCraft.tanks ){
         Draw3D::drawCapsula( (Vec3f)(o.pose.pos+o.pose.rot.c*(o.span.c*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.span.c*-0.5)), o.span.a, o.span.b, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
         //sprintf( str, "Radiator_%03i", gd.id );
@@ -256,7 +260,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD ){
     glLineWidth(1);
     glShadeModel(GL_SMOOTH);
     glEnable(GL_LIGHTING);
-    glColor3f(0.5,0.5,0.5);
+    if(bColor)glColor3f(0.5,0.5,0.5);
     for( const Thruster& o : spaceCraft.thrusters ){
         //Draw3D::drawMatInPos( (Mat3f)o.pose.rot*10.0, (Vec3f)o.pose.pos );
         glPushMatrix();

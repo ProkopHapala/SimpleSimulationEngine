@@ -143,7 +143,7 @@ int makeTruss( Truss& truss ){
 
     int glo = glGenLists(1);
     glNewList( glo, GL_COMPILE );
-    SpaceCrafting::drawTruss( truss );
+    SpaceCrafting::drawTruss( truss, true );
     glEndList();
 
     return glo;
