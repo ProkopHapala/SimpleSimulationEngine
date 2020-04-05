@@ -3,8 +3,6 @@
 #define  UVfuncs_h
 
 
-
-
 template<typename UVfunc>
 Vec3f getUVFuncNormal( Vec2f uv, float eps,  UVfunc func ){
     Vec2f o;

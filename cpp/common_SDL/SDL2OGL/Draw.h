@@ -24,11 +24,14 @@ namespace Draw{
 
     void setRGB ( uint32_t i );
     void setRGBA( uint32_t i );
+    void setRGB ( uint32_t i, Vec3f& color );
+    void setRGBA( uint32_t i, Vec3f& color );
 
     void      colorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
     uint32_t icolorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
 
     void color_of_hash( int i  );
+    void color_of_hash( int i, Vec3f& c );
 
     void billboardCam( );
     void billboardCamProj( );

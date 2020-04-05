@@ -58,8 +58,14 @@ void renderShip(){
     if(glo_ship){ glDeleteLists(glo_ship,1); };
     glo_ship = glGenLists(1);
     glNewList( glo_ship, GL_COMPILE );
-    glColor3f(0.2,0.2,0.2);
-    drawSpaceCraft( *theSpaceCraft, 1, false, false );
+    //glColor3f(0.2,0.2,0.2);
+
+    //drawSpaceCraft( *theSpaceCraft, 1, false, true );
+    MeshBuilder mesh;
+    glColor3f(1.0,1.0,1.0);
+    drawSpaceCraft_Mesh( *theSpaceCraft, mesh, 1, false, true, (Vec3f){0.5,0.5,0.5} );
+    mesh.newSub();
+    drawMesh( mesh );
 
     /*
     radiositySolver.clearTriangles();
@@ -347,6 +353,7 @@ void SpaceCraftEditGUI::draw(){
     //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
     glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
+
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	//glDisable(GL_DEPTH_TEST);
