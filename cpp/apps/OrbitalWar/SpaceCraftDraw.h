@@ -648,7 +648,8 @@ void drawMesh( const MeshBuilder& mesh ){
                 Vec3f vpos, vnor;
                 int ii = mesh.inds[j];
                 glColor3f( 0.9, 0.9, 0.9 );
-                vpos  = mesh.vpos[ii]; vnor  = mesh.vpos[ii]; glNormal3f( vnor.x, vnor.y, vnor.z ); glVertex3f( vpos.x, vpos.y, vpos.z );
+                vnor  = mesh.vnor[ii]; glNormal3f( vnor.x, vnor.y, vnor.z );
+                vpos  = mesh.vpos[ii]; glVertex3f( vpos.x, vpos.y, vpos.z );
             }
             glEnd();
         }else if(mode == GL_LINES ) {

@@ -300,6 +300,7 @@ class MeshBuilder{ public:
             Vec3i sub = subs[i];
             int mode  = osub.z;
             if      (mode == GL_TRIANGLES ){      // un-indexed triangles
+                /*
                 fprintf( pFile, "o OBJ_TRIANGLES.%i \n", nobj ); nobj++;
                 int iii = 0;
                 for(int j=osub.x; j<sub.x; j++){
@@ -310,9 +311,12 @@ class MeshBuilder{ public:
                     if(iii%3==2) fprintf( pFile, "f %i//%i %i//%i %i//%i \n", nvert-2,nnor-2,  nvert-1,nnor-1,   nvert,nnor );
                     iii++;
                 }
+                */
             }else if(mode == GL_TRIANGLE_STRIP ) {  // Indexed Triangles
 
                 fprintf( pFile, "o OBJ_TRIANGLE_STRIP.%i \n", nobj ); nobj++;
+                /*
+                //  ToDo - This does not work for some reason => brute force polygonization
                 int iv0 = nvert-osub.x;
                 int in0 = nnor -osub.x;
                 for(int j=osub.x; j<sub.x; j++){
@@ -322,15 +326,27 @@ class MeshBuilder{ public:
                     fprintf(pFile, "vn  %f %f %f\n", vn.x, vn.y, vn.z ); nnor ++;
                 }
                 int iii = 0;
-                for(int j=osub.y; j<sub.y; j++){
-                    Vec3f vpos, vnor;
-                    int ii = inds[j];
-                    if(iii%3==2) fprintf( pFile, "f %i//%i %i//%i %i//%i \n",     inds[j-2]+iv0, inds[j-2]+in0,       inds[j-1]+iv0, inds[j-1]+in0,     inds[j]+iv0, inds[j]+in0 );
+                for(int j=osub.y; j<sub.y; j+=3 ){
+                    int i0=inds[j  ];
+                    int i1=inds[j+1];
+                    int i2=inds[j+2];
+                    fprintf( pFile, "f %i//%i %i//%i %i//%i \n",    i0+iv0, i0+in0,       i1+iv0, i1+in0,     i2+iv0, i2+in0 );
+                    iii++;
+                }
+                */
+                int iii = 0;
+                for(int j=osub.y; j<sub.y; j++ ){
+                    int ii = inds[j  ];
+                    Vec3f vp = vpos[ii];
+                    Vec3f vn = vnor[ii];
+                    fprintf(pFile, "vn  %f %f %f\n", vn.x, vn.y, vn.z ); nnor ++;
+                    fprintf(pFile, "v   %f %f %f\n", vp.x, vp.y, vp.z ); nvert++;
+                    if(iii%3==2) fprintf( pFile, "f %i//%i %i//%i %i//%i \n", nvert-2,nnor-2,  nvert-1,nnor-1,   nvert,nnor );
                     iii++;
                 }
 
             }else if(mode == GL_LINES ) {
-
+                /*
                 fprintf( pFile, "o OBJ_LINES.%i \n", nobj ); nobj++;
                 int iii = 0;
                 for(int j=osub.x; j<sub.x; j++){
@@ -341,7 +357,7 @@ class MeshBuilder{ public:
                     if(iii%2==1) printf( "f %i %i \n", nvert-1, nvert );
                     iii++;
                 }
-
+                */
             }
             osub=sub;
         }
