@@ -150,16 +150,18 @@ class MeshBuilder{ public:
     }
 
     void addQuad( const Vec3f& p00, const Vec3f& p01, const Vec3f& p10, const Vec3f& p11 ){
-        /*
-        Vec3f nor; nor.set_cross( p10-p00, p01-p00 ); nor.normalize();
-        vpos.push_back( p00 ); vnor.push_back( nor );
-        vpos.push_back( p01 ); vnor.push_back( nor );
-        vpos.push_back( p11 ); vnor.push_back( nor );
-        vpos.push_back( p10 ); vnor.push_back( nor );
-        */
         addTriangle( p00, p01, p10 );
         addTriangle( p11, p10, p01 );
     }
+
+    void addTube4( Vec3f p1, Vec3f p2, Vec3f up, float r1, float r2 ){
+        up.normalize();
+        Vec3f lf; lf.set_cross( p2-p1, up ); lf.normalize();
+        addQuad( p1+up*r1, p1+lf*r1, p2+up*r2, p2+lf*r2 );
+        addQuad( p1+lf*r1, p1-up*r1, p2+lf*r2, p2-up*r2 );
+        addQuad( p1-up*r1, p1-lf*r1, p2-up*r2, p2-lf*r2 );
+        addQuad( p1-lf*r1, p1+up*r1, p2-lf*r2, p2+up*r2 );
+    };
 
     int addCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R ){
         float dphi = 2*M_PI/n;
@@ -280,6 +282,72 @@ class MeshBuilder{ public:
         return nvert;
     }
     //GLMesh* normals2GLmesh( float sc ){ return vecs2mesh( vpos.size(), &vpos[0], &vnor[0], sc ); }
+
+
+
+
+    void write_obj( char* fname ){
+        int nsubs  = subs.size();
+        Vec3i osub = subs[0];
+
+        FILE * pFile;
+        pFile = fopen (fname,"w");
+
+        int nobj =0;
+        int nvert=0;
+        int nnor =0;
+        for( int i=1; i<nsubs; i++ ){
+            Vec3i sub = subs[i];
+            int mode  = osub.z;
+            if      (mode == GL_TRIANGLES ){      // un-indexed triangles
+                fprintf( pFile, "o OBJ_TRIANGLES.%i \n", nobj ); nobj++;
+                int iii = 0;
+                for(int j=osub.x; j<sub.x; j++){
+                    Vec3f vp = vpos[j];
+                    Vec3f vn = vnor[j];
+                    fprintf(pFile, "v   %f %f %f\n", vp.x, vp.y, vp.z ); nvert++;
+                    fprintf(pFile, "vn  %f %f %f\n", vn.x, vn.y, vn.z ); nnor ++;
+                    if(iii%3==2) fprintf( pFile, "f %i//%i %i//%i %i//%i \n", nvert-2,nnor-2,  nvert-1,nnor-1,   nvert,nnor );
+                    iii++;
+                }
+            }else if(mode == GL_TRIANGLE_STRIP ) {  // Indexed Triangles
+
+                fprintf( pFile, "o OBJ_TRIANGLE_STRIP.%i \n", nobj ); nobj++;
+                int iv0 = nvert-osub.x;
+                int in0 = nnor -osub.x;
+                for(int j=osub.x; j<sub.x; j++){
+                    Vec3f vp = vpos[j];
+                    Vec3f vn = vnor[j];
+                    fprintf(pFile, "v   %f %f %f\n", vp.x, vp.y, vp.z ); nvert++;
+                    fprintf(pFile, "vn  %f %f %f\n", vn.x, vn.y, vn.z ); nnor ++;
+                }
+                int iii = 0;
+                for(int j=osub.y; j<sub.y; j++){
+                    Vec3f vpos, vnor;
+                    int ii = inds[j];
+                    if(iii%3==2) fprintf( pFile, "f %i//%i %i//%i %i//%i \n",     inds[j-2]+iv0, inds[j-2]+in0,       inds[j-1]+iv0, inds[j-1]+in0,     inds[j]+iv0, inds[j]+in0 );
+                    iii++;
+                }
+
+            }else if(mode == GL_LINES ) {
+
+                fprintf( pFile, "o OBJ_LINES.%i \n", nobj ); nobj++;
+                int iii = 0;
+                for(int j=osub.x; j<sub.x; j++){
+                    //Vec3f vnor = mesh.vnor[j];
+                    Vec3f vp = vpos[j];
+                    fprintf(pFile, "v   %f %f %f\n", vp.x, vp.y, vp.z ); nvert++;
+                    //if(iii%2==1) printf( "l %i %i \n", nvert-1, nvert );
+                    if(iii%2==1) printf( "f %i %i \n", nvert-1, nvert );
+                    iii++;
+                }
+
+            }
+            osub=sub;
+        }
+        fclose(pFile);
+    }
+
 }; // class MeshBuilder
 
 

@@ -362,7 +362,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
 
 
 
-void drawTruss_mesh( MeshBuilder& mesh,  const Truss& truss, bool bColor ){
+void drawTruss_mesh( MeshBuilder& mesh,  const Truss& truss, bool bColor, float width=-1 ){
     //printf("=============\n");
     for( int i=0; i<truss.blocks.size(); i++ ){
         //Vec3f color;
@@ -371,13 +371,20 @@ void drawTruss_mesh( MeshBuilder& mesh,  const Truss& truss, bool bColor ){
         Vec2i bj,bi = truss.blocks[i];
         if( i==(truss.blocks.size()-1) ){ bj = {truss.points.size(),truss.edges.size()}; }else{ bj = truss.blocks[i+1]; };
         //Draw3D::drawPoints( bj.a-bi.a, &truss.points[bi.a], 0.1 );
-        mesh.newSub( GL_LINES );
+
+        if(width>0){ mesh.newSub( GL_TRIANGLES ); }else{ mesh.newSub( GL_LINES ); }
+
         for( int j=bi.b; j<bj.b; j++ ){
             //Vec3f a,b;
             const TrussEdge& ed = truss.edges[j];
-            //convert( truss.points[ed.a], a ); glVertex3f( a.x, a.y, a.z );
-            //convert( truss.points[ed.b], b ); glVertex3f( b.x, b.y, b.z );
-            mesh.addLine( (Vec3f)truss.points[ed.a], (Vec3f)truss.points[ed.b] );
+            Vec3f p1 = (Vec3f)truss.points[ed.a];
+            Vec3f p2 = (Vec3f)truss.points[ed.b];
+            if(width>0){
+                Vec3f up,lf; (p2-p1).getSomeOrtho( up, lf );
+                mesh.addTube4( p1, p2, up, width, width );
+            }else{
+                mesh.addLine( p1, p2 );
+            }
             //if(i==(truss.blocks.size()-1)){ printf( "%i %i (%i,%i) (%g,%g,%g) (%g,%g,%g) \n", i, j, ed.a, ed.b, a.x, a.y, a.z,  b.x, b.y, b.z ); }
         }
     }
@@ -428,35 +435,38 @@ void drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, MeshBuilder& mesh, int i
 
     //if(!bColor)
     //glColor3f(0.4,0.4,0.4);
+
+
+    float line_width = 0.25;   // TODO : this should be set better
+    //mesh.newSub(GL_TRIANGLES);
+    //mesh.addTube4( {0.0,0.0,0.0}, {0.0,0.0,100.0}, {0.0,1.0,0.0}, 5.0, 5.0 );
+    //return;
+
     if( iLOD>0 ){
         //glLineWidth(1.0);
         if(bColor) mesh.penColor = (Vec3f){0.0,0.0,0.0};
         //drawTruss( spaceCraft.truss, bColor );
-        drawTruss_mesh( mesh, spaceCraft.truss, false );
+        drawTruss_mesh( mesh, spaceCraft.truss, false, line_width );
     }
 
     //glLineWidth(0.5);
     //if(!bColor)glColor3f(0.2,0.2,0.2);
     if(!bColor) mesh.penColor = (Vec3f){0.2,0.2,0.2};
     for( const Rope& rp : spaceCraft.ropes ){
-        Vec3f p0=(Vec3f)nodes[rp.p0].pos;
-        Vec3f p1=(Vec3f)nodes[rp.p1].pos;
+        Vec3f p1=(Vec3f)nodes[rp.p0].pos;
+        Vec3f p2=(Vec3f)nodes[rp.p1].pos;
         //glEnable( GL_BLEND );
         //glEnable(GL_DEPTH_TEST);
         if(iLOD==0){
             mesh.newSub( GL_LINES ); // toDo
-            mesh.addLine( p0, p1 );
+            if(line_width>0){
+                Vec3f up,lf; (p2-p1).getSomeOrtho( up, lf );
+                mesh.addTube4( p1, p2, up, line_width, line_width );
+            }else{
+                mesh.addLine( p1, p2 );
+            }
         }
         // ToDo : polygonized line (tube) with non-zero width ?
-        /*
-        if(bText){
-            sprintf( str, "rope_%03i", rp.id );
-            Vec3f d = p1-p0; d.normalize();
-            //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
-            Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
-            //Draw3D::drawText3D( str, (p0+p1)*0.5, (Vec3f){1.0,0.0,0.0}, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
-        }
-        */
     };
     // --- Girders
     //glLineWidth(3);
@@ -474,14 +484,6 @@ void drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, MeshBuilder& mesh, int i
         }
         // ToDo : polygonized line (tube) with non-zero width ?
         //Draw3D::drawCylinderStrip( 6, 1.0,1.0, p0, p1 );
-        /*
-        if(bText){
-            sprintf( str, "Girder_%03i", gd.id );
-            Vec3f d = p1-p0; d.normalize();
-            //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
-            Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
-        }
-        */
     };
     //glLineWidth(5);
     //if(bColor)glColor3f(0.6,0.1,0.1);
@@ -552,6 +554,7 @@ void drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, MeshBuilder& mesh, int i
     //glShadeModel(GL_SMOOTH);
     //glEnable(GL_LIGHTING);
     //if(bColor)glColor3f(0.5,0.5,0.5);
+
     for( const Tank& o : spaceCraft.tanks ){
         //Draw3D::drawCapsula( (Vec3f)(o.pose.pos+o.pose.rot.c*(o.span.c*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.span.c*-0.5)), o.span.a, o.span.b, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
         mesh.newSub(GL_TRIANGLES);
@@ -562,6 +565,7 @@ void drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, MeshBuilder& mesh, int i
         //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
         //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
     };
+    //return;
     // --- Thrusters
     //glLineWidth(1);
     //glShadeModel(GL_SMOOTH);
@@ -661,6 +665,8 @@ void drawMesh( const MeshBuilder& mesh ){
         osub=sub;
     }
 }
+
+
 
 
 

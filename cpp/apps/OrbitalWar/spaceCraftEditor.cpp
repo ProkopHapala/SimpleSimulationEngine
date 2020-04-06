@@ -66,6 +66,7 @@ void renderShip(){
     drawSpaceCraft_Mesh( *theSpaceCraft, mesh, 1, false, true, (Vec3f){0.5,0.5,0.5} );
     mesh.newSub();
     drawMesh( mesh );
+    mesh.write_obj( "ship.obj" );
 
     /*
     radiositySolver.clearTriangles();
