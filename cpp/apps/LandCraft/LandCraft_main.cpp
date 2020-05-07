@@ -63,10 +63,7 @@ void cmapHeight(double g){
 
 class LandCraftApp : public AppSDL2OGL { public:
 
-
     Hydraulics1D hydro1d;
-
-
 
     SimplexRuler       ruler;
     Ruler2DFast        square_ruler;
@@ -362,6 +359,27 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
         loadBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
     }
 
+
+    // ======= Test Hydraulic relaxation
+
+    /*
+    Vec2i ip0 = {16,18};
+    double g0=10.5;
+    double w0=14.5;
+    int i0=hydraulics.ip2i(ip0);
+    hydraulics.ground[i0] = g0;
+    hydraulics.water [i0] = w0;
+    for(int ing=0; ing<hydraulics.nneigh; ing++){
+        Vec2i ip = hydraulics.wrap_index( ip0 + hydraulics.neighs[ing] );
+        int j    = hydraulics.ip2i(ip);
+        double g = g0 + randf(-5.0,5.0);
+        hydraulics.ground[j]=g;
+        hydraulics.water [j]=g+randf(0,2.5);
+    }
+    hydraulics.relaxWatter( ip0 );
+    exit(0);
+    */
+
     double wmax = hydraulics.gatherRain( 100.0 ); printf("wmax %f \n",wmax ); // exit(0);
     terrainViewMode = 2;
     hydraulics.findAllRivers( 50.0 );
@@ -483,6 +501,12 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     //bisectNoise1D(4,hydro1d.ground,-1.0,0.0);
     VecN::set(hydro1d.n,5.0,hydro1d.water);
 
+
+    // Fill random watter
+    for(int i=0; i<hydraulics.ntot; i++){
+        hydraulics.water[i] = hydraulics.ground[i] + randf(0,20.0);;
+    }
+
 }
 
 void LandCraftApp::terrainColor( int i ){
@@ -587,6 +611,9 @@ void LandCraftApp::draw(){
 	glDisable( GL_DEPTH_TEST );
     glShadeModel ( GL_SMOOTH );
 
+
+    /*
+    // ---- Hydro 1D
     printf( "frame %i \n", frameCount );
     for(int i=0; i<10; i++)
     //hydro1d.step( 9.0, 10.0 );
@@ -610,10 +637,14 @@ void LandCraftApp::draw(){
     glEnd();
     glColor3f(1,0,0);
     Draw2D::plot(hydro1d.n,dx, hydro1d.ground);
+    */
+
+    //terrainViewMode = 1;
+    //hydraulics.relaxWater();
 
 
 
-    return;
+    //return;
 
 
 
@@ -789,6 +820,11 @@ void LandCraftApp::eventHandling ( const SDL_Event& event  ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
                 case SDLK_n : generateTerrain(); break;
+                case SDLK_r:  hydraulics.relaxWater(); break;
+                case SDLK_e:
+                    ihex = ruler.hexIndex({mouse_begin_x,mouse_begin_y});
+                    hydraulics.relaxWater( ruler.i2ip(ihex) );
+                    break;
                 case SDLK_s :
                     saveBin( "data/ground.bin", sizeof(double)*hydraulics.ntot, (char*)ground );
                     saveBin( "data/water.bin", sizeof(double)*hydraulics.ntot,  (char*)water  );
@@ -937,7 +973,8 @@ int main(int argc, char *argv[]){
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
 	int junk;
-	thisApp = new LandCraftApp( junk , dm.w-150, dm.h-100 );
+	//thisApp = new LandCraftApp( junk , dm.w-150, dm.h-100 );
+	thisApp = new LandCraftApp( junk , 1000,600 );
 	SDL_SetWindowPosition(thisApp->window, 100, 0 );
 	thisApp->zoom  = 3000;
 	thisApp->camX0 = 4000;
