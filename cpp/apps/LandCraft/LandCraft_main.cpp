@@ -61,6 +61,17 @@ void cmapHeight(double g){
     //return g;
 }
 
+
+
+
+
+
+FILE* file_relax_debug = 0;
+
+
+
+
+
 class LandCraftApp : public AppSDL2OGL { public:
 
     Hydraulics1D hydro1d;
@@ -280,6 +291,9 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     //itex = makeTexture(  "data/tank.bmp" );
     //itex = makeTexture(  "data/nehe.bmp" );
     printf( "default_font_texture :  %i \n", default_font_texture );
+
+
+
 
     fontTex     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     GUI_fontTex = fontTex;
@@ -640,29 +654,29 @@ void LandCraftApp::draw(){
     Draw2D::plot(hydro1d.n,dx, hydro1d.ground);
     */
 
+
+    if(!file_relax_debug) file_relax_debug = fopen( "data/relax_debug.log", "w" );
     terrainViewMode = 1;
     double DEBUG_wsum_before=0.0;
     double DEBUG_E_before   =0.0;
     hydraulics.sumWater( DEBUG_wsum_before, DEBUG_E_before );
     hydraulics.relaxWater();
-    //for(int iy=1; iy<hydraulics.n.y-1; iy++){
-    //    for(int ix=1; ix<hydraulics.n.x-1; ix++){
-    //for(int iy=16; iy<19; iy++){
-    //    for(int ix=16; ix<19; ix++){
-    //        hydraulics.relaxWater( {ix, iy} );
-    //    }
-    //}
-    //hydraulics.relaxWater( {16, 19} );
+    for(int iy=0; iy<hydraulics.n.y; iy++){
+    //for(int iy=0; iy<hydraulics.n.y; iy+=3){
+        hydraulics.relaxWaterRasterX( iy, 0, hydraulics.n.x, 1.0 );
+        hydraulics.relaxWaterRasterY( iy, 0, hydraulics.n.x, 1.0 );
+    }
     double DEBUG_wsum_after=0.0;
     double DEBUG_E_after   =0.0;
     hydraulics.sumWater( DEBUG_wsum_after, DEBUG_E_after );
     printf( "DEBUG relaxWater[%i] dE %g | %g -> %g \n", frameCount, DEBUG_E_before-DEBUG_E_after,  DEBUG_E_before, DEBUG_E_after );
     if(fabs(DEBUG_wsum_before-DEBUG_wsum_after)>1e-6 ){
-        printf( "DEBUG ERROR in hydraulics.relaxWater water before,after %g \n", DEBUG_wsum_before, DEBUG_wsum_after );
+        printf( "DEBUG ERROR in hydraulics.relaxWater water before,after diff %g | %g %g \n", DEBUG_wsum_before-DEBUG_wsum_after, DEBUG_wsum_before, DEBUG_wsum_after );
         exit(0);
     }
+    if(frameCount<=200) fprintf( file_relax_debug, " %i %g %g \n", frameCount, DEBUG_E_after,  DEBUG_E_before-DEBUG_E_after );
+    if(frameCount==200) fclose(file_relax_debug);
     //SDL_Delay(200);
-
     //return;
 
 	if(bDrawing){

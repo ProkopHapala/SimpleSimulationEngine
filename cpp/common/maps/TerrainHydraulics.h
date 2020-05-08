@@ -64,6 +64,84 @@ class HydraulicGrid2D :public Grid2DAlg { public:
         }
     }
 
+    // TODO - later this relaxator can search best way (curved), e.g. along river
+
+    inline void relaxWaterRasterX( int iy, int ix0, int ix1, double hmin ){
+        int i0 = iy*n.x;
+        int i1 = i0+ix1; i0+=ix0;
+        int istart=-1;
+        //int iend;
+        double wsum=0;
+        double wmin,gmax;
+        //bool started=false;
+        for(int i=i0; i<i1; i++){
+            double g = ground[i];
+            double w = water [i];
+            double h = w-g;
+            if(istart<0){
+                if( h>hmin ){ // start new block of water ?
+                    istart=i;
+                    wsum  =w;
+                    wmin  =w;
+                    gmax  =g;
+                }
+            }else{
+                wmin=fmin(w,wmin);
+                gmax=fmax(g,gmax);
+                if( wmin-gmax < hmin ){ // end block ?
+                    double wlevel = wsum/(i-istart); // calculate average flat level
+                    double DEBUG_wsum = 0.0;
+                    for(int j=istart; j<i; j++){     // fill block of water
+                        DEBUG_wsum += water[j];
+                        water[j] = wlevel;
+                    }
+                    //printf( "wsum[%i|%i] %g %g |wl %g \n", istart, i-1, wsum, DEBUG_wsum, wlevel );
+                    istart=-1;
+                }else{
+                    wsum += w;
+                }
+            }
+        }
+    }
+
+    inline void relaxWaterRasterY( int ix0, int iy0, int iy1, double hmin ){
+        int i0 = iy0*n.x+ix0;
+        int i1 = iy1*n.x+ix0;
+        int istart=-1;
+        //int iend;
+        double wsum=0;
+        double wmin,gmax;
+        //bool started=false;
+        for(int i=i0; i<i1; i+=n.x){
+            double g = ground[i];
+            double w = water [i];
+            double h = w-g;
+            if(istart<0){
+                if( h>hmin ){ // start new block of water ?
+                    istart=i;
+                    wsum  =w;
+                    wmin  =w;
+                    gmax  =g;
+                }
+            }else{
+                wmin=fmin(w,wmin);
+                gmax=fmax(g,gmax);
+                if( wmin-gmax < hmin ){ // end block ?
+                    double wlevel = (wsum*n.x)/(i-istart); // calculate average flat level
+                    double DEBUG_wsum = 0.0;
+                    for(int j=istart; j<i; j+=n.x){     // fill block of water
+                        DEBUG_wsum += water[j];
+                        water[j] = wlevel;
+                    }
+                    //printf( "wsum[%i|%i] %g %g |wl %g \n", istart, i-1, wsum, DEBUG_wsum, wlevel );
+                    istart=-1;
+                }else{
+                    wsum += w;
+                }
+            }
+        }
+    }
+
     inline void relaxWater2cells( TerrainCell& Ci, TerrainCell& Cj ){
         double  w = Ci.w + Cj.w;
         double dg = Ci.g - Cj.g;
