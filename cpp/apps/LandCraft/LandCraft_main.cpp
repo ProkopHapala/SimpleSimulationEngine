@@ -506,6 +506,7 @@ LandCraftApp::LandCraftApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id,
     for(int i=0; i<hydraulics.ntot; i++){
         hydraulics.water[i] = hydraulics.ground[i] + randf(0,20.0);;
     }
+    hydraulics.relaxWater( {36, 39});
 
 }
 
@@ -639,14 +640,30 @@ void LandCraftApp::draw(){
     Draw2D::plot(hydro1d.n,dx, hydro1d.ground);
     */
 
-    //terrainViewMode = 1;
-    //hydraulics.relaxWater();
-
-
+    terrainViewMode = 1;
+    double DEBUG_wsum_before=0.0;
+    double DEBUG_E_before   =0.0;
+    hydraulics.sumWater( DEBUG_wsum_before, DEBUG_E_before );
+    hydraulics.relaxWater();
+    //for(int iy=1; iy<hydraulics.n.y-1; iy++){
+    //    for(int ix=1; ix<hydraulics.n.x-1; ix++){
+    //for(int iy=16; iy<19; iy++){
+    //    for(int ix=16; ix<19; ix++){
+    //        hydraulics.relaxWater( {ix, iy} );
+    //    }
+    //}
+    //hydraulics.relaxWater( {16, 19} );
+    double DEBUG_wsum_after=0.0;
+    double DEBUG_E_after   =0.0;
+    hydraulics.sumWater( DEBUG_wsum_after, DEBUG_E_after );
+    printf( "DEBUG relaxWater[%i] dE %g | %g -> %g \n", frameCount, DEBUG_E_before-DEBUG_E_after,  DEBUG_E_before, DEBUG_E_after );
+    if(fabs(DEBUG_wsum_before-DEBUG_wsum_after)>1e-6 ){
+        printf( "DEBUG ERROR in hydraulics.relaxWater water before,after %g \n", DEBUG_wsum_before, DEBUG_wsum_after );
+        exit(0);
+    }
+    //SDL_Delay(200);
 
     //return;
-
-
 
 	if(bDrawing){
         Vec2i ind;Vec2d dind;

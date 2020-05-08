@@ -20,6 +20,11 @@ class Lake{ public:
     double base;
 };
 
+struct TerrainCell{
+    double g;
+    double w;
+};
+
 class HydraulicGrid2D :public Grid2DAlg { public:
     double * ground  = NULL;
 	double * water   = NULL;
@@ -49,44 +54,103 @@ class HydraulicGrid2D :public Grid2DAlg { public:
     int* toBasin     = NULL;
     int* toTile      = NULL;
 
+    inline void sumWater( double& wsum, double& E ){
+        for(int i=0; i<ntot;i++){
+            double g  = ground[i];
+            double w  = water [i];
+            double dw = w-g;
+            wsum += dw;
+            E    += (w+g)*dw*0.5;
+        }
+    }
 
+    inline void relaxWater2cells( TerrainCell& Ci, TerrainCell& Cj ){
+        double  w = Ci.w + Cj.w;
+        double dg = Ci.g - Cj.g;
+        if(dg>0){
+            if(dg>w){
+                Cj.w=Cj.g+w;
+                Ci.w=Ci.g;
+            }else{
+                w -= dg;
+                w *= 0.5;
+                Cj.w=Cj.g+w;
+                Ci.w=Ci.g+w;
+            }
+        }else{
+            if(-dg>w){
+                Cj.w=Cj.g+w;
+                Ci.w=Ci.g;
+            }else{
+                w += dg;
+                w *= 0.5;
+                Cj.w=Cj.g+w;
+                Ci.w=Ci.g+w;
+            }
+        }
+    }
 
+    inline void relaxWaterHexCells( const Vec2i& ip0 ){
+        TerrainCell cells[nneigh];
+        int         is   [nneigh];
+        int i0 = ip2i(ip0);
+        TerrainCell cell0 = (TerrainCell){ground[i0],water[i0]};
+        for(int ing=0; ing<nneigh; ing++){
+            Vec2i ip   = wrap_index( ip0 + neighs[ing] );
+            int i      = ip2i(ip);
+            is[ing]    = i;
+            cells[ing] = (TerrainCell){ground[i],water[i]};
+        }
+        relaxWater2cells( cells[0], cell0           );
+        relaxWater2cells( cells[0], cells[nneigh-1] );
+        for(int ing=1; ing<nneigh; ing++){
+            relaxWater2cells( cells[ing], cell0        );
+            relaxWater2cells( cells[ing], cells[ing-1] );
+        }
+        for(int ing=0; ing<nneigh; ing++){
+            int i    = is[ing];
+            ground[i] = cells[ing].g;
+            water[i] = cells[ing].w;
+        }
+    }
 
     inline void relaxWater( const Vec2i& ip0 ){
         double hs[nneigh+1]; // heights
         int    is[nneigh+1]; // indexes
-
-        int i = ip2i(ip0);
+        int i0 = ip2i(ip0);
         //-- load neighbors to work array
-        double g = ground[i];
-        is[nneigh]=i;
-        hs[nneigh]=g;
+        double g0 = ground[i0];
+        is[nneigh]=i0;
+        hs[nneigh]=g0;
 
-        double wsum = water[i]-g;
-        double wsum_DEBUG = wsum;
-
+        double wsum = water[i0]-g0;
+        //double wsum_DEBUG = wsum;
         for(int ing=0; ing<nneigh; ing++){
             Vec2i ip = wrap_index( ip0 + neighs[ing] );
             int j    = ip2i(ip);
             is[ing]=j;
             double wj = water [j];
             double gj = ground[j];
-            wsum_DEBUG += wj-gj;
-            if      (wj<g){
+            //wsum_DEBUG += wj-gj;
+            if      (wj<g0){
                 //wsum += 0;
                 hs[ing]=wj;
-            }else if(gj<g){
-                wsum += wj-g;
-                hs[ing]=g;
+            }else if(gj<g0){
+                wsum += wj-g0;
+                hs[ing]=g0;
             }else{
                 wsum += wj-gj;
                 hs[ing]=gj;
             }
-            printf( "%i: %i(%i,%i) g %g w %g -> %g \n", ing, j, ip.x,ip.y,  ground[j], water[j], hs[ing] );
+            //printf( "%i: %i(%i,%i) g %g w %g -> %g \n", ing, j, ip.x,ip.y,  ground[j], water[j], hs[ing] );
         }
+
+        //water[i0] = ground[i0] + wsum;
+
         //printf( "%i: %i(%i,%i) g %g w %g -> %g \n", nneigh, i, ip0.x,ip0.y,  ground[i], water[i], hs[nneigh] );
-        printf(" --- wsum %g wsum_DEBUG %g \n", wsum, wsum_DEBUG );
-        if(wsum<0) return;
+        //printf(" --- wsum %g wsum_DEBUG %g \n", wsum, wsum_DEBUG );
+        //if(wsum<0) return;
+
         //printf(" --- loaded \n");
         //for(int ing=0; ing<=nneigh; ing++){  printf( "%i : %i %g \n", ing, is[ing], hs[ing] ); }
         //-- sort work array by height ( bouble sort )
@@ -106,104 +170,85 @@ class HydraulicGrid2D :public Grid2DAlg { public:
             j--;
         }
         //printf(" --- sorted \n");
-        for(int ing=0; ing<=nneigh; ing++){  printf( "%i : %i %g \n", ing, is[ing], hs[ing] ); }
+        //for(int ing=0; ing<=nneigh; ing++){  printf( "%i : %i %g \n", ing, is[ing], hs[ing] ); }
+
+        //double DEBUG_wsum_bak = wsum;
         // find common water level
-        g = hs[0];
-        printf( "--- g %g wsum %g \n", g, wsum );
-        for(i=1; i<=nneigh; i++){
-            double g_ = hs[i];
-            double dg = g_-g;
-            double dw = dg*i;
-            // 0 = w -
-            if(wsum>dw){
-                g     = g_;
-                wsum -= dw;
-            }else{
-                g += dg*(wsum/dw);
-                //printf(  "[%i] dg %g dw %g | g %g wsum %g \n", i, dg, dw, g, wsum );
-                break;
+        double g = hs[0];
+        //printf( "--- g %g wsum %g \n", g, wsum );
+        {
+            //double dg,dw;
+            int ing;
+            for(ing=1; ing<=nneigh; ing++){
+                double g_ = hs[ing];
+                double dg = g_-g;
+                double dw = dg*ing;
+                // 0 = w -
+                if(wsum>dw){
+                    g     = g_;
+                    wsum -= dw;
+                }else{
+                    break;
+                }
+                //printf(  "[%i] dg %g dw %g | g %g wsum %g \n", ing, dg, dw, g, wsum );
             }
-            //printf(  "[%i] dg %g dw %g | g %g wsum %g \n", i, dg, dw, g, wsum );
+            //double dg_ = dg*(wsum/dw);
+            //double dw_ = dg*jng;
+            g += wsum/ing;
+            //printf(  "DEBUG finish [%i] wsum %g dg %g g %g \n", ing, wsum,  wsum/ing, g );
         }
-        printf(" --- watter level %g \n", g );
+
+
+        // DEBUG check
+        //double DEBUG_wsum_pref = 0.0;
+        //double DEBUG_wsum_new  = 0.0;
+        //double DEBUG_wsum_h    = 0.0;
+        //double DEBUG_wsum_gh   = 0.0;
+        //for(int ing=0; ing<=nneigh; ing++){
+        //    int i     = is[ing];
+        //    double gi = ground[i];
+        //    double h  = hs[ing];
+        //   //DEBUG_wsum_pref += water[i] - gi;
+        //    DEBUG_wsum_h    += water[i] - h;
+        //    //DEBUG_wsum_gh   += g - h;
+        //    if( g>h ){ DEBUG_wsum_gh   += g - h; }
+        //    //if( gi<g ){ DEBUG_wsum_new += g - gi; }
+        //}
+        //printf( "DEBUG[%i,%i] wsum  %g -> %g \n", ip0.x,ip0.y,  DEBUG_wsum_pref, DEBUG_wsum_new  );
+        //printf( "DEBUG wsum  %g  %g %g \n", DEBUG_wsum_bak,  DEBUG_wsum_h, DEBUG_wsum_gh  );
+        //printf( "DEBUG wsum  %g  %g | %g \n", DEBUG_wsum_bak,  DEBUG_wsum_gh+wsum, wsum  );
+
+
+        //printf(" --- watter level %g \n", g );
         // set water level
-        for(i=0; i<=nneigh; i++){
-            water[is[i]] = g;
+        for(int ing=0; ing<=nneigh; ing++){
+            int i     = is[ing];
+            double h  = hs[ing];
+            //double gi = ground[i];
+            //if( gi<g ){ gi = g; }
+            if( g>h ){ h=g; }
+            water[i] = h;
         }
+
+        //double DEBUG_whsum = 0.0;
+        //for(int ing=0; ing<=nneigh; ing++){
+        //    DEBUG_whsum += water[is[ing]] - hs[ing];
+        //}
+        //printf( " DEBUG check wsum %g %g \n",  DEBUG_whsum, DEBUG_wsum_bak );
+        //if( fabs(DEBUG_wsum_bak-DEBUG_whsum) >1e-6 ){
+        //    printf( "DEBUG pix[%i,%i] check wsum %g %g \n", ip0.x,ip0.y,  DEBUG_whsum, DEBUG_wsum_bak );
+        //    exit(0);
+        //}
+
     }
-
-
 
     inline void relaxWater(){
         for(int iy=0; iy<n.y; iy++){
             for(int ix=0; ix<n.x; ix++){
                 relaxWater( {ix, iy} );
-                //double g = ground[i];
-                //double w = water [i];
-                /*
-                // sum watter
-                // 1) sum watter above ground of this pixel
-                // 2) sum void   below ground level of this pixel
-                double wsum = w-g;
-                double vsum = 0;
-                double gsum = 0;
-                for(int ing=0; ing<nneigh; ing++){
-                    Vec2i ip = wrap_index( ip0 + neighs[ing] );
-                    int j    = ip2i(ip);
-                    //double gj=ground[j];
-                    double wj=water[j];
-                    if(wj>g){
-                        double gj = ground[j];
-                        if(gj>g){ gsum += gj-g; wsum+=wj-gj; }else{  wsum+=wj-g; }
-                    }else{
-                        vsum += g-wj;
-                    }
-                }
-                if()
-                double w = (wsum+gsum-vsum)/(nneigh+1);
-                for(int ing=0; ing<nneigh; ing++){
-                    Vec2i ip = wrap_index( ip0 + neighs[ing] );
-                    int j    = ip2i(ip);
-                    double g=ground[j]; if(g<val){ imin=j; val=g; }
-                }
-                */
             }
         }
-
-
-
-        /*
-        double SAFETY = 1e-8;
-        for(int ii=ntot; ii>0; ii--){
-            int i = contour1[ii];
-            Vec2i ip0 = i2ip(i);
-            int imin = -1;
-            double val = ground[i]-SAFETY;
-            for(int ing=0; ing<nneigh; ing++){
-                Vec2i ip = wrap_index( ip0 + neighs[ing] );
-                int j    = ip2i(ip);
-                double g=ground[j]; if(g<val){ imin=j; val=g; }
-            }
-            //printf("%i %i %i %f %i\n", ii, i, imin, val, nneigh );
-            if(imin>=0){
-                water[imin] += water[i];
-            }else{
-                // sink-less pixel
-                known[i] = true;
-                if( water[i] > minSinkFlow ) sinks.push_back(i);
-            }
-        }
-        double wmax = 0.0;
-        for(int i=0; i<ntot; i++){ wmax = fmax(wmax,water[i]); }
-        //printf( "max water %f \n", wmax);
-        return wmax;
-        //for(int i=0; i<ntot; i++){ water[contour1[i]]=i*0.001; }
-        */
     }
-
-
-
-
 
 	// ==== function declaration
 

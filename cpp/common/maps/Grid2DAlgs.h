@@ -8,9 +8,22 @@
 //#include "Grid2DAlgs.cpp"
 
 
-static const int    SquareNeighs       []={-1,0, 1,0, 0,-1, 0,1, -1,-1,    -1,+1,     +1,-1,     +1,+1     };
-static const double SquareNeighsDist   []={ 1.0, 1.0,  1.0, 1.0, M_SQRT2,   M_SQRT2,   M_SQRT2,   M_SQRT2  };
-static const double SquareNeighsDistInv[]={ 1.0, 1.0,  1.0, 1.0, M_SQRT1_2, M_SQRT1_2, M_SQRT1_2, M_SQRT1_2};
+//    5   3   7
+//    0       1
+//    4   2   6
+//                                           0     1    2     3     4        5          6           7
+//static const int    SquareNeighs       []={-1,0, 1,0, 0,-1, 0,1, -1,-1,    -1,+1,     +1,-1,     +1,+1     };
+//static const double SquareNeighsDist   []={ 1.0, 1.0,  1.0, 1.0, M_SQRT2,   M_SQRT2,   M_SQRT2,   M_SQRT2  };
+//static const double SquareNeighsDistInv[]={ 1.0, 1.0,  1.0, 1.0, M_SQRT1_2, M_SQRT1_2, M_SQRT1_2, M_SQRT1_2};
+
+//    6   5   4
+//    7       3
+//    0   1   2
+//                                             0         1        2          3     4          5       6          7
+static const int    SquareNeighs       []={ -1,-1,      0,-1,   1,-1,      1,0,   1,1,       0,+1,  -1,+1,     -1,0 };
+static const double SquareNeighsDist   []={  M_SQRT2,   1.0,   M_SQRT2,    1.0,   M_SQRT2,   1.0,   M_SQRT2  ,  1.0 };
+static const double SquareNeighsDistInv[]={  M_SQRT1_2, 1.0,   M_SQRT1_2,  1.0,   M_SQRT1_2, 1.0,   M_SQRT1_2,  1.0 };
+
 
 //void bisecNoise( Vec2i n, double * hs, double frndMin, double frndMax );
 void bisecNoise      ( int npow, double * hs, double frndMin, double frndMax );
@@ -43,8 +56,10 @@ class Grid2DAlg : public GridIndex2D{ public:
 
     void initNeighs_6(bool switched){
         nneigh = 6;
-        int  sela[]={0,1,2,3, 4,7};
-        int  selb[]={0,1,2,3, 5,6};
+        //int  sela[]={0,1,2,3,4,7};
+        //int  selb[]={0,1,2,3,5,6};
+        int  sela[]={0,1,3,4,5,7};
+        int  selb[]={1,2,3,5,6,7};
         int* sel;
         if(switched){sel=sela;}else{sel=selb;}
         for(int i=0; i<nneigh; i++){
