@@ -77,6 +77,9 @@ target_link_libraries( test_Plotting2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_Integration1D test_Integration1D.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Integration1D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_ConvexApprox1D test_ConvexApprox1D.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_ConvexApprox1D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_PixelGlyphs test_PixelGlyphs.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_PixelGlyphs ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

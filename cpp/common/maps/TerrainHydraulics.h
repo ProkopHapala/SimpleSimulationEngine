@@ -13,6 +13,9 @@ class River{ public:
 };
 
 class Lake{ public:
+    // continuous patch of all pixels where
+    // 1) ground is below g0
+    // 2) water level is above w0=g0+dw
     double level;
     double base;
 };

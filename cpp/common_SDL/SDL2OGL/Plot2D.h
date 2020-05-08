@@ -56,7 +56,7 @@ class DataLine2D{ public:
     inline DataLine2D(int n_,double*xs_){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; }
     //inline DataLine2D(int n_,double xmin,double xmax){ allocate(n_); linspan(xmin,xmax);  }
     inline DataLine2D(int n_,double xmin,double dx, uint32_t clr_=0xFFFF00FF, std::string label_="" ){ allocate(n_); arange(xmin,dx);                 clr=clr_; label=label_; }
-    inline DataLine2D(int n_, double*xs_,           uint32_t clr_=0xFFFF00FF, std::string label_="" ){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; clr=clr_; label=label_; }
+    inline DataLine2D(int n_,double*xs_,            uint32_t clr_=0xFFFF00FF, std::string label_="" ){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; clr=clr_; label=label_; }
 
     ~DataLine2D();
 };

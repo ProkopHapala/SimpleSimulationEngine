@@ -1,0 +1,4 @@
+
+IronMaking     {{1.0;2.0}; consume{{IronOre;10.0}; {Coke;20.0}; {Lime;20.0}};    produce{{Iron; 9.0}};                              machines{{people;1}}}
+SteelMaking    {{1.0;2.0}; consume{{Iron;   10.0}; {Coke;20.0}};                 produce{{Steel;9.0}};                              machines{{people;1}}}
+Coking         {{1.0;2.0}; consume{{Coal;   10.0}};                              produce{{Coke; 7.5}; {Pitch;1.0}; {Sulphur;0.1}};  machines{{people;1}}}
