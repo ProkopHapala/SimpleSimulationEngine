@@ -23,9 +23,10 @@ CompressibleMaterial materials[] = {
 
 class TestAppMech2D : public AppSDL2OGL { public:
 
-    MechGrid2D mgrid;
     MechMesh2D mmesh;
-    MechPIC2D  mpic;
+
+
+    Mesh2D::Builder builder;
 
     //bool bRun = false;
     bool bRun = true;
@@ -41,18 +42,16 @@ class TestAppMech2D : public AppSDL2OGL { public:
 
 TestAppMech2D::TestAppMech2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-    mpic.realloc( 8, {16,16} );
-    mpic.materials = materials;
+    //                0            1           2        3
+    double vs[]{ -1.0,-1.0,   1.0,-1.0,   -1.0,1.0,  1.0,1.0  };
+    int    es[]{  0,1,   0,2,  1,3,  2,3,   0,3    };
 
-    mpic.setStep( 1e-2 );
+    builder.fromArrayVerts( 4, (Vec2d*)vs);
+    builder.fromArrayEdges( 5, (Vec2i*)es);
 
-    for(int i=0; i<mpic.np; i++){
-        mpic.imats [i] = 0;          // materials
-        mpic.pmoles[i] = 0.1;       //
-        mpic.pos[i]    = { (i+2.2)*mpic.step,4.3*mpic.step };   // position (global, or local within the box)
-        //mpic.vel[i]    = {0.,1000.0};
-        mpic.vel[i]    = Vec2dZero;  // velocity
-    }
+    //builder.sortEdges();
+    for( Mesh2D::Edge e: builder.edges ){ printf( " %i %i \n", e.verts.a, e.verts.b ); };
+    builder.makeTris();
 
 }
 
@@ -69,39 +68,26 @@ void TestAppMech2D::draw(){
     double dt = 1e-7;
     if(bRun){
 
-        mpic.clearPressure();
-        mpic.particlesToCells();
-        mpic.evalCellPressures();
-        //mpic.moveMD( dt );
-        //mpic.moveMD_selfCorrect( dt );
-        mpic.moveMD_selfCorrect2( dt );
-        //mpic.update(dt);
+
     }
 
-    int ixy=0;
-    for(int iy=0; iy<mpic.nc.y; iy++){
-        for(int ix=0; ix<mpic.nc.x; ix++){
-            double c = mpic.moles[ixy]/0.1;
-            //double c = mpic.Umol[ixy];
-            //glColor3b( 1+c,1-c*c, 1-c );
-            glColor3f( 1-c, 1-c*4., 1-c*16. );
-            //Vec2d vert = {ix*mpic.step,iy*mpic.step};
-            //Draw2D::drawRectangle( (ix-0.5)*mpic.step, (iy-0.5)*mpic.step, (ix+0.5)*mpic.step, (iy+0.5)*mpic.step, true );
-            Draw2D::drawRectangle( (ix-0.5), (iy-0.5), (ix+0.5), (iy+0.5), true );
-            ixy++;
-        }
-    }
+    glBegin( GL_LINES );
+    for( Mesh2D::Edge e : builder.edges ){
+        Vec2d va = builder.verts[e.verts.a];
+        Vec2d vb = builder.verts[e.verts.b];
+        glVertex3f(va.x,va.y,0);
+        glVertex3f(vb.x,vb.y,0);
+    };
+    glEnd();
 
-    glColor3f(0.,0.,0.);
-    double vsc   = 1e-3;
-    double molsc = 5.1;
-    for(int i=0; i<mpic.np; i++){
-        //Draw2D::drawPointCross_d( mpic.pos[i], mpic.pmoles[i]*molsc );
-        //Draw2D::drawVecInPos_d  ( mpic.vel[i]*vsc, mpic.pos[i] );
 
-        Draw2D::drawPointCross_d( mpic.pos[i]*mpic.invStep, mpic.pmoles[i]*molsc );
-        Draw2D::drawVecInPos_d  ( mpic.vel[i]*vsc, mpic.pos[i]*mpic.invStep );
-    }
+    //glColor3f(0.,0.,0.);
+    //double vsc   = 1e-3;
+    //double molsc = 5.1;
+    //for(int i=0; i<mpic.np; i++){
+    //    Draw2D::drawPointCross_d( mpic.pos[i]*mpic.invStep, mpic.pmoles[i]*molsc );
+    //    Draw2D::drawVecInPos_d  ( mpic.vel[i]*vsc, mpic.pos[i]*mpic.invStep );
+    //}
 
 };
 

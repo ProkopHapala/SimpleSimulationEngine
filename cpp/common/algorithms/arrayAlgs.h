@@ -40,10 +40,13 @@ inline int prune( int n, T* arr, CondFunc cond ){
 
 
 inline int objects2cells( int nobj, int ncell, int* obj2cell, int* cellNs, int* cellI0s, int* permut ){
+    //printf("DEBUG 1 objects2cells \n");
     int nmax = 0;
+    for(int k=0; k<ncell; k++ ){ cellNs[k]=0; }
     for(int i=0; i<nobj; i++ ){
         cellNs[ obj2cell[i] ]++;
     }
+    //printf("DEBUG 2 objects2cells \n");
     int ntot=0;
     for(int k=0; k<ncell; k++ ){
         cellI0s[k]=ntot;
@@ -52,12 +55,16 @@ inline int objects2cells( int nobj, int ncell, int* obj2cell, int* cellNs, int* 
         if( ni>nmax ) nmax=ni;
         ni=0;
     }
+    //printf("DEBUG 3 objects2cells \n");
     for(int i=0; i<nobj; i++){
+        printf( "[%i] ", i );
         int k =  obj2cell[i];
         int j =  cellI0s[k] + cellNs[k];
+        printf( " k %i j %i | nobj %i \n", k, j, nobj );
         permut[j] = i;
         cellNs[k]++;
     }
+    //printf("DEBUG 4 objects2cells \n");
     return nmax;
 }
 
