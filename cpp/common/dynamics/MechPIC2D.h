@@ -81,13 +81,7 @@ class MechPIC2D{ public:
         return nc.x*iy + ix;
     }
 
-    void clearPressure(){
-        for(int i=0; i<nctot; i++){
-            moles[i]=0;
-        }
-    }
-
-    void evalCellPressures(){
+    void updateCellThermodynamics(){
         // Total Energy E = T + U   (Kinetic + potential ... we may ensure condensation using certain materials)
         double invV = invStep*invStep;
         double RT = const_Rgas * 1e+4; // [K]  - reference
@@ -97,7 +91,10 @@ class MechPIC2D{ public:
         }
     }
 
+    void clearCells(){ for(int i=0; i<nctot; i++){moles[i]=0;} }
+
     void particlesToCells(){
+        clearCells();
         // evaluated pressure in cells due to presence of particles (chunks of material)
         const int io10=nc.x  ;
         const int io11=nc.x+1;
@@ -212,8 +209,9 @@ class MechPIC2D{ public:
         const int io11=nc.x+1;
 
         double damp = 1.0-100000.0*dt;
-        printf("damp %g \n", damp);
         if(damp<0)damp=0;
+        //damp=1; // damping off
+        //printf("damp %g \n", damp);
 
         for(int i=0;i<np; i++){
             //double nmol = ( mass[i] / materials[ imats[i] ].molarMass ); // presure norm
@@ -243,9 +241,8 @@ class MechPIC2D{ public:
     }
 
     void update( double dt ){
-        clearPressure();
         particlesToCells();
-        evalCellPressures();
+        updateCellThermodynamics();
         moveMD( dt );
     }
 

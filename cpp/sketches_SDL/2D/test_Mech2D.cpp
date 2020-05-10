@@ -12,8 +12,10 @@
 #include "testUtils.h"
 
 #include "MechGrid2D.h"
-#include "MechPIC2D.h"
 #include "MechMesh2D.h"
+
+#include "MechPIC2D.h"
+#include "MechPIC2D_Temperature.h"
 
 CompressibleMaterial materials[] = {
     {1.,1.}
@@ -23,9 +25,10 @@ CompressibleMaterial materials[] = {
 
 class TestAppMech2D : public AppSDL2OGL { public:
 
-    MechGrid2D mgrid;
-    MechMesh2D mmesh;
-    MechPIC2D  mpic;
+    //MechGrid2D mgrid;
+    //MechMesh2D mmesh;
+    //MechPIC2D    mpic;
+    MechPIC2D_T  mpic;
 
     //bool bRun = false;
     bool bRun = true;
@@ -69,19 +72,19 @@ void TestAppMech2D::draw(){
     double dt = 1e-7;
     if(bRun){
 
-        mpic.clearPressure();
         mpic.particlesToCells();
-        mpic.evalCellPressures();
+        mpic.updateCellThermodynamics();
         //mpic.moveMD( dt );
         //mpic.moveMD_selfCorrect( dt );
-        mpic.moveMD_selfCorrect2( dt );
+        mpic.moveMD( dt );
         //mpic.update(dt);
     }
 
     int ixy=0;
     for(int iy=0; iy<mpic.nc.y; iy++){
         for(int ix=0; ix<mpic.nc.x; ix++){
-            double c = mpic.moles[ixy]/0.1;
+            //double c = mpic.moles[ixy]/0.1;
+            double c = mpic.temperature[ixy]*0.0001;
             //double c = mpic.Umol[ixy];
             //glColor3b( 1+c,1-c*c, 1-c );
             glColor3f( 1-c, 1-c*4., 1-c*16. );

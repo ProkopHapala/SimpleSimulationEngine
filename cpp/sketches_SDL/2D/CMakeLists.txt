@@ -41,6 +41,9 @@ target_link_libraries( test_Voronoi2 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIB
 add_executable       ( test_Mech2D test_Mech2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Mech2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_MechEuler2D test_MechEuler2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_MechEuler2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_AutoMesh2D test_AutoMesh2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_AutoMesh2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
