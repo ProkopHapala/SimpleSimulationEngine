@@ -111,7 +111,10 @@ class GUIAbstractPanel{ public:
     // inline fnctions
 
     inline void draw      ( ){ tryRender(); view(); };
-    inline bool check      ( int  x, int  y ){  return (x>xmin)&&(x<xmax)&&(y>ymin)&&(y<ymax); }
+    inline bool check     ( int  x, int  y ){
+        //printf( "check x %i <%i...%i>   y %i <%i...%i>\n", x, xmin, xmax,   y, ymin, ymax );
+        return (x>xmin)&&(x<xmax)&&(y>ymin)&&(y<ymax);
+    }
 	inline void toRelative ( int& x, int& y ){ x-=xmin; y-=ymin; }
 
 };
@@ -131,6 +134,7 @@ class GUIPanel : public GUIAbstractPanel { public:
 
 	float    vmin=0.0f, vmax=1.0f;
 	double   value=0.0d;
+	bool     isInt = false;
 
 	void (*command)(double) = NULL;
 
@@ -142,7 +146,7 @@ class GUIPanel : public GUIAbstractPanel { public:
         command=0;
     };
 
-    virtual void view    ();
+    virtual void view();
 	//virtual void tryRender();
 	void render();
     virtual void              onKeyDown( const SDL_Event&  e );
@@ -153,6 +157,8 @@ class GUIPanel : public GUIAbstractPanel { public:
     inline  void  val2text()         { inputText = std::to_string(value); };
 	inline double x2val( float  x   ){ return ( x*(vmax-vmin)/(xmax-xmin) )+ vmin; };
 	inline float  val2x( double val ){ return (val-vmin)*(xmax-xmin)/(vmax-vmin);  };
+
+	inline GUIPanel* setRange(float vmin_, float vmax_){ vmin=vmin_; vmax=vmax_; return this; };
 
 };
 

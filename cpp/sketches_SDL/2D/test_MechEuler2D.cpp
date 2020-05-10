@@ -56,10 +56,11 @@ TestAppMech2D::TestAppMech2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( i
     //for(int iy=120; iy<150; iy++){ for(int ix=120; ix<150; ix++){ solver.matNs[1][solver.nc.x*iy + ix] = 1.0; } }
 
     for(int iy=100; iy<120; iy++){ for(int ix=100; ix<150; ix++){ solver.matNs[0][solver.nc.x*iy + ix] = 1.0; } }
-    for(int iy=120; iy<150; iy++){ for(int ix=100; ix<150; ix++){ solver.matNs[1][solver.nc.x*iy + ix] = 1.0; } }
+    //for(int iy=120; iy<150; iy++){ for(int ix=100; ix<150; ix++){ solver.matNs[1][solver.nc.x*iy + ix] = 1.0; } }
 
     for(int i=0; i<solver.nctot; i++){
-        solver.vs[i] = (Vec2d){1.0,1.0};
+        //solver.vs[i] = (Vec2d){1.0,1.0};
+        solver.vs[i] = Vec2dZero;
         solver.Vs[i] = 1.0;
         solver.Ts[i] = 1.0;
         solver.ps[i] = 0.0;
@@ -81,17 +82,17 @@ void TestAppMech2D::draw(){
     glColor3f(1.0,0.0,0.0);
 
     if(frameCount==1)zoom = 150;
-    double dt = 0.01;
+    double dt = 0.003;
     solver.cohesive_pressure = 1.0;
 
-    int perFrame = 10;
+    int perFrame = 1;
     if(bRun){
         for(int itr=0; itr<perFrame; itr++){
             //solver.update(dt);
             //solver.advec(0.001);
             solver.update(dt);
             //solver.cohesion     (dt);
-            //printf("#### frame %i sumN %g p[100,100]: %g \n", frameCount, solver.sumN, solver.ps[solver.nc.x*100+100] );
+            printf("#### frame %i sumN %g p[100,100]: %g \n", frameCount, solver.sumN, solver.ps[solver.nc.x*100+100] );
             //SDL_Delay(500);
         }
     }
@@ -100,19 +101,31 @@ void TestAppMech2D::draw(){
     for(int iy=0; iy<solver.nc.y; iy++){
         for(int ix=0; ix<solver.nc.x; ix++){
             //double c = mpic.moles[ixy]/0.1;
-            double n1 = solver.matNs[0][ixy]*3;
-            double n2 = solver.matNs[1][ixy]*3;
-            //double n3 = fabs( solver.Ntmp[ixy] );
-            double n3 = solver.ps[ixy]*0;
+            double n1 = solver.matNs[0][ixy]*0;
+            double n3 = solver.matNs[1][ixy]*0;
+            double n2 = solver.ps[ixy];
+
+            //double n1 = solver.vs[ixy].x*0.01+0.5;
+            //double n2 = solver.Ntot[ixy]*0;
+            //double n3 = solver.vs[ixy].y*0.01+0.5;
+
             //printf( "[%i,%i] %g %g\n", ix,iy, n1, n2 );
-            glColor3f( n1, n3, n2 );
+            glColor3f( n1, n2, n3 );
             float x=ix-0.5-solver.nc.x*0.5;
             float y=iy-0.5-solver.nc.y*0.5;
             Draw2D::drawRectangle( x, y, x+1, y+1, true );
             ixy++;
         }
-
     }
+
+    ixy=0;
+    for(int iy=0; iy<solver.nc.y; iy++){for(int ix=0; ix<solver.nc.x; ix++){
+        glColor3f(1.0,1.0,1.0);
+        float x=ix-solver.nc.x*0.5;
+        float y=iy-solver.nc.y*0.5;
+        Draw2D::drawVecInPos_d( solver.vs[ixy], {x+0.5,y+0.5} );
+        ixy++;
+    } }
 
     /*
     solver.cohesive_pressure = -1.0;

@@ -179,7 +179,7 @@ void ScreenSDL2OGL::keyStateHandling( const Uint8 *keys ){
 };
 
 void ScreenSDL2OGL::mouseHandling( ){
-    SDL_GetMouseState( &mouseX, &mouseY ); //mouseY=HEIGHT-mouseY; // this is done in mouseUp()
+    SDL_GetMouseState   ( &mouseX, &mouseY ); //mouseY=HEIGHT-mouseY; // this is done in mouseUp()
     defaultMouseHandling( mouseX, mouseY );
 }
 

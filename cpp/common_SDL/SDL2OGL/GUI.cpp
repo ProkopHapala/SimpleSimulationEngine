@@ -95,11 +95,11 @@ void GUITextInput::onKeyDown( SDL_Event e ){
                     inputText = "";
                     curPos=0;
                     num_op = e.key.keysym.sym;
-                    printf("num_op %i\n",num_op);
+                    //printf("num_op %i\n",num_op);
                 }
                 break;
         }
-        printf("curPos : %i\n", curPos);
+        //printf("curPos : %i\n", curPos);
     }
 };
 
@@ -180,6 +180,7 @@ void GUIPanel::view ( ){
 };
 
 void GUIPanel::render(){
+    if(isInt){ value=round(value); }
     glDisable( GL_LIGHTING );
     glDisable( GL_DEPTH_TEST);
     glShadeModel( GL_FLAT     );
@@ -195,6 +196,7 @@ void GUIPanel::render(){
     int nch0 = caption.length();
     //Draw2D::drawText( caption, nch, {xmin, ymin+fontSizeDef*2,}, 0.0,  GUI_fontTex, fontSizeDef );
     Draw2D::drawText( caption.c_str(), caption.length(), {xmin, ymax-fontSizeDef*2}, 0.0,  GUI_fontTex, fontSizeDef );
+    val2text();
     int nch = inputText.length();
     if( nch > 0 ){
         Draw  ::setRGB( 0xFFFFFFFF );
@@ -243,7 +245,7 @@ void GUIPanel::onKeyDown( const SDL_Event&  e ){
                 executed = true;
                 break;
         }
-        printf("curPos : %i\n", curPos);
+        //printf("curPos : %i\n", curPos);
     }
 };
 
@@ -263,15 +265,15 @@ GUIAbstractPanel* GUIPanel::onMouse( int x, int y, const SDL_Event& event, GUI& 
     GUIAbstractPanel* active = NULL;
     if( check( x, y ) ){
         toRelative(x,y);
-        printf( "  panel.onMouse %i %i \n", x, y );
+        //printf( "  panel.onMouse %i %i \n", x, y );
         if( ( event.type == SDL_MOUSEBUTTONDOWN ) ){
             active = this;
             if(isSlider && (event.button.button==SDL_BUTTON_RIGHT)){
                 //value=( x*(vmax-vmin)/(xmax-xmin) ) + vmin;
                 value=x2val(x);
+                if(isInt)value=round(value);
                 //sprintf(val_text, "%3.3f", value );
                 //inputText = std::to_string(value);
-                val2text();
                 redraw=true;
             }
             if(isButton && (event.button.button==SDL_BUTTON_LEFT ) ){
@@ -652,6 +654,7 @@ GUIAbstractPanel* GUI::addPanel( GUIAbstractPanel* panel ){ panels.push_back(pan
 
 GUIAbstractPanel* GUI::onEvent( int mouseX, int mouseY, const SDL_Event& event ){
     GUIAbstractPanel* active = 0;
+    //printf("GUI::onEvent \n");
     switch( event.type ){
         case SDL_KEYDOWN:
             //if(focused){ focused->onKeyDown( event ); }else{ txt.onKeyDown(  event ); }; break;

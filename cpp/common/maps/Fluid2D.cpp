@@ -85,11 +85,13 @@ void Fluid2D::set_bnd( int b, double* u) {
 void Fluid2D::advect(double* u, double* u0, double* vx, double* vy, double dt) {
 //	int i0, j0, i1, j1;
 //	double x, y, s0, t0, s1, t1;
+    double dyt = dt * n.y;
+    double dxt = dt * n.x;
     for (int iy=1; iy<n.y-1; iy++) {
         for (int ix=1; ix<n.x-1; ix++) {
             int i = ip2i( {ix,iy} );
-            double x = ix - dt * n.x * vx[i];   // how far it flows ?
-            double y = iy - dt * n.y * vy[i];
+            double x = ix - dxt * vx[i];   // how far it flows ?
+            double y = iy - dyt * vy[i];
             //Draw2D::drawLine({ix*0.1,iy*0.1},{x*0.1,y*0.1});
             u[i] = interpBilinear( {x,y}, u0 );
         }
@@ -149,49 +151,113 @@ void Fluid2D::diffuse( double* u, double* u0, double diff, double dt ){    // di
     } }
 }
 
-void Fluid2D::fluidStep(double dt){
 
+void Fluid2D::fluidStep_minimal(double dt){
     for(int i=0;i<ndiffuse;i++){ diffuse(vx_, vx, visc, dt); SWAP(vx_,vx,double*); }
     for(int i=0;i<ndiffuse;i++){ diffuse(vy_, vy, visc, dt); SWAP(vy_,vy,double*); }
     //boundary_reflect(vx);
     //boundary_reflect(vy);
-    /*
-    diverg( div, p, vx, vy );
-    //for(int i=0;i<npressure;i++) pressureBlur( div, p );
-    for(int i=0;i<npressure;i++){ diffuse(p,div, visc, dt); SWAP(p,div,double*); }
-    accelerate( p, vx, vy );
-    */
+    //diverg( div, p, vx, vy );
+    ////for(int i=0;i<npressure;i++) pressureBlur( div, p );
+    //for(int i=0;i<npressure;i++){ diffuse(p,div, visc, dt); SWAP(p,div,double*); }
+    //accelerate( p, vx, vy );
     advect(vx, vx_, vx_, vy_, dt); //SWAP(vx_,vx,double*); //boundary_reflect(vx);
     advect(vy, vy_, vx_, vy_, dt); //SWAP(vy_,vy,double*); //boundary_reflect(vy);
     //acum( ntot, vx_, vx, dt );
     //acum( ntot, vy_, vy, dt );
     //SWAP(vx_,vx,double*);
     //SWAP(vy_,vy,double*);
-
     diverg( div, p, vx, vy ); boundary_absorb(div);
     //for(int i=0;i<npressure;i++) pressureBlur( div, p );
     //for(int i=0;i<npressure;i++){ diffuse(p,div, visc, dt); SWAP(p,div,double*); }
     SWAP(p,div,double*);
     accelerate( p, vx, vy, 1.0 );
+}
 
-    // ==== vel_step
-    /*
+void Fluid2D::fluidStep_simplified(double dt){
+    //SWAP(vx_,vx,double*);
+    //SWAP(vy_,vy,double*);
     acum( ntot, vx, vx_, dt );
     acum( ntot, vy, vy_, dt );
+    //printf( "ndiffuse, npressure %i %i\n", ndiffuse, npressure );
     for(int i=0;i<ndiffuse;i++){ diffuse(vx, vx_, visc, dt); boundary_reflect(vx); }
     for(int i=0;i<ndiffuse;i++){ diffuse(vy, vy_, visc, dt); boundary_reflect(vy); }
-    SWAP(vx_,vx,double*);
-    SWAP(vy_,vy,double*);
+    //SWAP(vx_,vx,double*);
+    //SWAP(vy_,vy,double*);
+
     //project(vx, vy, vx0, vy0);
     diverg( div, p, vx, vy );
     for(int i=0;i<npressure;i++) pressureBlur( div, p );
-    accelerate( p, vx, vy );   SWAP(vx_,vx,double*); SWAP(vy_,vy,double*);
+    accelerate( p, vx, vy, 1.0 );
+
+    SWAP(vx_,vx,double*);
+    SWAP(vy_,vy,double*);
+    advect(vx, vx_, vx_, vy_, dt); boundary_reflect(vx);
+    advect(vy, vy_, vx_, vy_, dt); boundary_reflect(vy);
+}
+
+
+void Fluid2D::fluidStep_orig(double dt){
+
+
+    // ==== vel_step
+    //SWAP(vx_,vx,double*);
+    //SWAP(vy_,vy,double*);
+    acum( ntot, vx, vx_, dt );
+    acum( ntot, vy, vy_, dt );
+    //printf( "ndiffuse, npressure %i %i\n", ndiffuse, npressure );
+    for(int i=0;i<ndiffuse;i++){ diffuse(vx, vx_, visc, dt); boundary_reflect(vx); }
+    for(int i=0;i<ndiffuse;i++){ diffuse(vy, vy_, visc, dt); boundary_reflect(vy); }
+    //SWAP(vx_,vx,double*);
+    //SWAP(vy_,vy,double*);
+
+    //project(vx, vy, vx0, vy0);
+    diverg( div, p, vx, vy );
+    for(int i=0;i<npressure;i++) pressureBlur( div, p );
+    accelerate( p, vx, vy, 1.0 );
+
+    SWAP(vx_,vx,double*);
+    SWAP(vy_,vy,double*);
+    advect(vx, vx_, vx_, vy_, dt); boundary_reflect(vx);
+    advect(vy, vy_, vx_, vy_, dt); boundary_reflect(vy);
+
+    //project(vx, vy, vx0, vy0);             // meaning of variables:      void project(vx, vy, p, diverg
+    diverg( div, p, vx, vy );
+    for(int i=0;i<npressure;i++) pressureBlur( div, p );
+    accelerate( p, vx, vy, 1.0 );
+
+    // === dens step
+    // --- dens is not used (we don't cary anything )
+    //acum    (ntot,dens,dens_,dt);  SWAP(dens_,dens,double*);
+    //for(int i=0;i<ndiffuse;i++){ diffuse (dens ,dens_, diff, dt); SWAP(dens_, dens,double*); }
+    //boundary_absorb(dens);
+    //advect  (dens, dens_, vx, vy, dt);
+    //boundary_absorb(dens);
+
+
+    /*
+    // ==== vel_step // ###### BACKUP
+    acum( ntot, vx, vx_, dt );
+    acum( ntot, vy, vy_, dt );
+    //printf( "ndiffuse, npressure %i %i\n", ndiffuse, npressure );
+    for(int i=0;i<ndiffuse;i++){ diffuse(vx, vx_, visc, dt); boundary_reflect(vx); }
+    for(int i=0;i<ndiffuse;i++){ diffuse(vy, vy_, visc, dt); boundary_reflect(vy); }
+    //SWAP(vx_,vx,double*);
+    //SWAP(vy_,vy,double*);
+    //project(vx, vy, vx0, vy0);
+    diverg( div, p, vx, vy );
+    for(int i=0;i<npressure;i++) pressureBlur( div, p );
+    accelerate( p, vx, vy, 1.0 );
+
+    SWAP(vx_,vx,double*);
+    SWAP(vy_,vy,double*);
     advect(vx, vx_, vx_, vy_, dt); boundary_reflect(vx);
     advect(vy, vy_, vx_, vy_, dt); boundary_reflect(vy);
     //project(vx, vy, vx0, vy0);             // meaning of variables:      void project(vx, vy, p, diverg
     diverg( div, p, vx, vy );
     for(int i=0;i<npressure;i++) pressureBlur( div, p );
-    accelerate( p, vx, vy );
+    accelerate( p, vx, vy, 1.0 );
+
     // === dens step
     acum    (ntot,dens,dens_,dt);  SWAP(dens_,dens,double*);
     for(int i=0;i<ndiffuse;i++){ diffuse (dens ,dens_, diff, dt); SWAP(dens_, dens,double*); }
@@ -199,6 +265,8 @@ void Fluid2D::fluidStep(double dt){
     advect  (dens, dens_, vx, vy, dt);
     boundary_absorb(dens);
     */
+
+
 }
 
 

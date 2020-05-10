@@ -18,8 +18,8 @@ http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/ns.pdf
 /home/prokop/Dropbox/MyDevSW/Processing/AlgorithmicArtGeneration/PlasticOrogennyParticles
 */
 
-inline void acum( int n, double* a, double* b, double dt){ for(int i=0;i<n;i++){  a[i] += b[i] * dt; } };
-inline void setarr(int n, double* a, double val){ for(int i=0;i<n;i++){  a[i]=val; } }
+inline void acum  (int n, double* a, double* b, double dt){ for(int i=0;i<n;i++){  a[i]+=b[i]*dt; } }
+inline void setarr(int n, double* a, double val          ){ for(int i=0;i<n;i++){  a[i]=val;      } }
 //void swap_ptr(void*& a, void*& b){ void*& tmp=a; a=b; b=tmp; };
 
 class Fluid2D : public Grid2DAlg { public:
@@ -54,7 +54,15 @@ class Fluid2D : public Grid2DAlg { public:
     void pressureBlur( double* div, double* p );
     void accelerate  ( double* p, double* vx, double* vy, double dt );
     void diffuse     ( double* u, double* u0, double diff, double dt );
-    void fluidStep   ( double dt);
+
+    void fluidStep_minimal   (double dt);
+    void fluidStep_simplified(double dt);
+    void fluidStep_orig      (double dt);
+    inline void fluidStep    (double dt){
+        //fluidStep_minimal(dt);
+        fluidStep_simplified(dt);
+        //fluidStep_orig(dt);
+    };
 
     // ===== inline Functions
 
@@ -65,8 +73,10 @@ class Fluid2D : public Grid2DAlg { public:
         int iy0 = (int)y;     //int iy1 = iy+1;
         int i0  = ip2i( {ix0,iy0} );
         int i1  = i0 + n.x;
+        //printf( " p(%g,%g) xy(%g,%g) ixy(%i,%i)%i==%i\n", p.x,p.y, x,y, ix0, iy0, i0, iy0*n.x+ix0 );
         double fx = x-ix0;  double mx = 1-fx;
         double fy = y-iy0;  double my = 1-fy;
+        //printf( " fx,fy %g,%g mx,my %g,%g \n", fx,fy, mx, my );
         return my * (mx*u[i0] + fx*u[i0+1])
              + fy * (mx*u[i1] + fx*u[i1+1]);
     }

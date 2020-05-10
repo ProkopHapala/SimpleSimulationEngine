@@ -28,6 +28,9 @@
 #include "SquareRuler.h"
 */
 
+#include "SDL_utils.h"
+#include "GUI.h"
+
 //#include "Grid.h"
 
 // ======================  TestApp
@@ -53,6 +56,16 @@ class TestAppFluid2D : public AppSDL2OGL{
 
     int nParticles;
     Vec2d * particles = 0;
+
+
+    GUI gui;
+    GUIPanel panel_dt;
+    GUIPanel panel_diff;
+    GUIPanel panel_visc;
+    GUIPanel panel_ndiff;
+    GUIPanel panel_npress;
+
+    GUIPanel panel_CPUtime;
 
 	// ---- function declarations
 
@@ -105,7 +118,56 @@ void TestAppFluid2D::renderMapContent( float x0, float y0, float scale, float cs
 }
 */
 
+
+/*
+void testClamp(double a, double amin, double amax){
+    //printf(" %g in (%g ... %g) -> %g \n", a, amin, amax, _clamp(a, amin, amax) );
+}
+*/
+
+
 TestAppFluid2D::TestAppFluid2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+
+    GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+
+    //((GUIPanel*)gui.addPanel( new GUIPanel( "dt [Rad]", 5,5,105,35, true, true ) )) -> setRange(0.0, 0.2);
+    //    ->command = &command_example;
+    panel_dt.initPanel( "dt", 5,5,90,35 );
+    panel_dt.setRange(0.0, 0.2);
+    panel_dt.value = 0.05;
+    gui.addPanel( &panel_dt );
+
+    panel_visc.initPanel( "viscosity", 100,5,190,35 );
+    panel_visc.setRange(0.0, 0.001);
+    panel_visc.value = 0.0001*4;
+    gui.addPanel( &panel_visc );
+
+    panel_diff.initPanel( "diffuse", 200,5,290,35 );
+    panel_diff.setRange(0.0, 5.0);
+    panel_diff.value = 3.0;
+    gui.addPanel( &panel_diff );
+
+    panel_ndiff.initPanel( "ndiffuse", 300,5,390,35 );
+    panel_ndiff.setRange(0, 10);
+    panel_ndiff.value = 5;
+    panel_ndiff.isInt=true;
+    gui.addPanel( &panel_ndiff );
+
+    panel_npress.initPanel( "npressure", 400,5,490,35 );
+    panel_npress.setRange(0, 10);
+    panel_npress.value = 5;
+    panel_npress.isInt=true;
+    gui.addPanel( &panel_npress );
+
+    panel_CPUtime.initPanel( "CPUtime [tick/pix]", 5,40,90,70 );
+    panel_CPUtime.setRange(0, 1000);
+    gui.addPanel( &panel_CPUtime );
+
+    //int ndiffuse  = 5;
+    //int npressure = 5;
+    //double	visc = 0.0001*4;
+	//double	diff = 3.0;
+
     srand(154978);
     //fluid.allocate( {64,64} );
     fluid.allocate( {128,128} );
@@ -116,6 +178,16 @@ TestAppFluid2D::TestAppFluid2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL(
     nParticles = fluid.ntot;
     particles = new Vec2d[nParticles];
 
+    /*
+    testClamp(  0.6,  0.5, 1.5 );
+    testClamp(  0.6,  0.5, 1.5 );
+    testClamp(  2.3,  0.5, 1.5 );
+    testClamp( -0.2, -0.7,  1.5 );
+    testClamp( -0.7, -0.5,  0.7 );
+    testClamp( -0.1, -0.5, -0.2 );
+    */
+    //fluid.interpBilinear( {16.3,13.6}, fluid.vx );
+    //exit(0);
 
     //fluid.source[ fluid.ip2i({16,32}) ] =  1.0;
     //fluid.source[ fluid.ip2i({48,32}) ] = -1.0;
@@ -126,10 +198,10 @@ TestAppFluid2D::TestAppFluid2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL(
 void TestAppFluid2D::draw(){
 
     //delay = 100;
-    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
-	//glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
+    glClearColor( 1.0f, 1.0f, 1.0f, 0.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable(GL_LIGHTING);
+	/*
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//glColor4f( 0.5f, 0.5f, 0.5f, 0.05f );
@@ -137,13 +209,17 @@ void TestAppFluid2D::draw(){
 	glColor4f( 1.0f, 1.0f, 1.0f, 0.2f );
 	Draw2D::drawRectangle( {-100.0,-100.0},{100.0,100.0},true);
     glDisable(GL_BLEND);
+    */
+
+
+    if(frameCount==1){  camX0=fluid.n.x*0.05; camY0=fluid.n.y*0.05; };
 
 	glDisable( GL_DEPTH_TEST );
-    long t0,t1;
 
     double vsc = 5;
+
     glBegin(GL_LINES);
-    glColor3f(1.0,0.0,0.0);
+    glColor3f(0.0,1.0,0.0);
     for(int ii=0; ii<nVSource; ii++){
         const Vec2i& ip = pSources[ii];
         const Vec2d& v  = vSources[ii];
@@ -151,33 +227,60 @@ void TestAppFluid2D::draw(){
         //printf( "%i (%i,%i) (%f,%f) \n", ii, ip.x, ip.y, v.x, v.y  );
         fluid.vx[i] = v.x;
         fluid.vy[i] = v.y;
+        fluid.vx_[i] = v.x;
+        fluid.vy_[i] = v.y;
         Vec2d p = (Vec2d){ ip.x*0.1,ip.y*0.1 };
         glVertex3f(p.x,p.y,0);
         glVertex3f(p.x+fluid.vx[i]*vsc,p.y+fluid.vy[i]*vsc,0);
     }
     glEnd();
 
-    double dt = 0.1;
+    double dt  = panel_dt.value;
+    fluid.diff = panel_diff.value;
+    fluid.visc = panel_visc.value;
+    fluid.npressure=(int)panel_npress.value;
+    fluid.ndiffuse =(int)panel_ndiff .value;
+    //double dt = 0.05;
 
+    long t0;
     glColor3f(1.0,0.0,1.0);
     t0 = getCPUticks();
     fluid.fluidStep( dt );
     t0 = getCPUticks()-t0;
 
-    //glBegin(GL_LINES);
-    glBegin(GL_POINTS);
+    panel_CPUtime.value = ((double)t0)/fluid.ntot;
+    panel_CPUtime.redraw=true;
+
+    //int i0 = 128*50+50;
+    //printf( " vx,vy %g %g  \n", fluid.vx[i0], fluid.vx[i0] );
+
+    //SDL_Delay(500);
+
+    glBegin(GL_LINES);
+    //glBegin(GL_POINTS);
     glColor3f(1.0,0.0,0.0);
     float psc = 10000.0;
+    vsc = 1.0;
     for (int iy=1; iy<fluid.n.y-1; iy++){ for (int ix=1; ix<fluid.n.x-1; ix++){
         int i = fluid.ip2i( {ix,iy} );
         Vec2d p = (Vec2d){ ix*0.1,iy*0.1 };
         float c = fluid.p[i]*psc;
         //if( c<0 ){ glColor3f(1.0,1.0+c,1.0+c); }else{ glColor3f(1-c,1-c,1.0); }
-        //glVertex3f(p.x,p.y,0);
-        //glVertex3f(p.x+fluid.vx[i]*vsc,p.y+fluid.vy[i]*vsc,0);
+
+        glColor3f(1.0,0.0,0.0);
+        glVertex3f(p.x,p.y,0);
+        glVertex3f( p.x+fluid.vx[i]*vsc, p.y+fluid.vy[i]*vsc, 0);
+
+        /*
+        double vx = fluid.interpBilinear( (Vec2d){ix,iy}, fluid.vx );
+        double vy = fluid.interpBilinear( (Vec2d){ix,iy}, fluid.vy );
+        glColor3f(0.0,0.0,1.0);
+        glVertex3f(p.x,p.y,0);
+        glVertex3f( p.x+vx*vsc, p.y+vy*vsc, 0);
+        */
+
     } }
     glEnd();
-
 
     /*
     glBegin(GL_POINTS);
@@ -194,6 +297,7 @@ void TestAppFluid2D::draw(){
     */
 
 
+    /*
     glBegin(GL_LINES);
     glColor3f(0.0,0.0,0.0);
     double L = 1.5;
@@ -228,12 +332,59 @@ void TestAppFluid2D::draw(){
         glVertex3f( p2.x*0.1, p2.y*0.1,0.0 );
     }
     glEnd();
+    */
 
+    glColor3f(0.0,0.0,0.0);
+    double L = 1.5;
+    int nl   = 10;
+    for(int i=0; i<nParticles/nl; i++){
+        if( (randf()<0.0005)||(frameCount==1) ){
+            double ang = randf(0.0,M_PI*2);
+            double dx  = cos(ang)*L*0.5;
+            double dy  = sin(ang)*L*0.5;
+            double x   = randf(0.0,fluid.n.x);
+            double y   = randf(0.0,fluid.n.y);
+            for(int j=0; j<nl; j++){
+                particles[i*nl+j].set(x+dx*j,y+dy*j);
+            }
+        }else{
+            double vx,vy;
+            glBegin(GL_LINE_STRIP);
+            Vec2d* op=0;
+            for(int j=0; j<nl; j++){
+                Vec2d& p = particles[i*nl+j];
 
-    printf( " %f Mticks %f op/pix \n", t0*1.0e-6 ,((double)t0)/fluid.ntot );
+                vx = fluid.interpBilinear( p, fluid.vx );
+                vy = fluid.interpBilinear( p, fluid.vy );
+                p.add_mul( (Vec2d){vx,vy}, dt*50 );
+                if( j>0 ){
+                    Vec2d  d = p-(*op);
+                    double l = d.norm();
+                    double c = (l-L*0.5)/l;
+                    p    .add_mul(d,-c*0.5);
+                    (*op).add_mul(d,+c*0.5);
+                }
+
+                glVertex3f( p.x*0.1, p.y*0.1,0.0 );
+                op=&p;
+            }
+            glEnd();
+            //if(i==0) printf("%f %f \n",l,c);
+        };
+    }
+
+    //printf( " %f Mticks %f op/pix \n", t0*1.0e-6 ,((double)t0)/fluid.ntot );
 };
 
-void TestAppFluid2D::drawHUD(){}
+void TestAppFluid2D::drawHUD(){
+    glDisable( GL_LIGHTING );
+    glDisable(GL_DEPTH_TEST);
+
+
+    Draw2D::drawText( "AHOJ !!!!", 0, {10, 100}, 0.0, GUI_fontTex, fontSizeDef );
+
+    gui.draw();
+}
 
 
 void TestAppFluid2D::eventHandling( const SDL_Event& event ){
@@ -268,6 +419,7 @@ void TestAppFluid2D::eventHandling( const SDL_Event& event ){
             break;
         */
     };
+    gui.onEvent( mouseX, HEIGHT-mouseY, event );
     AppSDL2OGL::eventHandling( event );
 };
 
