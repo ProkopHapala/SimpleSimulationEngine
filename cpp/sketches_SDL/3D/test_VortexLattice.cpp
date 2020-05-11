@@ -15,6 +15,9 @@
 #include "Vec3.h"
 #include "Mat3.h"
 
+#include "SDL_utils.h"
+#include "Plot2D.h"
+
 #include "Multipoles.h"
 #include "PotentialFlow.h"
 #include "grids3D.h"
@@ -115,6 +118,65 @@ void plotStreamLinePlane( Vec2i n, int ns, Vec3d p0, Vec3d a, Vec3d b, double dt
     }
 }
 
+
+
+/*
+template<typename Type_f, typename Type_F>
+void TestIntegralScalar1D( int n, Vec3d p, Vec3d dp, Type_f f, Type_F f){
+
+    for(){
+
+    }
+}
+*/
+
+
+template<typename Type_f>
+double numIntegralScalarLine1D( int n, Vec3d p0, Vec3d p1, Type_f f, double* ys=0 ){
+    Vec3d dp = p1-p0;
+    dp.mul(1./n);
+    double dl = dp.norm();
+    //double dl = 1;
+    Vec3d p  = p0 + dp*0.5;
+    double sum=0;
+    for(int i=0; i<n; i++){
+        double y =  f( p ) * dl;
+        sum  += y;
+        ys[i] = sum;
+        p.add(dp);
+    }
+    return sum;
+}
+
+template<typename Type_F>
+double definiteIntegral2Array( int n, Vec3d p0, Vec3d p1, Type_F F, double * ys){
+    Vec3d dp = p1-p0;
+    dp.mul(1./n);
+    Vec3d p  = p0;
+    double Y0 = F( p0 );
+    double y;
+    for(int i=0; i<n; i++){
+        p.add(dp);
+        y     = F( p ) - Y0;
+        ys[i] = y;
+    }
+    return y;
+}
+
+
+template<typename Type_f, typename Type_F>
+double testIntegralScalarLine1D( int n, Vec3d p0, Vec3d p1, Type_f f, Type_F F){
+    double y_num = numIntegralScalarLine1D( n, p0, p1, f);
+    double y_ana = F( p0, p1 );
+    double err   = y_ana - y_num;
+    printf( "Integral error %g | analytic %g numerical %g \n", y_ana, y_num, err );
+    return err;
+}
+
+
+
+
+
 void testILineFinite(){
     // test ILineFinite
     //Vec3d L  = (Vec3d){4.0,0.5,0.6};
@@ -166,6 +228,9 @@ class TestAppVortexLattice : public AppSDL2OGL_3D {
 
     MultipoleGrid grid;
 
+    Plot2D plot1;
+    int fontTex;
+
 	virtual void draw   ();
 	virtual void drawHUD();
 	//virtual void mouseHandling( );
@@ -178,8 +243,100 @@ class TestAppVortexLattice : public AppSDL2OGL_3D {
 
 TestAppVortexLattice::TestAppVortexLattice( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    /*
     //exit(0);
+    double x0 = 6;
+    double y0 = 10;
+    testIntegralScalarLine1D( 10000, {-0.1,0,0}, {0.6,0,0},
+        [x0,y0](Vec3d p          )->double{ double dx  = p.x-x0;                        return     dx/(dx*dx + y0*y0);                                }, // f
+        [x0,y0](Vec3d p0,Vec3d p1)->double{ double dx0 = p0.x-x0; double dx1 = p1.x-x0; return 0.5*log(dx1*dx1 + y0*y0 ) - 0.5*log(dx0*dx0 + y0*y0 ); }  // F
+    );
+    exit(0);
+    */
 
+    plot1.init();
+    //plot1.fontTex = fontTex;
+    plot1.bGrid=false;
+    //plot1.bAxes=false;
+    plot1.bTicks=false;
+    plot1.scaling.y = (5.0);
+
+    int nsamp = 100;
+    double x0 = 0.2;
+    double y0 = 0.3;
+    Vec3d p0 = (Vec3d){-0.3,   0,0};
+    Vec3d p1 = (Vec3d){+0.6,   0,0};
+    double dx = (p1.x-p0.x)/nsamp;
+    DataLine2D* line_Fnun = new DataLine2D(nsamp,p0.x,dx*5, 0xFF0000 ); plot1.add(line_Fnun);
+    DataLine2D* line_Fana = new DataLine2D(nsamp,p0.x,dx*5, 0x0000FF ); plot1.add(line_Fana); line_Fana->lineStyle=' '; line_Fana->pointStyle='.'; //line_Fana->pointSize=0.0003;
+
+
+
+    // #### Coulomb Law   vs   Biot-Savart Law
+    //   Coulomb       E = kQ* r/|r|^3     V=kQ/|r|                 Lapalce{ V } = rho   (charge  density)
+    //   Biot-Savart   B = J x r/|r|^3     A= J/|r|                 Laplace{ A } = J     (current density)
+    //                            (Ax,Ay,Az)=(Jx,Jy,Jz)/|r|
+
+
+
+
+    // WARRNING :
+    //  Previous integrals are probably useless, we need to integrate potential
+    // We may exchange derivative and integral first
+    //        (x-x0-x1)/sqrt( (x-x0) + y0 )
+    // d_x0 : ((x-x0)*x1 - y0^2)/( (x-x0)^2 + y0^2 )^(3/2)   ... Integral_x :  (x-x0-x1)/sqrt( (x-x0) + y0 )
+    // d_y0 : y0*(x-x0-x1)      /( (x-x0)^2 + y0^2 )^(3/2)   ... Integral_x :  (-(x-x0)*x1 - y0^2) / ( y0 * sqrt( (x-x0) + y0 ) )
+
+
+
+    // #### Simple 1D integrals of source distribution on linear segment
+
+    // NOTE - derivative along x may be even simpler
+    // d_x atan(x/y) =  y/(x^2 + y^2)
+    // d_y atan(x/y) = -x/(x^2 + y^2)
+    // d_x log( x^2 + y^2 ) = 2*x/(x^2+y^2)
+
+    // ##Linear function
+    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ return p.x; }, line_Fnun->ys );
+    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ return 0.5*p.x*p.x; }, line_Fana->ys );
+
+    // ##  constant source line
+    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return 1/( dx*dx + y0*y0 ); }, line_Fnun->ys );
+    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return atan(dx/y0)/y0;      }, line_Fana->ys );
+
+    // ## linear source line
+    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return     dx/( dx*dx + y0*y0 ); }, line_Fnun->ys );
+    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return 0.5*log( dx*dx + y0*y0 ); }, line_Fana->ys );
+
+    // ## quadratic source line
+    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return       dx*dx/( dx*dx + y0*y0 ); }, line_Fnun->ys );
+    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return dx - y0*atan( dx/y0         ); }, line_Fana->ys );
+
+    // ## cubic source line
+    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return               dx*dx*dx/( dx*dx + y0*y0 ); }, line_Fnun->ys );
+    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return 0.5*( dx*dx - y0*y0*log( dx*dx + y0*y0 )); }, line_Fana->ys );
+
+
+    // ## cubic polynominal
+    // Integral (C0 + C1*x + C2*x^2 +  C3*x^3)/( (x-x0)^2 + y0^2 )
+    //  (atan( (x-x0)/y0 )/y0)  (  C0 + C1*x0 + C2*(x0*x0-y0*y0) + C3*x0*(x0*x0-3*y0*y0) )   + log((x-x0)^2)*( C1 + 2*C2*x0 + C3*(3*x0*x0 - y0*y0) ) + (x-x0)*(2*C2+C3*(x+5*x0))
+
+
+    // #### Shifted Simple 1D integrals of source distribution on linear segment
+    // Integral (x-x0+x1)/((x-x0)^2 + y0^2 )
+    //
+
+
+    // ## linear source line
+    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return     (x-x1)/( dx*dx + y0*y0 ); }, line_Fnun->ys );
+    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return 0.5*log( dx*dx + y0*y0 ) + (x0-x1)*atan(dx/y0)/y0; }, line_Fana->ys );
+
+
+    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dy = p.y-y0; double dx = p.x-x0; return atan(dy/dx)/dx - atan(dx/dy)/dx;  }, line_Fnun->ys );
+    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ return 0.5*p.x*p.x;      }, line_Fana->ys );
+
+    plot1.render();
 
 }
 
@@ -187,6 +344,10 @@ void TestAppVortexLattice::draw(){
     printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    plot1.view();
+    //return;
+
 
 	//LineSemiInf( {0.5,1.5,0.0}, {1.0,0.0,0.0} ); exit(0);
 	//ISemiInfSheet( {1.0,1.0,0.0}, {1.0,0.0,0.0}, {0.0,1.0,0.0}, 4.0 ); exit(0);

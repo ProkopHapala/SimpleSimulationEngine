@@ -80,6 +80,10 @@ class Plot2D{ public:
     double * yTicks=NULL;
     int      glObj=0;
 
+
+    Vec2d shift   =Vec2dZero;
+    Vec2d scaling =Vec2dOnes;
+
     Vec2d  axPos;
     Rect2d axBounds;
     float tickSz = 0.1;
@@ -95,9 +99,10 @@ class Plot2D{ public:
 
     bool     logX  = false;
     bool     logY  = false;
-    bool     bGrid = true;
-    bool     bAxes = true;
-    bool     tickCaption=false;
+    bool     bGrid       = true;
+    bool     bAxes       = true;
+    bool     bTicks      = true;
+    bool     tickCaption = false;
     uint32_t clrBg      = 0x00f0f0f0;
     uint32_t clrGrid    = 0xFF858585;
     uint32_t clrTicksX  = 0xFF000000;

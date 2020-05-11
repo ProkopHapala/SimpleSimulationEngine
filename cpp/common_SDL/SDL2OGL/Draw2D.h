@@ -49,6 +49,7 @@ void drawPolarFunc     ( double x0, double y0, double fscale, int n, double phi0
 
 void plot         ( int n, float dx,    double * ys );
 void plot         ( int n, double * xs, double * ys );
+void plot_dots    ( int n, double * xs, double * ys );
 void plot_cross   ( int n, double * xs, double * ys, double sz );
 void plot_X       ( int n, double * xs, double * ys, double sz );
 void plot_O       ( int n, double * xs, double * ys, double sz, int ncirc );

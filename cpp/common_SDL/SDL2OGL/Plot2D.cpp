@@ -37,6 +37,7 @@ void DataLine2D::draw(){
     if(yfunc){ VecN::set(n,xs,yfunc,ys); }
     if(lineStyle =='-')Draw2D::plot( n, xs, ys );
     switch(pointStyle){
+        case '.': Draw2D::plot_dots ( n, xs, ys ); break;
         case '+': Draw2D::plot_cross( n, xs, ys, pointSize    ); break;
         case 'x': Draw2D::plot_X    ( n, xs, ys, pointSize    ); break;
         case '3': Draw2D::plot_O    ( n, xs, ys, pointSize, 3 ); break;
@@ -116,7 +117,6 @@ void Plot2D::autoAxes(double dx, double dy){
 }
 
 void Plot2D::drawAxes(){
-
     //Draw2D::drawPointCross({0.0,0.0},100.0);
     //grid=false;
     if(bGrid){
@@ -125,10 +125,13 @@ void Plot2D::drawAxes(){
         Draw2D::drawGrid( nYTicks, yTicks, axBounds.x0, axBounds.x1, false );
     }
     if(bAxes){
-        Draw::setRGBA(clrTicksY); Draw2D::drawGrid( nXTicks, xTicks, axPos.x, axPos.x+tickSz,     true  );  Draw2D::drawLine( {axPos   .x ,axBounds.y0}, {axPos   .x ,axBounds.y1} );
-        Draw::setRGBA(clrTicksX); Draw2D::drawGrid( nYTicks, yTicks, axPos.x, axPos.y+tickSz,     false );  Draw2D::drawLine( {axBounds.x0,axPos   .y }, {axBounds.x1,axPos   .y } );
+        Draw::setRGBA(clrTicksX); Draw2D::drawLine( {axPos   .x ,axBounds.y0}, {axPos   .x ,axBounds.y1} );
+        Draw::setRGBA(clrTicksY); Draw2D::drawLine( {axBounds.x0,axPos   .y }, {axBounds.x1,axPos   .y } );
     }
-
+    if(bTicks){
+        Draw::setRGBA(clrTicksY); Draw2D::drawGrid( nXTicks, xTicks, axPos.x, axPos.x+tickSz, true  );
+        Draw::setRGBA(clrTicksX); Draw2D::drawGrid( nYTicks, yTicks, axPos.x, axPos.y+tickSz, false );
+    }
     if(fontTex){
         char str[16];
         Draw::setRGBA(clrTicksX);
@@ -147,8 +150,6 @@ void Plot2D::drawAxes(){
             Draw2D::drawText(str, 0, {axPos.x,yTicks[i]}, 0.0, fontTex, tickSz );
         }
     }
-
-
 }
 
 int Plot2D::render( bool bLegend ){
@@ -185,9 +186,13 @@ void Plot2D::drawVline ( double x ){ Draw2D::drawLine_d( {x, axBounds.y0}, {x, a
 //void Plot2D::drawCursor( Vec2d p, double sz ){Draw2D::drawPointCross_d(p); };
 
 void Plot2D::view(bool bAxes){
+    glPushMatrix();
+    glTranslatef(shift.x,shift.y,0.0);
+    glScalef    (scaling.x,scaling.y,1.0);
     if(bAxes) glCallList( glObj );
     for( DataLine2D* line : lines ){ line->view(); }
-   // printf( "%i \n", glObj);
+    // printf( "%i \n", glObj);
+    glPopMatrix();
 }
 
 /*

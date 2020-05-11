@@ -292,6 +292,12 @@ void Draw2D::plot( int n, double * xs, double * ys ){
     //exit(0);
 };
 
+void Draw2D::plot_dots( int n, double * xs, double * ys ){
+    glBegin   (GL_POINTS);
+	for( int i=0; i<n; i++ ){ glVertex3f( (float)xs[i], (float)ys[i], z_layer );}
+	glEnd();
+};
+
 void Draw2D::plot_cross( int n, double * xs, double * ys, double sz ){
     glBegin   (GL_LINES);
 	for( int i=0; i<n; i++ ){
