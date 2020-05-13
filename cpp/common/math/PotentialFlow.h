@@ -148,5 +148,92 @@ inline Vec3d ISemiInfSheet( Vec3d R, Vec3d a, Vec3d b, double l ){
 };
 
 
+
+
+// =================================================================
+// ==================== Coulomb integrals ==========================
+// =================================================================
+//
+// Calculated with sympy in :
+// /home/prokop/Dropbox/MyDevSW/Python/_Physics/VortexLattice/basis_Coulomb_sympy.py
+//
+//#### rho:  1
+//Fx  -1/sqrt(x**2 + y**2)
+//Fy  x/(y*sqrt(x**2 + y**2))
+//
+//#### rho:  x
+//Fx  -x/sqrt(x**2 + y**2) - log(y**2/x**2)/2 + log(1 + sqrt(x**2 + y**2)/x)
+//Fy  -y/sqrt(x**2 + y**2)
+//
+//#### rho:  x**2
+//Fx  (x**2 + 2*y**2)/sqrt(x**2 + y**2)
+//Fy  -x*y/sqrt(x**2 + y**2) - y*log(y**2/x**2)/2 + y*log(1 + sqrt(x**2 + y**2)/x)
+//
+//#### rho:  x**3
+//Fx  (x**3 + 3*x*y**2 - 3*y**2*sqrt(x**2 + y**2)*asinh(x/y))/(2*sqrt(x**2 + y**2))
+//Fy  y*(x**2 + 2*y**2)/sqrt(x**2 + y**2)
+// =============================================================
+//#### rho:  1
+//   r = sqrt(x**2 + y**2)
+//Fx=  -1/r
+//Fy=  (x/y)/r
+//
+//#### rho:  x
+//Fx=  -x/r - log(  x/y * ( 1 + r/x ) )    =  -x/r   -
+//Fy=  -y/r
+//
+//#### rho:  x**2
+//Fx=  (x**2 + 2*y**2)/r
+//Fy=  -x*y/r - y*log(y**2/x**2)/2 + y*log(1 + r/x)
+//
+//#### rho:  x**3
+//Fx=  ( x*(x**3 + 3*y**2) - 3*y**2*r*log(  y/x  + r/y )    )/(2*r)
+//Fy=    y*(x**2 + 2*y**2)/r
+
+// use equality   log( y/x + r/x ) =====  asinh(y/x) ?
+
+
+
+double sourceLineF_pow0( double x, double y, double& Fx, double& Fy ){
+    double r  = sqrt(x*x+y*y);
+    double ir = 1/r;
+    Fx = -ir;
+    Fy = (x/y)*ir;
+}
+
+double sourceLineF_pow1( double x, double y, double& Fx, double& Fy ){
+    double r  = sqrt(x*x+y*y);
+    double ir = 1/r;
+    //Fx = -x*r - log(y*y/(x*x))/2 + log(1+r/x);
+    //Fx = -x*r + log(x/y) + log(1+r/x);
+    //Fx = -x*r + log( x/y * ( 1 + r/x ) );
+    //Fx = -x*r + log( x/y + r/y );
+    Fx = -x*r + asinh(x/y);
+    Fy = -y*ir;
+}
+
+double sourceLineF_pow2( double x, double y, double& Fx, double& Fy ){
+    double r  = sqrt(x*x+y*y);
+    double ir = 1/r;
+    Fx = x*x + 2*y*y)*ir
+    Fy = y*( -x*r + asinh(x/y) );
+}
+
+double sourceLineF_pow3( double x, double y, double& Fx, double& Fy ){
+    double r  = sqrt(x*x+y*y);
+    double ir = 1/r;
+    Fx = x*x + 2*y*y)*ir
+    Fy = y*( -x*r + asinh(x/y) );
+}
+
+// ---------------- Vec3 functions
+
+inline Vec3d sourceLine_const( Vec3d R, Vec3d hL, double L ){
+    double Fx = (x*x + 2*y*y)*ir
+    double Fy = y*( -x*r + asinh(x/y) );
+}
+
+
+
 #endif
 
