@@ -187,50 +187,105 @@ inline Vec3d ISemiInfSheet( Vec3d R, Vec3d a, Vec3d b, double l ){
 //Fy=  -x*y/r - y*log(y**2/x**2)/2 + y*log(1 + r/x)
 //
 //#### rho:  x**3
-//Fx=  ( x*(x**3 + 3*y**2) - 3*y**2*r*log(  y/x  + r/y )    )/(2*r)
+//Fx=  ( x*(x**2 + 3*y**2) - 3*y**2*r*log(  y/x  + r/y )    )/(2*r)
 //Fy=    y*(x**2 + 2*y**2)/r
 
 // use equality   log( y/x + r/x ) =====  asinh(y/x) ?
 
 
+inline double sourceXY( double x, double y, double& Fx, double& Fy ){
+    double r2    = x*x + y*y;
+    double ir3_2 = 1/sqrt(r2*r2*r2);
+    Fx = x*ir3_2;
+    Fy = y*ir3_2;
+}
 
-double sourceLineF_pow0( double x, double y, double& Fx, double& Fy ){
+inline double sourceLineF_pow0( double x, double y, double& Fx, double& Fy ){
     double r  = sqrt(x*x+y*y);
     double ir = 1/r;
     Fx = -ir;
     Fy = (x/y)*ir;
 }
 
-double sourceLineF_pow1( double x, double y, double& Fx, double& Fy ){
-    double r  = sqrt(x*x+y*y);
+inline double sourceLineF_pow1( double x, double y, double& Fx, double& Fy ){
+    double x2 = x*x;
+    double y2 = y*y;
+    double r  = sqrt(x2+y2);
     double ir = 1/r;
-    //Fx = -x*r - log(y*y/(x*x))/2 + log(1+r/x);
-    //Fx = -x*r + log(x/y) + log(1+r/x);
-    //Fx = -x*r + log( x/y * ( 1 + r/x ) );
-    //Fx = -x*r + log( x/y + r/y );
-    Fx = -x*r + asinh(x/y);
+    //Fx = -x*ir - log(y2/x2)/2 + log(1+r/x);
+    //Fx = -x*ir + log(x/y) + log(1+r/x);
+    //Fx = -x*ir + log( x/y * ( 1 + r/x ) );
+    //Fx = -x*ir + log( x/y + r/y );
+    Fx = -x*ir + asinh(x/y);
     Fy = -y*ir;
 }
 
-double sourceLineF_pow2( double x, double y, double& Fx, double& Fy ){
-    double r  = sqrt(x*x+y*y);
+inline double sourceLineF_pow2( double x, double y, double& Fx, double& Fy ){
+    double x2 = x*x;
+    double y2 = y*y;
+    double r  = sqrt(x2+y2);
     double ir = 1/r;
-    Fx = x*x + 2*y*y)*ir
-    Fy = y*( -x*r + asinh(x/y) );
+    Fx = (x2 + 2*y2)*ir;
+    Fy = y*( -x*ir + asinh(x/y) );
 }
 
-double sourceLineF_pow3( double x, double y, double& Fx, double& Fy ){
-    double r  = sqrt(x*x+y*y);
+inline double sourceLineF_pow3( double x, double y, double& Fx, double& Fy ){
+    double x2 = x*x;
+    double y2 = y*y;
+    double r  = sqrt(x2+y2);
     double ir = 1/r;
-    Fx = x*x + 2*y*y)*ir
-    Fy = y*( -x*r + asinh(x/y) );
+    Fx = ( x*(x2 + 3*y2) - 3*y2*r*asinh(x/y) )/(2*r);
+    Fy = y*(x2 + 2*y2)/r ;
+}
+
+inline double sourceLineF_linear( double x, double y, double& Fx, double& Fy, double C0, double C1 ){
+    double x2 = x*x;
+    double y2 = y*y;
+    double r  = sqrt(x2+y2);
+    double ir = 1/r;
+    double x_y = x/y;
+    double asinhxy = asinh(x_y);
+    double Fx1 = -x*ir + asinhxy;
+    Fx =  C0*-ir + C1*Fx1;
+    Fy = (C0*x_y - C1*y)*ir;
+}
+
+inline double sourceLineF_poly3( double x, double y, double& Fx, double& Fy, double C0, double C1, double C2, double C3 ){
+    double x2 = x*x;
+    double y2 = y*y;
+    double r  = sqrt(x2+y2);
+    double ir = 1/r;
+    double x_y = x/y;
+    double asinhxy = asinh(x_y);
+    //Fx =  C0*    -ir
+    //   +  C1*( -x*ir + asinhxy )
+    //   +  C2*(x2 + 2*y2)*ir
+    //   +  C3*0.5*( x*(x2 + 3*y2) - 3*y2*r*asinhxy )*ir;
+    //Fy = C0 *  x_y
+    //   + C1 * -y*ir
+    //   + C2 * y*( -x*ir + asinhxy )
+    //   + C3 * y*(x2 + 2*y2)*ir;
+    double Fx1 = -x*ir + asinhxy;
+    double Fx2 = (x2 + 2*y2)*ir;
+    Fx =   C1*Fx1 + C2*Fx2
+       + (-C0     + C3*0.5*( x*(x2 + 3*y2) - 3*y2*r*asinhxy ) )*ir;
+    Fy = (C0 *  x_y +  C1 * -y  )*ir
+       + (C2 * Fx1  +  C3 * Fx2 )*y;
 }
 
 // ---------------- Vec3 functions
 
-inline Vec3d sourceLine_const( Vec3d R, Vec3d hL, double L ){
-    double Fx = (x*x + 2*y*y)*ir
-    double Fy = y*( -x*r + asinh(x/y) );
+template<typename FuncXY>
+inline Vec3d sourceLine_const( Vec3d R, Vec3d fw, double L, FuncXY funcXY ){
+    double Fx0,Fy0,Fx1,Fy1;
+    double x0 = fw.dot(R);
+    Vec3d  up = R - fw*x0;
+    double y0 = up.normalize();
+    //sourceLineF_pow0( x0  , y0, Fx0, Fy0 );
+    //sourceLineF_pow0( x0+L, y0, Fx1, Fy1 );
+    funcXY( x0  , y0, Fx0, Fy0 );
+    funcXY( x0+L, y0, Fx1, Fy1 );
+    return fw*(Fx1-Fx0) + up*(Fy1-Fy0);
 }
 
 

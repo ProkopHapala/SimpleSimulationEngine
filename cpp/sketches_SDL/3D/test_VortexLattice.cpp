@@ -142,7 +142,26 @@ double numIntegralScalarLine1D( int n, Vec3d p0, Vec3d p1, Type_f f, double* ys=
     for(int i=0; i<n; i++){
         double y =  f( p ) * dl;
         sum  += y;
-        ys[i] = sum;
+        if(ys)ys[i] = sum;
+        p.add(dp);
+    }
+    return sum;
+}
+
+
+
+template<typename Type_f>
+Vec3d numIntegralVec3Line1D( int n, Vec3d p0, Vec3d p1, Type_f f, Vec3d* ys=0 ){
+    Vec3d dp = p1-p0;
+    dp.mul(1./n);
+    double dl = dp.norm();
+    //double dl = 1;
+    Vec3d p  = p0 + dp*0.5;
+    Vec3d sum=Vec3dZero;
+    for(int i=0; i<n; i++){
+        Vec3d y =  f( p ) * dl;
+        sum.add(y);
+        if(ys)ys[i] = sum;
         p.add(dp);
     }
     return sum;
@@ -163,6 +182,20 @@ double definiteIntegral2Array( int n, Vec3d p0, Vec3d p1, Type_F F, double * ys)
     return y;
 }
 
+template<typename Type_F>
+double definiteIntegral2ArrayVec3( int n, Vec3d p0, Vec3d p1, Type_F F, Vec3d * ys){
+    Vec3d dp = p1-p0;
+    dp.mul(1./n);
+    Vec3d p  = p0;
+    Vec3d Y0 = F( p0 );
+    Vec3d y;
+    for(int i=0; i<n; i++){
+        p.add(dp);
+        y     = F( p ) - Y0;
+        ys[i] = y;
+    }
+    return y;
+}
 
 template<typename Type_f, typename Type_F>
 double testIntegralScalarLine1D( int n, Vec3d p0, Vec3d p1, Type_f f, Type_F F){
@@ -268,9 +301,10 @@ TestAppVortexLattice::TestAppVortexLattice( int& id, int WIDTH_, int HEIGHT_ ) :
     Vec3d p0 = (Vec3d){-0.3,   0,0};
     Vec3d p1 = (Vec3d){+0.6,   0,0};
     double dx = (p1.x-p0.x)/nsamp;
-    DataLine2D* line_Fnun = new DataLine2D(nsamp,p0.x,dx*5, 0xFF0000 ); plot1.add(line_Fnun);
-    DataLine2D* line_Fana = new DataLine2D(nsamp,p0.x,dx*5, 0x0000FF ); plot1.add(line_Fana); line_Fana->lineStyle=' '; line_Fana->pointStyle='.'; //line_Fana->pointSize=0.0003;
-
+    DataLine2D* line_FnunX = new DataLine2D(nsamp,p0.x,dx*5, 0xFF0000 ); plot1.add(line_FnunX);
+    DataLine2D* line_FnunY = new DataLine2D(nsamp,p0.x,dx*5, 0x0000FF ); plot1.add(line_FnunY);
+    DataLine2D* line_FanaX = new DataLine2D(nsamp,p0.x,dx*5, 0xFFFF00 ); plot1.add(line_FanaX); line_FanaX->lineStyle=' '; line_FanaX->pointStyle='.'; //line_Fana->pointSize=0.0003;
+    DataLine2D* line_FanaY = new DataLine2D(nsamp,p0.x,dx*5, 0x00FFFF ); plot1.add(line_FanaY); line_FanaY->lineStyle=' '; line_FanaY->pointStyle='.'; //line_Fana->pointSize=0.0003;
 
 
     // #### Coulomb Law   vs   Biot-Savart Law
@@ -279,62 +313,42 @@ TestAppVortexLattice::TestAppVortexLattice( int& id, int WIDTH_, int HEIGHT_ ) :
     //                            (Ax,Ay,Az)=(Jx,Jy,Jz)/|r|
 
 
+//    // ## source line: rho(x) = 1
+//    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY        (x,y0,Fx,Fy); return Fx; }, line_FnunX->ys );
+//    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY        (x,y0,Fx,Fy); return Fy; }, line_FnunY->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_pow0(x,y0,Fx,Fy); return Fx; }, line_FanaX->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_pow0(x,y0,Fx,Fy); return Fy; }, line_FanaY->ys );
 
+//    // ##  source line rho(x) = x
+//    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY        (x,y0,Fx,Fy); return x*Fx; }, line_FnunX->ys );
+//    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY        (x,y0,Fx,Fy); return x*Fy; }, line_FnunY->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_pow1(x,y0,Fx,Fy); return Fx;    }, line_FanaX->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_pow1(x,y0,Fx,Fy); return Fy;    }, line_FanaY->ys );
 
-    // WARRNING :
-    //  Previous integrals are probably useless, we need to integrate potential
-    // We may exchange derivative and integral first
-    //        (x-x0-x1)/sqrt( (x-x0) + y0 )
-    // d_x0 : ((x-x0)*x1 - y0^2)/( (x-x0)^2 + y0^2 )^(3/2)   ... Integral_x :  (x-x0-x1)/sqrt( (x-x0) + y0 )
-    // d_y0 : y0*(x-x0-x1)      /( (x-x0)^2 + y0^2 )^(3/2)   ... Integral_x :  (-(x-x0)*x1 - y0^2) / ( y0 * sqrt( (x-x0) + y0 ) )
+//    // ##  source line rho(x) = x^2
+//    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY        (x,y0,Fx,Fy); return x*x*Fx; }, line_FnunX->ys );
+//    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY        (x,y0,Fx,Fy); return x*x*Fy; }, line_FnunY->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_pow2(x,y0,Fx,Fy); return Fx;     }, line_FanaX->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_pow2(x,y0,Fx,Fy); return Fy;     }, line_FanaY->ys );
 
+    // ##  source line rho(x) = x^3
+//    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY        (x,y0,Fx,Fy); return x*x*x*Fx; }, line_FnunX->ys );
+//    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY        (x,y0,Fx,Fy); return x*x*x*Fy; }, line_FnunY->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_pow3(x,y0,Fx,Fy); return Fx;       }, line_FanaX->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_pow3(x,y0,Fx,Fy); return Fy;       }, line_FanaY->ys );
 
+    double C0=0.5,C1=-0.7,C2=0.8,C3=-5.6;
 
-    // #### Simple 1D integrals of source distribution on linear segment
+    //    // ##  source line rho(x) = C0 + C1*x
+//    numIntegralScalarLine1D( nsamp , p0, p1, [=](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY          (x,y0,Fx,Fy);       return (C0+C1*x)*Fx; }, line_FnunX->ys );
+//    numIntegralScalarLine1D( nsamp , p0, p1, [=](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY          (x,y0,Fx,Fy);       return (C0+C1*x)*Fy; }, line_FnunY->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [=](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_linear(x,y0,Fx,Fy,C0,C1); return Fx;           }, line_FanaX->ys );
+//    definiteIntegral2Array ( nsamp , p0, p1, [=](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_linear(x,y0,Fx,Fy,C0,C1); return Fy;           }, line_FanaY->ys );
 
-    // NOTE - derivative along x may be even simpler
-    // d_x atan(x/y) =  y/(x^2 + y^2)
-    // d_y atan(x/y) = -x/(x^2 + y^2)
-    // d_x log( x^2 + y^2 ) = 2*x/(x^2+y^2)
-
-    // ##Linear function
-    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ return p.x; }, line_Fnun->ys );
-    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ return 0.5*p.x*p.x; }, line_Fana->ys );
-
-    // ##  constant source line
-    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return 1/( dx*dx + y0*y0 ); }, line_Fnun->ys );
-    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return atan(dx/y0)/y0;      }, line_Fana->ys );
-
-    // ## linear source line
-    numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return     dx/( dx*dx + y0*y0 ); }, line_Fnun->ys );
-    definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return 0.5*log( dx*dx + y0*y0 ); }, line_Fana->ys );
-
-    // ## quadratic source line
-    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return       dx*dx/( dx*dx + y0*y0 ); }, line_Fnun->ys );
-    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return dx - y0*atan( dx/y0         ); }, line_Fana->ys );
-
-    // ## cubic source line
-    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return               dx*dx*dx/( dx*dx + y0*y0 ); }, line_Fnun->ys );
-    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return 0.5*( dx*dx - y0*y0*log( dx*dx + y0*y0 )); }, line_Fana->ys );
-
-
-    // ## cubic polynominal
-    // Integral (C0 + C1*x + C2*x^2 +  C3*x^3)/( (x-x0)^2 + y0^2 )
-    //  (atan( (x-x0)/y0 )/y0)  (  C0 + C1*x0 + C2*(x0*x0-y0*y0) + C3*x0*(x0*x0-3*y0*y0) )   + log((x-x0)^2)*( C1 + 2*C2*x0 + C3*(3*x0*x0 - y0*y0) ) + (x-x0)*(2*C2+C3*(x+5*x0))
-
-
-    // #### Shifted Simple 1D integrals of source distribution on linear segment
-    // Integral (x-x0+x1)/((x-x0)^2 + y0^2 )
-    //
-
-
-    // ## linear source line
-    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return     (x-x1)/( dx*dx + y0*y0 ); }, line_Fnun->ys );
-    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ double dx = p.x-x0; return 0.5*log( dx*dx + y0*y0 ) + (x0-x1)*atan(dx/y0)/y0; }, line_Fana->ys );
-
-
-    //numIntegralScalarLine1D( nsamp , p0, p1, [x0,y0](Vec3d p){ double dy = p.y-y0; double dx = p.x-x0; return atan(dy/dx)/dx - atan(dx/dy)/dx;  }, line_Fnun->ys );
-    //definiteIntegral2Array ( nsamp , p0, p1, [x0,y0](Vec3d p){ return 0.5*p.x*p.x;      }, line_Fana->ys );
+    numIntegralScalarLine1D( nsamp , p0, p1, [=](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY          (x,y0,Fx,Fy);            return (C0+x*(C1+x*(C2+C3*x)))*Fx; }, line_FnunX->ys );
+    numIntegralScalarLine1D( nsamp , p0, p1, [=](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceXY          (x,y0,Fx,Fy);            return (C0+x*(C1+x*(C2+C3*x)))*Fy; }, line_FnunY->ys );
+    definiteIntegral2Array ( nsamp , p0, p1, [=](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_poly3(x,y0,Fx,Fy,C0,C1,C2,C3); return Fx;                         }, line_FanaX->ys );
+    definiteIntegral2Array ( nsamp , p0, p1, [=](Vec3d p){ double x = p.x-x0; double Fx,Fy; sourceLineF_poly3(x,y0,Fx,Fy,C0,C1,C2,C3); return Fy;                         }, line_FanaY->ys );
 
     plot1.render();
 
