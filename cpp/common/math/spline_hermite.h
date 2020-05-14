@@ -75,6 +75,15 @@ inline T ddval( T x, T y0, T y1, T dy0, T dy1 ){
 }
 
 template <class T>
+inline void valdval( T x, T& val, T& dval, T y0, T y1, T dy0, T dy1 ){
+    T y01 = y0-y1;
+    T p2  = (-3*y01 -2*dy0 - dy1)*x;
+    T p3  = ( 2*y01 +  dy0 + dy1)*x*x;
+    val a =  y0 + x*(dy0 +   p2 +   p3);
+	dval  =          dy0 + 2*p2 + 3*p3;
+}
+
+template <class T>
 inline void basis( T x, T& c0, T& c1, T& d0, T& d1 ){
 	T x2   = x*x;
 	T K    =  x2*(x - 1);
@@ -189,6 +198,36 @@ inline T dderiv( T s, const T* ys ){
     return ddval<T>( dr, ys+is );
 }
 
+
+/*
+template <class T>
+inline void valAndDeriv( T s, const T* ys, double& val, double& dval ){
+    //double  s  = r*invdr;
+    int    is = (int)s;
+    T      x  = s - is;
+
+    T ym  =ys[i  ];
+    T y0  =ys[i+1];
+    T y1  =ys[i+2];
+    T yp  =ys[i+3];
+
+    T dy0 = (y1-ym)*0.5;
+    T dy1 = (yp-y0)*0.5;
+    T y01 = y0-y1;
+
+    T p2  = (-3*y01 -2*dy0 - dy1)*x;
+    T p3  = ( 2*y01 +  dy0 + dy1)*x*x;
+    val a =  y0 + x*(dy0 +   p2 +   p3);
+	dval  =          dy0 + 2*p2 + 3*p3;
+}
+*/
+
+template <class T>
+inline T valderiv( T s, const T* ys, T& val, T& dval ){
+    int    is  = (int)s;
+    T      x   =  s - is;
+    Spline_Hermite::valdval( x, val, dval, ys[is], ys[is+1], ys[is+2], ys[is+3] ); // Overlap
+}
 
 template <class T>
 inline T val2D( T x, T y, const  T * f0s, const  T * f1s, const  T * f2s, const  T * f3s ){
