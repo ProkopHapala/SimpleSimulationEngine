@@ -117,6 +117,39 @@ void projectFr( int nr, int nz, int nrf, double dz, double frStep, double rs_sca
     }
 }
 
+void projectFrLaplace( int nr, int nz, int nrf, double dz, double frStep, double rs_scale, const double* rs, const double* fr, double* f, double* Lf, int im ){
+    //printf( "===== projectFr ========== \n" );
+    double invdr       = 1/frStep;
+    double const rsafe = 1e-12;
+    int i=0;
+    double r2max = (nrf-3)*frStep; r2max*=r2max;
+    for(int ir=0; ir<nr; ir++){
+        double rxy = rs[ir]*rs_scale;
+        for(int iz =0; iz<nz; iz++){
+            double  z  = iz*dz;
+            double Y;
+            double  r2 = rxy*rxy + z*z;
+            if(r2>r2max){
+                f[i] = 0;
+            }else{
+                double  r  = sqrt( r2 );
+                double ir  = 1/(r+rsafe);
+                if      (im==0){ Y=1;                } // s
+                else if (im==1){ Y=z            *ir; } // pz
+                else           { Y=M_SQRT1_2*rxy*ir; } // py   // M_SQRT1_2 comes from angular integral:  sqrt(2) = sqrt( Integral{ cos(phi)^2 } )
+                // https://en.wikipedia.org/wiki/Laplace%27s_equation#Forms_in_different_coordinate_systems
+                // L{f} =  1/r^2 d(r^2 * d f ) = 1/r^2 ( 2*r*df + r^2*ddf ) = 2*df/r + ddf
+                double y,dy,ddy;
+                //f[i] = Spline_Hermite::value( r*invdr, fr ) * Y;
+                Spline_Hermite::valdd( r*invdr, fr,   y, dy, ddy );
+                if(f) f [i] = y*Y;                // function         ( x,y )
+                if(Lf)Lf[i] = (2*dy*ir + ddy)*Y;  // Laplace{function}( x,y )
+            }
+            i++;
+        }
+    }
+}
+
 template< typename Func >
 void projectFr( Func func, int nr, int nz, double dz, double Rsc, const double* rs, double* f ){
     int i=0;
@@ -145,6 +178,55 @@ void mulYz( int nr, int nz, double dz, double* rs, double* fin, double* fout ){
     }
 }
 */
+
+
+void integrateS( int nrf, int order, int nint, double dz, double Rmax, double frStep, const double* fr1, const double* fr2, double* Is ){
+    //constexpr const int nr = 8;
+    //constexpr const double *ws_ = GaussQuadrature::ws_8;
+    //constexpr const double *rs  = GaussQuadrature::xs_8;
+    constexpr const int nr = 14;
+    constexpr const double *ws_ = GaussQuadrature::ws_14;
+    constexpr const double *rs  = GaussQuadrature::xs_14;
+    double cw = Rmax*Rmax*(M_PI*2)*dz;
+    double *ws=new double[nr];
+    for(int i=0; i<nr; i++){ ws[i] = ws_[i]*rs[i]*cw; };
+    const int nz  = nint+1;
+    const int nrz = nr*nz;
+    double * f1  = new double[nrz];
+    double * f2  = new double[nrz];
+    for(int i=0; i<nint; i++){ Is[i]=0; }
+    projectFr( nr, nz, nrf, dz, frStep, Rmax, rs, fr1, f1, 0 );
+    projectFr( nr, nz, nrf, dz, frStep, Rmax, rs, fr2, f2, 0 );
+    intCyl_shift( nr, nz, nint, f1, f2, ws, Is,  1,  1 );
+    delete [] f1; delete [] f2;
+    delete [] ws;
+}
+
+void integrateSK( int nrf, int order, int nint, double dz, double Rmax, double frStep, const double* fr1, const double* fr2, double* ISs, double* IKs ){
+    //constexpr const int nr = 8;
+    //constexpr const double *ws_ = GaussQuadrature::ws_8;
+    //constexpr const double *rs  = GaussQuadrature::xs_8;
+    constexpr const int nr = 14;
+    constexpr const double *ws_ = GaussQuadrature::ws_14;
+    constexpr const double *rs  = GaussQuadrature::xs_14;
+    double cw = Rmax*Rmax*(M_PI*2)*dz;
+    double *ws=new double[nr];
+    for(int i=0; i<nr; i++){ ws[i] = ws_[i]*rs[i]*cw; };
+    const int nz  = nint+1;
+    const int nrz = nr*nz;
+    double * f1   = new double[nrz];
+    double * f2   = new double[nrz];
+    //double * Lf1  = new double[nrz];
+    double * Lf2  = new double[nrz];
+    for(int i=0; i<nint; i++){ ISs[i]=0; IKs[i]=0; }
+    projectFrLaplace( nr, nz, nrf, dz, frStep, Rmax, rs, fr1, f1, 0  , 0 );
+    projectFrLaplace( nr, nz, nrf, dz, frStep, Rmax, rs, fr2, f2, Lf2, 0 );
+    intCyl_shift( nr, nz, nint, f1,  f2, ws, ISs,   1,  1 );
+    intCyl_shift( nr, nz, nint, f1, Lf2, ws, IKs,  1,  1 );
+    delete [] f1;  delete [] f2; delete [] Lf2; //delete [] Lf1;
+    delete [] ws;
+}
+
 
 void integrateSP( int nrf, int order, int nint, double dz, double Rmax, double frStep, const double** fr1, const double** fr2, double** Is ){
     //constexpr const int nr = 8;
