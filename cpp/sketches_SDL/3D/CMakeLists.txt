@@ -19,6 +19,9 @@ target_link_libraries( test_Patches ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBR
 add_executable       ( test_GUI test_GUI.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_GUI ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_EditorGizmo test_EditorGizmo.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_EditorGizmo ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_Camera test_Camera.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Camera ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

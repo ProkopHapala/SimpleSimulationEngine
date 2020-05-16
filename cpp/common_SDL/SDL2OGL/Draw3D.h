@@ -69,7 +69,8 @@ int  drawCircleAxis     ( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f&
 int  drawConeFan        ( int n, float r,                const Vec3f& base, const Vec3f& tip );
 int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3f& base, const Vec3f& tip, bool smooth );
 
-int  drawSphereOctLines ( int n, float R, const Vec3f& pos );
+//int  drawSphereOctLines ( int n, float R, const Vec3f& pos );
+int  drawSphereOctLines ( int n, float R, const Vec3f& pos, const Mat3f& rot=Mat3fIdentity, bool bRGB=false );
 int  drawSphere_oct     ( int n, float R, const Vec3f& pos, bool wire=false );
 int  drawCapsula        ( Vec3f p0, Vec3f p1,  float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped );
 
@@ -104,15 +105,19 @@ inline void drawTriangle ( const Triangle3D& tri, bool filled ){ drawTriangle( (
 inline void drawQuad     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3, const Vec3d& p4, bool filled ){ drawQuad((Vec3f)p1,(Vec3f)p2,(Vec3f)p3,(Vec3f)p4, filled ); }
 inline void drawQuad     ( const Quad3d& qd, bool filled ){ drawQuad(qd.l1.a,qd.l1.b,qd.l2.b,qd.l2.a, filled); }
 
-
 inline void drawMatInPos ( const Mat3d& mat, const Vec3d& pos, const Vec3d& sc=Vec3dOne ){  drawMatInPos( (Mat3f)mat, (Vec3f)pos, (Vec3f)sc ); };
 
 inline void drawShape    ( const Vec3d& pos, const Mat3d&  rot,  int shape, bool transposed = false ){ drawShape( (Vec3f)pos, (Mat3f)rot, shape, transposed ); };
 inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, shape); };
 inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, Vec3d& scale, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, (Vec3f)scale, shape); };
 
+
+inline int  drawConeFan        ( int n, float r,                const Vec3d& base,  const Vec3d& tip                                 ){ drawConeFan( n,             r,      (Vec3f)base, (Vec3f)tip         ); };
+inline int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3d& base, const Vec3d& tip, bool smooth ){ drawCone   ( n, phi1, phi2, r1, r2, (Vec3f)base, (Vec3f)tip, smooth ); };
+
 inline int  drawCircleAxis     ( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis, double R ){ return drawCircleAxis( n, (Vec3f)pos, (Vec3f)v0, (Vec3f)uaxis, R ); };
-inline int  drawSphereOctLines ( int n, double R, const Vec3d& pos ){ return drawSphereOctLines ( n, R, (Vec3f)pos ); };
+//inline int  drawSphereOctLines ( int n, double R, const Vec3d& pos ){ return drawSphereOctLines ( n, R, (Vec3f)pos ); };
+inline int  drawSphereOctLines ( int n, double R, const Vec3d& pos, const Mat3d& rot=Mat3dIdentity, bool bRGB=false ){ return drawSphereOctLines ( n, R, (Vec3f)pos, (Mat3f)rot, bRGB ); };
 inline int  drawSphere_oct     ( int n, double R, const Vec3d& pos ){ return drawSphere_oct( n, R, (Vec3f)pos ); };
 
 inline void drawKite     ( const Vec3d& pos, const Mat3d& rot, double sz       ){ drawKite ( (Vec3f)pos, (Mat3f)rot, sz ); };

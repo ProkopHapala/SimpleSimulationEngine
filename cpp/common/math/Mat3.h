@@ -553,6 +553,23 @@ class Mat3T{
         }
     }
 
+    void scalePoint ( const Vec3T<T>& p0, Vec3T<T>& p, const Vec3T<T>& pos0, const Vec3T<T>& sc )const{
+        Vec3T<T> v,v_;
+        v.set_sub( p0, pos0 );
+        dot_to   ( v, v_  );
+        v_.mul   ( sc     );
+        dot_to_T ( v_, v  );
+        p.set_add( v, pos0);
+    };
+
+    void scalePoints( int n, Vec3T<T>* p0s, Vec3T<T>* ps, const Vec3T<T>& pos0, const Vec3T<T>& sc )const{
+        for( int j=0; j<n; j++ ){ scalePoint( p0s[j], ps[j], pos0, sc ); }
+    }
+
+    void scalePoints( int n, int* selection, Vec3T<T>* p0s, Vec3T<T>* ps, const Vec3T<T>& pos0, const Vec3T<T>& sc )const{
+        for( int j=0; j<n; j++ ){ int i=selection[j]; scalePoint( p0s[i], ps[i], pos0, sc ); }
+    }
+
 };
 
 

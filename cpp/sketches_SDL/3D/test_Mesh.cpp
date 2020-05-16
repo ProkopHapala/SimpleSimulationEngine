@@ -23,58 +23,10 @@
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
 
-
 // ============= Application
-
-
-void drawPlane( Plane3D& p ){
-    Vec3d p0 = p.normal * p.C;
-    Vec3d up,lf;
-    p.normal.getSomeOrtho( up, lf );
-    glBegin(GL_QUADS);
-    glVertex3f( p0.x+up.x, p0.y+up.y,p0.z+up.z );
-    glVertex3f( p0.x+lf.x, p0.y+lf.y,p0.z+lf.z );
-    glVertex3f( p0.x-up.x, p0.y-up.y,p0.z-up.z );
-    glVertex3f( p0.x-lf.x, p0.y-lf.y,p0.z-lf.z );
-    glEnd();
-    glBegin( GL_LINES );
-    glVertex3f( p0.x, p0.y,p0.z );
-    glVertex3f( p0.x+p.normal.x, p0.y+p.normal.y,p0.z+p.normal.z );
-    glEnd();
-}
-
-int nplanes = 18;
-Plane3D planes[] = {
-    +1.0, 0.0, 0.0,  -1.0,
-    -1.0, 0.0, 0.0,  -1.0,
-     0.0,+1.0, 0.0,  -1.0,
-     0.0,-1.0, 0.0,  -1.0,
-     0.0, 0.0,-1.0,  -1.0,
-     0.0, 0.0,+1.0,  -1.0,
-
-     0.0,+1.0,+1.0,  -1.0,
-     0.0,-1.0,+1.0,  -1.0,
-     0.0,+1.0,-1.0,  -1.0,
-     0.0,-1.0,-1.0,  -1.0,
-
-     +1.0,0.0,+1.0,  -1.0,
-     -1.0,0.0,+1.0,  -1.0,
-     +1.0,0.0,-1.0,  -1.0,
-     -1.0,0.0,-1.0,  -1.0,
-
-     +1.0,+1.0,0.0,  -1.0,
-     -1.0,+1.0,0.0,  -1.0,
-     +1.0,-1.0,0.0,  -1.0,
-     -1.0,-1.0,0.0,  -1.0
-
-
-};
-
-char str[1024];
 
 class TestAppMesh : public AppSDL2OGL_3D { public:
 
-    
     Mesh mesh;
     Mesh mesh2;
 
@@ -211,68 +163,7 @@ void TestAppMesh::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    //glEnable( GL_LIGHTING );
-    //glEnable(GL_DEPTH_TEST);
-    //glCallList(mesh.rendered_shape);
 
-    /*
-    glDisable( GL_LIGHTING );
-    Draw3D::drawAxis(1.0);
-    glDisable( GL_DEPTH_TEST );
-    */
-
-    /*
-    // this should work for perspective
-    Vec3d hRay; //hRay.set_lincomb(  camMat.a, camMat.b, camMat.b, );
-    camMat.dot_to( {mouseX-WIDTH*0.5f, mouseY-HEIGHT*0.5f, zoom }, hRay);
-    Draw3D::drawLine      ( camPos, camPos+hRay );
-    Draw3D::drawPointCross( camPos+hRay, 0.2 );
-    int ip = mesh.pickVertex( camPos, camMat.c );
-    */
-
-
-    /*
-    glColor3f(0.0,0.0,1.0);
-    char str[256];
-    for(int i=0; i<mesh.points.size(); i++){
-        sprintf(str,"%i\0",i);
-        Vec3d& p = mesh.points[i];
-        Draw3D::drawText(str, p, fontTex, 0.03, 0);
-    }
-    glColor3f(1.0,0.0,0.0);
-    for(int i=0; i<mesh.polygons.size(); i++){
-        Vec3d c = mesh.faceCog( i );
-        sprintf(str,"%i\0",i);
-        Vec3d& p = mesh.points[i];
-        Draw3D::drawText(str, c, fontTex, 0.03, 0);
-    }
-
-    glColor3f(0.0,0.7,0.0);
-    for(int i=0; i<mesh.edges.size(); i++){
-        MeshEdge& ed = mesh.edges[i];
-        Draw3D::drawLine( mesh.points[ed.verts.a], mesh.points[ed.verts.b] );
-        Vec3d c = (mesh.points[ed.verts.a]+mesh.points[ed.verts.b])*0.5;
-        sprintf(str,"%i\0",i);
-        Vec3d& p = mesh.points[i];
-        Draw3D::drawText(str, c, fontTex, 0.03, 0);
-    }
-    */
-
-    /*
-    glColor3f(1.0,1.0,1.0);
-    for( LineInterval3d& lij : mesh2.lijsDEBUG ){
-        //Draw3D::drawPointCross( lij.p0, 0.1 ); 
-        //Draw3D::drawVecInPos( lij.hdir, lij.p0 );
-        Vec3d p0,p1;
-        p0=lij.endPoint0();
-        p1=lij.endPoint1();
-        Draw3D::drawPointCross( p0, 0.1 ); 
-        Draw3D::drawPointCross( p1, 0.1 ); 
-        Draw3D::drawLine      ( p0, p1 );
-    }
-    //exit(0);
-    */
-    
     glColor3f(0.0,0.0,0.0);
     for( MeshEdge& edge: mesh2.edges ){
         Vec3d& a =  mesh2.points[ edge.verts.a ];
@@ -281,14 +172,12 @@ void TestAppMesh::draw(){
         //printf( "edge %i(%g,%g,%g) %i(%g,%g,%g) \n", edge.verts.a, a.x,a.y,a.z,   edge.verts.b, b.x,b.y,b.z );
         Draw3D::drawLine( a, b );
     }
-    //exit(0);
-    
-    
+
     for( Vec3d& p: mesh2.points ){
         glEnable(GL_DEPTH_TEST);
         Draw3D::drawPointCross( p, 0.1 );
     }
-    
+
     int i=0;
     for( Polygon* pl: mesh2.polygons ){
         Draw::color_of_hash(i*4456464+54844); i++;
@@ -299,36 +188,6 @@ void TestAppMesh::draw(){
         }
         glEnd();
     }
-
-    /*
-    for(int i=0; i<nplanes; i++){
-        Draw::color_of_hash(i*4456464+54844);
-        glEnable(GL_DEPTH_TEST);
-        drawPlane( planes[i] );
-        sprintf(str,"%i", i );
-        Draw3D::drawText(str, planes[i].normal*planes[i].iso, fontTex, 0.02, 0);
-    }
-    glEnable(GL_DEPTH_TEST);
-    */
-   
-    /*
-    glColor3f(0.5,0.0,0.0); drawPlane( plane1 );
-    glColor3f(0.0,0.0,0.5); drawPlane( plane2 );
-    glColor3f(1.0,1.0,1.0); Draw3D::drawPointCross( l12.p0, 0.1 ); Draw3D::drawVecInPos( l12.hdir, l12.p0 );
-    
-    glColor3f(0.0,0.0,0.0);
-    Vec3d p1,p2; p1=l12.endPoint0(); p2=l12.endPoint1();
-    Draw3D::drawPointCross( p1, 0.1 ); Draw3D::drawPointCross( p2, 0.1 ); Draw3D::drawLine( p1, p2 );
-    */
-
-    /*
-    glColor3f(0.5,0.0,0.0); drawPlane( plane3 );
-    glColor3f(0.0,0.0,0.5); drawPlane( plane4 );
-    glColor3f(1.0,1.0,1.0);
-    Draw3D::drawPointCross( l12.p0, 0.1 ); Draw3D::drawVecInPos( l12.hdir, l12.p0 );
-    */
-    
-    //glColor3f(0,0,0); Draw3D::drawPointCross( mesh.points[ipicked], 0.2 );
 
 };
 
@@ -341,7 +200,7 @@ void TestAppMesh::eventHandling ( const SDL_Event& event  ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
-                case SDLK_t: 
+                case SDLK_t:
                     plane1.normal.fromRandomSphereSample();
                     plane2.normal.fromRandomSphereSample();
                     float perturb = 0.3;

@@ -773,6 +773,7 @@ int drawCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis
     return drawCircleAxis( n, pos, v0, uaxis, R, dca, dsa );
 }
 
+/*
 int drawSphereOctLines( int n, float R, const Vec3f& pos ){
 	int nvert=0;
     float dphi = 2*M_PI/n;
@@ -781,6 +782,21 @@ int drawSphereOctLines( int n, float R, const Vec3f& pos ){
     nvert += drawCircleAxis( n, pos, {0,1,0}, {1.0d,0.0d,0.0d}, R, dca, dsa );
     nvert += drawCircleAxis( n, pos, {0,0,1}, {0.0d,1.0d,0.0d}, R, dca, dsa );
     nvert += drawCircleAxis( n, pos, {1,0,0}, {0.0d,0.0d,1.0d}, R, dca, dsa );
+	return nvert;
+}
+*/
+
+int drawSphereOctLines( int n, float R, const Vec3f& pos, const Mat3f& rot, bool bRGB ){
+	int nvert=0;
+    float dphi = 2*M_PI/n;
+    float dca  = cos( dphi );
+    float dsa  = sin( dphi );
+    if(bRGB)glColor3f(1,0,0);
+    nvert += drawCircleAxis( n, pos, rot.b, rot.a, R, dca, dsa );
+    if(bRGB)glColor3f(0,1,0);
+    nvert += drawCircleAxis( n, pos, rot.c, rot.b, R, dca, dsa );
+    if(bRGB)glColor3f(0,0,1);
+    nvert += drawCircleAxis( n, pos, rot.a, rot.c, R, dca, dsa );
 	return nvert;
 }
 

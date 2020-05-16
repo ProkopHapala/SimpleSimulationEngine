@@ -140,7 +140,7 @@ class Vec3T{
 		x *= inVnorm;    y *= inVnorm;    z *= inVnorm;
 		return norm;
     }
-    inline VEC normalized() {
+    inline VEC normalized()const{
         VEC v; v.set(*this);
         v.normalize();
         return v;
@@ -293,6 +293,10 @@ class Vec3T{
 		return *this;
 	};
 
+    inline VEC& rotate_csa( T ca, T sa, const VEC& uaxis, const VEC& p0        ){ sub(p0); rotate_csa( ca, sa, uaxis ); add(p0); return *this; };
+    inline VEC& rotate    ( T angle,    const VEC& axis , const VEC& p0        ){ sub(p0); rotate    ( angle,   axis ); add(p0); return *this; };
+    inline VEC& scale     (             const VEC& sc   , const VEC& p0        ){ sub(p0); mul(sc);                     add(p0); return *this; };
+
 	inline VEC& rotateTo( const VEC& rot0, double coef ){
         //rot.add_mul( rot0, coef ); rot.normalize();
         VEC ax; ax.set_cross( *this, rot0 );
@@ -398,9 +402,9 @@ class Vec3T{
         return *this;
     }
 
-    inline VEC& addRandomCube( double d ){ x+=randf(-d,d); y+=randf(-d,d); z+=randf(-d,d);  return *this; }
-    inline VEC& fromRandomCube( double d ){ x=randf(-d,d); y=randf(-d,d); z=randf(-d,d);  return *this; }
-    inline VEC& fromRandomBox( const VEC& vmin, const VEC& vmax ){ x=randf(vmin.x,vmax.x); y=randf(vmin.y,vmax.y); z=randf(vmin.z,vmax.z);  return *this; }
+    inline VEC& addRandomCube ( T d ){ x+=randf(-d,d); y+=randf(-d,d); z+=randf(-d,d);  return *this; }
+    inline VEC& fromRandomCube( T d ){ x =randf(-d,d); y =randf(-d,d); z =randf(-d,d);  return *this; }
+    inline VEC& fromRandomBox ( const VEC& vmin, const VEC& vmax ){ x=randf(vmin.x,vmax.x); y=randf(vmin.y,vmax.y); z=randf(vmin.z,vmax.z);  return *this; }
 
     inline VEC& fromLinearSolution( const VEC& va, const VEC& vb, const VEC& vc, const VEC& p ){
         // https://en.wikipedia.org/wiki/Cramer%27s_rule
@@ -423,13 +427,23 @@ class Vec3T{
         return v;
     }
 
-    static inline void average( int n, int* selection, VEC* vs ){
+    static inline VEC average( int n, int* selection, VEC* vs ){
         VEC v;
         v.set(0.0);
         for(int i=0; i<n; i++){ v.add(vs[selection[i]]); }
         v.mul( 1/(T)n );
         return v;
     }
+
+    static inline void move  (int n, VEC* ps, const VEC& shift                                ){ for(int i=0; i<n; i++)ps[i].add(shift); }
+    static inline void scale (int n, VEC* ps, const VEC& center, const VEC& sc                ){ for(int i=0; i<n; i++){ ps[i].scale     ( sc, center      ); };  }
+    static inline void rotate(int n, VEC* ps, const VEC& center, const VEC& uaxis, T ca, T sa ){ for(int i=0; i<n; i++){ ps[i].rotate_csa( ca, sa, uaxis, center   ); }; }
+    static inline void rotate(int n, VEC* ps, const VEC& center, const VEC&  axis, double phi ){ rotate( n,ps,center,axis.normalized(), cos(phi), sin(phi) ); }
+
+    static inline void move  (int n, int* selection, VEC* ps, const VEC& shift                                ){ for(int i =0;  i<n;  i++)  ps[selection[i]].add(shift);                        }
+    static inline void scale (int n, int* selection, VEC* ps, const VEC& center, const VEC& sc                ){ for(int ii=0; ii<n; ii++){ ps[selection[ii]].scale     ( sc, center ); }; }
+    static inline void rotate(int n, int* selection, VEC* ps, const VEC& center, const VEC& uaxis, T ca, T sa ){ for(int ii=0; ii<n; ii++){ ps[selection[ii]].rotate_csa( ca, sa, uaxis, center   ); }; }
+    static inline void rotate(int n, int* selection, VEC* ps, const VEC& center, const VEC&  axis, double phi ){ rotate( n,ps,center,axis.normalized(), cos(phi), sin(phi) ); }
 
 };
 
