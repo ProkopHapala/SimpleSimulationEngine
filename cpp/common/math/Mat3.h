@@ -27,7 +27,8 @@ class Mat3T{
 			T bx,by,bz;
 			T cx,cy,cz;
 		};
-		struct{	VEC a,b,c; };
+		struct{	VEC a,b,c;    };
+		struct{	VEC lf,up,fw; };
 		T array[9];
 		VEC  vecs [3];
 	};

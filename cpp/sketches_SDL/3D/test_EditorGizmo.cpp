@@ -44,9 +44,15 @@ class TestAppMousePicking : public AppSDL2OGL_3D {
 };
 
 TestAppMousePicking::TestAppMousePicking( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+    gizmo.cam = &cam;
 
-
-
+    int np = 30;
+    gizmo.npoint = np;
+    gizmo.points = new Vec3d[np];
+    double sz = 5.0;
+    for(int i=0; i<gizmo.npoint; i++){
+        gizmo.points[i].fromRandomBox( {-sz,-sz,-sz}, {sz,sz,sz} );
+    }
 }
 
 void TestAppMousePicking::draw(){
@@ -55,6 +61,8 @@ void TestAppMousePicking::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	gizmo.draw();
+
+	Draw3D::drawPoints( gizmo.npoint, gizmo.points ,0.1 );
 
 };
 
@@ -72,8 +80,12 @@ void TestAppMousePicking::eventHandling ( const SDL_Event& event  ){
             }
             break;
     };
-    gizmo.onEvent( mouseX, mouseY, event );
     AppSDL2OGL::eventHandling( event );
+    Vec2f pix = { 2*mouseX/float(HEIGHT) - ASPECT_RATIO,
+                  2*mouseY/float(HEIGHT) - 1              };
+    cam.persp = perspective;
+    cam.zoom  = zoom;
+    gizmo.onEvent( pix, event );
 }
 
 

@@ -18,6 +18,7 @@ class Camera{ public:
     float  aspect = 1.0;
     float  zmin   = 10.0;
     float  zmax   = 10000.0;
+    bool   persp  = true;
 
     inline void lookAt( Vec3f p, float R ){ pos = p + rot.c*-R; }
     inline void lookAt( Vec3d p, float R ){ Vec3f p_; convert(p,p_); lookAt(p_,R); }
@@ -38,6 +39,13 @@ class Camera{ public:
         rot.dot_to( p, p );
         return Vec2f{ resolution.x*(0.5f+p.x/(2*zoom*aspect)),
                       resolution.y*(0.5f+p.y/(2*zoom)) };
+    }
+
+    inline Vec2f ray2screen( const Vec3f& rd, const Vec3f& p0 ){
+        Vec3f v = p0 - pos;
+        float z = rot.c.dot( v );
+        Vec3f u = rd*z - v;    // ToDo - this is perhas only approximation on sphere instead of screen plane
+        return { rd.dot(rot.a) , rd.dot(rot.b) };
     }
 
     inline void word2screenPersp( const Vec3f& pWord, Vec3f& pScreen ) const {
@@ -69,13 +77,24 @@ class Camera{ public:
     }
 
     inline void pix2rayOrtho( const Vec2f& pix, Vec3f& ro ) const {
-        float resc = 1/zoom;
+        //float resc = 1/zoom;
+        float resc = zoom;
         ro = rot.a*(pix.a*resc) + rot.b*(pix.b*resc);
     }
 
     inline void pix2rayPersp( const Vec2f& pix, Vec3f& rd ) const {
         float resc = 1/zoom;
         rd = rot.a*(pix.a*resc) + rot.b*(pix.b*resc);
+    }
+
+    inline Vec3f pix2ray( const Vec2f& pix, Vec3f& rd, Vec3f& ro ){
+        if(persp){
+            ro = pos;
+            pix2rayPersp( pix, rd );
+        }else{
+            rd = rot.c;
+            pix2rayOrtho( pix, ro );
+        }
     }
 
     inline bool pointInFrustrum( Vec3f p ) const {
