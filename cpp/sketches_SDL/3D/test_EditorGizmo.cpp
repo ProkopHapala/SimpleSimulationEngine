@@ -64,6 +64,13 @@ void TestAppMousePicking::draw(){
 
 	Draw3D::drawPoints( gizmo.npoint, gizmo.points ,0.1 );
 
+
+	for(auto& it: gizmo.selection){
+        Vec3d p = gizmo.points[it.first];
+        Draw::color_of_hash( it.second + 15454 );
+        Draw3D::drawPointCross( p, 0.2 );
+	};
+
 };
 
 

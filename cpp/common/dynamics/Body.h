@@ -1,5 +1,5 @@
-#ifndef Body_h
-#define Body_h
+#ifndef Body3D_h
+#define Body3D_h
 
 #include <math.h>
 #include <cstdlib>
@@ -9,6 +9,26 @@
 #include "Vec3.h"
 #include "Mat3.h"
 #include "quaternion.h"
+
+template<typename T>
+struct PoseQ{
+	union{
+		struct{
+            Vec3T<T> pos;
+            QuatT<T> rot;
+		};
+		T array[7];
+	};
+}
+
+template<typename T>
+struct BodyQ{
+    double mass;
+    PoseQ<T> pose;
+    PoseQ<T> vel;
+    PoseQ<T> force;
+}
+
 
 // ========================
 //   CLASS :   KinematicBody
