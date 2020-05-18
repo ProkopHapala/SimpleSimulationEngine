@@ -51,11 +51,6 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
     CLCFSF  solver;
 
-    std::vector<Vec3d> ps{ 1,Vec3dZero };
-
-
-    int ogl=0;
-    int ipicked  = -1, ibpicked = -1;
     Plot2D plot1;
 
 
@@ -79,9 +74,11 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //int    n    = 40;
     //double dx   = xmax/n;
 
+    DEBUG
+
     int nsamp = 24;
-    solver.realloc( 2, 2, 2, nsamp_, 1 );
-    solver.setRcut( 8.0 );
+    solver.realloc( 2, 2, 2, nsamp, 1 );
+    solver.setRcut( 4.0 );
 
     // --- Make Geometry
     // initialize atomic positions
@@ -89,40 +86,88 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     solver.apos[1]=(Vec3d){+1.0,0.0,0.0};
     // initialize electron positions
     double dy = 0.5;
-    solver.epos[0]=(Vec3d){0.0,-dy,0.0};  // e[0][0]
-    solver.epos[1]=(Vec3d){0.0,+dy,0.0};  // e[0][1]
-    solver.epos[2]=(Vec3d){0.0,-dy,0.0};  // e[1][0]
-    solver.epos[3]=(Vec3d){0.0,+dy,0.0};  // e[1][1]
+    //solver.epos[0]=(Vec3d){-0.5,-dy,0.0};  // e[0][0]
+    //solver.epos[1]=(Vec3d){-0.5 ,+dy,0.0};  // e[0][1]
+    //solver.epos[2]=(Vec3d){+0.5,-dy,0.0};  // e[1][0]
+    //solver.epos[3]=(Vec3d){+0.5,+dy,0.0};  // e[1][1]
 
+    solver.epos[0]=(Vec3d){-2.0,-3,0.0};  // e[0][0]
+    solver.epos[1]=(Vec3d){-2.0,+3,0.0};  // e[0][1]
+    solver.epos[2]=(Vec3d){+2.0,-3,0.0};  // e[1][0]
+    solver.epos[3]=(Vec3d){+2.0,+3,0.0};  // e[1][1]
+
+
+    for(int i=0; i<solver.nBas; i++){
+        solver.ecoefs[i] = randf()-0.5;
+        printf( "orb[%i].wf[%i] (%g,%g,%g ) C %g \n",  i/solver.perOrb, i%solver.perOrb,  solver.epos[i].x, solver.epos[i].y, solver.epos[i].z, solver.ecoefs[i] );
+    }
+
+
+    DEBUG
 
     // ----  Make Basis Functions
     double  betaWf=1.8,betaPP=1.8;
-    double dr   = 0.1;
-    int    nr   = Rmax/dr + 3;
     // wave function
-    double* PP = solver.PPs[0];
     double sumQ = 0.0;
-    for(int ir=0; ir<nr; ir++){
-        double r = ((ir-1)*dr);  // WARRNING : don't forget [-1] !!!!
-        double wf = exp(-betaWf*r);
-        solver.Wfs [ir] = wf;    // wavefunction
-        double rho = wf*wf;
-        solver.Wf2s[ir] = rho;   // density
-        sumQ += rho;
-        solver.Vfs[ir] = sumQ/r; // potential of density basis function
-        olver .PPs[ir] = exp(-betaPP*r); // pseudo-potential of ion (atom)
+    for(int ir=0; ir<solver.nsampMem; ir++){
+        double r    = ((ir-1)*solver.dsamp);  // WARRNING : don't forget [-1] !!!!
+        double invr = 1/r;
+        double wf  = exp(-betaWf*r);
+        //double rho = wf*wf;
+        //sumQ      += rho;
+        //printf( "" );
+        solver.Wfs   [ir] = wf;     // wavefunction
+        //solver.Wf2s  [ir] = rho;    // density
+        //solver.Vfs   [ir] = sumQ*invr; // potential of density basis function
+        solver.PPs[0][ir] = (1-exp(-betaPP*r))*invr; // pseudo-potential of ion (atom)
     }
-    // pseudo potential
 
-    for(int ir=0; ir<nr; ir++){
-        double r = ((ir-1)*dr); // WARRNING : don't forget [-1] !!!!
-        s
+    plot1.init();
+    DataLine2D* line_ref    = new DataLine2D(nsamp, 0.0, solver.dsamp, 0xFFFF00FF, "ref"    ); plot1.add(line_ref   );
+    DataLine2D* line_spline = new DataLine2D(nsamp, 0.0, solver.dsamp, 0xFF0000FF, "spline" ); plot1.add(line_spline);
+    Spline_Hermite::Sampler<double> spline;
+    for(int i=0; i<solver.nsamp; i++){
+        double r    = i*solver.dsamp + 0.06;
+        spline.prepare( r*solver.idsamp, solver.Wfs );
+        line_ref   ->ys[i] = solver.Wfs[i+1];
+        line_spline->ys[i] = spline.y();
+        printf( "[%i] wf(%g)-> %g | %g \n", i, r, line_spline->ys[i], line_ref->ys[i]  );
     }
-    // ---- MakeBasis Function Integrals
-    integrateSK( nr, 0, nsamp, solver.dsamp, Rmax, dr, solver.Wfs,  solver.Wfs, solver.ISs, solver.IKs );  // Basis Overlap and Kinetic energy
-    integrateS ( nr, 0, nsamp, solver.dsamp, Rmax, dr, solver.Wf2s, solver.Vfs, solver.ICs             );  // Coulomb betwween density functions
-    integrateS ( nr, 0, nsamp, solver.dsamp, Rmax, dr, solver.PPs,  solver.WFs, solver.IrhoV[0]        );  // Coulomb with ion pseudopotential
+    plot1.update();
+    plot1.render();
 
+
+    DEBUG
+
+    //integrateSK( solver.nsamp, 0, solver.nsampI, solver.dsamp, solver.Rcut, dr, solver.Wfs,     solver.Wfs,  solver.ISs, solver.ITs );  // Basis Overlap and Kinetic energy
+    //integrateS ( solver.nsamp, 0, solver.nsampI, solver.dsamp, solver.Rcut, dr, solver.Wf2s,    solver.Vfs,  solver.ICs             );  // Coulomb betwween density functions
+    //integrateS ( solver.nsamp, 0, solver.nsampI, solver.dsamp, solver.Rcut, dr, solver.PPs[0],  solver.Wf2s, solver.IrhoV[0]        );  // Coulomb with ion pseudopotential
+
+    solver.prepareIntegralTables();
+
+    DEBUG
+
+    // ===========  test project orbital
+
+    GridShape grid;
+    //grid.n    = {5,5,5};
+    grid.n    = {100,100,100};
+    grid.cell = (Mat3d){   10.0,0.0,0.0,     0.0,10.0,0.0,    0.0,0.0,10.0 };
+    //grid.pos0 = (Vec3d){-5.0 ,-5.0 ,-5.0  };
+    grid.pos0 = (Vec3d){-5.0 ,-5.0 ,-5.0  };
+    grid.updateCell();
+
+    DEBUG
+
+    int ng = grid.n.totprod();
+    double * orbOnGrid = new double[ ng ];
+    //solver.orb2grid( 0, grid, orbOnGrid ); saveXSF( "temp/orb_0.xsf", grid, orbOnGrid, solver.natom, solver.apos, solver.atype );
+    //solver.orb2grid( 1, grid, orbOnGrid ); saveXSF( "temp/orb_1.xsf", grid, orbOnGrid, solver.natom, solver.apos, solver.atype );
+    solver.orb2grid( 0, grid, orbOnGrid ); saveXSF( "temp/orb_0.xsf", grid, orbOnGrid, solver.perOrb, solver.epos+solver.perOrb*0, 0 );
+    solver.orb2grid( 1, grid, orbOnGrid ); saveXSF( "temp/orb_1.xsf", grid, orbOnGrid, solver.perOrb, solver.epos+solver.perOrb*1, 0 );
+    delete [] orbOnGrid;
+
+    DEBUG
 }
 
 void TestAppCLCFSF::draw(){
@@ -131,15 +176,16 @@ void TestAppCLCFSF::draw(){
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
 
+    plot1.view();
 };
 
 
 void TestAppCLCFSF::drawHUD(){
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
-	glTranslatef( 100.0,100.0,0.0 );
-	glScalef    ( 20.0,300.00,1.0  );
-	plot1.view();
+	//glTranslatef( 100.0,100.0,0.0 );
+	//glScalef    ( 20.0,300.00,1.0  );
+	//plot1.view();
 
 }
 

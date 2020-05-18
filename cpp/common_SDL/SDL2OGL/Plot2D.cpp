@@ -238,7 +238,7 @@ void Plot2D::savetxt(const char* fname){
 void Plot2D::init( ){
     //axBounds.set( {-10.0,-10.0},{10.0,10.0});
     bounds.set( {-10.0,-10.0},{10.0,10.0});
-    axPos   .set( 0.0,0.0  );
+    axPos .set( 0.0,0.0  );
     //init        ( 1.0, 1.0 );
     autoAxes( 1.0, 1.0 );
 }

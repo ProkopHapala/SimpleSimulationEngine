@@ -51,9 +51,11 @@ class GridShape {
 		cpos.set_mul( dCell.a, gpos.x );
 		cpos.add_mul( dCell.b, gpos.y );
 		cpos.add_mul( dCell.c, gpos.z );
+		cpos.add(pos0);
 	}
 
-	inline void cartesian2grid( const Vec3d& cpos, Vec3d& gpos ) const {
+	inline void cartesian2grid( Vec3d cpos, Vec3d& gpos ) const {
+        cpos.sub( pos0 );
 		gpos.a = cpos.dot( diCell.a );
 		gpos.b = cpos.dot( diCell.b );
 		gpos.c = cpos.dot( diCell.c );
@@ -103,7 +105,8 @@ class GridShape {
     }
     */
 
-    void toXSF( FILE* fout, Vec3d * FF, int icomp ) const {
+
+    void headerToXsf( FILE* fout )const{
         fprintf( fout, "BEGIN_BLOCK_DATAGRID_3D\n" );
         fprintf( fout, "   some_datagrid\n" );
         fprintf( fout, "   BEGIN_DATAGRID_3D_whatever\n" );
@@ -112,12 +115,36 @@ class GridShape {
         fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.a.x, cell.a.y, cell.a.z );
         fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.b.x, cell.b.y, cell.b.z );
         fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.c.x, cell.c.y, cell.c.z );
+    }
+
+    /*
+    void toXSF( FILE* fout, double * FF ) const {
+        headerToXsf(  FILE* fout );
         int nx  = n.x; 	int ny  = n.y; 	int nz  = n.z; int nxy = ny * nx;
         for ( int ic=0; ic<nz; ic++ ){
             for ( int ib=0; ib<ny; ib++ ){
                 for ( int ia=0; ia<nx; ia++ ){
                    int i = i3D( ia, ib, ic );
-                   fprintf( fout, "%6.5e\n", ((double*)(FF+i))[icomp] );
+                   fprintf( fout, "%6.5e\n", FF[i] );
+                }
+            }
+        }
+        fprintf( fout, "   END_DATAGRID_3D\n" );
+        fprintf( fout, "END_BLOCK_DATAGRID_3D\n" );
+    }
+    */
+
+    void toXSF( FILE* fout, double* FF, int icomp ) const {
+        headerToXsf( fout );
+        int nx  = n.x; 	int ny  = n.y; 	int nz  = n.z; int nxy = ny * nx;
+        for ( int ic=0; ic<nz; ic++ ){
+            for ( int ib=0; ib<ny; ib++ ){
+                for ( int ia=0; ia<nx; ia++ ){
+                   int i = i3D( ia, ib, ic );
+                   double val;
+                   if(icomp<0){ val =          FF [i];              }
+                   else       { val = ((Vec3d*)FF)[i].array[icomp]; }
+                   fprintf( fout, "%6.5e\n", val );
                 }
             }
         }
@@ -125,7 +152,20 @@ class GridShape {
         fprintf( fout, "END_BLOCK_DATAGRID_3D\n" );
     }
 
-    void saveXSF( char * fname, Vec3d * FF, int icomp )const {
+    /*
+    void saveXSF( char * fname, double * FF, int icomp )const {
+        printf( "saving %s\n", fname );
+        FILE *fout;
+        fout = fopen(fname,"w");
+        fprintf( fout, "   ATOMS\n" );
+        fprintf( fout, "    1   0.0   0.0   0.0\n" );
+        fprintf( fout, "\n" );
+        toXSF( fout, FF, icomp );
+        fclose(fout);
+    }
+    */
+
+    void saveXSF( char * fname, double* FF, int icomp=-1 )const {
         printf( "saving %s\n", fname );
         FILE *fout;
         fout = fopen(fname,"w");
@@ -173,6 +213,30 @@ inline Vec3d interpolate3DvecWrap( Vec3d * grid, const Vec3i& n, const Vec3d& r 
 	out.add_mul( grid[ i3D( imx, imy, itz ) ], tz*mymx );   out.add_mul( grid[ i3D( itx, imy, itz ) ], tz*mytx );
 	return out;
 }
+
+
+template<typename Func>
+double evalOnGrid( const GridShape& grid, Func func ){
+    int nx  = grid.n.x;
+    int ny  = grid.n.y;
+    int nz  = grid.n.z;
+    int nxy = ny * nx;
+    int ii = 0;
+    double res=0.0;
+    for ( int ic=0; ic<nz; ic++ ){
+        for ( int ib=0; ib<ny; ib++ ){
+            for ( int ia=0; ia<nx; ia++ ){
+                Vec3d pos;
+                grid.grid2cartesian( (Vec3d){ia,ib,ic}, pos );
+                func( ii, pos, res );
+                ii++;
+            }
+        }
+    }
+    return res;
+}
+
+
 
 // iterate over field
 //template< void FUNC( int ibuff, const Vec3d& pos_, void * args ) >
@@ -280,8 +344,14 @@ void writePrimCoord( FILE* fout, Mat3d& cell, int natoms, Vec3d * apos, int * iZ
     fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.c.x, cell.c.y, cell.c.z );
     fprintf( fout, "PRIMCOORD\n" );
     fprintf( fout, "%i %i\n", natoms, 1 );
-    for(int i=0; i<natoms; i++){
-        fprintf( fout, "%i %3.8f %3.8f %3.8f\n", iZs[i], apos[i].x, apos[i].y, apos[i].z );
+    if(iZs){
+        for(int i=0; i<natoms; i++){
+            fprintf( fout, "%i %3.8f %3.8f %3.8f\n", iZs[i], apos[i].x, apos[i].y, apos[i].z );
+        }
+    }else{
+        for(int i=0; i<natoms; i++){
+            fprintf( fout, "%i %3.8f %3.8f %3.8f\n", 1, apos[i].x, apos[i].y, apos[i].z );
+        }
     }
 }
 
@@ -290,7 +360,16 @@ void saveXSF( char * fname, GridShape& grid, Vec3d * FF, int icomp, int natoms, 
     FILE *fout;
     fout = fopen(fname,"w");
     writePrimCoord( fout, grid.cell, natoms, apos, iZs );
-    grid.toXSF    ( fout, FF, icomp );
+    grid.toXSF    ( fout, (double*)FF, icomp );
+    fclose(fout);
+}
+
+void saveXSF( char * fname, GridShape& grid, double * FF, int natoms, Vec3d * apos, int * iZs ){
+    printf( "saving %s\n", fname );
+    FILE *fout;
+    fout = fopen(fname,"w");
+    writePrimCoord( fout, grid.cell, natoms, apos, iZs );
+    grid.toXSF    ( fout, FF, -1 );
     fclose(fout);
 }
 

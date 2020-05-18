@@ -34,6 +34,37 @@
 
 namespace Spline_Hermite{
 
+template<typename T>
+struct Sampler{
+    T    dx;
+    int  ix;
+    T y0,dy0,y01,p2,p3;
+
+    inline void seek(T x){
+        ix = (int)x;
+        dx = x-ix;
+    }
+    inline void preval(T* buff){
+        buff  += ix-1;
+        T ym,y1,yp,dy1;
+        ym  = buff[0];
+        y0  = buff[1];
+        y1  = buff[2];
+        yp  = buff[3];
+        dy0 = (y1-ym)*0.5;
+        dy1 = (yp-y0)*0.5;
+        y01 = y0-y1;
+        p2  = (-3*y01 -2*dy0 - dy1);
+        p3  = ( 2*y01 +  dy0 + dy1)*dx;
+    }
+    inline void prepare(T x, T* buff){
+        seek  (x);
+        preval(buff);
+    }
+    inline double y   (){ return y0 + dx*dx*(dy0 +   p2 +   p3); }
+    inline double dy  (){ return         dx*(dy0 + 2*p2 + 3*p3); }
+    inline double ddyl(){ return                   2*p2 + 6*p3 ; }
+};
 
 const static double C[4][4] = {
 { 1, 0, 0, 0 },
@@ -48,7 +79,6 @@ const static double B[4][4] = {
 { -3, -2,  3, -1 },
 {  2,  1, -2,  1 }
 };
-
 
 template <class T>
 inline T val( T x,    T y0, T y1, T dy0, T dy1 ){

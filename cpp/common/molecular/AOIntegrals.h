@@ -1,6 +1,6 @@
 
-#ifndef basisIntegrals_h
-#define basisIntegrals_h
+#ifndef AOIntegrals_h
+#define AOIntegrals_h
 
 #include <stdint.h>
 

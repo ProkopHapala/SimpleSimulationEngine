@@ -14,12 +14,12 @@ template<typename T>
 struct PoseQ{
 	union{
 		struct{
-            Vec3T<T> pos;
-            QuatT<T> rot;
+            Vec3T <T> pos;
+            Quat4T<T> rot;
 		};
 		T array[7];
 	};
-}
+};
 
 template<typename T>
 struct BodyQ{
@@ -27,7 +27,7 @@ struct BodyQ{
     PoseQ<T> pose;
     PoseQ<T> vel;
     PoseQ<T> force;
-}
+};
 
 
 // ========================
