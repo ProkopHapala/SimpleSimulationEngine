@@ -47,6 +47,9 @@ target_link_libraries( test_MechEuler2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_
 add_executable       ( test_AutoMesh2D test_AutoMesh2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_AutoMesh2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_SuperSonic2D test_SuperSonic2D.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_SuperSonic2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_CommodityNetwork test_CommodityNetwork.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:CommodityNetwork> )
 target_link_libraries( test_CommodityNetwork ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
