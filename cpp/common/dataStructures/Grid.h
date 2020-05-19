@@ -32,6 +32,8 @@ class GridShape {
 	//inline Vec3d * allocateArray_Vec3d(){ return new Vec3d[n.x*n.y*n.z); }
 	inline int getNtot() const {return n.x*n.y*n.z ; }
 
+	inline double voxelVolume()const{ return dCell.determinant(); }
+
 	inline void updateCell(){
         dCell.a.set_mul( cell.a, 1.0d/n.a );
 		dCell.b.set_mul( cell.b, 1.0d/n.b );

@@ -250,11 +250,11 @@ class Mat3T{
 
 // ====== matrix solver
 
-   inline T determinant() {
+   inline T determinant()const{
         T fCoxx = yy * zz - yz * zy;
         T fCoyx = yz * zx - yx * zz;
         T fCozx = yx * zy - yy * zx;
-        T fDet = xx * fCoxx + xy * fCoyx + xz * fCozx;
+        T fDet  = xx * fCoxx + xy * fCoyx + xz * fCozx;
         return fDet;
     };
 

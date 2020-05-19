@@ -45,12 +45,13 @@ struct Sampler{
         dx = x-ix;
     }
     inline void preval(T* buff){
-        buff  += ix-1;
+        buff  += ix;
         T ym,y1,yp,dy1;
         ym  = buff[0];
         y0  = buff[1];
         y1  = buff[2];
         yp  = buff[3];
+        //printf( "y[{1,2,3,4}] %g %g %g %g \n", ym,y0,y1,yp  );
         dy0 = (y1-ym)*0.5;
         dy1 = (yp-y0)*0.5;
         y01 = y0-y1;
@@ -61,9 +62,10 @@ struct Sampler{
         seek  (x);
         preval(buff);
     }
-    inline double y   (){ return y0 + dx*dx*(dy0 +   p2 +   p3); }
-    inline double dy  (){ return         dx*(dy0 + 2*p2 + 3*p3); }
-    inline double ddyl(){ return                   2*p2 + 6*p3 ; }
+    //inline double y   (){ return y0 - dx*y01; }
+    inline double y   (){ return y0 + dx*(dy0 + dx*(  p2 +   p3)); }
+    inline double dy  (){ return          dy0 + dx*(2*p2 + 3*p3) ; }
+    inline double ddyl(){ return                    2*p2 + 6*p3  ; }
 };
 
 const static double C[4][4] = {
@@ -118,9 +120,9 @@ inline void valdd( T x, T& val, T& dval, T& ddval, T y0, T y1, T dy0, T dy1 ){
     T y01 = y0-y1;
     T p2  = (-3*y01 -2*dy0 - dy1);
     T p3  = ( 2*y01 +  dy0 + dy1)*x;
-    val   =  y0 + x*x*(dy0 +   p2 +   p3);
-	dval  =         x*(dy0 + 2*p2 + 3*p3);
-	ddval =                  2*p2 + 6*p3;
+    val   =  y0 + x*(dy0 + x*(  p2 +   p3));
+	dval  =          dy0 + x*(2*p2 + 3*p3);
+	ddval =                   2*p2 + 6*p3;
 }
 
 template <class T>
@@ -266,14 +268,25 @@ template <class T>
 inline void valderiv( T s, const T* ys, T& val, T& dval ){
     int    is  = (int)s;
     T      x   =  s - is;
-    Spline_Hermite::valdval( x, val, dval, ys[is], ys[is+1], ys[is+2], ys[is+3] ); // Overlap
+    ys+=is;
+    T ym = ys[0];
+	T y0 = ys[1];
+	T y1 = ys[2];
+	T yp = ys[3];
+    Spline_Hermite::valdval( x, val, dval, y0, y1, (y1-ym)*0.5, (yp-y0)*0.5 ); // Overlap
 }
 
 template <class T>
 inline void valdd( T s, const T* ys, T& val, T& dval, T& ddval ){
     int    is  = (int)s;
     T      x   =  s - is;
-    Spline_Hermite::valdd( x, val, dval, ddval, ys[is], ys[is+1], ys[is+2], ys[is+3] ); // Overlap
+    ys+=is;
+    T ym = ys[0];
+	T y0 = ys[1];
+	T y1 = ys[2];
+	T yp = ys[3];
+	//              valdd( x, val, dval, ddval, y0, y1, dy0,          dy1 );
+    Spline_Hermite::valdd( x, val, dval, ddval, y0, y1, (y1-ym)*0.5, (yp-y0)*0.5 ); // Overlap
 }
 
 template <class T>

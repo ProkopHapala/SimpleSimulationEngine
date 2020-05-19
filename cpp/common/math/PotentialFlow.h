@@ -29,6 +29,22 @@ https://www.wolframalpha.com/input/?i=integral+(x%5E3)+%2F+(x%5E2+%2B+L)
 
 Any function can be inegrated when approximated by some polynominal expansion series (e.g. taylor expansion)
 
+
+####  Multi-Pole expansion of arbitrary distribution of sorces and current elements
+ - Instead of searching analytic solution we may simply expand a panel on multipoles   (  monopol, dipole, quadrupole )
+    - It will guarantee proper surface beyond certain radius
+
+
+
+
+
+
+
+
+
+
+
+
 */
 
 inline Vec3d pointSource( Vec3d R ){

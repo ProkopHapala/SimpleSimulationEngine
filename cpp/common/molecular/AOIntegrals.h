@@ -54,7 +54,6 @@ double dot_rolled( int n, int ioff, const double* f1, const double* f2 ){
     return sum1+sum2;
 }
 
-
 double dot_shifted_sym( int n, int ioff, const double* f1, const double* f2, const double anti1, double anti2 ){
     // very often integrated function are either symmetric or antisymmetric, than it is enough to use just half of interval
     //printf( "dot_shifted_sym %i %i (%g,%g) \n", n, ioff, anti1, anti2 );
@@ -69,6 +68,35 @@ double dot_shifted_sym( int n, int ioff, const double* f1, const double* f2, con
     return sum1+sum2+sum3;
 }
 
+double dot_shifted_sym_( int n, int ioff, const double* f1, const double* f2, const double anti1, double anti2 ){
+    // very often integrated function are either symmetric or antisymmetric, than it is enough to use just half of interval
+    //printf( "dot_shifted_sym %i %i (%g,%g) \n", n, ioff, anti1, anti2 );
+    int DEBUG_n = 0;
+    const int n_ = n-ioff;
+    if(n_<=0){
+        //const n__=n_+n;
+        double sum2 = 0;
+        for(int i=ioff-n+1;i<n;i++){
+            int j=ioff-i-1;
+            //printf( "[ %i * %i |%i] %g * %g \n", i, j, n, f1[i],f2[j] );
+            sum2+=f1[i]*f2[j];
+            //DEBUG_n++;
+        }; sum2*= anti2;
+        //printf(  "DEBUG dot_shifted_sym_ DEBUG_n %i | %i | n=%i \n", DEBUG_n, n*2-ioff-1, n );
+        return sum2;
+    }
+    double sum1 = 0; for(int i=0;i<n_  ;i++){ sum1+=f1[i+ioff]*f2[i       ]; }
+    double sum2 = 0; for(int i=0;i<ioff;i++){ sum2+=f1[i     ]*f2[ioff-i-1]; } sum2*= anti2;
+    double sum3 = 0; for(int i=1;i<n_  ;i++){ sum3+=f1[i     ]*f2[ioff+i  ]; } sum3*=(anti1*anti2);
+    int i,j;
+    //double sum1 = 0; for(int ii=0;ii<n_  ;ii++){ DEBUG_n++;i=ii+ioff;j=ii      ; printf( "[ %i * %i ] %g * %g \n", i,j, n, f1[i],f2[j] ); sum1+=f1[i]*f2[j]; }
+    //double sum2 = 0; for(int ii=0;ii<ioff;ii++){ DEBUG_n++;i=ii     ;j=ioff-i-1; printf( "[ %i * %i ] %g * %g \n", i,j, n, f1[i],f2[j] ); sum2+=f1[i]*f2[j]; } sum2*= anti2;
+    //double sum3 = 0; for(int ii=1;ii<n_  ;ii++){ DEBUG_n++;i=ii     ;j=ioff+i  ; printf( "[ %i * %i ] %g * %g \n", i,j, n, f1[i],f2[j] ); sum3+=f1[i]*f2[j]; } sum3*=(anti1*anti2);
+    //printf( "dot_shifted_sym %i %i (%g,%g) %g(%g,%g,%g)\n", n, ioff, anti1, anti2, sum1+sum2+sum3, sum1,sum2,sum3 );
+    //printf(  "DEBUG dot_shifted_sym_ DEBUG_n %i | %i | n=%i \n", DEBUG_n, n*2-ioff-1, n );
+    return sum1+sum2+sum3;
+}
+
 void intCyl_shift( int nr, int nz, int nint, const double* f1s, const double* f2s, const double* ws, double* Is, double anti1, double anti2 ){
     double sym = anti1*anti2;
     bool bSym = sym*sym>0.125;
@@ -78,8 +106,9 @@ void intCyl_shift( int nr, int nz, int nint, const double* f1s, const double* f2
     for(int ir=0; ir<nr; ir++){
         double wr = ws[ir];
         int iroff = ir*nz;
-        if (bSym){ for(int ii=0;ii<nint;ii++){ Is[ii] += wr*dot_shifted_sym( nz, ii, f1s+iroff, f2s+iroff, anti1, anti2 ); } }
-        else     { for(int ii=0;ii<nint;ii++){ Is[ii] += wr*dot_shifted    ( nz, ii, f1s+iroff, f2s+iroff               ); } }
+        //if (bSym){ for(int ii=0;ii<nint;ii++){ Is[ii] += wr*dot_shifted_sym( nz, ii, f1s+iroff, f2s+iroff, anti1, anti2 ); } }
+        if (bSym){ for(int ii=0;ii<nint;ii++){ Is[ii] += wr*dot_shifted_sym_( nz, ii, f1s+iroff, f2s+iroff, anti1, anti2 ); } }
+        else     { for(int ii=0;ii<nint;ii++){ Is[ii] += wr*dot_shifted     ( nz, ii, f1s+iroff, f2s+iroff               ); } }
     }
 }
 
@@ -123,6 +152,13 @@ void projectFrLaplace( int nr, int nz, int nrf, double dz, double frStep, double
     double const rsafe = 1e-12;
     int i=0;
     double r2max = (nrf-3)*frStep; r2max*=r2max;
+
+    printf( "DEBUG projectFrLaplace: nz,nr,nrf %i %i %i \n", nz, nr, nrf );
+    printf( "DEBUG projectFrLaplace: Rmax %g  frStep %g rs_scale %g \n", sqrt(r2max), frStep, rs_scale );
+    double zmax = dz*nz;
+    double V    = M_PI*rs_scale*rs_scale*zmax;
+    printf( "DEBUG Cylinder R %g Z %g Volume projectFrLaplace: nz,nr,nrf %i %i %i \n", rs_scale, zmax, V );
+
     for(int ir=0; ir<nr; ir++){
         double rxy = rs[ir]*rs_scale;
         for(int iz =0; iz<nz; iz++){
@@ -132,18 +168,20 @@ void projectFrLaplace( int nr, int nz, int nrf, double dz, double frStep, double
             if(r2>r2max){
                 f[i] = 0;
             }else{
-                double  r  = sqrt( r2 );
-                double ir  = 1/(r+rsafe);
-                if      (im==0){ Y=1;                } // s
-                else if (im==1){ Y=z            *ir; } // pz
-                else           { Y=M_SQRT1_2*rxy*ir; } // py   // M_SQRT1_2 comes from angular integral:  sqrt(2) = sqrt( Integral{ cos(phi)^2 } )
+                double  r    = sqrt( r2 );
+                double invr  = 1/(r+rsafe);
+                if      (im==0){ Y=1;                  } // s
+                else if (im==1){ Y=z            *invr; } // pz
+                else           { Y=M_SQRT1_2*rxy*invr; } // py   // M_SQRT1_2 comes from angular integral:  sqrt(2) = sqrt( Integral{ cos(phi)^2 } )
                 // https://en.wikipedia.org/wiki/Laplace%27s_equation#Forms_in_different_coordinate_systems
                 // L{f} =  1/r^2 d(r^2 * d f ) = 1/r^2 ( 2*r*df + r^2*ddf ) = 2*df/r + ddf
                 double y,dy,ddy;
+                Spline_Hermite::valdd( r*invdr, fr, y, dy, ddy );
+                if(f) f [i] = y*Y;                  // function         ( x,y )
+                if(Lf)Lf[i] = (2*dy*invr + ddy)*Y;  // Laplace{function}( x,y )
                 //f[i] = Spline_Hermite::value( r*invdr, fr ) * Y;
-                Spline_Hermite::valdd( r*invdr, fr,   y, dy, ddy );
-                if(f) f [i] = y*Y;                // function         ( x,y )
-                if(Lf)Lf[i] = (2*dy*ir + ddy)*Y;  // Laplace{function}( x,y )
+                //f[i] = exp(-r);
+                //f[i] = 1.0/sqrt( V ); // DEBUG
             }
             i++;
         }
@@ -202,16 +240,36 @@ void integrateS( int nrf, int order, int nint, double dz, double Rmax, double fr
     delete [] ws;
 }
 
+
+
+#include "Draw2D.h"
+
 void integrateSK( int nrf, int order, int nint, double dz, double Rmax, double frStep, const double* fr1, const double* fr2, double* ISs, double* IKs ){
+
+
     //constexpr const int nr = 8;
     //constexpr const double *ws_ = GaussQuadrature::ws_8;
     //constexpr const double *rs  = GaussQuadrature::xs_8;
-    constexpr const int nr = 14;
-    constexpr const double *ws_ = GaussQuadrature::ws_14;
-    constexpr const double *rs  = GaussQuadrature::xs_14;
+
+    //constexpr const int nr = 14;
+    //constexpr const double *ws_ = GaussQuadrature::ws_14;
+    //constexpr const double *rs  = GaussQuadrature::xs_14;
+    //double cw = Rmax*Rmax*(M_PI*2)*dz;
+
+    // midpoints
+    const int nr       = Rmax/frStep;
+    const double invnr = 1./nr;
+    double ws_[nr];
+    double rs [nr];
     double cw = Rmax*Rmax*(M_PI*2)*dz;
+    for(int i=0; i<nr; i++){
+        ws_[i] = invnr;
+        rs [i] = (i+0.5)*invnr;
+    }
+
     double *ws=new double[nr];
-    for(int i=0; i<nr; i++){ ws[i] = ws_[i]*rs[i]*cw; };
+    for(int i=0; i<nr; i++){ ws[i] = ws_[i]*rs[i]*cw; }
+
     const int nz  = nint+1;
     const int nrz = nr*nz;
     double * f1   = new double[nrz];
@@ -221,7 +279,34 @@ void integrateSK( int nrf, int order, int nint, double dz, double Rmax, double f
     for(int i=0; i<nint; i++){ ISs[i]=0; IKs[i]=0; }
     projectFrLaplace( nr, nz, nrf, dz, frStep, Rmax, rs, fr1, f1, 0  , 0 );
     projectFrLaplace( nr, nz, nrf, dz, frStep, Rmax, rs, fr2, f2, Lf2, 0 );
-    intCyl_shift( nr, nz, nint, f1,  f2, ws, ISs,   1,  1 );
+
+    { // DEBUG
+        double dr= Rmax/nr;
+        int ii=0;
+        for(int ir=0; ir<nr; ir++){
+            for(int iz=0; iz<nz; iz++){
+                double x=iz*dz;
+                double y=ir*dr;
+                ii=ir*nz+iz;
+                float f = f1[ii];
+                //float c = 1/(1+exp(f));
+                //glColor3f(f,f*5,f*25);
+                //glColor3f(f,f*0.1,f*10);
+                glColor3f(tanh(f*5),tanh(f),tanh(f*25));
+                Draw2D::drawRectangle_d( {x-dz*0.5,y-dr*0.5},{x+dz*0.5,y+dr*0.5} , true);
+            }
+        }
+        /*
+        double V   = (2*nz*dz)*Rmax*Rmax*M_PI;
+        double dwf = sqrt( 1/V );
+        for(int i=0; i<nrz; i++){
+            f1[i]=dwf;
+            f2[i]=dwf;
+        }
+        */
+    }
+
+    intCyl_shift( nr, nz, nint, f1,  f2, ws, ISs,  1,  1 );
     intCyl_shift( nr, nz, nint, f1, Lf2, ws, IKs,  1,  1 );
     delete [] f1;  delete [] f2; delete [] Lf2; //delete [] Lf1;
     delete [] ws;

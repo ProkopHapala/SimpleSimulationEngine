@@ -25,9 +25,9 @@ class DataLine2D{ public:
     int      n = 0;
     bool   bSharedX =false;
     //Arr xs;
-    double * xs    =NULL;
-    double * ys    =NULL;
-    Func1d   yfunc =NULL;
+    double * xs    =0;
+    double * ys    =0;
+    Func1d   yfunc =0;
     //update_data    =false;
     // draw properties
     Rect2d   bounds;
@@ -46,7 +46,8 @@ class DataLine2D{ public:
     void view();
 
     inline void set     ( int n_, double * xs_, double * ys_){ n=n_; xs=xs_; ys=ys_; };
-    inline void allocate( int n_ ){ n=n_; xs=new double[n]; ys=new double[n]; bSharedX=false; };
+    //inline void allocate( int n_ ){ n=n_; xs=new double[n]; ys=new double[n]; bSharedX=false; };
+    inline void allocate( int n_ ){ n=n_; _allocIfNull(xs,n); _allocIfNull(ys,n); bSharedX=false; };
 
     inline void linspan(double xmin, double xmax){ VecN::linspan(n,xmin,xmax,xs); };
     inline void arange (double xmin, double dx  ){ VecN::arange (n,xmin,dx,xs);   };
@@ -55,8 +56,8 @@ class DataLine2D{ public:
     inline DataLine2D(int n_){ allocate(n_); }
     inline DataLine2D(int n_,double*xs_){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; }
     //inline DataLine2D(int n_,double xmin,double xmax){ allocate(n_); linspan(xmin,xmax);  }
-    inline DataLine2D(int n_,double xmin,double dx, uint32_t clr_=0xFFFF00FF, std::string label_="" ){ allocate(n_); arange(xmin,dx);                 clr=clr_; label=label_; }
-    inline DataLine2D(int n_,double*xs_,            uint32_t clr_=0xFFFF00FF, std::string label_="" ){ n=n_; bSharedX=true; xs=xs_; ys=new double[n]; clr=clr_; label=label_; }
+    inline DataLine2D(int n_,double xmin,double dx, uint32_t clr_=0xFFFF00FF, std::string label_="", double* ys_=0 ){ ys=ys_; allocate(n_); arange(xmin,dx);                 clr=clr_; label=label_; }
+    inline DataLine2D(int n_,double*xs_,            uint32_t clr_=0xFFFF00FF, std::string label_="", double* ys_=0 ){ ys=ys_; n=n_; bSharedX=true; xs=xs_; ys=new double[n]; clr=clr_; label=label_; }
 
     ~DataLine2D();
 };
