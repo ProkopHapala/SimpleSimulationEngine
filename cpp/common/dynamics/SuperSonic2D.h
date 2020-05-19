@@ -40,7 +40,7 @@ struct obliqueShock{
     Vec2d  normal; // direction of shock
 
 
-}
+};
 
 
 

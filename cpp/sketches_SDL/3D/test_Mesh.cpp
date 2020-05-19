@@ -25,6 +25,52 @@
 
 // ============= Application
 
+
+void drawPlane( Plane3D& p ){
+    Vec3d p0 = p.normal * p.C;
+    Vec3d up,lf;
+    p.normal.getSomeOrtho( up, lf );
+    glBegin(GL_QUADS);
+    glVertex3f( p0.x+up.x, p0.y+up.y,p0.z+up.z );
+    glVertex3f( p0.x+lf.x, p0.y+lf.y,p0.z+lf.z );
+    glVertex3f( p0.x-up.x, p0.y-up.y,p0.z-up.z );
+    glVertex3f( p0.x-lf.x, p0.y-lf.y,p0.z-lf.z );
+    glEnd();
+    glBegin( GL_LINES );
+    glVertex3f( p0.x, p0.y,p0.z );
+    glVertex3f( p0.x+p.normal.x, p0.y+p.normal.y,p0.z+p.normal.z );
+    glEnd();
+}
+
+int nplanes = 18;
+Plane3D planes[] = {
+    +1.0, 0.0, 0.0,  -1.0,
+    -1.0, 0.0, 0.0,  -1.0,
+     0.0,+1.0, 0.0,  -1.0,
+     0.0,-1.0, 0.0,  -1.0,
+     0.0, 0.0,-1.0,  -1.0,
+     0.0, 0.0,+1.0,  -1.0,
+
+     0.0,+1.0,+1.0,  -1.0,
+     0.0,-1.0,+1.0,  -1.0,
+     0.0,+1.0,-1.0,  -1.0,
+     0.0,-1.0,-1.0,  -1.0,
+
+     +1.0,0.0,+1.0,  -1.0,
+     -1.0,0.0,+1.0,  -1.0,
+     +1.0,0.0,-1.0,  -1.0,
+     -1.0,0.0,-1.0,  -1.0,
+
+     +1.0,+1.0,0.0,  -1.0,
+     -1.0,+1.0,0.0,  -1.0,
+     +1.0,-1.0,0.0,  -1.0,
+     -1.0,-1.0,0.0,  -1.0
+
+
+};
+
+char str[1024];
+
 class TestAppMesh : public AppSDL2OGL_3D { public:
 
     Mesh mesh;

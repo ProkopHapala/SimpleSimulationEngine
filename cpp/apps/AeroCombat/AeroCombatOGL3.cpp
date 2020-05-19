@@ -526,11 +526,11 @@ void AeroCraftGUI::draw( Camera& cam ){
     //sh1->set_modelPos( (const GLfloat[]){0.0f,0.0f,0.0f} );
 
     //convert( myCraft->pos, cam.pos );
-    cam.lookAt( myCraft->pos, 20.0 );
+    cam.lookAt( (Vec3f)myCraft->pos, 20.0 );
     setCamera( *sh1, cam );
 
     cam.rot = (Mat3f)myCraft->rotMat;
-    cam.lookAt( myCraft->pos, 20.0 );
+    cam.lookAt( (Vec3f)myCraft->pos, 20.0 );
     //cam.pos = (Vec3f)myCraft->pos;
 
     //setCameraOrtho(*sh1,cam);

@@ -9,140 +9,149 @@
 #include <SDL2/SDL_opengl.h>
 #include "Draw2D.h"
 #include "AppSDL2OGL.h"
-
-#include "fastmath.h"
-#include "Vec2.h"
-//#include "geom2D.h"
-#include "SuperSonic2D.h"
-//#include "Fluid2D.h"
-//#include "Fluid2D.cpp"
 #include "testUtils.h"
 
+#include "MechGrid2D.h"
+#include "MechMesh2D.h"
 
-#include "SDL_utils.h"
-#include "GUI.h"
+#include "MechPIC2D.h"
+#include "MechPIC2D_Temperature.h"
+
+CompressibleMaterial materials[] = {
+    {1.,1.}
+};
 
 
 
-class TestAppSuperSonic2D : public AppSDL2OGL{
-	public:
-    int job_type = 1;
-    int perframe = 3;
-    //TerrainHydraulics terrain;
-    int shape;
-    bool running = true;
+class TestAppMech2D : public AppSDL2OGL { public:
 
-    SuperSonic2D solver;
+    //MechGrid2D mgrid;
+    //MechMesh2D mmesh;
+    //MechPIC2D    mpic;
+    MechPIC2D_T  mpic;
 
-	// ---- function declarations
+    //bool bRun = false;
+    bool bRun = true;
+
 	virtual void draw   ();
 	virtual void drawHUD();
-    virtual void eventHandling( const SDL_Event& event );
-	//virtual int tileToList( float x0, float y0, float x1, float y1 );
+	virtual void mouseHandling( );
+	virtual void eventHandling   ( const SDL_Event& event  );
 
-    //void renderMapContent ( float x0, float y0, float scale, float csc, float hsc );
-    //double terrain_color( int i );
-	//void drawSimplexGrid( int n, float step );
-
-	TestAppFluid2D( int& id, int WIDTH_, int HEIGHT_ );
+	TestAppMech2D( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-TestAppFluid2D::TestAppFluid2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+TestAppMech2D::TestAppMech2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-    GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    mpic.realloc( 8, {16,16} );
+    mpic.materials = materials;
 
-    //((GUIPanel*)gui.addPanel( new GUIPanel( "dt [Rad]", 5,5,105,35, true, true ) )) -> setRange(0.0, 0.2);
-    //    ->command = &command_example;
-    //panel_dt.initPanel( "dt", 5,5,90,35 );
-    //panel_dt.setRange(0.0, 0.2);
-    //panel_dt.value = 0.05;
-    //gui.addPanel( &panel_dt );
+    mpic.setStep( 1e-2 );
 
-
+    for(int i=0; i<mpic.np; i++){
+        mpic.imats [i] = 0;          // materials
+        mpic.pmoles[i] = 0.1;       //
+        mpic.pos[i]    = { (i+2.2)*mpic.step,4.3*mpic.step };   // position (global, or local within the box)
+        //mpic.vel[i]    = {0.,1000.0};
+        mpic.vel[i]    = Vec2dZero;  // velocity
+    }
 
 }
 
-void TestAppFluid2D::draw(){
+void TestAppMech2D::draw(){
 
-    //delay = 100;
-    glClearColor( 1.0f, 1.0f, 1.0f, 0.0f );
+    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glDisable(GL_LIGHTING);
+	glDisable( GL_DEPTH_TEST );
+
+    glDisable(GL_LIGHTING);
+
+    glColor3f(1.0,0.0,0.0);
+
+    double dt = 1e-7;
+    if(bRun){
+
+        mpic.particlesToCells();
+        mpic.updateCellThermodynamics();
+        //mpic.moveMD( dt );
+        //mpic.moveMD_selfCorrect( dt );
+        mpic.moveMD( dt );
+        //mpic.update(dt);
+    }
+
+    int ixy=0;
+    for(int iy=0; iy<mpic.nc.y; iy++){
+        for(int ix=0; ix<mpic.nc.x; ix++){
+            //double c = mpic.moles[ixy]/0.1;
+            double c = mpic.temperature[ixy]*0.0001;
+            //double c = mpic.Umol[ixy];
+            //glColor3b( 1+c,1-c*c, 1-c );
+            glColor3f( 1-c, 1-c*4., 1-c*16. );
+            //Vec2d vert = {ix*mpic.step,iy*mpic.step};
+            //Draw2D::drawRectangle( (ix-0.5)*mpic.step, (iy-0.5)*mpic.step, (ix+0.5)*mpic.step, (iy+0.5)*mpic.step, true );
+            Draw2D::drawRectangle( (ix-0.5), (iy-0.5), (ix+0.5), (iy+0.5), true );
+            ixy++;
+        }
+    }
+
+    glColor3f(0.,0.,0.);
+    double vsc   = 1e-3;
+    double molsc = 5.1;
+    for(int i=0; i<mpic.np; i++){
+        //Draw2D::drawPointCross_d( mpic.pos[i], mpic.pmoles[i]*molsc );
+        //Draw2D::drawVecInPos_d  ( mpic.vel[i]*vsc, mpic.pos[i] );
+
+        Draw2D::drawPointCross_d( mpic.pos[i]*mpic.invStep, mpic.pmoles[i]*molsc );
+        Draw2D::drawVecInPos_d  ( mpic.vel[i]*vsc, mpic.pos[i]*mpic.invStep );
+    }
 
 };
 
-void TestAppFluid2D::drawHUD(){
-    glDisable( GL_LIGHTING );
-    glDisable(GL_DEPTH_TEST);
-
-    //Draw2D::drawText( "AHOJ !!!!", 0, {10, 100}, 0.0, GUI_fontTex, fontSizeDef );
-    //gui.draw();
+void TestAppMech2D::mouseHandling( ){
+    Uint32 buttons = SDL_GetMouseState( &mouseX, &mouseY );
+    defaultMouseHandling( mouseX, mouseY );
 }
 
-
-void TestAppFluid2D::eventHandling( const SDL_Event& event ){
+void TestAppMech2D::eventHandling ( const SDL_Event& event  ){
+    //printf( "TestAppMech2D::eventHandling() \n" );
     switch( event.type ){
-        case SDL_KEYDOWN :
-            switch( event.key.keysym.sym ){
-               // case SDLK_r:  terrain.initErrosion( 0.8 ); running=true;  break;
-            }
-            break;
-         /*
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    //paintSimplex( mouse_begin_x, mouse_begin_y );
-                    mouse_left  = true;
-                    break;
-                case SDL_BUTTON_RIGHT:
-                    mouse_right = true;
-                    //eraseSimplex( mouse_begin_x, mouse_begin_y );
-                    break;
+                    //printf( "left button pressed !!!! " );
+                    //pickParticle( world.picked );
+                    //ipick = pline1.nearestPoint( {mouse_begin_x,mouse_begin_y} );
+                break;
             }
             break;
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    mouse_left = false;
-                    break;
-                case SDL_BUTTON_RIGHT:
-                    mouse_right = false;
+                    //printf( "left button pressed !!!! " );
+                    //world.picked = NULL;
+                    //ipick = -1;
                     break;
             }
             break;
-        */
     };
-    gui.onEvent( mouseX, HEIGHT-mouseY, event );
     AppSDL2OGL::eventHandling( event );
-};
+}
+
+void TestAppMech2D::drawHUD(){
+
+}
 
 // ===================== MAIN
 
-TestAppSuperSonic2D * testApp;
+TestAppMech2D * thisApp;
 
 int main(int argc, char *argv[]){
-
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	int junk;
-	testApp = new TestAppFluid2D( junk , 800, 600 );
-	testApp->loop( 1000000 );
+	thisApp = new TestAppMech2D( junk , 800, 600 );
+	thisApp->zoom = 30;
+	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

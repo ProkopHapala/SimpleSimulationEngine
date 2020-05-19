@@ -166,7 +166,7 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
         glEnable ( GL_LIGHTING );
         glColor3f( 0.9f, 0.9f, 0.9f );
         //Draw3D::drawConeFan        ( 16, 0.5f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f} );
-        Draw3D::drawCone        ( 4, M_PI/4.0f, 9*M_PI/4.0f, (float)sqrt(0.5f), 0.01f, {0.0f,0.0f,0.5f}, {0.0f,0.0f,0.0f}, false );
+        Draw3D::drawCone        ( 4, M_PI/4.0f, 9*M_PI/4.0f, (float)sqrt(0.5f), 0.01f, (Vec3f){0.0f,0.0f,0.5f}, (Vec3f){0.0f,0.0f,0.0f}, false );
         glBegin( GL_QUADS );
         glNormal3f( 0.0f, 0.0f, 1.0f );
         glVertex3f(  0.5f,  0.5f, 0.5f);
@@ -187,7 +187,7 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
         glEnable ( GL_LIGHTING );
         glColor3f( 0.9f, 0.9f, 0.9f );
         //Draw3D::drawConeFan        ( 16, 0.5f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f} );
-        Draw3D::drawCone        ( 16, 0.0f, M_PI/2.0f, 0.5f, 0.1f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f}, false );
+        Draw3D::drawCone        ( 16, 0.0f, M_PI/2.0f, 0.5f, 0.1f, (Vec3f){0.0f,0.0f,-0.5f}, (Vec3f){0.0f,0.0f,0.5f}, false );
         //Draw3D::drawCylinderStrip  ( 16, 0.5f, 0.01f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f} );
         //glPopMatrix();
     glEndList();
@@ -200,7 +200,7 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
         glEnable ( GL_LIGHTING );
         glColor3f( 0.9f, 0.9f, 0.9f );
         //Draw3D::drawConeFan        ( 16, 0.5f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f} );
-        Draw3D::drawCone        ( 5, 0.0f, 2*M_PI, 0.5f, 0.1f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f}, false );
+        Draw3D::drawCone        ( 5, 0.0f, 2*M_PI, 0.5f, 0.1f, (Vec3f){0.0f,0.0f,-0.5f}, (Vec3f){0.0f,0.0f,0.5f}, false );
         //Draw3D::drawCylinderStrip  ( 16, 0.5f, 0.01f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f} );
         //glPopMatrix();
     glEndList();
@@ -214,7 +214,7 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
         glEnable ( GL_LIGHTING );
         glColor3f( 0.9f, 0.9f, 0.9f );
         //Draw3D::drawConeFan        ( 16, 0.5f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f} );
-        Draw3D::drawCone        ( 3, 0.0f, M_PI/2, 1.0f, 1.0f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f}, false );
+        Draw3D::drawCone        ( 3, 0.0f, M_PI/2, 1.0f, 1.0f, (Vec3f){0.0f,0.0f,-0.5f}, (Vec3f){0.0f,0.0f,0.5f}, false );
         //Draw3D::drawCylinderStrip  ( 16, 0.5f, 0.01f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f} );
         glPopMatrix();
     glEndList();
@@ -226,7 +226,7 @@ TestAppBlockBuilder::TestAppBlockBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
         //glScalef( 0.5f, 0.5f, 0.5f );
         glEnable ( GL_LIGHTING );
         glColor3f( 0.9f, 0.9f, 0.9f );
-        Draw3D::drawCylinderStrip  ( 16, 0.5f, 0.5f, {0.0f,0.0f,-0.5f}, {0.0f,0.0f,0.5f} );
+        Draw3D::drawCylinderStrip  ( 16, 0.5f, 0.5f, (Vec3f){0.0f,0.0f,-0.5f}, (Vec3f){0.0f,0.0f,0.5f} );
         //glPopMatrix();
     glEndList();
     nShapes++;

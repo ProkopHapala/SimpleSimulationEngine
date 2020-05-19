@@ -1,12 +1,12 @@
 
-#ifndef CLCFSF_h
-#define CLCFSF_h
+#ifndef CLCFGO_h
+#define CLCFGO_h
 
 /*
 
-####################################################################
-#### Compact Linear Combination of Floating Spherical Functions ####
-####################################################################
+##################################################################
+#### Compact Linear Combination of Floating Gaussian Orbitals ####
+##################################################################
 
 ## Idea :
  - Bonding orbitals (BO) are highly localized occupied Molecular orbitas (MOs)
@@ -64,16 +64,7 @@
 #include "AOIntegrals.h"
 
 
-struct PairInteractionTable{
-    double* Eoverlap=0; // <i|j>
-    double* Ekinetic=0; // <i|Lapalce|j>
-    // From interpolation of spline (higher order) we can get also derivative i.e. forces
-    //double* Foverlap=0; // d<i|j>/dRij
-    //double* Fkinetic=0; // <i|Lapalce|j>/dRij
-};
-
-
-class CLCFSF{ public:
+class CLCFGO{ public:
 
     double Rcut    =6.0;  // cutoff beyond which two basis functions chi has no overlap
     double RcutOrb =9.0;  // cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap

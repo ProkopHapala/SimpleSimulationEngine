@@ -165,7 +165,7 @@ HorizontTestApp::HorizontTestApp(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
 	glEnable(GL_DEPTH_TEST);
 
     sh1->use();
-    cam.lookAt( Vec3dZ, 20.0 );
+    cam.lookAt( (Vec3f)Vec3dZ, 20.0 );
     setCamera( *sh1, cam );
     sh1->setModelPoseT( Vec3dZero, Mat3dIdentity );
     drawMeshArray( {20,200}, {3.0,3.0} , *glmesh, *sh1,  screenDist,  true );
