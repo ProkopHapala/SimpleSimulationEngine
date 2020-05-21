@@ -36,6 +36,7 @@ class DataLine2D{ public:
     //char     pointStyle ='+';
     char     pointStyle =' ';
     float    pointSize  =0.1;
+    bool     bView = true;
     uint32_t clr        =0xFFFF00FF;
     std::string label;
 

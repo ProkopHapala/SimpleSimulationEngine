@@ -32,6 +32,7 @@
 #include "AOIntegrals.h"
 //#include "AOrotations.h"
 
+#include "Grid.h"
 #include "CLCFGO.h"
 
 #include "testUtils.h"
@@ -44,6 +45,9 @@
 
 //#include "eFF.h"
 //#include "e2FF.h"
+
+long timeStart;
+
 
 class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
@@ -133,30 +137,55 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     solver.epos [0] = (Vec3d){10.0,5.0,5.0};
     solver.epos [1] = (Vec3d){15.0,5.0,5.0};
     int ng = grid.n.totprod();
-    double * orbOnGrid  = new double[ ng ];
-    double * orbOnGrid_ = new double[ ng ];
+    double * orbOnGrid   = new double[ ng ];
+    double * orbOnGrid_  = new double[ ng ];
+    double * orbOnGrid__ = new double[ ng ];
+
+    timeStart=getCPUticks();
     solver.orb2grid( 0, grid, orbOnGrid );
+    printf( "project wf CPUtime %g [Mticks]  \n", (getCPUticks()-timeStart)*1e-6 );
+
     double dV = grid.voxelVolume();
     double Q  = dV * VecN::dot (ng, orbOnGrid, orbOnGrid );
     saveXSF( "temp/orb_0.xsf", grid, orbOnGrid, solver.perOrb, solver.epos+solver.perOrb*0, 0 );
 
-    DataLine2D* line_overlap_grid = new DataLine2D(5, 0, 1.0, 0xFF0000FF, "OverlapGrid" ); plot1.add(line_overlap_grid);
+    DataLine2D* line_overlap_grid = new DataLine2D(15, 0, 0.3, 0xFF0000FF, "OverlapGrid" ); plot1.add(line_overlap_grid);
     line_overlap_grid->pointStyle = '+'; line_overlap_grid->pointSize = 0.05;
+    DataLine2D* line_overlap_grid_ = new DataLine2D(5, 0, 1.0, 0xFF0080FF, "OverlapGrid_" ); plot1.add(line_overlap_grid_);
+    line_overlap_grid_->pointStyle = '+'; line_overlap_grid_->pointSize = 0.05;
     solver.ecoef[2] = 1.0;
     solver.ecoef[3] = 0;
+
+    VecN::set( ng, orbOnGrid, orbOnGrid_  );
+
+    timeStart = getCPUticks();
     for(int i=0; i<line_overlap_grid->n; i++){
-        Vec3d p  = solver.epos[0];
         double x = line_overlap_grid->xs[i];
+        double Q = dV * grid.integrateProductShifted( (Vec3d){x,0,0}, orbOnGrid, orbOnGrid_ );
+        line_overlap_grid->ys[i] = Q;
+        printf( "[i] Q %g |  CPUtime %g [Mticks]\n", i, Q, (getCPUticks()-timeStart)*1e-6  );
+    }
+
+    /*
+    for(int i=0; i<line_overlap_grid_->n; i++){
+        double x = line_overlap_grid_->xs[i];
+
+        //double Q = dV * grid.integrateProductShifted( (Vec3d){x,0,0}, orbOnGrid, orbOnGrid_ );
+        //line_overlap_grid->ys[i] = Q;
+
+        Vec3d p  = solver.epos[0];
         p.x+=x;
         solver.epos[2] = p;
-        solver.orb2grid( 1, grid, orbOnGrid_ );
-        double Q  = dV * VecN::dot(ng, orbOnGrid, orbOnGrid_ );
-        line_overlap_grid->ys[i] = Q;
+        solver.orb2grid( 1, grid, orbOnGrid__ );
+        Q  = dV * VecN::dot(ng, orbOnGrid, orbOnGrid__ );
+        line_overlap_grid_->ys[i] = Q;
     }
+    */
     plot1.update();
     plot1.render();
     delete [] orbOnGrid;
     delete [] orbOnGrid_;
+    delete [] orbOnGrid__;
 
     DEBUG
 

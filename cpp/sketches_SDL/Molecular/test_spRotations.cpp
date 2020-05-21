@@ -273,9 +273,19 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     Approx ::polyFit ( lsz->n,   npoly, lsz->xs,   lsz->ys,   coefs );
     Approx ::polyeval( lpoly->n, npoly, lpoly->xs, lpoly->ys, coefs );
     //polyfit( n, 5, xs, double* ys, double* BB, double* By );
-    for(int i=0; i<lpoly->n; i++){ printf( "lpoly[%i] %g -> %g | %g \n", i, lpoly->xs[i], lpoly->ys[i], lsz->ys[i] ); }
+    for(int i=0; i<lpoly->n; i++){ printf( "lpoly[%i] %g -> %g =?= %g err %g ( %g% )\n", i, lpoly->xs[i], lpoly->ys[i], lsz->ys[i], fabs( lpoly->ys[i] - lsz->ys[i] ), fabs( lpoly->ys[i] - lsz->ys[i] )/lsz->ys[i] ); }
     for(int i=0; i<npoly;    i++){ printf( "poly[%i] %g \n", i, coefs[i] ); }
 
+
+    lss->bView=false; lzs->bView=false; lzz->bView=false; lyy->bView=false;
+
+    //plot1.add(lsz);
+    //plot1.add(lpoly);
+
+    //plot1.update();
+    //plot1.render();
+    //return;
+    //exit(0);
 
     /*
     int i0 = 10;
@@ -319,18 +329,18 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         //aaprox.ys_ref[i] = pow(x,3);
     }
     aaprox.reallocAux();
-    DEBUG
+    //DEBUG
     aaprox.preparePowers();
-    DEBUG
+    //DEBUG
     for(int i=0; i<aaprox.npows; i++){
-        int order = aaprox.tryVariant(10, 50, i );
+        int order = aaprox.tryVariant(10, 50, i ); // order of polynominal required for that accuracy?
         //int order = aaprox.ascendingPolyFit_(10, 50, i );
         if(order<0){ order=aaprox.npoly; printf("(not converged)"); }
         printf("[%i] pow %g err %g coefs[%i]: ", i, aaprox.pows[i], aaprox.err, order );
         for(int j=0; j<order; j++ ) printf( "%g ", i, aaprox.coefs[j] );
         printf("\n");
     }
-    DEBUG
+    //DEBUG
     exit(0);
 
     plot1.render();
@@ -386,6 +396,8 @@ void TestAppSp3Space::draw(){
 
     //Draw3D::drawAxis(1.5);
 
+    plot1.view();
+
 
 };
 
@@ -393,9 +405,10 @@ void TestAppSp3Space::draw(){
 void TestAppSp3Space::drawHUD(){
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
-	glTranslatef( 100.0,100.0,0.0 );
-	glScalef    ( 20.0,300.00,1.0  );
-	plot1.view();
+
+	//glTranslatef( 100.0,100.0,0.0 );
+	//glScalef    ( 20.0,300.00,1.0  );
+	//plot1.view();
 
 }
 

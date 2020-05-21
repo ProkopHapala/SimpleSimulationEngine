@@ -178,6 +178,34 @@ class GridShape {
         fclose(fout);
     }
 
+    double integrateProductShifted( Vec3i ishift, double* f1, double* f2 ){
+        //Vec3d gpos;
+		//gpos.a = cpos.dot( diCell.a );
+		//gpos.b = cpos.dot( diCell.b );
+		//gpos.c = cpos.dot( diCell.c );
+		double sum = 0;
+        int nx  = n.x; 	int ny  = n.y; 	int nz  = n.z; int nxy = ny * nx;
+        for ( int ic=0; ic<nz-ishift.z; ic++ ){
+           for ( int ib=0; ib<ny-ishift.y; ib++ ){
+                for ( int ia=0; ia<nx-ishift.x; ia++ ){
+                   int i1 = i3D( ia         , ib         , ic          );
+                   int i2 = i3D( ia+ishift.x, ib+ishift.y, ic+ishift.z );
+                   sum += f1[i1] * f2[i2];
+                }
+            }
+            //printf( "[%u] sum %g \n,", ic, sum );
+        }
+        return sum;
+    }
+
+    double integrateProductShifted( Vec3d shift, double* f1, double* f2 ){
+        Vec3i ishift;
+		ishift.a = round(shift.dot( diCell.a )); // Should we use (int) instead ?
+		ishift.b = round(shift.dot( diCell.b ));
+		ishift.c = round(shift.dot( diCell.c ));
+        return integrateProductShifted( ishift, f1, f2 );
+    }
+
 };
 
 // interpolation of vector force-field Vec3d[ix,iy,iz] in periodic boundary condition

@@ -231,7 +231,7 @@ int ascendingPolyFit( double& err, int ipow0, int npows, int* pows, int n, doubl
     //}
     //return 0;
 
-    for( int ipw=ipow0; ipw<npows; ipw++ ){
+    for( int ipw=ipow0; ipw<npows; ipw++ ){    // iterate over orders
         //int pwi = pows[ipw];
         //printf("m1 %i mm %i ipw %i \n", m1, mm, ipw );
         for(int i=0;i<ipw;i++){ Bycp[i] = By[i];  int ioff=i*m1; for(int j=0;j<ipw;j++){ BBcp[ioff+j] = BB[ioff+j]; }; }  // must copy otherwise linSolve_gauss destroy it
@@ -256,7 +256,7 @@ int ascendingPolyFit( double& err, int ipow0, int npows, int* pows, int n, doubl
             err2   += derr*derr;
         }
         double errRMS = sqrt(err2/n);
-        printf( "multiFitAndCheck[%i] m1[%i] %g %g \n", ipw, pows[ipw], errmax, errRMS );
+        printf( "multiFitAndCheck[%i] m1[%i] err(max,RMS) %g %g \n", ipw, pows[ipw], errmax, errRMS );
         err=errmax;
         if(errmax<errTol){  m_conv=ipw;  break;}
         if(allCoefs) coefs+=ipw;
@@ -319,14 +319,20 @@ inline double pow2m(double x, int m){
 };
 
 
-struct ApproxVariant{
-    double  cost;    // computational cost estimate (heuristics)
-    double  errMax;  //
-    double  errRMS;  //
-    int     i0,i1;   // initial end final starting point
-    int     ipow;    // power of y_ref
-    int     ncoefs;  // order of polynominal
-    double* coefs;   // pointer to array of cooefs
+struct ApproxBlock{
+    //double  cost;    // computational cost estimate (heuristics)
+    //double  errMax;  //
+    //double  errRMS;  //
+    //int     i0,i1;   // initial end final starting point
+    //int     ipow;    // power of y_ref
+    //int     ncoefs;  // order of polynominal
+    //double* coefs;   // pointer to array of cooefs
+    double  cost; // cost function (fittness)
+    int     i0;
+    int     np;
+    int     ipow;
+    int     ncoef;
+    double* coefs;
 
     /*
     //double evalError(double* xs_ref, double* yn_ref, bool relative, double* ys_test=0, double* pows=0 ){
@@ -369,6 +375,27 @@ struct ApproxVariant{
 };
 
 
+
+struct ApproxVariant{
+    static constexpr int nmax=10;
+    int   nblocks =0;
+    int          is     [nmax+1];
+    ApproxBlock* blocks [nmax  ];
+    //ApproxBlock blocks[nmax];
+};
+
+
+
+/*
+################  AutoAprox
+
+We approximate by to way ( coefficients "a_i" and exponet "k" )
+  f(x) ~=  ( Sum_i{ a_i * x^i }  )^k
+
+*/
+
+
+
 class AutoApprox{ public:
 
     double errTol         = 1e-6;
@@ -406,7 +433,11 @@ class AutoApprox{ public:
     double* Bycp = 0;
     double**BB_  = 0;
 
-    std::vector<ApproxVariant> variants;
+    //std::vector<ApproxVariant> variants;
+    std::vector<ApproxBlock> bestPartioning;
+    ApproxBlock wrokBlock;
+
+
 
     // ===== Functions
 
@@ -448,8 +479,32 @@ class AutoApprox{ public:
         int     ni   = i1-i0;
         err =  errTol;
         int i = ascendingPolyFit( err, ipoly0, npoly, ipolys, ni, xs+i0, getYrefPow(ipow)+i0, ys_test, coefs, ws.data, pows[ipow], bRelativeError );
-        return i;
+        return i; // order of polynominal required for that accuracy?
     }
+
+
+    int tryPartioning(int ncut, int imin, int imax){
+        //for(int icut=0; icut<ncuts; icut++){
+        for(int i=imin; i<imax; i++){      // branching loop over partitioning
+            wrokBlock.cost   =1+300;
+            for(int ipow=0; i<npows; i++){  // test all power transformation of the function
+                int iord = tryVariant( imin, i, ipow );
+                double cost = iord +  ipow;  // ToDo : cost of ipow?   - perhaps need array powCost[]   ???
+                if(cost<wrokBlock.cost){
+                    wrokBlock.cost =cost;
+                    wrokBlock.i0   =imin;
+                    wrokBlock.np   =imin-i;
+                    wrokBlock.ipow =ipow;
+                    wrokBlock.ncoef=iord;
+                    wrokBlock.coefs=0;     // ToDo : properly store coefs?
+                }
+            }
+            bestPartioning.push_back(wrokBlock);
+            if(ncut>0)tryPartioning( ncut-1, i, imax ); // partition the rest
+        }
+    }
+
+
 
     // ======= ascendingPolyFit
 
@@ -494,12 +549,12 @@ class AutoApprox{ public:
         double mm = npoly*npoly;
         VecN::set( mm,    0., BB );
         VecN::set( npoly, 0., By );
-        DEBUG
+        //DEBUG
         polyProject( n, npoly, ipolys, xs_, ys_, BB, By, ws.data );
         int m_conv=-1;
-        DEBUG
+        //DEBUG
         Lingebra::from_continuous( npoly, npoly, BBcp, BB_ );
-        DEBUG
+        //DEBUG
 
         /*
         //for(int i=0;i<npoly;i++){ Bycp[i] = By[i];  int ioff=i*npoly; for(int j=0;j<npoly;j++){ BBcp[ioff+j] = BB[ioff+j]; }; }
@@ -533,7 +588,7 @@ class AutoApprox{ public:
             if(bAllCoefs) coefs+=ipw;
 
         }
-        return m_conv;
+        return m_conv;  // order of polynominal required for that accuracy?
     }
 
 };

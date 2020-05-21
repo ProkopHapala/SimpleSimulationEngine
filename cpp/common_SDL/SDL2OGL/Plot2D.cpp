@@ -58,10 +58,12 @@ int DataLine2D::render(){
 };
 
 void DataLine2D::view(){
-    Draw::setRGBA(clr);
-    //printf( "DEBUG DataLine2D::view() %i \n", glObj  );
-    glCallList( glObj );
-    //printf("%i\n", glObj);
+    if(bView){
+        Draw::setRGBA(clr);
+        //printf( "DEBUG DataLine2D::view() %i \n", glObj  );
+        glCallList( glObj );
+        //printf("%i\n", glObj);
+    }
 };
 
 DataLine2D::~DataLine2D(){
