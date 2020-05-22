@@ -32,23 +32,23 @@ Derived & Tested in Python Here:
 
 
 
-inline double gaussProduct1D( double wi,double xi,   double wj,double xj,   double& wij, double& xij  ){
-    double W    =  wi+wj;
+inline double product1D_w( double wi,double xi,   double wj,double xj,   double& W, double& X  ){
+    W           =  wi+wj;
     double wxi  =  wi*xi;
     double wxj  =  wj*xj;
     double wx   =  wxi + wxj;
-    double X    =  wx/W;
+    X           =  wx/W;
     double logC =  wxi*xi + wxj*xj - wx*X;
     //double C   = np.exp(-logC) * Ci * Cj
     return logC;
 }
 
-inline double gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
+inline double product3D_w( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
     double junk;
     double logC =
-        + gaussProduct1D( wi,pi.x,  wj,pj.x,   wij ,  pij.x );
-        + gaussProduct1D( wi,pi.y,  wj,pj.y,   junk,  pij.y );
-        + gaussProduct1D( wi,pi.z,  wj,pj.z,   junk,  pij.z );
+        + product1D_w( wi,pi.x,  wj,pj.x,   wij ,  pij.x );
+        + product1D_w( wi,pi.y,  wj,pj.y,   junk,  pij.y );
+        + product1D_w( wi,pi.z,  wj,pj.z,   junk,  pij.z );
 
     /*
     Vec3d wxi   =  pi*wi;
@@ -61,7 +61,23 @@ inline double gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d
     return logC;
 }
 
-inline double gaussNorm3Dw( double w ){
+
+inline double product3D_s( double si, const Vec3d& pi, double sj, const Vec3d& pj,  double& sij, Vec3d& pij ){
+    double junk;
+    double wi = 1/(2*si*si);
+    double wj = 1/(2*sj*sj);
+    double wij;
+    double logC =
+        + product1D_w( wi,pi.x,  wj,pj.x,   wij ,  pij.x );
+        + product1D_w( wi,pi.y,  wj,pj.y,   junk,  pij.y );
+        + product1D_w( wi,pi.z,  wj,pj.z,   junk,  pij.z );
+    sij = 1/sqrt(2*wij);
+    printf( "DEBUG product3D_s sij %g wij %g \n", sij, wij );
+    return logC;
+}
+
+
+inline double norm3Dw( double w ){
     // https://math.stackexchange.com/questions/434629/3-d-generalization-of-the-gaussian-point-spread-function
     // n-dimansional Gaussian normalization C is :
     // G(x,y,z) = C*exp( -( x^2 + y^2 + z^2)/(2*sigma^2) ) =   C*exp( -w*( x^2 + y^2 + z^2) )

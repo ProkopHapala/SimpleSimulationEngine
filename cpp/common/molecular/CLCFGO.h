@@ -300,9 +300,10 @@ class CLCFGO{ public:
             // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
             Qs[ii] =qii;
             Ps[ii] =pi;
-            Ss[ii] =si*si;
+            Ss[ii] =si*0.5;
             ii++;
             Q += ci*ci;
+            printf( "orb[%i|%i] s %g qii %g \n", io, i,  si*2,  qii );
             for(int j=i0; j<i; j++){
                 Vec3d pj  = epos[j];
                 Vec3d Rij = pj-pi;
@@ -312,25 +313,35 @@ class CLCFGO{ public:
                 double cj  = ecoef[j];
                 double sj  = esize[j];
 
+                // --- Evaluate Normalization, Kinetic & Pauli Energy
                 double dSr, dSsi, dSsj;
                 double dTr, dTsi, dTsj;
                 double Sij = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj );
                 double Tij = getDeltaTGauss  ( r2, si, sj, dTr, dTsi, dTsj );
 
-                double cij = ci*cj;
+                // --- Project on auxuliary density functions
+                Vec3d  pij;
+                double sij;
+                double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+                printf( "DEBUG sij %g \n", sij );
+
+                double cij = ci *cj;
                 double qij = Sij*cij;
+
+                printf( "orb[%i|%i,%i] r %g s(%g,%g):%g qS(%g,%g|%g):%g \n", io, i,j, sqrt(r2),  si,sj,sij,  ci,cj,Sij,qij  );
                 qcog.add_mul( pi+pj, 0.5*qij );
                 Q +=   qij;
                 T += T*cij;
 
                 // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
                 Qs[ii] = qij;
-                Ps[ii] = (pi+pj)*0.5;   // center of axuliary overlap density function in the middle between the two wavefunctions
-                Ss[ii] = si*sj;
+                Ps[ii] = pij;   // center of axuliary overlap density function in the middle between the two wavefunctions
+                Ss[ii] = sij;
                 ii++;
                 // ToDo : Store qij to list of axuliary functions
             }
         }
+        onq[io] = ii;
         if(bNormalize){
             double renorm  = sqrt(1./Q);
             double renorm2 = renorm*renorm;
@@ -355,11 +366,45 @@ class CLCFGO{ public:
         }
     }
 
-    void CoulombOrbPair( int io, int jo ){
+    double DensOverlapOrbPair( int io, int jo ){
+        int i0 = getRhoOffset(io);
+        int j0 = getRhoOffset(jo);
+        int ni = onq[io];
+        int nj = onq[jo];
+        printf( "DEBUG DensOverlapOrbPair i0,j0  %i,%i ni,nj %i,%i \n", i0,j0, ni, nj );
+        double Srho = 0;
+        for(int i=i0; i<i0+ni; i++){
+            Vec3d  pi = rhoP[i];
+            double qi = rhoQ[i];
+            double si = rhoS[i];
+            for(int j=j0; j<j0+nj; j++){
+                Vec3d  pj = rhoP[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+
+                if(r2>Rcut2) continue;
+
+                double qj = rhoQ[j];
+                double sj = rhoS[j];
+
+                double dSr,dSsi,dSsj;
+                double Sij = getOverlapSGauss( r2, si*M_SQRT2, sj*M_SQRT2, dSr, dSsi, dSsj );
+
+                printf( "i,j %i %i  r %g si,j(%g,%g) qi*qj*S(%g,%g|%g):%g \n", i,j, sqrt(r2),  si,sj, qi,qj,Sij, Sij*qi*qj );
+
+                Srho += Sij*qi*qj;
+
+            }
+        }
+        return Srho;
+    }
+
+    double CoulombOrbPair( int io, int jo ){
         int i0 = getRhoOffset(io);
         int j0 = getRhoOffset(jo);
         int nrho = onq[io];
         int nV   = onq[jo];
+        double Ecoul=0;
         for(int i=i0; i<i0+nV; i++){
             Vec3d  pi = rhoP[i];
             double qi = rhoQ[i];
@@ -381,6 +426,7 @@ class CLCFGO{ public:
                 double Eqq = CoulombGauss( r, s, fr, fs, qi*qj );
             }
         }
+        return Ecoul;
     }
 
     void evalElectrostatICoulomb( ){

@@ -95,11 +95,6 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     solver.apos[1]=(Vec3d){+1.0,0.0,0.0};
     // initialize electron positions
     double dy = 0.5;
-    //solver.epos[0]=(Vec3d){-0.5,-dy,0.0};  // e[0][0]
-    //solver.epos[1]=(Vec3d){-0.5 ,+dy,0.0};  // e[0][1]
-    //solver.epos[2]=(Vec3d){+0.5,-dy,0.0};  // e[1][0]
-    //solver.epos[3]=(Vec3d){+0.5,+dy,0.0};  // e[1][1]
-
     solver.epos[0]=(Vec3d){-2.0,-3,0.0};  // e[0][0]
     solver.epos[1]=(Vec3d){-2.0,+3,0.0};  // e[0][1]
     solver.epos[2]=(Vec3d){+2.0,-3,0.0};  // e[1][0]
@@ -117,62 +112,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     plot1.init();
     plot1.fontTex = fontTex;
 
-    //ogl = glGenLists(1);
-    //glNewList(ogl,GL_COMPILE);
-    //glEndList();
-
-
-    // ========== Brute Force Overlap
 
 
     /*
-    GridShape grid;
-    //grid.n    = {5,5,5};
-    grid.n    = {400,100,100};
-    grid.cell = (Mat3d){ 40.0,0.0,0.0,  0.0,10.0,0.0,  0.0,0.0,10.0 };
-    grid.pos0 = (Vec3d){ 0.0 ,0.0 ,0.0 };
-    grid.updateCell();
-
-    solver.ecoef[0] = 1.0;
-    solver.ecoef[1] = 0;
-    solver.epos [0] = (Vec3d){10.0,5.0,5.0};
-    solver.epos [1] = (Vec3d){15.0,5.0,5.0};
-    int ng = grid.n.totprod();
-    double * orbOnGrid   = new double[ ng ];
-    double * orbOnGrid_  = new double[ ng ];
-    double * orbOnGrid__ = new double[ ng ];
-
-    timeStart=getCPUticks();
-    solver.orb2grid( 0, grid, orbOnGrid );
-    printf( "project wf CPUtime %g [Mticks]  \n", (getCPUticks()-timeStart)*1e-6 );
-
-    double dV = grid.voxelVolume();
-    double Q  = dV * VecN::dot (ng, orbOnGrid, orbOnGrid );
-    saveXSF( "temp/orb_0.xsf", grid, orbOnGrid, solver.perOrb, solver.epos+solver.perOrb*0, 0 );
-
-    DataLine2D* line_overlap_grid = new DataLine2D(15, 0, 0.3, 0xFF0000FF, "OverlapGrid" ); plot1.add(line_overlap_grid);
-    line_overlap_grid->pointStyle = '+'; line_overlap_grid->pointSize = 0.05;
-    DataLine2D* line_overlap_grid_ = new DataLine2D(5, 0, 1.0, 0xFF0080FF, "OverlapGrid_" ); plot1.add(line_overlap_grid_);
-    line_overlap_grid_->pointStyle = '+'; line_overlap_grid_->pointSize = 0.05;
-    solver.ecoef[2] = 1.0;
-    solver.ecoef[3] = 0;
-
-    VecN::set( ng, orbOnGrid, orbOnGrid_  );
-
-    timeStart = getCPUticks();
-    for(int i=0; i<line_overlap_grid->n; i++){
-        double x = line_overlap_grid->xs[i];
-        double Q = dV * grid.integrateProductShifted( (Vec3d){x,0,0}, orbOnGrid, orbOnGrid_ );
-        line_overlap_grid->ys[i] = Q;
-        printf( "[i] Q %g |  CPUtime %g [Mticks]\n", i, Q, (getCPUticks()-timeStart)*1e-6  );
-    }
-    delete [] orbOnGrid;
-    delete [] orbOnGrid_;
-    delete [] orbOnGrid__;
-    plot1.update();
-    plot1.render();
-    */
-
+    // ======= Test Orbital Wavefunction Overlap
     int    nint = 10;
     double Lmax = 5.0;
     DataLine2D* line_ISgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFF0000FF, "IS_grid" ); plot1.add(line_ISgrid );
@@ -196,32 +139,48 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     }
     plot1.update();
     plot1.render();
-
-
-
-    /*
-    for(int i=0; i<line_overlap_grid_->n; i++){
-        double x = line_overlap_grid_->xs[i];
-
-        //double Q = dV * grid.integrateProductShifted( (Vec3d){x,0,0}, orbOnGrid, orbOnGrid_ );
-        //line_overlap_grid->ys[i] = Q;
-
-        Vec3d p  = solver.epos[0];
-        p.x+=x;
-        solver.epos[2] = p;
-        solver.orb2grid( 1, grid, orbOnGrid__ );
-        Q  = dV * VecN::dot(ng, orbOnGrid, orbOnGrid__ );
-        line_overlap_grid_->ys[i] = Q;
-    }
-    plot1.update();
-    plot1.render();
     */
 
 
-    // USE THIS INSTEAD OF WITH
-    //{auto&_=solver;
-    //    _.epos = ;
-    // }
+    // ======= Test Orbital Density Overlap
+    int    nint = 10;
+    double Lmax = 5.0;
+    DataLine2D* line_IrhoSgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFF0000FF, "IS_grid" ); plot1.add(line_IrhoSgrid );
+    DataLine2D* line_IrhoSana  = new DataLine2D( 10,  0, 0.5       , 0xFF0080FF, "IS_ana"  ); plot1.add(line_IrhoSana  );
+    {auto& _=solver;
+        for(int i=0; i<_.nBas; i++){ _.ecoef[i]=0; _.epos[i]=Vec3dZero;  }
+        _.ecoef[0] = 1.0;
+        _.ecoef[2] = 1.0;
+        //_.ecoef[1] = +0.2;
+        //_.ecoef[3] = +0.3;
+    }
+    for(int i=0; i<line_IrhoSana->n; i++){
+        solver.epos[2].x=line_IrhoSana->xs[i];
+        solver.projectOrbs();
+        line_IrhoSana->ys[i] = solver.DensOverlapOrbPair( 0, 1 );
+    }
+    {
+    double DEBUG_scale = 3.0;
+    auto func1 = [&](GridShape& grid, double* f, double x ){
+        solver.epos[0].x=x;
+        solver.projectOrbs();
+        solver.orb2grid( 0, grid, f );
+        int ntot=grid.n.totprod();
+        for(int i=0; i<ntot; i++){ double fi=f[i]; f[i]=fi*fi*DEBUG_scale ; }
+    };
+    auto func2 = [&](GridShape& grid, double* f, double x ){
+        solver.epos[2].x=x;
+        solver.projectOrbs();
+        int ntot=grid.n.totprod();
+        solver.orb2grid( 1, grid, f );
+        for(int i=0; i<ntot; i++){ double fi=f[i]; f[i]=fi*fi*DEBUG_scale ; }
+    };
+    gridNumIntegral( nint, 0.1, 6.0, Lmax, line_IrhoSgrid->ys, func1, func2 );
+    }
+
+    plot1.update();
+    plot1.render();
+
 
 
 
