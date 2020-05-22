@@ -2,8 +2,9 @@
 #ifndef GaussianBasis_h
 #define GaussianBasis_h
 
-/*
+namespace Gauss{
 
+/*
 ######  Product of Gaussians 1D
 
 gij(x) =  exp( wi*(x-xi)^2 ) * exp( wj*(x-xj)^2 )
@@ -25,9 +26,11 @@ C = wi*wj*(xi-xj)**2/(wi+wj)
 
 Derived & Tested in Python Here:
 /home/prokop/git/SimpleSimulationEngine/python/pyGaussAtom/GaussProduct.py
-
-
 */
+
+
+
+
 
 inline double gaussProduct1D( double wi,double xi,   double wj,double xj,   double& wij, double& xij  ){
     double W    =  wi+wj;
@@ -58,7 +61,7 @@ inline double gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d
     return logC;
 }
 
-inline double gaussNorm3D( double w ){
+inline double gaussNorm3Dw( double w ){
     // https://math.stackexchange.com/questions/434629/3-d-generalization-of-the-gaussian-point-spread-function
     // n-dimansional Gaussian normalization C is :
     // G(x,y,z) = C*exp( -( x^2 + y^2 + z^2)/(2*sigma^2) ) =   C*exp( -w*( x^2 + y^2 + z^2) )
@@ -68,10 +71,27 @@ inline double gaussNorm3D( double w ){
     // C3 = 1/( sqrt(2*sigma^2)^3/((2)^(3/2)) (2*pi)^(3/2) )
     // C3 = 1/( w^(3/2)/((2)^(3/2)) (2*pi)^(3/2) )
     // C3 = 1/( w*pi )^(3/2)
-    double c2 = 1/(M_PI*w);
+    double c2 = w/M_PI;
     double c  = sqrt( c2 );
     return c2*c;
 }
+
+inline double norm3Ds( double s ){
+    double c = 1/(2.50662827463*s);
+    return c*c*c;
+}
+
+inline double sqnorm3Ds( double s ){
+    // exp(-r2/(2*s^2))*exp(-r2/(2*s^2)) = exp(-r2/(s^2))
+    // ToDo: it may be better to store      1/sqrt(s) ... to avoid unnecessary sqrt() call
+    double c = sqrt( 1/(1.77245385091*s) );
+    return c*c*c;
+}
+
+//inline double uy3Ds( double r, double s ){ return norm3Ds(s)* exp( (r*r)/(-2*s*s) ); }
+//inline double uy3Ds2( double r2, double s ){ return norm3Ds(s)* exp( r2/(-2*s*s) ); }
+inline double bas3D_r2( double r2, double s ){ return sqnorm3Ds(s)* exp( r2/(-2*s*s) ); }
+
 
 /// Boys Function
 //  https://chemistry.stackexchange.com/questions/41214/boys-function-for-gaussian-integrals-in-ab-initio-calculations
@@ -82,6 +102,8 @@ inline double gaussNorm3D( double w ){
 //  F0(x) = sqrt(pi/(4x)) * erf( sqrt(x) )
 //  Vpq = (pi/sqrt(p*q))^3 * erf( sqrt(a) * r ) / r
 // => It makes sense to tabulate rather F0(x^2)
+
+}
 
 #endif
 

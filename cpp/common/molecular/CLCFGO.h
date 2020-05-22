@@ -172,6 +172,62 @@ class CLCFGO{ public:
         return r2<RcutOrb2;
     }
 
+
+    //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
+    inline double evalOverlap( int io, int jo ){
+        // Pauli Energy between two orbitals depend on IKinetic overlap  ~S^2
+        //  See addPauliGauss() in common/molecular/InteractionsGauss.h
+        int i0 = getOrbOffset(io);
+        int j0 = getOrbOffset(jo);
+         // ToDo : we may allow different number of orbitals per electron later (?)
+        double Ssum = 0;
+        //printf("============ i0 %i j0 %i perOrb %i \n", i0, j0, perOrb);
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi = epos[i];
+            double si = esize[i];
+            double ci = ecoef[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                // ToDo: Rcut may be read from
+                Vec3d Rij = epos[j]-pi;
+                double r2 = Rij.norm2();
+                if(r2>Rcut2)continue; //{ fij = Vec3dZero; return 0; }
+                double sj = esize[j];
+                double cj = ecoef[j];
+                double dSr, dSsi, dSsj;
+                //double Sij = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj );
+                //double Sij = getOverlapSGauss( r2, si*2, sj*2, dSr, dSsi, dSsj );
+                double Sij = getOverlapSGauss( r2, si*M_SQRT2, sj*M_SQRT2, dSr, dSsi, dSsj );
+                // NOTE : si,sj scaled by sqrt(2) because they are made for density widths not wave-functions width
+                //printf( "[%i,%i]x[%i,%i] r,S %g %g ci,j  %g %g -> %g \n", io,i, jo,j, sqrt(r2), Sij, ci, cj, Sij*ci*cj );
+                Ssum += Sij*ci*cj;
+            }
+        }
+        return Ssum;
+    }
+
+    double orbNorm(int io ){
+        int i0=getOrbOffset(io);
+        double Ssum=0;
+        int ii=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double si  = esize[i];
+            double ci  = ecoef[i];
+            for(int j=i0; j<i; j++){
+                Vec3d Rij = epos[j]-pi;
+                double r2 = Rij.norm2();
+                if(r2>Rcut2)continue; //{ fij = Vec3dZero; return 0; }
+                double sj = esize[j];
+                double cj = ecoef[j];
+                double dSr, dSsi, dSsj;
+                double Sij = getOverlapSGauss( r2, si*M_SQRT2, sj*M_SQRT2, dSr, dSsi, dSsj );
+                // NOTE : si,sj scaled by sqrt(2) because they are made for density widths not wave-functions width
+                Ssum += Sij*ci*cj;
+            }
+        }
+        return Ssum;
+    }
+
     //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
     inline double evalPauli( int io, int jo ){
         // Pauli Energy between two orbitals depend on IKinetic overlap  ~S^2
@@ -223,6 +279,8 @@ class CLCFGO{ public:
             }
         }
     }
+
+
 
     double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
         int i0=getOrbOffset(io);
@@ -444,11 +502,8 @@ class CLCFGO{ public:
         double* Cs = ecoef+i0;
         double* Ss = esize+i0;
         printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
-        for(int i=0; i<perOrb; i++){
-            printf( "wf[%i] C(%e) P(%g,%g,%g)\n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z );
-        }
+        for(int i=0; i<perOrb; i++){ printf( "wf[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
         return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){
-            Spline_Hermite::Sampler<double> spline;
             double wfsum = 0.0;
             for(int i=0; i<perOrb; i++){
                 Vec3d dR  = pos - Ps[i];
@@ -458,7 +513,16 @@ class CLCFGO{ public:
                 //    continue;
                 //}
                 double si = Ss[i];
-                wfsum += exp(-r2/(2*si*si)) * Cs[i];
+                wfsum += Gauss::bas3D_r2( r2, si ) * Cs[i];
+
+                //wfsum += gaussNorm3Ds( si ) * exp(-r2/(2*si*si)) * Cs[i];
+                //if(r2<1)wfsum+=sqrt(3/(4*M_PI)) * Cs[i]; // constant
+                //wfsum += (M_PI/2)*uGauss3Ds2( r2, si)*Cs[i];
+                //wfsum += (1/1.189207115) * pow( 2*M_PI*si*si, -3./8. ) * exp(r2/(-2*si*si)) * Cs[i];
+                //wfsum += pow( M_PI*si*si, -3./8. ) * pow( 2, -5./8. )  * exp(r2/(-2*si*si)) * Cs[i];
+                //wfsum += pow( 2*M_PI, -3./8. ) * exp(-r2/2) * Cs[i];
+                //if(i==0)wfsum += exp(-r2)*pow(M_PI, -3./2. );
+                //if(i==0)wfsum += Gauss::bas3D_r2(r2, si);
                 // ToDo : Fast Gaussian ?
             }
             buff[ig] = wfsum;

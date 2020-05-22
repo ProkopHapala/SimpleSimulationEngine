@@ -113,7 +113,7 @@ class GridShape {
         fprintf( fout, "   some_datagrid\n" );
         fprintf( fout, "   BEGIN_DATAGRID_3D_whatever\n" );
         fprintf( fout, "%i %i %i\n", n.x, n.y, n.z );
-        fprintf( fout, "%5.10f %5.10f %5.10f \n", pos0.x,   pos0.x,   pos0.x   );
+        fprintf( fout, "%5.10f %5.10f %5.10f \n", pos0.x,   pos0.y,   pos0.z   );
         fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.a.x, cell.a.y, cell.a.z );
         fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.b.x, cell.b.y, cell.b.z );
         fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.c.x, cell.c.y, cell.c.z );
@@ -178,11 +178,27 @@ class GridShape {
         fclose(fout);
     }
 
-    double integrateProductShifted( Vec3i ishift, double* f1, double* f2 ){
-        //Vec3d gpos;
-		//gpos.a = cpos.dot( diCell.a );
-		//gpos.b = cpos.dot( diCell.b );
-		//gpos.c = cpos.dot( diCell.c );
+    double integrate( const double* f )const{
+        int nx  = n.x; 	int ny  = n.y; 	int nz  = n.z; int nxy = ny * nx;
+        double sum = 0;
+        //int itot=0;
+        //double vmax = -1e+300;
+        for ( int ic=0; ic<nz; ic++ ){
+           for ( int ib=0; ib<ny; ib++ ){
+                for ( int ia=0; ia<nx; ia++ ){
+                   int i = i3D( ia, ib, ic );
+                   double fi = f[i];
+                   //vmax=fmax(vmax,fi);
+                   sum += fi;
+                   //itot++;
+                }
+            }
+        }
+        //printf( "DEBUG itot %i(%i) fmax %g sum %g \n", itot, n.totprod(), vmax, sum*voxelVolume() );
+        return sum * voxelVolume();
+    }
+
+    double integrateProductShifted( Vec3i ishift, const double* f1, const double* f2 )const{
 		double sum = 0;
         int nx  = n.x; 	int ny  = n.y; 	int nz  = n.z; int nxy = ny * nx;
         for ( int ic=0; ic<nz-ishift.z; ic++ ){
@@ -195,15 +211,25 @@ class GridShape {
             }
             //printf( "[%u] sum %g \n,", ic, sum );
         }
-        return sum;
+        return sum * voxelVolume();
     }
 
-    double integrateProductShifted( Vec3d shift, double* f1, double* f2 ){
+    double integrateProductShifted( Vec3d shift, const double* f1, const double* f2 )const{
         Vec3i ishift;
 		ishift.a = round(shift.dot( diCell.a )); // Should we use (int) instead ?
 		ishift.b = round(shift.dot( diCell.b ));
 		ishift.c = round(shift.dot( diCell.c ));
-        return integrateProductShifted( ishift, f1, f2 );
+        return integrateProductShifted( ishift, f1, f2 ) * voxelVolume();
+    }
+
+    void gridIntegral( const double* f1, const double* f2, int nint, double x0, double dx, double* ys )const{
+        int ng    = n.totprod();
+        double dV = voxelVolume();
+        for(int i=0; i<nint; i++){
+            double x = x0+dx*i;
+            double Q = dV * integrateProductShifted( (Vec3d){x,0,0}, f1, f2 );
+            ys[i] = Q;
+        }
     }
 
 };
@@ -266,8 +292,6 @@ double evalOnGrid( const GridShape& grid, Func func ){
     return res;
 }
 
-
-
 // iterate over field
 //template< void FUNC( int ibuff, const Vec3d& pos_, void * args ) >
 template<typename FUNC>
@@ -299,6 +323,37 @@ void interateGrid3D( const GridShape& grid, FUNC func ){
 		pos.add( grid.dCell.c );
 	}
     printf ("\n");
+}
+
+template<typename Func1, typename Func2>
+void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* ys, Func1 func1, Func2 func2 ){
+    GridShape grid;
+    //grid.cell = (Mat3d){ (Rmax+Lmax),0.0,0.0,  0.0,Rmax,0.0,  0.0,0.0,Rmax };
+    //grid.n    = {(int)((2*Rmax+Lmax)/gStep)+1,(int)(2*Rmax/gStep)+1,(int)(2*Rmax/gStep)+1};
+    grid.cell = (Mat3d){ (2*Rmax),0.0,0.0,  0.0,(2*Rmax),0.0,  0.0,0.0,(2*Rmax) };
+    int ngx = (2*Rmax)/gStep;
+    grid.n    = {ngx,ngx,ngx};
+    grid.pos0 = (Vec3d){-Rmax,-Rmax,-Rmax};
+    grid.updateCell();
+    int ng = grid.n.totprod();
+    double  dV = grid.voxelVolume();
+    double* f1 = new double[ ng ];
+    double* f2 = new double[ ng ];
+    func1( grid, f1, 0.0 );
+    printf( "DEBUG integral{f1} %g |f^2| %g \n", grid.integrate( f1 ), VecN::dot(ng, f1, f1 )*dV );
+    double dx = Lmax/nint;
+    grid. saveXSF( "temp/orb1.xsf", f1, -1 );
+    for(int i=0; i<nint; i++){
+        double x = dx*i;
+        func2( grid, f2, x );
+        if(i==0) grid. saveXSF( "temp/orb2.xsf", f2, -1 );
+        double Q = dV * VecN::dot(ng, f1, f2 );
+        printf( "Q[%i] %g \n", i, Q );
+        ys[i] = Q;
+        //printf( "[i] Q %g |  CPUtime %g [Mticks]\n", i, Q, (getCPUticks()-timeStart)*1e-6  );
+    }
+    delete [] f1;
+    delete [] f2;
 }
 
 void getIsovalPoints_a( const GridShape& grid, double isoval, Vec3d  *FF, std::vector<Vec3d>& points ){

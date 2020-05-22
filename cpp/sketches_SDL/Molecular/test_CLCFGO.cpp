@@ -125,6 +125,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     // ========== Brute Force Overlap
 
 
+    /*
     GridShape grid;
     //grid.n    = {5,5,5};
     grid.n    = {400,100,100};
@@ -165,6 +166,38 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         line_overlap_grid->ys[i] = Q;
         printf( "[i] Q %g |  CPUtime %g [Mticks]\n", i, Q, (getCPUticks()-timeStart)*1e-6  );
     }
+    delete [] orbOnGrid;
+    delete [] orbOnGrid_;
+    delete [] orbOnGrid__;
+    plot1.update();
+    plot1.render();
+    */
+
+    int    nint = 10;
+    double Lmax = 5.0;
+    DataLine2D* line_ISgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFF0000FF, "IS_grid" ); plot1.add(line_ISgrid );
+    DataLine2D* line_ISana  = new DataLine2D( 100,  0, 0.1      , 0xFF0080FF, "IS_ana"  );  plot1.add(line_ISana  );
+
+    {auto& _=solver;
+        for(int i=0; i<_.nBas; i++){ _.ecoef[i]=0; _.epos[i]=Vec3dZero;  }
+        _.ecoef[0] = 1.0;
+        _.ecoef[2] = 1.0;
+        _.ecoef[1] = +0.5;
+        _.ecoef[3] = -0.7;
+    }
+    {
+    auto func1 = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=x; solver.orb2grid( 0, grid, f ); };
+    auto func2 = [&](GridShape& grid, double* f, double x ){ solver.epos[2].x=x; solver.orb2grid( 1, grid, f ); };
+    gridNumIntegral( nint, 0.1, 6.0, Lmax, line_ISgrid->ys, func1, func2 );
+    }
+    for(int i=0; i<line_ISana->n; i++){
+        solver.epos[2].x=line_ISana->xs[i];
+        line_ISana->ys[i] = solver.evalOverlap( 0, 1 );
+    }
+    plot1.update();
+    plot1.render();
+
+
 
     /*
     for(int i=0; i<line_overlap_grid_->n; i++){
@@ -180,12 +213,17 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         Q  = dV * VecN::dot(ng, orbOnGrid, orbOnGrid__ );
         line_overlap_grid_->ys[i] = Q;
     }
-    */
     plot1.update();
     plot1.render();
-    delete [] orbOnGrid;
-    delete [] orbOnGrid_;
-    delete [] orbOnGrid__;
+    */
+
+
+    // USE THIS INSTEAD OF WITH
+    //{auto&_=solver;
+    //    _.epos = ;
+    // }
+
+
 
     DEBUG
 

@@ -356,7 +356,7 @@ class Vec3T{
     inline T dist2( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm2(); }
     inline T dist ( const VEC& a ) const { VEC d; d.set( x-a.x, y-a.y, z-a.z ); return d.norm (); }
 
-    inline T totprod(){ return x*y*z; };
+    inline T totprod()const{ return x*y*z; };
 
     inline void octDir( int iface ){
         // mix-weights for inverse mapping of octahedron
