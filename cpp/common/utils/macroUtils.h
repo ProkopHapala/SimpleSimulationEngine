@@ -66,8 +66,11 @@ struct Arr{
     }
 };
 
+
+#define WITH(x) auto& _=x;
+
 #define _forN(i,n)         for(int i=0 ;i<n;i++)
-#define _for0N(i,i0,n)     for(int i=i0;i<n;i+=d)
+#define _for0N(i,i0,n)     for(int i=i0;i<n;i++)
 #define _for0Nd(i,i0,n,d)  for(int i=i0;i<n;i+=d)
 
 #define _template_Func   template<typename Func>

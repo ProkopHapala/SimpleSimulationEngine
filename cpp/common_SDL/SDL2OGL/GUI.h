@@ -136,6 +136,8 @@ class GUIPanel : public GUIAbstractPanel { public:
 	double   value=0.0d;
 	bool     isInt = false;
 
+	double* master=0;
+
 	void (*command)(double) = NULL;
 
     // ==== functions
@@ -154,9 +156,11 @@ class GUIPanel : public GUIAbstractPanel { public:
     virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
 
 	// ===== inline functions
-    inline  void  val2text()         { inputText = std::to_string(value); };
+    inline void   val2text()         { inputText = std::to_string(value); };
 	inline double x2val( float  x   ){ return ( x*(vmax-vmin)/(xmax-xmin) )+ vmin; };
 	inline float  val2x( double val ){ return (val-vmin)*(xmax-xmin)/(vmax-vmin);  };
+    inline void syncRead (){ if(master)value=*master; }
+    inline void syncWrite(){ if(master)*master=value; }
 
 	inline GUIPanel* setRange(float vmin_, float vmax_){ vmin=vmin_; vmax=vmax_; return this; };
 
@@ -218,6 +222,54 @@ class MultiPanel : public GUIAbstractPanel { public:
     //virtual void onText   ( SDL_Event e, GUI& gui ){};
 
 };
+
+// ==============================
+//     class  CheckBoxList
+// ==============================
+
+#define _addBox(var)   _.addBox( #var, &var );
+
+struct CheckBox{
+    bool  val   =0; //
+    bool* master=0; // if not zero, this is the true value
+    std::string label;
+    inline void read (){ if(master)val=*master; }
+    inline void write(){ if(master)*master=val; }
+    inline void flip (){ printf("flip  %i %i ", val,*master ); val=!val; write(); printf("-> %i %i \n", val,*master); }
+};
+
+class CheckBoxList : public GUIAbstractPanel { public:
+    std::vector<CheckBox> boxes;
+    bool opened = true;
+    int dy;
+    uint32_t checkColor=0x00FF00;
+
+
+    // ==== functions
+
+    void addBox(std::string label, bool* ptr){
+        boxes.push_back((CheckBox){false,ptr,label});
+    }
+
+    void initCheckBoxList( int xmin_, int ymin_, int xmax_, int dy=fontSizeDef*2 );
+
+    CheckBoxList(){};
+    CheckBoxList(int xmin, int ymin, int xmax, int dy=fontSizeDef*2){ initCheckBoxList( xmin, ymin, xmax, dy); }
+
+    //virtual void  open();
+    //virtual void close();
+    //void    toggleOpen();
+    //virtual void moveBy(int dx, int dy);
+    void update();
+
+    virtual void view  ( );
+    virtual void render( );
+    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
+
+    inline void syncRead (){ for(CheckBox& b: boxes){ b.read (); } }
+    inline void syncWrite(){ for(CheckBox& b: boxes){ b.write(); } }
+};
+
 
 // ==============================
 //     class  DropDownList

@@ -448,6 +448,72 @@ GUIAbstractPanel* MultiPanel::onMouse  ( int x, int y, const SDL_Event& event, G
     return active;
 };
 
+
+// ==============================
+//     class  CheckBoxList
+// ==============================
+
+void CheckBoxList::initCheckBoxList( int xmin_, int ymin_, int xmax_, int dy_){
+    xmin=xmin_,ymin=ymin_,xmax=xmax_, dy=dy_; //fontTex=fontTex_;
+    //ymax=ymin + dy*boxes.s + fontSizeDef*2;
+    //int yi = ymax-dy-fontSizeDef*2;
+    redraw = true;
+}
+
+/*
+void CheckBoxList::moveBy(int dx, int dy){
+    xmin+=dx; xmax+=dx;
+    ymin+=dy; ymax+=dy;
+    redraw=true; //tryRender();
+    for(int i=0;i<nsubs;i++){
+        subs[i]->moveBy(dx,dy);
+    }
+};
+*/
+
+void CheckBoxList::view( ){
+    glCallList( gllist );
+}
+
+void CheckBoxList::update(){
+    ymax=ymin + dy*boxes.size() + fontSizeDef*2;
+    syncRead();
+}
+
+void CheckBoxList::render( ){
+    glDisable( GL_LIGHTING );
+    glDisable( GL_DEPTH_TEST);
+    glShadeModel( GL_FLAT );
+    update();
+    for(int i=0; i<boxes.size(); i++){
+        const CheckBox& box = boxes[i];
+        if(box.val){ Draw::setRGB(checkColor); }else{ Draw::setRGB(bgColor); }
+        int y=ymin+i*dy;
+        Draw2D::drawRectangle ( xmin, y, xmax, y+dy, true );
+        Draw  ::setRGB( textColor );
+        Draw2D::drawText( box.label.c_str(), 0, {xmin, y}, 0.0, GUI_fontTex, fontSizeDef );
+    }
+};
+
+GUIAbstractPanel* CheckBoxList::onMouse  ( int x, int y, const SDL_Event& event, GUI& gui ){
+    GUIAbstractPanel* active = NULL;
+    if( check( x, y ) ){
+        active = this;
+        if( ( event.type == SDL_MOUSEBUTTONDOWN ) ){
+            if(event.button.button == SDL_BUTTON_LEFT){
+                gui.dragged = this;
+                int ibox = (y-ymin)/dy;
+                if( ibox<boxes.size()){
+                    boxes[ibox].flip();
+                    redraw=true;
+                }
+                //if(event.button.clicks > 1 ){ toggleOpen();}
+            }
+        }
+    }
+    return active;
+};
+
 // ==============================
 //     class  DropDownList
 // ==============================
