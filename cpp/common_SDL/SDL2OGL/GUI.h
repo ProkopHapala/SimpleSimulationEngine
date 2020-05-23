@@ -12,6 +12,7 @@
 #include "Table.h"
 
 #include <string>
+#include <functional>
 
 /*
 
@@ -21,6 +22,36 @@ TODO:
     line    200.0 250.0
     ngon    6 16.5
 */
+
+struct Command{
+    int id;
+    int key;
+    std::string name;
+};
+
+class Commander{ public:
+    std::vector<Command>        commands;
+    std::unordered_map<int,int> keymap;
+    //std::unordered_map<std::string,int> byname;
+
+    inline void add(int id, int key, std::string name=""){
+        int i=commands.size();
+        commands.push_back( (Command){id,key,name} );
+        auto got = keymap.find(key);
+        if(got!=keymap.end()){ printf("WARRNING KeyBind: key already used %i %c\n", key, (char)key ); return; };
+        keymap.insert({key,i});
+    }
+
+    inline void rebind( int i, int key ){
+        auto got = keymap.find(key);
+        if(got!=keymap.end()){ printf("WARRNING KeyBind: key already used %i %c\n", key, (char)key ); return; };
+        int old_key  = commands[i].key;
+        auto old_got = keymap.find(old_key);
+        if( old_got != keymap.end() ){ keymap.erase(old_got); }
+        keymap.insert({key,i});
+        commands[i].key=key;
+    }
+};
 
 //class GUIAbstractPanel;
 
@@ -240,7 +271,6 @@ struct CheckBox{
 
 class CheckBoxList : public GUIAbstractPanel { public:
     std::vector<CheckBox> boxes;
-    bool opened = true;
     int dy;
     uint32_t checkColor=0x00FF00;
 
@@ -269,6 +299,56 @@ class CheckBoxList : public GUIAbstractPanel { public:
     inline void syncRead (){ for(CheckBox& b: boxes){ b.read (); } }
     inline void syncWrite(){ for(CheckBox& b: boxes){ b.write(); } }
 };
+
+
+// ==============================
+//     class  CommandList
+// ==============================
+
+class CommandList : public GUIAbstractPanel { public:
+    Commander*                commands;
+    //std::function<void(int)>* commandDispatch=0;
+    std::function<void(int)> commandDispatch;
+    //std::function commandDispatch;
+    bool bDispatch=0;
+    int dy;
+    uint32_t modColor=0x00FFFF;
+    int icmdbind = -1;
+    //uint32_t checkColor=0x00FF00;
+
+    // ==== functions
+
+    void initCommandList( int xmin_, int ymin_, int xmax_, int dy=fontSizeDef*2 );
+
+    CommandList(){};
+    CommandList(int xmin, int ymin, int xmax, int dy=fontSizeDef*2){ initCommandList( xmin, ymin, xmax, dy); }
+
+    bool     getKeyb(int key);
+    void         update( );
+    virtual void view  ( );
+    virtual void render( );
+    virtual GUIAbstractPanel* onMouse( int x, int y, const SDL_Event& event, GUI& gui );
+
+};
+
+
+// ==============================
+//     class  KeyTree
+// ==============================
+
+/*
+
+#### For dispatching tree of commands
+ * BackSpace go one level up
+ * Escape restat tree from root
+
+should look like this:
+---------------------
+* [F]ile [E]dit [V]iew
+    * [O]pen [S]ave [L]oad [Q]uit
+
+*/
+
 
 
 // ==============================
@@ -505,9 +585,10 @@ class GUI{ public:
     GUIAbstractPanel* onEvent( int mouseX, int mouseY, const SDL_Event& event );
     void draw();
 
-    ~GUI(){
-        for(GUIAbstractPanel* panel: panels){ delete panel; }
-    }
+    //void layoutRow( int xmin, int xmax );
+    void layoutRow( int xmin, int ymin, int xspace=0 );
+
+    inline ~GUI(){ for(GUIAbstractPanel* panel: panels){ delete panel; } }
 
 };
 
