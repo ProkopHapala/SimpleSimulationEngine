@@ -105,16 +105,27 @@ void polyFit( int n, int m, double* xs, double* ys, double* coefs ){
     Lingebra::linSolve_gauss ( m, BB_, By, index, coefs );
 }
 
+inline double pval( double x, int m, double* coefs ){
+    double y  = coefs[0];
+    double xn = x;
+    for(int i=1; i<m; i++){
+        y += coefs[i]*xn;
+        xn*=x;
+    }
+    return y;
+}
+
 void polyeval( int n, int m, double* xs, double* ys, double* coefs ){
     for(int ip=0; ip<n; ip++){
-        double x  = xs   [ip];
-        double y  = coefs[0];
-        double xn = x;
-        for(int i=1; i<m; i++){
-            y += coefs[i]*xn;
-            xn*=x;
-        }
-        ys[ip]=y;
+        //double x  = xs   [ip];
+        //double y  = coefs[0];
+        //double xn = x;
+        //for(int i=1; i<m; i++){
+        //    y += coefs[i]*xn;
+        //    xn*=x;
+        //}
+        //ys[ip]=y;
+        ys[ip] = pval( xs[ip], m, coefs );
     }
 }
 
