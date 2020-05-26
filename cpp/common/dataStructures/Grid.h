@@ -10,6 +10,8 @@
 #include "Mat3.h"
 //#include <string.h>
 
+#include "VecN.h"
+
 #include <vector>
 
 // ================= MACROS
@@ -44,6 +46,14 @@ class GridShape {
 	inline void setCell( const Mat3d& cell_ ){
 		//n.set( n_ );
 		cell.set( cell_ );
+        updateCell();
+	}
+
+	void init(double R, double step){
+        cell = (Mat3d){ (2*R),0.0,0.0,  0.0,(2*R),0.0,  0.0,0.0,(2*R) };
+        int ngx   = (2*R)/step;
+        n    = {ngx,ngx,ngx};
+        pos0 = (Vec3d){-R,-R,-R};
         updateCell();
 	}
 
@@ -111,7 +121,8 @@ class GridShape {
     void headerToXsf( FILE* fout )const{
         fprintf( fout, "BEGIN_BLOCK_DATAGRID_3D\n" );
         fprintf( fout, "   some_datagrid\n" );
-        fprintf( fout, "   BEGIN_DATAGRID_3D_whatever\n" );
+        //fprintf( fout, "   BEGIN_DATAGRID_3D_whatever\n" );
+        fprintf( fout, "   DATAGRID_3D\n" );
         fprintf( fout, "%i %i %i\n", n.x, n.y, n.z );
         fprintf( fout, "%5.10f %5.10f %5.10f \n", pos0.x,   pos0.y,   pos0.z   );
         fprintf( fout, "%5.10f %5.10f %5.10f \n", cell.a.x, cell.a.y, cell.a.z );
@@ -171,9 +182,9 @@ class GridShape {
         printf( "saving %s\n", fname );
         FILE *fout;
         fout = fopen(fname,"w");
-        fprintf( fout, "   ATOMS\n" );
-        fprintf( fout, "    1   0.0   0.0   0.0\n" );
-        fprintf( fout, "\n" );
+        //fprintf( fout, "   ATOMS\n" );
+        //fprintf( fout, "    1   0.0   0.0   0.0\n" );
+        //fprintf( fout, "\n" );
         toXSF( fout, FF, icomp );
         fclose(fout);
     }
@@ -299,7 +310,7 @@ void interateGrid3D( const GridShape& grid, FUNC func ){
 	int nx  = grid.n.x; 	int ny  = grid.n.y; 	int nz  = grid.n.z;
 	//int nx  = n.z; 	int ny  = n.y; 	int nz  = n.x;
 	int nxy = ny * nx;
-	printf( "interateGrid3D nx,y,z (%i,%i,%i) nxy %i\n", nx,ny,nz, nxy );
+	//printf( "interateGrid3D nx,y,z (%i,%i,%i) nxy %i\n", nx,ny,nz, nxy );
 	Vec3d pos;  pos.set( grid.pos0 );
 	//printf(" interateGrid3D : args %i \n", args );
 	for ( int ic=0; ic<nz; ic++ ){
@@ -322,8 +333,12 @@ void interateGrid3D( const GridShape& grid, FUNC func ){
 		pos.add_mul( grid.dCell.b, -ny );
 		pos.add( grid.dCell.c );
 	}
-    printf ("\n");
+    //printf ("\n");
 }
+
+
+char* DEBUG_saveFile1="temp/f1.xsf";
+char* DEBUG_saveFile2="temp/f2.xsf";
 
 template<typename Func1, typename Func2>
 void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* ys, Func1 func1, Func2 func2 ){
@@ -340,15 +355,15 @@ void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* 
     double* f1 = new double[ ng ];
     double* f2 = new double[ ng ];
     func1( grid, f1, 0.0 );
-    printf( "DEBUG integral{f1} %g |f^2| %g \n", grid.integrate( f1 ), VecN::dot(ng, f1, f1 )*dV );
+    //printf( "DEBUG integral{f1} %g |f^2| %g \n", grid.integrate( f1 ), VecN::dot(ng, f1, f1 )*dV );
     double dx = Lmax/nint;
-    grid. saveXSF( "temp/orb1.xsf", f1, -1 );
+    grid. saveXSF( DEBUG_saveFile1, f1, -1 );
     for(int i=0; i<nint; i++){
         double x = dx*i;
         func2( grid, f2, x );
-        if(i==0) grid. saveXSF( "temp/orb2.xsf", f2, -1 );
+        if(i==0) grid. saveXSF( DEBUG_saveFile2, f2, -1 );
         double Q = dV * VecN::dot(ng, f1, f2 );
-        printf( "Q[%i] %g \n", i, Q );
+        //printf( "Q[%i] %g \n", i, Q );
         ys[i] = Q;
         //printf( "[i] Q %g |  CPUtime %g [Mticks]\n", i, Q, (getCPUticks()-timeStart)*1e-6  );
     }

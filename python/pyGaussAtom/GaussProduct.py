@@ -76,16 +76,17 @@ def gaussProduct1D( wi=1.0,xi=0.0,Ci=1, wj=1.0,xj=0.0,Cj=1 ):
 def evalGauss1D( xs, w=1.0, x0=0.0, C=1.0 ):
     return np.exp( -w*(xs-x0)**2 )*C
 
+
 # ================== Main
 
 if __name__ == "__main__":
     xs = np.linspace(-5,5,1000)
     import matplotlib.pyplot as plt
     
+    cs = [1.0,-0.8]
     g1 = ( 1.2,-0.8,1.0 )
     g2 = ( 0.6, 1.2,1.0 )
-
-    g12 =  gaussProduct1D( wi=g1[0],xi=g1[1],Ci=g1[2],  wj=g2[0],xj=g2[1],Cj=g2[2] )
+    g12    =  gaussProduct1D( wi=g1[0],xi=g1[1],Ci=g1[2],  wj=g2[0],xj=g2[1],Cj=g2[2] )
 
     y1     = evalGauss1D(xs,w=g1 [0],x0=g1 [1],C=g1 [2])
     y2     = evalGauss1D(xs,w=g2 [0],x0=g2 [1],C=g2 [2])
@@ -96,7 +97,19 @@ if __name__ == "__main__":
     plt.plot( xs, y2 , label='g1')
     plt.plot( xs, y12,    label='(g1*g2)ana')
     plt.plot( xs, y12num,':', label='(g1*g2)num')
-    
+
+
+    gsum  = cs[0]*y1 + cs[1]*y2
+    gsum2 = gsum*gsum
+
+    #gsum2_ = (cs[0]**2)*(y1**2) + (cs[1]**2)*(y2**2) +  (2*cs[0]*cs[1])*(y1*y2)
+    gsum2_ = (cs[0]**2)*(y1**2) + (cs[1]**2)*(y2**2) +  (2*cs[0]*cs[1])*(y12)
+
+    plt.figure()
+    plt.plot( xs, gsum , label='gsum')
+    plt.plot( xs, gsum2, label='gsum^2')
+    plt.plot( xs, gsum2_ , label='gsum^2 _')
+
     plt.legend()
     plt.grid()
     #plt.ylim(0,1.5)

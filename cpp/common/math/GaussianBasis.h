@@ -72,7 +72,7 @@ inline double product3D_s( double si, const Vec3d& pi, double sj, const Vec3d& p
         + product1D_w( wi,pi.y,  wj,pj.y,   junk,  pij.y );
         + product1D_w( wi,pi.z,  wj,pj.z,   junk,  pij.z );
     sij = 1/sqrt(2*wij);
-    printf( "DEBUG product3D_s sij %g wij %g \n", sij, wij );
+    //printf( "DEBUG product3D_s sij %g(%g,%g) wij %g(%g,%g)\n", sij,si,sj,  wij,wi,wj );
     return logC;
 }
 
@@ -93,20 +93,24 @@ inline double norm3Dw( double w ){
 }
 
 inline double norm3Ds( double s ){
-    double c = 1/(2.50662827463*s);
+    const double sqrt_2pi = 2.50662827463;
+    double c = 1/(sqrt_2pi*s);
     return c*c*c;
 }
 
 inline double sqnorm3Ds( double s ){
+    const double sqrt_pi = 1.77245385091;
     // exp(-r2/(2*s^2))*exp(-r2/(2*s^2)) = exp(-r2/(s^2))
+    // exp(-r2/(s^2)) = s*sqrt(pi)
     // ToDo: it may be better to store      1/sqrt(s) ... to avoid unnecessary sqrt() call
-    double c = sqrt( 1/(1.77245385091*s) );
+    double c = sqrt( 1/(sqrt_pi*s) ); // sqrt(sqrt(pi)*s)
     return c*c*c;
 }
 
 //inline double uy3Ds( double r, double s ){ return norm3Ds(s)* exp( (r*r)/(-2*s*s) ); }
 //inline double uy3Ds2( double r2, double s ){ return norm3Ds(s)* exp( r2/(-2*s*s) ); }
 inline double bas3D_r2( double r2, double s ){ return sqnorm3Ds(s)* exp( r2/(-2*s*s) ); }
+inline double rho3D_r2( double r2, double s ){ return   norm3Ds(s)* exp( r2/(-2*s*s) ); }
 
 
 /// Boys Function
