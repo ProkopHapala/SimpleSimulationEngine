@@ -267,8 +267,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     //test_WfOverlap     ( solver, plot1 );
     //test_ProjectDensity( solver, plot1 );
-    //test_DensityOverlap( solver, plot1 );   plot1.scaling.y = 30.0;
-    test_ElectroStatics( solver, plot1 );
+    test_DensityOverlap( solver, plot1 );   plot1.scaling.y = 30.0;
+    //test_ElectroStatics( solver, plot1 );
 
     plot1.update();
     plot1.render();

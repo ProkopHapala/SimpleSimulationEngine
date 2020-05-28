@@ -591,6 +591,33 @@ void Draw2D::drawText( const char * str, Vec2d pos, Vec2d sz, int fontTex, float
     glPopMatrix();
 };
 
+void Draw2D::drawTextBillboard( const char * str, int nchar, Vec2d pos, int fontTex, float textSize ){
+    glDisable    ( GL_LIGHTING   );
+    glDisable    ( GL_DEPTH_TEST );
+    glShadeModel ( GL_FLAT       );
+    glPushMatrix();
+        glMatrixMode(GL_MODELVIEW);
+        // DOES NOT WORK !!!!
+        float M[16];
+        glGetFloatv(GL_PROJECTION_MATRIX, M );
+        printf( "MODEL VIEW: \n" );
+        printf( "%3.3g %3.3g %3.3g %3.3g \n", M[ 0],M[ 1],M[ 2],M[ 3] );
+        printf( "%3.3g %3.3g %3.3g %3.3g \n", M[ 4],M[ 5],M[ 6],M[ 7] );
+        printf( "%3.3g %3.3g %3.3g %3.3g \n", M[ 8],M[ 9],M[10],M[11] );
+        printf( "%3.3g %3.3g %3.3g %3.3g \n", M[12],M[13],M[14],M[15] );
+        printf( "PROJECTION: \n" );
+        glGetFloatv(GL_PROJECTION_MATRIX, M );
+        printf( "%3.3g %3.3g %3.3g %3.3g \n", M[ 0],M[ 1],M[ 2],M[ 3] );
+        printf( "%3.3g %3.3g %3.3g %3.3g \n", M[ 4],M[ 5],M[ 6],M[ 7] );
+        printf( "%3.3g %3.3g %3.3g %3.3g \n", M[ 8],M[ 9],M[10],M[11] );
+        printf( "%3.3g %3.3g %3.3g %3.3g \n", M[12],M[13],M[14],M[15] );
+        glScalef(1/M[5],1/M[10],1);
+        glTranslatef( pos.x, pos.y, z_layer );
+        //Draw::drawText( str, fontTex, textSize, 0, nchar );
+        Draw::drawText ( str, fontTex, textSize, nchar );
+    glPopMatrix();
+};
+
 /*
 void Draw2D::drawText( const char * str, const Vec2d& pos, float angle, int fontTex, float textSize, int istart, int iend ){
     glDisable    ( GL_LIGHTING   );

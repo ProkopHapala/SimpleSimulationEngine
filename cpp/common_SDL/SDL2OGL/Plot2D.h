@@ -115,8 +115,9 @@ class Plot2D{ public:
 
 
     void update();
+    void drawTexts();
     void drawAxes();
-    int  render(bool bLegend=true);
+    int  render();
     void view  (bool bAxes=true);
     void init  ();
     //void xsharingLines(int nl, int np);
