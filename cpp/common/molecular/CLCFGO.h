@@ -290,7 +290,8 @@ class CLCFGO{ public:
         double*  Qs =rhoQ+irho0;
         double*  Ss =rhoS+irho0;
         double Q=0;
-        double T=0; // kinetic energy
+        double DT=0; // kinetic energy change by orthognalization
+        double Ek=0; // kinetic energy
         dip         = Vec3dZero;
         Vec3d qcog  = Vec3dZero;
         Vec3d oqcog = opos[io];
@@ -307,6 +308,8 @@ class CLCFGO{ public:
             Ps[ii]  = pi;
             Ss[ii]  = si*M_SQRT1_2;
 
+            double fEki;
+            Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
             //printf( "orb[%i|%i   ] s(%g):%g qii %g \n", io, i,  si, Ss[ii],  qii );
             ii++;
             //printf( "orb[%i|%i] s %g qii %g \n", io, i,  si*2,  qii );
@@ -323,8 +326,10 @@ class CLCFGO{ public:
                 double dSr, dSsi, dSsj;
                 double dTr, dTsi, dTsj;
                 const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
-                double Sij = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
-                double Tij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj );
+                double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
+                double DTij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj ); // This is not normal kinetic energy this is change of kinetic energy due to orthogonalization
+                double Ekij = 0.0; // TODO : <i|Lapalace|j> between the two gaussians
+                //ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
 
                 // --- Project on auxuliary density functions
                 Vec3d  pij;
@@ -334,11 +339,13 @@ class CLCFGO{ public:
                 //double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
                 double qij = Sij*cij*2;
 
+                //printf( "DEBUG projectOrb[%i|%i,%i] r2 %g Tij %g \n", io, i,j, r2, Tij );
                 //printf( "DEBUG projectOrb[%i|%i,%i] sij %g \n", io, i,j, sij );
                 //printf( "orb[%i|%i,%i] r %g s(%g,%g):%g qS(%g,%g|%g):%g C %g \n", io, i,j, sqrt(r2),  si,sj,sij,  ci,cj,Sij,qij, Cij );
                 qcog.add_mul( pij, qij );
-                Q +=   qij;
-                T += T*cij;
+                Q  +=   qij;
+                DT += DTij*cij;
+                Ek += Ekij*cij;
 
                 // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
                 Qs[ii] = qij;
@@ -357,7 +364,7 @@ class CLCFGO{ public:
             for(int i= 0; i<ii       ; i++){ Qs   [i] *=renorm2; };
         }
         // ToDo: Renormalize also  rhos?
-        return Q;
+        return Ek;
     }
 
     double projectOrbs(){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
@@ -501,16 +508,21 @@ class CLCFGO{ public:
                 Vec3d Rij = pj-pi;
                 double r2 = Rij.norm2();
                 if(r2>Rcut2) continue;
-
-                // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
-
                 double cj = ecoef[j];
                 double sj = esize[j];
 
-                double qij = ci*cj;
+                double dSr, dSsi, dSsj;
+                const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
+                double Sij = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
+                Vec3d  pij;
+                double sij;
+                double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+                double cij = ci*cj;
+                //double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
+                double qij = Sij*cij*2;
                 rhoij[ij]  = qij;           // ToDo: we may perhas evaluate it on even more extended axuliary basis
-                posij[ij]  = (pi+pj)*0.5;
-                szij [ij]  = si*sj;
+                posij[ij]  = pij;
+                szij [ij]  = sij;
                 ij++;
             }
         }
@@ -530,7 +542,7 @@ class CLCFGO{ public:
                 double s2 = si*si + sj*sj;
                 double s  = sqrt(s2);
                 double fr,fs;
-                double Cij = CoulombGauss( r, s, fr, fs, qi*qj );
+                double Cij = CoulombGauss( r, s*2, fr, fs, qi*qj );
                 E += Cij; // ToDo : we should perhaps use some cutoff for large distances ?
                 //E += qi*qj/sqrt(r2+R2Safe);  // ToDo  : we should perhaps calculate this more properly considering true shape of axuiliary density function
                 //

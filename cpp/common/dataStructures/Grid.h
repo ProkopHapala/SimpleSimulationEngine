@@ -204,6 +204,28 @@ class GridShape {
         fclose(fout);
     }
 
+    double Laplace( const double* f, double* out )const{
+        int nx  = n.x; 	int ny  = n.y; 	int nz  = n.z; int nxy = ny * nx;
+        double idx2 = diCell.a.norm2();
+        double idy2 = diCell.b.norm2();
+        double idz2 = diCell.c.norm2();
+        //printf( "idxyz2 %g, %g, %g \n", idx2, idy2, idz2 );
+        for ( int ic=0; ic<nz; ic++ ){
+            //printf( "ic %i|nz \n", ic, nz );
+            for ( int ib=0; ib<ny; ib++ ){
+                for ( int ia=0; ia<nx; ia++ ){
+                    if((ia==0)||(ia==(nx-1))||(ib==0)||(ib==(ny-1))||(ic==0)||(ic==(nz-1))){ out[i3D(ia,ib,ic)]=0.0; continue; }
+                    double f00 = f[i3D(ia,ib,ic)]*2;
+                    out[i3D(ia,ib,ic)]
+                      = (f[i3D(ia+1,ib,ic)]+f[i3D(ia-1,ib,ic)]-f00)*idx2
+                      + (f[i3D(ia,ib+1,ic)]+f[i3D(ia,ib-1,ic)]-f00)*idy2
+                      + (f[i3D(ia,ib,ic+1)]+f[i3D(ia,ib,ic-1)]-f00)*idz2;
+
+                }
+            }
+        }
+    }
+
     double integrate( const double* f )const{
         int nx  = n.x; 	int ny  = n.y; 	int nz  = n.z; int nxy = ny * nx;
         double sum = 0;
@@ -369,13 +391,15 @@ void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* 
     double  dV = grid.voxelVolume();
     double* f1 = new double[ ng ];
     double* f2 = new double[ ng ];
-    func1( grid, f1, 0.0 );
+    //func1( grid, f1, 0.0 );
     //printf( "DEBUG integral{f1} %g |f^2| %g \n", grid.integrate( f1 ), VecN::dot(ng, f1, f1 )*dV );
     double dx = Lmax/nint;
-    if(bDebugXsf)grid. saveXSF( DEBUG_saveFile1, f1, -1 );
+    //if(bDebugXsf)grid. saveXSF( DEBUG_saveFile1, f1, -1 );
     for(int i=0; i<nint; i++){
         double x = dx*i;
+        func1( grid, f1, x );
         func2( grid, f2, x );
+        if(bDebugXsf&&(i==0)) grid. saveXSF( DEBUG_saveFile1, f1, -1 );
         if(bDebugXsf&&(i==0)) grid. saveXSF( DEBUG_saveFile2, f2, -1 );
         double Q = dV * VecN::dot(ng, f1, f2 );
         //printf( "Q[%i] %g \n", i, Q );

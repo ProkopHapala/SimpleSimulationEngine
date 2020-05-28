@@ -114,6 +114,10 @@ inline double sqnorm3Ds( double s ){
 inline double bas3D_r2( double r2, double s ){ return sqnorm3Ds(s)* exp( r2/(-2*s*s) ); }
 inline double rho3D_r2( double r2, double s ){ return   norm3Ds(s)* exp( r2/(-2*s*s) ); }
 
+
+
+inline double LoG3D_r2( double r2, double s ){ double wr2=r2/(-2*s*s); return   norm3Ds(s)* ( (1+wr2) )*exp( wr2 ); }
+
 /// Boys Function
 //  https://chemistry.stackexchange.com/questions/41214/boys-function-for-gaussian-integrals-in-ab-initio-calculations
 //  BoysF is used for Coulomb integrals like :

@@ -1,4 +1,32 @@
 
+
+/*
+
+==========================================================================
+    Test: Compact Linear Combination of Floating Gaussian Orbitals
+==========================================================================
+
+### DONE ###
+------------
+ - tested Wf projection of grid
+ - tested Density projection on Aux Basis & on grid
+ - tested Electrostatics (Hartree) evaluation
+
+### TO DO ###
+--------------
+ - Check kinetic energy
+    - ToDo :  needs to integrate <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
+ - How to test Fock Exchange ?
+    - possibly check overlap density
+ - Model for Pauli Energy
+    - Perhaps Some inspire by pauli in pseudpotentials
+ - Electron-ion interaction  (Electrostatics - Pauli - look how pseudopotentials are done)
+ - Make derivatives
+
+
+*/
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,8 +46,6 @@
 #include "Mat3.h"
 #include "Mat4.h"
 #include "VecN.h"
-
-
 
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
@@ -63,13 +89,46 @@ void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
     {
     DEBUG_saveFile1="temp/wf0.xsf";
     DEBUG_saveFile2="temp/wf1.xsf";
-    auto func1 = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=x; solver.orb2grid( 0, grid, f ); };
+    auto func1 = [&](GridShape& grid, double* f, double x ){                     solver.orb2grid( 0, grid, f ); };
     auto func2 = [&](GridShape& grid, double* f, double x ){ solver.epos[2].x=x; solver.orb2grid( 1, grid, f ); };
     gridNumIntegral( nint, 0.2, 6.0, Lmax, line_ISgrid->ys, func1, func2 );
     }
     for(int i=0; i<line_ISana->n; i++){
         solver.epos[2].x=line_ISana->xs[i];
         line_ISana->ys[i] = solver.evalOverlap( 0, 1 );
+    }
+}
+
+// ===================================================
+///        test   Wave Fucntion Overlap
+// ===================================================
+
+void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
+    // ======= Test Orbital Wavefunction Overlap
+    int    nint = 10;
+    double Lmax = 5.0;
+    DataLine2D* line_ISgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0000, "IS_grid" ); plot1.add(line_ISgrid );
+    DataLine2D* line_ISana  = new DataLine2D( 100,  0, 0.1      , 0xFFFF8000, "IS_ana"  );  plot1.add(line_ISana  );
+    {
+    DEBUG_saveFile1="temp/wf0.xsf";
+    DEBUG_saveFile2="temp/Lwf1.xsf";
+    auto func1 = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=x; solver.orb2grid( 0, grid, f );                                   };
+    auto func2 = [&](GridShape& grid, double* f, double x ){
+        double* tmp = new double[grid.n.totprod()];
+        solver.epos[0].x=x;
+        DEBUG
+        solver.orb2grid( 0, grid, tmp );
+        DEBUG
+        grid.Laplace   ( tmp, f );
+        DEBUG
+        delete [] tmp;
+    };
+    gridNumIntegral( nint, 0.2, 6.0, Lmax, line_ISgrid->ys, func1, func2, true );
+    }
+    Vec3d dip;
+    for(int i=0; i<line_ISana->n; i++){
+        solver.epos[0].x=line_ISana->xs[i];
+        line_ISana->ys[i] = solver.projectOrb( 0, dip, false );
     }
 }
 
@@ -137,7 +196,7 @@ void test_DensityOverlap( CLCFGO& solver, Plot2D& plot1 ){
     DEBUG_saveFile1="temp/rho0.xsf";
     DEBUG_saveFile2="temp/rho1.xsf";
     auto func1 = [&](GridShape& grid, double* f, double x ){
-        solver.epos[0].x=x;
+        //solver.epos[0].x=x;
         //solver.projectOrbs();
         solver.orb2grid( 0, grid, f );
         int ntot=grid.n.totprod();
@@ -177,7 +236,7 @@ void test_ElectroStatics( CLCFGO& solver, Plot2D& plot1 ){
     DEBUG_saveFile2="temp/rho1.xsf";
     auto func1 = [&](GridShape& grid, double* f, double x ){     //    ---- Potencial of Orb_1
         int ntot=grid.n.totprod();
-        solver.epos[0].x=x;
+        //solver.epos[0].x=x;
         solver.projectOrbs();
         //solver.orb2grid( 0, grid, f );
         //solver.rho2grid( 0, grid, f );
@@ -259,15 +318,16 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     {auto& _=solver;
         for(int i=0; i<_.nBas; i++){ _.ecoef[i]=0; _.epos[i]=Vec3dZero;  }
-        _.ecoef[0] = 1.0;
-        _.ecoef[2] = 1.0;
-        //_.ecoef[1] = +0.2;
+        _.ecoef[0] =  1.0;
+        _.ecoef[2] =  1.0;
+        _.ecoef[1] = -0.5; solver.epos[1] = (Vec3d){2.0,0.0,0.0};
         //_.ecoef[3] = +0.3;
     }
 
     //test_WfOverlap     ( solver, plot1 );
+    test_Kinetic( solver, plot1 );
     //test_ProjectDensity( solver, plot1 );
-    test_DensityOverlap( solver, plot1 );   plot1.scaling.y = 30.0;
+    //test_DensityOverlap( solver, plot1 );   plot1.scaling.y = 30.0;
     //test_ElectroStatics( solver, plot1 );
 
     plot1.update();
