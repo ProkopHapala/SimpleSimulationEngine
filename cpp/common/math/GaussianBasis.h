@@ -2,6 +2,8 @@
 #ifndef GaussianBasis_h
 #define GaussianBasis_h
 
+#include "fastmath.h"
+
 namespace Gauss{
 
 /*
@@ -111,7 +113,6 @@ inline double sqnorm3Ds( double s ){
 //inline double uy3Ds2( double r2, double s ){ return norm3Ds(s)* exp( r2/(-2*s*s) ); }
 inline double bas3D_r2( double r2, double s ){ return sqnorm3Ds(s)* exp( r2/(-2*s*s) ); }
 inline double rho3D_r2( double r2, double s ){ return   norm3Ds(s)* exp( r2/(-2*s*s) ); }
-
 
 /// Boys Function
 //  https://chemistry.stackexchange.com/questions/41214/boys-function-for-gaussian-integrals-in-ab-initio-calculations
