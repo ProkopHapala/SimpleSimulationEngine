@@ -308,8 +308,9 @@ class CLCFGO{ public:
             Ps[ii]  = pi;
             Ss[ii]  = si*M_SQRT1_2;
 
-            double fEki;
-            Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
+            //double fEki;
+            //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
+            Ek += qii*Gauss::kinetic( si );
             //printf( "orb[%i|%i   ] s(%g):%g qii %g \n", io, i,  si, Ss[ii],  qii );
             ii++;
             //printf( "orb[%i|%i] s %g qii %g \n", io, i,  si*2,  qii );
@@ -321,16 +322,15 @@ class CLCFGO{ public:
 
                 double cj  = ecoef[j];
                 double sj  = esize[j];
-
                 // --- Evaluate Normalization, Kinetic & Pauli Energy
                 double dSr, dSsi, dSsj;
                 double dTr, dTsi, dTsj;
                 const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
                 double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
                 double DTij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj ); // This is not normal kinetic energy this is change of kinetic energy due to orthogonalization
-                double Ekij = 0.0; // TODO : <i|Lapalace|j> between the two gaussians
-                //ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
 
+                double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
+                //ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
                 // --- Project on auxuliary density functions
                 Vec3d  pij;
                 double sij;
@@ -339,13 +339,15 @@ class CLCFGO{ public:
                 //double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
                 double qij = Sij*cij*2;
 
-                //printf( "DEBUG projectOrb[%i|%i,%i] r2 %g Tij %g \n", io, i,j, r2, Tij );
+                //printf( "DEBUG projectOrb[%i|%i,%i] r2 %g Tij %g \n", io, i,j, r2, DTij );
                 //printf( "DEBUG projectOrb[%i|%i,%i] sij %g \n", io, i,j, sij );
                 //printf( "orb[%i|%i,%i] r %g s(%g,%g):%g qS(%g,%g|%g):%g C %g \n", io, i,j, sqrt(r2),  si,sj,sij,  ci,cj,Sij,qij, Cij );
                 qcog.add_mul( pij, qij );
                 Q  +=   qij;
                 DT += DTij*cij;
                 Ek += Ekij*cij;
+
+
 
                 // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
                 Qs[ii] = qij;

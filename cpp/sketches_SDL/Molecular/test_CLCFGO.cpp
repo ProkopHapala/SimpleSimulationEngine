@@ -11,11 +11,10 @@
  - tested Wf projection of grid
  - tested Density projection on Aux Basis & on grid
  - tested Electrostatics (Hartree) evaluation
+ - tested kinetic energy
 
 ### TO DO ###
 --------------
- - Check kinetic energy
-    - ToDo :  needs to integrate <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
  - How to test Fock Exchange ?
     - possibly check overlap density
  - Model for Pauli Energy
@@ -105,10 +104,10 @@ void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
 
 void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
     // ======= Test Orbital Wavefunction Overlap
-    int    nint = 10;
-    double Lmax = 5.0;
-    DataLine2D* line_ISgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0000, "IS_grid" ); plot1.add(line_ISgrid );
-    DataLine2D* line_ISana  = new DataLine2D( 100,  0, 0.1      , 0xFFFF8000, "IS_ana"  );  plot1.add(line_ISana  );
+    int    nint = 20;
+    double Lmax = 8.0;
+    DataLine2D* line_ITgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0000, "IT_grid" ); plot1.add(line_ITgrid );
+    DataLine2D* line_ITana  = new DataLine2D( 100,  0, 0.1      , 0xFFFF8000, "IT_ana"  ); plot1.add(line_ITana  );
     {
     DEBUG_saveFile1="temp/wf0.xsf";
     DEBUG_saveFile2="temp/Lwf1.xsf";
@@ -116,20 +115,18 @@ void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
     auto func2 = [&](GridShape& grid, double* f, double x ){
         double* tmp = new double[grid.n.totprod()];
         solver.epos[0].x=x;
-        DEBUG
         solver.orb2grid( 0, grid, tmp );
-        DEBUG
         grid.Laplace   ( tmp, f );
-        DEBUG
         delete [] tmp;
     };
-    gridNumIntegral( nint, 0.2, 6.0, Lmax, line_ISgrid->ys, func1, func2, true );
+    gridNumIntegral( nint, 0.2, 8.0, Lmax, line_ITgrid->ys, func1, func2, true );
     }
     Vec3d dip;
-    for(int i=0; i<line_ISana->n; i++){
-        solver.epos[0].x=line_ISana->xs[i];
-        line_ISana->ys[i] = solver.projectOrb( 0, dip, false );
+    for(int i=0; i<line_ITana->n; i++){
+        solver.epos[0].x=line_ITana->xs[i];
+        line_ITana->ys[i] = solver.projectOrb( 0, dip, false );
     }
+    printf( "KineticIntegral(0) Grid %g Ana %g ratio %g /%g \n", line_ITgrid->ys[0], line_ITana->ys[0],  line_ITgrid->ys[0]/line_ITana->ys[0],  line_ITana->ys[0]/line_ITgrid->ys[0]  );
 }
 
 // ===================================================
@@ -221,7 +218,7 @@ void test_DensityOverlap( CLCFGO& solver, Plot2D& plot1 ){
 void test_ElectroStatics( CLCFGO& solver, Plot2D& plot1 ){
     // ======= Test Orbital Density Overlap
     int    nint = 10;
-    double Lmax = 5.0;
+    double Lmax = 6.0;
     DataLine2D* line_IElGrid = new DataLine2D( nint, 0, Lmax/nint, 0xFF0000FF, "IEl_grid" ); plot1.add(line_IElGrid );
     DataLine2D* line_IElAna  = new DataLine2D( 100, 0, 0.1       , 0xFF0080FF, "IEl_ana"  ); plot1.add(line_IElAna  );
     //DataLine2D* line_IrhoWf   = new DataLine2D( 100, 0, 0.1      , 0xFFFF00FF, "Irho_Wf"   ); plot1.add(line_IrhoWf  );
@@ -320,7 +317,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         for(int i=0; i<_.nBas; i++){ _.ecoef[i]=0; _.epos[i]=Vec3dZero;  }
         _.ecoef[0] =  1.0;
         _.ecoef[2] =  1.0;
-        _.ecoef[1] = -0.5; solver.epos[1] = (Vec3d){2.0,0.0,0.0};
+        _.ecoef[1] = -1.0; solver.epos[1] = (Vec3d){0.0,0.0,0.0};
         //_.ecoef[3] = +0.3;
     }
 

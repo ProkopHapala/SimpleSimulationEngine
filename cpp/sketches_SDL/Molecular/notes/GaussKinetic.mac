@@ -1,0 +1,19 @@
+load(noninteractive);
+
+assume(w1>0,w2>0,x1>0);
+f1(x,y,z):=exp(-w1*((x-x1)^2+y^2+z^2));
+f2(x,y,z):=exp(-w2*(x^2+y^2+z^2));
+Lf2(x,y,z):=diff(f2(x,y,z),x,2) + diff(f2(x,y,z),y,2) + diff(f2(x,y,z),z,2);
+t12(x,y,z):=f1(x,y,z)*Lf2(x,y,z);
+
+t12 (x,y,z);
+
+assume(w1+w2>0);
+
+Ix_t12(y,z) := integrate( t12(x,y,z), x, -inf,+inf);
+
+T12 : integrate(   integrate(  Ix_t12(y,z), y, -inf,+inf ), z, -inf,+inf );
+
+It12 : factor((ratsimp(T12(x,y,z))));
+
+factor(It12);
