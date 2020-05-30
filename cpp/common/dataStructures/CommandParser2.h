@@ -2,6 +2,7 @@
 #ifndef CommandParser2_h
 #define CommandParser2_h
 
+#include <string>
 
 /*
 

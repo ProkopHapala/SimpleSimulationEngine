@@ -21,9 +21,13 @@ class AABBNode3D{
     AABBNode3D* subs[NSUBMAX];
 
     bool insert( O o, Box box){
-        if( span ){
+        if( span.pointIn(o) ){
+            // ToDo: Branching !!!
+            if(nobj<nobjmax-1){
+                objs[nobj]=o;
+                nobj++;
+            }
         }
-
         return false;
     }
 

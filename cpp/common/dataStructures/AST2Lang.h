@@ -6,6 +6,7 @@
 #include "AST.h"
 
 #include <unordered_map>
+#include <string>
 
 namespace Lang{
 

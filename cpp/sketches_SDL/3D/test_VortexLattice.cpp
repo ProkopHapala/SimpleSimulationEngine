@@ -183,7 +183,7 @@ double definiteIntegral2Array( int n, Vec3d p0, Vec3d p1, Type_F F, double * ys)
 }
 
 template<typename Type_F>
-double definiteIntegral2ArrayVec3( int n, Vec3d p0, Vec3d p1, Type_F F, Vec3d * ys){
+Vec3d definiteIntegral2ArrayVec3( int n, Vec3d p0, Vec3d p1, Type_F F, Vec3d * ys){
     Vec3d dp = p1-p0;
     dp.mul(1./n);
     Vec3d p  = p0;

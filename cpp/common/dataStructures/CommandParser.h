@@ -2,6 +2,8 @@
 #ifndef CommandParser_h
 #define CommandParser_h
 
+#include <stdlib.h>
+
 // simple command parser
 // # comment
 // commands are separated by some separator (;, \t )
