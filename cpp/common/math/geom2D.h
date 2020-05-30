@@ -401,10 +401,17 @@ struct Arc2d{
         //if(angs[1]<a) angs[1]+=2*M_PI;
     }
 
-    void fromCorner( const Vec2d& d1, const Vec2d& d2 ){
-        angs[0] = atan2(d1.y,d1.x) - M_PI_2;
-        angs[1] = atan2(d2.y,d2.x) + M_PI_2;
-        printf( "angs %g %g \n", angs[0], angs[1] );
+    void fromCorner( Vec2d d1, Vec2d d2 ){
+        //angs[0] = atan2(d1.y,d1.x) - M_PI_2;
+        //angs[1] = atan2(d2.y,d2.x) + M_PI_2;
+        Vec2d dc = d1+d2;
+        //d1.mul( copysign( 1, dc.dot_perp(d1) ) );
+        //d2.mul( copysign( 1, dc.dot_perp(d2) ) );
+        d1.mul( dc.dot_perp(d1) );
+        d2.mul( dc.dot_perp(d2) );
+        angs[0] = atan2(-d1.x,d1.y);
+        angs[1] = atan2(-d2.x,d2.y);
+        //printf( "angs %g %g \n", angs[0], angs[1] );
         //double a = atan2(d3.y,d3.x);
         //if( (angs[1]-angs[0])> M_PI ){ angs[1]-=M_PI; angs[0]+=M_PI; }
         //if( (angs[1]-angs[0])<-M_PI ){ angs[1]-=M_PI; angs[0]+=M_PI; }

@@ -103,8 +103,9 @@ class Vec2T{
 
     inline double makePerpUni( const VEC& a ) { double cdot=x*a.x+y*a.y; x-=a.x*cdot; y-=a.y*cdot; return cdot; }
 
-	inline void set_perp( const VEC& a )     { x=-a.y; y=a.x; }
-	inline T cross ( const VEC& a ) const { return x*a.y - y*a.x; };
+    inline void     perp(              )  { T x_=x; x=-y;   y=x_;  }
+	inline void set_perp( const VEC& a )  {         x=-a.y; y=a.x; }
+	inline T cross ( const VEC& a ) const { return x*a.y - y*a.x;  }
 
 	bool isBetweenRotations( const VEC& a, const VEC& b ){ return (cross(a)<0)&&(cross(b)>0);  }
 

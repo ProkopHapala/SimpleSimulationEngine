@@ -18,7 +18,7 @@
 #include "quaternion.h"
 //#include "raytrace.h"
 
-
+#include "spline_Circle.h"
 #include "geom2D.h"
 
 
@@ -164,6 +164,7 @@ void CAD2DGUI::draw(){
     }
     */
 
+    /*
     {
         Vec2d pc = { 0.2, .8};
         Vec2d d1 = {-0.9, .5};
@@ -189,6 +190,28 @@ void CAD2DGUI::draw(){
 
         glColor3f( 0.7,0.7,0.7 ); Draw2D::drawCircle_d( c1.p0, c1.r,  64, false );
         glColor3f( 0.0,0.0,0.0 ); Draw2D::drawArc_d   ( c1.p0, c1.r, arc.angs[0], arc.angs[1], 0.1, false );
+
+
+        //glColor3f( 1.0,1.0,0.0 ); Draw2D::drawVecInPos_d( (Vec2d){cos(arc.angs[0]),sin(arc.angs[0])}, pc );
+        //glColor3f( 0.0,1.0,1.0 ); Draw2D::drawVecInPos_d( (Vec2d){cos(arc.angs[1]),sin(arc.angs[1])}, pc );
+
+        glColor3f( 1.0,1.0,0.0 ); Draw2D::drawVecInPos_d( (Vec2d){cos(arc.angs[0]),sin(arc.angs[0])}, c1.p0 );
+        glColor3f( 0.0,1.0,1.0 ); Draw2D::drawVecInPos_d( (Vec2d){cos(arc.angs[1]),sin(arc.angs[1])}, c1.p0 );
+    }
+    */
+
+    {
+
+        CircleSpline cspline;
+        cspline.CPs.push_back( {0.5,1.3,   0.2} );
+        cspline.CPs.push_back( {-0.5,6.3,  1.2} );
+
+        Vec2d p0,p1;
+        glColor3f( 1.0,0.0,0.0 );
+        cspline.getLine(0, p0, p1);
+
+        glColor3f( 1.0,0.0,0.0 ); Draw2D::drawCircle_d( cspline.CPs[0].p0, cspline.CPs[0].r,  64, false );
+        glColor3f( 0.0,0.0,1.0 ); Draw2D::drawCircle_d( cspline.CPs[1].p0, cspline.CPs[1].r,  64, false );
 
     }
 
