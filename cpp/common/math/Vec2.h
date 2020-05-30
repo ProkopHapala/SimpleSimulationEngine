@@ -77,6 +77,7 @@ class Vec2T{
 	inline void set_lincomb( T fa, T fb, T fc, const VEC& a, const VEC& b, const VEC& c ){ x = fa*a.x + fb*b.x + fc*c.x;  y = fa*a.y + fb*b.y + fc*c.y; };
 	inline void add_lincomb( T fa, T fb, T fc, const VEC& a, const VEC& b, const VEC& c ){ x+= fa*a.x + fb*b.x + fc*c.x;  y+= fa*a.y + fb*b.y + fc*c.y; };
 
+	//inline void set_lincomb_perp( const VEC& v, const VEC& cs ){ x=v.x*cs.x - v.y*cs.y; y=v.y*cs.x + v.x*cs.y; }; //  NOT REQUIRED: wequivalent to  set_mul_cmplx
 
     inline VEC operator+ ( T f   ) const { VEC vo; vo.x=x+f; vo.y=y+f; return vo; };
     inline VEC operator* ( T f   ) const { VEC vo; vo.x=x*f; vo.y=y*f; return vo; };
@@ -120,6 +121,7 @@ class Vec2T{
 	inline void fromAngle_taylor2( T phi ){	sincos_taylor2<T>( phi, y, x );	}
 	inline void fromCos          ( T ca  ){  x=ca; y=sqrt(1-ca*ca); }
 	inline void fromSin          ( T sa  ){  y=sa; x=sqrt(1-sa*sa); }
+	inline T    toAngle() { return atan2(y,x); }
 
 	inline void rotate( T phi ){
 		T bx = cos( phi );   		  T by = sin( phi );

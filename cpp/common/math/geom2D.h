@@ -316,17 +316,27 @@ struct Circle2d{
     Vec2d  p0;
     double r;
 
-    void fromCenterAndPoint(const Vec2d& p0_, const Vec2d& p1_){
+    inline double pointDist(Vec2d p){
+        p.sub(p0);
+        return p.norm()-r;
+    }
+
+    inline double pointDist2(Vec2d p){
+        p.sub(p0);
+        return p.norm2()-r*r;
+    }
+
+    inline void fromCenterAndPoint(const Vec2d& p0_, const Vec2d& p1_){
         p0=p0_;
         r = (p0_-p1_).norm();
     }
 
-    void from2points(const Vec2d& p0_, const Vec2d& p1_){
+    inline void from2points(const Vec2d& p0_, const Vec2d& p1_){
         p0 = (p0_+p1_)*0.5;
         r  = (p0_-p1_).norm()*0.5;
     }
 
-    void from3points(const Vec2d& p1, const Vec2d& p2, const Vec2d& p3 ){
+    inline void from3points(const Vec2d& p1, const Vec2d& p2, const Vec2d& p3 ){
 
         // https://www.geeksforgeeks.org/equation-of-circle-when-three-points-on-the-circle-are-given/
 
@@ -351,7 +361,7 @@ struct Circle2d{
 
     }
 
-    void fromCorner( const Vec2d& pc, const Vec2d& d1, const Vec2d& d2, double r_ ){
+    inline void fromCorner( const Vec2d& pc, const Vec2d& d1, const Vec2d& d2, double r_ ){
         r = r_;
         Vec2d d    = d1 + d2;
         double c   = d.dot(d1);
@@ -363,11 +373,55 @@ struct Circle2d{
     }
 };
 
-
 struct Arc2d{
     //Circle2d* circ;
     int icirc;
-    double angs[2];
+    //double angs[2];
+    double ang0;
+    double dang;
+
+    inline void getDir1  ( double f, Vec2d& d )const{ d.fromAngle(ang0+(dang*f)); };
+    //void getDir2(Vec2d& d)const{ d.fromAngle(angs[1]); };
+    inline void getPoint1( double f, Vec2d& p, const Circle2d* c )const{ getDir1(f,p); c+=icirc; p.mul(c->r); p.add(c->p0); };
+    //void getPoint2(Vec2d& p, const Circle2d* c)const{ getDir2(p); c+=icirc; p.mul(c->r); p.add(c->p0); };
+
+    //void dirFromPoint( int ip, const Vec2d& p, const Circle2d* c ){
+    //    c+=icirc;
+    //    Vec2d d = p - c->p0;
+    //    angs[ip] = atan2(d.x,d.y);
+    //};
+
+    inline void fromCenter2points( const Vec2d& pc, const Vec2d& p1, const Vec2d& p2 ){
+        Vec2d d0,d1;
+        d0 = p1-pc;
+        d1 = p2-pc;
+        d1.udiv_cmplx(d0);
+        ang0 = d0.toAngle();
+        dang = d1.toAngle();
+        //if(angs[0]>angs[1]) _swap(angs[0],angs[1]);
+    }
+
+    inline void fromCorner( Vec2d d1, Vec2d d2 ){
+        Vec2d dc = d1+d2;
+        d1.mul( dc.dot_perp(d1) );
+        d2.mul( dc.dot_perp(d2) );
+        d2.udiv_cmplx(d1);
+        ang0 = d1.toAngle();
+        dang = d2.toAngle();
+        //angs[0] = atan2(-d1.x,d1.y);
+        //angs[1] = atan2(-d2.x,d2.y);
+    }
+
+};
+
+
+/*
+struct Arc2d{
+    //Circle2d* circ;
+    int icirc;
+    //double angs[2];
+    double ang0;
+    double dang;
 
     void getDir1  ( int ip, Vec2d& d )const{ d.fromAngle(angs[ip]); };
     //void getDir2(Vec2d& d)const{ d.fromAngle(angs[1]); };
@@ -380,10 +434,10 @@ struct Arc2d{
         angs[ip] = atan2(d.x,d.y);
     };
 
-    void fromCenter2points( const Vec2d& p0, const Vec2d& p1, const Vec2d& p2 ){
+    void fromCenter2points( const Vec2d& pc, const Vec2d& p1, const Vec2d& p2 ){
         Vec2d d;
-        d = p1-p0; angs[0] = atan2(d.y,d.x);
-        d = p2-p0; angs[1] = atan2(d.y,d.x);
+        d = p1-pc; angs[0] = atan2(d.y,d.x);
+        d = p2-pc; angs[1] = atan2(d.y,d.x);
         //if(angs[0]>angs[1]) _swap(angs[0],angs[1]);
     }
 
@@ -419,9 +473,8 @@ struct Arc2d{
         //if(angs[0]>a && angs[1]>a ){ angs[1]-=2*M_PI; _swap(angs[0],angs[1]); }
         //if(angs[1]<a && angs[0]<a ){ angs[0]+=2*M_PI; _swap(angs[0],angs[1]); }
     }
-
 };
-
+*/
 
 #endif
 

@@ -5,6 +5,8 @@
 #include <vector>
 #include <math.h>
 
+#include "testUtils.h"
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw2D.h"
@@ -29,7 +31,6 @@
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 #include "IO_utils.h"
-#include "testUtils.h"
 
 //#include "Table.h"
 //#include "Tree.h"
@@ -46,12 +47,17 @@ class CAD2DGUI : public AppSDL2OGL_3D { public:
 	//DropDownList lstLuaFiles;
     GUI gui;
 
+
+    CircleSpline cspline;
     //DropDownList* lstLuaFiles=0;
     //OnSelectLuaShipScript onSelectLuaShipScript;
 
     double gridStep = 1.0;
 
-    int picked = -1;
+    int ipick = -1;
+    Vec2d  opmouse;
+
+    // ======= Functions
 
     void selectCompGui();
 
@@ -74,6 +80,12 @@ CAD2DGUI::CAD2DGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDT
     fontTex     = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
+    cspline.CPs.push_back( { 0.5,0.3,  0.6} );
+    cspline.CPs.push_back( {-0.5,3.3,  2.2} );
+    cspline.CPs.push_back( {-2.5,4.3,  1.3} );
+    cspline.CPs.push_back( {-4.5,2.3,  1.8} );
+    cspline.CPs.push_back( {-4.5,-0.3, 1.3} );
+
 }
 
 void drawPointGrid(const Vec2i& ns,const Vec2d& p0,const Vec2d& da,const Vec2d& db ){
@@ -87,6 +99,44 @@ void drawPointGrid(const Vec2i& ns,const Vec2d& p0,const Vec2d& da,const Vec2d& 
     glEnd();
 }
 
+void drawCircSpline( CircleSpline& cspline, int ncirc=64 ){
+    Vec2d op;
+    for(int i=0; i<cspline.CPs.size();i++){
+        const Circle2d& circ = cspline.CPs [i];
+        Draw2D::drawCircle_d( circ.p0, circ.r, ncirc, false );
+        if(i>0) Draw2D::drawLine_d( op, circ.p0 );
+        op=circ.p0;
+    }
+}
+
+/*
+void drawCircSplineSide( CircleSpline& cspline , float dang=0.1 ){
+    int n = cspline.CPs.size()-1;
+    for(int i=0; i<n;i++){
+        glColor3f(0.,0.,0.);
+        const Ray2d&    ray  = cspline.rays[i  ];
+        Draw2D::drawVecInPos_d( ray.dir*ray.l, ray.p0 );
+        if(i>0){
+            const Circle2d& circ = cspline.CPs [i  ];
+            const Arc2d&    arc  = cspline.arcs[i-1];
+            Draw2D::drawArc_d( circ.p0, circ.r, arc.ang0, arc.dang, dang, false );
+            //glColor3f(0.7,0.7,0.7); Draw2D::drawCircle_d( circ.p0, circ.r, 64, false );
+        }
+    }
+}
+*/
+
+void drawCircSplineSide( CircleSpline& cspline , float dang=0.1 ){
+    int n = cspline.CPs.size();
+    for(int i=0; i<n; i++){
+        const Ray2d&    ray  = cspline.rays[i  ];
+        Draw2D::drawVecInPos_d( ray.dir*ray.l, ray.p0 );
+        //printf( "- ray (%g,%g) (%g,%g) l %g \n", ray.p0.x,ray.p0.y,  ray.dir.x,ray.dir.y,  ray.l );
+        const Circle2d& circ = cspline.CPs [i];
+        const Arc2d&    arc  = cspline.arcs[i];
+        Draw2D::drawArc_d( circ.p0, circ.r, arc.ang0, arc.dang, dang, false );
+    }
+}
 
 void CAD2DGUI::draw(){
     //printf( " ==== frame %i \n", frameCount );
@@ -201,18 +251,9 @@ void CAD2DGUI::draw(){
     */
 
     {
-
-        CircleSpline cspline;
-        cspline.CPs.push_back( {0.5,1.3,   0.2} );
-        cspline.CPs.push_back( {-0.5,6.3,  1.2} );
-
-        Vec2d p0,p1;
-        glColor3f( 1.0,0.0,0.0 );
-        cspline.getLine(0, p0, p1);
-
-        glColor3f( 1.0,0.0,0.0 ); Draw2D::drawCircle_d( cspline.CPs[0].p0, cspline.CPs[0].r,  64, false );
-        glColor3f( 0.0,0.0,1.0 ); Draw2D::drawCircle_d( cspline.CPs[1].p0, cspline.CPs[1].r,  64, false );
-
+        cspline.evalSide(-1);
+        glColor3f(0.7,0.7,0.7); drawCircSpline    (cspline);
+        glColor3f(0.0,0.0,0.0); drawCircSplineSide(cspline);
     }
 
 
@@ -282,6 +323,7 @@ void CAD2DGUI::eventHandling ( const SDL_Event& event  ){
         else if(event.wheel.y < 0){ zoom*=VIEW_ZOOM_STEP; }
     }
     gui.onEvent(mouseX,mouseY,event);
+    Vec2d pmouse=(Vec2d){mouse_begin_x,mouse_begin_y};
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
@@ -293,6 +335,8 @@ void CAD2DGUI::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
+                    ipick = cspline.pickNode( pmouse ); opmouse=pmouse;
+                    break;
                     //switch(edit_mode){
                     //    case EDIT_MODE::vertex    : picked = truss.pickVertex( mouse_ray0, (Vec3d)cam.rot.c, 0.5  ); printf("picked %i\n", picked); break;
                     //    case EDIT_MODE::edge      : picked = truss.pickEdge  ( mouse_ray0, (Vec3d)cam.rot.c, 0.25 ); printf("picked %i\n", picked); break;
@@ -313,13 +357,21 @@ void CAD2DGUI::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
+                    ipick=-1;
                     //switch(edit_mode){
-                        //case EDIT_MODE::vertex: int ip2 = truss.pickVertex( mouse_ray0, (Vec3d)cam.rot.c, 0.5  ); if((picked>=0)&(ip2!=picked)); truss.edges.push_back((TrussEdge){picked,ip2,0}); break;
-                        //case EDIT_MODE::edge  : picked = truss.pickEdge  ( mouse_ray0, camMat.c, 0.25 ); printf("picked %i\n", picked); break;
+                    //    case EDIT_MODE::cspline: int ip2 = ;
+                    //    //case EDIT_MODE::edge  : picked = truss.pickEdge  ( mouse_ray0, camMat.c, 0.25 ); printf("picked %i\n", picked); break;
                     //}; break;
                 case SDL_BUTTON_RIGHT:break;
             }
             break;
+        case SDL_MOUSEMOTION:
+            case SDL_BUTTON_LEFT:
+                if(ipick>=0){
+                    cspline.CPs[ipick].p0.add( pmouse-opmouse );
+                    opmouse=pmouse;
+                }break;
+        break;
     };
     AppSDL2OGL::eventHandling( event );
 
