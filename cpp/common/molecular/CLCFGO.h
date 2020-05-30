@@ -290,7 +290,8 @@ class CLCFGO{ public:
         double*  Qs =rhoQ+irho0;
         double*  Ss =rhoS+irho0;
         double Q=0;
-        double T=0; // kinetic energy
+        double DT=0; // kinetic energy change by orthognalization
+        double Ek=0; // kinetic energy
         dip         = Vec3dZero;
         Vec3d qcog  = Vec3dZero;
         Vec3d oqcog = opos[io];
@@ -307,7 +308,10 @@ class CLCFGO{ public:
             Ps[ii]  = pi;
             Ss[ii]  = si*M_SQRT1_2;
 
-            printf( "orb[%i|%i   ] s(%g):%g qii %g \n", io, i,  si, Ss[ii],  qii );
+            //double fEki;
+            //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
+            Ek += qii*Gauss::kinetic( si );
+            //printf( "orb[%i|%i   ] s(%g):%g qii %g \n", io, i,  si, Ss[ii],  qii );
             ii++;
             //printf( "orb[%i|%i] s %g qii %g \n", io, i,  si*2,  qii );
             for(int j=i0; j<i; j++){
@@ -318,14 +322,15 @@ class CLCFGO{ public:
 
                 double cj  = ecoef[j];
                 double sj  = esize[j];
-
                 // --- Evaluate Normalization, Kinetic & Pauli Energy
                 double dSr, dSsi, dSsj;
                 double dTr, dTsi, dTsj;
                 const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
-                double Sij = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
-                double Tij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj );
+                double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
+                double DTij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj ); // This is not normal kinetic energy this is change of kinetic energy due to orthogonalization
 
+                double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
+                //ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
                 // --- Project on auxuliary density functions
                 Vec3d  pij;
                 double sij;
@@ -334,11 +339,15 @@ class CLCFGO{ public:
                 //double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
                 double qij = Sij*cij*2;
 
+                //printf( "DEBUG projectOrb[%i|%i,%i] r2 %g Tij %g \n", io, i,j, r2, DTij );
                 //printf( "DEBUG projectOrb[%i|%i,%i] sij %g \n", io, i,j, sij );
-                printf( "orb[%i|%i,%i] r %g s(%g,%g):%g qS(%g,%g|%g):%g C %g \n", io, i,j, sqrt(r2),  si,sj,sij,  ci,cj,Sij,qij, Cij );
+                //printf( "orb[%i|%i,%i] r %g s(%g,%g):%g qS(%g,%g|%g):%g C %g \n", io, i,j, sqrt(r2),  si,sj,sij,  ci,cj,Sij,qij, Cij );
                 qcog.add_mul( pij, qij );
-                Q +=   qij;
-                T += T*cij;
+                Q  +=   qij;
+                DT += DTij*cij;
+                Ek += Ekij*cij;
+
+
 
                 // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
                 Qs[ii] = qij;
@@ -352,12 +361,12 @@ class CLCFGO{ public:
         if(bNormalize){
             double renorm  = sqrt(1./Q);
             double renorm2 = renorm*renorm;
-            printf( "Q %g renorm %g renorm2 %g \n", Q, renorm, renorm2 );
+            //printf( "Q %g renorm %g renorm2 %g \n", Q, renorm, renorm2 );
             for(int i=i0; i<i0+perOrb; i++){ ecoef[i] *=renorm;  };
             for(int i= 0; i<ii       ; i++){ Qs   [i] *=renorm2; };
         }
         // ToDo: Renormalize also  rhos?
-        return Q;
+        return Ek;
     }
 
     double projectOrbs(){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
@@ -427,19 +436,22 @@ class CLCFGO{ public:
                 Vec3d  pj = rhoP[j];
                 Vec3d Rij = pj-pi;
                 double r2 = Rij.norm2();
-                if(r2>Rcut2) continue;
+                //if(r2>Rcut2) continue;
 
                 double qj = rhoQ[j];
                 double sj = rhoS[j];
 
-                double r    = sqrt(r2);
+                double r    = sqrt(r2 + R2SAFE);
                 double s2   = si*si + sj*sj;
                 double s    = sqrt(s2);
 
                 double fr,fs;
-                double Eqq = CoulombGauss( r, s, fr, fs, qi*qj );
+                double Eqq  = CoulombGauss( r, s*2, fr, fs, qi*qj );
+                //printf( "[%i,%i] E %g r %g sij %g(%g,%g) q %g(%g,%g) \n", i,j,  Eqq , r, s,si,sj, qi*qj,qi,qj );
+                Ecoul      += Eqq;
             }
         }
+        //printf( "CoulombOrbPair Eorb %g \n", Ecoul );
         return Ecoul;
     }
 
@@ -498,16 +510,21 @@ class CLCFGO{ public:
                 Vec3d Rij = pj-pi;
                 double r2 = Rij.norm2();
                 if(r2>Rcut2) continue;
-
-                // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
-
                 double cj = ecoef[j];
                 double sj = esize[j];
 
-                double qij = ci*cj;
+                double dSr, dSsi, dSsj;
+                const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
+                double Sij = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
+                Vec3d  pij;
+                double sij;
+                double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+                double cij = ci*cj;
+                //double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
+                double qij = Sij*cij*2;
                 rhoij[ij]  = qij;           // ToDo: we may perhas evaluate it on even more extended axuliary basis
-                posij[ij]  = (pi+pj)*0.5;
-                szij [ij]  = si*sj;
+                posij[ij]  = pij;
+                szij [ij]  = sij;
                 ij++;
             }
         }
@@ -527,7 +544,7 @@ class CLCFGO{ public:
                 double s2 = si*si + sj*sj;
                 double s  = sqrt(s2);
                 double fr,fs;
-                double Cij = CoulombGauss( r, s, fr, fs, qi*qj );
+                double Cij = CoulombGauss( r, s*2, fr, fs, qi*qj );
                 E += Cij; // ToDo : we should perhaps use some cutoff for large distances ?
                 //E += qi*qj/sqrt(r2+R2Safe);  // ToDo  : we should perhaps calculate this more properly considering true shape of axuiliary density function
                 //
@@ -587,7 +604,7 @@ class CLCFGO{ public:
         double* Cs = rhoQ + i0;
         double* Ss = rhoS + i0;
         //printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
-        for(int i=0; i<ni; i++){ printf( "rho[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
+        //for(int i=0; i<ni; i++){ printf( "rho[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
         //printf( "DEBUG norm3Ds(1) %g %g \n", Gauss::norm3Ds( 1.0 ), pow( M_PI*2,-3./2) );
         return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){
             double rho_sum = 0.0;
@@ -601,6 +618,34 @@ class CLCFGO{ public:
                 // ToDo : Fast Gaussian ?
             }
             buff[ig] = rho_sum;
+        });
+    }
+
+    double hartree2grid( int io, const GridShape& gridShape, double* buff )const{
+        int i0 = getRhoOffset(io);
+        int ni = onq[io];
+        //printf( "DEBUG rho2grid i0 %i ni %i \n", i0, ni  );
+        //printf( "DEBUG DensOverlapOrbPair i0,j0  %i,%i ni,nj %i,%i \n", i0,j0, ni, nj );
+        double renorm = Gauss::norm3Ds(1);
+        Vec3d*  Ps = rhoP + i0;
+        double* Cs = rhoQ + i0;
+        double* Ss = rhoS + i0;
+        //printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
+        //for(int i=0; i<ni; i++){ printf( "rho[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
+        //printf( "DEBUG norm3Ds(1) %g %g \n", Gauss::norm3Ds( 1.0 ), pow( M_PI*2,-3./2) );
+        return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){
+            double v_sum = 0.0;
+            for(int i=0; i<ni; i++){
+                Vec3d dR  = pos - Ps[i];
+                double r2 = dR.norm2();
+                double si = Ss[i];
+                double ci = Cs[i];
+                //if(i==2) ci*=1.28;
+                //rho_sum += Gauss::elpot( sqrt(r2)/si ) * ci;
+                v_sum += erfx_e6( sqrt(r2)/(si*M_SQRT2) ) * (ci * const_El_eVA);
+                // ToDo : Fast Gaussian ?
+            }
+            buff[ig] = v_sum;
         });
     }
 

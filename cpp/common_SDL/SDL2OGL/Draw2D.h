@@ -76,6 +76,7 @@ void renderImage( int itex, const Rect2d& rec );
 //void drawString ( const char * str, int imin, int imax, float x, float y, float sz, int itex );
 //void drawString ( const char * str,                     float x, float y, float sz, int itex );
 //void drawText ( const char * str, int nchar,        Vec2d pos,              int fontTex, float textSize );
+void drawTextBillboard( const char * str, int nchar, Vec2d pos,              int fontTex, float textSize );
 void drawText ( const char * str, int nchar, Vec2d pos, float angle, int fontTex, float textSize );
 void drawText ( const char * str,            Vec2d pos, Vec2d sz,    int fontTex, float textSize );
 //void drawText   ( const char * str, const Vec2d& pos, float angle, int fontTex, float textSize, int istart, int iend );

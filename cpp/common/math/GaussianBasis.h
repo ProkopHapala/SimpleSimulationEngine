@@ -2,6 +2,8 @@
 #ifndef GaussianBasis_h
 #define GaussianBasis_h
 
+#include "fastmath.h"
+
 namespace Gauss{
 
 /*
@@ -107,10 +109,54 @@ inline double sqnorm3Ds( double s ){
     return c*c*c;
 }
 
+inline double sqnorm3Ds_sq( double s ){
+    const double sqrt_pi = 1.77245385091;
+    double c = 1/(sqrt_pi*s); // sqrt(sqrt(pi)*s)
+    return c*c*c;
+}
+
 //inline double uy3Ds( double r, double s ){ return norm3Ds(s)* exp( (r*r)/(-2*s*s) ); }
 //inline double uy3Ds2( double r2, double s ){ return norm3Ds(s)* exp( r2/(-2*s*s) ); }
 inline double bas3D_r2( double r2, double s ){ return sqnorm3Ds(s)* exp( r2/(-2*s*s) ); }
 inline double rho3D_r2( double r2, double s ){ return   norm3Ds(s)* exp( r2/(-2*s*s) ); }
+
+inline double LoG3D_r2( double r2, double s ){ double wr2=r2/(-2*s*s); return   norm3Ds(s)* ( (1+wr2) )*exp( wr2 ); }
+
+
+
+inline double kinetic_w( double w ){
+    // !!!!! NOT NORMALIZED GAUSSIAN
+    //    -((3*pi^(3/2))/(2^(3/2) )   /sqrt(w))
+    return -5.90610372965 * sqrt(w);
+}
+
+
+inline double kinetic_w(  double r2, double w1, double w2 ){
+    // Derived in Maxima: see : /home/prokop/Dropbox/MyDevSW/Maxima/Gauss_Kinetic-Cleaned.wxmx
+    //                                                              Gauss_Kinetic-Polar-.wxmx
+    // Cartes : (2*%pi^(3/2)*w1*w2*(2*w1*w2*x1^2-3*w2-3*w1)*%e^(-(w1*w2*x1^2)/(w2+w1)))/(w2+w1)^(7/2)
+    // Polar  : (2*%pi^(3/2)*w1*w2*(2*w1*w2*x1^2-3*w2-3*w1)*%e^(-(w1*w2*x1^2)/(w2+w1)))/(w2+w1)^(7/2)
+    //   (2*pi^(3/2) *   w1*w2*    (2*w1*w2* x1^2 -3*(w2+w1) )*  exp( -(w1*w2*x1^2)/(w2+w1))   )   /(w2+w1)^(7/2)
+    //                   wprod*    (2 *wprod* x*x - 3*wsum )  *  exp( -( wprod *x*x )/wsum  )
+    double C         = 11.1366559937; //(pi^(3/2))*2
+    double wsum      = w2+w1 ;
+    double iwsum     = 1/wsum;
+    double sqrtiwsum = sqrt(iwsum);
+    double wprod     = w1*w2 ;
+    //double x2        = x*x;
+    double g         = exp( -( wprod * r2 )*iwsum );
+    return C*wprod * ( 2*wprod*r2 - 3*wsum )*g*iwsum*iwsum*iwsum*sqrtiwsum;
+}
+
+inline double kinetic( double s ){
+    //     -(3*pi^(3/2)*s)/2
+    //return -8.35249199525 * s * sqnorm3Ds(s) * sqnorm3Ds(s);
+    return -8.35249199525 * s * sqnorm3Ds_sq(s);
+}
+
+inline double kinetic( double r2, double s1, double s2 ){
+    return kinetic_w( r2, 1/(2*s1*s1), 1/(2*s2*s2) )  *  sqnorm3Ds(s1) * sqnorm3Ds(s2);
+}
 
 
 /// Boys Function
