@@ -20,15 +20,16 @@
 #include "quaternion.h"
 //#include "raytrace.h"
 
-#include "spline_Circle.h"
+#include "Spline2d.h"
 #include "geom2D.h"
+#include "spline_Circle.h"
 
 
 //#include "SphereSampling.h"
 //#include "DrawSphereMap.h"
-#include "Draw3D_Surf.h"
+//#include "Draw3D_Surf.h"
 
-#include "AppSDL2OGL_3D.h"
+#include "AppSDL2OGL_3D.h" // should we use 2D instead ? - no, we wan to draw projections later
 #include "GUI.h"
 #include "IO_utils.h"
 
@@ -47,7 +48,7 @@ class CAD2DGUI : public AppSDL2OGL_3D { public:
 	//DropDownList lstLuaFiles;
     GUI gui;
 
-
+    Spline2d     spline1;
     CircleSpline cspline;
     //DropDownList* lstLuaFiles=0;
     //OnSelectLuaShipScript onSelectLuaShipScript;
@@ -86,6 +87,14 @@ CAD2DGUI::CAD2DGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDT
     cspline.CPs.push_back( {-4.5,2.3,  1.8} );
     cspline.CPs.push_back( {-4.5,-0.3, 1.3} );
 
+    spline1.CPs.push_back( {(Vec2d){ 0.5,0.3},Vec2dZero,Vec2dZero} );
+    spline1.CPs.push_back( {(Vec2d){-0.5,3.3},Vec2dZero,Vec2dZero} );
+    spline1.CPs.push_back( {(Vec2d){-2.5,4.3},Vec2dZero,Vec2dZero} );
+    spline1.CPs.push_back( {(Vec2d){-4.5,2.3},Vec2dZero,Vec2dZero} );
+    spline1.evalDerivs( 0.5 );
+
+    spline1.CPs[2].dm=(Vec2d){0.0,-4.0};
+
 }
 
 void drawPointGrid(const Vec2i& ns,const Vec2d& p0,const Vec2d& da,const Vec2d& db ){
@@ -97,6 +106,29 @@ void drawPointGrid(const Vec2i& ns,const Vec2d& p0,const Vec2d& da,const Vec2d& 
         }
     }
     glEnd();
+}
+
+void drawSpline( Spline2d& spl, int nsub=64 ){
+    double ds = 1./nsub;
+    glBegin(GL_LINE_STRIP);
+    for(int i=0; i<spl.CPs.size();i++){
+        double dsj=0;
+        for(int j=0; j<nsub; j++){
+            Vec2d p = spl.val(i,dsj);
+            glVertex2f( p.x, p.y );
+            dsj+=ds;
+        }
+    }
+    glEnd();
+}
+
+void drawSplineHandles( Spline2d& spl, float sc ){
+    for(int i=0; i<spl.CPs.size();i++){
+        const SplinePoint2d& cp = spl.CPs[i];
+        Draw2D::drawPointCross_d(cp.p,0.1);
+        Draw2D::drawVecInPos_d(cp.dm*(-sc),cp.p);
+        Draw2D::drawVecInPos_d(cp.dp*( sc),cp.p);
+    }
 }
 
 void drawCircSpline( CircleSpline& cspline, int ncirc=64 ){
@@ -254,6 +286,10 @@ void CAD2DGUI::draw(){
         cspline.evalSide(-1);
         glColor3f(0.7,0.7,0.7); drawCircSpline    (cspline);
         glColor3f(0.0,0.0,0.0); drawCircSplineSide(cspline);
+
+        drawSpline( spline1, 16 );
+        drawSplineHandles( spline1, 1.0 );
+        //exit(0);
     }
 
 

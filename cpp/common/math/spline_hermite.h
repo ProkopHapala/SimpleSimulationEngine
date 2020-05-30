@@ -68,6 +68,7 @@ struct Sampler{
     inline double ddyl(){ return                    2*p2 + 6*p3  ; }
 };
 
+
 const static double C[4][4] = {
 { 1, 0, 0, 0 },
 { 0, 1, 0, 0 },
