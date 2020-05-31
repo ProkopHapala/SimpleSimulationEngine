@@ -20,6 +20,8 @@
 #include "quaternion.h"
 //#include "raytrace.h"
 
+#include "lineSearch.h"
+
 #include "Spline2d.h"
 #include "geom2D.h"
 #include "spline_Circle.h"
@@ -110,15 +112,44 @@ CAD2DGUI::CAD2DGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDT
     impCurve.fields[1]=[](const Vec3d& p,Vec3d& f)->double{ f=Vec3d{2*p.x,2*p.y,0    }; return p.x*p.x + p.y*p.y; }; // cylinder along z-axis
     impCurve.Cs[0]=1;
     impCurve.Cs[1]=0.3;
-
-    impCurve.opt.setup( 0.1,0.01, 0.9 );
-    ogl=Draw::list(ogl);
-    //glBegin(GL_LINE_STRIP);
     impCurve.trace( {0.3,1.3,0.3}, {0.1,0,0}, 100 );
-    //glEnd();
+
+    impCurve.opt.setup( 0.25,0.025, 0.5 );
+    printf( "Curve [%i]-points sampled in # %i steps => %g steps/point \n", impCurve.nStep, impCurve.nevalTot, impCurve.nevalTot/(float)impCurve.nStep );
+
+    LineSearch lsearch;
+
+    Vec3d pc = (Vec3d){0.0,0.0,0.0};
+    double R = 1.0;
+    Vec3d ro = (Vec3d){0.0,0.0,0.0};
+    Vec3d rd = (Vec3d){0.6,0.8};
+    auto fray = [&](double t)->Vec3d{   // Ray Function
+        //return ro+rd*t;
+        return { 5*t*t-t, t, 0.0 };
+        //return { t*t*t*0.2 + t*t*-0.8 + t, };
+    };
+    auto func = [&](double t)->double{  // Surface Function
+        Vec3d p = fray(t);
+        glVertex3f( p.x, p.y, p.z );
+        p.sub(pc);
+        double dist =  p.x*p.x + p.y*p.y - R*R;
+        printf( "func(%g) p(%g,%g,%g) -> %g | %g %g \n", t, p.x, p.y, p.z,  dist, p.norm(), R*R );
+        return dist;
+    };
+    ogl=Draw::list(ogl);
+    glColor3f(0.0,0.0,1.0); Draw2D::drawPointCross_d( ro.xy(), 0.05 );
+    glColor3f(1.0,0.0,0.0); Draw2D::drawCircle_d    ( pc.xy(), R, 64, false );
+    glColor3f(0.0,0.0,0.0);
+    //glBegin(GL_LINE_STRIP);
+    glPointSize( 3.0 );
+    glBegin(GL_POINTS);
+    double xX = lineSearch( lsearch, func, 0.1, 2.5, 100, 1.e-3 );
+    Vec3d pX  = fray(xX);
+    glEnd();
+    printf( "fray(xX)-> (%g,%g,%g) E %g R %g \n", pX.x, pX.y, pX.z, func(xX), pX.norm() );
+    glColor3f(1.0,0.0,1.0); Draw2D::drawPointCross_d( pX.xy(), 0.05 );
     glEndList();
 
-    printf( "Curve [%i]-points sampled in # %i steps => %g steps/point \n", impCurve.nStep, impCurve.nevalTot, impCurve.nevalTot/(float)impCurve.nStep );
 
 }
 
@@ -222,7 +253,7 @@ void CAD2DGUI::draw(){
     int ny= (int)(p1.y-p0.y)/gridStep;
     //printf( "%i %i \n", nx, ny );
 	//drawPointGrid( {nx, ny}, {mx,my}, {gridStep,0.}, {0.,gridStep} );
-	drawPointGrid( {nx, ny}, p0+((Vec3d)cam.pos).xy(), {gridStep,0.}, {0.,gridStep} );
+	//drawPointGrid( {nx, ny}, p0+((Vec3d)cam.pos).xy(), {gridStep,0.}, {0.,gridStep} );
 
     /*
     { // #### Circle form 3 points
@@ -293,11 +324,11 @@ void CAD2DGUI::draw(){
     */
 
     //glColor3f(0.7,0.7,0.7);
-    //glCallList(ogl);
+    glCallList(ogl);
 
     //glColor3f(0.0,0.0,1.0); Draw3D::drawPointCross( impCurve.ps[0], 0.2 );
 
-    glColor3f(0.0,0.0,0.0); Draw3D::drawPolyLine( impCurve.nStep, impCurve.ps, true );
+    //glColor3f(0.0,0.0,0.0); Draw3D::drawPolyLine( impCurve.nStep, impCurve.ps, true );
 
 };
 

@@ -1,3 +1,113 @@
+#ifndef  lineSearch_h
+#define  lineSearch_h
+
+/*
+
+Application : RayMarching  (and Curve Marching):
+ - finish Auto-extend (non-bound intersection)
+ - utilize distance-function estimate ( like in RayMarching )
+
+*/
+
+#include "fastmath.h"
+
+class LineSearch{ public:
+    double xmin,xmax;
+    double ymin,ymax;
+    int side=0;
+
+    bool   bound=false;
+    double xExtendMax =  0.3;
+    double xErrConv   = 1e-6;
+
+    //Func1d func;
+
+    inline bool checkConv(){
+        return fabs(xmax-xmin)<xErrConv;
+    }
+
+    inline double guess_RegulaFalsa(){
+        return (ymin*xmax - ymax*xmin)/(ymin-ymax);
+    }
+
+    inline double step_RegulaFalsa( double x, double y ){
+        //double x =
+        //if (fabs(xmax-xmin) < errMax*fabs(xmax+xmin)) break; // Convergence reached !
+        //double y = func(x);
+        if (y * ymax > 0){
+            xmax = x;
+            ymax = y;
+            if (side==-1) ymin /= 2; //   Illinois Algorithm  correction
+            side = -1;
+        }else if (y * ymin > 0){
+            xmin = x;
+            ymin = y;
+            if (side==+1) ymax /= 2; //   Illinois Algorithm  correction
+            side = +1;
+        }//else{ break; } // fr * f_ very small (looks like zero)
+        return guess_RegulaFalsa();
+    }
+
+    double linear_extend( double x, double y,  double x0, double y0 ){
+        double dxdy = (x-x0)/(y-y0);
+        return x - clamp( dxdy*y, -xExtendMax, xExtendMax );
+    }
+
+    double init(double xmin_, double ymin_, double xmax_, double ymax_){
+        bound = (ymin_*ymax_<0);
+        if(ymin_>ymax_){
+            xmin=xmax_;  ymin=ymax_;
+            xmax=xmin_;  ymax=ymin_;
+        }else{
+            xmin=xmin_;  ymin=ymin_;
+            xmax=xmax_;  ymax=ymax_;
+        }
+        //return step( );
+        return 0;
+    }
+
+    double step( double x, double y ){
+        // Automatically choose interpolation vs. extrapolation step (bound and un-bound solution)
+        // ToDo : consider ray-arching with distance estimator
+        if(bound){
+            return step_RegulaFalsa( x, y );
+        }else{
+            return linear_extend(x,y,xmin,ymin);
+        }
+    }
+
+    double solve( Func1d func, double xmin, double xmax, int nMaxIter=1000, double xErrConv=1e-6 ){
+        double ymin = func(xmin);
+        double ymax = func(xmax);
+        init( xmin, ymin, xmax, ymax );
+        // ToDo : extend step later !!!
+        double x =  guess_RegulaFalsa();
+        for(int i=0; i<nMaxIter; i++){
+            double y = func(x);
+            x = step_RegulaFalsa( x, y );
+            if( checkConv() ) break;
+        }
+        return x;
+    }
+
+};
+
+template <typename Func>
+double lineSearch( LineSearch& lsearch, Func func, double xmin, double xmax, int nMaxIter=1000, double xErrConv=1e-6 ){
+    double ymin = func(xmin);
+    double ymax = func(xmax);
+    lsearch.init( xmin, ymin, xmax, ymax );
+    // ToDo : extend step later !!!
+    double x =  lsearch.guess_RegulaFalsa();
+    for(int i=0; i<nMaxIter; i++){
+        double y = func(x);
+        x = lsearch.step_RegulaFalsa( x, y );
+        //printf( "lineSearch([%i] x %g | <%g..%g> |span| %g \n", i, x, lsearch.xmin,lsearch.xmax, lsearch.xmax-lsearch.xmin );
+        if( lsearch.checkConv() ) break;
+    }
+    return x;
+}
+
 
 /*
 
@@ -49,7 +159,7 @@ Here is a copy of the Netlib documentation:
 
 template<class ScalarFunction1D>
 double lineSearch_Brent (ScalarFunction1D pot_func, double x0, double a, double b, double tol ) {
-    double  x,  u, v, w; 
+    double  x,  u, v, w;
     double fx, fu,fv,fw;
     double p,q,r;
     double tol1,t2;
@@ -87,7 +197,7 @@ double lineSearch_Brent (ScalarFunction1D pot_func, double x0, double a, double 
           if (q > 0.0d)  p = -p;
           else          q = -q;
           r = e;
-          e = d;         
+          e = d;
        }
 
        if (( fabs(p) < fabs(0.5d*q*r)) && (p > q*(a-x)) && (p < q*(b-x))) {  // a parabolic interpolation step
@@ -122,24 +232,26 @@ double lineSearch_Brent (ScalarFunction1D pot_func, double x0, double a, double 
           if( fabs(u-x)<tol) break;
           if (u < x)  b = x;
           else        a = x;
-          v = w; fv = fw;  
+          v = w; fv = fw;
           w = x; fw = fx;
           x = u; fx = fu;
        } else {
           if ( (fu <= fw) || (w == x) ) {
              v = w; fv = fw;
              w = u; fw = fu;
-          } else { 
+          } else {
             if (!((fu > fv) && (v != x) && (v != w))) {
                v = u;  fv = fu;
             }
-          }  
-       }   
+          }
+       }
        xm   = 0.5d*(a + b);
        tol1 = eps * fabs(x) + tol3;
        t2   = 2.0d*tol1;
-       
+
        //println( " t2 "+t2 +"  tol1   "+ tol1 + "    x   "+ x );
     }
     return x;
- }
+ };
+
+ #endif
