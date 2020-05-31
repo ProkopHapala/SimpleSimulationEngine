@@ -2,6 +2,18 @@
 #ifndef  raytrace_h
 #define  raytrace_h
 
+/*
+
+Quadric intersection:
+    http://skuld.bmsc.washington.edu/people/merritt/graphics/quadrics.html
+
+ToDo:
+-Numerical solution of any intersection
+
+
+*/
+
+
 #include <math.h>
 #include <cstdlib>
 #include <stdio.h>
