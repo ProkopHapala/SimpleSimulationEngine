@@ -121,7 +121,7 @@ class Vec2T{
 	inline void fromAngle_taylor2( T phi ){	sincos_taylor2<T>( phi, y, x );	}
 	inline void fromCos          ( T ca  ){  x=ca; y=sqrt(1-ca*ca); }
 	inline void fromSin          ( T sa  ){  y=sa; x=sqrt(1-sa*sa); }
-	inline T    toAngle() { return atan2(y,x); }
+	inline T    toAngle()const{ return atan2(y,x); }
 
 	inline void rotate( T phi ){
 		T bx = cos( phi );   		  T by = sin( phi );

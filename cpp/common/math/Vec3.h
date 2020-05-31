@@ -175,7 +175,7 @@ class Vec3T{
         // sqrt(1+x) ~= 1 + 0.5*x - 0.125*x*x
         // sqrt(r2) = sqrt((r2-1)+1) ~= 1 + 0.5*(r2-1)
         // 1/sqrt(1+x) ~= 1 - 0.5*x + (3/8)*x^2 - (5/16)*x^3 + (35/128)*x^4 - (63/256)*x^5
-        T dr2    = x*x+y*y+z*z-1;
+        T dr2  = x*x+y*y+z*z-1;
         T invr = 1 + dr2*( -0.5d + dr2*( 0.375d + dr2*-0.3125d ) );
         x*=invr;
         y*=invr;
@@ -183,6 +183,17 @@ class Vec3T{
         //return *this;
         return invr;
 	}
+
+	inline T fixSphere( const VEC& pc, T r){ sub(pc); T l=norm(); mul(r/l); add(pc); }
+
+	inline T fixSphere_taylor3( const VEC& pc, T r){
+        x-=pc.x; y-=pc.y; z-=pc.z;
+        T dr2  = x*x+y*y+z*z-1;
+        T invr = r*(1 + dr2*( -0.5d + dr2*( 0.375d + dr2*-0.3125d ) ));
+        x=x*invr+pc.x;
+        y=y*invr+pc.y;
+        z=z*invr+pc.z;
+    }
 
 
 	inline void getSomeOrtho( VEC& v1, VEC& v2 ) const {

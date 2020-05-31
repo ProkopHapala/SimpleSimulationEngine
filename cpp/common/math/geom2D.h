@@ -380,101 +380,46 @@ struct Arc2d{
     double ang0;
     double dang;
 
-    inline void getDir1  ( double f, Vec2d& d )const{ d.fromAngle(ang0+(dang*f)); };
-    //void getDir2(Vec2d& d)const{ d.fromAngle(angs[1]); };
-    inline void getPoint1( double f, Vec2d& p, const Circle2d* c )const{ getDir1(f,p); c+=icirc; p.mul(c->r); p.add(c->p0); };
-    //void getPoint2(Vec2d& p, const Circle2d* c)const{ getDir2(p); c+=icirc; p.mul(c->r); p.add(c->p0); };
+    inline double getEndAngle(){ return ang0+dang; };
 
-    //void dirFromPoint( int ip, const Vec2d& p, const Circle2d* c ){
-    //    c+=icirc;
-    //    Vec2d d = p - c->p0;
-    //    angs[ip] = atan2(d.x,d.y);
-    //};
+    inline Vec2d getDir  ( double f )const                   { Vec2d d; d.fromAngle(ang0+(dang*f)); return d; };
+    inline Vec2d getPoint( double f, const Circle2d* c )const{ Vec2d p= getDir(f); c+=icirc; p.mul(c->r); p.add(c->p0); return p; };
 
-    inline void fromCenter2points( const Vec2d& pc, const Vec2d& p1, const Vec2d& p2 ){
-        Vec2d d0,d1;
-        d0 = p1-pc;
-        d1 = p2-pc;
+    inline void updateStart(const Vec2d& d ){ double a = d.toAngle(); dang+=ang0-a; ang0=a; };
+    inline void updateEnd  (const Vec2d& d ){ double a = d.toAngle(); dang+=a-ang0;         };
+
+    inline void from2vecs( const Vec2d d0, Vec2d d1 ){
         d1.udiv_cmplx(d0);
         ang0 = d0.toAngle();
         dang = d1.toAngle();
+    }
+
+    inline void fromCenter2points( const Vec2d& pc, const Vec2d& p1, const Vec2d& p2 ){
+        //Vec2d d0,d1;
+        //d0 = p1-pc;
+        //d1 = p2-pc;
+        //d1.udiv_cmplx(d0);
+        //ang0 = d0.toAngle();
+        //dang = d1.toAngle();
         //if(angs[0]>angs[1]) _swap(angs[0],angs[1]);
+        from2vecs( p1-pc, p2-pc );
     }
 
     inline void fromCorner( Vec2d d1, Vec2d d2 ){
         Vec2d dc = d1+d2;
-        d1.mul( dc.dot_perp(d1) );
-        d2.mul( dc.dot_perp(d2) );
-        d2.udiv_cmplx(d1);
-        ang0 = d1.toAngle();
-        dang = d2.toAngle();
+        d1.perp();
+        d2.perp();
+        d1.mul( -dc.dot(d1) );
+        d2.mul( -dc.dot(d2) );
+        from2vecs( d1, d2 );
+        //d2.udiv_cmplx(d1);
+        //ang0 = d1.toAngle();
+        //dang = d2.toAngle();
         //angs[0] = atan2(-d1.x,d1.y);
         //angs[1] = atan2(-d2.x,d2.y);
     }
 
 };
-
-
-/*
-struct Arc2d{
-    //Circle2d* circ;
-    int icirc;
-    //double angs[2];
-    double ang0;
-    double dang;
-
-    void getDir1  ( int ip, Vec2d& d )const{ d.fromAngle(angs[ip]); };
-    //void getDir2(Vec2d& d)const{ d.fromAngle(angs[1]); };
-    void getPoint1( int ip, Vec2d& p, const Circle2d* c )const{ getDir1(ip,p); c+=icirc; p.mul(c->r); p.add(c->p0); };
-    //void getPoint2(Vec2d& p, const Circle2d* c)const{ getDir2(p); c+=icirc; p.mul(c->r); p.add(c->p0); };
-
-    void dirFromPoint( int ip, const Vec2d& p, const Circle2d* c ){
-        c+=icirc;
-        Vec2d d = p - c->p0;
-        angs[ip] = atan2(d.x,d.y);
-    };
-
-    void fromCenter2points( const Vec2d& pc, const Vec2d& p1, const Vec2d& p2 ){
-        Vec2d d;
-        d = p1-pc; angs[0] = atan2(d.y,d.x);
-        d = p2-pc; angs[1] = atan2(d.y,d.x);
-        //if(angs[0]>angs[1]) _swap(angs[0],angs[1]);
-    }
-
-    void fromCenterPoints( const Vec2d& p0, const Vec2d& p1, const Vec2d& p2, const Vec2d& p3 ){
-        Vec2d d;
-        d  = p1-p0; angs[0] = atan2(d.y,d.x);
-        d  = p2-p0; angs[1] = atan2(d.y,d.x);
-        //if(angs[0]>angs[1]) _swap(angs[0],angs[1]);
-        d  = p3-p0; double a = atan2(d.y,d.x);
-        //if(angs[0]>a) angs[0]-=2*M_PI;
-        //if(angs[1]<a) angs[1]+=2*M_PI;
-        if(angs[0]>angs[1])_swap(angs[0],angs[1]);
-        if(angs[0]>a){ angs[1]-=2*M_PI; _swap(angs[0],angs[1]); }
-        if(angs[1]<a){ angs[0]+=2*M_PI; _swap(angs[0],angs[1]); }
-        //if(angs[1]<a) angs[1]+=2*M_PI;
-    }
-
-    void fromCorner( Vec2d d1, Vec2d d2 ){
-        //angs[0] = atan2(d1.y,d1.x) - M_PI_2;
-        //angs[1] = atan2(d2.y,d2.x) + M_PI_2;
-        Vec2d dc = d1+d2;
-        //d1.mul( copysign( 1, dc.dot_perp(d1) ) );
-        //d2.mul( copysign( 1, dc.dot_perp(d2) ) );
-        d1.mul( dc.dot_perp(d1) );
-        d2.mul( dc.dot_perp(d2) );
-        angs[0] = atan2(-d1.x,d1.y);
-        angs[1] = atan2(-d2.x,d2.y);
-        //printf( "angs %g %g \n", angs[0], angs[1] );
-        //double a = atan2(d3.y,d3.x);
-        //if( (angs[1]-angs[0])> M_PI ){ angs[1]-=M_PI; angs[0]+=M_PI; }
-        //if( (angs[1]-angs[0])<-M_PI ){ angs[1]-=M_PI; angs[0]+=M_PI; }
-        //if(angs[0]>angs[1])_swap(angs[0],angs[1]);
-        //if(angs[0]>a && angs[1]>a ){ angs[1]-=2*M_PI; _swap(angs[0],angs[1]); }
-        //if(angs[1]<a && angs[0]<a ){ angs[0]+=2*M_PI; _swap(angs[0],angs[1]); }
-    }
-};
-*/
 
 #endif
 

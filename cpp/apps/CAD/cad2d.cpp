@@ -36,7 +36,10 @@
 //#include "Table.h"
 //#include "Tree.h"
 
+#include "IntersectionCurve.h"
+
 #include "CAD2D.h"
+
 
 using namespace CAD;
 
@@ -50,6 +53,9 @@ class CAD2DGUI : public AppSDL2OGL_3D { public:
 
     Spline2d     spline1;
     CircleSpline cspline;
+
+
+    IntersectionCurve impCurve;
     //DropDownList* lstLuaFiles=0;
     //OnSelectLuaShipScript onSelectLuaShipScript;
 
@@ -57,6 +63,8 @@ class CAD2DGUI : public AppSDL2OGL_3D { public:
 
     int ipick = -1;
     Vec2d  opmouse;
+
+    int ogl;
 
     // ======= Functions
 
@@ -94,6 +102,23 @@ CAD2DGUI::CAD2DGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDT
     spline1.evalDerivs( 0.5 );
 
     spline1.CPs[2].dm=(Vec2d){0.0,-4.0};
+
+    // https://stackoverflow.com/questions/28746744/passing-capturing-lambda-as-function-pointer
+    impCurve.nfunc=2;
+    //impCurve.fields[0]=[](const Vec3d& p,Vec3d& f)->double{ f=Vec3d{0,0,1}; return p.z; };                       // plane along z-axis
+    impCurve.fields[0]=[](const Vec3d& p,Vec3d& f)->double{ double x_ = (p.x-0.5); f=Vec3d{2*x_,2*p.y,2*p.z}; return x_*x_ + p.y*p.y + p.z*p.z; }; // sphere
+    impCurve.fields[1]=[](const Vec3d& p,Vec3d& f)->double{ f=Vec3d{2*p.x,2*p.y,0    }; return p.x*p.x + p.y*p.y; }; // cylinder along z-axis
+    impCurve.Cs[0]=1;
+    impCurve.Cs[1]=0.3;
+
+    impCurve.opt.setup( 0.1,0.01, 0.9 );
+    ogl=Draw::list(ogl);
+    //glBegin(GL_LINE_STRIP);
+    impCurve.trace( {0.3,1.3,0.3}, {0.1,0,0}, 100 );
+    //glEnd();
+    glEndList();
+
+    printf( "Curve [%i]-points sampled in # %i steps => %g steps/point \n", impCurve.nStep, impCurve.nevalTot, impCurve.nevalTot/(float)impCurve.nStep );
 
 }
 
@@ -175,7 +200,8 @@ void CAD2DGUI::draw(){
     //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
     //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-    glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
+    //glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
+    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	gridStep = 0.01*pow( 10., round( log10( zoom ) ) );
@@ -198,8 +224,8 @@ void CAD2DGUI::draw(){
 	//drawPointGrid( {nx, ny}, {mx,my}, {gridStep,0.}, {0.,gridStep} );
 	drawPointGrid( {nx, ny}, p0+((Vec3d)cam.pos).xy(), {gridStep,0.}, {0.,gridStep} );
 
-	/*
-    {
+    /*
+    { // #### Circle form 3 points
         Vec2d p1 = { 0.2, .8};
         Vec2d p2 = {-0.9, .5};
         Vec2d p3 = { 1.2,-.8};
@@ -219,35 +245,6 @@ void CAD2DGUI::draw(){
 
     /*
     {
-        //Vec2d p1 = { 0.2, .8};
-        //Vec2d p3 = { mouse_begin_x, mouse_begin_y };
-        Vec2d p1 = { 0.2, .8};
-        Vec2d p2 = {-0.9, .5};
-        Vec2d p3 = { mouse_begin_x, mouse_begin_y };
-
-        Circle2d c1;
-        Arc2d    arc;
-
-        c1.from3points( p1,p2,p3 );
-        //arc.fromCenter2points( c1.p0, p1, p2 );
-        arc.fromCenterPoints( c1.p0, p1, p2, p3 );
-
-        Vec2d v;
-        glColor3f( 1.0,0.0,0.0 ); v.fromAngle( arc.angs[0] ); Draw2D::drawVecInPos_d( v*c1.r, c1.p0 );
-        glColor3f( 0.0,0.0,1.0 ); v.fromAngle( arc.angs[1] ); Draw2D::drawVecInPos_d( v*c1.r, c1.p0 );
-
-        glColor3f( 0.7,0.7,0.7 ); Draw2D::drawPointCross_d( p1, 0.1 );
-        glColor3f( 0.7,0.7,0.7 ); Draw2D::drawPointCross_d( p2, 0.1 );
-        glColor3f( 0.7,0.0,0.7 ); Draw2D::drawPointCross_d( p3, 0.1 );
-
-        glColor3f( 0.7,0.7,0.7 ); Draw2D::drawCircle_d( c1.p0, c1.r,  64, false );
-        glColor3f( 0.0,0.0,0.0 ); Draw2D::drawArc_d   ( c1.p0, c1.r, arc.angs[0], arc.angs[1], 0.1, false );
-
-    }
-    */
-
-    /*
-    {
         Vec2d pc = { 0.2, .8};
         Vec2d d1 = {-0.9, .5};
         Vec2d d2 = { mouse_begin_x, mouse_begin_y };
@@ -259,7 +256,7 @@ void CAD2DGUI::draw(){
         Circle2d c1;
         Arc2d    arc;
 
-        c1.fromCorner ( pc, d1, d2, r );
+        c1 .fromCorner( pc, d1, d2, r );
         arc.fromCorner( d1, d2 );
 
         glColor3f( 0.7,0.7,0.7 ); Draw2D::drawPointCross_d( pc, 0.1 );
@@ -271,17 +268,19 @@ void CAD2DGUI::draw(){
         glColor3f( 0.0,1.0,0.0 ); Draw2D::drawVecInPos_d( d*( r/d.norm() ), pc );
 
         glColor3f( 0.7,0.7,0.7 ); Draw2D::drawCircle_d( c1.p0, c1.r,  64, false );
-        glColor3f( 0.0,0.0,0.0 ); Draw2D::drawArc_d   ( c1.p0, c1.r, arc.angs[0], arc.angs[1], 0.1, false );
+        glColor3f( 0.0,0.0,0.0 ); Draw2D::drawArc_d   ( c1.p0, c1.r, arc.ang0, arc.dang, 0.1, false );
 
 
         //glColor3f( 1.0,1.0,0.0 ); Draw2D::drawVecInPos_d( (Vec2d){cos(arc.angs[0]),sin(arc.angs[0])}, pc );
         //glColor3f( 0.0,1.0,1.0 ); Draw2D::drawVecInPos_d( (Vec2d){cos(arc.angs[1]),sin(arc.angs[1])}, pc );
+        //arc.getDir(0.0,d);
 
-        glColor3f( 1.0,1.0,0.0 ); Draw2D::drawVecInPos_d( (Vec2d){cos(arc.angs[0]),sin(arc.angs[0])}, c1.p0 );
-        glColor3f( 0.0,1.0,1.0 ); Draw2D::drawVecInPos_d( (Vec2d){cos(arc.angs[1]),sin(arc.angs[1])}, c1.p0 );
+        glColor3f( 1.0,1.0,0.0 ); Draw2D::drawVecInPos_d( arc.getDir(0.0), c1.p0 );
+        glColor3f( 0.0,1.0,1.0 ); Draw2D::drawVecInPos_d( arc.getDir(1.0), c1.p0 );
     }
     */
 
+    /*
     {
         cspline.evalSide(-1);
         glColor3f(0.7,0.7,0.7); drawCircSpline    (cspline);
@@ -291,7 +290,14 @@ void CAD2DGUI::draw(){
         drawSplineHandles( spline1, 1.0 );
         //exit(0);
     }
+    */
 
+    //glColor3f(0.7,0.7,0.7);
+    //glCallList(ogl);
+
+    //glColor3f(0.0,0.0,1.0); Draw3D::drawPointCross( impCurve.ps[0], 0.2 );
+
+    glColor3f(0.0,0.0,0.0); Draw3D::drawPolyLine( impCurve.nStep, impCurve.ps, true );
 
 };
 
