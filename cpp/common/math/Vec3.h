@@ -131,6 +131,9 @@ class Vec3T{
     inline VEC operator* ( const VEC& vi ) const { VEC vo; vo.x=x*vi.x; vo.y=y*vi.y; vo.z=z*vi.z; return vo; };
     inline VEC operator/ ( const VEC& vi ) const { VEC vo; vo.x=x/vi.x; vo.y=y/vi.y; vo.z=z/vi.z; return vo; };
 
+    inline T bidot  ( const VEC& a, const VEC& b ) const { return x*a.x*b.x + y*a.y*b.y + z*a.z*b.z;  };
+    inline T antidot( const VEC& a, const VEC& b ) const { return x*a.y*b.z + y*a.z*b.x + z*a.x*b.y;  };
+
 	inline T dot  ( const VEC& a ) const { return x*a.x + y*a.y + z*a.z;  };
 	inline T norm2(              ) const { return x*x + y*y + z*z;        };
 	inline T norm ( ) const { return  sqrt( x*x + y*y + z*z ); };

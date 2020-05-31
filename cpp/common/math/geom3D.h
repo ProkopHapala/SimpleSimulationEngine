@@ -133,6 +133,32 @@ class LineInterval3d{ public:
 
 };
 
+
+
+
+// ### Quadric Intersection
+// http://skuld.bmsc.washington.edu/people/merritt/graphics/quadrics.html
+// F(x, y, z) = Ax2 + By2 + Cz2 + Dxy+ Exz + Fyz + Gx + Hy + Iz + J = 0
+// Then substitute in ray equation R(t) = Ro + Rd and we get quadratic equation:
+//   Aqt2 + Bqt + Cq = 0
+//   Aq = Axd2 + Byd2 + Czd2 + Dxdyd + Exdzd + Fydzd
+//   Bq = 2*Axoxd + 2*Byoyd + 2*Czozd + D(xoyd + yoxd) + E(xozd + zoxd) + F(yozd + ydzo) + Gxd + Hyd + Izd
+//   Cq = Axo2 + Byo2 + Czo2 + Dxoyo + Exozo + Fyozo + Gxo + Hyo + Izo + J
+
+inline bool quaric_intersec( Vec3d qp, Vec3d qb, Vec3d q, double R, Vec3d rd, Vec3d ro, double& t1, double& t2 ){
+    double A = qp.bidot(rd,rd)   + qb.antidot(rd,rd);
+    double B = qp.bidot(ro,rd)*2 + qb.antidot(ro,rd) + qb.antidot(rd,ro)  + q.dot(rd);
+    double C = qp.bidot(ro,ro)   + qb.antidot(ro,ro)                      + q.dot(ro) + R;
+    return quadratic_roots ( A, B, C, t1, t2 );
+}
+
+inline void rayQuadric( Mat3d rot, Vec3d pos, Vec3d sc, double R, Vec3d rd, Vec3d ro, double& t1, double& t2 ){
+// Ax^2 + Bx^2 + Cx^2 = 0   // no parabola
+// Ax^2 + Bx^2 + Cx^2 = 0
+// ToDo : How to conveniently define General Unitary quadric (un-rotated, un-scaled)
+};
+
+
 class Capsula3D{ public:
     Vec3d  p,hdir;
     double r,l;
