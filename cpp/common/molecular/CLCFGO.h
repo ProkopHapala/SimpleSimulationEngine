@@ -170,6 +170,21 @@ class CLCFGO{ public:
         return r2<RcutOrb2;
     }
 
+    inline void cleanForces(){
+        for(int i=0; i<natom; i++){
+            aforce[i] = Vec3dZero;
+        }
+        for(int i=0; i<nBas; i++){
+            efpos [i] = Vec3dZero;
+            efsize[i] = 0;
+            efcoef[i] = 0;
+        }
+        for(int i=0; i<nQtot; i++){
+            rhofP[i] = Vec3dZero;
+            rhofQ[i] = 0;
+            rhofS[i] = 0;
+        }
+    }
 
     //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
     inline double evalOverlap( int io, int jo ){
@@ -184,6 +199,10 @@ class CLCFGO{ public:
             Vec3d  pi = epos[i];
             double si = esize[i];
             double ci = ecoef[i];
+
+            //Vec3d& fpi = efpos [i];
+            //double fsi = efsize[i];
+            //double fci = efcoef[i];
             for(int j=j0; j<j0+perOrb; j++){
                 /// ToDo: Rcut may be read from
                 Vec3d Rij = epos[j]-pi;
@@ -197,7 +216,14 @@ class CLCFGO{ public:
                 double Sij = getOverlapSGauss( r2, si*M_SQRT2, sj*M_SQRT2, dSr, dSsi, dSsj );
                 /// NOTE : si,sj scaled by sqrt(2) because they are made for density widths not wave-functions width
                 //printf( "[%i,%i]x[%i,%i] r,S %g %g ci,j  %g %g -> %g \n", io,i, jo,j, sqrt(r2), Sij, ci, cj, Sij*ci*cj );
-                Ssum += Sij*ci*cj;
+                double cij = ci*cj;
+                Ssum += Sij*cij;
+
+                // --- Derivatives ( i.e. Forces )
+                Vec3d fij = Rij*(dSr*cij);
+                efpos [i].add( fij     ); efpos[j].sub ( fij );
+                efsize[i]+= dSsi*cij ; efsize[j]+= dSsj*cij ;
+                efcoef[i]+= Sij*cj   ; efcoef[j]+= Sij*ci  ;
             }
         }
         return Ssum;
@@ -329,6 +355,7 @@ class CLCFGO{ public:
 
                 double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
                 ///ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
+                /// ToDo :  Need derivatives of Kinetic Overlap !!!!!
                 // --- Project on auxuliary density functions
                 Vec3d  pij;
                 double sij;
@@ -345,7 +372,11 @@ class CLCFGO{ public:
                 DT += DTij*cij;
                 Ek += Ekij*cij;
 
-
+                // --- Derivatives ( i.e. Forces )
+                Vec3d fij = Rij*(dSr*cij);
+                efpos [i].add( fij  ); efpos[j].sub ( fij );
+                efsize[i]+= dSsi*cij ; efsize[j]+= dSsj*cij ;
+                efcoef[i]+= Sij*cj   ; efcoef[j]+= Sij*ci  ;
 
                 // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
                 Qs[ii] = qij;

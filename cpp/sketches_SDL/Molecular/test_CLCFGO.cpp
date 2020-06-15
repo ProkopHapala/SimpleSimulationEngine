@@ -75,12 +75,50 @@
 
 long timeStart;
 
+
+// ===================================================
+///        test   Kinetic Derivs
+// ===================================================
+
+void test_OverlapDerivs( CLCFGO& solver, Plot2D& plot1 ){
+    // ======= Test Orbital Wavefunction Overlap
+    int    nint = 30;
+    double dx   = 0.2;
+    DataLine2D* line_E    = new DataLine2D( nint, 0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
+    DataLine2D* line_Fnum = new DataLine2D( nint, 0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
+    DataLine2D* line_Fana = new DataLine2D( nint, 0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
+    for(int i=0; i<nint; i++){
+        solver.cleanForces();
+        solver.epos[2].x = line_E->xs[i];
+        line_E   ->ys[i] = solver.evalOverlap( 0, 1 );
+        if(i>1)line_Fnum->ys[i-1] = -(line_E->ys[i] - line_E->ys[i-2])/(2*dx);
+        line_Fana->ys[i]          = solver.efpos[2].x;
+    }
+}
+
+void test_KineticDerivs( CLCFGO& solver, Plot2D& plot1 ){
+    int    nint = 30;
+    double dx   = 0.2;
+    DataLine2D* line_E    = new DataLine2D( nint, 0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
+    DataLine2D* line_Fnum = new DataLine2D( nint, 0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
+    DataLine2D* line_Fana = new DataLine2D( nint, 0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
+    for(int i=0; i<nint; i++){
+        solver.cleanForces();
+        solver.epos[2].x = line_E->xs[i];
+        Vec3d dip;
+        line_E   ->ys[i] = solver.projectOrb( 0, dip, false );
+        if(i>1)line_Fnum->ys[i-1] = -(line_E->ys[i] - line_E->ys[i-2])/(2*dx);
+        line_Fana->ys[i]          = solver.efpos[2].x;
+    }
+}
+
 // ===================================================
 ///        test   Wave Fucntion Overlap
 // ===================================================
 
 void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
     // ======= Test Orbital Wavefunction Overlap
+    printf( " test_WfOverlap 1 \n" );
     int    nint = 10;
     double Lmax = 5.0;
     DataLine2D* line_ISgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0000, "IS_grid" ); plot1.add(line_ISgrid );
@@ -90,8 +128,9 @@ void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
     DEBUG_saveFile2="temp/wf1.xsf";
     auto func1 = [&](GridShape& grid, double* f, double x ){                     solver.orb2grid( 0, grid, f ); };
     auto func2 = [&](GridShape& grid, double* f, double x ){ solver.epos[2].x=x; solver.orb2grid( 1, grid, f ); };
-    gridNumIntegral( nint, 0.2, 6.0, Lmax, line_ISgrid->ys, func1, func2 );
+    gridNumIntegral( nint, 0.2, 6.0, Lmax, line_ISgrid->ys, func1, func2, true );
     }
+    printf( " test_WfOverlap 2 \n" );
     for(int i=0; i<line_ISana->n; i++){
         solver.epos[2].x=line_ISana->xs[i];
         line_ISana->ys[i] = solver.evalOverlap( 0, 1 );
@@ -319,15 +358,18 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         //_.ecoef[3] = +0.3;
     }
 
-    GridShape grid; grid.init( 5.0, 1.0, false);
+    GridShape grid; grid.init( 5.0, 0.2, false);
     solver.orb2xsf( grid, 0, "temp/orb0.xsf" );
 
     //exit(0);
     //test_WfOverlap   ( solver, plot1 );
-    test_Kinetic       ( solver, plot1 );
+    //test_Kinetic       ( solver, plot1 );
     //test_ProjectDensity( solver, plot1 );
     //test_DensityOverlap( solver, plot1 );   plot1.scaling.y = 30.0;
     //test_ElectroStatics( solver, plot1 );
+
+
+    test_OverlapDerivs( solver, plot1 );
 
     plot1.update();
     plot1.render();

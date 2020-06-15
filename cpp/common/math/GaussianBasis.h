@@ -148,6 +148,33 @@ inline double kinetic_w(  double r2, double w1, double w2 ){
     return C*wprod * ( 2*wprod*r2 - 3*wsum )*g*iwsum*iwsum*iwsum*sqrtiwsum;
 }
 
+//
+inline double kinetic_w(  double r2, double w1, double w2,   double& dr, double& dw1, double& dw2 ){
+    /// ToDo :  Need derivatives of Kinetic Overlap !!!!!
+    double C         = 11.1366559937; //(pi^(3/2))*2
+    double wsum      = w2+w1 ;
+    double iwsum     = 1/wsum;
+    double sqrtiwsum = sqrt(iwsum);
+    double wprod     = w1*w2 ;
+    //double x2        = x*x;
+    double g         = exp( -( wprod * r2 )*iwsum );
+
+    double r     =  sqrt(r2);
+    double dgdr  = -g*r*iwsum;
+    double dgdw1 = 0;
+    double dgdw2 = 0;
+
+    dr  =  dgdr   *   wprod * ( 2*wprod*r2 - 3*wsum )*iwsum*iwsum*iwsum*sqrtiwsum ;
+    dw1 = 0;
+    dw2 = 0;
+
+    // d_w1{ w1*w2*(w1+w2)^(-7/2) } = (63*w1*w2)/(4*(w2+w1)^(11/2))-(7*w2)/(w2+w1)^(9/2)
+
+    return C*wprod * ( 2*wprod*r2 - 3*wsum )*g*iwsum*iwsum*iwsum*sqrtiwsum;
+
+}
+
+
 inline double kinetic( double s ){
     //     -(3*pi^(3/2)*s)/2
     //return -8.35249199525 * s * sqnorm3Ds(s) * sqnorm3Ds(s);
@@ -155,6 +182,12 @@ inline double kinetic( double s ){
 }
 
 inline double kinetic( double r2, double s1, double s2 ){
+    return kinetic_w( r2, 1/(2*s1*s1), 1/(2*s2*s2) )  *  sqnorm3Ds(s1) * sqnorm3Ds(s2);
+}
+
+
+inline double kinetic( double r2, double s1, double s2, double& dr, double& ds1, double& ds2 ){
+    /// ToDo :  Need derivatives of Kinetic Overlap !!!!!
     return kinetic_w( r2, 1/(2*s1*s1), 1/(2*s2*s2) )  *  sqnorm3Ds(s1) * sqnorm3Ds(s2);
 }
 
