@@ -2,12 +2,34 @@
 #ifndef CLCFSF_h
 #define CLCFSF_h
 
-/*
+/// @file
+/// @ingroup Molecular
 
+#include "fastmath.h"
+#include "Vec2.h"
+#include "Vec3.h"
+#include "quaternion.h"
+
+#include "spline_hermite.h"
+#include "GaussianBasis.h"
+#include "Forces.h"
+
+#include "Grid.h"
+#include "AOIntegrals.h"
+
+/// Table to store matrix elements of diferent interactions in Hamilatonian (Like in Fireball Fdata)
+struct PairInteractionTable{
+    double* Eoverlap=0; // <i|j>
+    double* Ekinetic=0; // <i|Lapalce|j>
+    // From interpolation of spline (higher order) we can get also derivative i.e. forces
+    //double* Foverlap=0; // d<i|j>/dRij
+    //double* Fkinetic=0; // <i|Lapalce|j>/dRij
+};
+
+/*! @brief
 ####################################################################
 #### Compact Linear Combination of Floating Spherical Functions ####
 ####################################################################
-
 ## Idea :
  - Bonding orbitals (BO) are highly localized occupied Molecular orbitas (MOs)
     - This high localization makes evaluation of many interaction very efficient (linear scaling and highly peraelized), almost like a forcefield
@@ -45,84 +67,56 @@
            x : wi*(x-xi)^2 + wj*(x-xj)^2   =    (wi+wj)x^2   - 2*(wi*xi+wj*xj)x - (wi*xi^2+wj*xj^2)
         // http://www.tina-vision.net/docs/memos/2003-003.pdf
 */
-
-
-
-
-
-
-#include "fastmath.h"
-#include "Vec2.h"
-#include "Vec3.h"
-#include "quaternion.h"
-
-#include "spline_hermite.h"
-#include "GaussianBasis.h"
-#include "Forces.h"
-
-#include "Grid.h"
-#include "AOIntegrals.h"
-
-
-struct PairInteractionTable{
-    double* Eoverlap=0; // <i|j>
-    double* Ekinetic=0; // <i|Lapalce|j>
-    // From interpolation of spline (higher order) we can get also derivative i.e. forces
-    //double* Foverlap=0; // d<i|j>/dRij
-    //double* Fkinetic=0; // <i|Lapalce|j>/dRij
-};
-
-
 class CLCFSF{ public:
 
-    double Rcut    =6.0;  // cutoff beyond which two basis functions chi has no overlap
-    double RcutOrb =9.0;  // cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
+    double Rcut    =6.0;  ///< cutoff beyond which two basis functions chi has no overlap
+    double RcutOrb =9.0;  ///< cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
     double Rcut2     =Rcut*Rcut;
     double RcutOrb2  =RcutOrb*RcutOrb;
 
-    double   dsamp =0.1; // [A] sampling step for splines describing radial splines
+    double   dsamp =0.1; ///< [A] sampling step for splines describing radial splines
     double  idsamp =1/dsamp;
-    int nsamp     =0;   // number of samples in splines
+    int nsamp     =0;   ///< number of samples in splines
     int nsampI    =0;
     int nsampMem  =0;
     int nsampIMem =0;
 
     int natypes  =0;
 
-    int natom =0; // number of atoms (nuclei, ions)
-    int perOrb=0; // number of spherical functions per orbital
-    int nOrb  =0; // number of single-electron orbitals in system
+    int natom =0; ///< number of atoms (nuclei, ions)
+    int perOrb=0; ///< number of spherical functions per orbital
+    int nOrb  =0; ///< number of single-electron orbitals in system
     // this is evaluated automaticaly
-    int nBas  =0; // number of basis functions
-    int nqOrb =0; // number of charges (axuliary density elements) per orbital
-    int nQtot =0; // total number of charge elements
+    int nBas  =0; ///< number of basis functions
+    int nqOrb =0; ///< number of charges (axuliary density elements) per orbital
+    int nQtot =0; ///< total number of charge elements
 
     // atoms (ions)
-    Vec3d*  apos   =0;  // positioon of atoms
-    Vec3d*  aforce =0;  // positioon of atoms
-    Vec3d*  aQs    =0;  // charge of atom
-    int*    atype  =0;  // type of atom (in particular IKinetic pseudo-potential)
+    Vec3d*  apos   =0;  ///< positioon of atoms
+    Vec3d*  aforce =0;  ///< positioon of atoms
+    Vec3d*  aQs    =0;  ///< charge of atom
+    int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
 
     // orbitals
-    Vec3d*  opos =0;   // store positions for the whole orbital
-    Vec3d*  odip =0;   // Axuliary array to store dipoles for the whole orbital
-    double* oEs  =0;   // orbital energies
-    int*    onq  =0;   // number of axuliary density functions per orbital
+    Vec3d*  opos =0;   ///< store positions for the whole orbital
+    Vec3d*  odip =0;   ///< Axuliary array to store dipoles for the whole orbital
+    double* oEs  =0;   ///< orbital energies
+    int*    onq  =0;   ///< number of axuliary density functions per orbital
 
     // orbital basis functions
-    Vec3d*  epos  =0; // position of spherical function for expansion of orbitals
-    Vec3d*  epfs  =0; //   force acting on position of orbitals
-    double* ecoefs=0; // expansion coefficient of expansion of given orbital
-    double* ecfs  =0; //   force acting on combination coefficnet of orbitals
+    Vec3d*  epos  =0; ///< position of spherical function for expansion of orbitals
+    Vec3d*  epfs  =0; ///<   force acting on position of orbitals
+    double* ecoefs=0; ///< expansion coefficient of expansion of given orbital
+    double* ecfs  =0; ///<   force acting on combination coefficnet of orbitals
     // density approx
-    //double  eQs  =0; // charge (occupation) of all orbitals is 1 (by definition)
+    //double  eQs  =0; ///< charge (occupation) of all orbitals is 1 (by definition)
     // denisty axuliary
 
     // denisty expansion on auxuliary basis
-    double* erho  =0;  // temporary array to store density projection on pair overlap functions
-    double* erhoE =0; // energy of density axuliary function
-    Vec3d * erhoP =0; // position of density axuliary function
-    Vec3d * erhoF =0; // force  on density axuliary function
+    double* erho  =0; ///< temporary array to store density projection on pair overlap functions
+    double* erhoE =0; ///< energy of density axuliary function
+    Vec3d * erhoP =0; ///< position of density axuliary function
+    Vec3d * erhoF =0; ///< force  on density axuliary function
 
     // ToDo: implement different basis function types
     //int* etypes = 0; // currently not used
@@ -135,16 +129,16 @@ class CLCFSF{ public:
     //double*** IKs = 0;   // < chi_i(r) | Laplace | chi_i(r) >  Kinetic energy interactin between two spherical functions
 
     // ---- Radial Function Tables
-    double* Wfs  = 0;  // wavefunction |Chi(r)>         radial wave function table
-    double* Wf2s = 0;  // density      |Chi(r)>^2       denisty function from wavefunction
-    double* Vfs  = 0;  // V(R) = (1/(r-R))*|Chi(r)>^2   potential generated by a wave function
+    double* Wfs  = 0;  ///< wavefunction |Chi(r)>         radial wave function table
+    double* Wf2s = 0;  ///< density      |Chi(r)>^2       denisty function from wavefunction
+    double* Vfs  = 0;  ///< V(R) = (1/(r-R))*|Chi(r)>^2   potential generated by a wave function
     // ----- Integral Tables
-    double* IOverlap = 0;  // Overlap  = < chi_i(r) |    1       | chi_j(r) >  Overlap interactin between two  spherical bais functions
-    double* IKinetic = 0;  // Kinetic  = < chi_i(r) | Laplace    | chi_j(r) >  Kinetic energy interactin between two spherical functions
-    double* ICoulomb = 0;  // Coulomb  = < chi_i(ri) | 1/|ri-rj| | chi_i(rj) >
-    //double*** IPPWf2 = 0; // < rho(r) V(r) >  interactin between spherical_eletron_density_function and spherical electrostatic_potential_function
-    double** PPs   = 0; // V(r) pseudopotential of atom
-    double** IPPWf2 = 0; // < rho(r) V(r) >  interactin between spherical_eletron_density_function and spherical electrostatic_potential_function
+    double* IOverlap = 0;  ///< Overlap  = < chi_i(r) |    1       | chi_j(r) >  Overlap interactin between two  spherical bais functions
+    double* IKinetic = 0;  ///< Kinetic  = < chi_i(r) | Laplace    | chi_j(r) >  Kinetic energy interactin between two spherical functions
+    double* ICoulomb = 0;  ///< Coulomb  = < chi_i(ri) | 1/|ri-rj| | chi_i(rj) >
+    //double*** IPPWf2 = 0; ///< < rho(r) V(r) >  interactin between spherical_eletron_density_function and spherical electrostatic_potential_function
+    double** PPs   = 0;    ///< V(r) pseudopotential of atom
+    double** IPPWf2 = 0;   ///< < rho(r) V(r) >  interactin between spherical_eletron_density_function and spherical electrostatic_potential_function
 
     // ======= Functions
 
@@ -243,11 +237,11 @@ class CLCFSF{ public:
         //  See addPauliGauss() in common/molecular/InteractionsGauss.h
         int i0 = getOrbOffset(io);
         int j0 = getOrbOffset(jo);
-         // ToDo : we may allow different number of orbitals per electron later (?)
+         /// ToDo : we may allow different number of orbitals per electron later (?)
          for(int i=i0; i<i0+perOrb; i++){
             Vec3d pi = epos[i];
             for(int j=j0; j<j0+perOrb; j++){
-                // ToDo: Rcut may be read from
+                /// ToDo: Rcut may be read from
                 Vec3d Rij = epos[j]-pi;
                 double r2 = Rij.norm2();
                 if(r2>Rcut2)continue; //{ fij = Vec3dZero; return 0; }
@@ -276,7 +270,7 @@ class CLCFSF{ public:
 
                 Vec3d fij; fij.set_mul( Rij, cij*fP/r ); // ToDo:  evaluate fP properly
 
-                // ToDo:  ecfs should be set as well
+                /// ToDo:  ecfs should be set as well
                 ecfs[i] +=dcP;
                 ecfs[j] +=dcP;
                 epfs[i].add(fij);
@@ -391,7 +385,7 @@ class CLCFSF{ public:
                 //if( checkOrbitalCutoff( i, j ) ){
                     /// Calculate detailed short-range electrostatICoulomb
                     int j0 = getRhoOffset(jo);
-                    // ToDo : nrho,nV may vary
+                    /// ToDo : nrho,nV may vary
                     CoulombOrbPair( nqi, onq[jo], erho+i0, erhoP+i0, erhoF+i0,  erho+j0, erhoP+j0, erhoF+j0 );
                 }else{
                     double ir2 = 1/(r2+r2safe);
@@ -430,7 +424,7 @@ class CLCFSF{ public:
                 Spline_Hermite::valdval( x, S, dS, IOverlap[i], IOverlap[i+1], IOverlap[i+2], IOverlap[i+3] ); // Overlap
                 double cij = ci*ecoefs[j];
                 double qij = S*cij;
-                rhoij[ij] = qij;           // ToDo: we may perhas evaluate it on even more extended axuliary basis
+                rhoij[ij] = qij;           /// ToDo: we may perhas evaluate it on even more extended axuliary basis
                 posij[ij] = (pi+pj)*0.5;
                 ij++;
             }
@@ -443,21 +437,21 @@ class CLCFSF{ public:
                 Vec3d Rij = posij[j] - pi;
                 double r2 = Rij.norm2();
                 double qj = rhoij[j];
-                E += qi*qj/sqrt(r2+R2Safe);  // ToDo  : we should perhaps calculate this more properly considering true shape of axuiliary density function
-                                            // ToDo2 : what about coulomb constant ?????
+                E += qi*qj/sqrt(r2+R2Safe);  /// ToDo  : we should perhaps calculate this more properly considering true shape of axuiliary density function
+                                            /// ToDo2 : what about coulomb constant ?????
             }
         }
 
     }
 
     void evalFockExchange(){
-        // It may be actually easier to evaluate Hartree-Fock like exchange, because it is linear
-        // see:   https://en.wikipedia.org/wiki/Exchange_interaction#Exchange_of_spatial_coordinates
-        // https://chemistry.stackexchange.com/questions/61176/what-is-the-exchange-interaction
-        // => Exchange integral should be rather easy to compute, just by calculating overlap between the two functions   K = <rho_ij(r1)| 1/|r1-r2| |rho_ij(r2)>
-        // scheme:
-        //  1) for pair of orbital, construct auxiliary rho_ij (by expansion on auxuliary functions)
-        //  2) callculate self-convolution of this auxuliary function
+        /// It may be actually easier to evaluate Hartree-Fock like exchange, because it is linear
+        /// see:   https://en.wikipedia.org/wiki/Exchange_interaction#Exchange_of_spatial_coordinates
+        /// https://chemistry.stackexchange.com/questions/61176/what-is-the-exchange-interaction
+        /// => Exchange integral should be rather easy to compute, just by calculating overlap between the two functions   K = <rho_ij(r1)| 1/|r1-r2| |rho_ij(r2)>
+        /// scheme:
+        ///  1) for pair of orbital, construct auxiliary rho_ij (by expansion on auxuliary functions)
+        ///  2) callculate self-convolution of this auxuliary function
     }
 
 
@@ -474,13 +468,13 @@ class CLCFSF{ public:
     // ========== On Grid
 
     /// ToDo : Coulomb integral C{i,j}  on grid can be calculated like this:
-    //  for i in MOs :
-    //      wf_j = orb2grid( i, grid )  // potencial or density
-    //      for j in MOs:
-    //          Iij = 0
-    //          for kbas in basis_decomposition[j]:
-    //              for pos in grid:
-    //                  Iij += kbas(pos)^2 * wf_j[pos]^2
+    ///  for i in MOs :
+    ///      wf_j = orb2grid( i, grid )  // potencial or density
+    ///      for j in MOs:
+    ///          Iij = 0
+    ///          for kbas in basis_decomposition[j]:
+    ///              for pos in grid:
+    ///                  Iij += kbas(pos)^2 * wf_j[pos]^2
 
     double orb2grid( int io, const GridShape& gridShape, double* buff )const{
         int i0     = getOrbOffset( io );
@@ -560,5 +554,7 @@ class CLCFSF{ public:
     }
 
 };
+
+/// @}
 
 #endif

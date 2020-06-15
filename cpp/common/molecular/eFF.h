@@ -2,6 +2,9 @@
 #ifndef EFF_h
 #define EFF_h
 
+/// @file
+/// @ingroup eFF
+
 #include "fastmath.h"
 //#include "Vec2.h"
 #include "Vec3.h"
@@ -152,6 +155,7 @@ inline double interp_gx4(double r2, double y1, double y2 ){
     return c*y1 + (1-c)*y2;
 }
 
+/// EFF solver
 class EFF{ public:
     //double dvmax = 0.1;
     //double dpmax = 0.1;
@@ -164,7 +168,7 @@ class EFF{ public:
     double sea2 = see*see;
     */
 
-    constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 };
+    constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
     //Vec3d KRSrho = { 1.125, 0.9, 0.2 };
 
     //double wee = 2.0;
@@ -182,27 +186,27 @@ class EFF{ public:
     //double bAE = -6.0;
     //double aAE = 100.0;
 
-    int ne=0,na=0,nDOFs=0;
+    int ne=0,na=0,nDOFs=0; ///< number of electrons, atoms, degrees of freedom
     //int*   atype  =0;
 
-    double * aQ     =0;
-    Vec3d  * apos   =0;
-    Vec3d  * aforce =0;
+    double * aQ     =0; ///< atomic charges
+    Vec3d  * apos   =0; ///< atomic positions
+    Vec3d  * aforce =0; ///< atomic forces
 
-    Vec3d  * aAbWs  =0;
-    Vec3d  * eAbWs  =0;
+    Vec3d  * aAbWs  =0; ///< atomic   parameters (amplitude, decay, width)
+    Vec3d  * eAbWs  =0; ///< electron parameters (amplitude, decay, width)
 
     //double * espin  =0;
-    int8_t * espin  =0;
-    Vec3d  * epos   =0;
-    Vec3d  * eforce =0;
-    double * esize  =0;
-    double * fsize  =0;
+    int8_t * espin  =0; ///< electron spins
+    Vec3d  * epos   =0; ///< electron positions
+    Vec3d  * eforce =0; ///< electron forces
+    double * esize  =0; ///< electron size
+    double * fsize  =0; ///< electron force on size
 
-    double* pDOFs =0;
-    double* fDOFs =0;
+    double* pDOFs =0;  ///< buffer of degrees of freedom
+    double* fDOFs =0;  ///< buffer of forces on degrees of freedom
 
-    double Ek=0, Eee=0,Eae=0,Eaa=0, EeePaul=0,EaePaul=0;
+    double Ek=0, Eee=0,Eae=0,Eaa=0, EeePaul=0,EaePaul=0; ///< different kinds of energy
 
 void realloc(int na_, int ne_){
     na=na_; ne=ne_;
@@ -249,6 +253,7 @@ void dealloc(){
     delete [] espin;
 }
 
+/// evaluate kinetic energy of each electron
 double evalKinetic(){
     Ek=0;
     for(int i=0; i<ne; i++){
@@ -258,6 +263,7 @@ double evalKinetic(){
     return Ek;
 }
 
+/// evaluate Electron-Electron forces
 double evalEE(){
     Eee    =0;
     EeePaul=0;
@@ -296,6 +302,7 @@ double evalEE(){
     return Eee+EeePaul;
 }
 
+/// evaluate Atom-Electron forces
 double evalAE(){
     Eae    =0;
     EaePaul=0;
@@ -335,6 +342,7 @@ double evalAE(){
     return Eae+EaePaul;
 }
 
+/// evaluate Atom-Atom forces
 double evalAA(){
     if( i_DEBUG>0 ) printf( "evalAA \n" );
     Eaa=0;
@@ -371,6 +379,7 @@ double evalAA(){
     return Eaa;
 }
 
+/// evaluate full Electron Forcefild
 double eval(){
     return
     evalKinetic()

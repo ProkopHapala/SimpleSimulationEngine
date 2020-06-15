@@ -112,8 +112,8 @@ inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape ){ dr
 inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, Vec3d& scale, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, (Vec3f)scale, shape); };
 
 
-inline int  drawConeFan        ( int n, float r,                const Vec3d& base,  const Vec3d& tip                                 ){ drawConeFan( n,             r,      (Vec3f)base, (Vec3f)tip         ); };
-inline int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3d& base, const Vec3d& tip, bool smooth ){ drawCone   ( n, phi1, phi2, r1, r2, (Vec3f)base, (Vec3f)tip, smooth ); };
+inline int  drawConeFan        ( int n, float r,                const Vec3d& base,  const Vec3d& tip                                 ){ return drawConeFan( n,             r,      (Vec3f)base, (Vec3f)tip         ); };
+inline int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3d& base, const Vec3d& tip, bool smooth ){ return drawCone   ( n, phi1, phi2, r1, r2, (Vec3f)base, (Vec3f)tip, smooth ); };
 
 inline int  drawCircleAxis     ( int n, const Vec3d& pos, const Vec3d& v0, const Vec3d& uaxis, double R ){ return drawCircleAxis( n, (Vec3f)pos, (Vec3f)v0, (Vec3f)uaxis, R ); };
 //inline int  drawSphereOctLines ( int n, double R, const Vec3d& pos ){ return drawSphereOctLines ( n, R, (Vec3f)pos ); };

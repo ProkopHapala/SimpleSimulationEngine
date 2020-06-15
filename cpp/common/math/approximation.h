@@ -494,7 +494,7 @@ class AutoApprox{ public:
     }
 
 
-    int tryPartioning(int ncut, int imin, int imax){
+    void tryPartioning(int ncut, int imin, int imax){
         //for(int icut=0; icut<ncuts; icut++){
         for(int i=imin; i<imax; i++){      // branching loop over partitioning
             wrokBlock.cost   =1+300;

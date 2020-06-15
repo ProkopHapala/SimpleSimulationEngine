@@ -2,7 +2,26 @@
 #ifndef CLCFGO_h
 #define CLCFGO_h
 
-/*
+#include "fastmath.h"
+#include "Vec2.h"
+#include "Vec3.h"
+#include "quaternion.h"
+
+#include "spline_hermite.h"
+#include "GaussianBasis.h"
+#include "Forces.h"
+
+#include "Grid.h"
+//#include "AOIntegrals.h"
+
+#include "InteractionsGauss.h"
+#include "GaussianBasis.h"
+
+/// \defgroup Molecular  Molecular
+
+/*!
+\ingroup Molecular
+ @{
 
 ##################################################################
 #### Compact Linear Combination of Floating Gaussian Orbitals ####
@@ -25,7 +44,7 @@
    - But in our case we do not solve Hamoltonian matrix (O(N^3) cost) instead we just move it by a linear solver (O(N) cost). Therefore, in our case the calculation of the integrals is the time limiting step.
  - Electrostatic potential is calculated by multipole expansion of orbital density with distance. Thanks to high localization we can do this expansion very fast (Like fast multipole method)
     - Electron denisty of each orbital (which is linear combination of basis functions) is re-projected on few axuliary basis functions
-        rho(r)=phi(r) = sum_i{ c_i chi_i(r)} sum_j{ c_j chi_j(r)}
+     \f$   rho(r)=phi(r) = sum_i{ c_i chi_i(r)} sum_j{ c_j chi_j(r)}  \f$
  - The main problem is evaluation of exchange-correlation. Which is non-linear and cannot be easily experesed as combination of orbitals.
     - This can be done on a real-space grid, but that is very costly perhaps
     - We can use some approximation from Fireball ... e.g. McWeda approximation of Pavel Jelinek
@@ -36,83 +55,62 @@
        - Variation of coeficients is much faster than variation of position ( re-evaluation of integrals is not required )
 
 
- ## Make alternative with Gaussian Orbitals (instead of numerica basis)
+ ### Make alternative with Gaussian Orbitals (instead of numerica basis)
     - It makes it possible to express auxuliary density functions exactly
-        rho_ij(r)
-           = Gauss(r-Ri) * Gauss(r-Rj)
-           = exp( -wi*( (x-xi)^2 + (y-yi)^2 + (y-yi)^2 ) ) * exp( -wj*( (x-xj)^2 + (y-yj)^2 + (y-yi)^2 ) )
-           = exp( -wi*( (x-xi)^2 + (y-yi)^2 + (y-yi)^2 ) -wj*( (x-xj)^2 + (y-yj)^2 + (y-yj)^2 )  )
-           x : wi*(x-xi)^2 + wj*(x-xj)^2   =    (wi+wj)x^2   - 2*(wi*xi+wj*xj)x - (wi*xi^2+wj*xj^2)
-        // http://www.tina-vision.net/docs/memos/2003-003.pdf
+
+   \f$     rho_ij(r)                                                                \f$
+   \f$        = Gauss(r-R_i) * Gauss(r-R_j)                                         \f$
+   \f$        = \exp( -w_i*( (x-x_i)^2 + (y-y_i)^2 + (y-y_i)^2 ) ) * \exp( -w_j*( (x-x_j)^2 + (y-y_j)^2 + (y-y_i)^2 ) ) \f$
+   \f$        = \exp( -w_i*( (x-x_i)^2 + (y-y_i)^2 + (y-y_i)^2 ) -wj*( (x-x_j)^2 + (y-y_j)^2 + (y-y_j)^2 )  )         \f$
+   \f$        x : wi*(x-x_i)^2 + wj*(x-x_j)^2   =    (w_i+w_j)x^2   - 2*(w_i*x_i+w_j*x_j)x - (w_i*x_i^2+w_j*x_j^2)        \f$
+    - http://www.tina-vision.net/docs/memos/2003-003.pdf
 */
-
-
-
-
-
-
-#include "fastmath.h"
-#include "Vec2.h"
-#include "Vec3.h"
-#include "quaternion.h"
-
-#include "spline_hermite.h"
-#include "GaussianBasis.h"
-#include "Forces.h"
-
-#include "Grid.h"
-//#include "AOIntegrals.h"
-
-#include "InteractionsGauss.h"
-#include "GaussianBasis.h"
-
-
 class CLCFGO{ public:
 
-    double Rcut    =6.0;  // cutoff beyond which two basis functions chi has no overlap
-    double RcutOrb =9.0;  // cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
+    double Rcut    =6.0;  ///< cutoff beyond which two basis functions chi has no overlap
+    double RcutOrb =9.0;  ///< cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
     double Rcut2     =Rcut*Rcut;
     double RcutOrb2  =RcutOrb*RcutOrb;
 
 
     int natypes =0;
 
-    int natom =0; // number of atoms (nuclei, ions)
-    int perOrb=0; // number of spherical functions per orbital
-    int nOrb  =0; // number of single-electron orbitals in system
+    int natom =0; ///< number of atoms (nuclei, ions)
+    int perOrb=0; //!< Brief number of spherical functions per orbital
+    int nOrb  =0; //!< Brief number of single-electron orbitals in system
     // this is evaluated automaticaly
-    int nBas  =0; // number of basis functions
-    int nqOrb =0; // number of charges (axuliary density elements) per orbital
-    int nQtot =0; // total number of charge elements
+    int nBas  =0; ///< number of basis functions
+    int nqOrb =0; ///< number of charges (axuliary density elements) per orbital
+    int nQtot =0; ///< total number of charge elements
 
     // atoms (ions)
-    Vec3d*  apos   =0;  // positioon of atoms
-    Vec3d*  aforce =0;  // positioon of atoms
-    Vec3d*  aQs    =0;  // charge of atom
-    int*    atype  =0;  // type of atom (in particular IKinetic pseudo-potential)
+    Vec3d*  apos   =0;  ///< positioon of atoms
+    Vec3d*  aforce =0;  ///< positioon of atoms
+    Vec3d*  aQs    =0;  ///< charge of atom
+    int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
 
     // orbitals
-    Vec3d*  opos =0;   // store positions for the whole orbital
-    Vec3d*  odip =0;   // Axuliary array to store dipoles for the whole orbital
-    double* oEs  =0;   // orbital energies
-    int*    onq  =0;   // number of axuliary density functions per orbital
+    Vec3d*  opos =0;   ///< store positions for the whole orbital
+    Vec3d*  odip =0;   ///< Axuliary array to store dipoles for the whole orbital
+    double* oEs  =0;   ///< orbital energies
+    int*    onq  =0;   ///< number of axuliary density functions per orbital
 
     // --- Wave-function components for each orbital
-    Vec3d*  epos  =0; // position of spherical function for expansion of orbitals
+    Vec3d*  epos  =0; ///< position of spherical function for expansion of orbitals
     double* esize =0;
-    double* ecoef =0; // expansion coefficient of expansion of given orbital
+    double* ecoef =0;  ///< expansion coefficient of expansion of given orbital
     // --- Forces acting on wave-functions components
-    Vec3d*  efpos  =0; //   force acting on position of orbitals
-    double* efsize =0; //   force acting on combination coefficnet of orbitals
-    double* efcoef =0; //  force acting on size of gaussians
+    Vec3d*  efpos  =0; ///<   force acting on position of orbitals
+    double* efsize =0; ///<   force acting on combination coefficnet of orbitals
+    double* efcoef =0; ///<  force acting on size of gaussians
 
     // --- Auxuliary electron density expansion basis functions
-    Vec3d * rhoP  =0; // position of density axuliary functio
-    double* rhoQ  =0; // temporary array to store density projection on pair overlap functions
+    Vec3d * rhoP  =0; ///< position of density axuliary functio
+    double* rhoQ  =0; ///< temporary array to store density projection on pair overlap functions
     double* rhoS  =0;
     // --- Forces acting on auxuliary density basis functions
-    Vec3d * rhofP =0; // position of density axuliary functio
-    double* rhofQ =0; // temporary array to store density projection on pair overlap functions
+    Vec3d * rhofP =0; ///< position of density axuliary functio
+    double* rhofQ =0; ///< temporary array to store density projection on pair overlap functions
     double* rhofS =0;
 
     // ======= Functions
@@ -175,11 +173,11 @@ class CLCFGO{ public:
 
     //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
     inline double evalOverlap( int io, int jo ){
-        // Pauli Energy between two orbitals depend on IKinetic overlap  ~S^2
-        //  See addPauliGauss() in common/molecular/InteractionsGauss.h
+        /// Pauli Energy between two orbitals depend on IKinetic overlap  ~S^2
+        ///   See addPauliGauss() in common/molecular/InteractionsGauss.h
         int i0 = getOrbOffset(io);
         int j0 = getOrbOffset(jo);
-         // ToDo : we may allow different number of orbitals per electron later (?)
+         /// ToDo : we may allow different number of orbitals per electron later (?)
         double Ssum = 0;
         //printf("============ i0 %i j0 %i perOrb %i \n", i0, j0, perOrb);
         for(int i=i0; i<i0+perOrb; i++){
@@ -187,7 +185,7 @@ class CLCFGO{ public:
             double si = esize[i];
             double ci = ecoef[i];
             for(int j=j0; j<j0+perOrb; j++){
-                // ToDo: Rcut may be read from
+                /// ToDo: Rcut may be read from
                 Vec3d Rij = epos[j]-pi;
                 double r2 = Rij.norm2();
                 if(r2>Rcut2)continue; //{ fij = Vec3dZero; return 0; }
@@ -197,7 +195,7 @@ class CLCFGO{ public:
                 //double Sij = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj );
                 //double Sij = getOverlapSGauss( r2, si*2, sj*2, dSr, dSsi, dSsj );
                 double Sij = getOverlapSGauss( r2, si*M_SQRT2, sj*M_SQRT2, dSr, dSsi, dSsj );
-                // NOTE : si,sj scaled by sqrt(2) because they are made for density widths not wave-functions width
+                /// NOTE : si,sj scaled by sqrt(2) because they are made for density widths not wave-functions width
                 //printf( "[%i,%i]x[%i,%i] r,S %g %g ci,j  %g %g -> %g \n", io,i, jo,j, sqrt(r2), Sij, ci, cj, Sij*ci*cj );
                 Ssum += Sij*ci*cj;
             }
@@ -230,8 +228,8 @@ class CLCFGO{ public:
 
     //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
     inline double evalPauli( int io, int jo ){
-        // Pauli Energy between two orbitals depend on IKinetic overlap  ~S^2
-        //  See addPauliGauss() in common/molecular/InteractionsGauss.h
+        /// Pauli Energy between two orbitals depend on IKinetic overlap  ~S^2
+        ///  See addPauliGauss() in common/molecular/InteractionsGauss.h
         int i0 = getOrbOffset(io);
         int j0 = getOrbOffset(jo);
          // ToDo : we may allow different number of orbitals per electron later (?)
@@ -302,7 +300,7 @@ class CLCFGO{ public:
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
             qcog.add_mul( pi, qii );
-            // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
+            /// ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
             Q      += qii;
             Qs[ii]  = qii;
             Ps[ii]  = pi;
@@ -330,7 +328,7 @@ class CLCFGO{ public:
                 double DTij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj ); // This is not normal kinetic energy this is change of kinetic energy due to orthogonalization
 
                 double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
-                //ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
+                ///ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
                 // --- Project on auxuliary density functions
                 Vec3d  pij;
                 double sij;
@@ -369,7 +367,7 @@ class CLCFGO{ public:
         return Ek;
     }
 
-    double projectOrbs(){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
+    void projectOrbs(){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
         int nqOrb = perOrb*(perOrb+1)/2;
         int i0 =0;
         int ii0=0;
@@ -423,6 +421,7 @@ class CLCFGO{ public:
     }
 
     double CoulombOrbPair( int io, int jo ){
+        /// Calculate Elecrostatic Energy&Force for projected density of orbitas @io and @jo
         int i0 = getRhoOffset(io);
         int j0 = getRhoOffset(jo);
         int nrho = onq[io];
@@ -455,7 +454,8 @@ class CLCFGO{ public:
         return Ecoul;
     }
 
-    void evalElectrostatICoulomb( ){
+    double evalElectrostatICoulomb( ){
+        /// Calculate detailed short-range electrostatICoulomb
         double r2safe = 0.1;
         double E = 0;
         for(int io=0; io<nOrb; io++){
@@ -466,7 +466,6 @@ class CLCFGO{ public:
                 Vec3d dop = opos[jo] - opi;
                 double r2 = dop.norm2();
                 if( r2<RcutOrb2 ){
-                    /// Calculate detailed short-range electrostatICoulomb
                     int j0 = getRhoOffset(jo);
                     // ToDo : nrho,nV may vary
                     CoulombOrbPair( io, jo );
@@ -481,6 +480,7 @@ class CLCFGO{ public:
                 }
             }
         }
+        return E;
     }
 
     void ExchangeOrbPair(int io, int jo){
@@ -558,8 +558,10 @@ class CLCFGO{ public:
     }
 
     double eval(){
+        double E=0;
         projectOrbs();
-        evalElectrostatICoulomb();
+        E += evalElectrostatICoulomb();
+        return E;
     }
 
     // ========== On Grid
@@ -581,17 +583,29 @@ class CLCFGO{ public:
         //printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
         //for(int i=0; i<perOrb; i++){ printf( "wf[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
         //printf( "DEBUG norm3Ds(1) %g %g \n", Gauss::norm3Ds( 1.0 ), pow( M_PI*2,-3./2) );
-        return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){
+        return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double& res){
             double wfsum = 0.0;
             for(int i=0; i<perOrb; i++){
                 Vec3d dR  = pos - Ps[i];
                 double r2 = dR.norm2();
                 double si = Ss[i];
                 wfsum += Gauss::bas3D_r2( r2, si ) * Cs[i];
+                //printf( "ig [%i] dR(%g,%g,%g) wf %g  r2 si C %g %g %g \n", ig, dR.x,dR.y,dR.z, wfsum, r2, si, Cs[i] );
                 // ToDo : Fast Gaussian ?
             }
+            res += wfsum*wfsum;
+            //printf( "ig [%i] wf %g \n", ig, wfsum );
             buff[ig] = wfsum;
         });
+    }
+
+    void orb2xsf( const GridShape& grid, int iorb, const char* fname ){
+        int ng = grid.n.totprod();
+        double  dV = grid.voxelVolume();
+        double* buff = new double[ ng ];
+        double Q = orb2grid( 0, grid, buff );
+        //printf( "orb2xsf Q  %g \n", Q );
+        grid.saveXSF( fname, buff, -1 );
     }
 
     double rho2grid( int io, const GridShape& gridShape, double* buff )const{
@@ -650,5 +664,7 @@ class CLCFGO{ public:
     }
 
 };
+
+/// @}
 
 #endif

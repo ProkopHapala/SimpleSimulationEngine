@@ -111,7 +111,7 @@ void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
     {
     DEBUG_saveFile1="temp/wf0.xsf";
     DEBUG_saveFile2="temp/Lwf1.xsf";
-    auto func1 = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=x; solver.orb2grid( 0, grid, f );                                   };
+    auto func1 = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=x; solver.orb2grid( 0, grid, f );      };
     auto func2 = [&](GridShape& grid, double* f, double x ){
         double* tmp = new double[grid.n.totprod()];
         solver.epos[0].x=x;
@@ -285,8 +285,6 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     fontTex     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
-    DEBUG
-
     int nsamp = 40;
     solver.realloc( 2, 2, 2, nsamp, 1 );
     solver.setRcut( 4.0 );
@@ -312,27 +310,27 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     plot1.init();
     plot1.fontTex = fontTex;
 
-
     {auto& _=solver;
         for(int i=0; i<_.nBas; i++){ _.ecoef[i]=0; _.epos[i]=Vec3dZero;  }
         _.ecoef[0] =  1.0;
         _.ecoef[2] =  1.0;
-        _.ecoef[1] = -1.0; solver.epos[1] = (Vec3d){0.0,0.0,0.0};
+        _.ecoef[1] = -0.5;
+        _.epos [1] = (Vec3d){0.0,0.0,0.0};
         //_.ecoef[3] = +0.3;
     }
 
-    //test_WfOverlap     ( solver, plot1 );
-    test_Kinetic( solver, plot1 );
+    GridShape grid; grid.init( 5.0, 1.0, false);
+    solver.orb2xsf( grid, 0, "temp/orb0.xsf" );
+
+    //exit(0);
+    //test_WfOverlap   ( solver, plot1 );
+    test_Kinetic       ( solver, plot1 );
     //test_ProjectDensity( solver, plot1 );
     //test_DensityOverlap( solver, plot1 );   plot1.scaling.y = 30.0;
     //test_ElectroStatics( solver, plot1 );
 
     plot1.update();
     plot1.render();
-
-
-    DEBUG
-
 
 }
 

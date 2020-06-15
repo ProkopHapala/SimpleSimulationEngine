@@ -2,7 +2,11 @@
 #ifndef InteractionsGauss_h
 #define InteractionsGauss_h
 
-/*
+/// @file
+/// @ingroup eFF
+
+/*!  \addtogroup eFF Electron Force Field
+ @{
 
 eFF : Electron Force Field
 ---------------------------
@@ -15,33 +19,31 @@ Julius T. Su, William A. Goddard
 Non-adiabatic dynamics modeling framework for materials in extreme conditions
 Hai Xiao, Andrés Jaramillo-Botero, Patrick L. Theofanis, William A. Goddard,
 
-NOTES:
--------
+### NOTES:
 
 1) It seems that decrease of kinetic energy by sharing electron between two atoms is dominant contribution which makes formation of bonds fabourable
     * H2 Molecule perhaps cannot be stable without this contribution ( i.e. with fixed radius of electron blobs )
 
-Params
+### Params
+ \verbatim
             a             b             c           d           e           s-core
 Al     0.486000       1.049000      0.207000                              1.660000
 Si     0.320852       2.283269      0.814857                              1.691398
 C     22.721015       0.728733      1.103199     17.695345    6.693621    0.621427
 O     25.080199       0.331574      1.276183     12.910142    3.189333    0.167813
 
-*/
-
-/*
 Erf approximation:
-# Gaussian:    F = (x2-1)**2 / sqrtPi
-# Erf          E = x*(1 + x2 * ( -0.66666666666 + 0.2*x2 ) ) * (2/(16.0/15.0))
+ Gaussian:    F = (x2-1)**2 / sqrtPi
+ Erf          E = x*(1 + x2 * ( -0.66666666666 + 0.2*x2 ) ) * (2/(16.0/15.0))
+\endverbatim
 */
 
 
-const double const_hbar_SI      = 1.054571817e-34;    // [J.s]  #6.582119569e-16 # [eV/s]
-const double const_Me_SI        = 9.10938356e-31;     // [kg]
-const double const_e_SI         = 1.602176620898e-19; // [Coulomb]
-const double const_eps0_SI      = 8.854187812813e-12; // [F.m = Coulomb/(Volt*m)]
-const double const_eV_SI        = 1.602176620898e-19; // [J]
+const double const_hbar_SI      = 1.054571817e-34;    ///< [J.s]  #6.582119569e-16 # [eV/s]
+const double const_Me_SI        = 9.10938356e-31;     ///< [kg]
+const double const_e_SI         = 1.602176620898e-19; ///< [Coulomb]
+const double const_eps0_SI      = 8.854187812813e-12; ///< [F.m = Coulomb/(Volt*m)]
+const double const_eV_SI        = 1.602176620898e-19; ///< [J]
 const double const_Angstroem_SI = 1.0e-10;
 
 const double const_K_SI     =  const_hbar_SI*const_hbar_SI/const_Me_SI;
@@ -183,18 +185,18 @@ inline double DensOverlapGauss_S( double r2, double amp, double si, double sj, d
 inline double DensOverlapGauss_Snorm( double r2, double amp, double si, double sj, double& dSr, double& dSsi, double& dSsj,
     double si2, double sj2, double is2, double is4
 ){
-    // eq. 12 in (Xiao, H., et. al. Mechanics of Materials, 90, 243–252 (2015). https://doi.org/10.1016/j.mechmat.2015.02.008 )
-    // E = (2/(si/sj+si/sj))^3 * exp( -2*r^2/(si^2+sj^2) )
+    /// eq. 12 in (Xiao, H., et. al. Mechanics of Materials, 90, 243–252 (2015). https://doi.org/10.1016/j.mechmat.2015.02.008 )
+    /// E = (2/(si/sj+si/sj))^3 * exp( -2*r^2/(si^2+sj^2) )
 
     amp*= const_K_eVA;
 
     double a    = 2.*(si*sj)*is2;
     double a2   = a*a;
     double e1   = a2*a;              // (2/(si/sj+si/sj))^3
-    double e2   = exp( -2*r2*is2 );   // exp( -2*r^2/(si^2+sj^2) )
+    double e2   = exp( -2*r2*is2 );  // exp( -2*r^2/(si^2+sj^2) )
 
-    // prefactr derived from T :  e0    = (     si^4 +   sj^4 - 1.25*(si^2*sj^2) )/((si^2*sj^2)*(si^2+sj^2))
-    // and its derivative        de0/da = ( 4.5*si^4 - 2*sj^4 - 4.0 *(si^2*sj^2) )/((si^3     )*(si^2+sj^2)**2)
+    /// prefactr derived from T :  e0    = (     si^4 +   sj^4 - 1.25*(si^2*sj^2) )/((si^2*sj^2)*(si^2+sj^2))
+    /// and its derivative        de0/da = ( 4.5*si^4 - 2*sj^4 - 4.0 *(si^2*sj^2) )/((si^3     )*(si^2+sj^2)**2)
     double sisj   = si*sj;
     double sisj2  = sisj*sisj;
     //double isisj2 = 1/sisj2;
@@ -222,8 +224,8 @@ inline double DensOverlapGauss_Snorm( double r2, double amp, double si, double s
 inline double DensOverlapGauss_P( double r2, double amp, double si, double sj, double& dSr, double& dSsi, double& dSsj,
     double si2, double sj2, double is2, double is4
 ){
-    // eq. 12 in (Xiao, H., et. al. Mechanics of Materials, 90, 243–252 (2015). https://doi.org/10.1016/j.mechmat.2015.02.008 )
-    // E = (2/(si/sj+si/sj))^5 * (r12-s2/sqrt2)^2 * exp( -2*(r^2-sj/sqrt2)/(si^2+sj^2) )
+    /// eq. 12 in (Xiao, H., et. al. Mechanics of Materials, 90, 243–252 (2015). https://doi.org/10.1016/j.mechmat.2015.02.008 )
+    /// E = (2/(si/sj+si/sj))^5 * (r12-s2/sqrt2)^2 * exp( -2*(r^2-sj/sqrt2)/(si^2+sj^2) )
     double isi  = 1/si;
     double a    = 2.*(si*sj)*is2;
     double a2   = a *a;
@@ -530,6 +532,7 @@ inline double addPauliGaussS( const Vec3d& dR, double si, double sj, Vec3d& f, d
 
 }
 
+///  @}
 
 #endif
 

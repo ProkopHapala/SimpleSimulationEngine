@@ -2,11 +2,16 @@
 #ifndef AOIntegrals_h
 #define AOIntegrals_h
 
+/// @file
+/// \ingroup Molecular
+/// @{
+
 #include <stdint.h>
 
 #include "spline_hermite.h"
 #include "integration.h"
 
+/// rotate p-p interaction
 double hrot_pp( const Vec3d& dh, const Vec3d& p1, const Vec3d& p2, const Vec2d& H ){
     Mat3d rot;
     rot.fromDirUp(dh,p1);
@@ -16,6 +21,7 @@ double hrot_pp( const Vec3d& dh, const Vec3d& p1, const Vec3d& p2, const Vec2d& 
     return (c1.x*c2.x + c1.y*c2.y)*H.x + c1.z*c2.z*H.y;
 }
 
+/// rotate s-p interaction
 double hrot_sp( const Vec3d& dh, const Quat4d& c1, const Quat4d& c2, const Vec3d& H ){
 
     Mat3d rot;
@@ -28,6 +34,7 @@ double hrot_sp( const Vec3d& dh, const Quat4d& c1, const Quat4d& c2, const Vec3d
 
 }
 
+/// evaluate slater orbital
 inline double slater( Vec3d p, const Quat4d& c, double beta ){
     //double DEBUG_xy = p.y;
     //double DEBUG_z  = p.z;
@@ -383,6 +390,8 @@ void integrateCylFunc( Func1 func1, Func2 func2, int order, int nint, double dz,
     delete [] f1s; delete [] f2s;
     delete [] ws;
 }
+
+///  @}
 
 #endif
 
