@@ -334,7 +334,12 @@ class CLCFGO{ public:
 
             //double fEki;
             //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
-            Ek += qii*Gauss::kinetic( si );
+            //Ek += qii*Gauss::kinetic( si );
+            double fr,fsi,fsj;
+            Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
+            efsize[i]+= fsi*ci*ci*2;
+
+
             //printf( "orb[%i|%i   ] s(%g):%g qii %g \n", io, i,  si, Ss[ii],  qii );
             ii++;
             //printf( "orb[%i|%i] s %g qii %g \n", io, i,  si*2,  qii );
@@ -354,6 +359,9 @@ class CLCFGO{ public:
                 double DTij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj ); // This is not normal kinetic energy this is change of kinetic energy due to orthogonalization
 
                 double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
+
+                //double Ekij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj )*2; fr*=2; fsi*=2, fsj*=2;
+
                 ///ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
                 /// ToDo :  Need derivatives of Kinetic Overlap !!!!!
                 // --- Project on auxuliary density functions
@@ -373,10 +381,10 @@ class CLCFGO{ public:
                 Ek += Ekij*cij;
 
                 // --- Derivatives ( i.e. Forces )
-                Vec3d fij = Rij*(dSr*cij);
+                Vec3d fij = Rij*(fr*cij);
                 efpos [i].add( fij  ); efpos[j].sub ( fij );
-                efsize[i]+= dSsi*cij ; efsize[j]+= dSsj*cij ;
-                efcoef[i]+= Sij*cj   ; efcoef[j]+= Sij*ci  ;
+                efsize[i]+= fsi*cij  ; efsize[j]+= fsj*cij ;
+                efcoef[i]+= Ekij*cj  ; efcoef[j]+= Ekij*ci ;
 
                 // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
                 Qs[ii] = qij;

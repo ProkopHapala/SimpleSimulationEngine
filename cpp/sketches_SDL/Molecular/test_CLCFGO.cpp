@@ -104,11 +104,11 @@ void test_KineticDerivs( CLCFGO& solver, Plot2D& plot1 ){
     DataLine2D* line_Fana = new DataLine2D( nint, 0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
     for(int i=0; i<nint; i++){
         solver.cleanForces();
-        solver.epos[2].x = line_E->xs[i];
+        solver.epos[0].x = line_E->xs[i];
         Vec3d dip;
         line_E   ->ys[i] = solver.projectOrb( 0, dip, false );
-        if(i>1)line_Fnum->ys[i-1] = -(line_E->ys[i] - line_E->ys[i-2])/(2*dx);
-        line_Fana->ys[i]          = solver.efpos[2].x;
+        if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
+        line_Fana->ys[i]          = solver.efpos[0].x;
     }
 }
 
@@ -165,6 +165,7 @@ void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
         solver.epos[0].x=line_ITana->xs[i];
         line_ITana->ys[i] = solver.projectOrb( 0, dip, false );
     }
+    printf( "Ek[0] ana %g num %g / %g \n", line_ITana->ys[0], line_ITgrid->ys[0], line_ITana->ys[0]/line_ITgrid->ys[0] );
     printf( "KineticIntegral(0) Grid %g Ana %g ratio %g /%g \n", line_ITgrid->ys[0], line_ITana->ys[0],  line_ITgrid->ys[0]/line_ITana->ys[0],  line_ITana->ys[0]/line_ITgrid->ys[0]  );
 }
 
@@ -353,7 +354,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         for(int i=0; i<_.nBas; i++){ _.ecoef[i]=0; _.epos[i]=Vec3dZero;  }
         _.ecoef[0] =  1.0;
         _.ecoef[2] =  1.0;
-        _.ecoef[1] = -0.5;
+        _.ecoef[1] = -0.0;
         _.epos [1] = (Vec3d){0.0,0.0,0.0};
         //_.ecoef[3] = +0.3;
     }
@@ -363,13 +364,15 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     //exit(0);
     //test_WfOverlap   ( solver, plot1 );
-    //test_Kinetic       ( solver, plot1 );
+    test_Kinetic       ( solver, plot1 );
     //test_ProjectDensity( solver, plot1 );
     //test_DensityOverlap( solver, plot1 );   plot1.scaling.y = 30.0;
     //test_ElectroStatics( solver, plot1 );
 
 
-    test_OverlapDerivs( solver, plot1 );
+    //test_OverlapDerivs( solver, plot1 );
+
+    test_KineticDerivs( solver, plot1 );
 
     plot1.update();
     plot1.render();

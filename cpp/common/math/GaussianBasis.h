@@ -109,6 +109,16 @@ inline double sqnorm3Ds( double s ){
     return c*c*c;
 }
 
+inline double sqnorm3Ds_deriv( double s, double& d ){
+    const double C  = 0.42377720812; // pi^(-3/4)
+    const double dC = 0.28251813874;
+    double invs   = 1/s;
+    double insqrt  = sqrt(invs);
+    double N = invs*insqrt;
+    d        = dC * N * invs;
+    return N*C;
+}
+
 inline double sqnorm3Ds_sq( double s ){
     const double sqrt_pi = 1.77245385091;
     double c = 1/(sqrt_pi*s); // sqrt(sqrt(pi)*s)
@@ -148,32 +158,49 @@ inline double kinetic_w(  double r2, double w1, double w2 ){
     return C*wprod * ( 2*wprod*r2 - 3*wsum )*g*iwsum*iwsum*iwsum*sqrtiwsum;
 }
 
-//
-inline double kinetic_w(  double r2, double w1, double w2,   double& dr, double& dw1, double& dw2 ){
-    /// ToDo :  Need derivatives of Kinetic Overlap !!!!!
-    double C         = 11.1366559937; //(pi^(3/2))*2
-    double wsum      = w2+w1 ;
-    double iwsum     = 1/wsum;
-    double sqrtiwsum = sqrt(iwsum);
-    double wprod     = w1*w2 ;
-    //double x2        = x*x;
-    double g         = exp( -( wprod * r2 )*iwsum );
 
-    double r     =  sqrt(r2);
-    double dgdr  = -g*r*iwsum;
-    double dgdw1 = 0;
-    double dgdw2 = 0;
 
-    dr  =  dgdr   *   wprod * ( 2*wprod*r2 - 3*wsum )*iwsum*iwsum*iwsum*sqrtiwsum ;
-    dw1 = 0;
-    dw2 = 0;
+inline double kinetic_s(  double r2, double si, double sj,   double& fr, double& fsi, double& fsj ){
+ // (2^(3/2)*%pi^(3/2)*s1^3*s2^3*(  r2   -3*(s2^2+s1^2)*exp(-r2/(2*s2^2+2*s1^2)))/(s2^2+s1^2)^(7/2)
+ //  2^(3/2)*pi^(3/2)    *si^3*sj^3*(  r2   -3*(sj^2+si^2)*exp(-r2/(2*sj^2+2*si^2)))     /     (s2^2+s1^2)^(7/2)
+ //  2^(3/2)*pi^(3/2)    *sij^3*(  r2   -3* s2 *exp( -r2/(2*s2) ) ) /  s2^(7/2)
+ double C = 15.7496099457;
+ double dCi,dCj;
+ //C *= sqnorm3Ds(si) * sqnorm3Ds(sj);
+ C *= sqnorm3Ds_deriv( si, dCi ) * sqnorm3Ds_deriv( sj, dCj );
+ double sij  = si*sj;
+ double si2  = si*si;
+ double sj2  = sj*sj;
+ double si4  = si2*si2;
+ double sj4  = sj2*sj2;
+ double si6  = si2*si4;
+ double sj6  = sj2*sj4;
+ double sij2 = sij*sij;
+ double s2   = si2 + sj2;
+ double invs2  = 1/s2;
+ double invs4  = invs2*invs2;
+ double invs   = sqrt( invs2 );
+ double g = exp( -r2*0.5*invs2 );
+ double denom = invs4*invs2*invs;
+ double comm  = C* sij*sij * g * denom;
+ //double poly     = sij*sij*sij  * ( r2  - 3*s2 );
+ //double dpoly_si = 3*sij*sij*sj * ( r2  - 3*sj2 - 5*si2 );
+ //double dpoly_sj = 3*sij*sij*sj * ( r2  - 3*si2 - 5*sj2 );
+ double E    = comm * sij * ( r2  -  3*s2 );
+ comm*=invs2;
+ fr   = comm * sij * ( r2  -  5*s2 );
+ comm*=invs2;
+ fsi  = comm * sj  * (  si2*r2*r2  + ( 3*sj4  - 4*sij2 - 7*si4 )*r2 - 9*sj6 - (12*sj2 + 3*si2)*sij2 + si6 );
+ fsj  = comm * si  * (  si2*r2*r2  + ( 3*si4  - 4*sij2 - 7*si4 )*r2 - 9*si6 - (12*si2 + 3*sj2)*sij2 + sj6 );
+ //double fsi  = C* (  *poly*g*denom +  ddenom
+ //( s1 ^2*x1^4+3*s2^4*x1^2-4*s1^2*s2^2*x1^2-7*s1^4*x1^2-9*s2^6-12*s1^2*s2^4+3*s1^4*s2^2+6*s1^6)
+ // si2*r2*r2 +    3*sj^4 * r2  -4*si^2*sj^2*r2  - 7*si^4*r2 -    9*sj^6 - 12*si^2*sj^4 + 3*si^4*sj^2 + 6*si^6  )
+ // si2*r2*r2 +  ( 3*sj^4  -4*si^2*sj^2  - 7*si^4 )*r2  -    9*sj^6 - 12*si^2*sj^4 + 3*si^4*sj^2 + 6*si^6  )
+ // si2*r2*r2 + ( 3*sj2*sj2  -4*si2*sj2  - 7*si2*si2 )*r2  -  9*sj2*sj2*sj2 - 12*si2*sj2*sj2 + 3*si2*si2*sj2 + si2*si2*si2  )
+ // si2*r2*r2  + ( 3*sj4  -4*si4  - 7*si2*si2 )*r2 - 9*sj4*sj2 - 12*si2*sj4 + 3*si4*sj2 + si2*si4
 
-    // d_w1{ w1*w2*(w1+w2)^(-7/2) } = (63*w1*w2)/(4*(w2+w1)^(11/2))-(7*w2)/(w2+w1)^(9/2)
-
-    return C*wprod * ( 2*wprod*r2 - 3*wsum )*g*iwsum*iwsum*iwsum*sqrtiwsum;
-
+ return   E;
 }
-
 
 inline double kinetic( double s ){
     //     -(3*pi^(3/2)*s)/2
