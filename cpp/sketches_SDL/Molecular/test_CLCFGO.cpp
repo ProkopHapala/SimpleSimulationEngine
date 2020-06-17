@@ -380,7 +380,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     plot1.scaling.y=0.3;
     plot1.update();
     plot1.render();
-     DEBUG
+
 
 }
 
