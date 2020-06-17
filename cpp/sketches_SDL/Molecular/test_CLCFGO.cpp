@@ -75,40 +75,20 @@
 
 long timeStart;
 
-
-// ===================================================
-///        test   Kinetic Derivs
-// ===================================================
-
-void test_OverlapDerivs( CLCFGO& solver, Plot2D& plot1 ){
+template<typename Func>
+void testDerivs( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1, Func func ){
     // ======= Test Orbital Wavefunction Overlap
-    int    nint = 30;
-    double dx   = 0.2;
-    DataLine2D* line_E    = new DataLine2D( nint, 0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
-    DataLine2D* line_Fnum = new DataLine2D( nint, 0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
-    DataLine2D* line_Fana = new DataLine2D( nint, 0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
-    for(int i=0; i<nint; i++){
+    printf( "n  %i dx %g  \n", n , dx );
+    DataLine2D* line_E    = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
+    DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
+    DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
+    for(int i=0; i<n; i++){
         solver.cleanForces();
-        solver.epos[2].x = line_E->xs[i];
-        line_E   ->ys[i] = solver.evalOverlap( 0, 1 );
-        if(i>1)line_Fnum->ys[i-1] = -(line_E->ys[i] - line_E->ys[i-2])/(2*dx);
-        line_Fana->ys[i]          = solver.efpos[2].x;
-    }
-}
-
-void test_KineticDerivs( CLCFGO& solver, Plot2D& plot1 ){
-    int    nint = 30;
-    double dx   = 0.2;
-    DataLine2D* line_E    = new DataLine2D( nint, 0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
-    DataLine2D* line_Fnum = new DataLine2D( nint, 0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
-    DataLine2D* line_Fana = new DataLine2D( nint, 0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
-    for(int i=0; i<nint; i++){
-        solver.cleanForces();
-        solver.epos[0].x = line_E->xs[i];
-        Vec3d dip;
-        line_E   ->ys[i] = solver.projectOrb( 0, dip, false );
+        //solver.epos[2].x = line_E->xs[i];
+        //line_E   ->ys[i] = solver.evalOverlap( 0, 1 );
+        //line_Fana->ys[i] = solver.efpos[2].x;
+        line_E->ys[i] =  func( line_E->xs[i], line_Fana->ys[i] );
         if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
-        line_Fana->ys[i]          = solver.efpos[0].x;
     }
 }
 
@@ -354,7 +334,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         for(int i=0; i<_.nBas; i++){ _.ecoef[i]=0; _.epos[i]=Vec3dZero;  }
         _.ecoef[0] =  1.0;
         _.ecoef[2] =  1.0;
-        _.ecoef[1] = -0.0;
+        _.ecoef[1] = -1.0;
         _.epos [1] = (Vec3d){0.0,0.0,0.0};
         //_.ecoef[3] = +0.3;
     }
@@ -364,15 +344,22 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     //exit(0);
     //test_WfOverlap   ( solver, plot1 );
-    test_Kinetic       ( solver, plot1 );
+    //test_Kinetic       ( solver, plot1 );
     //test_ProjectDensity( solver, plot1 );
     //test_DensityOverlap( solver, plot1 );   plot1.scaling.y = 30.0;
     //test_ElectroStatics( solver, plot1 );
 
 
-    //test_OverlapDerivs( solver, plot1 );
+    //test_OverlapDerivs_pos( solver, plot1 );
+    //test_KineticDerivs_pos( solver, plot1 );
 
-    test_KineticDerivs( solver, plot1 );
+    // --- Overlap Derivs
+    //testDerivs( 30, 0.0,0.2, solver, plot1, [&](double x, double& f)->double{ solver.epos[0].x=x; double E=solver.evalOverlap( 0, 1 ); f=solver.efpos[0].x; return E; } );
+    //testDerivs( 30, 0.0,0.2, solver, plot1, [&](double x, double& f)->double{ solver.esize[0]=x; double E=solver.evalOverlap( 0, 1 ); f=solver.efsize[0]; return E; } );
+
+    // --- Kinetic Derivs
+    //testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{ solver.epos[0].x=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false );  f=solver.efpos[0].x; return E; } );
+    testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{ solver.esize[0]=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false );  f=solver.efsize[0]; return E; } );
 
     plot1.update();
     plot1.render();
