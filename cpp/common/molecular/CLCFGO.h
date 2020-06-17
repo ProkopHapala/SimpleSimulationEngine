@@ -403,7 +403,7 @@ class CLCFGO{ public:
         if(bNormalize){
             double renorm  = sqrt(1./Q);
             double renorm2 = renorm*renorm;
-            //printf( "Q %g renorm %g renorm2 %g \n", Q, renorm, renorm2 );
+            printf( "project orb[$i]: Q %g renorm %g renorm2 %g \n", io, Q, renorm, renorm2 );
             for(int i=i0; i<i0+perOrb; i++){ ecoef[i] *=renorm;  };
             for(int i= 0; i<ii       ; i++){ Qs   [i] *=renorm2; };
         }
@@ -471,6 +471,7 @@ class CLCFGO{ public:
         int nrho = onq[io];
         int nV   = onq[jo];
         double Ecoul=0;
+        //printf( "nV %i \n", nV );
         for(int i=i0; i<i0+nV; i++){
             Vec3d  pi = rhoP[i];
             double qi = rhoQ[i];
@@ -488,12 +489,23 @@ class CLCFGO{ public:
                 double s2   = si*si + sj*sj;
                 double s    = sqrt(s2);
 
+                double qij = qi*qj;
                 double fr,fs;
-                double Eqq  = CoulombGauss( r, s*2, fr, fs, qi*qj );
+                double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
+                fs*=4;
+                // see    InteractionsGauss.h :: addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, double qq ){
+
+                // --- Derivatives (Forces)
+                Vec3d fij = Rij*(-fr);
+                rhofP[i].add(fij);   rhofP[j].sub(fij);
+                rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
+                rhofQ[i] += Eqq/qi;  rhofQ[j] += Eqq/qj; // ToDo : need to be made more stable ... different (qi,qj)
+
                 //printf( "[%i,%i] E %g r %g sij %g(%g,%g) q %g(%g,%g) \n", i,j,  Eqq , r, s,si,sj, qi*qj,qi,qj );
                 Ecoul      += Eqq;
             }
         }
+        //printf( " Ecoul %g \n", Ecoul );
         //printf( "CoulombOrbPair Eorb %g \n", Ecoul );
         return Ecoul;
     }

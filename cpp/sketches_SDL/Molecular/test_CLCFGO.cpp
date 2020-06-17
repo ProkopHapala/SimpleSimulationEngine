@@ -332,10 +332,14 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     {auto& _=solver;
         for(int i=0; i<_.nBas; i++){ _.ecoef[i]=0; _.epos[i]=Vec3dZero;  }
-        _.ecoef[0] =  1.0;
+        _.ecoef[0] =  -0.3;
+        _.ecoef[1] =  0.7;
         _.ecoef[2] =  1.0;
-        _.ecoef[1] = -1.0;
+        _.ecoef[3] =  0.0;
+        _.epos [0] = (Vec3d){0.0,0.0,0.0};
         _.epos [1] = (Vec3d){0.0,0.0,0.0};
+        _.epos [2] = (Vec3d){0.0,0.0,0.0};
+        _.epos [3] = (Vec3d){0.0,0.0,0.0};
         //_.ecoef[3] = +0.3;
     }
 
@@ -359,13 +363,24 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     // --- Kinetic Derivs
     //testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{ solver.epos[0].x=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false );  f=solver.efpos[0].x; return E; } );
-
-    testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{ solver.esize[0]=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false ); f=solver.efsize[0]; return E; } );
+    //testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{ solver.esize[0]=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false ); f=solver.efsize[0]; return E; } );
     //testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{double fr,fsi,fsj;double E = Gauss::kinetic_s( 0.0, x, 1.0, fr, fsi, fsj );f=fsi;return E;} );
     //testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{double fr,fsi,fsj;double E = Gauss::kinetic_s( 0.0, x, x, fr, fsi, fsj );f=fsi*2;return E;} );
 
+
+    // --- Coublomb Derivs
+
+    // --- aux basis
+    Vec3d dip;
+    solver.projectOrb( 0, dip, true );
+    solver.projectOrb( 1, dip, true );
+    //testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{ solver.rhoP[0].x=x; Vec3d dip; double E=solver.CoulombOrbPair( 0, 1 ); f=solver.rhofP[0].x; return E; } );
+    testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{ solver.rhoS[0]=x; Vec3d dip; double E=solver.CoulombOrbPair( 0, 1 ); f=solver.rhofS[0]; return E; } );
+
+    plot1.scaling.y=0.3;
     plot1.update();
     plot1.render();
+     DEBUG
 
 }
 
