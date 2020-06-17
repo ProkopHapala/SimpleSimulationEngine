@@ -78,7 +78,7 @@ long timeStart;
 template<typename Func>
 void testDerivs( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1, Func func ){
     // ======= Test Orbital Wavefunction Overlap
-    printf( "n  %i dx %g  \n", n , dx );
+    //printf( "n  %i dx %g  \n", n , dx );
     DataLine2D* line_E    = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
     DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
     DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
@@ -359,7 +359,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     // --- Kinetic Derivs
     //testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{ solver.epos[0].x=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false );  f=solver.efpos[0].x; return E; } );
-    testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{ solver.esize[0]=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false );  f=solver.efsize[0]; return E; } );
+
+    testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{ solver.esize[0]=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false ); f=solver.efsize[0]; return E; } );
+    //testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{double fr,fsi,fsj;double E = Gauss::kinetic_s( 0.0, x, 1.0, fr, fsi, fsj );f=fsi;return E;} );
+    //testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{double fr,fsi,fsj;double E = Gauss::kinetic_s( 0.0, x, x, fr, fsi, fsj );f=fsi*2;return E;} );
 
     plot1.update();
     plot1.render();

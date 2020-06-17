@@ -110,12 +110,12 @@ inline double sqnorm3Ds( double s ){
 }
 
 inline double sqnorm3Ds_deriv( double s, double& d ){
-    const double C  = 0.42377720812; // pi^(-3/4)
-    const double dC = 0.28251813874;
+    const double C  =  0.42377720812; // pi^(-3/4)
+    const double dC = -0.63566581218; // pi^(-3/4) * (3/2)
     double invs   = 1/s;
     double insqrt  = sqrt(invs);
-    double N = invs*insqrt;
-    d        = dC * N * invs;
+    double N = invs*insqrt;   //   ()^(-3/2)
+    d        = dC * N * invs; //   ()^(-5/2)
     return N*C;
 }
 
@@ -167,7 +167,10 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  double C = 15.7496099457;
  double dCi,dCj;
  //C *= sqnorm3Ds(si) * sqnorm3Ds(sj);
- C *= sqnorm3Ds_deriv( si, dCi ) * sqnorm3Ds_deriv( sj, dCj );
+ double Ci = sqnorm3Ds_deriv( si, dCi );
+ double Cj = sqnorm3Ds_deriv( sj, dCj );
+ double Cij = Ci*Cj;
+
  double sij  = si*sj;
  double si2  = si*si;
  double sj2  = sj*sj;
@@ -182,16 +185,23 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  double invs   = sqrt( invs2 );
  double g = exp( -r2*0.5*invs2 );
  double denom = invs4*invs2*invs;
- double comm  = C* sij*sij * g * denom;
+ double comm  = C*sij*sij * g * denom;
  //double poly     = sij*sij*sij  * ( r2  - 3*s2 );
  //double dpoly_si = 3*sij*sij*sj * ( r2  - 3*sj2 - 5*si2 );
  //double dpoly_sj = 3*sij*sij*sj * ( r2  - 3*si2 - 5*sj2 );
- double E    = comm * sij * ( r2  -  3*s2 );
+ double E = comm * sij * ( r2  -  3*s2 );
  comm*=invs2;
- fr   = comm * sij * ( r2  -  5*s2 );
+ fr       = comm * sij * ( r2  -  5*s2 );
  comm*=invs2;
- fsi  = comm * sj  * (  si2*r2*r2  + ( 3*sj4  - 4*sij2 - 7*si4 )*r2 - 9*sj6 - (12*sj2 + 3*si2)*sij2 + si6 );
- fsj  = comm * si  * (  si2*r2*r2  + ( 3*si4  - 4*sij2 - 7*si4 )*r2 - 9*si6 - (12*si2 + 3*sj2)*sij2 + sj6 );
+ fsi  = comm * sj  * (  si2*r2*r2  + ( 3*sj4  - 4*sij2 - 7*si4 )*r2 - 9*sj6 + (-12*sj2 + 3*si2)*sij2 + 6*si6 );
+ fsj  = comm * si  * (  sj2*r2*r2  + ( 3*si4  - 4*sij2 - 7*sj4 )*r2 - 9*si6 + (-12*si2 + 3*sj2)*sij2 + 6*sj6 );
+
+ fsi = Cij*fsi + Cj*dCi*E;
+ fsj = Cij*fsj + Ci*dCj*E;
+ E *=Cij;
+ fr*=Cij;
+
+
  //double fsi  = C* (  *poly*g*denom +  ddenom
  //( s1 ^2*x1^4+3*s2^4*x1^2-4*s1^2*s2^2*x1^2-7*s1^4*x1^2-9*s2^6-12*s1^2*s2^4+3*s1^4*s2^2+6*s1^6)
  // si2*r2*r2 +    3*sj^4 * r2  -4*si^2*sj^2*r2  - 7*si^4*r2 -    9*sj^6 - 12*si^2*sj^4 + 3*si^4*sj^2 + 6*si^6  )

@@ -340,8 +340,9 @@ class CLCFGO{ public:
             //Ek += qii*Gauss::kinetic( si );
             double fr,fsi,fsj;
             Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
-            efsize[i]+= fsi*ci*ci;
+            efsize[i]+= 2*fsi*qii;
 
+            //if(qii>1e-8)printf( "Kinetic[%i] %g | %g %g %g \n", i, fsi*ci*ci, fsi, ci, qii );
 
             //printf( "orb[%i|%i   ] s(%g):%g qii %g \n", io, i,  si, Ss[ii],  qii );
             ii++;
@@ -387,6 +388,8 @@ class CLCFGO{ public:
                 efpos [i].add( fij ); efpos[j].sub( fij );
                 efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
                 efcoef[i]+= Ekij*cj ; efcoef[j]+= Ekij*ci;
+
+                //printf(  "Kinetic [%i,%i]  fsi,j %g %g  \n ", i,j, fsi*cij, fsj*cij  );
 
                 // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
                 Qs[ii] = qij;
