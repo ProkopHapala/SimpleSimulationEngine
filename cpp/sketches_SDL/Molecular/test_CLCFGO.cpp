@@ -305,6 +305,21 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     fontTex     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
+
+    double W,W_,X,X_,S;
+    double si=0.5,sj=0.7;
+    double wi=1/(2*si*si),wj=1/(2*sj*sj);
+    double xi=0.1,xj=0.8;
+
+    Gauss::product1D_w(  wi,xi,   wj,xj,   W,X   );
+    Gauss::product1D_s(  si,xi,   sj,xj,   S,X_  );
+    W_ = 1/(2*S*S);
+    printf(  "  X  %g %g    W %g %g \n", X, X_, W, W_ );
+
+    exit(0);
+
+
+
     int nsamp = 40;
     solver.realloc( 2, 2, 2, nsamp, 1 );
     solver.setRcut( 4.0 );

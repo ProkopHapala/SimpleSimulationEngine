@@ -42,6 +42,18 @@ inline double product1D_w( double wi,double xi,   double wj,double xj,   double&
     return logC;
 }
 
+inline double product1D_s( double si,double xi,   double sj,double xj,   double& S, double& X  ){
+    double si2   = si*si;
+    double sj2   = sj*sj;
+    double inv     = 1/(si2 + sj2);
+    double sqrtinv = sqrt(inv);
+    S          =  si*sj*sqrtinv;
+    X          =  ( si2*xj + sj2*xi )*inv ;
+    //double logC =  wxi*xi + wxj*xj - wx*X;
+    //double C   = np.exp(-logC) * Ci * Cj
+    return 1;
+}
+
 inline double product1D_w_deriv( double wi,double xi,   double wj,double xj,   double& W, double& X,    double& dXdwi, double& dXdwj, double& dXdxi, double& dXdxj ){
     // derivatives in  /home/prokop/Dropbox/MyDevSW/Maxima/Gauss_Product.wxmx
     W          = wi+wj; // => dW/dwi = 1   ;    dW/dwj = 1   dW/dxi = 0   ;    dW/dxj = 0
@@ -91,6 +103,21 @@ inline double product3D_s( double si, const Vec3d& pi, double sj, const Vec3d& p
         + product1D_w( wi,pi.z,  wj,pj.z,   junk,  pij.z );
     sij = 1/sqrt(2*wij);
     //printf( "DEBUG product3D_s sij %g(%g,%g) wij %g(%g,%g)\n", sij,si,sj,  wij,wi,wj );
+    return logC;
+}
+
+
+// ToDo : needs derivatives of projection
+inline double product3D_s_( double si, const Vec3d& pi, double sj, const Vec3d& pj,        double& sij, Vec3d& pij ){
+    double junk;
+    double wi = 1/(2*si*si);
+    double wj = 1/(2*sj*sj);
+    double wij;
+    double logC =
+        + product1D_s( wi,pi.x,  wj,pj.x,   wij ,  pij.x );
+        + product1D_s( wi,pi.y,  wj,pj.y,   junk,  pij.y );
+        + product1D_s( wi,pi.z,  wj,pj.z,   junk,  pij.z );
+    sij = 1/sqrt(2*wij);
     return logC;
 }
 
