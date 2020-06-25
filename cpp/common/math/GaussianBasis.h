@@ -48,11 +48,107 @@ inline double product1D_s( double si,double xi,   double sj,double xj,   double&
     double inv     = 1/(si2 + sj2);
     double sqrtinv = sqrt(inv);
     S          =  si*sj*sqrtinv;
-    X          =  ( si2*xj + sj2*xi )*inv ;
+    X          =  ( si2*xj + sj2*xi )*inv;
     //double logC =  wxi*xi + wxj*xj - wx*X;
     //double C   = np.exp(-logC) * Ci * Cj
     return 1;
 }
+
+inline double product1D_s_deriv( double si, double r2, double xi,   double sj,double xj,   double& S, double& X,    double& dSsi,double& dSsj,  double& dXsi,double& dXsj,  double& dXxi,double& dXxj ){
+    double si2   = si*si;
+    double sj2   = sj*sj;
+    double s2   = si2 + sj2;
+    double is2     = 1/(si2 + sj2);
+    double sqrtis2 = sqrt(is2);
+    S      =  si*sj*sqrtis2;
+    X      =  ( si2*xj + sj2*xi )*is2;
+
+    dSsi   = sj*sj2*sqrtis2*is2;
+    dSsj   = si*si2*sqrtis2*is2;
+
+    dXsi   = 4*si*xj;
+    dXsj   = 4*sj*xi;
+
+    dXxi   = 2*sj2;
+    dXxj   = 2*si2;
+
+    // --- constant
+    /*
+
+    double is4  = is2 * is2;
+
+    double a2   = 2.*(si*sj)*is2;
+    double a    = sqrt(a2);
+    double e1   = a2*a;
+    double e2   = exp( -r2*is2 );
+
+    double f1   = 3.*a  * (si2-sj2)*is4;
+    double f2   = 2.*e2 * r2*is4;
+
+    dCsi = e1*f2*si - e2*f1*sj;
+    dCsj = e1*f2*sj + e2*f1*si;
+    dCr  = e1*e2*(-2.*is2);
+     return e1 * e2;
+    */
+   return 1;
+}
+
+
+
+
+
+inline double product3D_s_deriv(
+    double si,    Vec3d   pi,
+    double sj,    Vec3d   pj,
+    double& S,    Vec3d & p,
+    double& dSsi, double& dSsj,
+    Vec3d & dXsi, Vec3d & dXsj,
+    double& dXxi, double& dXxj,
+    double& dCsi, double& dCsj, double& dCr
+){
+    double si2   = si*si;
+    double sj2   = sj*sj;
+    double s2   = si2 + sj2;
+    double is2     = 1/(si2 + sj2);
+    double sqrtis2 = sqrt(is2);
+
+    S      =  si*sj*sqrtis2;
+    p      =  pj*(si2*is2) + pi*(sj2*is2);
+    //X      =  ( si2*xj + sj2*xi )*inv;
+
+    double inv3_2 = sqrtis2*is2;
+    dSsi   = sj*sj2*inv3_2;
+    dSsj   = si*si2*inv3_2;
+
+    dXsi   = pj*(4*si); // seems to be wrong
+    dXsj   = pi*(4*sj);
+
+    dXxi   = 2*sj2;
+    dXxj   = 2*si2;
+
+    // --- constant
+
+    double r2 = (pi-pj).norm2();
+
+    double is4  = is2 * is2;
+
+    double a2   = 2.*(si*sj)*is2;
+    double a    = sqrt(a2);
+    double e1   = a2*a;
+    double e2   = exp( -r2*is2 );
+
+    double f1   = 3.*a  * (si2-sj2)*is4;
+    double f2   = 2.*e2 * r2*is4;
+
+    dCsi = e1*f2*si - e2*f1*sj;
+    dCsj = e1*f2*sj + e2*f1*si;
+    dCr  = e1*e2*(-2.*is2);
+
+    //double logC =  wxi*xi + wxj*xj - wx*X;
+    //double C   = np.exp(-logC) * Ci * Cj
+    return e1 * e2;
+}
+
 
 inline double product1D_w_deriv( double wi,double xi,   double wj,double xj,   double& W, double& X,    double& dXdwi, double& dXdwj, double& dXdxi, double& dXdxj ){
     // derivatives in  /home/prokop/Dropbox/MyDevSW/Maxima/Gauss_Product.wxmx
@@ -214,19 +310,19 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  double Cj = sqnorm3Ds_deriv( sj, dCj );
  double Cij = Ci*Cj;
 
- double sij  = si*sj;
- double si2  = si*si;
- double sj2  = sj*sj;
- double si4  = si2*si2;
- double sj4  = sj2*sj2;
- double si6  = si2*si4;
- double sj6  = sj2*sj4;
- double sij2 = sij*sij;
- double s2   = si2 + sj2;
- double invs2  = 1/s2;
- double invs4  = invs2*invs2;
- double invs   = sqrt( invs2 );
- double g = exp( -r2*0.5*invs2 );
+ double sij   = si*sj;
+ double si2   = si*si;
+ double sj2   = sj*sj;
+ double si4   = si2*si2;
+ double sj4   = sj2*sj2;
+ double si6   = si2*si4;
+ double sj6   = sj2*sj4;
+ double sij2  = sij*sij;
+ double s2    = si2 + sj2;
+ double invs2 = 1/s2;
+ double invs4 = invs2*invs2;
+ double invs  = sqrt( invs2 );
+ double g     = exp( -r2*0.5*invs2 );
  double denom = invs4*invs2*invs;
  double comm  = C*sij*sij * g * denom;
  //double poly     = sij*sij*sij  * ( r2  - 3*s2 );

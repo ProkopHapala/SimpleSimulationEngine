@@ -23,6 +23,15 @@
  - Make derivatives
 
 
+ # How test Forces on AuxDensity
+ --------------------------------
+ 1) move wf basis function
+ 2) calculate some force and energy in on aux-basis
+ 3) make numerical derivative
+
+
+
+
 */
 
 
@@ -91,6 +100,25 @@ void testDerivs( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1, Fun
         if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ===================================================
 ///        test   Wave Fucntion Overlap
@@ -297,27 +325,119 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
     virtual void eventHandling   ( const SDL_Event& event  );
     //virtual void keyStateHandling( const Uint8 *keys );
 
+
+    void test_RhoDeriv();
+
     TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ );
 
+
+
 };
+
+
+
+
+
+
+// ===================================================
+///        test   Rho Deriv
+// ===================================================
+
+void TestAppCLCFSF::test_RhoDeriv( ){
+
+    double si=1,sj=1;
+    Vec3d  pi=(Vec3d){0.0,0.0,0.0};
+    Vec3d  pj=(Vec3d){1.0,0.5,0.0};
+    //Vec3d  pi=(Vec3d){0.0,0.0,0.0};
+    //Vec3d  pj=(Vec3d){0.0,0.0,0.0};
+    Vec3d  p;
+    double s;
+    double dSsi,dSsj;
+    Vec3d  dXsi,dXsj;
+    double dXxi,dXxj;
+    double dCsi,dCsj,dCr;
+
+    int n = 60;
+    DataLine2D* line_E     = new DataLine2D( n, 0, 0.1, 0xFFFF0000, "E"     ); plot1.add(line_E    );
+    DataLine2D* line_px    = new DataLine2D( n, 0, 0.1, 0xFF000000, "p.x"   ); plot1.add(line_px    );
+    DataLine2D* line_Fnum  = new DataLine2D( n, 0, 0.1, 0xFF0080FF, "Fnum"  ); plot1.add(line_Fnum );
+    DataLine2D* line_Fana  = new DataLine2D( n, 0, 0.1, 0xFF0000FF, "Fana"  ); plot1.add(line_Fana );
+
+    double dx = 0.05;
+
+    for(int i=0; i<n; i++){
+
+        //pj.x = i*dx;
+        //pi.x = i*dx;
+
+        si = 0.5 + i*dx;
+
+        Gauss::product3D_s_deriv(
+            si,   pi,
+            sj,   pj,
+            s ,   p ,
+            dSsi, dSsj,
+            dXsi, dXsj,
+            dXxi, dXxj,
+            dCsi, dCsj, dCr
+        );
+
+        double Ks = 0.0;
+        double Kr = 1.0;
+
+        double r    = p.norm();
+
+        double E    = 0.5*Kr*p.norm2() + 0.5*Ks*s*s;
+        double dEdS = s*Ks;
+        Vec3d  dEdp = p*Kr;
+
+        //double E    = Kr/p.norm() + 0.5*Ks*s*s;
+        //double dEdS = s*Ks;
+        //Vec3d  dEdp = p*(-Kr/(r*r*r));
+
+        //double E    = 0.5*Ks/(s*s);
+        //double dEdS = -Ks/(s*s*s);
+        //Vec3d  dEdp = p*0;
+
+        //double E    = Kr/p.norm() + 0.5*Ks/(s*s);
+        //double dEdS = -Ks/(s*s*s);
+        //Vec3d  dEdp =  p*(-Kr/(r*r*r));
+
+        printf( " [%i] dEdS %g dEdp %g dXsi %g \n", dEdS, dEdp.x, dXsi.x );
+
+        double fsi = dEdS*dSsi + dEdp.dot( dXsi );
+        double fsj = dEdS*dSsj + dEdp.dot( dXsj );
+        Vec3d  fxi = dEdp*dXxi*0.25;
+        Vec3d  fxj = dEdp*dXxj*0.25;
+
+        // fx
+        line_px  ->ys[i] = p.x;
+        line_E   ->ys[i] = E;
+        if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
+        //line_Fana->ys[i] = fxj.x;
+        //line_Fana->ys[i] = fxi.x;
+        line_Fana->ys[i] = fsi;
+
+    }
+
+}
 
 TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     fontTex     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
 
+    /*
     double W,W_,X,X_,S;
     double si=0.5,sj=0.7;
     double wi=1/(2*si*si),wj=1/(2*sj*sj);
     double xi=0.1,xj=0.8;
-
     Gauss::product1D_w(  wi,xi,   wj,xj,   W,X   );
     Gauss::product1D_s(  si,xi,   sj,xj,   S,X_  );
     W_ = 1/(2*S*S);
     printf(  "  X  %g %g    W %g %g \n", X, X_, W, W_ );
-
     exit(0);
-
+    */
 
 
     int nsamp = 40;
@@ -383,14 +503,20 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{double fr,fsi,fsj;double E = Gauss::kinetic_s( 0.0, x, x, fr, fsi, fsj );f=fsi*2;return E;} );
 
 
+
+    TestAppCLCFSF::test_RhoDeriv( );
+
+
     // --- Coublomb Derivs
 
+    /*
     // --- aux basis
     Vec3d dip;
     solver.projectOrb( 0, dip, true );
     solver.projectOrb( 1, dip, true );
     //testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{ solver.rhoP[0].x=x; Vec3d dip; double E=solver.CoulombOrbPair( 0, 1 ); f=solver.rhofP[0].x; return E; } );
     testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{ solver.rhoS[0]=x; Vec3d dip; double E=solver.CoulombOrbPair( 0, 1 ); f=solver.rhofS[0]; return E; } );
+    */
 
     plot1.scaling.y=0.3;
     plot1.update();
