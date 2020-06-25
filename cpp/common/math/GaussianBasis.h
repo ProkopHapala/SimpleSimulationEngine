@@ -108,8 +108,9 @@ inline double product3D_s_deriv(
 ){
     double si2   = si*si;
     double sj2   = sj*sj;
-    double s2   = si2 + sj2;
-    double is2     = 1/(si2 + sj2);
+    double s2    = si2 + sj2;
+    double is2   = 1/(si2 + sj2);
+    double is4   = is2*is2;
     double sqrtis2 = sqrt(is2);
 
     S      =  si*sj*sqrtis2;
@@ -120,17 +121,16 @@ inline double product3D_s_deriv(
     dSsi   = sj*sj2*inv3_2;
     dSsj   = si*si2*inv3_2;
 
-    dXsi   = pj*(4*si); // seems to be wrong
-    dXsj   = pi*(4*sj);
+    Vec3d dp = pi-pj;
+    dXsi   = dp*(-2*si*sj2*is4);
+    dXsj   = dp*( 2*sj*si2*is4);
 
-    dXxi   = 2*sj2;
-    dXxj   = 2*si2;
+    dXxi   = sj2*is2;
+    dXxj   = si2*is2;
 
     // --- constant
 
-    double r2 = (pi-pj).norm2();
-
-    double is4  = is2 * is2;
+    double r2 = dp.norm2();
 
     double a2   = 2.*(si*sj)*is2;
     double a    = sqrt(a2);

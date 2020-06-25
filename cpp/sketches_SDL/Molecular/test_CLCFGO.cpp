@@ -345,7 +345,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
 void TestAppCLCFSF::test_RhoDeriv( ){
 
-    double si=1,sj=1;
+    double si=0.5,sj=0.3;
     Vec3d  pi=(Vec3d){0.0,0.0,0.0};
     Vec3d  pj=(Vec3d){1.0,0.5,0.0};
     //Vec3d  pi=(Vec3d){0.0,0.0,0.0};
@@ -369,7 +369,6 @@ void TestAppCLCFSF::test_RhoDeriv( ){
 
         //pj.x = i*dx;
         //pi.x = i*dx;
-
         si = 0.5 + i*dx;
 
         Gauss::product3D_s_deriv(
@@ -405,10 +404,11 @@ void TestAppCLCFSF::test_RhoDeriv( ){
 
         printf( " [%i] dEdS %g dEdp %g dXsi %g \n", dEdS, dEdp.x, dXsi.x );
 
-        double fsi = dEdS*dSsi + dEdp.dot( dXsi );
+        double fsi = dEdS*dSsi*0 + dEdp.dot( dXsi );
+        //double fsi = dEdS*dSsi*0 + dEdp.x*2;
         double fsj = dEdS*dSsj + dEdp.dot( dXsj );
-        Vec3d  fxi = dEdp*dXxi*0.25;
-        Vec3d  fxj = dEdp*dXxj*0.25;
+        Vec3d  fxi = dEdp*dXxi;
+        Vec3d  fxj = dEdp*dXxj;
 
         // fx
         line_px  ->ys[i] = p.x;
