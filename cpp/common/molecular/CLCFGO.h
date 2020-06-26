@@ -411,6 +411,81 @@ class CLCFGO{ public:
         return Ek;
     }
 
+    //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
+    void assembleOrbForces(int io ){
+        int i0    = getOrbOffset(io);
+        int irho0 = getRhoOffset(io);
+        Vec3d*   fPs =rhofP+irho0;
+        double*  fQs =rhofQ+irho0;
+        double*  fSs =rhofS+irho0;
+        int ii=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            double qii = ci*ci; // overlap = 1
+
+            //Q       += qii;
+            //fQs[ii]  = qii;
+            //fPs[ii]  = pi;
+            //fSs[ii]  = si*M_SQRT1_2;
+            //double fr,fsi,fsj;
+            //Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
+            //efsize[i]+= 2*fsi*qii;
+
+            ii++;
+
+            for(int j=i0; j<i; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                if(r2>Rcut2) continue;
+
+                //Vec3d  pj  = epos [j];
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+
+                Vec3d  p;
+                double s;
+                double dSsi,dSsj;
+                Vec3d  dXsi,dXsj;
+                double dXxi,dXxj;
+                double dCsi,dCsj,dCr;
+
+                double cij = Gauss::product3D_s_deriv(
+                    si,   pi,
+                    sj,   pj,
+                    s ,   p ,
+                    dSsi, dSsj,
+                    dXsi, dXsj,
+                    dXxi, dXxj,
+                    dCsi, dCsj, dCr
+                );
+
+                Vec3d  Fpi = fPs[ii];
+                double Fqi = fQs[ii];
+                double Fsi = fSs[ii];
+
+                double fsj = Fsi*dSsj + Fpi.dot( dXsj );
+                double fsi = Fsi*dSsj + Fpi.dot( dXsj );
+                Vec3d  fxi = Fpi*dXxi;
+                Vec3d  fxj = Fpi*dXxj;
+
+                // --- Derivatives ( i.e. Forces )
+                efpos[i].add( fxi );
+                efpos[j].add( fxj );
+                efsize[i]+= fsi*cij;
+                efsize[j]+= fsj*cij;
+                //efcoef[i]+= Ekij*cj;
+                //efcoef[j]+= Ekij*ci;
+
+                ii++;
+            }
+        }
+    }
+
+
+
     void projectOrbs(){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
         int nqOrb = perOrb*(perOrb+1)/2;
         int i0 =0;

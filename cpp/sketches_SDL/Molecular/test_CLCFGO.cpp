@@ -359,7 +359,7 @@ void TestAppCLCFSF::test_RhoDeriv( ){
 
     int n = 60;
     DataLine2D* line_E     = new DataLine2D( n, 0, 0.1, 0xFFFF0000, "E"     ); plot1.add(line_E    );
-    DataLine2D* line_px    = new DataLine2D( n, 0, 0.1, 0xFF000000, "p.x"   ); plot1.add(line_px    );
+    DataLine2D* line_px    = new DataLine2D( n, 0, 0.1, 0xFF000000, "p.x"   ); plot1.add(line_px   );
     DataLine2D* line_Fnum  = new DataLine2D( n, 0, 0.1, 0xFF0080FF, "Fnum"  ); plot1.add(line_Fnum );
     DataLine2D* line_Fana  = new DataLine2D( n, 0, 0.1, 0xFF0000FF, "Fana"  ); plot1.add(line_Fana );
 
