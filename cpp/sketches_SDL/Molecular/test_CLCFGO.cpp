@@ -504,10 +504,28 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
 
 
-    TestAppCLCFSF::test_RhoDeriv( );
+
+
+    //TestAppCLCFSF::test_RhoDeriv( );
+
+
 
 
     // --- Coublomb Derivs
+
+    testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{
+        solver.epos[0].x=x;
+        Vec3d dip;
+        solver.projectOrb( 0, dip, false );
+        solver.projectOrb( 1, dip, false );
+        //solver.evalElectrostatICoulomb();
+        double E = solver.CoulombOrbPair( 0, 1 );
+        solver.assembleOrbForces(0);
+        f=solver.efpos[0].x * M_PI * 2;
+        return E;
+        }
+    );
+
 
     /*
     // --- aux basis

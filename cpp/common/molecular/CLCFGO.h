@@ -383,11 +383,16 @@ class CLCFGO{ public:
                 DT += DTij*cij;
                 Ek += Ekij*cij;
 
+                /*
+                // !!!!!!!!!!!!!!! DEBUG !!!!!!!!!!!!!!!!!!
+                // !!!  Commented kinetc energy forces !!!!
+                // !!!!!!!!!!!!!!! DEBUG !!!!!!!!!!!!!!!!!!
                 // --- Derivatives ( i.e. Forces )
                 Vec3d fij = Rij*(fr*cij);
                 efpos [i].add( fij ); efpos[j].sub( fij );
                 efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
                 efcoef[i]+= Ekij*cj ; efcoef[j]+= Ekij*ci;
+                */
 
                 //printf(  "Kinetic [%i,%i]  fsi,j %g %g  \n ", i,j, fsi*cij, fsj*cij  );
 
