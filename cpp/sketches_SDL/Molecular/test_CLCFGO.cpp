@@ -102,26 +102,85 @@ void testDerivs( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1, Fun
 }
 
 
+void testDerivs_Coulomb( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1 ){
+    // ======= Test Orbital Wavefunction Overlap
+    //printf( "n  %i dx %g  \n", n , dx );
+    DataLine2D* line_E    = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
+    DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
+    DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
+
+    DataLine2D* line_Qc   = new DataLine2D( n, x0, dx, 0xFFFF80FF, "Qc" ); plot1.add(line_Qc );
+    DataLine2D* line_Xc   = new DataLine2D( n, x0, dx, 0xFFFF00FF, "Xc" ); plot1.add(line_Xc );
+    for(int i=0; i<n; i++){
+        solver.cleanForces();
+        double x = x0 + i*dx;
+        solver.epos[0].x=x;
+        Vec3d dip;
+        solver.projectOrb( 0, dip, false );
+        solver.projectOrb( 1, dip, false );
+        //solver.evalElectrostatICoulomb();
+
+        double xc = solver.rhoP[2].x; line_Qc->ys[i] = xc;
+
+        //printf( "line_Qc->ys[i] %g %g | %g \n", line_Qc->ys[i], line_Qc->xs[i],     ( line_Qc->ys[i]-line_Qc->ys[0] ) / ( line_Qc->xs[i] - line_Qc->xs[0] )   );
+
+        //double qc = solver.rhoQ[0];   line_Xc->ys[i] = qc;
+        double E  = solver.CoulombOrbPair( 0, 1 );
+        solver.assembleOrbForces(0);
+        //f=solver.efpos[0].x * M_PI * 2;
+        //line_Fana->ys[i]= solver.efpos[0].x * M_PI * 2;
+        line_Fana->ys[i]= solver.efpos[0].x * 7;
+        line_E->ys[i]   = E; //func( line_E->xs[i], line_Fana->ys[i] );
+        if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
+    }
+}
 
 
 
 
+void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1 ){
+    // ======= Test Orbital Wavefunction Overlap
+    //printf( "n  %i dx %g  \n", n , dx );
+    DataLine2D* line_E    = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
+    DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
+    DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
 
+    DataLine2D* line_Qc   = new DataLine2D( n, x0, dx, 0xFFFF80FF, "Qc" ); plot1.add(line_Qc );
+    DataLine2D* line_Xc   = new DataLine2D( n, x0, dx, 0xFFFF00FF, "Xc" ); plot1.add(line_Xc );
 
+    int ie=0,je=1;
+    for(int i=0; i<n; i++){
+        solver.cleanForces();
+        double x = x0 + i*dx;
+        solver.epos[0].x=x;
 
+        solver.toRho  (0,1,0);
+        solver.toRho  (2,3,1);
+        solver.CoublombElement(0,1);
+        solver.fromRho(0,1,0);
+        solver.fromRho(2,3,1);
 
+        //solver.evalElectrostatICoulomb();
 
+        double xc = solver.rhoP[2].x; line_Qc->ys[i] = xc;
 
+        //printf( "line_Qc->ys[i] %g %g | %g \n", line_Qc->ys[i], line_Qc->xs[i],     ( line_Qc->ys[i]-line_Qc->ys[0] ) / ( line_Qc->xs[i] - line_Qc->xs[0] )   );
 
-
-
-
-
+        //double qc = solver.rhoQ[0];   line_Xc->ys[i] = qc;
+        double E  = solver.CoulombOrbPair( 0, 1 );
+        solver.assembleOrbForces(0);
+        //f=solver.efpos[0].x * M_PI * 2;
+        //line_Fana->ys[i]= solver.efpos[0].x * M_PI * 2;
+        line_Fana->ys[i]= solver.efpos[0].x * 7;
+        line_E->ys[i]   = E; //func( line_E->xs[i], line_Fana->ys[i] );
+        if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
+    }
+}
 
 
 
 // ===================================================
-///        test   Wave Fucntion Overlap
+///        test   Wave Function Overlap
 // ===================================================
 
 void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
@@ -146,7 +205,7 @@ void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
 }
 
 // ===================================================
-///        test   Wave Fucntion Overlap
+///        test   Wave Function Overlap
 // ===================================================
 
 void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
@@ -260,7 +319,7 @@ void test_DensityOverlap( CLCFGO& solver, Plot2D& plot1 ){
 }
 
 // =========================================================================
-///        test   Electrostatics   ( density * HartreePotential overlap )
+///        test   Electrostatics   ( density * Hartree-Potential overlap )
 // =========================================================================
 
 void test_ElectroStatics( CLCFGO& solver, Plot2D& plot1 ){
@@ -367,9 +426,9 @@ void TestAppCLCFSF::test_RhoDeriv( ){
 
     for(int i=0; i<n; i++){
 
-        //pj.x = i*dx;
         //pi.x = i*dx;
-        si = 0.5 + i*dx;
+        pj.x = i*dx;
+        //si = 0.5 + i*dx;
 
         Gauss::product3D_s_deriv(
             si,   pi,
@@ -386,9 +445,9 @@ void TestAppCLCFSF::test_RhoDeriv( ){
 
         double r    = p.norm();
 
-        double E    = 0.5*Kr*p.norm2() + 0.5*Ks*s*s;
-        double dEdS = s*Ks;
-        Vec3d  dEdp = p*Kr;
+        //double E    = 0.5*Kr*p.norm2() + 0.5*Ks*s*s;
+        //double dEdS = s*Ks;
+        //Vec3d  dEdp = p*Kr;
 
         //double E    = Kr/p.norm() + 0.5*Ks*s*s;
         //double dEdS = s*Ks;
@@ -398,9 +457,9 @@ void TestAppCLCFSF::test_RhoDeriv( ){
         //double dEdS = -Ks/(s*s*s);
         //Vec3d  dEdp = p*0;
 
-        //double E    = Kr/p.norm() + 0.5*Ks/(s*s);
-        //double dEdS = -Ks/(s*s*s);
-        //Vec3d  dEdp =  p*(-Kr/(r*r*r));
+        double E    = Kr/p.norm() + 0.5*Ks/(s*s);
+        double dEdS = -Ks/(s*s*s);
+        Vec3d  dEdp =  p*(-Kr/(r*r*r));
 
         printf( " [%i] dEdS %g dEdp %g dXsi %g \n", dEdS, dEdp.x, dXsi.x );
 
@@ -414,9 +473,9 @@ void TestAppCLCFSF::test_RhoDeriv( ){
         line_px  ->ys[i] = p.x;
         line_E   ->ys[i] = E;
         if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
-        //line_Fana->ys[i] = fxj.x;
         //line_Fana->ys[i] = fxi.x;
-        line_Fana->ys[i] = fsi;
+        line_Fana->ys[i] = fxj.x;
+        //line_Fana->ys[i] = fsi;
 
     }
 
@@ -468,9 +527,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     {auto& _=solver;
         for(int i=0; i<_.nBas; i++){ _.ecoef[i]=0; _.epos[i]=Vec3dZero;  }
         _.ecoef[0] =  -0.3;
-        _.ecoef[1] =  0.7;
-        _.ecoef[2] =  1.0;
-        _.ecoef[3] =  0.0;
+        _.ecoef[1] =   0.7;
+        _.ecoef[2] =   1.0;
+        _.ecoef[3] =   1.0;
         _.epos [0] = (Vec3d){0.0,0.0,0.0};
         _.epos [1] = (Vec3d){0.0,0.0,0.0};
         _.epos [2] = (Vec3d){0.0,0.0,0.0};
@@ -506,25 +565,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
 
 
-    //TestAppCLCFSF::test_RhoDeriv( );
+    TestAppCLCFSF::test_RhoDeriv( );
 
 
-
-
-    // --- Coublomb Derivs
-
-    testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{
-        solver.epos[0].x=x;
-        Vec3d dip;
-        solver.projectOrb( 0, dip, false );
-        solver.projectOrb( 1, dip, false );
-        //solver.evalElectrostatICoulomb();
-        double E = solver.CoulombOrbPair( 0, 1 );
-        solver.assembleOrbForces(0);
-        f=solver.efpos[0].x * M_PI * 2;
-        return E;
-        }
-    );
+    //testDerivs_Coulomb( 30, 0.0, 0.2, solver, plot1 );
 
 
     /*
@@ -546,8 +590,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 void TestAppCLCFSF::draw(){
     //printf( " ==== frame %i \n", frameCount );
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-    glEnable(GL_DEPTH_TEST);
+    glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    glEnable( GL_DEPTH_TEST );
 
     glCallList( ogl );
 
