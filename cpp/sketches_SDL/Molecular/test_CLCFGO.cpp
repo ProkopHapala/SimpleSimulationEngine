@@ -145,33 +145,53 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
     DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
     DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
 
-    DataLine2D* line_Qc   = new DataLine2D( n, x0, dx, 0xFFFF80FF, "Qc" ); plot1.add(line_Qc );
-    DataLine2D* line_Xc   = new DataLine2D( n, x0, dx, 0xFFFF00FF, "Xc" ); plot1.add(line_Xc );
+    DataLine2D* line_Frho = new DataLine2D( n, x0, dx, 0xFF00FFFF, "F_rho" ); plot1.add(line_Frho );
+
+
+    DataLine2D* line_Qi   = new DataLine2D( n, x0, dx, 0xFF008000, "Qi" ); plot1.add(line_Qi );
+    DataLine2D* line_Si   = new DataLine2D( n, x0, dx, 0xFFFF00FF, "Si" ); plot1.add(line_Si );
+    DataLine2D* line_Pi   = new DataLine2D( n, x0, dx, 0xFFFFFFFF, "Pi" ); plot1.add(line_Pi );
+    //DataLine2D* line_Qj   = new DataLine2D( n, x0, dx, 0xFF00F000, "Qj" ); plot1.add(line_Qj );
+
+    //DataLine2D* line_Qc   = new DataLine2D( n, x0, dx, 0xFFFF80FF, "Qc" ); plot1.add(line_Qc );
+    //DataLine2D* line_Xc   = new DataLine2D( n, x0, dx, 0xFFFF00FF, "Xc" ); plot1.add(line_Xc );
+
+    solver.toRho  (0,1,0);
+    solver.toRho  (2,3,1);
 
     int ie=0,je=1;
     for(int i=0; i<n; i++){
         solver.cleanForces();
         double x = x0 + i*dx;
-        solver.epos[0].x=x;
+        solver.epos[0].x=x;    // set position of  wf basis function   xhi[0]
+        //solver.rhoP[0].x=x;      // set position of  density blob        rho[0]
 
+        // project wave-function (molecular orbitals) to auxiliary density basis
         solver.toRho  (0,1,0);
         solver.toRho  (2,3,1);
-        solver.CoublombElement(0,1);
+        // evaluate coulomb interaction between density basis functions
+        double E  = solver.CoublombElement(0,1);
+
+        line_Qi->ys[i] = solver.rhoQ[0];
+        line_Si->ys[i] = solver.rhoS[0];
+        //line_Pi->ys[i] = solver.rhoP[0].x;
+        line_Pi->ys[i] = (solver.rhoP[0].x - x*0.5)*100;
+
+
+        //double xc = solver.rhoP[0].x;
+        // x-axis according to density blob
+        //line_E   ->xs[i] = xc;
+        //line_Fnum->xs[i] = xc;
+        //line_Fana->xs[i] = xc;
+        //line_Fana->ys[i]= solver.rhofP[0].x;
+
+        line_Frho->ys[i] = solver.rhofP[0].x;
+
+        //printf( "[%i]", i );
         solver.fromRho(0,1,0);
-        solver.fromRho(2,3,1);
+        //solver.fromRho(2,3,1);
+        line_Fana->ys[i]= solver.efpos[0].x*8.1;
 
-        //solver.evalElectrostatICoulomb();
-
-        double xc = solver.rhoP[2].x; line_Qc->ys[i] = xc;
-
-        //printf( "line_Qc->ys[i] %g %g | %g \n", line_Qc->ys[i], line_Qc->xs[i],     ( line_Qc->ys[i]-line_Qc->ys[0] ) / ( line_Qc->xs[i] - line_Qc->xs[0] )   );
-
-        //double qc = solver.rhoQ[0];   line_Xc->ys[i] = qc;
-        double E  = solver.CoulombOrbPair( 0, 1 );
-        solver.assembleOrbForces(0);
-        //f=solver.efpos[0].x * M_PI * 2;
-        //line_Fana->ys[i]= solver.efpos[0].x * M_PI * 2;
-        line_Fana->ys[i]= solver.efpos[0].x * 7;
         line_E->ys[i]   = E; //func( line_E->xs[i], line_Fana->ys[i] );
         if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
     }
@@ -562,13 +582,11 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{double fr,fsi,fsj;double E = Gauss::kinetic_s( 0.0, x, x, fr, fsi, fsj );f=fsi*2;return E;} );
 
 
-
-
-
-    TestAppCLCFSF::test_RhoDeriv( );
+    //TestAppCLCFSF::test_RhoDeriv( );
 
 
     //testDerivs_Coulomb( 30, 0.0, 0.2, solver, plot1 );
+    testDerivs_Coulomb_model( 30, 0.0, 0.2, solver, plot1 );
 
 
     /*

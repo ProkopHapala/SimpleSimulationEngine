@@ -140,7 +140,10 @@ void Plot2D::drawTexts(){
         //Draw2D::drawLine({5.0,i+0.5},{0.0,0.0});
         //Draw2D::drawText(line->label.c_str(), 0, (Vec2d)legend_pos+(Vec2d){0,tickSz*i}, 0., fontTex, tickSz );
         //Draw2D::drawText(line->label.c_str(), 0, {line->xs[0],line->ys[0]}, 0., fontTex, tickSz );
-        Draw2D::drawText(line->label.c_str(), 0, {shift.x+line->xs[0]*scaling.x,shift.y+line->ys[0]*scaling.y}, 0.0, fontTex, tickSz );
+        Draw2D::drawText(line->label.c_str(), 0, {shift.x+line->xs[0]*scaling.x
+                                                 ,shift.y+line->ys[0]*scaling.y}, 0.0, fontTex, tickSz );
+        Draw2D::drawText(line->label.c_str(), 0, {shift.x+line->xs[line->n-1]*scaling.x
+                                                 ,shift.y+line->ys[line->n-1]*scaling.y}, 0.0, fontTex, tickSz );
     }
 }
 

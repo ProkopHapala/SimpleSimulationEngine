@@ -375,6 +375,8 @@ class CLCFGO{ public:
         Vec3d  fxi = Fpi*dXxi;
         Vec3d  fxj = Fpi*dXxj;
 
+        //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
+
         // --- Derivatives ( i.e. Forces )
         efpos [i].add( fxi );
         efpos [j].add( fxj );
@@ -392,6 +394,40 @@ class CLCFGO{ public:
         double qj = rhoQ[j];
         double sj = rhoS[j];
 
+        double qij = qi*qj;
+
+        /*
+        { // >>> DEBUG
+            double Kr  = 1.0;
+            double Ks  = 1.0;
+            Vec3d Rij  = pj-pi;
+            double r = Rij.norm();
+
+            //double E   = Kr * sq(Rij.x);
+            //double fr  = 2 * Kr ;
+            //double fs  = 0;
+
+            //double E  = 0.5*Kr*Rij.norm2() + 0.5*Ks*si*si;
+            //double fr = Kr;
+            //double fs = si*Ks;
+
+            double E  = Kr/r + 0.5*Ks*si*si;
+            double fs = si*Ks;
+            double fr = (-Kr/(r*r*r));
+
+            //double E    = 0.5*Ks/(s*s);
+            //double dEdS = -Ks/(s*s*s);
+            //Vec3d  dEdp = p*0;
+
+            Vec3d fij = Rij*(-fr);
+            rhofP[i].add(fij);
+            rhofS[i] = fs*si;
+            rhofQ[i] += E/qi;
+
+            return E;
+        } // <<< DEBUG
+        */
+
         Vec3d Rij = pj-pi;
         double r2 = Rij.norm2();
 
@@ -399,7 +435,6 @@ class CLCFGO{ public:
         double s2   = si*si + sj*sj;
         double s    = sqrt(s2);
 
-        double qij = qi*qj;
         double fr,fs;
         double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
 
