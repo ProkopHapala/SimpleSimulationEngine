@@ -319,23 +319,25 @@ class CLCFGO{ public:
         Vec3d Rij = pj-pi;
         double r2 = Rij.norm2();
 
-        double dSr, dSsi, dSsj;
-        const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
-        double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
+        //double dSr, dSsi, dSsj;
+        //const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
+        //double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
 
         // ToDo : we should not need   getOverlapSGauss,    Gauss::product3D_s  should calculate Sij
 
         Vec3d  pij;
         double sij;
-        double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+        //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+        double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
         double cij = ci *cj;
         double qij = Sij*cij*2;
+        //double qij = Cij*cij*2;
         rhoQ[ij] = qij;
         rhoP[ij] = pij;
         rhoS[ij] = sij;
     }
 
-    void fromRho( int i, int j, int ij ){
+    Vec3d fromRho( int i, int j, int ij ){
         /// NOTE : this function is mostly for debugging of  assembleOrbForces()
 
         Vec3d  pi  = epos [i];
@@ -371,9 +373,11 @@ class CLCFGO{ public:
         double Fsi = rhofS[ij];
 
         double fsj = Fsi*dSsj + Fpi.dot( dXsj );
-        double fsi = Fsi*dSsj + Fpi.dot( dXsj );
-        Vec3d  fxi = Fpi*dXxi;
-        Vec3d  fxj = Fpi*dXxj;
+        double fsi = Fsi*dSsi + Fpi.dot( dXsi );
+        Vec3d  fxi = Fpi*dXxi;  // ToDo : dSij/dxi == 0
+        Vec3d  fxj = Fpi*dXxj;  //    dXxi == 0.5
+
+        //fxi = ((Vec3d){1,1,1}) * dXxi ;
 
         //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
 
@@ -382,6 +386,8 @@ class CLCFGO{ public:
         efpos [j].add( fxj );
         efsize[i] += fsi*cij;
         efsize[j] += fsj*cij;
+
+        return Rij*dCr;
     }
 
     double CoublombElement( int i, int j ){
@@ -436,16 +442,20 @@ class CLCFGO{ public:
         double s    = sqrt(s2);
 
         double fr,fs;
-        double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
+        //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
 
-        fs*=4;
+        double E  = Gauss::Coulomb( r, s*2, fr, fs );
+
+        fr *= qij;
+        fs *= qij;
+        fs *= 4;
 
         Vec3d fij = Rij*(-fr);
         rhofP[i].add(fij);   rhofP[j].sub(fij);
         rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
-        rhofQ[i] += Eqq/qi;  rhofQ[j] += Eqq/qj; // ToDo : need to be made more stable ... different (qi,qj)
+        rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
 
-        return Eqq;
+        return E;
     }
 
 
@@ -619,6 +629,7 @@ class CLCFGO{ public:
                     dXxi, dXxj,
                     dCsi, dCsj, dCr
                 );
+                // TODO: Cij should be like Qij ??????
 
                 Vec3d  Fpi = fPs[ii];
                 double Fqi = fQs[ii];

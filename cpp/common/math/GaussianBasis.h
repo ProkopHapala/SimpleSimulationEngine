@@ -6,6 +6,23 @@
 
 namespace Gauss{
 
+// TODO : this should go elsewhere (physical constants or something)
+const double const_hbar_SI      = 1.054571817e-34;    ///< [J.s]  #6.582119569e-16 # [eV/s]
+const double const_Me_SI        = 9.10938356e-31;     ///< [kg]
+const double const_e_SI         = 1.602176620898e-19; ///< [Coulomb]
+const double const_eps0_SI      = 8.854187812813e-12; ///< [F.m = Coulomb/(Volt*m)]
+const double const_eV_SI        = 1.602176620898e-19; ///< [J]
+const double const_Angstroem_SI = 1.0e-10;
+
+const double const_K_SI     =  const_hbar_SI*const_hbar_SI/const_Me_SI;
+const double const_El_SI    =  const_e_SI*const_e_SI/(4.*M_PI*const_eps0_SI);
+const double const_Ry_SI    = 0.5 * const_El_SI*const_El_SI/const_K_SI;
+
+const double const_Ry_eV  = 13.6056925944;
+const double const_El_eVA = const_El_SI/( const_e_SI*const_Angstroem_SI );
+const double const_K_eVA  = (const_El_eVA*const_El_eVA)/(2*const_Ry_eV);
+const double const_Ke_eVA = const_K_eVA*1.5;
+
 /*
 ######  Product of Gaussians 1D
 
@@ -94,7 +111,24 @@ inline double product1D_s_deriv( double si, double r2, double xi,   double sj,do
 }
 
 
-
+inline double Coulomb( double r, double s, double& fr, double& fs ){
+    // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
+    //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
+    constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
+    double ir   = 1./r; //(r+1.e-8);
+    double is   = 1./s; //(s+1.e-8);
+    double r_s  = r*is;
+    double r_2s = M_SQRT2 * r_s;
+    double e1   = ir * const_El_eVA;
+    double e2   = erf(  r_2s      );
+    double g    = exp( -r_2s*r_2s ) * const_F2;
+    double f1   = -e1*ir;
+    double f2   = g*is;
+    double e1f2 = e1*f2;
+    fr = (f1*e2 + e1f2)*ir;
+    fs =          e1f2 *r_s * is;
+    return e1 * e2;
+}
 
 
 inline double product3D_s_deriv(
@@ -148,6 +182,45 @@ inline double product3D_s_deriv(
     //double C   = np.exp(-logC) * Ci * Cj
     return e1 * e2;
 }
+
+
+inline double product3D_s_new(
+    double si,    Vec3d   pi,
+    double sj,    Vec3d   pj,
+    double& S,    Vec3d & p
+){
+    double si2   = si*si;
+    double sj2   = sj*sj;
+    double s2    = si2 + sj2;
+    double is2   = 1/(si2 + sj2);
+    double is4   = is2*is2;
+    double sqrtis2 = sqrt(is2);
+
+    S      =  si*sj*sqrtis2;
+    p      =  pj*(si2*is2) + pi*(sj2*is2);
+    //X      =  ( si2*xj + sj2*xi )*inv;
+
+    Vec3d dp = pi-pj;
+
+    // --- constant
+
+    double r2 = dp.norm2();
+
+    double a2   = 2.*(si*sj)*is2;
+    double a    = sqrt(a2);
+    double e1   = a2*a;
+    double e2   = exp( -r2*is2 );
+
+    // From  DensOverlapGauss_S() @  InteractionsGauss.h
+    //double a    = 2.*(si*sj)*is2;
+    //double a2   = a*a;
+    //double Aa2  = amp*a2;
+    //double e1   = Aa2*a;              // (2/(si/sj+si/sj))^3
+    //double e2   = exp( -2*r2*is2 );   // exp( -2*r^2/(si^2+sj^2) )
+
+    return e1 * e2;
+}
+
 
 
 inline double product1D_w_deriv( double wi,double xi,   double wj,double xj,   double& W, double& X,    double& dXdwi, double& dXdwj, double& dXdxi, double& dXdxj ){
