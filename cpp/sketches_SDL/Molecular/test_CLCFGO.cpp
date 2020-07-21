@@ -163,7 +163,7 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
     solver.toRho(0,1,0);
     solver.toRho(2,3,1);
 
-    int ie=0,je=1;
+    //int ie=0,je=1;
     for(int i=0; i<n; i++){
         solver.cleanForces();
         double x = x0 + i*dx;
@@ -175,9 +175,10 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
         solver.toRho  (2,3,1);
         // evaluate coulomb interaction between density basis functions
         double E  = solver.CoublombElement(0,1);
-        E *= solver.rhoQ[0];
+        //E *= solver.rhoQ[0];
 
         Vec3d dQdp =  solver.fromRho(0,1,0);
+        //double dQ =  solver.fromRho(0,1,0);
 
         //E /= solver.rhoQ[0];
 
@@ -185,11 +186,12 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
         //line_S1->ys[i] = solver.esize[0];
         //line_S2->ys[i] = solver.esize[1];
 
-        line_Qi->ys[i]        = solver.rhoQ[0];
-        line_dQi_ana->ys[i]   = dQdp.x;
+        line_Qi     ->ys[i] = solver.rhoQ[0];
+        line_dQi_ana->ys[i] = dQdp.x;
+        //line_dQi_ana->ys[i] = dQ * -x * 0.5;
         if(i>1){
             line_dQi_num->ys[i-1]  = (line_Qi->ys[i] - line_Qi->ys[i-2])/(2*dx);
-            printf( "[%i] /%g   num %g  ana %g \n",  i, line_dQi_num->ys[i-1]/line_dQi_ana->ys[i-1], line_dQi_num->ys[i-1], line_dQi_ana->ys[i-1] );
+            printf( "[%i] /%g   num %g  ana %g \n", i, line_dQi_num->ys[i-1]/line_dQi_ana->ys[i-1], line_dQi_num->ys[i-1], line_dQi_ana->ys[i-1] );
         }
         //line_Si->ys[i] = solver.rhoS[0];
         //line_Pi->ys[i] = solver.rhoP[0].x;
@@ -601,6 +603,36 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //testDerivs( 30, 0.0,0.2, solver, plot1, [&](double x, double& f)->double{ solver.epos[0].x=x; double E=solver.evalOverlap( 0, 1 ); f=solver.efpos[0].x; return E; } );
     //testDerivs( 30, 0.0,0.2, solver, plot1, [&](double x, double& f)->double{ solver.esize[0]=x; double E=solver.evalOverlap( 0, 1 ); f=solver.efsize[0]; return E; } );
 
+
+    /*
+    testDerivs( 30, 0.0,0.2, solver, plot1, [&](double x, double& f)->double{
+        Vec3d  p;
+        double s;
+        double dSsi,dSsj;
+        Vec3d  dXsi,dXsj;
+        double dXxi,dXxj;
+        double dCsi,dCsj,dCr;
+
+        double si = 1.0, sj = 1.0;
+        Vec3d  pi=Vec3dZero,pj=Vec3dZero;
+        pi.x=x;
+
+        double E = Gauss::product3D_s_deriv(
+            si,   pi,
+            sj,   pj,
+            s ,   p ,
+            dSsi, dSsj,
+            dXsi, dXsj,
+            dXxi, dXxj,
+            dCsi, dCsj, f
+        );
+        f *= x;
+        return E;
+    } );
+    */
+
+
+
     // --- Kinetic Derivs
     //testDerivs( 30, 0.0, 0.2, solver, plot1, [&](double x, double& f)->double{ solver.epos[0].x=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false );  f=solver.efpos[0].x; return E; } );
     //testDerivs( 30, 0.5, 0.1, solver, plot1, [&](double x, double& f)->double{ solver.esize[0]=x; Vec3d dip; double E=solver.projectOrb( 0, dip, false ); f=solver.efsize[0]; return E; } );
@@ -612,7 +644,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
 
     //testDerivs_Coulomb( 30, 0.0, 0.2, solver, plot1 );
-    testDerivs_Coulomb_model( 30, 0.0, 0.2, solver, plot1 );
+    testDerivs_Coulomb_model( 30, 0.0, 0.1, solver, plot1 );
 
 
     /*

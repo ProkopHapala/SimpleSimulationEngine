@@ -321,7 +321,7 @@ class CLCFGO{ public:
 
         //double dSr, dSsi, dSsj;
         //const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
-        //double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
+        //double Sij_  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
 
         // ToDo : we should not need   getOverlapSGauss,    Gauss::product3D_s  should calculate Sij
 
@@ -330,7 +330,11 @@ class CLCFGO{ public:
         //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
         double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
         double cij = ci *cj;
-        double qij = Sij*cij*2;
+        //printf(  "ci*cj %g ci %g cj %g \n", cij, ci, cj );
+        double qij = Sij*cij*2; // TODO CHECK: should there by realy coefficeint 2.0 ?  .... test by grid !
+        //double qij = Sij;
+        //double qij = Sij*cij*4.85;
+        //double qij = Sij_*cij*4;
         //double qij = Cij*cij*2;
         rhoQ[ij] = qij;
         rhoP[ij] = pij;
@@ -347,6 +351,8 @@ class CLCFGO{ public:
         Vec3d  pj  = epos [j];
         double cj  = ecoef[j];
         double sj  = esize[j];
+
+        //printf(  ":ci*cj %g ci %g cj %g \n", ci*cj, ci, cj );
 
         Vec3d Rij = pj-pi;
         double r2 = Rij.norm2();
@@ -387,7 +393,8 @@ class CLCFGO{ public:
         efsize[i] += fsi*cij;
         efsize[j] += fsj*cij;
 
-        return Rij*dCr;
+        return Rij*(-2*dCr*ci*cj);
+        //return dCr;
     }
 
     double CoublombElement( int i, int j ){

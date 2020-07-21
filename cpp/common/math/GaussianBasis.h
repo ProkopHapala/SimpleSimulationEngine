@@ -176,7 +176,7 @@ inline double product3D_s_deriv(
 
     dCsi = e1*f2*si - e2*f1*sj;
     dCsj = e1*f2*sj + e2*f1*si;
-    dCr  = e1*e2*(-2.*is2);
+    dCr  = e1*e2*(-2.*is2);          // derivative is correct, tested !
 
     //double logC =  wxi*xi + wxj*xj - wx*X;
     //double C   = np.exp(-logC) * Ci * Cj
