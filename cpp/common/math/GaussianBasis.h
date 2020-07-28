@@ -193,7 +193,7 @@ inline double product3D_s_new(
     double sj2   = sj*sj;
     double s2    = si2 + sj2;
     double is2   = 1/(si2 + sj2);
-    double is4   = is2*is2;
+    //double is4   = is2*is2;
     double sqrtis2 = sqrt(is2);
 
     S      =  si*sj*sqrtis2;

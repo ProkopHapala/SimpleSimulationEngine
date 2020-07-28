@@ -341,7 +341,8 @@ class CLCFGO{ public:
         rhoS[ij] = sij;
     }
 
-    Vec3d fromRho( int i, int j, int ij ){
+    //Vec3d fromRho( int i, int j, int ij ){
+    void fromRho( int i, int j, int ij, double& aij, double& dCsi, double& dCsj, Vec3d& dCdp ){
         /// NOTE : this function is mostly for debugging of  assembleOrbForces()
 
         Vec3d  pi  = epos [i];
@@ -362,9 +363,10 @@ class CLCFGO{ public:
         double dSsi,dSsj;
         Vec3d  dXsi,dXsj;
         double dXxi,dXxj;
-        double dCsi,dCsj,dCr;
+        //double dCsi,dCsj,dCr;
+        double dCr;
 
-        double cij = Gauss::product3D_s_deriv(
+        aij = Gauss::product3D_s_deriv(
             si,   pi,
             sj,   pj,
             s ,   p ,
@@ -378,22 +380,32 @@ class CLCFGO{ public:
         double Fqi = rhofQ[ij];
         double Fsi = rhofS[ij];
 
-        double fsj = Fsi*dSsj + Fpi.dot( dXsj );
-        double fsi = Fsi*dSsi + Fpi.dot( dXsi );
+        double fsj = Fsi*dSsj*0 + Fpi.dot( dXsj )*0;
+        double fsi = Fsi*dSsi*0 + Fpi.dot( dXsi )*0;
         Vec3d  fxi = Fpi*dXxi;  // ToDo : dSij/dxi == 0
         Vec3d  fxj = Fpi*dXxj;  //    dXxi == 0.5
+
+
+        //fsi = ci*cj * ( fsi*aij + E*dCr );
+
+
 
         //fxi = ((Vec3d){1,1,1}) * dXxi ;
 
         //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
 
         // --- Derivatives ( i.e. Forces )
+        printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
         efpos [i].add( fxi );
         efpos [j].add( fxj );
-        efsize[i] += fsi*cij;
-        efsize[j] += fsj*cij;
+        efsize[i] += fsi*aij*0;
+        efsize[j] += fsj*aij*0;
 
-        return Rij*(-2*dCr*ci*cj);
+        //dCsi*=-0.42;
+        //dCsj*=-0.42;
+        dCdp = Rij*(-2*dCr*ci*cj);
+        //return dCsi;
+        //return Rij*(-2*dCr*ci*cj);
         //return dCr;
     }
 

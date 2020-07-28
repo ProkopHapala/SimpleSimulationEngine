@@ -139,14 +139,17 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
     // ======= Test Orbital Wavefunction Overlap
     //printf( "n  %i dx %g  \n", n , dx );
 
-    //DataLine2D* line_Eq   = new DataLine2D( n, x0, dx, 0xFFFF8080, "E/q"   );// plot1.add(line_Eq   );
+    DataLine2D* line_Eq   = new DataLine2D( n, x0, dx, 0xFFFF8080,  "Eq"     ); //plot1.add(line_Eq    );
+    DataLine2D* line_Fqnum = new DataLine2D( n, x0, dx, 0xFF008077, "Fq_num" ); //plot1.add(line_Fqnum ); // orange
+    DataLine2D* line_Fqana = new DataLine2D( n, x0, dx, 0xFF000077, "Fq_ana" ); //plot1.add(line_Fqana ); // red     // efpos[0].x;
 
-    //DataLine2D* line_E    = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
-    //DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum ); // orange
-    //DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana ); // red     // efpos[0].x;
+    DataLine2D* line_E    = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
+    DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0077FF, "F_num" ); plot1.add(line_Fnum ); // orange
+    DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana ); // red     // efpos[0].x;
+
     //DataLine2D* line_Frho = new DataLine2D( n, x0, dx, 0xFF00FFFF, "F_rho" ); plot1.add(line_Frho ); // yellow  // rhofP[0].x
 
-    DataLine2D* line_dQi_num  = new DataLine2D( n, x0, dx, 0xFF080FF00, "dQi_num" ); plot1.add(line_dQi_num );
+    //DataLine2D* line_dQi_num  = new DataLine2D( n, x0, dx, 0xFF080FF00, "dQi_num" ); plot1.add(line_dQi_num );
     DataLine2D* line_dQi_ana  = new DataLine2D( n, x0, dx, 0xFF0FF8000, "dQi_ana" ); plot1.add(line_dQi_ana );
 
     DataLine2D* line_Qi   = new DataLine2D( n, x0, dx, 0xFF008000, "Qi" ); plot1.add(line_Qi );
@@ -174,11 +177,12 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
         solver.toRho  (0,1,0);
         solver.toRho  (2,3,1);
         // evaluate coulomb interaction between density basis functions
-        double E  = solver.CoublombElement(0,1);
-        //E *= solver.rhoQ[0];
+        double E_  = solver.CoublombElement(0,1);
+        line_Eq->ys[i] = E_;
+        double E   = E_ * solver.rhoQ[0];
+        double dCsi, dCsj, aij; Vec3d dQdp;
 
-        Vec3d dQdp =  solver.fromRho(0,1,0);
-        //double dQ =  solver.fromRho(0,1,0);
+        solver.fromRho( 0,1,0,   aij, dCsi, dCsj, dQdp );
 
         //E /= solver.rhoQ[0];
 
@@ -189,10 +193,10 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
         line_Qi     ->ys[i] = solver.rhoQ[0];
         line_dQi_ana->ys[i] = dQdp.x;
         //line_dQi_ana->ys[i] = dQ * -x * 0.5;
-        if(i>1){
-            line_dQi_num->ys[i-1]  = (line_Qi->ys[i] - line_Qi->ys[i-2])/(2*dx);
-            printf( "[%i] /%g   num %g  ana %g \n", i, line_dQi_num->ys[i-1]/line_dQi_ana->ys[i-1], line_dQi_num->ys[i-1], line_dQi_ana->ys[i-1] );
-        }
+        //if(i>1){
+        //    line_dQi_num->ys[i-1]  = (line_Qi->ys[i] - line_Qi->ys[i-2])/(2*dx);
+        //    printf( "[%i] /%g   num %g  ana %g \n", i, line_dQi_num->ys[i-1]/line_dQi_ana->ys[i-1], line_dQi_num->ys[i-1], line_dQi_ana->ys[i-1] );
+        //}
         //line_Si->ys[i] = solver.rhoS[0];
         //line_Pi->ys[i] = solver.rhoP[0].x;
         //line_Pi->ys[i] = (solver.rhoP[0].x - x*0.5)*100;
@@ -210,12 +214,13 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
         //printf( "[%i]", i );
 
         //solver.fromRho(2,3,1);
-        //line_Fana->ys[i]= solver.efpos[0].x;
+        line_Fqana->ys[i] = 0.5*solver.efpos[0].x/line_Qi->ys[i];  // This is derivative of force for Q = const. (  dQ/dx =0 )
+        line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*line_dQi_ana->ys[i];
 
 
-
-        //line_E->ys[i]   = E; //func( line_E->xs[i], line_Fana->ys[i] );
-        //if(i>1) line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
+        line_E->ys[i]   = E; //func( line_E->xs[i], line_Fana->ys[i] );
+        if(i>1) line_Fnum->ys[i-1]  = (line_E ->ys[i] - line_E ->ys[i-2])/(2*dx);
+        if(i>1) line_Fqnum->ys[i-1] = (line_Eq->ys[i] - line_Eq->ys[i-2])/(2*dx);
 
         //if(i>1) line_dQi->ys[i-1]  = (line_Qi->ys[i] - line_Qi->ys[i-2])/(2*dx);
 
@@ -224,6 +229,69 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
 
     }
 }
+
+
+
+void testDerivs_Coulomb_model_S( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1 ){
+
+    //DataLine2D* line_Eq    = new DataLine2D( n, x0, dx, 0xFFFF8080,  "Eq"     ); //plot1.add(line_Eq    );
+    //DataLine2D* line_Fqnum = new DataLine2D( n, x0, dx, 0xFF008077, "Fq_num" ); //plot1.add(line_Fqnum ); // orange
+    //DataLine2D* line_Fqana = new DataLine2D( n, x0, dx, 0xFF000077, "Fq_ana" ); //plot1.add(line_Fqana ); // red     // efpos[0].x;
+
+    //DataLine2D* line_E     = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
+    //DataLine2D* line_Fnum  = new DataLine2D( n, x0, dx, 0xFF0077FF, "F_num" ); plot1.add(line_Fnum ); // orange
+    //DataLine2D* line_Fana  = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana ); // red     // efpos[0].x;
+
+    DataLine2D* line_dQi_num = new DataLine2D( n, x0, dx, 0xFFFF8888, "dQi_num" ); plot1.add(line_dQi_num );
+    DataLine2D* line_dQi_ana = new DataLine2D( n, x0, dx, 0xFFFF0000, "dQi_ana" ); plot1.add(line_dQi_ana );
+
+    DataLine2D* line_Qi      = new DataLine2D( n, x0, dx, 0xFF008800, "Qi" ); plot1.add(line_Qi );
+    DataLine2D* line_aij     = new DataLine2D( n, x0, dx, 0xFF888800, "aij" );   //plot1.add(line_aij );
+    DataLine2D* line_Qaij    = new DataLine2D( n, x0, dx, 0xFF008888, "Q/aij" ); //plot1.add(line_Qaij );
+
+    solver.toRho(0,1,0);
+    solver.toRho(2,3,1);
+
+    //int ie=0,je=1;
+    for(int i=0; i<n; i++){
+        solver.cleanForces();
+        double x = x0 + i*dx;
+        solver.esize[0]=x;        // set size of wf basis function  xhi[0]
+
+        solver.toRho  (0,1,0);
+        solver.toRho  (2,3,1);
+        double E_q = solver.CoublombElement(0,1);
+        double Q   = solver.rhoQ[0];
+        double E   = E_q * Q;
+
+        double dCsi, dCsj, aij; Vec3d dQdp;
+        solver.fromRho(0,1,0, aij, dCsi, dCsj, dQdp);
+        //Vec3d dQdp =  solver.fromRho(0,1,0);
+
+        line_Qi     ->ys[i] = Q;
+        line_aij    ->ys[i] = aij;
+        line_Qaij   ->ys[i] = Q/aij;
+        printf( "Q/aij %g  \n", Q/aij );
+
+        line_dQi_ana->ys[i] = dCsi*(Q/aij); // ToDo : this works but there should be better way (using only cij, without overlap sij)
+
+        //solver.fromRho(2,3,1);
+        //line_Fqana->ys[i] = 0.5*solver.efsize[0]/line_Qi->ys[i];            // This is derivative of force for Q = const. (  dQ/dx =0 )
+        //line_Fana ->ys[i] = 0.5*solver.efsize[0] + E_q*line_dQi_ana->ys[i];
+
+        //line_Eq->ys[i] = E_q;
+        //line_E->ys[i] = E;
+        //if(i>1) line_Fnum-> ys[i-1] = ( line_E ->ys[i] - line_E ->ys[i-2] )/(2*dx);
+        //if(i>1) line_Fqnum->ys[i-1] = ( line_Eq->ys[i] - line_Eq->ys[i-2] )/(2*dx);
+        if(i>1){
+            line_dQi_num->ys[i-1] = ( line_Qi->ys[i] - line_Qi->ys[i-2] )/(2*dx);
+            printf( "[%i] /%g  dQ_ana  %g   dQ_num %g \n", i, line_dQi_num->ys[i-1]/line_dQi_ana->ys[i],  line_dQi_ana->ys[i],  line_dQi_num->ys[i-1] );
+        }
+
+
+    }
+}
+
 
 
 
@@ -509,7 +577,7 @@ void TestAppCLCFSF::test_RhoDeriv( ){
         double dEdS = -Ks/(s*s*s);
         Vec3d  dEdp =  p*(-Kr/(r*r*r));
 
-        printf( " [%i] dEdS %g dEdp %g dXsi %g \n", dEdS, dEdp.x, dXsi.x );
+        //printf( " [%i] dEdS %g dEdp %g dXsi %g \n", dEdS, dEdp.x, dXsi.x );
 
         double fsi = dEdS*dSsi*0 + dEdp.dot( dXsi );
         //double fsi = dEdS*dSsi*0 + dEdp.x*2;
@@ -565,7 +633,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     for(int i=0; i<solver.nBas; i++){
         solver.esize[i] = 1.0;
         solver.ecoef[i] = randf()-0.5;
-        printf( "orb[%i].wf[%i] (%g,%g,%g ) C %g \n",  i/solver.perOrb, i%solver.perOrb,  solver.epos[i].x, solver.epos[i].y, solver.epos[i].z, solver.ecoef[i] );
+        //printf( "orb[%i].wf[%i] (%g,%g,%g ) C %g \n",  i/solver.perOrb, i%solver.perOrb,  solver.epos[i].x, solver.epos[i].y, solver.epos[i].z, solver.ecoef[i] );
     }
 
     // ======= Test Density projection
@@ -644,7 +712,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
 
     //testDerivs_Coulomb( 30, 0.0, 0.2, solver, plot1 );
-    testDerivs_Coulomb_model( 30, 0.0, 0.1, solver, plot1 );
+    //testDerivs_Coulomb_model  ( 30, 0.0, 0.1, solver, plot1 ); // Position force
+    testDerivs_Coulomb_model_S( 30, 0.0, 0.1, solver, plot1 );   // Size force
 
 
     /*
