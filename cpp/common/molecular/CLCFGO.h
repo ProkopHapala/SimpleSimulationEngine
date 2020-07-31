@@ -112,6 +112,7 @@ class CLCFGO{ public:
     Vec3d * rhofP =0; ///< position of density axuliary functio
     double* rhofQ =0; ///< temporary array to store density projection on pair overlap functions
     double* rhofS =0;
+    double* rhoEQ =0; /// coulomb energy
 
     // ======= Functions
 
@@ -154,6 +155,7 @@ class CLCFGO{ public:
             _realloc( rhofP, nQtot );
             _realloc( rhofQ, nQtot );
             _realloc( rhofS, nQtot );
+            _realloc( rhoEQ, nQtot );
 
         }
     }
@@ -421,38 +423,6 @@ class CLCFGO{ public:
 
         double qij = qi*qj;
 
-        /*
-        { // >>> DEBUG
-            double Kr  = 1.0;
-            double Ks  = 1.0;
-            Vec3d Rij  = pj-pi;
-            double r = Rij.norm();
-
-            //double E   = Kr * sq(Rij.x);
-            //double fr  = 2 * Kr ;
-            //double fs  = 0;
-
-            //double E  = 0.5*Kr*Rij.norm2() + 0.5*Ks*si*si;
-            //double fr = Kr;
-            //double fs = si*Ks;
-
-            double E  = Kr/r + 0.5*Ks*si*si;
-            double fs = si*Ks;
-            double fr = (-Kr/(r*r*r));
-
-            //double E    = 0.5*Ks/(s*s);
-            //double dEdS = -Ks/(s*s*s);
-            //Vec3d  dEdp = p*0;
-
-            Vec3d fij = Rij*(-fr);
-            rhofP[i].add(fij);
-            rhofS[i] = fs*si;
-            rhofQ[i] += E/qi;
-
-            return E;
-        } // <<< DEBUG
-        */
-
         Vec3d Rij = pj-pi;
         double r2 = Rij.norm2();
 
@@ -466,13 +436,13 @@ class CLCFGO{ public:
         double E  = Gauss::Coulomb( r, s*2, fr, fs );
 
         fr *= qij;
-        fs *= qij;
-        fs *= 4;
+        fs *= qij*4;
 
         Vec3d fij = Rij*(-fr);
         rhofP[i].add(fij);   rhofP[j].sub(fij);
         rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
         rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
+        rhoEQ[i] += E; // Coulombic energy per given density could (due to other density clouds)
 
         return E;
     }
@@ -593,6 +563,81 @@ class CLCFGO{ public:
 
 
 
+        //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
+    double projectOrb_mod(int io, Vec3d& dip, bool bNormalize ){
+        int i0    = getOrbOffset(io);
+        int irho0 = getRhoOffset(io);
+        Vec3d*   Ps =rhoP+irho0;
+        double*  Qs =rhoQ+irho0;
+        double*  Ss =rhoS+irho0;
+        double Q =0;
+        double DT=0; // kinetic energy change by orthognalization
+        double Ek=0; // kinetic energy
+        dip         = Vec3dZero;
+        Vec3d qcog  = Vec3dZero;
+        Vec3d oqcog = opos[io];
+        int ii=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            double qii = ci*ci; // overlap = 1
+            qcog.add_mul( pi, qii );
+            Q      += qii;
+
+            // DEBUG : testing Gaussian Transform
+            Qs[ii]  = qii;
+            Ps[ii]  = pi;
+            Ss[ii]  = si*M_SQRT1_2;
+
+            double fr,fsi,fsj;
+            Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
+            efsize[i]+= 2*fsi*qii;
+
+            ii++;
+            for(int j=i0; j<i; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                if(r2>Rcut2) continue;
+
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+                // --- Evaluate Normalization, Kinetic & Pauli Energy
+                double Ekij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj )*2; fr*=2; fsi*=2, fsj*=2;
+                ///ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
+                /// ToDo :  Need derivatives of Kinetic Overlap !!!!!
+                // --- Project on auxuliary density functions
+                Vec3d  pij;
+                double sij;
+                double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
+                double cij = ci *cj;
+                double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
+
+                qcog.add_mul( pij, qij );
+                Q  +=   qij;
+                //DT += DTij*cij;
+                Ek += Ekij*cij;
+
+                Qs[ii] = qij;
+                Ps[ii] = pij;   // center of axuliary overlap density function in the middle between the two wavefunctions
+                Ss[ii] = sij;
+                ii++;
+            }
+        }
+        onq[io] = ii;
+        if(bNormalize){
+            double renorm  = sqrt(1./Q);
+            double renorm2 = renorm*renorm;
+            //printf( "project orb[$i]: Q %g renorm %g renorm2 %g \n", io, Q, renorm, renorm2 );
+            for(int i=i0; i<i0+perOrb; i++){ ecoef[i] *=renorm;  };
+            for(int i= 0; i<ii       ; i++){ Qs   [i] *=renorm2; };
+        }
+        // ToDo: Renormalize also  rhos?
+        return Ek;
+    }
+
+
     //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
     void assembleOrbForces(int io ){
         int i0    = getOrbOffset(io);
@@ -673,6 +718,85 @@ class CLCFGO{ public:
             }
         }
     }
+
+
+
+    //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
+    void assembleOrbForces_mod(int io ){
+        int i0    = getOrbOffset(io);
+        int irho0 = getRhoOffset(io);
+        Vec3d*   fPs = rhofP+irho0;
+        double*  fQs = rhofQ+irho0;
+        double*  fSs = rhofS+irho0;
+        double*  eQs = rhoEQ+irho0;
+        int ii=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            double qii = ci*ci; // overlap = 1
+
+            ii++;
+
+            for(int j=i0; j<i; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                if(r2>Rcut2) continue;
+
+                //Vec3d  pj  = epos [j];
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+
+                Vec3d  p;
+                double s;
+                double dSsi,dSsj;
+                Vec3d  dXsi,dXsj;
+                double dXxi,dXxj;
+                double dCsi,dCsj,dCr;
+
+                double cij = Gauss::product3D_s_deriv(
+                    si,   pi,
+                    sj,   pj,
+                    s ,   p ,
+                    dSsi, dSsj,
+                    dXsi, dXsj,
+                    dXxi, dXxj,
+                    dCsi, dCsj, dCr
+                );
+                // TODO: Cij should be like Qij ??????
+
+                Vec3d  Fpi = fPs[ii];
+                double Fqi = fQs[ii];
+                double Fsi = fSs[ii];
+
+                //printf( "i,j %i,%i : %g \n", i, j, p.x );
+
+                double fsj = Fsi*dSsj + Fpi.dot( dXsj );
+                double fsi = Fsi*dSsj + Fpi.dot( dXsj );
+                //Vec3d  fxi = Fpi*dXxi;
+                //Vec3d  fxj = Fpi*dXxj;
+
+                Vec3d dCdp = Rij*(-2*dCr*ci*cj);  // TODO : dCdp must be considered !!!!
+
+                double Eq = eQs[ii]; // Eq should be coulomb energy see:  testDerivs_Coulomb_model():    Eq = solver.CoublombElement(0,1);
+                               //                                                                  line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*line_dQi_ana->ys[i];
+                // --- Derivatives ( i.e. Forces )
+
+                efpos[i].add( Fpi*dXxi  +  dCdp*Eq );
+                efpos[j].add( Fpi*dXxj  +  dCdp*Eq );
+                efsize[i]+= fsi*cij + dCsi*Eq;
+                efsize[j]+= fsj*cij + dCsj*Eq;
+
+                //efcoef[i]+= Ekij*cj;
+                //efcoef[j]+= Ekij*ci;
+
+                ii++;
+            }
+        }
+    }
+
+
 
 
 
