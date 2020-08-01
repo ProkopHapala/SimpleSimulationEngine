@@ -62,6 +62,9 @@ target_link_libraries( test_Fluid2D ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBR
 add_executable       ( test_TerrainHydraulics test_TerrainHydraulics.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainGrid2D> $<TARGET_OBJECTS:Noise> )
 target_link_libraries( test_TerrainHydraulics ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_AnalyticalMushroomVortex test_AnalyticalMushroomVortex.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_AnalyticalMushroomVortex ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_TerrainCubic test_TerrainCubic.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:TerrainCubic> $<TARGET_OBJECTS:TiledView> )
 target_link_libraries( test_TerrainCubic ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

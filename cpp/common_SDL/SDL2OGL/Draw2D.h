@@ -41,6 +41,10 @@ void drawArc_d         ( const Vec2d& center, float radius, float phi0, float ph
 
 void drawPoints        ( int npoints, Vec2d * points );
 void drawPoints        ( int npoints, Vec2d * points, float sz );
+
+void drawPlot2D        ( int np, double* xs, double* ys, Vec2d sc=Vec2dOnes, Vec2d p0=Vec2dZero );
+
+
 void drawLines         ( int n, Vec2d * points );
 void drawLines         ( int n, Vec2d * points, Vec2d * vecs, float sz );
 void drawLines         ( int nlinks, int * links, Vec2d * points );

@@ -208,6 +208,18 @@ void Draw2D::drawPoints( int npoints, Vec2d * points, float sc  ){
 	glEnd();
 };
 
+
+
+void Draw2D::drawPlot2D( int np, double* xs, double* ys, Vec2d sc, Vec2d p0 ){ // , Vec2d sc=Vec2dOnes, Vec2d p0=Vec2dZero
+	glBegin   (GL_LINE_STRIP);
+	for( int i=0; i<np; i++ ){
+        printf( "[%i] %g %g | %g %g \n", i, xs[i], ys[i],  p0.x+xs[i]*sc.x, p0.y+ys[i]*sc.y );
+		glVertex3f( p0.x+xs[i]*sc.x, p0.y+ys[i]*sc.y, z_layer );
+	}
+	glEnd();
+};
+
+
 void Draw2D::drawLines( int n, Vec2d * points ){
 	glBegin   (GL_LINE_STRIP);
 	for( int i=0; i<n; i++ ){
