@@ -214,6 +214,7 @@ inline double sourceXY( double x, double y, double& Fx, double& Fy ){
     double ir3_2 = 1/sqrt(r2*r2*r2);
     Fx = x*ir3_2;
     Fy = y*ir3_2;
+    return 0; // TODO : Value (not derivative)
 }
 
 inline double sourceLineF_pow0( double x, double y, double& Fx, double& Fy ){
@@ -221,6 +222,7 @@ inline double sourceLineF_pow0( double x, double y, double& Fx, double& Fy ){
     double ir = 1/r;
     Fx = -ir;
     Fy = (x/y)*ir;
+    return 0; // TODO : Value (not derivative)
 }
 
 inline double sourceLineF_pow1( double x, double y, double& Fx, double& Fy ){
@@ -234,6 +236,7 @@ inline double sourceLineF_pow1( double x, double y, double& Fx, double& Fy ){
     //Fx = -x*ir + log( x/y + r/y );
     Fx = -x*ir + asinh(x/y);
     Fy = -y*ir;
+    return 0; // TODO : Value (not derivative)
 }
 
 inline double sourceLineF_pow2( double x, double y, double& Fx, double& Fy ){
@@ -243,6 +246,7 @@ inline double sourceLineF_pow2( double x, double y, double& Fx, double& Fy ){
     double ir = 1/r;
     Fx = (x2 + 2*y2)*ir;
     Fy = y*( -x*ir + asinh(x/y) );
+    return 0; // TODO : Value (not derivative)
 }
 
 inline double sourceLineF_pow3( double x, double y, double& Fx, double& Fy ){
@@ -252,6 +256,7 @@ inline double sourceLineF_pow3( double x, double y, double& Fx, double& Fy ){
     double ir = 1/r;
     Fx = ( x*(x2 + 3*y2) - 3*y2*r*asinh(x/y) )/(2*r);
     Fy = y*(x2 + 2*y2)/r ;
+    return 0; // TODO : Value (not derivative)
 }
 
 inline double sourceLineF_linear( double x, double y, double& Fx, double& Fy, double C0, double C1 ){
@@ -264,6 +269,7 @@ inline double sourceLineF_linear( double x, double y, double& Fx, double& Fy, do
     double Fx1 = -x*ir + asinhxy;
     Fx =  C0*-ir + C1*Fx1;
     Fy = (C0*x_y - C1*y)*ir;
+    return 0; // TODO : Value (not derivative)
 }
 
 inline double sourceLineF_poly3( double x, double y, double& Fx, double& Fy, double C0, double C1, double C2, double C3 ){
@@ -287,6 +293,7 @@ inline double sourceLineF_poly3( double x, double y, double& Fx, double& Fy, dou
        + (-C0     + C3*0.5*( x*(x2 + 3*y2) - 3*y2*r*asinhxy ) )*ir;
     Fy = (C0 *  x_y +  C1 * -y  )*ir
        + (C2 * Fx1  +  C3 * Fx2 )*y;
+    return 0; // TODO : Value (not derivative)
 }
 
 // ---------------- Vec3 functions

@@ -52,6 +52,7 @@ double compressAdiabat( double dR, double kappa, double& R, double& p ){
     double factor = pow( oR/R, 3*kappa );
     p *= factor;
     //printf( "factor %g [1] p %g [GPa]\n",  factor,  p*1e-9  );
+    return 0;
 }
 
 

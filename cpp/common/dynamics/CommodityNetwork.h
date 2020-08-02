@@ -332,6 +332,7 @@ struct City{
                 fc->produce( dt, N, goods );
             }
         }
+        return 0;
     }
 
     double extractResources( double dt ){
@@ -342,6 +343,7 @@ struct City{
             addCommodity( N, *rs->type );
             rs->deposit += ( rs->sustainable_rate * dt - N );
         }
+        return 0;
     }
 
     double addCommodity( double N, const CommodityType& cargo ){

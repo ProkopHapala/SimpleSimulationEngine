@@ -78,7 +78,8 @@ class CameraT{ public:
         rd = rot.a*(pix.a*resc) + rot.b*(pix.b*resc);
     }
 
-    inline Vec3T<T> pix2ray( const Vec2f& pix, Vec3T<T>& rd, Vec3T<T>& ro ){
+    //inline Vec3T<T> pix2ray( const Vec2f& pix, Vec3T<T>& rd, Vec3T<T>& ro ){
+    inline void pix2ray( const Vec2f& pix, Vec3T<T>& rd, Vec3T<T>& ro ){
         if(persp){
             ro = pos;
             pix2rayPersp( pix, rd );

@@ -338,7 +338,7 @@ class CLCFSF{ public:
         return Q;
     }
 
-    double projectOrbs(){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
+    void projectOrbs(){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
         int nqOrb = perOrb*(perOrb+1)/2;
         int i0=0;
         int irho0=0;
@@ -463,6 +463,7 @@ class CLCFSF{ public:
     double eval(){
         projectOrbs();
         evalElectrostatICoulomb();
+        return 0;
     }
 
     // ========== On Grid

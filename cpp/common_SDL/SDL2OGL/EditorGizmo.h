@@ -221,6 +221,7 @@ class EditorGizmo{ public:
         double tmin=1e+300;
         //ro, rd,
         clearAxMask();
+        bool b=false;
         for(int i=0; i<3; i++){
             Vec3d& ax     = pose.rot.vecs[i];
             Vec3d phandle = pose.pos+ax*Rgizmo;
@@ -229,8 +230,10 @@ class EditorGizmo{ public:
             if( (r2<Rhandle)&&(t<tmin)  ){
                 axmask[i]=true;
                 tmin=t;
+                b=true;
             }
         }
+        return b;
     }
 
     void filterByAxis(Vec3d& v){
