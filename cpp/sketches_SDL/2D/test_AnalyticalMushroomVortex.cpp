@@ -35,6 +35,20 @@ https://link.springer.com/chapter/10.1007/978-981-13-1678-4_4
 */
 
 
+Vec2d flowCurve( double t, double a ){
+    double sa = sin(t);
+    double ca = cos(t);
+    double w = 2*a;
+    return (Vec2d){
+        //((1-a)*fmax(0.1,ca) + a*ca)*(1-a) +  a*0.8,
+        (sqrt(w*w+ca*ca) + ca - 0.1*w)*0.8/(1.5+w),
+        sa/(1+a)
+    };
+}
+
+
+
+
 void flowField(Vec2d p, Vec2d& v){
     //v.x = sin(p.y);// + cos(p.x);
     //v.y = sin(p.x);// - sin(p.x);
@@ -114,7 +128,10 @@ AnalyticVortexApp::AnalyticVortexApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     trj.init( 256 , 2 );
 
     plot1.init();
-    plot1.xsharingLines( 2, 1024 );
+    plot1.xsharingLines( 2, 1024, 0.0, 0.01 );
+
+    plot1.lines[0]->clr=0xFFFF0000;
+    plot1.lines[1]->clr=0xFF0000FF;
 
 
     double L = M_PI*M_SQRT2;
@@ -134,6 +151,15 @@ AnalyticVortexApp::AnalyticVortexApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 }
 
 void AnalyticVortexApp::draw(){
+
+
+
+
+    glClearColor( 0.9f, 0.9f, 0.9f, 0.1f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+
+	    /*
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -141,18 +167,15 @@ void AnalyticVortexApp::draw(){
     Draw2D::drawRectangle( {-100.,-100.}, {100.,100.}, true );
     glDisable(GL_BLEND);
 
-
-    //glClearColor( 0.9f, 0.9f, 0.9f, 0.1f );
-	//glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
     //if(frameCount==2)zoom=1.0;
+
 
     for(int i=0;i<5; i++){
         int ip = rand()%np;
         particles[ip] = (Vec2d){randf(pmin.x,pmax.x),randf(pmin.y,pmax.y)};
     }
 
-    glColor4f(1.,.0,.0,1.);
+    glColor4f(0.,1.0,.0,1.);
     Draw2D::drawLine( {0.0,0.0}, {M_PI*0.5,0.0} );
 
 
@@ -172,7 +195,7 @@ void AnalyticVortexApp::draw(){
     }
     glEnd();
 
-    glColor3f(1.,.0,.0);
+    glColor3f(0.,1.0,.0);
     //Draw2D::drawRectangle({-M_PI*M_SQRT2,-M_PI*M_SQRT2},{0,0},false);
 
 
@@ -184,27 +207,34 @@ void AnalyticVortexApp::draw(){
     propagate( particles[0], plot1.lines[0]->n, 0.1, plot1.lines[0]->ys, plot1.lines[1]->ys );
     Draw2D::plot( plot1.lines[0]->n, plot1.lines[0]->ys, plot1.lines[1]->ys );
 
-    //plot1.render();
-    //plot1.view();
+    plot1.render();
+    plot1.view();
+    */
 
-    /*
+
 	glColor3f(0.0,.0,.0);
-	for( int ix = 0; ix<5; ix++ ){
+	int nl=20;
+	for( int ix = 0; ix<=nl; ix++ ){
 
         double xoff = ix * 0.1;
         glBegin(GL_LINE_STRIP);
         double dt = 0.2;
         for(int i=0; i<256; i++){
+            /*
             double t   = i*dt;
             //double t2  = t*t;
             double lor = 1/(1+t);
             double x = cos(t)*lor*(1+xoff);
             double y = sin(t)*lor*(1+xoff);
             glVertex2f( x, y );
+            */
+
+            Vec2d p = flowCurve( i*dt, 4*ix/(float)nl ) * 5.0;
+            glVertex2f( p.x, p.y );
         }
         glEnd();
 	}
-	*/
+
 
 };
 
