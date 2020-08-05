@@ -716,6 +716,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     testDerivs_Coulomb_model_S( 30, 0.0, 0.1, solver, plot1 );   // Size force
 
 
+
+
     /*
     // --- aux basis
     Vec3d dip;

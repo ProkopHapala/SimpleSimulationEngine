@@ -478,6 +478,7 @@ class CLCFSF{ public:
     ///                  Iij += kbas(pos)^2 * wf_j[pos]^2
 
     double orb2grid( int io, const GridShape& gridShape, double* buff )const{
+        printf( " ===================== orb2grid \n" );
         int i0     = getOrbOffset( io );
         Vec3d*  Ps = epos  +i0;
         double* Cs = ecoefs+i0;
@@ -485,6 +486,9 @@ class CLCFSF{ public:
         for(int i=0; i<perOrb; i++){
             printf( "wf[%i] C(%e) P(%g,%g,%g)\n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z );
         }
+        for(int i=0; i<nsamp; i++){ printf( "Wfs[%i] %g \n", i, Wfs[i] ); }
+        //exit(0);
+
         return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){
             Spline_Hermite::Sampler<double> spline;
             double wfsum = 0.0;
@@ -493,20 +497,25 @@ class CLCFSF{ public:
                 double r2 = dR.norm2();
                 //printf( "orb2grid[%i] pos(%g,%g,%g) epos(%g,%g,%g) \n", ig, pos.x, pos.y, pos.z,   epos[i].x, epos[i].y, epos[i].z );
                 //printf( "orb2grid[%i] r2 %g  Rcut2 %g |  pos(%g,%g,%g) epos(%g,%g,%g) \n", ig, r2, Rcut2, pos.x, pos.y, pos.z,   epos[i].x, epos[i].y, epos[i].z );
+                /*
                 if(r2>=Rcut2){
                     buff[ig] = 0.0;
                     continue;
                 }
-                //double r   = sqrt(r2);
+                */
+                double r   = sqrt(r2);
                 //int    ix  = (int)r;
                 //double x   =  r - ix;
                 //double y   = Spline_Hermite::val( x, Wfs[ix], Wfs[ix+1], Wfs[ix+2], Wfs[ix+3] );
-                spline.prepare( sqrt(r2)*idsamp, Wfs );
-                wfsum += spline.y() * Cs[i];
+                spline.prepare( r, Wfs );
+                double y   = spline.y();
+                double dwf = y * Cs[i];
+                wfsum += dwf;
                 //wfsum += spline.y();
                 //wfsum += exp( -r2 );
                 //wfsum += exp( -r2 ) * Cs[i];
-                //printf( "orb2grid[%i] r %g  y(r) %g  ci*y(r) %g \n", ig, sqrt(r2), spline.y(), ecoefs[i] );
+                //if(r<4.0) printf( "orb2grid[%i] r %g  y(r) %g  ci*y(r) %g \n", ig, r, r*idsamp, spline.y(), ecoefs[i] );
+                //if(r<4.0) printf( "orb2grid[%i] r %g y(r) %g  ci*y(r) %g \n", ig, r, y, dwf );
             }
             buff[ig] = wfsum;
         });

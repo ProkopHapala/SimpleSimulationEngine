@@ -45,6 +45,154 @@
 //#include "eFF.h"
 //#include "e2FF.h"
 
+
+
+
+
+
+/*
+// ===================================================
+///        test   Wave Function Overlap
+// ===================================================
+
+void test_WfOverlap( CLCFSF& solver, Plot2D& plot1 ){
+    // ======= Test Orbital Wavefunction Overlap
+    printf( " test_WfOverlap 1 \n" );
+    int    nint = 10;
+    double Lmax = 5.0;
+    DataLine2D* line_ISgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0000, "IS_grid" ); plot1.add(line_ISgrid );
+    DataLine2D* line_ISana  = new DataLine2D( 100,  0, 0.1      , 0xFFFF8000, "IS_ana"  ); plot1.add(line_ISana  );
+    {
+    DEBUG_saveFile1="temp/wf0.xsf";
+    DEBUG_saveFile2="temp/wf1.xsf";
+    auto func1 = [&](GridShape& grid, double* f, double x ){                     solver.orb2grid( 0, grid, f ); };
+    auto func2 = [&](GridShape& grid, double* f, double x ){ solver.epos[2].x=x; solver.orb2grid( 1, grid, f ); };
+    gridNumIntegral( nint, 0.2, 6.0, Lmax, line_ISgrid->ys, func1, func2, true );
+    }
+    printf( " test_WfOverlap 2 \n" );
+    for(int i=0; i<line_ISana->n; i++){
+        solver.epos[2].x=line_ISana->xs[i];
+        line_ISana->ys[i] = solver.evalOverlap( 0, 1 );
+    }
+}
+
+// ===================================================
+///        test   Wave Function Overlap
+// ===================================================
+
+void test_Kinetic( CLCFSF& solver, Plot2D& plot1 ){
+    // ======= Test Orbital Wavefunction Overlap
+    int    nint = 20;
+    double Lmax = 8.0;
+    DataLine2D* line_ITgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0000, "IT_grid" ); plot1.add(line_ITgrid );
+    DataLine2D* line_ITana  = new DataLine2D( 100,  0, 0.1      , 0xFFFF8000, "IT_ana"  ); plot1.add(line_ITana  );
+    {
+    DEBUG_saveFile1="temp/wf0.xsf";
+    DEBUG_saveFile2="temp/Lwf1.xsf";
+    auto func1 = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=x; solver.orb2grid( 0, grid, f );      };
+    auto func2 = [&](GridShape& grid, double* f, double x ){
+        double* tmp = new double[grid.n.totprod()];
+        solver.epos[0].x=x;
+        solver.orb2grid( 0, grid, tmp );
+        grid.Laplace   ( tmp, f );
+        delete [] tmp;
+    };
+    gridNumIntegral( nint, 0.2, 8.0, Lmax, line_ITgrid->ys, func1, func2, true );
+    }
+    Vec3d dip;
+    for(int i=0; i<line_ITana->n; i++){
+        solver.epos[0].x=line_ITana->xs[i];
+        line_ITana->ys[i] = solver.projectOrb( 0, dip, false );
+    }
+    printf( "Ek[0] ana %g num %g / %g \n", line_ITana->ys[0], line_ITgrid->ys[0], line_ITana->ys[0]/line_ITgrid->ys[0] );
+    printf( "KineticIntegral(0) Grid %g Ana %g ratio %g /%g \n", line_ITgrid->ys[0], line_ITana->ys[0],  line_ITgrid->ys[0]/line_ITana->ys[0],  line_ITana->ys[0]/line_ITgrid->ys[0]  );
+}
+*/
+
+
+void test_Pauli( CLCFSF& solver, Plot2D& plot1 ){
+    // see https://onlinelibrary.wiley.com/doi/full/10.1002/jcc.21637
+    // eq.2
+    // E = S^2/(1-S^2) * ( Tii + Tjj + 2*Tij/Sij )
+
+    // ======= Test Orbital Wavefunction Overlap
+    int    nint = 20;
+    double Lmax = 8.0;
+    DataLine2D* line_S = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0080, "Sij" ); plot1.add(line_S );
+    DataLine2D* line_T = new DataLine2D( 100,  0, 0.1      , 0xFFFF8000, "Tij" ); plot1.add(line_T );
+    DataLine2D* line_E = new DataLine2D( 100,  0, 0.1      , 0xFFFF8080, "Eij" ); plot1.add(line_E );
+
+    solver.ecoefs[0]=1;
+    solver.ecoefs[1]=0;
+    solver.ecoefs[2]=1;
+    solver.ecoefs[3]=0;
+
+    solver.epos[0]=Vec3dZero;
+    solver.epos[1]=Vec3dZero;
+    solver.epos[2]=Vec3dZero;
+    solver.epos[3]=Vec3dZero;
+
+
+
+    double Tii,Tjj;
+    {
+
+    double T1,T2;
+    auto func1  = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=x; solver.orb2grid( 0, grid, f ); };
+    auto func2  = [&](GridShape& grid, double* f, double x ){ solver.epos[2].x=x; solver.orb2grid( 1, grid, f ); };
+    auto func1L = [&](GridShape& grid, double* f, double x ){
+        double* tmp = new double[grid.n.totprod()];
+        solver.epos[0].x=x;
+        solver.orb2grid( 0, grid, tmp );
+        grid.Laplace   ( tmp, f );
+        delete [] tmp;
+    };
+    auto func2L = [&](GridShape& grid, double* f, double x ){
+        double* tmp = new double[grid.n.totprod()];
+        solver.epos[2].x=x;
+        solver.orb2grid( 1, grid, tmp );
+        grid.Laplace   ( tmp, f );
+        delete [] tmp;
+    };
+    DEBUG_saveFile1="temp/wf0.xsf";
+    DEBUG_saveFile2="temp/Lwf0.xsf";
+    //gridNumIntegral( 1, 0.2, 8.0, Lmax, &Tii, func1, func1L, true );
+    gridNumIntegral( 1, 0.5, 8.0, Lmax, &Tii, func1, func1L, true );
+    DEBUG_saveFile1="temp/wf1.xsf";
+    DEBUG_saveFile2="temp/Lwf1.xsf";
+    gridNumIntegral( 1, 0.2, 8.0, Lmax, &Tjj, func2, func2L, true );
+    DEBUG_saveFile1="temp/wf0.xsf";
+    DEBUG_saveFile2="temp/wf1.xsf";
+    gridNumIntegral( nint, 0.2, 8.0, Lmax, line_S->ys, func1, func2 , true );
+    DEBUG_saveFile1="temp/wf0.xsf";
+    DEBUG_saveFile2="temp/Lwf1.xsf";
+    gridNumIntegral( nint, 0.2, 8.0, Lmax, line_T->ys, func1, func2L, true );
+
+    }
+    double Srenorm = 1/line_S->ys[0];
+    double Trenorm = 1/line_T->ys[0];
+    for(int i=0; i<line_E->n; i++){
+        line_S->ys[i]*=Srenorm;
+        line_T->ys[i]*=Trenorm;
+        double Sij = line_S->ys[i];
+        double Tij = line_T->ys[i];
+        printf( "[%i] x %g S %g T %g \n", i, line_E->xs[i] , Sij, Tij );
+        line_E->ys[i] = Sij/(1-Sij)*( Tii + Tjj + 2*Tij/Sij );
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
     //RigidAtom     atom1;
@@ -129,6 +277,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     }
     spline.prepare( (solver.Rcut-1e-7)*solver.idsamp, solver.Wfs );
     printf("spline_wf(Rcut=%g|%i+%g) %g \n", (spline.ix+spline.dx)*solver.dsamp, spline.ix,spline.dx, spline.y() );
+
+    for(int i=0; i<solver.nsampMem; i++){
+        double r    = (i+0.4)*solver.dsamp;
+        spline.prepare( r, solver.Wfs );
+        printf( "spline[%i] r: %g wf: %g \n", i, r,  spline.y() );
+    }
+
     //exit(0);
 
     /*
@@ -195,6 +350,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     plot1.render();
     */
 
+    /*
     ogl = glGenLists(1);
     glNewList(ogl,GL_COMPILE);
     solver.prepareIntegralTables();
@@ -204,17 +360,21 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     DataLine2D* line_overlap = new DataLine2D(solver.nsampIMem, -solver.dsamp, solver.dsamp, 0xFF00FFFF, "Overlap",solver.IOverlap ); plot1.add(line_overlap);
     plot1.update();
     plot1.render();
+    */
+
+    test_Pauli( solver, plot1 );
 
 
     // ========== Brute Force Overlap
 
-
+    /*
     GridShape grid;
     //grid.n    = {5,5,5};
     grid.n    = {400,100,100};
     grid.cell = (Mat3d){ 40.0,0.0,0.0,  0.0,10.0,0.0,  0.0,0.0,10.0 };
     grid.pos0 = (Vec3d){ 0.0 ,0.0 ,0.0 };
     grid.updateCell();
+
 
     solver.ecoefs[0] = 1.0;
     solver.ecoefs[1] = 0;
@@ -247,6 +407,11 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     delete [] orbOnGrid;
     delete [] orbOnGrid_;
 
+    */
+
+
+
+
     DEBUG
 
     /*
@@ -272,6 +437,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     DEBUG
     */
+
+    plot1.render();
+
 }
 
 void TestAppCLCFSF::draw(){
