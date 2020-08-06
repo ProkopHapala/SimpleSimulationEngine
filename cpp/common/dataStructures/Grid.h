@@ -378,19 +378,20 @@ void interateGrid3D( const GridShape& grid, FUNC func ){
 
 char* DEBUG_saveFile1="temp/f1.xsf";
 char* DEBUG_saveFile2="temp/f2.xsf";
+char* DEBUG_saveFile12="temp/prod_f1_f2.xsf";
 
 template<typename Func1, typename Func2>
 void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* ys, Func1 func1, Func2 func2, bool bDebugXsf = false ){
     GridShape grid;
     //grid.cell = (Mat3d){ (Rmax+Lmax),0.0,0.0,  0.0,Rmax,0.0,  0.0,0.0,Rmax };
     //grid.n    = {(int)((2*Rmax+Lmax)/gStep)+1,(int)(2*Rmax/gStep)+1,(int)(2*Rmax/gStep)+1};
-    grid.cell = (Mat3d){ (2*Rmax),0.0,0.0,  0.0,(2*Rmax),0.0,  0.0,0.0,(2*Rmax) };
+    grid.cell = (Mat3d){ (2*Rmax+Lmax),0.0,0.0,  0.0,(2*Rmax),0.0,  0.0,0.0,(2*Rmax) };
     int ngx = (2*Rmax)/gStep;
-    grid.n    = {ngx,ngx,ngx};
+    grid.n    = {(2*Rmax+Lmax)/gStep,ngx,ngx};
     grid.pos0 = (Vec3d){-Rmax,-Rmax,-Rmax};
     grid.updateCell();
     int ng = grid.n.totprod();
-    double  dV = grid.voxelVolume();
+    double  dV = grid.voxelVolume(); printf( "dV %e \n", dV );
     double* f1 = new double[ ng ];
     double* f2 = new double[ ng ];
     //func1( grid, f1, 0.0 );
@@ -403,11 +404,24 @@ void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* 
         func2( grid, f2, x );
         //printf( " |f1| %g \n" , VecN::sum2( ng, f1 ) );
         //printf( " |f2| %g \n" , VecN::sum2( ng, f2 ) );
-        if(bDebugXsf&&(i==0)) grid. saveXSF( DEBUG_saveFile1, f1, -1 );
-        if(bDebugXsf&&(i==0)) grid. saveXSF( DEBUG_saveFile2, f2, -1 );
-        double Q = dV * VecN::dot( ng, f1, f2 );
-        //printf( "Q[%i] %g \n", i, Q );
+
+
+        if(bDebugXsf&&(i==nint-1)) grid. saveXSF( DEBUG_saveFile1, f1, -1 );
+        if(bDebugXsf&&(i==nint-1)) grid. saveXSF( DEBUG_saveFile2, f2, -1 );
+
+
+        //double Q = dV * VecN::dot( ng, f1, f2 );
+        double Q=0;
+        for(int j=0; j<ng; j++){ f2[j]*=f1[j]; Q+=dV*f2[j]; };
+        printf( "[%i]  x %g Q %g dV %e \n", i, x, Q, dV );
         ys[i] = Q;
+
+
+        if(bDebugXsf&&(i==nint-1)){
+            //for(int j=0; j<ng; j++) f2[j]*=f1[j];
+            //for(int j=0; j<ng; j++) f2[j]*=0;
+            grid. saveXSF( DEBUG_saveFile12, f2, -1 );
+        }
         //printf( "[i] Q %g |  CPUtime %g [Mticks]\n", i, Q, (getCPUticks()-timeStart)*1e-6  );
     }
     delete [] f1;

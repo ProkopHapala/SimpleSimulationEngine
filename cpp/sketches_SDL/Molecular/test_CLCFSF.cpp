@@ -116,33 +116,32 @@ void test_Pauli( CLCFSF& solver, Plot2D& plot1 ){
     // E = S^2/(1-S^2) * ( Tii + Tjj + 2*Tij/Sij )
 
     // ======= Test Orbital Wavefunction Overlap
-    int    nint = 20;
-    double Lmax = 8.0;
-    DataLine2D* line_S = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0080, "Sij" ); plot1.add(line_S );
-    DataLine2D* line_T = new DataLine2D( 100,  0, 0.1      , 0xFFFF8000, "Tij" ); plot1.add(line_T );
-    DataLine2D* line_E = new DataLine2D( 100,  0, 0.1      , 0xFFFF8080, "Eij" ); plot1.add(line_E );
+    int    nint = 80;
+    double Lmax = 16.0;
+    DataLine2D* line_S    = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0080, "Sij" ); plot1.add(line_S );
+    DataLine2D* line_T    = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF8000, "Tij" ); plot1.add(line_T );
+    DataLine2D* line_E    = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF8080, "Eij" ); plot1.add(line_E );
+    DataLine2D* line_RhoS = new DataLine2D( nint, 0, Lmax/nint, 0xFF00F0F0, "RhoS" ); plot1.add(line_RhoS );
 
-    solver.ecoefs[0]=1;
-    solver.ecoefs[1]=0;
-    solver.ecoefs[2]=1;
-    solver.ecoefs[3]=0;
+    solver.ecoefs[0]=1.;
+    solver.ecoefs[1]=0.;
+    solver.ecoefs[2]=1.;
+    solver.ecoefs[3]=0.;
 
     solver.epos[0]=Vec3dZero;
     solver.epos[1]=Vec3dZero;
     solver.epos[2]=Vec3dZero;
     solver.epos[3]=Vec3dZero;
 
-
-
-    double Tii,Tjj;
+    double Tii=0,Tjj=0;
     {
 
     double T1,T2;
-    auto func1  = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=x; solver.orb2grid( 0, grid, f ); };
+    auto func1  = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=0; solver.orb2grid( 0, grid, f ); };
     auto func2  = [&](GridShape& grid, double* f, double x ){ solver.epos[2].x=x; solver.orb2grid( 1, grid, f ); };
     auto func1L = [&](GridShape& grid, double* f, double x ){
         double* tmp = new double[grid.n.totprod()];
-        solver.epos[0].x=x;
+        solver.epos[0].x=0;
         solver.orb2grid( 0, grid, tmp );
         grid.Laplace   ( tmp, f );
         delete [] tmp;
@@ -154,29 +153,48 @@ void test_Pauli( CLCFSF& solver, Plot2D& plot1 ){
         grid.Laplace   ( tmp, f );
         delete [] tmp;
     };
+
+    auto func1rho = [&](GridShape& grid, double* f, double x ){ solver.epos[0].x=0; solver.orb2grid( 0, grid, f ); int ng = grid.n.totprod(); for(int i=0; i<ng; i++) f[i]*=f[i]; };
+    auto func2rho = [&](GridShape& grid, double* f, double x ){ solver.epos[2].x=x; solver.orb2grid( 1, grid, f ); int ng = grid.n.totprod(); for(int i=0; i<ng; i++) f[i]*=f[i]; };
+
+
+    printf("===================== Tii \n");
     DEBUG_saveFile1="temp/wf0.xsf";
     DEBUG_saveFile2="temp/Lwf0.xsf";
     //gridNumIntegral( 1, 0.2, 8.0, Lmax, &Tii, func1, func1L, true );
-    gridNumIntegral( 1, 0.5, 8.0, Lmax, &Tii, func1, func1L, true );
+    gridNumIntegral( 1, 0.0, 8.0, Lmax, &Tii, func1, func1L, true );
+
+    printf("===================== Tjj \n");
     DEBUG_saveFile1="temp/wf1.xsf";
     DEBUG_saveFile2="temp/Lwf1.xsf";
-    gridNumIntegral( 1, 0.2, 8.0, Lmax, &Tjj, func2, func2L, true );
+    gridNumIntegral( 1, 0.0, 8.0, Lmax, &Tjj, func2, func2L, true );
+
+    printf("===================== Sij \n");
     DEBUG_saveFile1="temp/wf0.xsf";
     DEBUG_saveFile2="temp/wf1.xsf";
-    gridNumIntegral( nint, 0.2, 8.0, Lmax, line_S->ys, func1, func2 , true );
+    gridNumIntegral( nint, Lmax/nint, 8.0, Lmax, line_S->ys, func1, func2 , true );
+
+    printf("===================== Tij \n");
     DEBUG_saveFile1="temp/wf0.xsf";
     DEBUG_saveFile2="temp/Lwf1.xsf";
-    gridNumIntegral( nint, 0.2, 8.0, Lmax, line_T->ys, func1, func2L, true );
+    gridNumIntegral( nint, Lmax/nint, 8.0, Lmax, line_T->ys, func1, func2L, true );
+
+    printf("===================== RhoS \n");
+    DEBUG_saveFile1="temp/rho0.xsf";
+    DEBUG_saveFile2="temp/rho1.xsf";
+    gridNumIntegral( nint, Lmax/nint, 8.0, Lmax, line_RhoS->ys, func1rho, func2rho, true );
 
     }
-    double Srenorm = 1/line_S->ys[0];
-    double Trenorm = 1/line_T->ys[0];
+    double Srenorm   = 1./line_S->ys[0];
+    double Trenorm   = 1./line_T->ys[0];
+    double rhorenorm = 1./line_RhoS->ys[0];
     for(int i=0; i<line_E->n; i++){
-        line_S->ys[i]*=Srenorm;
-        line_T->ys[i]*=Trenorm;
+        line_S   ->ys[i]*=Srenorm;
+        line_T   ->ys[i]*=Trenorm;
+        line_RhoS->ys[i]*=rhorenorm;
         double Sij = line_S->ys[i];
         double Tij = line_T->ys[i];
-        printf( "[%i] x %g S %g T %g \n", i, line_E->xs[i] , Sij, Tij );
+        //printf( "[%i] x %g S %g T %g \n", i, line_E->xs[i] , Sij, Tij );
         line_E->ys[i] = Sij/(1-Sij)*( Tii + Tjj + 2*Tij/Sij );
     }
 }
@@ -262,7 +280,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     Spline_Hermite::Sampler<double> spline;
 
     // ----  Make Basis Functions
-    double  betaWf=1.8,betaPP=1.8;
+    double  betaWf=4.8,betaPP=4.8;
     // wave function
     double sumQ = 0.0;
     for(int i=0; i<solver.nsampMem; i++){

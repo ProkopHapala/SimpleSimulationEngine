@@ -69,7 +69,7 @@ struct PairInteractionTable{
 */
 class CLCFSF{ public:
 
-    double Rcut    =6.0;  ///< cutoff beyond which two basis functions chi has no overlap
+    double Rcut    =8.0;  ///< cutoff beyond which two basis functions chi has no overlap
     double RcutOrb =9.0;  ///< cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
     double Rcut2     =Rcut*Rcut;
     double RcutOrb2  =RcutOrb*RcutOrb;
@@ -478,15 +478,15 @@ class CLCFSF{ public:
     ///                  Iij += kbas(pos)^2 * wf_j[pos]^2
 
     double orb2grid( int io, const GridShape& gridShape, double* buff )const{
-        printf( " ===================== orb2grid \n" );
+        //printf( " ===================== orb2grid \n" );
         int i0     = getOrbOffset( io );
         Vec3d*  Ps = epos  +i0;
         double* Cs = ecoefs+i0;
-        printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
-        for(int i=0; i<perOrb; i++){
-            printf( "wf[%i] C(%e) P(%g,%g,%g)\n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z );
-        }
-        for(int i=0; i<nsamp; i++){ printf( "Wfs[%i] %g \n", i, Wfs[i] ); }
+        //printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
+        //for(int i=0; i<perOrb; i++){
+        //    printf( "wf[%i] C(%e) P(%g,%g,%g)\n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z );
+        //}
+        //for(int i=0; i<nsamp; i++){ printf( "Wfs[%i] %g \n", i, Wfs[i] ); }
         //exit(0);
 
         return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){
@@ -497,12 +497,12 @@ class CLCFSF{ public:
                 double r2 = dR.norm2();
                 //printf( "orb2grid[%i] pos(%g,%g,%g) epos(%g,%g,%g) \n", ig, pos.x, pos.y, pos.z,   epos[i].x, epos[i].y, epos[i].z );
                 //printf( "orb2grid[%i] r2 %g  Rcut2 %g |  pos(%g,%g,%g) epos(%g,%g,%g) \n", ig, r2, Rcut2, pos.x, pos.y, pos.z,   epos[i].x, epos[i].y, epos[i].z );
-                /*
+
                 if(r2>=Rcut2){
                     buff[ig] = 0.0;
                     continue;
                 }
-                */
+
                 double r   = sqrt(r2);
                 //int    ix  = (int)r;
                 //double x   =  r - ix;
