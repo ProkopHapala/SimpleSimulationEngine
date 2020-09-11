@@ -241,7 +241,8 @@ int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	int junk;
-	testApp = new TestAppTerrainHydraulics( junk , 800, 600 );
+	//testApp = new TestAppTerrainHydraulics( junk , 800, 600 );
+	testApp = new TestAppTerrainHydraulics( junk , 1200, 1000 );
 	testApp->loop( 1000000 );
 	return 0;
 }

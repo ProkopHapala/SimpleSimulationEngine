@@ -264,6 +264,7 @@ class CLCFGO{ public:
         int i0 = getOrbOffset(io);
         int j0 = getOrbOffset(jo);
          // ToDo : we may allow different number of orbitals per electron later (?)
+         double E = 0;
          for(int i=i0; i<i0+perOrb; i++){
             Vec3d  pi = epos[i];
             double si = esize[i];
@@ -294,17 +295,20 @@ class CLCFGO{ public:
                 //ecfs[j] +=dcP;
                 //epfs[i].add(fij);
                 //epfs[j].sub(fij);
-                return eP*cij;
+                //return eP*cij;
+                E += eP*cij;
             }
         }
+        return E;
     }
 
     void evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
+        double E = 0;
         for(int io=0; io<nOrb; io++){
             for(int jo=0; jo<nOrb; jo++){
                 if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
                 //interpolate( epos[j] - epos[i], Is[ityp][jtyp], f ); // ToDo: different basis function types
-                evalPauli( io, jo );
+                E += evalPauli( io, jo );
             }
         }
     }
@@ -707,8 +711,10 @@ class CLCFGO{ public:
                 Vec3d  fxj = Fpi*dXxj;
 
                 // --- Derivatives ( i.e. Forces )
-                efpos[i].add( fxi );
-                efpos[j].add( fxj );
+
+                double bulgarian_const = 14.0;
+                efpos [i].add( fxi * bulgarian_const) ;
+                efpos [j].add( fxj * bulgarian_const) ;
                 efsize[i]+= fsi*cij;
                 efsize[j]+= fsj*cij;
                 //efcoef[i]+= Ekij*cj;
@@ -860,7 +866,7 @@ class CLCFGO{ public:
         int nrho = onq[io];
         int nV   = onq[jo];
         double Ecoul=0;
-        //printf( "nV %i \n", nV );
+        printf( "CoulombOrbPair[%i,%i] nV %i \n", io, jo, nV );
         for(int i=i0; i<i0+nV; i++){
             Vec3d  pi = rhoP[i];
             double qi = rhoQ[i];
@@ -913,10 +919,15 @@ class CLCFGO{ public:
             for(int jo=0; jo<io; jo++){
                 Vec3d dop = opos[jo] - opi;
                 double r2 = dop.norm2();
+                printf( "evalElectrostatICoulomb[%i,%i]  %g <? %g \n", io, jo, r2,RcutOrb2 );
+
+                E += CoulombOrbPair( io, jo );
+
+                /*
                 if( r2<RcutOrb2 ){
                     int j0 = getRhoOffset(jo);
                     // ToDo : nrho,nV may vary
-                    CoulombOrbPair( io, jo );
+                    E+= CoulombOrbPair( io, jo );
                 }else{
                     double ir2 = 1/(r2+r2safe);
                     double ir  = sqrt(ir2);
@@ -926,6 +937,7 @@ class CLCFGO{ public:
                       + dop.dot(dipi) + dop.dot(dipj) *ir*ir2  // diple-charge
                       + dipi.dot(dipj);                        // dipole-dipole
                 }
+                */
             }
         }
         return E;
@@ -1008,7 +1020,9 @@ class CLCFGO{ public:
     double eval(){
         double E=0;
         projectOrbs();
+        //E += evalPauli();
         E += evalElectrostatICoulomb();
+        for(int i=0; i<nOrb; i++) assembleOrbForces(i);
         return E;
     }
 
