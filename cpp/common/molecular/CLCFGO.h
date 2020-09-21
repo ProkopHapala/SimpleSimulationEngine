@@ -313,145 +313,6 @@ class CLCFGO{ public:
         }
     }
 
-    void toRho( int i, int j, int ij ){
-        /// NOTE : this function is mostly for debugging of  projectOrb()
-        Vec3d  pi  = epos [i];
-        double ci  = ecoef[i];
-        double si  = esize[i];
-        Vec3d  pj  = epos [j];
-        double cj  = ecoef[j];
-        double sj  = esize[j];
-
-        Vec3d Rij = pj-pi;
-        double r2 = Rij.norm2();
-
-        //double dSr, dSsi, dSsj;
-        //const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
-        //double Sij_  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
-
-        // ToDo : we should not need   getOverlapSGauss,    Gauss::product3D_s  should calculate Sij
-
-        Vec3d  pij;
-        double sij;
-        //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
-        double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
-        double cij = ci *cj;
-        //printf(  "ci*cj %g ci %g cj %g \n", cij, ci, cj );
-        double qij = Sij*cij*2; // TODO CHECK: should there by realy coefficeint 2.0 ?  .... test by grid !
-        //double qij = Sij;
-        //double qij = Sij*cij*4.85;
-        //double qij = Sij_*cij*4;
-        //double qij = Cij*cij*2;
-        rhoQ[ij] = qij;
-        rhoP[ij] = pij;
-        rhoS[ij] = sij;
-    }
-
-    //Vec3d fromRho( int i, int j, int ij ){
-    void fromRho( int i, int j, int ij, double& aij, double& dCsi, double& dCsj, Vec3d& dCdp ){
-        /// NOTE : this function is mostly for debugging of  assembleOrbForces()
-
-        Vec3d  pi  = epos [i];
-        double ci  = ecoef[i];
-        double si  = esize[i];
-
-        Vec3d  pj  = epos [j];
-        double cj  = ecoef[j];
-        double sj  = esize[j];
-
-        //printf(  ":ci*cj %g ci %g cj %g \n", ci*cj, ci, cj );
-
-        Vec3d Rij = pj-pi;
-        double r2 = Rij.norm2();
-
-        Vec3d  p;
-        double s;
-        double dSsi,dSsj;
-        Vec3d  dXsi,dXsj;
-        double dXxi,dXxj;
-        //double dCsi,dCsj,dCr;
-        double dCr;
-
-        aij = Gauss::product3D_s_deriv(
-            si,   pi,
-            sj,   pj,
-            s ,   p ,
-            dSsi, dSsj,
-            dXsi, dXsj,
-            dXxi, dXxj,
-            dCsi, dCsj, dCr
-        );
-
-        Vec3d  Fpi = rhofP[ij];
-        double Fqi = rhofQ[ij];
-        double Fsi = rhofS[ij];
-
-        double fsj = Fsi*dSsj*0 + Fpi.dot( dXsj )*0;
-        double fsi = Fsi*dSsi*0 + Fpi.dot( dXsi )*0;
-        Vec3d  fxi = Fpi*dXxi;  // ToDo : dSij/dxi == 0
-        Vec3d  fxj = Fpi*dXxj;  //    dXxi == 0.5
-
-
-        //fsi = ci*cj * ( fsi*aij + E*dCr );
-
-
-
-        //fxi = ((Vec3d){1,1,1}) * dXxi ;
-
-        //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
-
-        // --- Derivatives ( i.e. Forces )
-        printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
-        efpos [i].add( fxi );
-        efpos [j].add( fxj );
-        efsize[i] += fsi*aij*0;
-        efsize[j] += fsj*aij*0;
-
-        //dCsi*=-0.42;
-        //dCsj*=-0.42;
-        dCdp = Rij*(-2*dCr*ci*cj);
-        //return dCsi;
-        //return Rij*(-2*dCr*ci*cj);
-        //return dCr;
-    }
-
-    double CoublombElement( int i, int j ){
-
-        Vec3d  pi = rhoP[i];
-        double qi = rhoQ[i];
-        double si = rhoS[i];
-
-        Vec3d  pj = rhoP[j];
-        double qj = rhoQ[j];
-        double sj = rhoS[j];
-
-        double qij = qi*qj;
-
-        Vec3d Rij = pj-pi;
-        double r2 = Rij.norm2();
-
-        double r    = sqrt(r2 + R2SAFE);
-        double s2   = si*si + sj*sj;
-        double s    = sqrt(s2);
-
-        double fr,fs;
-        //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
-
-        double E  = Gauss::Coulomb( r, s*2, fr, fs );
-
-        fr *= qij;
-        fs *= qij*4;
-
-        Vec3d fij = Rij*(-fr);
-        rhofP[i].add(fij);   rhofP[j].sub(fij);
-        rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
-        rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
-        rhoEQ[i] += E; // Coulombic energy per given density could (due to other density clouds)
-
-        return E;
-    }
-
-
     //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
     double projectOrb(int io, Vec3d& dip, bool bNormalize ){
         int i0    = getOrbOffset(io);
@@ -705,8 +566,9 @@ class CLCFGO{ public:
 
                 //printf( "i,j %i,%i : %g \n", i, j, p.x );
 
+                //   line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*line_dQi_ana->ys[i];
                 double fsj = Fsi*dSsj + Fpi.dot( dXsj );
-                double fsi = Fsi*dSsj + Fpi.dot( dXsj );
+                double fsi = Fsi*dSsi + Fpi.dot( dXsi );
                 Vec3d  fxi = Fpi*dXxi;
                 Vec3d  fxj = Fpi*dXxj;
 
@@ -859,6 +721,174 @@ class CLCFGO{ public:
         return Srho;
     }
 
+
+    void toRho( int i, int j, int ij ){
+        /// NOTE : this function is mostly for debugging of  projectOrb()
+        Vec3d  pi  = epos [i];
+        double ci  = ecoef[i];
+        double si  = esize[i];
+        Vec3d  pj  = epos [j];
+        double cj  = ecoef[j];
+        double sj  = esize[j];
+
+        Vec3d Rij = pj-pi;
+        double r2 = Rij.norm2();
+
+        //double dSr, dSsi, dSsj;
+        //const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
+        //double Sij_  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
+
+        // ToDo : we should not need   getOverlapSGauss,    Gauss::product3D_s  should calculate Sij
+
+        Vec3d  pij;
+        double sij;
+        //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+        double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
+        double cij = ci *cj;
+        //printf(  "ci*cj %g ci %g cj %g \n", cij, ci, cj );
+        double qij = Sij*cij*2; // TODO CHECK: should there by realy coefficeint 2.0 ?  .... test by grid !
+        //double qij = Sij;
+        //double qij = Sij*cij*4.85;
+        //double qij = Sij_*cij*4;
+        //double qij = Cij*cij*2;
+        rhoQ[ij] = qij;
+        rhoP[ij] = pij;
+        rhoS[ij] = sij;
+    }
+
+    //Vec3d fromRho( int i, int j, int ij ){
+    void fromRho( int i, int j, int ij, double& aij, double& dCsi, double& dCsj, Vec3d& dCdp ){
+        /// NOTE : this function is mostly for debugging of  assembleOrbForces()
+
+        Vec3d  pi  = epos [i];
+        double ci  = ecoef[i];
+        double si  = esize[i];
+
+        Vec3d  pj  = epos [j];
+        double cj  = ecoef[j];
+        double sj  = esize[j];
+
+        //printf(  ":ci*cj %g ci %g cj %g \n", ci*cj, ci, cj );
+
+        Vec3d Rij = pj-pi;
+        double r2 = Rij.norm2();
+
+        Vec3d  p;
+        double s;
+        double dSsi,dSsj;
+        Vec3d  dXsi,dXsj;
+        double dXxi,dXxj;
+        //double dCsi,dCsj,dCr;
+        double dCr;
+
+        aij = Gauss::product3D_s_deriv(
+            si,   pi,
+            sj,   pj,
+            s ,   p ,
+            dSsi, dSsj,
+            dXsi, dXsj,
+            dXxi, dXxj,
+            dCsi, dCsj, dCr
+        );
+
+        Vec3d  Fpi = rhofP[ij];
+        double Fqi = rhofQ[ij];
+        double Fsi = rhofS[ij];
+
+        double fsj = Fsi*dSsj*0 + Fpi.dot( dXsj )*0;
+        double fsi = Fsi*dSsi*0 + Fpi.dot( dXsi )*0;
+        Vec3d  fxi = Fpi*dXxi;  // ToDo : dSij/dxi == 0
+        Vec3d  fxj = Fpi*dXxj;  //    dXxi == 0.5
+
+
+        //fsi = ci*cj * ( fsi*aij + E*dCr );
+
+
+
+        //fxi = ((Vec3d){1,1,1}) * dXxi ;
+
+        //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
+
+        // --- Derivatives ( i.e. Forces )
+        printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
+        efpos [i].add( fxi );
+        efpos [j].add( fxj );
+        efsize[i] += fsi*aij*0;
+        efsize[j] += fsj*aij*0;
+
+        //dCsi*=-0.42;
+        //dCsj*=-0.42;
+        dCdp = Rij*(-2*dCr*ci*cj);
+        //return dCsi;
+        //return Rij*(-2*dCr*ci*cj);
+        //return dCr;
+    }
+
+
+    void assembleOrbForces_fromRho(int io ){
+        // NOTE : This is less efficient but more mocular version of assembleOrbForces which use fromRho function per each element
+        //        It is used for debuging since it is more modular, but after everything works original assembleOrbForces should be prefered
+        //   line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*line_dQi_ana->ys[i];
+        //   Fana              = efpos                + EK*dQdp; ..... TODO
+        int i0    = getOrbOffset(io);
+        int irho0 = getRhoOffset(io);
+        Vec3d*   fPs =rhofP+irho0;
+        double*  fQs =rhofQ+irho0;
+        double*  fSs =rhofS+irho0;
+        int ii=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            ii++;
+            for(int j=i0; j<i; j++){
+                double aij;
+                double dCsi;
+                double dCsj;
+                Vec3d  dQdp;
+                fromRho( i, j, ii, aij, dCsi, dCsj, dQdp );
+
+                // ToDo: ad dQdp    //   Fana              = efpos                + EK*dQdp; ..... TODO
+                // We need to copy EK from somewhere
+                //dQdp
+                ii++;
+            }
+        }
+    }
+
+    double CoublombElement( int i, int j ){
+
+        Vec3d  pi = rhoP[i];
+        double qi = rhoQ[i];
+        double si = rhoS[i];
+
+        Vec3d  pj = rhoP[j];
+        double qj = rhoQ[j];
+        double sj = rhoS[j];
+
+        double qij = qi*qj;
+
+        Vec3d Rij = pj-pi;
+        double r2 = Rij.norm2();
+
+        double r    = sqrt(r2 + R2SAFE);
+        double s2   = si*si + sj*sj;
+        double s    = sqrt(s2);
+
+        double fr,fs;
+        //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
+
+        double E  = Gauss::Coulomb( r, s*2, fr, fs );
+
+        fr *= qij;
+        fs *= qij*4;
+
+        Vec3d fij = Rij*(-fr);
+        rhofP[i].add(fij);   rhofP[j].sub(fij);
+        rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
+        rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
+        rhoEQ[i] += E; // Coulombic energy per given density could (due to other density clouds)
+
+        return E;
+    }
+
     double CoulombOrbPair( int io, int jo ){
         /// Calculate Elecrostatic Energy&Force for projected density of orbitas @io and @jo
         int i0 = getRhoOffset(io);
@@ -886,27 +916,49 @@ class CLCFGO{ public:
 
                 double qij = qi*qj;
                 double fr,fs;
-                double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
+                //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
+                //fs*=4;
 
-                printf(  " [%i,%i] q %g r %g E %g \n", i, j, qij, r, Eqq );
+                double E  = Gauss::Coulomb( r, s*2, fr, fs );
 
-                fs*=4;
+                //printf(  " [%i,%i] q %g r %g E %g \n", i, j, qij, r, Eqq );
+
+                fr *= qij;
+                fs *= qij*4;
+
                 // see    InteractionsGauss.h :: addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, double qq ){
 
                 // --- Derivatives (Forces)
                 Vec3d fij = Rij*(-fr);
                 rhofP[i].add(fij);   rhofP[j].sub(fij);
                 rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
-                rhofQ[i] += Eqq/qi;  rhofQ[j] += Eqq/qj; // ToDo : need to be made more stable ... different (qi,qj)
+                rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
+                rhoEQ[i] += E; // Coulombic energy per given density could (due to other density clouds)
 
                 //printf( "[%i,%i] E %g r %g sij %g(%g,%g) q %g(%g,%g) \n", i,j,  Eqq , r, s,si,sj, qi*qj,qi,qj );
-                Ecoul      += Eqq;
+                Ecoul      += E*qi*qj;
             }
         }
         //printf( " Ecoul %g \n", Ecoul );
         //printf( "CoulombOrbPair Eorb %g \n", Ecoul );
         return Ecoul;
     }
+
+/*
+
+### Coulomb Force Derivatives
+
+        evalElectrostatICoulomb();
+        for(int i=0; i<nOrb; i++) assembleOrbForces(i);
+
+   Problem is derivative of Q
+     qi = Sab(ra-rb) * Ca * Cb
+     qj = Scd(rc-rd) * Cc * Cd                   ... where Ca,Cb,Cc,Cd are expansion coeficients in given basis and S is overlap integral for given pair of basis functions
+   EQij(r) = qi(ra,rb) * qj(rc,rd) * Kij(ri,rj)  ... where qi,qj are charges in some overlap cloud and Kij is Coulomb Matrix kernel between the two clouds
+   Force calculated by derivatives as:
+     FQ_xa = dEQ/dxa =  (qi*qj) * (dKij/ri)/(dri/dxa) + ( Kij*qj ) * (dqi/dxa)
+
+*/
 
     double evalElectrostatICoulomb( ){
         /// Calculate detailed short-range electrostatICoulomb
@@ -1022,7 +1074,8 @@ class CLCFGO{ public:
         projectOrbs();
         //E += evalPauli();
         E += evalElectrostatICoulomb();
-        for(int i=0; i<nOrb; i++) assembleOrbForces(i);
+        //for(int i=0; i<nOrb; i++) assembleOrbForces(i);
+        for(int i=0; i<nOrb; i++) assembleOrbForces_fromRho(i); // DEBUG
         return E;
     }
 

@@ -134,6 +134,26 @@ void testDerivs_Coulomb( int n, double x0, double dx, CLCFGO& solver, Plot2D& pl
 
 
 
+
+/*
+
+
+### Coulomb Force Derivatives
+
+        evalElectrostatICoulomb();
+        for(int i=0; i<nOrb; i++) assembleOrbForces(i);
+
+   Problem is derivative of Q
+     qi = Sab(ra-rb) * Ca * Cb
+     qj = Scd(rc-rd) * Cc * Cd                   ... where Ca,Cb,Cc,Cd are expansion coeficients in given basis and S is overlap integral for given pair of basis functions
+   EQij(r) = qi(ra,rb) * qj(rc,rd) * Kij(ri,rj)  ... where qi,qj are charges in some overlap cloud and Kij is Coulomb Matrix kernel between the two clouds
+   Force calculated by derivatives as:
+     FQ_xa = dEQ/dxa =  (qi*qj) * (dKij/ri)/(dri/dxa) + ( Kij*qj ) * (dqi/dxa)
+
+
+*/
+
+
 void testDerivs_Total( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1 ){
     DataLine2D* line_E    = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
     DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
@@ -147,10 +167,14 @@ void testDerivs_Total( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot
         double xc = solver.rhoP[2].x; //line_Qc->ys[i] = xc;
         //double E  = solver.CoulombOrbPair( 0, 1 );
         double E  = solver.eval();
+
         line_Fana->ys[i]= solver.efpos[0].x;
         line_E->ys[i]   = E;
+
+        printf( "testDerivs_Total i[%i] x %g E %g \n", i, x, E );
         if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
     }
+    for(int i=0;i<n;i++){ line_E->ys[i]   -= line_E->ys[n-1]; };
 }
 
 
@@ -730,8 +754,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
 
     //testDerivs_Coulomb( 30, 0.0, 0.2, solver, plot1 );
-    //testDerivs_Coulomb_model  ( 30, 0.0, 0.1, solver, plot1 ); // Position force
-    //testDerivs_Coulomb_model_S( 30, 0.0, 0.1, solver, plot1 );   // Size force
+    //testDerivs_Coulomb_model  ( 30, 0.0, 0.1, solver, plot1 );    // Position force
+    //testDerivs_Coulomb_model_S( 30, 0.0, 0.1, solver, plot1 );  // Size force
 
     testDerivs_Total( 30, 0.0, 0.1, solver, plot1 );
 
