@@ -794,31 +794,32 @@ class CLCFGO{ public:
         Vec3d  Fpi = rhofP[ij];
         double Fqi = rhofQ[ij];
         double Fsi = rhofS[ij];
+        double Eqi = rhoEQ[ij];
 
         double fsj = Fsi*dSsj*0 + Fpi.dot( dXsj )*0;
         double fsi = Fsi*dSsi*0 + Fpi.dot( dXsi )*0;
         Vec3d  fxi = Fpi*dXxi;  // ToDo : dSij/dxi == 0
-        Vec3d  fxj = Fpi*dXxj;  //    dXxi == 0.5
-
+        Vec3d  fxj = Fpi*dXxj;  //            dXxi == 0.5
 
         //fsi = ci*cj * ( fsi*aij + E*dCr );
-
-
-
         //fxi = ((Vec3d){1,1,1}) * dXxi ;
 
         //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
 
+        dCdp = Rij*(-2*dCr*ci*cj);
+
         // --- Derivatives ( i.e. Forces )
-        printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
-        efpos [i].add( fxi );
-        efpos [j].add( fxj );
+        //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
+
+        printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
+        efpos [i].add( fxi + dCdp*Eqi* +0.25 ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
+        efpos [j].add( fxj + dCdp*Eqi* -0.25 );
         efsize[i] += fsi*aij*0;
         efsize[j] += fsj*aij*0;
 
         //dCsi*=-0.42;
         //dCsj*=-0.42;
-        dCdp = Rij*(-2*dCr*ci*cj);
+
         //return dCsi;
         //return Rij*(-2*dCr*ci*cj);
         //return dCr;
@@ -832,10 +833,7 @@ class CLCFGO{ public:
         //   Fana              = efpos                + EK*dQdp; ..... TODO
         int i0    = getOrbOffset(io);
         int irho0 = getRhoOffset(io);
-        Vec3d*   fPs =rhofP+irho0;
-        double*  fQs =rhofQ+irho0;
-        double*  fSs =rhofS+irho0;
-        int ii=0;
+        int ii    = irho0;
         for(int i=i0; i<i0+perOrb; i++){
             ii++;
             for(int j=i0; j<i; j++){
@@ -843,14 +841,26 @@ class CLCFGO{ public:
                 double dCsi;
                 double dCsj;
                 Vec3d  dQdp;
+                printf( "assembleOrbForces_fromRho[%i,%i][%i] \n", i, j, ii  );
                 fromRho( i, j, ii, aij, dCsi, dCsj, dQdp );
-
                 // ToDo: ad dQdp    //   Fana              = efpos                + EK*dQdp; ..... TODO
                 // We need to copy EK from somewhere
                 //dQdp
                 ii++;
             }
         }
+    }
+
+    void clearAuxDens(){
+        // We do not need to clear this, it is set fully in projection
+        //for(int i=0; i<nQtot; i++){ rhoP[i] = 0; };
+        //for(int i=0; i<nQtot; i++){ rhoQ[i] = 0; };
+        //for(int i=0; i<nQtot; i++){ rhoS[i] = 0; };
+        // We need only clear forces which are assembled
+        for(int i=0; i<nQtot; i++){ rhofP[i] = Vec3dZero; };
+        for(int i=0; i<nQtot; i++){ rhofQ[i] = 0; };
+        for(int i=0; i<nQtot; i++){ rhofS[i] = 0; };
+        for(int i=0; i<nQtot; i++){ rhoEQ[i] = 0; };
     }
 
     double CoublombElement( int i, int j ){
@@ -884,7 +894,9 @@ class CLCFGO{ public:
         rhofP[i].add(fij);   rhofP[j].sub(fij);
         rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
         rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
-        rhoEQ[i] += E; // Coulombic energy per given density could (due to other density clouds)
+        rhoEQ[i] += E;       rhoEQ[j] += E;    // Coulombic energy per given density could (due to other density clouds)
+
+        printf( "CoublombElement[%i,%i] E %g rhoEQij %g %g \n", i, j, E, rhoEQ[i], rhoEQ[j] );
 
         return E;
     }
@@ -933,7 +945,9 @@ class CLCFGO{ public:
                 rhofP[i].add(fij);   rhofP[j].sub(fij);
                 rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
-                rhoEQ[i] += E; // Coulombic energy per given density could (due to other density clouds)
+                rhoEQ[i] += E;       rhoEQ[j] += E;// Coulombic energy per given density could (due to other density clouds)
+
+                printf( "CoulombOrbPair[%i,%i] E %g rhoEQij %g %g \n", i, j, E, rhoEQ[i], rhoEQ[j] );
 
                 //printf( "[%i,%i] E %g r %g sij %g(%g,%g) q %g(%g,%g) \n", i,j,  Eqq , r, s,si,sj, qi*qj,qi,qj );
                 Ecoul      += E*qi*qj;
@@ -1071,6 +1085,7 @@ class CLCFGO{ public:
 
     double eval(){
         double E=0;
+        clearAuxDens();
         projectOrbs();
         //E += evalPauli();
         E += evalElectrostatICoulomb();

@@ -174,7 +174,7 @@ void testDerivs_Total( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot
         printf( "testDerivs_Total i[%i] x %g E %g \n", i, x, E );
         if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
     }
-    for(int i=0;i<n;i++){ line_E->ys[i]   -= line_E->ys[n-1]; };
+    //for(int i=0;i<n;i++){ line_E->ys[i]   -= line_E->ys[n-1]; };
 }
 
 
