@@ -761,10 +761,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
 
     //testDerivs_Coulomb( 30, 0.0, 0.2, solver, plot1 );
-    testDerivs_Coulomb_model  ( 30, 0.0, 0.1, solver, plot1 );    // Position force
+    //testDerivs_Coulomb_model  ( 30, 0.0, 0.1, solver, plot1 );    // Position force
     //testDerivs_Coulomb_model_S( 30, 0.0, 0.1, solver, plot1 );  // Size force
 
-    //testDerivs_Total( 30, 0.0, 0.1, solver, plot1 );
+    testDerivs_Total( 30, 0.0, 0.1, solver, plot1 );
 
 
     /*

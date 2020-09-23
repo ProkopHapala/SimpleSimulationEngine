@@ -848,13 +848,16 @@ class CLCFGO{ public:
         int i0    = getOrbOffset(io);
         int irho0 = getRhoOffset(io);
         int ii    = irho0;
+        double aij;
+        double dCsi;
+        double dCsj;
+        Vec3d  dQdp;
         for(int i=i0; i<i0+perOrb; i++){
             ii++;
+            // TODO : What to do with diagonal elements ? That is diagonal electron could rho_ii ( It should not change upon moving ? Or should only due to renormalization ? )
+            //        Is the problem caused by renormalization ????????
+            fromRho( i, i, ii, aij, dCsi, dCsj, dQdp );
             for(int j=i0; j<i; j++){
-                double aij;
-                double dCsi;
-                double dCsj;
-                Vec3d  dQdp;
                 printf( "assembleOrbForces_fromRho[%i,%i][%i] \n", i, j, ii  );
                 fromRho( i, j, ii, aij, dCsi, dCsj, dQdp );
                 // ToDo: ad dQdp    //   Fana              = efpos                + EK*dQdp; ..... TODO
