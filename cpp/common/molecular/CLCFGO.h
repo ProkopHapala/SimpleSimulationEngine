@@ -172,6 +172,18 @@ class CLCFGO{ public:
         return r2<RcutOrb2;
     }
 
+    void clearAuxDens(){
+        // We do not need to clear this, it is set fully in projection
+        //for(int i=0; i<nQtot; i++){ rhoP[i] = 0; };
+        //for(int i=0; i<nQtot; i++){ rhoQ[i] = 0; };
+        //for(int i=0; i<nQtot; i++){ rhoS[i] = 0; };
+        // We need only clear forces which are assembled
+        for(int i=0; i<nQtot; i++){ rhofP[i] = Vec3dZero; };
+        for(int i=0; i<nQtot; i++){ rhofQ[i] = 0; };
+        for(int i=0; i<nQtot; i++){ rhofS[i] = 0; };
+        for(int i=0; i<nQtot; i++){ rhoEQ[i] = 0; };
+    }
+
     inline void cleanForces(){
         for(int i=0; i<natom; i++){
             aforce[i] = Vec3dZero;
@@ -181,11 +193,13 @@ class CLCFGO{ public:
             efsize[i] = 0;
             efcoef[i] = 0;
         }
-        for(int i=0; i<nQtot; i++){
-            rhofP[i] = Vec3dZero;
-            rhofQ[i] = 0;
-            rhofS[i] = 0;
-        }
+
+        //for(int i=0; i<nQtot; i++){
+        //    rhofP[i] = Vec3dZero;
+        //    rhofQ[i] = 0;
+        //    rhofS[i] = 0;
+        //}
+        clearAuxDens();
     }
 
     //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
@@ -812,8 +826,8 @@ class CLCFGO{ public:
         //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
 
         printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
-        efpos [i].add( fxi + dCdp*Eqi* +0.25 ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
-        efpos [j].add( fxj + dCdp*Eqi* -0.25 );
+        efpos [i].add( fxi*0.5 + dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
+        efpos [j].add( fxj*0.5 + dCdp*Eqi );
         efsize[i] += fsi*aij*0;
         efsize[j] += fsj*aij*0;
 
@@ -849,18 +863,6 @@ class CLCFGO{ public:
                 ii++;
             }
         }
-    }
-
-    void clearAuxDens(){
-        // We do not need to clear this, it is set fully in projection
-        //for(int i=0; i<nQtot; i++){ rhoP[i] = 0; };
-        //for(int i=0; i<nQtot; i++){ rhoQ[i] = 0; };
-        //for(int i=0; i<nQtot; i++){ rhoS[i] = 0; };
-        // We need only clear forces which are assembled
-        for(int i=0; i<nQtot; i++){ rhofP[i] = Vec3dZero; };
-        for(int i=0; i<nQtot; i++){ rhofQ[i] = 0; };
-        for(int i=0; i<nQtot; i++){ rhofS[i] = 0; };
-        for(int i=0; i<nQtot; i++){ rhoEQ[i] = 0; };
     }
 
     double CoublombElement( int i, int j ){

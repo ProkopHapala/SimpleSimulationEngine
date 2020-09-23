@@ -211,6 +211,7 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
 
     //int ie=0,je=1;
     for(int i=0; i<n; i++){
+        printf( "-------------- %i | testDerivs_Coulomb_model \n", i );
         solver.cleanForces();
         double x = x0 + i*dx;
         solver.epos[0].x=x;    // set position of  wf basis function   xhi[0]
@@ -258,7 +259,13 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
 
         //solver.fromRho(2,3,1);
         line_Fqana->ys[i] = 0.5*solver.efpos[0].x/line_Qi->ys[i];  // This is derivative of force for Q = const. (  dQ/dx =0 )
-        line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*line_dQi_ana->ys[i];
+        //line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*line_dQi_ana->ys[i];    // This is used with fromRho() not modified
+        //line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*dQdp.x;                   // This is used with fromRho() not modified
+        line_Fana->ys[i]  = solver.efpos[0].x;                             // This is used when fromRho() is  modified
+        printf( "testDerivs_Coulomb_model E_ %g dQdx %g \n", E_, dQdp.x );
+
+        // TODO :  we should first make work this "Fana" with fromRho()
+        //         Why is there coef 0.5 ?
 
 
         line_E->ys[i]   = E; //func( line_E->xs[i], line_Fana->ys[i] );
@@ -754,10 +761,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
 
     //testDerivs_Coulomb( 30, 0.0, 0.2, solver, plot1 );
-    //testDerivs_Coulomb_model  ( 30, 0.0, 0.1, solver, plot1 );    // Position force
+    testDerivs_Coulomb_model  ( 30, 0.0, 0.1, solver, plot1 );    // Position force
     //testDerivs_Coulomb_model_S( 30, 0.0, 0.1, solver, plot1 );  // Size force
 
-    testDerivs_Total( 30, 0.0, 0.1, solver, plot1 );
+    //testDerivs_Total( 30, 0.0, 0.1, solver, plot1 );
 
 
     /*
