@@ -5,6 +5,9 @@
 #include "AppSDL2OGL.h"
 
 
+#include "Fourier.h"
+
+
 
 /*
 
@@ -36,6 +39,10 @@ static const char *music_file_name = "02-Lazenca-SaveUs.mp3";
 
 char   post_state_buff[1024];
 Sint16 stream[2][BUFFER*2*2];
+
+double fft_buff[BUFFER*2]; // complex numbers
+
+
 int len=BUFFER*2*2, done=0, need_refresh=0, bits=0, which=0, sample_size=0, position=0, rate=0;
 
 int    audio_rate,audio_channels;
@@ -85,11 +92,29 @@ void redraw_waveform(){
 	need_refresh= 0;
 	// draw the wav from the saved stream buffer
 	//for(x=0;x<WIDTH*2;x++){
+
+	/*
 	for(x=0;x<BUFFER;x++){
         const int  X=x>>1;
 		int y = Y(buf[x]);
 		glColor3f(1.,0.,0.); Draw2D::drawLine( {X,0}, {X,y} );
 		//glColor3f(0.,0.,1.); Draw2D::drawLine( {X,0}, {X,h1} );
+	}
+	*/
+
+	for(int i=0;i<BUFFER;i++){
+        fft_buff[2*i  ]  = Y(buf[i]);  // Re[i]
+        fft_buff[2*i+1]  = 0;          // Im[i]
+	}
+
+	FFT( fft_buff, BUFFER, 1 );
+
+	float sc = 0.2;
+	for(int i=0;i<BUFFER;i++){
+        double yr = fft_buff[2*i];
+        double yi = fft_buff[2*i];
+		glColor3f(1.,0.,0.); Draw2D::drawLine( {i    ,0}, {i    ,yr*sc} );
+		glColor3f(0.,0.,1.); Draw2D::drawLine( {i+0.5,0}, {i+0.5,yi*sc} );
 	}
 
 }
