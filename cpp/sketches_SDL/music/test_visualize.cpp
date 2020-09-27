@@ -25,6 +25,7 @@ https://www.libsdl.org/projects/SDL_mixer/docs/SDL_mixer_frame.html
 
 //static const char *MY_COOL_MP3 = "cool_tunes.mp3";
 static const char *music_file_name = "02-Lazenca-SaveUs.mp3";
+//static const char *music_file_name = "Yanni - Reflections Of Passion.mp3";
 
 
 
@@ -40,7 +41,11 @@ static const char *music_file_name = "02-Lazenca-SaveUs.mp3";
 char   post_state_buff[1024];
 Sint16 stream[2][BUFFER*2*2];
 
-double fft_buff[BUFFER*2]; // complex numbers
+double fft_buff[BUFFER*2+32]; // complex numbers
+const int nbinHist  = 32;
+double    powerHist   [nbinHist];
+double    powerHistTop[nbinHist];
+double    powerHistVel[nbinHist];
 
 
 int len=BUFFER*2*2, done=0, need_refresh=0, bits=0, which=0, sample_size=0, position=0, rate=0;
@@ -85,6 +90,36 @@ void mixer_info(){
 }
 
 
+
+void spectrumHist( double nbuf, double* buf, int nbin, double* out){
+    for(int i=0; i<nbin; i++){ out[i] = 0; }
+    double dx = 2*nbin/nbuf;
+    for(int i=0; i<nbuf/2; i++){
+        int i1=i*2;
+        int i2=2*nbuf-i1;
+        double yr1=buf[i1  ];
+        double yi1=buf[i1+1];
+        double yr2=buf[i2  ];
+        double yi2=buf[i2+1];
+        double p1 = yr1*yr1 + yi1*yi1;
+        double p2 = yr2*yr2 + yi2*yi2;
+        int j = (int)(i*dx);
+        out[j] += p1+p2;
+    }
+    for(int i=0; i<nbin; i++){ out[i] = sqrt( out[i] ); }
+}
+
+void spectrumHistDynamics( double da, int nbin, double* now, double* old, double* vel ){
+    for(int i=0; i<nbin; i++){
+        double y = now[i];
+        //printf( "%g %g \n", y, old[i] );
+        if(y<old[i]){ vel[i]-=da; old[i]+=vel[i]; }
+        if(y>old[i]){ old[i]=y;   vel[i]=0;        }
+    }
+}
+
+
+
 void redraw_waveform(){
 	int     x;
 	Sint16 *buf;
@@ -102,19 +137,62 @@ void redraw_waveform(){
 	}
 	*/
 
-	for(int i=0;i<BUFFER;i++){
+	for(int i=0;i<BUFFER+32;i++){
         fft_buff[2*i  ]  = Y(buf[i]);  // Re[i]
-        fft_buff[2*i+1]  = 0;          // Im[i]
+        //fft_buff[2*i  ] = sin(2*200*M_PI*i/((double)BUFFER))*0 + sin(2*500*M_PI*i/((double)BUFFER)) + 1;
+        //fft_buff[2*i  ] = 1;
+        fft_buff[2*i+1] = 0;          // Im[i]
 	}
+
+	/*
+	glColor3f(1.,1.,1.); Draw2D::drawLine( {0,0}, {BUFFER,0} );
+	glBegin(GL_LINE_STRIP);
+	glColor3f(0.,0.,1.);
+    for(int i=0;i<BUFFER;i++){
+        double y = fft_buff[2*i  ];
+        //Draw2D::drawLine( {X,0}, {X,y} );
+        glVertex2f(i,y);
+	}
+	glEnd();
+
+    glBegin(GL_LINE_STRIP);
+    glColor3f(1.,0.,0.);
+    for(int i=0;i<BUFFER;i++){
+        double y = fft_buff[2*i+1];
+		//Draw2D::drawLine( {X,0}, {X,y} );
+		glVertex2f(i,y);
+	}
+	glEnd();
+    */
 
 	FFT( fft_buff, BUFFER, 1 );
 
+    /*
 	float sc = 0.2;
 	for(int i=0;i<BUFFER;i++){
-        double yr = fft_buff[2*i];
-        double yi = fft_buff[2*i];
+        double yr = fft_buff[2*i  ];
+        double yi = fft_buff[2*i+1];
+		//glColor3f(1.,0.,0.); Draw2D::drawLine( {i    ,0}, {i    ,yr*sc} );
+		//glColor3f(0.,0.,1.); Draw2D::drawLine( {i+0.5,0}, {i+0.5,yi*sc} );
+		glColor3f(0.,1.,0.); Draw2D::drawLine( {i+0.5,0}, {i+0.5,sqrt(yr*yr + yi*yi)*sc} );
+	}
+    */
+
+	spectrumHist( BUFFER, fft_buff, nbinHist, powerHist );
+	spectrumHistDynamics( 5.1, nbinHist, powerHist, powerHistTop, powerHistVel );
+
+	{float sc = 0.002;
+	for(int i=0;i<nbinHist;i++){
+        double yr = powerHist[i];
 		glColor3f(1.,0.,0.); Draw2D::drawLine( {i    ,0}, {i    ,yr*sc} );
-		glColor3f(0.,0.,1.); Draw2D::drawLine( {i+0.5,0}, {i+0.5,yi*sc} );
+	}
+	glBegin(GL_LINE_STRIP);
+    glColor3f(0.,0.,1.);
+    for(int i=0;i<nbinHist;i++){
+        double y = powerHistTop[i];
+		glVertex2f(i,y*sc);
+	}
+	glEnd();
 	}
 
 }
@@ -152,6 +230,12 @@ TestAppCityGen::TestAppCityGen( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL(
     Mix_Music *music = Mix_LoadMUS( music_file_name );
 
     mixer_info();
+
+    for(int i=0; i<nbinHist; i++){ powerHist[i]=0; powerHistTop[i]=0; powerHistVel[i]=0; }
+
+    camStep = 2.0;
+
+
 
     Mix_SetPostMix( postmix, post_state_buff );
     Mix_PlayMusic(music, 1);

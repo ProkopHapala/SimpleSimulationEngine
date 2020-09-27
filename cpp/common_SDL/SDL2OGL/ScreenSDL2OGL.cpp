@@ -172,6 +172,7 @@ void ScreenSDL2OGL::eventHandling( const SDL_Event& event ){
 };
 
 void ScreenSDL2OGL::keyStateHandling( const Uint8 *keys ){
+    //printf( "camStep %g \n", camStep );
     if( keys[ SDL_SCANCODE_LEFT  ] ){ camX0 -= camStep; }
 	if( keys[ SDL_SCANCODE_RIGHT ] ){ camX0 += camStep; }
 	if( keys[ SDL_SCANCODE_UP    ] ){ camY0 += camStep; }
