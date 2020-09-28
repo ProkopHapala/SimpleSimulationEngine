@@ -24,6 +24,7 @@ add_subdirectory (SwordPlay)
 add_subdirectory (MolecularEditor)
 add_subdirectory (MolecularEditor2)
 add_subdirectory (DemoCrat)
+add_subdirectory (MusicVizualizer)
 
 file (GLOB_RECURSE _COMMON_SRCS_     ${COMMON_SRCS}/*.h     ${COMMON_SRCS}/*.cpp     ${COMMON_SRCS}/*.c     )
 file (GLOB_RECURSE _COMMON_SDL_SRCS_ ${COMMON_SDL_SRCS}/*.h ${COMMON_SDL_SRCS}/*.cpp ${COMMON_SDL_SRCS}/*.c )

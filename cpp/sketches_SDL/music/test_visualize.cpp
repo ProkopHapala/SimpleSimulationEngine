@@ -63,6 +63,7 @@ static void postmix( void *udata, Uint8 *_stream, int _len){
 	if(need_refresh) return;
 	// save the stream buffer and indicate that we need a redraw
 	len=_len;
+	// ??? QUESTION ???: which-fliping is there because of stereo ?????
 	memcpy(stream[(which+1)%2],_stream,len>WIDTH*4?WIDTH*4:len);
 	which=(which+1)%2;
 	need_refresh=1;
