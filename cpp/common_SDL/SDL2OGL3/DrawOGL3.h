@@ -73,7 +73,14 @@ class LineMeshBuilder{ public:
 */
 
 
-
+GLMesh* polyLineMesh( int n, float* ps, GLMesh* mesh=NULL ){
+    if(mesh==0) mesh=new GLMesh();
+    //Vec3f *pnor=NULL;
+    //if( bnor ) pnor=&vnor[0];
+    mesh->init( n, 0, 0, ps, 0, NULL, NULL );
+    mesh->draw_mode = GL_LINE_STRIP;
+    return mesh;
+}
 
 
 
@@ -186,6 +193,14 @@ class GLMeshBuilder{ public:
     };
 
     void addLines( int n, int * inds, Vec3f* verts, Vec3f c ){
+        for(int i=0; i<n; i++){
+            int i2=i*2;
+            addLine( verts[inds[i2]], verts[inds[i2+1]], c );
+        }
+    }
+
+
+    void addLineStrip( int n, Vec3f* verts, Vec3f c ){
         for(int i=0; i<n; i++){
             int i2=i*2;
             addLine( verts[inds[i2]], verts[inds[i2+1]], c );

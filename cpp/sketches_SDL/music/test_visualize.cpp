@@ -24,7 +24,7 @@ https://www.libsdl.org/projects/SDL_mixer/docs/SDL_mixer_frame.html
 
 
 //static const char *MY_COOL_MP3 = "cool_tunes.mp3";
-static const char *music_file_name = "02-Lazenca-SaveUs.mp3";
+static const char *music_file_name = "common_resources/02-Lazenca-SaveUs.mp3";
 //static const char *music_file_name = "Yanni - Reflections Of Passion.mp3";
 
 

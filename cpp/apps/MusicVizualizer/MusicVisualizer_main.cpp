@@ -66,7 +66,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 
     Shader *sh1,*shDebug,*shTx;
-    GLMesh *glmesh,*gledges,*msh_normals, *glDebug, *glTxDebug;
+    GLMesh *histMesh, *glmesh,*gledges,*msh_normals, *glDebug, *glTxDebug;
 
 
 	// ==== function declarations
@@ -130,8 +130,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 
     GLMeshBuilder mshbuild;
 
-    Parabola2Mesh( {20,10}, {-1.5,-0.5*M_PI}, {1.0,0}, 2.0, 4.0, 0.0, false, mshbuild );
-    Hyperbola2Mesh( {20,20}, {-1.5,0.0}, {1.0,M_PI}, 1.5, 2.0, 4.0, 0.0, false, mshbuild );
+    Parabola2Mesh ( {20,10}, {-1.5,-0.5*M_PI}, {1.0,0},      2.0, 4.0, 0.0, false, mshbuild );
+    Hyperbola2Mesh( {20,20}, {-1.5,0.0}, {1.0,M_PI},    1.5, 2.0, 4.0, 0.0, false, mshbuild );
 
     //mshbuild.moveSub( 0, {1.0,2.0,3.0} );
     //mshbuild.rotateSub( 0, {0.0,0.0,0.0}, {1.0,0.0,0.0}, M_PI*0.5 );
@@ -162,36 +162,37 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     int result = 0;
     int flags = MIX_INIT_MP3;
 
-    const char *music_file_name = "02-Lazenca-SaveUs.mp3";
+    const char *music_file_name = "common_resources/02-Lazenca-SaveUs.mp3";
     //const char *music_file_name = "Yanni - Reflections Of Passion.mp3";
-    Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 640);
 
+    Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 640);
     if (SDL_Init(SDL_INIT_AUDIO) < 0) {
         printf("Failed to init SDL\n");
         exit(1);
     }
-
     if (flags != (result = Mix_Init(flags ))) {
         printf("Could not initialize mixer (result: %d).\n", result);
         printf("Mix_Init: %s\n", Mix_GetError());
         exit(1);
     }
-
-    //Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 640);
     Mix_Music *music = Mix_LoadMUS( music_file_name );
 
+
+    waveform.realloc( 1024, 16 );
     waveform.mixer_info();
     waveform.clearHist();
 
+    Vec3f ps[3*16];
+    //for(int i=0; i<16; i++){ ps[i].set( i, waveform.hist[i], 0 ); }
+    for(int i=0; i<16; i++){ ps[i].set( sin(i*0.1), cos(i*0.1), 0 ); }
+    //histMesh->draw_mode
+    //polyLineMesh( 16, ps, (float*)histMesh );
+    histMesh = polyLineMesh( 16, (float*)ps );
 
-    //camStep = 2.0;
-
-
-
-    Mix_SetPostMix( postmix_Spectrum,  (void*)&waveform );
+    Mix_SetPostMix( postmix_Spectrum, (void*)&waveform );
     Mix_PlayMusic(music, 1);
 
-
+    //camStep = 2.0;
 };
 
 
@@ -201,49 +202,41 @@ void MusicVisualizerGUI::draw( Camera& cam ){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
 
-    //DEBUG_mesh->clear();
-    /*
-    for(int i=0; i<12; i++){ DEBUG_mesh->addLine(
-        ((Vec3d){randf(),randf(),randf()})+myCraft->pos,
-        ((Vec3d){randf(),randf(),randf()})+myCraft->pos,
-        {randf(),randf(),randf()} );
-    }
-    */
+
+    Vec3f ps[3*16];
+    for(int i=0; i<16; i++){ ps[i].set( i, waveform.hist[i]*0.0001, 0 ); }
+    //for(int i=0; i<16; i++){ ps[i].set( i, sin(frameCount+i), 0 ); }
+    glBindBuffer(GL_ARRAY_BUFFER, histMesh->vpos );
+    glBufferSubData(GL_ARRAY_BUFFER, 0, 3*16*sizeof(float), ps   );
+    waveform.need_refresh = false;
+    //glBufferData( GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW );
+
+
 
     sh1->use();
-    //Mat3f mrot; mrot.setOne();
-
-    //cam.lookAt( myCraft->pos, 20.0 );
     cam.lookAt( (Vec3f){0.0,0.0,0.0}, 20.0 );
 
-    //cam.lookAt( (Vec3d){0.0,0.0,0.0}, 20.0 );
-    //setCamera( *sh1, cam );
 
     setCamera( *sh1, cam );
     sh1->setModelPoseT( Vec3dZero, Mat3dIdentity );
 
 
-    //cam.rot = (Mat3f)myCraft->rotMat;
-    //cam.lookAt( myCraft->pos, 20.0 );
-    //sh1->setModelPose( myCraft->pos, myCraft->rotMat );
-
     int narg;
-    GLuint ucolor = sh1->getUloc("baseColor");
-    glUniform4f( ucolor, 0.0, 0.0, 0.0, 1.0 );
-    glmesh->draw();
-    /*
-    narg = glmesh->preDraw();
-    glmesh->drawRaw(GL_TRIANGLES, (frameCount*9)%glmesh->nInds , glmesh->nInds );
-    glmesh->postDraw( narg );
-    */
+    //GLuint ucolor = sh1->getUloc("baseColor");
+    //glUniform4f( ucolor, 0.0, 0.0, 0.0, 1.0 );
+    //glmesh->draw();
 
-    glUniform4f( ucolor, 1.0, 0.0, 0.0, 1.0 );
-    msh_normals->draw();
-    /*
-    narg = msh_normals->preDraw();
-    msh_normals->drawRaw(GL_LINES, (frameCount*8)%msh_normals->nVerts , msh_normals->nVerts );
-    msh_normals->postDraw( narg );
-    */
+    //narg = glmesh->preDraw();
+    //glmesh->drawRaw(GL_TRIANGLES, (frameCount*9)%glmesh->nInds , glmesh->nInds );
+    //glmesh->postDraw( narg );
+
+    histMesh->draw();
+
+
+    //narg = msh_normals->preDraw();
+    //msh_normals->drawRaw(GL_LINES, (frameCount*8)%msh_normals->nVerts , msh_normals->nVerts );
+    //msh_normals->postDraw( narg );
+
 
     /*
     shDebug->use();
@@ -252,12 +245,11 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     glDebug->draw();
     */
 
-    /*
-    shTx->use();
-    setCamera(*shTx, cam);
+
+    //shTx->use();
+    //setCamera(*shTx, cam);
     //shTx->setModelPoseT( myCraft->pos, myCraft->rotMat );
-    /glTxDebug->draw();
-    */
+    //glTxDebug->draw();
 
     //shTx->setModelPoseT( myCraft->pos, Mat3dIdentity*10.0 );
 

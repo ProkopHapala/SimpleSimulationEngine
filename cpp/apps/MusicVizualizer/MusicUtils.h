@@ -93,15 +93,13 @@ class Spectrum{ public:
 };
 
 
-
-
 static void postmix_Spectrum( void *spec_, Uint8 *_stream, int _len){
 
     Spectrum& spec = *(Spectrum*) spec_;
 
 	spec.position+=_len/spec.sample_size;
 	// fprintf(stderr,"pos=%7.2f seconds \r",position/(float)rate);
-	//printf( "position %i len %i sample_size %i \n", position, _len, sample_size );
+	//printf( "position %i len %i sample_size %i \n", spec.position, _len, spec.sample_size );
 	//return;
 	if(spec.need_refresh) return;
 	// save the stream buffer and indicate that we need a redraw
@@ -111,13 +109,17 @@ static void postmix_Spectrum( void *spec_, Uint8 *_stream, int _len){
 	//memcpy(stream[(which+1)%2],_stream,len>WIDTH*4?WIDTH*4:len);
     //spec.which=(spec.which+1)%2;
 
+    printf( "position %i len %i sample_size %i \n", spec.position, _len, spec.sample_size );
+
 	Sint16* stream = (Sint16*)_stream;
 	//for(int i=0; i<spec.nwave; i++){
+
 	for(int i=0; i<_len; i++){
         spec.wave[i] = (double)stream[i];
 	}
 
 	spec.need_refresh=true;
+
 }
 
 
