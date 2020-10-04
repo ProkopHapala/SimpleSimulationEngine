@@ -12,7 +12,8 @@ class Spectrum{ public:
     int nwave=0;
     int nhist=0;
 
-    double*    wave=0; // complex numbers
+    double*    wave=0;  // complex numbers
+    double*    Fwave=0; // fourier
 
     double*    hist   =0;
     double*    histOld=0;
@@ -31,10 +32,11 @@ class Spectrum{ public:
     void realloc( int nwave_, int nhist_ ){
         nwave=nwave_;
         nhist=nhist_;
-        _realloc( wave,    nwave );
-        _realloc( hist,    nwave );
-        _realloc( histOld, nwave );
-        _realloc( histVel, nwave );
+        _realloc( wave,    nwave   );
+        _realloc( Fwave,   nwave*2 );
+        _realloc( hist,    nwave   );
+        _realloc( histOld, nwave   );
+        _realloc( histVel, nwave   );
     }
 
     void clearHist(){
@@ -66,6 +68,23 @@ class Spectrum{ public:
             if(y<histOld[i]){ histVel[i]-=da; histOld[i]+=histVel[i]; }
             if(y>histOld[i]){ histOld[i]=y;   histVel[i]=0;           }
         }
+    }
+
+    void spectrumHistSmearing( double dt ){
+        for(int i=0; i<nhist; i++){ histOld[i] = histOld[i]*(1-dt) + hist[i]*dt; }
+    }
+
+    void update( double dt){
+        for(int i=0;i<nwave+32;i++){
+            Fwave[2*i  ]  = wave[i];  // Re[i]
+            //fft_buff[2*i  ] = sin(2*200*M_PI*i/((double)BUFFER))*0 + sin(2*500*M_PI*i/((double)BUFFER)) + 1;
+            //fft_buff[2*i  ] = 1;
+            Fwave[2*i+1] = 0;          // Im[i]
+        }
+        FFT( Fwave, nwave, 1 );
+        powerSpectrum(  );
+        spectrumHistDynamics( dt );
+        //spectrumHistSmearing( dt );
     }
 
 
@@ -109,7 +128,7 @@ static void postmix_Spectrum( void *spec_, Uint8 *_stream, int _len){
 	//memcpy(stream[(which+1)%2],_stream,len>WIDTH*4?WIDTH*4:len);
     //spec.which=(spec.which+1)%2;
 
-    printf( "position %i len %i sample_size %i \n", spec.position, _len, spec.sample_size );
+    //printf( "position %i len %i sample_size %i \n", spec.position, _len, spec.sample_size );
 
 	Sint16* stream = (Sint16*)_stream;
 	//for(int i=0; i<spec.nwave; i++){

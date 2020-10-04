@@ -65,8 +65,10 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 	//int fontTex_DEBUG;
 
 
-    Shader *sh1,*shDebug,*shTx;
-    GLMesh *histMesh, *glmesh,*gledges,*msh_normals, *glDebug, *glTxDebug;
+
+
+    Shader *sh1=0,*shDebug=0,*shTx=0,*shJulia=0;
+    GLMesh *histMesh=0, *glmesh=0,*gledges=0,*msh_normals=0, *glDebug=0, *glTxDebug=0;
 
 
 	// ==== function declarations
@@ -96,7 +98,6 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     DEBUG_VIEW_INIT()
 
     //for( ScreenSDL2OGL3* screen: screens ) screen->scenes.push_back( this );
-    printf("DEBUG 3 \n");
 
     shDebug=new Shader();
     //shDebug->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
@@ -108,10 +109,18 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     sh1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
     sh1->getDefaultUniformLocation();
 
+    /*
     shTx=new Shader();
     //sh1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
     shTx->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
     shTx->getDefaultUniformLocation();
+    */
+
+    shJulia=new Shader();
+    //sh1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
+    //shJulia->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
+    shJulia->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/Julia.glslf"   );
+    shJulia->getDefaultUniformLocation();
 
     sh1->use();
     glUniform3f(sh1->getUloc("lightColor"   ), 0.5,0.45,0.4 );
@@ -149,12 +158,12 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     cam.aspect = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
 
 
-    /*
+
     glTxDebug = new GLMesh();
     //DEFAULT_Bilboard_verts, DEFAULT_Bilboard_verts[]
     //glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs);
     glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs_2x2);
-    */
+
 
     //return 0;
 
@@ -182,12 +191,9 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     waveform.mixer_info();
     waveform.clearHist();
 
-    Vec3f ps[3*16];
-    //for(int i=0; i<16; i++){ ps[i].set( i, waveform.hist[i], 0 ); }
-    for(int i=0; i<16; i++){ ps[i].set( sin(i*0.1), cos(i*0.1), 0 ); }
-    //histMesh->draw_mode
-    //polyLineMesh( 16, ps, (float*)histMesh );
-    histMesh = polyLineMesh( 16, (float*)ps );
+    Vec3f ps[3*waveform.nwave];
+    for(int i=0; i<waveform.nwave; i++){ ps[i].set( i*0.1, waveform.wave[i]*0.0001, 0 ); }
+    histMesh = polyLineMesh( waveform.nwave, (float*)ps );
 
     Mix_SetPostMix( postmix_Spectrum, (void*)&waveform );
     Mix_PlayMusic(music, 1);
@@ -203,12 +209,24 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     glEnable(GL_DEPTH_TEST);
 
 
-    Vec3f ps[3*16];
-    for(int i=0; i<16; i++){ ps[i].set( i, waveform.hist[i]*0.0001, 0 ); }
-    //for(int i=0; i<16; i++){ ps[i].set( i, sin(frameCount+i), 0 ); }
-    glBindBuffer(GL_ARRAY_BUFFER, histMesh->vpos );
-    glBufferSubData(GL_ARRAY_BUFFER, 0, 3*16*sizeof(float), ps   );
+    //waveform.spectrumHistSmearing();
+    waveform.update( 5.1 );
     waveform.need_refresh = false;
+
+    printf( "waveform [0,2] %g %g \n", waveform.wave[0], waveform.wave[2] );
+
+    glBindBuffer(GL_ARRAY_BUFFER, histMesh->vpos );
+
+    Vec3f ps[3*waveform.nwave];
+    for(int i=0; i<waveform.nwave; i++){ ps[i].set( i*0.1, waveform.wave[i]*0.0001, 0 ); }
+    glBufferSubData(GL_ARRAY_BUFFER, 0, 3*waveform.nwave*sizeof(float), ps   );
+
+    //Vec3f ps[3*waveform.nhist];
+    //for(int i=0; i<waveform.nhist; i++){ ps[i].set( i, sqrt(waveform.hist[i])*0.001, 0 ); }
+    //glBufferSubData(GL_ARRAY_BUFFER, 0, 3*waveform.nhist*sizeof(float), ps   );
+
+
+
     //glBufferData( GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW );
 
 
@@ -237,24 +255,21 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     //msh_normals->drawRaw(GL_LINES, (frameCount*8)%msh_normals->nVerts , msh_normals->nVerts );
     //msh_normals->postDraw( narg );
 
-
     /*
-    shDebug->use();
-    setCamera( *shDebug, cam );
-    //shDebug->setModelPoseT( myCraft->pos, myCraft->rotMat );
-    glDebug->draw();
+    shTx->use();
+    setCamera(*shTx, cam);
+    shTx->setModelPoseT( Vec3dOne, Mat3dIdentity );
+    glTxDebug->draw();
     */
 
-
-    //shTx->use();
-    //setCamera(*shTx, cam);
-    //shTx->setModelPoseT( myCraft->pos, myCraft->rotMat );
-    //glTxDebug->draw();
-
-    //shTx->setModelPoseT( myCraft->pos, Mat3dIdentity*10.0 );
-
-    //DEBUG_draw(cam,myCraft->pos,myCraft->rotMat);
-    //DEBUG_draw(cam,Vec3dZero,Mat3dIdentity);
+    shJulia->use();
+    //uint locC = shJulia->getUloc("C");
+    shJulia->setUniformVec2f( "Const", {waveform.hist[0]*0.0000001,waveform.hist[waveform.nwave/2]*0.0000001} );
+    //shJulia->setUniformVec2f( "Const", {sin(frameCount*0.02),cos(frameCount*0.01)} );
+    //shJulia->setUniformVec2f( "Const", {-0.3,0.6} );
+    setCamera(*shJulia, cam);
+    shJulia->setModelPoseT( (Vec3d){-4.,-4.,0.0}, Mat3dIdentity*8.0 );
+    glTxDebug->draw();
 
 };
 
