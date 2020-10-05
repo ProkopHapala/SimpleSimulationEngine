@@ -682,14 +682,14 @@ class CLCFGO{ public:
 
 
 
-    void projectOrbs(){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
+    void projectOrbs(bool bNormalize){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
         int nqOrb = perOrb*(perOrb+1)/2;
         int i0 =0;
         int ii0=0;
         for(int io=0; io<nOrb; io++){
             //int i0  = getOrbOffset(jo);
             //oQs[io] =
-            projectOrb( io, odip[io], true );
+            projectOrb( io, odip[io], bNormalize );
             //projectOrb(  io, rhoP+ii0, rhoQ+ii0, rhoS+ii0, odip[io], true );
             //projectOrb(io, ecoefs+i0, erho+irho0, erhoP+irho0, odip[io] );
             ii0+=nqOrb;
@@ -770,8 +770,26 @@ class CLCFGO{ public:
         rhoS[ij] = sij;
     }
 
+
     //Vec3d fromRho( int i, int j, int ij ){
-    void fromRho( int i, int j, int ij, double& aij, double& dCsi, double& dCsj, Vec3d& dCdp ){
+    void fromRhoDiag( int i, int ij, double& aij ){
+        /// This function function cares about diagonal density terms rho_ii = wi * wi
+        //Vec3d  pi  = epos [i];
+        //double ci  = ecoef[i];
+        //double si  = esize[i];
+        Vec3d  Fpi = rhofP[ij];
+        double Fqi = rhofQ[ij];
+        double Fsi = rhofS[ij];
+        //double Eqi = rhoEQ[ij];
+        printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fsi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, Fsi,    rhofQ[ij] );
+        efpos [i].add( Fpi );
+        efsize[i] += Fsi*aij*2;
+    }
+
+
+    //Vec3d fromRho( int i, int j, int ij ){
+    void fromRho( int i, int j, int ij, double& aij ){
+    //void fromRho( int i, int j, int ij, double& aij, double& dCsi, double& dCsj, Vec3d& dCdp ){
         /// NOTE : this function is mostly for debugging of  assembleOrbForces()
 
         Vec3d  pi  = epos [i];
@@ -792,8 +810,9 @@ class CLCFGO{ public:
         double dSsi,dSsj;
         Vec3d  dXsi,dXsj;
         double dXxi,dXxj;
-        //double dCsi,dCsj,dCr;
         double dCr;
+        double dCsi,dCsj;
+        Vec3d  dCdp;
 
         aij = Gauss::product3D_s_deriv(
             si,   pi,
@@ -825,7 +844,8 @@ class CLCFGO{ public:
         // --- Derivatives ( i.e. Forces )
         //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
 
-        printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
+        printf( "fromRho[%i,%i][%i] Fpi(%g,%g,%g) Fsi %g \n", i, j, ij, Fpi.x,Fpi.y,Fpi.z, Fsi );
+        //printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
         efpos [i].add( fxi*0.5 + dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
         efpos [j].add( fxj*0.5 + dCdp*Eqi );
         efsize[i] += fsi*aij*0;
@@ -853,13 +873,15 @@ class CLCFGO{ public:
         double dCsj;
         Vec3d  dQdp;
         for(int i=i0; i<i0+perOrb; i++){
-            ii++;
             // TODO : What to do with diagonal elements ? That is diagonal electron could rho_ii ( It should not change upon moving ? Or should only due to renormalization ? )
             //        Is the problem caused by renormalization ????????
-            fromRho( i, i, ii, aij, dCsi, dCsj, dQdp );
+            //fromRho( i, i, ii, aij, dCsi, dCsj, dQdp );
+            fromRhoDiag( i, ii, aij );  // Why is this zero ????
+            ii++;
             for(int j=i0; j<i; j++){
                 printf( "assembleOrbForces_fromRho[%i,%i][%i] \n", i, j, ii  );
-                fromRho( i, j, ii, aij, dCsi, dCsj, dQdp );
+                //fromRho( i, j, ii, aij, dCsi, dCsj, dQdp );
+                fromRho( i, j, ii, aij );
                 // ToDo: ad dQdp    //   Fana              = efpos                + EK*dQdp; ..... TODO
                 // We need to copy EK from somewhere
                 //dQdp
@@ -938,6 +960,8 @@ class CLCFGO{ public:
 
                 double E  = Gauss::Coulomb( r, s*2, fr, fs );
 
+                printf( "CoulombOrbPair[%i,%i][%i,%i] qij %g(%g,%g) r %g E %g \n", io,jo, i,j, qij,qi,qj,  r, E );
+
                 //printf(  " [%i,%i] q %g r %g E %g \n", i, j, qij, r, Eqq );
 
                 fr *= qij;
@@ -952,7 +976,7 @@ class CLCFGO{ public:
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
                 rhoEQ[i] += E;       rhoEQ[j] += E;// Coulombic energy per given density could (due to other density clouds)
 
-                printf( "CoulombOrbPair[%i,%i] E %g rhoEQij %g %g \n", i, j, E, rhoEQ[i], rhoEQ[j] );
+                //printf( "CoulombOrbPair[%i,%i] E %g rhoEQij %g %g \n", i, j, E, rhoEQ[i], rhoEQ[j] );
 
                 //printf( "[%i,%i] E %g r %g sij %g(%g,%g) q %g(%g,%g) \n", i,j,  Eqq , r, s,si,sj, qi*qj,qi,qj );
                 Ecoul      += E*qi*qj;
@@ -1091,9 +1115,10 @@ class CLCFGO{ public:
     double eval(){
         double E=0;
         clearAuxDens();
-        projectOrbs();
+        //projectOrbs( true );
+        projectOrbs( false );
         //E += evalPauli();
-        E += evalElectrostatICoulomb();
+        E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
         //for(int i=0; i<nOrb; i++) assembleOrbForces(i);
         for(int i=0; i<nOrb; i++) assembleOrbForces_fromRho(i); // DEBUG
         return E;
