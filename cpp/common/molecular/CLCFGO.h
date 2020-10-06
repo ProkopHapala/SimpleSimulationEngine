@@ -400,7 +400,7 @@ class CLCFGO{ public:
                 double dSr, dSsi, dSsj;
                 double dTr, dTsi, dTsj;
                 const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
-                double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
+                //double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
                 double DTij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj ); // This is not normal kinetic energy this is change of kinetic energy due to orthogonalization
 
                 //double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
@@ -411,12 +411,14 @@ class CLCFGO{ public:
                 // --- Project on auxuliary density functions
                 Vec3d  pij;
                 double sij;
-                double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+                //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+                double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
                 double cij = ci *cj;
                 //double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
                 double qij = Sij*cij*2;
 
-                qij = 0; // DEBUG remove off-diagonal charge
+
+                //qij = 0; // DEBUG remove off-diagonal charge
 
                 //printf( "DEBUG projectOrb[%i|%i,%i] r2 %g Tij %g \n", io, i,j, r2, DTij );
                 //printf( "DEBUG projectOrb[%i|%i,%i] sij %g \n", io, i,j, sij );
@@ -456,82 +458,6 @@ class CLCFGO{ public:
             double renorm  = sqrt(1./Q);
             double renorm2 = renorm*renorm;
             printf( "project orb[$i]: Q %g renorm %g renorm2 %g \n", io, Q, renorm, renorm2 );
-            for(int i=i0; i<i0+perOrb; i++){ ecoef[i] *=renorm;  };
-            for(int i= 0; i<ii       ; i++){ Qs   [i] *=renorm2; };
-        }
-        // ToDo: Renormalize also  rhos?
-        return Ek;
-    }
-
-
-
-        //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
-    double projectOrb_mod(int io, Vec3d& dip, bool bNormalize ){
-        int i0    = getOrbOffset(io);
-        int irho0 = getRhoOffset(io);
-        Vec3d*   Ps =rhoP+irho0;
-        double*  Qs =rhoQ+irho0;
-        double*  Ss =rhoS+irho0;
-        double Q =0;
-        double DT=0; // kinetic energy change by orthognalization
-        double Ek=0; // kinetic energy
-        dip         = Vec3dZero;
-        Vec3d qcog  = Vec3dZero;
-        Vec3d oqcog = opos[io];
-        int ii=0;
-        for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi  = epos [i];
-            double ci  = ecoef[i];
-            double si  = esize[i];
-            double qii = ci*ci; // overlap = 1
-            qcog.add_mul( pi, qii );
-            Q      += qii;
-
-            // DEBUG : testing Gaussian Transform
-            Qs[ii]  = qii;
-            Ps[ii]  = pi;
-            Ss[ii]  = si*M_SQRT1_2;
-
-            double fr,fsi,fsj;
-            Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
-            efsize[i]+= 2*fsi*qii;
-
-            ii++;
-            for(int j=i0; j<i; j++){
-                Vec3d pj  = epos[j];
-                Vec3d Rij = pj-pi;
-                double r2 = Rij.norm2();
-                if(r2>Rcut2) continue;
-
-                double cj  = ecoef[j];
-                double sj  = esize[j];
-                // --- Evaluate Normalization, Kinetic & Pauli Energy
-                double Ekij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj )*2; fr*=2; fsi*=2, fsj*=2;
-                ///ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
-                /// ToDo :  Need derivatives of Kinetic Overlap !!!!!
-                // --- Project on auxuliary density functions
-                Vec3d  pij;
-                double sij;
-                double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
-                double cij = ci *cj;
-                double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
-
-                qcog.add_mul( pij, qij );
-                Q  +=   qij;
-                //DT += DTij*cij;
-                Ek += Ekij*cij;
-
-                Qs[ii] = qij;
-                Ps[ii] = pij;   // center of axuliary overlap density function in the middle between the two wavefunctions
-                Ss[ii] = sij;
-                ii++;
-            }
-        }
-        onq[io] = ii;
-        if(bNormalize){
-            double renorm  = sqrt(1./Q);
-            double renorm2 = renorm*renorm;
-            //printf( "project orb[$i]: Q %g renorm %g renorm2 %g \n", io, Q, renorm, renorm2 );
             for(int i=i0; i<i0+perOrb; i++){ ecoef[i] *=renorm;  };
             for(int i= 0; i<ii       ; i++){ Qs   [i] *=renorm2; };
         }
@@ -637,7 +563,7 @@ class CLCFGO{ public:
         double Fqi = rhofQ[ij];
         double Fsi = rhofS[ij];
         //double Eqi = rhoEQ[ij];
-        printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fsi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, Fsi,    rhofQ[ij] );
+        printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
         efpos [i].add( Fpi );
         efsize[i] += Fsi*aij*2;
     }
@@ -700,7 +626,7 @@ class CLCFGO{ public:
         // --- Derivatives ( i.e. Forces )
         //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
 
-        printf( "fromRho[%i,%i][%i] Fpi(%g,%g,%g) Fsi %g \n", i, j, ij, Fpi.x,Fpi.y,Fpi.z, Fsi );
+        printf( "fromRho[%i,%i][%i] Fpi(%g,%g,%g) Eqi %g Fqi \n", i, j, ij, Fpi.x,Fpi.y,Fpi.z, Eqi, Fqi);
         //printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
         efpos [i].add( fxi*0.5 + dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
         efpos [j].add( fxj*0.5 + dCdp*Eqi );
@@ -737,7 +663,7 @@ class CLCFGO{ public:
             for(int j=i0; j<i; j++){
                 printf( "assembleOrbForces_fromRho[%i,%i][%i] \n", i, j, ii  );
                 //fromRho( i, j, ii, aij, dCsi, dCsj, dQdp );
-                //fromRho( i, j, ii, aij );
+                fromRho( i, j, ii, aij );
                 // ToDo: ad dQdp    //   Fana              = efpos                + EK*dQdp; ..... TODO
                 // We need to copy EK from somewhere
                 //dQdp

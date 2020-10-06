@@ -134,6 +134,20 @@ void testDerivs_Coulomb( int n, double x0, double dx, CLCFGO& solver, Plot2D& pl
 
 
 
+void initTestElectrons( CLCFGO& solver ){
+    {auto& _=solver;
+        _.ecoef[0] =   1.0;
+        _.ecoef[1] =   1.0;
+        _.ecoef[2] =  -0.5;
+        _.ecoef[3] =   0.6;
+        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [2] = (Vec3d){-2.0,-1.0,0.0};
+        _.epos [3] = (Vec3d){-2.0,+1.0,0.0};
+        //_.ecoef[3] = +0.3;
+    }
+}
+
 
 /*
 
@@ -155,17 +169,7 @@ void testDerivs_Total( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot
     DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
     DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
     DataLine2D* line_Q    = new DataLine2D( n, x0, dx, 0xFF00FF00, "Q" );     plot1.add(line_Q    );
-    {auto& _=solver;
-        _.ecoef[0] =   1.0;
-        _.ecoef[1] =   1.0;
-        _.ecoef[2] =  -0.5;
-        _.ecoef[3] =   0.6;
-        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
-        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
-        _.epos [2] = (Vec3d){-2.0,-1.0,0.0};
-        _.epos [3] = (Vec3d){-2.0,+1.0,0.0};
-        //_.ecoef[3] = +0.3;
-    }
+    initTestElectrons( solver );
     for(int i=0; i<n; i++){
         solver.cleanForces();
         double x = x0 + i*dx;
@@ -215,6 +219,9 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
     //DataLine2D* line_Qc   = new DataLine2D( n, x0, dx, 0xFFFF80FF, "Qc" ); plot1.add(line_Qc );
     //DataLine2D* line_Xc   = new DataLine2D( n, x0, dx, 0xFFFF00FF, "Xc" ); plot1.add(line_Xc );
 
+
+    initTestElectrons( solver );
+
     solver.toRho(0,1,0);
     solver.toRho(2,3,1);
 
@@ -233,8 +240,8 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
         double E_  = solver.CoublombElement(0,1);
         line_Eq->ys[i] = E_;
         double E   = E_ * solver.rhoQ[0];
-        double dCsi, dCsj, aij; Vec3d dQdp;
-
+        double aij;
+        //double dCsi, dCsj, ; Vec3d dQdp;
         //solver.fromRho( 0,1,0,   aij, dCsi, dCsj, dQdp );
         solver.fromRho( 0,1,0,   aij );
 
@@ -279,7 +286,7 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
 
 
         line_E->ys[i]   = E; //func( line_E->xs[i], line_Fana->ys[i] );
-        if(i>1) line_Fnum->ys[i-1]  = (line_E ->ys[i] - line_E ->ys[i-2])/(2*dx);
+        if(i>1) line_Fnum ->ys[i-1] = (line_E ->ys[i] - line_E ->ys[i-2])/(2*dx);
         if(i>1) line_Fqnum->ys[i-1] = (line_Eq->ys[i] - line_Eq->ys[i-2])/(2*dx);
 
         //if(i>1) line_dQi->ys[i-1]  = (line_Qi->ys[i] - line_Qi->ys[i-2])/(2*dx);
@@ -773,10 +780,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
 
     //testDerivs_Coulomb( 30, 0.0, 0.2, solver, plot1 );
-    //testDerivs_Coulomb_model  ( 30, 0.0, 0.1, solver, plot1 );    // Position force
+    testDerivs_Coulomb_model  ( 30, 0.0, 0.1, solver, plot1 );    // Position force
     //testDerivs_Coulomb_model_S( 30, 0.0, 0.1, solver, plot1 );  // Size force
 
-    testDerivs_Total( 30, 0.0, 0.1, solver, plot1 );
+    //testDerivs_Total( 30, 0.0, 0.1, solver, plot1 );
 
 
     /*
