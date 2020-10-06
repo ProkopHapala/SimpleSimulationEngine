@@ -123,7 +123,7 @@ void testDerivs_Coulomb( int n, double x0, double dx, CLCFGO& solver, Plot2D& pl
 
         //double qc = solver.rhoQ[0];   line_Xc->ys[i] = qc;
         double E  = solver.CoulombOrbPair( 0, 1 );
-        solver.assembleOrbForces(0);
+        solver.assembleOrbForces_fromRho(0);
         //f=solver.efpos[0].x * M_PI * 2;
         //line_Fana->ys[i]= solver.efpos[0].x * M_PI * 2;
         line_Fana->ys[i]= solver.efpos[0].x * 7;
@@ -139,18 +139,14 @@ void testDerivs_Coulomb( int n, double x0, double dx, CLCFGO& solver, Plot2D& pl
 
 
 ### Coulomb Force Derivatives
-
         evalElectrostatICoulomb();
         for(int i=0; i<nOrb; i++) assembleOrbForces(i);
-
    Problem is derivative of Q
      qi = Sab(ra-rb) * Ca * Cb
      qj = Scd(rc-rd) * Cc * Cd                   ... where Ca,Cb,Cc,Cd are expansion coeficients in given basis and S is overlap integral for given pair of basis functions
    EQij(r) = qi(ra,rb) * qj(rc,rd) * Kij(ri,rj)  ... where qi,qj are charges in some overlap cloud and Kij is Coulomb Matrix kernel between the two clouds
    Force calculated by derivatives as:
      FQ_xa = dEQ/dxa =  (qi*qj) * (dKij/ri)/(dri/dxa) + ( Kij*qj ) * (dqi/dxa)
-
-
 */
 
 
@@ -158,6 +154,18 @@ void testDerivs_Total( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot
     DataLine2D* line_E    = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
     DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0080FF, "F_num" ); plot1.add(line_Fnum );
     DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana );
+    DataLine2D* line_Q    = new DataLine2D( n, x0, dx, 0xFF00FF00, "Q" );     plot1.add(line_Q    );
+    {auto& _=solver;
+        _.ecoef[0] =   1.0;
+        _.ecoef[1] =   1.0;
+        _.ecoef[2] =  -0.5;
+        _.ecoef[3] =   0.6;
+        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [2] = (Vec3d){-2.0,-1.0,0.0};
+        _.epos [3] = (Vec3d){-2.0,+1.0,0.0};
+        //_.ecoef[3] = +0.3;
+    }
     for(int i=0; i<n; i++){
         solver.cleanForces();
         double x = x0 + i*dx;
@@ -170,6 +178,8 @@ void testDerivs_Total( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot
 
         line_Fana->ys[i]= solver.efpos[0].x;
         line_E->ys[i]   = E;
+        line_Q->ys[i]   = solver.oQs[0];
+
 
         printf( "testDerivs_Total i[%i] x %g E %g \n", i, x, E );
         if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
@@ -182,13 +192,12 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
     // ======= Test Orbital Wavefunction Overlap
     //printf( "n  %i dx %g  \n", n , dx );
 
-    DataLine2D* line_Eq   = new DataLine2D( n, x0, dx, 0xFFFF8080,  "Eq"     ); //plot1.add(line_Eq    );
+    DataLine2D* line_Eq    = new DataLine2D( n, x0, dx, 0xFFFF8080, "Eq"     ); //plot1.add(line_Eq    );
     DataLine2D* line_Fqnum = new DataLine2D( n, x0, dx, 0xFF008077, "Fq_num" ); //plot1.add(line_Fqnum ); // orange
     DataLine2D* line_Fqana = new DataLine2D( n, x0, dx, 0xFF000077, "Fq_ana" ); //plot1.add(line_Fqana ); // red     // efpos[0].x;
-
-    DataLine2D* line_E    = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
-    DataLine2D* line_Fnum = new DataLine2D( n, x0, dx, 0xFF0077FF, "F_num" ); plot1.add(line_Fnum ); // orange
-    DataLine2D* line_Fana = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana ); // red     // efpos[0].x;
+    DataLine2D* line_E     = new DataLine2D( n, x0, dx, 0xFFFF0000, "E"     ); plot1.add(line_E    );
+    DataLine2D* line_Fnum  = new DataLine2D( n, x0, dx, 0xFF0077FF, "F_num" ); plot1.add(line_Fnum ); // orange
+    DataLine2D* line_Fana  = new DataLine2D( n, x0, dx, 0xFF0000FF, "F_ana" ); plot1.add(line_Fana ); // red     // efpos[0].x;
 
     //DataLine2D* line_Frho = new DataLine2D( n, x0, dx, 0xFF00FFFF, "F_rho" ); plot1.add(line_Frho ); // yellow  // rhofP[0].x
 
@@ -698,10 +707,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         _.ecoef[1] =   0.7;
         _.ecoef[2] =   1.0;
         _.ecoef[3] =   1.0;
-        _.epos [0] = (Vec3d){0.0,0.0,0.0};
-        _.epos [1] = (Vec3d){0.0,0.0,0.0};
-        _.epos [2] = (Vec3d){0.0,0.0,0.0};
-        _.epos [3] = (Vec3d){0.0,0.0,0.0};
+        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [2] = (Vec3d){-2.0,-1.0,0.0};
+        _.epos [3] = (Vec3d){-2.0,+1.0,0.0};
         //_.ecoef[3] = +0.3;
     }
 

@@ -93,6 +93,7 @@ class CLCFGO{ public:
     Vec3d*  opos =0;   ///< store positions for the whole orbital
     Vec3d*  odip =0;   ///< Axuliary array to store dipoles for the whole orbital
     double* oEs  =0;   ///< orbital energies
+    double* oQs  =0;   ///< total charge in orbital before renormalization (just DEBUG?)
     int*    onq  =0;   ///< number of axuliary density functions per orbital
 
     // --- Wave-function components for each orbital
@@ -136,6 +137,7 @@ class CLCFGO{ public:
             _realloc( opos, nOrb);
             _realloc( odip, nOrb);
             _realloc( oEs , nOrb);
+            _realloc( oQs , nOrb);
             _realloc( onq , nOrb);
 
             // --- Wave-function components for each orbital
@@ -327,6 +329,22 @@ class CLCFGO{ public:
         }
     }
 
+    void reportCharges(int io){
+        int i0    = getOrbOffset(io);
+        int irho0 = getRhoOffset(io);
+        int ij=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            printf( "Q[%i|%i,%i|%i] %g|%g\n", io,i,i,ij, rhoQ[irho0+ij], ecoef[i] );
+            ij++;
+            for(int j=i0; j<i; j++){
+                printf( "Q[%i|%i,%i|%i] %g|%g,%g\n", io,i,j,ij, rhoQ[irho0+ij], ecoef[i], ecoef[j] );
+                ij++;
+            }
+        }
+    }
+    void reportCharges(){ for(int io=0; io<nOrb; io++){ reportCharges(io); } }
+
+
     //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
     double projectOrb(int io, Vec3d& dip, bool bNormalize ){
         int i0    = getOrbOffset(io);
@@ -354,7 +372,7 @@ class CLCFGO{ public:
             Qs[ii]  = qii;
             Ps[ii]  = pi;
             Ss[ii]  = si*M_SQRT1_2;
-            Qs[ii]  = 0; // DEBUG
+            //Qs[ii]  = 0; // DEBUG
 
             //double fEki;
             //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
@@ -362,6 +380,8 @@ class CLCFGO{ public:
             double fr,fsi,fsj;
             Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
             efsize[i]+= 2*fsi*qii;
+
+            printf( "projectOrb[%i] [%i] q[%i] %g \n", io, i, ii, qii );
 
             //if(qii>1e-8)printf( "Kinetic[%i] %g | %g %g %g \n", i, fsi*ci*ci, fsi, ci, qii );
 
@@ -396,6 +416,8 @@ class CLCFGO{ public:
                 //double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
                 double qij = Sij*cij*2;
 
+                qij = 0; // DEBUG remove off-diagonal charge
+
                 //printf( "DEBUG projectOrb[%i|%i,%i] r2 %g Tij %g \n", io, i,j, r2, DTij );
                 //printf( "DEBUG projectOrb[%i|%i,%i] sij %g \n", io, i,j, sij );
                 //printf( "orb[%i|%i,%i] r %g s(%g,%g):%g qS(%g,%g|%g):%g C %g \n", io, i,j, sqrt(r2),  si,sj,sij,  ci,cj,Sij,qij, Cij );
@@ -419,7 +441,7 @@ class CLCFGO{ public:
 
                 // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
 
-                printf( "prj[%i] [%i,%i] r %g q %g \n", io, i,j, r2, qij );
+                printf( "projectOrb[%i] [%i,%i] r %g q[%i] %g \n", io, i,j, r2, ii, qij );
 
                 Qs[ii] = qij;
                 Ps[ii] = pij;   // center of axuliary overlap density function in the middle between the two wavefunctions
@@ -429,6 +451,7 @@ class CLCFGO{ public:
             }
         }
         onq[io] = ii;
+        oQs[io] = Q;
         if(bNormalize){
             double renorm  = sqrt(1./Q);
             double renorm2 = renorm*renorm;
@@ -516,172 +539,6 @@ class CLCFGO{ public:
         return Ek;
     }
 
-
-    //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
-    void assembleOrbForces(int io ){
-        int i0    = getOrbOffset(io);
-        int irho0 = getRhoOffset(io);
-        Vec3d*   fPs =rhofP+irho0;
-        double*  fQs =rhofQ+irho0;
-        double*  fSs =rhofS+irho0;
-        int ii=0;
-        for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi  = epos [i];
-            double ci  = ecoef[i];
-            double si  = esize[i];
-            double qii = ci*ci; // overlap = 1
-
-            //printf( "i %i,%i : %g \n", i, pi.x );
-
-            //Q       += qii;
-            //fQs[ii]  = qii;
-            //fPs[ii]  = pi;
-            //fSs[ii]  = si*M_SQRT1_2;
-            //double fr,fsi,fsj;
-            //Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
-            //efsize[i]+= 2*fsi*qii;
-
-            //efpos [i].add( fPs[ii]*ci*ci );
-            //efsize[i]+= fSs[ii]*ci*ci;
-
-            ii++;
-
-            for(int j=i0; j<i; j++){
-                Vec3d pj  = epos[j];
-                Vec3d Rij = pj-pi;
-                double r2 = Rij.norm2();
-                if(r2>Rcut2) continue;
-
-                //Vec3d  pj  = epos [j];
-                double cj  = ecoef[j];
-                double sj  = esize[j];
-
-                Vec3d  p;
-                double s;
-                double dSsi,dSsj;
-                Vec3d  dXsi,dXsj;
-                double dXxi,dXxj;
-                double dCsi,dCsj,dCr;
-
-                double cij = Gauss::product3D_s_deriv(
-                    si,   pi,
-                    sj,   pj,
-                    s ,   p ,
-                    dSsi, dSsj,
-                    dXsi, dXsj,
-                    dXxi, dXxj,
-                    dCsi, dCsj, dCr
-                );
-                // TODO: Cij should be like Qij ??????
-
-                Vec3d  Fpi = fPs[ii];
-                double Fqi = fQs[ii];
-                double Fsi = fSs[ii];
-
-                //printf( "i,j %i,%i : %g \n", i, j, p.x );
-
-                //   line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*line_dQi_ana->ys[i];
-                double fsj = Fsi*dSsj + Fpi.dot( dXsj );
-                double fsi = Fsi*dSsi + Fpi.dot( dXsi );
-                Vec3d  fxi = Fpi*dXxi;
-                Vec3d  fxj = Fpi*dXxj;
-
-                // --- Derivatives ( i.e. Forces )
-
-                double bulgarian_const = 14.0;
-                efpos [i].add( fxi * bulgarian_const) ;
-                efpos [j].add( fxj * bulgarian_const) ;
-                efsize[i]+= fsi*cij;
-                efsize[j]+= fsj*cij;
-                //efcoef[i]+= Ekij*cj;
-                //efcoef[j]+= Ekij*ci;
-
-                ii++;
-            }
-        }
-    }
-
-
-
-    //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
-    void assembleOrbForces_mod(int io ){
-        int i0    = getOrbOffset(io);
-        int irho0 = getRhoOffset(io);
-        Vec3d*   fPs = rhofP+irho0;
-        double*  fQs = rhofQ+irho0;
-        double*  fSs = rhofS+irho0;
-        double*  eQs = rhoEQ+irho0;
-        int ii=0;
-        for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi  = epos [i];
-            double ci  = ecoef[i];
-            double si  = esize[i];
-            double qii = ci*ci; // overlap = 1
-
-            ii++;
-
-            for(int j=i0; j<i; j++){
-                Vec3d pj  = epos[j];
-                Vec3d Rij = pj-pi;
-                double r2 = Rij.norm2();
-                if(r2>Rcut2) continue;
-
-                //Vec3d  pj  = epos [j];
-                double cj  = ecoef[j];
-                double sj  = esize[j];
-
-                Vec3d  p;
-                double s;
-                double dSsi,dSsj;
-                Vec3d  dXsi,dXsj;
-                double dXxi,dXxj;
-                double dCsi,dCsj,dCr;
-
-                double cij = Gauss::product3D_s_deriv(
-                    si,   pi,
-                    sj,   pj,
-                    s ,   p ,
-                    dSsi, dSsj,
-                    dXsi, dXsj,
-                    dXxi, dXxj,
-                    dCsi, dCsj, dCr
-                );
-                // TODO: Cij should be like Qij ??????
-
-                Vec3d  Fpi = fPs[ii];
-                double Fqi = fQs[ii];
-                double Fsi = fSs[ii];
-
-                //printf( "i,j %i,%i : %g \n", i, j, p.x );
-
-                double fsj = Fsi*dSsj + Fpi.dot( dXsj );
-                double fsi = Fsi*dSsj + Fpi.dot( dXsj );
-                //Vec3d  fxi = Fpi*dXxi;
-                //Vec3d  fxj = Fpi*dXxj;
-
-                Vec3d dCdp = Rij*(-2*dCr*ci*cj);  // TODO : dCdp must be considered !!!!
-
-                double Eq = eQs[ii]; // Eq should be coulomb energy see:  testDerivs_Coulomb_model():    Eq = solver.CoublombElement(0,1);
-                               //                                                                  line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*line_dQi_ana->ys[i];
-                // --- Derivatives ( i.e. Forces )
-
-                efpos[i].add( Fpi*dXxi  +  dCdp*Eq );
-                efpos[j].add( Fpi*dXxj  +  dCdp*Eq );
-                efsize[i]+= fsi*cij + dCsi*Eq;
-                efsize[j]+= fsj*cij + dCsj*Eq;
-
-                //efcoef[i]+= Ekij*cj;
-                //efcoef[j]+= Ekij*ci;
-
-                ii++;
-            }
-        }
-    }
-
-
-
-
-
     void projectOrbs(bool bNormalize){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
         int nqOrb = perOrb*(perOrb+1)/2;
         int i0 =0;
@@ -734,7 +591,6 @@ class CLCFGO{ public:
         }
         return Srho;
     }
-
 
     void toRho( int i, int j, int ij ){
         /// NOTE : this function is mostly for debugging of  projectOrb()
@@ -829,8 +685,8 @@ class CLCFGO{ public:
         double Fsi = rhofS[ij];
         double Eqi = rhoEQ[ij];
 
-        double fsj = Fsi*dSsj*0 + Fpi.dot( dXsj )*0;
-        double fsi = Fsi*dSsi*0 + Fpi.dot( dXsi )*0;
+        double fsj = Fsi*dSsj + Fpi.dot( dXsj );
+        double fsi = Fsi*dSsi + Fpi.dot( dXsi );
         Vec3d  fxi = Fpi*dXxi;  // ToDo : dSij/dxi == 0
         Vec3d  fxj = Fpi*dXxj;  //            dXxi == 0.5
 
@@ -881,7 +737,7 @@ class CLCFGO{ public:
             for(int j=i0; j<i; j++){
                 printf( "assembleOrbForces_fromRho[%i,%i][%i] \n", i, j, ii  );
                 //fromRho( i, j, ii, aij, dCsi, dCsj, dQdp );
-                fromRho( i, j, ii, aij );
+                //fromRho( i, j, ii, aij );
                 // ToDo: ad dQdp    //   Fana              = efpos                + EK*dQdp; ..... TODO
                 // We need to copy EK from somewhere
                 //dQdp
@@ -932,15 +788,15 @@ class CLCFGO{ public:
         /// Calculate Elecrostatic Energy&Force for projected density of orbitas @io and @jo
         int i0 = getRhoOffset(io);
         int j0 = getRhoOffset(jo);
-        int nrho = onq[io];
-        int nV   = onq[jo];
+        int nio = onq[io];
+        int njo   = onq[jo];
         double Ecoul=0;
-        printf( "CoulombOrbPair[%i,%i] nV %i \n", io, jo, nV );
-        for(int i=i0; i<i0+nV; i++){
+        printf( "CoulombOrbPair[%i,%i] nV %i \n", io, jo, njo );
+        for(int i=i0; i<i0+nio; i++){
             Vec3d  pi = rhoP[i];
             double qi = rhoQ[i];
             double si = rhoS[i];
-            for(int j=j0; j<j0+nrho; j++){
+            for(int j=j0; j<j0+njo; j++){
                 Vec3d  pj = rhoP[j];
                 Vec3d Rij = pj-pi;
                 double r2 = Rij.norm2();
@@ -1117,6 +973,7 @@ class CLCFGO{ public:
         clearAuxDens();
         //projectOrbs( true );
         projectOrbs( false );
+        reportCharges();
         //E += evalPauli();
         E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
         //for(int i=0; i<nOrb; i++) assembleOrbForces(i);
