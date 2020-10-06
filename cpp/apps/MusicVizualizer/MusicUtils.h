@@ -9,6 +9,8 @@ namespace Music{
 
 class Spectrum{ public:
 
+    constexpr static int nmargin = 16;
+
     int nwave=0;
     int nhist=0;
 
@@ -32,11 +34,12 @@ class Spectrum{ public:
     void realloc( int nwave_, int nhist_ ){
         nwave=nwave_;
         nhist=nhist_;
-        _realloc( wave,    nwave   );
-        _realloc( Fwave,   nwave*2 );
-        _realloc( hist,    nwave   );
-        _realloc( histOld, nwave   );
-        _realloc( histVel, nwave   );
+
+        _realloc( wave,    nwave   + nmargin );
+        _realloc( Fwave,   nwave*2 + nmargin );
+        _realloc( hist,    nhist   );
+        _realloc( histOld, nhist   );
+        _realloc( histVel, nhist   );
     }
 
     void clearHist(){
@@ -75,13 +78,13 @@ class Spectrum{ public:
     }
 
     void update( double dt){
-        for(int i=0;i<nwave+32;i++){
-            Fwave[2*i  ]  = wave[i];  // Re[i]
-            //fft_buff[2*i  ] = sin(2*200*M_PI*i/((double)BUFFER))*0 + sin(2*500*M_PI*i/((double)BUFFER)) + 1;
-            //fft_buff[2*i  ] = 1;
+        for(int i=0;i<nwave+nmargin;i++){
+            //Fwave[2*i  ]  = wave[i];  // Re[i]
+            Fwave[2*i  ] = sin(2*200*M_PI*i/((double)nwave)) + sin(2*500*M_PI*i/((double)nwave)) + 1;
+            //Fwave[2*i  ] = 1;
             Fwave[2*i+1] = 0;          // Im[i]
         }
-        FFT( Fwave, nwave, 1 );
+        FFT( Fwave, nwave/2, 1 );
         powerSpectrum(  );
         spectrumHistDynamics( dt );
         //spectrumHistSmearing( dt );
@@ -109,10 +112,19 @@ class Spectrum{ public:
     }
 
 
+    void printSpectrum(){
+        for(int i=0;i<nhist;i++){
+            printf("%10.10f\n", hist[i]);
+        }
+    }
+
+
 };
 
 
 static void postmix_Spectrum( void *spec_, Uint8 *_stream, int _len){
+
+    //return;
 
     Spectrum& spec = *(Spectrum*) spec_;
 

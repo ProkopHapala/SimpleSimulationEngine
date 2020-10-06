@@ -100,8 +100,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     //for( ScreenSDL2OGL3* screen: screens ) screen->scenes.push_back( this );
 
     shDebug=new Shader();
-    //shDebug->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
-    shDebug->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
+    shDebug->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
+    //shDebug->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
     shDebug->getDefaultUniformLocation();
 
     sh1=new Shader();
@@ -208,59 +208,25 @@ void MusicVisualizerGUI::draw( Camera& cam ){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
 
-
     //waveform.spectrumHistSmearing();
     waveform.update( 5.1 );
     waveform.need_refresh = false;
 
-    printf( "waveform [0,2] %g %g \n", waveform.wave[0], waveform.wave[2] );
-
-    glBindBuffer(GL_ARRAY_BUFFER, histMesh->vpos );
-
-    Vec3f ps[3*waveform.nwave];
-    for(int i=0; i<waveform.nwave; i++){ ps[i].set( i*0.1, waveform.wave[i]*0.0001, 0 ); }
-    glBufferSubData(GL_ARRAY_BUFFER, 0, 3*waveform.nwave*sizeof(float), ps   );
-
-    //Vec3f ps[3*waveform.nhist];
-    //for(int i=0; i<waveform.nhist; i++){ ps[i].set( i, sqrt(waveform.hist[i])*0.001, 0 ); }
-    //glBufferSubData(GL_ARRAY_BUFFER, 0, 3*waveform.nhist*sizeof(float), ps   );
+    //fflush( stdout );
+    printf("\e[1;1H\e[2J"); // clear screen //https://stackoverflow.com/questions/2347770/how-do-you-clear-the-console-screen-in-c
+    waveform.printSpectrum();
 
 
-
-    //glBufferData( GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW );
-
-
-
-    sh1->use();
+    shDebug->use();
     cam.lookAt( (Vec3f){0.0,0.0,0.0}, 20.0 );
 
+    setCamera( *shDebug, cam );
+    shDebug->setModelPoseT( (Vec3d){-6.0f,0.0,0.0}, Mat3dIdentity );
 
-    setCamera( *sh1, cam );
-    sh1->setModelPoseT( Vec3dZero, Mat3dIdentity );
 
+    plotBuffStereo ( *histMesh, *shDebug, waveform.nwave, waveform.wave, 0.05, 0.0001 );
 
     int narg;
-    //GLuint ucolor = sh1->getUloc("baseColor");
-    //glUniform4f( ucolor, 0.0, 0.0, 0.0, 1.0 );
-    //glmesh->draw();
-
-    //narg = glmesh->preDraw();
-    //glmesh->drawRaw(GL_TRIANGLES, (frameCount*9)%glmesh->nInds , glmesh->nInds );
-    //glmesh->postDraw( narg );
-
-    histMesh->draw();
-
-
-    //narg = msh_normals->preDraw();
-    //msh_normals->drawRaw(GL_LINES, (frameCount*8)%msh_normals->nVerts , msh_normals->nVerts );
-    //msh_normals->postDraw( narg );
-
-    /*
-    shTx->use();
-    setCamera(*shTx, cam);
-    shTx->setModelPoseT( Vec3dOne, Mat3dIdentity );
-    glTxDebug->draw();
-    */
 
     shJulia->use();
     //uint locC = shJulia->getUloc("C");
