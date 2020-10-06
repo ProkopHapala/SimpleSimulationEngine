@@ -35,7 +35,7 @@ class Spectrum{ public:
         nwave=nwave_;
         nhist=nhist_;
 
-        _realloc( wave,    nwave   + nmargin );
+        _realloc( wave,    nwave*2 + nmargin );
         _realloc( Fwave,   nwave*2 + nmargin );
         _realloc( hist,    nhist   );
         _realloc( histOld, nhist   );
@@ -79,12 +79,13 @@ class Spectrum{ public:
 
     void update( double dt){
         for(int i=0;i<nwave+nmargin;i++){
-            //Fwave[2*i  ]  = wave[i];  // Re[i]
-            Fwave[2*i  ] = sin(2*200*M_PI*i/((double)nwave)) + sin(2*500*M_PI*i/((double)nwave)) + 1;
+            Fwave[2*i  ]  = wave[2*i]; // + wave[2*i+1];;  // Re[i]
+            //Fwave[2*i  ] = sin(2*200*M_PI*i/((double)nwave)) + sin(2*500*M_PI*i/((double)nwave)) + 1;
             //Fwave[2*i  ] = 1;
-            Fwave[2*i+1] = 0;          // Im[i]
+            //Fwave[2*i+1] = 0;          // Im[i]
+            Fwave[2*i+1] = wave[2*i+1];
         }
-        FFT( Fwave, nwave/2, 1 );
+        FFT( Fwave, nwave, 1 );
         powerSpectrum(  );
         spectrumHistDynamics( dt );
         //spectrumHistSmearing( dt );
@@ -145,9 +146,31 @@ static void postmix_Spectrum( void *spec_, Uint8 *_stream, int _len){
 	Sint16* stream = (Sint16*)_stream;
 	//for(int i=0; i<spec.nwave; i++){
 
-	for(int i=0; i<_len; i++){
-        spec.wave[i] = (double)stream[i];
+	int n  = spec.nwave*2 + spec.nmargin;
+
+	_len=_len/2; // len is in bytes !!!
+
+	int i0=0;
+	int j0=0;
+	if(_len>n){
+        i0=_len-n;
+    }else{
+        j0=n-_len;
+        for(int i=0; i<n-_len; i++){
+            spec.wave[i] = spec.wave[_len+i];
+        };
+        n=_len;
+    }
+    //printf( "postmix_Spectrum n %i len %i | i0 %i j0 %i \n", n, _len, i0, j0 );
+	for(int i=0; i<n; i++){
+        spec.wave[j0+i] = (double)stream[i0+i];
+        //spec.wave[i] = (double)stream[i];
 	}
+
+	//spec.wave[n-2] = 1000000;
+	//spec.wave[n/2] = 1000000;
+	//spec.wave[n/2+n/4] = 1000000;
+	//spec.wave[1  ] = 1000000;
 
 	spec.need_refresh=true;
 

@@ -165,6 +165,8 @@ class Vec2T{
 	static inline T cross    (VEC& a, VEC& b){ return a.x*b.x + a.y*b.y ; };
 	static inline VEC  mul_cmplx(VEC& a, VEC& b){ return (VEC){ a.x*b.x-a.y*b.y, a.y*b.x+a.x*b.y };  }
 
+	static inline VEC newFromAngle( T phi ){ VEC v;  v.x = cos( phi ); v.y = sin( phi ); return v; }
+
 };
 
 using Vec2i = Vec2T<int>;

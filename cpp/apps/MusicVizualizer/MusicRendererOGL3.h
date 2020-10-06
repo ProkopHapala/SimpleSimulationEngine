@@ -30,6 +30,7 @@ void plotBuffStereo( GLMesh& mesh, Shader& sh, int n, double* buff, float dx, fl
 
     GLuint ucolor = sh.getUloc("baseColor");
 
+    //printf( "plotBuffStereo n %i \n", n );
     for(int i=0; i<n; i++){ ps[i].set( i*dx, buff[i*2]*dy, 0 ); }
     glBufferSubData(GL_ARRAY_BUFFER, 0, 3*n*sizeof(float), ps   );
     //sh.setUniformVec4f( "baseColor", (Quat4f){1.f,0.f,0.f,1.f} );

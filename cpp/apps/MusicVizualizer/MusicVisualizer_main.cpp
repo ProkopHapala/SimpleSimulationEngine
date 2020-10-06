@@ -13,6 +13,7 @@
 #include "Vec3.h"
 #include "Mat3.h"
 #include "quaternion.h"
+#include "VecN.h"
 
 //#include "Body.h"
 //#include "DynamicControl.h"
@@ -192,7 +193,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     waveform.clearHist();
 
     Vec3f ps[3*waveform.nwave];
-    for(int i=0; i<waveform.nwave; i++){ ps[i].set( i*0.1, waveform.wave[i]*0.0001, 0 ); }
+    //for(int i=0; i<waveform.nwave; i++){ ps[i].set( i*0.1, waveform.wave[i]*0.0001, 0 ); }
+    for(int i=0; i<waveform.nwave; i++){ ps[i].set( 0.0, 0, 0 ); }
     histMesh = polyLineMesh( waveform.nwave, (float*)ps );
 
     Mix_SetPostMix( postmix_Spectrum, (void*)&waveform );
@@ -209,12 +211,13 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     glEnable(GL_DEPTH_TEST);
 
     //waveform.spectrumHistSmearing();
-    waveform.update( 5.1 );
+    //waveform.update( 5.1 );
     waveform.need_refresh = false;
 
     //fflush( stdout );
-    printf("\e[1;1H\e[2J"); // clear screen //https://stackoverflow.com/questions/2347770/how-do-you-clear-the-console-screen-in-c
-    waveform.printSpectrum();
+    //printf("\e[1;1H\e[2J"); // clear screen //https://stackoverflow.com/questions/2347770/how-do-you-clear-the-console-screen-in-c
+    //waveform.printSpectrum();
+    //printf( "nwave %i nhist %i \n", waveform.nwave, waveform.nhist );
 
 
     shDebug->use();
@@ -224,7 +227,20 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     shDebug->setModelPoseT( (Vec3d){-6.0f,0.0,0.0}, Mat3dIdentity );
 
 
-    plotBuffStereo ( *histMesh, *shDebug, waveform.nwave, waveform.wave, 0.05, 0.0001 );
+    //plotBuffStereo ( *histMesh, *shDebug, waveform.nwave, waveform.wave, 0.05, 0.0001 );
+
+    //FFT(  waveform.wave, waveform.nwave, 1 );
+    Vec2d* wave = (Vec2d*)(waveform.wave);
+    //for(int i=0; i<waveform.nwave+16; i++){ wave[i].fromAngle( i*0.04f); wave[i].add( Vec2d::newFromAngle( i*0.1f) ); wave[i].mul(1e+6); };
+    //FFT(  waveform.wave+2, waveform.nwave/2, 1 );
+    //plotBuffStereo ( *histMesh, *shDebug, waveform.nwave, waveform.wave, 0.01, 0.0001 );
+    //FFT(  waveform.wave+2, waveform.nwave/2, 1 );
+
+    waveform.update( 5.1 );
+    plotBuffStereo ( *histMesh, *shDebug, waveform.nwave, waveform.Fwave, 0.01, 0.000001 );
+
+    //plotBuffStereo ( *histMesh, *shDebug, 396, waveform.wave, 0.05, 0.00001 );
+    //VecN::set( waveform.nwave*2, 0.0, waveform.wave );
 
     int narg;
 
