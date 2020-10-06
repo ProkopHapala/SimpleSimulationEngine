@@ -16,8 +16,7 @@
 
 void plotBuff( GLMesh& mesh, int n, double* buff, float dx, float dy ){
     Vec3f ps[3*n];
-    for(int i=0; i<n/2; i++){ ps[i].set( i*dx, buff[i*2]*dy, 0 ); }
-
+    for(int i=0; i<n; i++){ ps[i].set( i*dx, buff[i]*dy, 0 ); }
     glBindBuffer(GL_ARRAY_BUFFER, mesh.vpos );
     glBufferSubData(GL_ARRAY_BUFFER, 0, 3*n*sizeof(float), ps   );
     mesh.draw();

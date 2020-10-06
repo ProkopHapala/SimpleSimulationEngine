@@ -58,8 +58,10 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
     Spectrum waveform;
 
-    float camDist = 100.0;
+    float dtJul = 0.2;
+    Vec2f CJul = Vec2fZero;
 
+    float camDist = 100.0;
 	int perFrame = 10;
 	//double dt = 0.001;
 
@@ -69,7 +71,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 
     Shader *sh1=0,*shDebug=0,*shTx=0,*shJulia=0;
-    GLMesh *histMesh=0, *glmesh=0,*gledges=0,*msh_normals=0, *glDebug=0, *glTxDebug=0;
+    GLMesh *histMesh=0, *waveMesh=0, *glmesh=0,*gledges=0,*msh_normals=0, *glDebug=0, *glTxDebug=0;
 
 
 	// ==== function declarations
@@ -195,7 +197,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     Vec3f ps[3*waveform.nwave];
     //for(int i=0; i<waveform.nwave; i++){ ps[i].set( i*0.1, waveform.wave[i]*0.0001, 0 ); }
     for(int i=0; i<waveform.nwave; i++){ ps[i].set( 0.0, 0, 0 ); }
-    histMesh = polyLineMesh( waveform.nwave, (float*)ps );
+    waveMesh = polyLineMesh( waveform.nwave, (float*)ps );
+    histMesh = polyLineMesh( waveform.nhist, (float*)ps );
 
     Mix_SetPostMix( postmix_Spectrum, (void*)&waveform );
     Mix_PlayMusic(music, 1);
@@ -215,8 +218,8 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     waveform.need_refresh = false;
 
     //fflush( stdout );
-    //printf("\e[1;1H\e[2J"); // clear screen //https://stackoverflow.com/questions/2347770/how-do-you-clear-the-console-screen-in-c
-    //waveform.printSpectrum();
+    printf("\e[1;1H\e[2J"); // clear screen //https://stackoverflow.com/questions/2347770/how-do-you-clear-the-console-screen-in-c
+    waveform.printSpectrum();
     //printf( "nwave %i nhist %i \n", waveform.nwave, waveform.nhist );
 
 
@@ -227,26 +230,43 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     shDebug->setModelPoseT( (Vec3d){-6.0f,0.0,0.0}, Mat3dIdentity );
 
 
-    //plotBuffStereo ( *histMesh, *shDebug, waveform.nwave, waveform.wave, 0.05, 0.0001 );
+    //plotBuffStereo ( *waveMesh, *shDebug, waveform.nwave, waveform.wave, 0.05, 0.0001 );
 
     //FFT(  waveform.wave, waveform.nwave, 1 );
     Vec2d* wave = (Vec2d*)(waveform.wave);
     //for(int i=0; i<waveform.nwave+16; i++){ wave[i].fromAngle( i*0.04f); wave[i].add( Vec2d::newFromAngle( i*0.1f) ); wave[i].mul(1e+6); };
     //FFT(  waveform.wave+2, waveform.nwave/2, 1 );
-    //plotBuffStereo ( *histMesh, *shDebug, waveform.nwave, waveform.wave, 0.01, 0.0001 );
+    //plotBuffStereo ( *waveMesh, *shDebug, waveform.nwave, waveform.wave, 0.01, 0.0001 );
     //FFT(  waveform.wave+2, waveform.nwave/2, 1 );
 
+    float dx = 0.01;
     waveform.update( 5.1 );
-    plotBuffStereo ( *histMesh, *shDebug, waveform.nwave, waveform.Fwave, 0.01, 0.000001 );
+    plotBuffStereo ( *waveMesh, *shDebug, waveform.nwave, waveform.Fwave, dx, 0.000001 );
 
-    //plotBuffStereo ( *histMesh, *shDebug, 396, waveform.wave, 0.05, 0.00001 );
+
+    //fflush( stdout );
+    printf("\e[1;1H\e[2J"); // clear screen //https://stackoverflow.com/questions/2347770/how-do-you-clear-the-console-screen-in-c
+    waveform.printSpectrum();
+    shDebug->setUniformVec4f("baseColor", (Quat4f){0.0,1.0,0.0,1.0});
+    plotBuff( *histMesh, waveform.nhist, waveform.hist, 0.5*dx*waveform.nwave/waveform.nhist, 0.000001 );
+
+
+    //plotBuffStereo ( *waveMesh, *shDebug, 396, waveform.wave, 0.05, 0.00001 );
     //VecN::set( waveform.nwave*2, 0.0, waveform.wave );
 
     int narg;
 
     shJulia->use();
     //uint locC = shJulia->getUloc("C");
-    shJulia->setUniformVec2f( "Const", {waveform.hist[0]*0.0000001,waveform.hist[waveform.nwave/2]*0.0000001} );
+    float scJulC = 0.0000005;
+    //shJulia->setUniformVec2f( "Const", {waveform.hist[0]*scJulC,waveform.hist[waveform.nwave/2]*scJulC} );
+    float Cx=2-waveform.hist[0               ]*scJulC*0.2;
+    float Cy=  waveform.hist[waveform.nhist/2]*scJulC;
+
+    CJul.mul(1-dtJul); CJul.add(Cx*dtJul,Cy*dtJul);
+    printf("C %g %g | %g %g \n", CJul.y, CJul.y, Cx,Cy );
+    //shJulia->setUniformVec2f( "Const", {Cx,Cy} );
+    shJulia->setUniformVec2f( "Const", CJul );
     //shJulia->setUniformVec2f( "Const", {sin(frameCount*0.02),cos(frameCount*0.01)} );
     //shJulia->setUniformVec2f( "Const", {-0.3,0.6} );
     setCamera(*shJulia, cam);

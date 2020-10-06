@@ -48,14 +48,14 @@ class Spectrum{ public:
 
     void powerSpectrum( ){
         for(int i=0; i<nhist; i++){ hist[i] = 0; }
-        double dx = 2*nhist/nwave;
+        double dx = 2*nhist/float(nwave);
         for(int i=0; i<nwave/2; i++){
             int i1=i*2;
             int i2=2*nwave-i1;
-            double yr1=wave[i1  ];
-            double yi1=wave[i1+1];
-            double yr2=wave[i2  ];
-            double yi2=wave[i2+1];
+            double yr1=Fwave[i1  ];
+            double yi1=Fwave[i1+1];
+            double yr2=Fwave[i2  ];
+            double yi2=Fwave[i2+1];
             double p1 = yr1*yr1 + yi1*yi1;
             double p2 = yr2*yr2 + yi2*yi2;
             int j = (int)(i*dx);
