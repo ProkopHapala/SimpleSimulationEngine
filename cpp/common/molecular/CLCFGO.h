@@ -67,6 +67,9 @@
 */
 class CLCFGO{ public:
 
+
+    Vec3d DEBUG_dQdp;
+
     double Rcut    =6.0;  ///< cutoff beyond which two basis functions chi has no overlap
     double RcutOrb =9.0;  ///< cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
     double Rcut2     =Rcut*Rcut;
@@ -623,15 +626,22 @@ class CLCFGO{ public:
 
         dCdp = Rij*(-2*dCr*ci*cj);
 
+        DEBUG_dQdp = dCdp;
+
         // --- Derivatives ( i.e. Forces )
         //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
 
-        printf( "fromRho[%i,%i][%i] Fpi(%g,%g,%g) Eqi %g Fqi \n", i, j, ij, Fpi.x,Fpi.y,Fpi.z, Eqi, Fqi);
+        //printf( "fromRho[%i,%i][%i] Fpi(%g,%g,%g) Eqi %g Fqi \n", i, j, ij, Fpi.x,Fpi.y,Fpi.z, Eqi, Fqi);
+        printf( "fromRho[%i,%i][%i]  Q %g    fxi(%g,%g,%g) Eqi %g dCdp(%g,%g,%g) \n", i, j, ij,  1./rhoQ[ij],  fxi.x,fxi.y,fxi.z, Eqi, dCdp.x,dCdp.y,dCdp.z );
         //printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
-        efpos [i].add( fxi*0.5 + dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
-        efpos [j].add( fxj*0.5 + dCdp*Eqi );
-        efsize[i] += fsi*aij*0;
-        efsize[j] += fsj*aij*0;
+
+
+        efpos [i].add( fxi*-3.65*2 + dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
+        efpos [j].add( fxj*-3.65*2 + dCdp*Eqi );
+        //efpos [i].add( dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
+        //efpos [j].add( dCdp*Eqi );
+        efsize[i] += fsi*aij;
+        efsize[j] += fsj*aij;
 
         //dCsi*=-0.42;
         //dCsj*=-0.42;
