@@ -141,6 +141,7 @@ class FrameBuffer{ public:
             printf(" problem in FBO ! \n ");
             checkFramebufferStatus();
         }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     void init( int W, int H  ){
@@ -154,6 +155,10 @@ class FrameBuffer{ public:
         glViewport(0,0,W,H);
         glScissor (0,0,W,H);
     }
+
+    FrameBuffer() = default;
+    FrameBuffer(int W, int H){  init( W, H ); };
+
 };
 
 #endif

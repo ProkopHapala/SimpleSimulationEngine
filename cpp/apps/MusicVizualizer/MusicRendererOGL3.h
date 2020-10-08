@@ -45,6 +45,50 @@ void plotBuffStereo( GLMesh& mesh, Shader& sh, int n, double* buff, float dx, fl
 
 
 
+class ShaderStack{ public:
+    // This class let you render use multiple FrameBuffers as input-output textures with multople shaders like multiple buffers on ShaderToy
+    // This is usefull for grid-based physical simulations on GPU (like fluid simulations) or like texture dynamic wraping/transforms like movement module in WinAmp AVS
+
+    std::vector<FrameBuffer*> buffers;
+    std::vector<Shader*>      shaders;
+    GLMesh* screenQuad=0;
+
+    //bool bDrawRaw = true;
+    bool bDrawRaw = false;
+
+    void makeBuffers(int n, int width, int height ){
+        for(int i=0; i<n; i++){
+            buffers.push_back( new FrameBuffer(width, height) );
+        }
+    }
+
+    void bindOutput(int i){
+        if( (i<0)||(i>buffers.size()) ) { glBindFramebuffer(GL_FRAMEBUFFER, 0               );  }
+        else                            { glBindFramebuffer(GL_FRAMEBUFFER, buffers[i]->buff );  }
+    };
+    void unbindOutput(){ glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+
+    Shader* render( int ish, int iout, int nin, const int* ins, const int* texUnits=0 ){
+        //glBindFramebuffer(GL_FRAMEBUFFER, iout );
+        bindOutput(iout);
+        for(int i=0; i<nin; i++){
+            printf( "i %i nin %i \n", i, nin );
+            int itex = i;
+            if(texUnits) itex = texUnits[i];
+            glActiveTexture(GL_TEXTURE0+i);
+            int ibuf = ins[i];
+            if(ibuf<0){ glBindTexture  (GL_TEXTURE_2D, buffers[-ibuf]->texZ   ); } // for negative buffer index we take Z-buffer
+            else      { glBindTexture  (GL_TEXTURE_2D, buffers[ ibuf]->texRGB ); } // for positive buffer index we take RGB-buffer
+        }
+        Shader* sh = shaders[ish];
+        sh->use();
+        // ToDo - would be nice to set shader parameters here
+        if(bDrawRaw){ screenQuad->drawRaw(); }else{ screenQuad->draw(); }
+        return sh;
+    }
+
+};
+
 
 
 #endif

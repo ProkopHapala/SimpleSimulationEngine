@@ -9,6 +9,8 @@
 //#include <SDL2/SDL_opengl.h>
 #include <GL/glew.h>
 
+#include "testUtils.h"
+
 #include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
@@ -42,7 +44,7 @@ DEBUG_VIEW_DEFINE()
 
 #include "MusicUtils.h"
 #include "MusicRendererOGL3.h"
-#include "testUtils.h"
+
 
 
 using namespace Music;
@@ -67,10 +69,10 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 	//int fontTex_DEBUG;
 
+    ShaderStack layers;
 
 
-
-    Shader *sh1=0,*shDebug=0,*shTx=0,*shJulia=0;
+    Shader *sh1=0,*shDebug=0,*shTx=0,*shJulia=0,*shTex=0;
     GLMesh *histMesh=0, *waveMesh=0, *glmesh=0,*gledges=0,*msh_normals=0, *glDebug=0, *glTxDebug=0;
 
 
@@ -99,6 +101,16 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
  for( ScreenSDL2OGL3* screen: screens ) screen->scenes.push_back( this );
 
     DEBUG_VIEW_INIT()
+
+
+    //frameBuff1.init( WIDTH, HEIGHT );
+    //texTest = makeTestTextureRGBA( 256, 256);
+
+    shTex=new Shader();
+    shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
+    shTex->getDefaultUniformLocation();
+
+
 
     //for( ScreenSDL2OGL3* screen: screens ) screen->scenes.push_back( this );
 
@@ -167,6 +179,10 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     //glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs);
     glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs_2x2);
 
+    layers.screenQuad = glTxDebug;
+    layers.makeBuffers( 2, screen[0].WIDTH, screen[0].HEIGHT );
+    layers.shaders.push_back( shTex   );
+    layers.shaders.push_back( shJulia );
 
     //return 0;
 
@@ -202,6 +218,7 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 
     Mix_SetPostMix( postmix_Spectrum, (void*)&waveform );
     Mix_PlayMusic(music, 1);
+
 
     //camStep = 2.0;
 };
@@ -239,6 +256,7 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     //plotBuffStereo ( *waveMesh, *shDebug, waveform.nwave, waveform.wave, 0.01, 0.0001 );
     //FFT(  waveform.wave+2, waveform.nwave/2, 1 );
 
+
     float dx = 0.01;
     waveform.update( 5.1 );
     plotBuffStereo ( *waveMesh, *shDebug, waveform.nwave, waveform.Fwave, dx, 0.000001 );
@@ -256,6 +274,15 @@ void MusicVisualizerGUI::draw( Camera& cam ){
 
     int narg;
 
+
+
+    //  Following will be rendered to BUFFER[1]
+    layers.bindOutput( 0 );
+    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    glEnable(GL_DEPTH_TEST);
+
+
     shJulia->use();
     //uint locC = shJulia->getUloc("C");
     float scJulC = 0.0000005;
@@ -272,6 +299,29 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     setCamera(*shJulia, cam);
     shJulia->setModelPoseT( (Vec3d){-4.,-4.,0.0}, Mat3dIdentity*8.0 );
     glTxDebug->draw();
+
+
+    layers.unbindOutput();
+
+
+
+    /*
+    shTex->use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture  (GL_TEXTURE_2D, layers.buffers[0]->texRGB   );
+    setCamera(*shTex, cam );
+    shTex->setModelPoseT( (Vec3d){-4.,-4.,0.0}, Mat3dIdentity*8.0 );
+    glTxDebug->draw();
+    */
+
+
+    shTex->use();
+    setCamera(*shTex, cam );
+    shTex->setModelPoseT( (Vec3d){-4.,-4.,0.0}, Mat3dIdentity*8.0 );
+    layers.render( 0, -1, 1, (const int[]){0} ); // renders using shader[0] to default_screen using 1 input buffer #0
+
+
+
 
 };
 
