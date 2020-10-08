@@ -67,6 +67,9 @@
 */
 class CLCFGO{ public:
 
+
+    Vec3d DEBUG_dQdp;
+
     double Rcut    =6.0;  ///< cutoff beyond which two basis functions chi has no overlap
     double RcutOrb =9.0;  ///< cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
     double Rcut2     =Rcut*Rcut;
@@ -623,15 +626,22 @@ class CLCFGO{ public:
 
         dCdp = Rij*(-2*dCr*ci*cj);
 
+        DEBUG_dQdp = dCdp;
+
         // --- Derivatives ( i.e. Forces )
         //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
 
-        printf( "fromRho[%i,%i][%i] Fpi(%g,%g,%g) Eqi %g Fqi \n", i, j, ij, Fpi.x,Fpi.y,Fpi.z, Eqi, Fqi);
+        //printf( "fromRho[%i,%i][%i] Fpi(%g,%g,%g) Eqi %g Fqi \n", i, j, ij, Fpi.x,Fpi.y,Fpi.z, Eqi, Fqi);
+        printf( "fromRho[%i,%i][%i]  Q %g    fxi(%g,%g,%g) Eqi %g dCdp(%g,%g,%g) \n", i, j, ij,  1./rhoQ[ij],  fxi.x,fxi.y,fxi.z, Eqi, dCdp.x,dCdp.y,dCdp.z );
         //printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
-        efpos [i].add( fxi*0.5 + dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
-        efpos [j].add( fxj*0.5 + dCdp*Eqi );
-        efsize[i] += fsi*aij*0;
-        efsize[j] += fsj*aij*0;
+
+
+        efpos [i].add( fxi + dCdp*Eqi*0 ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
+        efpos [j].add( fxj + dCdp*Eqi*0 );
+        //efpos [i].add( dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
+        //efpos [j].add( dCdp*Eqi );
+        efsize[i] += fsi*aij;
+        efsize[j] += fsj*aij;
 
         //dCsi*=-0.42;
         //dCsj*=-0.42;
@@ -694,7 +704,8 @@ class CLCFGO{ public:
         double fr,fs;
         //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
 
-        double E  = Gauss::Coulomb( r, s*2, fr, fs );
+        //double E  = Gauss::Coulomb( r, s*2, fr, fs );   // Q :  Should there be the constant s*2 ????
+        double E  = Gauss::Coulomb( r, s, fr, fs );       // WARRNING  :  removed the contant s*2 to s  ... is it correct ?
 
         fr *= qij;
         fs *= qij*4;
@@ -705,7 +716,8 @@ class CLCFGO{ public:
         rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
         rhoEQ[i] += E;       rhoEQ[j] += E;    // Coulombic energy per given density could (due to other density clouds)
 
-        printf( "CoublombElement[%i,%i] E %g rhoEQij %g %g \n", i, j, E, rhoEQ[i], rhoEQ[j] );
+        //printf( "CoublombElement r %g s %g E %g \n", r, s, E );
+        //printf( "CoublombElement[%i,%i] E %g rhoEQij %g %g \n", i, j, E, rhoEQ[i], rhoEQ[j] );
 
         return E;
     }

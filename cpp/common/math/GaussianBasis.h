@@ -127,6 +127,8 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     double e1f2 = e1*f2;
     fr = (f1*e2 + e1f2)*ir;
     fs =          e1f2 *r_s * is;
+
+    printf( "Gauss::Coulomb r %g s %g E %g \n", r, s, e1 * e2 );
     return e1 * e2;
 }
 
@@ -143,7 +145,7 @@ inline double product3D_s_deriv(
     double si2   = si*si;
     double sj2   = sj*sj;
     double s2    = si2 + sj2;
-    double is2   = 1/(si2 + sj2);
+    double is2   = 1/s2;
     double is4   = is2*is2;
     double sqrtis2 = sqrt(is2);
 
