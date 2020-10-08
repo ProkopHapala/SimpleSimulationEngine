@@ -127,6 +127,8 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     double e1f2 = e1*f2;
     fr = (f1*e2 + e1f2)*ir;
     fs =          e1f2 *r_s * is;
+
+    printf( "Gauss::Coulomb r %g s %g E %g \n", r, s, e1 * e2 );
     return e1 * e2;
 }
 

@@ -70,6 +70,11 @@ def Coulomb( r, s ):
     fr = (f1*e2 + e1f2)*ir
     fs =          e1f2 *r_s * is_
     E  = e1 * e2
+
+    for i in range(len(r)):
+        print "Gauss::Coulomb r %g s %g E %g " %(r[i],s, (e1 * e2)[i] )
+
+
     return E,fr,fs
 
 def product3D_s_deriv( si,pi, sj,pj ):
@@ -121,6 +126,7 @@ def product3D_s_deriv( si,pi, sj,pj ):
     #double C   = np.exp(-logC) * Ci * Cj
 
     S = e1*e2 # Overlap
+
     return S,s,p, dCr*dp, (dSsi,dXsi,dXxi,dCsi), (dSsj,dXsj,dXxj,dCsj)
 
 
@@ -165,29 +171,37 @@ if __name__ == "__main__":
     dx =  0.05
     xa =  np.arange( 0.01, 5.0, dx )
     xb =  0.0
-    xc =  -0.5
-    xd =   0.0
+    xc = -1.5
+    xd =  0.0
 
+    xs_ = (xa[1:]+xa[:-1])*0.5
 
     # overlaps
     Sab, si, xab, dQab, dA, dB = product3D_s_deriv( sa,xa, sb,xb )
     Scd, sj, xcd, dQcd, dC, dD = product3D_s_deriv( sc,xc, sd,xd )
     # coulomb
-    s2   = si*si + sj*sj;
-    s    = np.sqrt(s2);
-    E, fx, fs = Coulomb( xab-xcd, s )
+    s2        = si*si + sj*sj
+    s         = np.sqrt(s2)
+    r         = xab-xcd
+    E, fx, fs = Coulomb( r, s )
+    dXxi = dA[2] + xa*0 
 
-    #plt.plot( xa, Sab , label='Sab' )
+    plt.plot( xa, Sab , label='Sab' )
+    plt.plot( xa, r   , label='r'   )
     #plt.plot( xa, dQab, label='dSab_ana' )
-    #plt.plot( (xa[1:]+xa[:-1])*0.5, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
+    #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
 
     # Q: Why we dont need derivatives of charge ????
     #Fx = -fx*0.5*dA[1] # This works for zero initial distance between blobs
-    Fx = -fx*0.5*dA[1]
+    Fx = fx*r*dXxi
 
+    
     plt.plot( xa, E , label='E' )
     plt.plot( xa, Fx, label='dEdx_ana' )
-    plt.plot( (xa[1:]+xa[:-1])*0.5, (E[1:]-E[:-1])/dx,':', label='dEdx_num' )
+    plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='dEdx_num' )
+    
+    #plt.plot( xa, fx,   label='fx' )
+    #plt.plot( xa, dXxi, label='dXxi' )
 
 
     plt.grid()

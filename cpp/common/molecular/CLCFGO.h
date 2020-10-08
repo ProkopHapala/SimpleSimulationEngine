@@ -636,8 +636,8 @@ class CLCFGO{ public:
         //printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
 
 
-        efpos [i].add( fxi*-3.65*2 + dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
-        efpos [j].add( fxj*-3.65*2 + dCdp*Eqi );
+        efpos [i].add( fxi + dCdp*Eqi*0 ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
+        efpos [j].add( fxj + dCdp*Eqi*0 );
         //efpos [i].add( dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
         //efpos [j].add( dCdp*Eqi );
         efsize[i] += fsi*aij;
@@ -704,7 +704,8 @@ class CLCFGO{ public:
         double fr,fs;
         //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
 
-        double E  = Gauss::Coulomb( r, s*2, fr, fs );
+        //double E  = Gauss::Coulomb( r, s*2, fr, fs );   // Q :  Should there be the constant s*2 ????
+        double E  = Gauss::Coulomb( r, s, fr, fs );       // WARRNING  :  removed the contant s*2 to s  ... is it correct ?
 
         fr *= qij;
         fs *= qij*4;
@@ -715,7 +716,8 @@ class CLCFGO{ public:
         rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
         rhoEQ[i] += E;       rhoEQ[j] += E;    // Coulombic energy per given density could (due to other density clouds)
 
-        printf( "CoublombElement[%i,%i] E %g rhoEQij %g %g \n", i, j, E, rhoEQ[i], rhoEQ[j] );
+        //printf( "CoublombElement r %g s %g E %g \n", r, s, E );
+        //printf( "CoublombElement[%i,%i] E %g rhoEQij %g %g \n", i, j, E, rhoEQ[i], rhoEQ[j] );
 
         return E;
     }
