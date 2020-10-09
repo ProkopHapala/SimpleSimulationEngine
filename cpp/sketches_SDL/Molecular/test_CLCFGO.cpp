@@ -246,7 +246,7 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
 
     //int ie=0,je=1;
     for(int i=0; i<n; i++){
-        printf( "-------------- %i | testDerivs_Coulomb_model \n", i );
+        //printf( "-------------- %i | testDerivs_Coulomb_model \n", i );
         solver.cleanForces();
         double x = x0 + i*dx + 0.01;
         solver.epos[0].x=x;    // set position of  wf basis function   xhi[0]

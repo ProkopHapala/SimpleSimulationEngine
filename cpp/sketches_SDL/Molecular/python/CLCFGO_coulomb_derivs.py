@@ -71,8 +71,8 @@ def Coulomb( r, s ):
     fs =          e1f2 *r_s * is_
     E  = e1 * e2
 
-    for i in range(len(r)):
-        print "Gauss::Coulomb r %g s %g E %g " %(r[i],s, (e1 * e2)[i] )
+    #for i in range(len(r)):
+    #    print "Gauss::Coulomb r %g s %g E %g fr %g " %(r[i],s, E[i], fr[i]  )
 
 
     return E,fr,fs
@@ -120,14 +120,19 @@ def product3D_s_deriv( si,pi, sj,pj ):
 
     dCsi = e1*f2*si - e2*f1*sj
     dCsj = e1*f2*sj + e2*f1*si
-    dCr  = e1*e2*(-2.*is2)          # derivative is correct, tested !
+    C    = e1*e2        # Overlap
+    dCr  = C*(-2.*is2)  # derivative is correct, tested !
+    #   TODO : How is it possible that derivative is the same as value (just rescaled) ???? 
 
     #double logC =  wxi*xi + wxj*xj - wx*X;
     #double C   = np.exp(-logC) * Ci * Cj
 
-    S = e1*e2 # Overlap
-
-    return S,s,p, dCr*dp, (dSsi,dXsi,dXxi,dCsi), (dSsj,dXsj,dXxj,dCsj)
+    #try:
+    #    for i in range(len(r2)):
+    #        print "product3D_s_deriv r %g s %g S %g dS %g " %(np.sqrt(r2[i]),s, S[i], dCr[i]  )
+    #except: 
+    #    pass
+    return C,s,p, dCr*dp, (dSsi,dXsi,dXxi,dCsi), (dSsj,dXsj,dXxj,dCsj)
 
 
 
@@ -168,8 +173,8 @@ if __name__ == "__main__":
     sc = 1.0
     sd = 1.0
 
-    dx =  0.05
-    xa =  np.arange( 0.01, 5.0, dx )
+    dx =  0.1
+    xa =  np.arange( 0.01, 3.0, dx )
     xb =  0.0
     xc = -1.5
     xd =  0.0
@@ -183,7 +188,7 @@ if __name__ == "__main__":
     s2        = si*si + sj*sj
     s         = np.sqrt(s2)
     r         = xab-xcd
-    E, fx, fs = Coulomb( r, s )
+    e, fx, fs = Coulomb( r, s )
     dXxi = dA[2] + xa*0 
 
     plt.plot( xa, Sab , label='Sab' )
@@ -195,10 +200,30 @@ if __name__ == "__main__":
     #Fx = -fx*0.5*dA[1] # This works for zero initial distance between blobs
     Fx = fx*r*dXxi
 
+    qij  = 4*Scd*Sab
+    #qij  = Sab
+    dQij = 4*Scd*dQab
+
+    print "Scd, 4*Scd ", Scd, 4*Scd
+    print "For some reason each charge is scaled by 2.0"
+
+    E = e*qij
+    F = fx*qij + e*dQij   # total derivtive F = dE/dx = d(e*qi)/dx
+
+    # Note:   e,fx=de/dx   are NOT multiplied by charge Qij
+    #         Total force Fx = dE/dx = d(e*q)/dx = q*(de/dx) + e*(dq/dx)
+
+    for i in range(len(r)):
+        #print "Gauss::Coulomb r %g s %g E %g Fx %g fx %g " %(r[i], s, E[i], Fx[i], fx[i] )
+        #print "fromRho r %g s %g E %g Fx %g fx %g " %((xa-xb)[i], s, E[i], Fx[i], fx[i] )
+        #print "CoublombElement r %g s %g E %g fr %g qij %g  frq %g fij %g" %((xa-xb)[i], s, e[i], fx[i], qij[i], (fx*qij)[i], (fx*qij*r)[i] )
+        print "fromRho r %g s %g | E %g e %g qij %g | F %g fx %g dQij %g " %((xa-xb)[i], si, E[i],e[i]*2*Scd,qij[i],  F[i],fx[i],dQij[i] )
+        pass
+
     
-    plt.plot( xa, E , label='E' )
+    plt.plot( xa, e , label='E' )
     plt.plot( xa, Fx, label='dEdx_ana' )
-    plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='dEdx_num' )
+    plt.plot( xs_, (e[1:]-e[:-1])/dx,':', label='dEdx_num' )
     
     #plt.plot( xa, fx,   label='fx' )
     #plt.plot( xa, dXxi, label='dXxi' )

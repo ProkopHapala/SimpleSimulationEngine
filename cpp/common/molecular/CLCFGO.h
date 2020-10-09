@@ -573,7 +573,7 @@ class CLCFGO{ public:
 
 
     //Vec3d fromRho( int i, int j, int ij ){
-    void fromRho( int i, int j, int ij, double& aij ){
+    void fromRho( int i, int j, int ij, double& Cij ){
     //void fromRho( int i, int j, int ij, double& aij, double& dCsi, double& dCsj, Vec3d& dCdp ){
         /// NOTE : this function is mostly for debugging of  assembleOrbForces()
 
@@ -599,7 +599,11 @@ class CLCFGO{ public:
         double dCsi,dCsj;
         Vec3d  dCdp;
 
-        aij = Gauss::product3D_s_deriv(
+        // NOTE: we must compute it twice
+        // 1) in toRho() to obtain charges and positions
+        // 2) here to obtain derivatives dXxi,dXxj,dCr
+        // We cannot connect it because CoublombElement needs do (1)before and (2)after itself
+        Cij = Gauss::product3D_s_deriv(
             si,   pi,
             sj,   pj,
             s ,   p ,
@@ -622,26 +626,37 @@ class CLCFGO{ public:
         //fsi = ci*cj * ( fsi*aij + E*dCr );
         //fxi = ((Vec3d){1,1,1}) * dXxi ;
 
-        //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
-
         dCdp = Rij*(-2*dCr*ci*cj);
-
         DEBUG_dQdp = dCdp;
 
-        // --- Derivatives ( i.e. Forces )
-        //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
+        Vec3d Fq  = dCdp*Eqi;
+        Vec3d Fxi = fxi + Fq;
+        Vec3d Fxj = fxj - Fq;
 
-        //printf( "fromRho[%i,%i][%i] Fpi(%g,%g,%g) Eqi %g Fqi \n", i, j, ij, Fpi.x,Fpi.y,Fpi.z, Eqi, Fqi);
-        printf( "fromRho[%i,%i][%i]  Q %g    fxi(%g,%g,%g) Eqi %g dCdp(%g,%g,%g) \n", i, j, ij,  1./rhoQ[ij],  fxi.x,fxi.y,fxi.z, Eqi, dCdp.x,dCdp.y,dCdp.z );
-        //printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
-
-
-        efpos [i].add( fxi + dCdp*Eqi*0 ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
-        efpos [j].add( fxj + dCdp*Eqi*0 );
+        efpos [i].add( Fxi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
+        efpos [j].add( Fxj );
         //efpos [i].add( dCdp*Eqi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
         //efpos [j].add( dCdp*Eqi );
-        efsize[i] += fsi*aij;
-        efsize[j] += fsj*aij;
+        efsize[i] += fsi*Cij;
+        efsize[j] += fsj*Cij;
+
+
+        // Perhaps found a problem !!!!!
+        //  rhoQ[ij]  = qi*qj*Sab*Scd is probably wrong !!!!!
+        //  We are missing the j-orbital part  cj*Sj = cj*Scd
+        // TODO : Due to summation we have to multiply it by Qj but not by Qi
+
+
+        // --- Derivatives ( i.e. Forces )
+        //printf( "fromRho r %g s %g E %g Fx %g fx %g  \n", sqrt(r2), s, Eqi,     );
+        //printf( "fromRho r %g s %g | E %g e %g qij %g(%g) | F %g fx %g dQij %g \n", sqrt(r2), s, Eqi*rhoQ[ij],Eqi,rhoQ[ij],  Fxi.x,fxi.x,dCdp.x );
+        printf( "fromRho r %g s %g | E %g e %g qij %g(%g) | F %g fx %g dQij %g \n", sqrt(r2), s, Eqi*rhoQ[ij],Eqi,rhoQ[ij],Cij,  Fxi.x,fxi.x,dCdp.x );
+
+        //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
+        //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
+        //printf( "fromRho[%i,%i][%i] Fpi(%g,%g,%g) Eqi %g Fqi \n", i, j, ij, Fpi.x,Fpi.y,Fpi.z, Eqi, Fqi);
+        //printf( "fromRho[%i,%i][%i]  Q %g    fxi(%g,%g,%g) Eqi %g dCdp(%g,%g,%g) \n", i, j, ij,  1./rhoQ[ij],  fxi.x,fxi.y,fxi.z, Eqi, dCdp.x,dCdp.y,dCdp.z );
+        //printf( "fromRho[%i,%i][%i] Eqi %g dCdp(%g,%g,%g) \n", i, j, ij, Eqi, dCdp.x,dCdp.y,dCdp.z );
 
         //dCsi*=-0.42;
         //dCsj*=-0.42;
@@ -671,7 +686,7 @@ class CLCFGO{ public:
             fromRhoDiag( i, ii, aij );  // Why is this zero ????
             ii++;
             for(int j=i0; j<i; j++){
-                printf( "assembleOrbForces_fromRho[%i,%i][%i] \n", i, j, ii  );
+                //printf( "assembleOrbForces_fromRho[%i,%i][%i] \n", i, j, ii  );
                 //fromRho( i, j, ii, aij, dCsi, dCsj, dQdp );
                 fromRho( i, j, ii, aij );
                 // ToDo: ad dQdp    //   Fana              = efpos                + EK*dQdp; ..... TODO
@@ -707,16 +722,17 @@ class CLCFGO{ public:
         //double E  = Gauss::Coulomb( r, s*2, fr, fs );   // Q :  Should there be the constant s*2 ????
         double E  = Gauss::Coulomb( r, s, fr, fs );       // WARRNING  :  removed the contant s*2 to s  ... is it correct ?
 
-        fr *= qij;
+        double frq =  fr * qij;
         fs *= qij*4;
 
-        Vec3d fij = Rij*(-fr);
-        rhofP[i].add(fij);   rhofP[j].sub(fij);
-        rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
-        rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
-        rhoEQ[i] += E;       rhoEQ[j] += E;    // Coulombic energy per given density could (due to other density clouds)
 
-        //printf( "CoublombElement r %g s %g E %g \n", r, s, E );
+        Vec3d fij = Rij*(-frq);
+        rhofP[i].add(fij);   rhofP[j].sub(fij);
+        rhofS[i] -= fs*si;   rhofS[j] -= fs*sj; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
+        rhofQ[i] += E*qj;    rhofQ[j] += E*qi;  // ToDo : need to be made more stable ... different (qi,qj)
+        rhoEQ[i] += E*qj;    rhoEQ[j] += E*qi;  // Coulombic energy per given density could (due to other density clouds)
+
+        //printf( "CoublombElement r %g s %g E %g fr %g qij %g frq %g fij %g \n", r, s, E, fr, qij, frq, fij.x );
         //printf( "CoublombElement[%i,%i] E %g rhoEQij %g %g \n", i, j, E, rhoEQ[i], rhoEQ[j] );
 
         return E;

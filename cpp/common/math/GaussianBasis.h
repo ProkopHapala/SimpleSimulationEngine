@@ -127,8 +127,7 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     double e1f2 = e1*f2;
     fr = (f1*e2 + e1f2)*ir;
     fs =          e1f2 *r_s * is;
-
-    printf( "Gauss::Coulomb r %g s %g E %g \n", r, s, e1 * e2 );
+    //printf( "Gauss::Coulomb r %g s %g E %g fr %g \n", r, s, e1*e2, fr ); // This works (same as in python)
     return e1 * e2;
 }
 
@@ -182,7 +181,10 @@ inline double product3D_s_deriv(
 
     //double logC =  wxi*xi + wxj*xj - wx*X;
     //double C   = np.exp(-logC) * Ci * Cj
-    return e1 * e2;
+    double C = e1*e2;
+    //printf( "product3D_s_deriv r %g s %g S %g dS %g \n", sqrt(r2), S, C, dCr  );
+
+    return C;
 }
 
 
