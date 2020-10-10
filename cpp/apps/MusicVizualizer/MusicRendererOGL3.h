@@ -82,7 +82,8 @@ class ShaderStack{ public:
     GLMesh* screenQuad=0;
 
     //bool bDrawRaw = true;
-    bool bDrawRaw = false;
+    bool bDrawRaw  = false;
+    bool bFlushing = true;
 
     void makeBuffers(int n, int width, int height ){
         for(int i=0; i<n; i++){
@@ -97,6 +98,7 @@ class ShaderStack{ public:
     void unbindOutput(){ glBindFramebuffer(GL_FRAMEBUFFER, 0); }
 
     Shader* render( int ish, int iout, int nin, const int* ins, const int* texUnits=0 ){
+        if(bFlushing)glFlush();
         //glBindFramebuffer(GL_FRAMEBUFFER, iout );
         bindOutput(iout);
         for(int i=0; i<nin; i++){

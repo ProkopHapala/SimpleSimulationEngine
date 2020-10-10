@@ -198,7 +198,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     //cam.zoom = 5.00f;
     // Orthographic
     cam.persp =  false;
-    cam.zoom  =  0.9036f; // Q??? : Not Sure Why there is this factor 0.9036f instead of 1.0 ?????
+    //cam.zoom  =  0.9036f; // Q??? : Not Sure Why there is this factor 0.9036f instead of 1.0 ?????
+    cam.zoom  =  0.90310f;
     cam.zmin  = -1000.0;
     //zoomStep = 0.001;
 
@@ -251,6 +252,16 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     Mix_SetPostMix( postmix_Spectrum, (void*)&waveform );
     Mix_PlayMusic(music, 1);
 
+
+
+    glActiveTexture(GL_TEXTURE0  );
+    glActiveTexture(GL_TEXTURE0+1);
+    glActiveTexture(GL_TEXTURE0+2);
+    glActiveTexture(GL_TEXTURE0+3);
+    glActiveTexture(GL_TEXTURE0+4);
+    glActiveTexture(GL_TEXTURE0+5);
+    glActiveTexture(GL_TEXTURE0+6);
+    glActiveTexture(GL_TEXTURE0+7);
 
     //camStep = 2.0;
 };
@@ -308,16 +319,20 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     glTxDebug->draw(GL_LINE_LOOP);
 
 
-
+    glDisable(GL_DEPTH_TEST);
     //  Following will be rendered to BUFFER[1]
     layers.bindOutput( 0 );
-    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-    glEnable(GL_DEPTH_TEST);
+    //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+	//glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    //glDisable(GL_DEPTH_TEST);
 
-    shDebug->setUniformVec4f("baseColor", {1.0,0.0,1.0,1.0});
-    glTxDebug->draw(GL_LINE_LOOP);
-
+    if(frameCount==1){
+        glClearColor( 0.5f, 0.6f, 0.4f, 1.0f );
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        shDebug->setUniformVec4f("baseColor", {0.7,0.3,0.8,1.0});
+        glTxDebug->draw(GL_LINE_LOOP);
+    }
+    //glTxDebug->draw(GL_LINE_LOOP);
 
     // ---- Texture processing shader between two buffers
     // ---- TODO : prehaps cannot use the same buffer both as input and output
@@ -326,17 +341,46 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     setCamera(*shReactDiff, cam);
     shReactDiff->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
 
+    // MaybeNeed Synchornization ???   https://www.khronos.org/opengl/wiki/Synchronization
+
+    // ---- Using the same texture as both input and output makes problems
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture  (GL_TEXTURE_2D, layers.buffers[0]->texRGB );
+    //glTxDebug->draw();
+
+    //glFinish();
+
+    //glFlush();
     layers.bindOutput( 1 );
-    glActiveTexture(GL_TEXTURE0);
+    {
+    int W = layers.buffers[0]->W;
+    int H = layers.buffers[0]->H;
+    const int nbuf = W*H;
+    uint8_t buff[nbuf*3];
+    if(frameCount==1){
+        for(int i=0;i<nbuf*3;i++) buff[i]=rand()&0xFF;
+        //glActiveTexture(GL_TEXTURE0);
+        glBindTexture  (GL_TEXTURE_2D, layers.buffers[0]->texRGB );
+        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,W,H,GL_RGB,GL_UNSIGNED_BYTE,buff);
+        //glFlush();
+    }
+    }
+
+    //glActiveTexture(GL_TEXTURE0);
     glBindTexture  (GL_TEXTURE_2D, layers.buffers[0]->texRGB );
     glTxDebug->draw();
+    //glFinish();
+    //glFlush();
 
     layers.bindOutput( 0 );
-    glActiveTexture(GL_TEXTURE0);
+    //glActiveTexture(GL_TEXTURE0);
     glBindTexture  (GL_TEXTURE_2D, layers.buffers[1]->texRGB );
     glTxDebug->draw();
+    //glFinish();
+    //glFlush();
     //layers.render( 2, 0, 1, (const int[]){0}, 0 );
     //layers.render( 2, 1, 0, (const int[]){1}, 0 );
+
 
 
     /*
