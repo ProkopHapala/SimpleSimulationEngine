@@ -162,7 +162,7 @@ class Mat4T{
 
     // http://www.songho.ca/opengl/gl_projectionmatrix.html
     void setOrthographic( T W, T H, T zmin, T zmax ){
-        T invdz = -1/(zmin-zmax);
+        T invdz = 1/(zmax-zmin);
         /*
         array[0 ]  = 1/W; array[1 ] = 0;   array[2 ] =  0;       array[3 ] = 0;
         array[4 ]  = 0;   array[5 ] = 1/H; array[6 ] =  0;       array[7 ] = 0;

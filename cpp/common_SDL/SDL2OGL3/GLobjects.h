@@ -26,10 +26,12 @@ static const float DEFAULT_Bilboard_UVs[] = {
     1.0f,1.0f,   1.0f,0.0f,   0.0f,1.0f
 };
 
+/*
 static const float DEFAULT_Bilboard_UVs_2x2[] = {
     0.0f,0.0f,   2.0f,0.0f,   0.0f,2.0f,
     2.0f,2.0f,   2.0f,0.0f,   0.0f,2.0f
 };
+*/
 
 class GLMesh{ public:
     union{
@@ -62,6 +64,14 @@ class GLMesh{ public:
         if(c_vcol ){ double2float( nVerts*3, c_vcol,fs); newArrayBuffer( vcol, nVerts*3*sizeof(GLfloat), fs, usage ); }else{ vcol=0; };
         if(c_vUVs ){ double2float( nVerts*2, c_vUVs,fs); newArrayBuffer( vUVs, nVerts*2*sizeof(GLfloat), fs, usage ); }else{ vUVs=0; };
         delete[] fs;
+    };
+
+    GLMesh() = default;
+    GLMesh(int nVerts_, int nInds_, const void * c_inds, const void * c_vpos,  const void * c_vnor, const void * c_vcol, const void * c_vUVs, GLenum usage=GL_STATIC_DRAW){
+        init(nVerts_,nInds_,c_inds,c_vpos,c_vnor,c_vcol,c_vUVs,usage );
+    };
+    GLMesh( int nVerts_, int nInds_, const int * c_inds, const double * c_vpos, const double * c_vnor, const double * c_vcol, const double * c_vUVs, GLenum usage=GL_STATIC_DRAW ){
+        init_d(nVerts_,nInds_,c_inds,c_vpos,c_vnor,c_vcol,c_vUVs, usage );
     };
 
     void init_wireframe( const CMesh& msh ){
@@ -109,6 +119,14 @@ class GLMesh{ public:
 
     //inline GLMesh(){ vpos=0,vnor=0,vcol=0,vUVs=0; };
 };
+
+
+void makeBilboard( GLMesh*& mesh ){
+    //mesh = new GLMesh();
+    //mesh->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs);
+    mesh = new GLMesh( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs);
+}
+
 
 // ==============================
 // ========== GLMesh

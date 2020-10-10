@@ -20,7 +20,7 @@
 #include "Shader.h"
 #include "GLObject.h"
 
-inline void setCamera(Shader& sh, const Camera& cam){
+inline void setCameraPersp(Shader& sh, const Camera& cam){
     Mat4f camMat,mRot,mPersp;
     mPersp.setPerspective( cam.aspect*cam.zoom, cam.zoom, cam.zmin, cam.zmax );
     mRot.setOne(); mRot.setRot(cam.rot);
@@ -40,6 +40,8 @@ inline void setCameraOrtho(Shader& sh, const Camera& cam){
     sh.set_camMat( (GLfloat*)&camMat  );
     //sh.set_modelMat();
 }
+
+inline void setCamera(Shader& sh, const Camera& cam){ if(cam.persp){ setCameraPersp(sh,cam); } else { setCameraOrtho(sh,cam); } }
 
 class SceneNode3D{
 	public:

@@ -27,6 +27,7 @@ class AppSDL2OGL3{ public:
     int frameCount = 0;
     bool STOP = false;
 
+    float zoomStep      = 0.01;
     float mouseRotSpeed = 0.001;
     float keyRotSpeed   = 0.005;
     float keyMoveSpeed  = 1.0;
@@ -117,8 +118,8 @@ void AppSDL2OGL3::update(){
         if( keys[ SDL_SCANCODE_A     ] ){ cam.pos.add_mul( cam.rot.a,  keyMoveSpeed ); }
         if( keys[ SDL_SCANCODE_D     ] ){ cam.pos.add_mul( cam.rot.a, -keyMoveSpeed ); }
 
-        if( keys[ SDL_SCANCODE_KP_PLUS  ] ){ cam.zoom*=1.01; }
-        if( keys[ SDL_SCANCODE_KP_MINUS ] ){ cam.zoom/=1.01; }
+        if( keys[ SDL_SCANCODE_KP_PLUS  ] ){ cam.zoom*=(1.+zoomStep); }
+        if( keys[ SDL_SCANCODE_KP_MINUS ] ){ cam.zoom/=(1.+zoomStep); }
         int dmx,dmy;
         Uint32 buttons = SDL_GetRelativeMouseState( &dmx, &dmy);
         bool polarCamera = true;

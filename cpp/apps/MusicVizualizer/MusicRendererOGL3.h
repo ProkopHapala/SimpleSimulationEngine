@@ -14,6 +14,34 @@
 #include "SDL_utils.h"
 //#include "IO_utils.h"
 
+
+/*
+
+TODO : Share Camera between many shaders  (and other uniforms as well)
+
+Sharing Uniforms (like Camera) between many shaders
+Uniform Buffer Objects (OpenGL)
+https://gamedev.stackexchange.com/questions/153896/camera-and-multiple-shaders
+
+*/
+
+
+void renderTexture( Shader* sh, GLMesh* mesh, Camera& cam, uint tx, int iTxUnit=0){
+    sh->use();
+    glActiveTexture(GL_TEXTURE0 + iTxUnit);
+    glBindTexture  (GL_TEXTURE_2D, tx   );
+    setCamera(*sh, cam );
+    sh->setModelPoseT( (Vec3d){-4.,-4.,0.0}, Mat3dIdentity*8.0 );
+    mesh->draw();
+}
+
+void renderTexture( GLMesh* mesh, uint tx, int iTxUnit=0){
+    glActiveTexture(GL_TEXTURE0 + iTxUnit);
+    glBindTexture  (GL_TEXTURE_2D, tx   );
+    mesh->draw();
+}
+
+
 void plotBuff( GLMesh& mesh, int n, double* buff, float dx, float dy ){
     Vec3f ps[3*n];
     for(int i=0; i<n; i++){ ps[i].set( i*dx, buff[i]*dy, 0 ); }
@@ -63,7 +91,7 @@ class ShaderStack{ public:
     }
 
     void bindOutput(int i){
-        if( (i<0)||(i>buffers.size()) ) { glBindFramebuffer(GL_FRAMEBUFFER, 0               );  }
+        if( (i<0)||(i>buffers.size()) ) { glBindFramebuffer(GL_FRAMEBUFFER, 0                );  }
         else                            { glBindFramebuffer(GL_FRAMEBUFFER, buffers[i]->buff );  }
     };
     void unbindOutput(){ glBindFramebuffer(GL_FRAMEBUFFER, 0); }
@@ -75,7 +103,7 @@ class ShaderStack{ public:
             printf( "i %i nin %i \n", i, nin );
             int itex = i;
             if(texUnits) itex = texUnits[i];
-            glActiveTexture(GL_TEXTURE0+i);
+            glActiveTexture(GL_TEXTURE0+itex);
             int ibuf = ins[i];
             if(ibuf<0){ glBindTexture  (GL_TEXTURE_2D, buffers[-ibuf]->texZ   ); } // for negative buffer index we take Z-buffer
             else      { glBindTexture  (GL_TEXTURE_2D, buffers[ ibuf]->texRGB ); } // for positive buffer index we take RGB-buffer
