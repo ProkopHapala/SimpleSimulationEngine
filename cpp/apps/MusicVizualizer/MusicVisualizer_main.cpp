@@ -108,6 +108,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 
     Shader *shDebug=0,*shJulia=0,*shReactDiff=0,*shTex=0;
+    Shader *shFluid1=0,*shFluid2=0;
     GLMesh *histMesh=0, *waveMesh=0, *glTxDebug=0;
 
 
@@ -141,6 +142,13 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     //frameBuff1.init( WIDTH, HEIGHT );
     //texTest = makeTestTextureRGBA( 256, 256);
 
+    const char *keys[2]{"SOLVER","RENDER"};
+    char** srcs         = fileGetSections( "common_resources/shaders/Fluid.glslf", 2, keys, "//#BEGIN_SHADER:" );
+    char* srx_texture3D = filetobuf( "common_resources/shaders/texture3D.glslv" );
+    printf("\n//==========%s \n\n %s \n\n", "SOLVER", srcs[0] );
+    printf("\n//==========%s \n\n %s \n\n", "RENDER", srcs[0] );
+    shFluid1 = new Shader( srx_texture3D , srcs[0], false );
+    shFluid2 = new Shader( srx_texture3D , srcs[1], false );
 
     shTex   = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/texture.glslf" , true );
     shDebug = new Shader( "common_resources/shaders/const3D.glslv"   , "common_resources/shaders/const3D.glslf" , true );

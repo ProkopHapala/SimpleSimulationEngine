@@ -135,32 +135,20 @@ template <typename T> void toBuff  (  const T& v, void* buff, int& i){ (*(T*)(bu
 */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/*
+inline char* file2str(char const  *fname ){
+	FILE  *fptr = fopen(fname, "rb");	  // Open file for reading
+	if(fptr==NULL){ printf("Failed to load %s \n", fname ); return NULL; }
+    char *buff = NULL;
+	fseek (fptr, 0, SEEK_END);
+    int length = ftell(fptr);
+    buffer = new char[length];
+    fseek (fptr, 0, SEEK_SET);
+    if (buffer){ fread (buff, 1, length, fptr); }
+    fclose (fptr);
+	return buff;
+}
+*/
 
 inline int fileExist(const char * fname ){
     FILE *file;
@@ -350,9 +338,14 @@ inline  char* filetobuf(char const  *fname){
 	return buf; 						// Return the buffer
 }
 
-inline int fileGetNextKey( FILE  *fptr, char * keystr, char * tmp ){
+inline int fileGetNextKey( FILE  *fptr, const char * keystr, char * tmp ){
 	int nch = strlen(keystr);
-    while(fgets(tmp, N_CHAR_TMP, fptr)){  if( strncmp(tmp,keystr,nch)==0 ) return ftell(fptr); };
+	//printf( "fileGetNextKey [%s] %i \n", keystr, nch );
+    while(fgets(tmp, N_CHAR_TMP, fptr)){
+        //printf( "fileGetNextKey: %s %i \n", tmp, strncmp(tmp,keystr,nch) );
+        if( strncmp(tmp,keystr,nch)==0 ) return ftell(fptr);
+        //printf( "fileGetNextKey: NOOOO! \n" );
+    };
     return -1;
 }
 
@@ -366,7 +359,8 @@ inline char * fileCut( FILE * fptr, int ibeg, int iend ){
 }
 
 // cut piece out of file
-inline char* fileGetSection(char const  *fname, char * keystr, char * endstr ){
+inline char* fileGetSection(const char *fname, const char * keystr, const char * endstr ){
+	//printf( "fileGetSection \n" );
 	FILE  *fptr = fopen(fname, "rb");	  // Open file for reading
 	if(fptr==NULL){ printf("Failed to load %s \n", fname ); return NULL; }
     char *buff = NULL;
@@ -382,9 +376,10 @@ inline char* fileGetSection(char const  *fname, char * keystr, char * endstr ){
 	return buff;
 }
 
-inline int whichKey( char * tmp, int nkey, char ** keys ){
+inline int whichKey( const char* tmp, int nkey, const char ** keys ){
     for(int ikey=0; ikey<nkey; ikey++){
-        char * key = keys[ikey];
+        const char * key = keys[ikey];
+        //printf( "whichKey[%i] %s %s \n", ikey, key, tmp );
         int i=0;
         bool match=true;
         while(key[i]!='\0'){ if(key[i]!=tmp[i])match=false; i++; }
@@ -393,7 +388,7 @@ inline int whichKey( char * tmp, int nkey, char ** keys ){
     return -1;
 }
 
-inline char ** fileGetSections(char const  *fname, int nkey, char ** keys, char *begstr ){
+inline char ** fileGetSections(const char *fname, int nkey, const char ** keys, const char* begstr ){
 	FILE  *fptr = fopen(fname, "rb");	  // Open file for reading
 	if(fptr==NULL){ printf("Failed to load %s \n", fname ); return NULL; }
 	char      tmp[N_CHAR_TMP];
@@ -401,7 +396,9 @@ inline char ** fileGetSections(char const  *fname, int nkey, char ** keys, char 
 	char** result = new char*[nkey];
 	for(int ikey=0; ikey<nkey; ikey++){ result[ikey] = NULL; }
 	int ikey=-1,i0=-1,i1;
+	//printf( "fileGetSections\n" );
 	while( (i1=fileGetNextKey( fptr, begstr, tmp ))>=0 ){
+        //printf( " ikey %i i0  %i i1 %i \n", ikey, i0, i1 );
         //if((ikey>=0)&&(i0>=0)){
         //    //printf(" ikey %i i0  %i i1 %i \n", ikey, i0, i1 );
         //    result[ikey] = fileCut( fptr, i0, i1 );
@@ -412,6 +409,7 @@ inline char ** fileGetSections(char const  *fname, int nkey, char ** keys, char 
 	};
 	fseek(fptr, 0, SEEK_END);
 	if((ikey>=0)&&(i0>=0)) result[ikey] = fileCut( fptr, i0, ftell(fptr) ); // seaction at end of file
+	fclose(fptr);
 	return result;
 }
 
@@ -420,7 +418,7 @@ inline int checkNullSections( int n, char ** sections ){
     return 0;
 }
 
-inline void saveStr( char * fname, char * str ){
+inline void saveStr( const char * fname, const char * str ){
     int n = strlen(str);
     FILE  *fptr = fopen(fname, "wb");
     fwrite( str, n, 1, fptr);
