@@ -26,6 +26,21 @@ https://gamedev.stackexchange.com/questions/153896/camera-and-multiple-shaders
 */
 
 
+void textureFillRandomRGB(int W, int H, uint tex ){
+    //int W = layers.buffers[0]->W;
+    //int H = layers.buffers[0]->H;
+    const int nbuf = W*H;
+    uint8_t buff[nbuf*3];
+    //if(frameCount==1){
+    for(int i=0;i<nbuf*3;i++) buff[i]=rand()&0xFF;
+    //glActiveTexture(GL_TEXTURE0);
+    glBindTexture  (GL_TEXTURE_2D, tex );
+    glTexSubImage2D(GL_TEXTURE_2D,0,0,0,W,H,GL_RGB,GL_UNSIGNED_BYTE,buff);
+    //glFlush();
+    //}
+}
+
+
 void renderTexture( Shader* sh, GLMesh* mesh, Camera& cam, uint tx, int iTxUnit=0){
     sh->use();
     glActiveTexture(GL_TEXTURE0 + iTxUnit);
@@ -73,7 +88,7 @@ void plotBuffStereo( GLMesh& mesh, Shader& sh, int n, double* buff, float dx, fl
 
 
 
-class ShaderStack{ public:
+class RenderStack{ public:
     // This class let you render use multiple FrameBuffers as input-output textures with multople shaders like multiple buffers on ShaderToy
     // This is usefull for grid-based physical simulations on GPU (like fluid simulations) or like texture dynamic wraping/transforms like movement module in WinAmp AVS
 
@@ -83,7 +98,7 @@ class ShaderStack{ public:
 
     //bool bDrawRaw = true;
     bool bDrawRaw  = false;
-    bool bFlushing = true;
+    bool bFlushing = false;
 
     void makeBuffers(int n, int width, int height ){
         for(int i=0; i<n; i++){
@@ -91,24 +106,31 @@ class ShaderStack{ public:
         }
     }
 
-    void bindOutput(int i){
-        if( (i<0)||(i>buffers.size()) ) { glBindFramebuffer(GL_FRAMEBUFFER, 0                );  }
-        else                            { glBindFramebuffer(GL_FRAMEBUFFER, buffers[i]->buff );  }
+    void bindOutput(int ibuf){
+        if( (ibuf<0)||(ibuf>buffers.size()) ) { glBindFramebuffer(GL_FRAMEBUFFER, 0                );  }
+        else                                  { glBindFramebuffer(GL_FRAMEBUFFER, buffers[ibuf]->buff );  }
     };
     void unbindOutput(){ glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+
+    void bindInput(int ibuf, int islot=0){
+        glActiveTexture(GL_TEXTURE0+islot);
+        if(ibuf<0){ glBindTexture  (GL_TEXTURE_2D, buffers[-ibuf]->texZ   ); } // for negative buffer index we take Z-buffer
+        else      { glBindTexture  (GL_TEXTURE_2D, buffers[ ibuf]->texRGB ); } // for positive buffer index we take RGB-buffer
+    }
 
     Shader* render( int ish, int iout, int nin, const int* ins, const int* texUnits=0 ){
         if(bFlushing)glFlush();
         //glBindFramebuffer(GL_FRAMEBUFFER, iout );
         bindOutput(iout);
         for(int i=0; i<nin; i++){
-            printf( "i %i nin %i \n", i, nin );
-            int itex = i;
-            if(texUnits) itex = texUnits[i];
-            glActiveTexture(GL_TEXTURE0+itex);
-            int ibuf = ins[i];
-            if(ibuf<0){ glBindTexture  (GL_TEXTURE_2D, buffers[-ibuf]->texZ   ); } // for negative buffer index we take Z-buffer
-            else      { glBindTexture  (GL_TEXTURE_2D, buffers[ ibuf]->texRGB ); } // for positive buffer index we take RGB-buffer
+            //printf( "i %i nin %i \n", i, nin );
+            int islot = i;
+            if(texUnits) islot = texUnits[i];
+            //glActiveTexture(GL_TEXTURE0+itex);
+            //int ibuf = ins[i];
+            //if(ibuf<0){ glBindTexture  (GL_TEXTURE_2D, buffers[-ibuf]->texZ   ); } // for negative buffer index we take Z-buffer
+            //else      { glBindTexture  (GL_TEXTURE_2D, buffers[ ibuf]->texRGB ); } // for positive buffer index we take RGB-buffer
+            bindInput( ins[i], islot=islot);
         }
         Shader* sh = shaders[ish];
         sh->use();
@@ -117,6 +139,7 @@ class ShaderStack{ public:
         return sh;
     }
 
+    void fillRandomRGB(int ibuf){ textureFillRandomRGB( buffers[ibuf]->W, buffers[ibuf]->H, buffers[ibuf]->texRGB ); }
 };
 
 

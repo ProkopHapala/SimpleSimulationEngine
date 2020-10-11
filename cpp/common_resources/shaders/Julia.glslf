@@ -42,7 +42,7 @@ vec2 juliaSet2( vec2 z, vec2 c ){
 
 void main(){
     //gl_FragColor   = textureLod( texture_1, fUV, 0 );
-    vec2 z0 = (fUV*2.)+vec2(-2.0,-2.0);
+    vec2 z0 = (fUV*4.0)+vec2(-2.0,-2.0);
     //vec2 Const = vec2(-0.5,0.3);
     float c = log(juliaSet( z0, Const ) ) *0.2;
     gl_FragColor = vec4(c,c,c,1.);

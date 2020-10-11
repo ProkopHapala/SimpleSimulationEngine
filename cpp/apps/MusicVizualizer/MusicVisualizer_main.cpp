@@ -95,7 +95,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
     Spectrum waveform;
 
-    float dtJul = 0.2;
+    float dtJul = 0.5;
     Vec2f CJul = Vec2fZero;
 
     float camDist = 100.0;
@@ -104,7 +104,8 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 	//int fontTex_DEBUG;
 
-    ShaderStack layers;
+    RenderStack layers;
+    //Camera cam;
 
 
     Shader *shDebug=0,*shJulia=0,*shReactDiff=0,*shTex=0;
@@ -130,6 +131,10 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 	MusicVisualizerGUI(int W, int H);
 
+    void draw_Spectrum     ( Camera& cam );
+    void draw_Julia        ( Camera& cam );
+    void draw_ReactDiffuse ( Camera& cam );
+    void draw_Fluid        ( Camera& cam );
 };
 
 MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
@@ -159,29 +164,6 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 
 
     /*
-    shTex=new Shader();
-    shTex->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
-    shTex->getDefaultUniformLocation();
-
-    shDebug=new Shader();
-    shDebug->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
-    //shDebug->init( "common_resources/shaders/color3D.glslv",   "common_resources/shaders/color3D.glslf"   );
-    shDebug->getDefaultUniformLocation();
-
-    sh1=new Shader();
-    //sh1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
-    sh1->init( "common_resources/shaders/shade3D.glslv",   "common_resources/shaders/shade3D.glslf"   );
-    sh1->getDefaultUniformLocation();
-
-    shJulia=new Shader();
-    //sh1->init( "common_resources/shaders/const3D.glslv",   "common_resources/shaders/const3D.glslf"   );
-    //shJulia->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/texture.glslf"   );
-    shJulia->init( "common_resources/shaders/texture3D.glslv",   "common_resources/shaders/Julia.glslf"   );
-    shJulia->getDefaultUniformLocation();
-    */
-
-
-    /*
     GLMeshBuilder mshDebug;
     mshDebug.addLine      ( (Vec3f){0.0,0.0,0.0}, {10.0,10.0,10.0}, {1.0,0.0,0.0} );
     mshDebug.addPointCross( {0.0,0.0,0.0}, 1.0, {0.0,0.0,1.0} );
@@ -197,10 +179,9 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     msh_normals = mshbuild.normals2GLmesh(0.1);
     */
 
-
     Camera& cam = screens[0]->cam;
-    cam.aspect = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
-    cam.zmax = 1000.0;
+    cam.aspect  = screens[0]->HEIGHT/(float)screens[0]->WIDTH;
+    cam.zmax    = 1000.0;
     // Prespective
     //cam.zmin = 1.0;
     //cam.zoom = 5.00f;
@@ -214,13 +195,9 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 
     makeBilboard( glTxDebug );
 
-    //glTxDebug = new GLMesh();
-    //glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs);
-    //glTxDebug->init( 6, 0,  NULL, DEFAULT_Bilboard_verts, NULL, NULL, DEFAULT_Bilboard_UVs_2x2);
-
 
     layers.screenQuad = glTxDebug;
-    layers.makeBuffers( 2, screen[0].WIDTH, screen[0].HEIGHT );
+    layers.makeBuffers( 3, screen[0].WIDTH, screen[0].HEIGHT );
     layers.shaders.push_back( shTex   );
     layers.shaders.push_back( shJulia );
     layers.shaders.push_back( shReactDiff );
@@ -275,49 +252,126 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 };
 
 
+void MusicVisualizerGUI::draw_Spectrum( Camera& cam ){
+    shDebug->use();
+    cam.lookAt( (Vec3f){0.0,0.0,0.0}, 20.0 );
+    setCamera( *shDebug, cam );
+    shDebug->setModelPoseT( (Vec3d){-0.8f,0.0,0.0}, Mat3dIdentity );
+    Vec2d* wave = (Vec2d*)(waveform.wave);
+    float dx = 0.0015;
+    float dy = 0.0000003;
+    plotBuffStereo ( *waveMesh, *shDebug, waveform.nwave, waveform.Fwave, dx, dy );
+    shDebug->setUniformVec4f("baseColor", (Quat4f){0.0,1.0,0.0,1.0});
+    plotBuff( *histMesh, waveform.nhist, waveform.hist, 0.5*dx*waveform.nwave/waveform.nhist, dy );
+}
+
+void MusicVisualizerGUI::draw_Julia( Camera& cam ){
+    shJulia->use();
+    float scJulC = 0.0000005;
+    float Cx=2-waveform.hist[0               ]*scJulC*0.2;
+    float Cy=  waveform.hist[waveform.nhist/2]*scJulC;
+    CJul.mul(1-dtJul); CJul.add(Cx*dtJul,Cy*dtJul);
+    printf("C %g %g | %g %g \n", CJul.y, CJul.y, Cx,Cy );
+    shJulia->setUniformVec2f( "Const", CJul );
+    setCamera(*shJulia, cam);
+    shJulia->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+    glTxDebug->draw();
+}
+
+void MusicVisualizerGUI::draw_ReactDiffuse( Camera& cam ){
+
+    shReactDiff->use();
+    setCamera(*shReactDiff, cam);
+    shReactDiff->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+
+    // Render 0 -> 1
+    layers.bindOutput( 1    );
+    layers.bindInput ( 0, 0 );
+    if(frameCount==1)layers.fillRandomRGB(0);
+    glTxDebug->draw();
+
+    // Render 1 -> 0
+    layers.bindOutput( 0    );
+    layers.bindInput ( 1, 0 );
+    if(frameCount==1)layers.fillRandomRGB(1);
+    glTxDebug->draw();
+
+}
+
+
+void MusicVisualizerGUI::draw_Fluid( Camera& cam ){
+
+    // --- Shader 1
+    shFluid1->use();
+    setCamera(*shFluid1, cam);
+    shFluid1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+
+    layers.bindOutput( 1    );
+    layers.bindInput ( 0, 0 );
+    if(frameCount==1)layers.fillRandomRGB(0);
+    glTxDebug->draw();
+
+    layers.bindOutput( 0    );
+    layers.bindInput ( 1, 0 );
+    if(frameCount==1)layers.fillRandomRGB(1);
+    glTxDebug->draw();
+
+
+    // --- Shader 2
+    shFluid2->use();
+    setCamera(*shFluid2, cam);
+    shFluid2->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+
+    //layers.unbindOutput();
+    layers.bindOutput( 2    );
+    layers.bindInput ( 0, 0 );
+    layers.bindInput ( 2, 1 );
+    glTxDebug->draw();
+
+    // --- Shader 3
+    shTex->use();
+    setCamera(*shTex, cam );
+    shTex->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+
+    layers.unbindOutput();
+    layers.bindInput(2,0);
+    glTxDebug->draw();
+
+}
+
 void MusicVisualizerGUI::draw( Camera& cam ){
-
-    int narg;
-
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-    glEnable(GL_DEPTH_TEST);
 
     //waveform.spectrumHistSmearing();
     //waveform.update( 5.1 );
     waveform.need_refresh = false;
+    waveform.update( 5.0 );
+    //printf("\e[1;1H\e[2J"); // clear screen //https://stackoverflow.com/questions/2347770/how-do-you-clear-the-console-screen-in-c
+    //waveform.printSpectrum();
 
-    //fflush( stdout );
-    printf("\e[1;1H\e[2J"); // clear screen //https://stackoverflow.com/questions/2347770/how-do-you-clear-the-console-screen-in-c
-    waveform.printSpectrum();
-    //printf( "nwave %i nhist %i \n", waveform.nwave, waveform.nhist );
+    //cam = cam_;
+
+    //int narg;
+    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    //glEnable(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
+
+    //draw_ReactDiffuse(cam);
+    draw_Fluid(cam);
+
+    layers.unbindOutput();
 
     /*
-    // -------- Plot Spectrum
-    shDebug->use();
-    cam.lookAt( (Vec3f){0.0,0.0,0.0}, 20.0 );
-    setCamera( *shDebug, cam );
-    shDebug->setModelPoseT( (Vec3d){-6.0f,0.0,0.0}, Mat3dIdentity );
-    //plotBuffStereo ( *waveMesh, *shDebug, waveform.nwave, waveform.wave, 0.05, 0.0001 );
-    //FFT(  waveform.wave, waveform.nwave, 1 );
-    Vec2d* wave = (Vec2d*)(waveform.wave);
-    //for(int i=0; i<waveform.nwave+16; i++){ wave[i].fromAngle( i*0.04f); wave[i].add( Vec2d::newFromAngle( i*0.1f) ); wave[i].mul(1e+6); };
-    //FFT(  waveform.wave+2, waveform.nwave/2, 1 );
-    //plotBuffStereo ( *waveMesh, *shDebug, waveform.nwave, waveform.wave, 0.01, 0.0001 );
-    //FFT(  waveform.wave+2, waveform.nwave/2, 1 );
-    float dx = 0.01;
-    waveform.update( 5.1 );
-    plotBuffStereo ( *waveMesh, *shDebug, waveform.nwave, waveform.Fwave, dx, 0.000001 );
-    //fflush( stdout );
-    printf("\e[1;1H\e[2J"); // clear screen //https://stackoverflow.com/questions/2347770/how-do-you-clear-the-console-screen-in-c
-    waveform.printSpectrum();
-    shDebug->setUniformVec4f("baseColor", (Quat4f){0.0,1.0,0.0,1.0});
-    plotBuff( *histMesh, waveform.nhist, waveform.hist, 0.5*dx*waveform.nwave/waveform.nhist, 0.000001 );
+    // Render Layers
+    shTex->use();
+    setCamera(*shTex, cam );
+    //shTex->setModelPoseT( (Vec3d){-4.,-4.,0.0}, Mat3dIdentity*8.0 );
+    shTex->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+    //printf( "cam.zoom %g \n", cam.zoom );
+    //layers.render( 0, -1, 1, (const int[]){0} ); // renders using shader[0] to default_screen using 1 input buffer #0
+    layers.bindInput(0,0);
+    glTxDebug->draw();
     */
-
-    //plotBuffStereo ( *waveMesh, *shDebug, 396, waveform.wave, 0.05, 0.00001 );
-    //VecN::set( waveform.nwave*2, 0.0, waveform.wave );
-
 
     shDebug->use();
     setCamera(*shDebug, cam);
@@ -326,111 +380,8 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     shDebug->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
     glTxDebug->draw(GL_LINE_LOOP);
 
-
-    glDisable(GL_DEPTH_TEST);
-    //  Following will be rendered to BUFFER[1]
-    layers.bindOutput( 0 );
-    //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
-	//glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-    //glDisable(GL_DEPTH_TEST);
-
-    if(frameCount==1){
-        glClearColor( 0.5f, 0.6f, 0.4f, 1.0f );
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-        shDebug->setUniformVec4f("baseColor", {0.7,0.3,0.8,1.0});
-        glTxDebug->draw(GL_LINE_LOOP);
-    }
-    //glTxDebug->draw(GL_LINE_LOOP);
-
-    // ---- Texture processing shader between two buffers
-    // ---- TODO : prehaps cannot use the same buffer both as input and output
-
-    shReactDiff->use();
-    setCamera(*shReactDiff, cam);
-    shReactDiff->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
-
-    // MaybeNeed Synchornization ???   https://www.khronos.org/opengl/wiki/Synchronization
-
-    // ---- Using the same texture as both input and output makes problems
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture  (GL_TEXTURE_2D, layers.buffers[0]->texRGB );
-    //glTxDebug->draw();
-
-    //glFinish();
-
-    //glFlush();
-    layers.bindOutput( 1 );
-    {
-    int W = layers.buffers[0]->W;
-    int H = layers.buffers[0]->H;
-    const int nbuf = W*H;
-    uint8_t buff[nbuf*3];
-    if(frameCount==1){
-        for(int i=0;i<nbuf*3;i++) buff[i]=rand()&0xFF;
-        //glActiveTexture(GL_TEXTURE0);
-        glBindTexture  (GL_TEXTURE_2D, layers.buffers[0]->texRGB );
-        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,W,H,GL_RGB,GL_UNSIGNED_BYTE,buff);
-        //glFlush();
-    }
-    }
-
-    //glActiveTexture(GL_TEXTURE0);
-    glBindTexture  (GL_TEXTURE_2D, layers.buffers[0]->texRGB );
-    glTxDebug->draw();
-    //glFinish();
-    //glFlush();
-
-    layers.bindOutput( 0 );
-    //glActiveTexture(GL_TEXTURE0);
-    glBindTexture  (GL_TEXTURE_2D, layers.buffers[1]->texRGB );
-    glTxDebug->draw();
-    //glFinish();
-    //glFlush();
-    //layers.render( 2, 0, 1, (const int[]){0}, 0 );
-    //layers.render( 2, 1, 0, (const int[]){1}, 0 );
-
-
-
-    /*
-    // ------ Render Julia Set
-    shJulia->use();
-    //uint locC = shJulia->getUloc("C");
-    float scJulC = 0.0000005;
-    //shJulia->setUniformVec2f( "Const", {waveform.hist[0]*scJulC,waveform.hist[waveform.nwave/2]*scJulC} );
-    float Cx=2-waveform.hist[0               ]*scJulC*0.2;
-    float Cy=  waveform.hist[waveform.nhist/2]*scJulC;
-    CJul.mul(1-dtJul); CJul.add(Cx*dtJul,Cy*dtJul);
-    printf("C %g %g | %g %g \n", CJul.y, CJul.y, Cx,Cy );
-    //shJulia->setUniformVec2f( "Const", {Cx,Cy} );
-    shJulia->setUniformVec2f( "Const", CJul );
-    //shJulia->setUniformVec2f( "Const", {sin(frameCount*0.02),cos(frameCount*0.01)} );
-    //shJulia->setUniformVec2f( "Const", {-0.3,0.6} );
-    setCamera(*shJulia, cam);
-    shJulia->setModelPoseT( (Vec3d){-4.,-4.,0.0}, Mat3dIdentity*8.0 );
-    glTxDebug->draw();
-    */
-
-
-
-    layers.unbindOutput();
-
-
-    //shTex->use();
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture  (GL_TEXTURE_2D, layers.buffers[0]->texRGB   );
-    //setCamera(*shTex, cam );
-    //shTex->setModelPoseT( (Vec3d){-4.,-4.,0.0}, Mat3dIdentity*8.0 );
-    //glTxDebug->draw();
-
-
-    // Render Layers
-    shTex->use();
-    setCamera(*shTex, cam );
-    //shTex->setModelPoseT( (Vec3d){-4.,-4.,0.0}, Mat3dIdentity*8.0 );
-    shTex->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
-    //printf( "cam.zoom %g \n", cam.zoom );
-    layers.render( 0, -1, 1, (const int[]){0} ); // renders using shader[0] to default_screen using 1 input buffer #0
-
+    //draw_Julia(cam);
+    //draw_Spectrum(cam);
 
 };
 

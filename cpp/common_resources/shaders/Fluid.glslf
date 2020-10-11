@@ -24,6 +24,12 @@
 
 #version 330 core
 
+
+in       vec2      fUV;
+uniform sampler2D  iChannel0; 
+out vec4 gl_FragColor;
+
+
 #define dt 0.15
 #define USE_VORTICITY_CONFINEMENT
 //#define MOUSE_ONLY
@@ -32,12 +38,14 @@
 //higher values simulate lower viscosity fluids (think billowing smoke)
 #define VORTICITY_AMOUNT 0.11
 
+
 float mag2(vec2 p){return dot(p,p);}
 
 vec2 point1(float t) { t *= 0.62; return vec2(0.12,0.5 + sin(t         )*0.2); }
 vec2 point2(float t) { t *= 0.62; return vec2(0.88,0.5 + cos(t + 1.5708)*0.2); }
 
-vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w, float time, vec3 mouse, vec3 lastMouse){
+//vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w, float time, vec3 mouse, vec3 lastMouse){
+vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w ){
 	const float K = 0.2;
 	const float v = 0.55;
     
@@ -70,6 +78,8 @@ vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w, float time, vec3 mouse, vec3 las
     //    vec2 vv = clamp(vec2(mouse.xy*w - lastMouse.xy*w)*400., -6., 6.);
     //    newForce.xy += .001/(mag2(uv - mouse.xy*w)+0.001)*vv;
     //}
+    newForce.xy += 0.75*vec2(.0003, 0.00015)/(mag2(uv-point1(1.544))+0.0001);
+    newForce.xy -= 0.75*vec2(.0003, 0.00015)/(mag2(uv-point2(1.255))+0.0001);
     
     data.xy += dt*(viscForce.xy - K/dt*densDif + newForce);   //update velocity
     data.xy  = max(vec2(0), abs(data.xy)-1e-4)*sign(data.xy); //linear velocity decay
@@ -89,19 +99,32 @@ vec4 solveFluid(sampler2D smp, vec2 uv, vec2 w, float time, vec3 mouse, vec3 las
 float length2(vec2 p){return dot(p,p);}
 mat2 mm2(in float a){float c = cos(a), s = sin(a);return mat2(c,s,-s,c);}
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord ){
-    vec2 uv = fragCoord.xy/iResolution.xy;
-    vec2 w = 1.0/iResolution.xy;
-    vec4 lastMouse = texelFetch(iChannel0, ivec2(0,0), 0);
-    vec4 data = solveFluid(iChannel0, uv, w, iTime, iMouse.xyz, lastMouse.xyz);
-    if (iFrame < 20) data = vec4(0.5,0,0,0);
-    if (fragCoord.y < 1.) data = iMouse;
-    fragColor = data;
+//void mainImage( out vec4 fragColor, in vec2 fragCoord ){
+void main( ){
+    //vec2 uv = fragCoord.xy/iResolution.xy;
+    //vec2 w = 1.0/iResolution.xy;
+    //vec4 lastMouse = texelFetch(iChannel0, ivec2(0,0), 0);
+    //vec4 data = solveFluid(iChannel0, uv, w, iTime, iMouse.xyz, lastMouse.xyz);
+
+    vec2 uv = fUV;
+    vec2 w = vec2(0.001,0.001);
+    vec4 data = solveFluid(iChannel0, uv, w );
+    //if (iFrame < 20) data = vec4(0.5,0,0,0);
+    //if (fragCoord.y < 1.) data = iMouse;
+    //fragColor = data;
+    gl_FragColor = data;
 }
 
 //#BEGIN_SHADER:RENDER
 
 #version 330 core
+
+in       vec2      fUV;
+uniform sampler2D  iChannel0;
+uniform sampler2D  iChannel1;
+out vec4 gl_FragColor;
+
+#define dt 0.15
 
 mat2 mm2(in float a){float c = cos(a), s = sin(a);return mat2(c,s,-s,c);}
 
@@ -125,15 +148,19 @@ vec4 pal2(float x){
     return vec4(pal, 1.);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord ){
-    vec2 uv = fragCoord.xy / iResolution.xy;
-    vec2 mo = iMouse.xy / iResolution.xy;
-    vec2 w = 1.0/iResolution.xy;
+//void mainImage( out vec4 fragColor, in vec2 fragCoord ){
+void main( ){
+    //vec2 uv = fragCoord.xy / iResolution.xy;
+    //vec2 mo = iMouse.xy / iResolution.xy;
+    //vec2 w = 1.0/iResolution.xy;
     
-    vec2 velo = textureLod(iChannel0, uv, 0.).xy;
+    vec2 uv = fUV;
+    vec2 w  = vec2(0.001,0.001);
+    
+    vec2 velo = textureLod(iChannel0, uv               , 0.).xy;
     vec4 col  = textureLod(iChannel1, uv - dt*velo*w*3., 0.); //advection
-    if (fragCoord.y < 1. && fragCoord.x < 1.)col = vec4(0);
-    vec4 lastMouse = texelFetch(iChannel1, ivec2(0,0), 0).xyzw;
+    //if (fragCoord.y < 1. && fragCoord.x < 1.)col = vec4(0);
+    //vec4 lastMouse = texelFetch(iChannel1, ivec2(0,0), 0).xyzw;
     
     //if (iMouse.z > 1. && lastMouse.z > 1.){
     //    float str = smoothstep(-.5,1.,length(mo - lastMouse.xy/iResolution.xy));   
@@ -144,11 +171,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
     //col += .0025/(0.0005+pow(length(uv - point2(iTime)),1.75))*dt*0.12*pal2(iTime*0.05 + 0.675);
     //#endif
     
-    if (iFrame < 20){  col = vec4(0.); }
+    //if (iFrame < 20){  col = vec4(0.); }
     col = clamp(col, 0.,5.);
     col = max(col - (0.0001 + col*0.004)*.5, 0.); //decay
-    if (fragCoord.y < 1. && fragCoord.x < 1.) col = iMouse;
-    fragColor = col;
+    //if (fragCoord.y < 1. && fragCoord.x < 1.) col = iMouse;
+    //fragColor = col;
+    gl_FragColor = col;
 }
 
 
