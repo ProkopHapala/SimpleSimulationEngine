@@ -95,7 +95,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
     Spectrum waveform;
 
-    float dtJul = 0.5;
+    float dtJul = 0.2;
     Vec2f CJul = Vec2fZero;
 
     float camDist = 100.0;
@@ -164,7 +164,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     shTex   = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/texture.glslf" , true );
     shDebug = new Shader( "common_resources/shaders/const3D.glslv"   , "common_resources/shaders/const3D.glslf" , true );
     //sh1     = new Shader( "common_resources/shaders/shade3D.glslv"   , "common_resources/shaders/shade3D.glslf" , true );
-    shJulia = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Julia.glslf"   , true );
+    //shJulia = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Julia.glslf"   , true );
+    shJulia = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Julia_curvature.glslf"   , true );
 
     shReactDiff = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/BelousovZhabotinsky.glslf"   , true );
     GL_DEBUG;
@@ -219,6 +220,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     shFluid2->setUniformf    ("dt",   0.15);
     shFluid2->setUniformVec2f("iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
 
+    shJulia->use(); GL_DEBUG;
+    shJulia->setUniformVec2f("iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
     //return 0;
 
 
@@ -284,12 +287,21 @@ void MusicVisualizerGUI::draw_Spectrum( Camera& cam ){
 
 void MusicVisualizerGUI::draw_Julia( Camera& cam ){
     shJulia->use();
-    float scJulC = 0.0000005;
-    float Cx=2-waveform.hist[0               ]*scJulC*0.2;
-    float Cy=  waveform.hist[waveform.nhist/2]*scJulC;
-    CJul.mul(1-dtJul); CJul.add(Cx*dtJul,Cy*dtJul);
+    float scJulC = 0.00000002;
+    CJul.mul(1-dtJul);
+    CJul.add(
+        dtJul*waveform.hist[0               ]*scJulC,
+        dtJul*waveform.hist[waveform.nhist/2]*scJulC
+    );
+    //float Cx=0.285,Cy=0.01;
+    //float Cx=-0.4,Cy=0.6;
+    float Cx=-0.8,Cy=0.256;
+    //float Cx=-0.8,Cy=0.156;
+    Vec2f C = { CJul.x+Cx, CJul.y+Cy  };
+
+    //CJul.set(Cx,Cy);
     printf("C %g %g | %g %g \n", CJul.y, CJul.y, Cx,Cy );
-    shJulia->setUniformVec2f( "Const", CJul );
+    shJulia->setUniformVec2f( "Const", C );
     setCamera(*shJulia, cam);
     shJulia->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
     glTxDebug->draw();
@@ -382,7 +394,7 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     glDisable(GL_DEPTH_TEST);
 
     //draw_ReactDiffuse(cam);
-    draw_Fluid(cam);
+    //draw_Fluid(cam);
 
     layers.unbindOutput();
 
@@ -405,7 +417,7 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     shDebug->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
     glTxDebug->draw(GL_LINE_LOOP);
 
-    //draw_Julia(cam);
+    draw_Julia(cam);
     //draw_Spectrum(cam);
 
 };
