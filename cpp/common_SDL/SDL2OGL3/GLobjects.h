@@ -134,37 +134,55 @@ void makeBilboard( GLMesh*& mesh ){
 
 class FrameBuffer{ public:
     GLuint buff =0;
-    GLuint buffZ=0;
+    GLuint buffZ=0, buffRGB=0;
     GLuint texZ =0, texRGB=0;
     int W=0,H=0;
 
-    inline void init( GLuint texRGB_, GLuint texZ_, int W_, int H_){
+    inline void init( GLuint texRGB_, GLuint texZ_, int W_, int H_, bool bFloat=false ){
+
         texZ   =  texZ_;
         texRGB =  texRGB_;
         W=W_;H=H_;
-        glGenFramebuffers(1, &buff);
-        glBindFramebuffer(GL_FRAMEBUFFER, buff);
+        glGenFramebuffers(1, &buff);              GL_DEBUG;
+        glBindFramebuffer(GL_FRAMEBUFFER, buff);  GL_DEBUG;
+
+        if( bFloat ){
+        // See: https://community.khronos.org/t/full-precision-renderbuffer/63716/5
+        // The color buffer
+        glGenRenderbuffers       (1, &buffRGB);                           GL_DEBUG;
+        glBindRenderbuffer       (GL_RENDERBUFFER, buffRGB );             GL_DEBUG;
+        glRenderbufferStorage    (GL_RENDERBUFFER, GL_RGBA16F, W, H );    GL_DEBUG;
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER,  GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, buffRGB ); GL_DEBUG;
+        }
+
         // The depth buffer
-        glGenRenderbuffers       (1, &buffZ);
-        glBindRenderbuffer       (GL_RENDERBUFFER, buffZ );
-        glRenderbufferStorage    (GL_RENDERBUFFER, GL_DEPTH_COMPONENT, W, H );
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER,  GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, buffZ );
+        glGenRenderbuffers       (1, &buffZ);                                                     GL_DEBUG;
+        glBindRenderbuffer       (GL_RENDERBUFFER, buffZ );                                       GL_DEBUG;
+        glRenderbufferStorage    (GL_RENDERBUFFER, GL_DEPTH_COMPONENT, W, H );                    GL_DEBUG;
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER,  GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, buffZ ); GL_DEBUG;
 
         //printf( "texZ %i texRGB %i \n", texZ, texRGB );
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  texZ,   0 );
-        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texRGB, 0 );
-        GLenum DrawBuffers[2] = {GL_DEPTH_ATTACHMENT, GL_COLOR_ATTACHMENT0};
-        glDrawBuffers(2, DrawBuffers);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  texZ,   0 ); GL_DEBUG;
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texRGB, 0 ); GL_DEBUG;
+        // Depth buffer should not be used with glDrawBuffers !!!!
+        //https://stackoverflow.com/questions/25587359/how-is-gldrawbuffers-associated-to-drawing-to-a-depth-texture
+        //GLenum DrawBuffers[2] = {GL_DEPTH_ATTACHMENT, GL_COLOR_ATTACHMENT0};
+        //glDrawBuffers(2, DrawBuffers); GL_DEBUG;
+        GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+        glDrawBuffers(1, DrawBuffers); GL_DEBUG;
         if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
             printf(" problem in FBO ! \n ");
             checkFramebufferStatus();
         }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0); GL_DEBUG;
     }
 
-    void init( int W, int H  ){
-        newTexture2D( texRGB, W, H, NULL, GL_RGB,             GL_UNSIGNED_BYTE );
-        newTexture2D( texZ  , W, H, NULL, GL_DEPTH_COMPONENT, GL_FLOAT         );
+    void init( int W, int H, bool bFloat=false ){
+        //newTexture2D( texRGB, W, H, NULL, GL_RGB,             GL_UNSIGNED_BYTE );
+        //newTexture2D( texRGB, W, H, NULL, GL_RGBA,             GL_UNSIGNED_BYTE );
+        if(bFloat){ newTexture2D( texRGB, W, H, NULL, GL_RGBA, GL_FLOAT         ); }
+        else      { newTexture2D( texRGB, W, H, NULL, GL_RGBA, GL_UNSIGNED_BYTE ); }
+        newTexture2D( texZ  , W, H, NULL, GL_DEPTH_COMPONENT,  GL_FLOAT  );
         init( texRGB, texZ, W, H );
     }
 
@@ -175,7 +193,7 @@ class FrameBuffer{ public:
     }
 
     FrameBuffer() = default;
-    FrameBuffer(int W, int H){  init( W, H ); };
+    FrameBuffer(int W, int H, bool bFloat=false){  init( W, H, bFloat ); };
 
 };
 

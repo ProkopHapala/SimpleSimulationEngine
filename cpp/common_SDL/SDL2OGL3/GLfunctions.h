@@ -5,6 +5,39 @@
 #include <GL/glew.h>
 //#include <SDL2/SDL.h>
 
+bool checkFramebufferStatus(){
+    // check FBO status
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    switch(status){
+        case GL_FRAMEBUFFER_COMPLETE:                      printf( "GL_FRAMEBUFFER_COMPLETE.\n" );                              return true;
+        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:         printf( "[ERROR] GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT\n" );          return false;
+        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: printf( "[ERROR] GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT\n" );  return false;
+        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:        printf( "[ERROR] GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER\n" );         return false;
+        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:        printf( "[ERROR] GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER\n" );         return false;
+        case GL_FRAMEBUFFER_UNSUPPORTED:                   printf( "[ERROR] GL_FRAMEBUFFER_UNSUPPORTED\n" );                    return false;
+        default:                                           printf( "[ERROR] Framebuffer incomplete: Unknown error.\n" );        return false;
+    }
+}
+
+bool checkOpenGLError(){
+    GLenum status = glGetError();
+    switch(status){
+        case GL_NO_ERROR:        return true;
+        case GL_INVALID_ENUM:    printf( "[ERROR] GL_INVALID_ENUM\n"    );           return false;
+        case GL_INVALID_VALUE:   printf( "[ERROR] GL_INVALID_VALUE\n"   );           return false;
+        case GL_INVALID_FRAMEBUFFER_OPERATION: printf( "[ERROR] GL_INVALID_FRAMEBUFFER_OPERATION\n" ); return false;
+        case GL_OUT_OF_MEMORY:   printf( "[ERROR] GL_OUT_OF_MEMORY\n"   );           return false;
+        case GL_STACK_UNDERFLOW: printf( "[ERROR] GL_STACK_UNDERFLOW\n" );           return false;
+        case GL_STACK_OVERFLOW:  printf( "[ERROR] GL_STACK_OVERFLOW\n"  );           return false;
+        default:                 printf( "[ERROR] glGetError(): Unknown error.\n" ); return false;
+    }
+}
+
+
+#define GL_DEBUG { if(!checkOpenGLError()){ printf( "@ %i %s %s \n", __LINE__, __FUNCTION__, __FILE__ ); exit(0); } }
+
+
+
 // =========== GL_ARRAY_BUFFER
 
 inline void newArrayBuffer( GLuint& buff, GLuint sz, const void * c_buff, GLenum usage ){
@@ -44,15 +77,24 @@ inline void newTexture2D( GLuint& textureID, int W, int H, const void * cbuff, G
     // example:
     // newTexture2D( textureID, 800, 600, imgData, GL_RGBA, GL_UNSIGNED_BYTE );
     // newTexture2D( textureID, 800, 600, imgData, GL_R, GL_FLOAT );
-    glGenTextures(1, &textureID);    // Create one OpenGL texture
-    glBindTexture  (GL_TEXTURE_2D, textureID);
-    glTexImage2D   (GL_TEXTURE_2D, 0, format, W, H, 0, format, type, cbuff );
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenTextures(1, &textureID);                GL_DEBUG;              // Create one OpenGL texture
+    glBindTexture  (GL_TEXTURE_2D, textureID);   GL_DEBUG;
+    //
+    // see : https://learnopengl.com/Advanced-Lighting/HDR
+    if(format==GL_RGBA && type==GL_FLOAT){
+        //glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, W, H, 0, GL_RGBA, GL_FLOAT, cbuff );
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA16F, W, H, 0, GL_RGBA, GL_FLOAT, cbuff );
+    }else{
+        glTexImage2D( GL_TEXTURE_2D, 0, format,     W, H, 0, format,  type,     cbuff );
+    } GL_DEBUG;
+
+    //glTexImage2D   ( GL_TEXTURE_2D, 0, GL_RGB16F, W, H, 0, GL_RGB, GL_FLOAT, cbuff );
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  GL_DEBUG;
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     // how to properly minimap:http://www.opengl-tutorial.org/beginners-tutorials/tutorial-5-a-textured-cube/
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); GL_DEBUG;
     //glActiveTexture(GL_TEXTURE0 );
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glGenerateMipmap(GL_TEXTURE_2D); GL_DEBUG;
 }
 
 inline void bindTexture( GLuint slot, GLuint textureID, GLuint uloc ){
@@ -82,6 +124,7 @@ inline void makeRandomTexture( GLuint& textureID, int W, int H, GLenum type=GL_U
 
 // ========== Frame Buffer
 
+/*
 bool checkFramebufferStatus(){
     // check FBO status
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -95,5 +138,7 @@ bool checkFramebufferStatus(){
         default:                                           printf( "[ERROR] Framebuffer incomplete: Unknown error.\n" );                     return false;
     }
 }
+*/
+
 
 #endif

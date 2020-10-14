@@ -95,7 +95,8 @@ void Shader::getDefaultUniformLocation(){
     uloc_baseColor = glGetUniformLocation( shaderprogram, "baseColor" );
 }
 
-void Shader::setUniformi    ( const char * name, const int    i)const{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform1iv      (u, 1, (GLint*  )&i           ); };
+//void Shader::setUniformi    ( const char * name, const int    i)const{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform1iv      (u, 1, (GLint*  )&i           ); };
+void Shader::setUniformi    ( const char * name, const int    i)const{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform1i      (u,  i ); };
 void Shader::setUniformf    ( const char * name, const float  f)const{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform1fv      (u, 1, (GLfloat*)&f           ); };
 void Shader::setUniformVec2f( const char * name, const Vec2f  v)const{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform2fv      (u, 1, (GLfloat*)&v           ); };
 void Shader::setUniformVec3f( const char * name, const Vec3f  v)const{ GLuint u = glGetUniformLocation(shaderprogram,name); glUniform3fv      (u, 1, (GLfloat*)&v           ); };

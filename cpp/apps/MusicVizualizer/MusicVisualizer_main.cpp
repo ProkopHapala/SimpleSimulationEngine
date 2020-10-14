@@ -143,6 +143,12 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 
     DEBUG_VIEW_INIT()
 
+    // https://learnopengl.com/Advanced-Lighting/HDR
+    // https://stackoverflow.com/questions/11211698/framebuffer-object-with-float-texture-clamps-values
+    //glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);   GL_DEBUG;
+    //glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE); GL_DEBUG;
+    //glClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE); GL_DEBUG;
+
 
     //frameBuff1.init( WIDTH, HEIGHT );
     //texTest = makeTestTextureRGBA( 256, 256);
@@ -151,7 +157,7 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     char** srcs         = fileGetSections( "common_resources/shaders/Fluid.glslf", 2, keys, "//#BEGIN_SHADER:" );
     char* srx_texture3D = filetobuf( "common_resources/shaders/texture3D.glslv" );
     printf("\n//==========%s \n\n %s \n\n", "SOLVER", srcs[0] );
-    printf("\n//==========%s \n\n %s \n\n", "RENDER", srcs[0] );
+    printf("\n//==========%s \n\n %s \n\n", "RENDER", srcs[1] );
     shFluid1 = new Shader( srx_texture3D , srcs[0], false );
     shFluid2 = new Shader( srx_texture3D , srcs[1], false );
 
@@ -161,7 +167,7 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     shJulia = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Julia.glslf"   , true );
 
     shReactDiff = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/BelousovZhabotinsky.glslf"   , true );
-
+    GL_DEBUG;
 
     /*
     GLMeshBuilder mshDebug;
@@ -197,10 +203,21 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 
 
     layers.screenQuad = glTxDebug;
-    layers.makeBuffers( 3, screen[0].WIDTH, screen[0].HEIGHT );
+    layers.makeBuffers( 4, screen[0].WIDTH, screen[0].HEIGHT );
     layers.shaders.push_back( shTex   );
     layers.shaders.push_back( shJulia );
     layers.shaders.push_back( shReactDiff );
+
+    shFluid1->use(); GL_DEBUG;
+    shFluid1->setUniformf    ("dt",   0.15);
+    shFluid1->setUniformVec2f("iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+    shFluid1->setUniformf    ("vorticity", 0.09 );
+
+    shFluid2->use(); GL_DEBUG;
+    shFluid2->setUniformi( "iChannel0", 0 ); GL_DEBUG;
+    shFluid2->setUniformi( "iChannel1", 1 ); GL_DEBUG;
+    shFluid2->setUniformf    ("dt",   0.15);
+    shFluid2->setUniformVec2f("iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
 
     //return 0;
 
@@ -301,40 +318,48 @@ void MusicVisualizerGUI::draw_ReactDiffuse( Camera& cam ){
 
 void MusicVisualizerGUI::draw_Fluid( Camera& cam ){
 
-    // --- Shader 1
-    shFluid1->use();
-    setCamera(*shFluid1, cam);
-    shFluid1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+    // Try to use this extension allowing to use same texture as both input and output
+    // https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_shader_framebuffer_fetch.txt
+    // https://stackoverflow.com/questions/64304026/rendering-to-custom-framebuffer-using-same-texture-both-as-input-and-output?noredirect=1#comment113708604_64304026
 
-    layers.bindOutput( 1    );
-    layers.bindInput ( 0, 0 );
-    if(frameCount==1)layers.fillRandomRGB(0);
-    glTxDebug->draw();
+    int perFrame = 5;
 
-    layers.bindOutput( 0    );
-    layers.bindInput ( 1, 0 );
-    if(frameCount==1)layers.fillRandomRGB(1);
-    glTxDebug->draw();
+    int iout,iin,iin2;
+    for(int i=0; i<perFrame; i++){
+        int iter = i + frameCount*perFrame;
 
+        // === 1] --- Shader 1
+        shFluid1->use();
+        setCamera(*shFluid1, cam);
+        shFluid1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
 
-    // --- Shader 2
-    shFluid2->use();
-    setCamera(*shFluid2, cam);
-    shFluid2->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+        shFluid1->setUniformf ("time", iter*0.001);
 
-    //layers.unbindOutput();
-    layers.bindOutput( 2    );
-    layers.bindInput ( 0, 0 );
-    layers.bindInput ( 2, 1 );
-    glTxDebug->draw();
+        if( iter&1 ){ iout=0; iin=1; }else{ iout=1; iin=0; }; // split odd and even frames
+        layers.bindOutput( iout   );
+        layers.bindInput ( iin, 0 );
+        glTxDebug->draw();
 
-    // --- Shader 3
+        // === 2] --- Shader 2
+        shFluid2->use();
+        setCamera(*shFluid2, cam);
+        shFluid2->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+
+        iin=iout;
+        if( iter&1 ){ iout=2; iin2=3; }else{ iout=3; iin2=2; };
+        layers.bindOutput( iout    );
+        layers.bindInput ( iin,  0 );
+        layers.bindInput ( iin2, 1 );
+        glTxDebug->draw();
+    }
+
+    // === 3] --- just plot velocity buffer
     shTex->use();
     setCamera(*shTex, cam );
     shTex->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
 
     layers.unbindOutput();
-    layers.bindInput(2,0);
+    layers.bindInput(iout,0);
     glTxDebug->draw();
 
 }

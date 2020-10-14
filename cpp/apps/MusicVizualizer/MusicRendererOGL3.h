@@ -102,7 +102,7 @@ class RenderStack{ public:
 
     void makeBuffers(int n, int width, int height ){
         for(int i=0; i<n; i++){
-            buffers.push_back( new FrameBuffer(width, height) );
+            buffers.push_back( new FrameBuffer(width, height, true) );
         }
     }
 
