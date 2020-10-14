@@ -613,7 +613,7 @@ class CLCFGO{ public:
             dCsi, dCsj, dCr
         );
 
-        Vec3d  Fpi = rhofP[ij];
+        Vec3d  Fpi = rhofP[ij];  //   fij = Rij*(-fr*qij);   ... from CoulombElement
         double Fqi = rhofQ[ij];
         double Fsi = rhofS[ij];
         double Eqi = rhoEQ[ij];
@@ -650,7 +650,10 @@ class CLCFGO{ public:
         // --- Derivatives ( i.e. Forces )
         //printf( "fromRho r %g s %g E %g Fx %g fx %g  \n", sqrt(r2), s, Eqi,     );
         //printf( "fromRho r %g s %g | E %g e %g qij %g(%g) | F %g fx %g dQij %g \n", sqrt(r2), s, Eqi*rhoQ[ij],Eqi,rhoQ[ij],  Fxi.x,fxi.x,dCdp.x );
-        printf( "fromRho r %g s %g | E %g e %g qij %g(%g) | F %g fx %g dQij %g \n", sqrt(r2), s, Eqi*rhoQ[ij],Eqi,rhoQ[ij],Cij,  Fxi.x,fxi.x,dCdp.x );
+        //printf( "fromRho r %g s %g | E %g e %g qij %g(%g) | F %g fx %g dQij %g \n", sqrt(r2), s, Eqi*rhoQ[ij],Eqi,rhoQ[ij],Cij,  Fxi.x,fxi.x,dCdp.x );
+        //printf( "fromRho r %g s %g | E %g e %g qij %g(%g) | fxi %g Fxi %g Fpi %g dQij %g \n", sqrt(r2), s, Eqi*rhoQ[ij],Eqi,rhoQ[ij],Cij,  fxi.x,Fxi.x,Fpi.x,dCdp.x );
+
+        printf( "fromRho r %g  Eqi %g Cij %g | Fpi %g dXxi %g fxi %g Fxi %g \n", sqrt(r2), Eqi,Cij,  Fpi.x, dXxi, fxi.x, Fxi.x );
 
         //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
         //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
@@ -722,13 +725,12 @@ class CLCFGO{ public:
         //double E  = Gauss::Coulomb( r, s*2, fr, fs );   // Q :  Should there be the constant s*2 ????
         double E  = Gauss::Coulomb( r, s, fr, fs );       // WARRNING  :  removed the contant s*2 to s  ... is it correct ?
 
-        double frq =  fr * qij;
         fs *= qij*4;
-
-
-        Vec3d fij = Rij*(-frq);
+        Vec3d fij = Rij*(-fr*qij);
         rhofP[i].add(fij);   rhofP[j].sub(fij);
         rhofS[i] -= fs*si;   rhofS[j] -= fs*sj; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
+        //rhofP[i].add(Rij*(fr*qj));   rhofP[j].sub(Rij*(fr*qi));
+        //rhofS[i] -= fs*si*qj;        rhofS[j] -= fs*sj*qi; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
         rhofQ[i] += E*qj;    rhofQ[j] += E*qi;  // ToDo : need to be made more stable ... different (qi,qj)
         rhoEQ[i] += E*qj;    rhoEQ[j] += E*qi;  // Coulombic energy per given density could (due to other density clouds)
 
@@ -745,7 +747,7 @@ class CLCFGO{ public:
         int nio = onq[io];
         int njo   = onq[jo];
         double Ecoul=0;
-        printf( "CoulombOrbPair[%i,%i] nV %i \n", io, jo, njo );
+        //printf( "CoulombOrbPair[%i,%i] nV %i \n", io, jo, njo );
         for(int i=i0; i<i0+nio; i++){
             Vec3d  pi = rhoP[i];
             double qi = rhoQ[i];
@@ -770,7 +772,7 @@ class CLCFGO{ public:
 
                 double E  = Gauss::Coulomb( r, s*2, fr, fs );
 
-                printf( "CoulombOrbPair[%i,%i][%i,%i] qij %g(%g,%g) r %g E %g \n", io,jo, i,j, qij,qi,qj,  r, E );
+                //printf( "CoulombOrbPair[%i,%i][%i,%i] qij %g(%g,%g) r %g E %g \n", io,jo, i,j, qij,qi,qj,  r, E );
 
                 //printf(  " [%i,%i] q %g r %g E %g \n", i, j, qij, r, Eqq );
 
