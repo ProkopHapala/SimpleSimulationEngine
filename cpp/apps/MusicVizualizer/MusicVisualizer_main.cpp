@@ -16,10 +16,16 @@ FEATURS TO DO
      Chimera's Breath - https://www.shadertoy.com/view/4tGfDW
     Multi-Substance - https://www.shadertoy.com/view/WtffRM
 3) Kaleidoscope
+    https://www.shadertoy.com/view/4tlGD2
+    https://www.shadertoy.com/view/Mlsfzs
 4) Body-Of rotation render for spectrum
 5) L-system branching acording to music (spectrum, complex)
+ Tree KIFS 3D : https://www.shadertoy.com/view/4lVyzh
+ Tree KIFS 2D : https://www.shadertoy.com/view/wslGz7
+
 6) Diffusion random walks  with same spectrum a the music - https://matousstieber.wordpress.com/
 4) Particle flow harmonies (sinus flow)-  https://www.shadertoy.com/view/4sGSDw
+
 
 
 
@@ -109,6 +115,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 
     Shader *shDebug=0,*shJulia=0,*shReactDiff=0,*shTex=0;
+    Shader *shKalei1=0;
     Shader *shFluid1=0,*shFluid2=0;
     GLMesh *histMesh=0, *waveMesh=0, *glTxDebug=0;
 
@@ -135,6 +142,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
     void draw_Julia        ( Camera& cam );
     void draw_ReactDiffuse ( Camera& cam );
     void draw_Fluid        ( Camera& cam );
+    void draw_Kaleidoscope ( Camera& cam );
 };
 
 MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
@@ -165,7 +173,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     shDebug = new Shader( "common_resources/shaders/const3D.glslv"   , "common_resources/shaders/const3D.glslf" , true );
     //sh1     = new Shader( "common_resources/shaders/shade3D.glslv"   , "common_resources/shaders/shade3D.glslf" , true );
     //shJulia = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Julia.glslf"   , true );
-    shJulia = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Julia_curvature.glslf"   , true );
+    shJulia  = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Julia_curvature.glslf"  , true );
+    shKalei1 = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/KaleidoscopeKIFS.glslf" , true );
 
     shReactDiff = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/BelousovZhabotinsky.glslf"   , true );
     GL_DEBUG;
@@ -215,14 +224,18 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     shFluid1->setUniformf    ("vorticity", 0.09 );
 
     shFluid2->use(); GL_DEBUG;
-    shFluid2->setUniformi( "iChannel0", 0 ); GL_DEBUG;
-    shFluid2->setUniformi( "iChannel1", 1 ); GL_DEBUG;
-    shFluid2->setUniformf    ("dt",   0.15);
-    shFluid2->setUniformVec2f("iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+    shFluid2->setUniformi    ( "iChannel0", 0    ); GL_DEBUG;
+    shFluid2->setUniformi    ( "iChannel1", 1    ); GL_DEBUG;
+    shFluid2->setUniformf    ( "dt",        0.15 );
+    shFluid2->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
 
     shJulia->use(); GL_DEBUG;
-    shJulia->setUniformVec2f("iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+    shJulia->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
     //return 0;
+
+    shKalei1->use();
+    shKalei1->setUniformi( "iChannel0", 0 ); GL_DEBUG;
+    shKalei1->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
 
 
     int result = 0;
@@ -313,19 +326,34 @@ void MusicVisualizerGUI::draw_ReactDiffuse( Camera& cam ){
     setCamera(*shReactDiff, cam);
     shReactDiff->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
 
-    // Render 0 -> 1
-    layers.bindOutput( 1    );
-    layers.bindInput ( 0, 0 );
-    if(frameCount==1)layers.fillRandomRGB(0);
+    int iout,iin;
+    if( frameCount&1 ){ iout=0; iin=1; }else{ iout=1; iin=0; };
+
+    layers.bindOutput( iout   );
+    layers.bindInput ( iin, 0 );
+    if(frameCount==1)layers.fillRandomRGB(iin);
     glTxDebug->draw();
 
-    // Render 1 -> 0
-    layers.bindOutput( 0    );
-    layers.bindInput ( 1, 0 );
+    layers.unbindOutput();
+    layers.bindInput(iout,0);
+    glTxDebug->draw();
+
+}
+
+void MusicVisualizerGUI::draw_Kaleidoscope( Camera& cam ){
+
+    shKalei1->use();
+    setCamera(*shKalei1, cam);
+    shKalei1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+    shKalei1->setUniformf( "iTime", frameCount*0.01 );
+
+    layers.unbindOutput();
+    layers.bindInput   (1,0);
     if(frameCount==1)layers.fillRandomRGB(1);
     glTxDebug->draw();
 
 }
+
 
 
 void MusicVisualizerGUI::draw_Fluid( Camera& cam ){
@@ -393,7 +421,7 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     //glEnable(GL_DEPTH_TEST);
     glDisable(GL_DEPTH_TEST);
 
-    //draw_ReactDiffuse(cam);
+    draw_ReactDiffuse(cam);
     //draw_Fluid(cam);
 
     layers.unbindOutput();
@@ -417,7 +445,9 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     shDebug->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
     glTxDebug->draw(GL_LINE_LOOP);
 
-    draw_Julia(cam);
+    //draw_Julia(cam);
+
+    draw_Kaleidoscope( cam );
     //draw_Spectrum(cam);
 
 };
