@@ -37,6 +37,15 @@ bool checkOpenGLError(){
 #define GL_DEBUG { if(!checkOpenGLError()){ printf( "@ %i %s %s \n", __LINE__, __FUNCTION__, __FILE__ ); exit(0); } }
 
 
+// =========== GL
+
+inline void newUniformBuffer( GLuint& buff, GLuint sz ){
+    glGenBuffers( 1, &buff );
+    glBindBuffer( GL_UNIFORM_BUFFER, buff );
+    glBufferData( GL_UNIFORM_BUFFER, sz, NULL, GL_STREAM_DRAW );
+    glBindBuffer( GL_UNIFORM_BUFFER, 0 );
+}
+
 
 // =========== GL_ARRAY_BUFFER
 

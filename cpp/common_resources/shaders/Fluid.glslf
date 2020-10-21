@@ -34,6 +34,24 @@ uniform float dt;
 uniform vec2  iResolution;
 uniform float vorticity; 
 
+// https://subscription.packtpub.com/book/game_development/9781782167020/1/ch01lvl1sec18/using-uniform-blocks-and-uniform-buffer-objects
+// https://www.geeks3d.com/20140704/gpu-buffers-introduction-to-opengl-3-1-uniform-buffers-objects/
+// https://paroj.github.io/gltut/Positioning/Tut07%20Shared%20Uniforms.html
+/*
+layout(std140) uniform ShaderToy{
+  vec2  iResolution;
+  float iTime;
+  float iTimeStep;
+  vec4      iFwColor;
+  vec4      iBgColor;
+  vec4      iMouse;
+  sampler2D iChannel0;
+  sampler2D iChannel1;
+  sampler2D iChannel2;
+  sampler2D iChannel3;
+};
+*/
+
 #define USE_VORTICITY_CONFINEMENT
 //#define MOUSE_ONLY
 
@@ -113,13 +131,29 @@ void main( ){
 #version 330 core
 
 in       vec2      fUV;
-uniform sampler2D  iChannel0;
-uniform sampler2D  iChannel1;
 out vec4 gl_FragColor;
 
-//uniform float time;
+uniform float time;
 uniform float dt;
 uniform vec2  iResolution;
+uniform sampler2D  iChannel0;
+uniform sampler2D  iChannel1;
+
+// https://paroj.github.io/gltut/Positioning/Tut07%20Shared%20Uniforms.html
+/*
+layout(std140) uniform ShaderToy{
+  vec2  iResolution;
+  float iTime;
+  float idt;
+  vec4      iFwColor;
+  vec4      iBgColor;
+  vec4      iMouse;
+  sampler2D iChannel0;
+  sampler2D iChannel1;
+  sampler2D iChannel2;
+  sampler2D iChannel3;
+};
+*/
 
 mat2 mm2(in float a){float c = cos(a), s = sin(a);return mat2(c,s,-s,c);}
 

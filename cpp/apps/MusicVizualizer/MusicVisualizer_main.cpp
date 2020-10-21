@@ -179,6 +179,46 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     shReactDiff = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/BelousovZhabotinsky.glslf"   , true );
     GL_DEBUG;
 
+    makeBilboard( glTxDebug );
+    layers.screenQuad = glTxDebug;
+    layers.makeBuffers( 4, screen[0].WIDTH, screen[0].HEIGHT );
+
+    layers.shaders.push_back( shDebug );
+    layers.shaders.push_back( shTex   );
+    layers.shaders.push_back( shJulia );
+    layers.shaders.push_back( shReactDiff );
+    layers.shaders.push_back( shKalei1 );
+    layers.shaders.push_back( shFluid1 );
+    layers.shaders.push_back( shFluid2 );
+    float aspect = H/(float)W;
+    for( Shader* sh: layers.shaders){
+        sh->use();
+        sh->setModelPoseT( (Vec3d){-0.5/aspect,-0.5,0.0}, {1./aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+    };
+
+    shDebug->use();
+    shDebug->setUniformVec4f("baseColor", {0.0,1.0,0.0,1.0});
+
+    shFluid1->use(); GL_DEBUG;
+    shFluid1->setUniformf    ("dt",   0.15);
+    shFluid1->setUniformVec2f("iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+    shFluid1->setUniformf    ("vorticity", 0.09 );
+
+    shFluid2->use(); GL_DEBUG;
+    shFluid2->setUniformi    ( "iChannel0", 0    ); GL_DEBUG;
+    shFluid2->setUniformi    ( "iChannel1", 1    ); GL_DEBUG;
+    shFluid2->setUniformf    ( "dt",        0.15 );
+    shFluid2->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+
+    shJulia->use(); GL_DEBUG;
+    shJulia->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+    //return 0;
+
+    shKalei1->use();
+    shKalei1->setUniformi    ( "iChannel0", 0 ); GL_DEBUG;
+    shKalei1->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+
+
     /*
     GLMeshBuilder mshDebug;
     mshDebug.addLine      ( (Vec3f){0.0,0.0,0.0}, {10.0,10.0,10.0}, {1.0,0.0,0.0} );
@@ -209,33 +249,11 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     //zoomStep = 0.001;
 
 
-    makeBilboard( glTxDebug );
 
 
-    layers.screenQuad = glTxDebug;
-    layers.makeBuffers( 4, screen[0].WIDTH, screen[0].HEIGHT );
-    layers.shaders.push_back( shTex   );
-    layers.shaders.push_back( shJulia );
-    layers.shaders.push_back( shReactDiff );
 
-    shFluid1->use(); GL_DEBUG;
-    shFluid1->setUniformf    ("dt",   0.15);
-    shFluid1->setUniformVec2f("iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
-    shFluid1->setUniformf    ("vorticity", 0.09 );
 
-    shFluid2->use(); GL_DEBUG;
-    shFluid2->setUniformi    ( "iChannel0", 0    ); GL_DEBUG;
-    shFluid2->setUniformi    ( "iChannel1", 1    ); GL_DEBUG;
-    shFluid2->setUniformf    ( "dt",        0.15 );
-    shFluid2->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
 
-    shJulia->use(); GL_DEBUG;
-    shJulia->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
-    //return 0;
-
-    shKalei1->use();
-    shKalei1->setUniformi( "iChannel0", 0 ); GL_DEBUG;
-    shKalei1->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
 
 
     int result = 0;
@@ -286,9 +304,11 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 
 
 void MusicVisualizerGUI::draw_Spectrum( Camera& cam ){
-    shDebug->use();
-    cam.lookAt( (Vec3f){0.0,0.0,0.0}, 20.0 );
-    setCamera( *shDebug, cam );
+    //shDebug->use();
+    //cam.lookAt( (Vec3f){0.0,0.0,0.0}, 20.0 );
+    //setCamera( *shDebug, cam );
+    useWithCamera( shDebug, cam );
+
     shDebug->setModelPoseT( (Vec3d){-0.8f,0.0,0.0}, Mat3dIdentity );
     Vec2d* wave = (Vec2d*)(waveform.wave);
     float dx = 0.0015;
@@ -299,7 +319,10 @@ void MusicVisualizerGUI::draw_Spectrum( Camera& cam ){
 }
 
 void MusicVisualizerGUI::draw_Julia( Camera& cam ){
-    shJulia->use();
+    //shJulia->use();
+    //setCamera(*shJulia, cam);
+    useWithCamera( shJulia, cam );
+
     float scJulC = 0.00000002;
     CJul.mul(1-dtJul);
     CJul.add(
@@ -315,16 +338,17 @@ void MusicVisualizerGUI::draw_Julia( Camera& cam ){
     //CJul.set(Cx,Cy);
     printf("C %g %g | %g %g \n", CJul.y, CJul.y, Cx,Cy );
     shJulia->setUniformVec2f( "Const", C );
-    setCamera(*shJulia, cam);
-    shJulia->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+
+    //shJulia->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
     glTxDebug->draw();
 }
 
 void MusicVisualizerGUI::draw_ReactDiffuse( Camera& cam ){
 
-    shReactDiff->use();
-    setCamera(*shReactDiff, cam);
-    shReactDiff->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+    //shReactDiff->use();
+    //setCamera(*shReactDiff, cam);
+    useWithCamera( shReactDiff, cam );
+    //shReactDiff->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
 
     int iout,iin;
     if( frameCount&1 ){ iout=0; iin=1; }else{ iout=1; iin=0; };
@@ -342,9 +366,10 @@ void MusicVisualizerGUI::draw_ReactDiffuse( Camera& cam ){
 
 void MusicVisualizerGUI::draw_Kaleidoscope( Camera& cam ){
 
-    shKalei1->use();
-    setCamera(*shKalei1, cam);
-    shKalei1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+    //shKalei1->use();
+    //setCamera(*shKalei1, cam);
+    useWithCamera( shKalei1, cam );
+    //shKalei1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
     shKalei1->setUniformf( "iTime", frameCount*0.01 );
 
     layers.unbindOutput();
@@ -371,7 +396,7 @@ void MusicVisualizerGUI::draw_Fluid( Camera& cam ){
         // === 1] --- Shader 1
         shFluid1->use();
         setCamera(*shFluid1, cam);
-        shFluid1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+        //shFluid1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
 
         shFluid1->setUniformf ("time", iter*0.001);
 
@@ -383,7 +408,7 @@ void MusicVisualizerGUI::draw_Fluid( Camera& cam ){
         // === 2] --- Shader 2
         shFluid2->use();
         setCamera(*shFluid2, cam);
-        shFluid2->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+        //shFluid2->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
 
         iin=iout;
         if( iter&1 ){ iout=2; iin2=3; }else{ iout=3; iin2=2; };
@@ -396,7 +421,7 @@ void MusicVisualizerGUI::draw_Fluid( Camera& cam ){
     // === 3] --- just plot velocity buffer
     shTex->use();
     setCamera(*shTex, cam );
-    shTex->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+    //shTex->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
 
     layers.unbindOutput();
     layers.bindInput(iout,0);
@@ -421,7 +446,7 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     //glEnable(GL_DEPTH_TEST);
     glDisable(GL_DEPTH_TEST);
 
-    draw_ReactDiffuse(cam);
+    //draw_ReactDiffuse(cam);
     //draw_Fluid(cam);
 
     layers.unbindOutput();
@@ -440,9 +465,9 @@ void MusicVisualizerGUI::draw( Camera& cam ){
 
     shDebug->use();
     setCamera(*shDebug, cam);
-    shDebug->setUniformVec4f("baseColor", {0.0,1.0,0.0,1.0});
+    //shDebug->setUniformVec4f("baseColor", {0.0,1.0,0.0,1.0});
     //shDebug->setModelPoseT( (Vec3d){-0.5,-0.5,0.0}, Mat3dIdentity*1.0 );
-    shDebug->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+    //shDebug->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
     glTxDebug->draw(GL_LINE_LOOP);
 
     //draw_Julia(cam);

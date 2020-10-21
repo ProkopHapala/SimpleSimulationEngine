@@ -42,6 +42,7 @@ inline void setCameraOrtho(Shader& sh, const Camera& cam){
 }
 
 inline void setCamera(Shader& sh, const Camera& cam){ if(cam.persp){ setCameraPersp(sh,cam); } else { setCameraOrtho(sh,cam); } }
+inline void useWithCamera(Shader* sh, const Camera& cam){ sh->use(); setCamera(*sh, cam); }
 
 class SceneNode3D{
 	public:
