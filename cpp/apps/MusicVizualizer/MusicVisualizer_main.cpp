@@ -110,7 +110,10 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 	//int fontTex_DEBUG;
 
-    RenderStack layers;
+    RenderStack        layers;
+    RenderStack        layers_;
+    RenderStackManager manager;
+
     //Camera cam;
 
     ParticleFlow        particles;
@@ -150,6 +153,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
     void draw_Tree         ( Camera& cam );
     void draw_3Dfrac       ( Camera& cam );
     void draw_Sinuous      ( Camera& cam );
+    void draw_Particles    ( Camera& cam );
 
 };
 
@@ -168,6 +172,39 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 
     //frameBuff1.init( WIDTH, HEIGHT );
     //texTest = makeTestTextureRGBA( 256, 256);
+
+    //FluidPDE   2 = 1    // render FluidPDE from texture[1] to texture[2]
+    //FluidPDE   1 = 2    // render FluidPDE from texture[2] to texture[1] // Flip-Flopping
+    //FluidDrift 4 = 3 1  // render FluidDrift to texture[4] using texture[3] and texture[1] as input
+    //FluidPDE   2 = 1    //
+    //FluidPDE   1 = 2    //
+    //FluidDrift 3 = 4  1 //
+    //tx         0 = 3    // output to screen
+
+    manager.layers = &layers_;
+    manager.addScriptLine( "FluidPDE   2 = 1"   );
+    manager.addScriptLine( "FluidPDE   1 = 2"   );
+    manager.addScriptLine( "FluidDrift 3 = 4 1" );
+    manager.addScriptLine( "FluidDrift 4 = 3 1" );
+    //manager.addScriptLine( "FluidDrift 4 = 1 3"   );
+    //manager.addScriptLine( "FluidPDE   2 = 1"   );
+    //manager.addScriptLine( "FluidPDE   1 = 2"   );
+    //manager.addScriptLine( "FluidDrift 3 = 4 1" );
+    //manager.addScriptLine( "FluidDrift 3 = 1 4" );
+    manager.addScriptLine( "texture    0 = 4"   );
+
+    char info[256];
+    for(int i=0; i<manager.scripts[0]->size(); i++){
+        manager.sprintfScriptLine( i,0, info);
+        printf("#L%i : %s\n",i,info);
+    }
+
+    manager.prepare( screens[0]->WIDTH,screens[0]->HEIGHT );
+
+    printf("DEBUG ===  DONE instert scripts \n");
+    //exit(0);
+
+
 
     const char *keys[2]{"SOLVER","RENDER"};
     char** srcs         = fileGetSections( "common_resources/shaders/Fluid.glslf", 2, keys, "//#BEGIN_SHADER:" );
@@ -198,7 +235,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     GL_DEBUG;
 
     makeBilboard( glTxDebug );
-    layers.screenQuad = glTxDebug;
+    layers.screenQuad  = glTxDebug;
+    layers_.screenQuad = glTxDebug;
     layers.makeBuffers( 4, screen[0].WIDTH, screen[0].HEIGHT );
 
     layers.shaders.push_back( shDebug );
@@ -379,7 +417,7 @@ void MusicVisualizerGUI::draw_Julia( Camera& cam ){
     //float Cx=-0.4,Cy=0.6;
     float Cx=-0.8,Cy=0.256;
     //float Cx=-0.8,Cy=0.156;
-    Vec2f C = { CJul.x+Cx, CJul.y+Cy  };
+    Vec2f C = { -CJul.x+Cx, -CJul.y+Cy  };
 
     //CJul.set(Cx,Cy);
     printf("C %g %g | %g %g \n", CJul.y, CJul.y, Cx,Cy );
@@ -416,10 +454,10 @@ void MusicVisualizerGUI::draw_Kaleidoscope( Camera& cam ){
     //setCamera(*shKalei1, cam);
     useWithCamera( shKalei1, cam );
     //shKalei1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
-    shKalei1->setUniformf( "iTime", frameCount*0.01 );
+    shKalei1->setUniformf( "iTime", frameCount*0.001 );
 
     layers.unbindOutput();
-    layers.bindInput   (1,0);
+    layers.bindInput   (0,0);
     if(frameCount==1)layers.fillRandomRGB(1);
     glTxDebug->draw();
 
@@ -539,8 +577,43 @@ void MusicVisualizerGUI::draw_Sinuous( Camera& cam ){
 }
 
 
+void MusicVisualizerGUI::draw_Particles( Camera& cam ){
+
+    layers.bindOutput( 0 );
+    // https://learnopengl.com/Advanced-OpenGL/Blending
+    // https://www.learnopengles.com/tag/additive-blending/
+    glEnable   (GL_BLEND);
+    glDisable  (GL_DEPTH_TEST);
+    if(frameCount<2){
+        glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        particleRender.fillBuff();
+    }
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendFunc(GL_FUNC_ADD, GL_ONE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    shDebug->use();
+    setCamera(*shDebug, cam);
+    shDebug->setUniformVec4f("baseColor", {1.0,0.3,0.5,0.05});
+    particles.update( 0.01 );
+
+    particleRender.plotBuff();
+
+    /*
+    shTex->use();
+    setCamera(*shTex, cam );
+    layers.unbindOutput();
+    layers.bindInput(0,0);
+    glTxDebug->draw();
+    */
+
+}
+
 
 void MusicVisualizerGUI::draw( Camera& cam ){
+
+    layers .cam=&cam;
+    layers_.cam=&cam;
 
     //waveform.spectrumHistSmearing();
     //waveform.update( 5.1 );
@@ -560,34 +633,11 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     //draw_ReactDiffuse(cam);
     //draw_Fluid(cam);
     //draw_Sinuous( cam );
+    //draw_Particles( cam );
 
-
-    layers.bindOutput( 0 );
-    // https://learnopengl.com/Advanced-OpenGL/Blending
-    // https://www.learnopengles.com/tag/additive-blending/
-    glEnable   (GL_BLEND);
-    glDisable  (GL_DEPTH_TEST);
-    if(frameCount<2){
-        glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-        particleRender.fillBuff();
-    }
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    //glBlendFunc(GL_FUNC_ADD, GL_ONE);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    shDebug->use();
-    setCamera(*shDebug, cam);
-    shDebug->setUniformVec4f("baseColor", {0.0,1.0,0.0,0.1});
-    particles.update( 0.01 );
-
-    particleRender.plotBuff();
-
-    shTex->use();
-    setCamera(*shTex, cam );
-    layers.unbindOutput();
-    layers.bindInput(0,0);
-    glTxDebug->draw();
-
+    printf( "Frame %i \n", frameCount );
+    //layers_.render( *(manager.scripts[0]) );
+    manager.renderScript(0);
 
     layers.unbindOutput();
 
@@ -603,14 +653,17 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     glTxDebug->draw();
     */
 
+    /*
+    // --- draw rect
     shDebug->use();
     setCamera(*shDebug, cam);
     //shDebug->setUniformVec4f("baseColor", {0.0,1.0,0.0,1.0});
     //shDebug->setModelPoseT( (Vec3d){-0.5,-0.5,0.0}, Mat3dIdentity*1.0 );
     //shDebug->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
     glTxDebug->draw(GL_LINE_LOOP);
+    */
 
-
+    //layers.bindOutput( 0 );
     //draw_Julia(cam);
 
     //draw_3Dfrac( cam );

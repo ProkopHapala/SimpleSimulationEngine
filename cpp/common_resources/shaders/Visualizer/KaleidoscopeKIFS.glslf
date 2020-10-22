@@ -35,7 +35,7 @@ vec2 N(float angle) {
 
 //Rotate around an arbitrary line by a given angle.
 vec2 rotate(vec2 uv, vec2 cp, float a, bool side) {
-    vec2 n = N(a * 3.14159);
+    vec2 n = N(  a * 3.14159);
     float d = dot(uv - cp, n);
     if (side) {
         uv -= n * max(0.0, d) * 2.0;
@@ -67,9 +67,10 @@ void main( ){
     //vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;//Center Origin, Remap to -0.5 to +0.5, and square using aspect ratio.
     
     vec2 uv = 2*(fUV - 0.5)*iResolution.xy/ iResolution.x;
-    
+
     //vec2 mouse = iMouse.xy / iResolution.xy;//Useful for finding exact mirroring angles to use, just place mouse.x in place of angle
-    vec2 mouse = vec2(0.5,0.6);
+    //vec2 mouse = vec2(0.3,0.6);
+    vec2 mouse = vec2(0.0,0.9);
     //if (!mouseOn) {
     //    mouse = vec2(1.0);//If not using mouse, lock to 1.0, 1.0 (because it is multiplied by a value below.)
     //}
@@ -93,7 +94,7 @@ void main( ){
         uv.x  -= 1.5;       // Shift left by 1.5 Units
         uv.x   = abs(uv.x); // Mirror on Y axis
         uv.x  -= 0.5;       // Shift left by 1/2 Unit
-        uv     = rotate(uv, vec2(0.0, 0.0), mouse.y * 2.0 / 3.0, false);//Fold to create mirrored rotated segments. (The ^ part.)
+        uv     = rotate(uv, vec2(0.0, 0.0), 3.0*mouse.y * 2.0 / 3.0, false);//Fold to create mirrored rotated segments. (The ^ part.)
     }
     
     if (trippyInAndOut) {
@@ -105,13 +106,17 @@ void main( ){
     if (trippyTexture) {
         //Very trippy effect!
         uv /= scale;
-        //col += texture(iChannel0, uv * 2.0 - iTime * 0.1).rgb;
+        uv.x += 0.5;
+        uv.y -= 0.5;
+        col += texture(iChannel0, uv * 0.5 - iTime * 0.1).rgb;
         //col += vec3(cos(uv*50.0),cos(uv.x/uv.y));
+        /*
         col += vec3(
             cos(uv.x*25.)*cos(uv.y*25.),
             cos(uv.x*50.)*cos(uv.y*50.),
             cos(uv.x*100.)*cos(uv.y*100.)
         );
+        */
     } else {
         //Calculate the color based on the distance from the line. Until now, just shifting, scaling, mirroring UV space.
         //Remember uv space has been mirrored repeatedly to create the fractal outline. 

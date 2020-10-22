@@ -99,9 +99,9 @@ struct RenderPassRecord{
     // Transforms ?
 };
 
-struct RenderScript{
-    int npass=0;
-    RenderPassRecord* passes=0;
+struct RenderScript: std::vector<RenderPassRecord>{
+    //int npass=0;
+    //RenderPassRecord* passes=0;
 };
 
 class RenderStack{ public:
@@ -111,6 +111,7 @@ class RenderStack{ public:
     std::vector<FrameBuffer*> buffers;
     std::vector<Shader*>      shaders;
 
+    Camera* cam=0;
     GLMesh* screenQuad=0;
 
     //bool bDrawRaw = true;
@@ -123,6 +124,20 @@ class RenderStack{ public:
         }
     }
 
+    void prepareShaders(){
+        float aspect = buffers[0]->H/(float)buffers[0]->W;
+        for( Shader* sh: shaders){
+            sh->use();
+            sh->setModelPoseT( (Vec3d){-0.5/aspect,-0.5,0.0}, {1./aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+            sh->setUniformVec2f( "iResolution", {buffers[0]->W,(float)buffers[0]->H}  );
+            sh->setUniformf    ( "iTimeStep", 0.1  );
+            sh->setUniformi    ( "iChannel0", 0  );
+            sh->setUniformi    ( "iChannel1", 1  );
+            sh->setUniformi    ( "iChannel2", 2  );
+            sh->setUniformi    ( "iChannel3", 3  );
+        };
+    }
+
     void bindOutput(int ibuf){
         if( (ibuf<0)||(ibuf>buffers.size()) ) { glBindFramebuffer(GL_FRAMEBUFFER, 0                );  }
         else                                  { glBindFramebuffer(GL_FRAMEBUFFER, buffers[ibuf]->buff );  }
@@ -130,15 +145,18 @@ class RenderStack{ public:
     void unbindOutput(){ glBindFramebuffer(GL_FRAMEBUFFER, 0); }
 
     void bindInput(int ibuf, int islot=0){
+        printf( "bondInput %i slot %i \n", ibuf, islot );
         glActiveTexture(GL_TEXTURE0+islot);
         if(ibuf<0){ glBindTexture  (GL_TEXTURE_2D, buffers[-ibuf]->texZ   ); } // for negative buffer index we take Z-buffer
         else      { glBindTexture  (GL_TEXTURE_2D, buffers[ ibuf]->texRGB ); } // for positive buffer index we take RGB-buffer
     }
 
     Shader* render( int ish, int iout, int nin, const int* ins, const int* texUnits=0 ){
+        printf( "render S %i/%i L %i/%i <- \n", ish, shaders.size(), iout, buffers.size() );
         if(bFlushing)glFlush();
         //glBindFramebuffer(GL_FRAMEBUFFER, iout );
-        bindOutput(iout);
+        if(iout<0){ unbindOutput();   }
+        else      { bindOutput(iout); }
         for(int i=0; i<nin; i++){
             //printf( "i %i nin %i \n", i, nin );
             int islot = i;
@@ -148,16 +166,19 @@ class RenderStack{ public:
             //if(ibuf<0){ glBindTexture  (GL_TEXTURE_2D, buffers[-ibuf]->texZ   ); } // for negative buffer index we take Z-buffer
             //else      { glBindTexture  (GL_TEXTURE_2D, buffers[ ibuf]->texRGB ); } // for positive buffer index we take RGB-buffer
             bindInput( ins[i], islot=islot);
+            //printf( " %i\n", ins[i] );
         }
         Shader* sh = shaders[ish];
         sh->use();
         // ToDo - would be nice to set shader parameters here
+        setCamera(*sh, *cam );
         if(bDrawRaw){ screenQuad->drawRaw(); }else{ screenQuad->draw(); }
         return sh;
     }
 
     Shader* render( const  RenderPassRecord& rc  ){ return render( rc.shader, rc.output, rc.nin, rc.inputs ); }
-    void render   ( int n, RenderPassRecord* rcs ){ for(int i=0;i<n;i++){ render(rcs[i]); }; };
+    //void render   ( int n, RenderPassRecord* rcs ){ for(int i=0;i<n;i++){ render(rcs[i]); }; };
+    void render   ( RenderScript& rcs ){ for(int i=0;i<rcs.size();i++){ render(rcs[i]); }; };
 
     void fillRandomRGB(int ibuf){ textureFillRandomRGB( buffers[ibuf]->W, buffers[ibuf]->H, buffers[ibuf]->texRGB ); }
 };
@@ -167,7 +188,7 @@ class RenderStackManager{ public:
     RenderStack* layers=0;
     Dictionary   shaderDict;
     Dictionary   scriptDict;
-    std::vector<RenderScript> scripts;
+    std::vector<RenderScript*> scripts;
     std::vector<std::string> shaderNames;
 
     int maxTextures=0;
@@ -195,10 +216,10 @@ class RenderStackManager{ public:
     */
 
     void loadShaders(){
-        const char prefix[]{"common_resources/shaders/"};
+        const char prefix[]{"common_resources/shaders/Visualizer/"};
         char vertPath[1024];
         for(int i=0; i<shaderNames.size(); i++){
-            sprintf(vertPath,"%s%s",prefix, shaderNames[i].c_str() );
+            sprintf(vertPath,"%s%s.glslf",prefix, shaderNames[i].c_str() );
             printf( "Loading %s \n", vertPath );
             loadShader( "common_resources/shaders/texture3D.glslv", vertPath );
         }
@@ -207,26 +228,45 @@ class RenderStackManager{ public:
 
     void prepare( int width, int height ){
         int nbuf = maxTextures - layers->buffers.size();
+        printf( "nbuf %i \n", nbuf );
         layers->makeBuffers( nbuf, width, height );
         loadShaders();
+        layers->prepareShaders();
     };
 
-    void addScriptLine(char* s){
+    void addScriptLine( char* s, int iscript=-1){
         // parse script line
         RenderPassRecord rc;
         char cname[64];
-        int nread = sscanf( s, "%s %i = %i %i %i %i ", cname, rc.output, rc.inputs[0], rc.inputs[1], rc.inputs[2], rc.inputs[3] );
+        int nread = sscanf( s, "%s %i = %i %i %i %i", cname, &rc.output, &rc.inputs[0], &rc.inputs[1], &rc.inputs[2], &rc.inputs[3] );
+        //int nread = sscanf( "Hey 1 = 3 6 9 8", "%s %i = %i %i %i %i", cname, &rc.output, &rc.inputs[0], &rc.inputs[1], &rc.inputs[2], &rc.inputs[3] );
         if(nread<2){ printf( "ERORR : render pass needs to specify shader name & output at least ! \n %s", s ); exit(0); }
         rc.nin = nread - 2;
         // update required number of textures
-        _setmax( maxTextures, rc.output );
-        for(int i=0; i<rc.nin; i++){ _setmax( maxTextures, rc.inputs[i] ); }
+        rc.output--; _setmax( maxTextures, rc.output );
+        for(int i=0; i<rc.nin; i++){  rc.inputs[i]--; _setmax( maxTextures, rc.inputs[i] ); }
         // register new shader name
         std::string name(cname);
         //int ish;
         auto got  =  shaderDict.find (name);
         if  ( got == shaderDict.end() ){ rc.shader = shaderDict.size(); shaderDict.insert( {name,rc.shader} ); shaderNames.push_back(name); }
         else                           { rc.shader = got->second; }
+        if(iscript<0)iscript+=scripts.size();
+        if(iscript<0){iscript=0;
+            if( scripts.size()==0 ) scripts.resize(1);
+            scripts[iscript]=new RenderScript();
+        };
+        scripts[iscript]->push_back( rc );
+    }
+
+    char* sprintfScriptLine(int iline,int iscript,char* s){
+        RenderPassRecord rc = (*scripts[iscript])[iline];
+        int nch = sprintf(s,"%s %i = ", shaderNames[rc.shader].c_str(), rc.output );
+        s+=nch;
+        for(int i=0;i<rc.nin; i++){
+            s+=sprintf(s,"%i ", rc.inputs[i] );
+        }
+        return s;
     }
 
     /*
@@ -249,22 +289,16 @@ class RenderStackManager{ public:
     }
 
     void loadScriptFile( const char* fname, char sep='\n'){
-        /*
-        FILE * pFile;
-        const int nbuff = 4096;
-        char str[nbuff];
-        pFile = fopen ( fname , "r");
-        if (pFile == NULL){ printf("ERROR : RenderStackManager: script file not found: %s \n", fname ); return(-1); };
-        int n=0;
-        while ( fgets( str , nbuff, pFile) != NULL ){
-            if (str[0]=='#') continue;
-            addScriptLine( str );
-            n++;
-        }
-        fclose(pFile);
-        return n;
-        */
         processFileLines( fname, [this](char* line){ addScriptLine(line); } );
+    }
+
+    void renderScript(int i){
+        //layers->render( *scripts[i] );
+        RenderScript& rcs = *scripts[i];
+        for(int i=0;i<rcs.size();i++){
+            printf( "%s ", shaderNames[rcs[i].shader].c_str() );
+            layers->render(rcs[i]);
+        };
     }
 
 
