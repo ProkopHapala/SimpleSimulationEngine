@@ -9,25 +9,27 @@ in       vec2      fUV;
 uniform sampler2D  iChannel0; 
 out vec4 gl_FragColor;
 
-uniform float time;
-uniform float dt;
+uniform float iTime;
+//uniform float dt;
 uniform vec2  iResolution;
-uniform float vorticity; 
 
 
 
 #define pi 3.1415926
 vec3 light;
+
 float ln (vec3 p, vec3 a, vec3 b, float R) { 
     float r = dot(p-a,b-a)/dot(b-a,b-a);
     r = clamp(r,0.,1.);
     p.x+= 0.2*sqrt(R)*smoothstep(1.,0.,abs(r*2.-1.))*cos(pi*(2.*iTime));
     return length(p-a-(b-a)*r)-R*(1.5-0.4*r);
 }
+
 mat2 ro (float a) {
 	float s = sin(a), c = cos(a);
     return mat2(c,-s,s,c);
 }
+
 float map (vec3 p) {
     float l = length(p-light)-1e-2;
     l = min(l,abs(p.y+0.4)-1e-2);
@@ -62,20 +64,28 @@ vec3 march (vec3 p, vec3 d) {
     }
     return p;
 }
+
 vec3 norm (vec3 p) { // iq
-		vec2 e = vec2 (.001,0.);
-		return normalize(vec3(
-				map(p+e.xyy) - map(p-e.xyy),
-				map(p+e.yxy) - map(p-e.yxy),
-				map(p+e.yyx) - map(p-e.yyx)
-			));
-	}
-void mainImage( out vec4 C, in vec2 U )
-{   vec2 R = iResolution.xy;
+    vec2 e = vec2 (.001,0.);
+    return normalize(vec3(
+            map(p+e.xyy) - map(p-e.xyy),
+            map(p+e.yxy) - map(p-e.yxy),
+            map(p+e.yyx) - map(p-e.yyx)
+        ));
+}
+
+//void mainImage( out vec4 C, in vec2 U )
+void main( ){
+
+    vec4 C;
     light = vec3(0.2*sin(iTime),0.5,-.5);
-    if (iMouse.z > 0.) light = vec3(vec2(-0.5,0.5)*0.+0.7*(iMouse.xy-0.5*R)/R.y,-.3);
+    //if (iMouse.z > 0.) light = vec3(vec2(-0.5,0.5)*0.+0.7*(iMouse.xy-0.5*R)/R.y,-.3);
     
-    U = (U-0.5*R)/R.y;
+    vec2 U = (fUV-0.5)*2.0;
+    vec2 R = iResolution.xy;
+    U.x*=(iResolution.x/iResolution.y);
+    //U = (U-0.5*R)/R.y;
+
     vec3 p = vec3(0,0,-1);
     vec3 d = normalize(vec3(U,1));
     p =  march(p,d);
@@ -86,6 +96,8 @@ void mainImage( out vec4 C, in vec2 U )
     vec3 lp = march(p+d*1e-2,d);
     C *= 2.5*(dot(d,n))*(.3+0.7*length(lp-p)/length(light-p));
     C = atan(C)/pi*2.;
+
+    gl_FragColor = C;
 }
 
 

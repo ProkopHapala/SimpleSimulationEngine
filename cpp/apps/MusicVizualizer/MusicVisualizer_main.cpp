@@ -115,7 +115,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
 
 
     Shader *shDebug=0,*shJulia=0,*shReactDiff=0,*shTex=0;
-    Shader *shKalei1=0;
+    Shader *shKalei1=0,*shTree=0,*sh3Dfrac=0;
     Shader *shFluid1=0,*shFluid2=0;
     GLMesh *histMesh=0, *waveMesh=0, *glTxDebug=0;
 
@@ -143,6 +143,9 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
     void draw_ReactDiffuse ( Camera& cam );
     void draw_Fluid        ( Camera& cam );
     void draw_Kaleidoscope ( Camera& cam );
+    void draw_Tree         ( Camera& cam );
+    void draw_3Dfrac       ( Camera& cam );
+
 };
 
 MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
@@ -173,10 +176,15 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     shDebug = new Shader( "common_resources/shaders/const3D.glslv"   , "common_resources/shaders/const3D.glslf" , true );
     //sh1     = new Shader( "common_resources/shaders/shade3D.glslv"   , "common_resources/shaders/shade3D.glslf" , true );
     //shJulia = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Julia.glslf"   , true );
-    shJulia  = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Julia_curvature.glslf"  , true );
-    shKalei1 = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/KaleidoscopeKIFS.glslf" , true );
+    shJulia  = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Visualizer/Julia_curvature.glslf"  , true );
+    shKalei1 = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Visualizer/KaleidoscopeKIFS.glslf" , true );
 
-    shReactDiff = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/BelousovZhabotinsky.glslf"   , true );
+    shTree   = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Visualizer/DancyTreeDoodle.glslf" , true );
+    //shTree   = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Visualizer/DancyTreeDoodle3D.glslf" , true );
+
+    sh3Dfrac   = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Visualizer/HollyGrailQuest2.glslf" , true );
+
+    shReactDiff = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/Visualizer/BelousovZhabotinsky.glslf" , true );
     GL_DEBUG;
 
     makeBilboard( glTxDebug );
@@ -188,6 +196,8 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     layers.shaders.push_back( shJulia );
     layers.shaders.push_back( shReactDiff );
     layers.shaders.push_back( shKalei1 );
+    layers.shaders.push_back( shTree   );
+    layers.shaders.push_back( sh3Dfrac );
     layers.shaders.push_back( shFluid1 );
     layers.shaders.push_back( shFluid2 );
     float aspect = H/(float)W;
@@ -217,6 +227,15 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     shKalei1->use();
     shKalei1->setUniformi    ( "iChannel0", 0 ); GL_DEBUG;
     shKalei1->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+
+    shTree->use();
+    //shTree->setUniformi    ( "iChannel0", 0 ); GL_DEBUG;
+    shTree->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+
+
+    sh3Dfrac->use();
+    //shTree->setUniformi    ( "iChannel0", 0 ); GL_DEBUG;
+    sh3Dfrac->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
 
 
     /*
@@ -379,7 +398,19 @@ void MusicVisualizerGUI::draw_Kaleidoscope( Camera& cam ){
 
 }
 
+void MusicVisualizerGUI::draw_Tree ( Camera& cam ){
+    useWithCamera( shTree, cam );
+    shTree->setUniformf( "iTime", frameCount*0.01 );
+    layers.unbindOutput();
+    glTxDebug->draw();
+};
 
+void MusicVisualizerGUI::draw_3Dfrac( Camera& cam ){
+    useWithCamera( sh3Dfrac, cam );
+    sh3Dfrac->setUniformf( "iTime", frameCount*0.01 );
+    layers.unbindOutput();
+    glTxDebug->draw();
+};
 
 void MusicVisualizerGUI::draw_Fluid( Camera& cam ){
 
@@ -472,7 +503,9 @@ void MusicVisualizerGUI::draw( Camera& cam ){
 
     //draw_Julia(cam);
 
-    draw_Kaleidoscope( cam );
+    draw_3Dfrac( cam );
+    //draw_Kaleidoscope( cam );
+    //draw_Tree( cam );
     //draw_Spectrum(cam);
 
 };

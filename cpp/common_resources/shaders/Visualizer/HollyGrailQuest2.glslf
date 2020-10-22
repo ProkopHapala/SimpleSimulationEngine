@@ -5,6 +5,10 @@ uniform  vec2      Const;    // julia constant
 
 out vec4 gl_FragColor;
 
+
+uniform float iTime;
+uniform vec2  iResolution;
+
 //another holy grail candidate from msltoe found here:
 //http://www.fractalforums.com/theory/choosing-the-squaring-formula-by-location
 
@@ -19,7 +23,7 @@ bool bColoring=false;
 float DE(in vec3 p){
 	float dr=1.0,r=length(p);
 	//C=p;
-	for(int i=0;i<10;i++){
+	for(int i=0;i<6;i++){
 		if(r>20.0)break;
 		dr=dr*2.0*r;
 		float psi = abs(mod(atan(p.z,p.y)+pi/8.0,pi/4.0)-pi/8.0);
@@ -79,7 +83,12 @@ vec3 Julia(float t){
 	return vec3(0.0,1.0,-1.0);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
+
+//void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
+void main( ) {
+
+    vec2 fragCoord = fUV*iResolution;
+
 	float px=0.5/size.y;
 	L=normalize(vec3(0.4,0.8,-0.6));
 	float tim=time*0.5;
@@ -95,7 +104,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 	vec3 edge=vec3(-1.0);
 	bool bGrab=false;
 	vec3 col=Sky(rd);
-	for(int i=0;i<78;i++){
+	for(int i=0;i<32;i++){
 		t+=d*0.5;
 		d=DE(ro+rd*t);
 		if(d>od){
@@ -119,6 +128,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 		edge=edge.zxy;
 		bFill=false;
 	}
-	fragColor = vec4(2.0*col,1.0);
+	gl_FragColor = vec4(2.0*col,1.0);
 }
 

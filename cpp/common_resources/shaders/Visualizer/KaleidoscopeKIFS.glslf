@@ -106,7 +106,12 @@ void main( ){
         //Very trippy effect!
         uv /= scale;
         //col += texture(iChannel0, uv * 2.0 - iTime * 0.1).rgb;
-        col += vec3(cos(uv*50.0),cos(uv.x/uv.y));
+        //col += vec3(cos(uv*50.0),cos(uv.x/uv.y));
+        col += vec3(
+            cos(uv.x*25.)*cos(uv.y*25.),
+            cos(uv.x*50.)*cos(uv.y*50.),
+            cos(uv.x*100.)*cos(uv.y*100.)
+        );
     } else {
         //Calculate the color based on the distance from the line. Until now, just shifting, scaling, mirroring UV space.
         //Remember uv space has been mirrored repeatedly to create the fractal outline. 
