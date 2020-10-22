@@ -13,6 +13,8 @@
 #include "Shader.h"
 #include "DrawOGL3.h"
 
+#include "Noise.h"
+
 #include "SDL_utils.h"
 //#include "IO_utils.h"
 
@@ -269,6 +271,97 @@ class RenderStackManager{ public:
 };
 
 
+class ParticleFlow{ public:
+    int np=0;
+    Vec2d* ps=0; // ToDo : we may do in also in 3D ( using procedural noise )
+    Vec2d* vs=0;
+    double bmix = 0.2;
+    double resetProb = 0.01;
+    Vec2d pmin=Vec2dZero;
+    Vec2d pmax=Vec2dOnes;
 
+    void init(Vec2d pmin_, Vec2d pmax_){
+        pmin=pmin_;
+        pmax=pmax_;
+        for(int i=0; i<np; i++){
+            ps[i].set( randf(pmin.x,pmax.x), randf(pmin.y,pmax.y) );
+            vs[i] = Vec2dZero;
+        }
+    }
+
+    void realloc(int np_){
+        np=np_;
+        _realloc( ps, np );
+        _realloc( vs, np );
+    }
+
+    inline void flowField(const Vec2d& p, Vec2d& v){
+        Noise::simplexNoise2D( p*25.0, v );
+        //Noise::warpNoise3R( const Vec2d& pos0, const Vec2d& rot, double fdown, double strenght, int n, Vec2d& dpos_ );
+    }
+
+    void update(double dt){
+        Vec2d vel;
+        for(int i=0; i<np; i++){
+            if(resetProb>1e-12){
+                if(randf()<resetProb){
+                    ps[i].set( randf(pmin.x,pmax.x), randf(pmin.y,pmax.y) );
+                    vs[i] = Vec2dZero;
+                }
+            }
+            Vec2d pos = ps[i];
+            flowField(pos,vel);
+            vel = vel*bmix + vs[i]*(1-bmix);
+            pos.add_mul(vel,dt);
+            ps[i] = pos;
+            vs[i] = vel;
+        }
+    }
+
+};
+
+
+class ParticleFlowRender{ public:
+    int np=0;
+    Vec2d*  ps=0;
+    Vec3f*  ops=0;
+    GLMesh* mesh=0;
+    Vec2f p0=Vec2fZero;
+    Vec2f sc=Vec2fOnes;
+    double max_dist = 0.1;
+
+    void init(int np_, Vec2d* ps_, GLMesh* mesh_ = 0){
+        np=np_;
+        ps=ps_;
+        _realloc(ops, 2*np);
+        mesh=mesh_;
+        if(mesh==0){
+            if(mesh==0) mesh=new GLMesh();
+            mesh->init( np*2, 0, 0, ops, 0, NULL, NULL, GL_STREAM_DRAW );
+            mesh->draw_mode = GL_LINES;
+        }
+    }
+
+    void fillBuff(){
+        for(int i=0; i<np; i++){
+            int i2=i*2;
+            Vec3f op = ops[i2+1];
+            Vec3f p  = (Vec3f){ ps[i].x*sc.x+p0.x, ps[i].y*sc.y+p0.y, 0. };
+            if( p.dist2(op)>(max_dist*max_dist) ){ op=p; };
+            ops[i2  ] = op;
+            ops[i2+1] = p;
+        }
+    };
+
+    void plotBuff(){
+
+        fillBuff();
+
+        glBindBuffer(GL_ARRAY_BUFFER, mesh->vpos );
+        glBufferSubData(GL_ARRAY_BUFFER, 0, 6*np*sizeof(float), ops );
+        mesh->draw();
+    }
+
+};
 
 #endif

@@ -113,10 +113,14 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
     RenderStack layers;
     //Camera cam;
 
+    ParticleFlow        particles;
+    ParticleFlowRender  particleRender;
+
 
     Shader *shDebug=0,*shJulia=0,*shReactDiff=0,*shTex=0;
     Shader *shKalei1=0,*shTree=0,*sh3Dfrac=0;
     Shader *shFluid1=0,*shFluid2=0;
+    Shader *shSinuous1=0,*shSinuous2=0;
     GLMesh *histMesh=0, *waveMesh=0, *glTxDebug=0;
 
 
@@ -145,6 +149,7 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
     void draw_Kaleidoscope ( Camera& cam );
     void draw_Tree         ( Camera& cam );
     void draw_3Dfrac       ( Camera& cam );
+    void draw_Sinuous      ( Camera& cam );
 
 };
 
@@ -167,10 +172,15 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     const char *keys[2]{"SOLVER","RENDER"};
     char** srcs         = fileGetSections( "common_resources/shaders/Fluid.glslf", 2, keys, "//#BEGIN_SHADER:" );
     char* srx_texture3D = filetobuf( "common_resources/shaders/texture3D.glslv" );
-    printf("\n//==========%s \n\n %s \n\n", "SOLVER", srcs[0] );
-    printf("\n//==========%s \n\n %s \n\n", "RENDER", srcs[1] );
+    //printf("\n//==========%s \n\n %s \n\n", "SOLVER", srcs[0] );
+    //printf("\n//==========%s \n\n %s \n\n", "RENDER", srcs[1] );
     shFluid1 = new Shader( srx_texture3D , srcs[0], false );
     shFluid2 = new Shader( srx_texture3D , srcs[1], false );
+
+
+    srcs         = fileGetSections( "common_resources/shaders/Visualizer/Sinuous.glslf", 2, keys, "//#BEGIN_SHADER:" );
+    shSinuous1 = new Shader( srx_texture3D , srcs[0], false );
+    shSinuous2 = new Shader( srx_texture3D , srcs[1], false );
 
     shTex   = new Shader( "common_resources/shaders/texture3D.glslv" , "common_resources/shaders/texture.glslf" , true );
     shDebug = new Shader( "common_resources/shaders/const3D.glslv"   , "common_resources/shaders/const3D.glslf" , true );
@@ -200,6 +210,9 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     layers.shaders.push_back( sh3Dfrac );
     layers.shaders.push_back( shFluid1 );
     layers.shaders.push_back( shFluid2 );
+    layers.shaders.push_back( shSinuous1 );
+    layers.shaders.push_back( shSinuous2 );
+
     float aspect = H/(float)W;
     for( Shader* sh: layers.shaders){
         sh->use();
@@ -219,6 +232,18 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
     shFluid2->setUniformi    ( "iChannel1", 1    ); GL_DEBUG;
     shFluid2->setUniformf    ( "dt",        0.15 );
     shFluid2->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+
+    shSinuous1->use(); GL_DEBUG;
+    shSinuous1->setUniformf    ("dt",   0.15);
+    shSinuous1->setUniformVec2f("iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+    shSinuous1->setUniformf    ("vorticity", 0.09 );
+
+    shSinuous2->use(); GL_DEBUG;
+    shSinuous2->setUniformi    ( "iChannel0", 0    ); GL_DEBUG;
+    shSinuous2->setUniformi    ( "iChannel1", 1    ); GL_DEBUG;
+    shSinuous2->setUniformf    ( "dt",        0.15 );
+    shSinuous2->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
+
 
     shJulia->use(); GL_DEBUG;
     shJulia->setUniformVec2f( "iResolution", (Vec2f){layers.buffers[0]->W,layers.buffers[0]->H});
@@ -269,7 +294,9 @@ MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(
 
 
 
-
+    particles.realloc(10000);
+    particles.init( {-1.0,-1.0}, {1.0,1.0} );
+    particleRender.init( particles.np, particles.ps );
 
 
 
@@ -460,6 +487,59 @@ void MusicVisualizerGUI::draw_Fluid( Camera& cam ){
 
 }
 
+
+
+void MusicVisualizerGUI::draw_Sinuous( Camera& cam ){
+
+    // Try to use this extension allowing to use same texture as both input and output
+    // https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_shader_framebuffer_fetch.txt
+    // https://stackoverflow.com/questions/64304026/rendering-to-custom-framebuffer-using-same-texture-both-as-input-and-output?noredirect=1#comment113708604_64304026
+
+    int perFrame = 5;
+
+    int iout,iin,iin2;
+    for(int i=0; i<perFrame; i++){
+        int iter = i + frameCount*perFrame;
+
+        // === 1] --- Shader 1
+        shSinuous1->use();
+        setCamera(*shSinuous1, cam);
+        //shFluid1->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+
+        shSinuous1->setUniformf ("time", iter*0.001);
+
+        if( iter&1 ){ iout=0; iin=1; }else{ iout=1; iin=0; }; // split odd and even frames
+        layers.bindOutput( iout   );
+        layers.bindInput ( iin, 0 );
+        //layers.bindInput ( iin, 1 );
+        glTxDebug->draw();
+
+        // === 2] --- Shader 2
+        shSinuous2->use();
+        setCamera(*shSinuous2, cam);
+        //shFluid2->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+
+        iin=iout;
+        if( iter&1 ){ iout=2; iin2=3; }else{ iout=3; iin2=2; };
+        layers.bindOutput( iout    );
+        layers.bindInput ( iin,  0 );
+        layers.bindInput ( iin2, 1 );
+        glTxDebug->draw();
+    }
+
+    // === 3] --- just plot velocity buffer
+    shTex->use();
+    setCamera(*shTex, cam );
+    //shTex->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
+
+    layers.unbindOutput();
+    layers.bindInput(iout,0);
+    glTxDebug->draw();
+
+}
+
+
+
 void MusicVisualizerGUI::draw( Camera& cam ){
 
     //waveform.spectrumHistSmearing();
@@ -479,6 +559,35 @@ void MusicVisualizerGUI::draw( Camera& cam ){
 
     //draw_ReactDiffuse(cam);
     //draw_Fluid(cam);
+    //draw_Sinuous( cam );
+
+
+    layers.bindOutput( 0 );
+    // https://learnopengl.com/Advanced-OpenGL/Blending
+    // https://www.learnopengles.com/tag/additive-blending/
+    glEnable   (GL_BLEND);
+    glDisable  (GL_DEPTH_TEST);
+    if(frameCount<2){
+        glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        particleRender.fillBuff();
+    }
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendFunc(GL_FUNC_ADD, GL_ONE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    shDebug->use();
+    setCamera(*shDebug, cam);
+    shDebug->setUniformVec4f("baseColor", {0.0,1.0,0.0,0.1});
+    particles.update( 0.01 );
+
+    particleRender.plotBuff();
+
+    shTex->use();
+    setCamera(*shTex, cam );
+    layers.unbindOutput();
+    layers.bindInput(0,0);
+    glTxDebug->draw();
+
 
     layers.unbindOutput();
 
@@ -501,12 +610,14 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     //shDebug->setModelPoseT( (Vec3d){-0.5/cam.aspect,-0.5,0.0}, {1./cam.aspect,0.,0.,  0.,1.,0.,  0.,1.,0.} );
     glTxDebug->draw(GL_LINE_LOOP);
 
+
     //draw_Julia(cam);
 
-    draw_3Dfrac( cam );
+    //draw_3Dfrac( cam );
     //draw_Kaleidoscope( cam );
     //draw_Tree( cam );
     //draw_Spectrum(cam);
+
 
 };
 

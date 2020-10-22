@@ -6,12 +6,14 @@
 smooth in vec4 gl_FragCoord;
 
 // OUT --- Ouput data
-out vec3 color;
+//out vec3 color;
+out vec4 color;
 
 // UNI --- Values that stay constant for the whole mesh.
 uniform vec4 baseColor;
 
 void main(){
-	color = baseColor.xyz;
+	//color = baseColor.xyz;
+	color = baseColor;
 	gl_FragDepth = gl_FragCoord.z;
 }

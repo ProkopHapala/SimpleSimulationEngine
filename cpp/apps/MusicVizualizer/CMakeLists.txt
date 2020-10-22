@@ -38,6 +38,7 @@ add_executable( ${NAME}_main
 	${NAME}_main.cpp 
 	#$<TARGET_OBJECTS:SDL2OGL>
 	$<TARGET_OBJECTS:SDL2OGL3>
+    $<TARGET_OBJECTS:Noise>
 )
 target_link_libraries( ${NAME}_main${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${SDL2_MIXER_LIBRARY} )
 
