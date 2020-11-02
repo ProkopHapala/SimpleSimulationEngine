@@ -1,0 +1,203 @@
+﻿
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <vector>
+#include <math.h>
+
+#include <vector>
+#include <unordered_map>
+#include <string>
+
+#include "fastmath.h"
+#include "Vec3.h"
+#include "Mat3.h"
+//#include "VecN.h"
+
+#include "integration.h"
+#include "AOIntegrals.h"
+//#include "AOrotations.h"
+
+#include "Grid.h"
+#include "CLCFGO.h"
+
+
+// ============ Global Variables
+
+CLCFGO solver;
+
+std::unordered_map<std::string, double*>  buffers;
+std::unordered_map<std::string, int*>     ibuffers;
+
+extern "C"{
+// ========= Grid initialization
+
+void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
+    solver.realloc( natom_, nOrb_, perOrb_, natypes_ );
+    /*
+    int natom =0; ///< number of atoms (nuclei, ions)
+    int perOrb=0; //!< Brief number of spherical functions per orbital
+    int nOrb  =0; //!< Brief number of single-electron orbitals in system
+    // this is evaluated automaticaly
+    int nBas  =0; ///< number of basis functions
+    int nqOrb =0; ///< number of charges (axuliary density elements) per orbital
+    int nQtot =0; ///< total number of charge elements
+
+    // atoms (ions)
+    Vec3d*  apos   =0;  ///< positioon of atoms
+    Vec3d*  aforce =0;  ///< positioon of atoms
+    Vec3d*  aQs    =0;  ///< charge of atom
+    int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
+
+    // orbitals
+    Vec3d*  opos =0;   ///< store positions for the whole orbital
+    Vec3d*  odip =0;   ///< Axuliary array to store dipoles for the whole orbital
+    double* oEs  =0;   ///< orbital energies
+    double* oQs  =0;   ///< total charge in orbital before renormalization (just DEBUG?)
+    int*    onq  =0;   ///< number of axuliary density functions per orbital
+
+    // --- Wave-function components for each orbital
+    Vec3d*  epos  =0; ///< position of spherical function for expansion of orbitals
+    double* esize =0;
+    double* ecoef =0;  ///< expansion coefficient of expansion of given orbital
+    // --- Forces acting on wave-functions components
+    Vec3d*  efpos  =0; ///<   force acting on position of orbitals
+    double* efsize =0; ///<   force acting on combination coefficnet of orbitals
+    double* efcoef =0; ///<  force acting on size of gaussians
+
+    // --- Auxuliary electron density expansion basis functions
+    Vec3d * rhoP  =0; ///< position of density axuliary functio
+    double* rhoQ  =0; ///< temporary array to store density projection on pair overlap functions
+    double* rhoS  =0;
+    // --- Forces acting on auxuliary density basis functions
+    Vec3d * rhofP =0; ///< position of density axuliary functio
+    double* rhofQ =0; ///< temporary array to store density projection on pair overlap functions
+    double* rhofS =0;
+    double* rhoEQ =0; /// coulomb energy
+    */
+    
+    // atoms (ions)
+    buffers.insert( { "apos",   (double*)solver.apos   } );
+    buffers.insert( { "aforce", (double*)solver.aforce } );
+    buffers.insert( { "aQs",    (double*)solver.aQs    } );
+    ibuffers.insert( { "atype",          solver.atype  } );
+    // orbitals
+    buffers.insert( { "opos", (double*)solver.opos  } );
+    buffers.insert( { "odip", (double*)solver.odip  } );
+    buffers.insert( { "oEs",           solver.oEs   } );
+    buffers.insert( { "oQs",           solver.oQs   } );
+    buffers.insert( { "onq",  (double*)solver.onq   } );
+    // --- Wave-function components for each orbital
+    buffers.insert( { "epos", (double*)solver.epos   } );
+    buffers.insert( { "esize",         solver.esize  } );
+    buffers.insert( { "ecoef",         solver.ecoef  } );
+    // --- Forces acting on wave-functions components
+    buffers.insert( { "efpos", (double*)solver.efpos  } );
+    buffers.insert( { "efsize",         solver.efsize } );
+    buffers.insert( { "efcoef",         solver.efcoef } );
+    // --- Auxuliary electron density expansion basis functions
+    buffers.insert( { "rhoP", (double*)solver.rhoP } );
+    buffers.insert( { "rhoQ",          solver.rhoQ } );
+    buffers.insert( { "rhoS",          solver.rhoS } );
+    // --- Forces acting on auxuliary density basis functions
+    buffers.insert( { "rhofP", (double*)solver.rhofP } );
+    buffers.insert( { "rhofQ",          solver.rhofQ } );
+    buffers.insert( { "rhofS",          solver.rhofS } );
+    buffers.insert( { "rhoEQ",          solver.rhoEQ } );
+
+}
+
+/*
+int*    getTypes (){ return (int*)   ff.types;  }
+double* getPoss  (){ return (double*)ff.poss;   }
+double* getQrots (){ return (double*)ff.qrots;  }
+double* getHbonds(){ return (double*)ff.hbonds; }
+double* getEbonds(){ return (double*)ff.ebonds; }
+double* getBondCaps(){ return (double*)ff.bondCaps; }
+*/
+
+double* getBuff(const char* name){ 
+    auto got = buffers.find( name );
+    if( got==buffers.end() ){ return 0;        }
+    else                    { return got->second; }
+}
+
+void setBuff(const char* name, double* buff){ 
+    buffers[name] = buff;
+    //auto got = buffers.find( name );
+    //if( got==buffers.end() ){ return null;        }
+    //else                    { return got->second; }
+}
+
+int* getIBuff(const char* name){ 
+    auto got = ibuffers.find( name );
+    if( got == ibuffers.end() ){ return 0;        }
+    else                    { return got->second; }
+}
+
+void setIBuff(const char* name, int* buff){ 
+    ibuffers[name] = buff;
+    //auto got = buffers.find( name );
+    //if( got==buffers.end() ){ return null;        }
+    //else                    { return got->second; }
+}
+
+void initTestElectrons( ){
+    {auto& _=solver;
+        _.ecoef[0] =   1.0;
+        _.ecoef[1] =   1.0;
+        _.ecoef[2] =   1.0;
+        _.ecoef[3] =   1.0;
+        _.esize[0] =   1.0;
+        _.esize[1] =   1.0;
+        _.esize[2] =   1.0;
+        _.esize[3] =   1.0;
+        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [2] = (Vec3d){-1.5, 0.0,0.0};
+        _.epos [3] = (Vec3d){ 0.0, 0.0,0.0};
+    }
+}
+
+#define NEWBUFF(name,N)   double* name = new double[N]; buffers.insert( {#name, name} );
+
+void testDerivs_Coulomb_model( int n, double x0, double dx ){
+    initTestElectrons( );
+    solver.toRho(0,1,0);
+    solver.toRho(2,3,1);
+    NEWBUFF(l_xs,n)
+    NEWBUFF(l_Qi,n)
+    NEWBUFF(l_dQi_ana,n)
+    NEWBUFF(l_dQi_num,n)
+    NEWBUFF(l_Pi,n)
+    NEWBUFF(l_E,n)
+    NEWBUFF(l_Fana,n)
+    NEWBUFF(l_Fnum,n)
+    for(int i=0; i<n; i++){
+        solver.cleanForces();
+        double x = x0 + i*dx + 0.01;
+        l_xs[i] = x;
+        solver.epos[0].x=x;   
+        solver.toRho  (0,1,0);
+        solver.toRho  (2,3,1);
+        double E_  = solver.CoublombElement(0,1);
+        double E   = E_ * solver.rhoQ[0];
+        double aij;
+        solver.fromRho( 0,1,0,   aij );
+        l_Qi     [i] = solver.rhoQ[0];
+        l_dQi_ana[i] = solver.DEBUG_dQdp.x;
+        if(i>1){
+            l_dQi_num[i-1]  = (l_Qi[i] - l_Qi[i-2])/(2*dx);
+       }
+        l_Pi[i] = (solver.rhoP[0] - solver.rhoP[1]).norm();
+        l_Fana[i]  = solver.efpos[0].x;                             // This is used when fromRho() is  modified
+        l_E[i]   = E; //func( line_E->xs[i], line_Fana->ys[i] );
+        if(i>1) l_Fnum[i-1] = (l_E[i] - l_E[i-2])/(2*dx);
+    }
+    //double* buff = buffers["l_xs"];
+    //for(int i=0; i<n; i++){ printf("%i : %g \n", i, buff[i]); }
+}
+
+} // extern "C"{
+
+

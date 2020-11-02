@@ -8,6 +8,11 @@
 
 #include <stdint.h>
 
+#include "fastmath.h"
+#include "Vec3.h"
+#include "Mat3.h"
+#include "quaternion.h"
+
 #include "spline_hermite.h"
 #include "integration.h"
 
@@ -249,7 +254,7 @@ void integrateS( int nrf, int order, int nint, double dz, double Rmax, double fr
 
 
 
-#include "Draw2D.h"
+//#include "Draw2D.h"
 
 void integrateSK( int nrf, int order, int nint, double dz, double Rmax, double frStep, const double* fr1, const double* fr2, double* ISs, double* IKs ){
 
@@ -287,31 +292,29 @@ void integrateSK( int nrf, int order, int nint, double dz, double Rmax, double f
     projectFrLaplace( nr, nz, nrf, dz, frStep, Rmax, rs, fr1, f1, 0  , 0 );
     projectFrLaplace( nr, nz, nrf, dz, frStep, Rmax, rs, fr2, f2, Lf2, 0 );
 
-    { // DEBUG
-        double dr= Rmax/nr;
-        int ii=0;
-        for(int ir=0; ir<nr; ir++){
-            for(int iz=0; iz<nz; iz++){
-                double x=iz*dz;
-                double y=ir*dr;
-                ii=ir*nz+iz;
-                float f = f1[ii];
-                //float c = 1/(1+exp(f));
-                //glColor3f(f,f*5,f*25);
-                //glColor3f(f,f*0.1,f*10);
-                glColor3f(tanh(f*5),tanh(f),tanh(f*25));
-                Draw2D::drawRectangle_d( {x-dz*0.5,y-dr*0.5},{x+dz*0.5,y+dr*0.5} , true);
-            }
-        }
-        /*
-        double V   = (2*nz*dz)*Rmax*Rmax*M_PI;
-        double dwf = sqrt( 1/V );
-        for(int i=0; i<nrz; i++){
-            f1[i]=dwf;
-            f2[i]=dwf;
-        }
-        */
-    }
+    // { // DEBUG
+    //     double dr= Rmax/nr;
+    //     int ii=0;
+    //     for(int ir=0; ir<nr; ir++){
+    //         for(int iz=0; iz<nz; iz++){
+    //             double x=iz*dz;
+    //             double y=ir*dr;
+    //             ii=ir*nz+iz;
+    //             float f = f1[ii];
+    //             //float c = 1/(1+exp(f));
+    //             //glColor3f(f,f*5,f*25);
+    //             //glColor3f(f,f*0.1,f*10);
+    //             glColor3f(tanh(f*5),tanh(f),tanh(f*25));
+    //             Draw2D::drawRectangle_d( {x-dz*0.5,y-dr*0.5},{x+dz*0.5,y+dr*0.5} , true);
+    //         }
+    //     }
+    //     //double V   = (2*nz*dz)*Rmax*Rmax*M_PI;
+    //     //double dwf = sqrt( 1/V );
+    //     //for(int i=0; i<nrz; i++){
+    //     //    f1[i]=dwf;
+    //     //    f2[i]=dwf;
+    //     //}
+    // }
 
     intCyl_shift( nr, nz, nint, f1,  f2, ws, ISs,  1,  1 );
     intCyl_shift( nr, nz, nint, f1, Lf2, ws, IKs,  1,  1 );

@@ -702,8 +702,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     */
 
 
-    int nsamp = 40;
-    solver.realloc( 2, 2, 2, nsamp, 1 );
+    //int nsamp = 40;
+    solver.realloc( 2, 2, 2, 1 );
     solver.setRcut( 4.0 );
 
     // --- Make Geometry

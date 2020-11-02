@@ -120,7 +120,7 @@ class CLCFGO{ public:
 
     // ======= Functions
 
-    void realloc( int natom_, int nOrb_, int perOrb_, int nsamp_, int natypes_ ){
+    void realloc( int natom_, int nOrb_, int perOrb_, int natypes_ ){
         // atoms
         if( natom != natom_ ){
             natom = natom_;

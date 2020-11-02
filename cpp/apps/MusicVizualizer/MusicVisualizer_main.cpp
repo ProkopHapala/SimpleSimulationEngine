@@ -155,6 +155,8 @@ class MusicVisualizerGUI : public AppSDL2OGL3, public SceneOGL3 { public:
     void draw_Sinuous      ( Camera& cam );
     void draw_Particles    ( Camera& cam );
 
+    void draw_Fluid_debug( Camera& cam );
+
 };
 
 MusicVisualizerGUI::MusicVisualizerGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
@@ -527,6 +529,63 @@ void MusicVisualizerGUI::draw_Fluid( Camera& cam ){
 
 
 
+
+void MusicVisualizerGUI::draw_Fluid_debug( Camera& cam ){
+
+    // Try to use this extension allowing to use same texture as both input and output
+    // https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_shader_framebuffer_fetch.txt
+    // https://stackoverflow.com/questions/64304026/rendering-to-custom-framebuffer-using-same-texture-both-as-input-and-output?noredirect=1#comment113708604_64304026
+
+    /*
+    manager.layers = &layers_;
+    manager.addScriptLine( "FluidPDE   2 = 1"   );
+    manager.addScriptLine( "FluidPDE   1 = 2"   );
+    manager.addScriptLine( "FluidDrift 3 = 4 1" );
+    manager.addScriptLine( "FluidDrift 4 = 3 1" );
+    manager.addScriptLine( "texture    0 = 4"   );
+    */
+
+    Shader* shFluid1 = manager.getShader( "FluidPDE" );
+    Shader* shFluid2 = manager.getShader( "FluidDrift" );
+    Shader* shTex    = manager.getShader( "texture" );
+
+    int iter = frameCount;
+
+    // === 1] --- Shader 1
+    useWithCamera( shFluid1, cam );
+    shFluid1->setUniformf ("time", iter*0.001);
+    layers_.bindOutput( 1   );
+    layers_.bindInput ( 0, 0 );
+    glTxDebug->draw();
+
+    layers_.bindOutput( 0   );
+    layers_.bindInput ( 1, 0 );
+    glTxDebug->draw();
+
+    // === 2] --- Shader 2
+    useWithCamera( shFluid2, cam );
+
+    layers_.bindOutput( 2    );
+    layers_.bindInput ( 3, 0 );
+    layers_.bindInput ( 0, 1 );
+    glTxDebug->draw();
+
+    layers_.bindOutput( 3    );
+    layers_.bindInput ( 2, 0 );
+    layers_.bindInput ( 0, 1 );
+    glTxDebug->draw();
+
+    // === 3] --- just plot velocity buffer
+    useWithCamera( shTex, cam );
+    layers_.unbindOutput();
+    layers_.bindInput(3,0);
+    glTxDebug->draw();
+
+}
+
+
+
+
 void MusicVisualizerGUI::draw_Sinuous( Camera& cam ){
 
     // Try to use this extension allowing to use same texture as both input and output
@@ -635,9 +694,12 @@ void MusicVisualizerGUI::draw( Camera& cam ){
     //draw_Sinuous( cam );
     //draw_Particles( cam );
 
-    printf( "Frame %i \n", frameCount );
+    //printf( "Frame %i \n", frameCount );
     //layers_.render( *(manager.scripts[0]) );
-    manager.renderScript(0);
+    //manager.renderScript(0);
+
+    draw_Fluid_debug( cam );
+
 
     layers.unbindOutput();
 
