@@ -163,35 +163,33 @@ void initTestElectrons( ){
 
 void testDerivs_Coulomb_model( int n, double x0, double dx ){
     initTestElectrons( );
-    solver.toRho(0,1,0);
-    solver.toRho(2,3,1);
+    solver.toRho(0,1, 0);   
+    solver.toRho(2,3, 1);
     NEWBUFF(l_xs,n)
-    NEWBUFF(l_Qi,n)
-    NEWBUFF(l_dQi_ana,n)
-    NEWBUFF(l_dQi_num,n)
-    NEWBUFF(l_Pi,n)
+    NEWBUFF(l_Q,n)
+    NEWBUFF(l_dQ_ana,n)
+    NEWBUFF(l_dQ_num,n)
+    NEWBUFF(l_r,n)
     NEWBUFF(l_E,n)
     NEWBUFF(l_Fana,n)
     NEWBUFF(l_Fnum,n)
     for(int i=0; i<n; i++){
+        double aij;
         solver.cleanForces();
         double x = x0 + i*dx + 0.01;
         l_xs[i] = x;
         solver.epos[0].x=x;   
-        solver.toRho  (0,1,0);
-        solver.toRho  (2,3,1);
-        double E_  = solver.CoublombElement(0,1);
-        double E   = E_ * solver.rhoQ[0];
-        double aij;
-        solver.fromRho( 0,1,0,   aij );
-        l_Qi     [i] = solver.rhoQ[0];
-        l_dQi_ana[i] = solver.DEBUG_dQdp.x;
-        if(i>1){
-            l_dQi_num[i-1]  = (l_Qi[i] - l_Qi[i-2])/(2*dx);
-       }
-        l_Pi[i] = (solver.rhoP[0] - solver.rhoP[1]).norm();
-        l_Fana[i]  = solver.efpos[0].x;                             // This is used when fromRho() is  modified
-        l_E[i]   = E; //func( line_E->xs[i], line_Fana->ys[i] );
+        solver.toRho  (0,1, 0);                            // w0*w1 -> q0
+        solver.toRho  (2,3, 1);                            // w2*w3 -> q1
+        double E_  = solver.CoublombElement(0,1);          // E = C( q0, q1 )
+        double E   = E_ * solver.rhoQ[0] * solver.rhoQ[1]; // E(q0,q1) * q0 * q1
+        solver.fromRho( 0,1, 0,   aij );                   // w0,w1 <- q0
+        l_Q     [i] = solver.rhoQ[0];
+        l_dQ_ana[i] = solver.DEBUG_dQdp.x;
+        if(i>1) l_dQ_num[i-1]  = (l_Q[i] - l_Q[i-2])/(2*dx);
+        l_r[i]       = (solver.rhoP[0] - solver.rhoP[1]).norm();
+        l_Fana[i]    = solver.efpos[0].x;                             // This is used when fromRho() is  modified
+        l_E[i]       = E; //func( line_E->xs[i], line_Fana->ys[i] );
         if(i>1) l_Fnum[i-1] = (l_E[i] - l_E[i-2])/(2*dx);
     }
     //double* buff = buffers["l_xs"];

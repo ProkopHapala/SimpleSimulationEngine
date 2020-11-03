@@ -71,29 +71,39 @@ if __name__ == "__main__":
     n = 30
     testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )
 
-    l_xs      = getBuff( "l_xs",     (n,) )
-    l_Pi      = getBuff( "l_Pi",     (n,) )
-    l_Qi      = getBuff( "l_Qi",     (n,) )
-    l_dQi_ana = getBuff( "l_dQi_ana",(n,) )
-    l_dQi_num = getBuff( "l_dQi_num",(n,) )
-    l_E       = getBuff( "l_E",      (n,) )
-    l_Fana    = getBuff( "l_Fana",   (n,) )
-    l_Fnum    = getBuff( "l_Fnum",   (n,) )
+    l_xs     = getBuff( "l_xs",    (n,) )
+    l_r      = getBuff( "l_r",     (n,) )
+    l_Q      = getBuff( "l_Q",     (n,) )
+    l_dQ_ana = getBuff( "l_dQ_ana",(n,) )
+    l_dQ_num = getBuff( "l_dQ_num",(n,) )
+    l_E      = getBuff( "l_E",     (n,) )
+    l_Fana   = getBuff( "l_Fana",  (n,) )
+    l_Fnum   = getBuff( "l_Fnum",  (n,) )
+
+    # =========================================
+    # ============== Derivs in C++ ============
+    # =========================================
 
     plt.figure(figsize=(14,8))
     plt.subplot(1,2,1)
-    plt.plot(l_xs,l_Pi,label="Pi")
-    plt.plot(l_xs,l_Qi,label="Qi")
-    plt.plot(l_xs,l_dQi_ana,label="dQi_ana")
-    plt.plot(l_xs,l_dQi_num,label="dQi_num", ls=':',lw=3)
-    plt.plot(l_xs,l_E,label="E")
+    plt.plot(l_xs,l_r,label="r")
+    plt.plot(l_xs,l_Q,label="Qab")
+    plt.plot(l_xs,l_E,label="E" )
     plt.plot(l_xs,l_Fana,label="Fana")
     plt.plot(l_xs,l_Fnum,label="Fnum",ls=':',lw=3)
+    plt.plot(l_xs,l_dQ_ana,label="dQ_ana")
+    plt.plot(l_xs,l_dQ_num,label="dQ_num", ls=':',lw=3)
 
     plt.legend()
     plt.ylim(-30,40)
+    #plt.ylim(-5,30)
     plt.grid()
+    plt.minorticks_on()
+    plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
 
+    # =========================================
+    # ============== Derivs in Python =========
+    # =========================================
 
     # ==== Derivative of Coulomb term with considering the Charges
     import CLCFGO_coulomb_derivs as ref
@@ -126,12 +136,7 @@ if __name__ == "__main__":
     e, fx, fs = ref.Coulomb( r, s )
     dXxi      = dA[2] + xa*0 
 
-    plt.subplot(1,2,2)
-    plt.plot( xa, Sab , label='Sab' )
-    plt.plot( xa, r   , label='r'   )
-    #plt.plot( xa, dQab, label='dSab_ana' )
-    #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
-
+    Qab  = 2*Sab*ca*cb 
     qij  = 4*Scd*Sab
     #qij  = Sab
     dQij = 4*Scd*dQab
@@ -148,15 +153,24 @@ if __name__ == "__main__":
     E = e*qij
     F = fxi + e*dQij   # total derivtive F = dE/dx = d(e*qi)/dx
 
+    plt.subplot(1,2,2)
+    #plt.plot( xa, r   , label='r'   )
+    plt.plot( xa, r , label='r'  )
+    #plt.plot( xa, Sab , label='Sab' )
+    plt.plot( xa, Qab , label='Qab'  )
+    #plt.plot( xa, dQab, label='dSab_ana' )
+    #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
     #plt.figure(figsize=(12,10))
     plt.plot( xa, E,  label='E' )
-    plt.plot( xa, F,  label='dEdx_ana' )
-    plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='dEdx_num', lw=3 )
+    plt.plot( xa, F,  label='F_ana' )
+    plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='F_num', lw=3 )
     plt.plot( xa, fxi, label='fxi' )
 
     plt.legend()
     plt.ylim(-30,40)
+    #plt.ylim(-5,30)
     plt.grid()
-
+    plt.minorticks_on()
+    plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
 
     plt.show()

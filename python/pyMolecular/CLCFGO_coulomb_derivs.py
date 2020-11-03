@@ -191,8 +191,12 @@ if __name__ == "__main__":
     e, fx, fs = Coulomb( r, s )
     dXxi = dA[2] + xa*0 
 
-    plt.plot( xa, Sab , label='Sab' )
+    Qab = Sab*ca*cb*2; # factor 2 because offdiagonal is there twice 
+
     plt.plot( xa, r   , label='r'   )
+    #plt.plot( xa, xab , label='Xab' )
+    #plt.plot( xa, Sab , label='Sab' )
+    plt.plot( xa, Qab , label='Qab' )
     #plt.plot( xa, dQab, label='dSab_ana' )
     #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
 
@@ -206,8 +210,6 @@ if __name__ == "__main__":
     Fpi = fx*r*qij # see 
     fxi = Fpi*dXxi
     
-
-
     print "Scd, 4*Scd ", Scd, 4*Scd
     print "For some reason each charge is scaled by 2.0"
 
@@ -217,15 +219,6 @@ if __name__ == "__main__":
     # Note:   e,fx=de/dx   are NOT multiplied by charge Qij
     #         Total force Fx = dE/dx = d(e*q)/dx = q*(de/dx) + e*(dq/dx)
 
-
-    for i in range(len(r)):
-        #print "Gauss::Coulomb r %g s %g E %g Fx %g fx %g " %(r[i], s, E[i], Fx[i], fx[i] )
-        #print "fromRho r %g s %g E %g Fx %g fx %g " %((xa-xb)[i], s, E[i], Fx[i], fx[i] )
-        #print "CoublombElement r %g s %g E %g fr %g qij %g  frq %g fij %g" %((xa-xb)[i], s, e[i], fx[i], qij[i], (fx*qij)[i], (fx*qij*r)[i] )
-        #print "fromRho r %g s %g | E %g e %g qij %g(%g) | Fx %g Fpi %g dQij %g " %((xa-xb)[i], si, E[i],e[i]*2*Scd,qij[i],Sab[i], Fx[i], Fpi[i],dQij[i] )
-        print "fromRho r %g  Eqi %g Cij %g | Fpi %g dXxi %g fxi %g Fxi %g "    %((xa-xb)[i],          e[i]*2*Scd,       Sab[i], Fpi[i], dXxi[i], fxi[i], F[i] );
-        pass
-
     # ==== Derivative of Coulomb term without considering changes of Charges 
     #plt.plot( xa, e ,  label='e' )
     #plt.plot( xa, Fx,  label='dedx_ana' )
@@ -233,9 +226,9 @@ if __name__ == "__main__":
     
     # ==== Derivative of Coulomb term with considering the Charges
     plt.plot( xa, E,  label='E' )
-    plt.plot( xa, F,  label='dEdx_ana' )
-    plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='dEdx_num', lw=3 )
-    plt.plot( xa, fxi, label='fxi' )
+    #plt.plot( xa, F,  label='dEdx_ana' )
+    #plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='dEdx_num', lw=3 )
+    #plt.plot( xa, fxi, label='fxi' )
 
     
     #plt.plot( xa, fx,   label='fx' )
@@ -244,5 +237,16 @@ if __name__ == "__main__":
 
     plt.grid()
     plt.legend()
+
+    '''
+    for i in range(len(r)):
+        #print "Gauss::Coulomb r %g s %g E %g Fx %g fx %g " %(r[i], s, E[i], Fx[i], fx[i] )
+        #print "fromRho r %g s %g E %g Fx %g fx %g " %((xa-xb)[i], s, E[i], Fx[i], fx[i] )
+        #print "CoublombElement r %g s %g E %g fr %g qij %g  frq %g fij %g" %((xa-xb)[i], s, e[i], fx[i], qij[i], (fx*qij)[i], (fx*qij*r)[i] )
+        #print "fromRho r %g s %g | E %g e %g qij %g(%g) | Fx %g Fpi %g dQij %g " %((xa-xb)[i], si, E[i],e[i]*2*Scd,qij[i],Sab[i], Fx[i], Fpi[i],dQij[i] )
+        print "fromRho r %g  Eqi %g Cij %g | Fpi %g dXxi %g fxi %g Fxi %g "    %((xa-xb)[i],          e[i]*2*Scd,       Sab[i], Fpi[i], dXxi[i], fxi[i], F[i] );
+        pass
+    '''
+
     plt.show()
 
