@@ -89,7 +89,7 @@ class CLCFGO{ public:
     // atoms (ions)
     Vec3d*  apos   =0;  ///< positioon of atoms
     Vec3d*  aforce =0;  ///< positioon of atoms
-    Vec3d*  aQs    =0;  ///< charge of atom
+    double* aQs    =0;  ///< charge of atom
     int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
 
     // orbitals
@@ -162,6 +162,44 @@ class CLCFGO{ public:
             _realloc( rhofS, nQtot );
             _realloc( rhoEQ, nQtot );
 
+        }
+    }
+
+    void setDefaultValues( ){
+        // atoms
+        for(int i=0; i<natom;  i++){
+            apos  [i]=Vec3dZero; 
+            aforce[i]=Vec3dZero;
+            aQs   [i]=1.; 
+            atype [i]=0;
+        }
+        for(int i=0; i<nOrb;  i++){
+            opos[i]=Vec3dZero;
+            odip[i]=Vec3dZero;
+            oEs [i]=0;
+            oQs [i]=0;
+            onq [i]=0;
+        }
+        for(int i=0; i<nBas;  i++){
+            // --- Wave-function components for each orbital
+            epos [i]=Vec3dZero;
+            esize[i]=1.;
+            ecoef[i]=1.;
+            // --- Forces acting on wave-functions components
+            efpos [i]=Vec3dZero;
+            efsize[i]=1.;
+            efcoef[i]=1.;
+        }
+        for(int i=0; i<nQtot;  i++){
+            // --- Auxuliary electron density expansion basis functions
+            rhoP[i]=Vec3dZero;
+            rhoQ[i]=0;
+            rhoS[i]=1.;
+            // --- Forces acting on auxuliary density basis functions
+            rhofP[i]=Vec3dZero;
+            rhofQ[i]=0;
+            rhofS[i]=0;
+            rhoEQ[i]=0;
         }
     }
 

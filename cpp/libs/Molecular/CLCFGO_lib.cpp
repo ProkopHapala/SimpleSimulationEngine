@@ -34,6 +34,7 @@ extern "C"{
 
 void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
     solver.realloc( natom_, nOrb_, perOrb_, natypes_ );
+    solver.setDefaultValues();
     /*
     int natom =0; ///< number of atoms (nuclei, ions)
     int perOrb=0; //!< Brief number of spherical functions per orbital
@@ -162,7 +163,8 @@ void initTestElectrons( ){
 #define NEWBUFF(name,N)   double* name = new double[N]; buffers.insert( {#name, name} );
 
 void testDerivs_Coulomb_model( int n, double x0, double dx ){
-    initTestElectrons( );
+    //initTestElectrons( );
+    for(int i=0; i<solver.nBas; i++){ printf( "epos[%i] (%g,%g,%g) \n", i, solver.epos[i].x,solver.epos[i].y,solver.epos[i].z); }
     solver.toRho(0,1, 0);   
     solver.toRho(2,3, 1);
     NEWBUFF(l_xs,n)

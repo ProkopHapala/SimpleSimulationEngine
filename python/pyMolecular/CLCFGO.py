@@ -63,14 +63,26 @@ def testDerivs_Coulomb_model( n=100, x0=0.0, dx=0.1 ):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+
     init(2,2,2,1)
     ecoef = getBuff("ecoef",(2,2)  )
     esize = getBuff("esize",(2,2)  )
     epos  = getBuff("epos" ,(2,2,3))
 
-    n = 30
-    testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )
+    ecoefs = np.array([ [1.,1.],[1.,1.] ])
+    esizes = np.array([ [1.,1.],[1.,1.] ])
+    eXpos  = np.array([ [0.,0.],[-1.5,0.0]])
 
+    # =========================================
+    # ============== Derivs in C++ ============
+    # =========================================
+
+    ecoef[:,:]  = ecoefs[:,:]
+    esize[:,:]  = esizes[:,:]
+    epos[:,:,0] = eXpos[:,:]
+
+    n = 30
+    testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
     l_xs     = getBuff( "l_xs",    (n,) )
     l_r      = getBuff( "l_r",     (n,) )
     l_Q      = getBuff( "l_Q",     (n,) )
@@ -80,12 +92,11 @@ if __name__ == "__main__":
     l_Fana   = getBuff( "l_Fana",  (n,) )
     l_Fnum   = getBuff( "l_Fnum",  (n,) )
 
-    # =========================================
-    # ============== Derivs in C++ ============
-    # =========================================
-
     plt.figure(figsize=(14,8))
+    ylims=[-20,30]
+
     plt.subplot(1,2,1)
+    plt.title('C++')
     plt.plot(l_xs,l_r,label="r")
     plt.plot(l_xs,l_Q,label="Qab")
     plt.plot(l_xs,l_E,label="E" )
@@ -95,8 +106,9 @@ if __name__ == "__main__":
     plt.plot(l_xs,l_dQ_num,label="dQ_num", ls=':',lw=3)
 
     plt.legend()
-    plt.ylim(-30,40)
+    #plt.ylim(-30,40)
     #plt.ylim(-5,30)
+    plt.ylim( ylims[0], ylims[1] ) 
     plt.grid()
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
@@ -107,39 +119,16 @@ if __name__ == "__main__":
 
     # ==== Derivative of Coulomb term with considering the Charges
     import CLCFGO_coulomb_derivs as ref
-    
-
-    ecoefs = [ [1.,1.],[1.,1.] ]
-    esizes = [ [1.,1.],[1.,1.] ]
-    eXpos  = [ [1.,1.],[-1.5,0.0] ]
-
-    '''
-    ca = 1.0
-    cb = 1.0
-    cc = 1.0
-    cd = 1.0
-
-    sa = 1.0
-    sb = 1.0
-    sc = 1.0
-    sd = 1.0
 
     dx =  0.1
     xa =  np.arange( 0.01, 3.0, dx )
-    xb =  0.0
-    xc = -1.5
-    xd =  0.0
-    '''
-
-    xa =  np.arange( 0.01, 3.0, dx )
     xs_ = (xa[1:]+xa[:-1])*0.5
-    eXpos[0][0] = xa 
+    #eXpos[0][0] = xa 
 
     # overlaps
     #Sab, si, xab, dQab, dA, dB = ref.product3D_s_deriv( sa,xa, sb,xb )
     #Scd, sj, xcd, dQcd, dC, dD = ref.product3D_s_deriv( sc,xc, sd,xd )
-
-    Sab, si, xab, dQab, dA, dB = ref.product3D_s_deriv( esizes[0][0], eXpos[0][0], esizes[0][1],eXpos[0][1] )
+    Sab, si, xab, dQab, dA, dB = ref.product3D_s_deriv( esizes[0][0], xa         , esizes[0][1],eXpos[0][1] )
     Scd, sj, xcd, dQcd, dC, dD = ref.product3D_s_deriv( esizes[1][0], eXpos[1][0], esizes[1][1],eXpos[1][1] )
     # coulomb
     s2        = si*si + sj*sj
@@ -148,6 +137,8 @@ if __name__ == "__main__":
     e, fx, fs = ref.Coulomb( r, s )
     dXxi      = dA[2] + xa*0 
 
+    ca = ecoefs[0][0]
+    cb = ecoefs[0][1]
     Qab  = 2*Sab*ca*cb 
     qij  = 4*Scd*Sab
     #qij  = Sab
@@ -178,9 +169,11 @@ if __name__ == "__main__":
     plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='F_num', lw=3 )
     plt.plot( xa, fxi, label='fxi' )
 
+    plt.title('Python')
     plt.legend()
-    plt.ylim(-30,40)
+    #plt.ylim(-30,40)
     #plt.ylim(-5,30)
+    plt.ylim( ylims[0], ylims[1] )
     plt.grid()
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
