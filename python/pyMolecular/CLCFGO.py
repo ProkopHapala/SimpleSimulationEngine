@@ -108,6 +108,12 @@ if __name__ == "__main__":
     # ==== Derivative of Coulomb term with considering the Charges
     import CLCFGO_coulomb_derivs as ref
     
+
+    ecoefs = [ [1.,1.],[1.,1.] ]
+    esizes = [ [1.,1.],[1.,1.] ]
+    eXpos  = [ [1.,1.],[-1.5,0.0] ]
+
+    '''
     ca = 1.0
     cb = 1.0
     cc = 1.0
@@ -123,12 +129,18 @@ if __name__ == "__main__":
     xb =  0.0
     xc = -1.5
     xd =  0.0
+    '''
 
+    xa =  np.arange( 0.01, 3.0, dx )
     xs_ = (xa[1:]+xa[:-1])*0.5
+    eXpos[0][0] = xa 
 
     # overlaps
-    Sab, si, xab, dQab, dA, dB = ref.product3D_s_deriv( sa,xa, sb,xb )
-    Scd, sj, xcd, dQcd, dC, dD = ref.product3D_s_deriv( sc,xc, sd,xd )
+    #Sab, si, xab, dQab, dA, dB = ref.product3D_s_deriv( sa,xa, sb,xb )
+    #Scd, sj, xcd, dQcd, dC, dD = ref.product3D_s_deriv( sc,xc, sd,xd )
+
+    Sab, si, xab, dQab, dA, dB = ref.product3D_s_deriv( esizes[0][0], eXpos[0][0], esizes[0][1],eXpos[0][1] )
+    Scd, sj, xcd, dQcd, dC, dD = ref.product3D_s_deriv( esizes[1][0], eXpos[1][0], esizes[1][1],eXpos[1][1] )
     # coulomb
     s2        = si*si + sj*sj
     s         = np.sqrt(s2)
