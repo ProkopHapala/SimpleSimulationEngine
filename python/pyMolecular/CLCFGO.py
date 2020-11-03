@@ -58,6 +58,12 @@ lib.testDerivs_Coulomb_model.restype  = c_double
 def testDerivs_Coulomb_model( n=100, x0=0.0, dx=0.1 ):
     return lib.testDerivs_Coulomb_model( n, x0, dx )
 
+#void testDerivs_Total( int n, double x0, double dx ){
+lib.testDerivs_Total.argtypes = [ c_int, c_double, c_double ]
+lib.testDerivs_Total.restype  = c_double
+def testDerivs_Total( n=100, x0=0.0, dx=0.1 ):
+    return lib.testDerivs_Total( n, x0, dx )
+
 # ========= Python Functions
 
 
@@ -71,7 +77,7 @@ if __name__ == "__main__":
 
     ecoefs = np.array([ [1.,1.],[1.,1.] ])
     esizes = np.array([ [1.,1.],[1.,1.] ])
-    eXpos  = np.array([ [0.,0.],[-1.5,0.0]])
+    eXpos  = np.array([ [0.,0.],[-3.5,-2.0]])
 
     # =========================================
     # ============== Derivs in C++ ============
@@ -82,28 +88,29 @@ if __name__ == "__main__":
     epos[:,:,0] = eXpos[:,:]
 
     n = 30
-    testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
+    #testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
+    testDerivs_Total        ( n=n, x0=0.0, dx=0.1 )
     l_xs     = getBuff( "l_xs",    (n,) )
-    l_r      = getBuff( "l_r",     (n,) )
+    #l_r      = getBuff( "l_r",     (n,) )
     l_Q      = getBuff( "l_Q",     (n,) )
-    l_dQ_ana = getBuff( "l_dQ_ana",(n,) )
-    l_dQ_num = getBuff( "l_dQ_num",(n,) )
+    #l_dQ_ana = getBuff( "l_dQ_ana",(n,) )
+    #l_dQ_num = getBuff( "l_dQ_num",(n,) )
     l_E      = getBuff( "l_E",     (n,) )
     l_Fana   = getBuff( "l_Fana",  (n,) )
     l_Fnum   = getBuff( "l_Fnum",  (n,) )
 
     plt.figure(figsize=(14,8))
-    ylims=[-20,30]
+    ylims=[-10,65]
 
     plt.subplot(1,2,1)
     plt.title('C++')
-    plt.plot(l_xs,l_r,label="r")
-    plt.plot(l_xs,l_Q,label="Qab")
+    #plt.plot(l_xs,l_r,label="r")
+    plt.plot(l_xs,l_Q,label="Q")
     plt.plot(l_xs,l_E,label="E" )
-    plt.plot(l_xs,l_Fana,label="Fana")
-    plt.plot(l_xs,l_Fnum,label="Fnum",ls=':',lw=3)
-    plt.plot(l_xs,l_dQ_ana,label="dQ_ana")
-    plt.plot(l_xs,l_dQ_num,label="dQ_num", ls=':',lw=3)
+    plt.plot(l_xs,-l_Fana,label="Fana")
+    plt.plot(l_xs,-l_Fnum,label="Fnum",ls=':',lw=3)
+    #plt.plot(l_xs,l_dQ_ana,label="dQ_ana")
+    #plt.plot(l_xs,l_dQ_num,label="dQ_num", ls=':',lw=3)
 
     plt.legend()
     #plt.ylim(-30,40)
@@ -125,6 +132,9 @@ if __name__ == "__main__":
     xs_ = (xa[1:]+xa[:-1])*0.5
     #eXpos[0][0] = xa 
 
+    (E, F) = ref.evalEFtot( xa, ecoef, esize, eXpos )
+
+    '''
     # overlaps
     #Sab, si, xab, dQab, dA, dB = ref.product3D_s_deriv( sa,xa, sb,xb )
     #Scd, sj, xcd, dQcd, dC, dD = ref.product3D_s_deriv( sc,xc, sd,xd )
@@ -155,19 +165,20 @@ if __name__ == "__main__":
 
     E = e*qij
     F = fxi + e*dQij   # total derivtive F = dE/dx = d(e*qi)/dx
+    '''
 
     plt.subplot(1,2,2)
     #plt.plot( xa, r   , label='r'   )
-    plt.plot( xa, r , label='r'  )
+    #plt.plot( xa, r , label='r'  )
     #plt.plot( xa, Sab , label='Sab' )
-    plt.plot( xa, Qab , label='Qab'  )
+    #plt.plot( xa, Qab , label='Qab'  )
     #plt.plot( xa, dQab, label='dSab_ana' )
     #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
     #plt.figure(figsize=(12,10))
     plt.plot( xa, E,  label='E' )
-    plt.plot( xa, F,  label='F_ana' )
-    plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='F_num', lw=3 )
-    plt.plot( xa, fxi, label='fxi' )
+    plt.plot( xa, -F,  label='F_ana' )
+    plt.plot( xs_,-(E[1:]-E[:-1])/dx,':', label='F_num', lw=3 )
+    #plt.plot( xa, fxi, label='fxi' )
 
     plt.title('Python')
     plt.legend()

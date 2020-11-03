@@ -691,7 +691,7 @@ class CLCFGO{ public:
         //printf( "fromRho r %g s %g | E %g e %g qij %g(%g) | F %g fx %g dQij %g \n", sqrt(r2), s, Eqi*rhoQ[ij],Eqi,rhoQ[ij],Cij,  Fxi.x,fxi.x,dCdp.x );
         //printf( "fromRho r %g s %g | E %g e %g qij %g(%g) | fxi %g Fxi %g Fpi %g dQij %g \n", sqrt(r2), s, Eqi*rhoQ[ij],Eqi,rhoQ[ij],Cij,  fxi.x,Fxi.x,Fpi.x,dCdp.x );
 
-        printf( "fromRho r %g  Eqi %g Cij %g | Fpi %g dXxi %g fxi %g Fxi %g \n", sqrt(r2), Eqi,Cij,  Fpi.x, dXxi, fxi.x, Fxi.x );
+        //printf( "fromRho r %g  Eqi %g Cij %g | Fpi %g dXxi %g fxi %g Fxi %g \n", sqrt(r2), Eqi,Cij,  Fpi.x, dXxi, fxi.x, Fxi.x );
 
         //printf( "[%i,%i,%i] fxi %g Fpi %g dXxi %g \n",   i,j,ij,   fxi.x, Fpi, dXxi );
         //printf( "fsi, fsj, aij %g %g %g \n", fsi, fsj, aij );
@@ -810,7 +810,7 @@ class CLCFGO{ public:
 
                 double E  = Gauss::Coulomb( r, s*2, fr, fs );
 
-                //printf( "CoulombOrbPair[%i,%i][%i,%i] qij %g(%g,%g) r %g E %g \n", io,jo, i,j, qij,qi,qj,  r, E );
+                printf( "CoulombOrbPair[%i,%i][%i,%i] qij %g(%g,%g) s %g(%g,%g) r %g E %g \n", io,jo, i,j, qij,qi,qj, s,si,sj, r, E );
 
                 //printf(  " [%i,%i] q %g r %g E %g \n", i, j, qij, r, Eqq );
 

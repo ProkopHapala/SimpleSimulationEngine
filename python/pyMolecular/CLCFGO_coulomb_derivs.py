@@ -134,10 +134,59 @@ def product3D_s_deriv( si,pi, sj,pj ):
     #    pass
     return C,s,p, dCr*dp, (dSsi,dXsi,dXxi,dCsi), (dSsj,dXsj,dXxj,dCsj)
 
+def acumEF( outs, r,s, qi, qj, Scd=None, dSab=None, dXxi=None ):
+    e, fx, fs = Coulomb( r, s ) 
+    E  = e * qi*qj
+    
+    Fpi  = fx * r * qi*qj    # pure derivative of coulombic forcefield
+    if( dXxi is None  ):
+        F    = Fpi 
+    else:
+        dSij = 4*Scd*dSab    
+        F    = Fpi*dXxi + e*dSij  # total derivative due to charge change
+        #fxi  = Fpi*dXxi
+
+    outs[0] += E
+    outs[1] += F 
 
 
+def combSize(si,sj):
+    return np.sqrt(si*si + sj*sj)
 
+def evalEFtot( xa, ecoef, esize, eXpos ):
+    
+    ca = ecoef[0][0]
+    cb = ecoef[0][1]
+    cc = ecoef[1][0]
+    cd = ecoef[1][1]
 
+    sa = esize[0][0]
+    sb = esize[0][1]
+    sc = esize[1][0]
+    sd = esize[1][1]
+
+    #xa =  np.arange( 0.01, 3.0, dx )
+    xb = eXpos[0][1]
+    xc = eXpos[1][0]
+    xd = eXpos[1][1]
+    
+    Sab, si, xab, dSab, dA, dB = product3D_s_deriv( sa, xa, sb,xb )
+    Scd, sj, xcd, dScd, dC, dD = product3D_s_deriv( sc, xc, sd,xd )
+    s2        = si*si + sj*sj
+    s         = np.sqrt(s2)
+    dXxi      = dA[2] + xa*0 
+    
+    out = [0.,0.]
+
+    acumEF( out, xab-xcd,         combSize(si,sj)   , 2*Sab*ca*cb, 2*Scd*cc*cd, Scd=Scd, dSab=Sab, dXxi=dXxi )
+    acumEF( out, xab-eXpos[1][0], combSize(si,sc**2), 2*Sab*ca*cb,       cc**2         , Scd=Scd, dSab=Sab, dXxi=dXxi )
+    acumEF( out, xab-eXpos[1][1], combSize(si,sd**2), 2*Sab*ca*cb,       cd**2         , Scd=Scd, dSab=Sab, dXxi=dXxi )
+    
+    acumEF( out, xa-xcd        ,  combSize(sa,sj), ca**2, 2*Scd*cc*cd )
+    acumEF( out, xa-eXpos[1][0],  combSize(sa,sc), ca**2,       cc**2 )
+    acumEF( out, xa-eXpos[1][1],  combSize(sa,sd), ca**2,       cd**2 )
+
+    return out
 
 
 

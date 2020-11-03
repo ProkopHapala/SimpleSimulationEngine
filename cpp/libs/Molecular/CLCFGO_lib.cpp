@@ -143,6 +143,7 @@ void setIBuff(const char* name, int* buff){
     //else                    { return got->second; }
 }
 
+/*
 void initTestElectrons( ){
     {auto& _=solver;
         _.ecoef[0] =   1.0;
@@ -156,9 +157,10 @@ void initTestElectrons( ){
         _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
         _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
         _.epos [2] = (Vec3d){-1.5, 0.0,0.0};
-        _.epos [3] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [3] = (Vec3d){-1.0, 0.0,0.0};
     }
 }
+*/
 
 #define NEWBUFF(name,N)   double* name = new double[N]; buffers.insert( {#name, name} );
 
@@ -197,6 +199,36 @@ void testDerivs_Coulomb_model( int n, double x0, double dx ){
     //double* buff = buffers["l_xs"];
     //for(int i=0; i<n; i++){ printf("%i : %g \n", i, buff[i]); }
 }
+
+void testDerivs_Total( int n, double x0, double dx ){
+    for(int i=0; i<solver.nBas; i++){ printf( "epos[%i] (%g,%g,%g) s %g c %g \n", i, solver.epos[i].x,solver.epos[i].y,solver.epos[i].z, solver.esize[i], solver.ecoef[i] ); }
+    //NEWBUFF(l_r,n)
+    NEWBUFF(l_xs,n)
+    NEWBUFF(l_Q,n)
+    NEWBUFF(l_E,n)
+    NEWBUFF(l_Fana,n)
+    NEWBUFF(l_Fnum,n)
+    for(int i=0; i<n; i++){
+        double x = x0 + i*dx;
+        l_xs[i] = x;
+        solver.epos[0].x=x;
+        printf( ">>> testDerivs_Total [%i] \n", i );
+        solver.cleanForces();
+        //solver.projectOrb( 0, dip, false );
+        //solver.projectOrb( 1, dip, false );
+        //double E  = solver.CoulombOrbPair( 0, 1 );
+        double E  = solver.eval();
+        double xc = solver.rhoP[2].x; //line_Qc->ys[i] = xc;
+        l_Fana[i]= solver.efpos[0].x;
+        l_E[i]   = E;
+        l_Q[i]   = solver.oQs[0];
+        printf( "<<< testDerivs_Total i[%i] x %g E %g \n", i, x, E );
+        if(i>1)l_Fnum[i-1] = (l_E[i] - l_E[i-2])/(2*dx);
+        return;
+    }
+    //for(int i=0;i<n;i++){ line_E->ys[i]   -= line_E->ys[n-1]; };
+}
+
 
 } // extern "C"{
 
