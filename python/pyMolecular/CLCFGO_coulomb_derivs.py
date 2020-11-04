@@ -134,17 +134,23 @@ def product3D_s_deriv( si,pi, sj,pj ):
     #    pass
     return C,s,p, dCr*dp, (dSsi,dXsi,dXxi,dCsi), (dSsj,dXsj,dXxj,dCsj)
 
-def acumEF( outs, r,s, qi, qj, Scd=None, dSab=None, dXxi=None ):
+def acumEF( outs, r, si, sj, qi, qj, dSi=None, dXxi=None, ci=None ):
+
+    si = si + r*0
+    sj = sj + r*0
+    qi = qi + r*0
+    qj = qj + r*0
+
+    s =  combSize(si,sj);
+
     e, fx, fs = Coulomb( r, s ) 
     E  = e * qi*qj
+
+    F  = fx * r * qi*qj    # pure derivative of coulombic forcefield
+    if( dXxi is not None  ):
+        F  = F*dXxi  + e*2*dSi*ci*qj  # total derivative due to charge change
     
-    Fpi  = fx * r * qi*qj    # pure derivative of coulombic forcefield
-    if( dXxi is None  ):
-        F    = Fpi 
-    else:
-        dSij = 4*Scd*dSab    
-        F    = Fpi*dXxi + e*dSij  # total derivative due to charge change
-        #fxi  = Fpi*dXxi
+    print "e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fx %g F %g " %( e[0], E[0], s[0],si[0],sj[0], (qi*qj)[0],qi[0],qj[0], r[0], fx[0], F[0] )
 
     outs[0] += E
     outs[1] += F 
@@ -153,6 +159,7 @@ def acumEF( outs, r,s, qi, qj, Scd=None, dSab=None, dXxi=None ):
 def combSize(si,sj):
     return np.sqrt(si*si + sj*sj)
 
+'''
 def evalEFtot( xa, ecoef, esize, eXpos ):
     
     ca = ecoef[0][0]
@@ -187,9 +194,57 @@ def evalEFtot( xa, ecoef, esize, eXpos ):
     acumEF( out, xa-eXpos[1][1],  combSize(sa,sd), ca**2,       cd**2 )
 
     return out
+'''
 
 
+def evalEFtot( xa, ecoef, esize, eXpos ):
+    eXpos[0][0] = xa
+    qs = [[0,0,0],[0,0,0]]
+    xs = [[0,0,0],[0,0,0]]
+    ss = [[0,0,0],[0,0,0]]
+    auxs = [None,None,None,None] 
+    isqrt2 = np.sqrt(0.5)
+    for io in range(2):
+        for ib in range(2):
+            xs[io][ib] = eXpos[io][ib]
+            qs[io][ib] = ecoef[io][ib]**2
+            ss[io][ib] = esize[io][ib]*isqrt2
+        S, s, x, dS, dA, dB = product3D_s_deriv( esize[io][0], eXpos[io][0], esize[io][1], eXpos[io][1] )
+        cc = ecoef[io][0]*ecoef[io][1]
+        xs[io][2] = x
+        qs[io][2] = 2*S*cc
+        ss[io][2] = s
+        auxs[io]  = ( dS, dA[2], cc )
 
+    out = [0.,0.]
+
+    # -- Diagonal charges
+    for i in range(2):
+        for j in range(3):
+            acumEF( out, xs[0][i]-xs[1][j] + 0*xa,  ss[0][i],ss[1][j], qs[0][i], qs[1][j] )
+    i = 2
+    for j in range(3):
+        acumEF    ( out, xs[0][i]-xs[1][j] + 0*xa,  ss[0][i],ss[1][j], qs[0][i], qs[1][j], dSi=auxs[0][0], dXxi=auxs[0][1]+xa*0, ci=auxs[0][2]+xa*0 )
+
+    return out
+
+
+def evalEF_off( xa, ecoef, esize, eXpos ):
+    eXpos[0][0] = xa
+   
+    Sab, si, xab, dSab, dA, dB = ref.product3D_s_deriv( esizes[0][0], xa         , esize[0][1],eXpo[0][1] )
+    Scd, sj, xcd, dScd, dC, dD = ref.product3D_s_deriv( esizes[1][0], eXpos[1][0], esize[1][1],eXpo[1][1] )
+    
+    out = [0.,0.]
+    
+    ci = ecoef[0][0]*ecoef[0][1]
+    cj = ecoef[1][0]*ecoef[1][1]
+    qi = Sab*ci
+    qj = Scd*cj
+
+    acumEF    ( out, xab-xcd, si, sj, qi, qj,dSab=dSab, dXxi=dA[2]+xa*0, ccd=ci+xa*0 )
+
+    return out
 
 
 

@@ -75,17 +75,17 @@ if __name__ == "__main__":
     esize = getBuff("esize",(2,2)  )
     epos  = getBuff("epos" ,(2,2,3))
 
-    ecoefs = np.array([ [1.,1.],[1.,1.] ])
-    esizes = np.array([ [1.,1.],[1.,1.] ])
-    eXpos  = np.array([ [0.,0.],[-3.5,-2.0]])
+    ecoefs = [ [1.,1.],[1.,1.] ]
+    esizes = [ [1.,1.],[1.,1.] ]
+    eXpos  = [ [0.,0.],[-3.5,-2.0]]
 
     # =========================================
     # ============== Derivs in C++ ============
     # =========================================
 
-    ecoef[:,:]  = ecoefs[:,:]
-    esize[:,:]  = esizes[:,:]
-    epos[:,:,0] = eXpos[:,:]
+    ecoef[:,:]  = np.array(ecoefs)[:,:]
+    esize[:,:]  = np.array(esizes)[:,:]
+    epos[:,:,0] = np.array(eXpos)[:,:]
 
     n = 30
     #testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
@@ -105,10 +105,11 @@ if __name__ == "__main__":
     plt.subplot(1,2,1)
     plt.title('C++')
     #plt.plot(l_xs,l_r,label="r")
-    plt.plot(l_xs,l_Q,label="Q")
+
     plt.plot(l_xs,l_E,label="E" )
     plt.plot(l_xs,-l_Fana,label="Fana")
     plt.plot(l_xs,-l_Fnum,label="Fnum",ls=':',lw=3)
+    plt.plot(l_xs,l_Q,label="Q")
     #plt.plot(l_xs,l_dQ_ana,label="dQ_ana")
     #plt.plot(l_xs,l_dQ_num,label="dQ_num", ls=':',lw=3)
 
@@ -128,11 +129,11 @@ if __name__ == "__main__":
     import CLCFGO_coulomb_derivs as ref
 
     dx =  0.1
-    xa =  np.arange( 0.01, 3.0, dx )
+    xa =  np.arange( 0.0, 3.0, dx )
     xs_ = (xa[1:]+xa[:-1])*0.5
     #eXpos[0][0] = xa 
 
-    (E, F) = ref.evalEFtot( xa, ecoef, esize, eXpos )
+    (E, F) = ref.evalEFtot( xa, ecoefs, esizes, eXpos )
 
     '''
     # overlaps
@@ -175,7 +176,7 @@ if __name__ == "__main__":
     #plt.plot( xa, dQab, label='dSab_ana' )
     #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
     #plt.figure(figsize=(12,10))
-    plt.plot( xa, E,  label='E' )
+    plt.plot( xa,  E,  label='E' )
     plt.plot( xa, -F,  label='F_ana' )
     plt.plot( xs_,-(E[1:]-E[:-1])/dx,':', label='F_num', lw=3 )
     #plt.plot( xa, fxi, label='fxi' )

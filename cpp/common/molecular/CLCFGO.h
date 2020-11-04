@@ -808,9 +808,9 @@ class CLCFGO{ public:
                 //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
                 //fs*=4;
 
-                double E  = Gauss::Coulomb( r, s*2, fr, fs );
+                double E  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
 
-                printf( "CoulombOrbPair[%i,%i][%i,%i] qij %g(%g,%g) s %g(%g,%g) r %g E %g \n", io,jo, i,j, qij,qi,qj, s,si,sj, r, E );
+                printf( "CoulombOrbPair[%i,%i][%i,%i] e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fr %g \n", io,jo, i,j,  E, E*qi*qj, s,si,sj, qij,qi,qj, r, fr );
 
                 //printf(  " [%i,%i] q %g r %g E %g \n", i, j, qij, r, Eqq );
 
