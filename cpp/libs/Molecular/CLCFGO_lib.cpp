@@ -104,7 +104,7 @@ void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
     buffers.insert( { "rhofP", (double*)solver.rhofP } );
     buffers.insert( { "rhofQ",          solver.rhofQ } );
     buffers.insert( { "rhofS",          solver.rhofS } );
-    buffers.insert( { "rhoEQ",          solver.rhoEQ } );
+    //buffers.insert( { "rhoEQ",          solver.rhoEQ } );
 
 }
 
