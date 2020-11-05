@@ -738,10 +738,10 @@ class CLCFGO{ public:
         double E  = Gauss::Coulomb( r, s, fr, fs );       // WARRNING  :  removed the contant s*2 to s  ... is it correct ?
 
         fs *= qij*4;
-        Vec3d fij = Rij*(-fr*qij);
-        rhofP[i].add(fij);   rhofP[j].sub(fij);
-        rhofS[i] -= fs*si;   rhofS[j] -= fs*sj; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
-        rhofQ[i] += E*qj;    rhofQ[j] += E*qi;  // ToDo : need to be made more stable ... different (qi,qj)
+        Vec3d fp = Rij*(-fr*qij);
+        rhofP[i].add(fp);   rhofP[j].sub(fp);
+        rhofS[i] -= fs*si;  rhofS[j] -= fs*sj; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
+        rhofQ[i] += E*qj;   rhofQ[j] += E*qi;  // ToDo : need to be made more stable ... different (qi,qj)
         return E;
     }
 
@@ -781,12 +781,12 @@ class CLCFGO{ public:
                 double E  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
 
                 // --- Derivatives (Forces)
-                Vec3d fij = Rij*(-fr * qij);
+                Vec3d fp = Rij*(-fr * qij);
                 fs       *=            qij ;
-                rhofP[i].add(fij);   rhofP[j].sub(fij);
+                rhofP[i].add(fp);    rhofP[j].sub(fp);
                 rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
-                Ecoul      += E*qi*qj;
+                Ecoul    += E*qi*qj;
 
                 //printf( "CoulombOrbPair[%i,%i][%i,%i] e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fr %g \n", io,jo, i,j,  E, E*qi*qj, s,si,sj, qij,qi,qj, r, fr );
                 //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qi*qj,r );

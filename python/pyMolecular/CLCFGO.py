@@ -81,6 +81,7 @@ def testDerivsS_Total( n=100, x0=0.0, dx=0.1 ):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    import CLCFGO_coulomb_derivs as ref
 
     init(2,2,2,1)
     ecoef = getBuff("ecoef",(2,2)  )
@@ -89,7 +90,7 @@ if __name__ == "__main__":
 
     ecoefs = [[1.0,1.0],[1.0,1.0] ]
     esizes = [[1.0,1.0],[1.0,1.0] ]
-    eXpos  = [[0.,+0.5],[-3.5,-2.0]]
+    eXpos  = [[0.,+0.5],[-2.5,-1.0]]
     eYpos  = [[0.,+0.0],[ 0.0, 0.0]]
     eZpos  = [[0.,+0.0],[ 0.0, 0.0]]
 
@@ -98,6 +99,60 @@ if __name__ == "__main__":
     #eXpos  = [[+0.00,+0.50],[-3.50,-2.0]]
     #eYpos  = [[+0.00,+0.00],[+0.00,+0.0]]
     #eZpos  = [[+0.50,-0.30],[-0.40,+0.8]]
+
+    dx = 0.025
+    xs =  np.arange( 0.0, 3.0, dx )
+    xs_ = 0.5*(xs[1:]+xs[:-1])
+
+    # ============== Gaussian Overlap Product derivatives
+    esizes[0][0] = xs
+    C,s,p, dCr, dA,dB = ref.product3D_s_deriv( esizes[0][0],eXpos[0][0], eXpos[0][1],eXpos[0][1] )
+    (dSsi,dXsi,dXxi,dCsi) = dA
+
+    plt.figure()
+    plt.plot( xs, C,    label = "C" )
+    plt.plot( xs, dCsi, label = "dC/dsa" )
+    plt.plot( xs_, (C[1:]-C[:-1])/dx, label = "dC/dsa_num", lw=3,ls=":" )
+    
+    plt.plot( xs, p,    label = "p")
+    plt.plot( xs, dXsi, label = "dp/dsa")
+    plt.plot( xs_, (p[1:]-p[:-1])/dx, label = "dp/dsa_num", lw=3,ls=":" )
+    
+    plt.plot( xs, s,    label = "s")
+    plt.plot( xs, dSsi, label = "ds/dsa")
+    plt.plot( xs_, (s[1:]-s[:-1])/dx, label = "ds/dsa_num", lw=3,ls=":" )
+
+    plt.legend()
+    plt.grid()
+    plt.minorticks_on()
+    plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
+    plt.title('Gaussian Overlap Derivative')
+
+    # ============== Gaussian Electrostatics derivatives
+
+    plt.figure()
+    E,fr,fs = ref.Coulomb( xs, 1.0 )
+    plt.plot( xs, E,  label = "E(r)")
+    plt.plot( xs, fr*xs, label = "dE/dr")
+    plt.plot( xs_, (E[1:]-E[:-1])/dx, label = "dE/dr_num", lw=3,ls=":" )
+
+    E,fr,fs = ref.Coulomb( 1.0, xs  )
+    plt.plot( xs, E,  label = "E(s)")
+    plt.plot( xs, fs*xs, label = "dE/ds")
+    plt.plot( xs_, (E[1:]-E[:-1])/dx, label = "dE/ds_num", lw=3,ls=":" )
+    
+    plt.legend()
+    plt.grid()
+    plt.minorticks_on()
+    plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
+    plt.title('Gaussian Coulomb Derivative')
+
+    plt.show()
+    exit()
+    # =====================
+
+
+
 
     # =========================================
     # ============== Derivs in C++ ============
@@ -153,15 +208,13 @@ if __name__ == "__main__":
     # ============== Derivs in Python =========
     # =========================================
 
-    # ==== Derivative of Coulomb term with considering the Charges
-    import CLCFGO_coulomb_derivs as ref
-
     dx =  0.1
     xa =  np.arange( 0.0, 3.0, dx )
     xs_ = (xa[1:]+xa[:-1])*0.5
     #eXpos[0][0] = xa 
 
-    (E, F) = ref.evalEFtot( xa, ecoefs, esizes, eXpos )
+    #(E, F) = ref.evalEFtot( xa, ecoefs, esizes, eXpos )
+    (E, F) = ref.evalEF_S_off ( xa, ecoefs, esizes, eXpos )
 
     plt.subplot(1,2,2)
     #plt.plot( xa, r   , label='r'   )

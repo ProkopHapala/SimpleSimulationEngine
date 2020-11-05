@@ -68,12 +68,11 @@ def Coulomb( r, s ):
     f2   = g*is_
     e1f2 = e1*f2
     fr = (f1*e2 + e1f2)*ir
-    fs =          e1f2 *r_s * is_
+    fs =       -  e1f2 *r_s * is_
     E  = e1 * e2
 
     #for i in range(len(r)):
     #    print "Gauss::Coulomb r %g s %g E %g fr %g " %(r[i],s, E[i], fr[i]  )
-
 
     return E,fr,fs
 
@@ -134,7 +133,7 @@ def product3D_s_deriv( si,pi, sj,pj ):
     #    pass
     return C,s,p, dCr*dp, (dSsi,dXsi,dXxi,dCsi), (dSsj,dXsj,dXxj,dCsj)
 
-def getCoulombEF( r, si, sj, qi, qj, dSi=None, dXxi=None, ci=None, out=None ):
+def getCoulombEF( r, si, sj, qi, qj, dSi=None, dA=None, ci=None, out=None ):
 
     si = si + r*0
     sj = sj + r*0
@@ -146,65 +145,36 @@ def getCoulombEF( r, si, sj, qi, qj, dSi=None, dXxi=None, ci=None, out=None ):
     e, fx, fs = Coulomb( r, s ) 
     E  = e * qi*qj
 
-    F  = fx * r * qi*qj    # pure derivative of coulombic forcefield
+    # rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
+    # double fsi = Fs*dssi - Fp.dot( dxsi );       # fromRho()
 
-    if( dXxi is not None  ):
+    Fp = fx * r * qi*qj    # pure derivative of coulombic forcefield
+    Fs = fs * si 
+
+    if( dA is not None  ):
+        # dA = (dSsi,dXsi,dXxi,dCsi)
+        dXsi = dA[1]
+        dXxi = dA[2]
         eqj = e*qj
         Fq = eqj*2*dSi*ci
-        F  = F*dXxi  + Fq  # total derivative due to charge change    
+        Fs += Fp*dXsi
+        Fp  = Fp*dXxi  + Fq  # total derivative due to charge change
+
         #print "e %g E %g s %g q %g r %g fx %g F %g dS %g dSr %g cc %g dEdQ %g " %( e[0], E[0], s[0], (qi*qj)[0], r[0], fx[0], F[0], (2*dSi*ci)[0], dSi[0], ci[0], eqj[0]  )
         if out is not None:
             out[0] += eqj
             out[1] += Fq
-            out[2] += F
+            out[2] += Fp
 
     #print "e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fx %g F %g dSi %g " %( e[0], E[0], s[0],si[0],sj[0], (qi*qj)[0],qi[0],qj[0], r[0], fx[0], F[0], 2*dSi*ci )
    
-    return E,F
+    return E,Fp, Fs
     #outs[0] += E
     #outs[1] += F 
 
 
 def combSize(si,sj):
     return np.sqrt(si*si + sj*sj)
-
-'''
-def evalEFtot( xa, ecoef, esize, eXpos ):
-    
-    ca = ecoef[0][0]
-    cb = ecoef[0][1]
-    cc = ecoef[1][0]
-    cd = ecoef[1][1]
-
-    sa = esize[0][0]
-    sb = esize[0][1]
-    sc = esize[1][0]
-    sd = esize[1][1]
-
-    #xa =  np.arange( 0.01, 3.0, dx )
-    xb = eXpos[0][1]
-    xc = eXpos[1][0]
-    xd = eXpos[1][1]
-    
-    Sab, si, xab, dSab, dA, dB = product3D_s_deriv( sa, xa, sb,xb )
-    Scd, sj, xcd, dScd, dC, dD = product3D_s_deriv( sc, xc, sd,xd )
-    s2        = si*si + sj*sj
-    s         = np.sqrt(s2)
-    dXxi      = dA[2] + xa*0 
-    
-    out = [0.,0.]
-
-    acumEF( out, xab-xcd,         combSize(si,sj)   , 2*Sab*ca*cb, 2*Scd*cc*cd, Scd=Scd, dSab=Sab, dXxi=dXxi )
-    acumEF( out, xab-eXpos[1][0], combSize(si,sc**2), 2*Sab*ca*cb,       cc**2         , Scd=Scd, dSab=Sab, dXxi=dXxi )
-    acumEF( out, xab-eXpos[1][1], combSize(si,sd**2), 2*Sab*ca*cb,       cd**2         , Scd=Scd, dSab=Sab, dXxi=dXxi )
-    
-    acumEF( out, xa-xcd        ,  combSize(sa,sj), ca**2, 2*Scd*cc*cd )
-    acumEF( out, xa-eXpos[1][0],  combSize(sa,sc), ca**2,       cc**2 )
-    acumEF( out, xa-eXpos[1][1],  combSize(sa,sd), ca**2,       cd**2 )
-
-    return out
-'''
-
 
 def evalEFtot( xa, ecoef, esize, eXpos ):
     eXpos[0][0] = xa
@@ -223,7 +193,7 @@ def evalEFtot( xa, ecoef, esize, eXpos ):
         xs[io][2] = x
         qs[io][2] = 2*S*cc
         ss[io][2] = s
-        auxs[io]  = ( dS, dA[2], cc )
+        auxs[io]  = ( dS, dA, cc )
 
     #out = [0.,0.]
     Etot = 0
@@ -232,19 +202,19 @@ def evalEFtot( xa, ecoef, esize, eXpos ):
     for i in range(2):
         for j in range(3):
         #for j in range(2):
-            E,F = getCoulombEF( xs[0][i]-xs[1][j] + 0*xa,  ss[0][i],ss[1][j], qs[0][i], qs[1][j] )
+            E,Fp,Fs = getCoulombEF( xs[0][i]-xs[1][j] + 0*xa,  ss[0][i],ss[1][j], qs[0][i], qs[1][j] )
             Etot += E
             if (i==0):
-                Ftot += F
+                Ftot += Fp
     # -- from overlap (off-diagonal) charges of orb #1
     i = 2
     out = [0.,0.,0.]
     for j in range(3):
         r = xs[0][i]-xs[1][j] + 0*xa
-        E,F = getCoulombEF( r,  ss[0][i],ss[1][j], qs[0][i], qs[1][j], dSi=auxs[0][0], dXxi=auxs[0][1]+xa*0, ci=auxs[0][2]+xa*0, out=out )
+        E,Fp,Fs = getCoulombEF( r,  ss[0][i],ss[1][j], qs[0][i], qs[1][j], dSi=auxs[0][0], dA=auxs[0][1], ci=auxs[0][2], out=out )
         print "[%i,%i] E %g r %g " %(i,j,E[0],r[0])
         Etot += E
-        Ftot += F
+        Ftot += Fp
 
     print " sum: dEdQ %g Fq %g F %g " %(out[0][0],out[1][0],out[2][0])
     return Etot,Ftot
@@ -253,8 +223,8 @@ def evalEFtot( xa, ecoef, esize, eXpos ):
 def evalEF_off( xa, ecoef, esize, eXpos ):
     eXpos[0][0] = xa
    
-    Sab, si, xab, dSab, dA, dB = ref.product3D_s_deriv( esizes[0][0], xa         , esize[0][1],eXpo[0][1] )
-    Scd, sj, xcd, dScd, dC, dD = ref.product3D_s_deriv( esizes[1][0], eXpos[1][0], esize[1][1],eXpo[1][1] )
+    Sab, si, xab, dSab, dA, dB = product3D_s_deriv( esize[0][0], xa         , esize[0][1],eXpos[0][1] )
+    Scd, sj, xcd, dScd, dC, dD = product3D_s_deriv( esize[1][0], eXpos[1][0], esize[1][1],eXpos[1][1] )
     
     #out = [0.,0.]
     
@@ -263,9 +233,27 @@ def evalEF_off( xa, ecoef, esize, eXpos ):
     qi = Sab*ci
     qj = Scd*cj
 
-    E,F = getCoulombEF( out, xab-xcd, si, sj, qi, qj,dSab=dSab, dXxi=dA[2]+xa*0, ccd=ci+xa*0 )
+    E,Fr,Fs = getCoulombEF( xab-xcd, si, sj, qi, qj,dSi=dSab, dA=dA, ci=ci )
 
-    return E,F
+    return E,Fr
+
+def evalEF_S_off( sa, ecoef, esize, eXpos ):
+    #eXpos[0][0] = xa
+    esize[0][0] = sa
+
+    Sab, si, xab, dSab, dA, dB = product3D_s_deriv( sa,          eXpos[0][0], esize[0][1],eXpos[0][1] )
+    Scd, sj, xcd, dScd, dC, dD = product3D_s_deriv( esize[1][0], eXpos[1][0], esize[1][1],eXpos[1][1] )
+    
+    #out = [0.,0.]
+    
+    ci = ecoef[0][0]*ecoef[0][1]
+    cj = ecoef[1][0]*ecoef[1][1]
+    qi = Sab*ci
+    qj = Scd*cj
+
+    E,Fr,Fs = getCoulombEF( xab-xcd, si, sj, qi, qj, dSi=dSab, dA=dA, ci=ci )
+
+    return E,Fs
 
 
 
