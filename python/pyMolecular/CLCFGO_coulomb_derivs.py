@@ -152,7 +152,7 @@ def getCoulombEF( r, si, sj, qi, qj, dSi=None, dXxi=None, ci=None, out=None ):
         eqj = e*qj
         Fq = eqj*2*dSi*ci
         F  = F*dXxi  + Fq  # total derivative due to charge change    
-        print "e %g E %g s %g q %g r %g fx %g F %g dS %g dSr %g cc %g dEdQ %g " %( e[0], E[0], s[0], (qi*qj)[0], r[0], fx[0], F[0], (2*dSi*ci)[0], dSi[0], ci[0], eqj[0]  )
+        #print "e %g E %g s %g q %g r %g fx %g F %g dS %g dSr %g cc %g dEdQ %g " %( e[0], E[0], s[0], (qi*qj)[0], r[0], fx[0], F[0], (2*dSi*ci)[0], dSi[0], ci[0], eqj[0]  )
         if out is not None:
             out[0] += eqj
             out[1] += Fq
@@ -228,10 +228,10 @@ def evalEFtot( xa, ecoef, esize, eXpos ):
     #out = [0.,0.]
     Etot = 0
     Ftot = 0
-
     # -- from Diagonal charges of orb #1 
     for i in range(2):
         for j in range(3):
+        #for j in range(2):
             E,F = getCoulombEF( xs[0][i]-xs[1][j] + 0*xa,  ss[0][i],ss[1][j], qs[0][i], qs[1][j] )
             Etot += E
             if (i==0):
@@ -240,12 +240,13 @@ def evalEFtot( xa, ecoef, esize, eXpos ):
     i = 2
     out = [0.,0.,0.]
     for j in range(3):
-        E,F = getCoulombEF( xs[0][i]-xs[1][j] + 0*xa,  ss[0][i],ss[1][j], qs[0][i], qs[1][j], dSi=auxs[0][0], dXxi=auxs[0][1]+xa*0, ci=auxs[0][2]+xa*0, out=out )
+        r = xs[0][i]-xs[1][j] + 0*xa
+        E,F = getCoulombEF( r,  ss[0][i],ss[1][j], qs[0][i], qs[1][j], dSi=auxs[0][0], dXxi=auxs[0][1]+xa*0, ci=auxs[0][2]+xa*0, out=out )
+        print "[%i,%i] E %g r %g " %(i,j,E[0],r[0])
         Etot += E
         Ftot += F
 
     print " sum: dEdQ %g Fq %g F %g " %(out[0][0],out[1][0],out[2][0])
-
     return Etot,Ftot
 
 

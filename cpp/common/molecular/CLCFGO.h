@@ -235,7 +235,6 @@ class CLCFGO{ public:
             efsize[i] = 0;
             efcoef[i] = 0;
         }
-
         //for(int i=0; i<nQtot; i++){
         //    rhofP[i] = Vec3dZero;
         //    rhofQ[i] = 0;
@@ -655,8 +654,9 @@ class CLCFGO{ public:
         //double Eq = rhoEQ[ij];  // TODO: Eqi is probably redudent ( Fqi is the same )  !!!
         double dEdQ = rhofQ[ij];  // TODO: Eqi is probably redudent ( Fqi is the same )  !!!
 
+        // TODO : we should make sure there is a recoil ( forces point to opposite direction )
+        double fsi = Fs*dssi - Fp.dot( dxsi );
         double fsj = Fs*dssj + Fp.dot( dxsj );
-        double fsi = Fs*dssi + Fp.dot( dxsi );
         Vec3d  fxi = Fp*dxxi;  // ToDo : dSij/dxi == 0
         Vec3d  fxj = Fp*dxxj;  //            dXxi == 0.5
 
@@ -669,14 +669,14 @@ class CLCFGO{ public:
         DEBUG_dQdp = dSdp;
         Vec3d Fq   = dSdp*dEdQ;
         Vec3d Fxi  = fxi + Fq;
-        Vec3d Fxj  = fxj - Fq;
-
-        printf( "fromRho dS %g  dSr %g cij %g dEdQ %g Fq.x %g F %g \n", dSdp.x, dSr*Rij.x, ci*cj, dEdQ, Fq.x, Fxi.x );
+        Vec3d Fxj  = fxj + Fq;
 
         efpos [i].add( Fxi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
         efpos [j].add( Fxj );
         efsize[i] += fsi*Sij;
         efsize[j] += fsj*Sij;
+
+        printf( "fromRho[%i,%i] dS %g  dSr %g cij %g dEdQ %g Fq.x %g F %g F[i] %g F[j] %g \n", i,j, dSdp.x, dSr*Rij.x, ci*cj, dEdQ, Fq.x, Fxi.x, efpos[i].x, efpos[j].x );
 
         // TODO : Due to summation we have to multiply it by Qj but not by Qi
 
@@ -879,10 +879,13 @@ class CLCFGO{ public:
         int i0 = getRhoOffset(io);
         int j0 = getRhoOffset(jo);
         int nio = onq[io];
-        int njo   = onq[jo];
+        int njo = onq[jo];
+        //int nio = 2; // DEBUG WARRNING !!!!
+        //int njo = 2; // DEBUG WARRNING !!!!
         double Ecoul=0;
-        //printf( "CoulombOrbPair[%i,%i] nV %i \n", io, jo, njo );
+        printf( "CoulombOrbPair[%i,%i] (%i:%i) (%i:%i) nV %i \n", io, jo, i0,i0+nio, j0,j0+njo  );
         for(int i=i0; i<i0+nio; i++){
+        //int i=2;{ // DEBUG
             Vec3d  pi = rhoP[i];
             double qi = rhoQ[i];
             double si = rhoS[i];
@@ -921,6 +924,8 @@ class CLCFGO{ public:
 
                 //printf( "[%i,%i] E %g r %g sij %g(%g,%g) q %g(%g,%g) \n", i,j,  Eqq , r, s,si,sj, qi*qj,qi,qj );
                 Ecoul      += E*qi*qj;
+
+                printf( "[%i,%i] E %g r %g \n", i-i0,j-j0,E*qi*qj,r );
             }
         }
         //printf( " Ecoul %g \n", Ecoul );
@@ -953,7 +958,7 @@ class CLCFGO{ public:
             int i0 = getRhoOffset(io);
             Vec3d opi  = opos[io];
             Vec3d dipi = odip[io];
-            for(int jo=0; jo<io; jo++){
+            for(int jo=io+1; jo<nOrb; jo++){
                 Vec3d dop = opos[jo] - opi;
                 double r2 = dop.norm2();
                 //printf( "evalElectrostatICoulomb[%i,%i]  %g <? %g \n", io, jo, r2,RcutOrb2 );
@@ -1056,6 +1061,7 @@ class CLCFGO{ public:
 
     double eval(){
         double E=0;
+        cleanForces();
         clearAuxDens();
         //projectOrbs( true );
         projectOrbs( false );
@@ -1063,7 +1069,10 @@ class CLCFGO{ public:
         //E += evalPauli();
         E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
         //for(int i=0; i<nOrb; i++) assembleOrbForces(i);
-        for(int i=0; i<nOrb; i++) assembleOrbForces_fromRho(i); // DEBUG
+        for(int i=0; i<nOrb; i++){ 
+            printf( "assembleOrbForces[%i] F[0] %g F[1] %g\n", i, efpos[0].x, efpos[1].x );
+            assembleOrbForces_fromRho(i); 
+        }
         return E;
     }
 

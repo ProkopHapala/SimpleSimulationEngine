@@ -224,7 +224,7 @@ void testDerivs_Total( int n, double x0, double dx ){
         l_Q[i]   = solver.oQs[0];
         printf( "<<< testDerivs_Total i[%i] x %g E %g \n", i, x, E );
         if(i>1)l_Fnum[i-1] = (l_E[i] - l_E[i-2])/(2*dx);
-        return;
+        //return;
     }
     //for(int i=0;i<n;i++){ line_E->ys[i]   -= line_E->ys[n-1]; };
 }

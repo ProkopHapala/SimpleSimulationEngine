@@ -109,7 +109,7 @@ if __name__ == "__main__":
     plt.plot(l_xs,l_E,label="E" )
     plt.plot(l_xs,-l_Fana,label="Fana")
     plt.plot(l_xs,-l_Fnum,label="Fnum",ls=':',lw=3)
-    plt.plot(l_xs,l_Q,label="Q")
+    #plt.plot(l_xs,l_Q,label="Q")
     #plt.plot(l_xs,l_dQ_ana,label="dQ_ana")
     #plt.plot(l_xs,l_dQ_num,label="dQ_num", ls=':',lw=3)
 
@@ -189,5 +189,7 @@ if __name__ == "__main__":
     plt.grid()
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
+
+    print "Fc++ %g Fpy %g " %(l_Fana[0],F[0])
 
     plt.show()
