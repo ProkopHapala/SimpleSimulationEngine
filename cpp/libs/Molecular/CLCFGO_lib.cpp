@@ -212,7 +212,7 @@ void testDerivs_Total( int n, double x0, double dx ){
         double x = x0 + i*dx;
         l_xs[i] = x;
         solver.epos[0].x=x;
-        printf( ">>> testDerivs_Total [%i] \n", i );
+        //printf( ">>> testDerivs_Total [%i] \n", i );
         solver.cleanForces();
         //solver.projectOrb( 0, dip, false );
         //solver.projectOrb( 1, dip, false );
@@ -222,7 +222,7 @@ void testDerivs_Total( int n, double x0, double dx ){
         l_Fana[i]= solver.efpos[0].x;
         l_E[i]   = E;
         l_Q[i]   = solver.oQs[0];
-        printf( "<<< testDerivs_Total i[%i] x %g E %g \n", i, x, E );
+        //printf( "<<< testDerivs_Total i[%i] x %g E %g \n", i, x, E );
         if(i>1)l_Fnum[i-1] = (l_E[i] - l_E[i-2])/(2*dx);
         //return;
     }

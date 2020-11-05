@@ -75,9 +75,13 @@ if __name__ == "__main__":
     esize = getBuff("esize",(2,2)  )
     epos  = getBuff("epos" ,(2,2,3))
 
-    ecoefs = [ [1.,1.],[1.,1.] ]
-    esizes = [ [1.,1.],[1.,1.] ]
+    #ecoefs = [ [1.0,1.],[1.,1.] ]
+    #esizes = [ [1.,1.],[1.,1.] ]
+    ecoefs = [ [0.93,0.68],[0.654,1.3] ]
+    esizes = [ [1.3,0.9],[1.6,0.7] ]
     eXpos  = [ [0.,+0.5],[-3.5,-2.0]]
+    eYpos  = [ [0.,+0.0],[0.0,0.0]]
+    eZpos  = [ [0.5,-0.3],[-0.4,0.8]]
 
     # =========================================
     # ============== Derivs in C++ ============
@@ -86,10 +90,15 @@ if __name__ == "__main__":
     ecoef[:,:]  = np.array(ecoefs)[:,:]
     esize[:,:]  = np.array(esizes)[:,:]
     epos[:,:,0] = np.array(eXpos)[:,:]
+    epos[:,:,1] = np.array(eYpos)[:,:]
+    epos[:,:,2] = np.array(eZpos)[:,:]
 
     n = 30
     #testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
+    print "===>> RUN  C++ test : testDerivs_Total "
     testDerivs_Total        ( n=n, x0=0.0, dx=0.1 )
+    print "===<< DONE C++ test : testDerivs_Total "
+
     l_xs     = getBuff( "l_xs",    (n,) )
     #l_r      = getBuff( "l_r",     (n,) )
     l_Q      = getBuff( "l_Q",     (n,) )
