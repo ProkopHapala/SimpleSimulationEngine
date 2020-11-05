@@ -53,16 +53,28 @@ def getBuff(name,sh):
     return np.ctypeslib.as_array( ptr, shape=sh)
 
 #void testDerivs_Coulomb_model( int n, double x0, double dx ){
-lib.testDerivs_Coulomb_model.argtypes = [ c_int, c_double, c_double ]
-lib.testDerivs_Coulomb_model.restype  = c_double
-def testDerivs_Coulomb_model( n=100, x0=0.0, dx=0.1 ):
-    return lib.testDerivs_Coulomb_model( n, x0, dx )
+lib.testDerivsP_Coulomb_model.argtypes = [ c_int, c_double, c_double ]
+lib.testDerivsP_Coulomb_model.restype  = c_double
+def testDerivsP_Coulomb_model( n=100, x0=0.0, dx=0.1 ):
+    return lib.testDerivsP_Coulomb_model( n, x0, dx )
 
-#void testDerivs_Total( int n, double x0, double dx ){
-lib.testDerivs_Total.argtypes = [ c_int, c_double, c_double ]
-lib.testDerivs_Total.restype  = c_double
-def testDerivs_Total( n=100, x0=0.0, dx=0.1 ):
-    return lib.testDerivs_Total( n, x0, dx )
+#void testDerivs_Coulomb_model( int n, double x0, double dx ){
+lib.testDerivsS_Coulomb_model.argtypes = [ c_int, c_double, c_double ]
+lib.testDerivsS_Coulomb_model.restype  = c_double
+def testDerivsS_Coulomb_model( n=100, x0=0.0, dx=0.1 ):
+    return lib.testDerivsS_Coulomb_model( n, x0, dx )
+
+#void testDerivsP_Total( int n, double x0, double dx ){
+lib.testDerivsP_Total.argtypes = [ c_int, c_double, c_double ]
+lib.testDerivsP_Total.restype  = c_double
+def testDerivsP_Total( n=100, x0=0.0, dx=0.1 ):
+    return lib.testDerivsP_Total( n, x0, dx )
+
+#void testDerivsS_Total( int n, double x0, double dx ){
+lib.testDerivsS_Total.argtypes = [ c_int, c_double, c_double ]
+lib.testDerivsS_Total.restype  = c_double
+def testDerivsS_Total( n=100, x0=0.0, dx=0.1 ):
+    return lib.testDerivsS_Total( n, x0, dx )
 
 # ========= Python Functions
 
@@ -75,13 +87,17 @@ if __name__ == "__main__":
     esize = getBuff("esize",(2,2)  )
     epos  = getBuff("epos" ,(2,2,3))
 
-    #ecoefs = [ [1.0,1.],[1.,1.] ]
-    #esizes = [ [1.,1.],[1.,1.] ]
-    ecoefs = [ [0.93,0.68],[0.654,1.3] ]
-    esizes = [ [1.3,0.9],[1.6,0.7] ]
-    eXpos  = [ [0.,+0.5],[-3.5,-2.0]]
-    eYpos  = [ [0.,+0.0],[0.0,0.0]]
-    eZpos  = [ [0.5,-0.3],[-0.4,0.8]]
+    ecoefs = [[1.0,1.0],[1.0,1.0] ]
+    esizes = [[1.0,1.0],[1.0,1.0] ]
+    eXpos  = [[0.,+0.5],[-3.5,-2.0]]
+    eYpos  = [[0.,+0.0],[ 0.0, 0.0]]
+    eZpos  = [[0.,+0.0],[ 0.0, 0.0]]
+
+    #ecoefs = [[+0.93,+0.68],[+0.65,+1.3]]
+    #esizes = [[+1.30,+0.90],[+1.60,+0.7]]
+    #eXpos  = [[+0.00,+0.50],[-3.50,-2.0]]
+    #eYpos  = [[+0.00,+0.00],[+0.00,+0.0]]
+    #eZpos  = [[+0.50,-0.30],[-0.40,+0.8]]
 
     # =========================================
     # ============== Derivs in C++ ============
@@ -96,7 +112,10 @@ if __name__ == "__main__":
     n = 30
     #testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
     print "===>> RUN  C++ test : testDerivs_Total "
-    testDerivs_Total        ( n=n, x0=0.0, dx=0.1 )
+    #testDerivsP_Coulomb_model( n=n, x0=0.0, dx=0.1 )
+    testDerivsS_Coulomb_model( n=n, x0=0.0, dx=0.1 )
+    #testDerivsP_Total        ( n=n, x0=0.0, dx=0.1 )
+    #testDerivsS_Total        ( n=n, x0=0.0, dx=0.1 )
     print "===<< DONE C++ test : testDerivs_Total "
 
     l_xs     = getBuff( "l_xs",    (n,) )
@@ -143,39 +162,6 @@ if __name__ == "__main__":
     #eXpos[0][0] = xa 
 
     (E, F) = ref.evalEFtot( xa, ecoefs, esizes, eXpos )
-
-    '''
-    # overlaps
-    #Sab, si, xab, dQab, dA, dB = ref.product3D_s_deriv( sa,xa, sb,xb )
-    #Scd, sj, xcd, dQcd, dC, dD = ref.product3D_s_deriv( sc,xc, sd,xd )
-    Sab, si, xab, dQab, dA, dB = ref.product3D_s_deriv( esizes[0][0], xa         , esizes[0][1],eXpos[0][1] )
-    Scd, sj, xcd, dQcd, dC, dD = ref.product3D_s_deriv( esizes[1][0], eXpos[1][0], esizes[1][1],eXpos[1][1] )
-    # coulomb
-    s2        = si*si + sj*sj
-    s         = np.sqrt(s2)
-    r         = xab-xcd
-    e, fx, fs = ref.Coulomb( r, s )
-    dXxi      = dA[2] + xa*0 
-
-    ca = ecoefs[0][0]
-    cb = ecoefs[0][1]
-    Qab  = 2*Sab*ca*cb 
-    qij  = 4*Scd*Sab
-    #qij  = Sab
-    dQij = 4*Scd*dQab
-
-    # Q: Why we dont need derivatives of charge ????
-    #Fx = -fx*0.5*dA[1] # This works for zero initial distance between blobs
-    Fx  = fx*r*dXxi
-    Fpi = fx*r*qij # see 
-    fxi = Fpi*dXxi
-    
-    print "Scd, 4*Scd ", Scd, 4*Scd
-    print "For some reason each charge is scaled by 2.0"
-
-    E = e*qij
-    F = fxi + e*dQij   # total derivtive F = dE/dx = d(e*qi)/dx
-    '''
 
     plt.subplot(1,2,2)
     #plt.plot( xa, r   , label='r'   )

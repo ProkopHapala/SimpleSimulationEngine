@@ -143,28 +143,9 @@ void setIBuff(const char* name, int* buff){
     //else                    { return got->second; }
 }
 
-/*
-void initTestElectrons( ){
-    {auto& _=solver;
-        _.ecoef[0] =   1.0;
-        _.ecoef[1] =   1.0;
-        _.ecoef[2] =   1.0;
-        _.ecoef[3] =   1.0;
-        _.esize[0] =   1.0;
-        _.esize[1] =   1.0;
-        _.esize[2] =   1.0;
-        _.esize[3] =   1.0;
-        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
-        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
-        _.epos [2] = (Vec3d){-1.5, 0.0,0.0};
-        _.epos [3] = (Vec3d){-1.0, 0.0,0.0};
-    }
-}
-*/
-
 #define NEWBUFF(name,N)   double* name = new double[N]; buffers.insert( {#name, name} );
 
-void testDerivs_Coulomb_model( int n, double x0, double dx ){
+void testDerivsP_Coulomb_model( int n, double x0, double dx ){
     //initTestElectrons( );
     for(int i=0; i<solver.nBas; i++){ printf( "epos[%i] (%g,%g,%g) \n", i, solver.epos[i].x,solver.epos[i].y,solver.epos[i].z); }
     solver.toRho(0,1, 0);   
@@ -200,7 +181,43 @@ void testDerivs_Coulomb_model( int n, double x0, double dx ){
     //for(int i=0; i<n; i++){ printf("%i : %g \n", i, buff[i]); }
 }
 
-void testDerivs_Total( int n, double x0, double dx ){
+void testDerivsS_Coulomb_model( int n, double x0, double dx ){
+    //initTestElectrons( );
+    for(int i=0; i<solver.nBas; i++){ printf( "epos[%i] (%g,%g,%g) \n", i, solver.epos[i].x,solver.epos[i].y,solver.epos[i].z); }
+    solver.toRho(0,1, 0);   
+    solver.toRho(2,3, 1);
+    NEWBUFF(l_xs,n)
+    NEWBUFF(l_Q,n)
+    NEWBUFF(l_dQ_ana,n)
+    NEWBUFF(l_dQ_num,n)
+    NEWBUFF(l_r,n)
+    NEWBUFF(l_E,n)
+    NEWBUFF(l_Fana,n)
+    NEWBUFF(l_Fnum,n)
+    for(int i=0; i<n; i++){
+        double aij;
+        solver.cleanForces();
+        double x = x0 + i*dx + 0.01;
+        l_xs[i] = x;
+        solver.esize[0]=x;   
+        solver.toRho  (0,1, 0);                            // w0*w1 -> q0
+        solver.toRho  (2,3, 1);                            // w2*w3 -> q1
+        double E_  = solver.CoublombElement(0,1);          // E = C( q0, q1 )
+        double E   = E_ * solver.rhoQ[0] * solver.rhoQ[1]; // E(q0,q1) * q0 * q1
+        solver.fromRho( 0,1, 0,   aij );                   // w0,w1 <- q0
+        l_Q     [i] = solver.rhoQ[0];
+        l_dQ_ana[i] = solver.DEBUG_dQdp.x;
+        if(i>1) l_dQ_num[i-1]  = (l_Q[i] - l_Q[i-2])/(2*dx);
+        l_r[i]       = (solver.rhoP[0] - solver.rhoP[1]).norm();
+        l_Fana[i]    =  solver.efsize[0];                             // This is used when fromRho() is  modified
+        l_E[i]       =  E; //func( line_E->xs[i], line_Fana->ys[i] );
+        if(i>1) l_Fnum[i-1] = (l_E[i] - l_E[i-2])/(2*dx);
+    }
+    //double* buff = buffers["l_xs"];
+    //for(int i=0; i<n; i++){ printf("%i : %g \n", i, buff[i]); }
+}
+
+void testDerivsP_Total( int n, double x0, double dx ){
     for(int i=0; i<solver.nBas; i++){ printf( "epos[%i] (%g,%g,%g) s %g c %g \n", i, solver.epos[i].x,solver.epos[i].y,solver.epos[i].z, solver.esize[i], solver.ecoef[i] ); }
     //NEWBUFF(l_r,n)
     NEWBUFF(l_xs,n)
@@ -220,6 +237,32 @@ void testDerivs_Total( int n, double x0, double dx ){
         double E  = solver.eval();
         double xc = solver.rhoP[2].x; //line_Qc->ys[i] = xc;
         l_Fana[i]= solver.efpos[0].x;
+        l_E[i]   = E;
+        l_Q[i]   = solver.oQs[0];
+        //printf( "<<< testDerivs_Total i[%i] x %g E %g \n", i, x, E );
+        if(i>1)l_Fnum[i-1] = (l_E[i] - l_E[i-2])/(2*dx);
+        //return;
+    }
+    //for(int i=0;i<n;i++){ line_E->ys[i]   -= line_E->ys[n-1]; };
+}
+
+void testDerivsS_Total( int n, double x0, double dx ){
+    for(int i=0; i<solver.nBas; i++){ printf( "epos[%i] (%g,%g,%g) s %g c %g \n", i, solver.epos[i].x,solver.epos[i].y,solver.epos[i].z, solver.esize[i], solver.ecoef[i] ); }
+    //NEWBUFF(l_r,n)
+    NEWBUFF(l_xs,n)
+    NEWBUFF(l_Q,n)
+    NEWBUFF(l_E,n)
+    NEWBUFF(l_Fana,n)
+    NEWBUFF(l_Fnum,n)
+    for(int i=0; i<n; i++){
+        double x = x0 + i*dx;
+        l_xs[i] = x;
+        solver.esize[0]=x;
+        //printf( ">>> testDerivs_Total [%i] \n", i );
+        solver.cleanForces();
+        double E  = solver.eval();
+        //double xc = solver.rhoP[2].x; //line_Qc->ys[i] = xc;
+        l_Fana[i]= solver.efsize[0];
         l_E[i]   = E;
         l_Q[i]   = solver.oQs[0];
         //printf( "<<< testDerivs_Total i[%i] x %g E %g \n", i, x, E );
