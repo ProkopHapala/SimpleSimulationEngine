@@ -632,7 +632,7 @@ class CLCFGO{ public:
         double dxxi,dxxj;
         double dSr;
         double dSsi,dSsj;
-        Vec3d  dSdp;
+        
 
         // NOTE: we must compute it twice
         // 1) in toRho() to obtain charges and positions
@@ -648,24 +648,19 @@ class CLCFGO{ public:
             dSsi, dSsj, dSr
         );
 
-        Vec3d  Fp = rhofP[ij];  //   fij = Rij*(-fr*qij);   ... from CoulombElement
-        //double Fq = rhofQ[ij];
-        double Fs = rhofS[ij];
-        //double Eq = rhoEQ[ij];  // TODO: Eqi is probably redudent ( Fqi is the same )  !!!
+        Vec3d  Fp   = rhofP[ij];  //   fij = Rij*(-fr*qij);   ... from CoulombElement
+        double Fs   = rhofS[ij];
         double dEdQ = rhofQ[ij];  // TODO: Eqi is probably redudent ( Fqi is the same )  !!!
+        
+        double cij = ci*cj;
 
         // TODO : we should make sure there is a recoil ( forces point to opposite direction )
-        double fsi = Fs*dssi - Fp.dot( dxsi );
-        double fsj = Fs*dssj + Fp.dot( dxsj );
-        Vec3d  fxi = Fp*dxxi;  // ToDo : dSij/dxi == 0
-        Vec3d  fxj = Fp*dxxj;  //            dXxi == 0.5
+        double fsi = Fp.dot( dxsi ) + Fs*dssi + dEdQ*dSsi*cij;
+        double fsj = Fp.dot( dxsj ) + Fs*dssj + dEdQ*dSsj*cij;
+        Vec3d  fxi = Fp*dxxi;
+        Vec3d  fxj = Fp*dxxj;
 
-        //fsi = ci*cj * ( fsi*aij + E*dCr );
-        //fxi = ((Vec3d){1,1,1}) * dXxi ;
-
-        // See Python: F  = F*dXxi  + e*2*dSi*ci*qj 
-
-        dSdp = Rij*(2*dSr*ci*cj);
+        Vec3d  dSdp = Rij*(2*dSr*cij);
         DEBUG_dQdp = dSdp;
         Vec3d Fq   = dSdp*dEdQ;
         Vec3d Fxi  = fxi + Fq;
@@ -673,14 +668,12 @@ class CLCFGO{ public:
 
         efpos [i].add( Fxi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
         efpos [j].add( Fxj );
-        efsize[i] += fsi*Sij;
-        efsize[j] += fsj*Sij;
+        efsize[i] += fsi;
+        efsize[j] += fsj;
 
         //printf( "fromRho[%i,%i] dS %g  dSr %g cij %g dEdQ %g Fq.x %g F %g F[i] %g F[j] %g \n", i,j, dSdp.x, dSr*Rij.x, ci*cj, dEdQ, Fq.x, Fxi.x, efpos[i].x, efpos[j].x );
 
     }
-
-
 
     void assembleOrbForces_fromRho(int io ){
         // NOTE : This is less efficient but more mocular version of assembleOrbForces which use fromRho function per each element
@@ -782,11 +775,11 @@ class CLCFGO{ public:
 
                 // --- Derivatives (Forces)
                 Vec3d fp = Rij*(-fr * qij);
-                fs       *=            qij ;
+                fs       *=           qij ;
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
                 rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
-                Ecoul    += E*qi*qj;
+                Ecoul    += E*qij;
 
                 //printf( "CoulombOrbPair[%i,%i][%i,%i] e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fr %g \n", io,jo, i,j,  E, E*qi*qj, s,si,sj, qij,qi,qj, r, fr );
                 //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qi*qj,r );

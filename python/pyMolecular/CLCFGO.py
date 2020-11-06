@@ -105,8 +105,10 @@ if __name__ == "__main__":
     xs_ = 0.5*(xs[1:]+xs[:-1])
 
     # ============== Gaussian Overlap Product derivatives
-    esizes[0][0] = xs
-    C,s,p, dCr, dA,dB = ref.product3D_s_deriv( esizes[0][0],eXpos[0][0], eXpos[0][1],eXpos[0][1] )
+    #esizes[0][0] = xs
+    print "esizes", esizes
+
+    C,s,p, dCr, dA,dB = ref.product3D_s_deriv( xs,eXpos[0][0], eXpos[0][1],eXpos[0][1] )
     (dSsi,dXsi,dXxi,dCsi) = dA
 
     plt.figure()
@@ -129,6 +131,7 @@ if __name__ == "__main__":
     plt.title('Gaussian Overlap Derivative')
 
     # ============== Gaussian Electrostatics derivatives
+    print "esizes", esizes
 
     plt.figure()
     E,fr,fs = ref.Coulomb( xs, 1.0 )
@@ -147,16 +150,54 @@ if __name__ == "__main__":
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
     plt.title('Gaussian Coulomb Derivative')
 
-    plt.show()
-    exit()
+    #plt.show()
+    #exit()
     # =====================
 
+    ylims=[-2,5]
+    plt.figure(figsize=(14,8))
 
+    # =========================================
+    # ============== Derivs in Python =========
+    # =========================================
+    print "esizes", esizes
+
+    dx =  0.025
+    xa =  np.arange( 0.0, 3.0, dx )
+    xs_ = (xa[1:]+xa[:-1])*0.5
+    #eXpos[0][0] = xa 
+
+    #(E, F) = ref.evalEFtot( xa, ecoefs, esizes, eXpos )
+    (E, F) = ref.evalEF_S_off ( xa, ecoefs, esizes, eXpos )
+
+    plt.subplot(1,2,2)
+    #plt.plot( xa, r   , label='r'   )
+    #plt.plot( xa, r , label='r'  )
+    #plt.plot( xa, Sab , label='Sab' )
+    #plt.plot( xa, Qab , label='Qab'  )
+    #plt.plot( xa, dQab, label='dSab_ana' )
+    #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
+    #plt.figure(figsize=(12,10))
+    plt.plot( xa,  E,  label='E' )
+    plt.plot( xa, F,  label='F_ana' )
+    plt.plot( xs_,(E[1:]-E[:-1])/dx,':', label='F_num', lw=3 )
+    #plt.plot( xa, fxi, label='fxi' )
+
+    plt.title('Python')
+    plt.legend()
+    #plt.ylim(-30,40)
+    #plt.ylim(-5,30)
+    plt.ylim( ylims[0], ylims[1] )
+    plt.grid()
+    plt.minorticks_on()
+    plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
 
 
     # =========================================
     # ============== Derivs in C++ ============
     # =========================================
+
+    print "esizes", esizes
 
     ecoef[:,:]  = np.array(ecoefs)[:,:]
     esize[:,:]  = np.array(esizes)[:,:]
@@ -182,16 +223,13 @@ if __name__ == "__main__":
     l_Fana   = getBuff( "l_Fana",  (n,) )
     l_Fnum   = getBuff( "l_Fnum",  (n,) )
 
-    plt.figure(figsize=(14,8))
-    ylims=[-10,65]
-
     plt.subplot(1,2,1)
     plt.title('C++')
     #plt.plot(l_xs,l_r,label="r")
 
     plt.plot(l_xs,l_E,label="E" )
-    plt.plot(l_xs,-l_Fana,label="Fana")
-    plt.plot(l_xs,-l_Fnum,label="Fnum",ls=':',lw=3)
+    plt.plot(l_xs,l_Fana,label="Fana")
+    plt.plot(l_xs,l_Fnum,label="Fnum",ls=':',lw=3)
     #plt.plot(l_xs,l_Q,label="Q")
     #plt.plot(l_xs,l_dQ_ana,label="dQ_ana")
     #plt.plot(l_xs,l_dQ_num,label="dQ_num", ls=':',lw=3)
@@ -199,44 +237,13 @@ if __name__ == "__main__":
     plt.legend()
     #plt.ylim(-30,40)
     #plt.ylim(-5,30)
+    #plt.xlim(0,l_xs[-3])
     plt.ylim( ylims[0], ylims[1] ) 
     plt.grid()
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
 
-    # =========================================
-    # ============== Derivs in Python =========
-    # =========================================
-
-    dx =  0.1
-    xa =  np.arange( 0.0, 3.0, dx )
-    xs_ = (xa[1:]+xa[:-1])*0.5
-    #eXpos[0][0] = xa 
-
-    #(E, F) = ref.evalEFtot( xa, ecoefs, esizes, eXpos )
-    (E, F) = ref.evalEF_S_off ( xa, ecoefs, esizes, eXpos )
-
-    plt.subplot(1,2,2)
-    #plt.plot( xa, r   , label='r'   )
-    #plt.plot( xa, r , label='r'  )
-    #plt.plot( xa, Sab , label='Sab' )
-    #plt.plot( xa, Qab , label='Qab'  )
-    #plt.plot( xa, dQab, label='dSab_ana' )
-    #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
-    #plt.figure(figsize=(12,10))
-    plt.plot( xa,  E,  label='E' )
-    plt.plot( xa, -F,  label='F_ana' )
-    plt.plot( xs_,-(E[1:]-E[:-1])/dx,':', label='F_num', lw=3 )
-    #plt.plot( xa, fxi, label='fxi' )
-
-    plt.title('Python')
-    plt.legend()
-    #plt.ylim(-30,40)
-    #plt.ylim(-5,30)
-    plt.ylim( ylims[0], ylims[1] )
-    plt.grid()
-    plt.minorticks_on()
-    plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
+   
 
     print "Fc++ %g Fpy %g " %(l_Fana[0],F[0])
 

@@ -143,28 +143,30 @@ def getCoulombEF( r, si, sj, qi, qj, dSi=None, dA=None, ci=None, out=None ):
     s =  combSize(si,sj);
 
     e, fx, fs = Coulomb( r, s ) 
-    E  = e * qi*qj
+
+    qij = qi * qj
+
+    E  = e * qij
 
     # rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
     # double fsi = Fs*dssi - Fp.dot( dxsi );       # fromRho()
 
-    Fp = fx * r * qi*qj    # pure derivative of coulombic forcefield
-    Fs = fs * si 
+    Fp = fx * r  * qij    # pure derivative of coulombic forcefield
+    Fs = fs * si * qij
 
     if( dA is not None  ):
-        # dA = (dSsi,dXsi,dXxi,dCsi)
-        dXsi = dA[1]
-        dXxi = dA[2]
+        (dSsi,dXsi,dXxi,dCsi) = dA
         eqj = e*qj
-        Fq = eqj*2*dSi*ci
-        Fs += Fp*dXsi
-        Fp  = Fp*dXxi  + Fq  # total derivative due to charge change
+        Fs  = Fp*dXsi + Fs*dSsi  + eqj  *dCsi*ci 
+        Fp  = Fp*dXxi            + eqj*2*dSi *ci  # total derivative due to charge change
+
+        #Fs = ( fs*si*dSsa +  fx*r*dXsa ) * qi*qj   +  e*( dCsa*ci*qj )
 
         #print "e %g E %g s %g q %g r %g fx %g F %g dS %g dSr %g cc %g dEdQ %g " %( e[0], E[0], s[0], (qi*qj)[0], r[0], fx[0], F[0], (2*dSi*ci)[0], dSi[0], ci[0], eqj[0]  )
-        if out is not None:
-            out[0] += eqj
-            out[1] += Fq
-            out[2] += Fp
+        #if out is not None:
+        #    out[0] += eqj
+        #    out[1] += Fq
+        #    out[2] += Fp
 
     #print "e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fx %g F %g dSi %g " %( e[0], E[0], s[0],si[0],sj[0], (qi*qj)[0],qi[0],qj[0], r[0], fx[0], F[0], 2*dSi*ci )
    
@@ -239,7 +241,7 @@ def evalEF_off( xa, ecoef, esize, eXpos ):
 
 def evalEF_S_off( sa, ecoef, esize, eXpos ):
     #eXpos[0][0] = xa
-    esize[0][0] = sa
+    #esize[0][0] = sa
 
     Sab, si, xab, dSab, dA, dB = product3D_s_deriv( sa,          eXpos[0][0], esize[0][1],eXpos[0][1] )
     Scd, sj, xcd, dScd, dC, dD = product3D_s_deriv( esize[1][0], eXpos[1][0], esize[1][1],eXpos[1][1] )
@@ -250,6 +252,15 @@ def evalEF_S_off( sa, ecoef, esize, eXpos ):
     cj = ecoef[1][0]*ecoef[1][1]
     qi = Sab*ci
     qj = Scd*cj
+
+    '''
+    (dSsa,dXsa,dXxa,dCsa) = dA
+    r = xab-xcd
+    s =  combSize(si,sj)
+    e, fx, fs = Coulomb( r, s ) 
+    E  = e * qi*qj
+    Fs = ( fs*si*dSsa +  fx*r*dXsa ) * qi*qj   +  e*qj*ci*dCsa
+    '''
 
     E,Fr,Fs = getCoulombEF( xab-xcd, si, sj, qi, qj, dSi=dSab, dA=dA, ci=ci )
 
