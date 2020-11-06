@@ -604,7 +604,7 @@ class CLCFGO{ public:
         //double Eqi = rhoEQ[ij];
         //printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
         efpos [i].add( Fpi );
-        efsize[i] += Fsi*aij*2;
+        efsize[i] += Fsi*aij;
     }
 
     //Vec3d fromRho( int i, int j, int ij ){

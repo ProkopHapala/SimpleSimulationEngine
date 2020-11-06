@@ -157,7 +157,8 @@ if __name__ == "__main__":
     #exit()
     # =====================
 
-    ylims=[-5,20]
+    #ylims=[-5,20]
+    ylims=[-30,80]
     plt.figure(figsize=(14,8))
     
     # =========================================
@@ -171,8 +172,9 @@ if __name__ == "__main__":
     xs_ = (xs[1:]+xs[:-1])*0.5
     #eXpos[0][0] = xa 
 
-    #(E, F) = ref.evalEFtot( xs, ecoefs, esizes, eXpos )
-    (E, F) = ref.evalEF_S_off ( xs, ecoefs, esizes, eXpos )
+    #(E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, xa=xs ); F=Fp
+    (E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, sa=xs ); F=Fs
+    #(E, F) = ref.evalEF_S_off ( xs, ecoefs, esizes, eXpos )
 
     plt.subplot(1,2,2)
     #plt.plot( xs, r   , label='r'   )
@@ -201,19 +203,19 @@ if __name__ == "__main__":
     # ============== Derivs in C++ ============
     # =========================================
 
-    ecoef[:,:]  = np.array(ecoefs)[:,:]
-    esize[:,:]  = np.array(esizes)[:,:]
-    epos[:,:,0] = np.array(eXpos)[:,:]
-    epos[:,:,1] = np.array(eYpos)[:,:]
-    epos[:,:,2] = np.array(eZpos)[:,:]
+    ecoef[:,:]   = np.array(ecoefs)[:,:]
+    esize[:,:]   = np.array(esizes)[:,:]
+    epos [:,:,0] = np.array(eXpos)[:,:]
+    epos [:,:,1] = np.array(eYpos)[:,:]
+    epos [:,:,2] = np.array(eZpos)[:,:]
 
     n = len(xs)
     #testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
     print "===>> RUN  C++ test : testDerivs_Total "
     #testDerivsP_Coulomb_model( n=n, x0=x0, dx=dx )
-    testDerivsS_Coulomb_model( n=n, x0=x0, dx=dx )
+    #testDerivsS_Coulomb_model( n=n, x0=x0, dx=dx )
     #testDerivsP_Total        ( n=n, x0=x0, dx=dx )
-    #testDerivsS_Total        ( n=n, x0=x0, dx=dx )
+    testDerivsS_Total        ( n=n, x0=x0, dx=dx )
     print "===<< DONE C++ test : testDerivs_Total "
 
     l_xs     = getBuff( "l_xs",    (n,) )
