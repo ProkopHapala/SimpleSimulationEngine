@@ -135,18 +135,11 @@ def product3D_s_deriv( si,pi, sj,pj ):
 
 def getCoulombEF( r, si, sj, qi, qj, dSi=None, dA=None, ci=None, out=None ):
 
-    si = si + r*0
-    sj = sj + r*0
-    qi = qi + r*0
-    qj = qj + r*0
-
     s =  combSize(si,sj);
 
     e, fx, fs = Coulomb( r, s ) 
-
     qij = qi * qj
-
-    E  = e * qij
+    E   = e * qij
 
     # rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
     # double fsi = Fs*dssi - Fp.dot( dxsi );       # fromRho()
@@ -154,13 +147,17 @@ def getCoulombEF( r, si, sj, qi, qj, dSi=None, dA=None, ci=None, out=None ):
     Fp = fx * r  * qij    # pure derivative of coulombic forcefield
     Fs = fs * si * qij
 
+    #print "q(%g,%g)  E %g fs %g fr %g s %g r %g \n"  %( (qi+0*si)[0],(qj+0*si)[0], (e+0*si)[0], (fs+0*si)[0], (fx+0*si)[0], (s+0*si)[0], (r+0*si)[0] )
+
     if( dA is not None  ):
         (dSsi,dXsi,dXxi,dCsi) = dA
         eqj = e*qj
+        print "eqj %g E %g Fs %g dSsi %g dCsi %g cij %g \n"  %( (eqj+0*si)[0], (E+0*si)[0], (Fs+0*si)[0], (dSsi+0*si)[0], (dCsi+0*si)[0], (ci+0*si)[0] )
         Fs  = Fp*dXsi + Fs*dSsi  + eqj  *dCsi*ci 
         Fp  = Fp*dXxi            + eqj*2*dSi *ci  # total derivative due to charge change
 
         #Fs = ( fs*si*dSsa +  fx*r*dXsa ) * qi*qj   +  e*( dCsa*ci*qj )
+
 
         #print "e %g E %g s %g q %g r %g fx %g F %g dS %g dSr %g cc %g dEdQ %g " %( e[0], E[0], s[0], (qi*qj)[0], r[0], fx[0], F[0], (2*dSi*ci)[0], dSi[0], ci[0], eqj[0]  )
         #if out is not None:
@@ -230,8 +227,8 @@ def evalEF_off( xa, ecoef, esize, eXpos ):
     
     #out = [0.,0.]
     
-    ci = ecoef[0][0]*ecoef[0][1]
-    cj = ecoef[1][0]*ecoef[1][1]
+    ci = ecoef[0][0]*ecoef[0][1]*2
+    cj = ecoef[1][0]*ecoef[1][1]*2
     qi = Sab*ci
     qj = Scd*cj
 
@@ -248,8 +245,8 @@ def evalEF_S_off( sa, ecoef, esize, eXpos ):
     
     #out = [0.,0.]
     
-    ci = ecoef[0][0]*ecoef[0][1]
-    cj = ecoef[1][0]*ecoef[1][1]
+    ci = ecoef[0][0]*ecoef[0][1]*2
+    cj = ecoef[1][0]*ecoef[1][1]*2
     qi = Sab*ci
     qj = Scd*cj
 

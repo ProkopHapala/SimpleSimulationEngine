@@ -652,7 +652,7 @@ class CLCFGO{ public:
         double Fs   = rhofS[ij];
         double dEdQ = rhofQ[ij];  // TODO: Eqi is probably redudent ( Fqi is the same )  !!!
         
-        double cij = ci*cj;
+        double cij = 2*ci*cj;
 
         // TODO : we should make sure there is a recoil ( forces point to opposite direction )
         double fsi = Fp.dot( dxsi ) + Fs*dssi + dEdQ*dSsi*cij;
@@ -660,7 +660,7 @@ class CLCFGO{ public:
         Vec3d  fxi = Fp*dxxi;
         Vec3d  fxj = Fp*dxxj;
 
-        Vec3d  dSdp = Rij*(2*dSr*cij);
+        Vec3d  dSdp = Rij*(dSr*cij);
         DEBUG_dQdp = dSdp;
         Vec3d Fq   = dSdp*dEdQ;
         Vec3d Fxi  = fxi + Fq;
@@ -670,6 +670,8 @@ class CLCFGO{ public:
         efpos [j].add( Fxj );
         efsize[i] += fsi;
         efsize[j] += fsj;
+
+        printf( "fromRho[%i,%i] eqj %g E %g Fs %g dSsi %g dCsi %g cij %g \n", i,j, dEdQ, dEdQ*rhoQ[ij], Fs, dssi, dSsi, cij );
 
         //printf( "fromRho[%i,%i] dS %g  dSr %g cij %g dEdQ %g Fq.x %g F %g F[i] %g F[j] %g \n", i,j, dSdp.x, dSr*Rij.x, ci*cj, dEdQ, Fq.x, Fxi.x, efpos[i].x, efpos[j].x );
 
@@ -730,11 +732,14 @@ class CLCFGO{ public:
         //double E  = Gauss::Coulomb( r, s*2, fr, fs );   // Q :  Should there be the constant s*2 ????
         double E  = Gauss::Coulomb( r, s, fr, fs );       // WARRNING  :  removed the contant s*2 to s  ... is it correct ?
 
-        fs *= qij*4;
+        //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
+
         Vec3d fp = Rij*(-fr*qij);
+        fs *= qij;
         rhofP[i].add(fp);   rhofP[j].sub(fp);
         rhofS[i] -= fs*si;  rhofS[j] -= fs*sj; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
         rhofQ[i] += E*qj;   rhofQ[j] += E*qi;  // ToDo : need to be made more stable ... different (qi,qj)
+
         return E;
     }
 
@@ -780,6 +785,8 @@ class CLCFGO{ public:
                 rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
                 Ecoul    += E*qij;
+
+                //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
 
                 //printf( "CoulombOrbPair[%i,%i][%i,%i] e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fr %g \n", io,jo, i,j,  E, E*qi*qj, s,si,sj, qij,qi,qj, r, fr );
                 //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qi*qj,r );

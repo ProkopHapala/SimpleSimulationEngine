@@ -100,6 +100,7 @@ if __name__ == "__main__":
     #eYpos  = [[+0.00,+0.00],[+0.00,+0.0]]
     #eZpos  = [[+0.50,-0.30],[-0.40,+0.8]]
 
+    '''
     dx = 0.025
     xs =  np.arange( 0.0, 3.0, dx )
     xs_ = 0.5*(xs[1:]+xs[:-1])
@@ -150,38 +151,41 @@ if __name__ == "__main__":
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
     plt.title('Gaussian Coulomb Derivative')
 
+    '''
+
     #plt.show()
     #exit()
     # =====================
 
-    ylims=[-2,5]
+    ylims=[-5,20]
     plt.figure(figsize=(14,8))
-
+    
     # =========================================
     # ============== Derivs in Python =========
     # =========================================
-    print "esizes", esizes
+    print " ========== Derivs in Python "
 
+    x0 =  0.2
     dx =  0.025
-    xa =  np.arange( 0.0, 3.0, dx )
-    xs_ = (xa[1:]+xa[:-1])*0.5
+    xs =  np.arange( x0, 3.0, dx )
+    xs_ = (xs[1:]+xs[:-1])*0.5
     #eXpos[0][0] = xa 
 
-    #(E, F) = ref.evalEFtot( xa, ecoefs, esizes, eXpos )
-    (E, F) = ref.evalEF_S_off ( xa, ecoefs, esizes, eXpos )
+    #(E, F) = ref.evalEFtot( xs, ecoefs, esizes, eXpos )
+    (E, F) = ref.evalEF_S_off ( xs, ecoefs, esizes, eXpos )
 
     plt.subplot(1,2,2)
-    #plt.plot( xa, r   , label='r'   )
-    #plt.plot( xa, r , label='r'  )
-    #plt.plot( xa, Sab , label='Sab' )
-    #plt.plot( xa, Qab , label='Qab'  )
-    #plt.plot( xa, dQab, label='dSab_ana' )
+    #plt.plot( xs, r   , label='r'   )
+    #plt.plot( xs, r , label='r'  )
+    #plt.plot( xs, Sab , label='Sab' )
+    #plt.plot( xs, Qab , label='Qab'  )
+    #plt.plot( xs, dQab, label='dSab_ana' )
     #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
     #plt.figure(figsize=(12,10))
-    plt.plot( xa,  E,  label='E' )
-    plt.plot( xa, F,  label='F_ana' )
+    plt.plot( xs, E,  label='E' )
+    plt.plot( xs, F,  label='F_ana' )
     plt.plot( xs_,(E[1:]-E[:-1])/dx,':', label='F_num', lw=3 )
-    #plt.plot( xa, fxi, label='fxi' )
+    #plt.plot( xs, fxi, label='fxi' )
 
     plt.title('Python')
     plt.legend()
@@ -197,21 +201,19 @@ if __name__ == "__main__":
     # ============== Derivs in C++ ============
     # =========================================
 
-    print "esizes", esizes
-
     ecoef[:,:]  = np.array(ecoefs)[:,:]
     esize[:,:]  = np.array(esizes)[:,:]
     epos[:,:,0] = np.array(eXpos)[:,:]
     epos[:,:,1] = np.array(eYpos)[:,:]
     epos[:,:,2] = np.array(eZpos)[:,:]
 
-    n = 30
+    n = len(xs)
     #testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
     print "===>> RUN  C++ test : testDerivs_Total "
-    #testDerivsP_Coulomb_model( n=n, x0=0.0, dx=0.1 )
-    testDerivsS_Coulomb_model( n=n, x0=0.0, dx=0.1 )
-    #testDerivsP_Total        ( n=n, x0=0.0, dx=0.1 )
-    #testDerivsS_Total        ( n=n, x0=0.0, dx=0.1 )
+    #testDerivsP_Coulomb_model( n=n, x0=x0, dx=dx )
+    testDerivsS_Coulomb_model( n=n, x0=x0, dx=dx )
+    #testDerivsP_Total        ( n=n, x0=x0, dx=dx )
+    #testDerivsS_Total        ( n=n, x0=x0, dx=dx )
     print "===<< DONE C++ test : testDerivs_Total "
 
     l_xs     = getBuff( "l_xs",    (n,) )

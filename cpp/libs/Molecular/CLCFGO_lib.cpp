@@ -161,7 +161,7 @@ void testDerivsP_Coulomb_model( int n, double x0, double dx ){
     for(int i=0; i<n; i++){
         double aij;
         solver.cleanForces();
-        double x = x0 + i*dx + 0.01;
+        double x = x0 + i*dx;
         l_xs[i] = x;
         solver.epos[0].x=x;   
         solver.toRho  (0,1, 0);                            // w0*w1 -> q0
@@ -195,9 +195,10 @@ void testDerivsS_Coulomb_model( int n, double x0, double dx ){
     NEWBUFF(l_Fana,n)
     NEWBUFF(l_Fnum,n)
     for(int i=0; i<n; i++){
+        //printf("testDerivsS_Coulomb_model[%i] \n", i );
         double aij;
         solver.cleanForces();
-        double x = x0 + i*dx + 0.01;
+        double x = x0 + i*dx;
         l_xs[i] = x;
         solver.esize[0]=x;   
         solver.toRho  (0,1, 0);                            // w0*w1 -> q0
@@ -212,6 +213,7 @@ void testDerivsS_Coulomb_model( int n, double x0, double dx ){
         l_Fana[i]    =  solver.efsize[0];                             // This is used when fromRho() is  modified
         l_E[i]       =  E; //func( line_E->xs[i], line_Fana->ys[i] );
         if(i>1) l_Fnum[i-1] = (l_E[i] - l_E[i-2])/(2*dx);
+        //return;
     }
     //double* buff = buffers["l_xs"];
     //for(int i=0; i<n; i++){ printf("%i : %g \n", i, buff[i]); }
