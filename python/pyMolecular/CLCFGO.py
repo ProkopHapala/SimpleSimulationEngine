@@ -198,7 +198,6 @@ if __name__ == "__main__":
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
 
-
     # =========================================
     # ============== Derivs in C++ ============
     # =========================================
@@ -247,8 +246,8 @@ if __name__ == "__main__":
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
 
-   
 
     print "Fc++ %g Fpy %g " %(l_Fana[0],F[0])
+   
 
     plt.show()
