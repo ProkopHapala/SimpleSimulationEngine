@@ -126,7 +126,7 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     double f2   = g*is;
     double e1f2 = e1*f2;
     fr = (f1*e2 + e1f2)*ir;
-    fs =          e1f2 *r_s * is;
+    fs =          e1f2 *r_s * is * M_SQRT1_2;
     //printf( "Gauss::Coulomb r %g s %g E %g fr %g \n", r, s, e1*e2, fr ); // This works (same as in python)
     return e1 * e2;
 }

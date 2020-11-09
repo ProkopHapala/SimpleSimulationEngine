@@ -256,6 +256,7 @@ void testDerivsS_Total( int n, double x0, double dx ){
     NEWBUFF(l_E,n)
     NEWBUFF(l_Fana,n)
     NEWBUFF(l_Fnum,n)
+    solver.bKineticForce = false;
     for(int i=0; i<n; i++){
         double x = x0 + i*dx;
         l_xs[i] = x;
@@ -265,6 +266,7 @@ void testDerivsS_Total( int n, double x0, double dx ){
         double E  = solver.eval();
         //double xc = solver.rhoP[2].x; //line_Qc->ys[i] = xc;
         l_Fana[i]= solver.efsize[0];
+        //printf( "i %i x %g efsize[0] %g \n", i, x, solver.efsize[0] );
         l_E[i]   = E;
         l_Q[i]   = solver.oQs[0];
         //printf( "<<< testDerivs_Total i[%i] x %g E %g \n", i, x, E );

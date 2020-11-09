@@ -67,6 +67,7 @@
 */
 class CLCFGO{ public:
 
+    bool bKineticForce = true;
 
     Vec3d DEBUG_dQdp;
 
@@ -418,7 +419,10 @@ class CLCFGO{ public:
             //Ek += qii*Gauss::kinetic( si );
             double fr,fsi,fsj;
             Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
-            efsize[i]+= 2*fsi*qii;
+
+            if(bKineticForce){
+                efsize[i]+= 2*fsi*qii;
+            }
 
             //printf( "projectOrb[%i] [%i] q[%i] %g \n", io, i, ii, qii );
 
@@ -467,16 +471,12 @@ class CLCFGO{ public:
                 DT += DTij*cij;
                 Ek += Ekij*cij;
 
-                /*
-                // !!!!!!!!!!!!!!! DEBUG !!!!!!!!!!!!!!!!!!
-                // !!!  Commented kinetc energy forces !!!!
-                // !!!!!!!!!!!!!!! DEBUG !!!!!!!!!!!!!!!!!!
-                // --- Derivatives ( i.e. Forces )
-                Vec3d fij = Rij*(fr*cij);
-                efpos [i].add( fij ); efpos[j].sub( fij );
-                efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
-                efcoef[i]+= Ekij*cj ; efcoef[j]+= Ekij*ci;
-                */
+                if(bKineticForce){
+                    Vec3d fij = Rij*(fr*cij);
+                    efpos [i].add( fij ); efpos[j].sub( fij );
+                    efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
+                    efcoef[i]+= Ekij*cj ; efcoef[j]+= Ekij*ci;
+                }
 
                 //printf(  "Kinetic [%i,%i]  fsi,j %g %g  \n ", i,j, fsi*cij, fsj*cij  );
 
@@ -595,16 +595,18 @@ class CLCFGO{ public:
     void fromRhoDiag( int i, int ij, double& aij ){
         /// This function function cares about diagonal density terms rho_ii = wi * wi
         //Vec3d  pi  = epos [i];
-        double ci  = ecoef[i];
-        aij = ci*ci;
+        //double ci  = ecoef[i];
+        //aij = ci*ci;
         //double si  = esize[i];
-        Vec3d  Fpi = rhofP[ij];
-        double Fqi = rhofQ[ij];
-        double Fsi = rhofS[ij];
+        Vec3d  Fpi  = rhofP[ij];
+        double Fsi  = rhofS[ij];
+        double dEdQ = rhofQ[ij];
+        double Q    = rhoQ[ij];
         //double Eqi = rhoEQ[ij];
-        //printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
         efpos [i].add( Fpi );
-        efsize[i] += Fsi*aij;
+        efsize[i] += Fsi*Q;
+        //printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
+        //printf( "fromRho[%i]ii[%i] E %g qij %g Fs %g \n", i, ij, dEdQ*Q, Q, Fsi*Q );
     }
 
     //Vec3d fromRho( int i, int j, int ij ){
@@ -671,8 +673,8 @@ class CLCFGO{ public:
         efsize[i] += fsi;
         efsize[j] += fsj;
 
-        printf( "fromRho[%i,%i] eqj %g E %g Fs %g dSsi %g dCsi %g cij %g \n", i,j, dEdQ, dEdQ*rhoQ[ij], Fs, dssi, dSsi, cij );
-
+        //printf( "fromRho[%i,%i] eqj %g E %g Fs %g dSsi %g dCsi %g cij %g \n", i,j, dEdQ, dEdQ*rhoQ[ij], Fs, dssi, dSsi, cij );
+        //printf( "fromRho[%i,%i]    E %g qij %g Fs %g \n", i,j, dEdQ*rhoQ[ij], rhoQ[ij], Fs );
         //printf( "fromRho[%i,%i] dS %g  dSr %g cij %g dEdQ %g Fq.x %g F %g F[i] %g F[j] %g \n", i,j, dSdp.x, dSr*Rij.x, ci*cj, dEdQ, Fq.x, Fxi.x, efpos[i].x, efpos[j].x );
 
     }
@@ -735,7 +737,7 @@ class CLCFGO{ public:
         //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
 
         Vec3d fp = Rij*(-fr*qij);
-        fs *= qij;
+        fs *= qij * M_SQRT1_2;
         rhofP[i].add(fp);   rhofP[j].sub(fp);
         rhofS[i] -= fs*si;  rhofS[j] -= fs*sj; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
         rhofQ[i] += E*qj;   rhofQ[j] += E*qi;  // ToDo : need to be made more stable ... different (qi,qj)
@@ -758,6 +760,7 @@ class CLCFGO{ public:
             double qi = rhoQ[i];
             double si = rhoS[i];
             for(int j=j0; j<j0+njo; j++){
+            //int j=j0+2;{ // DEBUG
                 Vec3d  pj = rhoP[j];
                 Vec3d Rij = pj-pi;
                 double r2 = Rij.norm2();
@@ -780,7 +783,7 @@ class CLCFGO{ public:
 
                 // --- Derivatives (Forces)
                 Vec3d fp = Rij*(-fr * qij);
-                fs       *=           qij ;
+                fs       *=           qij;
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
                 rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
