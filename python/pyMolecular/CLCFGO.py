@@ -172,8 +172,8 @@ if __name__ == "__main__":
     xs_ = (xs[1:]+xs[:-1])*0.5
     #eXpos[0][0] = xa 
 
-    #(E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, xa=xs ); F=Fp
-    (E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, sa=xs ); F=Fs
+    (E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, xa=xs ); F=Fp
+    #(E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, sa=xs ); F=Fs
     #(E, F) = ref.evalEF_S_off ( xs, ecoefs, esizes, eXpos )
 
     plt.subplot(1,2,2)
@@ -213,8 +213,8 @@ if __name__ == "__main__":
     print "===>> RUN  C++ test : testDerivs_Total "
     #testDerivsP_Coulomb_model( n=n, x0=x0, dx=dx )
     #testDerivsS_Coulomb_model( n=n, x0=x0, dx=dx )
-    #testDerivsP_Total        ( n=n, x0=x0, dx=dx )
-    testDerivsS_Total        ( n=n, x0=x0, dx=dx )
+    testDerivsP_Total        ( n=n, x0=x0, dx=dx )
+    #testDerivsS_Total        ( n=n, x0=x0, dx=dx )
     print "===<< DONE C++ test : testDerivs_Total "
 
     l_xs     = getBuff( "l_xs",    (n,) )

@@ -665,7 +665,7 @@ class CLCFGO{ public:
         Vec3d  dSdp = Rij*(dSr*cij);
         DEBUG_dQdp = dSdp;
         Vec3d Fq   = dSdp*dEdQ;
-        Vec3d Fxi  = fxi + Fq;
+        Vec3d Fxi  = fxi - Fq;
         Vec3d Fxj  = fxj + Fq;
 
         efpos [i].add( Fxi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
@@ -674,7 +674,7 @@ class CLCFGO{ public:
         efsize[j] += fsj;
 
         //printf( "fromRho[%i,%i] eqj %g E %g Fs %g dSsi %g dCsi %g cij %g \n", i,j, dEdQ, dEdQ*rhoQ[ij], Fs, dssi, dSsi, cij );
-        //printf( "fromRho[%i,%i]    E %g qij %g Fs %g \n", i,j, dEdQ*rhoQ[ij], rhoQ[ij], Fs );
+        printf( "fromRho[%i,%i] E %g qij %g Fp %g \n", i,j, dEdQ*rhoQ[ij], rhoQ[ij], Fxi.x );
         //printf( "fromRho[%i,%i] dS %g  dSr %g cij %g dEdQ %g Fq.x %g F %g F[i] %g F[j] %g \n", i,j, dSdp.x, dSr*Rij.x, ci*cj, dEdQ, Fq.x, Fxi.x, efpos[i].x, efpos[j].x );
 
     }
@@ -754,8 +754,8 @@ class CLCFGO{ public:
         int njo = onq[jo];
         double Ecoul=0;
         //printf( "CoulombOrbPair[%i,%i] (%i:%i) (%i:%i) \n", io, jo, i0,i0+nio, j0,j0+njo );
-        for(int i=i0; i<i0+nio; i++){
-        //int i=2;{ // DEBUG
+        //for(int i=i0; i<i0+nio; i++){
+        int i=2;{ // DEBUG
             Vec3d  pi = rhoP[i];
             double qi = rhoQ[i];
             double si = rhoS[i];
@@ -792,7 +792,7 @@ class CLCFGO{ public:
                 //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
 
                 //printf( "CoulombOrbPair[%i,%i][%i,%i] e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fr %g \n", io,jo, i,j,  E, E*qi*qj, s,si,sj, qij,qi,qj, r, fr );
-                //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qi*qj,r );
+                //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qij,r,  );
             }
         }
         //printf( " Ecoul %g \n", Ecoul );
