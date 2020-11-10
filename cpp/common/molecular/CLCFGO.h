@@ -67,7 +67,8 @@
 */
 class CLCFGO{ public:
 
-    bool bKineticForce = true;
+    bool bEvalKinetic = true;
+    bool bEvalCoulomb = true;
 
     Vec3d DEBUG_dQdp;
     int DEBUG_iter = 0;
@@ -386,44 +387,41 @@ class CLCFGO{ public:
         double*  Qs =rhoQ+irho0;
         double*  Ss =rhoS+irho0;
         double Q=0;
-        double DT=0; // kinetic energy change by orthognalization
+        //double DT=0; // kinetic energy change by orthognalization
         double Ek=0; // kinetic energy
         dip         = Vec3dZero;
         Vec3d qcog  = Vec3dZero;
         Vec3d oqcog = opos[io];
         int ii=0;
+
         for(int i=i0; i<i0+perOrb; i++){
+
             Vec3d  pi  = epos [i];
             double ci  = ecoef[i];
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
-            qcog.add_mul( pi, qii );
-            /// ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
-            Q      += qii;
+            
+            if(bEvalCoulomb){
+                qcog.add_mul( pi, qii );
+                /// ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
+                Q      += qii;
+                Qs[ii]  = qii;
+                Ps[ii]  = pi;
+                Ss[ii]  = si*M_SQRT1_2;
+                //Qs[ii]  = 0; // DEBUG
+            }
 
-            // DEBUG : testing Gaussian Transform
-            Qs[ii]  = qii;
-            Ps[ii]  = pi;
-            Ss[ii]  = si*M_SQRT1_2;
-            //Qs[ii]  = 0; // DEBUG
-
-            //double fEki;
-            //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
-            //Ek += qii*Gauss::kinetic( si );
             double fr,fsi,fsj;
-            Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
-
-            if(bKineticForce){
+            if(bEvalKinetic){
+                //double fEki;
+                //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
+                //Ek += qii*Gauss::kinetic( si );
+                Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
                 efsize[i]+= 2*fsi*qii;
             }
 
-            //printf( "projectOrb[%i] [%i] q[%i] %g \n", io, i, ii, qii );
-
-            //if(qii>1e-8)printf( "Kinetic[%i] %g | %g %g %g \n", i, fsi*ci*ci, fsi, ci, qii );
-
-            //printf( "orb[%i|%i   ] s(%g):%g qii %g \n", io, i,  si, Ss[ii],  qii );
             ii++;
-            //printf( "orb[%i|%i] s %g qii %g \n", io, i,  si*2,  qii );
+
             for(int j=i0; j<i; j++){
                 Vec3d pj  = epos[j];
                 Vec3d Rij = pj-pi;
@@ -432,54 +430,43 @@ class CLCFGO{ public:
 
                 double cj  = ecoef[j];
                 double sj  = esize[j];
+                double cij = ci*cj*2;
+
                 // --- Evaluate Normalization, Kinetic & Pauli Energy
-                double dSr, dSsi, dSsj;
-                double dTr, dTsi, dTsj;
-                const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
+                
+                //const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
+                //double dSr, dSsi, dSsj;
                 //double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
-                double DTij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj ); // This is not normal kinetic energy this is change of kinetic energy due to orthogonalization
 
-                //double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
-                double Ekij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj )*2; fr*=2; fsi*=2, fsj*=2;
+                //double dTr, dTsi, dTsj;
+                //double DTij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj ); // This is not normal kinetic energy this is change of kinetic energy due to orthogonalization
+                 //DT += DTij*cij;
 
-                ///ToDo :   <i|Laplace|j> = Integral{ w1*(x^2 + y^2)*exp(w1*(x^2+y^2)) *exp(w2*((x+x0)^2+y^2)) }
-                /// ToDo :  Need derivatives of Kinetic Overlap !!!!!
-                // --- Project on auxuliary density functions
-                Vec3d  pij;
-                double sij;
-                //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
-                double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
-                double cij = ci *cj;
-                //double qij = Sij*cij*2; // factor 2  because  Integral{(ci*fi + cj*fj)^2} = (ci^2)*<fi|fi> + (cj^2)*<fj|fj> + 2*ci*cj*<fi|fj>
-                double qij = Sij*cij*2;
+                if(bEvalCoulomb){
+                    // --- Project on auxuliary density functions
+                    Vec3d  pij;
+                    double sij;
+                    //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+                    double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
+                    double qij = Sij*cij;
+                    qcog.add_mul( pij, qij );
+                    Q         += qij;
 
-
-                //qij = 0; // DEBUG remove off-diagonal charge
-
-                //printf( "DEBUG projectOrb[%i|%i,%i] r2 %g Tij %g \n", io, i,j, r2, DTij );
-                //printf( "DEBUG projectOrb[%i|%i,%i] sij %g \n", io, i,j, sij );
-                //printf( "orb[%i|%i,%i] r %g s(%g,%g):%g qS(%g,%g|%g):%g C %g \n", io, i,j, sqrt(r2),  si,sj,sij,  ci,cj,Sij,qij, Cij );
-                qcog.add_mul( pij, qij );
-                Q  +=   qij;
-                DT += DTij*cij;
-                Ek += Ekij*cij;
-
-                if(bKineticForce){
+                    Qs[ii] = qij;
+                    Ps[ii] = pij;   // center of axuliary overlap density function in the middle between the two wavefunctions
+                    Ss[ii] = sij;
+                }
+               
+                if(bEvalKinetic){
+                    //double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
+                    double Ekij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj );   // fr*=2; fsi*=2, fsj*=2;
+                    Ek += Ekij*cij;
                     Vec3d fij = Rij*(fr*cij);
                     efpos [i].add( fij ); efpos[j].sub( fij );
                     efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
                     efcoef[i]+= Ekij*cj ; efcoef[j]+= Ekij*ci;
                 }
 
-                //printf(  "Kinetic [%i,%i]  fsi,j %g %g  \n ", i,j, fsi*cij, fsj*cij  );
-
-                // ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
-
-                //printf( "projectOrb[%i] [%i,%i] r %g q[%i] %g \n", io, i,j, r2, ii, qij );
-
-                Qs[ii] = qij;
-                Ps[ii] = pij;   // center of axuliary overlap density function in the middle between the two wavefunctions
-                Ss[ii] = sij;
                 ii++;
                 // ToDo : Store qij to list of axuliary functions
             }
@@ -821,6 +808,7 @@ class CLCFGO{ public:
                 E += CoulombOrbPair( io, jo );
 
                 /*
+                // ==== Long Range Electrostatics Approximation
                 if( r2<RcutOrb2 ){
                     int j0 = getRhoOffset(jo);
                     // ToDo : nrho,nV may vary
@@ -917,14 +905,16 @@ class CLCFGO{ public:
     double eval(){
         double E=0;
         cleanForces();
-        clearAuxDens();
+        if(bEvalCoulomb)clearAuxDens();
         //projectOrbs( true );
         projectOrbs( false );
         //reportCharges();
         //E += evalPauli();
-        E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
-        for(int i=0; i<nOrb; i++){ 
-            assembleOrbForces_fromRho(i); 
+        if(bEvalCoulomb){
+            E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
+            for(int i=0; i<nOrb; i++){ 
+                assembleOrbForces_fromRho(i); 
+            }
         }
         return E;
     }

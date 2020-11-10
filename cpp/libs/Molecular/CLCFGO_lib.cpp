@@ -159,7 +159,7 @@ void testDerivsP_Coulomb_model( int n, double x0, double dx ){
     NEWBUFF(l_E,n)
     NEWBUFF(l_Fana,n)
     NEWBUFF(l_Fnum,n)
-    solver.bKineticForce = false;
+    solver.bEvalKinetic = false;
     for(int i=0; i<n; i++){
         solver.DEBUG_iter=i;
         solver.cleanForces();
@@ -196,7 +196,7 @@ void testDerivsS_Coulomb_model( int n, double x0, double dx ){
     NEWBUFF(l_E,n)
     NEWBUFF(l_Fana,n)
     NEWBUFF(l_Fnum,n)
-    solver.bKineticForce = false;
+    solver.bEvalKinetic = false;
     for(int i=0; i<n; i++){
         solver.DEBUG_iter=i;
         //printf("testDerivsS_Coulomb_model[%i] \n", i );
@@ -230,7 +230,7 @@ void testDerivsP_Total( int n, double x0, double dx ){
     NEWBUFF(l_E,n)
     NEWBUFF(l_Fana,n)
     NEWBUFF(l_Fnum,n)
-    solver.bKineticForce = false;
+    solver.bEvalKinetic = false;
     for(int i=0; i<n; i++){
         solver.DEBUG_iter=i;
         double x = x0 + i*dx;
@@ -261,7 +261,7 @@ void testDerivsS_Total( int n, double x0, double dx ){
     NEWBUFF(l_E,n)
     NEWBUFF(l_Fana,n)
     NEWBUFF(l_Fnum,n)
-    solver.bKineticForce = false;
+    solver.bEvalKinetic = false;
     for(int i=0; i<n; i++){
         solver.DEBUG_iter=i;
         double x = x0 + i*dx;
@@ -284,7 +284,7 @@ void testDerivsS_Total( int n, double x0, double dx ){
 
 
 void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
-    solver.bKineticForce = false;
+    solver.bEvalKinetic = false;
     return testDerivsTotal( solver, n, xs, Es, Fs, what );
 }
 

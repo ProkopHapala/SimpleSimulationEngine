@@ -16,7 +16,6 @@ void testDerivsCoulombModel( CLCFGO& solver, int n, double* xs, double* Es, doub
     //initTestElectrons( );
     solver.toRho(0,1, 0);   
     solver.toRho(2,3, 1);
-    solver.bKineticForce = false;
     for(int i=0; i<n; i++){
         solver.DEBUG_iter=i;
         solver.clearAuxDens();
