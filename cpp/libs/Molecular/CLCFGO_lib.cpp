@@ -284,7 +284,8 @@ void testDerivsS_Total( int n, double x0, double dx ){
 
 
 void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
-    solver.bEvalKinetic = false;
+    solver.bEvalKinetic = 1;
+    solver.bEvalCoulomb = 0;
     return testDerivsTotal( solver, n, xs, Es, Fs, what );
 }
 

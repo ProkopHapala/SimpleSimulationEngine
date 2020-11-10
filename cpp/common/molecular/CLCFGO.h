@@ -459,12 +459,15 @@ class CLCFGO{ public:
                
                 if(bEvalKinetic){
                     //double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
-                    double Ekij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj );   // fr*=2; fsi*=2, fsj*=2;
-                    Ek += Ekij*cij;
+                    double Kij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj );   // fr*=2; fsi*=2, fsj*=2;
+                    Ek += Kij*cij;
                     Vec3d fij = Rij*(fr*cij);
                     efpos [i].add( fij ); efpos[j].sub( fij );
                     efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
-                    efcoef[i]+= Ekij*cj ; efcoef[j]+= Ekij*ci;
+                    efcoef[i]+= Kij*cj ;  efcoef[j]+= Kij*ci;
+                    if(DEBUG_iter==DEBUG_log_iter){
+                        printf(" Kij %g cij %g Ekij \n", Kij, cij, Kij*cij );
+                    }
                 }
 
                 ii++;
@@ -484,19 +487,21 @@ class CLCFGO{ public:
         return Ek;
     }
 
-    void projectOrbs(bool bNormalize){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
+    double projectOrbs(bool bNormalize){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
         int nqOrb = perOrb*(perOrb+1)/2;
         int i0 =0;
         int ii0=0;
+        double Ek = 0;
         for(int io=0; io<nOrb; io++){
             //int i0  = getOrbOffset(jo);
             //oQs[io] =
-            projectOrb( io, odip[io], bNormalize );
+            Ek += projectOrb( io, odip[io], bNormalize );
             //projectOrb(  io, rhoP+ii0, rhoQ+ii0, rhoS+ii0, odip[io], true );
             //projectOrb(io, ecoefs+i0, erho+irho0, erhoP+irho0, odip[io] );
             ii0+=nqOrb;
             i0 +=perOrb;
         }
+        return Ek;
     }
 
     double DensOverlapOrbPair( int io, int jo ){
@@ -907,7 +912,8 @@ class CLCFGO{ public:
         cleanForces();
         if(bEvalCoulomb)clearAuxDens();
         //projectOrbs( true );
-        projectOrbs( false );
+        double Ek = projectOrbs( false );
+        if(bEvalKinetic) E+=Ek;
         //reportCharges();
         //E += evalPauli();
         if(bEvalCoulomb){

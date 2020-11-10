@@ -249,8 +249,8 @@ if __name__ == "__main__":
     #testDerivsP_Total        ( n=n, x0=x0, dx=dx )
     #testDerivsS_Total        ( n=n, x0=x0, dx=dx )
 
-    #Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
-    Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
+    Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
+    #Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
     print "===<< DONE C++ test : testDerivs_Total "
 
     '''
@@ -262,8 +262,6 @@ if __name__ == "__main__":
     l_E      = getBuff( "l_E",     (n,) )
     l_Fana   = getBuff( "l_Fana",  (n,) )
     l_Fnum   = getBuff( "l_Fnum",  (n,) )
-
-
 
     plt.plot(l_xs,l_E,label="E" )
     plt.plot(l_xs,l_Fana,label="Fana")

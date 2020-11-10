@@ -380,7 +380,7 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  // (2^(3/2)*%pi^(3/2)*s1^3*s2^3*(  r2   -3*(s2^2+s1^2)*exp(-r2/(2*s2^2+2*s1^2)))/(s2^2+s1^2)^(7/2)
  //  2^(3/2)*pi^(3/2)    *si^3*sj^3*(  r2   -3*(sj^2+si^2)*exp(-r2/(2*sj^2+2*si^2)))     /     (s2^2+s1^2)^(7/2)
  //  2^(3/2)*pi^(3/2)    *sij^3*(  r2   -3* s2 *exp( -r2/(2*s2) ) ) /  s2^(7/2)
- double C = 15.7496099457;
+ double C = -15.7496099457;
  double dCi,dCj;
  //C *= sqnorm3Ds(si) * sqnorm3Ds(sj);
  double Ci = sqnorm3Ds_deriv( si, dCi );
@@ -411,6 +411,8 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  comm*=invs2;
  fsi  = comm * sj  * (  si2*r2*r2  + ( 3*sj4  - 4*sij2 - 7*si4 )*r2 - 9*sj6 + (-12*sj2 + 3*si2)*sij2 + 6*si6 );
  fsj  = comm * si  * (  sj2*r2*r2  + ( 3*si4  - 4*sij2 - 7*sj4 )*r2 - 9*si6 + (-12*si2 + 3*sj2)*sij2 + 6*sj6 );
+
+ //printf( "E %g fr %g fsi %g fsj %g \n", E, fr, fsi, fsj );
 
  fsi = Cij*fsi + Cj*dCi*E;
  fsj = Cij*fsj + Ci*dCj*E;
