@@ -69,6 +69,7 @@ class CLCFGO{ public:
 
     bool bEvalKinetic = true;
     bool bEvalCoulomb = true;
+    bool bEvalPauli   = true;
 
     Vec3d DEBUG_dQdp;
     int DEBUG_iter = 0;
@@ -352,15 +353,71 @@ class CLCFGO{ public:
         return E;
     }
 
-    void evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
+
+    inline double CrossOverlap( int io, int jo ){
+        // NOTE : Later we need to evaluate some function F(S(x)) ( e.g. polynominal of cross-overlap  )
+        //          => we need chain derivs   dF(S(x))/dx = (dF/dS)*(dS/dx) 
+        //        Most probably it will be integral of overlap density Sum{rho} = Sum{Sij^2}  
+        //         in such case derivative    dF(S(xi))/dx =  Stot * (dSij/dxi)
+        int i0 = getOrbOffset(io);
+        int j0 = getOrbOffset(jo);
+         double E = 0;
+         double SOij = 0.0;
+         double CAmp = 1.0; 
+         for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi = epos [i];
+            double si = esize[i];
+            double ci = ecoef[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                if(r2>Rcut2)continue; //{ fij = Vec3dZero; return 0; }
+                double sj = esize[j];
+                double cj = ecoef[j];
+                double cij = ci*cj;
+
+                double Sij;
+                Vec3d  p;
+                double s;
+                double dssi,dssj;
+                Vec3d  dxsi,dxsj;
+                double dxxi,dxxj;
+                double dSr;
+                double dSsi,dSsj;
+
+                Sij = Gauss::product3D_s_deriv(
+                    si,   pi,
+                    sj,   pj,
+                    s ,   p ,
+                    dssi, dssj,
+                    dxsi, dxsj,
+                    dxxi, dxxj,
+                    dSsi, dSsj, dSr
+                );
+
+                double eij=CAmp*Sij;
+                E   += eij*cij;
+                Vec3d Fp = Rij*(-dSr*cij);
+                efpos [i].add( Fp ); efpos[j].sub( Fp );
+                efsize[i]+= dSsi*cij; efsize[j]+= dSsj*cij;
+                efcoef[i]+= eij*cj ;  efcoef[j]+= eij*ci;
+
+            }
+        }
+        return E;
+    }
+
+    double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
         double E = 0;
         for(int io=0; io<nOrb; io++){
             for(int jo=0; jo<nOrb; jo++){
-                if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
-                //interpolate( epos[j] - epos[i], Is[ityp][jtyp], f ); // ToDo: different basis function types
-                E += evalPauli( io, jo );
+                //if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
+                //E += evalPauli( io, jo );
+                E += CrossOverlap( io, jo ); // WARRNING : This is just DEBUG, later we need to use some function of overlap
             }
         }
+        return E;
     }
 
     void reportCharges(int io){
@@ -915,7 +972,7 @@ class CLCFGO{ public:
         double Ek = projectOrbs( false );
         if(bEvalKinetic) E+=Ek;
         //reportCharges();
-        //E += evalPauli();
+        if(bEvalPauli) E += evalPauli();
         if(bEvalCoulomb){
             E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
             for(int i=0; i<nOrb; i++){ 

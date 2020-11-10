@@ -249,8 +249,8 @@ if __name__ == "__main__":
     #testDerivsP_Total        ( n=n, x0=x0, dx=dx )
     #testDerivsS_Total        ( n=n, x0=x0, dx=dx )
 
-    Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
-    #Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
+    #Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
+    Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
     print "===<< DONE C++ test : testDerivs_Total "
 
     '''
