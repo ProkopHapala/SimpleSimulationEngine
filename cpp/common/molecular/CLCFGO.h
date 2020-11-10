@@ -70,6 +70,8 @@ class CLCFGO{ public:
     bool bKineticForce = true;
 
     Vec3d DEBUG_dQdp;
+    int DEBUG_iter = 0;
+    int DEBUG_log_iter = 0;
 
     double Rcut    =6.0;  ///< cutoff beyond which two basis functions chi has no overlap
     double RcutOrb =9.0;  ///< cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
@@ -228,20 +230,11 @@ class CLCFGO{ public:
     }
 
     inline void cleanForces(){
-        for(int i=0; i<natom; i++){
-            aforce[i] = Vec3dZero;
-        }
-        for(int i=0; i<nBas; i++){
-            efpos [i] = Vec3dZero;
-            efsize[i] = 0;
-            efcoef[i] = 0;
-        }
-        //for(int i=0; i<nQtot; i++){
-        //    rhofP[i] = Vec3dZero;
-        //    rhofQ[i] = 0;
-        //    rhofS[i] = 0;
-        //}
-        clearAuxDens();
+        for(int i=0; i<natom; i++){ aforce[i] = Vec3dZero; }
+        for(int i=0; i<nBas;  i++){ efpos [i] = Vec3dZero; }
+        for(int i=0; i<nBas;  i++){ efsize[i] = 0;         }
+        for(int i=0; i<nBas;  i++){ efcoef[i] = 0;         }
+        //clearAuxDens();
     }
 
     //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
@@ -592,11 +585,10 @@ class CLCFGO{ public:
     }
 
     //Vec3d fromRho( int i, int j, int ij ){
-    void fromRhoDiag( int i, int ij, double& aij ){
+    void fromRhoDiag( int i, int ij ){
         /// This function function cares about diagonal density terms rho_ii = wi * wi
         //Vec3d  pi  = epos [i];
         //double ci  = ecoef[i];
-        //aij = ci*ci;
         //double si  = esize[i];
         Vec3d  Fpi  = rhofP[ij];
         double Fsi  = rhofS[ij];
@@ -605,12 +597,14 @@ class CLCFGO{ public:
         //double Eqi = rhoEQ[ij];
         efpos [i].add( Fpi );
         efsize[i] += Fsi*Q;
-        //printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
-        //printf( "fromRho[%i]ii[%i] E %g qij %g Fs %g \n", i, ij, dEdQ*Q, Q, Fsi*Q );
+        if(DEBUG_iter==DEBUG_log_iter){
+            //printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
+            //printf( "fromRho[%i]ii[%i] E %g qij %g Fs %g \n", i, ij, dEdQ*Q, Q, Fsi*Q );
+        }
     }
 
     //Vec3d fromRho( int i, int j, int ij ){
-    void fromRho( int i, int j, int ij, double& Sij ){
+    void fromRho( int i, int j, int ij ){
     //void fromRho( int i, int j, int ij, double& aij, double& dCsi, double& dCsj, Vec3d& dCdp ){
         /// NOTE : this function is mostly for debugging of  assembleOrbForces()
 
@@ -627,6 +621,7 @@ class CLCFGO{ public:
         Vec3d Rij = pj-pi;
         double r2 = Rij.norm2();
 
+        double Sij;
         Vec3d  p;
         double s;
         double dssi,dssj;
@@ -665,45 +660,34 @@ class CLCFGO{ public:
         Vec3d  dSdp = Rij*(dSr*cij);
         DEBUG_dQdp = dSdp;
         Vec3d Fq   = dSdp*dEdQ;
-        Vec3d Fxi  = fxi - Fq;
+        Vec3d Fxi  = fxi + Fq;
         Vec3d Fxj  = fxj + Fq;
 
-        efpos [i].add( Fxi ); // TODO : Why 0.25 factor ? There is no reason for this !!!!!
+        efpos [i].add( Fxi );
         efpos [j].add( Fxj );
         efsize[i] += fsi;
         efsize[j] += fsj;
 
-        //printf( "fromRho[%i,%i] eqj %g E %g Fs %g dSsi %g dCsi %g cij %g \n", i,j, dEdQ, dEdQ*rhoQ[ij], Fs, dssi, dSsi, cij );
-        printf( "fromRho[%i,%i] E %g qij %g Fp %g \n", i,j, dEdQ*rhoQ[ij], rhoQ[ij], Fxi.x );
-        //printf( "fromRho[%i,%i] dS %g  dSr %g cij %g dEdQ %g Fq.x %g F %g F[i] %g F[j] %g \n", i,j, dSdp.x, dSr*Rij.x, ci*cj, dEdQ, Fq.x, Fxi.x, efpos[i].x, efpos[j].x );
-
+        if(DEBUG_iter==DEBUG_log_iter){
+            //printf( "fromRho[%i,%i] eqj %g E %g Fs %g dSsi %g dCsi %g cij %g \n", i,j, dEdQ, dEdQ*rhoQ[ij], Fs, dssi, dSsi, cij );
+            //printf( "fromRho[%i,%i] E %g qij %g Fp %g fp*dxxi %g Fq %g \n", i,j, dEdQ*rhoQ[ij], rhoQ[ij], Fxi.x, (Fp*dxxi).x, Fq.x  );
+            //printf( "fromRho[%i,%i] dS %g  dSr %g cij %g dEdQ %g Fq.x %g F %g F[i] %g F[j] %g \n", i,j, dSdp.x, dSr*Rij.x, ci*cj, dEdQ, Fq.x, Fxi.x, efpos[i].x, efpos[j].x );
+        }
     }
 
     void assembleOrbForces_fromRho(int io ){
-        // NOTE : This is less efficient but more mocular version of assembleOrbForces which use fromRho function per each element
+        // NOTE : This is less efficient but more modular version of assembleOrbForces which use fromRho function per each element
         //        It is used for debuging since it is more modular, but after everything works original assembleOrbForces should be prefered
         //   line_Fana->ys[i]  = 0.5*solver.efpos[0].x + E_*line_dQi_ana->ys[i];
         //   Fana              = efpos                + EK*dQdp; ..... TODO
         int i0    = getOrbOffset(io);
         int irho0 = getRhoOffset(io);
         int ii    = irho0;
-        double aij;
-        double dCsi;
-        double dCsj;
-        Vec3d  dQdp;
         for(int i=i0; i<i0+perOrb; i++){
-            // TODO : What to do with diagonal elements ? That is diagonal electron could rho_ii ( It should not change upon moving ? Or should only due to renormalization ? )
-            //        Is the problem caused by renormalization ????????
-            //fromRho( i, i, ii, aij, dCsi, dCsj, dQdp );
-            fromRhoDiag( i, ii, aij );  // Why is this zero ????
+            fromRhoDiag( i, ii );  // Why is this zero ????
             ii++;
             for(int j=i0; j<i; j++){
-                //printf( "assembleOrbForces_fromRho[%i,%i][%i] \n", i, j, ii  );
-                //fromRho( i, j, ii, aij, dCsi, dCsj, dQdp );
-                fromRho( i, j, ii, aij );
-                // ToDo: ad dQdp    //   Fana              = efpos                + EK*dQdp; ..... TODO
-                // We need to copy EK from somewhere
-                //dQdp
+                fromRho( i, j, ii );
                 ii++;
             }
         }
@@ -754,8 +738,8 @@ class CLCFGO{ public:
         int njo = onq[jo];
         double Ecoul=0;
         //printf( "CoulombOrbPair[%i,%i] (%i:%i) (%i:%i) \n", io, jo, i0,i0+nio, j0,j0+njo );
-        //for(int i=i0; i<i0+nio; i++){
-        int i=2;{ // DEBUG
+        for(int i=i0; i<i0+nio; i++){
+        //int i=2;{ // DEBUG
             Vec3d  pi = rhoP[i];
             double qi = rhoQ[i];
             double si = rhoS[i];
@@ -789,12 +773,16 @@ class CLCFGO{ public:
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
                 Ecoul    += E*qij;
 
-                //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
-
-                //printf( "CoulombOrbPair[%i,%i][%i,%i] e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fr %g \n", io,jo, i,j,  E, E*qi*qj, s,si,sj, qij,qi,qj, r, fr );
-                //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qij,r,  );
+                if(DEBUG_iter=DEBUG_log_iter){
+                    //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
+                    //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E*qij, fp.x, fs*si, s, r );
+                    //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
+                    //printf( "CoulombOrbPair[%i,%i][%i,%i] e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fr %g \n", io,jo, i,j,  E, E*qi*qj, s,si,sj, qij,qi,qj, r, fr );
+                    //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qij,r,  );
+                }
             }
         }
+        
         //printf( " Ecoul %g \n", Ecoul );
         //printf( "CoulombOrbPair Eorb %g \n", Ecoul );
         return Ecoul;
@@ -935,9 +923,7 @@ class CLCFGO{ public:
         //reportCharges();
         //E += evalPauli();
         E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
-        //for(int i=0; i<nOrb; i++) assembleOrbForces(i);
         for(int i=0; i<nOrb; i++){ 
-            //printf( "assembleOrbForces[%i] F[0] %g F[1] %g\n", i, efpos[0].x, efpos[1].x );
             assembleOrbForces_fromRho(i); 
         }
         return E;

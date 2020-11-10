@@ -151,6 +151,8 @@ def getCoulombEF( r, si, sj, qi, qj, dSi=None, dA=None, ci=None, out=None, i=0, 
     Fp = fx * r  * qij    # pure derivative of coulombic forcefield
     Fs = fs * si * qij
 
+    #print "[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g " %( i,j, (qi+o)[0],(qj+o)[0], (E+o)[0], (Fp+o)[0], (Fs+o)[0], (s+o)[0], (r+o)[0] )
+
     #print "qi,qj ", qi[0],qj[0]
     #if( dA is  None  ):
     #    print "e Fs %g qij %g Fsq %g "  %( , (fs*si+o)[0], (qij+o)[0], (Fs+o)[0] );
@@ -163,19 +165,24 @@ def getCoulombEF( r, si, sj, qi, qj, dSi=None, dA=None, ci=None, out=None, i=0, 
         Fpq = eqj*dSi *ci
         #print "eqj %g E %g Fs %g dSsi %g dCsi %g cij %g "  %( (eqj+o)[0], (E+o)[0], (Fs+o)[0], (dSsi+o)[0], (dCsi+o)[0], (ci+o)[0] )
         Fs  = Fp*dXsi + Fs*dSsi  + eqj*dCsi*ci 
-        Fp  = Fp*dXxi            + Fpq  # total derivative due to charge change
+        Fp_ = Fp*dXxi            + Fpq  # total derivative due to charge change
         #Fs = ( fs*si*dSsa +  fx*r*dXsa ) * qi*qj   +  e*( dCsa*ci*qj )
         #print "e %g qij %g Fs %g " %( (e+o)[0], (qi*qj+o)[0], (Fs+o)[0]  )
         #print "e %g E %g s %g q %g r %g fx %g F %g dS %g dSr %g cc %g dEdQ %g " %( e[0], E[0], s[0], (qi*qj)[0], r[0], fx[0], F[0], (2*dSi*ci)[0], dSi[0], ci[0], eqj[0]  )
+
+        print "fromRho[%i,%i] E %g qij %g Fp %g fp*dxxi %g Fq %g " %(i,j, (E+o)[0], (qi+o)[0], (Fp_+o)[0], (Fp*dXxi+o)[0], (Fpq+o)[0] )
+
+        Fp = Fp_
         if out is not None:
             out[0] += eqj
             out[1] += Fpq
             out[2] += Fp
 
     #print "e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fx %g F %g dSi %g " %( e[0], E[0], s[0],si[0],sj[0], (qi*qj)[0],qi[0],qj[0], r[0], fx[0], F[0], 2*dSi*ci )
-    
     #print "[%i,%i] E %g qij %g Fs %g " %( i,j, (E+o)[0], (qi*qj+o)[0], (Fs+o)[0]  )
-    print "[%i,%i] E %g qij %g Fp %g " %(i,j,(E+o)[0], (qi*qj+o)[0], (Fp+o)[0])
+    #print "[%i,%i] E %g qij %g Fp %g " %(i,j,(E+o)[0], (qi*qj+o)[0], (Fp+o)[0])
+
+
 
     return E,Fp, Fs
     #outs[0] += E
@@ -216,7 +223,6 @@ def evalEFtot( ecoef, esize, eXpos, xa=0., sa=0. ):
     Etot  = 0
     Fptot = 0
     Fstot = 0
-    '''
     # -- from Diagonal charges of orb #1 
     for i in range(2):
         for j in range(3):
@@ -227,7 +233,6 @@ def evalEFtot( ecoef, esize, eXpos, xa=0., sa=0. ):
                 #Etot  += E
                 Fptot += Fp
                 Fstot += Fs
-    '''
     # -- from overlap (off-diagonal) charges of orb #1
     i = 2
     out = [0.,0.,0.]
@@ -241,7 +246,6 @@ def evalEFtot( ecoef, esize, eXpos, xa=0., sa=0. ):
         Fptot += Fp
         Fstot += Fs
     print " sum: dEdQ %g Fq %g F %g " %((o+out[0])[0],(o+out[1])[0],(o+out[2])[0])
-
     return Etot,Fptot,Fstot
 
 
