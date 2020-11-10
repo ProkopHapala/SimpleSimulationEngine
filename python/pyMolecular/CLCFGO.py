@@ -26,6 +26,10 @@ array1d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=1, flags='CONTIGUOUS')
 array2d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=2, flags='CONTIGUOUS')
 array3d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=3, flags='CONTIGUOUS')
 
+c_int_p    = ctypes.POINTER(c_int)
+c_double_p = ctypes.POINTER(c_double)
+
+
 # ========= C functions
 
 #void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
@@ -36,7 +40,7 @@ def init( natom, nOrb, perOrb, natypes ):
 
 #int* getIBuff(const char* name){ 
 lib.getIBuff.argtypes = [c_char_p]
-lib.getIBuff.restype  = ctypes.POINTER(c_int)
+lib.getIBuff.restype  = c_int_p
 def getIBuff(name,natom):
     ptr = lib.getIBuff(name)
     return np.ctypeslib.as_array( ptr, shape=(natom,))
@@ -44,7 +48,7 @@ def getIBuff(name,natom):
 
 #double* getBuff(const char* name){ 
 lib.getBuff.argtypes = [c_char_p]
-lib.getBuff.restype  = ctypes.POINTER(c_double)
+lib.getBuff.restype  = c_double_p 
 def getBuff(name,sh):
     ptr = lib.getBuff(name)
     #sh_ = (natom,)
@@ -75,6 +79,29 @@ lib.testDerivsS_Total.argtypes = [ c_int, c_double, c_double ]
 lib.testDerivsS_Total.restype  = c_double
 def testDerivsS_Total( n=100, x0=0.0, dx=0.1 ):
     return lib.testDerivsS_Total( n, x0, dx )
+
+
+
+
+#void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
+lib.testDerivsTotal.argtypes = [ c_int, array1d, array1d, array1d, c_int ]
+lib.testDerivsTotal.restype  = c_double
+def testDerivsTotal( xs, Es=None, Fs=None, what=0 ):
+    n = len(xs)
+    if Es is None: Es = np.zeros(n)
+    if Fs is None: Fs = np.zeros(n)
+    lib.testDerivsTotal( n, xs, Es, Fs, what )
+    return Es,Fs
+
+#void testDerivsCoulombModel( CLCFGO& solver, int n, double* xs, double* Es, double* Fs, int what  ){
+lib.testDerivsCoulombModel.argtypes = [ c_int, array1d, array1d, array1d, c_int ]
+lib.testDerivsCoulombModel.restype  = c_double
+def testDerivsCoulombModel( xs, Es=None, Fs=None, what=0 ):
+    n = len(xs)
+    if Es is None: Es = np.zeros(n)
+    if Fs is None: Fs = np.zeros(n)
+    lib.testDerivsCoulombModel( n, xs, Es, Fs, what )
+    return Es,Fs
 
 # ========= Python Functions
 
@@ -173,8 +200,8 @@ if __name__ == "__main__":
     xs_ = (xs[1:]+xs[:-1])*0.5
     #eXpos[0][0] = xa 
 
-    (E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, xa=xs ); F=Fp
-    #(E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, sa=xs ); F=Fs
+    #(E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, xa=xs ); F=Fp
+    (E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, sa=xs ); F=Fs
     #(E, F) = ref.evalEF_S_off ( xs, ecoefs, esizes, eXpos )
 
     plt.subplot(1,2,2)
@@ -203,6 +230,11 @@ if __name__ == "__main__":
     # ============== Derivs in C++ ============
     # =========================================
 
+
+    plt.subplot(1,2,1)
+    plt.title('C++')
+    #plt.plot(l_xs,l_r,label="r")
+
     ecoef[:,:]   = np.array(ecoefs)[:,:]
     esize[:,:]   = np.array(esizes)[:,:]
     epos [:,:,0] = np.array(eXpos)[:,:]
@@ -214,10 +246,14 @@ if __name__ == "__main__":
     print "===>> RUN  C++ test : testDerivs_Total "
     #testDerivsP_Coulomb_model( n=n, x0=x0, dx=dx )
     #testDerivsS_Coulomb_model( n=n, x0=x0, dx=dx )
-    testDerivsP_Total        ( n=n, x0=x0, dx=dx )
+    #testDerivsP_Total        ( n=n, x0=x0, dx=dx )
     #testDerivsS_Total        ( n=n, x0=x0, dx=dx )
+
+    #Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
+    Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
     print "===<< DONE C++ test : testDerivs_Total "
 
+    '''
     l_xs     = getBuff( "l_xs",    (n,) )
     #l_r      = getBuff( "l_r",     (n,) )
     l_Q      = getBuff( "l_Q",     (n,) )
@@ -227,9 +263,7 @@ if __name__ == "__main__":
     l_Fana   = getBuff( "l_Fana",  (n,) )
     l_Fnum   = getBuff( "l_Fnum",  (n,) )
 
-    plt.subplot(1,2,1)
-    plt.title('C++')
-    #plt.plot(l_xs,l_r,label="r")
+
 
     plt.plot(l_xs,l_E,label="E" )
     plt.plot(l_xs,l_Fana,label="Fana")
@@ -237,6 +271,12 @@ if __name__ == "__main__":
     #plt.plot(l_xs,l_Q,label="Q")
     #plt.plot(l_xs,l_dQ_ana,label="dQ_ana")
     #plt.plot(l_xs,l_dQ_num,label="dQ_num", ls=':',lw=3)
+    '''
+
+    plt.plot(xs ,Es,label="E" )
+    plt.plot(xs ,Fs,label="Fana")
+    plt.plot(xs_,(Es[1:]-Es[:-1])/dx,label="Fnum",ls=':',lw=3)
+
 
     plt.legend()
     #plt.ylim(-30,40)
@@ -247,8 +287,6 @@ if __name__ == "__main__":
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
 
-
-    print "Fc++ %g Fpy %g " %(l_Fana[0],F[0])
-   
+    #print "Fc++ %g Fpy %g " %(l_Fana[0],F[0])
 
     plt.show()

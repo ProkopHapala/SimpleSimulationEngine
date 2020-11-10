@@ -20,6 +20,7 @@
 
 #include "Grid.h"
 #include "CLCFGO.h"
+#include "CLCFGO_tests.h"
 
 
 // ============ Global Variables
@@ -282,6 +283,13 @@ void testDerivsS_Total( int n, double x0, double dx ){
 }
 
 
-} // extern "C"{
+void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
+    solver.bKineticForce = false;
+    return testDerivsTotal( solver, n, xs, Es, Fs, what );
+}
 
+void testDerivsCoulombModel( int n, double* xs, double* Es, double* Fs, int what  ){
+    return testDerivsCoulombModel( solver, n, xs, Es, Fs, what  );
+}
 
+} // extern "C"
