@@ -41,6 +41,7 @@ void testDerivsCoulombModel( CLCFGO& solver, int n, double* xs, double* Es, doub
 
 void testDerivsTotal( CLCFGO& solver, int n, double* xs, double* Es, double* Fs, int what ){
     for(int i=0; i<n; i++){
+        //printf( "===== testDerivsTotal[%i]\n", i  );
         solver.DEBUG_iter=i;
         switch(what){
             case iTEST_POS_DERIV : solver.epos [0].x=xs[i]; break;

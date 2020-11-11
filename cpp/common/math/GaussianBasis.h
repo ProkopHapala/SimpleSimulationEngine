@@ -4,7 +4,12 @@
 
 #include "fastmath.h"
 
+
 namespace Gauss{
+
+
+
+
 
 // TODO : this should go elsewhere (physical constants or something)
 const double const_hbar_SI      = 1.054571817e-34;    ///< [J.s]  #6.582119569e-16 # [eV/s]
@@ -186,6 +191,48 @@ inline double product3D_s_deriv(
 
     return C;
 }
+
+struct PairDerivs{
+    double C;
+    double s;    
+    Vec3d  p;
+    double dSsi,dSsj;
+    Vec3d  dXsi,dXsj;
+    double dXxi,dXxj;
+    double dCsi,dCsj,dCr;
+
+    inline void get( double si, Vec3d pi,  double sj, Vec3d pj ){
+        C = product3D_s_deriv( si, pi, sj, pj,
+            s, p,
+            dSsi, dSsj,
+            dXsi, dXsj,
+            dXxi, dXxj,
+            dCsi, dCsj, dCr
+        );
+    }
+
+    inline void backForce( 
+        Vec3d Rij, double cij, double dEdQ, Vec3d Fp, double Fs,   
+        Vec3d& Fxi, Vec3d& Fxj, double& fsi, double& fsj  
+    ){
+        /*
+        fsi  = Fp.dot( dXsi ) + Fs*dSsi + dEdQ*dCsi*cij;
+        fsj  = Fp.dot( dXsj ) + Fs*dSsj + dEdQ*dCsj*cij;
+        Vec3d  fxi  = Fp*dXxi;
+        Vec3d  fxj  = Fp*dXxj;
+        Vec3d  dSdp = Rij*(dCr*cij);
+        Vec3d  Fq   = dSdp*dEdQ;
+        Fxi  = fxi + Fq;
+        Fxj  = fxj + Fq;
+        */
+        fsi += ( Fp.dot( dXsi ) + Fs*dSsi + dEdQ*dCsi*cij );
+        fsj += ( Fp.dot( dXsj ) + Fs*dSsj + dEdQ*dCsj*cij );
+        Vec3d  Fq = Rij*(dCr*cij)*dEdQ;
+        Fxi.add( Fp*dXxi + Fq );
+        Fxj.add( Fp*dXxj + Fq );
+    }
+
+};
 
 
 inline double product3D_s_new(

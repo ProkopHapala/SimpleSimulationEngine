@@ -282,11 +282,11 @@ void testDerivsS_Total( int n, double x0, double dx ){
     //for(int i=0;i<n;i++){ line_E->ys[i]   -= line_E->ys[n-1]; };
 }
 
-
 void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
-    solver.bEvalKinetic = 0;
-    solver.bEvalCoulomb = 0;
-    solver.bEvalPauli   = 1;
+    solver.bEvalKinetic  = 0;
+    solver.bEvalCoulomb  = 0;
+    solver.bEvalExchange = 1;
+    solver.bEvalPauli    = 0;
     return testDerivsTotal( solver, n, xs, Es, Fs, what );
 }
 
