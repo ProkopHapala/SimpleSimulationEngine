@@ -417,6 +417,13 @@ class CLCFGO{ public:
         return E;
     }
 
+    void reportOrbitals(){
+        for(int io=0; io<nOrb; io++){ for(int ib=0; ib<perOrb; ib++){
+            int i=io*perOrb+ib;
+            printf( "orb[%i,%i=%i] p(%g,%g,%g) s %g c %g \n", io, ib, i, epos[i].x,epos[i].y,epos[i].z, esize[i], ecoef[i] );
+        } }
+    }
+
     void reportCharges(int io){
         int i0    = getOrbOffset(io);
         int irho0 = getRhoOffset(io);
@@ -642,7 +649,7 @@ class CLCFGO{ public:
         double Q    = rhoQ[ij];
         //double Eqi = rhoEQ[ij];
         efpos [i].add( Fpi );
-        efsize[i] += Fsi*Q;
+        efsize[i] += Fsi*Q * M_SQRT1_2;
         if(DEBUG_iter==DEBUG_log_iter){
             //printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
             //printf( "fromRho[%i]ii[%i] E %g qij %g Fs %g \n", i, ij, dEdQ*Q, Q, Fsi*Q );
@@ -767,7 +774,7 @@ class CLCFGO{ public:
         //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
 
         Vec3d fp = Rij*(-fr*qij);
-        fs *= qij * M_SQRT1_2;
+        fs *= qij;
         rhofP[i].add(fp);   rhofP[j].sub(fp);
         rhofS[i] -= fs*si;  rhofS[j] -= fs*sj; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
         rhofQ[i] += E*qj;   rhofQ[j] += E*qi;  // ToDo : need to be made more stable ... different (qi,qj)
@@ -814,6 +821,7 @@ class CLCFGO{ public:
                 // --- Derivatives (Forces)
                 Vec3d fp = Rij*(-fr * qij);
                 fs       *=           qij;
+                //fs      *= M_SQRT1_2 * qij;
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
                 rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
@@ -900,7 +908,7 @@ class CLCFGO{ public:
         //  2) callculate self-convolution of this auxuliary function
 
         //if( ~(0==io) ) return 0;
-        if(DEBUG_iter==DEBUG_log_iter)printf( " -- ExchangeOrbPair[%i,%i] \n", io, jo );
+        //if(DEBUG_iter==DEBUG_log_iter)printf( " -- ExchangeOrbPair[%i,%i] \n", io, jo );
 
         const double R2Safe = sq(0.1);
         // we first project on axuliary density
@@ -917,6 +925,7 @@ class CLCFGO{ public:
         int j0=jo*perOrb;
         int ij=0;
         // --- Project   rho_ij(r)  to temp axuliary basis
+        //if(DEBUG_iter==DEBUG_log_iter) reportOrbitals();
         for(int i=i0; i<i0+perOrb; i++){
             Vec3d  pi  = epos [i];
             double ci  = ecoef[i];
@@ -931,8 +940,7 @@ class CLCFGO{ public:
                 double cij = ci*cj;
                 cijs [ij] = cij;
                 pairs[ij].get(si,pi, sj,pj);
-
-                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:Project[%i,%i] cij %g Sij %g Qij %g r %g x(%g,%g) \n", i, j, cij, pairs[ij].C, cij*pairs[ij].C, sqrt(r2), pi.x, pj.x );
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:Project[%i,%i] ss(%g,%g) cij %g Sij %g Qij %g r %g x(%g,%g) \n", i, j, si, sj, cij, pairs[ij].C, cij*pairs[ij].C, sqrt(r2), pi.x, pj.x );
                 ij++;
             }
         }
@@ -973,6 +981,9 @@ class CLCFGO{ public:
                 // --- Derivatives (Forces)
                 Vec3d fp = Rij*(-fr * qij);
                 fs       *=           qij;
+
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "ExchangeOrbPair:Coulomb[%i,%i] qij %g e %g fx %g fs %g | r %g s %g fr %g fs %g  \n", i,j, qij, e, fp.x, fs,    r, s, fr, fs );
+                
                 fPs[i].add(fp);    fPs[j].sub(fp);
                 fSs[i] -= fs*A.s;  fSs[j] -= fs*B.s;
                 fQs[i] += e*qj*2;  fQs[j] += e*qi*2; // ToDo : need to be made more stable ... different (qi,qj)
@@ -980,12 +991,8 @@ class CLCFGO{ public:
             }
         }
         
-        // DEBUG
-        if(DEBUG_iter==DEBUG_log_iter){
-            for(int i=0; i<nqOrb; i++){
-                printf( "[%i] e %g fx %g | x %g q %g \n", i,  fQs[i], fPs[i].x,     pairs[i].p.x, pairs[i].C*cijs[i] );
-            };
-        }
+        //if(DEBUG_iter==DEBUG_log_iter){for(int i=0; i<nqOrb; i++){printf( "[%i] e %g fx %g | x %g q %g \n", i,  fQs[i], fPs[i].x,     pairs[i].p.x, pairs[i].C*cijs[i] );}}
+        
         //printf( " Exchange:Coulomb DONE \n" );
         //printf( " Exchange:Coulomb DONE \n" );
         // --- From Rho
@@ -1004,13 +1011,13 @@ class CLCFGO{ public:
                 double cij = ci*cj;
                 cijs[ij] = cij;
                 Gauss::PairDerivs& pair = pairs[ij];
-                if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:fromRho[%i,%i] x(%g,%g) ", i, j, pi.x, pj.x );
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:fromRho[%i,%i] x(%g,%g) ", i, j, pi.x, pj.x );
                 pair.backForce( Rij, cij, fQs[ij], fPs[ij], fSs[ij],  efpos[i], efpos[j], efsize[i], efsize[j] );
                 ij++;
             }
         }
         //printf( " Exchange:FromRho DONE \n" );
-        if(DEBUG_iter==DEBUG_log_iter)printf( "ExchangeOrbPair() E=%g \n", E  );
+        //if(DEBUG_iter==DEBUG_log_iter)printf( "ExchangeOrbPair() E=%g \n", E  );
         return E;
     }
 

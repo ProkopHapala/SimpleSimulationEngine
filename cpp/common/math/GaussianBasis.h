@@ -122,16 +122,22 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
     double ir   = 1./r; //(r+1.e-8);
     double is   = 1./s; //(s+1.e-8);
+
+
+
     double r_s  = r*is;
     double r_2s = M_SQRT2 * r_s;
     double e1   = ir * const_El_eVA;
     double e2   = erf(  r_2s      );
     double g    = exp( -r_2s*r_2s ) * const_F2;
+
     double f1   = -e1*ir;
     double f2   = g*is;
     double e1f2 = e1*f2;
     fr = (f1*e2 + e1f2)*ir;
-    fs =          e1f2 *r_s * is * M_SQRT1_2;
+    //fs =          e1f2 *r_s * is * M_SQRT1_2; // WARRNING : Not sure if there should be factor sqrt(2) 
+    fs =          e1f2 *r_s * is;
+    //if(DEBUG_iter==DEBUG_log_iter) printf( "ir %g is %g e1 %g e2 %g g %g f1 %g f2 %g  fr %g fs %g \n", ir, is, e1, e2, g, f1, f2, fr, fs ); 
     //printf( "Gauss::Coulomb r %g s %g E %g fr %g \n", r, s, e1*e2, fr ); // This works (same as in python)
     return e1 * e2;
 }
@@ -177,6 +183,8 @@ inline double product3D_s_deriv(
     double e1   = a2*a;
     double e2   = exp( -r2*is2 );
 
+    //if(DEBUG_iter==DEBUG_log_iter) printf( "r2 %g ss(%g,%g) a2 %g e1 %g e2 %g \n", r2, si, sj, a2, e1, e2 ); 
+
     double f1   = 3.*a  * (si2-sj2)*is4;
     double f2   = 2.*e2 * r2*is4;
 
@@ -215,17 +223,7 @@ struct PairDerivs{
         Vec3d Rij, double cij, double dEdQ, Vec3d Fp, double Fs,   
         Vec3d& Fxi, Vec3d& Fxj, double& fsi, double& fsj  
     ){
-        /*
-        fsi  = Fp.dot( dXsi ) + Fs*dSsi + dEdQ*dCsi*cij;
-        fsj  = Fp.dot( dXsj ) + Fs*dSsj + dEdQ*dCsj*cij;
-        Vec3d  fxi  = Fp*dXxi;
-        Vec3d  fxj  = Fp*dXxj;
-        Vec3d  dSdp = Rij*(dCr*cij);
-        Vec3d  Fq   = dSdp*dEdQ;
-        Fxi  = fxi + Fq;
-        Fxj  = fxj + Fq;
-        */
-        if(DEBUG_iter==DEBUG_log_iter) printf( "cij %g dEdQ %g Fx %g \n", cij, dEdQ, Fp.x );
+        //if(DEBUG_iter==DEBUG_log_iter) printf( "cij %g dEdQ %g Fx %g \n", cij, dEdQ, Fp.x );
         fsi += ( Fp.dot( dXsi ) + Fs*dSsi + dEdQ*dCsi*cij );
         fsj += ( Fp.dot( dXsj ) + Fs*dSsj + dEdQ*dCsj*cij );
         Vec3d  Fq = Rij*(dCr*cij)*dEdQ;
