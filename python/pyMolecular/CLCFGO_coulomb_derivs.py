@@ -59,6 +59,7 @@ def Coulomb( r, s ):
     M_SQRT2   = 1.41421356237 
     M_SQRT1_2 = 0.70710678118
     const_F2 = 2*np.sqrt(2/np.pi)
+    r=r+1e-8
     ir   = 1./r                         #(r+1.e-8);
     is_  = 1./s                         #(s+1.e-8);
     r_s  = r*is_

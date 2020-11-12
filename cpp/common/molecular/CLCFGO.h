@@ -72,10 +72,6 @@ class CLCFGO{ public:
     bool bEvalPauli    = true;
     bool bEvalExchange = true;
 
-    Vec3d DEBUG_dQdp;
-    int DEBUG_iter = 0;
-    int DEBUG_log_iter = 0;
-
     double Rcut    =6.0;  ///< cutoff beyond which two basis functions chi has no overlap
     double RcutOrb =9.0;  ///< cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
     double Rcut2     =Rcut*Rcut;
@@ -903,15 +899,11 @@ class CLCFGO{ public:
         //  1) for pair of orbital, construct auxiliary rho_ij (by expansion on auxuliary functions)
         //  2) callculate self-convolution of this auxuliary function
 
+        //if( ~(0==io) ) return 0;
+        if(DEBUG_iter==DEBUG_log_iter)printf( " -- ExchangeOrbPair[%i,%i] \n", io, jo );
+
         const double R2Safe = sq(0.1);
         // we first project on axuliary density
-        //Vec3d  posij[nqOrb];
-        //double rhoij[nqOrb];
-        //double szij [nqOrb];
-
-        //Vec3d  fposij[nqOrb];
-        //double frhoij[nqOrb];
-        //double fszij [nqOrb];
 
         double cijs[nqOrb];
 
@@ -933,27 +925,34 @@ class CLCFGO{ public:
                 Vec3d pj  = epos[j];
                 Vec3d Rij = pj-pi;
                 double r2 = Rij.norm2();
-                if(r2>Rcut2) continue;
+                //if(r2>Rcut2) continue;
                 double cj  = ecoef[j];
                 double sj  = esize[j];
                 double cij = ci*cj;
                 cijs [ij] = cij;
                 pairs[ij].get(si,pi, sj,pj);
 
-                //printf( "Exchange:Project[%i,%i] cij %g Sij %g \n", i, j, cij, pairs[ij].C );
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:Project[%i,%i] cij %g Sij %g Qij %g r %g x(%g,%g) \n", i, j, cij, pairs[ij].C, cij*pairs[ij].C, sqrt(r2), pi.x, pj.x );
                 ij++;
             }
         }
         // --- self-coulomb  of   rho_ij(r)
         double E = 0;
-        for(int i=0; i<nqOrb; i++){
+        for(int i=0; i<nqOrb; i++){ 
+            fPs[i] = Vec3dZero;    
+            fSs[i] = 0;
+            fQs[i] = 0; 
+        }
+        //for(int i=0; i<nqOrb; i++){
+        int i=0;{
             //Vec3d  pi = posij[i];
             //double qi = rhoij[i];
             //double si = szij [i];
             const Gauss::PairDerivs& A = pairs[i];
             double ci = cijs[i];
             double qi = ci*A.C;
-            for(int j=0; j<i; j++){
+            //for(int j=0; j<=i; j++){
+            int j=1; {
                 const Gauss::PairDerivs& B = pairs[j];
                 Vec3d Rij = B.p - A.p;
                 double r2 = Rij.norm2();
@@ -965,18 +964,8 @@ class CLCFGO{ public:
                 double s  = sqrt(s2);
                 double fr,fs;
 
-                double qij = qi*qj;
+                double qij = qi*qj*2;
                 
-                //double Cij = CoulombGauss( r, s*2, fr, fs, qi*qj );
-                //fP[i].add(fp);    rhofP[j].sub(fp);
-                //fS[i] -= fs*si;   rhofS[j] -= fs*sj;
-                //rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
-                //Ecoul    += E*qij;
-                // see    InteractionsGauss.h :: addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, double qq ){
-                //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
-                //fs*=4;
-
-
                 //printf( "//Exchange:Coulomb[%i,%i] r %g s %g \n", i, j, r, s  );
                 double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
                 //printf( "Exchange:Coulomb[%i,%i] qij %g E %g fr %g fs %g \n", i, j, r, s, qij, E*qij, fs, fs );
@@ -990,6 +979,13 @@ class CLCFGO{ public:
                 E      += e*qij;
             }
         }
+        
+        // DEBUG
+        if(DEBUG_iter==DEBUG_log_iter){
+            for(int i=0; i<nqOrb; i++){
+                printf( "[%i] e %g fx %g | x %g q %g \n", i,  fQs[i], fPs[i].x,     pairs[i].p.x, pairs[i].C*cijs[i] );
+            };
+        }
         //printf( " Exchange:Coulomb DONE \n" );
         //printf( " Exchange:Coulomb DONE \n" );
         // --- From Rho
@@ -1002,57 +998,26 @@ class CLCFGO{ public:
                 Vec3d pj  = epos[j];
                 Vec3d Rij = pj-pi;
                 double r2 = Rij.norm2();
-                if(r2>Rcut2) continue;
-                double cj = ecoef[j];
-                double sj = esize[j];
+                //if(r2>Rcut2) continue;
+                double cj  = ecoef[j];
+                double sj  = esize[j];
                 double cij = ci*cj;
                 cijs[ij] = cij;
-
-                //printf( "Exchange:FromRho[%i,%i] r2 %g cij %g \n", i, j, r2, cij );
-
                 Gauss::PairDerivs& pair = pairs[ij];
-
-                /*
-                Vec3d  Fp   = rhofP[ij];  //   fij = Rij*(-fr*qij);   ... from CoulombElement
-                double Fs   = rhofS[ij];
-                double dEdQ = rhofQ[ij];  // TODO: Eqi is probably redudent ( Fqi is the same )  !!!
-                
-                double cij = 2*ci*cj;
-
-                // TODO : we should make sure there is a recoil ( forces point to opposite direction )
-                double fsi = Fp.dot( pair.dxsi ) + Fs*dssi + dEdQ*dSsi*cij;
-                double fsj = Fp.dot( dxsj ) + Fs*dssj + dEdQ*dSsj*cij;
-                Vec3d  fxi = Fp*dxxi;
-                Vec3d  fxj = Fp*dxxj;
-
-                Vec3d  dSdp = Rij*(dSr*cij);
-                DEBUG_dQdp = dSdp;
-                Vec3d Fq   = dSdp*dEdQ;
-                Vec3d Fxi  = fxi + Fq;
-                Vec3d Fxj  = fxj + Fq;
-                */
-
-                pair.backForce( Rij, cij, fQs[i], fPs[i], fSs[i],  efpos[i], efpos[j], efsize[i], efsize[j] );
-
-                /*
-                efpos [i].add( Fxi );
-                efpos [j].add( Fxj );
-                efsize[i] += fsi;
-                efsize[j] += fsj;
-                */
-
+                if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:fromRho[%i,%i] x(%g,%g) ", i, j, pi.x, pj.x );
+                pair.backForce( Rij, cij, fQs[ij], fPs[ij], fSs[ij],  efpos[i], efpos[j], efsize[i], efsize[j] );
                 ij++;
             }
         }
         //printf( " Exchange:FromRho DONE \n" );
-        //printf( "ExchangeOrbPair() E=%g \n", E  );
+        if(DEBUG_iter==DEBUG_log_iter)printf( "ExchangeOrbPair() E=%g \n", E  );
         return E;
     }
 
     double evalExchange(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
         double E = 0;
-        for(int io=0; io<nOrb; io++){
-            for(int jo=0; jo<nOrb; jo++){
+        for(int io=0; io<nOrb; io++){ for(int jo=0; jo<io; jo++){
+        //for(int io=0; io<nOrb; io++){ for(int jo=io+1; jo<nOrb; jo++){
                 //if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
                 E += ExchangeOrbPair( io, jo);
             }

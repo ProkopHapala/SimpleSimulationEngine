@@ -117,7 +117,8 @@ if __name__ == "__main__":
 
     ecoefs = [[1.0,1.0],[1.0,1.0] ]
     esizes = [[1.0,1.0],[1.0,1.0] ]
-    eXpos  = [[0.,+0.5],[-3.5,-1.5]]
+    #eXpos  = [[0.,+0.5],[-3.5,-1.5]]
+    eXpos  = [[0.,+0.0],[ -0.5, 0.5]]
     eYpos  = [[0.,+0.0],[ 0.0, 0.0]]
     eZpos  = [[0.,+0.0],[ 0.0, 0.0]]
 
@@ -127,10 +128,13 @@ if __name__ == "__main__":
     #eYpos  = [[+0.00,+0.00],[+0.00,+0.0]]
     #eZpos  = [[+0.50,-0.30],[-0.40,+0.8]]
 
+
+    x0 =  -1.0
+    dx =  0.05
+    xs =  np.arange( x0, 4.0, dx )
+    xs_ = (xs[1:]+xs[:-1])*0.5
+
     '''
-    dx = 0.025
-    xs =  np.arange( 0.0, 3.0, dx )
-    xs_ = 0.5*(xs[1:]+xs[:-1])
 
     # ============== Gaussian Overlap Product derivatives
     #esizes[0][0] = xs
@@ -186,7 +190,8 @@ if __name__ == "__main__":
 
     #ylims=[-5,5]
     #ylims=[-5,20]
-    ylims=[-30,80]
+    #ylims=[-30,80]
+    ylims=[-200,400]
     plt.figure(figsize=(14,8))
     
     # =========================================
@@ -194,14 +199,10 @@ if __name__ == "__main__":
     # =========================================
     print " ========== Derivs in Python "
 
-    x0 =  0.2
-    dx =  0.025
-    xs =  np.arange( x0, 3.0, dx )
-    xs_ = (xs[1:]+xs[:-1])*0.5
     #eXpos[0][0] = xa 
 
-    #(E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, xa=xs ); F=Fp
-    (E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, sa=xs ); F=Fs
+    (E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, xa=xs ); F=Fp
+    #(E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, sa=xs ); F=Fs
     #(E, F) = ref.evalEF_S_off ( xs, ecoefs, esizes, eXpos )
 
     plt.subplot(1,2,2)
@@ -249,8 +250,8 @@ if __name__ == "__main__":
     #testDerivsP_Total        ( n=n, x0=x0, dx=dx )
     #testDerivsS_Total        ( n=n, x0=x0, dx=dx )
 
-    #Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
-    Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
+    Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
+    #Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
     print "===<< DONE C++ test : testDerivs_Total "
 
     '''
@@ -280,7 +281,7 @@ if __name__ == "__main__":
     #plt.ylim(-30,40)
     #plt.ylim(-5,30)
     #plt.xlim(0,l_xs[-3])
-    plt.ylim( ylims[0], ylims[1] ) 
+    #plt.ylim( ylims[0], ylims[1] ) 
     plt.grid()
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')

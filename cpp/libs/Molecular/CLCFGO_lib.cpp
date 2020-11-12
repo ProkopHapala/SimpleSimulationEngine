@@ -18,7 +18,14 @@
 #include "AOIntegrals.h"
 //#include "AOrotations.h"
 
+
+Vec3d DEBUG_dQdp;
+int DEBUG_iter     = 0;
+int DEBUG_log_iter = 0;
+
+
 #include "Grid.h"
+#include "GaussianBasis.h"
 #include "CLCFGO.h"
 #include "CLCFGO_tests.h"
 
@@ -161,7 +168,7 @@ void testDerivsP_Coulomb_model( int n, double x0, double dx ){
     NEWBUFF(l_Fnum,n)
     solver.bEvalKinetic = false;
     for(int i=0; i<n; i++){
-        solver.DEBUG_iter=i;
+        DEBUG_iter=i;
         solver.cleanForces();
         double x = x0 + i*dx;
         l_xs[i] = x;
@@ -172,7 +179,7 @@ void testDerivsP_Coulomb_model( int n, double x0, double dx ){
         double E   = E_ * solver.rhoQ[0] * solver.rhoQ[1]; // E(q0,q1) * q0 * q1
         solver.fromRho( 0,1, 0 );                   // w0,w1 <- q0
         l_Q     [i] = solver.rhoQ[0];
-        l_dQ_ana[i] = solver.DEBUG_dQdp.x;
+        l_dQ_ana[i] = DEBUG_dQdp.x;
         if(i>1) l_dQ_num[i-1]  = (l_Q[i] - l_Q[i-2])/(2*dx);
         l_r[i]       = (solver.rhoP[0] - solver.rhoP[1]).norm();
         l_Fana[i]    = solver.efpos[0].x;                             // This is used when fromRho() is  modified
@@ -198,7 +205,7 @@ void testDerivsS_Coulomb_model( int n, double x0, double dx ){
     NEWBUFF(l_Fnum,n)
     solver.bEvalKinetic = false;
     for(int i=0; i<n; i++){
-        solver.DEBUG_iter=i;
+        DEBUG_iter=i;
         //printf("testDerivsS_Coulomb_model[%i] \n", i );
         solver.cleanForces();
         double x = x0 + i*dx;
@@ -210,7 +217,7 @@ void testDerivsS_Coulomb_model( int n, double x0, double dx ){
         double E   = E_ * solver.rhoQ[0] * solver.rhoQ[1]; // E(q0,q1) * q0 * q1
         solver.fromRho( 0,1, 0 );                   // w0,w1 <- q0
         l_Q     [i] = solver.rhoQ[0];
-        l_dQ_ana[i] = solver.DEBUG_dQdp.x;
+        l_dQ_ana[i] = DEBUG_dQdp.x;
         if(i>1) l_dQ_num[i-1]  = (l_Q[i] - l_Q[i-2])/(2*dx);
         l_r[i]       = (solver.rhoP[0] - solver.rhoP[1]).norm();
         l_Fana[i]    =  solver.efsize[0];                             // This is used when fromRho() is  modified
@@ -232,7 +239,7 @@ void testDerivsP_Total( int n, double x0, double dx ){
     NEWBUFF(l_Fnum,n)
     solver.bEvalKinetic = false;
     for(int i=0; i<n; i++){
-        solver.DEBUG_iter=i;
+        DEBUG_iter=i;
         double x = x0 + i*dx;
         l_xs[i] = x;
         solver.epos[0].x=x;
@@ -263,7 +270,7 @@ void testDerivsS_Total( int n, double x0, double dx ){
     NEWBUFF(l_Fnum,n)
     solver.bEvalKinetic = false;
     for(int i=0; i<n; i++){
-        solver.DEBUG_iter=i;
+        DEBUG_iter=i;
         double x = x0 + i*dx;
         l_xs[i] = x;
         solver.esize[0]=x;

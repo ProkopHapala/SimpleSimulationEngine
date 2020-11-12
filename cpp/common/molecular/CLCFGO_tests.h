@@ -17,7 +17,7 @@ void testDerivsCoulombModel( CLCFGO& solver, int n, double* xs, double* Es, doub
     solver.toRho(0,1, 0);   
     solver.toRho(2,3, 1);
     for(int i=0; i<n; i++){
-        solver.DEBUG_iter=i;
+        DEBUG_iter=i;
         solver.clearAuxDens();
         solver.cleanForces();
         switch(what){
@@ -42,7 +42,7 @@ void testDerivsCoulombModel( CLCFGO& solver, int n, double* xs, double* Es, doub
 void testDerivsTotal( CLCFGO& solver, int n, double* xs, double* Es, double* Fs, int what ){
     for(int i=0; i<n; i++){
         //printf( "===== testDerivsTotal[%i]\n", i  );
-        solver.DEBUG_iter=i;
+        DEBUG_iter=i;
         switch(what){
             case iTEST_POS_DERIV : solver.epos [0].x=xs[i]; break;
             case iTEST_SIZE_DERIV: solver.esize[0]  =xs[i]; break;

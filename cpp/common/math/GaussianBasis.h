@@ -225,6 +225,7 @@ struct PairDerivs{
         Fxi  = fxi + Fq;
         Fxj  = fxj + Fq;
         */
+        if(DEBUG_iter==DEBUG_log_iter) printf( "cij %g dEdQ %g Fx %g \n", cij, dEdQ, Fp.x );
         fsi += ( Fp.dot( dXsi ) + Fs*dSsi + dEdQ*dCsi*cij );
         fsj += ( Fp.dot( dXsj ) + Fs*dSsj + dEdQ*dCsj*cij );
         Vec3d  Fq = Rij*(dCr*cij)*dEdQ;
