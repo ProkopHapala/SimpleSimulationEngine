@@ -943,16 +943,16 @@ class CLCFGO{ public:
             fSs[i] = 0;
             fQs[i] = 0; 
         }
-        //for(int i=0; i<nqOrb; i++){
-        int i=0;{
+        for(int i=0; i<nqOrb; i++){
+        //int i=0;{
             //Vec3d  pi = posij[i];
             //double qi = rhoij[i];
             //double si = szij [i];
             const Gauss::PairDerivs& A = pairs[i];
             double ci = cijs[i];
             double qi = ci*A.C;
-            //for(int j=0; j<=i; j++){
-            int j=1; {
+            for(int j=0; j<=i; j++){
+            //int j=1; {
                 const Gauss::PairDerivs& B = pairs[j];
                 Vec3d Rij = B.p - A.p;
                 double r2 = Rij.norm2();
@@ -975,7 +975,7 @@ class CLCFGO{ public:
                 fs       *=           qij;
                 fPs[i].add(fp);    fPs[j].sub(fp);
                 fSs[i] -= fs*A.s;  fSs[j] -= fs*B.s;
-                fQs[i] += e*qj;    fQs[j] += e*qi; // ToDo : need to be made more stable ... different (qi,qj)
+                fQs[i] += e*qj*2;  fQs[j] += e*qi*2; // ToDo : need to be made more stable ... different (qi,qj)
                 E      += e*qij;
             }
         }
