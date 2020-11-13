@@ -465,8 +465,8 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
 
     double dTr,dTsi,dTsj;
     double dSr,dSsi,dSsj;
-    double T = getDeltaTGauss  ( r2, si, sj, dTr, dTsi, dTsj, 1./si2, 1./sj2,s2,is2,is4 );
-    double S = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj,    si2,    sj2,is2,is4 );
+    double T = getDeltaTGauss  ( r2, si, sj, dTr, dTsi, dTsj, 1./si2, 1./sj2, s2,is2,is4 );
+    double S = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj,    si2,    sj2    ,is2,is4 );
 
     double eS,fS;
     if(anti){ eS = PauliSGauss_anti( S, fS, KRSrho.z ); }

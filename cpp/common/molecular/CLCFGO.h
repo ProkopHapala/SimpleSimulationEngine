@@ -71,6 +71,10 @@ class CLCFGO{ public:
     bool bEvalCoulomb  = true;
     bool bEvalPauli    = true;
     bool bEvalExchange = true;
+    int  iPauliModel   = 0;
+
+    double KPauliOverlap = 1.0;
+    constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
 
     double Rcut    =6.0;  ///< cutoff beyond which two basis functions chi has no overlap
     double RcutOrb =9.0;  ///< cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
@@ -1009,7 +1013,7 @@ class CLCFGO{ public:
                 double cj  = ecoef[j];
                 double sj  = esize[j];
                 double cij = ci*cj;
-                cijs[ij] = cij;
+                //cijs[ij] = cij;
                 Gauss::PairDerivs& pair = pairs[ij];
                 //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:fromRho[%i,%i] x(%g,%g) ", i, j, pi.x, pj.x );
                 pair.backForce( Rij, cij, fQs[ij], fPs[ij], fSs[ij],  efpos[i], efpos[j], efsize[i], efsize[j] );
@@ -1018,6 +1022,216 @@ class CLCFGO{ public:
         }
         //printf( " Exchange:FromRho DONE \n" );
         //if(DEBUG_iter==DEBUG_log_iter)printf( "ExchangeOrbPair() E=%g \n", E  );
+        return E;
+    }
+
+    double pairOverlapDervis( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs ){
+        int i0=io*perOrb;
+        int j0=jo*perOrb;
+        int ij=0;
+        // --- Project   rho_ij(r)  to temp axuliary basis
+        //if(DEBUG_iter==DEBUG_log_iter) reportOrbitals();
+        double S=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                //if(r2>Rcut2) continue;
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+                double cij = ci*cj;
+                //pairs[ij].get(si,pi, sj,pj);
+                Gauss::product3DDeriv(si,pi,sj,pj, Bs[ij], dBs[ij]);
+                Bs[ij].charge *= cij;
+                S += Bs[ij].charge;
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:Project[%i,%i] ss(%g,%g) cij %g Sij %g Qij %g r %g x(%g,%g) \n", i, j, si, sj, cij, pairs[ij].C, cij*pairs[ij].C, sqrt(r2), pi.x, pj.x );
+                ij++;
+            }
+        }
+        return S;
+    }
+
+    double evalCoulombPair( int ni, int nj, Gauss::Blob* Bis, Gauss::Blob* Bjs, Gauss::Blob* dBis, Gauss::Blob* dBjs ){
+        double E = 0;
+        for(int i=0; i<nqOrb; i++){
+            const Gauss::Blob&  Bi =  Bis[i];
+                  Gauss::Blob& dBi = dBis[i];
+            for(int j=0; j<=i; j++){
+            //int j=1; {
+                const Gauss::Blob&  Bj =  Bjs[j];
+                      Gauss::Blob& dBj = dBjs[j];
+                Vec3d Rij = Bi.pos - Bj.pos;
+                double r2 = Rij.norm2();
+                double r  = sqrt(r2 + R2SAFE );
+                double s2 = Bi.size*Bi.size + Bj.size*Bj.size;
+                double s  = sqrt(s2);
+                double qij = Bi.charge*Bj.charge * 2 ;
+                //printf( "//Exchange:Coulomb[%i,%i] r %g s %g \n", i, j, r, s  );
+                double fr,fs;
+                double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
+                //printf( "Exchange:Coulomb[%i,%i] qij %g E %g fr %g fs %g \n", i, j, r, s, qij, E*qij, fs, fs );
+                // --- Derivatives (Forces)
+                Vec3d fp = Rij*(-fr * qij);
+                fs       *=           qij;
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "ExchangeOrbPair:Coulomb[%i,%i] qij %g e %g fx %g fs %g | r %g s %g fr %g fs %g  \n", i,j, qij, e, fp.x, fs,    r, s, fr, fs );
+                dBi.pos.add(fp);              dBj.pos.sub(fp);
+                dBi.size   -= fs*Bi.size;     dBj.size   -= fs*Bj.size;
+                dBi.charge += e*Bj.charge*2;  dBj.charge += e*Bi.charge*2; // ToDo : need to be made more stable ... different (qi,qj)
+                E      += e*qij;
+            }
+        }
+        return E;
+    }
+
+    double forceFromOverlaps( int io, int jo, Gauss::PairDeriv* dBs, Gauss::Blob* fBs ){
+        int i0=io*perOrb;
+        int j0=jo*perOrb;
+        int ij=0;
+        // --- Project   rho_ij(r)  to temp axuliary basis
+        //if(DEBUG_iter==DEBUG_log_iter) reportOrbitals();
+        double S=0;
+        ij=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                //if(r2>Rcut2) continue;
+                double cj  = ecoef[j];
+                double cij = ci*cj;
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:fromRho[%i,%i] x(%g,%g) ", i, j, pi.x, pj.x );
+                //pair.backForce( Rij, cij, fQs[ij], fPs[ij], fSs[ij],  efpos[i], efpos[j], efsize[i], efsize[j] );
+                Gauss::productBackForce( fBs[ij], dBs[ij], Rij, cij, efpos[i], efpos[j], efsize[i], efsize[j] );
+                ij++;
+            }
+        }
+        return S;
+    }
+
+    // ToDo : This may be perhaps integrated into  ***  forceFromOverlaps() *** 
+    void applyPairForce( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, double Amp ){
+        int i0=io*perOrb;
+        int j0=jo*perOrb;
+        int ij=0;
+        // --- Project   rho_ij(r)  to temp axuliary basis
+        //if(DEBUG_iter==DEBUG_log_iter) reportOrbitals();
+        //double E=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                //if(r2>Rcut2) continue;
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+                double cij = ci*cj*Amp;
+                //pairs[ij].get(si,pi, sj,pj);
+                const Gauss::PairDeriv& dB = dBs[ij];
+                double eij=Amp*Bs[ij].charge;
+                //E   += eij;
+                Vec3d Fp = Rij*(-dB.dCr*cij);
+                efpos [i].add( Fp ); efpos[j].sub( Fp );
+                efsize[i]+= dB.dSsi*cij; efsize[j]+= dB.dSsj*cij;
+                //efcoef[i]+= eij*cj ;  efcoef[j]+= eij*ci;
+                efcoef[i]+= eij/ci ;  efcoef[j]+= eij/cj;
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:Project[%i,%i] ss(%g,%g) cij %g Sij %g Qij %g r %g x(%g,%g) \n", i, j, si, sj, cij, pairs[ij].C, cij*pairs[ij].C, sqrt(r2), pi.x, pj.x );
+                ij++;
+            }
+        }
+        //return E;
+    }
+
+    // ToDo : This may be perhaps integrated into  ***  forceFromOverlaps() *** 
+    double pauliCrossKinetic( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, double S, Vec3d KRSrho, bool anti ){
+        // This is Pauli potential derived from Kinetic energy; 
+        // See Eq.3a,b in article:
+        // Su, J. T., & Goddard, W. A. (2009), The Journal of Chemical Physics, 131(24), 244501.
+        // The dynamics of highly excited electronic systems: Applications of the electron force field. 
+        // See  https://doi.org/10.1063/1.3272671    or    http://aip.scitation.org/doi/10.1063/1.3272671
+        //
+        // Same spin (Eq.3a)    Ep = T * ( (1-a)*S/(1+S) + S/(1-S) )
+        // anti spin (Eq.3b)    Ep = T * (    a *S/(1+S)           )
+        // 
+        //See : /home/prokop/git/SimpleSimulationEngine/cpp/common/molecular/InteractionsGauss.h 
+        // addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho )
+
+        double eS,fS;
+        if(anti){ eS = PauliSGauss_anti( S, fS, KRSrho.z ); }
+        else    { eS = PauliSGauss_syn ( S, fS, KRSrho.z ); }
+
+        int i0=io*perOrb;
+        int j0=jo*perOrb;
+        int ij=0;
+        // --- Project   rho_ij(r)  to temp axuliary basis
+        //if(DEBUG_iter==DEBUG_log_iter) reportOrbitals();
+        double E=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                //if(r2>Rcut2) continue;
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+                //double cij = ci*cj*Amp;
+                double cij = ci*cj;
+                //pairs[ij].get(si,pi, sj,pj);
+                const Gauss::PairDeriv& dB = dBs[ij];
+
+                double dTr, dTsi, dTsj;
+                double T = Gauss:: kinetic_s(  r2, si, sj,   dTr, dTsi, dTsj );
+                
+                double TfS = T*fS;
+                double fsi =         -( dTsi*eS + TfS*dB.dCsi )*KRSrho.y;
+                double fsj =         -( dTsj*eS + TfS*dB.dCsj )*KRSrho.y;
+                Vec3d  fp  =  Rij * ( ( dTr *eS + TfS*dB.dCr  )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
+
+                efpos [i].add( fp ); efpos[j].sub( fp );
+                efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
+                efcoef[i]+= T*cj  ; efcoef[j]+= T*ci;
+                E += T*cij;
+                ij++;
+            }
+        }
+        return E;
+    }
+
+    double evalCrossOrb(int io, int jo){
+        const double R2Safe = sq(0.1);
+        // we first project on axuliary density
+
+        Gauss::PairDeriv dBs[nqOrb]; 
+        Gauss::Blob       Bs[nqOrb];
+        Gauss::Blob      fBs[nqOrb];
+        // transform to auxuliatery overlap-density basis and calculate corresponding derivative transform (Jacobian)
+        double S = pairOverlapDervis( io, jo, Bs, dBs ); 
+        // evaluate coulombic terms in axuilary density basis ( i.e. between charge blobs )
+        for(int i=0; i<nqOrb; i++){ fBs[i].setZero(); }
+        double E = evalCoulombPair( nqOrb, nqOrb, Bs, Bs, fBs, fBs );
+        // transform forces back to wave-function basis, using previously calculated derivatives 
+        forceFromOverlaps( io, jo, dBs, fBs );
+
+        bool anti = false; // ToDo : we  should properly distinguish spins of electrons
+
+        switch(iPauliModel){
+            case 0: E += S*S*KPauliOverlap; applyPairForce   ( io, jo, Bs, dBs, S*2*KPauliOverlap );  break;
+            case 1: E +=                    pauliCrossKinetic( io, jo, Bs, dBs, S, KRSrho,  anti  );  break;
+        }
+
+        // ToDo : We can calculate Kinetic Energy Change ass well ( by the same general algorithm )
+        
         return E;
     }
 
@@ -1033,6 +1247,18 @@ class CLCFGO{ public:
         return E;
     }
 
+    double evalCrossTerms(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
+        double E = 0;
+        for(int io=0; io<nOrb; io++){ for(int jo=0; jo<io; jo++){
+        //for(int io=0; io<nOrb; io++){ for(int jo=io+1; jo<nOrb; jo++){
+                //if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
+                E += evalCrossOrb( io, jo);
+            }
+        }
+        //printf( "evalExchange() E=%g \n", E  );
+        return E;
+    }
+
     void evalExchangeCorrelation(){
         // not sure how exactly to do that now - no using real space grid since it is slow
     }
@@ -1042,12 +1268,13 @@ class CLCFGO{ public:
         cleanForces();
         if( bEvalCoulomb  ) clearAuxDens();
         //projectOrbs( true );
-        double Ek = projectOrbs( false );
+        double Ek = projectOrbs( false ); // here we calculate kinetic energy of each orbital and project them to auxuliary charge density basis
         if( bEvalKinetic  ) E+=Ek;
         //reportCharges();
         if( bEvalPauli    ) E += evalPauli();
         if( bEvalExchange ) E += evalExchange();
         if( bEvalCoulomb  ) E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
+        //evalCrossTerms(); // ToDo : This should replace evalPauli and evalExchange()
         //printf( "eval() E=%g \n", E  );
         return E;
     }

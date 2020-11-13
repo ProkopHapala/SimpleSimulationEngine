@@ -200,6 +200,49 @@ inline double product3D_s_deriv(
     return C;
 }
 
+/// ====== Product Blobs and its derivativs
+
+struct Blob{
+    Vec3d  pos;
+    double size;
+    double charge;
+    inline void setZero(){ pos=Vec3dZero; size=0; charge=0; };
+};
+
+struct PairDeriv{
+    double dSsi,dSsj;
+    Vec3d  dXsi,dXsj;
+    double dXxi,dXxj;
+    double dCsi,dCsj,dCr;
+};
+
+inline void product3DDeriv( double si, Vec3d pi, double sj, Vec3d pj, Blob& out, PairDeriv& dOut ){
+    out.charge = product3D_s_deriv( si, pi, sj, pj,
+        out.size, out.pos,
+        dOut.dSsi, dOut.dSsj,
+        dOut.dXsi, dOut.dXsj,
+        dOut.dXxi, dOut.dXxj,
+        dOut.dCsi, dOut.dCsj, dOut.dCr
+    );
+}
+
+inline void productBackForce( 
+    const Blob& fB, const PairDeriv& Ds,
+    Vec3d Rij, double cij,  
+    Vec3d& Fxi, Vec3d& Fxj, double& fsi, double& fsj  
+){
+    //if(DEBUG_iter==DEBUG_log_iter) printf( "cij %g dEdQ %g Fx %g \n", cij, dEdQ, Fp.x );
+    fsi += ( fB.pos.dot( Ds.dXsi ) + fB.size*Ds.dSsi + fB.charge*Ds.dCsi*cij );
+    fsj += ( fB.pos.dot( Ds.dXsj ) + fB.size*Ds.dSsj + fB.charge*Ds.dCsj*cij );
+    Vec3d  Fq = Rij*(Ds.dCr*cij)*fB.charge;
+    Fxi.add( fB.pos*Ds.dXxi + Fq );
+    Fxj.add( fB.pos*Ds.dXxj + Fq );
+}
+
+
+
+/// ====== this should be probably removed later
+
 struct PairDerivs{
     double C;
     double s;    
@@ -232,6 +275,10 @@ struct PairDerivs{
     }
 
 };
+
+
+
+
 
 
 inline double product3D_s_new(
