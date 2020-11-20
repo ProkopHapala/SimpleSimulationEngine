@@ -1199,18 +1199,36 @@ class CLCFGO{ public:
                 //pairs[ij].get(si,pi, sj,pj);
                 const Gauss::PairDeriv& dB = dBs[ij];
 
+                // ToDo : this is in    addPauliGauss()    @     /home/prokop/git/SimpleSimulationEngine/cpp/common/molecular/InteractionsGauss.h
+                //r2 *= KRSrho.x*KRSrho.x;
+                //si *= KRSrho.y;
+                //sj *= KRSrho.y;
+
                 double dTr, dTsi, dTsj;
-                double T = Gauss:: kinetic_s(  r2, si, sj,   dTr, dTsi, dTsj );
+                double T = Gauss:: kinetic_s(  r2, si, sj,   dTr, dTsi, dTsj );             
+                
                 
                 double TfS = T*fS;
-                double fsi =         -( dTsi*eS + TfS*dB.dCsi )*KRSrho.y;
-                double fsj =         -( dTsj*eS + TfS*dB.dCsj )*KRSrho.y;
-                Vec3d  fp  =  Rij * ( ( dTr *eS + TfS*dB.dCr  )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
+                //double fsi =         -( dTsi*eS + TfS*dB.dCsi )*KRSrho.y;
+                //double fsj =         -( dTsj*eS + TfS*dB.dCsj )*KRSrho.y;
+                //Vec3d  fp  =  Rij * ( ( dTr *eS + TfS*dB.dCr  )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
+                double fsi =         -( dTsi*eS + TfS*dB.dCsi );
+                double fsj =         -( dTsj*eS + TfS*dB.dCsj );
+                Vec3d  fp  =  Rij * ( ( dTr *eS + TfS*dB.dCr  ) ); // second *KRSrho.x because dR is not multiplied
+                T *= eS;
+                
+
+                /*
+                Vec3d  fp  =  Rij * dTr; 
+                double fsi =  dTsi;
+                double fsj =  dTsj;;
+                */
 
                 efpos [i].add( fp ); efpos[j].sub( fp );
-                efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
-                efcoef[i]+= T*cj  ; efcoef[j]+= T*ci;
+                efsize[i]+= fsi*cij; efsize[j]+= fsj*cij;
+                efcoef[i]+= T*cj   ; efcoef[j]+= T*ci;
                 E += T*cij;
+
                 ij++;
             }
         }

@@ -296,7 +296,7 @@ void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
     solver.bEvalCoulomb  = 0;
     solver.bEvalExchange = 0;
     solver.bEvalPauli    = 1;
-    solver.iPauliModel   = 0;
+    solver.iPauliModel   = 1;
     return testDerivsTotal( solver, n, xs, Es, Fs, what );
 }
 
