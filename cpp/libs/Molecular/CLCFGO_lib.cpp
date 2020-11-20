@@ -14,6 +14,8 @@
 #include "Mat3.h"
 //#include "VecN.h"
 
+#include "testUtils.h"
+
 #include "integration.h"
 #include "AOIntegrals.h"
 //#include "AOrotations.h"
@@ -292,8 +294,9 @@ void testDerivsS_Total( int n, double x0, double dx ){
 void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
     solver.bEvalKinetic  = 0;
     solver.bEvalCoulomb  = 0;
-    solver.bEvalExchange = 1;
-    solver.bEvalPauli    = 0;
+    solver.bEvalExchange = 0;
+    solver.bEvalPauli    = 1;
+    solver.iPauliModel   = 0;
     return testDerivsTotal( solver, n, xs, Es, Fs, what );
 }
 
