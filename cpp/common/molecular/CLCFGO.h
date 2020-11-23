@@ -1058,6 +1058,44 @@ class CLCFGO{ public:
         return S;
     }
 
+    double pairKineticDervis( int io, int jo, Quat4d* TDs ){ // TODO : this can be merged with  pairOverlapDervis() for better performance
+        int i0=io*perOrb;
+        int j0=jo*perOrb;
+        int ij=0;
+        // --- Project   rho_ij(r)  to temp axuliary basis
+        //if(DEBUG_iter==DEBUG_log_iter) reportOrbitals();
+        double T=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                //if(r2>Rcut2) continue;
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+                double cij = ci*cj;
+                //pairs[ij].get(si,pi, sj,pj);
+                //Gauss::product3DDeriv(si,pi,sj,pj, Bs[ij], dBs[ij]);
+                Quat4d& TD = TDs[ij];
+                //r2 *= KRSrho.x*KRSrho.x;
+                //si *= KRSrho.y;
+                //sj *= KRSrho.y;
+                double Tij = Gauss:: kinetic_s(  r2, si, sj,  TD.z, TD.x, TD.y );
+                TD.e  = Tij;
+                T    += Tij;
+                //Bs[ij].charge *= cij;
+                //S += Bs[ij].charge;
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:Project[%i,%i] ss(%g,%g) cij %g Sij %g Qij %g r %g x(%g,%g) \n", i, j, si, sj, cij, pairs[ij].C, cij*pairs[ij].C, sqrt(r2), pi.x, pj.x );
+                //printf( "pairOverlapDervis[%i,%i]%i\n", i, j, ij );
+                ij++;
+            }
+        }
+        return T;
+    }
+
     double evalCoulombPair( int ni, int nj, Gauss::Blob* Bis, Gauss::Blob* Bjs, Gauss::Blob* dBis, Gauss::Blob* dBjs ){
         double E = 0;
         for(int i=0; i<ni; i++){
@@ -1123,7 +1161,7 @@ class CLCFGO{ public:
 
     // ToDo : This may be perhaps integrated into  ***  forceFromOverlaps() *** 
     void applyPairForce( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, double Amp ){
-        printf( "applyPairForce [%i,%i] Amp %g \n", io, jo, Amp );
+        //printf( "applyPairForce [%i,%i] Amp %g \n", io, jo, Amp );
         int i0=io*perOrb;
         int j0=jo*perOrb;
         int ij=0;
@@ -1151,7 +1189,8 @@ class CLCFGO{ public:
                 efsize[i]+= dB.dCsi*cij; efsize[j]+= dB.dCsj*cij;
                 //efcoef[i]+= eij*cj ;  efcoef[j]+= eij*ci;
                 efcoef[i]+= eij/ci ;  efcoef[j]+= eij/cj;
-                if(DEBUG_iter==DEBUG_log_iter) printf( "applyPairForce[%i,%i]%i  dCr %g dCsi %g dCsj %g cij*Amp %g \n", i, j, ij, dB.dCr, dB.dCsi, dB.dCsj, cij );
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "applyPairForce[%i,%i]%i  dCr %g dCsi %g dCsj %g cij*Amp %g \n", i, j, ij, dB.dCr, dB.dCsi, dB.dCsj, cij );
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "applyPairForce[%i,%i]%i Qij %g eij %g dCr %g Fp.x %g cij %g Amp %g \n", i, j, ij, Bs[ij].charge, eij, dB.dCr, Fp.x, cij, Amp );
                 //printf( "applyPairForce[%i,%i]%i\n", i, j, ij );
                 ij++;
             }
@@ -1160,7 +1199,7 @@ class CLCFGO{ public:
     }
 
     // ToDo : This may be perhaps integrated into  ***  forceFromOverlaps() *** 
-    double pauliCrossKinetic( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, double S, Vec3d KRSrho, bool anti ){
+    double pauliCrossKinetic( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, Quat4d* TDs, double S, double T, Vec3d KRSrho, bool anti ){
         // This is Pauli potential derived from Kinetic energy; 
         // See Eq.3a,b in article:
         // Su, J. T., & Goddard, W. A. (2009), The Journal of Chemical Physics, 131(24), 244501.
@@ -1173,9 +1212,12 @@ class CLCFGO{ public:
         //See : /home/prokop/git/SimpleSimulationEngine/cpp/common/molecular/InteractionsGauss.h 
         // addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho )
 
+        anti = true; // DEBUG WARRNING !!!!!!!!
+
         double eS,fS;
         if(anti){ eS = PauliSGauss_anti( S, fS, KRSrho.z ); }
         else    { eS = PauliSGauss_syn ( S, fS, KRSrho.z ); }
+        double TfS = T*fS;
 
         int i0=io*perOrb;
         int j0=jo*perOrb;
@@ -1198,41 +1240,35 @@ class CLCFGO{ public:
                 double cij = ci*cj;
                 //pairs[ij].get(si,pi, sj,pj);
                 const Gauss::PairDeriv& dB = dBs[ij];
+                const Quat4d&           TD = TDs[ij];
 
                 // ToDo : this is in    addPauliGauss()    @     /home/prokop/git/SimpleSimulationEngine/cpp/common/molecular/InteractionsGauss.h
-                //r2 *= KRSrho.x*KRSrho.x;
-                //si *= KRSrho.y;
-                //sj *= KRSrho.y;
 
-                double dTr, dTsi, dTsj;
-                double T = Gauss:: kinetic_s(  r2, si, sj,   dTr, dTsi, dTsj );             
+                //double dTr, dTsi, dTsj;
+                //double T = Gauss:: kinetic_s(  r2, si, sj,   dTr, dTsi, dTsj );             
                 
-                
-                double TfS = T*fS;
-                //double fsi =         -( dTsi*eS + TfS*dB.dCsi )*KRSrho.y;
-                //double fsj =         -( dTsj*eS + TfS*dB.dCsj )*KRSrho.y;
-                //Vec3d  fp  =  Rij * ( ( dTr *eS + TfS*dB.dCr  )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
-                double fsi =         -( dTsi*eS + TfS*dB.dCsi );
-                double fsj =         -( dTsj*eS + TfS*dB.dCsj );
-                Vec3d  fp  =  Rij * ( ( dTr *eS + TfS*dB.dCr  ) ); // second *KRSrho.x because dR is not multiplied
-                T *= eS;
-                
+                double dTsi = TD.x;
+                double dTsj = TD.y;
+                double dTr  = TD.z;
 
-                /*
-                Vec3d  fp  =  Rij * dTr; 
-                double fsi =  dTsi;
-                double fsj =  dTsj;;
-                */
+                //double fsi =          ( dTsi*eS + TfS*dB.dCsi )*KRSrho.y;
+                //double fsj =          ( dTsj*eS + TfS*dB.dCsj )*KRSrho.y;
+                //Vec3d  fp  =  Rij * ( ( dTr *eS - TfS*dB.dCr  )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
+                
+                double fsi =         ( dTsi*eS + TfS*dB.dCsi );
+                double fsj =         ( dTsj*eS + TfS*dB.dCsj );
+                Vec3d  fp  =  Rij * ( ( dTr *eS - TfS*dB.dCr ) ); // second *KRSrho.x because dR is not multiplied
 
                 efpos [i].add( fp ); efpos[j].sub( fp );
                 efsize[i]+= fsi*cij; efsize[j]+= fsj*cij;
                 efcoef[i]+= T*cj   ; efcoef[j]+= T*ci;
-                E += T*cij;
-
+                E += T*cij; // TODO - this should be total kinetic energy for whole orbital not for single basis !!!!
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "pauliCrossKinetic[%i,%i]%i Qij %g eij %g dCr %g Fp.x %g cij %g \n", i, j, ij, cij*S, T*cij, dB.dCr, fp.x, cij );
                 ij++;
             }
         }
-        return E;
+        return T*eS;
+        //return E;
     }
 
     double evalCrossOrb(int io, int jo){
@@ -1244,6 +1280,13 @@ class CLCFGO{ public:
         Gauss::Blob      fBs[perOrb2];
         // transform to auxuliatery overlap-density basis and calculate corresponding derivative transform (Jacobian)
         double S = pairOverlapDervis( io, jo, Bs, dBs ); 
+
+        double T=0;
+        Quat4d TDs[perOrb2];
+        if( (bEvalPauli) && (iPauliModel==1) ){
+            T = pairKineticDervis(io,jo,TDs);
+        }
+
         // evaluate coulombic terms in axuilary density basis ( i.e. between charge blobs )
         for(int i=0; i<perOrb2; i++){ fBs[i].setZero(); }
         if(bEvalExchange) E += evalCoulombPair( perOrb2, perOrb2, Bs, Bs, fBs, fBs );
@@ -1254,8 +1297,8 @@ class CLCFGO{ public:
         bool anti = false; // ToDo : we  should properly distinguish spins of electrons
         if(bEvalPauli){
             switch(iPauliModel){
-                case 0: E += S*S*KPauliOverlap; applyPairForce   ( io, jo, Bs, dBs, S*2*KPauliOverlap );  break;  // Simple square of overlap : Epauli = k*S^2
-                case 1: E +=                    pauliCrossKinetic( io, jo, Bs, dBs, S, KRSrho,  anti  );  break;  // Kinetic energy change    : Epauli = Delta_T * ( (1-a)*S/(1+S) + S/(1-S) )
+                case 0: E += S*S*KPauliOverlap; applyPairForce   ( io, jo, Bs, dBs, S*2*KPauliOverlap );          break;  // Simple square of overlap : Epauli = k*S^2
+                case 1: E +=                    pauliCrossKinetic( io, jo, Bs, dBs, TDs, S, T, KRSrho,  anti  );  break;  // Kinetic energy change    : Epauli = Delta_T * ( (1-a)*S/(1+S) + S/(1-S) )
             }
         }
         return E;
