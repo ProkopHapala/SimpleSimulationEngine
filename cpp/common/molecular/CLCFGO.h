@@ -100,11 +100,12 @@ class CLCFGO{ public:
     int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
 
     // orbitals
-    Vec3d*  opos =0;   ///< store positions for the whole orbital
-    Vec3d*  odip =0;   ///< Axuliary array to store dipoles for the whole orbital
-    double* oEs  =0;   ///< orbital energies
-    double* oQs  =0;   ///< total charge in orbital before renormalization (just DEBUG?)
-    int*    onq  =0;   ///< number of axuliary density functions per orbital
+    Vec3d*  opos  =0;   ///< store positions for the whole orbital
+    Vec3d*  odip  =0;   ///< Axuliary array to store dipoles for the whole orbital
+    double* oEs   =0;   ///< orbital energies
+    double* oQs   =0;   ///< total charge in orbital before renormalization (just DEBUG?)
+    int*    onq   =0;   ///< number of axuliary density functions per orbital
+    int*    ospin =0; 
 
     // --- Wave-function components for each orbital
     Vec3d*  epos  =0; ///< position of spherical function for expansion of orbitals
@@ -145,6 +146,7 @@ class CLCFGO{ public:
             nQtot   = nOrb*nqOrb;
 
             // orbitals
+            _realloc( ospin,nOrb);
             _realloc( opos, nOrb);
             _realloc( odip, nOrb);
             _realloc( oEs , nOrb);
@@ -186,6 +188,7 @@ class CLCFGO{ public:
             oEs [i]=0;
             oQs [i]=0;
             onq [i]=0;
+            ospin [i]=1;
         }
         for(int i=0; i<nBas;  i++){
             // --- Wave-function components for each orbital
@@ -1096,6 +1099,48 @@ class CLCFGO{ public:
         return T;
     }
 
+
+
+    double pairOverlapAndKineticDervis( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, Quat4d* TDs, double& S ){
+        int i0=io*perOrb;
+        int j0=jo*perOrb;
+        int ij=0;
+        // --- Project   rho_ij(r)  to temp axuliary basis
+        //if(DEBUG_iter==DEBUG_log_iter) reportOrbitals();
+        double T=0;  S=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                //if(r2>Rcut2) continue;
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+                double cij = ci*cj;
+                //pairs[ij].get(si,pi, sj,pj);
+                // ---- Overlap
+                Gauss::product3DDeriv(si,pi,sj,pj, Bs[ij], dBs[ij]);
+                Bs[ij].charge *= cij;
+                S += Bs[ij].charge;
+                // ---- Kinetic
+                Quat4d& TD = TDs[ij];
+                //r2 *= KRSrho.x*KRSrho.x;
+                //si *= KRSrho.y;
+                //sj *= KRSrho.y;
+                double Tij = Gauss:: kinetic_s(  r2, si, sj,  TD.z, TD.x, TD.y );
+                TD.e  = Tij;
+                T    += Tij;
+                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:Project[%i,%i] ss(%g,%g) cij %g Sij %g Qij %g r %g x(%g,%g) \n", i, j, si, sj, cij, pairs[ij].C, cij*pairs[ij].C, sqrt(r2), pi.x, pj.x );
+                //printf( "pairOverlapDervis[%i,%i]%i\n", i, j, ij );
+                ij++;
+            }
+        }
+        return T;
+    }
+
     double evalCoulombPair( int ni, int nj, Gauss::Blob* Bis, Gauss::Blob* Bjs, Gauss::Blob* dBis, Gauss::Blob* dBjs ){
         double E = 0;
         for(int i=0; i<ni; i++){
@@ -1271,6 +1316,39 @@ class CLCFGO{ public:
         //return E;
     }
 
+
+    double evalCrossOrb(int io, int jo){
+        const double R2Safe = sq(0.1);
+        // we first project on axuliary density
+        double E =0;
+        Gauss::PairDeriv dBs[perOrb2]; 
+        Gauss::Blob       Bs[perOrb2];
+        Gauss::Blob      fBs[perOrb2];
+        // transform to auxuliatery overlap-density basis and calculate corresponding derivative transform (Jacobian)
+        double T=0,S=0;
+        Quat4d TDs[perOrb2];
+        for(int i=0; i<perOrb2; i++){ fBs[i].setZero(); }
+        if( bEvalPauli && (iPauliModel==1) ){
+            bool anti = ( ospin[io] != ospin[jo] );
+            T += pairOverlapAndKineticDervis( io, jo, Bs, dBs, TDs, S ); 
+            E += pauliCrossKinetic          ( io, jo, Bs, dBs, TDs, S, T, KRSrho,  anti  ); 
+        }else{
+            S = pairOverlapDervis( io, jo, Bs, dBs ); 
+            if(bEvalPauli){
+                E += S*S*KPauliOverlap; 
+                applyPairForce   ( io, jo, Bs, dBs, S*2*KPauliOverlap ); 
+            }
+        }
+        // evaluate coulombic terms in axuilary density basis ( i.e. between charge blobs )
+        if(bEvalExchange) E += evalCoulombPair( perOrb2, perOrb2, Bs, Bs, fBs, fBs );
+        //printf( "nqOrb %i \n", perOrb2 );
+        //for(int i=0; i<nqOrb; i++){ printf( "fBs[%i] fq %g fs %g fp(%g,%g,%g) \n", i, fBs[i].charge, fBs[i].size,    fBs[i].pos.x,fBs[i].pos.x,fBs[i].pos.x ); }
+        // transform forces back to wave-function basis, using previously calculated derivatives 
+        forceFromOverlaps( io, jo, dBs, fBs );
+        return E;
+    }
+
+    /*
     double evalCrossOrb(int io, int jo){
         const double R2Safe = sq(0.1);
         // we first project on axuliary density
@@ -1303,6 +1381,7 @@ class CLCFGO{ public:
         }
         return E;
     }
+    */
 
     double evalExchange(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
         double E = 0;
