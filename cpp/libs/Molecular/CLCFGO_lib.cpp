@@ -297,6 +297,10 @@ void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
     solver.bEvalExchange = 0;
     solver.bEvalPauli    = 1;
     solver.iPauliModel   = 1;
+    solver.bEvalAECoulomb = 0;
+    solver.bEvalAEPauli   = 0;
+    solver.bEvalAE        = 0;
+    solver.bEvalAA        = 0;
     return testDerivsTotal( solver, n, xs, Es, Fs, what );
 }
 

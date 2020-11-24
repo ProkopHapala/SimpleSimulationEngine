@@ -216,14 +216,16 @@ struct PairDeriv{
     double dCsi,dCsj,dCr;
 };
 
-inline void product3DDeriv( double si, Vec3d pi, double sj, Vec3d pj, Blob& out, PairDeriv& dOut ){
-    out.charge = product3D_s_deriv( si, pi, sj, pj,
+inline double product3DDeriv( double si, Vec3d pi, double sj, Vec3d pj, Blob& out, PairDeriv& dOut ){
+    double C = product3D_s_deriv( si, pi, sj, pj,
         out.size, out.pos,
         dOut.dSsi, dOut.dSsj,
         dOut.dXsi, dOut.dXsj,
         dOut.dXxi, dOut.dXxj,
         dOut.dCsi, dOut.dCsj, dOut.dCr
     );
+    out.charge = C;
+    return C;
 }
 
 inline void productBackForce( 

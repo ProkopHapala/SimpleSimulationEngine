@@ -67,10 +67,31 @@
 */
 class CLCFGO{ public:
 
-    bool bEvalKinetic  = true;
-    bool bEvalCoulomb  = true;
-    bool bEvalPauli    = true;
-    bool bEvalExchange = true;
+// ToDo : Later properly
+constexpr static const Vec3d default_eAbWs[] = {
+{ 0.0,  0.0, 0.0},  // Q = 0 //
+{ 0.0,  0.0, 0.01}, // Q = 1 // H
+{ 2.0, -3.0, 0.1},  // Q = 2 // Be?
+{ 2.0, -3.0, 0.1},  // Q = 3 // B
+{ 2.0, -3.0, 0.1},  // Q = 4 // C
+};
+
+constexpr static const Vec3d default_aAbWs[] = {
+{ 0.0,  0.0, 0.1},  // Q = 0 //
+{ 0.0,  0.0, 0.01}, // Q = 1 // H
+{ 1.0, -5.0, 0.1},  // Q = 2 // Be?
+{ 1.0, -5.0, 0.1},  // Q = 3 // B
+{ 1.0, -5.0, 0.1},  // Q = 4 // C
+};
+
+    bool bEvalKinetic   = true;
+    bool bEvalCoulomb   = true;
+    bool bEvalPauli     = true;
+    bool bEvalExchange  = true;
+    bool bEvalAECoulomb = true;
+    bool bEvalAEPauli   = true;
+    bool bEvalAE        = true;
+    bool bEvalAA        = true; 
     int  iPauliModel   = 0;
 
     double KPauliOverlap = 1.0;
@@ -98,6 +119,8 @@ class CLCFGO{ public:
     Vec3d*  aforce =0;  ///< positioon of atoms
     double* aQs    =0;  ///< charge of atom
     int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
+    Vec3d  * aAbWs =0; ///< atomic   parameters (amplitude, decay, width)
+    Vec3d  * eAbWs =0; ///< electron parameters (amplitude, decay, width)
 
     // orbitals
     Vec3d*  opos  =0;   ///< store positions for the whole orbital
@@ -135,6 +158,8 @@ class CLCFGO{ public:
             _realloc( apos  ,natom );
             _realloc( aforce,natom );
             _realloc( aQs   ,natom );
+            _realloc( aAbWs ,natom);
+            _realloc( eAbWs ,natom);
             _realloc( atype ,natom ); // not used  now
         }
         if( (nOrb != nOrb_)||(perOrb != perOrb_) ){
@@ -244,6 +269,35 @@ class CLCFGO{ public:
         for(int i=0; i<nBas;  i++){ efcoef[i] = 0;         }
         //clearAuxDens();
     }
+
+    void reportOrbitals(){
+        for(int io=0; io<nOrb; io++){ for(int ib=0; ib<perOrb; ib++){
+            int i=io*perOrb+ib;
+            printf( "orb[%i,%i=%i] p(%g,%g,%g) s %g c %g \n", io, ib, i, epos[i].x,epos[i].y,epos[i].z, esize[i], ecoef[i] );
+        } }
+    }
+
+    void reportCharges(int io){
+        int i0    = getOrbOffset(io);
+        int irho0 = getRhoOffset(io);
+        int ij=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            printf( "Q[%i|%i,%i|%i] %g|%g\n", io,i,i,ij, rhoQ[irho0+ij], ecoef[i] );
+            ij++;
+            for(int j=i0; j<i; j++){
+                printf( "Q[%i|%i,%i|%i] %g|%g,%g\n", io,i,j,ij, rhoQ[irho0+ij], ecoef[i], ecoef[j] );
+                ij++;
+            }
+        }
+    }
+    void reportCharges(){ for(int io=0; io<nOrb; io++){ reportCharges(io); } }
+
+
+
+// ===========================================================================================================================
+// ==================== Old Version of overlap and Pauli Evaluation - ToDo : Remove This
+// ===========================================================================================================================
+
 
     //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
     inline double evalOverlap( int io, int jo ){
@@ -426,28 +480,9 @@ class CLCFGO{ public:
         return E;
     }
 
-    void reportOrbitals(){
-        for(int io=0; io<nOrb; io++){ for(int ib=0; ib<perOrb; ib++){
-            int i=io*perOrb+ib;
-            printf( "orb[%i,%i=%i] p(%g,%g,%g) s %g c %g \n", io, ib, i, epos[i].x,epos[i].y,epos[i].z, esize[i], ecoef[i] );
-        } }
-    }
-
-    void reportCharges(int io){
-        int i0    = getOrbOffset(io);
-        int irho0 = getRhoOffset(io);
-        int ij=0;
-        for(int i=i0; i<i0+perOrb; i++){
-            printf( "Q[%i|%i,%i|%i] %g|%g\n", io,i,i,ij, rhoQ[irho0+ij], ecoef[i] );
-            ij++;
-            for(int j=i0; j<i; j++){
-                printf( "Q[%i|%i,%i|%i] %g|%g,%g\n", io,i,j,ij, rhoQ[irho0+ij], ecoef[i], ecoef[j] );
-                ij++;
-            }
-        }
-    }
-    void reportCharges(){ for(int io=0; io<nOrb; io++){ reportCharges(io); } }
-
+// ===========================================================================================================================
+// ==================== Project Orbitals ( Normalize, Eval Kinetic Energy, Project to Auxiliary Density Basis )
+// ===========================================================================================================================
 
     //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
     double projectOrb(int io, Vec3d& dip, bool bNormalize ){
@@ -611,6 +646,11 @@ class CLCFGO{ public:
         }
         return Srho;
     }
+
+
+// ===========================================================================================================================
+// ==================== Eval Coulombin interaction  -  Using Auxuliary density basis
+// ===========================================================================================================================
 
     void toRho( int i, int j, int ij ){
         /// NOTE : this function is mostly for debugging of  projectOrb()
@@ -901,13 +941,21 @@ class CLCFGO{ public:
                 */
             }
         }
-        for(int i=0; i<nOrb; i++){ 
-            assembleOrbForces_fromRho(i); 
-        }
         return E;
     }
 
+
+// ===========================================================================================================================
+// ==================== Eval Cross-Terms ( Contact of two different orbitals, such as Pauli and Exchange interaction )
+// ===========================================================================================================================
+
+    /*
     double ExchangeOrbPair(int io, int jo){
+
+        // ToDo : Remove This   --   This was replaced by other functions like 
+        //    pairOverlapDervis() 
+        //    pairKineticDervis()
+
         // It may be actually easier to evaluate Hartree-Fock like exchange, because it is linear
         // see:   https://en.wikipedia.org/wiki/Exchange_interaction#Exchange_of_spatial_coordinates
         // https://chemistry.stackexchange.com/questions/61176/what-is-the-exchange-interaction
@@ -1030,7 +1078,22 @@ class CLCFGO{ public:
         return E;
     }
 
+    double evalExchange(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
+        double E = 0;
+        for(int io=0; io<nOrb; io++){ for(int jo=0; jo<io; jo++){
+        //for(int io=0; io<nOrb; io++){ for(int jo=io+1; jo<nOrb; jo++){
+                //if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
+                E += ExchangeOrbPair( io, jo);
+            }
+        }
+        //printf( "evalExchange() E=%g \n", E  );
+        return E;
+    }
+
+    */
+
     double pairOverlapDervis( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs ){
+        // ToDo : This may be integrated within   pairOverlapAndKineticDervis() using only switch
         int i0=io*perOrb;
         int j0=jo*perOrb;
         int ij=0;
@@ -1061,7 +1124,9 @@ class CLCFGO{ public:
         return S;
     }
 
-    double pairKineticDervis( int io, int jo, Quat4d* TDs ){ // TODO : this can be merged with  pairOverlapDervis() for better performance
+    double pairKineticDervis( int io, int jo, Quat4d* TDs ){ 
+        // TODO : this can be merged with  pairOverlapDervis() for better performance
+        // ToDo : This is not required anymore since we have    pairOverlapAndKineticDervis()
         int i0=io*perOrb;
         int j0=jo*perOrb;
         int ij=0;
@@ -1102,6 +1167,7 @@ class CLCFGO{ public:
 
 
     double pairOverlapAndKineticDervis( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, Quat4d* TDs, double& S ){
+        // ToDo: If we put here a switch we can use it in place of    pairOverlapAndKineticDervis() 
         int i0=io*perOrb;
         int j0=jo*perOrb;
         int ij=0;
@@ -1142,6 +1208,8 @@ class CLCFGO{ public:
     }
 
     double evalCoulombPair( int ni, int nj, Gauss::Blob* Bis, Gauss::Blob* Bjs, Gauss::Blob* dBis, Gauss::Blob* dBjs ){
+        // ToDo : can we integrate this with    pairOverlapAndKineticDervis()    ???????
+        //        perhaps yes but the cost of duplicating    Bs and dBs
         double E = 0;
         for(int i=0; i<ni; i++){
             const Gauss::Blob&  Bi =  Bis[i];
@@ -1348,53 +1416,6 @@ class CLCFGO{ public:
         return E;
     }
 
-    /*
-    double evalCrossOrb(int io, int jo){
-        const double R2Safe = sq(0.1);
-        // we first project on axuliary density
-        double E =0;
-        Gauss::PairDeriv dBs[perOrb2]; 
-        Gauss::Blob       Bs[perOrb2];
-        Gauss::Blob      fBs[perOrb2];
-        // transform to auxuliatery overlap-density basis and calculate corresponding derivative transform (Jacobian)
-        double S = pairOverlapDervis( io, jo, Bs, dBs ); 
-
-        double T=0;
-        Quat4d TDs[perOrb2];
-        if( (bEvalPauli) && (iPauliModel==1) ){
-            T = pairKineticDervis(io,jo,TDs);
-        }
-
-        // evaluate coulombic terms in axuilary density basis ( i.e. between charge blobs )
-        for(int i=0; i<perOrb2; i++){ fBs[i].setZero(); }
-        if(bEvalExchange) E += evalCoulombPair( perOrb2, perOrb2, Bs, Bs, fBs, fBs );
-        //printf( "nqOrb %i \n", perOrb2 );
-        //for(int i=0; i<nqOrb; i++){ printf( "fBs[%i] fq %g fs %g fp(%g,%g,%g) \n", i, fBs[i].charge, fBs[i].size,    fBs[i].pos.x,fBs[i].pos.x,fBs[i].pos.x ); }
-        // transform forces back to wave-function basis, using previously calculated derivatives 
-        forceFromOverlaps( io, jo, dBs, fBs );
-        bool anti = false; // ToDo : we  should properly distinguish spins of electrons
-        if(bEvalPauli){
-            switch(iPauliModel){
-                case 0: E += S*S*KPauliOverlap; applyPairForce   ( io, jo, Bs, dBs, S*2*KPauliOverlap );          break;  // Simple square of overlap : Epauli = k*S^2
-                case 1: E +=                    pauliCrossKinetic( io, jo, Bs, dBs, TDs, S, T, KRSrho,  anti  );  break;  // Kinetic energy change    : Epauli = Delta_T * ( (1-a)*S/(1+S) + S/(1-S) )
-            }
-        }
-        return E;
-    }
-    */
-
-    double evalExchange(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
-        double E = 0;
-        for(int io=0; io<nOrb; io++){ for(int jo=0; jo<io; jo++){
-        //for(int io=0; io<nOrb; io++){ for(int jo=io+1; jo<nOrb; jo++){
-                //if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
-                E += ExchangeOrbPair( io, jo);
-            }
-        }
-        //printf( "evalExchange() E=%g \n", E  );
-        return E;
-    }
-
     double evalCrossTerms(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
         double E = 0;
         for(int io=0; io<nOrb; io++){ for(int jo=0; jo<io; jo++){
@@ -1411,6 +1432,151 @@ class CLCFGO{ public:
         // not sure how exactly to do that now - no using real space grid since it is slow
     }
 
+
+// ==================================================================
+// ==================== Interactions with atomic cores
+// ==================================================================
+
+
+double evalAEoverlap( int ia, int jo, Gauss::PairDeriv*  dBs, double* Ss ){  // Interaction of atomic core with electron wavefunction (Pauli)
+    const Vec3d  pi   = apos [ia];
+    //const Vec3d  abwi = eAbWs[ia]; // ToDo: We actually need only the width
+    double si = eAbWs[ia].z;
+    double S=0;
+    int j0=jo*perOrb;
+    for(int j=j0; j<j0+perOrb; j++){
+        Vec3d pj  = epos[j];
+        Vec3d Rij = pj-pi;
+        double r2 = Rij.norm2();
+        //if(r2>Rcut2) continue;
+        double cj  = ecoef[j];
+        double sj  = esize[j];
+        Gauss::Blob Bjunk;
+        double Si = Gauss::product3DDeriv( si,pi, sj,pj, Bjunk, dBs[j] );
+        Ss[j] = Si;
+        S += Si*cj;
+    }
+    return S;
+}
+
+void applyPairForceAE( int ia, int jo, Gauss::PairDeriv* dBs,  double* Ss, double Amp ){
+    int j0=jo*perOrb;
+    const Vec3d  pi   = apos [ia];
+    const Vec3d  abwi = eAbWs[ia]; // ToDo: We actually need only the width
+    for(int j=j0; j<j0+perOrb; j++){
+        Vec3d pj  = epos[j];
+        Vec3d Rij = pj-pi;
+        double r2 = Rij.norm2();
+        //if(r2>Rcut2) continue;
+        double cj  = ecoef[j];
+        double sj  = esize[j];
+        double cij = cj*Amp;
+        const Gauss::PairDeriv& dB = dBs[j];
+        double eij=Amp*Ss[j];
+        Vec3d Fp = Rij*(-dB.dCr*cij);
+        efpos [ia].add( Fp ); 
+        efpos [j] .sub( Fp );
+        efsize[j] += dB.dCsj*cij;
+        efcoef[j] += eij/cj;
+        //ij++;
+    }
+    //return E;
+}
+
+/*
+double evalAorb( int ia, int jo ){ 
+    Gauss::PairDeriv dBs[perOrb];
+    double            Ss[perOrb];
+    double S = evalAEoverlap( ia, jo, dBs, Ss );
+    double K   = eAbWs[ia].x;
+    double E   = K*S*S;
+    double Amp = K*S*2;
+    applyPairForceAE        ( ia, jo, dBs, Ss, Amp );
+    return E;
+}
+*/
+
+double evalArho( int ia, int jo ){ // Interaction of atomic core with electron density  (Coulomb)
+    const Vec3d  pi = apos [ia];
+    const double qi = aQs  [ia];
+    const double si = eAbWs[ia].z;
+    int j0  = getRhoOffset(jo);
+    int njo = onq[jo];
+    double E=0;
+    for(int j=j0; j<j0+njo; j++){
+    //int j=j0+2;{ // DEBUG
+        Vec3d  pj = rhoP[j];
+        Vec3d Rij = pj-pi;
+        double r2 = Rij.norm2();
+        //if(r2>Rcut2) continue;
+        double qj = rhoQ[j];
+        double sj = rhoS[j];
+        double r    = sqrt(r2 + R2SAFE);
+        double s2   = si*si + sj*sj;
+        double s    = sqrt(s2);
+        double qij = qi*qj;
+        double fr,fs;
+        double E  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
+        // --- Derivatives (Forces)
+        Vec3d fp = Rij*(-fr * qij);
+        fs       *=           qij;
+        //fs      *= M_SQRT1_2 * qij;
+        aforce[ia].add(fp);    
+        rhofP [j].sub(fp);
+        rhofS [j] -= fs*sj;
+        rhofQ [j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
+        E        += E*qij;
+    }
+    return E;
+}
+
+double evalAE(){
+    Gauss::PairDeriv dBs[perOrb];
+    double            Ss[perOrb];
+    double E =0;
+    for(int ia=0; ia<natom; ia++){
+        //const Vec3d  pi   = apos [ia];
+        //const double qqi  = aQs  [ia];
+        //const Vec3d  abwi = eAbWs[ia];
+        for(int jo=0; jo<nOrb; jo++){
+            if(bEvalAEPauli){// --- Pauli Overlap 
+                double S = evalAEoverlap( ia, jo, dBs, Ss );
+                double K   = eAbWs[ia].x;
+                E         += K*S*S;
+                double Amp = K*S*2;
+                applyPairForceAE ( ia, jo, dBs, Ss, Amp );
+            }
+            // ---- Coulomb
+            if(bEvalAEPauli){
+                E += evalArho( ia, jo );
+            }
+        }
+    }
+    return E;
+}
+
+/// evaluate Atom-Atom forces
+double evalAA(){
+    double E=0;
+    for(int i=0; i<natom; i++){
+        const Vec3d  pi   = apos[i];
+        const double qi   = aQs[i];
+        for(int j=0; j<i; j++){
+            Vec3d f = Vec3dZero; // HERE WAS THE ERROR (missing initialization !!!! )
+            Vec3d  abw;
+            const Vec3d dR  = apos[j] - pi;
+            E +=  addAtomicForceQ( dR, f, qi*aQs[j] );
+            aforce[j].sub(f);
+            aforce[i].add(f);
+        }
+    }
+    return E;
+}
+
+// ==================================================================
+// ==================== Eval Total Energy And Forces
+// ==================================================================
+
     double eval(){
         double E=0;
         cleanForces();
@@ -1422,12 +1588,19 @@ class CLCFGO{ public:
         //if( bEvalPauli    ) E += evalPauli();
         //if( bEvalExchange ) E += evalExchange();
         if( bEvalCoulomb  ) E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
+        if( bEvalAE       ) E += evalAE();
+        if( bEvalAA       ) E += evalAA();
+        for(int io=0; io<nOrb; io++){ 
+            assembleOrbForces_fromRho(io); 
+        }
         E += evalCrossTerms(); // ToDo : This should replace evalPauli and evalExchange()
         //printf( "eval() E=%g \n", E  );
         return E;
     }
 
-    // ========== On Grid
+// ==================================================================
+// ==================== On Grid Utils
+// ==================================================================
 
     /// ToDo : Coulomb integral C{i,j}  on grid can be calculated like this:
     //  for i in MOs :
