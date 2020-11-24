@@ -131,6 +131,17 @@ inline clamp( TYPE x, TYPE xmin, TYPE xmax ){
 }
 */
 
+
+double powTrash(double x, double alpha){
+    if(x<0) return 0;
+    if(x>1) return 1;
+    if(alpha>0){ return pow(1-x,alpha); } 
+    else       { return 1-pow(x,alpha); };
+}
+
+
+
+
 // ========= random ===========
 
 const  float INV_RAND_MAX = 1.0f/RAND_MAX;

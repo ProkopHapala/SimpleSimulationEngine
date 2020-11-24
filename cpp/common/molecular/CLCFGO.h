@@ -102,7 +102,6 @@ constexpr static const Vec3d default_aAbWs[] = {
     double Rcut2     =Rcut*Rcut;
     double RcutOrb2  =RcutOrb*RcutOrb;
 
-
     int natypes =0;
 
     int natom =0; ///< number of atoms (nuclei, ions)
@@ -117,10 +116,13 @@ constexpr static const Vec3d default_aAbWs[] = {
     // atoms (ions)
     Vec3d*  apos   =0;  ///< positioon of atoms
     Vec3d*  aforce =0;  ///< positioon of atoms
-    double* aQs    =0;  ///< charge of atom
+    double* aQs    =0;  ///< charge of atomic core ( Q_nucleus - Q_core_electrons )
+    double* aPcoef =0;  ///< coeficient of pauli repulsion of core electrons
+    double* aPsize =0;  ///< size of core in coulombic interaction
+    double* aQsize =0;  ///< size of core in Pauli interaction
     int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
-    Vec3d  * aAbWs =0; ///< atomic   parameters (amplitude, decay, width)
-    Vec3d  * eAbWs =0; ///< electron parameters (amplitude, decay, width)
+    //Vec3d  * aAbWs =0; ///< atomic   parameters (amplitude, decay, width)
+    //Vec3d  * eAbWs =0; ///< electron parameters (amplitude, decay, width)
 
     // orbitals
     Vec3d*  opos  =0;   ///< store positions for the whole orbital
@@ -158,8 +160,11 @@ constexpr static const Vec3d default_aAbWs[] = {
             _realloc( apos  ,natom );
             _realloc( aforce,natom );
             _realloc( aQs   ,natom );
-            _realloc( aAbWs ,natom);
-            _realloc( eAbWs ,natom);
+            //_realloc( aAbWs ,natom);
+            //_realloc( eAbWs ,natom);
+            _realloc( aPcoef ,natom);
+            _realloc( aPsize ,natom);
+            _realloc( aQsize ,natom);
             _realloc( atype ,natom ); // not used  now
         }
         if( (nOrb != nOrb_)||(perOrb != perOrb_) ){
@@ -204,7 +209,10 @@ constexpr static const Vec3d default_aAbWs[] = {
         for(int i=0; i<natom;  i++){
             apos  [i]=Vec3dZero; 
             aforce[i]=Vec3dZero;
-            aQs   [i]=1.; 
+            aQs   [i]=1.;
+            aQsize[i]=1.0;
+            aPsize[i]=1.0;
+            aPcoef[i]=1.0; 
             atype [i]=0;
         }
         for(int i=0; i<nOrb;  i++){
@@ -486,6 +494,9 @@ constexpr static const Vec3d default_aAbWs[] = {
 
     //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
     double projectOrb(int io, Vec3d& dip, bool bNormalize ){
+
+        bool bCoulomb = bEvalCoulomb || bEvalAECoulomb; 
+
         int i0    = getOrbOffset(io);
         int irho0 = getRhoOffset(io);
         Vec3d*   Ps =rhoP+irho0;
@@ -506,7 +517,7 @@ constexpr static const Vec3d default_aAbWs[] = {
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
             
-            if(bEvalCoulomb){
+            if(bCoulomb){
                 qcog.add_mul( pi, qii );
                 /// ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
                 Q      += qii;
@@ -1438,13 +1449,16 @@ constexpr static const Vec3d default_aAbWs[] = {
 // ==================================================================
 
 
-double evalAEoverlap( int ia, int jo, Gauss::PairDeriv*  dBs, double* Ss ){  // Interaction of atomic core with electron wavefunction (Pauli)
-    const Vec3d  pi   = apos [ia];
+double evalAEoverlap( int jo, Gauss::PairDeriv*  dBs, double* Ss, double si, const Vec3d&  pi ){  // Interaction of atomic core with electron wavefunction (Pauli)
+    ///const Vec3d  pi   = apos [ia];
     //const Vec3d  abwi = eAbWs[ia]; // ToDo: We actually need only the width
-    double si = eAbWs[ia].z;
+    //double si = eAbWs[ia].z;
+    //double si = aPsize[ia];
+    //printf( "evalAEoverlap() \n" );
     double S=0;
     int j0=jo*perOrb;
-    for(int j=j0; j<j0+perOrb; j++){
+    for(int jj=0; jj<perOrb; jj++){
+        int j=j0+jj;
         Vec3d pj  = epos[j];
         Vec3d Rij = pj-pi;
         double r2 = Rij.norm2();
@@ -1452,8 +1466,8 @@ double evalAEoverlap( int ia, int jo, Gauss::PairDeriv*  dBs, double* Ss ){  // 
         double cj  = ecoef[j];
         double sj  = esize[j];
         Gauss::Blob Bjunk;
-        double Si = Gauss::product3DDeriv( si,pi, sj,pj, Bjunk, dBs[j] );
-        Ss[j] = Si;
+        double Si = Gauss::product3DDeriv( si,pi, sj,pj, Bjunk, dBs[jj] );
+        Ss[jj] = Si;
         S += Si*cj;
     }
     return S;
@@ -1462,8 +1476,11 @@ double evalAEoverlap( int ia, int jo, Gauss::PairDeriv*  dBs, double* Ss ){  // 
 void applyPairForceAE( int ia, int jo, Gauss::PairDeriv* dBs,  double* Ss, double Amp ){
     int j0=jo*perOrb;
     const Vec3d  pi   = apos [ia];
-    const Vec3d  abwi = eAbWs[ia]; // ToDo: We actually need only the width
-    for(int j=j0; j<j0+perOrb; j++){
+    //const Vec3d  abwi = eAbWs[ia]; // ToDo: We actually need only the width
+    //printf( "applyPairForceAE() \n" );
+    //for(int j=j0; j<j0+perOrb; j++){
+    for(int jj=0; jj<perOrb; jj++){
+        int j=j0+jj;
         Vec3d pj  = epos[j];
         Vec3d Rij = pj-pi;
         double r2 = Rij.norm2();
@@ -1471,13 +1488,14 @@ void applyPairForceAE( int ia, int jo, Gauss::PairDeriv* dBs,  double* Ss, doubl
         double cj  = ecoef[j];
         double sj  = esize[j];
         double cij = cj*Amp;
-        const Gauss::PairDeriv& dB = dBs[j];
-        double eij=Amp*Ss[j];
-        Vec3d Fp = Rij*(-dB.dCr*cij);
-        efpos [ia].add( Fp ); 
-        efpos [j] .sub( Fp );
+        const Gauss::PairDeriv& dB = dBs   [jj];
+        double eij                 = Amp*Ss[jj];
+        Vec3d fp = Rij*(-dB.dCr*cij);
+        aforce[ia].add( fp ); 
+        efpos [j] .sub( fp );
         efsize[j] += dB.dCsj*cij;
         efcoef[j] += eij/cj;
+        if(DEBUG_iter==DEBUG_log_iter) printf( "applyPairForceAE[%i,%i] qij %g e %g fp.x %g | r %g s %g \n", ia,j, cij, eij, fp.x,   sqrt(r2), sj  );
         //ij++;
     }
     //return E;
@@ -1497,9 +1515,11 @@ double evalAorb( int ia, int jo ){
 */
 
 double evalArho( int ia, int jo ){ // Interaction of atomic core with electron density  (Coulomb)
+    //printf( " evalArho DEBUG \n");
     const Vec3d  pi = apos [ia];
     const double qi = aQs  [ia];
-    const double si = eAbWs[ia].z;
+    const double si = aQsize[ia];
+    //const double si = eAbWs[ia].z;
     int j0  = getRhoOffset(jo);
     int njo = onq[jo];
     double E=0;
@@ -1516,16 +1536,17 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         double s    = sqrt(s2);
         double qij = qi*qj;
         double fr,fs;
-        double E  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
+        double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
         // --- Derivatives (Forces)
-        Vec3d fp = Rij*(-fr * qij);
+        Vec3d fp = Rij*(-fr * qij );
         fs       *=           qij;
         //fs      *= M_SQRT1_2 * qij;
         aforce[ia].add(fp);    
-        rhofP [j].sub(fp);
+        rhofP [j] .sub(fp);
         rhofS [j] -= fs*sj;
-        rhofQ [j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
-        E        += E*qij;
+        //rhofQ [j] += e*qi*0.0; // Not sure why this is not used here
+        E         += e*qij;
+        if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
     }
     return E;
 }
@@ -1540,14 +1561,14 @@ double evalAE(){
         //const Vec3d  abwi = eAbWs[ia];
         for(int jo=0; jo<nOrb; jo++){
             if(bEvalAEPauli){// --- Pauli Overlap 
-                double S = evalAEoverlap( ia, jo, dBs, Ss );
-                double K   = eAbWs[ia].x;
+                double S = evalAEoverlap( jo, dBs, Ss, aPsize[ia], apos[ia] );
+                double K   = aPcoef[ia];
                 E         += K*S*S;
                 double Amp = K*S*2;
                 applyPairForceAE ( ia, jo, dBs, Ss, Amp );
             }
             // ---- Coulomb
-            if(bEvalAEPauli){
+            if(bEvalAECoulomb){
                 E += evalArho( ia, jo );
             }
         }
@@ -1580,7 +1601,7 @@ double evalAA(){
     double eval(){
         double E=0;
         cleanForces();
-        if( bEvalCoulomb  ) clearAuxDens();
+        if( bEvalCoulomb || (bEvalAECoulomb && bEvalAE) ) clearAuxDens();
         //projectOrbs( true );
         double Ek = projectOrbs( false ); // here we calculate kinetic energy of each orbital and project them to auxuliary charge density basis
         if( bEvalKinetic  ) E+=Ek;

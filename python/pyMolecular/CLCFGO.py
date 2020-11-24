@@ -110,10 +110,19 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import CLCFGO_coulomb_derivs as ref
 
-    init(2,2,2,1)
-    ecoef = getBuff("ecoef",(2,2)  )
-    esize = getBuff("esize",(2,2)  )
-    epos  = getBuff("epos" ,(2,2,3))
+    natom  = 1
+    norb   = 2
+    perORb = 2
+    init(natom,norb,perORb,1)  #  natom, nOrb, perOrb, natypes
+    ecoef = getBuff("ecoef",(norb,perORb)  )
+    esize = getBuff("esize",(norb,perORb)  )
+    epos  = getBuff("epos" ,(norb,perORb,3))
+
+    aQ     = getBuff("aQs",   (natom,)  )
+    aQsize = getBuff("aQsize",(natom,)  )
+    aPcoef = getBuff("aPcoef",(natom,)  )
+    aPsize = getBuff("aPsize",(natom,)  )
+    apos   = getBuff("apos"  ,(natom,3) )
 
     ecoefs = [[1.0,1.0],[1.0,1.0] ]
     esizes = [[1.0,1.0],[1.0,1.0] ]
@@ -121,6 +130,12 @@ if __name__ == "__main__":
     eXpos  = [[0.,+0.0],[ -0.5, 0.5]]
     eYpos  = [[0.,+0.0],[ 0.0, 0.0]]
     eZpos  = [[0.,+0.0],[ 0.0, 0.0]]
+
+    aposs   = [[0.0,0.0,0.0],]
+    aQs     = [1.0,]  # atomic nuclei charge (after screening core electrons)
+    aPcoefs = [1.0,]  # atomic core pauli repulsion coeficient (strenght)
+    aQsizes = [1.0,]  # atomic nuclei/pseudopotential size (radius of core electrons )
+    aPsizes = [1.0,]  # atomic nuclei/pseudopotential size (radius of core electrons )
 
     #ecoefs = [[+0.93,+0.68],[+0.65,+1.3]]
     #esizes = [[+1.30,+0.90],[+1.60,+0.7]]
@@ -242,6 +257,15 @@ if __name__ == "__main__":
     epos [:,:,1] = np.array(eYpos)[:,:]
     epos [:,:,2] = np.array(eZpos)[:,:]
 
+    aQ    [:]   = np.array(aQs    )
+    aQsize[:]   = np.array(aQsizes)
+    aPcoef[:]   = np.array(aPcoefs)
+    aPsize[:]   = np.array(aPsizes)
+    apos [:,:]= np.array(aposs)[:,:]
+    #aposs_ = np.array(aposs)[:,:]
+    #apos  [:,1] = aposs_[:,1]
+    #apos  [:,2] = aposs_[:,2]
+
     n = len(xs)
     #testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
     print "===>> RUN  C++ test : testDerivs_Total "
@@ -250,8 +274,8 @@ if __name__ == "__main__":
     #testDerivsP_Total        ( n=n, x0=x0, dx=dx )
     #testDerivsS_Total        ( n=n, x0=x0, dx=dx )
 
-    Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
-    #Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
+    #Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
+    Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
     print "===<< DONE C++ test : testDerivs_Total "
 
     '''

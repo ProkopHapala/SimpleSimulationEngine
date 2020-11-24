@@ -19,4 +19,28 @@ double timeOfFlightParabolic( double distance, double vMuzzle ){
     double  
 }
 
+
+
+/*
+
+Simple Damage Model
+
+- Vehicle is composed o modules
+- Modules are esential for function ( performance of whole system is typically product of function of modules )
+- Modules have certain 
+    1] crossection and 
+    2] certain armor
+    both of which can by in simple terms projected into cartesina direction x,y,z
+      =>  hit corssection = area = dot( S, dir );        armor = dot( A, dir )
+-If the shot pass through it destroys certain volume (proportional to cross area) of the system
+   - some systems react well to damage ( e.g. radiators )
+   - some systems react badly (even small damage makes it disfunctional)
+     - this can be expressed by some function - damage exponent
+     decrease of performace scales as (1-x)^alha  or 1-x^alpha 
+ 
+
+
+*/
+
+
 #endif

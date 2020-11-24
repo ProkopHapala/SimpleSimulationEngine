@@ -90,7 +90,10 @@ void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
     // atoms (ions)
     buffers.insert( { "apos",   (double*)solver.apos   } );
     buffers.insert( { "aforce", (double*)solver.aforce } );
-    buffers.insert( { "aQs",    (double*)solver.aQs    } );
+    buffers.insert( { "aQs",             solver.aQs    } );
+    buffers.insert( { "aQsize",          solver.aQsize    } );
+    buffers.insert( { "aPsize",          solver.aPsize    } );
+    buffers.insert( { "aPcoef",          solver.aPcoef    } );
     ibuffers.insert( { "atype",          solver.atype  } );
     // orbitals
     buffers.insert( { "opos", (double*)solver.opos  } );
@@ -295,12 +298,12 @@ void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
     solver.bEvalKinetic  = 0;
     solver.bEvalCoulomb  = 0;
     solver.bEvalExchange = 0;
-    solver.bEvalPauli    = 1;
+    solver.bEvalPauli    = 0;
     solver.iPauliModel   = 1;
-    solver.bEvalAECoulomb = 0;
-    solver.bEvalAEPauli   = 0;
-    solver.bEvalAE        = 0;
     solver.bEvalAA        = 0;
+    solver.bEvalAE        = 1;
+    solver.bEvalAECoulomb = 1;
+    solver.bEvalAEPauli   = 0;
     return testDerivsTotal( solver, n, xs, Es, Fs, what );
 }
 
