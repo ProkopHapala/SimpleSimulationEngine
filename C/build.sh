@@ -6,7 +6,7 @@ target=$1
 BUILDDIR="./Build" 
 
 IFLAGS="-I./math -I./GUI"
-LFLAGS="-L/usr/lib/x86_64-linux-gnu  -lGL -lSDL2 -lm"
+LFLAGS="-L/usr/lib/x86_64-linux-gnu  -lGL -lSDL2 -lm -ltcc -ldl"
 #          /usr/lib/x86_64-linux-gnu/
 
 #CFLAGS=" -std=c99 -Og"
@@ -29,5 +29,5 @@ mkdir $BUILDDIR
 rm $BINAME
 
 #gcc $IFLAGS -E $target.c
-gcc $CFLAGS $IFLAGS $target.c -o $BINAME $LFLAGS
+gcc $CFLAGS $IFLAGS $target.c -o $BINAME $LFLAGS 
 $BINAME
