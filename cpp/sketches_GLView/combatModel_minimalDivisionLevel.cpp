@@ -275,7 +275,7 @@ void setup(){
     plot1.clrTicksY = 0xFFA0A0A0;
     plot1.xlabel="log dist[m]";
     plot1.ylabel="log got_shot";
-    plot1.render(true);
+    plot1.render();
 
     //exit(0);
     

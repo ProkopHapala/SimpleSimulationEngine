@@ -296,10 +296,13 @@ void Draw2D::plot( int n, float dx, double * ys ){
 
 void Draw2D::plot( int n, double * xs, double * ys ){
     glBegin(GL_LINE_STRIP);
+    //double DEBUG_sum = 0.0;
     for( int i=0; i<n; i++ ){
         //printf("Draw2D::plot i,x,y %i %f %f\n", i, xs[i], ys[i] );
+        //DEBUG_sum += ys[i];
         glVertex3f( (float)xs[i], (float)ys[i], z_layer );
     }
+    //printf( "DEBUG_sum %g \n", DEBUG_sum );
     glEnd();
     //exit(0);
 };

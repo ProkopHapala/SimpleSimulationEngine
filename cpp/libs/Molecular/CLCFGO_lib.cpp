@@ -295,20 +295,36 @@ void testDerivsS_Total( int n, double x0, double dx ){
 }
 
 void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
-    solver.bEvalKinetic  = 0;
-    solver.bEvalCoulomb  = 0;
-    solver.bEvalExchange = 0;
-    solver.bEvalPauli    = 0;
-    solver.iPauliModel   = 1;
+    /*
+    solver.bNormalize     = 0;
+    solver.bEvalKinetic   = 0;
+    solver.bEvalCoulomb   = 0;
+    solver.bEvalExchange  = 0;
+    solver.bEvalPauli     = 0;
+    solver.iPauliModel    = 1;
     solver.bEvalAA        = 0;
     solver.bEvalAE        = 1;
     solver.bEvalAECoulomb = 1;
     solver.bEvalAEPauli   = 0;
+    */
     return testDerivsTotal( solver, n, xs, Es, Fs, what );
 }
 
 void testDerivsCoulombModel( int n, double* xs, double* Es, double* Fs, int what  ){
     return testDerivsCoulombModel( solver, n, xs, Es, Fs, what  );
+}
+
+void setSwitches(bool bNormalize, bool bEvalKinetic, bool bEvalCoulomb, bool  bEvalExchange, bool  bEvalPauli, int iPauliModel,  bool bEvalAA, bool  bEvalAE, bool  bEvalAECoulomb, bool  bEvalAEPauli ){
+    solver.bNormalize     = bNormalize;
+    solver.bEvalKinetic   = bEvalKinetic;
+    solver.bEvalCoulomb   = bEvalCoulomb;
+    solver.bEvalExchange  = bEvalExchange;
+    solver.bEvalPauli     = bEvalPauli;
+    solver.iPauliModel    = iPauliModel;
+    solver.bEvalAA        = bEvalAA;
+    solver.bEvalAE        = bEvalAE;
+    solver.bEvalAECoulomb = bEvalAECoulomb;
+    solver.bEvalAEPauli   = bEvalAEPauli;
 }
 
 } // extern "C"

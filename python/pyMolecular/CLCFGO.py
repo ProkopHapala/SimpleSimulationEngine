@@ -80,9 +80,6 @@ lib.testDerivsS_Total.restype  = c_double
 def testDerivsS_Total( n=100, x0=0.0, dx=0.1 ):
     return lib.testDerivsS_Total( n, x0, dx )
 
-
-
-
 #void testDerivsTotal( int n, double* xs, double* Es, double* Fs, int what ){
 lib.testDerivsTotal.argtypes = [ c_int, array1d, array1d, array1d, c_int ]
 lib.testDerivsTotal.restype  = c_double
@@ -93,56 +90,55 @@ def testDerivsTotal( xs, Es=None, Fs=None, what=0 ):
     lib.testDerivsTotal( n, xs, Es, Fs, what )
     return Es,Fs
 
-#void testDerivsCoulombModel( CLCFGO& solver, int n, double* xs, double* Es, double* Fs, int what  ){
-lib.testDerivsCoulombModel.argtypes = [ c_int, array1d, array1d, array1d, c_int ]
-lib.testDerivsCoulombModel.restype  = c_double
-def testDerivsCoulombModel( xs, Es=None, Fs=None, what=0 ):
-    n = len(xs)
-    if Es is None: Es = np.zeros(n)
-    if Fs is None: Fs = np.zeros(n)
-    lib.testDerivsCoulombModel( n, xs, Es, Fs, what )
-    return Es,Fs
+#void setSwitches(bool bNormalize, bool bEvalKinetic, bool bEvalCoulomb, bool  bEvalExchange, bool  bEvalPauli, int iPauliModel,  bool bEvalAA, bool  bEvalAE, bool  bEvalAECoulomb, bool  bEvalAEPauli ){
+lib.setSwitches.argtypes = [ c_bool, c_bool, c_bool, c_bool, c_bool, c_int, c_bool, c_bool, c_bool, c_bool ]
+lib.setSwitches.restype  = None
+def setSwitches( normalize=True, kinetic=True, coulomb=True, exchange=True, pauli=True, pauliModel=0, AA=True, AE=True, AECoulomb=True, AEPauli=True ):
+    lib.setSwitches( normalize, kinetic, coulomb, exchange, pauli, pauliModel, AA, AE, AECoulomb, AEPauli )
 
 # ========= Python Functions
-
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import CLCFGO_coulomb_derivs as ref
 
-    natom  = 1
+
+    natom   = 1
+    aposs   = [[0.0,0.0,0.0],]
+    aQs     = [4.0,]  # atomic nuclei charge (after screening core electrons)
+    aPcoefs = [500.0,]  # atomic core pauli repulsion coeficient (strenght)
+    aQsizes = [0.5,]  # atomic nuclei/pseudopotential size (radius of core electrons )
+    aPsizes = [0.1,]  # atomic nuclei/pseudopotential size (radius of core electrons )
+
+    norb   = 1
+    perORb = 1
+    ecoefs = [[1.0,], ]
+    esizes = [[0.1,],]
+    #eXpos  = [[0.,],]
+    eXpos  = [[0.,],]
+    eYpos  = [[0.,],]
+    eZpos  = [[0.,],]
+
+    '''
     norb   = 2
     perORb = 2
-    init(natom,norb,perORb,1)  #  natom, nOrb, perOrb, natypes
-    ecoef = getBuff("ecoef",(norb,perORb)  )
-    esize = getBuff("esize",(norb,perORb)  )
-    epos  = getBuff("epos" ,(norb,perORb,3))
-
-    aQ     = getBuff("aQs",   (natom,)  )
-    aQsize = getBuff("aQsize",(natom,)  )
-    aPcoef = getBuff("aPcoef",(natom,)  )
-    aPsize = getBuff("aPsize",(natom,)  )
-    apos   = getBuff("apos"  ,(natom,3) )
-
     ecoefs = [[1.0,1.0],[1.0,1.0] ]
     esizes = [[1.0,1.0],[1.0,1.0] ]
     #eXpos  = [[0.,+0.5],[-3.5,-1.5]]
     eXpos  = [[0.,+0.0],[ -0.5, 0.5]]
     eYpos  = [[0.,+0.0],[ 0.0, 0.0]]
     eZpos  = [[0.,+0.0],[ 0.0, 0.0]]
+    '''
 
-    aposs   = [[0.0,0.0,0.0],]
-    aQs     = [1.0,]  # atomic nuclei charge (after screening core electrons)
-    aPcoefs = [1.0,]  # atomic core pauli repulsion coeficient (strenght)
-    aQsizes = [1.0,]  # atomic nuclei/pseudopotential size (radius of core electrons )
-    aPsizes = [1.0,]  # atomic nuclei/pseudopotential size (radius of core electrons )
-
+    '''
+    norb   = 2
+    perORb = 2
     #ecoefs = [[+0.93,+0.68],[+0.65,+1.3]]
     #esizes = [[+1.30,+0.90],[+1.60,+0.7]]
     #eXpos  = [[+0.00,+0.50],[-3.50,-2.0]]
     #eYpos  = [[+0.00,+0.00],[+0.00,+0.0]]
     #eZpos  = [[+0.50,-0.30],[-0.40,+0.8]]
-
+    '''
 
     x0 =  -1.0
     dx =  0.05
@@ -212,6 +208,7 @@ if __name__ == "__main__":
     # =========================================
     # ============== Derivs in Python =========
     # =========================================
+    '''
     print " ========== Derivs in Python "
 
     #eXpos[0][0] = xa 
@@ -241,11 +238,22 @@ if __name__ == "__main__":
     plt.grid()
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
+    '''
 
     # =========================================
     # ============== Derivs in C++ ============
     # =========================================
 
+    init(natom,norb,perORb,1)  #  natom, nOrb, perOrb, natypes
+    ecoef = getBuff("ecoef",(norb,perORb)  )
+    esize = getBuff("esize",(norb,perORb)  )
+    epos  = getBuff("epos" ,(norb,perORb,3))
+
+    aQ     = getBuff("aQs",   (natom,)  )
+    aQsize = getBuff("aQsize",(natom,)  )
+    aPcoef = getBuff("aPcoef",(natom,)  )
+    aPsize = getBuff("aPsize",(natom,)  )
+    apos   = getBuff("apos"  ,(natom,3) )
 
     plt.subplot(1,2,1)
     plt.title('C++')
@@ -269,35 +277,17 @@ if __name__ == "__main__":
     n = len(xs)
     #testDerivs_Coulomb_model( n=n, x0=0.0, dx=0.1 )    
     print "===>> RUN  C++ test : testDerivs_Total "
-    #testDerivsP_Coulomb_model( n=n, x0=x0, dx=dx )
-    #testDerivsS_Coulomb_model( n=n, x0=x0, dx=dx )
-    #testDerivsP_Total        ( n=n, x0=x0, dx=dx )
-    #testDerivsS_Total        ( n=n, x0=x0, dx=dx )
 
-    #Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
-    Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
+    #setSwitches( normalize=False, kinetic=False, coulomb=False, exchange=False, pauli=False, pauliModel=1, AA=False, AE=True, AECoulomb=False, AEPauli=True );
+    #setSwitches( normalize=False, kinetic=False, coulomb=False, exchange=False, pauli=False, pauliModel=1, AA=False, AE=True, AECoulomb=True, AEPauli=False );
+    setSwitches( normalize=False, kinetic=False );
+
+    Es,Fs = testDerivsTotal( xs, what=0 ) # position deriv
+    #Es,Fs = testDerivsTotal( xs, what=1 ) # size     deriv
     print "===<< DONE C++ test : testDerivs_Total "
 
-    '''
-    l_xs     = getBuff( "l_xs",    (n,) )
-    #l_r      = getBuff( "l_r",     (n,) )
-    l_Q      = getBuff( "l_Q",     (n,) )
-    #l_dQ_ana = getBuff( "l_dQ_ana",(n,) )
-    #l_dQ_num = getBuff( "l_dQ_num",(n,) )
-    l_E      = getBuff( "l_E",     (n,) )
-    l_Fana   = getBuff( "l_Fana",  (n,) )
-    l_Fnum   = getBuff( "l_Fnum",  (n,) )
-
-    plt.plot(l_xs,l_E,label="E" )
-    plt.plot(l_xs,l_Fana,label="Fana")
-    plt.plot(l_xs,l_Fnum,label="Fnum",ls=':',lw=3)
-    #plt.plot(l_xs,l_Q,label="Q")
-    #plt.plot(l_xs,l_dQ_ana,label="dQ_ana")
-    #plt.plot(l_xs,l_dQ_num,label="dQ_num", ls=':',lw=3)
-    '''
-
     plt.plot(xs ,Es,label="E" )
-    plt.plot(xs ,Fs,label="Fana")
+    plt.plot(xs ,-Fs,label="Fana")
     plt.plot(xs_,(Es[1:]-Es[:-1])/dx,label="Fnum",ls=':',lw=3)
 
 

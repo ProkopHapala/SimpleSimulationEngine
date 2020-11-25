@@ -3,8 +3,15 @@
 #define CombatModelsCommon_h
 
 #include <math>
+#include "fastmath,h"
+#include "Vec2,h"
+#include "Vec3,h"
 
-double const_G = 9.81;
+
+static double const_G = 9.81;
+
+static double penetrationTreshNever  = 0.8;
+static double penetrationTreshAlways = 1.2;
 
 double timeOfFlightParabolic( double distance, double vMuzzle ){
     // parabolic trajectory
@@ -41,6 +48,25 @@ Simple Damage Model
 
 
 */
+
+
+//   s = 0.5*a*t^2     a = 2*s/(t^2)    t = sqrt(2*s/a)
+double manuever_dist ( double accel, double time ){ return 0.5*accel*time*time; }
+double manuever_time ( double accel, double dist ){ return sqrt(2*accel/a);     }
+double manuever_accel( double dist,  double time ){ return 2.*dist/(time*time); }
+
+
+double hitProb( Vec3d udir, Vec3d size,                  ){ return size.dot(udir); }
+double penProb( Vec3d udir, Vec3d armor, double piercing ){
+    double sc = 1/(penetrationTreshAlways-penetrationTreshNever);
+    Vec3d pen; 
+    pen.x = Treshold::p3( ((piercing/armor.x)-penetrationTreshNever)*sc );
+    pen.y = Treshold::p3( ((piercing/armor.y)-penetrationTreshNever)*sc );
+    pen.z = Treshold::p3( ((piercing/armor.z)-penetrationTreshNever)*sc );
+    return size.dot(pen,udir); 
+}
+
+
 
 
 #endif

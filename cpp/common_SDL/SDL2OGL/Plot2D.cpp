@@ -47,6 +47,7 @@ void DataLine2D::draw(){
 }
 
 int DataLine2D::render(){
+    //printf( "DalaLine2D::render() \n" );
     if( glObj ) glDeleteLists(glObj,1);
     glObj = glGenLists(1);
     //printf( " 1 DataLine2D::render() %i \n", glObj  );

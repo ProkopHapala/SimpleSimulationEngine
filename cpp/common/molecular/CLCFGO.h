@@ -68,22 +68,21 @@
 class CLCFGO{ public:
 
 // ToDo : Later properly
-constexpr static const Vec3d default_eAbWs[] = {
-{ 0.0,  0.0, 0.0},  // Q = 0 //
-{ 0.0,  0.0, 0.01}, // Q = 1 // H
-{ 2.0, -3.0, 0.1},  // Q = 2 // Be?
-{ 2.0, -3.0, 0.1},  // Q = 3 // B
-{ 2.0, -3.0, 0.1},  // Q = 4 // C
+constexpr static const Quat4d default_AtomParams[] = {
+//  Q   sQ   sP   cP
+{ 0.,  1.0, 1.0, 0.0 }, // 0
+{ 1.,  0.1, 0.1, 0.0 }, // 1 H
+{ 0.,  1.0, 1.0, 2.0 }, // 2 He
+{ 1.,  0.1, 0.1, 2.0 }, // 3 Li
+{ 2.,  0.1, 0.1, 2.0 }, // 4 Be
+{ 3.,  0.1, 0.1, 2.0 }, // 5 B
+{ 4.,  0.1, 0.1, 2.0 }, // 6 C
+{ 5.,  0.1, 0.1, 2.0 }, // 7 N
+{ 6.,  0.1, 0.1, 2.0 }, // 8 O
+{ 7.,  0.1, 0.1, 2.0 }, // 9 F
 };
 
-constexpr static const Vec3d default_aAbWs[] = {
-{ 0.0,  0.0, 0.1},  // Q = 0 //
-{ 0.0,  0.0, 0.01}, // Q = 1 // H
-{ 1.0, -5.0, 0.1},  // Q = 2 // Be?
-{ 1.0, -5.0, 0.1},  // Q = 3 // B
-{ 1.0, -5.0, 0.1},  // Q = 4 // C
-};
-
+    bool bNormalize     = true;
     bool bEvalKinetic   = true;
     bool bEvalCoulomb   = true;
     bool bEvalPauli     = true;
@@ -91,8 +90,8 @@ constexpr static const Vec3d default_aAbWs[] = {
     bool bEvalAECoulomb = true;
     bool bEvalAEPauli   = true;
     bool bEvalAE        = true;
-    bool bEvalAA        = true; 
-    int  iPauliModel   = 0;
+    bool bEvalAA        = true;
+    int  iPauliModel    = 0;
 
     double KPauliOverlap = 1.0;
     constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
@@ -130,7 +129,7 @@ constexpr static const Vec3d default_aAbWs[] = {
     double* oEs   =0;   ///< orbital energies
     double* oQs   =0;   ///< total charge in orbital before renormalization (just DEBUG?)
     int*    onq   =0;   ///< number of axuliary density functions per orbital
-    int*    ospin =0; 
+    int*    ospin =0;
 
     // --- Wave-function components for each orbital
     Vec3d*  epos  =0; ///< position of spherical function for expansion of orbitals
@@ -207,12 +206,12 @@ constexpr static const Vec3d default_aAbWs[] = {
     void setDefaultValues( ){
         // atoms
         for(int i=0; i<natom;  i++){
-            apos  [i]=Vec3dZero; 
+            apos  [i]=Vec3dZero;
             aforce[i]=Vec3dZero;
             aQs   [i]=1.;
             aQsize[i]=1.0;
             aPsize[i]=1.0;
-            aPcoef[i]=1.0; 
+            aPcoef[i]=1.0;
             atype [i]=0;
         }
         for(int i=0; i<nOrb;  i++){
@@ -258,6 +257,19 @@ constexpr static const Vec3d default_aAbWs[] = {
         return r2<RcutOrb2;
     }
 
+    inline void setElectron( int io, int j, Vec3d p, double s, double c ){
+        int i = io*perOrb + j; epos[i]=p; esize[i]=s; ecoef[i]=c;
+    }
+
+    inline void setAtom( int i, Vec3d p, double q, double sQ, double sP, double cP ){
+        apos[i]=p; aQs[i]=q; aQsize[i]=sQ; aPsize[i]=sP; aPcoef[i]=cP;
+    }
+
+    inline void setAtom( int i, int itype, Vec3d p ){
+        const Quat4d& par = default_AtomParams[itype];
+        apos[i]=p; aQs[i]=par.x; aQsize[i]=par.y; aPsize[i]=par.z; aPcoef[i]=par.w;
+    }
+
     void clearAuxDens(){
         // We do not need to clear this, it is set fully in projection
         //for(int i=0; i<nQtot; i++){ rhoP[i] = 0; };
@@ -278,14 +290,14 @@ constexpr static const Vec3d default_aAbWs[] = {
         //clearAuxDens();
     }
 
-    void reportOrbitals(){
+    void reportOrbitals()const{
         for(int io=0; io<nOrb; io++){ for(int ib=0; ib<perOrb; ib++){
             int i=io*perOrb+ib;
             printf( "orb[%i,%i=%i] p(%g,%g,%g) s %g c %g \n", io, ib, i, epos[i].x,epos[i].y,epos[i].z, esize[i], ecoef[i] );
         } }
     }
 
-    void reportCharges(int io){
+    void reportCharges(int io)const{
         int i0    = getOrbOffset(io);
         int irho0 = getRhoOffset(io);
         int ij=0;
@@ -353,7 +365,7 @@ constexpr static const Vec3d default_aAbWs[] = {
         return Ssum;
     }
 
-    double orbNorm(int io ){
+    double orbNorm(int io )const{
         int i0=getOrbOffset(io);
         double Ssum=0;
         int ii=0;
@@ -424,14 +436,14 @@ constexpr static const Vec3d default_aAbWs[] = {
 
     inline double CrossOverlap( int io, int jo ){
         // NOTE : Later we need to evaluate some function F(S(x)) ( e.g. polynominal of cross-overlap  )
-        //          => we need chain derivs   dF(S(x))/dx = (dF/dS)*(dS/dx) 
-        //        Most probably it will be integral of overlap density Sum{rho} = Sum{Sij^2}  
+        //          => we need chain derivs   dF(S(x))/dx = (dF/dS)*(dS/dx)
+        //        Most probably it will be integral of overlap density Sum{rho} = Sum{Sij^2}
         //         in such case derivative    dF(S(xi))/dx =  Stot * (dSij/dxi)
         int i0 = getOrbOffset(io);
         int j0 = getOrbOffset(jo);
          double E = 0;
          double SOij = 0.0;
-         double CAmp = 1.0; 
+         double CAmp = 1.0;
          for(int i=i0; i<i0+perOrb; i++){
             Vec3d  pi = epos [i];
             double si = esize[i];
@@ -466,7 +478,7 @@ constexpr static const Vec3d default_aAbWs[] = {
 
                 double eij=CAmp*Sij;
                 E   += eij*cij;
-                Vec3d Fp = Rij*(-dSr*cij);
+                Vec3d Fp = Rij*(dSr*cij);
                 efpos [i].add( Fp ); efpos[j].sub( Fp );
                 efsize[i]+= dSsi*cij; efsize[j]+= dSsj*cij;
                 efcoef[i]+= eij*cj ;  efcoef[j]+= eij*ci;
@@ -493,9 +505,9 @@ constexpr static const Vec3d default_aAbWs[] = {
 // ===========================================================================================================================
 
     //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
-    double projectOrb(int io, Vec3d& dip, bool bNormalize ){
+    double projectOrb(int io, Vec3d& dip ){
 
-        bool bCoulomb = bEvalCoulomb || bEvalAECoulomb; 
+        bool bCoulomb = bEvalCoulomb || bEvalAECoulomb;
 
         int i0    = getOrbOffset(io);
         int irho0 = getRhoOffset(io);
@@ -516,7 +528,7 @@ constexpr static const Vec3d default_aAbWs[] = {
             double ci  = ecoef[i];
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
-            
+
             if(bCoulomb){
                 qcog.add_mul( pi, qii );
                 /// ToDo: MUST USE PRODUCT OF GAUSSIANS !!!!   gaussProduct3D( double wi, const Vec3d& pi, double wj, const Vec3d& pj,  double& wij, Vec3d& pij ){
@@ -549,7 +561,7 @@ constexpr static const Vec3d default_aAbWs[] = {
                 double cij = ci*cj*2;
 
                 // --- Evaluate Normalization, Kinetic & Pauli Energy
-                
+
                 //const double resz = M_SQRT2; // TODO : PROBLEM !!!!!!!   getOverlapSGauss and getDeltaTGauss are made for density gaussians not wave-function gaussians => we need to rescale "sigma" (size)
                 //double dSr, dSsi, dSsj;
                 //double Sij  = getOverlapSGauss( r2, si*resz, sj*resz, dSr, dSsi, dSsj );
@@ -572,7 +584,7 @@ constexpr static const Vec3d default_aAbWs[] = {
                     Ps[ii] = pij;   // center of axuliary overlap density function in the middle between the two wavefunctions
                     Ss[ii] = sij;
                 }
-               
+
                 if(bEvalKinetic){
                     //double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
                     double Kij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj );   // fr*=2; fsi*=2, fsj*=2;
@@ -581,9 +593,7 @@ constexpr static const Vec3d default_aAbWs[] = {
                     efpos [i].add( fij ); efpos[j].sub( fij );
                     efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
                     efcoef[i]+= Kij*cj ;  efcoef[j]+= Kij*ci;
-                    if(DEBUG_iter==DEBUG_log_iter){
-                        printf(" Kij %g cij %g Ekij \n", Kij, cij, Kij*cij );
-                    }
+                    //if(DEBUG_iter==DEBUG_log_iter){ printf(" Kij %g cij %g Ekij \n", Kij, cij, Kij*cij ); }
                 }
 
                 ii++;
@@ -611,7 +621,7 @@ constexpr static const Vec3d default_aAbWs[] = {
         for(int io=0; io<nOrb; io++){
             //int i0  = getOrbOffset(jo);
             //oQs[io] =
-            Ek += projectOrb( io, odip[io], bNormalize );
+            Ek += projectOrb( io, odip[io] );
             //projectOrb(  io, rhoP+ii0, rhoQ+ii0, rhoS+ii0, odip[io], true );
             //projectOrb(io, ecoefs+i0, erho+irho0, erhoP+irho0, odip[io] );
             ii0+=nqOrb;
@@ -742,7 +752,7 @@ constexpr static const Vec3d default_aAbWs[] = {
         double dxxi,dxxj;
         double dSr;
         double dSsi,dSsj;
-        
+
 
         // NOTE: we must compute it twice
         // 1) in toRho() to obtain charges and positions
@@ -761,7 +771,7 @@ constexpr static const Vec3d default_aAbWs[] = {
         Vec3d  Fp   = rhofP[ij];  //   fij = Rij*(-fr*qij);   ... from CoulombElement
         double Fs   = rhofS[ij];
         double dEdQ = rhofQ[ij];  // TODO: Eqi is probably redudent ( Fqi is the same )  !!!
-        
+
         double cij = 2*ci*cj;
 
         // TODO : we should make sure there is a recoil ( forces point to opposite direction )
@@ -833,7 +843,7 @@ constexpr static const Vec3d default_aAbWs[] = {
 
         //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
 
-        Vec3d fp = Rij*(-fr*qij);
+        Vec3d fp = Rij*(fr*qij);
         fs *= qij;
         rhofP[i].add(fp);   rhofP[j].sub(fp);
         rhofS[i] -= fs*si;  rhofS[j] -= fs*sj; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
@@ -879,7 +889,7 @@ constexpr static const Vec3d default_aAbWs[] = {
                 double E  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
 
                 // --- Derivatives (Forces)
-                Vec3d fp = Rij*(-fr * qij);
+                Vec3d fp = Rij*(fr * qij);
                 fs       *=           qij;
                 //fs      *= M_SQRT1_2 * qij;
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
@@ -896,7 +906,7 @@ constexpr static const Vec3d default_aAbWs[] = {
                 }
             }
         }
-        
+
         //printf( " Ecoul %g \n", Ecoul );
         //printf( "CoulombOrbPair Eorb %g \n", Ecoul );
         return Ecoul;
@@ -963,8 +973,8 @@ constexpr static const Vec3d default_aAbWs[] = {
     /*
     double ExchangeOrbPair(int io, int jo){
 
-        // ToDo : Remove This   --   This was replaced by other functions like 
-        //    pairOverlapDervis() 
+        // ToDo : Remove This   --   This was replaced by other functions like
+        //    pairOverlapDervis()
         //    pairKineticDervis()
 
         // It may be actually easier to evaluate Hartree-Fock like exchange, because it is linear
@@ -983,11 +993,11 @@ constexpr static const Vec3d default_aAbWs[] = {
 
         double cijs[nqOrb];
 
-        Vec3d  fPs[nqOrb];    
+        Vec3d  fPs[nqOrb];
         double fSs[nqOrb];
-        double fQs[nqOrb]; 
+        double fQs[nqOrb];
 
-        Gauss::PairDerivs pairs[nqOrb]; 
+        Gauss::PairDerivs pairs[nqOrb];
 
         int i0=io*perOrb;
         int j0=jo*perOrb;
@@ -1014,10 +1024,10 @@ constexpr static const Vec3d default_aAbWs[] = {
         }
         // --- self-coulomb  of   rho_ij(r)
         double E = 0;
-        for(int i=0; i<nqOrb; i++){ 
-            fPs[i] = Vec3dZero;    
+        for(int i=0; i<nqOrb; i++){
+            fPs[i] = Vec3dZero;
             fSs[i] = 0;
-            fQs[i] = 0; 
+            fQs[i] = 0;
         }
         for(int i=0; i<nqOrb; i++){
         //int i=0;{
@@ -1041,7 +1051,7 @@ constexpr static const Vec3d default_aAbWs[] = {
                 double fr,fs;
 
                 double qij = qi*qj*2;
-                
+
                 //printf( "//Exchange:Coulomb[%i,%i] r %g s %g \n", i, j, r, s  );
                 double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
                 //printf( "Exchange:Coulomb[%i,%i] qij %g E %g fr %g fs %g \n", i, j, r, s, qij, E*qij, fs, fs );
@@ -1051,16 +1061,16 @@ constexpr static const Vec3d default_aAbWs[] = {
                 fs       *=           qij;
 
                 //if(DEBUG_iter==DEBUG_log_iter) printf( "ExchangeOrbPair:Coulomb[%i,%i] qij %g e %g fx %g fs %g | r %g s %g fr %g fs %g  \n", i,j, qij, e, fp.x, fs,    r, s, fr, fs );
-                
+
                 fPs[i].add(fp);    fPs[j].sub(fp);
                 fSs[i] -= fs*A.s;  fSs[j] -= fs*B.s;
                 fQs[i] += e*qj*2;  fQs[j] += e*qi*2; // ToDo : need to be made more stable ... different (qi,qj)
                 E      += e*qij;
             }
         }
-        
+
         //if(DEBUG_iter==DEBUG_log_iter){for(int i=0; i<nqOrb; i++){printf( "[%i] e %g fx %g | x %g q %g \n", i,  fQs[i], fPs[i].x,     pairs[i].p.x, pairs[i].C*cijs[i] );}}
-        
+
         //printf( " Exchange:Coulomb DONE \n" );
         //printf( " Exchange:Coulomb DONE \n" );
         // --- From Rho
@@ -1135,7 +1145,7 @@ constexpr static const Vec3d default_aAbWs[] = {
         return S;
     }
 
-    double pairKineticDervis( int io, int jo, Quat4d* TDs ){ 
+    double pairKineticDervis( int io, int jo, Quat4d* TDs ){
         // TODO : this can be merged with  pairOverlapDervis() for better performance
         // ToDo : This is not required anymore since we have    pairOverlapAndKineticDervis()
         int i0=io*perOrb;
@@ -1178,7 +1188,7 @@ constexpr static const Vec3d default_aAbWs[] = {
 
 
     double pairOverlapAndKineticDervis( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, Quat4d* TDs, double& S ){
-        // ToDo: If we put here a switch we can use it in place of    pairOverlapAndKineticDervis() 
+        // ToDo: If we put here a switch we can use it in place of    pairOverlapAndKineticDervis()
         int i0=io*perOrb;
         int j0=jo*perOrb;
         int ij=0;
@@ -1240,7 +1250,7 @@ constexpr static const Vec3d default_aAbWs[] = {
                 double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
                 //printf( "Exchange:Coulomb[%i,%i] qij %g E %g fr %g fs %g \n", i, j, r, s, qij, E*qij, fs, fs );
                 // --- Derivatives (Forces)
-                Vec3d fp = Rij*(-fr * qij);
+                Vec3d fp = Rij*(fr * qij);
                 fs       *=           qij;
                 //if(DEBUG_iter==DEBUG_log_iter) printf( "ExchangeOrbPair:Coulomb[%i,%i] qij %g e %g fx %g fs %g | r %g s %g fr %g fs %g  \n", i,j, qij, e, fp.x, fs,    r, s, fr, fs );
                 dBi.pos.add(fp);              dBj.pos.sub(fp);
@@ -1283,7 +1293,7 @@ constexpr static const Vec3d default_aAbWs[] = {
         return S;
     }
 
-    // ToDo : This may be perhaps integrated into  ***  forceFromOverlaps() *** 
+    // ToDo : This may be perhaps integrated into  ***  forceFromOverlaps() ***
     void applyPairForce( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, double Amp ){
         //printf( "applyPairForce [%i,%i] Amp %g \n", io, jo, Amp );
         int i0=io*perOrb;
@@ -1308,7 +1318,7 @@ constexpr static const Vec3d default_aAbWs[] = {
                 const Gauss::PairDeriv& dB = dBs[ij];
                 double eij=Amp*Bs[ij].charge;
                 //E   += eij;
-                Vec3d Fp = Rij*(-dB.dCr*cij);
+                Vec3d Fp = Rij*(dB.dCr*cij);
                 efpos [i].add( Fp ); efpos[j].sub( Fp );
                 efsize[i]+= dB.dCsi*cij; efsize[j]+= dB.dCsj*cij;
                 //efcoef[i]+= eij*cj ;  efcoef[j]+= eij*ci;
@@ -1322,18 +1332,18 @@ constexpr static const Vec3d default_aAbWs[] = {
         //return E;
     }
 
-    // ToDo : This may be perhaps integrated into  ***  forceFromOverlaps() *** 
+    // ToDo : This may be perhaps integrated into  ***  forceFromOverlaps() ***
     double pauliCrossKinetic( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, Quat4d* TDs, double S, double T, Vec3d KRSrho, bool anti ){
-        // This is Pauli potential derived from Kinetic energy; 
+        // This is Pauli potential derived from Kinetic energy;
         // See Eq.3a,b in article:
         // Su, J. T., & Goddard, W. A. (2009), The Journal of Chemical Physics, 131(24), 244501.
-        // The dynamics of highly excited electronic systems: Applications of the electron force field. 
+        // The dynamics of highly excited electronic systems: Applications of the electron force field.
         // See  https://doi.org/10.1063/1.3272671    or    http://aip.scitation.org/doi/10.1063/1.3272671
         //
         // Same spin (Eq.3a)    Ep = T * ( (1-a)*S/(1+S) + S/(1-S) )
         // anti spin (Eq.3b)    Ep = T * (    a *S/(1+S)           )   // Negligible ?
-        // 
-        //See : /home/prokop/git/SimpleSimulationEngine/cpp/common/molecular/InteractionsGauss.h 
+        //
+        //See : /home/prokop/git/SimpleSimulationEngine/cpp/common/molecular/InteractionsGauss.h
         // addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho )
 
         anti = true; // DEBUG WARRNING !!!!!!!!
@@ -1369,8 +1379,8 @@ constexpr static const Vec3d default_aAbWs[] = {
                 // ToDo : this is in    addPauliGauss()    @     /home/prokop/git/SimpleSimulationEngine/cpp/common/molecular/InteractionsGauss.h
 
                 //double dTr, dTsi, dTsj;
-                //double T = Gauss:: kinetic_s(  r2, si, sj,   dTr, dTsi, dTsj );             
-                
+                //double T = Gauss:: kinetic_s(  r2, si, sj,   dTr, dTsi, dTsj );
+
                 double dTsi = TD.x;
                 double dTsj = TD.y;
                 double dTr  = TD.z;
@@ -1378,10 +1388,10 @@ constexpr static const Vec3d default_aAbWs[] = {
                 //double fsi =          ( dTsi*eS + TfS*dB.dCsi )*KRSrho.y;
                 //double fsj =          ( dTsj*eS + TfS*dB.dCsj )*KRSrho.y;
                 //Vec3d  fp  =  Rij * ( ( dTr *eS - TfS*dB.dCr  )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
-                
+
                 double fsi =         ( dTsi*eS + TfS*dB.dCsi );
                 double fsj =         ( dTsj*eS + TfS*dB.dCsj );
-                Vec3d  fp  =  Rij * ( ( dTr *eS - TfS*dB.dCr ) ); // second *KRSrho.x because dR is not multiplied
+                Vec3d  fp  =  Rij * ( -( dTr *eS - TfS*dB.dCr ) ); // second *KRSrho.x because dR is not multiplied
 
                 efpos [i].add( fp ); efpos[j].sub( fp );
                 efsize[i]+= fsi*cij; efsize[j]+= fsj*cij;
@@ -1400,7 +1410,7 @@ constexpr static const Vec3d default_aAbWs[] = {
         const double R2Safe = sq(0.1);
         // we first project on axuliary density
         double E =0;
-        Gauss::PairDeriv dBs[perOrb2]; 
+        Gauss::PairDeriv dBs[perOrb2];
         Gauss::Blob       Bs[perOrb2];
         Gauss::Blob      fBs[perOrb2];
         // transform to auxuliatery overlap-density basis and calculate corresponding derivative transform (Jacobian)
@@ -1409,20 +1419,20 @@ constexpr static const Vec3d default_aAbWs[] = {
         for(int i=0; i<perOrb2; i++){ fBs[i].setZero(); }
         if( bEvalPauli && (iPauliModel==1) ){
             bool anti = ( ospin[io] != ospin[jo] );
-            T += pairOverlapAndKineticDervis( io, jo, Bs, dBs, TDs, S ); 
-            E += pauliCrossKinetic          ( io, jo, Bs, dBs, TDs, S, T, KRSrho,  anti  ); 
+            T += pairOverlapAndKineticDervis( io, jo, Bs, dBs, TDs, S );
+            E += pauliCrossKinetic          ( io, jo, Bs, dBs, TDs, S, T, KRSrho,  anti  );
         }else{
-            S = pairOverlapDervis( io, jo, Bs, dBs ); 
+            S = pairOverlapDervis( io, jo, Bs, dBs );
             if(bEvalPauli){
-                E += S*S*KPauliOverlap; 
-                applyPairForce   ( io, jo, Bs, dBs, S*2*KPauliOverlap ); 
+                E += S*S*KPauliOverlap;
+                applyPairForce   ( io, jo, Bs, dBs, S*2*KPauliOverlap );
             }
         }
         // evaluate coulombic terms in axuilary density basis ( i.e. between charge blobs )
         if(bEvalExchange) E += evalCoulombPair( perOrb2, perOrb2, Bs, Bs, fBs, fBs );
         //printf( "nqOrb %i \n", perOrb2 );
         //for(int i=0; i<nqOrb; i++){ printf( "fBs[%i] fq %g fs %g fp(%g,%g,%g) \n", i, fBs[i].charge, fBs[i].size,    fBs[i].pos.x,fBs[i].pos.x,fBs[i].pos.x ); }
-        // transform forces back to wave-function basis, using previously calculated derivatives 
+        // transform forces back to wave-function basis, using previously calculated derivatives
         forceFromOverlaps( io, jo, dBs, fBs );
         return E;
     }
@@ -1490,19 +1500,19 @@ void applyPairForceAE( int ia, int jo, Gauss::PairDeriv* dBs,  double* Ss, doubl
         double cij = cj*Amp;
         const Gauss::PairDeriv& dB = dBs   [jj];
         double eij                 = Amp*Ss[jj];
-        Vec3d fp = Rij*(-dB.dCr*cij);
-        aforce[ia].add( fp ); 
+        Vec3d fp = Rij*( dB.dCr*cij);
+        aforce[ia].add( fp );
         efpos [j] .sub( fp );
         efsize[j] += dB.dCsj*cij;
         efcoef[j] += eij/cj;
-        if(DEBUG_iter==DEBUG_log_iter) printf( "applyPairForceAE[%i,%i] qij %g e %g fp.x %g | r %g s %g \n", ia,j, cij, eij, fp.x,   sqrt(r2), sj  );
+        //if(DEBUG_iter==DEBUG_log_iter) printf( "applyPairForceAE[%i,%i] qij %g e %g fp.x %g | r %g s %g \n", ia,j, cij, eij, fp.x,   sqrt(r2), sj  );
         //ij++;
     }
     //return E;
 }
 
 /*
-double evalAorb( int ia, int jo ){ 
+double evalAorb( int ia, int jo ){
     Gauss::PairDeriv dBs[perOrb];
     double            Ss[perOrb];
     double S = evalAEoverlap( ia, jo, dBs, Ss );
@@ -1534,19 +1544,19 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         double r    = sqrt(r2 + R2SAFE);
         double s2   = si*si + sj*sj;
         double s    = sqrt(s2);
-        double qij = qi*qj;
+        double qij = -qi*qj;
         double fr,fs;
         double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
         // --- Derivatives (Forces)
-        Vec3d fp = Rij*(-fr * qij );
+        Vec3d fp = Rij*( fr * qij );
         fs       *=           qij;
         //fs      *= M_SQRT1_2 * qij;
-        aforce[ia].add(fp);    
+        aforce[ia].add(fp);
         rhofP [j] .sub(fp);
         rhofS [j] -= fs*sj;
         //rhofQ [j] += e*qi*0.0; // Not sure why this is not used here
         E         += e*qij;
-        if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
+        //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
     }
     return E;
 }
@@ -1560,7 +1570,7 @@ double evalAE(){
         //const double qqi  = aQs  [ia];
         //const Vec3d  abwi = eAbWs[ia];
         for(int jo=0; jo<nOrb; jo++){
-            if(bEvalAEPauli){// --- Pauli Overlap 
+            if(bEvalAEPauli){// --- Pauli Overlap
                 double S = evalAEoverlap( jo, dBs, Ss, aPsize[ia], apos[ia] );
                 double K   = aPcoef[ia];
                 E         += K*S*S;
@@ -1611,13 +1621,30 @@ double evalAA(){
         if( bEvalCoulomb  ) E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
         if( bEvalAE       ) E += evalAE();
         if( bEvalAA       ) E += evalAA();
-        for(int io=0; io<nOrb; io++){ 
-            assembleOrbForces_fromRho(io); 
+        for(int io=0; io<nOrb; io++){
+            assembleOrbForces_fromRho(io);
         }
         E += evalCrossTerms(); // ToDo : This should replace evalPauli and evalExchange()
         //printf( "eval() E=%g \n", E  );
         return E;
     }
+
+    double moveGD( double dt){
+        double F2a  = 0;
+        double F2ep = 0;
+        double F2es = 0;
+        double F2ec = 0;
+        //for(int i=0; i<natom; i++){ apos[i].add_mul( aforce[i], dt );     F2a+=aforce[i].norm2();     }
+        for(int i=0; i<nBas; i++){
+            // ToDo : We should out project directions which breaks normalization (!!!) but we can do it later - it is mostly importaint for dynamics, gradient desncent should be fine
+            epos [i].add_mul( efpos [i], dt );    F2ep+=aforce[i].norm2();
+            esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);
+            //ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);
+        }
+        return F2a + F2ep + F2es + F2ec;
+    }
+
+
 
 // ==================================================================
 // ==================== On Grid Utils
@@ -1631,6 +1658,27 @@ double evalAA(){
     //          for kbas in basis_decomposition[j]:
     //              for pos in grid:
     //                  Iij += kbas(pos)^2 * wf_j[pos]^2
+
+    double orbAtPoint( int io, const Vec3d& pos )const{
+        int i0     = getOrbOffset( io );
+        double wfsum=0;
+        for(int i=0; i<perOrb; i++){
+            int i_=i0+i;
+            Vec3d dR  = pos - epos[i_];
+            double r2 = dR.norm2();
+            wfsum += Gauss::bas3D_r2( r2, esize[i_] ) * ecoef[i_];
+        }
+        return wfsum;
+    }
+
+    double* orbAtPoints( int io, int n, Vec3d* ps, double* out=0 )const{
+        if(out==0){ out = new double[n]; };
+        for(int i=0; i<n; i++){
+            out[i] = orbAtPoint( io, ps[i] );
+            //printf( "orbAtPoints[%i/%i] %g @(%g,%g,%g) \n", i, n, out[i], ps[i].x,ps[i].y,ps[i].z );
+        }
+        return out;
+    }
 
     double orb2grid( int io, const GridShape& gridShape, double* buff )const{
         int i0     = getOrbOffset( io );
@@ -1656,7 +1704,7 @@ double evalAA(){
         });
     }
 
-    void orb2xsf( const GridShape& grid, int iorb, const char* fname ){
+    void orb2xsf( const GridShape& grid, int iorb, const char* fname )const{
         int ng = grid.n.totprod();
         double  dV = grid.voxelVolume();
         double* buff = new double[ ng ];
