@@ -10,8 +10,7 @@
 #include "LTUnit.h"
 #include "LTSquad.h"
 
-class LTFaction{
-	public:
+class LTFaction{ public:
     char  * name;
     //Vec3f   color;
     uint32_t color;
@@ -27,7 +26,7 @@ class LTFaction{
             if( r2 < r2min ){ r2min=r2; imin=i; }
             i++;
         }
-        printf( " imin %i r2min %f \n", imin, r2min );
+        //printf( " imin %i r2min %f \n", imin, r2min );
         return squads[imin];
     };
 

@@ -61,7 +61,7 @@ class LTWorld{
     Vec2d map_center;
     double maxHeight = 500.0;
 
-    static const int   ntg = 4;
+    static const int ntg     = 4;
     static const int nAngles = 64;
     double  tgs    [ntg] = {-0.2,-0.1,-0.0,0.1};
     double  Ttgs   [ntg];
@@ -99,7 +99,9 @@ class LTWorld{
     int  loadGunTypes (const char * fname );
     void getLinesInCircle ( const Vec2d& pos, double R, std::vector<LTLinearObject*>& out );
     void getObjectInCircle( const Vec2d& pos, double R, std::vector<LTStaticObject*>& out );
-    void getSurroundings  ( LTsurrounding& sur, LTFaction* fac, const Vec2d& p, double R );
+    void getSurroundings  ( LTsurrounding& sur, const LTFaction* fac, const Vec2d& p, double R );
+    void prepareSurroundings( const LTFaction* faction, Vec2d pos, double R, double constrRad=-1.0, Vec2d constrPos=Vec2dZero );
+    //void prepareSurroundings( LTSquad* s, double R );
     void optimizeDeployment( LTSquad* s, double R, int n, int m, bool bJumpToGoal );
 
     //void tryFindBetterPos( LTUnit& u );

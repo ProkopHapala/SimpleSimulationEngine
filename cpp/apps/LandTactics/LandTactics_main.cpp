@@ -12,6 +12,8 @@
 //#include "Texture.h"
 #include "Draw.h"
 #include "Draw2D.h"
+#include "Draw3D.h"
+
 
 #include "fastmath.h"
 #include "Vec2.h"
@@ -63,6 +65,8 @@ class FormationTacticsApp : public AppSDL2OGL {
     bool bDrawing  = false;
     bool bDrawGoal = true;
 
+    GLuint oglTerrain=0;
+
     //double xsc,ysc;
 
     //GLuint       itex;
@@ -78,6 +82,8 @@ class FormationTacticsApp : public AppSDL2OGL {
 
 	FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ );
 
+	void renderStaticTerrain();
+
 };
 
 void FormationTacticsApp::printASCItable( int imin, int imax  ){
@@ -89,75 +95,25 @@ void FormationTacticsApp::printASCItable( int imin, int imax  ){
     printf("%s\n", str );
 };
 
-FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+void FormationTacticsApp::renderStaticTerrain(){
 
-    printASCItable( 33, 127  );
-
-    world.init();
-
-    camX0 = world.map_center.x;
-    camY0 = world.map_center.y;
-
-    currentFaction = world.factions[0];  printf( "currentFaction: %s\n", currentFaction->name );
-    currentSquad   = currentFaction->squads[0];
-
-    //TiledView::init( 6, 6 );
-    //tiles    = new int[ nxy ];
-    //TiledView::renderAll( -10, -10, 10, 10 );
-
-    default_font_texture     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
-    GUI_fontTex = default_font_texture;
-
-
-    //printf( " pass.size:  %i \n" , world.pathFinder.pass.size() );
-    //for( auto& item : world.pathFinder.pass ){
-    //    printf( "pass %i %i %i %i \n", item.first&0xFFFF, item.first>>32, item.second.x, item.second.y );
-    //}
-
-
-    zoom = 1000.00;
-
-    printf( "default_font_texture :  %i \n", default_font_texture );
-
-}
-
-void FormationTacticsApp::draw(){
-    //long tTot = getCPUticks();
-    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glDisable( GL_DEPTH_TEST );
-
-/*
-	if(bDrawing){
-        Vec2i ind;Vec2d dind;
-        //int i = world.ruler.simplexIndex({mouse_begin_x,mouse_begin_y},ind,dind)>>1;
-        world.ruler.simplexIndexBare({mouse_begin_x,mouse_begin_y},ind);
-        ind = world.ruler.wrap_index(ind);
-        int i = world.ruler.ip2i(ind);
-        //printf("i %i (%i,%i) \n",i, ind.x, ind.y );
-        world.ground[i] = randf(0.0,1.0);
-	}
-	*/
-
-
-
-
-    //glDisable    ( GL_LIGHTING   );
-    //glDisable    ( GL_DEPTH_TEST );
+    glDisable    ( GL_LIGHTING   );
+    glDisable    ( GL_DEPTH_TEST );
     glShadeModel ( GL_SMOOTH     );
 
-	glPushMatrix();
-	glScalef(world.ruler.step,world.ruler.step,1.0);
+    const uint32_t colorsBW[2]{ 0xFF000000, 0xFFFFFFF};
+    //drawMap( SimplexRuler& ruler, world.ground,   int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
+    //drawMap( world.ruler, world.ground, 0, 1000 );
+    drawMap( world.ruler, world.ground, 0, 1000, 2, colorsBW );
+    //return;
 
-
-
-	// TODO !!!! This function Draw2D::drawTriaglePatch<>() is somehow lost !!!!
+    // TODO !!!! This function Draw2D::drawTriaglePatch<>() is somehow lost !!!!
+	//glPushMatrix();
+	//glScalef(world.ruler.step,world.ruler.step,1.0);
 	//Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, world.ruler.na, world.ground, 0.0, world.maxHeight );
-
 	//Draw2D::drawTriaglePatch<cmapHeight>( {0,0}, {128,128}, world.ruler.na, world.pathFinder.moveCosts, 0.0, world.maxHeight );
 	//Draw2D::drawTriaglePatchBas( {0,0}, {128,128}, world.ruler.na, world.pathFinder.toBasin, 0.0, world.maxHeight );
-
-	glPopMatrix();
+	//glPopMatrix();
 
 	glColor3f(1.0,1.0,1.0);
 
@@ -192,22 +148,90 @@ void FormationTacticsApp::draw(){
     }
 
 	//printf( "world.objects.size %i \n", world.objects.size() );
-	glColor3f(0.5,0.5,0.5);
+	glColor3f(0.7,0.7,0.7);
 	for( LTStaticObject& o : world.objects ){
         //Draw2D::drawShape( o.pos, o.dir, o.type->glo );
         o.view();
         //o.type->render( o.pos, o.dir );
     }
-    //exit(0)
 
-
+    glColor3f(0.7,0.7,0.7);
     for( LTLinearObject& o : world.linObjects ){
         //printf( " (%f,%f) (%f,%f) \n", o.p1.x, o.p1.y, o.p2.x, o.p2.y );
         Draw2D::drawLine_d( o.p1, o.p2 );
     }
+    //exit(0)
+}
+
+FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+
+    printASCItable( 33, 127  );
+
+    world.init();
+
+    camX0 = world.map_center.x;
+    camY0 = world.map_center.y;
+
+    currentFaction = world.factions[0];  printf( "currentFaction: %s\n", currentFaction->name );
+    currentSquad   = currentFaction->squads[0];
+
+    //TiledView::init( 6, 6 );
+    //tiles    = new int[ nxy ];
+    //TiledView::renderAll( -10, -10, 10, 10 );
+
+    default_font_texture     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    GUI_fontTex = default_font_texture;
 
 
-    //float camMargin = ( camXmax - camXmin )*0.1;
+    //printf( " pass.size:  %i \n" , world.pathFinder.pass.size() );
+    //for( auto& item : world.pathFinder.pass ){
+    //    printf( "pass %i %i %i %i \n", item.first&0xFFFF, item.first>>32, item.second.x, item.second.y );
+    //}
+
+    zoom = 1000.00;
+
+    oglTerrain=Draw::list(oglTerrain);
+    renderStaticTerrain();
+    glEndList();
+
+    printf( "default_font_texture :  %i \n", default_font_texture );
+
+}
+
+
+
+void FormationTacticsApp::draw(){
+    //long tTot = getCPUticks();
+    glClearColor( 0.5f, 0.5f, 0.5f, 0.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	glDisable( GL_DEPTH_TEST );
+
+
+	glCallList( oglTerrain );
+
+    const LTFaction* testFaction = world.factions[0];
+    const LTUnit*    testUnit    = &testFaction->squads[0]->units[0];
+    Vec2d pmouse = { mouse_begin_x, mouse_begin_y };
+    world.prepareSurroundings( testFaction, pmouse, 100.0 );
+    drawMap( {20,20}, pmouse-(Vec2d){10.0,10.0}, {1.0,1.0},
+        [&](Vec2d p){ return world.tmpSur.unitPosFittness( testUnit, p ); },
+        -1.0, 1.0, Draw::ncolors, Draw::colors_RWB
+    );
+
+    /*
+	if(bDrawing){
+        Vec2i ind;Vec2d dind;
+        //int i = world.ruler.simplexIndex({mouse_begin_x,mouse_begin_y},ind,dind)>>1;
+        world.ruler.simplexIndexBare({mouse_begin_x,mouse_begin_y},ind);
+        ind = world.ruler.wrap_index(ind);
+        int i = world.ruler.ip2i(ind);
+        //printf("i %i (%i,%i) \n",i, ind.x, ind.y );
+        world.ground[i] = randf(0.0,1.0);
+	}
+	*/
+
+
+    float camMargin = ( camXmax - camXmin )*0.1;
     //float camMargin = 0;
     //TiledView::draw(  camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin  );
     //printf( " camRect  %f %f %f %f \n", camXmin-camMargin, camYmin-camMargin, camXmax+camMargin, camYmax+camMargin );

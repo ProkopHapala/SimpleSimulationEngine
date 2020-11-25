@@ -61,7 +61,7 @@ void LTWorld::getObjectInCircle( const Vec2d& pos, double R, std::vector<LTStati
     }
 }
 
-void LTWorld::getSurroundings( LTsurrounding& sur, LTFaction* fac, const Vec2d& pos, double R ){
+void LTWorld::getSurroundings( LTsurrounding& sur, const LTFaction* fac, const Vec2d& pos, double R ){
     // TODO : it is not clear if sourrounding should be circle, or different shape
     //    - with circles it is quite hard to ensure that each object is inserted just once, if getSurroundings is called multiple times (disjunct areas)
     //    - maybe we should rather use unordered_set ?
@@ -73,18 +73,33 @@ void LTWorld::getSurroundings( LTsurrounding& sur, LTFaction* fac, const Vec2d& 
     getObjectInCircle( pos, R, sur.objs  );
 };
 
-void LTWorld::optimizeDeployment( LTSquad* s, double R, int n, int m, bool bJumpToGoal ){
+//void LTWorld::prepareSurroundings( const LTFaction* faction, Vec2d pos, double R, double constrRad=-1.0, Vec2d constrPos=Vec2dZero ){
+void LTWorld::prepareSurroundings( const LTFaction* fac, Vec2d pos, double R, double constrRad, Vec2d constrPos ){
     // TODO : this constr can be actually used for movement of units
     //   - probable energy gradient in direction toward the target
-    tmpSur.bConstr=true;
+    //printf( "pos (%f,%f) goal (%f,%f)\n", s->pos.x, s->pos.y,   s->goal.x, s->goal.y );
+    if(constrRad>0){
+        tmpSur.bConstr   = true;
+        tmpSur.ConstrPos = constrPos;
+        tmpSur.ConstrRad = constrRad;
+        tmpSur.ConstrE   = -1.0; // TODO: later something more cleaver ( depends on Moral and Order-Strength )
+    }else{
+        tmpSur.bConstr   = false;
+    }
+    tmpSur.clear();
+    getSurroundings( tmpSur, fac, pos, R );
+}
+
+void LTWorld::optimizeDeployment( LTSquad* s, double R, int n, int m, bool bJumpToGoal ){
+    LTWorld::prepareSurroundings( s->faction, s->pos, R, s->goalRadius, s->goal );
+    /*
+        tmpSur.bConstr   = true;
     tmpSur.ConstrPos = s->goal;
     tmpSur.ConstrRad = s->goalRadius;
     tmpSur.ConstrE   = -1.0; // TODO: later something more cleaver ( depends on Moral and Order-Strength )
-
-    //printf( "pos (%f,%f) goal (%f,%f)\n", s->pos.x, s->pos.y,   s->goal.x, s->goal.y );
-
     tmpSur.clear();
     getSurroundings( tmpSur, s->faction, s->pos, R );
+    */
     for( int i=0; i<m; i++ ){
         for( LTUnit& u : s->units ){
             tmpSur.tryFindBetterPlace( &u, n, bJumpToGoal );
@@ -93,8 +108,9 @@ void LTWorld::optimizeDeployment( LTSquad* s, double R, int n, int m, bool bJump
 }
 
 void LTWorld::initLinearObjects(){
-    int n      = 512;
-    double span = 300.0;
+    //int n      = 512;
+    int n      = 128;
+    double span = 500.0;
     double maxR = 50.0;
 
     int iter=0;

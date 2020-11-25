@@ -39,7 +39,7 @@ class LTsurrounding{ public:
             //printf( " %f %f \n", r2, r2max  );
             if( r2 < r2max ){
                 //E+= getCover( *u, *lo );
-                cover = fmax( cover, lo->cover * (r2max-r2)/r2max );
+                cover = fmax( cover, lo->cover * (1-r2/r2max) );
             }
         }
         double overlap = 0;
@@ -55,6 +55,7 @@ class LTsurrounding{ public:
         if( bConstr ){
             E += ConstrE * sq( p.dist2(ConstrPos)/sq(ConstrRad) );
         }
+        // ToDo - calculate  dange from enemies
         return E;
     };
 

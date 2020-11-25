@@ -2,6 +2,8 @@
 #ifndef LTdraw_h
 #define LTdraw_h
 
+#include "LTWorld.h"
+#include "Draw2D.h"
 
 void cmapHeight(double g){
 
@@ -91,11 +93,71 @@ double polyLinIntercept( int n, double* xs, double* ys, double y0, double a, con
     return -1e-8;
 }
 
-
+/*
 void drawTerrain(){
-
-
 }
+*/
+
+void drawMap( SimplexRuler& ruler, double* vals,  double vmin, double vmax, int ncol=Draw::ncolors, const uint32_t * colors=&Draw::colors_rainbow[0] ){
+    /*
+    int ix,iy; Vec2d p;
+    ix= 0;iy= 0; ruler.nodePoint( {ix,iy}, p  ); printf( "[%i,%i]->(%g,%g)\n", ix,iy,p.x,p.y );
+    ix= 0;iy=10; ruler.nodePoint( {ix,iy}, p  ); printf( "[%i,%i]->(%g,%g)\n", ix,iy,p.x,p.y );
+    ix=10;iy= 0; ruler.nodePoint( {ix,iy}, p  ); printf( "[%i,%i]->(%g,%g)\n", ix,iy,p.x,p.y );
+    ix=10;iy=10; ruler.nodePoint( {ix,iy}, p  ); printf( "[%i,%i]->(%g,%g)\n", ix,iy,p.x,p.y );
+    exit(0);
+    */
+    double scc = 1./(vmax-vmin);
+    for (int iy=0; iy<ruler.na-1; iy++){
+        glBegin( GL_TRIANGLE_STRIP );
+        //int ii = (i0.y+iy)*ruler.n + i0.x;
+        for (int ix=0; ix<ruler.nb; ix++){
+            Vec2d p,p_;
+            float val,val_;
+
+            //glColor3f(1.0,1.0,1.0);
+            val = vals[ruler.ip2i({ix,iy})];
+            Draw::colorScale( (val-vmin)*scc, ncol, colors );
+            ruler.nodePoint( {ix,iy}, p  );
+            glVertex3f( p.x, p.y, 0 );
+
+            val_ = vals[ruler.ip2i({ix,iy+1})];
+            Draw::colorScale( (val_-vmin)*scc, ncol, colors );
+            ruler.nodePoint( {ix,iy+1}, p_  );
+            glVertex3f( p_.x, p_.y, 0 );
+            //if((ix%10==0)&&(iy%10==0))printf( "drawMap[%i,%i] %g(%g,%g) %g(%g,%g)\n", ix,iy,  val,p.x,p.y, val_, p_.x,p_.y );
+        }
+        glEnd();
+    }
+}
+
+
+template<typename Func>
+void drawMap( Vec2i ns, Vec2d p0, Vec2d dp, Func func, double vmin, double vmax, int ncol=Draw::ncolors, const uint32_t * colors=&Draw::colors_rainbow[0] ){
+    double scc = 1./(vmax-vmin);
+    for (int iy=0; iy<ns.y-1; iy++){
+        glBegin( GL_TRIANGLE_STRIP );
+        //int ii = (i0.y+iy)*ruler.n + i0.x;
+        for (int ix=0; ix<ns.x; ix++){
+            Vec2d p;
+            float val;
+
+            p = p0 + (Vec2d){dp.x*ix,dp.y*iy};
+            val = func( p );
+            Draw::colorScale( (val-vmin)*scc, ncol, colors );
+            glVertex3f( p.x, p.y, 0 );
+
+            p.y+=dp.y;
+            val = func( p );
+            Draw::colorScale( (val-vmin)*scc, ncol, colors );
+            glVertex3f( p.x, p.y, 0 );
+            //if((ix%10==0)&&(iy%10==0))printf( "drawMap[%i,%i] %g(%g,%g) %g(%g,%g)\n", ix,iy,  val,p.x,p.y, val_, p_.x,p_.y );
+        }
+        glEnd();
+    }
+}
+
+
 
 
 
