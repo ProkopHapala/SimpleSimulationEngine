@@ -404,11 +404,10 @@ void testDerivs_Coulomb_model_S( int n, double x0, double dx, CLCFGO& solver, Pl
 
 
 
-
+/*
 // ===================================================
 ///        test   Wave Function Overlap
 // ===================================================
-
 void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
     // ======= Test Orbital Wavefunction Overlap
     printf( " test_WfOverlap 1 \n" );
@@ -429,6 +428,7 @@ void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
         line_ISana->ys[i] = solver.evalOverlap( 0, 1 );
     }
 }
+*/
 
 // ===================================================
 ///        test   Wave Function Overlap
@@ -507,10 +507,10 @@ void test_ProjectDensity( CLCFGO& solver, Plot2D& plot1 ){
     grid.saveXSF( "temp/dgrho.xsf"  , dgrho.data() );
 }
 
+/*
 // ===================================================
 ///        test   Density Overlap
 // ===================================================
-
 void test_DensityOverlap( CLCFGO& solver, Plot2D& plot1 ){
      // ======= Test Orbital Density Overlap
     int    nint = 10;
@@ -545,6 +545,7 @@ void test_DensityOverlap( CLCFGO& solver, Plot2D& plot1 ){
     printf( "DEBUG rho*rho grid %g | | %g \n", line_IrhoGrid->ys[0], line_IrhoAna->ys[0], Gauss::norm3Ds(1) );
     }
 }
+*/
 
 // =========================================================================
 ///        test   Electrostatics   ( density * Hartree-Potential overlap )

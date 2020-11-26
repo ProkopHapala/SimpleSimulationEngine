@@ -213,8 +213,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     dt = 0.001;
     */
 
-
-
+    /*
     // ---- Free 2 basis electron    (0a,1o,2b)
     //      natom  nOrb perOrb natypes
     solver.realloc( 0, 1, 2, 1 );
@@ -226,25 +225,65 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         _.setElectron( 0,1, (Vec3d){  -0.7, 0.0, 0.0 }, 0.5, -1.0 );
     }
     dt = 0.001;
+    */
+
+    /*
+    // ---- Free 2 electron 1 basis each    (0a,2o,1b)
+    //      natom  nOrb perOrb natypes
+    solver.realloc( 0, 2, 1, 1 );
+    solver.setRcut( 4.0 );
+    solver.setDefaultValues();
+    {CLCFGO& _=solver;
+        _.setElectron( 0,0, (Vec3d){  +0.3, 0.0, 0.0 }, 0.5, +1.0 );
+        _.setElectron( 1,0, (Vec3d){  -0.3, 0.0, 0.0 }, 0.5, +1.0 );
+    }
+    dt = 0.001;
+    */
 
 
+    // ---- 2 electron 1 basis each in Soft Atom potential   (1a,2o,1b)
+    //      natom  nOrb perOrb natypes
+    solver.realloc( 1, 2, 1, 1 );
+    solver.setRcut( 4.0 );
+    solver.setDefaultValues();
+    {CLCFGO& _=solver;
+        _.setAtom    ( 0,   (Vec3d){  0.0, 0.0, 0.0 }, 1.0,  0.1, 1.0, 0. );
+        _.setElectron( 0,0, (Vec3d){  +0.3, 0.0, 0.0 }, 0.5, +1.0 );
+        _.setElectron( 1,0, (Vec3d){  -0.3, 0.0, 0.0 }, 0.5, +1.0 );
+    }
+    dt = 0.001;
 
+
+    solver.turnAllSwitches(false);
+    solver.bNormalize     = 1;
+    solver.bEvalAE        = 1;
+    //solver.bEvalAECoulomb = 1;
+    //solver.bEvalCoulomb   = 1;
+    solver.bEvalPauli     = 1;
+    solver.bEvalKinetic   = 1;
+
+    solver.bOptEPos = 1;
+    solver.bOptSize = 1;
+
+    solver.iPauliModel = 0;
+
+    /*
     //solver.bNormalize     = false;
-    //solver.bEvalKinetic   = false;
-    solver.bEvalCoulomb   = false;
+    solver.bEvalKinetic   = false;
+    //solver.bEvalCoulomb   = false;
     solver.bEvalPauli     = false;
     solver.bEvalExchange  = false;
     //solver.bEvalAECoulomb = false;
     solver.bEvalAEPauli   = false;
-    //solver.bEvalAE        = false;
+    //solver.bEvalAE      = false;
     solver.bEvalAA        = false;
     solver.iPauliModel    = 1;
 
     solver.bOptAtom = false;
     //solver.bOptEPos = false;
-    //solver.bOptSize = false;
+    solver.bOptSize = false;
     solver.bOptCoef = false;
-
+    */
 
     // ======= Test Density projection
     plot1.init();
@@ -270,7 +309,7 @@ void TestAppCLCFSF::draw(){
     //testColorOfHash();
     double E = solver.eval();
     float F2 = solver.moveGD(dt);
-    printf( "frame[%i]  %g |F| %g \n", frameCount, E, sqrt(F2) );
+    printf( "frame[%i] E %g |F| %g \n", frameCount, E, sqrt(F2) );
 
     drawSolver( solver, 1.0 );
     plotOrb( solver, plot1.lines[3], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
