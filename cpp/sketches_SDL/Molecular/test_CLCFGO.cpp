@@ -240,7 +240,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     dt = 0.001;
     */
 
-
+    /*
     // ---- 2 electron 1 basis each in Soft Atom potential   (1a,2o,1b)
     //      natom  nOrb perOrb natypes
     solver.realloc( 1, 2, 1, 1 );
@@ -252,7 +252,11 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         _.setElectron( 1,0, (Vec3d){  -0.3, 0.0, 0.0 }, 0.5, +1.0 );
     }
     dt = 0.001;
+    */
 
+    solver.loadFromFile( "data/H2.fgo", true);
+    dt = 0.001;
+    //exit(0);
 
     solver.turnAllSwitches(false);
     solver.bNormalize     = 1;

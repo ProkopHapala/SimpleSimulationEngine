@@ -1418,7 +1418,47 @@ double evalAA(){
 
 
 
-
+bool loadFromFile( char const* filename, bool bCheck ){
+    printf(" filename: >>%s<< \n", filename );
+    FILE * pFile;
+    pFile = fopen (filename,"r");
+    int ntot;
+    //fscanf (pFile, " %i \n", &ntot );
+    int natom_=0, nOrb_=0, perOrb_=0;
+    fscanf (pFile, "%i %i %i\n", &natom_, &nOrb_, &perOrb_ );
+    //printf("na %i ne %i perORb %i \n", natom_, nOrb_, perOrb_ );
+    realloc( natom_, nOrb_, perOrb_, 1 );
+    printf("na %i ne %i perORb %i \n", natom, nOrb, perOrb_);
+    char buf[1024];
+    double Qasum = 0.0;
+    fgets( buf, 256, pFile); // printf( "fgets: >%s<\n", buf );
+    for(int i=0; i<natom; i++){
+        double x,y,z;
+        double Q,sQ,sP,cP;
+        fgets( buf, 256, pFile); //printf( "fgets: >%s<\n", buf );
+        int nw = sscanf (buf, "%lf %lf %lf %lf %lf %lf %lf", &x, &y, &z,    &Q, &sQ, &sP, &cP );
+        printf( "atom[%i] p(%g,%g,%g) Q %g sQ %g sP %g cP %g \n", i, x, y, z,    Q, sQ, sP, cP );
+        apos  [i]=(Vec3d){x,y,z};
+        aQs   [i]=Q;
+        aQsize[i]=sQ;
+        aPsize[i]=sP;
+        aPcoef[i]=cP;
+        Qasum += Q;
+    }
+    for(int i=0; i<nBas; i++){
+        double x,y,z;
+        double s,c;
+        fgets( buf, 256, pFile); // printf( "fgets: >%s<\n", buf );
+        int nw = sscanf (buf, "%lf %lf %lf %lf %lf", &x, &y, &z,  &s, &c );
+        printf( "orb[%i,%i] p(%g,%g,%g) s %g c %g \n", i/perOrb, i%perOrb, x, y, z,  s, c );
+        epos[i]=(Vec3d){x,y,z};
+        esize[i]=s;
+        ecoef[i]=c;
+    }
+    printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - nOrb, Qasum, nOrb );
+    fclose (pFile);
+    return 0;
+}
 
 // ===========================================================================================================================
 // ==================== Old Versions of Functions - Should be removed
