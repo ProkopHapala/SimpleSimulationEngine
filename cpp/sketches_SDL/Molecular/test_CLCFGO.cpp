@@ -123,6 +123,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
     //RigidAtomType type1,type2;
 
     bool bRun = false;
+    double dt;
 
     CLCFGO solver;
 
@@ -165,18 +166,85 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     }
     */
 
-    // ---- 1 atoms, 1 orbs, 1 basis per orb
+    /*
+    // ---- 1 H atoms, 1 orbs, 1 basis per orb
     //      natom  nOrb perOrb natypes
     solver.realloc( 1, 1, 1, 1 );
     solver.setRcut( 4.0 );
     solver.setDefaultValues();
     {CLCFGO& _=solver;
         //_.setAtom( 0,   1,  (Vec3d){  0.0, 0.0, 0.0 } );
-        _.setAtom    ( 0,   (Vec3d){  0.0, 0.0, 0.0 }, 4.0, 0.5, 0.2, 1000 );
-        _.setElectron( 0,0, (Vec3d){  2.0, 0.0, 0.0 }, 0.5, 1.0 );
+        //_.setAtom    ( 0,   (Vec3d){  0.0, 0.0, 0.0 }, 4.0, 0.5, 0.2, 1000 );
+        _.setAtom    ( 0,   (Vec3d){  0.0, 0.0, 0.0 }, 1.0,  0.1, 1.0, 0. );
+        _.setElectron( 0,0, (Vec3d){  1.0, 0.0, 0.0 }, 0.25, 1.0 );
     }
+    dt = 0.001;
+    */
 
-    solver.bEvalKinetic = false;
+    /*
+    // ---- 2 basis electron in soft potential   (1a,1o,2b)
+    //      natom  nOrb perOrb natypes
+    solver.realloc( 1, 1, 2, 1 );
+    solver.setRcut( 4.0 );
+    solver.setDefaultValues();
+    {CLCFGO& _=solver;
+        _.setAtom    ( 0,   (Vec3d){   0.0, 0.0, 0.0 }, 1.0,  0.9, 1.0, 0. );
+        _.setElectron( 0,0, (Vec3d){  +1.0, 0.0, 0.0 }, 0.5, +1.0 );
+        _.setElectron( 0,1, (Vec3d){  -1.0, 0.0, 0.0 }, 0.5, -1.0 );
+    }
+    dt = 0.001;
+    */
+
+    /*
+    // ---- H2+ molecule ion - 2 basis electron in 2 atom potential   (2a,1o,2b)
+    //      natom  nOrb perOrb natypes
+    solver.realloc( 2, 1, 2, 1 );
+    solver.setRcut( 4.0 );
+    solver.setDefaultValues();
+    {CLCFGO& _=solver;
+        //_.setAtom( 0,   1,  (Vec3d){  0.0, 0.0, 0.0 } );
+        //_.setAtom    ( 0,   (Vec3d){  0.0, 0.0, 0.0 }, 4.0, 0.5, 0.2, 1000 );
+        _.setAtom    ( 0,   (Vec3d){  +1.0, 0.0, 0.0 }, 1.0,  0.9, 1.0, 0. );
+        _.setAtom    ( 1,   (Vec3d){  -1.0, 0.0, 0.0 }, 1.0,  0.9, 1.0, 0. );
+        _.setElectron( 0,0, (Vec3d){  +0.7, 0.0, 0.0 }, 0.5, +1.0 );
+        //_.setElectron( 0,1, (Vec3d){  -0.7, 0.0, 0.0 }, 0.5, +1.0 );
+        _.setElectron( 0,1, (Vec3d){  -0.7, 0.0, 0.0 }, 0.5, -1.0 );
+    }
+    dt = 0.001;
+    */
+
+
+
+    // ---- Free 2 basis electron    (0a,1o,2b)
+    //      natom  nOrb perOrb natypes
+    solver.realloc( 0, 1, 2, 1 );
+    solver.setRcut( 4.0 );
+    solver.setDefaultValues();
+    {CLCFGO& _=solver;
+        _.setElectron( 0,0, (Vec3d){  +0.7, 0.0, 0.0 }, 0.5, +1.0 );
+        //_.setElectron( 0,1, (Vec3d){  -0.7, 0.0, 0.0 }, 0.5, +1.0 );
+        _.setElectron( 0,1, (Vec3d){  -0.7, 0.0, 0.0 }, 0.5, -1.0 );
+    }
+    dt = 0.001;
+
+
+
+    //solver.bNormalize     = false;
+    //solver.bEvalKinetic   = false;
+    solver.bEvalCoulomb   = false;
+    solver.bEvalPauli     = false;
+    solver.bEvalExchange  = false;
+    //solver.bEvalAECoulomb = false;
+    solver.bEvalAEPauli   = false;
+    //solver.bEvalAE        = false;
+    solver.bEvalAA        = false;
+    solver.iPauliModel    = 1;
+
+    solver.bOptAtom = false;
+    //solver.bOptEPos = false;
+    //solver.bOptSize = false;
+    solver.bOptCoef = false;
+
 
     // ======= Test Density projection
     plot1.init();
@@ -200,18 +268,16 @@ void TestAppCLCFSF::draw(){
     glEnable( GL_DEPTH_TEST );
 
     //testColorOfHash();
-
-    solver.eval();
-    float F2 = solver.moveGD(0.001);
-    printf( "frame[%i] |F| %g \n", frameCount, sqrt(F2) );
+    double E = solver.eval();
+    float F2 = solver.moveGD(dt);
+    printf( "frame[%i]  %g |F| %g \n", frameCount, E, sqrt(F2) );
 
     drawSolver( solver, 1.0 );
-
     plotOrb( solver, plot1.lines[3], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
-
     testDerivsTotal( 0, 0, 0, solver, plot1, 0 );
     plot1.update();
     plot1.render();
+    //delay=500;
 
     //glCallList( ogl );
     //glDisable(GL_DEPTH_TEST);
@@ -272,19 +338,5 @@ int main(int argc, char *argv[]){
 	thisApp->loop( 1000000 );
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

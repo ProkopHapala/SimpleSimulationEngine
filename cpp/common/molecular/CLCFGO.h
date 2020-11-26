@@ -93,6 +93,11 @@ constexpr static const Quat4d default_AtomParams[] = {
     bool bEvalAA        = true;
     int  iPauliModel    = 0;
 
+    bool bOptAtom = true;
+    bool bOptEPos = true;
+    bool bOptSize = true;
+    bool bOptCoef = true;
+
     double KPauliOverlap = 1.0;
     constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
 
@@ -154,6 +159,7 @@ constexpr static const Quat4d default_AtomParams[] = {
 
     void realloc( int natom_, int nOrb_, int perOrb_, int natypes_ ){
         // atoms
+        DEBUG
         if( natom != natom_ ){
             natom = natom_;
             _realloc( apos  ,natom );
@@ -166,6 +172,7 @@ constexpr static const Quat4d default_AtomParams[] = {
             _realloc( aQsize ,natom);
             _realloc( atype ,natom ); // not used  now
         }
+        DEBUG
         if( (nOrb != nOrb_)||(perOrb != perOrb_) ){
             nOrb    = nOrb_;
             perOrb  = perOrb_;
@@ -545,7 +552,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
                 //Ek += qii*Gauss::kinetic( si );
                 Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
-                efsize[i]+= 2*fsi*qii;
+                efsize[i]+= -2*fsi*qii;
             }
 
             ii++;
@@ -570,6 +577,9 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //double DTij = getDeltaTGauss  ( r2, si*resz, sj*resz, dTr, dTsi, dTsj ); // This is not normal kinetic energy this is change of kinetic energy due to orthogonalization
                  //DT += DTij*cij;
 
+
+                // TODO WARRNING : We calculate this BEFORE NORMALIZATION !!! we should do it after !!!!
+
                 if(bEvalCoulomb){
                     // --- Project on auxuliary density functions
                     Vec3d  pij;
@@ -591,8 +601,8 @@ constexpr static const Quat4d default_AtomParams[] = {
                     Ek += Kij*cij;
                     Vec3d fij = Rij*(fr*cij);
                     efpos [i].add( fij ); efpos[j].sub( fij );
-                    efsize[i]+= fsi*cij ; efsize[j]+= fsj*cij;
-                    efcoef[i]+= Kij*cj ;  efcoef[j]+= Kij*ci;
+                    efsize[i]-= fsi*cij ; efsize[j]-= fsj*cij;
+                    efcoef[i]-= Kij*cj ;  efcoef[j]-= Kij*ci;
                     //if(DEBUG_iter==DEBUG_log_iter){ printf(" Kij %g cij %g Ekij \n", Kij, cij, Kij*cij ); }
                 }
 
@@ -1553,7 +1563,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         //fs      *= M_SQRT1_2 * qij;
         aforce[ia].add(fp);
         rhofP [j] .sub(fp);
-        rhofS [j] -= fs*sj;
+        rhofS [j] += fs*sj;
         //rhofQ [j] += e*qi*0.0; // Not sure why this is not used here
         E         += e*qij;
         //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
@@ -1634,17 +1644,13 @@ double evalAA(){
         double F2ep = 0;
         double F2es = 0;
         double F2ec = 0;
-        //for(int i=0; i<natom; i++){ apos[i].add_mul( aforce[i], dt );     F2a+=aforce[i].norm2();     }
-        for(int i=0; i<nBas; i++){
-            // ToDo : We should out project directions which breaks normalization (!!!) but we can do it later - it is mostly importaint for dynamics, gradient desncent should be fine
-            epos [i].add_mul( efpos [i], dt );    F2ep+=aforce[i].norm2();
-            esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);
-            //ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);
-        }
+        if(bOptAtom)for(int i=0; i<natom;i++){ apos [i].add_mul( aforce[i], dt );    F2a +=aforce[i].norm2(); }
+        if(bOptEPos)for(int i=0; i<nBas; i++){ epos [i].add_mul( efpos [i], dt );    F2ep+=efpos [i].norm2(); }
+        if(bOptSize)for(int i=0; i<nBas; i++){ esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);     }
+        if(bOptCoef)for(int i=0; i<nBas; i++){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     }
+        // ToDo : We should out project directions which breaks normalization (!!!) but we can do it later - it is mostly importaint for dynamics, gradient desncent should be fine
         return F2a + F2ep + F2es + F2ec;
     }
-
-
 
 // ==================================================================
 // ==================== On Grid Utils

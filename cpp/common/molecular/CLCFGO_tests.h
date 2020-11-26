@@ -79,8 +79,8 @@ void testDerivsTotal( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot,
         line_Fnum = plot.lines[iline0+1];
         line_Fana = plot.lines[iline0+2];
         n=line_E->n;
-        x_bak = solver.epos[0].x;
     }
+    x_bak = solver.epos[0].x;
     //double DEBUG_sum = 0.0;
     for(int i=0; i<n; i++){
         //solver.cleanForces(); // this is already in solver.eval()
@@ -90,9 +90,7 @@ void testDerivsTotal( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot,
         line_Fana->ys[i]  = -solver.efpos[0].x;
         if(i>1)line_Fnum->ys[i-1] = (line_E->ys[i] - line_E->ys[i-2])/(2*dx);
     }
-    if(iline0>=0){
-        solver.epos[0].x = x_bak;
-    }
+    solver.epos[0].x = x_bak;
     //printf( "DEBUG_sum %g size %g \n", DEBUG_sum, solver.esize[0] );
 }
 
