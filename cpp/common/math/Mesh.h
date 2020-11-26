@@ -103,7 +103,7 @@ class Mesh{ public:
         int n = pl->ipoints.size();
         Vec3d c; c.set(0.0);
         for(int i=0;i<n; i++){ c.add( points[ pl->ipoints[i] ] ); }
-        c.mul(1.0d/n);
+        c.mul(1.0/n);
         return c;
     };
 
@@ -652,7 +652,7 @@ void findHull_oct( int npoints, Vec3d * from_points ){
     subdivHull( {ipx,imy,ipz},  npoints, selection, from_points );
     subdivHull( {imx,ipy,ipz},  npoints, selection, from_points );
     subdivHull( {ipx,ipy,ipz},  npoints, selection, from_points );
-    delete selection;
+    delete [] selection;
 };
 
 // Create initial simplex (tetrahedron, 4 vertices). To do this, the 6 Extreme Points [EP], min/max points in X,Y and Z, of the given pointcloud are extracted.

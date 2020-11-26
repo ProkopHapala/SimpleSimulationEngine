@@ -139,7 +139,7 @@ class Vec3T{
 	inline T norm ( ) const { return  sqrt( x*x + y*y + z*z ); };
     inline T normalize() {
 		T norm  = sqrt( x*x + y*y + z*z );
-		T inVnorm = 1.0d/norm;
+		T inVnorm = 1.0/norm;
 		x *= inVnorm;    y *= inVnorm;    z *= inVnorm;
 		return norm;
     }
@@ -179,7 +179,7 @@ class Vec3T{
         // sqrt(r2) = sqrt((r2-1)+1) ~= 1 + 0.5*(r2-1)
         // 1/sqrt(1+x) ~= 1 - 0.5*x + (3/8)*x^2 - (5/16)*x^3 + (35/128)*x^4 - (63/256)*x^5
         T dr2  = x*x+y*y+z*z-1;
-        T invr = 1 + dr2*( -0.5d + dr2*( 0.375d + dr2*-0.3125d ) );
+        T invr = 1 + dr2*( -0.5 + dr2*( 0.375 + dr2*-0.3125 ) );
         x*=invr;
         y*=invr;
         z*=invr;
@@ -192,7 +192,7 @@ class Vec3T{
 	inline T fixSphere_taylor3( const VEC& pc, T r){
         x-=pc.x; y-=pc.y; z-=pc.z;
         T dr2  = x*x+y*y+z*z-1;
-        T invr = r*(1 + dr2*( -0.5d + dr2*( 0.375d + dr2*-0.3125d ) ));
+        T invr = r*(1 + dr2*( -0.5 + dr2*( 0.375 + dr2*-0.3125 ) ));
         x=x*invr+pc.x;
         y=y*invr+pc.y;
         z=z*invr+pc.z;
@@ -270,11 +270,11 @@ class Vec3T{
 
     inline VEC& drotate_omega6(const VEC& w){
         /*
-        constexpr T c2 = -1.0d/2;
-        constexpr T c3 = -1.0d/6;
-        constexpr T c4 =  1.0d/24;
-        constexpr T c5 =  1.0d/120;
-        constexpr T c6 = -1.0d/720;
+        constexpr T c2 = -1.0/2;
+        constexpr T c3 = -1.0/6;
+        constexpr T c4 =  1.0/24;
+        constexpr T c5 =  1.0/120;
+        constexpr T c6 = -1.0/720;
         T r2  = w.x*w.x + w.y*w.y + w.z*w.z;
         T sa  =   1 + r2*( c3 + c5*r2 );
         T ca  =  c2 + r2*( c4 + c6*r2 );
@@ -470,11 +470,11 @@ using Vec3d = Vec3T<double>;
 using Vec3i8  = Vec3T<int8_t>;
 using Vec3ui8 = Vec3T<uint8_t>;
 
-static constexpr Vec3d Vec3dZero = (Vec3d){0.0d,0.0d,0.0d};
-static constexpr Vec3d Vec3dOne  = (Vec3d){1.0d,1.0d,1.0d};
-static constexpr Vec3d Vec3dX    = (Vec3d){1.0d,0.0d,0.0d};
-static constexpr Vec3d Vec3dY    = (Vec3d){0.0d,1.0d,0.0d};
-static constexpr Vec3d Vec3dZ    = (Vec3d){0.0d,0.0d,1.0d};
+static constexpr Vec3d Vec3dZero = (Vec3d){0.0,0.0,0.0};
+static constexpr Vec3d Vec3dOne  = (Vec3d){1.0,1.0,1.0};
+static constexpr Vec3d Vec3dX    = (Vec3d){1.0,0.0,0.0};
+static constexpr Vec3d Vec3dY    = (Vec3d){0.0,1.0,0.0};
+static constexpr Vec3d Vec3dZ    = (Vec3d){0.0,0.0,1.0};
 
 static constexpr Vec3f Vec3fZero = (Vec3f){0.0f,0.0f,0.0f};
 static constexpr Vec3f Vec3fOne  = (Vec3f){1.0f,1.0f,1.0f};
@@ -596,8 +596,8 @@ void numDeriv( Vec3d p, double d, Vec3d& f, Func func){
 
 template<typename T>
 void makeSamples(const Vec2i& ns, const Vec3T<T>& p0, const Vec3T<T>& a, const Vec3T<T>& b, Vec3T<T> *ps ){
-    Vec3T<T> da=a*(1.0d/ns.x);
-    Vec3T<T> db=b*(1.0d/ns.y);
+    Vec3T<T> da=a*(1.0/ns.x);
+    Vec3T<T> db=b*(1.0/ns.y);
     //printf( "da (%g,%g,%g)\n", da.x,da.y,da.z );
     //printf( "db (%g,%g,%g)\n", db.x,db.y,db.z );
     for(int ib=0; ib<ns.y; ib++){

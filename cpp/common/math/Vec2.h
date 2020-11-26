@@ -94,7 +94,7 @@ class Vec2T{
 	inline T norm ( ) const { return  sqrt( x*x + y*y ); };
     inline T normalize() {
 		T norm  = sqrt( x*x + y*y );
-		T inVnorm = 1.0d/norm;
+		T inVnorm = 1.0/norm;
 		x *= inVnorm;    y *= inVnorm;
 		return norm;
     };
@@ -173,10 +173,10 @@ using Vec2i = Vec2T<int>;
 using Vec2f = Vec2T<float>;
 using Vec2d = Vec2T<double>;
 
-static constexpr Vec2d Vec2dZero = (Vec2d){0.0d,0.0d};
-static constexpr Vec2d Vec2dOnes = (Vec2d){1.0d,1.0d};
-static constexpr Vec2d Vec2dX    = (Vec2d){1.0d,0.0d};
-static constexpr Vec2d Vec2dY    = (Vec2d){0.0d,1.0d};
+static constexpr Vec2d Vec2dZero = (Vec2d){0.0,0.0};
+static constexpr Vec2d Vec2dOnes = (Vec2d){1.0,1.0};
+static constexpr Vec2d Vec2dX    = (Vec2d){1.0,0.0};
+static constexpr Vec2d Vec2dY    = (Vec2d){0.0,1.0};
 
 static constexpr Vec2f Vec2fZero = (Vec2f){0.0f,0.0f};
 static constexpr Vec2f Vec2fOnes = (Vec2f){1.0f,1.0f};

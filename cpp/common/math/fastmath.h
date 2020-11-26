@@ -89,7 +89,7 @@ inline double fastModf ( double f, int& i ){ i=fastFloor(f); return f-i;        
 // https://en.wikipedia.org/wiki/Error_function#Approximation_with_elementary_functions
 
 inline double erf_4_plus(double x){
-    double p = 1 + x*( 0.278393d + x*( 0.230389d + x*(0.000972d + x*0.078108d )));
+    double p = 1 + x*( 0.278393 + x*( 0.230389 + x*(0.000972 + x*0.078108 )));
     p=p*p; p=p*p;
     return 1 - 1/p;
 }
@@ -97,7 +97,7 @@ inline double erf_4(double x){ if(x>0){ return erf_4_plus(x); }else{ return -erf
 
 
 inline double erf_6_plus(double x){
-    double p = 1 + x*( 0.0705230784d + x*( 0.0422820123d + x*( 0.0092705272d + x*( 0.0001520143d + x*( 0.0002765672d + x*0.0000430638d )))));
+    double p = 1 + x*( 0.0705230784 + x*( 0.0422820123 + x*( 0.0092705272 + x*( 0.0001520143 + x*( 0.0002765672 + x*0.0000430638 )))));
     p=p*p; p=p*p; p=p*p; p=p*p;
     return 1 - 1/p;
 }
@@ -246,19 +246,19 @@ inline float fastInvSqrt( float x ){
 
 // sqrt(1+dx) taylor(dx=0)
 // http://m.wolframalpha.com/input/?i=sqrt%281%2Bx%29+taylor+x%3D0
-template <typename T> inline T sqrt1_taylor1( T dx ){ return 1 + dx*  0.5d; }
-template <typename T> inline T sqrt1_taylor2( T dx ){ return 1 + dx*( 0.5d + dx*  -0.125d ); }
-template <typename T> inline T sqrt1_taylor3( T dx ){ return 1 + dx*( 0.5d + dx*( -0.125d + dx*  0.0625d ) ); }
-template <typename T> inline T sqrt1_taylor4( T dx ){ return 1 + dx*( 0.5d + dx*( -0.125d + dx*( 0.0625d + dx *  -0.0390625d ) ) ); }
-template <typename T> inline T sqrt1_taylor5( T dx ){ return 1 + dx*( 0.5d + dx*( -0.125d + dx*( 0.0625d + dx *( -0.0390625d + dx * 0.02734375d ) ) ) ); }
+template <typename T> inline T sqrt1_taylor1( T dx ){ return 1 + dx*  0.5; }
+template <typename T> inline T sqrt1_taylor2( T dx ){ return 1 + dx*( 0.5 + dx*  -0.125 ); }
+template <typename T> inline T sqrt1_taylor3( T dx ){ return 1 + dx*( 0.5 + dx*( -0.125 + dx*  0.0625 ) ); }
+template <typename T> inline T sqrt1_taylor4( T dx ){ return 1 + dx*( 0.5 + dx*( -0.125 + dx*( 0.0625 + dx *  -0.0390625 ) ) ); }
+template <typename T> inline T sqrt1_taylor5( T dx ){ return 1 + dx*( 0.5 + dx*( -0.125 + dx*( 0.0625 + dx *( -0.0390625 + dx * 0.02734375 ) ) ) ); }
 
 // 1/sqrt(1+dx) taylor(dx=0)
 // http://m.wolframalpha.com/input/?i=1%2Fsqrt%281%2Bx%29+taylor+x%3D0
-template <typename T> inline T invSqrt1_taylor1( T dx ){ return 1 + dx*  -0.5d; }
-template <typename T> inline T invSqrt1_taylor2( T dx ){ return 1 + dx*( -0.5d + dx*  0.375d ); }
-template <typename T> inline T invSqrt1_taylor3( T dx ){ return 1 + dx*( -0.5d + dx*( 0.375d + dx*  -0.3125d ) ); }
-template <typename T> inline T invSqrt1_taylor4( T dx ){ return 1 + dx*( -0.5d + dx*( 0.375d + dx*( -0.3125d + dx * 0.2734375d ) ) ); }
-template <typename T> inline T invSqrt1_taylor5( T dx ){ return 1 + dx*( -0.5d + dx*( 0.375d + dx*( -0.3125d + dx *(0.2734375d + dx * -0.24609375d ) ) ) ); }
+template <typename T> inline T invSqrt1_taylor1( T dx ){ return 1 + dx*  -0.5; }
+template <typename T> inline T invSqrt1_taylor2( T dx ){ return 1 + dx*( -0.5 + dx*  0.375 ); }
+template <typename T> inline T invSqrt1_taylor3( T dx ){ return 1 + dx*( -0.5 + dx*( 0.375 + dx*  -0.3125 ) ); }
+template <typename T> inline T invSqrt1_taylor4( T dx ){ return 1 + dx*( -0.5 + dx*( 0.375 + dx*( -0.3125 + dx * 0.2734375 ) ) ); }
+template <typename T> inline T invSqrt1_taylor5( T dx ){ return 1 + dx*( -0.5 + dx*( 0.375 + dx*( -0.3125 + dx *(0.2734375 + dx * -0.24609375 ) ) ) ); }
 
 /*
 template <class FLOAT,class INT> INT fastFloor( FLOAT x ){
@@ -332,7 +332,7 @@ inline bool quadratic_roots( double a, double b, double c,  double& x1, double& 
     double D     = b*b - 4*a*c;
     if (D < 0) return false;
     double sqrtD = sqrt( D );
-    double ia    = -0.5d/a;
+    double ia    = -0.5/a;
     if( ia>0 ){
         x1       = ( b - sqrtD )*ia;
         x2       = ( b + sqrtD )*ia;

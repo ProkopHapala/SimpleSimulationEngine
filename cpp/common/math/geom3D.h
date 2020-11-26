@@ -51,7 +51,7 @@ Slab  { Vec3d dir; double cmin,cmax; }
 
 
 
-inline Vec3d cog_of_points ( int n, Vec3d * points ){ Vec3d c;  c.set(0.0); for(int i=0;i<n; i++){ c.add(points[i]); }  c.mul(1.0d/n); return c; }
+inline Vec3d cog_of_points ( int n, Vec3d * points ){ Vec3d c;  c.set(0.0); for(int i=0;i<n; i++){ c.add(points[i]); }  c.mul(1.0/n); return c; }
 
 inline double Rbound2( const Vec3d& center, int n, Vec3d * points ){
     double r2max=0;
@@ -253,7 +253,7 @@ class Box{ public:
     inline static double dist2( const Vec3d& p, const Vec3d& a, const Vec3d& b ){
         // from here : http://stackoverflow.com/questions/4578967/cube-sphere-intersection-test
         // assume C1 and C2 are element-wise sorted, if not, do that now
-        double dist2 = 0.0d;
+        double dist2 = 0.0;
         if (p.x < a.x){ dist2 += sq(p.x - a.x); }else if(p.x > b.x){ dist2 += sq(p.x - b.x); };
         if (p.y < a.y){ dist2 += sq(p.y - a.y); }else if(p.y > b.y){ dist2 += sq(p.y - b.y); };
         if (p.z < a.z){ dist2 += sq(p.z - a.z); }else if(p.z > b.z){ dist2 += sq(p.z - b.z); };
