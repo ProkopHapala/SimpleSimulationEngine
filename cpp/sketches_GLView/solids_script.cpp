@@ -9,9 +9,13 @@ echo "IFLAGS " $IFLAGS
 ERRFLAGS="-Wno-missing-braces -Werror=return-type"
 CFLAGS="-std=c++17 -Ofast -march=native -mtune=native"
 LFLAGS="-L"$PREDIR"Build/libs_SDL/GLView -lGLView -lGL -lSDL2"
-#g++ -o $binout $target $CFLAGS $ERRFLAGS $IFLAGS $LFLAGS 
-clang++ -o $binout $target $CFLAGS $ERRFLAGS $IFLAGS $LFLAGS 
-./$binout
+g++ -o $binout $target $CFLAGS $ERRFLAGS $IFLAGS $LFLAGS 
+#clang++ -o $binout $target $CFLAGS $ERRFLAGS $IFLAGS $LFLAGS 
+ls
+bin_path=$PREDIR/Build/libs_SDL/GLView
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$bin_path
+echo $LD_LIBRARY_PATH
+$binout
 rm -f $binout
 exit
 #endif
@@ -104,6 +108,7 @@ void setup(){
 }
 
 int main(){
+    printf( "HERE !!!! \n"  );
     init( 800, 600 );
     set_draw_function( my_draw );
     setup();
