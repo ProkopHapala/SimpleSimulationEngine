@@ -49,6 +49,7 @@ cd $dirbak
 #ln -f -s libGLView.so  $build_path/libGLView.so
 #cp libGLView.so $build_path
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$bin_path
+echo $LD_LIBRARY_PATH
 
 
 
