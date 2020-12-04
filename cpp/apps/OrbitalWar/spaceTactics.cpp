@@ -241,6 +241,27 @@ class SpaceTactics : public AppSDL2OGL_3D { public:
 
 SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
+    //    "%i %lf %lf %lf", &n, &layerDens, &spacing, &critEdens
+    whippleShieldType ws1; ws1.fromString("2 10.0 0.5 150000");
+    //                                  &area, &HPs, &HPexponent
+    ProjectedTarget tg1;   tg1.fromString( "10.0  1.5e+8 2.5"); tg1.wshield = &ws1;
+
+    // sscanf( s,              "%lf %lf"  , &mass, &caliber );
+    ProjectileType pt1;    pt1.fromString( "0.15 0.12" );
+    //sscanf( s, "%lf %lf %lf %lf %lf"  , &length, &maxForce, &maxPower, &scatter, &fireRate  );
+    SpaceGunType   sg1;    sg1.fromString( "800 60000 1e+9 2e-4 10" );
+    SpaceGun g1( 1, &sg1, &pt1 );
+
+    DEBUG
+    CombatAssembly battle;      DEBUG
+    battle.addTarget( tg1 );    DEBUG
+    battle.fireGun  ( g1  );    DEBUG
+    //      dist[m]  accel[m/s^2]
+    battle.colide( 1e+5,    0.1 );
+    //exit(0);
+
+
+
     //world.addPlanet( "Sun"  , 100000000000.0, 1.0, { 0.0, 0.0, 0.0}, {0.0,0.0,0.0} );
     //world.addPlanet( "Earth",   1000000000.0, 0.1, {10.0, 0.0, 0.0}, {0.0,1.0,0.0} );
 
@@ -311,6 +332,8 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     exit(0);
     */
     zoom = 5;
+
+
 
 
 
