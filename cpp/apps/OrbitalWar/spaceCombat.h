@@ -354,6 +354,8 @@ struct ProjectedTarget{  // target projected in particular direction
         printf(    "projectedTarget : %g  %g  %g \n",  area,  HPs,  HPexponent );
     }
 
+    void reset(){ damage=0; };
+
     void getDamage( double E_Damage ){
         // ToDo : consider co-locality of hits, not just damage
         damage += E_Damage;
@@ -376,6 +378,7 @@ struct CombatAssembly{
 
     void addTarget( ProjectedTarget& t  ){ targets.push_back( t ); }
 
+    void reset(){ for( ProjectedTarget& t : targets){ t.reset(); }; };
     void colide( double dist, double aDelta ){
         int DEBUG_i = 0;
         for( SpaceSalvo& s : salvos){

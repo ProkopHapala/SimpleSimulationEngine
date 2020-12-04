@@ -41,7 +41,7 @@ cpp_utils.writeFuncInterfaces( header_strings );        exit()     #   uncomment
 
 cpp_name='FARFF'
 cpp_utils.make(cpp_name)
-lib    = ctypes.CDLL(  cpp_utils.CPP_PATH + "/" + cpp_name + cpp_utils.lib_ext )     # load dynamic librady object using ctypes 
+lib    = ctypes.CDLL(  cpp_utils.BIN_PATH + "/lib" + cpp_name + cpp_utils.lib_ext )     # load dynamic librady object using ctypes 
 
 # ========= C functions
 
