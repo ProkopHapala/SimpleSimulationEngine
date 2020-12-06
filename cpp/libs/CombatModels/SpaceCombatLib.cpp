@@ -47,7 +47,11 @@ extern "C"{
     battle.colide( 1e+5,    0.1 );
     */
 
+   void clearTargets( ){ battle.targets.clear(); };
     void addTarget( const char* str_target, const char* str_shield ){
+        //printf( "addTarget\n" );
+        //printf( "str_target >>%s<<\n", str_target );
+        //printf( "str_shield >>%s<<\n", str_shield );
         whippleShieldType* ws = new whippleShieldType(); 
         ProjectedTarget*   tg = new ProjectedTarget();   
         tg->wshield = ws;
@@ -56,20 +60,26 @@ extern "C"{
         battle.addTarget(*tg);
     }
 
-    void addGun( int n, const char* str_gun, const char* str_shot ){
+    void clearGuns( ){ battle.salvos.clear(); };
+    void addGun( int n, const char* str_gun, const char* str_shot, double burstTime ){
+        //printf( "addGun\n" );
         ProjectileType* pt = new ProjectileType();  pt->fromString( str_shot );
         SpaceGunType*   sg = new SpaceGunType();    sg->fromString( str_gun  ); 
         SpaceGun*       g  = new SpaceGun( n, sg, pt );
-        battle.fireGun(*g);
+        battle.fireGun(*g, burstTime );
     }
 
     void evaluateCombat( int n, double* dists,  double* accels, double* out ){
+        //printf( "evaluateCombat\n" );
         int ntarget = battle.targets.size();
         for(int i=0; i<n; i++){
+            //printf( "combat[%i]\n", i );
             battle.reset();
             battle.colide( dists[i],  accels[i] );
             for( int j=0; j<ntarget; j++ ){
-                out[i*ntarget+j] = battle.targets[j].health;
+                //printf( "dist %g accel %g health %g \n", dists[i], accels[i], battle.targets[j].health );
+                //out[i*ntarget+j] = battle.targets[j].health;
+                out[i*ntarget+j] = battle.targets[j].damage;
             }
         }
     }

@@ -255,7 +255,7 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     DEBUG
     CombatAssembly battle;      DEBUG
     battle.addTarget( tg1 );    DEBUG
-    battle.fireGun  ( g1  );    DEBUG
+    battle.fireGun  ( g1, 1.0  );    DEBUG
     //      dist[m]  accel[m/s^2]
     battle.colide( 1e+5,    0.1 );
     //exit(0);

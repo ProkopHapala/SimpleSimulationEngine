@@ -117,7 +117,7 @@ struct LineBattle{
             shooter = defender[ix];
             if( shooter ){
                 int dx=(ix<ixcenter)?1:-1;
-                for( int j=0; j<shooter->shooter->type->shoot_range; j++ ){
+                for( int j=0; j<shooter->type->shoot_range; j++ ){
                     Unit* target = defender[ix+j*dx];
                     if( target ){ shoot( *shooter, *target ); break; }
                 }

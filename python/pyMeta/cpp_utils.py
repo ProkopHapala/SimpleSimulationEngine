@@ -1,23 +1,25 @@
 
 import os
+import ctypes
 
-recompile = True 
-lib_ext   ='_lib.so'
+clean_build = True 
+lib_ext   ='.so'
+s_numpy_data_as_call = "_np_as(%s,%s)"
 
 def work_dir( v__file__ ): 
     return os.path.dirname( os.path.realpath( v__file__ ) )
 
 PACKAGE_PATH = work_dir( __file__ )
-CPP_PATH     = os.path.normpath( PACKAGE_PATH + '../../cpp/' )
+BUILD_PATH   = os.path.normpath( PACKAGE_PATH + '../../../cpp/Build/libs/CombatModels' )
 
-print " PACKAGE_PATH = ", PACKAGE_PATH
-print " CPP_PATH     = ", CPP_PATH
+print " PACKAGE_PATH : ", PACKAGE_PATH
+print " BUILD_PATH   : ", BUILD_PATH
 
 def compile_lib( name,
         #FFLAGS = "-std=c++11 -Og -g -Wall",
         FFLAGS = "-std=c++11 -O3 -ftree-vectorize -unroll-loops -ffast-math",
         LFLAGS = "-I/usr/local/include/SDL2 -lSDL2",
-        path   = CPP_PATH,
+        path   = BUILD_PATH,
         clean  = True,
     ):
     lib_name = name+lib_ext
@@ -37,24 +39,33 @@ def compile_lib( name,
     if path is not None:
         os.chdir( dir_bak )
 
-def makeclean( ):
-    CWD=os.getcwd()
-    os.chdir( CPP_PATH )
-    os.system("make clean")
-    os.chdir(CWD)
-
 def make( what="" ):
     current_directory = os.getcwd()
-    os.chdir ( CPP_PATH          )
-    if recompile:
+    os.chdir ( BUILD_PATH          )
+    print "CPP_PATH " + BUILD_PATH
+    if clean_build:
         os.system("make clean")
     os.system( "make "+what      )
     os.chdir ( current_directory )
 
+def loadLib( cpp_name, recompile=True ):
+    if recompile:
+        make(cpp_name)
+    return ctypes.CDLL(  BUILD_PATH + "/lib" + cpp_name + lib_ext ) 
+
 
 # ============ automatic C-python interface generation
 
-
+def _np_as(arr,atype):
+    if arr is None:
+        return None
+    elif isinstance( arr, str ):
+        #arr = arr.encode('utf-8')
+        #print "arr = ", arr
+        #return arr
+        return arr.encode('utf-8')
+    else: 
+        return arr.ctypes.data_as(atype)
 
 def parseFuncHeader( s ):
     #args = []
