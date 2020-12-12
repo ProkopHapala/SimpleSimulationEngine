@@ -138,10 +138,24 @@ struct CombatAirCraft{
         return vy;  // Omega
     }
 
+
 };
 
 
-
+//  Slip Away
+// ------------------
+//   Consider situation when fast aircaft try to shoot on slower but more maneuverable airceft
+//   The target aircraft (pray) can turn inside envelope of the faster aircraft
+//   Consider the slower aircaft turns at its maximum turn speed
+//   While the faster airfact turns does this as well to compensate
+//   The trajectory of the two is
+//  x1 = R1*sin(O1*t)         y1 = R1*(1-cos(O1*t))
+//  x2 = R2*sin(O2*t) + L0    y2 = R2*(1-cos(O2*t))
+//  we should care about the angle of attack in which the hunger see the pray, this is limited
+//  alpha < O1*t
+//  tg(alpha) =   ( R1*(1-cos(O1*t)) - R2*(1-cos(O2*t)) ) /  ( L0 + R2*sin(O2*t) - R1*sin(O1*t) )
+// So the final condition is :
+// sin(O1*t)/cos(O1*t) <   ( R1*(1-cos(O1*t)) - R2*(1-cos(O2*t)) ) /  ( L0 + R2*sin(O2*t) - R1*sin(O1*t) )
 
 
 

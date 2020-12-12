@@ -190,7 +190,7 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     aero1.area_hull = 10.0*0;    // [m^2] hull area - makes only drag
     aero1.aspect    = 4.5;       // [1]   aspec ratio of wing - affetcs predominantly lift-induced drag (Oswald efficiency factor included in)
     aero1.CD0       = 0.05;      // [1    min Drag Coef at zero lift
-    aero1.CLmax     = 1.5;       // [1]   max Lift coef at stall
+    aero1.CLmax     = 1.0;       // [1]   max Lift coef at stall
     aero1.accelMax  = 5*const_GravAccel;    // [m/s^2]  maximum acceleration
     evalAeroCraft( aero1 );
 
@@ -203,7 +203,7 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     aero1.area_hull = 10.0*0;     // [m^2] hull area - makes only drag
     aero1.aspect    = 6.14;      // [1]   aspec ratio of wing - affetcs predominantly lift-induced drag (Oswald efficiency factor included in)
     aero1.CD0       = 0.03;      // [1    min Drag Coef at zero lift
-    aero1.CLmax     = 1.5;       // [1]   max Lift coef at stall
+    aero1.CLmax     = 1.0;       // [1]   max Lift coef at stall
     aero1.accelMax  = 5*const_GravAccel;    // [m/s^2]  maximum acceleration
     evalAeroCraft( aero1 );
 
@@ -215,7 +215,7 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     aero1.area_hull = 10.0*0;   // [m^2] hull area - makes only drag
     aero1.aspect    = 5.35;     // [1]   aspec ratio of wing - affetcs predominantly lift-induced drag (Oswald efficiency factor included in)
     aero1.CD0       = 0.03;     // [1    min Drag Coef at zero lift
-    aero1.CLmax     = 1.5;      // [1]   max Lift coef at stall
+    aero1.CLmax     = 1.0;      // [1]   max Lift coef at stall
     aero1.accelMax  = 5*const_GravAccel;    // [m/s^2]  maximum acceleration
     evalAeroCraft( aero1 );
 
