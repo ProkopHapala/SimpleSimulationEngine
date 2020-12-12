@@ -28,6 +28,8 @@
 #include "SpaceWorld.h"
 #include "RublePile.h"
 
+#include "asteroidEngineering.h"
+
 #include "SpaceDraw.h"
 
 #include "AppSDL2OGL_3D.h"
@@ -225,16 +227,16 @@ SolarSystemMap::SolarSystemMap( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_
     SpaceBody* sun = &world.planets.back();
     //referenceBody =
 
-    //                                    name           a        e       inc         lan         apa         ma
-    world.planets.push_back( SpaceBody( "Mercury", sun,	0.39,	0.21,	0.1222580,	0.8435468,	1.3518701,	4.4026077) );
-    world.planets.push_back( SpaceBody( "Venus",   sun, 0.72,	0.01,	0.0592489,	1.3383305,	2.2956836,	3.1761455) );
-    world.planets.push_back( SpaceBody( "Earth",   sun, 1.00,	0.02,	0.0000009,	-0.1965352,	1.7967674,	1.7534337) );
-    world.planets.push_back( SpaceBody( "Mars",    sun, 1.52,	0.09,	0.0322992,	0.8653088,	5.8650191,	6.2038308) );
-    world.planets.push_back( SpaceBody( "Jupiter", sun, 5.20,	0.05,	0.0227818,	1.7550359,	0.2575033,	0.6004697) );
-    world.planets.push_back( SpaceBody( "Saturn",  sun, 9.54,	0.05,	0.0433620,	1.9847019,	1.6132417,	0.8716928) );
-    world.planets.push_back( SpaceBody( "Uranus",  sun, 19.19,	0.05,	0.0134366,	1.2955558,	2.9838889,	5.4669329) );
-    world.planets.push_back( SpaceBody( "Neptune", sun, 30.07,	0.01,	0.0308778,	2.2989772,	0.7848981,	5.3211603) );
-    world.planets.push_back( SpaceBody( "Pluto",   sun, 39.48,	0.25,	0.2991800,	1.9251587,	3.9107027,	4.1700944) );
+    //                                    name           a                e       inc         lan         apa         ma      R           mass
+    world.planets.push_back( SpaceBody( "Mercury", sun,	0.39 *const_AU,	0.21,	0.1222580,	0.8435468,	1.3518701,	4.4026077,2439.7e+3, 3.30E+23) );
+    world.planets.push_back( SpaceBody( "Venus",   sun, 0.72 *const_AU,	0.01,	0.0592489,	1.3383305,	2.2956836,	3.1761455,6051.8e+3, 4.87E+24) );
+    world.planets.push_back( SpaceBody( "Earth",   sun, 1.00 *const_AU,	0.02,	0.0000009,	-0.1965352,	1.7967674,	1.7534337,6378.14e+3,5.97E+24) );
+    world.planets.push_back( SpaceBody( "Mars",    sun, 1.52 *const_AU,	0.09,	0.0322992,	0.8653088,	5.8650191,	6.2038308,3396.19e+3,6.42E+23) );
+    world.planets.push_back( SpaceBody( "Jupiter", sun, 5.20 *const_AU,	0.05,	0.0227818,	1.7550359,	0.2575033,	0.6004697,71492e+3,  1.90E+27) );
+    world.planets.push_back( SpaceBody( "Saturn",  sun, 9.54 *const_AU,	0.05,	0.0433620,	1.9847019,	1.6132417,	0.8716928,60268e+3,  5.68E+26) );
+    world.planets.push_back( SpaceBody( "Uranus",  sun, 19.19*const_AU,	0.05,	0.0134366,	1.2955558,	2.9838889,	5.4669329,25559e+3,  8.68E+25) );
+    world.planets.push_back( SpaceBody( "Neptune", sun, 30.07*const_AU,	0.01,	0.0308778,	2.2989772,	0.7848981,	5.3211603,24764e+3,  1.02E+26) );
+    world.planets.push_back( SpaceBody( "Pluto",   sun, 39.48*const_AU,	0.25,	0.2991800,	1.9251587,	3.9107027,	4.1700944,1151e+3,   1.31E+22) );
 
     world.load_astorb( "data/astorb_with_diameter.dat", 3000 );
 
@@ -359,6 +361,8 @@ void SolarSystemMap::mouseHandling( ){
     if ( buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) {
         //if( mouseY<20 ){ timeCur = x2t(mouseX); Time::toStr(timeCur,strBuf); printf( "%s\n", strBuf );  };
         Vec3d mpos = (Vec3d)( cam.pos + cam.rot.a*mouse_begin_x +   cam.rot.b*mouse_begin_y );
+        mpos.mul( 1./SpaceDraw::zoom );
+        printf( " zoom %g mpos (%g,%g,%g)\n", SpaceDraw::zoom, mpos.x,mpos.y,mpos.z  );
         ipick = world.pickPlanet( mpos, (Vec3d)cam.rot.c, epoch );
 
         if(ipick>=0){

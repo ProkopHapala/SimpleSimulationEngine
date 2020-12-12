@@ -5,7 +5,28 @@
 #include "fastmath.h"
 #include "Vec3.h"
 
-static const double  const_Graviational = 6.674e-11;
+static constexpr const double const_Graviational = 6.6743015e-11;
+static constexpr const double const_Rgas        = 8.31446261815324;
+
+static constexpr const double const_AU = 149.597870700e+9; // [m] Astronomic Unit
+// second in year   3.17098e-8 kW year
+
+// Specific energy units : https://en.wikipedia.org/wiki/Energy_density
+static constexpr const double const_EkgAnihil = 89.875517874e+15; // Energy from anihilation
+static constexpr const double const_EkgDT     = 337.387388e+12;   // Energy of one kg of Deuterium-Tritium fusion
+static constexpr const double const_EkgU      = 80e+12;           // Energy of one kg of Uranium (Plutonium, Thorium) completely fissioned //
+static constexpr const double const_EktTNT    = 4.184e+12;        // kiloton of TNT
+static constexpr const double const_EMWy      = 31.54e+12;        // MegaWatt Year
+
+static constexpr const double const_heatCapacityRatio_monoatimic = 1.6666666;
+static constexpr const double const_heatCapacityRatio_diatomic   = 1.4;
+static constexpr const double const_heatCapacityRatio_watter     = 1.3333333;
+
+static constexpr const double const_SolarRadEarth =  1366.1; // [W/m^2]
+
+
+inline double solarRadDist_SI( double r ){ return const_SolarRadEarth * sq( const_AU/ r ); }
+
 
 inline double kineticEnergy( double v, double mass ){ return 0.5*mass*v*v; }
 
@@ -49,7 +70,31 @@ inline Vec3d centralGravityForce( const Vec3d& d, double Mm ){
     return d * (  Mm * const_Graviational / ( r2 * sqrt(r2) ) );
 }
 
+double tsielkovsky_speed( double payload, double vexh ){
+    return vexh*log( 1/payload );
+}
 
+double tsielkovsky_payload( double deltaV, double vexh ){
+    return exp( -deltaV/vexh );
+}
+
+
+double jetEfficiency( double expansionRatio, double kappa=const_heatCapacityRatio_monoatimic ){
+    double efficiency =  pow( expansionRatio, (1-kappa)/kappa ) - 1 ;
+    //double a = 1/(kappa-1);
+    //return a * efficiency;
+    return efficiency;
+}
+
+double exhaustVelocity( double T, double molarMass=1., double efficiency=1., double kappa=const_heatCapacityRatio_monoatimic  ){
+    //https://en.wikipedia.org/wiki/Adiabatic_process
+    // (a+1)/a = kappa   =>   1/a = kappa - 1 =>  a = 1/(kappa-1)
+    // W = - alpha * n*R*T1 * ( expansionRatio^(1-kappa) - 1 );
+    double alpha = 1/(kappa-1);
+    double W = alpha * efficiency*const_Rgas*T/molarMass;
+    double v = sqrt(W*2);
+    return v;
+}
 
 #endif
 

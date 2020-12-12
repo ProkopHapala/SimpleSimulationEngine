@@ -52,6 +52,7 @@ include_directories(
         ${COMMON_SRCS}/algorithms
         ${COMMON_SRCS}/math
         ${COMMON_SRCS}/dynamics
+	${COMMON_SRCS}/CombatModels
         ${COMMON_SRCS}/maps
         #${COMMON_SRCS}/optimization
         ${COMMON_SRCS}/utils

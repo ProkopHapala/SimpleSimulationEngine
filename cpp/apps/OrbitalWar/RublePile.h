@@ -15,6 +15,7 @@
 #include "SphereSampling.h"
 #include "DrawSphereMap.h"
 
+#include "asteroidEngineering.h"
 //#include "SpaceCraft.h"
 //#include "EditSpaceCraft.h"
 
@@ -109,10 +110,20 @@ class RublePile{ public:
         sout += sprintf( sout, "Mass   %g [kg]  \n", body->mass   );
         sout += sprintf( sout, "Stype  `%s`  \n", body->Stype  );
         sout += sprintf( sout, " ## Orbit : \n" );
-        sout += sprintf( sout, "semi_major  [AU]  %g \n", body->orbit->semi_major   );
+        sout += sprintf( sout, "semi_major  [AU]  %g \n", body->orbit->semi_major/const_AU   );
         sout += sprintf( sout, "eccentricity  %g \n", body->orbit->eccentricity );
         double inc = acos( body->orbit->rot.c.z );
         sout += sprintf( sout, "inclination   %g rad (%g deg) \n", inc, inc*180.0/M_PI );
+
+        // -- Test : Energy Requred to remove inclination
+        double mProp,deltaV;
+        double E    = manuever_planeChange( inc, body->mass, body->orbit, mProp,deltaV );
+        sout += sprintf( sout, "unIncline Energy %g[kgU]=%g[MWy] peopelant %g[kg] H2O deltaV %g[km/s]\n", E/const_EkgU, E/const_EMWy, mProp, deltaV*1e-3 );
+        double solarPowerDensity = solarRadDist_SI( body->orbit->apoapsis() );
+        double area    = E/( const_EMWy*1e-6 * solarPowerDensity); // [m^2]
+        double Rmirror = sqrt(area);
+        sout += sprintf( sout, "i.e. 1year solar mirror %g[km] %g[m^2] powerDens %g[W/m] \n", Rmirror*1e-3, area, solarPowerDensity );
+
         return sout;
     };
 

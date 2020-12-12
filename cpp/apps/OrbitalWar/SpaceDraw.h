@@ -23,9 +23,9 @@
 
 namespace SpaceDraw{
 
-Vec3d ref_pos = Vec3dZero;
-Vec3d ref_vel = Vec3dZero;
-double zoom   = 1.0;
+static Vec3d ref_pos = Vec3dZero;
+static Vec3d ref_vel = Vec3dZero;
+static double zoom   = 1.0/const_AU;
 
 float scF = 1.0; float scSz = 0.2;
 double view_scale = 1/1e+9;

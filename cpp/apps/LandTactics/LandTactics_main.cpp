@@ -38,6 +38,8 @@
 #include "GUI.h"
 #include "Plot2D.h"
 
+#include "AirCombatModel.h"
+
 // font rendering:
 //  http://www.willusher.io/sdl2%20tutorials/2013/12/18/lesson-6-true-type-fonts-with-sdl_ttf
 //  http://stackoverflow.com/questions/28880562/rendering-text-with-sdl2-and-opengl
@@ -163,7 +165,61 @@ void FormationTacticsApp::renderStaticTerrain(){
     //exit(0)
 }
 
+
+void evalAeroCraft( const CombatAirCraft& aero1 ){
+    double CL, speed, accel, Rturn, sa, vy, ta;
+    speed = aero1.maxSpeed_simple ();                                   printf( " speed : %g[km/h]  \n", speed*3.6 );
+    double omega = aero1.trunRate_simple ( CL, speed, accel, Rturn  );  printf( " turn  : Time %g[s] R %g[m] v %g[km/h] accel %g[g] \n", 2*M_PI/omega, Rturn, speed*3.6, accel/const_GravAccel );
+    vy    = aero1.climbRate_simple( sa );
+    ta    = sa/sqrt(1-sa*sa);
+    printf( " climb    :  %g[m/s] @ %g [km/h] tan %g alpha %g[deg] \n", vy, (vy/ta)*3.6, ta, asin(sa)*180/M_PI );
+    vy    = aero1.climbRate_CLmax ( sa );
+    ta    = sa/sqrt(1-sa*sa);
+    printf( " climb_CL :  %g[m/s] @ %g [km/h] tan %g alpha %g[deg] \n", vy, (vy/ta)*3.6, ta, asin(sa)*180/M_PI );
+}
+
 FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+
+    CombatAirCraft aero1;
+
+    printf( "### I-153 \n" );
+    // https://en.wikipedia.org/wiki/Polikarpov_I-153#Specifications_(I-153_(M-62))
+    aero1.mass      = 1960;      // [kg]
+    aero1.power     = 0.597e+6;  // [W]   engine power
+    aero1.area_wing = 22.14;     // [m^2] wing area - makes
+    aero1.area_hull = 10.0*0;    // [m^2] hull area - makes only drag
+    aero1.aspect    = 4.5;       // [1]   aspec ratio of wing - affetcs predominantly lift-induced drag (Oswald efficiency factor included in)
+    aero1.CD0       = 0.05;      // [1    min Drag Coef at zero lift
+    aero1.CLmax     = 1.5;       // [1]   max Lift coef at stall
+    aero1.accelMax  = 5*const_GravAccel;    // [m/s^2]  maximum acceleration
+    evalAeroCraft( aero1 );
+
+
+    printf( "### Bf 109 G6 \n" );
+    // https://en.wikipedia.org/wiki/Messerschmitt_Bf_109#Specifications_(Bf_109G-6)
+    aero1.mass      = 3400;     // [kg]
+    aero1.power     = 1.085e+6; // [W]   engine power
+    aero1.area_wing = 16.05;    // [m^2] wing area - makes
+    aero1.area_hull = 10.0*0;     // [m^2] hull area - makes only drag
+    aero1.aspect    = 6.14;      // [1]   aspec ratio of wing - affetcs predominantly lift-induced drag (Oswald efficiency factor included in)
+    aero1.CD0       = 0.03;      // [1    min Drag Coef at zero lift
+    aero1.CLmax     = 1.5;       // [1]   max Lift coef at stall
+    aero1.accelMax  = 5*const_GravAccel;    // [m/s^2]  maximum acceleration
+    evalAeroCraft( aero1 );
+
+    printf( "### F4U-4 \n" );
+    // https://en.wikipedia.org/wiki/Republic_P-47_Thunderbolt#Specifications_(P-47D-40_Thunderbolt)
+    aero1.mass      = 6592;     // [kg]
+    aero1.power     = 1.770e+6; // [W]   engine power
+    aero1.area_wing = 29.17;    // [m^2] wing area - makes
+    aero1.area_hull = 10.0*0;   // [m^2] hull area - makes only drag
+    aero1.aspect    = 5.35;     // [1]   aspec ratio of wing - affetcs predominantly lift-induced drag (Oswald efficiency factor included in)
+    aero1.CD0       = 0.03;     // [1    min Drag Coef at zero lift
+    aero1.CLmax     = 1.5;      // [1]   max Lift coef at stall
+    aero1.accelMax  = 5*const_GravAccel;    // [m/s^2]  maximum acceleration
+    evalAeroCraft( aero1 );
+
+    exit(0);
 
     printASCItable( 33, 127  );
 

@@ -16,14 +16,59 @@
 
 #include "appliedPhysics.h"
 
-
 constexpr const double DEG_2_RAD = M_PI/180;
+
+//constexpr const double const_Graviational = 6.6743015e-11;
 
 
 /*
 class SpaceCraftBody : public RigidBody{ public:
 }
 */
+
+
+// ToDo:   Orbit should be described by main invarients which are
+//  1) Total Orbital Energy   (scalar):                    E/m = v^2/2    + GM/r   ..=>..   v^2 =  sqrt( 2*( E/m - GM/r ) )
+//     Total energy is related to semi-major axis "a" as   E/m = GM/2a
+//  2) Total Orbital Momentum (vector):                    L/m = (r x v)          =  omega*r^2
+//
+
+// ---------- Manuevers
+// Maneuvering In Space
+// https://www.faa.gov/about/office_org/headquarters_offices/avs/offices/aam/cami/library/online_libraries/aerospace_medicine/tutorial/media/III.4.1.5_Maneuvering_in_Space.pdf
+
+// See the power series
+//  https://en.wikipedia.org/wiki/Radial_trajectory#The_radial_Kepler_problem_(distance_as_function_of_time)
+//  https://en.wikipedia.org/wiki/Radial_trajectory#Time_as_a_function_of_distance
+
+
+inline double E_orbitPlaneChange( const Vec3d& L1, const Vec3d& L2, double r ){
+    //Vec3d dL; dL.set_sub(L2,L1);
+    //return 0.5*dL.norm2()/(r*r);
+    return 0.5*L1.dist2(L2)/(r*r);
+}
+
+inline void orbitPoint( double phi, double L, double eccentricity, double semimajor, double M, double& r, double& vr, double& vphi ){
+    // https://en.wikipedia.org/wiki/Orbital_mechanics#Formulae_for_free_orbits
+    double GM    = const_Graviational*M;
+    double Etot  = GM/(2*semimajor);
+    double semiLactusRectum = semimajor * ( 1 - eccentricity*eccentricity );
+    double ca    = cos( phi );
+    double denom = 1/(1 + ca*eccentricity );
+    r     = semiLactusRectum*denom;
+    vphi  = L/r;
+    vr    = sqrt( 2*( Etot - GM/r ) -  vphi*vphi );
+}
+
+
+
+
+
+
+
+
+
+
 
 inline double findNextInd( double t, int imax, const double* ts, int& i ){
     double tleft;
@@ -129,6 +174,9 @@ struct Orbit{
     //Vec3d apsis;
     //Vec3d node;
     Mat3d rot;
+    //Vec3d L;
+    double L;    // total orbital momentum invariant
+    double E;    // Total orbial energy can be obatined from  semi_major_axis
     double eccentricity;
     double semi_major;
     // position on orbit and time
@@ -138,6 +186,41 @@ struct Orbit{
 
     Orbit() = default;
     Orbit(const OrbitalElements& el){fromElements(el);}
+
+    inline double getTotalEnergy(double M){
+        return const_Graviational*M/(2*semi_major);
+    }
+
+    inline double apoapsis (){ return semi_major*(1+eccentricity); };
+    inline double periapsis(){ return semi_major*(1-eccentricity); };
+    inline double semiLatusRectum(){ return semi_major*(1-eccentricity*eccentricity); };
+    inline double speed( double r, double M ){ return sqrt( const_Graviational*M*( 2./r - 1./semi_major ) ); }  // vis-via equation  https://en.wikipedia.org/wiki/Vis-viva_equation#Equation
+
+    inline double updateL( double M ){
+        double r = periapsis();
+        double v = speed( r, M );
+        printf( "updateL r %g v %g | %g M \n", r, v, M );
+        L = r * v;
+        return L;
+    }
+
+    inline double ellipseAtPhi( double phi ){
+        double ca    = cos( phi );
+        return 1/(1 + ca*eccentricity );
+    }
+
+    inline void evalAtPhi( double phi, double M, double& r, double& vr, double& vphi ){
+        // https://en.wikipedia.org/wiki/Orbital_mechanics#Formulae_for_free_orbits
+        double GM    = const_Graviational*M;
+        double Etot  = GM/(2*semi_major);
+        r     = ellipseAtPhi( phi )  * semiLatusRectum();
+        vphi  = L/r;
+        vr    = sqrt( 2*( Etot - GM/r ) -  vphi*vphi );
+    }
+
+
+
+
 
     inline void shift_epoch( double new_epoch ){
         mean_anomaly = mean_anomaly_at_epoch( period, mean_anomaly, (new_epoch-epoch) );
@@ -160,6 +243,8 @@ struct Orbit{
         mean_anomaly = el.mean_anomaly;
         period       = el.period;
         epoch        = el.epoch;
+
+
     }
 
     Vec3d pointAtEpoch(double at_epoch)const{
@@ -211,7 +296,8 @@ class SpaceBody : public RigidBody  { public:
 
     SpaceBody()=default;
     SpaceBody( std::string name, SpaceBody* orbCenter, Orbit* orbit, double radius ):name(name),orbCenter(orbCenter),orbit(orbit),radius(radius){};
-    SpaceBody( std::string name, SpaceBody* orbCenter, double a, double e, double inc, double lan, double apa, double ma ):name(name),orbCenter(orbCenter){
+    SpaceBody( std::string name, SpaceBody* orbCenter, double a, double e, double inc, double lan, double apa, double ma, double radius, double mass_ ):name(name),orbCenter(orbCenter),radius(radius){
+        setMass(mass_);
         orbit = new Orbit( OrbitalElements(a,e,inc,lan, apa, ma) );
     };
 

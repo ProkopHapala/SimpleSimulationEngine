@@ -32,10 +32,23 @@
 #include "appliedPhysics.h"
 #include "spaceCombat.h"
 
+#include "asteroidEngineering.h"
 
 
 
 /*
+
+
+
+ToDo:
+
+Americium Weapons
+    * Micro-Fission bombs
+    * Micro-Fission engine / Rockets
+Hafnium Weapons:      https://en.wikipedia.org/wiki/Hafnium_controversy
+    * Hafnium rockets
+    * Hafnium triggered fission weapons
+    * Hafnium Lasers
 
 
 #### Ideas:

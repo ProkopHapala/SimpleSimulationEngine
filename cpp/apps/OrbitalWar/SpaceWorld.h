@@ -237,6 +237,9 @@ class SpaceWorld : public ODEderivObject { public:
 
     int load_astorb(char* fname, int n_reserve){
         //printf( "load_astorb \n" );
+
+        double sunMass = planets[0].mass;
+
         FILE * pFile;
         const int nbuff = 1024;
         char str[nbuff];
@@ -249,6 +252,11 @@ class SpaceWorld : public ODEderivObject { public:
             //printf( "%s", str );
             SpaceBody b;
             b.fromString_astorb(str);
+            //b.orbCenter     --- ToDo : we should replace   sunMass by  orbCenter
+
+            b.orbit->semi_major *= const_AU;
+            b.orbit->updateL( sunMass );
+            //b.updateL( double M );
             planets.push_back(b);
             n++;
         }
