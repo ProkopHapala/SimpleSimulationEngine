@@ -265,6 +265,20 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     SpaceGunType   sg1;    sg1.fromString( "800 60000 1e+9 2e-4 10" );
     SpaceGun g1( 1, &sg1, &pt1 );
 
+
+    SpaceShipMobility mobil;
+    //                  fuel_energy_density,  burnUp,  nozzle_efficiency,  pulse_fuel,  pulse_inert,  rate
+    mobil.engine_hiIsp.fromString( "83140000e+6 0.15 0.8    0.150 0.5  0.5" );
+    mobil.engine_hiIsp.fromString( "83140000e+6 0.25 0.5    0.150 2.5  0.5" );
+    mobil.mass_propletant = 1000.0*1e+3;
+    mobil.mass_fuel       =  200.0*1e+3;
+    mobil.mass_empty      = 1000.0*1e+3;
+    mobil.evalDeltaV( 1e+6, 1.0 );
+    mobil.evalDeltaV( 1e+6, 1.0 );
+    exit(0);
+
+
+
     DEBUG
     CombatAssembly battle;      DEBUG
     battle.addTarget( tg1 );    DEBUG

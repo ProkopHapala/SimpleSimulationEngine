@@ -414,7 +414,71 @@ struct CombatAssembly{
 
 };
 
+struct PulseEngine{
+    double fuel_energy_density;  // [J/kg]
+    double burnUp;               // [1] share off fuel burned up
+    double nozzle_efficiency;    // [1]
+    double pulse_fuel;           // [kg]
+    double pulse_inert;          // [kg]
+    double rate;                 // [Hz]
 
+    void fromString(const char* s){
+        sscanf( s,               "%lf %lf %lf %lf %lf %lf",   &fuel_energy_density, &burnUp, &nozzle_efficiency, &pulse_fuel, &pulse_inert, &rate );
+        printf(    "PulseEngine : %g  %g  %g  %g  %g  %g \n",  fuel_energy_density,  burnUp,  nozzle_efficiency,  pulse_fuel,  pulse_inert,  rate );
+    }
+
+    void evalPulse( double& ve, double& thrust ){
+        double m       = pulse_fuel + pulse_inert;          // [kg]
+        double E       = fuel_energy_density * pulse_fuel;  // [J]
+        ve      = sqrt(2*nozzle_efficiency*E/m);     // [m/s]
+        double impulse = ve * m;                            // [kg*m/s]
+        thrust  = impulse * rate;
+        printf( " mass %g[kg]  E %g[TJ] ve %g[km/s] thrust %g[kN] \n", m, E*1e-12, ve*1e-3, thrust*1e-3 );
+    }
+
+    void fromTwo( double f, const PulseEngine& A, const PulseEngine& B ){
+        double m = 1.-f;
+        fuel_energy_density = m*A.fuel_energy_density + f*B.fuel_energy_density ;
+        burnUp              = m*A.burnUp              + f*B.burnUp              ;
+        nozzle_efficiency   = m*A.nozzle_efficiency   + f*B.nozzle_efficiency   ;
+        pulse_fuel          = m*A.pulse_fuel          + f*B.pulse_fuel          ;
+        pulse_inert         = m*A.pulse_inert         + f*B.pulse_inert         ;
+        rate                = m*A.rate                + f*B.rate                ;
+    }
+
+};
+
+struct SpaceShipMobility{
+    PulseEngine engine_hiIsp;
+    PulseEngine engine_loIsp;
+    double mass_propletant;
+    double mass_fuel;
+    double mass_empty;
+
+    //void fromString(const char* s){
+    //    sscanf( s,               "%lf %lf %lf %lf %lf %lf",   &fuel_energy_density, &burnUp, &nozzle_efficiency, &pulse_fuel, &pulse_inert, &rate );
+    //    printf(    "PulseEngine : %g  %g  %g  %g  %g  %g \n",  fuel_energy_density,  burnUp,  nozzle_efficiency,  pulse_fuel,  pulse_inert,  rate );
+    //}
+
+    double evalDeltaV( double time, double fIsp ){
+        // --- ToDo: this can be pre-computed for all times (depend only on fIsp)
+        PulseEngine engine_state;
+        engine_state.fromTwo( fIsp, engine_hiIsp, engine_loIsp );
+        double fuel_flow  = engine_state.pulse_fuel  * engine_state.rate;
+        double inert_flow = engine_state.pulse_inert * engine_state.rate;
+        double tburn      = fmin( mass_fuel/fuel_flow, mass_propletant/inert_flow );
+        double ve, thrust;  engine_state.evalPulse( ve, thrust );
+        double mtot  = mass_empty + mass_propletant + mass_fuel;
+        double mflow = fuel_flow + inert_flow;
+
+        // --- ToDo: do this for each "time"
+        double t       = fmin(time,tburn);
+        double delta_v = tsielkovsky_speed( 1.-mflow*t/mtot, ve );
+        double accel   = thrust/mtot;
+        printf( " mass %g[ton]  mflow %g[kg/s] t %g[s] delta_v %g[km/s] accel %g[g]\n", mtot*1e-3, mflow, t, delta_v*1e-3, thrust/const_GravAccel );
+        return delta_v;
+    }
+};
 
 
 
