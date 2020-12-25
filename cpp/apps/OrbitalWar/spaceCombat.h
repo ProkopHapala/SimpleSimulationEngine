@@ -226,6 +226,9 @@ struct ProjectileType{
         //printf(    "ProjectileType : %g %g \n", mass, caliber );
     }
 
+    ProjectileType()=default;
+    ProjectileType(const char* s){fromString(s);}
+
 };
 
 struct SpaceGunType{
@@ -240,6 +243,8 @@ struct SpaceGunType{
         sscanf( s,                "%lf %lf %lf %lf %lf"  , &length, &maxForce, &maxPower, &scatter, &fireRate  );
         //printf(    "SpaceGunType : %g  %g  %g  %g  %g \n", length,  maxForce,   maxPower,  scatter,  fireRate );
     }
+    SpaceGunType()=default;
+    SpaceGunType(const char* s){ fromString(s); };
 
     double getMuzzleVelocity( ProjectileType* shotType, double& t ){
         //printf( "getMuzzleVelocity \n" );
@@ -414,6 +419,12 @@ struct CombatAssembly{
 
 };
 
+
+
+
+
+
+
 struct PulseEngine{
     double fuel_energy_density;  // [J/kg]
     double burnUp;               // [1] share off fuel burned up
@@ -427,13 +438,18 @@ struct PulseEngine{
         printf(    "PulseEngine : %g  %g  %g  %g  %g  %g \n",  fuel_energy_density,  burnUp,  nozzle_efficiency,  pulse_fuel,  pulse_inert,  rate );
     }
 
+    void info(){
+        //sscanf( s,               "%lf %lf %lf %lf %lf %lf",   &fuel_energy_density, &burnUp, &nozzle_efficiency, &pulse_fuel, &pulse_inert, &rate );
+        printf(    "Edens %g[TJ/kg]  burnup %g  eff %g fuel %g/%g[kg] f %g[Hz] \n",  fuel_energy_density*1e-12,  burnUp,  nozzle_efficiency,  pulse_fuel,  pulse_inert,  rate );
+    }
+
     void evalPulse( double& ve, double& thrust ){
         double m       = pulse_fuel + pulse_inert;          // [kg]
         double E       = fuel_energy_density * pulse_fuel;  // [J]
         ve      = sqrt(2*nozzle_efficiency*E/m);     // [m/s]
         double impulse = ve * m;                            // [kg*m/s]
         thrust  = impulse * rate;
-        printf( " mass %g[kg]  E %g[TJ] ve %g[km/s] thrust %g[kN] \n", m, E*1e-12, ve*1e-3, thrust*1e-3 );
+        //printf( " mass %g[kg]  E %g[TJ] ve %g[km/s] thrust %g[kN] \n", m, E*1e-12, ve*1e-3, thrust*1e-3 );
     }
 
     void fromTwo( double f, const PulseEngine& A, const PulseEngine& B ){
@@ -444,6 +460,7 @@ struct PulseEngine{
         pulse_fuel          = m*A.pulse_fuel          + f*B.pulse_fuel          ;
         pulse_inert         = m*A.pulse_inert         + f*B.pulse_inert         ;
         rate                = m*A.rate                + f*B.rate                ;
+        //printf( " fuel_flow  %g[kg/s]  inert_flow %g[kg/s] tbrun %g[s]\n", fuel_flow, inert_flow, tburn );
     }
 
 };
@@ -463,11 +480,19 @@ struct SpaceShipMobility{
     double evalDeltaV( double time, double fIsp ){
         // --- ToDo: this can be pre-computed for all times (depend only on fIsp)
         PulseEngine engine_state;
+        //engine_hiIsp.info();
+        //engine_loIsp.info();
         engine_state.fromTwo( fIsp, engine_hiIsp, engine_loIsp );
+        //engine_state.info();
         double fuel_flow  = engine_state.pulse_fuel  * engine_state.rate;
         double inert_flow = engine_state.pulse_inert * engine_state.rate;
+        double tfuel  = mass_fuel/fuel_flow;
+        double tinert = mass_propletant/inert_flow;
         double tburn      = fmin( mass_fuel/fuel_flow, mass_propletant/inert_flow );
+        char tmp[64];// timeInfo(tmp, tburn);
+        //printf( " fuel_flow  %g[kg/s]  inert_flow %g[kg/s] tbrun %g[s] | tfuel %g[s] tinert %g[s] \n", fuel_flow, inert_flow, tburn, tfuel, tinert );
         double ve, thrust;  engine_state.evalPulse( ve, thrust );
+        //printf( "thrust %g[kN] \n", thrust*1e-3 );
         double mtot  = mass_empty + mass_propletant + mass_fuel;
         double mflow = fuel_flow + inert_flow;
 
@@ -475,7 +500,8 @@ struct SpaceShipMobility{
         double t       = fmin(time,tburn);
         double delta_v = tsielkovsky_speed( 1.-mflow*t/mtot, ve );
         double accel   = thrust/mtot;
-        printf( " mass %g[ton]  mflow %g[kg/s] t %g[s] delta_v %g[km/s] accel %g[g]\n", mtot*1e-3, mflow, t, delta_v*1e-3, thrust/const_GravAccel );
+        timeInfo(tmp, t);
+        printf( " mass %g[ton]  mflow %g[kg/s] t %g[day] delta_v %g[km/s] ve %g[km/s] thrust %g[kN] accel %g[g]\n", mtot*1e-3, mflow, t/const_day, delta_v*1e-3, ve*1e-3, thrust*1e-3, accel/const_GravAccel );
         return delta_v;
     }
 };

@@ -269,13 +269,13 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     SpaceShipMobility mobil;
     //                  fuel_energy_density,  burnUp,  nozzle_efficiency,  pulse_fuel,  pulse_inert,  rate
     mobil.engine_hiIsp.fromString( "83140000e+6 0.15 0.8    0.150 0.5  0.5" );
-    mobil.engine_hiIsp.fromString( "83140000e+6 0.25 0.5    0.150 2.5  0.5" );
+    mobil.engine_loIsp.fromString( "83140000e+6 0.25 0.8    0.150 2.5  0.5" );
     mobil.mass_propletant = 1000.0*1e+3;
-    mobil.mass_fuel       =  200.0*1e+3;
+    mobil.mass_fuel       = 1000.0*1e+3;
     mobil.mass_empty      = 1000.0*1e+3;
-    mobil.evalDeltaV( 1e+6, 1.0 );
-    mobil.evalDeltaV( 1e+6, 1.0 );
-    exit(0);
+    mobil.evalDeltaV( 1e+9, 0.0 );
+    mobil.evalDeltaV( 1e+9, 1.0 );
+    //sexit(0);
 
 
 
@@ -388,6 +388,43 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     print_AblationRocket( length, maxPressure, caliber, thickness, dens, molarMass, temperature );
 
     //exit(0);
+
+
+    //                                               mass   caliber );
+    world.projectileTypes.insert({"150g120mm",new ProjectileType("0.15   0.12")});
+    //                                               length  maxForce maxPower scatter  fireRate  );
+    world.gunTypes       .insert({"rail800m",new SpaceGunType  ("800     60000    1e+9     2e-4     10")});
+
+    {
+        //ProjectileType pt;
+        //SpaceGunType   sg;
+        SpaceCombatant  ship;
+        SpaceGun        g;
+
+        //               mass   caliber );
+        //pt1.fromString( "0.15   0.12" );
+        //               length  maxForce maxPower scatter  fireRate  );
+        //sg1.fromString( "800     60000    1e+9     2e-4     10"       );
+        //SpaceGun g1( 1, &sg1, &pt1 );
+        //ship.guns.push_back( SpaceGun(1,world.gunTypes.get) );
+        //ship.guns.push_back( SpaceGun(1,) );
+
+        world.makeGun( g, 1, "rail800m", "150g120mm" );
+
+        ship.faction = 1;
+        for(int i=0; i<3; i++){
+            ship.body = &world.ships[i];
+            world.combatants.push_back( ship );
+        }
+
+    }
+
+    SpaceCombatant target;
+    target.faction = 2;
+    target.targets.push_back( tg1 );
+    double dmg = world.evalDamage( target, 10.0, 1, 0 );
+    printf( "dmg %g \n", dmg );
+    exit(0);
 
 }
 

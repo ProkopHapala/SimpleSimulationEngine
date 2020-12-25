@@ -315,6 +315,18 @@ class SpaceBody : public RigidBody  { public:
         Vec3d p; Spline_Hermite::curve_point( du,trjPos[iTrj-1],trjPos[iTrj],trjPos[iTrj+1],trjPos[iTrj+2], p); return p;
     };
 
+    inline Vec3d getPos( int iTrj, double du )const {
+        Vec3d p;
+        if(iTrj>0){
+            p = getTrjPos(iTrj,du);
+            //if( referenceBody ) p.sub( referenceBody->getTrjPos(iTrj,du) );
+        }else{
+            p = pos;
+            //if( referenceBody ) p.sub(referenceBody->pos);
+        }
+        return p;
+    }
+
     inline Vec3d getThrust(int itrj, double du ){
         //if( trjThrust ){
             //printf( "%i %f   (%f,%f,%f)   (%f,%f,%f) \n", itrj, du, trjThrust[itrj].x, trjThrust[itrj].y, trjThrust[itrj].z,  trjThrust[itrj+1].x, trjThrust[itrj+1].y, trjThrust[itrj+1].z );

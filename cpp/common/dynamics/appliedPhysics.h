@@ -26,6 +26,23 @@ static constexpr const double const_heatCapacityRatio_watter     = 1.3333333;
 static constexpr const double const_SolarRadEarth =  1366.1; // [W/m^2]
 
 
+static constexpr const double const_hour  =  3600; // [W/m^2]
+static constexpr const double const_day   =  86400; // [W/m^2]
+static constexpr const double const_month =  2592000; // [W/m^2]
+static constexpr const double const_year  =  31536000; // [W/m^2]
+
+char* timeInfo(char* s, double t_sec){
+    if(t_sec<const_hour  ) return s+sprintf(s,"%g s"     ,t_sec);
+    if(t_sec<const_day   ) return s+sprintf(s,"%g hours" ,t_sec/const_hour );
+    if(t_sec<const_month ) return s+sprintf(s,"%g days"  ,t_sec/const_day  );
+    if(t_sec<const_year  ) return s+sprintf(s,"%g months",t_sec/const_month);
+    return s+sprintf(s,"%g years" ,t_sec/const_year);
+}
+
+
+
+
+
 inline double solarRadDist_SI( double r ){ return const_SolarRadEarth * sq( const_AU/ r ); }
 
 

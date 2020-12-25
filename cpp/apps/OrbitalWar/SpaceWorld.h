@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "appliedPhysics.h"
+#include "spaceCombat.h"
 #include "SpaceBodies.h"
 
 
@@ -56,10 +57,25 @@ namespace Time{
 };
 
 
+struct SpaceCombatant{
+    int faction;
+    SpaceBody* body;
+    std::vector<SpaceGun> guns;
+    //std::vector<SpaceHitBox> hitbox;  // ToDo : We need full space ship here
+    double accel;      // [m/s^2] maximum acceleration when maneuvering
+    std::vector<ProjectedTarget> targets; // ToDo : this is temporary we need full ship 3D unprojected targers here instead
+};
+
+
 class SpaceWorld : public ODEderivObject { public:
     std::vector<SpaceBody> planets;
     std::vector<SpaceBody> ships;
     //std::vector<SpaceBody> projectiles;
+
+    std::vector<SpaceCombatant> combatants;
+
+    std::unordered_map<std::string,SpaceGunType*>   gunTypes;
+    std::unordered_map<std::string,ProjectileType*> projectileTypes;
 
     //ODEintegrator_RKF45 odePlanets;
     //ODEintegrator_RKF45 odeShip;
@@ -151,6 +167,33 @@ class SpaceWorld : public ODEderivObject { public:
         */
 
     }
+
+    void makeGun( SpaceGun& g, int n, const char* gunName, const char* prjName){
+        g.n         = n;
+        g.gunType   = gunTypes       .at(gunName);
+        g.shotType  = projectileTypes.at(prjName);
+    }
+
+    double evalDamage( SpaceCombatant& target, double duration, int iTrj, double du ){ // ToDo : replace projected target by ship
+        CombatAssembly combat;
+        for(ProjectedTarget& t: target.targets){ combat.addTarget(t); t.reset(); };
+        for(SpaceCombatant& source: combatants){
+            if(source.faction == target.faction)continue;
+            for( SpaceGun& gun : source.guns){
+                combat.fireGun( gun, duration );
+            }
+            Vec3d p0    = target.body->getPos( iTrj, du );
+            Vec3d p1    = source.body->getPos( iTrj, du );
+            double dist = p0.dist(p1);
+            combat.colide( dist, target.accel );
+        }
+        double dmg=0;
+        for(ProjectedTarget& t: target.targets){ dmg += t.damage; }
+        return dmg;
+    }
+
+
+
 
     void allocateODE(){
         ode.derivObj = this;
