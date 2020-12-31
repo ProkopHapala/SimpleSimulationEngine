@@ -390,9 +390,9 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //exit(0);
 
 
-    //                                               mass   caliber );
+    //                                                            mass   caliber );
     world.projectileTypes.insert({"150g120mm",new ProjectileType("0.15   0.12")});
-    //                                               length  maxForce maxPower scatter  fireRate  );
+    //                                                           length  maxForce maxPower scatter  fireRate  );
     world.gunTypes       .insert({"rail800m",new SpaceGunType  ("800     60000    1e+9     2e-4     10")});
 
     {

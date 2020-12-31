@@ -6,6 +6,8 @@
 //#include "fastMath.h"
 #include "appliedPhysics.h"
 
+#include "Table.h"
+
 //#include "Combat.h"
 
 /*
@@ -231,6 +233,14 @@ struct ProjectileType{
 
 };
 
+struct LaserGunType{
+    double power;           // [W] maximum continuous (averaged) power
+    double peak;            // [W] peak power
+    double aperture;        // [m]
+    double wavelength_min;  // [m]
+    double wavelength_max;  // [m]
+};
+
 struct SpaceGunType{
     int    kind;      // 0=laser, 1=railgun
     double length;    // [m]
@@ -243,8 +253,30 @@ struct SpaceGunType{
         sscanf( s,                "%lf %lf %lf %lf %lf"  , &length, &maxForce, &maxPower, &scatter, &fireRate  );
         //printf(    "SpaceGunType : %g  %g  %g  %g  %g \n", length,  maxForce,   maxPower,  scatter,  fireRate );
     }
+    int toString(char* s){
+        return sprintf( s,                "%g %g %g %g %g"  , length, maxForce, maxPower, scatter, fireRate  );
+        //printf(    "SpaceGunType : %g  %g  %g  %g  %g \n", length,  maxForce,   maxPower,  scatter,  fireRate );
+    }
     SpaceGunType()=default;
     SpaceGunType(const char* s){ fromString(s); };
+
+
+    void mapTable( Table& T ){
+        T.bind( this, sizeof(this) );
+        T.addColum( "length",         &length,   1, DataType::Double);
+        T.addColum( "maxForce",       &maxForce, 1, DataType::Double);
+        T.addColum( "maxPower",       &maxPower, 1, DataType::Double);
+        T.addColum( "scatter",        &scatter,  1, DataType::Double);
+        T.addColum( "fireRate",       &fireRate, 1, DataType::Double);
+        //_addColum1d(T,length  );
+        //_addColum1d(T,maxForce);
+        //_addColum1d(T,maxPower);
+        //_addColum1d(T,scatter );
+        //_addColum1d(T,fireRate);
+    }
+
+
+
 
     double getMuzzleVelocity( ProjectileType* shotType, double& t ){
         //printf( "getMuzzleVelocity \n" );
@@ -347,10 +379,10 @@ struct OpticalMaterial{
 
 struct ProjectedTarget{  // target projected in particular direction
     double area;
-    double areaMass;         // for gause-gun  [kg/m^2]
-    double damageTolerance;  // how much damage energy per one hit ic can absorb before breaking
-    OpticalMaterial*   mat;  // for  laser     [in various wavelenghths]
-    whippleShieldType* wshield;
+    //double areaMass;              // for gause-gun  [kg/m^2]
+    double damageTolerance;         // how much damage energy per one hit ic can absorb before breaking
+    OpticalMaterial*   mat     =0;  // for  laser     [in various wavelenghths]
+    whippleShieldType* wshield =0;
 
     double HPs;        // [Joule] hitpoints
     double HPexponent;

@@ -2,11 +2,15 @@
 #ifndef Table_h
 #define Table_h
 
+#include <stdio.h>
 #include <vector>
 #include <string>
 #include <unordered_map>
 
 enum class DataType{ Bool, Int, Float, Double, String };
+
+#define _addColum(T,name,n,D)  { T.addColum( #name, &name, n, DataType::D); }
+#define _addColum1d(T,name)    { T.addColum( #name, &name, 1, DataType::Double); }
 
 /*
 struct DataColumn{
@@ -51,9 +55,14 @@ class Table{ public:
         itemsize=itemsize_;
     }
 
-    int addColum(void* ptr, int nsub, DataType type){
+    int addColum(void* ptr, int nsub, DataType type=DataType::Double){
         columns.push_back( Atribute( ((char*)ptr)-((char*)data), nsub, type ) );
         return columns.size()-1;
+    }
+
+    int addColum( std::string name, void* ptr, int nsub, DataType type=DataType::Double ){
+        name2column.insert( {name,columns.size()} );
+        return addColum(ptr, nsub, type);
     }
 
     /*
@@ -83,6 +92,27 @@ class Table{ public:
         }
         return s;
     }
+
+    void fromStr( char* s){
+        //while(c){
+        //
+        //}
+    }
+
+
+    /*
+    void loadCSV( char* fname, bool bRealloc=true ){
+        if(bRealloc){
+            delete [] data;
+
+        }
+        FILE * pFile;
+        const int nbuff = 1024;
+        char str[nbuff];
+        pFile = fopen ( fname, "r");
+        if (pFile == NULL){ printf("file not found: %s \n", fname ); return(-1); };
+    }
+    */
 
 /*
     template<typename Func>
