@@ -26,12 +26,10 @@ static const float DEFAULT_Bilboard_UVs[] = {
     1.0f,1.0f,   1.0f,0.0f,   0.0f,1.0f
 };
 
-/*
 static const float DEFAULT_Bilboard_UVs_2x2[] = {
     0.0f,0.0f,   2.0f,0.0f,   0.0f,2.0f,
     2.0f,2.0f,   2.0f,0.0f,   0.0f,2.0f
 };
-*/
 
 class GLMesh{ public:
     union{

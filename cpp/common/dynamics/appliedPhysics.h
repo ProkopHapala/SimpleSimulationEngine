@@ -31,7 +31,7 @@ static constexpr const double const_day   =  86400; // [W/m^2]
 static constexpr const double const_month =  2592000; // [W/m^2]
 static constexpr const double const_year  =  31536000; // [W/m^2]
 
-char* timeInfo(char* s, double t_sec){
+inline char* timeInfo(char* s, double t_sec){
     if(t_sec<const_hour  ) return s+sprintf(s,"%g s"     ,t_sec);
     if(t_sec<const_day   ) return s+sprintf(s,"%g hours" ,t_sec/const_hour );
     if(t_sec<const_month ) return s+sprintf(s,"%g days"  ,t_sec/const_day  );
@@ -88,23 +88,23 @@ inline Vec3d centralGravityForce( const Vec3d& d, double Mm ){
     return d * (  Mm * const_Graviational / ( r2 * sqrt(r2) ) );
 }
 
-double tsielkovsky_speed( double payload, double vexh ){
+inline double tsielkovsky_speed( double payload, double vexh ){
     return vexh*log( 1/payload );
 }
 
-double tsielkovsky_payload( double deltaV, double vexh ){
+inline double tsielkovsky_payload( double deltaV, double vexh ){
     return exp( -deltaV/vexh );
 }
 
 
-double jetEfficiency( double expansionRatio, double kappa=const_heatCapacityRatio_monoatimic ){
+inline double jetEfficiency( double expansionRatio, double kappa=const_heatCapacityRatio_monoatimic ){
     double efficiency =  pow( expansionRatio, (1-kappa)/kappa ) - 1 ;
     //double a = 1/(kappa-1);
     //return a * efficiency;
     return efficiency;
 }
 
-double exhaustVelocity( double T, double molarMass=1., double efficiency=1., double kappa=const_heatCapacityRatio_monoatimic  ){
+inline double exhaustVelocity( double T, double molarMass=1., double efficiency=1., double kappa=const_heatCapacityRatio_monoatimic  ){
     //https://en.wikipedia.org/wiki/Adiabatic_process
     // (a+1)/a = kappa   =>   1/a = kappa - 1 =>  a = 1/(kappa-1)
     // W = - alpha * n*R*T1 * ( expansionRatio^(1-kappa) - 1 );

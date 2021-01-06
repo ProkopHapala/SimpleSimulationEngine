@@ -376,7 +376,7 @@ inline char* fileGetSection(const char *fname, const char * keystr, const char *
 	return buff;
 }
 
-inline int whichKey( const char* tmp, int nkey, const char ** keys ){
+inline int whichKey( const char* tmp, int nkey, char const*const* keys ){
     for(int ikey=0; ikey<nkey; ikey++){
         const char * key = keys[ikey];
         //printf( "whichKey[%i] %s %s \n", ikey, key, tmp );
@@ -388,7 +388,7 @@ inline int whichKey( const char* tmp, int nkey, const char ** keys ){
     return -1;
 }
 
-inline char ** fileGetSections(const char *fname, int nkey, const char ** keys, const char* begstr ){
+inline char ** fileGetSections(const char *fname, int nkey, char const*const* keys, const char* begstr ){
 	FILE  *fptr = fopen(fname, "rb");	  // Open file for reading
 	if(fptr==NULL){ printf("Failed to load %s \n", fname ); return NULL; }
 	char      tmp[N_CHAR_TMP];
