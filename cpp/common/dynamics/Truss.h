@@ -59,6 +59,7 @@ class Truss{ public:
     void wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width );
     void makeGriders( int nEdges, TrussEdge* edges, Vec3d* points, GirderParams* params, Vec3d * ups );
     void makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vector<Vec2i>* ends );
+    int  addRope( int i, int j, int type, int nsub );
     void autoBridge(int n, Vec2i * ips, double rmax, int kind );
 
     Vec2i* getIJs();

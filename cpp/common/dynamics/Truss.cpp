@@ -324,6 +324,24 @@ void Truss::makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vec
     }
 };
 
+int Truss::addRope( int ip1, int ip2, int type, int nsub ){
+    Vec3d& p1 =  points[ip1];
+    Vec3d  d  = (points[ip2]-p1)*(1./nsub);
+    int jp,ip=ip1;
+    int np=0;
+    for(int k=0; k<nsub; k++){
+        if(k<(nsub-1)){
+            points.push_back( p1+d*(k+1) + (Vec3d){0,0,randf(-5.,5.)} ); np++;
+            jp=points.size()-1;
+        }else{
+            jp=ip2;
+        }
+        edges.push_back( (TrussEdge){ip,jp,type} );
+        ip=jp;
+    }
+    return np;
+};
+
 void Truss::autoBridge(int n, Vec2i * ips, double rmax, int kind ){
     //printf( "autoBridge beg %i %i n=%i\n", points.size(),edges.size(), n );
     blocks.push_back( (Vec2i){points.size(),edges.size()} );

@@ -54,7 +54,8 @@ int glo_truss=0;
 //char str[8096];
 double elementSize  = 5.;
 
-void makeShipTruss1( Truss& truss, int n, int m, double L ){
+
+void makeShipTruss1_simple( Truss& truss, int n, int m, double L ){
     // central spine
     for(int i=0; i<(n+1); i++){
         truss.points.push_back( (Vec3d){0.,0.,i*L} ); // 1
@@ -73,6 +74,36 @@ void makeShipTruss1( Truss& truss, int n, int m, double L ){
             int ie2;
             if(j==0){ ie2=ie+m-1; }else{ ie2=ie-1; }
             truss.edges.push_back( (TrussEdge){ ie2, ie, 2 }   );
+        }
+    }
+    // ToDo : radiators between lengs ?
+}
+
+void makeShipTruss1( Truss& truss, int n, int m, double L, int perRope ){
+    // central spine
+    for(int i=0; i<(n+1); i++){
+        truss.points.push_back( (Vec3d){0.,0.,i*L} ); // 1
+        if(i>0) truss.edges.push_back( (TrussEdge){ i-1,i,   0 }   );
+    }
+    // peripheral maneuvering pendulum points
+    int ip0=truss.points.size();
+    for(int i=0; i<n; i++){
+        for(int j=0; j<m; j++){
+            Vec2d rot; rot.fromAngle( (j  + 0.5*i )*2*M_PI/m );
+            truss.points.push_back( (Vec3d){rot.x*L,rot.y*L,L*(i+.5)} );
+        }
+    }
+    for(int i=0; i<n; i++){
+        int ip=ip0+i*m;
+        for(int j=0; j<m; j++){
+            int ie = ip+j;
+            // conection legs to spine
+                     truss.addRope( i  , ie, 1, perRope );
+            if(i<n){ truss.addRope( i+1, ie, 1, perRope ); }
+            // connection between legs
+            int ie2;
+            if(j==0){ ie2=ie+m-1; }else{ ie2=ie-1; }
+            truss.addRope( ie, ie2, 2, perRope );
         }
     }
     // ToDo : radiators between lengs ?
@@ -101,12 +132,22 @@ void truss2SoftBody( const Truss& truss, BondType* bondTypes, SoftBody& body ){
     body.gravity=Vec3dZero;
 }
 
+void makeShip1( int n, int m, int perRope, double L, Truss& truss, SoftBody& body, BondType* bondTypes ){
+    makeShipTruss1( truss, n, m, L, perRope );
+    truss2SoftBody( truss, &bondTypes[0], body );
+}
+
 void drawSoftBody( SoftBody& body, float vsc, float fsc ){
     glBegin(GL_LINES);
     glColor3f(.0,.0,.0);
     for(int i=0; i<body.nbonds; i++){
         Bond& b = body.bonds[i];
         //Draw::color_of_hash( b.type->id*1545 + 456 );
+
+        float c =  b.type->kTens*0.5 - b.type->kPress;
+        glColor3f(c,c,c);
+        //if(c<0){ glLineWidth(2); }else{ glLineWidth(1); }
+
         Draw3D::vertex( body.points[b.i] );
         Draw3D::vertex( body.points[b.j] );
     }
@@ -152,7 +193,11 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
     bondTypes.push_back( BondType::rope ( 2, 0.01,  modul, 20.0e+9, 4e+3 ) );
 
     //makeShipTruss1( truss, 3, 3, 100.0 );
-    makeShipTruss1( truss, 2, 3, 100.0 );
+
+    int n=2;
+    int m=3;
+    //makeShipTruss1( truss, n, m, 100.0, 1 );
+    makeShipTruss1( truss, n, m, 100.0, 2 ); // multiple segments per rope - seems unstable
     truss2SoftBody( truss, &bondTypes[0], body );
 
     /*
@@ -164,19 +209,30 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
     }
     */
 
+
+    double pendulumWeight = 300.0; // [kg]
     float speed = 10.0;
     //printf( "body.npoints %i \n" , body.npoints );
+    for(int i=n+1; i<n+1+n*m; i++){
+        //Vec3d& p = body.points[i];
+        //double r2 = sq(p.x) + sq(p.y);
+        //body.velocities[i].set_cross( p, Vec3dZ*speed );
+        body.mass[i] += pendulumWeight;
+    }
+    body.preparePoints( true, -1, -1 );
     for(int i=0; i<body.npoints; i++){
         //printf( "body.npoints[%i]  \n" , i );
-        Vec3d& p = body.points[i];
+        Vec3d& p  = body.points[i];
         double r2 = sq(p.x) + sq(p.y);
-        if( r2>1.0 ){
-            body.velocities[i].set_cross( p, Vec3dZ*speed );
-        }
+        //if( r2>1.0 ){
+        body.velocities[i].set_cross( p, Vec3dZ*speed );
+            //body.mass[i] += pendulumWeight;
+        //}
         printf( "point[%i] mass %g[kg] \n" , i, body.mass[i] );
     }
 
-    body.dt        = 0.0001;
+    perFrame = 100;
+    body.dt        = 0.00001;
     body.damp      = 0.0;
     body.viscosity = 0.0;
 
@@ -198,18 +254,19 @@ void SpaceCraftDynamicsApp::draw(){
 	//glDisable(GL_DEPTH_TEST);
 	glEnable(GL_DEPTH_TEST);
 
-	int ipull = 2;
+	//int npull = 2; int ipulls[]{2,3};
+	int npull = 4; int ipulls[]{2,3,4,5};
 	int iref  = 4;
 
 	double ang0 = atan2(body.points[iref].x,body.points[iref].y);
-    for(int i=0; i<perFrame; i++){
+    for(int itr=0; itr<perFrame; itr++){
 
         time+=body.dt;
 
         int pullDir = (((int)(time))%2)*2-1;
-        body.bonds[ipull].l0*=(1 + 1.0*body.dt*pullDir );
-
-
+        for(int i=0; i<npull; i++){
+            body.bonds[ipulls[i]].l0*=(1 + 0.2*body.dt*pullDir );
+        }
         //body.step( );
         body.cleanForces();
         body.evalBondForces();
@@ -220,13 +277,16 @@ void SpaceCraftDynamicsApp::draw(){
     double omega = (ang1-ang0)/(body.dt*perFrame);
 
     double junk;
-    glRotatef( modf(time*1.6,&junk)*360.0,  0.,0.,1.0 );
+    //glRotatef( modf(time*1.5,&junk)*360.0,  0.,0.,1.0 );
 
 	//drawTrussDirect( truss );
 	drawSoftBody( body, 0.02, 0.00001  );
 
 	glLineWidth(2);
-	glColor3f(0.,1.,0.); Draw3D::drawLine( body.points[body.bonds[ipull].i], body.points[body.bonds[ipull].j] );
+	for(int i=0; i<npull; i++){
+        Bond& b = body.bonds[ipulls[i]];
+        glColor3f(0.,1.,0.); Draw3D::drawLine( body.points[b.i], body.points[b.j] );
+    }
     glLineWidth(1);
 
     Draw3D::drawAxis(10.0);
