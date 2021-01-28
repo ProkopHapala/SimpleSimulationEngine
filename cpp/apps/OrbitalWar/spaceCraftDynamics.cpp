@@ -217,9 +217,9 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
         //Vec3d& p = body.points[i];
         //double r2 = sq(p.x) + sq(p.y);
         //body.velocities[i].set_cross( p, Vec3dZ*speed );
-        body.mass[i] += pendulumWeight;
+        //body.mass[i] += pendulumWeight;
     }
-    body.preparePoints( true, -1, -1 );
+    body.preparePoints( true, 1.0, 1.0 );
     for(int i=0; i<body.npoints; i++){
         //printf( "body.npoints[%i]  \n" , i );
         Vec3d& p  = body.points[i];
@@ -230,6 +230,7 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
         //}
         printf( "point[%i] mass %g[kg] \n" , i, body.mass[i] );
     }
+    body.updateInvariants();
 
     perFrame = 100;
     body.dt        = 0.00001;
@@ -251,8 +252,8 @@ void SpaceCraftDynamicsApp::draw(){
     glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
 
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	//glDisable(GL_DEPTH_TEST);
-	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_DEPTH_TEST);
+	//glEnable(GL_DEPTH_TEST);
 
 	//int npull = 2; int ipulls[]{2,3};
 	int npull = 4; int ipulls[]{2,3,4,5};
@@ -263,18 +264,28 @@ void SpaceCraftDynamicsApp::draw(){
 
         time+=body.dt;
 
+        /*
         int pullDir = (((int)(time))%2)*2-1;
         for(int i=0; i<npull; i++){
             body.bonds[ipulls[i]].l0*=(1 + 0.2*body.dt*pullDir );
         }
+        */
         //body.step( );
         body.cleanForces();
         body.evalBondForces();
-        body.move_LeapFrog();
+        //body.move_LeapFrog();
     }
     double ang1  = atan2(body.points[iref].x,body.points[iref].y);
     if(ang1<ang0)ang1+=M_PI*2;
     double omega = (ang1-ang0)/(body.dt*perFrame);
+
+    Vec3d cog  = body.evalCOG();
+    Vec3d vcog = body.evalCOGspeed();
+    Vec3d L    = body.evalAngularMomentum();
+    //printf( "cog (%g,%g,%g) \n", cog.x,cog.y,cog.z );
+    //printf( "p   (%g,%g,%g) \n", ptot.x,ptot.y,ptot.z );
+    //printf( "L   (%g,%g,%g) \n", L.x,L.y,L.z );
+    if(frameCount<10)printf( "cog (%g,%g,%g) p (%g,%g,%g) L (%g,%g,%g) \n", cog.x,cog.y,cog.z, vcog.x,vcog.y,vcog.z, L.x,L.y,L.z );
 
     double junk;
     //glRotatef( modf(time*1.5,&junk)*360.0,  0.,0.,1.0 );

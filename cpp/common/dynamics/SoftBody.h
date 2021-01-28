@@ -10,6 +10,23 @@
 
 //#include "DynamicOpt.h"
 
+
+inline Vec3d sumMassPoints(int n, const Vec3d* pos, const double* mass, bool bBormalize=true ){
+    // NOTE : can be used to calculate both total momentum and center of mass
+    Vec3d cog=Vec3dZero;
+    double m=0;
+    for(int i=0; i<n; i++){ double dm=mass[i]; cog.add_mul(pos[i],dm); m+=dm; };
+    if(bBormalize)cog.mul(1./m);
+    return cog;
+}
+
+inline Vec3d sumAngularMomentum(int n, const Vec3d* pos, const Vec3d* vel, const double* mass, const Vec3d& cog ){
+    Vec3d L=Vec3dZero;
+    for(int i=0; i<n; i++){ Vec3d p; p.set_sub(pos[i],cog); p.mul(mass[i]); L.add_cross(vel[i],p); };
+    return L;
+}
+
+
 // ==================
 //    BondTypes
 // ==================
@@ -168,6 +185,10 @@ class SoftBody{ public:
 	Vec3d  * dirs  = NULL;
     double * f0s   = NULL;
 
+    Vec3d cog;
+    Vec3d vcog;
+    Vec3d angularMomentum;
+
 	// bonds
 	int nbonds;
     Bond * bonds        = NULL;
@@ -253,10 +274,6 @@ class SoftBody{ public:
         forces[bond.i].sub( d );
 	}
 
-
-
-
-
 	inline void evalPointForce( int i, const Vec3d& gravity, const Vec3d& airFlow ){
 		forces[i].add_mul( gravity, mass[i] ); // here we clear forces
 		if( viscosity > 0.0 ){
@@ -264,6 +281,16 @@ class SoftBody{ public:
             forces[i].add_mul( vrel, viscosity * drag[i] * vrel.norm() );
 		}
 	}
+
+	inline Vec3d evalCOG            (){ return sumMassPoints(npoints,points    ,mass,true); }
+	inline Vec3d evalCOGspeed       (){ return sumMassPoints(npoints,velocities,mass,true); }
+	inline Vec3d evalAngularMomentum(){ return sumAngularMomentum(npoints,points,velocities,mass,cog); }
+	inline void  updateInvariants(){
+        cog        =evalCOG();
+        vcog       =evalCOGspeed();
+        angularMomentum=evalAngularMomentum();
+	}
+
 
 };
 

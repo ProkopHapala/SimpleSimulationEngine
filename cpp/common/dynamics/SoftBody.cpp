@@ -227,8 +227,8 @@ void SoftBody::prepareBonds( bool l0_fromPos ){
 void SoftBody::preparePoints(  bool clearVelocity, double constDrag, double constMass ){
     for (int i=0; i<npoints; i++){
         if( clearVelocity ) velocities[i].set(0.0);
-        if( constDrag > 0 ) drag[i] = constDrag;
-        if( constMass > 0 ) mass[i] = constMass;
+        if( constDrag >= 0 ) drag[i] = constDrag;
+        if( constMass >  0 ) mass[i] = constMass;
 		invMass[i] = 1/mass[i];
 		//printf( " poins %i %e %e   (%e,%e,%e) \n", i, mass[i], invMass[i], velocities[i].x, velocities[i].y, velocities[i].z  );
 	}
