@@ -279,6 +279,11 @@ void SpaceCraftDynamicsApp::draw(){
     if(ang1<ang0)ang1+=M_PI*2;
     double omega = (ang1-ang0)/(body.dt*perFrame);
 
+
+    // TODO:
+    // ERROR: there is some minor assymetry in construction of the spaceCraft
+    //        some is in mass distribution, but even for constant mass distribution angular momentum is not completely along Z-axis
+
     Vec3d cog  = body.evalCOG();
     Vec3d vcog = body.evalCOGspeed();
     Vec3d L    = body.evalAngularMomentum();
