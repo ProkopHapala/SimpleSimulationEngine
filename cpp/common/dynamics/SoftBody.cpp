@@ -6,16 +6,31 @@
 
 // ==== Dynamics
 
-void SoftBody::evalForces( ){
-	//printf( "==============\n" );
+void SoftBody::cleanForces( ){
+	for( int i=0; i<npoints; i++ ){ forces[i]=Vec3dZero; }
+}
+
+void SoftBody::evalPointForces( ){
 	for( int i=0; i<npoints; i++ ){
 		//forces[i].set(0.0);
 		evalPointForce( i, gravity, airFlow );
 		//printf( " %i  %f %f %f   %f %f %f \n", i, forces[i].x, forces[i].y, forces[i].z, mass[i], invMass[i], drag[i] );
 	}
+}
+
+void SoftBody::evalBondForces( ){
 	for( int i=0; i<nbonds;  i++ ){	addBondForce( bonds[i] ); }
+}
+
+/*
+void SoftBody::evalForces( ){
+	//printf( "==============\n" );
+	//for( int i=0; i<nbonds;  i++ ){	addBondForce( bonds[i] ); }
+	evalPointForces( );
+	evalStickForces( );
 	//for( int i=0; i<npoints; i++ ){ printf( " point force %i  %f %f %f   %f %f %f \n", i, forces[i].x, forces[i].y, forces[i].z, mass[i], invMass[i], drag[i] ); }
 }
+*/
 
 void SoftBody::evalForceLinearizedBonds( ){
 	for( int i=0; i<nbonds; i++ ){
@@ -50,12 +65,14 @@ void SoftBody::disp2pos( ){
 }
 
 void SoftBody::applyConstrains(){
+    if(fix){
 	for( int i=0; i<nfix; i++ ){
 		int ip = fix[i];
 		if( (ip>0)&&(ip<npoints) ){
             forces    [ip].set(0.0);
             velocities[ip].set(0.0);
 		}
+	}
 	}
 }
 
@@ -75,9 +92,30 @@ void SoftBody::move_LeapFrog( ){
 	}
 }
 
+
+void SoftBody::relaxStepGS( double fmax ){
+    // Gauss-Seidel relaxation step
+	for( int i=0; i<nbonds; i++ ){
+        const Bond& bond = bonds[i];
+        Vec3d d; d.set_sub( points[bond.i], points[bond.j] );
+        double l  = d.norm();
+        double dl = bond.enforce( l, fmax );
+        if(dl>1e-15){
+            d.mul(dl);
+            points[bond.j].add( d );
+            points[bond.i].sub( d );
+        }
+    }
+}
+
+
+
 void SoftBody::step( ){
     //for (int i=0; i<npoints; i++){ forces[i].set(0.0); }
-    evalForces( );
+    //evalForces( );
+    cleanForces    ();
+    evalPointForces();
+    evalBondForces ();
     applyConstrains();
     move_LeapFrog( );
 }
@@ -108,7 +146,7 @@ void SoftBody::allocate( int npoints_, int nbonds_, int nfix_ ){
 
 	bonds  = new Bond[ nbonds ];
 
-    fix = new int[nfix]; for(int i=0; i<nfix; i++ ){ fix[i]=-1; }
+    if(nfix>0)fix = new int[nfix]; for(int i=0; i<nfix; i++ ){ fix[i]=-1; }
 }
 
 void SoftBody::setPoints( int npoints_,  Vec3d  * points_, double * mass_, double * drag_ ){

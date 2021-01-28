@@ -424,7 +424,7 @@ SpaceTactics::SpaceTactics( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     target.targets.push_back( tg1 );
     double dmg = world.evalDamage( target, 10.0, 1, 0 );
     printf( "dmg %g \n", dmg );
-    exit(0);
+    //exit(0);
 
 }
 

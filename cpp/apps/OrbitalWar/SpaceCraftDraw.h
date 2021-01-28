@@ -92,8 +92,16 @@ void drawAsteroide( int nsamp, int nCrater, float hscale, bool wire ){
 
 }
 
-
-
+void drawTrussDirect( Truss& truss ){
+    glBegin(GL_LINES);
+    for(int i=0; i<truss.edges.size(); i++){
+        TrussEdge& ed = truss.edges[i];
+        Draw::color_of_hash( ed.type*1545 + 456 );
+        Draw3D::vertex(truss.points[ed.a]);
+        Draw3D::vertex(truss.points[ed.b]);
+    }
+    glEnd();
+}
 
 void drawTruss( const Truss& truss, bool bColor ){
     //printf("=============\n");
@@ -324,7 +332,6 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     //};
     glLineWidth(1);
 };
-
 
 
 

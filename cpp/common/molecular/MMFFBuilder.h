@@ -60,7 +60,10 @@ struct MMFFAtom{
     //Vec3d REQ = (Vec3d){1.,0.0,0.0};
 
     MMFFAtom() = default;
-    //MMFFAtom(const Vec3d& pos_):type(0),frag(-1),iconf(-1),REQ(defaultREQ),pos(pos_){};
+    MMFFAtom(const Vec3d& pos_):type(0),frag(-1),iconf(-1),REQ(defaultREQ),pos(pos_){};
+    MMFFAtom(const Vec3d& pos_,const Vec3d& REQ_):type(0),frag(-1),iconf(-1),REQ(REQ_),pos(pos_){};
+    MMFFAtom(int type_,int frag_,int iconf_,const Vec3d& pos_,const Vec3d& REQ_):type(type_),frag(frag_),iconf(iconf_),REQ(REQ_),pos(pos_){};
+
     //MMFFAtom(const Vec3d& pos_):pos(pos_){};
     //MMFFAtom(const Vec3d& pos_,const Vec3d& REQ_):pos(pos_),REQ(REQ_){};
     //void copyTo(MMFFAtom& c){ c.type=type; }
@@ -127,6 +130,8 @@ struct MMFFBond{
     double l0=1,k=0;
 
     MMFFBond()=default;
+    MMFFBond(int type_, Vec2i atoms_, double l0_, double k_):type(type_),atoms(atoms_),l0(l0_),k(k_){};
+
     inline int getNeighborAtom(int ia)const{
         if     (ia==atoms.i){ return atoms.j; }
         else if(ia==atoms.j){ return atoms.i; }
@@ -142,6 +147,7 @@ struct MMFFAngle{
     double a0=0;
     double k=0;
     MMFFAngle()=default;
+    MMFFAngle( int type_, Vec2i bonds_, double a0_, double k_):type(type_), bonds(bonds_),a0(a0_),k(k_){ };
 
     void print()const{ printf( " Angle{t %i b(%i,%i) a0 %g k %g}", type, bonds.i, bonds.j, a0, k ); }
 };
@@ -152,6 +158,7 @@ struct MMFFDihedral{
     int    n=0;
     double k=0;
     MMFFDihedral()=default;
+    MMFFDihedral( int type_, Vec3i  bonds_, int n_, double k_ ):type(type_), bonds(bonds_), n(n_), k(k_){};
 
     void print()const{ printf( " Dihedral{t %i b(%i,%i,%i) n %i k %g}", type, bonds.a, bonds.b,bonds.c, n, k ); }
 };
@@ -282,7 +289,8 @@ class MMFFBuilder{  public:
                 atoms.push_back( (MMFFAtom){mol->atomType[i], -1, -1, p, REQi } );
             }
             for(int i=0; i<mol->nbonds; i++){
-                bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k } );
+                //bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k } );
+                bonds.push_back( MMFFBond(mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k ) );
             }
             for(int i=0; i<mol->nang; i++){
                 angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}), defaultAngle.a0, defaultAngle.k } );

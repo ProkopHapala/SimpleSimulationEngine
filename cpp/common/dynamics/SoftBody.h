@@ -19,7 +19,32 @@ class BondType{ public:
 	double linearDensity;
     double kPress,kTens;  // stiffness
 	double sPress,sTens;  // strength
+
+	//BondType()=default;
+	//BondType()
+
+	void fromThickness( double thick, double modul, double strength, double dens ){
+        double area   = thick*thick;
+        double k      = modul    * area;
+        double s      = strength * area;
+        linearDensity = dens     * area;
+        printf( "BondType area %g[m^2] stiffness %g[N/m] strength %g[N] dens %g[kg/m]\n", area, k, s, linearDensity );
+        kPress=k; kTens=k;
+        sPress=s; sTens=s;
+	}
+
+	static BondType stick(int id, double thick, double modul, double strength, double dens ){
+        BondType bt; bt.id=id; bt.fromThickness( thick, modul, strength, dens );
+        return bt;
+	}
+	static BondType rope(int id, double thick, double modul, double strength, double dens ){
+        BondType bt; bt.id=id; bt.fromThickness( thick, modul, strength, dens );
+        bt.kPress=0; bt.sPress=0;
+        return bt;
+	}
+
 };
+
 
 class Bond{ public:
 
@@ -30,11 +55,13 @@ class Bond{ public:
 	double  l0;           // relaxed length
 	BondType * type;
 
-    inline double getMass(){ return l0 * type->linearDensity; }
-    inline double getDrag(){ return l0 ; }  // this could be improved later
+    inline double getMass()const{ return l0 * type->linearDensity; }
+    inline double getDrag()const{ return l0 ; }  // this could be improved later
 
-	inline double evalFoce( double l ){
-        double dl = ( l - l0 ) / l;
+	inline double evalFoce( double l )const{
+        //double dl = ( l - l0 ) / l;
+        double dl = ( l - l0 ) / l0;
+        //double inv_l0 = 1./l0;
         double f;
         if( dl > 0 ){
             f = type->kTens *dl;
@@ -46,7 +73,8 @@ class Bond{ public:
 	}
 
     inline double evalFoceBreak( double l ){
-        double dl = ( l - l0 ) / l;
+        //double dl = ( l - l0 ) / l;
+        double dl = ( l - l0 ) / l0;
         double f;
         if( dl > 0 ){
             f = type->kTens*dl;
@@ -62,6 +90,15 @@ class Bond{ public:
             }
         }
         return f;
+	}
+
+    inline double enforce( double l, double fmax )const{
+        double dl     = ( l - l0 ) / l;
+        double f;
+        if( dl > 0 ){ f = type->kTens  * dl;   }
+        else        { f = type->kPress *-dl;  }
+        if( f>fmax){ return dl; }else{ return 0; };
+        return 0;
 	}
 
 };
@@ -149,10 +186,15 @@ class SoftBody{ public:
     double viscosity = -1.0;
 	// ==== function declarations
 
-	void evalForces     (  );
+	//void evalForces     (  );
+	void cleanForces    (  );
+	void evalBondForces (  );
+	void evalPointForces(  );
 	void applyConstrains(  );
 	void move_LeapFrog  (  );
+	void relaxStepGS( double fmax );
 	void step           (  );
+
 
 	// linearized Sticks
 	void evalForceLinearizedBonds( );
@@ -160,7 +202,7 @@ class SoftBody{ public:
 	void disp2pos( );
 
     void deallocateAll( );
-    void allocate( int npoints_, int nbonds_, int nfix_ );
+    void allocate( int npoints_, int nbonds_, int nfix_=0 );
     void setPoints( int npoints_,  Vec3d  * points_, double * mass_, double * drag_ );
     void setConstrains( int nfix_, int  * fix_  );
     void setBonds     ( int n, int * ips, int * its, BondType * bts );
@@ -216,7 +258,7 @@ class SoftBody{ public:
 
 
 	inline void evalPointForce( int i, const Vec3d& gravity, const Vec3d& airFlow ){
-		forces[i].set_mul( gravity, mass[i] ); // here we clear forces
+		forces[i].add_mul( gravity, mass[i] ); // here we clear forces
 		if( viscosity > 0.0 ){
             Vec3d vrel; vrel.set_sub( airFlow, velocities[i] );
             forces[i].add_mul( vrel, viscosity * drag[i] * vrel.norm() );

@@ -39,7 +39,7 @@ struct Tuple{
     constexpr static const int nDim = N;
     T items[N];
 
-    Tuple() = default;
+    //Tuple() = default;
 
     T operator[](size_t i){
         return items[i];

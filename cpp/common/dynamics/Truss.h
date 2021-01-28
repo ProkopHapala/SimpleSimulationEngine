@@ -36,8 +36,10 @@ class TrussEdge{ public:
 
 class Truss{ public:
     int    rendered_shape;
-    std::vector<Vec3d>        points;
-    std::vector<TrussEdge>     edges;
+    std::vector<Vec3d>        points;   // what about mass ?
+    std::vector<TrussEdge>    edges;
+    //std::vector<Vec3i>      faces;    // triangles between edges
+    //std::vector<Quat4i>     vols;     // volumes between faces
     std::vector<Vec2i>        blocks;
     std::vector<int>          removed_points;
     std::vector<int>          removed_edges;

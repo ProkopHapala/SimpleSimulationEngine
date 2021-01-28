@@ -525,9 +525,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     // ============ Build molecule
 
     MMFFAtom brushAtom{  6, -1,-1, Vec3dZero, MMFFAtom::defaultREQ };
-    MMFFBond brushBond{ -1, -1,-1, 1.5, 25.0 };
+    MMFFBond brushBond{ -1, {-1,-1}, 1.5, 25.0 };
 
-    builder.capBond = MMFFBond{ -1, -1,-1, 1.07, 15.0 };
+    builder.capBond = MMFFBond{ -1, {-1,-1}, 1.07, 15.0 };
     builder.capAtom = { 1, -1,-1, Vec3dZero, MMFFAtom::defaultREQ };
 
     printf( "----- Atoms \n" );

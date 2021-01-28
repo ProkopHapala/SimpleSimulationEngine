@@ -271,8 +271,8 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     */
 
 
-    MMFFAtom a{1.0,0.0,0.0};
-    printf( "print (%g,%g,%g)\n", a.pos.x, a.pos.y,a.pos.z );
+    //MMFFAtom a{1.0,0.0,0.0};
+    //printf( "print (%g,%g,%g)\n", a.pos.x, a.pos.y,a.pos.z );
 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
@@ -359,9 +359,9 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     // ============ Build molecule
 
     MMFFAtom brushAtom{ -1, -1,-1, Vec3dZero, MMFFAtom::defaultREQ };
-    MMFFBond brushBond{ -1, -1,-1, 1.5, 25.0 };
+    MMFFBond brushBond{ -1, {-1,-1}, 1.5, 25.0 };
 
-    builder.capBond = MMFFBond{ -1, -1,-1, 1.07, 15.0 };
+    builder.capBond = MMFFBond{ -1, {-1,-1}, 1.07, 15.0 };
 
     printf( "----- Atoms \n" );
     for(int i=0;i<natom;i++){
@@ -383,7 +383,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     builder.autoAngles( 2.5, 1.25 );
     printf( "----- toMMFF \n" );
 
-    MMFFDihedral brushDihedral{ -1,   -1,-1,-1,    3, 0.5 };
+    MMFFDihedral brushDihedral{ -1,   {-1,-1,-1},    3, 0.5 };
     println(brushDihedral);
     //exit(0);
 
