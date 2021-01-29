@@ -22,6 +22,14 @@ void SoftBody::evalBondForces( ){
 	for( int i=0; i<nbonds;  i++ ){	addBondForce( bonds[i] ); }
 }
 
+void SoftBody::evalKinkForces( ){
+    if(kinks){
+        for( int i=0; i<npoints; i++ ){
+            addKinkForce( kinks[i] );
+        }
+	}
+}
+
 /*
 void SoftBody::evalForces( ){
 	//printf( "==============\n" );
@@ -206,8 +214,51 @@ int SoftBody::findBonds( double lmax, BondType * bt ){
         bonds[i].type   = bt;
         bonds[i].broken = false;
     }
+    delete [] bs;
     return nbonds;
 }
+
+#include "testUtils.h"
+int SoftBody::findKinks( double damp, double kstiff ){
+    int*   npls = new int  [npoints];
+    Vec2i* ijs  = new Vec2i[npoints];
+    DEBUG
+    for(int i=0; i<npoints; i++){ npls[i]=0; }
+    auto func = [&](int ip, int ib){ int ni=npls[ip]; if(ni<2){ ijs[ip].array[ni]=ib; }; npls[ip]=ni+1; };
+    for(int i=0; i<nbonds; i++){
+        const Bond& b = bonds[i];
+        //ni=npls[b.i];
+        //npls[b.i]++;
+        //npls[b.j]++;
+        func(b.i,i);
+        func(b.j,i);
+    }
+    DEBUG
+    nkink=0;
+    for(int i=0; i<npoints; i++){ if(npls[i]==2) nkink++; }
+    //kinks = new Kink[nkink];
+    //printf( "nkink %i \n", nkink );
+    DEBUG
+    _realloc( kinks, nkink );
+    DEBUG
+    int ik=0;
+    for(int i=0; i<npoints; i++){
+        if(npls[i]==2){
+            int a,b,ib;
+            ib=ijs[i].a; if(bonds[ib].i==i){a=bonds[ib].j;}else{a=bonds[ib].i;}
+            ib=ijs[i].b; if(bonds[ib].i==i){b=bonds[ib].j;}else{b=bonds[ib].i;}
+            //printf( "kink[%i] (%i,%i, %i) \n", ik, a,b, i );
+            kinks[ik]=(Kink){ a,b,i,  damp, kstiff  };
+            ik++;
+        }
+    }
+    DEBUG
+    delete [] ijs;
+    delete [] npls;
+    //exit(0);
+    return nkink;
+};
+
 
 void SoftBody::prepareBonds( bool l0_fromPos ){
     for( int i=0; i<nbonds; i++ ){

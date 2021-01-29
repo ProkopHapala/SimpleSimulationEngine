@@ -331,7 +331,7 @@ int Truss::addRope( int ip1, int ip2, int type, int nsub ){
     int np=0;
     for(int k=0; k<nsub; k++){
         if(k<(nsub-1)){
-            points.push_back( p1+d*(k+1) + (Vec3d){0,0,randf(-5.,5.)} ); np++;
+            points.push_back( p1+d*(k+1) ); np++;
             jp=points.size()-1;
         }else{
             jp=ip2;

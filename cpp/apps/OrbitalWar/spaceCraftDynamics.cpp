@@ -54,31 +54,6 @@ int glo_truss=0;
 //char str[8096];
 double elementSize  = 5.;
 
-
-void makeShipTruss1_simple( Truss& truss, int n, int m, double L ){
-    // central spine
-    for(int i=0; i<(n+1); i++){
-        truss.points.push_back( (Vec3d){0.,0.,i*L} ); // 1
-        if(i>0) truss.edges.push_back( (TrussEdge){ i-1,i,   0 }   );
-    }
-    // peripheral maneuvering pendulums
-    for(int i=0; i<n; i++){
-        for(int j=0; j<m; j++){
-            Vec2d rot; rot.fromAngle( (j  + 0.5*i )*2*M_PI/m );
-            truss.points.push_back( (Vec3d){rot.x*L,rot.y*L,L*(i+.5)} );
-            int ie = truss.points.size()-1;
-            // conection legs to spine
-                     truss.edges.push_back( (TrussEdge){ i  ,ie, 1 }   );
-            if(i<n){ truss.edges.push_back( (TrussEdge){ i+1,ie, 1 }   ); }
-            // connection between legs
-            int ie2;
-            if(j==0){ ie2=ie+m-1; }else{ ie2=ie-1; }
-            truss.edges.push_back( (TrussEdge){ ie2, ie, 2 }   );
-        }
-    }
-    // ToDo : radiators between lengs ?
-}
-
 void makeShipTruss1( Truss& truss, int n, int m, double L, int perRope ){
     // central spine
     for(int i=0; i<(n+1); i++){
@@ -110,7 +85,7 @@ void makeShipTruss1( Truss& truss, int n, int m, double L, int perRope ){
 }
 
 void truss2SoftBody( const Truss& truss, BondType* bondTypes, SoftBody& body ){
-    printf( "npoints %i nedge %i \n", truss.points.size(), truss.edges.size() );
+    //printf( "npoints %i nedge %i \n", truss.points.size(), truss.edges.size() );
     body.allocate( truss.points.size(), truss.edges.size() );
     delete [] body.points;
     body.points = (Vec3d*)&(truss.points[0]);      // this will help to visualizatio
@@ -151,9 +126,20 @@ void drawSoftBody( SoftBody& body, float vsc, float fsc ){
         Draw3D::vertex( body.points[b.i] );
         Draw3D::vertex( body.points[b.j] );
     }
+    /*
     for(int i=0; i<body.npoints; i++){
         if(fsc>0){ glColor3f(.0,.0,.9); Draw3D::vertex( body.points[i] ); Draw3D::vertex( body.points[i]+body.forces[i]    *fsc ); }
         if(vsc>0){ glColor3f(.9,.0,.0); Draw3D::vertex( body.points[i] ); Draw3D::vertex( body.points[i]+body.velocities[i]*vsc );}
+    }
+    */
+    if(body.kinks){
+        glColor3f(1.0,.0,1.0);
+        float f=0.1;
+        for(int i=0; i<body.nkink; i++){
+            const Kink& k=body.kinks[i];
+            Draw3D::vertex( body.points[k.c]*(1-f) + body.points[k.a]*f );
+            Draw3D::vertex( body.points[k.c]*(1-f) + body.points[k.b]*f );
+        }
     }
     glEnd();
 }
@@ -194,11 +180,12 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
 
     //makeShipTruss1( truss, 3, 3, 100.0 );
 
-    int n=2;
+    int n=1;
     int m=3;
     //makeShipTruss1( truss, n, m, 100.0, 1 );
     makeShipTruss1( truss, n, m, 100.0, 2 ); // multiple segments per rope - seems unstable
     truss2SoftBody( truss, &bondTypes[0], body );
+    body.findKinks( 0.1, 1.0 );
 
     /*
     for(int i=0; i<truss.edges.size(); i++){
@@ -217,9 +204,9 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
         //Vec3d& p = body.points[i];
         //double r2 = sq(p.x) + sq(p.y);
         //body.velocities[i].set_cross( p, Vec3dZ*speed );
-        //body.mass[i] += pendulumWeight;
+        body.mass[i] += pendulumWeight;
     }
-    body.preparePoints( true, 1.0, 1.0 );
+    body.preparePoints( true, -1.0, -1.0 );
     for(int i=0; i<body.npoints; i++){
         //printf( "body.npoints[%i]  \n" , i );
         Vec3d& p  = body.points[i];
@@ -256,7 +243,8 @@ void SpaceCraftDynamicsApp::draw(){
 	//glEnable(GL_DEPTH_TEST);
 
 	//int npull = 2; int ipulls[]{2,3};
-	int npull = 4; int ipulls[]{2,3,4,5};
+	//int npull = 4; int ipulls[]{2,3,4,5};
+	int npull = 4; int ipulls[]{1,2,3,4};
 	int iref  = 4;
 
 	double ang0 = atan2(body.points[iref].x,body.points[iref].y);
@@ -264,16 +252,17 @@ void SpaceCraftDynamicsApp::draw(){
 
         time+=body.dt;
 
-        /*
+
         int pullDir = (((int)(time))%2)*2-1;
         for(int i=0; i<npull; i++){
-            body.bonds[ipulls[i]].l0*=(1 + 0.2*body.dt*pullDir );
+            body.bonds[ipulls[i]].l0*=(1 + 0.8*body.dt*pullDir );
         }
-        */
+
         //body.step( );
         body.cleanForces();
         body.evalBondForces();
-        //body.move_LeapFrog();
+        //body.evalKinkForces( );   // currently crashes
+        body.move_LeapFrog();
     }
     double ang1  = atan2(body.points[iref].x,body.points[iref].y);
     if(ang1<ang0)ang1+=M_PI*2;
@@ -284,16 +273,19 @@ void SpaceCraftDynamicsApp::draw(){
     // ERROR: there is some minor assymetry in construction of the spaceCraft
     //        some is in mass distribution, but even for constant mass distribution angular momentum is not completely along Z-axis
 
-    Vec3d cog  = body.evalCOG();
-    Vec3d vcog = body.evalCOGspeed();
-    Vec3d L    = body.evalAngularMomentum();
+    Vec3d cog   = body.evalCOG();
+    Vec3d vcog  = body.evalCOGspeed();
+    Vec3d L     = body.evalAngularMomentum();
+    double Ekin = body.evalEkin();
+
     //printf( "cog (%g,%g,%g) \n", cog.x,cog.y,cog.z );
     //printf( "p   (%g,%g,%g) \n", ptot.x,ptot.y,ptot.z );
     //printf( "L   (%g,%g,%g) \n", L.x,L.y,L.z );
-    if(frameCount<10)printf( "cog (%g,%g,%g) p (%g,%g,%g) L (%g,%g,%g) \n", cog.x,cog.y,cog.z, vcog.x,vcog.y,vcog.z, L.x,L.y,L.z );
+    //if(frameCount<10)
+    //printf( "E %g cog (%g,%g,%g) p (%g,%g,%g) L (%g,%g,%g) \n", Ekin, cog.x,cog.y,cog.z, vcog.x,vcog.y,vcog.z, L.x,L.y,L.z );
 
     double junk;
-    //glRotatef( modf(time*1.5,&junk)*360.0,  0.,0.,1.0 );
+    glRotatef( modf(time*1.5,&junk)*360.0,  0.,0.,1.0 );
 
 	//drawTrussDirect( truss );
 	drawSoftBody( body, 0.02, 0.00001  );

@@ -26,6 +26,11 @@ inline Vec3d sumAngularMomentum(int n, const Vec3d* pos, const Vec3d* vel, const
     return L;
 }
 
+inline double sumKineticEnergy(int n, const Vec3d* vel, const double* mass ){
+    double E=0;
+    for(int i=0; i<n; i++){ E+=mass[i]*vel[i].norm2(); };
+    return E*0.5;
+}
 
 // ==================
 //    BondTypes
@@ -61,7 +66,6 @@ class BondType{ public:
 	}
 
 };
-
 
 class Bond{ public:
 
@@ -118,6 +122,13 @@ class Bond{ public:
         return 0;
 	}
 
+};
+
+struct Kink{  // point with only two attacked bonds
+    int a,b,c;
+    //Vec3d *a,*b,*c;
+    double damp;     // speed damping
+    double kstiff;   // linearizing force
 };
 
 
@@ -188,10 +199,15 @@ class SoftBody{ public:
     Vec3d cog;
     Vec3d vcog;
     Vec3d angularMomentum;
+    double Ekin;
 
 	// bonds
 	int nbonds;
     Bond * bonds        = NULL;
+
+    // kinks
+    int nkink=0;
+    Kink * kinks        = NULL;
 
 	// constrains
 	int   nfix=0;
@@ -209,6 +225,7 @@ class SoftBody{ public:
 
 	//void evalForces     (  );
 	void cleanForces    (  );
+	void evalKinkForces (  );
 	void evalBondForces (  );
 	void evalPointForces(  );
 	void applyConstrains(  );
@@ -228,6 +245,7 @@ class SoftBody{ public:
     void setConstrains( int nfix_, int  * fix_  );
     void setBonds     ( int n, int * ips, int * its, BondType * bts );
     int  findBonds( double lmax, BondType * bt );
+    int  findKinks( double damp, double stiff);
     void prepareBonds ( bool l0_fromPos );
     void preparePoints( bool clearVelocity, double constDrag, double constMass );
 
@@ -236,6 +254,17 @@ class SoftBody{ public:
 	inline double getBondLength( uint16_t i, uint16_t j )const{
 		Vec3d d; d.set_sub( points[i], points[j] );
 		return d.norm();
+	}
+
+    inline void addKinkForce( Kink& kink ){
+        // this should be optimized - we already have computed bond-lenghts
+        Vec3d ac; ac.set_sub( points[kink.a], points[kink.c] ); double  ila = 1/ac.norm();
+        Vec3d bc; bc.set_sub( points[kink.b], points[kink.c] ); double  ilb = 1/bc.norm();
+        Vec3d d;  d.set_lincomb(ila,ac,ilb,bc);
+        double k = kink.kstiff;
+        forces[kink.a].add_mul( d, ila*-k        );
+        forces[kink.b].add_mul( d, (ila + ilb)*k );
+        forces[kink.b].add_mul( d, ilb*-k        );
 	}
 
 	inline void addBondForce( Bond& bond ){
@@ -285,10 +314,12 @@ class SoftBody{ public:
 	inline Vec3d evalCOG            (){ return sumMassPoints(npoints,points    ,mass,true); }
 	inline Vec3d evalCOGspeed       (){ return sumMassPoints(npoints,velocities,mass,true); }
 	inline Vec3d evalAngularMomentum(){ return sumAngularMomentum(npoints,points,velocities,mass,cog); }
+	inline double evalEkin          (){ return sumKineticEnergy(npoints, velocities, mass ); }
 	inline void  updateInvariants(){
         cog        =evalCOG();
         vcog       =evalCOGspeed();
         angularMomentum=evalAngularMomentum();
+        Ekin       =evalEkin();
 	}
 
 
