@@ -253,6 +253,22 @@ class SoftBody{ public:
 		return d.norm();
 	}
 
+    inline void dampKink( Kink& kink ){
+        // this should be optimized - we already have computed bond-lenghts
+        Vec3d ac; ac.set_sub( points[kink.a], points[kink.c] ); double  ila = 1/ac.norm();
+        Vec3d bc; bc.set_sub( points[kink.b], points[kink.c] ); double  ilb = 1/bc.norm();
+        //double lab = 1/(ila+ilb);
+        //Vec3d v = velocities[kink.a]*(ila*lab) + velocities[kink.b]*(ilb*lab);  // expected velocity by interpolation between end points
+        Vec3d v = (velocities[kink.a] + velocities[kink.b])*0.5;
+        v.sub(velocities[kink.c]);
+        //double k = kink.damp*kink.kstiff;
+        double k = kink.damp;
+        //printf( "kink[%i|%i,%i] k %g d(%g,%g,%g) il(%g,%g) \n", kink.c, kink.a, kink.b, k, d.x,d.y,d.z, ila, ilb );
+        forces[kink.a].add_mul( v, ila*-k        );
+        forces[kink.c].add_mul( v, (ila + ilb)*k );
+        forces[kink.b].add_mul( v, ilb*-k        );
+	}
+
     inline void addKinkForce( Kink& kink ){
         // this should be optimized - we already have computed bond-lenghts
         Vec3d ac; ac.set_sub( points[kink.a], points[kink.c] ); double  ila = 1/ac.norm();
@@ -261,7 +277,7 @@ class SoftBody{ public:
 
         double k = kink.kstiff;
         if(kink.damp>1e-100){
-            double v = -( d.dot(velocities[kink.a])*ila + d.dot(velocities[kink.b])*ilb )*(ila+ilb) + d.dot(velocities[kink.c]);
+            double v = -( d.dot(velocities[kink.a])*ila + d.dot(velocities[kink.b])*ilb )/(ila+ilb) + d.dot(velocities[kink.c]);
             if(v>0){
                 glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( d*10.0, points[kink.c] );
                 //glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( v      , points[kink.c] );

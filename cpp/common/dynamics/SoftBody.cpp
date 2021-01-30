@@ -26,7 +26,8 @@ void SoftBody::evalBondForces( ){
 void SoftBody::evalKinkForces( ){
     if(kinks){
         for( int i=0; i<nkink; i++ ){
-            addKinkForce( kinks[i] );
+            //addKinkForce( kinks[i] );
+            dampKink( kinks[i] );
         }
 	}
 }

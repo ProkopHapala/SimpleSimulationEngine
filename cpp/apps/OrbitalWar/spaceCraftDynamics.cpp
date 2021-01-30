@@ -183,7 +183,8 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
     //makeShipTruss1( truss, n, m, 100.0, 1 );
     makeShipTruss1( truss, n, m, 100.0, 2 ); // multiple segments per rope - seems unstable
     truss2SoftBody( truss, &bondTypes[0], body );
-    body.findKinks( 0.5, 100000000.0 );
+    //body.findKinks( 0.5, 100000000.0 );
+    body.findKinks( 100000.0, 100000000.0 );
 
     /*
     for(int i=0; i<truss.edges.size(); i++){
@@ -209,19 +210,14 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
         //printf( "body.npoints[%i]  \n" , i );
         Vec3d& p  = body.points[i];
         double r2 = sq(p.x) + sq(p.y);
-        //if( r2>1.0 ){
 
-        // DEBUG RANDOMNESS
-        //body.points[i].addRandomCube( 20.0 );
-        body.points[i].addRandomCube( 5.0 );
+        //body.points[i].addRandomCube( 5.0 ); // DEBUG RANDOMNESS
 
-        //body.velocities[i].set_cross( p, Vec3dZ*speed );
-            //body.mass[i] += pendulumWeight;
-        //}
+        body.velocities[i].set_cross( p, Vec3dZ*speed );
         printf( "point[%i] mass %g[kg] \n" , i, body.mass[i] );
     }
-    body.prepareBonds ( true );
-    body.preparePoints( true, -1, -1 );
+    //body.prepareBonds ( true );
+    //body.preparePoints( true, -1, -1 );
     body.updateInvariants();
 
     perFrame = 100;
@@ -259,12 +255,13 @@ void SpaceCraftDynamicsApp::draw(){
     for(int itr=0; itr<perFrame; itr++){
 
         time+=body.dt;
-        /*
+
+
         int pullDir = (((int)(time))%2)*2-1;
         for(int i=0; i<npull; i++){
-            body.bonds[ipulls[i]].l0*=(1 + 0.8*body.dt*pullDir );
+            body.bonds[ipulls[i]].l0*=(1 + 0.4*body.dt*pullDir );
         }
-        */
+
 
         //body.step( );
         body.cleanForces();
