@@ -144,6 +144,7 @@ void drawSoftBody( SoftBody& body, float vsc, float fsc ){
 
 class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
+    bool bDrawTrj=false;
     double time=0;
     int perFrame = 10;
     // https://stackoverflow.com/questions/29145476/requiring-virtual-function-overrides-to-use-override-keyword
@@ -240,7 +241,8 @@ void SpaceCraftDynamicsApp::draw(){
     //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
     glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
 
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+	if(!bDrawTrj)glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable(GL_DEPTH_TEST);
 	//glEnable(GL_DEPTH_TEST);
 
@@ -256,12 +258,10 @@ void SpaceCraftDynamicsApp::draw(){
 
         time+=body.dt;
 
-
         int pullDir = (((int)(time))%2)*2-1;
         for(int i=0; i<npull; i++){
             body.bonds[ipulls[i]].l0*=(1 + 0.4*body.dt*pullDir );
         }
-
 
         //body.step( );
         body.cleanForces();
@@ -272,7 +272,6 @@ void SpaceCraftDynamicsApp::draw(){
     double ang1  = atan2(body.points[iref].x,body.points[iref].y);
     if(ang1<ang0)ang1+=M_PI*2;
     double omega = (ang1-ang0)/(body.dt*perFrame);
-
 
     // TODO:
     // ERROR: there is some minor assymetry in construction of the spaceCraft
@@ -294,21 +293,26 @@ void SpaceCraftDynamicsApp::draw(){
 
     //for(int i=0; i<body.npoints; i++){ Vec3d f = body.forces[i]; printf("force[i] (%g,%g,%g) \n", i, f.x,f.y,f.z ); };
 	//drawTrussDirect( truss );
-	drawSoftBody( body, 0.02, 0.00001  );
-	//drawSoftBody( body, 0.02, 1.0  );
-
-	glLineWidth(2);
-	for(int i=0; i<npull; i++){
-        Bond& b = body.bonds[ipulls[i]];
-        glColor3f(0.,1.,0.); Draw3D::drawLine( body.points[b.i], body.points[b.j] );
+	if(frameCount%200==0)bDrawTrj=!bDrawTrj;
+	if(bDrawTrj){
+        //glClearColor( 0.8f, 0.8f, 0.8f, 0.1f );
+        //glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        glBegin(GL_POINTS);
+        glColor3f(0,0,0);
+        for(int i=0; i<body.npoints; i++){ Draw3D::vertex(body.points[i]);  };
+        glEnd();
+        Draw3D::drawPointCross( body.points[0], 3.0 );
+	}else{
+        drawSoftBody( body, 0.02, 0.00001  );
+        //drawSoftBody( body, 0.02, 1.0  );
+        glLineWidth(2);
+        for(int i=0; i<npull; i++){
+            Bond& b = body.bonds[ipulls[i]];
+            glColor3f(0.,1.,0.); Draw3D::drawLine( body.points[b.i], body.points[b.j] );
+        }
+        glLineWidth(1);
+        Draw3D::drawAxis(10.0);
     }
-    glLineWidth(1);
-
-    Draw3D::drawAxis(10.0);
-
-	glDisable(GL_LIGHTING);
-	//glEnable(GL_LIGHTING);
-
 
 };
 
@@ -360,6 +364,7 @@ void SpaceCraftDynamicsApp::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
+                case SDLK_t: bDrawTrj=!bDrawTrj; glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); break;
                 case SDLK_m:  break;
                 //case SDLK_h:  warrior1->tryJump(); break;
                 case SDLK_l:break;
