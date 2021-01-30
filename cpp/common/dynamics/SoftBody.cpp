@@ -19,12 +19,13 @@ void SoftBody::evalPointForces( ){
 }
 
 void SoftBody::evalBondForces( ){
-	for( int i=0; i<nbonds;  i++ ){	addBondForce( bonds[i] ); }
+	if(fmax>1e+12){ for( int i=0; i<nbonds; i++ ){	addBondForce  ( bonds[i]       ); } }
+	else          { for( int i=0; i<nbonds; i++ ){	addBondForceGS( bonds[i], fmax ); } }
 }
 
 void SoftBody::evalKinkForces( ){
     if(kinks){
-        for( int i=0; i<npoints; i++ ){
+        for( int i=0; i<nkink; i++ ){
             addKinkForce( kinks[i] );
         }
 	}
@@ -86,9 +87,15 @@ void SoftBody::applyConstrains(){
 
 void SoftBody::move_LeapFrog( ){
 	for (int i=0; i<npoints; i++){
-		velocities[i].mul( 1-damp*dt );
-		velocities[i].add_mul( forces[i], invMass[i] * dt );
-		points[i].    add_mul( velocities[i], dt );
+        Vec3d f=forces[i];
+        Vec3d v=velocities[i];
+        // damping
+		v.mul( 1-damp*dt );
+		//double cfv = f.dot(v);
+		//if(cfv<0){ f.mul( 1-damp_fvdot*cfv ); } // this would break action-reaction law
+		v        .add_mul( f, invMass[i] * dt );
+		points[i].add_mul( v, dt );
+		velocities[i] = v;
 /*
 		printf( " (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) %3.3f %3.3f %3.3f \n",
             points[i].x, points[i].y, points[i].z,
@@ -100,23 +107,23 @@ void SoftBody::move_LeapFrog( ){
 	}
 }
 
-
-void SoftBody::relaxStepGS( double fmax ){
+int SoftBody::relaxStepGS( double errMax ){
     // Gauss-Seidel relaxation step
+	int ndone=0;
 	for( int i=0; i<nbonds; i++ ){
         const Bond& bond = bonds[i];
         Vec3d d; d.set_sub( points[bond.i], points[bond.j] );
         double l  = d.norm();
-        double dl = bond.enforce( l, fmax );
-        if(dl>1e-15){
-            d.mul(dl);
+        double dl = l - bond.l0; // todo - we shoud ignore ropes in pressure
+        if(dl>errMax){
+            double f  = bond.getForce( dl );
+            d.mul(dl/l);
             points[bond.j].add( d );
             points[bond.i].sub( d );
         }
     }
+    return ndone;
 }
-
-
 
 void SoftBody::step( ){
     //for (int i=0; i<npoints; i++){ forces[i].set(0.0); }
@@ -233,14 +240,11 @@ int SoftBody::findKinks( double damp, double kstiff ){
         func(b.i,i);
         func(b.j,i);
     }
-    DEBUG
     nkink=0;
     for(int i=0; i<npoints; i++){ if(npls[i]==2) nkink++; }
     //kinks = new Kink[nkink];
     //printf( "nkink %i \n", nkink );
-    DEBUG
     _realloc( kinks, nkink );
-    DEBUG
     int ik=0;
     for(int i=0; i<npoints; i++){
         if(npls[i]==2){
@@ -252,7 +256,6 @@ int SoftBody::findKinks( double damp, double kstiff ){
             ik++;
         }
     }
-    DEBUG
     delete [] ijs;
     delete [] npls;
     //exit(0);

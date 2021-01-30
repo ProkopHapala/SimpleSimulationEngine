@@ -9,6 +9,7 @@
 //#include "LinearElasticity.h"
 
 //#include "DynamicOpt.h"
+#include "Draw3D.h"
 
 
 inline Vec3d sumMassPoints(int n, const Vec3d* pos, const double* mass, bool bBormalize=true ){
@@ -39,8 +40,8 @@ inline double sumKineticEnergy(int n, const Vec3d* vel, const double* mass ){
 class BondType{ public:
 	int id;
 	double linearDensity;
-    double kPress,kTens;  // stiffness
-	double sPress,sTens;  // strength
+    double kPress,kTens;  // stiffness   [ (N/m)/m  ] ... it is per unit length
+	double sPress,sTens;  // strength    [ N        ]
 
 	//BondType()=default;
 	//BondType()
@@ -79,20 +80,20 @@ class Bond{ public:
     inline double getMass()const{ return l0 * type->linearDensity; }
     inline double getDrag()const{ return l0 ; }  // this could be improved later
 
-	inline double evalFoce( double l )const{
-        //double dl = ( l - l0 ) / l;
-        double dl = ( l - l0 ) / l0;
-        //double inv_l0 = 1./l0;
-        double f;
-        if( dl > 0 ){
-            f = type->kTens *dl;
-        }else{
-            f = type->kPress*dl;
-        }
-        //printf( "%f %f %f %f  k %f %f \n",    l, l0, dl, f,  type->kTens, type->kPress );
-        return f;
+    inline double getForce( double dl )const{
+        double strain = dl/l0;
+        if( dl > 0 ){ return type->kTens *strain; }
+        else        { return type->kPress*strain; }
 	}
 
+	inline double evalFoce( double l )const{
+        //double strain = ( l - l0 ) / l;
+        double strain = ( l - l0 ) / l0;
+        if( strain > 0 ){ return type->kTens *strain; }
+        else            { return type->kPress*strain; }
+	}
+
+	/*
     inline double evalFoceBreak( double l ){
         //double dl = ( l - l0 ) / l;
         double dl = ( l - l0 ) / l0;
@@ -112,15 +113,7 @@ class Bond{ public:
         }
         return f;
 	}
-
-    inline double enforce( double l, double fmax )const{
-        double dl     = ( l - l0 ) / l;
-        double f;
-        if( dl > 0 ){ f = type->kTens  * dl;   }
-        else        { f = type->kPress *-dl;  }
-        if( f>fmax){ return dl; }else{ return 0; };
-        return 0;
-	}
+	*/
 
 };
 
@@ -215,12 +208,16 @@ class SoftBody{ public:
 
 	bool own_points, own_mass, own_fix;
 
-	//Vec3d gravity = {0.0,-9.81,0.0}, airFlow={0.0,0.0,0.0};
-	Vec3d gravity, airFlow;
+	Vec3d gravity = (Vec3d){0.0,-9.81,0.0};
+	Vec3d airFlow = (Vec3d){0.0,0.0,0.0};
+	//Vec3d gravity, airFlow;
     double dt   = 0.01d;
-    double damp = 0.5d;
-    double damp_stick = 0.5d;
-    double viscosity = -1.0;
+    double damp = 0.0d;
+    double damp_stick = 0.0d;
+    double damp_fvdot = 0.0;
+    double viscosity  = -0.0;
+    double fmax       = 1e+300;
+    double vdamp      = 1.0;  // [m/s]  maximum speed for velocity based damping
 	// ==== function declarations
 
 	//void evalForces     (  );
@@ -230,7 +227,7 @@ class SoftBody{ public:
 	void evalPointForces(  );
 	void applyConstrains(  );
 	void move_LeapFrog  (  );
-	void relaxStepGS( double fmax );
+	int  relaxStepGS( double errMax );
 	void step           (  );
 
 
@@ -261,9 +258,22 @@ class SoftBody{ public:
         Vec3d ac; ac.set_sub( points[kink.a], points[kink.c] ); double  ila = 1/ac.norm();
         Vec3d bc; bc.set_sub( points[kink.b], points[kink.c] ); double  ilb = 1/bc.norm();
         Vec3d d;  d.set_lincomb(ila,ac,ilb,bc);
+
         double k = kink.kstiff;
+        if(kink.damp>1e-100){
+            double v = -( d.dot(velocities[kink.a])*ila + d.dot(velocities[kink.b])*ilb )*(ila+ilb) + d.dot(velocities[kink.c]);
+            if(v>0){
+                glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( d*10.0, points[kink.c] );
+                //glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( v      , points[kink.c] );
+                //printf( "kink[%i|%i,%i] v %g dampEff %g \n", kink.c, kink.a, kink.b, v, v/vdamp );
+                v/=vdamp; if(v>1)v=1;
+                k*=1-v*kink.damp;
+            }
+        }
+
+        //printf( "kink[%i|%i,%i] k %g d(%g,%g,%g) il(%g,%g) \n", kink.c, kink.a, kink.b, k, d.x,d.y,d.z, ila, ilb );
         forces[kink.a].add_mul( d, ila*-k        );
-        forces[kink.b].add_mul( d, (ila + ilb)*k );
+        forces[kink.c].add_mul( d, (ila + ilb)*k );
         forces[kink.b].add_mul( d, ilb*-k        );
 	}
 
@@ -272,7 +282,7 @@ class SoftBody{ public:
         double  l = d.norm();      // this should be optimized
         double  f = bond.evalFoce( l );
         //double  f = evalFoceBreak( l );
-        d.mul( f );
+        d.mul( f/l ); // ToDo: this (1/l) can go inside evalFoce(l) to save one division, but for didactic reason I keep it here
         /*
         if( damp_stick > 0 ){
             Vec3d dv; dv.set_sub( velocities[bond.i], velocities[bond.j] );
@@ -285,22 +295,25 @@ class SoftBody{ public:
         forces[bond.i].sub( d );
 	}
 
-    inline void addBondForceLinear( Bond& bond ){
+    inline void addBondForceGS( Bond& bond, double fmax ){
         Vec3d d; d.set_sub( points[bond.i], points[bond.j] );
-        double  l = d.norm();      // this should be optimized
-        double  f = bond.evalFoce( l );
-        //double  f = evalFoceBreak( l );
-        d.mul( f );
-        /*
-        if( damp_stick > 0 ){
-            Vec3d dv; dv.set_sub( velocities[bond.i], velocities[bond.j] );
-            double vf = dv.dot(d);
-            if(vf<0) d.mul( damp_stick );
-        };
-        */
-        //printf( " bond force %i %i %f %f (%3.3f,%3.3f,%3.3f)\n", bond.i, bond.j, l, f, d.x, d.y, d.z );
-        forces[bond.j].add( d );
-        forces[bond.i].sub( d );
+        double  l  = d.norm();      // this should be optimized
+        double dl  = l - bond.l0;
+        double  f  = bond.getForce( dl );
+        double  f_ = fabs(f);
+        if( f_>fmax ){ // GS-step move points to fullfill constrain of |fmax|
+            //dl*=(f_-fmax)/(f_*l);    // Not quite necessary
+            d.mul( 0.5*dl/l );
+            //printf( "bond[%i,%i] dl %g\n", bond.i,bond.j, dl );
+            points[bond.j].add( d );
+            points[bond.i].sub( d );
+            //forces[bond.j].add( d );
+            //forces[bond.i].sub( d );
+        }else{         // MD step for fine relaxation
+            d.mul( f/l );
+            forces[bond.j].add( d );
+            forces[bond.i].sub( d );
+        }
 	}
 
 	inline void evalPointForce( int i, const Vec3d& gravity, const Vec3d& airFlow ){

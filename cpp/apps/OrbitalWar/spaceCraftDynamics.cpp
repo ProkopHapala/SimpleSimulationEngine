@@ -126,12 +126,10 @@ void drawSoftBody( SoftBody& body, float vsc, float fsc ){
         Draw3D::vertex( body.points[b.i] );
         Draw3D::vertex( body.points[b.j] );
     }
-    /*
     for(int i=0; i<body.npoints; i++){
-        if(fsc>0){ glColor3f(.0,.0,.9); Draw3D::vertex( body.points[i] ); Draw3D::vertex( body.points[i]+body.forces[i]    *fsc ); }
-        if(vsc>0){ glColor3f(.9,.0,.0); Draw3D::vertex( body.points[i] ); Draw3D::vertex( body.points[i]+body.velocities[i]*vsc );}
+        if(fsc>0){ glColor3f(.9,.0,.0); Draw3D::vertex( body.points[i] ); Draw3D::vertex( body.points[i]+body.forces[i]    *fsc ); }
+        if(vsc>0){ glColor3f(.0,.0,.9); Draw3D::vertex( body.points[i] ); Draw3D::vertex( body.points[i]+body.velocities[i]*vsc );}
     }
-    */
     if(body.kinks){
         glColor3f(1.0,.0,1.0);
         float f=0.1;
@@ -185,7 +183,7 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
     //makeShipTruss1( truss, n, m, 100.0, 1 );
     makeShipTruss1( truss, n, m, 100.0, 2 ); // multiple segments per rope - seems unstable
     truss2SoftBody( truss, &bondTypes[0], body );
-    body.findKinks( 0.1, 1.0 );
+    body.findKinks( 0.5, 100000000.0 );
 
     /*
     for(int i=0; i<truss.edges.size(); i++){
@@ -212,16 +210,24 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
         Vec3d& p  = body.points[i];
         double r2 = sq(p.x) + sq(p.y);
         //if( r2>1.0 ){
-        body.velocities[i].set_cross( p, Vec3dZ*speed );
+
+        // DEBUG RANDOMNESS
+        //body.points[i].addRandomCube( 20.0 );
+        body.points[i].addRandomCube( 5.0 );
+
+        //body.velocities[i].set_cross( p, Vec3dZ*speed );
             //body.mass[i] += pendulumWeight;
         //}
         printf( "point[%i] mass %g[kg] \n" , i, body.mass[i] );
     }
+    body.prepareBonds ( true );
+    body.preparePoints( true, -1, -1 );
     body.updateInvariants();
 
     perFrame = 100;
     body.dt        = 0.00001;
-    body.damp      = 0.0;
+    body.damp        = 0.0;
+    // body.damp_stick  = 0.5;
     body.viscosity = 0.0;
 
 
@@ -247,21 +253,23 @@ void SpaceCraftDynamicsApp::draw(){
 	int npull = 4; int ipulls[]{1,2,3,4};
 	int iref  = 4;
 
+	//body.fmax = 100000.0;
+
 	double ang0 = atan2(body.points[iref].x,body.points[iref].y);
     for(int itr=0; itr<perFrame; itr++){
 
         time+=body.dt;
-
-
+        /*
         int pullDir = (((int)(time))%2)*2-1;
         for(int i=0; i<npull; i++){
             body.bonds[ipulls[i]].l0*=(1 + 0.8*body.dt*pullDir );
         }
+        */
 
         //body.step( );
         body.cleanForces();
         body.evalBondForces();
-        //body.evalKinkForces( );   // currently crashes
+        body.evalKinkForces();   // currently crashes
         body.move_LeapFrog();
     }
     double ang1  = atan2(body.points[iref].x,body.points[iref].y);
@@ -282,13 +290,15 @@ void SpaceCraftDynamicsApp::draw(){
     //printf( "p   (%g,%g,%g) \n", ptot.x,ptot.y,ptot.z );
     //printf( "L   (%g,%g,%g) \n", L.x,L.y,L.z );
     //if(frameCount<10)
-    //printf( "E %g cog (%g,%g,%g) p (%g,%g,%g) L (%g,%g,%g) \n", Ekin, cog.x,cog.y,cog.z, vcog.x,vcog.y,vcog.z, L.x,L.y,L.z );
+    if(frameCount%100==0)printf( "E %g cog (%g,%g,%g) p (%g,%g,%g) L (%g,%g,%g) \n", Ekin, cog.x,cog.y,cog.z, vcog.x,vcog.y,vcog.z, L.x,L.y,L.z );
 
     double junk;
-    glRotatef( modf(time*1.5,&junk)*360.0,  0.,0.,1.0 );
+    //glRotatef( modf(time*1.5,&junk)*360.0,  0.,0.,1.0 );
 
+    //for(int i=0; i<body.npoints; i++){ Vec3d f = body.forces[i]; printf("force[i] (%g,%g,%g) \n", i, f.x,f.y,f.z ); };
 	//drawTrussDirect( truss );
 	drawSoftBody( body, 0.02, 0.00001  );
+	//drawSoftBody( body, 0.02, 1.0  );
 
 	glLineWidth(2);
 	for(int i=0; i<npull; i++){
