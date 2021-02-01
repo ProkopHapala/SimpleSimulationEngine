@@ -26,6 +26,8 @@
 #include "PotentialFlow.h"
 #include "DrawField.h"
 
+#include "Ruler2DFast.h"
+
 
 /*
 
@@ -55,11 +57,18 @@ const int nCoillSteps = 8;
 //double coil_z[nCoils] =  { -4.0,-3.2, -1.5,  1.5, 3.2, 4.0 };
 //double coil_I[nCoils] =  { 10.0, 1.0,  1.0,  1.0, 1.0, 10.0*0.0 };
 
-float sc = 1.0;
-const int nCoils = 5;
-double coil_R[nCoils] =  {  0.5, 2.0,  3.0,  3.0, 2.0 };
-double coil_z[nCoils] =  { -4.0,-3.2, -1.5,  1.5, 4.0 };
-double coil_I[nCoils] =  { 1.5*sc, 0.125*sc,  0.07*sc,  0.05*sc, 0.25*sc  };
+
+//float sc = 0.8;
+//const int nCoils = 5;
+//double coil_R[nCoils] =  { 0.25, 2.0,  3.0,  3.0, 2.0 };
+//double coil_z[nCoils] =  { -4.0,-3.2, -1.3,  1.3, 4.0 };
+//double coil_I[nCoils] =  { 2.5*sc, 0.125*sc,  0.07*sc,  0.05*sc, 0.40*sc  };
+
+float sc = 0.8;
+const int nCoils = 6;
+double coil_R[nCoils] =  { 0.25, 2.0,  3.0,  3.0, 2.0, 1.0 };
+double coil_z[nCoils] =  { -4.0,-3.2, -1.3,  1.3, 4.0, 5.0 };
+double coil_I[nCoils] =  { 2.5*sc, 0.125*sc,  0.07*sc,  0.05*sc, 0.20*sc, 0.60*sc  };
 
 struct Particle{
     double invMass;
@@ -79,6 +88,57 @@ struct Particle{
     }
 };
 
+class GridFF2d : public Ruler2DFast{ public:
+    Vec2d*  data;
+    double* hits;
+
+    GridFF2d( Vec2i n_, Vec2d pmin, Vec2d pmax ){
+        Vec2d span = pmax-pmin;
+        setup( pmin, {span.x/n_.x,span.y/n_.y} );
+        n_.x++; n_.y++;
+        setN( n_ );
+        _realloc(data, ntot);
+        _realloc(hits, ntot);
+        for(int i=0; i<ntot; i++){ hits[i]=0; };
+    }
+
+    Vec2d interpolate( Vec2d p )const{
+        Vec2d d;
+        Vec2i ipos;
+        pos2index(p, d, ipos);
+        if( (ipos.x>0)&&(ipos.x<n.x-1) && (ipos.y>0)&&(ipos.y<n.y-1) ){
+            int i = ip2i(ipos);
+            double mx=1-d.x;
+            double my=1-d.y;
+            Vec2d f;
+            f.set_mul( data[i      ], my*mx  );
+            f.add_mul( data[i    +1], my*d.x );
+            f.add_mul( data[i+n.x  ],d.y*mx  );
+            f.add_mul( data[i+n.x+1],d.y*d.x );
+            return f;
+        }
+        return Vec2dZero;
+    }
+
+    void acumHit( Vec2d p, double w){
+        Vec2d d;
+        Vec2i ipos;
+        pos2index(p, d, ipos);
+        if( (ipos.x>0)&&(ipos.x<n.x-1) && (ipos.y>0)&&(ipos.y<n.y-1) ){
+            int i = ip2i(ipos);
+            double mx=1-d.x;
+            double my=1-d.y;
+            hits[i      ]+=w* my*mx  ;
+            hits[i    +1]+=w* my*d.x ;
+            hits[i+n.x  ]+=w*d.y*mx  ;
+            hits[i+n.x+1]+=w*d.y*d.x ;
+        }
+    }
+
+};
+
+GridFF2d gridFF( {121,41}, {-5.,0.}, {7.,4.} );
+
 void drawParticleTrj( int n, double dt, Particle p, VecFieldFunc func ){
     //Vec3d opos=p.pos;
     glBegin(GL_LINE_STRIP);
@@ -88,6 +148,8 @@ void drawParticleTrj( int n, double dt, Particle p, VecFieldFunc func ){
         f.set_cross( B, p.vel );
         f.add_cross( B, p.vel+f*(const_ElectronCharge*p.invMass*dt) );
         f.mul( const_ElectronCharge*0.5 );
+
+        gridFF.acumHit( { p.pos.z, sqrt(sq(p.pos.x)+sq(p.pos.y)) }, 1);
         //printf( "trj[%i] p(%g,%g,%g) v(%g,%g,%g) f(%g,%g,%g) B(%g,%g,%g)\n", i, p.pos.x,p.pos.y,p.pos.z,  p.vel.x,p.vel.y,p.vel.z,  f.x,f.y,f.z, B.x, B.y, B.z );
         //printf( "trj[%i] v %g [km/s]\n", i, p.vel.norm()*1e-3   );
         //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( f*1e+11, p.pos );
@@ -136,12 +198,32 @@ Vec3d coilField( Vec3d pos ){
     return B;
 }
 
+Vec3d coilFieldGrid( Vec3d pos ){
+    Vec2d p2d;
+    p2d.x     = pos.z;
+    p2d.y     = sqrt( pos.x*pos.x + pos.y*pos.y );
+    double invr = 1/p2d.y;
+    Vec2d f2d = gridFF.interpolate( p2d );
+    return (Vec3d){ f2d.y*pos.x*invr, f2d.y*pos.y*invr, f2d.x };
+}
+
 void drawCoils(){
     for(int i=0; i<nCoils; i++){
         coilField( (Vec3d){0.0,0.0,coil_z[i]}, Vec3dZ, coil_R[i], nCoillSteps, true );
     }
 }
 
+void prepareFFgrid( GridFF2d& grid ){
+    for(int iy=0; iy<grid.n.y; iy++){
+        for(int ix=0; ix<grid.n.x; ix++){
+            Vec2d p;
+            grid.index2pos( {ix,iy},{0,0}, p );
+            Vec3d B = coilField( {0,p.y,p.x} );
+            int   i = grid.ip2i( {ix,iy} );
+            grid.data[i].set( B.z, B.y );
+        }
+    }
+};
 
 // ============= Application
 
@@ -161,10 +243,14 @@ class TestAppElectromagnetic : public AppSDL2OGL_3D { public:
 };
 
 TestAppElectromagnetic::TestAppElectromagnetic( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    prepareFFgrid( gridFF );
+
     ogl = Draw::list( );
     glColor3f(0.0,0.0,1.0);
-    //plotVecPlane( {30,30}, {0.0,0.0,0.0}, {0.0,0.0,0.25}, {0.25,0.0,0.0},  -1.0, 1.0, coilField );
-    plotStreamLinePlane( {20,1}, 500, {0.0,0.0,0.0}, Vec3dX*0.25, Vec3dY*0.25, 0.25, coilField );
+    //plotVecPlane( {30,30}, {0.0,0.0,0.0}, {0.0,0.0,0.25}, {0.25,0.0,0.0},  -1.0, 1.0, coilFieldGrid );
+    //plotStreamLinePlane( {20,1}, 500, {0.0,0.0,0.0}, Vec3dX*0.25, Vec3dY*0.25, 0.25, coilField );
+    plotStreamLinePlane( {20,1}, 500, {0.0,0.0,0.0}, Vec3dX*0.25, Vec3dY*0.25, 0.25, coilFieldGrid );
     glColor3f(0.0,0.0,0.0);
     drawCoils();
     glColor3f(1.0,0.0,0.0);
@@ -190,11 +276,20 @@ void TestAppElectromagnetic::draw(){
         Particle p;
         //p.pos.fromRandomBox({-1.0,-1.0,-1.0},{1.0,1.0,1.0});
         p.pos.fromRandomBox({-0.5,-0.5,-0.5},{0.5,0.5,0.5});
+
         p.makeThermal(100e+6,1);
-        drawParticleTrj( 5000, 0.5e-8, p, coilField );
+        long t = getCPUticks();
+        int nstep=5000;
+        //drawParticleTrj( 5000, 0.5e-8, p, coilField );
+        drawParticleTrj( nstep, 0.5e-8, p, coilFieldGrid );
+        t= getCPUticks()-t;
+        printf( " %g CPUticks/step \n", t/(double)nstep );
     }else{
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
         glCallList(ogl);
+        double logHist[gridFF.ntot];
+        for(int i=0; i<gridFF.ntot; i++){ logHist[i]=log(gridFF.hits[i]+1); };
+        Draw3D::drawScalarGrid( gridFF.n, {0,gridFF.pos0.y,gridFF.pos0.x}, {0.0,0.0,gridFF.step.x}, {-gridFF.step.y,0.0,0.0}, logHist,  0.0, 12.0 );
 
     }
 

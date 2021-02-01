@@ -158,7 +158,7 @@ void drawVectorArray(int n,const Vec3d* ps,const Vec3d* vs, double sc, double lm
 void drawScalarArray(int n,const Vec3d* ps,const double* vs, double vmin=0.0, double vmax=1.0, const uint32_t * colors=&Draw::colors_rainbow[0], int ncol=Draw::ncolors );
 void drawScalarField(Vec2i ns,const Vec3d* ps,const double* data, double vmin=0.0, double vmax=1.0, const uint32_t * colors=&Draw::colors_rainbow[0], int ncol=Draw::ncolors );
 
-void drawScalarGrid(Vec2i ns,const Vec3d& p0, const Vec3d& a, const Vec3d& b, double* data,  double vmin=0.0, double vmax=1.0, const uint32_t * colors=&Draw::colors_rainbow[0], int ncol=Draw::ncolors );
+void drawScalarGrid(Vec2i ns,const Vec3d& p0, const Vec3d& a, const Vec3d& b, const double* data,  double vmin=0.0, double vmax=1.0, const uint32_t * colors=&Draw::colors_rainbow[0], int ncol=Draw::ncolors );
 void drawColorScale( int n,const Vec3d& p0, const Vec3d& Vec3dY, const Vec3d& up=Vec3dX, const uint32_t * colors=&Draw::colors_rainbow[0], int ncol=Draw::ncolors );
 
 void drawSimplexGrid( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs, const double * clrs, int ncolors, const uint32_t * colorscale );
