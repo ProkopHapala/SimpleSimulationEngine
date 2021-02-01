@@ -40,6 +40,10 @@ target_link_libraries( test_Scatterer ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LI
 add_executable       ( test_Elasticity test_Elasticity.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Truss> $<TARGET_OBJECTS:SoftBody> $<TARGET_OBJECTS:DynamicOpt> )
 target_link_libraries( test_Elasticity ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY}  )
 
+add_executable       ( test_Electromagnetic test_Electromagnetic.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_Electromagnetic ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY}  )
+
+
 add_executable       ( test_Mesh test_Mesh.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Mesh> )
 target_link_libraries( test_Mesh ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 

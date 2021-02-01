@@ -9,6 +9,13 @@ static const double const_GravAccel              = 9.81;
 static constexpr const double const_Graviational = 6.6743015e-11;
 static constexpr const double const_Rgas         = 8.31446261815324;
 
+static constexpr const double  const_eV             = 1.602176634e-19; // [J]
+static constexpr const double  const_ElectronCharge = 1.602176634e-19; // [Coulomb]
+
+static constexpr const double  const_Bonltzman    =   1.380649e-23;   // [J/K]
+static constexpr const double  const_massProton   =   1.6726219e-27;  // [kg]
+static constexpr const double  const_massElectron =   9.10938356e-31; // [kg]
+
 static constexpr const double const_AU = 149.597870700e+9; // [m] Astronomic Unit
 // second in year   3.17098e-8 kW year
 

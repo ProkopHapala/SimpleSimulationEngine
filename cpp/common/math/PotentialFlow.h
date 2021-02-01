@@ -165,6 +165,35 @@ inline Vec3d ISemiInfSheet( Vec3d R, Vec3d a, Vec3d b, double l ){
 
 
 
+// =============================================================
+// ============    Current Loop     ============================
+// =============================================================
+
+
+
+// Complete elliptic integral function
+// https://en.wikipedia.org/wiki/Elliptic_integral
+// Fredrik Johansson; Numerical Evaluation of Elliptic Functions, EllipticIntegrals and Modular Forms;  https://hal.inria.fr/hal-01817952
+// https://people.sc.fsu.edu/~jburkardt/cpp_src/elliptic_integral/elliptic_integral.html
+
+
+
+// Off-Axis Field Due to a Current Loop
+// https://tiggerntatie.github.io/emagnet/offaxis/iloopoffaxis.htm
+
+inline Vec2d CurrentLoop( Vec2d dp, double R ){
+    double alfa  = dp.y/R;
+    double beta  = dp.x/R;
+    double gamma = dp.x/dp.y;
+    double Q = sq(1+alfa) + sq(beta);
+    double k = sqrt( 4*alfa/Q );
+    return Vec2dZero;
+}
+
+
+
+
+
 
 // =================================================================
 // ==================== Coulomb integrals ==========================
