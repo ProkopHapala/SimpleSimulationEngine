@@ -153,7 +153,7 @@ void drawPolyLine( int n, Vec3d * ps, bool closed=false );
 
 void drawPoints         ( int n, const Vec3d * points, float sz );
 void drawLines          ( int nlinks, const int * links, const Vec3d * points );
-void drawTriangles      ( int nlinks, const int * links, const Vec3d * point, bool bNormals=false );
+void drawTriangles      ( int nlinks, const int * links, const Vec3d * point, int mode=0 );
 void drawPolygons       ( int nlinks, const int * ns,    const int * links, const Vec3d * points );
 void drawMeshWireframe  ( const CMesh& msh );
 void drawMeshPolygons   ( const CMesh& msh );

@@ -78,6 +78,38 @@ void drawPanels( int n, SurfElement* elems,  double* vals, float sz, float sc ){
     glEnd();
 }
 
+void drawCouplings( const Radiosity& sys, double cTrash ){
+    glDisable( GL_DEPTH_TEST );
+    //glBlendEquationSeparate( GL_MAX, GL_MAX );
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_MAX);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glBegin(GL_LINES);
+    int n = sys.elements.size();
+    //printf( "n %i \n", n );
+    for(int i=0; i<n; i++){
+        Vec3d pi = sys.elements[i].pos;
+        for(int j=0; j<i; j++){
+            int ij = i*n+j;
+            double cij = sys.M[ij];
+            //if(j==0)printf( "M[i,j] %g\n", i, j, cij );
+            if( cij > cTrash ){
+                Vec3d pj = sys.elements[j].pos;
+                //float c = 0.1*sqrt(cij/cTrash);
+                float c = 0.05*cij/cTrash;
+                if(c>1)c=1;
+                //if(j==0)printf( "M[i,j] %g c %g\n", i, j, cij, c );
+                //glColor4f(0.0,1.0,0.0,c);
+                glColor4f(0.0,c,0.0,1.0);
+                //glColor4f(0.0,1.0,0.0,0.1);
+                Draw3D::vertex( pi );
+                Draw3D::vertex( pj );
+            }
+        }
+    }
+    glEnd();
+}
+
 
 class TestAppRadiosity : public AppSDL2OGL_3D { public:
     Radiosity rad;
@@ -109,12 +141,14 @@ TestAppRadiosity::TestAppRadiosity( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
 
     //rad.fromMesh( Solids::Cube.ntri-2, Solids::Cube.tris, Solids::Cube.verts, 0.1, true );
     //rad.fromMesh( 4, Solids::Cube.tris, Solids::Cube.verts, 0.1, true );
-    rad.fromMesh( nTris, tris, verts, 0.1, true );
+    rad.fromMesh( nTris, tris, verts, 0.2, true );
 
     printf( " nElements %i \n", rad.elements.size() );
 
     rad.makeCouplingMatrix();
     rad.prepare();
+
+    drawCouplings( rad, 0.002 );
 
     for( int i=0; i<rad.elements.size(); i++ ){ rad.sources[i]=0.0; rad.vals[i]=0.0; }
     for( int i=0; i<30; i++ ){ rad.sources[i]=1.0; }
@@ -124,26 +158,33 @@ TestAppRadiosity::TestAppRadiosity( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
 
 void TestAppRadiosity::draw(){
     //rintf( " ==== frame %i \n", frameCount );
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+    glClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+
+	glCallList( ogl_complings );
+
+    glDisable( GL_LIGHTING   );
+    //glEnable( GL_LIGHTING   );
+    glEnable( GL_DEPTH_TEST );
+    //glDisable( GL_DEPTH_TEST );
 
 	//glColor3f(0.8,0.8,0.8);  drawElements( rad );
 	//glColor3f(0.0,0.0,0.0);  drawObstacles(rad);
 	//glColor3f(0.0,0.0,1.0); glCallList(ogl_complings);
 
+	rad.step_Direct();
+
 	drawPanels( rad.elements.size(), &rad.elements[0],  rad.vals, 0.1, 10.0 );
 	//drawPanels( rad.elements.size(), &rad.elements[0],  rad.sources, 0.1 );
 
-    glEnable( GL_LIGHTING );
-    glEnable(GL_DEPTH_TEST);
-    double t;
-    Vec3d hitpos, normal;
-
+    //double t;
+    //Vec3d hitpos, normal;
     //rad.step_CG();
 
-    rad.step_Direct();
 
-    //exit(0);
+    //glColor4f( 0.0,1.0,0.0, 0.1 );
+    //Draw3D::drawLine( (Vec3f){-1.0,0.0,0.0}, (Vec3f){1.0,0.0,0.0} );
 
     //Draw3D::drawTriangles( nTris, (int*)tris, verts );
 
@@ -176,7 +217,7 @@ TestAppRadiosity * thisApp;
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	SDL_SetRelativeMouseMode( SDL_TRUE );
+	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
 	thisApp = new TestAppRadiosity( junk , 800, 600 );
 	thisApp->loop( 1000000 );

@@ -902,9 +902,9 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 
 void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges, msh.verts ); }
 
-    void drawTriangles( int nlinks, const int * links, const Vec3d * points, bool bNormals ){
+    void drawTriangles( int nlinks, const int * links, const Vec3d * points, int mode ){
         int n2 = nlinks*3;
-        if(bNormals){ glBegin( GL_LINES ); }else{ glBegin( GL_TRIANGLES ); };
+        if((mode==2)||(mode==1)){ glBegin( GL_LINES ); }else{ glBegin( GL_TRIANGLES ); };
         for( int i=0; i<n2; i+=3 ){
             //drawTriangle( points[links[i]], points[links[i+1]], points[links[i+2]] );
             //printf ( " %i %i %i %f %f \n", i, links[i], links[i+1], points[links[i]].x, points[links[i+1]].x );
@@ -915,10 +915,14 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
             //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", i, a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z  );
             nor.set_cross( a-b, b-c );
             nor.normalize( );
-            if(bNormals){
+            if(mode==2){
                 Vec3f cog = (a+b+c)*(1./3.);
                 vertex( cog );
                 vertex( cog + nor );
+            }else if(mode==1){
+                vertex( a );vertex( b );
+                vertex( b );vertex( c );
+                vertex( c );vertex( a );
             }else{
                 //glNormal3f( normal.x, normal.y, normal.z );
                 //glVertex3f( a.x, a.y, a.z );
