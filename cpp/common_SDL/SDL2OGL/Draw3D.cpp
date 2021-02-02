@@ -11,14 +11,12 @@
 
 namespace Draw3D{
 
-void vertex(const Vec3f& v ){ glVertex3f(v.x,v.y,v.z); }
-void vertex(const Vec3d& v ){ glVertex3f(v.x,v.y,v.z); }
-
-void color (const Vec3f& v ){ glColor3f (v.x,v.y,v.z); }
-void color (const Vec3d& v ){ glColor3f (v.x,v.y,v.z); }
-
-void normal(const Vec3f& v ){ glNormal3f(v.x,v.y,v.z); }
-void normal(const Vec3d& v ){ glNormal3f(v.x,v.y,v.z); }
+//void vertex(const Vec3f& v ){ glVertex3f(v.x,v.y,v.z); }
+//void vertex(const Vec3d& v ){ glVertex3f(v.x,v.y,v.z); }
+//void color (const Vec3f& v ){ glColor3f (v.x,v.y,v.z); }
+//void color (const Vec3d& v ){ glColor3f (v.x,v.y,v.z); }
+//void normal(const Vec3f& v ){ glNormal3f(v.x,v.y,v.z); }
+//void normal(const Vec3d& v ){ glNormal3f(v.x,v.y,v.z); }
 
 void drawPoint( const Vec3f& vec ){
 	//glDisable (GL_LIGHTING);
@@ -904,23 +902,32 @@ void drawLines( int nlinks, const  int * links, const  Vec3d * points ){
 
 void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges, msh.verts ); }
 
-    void drawTriangles( int nlinks, const int * links, const Vec3d * points ){
+    void drawTriangles( int nlinks, const int * links, const Vec3d * points, bool bNormals ){
         int n2 = nlinks*3;
-        glBegin( GL_TRIANGLES );
+        if(bNormals){ glBegin( GL_LINES ); }else{ glBegin( GL_TRIANGLES ); };
         for( int i=0; i<n2; i+=3 ){
             //drawTriangle( points[links[i]], points[links[i+1]], points[links[i+2]] );
             //printf ( " %i %i %i %f %f \n", i, links[i], links[i+1], points[links[i]].x, points[links[i+1]].x );
-            Vec3f a,b,c,normal;
+            Vec3f a,b,c,nor;
             convert( points[links[i  ]], a );
             convert( points[links[i+1]], b );
             convert( points[links[i+2]], c );
             //printf( " %i (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", i, a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z  );
-            normal.set_cross( a-b, b-c );
-            normal.normalize( );
-            glNormal3f( normal.x, normal.y, normal.z );
-            glVertex3f( a.x, a.y, a.z );
-            glVertex3f( b.x, b.y, b.z );
-            glVertex3f( c.x, c.y, c.z );
+            nor.set_cross( a-b, b-c );
+            nor.normalize( );
+            if(bNormals){
+                Vec3f cog = (a+b+c)*(1./3.);
+                vertex( cog );
+                vertex( cog + nor );
+            }else{
+                //glNormal3f( normal.x, normal.y, normal.z );
+                //glVertex3f( a.x, a.y, a.z );
+                //glVertex3f( b.x, b.y, b.z );
+                //glVertex3f( c.x, c.y, c.z );
+                normal(nor);
+                vertex( a ); vertex( b ); vertex( c );
+
+            }
         }
         glEnd();
     }

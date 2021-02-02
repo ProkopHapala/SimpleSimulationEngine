@@ -27,14 +27,19 @@ namespace Draw3D{
 
 // ========== Float Versions
 
-void vertex(const Vec3f& v );
-void vertex(const Vec3d& v );
+//void vertex(const Vec3f& v );
+//void vertex(const Vec3d& v );
+//void color (const Vec3f& v );
+//void color (const Vec3d& v );
+//void normal(const Vec3f& v );
+//void normal(const Vec3d& v );
 
-void color (const Vec3f& v );
-void color (const Vec3d& v );
-
-void normal(const Vec3f& v );
-void normal(const Vec3d& v );
+inline void vertex(const Vec3f& v ){ glVertex3f(v.x,v.y,v.z); }
+inline void vertex(const Vec3d& v ){ glVertex3f(v.x,v.y,v.z); }
+inline void color (const Vec3f& v ){ glColor3f (v.x,v.y,v.z); }
+inline void color (const Vec3d& v ){ glColor3f (v.x,v.y,v.z); }
+inline void normal(const Vec3f& v ){ glNormal3f(v.x,v.y,v.z); }
+inline void normal(const Vec3d& v ){ glNormal3f(v.x,v.y,v.z); }
 
 void drawPoint     ( const Vec3f& vec                   );
 void drawPointCross_bare( const Vec3f& vec, float sz    );
@@ -148,7 +153,7 @@ void drawPolyLine( int n, Vec3d * ps, bool closed=false );
 
 void drawPoints         ( int n, const Vec3d * points, float sz );
 void drawLines          ( int nlinks, const int * links, const Vec3d * points );
-void drawTriangles      ( int nlinks, const int * links, const Vec3d * points );
+void drawTriangles      ( int nlinks, const int * links, const Vec3d * point, bool bNormals=false );
 void drawPolygons       ( int nlinks, const int * ns,    const int * links, const Vec3d * points );
 void drawMeshWireframe  ( const CMesh& msh );
 void drawMeshPolygons   ( const CMesh& msh );

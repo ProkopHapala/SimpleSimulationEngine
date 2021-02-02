@@ -243,7 +243,9 @@ class Mesh{ public:
         }
     }
 
+    /*
     int pickVertex( const Vec3d &ray0, const Vec3d &hRay ){
+
         double r2min=1e+300;
         int imin=0;
         for(int i=0; i<points.size(); i++){
@@ -280,6 +282,15 @@ class Mesh{ public:
         }
         return t_min;
     };
+    */
+
+    int pickVertex( const Vec3d &ray0, const Vec3d &hRay ){
+        return pickPoinMinDist( ray0, hRay, points.size(), &points[0] );
+    }
+
+    double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal, int& imin ){
+        return rayTriangles( ray0, hRay, triangles.size(), &triangles[0], &points[0], normal, imin );
+    }
 
     /// Topology operations
 
@@ -449,7 +460,7 @@ class Mesh{ public:
             }
             // order edges to make a polygon
             //int ne = edges.size() - ie0;
-            
+
             if( faceEdges[i].size()>0 ){
                 //printf( " face: %i nedges %i \n", i, faceEdges[i].size() );
                 Polygon * pl = new Polygon();
@@ -488,7 +499,7 @@ class Mesh{ public:
                 polygons.push_back(pl);
             }
             /*
-            // using map point->edge we can do polygon search in linear time 
+            // using map point->edge we can do polygon search in linear time
             if( faceEdges[i].size()>2 ){
                 Vec2i v2e[faceEdges[i].size()];
                 for(int ie : faceEdges[i]){

@@ -209,8 +209,6 @@ inline double rayTriangle2(
 	return rayTriangle2( ray0, hRay, hX, hY, a,b,c, normal );
 }
 
-
-
 // =========== Polygon
 
 inline double rayPolygon(
@@ -241,7 +239,39 @@ inline double rayPolygon(
 	return rayPlane( ray0, hRay, normal, tmp );
 }
 
+inline double rayTriangles( const Vec3d& ray0, const Vec3d& hRay, int n, const Vec3i* tris, const Vec3d* points, Vec3d& normal, int& imin ){
+    Vec3d hX,hY;
+    hRay.getSomeOrtho( hX, hY );
+    double t_min = 1e+300;
+    imin = -1;
+    for(int i=0; i<n; i++ ){
+        const Vec3i& it = tris[i];
+        const Vec3d& A  = points[it.x];
+        const Vec3d& B  = points[it.y];
+        const Vec3d& C  = points[it.z];
+        Vec3d normal_;
+        bool inside_;
+        double t = rayTriangle2( ray0, hRay, hX, hY, A, B, C, normal_ );
+        inside_ = (t<0.9e+300 )&&(t>0);
+        if( inside_ && ( t<t_min ) ){
+            t_min  = t;
+            normal = normal_;
+            imin   = i;
+        }
+    }
+    return t_min;
+}
 
+inline int pickPoinMinDist( const Vec3d &ray0, const Vec3d &hRay, int n, const Vec3d* points ){
+    double r2min=1e+300;
+    int imin=0;
+    for(int i=0; i<n; i++){
+        double t;
+        double r2 = rayPointDistance2( ray0, hRay, points[i], t );
+        if(r2<r2min){ imin=i; r2min=r2; }
+    }
+    return imin;
+};
 
 // =========== BoundingBox
 

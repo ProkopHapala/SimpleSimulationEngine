@@ -32,8 +32,8 @@ class TriangleMesh{
     void init(int npoints_, int ntris_){ npoints=npoints_; ntris=ntris_; points = new Vec3d[npoints]; tris = new Vec3i[ntris]; }
 
     double ray( const Vec3d &ray0, const Vec3d &hRay, Vec3d& normal ){
+        /*
         //int    imin  = 0;
-
         Vec3d hX,hY;
         hRay.getSomeOrtho( hX, hY );
 
@@ -56,6 +56,9 @@ class TriangleMesh{
             }
         }
         return t_min;
+        */
+        int imin;
+        return rayTriangles( ray0, hRay, ntris, tris, points, normal, imin );
     }
 
 };
