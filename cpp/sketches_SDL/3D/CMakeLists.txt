@@ -46,6 +46,8 @@ target_link_libraries( test_Elasticity ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_Electromagnetic test_Electromagnetic.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Electromagnetic ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY}  )
 
+add_executable       ( test_MultipoleAccel test_MultipoleAccel.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_MultipoleAccel ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY}  )
 
 add_executable       ( test_Mesh test_Mesh.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:Mesh> )
 target_link_libraries( test_Mesh ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
