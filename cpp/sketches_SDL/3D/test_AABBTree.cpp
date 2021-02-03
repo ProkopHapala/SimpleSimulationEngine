@@ -47,13 +47,33 @@ TestAppAABBTree::TestAppAABBTree( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     //Box span;    span.a.set(-d,-d,-d); span.b.set(d,d,d);
 
     Box mapSpan; mapSpan.setSymetric(5.0);    mapSpan.scale( (Vec3d){1.0,1.0,0.1} );
-    Box span; span.setSymetric(0.5); span.a=Vec3dZero;
+    Box span; span.setSymetric(0.5); //span.a=Vec3dZero;
     printf( "span (%g,%g,%g)  (%g,%g,%g) \n", span.a.x,span.a.y,span.a.z,   span.b.x,span.b.y,span.b.z );
 
+
+    /*
+    // Uniformly Scattered
     for(int i=0;i<1600;i++){
         Vec3d c = mapSpan.genRandomSample();
-        bodies.push_back( {c, c+span.genRandomSample()} );
+        Box b = (Box){c, c+span.genRandomSample()};
+        b.order();
+        bodies.push_back( b );
     }
+    */
+
+
+    // Random Walk
+    Vec3d pos = Vec3dZero;
+    for(int i=0;i<1000;i++){
+        Vec3d d = span.genRandomSample();
+        pos.add( d );
+        //printf( "d[%i] (%g,%g,%g) \n", i, d.x, d.y, d.z );
+        Box b = (Box){pos, pos+span.genRandomSample()};
+        b.order();
+        bodies.push_back( b );
+    }
+
+
 
     int n = bodies.size();
     int K = (int)sqrt(n);

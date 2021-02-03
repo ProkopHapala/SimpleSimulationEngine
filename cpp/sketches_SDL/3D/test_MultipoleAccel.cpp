@@ -19,10 +19,10 @@
 
 //#include "geom3D.h"
 
-#include "kBoxes.h"
-
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
+
+#include "kBoxes.h"
 
 // ============= Application
 
@@ -35,6 +35,141 @@ ToDo: kBoxes.h seems to be good choice for dipole distribution
 */
 
 
+void drawCells( int nc, Vec2i* cellNI, int* c2p , Vec3d* ps, float sz, int ik, Vec3d* pivots=0, bool bLines=true ){
+    for(int i=0; i<nc; i++){
+        Draw::color_of_hash( i*5454 + 646*ik + 454 );
+        Vec2i& c = cellNI[i];
+        for(int j=0; j<c.a; j++){
+            Draw3D::drawPointCross( ps[c.b+j], sz );
+            if(pivots&&bLines){ Draw3D::drawLine(pivots[i],ps[c.b+j]); }
+        }
+        if(pivots){
+            Draw3D::drawPointCross( pivots[i], sz*3 );
+        }
+    }
+}
+
+void KpivotsRecur( int np, Vec3d* ps, Vec3d* ps_, int* o2c, int* c2o, int perCellMax, int kmax, int lev ){
+    if(lev>5)return;
+    int K = _min( np/perCellMax, kmax );
+    KPivots kpiv(K);
+    kpiv.build( np, ps, o2c, c2o, true, false, 1.0, 2.0 );
+    applyPermutTmp( np, c2o, ps, ps_ );
+    for(int k=0; k<kpiv.K; k++){
+        int ni = kpiv.cellNIs[k].a;
+        printf( "%0*c[%i] ni %i \n", lev, '-', k, ni );
+        if( ni>perCellMax ){
+            int i0=kpiv.cellNIs[k].b;
+            KpivotsRecur( ni, ps+i0, ps_+i0, o2c+i0, c2o+i0, perCellMax, kmax, lev+1 );
+        }
+    }
+}
+
+class MultipoleAccel{ public:
+    int     np=0;
+    Vec3d*  ps=0; // points
+    double* qs=0; // point charges
+    int*    p2c =0; // maping points to centers
+    int*    p2cT=0;
+    std::vector<Vec3d> centers;
+    std::vector<int>   levels;
+    double* charges=0;
+    Vec3d * dipoles=0;
+};
+
+
+class TestAppMultipoleAccel : public AppSDL2OGL_3D { public:
+
+    MultipoleAccel mpol;
+    KPivots* kpiv;
+
+	virtual void draw   ();
+	virtual void drawHUD();
+	//virtual void mouseHandling( );
+	virtual void eventHandling   ( const SDL_Event& event  );
+	//virtual void keyStateHandling( const Uint8 *keys );
+
+	TestAppMultipoleAccel( int& id, int WIDTH_, int HEIGHT_ );
+
+};
+
+TestAppMultipoleAccel::TestAppMultipoleAccel( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+    mpol.np  = 1000;
+    mpol.ps  = new Vec3d[mpol.np];
+
+    Box span; span.setSymetric(0.5);
+    Vec3d pos = Vec3dZero;
+    for(int i=0;i<mpol.np;i++){
+        pos.add( span.genRandomSample() );
+        mpol.ps[i] = pos;
+    }
+
+
+    //kpiv = new KPivots( (int)(sqrt(mpol.np)) );
+    kpiv = new KPivots( 10 );
+    //kpiv->build( mpol.np, mpol.ps );
+    //kpiv->build( mpol.np, mpol.ps, 0, 0, true, false, -5.0, 5.0 );
+    kpiv->build( mpol.np, mpol.ps, 0, 0, true, true, -5.0, 5.0 );
+    applyPermut_relloc( mpol.np, mpol.ps, kpiv->c2o );
+
+
+    /*
+    // ========= Test Hierarchical   .... Currently not working  ... WIP
+    Vec3d* ps_ = new Vec3d[mpol.np];
+    int*   o2c = new int  [mpol.np];
+    int*   c2o = new int  [mpol.np];
+    KpivotsRecur( mpol.np, mpol.ps, ps_, o2c, c2o, 16, 8, 0 );
+    */
+
+}
+
+void TestAppMultipoleAccel::draw(){
+    //rintf( " ==== frame %i \n", frameCount );
+    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+	drawCells( kpiv->K, kpiv->cellNIs, kpiv->c2o , mpol.ps, 0.1, 0*frameCount/100, kpiv->pivots, true );
+};
+
+
+void TestAppMultipoleAccel::eventHandling ( const SDL_Event& event  ){
+    //printf( "NonInert_seats::eventHandling() \n" );
+    switch( event.type ){
+        case SDL_KEYDOWN :
+            switch( event.key.keysym.sym ){
+                case SDLK_p:  first_person = !first_person; break;
+                case SDLK_o:  perspective  = !perspective; break;
+                //case SDLK_r:  world.fireProjectile( warrior1 ); break;
+            }
+            break;
+    };
+    AppSDL2OGL::eventHandling( event );
+}
+
+
+void TestAppMultipoleAccel::drawHUD(){
+    glDisable ( GL_LIGHTING );
+}
+
+// ===================== MAIN
+
+TestAppMultipoleAccel * thisApp;
+
+int main(int argc, char *argv[]){
+	SDL_Init(SDL_INIT_VIDEO);
+	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+	//SDL_SetRelativeMouseMode( SDL_TRUE );
+	int junk;
+	thisApp = new TestAppMultipoleAccel( junk , 800, 600 );
+	thisApp->loop( 1000000 );
+	return 0;
+}
+
+
+
+
+
+/*
 class MultipoleAccel{
     int nps=0;
     Vec3d*  ps=0; // points
@@ -115,70 +250,7 @@ class MultipoleAccel{
     }
 
 };
-
-class TestAppMultipoleAccel : public AppSDL2OGL_3D { public:
-
-
-	virtual void draw   ();
-	virtual void drawHUD();
-	//virtual void mouseHandling( );
-	virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
-
-	TestAppMultipoleAccel( int& id, int WIDTH_, int HEIGHT_ );
-
-};
-
-TestAppMultipoleAccel::TestAppMultipoleAccel( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
-
-}
-
-void TestAppMultipoleAccel::draw(){
-    //rintf( " ==== frame %i \n", frameCount );
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-};
-
-
-void TestAppMultipoleAccel::eventHandling ( const SDL_Event& event  ){
-    //printf( "NonInert_seats::eventHandling() \n" );
-    switch( event.type ){
-        case SDL_KEYDOWN :
-            switch( event.key.keysym.sym ){
-                case SDLK_p:  first_person = !first_person; break;
-                case SDLK_o:  perspective  = !perspective; break;
-                //case SDLK_r:  world.fireProjectile( warrior1 ); break;
-            }
-            break;
-    };
-    AppSDL2OGL::eventHandling( event );
-}
-
-
-void TestAppMultipoleAccel::drawHUD(){
-    glDisable ( GL_LIGHTING );
-}
-
-// ===================== MAIN
-
-TestAppMultipoleAccel * thisApp;
-
-int main(int argc, char *argv[]){
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	SDL_SetRelativeMouseMode( SDL_TRUE );
-	int junk;
-	thisApp = new TestAppMultipoleAccel( junk , 800, 600 );
-	thisApp->loop( 1000000 );
-	return 0;
-}
-
-
-
-
-
-
+*/
 
 
 

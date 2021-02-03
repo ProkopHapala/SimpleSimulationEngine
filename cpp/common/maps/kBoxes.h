@@ -33,13 +33,10 @@
 //  We can do SweepAndPrune for those boxes
 //   - this means that optimal K would be slightly higher than sqrt(N)
 
-struct KBox{
-    // we should probably split this
-    int n;  //
-    int i0; // pointg to beginning of block in permutation array
-    Box span;
-    //float cost; // this may be also outside
-};
+
+// ======================================
+// ========= Free Functions =============
+// ======================================
 
 template<typename T>
 void applyPermut( int n, int* permut, T* dataIn, T* dataOut ){
@@ -49,6 +46,20 @@ void applyPermut( int n, int* permut, T* dataIn, T* dataOut ){
 template<typename T>
 void applyPermutInv( int n, int* permut, T* dataIn, T* dataOut ){
     for(int i=0; i<n; i++ ){ dataOut[permut[i]] = dataIn[i]; }
+}
+
+template<typename T>
+void applyPermutTmp( int n, int* permut, T* data, T* tmp ){
+    for(int i=0; i<n; i++ ){ tmp[i] = data[i]; }
+    applyPermut( n, permut, tmp, data );
+}
+
+template<typename T>
+void applyPermut_relloc( int np, T*& ps, int* c2o ){
+    T* ps_ = ps;
+    ps     = new T[np];
+    applyPermut( np,c2o, ps_, ps );
+    delete [] ps_;
 }
 
 void pickKofN( int K, int n, int* picked ){
@@ -74,9 +85,175 @@ void pickKofN( int K, int n, int* picked ){
     }
 }
 
+// Universal function for putting objects into cells
+void cellPermut( int nc, int no, Vec2i* cni, const int* o2c, int* c2o ){
+    // cni[nc](work) ... (Vec2i){a=ni,b=i0}; a=ni=number of objects in cell;  b=i0=starting index
+    // o2c[no](in  ) ... object->cell
+    // c2o[no](out ) ... array of object indexes assigned to each cell (i.e. continuous segments [i0:i0+ni] of the array belong to each cell)
+    // count number of objets in each cell
+    for(int ic=0; ic<nc; ic++ ){ cni[ic].a=0;        };
+    for(int io=0; io<no; io++ ){ cni[ o2c[io] ].a++; };
+    //DEBUG
+    int ntot=0;
+    //int nmax=0;
+    // find starting index for each cell by cumulative-sum of points in each cell
+    //DEBUG
+    for(int ic=0; ic<nc; ic++ ){
+        Vec2i& c = cni[ic];
+        c.b=ntot;
+        ntot+=c.a;
+        //printf( "[%i] ntot %i ni %i \n", ic, ntot, c.a );
+        //if( c.a>nmax ) nmax=c.a;
+        c.a=0;
+    }
+    //exit(0);
+    //DEBUG
+    for(int io=0; io<no; io++){
+        int ic   = o2c[io];
+        Vec2i& c = cni[ic];
+        int jo   = c.b + c.a;
+        //printf( "c2o[%i|%i] | ni %i i0 %i \n", jo, no, c.a, c.b );
+        c2o[jo]   = io;
+        c.a++;
+    }
+    //DEBUG
+    //exit(0);
+}
+
+int findClosest(const Vec3d& p, int np, const Vec3d* ps, double r2max ){
+    double r2min=r2max;
+    int    ibest=-1;
+    for(int i=0; i<np; i++){
+        Vec3d  d  = ps[i]; d.sub(p);
+        double r2 = d.norm2();
+        if(r2<r2min){ ibest=i; r2min=r2; };
+    }
+    return ibest;
+}
+
+// ========================================
+// ============= Class KPivots ============
+// ========================================
+
+
+class KPivots{ public:
+    int    np;     // number of points
+    Vec3d* ps;     // points
+    int    K;
+    //int*   pivots;
+
+    Vec3d* pivots;
+
+    Vec2i* cellNIs;
+    int*   o2c;
+    int*   c2o;
+
+    //KPivots(int K_, int np_, Vec3d* ps_):K(K_),np(np_),ps(ps_){cells = new Vec2i[K];}
+    KPivots(int K_):K(K_){ cellNIs = new Vec2i[K]; np=0;o2c=0;c2o=0; pivots=0; }
+    ~KPivots(){ delete [] cellNIs; if(pivots) delete [] pivots; }
+
+    void findPivots( bool bStorePos ){
+        for(int i=0; i<K; i++){
+            int ip = (rand()%(np-i))+i;
+            if(bStorePos){
+                pivots[i] = ps[ip];
+            }else{
+                _swap(ps[i]    ,ps[ip]    );
+                //_swap(permut[i],permut[ip]);
+                o2c[i]=i;
+            }
+        }
+    }
+
+    void repelPivots( double rmin, double rmax ){
+        if(rmax<0){ rmax=1e+300; }
+        for(int i=0; i<K; i++){
+            Vec3d& pi=pivots[i];
+            for(int j=0; j<i; j++){
+                Vec3d& pj=pivots[j];
+                Vec3d d; d.set_sub(pj,pi);
+                double r = d.norm();
+                if(r<rmin){
+                    double rnew = 0.5*(rmin-r);
+                    if(rnew>rmax){ rnew=rmax; }
+                    d.mul(  rnew/r );
+                    pj.add(d);
+                    pi.sub(d);
+                }
+            }
+        }
+    }
+
+    void insert_distance(){
+        // WARRNING : we assume first K points in ps are pivots
+        for(int i=K;i<np; i++){
+            int k = findClosest(ps[i], K, ps, 1e+300 );
+            //printf( "o2c[%i] %i \n", i, k );
+            o2c[i]=k;
+        }
+    }
+
+    void insert_distance_piv( bool bCOG ){
+        if(bCOG){ for(int k=0;k<K; k++){ cellNIs[k].a=0; } };
+        for(int i=0;i<np; i++){
+            int k = findClosest(ps[i], K, pivots, 1e+300 );
+            o2c[i]=k;
+            if(bCOG){
+                int& ni   = cellNIs[k].a;
+                double f  = ni/(ni+1.);
+                Vec3d& pk = pivots[k];
+                pk.mul(f);
+                pk.add_mul( ps[i], 1-f );
+                ni++;
+            }
+        }
+    }
+
+    int* build( int np_, Vec3d* ps_, int* c2o_=0, int* o2c_=0, bool bStorePos=false, bool bCOG=true, double rmin=-1, double rmax=1e+300 ){
+        ps=ps_; //bool new_o2c = (o2c==0);
+        //DEBUG
+        if(np_!=np){
+            np=np_;
+            if(c2o_ ){ c2o=c2o_; }else{ _realloc(c2o,np); };
+            if(o2c_ ){ o2c=o2c_; }else{ _realloc(o2c,np); };
+        }
+        if(bStorePos && !pivots ){ pivots=new Vec3d[K]; };
+        //DEBUG
+        //o2c   =new int[np];
+        //cells = new int[K ];
+        findPivots     (bStorePos);  //DEBUG
+        if(bStorePos){
+            if(rmin>0)repelPivots( rmin, rmax );
+            insert_distance_piv( bCOG );
+        }else{
+            insert_distance();           //DEBUG
+        }
+        cellPermut( K, np, cellNIs, o2c, c2o );  //DEBUG
+        return c2o;
+    }
+
+};
+
+
+// ========================================
+// ============= Class KBoxes  ============
+// ========================================
+
+
+struct KBox{
+    // we should probably split this
+    int n;  //
+    int i0; // pointg to beginning of block in permutation array
+    Box span;
+    //float cost; // this may be also outside
+};
+
 class KBoxes{ public:
-    std::vector<KBox>  branches;  // we should probably split this
-    std::vector<Vec2i> collisionPairs;
+    std::vector<KBox>    branches;  // we should probably split this
+    // ToDo : if we split KBox to (Box)span and (Vec2i){n,i0} we can use general function   cellPermut()
+    //std::vector<Box>    branches;  // we should probably split this
+    //std::vector<Vec2i>  branche_ni;
+    std::vector<Vec2i>  collisionPairs;
     //Box   * bounds;
     //Vec2i * ranges;
     int   * permut      = 0;
@@ -198,6 +375,7 @@ class KBoxes{ public:
     void updatePermut(){
         // we need to call this after each rearrangement of bodies
         //printf( "updatePermut nbodies %i bSweep %i\n", nbodies, bSweep );
+
         for(int i=0; i<nbodies; i++ ){ branches[ body2branch[i] ].n++; };
         int ntot=0;
         for(int k=0; k<branches.size(); k++ ){
@@ -213,9 +391,9 @@ class KBoxes{ public:
             permut[j] = i;
             branches[k].n++;
         }
-        if(bSweep){
-            realocTemp();
-        }
+        // ToDo : use cellPermut here - problem is {ni,i0} is inside KBox
+        //cellPermut( nc, no, cni, permut );
+        if(bSweep){ realocTemp(); }
     }
 
     void updateSweepStable( bool kSorted=true, bool bSorted=true ){
