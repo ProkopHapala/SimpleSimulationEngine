@@ -161,7 +161,7 @@ void drawMap( Vec2i ns, Vec2d p0, Vec2d dp, Func func, double vmin, double vmax,
 
 
 
-void drawVisibilityIsolines( LTWorld& world, Vec2d ray0, int ndhs, int nDirs, double phiMin, double phiMax, double dhMin, double dhMax, double tmax ){
+void drawVisibilityIsolines( LTWorld& world, Vec2d ray0, int ndhs, int nDirs, double phiMin, double phiMax, double dhMin, double dhMax, double tmax, bool bFill=true ){
     //const int  ndhs = 5;
     //const int nDirs = 50;
     double dhs[ndhs];
@@ -186,18 +186,39 @@ void drawVisibilityIsolines( LTWorld& world, Vec2d ray0, int ndhs, int nDirs, do
     };
     // plot lines
     float cstep = 1.0f/(ndhs-1);
-    for(int j=0; j<ndhs; j++ ){
-        //glBegin(GL_LINE_LOOP);
-        float c = cstep*j;
-        glBegin(GL_LINE_STRIP);
-            for(int i=0; i<nDirs; i++ ){
-                int ij = j*nDirs + i;
-                double t = horizonts[ij];
-                Vec2d p = ray0 + hRays[i]*t;
-                if( t>tmax ){ glColor3f(0.0f,0.0f,0.0f); }else{ glColor3f(1.0f-c,0.0f,c); };
-                glVertex3f( (float)p.x, (float)p.y, 100.0);
+    if(bFill){
+    	glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+        glDisable(GL_DEPTH_TEST);
+        //int j = iline;
+        //float c = cstep*j;
+            for(int j=0; j<ndhs; j++ ){
+            glBegin(GL_TRIANGLE_FAN);
+                glVertex3f( ray0.x, ray0.y, 100.0);
+                for(int i=0; i<nDirs; i++ ){
+                    int ij = j*nDirs + i;
+                    double t = horizonts[ij];
+                    Vec2d p = ray0 + hRays[i]*t;
+                    //if( t>tmax ){ glColor3f(0.0f,0.0f,0.0f); }else{ glColor3f(1.0f-c,0.0f,c); };
+                    glColor4f(1.0,0.0,1.0,0.05);
+                    glVertex3f( (float)p.x, (float)p.y, 100.0);
+                }
+            glEnd();
             }
-        glEnd();
+    }else{ // Plot As Lines
+        for(int j=0; j<ndhs; j++ ){
+            float c = cstep*j;
+            glBegin(GL_LINE_LOOP);
+            //glBegin(GL_LINE_STRIP);
+                for(int i=0; i<nDirs; i++ ){
+                    int ij = j*nDirs + i;
+                    double t = horizonts[ij];
+                    Vec2d p = ray0 + hRays[i]*t;
+                    if( t>tmax ){ glColor3f(0.0f,0.0f,0.0f); }else{ glColor3f(1.0f-c,0.0f,c); };
+                    glVertex3f( (float)p.x, (float)p.y, 100.0);
+                }
+            glEnd();
+        }
     }
 }
 

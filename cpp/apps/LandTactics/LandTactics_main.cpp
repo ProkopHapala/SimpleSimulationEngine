@@ -219,7 +219,7 @@ FormationTacticsApp::FormationTacticsApp( int& id, int WIDTH_, int HEIGHT_ ) : A
     aero1.accelMax  = 5*const_GravAccel;    // [m/s^2]  maximum acceleration
     evalAeroCraft( aero1 );
 
-    exit(0);
+    //exit(0);
 
     printASCItable( 33, 127  );
 
@@ -262,6 +262,8 @@ void FormationTacticsApp::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glDisable( GL_DEPTH_TEST );
 
+    glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
 	glCallList( oglTerrain );
 
@@ -301,18 +303,19 @@ void FormationTacticsApp::draw(){
         if( (u!= NULL) ){
             // TODO : check if on screen
             //printf( "squad %i \n", i ); i++;
-            if  ( u == currentSquad ){ u->render( u->faction->color, 1, bDrawGoal ); }
-            else                     { u->render( u->faction->color, 1, false );     }
+            if  ( u == currentSquad ){ u->render( u->faction->color&0x1fFFFFFF, 1, bDrawGoal ); }
+            else                     { u->render( u->faction->color&0x1fFFFFFF, 1, false     ); }
         }
     }
     tDraw = getCPUticks() - tDraw;
 
     if( currentSquad != 0 ){
         //glColor3f(1.0,0.0,1.0);
-        glColor3f(0.0,1.0,0.0);
-        Draw2D::drawCircle_d   ( currentSquad->pos, 0.5, 16, false );
-        currentSquad->renderJob( currentSquad->faction->color );
-        drawVisibilityIsolines ( world, currentSquad->pos, 5, 50, 0, 2*M_PI, -0.1, +0.1, 500.0 );
+        //glColor3f(0.0,1.0,0.0);
+        glColor4f( 0.0,1.0,0.0, 0.2 );
+        //Draw2D::drawCircle_d   ( currentSquad->pos, 0.5, 16, false );
+        //currentSquad->renderJob( currentSquad->faction->color );
+        drawVisibilityIsolines ( world, currentSquad->pos, 5, 50, 0, 2*M_PI, -0.1, +0.1, 500.0, true );
     }
 
     //world.tmpSur.bConstr=false;

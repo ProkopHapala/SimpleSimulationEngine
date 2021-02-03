@@ -116,21 +116,21 @@ void LTSquad::render( uint32_t color, int iLOD, bool bDrawGoal ){
     Draw2D::drawVecInPos_d( rot*radius,              pos );
     //printf( " %f %f \n", attentionDir.x, attentionDir.y );
     //printf( "render (%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", pos.x, pos.y, pos.x, c.x, c.y, c.z );
-    char str[8];
-    sprintf(str,"%4i",n);
-    //Draw2D::drawString( str, (float)pos.x, (float)pos.y, 0.4f, default_font_texture );
-    Draw2D::drawText( str, 0, {pos.x,pos.y}, 0.0, default_font_texture, 2.0 );
-
     if(iLOD>0){
         for(const LTUnit& u: units ){
             //printf( "unit \n"  );
-            u.render( color, iLOD );
+            u.render( color|0xFF000000, iLOD );
+            Draw::setRGBA(color);
             if( bDrawGoal ){
                Draw2D::drawLine_d( u.goal_pos, u.pos );
             }
         }
     }
 
+    char str[8];
+    sprintf(str,"%4i",n);
+    //Draw2D::drawString( str, (float)pos.x, (float)pos.y, 0.4f, default_font_texture );
+    Draw2D::drawText( str, 0, {pos.x,pos.y}, 0.0, default_font_texture, 2.0 );
 }
 
 void LTSquad::populate(int n){

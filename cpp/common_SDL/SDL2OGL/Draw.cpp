@@ -134,8 +134,8 @@ void Draw::drawText( const char * str, int itex, float sz, int iend ){
         glTexCoord2f( offset          , 0.0f ); glVertex3f( xi   , sz*2, 0.0f );
     }
     glEnd();
-    glDisable  ( GL_BLEND );
-    glDisable  ( GL_ALPHA_TEST );
+    //glDisable  ( GL_BLEND );
+    //glDisable  ( GL_ALPHA_TEST );
     glDisable  ( GL_TEXTURE_2D );
     //glBlendFunc( GL_ONE, GL_ZERO );
 };
