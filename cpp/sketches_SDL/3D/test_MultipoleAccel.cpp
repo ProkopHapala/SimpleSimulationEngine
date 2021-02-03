@@ -34,13 +34,20 @@ ToDo: kBoxes.h seems to be good choice for dipole distribution
 
 */
 
-
-void drawCells( int nc, Vec2i* cellNI, int* c2p , Vec3d* ps, float sz, int ik, Vec3d* pivots=0, bool bLines=true ){
+void drawCells( int nc, const Vec2i* cellNI, const Vec3d* ps, float sz, int ik, const Vec3d* pivots=0, bool bLines=true ){
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     for(int i=0; i<nc; i++){
-        Draw::color_of_hash( i*5454 + 646*ik + 454 );
-        Vec2i& c = cellNI[i];
+        Vec3f col;
+        //Draw::color_of_hash( i*5454 + 646*ik + 454 );
+        Draw::color_of_hash( i*5454 + 646*ik + 454, col );
+        glColor4f(col.x,col.y,col.z,1.0);
+        const Vec2i& c = cellNI[i];
         for(int j=0; j<c.a; j++){
+            glColor4f(col.x,col.y,col.z,1.0);
             Draw3D::drawPointCross( ps[c.b+j], sz );
+            glColor4f(col.x,col.y,col.z,0.3);
             if(pivots&&bLines){ Draw3D::drawLine(pivots[i],ps[c.b+j]); }
         }
         if(pivots){
@@ -49,21 +56,31 @@ void drawCells( int nc, Vec2i* cellNI, int* c2p , Vec3d* ps, float sz, int ik, V
     }
 }
 
+/*
 void KpivotsRecur( int np, Vec3d* ps, Vec3d* ps_, int* o2c, int* c2o, int perCellMax, int kmax, int lev ){
-    if(lev>5)return;
-    int K = _min( np/perCellMax, kmax );
+    if(lev>3)return;
+    int K = _min( 1+np/perCellMax, kmax );
+    if(K<=1)return;
+    printf( "%0*cK %i np %i \n", lev+1, '+', K, np );
+    //if(np<100)for(int i=0; i<np; i++){ printf( "ps[%i] (%g,%g,%g)\n", i, ps[i].x,ps[i].y,ps[i].z ); }
     KPivots kpiv(K);
     kpiv.build( np, ps, o2c, c2o, true, false, 1.0, 2.0 );
     applyPermutTmp( np, c2o, ps, ps_ );
+    //if(np<100)for(int i=0; i<np; i++){ printf( "ps_[%i] c2o[] %i (%g,%g,%g) \n", i, c2o[i], ps[i].x,ps[i].y,ps[i].z ); }
+    //return;
+    int nsum=0;
     for(int k=0; k<kpiv.K; k++){
         int ni = kpiv.cellNIs[k].a;
-        printf( "%0*c[%i] ni %i \n", lev, '-', k, ni );
+        nsum+=ni;
+        printf( "%0*c[%i] ni %i \n", lev+2, '.', k, ni );
         if( ni>perCellMax ){
             int i0=kpiv.cellNIs[k].b;
             KpivotsRecur( ni, ps+i0, ps_+i0, o2c+i0, c2o+i0, perCellMax, kmax, lev+1 );
         }
     }
+    //printf( "%0*cnsum %i np %i \n", lev, '-', nsum, np );
 }
+*/
 
 class MultipoleAccel{ public:
     int     np=0;
@@ -81,7 +98,8 @@ class MultipoleAccel{ public:
 class TestAppMultipoleAccel : public AppSDL2OGL_3D { public:
 
     MultipoleAccel mpol;
-    KPivots* kpiv;
+    KPivots* kpiv=0;
+    HierarchicalKpivot* hkpiv=0;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -94,7 +112,7 @@ class TestAppMultipoleAccel : public AppSDL2OGL_3D { public:
 };
 
 TestAppMultipoleAccel::TestAppMultipoleAccel( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
-    mpol.np  = 1000;
+    mpol.np  = 40;
     mpol.ps  = new Vec3d[mpol.np];
 
     Box span; span.setSymetric(0.5);
@@ -104,31 +122,37 @@ TestAppMultipoleAccel::TestAppMultipoleAccel( int& id, int WIDTH_, int HEIGHT_ )
         mpol.ps[i] = pos;
     }
 
-
+    /*
     //kpiv = new KPivots( (int)(sqrt(mpol.np)) );
     kpiv = new KPivots( 10 );
     //kpiv->build( mpol.np, mpol.ps );
     //kpiv->build( mpol.np, mpol.ps, 0, 0, true, false, -5.0, 5.0 );
     kpiv->build( mpol.np, mpol.ps, 0, 0, true, true, -5.0, 5.0 );
     applyPermut_relloc( mpol.np, mpol.ps, kpiv->c2o );
-
+    */
 
     /*
     // ========= Test Hierarchical   .... Currently not working  ... WIP
     Vec3d* ps_ = new Vec3d[mpol.np];
     int*   o2c = new int  [mpol.np];
     int*   c2o = new int  [mpol.np];
-    KpivotsRecur( mpol.np, mpol.ps, ps_, o2c, c2o, 16, 8, 0 );
+    KpivotsRecur( mpol.np, mpol.ps, ps_, o2c, c2o, 4, 4, 0 );
     */
+
+    hkpiv = new HierarchicalKpivot(mpol.np, mpol.ps);
+    hkpiv->run( 4, 4, 3 );
 
 }
 
 void TestAppMultipoleAccel::draw(){
     //rintf( " ==== frame %i \n", frameCount );
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+    glClearColor( 0.9f, 0.9f, 0.9f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	drawCells( kpiv->K, kpiv->cellNIs, kpiv->c2o , mpol.ps, 0.1, 0*frameCount/100, kpiv->pivots, true );
+	//drawCells( kpiv->K, kpiv->cellNIs, kpiv->c2o , mpol.ps, 0.1, 0*frameCount/100, kpiv->pivots, true );
+
+	drawCells( hkpiv->cells.size(), &hkpiv->cells[0], mpol.ps, 0.05, 0*frameCount/100, &hkpiv->pivots[0], true );
+
 };
 
 

@@ -156,6 +156,7 @@ class KPivots{ public:
         for(int i=0; i<K; i++){
             int ip = (rand()%(np-i))+i;
             if(bStorePos){
+                //printf( "piv[%i] ip %i\n", i, ip );
                 pivots[i] = ps[ip];
             }else{
                 _swap(ps[i]    ,ps[ip]    );
@@ -209,19 +210,20 @@ class KPivots{ public:
         }
     }
 
-    int* build( int np_, Vec3d* ps_, int* c2o_=0, int* o2c_=0, bool bStorePos=false, bool bCOG=true, double rmin=-1, double rmax=1e+300 ){
+    int* build( int np_, Vec3d* ps_, int* o2c_=0, int* c2o_=0, bool bStorePos=false, bool bCOG=true, double rmin=-1, double rmax=1e+300 ){
         ps=ps_; //bool new_o2c = (o2c==0);
         //DEBUG
         if(np_!=np){
             np=np_;
-            if(c2o_ ){ c2o=c2o_; }else{ _realloc(c2o,np); };
             if(o2c_ ){ o2c=o2c_; }else{ _realloc(o2c,np); };
+            if(c2o_ ){ c2o=c2o_; }else{ _realloc(c2o,np); };
         }
         if(bStorePos && !pivots ){ pivots=new Vec3d[K]; };
         //DEBUG
         //o2c   =new int[np];
         //cells = new int[K ];
         findPivots     (bStorePos);  //DEBUG
+        //for(int i=0; i<K; i++){ printf( "pivot[%i] (%g,%g,%g)\n", i, pivots[i].x,pivots[i].y,pivots[i].z ); }
         if(bStorePos){
             if(rmin>0)repelPivots( rmin, rmax );
             insert_distance_piv( bCOG );
@@ -234,6 +236,66 @@ class KPivots{ public:
 
 };
 
+// ========================================
+// ============= Class HierarchicalKpivot ============
+// ========================================
+
+class HierarchicalKpivot{ public:
+    int np;
+    Vec3d *ps,*ps_;
+    int   *o2c,*c2o;
+    std::vector<Vec3d> pivots;
+    std::vector<Vec2i> cells;
+    //std::vector<Vec2i> cells;
+
+    int perCellMax;
+    int kmax;
+    int levMax;
+
+    HierarchicalKpivot( int np_, Vec3d* ps__ ){
+        np=np_; ps=ps__;
+        ps_ = new Vec3d[np];
+        o2c = new int[np];
+        c2o = new int[np];
+    }
+
+    void run( int perCellMax_, int kmax_, int levMax_ ){
+        perCellMax=perCellMax_; kmax=kmax_; levMax=levMax_;
+        recur( np, ps, ps_, o2c, c2o, 0, 0 );
+    }
+
+    void recur( int np, Vec3d* ps, Vec3d* ps_, int* o2c, int* c2o, int lev, int i0 ){
+        //if(lev>levMax)return;
+        int K = _min( 1+np/perCellMax, kmax );
+        if(K<=1)return;
+        printf( "%0*cK %i np %i \n", lev+1, '+', K, np );
+        //if(np<100)for(int i=0; i<np; i++){ printf( "ps[%i] (%g,%g,%g)\n", i, ps[i].x,ps[i].y,ps[i].z ); }
+        KPivots kpiv(K);
+        kpiv.build( np, ps, o2c, c2o, true, false, 1.0, 2.0 );
+        applyPermutTmp( np, c2o, ps, ps_ );
+        //if(np<100)for(int i=0; i<np; i++){ printf( "ps_[%i] c2o[] %i (%g,%g,%g) \n", i, c2o[i], ps[i].x,ps[i].y,ps[i].z ); }
+        //return;
+        int nsum=0;
+        for(int k=0; k<kpiv.K; k++){
+            int ni = kpiv.cellNIs[k].a;
+            nsum+=ni;
+            printf( "%0*c[%i] ni %i \n", lev+2, '.', k, ni );
+            if( (ni>perCellMax)&&(lev<levMax) ){
+                int j0=kpiv.cellNIs[k].b;
+                recur( ni, ps+j0, ps_+j0, o2c+j0, c2o+j0, lev+1, i0+j0 );
+            }else{
+                int npiv = pivots.size();
+                pivots.push_back( kpiv.pivots[k] );
+                kpiv.cellNIs[k].b+=i0;
+                cells .push_back( kpiv.cellNIs[k] );
+                int* o2c_ = o2c+i0;
+                //for(int i=0; i<ni; i++){ o2c[i]+=npiv; }
+            }
+        }
+        //printf( "%0*cnsum %i np %i \n", lev, '-', nsum, np );
+    }
+
+};
 
 // ========================================
 // ============= Class KBoxes  ============
