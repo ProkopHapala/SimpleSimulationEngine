@@ -14,12 +14,24 @@
 #include "MechGrid2D.h"
 #include "MechMesh2D.h"
 
+
+bool bDEBUG = true;
+
 #include "MechPIC2D.h"
 #include "MechPIC2D_Temperature.h"
+
+
+/*
+
+ToDo : MechPIC2D_T needs better than linear interpolation in order to make smooth forces
+
+
+*/
 
 CompressibleMaterial materials[] = {
     {1.,1.}
 };
+
 
 
 
@@ -30,6 +42,7 @@ class TestAppMech2D : public AppSDL2OGL { public:
     //MechPIC2D    mpic;
     MechPIC2D_T  mpic;
 
+    int nproj=0;
     //bool bRun = false;
     bool bRun = true;
 
@@ -44,19 +57,61 @@ class TestAppMech2D : public AppSDL2OGL { public:
 
 TestAppMech2D::TestAppMech2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
-    mpic.realloc( 8, {16,16} );
-    mpic.materials = materials;
 
-    mpic.setStep( 1e-2 );
+    //mpic.realloc( 8, {16,16} );
 
-    for(int i=0; i<mpic.np; i++){
+    /*
+    int nside = 5;
+    nproj = 0;
+    mpic.realloc( (nside-1)*(nside-1) + nproj, {nside,nside} );
+
+    int nrow = nside-1;
+    // --- Target
+    for(int i=0; i<mpic.np-nproj; i++){
+        int ix = i%nrow;
+        int iy = i/nrow;
         mpic.imats [i] = 0;          // materials
         mpic.pmoles[i] = 0.1;       //
-        mpic.pos[i]    = { (i+2.2)*mpic.step,4.3*mpic.step };   // position (global, or local within the box)
-        //mpic.vel[i]    = {0.,1000.0};
-        mpic.vel[i]    = Vec2dZero;  // velocity
+        //mpic.pos   [i] = { (ix+16.2)*mpic.step,(iy+24.3)*mpic.step };
+        mpic.pos   [i] = { (ix+1+randf(-0.5,0.5))*mpic.step,(iy+1+randf(-0.5,0.5))*mpic.step };
+        //mpic.vel[i]  = {0.,1000.0};
+        mpic.vel   [i] = Vec2dZero;  // velocity
+        //printf( "target[%i] p(%g,%g) v(%g,%g) \n", i, mpic.pos[i].x, mpic.pos[i].y,  mpic.vel[i].x, mpic.vel[i].y );
+    }
+    // --- Projectile
+    int i0=mpic.np-nproj;
+    for(int i=i0; i<mpic.np; i++){
+        mpic.imats [i] = 0;
+        mpic.pmoles[i] = 0.1;
+        mpic.pos[i]    = { ((i-i0)+16.2)*mpic.step, 10.5*mpic.step };
+        mpic.vel[i]  = Vec2dY * 10.0;  // velocity
+        //mpic.vel[i]    = Vec2dZero;  // velocity
+        //printf( "projectile[%i] p(%g,%g) v(%g,%g) \n", i, mpic.pos[i].x, mpic.pos[i].y,  mpic.vel[i].x, mpic.vel[i].y );
+    }
+    */
+
+    mpic.realloc( 9, {5,5} );
+    mpic.setStep( 1e-2 );
+    int nrow=3;
+    for(int i=0; i<mpic.np; i++){
+        int ix = i%nrow;
+        int iy = i/nrow;
+        mpic.imats [i] = 0;
+        mpic.pmoles[i] = 0.1;
+        mpic.pos   [i] = { (ix+1)*mpic.step,(iy+1)*mpic.step };
+        mpic.vel   [i] = Vec2dZero;
     }
 
+    mpic.materials = materials;
+
+
+    camX0 = mpic.nc.x/2;
+    camY0 = mpic.nc.y/2;
+
+    mpic.particlesToCells();
+    mpic.updateCellTN ( 1.0 );
+    mpic.moveMD( 0.0001 );
+    bDEBUG=false;
 }
 
 void TestAppMech2D::draw(){
@@ -66,25 +121,15 @@ void TestAppMech2D::draw(){
 	glDisable( GL_DEPTH_TEST );
 
     glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
 
     glColor3f(1.0,0.0,0.0);
-
-    double dt = 1e-7;
-    if(bRun){
-
-        mpic.particlesToCells();
-        mpic.updateCellThermodynamics();
-        //mpic.moveMD( dt );
-        //mpic.moveMD_selfCorrect( dt );
-        mpic.moveMD( dt );
-        //mpic.update(dt);
-    }
 
     int ixy=0;
     for(int iy=0; iy<mpic.nc.y; iy++){
         for(int ix=0; ix<mpic.nc.x; ix++){
-            //double c = mpic.moles[ixy]/0.1;
-            double c = mpic.temperature[ixy]*0.0001;
+            double c = mpic.moles[ixy]/0.5;
+            //double c = mpic.temperature[ixy]*0.0001;
             //double c = mpic.Umol[ixy];
             //glColor3b( 1+c,1-c*c, 1-c );
             glColor3f( 1-c, 1-c*4., 1-c*16. );
@@ -95,15 +140,46 @@ void TestAppMech2D::draw(){
         }
     }
 
+
+    double dt = 1e-7;
+    //double dt_debug = 0.0001;
+    double dt_debug = 0.0001;
+    if(bRun){
+
+        Vec2d u; u.fromAngle(frameCount*0.1); u.mul(0.00001);
+        mpic.pos[4].add( u );
+        mpic.pmoles[4]=0;
+
+        mpic.particlesToCells();
+        //mpic.updateCellThermodynamics();
+        //mpic.setCellT( 10.0 );
+        mpic.updateCellTN ( 1.0 );
+        //mpic.moveMD( dt );
+        //mpic.moveMD_selfCorrect( dt );
+        //mpic.moveMD( dt );
+
+        mpic.moveMD( dt_debug );
+        //mpic.boundParticleMirror();
+    }
+
+
+    //if(frameCount<100){ printf( "========= %i \n", frameCount ); }
+
+    Draw2D::drawRectangle( (Vec2f)(mpic.pmin*mpic.invStep), (Vec2f)(mpic.pmax*mpic.invStep), false );
+
     glColor3f(0.,0.,0.);
-    double vsc   = 1e-3;
+    //double vsc   = 1e-3;
+    double vsc   = 0.1;
     double molsc = 5.1;
     for(int i=0; i<mpic.np; i++){
         //Draw2D::drawPointCross_d( mpic.pos[i], mpic.pmoles[i]*molsc );
         //Draw2D::drawVecInPos_d  ( mpic.vel[i]*vsc, mpic.pos[i] );
-
-        Draw2D::drawPointCross_d( mpic.pos[i]*mpic.invStep, mpic.pmoles[i]*molsc );
+        //Draw2D::drawPointCross_d( mpic.pos[i]*mpic.invStep, mpic.pmoles[i]*molsc );
+        Vec2d p = mpic.pos[i]*mpic.invStep;
+        //if(frameCount<100){ printf("p[%i] p(%g,%g) \n", i, p.x, p.y ); };
+        Draw2D::drawPointCross_d( p, 0.1 );
         Draw2D::drawVecInPos_d  ( mpic.vel[i]*vsc, mpic.pos[i]*mpic.invStep );
+        //if( i>=(mpic.np-nproj) ){ printf( "projectile[%i] p(%g,%g) v(%g,%g) \n", i, mpic.pos[i].x, mpic.pos[i].y,  mpic.vel[i].x, mpic.vel[i].y ); }
     }
 
 };

@@ -8,7 +8,15 @@
 #include "Vec2.h"
 //#include "Vec3.h"
 
-#include "MechPIC2D.h"
+//#include "MechPIC2D.h"
+
+/*
+
+ToDo : MechPIC2D_T needs better than linear interpolation in order to make smooth forces
+
+
+*/
+
 
 class MechPIC2D_T{ public:
 
@@ -31,7 +39,7 @@ class MechPIC2D_T{ public:
 
     // --- Particle Properties
     int np    = 0;
-    int npMax = 0;
+    //int npMax = 0;
     int*     imats  = 0;   // materials
     //double* mass  =0;
     double*  pmoles  = 0;   // molar amount in cells
@@ -40,6 +48,11 @@ class MechPIC2D_T{ public:
     //double*  pcmoles = 0; // molar distribution over individual cells
     Vec2d*   pos     = 0;   // position (global, or local within the box)
     Vec2d*   vel     = 0;   // velocity
+
+    Vec2d pmin;
+    Vec2d pmax;
+
+    //Vec2d*   DEBUG_fs = 0;
 
     //inline void point2cell(const Vec2d& p, Vec2d& dp, Vec2i ip){
     //    dp.x=p.x*invStep;  ip.x=(int)dp.x; dp.x-=ip.x;
@@ -52,11 +65,10 @@ class MechPIC2D_T{ public:
 
     void realloc( int np_, Vec2i nc_ ){
         np    = np_;
-        npMax = np*2;
-        _realloc( imats,  npMax );
-        _realloc( pmoles, npMax );
-        _realloc( pos,    npMax );
-        _realloc( vel,    npMax );
+        _realloc( imats,  np );
+        _realloc( pmoles, np );
+        _realloc( pos,    np );
+        _realloc( vel,    np );
         //_realloc( pcmoles,npMax*4 );
 
         nc    = nc_;
@@ -69,13 +81,15 @@ class MechPIC2D_T{ public:
 
     inline void setStep(double step_){
         step=step_; invStep=1./step;
+        pmin = (Vec2d){step*      -0.0 ,step*     -0.0  };
+        pmax = (Vec2d){step*(nc.x-1.0),step*(nc.y-1.0) };
     }
 
     inline int point2cell(const Vec2d& p, Vec2d& d){
         int ix,iy;
         d.x=p.x*invStep;  ix=(int)d.x; d.x-=ix;
         d.y=p.y*invStep;  iy=(int)d.y; d.y-=iy;
-        if(ix<0||ix>nc.x||iy<0||iy>nc.y) return -1;
+        if((ix<0)||(ix>=(nc.x-1))||(iy<0)||(iy>=(nc.y-1))) return -1;   // ToDo : we may get rid of this later
         return nc.x*iy + ix;
     }
 
@@ -86,7 +100,7 @@ class MechPIC2D_T{ public:
         for(int i=0; i<nctot; i++){
             double T   = temperature[i];
             double N   = moles      [i];
-            double N_  = moles_new [i];
+            double N_  = moles_new  [i];
             double T_  = T * pow( N_/N, 2./3. );
             // To Do : We must update temperature based on
             temperature[i] = T_;  // store updated temperature
@@ -96,7 +110,16 @@ class MechPIC2D_T{ public:
         }
     }
 
+    void updateCellTN( double T ){
+        for(int i=0; i<nctot; i++){
+            temperature[i] = T;
+            moles      [i] = moles_new[i];
+        }
+    }
+
     void clearCells(){ for(int i=0; i<nctot; i++){moles_new[i]=0;} }
+
+    inline void checkIndex( int i ){ if(i<0){ printf("ERROR: [%i<0]\n", i ); exit(0); }else if(i>nctot){ printf("ERROR: [%i>%i]\n", i, nctot ); exit(0); } };
 
     void particlesToCells(){
         // evaluated pressure in cells due to presence of particles (chunks of material)
@@ -111,11 +134,15 @@ class MechPIC2D_T{ public:
             Vec2d d;
             int ic = point2cell( pos[i], d );
             if(ic<0) continue;
-            double mx = 1-d.x;
-            double my = 1-d.y;
-            moles_new[ic      ] += pN*mx *my;
-            moles_new[ic+1    ] += pN*d.x*my;
-            moles_new[ic+io10 ] += pN*d.y*mx;
+            //checkIndex( ic      );
+            //checkIndex( ic+1    );
+            //checkIndex( ic+io10 );
+            //checkIndex( ic+io11 );
+            double m_x = 1-d.x;
+            double m_y = 1-d.y;
+            moles_new[ic      ] += pN*m_x*m_y;
+            moles_new[ic+1    ] += pN*d.x*m_y;
+            moles_new[ic+io10 ] += pN*m_x*d.y;
             moles_new[ic+io11 ] += pN*d.x*d.y;
             // To Do : We should consider also temperature transfer => we need to count hot material which left or entered the cell
         }
@@ -126,9 +153,9 @@ class MechPIC2D_T{ public:
         const int io10=nc.x  ;
         const int io11=nc.x+1;
 
-        double damp = 1.0-100000.0*dt;
-        if(damp<0)damp=0;
-        damp=1; // damping off
+        //double damp = 1.0-100000.0*dt;
+        //if(damp<0)damp=0;
+        //damp=1; // damping off
         //printf("damp %g \n", damp);
 
         for(int i=0;i<np; i++){
@@ -136,14 +163,14 @@ class MechPIC2D_T{ public:
             Vec2d d,f;
             int ic = point2cell( pos[i], d );
             if(ic<0) continue;
-            double mx = 1-d.x;
-            double my = 1-d.y;
+            double m_x = 1-d.x;
+            double m_y = 1-d.y;
 
             // prevent double counting
-            double pN  = pmoles[ i ];
-            double N00 = pN*mx * my;
-            double N01 = pN*d.x* my;
-            double N10 = pN*d.y* mx;
+            double pN  = pmoles[i];
+            double N00 = pN*m_x*m_y;
+            double N01 = pN*d.x*m_y;
+            double N10 = pN*m_x*d.y;
             double N11 = pN*d.x*d.y;
             int jc;
             jc=ic     ; double e00 = temperature[jc]*(moles[jc]-N00);
@@ -151,18 +178,24 @@ class MechPIC2D_T{ public:
             jc=ic+io10; double e10 = temperature[jc]*(moles[jc]-N10);
             jc=ic+io11; double e11 = temperature[jc]*(moles[jc]-N11);
 
-            f.x = ( (e01-e00)*my + (e11-e10)*d.y )*-invStep;
-            f.y = ( (e10-e00)*mx + (e11-e01)*d.x )*-invStep;
+            f.x = ( (e01-e00)*m_y + (e11-e10)*d.y )*-invStep;
+            f.y = ( (e10-e00)*m_x + (e11-e01)*d.x )*-invStep;
             double invM = materials[ imats[i] ].invMolarMass;
 
             // ToDo - velocity is damped when it goes along gradient of own molar mass
-            Draw2D::drawVecInPos_d( f*1e-7, pos[i]*invStep );
+            //Draw2D::drawVecInPos_d( f*1e-7, pos[i]*invStep );
+            glColor3d(0.0,1.0,0.0); Draw2D::drawVecInPos_d( f*1.0, pos[i]*invStep );
 
             //printf(  "[%i] f(%g,%g) v(%g,%g) | e(%g,%g,%g,%g)\n", i, f.x,f.y, vel[i].x,vel[i].y, e00,e01,e10,e11 );
-            vel[i].mul(damp);
-            vel[i].add_mul( f,      dt*invM );
+
+            /*
+            //f.add_mul( vel, -0.1*M/dt ); // ToDo : friction should depend on density, and energy should be conserved
+            double damp = 1 - 100.01*dt; if(damp<0)damp=0;
+            vel[i].mul( damp );
+            vel[i].add_mul( f, dt*invM );
 
             pos[i].add_mul( vel[i], dt      );
+            */
         }
     }
 
@@ -170,12 +203,26 @@ class MechPIC2D_T{ public:
         //clearPressure();
         particlesToCells();
         updateCellThermodynamics();
+        //updateCellT(1.0);
         moveMD( dt );
     }
 
     // ToDo : Merge & Split Particles
     // - During compression, many particles of the same meterial tend to be pressed into same box => we should merge them
     // - During expansion, single particle tend to expand over several cells => we should split them
+
+    void boundParticleMirror(){
+        double d = 1e-7;
+        for(int i=0; i<np; i++){
+            Vec2d& p = pos[i];
+            if      (p.x<pmin.x){ p.x=pmin.x+d; vel[i].x*=-1; }
+            else if (p.x>pmax.x){ p.x=pmax.x-d; vel[i].x*=-1; }
+            if      (p.y<pmin.y){ p.y=pmin.y+d; vel[i].y*=-1; }
+            else if (p.y>pmax.y){ p.y=pmax.y-d; vel[i].y*=-1; }
+            //if(i==np-1){ printf("p[-1].y %g in ( %g : %g )\n", i, p.y, pmin.y, pmax.y ); };
+        }
+    }
+
 
 };
 
