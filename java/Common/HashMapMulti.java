@@ -44,7 +44,7 @@ public class HashMapMulti{
     
     public final void put( int i, Object p, long ibox, int h ){
         checkResize();
-        System.out.println(  "insert ibox: "+ibox+" h: "+h+" i: "+i+" n[h] "+hits[h] );
+        //System.out.println(  "insert ibox: "+ibox+" h: "+h+" i: "+i+" n[h] "+hits[h] );
         hits[h]++;
         set ( i, p, ibox );
         filled++;

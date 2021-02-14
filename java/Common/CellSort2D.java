@@ -9,7 +9,7 @@ public class CellSort2D<T extends GetXY> extends CellSort {
   //Ant[] tmp;   // temporary array for loading
   int nl0;
   
-  CellSort2D( T[] army_, int w,int h, int dcell_ ){ super( (w/dcell_)*(h/dcell_), army_.length ); dcell=dcell_; step=1./dcell; nx=(w/dcell_); ny=(h/dcell_); army=army_;  }
+  public  CellSort2D( T[] army_, int w,int h, int dcell_ ){ super( (w/dcell_)*(h/dcell_), army_.length ); dcell=dcell_; step=1./dcell; nx=(w/dcell_); ny=(h/dcell_); army=army_;  }
   
   /*
   void drawCells(){

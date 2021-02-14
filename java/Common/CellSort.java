@@ -18,16 +18,28 @@ public class CellSort {
   int [] cellIs;
   int [] cell2id;
   
-  CellSort(int ncell_, int nid_ ){
+public CellSort(int ncell_, int nid_ ){
+    System.out.println("ncell "+ncell_+" nid "+nid_);
     id2cell=new int[nid_  ];
     cellNs =new int[ncell_];
     cellIs =new int[ncell_];
-    cell2id=new int[ncell_];
+    cell2id=new int[nid_];
     ncell=ncell_;
-    nid  =nid_; 
+    //nid  =nid_; 
+    //nid=0;
+    clean();
   }
+
+public void clean(){
+    nid=0;
+}
+
+public final void insert( int ic ){
+    id2cell[nid]=ic;
+    nid++;
+}
   
-  void sort(){
+public final void sort(){
     // prepare cell regions
     for(int i=0; i<nid; i++){
       int ic = id2cell[i];
@@ -38,18 +50,20 @@ public class CellSort {
       cellIs[i]=n;
       int ni = cellNs[i];
       n+=ni;
+      System.out.println( i+": i0 "+cellIs[i]+" ni "+ni );
       cellNs[i] = 0;
     }
     // put to cells
     for(int i=0; i<nid; i++){
       int ic = id2cell[i];
       int ni = cellNs[ic];
+      if((cellIs[ic] + ni)>ncell)System.out.println( " i0 "+cellIs[ic]+" ni "+ni );
       cell2id[ cellIs[ic] + ni ] = i;
       cellNs[ic]=ni+1;
     }
   }
   
-  void printCells(){
+public final void printCells(){
     for(int i=0; i<ncell; i++){
       if(cellNs[i]>0){
       System.out.print("["+i+"]");

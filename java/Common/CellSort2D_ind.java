@@ -8,7 +8,7 @@ double invStep=1/step;
   //int[] IDs;
   int nl0;
   
-  CellSort2D_ind( int w,int h, int step_, int nid_  ){ 
+public CellSort2D_ind( int w,int h, int step_, int nid_  ){ 
       super( (w/step_)*(h/step_), nid_ ); 
       setStep( step_ ); nx=(w/step_); ny=(h/step_); 
   }
@@ -36,24 +36,30 @@ double invStep=1/step;
     }
   }
 */
-  
-void insert( int i, double x, double y ){
-    int ix = (int)(x*invStep);
-    int iy = (int)(y*invStep);
-    id2cell[i] = nx*iy + ix;
+
+public final int getIx(double x){ return (int)(x*invStep); }
+public final int getIy(double y){ return (int)(y*invStep); }
+
+public final void insert( double x, double y ){
+    int ix = getIx(x);
+    int iy = getIy(y);
+    int ic = nx*iy + ix;
+    if( ic>=ncell ) System.out.println("ix,iy "+ix+","+iy+" ic "+ic);
+    //id2cell[i] =
+    insert(ic);
 }
   
-  void army2cells( GetXY [] ps ){
+public final void army2cells( GetXY [] ps ){
     nid=0;
     for(int i=0; i<ps.length; i++){
-      int ix = (int)(ps[i].getX()*step);
-      int iy = (int)(ps[i].getY()*step);
+      int ix = getIx( ps[i].getX() );
+      int iy = getIy( ps[i].getY() ); 
       id2cell[i] = nx*iy + ix;
       nid++;
     }
   }
 
-  int toArray( int il0, int[] loaded, int ix, int iy ){
+public final int loadCell( int il0, int[] loaded, int ix, int iy ){
     int ic = iy*nx+ix;
     if( (ix>0)&&(ix<nx) && (iy>0)&&(iy<ny) ){
       int i0 = cellIs[ic];
@@ -68,22 +74,28 @@ void insert( int i, double x, double y ){
     }
   }
   
-  int loadNeighs( int[] tmp, int ix, int iy, boolean bAlways ){
-    nl0=toArray( 0, tmp, ix-1,iy-1 );
+public final int loadNeighs( int ix, int iy, int[] tmp ){
+    nl0=loadCell( 0, tmp, ix,iy );
     int nl=nl0;
-    if( bAlways && (nl0>0) ){
-      nl+=toArray( nl, tmp, ix-1,iy-1 );
-      nl+=toArray( nl, tmp, ix  ,iy-1 );
-      nl+=toArray( nl, tmp, ix+1,iy-1 );
-      
-      nl+=toArray( nl, tmp, ix-1,iy-1 );
-      nl+=toArray( nl, tmp, ix+1,iy-1 );
-      
-      nl+=toArray( nl, tmp, ix-1,iy+1 );
-      nl+=toArray( nl, tmp, ix  ,iy+1 );
-      nl+=toArray( nl, tmp, ix+1,iy+1 );
-    }
+
+    nl+=loadCell( nl, tmp, ix-1,iy-1 );
+    nl+=loadCell( nl, tmp, ix  ,iy-1 );
+    nl+=loadCell( nl, tmp, ix+1,iy-1 );
+
+    nl+=loadCell( nl, tmp, ix-1,iy   );
+    nl+=loadCell( nl, tmp, ix+1,iy   );
+
+    nl+=loadCell( nl, tmp, ix-1,iy+1 );
+    nl+=loadCell( nl, tmp, ix  ,iy+1 );
+    nl+=loadCell( nl, tmp, ix+1,iy+1 );
+
     return nl;
-  }
+}
+
+public final int loadNeighs( double x, double y, int[] tmp ){
+    int ix = getIx(x);
+    int iy = getIx(y);
+    return loadNeighs( ix, iy, tmp );
+}
   
 }; // class CellSort2D{
