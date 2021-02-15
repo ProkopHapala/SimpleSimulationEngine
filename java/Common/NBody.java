@@ -11,7 +11,8 @@ final public class NBody implements Interactor {
     public double m = -1.0;
     
     TempPool pool;
-    public double collisionRadius=50.0;
+    public double collisionRadius=20.0;
+    public double collisionStiffness=0.1;
     public boolean bDEBUG=false;
     
     public NBody(int n, TempPool pool_){
@@ -40,8 +41,8 @@ final public class NBody implements Interactor {
             Vec2d fi=fs[ip];
             //Vec2d vi=vs[i]p;
             for(int j=0; j<n0; j++){
-                if(j==i) continue;
                 int jp=inds[j];
+                if(j<=i) continue;
                 Vec2d pj=ps[jp];
                 Vec2d fj=fs[jp];
                 //Vec2d vj=vs[jp];
@@ -50,7 +51,40 @@ final public class NBody implements Interactor {
                 if(r2<R2){
                     double r  = Math.sqrt(r2);
                     //System.out.println( "ps["+i+","+j+"] "+r );
-                    double fr = -0.01 * (r-collisionRadius)/(r+1e-3);
+                    double fr = -collisionStiffness * (r-collisionRadius)/(r+1e-3);
+                    //if(bDEBUG)System.out.println( "fr."+i+"."+j+" "+fr );
+                    d.mul(fr);
+                    fj.add(d);
+                    fi.sub(d);
+                    nint++;
+                }
+            }
+        }
+        pool.payback(d);
+        return nint;
+    }
+    
+    public int interactNeighs_naive( ){    
+        int nint=0;
+        //System.out.println( "interactNeighs_inds n0 "+n0+" nng "+nng );
+        Vec2d d = (Vec2d)pool.borrow();
+        int n=ps.length;
+        double R2 = collisionRadius*collisionRadius;
+        for(int i=0; i<n; i++){
+            Vec2d pi=ps[i];
+            Vec2d fi=fs[i];
+            //Vec2d vi=vs[i]p;
+            for(int j=0; j<i; j++){
+                if(j==i) continue;
+                Vec2d pj=ps[j];
+                Vec2d fj=fs[j];
+                //Vec2d vj=vs[jp];
+                d.set_sub( pj, pi );
+                double r2  = d.norm2();
+                if(r2<R2){
+                    double r  = Math.sqrt(r2);
+                    //System.out.println( "ps["+i+","+j+"] "+r );
+                    double fr = -collisionStiffness * (r-collisionRadius)/(r+1e-3);
                     //if(bDEBUG)System.out.println( "fr."+i+"."+j+" "+fr );
                     d.mul(fr);
                     fj.add(d);
@@ -104,10 +138,12 @@ final public class NBody implements Interactor {
         }
     }
         
-    public void move_leapFrog(double dt){
+    public void move_leapFrog(double dt, double damping){
+        double damp = 1-damping*dt;
+        if(damp<0)damp=0;
         for(int i=0; i<ps.length; i++){
             Vec2d v = vs[i];
-            //v.mul(1-drag*dt);
+            v.mul(damp);
             v    .fma( fs[i], dt );
             ps[i].fma(     v, dt );
         }
@@ -120,7 +156,7 @@ final public class NBody implements Interactor {
         }else{
             evalForce();
         }
-        move_leapFrog(dt);
+        move_leapFrog(dt, 0.0 );
     }
     
 }

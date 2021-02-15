@@ -18,6 +18,7 @@ public class Test_CollisionGrids extends PApplet implements PConstants  {
     float zoomRate = 1.2f;
     float zoom     = 100.0f;
     int perFrame=1;
+    boolean bGridAccel=true;
     
     NBody       nbody1; //= new NBody_Vec2d(nbody);
     HashMap2D   hmap;
@@ -115,15 +116,19 @@ public class Test_CollisionGrids extends PApplet implements PConstants  {
         for(int i=0; i<perFrame; i++){
             nbody1.cleanForce();
 
-            cmap.clean();
-            cmap.insert( nbody1.ps );
-            int n = cmap.interactNeighs(nbody1, outIDs);
-            //System.out.println( "n-interactions "+n );
-            pg.vecsInPos( nbody1.ps.length, nbody1.ps, nbody1.fs, 10.0f );
-            //vecsInPos(nbody1.ps.length, nbody1.ps, nbody1.fs, (float)10.0);
-
+            //bGridAccel = false;
+            if(bGridAccel){
+                cmap.clean();
+                cmap.insert( nbody1.ps );
+                int n = cmap.interactNeighs(nbody1, outIDs);
+                //System.out.println( "n-interactions "+n );
+            }else{
+                nbody1.interactNeighs_naive();
+            }
             nbody1.move_GD(0.1);
+            //nbody1.move_leapFrog(0.1, 0.1 );
         }
+        pg.vecsInPos( nbody1.ps.length, nbody1.ps, nbody1.fs, 10.0f );
     
         // ======== Drawing
         
