@@ -4,8 +4,10 @@ package Tests;
 
 import Common.HashMap2D;
 import Common.Vec2d;
-import Common.NBody_Vec2d;
-import Common.CellSort2D_ind;
+import Common.NBody;
+import Common.CellSort2D;
+import Common.TempPool;
+import Utils.PDraw.PDraw;
 
 
 import processing.core.PApplet;
@@ -15,12 +17,17 @@ public class Test_CollisionGrids extends PApplet implements PConstants  {
 
     float zoomRate = 1.2f;
     float zoom     = 100.0f;
-    NBody_Vec2d nbody1; //= new NBody_Vec2d(nbody);
-    HashMap2D       hmap;
-    CellSort2D_ind  cmap;
+    int perFrame=1;
+    
+    NBody       nbody1; //= new NBody_Vec2d(nbody);
+    HashMap2D   hmap;
+    CellSort2D  cmap;
 
+    TempPool pool_Vec2d;
+    PDraw pg;
+    
     Object [] tmpOuts;
-    int [] outIDs;
+    int    [] outIDs;
         
     @Override
     public void settings() {
@@ -32,15 +39,23 @@ public class Test_CollisionGrids extends PApplet implements PConstants  {
     @Override
     public void setup() {
         colorMode(HSB, 1.0f );
+        
+        pg = new PDraw(this);
+        
+        pool_Vec2d = new TempPool( 10, Vec2d.class );
+        Vec2d d = (Vec2d)pool_Vec2d.borrow();
+        System.out.println( "pool[0]: "+d.x+" "+ d.y );
+        pool_Vec2d.payback(d);
+        
         int nbody    = 1000;
-        nbody1 = new NBody_Vec2d(nbody);
+        nbody1 = new NBody(nbody, pool_Vec2d );
         hmap   = new HashMap2D( 5 ); 
         
         int step = 50;
         hmap.setStep( 50.0 );
         
-        cmap = new CellSort2D_ind( width, height, step, nbody );
-        
+        cmap = new CellSort2D( width, height, step, nbody );
+                
         //double px=400;
         //double py=400;
         float speed=30.0f;
@@ -81,11 +96,36 @@ public class Test_CollisionGrids extends PApplet implements PConstants  {
         
         int n = hmap.getAllInBox( nbody1.ps[0].x, nbody1.ps[0].y, tmpOuts );
         
+        nbody1.bDEBUG = true;
+        nbody1.cleanForce();
+        n = cmap.interactNeighs(nbody1, outIDs);
+        //System.out.println( "n-interactions "+n );
+        pg.vecsInPos( nbody1.ps.length, nbody1.ps, nbody1.fs, 10.0f );
+        nbody1.bDEBUG = false;        
+        
+        System.out.println( " *** SETUP DONE *** " );
     }
-
+    
     @Override
     public void draw() {
         background(0.5f);
+        
+        // ======== Simulation
+        perFrame=1;
+        for(int i=0; i<perFrame; i++){
+            nbody1.cleanForce();
+
+            cmap.clean();
+            cmap.insert( nbody1.ps );
+            int n = cmap.interactNeighs(nbody1, outIDs);
+            //System.out.println( "n-interactions "+n );
+            pg.vecsInPos( nbody1.ps.length, nbody1.ps, nbody1.fs, 10.0f );
+            //vecsInPos(nbody1.ps.length, nbody1.ps, nbody1.fs, (float)10.0);
+
+            nbody1.move_GD(0.1);
+        }
+    
+        // ======== Drawing
         
         strokeWeight(2);
         
@@ -104,7 +144,7 @@ public class Test_CollisionGrids extends PApplet implements PConstants  {
         //int ip = hmap.hash( mouseX, mouseY );
         //long ip = hmap.ibox2d( mouseX, mouseY );
         //int n = hmap.getAllInBox( mouseX, mouseY, tmpOuts );
-        int n = cmap.loadNeighs( (float)mouseX, (float)mouseY, outIDs );
+        int n = cmap.loadNeighs( (float)mouseX, (float)mouseY, outIDs, true );
         //if(n>0)System.out.println(  "nfpund " + n  );
         for(int i=0; i<n; i++){
             //Vec2d p = (Vec2d)tmpOuts[i];

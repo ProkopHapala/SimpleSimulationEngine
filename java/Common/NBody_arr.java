@@ -1,12 +1,12 @@
 package Common;
 
-public class NBody_array {
+public class NBody_arr {
     public double [] ps;
     public double [] vs;
     public double [] fs;
     public double m = -1.0;
     
-    public NBody_array(int n){
+    public NBody_arr(int n){
         ps = new double[n*2];
         vs = new double[n*2];
         fs = new double[n*2];

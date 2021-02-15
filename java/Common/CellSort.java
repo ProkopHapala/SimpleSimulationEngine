@@ -19,7 +19,7 @@ public class CellSort {
   int [] cell2id;
   
 public CellSort(int ncell_, int nid_ ){
-    System.out.println("ncell "+ncell_+" nid "+nid_);
+    //System.out.println("ncell "+ncell_+" nid "+nid_);
     id2cell=new int[nid_  ];
     cellNs =new int[ncell_];
     cellIs =new int[ncell_];
@@ -50,14 +50,14 @@ public final void sort(){
       cellIs[i]=n;
       int ni = cellNs[i];
       n+=ni;
-      System.out.println( i+": i0 "+cellIs[i]+" ni "+ni );
+      //System.out.println( i+": i0 "+cellIs[i]+" ni "+ni );
       cellNs[i] = 0;
     }
     // put to cells
     for(int i=0; i<nid; i++){
       int ic = id2cell[i];
       int ni = cellNs[ic];
-      if((cellIs[ic] + ni)>ncell)System.out.println( " i0 "+cellIs[ic]+" ni "+ni );
+      //if((cellIs[ic] + ni)>ncell)System.out.println( " i0 "+cellIs[ic]+" ni "+ni );
       cell2id[ cellIs[ic] + ni ] = i;
       cellNs[ic]=ni+1;
     }

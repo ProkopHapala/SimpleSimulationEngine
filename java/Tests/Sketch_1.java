@@ -2,9 +2,10 @@ package Tests;
 
 
 
-import Common.NBody_Vec2d;
+import Common.NBody;
 import Common.Vec2d;
-import Common.NBody_array;
+import Common.NBody_arr;
+import Common.TempPool;
 import processing.core.PApplet;
 import processing.core.PConstants;
 
@@ -12,8 +13,9 @@ public class Sketch_1 extends PApplet implements PConstants  {
 
     float zoomRate = 1.2f;
     float zoom     = 100.0f;
-    NBody_Vec2d nbody1; //= new NBody_Vec2d(nbody);
-    NBody_array nbody2; //= new NBody_array(nbody);
+    NBody nbody1; //= new NBody_Vec2d(nbody);
+    NBody_arr nbody2; //= new NBody_array(nbody);
+    TempPool pool_Vec2d;
         
     @Override
     public void settings() {
@@ -26,9 +28,12 @@ public class Sketch_1 extends PApplet implements PConstants  {
     @Override
     public void setup() {
         colorMode(RGB, 1.0f );
+        
+        pool_Vec2d = new TempPool( 10, Vec2d.class );
+        
         int nbody    = 5000;
-        nbody1 = new NBody_Vec2d(nbody);
-        nbody2 = new NBody_array(nbody);
+        nbody1 = new NBody(nbody, pool_Vec2d );
+        nbody2 = new NBody_arr(nbody);
         for(int i=0; i<nbody; i++){
             double px=Math.random();
             double py=Math.random();
