@@ -78,7 +78,7 @@ void Battleship::render( ){
 void Battleship::draw( ){
 
     glColor3f(0.8,0.8,0.8);
-    Draw3D::drawShape( pos3d, rot3d, shape );
+    Draw3D::drawShape( shape, pos3d, rot3d);
     glColor3f(0.8,0.0,0.0);
     for( Turret* tur : turrets ){
         printf( "(%3.3f,%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f)\n", tur->gpos.x, tur->gpos.y, tur->gpos.z, tur->gun_dir.x, tur->gun_dir.y, tur->gun_dir.z );
@@ -86,15 +86,15 @@ void Battleship::draw( ){
 
         Draw3D::drawVecInPos( tur->gun_dir*50.0, tur->gpos );
 
-        //Draw3D::drawShape( {0.0,0.0,0.0}, {1.0,0.0,0.0,   0.0,1.0,0.0,  1.0,0.0,0.0}, tur->shape );
-        //Draw3D::drawShape( tur->gpos, {1.0,0.0,0.0,   0.0,1.0,0.0,  0.0,0.0,1.0}, tur->shape );
-        Draw3D::drawShape( tur->gpos, tur->grot, tur->shape );
+        //Draw3D::drawShape( tur->shape, {0.0,0.0,0.0}, {1.0,0.0,0.0,   0.0,1.0,0.0,  1.0,0.0,0.0} );
+        //Draw3D::drawShape( tur->shape, tur->gpos, {1.0,0.0,0.0,   0.0,1.0,0.0,  0.0,0.0,1.0} );
+        Draw3D::drawShape( tur->shape, tur->gpos, tur->grot );
 
 
 
 
-        //Draw2D::drawShape( pos, rot, shape );
-        //Draw2D::drawShape( pos, rot, tur->shape );
+        //Draw2D::drawShape( shape, pos, rot );
+        //Draw2D::drawShape( tur->shape, pos, rot );
     }
 
 }
@@ -242,7 +242,7 @@ void Battleship::draw( ){
 void Battleship::drawHitBox( ){
     float clife = (float)( life / life_max );
     glColor4f( 1.0f, clife, clife, 1.0f );
-    Draw2D::drawShape( pos, rot, collisionShape->displayList );
+    Draw2D::drawShape( collisionShape->displayList, pos, rot );
 }
 */
 

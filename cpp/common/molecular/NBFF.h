@@ -160,40 +160,7 @@ double evalLJQs(){
     return E;
 }
 
-double evalLJQ_shifted( Vec3d shift ){
-    const int N=n;
-    double E=0;
-    for(int i=0; i<N; i++){
-        Vec3d fi = Vec3dZero;
-        Vec3d pi = ps[i];
-        pi.add(shift);
-        const Vec3d& REQi = REQs[i];
-        for(int j=i+1; j<N; j++){    // atom-atom
-            Vec3d fij = Vec3dZero;
-            Vec3d REQij; combineREQ( REQs[j], REQi, REQij );
-            E += addAtomicForceLJQ( ps[j]-pi, fij, REQij );
-            fs[j].sub(fij);
-            fi   .add(fij);
-        }
-        fs[i].add(fi);
-    }
-    return E;
-}
-
-double evalLJQ_pbc( Mat3d lvec, Vec3i npbc ){
-    double E=0;
-    for(int ix=-npbc.x;ix<=npbc.x;ix++){
-        for(int iy=-npbc.y;iy<=npbc.y;iy++){
-            for(int iz=-npbc.z;iz<=npbc.z;iz++){
-                E+=evalLJQ_shifted( lvec.a*ix + lvec.b*iy + lvec.c*iz );
-            }
-        }
-    }
-    return E;
-}
-
-
-double evalLJQ_sortedMask(){
+double evalLJQ_sortedMask( const Vec3d& shift=Vec3dZero ){
 
     int im=0;
     const int N=n;
@@ -201,6 +168,7 @@ double evalLJQ_sortedMask(){
     for(int i=0; i<N; i++){
         Vec3d fi = Vec3dZero;
         Vec3d pi = ps[i];
+        pi.add( shift );
         const Vec3d& REQi = REQs[i];
         for(int j=i+1; j<N; j++){    // atom-atom
             if( (im<nmask)&&(i==pairMask[im].i)&&(j==pairMask[im].j) ){
@@ -228,6 +196,19 @@ double evalLJQ_sortedMask(){
     //exit(0);
     return E;
 
+}
+
+double evalLJQ_pbc( Mat3d lvec, Vec3i npbc ){
+    double E=0;
+    for(int ix=-npbc.x;ix<=npbc.x;ix++){
+        for(int iy=-npbc.y;iy<=npbc.y;iy++){
+            for(int iz=-npbc.z;iz<=npbc.z;iz++){
+                //E+=evalLJQ_shifted( lvec.a*ix + lvec.b*iy + lvec.c*iz );
+                E+=evalLJQ_sortedMask( lvec.a*ix + lvec.b*iy + lvec.c*iz );
+            }
+        }
+    }
+    return E;
 }
 
 // ============= Short Range Force using neighbor list

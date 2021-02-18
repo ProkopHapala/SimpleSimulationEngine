@@ -133,8 +133,8 @@ void TestAppQuatRotSample::draw   (){
 	// draw rotation states
 	glColor3f(0.9f,0.9f,0.9f);
 	for(int i=0; i<rmesh.n; i++){
-        Draw3D::drawShape( {0.0,0.0,0.0}, rmesh.rots[i], vobL );
-        //Draw3D::drawShape( {0.0,0.0,0.0}, rmesh.mrots[i], vobL );
+        Draw3D::drawShape( vobL, {0.0,0.0,0.0}, rmesh.rots[i] );
+        //Draw3D::drawShape( vobL, {0.0,0.0,0.0}, rmesh.mrots[i] );
 	}
 
     // draw neighbor connections
@@ -144,7 +144,7 @@ void TestAppQuatRotSample::draw   (){
     Mat3f  mat;
     Vec3f  p;
     for(int i=0; i<rmesh.n; i++){
-        //Draw3D::drawShape( {0.0,0.0,0.0}, rmesh.rots[i], vobL );
+        //Draw3D::drawShape( vobL, {0.0,0.0,0.0}, rmesh.rots[i] );
         Vec3f pi;
         //convert(rmesh.mrots[i].c, pi );
         //printf("%i %i \n", i, rmesh.nneighs[i] );

@@ -225,14 +225,14 @@ void Tanks_single::draw(){
 
     for( Warrior3D * w : world.warriors ){
         Tank * tank =  ((Tank*)w);
-        Draw3D::drawShape( tank->pos, tank->rotMat, tank->hull.glo_armor );
+        Draw3D::drawShape( tank->hull.glo_armor, tank->pos, tank->rotMat );
         Mat3d grot;
         //tank->turret.globalRotT(tank->rotMat, grot);
         tank->turret.globalRot(tank->rotMat, grot);
         Draw3D::drawMatInPos( grot*60, tank->pos + (Vec3d){0.0,1.0,0.0} );
         glColor3f(1.0,1.0,1.0);
         Draw3D::drawVecInPos( tank->gun_rot, tank->pos + (Vec3d){0.0,1.0,0.0} );
-        Draw3D::drawShape( tank->pos, grot, tank->turret.glo_armor  );
+        Draw3D::drawShape( tank->turret.glo_armor, tank->pos, grot  );
         drawTankWheels(tank);
     }
 

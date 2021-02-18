@@ -453,7 +453,9 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     nff.bindOrRealloc( ff.natoms, ff.nbonds, ff.apos, ff.aforce, 0, ff.bond2atom );
     //nff.setREQs(0,nff.n, {1.4,0.0}  )
-    nff.setREQs(0       ,nff.n,{1.9080,sqrt(0.003729),0});
+    //nff.setREQs(0       ,nff.n,{1.9080,sqrt(0.003729),0});
+    nff.setREQs(0       ,natom,{1.500,sqrt(0.003729),0});
+    nff.setREQs(natom   ,nff.n,{1.000,sqrt(0.003729),0});
 
     opt.bindOrAlloc( 3*ff.natoms, (double*)ff.apos, 0, (double*)ff.aforce, 0 );
     //opt.setInvMass( 1.0 );
@@ -469,7 +471,9 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         //glEnable( GL_LIGHTING );
         //glColor3f( 0.8f, 0.8f, 0.8f );
         //Draw3D::drawSphere_oct(3, 0.5, {0.0,0.0,0.0} );
-        Draw3D::drawSphere_oct( 2, 0.25, {0.0,0.0,0.0} );
+        //Draw3D::drawSphere_oct( 2, 0.25, {0.0,0.0,0.0} );
+        //Draw3D::drawSphere_oct( 2, 1.0, {0.0,0.0,0.0} );
+        Draw3D::drawSphere_oct( 3, 1.0, {0.0,0.0,0.0} );
     glEndList();
 
     //exit(0);
@@ -522,10 +526,10 @@ void TestAppSoftMolDyn::draw(){
         //ff.apos[0] = ff.apos[1] + (ff.apos[0]-ff.apos[1]).rotate( 2*M_PI/perFrame, ff.apos[2]-ff.apos[1] );
 
         double E=0;
-        E += ff.eval();
+        ff.cleanAtomForce();
+        E += ff.eval(false);
         //E += nff.evalLJQ_sortedMask();   // This is fast but does not work in PBC
-        //E += nff.evalLJQs();
-        //E += nff.evalLJQ_pbc( lvec, {1,1,1} );
+        E += nff.evalLJQ_pbc( lvec, {1,1,1} );
 
         //Vec3d cog,fsum,torq;
         //checkForceInvariatns( ff.natoms, ff.aforce, ff.apos, cog, fsum, torq );
@@ -625,16 +629,18 @@ void TestAppSoftMolDyn::draw(){
         //printf( "aforce[%i] (%g,%g,%g) \n", i,  ff.aforce[i].x, ff.aforce[i].y, ff.aforce[i].z );
         //glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos(ff.aforce[i]*fsc,ff.apos[i]);
         glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(ff.apos[i],0.1);
-        /*
+
+
+
         //glCallList( ogl_sph );
         glEnable(GL_LIGHTING);
-        Mat3d mat;
-        mat.setOne();
+        //Mat3d mat;
+        //mat.setOne();
         //mat.mul();
         glColor3f(0.8f,0.8f,0.8f);
-        Draw3D::drawShape(ff.apos[i],mat,ogl_sph);
+        Draw3D::drawShape( ogl_sph, ff.apos[i], Mat3dIdentity*nff.REQs[i].x );
         glDisable(GL_LIGHTING);
-        */
+
     }
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);

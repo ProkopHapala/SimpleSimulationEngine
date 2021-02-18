@@ -200,7 +200,7 @@ void AppFlightView::draw(  ) {
     glColor3d(0.0,0.0,0.0);
     for(int i=0; i<world->nTargets; i++ ){
         //printf("%i (%g,%g,%g) %g \n", i, world->targets[i].p.x, world->targets[i].p.y, world->targets[i].p.z, world->targets[i].r );
-        Draw3D::drawShape( world->targets[i].p, Mat3dIdentity*world->targets[i].r, gloTarget, false );
+        Draw3D::drawShape( gloTarget, world->targets[i].p, Mat3dIdentity*world->targets[i].r, false );
     }
 
     //glEnable(GL_BLEND);

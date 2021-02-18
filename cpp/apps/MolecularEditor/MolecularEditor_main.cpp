@@ -230,7 +230,7 @@ void MolecularEditorApp::draw(){
             */
 
             //Draw3D::drawMatInPos( world.rot[i], world.pos[i] );
-            Draw3D::drawShape( world.pos[i], world.rot[i], world.instances[i]->viewlist );
+            Draw3D::drawShape( world.instances[i]->viewlist, world.pos[i], world.rot[i] );
 
         }
     };

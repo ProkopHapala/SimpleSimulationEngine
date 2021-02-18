@@ -230,7 +230,7 @@ void AeroCraftGUI::draw(){
         //printf( " %f, %f, %f\n", prj->pos.z, prj->pos.y, prj->pos.z);
 	}
 	for(int i=0; i<nBaloons; i++){
-        Draw3D::drawShape( baloons[i], {10.0,0.0,0.0, 0.0,10.0,0.0, 0.0,0.0,10.0} ,gloBaloon);
+        Draw3D::drawShape( gloBaloon, baloons[i], {10.0,0.0,0.0, 0.0,10.0,0.0, 0.0,0.0,10.0} );
         Draw3D::drawLine( {baloons[i].x,0.0,baloons[i].z}, baloons[i] );
     }
 

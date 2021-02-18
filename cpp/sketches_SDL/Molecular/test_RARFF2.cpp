@@ -352,7 +352,7 @@ void TestAppRARFF::draw(){
         //glColor3f(1.0,1.0,1.0); drawRigidAtom(ff.atoms[i]);
 
         glColor3f(0.3,0.3,0.3);
-        Draw3D::drawShape( ff.atoms[i].pos , Mat3dIdentity, oglSph );
+        Draw3D::drawShape( oglSph, ff.atoms[i].pos , Mat3dIdentity );
 
         for(int ib=0; ib<ff.atoms[i].type->nbond; ib++){
             int io=4*i+ib;

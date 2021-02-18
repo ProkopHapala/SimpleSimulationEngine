@@ -263,7 +263,7 @@ void drawMatInPos( const Mat3f& mat, const Vec3f& pos, const Vec3f& sc ){
 	glEnd();
 };
 
-void drawShape( const Vec3f& pos, const Mat3f& rot, int shape, bool trasposed ){
+void drawShape( int shape, const Vec3f& pos, const Mat3f& rot, bool trasposed ){
 	glPushMatrix();
 	float glMat[16];
 	if( trasposed ){
@@ -276,7 +276,7 @@ void drawShape( const Vec3f& pos, const Mat3f& rot, int shape, bool trasposed ){
 	glPopMatrix();
 };
 
-void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape ){
+void drawShape    ( int shape, const Vec3f& pos, const Quat4f& qrot ){
 	glPushMatrix();
 	float glMat[16];
 	toGLMat ( pos, qrot, glMat );
@@ -285,7 +285,7 @@ void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape ){
 	glPopMatrix();
 };
 
-void drawShape    ( const Vec3f& pos, const Quat4f& qrot, const Vec3f& scale, int shape ){
+void drawShape    ( int shape, const Vec3f& pos, const Quat4f& qrot, const Vec3f& scale ){
 	glPushMatrix();
 	float glMat[16];
 	toGLMat ( pos, qrot, scale, glMat );

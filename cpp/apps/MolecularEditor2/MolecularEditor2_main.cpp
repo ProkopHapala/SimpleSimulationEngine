@@ -386,7 +386,7 @@ void AppMolecularEditor2::draw(){
         mat.mul( atomSize*params.atypes[world.atypes[i]].RvdW );
         //glColor3f(0.8f,0.8f,0.8f);
         Draw::setRGB( params.atypes[world.atypes[i]].color );
-        Draw3D::drawShape(world.apos[i],mat,ogl_sph);
+        Draw3D::drawShape(ogl_sph, world.apos[i],mat);
         glDisable(GL_LIGHTING);
     }
     glDisable(GL_LIGHTING);

@@ -59,9 +59,13 @@ void drawQuad     ( const Vec3f& p1,  const Vec3f& p2, const Vec3f& p3, const Ve
 
 void drawMatInPos ( const Mat3f& mat, const Vec3f& pos, const Vec3f& sc=Vec3fOne );
 
-void drawShape    ( const Vec3f& pos, const Mat3f&  rot,  int shape, bool transposed = false );
-void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape );
-void drawShape    ( const Vec3f& pos, const Quat4f& qrot, const Vec3f& scale, int shape );
+//void drawShape    ( const Vec3f& pos, const Mat3f&  rot,  int shape, bool transposed = false );
+//void drawShape    ( const Vec3f& pos, const Quat4f& qrot, int shape );
+//void drawShape    ( const Vec3f& pos, const Quat4f& qrot, const Vec3f& scale, int shape );
+
+void drawShape    ( int shape, const Vec3f& pos, const Mat3f&  rot=Mat3fIdentity, bool transposed = false );
+//void drawShape    ( int shape, const Vec3f& pos, const Quat4f& qrot  );
+void drawShape    ( int shape, const Vec3f& pos, const Quat4f& qrot, const Vec3f& scale=Vec3fOne );
 
 int  drawCylinderStrip     ( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
 int  drawCylinderStrip_wire( int n, float r1, float r2, const Vec3f& base, const Vec3f& tip );
@@ -112,10 +116,13 @@ inline void drawQuad     ( const Quad3d& qd, bool filled ){ drawQuad(qd.l1.a,qd.
 
 inline void drawMatInPos ( const Mat3d& mat, const Vec3d& pos, const Vec3d& sc=Vec3dOne ){  drawMatInPos( (Mat3f)mat, (Vec3f)pos, (Vec3f)sc ); };
 
-inline void drawShape    ( const Vec3d& pos, const Mat3d&  rot,  int shape, bool transposed = false ){ drawShape( (Vec3f)pos, (Mat3f)rot, shape, transposed ); };
-inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, shape); };
-inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, Vec3d& scale, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, (Vec3f)scale, shape); };
+//inline void drawShape    ( const Vec3d& pos, const Mat3d&  rot,  int shape, bool transposed = false ){ drawShape( (Vec3f)pos, (Mat3f)rot, shape, transposed ); };
+//inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, shape); };
+//inline void drawShape    ( const Vec3d& pos, const Quat4d& qrot, Vec3d& scale, int shape ){ drawShape( (Vec3f)pos, (Quat4f)qrot, (Vec3f)scale, shape); };
 
+inline void drawShape    ( int shape, const Vec3d& pos, const Mat3d& rot=Mat3dIdentity,  bool transposed = false ){ drawShape(  shape, (Vec3f)pos, (Mat3f)rot,transposed ); };
+//inline void drawShape    ( int shape, const Vec3d& pos, const Quat4d& qrot, ){ drawShape( (Vec3f)pos, (Quat4f)qrot, shape); };
+inline void drawShape    (  int shape, const Vec3d& pos, const Quat4d& qrot, const Vec3d& scale=Vec3dOne ){ drawShape( shape, (Vec3f)pos, (Quat4f)qrot, (Vec3f)scale); };
 
 inline int  drawConeFan        ( int n, float r,                const Vec3d& base,  const Vec3d& tip                                 ){ return drawConeFan( n,             r,      (Vec3f)base, (Vec3f)tip         ); };
 inline int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3d& base, const Vec3d& tip, bool smooth ){ return drawCone   ( n, phi1, phi2, r1, r2, (Vec3f)base, (Vec3f)tip, smooth ); };

@@ -121,7 +121,7 @@ void TestConfDynamics::draw   (){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	Draw3D::drawShape( *confWorld.pos, *confWorld.rot, vobConf );
+	Draw3D::drawShape( vobConf, *confWorld.pos, *confWorld.rot );
 
 
     double Frest  = 1e+300;
@@ -136,7 +136,7 @@ void TestConfDynamics::draw   (){
 
 	for(int i=0; i<confWorld.nConfs; i++){
         //confWorld.confs[0].print();
-        Draw3D::drawShape( confWorld.confs[i].pos, confWorld.confs[i].rot, vobConf );
+        Draw3D::drawShape( vobConf, confWorld.confs[i].pos, confWorld.confs[i].rot );
 	}
 
 

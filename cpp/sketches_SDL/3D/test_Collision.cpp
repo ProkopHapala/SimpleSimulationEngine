@@ -167,11 +167,11 @@ void TestAppCollision::draw(){
             glCallList( o->shape );
             glPopMatrix();
             */
-            Draw3D::drawShape( o->gpos, o->grot, o->shape );
-            //Draw3D::drawShape( o->controler->pos, o->controler->rotMat, o->shape ); // WRONG : invert rotation
-            //Draw3D::drawShape( o->controler->pos, o->controler->qrot, o->shape ); // WRONG : invert rotation
-            //Draw3D::drawShapeT( o->controler->pos, o->controler->qrot, o->shape );
-            Draw3D::drawShape( o->controler->pos, o->controler->rotMat, o->shape, true );
+            Draw3D::drawShape( o->shape, o->gpos, o->grot );
+            //Draw3D::drawShape( o->shape, o->controler->pos, o->controler->rotMat ); // WRONG : invert rotation
+            //Draw3D::drawShape( o->shape, o->controler->pos, o->controler->qrot ); // WRONG : invert rotation
+            //Draw3D::drawShapeT( o->shape, o->controler->pos, o->controler->qrot );
+            Draw3D::drawShape(  o->shape, o->controler->pos, o->controler->rotMat, true );
         }
     }
 

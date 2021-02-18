@@ -782,7 +782,7 @@ void TestAppRARFF::draw(){
         //printf( "epos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
         //if(ff.espin[i]>0){ glColor3f(0.0,0.5,1.0); }else{ glColor3f(1.0,0.5,0.0); };
         if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, 0.2); }else{ glColor4f(1.0,0.0,0.0, 0.2 ); };
-        Draw3D::drawShape(ff.epos[i], Mat3dIdentity*ff.esize[i], oglSph, false );
+        Draw3D::drawShape( oglSph, ff.epos[i], Mat3dIdentity*ff.esize[i],  false );
         //Draw3D::drawSphere_oct(3,ff.esize[i],ff.epos[i]);
 
         //glColor3f(1.,1.,1.); Draw3D::drawVecInPos( ff.eforce  [i], ff.epos[i] );

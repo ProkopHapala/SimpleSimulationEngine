@@ -491,8 +491,8 @@ double eval_torsions(){
     return E;
 }
 
-double eval(){
-    cleanAtomForce();
+double eval( bool bClean=true ){
+    if(bClean)cleanAtomForce();
     double Eb = eval_bonds();
     double Ea = eval_angles();
     double Et = eval_torsions();
