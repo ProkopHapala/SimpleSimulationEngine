@@ -60,12 +60,14 @@ void checkForceInvariatns( int n, Vec3d* fs, Vec3d* ps, Vec3d& cog, Vec3d& fsum,
 
 class MMFFmini{ public:
     int  natoms=0, nbonds=0, nang=0, ntors=0;
+    bool bPBC=false;
 
     // --- Parameters
 
     Vec2i  * bond2atom = 0;
     double * bond_l0   = 0;  // [A]
     double * bond_k    = 0;  // [eV/A] ?
+    Vec3d  * pbcShifts = 0;  // [A]
 
     Vec2i  * ang2bond  = 0;
     Vec3i  * ang2atom  = 0;
@@ -111,6 +113,7 @@ void realloc( int natoms_, int nbonds_, int nang_, int ntors_ ){
     _realloc( bond2atom , nbonds );
     _realloc( bond_l0   , nbonds );
     _realloc( bond_k    , nbonds );
+    //if(bPBC){ _realloc(  pbcShifts, nbonds ); }
 
     _realloc( ang2bond  , nang   );
     _realloc( ang2atom  , nang   );
@@ -121,6 +124,8 @@ void realloc( int natoms_, int nbonds_, int nang_, int ntors_ ){
     _realloc( tors2atom , ntors  );
     _realloc( tors_n    , ntors  );
     _realloc( tors_k    , ntors  );
+
+
 
 }
 
@@ -134,6 +139,7 @@ void dealloc(){
     _dealloc( bond2atom );
     _dealloc( bond_l0   );
     _dealloc( bond_k    );
+    //_dealloc( pbcShifts );
 
     _dealloc( ang2bond  );
     _dealloc( ang2atom  );
@@ -145,6 +151,13 @@ void dealloc(){
     _dealloc( tors_n    );
     _dealloc( tors_k    );
 }
+
+
+void initPBC(){
+    _realloc(  pbcShifts, nbonds );
+    for(int i=0; i<nbonds; i++){ pbcShifts[i]=Vec3dZero; }
+}
+
 
 inline void setAngleParam(int i, double a0, double k){
     a0=a0*0.5; // we store half angle
@@ -168,6 +181,9 @@ double eval_bond(int ib){
     //printf( "bond %i\n", ib );
     Vec2i iat = bond2atom[ib];
     Vec3d f; f.set_sub( apos[iat.y], apos[iat.x] );
+
+    if(pbcShifts)f.add( pbcShifts[ib] );
+
     //printf( "%i %i (%g,%g,%g) (%g,%g,%g) \n", iat.x, iat.y, apos[iat.x].x, apos[iat.x].y, apos[iat.x].z, apos[iat.y].x, apos[iat.y].y, apos[iat.y].z );
     double l = f.normalize();
     //printf( " %i (%i,%i) (%g,%g,%g) %g \n", ib, iat.x, iat.y, dp.x, dp.y, dp.z, l );

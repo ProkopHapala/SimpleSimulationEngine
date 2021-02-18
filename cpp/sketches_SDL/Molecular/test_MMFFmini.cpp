@@ -67,40 +67,6 @@ void drawTors(int i, MMFFmini& ff){
     //if(b.j&SIGN_MASK){   };
 }
 
-class TestAppSoftMolDyn : public AppSDL2OGL_3D {
-	public:
-	Molecule    mol;
-	//MMFFparams  params;
-    MMFFmini    ff;
-    NBFF       nff;
-    MMFFBuilder builder;
-    DynamicOpt  opt;
-
-    int     fontTex;
-    int     ogl_sph;
-
-    char str[256];
-
-    Vec3d ray0;
-    int ipicked  = -1, ibpicked = -1;
-    int perFrame =  50;
-
-    double drndv =  10.0;
-    double drndp =  0.5;
-
-	virtual void draw   ();
-	virtual void drawHUD();
-	//virtual void mouseHandling( );
-	virtual void eventHandling   ( const SDL_Event& event  );
-	//virtual void keyStateHandling( const Uint8 *keys );
-
-	TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ );
-
-};
-
-
-
-
 bool bPrint = true;
 
 
@@ -216,15 +182,11 @@ inline double evalTorq(Vec3d& ha,Vec3d& hb,Vec3d& hab,   Vec3d& fa, Vec3d& fb, V
     return c;
 }
 
-//template<typename T> std::function<T(const T&,const T&         )> F2;
 
-TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
-
-
+void doChecks(){
     Vec3d ha      =(Vec3d){1.0, 1.0,-0.2};
     Vec3d hb      =(Vec3d){1.0,-1.0,+0.3};
     Vec3d hab     =(Vec3d){0.1, 0.2, 1.0};
-
     //ha.normalize();
     //hb.normalize();
     //hab.normalize();
@@ -257,10 +219,6 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     printf( "fE(%g,%g,%g) fE(%g,%g,%g)\n", fE.x, fE.y, fE.z, f.x,f.y,f.z );
     */
-
-
-
-
     /*
     for(int i=0; i<n; i++){
         ha.x+=dx;
@@ -269,6 +227,54 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         printf( f1 );
     }
     */
+}
+
+// ===========================================
+// ================= MAIN CLASS ==============
+// ===========================================
+
+class TestAppSoftMolDyn : public AppSDL2OGL_3D {
+	public:
+	Molecule    mol;
+	//MMFFparams  params;
+    MMFFmini    ff;
+    NBFF       nff;
+    MMFFBuilder builder;
+    DynamicOpt  opt;
+
+    Mat3d lvec;
+
+    bool bConverged = false;
+
+    int     fontTex;
+    int     ogl_sph;
+
+    char str[256];
+
+    Vec3d ray0;
+    int ipicked  = -1, ibpicked = -1;
+    int perFrame =  50;
+
+    double drndv =  10.0;
+    double drndp =  0.5;
+
+	virtual void draw   ();
+	virtual void drawHUD();
+	//virtual void mouseHandling( );
+	virtual void eventHandling   ( const SDL_Event& event  );
+	//virtual void keyStateHandling( const Uint8 *keys );
+
+	TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ );
+
+};
+
+
+//template<typename T> std::function<T(const T&,const T&         )> F2;
+
+TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+
+    doChecks();
 
 
     //MMFFAtom a{1.0,0.0,0.0};
@@ -285,18 +291,23 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
 
     //const int natom=4,nbond=3,nang=2,ntors=1;
-    const int natom=4,nbond=3,nang=0,ntors=0;
+    //const int natom=4,nbond=3,nang=0,ntors=0;
+    const int natom=4,nbond=4;
     Vec3d apos0[] = {
         {-2.0,0.0,0.0},  // 0
         {-1.0,2.0,0.0},  // 1
         {+1.0,2.0,0.0},  // 2
         {+2.0,0.0,1.0},  // 3
     };
-    Vec2i bong2atom[] = {
+    Vec2i bond2atom[] = {
         {0,1},  // 0
         {1,2},  // 1
         {2,3},  // 2
+        {3,0},  // 3  // PBC
     };
+
+    /*
+    // NOTE: Bonds and angles are assigned automatically by environment depending on atomic configuration !!!!
     Vec2i ang2bond[] = {
         {0,1},  // 0
         {1,2},  // 1
@@ -309,6 +320,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         2.0,
         2.0,
     };
+    */
     DEBUG
 /*
     const int natom=5+2,nbond=4+3,nang=6;
@@ -370,7 +382,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     }
     printf( "----- Bonds \n" );
     for(int i=0;i<nbond;i++){
-        brushBond.atoms=bong2atom[i];
+        brushBond.atoms=bond2atom[i];
         builder.insertBond(brushBond);
     }
     printf( "----- Confs \n" );
@@ -397,6 +409,17 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     }
     //exit(0);
     builder.toMMFFmini( ff );
+
+
+    lvec.a = (Vec3d){  5.0,0.0,0.0 };
+    lvec.b = (Vec3d){  0.0,5.0,0.0 };
+    lvec.c = (Vec3d){  0.0,0.0,5.0 };
+
+
+    ff.initPBC();                           // as far as good, pbc-shifts are curenlty zero, so no change
+    ff.pbcShifts[1] = lvec.a*-1.; // make bond 3 from nighboring cell
+    ff.printBondParams();
+    //exit(0);
 
     //exit(0);
     /*
@@ -483,11 +506,15 @@ void TestAppSoftMolDyn::draw(){
         Draw3D::drawVecInPos( ((Vec3d){cs.x,-cs.y,0.0})*5.0, ff.apos[1] );
     */
 
+
+    double Ftol = 1e-4;
+
     //ff.apos[0].set(-2.0,0.0,0.0);
     perFrame = 1;
     //perFrame = 50;
 	for(int itr=0; itr<perFrame; itr++){
-        printf( "======= frame %i \n", frameCount );
+        if(bConverged) break;
+        //printf( "======= frame %i \n", frameCount );
 
 	    //printf( "DEBUG run 1 \n" );
 
@@ -496,12 +523,13 @@ void TestAppSoftMolDyn::draw(){
 
         double E=0;
         E += ff.eval();
-        E += nff.evalLJQ_sortedMask();
+        //E += nff.evalLJQ_sortedMask();   // This is fast but does not work in PBC
+        //E += nff.evalLJQs();
+        //E += nff.evalLJQ_pbc( lvec, {1,1,1} );
 
-
-        Vec3d cog,fsum,torq;
-        checkForceInvariatns( ff.natoms, ff.aforce, ff.apos, cog, fsum, torq );
-        printf( "fsum %g torq %g   cog (%g,%g,%g) \n", fsum.norm(), torq.norm(), cog.x, cog.y, cog.z );
+        //Vec3d cog,fsum,torq;
+        //checkForceInvariatns( ff.natoms, ff.aforce, ff.apos, cog, fsum, torq );
+        //printf( "fsum %g torq %g   cog (%g,%g,%g) \n", fsum.norm(), torq.norm(), cog.x, cog.y, cog.z );
 
 
         //for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
@@ -539,8 +567,12 @@ void TestAppSoftMolDyn::draw(){
         //opt.move_GD(0.001);
         double f2 = opt.move_FIRE();
         //exit(0);
-        //printf( "E %g |F| %g \n", E, sqrt(f2) );
 
+        printf( "E %g |F| %g |Ftol %g \n", E, sqrt(f2), Ftol );
+        if(f2<sq(Ftol)){
+            bConverged=true;
+            printf( "CONVERGED \n" );
+        }
     }
 
 
