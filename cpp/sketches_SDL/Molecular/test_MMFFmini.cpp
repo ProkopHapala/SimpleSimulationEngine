@@ -242,12 +242,15 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
     MMFFBuilder builder;
     DynamicOpt  opt;
 
+    std::unordered_map<std::string,int> atomTypes;
+
     Mat3d lvec;
 
     bool bConverged = false;
 
     int     fontTex;
-    int     ogl_sph;
+    int     ogl_sph=0;
+    int     ogl_mol=0;
 
     char str[256];
 
@@ -269,6 +272,9 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 };
 
 
+
+//void TestAppSoftMolDyn::makeAtoms(){}
+
 //template<typename T> std::function<T(const T&,const T&         )> F2;
 
 TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
@@ -276,6 +282,11 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     doChecks();
 
+    makeAtomTypeNames( atomTypes );
+    Molecule mol1; // = new Molecule( );
+    mol1.atypNames = &atomTypes;
+    mol1.loadMol_const( "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol" );
+    //exit(0);
 
     //MMFFAtom a{1.0,0.0,0.0};
     //printf( "print (%g,%g,%g)\n", a.pos.x, a.pos.y,a.pos.z );
@@ -375,31 +386,60 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     builder.capBond = MMFFBond{ -1, {-1,-1}, 1.07, 15.0 };
 
-    printf( "----- Atoms \n" );
-    for(int i=0;i<natom;i++){
-        brushAtom.pos = apos0[i];
-        builder.insertAtom(brushAtom, true);
+    // ------ using molecule from mol-file does not seem to work now - There is some problem with AtomConfs
+    // >> This algorithm assumes all atoms with conf precede atoms without confs in the array
+    // >>   ERROR in builder.sortBonds() => exit
+    //bool bLoadMol = false;
+    bool bLoadMol = true;
+    if(bLoadMol){
+        makeAtomTypeNames( atomTypes );
+        //Molecule mol1; // = new Molecule( );
+        mol1.atypNames = &atomTypes;
+        mol1.loadMol_const( "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol" );
+        //exit(0);
+        //int nh = mol1.countAtomType(1); printf( "nh %i\n", nh );
+        //builder.insertMolecule( &mol1, Vec3dZero, Mat3dIdentity, false );
+        //builder.makeSPConf(i,0,0);
+        //for(int i=0;i<(mol1.natoms-nh);i++){ builder.makeSPConf(i,0,0); }
+        //for(int i=0;i<mol1.natoms;i++){ builder.makeSPConf(i,0,0); }
+        ogl_mol = glGenLists(1);
+        glNewList( ogl_mol, GL_COMPILE );
+            //glEnable( GL_LIGHTING );
+            //glColor3f( 0.8f, 0.8f, 0.8f );
+            //Draw3D::drawSphere_oct(3, 0.5, {0.0,0.0,0.0} );
+            //Draw3D::drawSphere_oct( 2, 0.25, {0.0,0.0,0.0} );
+            //Draw3D::drawSphere_oct( 2, 1.0, {0.0,0.0,0.0} );
+            Draw3D::drawLines( mol1.nbonds, (int*)mol1.bond2atom, mol1.pos );
+        glEndList();
+        return;
+    }else{
+        printf( "----- Atoms \n" );
+        for(int i=0;i<natom;i++){
+            brushAtom.pos = apos0[i];
+            builder.insertAtom(brushAtom, true);
+        }
+        printf( "----- Bonds \n" );
+        for(int i=0;i<nbond;i++){
+            brushBond.atoms=bond2atom[i];
+            builder.insertBond(brushBond);
+        }
+        printf( "----- Confs \n" );
+        for(int i=0;i<natom;i++){
+            builder.makeSPConf(i,0,0);
+            //builder.makeSPConf(i);
+        }
+        //exit(0);
     }
-    printf( "----- Bonds \n" );
-    for(int i=0;i<nbond;i++){
-        brushBond.atoms=bond2atom[i];
-        builder.insertBond(brushBond);
-    }
-    printf( "----- Confs \n" );
-    for(int i=0;i<natom;i++){
-        builder.makeSPConf(i,0,0);
-        //builder.makeSPConf(i);
-    }
-    //exit(0);
+
     printf( "----- toMMFF \n" );
     builder.autoAngles( 2.5, 1.25 );
     printf( "----- toMMFF \n" );
 
+    // instert aditional dihedral
     MMFFDihedral brushDihedral{ -1,   {-1,-1,-1},    3, 0.5 };
     println(brushDihedral);
-    //exit(0);
-
     builder.insertDihedralByAtom( {0,1,2,3}, brushDihedral );
+
 
     if( !builder.checkBondsSorted() ){
         if( !builder.sortBonds() ){
@@ -407,15 +447,14 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
             exit(0);
         }
     }
+
     //exit(0);
     builder.toMMFFmini( ff );
 
-
+    // --- Periodic Boundary Conditions
     lvec.a = (Vec3d){  5.0,0.0,0.0 };
     lvec.b = (Vec3d){  0.0,5.0,0.0 };
     lvec.c = (Vec3d){  0.0,0.0,5.0 };
-
-
     ff.initPBC();                           // as far as good, pbc-shifts are curenlty zero, so no change
     ff.pbcShifts[1] = lvec.a*-1.; // make bond 3 from nighboring cell
     ff.printBondParams();
@@ -451,6 +490,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     printf( "DEBUG 4 \n" );
     */
 
+
     nff.bindOrRealloc( ff.natoms, ff.nbonds, ff.apos, ff.aforce, 0, ff.bond2atom );
     //nff.setREQs(0,nff.n, {1.4,0.0}  )
     //nff.setREQs(0       ,nff.n,{1.9080,sqrt(0.003729),0});
@@ -484,6 +524,11 @@ void TestAppSoftMolDyn::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+	if( ogl_mol ){
+        glCallList( ogl_mol );
+        return;
+        //exit(0);
+    }
 
 	/*
 	//ibpicked = world.pickBond( ray0, camMat.c , 0.5 );

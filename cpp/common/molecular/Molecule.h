@@ -9,6 +9,7 @@
 #include "fastmath.h"
 #include "Vec2.h"
 #include "Vec3.h"
+//#include "IOutils.h"
 
 /*
 inline int atomChar2int(char ch ){
@@ -26,6 +27,39 @@ inline int atomChar2int(char ch ){
     return i;
 }
 */
+
+
+void makeAtomTypeNames( std::unordered_map<std::string,int>& mp ){
+    mp["H" ]=1;  mp["He"]=2;
+    mp["Li"]=3;  mp["Be"]=4;  mp["B" ]=5;  mp["C" ]=6;  mp["N"]=7;  mp["O"]=8;  mp["F"]=9;   mp["Ne"]=10;
+    mp["Na"]=11; mp["Mg"]=12; mp["Al"]=13; mp["Si"]=14; mp["P"]=15; mp["S"]=16; mp["Cl"]=17; mp["Ar"]=18;
+}
+
+void cpstr( const char* str, char* tmp, int i0, int n ){
+    tmp[n]='\0';
+    for(int i=0; i<n; i++){
+        tmp[i]=str[i0+i];
+    }
+}
+
+double getDouble(const char* str, int i0, int i1 ){
+    const int n=i1-i0;
+    char  tmp[n+1];
+    cpstr( str, tmp, i0, n );
+    //double f; //sscanf( "%lf", &f );
+    return atof(tmp);
+}
+
+double getInt(const char* str, int i0, int i1 ){
+    const int n=i1-i0;
+    char  tmp[n+1];
+    cpstr( str, tmp, i0, n );
+    //printf("str: %s",   str );
+    //printf("tmp: %s\n", tmp );
+    //int i; sscanf( "%i", &i );
+    return atoi(tmp);
+}
+
 
 inline int otherAtom( Vec2i ib, int ia ){ return (ia==ib.x)?ib.y:ib.x; }
 
@@ -91,6 +125,12 @@ class Molecule{ public:
         nbonds=pairs.size();
         _realloc(bond2atom,nbonds);
         for(int i=0;i<nbonds;i++){  bond2atom[i]=pairs[i]; }
+    }
+
+    int countAtomType( int ityp){
+        int n=0;
+        for(int i=0; i<natoms; i++){ if(atomType[i]==ityp)n++; }
+        return n;
     }
 
     void printAtom2Bond(){
@@ -164,6 +204,7 @@ class Molecule{ public:
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         sscanf( line, "%i %i\n", &natoms, &nbonds );
         //printf("%i %i \n", natoms, nbonds );
+
         allocate(natoms,nbonds);
         for(int i=0; i<natoms; i++){
             //char ch;
@@ -209,10 +250,15 @@ class Molecule{ public:
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
-        sscanf( line, "%i %i\n", &natoms, &nbonds );
+        //sscanf( line, "%i %i\n", &natoms, &nbonds );
         //printf("natoms, nbonds %i %i \n", natoms, nbonds );
+        //line = fgets( buff, 1024, pFile );
+        natoms = getInt( line, 0, 3 );
+        nbonds = getInt( line, 3, 6 );
+        printf("natoms, nbonds %i %i \n", natoms, nbonds );
+        //exit(0);
+        //return 0;
         allocate(natoms,nbonds);
-
         int istr_x      =0;
         int istr_y      =10;
         int istr_z      =20;
@@ -224,7 +270,7 @@ class Molecule{ public:
             char at_name[8];
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
             sscanf( line, "%lf %lf %lf %s\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name );
-            //printf(       "%lf %lf %lf %s\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name );
+            printf(       "%lf %lf %lf %s\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name );
             // atomType[i] = atomChar2int( ch );
             auto it = atypNames->find( at_name );
             if( it != atypNames->end() ){
@@ -236,7 +282,10 @@ class Molecule{ public:
         }
         for(int i=0; i<nbonds; i++){
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
-            sscanf( line, "%i %i %i\n", &bond2atom[i].x, &bond2atom[i].y, &bondType[i] );
+            bond2atom[i].x = getInt( line, 0, 3 );
+            bond2atom[i].y = getInt( line, 3, 6 );
+            bondType[i]    = getInt( line, 6, 9 );
+            //sscanf( line, "%i %i %i\n", &bond2atom[i].x, &bond2atom[i].y, &bondType[i] );
             printf(       "%i %i %i\n",  bond2atom[i].x,  bond2atom[i].y,  bondType[i] );
             bond2atom[i].x--;
             bond2atom[i].y--;
