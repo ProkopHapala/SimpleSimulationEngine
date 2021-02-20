@@ -8,7 +8,7 @@ Non-Bonded Force-Field
 
 //#include "Forces.h"
 
-bool checkParisSorted( int n, Vec2i* pairs ){
+bool checkPairsSorted( int n, Vec2i* pairs ){
     int ia=-1,ja=-1;
     for(int i=0;i<n; i++){
         const Vec2i& b = pairs[i];

@@ -138,7 +138,7 @@ struct MMFFBond{
         return -1;
     }
 
-    void print()const{ printf( " Bond{t %i a(%i,%) l0 %g k %g}", type, atoms.i, atoms.j, l0, k ); };
+    void print()const{ printf( " Bond{t %i a(%i,%i) l0 %g k %g}", type, atoms.i, atoms.j, l0, k ); };
 };
 
 struct MMFFAngle{
@@ -196,8 +196,8 @@ class MMFFBuilder{  public:
     std::unordered_map<size_t,size_t> fragTypes;
     std::unordered_map<size_t,size_t> mol2molType;
 
-    MMFFBond  defaultBond;
-    MMFFAngle defaultAngle;
+    MMFFBond  defaultBond { -1, {-1,-1}, 1.5, 1.0 };
+    MMFFAngle defaultAngle{ -1, {-1,-1}, 0.0, 0.5 };
 
     MMFFAtom capAtom; // = (MMFFAtom){,,};
     MMFFAtom capAtomEpair;
@@ -254,47 +254,82 @@ class MMFFBuilder{  public:
         return itype;
     };
 
-    int insertMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot, bool rigid ){
+    void insertFlexibleMolecule_ignorH( Molecule * mol, const Vec3d& pos, const Mat3d& rot, int iH = 1 ){
         int natom0  = atoms.size();
         int nbond0  = bonds.size();
+        std::vector<int> atomInds(mol->natoms);
+        std::vector<int> bondInds(mol->nbonds);
+        for(int i=0; i<mol->natoms; i++){
+            if( mol->atomType[i]==iH ) continue;
+            atomInds[i] = atoms.size();
+            Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y);
+            Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
+            atoms.push_back( (MMFFAtom){mol->atomType[i], -1, -1, p, REQi } );
+        }
+        for(int i=0; i<mol->nbonds; i++){
+            //bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k } );
+            bondInds[i] = bonds.size();
+            const Vec2i& b = mol->bond2atom[i];
+            bonds.push_back( MMFFBond(mol->bondType[i], { atomInds[b.a],atomInds[b.b] }, defaultBond.l0, defaultBond.k ) );
+        }
+        for(int i=0; i<mol->nang; i++){
+            const Vec2i& ang = mol->ang2bond[i];
+            angles.push_back( (MMFFAngle){ 1, { bondInds[ang.a],bondInds[ang.b] }, defaultAngle.a0, defaultAngle.k } );
+        }
+    }
+
+    void insertFlexibleMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot ){
+        int natom0  = atoms.size();
+        int nbond0  = bonds.size();
+        for(int i=0; i<mol->natoms; i++){
+            //Vec3d LJq = (Vec3d){0.0,0.0,0.0};  // TO DO : LJq can be set by type
+            //Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
+            Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y);
+            Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
+            //printf( "insertAtom[%i] pos(%g,%g,%g) -> p(%g,%g,%g)\n", i, mol->pos[i].x, mol->pos[i].y, mol->pos[i].z, p.x,p.y,p.z );
+            atoms.push_back( (MMFFAtom){mol->atomType[i], -1, -1, p, REQi } );
+        }
+        for(int i=0; i<mol->nbonds; i++){
+            //bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k } );
+            bonds.push_back( MMFFBond(mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k ) );
+        }
+        for(int i=0; i<mol->nang; i++){
+            angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}), defaultAngle.a0, defaultAngle.k } );
+        }
+    }
+
+    int insertRigidMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot ){
+        int natoms0 = atoms.size();
+        Quat4d qrot; qrot.fromMatrix(rot);
+        int ifrag = frags.size();
+        //printf( "insertMolecule mol->natoms %i \n", mol->natoms );
+        for(int i=0; i<mol->natoms; i++){
+            //Vec3d REQi = (Vec3d){1.0,0.03,mol->}; // TO DO : LJq can be set by type
+            //atoms.push_back( (MMFFAtom){mol->atomType[i],mol->pos[i], LJq } );
+            Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y); // REQi.z = 0.0;
+            Vec3d  p; rot.dot_to(mol->pos[i],p); p.add( pos );
+            atoms.push_back( (MMFFAtom){mol->atomType[i], ifrag, -1, p, REQi } );
+        }
+        frags.push_back( (MMFFfrag){natoms0, atoms.size()-natoms0, pos, qrot, mol}  );
+        //size_t mol_id = static_cast<size_t>(mol);
+        size_t mol_id = (size_t)(mol);
+        auto got = fragTypes.find(mol_id);
+        if ( got == fragTypes.end() ) {
+            fragTypes[ mol_id ] = frags.size()-1; // WTF ?
+        }else{}
+        return ifrag;
+    }
+
+    int insertMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot, bool rigid, int noH=-1 ){
+        int natom0  = atoms .size();
+        int nbond0  = bonds .size();
         int nangle0 = angles.size();
         mols.push_back( (MMFFmol){mol, (Vec3i){natom0,nbond0,nangle0} } );
-
-        int natoms0 = atoms.size();
         if( rigid ){
-            Quat4d qrot; qrot.fromMatrix(rot);
-            int ifrag = frags.size();
-            //printf( "insertMolecule mol->natoms %i \n", mol->natoms );
-            for(int i=0; i<mol->natoms; i++){
-                //Vec3d REQi = (Vec3d){1.0,0.03,mol->}; // TO DO : LJq can be set by type
-                //atoms.push_back( (MMFFAtom){mol->atomType[i],mol->pos[i], LJq } );
-                Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y); // REQi.z = 0.0;
-                Vec3d  p; rot.dot_to(mol->pos[i],p); p.add( pos );
-                atoms.push_back( (MMFFAtom){mol->atomType[i], ifrag, -1, p, REQi } );
-            }
-            frags.push_back( (MMFFfrag){natoms0, atoms.size()-natoms0, pos, qrot, mol}  );
-            //size_t mol_id = static_cast<size_t>(mol);
-            size_t mol_id = (size_t)(mol);
-            auto got = fragTypes.find(mol_id);
-            if ( got == fragTypes.end() ) {
-                fragTypes[ mol_id ] = frags.size()-1; // WTF ?
-            }else{}
-            return ifrag;
+            return insertRigidMolecule( mol, pos, rot );
         }else{
-            for(int i=0; i<mol->natoms; i++){
-                //Vec3d LJq = (Vec3d){0.0,0.0,0.0}; // TO DO : LJq can be set by type
-                //Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
-                Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y);
-                Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
-                atoms.push_back( (MMFFAtom){mol->atomType[i], -1, -1, p, REQi } );
-            }
-            for(int i=0; i<mol->nbonds; i++){
-                //bonds.push_back( (MMFFBond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k } );
-                bonds.push_back( MMFFBond(mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k ) );
-            }
-            for(int i=0; i<mol->nang; i++){
-                angles.push_back( (MMFFAngle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}), defaultAngle.a0, defaultAngle.k } );
-            }
+            if(noH>0){ insertFlexibleMolecule_ignorH( mol, pos, rot, noH ); }
+            else     { insertFlexibleMolecule       ( mol, pos, rot      ); }
             return -1;
         }
     }
@@ -366,7 +401,6 @@ class MMFFBuilder{  public:
         ff.realloc( atoms.size(), bonds.size(), angles.size(), dihedrals.size() );
         for(int i=0; i<atoms.size(); i++){
             ff.apos [i]  = atoms[i].pos;
-
             //println(atoms[i]);
             //if( atoms[i].iconf>=0 ) println(confs[atoms[i].iconf]);
         }
@@ -383,6 +417,7 @@ class MMFFBuilder{  public:
             //printf( "bond[%i] (%i,%i) %g %g | %g %g\n", i, ff.bond2atom[i].i, ff.bond2atom[i].j, ff.bond_l0[i], ff.bond_k[i], b.l0, b.k );
             //bondTypes[i]       = bonds[i].type;
         }
+        //printf( "toMMFFmini . Angles \n" );
         for(int i=0; i<angles.size(); i++){
             const MMFFAngle& a  = angles[i];
             ff.ang2bond[i] = a.bonds;
@@ -657,6 +692,43 @@ class MMFFBuilder{  public:
     }
     //void flipCap(){}
 
+
+    /*
+    void setAtoms( const MMFFAtom* brushAtom, const Vec3d* ps=0, int imin=0, int imax=-1,  ){
+        if(imax<0){ imax=atoms.size(); }
+        for(int i=imin;i<imax;i++){
+            if(ps       )brushAtom.pos = ps[i];
+            if(brushAtom)builder.insertAtom( *brushAtom, true);
+        }
+    }
+    void setBondTypes( MMFFBond brushBond, const Vec2i* bond2atom=0, int imin=0, int imax=-1 ){
+        if(imax<0){ imax=bonds.size(); }
+        for(int i=imin;i<imax;i++){
+            if(bond2atom)brushBond.atoms=bond2atom[i];
+            builder.insertBond(brushBond);
+        }
+    }
+    */
+    void insertAtoms( int n, MMFFAtom brushAtom, const Vec3d* ps ){
+        for(int i=0;i<n;i++){
+            brushAtom.pos = ps[i];
+            insertAtom( brushAtom, true );
+        }
+    }
+    void insertBonds( int n, MMFFBond brushBond, const Vec2i* bond2atom ){
+        for(int i=0;i<n;i++){
+            brushBond.atoms=bond2atom[i];
+            insertBond( brushBond );
+        }
+    }
+    void setConfs( int npi, int ne, int imin=0, int imax=-1 ){
+        if(imax<0){ imax=atoms.size(); }
+        for(int i=imin;i<imax;i++){
+            makeSPConf( i, npi, ne );
+        }
+    }
+
+
     // =============== Dihedrals
 
     bool insertDihedralByAtom(const Quat4i& ias, MMFFDihedral& tors ){
@@ -692,6 +764,17 @@ class MMFFBuilder{  public:
         return true;
     }
 
+    bool trySortBonds(){
+        bool sorted = checkBondsSorted();
+        if( !sorted ){
+            if( !sortBonds() ){
+                printf( " ERROR in builder.sortBonds() => exit \n" );
+                exit(0);
+            }
+        }
+        return sorted;
+    }
+
     bool sortBonds(){
         //printf( "sortBonds \n" );
         // sort bonds so that
@@ -713,6 +796,7 @@ class MMFFBuilder{  public:
             MMFFAtomConf* conf = (MMFFAtomConf*)getAtomConf(ia); // we need to modify it
             if(!conf){
                 if(nb<bonds.size()){
+                    printf( "MMFFBuilder::sortBonds(): nb(%i)<bonds.size(%i) \n", nb, bonds.size() );
                     printf( " This algorithm assumes all atoms with conf precede atoms without confs in the array \n" );
                     goto _GOTO_failed;
                 }
@@ -722,7 +806,10 @@ class MMFFBuilder{  public:
             int * neighs = conf->neighs;
             for(int i=0;i<nbconf;i++ ){
                 int ib=neighs[i];
-                if(ib<0){ printf("atom[%i].condf inconsistent nbond=%i neigh[%i]<0 \n", ia, conf->nbond, i, ib); goto _GOTO_failed; }
+                if(ib<0){
+                    printf("MMFFBuilder::sortBonds(): atom[%i].condf inconsistent nbond=%i neigh[%i]<0 \n", ia, conf->nbond, i, ib);
+                    goto _GOTO_failed;
+                }
                 int ja = bonds[ib].getNeighborAtom(ia);
                 //if(ja<ia)continue; // this bond was processed before
                 nga[i]=ja;
@@ -770,6 +857,26 @@ class MMFFBuilder{  public:
         return true;
     }
 
+    void printAtoms(){
+        for(int i=0; i<atoms.size(); i++){
+            printf("atom[%i]",i); atoms[i].print(); puts("");
+        }
+    }
+    void printBonds(){
+        for(int i=0; i<bonds.size(); i++){
+            printf("bond[%i]",i); bonds[i].print(); puts("");
+        }
+    }
+    void printAngles(){
+        for(int i=0; i<angles.size(); i++){
+            printf("angle[%i]", i); angles[i].print(); puts("");
+        }
+    }
+    void printConfs(){
+        for(int i=0; i<confs.size(); i++){
+            printf("conf[%i]", i); confs[i].print(); puts("");
+        }
+    }
 };
 
 int write2xyz( FILE* pfile, MMFF * mmff, MMFFparams * params ){

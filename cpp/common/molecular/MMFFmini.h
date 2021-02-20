@@ -184,9 +184,9 @@ double eval_bond(int ib){
 
     if(pbcShifts)f.add( pbcShifts[ib] );
 
-    //printf( "%i %i (%g,%g,%g) (%g,%g,%g) \n", iat.x, iat.y, apos[iat.x].x, apos[iat.x].y, apos[iat.x].z, apos[iat.y].x, apos[iat.y].y, apos[iat.y].z );
+    //printf( "bond[%i|%i,%i] (%g,%g,%g) (%g,%g,%g) \n", ib,iat.a,iat.b, apos[iat.x].x, apos[iat.x].y, apos[iat.x].z, apos[iat.y].x, apos[iat.y].y, apos[iat.y].z );
     double l = f.normalize();
-    //printf( " %i (%i,%i) (%g,%g,%g) %g \n", ib, iat.x, iat.y, dp.x, dp.y, dp.z, l );
+    //printf( "bond[%i|%i,%i] (%g,%g,%g) %g \n", ib,iat.a,iat.b, f.x, f.y, f.z, l );
     lbond [ib] = l;
     hbond [ib] = f;
     const double k = bond_k[ib];
@@ -298,6 +298,8 @@ double eval_angle(int ig){
     // to atoms
     aforce[ia.x].add(fa); aforce[ia.y].sub(fa);
     aforce[ia.z].add(fb); aforce[ia.y].sub(fb);
+
+    //printf( "ang[%i|%i,%i] E %g \n", ig, ia.a,ia.b,ia.c, E );
 
     return E;
 }
@@ -531,6 +533,12 @@ void torsions_bond2atom(){
         if( flip12){ tors2bond[i].j|=SIGN_MASK; };
         if( flip2 ){ tors2bond[i].j|=SIGN_MASK; };
         //printf( "tors[%i] ((%i,%i)(%i,%i)(%i,%i))->(%i,%i,%i,%i) (%i,%i,%i)==(%i,%i,%i) \n", i, b1.x,b1.y, b12.x,b12.y, b2.x,b2.y,tors2atom[i].x,tors2atom[i].y,tors2atom[i].z,tors2atom[i].w,tors2bond[i].x&0xFFFF, tors2bond[i].y&0xFFFF, tors2bond[i].z&0xFFFF,tors2bond[i].x,        tors2bond[i].y,        tors2bond[i].z         );
+    }
+}
+
+void printAtomPos(){
+    for( int i=0; i<natoms; i++ ){
+        printf( "atom[%i] p(%g,%g,%g) \n", i, apos[i].x,apos[i].y,apos[i].z );
     }
 }
 
