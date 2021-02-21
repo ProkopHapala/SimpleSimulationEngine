@@ -272,12 +272,12 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 	TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ );
 
 	int makeMoleculeInline();
-	int makeMoleculeInlineBuilder();
-	int loadMoleculeMol( bool bAutoH, bool loadTypes );
+	int makeMoleculeInlineBuilder( bool bPBC );
+	int loadMoleculeMol( const char* fname, bool bAutoH, bool loadTypes );
 
 };
 
-int TestAppSoftMolDyn::loadMoleculeMol( bool bAutoH, bool bLoadTypes ){
+int TestAppSoftMolDyn::loadMoleculeMol( const char* fname, bool bAutoH, bool bLoadTypes ){
 
     /// should look in   test_SoftMolecularDynamics.cpp
 
@@ -292,8 +292,8 @@ int TestAppSoftMolDyn::loadMoleculeMol( bool bAutoH, bool bLoadTypes ){
         makeAtomTypeNames( atomTypes );
         mol.atypNames  = &atomTypes;
     }
-
-    mol.loadMol_const( "common_resources/propylacid.mol");
+    mol.loadMol_const( fname );
+    //mol.loadMol_const( "common_resources/propylacid.mol");
     //mol.loadMol_const( "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol" );
     //exit(0);
     int iH = 1;
@@ -339,7 +339,7 @@ int TestAppSoftMolDyn::loadMoleculeMol( bool bAutoH, bool bLoadTypes ){
     return nheavy;
 }
 
-int TestAppSoftMolDyn::makeMoleculeInlineBuilder(){
+int TestAppSoftMolDyn::makeMoleculeInlineBuilder( bool bPBC ){
     //const int natom=4,nbond=3,nang=2,ntors=1;
     //const int natom=4,nbond=3,nang=0,ntors=0;
     const int natom=4,nbond=4;
@@ -371,6 +371,13 @@ int TestAppSoftMolDyn::makeMoleculeInlineBuilder(){
     builder.trySortBonds();
 
     builder.toMMFFmini( ff );
+
+    if(bPBC){    // --- Periodic Boundary Conditions
+        ff.initPBC();                           // as far as good, pbc-shifts are curenlty zero, so no change
+        ff.pbcShifts[1] = lvec.a*-1.; // make bond 3 from nighboring cell
+        ff.printBondParams();
+    }
+
     return natom;
 }
 
@@ -383,14 +390,8 @@ int TestAppSoftMolDyn::makeMoleculeInline(){
         {+1.0,-1.0,+1.0},  // 2
         {-1.0,-1.0,-1.0},  // 3
         {+1.0,+1.0,-1.0},  // 4
-
         {-1.0,-1.0,-2.0},  // 5
         {+1.0,+1.0,-2.0}   // 6
-
-        //{1.0,0.0,0.0},  // 1
-        //{0.0,1.0,0.0},  // 2
-        //{0.0,0.0,1.0},  // 3
-        //{-1.0,-1.0,-1.0}   // 4
     };
     Vec2i bong2atom[] = {
         {0,1},  // 0
@@ -418,7 +419,6 @@ int TestAppSoftMolDyn::makeMoleculeInline(){
         2.0
     };
     Vec3i tors2bond[] = { };
-
     double l0    = 1.5;
     double Kbond = 10.0;
     double Kang  = 3.0;
@@ -442,23 +442,25 @@ int TestAppSoftMolDyn::makeMoleculeInline(){
         ff.ang_cs0[i] = { cos(a0), sin(a0) };
         ff.ang_k  [i] = Kang;
     }
-
     printf( "----- Dihedrals \n" );
     for(int i=0; i<ff.ntors; i++){
         ff.tors2bond[i] = tors2bond[i];
         ff.tors_k   [i] = Ktors;
         ff.tors_n   [i] = tors_n;
     }
-
     ff.angles_bond2atom  ();
     ff.torsions_bond2atom();
     return natom;
-}
+};
 
 //void TestAppSoftMolDyn::makeAtoms(){}
 //template<typename T> std::function<T(const T&,const T&         )> F2;
 
 TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    lvec.a = (Vec3d){  5.0,0.0,0.0 };
+    lvec.b = (Vec3d){  0.0,5.0,0.0 };
+    lvec.c = (Vec3d){  0.0,0.0,5.0 };
 
     doChecks();
 
@@ -469,17 +471,11 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     // >>   ERROR in builder.sortBonds() => exit
 
     int nheavy = 0;
-    //nheavy = loadMoleculeMol( false, true);
-    nheavy = makeMoleculeInlineBuilder();
+    //nheavy = loadMoleculeMol(  "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol", false, true);
+    nheavy = loadMoleculeMol( "common_resources/propylacid.mol", false, true);   // use old method loading whole .mol file with hydrogens // currently distorted molecule :-(
+    //nheavy = loadMoleculeMol( "common_resources/propylacid.mol", true, false);   // use new method  // currently makes NaNs :-(
+    //nheavy = makeMoleculeInlineBuilder();     // piece of polyethylene
     //nheavy = makeMoleculeInline();
-
-    // --- Periodic Boundary Conditions
-    lvec.a = (Vec3d){  5.0,0.0,0.0 };
-    lvec.b = (Vec3d){  0.0,5.0,0.0 };
-    lvec.c = (Vec3d){  0.0,0.0,5.0 };
-    ff.initPBC();                           // as far as good, pbc-shifts are curenlty zero, so no change
-    ff.pbcShifts[1] = lvec.a*-1.; // make bond 3 from nighboring cell
-    ff.printBondParams();
 
     nff.bindOrRealloc( ff.natoms, ff.nbonds, ff.apos, ff.aforce, 0, ff.bond2atom );
     nff.setREQs(0      , nheavy ,{1.500,sqrt(0.003729),0});
@@ -511,9 +507,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         Draw3D::drawSphere_oct( 3, 0.25, {0.0,0.0,0.0} );
         //Draw3D::drawSphere_oct( 3, 0.5, {0.0,0.0,0.0} );
     glEndList();
-
     //exit(0);
-
 }
 
 void TestAppSoftMolDyn::draw(){

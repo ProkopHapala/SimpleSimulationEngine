@@ -197,7 +197,8 @@ class MMFFBuilder{  public:
     std::unordered_map<size_t,size_t> mol2molType;
 
     MMFFBond  defaultBond { -1, {-1,-1}, 1.5, 1.0 };
-    MMFFAngle defaultAngle{ -1, {-1,-1}, 0.0, 0.5 };
+    //MMFFAngle defaultAngle{ -1, {-1,-1}, 0.0, 0.5 };
+    MMFFAngle defaultAngle{ -1, {-1,-1}, M_PI, 0.5 };
 
     MMFFAtom capAtom; // = (MMFFAtom){,,};
     MMFFAtom capAtomEpair;
@@ -656,6 +657,27 @@ class MMFFBuilder{  public:
         }
         return false;
     }
+/*
+// copied from ProbeParticle MMFFBuilder
+    bool tryMakeSPConf(int ia){
+        const AtomConf* conf = getAtomConf(ia);
+        //printf("tryMakeSPConf %i conf %li\n", ia, (long)conf  );
+        if(conf){
+            //printf("tryMakeSPConf: proceed !!! \n"  );
+            makeSPConf(ia,conf->npi,conf->ne);
+            return true;
+        }
+        return false;
+    }
+
+    int makeAllConfsSP(){
+        int n=0,na=atoms.size();
+        for(int i=0;i<na;i++){
+            if(tryMakeSPConf(i)){n++;}
+        }
+        return n;
+    }
+*/
 
     // ============= Angles
 

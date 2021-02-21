@@ -127,13 +127,13 @@ class Molecule{ public:
         for(int i=0;i<nbonds;i++){  bond2atom[i]=pairs[i]; }
     }
 
-    int countAtomType( int ityp){
+    int countAtomType( int ityp)const{
         int n=0;
         for(int i=0; i<natoms; i++){ if(atomType[i]==ityp)n++; }
         return n;
     }
 
-    void printAtom2Bond(){
+    void printAtom2Bond()const{
         int * a2b = atom2bond;
         for(int ia=0; ia<natoms; ia++){
             int nb = atom_nb[ia];
@@ -147,7 +147,7 @@ class Molecule{ public:
         }
     }
 
-    void printAtomInfo(){
+    void printAtomInfo()const{
         printf("Molecule::printAtomInfo : \n" );
         for(int i=0; i<natoms; i++){
             printf( "atom[%i] pos (%g,%g,%g) REQs(%g,%g,%g) \n", i, pos[i].x,pos[i].y,pos[i].z, REQs[i].x, REQs[i].y, REQs[i].z );
@@ -176,7 +176,7 @@ class Molecule{ public:
         return iang;
     }
 
-    Vec3d getCOG_av(){
+    Vec3d getCOG_av()const{
         Vec3d cog = (Vec3d){0.0,0.0,0.0};
         for(int i=0; i<natoms; i++){
             cog.add(pos[i]);
@@ -187,7 +187,7 @@ class Molecule{ public:
 
     void addToPos( Vec3d dp ){ for(int i=0; i<natoms; i++){ pos[i].add(dp); } }
 
-    int loadMol( char* fname ){
+    int loadMol( const char* fname ){
         // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
         // http://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
         FILE * pFile = fopen(fname,"r");
@@ -233,7 +233,7 @@ class Molecule{ public:
     }
 
 
-    int loadMol_const( char* fname ){
+    int loadMol_const( const char* fname ){
         // 0        10         20
         //   -13.0110  -15.2500   -0.0030 N   0  0  0  0  0  0  0  0  0  0  0  0
         // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
@@ -369,8 +369,6 @@ class Molecule{ public:
         }
         return natoms;
     }
-
-
 
     void dealloc(){
         _dealloc( pos       );
