@@ -80,8 +80,8 @@ class GridFF{ public:
             //printf(                  "%s %lf %lf %lf %lf\n", at_name,  apos[i].x,  apos[i].y,  apos[i].z,  Q );
             aREQs[i].z = Q;
             // atomType[i] = atomChar2int( ch );
-            auto it = params.atypNames.find( at_name );
-            if( it != params.atypNames.end() ){
+            auto it = params.atomTypeDict.find( at_name );
+            if( it != params.atomTypeDict.end() ){
                 atypes[i] = it->second;
                 aREQs[i].x = params.atypes[atypes[i]].RvdW;
                 //aLJq[i].y = params.atypes[atypes[i]].EvdW;

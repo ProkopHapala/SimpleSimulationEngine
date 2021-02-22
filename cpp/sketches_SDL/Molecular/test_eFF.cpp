@@ -391,7 +391,7 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
     DynamicOpt opt;
 
 
-    MMFFBuilder builder;
+    MM::Builder builder;
 
     int perFrame = 1;
 
@@ -524,11 +524,11 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     // ============ Build molecule
 
-    MMFFAtom brushAtom{  6, -1,-1, Vec3dZero, MMFFAtom::defaultREQ };
-    MMFFBond brushBond{ -1, {-1,-1}, 1.5, 25.0 };
+    MM::Atom brushAtom{  6, -1,-1, Vec3dZero, MM::Atom::defaultREQ };
+    MM::Bond brushBond{ -1, {-1,-1}, 1.5, 25.0 };
 
-    builder.capBond = MMFFBond{ -1, {-1,-1}, 1.07, 15.0 };
-    builder.capAtom = { 1, -1,-1, Vec3dZero, MMFFAtom::defaultREQ };
+    builder.capBond = MM::Bond{ -1, {-1,-1}, 1.07, 15.0 };
+    builder.capAtom = { 1, -1,-1, Vec3dZero, MM::Atom::defaultREQ };
 
     printf( "----- Atoms \n" );
     for(int i=0;i<natom;i++){

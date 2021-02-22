@@ -74,7 +74,7 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
 	Molecule    mol;
 	MMFFparams  params;
     MMFF        world;
-    MMFFBuilder builder;
+    MM::Builder builder;
 
     FastAtomicMetric atomdist;
     AtomicConfiguration conf1;
@@ -126,7 +126,7 @@ void AppMolecularEditor2::initRigidSubstrate(){
     //world.substrate.init( (Vec3i){100,100,100}, (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f }, (Vec3d){-5.0,-5.0,-5.0} );
 
     printf( "params.atypNames:\n" );
-    for(auto kv : params.atypNames) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
+    for(auto kv : params.atomTypeDict) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
     //exit(0);
     //world.substrate.grid.n    = (Vec3i){120,120,200};
     world.gridFF.grid.n    = (Vec3i){60,60,100};
@@ -217,15 +217,15 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     //AtomType atyp;
     //atyp.fromString( "CA 6 4 4 1 2.00 0.09 0x11EEAA" );
-    builder.params = &params;
+    //builder.params = &params;
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
     params.loadBondTypes( "common_resources/BondTypes.dat" );
     //for(auto kv : params.atypNames) { printf( ">>%s<< %i \n", kv.first.c_str(), kv.second ); };
     char str[1024];
-    printf( "type %s \n", params.atypes[ params.atypNames.find( "C" )->second ].toString( str ) );
-    printf( "type %s \n", params.atypes[ params.atypNames.find( "H" )->second ].toString( str ) );
-    printf( "type %s \n", params.atypes[ params.atypNames.find( "O" )->second ].toString( str ) );
-    printf( "type %s \n", params.atypes[ params.atypNames.find( "N" )->second ].toString( str ) );
+    printf( "type %s \n", (params.atomTypeNames[ params.atomTypeDict.find( "C" )->second ]).c_str() );
+    printf( "type %s \n", (params.atomTypeNames[ params.atomTypeDict.find( "H" )->second ]).c_str() );
+    printf( "type %s \n", (params.atomTypeNames[ params.atomTypeDict.find( "O" )->second ]).c_str() );
+    printf( "type %s \n", (params.atomTypeNames[ params.atomTypeDict.find( "N" )->second ]).c_str() );
     /*
     auto it = params.atypNames.find( "C" );
     if( it != params.atypNames.end() ){
@@ -235,8 +235,8 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
         printf("not found\n");
     }
     */
-
-    mol.atypNames = &params.atypNames;
+    mol.atomTypeDict  = &params.atomTypeDict;
+    mol.atomTypeNames = &params.atomTypeNames;
 
     //exit(0);
 
@@ -264,7 +264,7 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     builder.insertMolecule( &mol, {6.0,6.0,2.0}, rot, false );
 
     world.printAtomInfo();
-    builder.toMMFF( &world );                                 DEBUG
+    builder.toMMFF( &world, &params );                                 DEBUG
     world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
     //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs );

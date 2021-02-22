@@ -5,6 +5,10 @@
 #include <vector>
 #include <math.h>
 
+// Non-Blocking terminal input : see https://stackoverflow.com/questions/6055702/using-fgets-as-non-blocking-function-c
+// Probably works only on Linux
+#include <fcntl.h>
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw3D.h"
@@ -46,7 +50,7 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 	Molecule    mol;
 	MMFFparams  params;
     MMFF        world;
-    MMFFBuilder builder;
+    MM::Builder builder;
 
     DynamicOpt  opt;
 
@@ -77,53 +81,37 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
-    mol.atypNames = &params.atypNames;
+    mol.atomTypeNames = &params.atomTypeNames;
+    mol.atomTypeDict  = &params.atomTypeDict;
     params.loadBondTypes( "common_resources/BondTypes.dat");
 
-    builder.params = &params;
-
     mol.loadMol("common_resources/propylacid.mol");
+    //mol.loadMol_old("common_resources/propylacid.mol");
     mol.bondsOfAtoms();   mol.printAtom2Bond();
     mol.autoAngles();
+    params.assignREs( mol.natoms, mol.atomType, mol.REQs );
 
     Vec3d cog = mol.getCOG_av();
     mol.addToPos( cog*-1.0d );
 
-    /*
-    world.apos      = mol.pos;
-    world.bond2atom = mol.bond2atom;
-    world.ang2bond  = mol.ang2bond;
-    world.allocate( mol.natoms, mol.nbonds, mol.nang, 0 );
-    world.ang_b2a();
-    //params.fillBondParams( world.nbonds, world.bond2atom, mol.bondType, mol.atomType, world.bond_0, world.bond_k );
-    */
-
-    //Vec3d pos = (Vec3d){0.0,0.0,0.0};
-    Mat3d rot; rot.setOne();
-    builder.insertMolecule(&mol, {0.0,0.0,0.0}, rot, false );
-    builder.insertMolecule(&mol, {5.0,0.0,0.0}, rot, false );
-    builder.insertMolecule(&mol, {0.0,5.0,0.0}, rot, false );
-    builder.insertMolecule(&mol, {5.0,5.0,0.0}, rot, false );
-    builder.toMMFF(&world );
+    builder.insertMolecule(&mol, {0.0,0.0,0.0}, Mat3dIdentity, false );
+    builder.insertMolecule(&mol, {5.0,0.0,0.0}, Mat3dIdentity, false );
+    builder.insertMolecule(&mol, {0.0,5.0,0.0}, Mat3dIdentity, false );
+    builder.insertMolecule(&mol, {5.0,5.0,0.0}, Mat3dIdentity, false );
+    builder.toMMFF(&world, &params );
 
     world.ang_b2a();
-
-    //exit(0);
 
     world.printBondParams();
-    //exit(0);
+    world.printAtomInfo();
 
     opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce, NULL );
     opt.setInvMass( 1.0 );
     opt.cleanVel( );
 
-    printf( "DEBUG 2 \n" );
-
     for(int i=0; i<world.nbonds; i++){
         world.bond_k[i] = 2.0;
     }
-
-    printf( "DEBUG 3 \n" );
 
     for(int i=0; i<world.nang; i++){
         world.ang_0[i] = {1.0,0.0};
@@ -131,8 +119,6 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         //Vec2i ib = world.ang2bond[i];
         //world.ang2atom [i] = (Vec3i){ world.bond2atom[ib.x].y, world.bond2atom[ib.y].y, world.bond2atom[ib.y].x };
     }
-
-    printf( "DEBUG 4 \n" );
 
     ogl_sph = glGenLists(1);
     glNewList( ogl_sph, GL_COMPILE );
@@ -144,9 +130,21 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
 }
 
+
 void TestAppSoftMolDyn::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+	// Non-Blocking terminal input : see https://stackoverflow.com/questions/6055702/using-fgets-as-non-blocking-function-c
+    int fd = fileno(stdin);
+    int flags  = fcntl(fd, F_GETFL, 0);
+    flags |= O_NONBLOCK;
+    fcntl(fd, F_SETFL, flags);
+	char inputLine[1024];
+	char* s = fgets(inputLine,1024,stdin);
+	if(s!=0){
+        printf( "got:`%s`", s );
+	}
 
     /*
     srand(154);
@@ -183,9 +181,10 @@ void TestAppSoftMolDyn::draw(){
         for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
 
         //printf( "DEBUG x.1 \n" );
-        world.eval_bonds(true);
-        //world.eval_angles();
+        world.eval_bonds(true);     // with    eval_LJq_On2
+        //world.eval_bonds(false);  // without eval_LJq_On2
         //printf( "DEBUG x.2 \n" );
+        //world.eval_angles();  // currently not working
         world.eval_angcos();
         //printf( "DEBUG x.3 \n" );
         world.eval_LJq_On2();

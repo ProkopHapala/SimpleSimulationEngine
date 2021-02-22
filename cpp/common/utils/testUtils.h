@@ -14,6 +14,9 @@
 
 inline void _endl(){ printf("\n"); };
 
+//#define print(A)    {A.print(); }
+//#define println(A)  {A.print(); puts("");}
+
 inline void printArray( int n, double * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }; printf("\n"); };
 inline void printArray( int n, float  * vec ){	for (int i=0; i<n; i++){ printf( " %f ", vec[i] ); }; printf("\n"); };
 inline void printArray( int n, int    * vec ){	for (int i=0; i<n; i++){ printf( " %i ", vec[i] ); }; printf("\n"); };

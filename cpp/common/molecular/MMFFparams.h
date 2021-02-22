@@ -5,6 +5,8 @@
 #include "Vec2.h"
 #include "Vec3.h"
 
+#include "molecular_utils.h"
+
 #include <string>
 #include <unordered_map>
 
@@ -53,13 +55,17 @@ class AtomType{ public:
 class MMFFparams{ public:
 
     // http://www.science.uwaterloo.ca/~cchieh/cact/c120/bondel.html
-
-    std::unordered_map<std::string,int>   atypNames;
+    std::vector       <std::string    >   atomTypeNames;
+    std::unordered_map<std::string,int>   atomTypeDict;
     std::vector<AtomType>                    atypes;
     std::unordered_map<uint64_t,BondType>     bonds;
 
     double default_bond_length      = 2.0;
     double default_bond_stiffness   = 1.0;
+
+    void initDefaultAtomTypeDict(){
+        makeDefaultAtomTypeDict( atomTypeNames, atomTypeDict );
+    }
 
     int loadAtomTypes(char * fname){
         //printf( "loadAtomTypes %s \n", fname );
@@ -81,7 +87,8 @@ class MMFFparams{ public:
             if(line==NULL) break;
             atyp.fromString( line );
             atypes.push_back(atyp);
-            atypNames[atyp.name] = atypes.size()-1;
+            atomTypeNames.push_back( atyp.name );
+            atomTypeDict [atyp.name] = atypes.size()-1;
 
             //char str[1000];
             //atyp.toString( str );
@@ -90,7 +97,7 @@ class MMFFparams{ public:
         return i;
     }
 
-    void assignREs( int n, int * itypes, Vec3d * REQs ){
+    void assignREs( int n, int * itypes, Vec3d * REQs )const{
         //printf( "assignREs %i   %i %i %i \n", n,  itypes, REQs, atypes );
         for(int i=0; i<n; i++){
             //mmff->aLJq [i]  = atoms[i].type;
@@ -133,7 +140,7 @@ class MMFFparams{ public:
         return i;
     }
 
-    bool getBondParams( int atyp1, int atyp2, int btyp, double& l0, double& k ){
+    bool getBondParams( int atyp1, int atyp2, int btyp, double& l0, double& k )const{
         uint64_t id  = getBondTypeId( atypes[atyp1].iZ, atypes[atyp2].iZ, btyp );
         //printf( "(%i,%i,%i) -> %i \n", atypes[atyp1].iZ, atypes[atyp2].iZ, btyp, id );
         //uint64_t id  = getBondTypeId( atyp1, atyp2, btyp );

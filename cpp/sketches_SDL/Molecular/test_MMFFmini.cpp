@@ -18,9 +18,11 @@
 #include "Mat3.h"
 
 #include "raytrace.h"
-//#include "Molecule.h"
+
+#include "Molecule.h"
 #include "MMFFmini.h"
 #include "NBFF.h"
+#include "MMFFparams.h"
 #include "MMFFBuilder.h"
 #include "DynamicOpt.h"
 #include "QEq.h"
@@ -233,18 +235,17 @@ void doChecks(){
 // ================= MAIN CLASS ==============
 // ===========================================
 
-class TestAppSoftMolDyn : public AppSDL2OGL_3D {
-	public:
+class TestAppSoftMolDyn : public AppSDL2OGL_3D { public:
 	Molecule    mol;
 	MMFFparams  params;
     MMFFmini    ff;
     NBFF       nff;
-    MMFFBuilder builder;
+    MM::Builder builder;
     DynamicOpt  opt;
 
     bool bNonBonded = true;
 
-    std::unordered_map<std::string,int> atomTypes;
+    //std::unordered_map<std::string,int> atomTypeDict;
 
     Mat3d lvec;
 
@@ -285,14 +286,14 @@ int TestAppSoftMolDyn::loadMoleculeMol( const char* fname, bool bAutoH, bool bLo
         printf( "bLoadTypes==True : load atom and bond types from file \n" );
         params.loadAtomTypes( "common_resources/AtomTypes.dat" );
         params.loadBondTypes( "common_resources/BondTypes.dat");
-        mol.atypNames  = &params.atypNames;
-        builder.params = &params;
+        //builder.params = &params;
     }else{
         printf( "bLoadTypes==False : make default Atom names dictionary \n" );
-        makeAtomTypeNames( atomTypes );
-        mol.atypNames  = &atomTypes;
+        params.initDefaultAtomTypeDict( );
     }
-    mol.loadMol_const( fname );
+    mol.atomTypeDict  = &params.atomTypeDict;
+    mol.atomTypeNames = &params.atomTypeNames;
+    mol.loadMol( fname );
     //mol.loadMol_const( "common_resources/propylacid.mol");
     //mol.loadMol_const( "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol" );
     //exit(0);
@@ -312,7 +313,7 @@ int TestAppSoftMolDyn::loadMoleculeMol( const char* fname, bool bAutoH, bool bLo
         Vec3d cog = mol.getCOG_av();
         mol.addToPos( cog*-1.0d );
         builder.insertMolecule(&mol, Vec3dZero, Mat3dIdentity, false );
-        builder.toMMFFmini( ff );
+        builder.toMMFFmini( ff, &params );
     }
     printf( " ==== In MMFFBuilder: \n" );
     builder.printAtoms();
@@ -323,7 +324,7 @@ int TestAppSoftMolDyn::loadMoleculeMol( const char* fname, bool bAutoH, bool bLo
     bNonBonded = false;      // ToDo : WARRNING : this is just hack, because builder.sortBonds() does not seem to work, we have to switch off Non-Bonding interactions
     //builder.trySortBonds();
     //builder.sortBonds();
-    builder.toMMFFmini( ff );
+    builder.toMMFFmini( ff, &params );
 
     printf( "==== In MMFFmini: \n" );
     ff.printBondParams();
@@ -356,9 +357,9 @@ int TestAppSoftMolDyn::makeMoleculeInlineBuilder( bool bPBC ){
         {3,0},  // 3  // PBC
     };
     // ============ Build molecule
-    MMFFAtom brushAtom{ -1, -1,-1, Vec3dZero, MMFFAtom::defaultREQ };
-    MMFFBond brushBond        { -1, {-1,-1}, 1.5,  25.0 };
-    builder.capBond = MMFFBond{ -1, {-1,-1}, 1.07, 15.0 };
+    MM::Atom brushAtom{ -1, -1,-1, Vec3dZero, MM::Atom::defaultREQ };
+    MM::Bond brushBond        { -1, {-1,-1}, 1.5,  25.0 };
+    builder.capBond = MM::Bond{ -1, {-1,-1}, 1.07, 15.0 };
 
     builder.insertAtoms( natom, brushAtom,  apos0    );
     builder.insertBonds( nbond, brushBond, bond2atom );
@@ -366,11 +367,11 @@ int TestAppSoftMolDyn::makeMoleculeInlineBuilder( bool bPBC ){
     builder.autoAngles ( 2.5, 1.25 );
 
     // instert aditional dihedral
-    MMFFDihedral brushDihedral{ -1,   {-1,-1,-1},    3, 0.5 };  println(brushDihedral);
+    MM::Dihedral brushDihedral{ -1,   {-1,-1,-1},    3, 0.5 };  println(brushDihedral);
     builder.insertDihedralByAtom( {0,1,2,3}, brushDihedral );
     builder.trySortBonds();
 
-    builder.toMMFFmini( ff );
+    builder.toMMFFmini( ff, &params );
 
     if(bPBC){    // --- Periodic Boundary Conditions
         ff.initPBC();                           // as far as good, pbc-shifts are curenlty zero, so no change

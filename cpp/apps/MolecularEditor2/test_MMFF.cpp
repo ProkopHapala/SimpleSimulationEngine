@@ -27,7 +27,7 @@
 
 MMFFparams  params;
 MMFF        world;
-MMFFBuilder builder;
+MM::Builder builder;
 DynamicOpt  opt;
 
 //int     fontTex;
@@ -45,7 +45,7 @@ double relaxNsteps( int nsteps, double F2conf );
 void initRigidSubstrate(){
     // ---- Rigid Substrate
     printf( "params.atypNames:\n" );
-    for(auto kv : params.atypNames) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
+    for(auto kv : params.atomTypeDict) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
     world.gridFF.grid.n    = (Vec3i){60,60,100};
     world.gridFF.grid.pos0 = (Vec3d){0.0d,0.0d,0.0d};
     world.gridFF.loadCell ( "inputs/cel.lvs" );
@@ -75,7 +75,7 @@ void initRigidSubstrate(){
     Vec3d * FFtot = new Vec3d[world.gridFF.grid.getNtot()];
     world.gridFF.evalCombindGridFF( testREQ, FFtot );
     saveXSF( "FFtot_z.xsf", world.gridFF.grid, FFtot, 2, world.gridFF.natoms, world.gridFF.apos, world.gridFF.atypes );
-    
+
     //isoOgl = glGenLists(1);
     //glNewList(isoOgl, GL_COMPILE);
     //    renderSubstrate_( world.gridFF.grid, FFtot, world.gridFF.FFelec, 0.01, true );
@@ -98,11 +98,11 @@ void initParams( char* fname_atomTypes, char* fname_bondTypes ){
 //int insertMolecule( int itype, double* pos, double* rot, bool rigid ){ return builder.insertMolecule( itype, *(Vec3d*)pos, *(Mat3d*)rot, rigid ); };
 
 void bakeMMFF(){
-    builder.toMMFF( &world );
+    builder.toMMFF( &world, &params );
     world.genPLQ();
     world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
-    //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); 
+    //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs );
 }
 
 void prepareOpt(){
@@ -124,20 +124,20 @@ double relaxNsteps( int nsteps, double F2conf ){
     //DEBUG
     for(int itr=0; itr<nsteps; itr++){
         //printf( "===== relaxNsteps itr %i \n", itr );
-        world.cleanAtomForce(); 
-        world.frags2atoms();    
-        if( world.gridFF.FFPauli ) world.eval_FFgrid(); 
-        world.eval_MorseQ_On2_fragAware(); 
+        world.cleanAtomForce();
+        world.frags2atoms();
+        if( world.gridFF.FFPauli ) world.eval_FFgrid();
+        world.eval_MorseQ_On2_fragAware();
 
         world.cleanPoseTemps();
-        world.aforce2frags(); 
+        world.aforce2frags();
 
-        world.toDym(true); 
-        F2 = opt.move_FIRE(); 
+        world.toDym(true);
+        F2 = opt.move_FIRE();
         //printf( "F2 %g dt %g \n", F2, opt.dt );
         if(F2<F2conf) break;
-        world.checkPoseUnitary(); 
-        world.fromDym(); 
+        world.checkPoseUnitary();
+        world.fromDym();
         //DEBUG
         printf( ">> itr %i F2 %g dt %g qrot (%g,%g,%g,%g) int %li \n", itr, F2, opt.dt, world.poses[4], world.poses[5], world.poses[6], world.poses[7], world.gridFF.FFPauli );
         //printf( ">> itr %i F2 %g dt %g poses (%g,%g,%g,%g, %g,%g,%g,%g) \n", itr, F2, world.poses[0], world.poses[1], world.poses[2], world.poses[3], world.poses[4], world.poses[5], world.poses[6], world.poses[7] );
@@ -148,7 +148,7 @@ double relaxNsteps( int nsteps, double F2conf ){
 int main(){
 
     // ======= common Potentials etc.
-    builder.params = &params;
+    //builder.params = &params;
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
     params.loadBondTypes( "common_resources/BondTypes.dat" );
 
@@ -157,7 +157,7 @@ int main(){
 
     printf( "// =========== System 1 \n" );
     builder.clear();
-    itype = builder.loadMolType( "inputs/water_T5_ax.xyz" );
+    itype = builder.loadMolTypeXYZ( "inputs/water_T5_ax.xyz", &params );
     builder.insertMolecule( itype, (Vec3d){5.78, 6.7, 12.24}, rot0, true );
     bakeMMFF();
     prepareOpt();
@@ -167,7 +167,7 @@ int main(){
     // =========== System 2
     printf( "// =========== System 2 \n" );
     builder.clear();
-    itype = builder.loadMolType( "inputs/Campher.xyz" );
+    itype = builder.loadMolTypeXYZ( "inputs/Campher.xyz", &params );
     builder.insertMolecule( itype, (Vec3d){5.78, 6.7, 12.24}, rot0, true );
     bakeMMFF();
     prepareOpt();

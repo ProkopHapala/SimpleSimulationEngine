@@ -66,7 +66,7 @@
 //std::vector<Molecule*> molTypes;
 MMFFparams  params;
 MMFF        world;
-MMFFBuilder builder;
+MM::Builder builder;
 
 DynamicOpt  opt;
 
@@ -126,26 +126,27 @@ void debugSaveGridFF( char* fname, double* testREQ ){
 // ========= Molecule initialization
 
 void initParams( char* fname_atomTypes, char* fname_bondTypes ){
-    builder.params = &params;
+    //builder.params = &params;
     if(fname_atomTypes) params.loadAtomTypes( fname_atomTypes );
     if(fname_bondTypes) params.loadBondTypes( fname_bondTypes );
+    world.atomTypeNames = &params.atomTypeNames;
     //printf( "params.atypNames.size() %i \n", params.atypNames.size() );
     //printf("initParams done! \n");
 }
 
 int registerRigidMolType( int natom, Vec3d* apos, Vec3d* REQs, int* atomType ){ return builder.registerRigidMolType( natom, (Vec3d*)apos, (Vec3d*)REQs, atomType ); };
-int loadMolType   ( char* fname ){ return builder.loadMolType(fname ); };
+int loadMolType   ( char* fname ){ return builder.loadMolTypeXYZ( fname, &params ); };
 int insertMolecule( int itype, double* pos, double* rot, bool rigid ){ return builder.insertMolecule( itype, *(Vec3d*)pos, *(Mat3d*)rot, rigid ); };
 
 void clear(){ builder.clear(); }
 void clearMolTypes(bool deep){ builder.clearMolTypes(deep); }
 
 void bakeMMFF(){
-    builder.toMMFF( &world );
+    builder.toMMFF( &world, &params );
     world.genPLQ();
     //world.printAtomInfo(); //exit(0);
     //world.allocFragment( nFrag );
-    //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs ); 
+    //opt.bindArrays( 8*world.nFrag, (double*)world.poses, new double[8*world.nFrag], (double*)world.poseFs );
 }
 
 void prepareOpt(){
@@ -215,11 +216,11 @@ double relaxNsteps( int nsteps, double F2conf ){
 }
 
 void save2xyz( char * fname ){
-    save2xyz( fname, &world, &params ); 
+    world.save2xyz( fname );
 }
 
 void write2xyz( int i ){
-     if( (i>=0)&&(i<files.size()) ){ write2xyz( files[i], &world, &params );  }
+    if( (i>=0)&&(i<files.size()) ){ world.write2xyz( files[i] );  }
 }
 
 void closef(int i){ if( (i>=0)&&(i<files.size()) ) if( files[i] ) fclose( files[i] ); }

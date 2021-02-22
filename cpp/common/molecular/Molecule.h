@@ -29,11 +29,13 @@ inline int atomChar2int(char ch ){
 */
 
 
+/*
 void makeAtomTypeNames( std::unordered_map<std::string,int>& mp ){
     mp["H" ]=1;  mp["He"]=2;
     mp["Li"]=3;  mp["Be"]=4;  mp["B" ]=5;  mp["C" ]=6;  mp["N"]=7;  mp["O"]=8;  mp["F"]=9;   mp["Ne"]=10;
     mp["Na"]=11; mp["Mg"]=12; mp["Al"]=13; mp["Si"]=14; mp["P"]=15; mp["S"]=16; mp["Cl"]=17; mp["Ar"]=18;
 }
+*/
 
 void cpstr( const char* str, char* tmp, int i0, int n ){
     tmp[n]='\0';
@@ -81,7 +83,8 @@ class Molecule{ public:
     Vec2i * ang2bond   = NULL;
     //int * ang2atom = NULL;
 
-    std::unordered_map<std::string,int>* atypNames = NULL;
+    const std::vector       <std::string    >* atomTypeNames=0;
+    const std::unordered_map<std::string,int>* atomTypeDict =0;
 
     void allocate( int natoms_, int nbonds_ ){
         natoms=natoms_; nbonds=nbonds_;
@@ -187,7 +190,9 @@ class Molecule{ public:
 
     void addToPos( Vec3d dp ){ for(int i=0; i<natoms; i++){ pos[i].add(dp); } }
 
-    int loadMol( const char* fname ){
+    /*
+    // DEPRECATED
+    int loadMol_old( const char* fname ){
         // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
         // http://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
         FILE * pFile = fopen(fname,"r");
@@ -214,8 +219,8 @@ class Molecule{ public:
             sscanf( line, "%lf %lf %lf %s %lf %lf\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name, &junk, &REQs[i].z );
             //printf(       "%lf %lf %lf %s %lf %lf\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name,  junk,  REQs[i].z );
             // atomType[i] = atomChar2int( ch );
-            auto it = atypNames->find( at_name );
-            if( it != atypNames->end() ){
+            auto it = atomTypeDict->find( at_name );
+            if( it != atomTypeDict->end() ){
                 atomType[i] = it->second;
             }else{
                 //atomType[i] = atomChar2int( at_name[0] );
@@ -231,9 +236,9 @@ class Molecule{ public:
         }
         return natoms + nbonds;
     }
+    */
 
-
-    int loadMol_const( const char* fname ){
+    int loadMol( const char* fname ){
         // 0        10         20
         //   -13.0110  -15.2500   -0.0030 N   0  0  0  0  0  0  0  0  0  0  0  0
         // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
@@ -267,14 +272,18 @@ class Molecule{ public:
 
         for(int i=0; i<natoms; i++){
             //char ch;
+            double junk;
             char at_name[8];
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
-            sscanf( line, "%lf %lf %lf %s\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name );
-            printf(       "%lf %lf %lf %s\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name );
+            sscanf( line, "%lf %lf %lf %s %lf %lf\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name, &junk, &REQs[i].z );
+            //printf(       "%lf %lf %lf %s %lf %lf\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name,  junk,  REQs[i].z );
+            REQs[i].x = 1.5; // [A]  van der Waals radius default
+            REQs[i].y = 0;   // [eV] van der Waals binding energy default
             // atomType[i] = atomChar2int( ch );
-            auto it = atypNames->find( at_name );
-            if( it != atypNames->end() ){
+            auto it = atomTypeDict->find( at_name );
+            if( it != atomTypeDict->end() ){
                 atomType[i] = it->second;
+                if(1==it->second)REQs[i].x=1.0; // Hydrogen is smaller
             }else{
                 //atomType[i] = atomChar2int( at_name[0] );
                 atomType[i] = -1;
@@ -318,10 +327,10 @@ class Molecule{ public:
             double Q;
             int nret = sscanf( line, "%s %lf %lf %lf %lf\n", at_name, &pos[i].x, &pos[i].y, &pos[i].z, &Q );
             if( nret >= 5 ){  REQs[i].z=Q; }else{ REQs[i].z=0; };
-            printf(       "mol[%i] %s %lf %lf %lf  %lf    *atypNames %i\n", i,  at_name, pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z, atypNames );
+            printf(       "mol[%i] %s %lf %lf %lf  %lf    *atomTypeDict %i\n", i,  at_name, pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z, atomTypeDict );
             // atomType[i] = atomChar2int( ch );
-            auto it = atypNames->find( at_name );
-            if( it != atypNames->end() ){
+            auto it = atomTypeDict->find( at_name );
+            if( it != atomTypeDict->end() ){
                 atomType[i] = it->second;
             }else{
                 //atomType[i] = atomChar2int( at_name[0] );

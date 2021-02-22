@@ -15,6 +15,7 @@
 
 #include "integerOps.h"
 
+#include "molecular_utils.h"
 
 #define SIGN_MASK 2147483648
 
@@ -182,6 +183,7 @@ class MMFF{ public:
     Vec3d  * aforce    = NULL;
 
     std::vector<MolType> molTypes;
+    const std::vector<std::string>* atomTypeNames = 0;
 
     int nFrag=0;  // rigid fragments
     //int *    imolTypes = NULL;
@@ -880,16 +882,25 @@ void eval_FFgrid(){
 
 void printBondParams(){
     for( int i=0; i<nbonds; i++ ){
-        printf( "%i (%i,%i) %g %g \n", i, bond2atom[i].x+1, bond2atom[i].y+1, bond_0[i], bond_k[i] );
+        printf( "bond[%i] (%i,%i) %g %g \n", i, bond2atom[i].x+1, bond2atom[i].y+1, bond_0[i], bond_k[i] );
     }
 }
 
 void printAtomInfo(){
     printf("MMFF::printAtomInfo : \n" );
     for(int i=0; i<natoms; i++){
-        printf( " i %i atom2frag[i] %i atypes[i] %i aREQ[i] (%g,%g,%g) \n", i, atom2frag[i], atypes[i], aREQ[i].x, aREQ[i].y, aREQ[i].z );
+        printf( "atom[%i] frag %i typ %i REQ(%g,%g,%g) pos(%g,%g,%g) \n", i, atom2frag[i], atypes[i], aREQ[i].x, aREQ[i].y, aREQ[i].z, apos[i].x,apos[i].y,apos[i].z );
         //printf( "%i %i %i %f %f %f \n", i, atom2frag[i], atypes[i], aREQ[i].x, aREQ[i].y, aREQ[i].z );
     }
+}
+
+void write2xyz( FILE* pfile, const char* comment="#comment" )const{
+    if(atomTypeNames==0){ printf( "ERROR in MMFF::write2xyz : atomTypeNames not initialized\n" ); exit(0); }
+    writeXYZ( pfile, natoms, atypes, apos, *atomTypeNames, comment );
+}
+
+int save2xyz( char * fname, const char* comment="#comment" )const{
+    return saveXYZ( fname, natoms, atypes, apos, *atomTypeNames, comment );
 }
 
 }; // MMFF
