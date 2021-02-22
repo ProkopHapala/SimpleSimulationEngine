@@ -740,21 +740,25 @@ class Builder{  public:
     }
 
     void printAtoms(){
+        printf(" # MM::Builder.printAtoms() \n");
         for(int i=0; i<atoms.size(); i++){
             printf("atom[%i]",i); atoms[i].print(); puts("");
         }
     }
     void printBonds(){
+        printf(" # MM::Builder.printBonds() \n");
         for(int i=0; i<bonds.size(); i++){
             printf("bond[%i]",i); bonds[i].print(); puts("");
         }
     }
     void printAngles(){
+        printf(" # MM::Builder.printAngles() \n");
         for(int i=0; i<angles.size(); i++){
             printf("angle[%i]", i); angles[i].print(); puts("");
         }
     }
     void printConfs(){
+        printf(" # MM::Builder.printConfs() \n");
         for(int i=0; i<confs.size(); i++){
             printf("conf[%i]", i); confs[i].print(); puts("");
         }
@@ -856,6 +860,7 @@ class Builder{  public:
     }
 
     void insertFlexibleMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot ){
+        //printf( "# MM::Builder::insertFlexibleMolecule \n" );
         int natom0  = atoms.size();
         int nbond0  = bonds.size();
         for(int i=0; i<mol->natoms; i++){
@@ -871,7 +876,10 @@ class Builder{  public:
             bonds.push_back( Bond(mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k ) );
         }
         for(int i=0; i<mol->nang; i++){
-            angles.push_back( (Angle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}), defaultAngle.a0, defaultAngle.k } );
+            double alfa0 = defaultAngle.a0;
+            if( mol->ang0s ) alfa0 = mol->ang0s[i];
+            angles.push_back( (Angle){ 1, mol->ang2bond[i] + ((Vec2i){nbond0,nbond0}), alfa0, defaultAngle.k } );
+            //printf( "angle[%i|%i,%i] %g|%g %g \n", i, angles.back().bonds.a, angles.back().bonds.b, angles.back().a0, alfa0, angles.back().k );
         }
     }
 
@@ -988,7 +996,7 @@ class Builder{  public:
             //printf( "bond[%i] (%i,%i) %g %g | %g %g\n", i, ff.bond2atom[i].i, ff.bond2atom[i].j, ff.bond_l0[i], ff.bond_k[i], b.l0, b.k );
             //bondTypes[i]       = bonds[i].type;
         }
-        //printf( "toMMFFmini . Angles \n" );
+        //printf( "toMMFFmini . Angles.size() %i \n", angles.size() );
         for(int i=0; i<angles.size(); i++){
             const Angle& a  = angles[i];
             ff.ang2bond[i] = a.bonds;

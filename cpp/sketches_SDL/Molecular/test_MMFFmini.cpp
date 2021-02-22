@@ -34,7 +34,7 @@
 
 
 // ==========================
-// TestAppSoftMolDyn
+// TestAppMMFFmini
 // ==========================
 
 void plotSurfPlane( Vec3d normal, double c0, Vec2d d, Vec2i n ){
@@ -235,7 +235,7 @@ void doChecks(){
 // ================= MAIN CLASS ==============
 // ===========================================
 
-class TestAppSoftMolDyn : public AppSDL2OGL_3D { public:
+class TestAppMMFFmini : public AppSDL2OGL_3D { public:
 	Molecule    mol;
 	MMFFparams  params;
     MMFFmini    ff;
@@ -270,7 +270,7 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D { public:
 	virtual void eventHandling   ( const SDL_Event& event  );
 	//virtual void keyStateHandling( const Uint8 *keys );
 
-	TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ );
+	TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ );
 
 	int makeMoleculeInline();
 	int makeMoleculeInlineBuilder( bool bPBC );
@@ -278,7 +278,7 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D { public:
 
 };
 
-int TestAppSoftMolDyn::loadMoleculeMol( const char* fname, bool bAutoH, bool bLoadTypes ){
+int TestAppMMFFmini::loadMoleculeMol( const char* fname, bool bAutoH, bool bLoadTypes ){
 
     /// should look in   test_SoftMolecularDynamics.cpp
 
@@ -291,8 +291,9 @@ int TestAppSoftMolDyn::loadMoleculeMol( const char* fname, bool bAutoH, bool bLo
         printf( "bLoadTypes==False : make default Atom names dictionary \n" );
         params.initDefaultAtomTypeDict( );
     }
-    mol.atomTypeDict  = &params.atomTypeDict;
-    mol.atomTypeNames = &params.atomTypeNames;
+    //mol.atomTypeDict  = &params.atomTypeDict;
+    //mol.atomTypeNames = &params.atomTypeNames;
+    mol.bindParams(&params);
     mol.loadMol( fname );
     //mol.loadMol_const( "common_resources/propylacid.mol");
     //mol.loadMol_const( "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol" );
@@ -308,27 +309,25 @@ int TestAppSoftMolDyn::loadMoleculeMol( const char* fname, bool bAutoH, bool bLo
         //for(int i=0;i<mol.natoms;i++)     { builder.makeSPConf(i,0,0); }
     }else{
         printf( "bAutoH==False : Angles assigned by simple algorithm Molecule::autoAngles \n" );
-        mol.bondsOfAtoms();   mol.printAtom2Bond();
-        mol.autoAngles();
+        //mol.bondsOfAtoms();
+        params.assignREs( mol.natoms, mol.atomType, mol.REQs );
+        mol.autoAngles(true);
         Vec3d cog = mol.getCOG_av();
         mol.addToPos( cog*-1.0d );
         builder.insertMolecule(&mol, Vec3dZero, Mat3dIdentity, false );
         builder.toMMFFmini( ff, &params );
     }
-    printf( " ==== In MMFFBuilder: \n" );
+    mol.printAtomInfo();
+    mol.printAtom2Bond();
+    mol.printAngleInfo();
     builder.printAtoms();
     builder.printBonds();
     builder.printAngles();
-
 
     bNonBonded = false;      // ToDo : WARRNING : this is just hack, because builder.sortBonds() does not seem to work, we have to switch off Non-Bonding interactions
     //builder.trySortBonds();
     //builder.sortBonds();
     builder.toMMFFmini( ff, &params );
-
-    printf( "==== In MMFFmini: \n" );
-    ff.printBondParams();
-    ff.printAngleParams();
 
     /*
     ogl_mol = glGenLists(1);
@@ -340,7 +339,7 @@ int TestAppSoftMolDyn::loadMoleculeMol( const char* fname, bool bAutoH, bool bLo
     return nheavy;
 }
 
-int TestAppSoftMolDyn::makeMoleculeInlineBuilder( bool bPBC ){
+int TestAppMMFFmini::makeMoleculeInlineBuilder( bool bPBC ){
     //const int natom=4,nbond=3,nang=2,ntors=1;
     //const int natom=4,nbond=3,nang=0,ntors=0;
     const int natom=4,nbond=4;
@@ -357,7 +356,7 @@ int TestAppSoftMolDyn::makeMoleculeInlineBuilder( bool bPBC ){
         {3,0},  // 3  // PBC
     };
     // ============ Build molecule
-    MM::Atom brushAtom{ -1, -1,-1, Vec3dZero, MM::Atom::defaultREQ };
+    MM::Atom brushAtom        { -1, -1, -1 , Vec3dZero, MM::Atom::defaultREQ };
     MM::Bond brushBond        { -1, {-1,-1}, 1.5,  25.0 };
     builder.capBond = MM::Bond{ -1, {-1,-1}, 1.07, 15.0 };
 
@@ -382,7 +381,7 @@ int TestAppSoftMolDyn::makeMoleculeInlineBuilder( bool bPBC ){
     return natom;
 }
 
-int TestAppSoftMolDyn::makeMoleculeInline(){
+int TestAppMMFFmini::makeMoleculeInline(){
     printf( "----- makeMoleculeInline \n" );
     const int natom=5+2,nbond=4+3,nang=6, ntors=0;
     Vec3d apos0[] = {
@@ -454,10 +453,10 @@ int TestAppSoftMolDyn::makeMoleculeInline(){
     return natom;
 };
 
-//void TestAppSoftMolDyn::makeAtoms(){}
+//void TestAppMMFFmini::makeAtoms(){}
 //template<typename T> std::function<T(const T&,const T&         )> F2;
 
-TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     lvec.a = (Vec3d){  5.0,0.0,0.0 };
     lvec.b = (Vec3d){  0.0,5.0,0.0 };
@@ -473,21 +472,28 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     int nheavy = 0;
     //nheavy = loadMoleculeMol(  "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol", false, true);
-    nheavy = loadMoleculeMol( "common_resources/propylacid.mol", false, true);   // use old method loading whole .mol file with hydrogens // currently distorted molecule :-(
+    nheavy = loadMoleculeMol( "common_resources/propylacid-q.mol", false, true);   // use old method loading whole .mol file with hydrogens // currently distorted molecule :-(
     //nheavy = loadMoleculeMol( "common_resources/propylacid.mol", true, false);   // use new method  // currently makes NaNs :-(
     //nheavy = makeMoleculeInlineBuilder();     // piece of polyethylene
     //nheavy = makeMoleculeInline();
 
     nff.bindOrRealloc( ff.natoms, ff.nbonds, ff.apos, ff.aforce, 0, ff.bond2atom );
-    nff.setREQs(0      , nheavy ,{1.500,sqrt(0.003729),0});
-    nff.setREQs(nheavy , nff.n  ,{1.000,sqrt(0.003729),0});
+    bool bREQparams=true;
+    if(bREQparams){
+        //params.assignREs( mol.natoms, mol.atomType, mol.REQs );
+        //params.assignREs( mol.natoms, mol.atomType, nff.REQs ); // WARRNING - this will not work if  atoms in "nff" does not match those in "mol" !!!!
+        for(int i=0; i<mol.natoms; i++){ nff.REQs[i]=mol.REQs[i]; };
+    }else{
+        nff.setREQs(0      , nheavy ,{1.500,sqrt(0.003729),0});
+        nff.setREQs(nheavy , nff.n  ,{1.000,sqrt(0.003729),0});
+    }
     if(bNonBonded){
         if( !checkPairsSorted( nff.nmask, nff.pairMask ) ){
             printf( "ERROR: nff.pairMask is not sorted => exit \n" );
             exit(0);
         };
     }else{
-        printf( "WARRNING : we ignore non-bonded interactions !!!! " );
+        printf( "WARRNING : we ignore non-bonded interactions !!!! \n" );
     }
 
     opt.bindOrAlloc( 3*ff.natoms, (double*)ff.apos, 0, (double*)ff.aforce, 0 );
@@ -495,12 +501,14 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     opt.cleanVel( );
 
     // ======== Test before we run
-    double E = ff.eval(true);
+    nff.printAtomParams();
     ff.printAtomPos();
     ff.printBondParams();
+    ff.printAngleParams();
+    double E = ff.eval(true);
     printf( "iter0 E = %g \n", E );
+    printf("TestAppMMFFmini.init() DONE \n");
     //exit(0);
-
 
     ogl_sph = glGenLists(1);
     glNewList( ogl_sph, GL_COMPILE );
@@ -511,7 +519,7 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     //exit(0);
 }
 
-void TestAppSoftMolDyn::draw(){
+void TestAppMMFFmini::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
@@ -679,7 +687,8 @@ void TestAppSoftMolDyn::draw(){
         //Mat3d mat;
         //mat.setOne();
         //mat.mul();
-        glColor3f(0.8f,0.8f,0.8f);
+        float q = (float)nff.REQs[i].z;
+        glColor3f(1-fmax(0,-q),1-fmax(q,-q),1-fmax(0,+q));
         Draw3D::drawShape( ogl_sph, ff.apos[i], Mat3dIdentity*nff.REQs[i].x );
         glDisable(GL_LIGHTING);
 
@@ -698,7 +707,7 @@ void TestAppSoftMolDyn::draw(){
 };
 
 
-void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
+void TestAppMMFFmini::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
     switch( event.type ){
         case SDL_KEYDOWN :
@@ -749,21 +758,21 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
     AppSDL2OGL::eventHandling( event );
 }
 
-void TestAppSoftMolDyn::drawHUD(){
+void TestAppMMFFmini::drawHUD(){
     glDisable ( GL_LIGHTING );
 
 }
 
 // ===================== MAIN
 
-TestAppSoftMolDyn * thisApp;
+TestAppMMFFmini * thisApp;
 
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
-	thisApp = new TestAppSoftMolDyn( junk , 800, 600 );
+	thisApp = new TestAppMMFFmini( junk , 800, 600 );
 	thisApp->loop( 1000000 );
 	return 0;
 }

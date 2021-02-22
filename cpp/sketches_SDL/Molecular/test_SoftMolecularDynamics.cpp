@@ -26,9 +26,26 @@
 #include "DynamicOpt.h"
 
 
-
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
+
+/*
+
+ToDo (quick):
+    * assign angles depending on number of bonds and atom type
+    * Pin/Fix atom in place
+    * use MM::Builder to automatically assign hydrogen, free-electron pairs and Pi-orbitals
+    * plot real atom sizes
+
+More complex ToDo:
+    * Rotate selection around bond
+    * Move atoms using Gizmo
+    * Fix selection as rigid body
+    * Plot energy profiles along atom movement (other atoms fixed)
+
+*/
+
+
 
 // ==========================
 // TestAppSoftMolDyn
@@ -81,14 +98,16 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
-    mol.atomTypeNames = &params.atomTypeNames;
-    mol.atomTypeDict  = &params.atomTypeDict;
+    //mol.atomTypeNames = &params.atomTypeNames;
+    //mol.atomTypeDict  = &params.atomTypeDict;
     params.loadBondTypes( "common_resources/BondTypes.dat");
+
+    mol.bindParams(&params);
 
     mol.loadMol("common_resources/propylacid.mol");
     //mol.loadMol_old("common_resources/propylacid.mol");
-    mol.bondsOfAtoms();   mol.printAtom2Bond();
-    mol.autoAngles();
+    //mol.bondsOfAtoms();
+    mol.autoAngles(true);   ;
     params.assignREs( mol.natoms, mol.atomType, mol.REQs );
 
     Vec3d cog = mol.getCOG_av();
@@ -102,8 +121,11 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     world.ang_b2a();
 
-    world.printBondParams();
-    world.printAtomInfo();
+    //params.printAtomTypeDict();
+    //mol.printAtom2Bond();
+    //mol.printAngleInfo()
+    //world.printBondParams();
+    //world.printAtomInfo();
 
     opt.bindArrays( 3*world.natoms, (double*)world.apos, new double[3*world.natoms], (double*)world.aforce, NULL );
     opt.setInvMass( 1.0 );

@@ -537,19 +537,22 @@ void torsions_bond2atom(){
 }
 
 void printAtomPos(){
+    printf( "# MMFFmini.printAtomPos() \n"  );
     for( int i=0; i<natoms; i++ ){
         printf( "atom[%i] p(%g,%g,%g) \n", i, apos[i].x,apos[i].y,apos[i].z );
     }
 }
 
 void printBondParams(){
+    printf( "# MMFFmini.printBondParams() \n"  );
     for( int i=0; i<nbonds; i++ ){
         printf( "bond[%i] (%i,%i) l0 %g k %g \n", i, bond2atom[i].x+1, bond2atom[i].y+1, bond_l0[i], bond_k[i] );
     }
 }
 
 void printAngleParams(){
-    for( int i=0; i<nbonds; i++ ){
+    printf( "# MMFFmini.printAngleParams() \n"  );
+    for( int i=0; i<nang; i++ ){
         printf( "angle[%i] (%i,%i|%i) cs0(%g,%g) k %g \n", i, ang2atom[i].a+1, ang2atom[i].b+1, ang2atom[i].c+1, ang_cs0[i].x, ang_cs0[i].y, ang_k[i] );
     }
 }

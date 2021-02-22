@@ -137,6 +137,13 @@ void setREQs(int i0,int i1, const Vec3d& REQ){
     for(int i=i0;i<i1;i++){ REQs[i]=REQ; }
 }
 
+void printAtomParams(){
+    printf( " # NBFF::printAtomParams() \n" );
+    for(int i=0;i<n;i++){
+        printf(  "atom[%i] R %g E %g Q %g \n", i, REQs[i].x, REQs[i].y, REQs[i].z );
+    }
+}
+
 void cleanForce(){
     for(int i=0; i<n; i++){ fs[i].set(0.); }
 }
@@ -161,7 +168,6 @@ double evalLJQs(){
 }
 
 double evalLJQ_sortedMask( const Vec3d& shift=Vec3dZero ){
-
     int im=0;
     const int N=n;
     double E=0;
@@ -171,6 +177,7 @@ double evalLJQ_sortedMask( const Vec3d& shift=Vec3dZero ){
         pi.add( shift );
         const Vec3d& REQi = REQs[i];
         for(int j=i+1; j<N; j++){    // atom-atom
+            // --- mask some atom pairs (e.g. those which are bonded), as long as atoms are sorted we can do it efficiently
             if( (im<nmask)&&(i==pairMask[im].i)&&(j==pairMask[im].j) ){
                 im++; continue;
             }

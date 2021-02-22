@@ -42,7 +42,7 @@ class AtomType{ public:
         //char sclr[6];
         sscanf( str, " %s %i %i %i %i %lf %lf %x \n", name, &iZ_, &neval_, &valence_, &sym_,  &RvdW, &EvdW, &color );
         iZ=iZ_; neval=neval_; valence=valence_; sym=sym_;
-        //printf( "printf: %s %i %i %i %i %lf %lf %x \n", name,  iZ,   neval_,  valence,   sym,    RvdW, EvdW,   color );
+        //printf( "AtomType: %s iZ %i ne %i nb %i sym %i RE(%g,%g) %x \n", name,  iZ,   neval_,  valence,   sym,    RvdW, EvdW,   color );
         //char ss[256]; printf("%s\n", toString(ss) );
     }
 
@@ -65,6 +65,10 @@ class MMFFparams{ public:
 
     void initDefaultAtomTypeDict(){
         makeDefaultAtomTypeDict( atomTypeNames, atomTypeDict );
+    }
+
+    void printAtomTypeDict(){
+        for(int i=0; i<atomTypeNames.size(); i++){ printf( "AtomType[%i] %s %i\n", i, atomTypeNames[i].c_str(), atomTypeDict[atomTypeNames[i]] ); };
     }
 
     int loadAtomTypes(char * fname){
@@ -98,7 +102,7 @@ class MMFFparams{ public:
     }
 
     void assignREs( int n, int * itypes, Vec3d * REQs )const{
-        //printf( "assignREs %i   %i %i %i \n", n,  itypes, REQs, atypes );
+        printf( "assignREs %i   %i %i %i \n", n,  itypes, REQs, atypes );
         for(int i=0; i<n; i++){
             //mmff->aLJq [i]  = atoms[i].type;
             //int ityp = atoms[i].type;
@@ -107,7 +111,7 @@ class MMFFparams{ public:
             //printf( "ityp %i \n", ityp );
             REQs[i].x = atypes[ityp].RvdW;
             REQs[i].y = atypes[ityp].EvdW;
-            //printf( "assignREs i %i ityp %i RE  %g %g  \n", i, ityp, atypes[ityp].RvdW, atypes[ityp].EvdW );
+            printf( "assignREs i %i ityp %i RE  %g %g  \n", i, ityp, atypes[ityp].RvdW, atypes[ityp].EvdW );
             //REQs.z = 0;
             //atomTypes[i]  = atoms[i].type;
         }

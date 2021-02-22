@@ -11,8 +11,9 @@
 #include "Vec3.h"
 //#include "IOutils.h"
 
-/*
-inline int atomChar2int(char ch ){
+#include "MMFFparams.h"
+
+inline int atomName2int(char ch ){
     int i = -1;
     switch(ch){
         case 'H': i=1;  break;
@@ -26,16 +27,6 @@ inline int atomChar2int(char ch ){
     }
     return i;
 }
-*/
-
-
-/*
-void makeAtomTypeNames( std::unordered_map<std::string,int>& mp ){
-    mp["H" ]=1;  mp["He"]=2;
-    mp["Li"]=3;  mp["Be"]=4;  mp["B" ]=5;  mp["C" ]=6;  mp["N"]=7;  mp["O"]=8;  mp["F"]=9;   mp["Ne"]=10;
-    mp["Na"]=11; mp["Mg"]=12; mp["Al"]=13; mp["Si"]=14; mp["P"]=15; mp["S"]=16; mp["Cl"]=17; mp["Ar"]=18;
-}
-*/
 
 void cpstr( const char* str, char* tmp, int i0, int n ){
     tmp[n]='\0';
@@ -80,9 +71,12 @@ class Molecule{ public:
     int   * atom2bond  = NULL;
 
     int nang = 0;
-    Vec2i * ang2bond   = NULL;
+    Vec2i  * ang2bond   = NULL;
+    double * ang0s      = NULL;
     //int * ang2atom = NULL;
 
+    const MMFFparams* params = 0;
+    // ToDo: this is redudant can be changed to params
     const std::vector       <std::string    >* atomTypeNames=0;
     const std::unordered_map<std::string,int>* atomTypeDict =0;
 
@@ -130,46 +124,67 @@ class Molecule{ public:
         for(int i=0;i<nbonds;i++){  bond2atom[i]=pairs[i]; }
     }
 
+    void bindParams( const MMFFparams* params_ ){
+        params = params_;
+        atomTypeNames = &params->atomTypeNames;
+        atomTypeDict  = &params->atomTypeDict;
+    }
+
     int countAtomType( int ityp)const{
         int n=0;
         for(int i=0; i<natoms; i++){ if(atomType[i]==ityp)n++; }
         return n;
     }
 
-    void printAtom2Bond()const{
-        int * a2b = atom2bond;
-        for(int ia=0; ia<natoms; ia++){
-            int nb = atom_nb[ia];
-            printf("%i :", ia);
-            for(int i=0; i<nb; i++){
-                //printf(" %i", a2b[i] );
-                printf(" %i", otherAtom( bond2atom[a2b[i]], ia) );
-            }
-            printf("\n");
-            a2b+= NBMAX;
+    inline double getAng0( int ia ){
+        int ityp = atomType[ia];
+        if(params) ityp = params->atypes[ityp].iZ; // ToDo : later this can be improved
+        int nb   = atom_nb [ia];
+        //printf( "getAng0 iT %i iZ %i nb %i \n", atomType[ia], ityp, nb );
+        switch(ityp){
+            case 1: return M_PI; break; // H
+            case 6: // C
+                if     (nb==2){ return M_PI;               }
+                else if(nb==3){ return M_PI*0.6666666666;  }
+                else if(nb==4){ return M_PI*0.60833333333; }
+                else          { return M_PI;               }
+                break;
+            case 7: // N
+                if     (nb==2){ return M_PI*0.6666666666;  }
+                else if(nb==3){ return M_PI*0.60833333333; }
+                else          { return M_PI;               }
+                break;
+            case 5: return M_PI; break; // B
+            case 8:  // O
+            case 14: // Si
+            case 16: // S
+                return M_PI*0.60833333333; break;
+            default: return M_PI;
         }
+        return M_PI;
     }
 
-    void printAtomInfo()const{
-        printf("Molecule::printAtomInfo : \n" );
-        for(int i=0; i<natoms; i++){
-            printf( "atom[%i] pos (%g,%g,%g) REQs(%g,%g,%g) \n", i, pos[i].x,pos[i].y,pos[i].z, REQs[i].x, REQs[i].y, REQs[i].z );
-        }
-    }
-
-    int autoAngles(){
+    int autoAngles( bool bAng0=false ){
         // create angle between each pair of bonds of an atom
         nang = 0;
+        if( (atom_nb==0)||(atom2bond==0) )bondsOfAtoms();
         for(int i=0; i<natoms; i++){ int nb = atom_nb[i]; nang+=(nb*(nb-1))>>1; }
-        ang2bond = new Vec2i[nang];
+        ang2bond       = new Vec2i [nang];
+        if(bAng0)ang0s = new double[nang];
         int * a2b = atom2bond;
         int iang = 0;
         for(int ia=0; ia<natoms; ia++){
             int nb = atom_nb[ia];
+            double a0;
+            if((bAng0)&&(nb>1)) a0 = getAng0( ia );
             for(int i=0; i<nb; i++){
                 int ib1 = a2b[i];
                 for(int j=0; j<i; j++){
                     ang2bond[iang]={ib1,a2b[j]};
+                    if(bAng0){
+                        ang0s[iang] = a0;
+                        //printf( "autoAngles[%i][%i|%i,%i] %g[rad] | nZ %i nb %i \n", iang, ia,i,j, ang0s[ia], atomType[ia], nb );
+                    }
                     iang++;
                 }
             }
@@ -238,6 +253,23 @@ class Molecule{ public:
     }
     */
 
+    void assignAtomType(int i, const char * at_name ){
+        if(atomTypeDict){
+            auto it = atomTypeDict->find( at_name );
+            if( it != atomTypeDict->end() ){
+                atomType[i] = it->second;
+                if(1==it->second)REQs[i].x=1.0; // Hydrogen is smaller
+            }else{
+                //atomType[i] = atomChar2int( at_name[0] );
+                atomType[i] = -1;
+            }
+            //printf( "at_name[%i] %s -> %i \n", i, at_name, atomType[i] );
+        }else{
+            atomType[i] = atomName2int( at_name[0] );
+        }
+    }
+
+
     int loadMol( const char* fname ){
         // 0        10         20
         //   -13.0110  -15.2500   -0.0030 N   0  0  0  0  0  0  0  0  0  0  0  0
@@ -260,7 +292,7 @@ class Molecule{ public:
         //line = fgets( buff, 1024, pFile );
         natoms = getInt( line, 0, 3 );
         nbonds = getInt( line, 3, 6 );
-        printf("natoms, nbonds %i %i \n", natoms, nbonds );
+        printf("loadMol(%s):  natoms, nbonds %i %i \n", fname, natoms, nbonds );
         //exit(0);
         //return 0;
         allocate(natoms,nbonds);
@@ -275,19 +307,11 @@ class Molecule{ public:
             double junk;
             char at_name[8];
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
-            sscanf( line, "%lf %lf %lf %s %lf %lf\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name, &junk, &REQs[i].z );
-            //printf(       "%lf %lf %lf %s %lf %lf\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name,  junk,  REQs[i].z );
+            sscanf( line, "%lf %lf %lf %s %lf %lf\n", &pos[i].x, &pos[i].y, &pos[i].z,  at_name, &junk, &(REQs[i].z) );
+            printf(       "%lf %lf %lf %s %lf %lf\n",  pos[i].x,  pos[i].y,  pos[i].z,  at_name,  junk,   REQs[i].z   );
             REQs[i].x = 1.5; // [A]  van der Waals radius default
             REQs[i].y = 0;   // [eV] van der Waals binding energy default
-            // atomType[i] = atomChar2int( ch );
-            auto it = atomTypeDict->find( at_name );
-            if( it != atomTypeDict->end() ){
-                atomType[i] = it->second;
-                if(1==it->second)REQs[i].x=1.0; // Hydrogen is smaller
-            }else{
-                //atomType[i] = atomChar2int( at_name[0] );
-                atomType[i] = -1;
-            }
+            assignAtomType( i, at_name );
         }
         for(int i=0; i<nbonds; i++){
             line = fgets( buff, 1024, pFile );  //printf("%s",line);
@@ -295,7 +319,7 @@ class Molecule{ public:
             bond2atom[i].y = getInt( line, 3, 6 );
             bondType[i]    = getInt( line, 6, 9 );
             //sscanf( line, "%i %i %i\n", &bond2atom[i].x, &bond2atom[i].y, &bondType[i] );
-            printf(       "%i %i %i\n",  bond2atom[i].x,  bond2atom[i].y,  bondType[i] );
+            //printf(       "%i %i %i\n",  bond2atom[i].x,  bond2atom[i].y,  bondType[i] );
             bond2atom[i].x--;
             bond2atom[i].y--;
         }
@@ -377,6 +401,38 @@ class Molecule{ public:
             // atomType[i] = atomChar2int( ch );
         }
         return natoms;
+    }
+
+    void printAtom2Bond()const{
+        if(atom2bond==0){ printf("# Molecule.printAtom2Bond() atom2bond == NULL ; return \n"); return; };
+        printf("# Molecule.printAtom2Bond()\n");
+        int * a2b = atom2bond;
+        for(int ia=0; ia<natoms; ia++){
+            int nb = atom_nb[ia];
+            printf("%i :", ia);
+            for(int i=0; i<nb; i++){
+                //printf(" %i", a2b[i] );
+                printf(" %i", otherAtom( bond2atom[a2b[i]], ia) );
+            }
+            printf("\n");
+            a2b+= NBMAX;
+        }
+    }
+
+    void printAtomInfo()const{
+        printf(" # Molecule.printAtomInfo() : \n" );
+        for(int i=0; i<natoms; i++){
+            printf( "atom[%i] pos (%g,%g,%g) REQs(%g,%g,%g) \n", i, pos[i].x,pos[i].y,pos[i].z, REQs[i].x, REQs[i].y, REQs[i].z );
+        }
+    }
+
+    void printAngleInfo()const{
+        if(ang2bond==0){ printf("# Molecule.printAngleInfo() ang2bond == NULL ; return \n"); return; };
+        printf(" # Molecule.printAngleInfo()\n");
+        for(int i=0; i<nang; i++){
+            double a0=0; if(ang0s)a0=ang0s[i];
+            printf( "angle[%i|%i,%i] a0 %g[rad] \n", i, ang2bond[i].a, ang2bond[i].b, a0 );
+        }
     }
 
     void dealloc(){
