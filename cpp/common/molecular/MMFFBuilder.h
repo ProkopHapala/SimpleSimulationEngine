@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <memory>
 
+#include "macroUtils.h"
 #include "testUtils.h"
 
 //#include "Molecule.h"
@@ -20,43 +21,7 @@
 //#include "MMFFmini.h"
 //#include "MMFFparams.h"
 
-// =============== Free functions
-
-/*
-int write2xyz( FILE* pfile, MMFF * ff, MMFFparams * params ){
-    fprintf(pfile, "%i\n", mmff->natoms );
-    fprintf(pfile, "#comment \n");
-    for(int i=0; i<mmff->natoms; i++){
-        int ityp   = mmff->atypes[i];
-        Vec3d&  pi = mmff->apos[i];
-        //printf( "write2xyz %i %i (%g,%g,%g) %s \n", i, ityp, pi.x,pi.y,pi.z, params->atypes[ityp].name );
-        fprintf( pfile, "%s   %15.10f   %15.10f   %15.10f \n", params->atypes[ityp].name, pi.x,pi.y,pi.z );
-    };
-    return mmff->natoms;
-}
-
-int save2xyz( char * fname, MMFF * mmff, MMFFparams * params ){
-    FILE* pfile = fopen(fname, "w");
-    if( pfile == NULL ) return -1;
-    int n = write2xyz(pfile, mmff, params );
-    fclose(pfile);
-    return n;
-}
-*/
-
-inline int selectMinHigher(int a0, int n, int* as){
-    int amin=0x7FFFFFFF; // 32 int max
-    int imin=0;
-    for(int i=0;i<n;i++){
-        int a=as[i];
-        if((a>a0)&&(a<amin)){amin=a;imin=i;};
-    }
-    return imin;
-};
-
-
 // =============== Structs for Atoms, Bonds etc...
-
 
 namespace MM{
 
@@ -108,6 +73,14 @@ struct AtomConf{
     int neighs[N_NEIGH_MAX]; // neighs  - NOTE: bonds not atoms !!!!
 
     //AtomConf() = default;
+
+    inline int findNeigh(int ib){
+        for(int i=0; i<N_NEIGH_MAX; i++){
+            //printf( "MM:AtomConf.findNeigh()[%i] ng %i ja %i \n", i, neighs[i], ja );
+            if(neighs[i]==ib) return i;
+        }
+        return -1;
+    }
 
     inline bool addNeigh(int ia, uint8_t& ninc ){
         if(n>=N_NEIGH_MAX)return false;
@@ -309,9 +282,32 @@ class Builder{  public:
         return -1;
     }
 
+    AtomConf* addConfToAtom( int ia, const AtomConf* conf=0 ){
+        //printf( "MM::Builder.addConfToAtom ia %i \n", ia );
+        int ic = confs.size();
+        atoms[ia].iconf = ic;
+        if   (conf){ confs.push_back( *conf      );                       }
+        else       { confs.push_back(  AtomConf()); confs.back().init0(); }
+        confs.back().iatom=ia;
+        return &confs.back();
+    }
+    int tryAddConfsToAtoms( int i0=0, int imax=-1 ){
+        if(imax<0){ imax=atoms.size(); }
+        int n=0;
+        for(int ia=0;ia<imax;ia++){
+            int ic=atoms[ia].iconf;
+            if(ic<0){
+                addConfToAtom( ia, 0 );
+                n++;
+            }
+        }
+        return n;
+    }
+
     AtomConf* insertAtom(const Atom& atom, bool bConf ){
         atoms.push_back(atom);
         if(bConf){
+            /*
             int ic = confs.size();
             int ia = atoms.size()-1;
             //printf( "insertAtom ia %i ic %i \n", ia, ic );
@@ -322,13 +318,47 @@ class Builder{  public:
             c.iatom = ia;
             //printf("insertAtom[%i] ", ia); println(c);
             return &c;
+            */
+            return addConfToAtom( atoms.size()-1 );
         }
         return 0;
+    }
+
+    void addBondToAtomConf( int ib, int ia, bool bCheck ){
+        int ic = atoms[ia].iconf;
+        //printf( "MM::Builder.addBondToAtomConf ia %i ib %i ic %i \n", ia, ib, ic );
+        if(ic>=0){
+            if(bCheck){
+                int ing = confs[ic].findNeigh(ib);
+                //printf( "ing %i \n", ing );
+                if( 0<ing ){
+                    //printf( " ia %i ib %i ing %i RETURN \n", ia, ib, ing );
+                    return; // neighbor already present in conf
+                }
+            }
+            //printf( "MM::Builder.addBondToAtomConf ia %i ib %i ADDED \n", ia, ib );
+            confs[ic].addBond(ib);
+        }
+    }
+
+    void addBondToConfs( int ib, bool bCheck ){
+        const Bond& bond = bonds[ib];
+        addBondToAtomConf( ib, bond.atoms.i, bCheck );
+        addBondToAtomConf( ib, bond.atoms.j, bCheck );
+    }
+    void tryAddBondsToConfs( int i0=0, int imax=-1 ){
+        if(imax<0) imax=bonds.size();
+        for(int ib=i0; ib<imax; ib++){
+            addBondToConfs( ib, true );
+        }
     }
 
     void insertBond(const Bond& bond ){
         int ib = bonds.size();
         bonds.push_back(bond);
+        addBondToAtomConf( ib, bond.atoms.i, false );
+        addBondToAtomConf( ib, bond.atoms.j, false );
+        /*
         int ic = atoms[bond.atoms.i].iconf;
         int jc = atoms[bond.atoms.j].iconf;
         //if(ic>=0){ confs[ic].addBond(bond.atoms.j); }
@@ -342,6 +372,7 @@ class Builder{  public:
             confs[jc].addBond(ib);
             //printf( "   j.conf " ); println(confs[jc]);
         }
+        */
     }
 
     //void addCap(int ia,Vec3d& hdir, Atom* atomj, int btype){
@@ -647,6 +678,11 @@ class Builder{  public:
         return true;
     }
 
+    void sortAtomsOfBonds(){
+        for(int i=0; i<bonds.size(); i++){ bonds[i].atoms.order(); }
+    }
+
+
     bool sortBonds(){
         //printf( "sortBonds \n" );
         // sort bonds so that
@@ -664,6 +700,9 @@ class Builder{  public:
 
         int nga[N_NEIGH_MAX];
         int ngb[N_NEIGH_MAX];
+
+        sortAtomsOfBonds();
+        //printBonds();
 
         int nb=0;
         for(int ia=0; ia<atoms.size(); ia++ ){
@@ -694,6 +733,7 @@ class Builder{  public:
                 ja=nga[ipick];
                 //neighs[i] = ngb[ipick]; // make conf sorted
                 //printf( " atom[%i].neigh[%i] %i \n", ia, i, ja  );
+                //printf( " atom[i %i -> j %i] ng %i \n", ia, ja, i  );
                 if(ja<ia)continue;      // this bond was processed before (Hopefully)
                 int ib = ngb[ipick];
 

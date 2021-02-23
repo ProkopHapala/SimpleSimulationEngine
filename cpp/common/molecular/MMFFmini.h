@@ -553,7 +553,7 @@ void printBondParams(){
 void printAngleParams(){
     printf( "# MMFFmini.printAngleParams() \n"  );
     for( int i=0; i<nang; i++ ){
-        printf( "angle[%i] (%i,%i|%i) cs0(%g,%g) k %g \n", i, ang2atom[i].a+1, ang2atom[i].b+1, ang2atom[i].c+1, ang_cs0[i].x, ang_cs0[i].y, ang_k[i] );
+        printf( "angle[%i] (%i,%i,%i) cs0(%g,%g) k %g \n", i, ang2atom[i].a+1, ang2atom[i].b+1, ang2atom[i].c+1, ang_cs0[i].x, ang_cs0[i].y, ang_k[i] );
     }
 }
 

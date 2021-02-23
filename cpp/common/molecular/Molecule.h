@@ -98,12 +98,50 @@ class Molecule{ public:
             Vec2i ib = bond2atom[i];
             int nb1 = atom_nb[ib.x];
             int nb2 = atom_nb[ib.y];
+            if( (nb1>=4)||(nb2>=4) ){
+                printf( "ERROR in Molecule.bondsOfAtoms() [ib %i] bond count(%i,%i) > NBMAX(%i) \n", i, nb1, nb2, NBMAX );
+                exit(0);
+            }
             atom2bond[ib.x*NBMAX+nb1] = i;
             atom2bond[ib.y*NBMAX+nb2] = i; // -i to denote directionality ?
             atom_nb[ib.x]=nb1+1;
             atom_nb[ib.y]=nb2+1;
         }
     }
+
+    /*
+
+    void sortAtomsOfBonds(){
+
+    }
+
+    void sortAtomNeighs(int ia){
+        int nb = atom_nb[ia];
+        int* ibs = atom2bond + i*NBMAX;
+        int nghs[NBMAX];
+        int bs  [NBMAX];
+        for(int i=0; i<nb i++){
+
+        }
+        for(int i=0; i<nb i++){
+            int ib = selectMinHigher(ja, nbconf, ibs );
+        }
+    }
+
+    void remakeBondsSorted(){
+        if( (atom_nb==0)||(atom2bond==0) )bondsOfAtoms();
+        int ib=0;
+
+        for(int i=0; i<natoms; i++){
+            int nb = atom_nb[i];
+            for(int ij=0; ij<nb; ij++){
+                int j = atom2bond[i*NBMAX+ij];
+                bond2atom[ib] = (Vec2i){i,j};
+                ib++;
+            }
+        }
+    }
+    */
 
     void findBonds_brute(double Rmax){
         double R2max = sq(Rmax);
@@ -130,7 +168,7 @@ class Molecule{ public:
         atomTypeDict  = &params->atomTypeDict;
     }
 
-    int countAtomType( int ityp)const{
+    int countAtomType( int ityp )const{
         int n=0;
         for(int i=0; i<natoms; i++){ if(atomType[i]==ityp)n++; }
         return n;
@@ -140,12 +178,12 @@ class Molecule{ public:
         int ityp = atomType[ia];
         if(params) ityp = params->atypes[ityp].iZ; // ToDo : later this can be improved
         int nb   = atom_nb [ia];
-        //printf( "getAng0 iT %i iZ %i nb %i \n", atomType[ia], ityp, nb );
+        printf( "getAng0 iT %i iZ %i nb %i \n", atomType[ia], ityp, nb );
         switch(ityp){
             case 1: return M_PI; break; // H
             case 6: // C
                 if     (nb==2){ return M_PI;               }
-                else if(nb==3){ return M_PI*0.6666666666;  }
+                else if(nb==3){ return M_PI*0.66666666666; }
                 else if(nb==4){ return M_PI*0.60833333333; }
                 else          { return M_PI;               }
                 break;
@@ -158,7 +196,7 @@ class Molecule{ public:
             case 8:  // O
             case 14: // Si
             case 16: // S
-                return M_PI*0.60833333333; break;
+                return M_PI*0.60833333333;
             default: return M_PI;
         }
         return M_PI;
@@ -176,14 +214,17 @@ class Molecule{ public:
         for(int ia=0; ia<natoms; ia++){
             int nb = atom_nb[ia];
             double a0;
-            if((bAng0)&&(nb>1)) a0 = getAng0( ia );
+            if((bAng0)&&(nb>1)){
+                a0 = getAng0( ia );
+                printf( "atom[%i] a0 %g \n ", ia, a0 );
+            }
             for(int i=0; i<nb; i++){
                 int ib1 = a2b[i];
                 for(int j=0; j<i; j++){
                     ang2bond[iang]={ib1,a2b[j]};
                     if(bAng0){
                         ang0s[iang] = a0;
-                        //printf( "autoAngles[%i][%i|%i,%i] %g[rad] | nZ %i nb %i \n", iang, ia,i,j, ang0s[ia], atomType[ia], nb );
+                        printf( "autoAngles[%i][ia%i|%i,%i] %g[rad] | nZ %i nb %i \n", iang, ia,i,j, ang0s[iang], atomType[ia], nb );
                     }
                     iang++;
                 }
@@ -422,7 +463,7 @@ class Molecule{ public:
     void printAtomInfo()const{
         printf(" # Molecule.printAtomInfo() : \n" );
         for(int i=0; i<natoms; i++){
-            printf( "atom[%i] pos (%g,%g,%g) REQs(%g,%g,%g) \n", i, pos[i].x,pos[i].y,pos[i].z, REQs[i].x, REQs[i].y, REQs[i].z );
+            printf( "atom[%i] t %i pos(%g,%g,%g) REQs(%g,%g,%g) \n", i, atomType[i], pos[i].x,pos[i].y,pos[i].z, REQs[i].x, REQs[i].y, REQs[i].z );
         }
     }
 

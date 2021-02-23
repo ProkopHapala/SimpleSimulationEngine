@@ -18,6 +18,7 @@
 #include "Mat3.h"
 
 #include "raytrace.h"
+#include "Forces.h"
 
 #include "Molecule.h"
 #include "MMFFmini.h"
@@ -250,6 +251,7 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
     Mat3d lvec;
 
     bool bConverged = false;
+    bool bRunRelax  = false;
 
     int     fontTex;
     int     ogl_sph=0;
@@ -258,8 +260,9 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
     char str[256];
 
     Vec3d ray0;
-    int ipicked  = -1, ibpicked = -1;
+    int ipicked  = -1, ibpicked = -1, iangPicked = -1;
     int perFrame =  50;
+
 
     double drndv =  10.0;
     double drndp =  0.5;
@@ -298,7 +301,8 @@ int TestAppMMFFmini::loadMoleculeMol( const char* fname, bool bAutoH, bool bLoad
     //mol.loadMol_const( "common_resources/propylacid.mol");
     //mol.loadMol_const( "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol" );
     //exit(0);
-    int iH = 1;
+    //int iH = 1;
+    int iH = params.atomTypeDict["H"];
     int nh     = mol.countAtomType(iH); printf( "nh %i\n", nh );
     int nheavy = mol.natoms - nh;
     if(bAutoH){
@@ -317,16 +321,27 @@ int TestAppMMFFmini::loadMoleculeMol( const char* fname, bool bAutoH, bool bLoad
         builder.insertMolecule(&mol, Vec3dZero, Mat3dIdentity, false );
         builder.toMMFFmini( ff, &params );
     }
-    mol.printAtomInfo();
-    mol.printAtom2Bond();
-    mol.printAngleInfo();
+
+    //builder.sortAtomsOfBonds();
+    builder.tryAddConfsToAtoms(0, nh);
+    builder.tryAddBondsToConfs();
+    //for(int i=0; i<nh; i++){ builder.addConfToAtom(i); }
+    //builder.tryAddBondsToConfs();
+
+    //mol.printAtomInfo();
+    //mol.printAtom2Bond();
+    //mol.printAngleInfo();
     builder.printAtoms();
+    //builder.printBonds();
+    //builder.printAngles();
+    //builder.printConfs();
+
+    //bNonBonded = false;      // ToDo : WARRNING : this is just hack, because builder.sortBonds() does not seem to work, we have to switch off Non-Bonding interactions
+    builder.trySortBonds();
+    //builder.sortBonds();
     builder.printBonds();
     builder.printAngles();
-
-    bNonBonded = false;      // ToDo : WARRNING : this is just hack, because builder.sortBonds() does not seem to work, we have to switch off Non-Bonding interactions
-    //builder.trySortBonds();
-    //builder.sortBonds();
+    builder.printConfs();
     builder.toMMFFmini( ff, &params );
 
     /*
@@ -565,67 +580,69 @@ void TestAppMMFFmini::draw(){
     //ff.apos[0].set(-2.0,0.0,0.0);
     perFrame = 1;
     //perFrame = 50;
-	for(int itr=0; itr<perFrame; itr++){
-        if(bConverged) break;
-        //printf( "======= frame %i \n", frameCount );
+    if(bRunRelax){
+        for(int itr=0; itr<perFrame; itr++){
+            if(bConverged) break;
+            //printf( "======= frame %i \n", frameCount );
 
-	    //printf( "DEBUG run 1 \n" );
+            //printf( "DEBUG run 1 \n" );
 
-	    // rotate arom[0]
-        //ff.apos[0] = ff.apos[1] + (ff.apos[0]-ff.apos[1]).rotate( 2*M_PI/perFrame, ff.apos[2]-ff.apos[1] );
+            // rotate arom[0]
+            //ff.apos[0] = ff.apos[1] + (ff.apos[0]-ff.apos[1]).rotate( 2*M_PI/perFrame, ff.apos[2]-ff.apos[1] );
 
-        double E=0;
-        ff.cleanAtomForce();
-        E += ff.eval(false);
-        if(bNonBonded){
-            //E += nff.evalLJQ_sortedMask();   // This is fast but does not work in PBC
-            E += nff.evalLJQ_pbc( lvec, {1,1,1} );
-        }
-        //Vec3d cog,fsum,torq;
-        //checkForceInvariatns( ff.natoms, ff.aforce, ff.apos, cog, fsum, torq );
-        //printf( "fsum %g torq %g   cog (%g,%g,%g) \n", fsum.norm(), torq.norm(), cog.x, cog.y, cog.z );
-
-
-        //for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
-        //printf( "DEBUG x.1 \n" );
-        //world.eval_bonds(true);
-        //world.eval_angles();
-        //printf( "DEBUG x.2 \n" );
-        //world.eval_angles();
-        //printf( "DEBUG x.3 \n" );
-        //world.eval_LJq_On2();
-
-        /*
-        //exit(0);
-        if(ipicked>=0){
-            Vec3d f = getForceSpringRay( world.apos[ipicked], (Vec3d)cam.rot.c, ray0, -1.0 );
-            //printf( "f (%g,%g,%g)\n", f.x, f.y, f.z );
-            world.aforce[ipicked].add( f );
-        };
+            double E=0;
+            ff.cleanAtomForce();
+            E += ff.eval(false);
+            if(bNonBonded){
+                //E += nff.evalLJQ_sortedMask();   // This is fast but does not work in PBC
+                E += nff.evalLJQ_pbc( lvec, {1,1,1} );
+            }
+            //Vec3d cog,fsum,torq;
+            //checkForceInvariatns( ff.natoms, ff.aforce, ff.apos, cog, fsum, torq );
+            //printf( "fsum %g torq %g   cog (%g,%g,%g) \n", fsum.norm(), torq.norm(), cog.x, cog.y, cog.z );
 
 
-        for(int i=0; i<world.natoms; i++){
-            world.aforce[i].add( getForceHamakerPlane( world.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
-            //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
-        }
-        */
+            //for(int i=0; i<world.natoms; i++){ world.aforce[i].set(0.0d); }
+            //printf( "DEBUG x.1 \n" );
+            //world.eval_bonds(true);
+            //world.eval_angles();
+            //printf( "DEBUG x.2 \n" );
+            //world.eval_angles();
+            //printf( "DEBUG x.3 \n" );
+            //world.eval_LJq_On2();
 
-        //exit(0);
 
-        //for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.01,0.0}); }
-        //int ipivot = 0;
-        //world.aforce[ipivot].set(0.0);
-        //opt.move_LeapFrog(0.01);
-        //opt.move_MDquench();
+            //exit(0);
+            if(ipicked>=0){
+                Vec3d f = getForceSpringRay( ff.apos[ipicked], (Vec3d)cam.rot.c, ray0, -1.0 );
+                //printf( "f (%g,%g,%g)\n", f.x, f.y, f.z );
+                ff.aforce[ipicked].add( f );
+            };
 
-        //opt.move_GD(0.001);
-        double f2 = opt.move_FIRE();
-        //exit(0);
 
-        printf( "E %g |F| %g |Ftol %g \n", E, sqrt(f2), Ftol );
-        if(f2<sq(Ftol)){
-            bConverged=true;
-            printf( "CONVERGED \n" );
+            for(int i=0; i<ff.natoms; i++){
+                ff.aforce[i].add( getForceHamakerPlane( ff.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
+                //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
+            }
+
+
+            //exit(0);
+
+            //for(int i=0; i<world.natoms; i++){ world.aforce[i].add({0.0,-0.01,0.0}); }
+            //int ipivot = 0;
+            //world.aforce[ipivot].set(0.0);
+            //opt.move_LeapFrog(0.01);
+            //opt.move_MDquench();
+
+            //opt.move_GD(0.001);
+            double f2 = opt.move_FIRE();
+            //exit(0);
+
+            printf( "E %g |F| %g |Ftol %g \n", E, sqrt(f2), Ftol );
+            if(f2<sq(Ftol)){
+                bConverged=true;
+                printf( "CONVERGED \n" );
+            }
         }
     }
 
@@ -668,6 +685,10 @@ void TestAppMMFFmini::draw(){
         //Draw3D::drawText(str, (ff.apos[ib.x]+ff.apos[ib.y])*0.5, fontTex, 0.02, 0);
     }
 
+    if(iangPicked>=0){
+        const Vec3i& ang = ff.ang2atom[iangPicked];
+        Draw3D::drawTriangle( ff.apos[ang.a], ff.apos[ang.b], ff.apos[ang.c], true );
+    }
 
     //};
     // draw Atoms
@@ -731,17 +752,26 @@ void TestAppMMFFmini::eventHandling ( const SDL_Event& event  ){
                 //case SDLK_w: world.apos[1].mul( 1.1 ); break;
                 //case SDLK_s: world.apos[1].mul( 0.9 ); break;
 
+
+                case SDLK_SPACE: bRunRelax=!bRunRelax; break;
+
+                case SDLK_g: iangPicked=(iangPicked+1)%ff.nang;
+                    printf( "ang[%i] cs(%g,%g) k %g (%i,%i,%i)\n", iangPicked, ff.ang_cs0[iangPicked].x, ff.ang_cs0[iangPicked].y, ff.ang_k[iangPicked],
+                        ff.ang2atom[iangPicked].a,ff.ang2atom[iangPicked].b,ff.ang2atom[iangPicked].c );
+                    break;
+
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
-                //case SDL_BUTTON_LEFT:
-                //    ipicked = pickParticle( world.natoms, world.apos, ray0, (Vec3d)cam.rot.c , 0.5 );
-                //    break;
-                //case SDL_BUTTON_RIGHT:
-                //    ibpicked = world.pickBond( ray0, (Vec3d)cam.rot.c , 0.5 );
-                //    printf("ibpicked %i \n", ibpicked);
-                //    break;
+                case SDL_BUTTON_LEFT:
+                    ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natoms, ff.apos );
+                    printf( "picked atom %i \n", ipicked );
+                    break;
+                case SDL_BUTTON_RIGHT:
+                    //ibpicked = ff.pickBond( ray0, (Vec3d)cam.rot.c , 0.5 );
+                    //printf("ibpicked %i \n", ibpicked);
+                    break;
             }
             break;
         case SDL_MOUSEBUTTONUP:
@@ -756,6 +786,7 @@ void TestAppMMFFmini::eventHandling ( const SDL_Event& event  ){
             break;
     };
     AppSDL2OGL::eventHandling( event );
+    //STOP = false;
 }
 
 void TestAppMMFFmini::drawHUD(){

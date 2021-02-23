@@ -31,13 +31,13 @@ inline void combineREQ(const Vec3d& a, const Vec3d& b, Vec3d& out){
 
 inline double addAtomicForceLJQ( const Vec3d& dp, Vec3d& f, const Vec3d& REQ ){
     //Vec3f dp; dp.set_sub( p2, p1 );
-    const double COULOMB_CONST = 14.3996448915d;  //  [V*A/e] = [ (eV/A) * A^2 /e^2]
+    const double COULOMB_CONST_ = 14.3996448915d;  //  [V*A/e] = [ (eV/A) * A^2 /e^2]
     double ir2  = 1/( dp.norm2() + 1e-4 );
     double ir   = sqrt(ir2);
     double ir2_ = ir2*REQ.a*REQ.a;
     double ir6  = ir2_*ir2_*ir2_;
     //double fr   = ( ( 1 - ir6 )*ir6*12*REQ.b + ir*REQ.c*-COULOMB_CONST )*ir2;
-    double Eel  = ir*REQ.c*COULOMB_CONST;
+    double Eel  = ir*REQ.c*COULOMB_CONST_;
     double vdW  = ir6*REQ.b;
     double fr   = ( ( 1 - ir6 )*12*vdW - Eel )*ir2;
     //printf( " (%g,%g,%g) r %g fr %g \n", dp.x,dp.y,dp.z, 1/ir, fr );

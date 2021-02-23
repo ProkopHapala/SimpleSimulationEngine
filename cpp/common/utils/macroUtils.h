@@ -27,6 +27,16 @@
 //#define END_WITH() }
 
 // ============= sorting
+inline int selectMinHigher(int a0, int n, int* arr){
+    int amin=0x7FFFFFFF; // 32 int max
+    int imin=0;
+    for(int i=0;i<n;i++){
+        int a=arr[i];
+        if((a>a0)&&(a<amin)){amin=a;imin=i;};
+    }
+    return imin;
+};
+
 
 template<typename  T>
 struct Buf{

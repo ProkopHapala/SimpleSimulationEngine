@@ -308,7 +308,7 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    ipicked = pickParticle( world.natoms, world.apos, ray0, (Vec3d)cam.rot.c , 0.5 );
+                    ipicked = pickParticle( ray0, (Vec3d)cam.rot.c , 0.5, world.natoms, world.apos );
                     break;
                 case SDL_BUTTON_RIGHT:
                     ibpicked = world.pickBond( ray0, (Vec3d)cam.rot.c , 0.5 );
