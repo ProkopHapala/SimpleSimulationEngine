@@ -46,14 +46,15 @@ void makeSphereOgl( int& ogl, int nsub, float sz ){
 }
 
 
-void atomsREQ( int n, Vec3d* ps, Vec3d* REQs, int ogl_sph, float qsc=1, float Rsc=1 ){
+void atomsREQ( int n, Vec3d* ps, Vec3d* REQs, int ogl_sph, float qsc=1, float Rsc=1, float Rsub=0 ){
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
     for(int i=0; i<n; i++){
         float q = (float)REQs[i].z*qsc;
         glColor3f(1-fmax(0,-q),1-fmax(q,-q),1-fmax(0,+q));
-        Draw3D::drawShape( ogl_sph, ps[i], Mat3dIdentity*(REQs[i].x*Rsc) );
+        //Draw3D::drawShape( ogl_sph, ps[i], Mat3dIdentity*(REQs[i].x*Rsc) );
+        Draw3D::drawShape( ogl_sph, ps[i], Mat3dIdentity*((REQs[i].x-Rsub)*Rsc) );
     }
 }
 

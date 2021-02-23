@@ -37,6 +37,8 @@ class AtomType{ public:
         return str;
     }
 
+    inline uint8_t nepair(){ return (neval-valence)/2; };
+
     void fromString( char * str ){
         int iZ_, neval_, valence_, sym_;
         //char sclr[6];
@@ -55,10 +57,10 @@ class AtomType{ public:
 class MMFFparams{ public:
 
     // http://www.science.uwaterloo.ca/~cchieh/cact/c120/bondel.html
+    std::vector       <AtomType>          atypes;
     std::vector       <std::string    >   atomTypeNames;
     std::unordered_map<std::string,int>   atomTypeDict;
-    std::vector<AtomType>                    atypes;
-    std::unordered_map<uint64_t,BondType>     bonds;
+    std::unordered_map<uint64_t,BondType> bonds;
 
     double default_bond_length      = 2.0;
     double default_bond_stiffness   = 1.0;
@@ -101,17 +103,23 @@ class MMFFparams{ public:
         return i;
     }
 
+    inline void assignRE( int ityp, Vec3d& REQ )const{
+        REQ.x = atypes[ityp].RvdW;
+        REQ.y = atypes[ityp].EvdW;
+    }
+
     void assignREs( int n, int * itypes, Vec3d * REQs )const{
-        printf( "assignREs %i   %i %i %i \n", n,  itypes, REQs, atypes );
+        //printf( "assignREs %i   %i %i %i \n", n,  itypes, REQs, atypes );
         for(int i=0; i<n; i++){
             //mmff->aLJq [i]  = atoms[i].type;
             //int ityp = atoms[i].type;
             //printf( "i %i \n", i );
-            int ityp = itypes[i];
+            //int ityp = itypes[i];
             //printf( "ityp %i \n", ityp );
-            REQs[i].x = atypes[ityp].RvdW;
-            REQs[i].y = atypes[ityp].EvdW;
-            printf( "assignREs i %i ityp %i RE  %g %g  \n", i, ityp, atypes[ityp].RvdW, atypes[ityp].EvdW );
+            //REQs[i].x = atypes[ityp].RvdW;
+            //REQs[i].y = atypes[ityp].EvdW;
+            assignRE( itypes[i], REQs[i] );
+            //printf( "assignREs i %i ityp %i RE  %g %g  \n", i, ityp, REQs.x, REQs.y );
             //REQs.z = 0;
             //atomTypes[i]  = atoms[i].type;
         }

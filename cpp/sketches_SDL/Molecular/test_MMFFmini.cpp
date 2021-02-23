@@ -30,7 +30,7 @@
 #include "QEq.h"
 
 //#include "NBSRFF.h"
-//#include "IO_utils.h"
+#include "IO_utils.h"
 
 #include "AppSDL2OGL_3D.h"
 
@@ -279,8 +279,30 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
 	int makeMoleculeInline();
 	int makeMoleculeInlineBuilder( bool bPBC );
 	int loadMoleculeMol( const char* fname, bool bAutoH, bool loadTypes );
+	int loadMoleculeXYZ( const char* fname, bool bAutoH );
 
 };
+
+
+int TestAppMMFFmini::loadMoleculeXYZ( const char* fname, bool bAutoH ){
+    params.loadAtomTypes( "common_resources/AtomTypes.dat" );
+    params.loadBondTypes( "common_resources/BondTypes.dat" );
+    builder.bindParams(&params);
+    int nheavy = builder.load_xyz( fname, bAutoH, true, true );
+    readMatrix( "common_resources/polymer.lvs", 3, 3, (double*)&builder.lvec );
+
+    //builder.printAtoms ();
+    //builder.printConfs ();
+    builder.printAtomConfs();
+    //exit(0);
+
+    builder.autoBonds ();               builder.printBonds ();
+    builder.autoAngles( 0.5, 0.5 );     builder.printAngles();
+
+    builder.toMMFFmini( ff, &params );
+    return nheavy;
+}
+
 
 int TestAppMMFFmini::loadMoleculeMol( const char* fname, bool bAutoH, bool bLoadTypes ){
 
@@ -487,13 +509,18 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     // >>   ERROR in builder.sortBonds() => exit
 
     int nheavy = 0;
+    nheavy = loadMoleculeXYZ( "common_resources/polymer.xyz", false );
+    //nheavy = loadMoleculeXYZ( "common_resources/polymer-noH.xyz", false );
     //nheavy = loadMoleculeMol(  "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol", false, true);
-    nheavy = loadMoleculeMol( "common_resources/propylacid-q.mol", false, true);   // use old method loading whole .mol file with hydrogens // currently distorted molecule :-(
+    //nheavy = loadMoleculeMol( "common_resources/propylacid-q.mol", false, true);   // use old method loading whole .mol file with hydrogens // currently distorted molecule :-(
     //nheavy = loadMoleculeMol( "common_resources/propylacid.mol", true, false);   // use new method  // currently makes NaNs :-(
     //nheavy = makeMoleculeInlineBuilder();     // piece of polyethylene
     //nheavy = makeMoleculeInline();
 
     nff.bindOrRealloc( ff.natoms, ff.nbonds, ff.apos, ff.aforce, 0, ff.bond2atom );
+    builder.export_REQs( nff.REQs );
+    /*
+    if(bREQmol){
     bool bREQparams=true;
     if(bREQparams){
         //params.assignREs( mol.natoms, mol.atomType, mol.REQs );
@@ -503,6 +530,7 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         nff.setREQs(0      , nheavy ,{1.500,sqrt(0.003729),0});
         nff.setREQs(nheavy , nff.n  ,{1.000,sqrt(0.003729),0});
     }
+    */
     if(bNonBonded){
         if( !checkPairsSorted( nff.nmask, nff.pairMask ) ){
             printf( "ERROR: nff.pairMask is not sorted => exit \n" );
@@ -526,7 +554,7 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     printf("TestAppMMFFmini.init() DONE \n");
     //exit(0);
 
-    Draw3D::makeSphereOgl( ogl_sph, 2, 1.0 );
+    Draw3D::makeSphereOgl( ogl_sph, 3, 1.0 );
 }
 
 void TestAppMMFFmini::draw(){
@@ -622,11 +650,13 @@ void TestAppMMFFmini::draw(){
         }
     }
 
+    Draw3D::drawTriclinicBox(builder.lvec, Vec3dZero, Vec3dOne );
+
     glColor3f(0.6f,0.6f,0.6f); Draw3D::plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
     glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLines ( ff.nbonds, (int*)ff.bond2atom, ff.apos );
     glColor3f(0.0f,0.0f,0.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );
     glColor3f(1.0f,0.0f,0.0f); Draw3D::vecsInPoss( ff.natoms, ff.aforce, ff.apos, 300.0              );
-    Draw3D::atomsREQ  ( ff.natoms, ff.apos,   nff.REQs, ogl_sph, 1.0, 0.25 );
+    Draw3D::atomsREQ  ( ff.natoms, ff.apos,   nff.REQs, ogl_sph, 1.0, 0.5, 1.0 );
 
     if(iangPicked>=0){
         const Vec3i& ang = ff.ang2atom[iangPicked];

@@ -113,6 +113,27 @@ inline char * fgetsNonComment(char * str, int num, FILE * stream, char commentCh
     return s;
 }
 
+inline int readMatrix( const char* fname, int nrow, int ncol, double* buff, bool bTranspose=0 ){
+    FILE *file = fopen(fname, "r");
+    if ( file==0 ){
+        printf( "ERROR in readMatrix(%s): no such file \n", fname );
+        fclose(file);
+        return -1;
+    }
+    int di=ncol,dj=1;
+    if(bTranspose){ di=1; dj=nrow; }
+    //char [];
+    for(int i=0; i<nrow; i++){
+        for(int j=0; j<ncol; j++){
+            double val;
+            fscanf( file, "%lf \n", &val );
+            //printf( "readMatrix[%i,%i] %g \n", i, j, val );
+            buff[i*di+j*dj] = val;
+        }
+    }
+    return nrow*ncol;
+}
+
 //  TODO:
 // Universal data loading idea:
 //  - load all data to std::map<string,string> "craft.velocity"->"0.0 1.0 3.0"

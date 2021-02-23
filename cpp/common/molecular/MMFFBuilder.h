@@ -19,7 +19,7 @@
 //#include "Molecule.h"
 //#include "MMFF.h"
 //#include "MMFFmini.h"
-//#include "MMFFparams.h"
+#include "MMFFparams.h"
 
 // =============== Structs for Atoms, Bonds etc...
 
@@ -96,13 +96,16 @@ struct AtomConf{
     inline bool addPi   (     ){ return addNeigh((int)NeighType::pi   ,npi); };
     inline bool addEpair(     ){ return addNeigh((int)NeighType::epair,ne ); };
 
-    inline void  clearNonBond(){ n=nbond; npi=0;ne=0;nH=0; };
+    inline void clearNonBond(){ n=nbond; npi=0;ne=0;nH=0; };
+    inline void clearBond   (){ nbond=0; n=npi+ne+nH;     };
     inline void setNonBond(int npi_,int ne_){ npi=npi_; ne=ne_; n=nbond+npi+ne+nH;  }
     inline void init0(){ for(int i=0; i<N_NEIGH_MAX; i++)neighs[i]=-1; nbond=0; clearNonBond(); }
 
     void print()const{ printf( " AtomConf{ ia %i, n %i nb %i np %i ne %i nH %i (%i,%i,%i,%i) }", iatom, n, nbond, npi, ne, nH , neighs[0],neighs[1],neighs[2],neighs[3] ); }
 
     AtomConf() = default;
+    //AtomConf(int iatom_,int npi_)       :iatom(iatom_),npi(npi_),ne(0  ),nH(0),nbond(0),n(npi_    ){};
+    AtomConf(int iatom_,int npi_,int ne_):iatom{iatom_},npi{npi_},ne{ne_},nH{0},nbond{0},n{npi_+ne_}{ for(int i=0;i<N_NEIGH_MAX;i++)neighs[i]=-1; };
     //AtomConf(const MMFFAtomConf&) = default;
     //AtomConf(std::initializer_list<MMFFAtomConf>) {};
 };
@@ -112,6 +115,8 @@ struct Bond{
     int    type  = -1;
     Vec2i  atoms = (Vec2i){-1,-1};
     double l0=1,k=0;
+    //Vec3<int8_t> ipbc; // for periodic boundary conditions
+
     //int    type;
     //Vec2i  atoms;
     //double l0,k;
@@ -184,7 +189,7 @@ struct Fragment{
     Vec2i dihRange;
     Vec3d  pos;
     Quat4d rot;
-    Molecule * mol;
+    Molecule * mol;     // ToDo : we can replace this by MolID to leave dependence on Molecule_h
     Vec3d    * pos0s;
 
     Fragment()=default;
@@ -206,8 +211,10 @@ class Builder{  public:
     std::vector<AtomConf>  confs;
     //std::vector<int>  atom_neighs;
 
-    //MMFFparams*  params = 0;  // Each function which needs this can take it as parameter
+    Mat3d lvec = Mat3dIdentity;  // lattice vectors for PBC (periodic boundary conditions)
+    std::vector<Vec3i> bondPBC;
 
+    MMFFparams* params = 0;  // Each function which needs this can take it as parameter
     std::vector       <std::string>*     atomTypeNames = 0;
     std::unordered_map<std::string,int>* atomTypeDict  = 0;
 
@@ -220,12 +227,12 @@ class Builder{  public:
     std::unordered_map<size_t,size_t> mol2molType;
 #endif // Molecule_h
 
-
-
+    Vec3d defaultREQ  {  1.5, 0.0, 0.0 };
     Bond  defaultBond { -1, {-1,-1}, 1.5, 1.0 };
     //Angle defaultAngle{ -1, {-1,-1}, 0.0, 0.5 };
     Angle defaultAngle{ -1, {-1,-1}, M_PI, 0.5 };
 
+    Bond bondBrush = defaultBond;
 
     Atom capAtom      = (Atom){ (int)NeighType::H,     -1,-1, {0,0,0}, Atom::HcapREQ };
     Atom capAtomEpair = (Atom){ (int)NeighType::epair, -1,-1, {0,0,0}, {0,0,0} };
@@ -248,6 +255,12 @@ class Builder{  public:
         frags.clear(); //printf("DEBUG a.4 \n");
         fragTypes.clear();
 #endif // Molecule_h
+    }
+
+    void bindParams( MMFFparams* params_ ){
+        params = params_;
+        atomTypeNames = &params->atomTypeNames;
+        atomTypeDict  = &params->atomTypeDict;
     }
 
     void initDefaultAtomTypeDict(){
@@ -304,27 +317,24 @@ class Builder{  public:
         return n;
     }
 
-    AtomConf* insertAtom(const Atom& atom, bool bConf ){
+    AtomConf* insertAtom(const Atom& atom, AtomConf* conf ){
         atoms.push_back(atom);
-        if(bConf){
-            /*
-            int ic = confs.size();
-            int ia = atoms.size()-1;
-            //printf( "insertAtom ia %i ic %i \n", ia, ic );
-            atoms.back().iconf = ic;
-            confs.push_back(AtomConf());
-            AtomConf& c = confs.back();
-            c.init0();
-            c.iatom = ia;
-            //printf("insertAtom[%i] ", ia); println(c);
-            return &c;
-            */
-            return addConfToAtom( atoms.size()-1 );
+        return addConfToAtom( atoms.size()-1, conf );
+    }
+    void insertAtom(const Atom& atom ){ atoms.push_back(atom); }
+
+    void insertAtom( int ityp, const Vec3d& pos, Vec3d* REQ=0, int npi=-1, int ne=0 ){
+        if(REQ==0)REQ=&defaultREQ;
+        int iconf=-1;
+        if(npi>=0){
+            //printf( "insertAtom npi>0 => make Conf \n" );
+            iconf=confs.size();
+            confs.push_back( AtomConf(atoms.size(), npi, ne ) );
         }
-        return 0;
+        atoms.push_back( Atom    ( ityp,-1,iconf, pos, *REQ )  );
     }
 
-    void addBondToAtomConf( int ib, int ia, bool bCheck ){
+    void tryAddBondToAtomConf( int ib, int ia, bool bCheck ){
         int ic = atoms[ia].iconf;
         //printf( "MM::Builder.addBondToAtomConf ia %i ib %i ic %i \n", ia, ib, ic );
         if(ic>=0){
@@ -343,8 +353,8 @@ class Builder{  public:
 
     void addBondToConfs( int ib, bool bCheck ){
         const Bond& bond = bonds[ib];
-        addBondToAtomConf( ib, bond.atoms.i, bCheck );
-        addBondToAtomConf( ib, bond.atoms.j, bCheck );
+        tryAddBondToAtomConf( ib, bond.atoms.i, bCheck );
+        tryAddBondToAtomConf( ib, bond.atoms.j, bCheck );
     }
     void tryAddBondsToConfs( int i0=0, int imax=-1 ){
         if(imax<0) imax=bonds.size();
@@ -356,8 +366,8 @@ class Builder{  public:
     void insertBond(const Bond& bond ){
         int ib = bonds.size();
         bonds.push_back(bond);
-        addBondToAtomConf( ib, bond.atoms.i, false );
-        addBondToAtomConf( ib, bond.atoms.j, false );
+        tryAddBondToAtomConf( ib, bond.atoms.i, false );
+        tryAddBondToAtomConf( ib, bond.atoms.j, false );
         /*
         int ic = atoms[bond.atoms.i].iconf;
         int jc = atoms[bond.atoms.j].iconf;
@@ -387,7 +397,7 @@ class Builder{  public:
         //if(btype<0) btype=capBond.type;
         atomj->pos = atoms[ia].pos + hdir;
         //atoms.push_back( *atomj );
-        insertAtom(*atomj,false);
+        insertAtom(*atomj);
         //bonds.push_back( (Bond){btype,{ia,ja}} );
         capBond.atoms.set(ia,ja);
         insertBond( capBond );
@@ -585,10 +595,11 @@ class Builder{  public:
         }
     }
     */
-    void insertAtoms( int n, Atom brushAtom, const Vec3d* ps ){
+    void insertAtoms( int n, Atom brushAtom, const Vec3d* ps, bool withConf=true ){
         for(int i=0;i<n;i++){
             brushAtom.pos = ps[i];
-            insertAtom( brushAtom, true );
+            if(withConf){ insertAtom( brushAtom, 0 ); }
+            else        { insertAtom( brushAtom    ); }
         }
     }
     void insertBonds( int n, Bond brushBond, const Vec2i* bond2atom ){
@@ -601,6 +612,26 @@ class Builder{  public:
         if(imax<0){ imax=atoms.size(); }
         for(int i=imin;i<imax;i++){
             makeSPConf( i, npi, ne );
+        }
+    }
+
+    void autoBonds( double R=-0.5, int i0=0, int imax=-1 ){
+        // ToDo : periodic boundary conditions
+        if(imax<0)imax=atoms.size();
+        bool byParams = (R<0);
+        double Rfac=-R;
+        //if( byParams && (params==0) ){ printf("ERROR in MM::Builder.autoBonds() byParams(R<0) but params==NULL \n"); exit(0); }
+        for(int i=i0; i<imax; i++){
+            const Atom& A = atoms[i];
+            for(int j=i+1; j<imax; j++){  // for pbc we need all atom pairs
+                const Atom& B = atoms[j];
+                Vec3d dp = B.pos - A.pos; // pbc here
+                if(byParams){ R = (B.REQ.x + A.REQ.x)*Rfac; }
+                if(  dp.norm2() < (R*R) ){
+                    bondBrush.atoms={i,j};
+                    insertBond( bondBrush );
+                }
+            }
         }
     }
 
@@ -803,6 +834,17 @@ class Builder{  public:
             printf("conf[%i]", i); confs[i].print(); puts("");
         }
     }
+    void printAtomConfs(){
+        printf(" # MM::Builder.printAtomConfs() \n");
+        for(int i=0; i<atoms.size(); i++){
+            const Atom& A = atoms[i];
+            printf("atom[%i] T %i ic %i ", i, A.type, A.iconf);
+            if(A.iconf>=0){
+                const AtomConf& c = confs[A.iconf];
+                printf(" Conf[%i] n %i nb %i npi %i ne %i nH %i \n", A.iconf, c.n, c.nbond, c.npi, c.ne, c.nH );
+            }else{ puts(""); }
+        }
+    }
 
     int write2xyz( FILE* pfile, const char* comment="#comment" ){
         //write2xyz( pfile, atoms.size(), int* atypes, Vec3d* pos, const std::unordered_map<std::string,int>& atomTypeDict, const char* comment="#comment" ){
@@ -825,9 +867,88 @@ class Builder{  public:
         return n;
     }
 
+    int load_xyz( const char * fname, bool noH=false, bool bConf=true, bool bDebug=false ){
+        if(bDebug)printf( "MM::Builder.load_xyz(%s)\n", fname );
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){
+            printf("cannot find %s\n", fname );
+            return -1;
+        }
+        int natoms; Vec3d pos,REQ=defaultREQ; char at_name[8]; int npi,ne=0;
+        const int nbuf=1024;
+        char buff[nbuf]; char* line;
+        line = fgets( buff, nbuf, pFile ); // number of atoms
+        sscanf( line, "%i", &natoms );
+        if(bDebug)printf( "natoms %i \n", natoms );
+        line = fgets( buff, nbuf, pFile ); // comment, ignore
+        int n0 = atoms.size();
+        for(int i=0; i<natoms; i++){
+            line     = fgets( buff, nbuf, pFile ); // comment, ignore
+            int nret = sscanf( line,       "%s %lf %lf %lf %lf %i  ",     at_name, &pos.x, &pos.y, &pos.z, &REQ.z, &npi );
+            if(bDebug)printf   (  ".xyz[%i] %s %lf %lf %lf %lf %i\n", i, at_name,  pos.x,  pos.y,  pos.z,  REQ.z,  npi  );
+            if( nret < 5 ){ REQ.z=0;  };
+            if( nret < 6 ){ npi  =-1; };
+            auto it = atomTypeDict->find( at_name );
+            if( it != atomTypeDict->end() ){
+                int ityp=it->second;
+                if(params){
+                    params->assignRE( ityp, REQ );
+                    ne = params->atypes[ityp].nepair();
+                }
+                if( noH && (at_name[0]='H') && (at_name[1]='\0')  ) continue;
+                insertAtom( it->second, pos, &REQ, npi, ne );
+            }
+        }
+        return atoms.size() - n0;
+    }
+
+    inline void natom_def(int& n,int i0)const{ if(n<0){ n=atoms .size()-i0; }; }
+    inline void nbond_def(int& n,int i0)const{ if(n<0){ n=bonds .size()-i0; }; }
+    inline void nang_def (int& n,int i0)const{ if(n<0){ n=angles.size()-i0; }; }
+    inline void ndih_def (int& n,int i0)const{ if(n<0){ n=dihedrals.size()-i0; }; }
+
+    void export_REQs(Vec3d* REQs, int i0=0, int n=-1)const{
+        natom_def(n,i0);
+        for(int i=0; i<n; i++){ REQs[i]= atoms[i0+i].REQ; }
+    }
+
+    void export_apos(Vec3d* apos, int i0=0, int n=-1)const{
+        natom_def(n,i0);
+        for(int i=0; i<n; i++){ apos[i]= atoms[i0+i].pos; }
+    }
+
+    void export_bonds(Vec2i* b2a, double* l0s=0, double* ks=0, int i0=0, int n=-1)const{
+        nbond_def(n,i0);
+        for(int i=0; i<n; i++){
+            const Bond& b  = bonds[i0+i];
+            b2a[i] = b.atoms;
+            if(ks )ks [i] = b.k;
+            if(l0s)l0s[i] = b.l0;
+        }
+    }
+
+    void export_angles(Vec2i* a2b, double* a0s=0, Vec2d* cs0s=0, double* ks=0, int i0=0, int n=-1)const{
+        nang_def(n,i0);
+        for(int i=0; i<n; i++){
+            const Angle& a = angles[i0+i];
+            a2b[i] = a.bonds;
+            if(ks )ks [i] = a.k;
+            if(a0s)a0s[i] = a.a0;
+            if(cs0s)cs0s[i].fromAngle( a.a0 * 0.5 ); // NOTE: we divide angle by 2
+        }
+    }
+
+    void export_dihedrals(Vec3i* d2b, int* tn=0, double* ks=0, int i0=0, int n=-1)const{
+        ndih_def(n,i0);
+        for(int i=0; i<n; i++){
+            const Dihedral& d = dihedrals[i0+i];
+            d2b[i] = d.bonds;
+            if(ks)ks[i] = d.k;
+            if(tn)tn[i] = d.n;
+        }
+    }
 
 #ifdef Molecule_h
-
     void clearMolTypes( bool deep ){
         if(deep){ for(Molecule* mol : molTypes ){ mol->dealloc(); delete mol; } }
         molTypeDict.clear();
@@ -1015,6 +1136,18 @@ class Builder{  public:
 
 #ifdef MMFFmini_h
     void toMMFFmini( MMFFmini& ff, const MMFFparams* params ){
+        ff.realloc( atoms.size(), bonds.size(), angles.size(), dihedrals.size() );
+        export_apos     ( ff.apos );
+        export_bonds    ( ff.bond2atom,   ff.bond_l0, ff.bond_k );
+        export_angles   ( ff.ang2bond, 0, ff.ang_cs0, ff.ang_k  );
+        export_dihedrals( ff.tors2bond,   ff.tors_n,  ff.tors_k );
+        ff.angles_bond2atom();
+        ff.torsions_bond2atom();
+    }
+
+    // ----  OLD version ----
+    /*
+    void toMMFFmini( MMFFmini& ff, const MMFFparams* params ){
         //printf( "na %i nb %i nA %i \n", atoms.size(), bonds.size(), dihedrals.size() );
         //mmff->deallocate();
         ff.realloc( atoms.size(), bonds.size(), angles.size(), dihedrals.size() );
@@ -1053,6 +1186,7 @@ class Builder{  public:
         ff.torsions_bond2atom();
         //exit(0);
     }
+    */
 #endif // MMFFmini_h
 
 #ifdef MMFF_h
