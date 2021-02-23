@@ -51,6 +51,8 @@ class AppSDL2OGL_3D : public AppSDL2OGL{ public:
 	//void orthoCamera      ( );
 	//void perspectiveCamera( );
 
+
+	inline Vec3f mouseRay0(){ return cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y; }
 	void drawCrosshair( float sz );
 
 	AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_ );

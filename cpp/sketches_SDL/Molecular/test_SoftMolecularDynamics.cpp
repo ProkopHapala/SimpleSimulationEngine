@@ -12,6 +12,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw3D.h"
+
 #include "SDL_utils.h"
 #include "Solids.h"
 
@@ -25,6 +26,7 @@
 #include "MMFFBuilder.h"
 #include "DynamicOpt.h"
 
+#include "Draw3D_Molecular.h"
 
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
@@ -45,22 +47,9 @@ More complex ToDo:
 
 */
 
-
-
 // ==========================
 // TestAppSoftMolDyn
 // ==========================
-
-void plotSurfPlane( Vec3d normal, double c0, Vec2d d, Vec2i n ){
-    Vec3d da,db;
-    normal.getSomeOrtho( da,db );
-    da.mul( d.a/da.norm() );
-    db.mul( d.b/db.norm() );
-    //glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(normal, {0.0,0.0,0.0} );
-    //glColor3f(0.0f,1.0f,0.0f); Draw3D::drawVecInPos(da*10, {0.0,0.0,0.0} );
-    //glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos(db*10, {0.0,0.0,0.0} );
-    Draw3D::drawRectGridLines( n*2, (da*-n.a)+(db*-n.b) + normal*c0, da, db );
-}
 
 class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 	public:
@@ -142,14 +131,8 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
         //world.ang2atom [i] = (Vec3i){ world.bond2atom[ib.x].y, world.bond2atom[ib.y].y, world.bond2atom[ib.y].x };
     }
 
-    ogl_sph = glGenLists(1);
-    glNewList( ogl_sph, GL_COMPILE );
-        //glEnable( GL_LIGHTING );
-        //glColor3f( 0.8f, 0.8f, 0.8f );
-        //Draw3D::drawSphere_oct(3, 0.5, {0.0,0.0,0.0} );
-        Draw3D::drawSphere_oct( 2, 0.25, {0.0,0.0,0.0} );
-    glEndList();
-
+    //Draw3D::makeSphereOgl( ogl_sph, 2, 0.25 );
+    Draw3D::makeSphereOgl( ogl_sph, 2, 1.0 );
 }
 
 
@@ -168,33 +151,7 @@ void TestAppSoftMolDyn::draw(){
         printf( "got:`%s`", s );
 	}
 
-    /*
-    srand(154);
-    Vec3d ax  = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};   ax.normalize();
-    Vec3d dp1 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};   dp1.add_mul( ax, -ax.dot(dp1) ); dp1.normalize();
-    Vec3d dp2 = (Vec3d){randf(-1.0,1.0),randf(-1.0,1.0),randf(-1.0,1.0)};   dp2.add_mul( ax, -ax.dot(dp2) ); dp2.normalize();
-    printf( "%g %g %g %g \n", dp1.dot(dp1), dp2.dot(dp2), dp1.dot(ax), dp2.dot(ax) );
-    Vec3d p1  = ax*randf( 0.0,1.0) + dp1*randf( -1.5,-1.0);
-    Vec3d p2  = ax*randf(-1.0,0.0) + dp2*randf( -1.5,0.0);
-    double t1,t2;
-    double dist = rayLine( p1, dp1, p2, dp2, t1, t2 );
-	// test closest point skew-lines
-	//glColor3f(0.6f,0.6f,0.6f); Draw3D::drawLine( ax*1, ax*-1 );
-	glColor3f(0.8f,0.0f,0.0f); Draw3D::drawLine( p1, p1+dp1 ); Draw3D::drawPointCross( p1, 0.1 );
-	glColor3f(0.0f,0.0f,0.8f); Draw3D::drawLine( p2, p2+dp2 ); Draw3D::drawPointCross( p2, 0.1 );
-	glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLine( p1+(dp1*t1), p2+(dp2*t2) ); // Draw3D::drawLine( p1+(dp1*t1), p1 );   Draw3D::drawLine( p2, p2+(dp2*t2) );
-	printf( "t1 %g t2 %g  dist %g %g \n", t1, t2, dist, (p1+(dp1*t1)-p2-(dp2*t2)).norm() );
-	//Vec3d rxl; rxl.set_cross(dp1, dp2);
-	//glColor3f(0.8f,0.0f,0.0f); Draw3D::drawVecInPos( rxl, p1+(dp1*t1) );
-	//glColor3f(0.0f,0.0f,0.8f); Draw3D::drawVecInPos( rxl, p2+(dp2*t2) );
-	return;
-	*/
-
-	//ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
-
-    ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
-    Draw3D::drawPointCross( ray0, 0.1 );
-    //Draw3D::drawVecInPos( camMat.c, ray0 );
+    ray0 = (Vec3d)mouseRay0(); Draw3D::drawPointCross( ray0, 0.1 ); //Draw3D::drawVecInPos( camMat.c, ray0 );
     if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
 
 	double F2;
@@ -218,7 +175,6 @@ void TestAppSoftMolDyn::draw(){
             world.aforce[ipicked].add( f );
         };
 
-
         for(int i=0; i<world.natoms; i++){
             world.aforce[i].add( getForceHamakerPlane( world.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
             //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
@@ -233,52 +189,23 @@ void TestAppSoftMolDyn::draw(){
         //opt.move_MDquench();
         F2 = opt.move_FIRE();
         //exit(0);
+        //printf( "==== frameCount %i  |F| %g \n", frameCount, sqrt(F2) );
 
     }
 
-    glColor3f(0.6f,0.6f,0.6f); plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
-    //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,1.0},  (Vec3d){0.0,0.0,0.0} );
+    glColor3f(0.6f,0.6f,0.6f); Draw3D::plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
+    glColor3f(0.0f,0.0f,0.0f);
+    Draw3D::drawLines ( world.nbonds, (int*)world.bond2atom, world.apos );
+    Draw3D::bondLabels( world.nbonds,       world.bond2atom, world.apos, fontTex, 0.02 );
+    glColor3f(1.0f,0.0f,0.0f);
+    Draw3D::vecsInPoss( world.natoms, world.aforce, world.apos, 300.0              );
+    Draw3D::atomsREQ  ( world.natoms, world.apos,   world.aREQ, ogl_sph, 1.0, 0.25 );
 
-    //printf( "==== frameCount %i  |F| %g \n", frameCount, sqrt(F2) );
-
-
-    for(int i=0; i<world.nbonds; i++){
-        Vec2i ib = world.bond2atom[i];
-        glColor3f(0.0f,0.0f,0.0f);
-        if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f); ;
-        Draw3D::drawLine(world.apos[ib.x],world.apos[ib.y]);
-        sprintf(str,"%i\0",i);
-        //Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0,0);
-        Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0);
-    }
-
-    glEnable(GL_LIGHTING);
-    glEnable(GL_DEPTH_TEST);
-    glShadeModel(GL_SMOOTH);
-    for(int i=0; i<world.natoms; i++){
-        //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.apos[i],0.2);
-        glColor3f(1.0f,0.0f,0.0f); Draw3D::drawVecInPos(world.aforce[i]*30.0,world.apos[i]);
-
-        //glCallList( ogl_sph );
-        glEnable(GL_LIGHTING);
-        Mat3d mat;
-        mat.setOne();
-        //mat.mul();
-        glColor3f(0.8f,0.8f,0.8f);
-        Draw3D::drawShape(ogl_sph,world.apos[i],mat);
-        glDisable(GL_LIGHTING);
-    }
-    glDisable(GL_LIGHTING);
-    glDisable(GL_DEPTH_TEST);
-
-    /*
-    printf("==========\n");
-    for(int i=0; i<world.natoms; i++){
-        printf("iatom %i (%g,%g,%g) (%g,%g,%g) \n", i, world.apos[i].x,world.apos[i].y,world.apos[i].z, world.aforce[i].x,world.aforce[i].y,world.aforce[i].z  );
-    }
-    if(frameCount>=10){STOP = true;}
-    */
-
+    //printf("==========\n");
+    //for(int i=0; i<world.natoms; i++){
+    //    printf("iatom %i (%g,%g,%g) (%g,%g,%g) \n", i, world.apos[i].x,world.apos[i].y,world.apos[i].z, world.aforce[i].x,world.aforce[i].y,world.aforce[i].z  );
+    //}
+    //if(frameCount>=10){STOP = true;}
 };
 
 

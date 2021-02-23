@@ -10,6 +10,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw3D.h"
+#include "Draw3D_Molecular.h"
 #include "SDL_utils.h"
 #include "Solids.h"
 
@@ -525,13 +526,7 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     printf("TestAppMMFFmini.init() DONE \n");
     //exit(0);
 
-    ogl_sph = glGenLists(1);
-    glNewList( ogl_sph, GL_COMPILE );
-        //Draw3D::drawSphere_oct(3, 0.5, {0.0,0.0,0.0} );
-        Draw3D::drawSphere_oct( 3, 0.25, {0.0,0.0,0.0} );
-        //Draw3D::drawSphere_oct( 3, 0.5, {0.0,0.0,0.0} );
-    glEndList();
-    //exit(0);
+    Draw3D::makeSphereOgl( ogl_sph, 2, 1.0 );
 }
 
 void TestAppMMFFmini::draw(){
@@ -548,32 +543,11 @@ void TestAppMMFFmini::draw(){
         //exit(0);
     }
 
-
-	/*
 	//ibpicked = world.pickBond( ray0, camMat.c , 0.5 );
     ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     Draw3D::drawPointCross( ray0, 0.1 );
     //Draw3D::drawVecInPos( camMat.c, ray0 );
-    if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
-    */
-
-
-    /*
-    for(int i=0; i<50; i++){
-        ff.apos[1]={0.0,0.0};
-        ff.apos[0]={1.0,0.0};
-        double a = i*2*M_PI/50;
-        ff.apos[2]={cos(a),sin(a)};
-
-        ff.eval();
-
-        glColor3f(1.0,1.0,1.0);
-        Draw3D::drawVecInPos( (ff.apos[0]-ff.apos[1])*5.0, ff.apos[1] );
-        Vec2d cs = ff.ang_cs0[0];
-        cs.set_mul_cmplx(cs,cs);
-        Draw3D::drawVecInPos( ((Vec3d){cs.x,-cs.y,0.0})*5.0, ff.apos[1] );
-    */
-
+    if(ipicked>=0) Draw3D::drawLine( ff.apos[ipicked], ray0);
 
     double Ftol = 1e-4;
 
@@ -582,7 +556,7 @@ void TestAppMMFFmini::draw(){
     //perFrame = 50;
     if(bRunRelax){
         for(int itr=0; itr<perFrame; itr++){
-            if(bConverged) break;
+            //if(bConverged) break;
             //printf( "======= frame %i \n", frameCount );
 
             //printf( "DEBUG run 1 \n" );
@@ -638,84 +612,26 @@ void TestAppMMFFmini::draw(){
             double f2 = opt.move_FIRE();
             //exit(0);
 
+            /*
             printf( "E %g |F| %g |Ftol %g \n", E, sqrt(f2), Ftol );
             if(f2<sq(Ftol)){
                 bConverged=true;
                 printf( "CONVERGED \n" );
             }
+            */
         }
     }
 
-
-    glColor3f(0.0,1.0,0.0);
-    //drawAngle(0, ff);
-    //drawTors (0, ff);
-
-    //glColor3f(0.6f,0.6f,0.6f); plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
-    //Draw3D::drawVecInPos( (Vec3d){0.0,0.0,1.0},  (Vec3d){0.0,0.0,0.0} );
-
-    //printf( "==== frameCount %i  |F| %g \n", frameCount, sqrt(F2) );
-    //printf( "DEBUG run 2 \n" );
-    // draw Bonds
-    glColor3f(0.0f,0.0f,0.0f);
-
-    for(int i=0; i<ff.nbonds; i++){
-        Vec2i ib = ff.bond2atom[i];
-        glColor3f(0.0f,0.0f,0.0f);
-        //if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f);
-        Draw3D::drawLine(ff.apos[ib.x],ff.apos[ib.y]);
-        //sprintf(str,"%i\0",i);
-        //Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0,0);
-        //Draw3D::drawText(str, (ff.apos[ib.x]+ff.apos[ib.y])*0.5, fontTex, 0.02, 0);
-    }
-
-    glEnable(GL_LIGHTING);
-    glEnable(GL_DEPTH_TEST);
-    glShadeModel(GL_SMOOTH);
-
-    glColor3f(1.0f,1.0f,1.0f);
-
-    for(int i=0; i<ff.nang; i++){
-        Vec3i ia = ff.ang2atom[i];
-        //glColor3f(0.0f,0.0f,0.0f);
-        //if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f);
-        //Draw3D::drawTriangle(ff.apos[ia.x],ff.apos[ia.y],ff.apos[ia.z]);
-        //sprintf(str,"%i\0",i);
-        //Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0,0);
-        //Draw3D::drawText(str, (ff.apos[ib.x]+ff.apos[ib.y])*0.5, fontTex, 0.02, 0);
-    }
+    glColor3f(0.6f,0.6f,0.6f); Draw3D::plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
+    glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLines ( ff.nbonds, (int*)ff.bond2atom, ff.apos );
+    glColor3f(0.0f,0.0f,0.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );
+    glColor3f(1.0f,0.0f,0.0f); Draw3D::vecsInPoss( ff.natoms, ff.aforce, ff.apos, 300.0              );
+    Draw3D::atomsREQ  ( ff.natoms, ff.apos,   nff.REQs, ogl_sph, 1.0, 0.25 );
 
     if(iangPicked>=0){
         const Vec3i& ang = ff.ang2atom[iangPicked];
         Draw3D::drawTriangle( ff.apos[ang.a], ff.apos[ang.b], ff.apos[ang.c], true );
     }
-
-    //};
-    // draw Atoms
-    double fsc = 1.0;
-
-    for(int i=0; i<ff.natoms; i++){
-        //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x,ff.apos[i].y,ff.apos[i].z );
-        //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(world.apos[i],0.2);
-        //printf( "aforce[%i] (%g,%g,%g) \n", i,  ff.aforce[i].x, ff.aforce[i].y, ff.aforce[i].z );
-        //glColor3f(0.0f,0.0f,1.0f); Draw3D::drawVecInPos(ff.aforce[i]*fsc,ff.apos[i]);
-        glColor3f(0.0f,0.0f,0.0f); Draw3D::drawPointCross(ff.apos[i],0.1);
-
-
-
-        //glCallList( ogl_sph );
-        glEnable(GL_LIGHTING);
-        //Mat3d mat;
-        //mat.setOne();
-        //mat.mul();
-        float q = (float)nff.REQs[i].z;
-        glColor3f(1-fmax(0,-q),1-fmax(q,-q),1-fmax(0,+q));
-        Draw3D::drawShape( ogl_sph, ff.apos[i], Mat3dIdentity*nff.REQs[i].x );
-        glDisable(GL_LIGHTING);
-
-    }
-    glDisable(GL_LIGHTING);
-    glDisable(GL_DEPTH_TEST);
 
     /*
     printf("==========\n");

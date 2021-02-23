@@ -108,6 +108,8 @@ inline void drawArrow     ( const Vec3d& p1,  const Vec3d& p2, float sz  ){drawA
 
 inline void drawScale     ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& a, double tick, double sza, double szb ){  drawScale( (Vec3f)p1, (Vec3f)p2, (Vec3f)a, tick,sza,szb); };
 
+void vecsInPoss( int n, const Vec3d* vs, const Vec3d* ps, float sc );
+
 inline void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3 ){ drawTriangle( (Vec3f)p1, (Vec3f)p2, (Vec3f)p3 ); };
 inline void drawTriangle ( const Vec3d& p1,  const Vec3d& p2, const Vec3d& p3, bool filled ){ drawTriangle( (Vec3f)p1, (Vec3f)p2, (Vec3f)p3, filled ); };
 inline void drawTriangle ( const Triangle3D& tri, bool filled ){ drawTriangle( (Vec3f)tri.a, (Vec3f)tri.b, (Vec3f)tri.c, filled ); };
@@ -123,6 +125,8 @@ inline void drawMatInPos ( const Mat3d& mat, const Vec3d& pos, const Vec3d& sc=V
 inline void drawShape    ( int shape, const Vec3d& pos, const Mat3d& rot=Mat3dIdentity,  bool transposed = false ){ drawShape(  shape, (Vec3f)pos, (Mat3f)rot,transposed ); };
 //inline void drawShape    ( int shape, const Vec3d& pos, const Quat4d& qrot, ){ drawShape( (Vec3f)pos, (Quat4f)qrot, shape); };
 inline void drawShape    (  int shape, const Vec3d& pos, const Quat4d& qrot, const Vec3d& scale=Vec3dOne ){ drawShape( shape, (Vec3f)pos, (Quat4f)qrot, (Vec3f)scale); };
+
+inline void shapeInPoss(  int shape, int n, const Vec3d* pos, const double* sizes=0, const Mat3d& rot=Mat3dIdentity, bool transposed = false );
 
 inline int  drawConeFan        ( int n, float r,                const Vec3d& base,  const Vec3d& tip                                 ){ return drawConeFan( n,             r,      (Vec3f)base, (Vec3f)tip         ); };
 inline int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3d& base, const Vec3d& tip, bool smooth ){ return drawCone   ( n, phi1, phi2, r1, r2, (Vec3f)base, (Vec3f)tip, smooth ); };
@@ -268,6 +272,16 @@ inline void toGLMat       ( const Vec3d& pos, const Quat4d& qrot, const Vec3d& s
 inline void toGLMatCam    ( const Vec3d& pos, const Quat4d& qrot, const Vec3d& sc, float* glMat   ){ toGLMatCam( (Vec3f)pos, ((Quat4f)qrot).toMat(), (Vec3f)sc, glMat ); };
 inline void rigidTransform( const Vec3d& pos, const Mat3d& rot,   const Vec3d& sc, bool trasposed = false ){ rigidTransform( (Vec3f)pos, (Mat3f)rot, (Vec3f)sc, trasposed ); };
 inline void rigidTransform( const Vec3d& pos, const Quat4d& qrot, const Vec3d& sc, bool trasposed = false ){ rigidTransform( (Vec3f)pos, ((Quat4f)qrot).toMat(), (Vec3f)sc, trasposed ); };
+
+
+template<typename Func>
+inline void drawShapes( int shape, int n, bool transposed, Func func ){
+    for(int i=0; i<n; i++){
+        Mat3d mat; Vec3d pos;
+        func(pos,mat);
+        drawShape( shape, pos, mat, transposed );
+    }
+}
 
 
 

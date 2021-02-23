@@ -83,6 +83,17 @@ void drawArrow( const Vec3f& p1, const Vec3f& p2, float sz ){
 	glEnd();
 };
 
+void vecsInPoss( int n, const Vec3d* vs, const Vec3d* ps, float sc ){
+    //printf("%i %i\n", n, closed );
+    glBegin(GL_LINES);
+    for(int i=0; i<n; i++){
+        //printf("%i (%3.3f,%3.3f,%3.3f)\n", i, ps[i].x, ps[i].y, ps[i].z );
+        glVertex3d( ps[i].x,            ps[i].y,            ps[i].z            );
+        glVertex3d( ps[i].x+vs[i].x*sc, ps[i].y+vs[i].y*sc, ps[i].z+vs[i].z*sc );
+    };
+    glEnd();
+};
+
 void drawPolyLine( int n, Vec3d * ps, bool closed ){   // closed=false
     //printf("%i %i\n", n, closed );
     if(closed){ glBegin(GL_LINE_LOOP); }else{ glBegin(GL_LINE_STRIP); }
@@ -293,6 +304,14 @@ void drawShape    ( int shape, const Vec3f& pos, const Quat4f& qrot, const Vec3f
 	glCallList( shape );
 	glPopMatrix();
 };
+
+inline void shapeInPoss(  int shape, int n, const Vec3d* pos, const double* sizes, const Mat3d& rot, bool transposed ){
+    Mat3f mat = (Mat3f)rot;
+    for(int i=0; i<n; i++){
+        if(sizes) mat.mul((float)sizes[i]);
+        drawShape( shape, (Vec3f)pos[i], mat, transposed );
+    }
+}
 
 /*
 void drawShapeT( const Vec3f& pos, const Mat3f& rot, int shape ){
