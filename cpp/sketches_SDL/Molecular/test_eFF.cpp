@@ -533,7 +533,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     printf( "----- Atoms \n" );
     for(int i=0;i<natom;i++){
         brushAtom.pos = apos0[i];
-        builder.insertAtom(brushAtom, true);
+        //builder.insertAtom(brushAtom, true);
+        builder.insertAtom(brushAtom, 0);
     }
     printf( "----- Bonds \n" );
     for(int i=0;i<nbond;i++){

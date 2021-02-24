@@ -202,6 +202,8 @@ struct Fragment{
 
 class Builder{  public:
 
+    bool bDEBUG = false;
+
     //static int iDebug = 0;
     std::vector<Atom>       atoms;
     std::vector<Bond>       bonds;
@@ -548,15 +550,27 @@ class Builder{  public:
         if(conf==0) return false;
         int nsigma = conf->nbond;
         //printf("addAnglesToAtom[%i] nsigma %i npi %i \n", ia, nsigma, conf->npi  );
-        if(bDummyPi && (conf->npi>0)){
-            nsigma -= conf->npi;
+        // ------ Pi Bonds
+        if( bDummyPi && (conf->npi>0) ){
+            //printf( "addAnglesToAtom[%i] angles to dummy Pi-orbital \n", ia );
+            //nsigma -= conf->npi; // ToDo : Check this
             for(int i=0;i<conf->npi;i++){ addAnglesToBond( i+nsigma, i+nsigma, conf->neighs, M_PI_2, kpi ); }
         }
-        //constexpr
-        static const double a0s[]{ 0.0d, 0.0d, M_PI, 120*M_PI/180, 109.5*M_PI/180 };
-        double a0 = a0s[nsigma+conf->ne];
-        //printf( "atom[%i] ns %i npi %i a0,ks %g %g   {%g,%g,%g,%g} %g \n", ia, nsigma, conf->npi, a0, ksigma, a0s[0],a0s[1],a0s[2],a0s[3] , a0s[nsigma] );
-        addAnglesUpToN( nsigma, conf->neighs, a0, ksigma );
+        // ------- Sigma bonds
+        static const double a0s[]{ 0.0, 0.0, M_PI, 120*M_PI/180, 109.5*M_PI/180 };
+        static const double Ks []{ 0.0, 0.0, 1.4,           1.2,            1.0 };
+        if(nsigma>=2){
+            int iangType = nsigma+conf->ne;
+            double a0 = a0s[iangType];
+            ksigma   *=  Ks[iangType];
+            //printf( "addAnglesToAtom[%i] ns %i npi %i a0,ks %g %g   {%g,%g,%g,%g} %g \n", ia, nsigma, conf->npi, a0, ksigma, a0s[0],a0s[1],a0s[2],a0s[3] , a0s[nsigma] );
+            addAnglesUpToN( nsigma, conf->neighs, a0, ksigma );
+            if(bDEBUG){
+                printf("addAnglesToAtom[%i] ", ia); printAtomConf(ia);
+                printf( " Sigma(%i,a0[%i] %g, k %g)", ia,  nsigma,conf->npi, iangType,  a0*(180/M_PI), ksigma );
+                if(bDummyPi && (conf->npi>0) ){ printf( " Pi(n%i,a0 %g, k %g)", conf->npi,  M_PI_2*(180/M_PI), kpi ); }else{ puts(""); };
+            }
+        }
         return true;
     }
 
@@ -834,16 +848,17 @@ class Builder{  public:
             printf("conf[%i]", i); confs[i].print(); puts("");
         }
     }
+    void printAtomConf(int i){
+        const Atom& A = atoms[i];
+        printf("atom[%i] T %i ic %i ", i, A.type, A.iconf);
+        if(A.iconf>=0){
+            const AtomConf& c = confs[A.iconf];
+            printf(" Conf[%i] n %i nb %i npi %i ne %i nH %i ", A.iconf, c.n, c.nbond, c.npi, c.ne, c.nH );
+        }
+    }
     void printAtomConfs(){
         printf(" # MM::Builder.printAtomConfs() \n");
-        for(int i=0; i<atoms.size(); i++){
-            const Atom& A = atoms[i];
-            printf("atom[%i] T %i ic %i ", i, A.type, A.iconf);
-            if(A.iconf>=0){
-                const AtomConf& c = confs[A.iconf];
-                printf(" Conf[%i] n %i nb %i npi %i ne %i nH %i \n", A.iconf, c.n, c.nbond, c.npi, c.ne, c.nH );
-            }else{ puts(""); }
-        }
+        for(int i=0; i<atoms.size(); i++){ printAtomConf(i); puts(""); }
     }
 
     int write2xyz( FILE* pfile, const char* comment="#comment" ){
@@ -909,12 +924,20 @@ class Builder{  public:
 
     void export_REQs(Vec3d* REQs, int i0=0, int n=-1)const{
         natom_def(n,i0);
+        //_allocIfNull(REQs,n);
         for(int i=0; i<n; i++){ REQs[i]= atoms[i0+i].REQ; }
     }
 
     void export_apos(Vec3d* apos, int i0=0, int n=-1)const{
         natom_def(n,i0);
+        //_allocIfNull(apos,n);
         for(int i=0; i<n; i++){ apos[i]= atoms[i0+i].pos; }
+    }
+
+    void export_atypes(int*& atypes, int i0=0, int n=-1)const{
+        natom_def(n,i0);
+        _allocIfNull(atypes,n);
+        for(int i=0; i<n; i++){ atypes[i]= atoms[i0+i].type; }
     }
 
     void export_bonds(Vec2i* b2a, double* l0s=0, double* ks=0, int i0=0, int n=-1)const{

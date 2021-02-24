@@ -88,6 +88,9 @@ void drawPanel          ( const Vec3f& pos, const Mat3f& rot, const Vec2f& sz );
 
 void drawText  ( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend );
 void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3f& up, int fontTex, float textSize, int iend );
+void drawInt   ( const Vec3d& pos, int i   , int fontTex, float sz=0.02 );
+void drawDouble( const Vec3d& pos, double f, int fontTex, float sz=0.02 );
+
 
 void drawBox( float x0, float x1, float y0, float y1, float z0, float z1, float r, float g, float b );
 void drawBBox        ( const Vec3f& p0, const Vec3f& p1 );

@@ -20,6 +20,8 @@
 //#include "Mesh.h"
 #include "Draw3D.h"
 
+//#include "MMFFParams.h"
+
 //#include <SDL2/SDL_opengl.h>
 
 namespace Draw3D{
@@ -58,21 +60,27 @@ void atomsREQ( int n, Vec3d* ps, Vec3d* REQs, int ogl_sph, float qsc=1, float Rs
     }
 }
 
-void bondLabels( int n, const Vec2i* b2a, const Vec3d* apos, int fontTex, float sz=0.02 ){
-    char str[256];
+void atoms( int n, Vec3d* ps, int* atypes, const MMFFparams& params, int ogl_sph, float qsc=1, float Rsc=1, float Rsub=0 ){
+    glEnable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
+    glShadeModel(GL_SMOOTH);
     for(int i=0; i<n; i++){
-        /*
-        Vec2i ib = b2a[i];
-        //glColor3f(0.0f,0.0f,0.0f);
-        if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f); ;
-        Draw3D::drawLine(world.apos[ib.x],world.apos[ib.y]);
-        sprintf(str,"%i\0",i);
-        */
-        //Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0,0);
-        Vec2i ib = b2a[i];
-        sprintf(str,"%i\0",i);
-        Draw3D::drawText(str, (apos[ib.x]+apos[ib.y])*0.5, fontTex, sz, 0);
+        const AtomType& atyp = params.atypes[atypes[i]];
+        Draw::setRGB( atyp.color );
+        Draw3D::drawShape( ogl_sph, ps[i], Mat3dIdentity*((atyp.RvdW-Rsub)*Rsc) );
     }
+}
+
+void bondLabels( int n, const Vec2i* b2a, const Vec3d* apos, int fontTex, float sz=0.02 ){
+    for(int i=0; i<n; i++){
+        Vec2i ib = b2a[i];
+        drawInt( (apos[ib.x]+apos[ib.y])*0.5, i, fontTex, sz );
+    }
+}
+
+void angle( const Vec3i& ang, const Vec2d& cs0, const Vec3d* apos, int fontTex ){
+    Draw3D::drawTriangle( apos[ang.a], apos[ang.b], apos[ang.c], true );
+    Draw3D::drawDouble( (apos[ang.a]+apos[ang.c])*0.5, atan2( cs0.y, cs0.x )*2*180/M_PI, fontTex );
 }
 
 }; // namespace Draw3D

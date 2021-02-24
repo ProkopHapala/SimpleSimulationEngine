@@ -10,7 +10,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 #include "Draw3D.h"
-#include "Draw3D_Molecular.h"
 #include "SDL_utils.h"
 #include "Solids.h"
 
@@ -28,6 +27,8 @@
 #include "MMFFBuilder.h"
 #include "DynamicOpt.h"
 #include "QEq.h"
+
+#include "Draw3D_Molecular.h"  // it needs to know MMFFparams
 
 //#include "NBSRFF.h"
 #include "IO_utils.h"
@@ -245,6 +246,8 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
     MM::Builder builder;
     DynamicOpt  opt;
 
+    int* atypes = 0;
+
     bool bNonBonded = true;
 
     //std::unordered_map<std::string,int> atomTypeDict;
@@ -295,10 +298,13 @@ int TestAppMMFFmini::loadMoleculeXYZ( const char* fname, bool bAutoH ){
     //builder.printConfs ();
     builder.printAtomConfs();
     //exit(0);
+    builder.export_atypes(atypes);
 
+    builder.bDEBUG = true;
     builder.autoBonds ();               builder.printBonds ();
     builder.autoAngles( 0.5, 0.5 );     builder.printAngles();
 
+    //exit(0);
     builder.toMMFFmini( ff, &params );
     return nheavy;
 }
@@ -582,6 +588,7 @@ void TestAppMMFFmini::draw(){
     //ff.apos[0].set(-2.0,0.0,0.0);
     perFrame = 1;
     //perFrame = 50;
+    //bRunRelax = false;
     if(bRunRelax){
         for(int itr=0; itr<perFrame; itr++){
             //if(bConverged) break;
@@ -596,8 +603,8 @@ void TestAppMMFFmini::draw(){
             ff.cleanAtomForce();
             E += ff.eval(false);
             if(bNonBonded){
-                //E += nff.evalLJQ_sortedMask();   // This is fast but does not work in PBC
-                E += nff.evalLJQ_pbc( lvec, {1,1,1} );
+                E += nff.evalLJQ_sortedMask();   // This is fast but does not work in PBC
+                //E += nff.evalLJQ_pbc( lvec, {1,1,1} );
             }
             //Vec3d cog,fsum,torq;
             //checkForceInvariatns( ff.natoms, ff.aforce, ff.apos, cog, fsum, torq );
@@ -623,7 +630,7 @@ void TestAppMMFFmini::draw(){
 
 
             for(int i=0; i<ff.natoms; i++){
-                ff.aforce[i].add( getForceHamakerPlane( ff.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
+                //ff.aforce[i].add( getForceHamakerPlane( ff.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
                 //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
             }
 
@@ -654,13 +661,15 @@ void TestAppMMFFmini::draw(){
 
     glColor3f(0.6f,0.6f,0.6f); Draw3D::plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
     glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLines ( ff.nbonds, (int*)ff.bond2atom, ff.apos );
-    glColor3f(0.0f,0.0f,0.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );
-    glColor3f(1.0f,0.0f,0.0f); Draw3D::vecsInPoss( ff.natoms, ff.aforce, ff.apos, 300.0              );
-    Draw3D::atomsREQ  ( ff.natoms, ff.apos,   nff.REQs, ogl_sph, 1.0, 0.5, 1.0 );
+    //glColor3f(0.0f,0.0f,0.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );
+    //glColor3f(1.0f,0.0f,0.0f); Draw3D::vecsInPoss( ff.natoms, ff.aforce, ff.apos, 300.0              );
+    //Draw3D::atomsREQ  ( ff.natoms, ff.apos,   nff.REQs, ogl_sph, 1.0, 0.25, 1.0 );
+
+    Draw3D::atoms( ff.natoms, ff.apos, atypes, params, ogl_sph, 1.0, 0.25, 1.0 );
 
     if(iangPicked>=0){
-        const Vec3i& ang = ff.ang2atom[iangPicked];
-        Draw3D::drawTriangle( ff.apos[ang.a], ff.apos[ang.b], ff.apos[ang.c], true );
+        glColor3f(0.,1.,0.);
+        Draw3D::angle( ff.ang2atom[iangPicked], ff.ang_cs0[iangPicked], ff.apos, fontTex );
     }
 
     /*

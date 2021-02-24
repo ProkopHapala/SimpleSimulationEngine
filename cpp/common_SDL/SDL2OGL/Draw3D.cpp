@@ -1303,6 +1303,17 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
         glPopMatrix();
 	}
 
+	void drawInt( const Vec3d& pos, int i, int fontTex, float sz ){
+        char str[16];
+        sprintf(str,"%i\0",i);
+        Draw3D::drawText(str, pos, fontTex, sz, 0);
+    }
+    void drawDouble( const Vec3d& pos, double f, int fontTex, float sz ){
+        char str[24];
+        sprintf(str,"%g\0",f);
+        Draw3D::drawText(str, pos, fontTex, sz, 0);
+    }
+
 	void drawCurve( float tmin, float tmax, int n, Func1d3 func ){
         glBegin(GL_LINE_STRIP);
         float dt = (tmax-tmin)/n;
