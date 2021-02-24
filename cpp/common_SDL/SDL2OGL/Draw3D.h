@@ -286,7 +286,22 @@ inline void drawShapes( int shape, int n, bool transposed, Func func ){
     }
 }
 
-
+template<typename Func>
+inline void drawPBC( const Vec3i& npbc, const Mat3d& lvec, Func func ){
+    for(int iz=-npbc.z; iz<=npbc.z; iz++){
+        for(int iy=-npbc.y; iy<=npbc.y; iy++){
+            for(int ix=-npbc.x; ix<=npbc.x; ix++){
+                //builder.pbcShift(ix,iy,iz);
+                Vec3d shift = lvec.lincomb( ix, iy, iz );
+                glPushMatrix();
+                glTranslatef(  shift.x,  shift.y,  shift.z );
+                func( );
+                //glTranslatef( -shift.x, -shift.y, -shift.z );
+                glPopMatrix();
+            }
+        }
+    }
+}
 
 }; // namespace Draw3D
 

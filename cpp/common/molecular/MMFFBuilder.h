@@ -213,6 +213,7 @@ class Builder{  public:
     std::vector<AtomConf>  confs;
     //std::vector<int>  atom_neighs;
 
+    bool bPBC=false;
     Mat3d lvec = Mat3dIdentity;  // lattice vectors for PBC (periodic boundary conditions)
     std::vector<Vec3i> bondPBC;
 
@@ -629,6 +630,19 @@ class Builder{  public:
         }
     }
 
+    void touchingAtoms( int i0, int imax, const Vec3d& p, double R0, double Rfac, std::vector<int>& found ){
+        for(int i=i0; i<imax; i++){  // for pbc we need all atom pairs
+            const Atom& A = atoms[i];
+            Vec3d dp = A.pos - p; // pbc here
+            double R = (R0 + A.REQ.x)*Rfac;
+            //printf( "[%i,%i] R %g \n", i0-1, i, dp.norm() );
+            if(  dp.norm2() < (R*R) ){
+                printf( "[%i,%i] R %g \n", i0-1, i, dp.norm() );
+                found.push_back(i);
+            }
+        }
+    }
+
     void autoBonds( double R=-0.5, int i0=0, int imax=-1 ){
         // ToDo : periodic boundary conditions
         if(imax<0)imax=atoms.size();
@@ -644,6 +658,44 @@ class Builder{  public:
                 if(  dp.norm2() < (R*R) ){
                     bondBrush.atoms={i,j};
                     insertBond( bondBrush );
+                }
+            }
+        }
+    }
+
+    inline Vec3d pbcShift( Vec3i G ){ return lvec.a*G.a + lvec.b*G.b + lvec.c*G.c; }
+
+    void autoBondsPBC( double R=-0.5, int i0=0, int imax=-1, Vec3i npbc=Vec3iOne ){
+        bPBC = true;
+        // ToDo : periodic boundary conditions
+        if(imax<0)imax=atoms.size();
+        bool byParams = (R<0);
+        double Rfac=-R;
+        //if( byParams && (params==0) ){ printf("ERROR in MM::Builder.autoBonds() byParams(R<0) but params==NULL \n"); exit(0); }
+        std::vector<int> found;
+        for(int i=i0; i<imax; i++){
+            const Atom& A = atoms[i];
+            R = A.REQ.x;
+            int ipbc=0;
+            //printf( "#==== Atom[%i] \n", i );
+            for(int ix=-npbc.x;ix<=npbc.x;ix++){
+                for(int iy=-npbc.y;iy<=npbc.y;iy++){
+                    for(int iz=-npbc.z;iz<=npbc.z;iz++){
+                        int   j0=i+1;
+                        //Vec3d vpbc = lvec.a*ix + lvec.b*iy + lvec.c*iz;
+                        //Vec3d vpbc; lvec.dot_to_T( {(double)ix,(double)iy,(double)iz} );
+                        //Vec3d p = A.pos - pbcShift( {ix,iy,iz} );
+                        Vec3d p = A.pos - lvec.lincomb( ix, iy, iz );
+                        //printf( "# pbc[%i,%i,%i][%i] v(%g,%g,%g)\n", ix,iy,iz, ipbc,  vpbc.x, vpbc.y, vpbc.z );
+                        found.clear();
+                        touchingAtoms( j0, imax, p, R, Rfac, found );
+                        for(int j:found){
+                            bondBrush.atoms={i,j};
+                            insertBond( bondBrush );
+                            bondPBC.push_back( {ix,iy,iz} );
+                        }
+                        ipbc++;
+                    }
                 }
             }
         }
@@ -833,7 +885,7 @@ class Builder{  public:
     void printBonds(){
         printf(" # MM::Builder.printBonds() \n");
         for(int i=0; i<bonds.size(); i++){
-            printf("bond[%i]",i); bonds[i].print(); puts("");
+            printf("bond[%i]",i); bonds[i].print(); if(bPBC)printf(" pbc(%i,%i,%i)",bondPBC[i].x,bondPBC[i].y,bondPBC[i].z); puts("");
         }
     }
     void printAngles(){
@@ -1164,6 +1216,14 @@ class Builder{  public:
         export_bonds    ( ff.bond2atom,   ff.bond_l0, ff.bond_k );
         export_angles   ( ff.ang2bond, 0, ff.ang_cs0, ff.ang_k  );
         export_dihedrals( ff.tors2bond,   ff.tors_n,  ff.tors_k );
+
+        if( bPBC ){
+            ff.initPBC();
+            for(int i=0; i<bonds.size(); i++){
+                ff.pbcShifts[i] = pbcShift( bondPBC[i] );
+            };
+        }
+
         ff.angles_bond2atom();
         ff.torsions_bond2atom();
     }

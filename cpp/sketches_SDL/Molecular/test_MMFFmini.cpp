@@ -252,7 +252,7 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
 
     //std::unordered_map<std::string,int> atomTypeDict;
 
-    Mat3d lvec;
+    //Mat3d lvec;
 
     bool bConverged = false;
     bool bRunRelax  = false;
@@ -284,6 +284,8 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
 	int loadMoleculeMol( const char* fname, bool bAutoH, bool loadTypes );
 	int loadMoleculeXYZ( const char* fname, bool bAutoH );
 
+	void drawSystem( );
+
 };
 
 
@@ -301,9 +303,13 @@ int TestAppMMFFmini::loadMoleculeXYZ( const char* fname, bool bAutoH ){
     builder.export_atypes(atypes);
 
     builder.bDEBUG = true;
-    builder.autoBonds ();               builder.printBonds ();
+    //builder.autoBonds ();             builder.printBonds ();
+    builder.autoBondsPBC();             builder.printBonds ();  // exit(0);
+    //builder.autoBondsPBC(-0.5, 0, -1, {0,0,0});             builder.printBonds ();  // exit(0);
     builder.autoAngles( 0.5, 0.5 );     builder.printAngles();
 
+
+    bNonBonded = false;
     //exit(0);
     builder.toMMFFmini( ff, &params );
     return nheavy;
@@ -416,9 +422,12 @@ int TestAppMMFFmini::makeMoleculeInlineBuilder( bool bPBC ){
 
     builder.toMMFFmini( ff, &params );
 
+    builder.lvec.a = (Vec3d){  5.0,0.0,0.0 };
+    builder.lvec.b = (Vec3d){  0.0,5.0,0.0 };
+    builder.lvec.c = (Vec3d){  0.0,0.0,5.0 };
     if(bPBC){    // --- Periodic Boundary Conditions
-        ff.initPBC();                           // as far as good, pbc-shifts are curenlty zero, so no change
-        ff.pbcShifts[1] = lvec.a*-1.; // make bond 3 from nighboring cell
+        ff.initPBC();                 // as far as good, pbc-shifts are curenlty zero, so no change
+        ff.pbcShifts[1] = builder.lvec.a*-1.; // make bond 3 from nighboring cell
         ff.printBondParams();
     }
 
@@ -502,10 +511,6 @@ int TestAppMMFFmini::makeMoleculeInline(){
 
 TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
-    lvec.a = (Vec3d){  5.0,0.0,0.0 };
-    lvec.b = (Vec3d){  0.0,5.0,0.0 };
-    lvec.c = (Vec3d){  0.0,0.0,5.0 };
-
     doChecks();
 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
@@ -525,18 +530,7 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
 
     nff.bindOrRealloc( ff.natoms, ff.nbonds, ff.apos, ff.aforce, 0, ff.bond2atom );
     builder.export_REQs( nff.REQs );
-    /*
-    if(bREQmol){
-    bool bREQparams=true;
-    if(bREQparams){
-        //params.assignREs( mol.natoms, mol.atomType, mol.REQs );
-        //params.assignREs( mol.natoms, mol.atomType, nff.REQs ); // WARRNING - this will not work if  atoms in "nff" does not match those in "mol" !!!!
-        for(int i=0; i<mol.natoms; i++){ nff.REQs[i]=mol.REQs[i]; };
-    }else{
-        nff.setREQs(0      , nheavy ,{1.500,sqrt(0.003729),0});
-        nff.setREQs(nheavy , nff.n  ,{1.000,sqrt(0.003729),0});
-    }
-    */
+
     if(bNonBonded){
         if( !checkPairsSorted( nff.nmask, nff.pairMask ) ){
             printf( "ERROR: nff.pairMask is not sorted => exit \n" );
@@ -561,6 +555,15 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     //exit(0);
 
     Draw3D::makeSphereOgl( ogl_sph, 3, 1.0 );
+}
+
+void TestAppMMFFmini::drawSystem( ){
+    //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLines ( ff.nbonds, (int*)ff.bond2atom, ff.apos );
+    glColor3f(0.0f,0.0f,0.0f); Draw3D::bondsPBC(  ff.nbonds, ff.bond2atom, ff.apos, &builder.bondPBC[0], builder.lvec );
+    //glColor3f(0.0f,0.0f,0.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );
+    //glColor3f(1.0f,0.0f,0.0f); Draw3D::vecsInPoss( ff.natoms, ff.aforce, ff.apos, 300.0              );
+    //Draw3D::atomsREQ  ( ff.natoms, ff.apos,   nff.REQs, ogl_sph, 1.0, 0.25, 1.0 );
+    Draw3D::atoms( ff.natoms, ff.apos, atypes, params, ogl_sph, 1.0, 0.25, 1.0 );
 }
 
 void TestAppMMFFmini::draw(){
@@ -603,8 +606,8 @@ void TestAppMMFFmini::draw(){
             ff.cleanAtomForce();
             E += ff.eval(false);
             if(bNonBonded){
-                E += nff.evalLJQ_sortedMask();   // This is fast but does not work in PBC
-                //E += nff.evalLJQ_pbc( lvec, {1,1,1} );
+                //E += nff.evalLJQ_sortedMask();   // This is fast but does not work in PBC
+                //E += nff.evalLJQ_pbc( builder.lvec, {1,1,1} );
             }
             //Vec3d cog,fsum,torq;
             //checkForceInvariatns( ff.natoms, ff.aforce, ff.apos, cog, fsum, torq );
@@ -620,14 +623,12 @@ void TestAppMMFFmini::draw(){
             //printf( "DEBUG x.3 \n" );
             //world.eval_LJq_On2();
 
-
             //exit(0);
             if(ipicked>=0){
                 Vec3d f = getForceSpringRay( ff.apos[ipicked], (Vec3d)cam.rot.c, ray0, -1.0 );
                 //printf( "f (%g,%g,%g)\n", f.x, f.y, f.z );
                 ff.aforce[ipicked].add( f );
             };
-
 
             for(int i=0; i<ff.natoms; i++){
                 //ff.aforce[i].add( getForceHamakerPlane( ff.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
@@ -658,14 +659,14 @@ void TestAppMMFFmini::draw(){
     }
 
     Draw3D::drawTriclinicBox(builder.lvec, Vec3dZero, Vec3dOne );
-
     glColor3f(0.6f,0.6f,0.6f); Draw3D::plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
-    glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLines ( ff.nbonds, (int*)ff.bond2atom, ff.apos );
-    //glColor3f(0.0f,0.0f,0.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );
-    //glColor3f(1.0f,0.0f,0.0f); Draw3D::vecsInPoss( ff.natoms, ff.aforce, ff.apos, 300.0              );
-    //Draw3D::atomsREQ  ( ff.natoms, ff.apos,   nff.REQs, ogl_sph, 1.0, 0.25, 1.0 );
 
-    Draw3D::atoms( ff.natoms, ff.apos, atypes, params, ogl_sph, 1.0, 0.25, 1.0 );
+    if(builder.bPBC){
+        printf( "draw PBC \n" );
+        Draw3D::drawPBC( (Vec3i){1,1,0}, builder.lvec, [&](){drawSystem();} );
+    }else{
+        drawSystem();
+    }
 
     if(iangPicked>=0){
         glColor3f(0.,1.,0.);

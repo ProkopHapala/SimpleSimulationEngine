@@ -78,6 +78,16 @@ void bondLabels( int n, const Vec2i* b2a, const Vec3d* apos, int fontTex, float 
     }
 }
 
+void bondsPBC( int n, const Vec2i* b2a, const Vec3d* apos, const Vec3i* pbc, const Mat3d& lvec ){
+    for(int i=0; i<n; i++){
+        Vec2i b = b2a[i];
+        Vec3i G = pbc[i];
+        if((G.a!=0)||(G.b!=0)||(G.c!=0)){
+        Draw3D::drawLine( apos[b.b], apos[b.a]+ lvec.a*-G.a + lvec.b*-G.b + lvec.c*-G.c );}
+        Draw3D::drawLine( apos[b.a], apos[b.b]+ lvec.a*G.a + lvec.b*G.b + lvec.c*G.c );
+    }
+}
+
 void angle( const Vec3i& ang, const Vec2d& cs0, const Vec3d* apos, int fontTex ){
     Draw3D::drawTriangle( apos[ang.a], apos[ang.b], apos[ang.c], true );
     Draw3D::drawDouble( (apos[ang.a]+apos[ang.c])*0.5, atan2( cs0.y, cs0.x )*2*180/M_PI, fontTex );

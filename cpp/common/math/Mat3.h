@@ -143,6 +143,7 @@ class Mat3T{
 		vout.z = xz*v.x + yz*v.y + zz*v.z;
 		return vout;
 	}
+	inline VEC lincomb( T fx, T fy, T fz )const{  return dotT({fx,fy,fz}); }
 
 	inline void dot_to( const VEC&  v, VEC&  vout ) const {
         T vx=v.x,vy=v.y,vz=v.z; // to make it safe use inplace
