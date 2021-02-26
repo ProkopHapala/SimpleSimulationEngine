@@ -129,7 +129,7 @@ inline void drawShape    ( int shape, const Vec3d& pos, const Mat3d& rot=Mat3dId
 //inline void drawShape    ( int shape, const Vec3d& pos, const Quat4d& qrot, ){ drawShape( (Vec3f)pos, (Quat4f)qrot, shape); };
 inline void drawShape    (  int shape, const Vec3d& pos, const Quat4d& qrot, const Vec3d& scale=Vec3dOne ){ drawShape( shape, (Vec3f)pos, (Quat4f)qrot, (Vec3f)scale); };
 
-inline void shapeInPoss(  int shape, int n, const Vec3d* pos, const double* sizes=0, const Mat3d& rot=Mat3dIdentity, bool transposed = false );
+void shapeInPoss(  int shape, int n, const Vec3d* pos, const double* sizes=0, const Mat3d& rot=Mat3dIdentity, bool transposed = false );
 
 inline int  drawConeFan        ( int n, float r,                const Vec3d& base,  const Vec3d& tip                                 ){ return drawConeFan( n,             r,      (Vec3f)base, (Vec3f)tip         ); };
 inline int  drawCone           ( int n, float phi1, float phi2, float r1, float r2, const Vec3d& base, const Vec3d& tip, bool smooth ){ return drawCone   ( n, phi1, phi2, r1, r2, (Vec3f)base, (Vec3f)tip, smooth ); };

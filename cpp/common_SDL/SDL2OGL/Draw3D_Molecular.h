@@ -60,17 +60,6 @@ void atomsREQ( int n, Vec3d* ps, Vec3d* REQs, int ogl_sph, float qsc=1, float Rs
     }
 }
 
-void atoms( int n, Vec3d* ps, int* atypes, const MMFFparams& params, int ogl_sph, float qsc=1, float Rsc=1, float Rsub=0 ){
-    glEnable(GL_LIGHTING);
-    glEnable(GL_DEPTH_TEST);
-    glShadeModel(GL_SMOOTH);
-    for(int i=0; i<n; i++){
-        const AtomType& atyp = params.atypes[atypes[i]];
-        Draw::setRGB( atyp.color );
-        Draw3D::drawShape( ogl_sph, ps[i], Mat3dIdentity*((atyp.RvdW-Rsub)*Rsc) );
-    }
-}
-
 void bondLabels( int n, const Vec2i* b2a, const Vec3d* apos, int fontTex, float sz=0.02 ){
     for(int i=0; i<n; i++){
         Vec2i ib = b2a[i];
@@ -92,6 +81,19 @@ void angle( const Vec3i& ang, const Vec2d& cs0, const Vec3d* apos, int fontTex )
     Draw3D::drawTriangle( apos[ang.a], apos[ang.b], apos[ang.c], true );
     Draw3D::drawDouble( (apos[ang.a]+apos[ang.c])*0.5, atan2( cs0.y, cs0.x )*2*180/M_PI, fontTex );
 }
+
+#ifdef MMFFparams_h
+void atoms( int n, Vec3d* ps, int* atypes, const MMFFparams& params, int ogl_sph, float qsc=1, float Rsc=1, float Rsub=0 ){
+    glEnable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
+    glShadeModel(GL_SMOOTH);
+    for(int i=0; i<n; i++){
+        const AtomType& atyp = params.atypes[atypes[i]];
+        Draw::setRGB( atyp.color );
+        Draw3D::drawShape( ogl_sph, ps[i], Mat3dIdentity*((atyp.RvdW-Rsub)*Rsc) );
+    }
+}
+#endif
 
 }; // namespace Draw3D
 

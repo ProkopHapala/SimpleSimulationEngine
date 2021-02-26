@@ -305,7 +305,7 @@ void drawShape    ( int shape, const Vec3f& pos, const Quat4f& qrot, const Vec3f
 	glPopMatrix();
 };
 
-inline void shapeInPoss(  int shape, int n, const Vec3d* pos, const double* sizes, const Mat3d& rot, bool transposed ){
+void shapeInPoss(  int shape, int n, const Vec3d* pos, const double* sizes, const Mat3d& rot, bool transposed ){
     Mat3f mat = (Mat3f)rot;
     for(int i=0; i<n; i++){
         if(sizes) mat.mul((float)sizes[i]);

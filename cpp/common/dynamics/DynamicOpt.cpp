@@ -179,11 +179,13 @@ double DynamicOpt::move_FIRE(){
 
     if( ff>(f_limit*f_limit) ){
         double f = sqrt(ff);
+        /*
         if( ff>(100*f_limit*f_limit) ){
             cleanVel();
             move_GD( dr_limit/f ); // do GD step of length == l_limit
             return ff;
         }
+        */
         //printf( "force too large: %g => limit dt: %g \n", f, dt_ );
         dt_*=sqrt( f_limit/f );
     };
@@ -203,6 +205,7 @@ double DynamicOpt::move_FIRE(){
         }
     }
     */
+    //printf( "DynamicOpt::move_FIRE dt %g \n", dt);
     move_LeapFrog( dt_ );
 	//move_LeapFrog();
 	//move_LeapFrog_vlimit();  // this does not seem to help

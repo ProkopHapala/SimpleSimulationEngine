@@ -21,6 +21,8 @@
 #include "SDL_utils.h"
 #include "Plot2D.h"
 
+#include "Draw3D_Molecular.h"
+
 //#include "MMFF.h"
 
 //#include "RARFFarr.h"
@@ -29,6 +31,7 @@
 int i_DEBUG = 0;
 #include "DynamicOpt.h"
 #include "FlexibleAtomReactiveFF.h"
+#include "FlexibleAtomReactiveFF_dyn.h"
 
 // ======= THE CLASS
 
@@ -40,8 +43,9 @@ class TestAppFARFF: public AppSDL2OGL_3D { public:
     FARFF ff;
     DynamicOpt opt;
 
-
     Plot2D plot1;
+
+    int ogl_sph=0;
 
     double  Emin,Emax;
     int     npoints;
@@ -65,14 +69,13 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
-    srand(15480);
-    //srand(2);
-    int nat = 15;
-    ff.realloc(nat);
-    double sz = 4;
+    //srand(15480);  int nat = 15; double sz = 4; double szH = 1;   // Test 1
 
+    srand(1581);  int nat = 40; double sz = 5; double szH = 0.1;    // Test 2
+
+    ff.realloc(nat);
     for(int ia=0; ia<nat; ia++){
-        ff.apos[ia].fromRandomBox( (Vec3d){-sz,-sz,-1.0},(Vec3d){sz,sz,1.0} );
+        ff.apos[ia].fromRandomBox( (Vec3d){-sz,-sz,-szH},(Vec3d){sz,sz,szH} );
         ff.aconf[ia].set(4,4,4);
         double rnd=randf(); if(rnd>0.7){ if(rnd<0.9){ ff.aconf[ia].a=3; }else{ ff.aconf[ia].a=2; }  }
         for(int j=0; j<N_BOND_MAX; j++){
@@ -86,7 +89,7 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.atype0.Kee = -0.5;
     //ff.atype0.Kpp = 0;
 
-
+    /*
     int ia,io;
     ia=0; io=ia*N_BOND_MAX;
     ff.apos [ia].set( 0.0,0.0,0.0);
@@ -111,6 +114,7 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.opos [io+1].set( 1.0,0.0,+0.1);
     ff.opos [io+2].set(0.0,+1.0,-0.1);
     ff.opos [io+3].set(0.0,-1.0,-0.1);
+    */
 
 
     // =========== check numerical derivatives
@@ -149,9 +153,13 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //opt.setInvMass( 1.0 );
     opt.cleanVel( );
 
-    opt.initOpt( 0.05, 0.2 );
+    //opt.initOpt( 0.05, 0.2 );
+    opt.initOpt( 0.01, 0.05 );
 
     //exit(0);
+
+    Draw3D::makeSphereOgl( ogl_sph, 3, 0.25 );
+
 }
 
 void TestAppFARFF::draw(){
@@ -161,6 +169,7 @@ void TestAppFARFF::draw(){
     glEnable(GL_DEPTH_TEST);
 
     //if(bRun){
+    perFrame=10;
     for(int itr=0;itr<perFrame;itr++){
         printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
         double F2 = 1.0;
@@ -176,7 +185,7 @@ void TestAppFARFF::draw(){
         //for(int i=0; )printf( "",  )
 
         printf( " |F| %g \n", sqrt(F2) );
-        if(!(F2<1000000.0))perFrame=0;
+        //if(!(F2<1000000.0))perFrame=0;
 
         /*
         double cosdRot,cosdPos;
@@ -213,6 +222,11 @@ void TestAppFARFF::draw(){
         }
         //glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( ff.atoms[i].torq*tsc,  ff.atoms[i].pos  );
     };
+
+    //Draw3D::atoms( ff.natoms, ff.apos, atypes, params, ogl_sph, 1.0, 0.25, 1.0 );
+    //Draw3D::shapeInPoss( ogl_sph, ff.natom, ff.apos, ff.aenergy );
+    glColor3f(1.0,1.0,1.0);
+    Draw3D::shapeInPoss( ogl_sph, ff.natom, ff.apos, 0 );
 
 
 /*

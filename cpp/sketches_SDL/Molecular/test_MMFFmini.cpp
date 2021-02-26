@@ -379,6 +379,8 @@ int TestAppMMFFmini::loadMoleculeMol( const char* fname, bool bAutoH, bool bLoad
     builder.printConfs();
     builder.toMMFFmini( ff, &params );
 
+    //Draw3D::shapeInPoss( ogl_sph, ff.natoms, ff.apos, 0 );
+
     /*
     ogl_mol = glGenLists(1);
     glNewList( ogl_mol, GL_COMPILE );

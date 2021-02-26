@@ -173,7 +173,7 @@ TestAppRayScattererMMC * thisApp;
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	SDL_SetRelativeMouseMode( SDL_TRUE );
+	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
 	thisApp = new TestAppRayScattererMMC( junk , 800, 600 );
 	thisApp->loop( 1000000 );
