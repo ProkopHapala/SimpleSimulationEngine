@@ -262,10 +262,11 @@ inline double rayTriangles( const Vec3d& ray0, const Vec3d& hRay, int n, const V
     return t_min;
 }
 
-inline int pickParticle( const Vec3d& ray0, const Vec3d& hRay, double R, int n, Vec3d * ps ){
+inline int pickParticle( const Vec3d& ray0, const Vec3d& hRay, double R, int n, Vec3d * ps, bool* ignore=0 ){
     double tmin =  1e+300;
     int imin    = -1;
     for(int i=0; i<n; i++){
+        if(ignore)if(ignore[i])continue;
         double ti = raySphere( ray0, hRay, R, ps[i] );
         //printf( "atom %i t %g %g hRay(%g,%g,%g) ps(%g,%g,%g) \n", i, ti, tmin, hRay.x,hRay.y,hRay.z,  ps[i].x, ps[i].y, ps[i].z );
         //printf( "atom %i t %g %g %g ray0(%g,%g,%g) ps(%g,%g,%g) \n", i, ti, R, tmin, ray0.x,ray0.y,ray0.z,  ps[i].x, ps[i].y, ps[i].z );

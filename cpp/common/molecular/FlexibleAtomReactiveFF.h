@@ -153,6 +153,8 @@ class FARFF{ public:
     //Vec3d * capPos   = 0;
     //Vec3d * capForce = 0;
 
+    bool * ignoreAtoms = 0;
+
     void realloc(int natom_){
         natom=natom_;
         norb =natom*N_BOND_MAX;
@@ -163,6 +165,7 @@ class FARFF{ public:
 
         _realloc(aconf  ,natom);
         _realloc(aenergy,natom);
+        _realloc(ignoreAtoms,natom);
 
         _realloc(dofs  ,nDOF);
         _realloc(fdofs ,nDOF);
@@ -172,6 +175,9 @@ class FARFF{ public:
 
         opos    =  dofs+natom;
         oforce  = fdofs+natom;
+
+        for(int i=0; i<natom; i++){ ignoreAtoms[i]=false; }
+
     }
 
 // ======== Force Evaluation
@@ -395,8 +401,10 @@ double evalPair( int ia, int ja, FlexiblePairType& type){
 double evalPairs(){
     Epairs = 0;
     for(int i=0; i<natom; i++){
+        if(ignoreAtoms[i])continue;
         //FlexiblePairType& typei = *types[i];    // TODO add pairs later
         for(int j=i+1; j<natom; j++){
+            if(ignoreAtoms[j])continue;
             //FlexiblePairType pairType;
             //pairType.combine( typei, *types[j] );
             //E += pairEF( i, j, typei.nbond, types[j]->nbond, pairType );
@@ -408,7 +416,10 @@ double evalPairs(){
 
 inline double evalAtoms(){
     Eatoms=0;
-    for(int i=0; i<natom; i++){ Eatoms+=evalAtom(i);        }
+    for(int i=0; i<natom; i++){
+        if(ignoreAtoms[i])continue;
+        Eatoms+=evalAtom(i);
+    }
     return Eatoms;
 }
 
@@ -417,6 +428,7 @@ void normalizeOrbs(){
     // ToDo : is this numerically stable? if normal forces are very hi ?
     for(int i=0; i<norb; i++){
         //opos[i].normalize();
+        if(ignoreAtoms[i>>2])continue;
         opos[i].normalize_taylor3();
     }
 }
@@ -426,6 +438,7 @@ void transferOrbRecoil(){
     for(int i=0; i<norb; i++){
         //aforce[i>>2].sub( oforce[i] );
         int ia=i>>2;
+        if(ignoreAtoms[ia])continue;
         Vec3d f = oforce[i]*-1;
         aforce[ia].add( f );
 
@@ -437,6 +450,7 @@ void transferOrbRecoil(){
 void removeNormalForces(){
     // ToDo : is this numerically stable? if normal forces are very hi ?
     for(int i=0; i<norb; i++){
+        if(ignoreAtoms[i>>2])continue;
         oforce[i].makeOrthoU(opos[i]);
         //Vec3d fT = opos[i]*opos[i].dot(oforce[i]);
         //oforce[i   ].sub( fT );
@@ -457,8 +471,14 @@ double eval(){
 
 void moveGD(double dt, bool bAtom, bool bOrbital ){
     //for(int i=0; i<nDOF; i++){ dofs[i].add_mul( fdofs[i], dt ); }
-    if(bAtom   )for(int i=0; i<natom; i++){ apos[i].add_mul( aforce[i], dt ); }
-    if(bOrbital)for(int i=0; i<norb;  i++){ opos[i].add_mul( oforce[i], dt ); }
+    if(bAtom   )for(int i=0; i<natom; i++){
+            if(ignoreAtoms[i])continue;
+            apos[i].add_mul( aforce[i], dt );
+    }
+    if(bOrbital)for(int i=0; i<norb;  i++){
+        if(ignoreAtoms[i>>2])continue;
+        opos[i].add_mul( oforce[i], dt );
+    }
 }
 
 

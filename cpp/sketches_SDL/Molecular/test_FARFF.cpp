@@ -46,6 +46,8 @@ class TestAppFARFF: public AppSDL2OGL_3D { public:
     Plot2D plot1;
 
     int ogl_sph=0;
+    int ipicked = -1;
+    Vec3d ray0;
 
     double  Emin,Emax;
     int     npoints;
@@ -70,14 +72,17 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     //srand(15480);  int nat = 15; double sz = 4; double szH = 1;   // Test 1
-
-    srand(1581);  int nat = 40; double sz = 5; double szH = 0.1;    // Test 2
+    srand(1581);  int nat = 30; double sz = 5; double szH = 0.5;    // Test 2
+    //srand(1581);  int nat = 40; double sz = 5; double szH = 0.1;    // Test 2
 
     ff.realloc(nat);
     for(int ia=0; ia<nat; ia++){
         ff.apos[ia].fromRandomBox( (Vec3d){-sz,-sz,-szH},(Vec3d){sz,sz,szH} );
         ff.aconf[ia].set(4,4,4);
-        double rnd=randf(); if(rnd>0.7){ if(rnd<0.9){ ff.aconf[ia].a=3; }else{ ff.aconf[ia].a=2; }  }
+        //double rnd=randf(); if(rnd>0.7){ if(rnd<0.9){ ff.aconf[ia].a=3; }else{ ff.aconf[ia].a=2; }  }
+
+        ff.aconf[ia].a=3; double rnd=randf(); if(rnd<0.3){  ff.aconf[ia].a=4;  }
+
         for(int j=0; j<N_BOND_MAX; j++){
             int io = j+ia*N_BOND_MAX;
             //printf( "atom[%i] %i %i \n", ia, j, io );
@@ -154,7 +159,7 @@ TestAppFARFF::TestAppFARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     opt.cleanVel( );
 
     //opt.initOpt( 0.05, 0.2 );
-    opt.initOpt( 0.01, 0.05 );
+    opt.initOpt( 0.01, 0.1 );
 
     //exit(0);
 
@@ -169,14 +174,21 @@ void TestAppFARFF::draw(){
     glEnable(GL_DEPTH_TEST);
 
     //if(bRun){
-    perFrame=10;
+    perFrame=100;
     for(int itr=0;itr<perFrame;itr++){
-        printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
+        //printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
         double F2 = 1.0;
 
         ff.cleanForce();
         ff.eval();
         //ff.apos[0].set(.0);
+
+        if(ipicked>=0){
+            Vec3d f = getForceSpringRay( ff.apos[ipicked], (Vec3d)cam.rot.c, ray0, -1.0 );
+            //printf( "f (%g,%g,%g)\n", f.x, f.y, f.z );
+            ff.aforce[ipicked].add( f );
+        };
+
 
         //if(bRun)ff.moveGD(0.001, 1, 1);
 
@@ -184,7 +196,7 @@ void TestAppFARFF::draw(){
 
         //for(int i=0; )printf( "",  )
 
-        printf( " |F| %g \n", sqrt(F2) );
+        //printf( " |F| %g \n", sqrt(F2) );
         //if(!(F2<1000000.0))perFrame=0;
 
         /*
@@ -203,12 +215,22 @@ void TestAppFARFF::draw(){
     //atom1.moveRotGD(0.8);
     //printf( "qrot (%g,%g,%g,%g)\n", atom1.qrot.x, atom1.qrot.y, atom1.qrot.z, atom1.qrot.w );
 
+    ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
+    Draw3D::drawPointCross( ray0, 0.1 );
+    if(ipicked>=0) Draw3D::drawLine( ff.apos[ipicked], ray0);
+
     glColor3f(1.0,1.0,1.0);
     //drawRigidAtom( atom1 );
 
     double fsc = 0.1;
     double tsc = 0.1;
     for(int i=0; i<ff.natom; i++){
+
+        if(ff.ignoreAtoms[i]) continue;
+
+        if(ff.aconf[i].a==4){ glColor3f(0.5,0.5,0.5); }else{ glColor3f(1.0,1.0,1.0); };
+         Draw3D::drawShape( ogl_sph, ff.apos[i], Mat3dIdentity, false );
+
         glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross(ff.apos[i], 0.1 );
         //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( ff.aforce[i]*fsc, ff.apos[i]  );
         for(int j=0;j<N_BOND_MAX; j++){
@@ -225,8 +247,8 @@ void TestAppFARFF::draw(){
 
     //Draw3D::atoms( ff.natoms, ff.apos, atypes, params, ogl_sph, 1.0, 0.25, 1.0 );
     //Draw3D::shapeInPoss( ogl_sph, ff.natom, ff.apos, ff.aenergy );
-    glColor3f(1.0,1.0,1.0);
-    Draw3D::shapeInPoss( ogl_sph, ff.natom, ff.apos, 0 );
+    //glColor3f(1.0,1.0,1.0);
+    //Draw3D::shapeInPoss( ogl_sph, ff.natom, ff.apos, 0 );
 
 
 /*
@@ -277,6 +299,29 @@ void TestAppFARFF::eventHandling ( const SDL_Event& event  ){
 
                 //case SDLK_LEFTBRACKET:  i_DEBUG=(i_DEBUG+1)%6; break;
                 case SDLK_RIGHTBRACKET: i_DEBUG=(i_DEBUG+1)%6; printf("i_DEBUG %i\n", i_DEBUG); break;
+            }
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:
+                    ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
+                    printf( "picked atom %i \n", ipicked );
+                    break;
+                case SDL_BUTTON_RIGHT:
+                    ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
+                    printf( "ignore atom %i \n", ipicked );
+                    ff.ignoreAtoms[ ipicked ] = true;
+                    break;
+            }
+            break;
+        case SDL_MOUSEBUTTONUP:
+            switch( event.button.button ){
+                case SDL_BUTTON_LEFT:
+                    ipicked = -1;
+                    break;
+                case SDL_BUTTON_RIGHT:
+                    ipicked = -1;
+                    break;
             }
             break;
     };
