@@ -155,6 +155,26 @@ class FARFF{ public:
 
     bool * ignoreAtoms = 0;
 
+
+    void alloc(int natom_){
+        natom=natom_;
+        norb =natom*N_BOND_MAX;
+        nDOF =natom + norb;
+        //printf(  "FARFF aloc na %i \n", natom );
+        _alloc(oenergy,norb );
+        _alloc(aconf  ,natom);
+        _alloc(aenergy,natom);
+        _alloc(ignoreAtoms,natom);
+        _alloc(dofs  ,nDOF);
+        _alloc(fdofs ,nDOF);
+        apos    = dofs;
+        aforce  = fdofs;
+        opos    =  dofs+natom;
+        oforce  = fdofs+natom;
+        for(int i=0; i<natom; i++){ ignoreAtoms[i]=false; }
+
+    }
+
     void realloc(int natom_){
         natom=natom_;
         norb =natom*N_BOND_MAX;
@@ -178,6 +198,45 @@ class FARFF{ public:
 
         for(int i=0; i<natom; i++){ ignoreAtoms[i]=false; }
 
+    }
+
+    void resize( int natom_new ){
+        int natom_=natom;
+        double*  oenergy_      = oenergy;
+        double*  aenergy_      = aenergy;
+        Vec3ui8* aconf_        = aconf;
+        bool *   ignoreAtoms_  = ignoreAtoms;
+        Vec3d* dofs_    = dofs;
+        Vec3d* fdofs_   = fdofs;
+        Vec3d* apos_    = apos;
+        Vec3d* opos_    = opos;
+        Vec3d* aforce_  = aforce;
+        Vec3d* oforce_  = oforce;
+        //realloc(natom_new);
+        alloc(natom_new);
+        int na = _min( natom_new, natom );
+        int ja=0;
+        for(int ia=0; ia<natom; ia++){
+            if(ignoreAtoms_[ia]) continue;
+            aconf  [ja]= aconf_ [ia];
+            aenergy[ja]=aenergy_[ia];
+            apos   [ja]=apos_   [ia];
+            aforce [ja]=aforce_ [ia];
+            for(int ib=0; ib<N_BOND_MAX; ib++){
+                int i=ia*N_BOND_MAX + ib;
+                int j=ja*N_BOND_MAX + ib;
+                aenergy[j]=aenergy_[i];
+                opos   [j]=opos_  [i];
+                oforce [j]=oforce_[i];
+            }
+            ja++;
+        }
+        delete [] dofs_;
+        delete [] fdofs_;
+        delete [] oenergy_;
+        delete [] aenergy_;
+        delete [] aconf_;
+        delete [] ignoreAtoms_;
     }
 
 // ======== Force Evaluation
