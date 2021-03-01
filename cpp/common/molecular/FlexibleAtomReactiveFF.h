@@ -115,6 +115,7 @@ class FARFF{ public:
     FlexibleAtomType atype0;
     FlexiblePairType ptype0;
 
+    int natomActive=0;
     int natom   = 0;
     int nbond   = 0; // number of all bonding orbitals
     int norb    = 0;
@@ -160,44 +161,38 @@ class FARFF{ public:
         natom=natom_;
         norb =natom*N_BOND_MAX;
         nDOF =natom + norb;
-        //printf(  "FARFF aloc na %i \n", natom );
-        _alloc(oenergy,norb );
+        printf(  "FARFF aloc na %i no %i nDOF %i \n", natom, norb, nDOF );
+        _alloc(ignoreAtoms,natom);
         _alloc(aconf  ,natom);
         _alloc(aenergy,natom);
-        _alloc(ignoreAtoms,natom);
+        _alloc(oenergy,norb );
         _alloc(dofs  ,nDOF);
         _alloc(fdofs ,nDOF);
-        apos    = dofs;
+        apos    =  dofs;
         aforce  = fdofs;
         opos    =  dofs+natom;
         oforce  = fdofs+natom;
+        natomActive=natom;
         for(int i=0; i<natom; i++){ ignoreAtoms[i]=false; }
-
     }
 
     void realloc(int natom_){
         natom=natom_;
         norb =natom*N_BOND_MAX;
         nDOF =natom + norb;
-        printf(  "FARFF realoc na %i \n", natom );
-
-        _realloc(oenergy,norb );
-
+        //printf(  "FARFF realoc na %i \n", natom );
+        _realloc(ignoreAtoms,natom);
         _realloc(aconf  ,natom);
         _realloc(aenergy,natom);
-        _realloc(ignoreAtoms,natom);
-
+        _realloc(oenergy,norb );
         _realloc(dofs  ,nDOF);
         _realloc(fdofs ,nDOF);
-
-        apos    = dofs;
+        apos    =  dofs;
         aforce  = fdofs;
-
         opos    =  dofs+natom;
         oforce  = fdofs+natom;
-
+        natomActive=natom;
         for(int i=0; i<natom; i++){ ignoreAtoms[i]=false; }
-
     }
 
     void resize( int natom_new ){
@@ -214,22 +209,27 @@ class FARFF{ public:
         Vec3d* oforce_  = oforce;
         //realloc(natom_new);
         alloc(natom_new);
-        int na = _min( natom_new, natom );
+        //int na = _min( natom_new, natom );
         int ja=0;
-        for(int ia=0; ia<natom; ia++){
+        for(int ia=0; ia<natom_; ia++){
             if(ignoreAtoms_[ia]) continue;
-            aconf  [ja]= aconf_ [ia];
-            aenergy[ja]=aenergy_[ia];
-            apos   [ja]=apos_   [ia];
-            aforce [ja]=aforce_ [ia];
+            aconf  [ja]= aconf_  [ia];
+            aenergy[ja]= aenergy_[ia];
+            apos   [ja]= apos_   [ia];
+            aforce [ja]= aforce_ [ia];
+            ignoreAtoms[ja] = false;
             for(int ib=0; ib<N_BOND_MAX; ib++){
                 int i=ia*N_BOND_MAX + ib;
                 int j=ja*N_BOND_MAX + ib;
-                aenergy[j]=aenergy_[i];
-                opos   [j]=opos_  [i];
-                oforce [j]=oforce_[i];
+                oenergy[j]=oenergy_[i];
+                opos   [j]=opos_   [i];
+                oforce [j]=oforce_ [i];
             }
             ja++;
+        }
+        natomActive=ja;
+        for(int ia=ja; ia<natom; ia++){
+            ignoreAtoms[ia] = true;
         }
         delete [] dofs_;
         delete [] fdofs_;
@@ -237,6 +237,63 @@ class FARFF{ public:
         delete [] aenergy_;
         delete [] aconf_;
         delete [] ignoreAtoms_;
+    }
+
+    bool tryResize( int nMaskMin=5, int nMaskMax=20, int nMaskGoal=10 ){
+        int nmask = 0;
+        for(int i=0; i<natom; i++){ if(ignoreAtoms[i]){ nmask++; } }
+        if( (nmask<nMaskMin)||(nmask>nMaskMax) ){
+            int natom_new = natom-nmask+nMaskGoal;
+            printf( "FARFF::resize(%i) from %i nmaxk %i \n", natom_new, natom, nmask );
+            resize( natom_new );
+            return true;
+        }
+        return false;
+    }
+
+    void inserAtom( const Vec3ui8& conf, const Vec3d& p, const Vec3d& dir, const Vec3d& up ){
+        Mat3d m;
+        m.c=dir;
+        double r = m.c.normalize();
+        if(r<1e-3)return;
+        //m.b=up; m.b.makeOrthoU(m.c);
+        m.b.set_cross(up ,m.c); m.b.normalize();
+        m.a.set_cross(m.b,m.c); m.a.normalize();
+        int ia=natomActive;
+        if( ia>=natom ){ resize(natom+5); }
+        natomActive++;
+        ignoreAtoms[ia] = false;
+        aconf[ia] = conf;
+        apos [ia] = p;
+        int nb = conf.a;
+        printf( "FARFF::inserAtom() [%i] nb %i p(%g,%g,%g)   h(%g,%g,%g) \n", ia, nb, p.x,p.y,p.z,  dir.x,dir.y,dir.z );
+        //m.c.getSomeOrtho(m.b,m.a);
+        //m.c.getSomeOrtho(m.a,m.b);
+        Vec3d* hs = opos + (ia*N_BOND_MAX);
+        hs[0] = m.c;
+        switch(nb){
+            case 4:{  // -CH3 like sp3 no-pi
+                const double ca = 0.81649658092;  // sqrt(2/3)
+                const double cb = 0.47140452079;  // sqrt(2/9)
+                const double cc =-0.33333333333;  // 1/3
+                hs[1] = m.c*cc + m.b*(cb*2) ;
+                hs[2] = m.c*cc - m.b* cb + m.a*ca;
+                hs[3] = m.c*cc - m.b* cb - m.a*ca;
+                }break;
+            case 3:{ // =CH2 like sp2 1-pi
+                const double ca = 0.87758256189;  // 1/2
+                const double cc =-0.5;            // sqrt(1/8)
+                hs[1] = m.c*cc + m.a*ca;
+                hs[2] = m.c*cc - m.a*ca;
+                hs[3] = m.b;
+                }break;
+            case 2:{  // #CH sp  2-pi
+                hs[1] = m.c*-1;
+                hs[2] = m.b;
+                hs[3] = m.a;
+                }break;
+        }
+        printf( "hs (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) \n",  hs[0].x,hs[0].y,hs[0].z,   hs[1].x,hs[1].y,hs[1].z,  hs[2].x,hs[2].y,hs[2].z,  hs[3].x,hs[3].y,hs[3].z );
     }
 
 // ======== Force Evaluation
@@ -299,9 +356,6 @@ double evalAtom(int ia){
 
     return E;
 }
-
-
-
 
 double evalPair( int ia, int ja, FlexiblePairType& type){
 //double evalPair( int ia, int ja, int nbi, int nbj ){
@@ -540,6 +594,12 @@ void moveGD(double dt, bool bAtom, bool bOrbital ){
     }
 }
 
+void printAtoms(){
+    printf( "FARFF::printAtoms() \n" );
+    for(int i=0; i<natom; i++){
+        printf( "atom[%i] mask %i pos(%g,%g,%g) conf(%i,%i,%i) \n", i, (int)ignoreAtoms[i], apos[i].x,apos[i].y,apos[i].z, aconf[i].a,aconf[i].b,aconf[i].c  );
+    }
+}
 
 // ============== BACKUP
 

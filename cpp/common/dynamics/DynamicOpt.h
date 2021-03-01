@@ -77,8 +77,8 @@ class DynamicOpt{ public:
         if(pos_  ==0){ _realloc(pos  ,n); }else{ pos   = pos_;   };
         if(vel_  ==0){ _realloc(vel  ,n); }else{ vel   = vel_;   };
         if(force_==0){ _realloc(force,n); }else{ force = force_; };
-        //if(invMasses_==0) { _realloc(invMasses,n); setInvMass(1.0); }else{ invMasses=invMasses_; }
-        if(invMasses_==0) setInvMass(1.0);
+        if(invMasses_==0) { _realloc(invMasses,n); setInvMass(1.0); }else{ invMasses=invMasses_; }
+        //if(invMasses_==0) setInvMass(1.0);
     }
 
     inline void realloc( int n_ ){
