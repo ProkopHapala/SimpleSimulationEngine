@@ -31,6 +31,8 @@
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
 
+#include "repl.h"
+
 /*
 
 ToDo (quick):
@@ -65,6 +67,8 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 
     char str[256];
 
+    REPL::Interpreter repl;
+
     Vec3d ray0;
     int ipicked  = -1, ibpicked = -1;
     int perFrame =  50;
@@ -82,7 +86,15 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 
 };
 
+void moveAtoms( int n, Vec3d* ps, Vec3d shift ){
+    for(int i=0; i<n; i++)ps[i].add(shift);
+}
+
 TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+
+    REPL::init();
+    repl.functions["move\n"] = [this]{ moveAtoms(world.natoms, world.apos, (Vec3d){1.0,0.0,0.0}); };
+
 
     fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
@@ -140,6 +152,7 @@ void TestAppSoftMolDyn::draw(){
     glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+    /*
 	// Non-Blocking terminal input : see https://stackoverflow.com/questions/6055702/using-fgets-as-non-blocking-function-c
     int fd = fileno(stdin);
     int flags  = fcntl(fd, F_GETFL, 0);
@@ -150,6 +163,8 @@ void TestAppSoftMolDyn::draw(){
 	if(s!=0){
         printf( "got:`%s`", s );
 	}
+    */
+    repl.eval();
 
     ray0 = (Vec3d)mouseRay0(); Draw3D::drawPointCross( ray0, 0.1 ); //Draw3D::drawVecInPos( camMat.c, ray0 );
     if(ipicked>=0) Draw3D::drawLine( world.apos[ipicked], ray0);
