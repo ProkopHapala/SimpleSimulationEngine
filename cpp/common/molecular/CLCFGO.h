@@ -1419,9 +1419,13 @@ double evalAA(){
 
 
 bool loadFromFile( char const* filename, bool bCheck ){
-    printf(" filename: >>%s<< \n", filename );
+    //printf(" filename: >>%s<< \n", filename );
     FILE * pFile;
     pFile = fopen (filename,"r");
+    if( pFile == NULL ){
+        printf("ERROR in CLCFGO::loadFromFile(%s) : No such file !!! \n", filename );
+        return -1;
+    }
     int ntot;
     //fscanf (pFile, " %i \n", &ntot );
     int natom_=0, nOrb_=0, perOrb_=0;
