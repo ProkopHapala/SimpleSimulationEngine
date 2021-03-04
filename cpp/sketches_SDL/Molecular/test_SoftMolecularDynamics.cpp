@@ -32,6 +32,7 @@
 #include "testUtils.h"
 
 #include "repl.h"
+#include "commandTree.h"
 
 /*
 
@@ -62,12 +63,13 @@ class TestAppSoftMolDyn : public AppSDL2OGL_3D {
 
     DynamicOpt  opt;
 
-    int     fontTex;
-    int     ogl_sph;
+    int     fontTex=0,fontTexPix=0;
+    int     ogl_sph=0;
 
     char str[256];
 
     REPL::Interpreter repl;
+    CommandTree commands;
 
     Vec3d ray0;
     int ipicked  = -1, ibpicked = -1;
@@ -96,7 +98,8 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     repl.functions["move\n"] = [this]{ moveAtoms(world.natoms, world.apos, (Vec3d){1.0,0.0,0.0}); };
 
 
-    fontTex = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    fontTexPix = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    fontTex    = makeTexture( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
 
     params.loadAtomTypes( "common_resources/AtomTypes.dat" );
     //mol.atomTypeNames = &params.atomTypeNames;
@@ -145,6 +148,22 @@ TestAppSoftMolDyn::TestAppSoftMolDyn( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     //Draw3D::makeSphereOgl( ogl_sph, 2, 0.25 );
     Draw3D::makeSphereOgl( ogl_sph, 2, 1.0 );
+
+
+    commands.root.func=[]{};
+    //commands.root.leafs.insert( { "h", []{printf("Hey!\n")} }  );
+    //commands.root.leafs.insert( { "o", []{printf("OK!\n")} }  );
+    //commands.root.leafs.insert( { "a", []{printf("Action 1 \n")} }  );
+
+    commands.root.addLeaf( "h", "prints Hey", []{printf("Hey!\n");} );
+    commands.root.addLeaf( "o", "prints OK",  []{printf("OK!\n");}  );
+    CommandNode* cnd = commands.root.addLeaf( "1", "Toolbox 1",  []{printf("Opening Toolbox 1 \n");} );
+    cnd->addLeaf( "1", "Tool 1.1",  []{printf("run_tool 1.1 \n");} );
+    cnd->addLeaf( "2", "Tool 1.2",  []{printf("run_tool 1.2 \n");} );
+    commands.root.addLeaf("2", "Toolbox 2",  []{printf("Opening Toolbox 1 \n");} );
+    cnd->addLeaf( "1", "Tool 2.1",  []{printf("run_tool 2.1 \n");} );
+    cnd->addLeaf( "2", "Tool 2.2",  []{printf("run_tool 2.2 \n");} );
+
 }
 
 
@@ -227,11 +246,18 @@ void TestAppSoftMolDyn::draw(){
 void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
     switch( event.type ){
+        case SDL_TEXTINPUT:
+            /* Add new text onto the end of our text */
+            commands.eval( event.text.text );
+            break;
         case SDL_KEYDOWN :
+            //commands.eval( event.key. );
+            //printf( "SDLK_w ", event.key. )
             switch( event.key.keysym.sym ){
                 //case SDLK_p:  first_person = !first_person; break;
                 //case SDLK_o:  perspective  = !perspective; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
+                case SDLK_BACKSPACE: commands.goBack(); break;
 
                 case SDLK_v: for(int i=0; i<world.natoms; i++){ ((Vec3d*)opt.vel)[i].add(randf(-drndv,drndv),randf(-drndv,drndv),randf(-drndv,drndv)); } break;
                 case SDLK_p: for(int i=0; i<world.natoms; i++){ world.apos[i].add(randf(-drndp,drndp),randf(-drndp,drndp),randf(-drndp,drndp)); } break;
@@ -274,6 +300,12 @@ void TestAppSoftMolDyn::eventHandling ( const SDL_Event& event  ){
 
 void TestAppSoftMolDyn::drawHUD(){
     glDisable ( GL_LIGHTING );
+    char str[1024];
+    commands.curInfo( str );
+    //sprintf( str, );
+    //Draw3D::drawText( str, (Vec3f){10.,10.,0.0}, fontTexPix, 20, 0 );
+    glTranslatef( 10 ,HEIGHT-20 ,0 );
+    Draw::drawText( str, fontTexPix, 7, {100,50} );
 
 }
 

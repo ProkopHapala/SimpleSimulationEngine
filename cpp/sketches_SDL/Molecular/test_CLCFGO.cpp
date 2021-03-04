@@ -370,7 +370,6 @@ void TestAppCLCFSF::eventHandling ( const SDL_Event& event  ){
                 case SDLK_p:  bDrawPlots   = !bDrawPlots;    break;
                 case SDLK_o:  bDrawObjects = !bDrawObjects;  break;
                 //case SDLK_a:    = !perspective; break;
-
                 case SDLK_SPACE: bRun = !bRun;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
