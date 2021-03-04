@@ -119,41 +119,41 @@ constexpr static const Quat4d default_AtomParams[] = {
     int nQtot =0; ///< total number of charge elements
 
     // atoms (ions)
-    Vec3d*  apos   =0;  ///< positioon of atoms
-    Vec3d*  aforce =0;  ///< positioon of atoms
-    double* aQs    =0;  ///< charge of atomic core ( Q_nucleus - Q_core_electrons )
-    double* aPcoef =0;  ///< coeficient of pauli repulsion of core electrons
-    double* aPsize =0;  ///< size of core in coulombic interaction
-    double* aQsize =0;  ///< size of core in Pauli interaction
+    Vec3d*  apos   =0;  ///< [A] positioon of atoms
+    Vec3d*  aforce =0;  ///< [eV/A] force on atoms
+    double* aQs    =0;  ///< [e] charge of atomic core ( Q_nucleus - Q_core_electrons )
+    double* aPcoef =0;  ///< [eV] coeficient of pauli repulsion of core electrons
+    double* aPsize =0;  ///< [A] size of core in Pauli interaction
+    double* aQsize =0;  ///< [A] size of core in coulombic interaction
     int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
     //Vec3d  * aAbWs =0; ///< atomic   parameters (amplitude, decay, width)
     //Vec3d  * eAbWs =0; ///< electron parameters (amplitude, decay, width)
 
     // orbitals
-    Vec3d*  opos  =0;   ///< store positions for the whole orbital
-    Vec3d*  odip  =0;   ///< Axuliary array to store dipoles for the whole orbital
-    double* oEs   =0;   ///< orbital energies
-    double* oQs   =0;   ///< total charge in orbital before renormalization (just DEBUG?)
+    Vec3d*  opos  =0;   ///< [A] store positions for the whole orbital
+    Vec3d*  odip  =0;   ///< [eA] Axuliary array to store dipoles for the whole orbital
+    double* oEs   =0;   ///< [eV] orbital energies
+    double* oQs   =0;   ///< [e] total charge in orbital before renormalization (just DEBUG?)
     int*    onq   =0;   ///< number of axuliary density functions per orbital
     int*    ospin =0;
 
     // --- Wave-function components for each orbital
-    Vec3d*  epos  =0; ///< position of spherical function for expansion of orbitals
-    double* esize =0;
-    double* ecoef =0;  ///< expansion coefficient of expansion of given orbital
+    Vec3d*  epos  =0; ///< [A] position of spherical function for expansion of orbitals
+    double* esize =0; ///< [A] spread of gassian basisfunction
+    double* ecoef =0; ///< [e^.5] expansion coefficient of expansion of given orbital
     // --- Forces acting on wave-functions components
-    Vec3d*  efpos  =0; ///<   force acting on position of orbitals
-    double* efsize =0; ///<   force acting on combination coefficnet of orbitals
-    double* efcoef =0; ///<  force acting on size of gaussians
+    Vec3d*  efpos  =0; ///< [eV/A]  force acting on position of orbitals   d_E/d_epos[i]
+    double* efsize =0; ///< [eV/A]  force acting on combination coefficnet of orbitals  d_E/d_esize[i]
+    double* efcoef =0; ///< [e^.5V] force acting on size of gaussians d_E/d_ecoef[i]
 
     // --- Auxuliary electron density expansion basis functions
-    Vec3d * rhoP  =0; ///< position of density axuliary functio
-    double* rhoQ  =0; ///< temporary array to store density projection on pair overlap functions
-    double* rhoS  =0;
+    Vec3d * rhoP  =0; ///< [A] position of axuliary electron density function
+    double* rhoQ  =0; ///< [e] charge in axuliary electron density function
+    double* rhoS  =0; ///< [A] spread of axuliary electron density function
     // --- Forces acting on auxuliary density basis functions
-    Vec3d * rhofP =0; ///< position of density axuliary functio
-    double* rhofQ =0; ///< temporary array to store density projection on pair overlap functions
-    double* rhofS =0;
+    Vec3d * rhofP =0; ///< [eV/A] force on position of axuliary electron density function d_E/d_rhoP[i]
+    double* rhofQ =0; ///< [V] force on charge in axuliary electron density function d_E/d_rhoQ[i]
+    double* rhofS =0; ///< [eV/A] force on spread of axuliary electron density function d_E/d_rhoS[i]
     //double* rhoEQ =0; /// coulomb energy
 
     // ======= Functions
@@ -1427,20 +1427,21 @@ bool loadFromFile( char const* filename, bool bCheck ){
         return -1;
     }
     int ntot;
+    const int nbuff = 1024;
+    char buff[nbuff]; char* line;
     //fscanf (pFile, " %i \n", &ntot );
     int natom_=0, nOrb_=0, perOrb_=0;
-    fscanf (pFile, "%i %i %i\n", &natom_, &nOrb_, &perOrb_ );
+    line=fgets(buff,nbuff,pFile);
+    sscanf (line, "%i %i %i\n", &natom_, &nOrb_, &perOrb_ );
+    printf("na %i ne %i perORb %i \n", natom, nOrb, perOrb_);
     //printf("na %i ne %i perORb %i \n", natom_, nOrb_, perOrb_ );
     realloc( natom_, nOrb_, perOrb_, 1 );
-    printf("na %i ne %i perORb %i \n", natom, nOrb, perOrb_);
-    char buf[1024];
     double Qasum = 0.0;
-    fgets( buf, 256, pFile); // printf( "fgets: >%s<\n", buf );
     for(int i=0; i<natom; i++){
         double x,y,z;
         double Q,sQ,sP,cP;
-        fgets( buf, 256, pFile); //printf( "fgets: >%s<\n", buf );
-        int nw = sscanf (buf, "%lf %lf %lf %lf %lf %lf %lf", &x, &y, &z,    &Q, &sQ, &sP, &cP );
+        fgets( buff, nbuff, pFile); //printf( "fgets: >%s<\n", buf );
+        int nw = sscanf (buff, "%lf %lf %lf %lf %lf %lf %lf", &x, &y, &z,    &Q, &sQ, &sP, &cP );
         printf( "atom[%i] p(%g,%g,%g) Q %g sQ %g sP %g cP %g \n", i, x, y, z,    Q, sQ, sP, cP );
         apos  [i]=(Vec3d){x,y,z};
         aQs   [i]=Q;
@@ -1452,9 +1453,9 @@ bool loadFromFile( char const* filename, bool bCheck ){
     for(int i=0; i<nBas; i++){
         double x,y,z;
         double s,c;
-        fgets( buf, 256, pFile); // printf( "fgets: >%s<\n", buf );
-        int nw = sscanf (buf, "%lf %lf %lf %lf %lf", &x, &y, &z,  &s, &c );
-        printf( "orb[%i,%i] p(%g,%g,%g) s %g c %g \n", i/perOrb, i%perOrb, x, y, z,  s, c );
+        fgets( buff, nbuff, pFile); // printf( "fgets: >%s<\n", buf );
+        int nw = sscanf (buff, "%lf %lf %lf %lf %lf", &x, &y, &z,  &s, &c );
+        printf( "ebasis[%i,%i|5i] p(%g,%g,%g) s %g c %g \n", i/perOrb, i%perOrb,i, x, y, z,  s, c );
         epos[i]=(Vec3d){x,y,z};
         esize[i]=s;
         ecoef[i]=c;
@@ -1463,6 +1464,26 @@ bool loadFromFile( char const* filename, bool bCheck ){
     fclose (pFile);
     return 0;
 }
+
+void printAtoms(){
+    printf( "===CLCFGO::printAtoms()\n");
+    for(int i=0; i<natom; i++){
+        printf( "eFF::atom[%i] p(%g,%g,%g)[A] Q(%g[e],%g[A])  Pauli(%g[eV],%g[A]) \n", i, apos[i].x,apos[i].y,apos[i].z,  aQs[i], aQsize[i], aPcoef[i], aPsize[i] );
+    }
+}
+
+void printElectrons(){
+    printf( "===CLCFGO::printElectrons()\n");
+    for(int io=0; io<nOrb; io++){
+        printf( "orb[%i]\n", io );
+        for(int j=0; j<perOrb; j++){
+            int ie=io*perOrb+j;
+            printf( "e[%i,%i|%i] p(%g,%g,%g)[A] size %g coef %g \n", io,j,ie, epos[ie].x,epos[ie].y,epos[ie].z, esize[ie], ecoef[ie] );
+        }
+    }
+}
+
+
 
 // ===========================================================================================================================
 // ==================== Old Versions of Functions - Should be removed

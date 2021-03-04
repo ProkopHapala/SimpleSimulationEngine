@@ -12,6 +12,7 @@ uniform vec4 atoms [100];
 uniform vec4 coefs [100];
 
 uniform float iso;
+uniform vec3 color;
 uniform vec3 light_dir;
 
 //const float iso = 0.2;
@@ -44,26 +45,10 @@ float LCAO( in vec3 pos ){
 
 float Func( in vec3 pos ){
     float f = LCAO(pos);
-    return iso-abs(f);
-    //return iso-f*f;
+    return iso-f*f;
     //return abs(LCAO(pos))-iso;
 }
 
-
-/*
-float Func_( in vec3 pos ){
-    //return exp( -dot(pos,pos) )  - 0.2;
-    vec3  sinp = sin(pos*vec3(5.0,5.0,5.0));
-    //vec3  cosp = cos(pos*vec3(5.0,5.0,5.0));
-    float  r2 = dot(pos,pos);
-    //float  n1 = (sinp.y + sinp.x - 0.37);
-    float  n1 = (sinp.x*sinp.z - sinp.y*1.0);
-    //float  n2 = (sinp.y - sinp.z + 0.36);
-    float n2 = 0.0;
-    return (n1*n1+n2*n2) - iso*(1.0-r2*0.3);
-    //return r2-iso;
-}
-*/
 
 vec2 sphIntersect( in vec3 ro, in vec3 rd, in vec4 sph ){
 	vec3 oc = ro - sph.xyz;
@@ -162,9 +147,9 @@ void main( void ){
             t    = bisec( t-dt, t, of, f, ro, rd );
             vec3 pos    = ro+rd*t;
             vec3 normal = normalize(grad( pos, 0.001));
-            vec3 color = vec3(1.0,1.0,1.0);
-            if( LCAO(pos)>0. ){ color = vec3(0.,0.5,1.); }
-            else              { color = vec3(1.,0.5,0.); }
+            //vec3 color = vec3(1.0,1.0,1.0);
+            //if( LCAO(pos)>0. ){ color = vec3(0.,0.5,1.); }
+            //else              { color = vec3(1.,0.5,0.); }
             clr.rgb     = phong( rd, normal, color );
             //clr.rgb *= 1.5-(t-2.0)*0.5;
             //clr.rgb = color;

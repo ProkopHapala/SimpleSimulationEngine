@@ -20,10 +20,13 @@ Vec3d DEBUG_dQdp;
 int DEBUG_iter     = 0;
 int DEBUG_log_iter = 0;
 
+#include "Draw.h"
 #include "Grid.h"
 #include "GaussianBasis.h"
 #include "CLCFGO.h"
 #include "CLCFGO_tests.h"
+
+#include "testUtils.h"
 
 // ===== Globals
 
@@ -31,18 +34,19 @@ bool bRun = false;
 double dt;
 CLCFGO eff;
 
-Shader   * shader1, *shClear;
+Shader   * shWf, *shPot, *shClear;
 GLObject * object1;
 GLObject * object2;
 
 const int WIDTH  = 800;
 const int HEIGHT = 800;
 Vec2f resolution{WIDTH,HEIGHT};
-Vec3f light_dir {  0.1, 0.2, 0.5 };
+Vec3f light_dir {  0.1, 0.2, -0.5 };
 Vec3f lookAt    { 0.0f, 0.f,  0.f};
 Vec3f camPos    { 0.0f, 0.f, -5.f};
 float zoom = 5.0;
-float iso  = 0.001;
+float isoWf = 0.1;
+float isoV  = 0.5;
 
 Quat4f qCamera = Quat4fIdentity;
 
@@ -82,9 +86,31 @@ void draw();
 void loop( int niters );
 
 void setup(){
-
-
     // ==== Init eFF CLC-FGO
+    light_dir.normalize();
+
+    object1 = new GLObject( );
+    object1->draw_mode = GL_TRIANGLE_STRIP;
+	object1->nVert   = 4;
+    object1->buffs[0].setup(0,2,GL_FALSE,&vertexes[0][0],'v'); // vertexes
+	object1->init();
+
+    //shClear=new Shader();
+	//shClear->init( "common_resources/shaders/plain_vert.glslv", "common_resources/shaders/clear.glslf" );
+
+	shWf=new Shader();
+	//shWf->init( "common_resources/shaders/plain_vert.glslv", "common_resources/shaders/CLCFGO.glslf" );
+	shWf->init( "common_resources/shaders/plain_vert.glslv", "common_resources/shaders/CLCFGO_dens.glslf" );
+	//shWf->init( "common_resources/shaders/plain_vert.glslv", "common_resources/shaders/rayMarchZero.glslf" );
+
+    shPot=new Shader();
+	shPot->init( "common_resources/shaders/plain_vert.glslv", "common_resources/shaders/CLCFGO_pot.glslf" );
+
+	//   From test_Atoms.cpp
+    //char* str_glslv_Instance3D     = filetobuf( "common_resources/shaders/Instance3D.glslv"  );
+    //char* str_glslf_Sphere3D       = filetobuf( "common_resources/shaders/Sphere3D.glslf"    );
+    //char* str_glslf_Sphere3D_depth = replaceStr( str_glslf_Sphere3D, "#define CUSTOM_DEPTH_0", "#define CUSTOM_DEPTH_1");
+
 
     //eff.loadFromFile( "data/H2.fgo", true);
     eff.loadFromFile( "inputs/H2.fgo", true);
@@ -104,7 +130,7 @@ void setup(){
 
     eff.iPauliModel = 0;
 
-
+    /*
     {
         // MO 0
         float sz=0.5;
@@ -115,22 +141,12 @@ void setup(){
         eff.ecoef[2]= 1.0; eff.epos[2].set(-l,-1.,0.);  eff.esize[2] = sz;
         eff.ecoef[3]=-1.0; eff.epos[3].set( l,-1.,0.);  eff.esize[3] = sz;
     }
+    */
 
-    light_dir.normalize();
+    eff.printAtoms();
+    eff.printElectrons();
 
-
-    object1 = new GLObject( );
-    object1->draw_mode = GL_TRIANGLE_STRIP;
-	object1->nVert   = 4;
-    object1->buffs[0].setup(0,2,GL_FALSE,&vertexes[0][0],'v'); // vertexes
-	object1->init();
-
-    shClear=new Shader();
-	shClear->init( "common_resources/shaders/plain_vert.glslv", "common_resources/shaders/clear.glslf" );
-
-	shader1=new Shader();
-	shader1->init( "common_resources/shaders/plain_vert.glslv", "common_resources/shaders/CLCFGO.glslf" );
-	//shader1->init( "common_resources/shaders/plain_vert.glslv", "common_resources/shaders/rayMarchZero.glslf" );
+    //exit(0);
 
 }
 
@@ -141,11 +157,13 @@ void draw(){
     glClearColor(1.0, 1.0, 1.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 
-    //double E = eff.eval();
-    //float F2 = eff.moveGD(dt);
+    double E = eff.eval();
+    float F2 = eff.moveGD(dt);
 
-    //bool bAlphaBlend = true;
-    bool bAlphaBlend = false;
+    GLuint uloc;
+
+    bool bAlphaBlend = true;
+    //bool bAlphaBlend = false;
     if(bAlphaBlend){
         glDisable( GL_DEPTH_TEST );
         glEnable(GL_BLEND);
@@ -159,36 +177,69 @@ void draw(){
     qCamera.toMatrix(mouseMat);
     camPos = lookAt  + mouseMat.c * -5.;
 
-    GLuint uloc;
+    {
+    shPot->use();
+    uloc = glGetUniformLocation( shPot->shaderprogram, "iso" );	        glUniform1fv(uloc, 1, &isoV    );
+    uloc = glGetUniformLocation( shPot->shaderprogram, "zoom" );	    glUniform1fv(uloc, 1, &zoom     );
+    uloc = glGetUniformLocation( shPot->shaderprogram, "lookAt" );	    glUniform3fv(uloc, 1, (float*)&lookAt      );
+    uloc = glGetUniformLocation( shPot->shaderprogram, "camPos" );	    glUniform3fv(uloc, 1, (float*)&camPos      );
+    uloc = glGetUniformLocation( shPot->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, (float*)&resolution  );
+    uloc = glGetUniformLocation( shPot->shaderprogram, "light_dir" );	glUniform3fv(uloc, 1, (float*)&light_dir   );
+    uloc = glGetUniformLocation( shPot->shaderprogram, "natoms"  );     glUniform1iv(uloc, 1, &eff.natom );
+    GLuint uloc_atoms  = glGetUniformLocation( shWf->shaderprogram, "atoms"   );
+    GLuint uloc_coefs  = glGetUniformLocation( shWf->shaderprogram, "coefs"   );
+    GLuint uloc_color  = glGetUniformLocation( shWf->shaderprogram, "color"   );
+    Quat4f atoms[eff.natom];
+    Quat4f coefs[eff.natom];
+    Vec3f color={0.5,0.5,0.5}; //Draw::color_of_hash(i*4546+544+i,color);
+    glUniform3fv(uloc_color, 1, (float*)&color  );
+    //printf( "natom %i \n", eff.natom );
+    for(int i=0; i<eff.natom; i++){
+        atoms[i].f = (Vec3f)eff.apos[i];
+        atoms[i].e = eff.aQsize[i];
+        coefs[i].f = Vec3fZero; // ToDo : we can use this for Pauli-repulsion coeficients
+        coefs[i].e = eff.aQs[i];
+        //atoms[j].set(j*0.25,0,0,0.1);
+        //coefs[j].set(0,0,0,1.0 - 2*(j%2) );
+    }
+    glUniform4fv(uloc_atoms, natoms, (float*)atoms );
+    glUniform4fv(uloc_coefs, natoms, (float*)coefs );
+    glEnableVertexAttribArray(0);
+    object1->draw();
+    }
+
 
     //shClear->use();
-    //uloc = glGetUniformLocation( shader1->shaderprogram, "iso" );	        glUniform1fv(uloc, 1, &iso     );
-    //uloc = glGetUniformLocation( shader1->shaderprogram, "zoom" );	        glUniform1fv(uloc, 1, &zoom     );
+    //uloc = glGetUniformLocation( shWf->shaderprogram, "iso" );	        glUniform1fv(uloc, 1, &iso     );
+    //uloc = glGetUniformLocation( shWf->shaderprogram, "zoom" );	        glUniform1fv(uloc, 1, &zoom     );
     //object1->draw();
 
-    shader1->use();
-    uloc = glGetUniformLocation( shader1->shaderprogram, "iso" );	        glUniform1fv(uloc, 1, &iso     );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "zoom" );	        glUniform1fv(uloc, 1, &zoom     );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "lookAt" );	    glUniform3fv(uloc, 1, (float*)&lookAt      );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "camPos" );	    glUniform3fv(uloc, 1, (float*)&camPos      );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, (float*)&resolution  );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "light_dir" );	    glUniform3fv(uloc, 1, (float*)&light_dir   );
-    uloc = glGetUniformLocation( shader1->shaderprogram, "natoms"  );       glUniform1iv(uloc, 1, &eff.perOrb );
-    GLuint uloc_atoms  = glGetUniformLocation( shader1->shaderprogram, "atoms"   );
-    GLuint uloc_coefs  = glGetUniformLocation( shader1->shaderprogram, "coefs"   );
+    // Wave-Functions
+    {
+    shWf->use();
+    uloc = glGetUniformLocation( shWf->shaderprogram, "iso" );	        glUniform1fv(uloc, 1, &isoWf     );
+    uloc = glGetUniformLocation( shWf->shaderprogram, "zoom" );	        glUniform1fv(uloc, 1, &zoom     );
+    uloc = glGetUniformLocation( shWf->shaderprogram, "lookAt" );	    glUniform3fv(uloc, 1, (float*)&lookAt      );
+    uloc = glGetUniformLocation( shWf->shaderprogram, "camPos" );	    glUniform3fv(uloc, 1, (float*)&camPos      );
+    uloc = glGetUniformLocation( shWf->shaderprogram, "resolution" );	glUniform2fv(uloc, 1, (float*)&resolution  );
+    uloc = glGetUniformLocation( shWf->shaderprogram, "light_dir" );	    glUniform3fv(uloc, 1, (float*)&light_dir   );
+    uloc = glGetUniformLocation( shWf->shaderprogram, "natoms"  );       glUniform1iv(uloc, 1, &eff.perOrb );
+    GLuint uloc_atoms  = glGetUniformLocation( shWf->shaderprogram, "atoms"   );
+    GLuint uloc_coefs  = glGetUniformLocation( shWf->shaderprogram, "coefs"   );
+    GLuint uloc_color  = glGetUniformLocation( shWf->shaderprogram, "color"   );
     Quat4f atoms[eff.perOrb];
     Quat4f coefs[eff.perOrb];
     for(int i=0; i<eff.nOrb; i++){
     //for(int i=0; i<1; i++){
+        Vec3f color; Draw::color_of_hash(i*4546+544+i,color);
+        glUniform3fv(uloc_color, 1, (float*)&color  );
         int io0 = eff.getOrbOffset(i);
         //for(int j=0; j<eff.perOrb; j++){
         for(int j=0; j<2; j++){
-
             atoms[j].f = (Vec3f)eff.epos [io0+j];
             atoms[j].e = eff.esize[io0+j];
             coefs[j].f = Vec3fZero;
             coefs[j].e = eff.ecoef[io0+j];
-
             //atoms[j].set(j*0.25,0,0,0.1);
             //coefs[j].set(0,0,0,1.0 - 2*(j%2) );
         }
@@ -197,7 +248,7 @@ void draw(){
         glEnableVertexAttribArray(0);
         object1->draw();
     }
-
+    }
     SDL_GL_SwapWindow(window);
     //redraw = false;
 

@@ -14,6 +14,43 @@
 
 namespace Draw{
 
+
+    inline void setRGB( uint32_t i ){
+        constexpr float inv255 = 1.0f/255.0f;
+        //glColor3f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
+        glColor3f( ((i>>16)&0xFF)*inv255, ((i>>8)&0xFF)*inv255, (i&0xFF)*inv255  );
+    };
+
+    inline void setRGB( uint32_t i, Vec3f& color ){
+        constexpr float inv255 = 1.0f/255.0f;
+        //glColor3f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
+        color.set( ((i>>16)&0xFF)*inv255, ((i>>8)&0xFF)*inv255, (i&0xFF)*inv255  );
+    };
+
+    inline void setRGBA( uint32_t i ){
+        constexpr float inv255 = 1.0f/255.0f;
+        glColor4f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255, ((i>>24)&0xFF)*inv255 );
+    };
+
+    /*
+    void Draw::setRGBA( uint32_t i, Quat4f& color ){
+        constexpr float inv255 = 1.0f/255.0f;
+        color.set( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255, ((i>>24)&0xFF)*inv255 );
+    };
+    */
+
+    inline void color_of_hash( int i ){
+        //constexpr float inv255 = 1.0f/255.0f;
+        int h = hash_Wang( i );
+        Draw::setRGB( h );
+        //glColor3f( (h&0xFF)*inv255, ((h>>8)&0xFF)*inv255, ((h>>16)&0xFF)*inv255 );
+    };
+
+    inline void color_of_hash( int i, Vec3f& color ){
+        int h = hash_Wang( i );
+        Draw::setRGB( h, color );
+    };
+
     constexpr int     ncolors = 5;
     //static uint32_t   colors_rainbow[ncolors] = { 0xFF000000, 0xFFFF0000, 0xFF00FF00, 0xFF00FFFF, 0xFFFFFFFF };
     //static uint32_t   colors_rainbow[ncolors]   = { 0xFF000000, 0xFF0000FF, 0xFF00FF00, 0xFF00FFFF, 0xFFFFFFFF };
@@ -22,10 +59,10 @@ namespace Draw{
     static uint32_t   colors_rainbow[ncolors]   = { 0xFF000000, 0xFFFF0000, 0xFF8000FF, 0xFF00FFFF, 0xFFFFFFFF };
     static uint32_t   colors_RWB    [ncolors]   = { 0xFFFF0000, 0xFFFFFF00, 0xFFFFFFFF, 0xFF00FFFF, 0xFF0000FF };
 
-    void setRGB ( uint32_t i );
-    void setRGBA( uint32_t i );
-    void setRGB ( uint32_t i, Vec3f& color );
-    void setRGBA( uint32_t i, Vec3f& color );
+    //void setRGB ( uint32_t i );
+    //void setRGBA( uint32_t i );
+    //void setRGB ( uint32_t i, Vec3f& color );
+    //void setRGBA( uint32_t i, Vec3f& color );
 
     void      colorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );
     uint32_t icolorScale( double d, int ncol=ncolors, const uint32_t * colors=&colors_rainbow[0] );

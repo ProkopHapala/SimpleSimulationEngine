@@ -3,42 +3,6 @@
 
 #include "Draw.h"  // THE HEADER
 
-void Draw::setRGB( uint32_t i ){
-	constexpr float inv255 = 1.0f/255.0f;
-	//glColor3f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
-	glColor3f( ((i>>16)&0xFF)*inv255, ((i>>8)&0xFF)*inv255, (i&0xFF)*inv255  );
-};
-
-void Draw::setRGB( uint32_t i, Vec3f& color ){
-	constexpr float inv255 = 1.0f/255.0f;
-	//glColor3f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255 );
-	color.set( ((i>>16)&0xFF)*inv255, ((i>>8)&0xFF)*inv255, (i&0xFF)*inv255  );
-};
-
-void Draw::setRGBA( uint32_t i ){
-	constexpr float inv255 = 1.0f/255.0f;
-	glColor4f( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255, ((i>>24)&0xFF)*inv255 );
-};
-
-/*
-void Draw::setRGBA( uint32_t i, Quat4f& color ){
-	constexpr float inv255 = 1.0f/255.0f;
-	color.set( (i&0xFF)*inv255, ((i>>8)&0xFF)*inv255, ((i>>16)&0xFF)*inv255, ((i>>24)&0xFF)*inv255 );
-};
-*/
-
-void Draw::color_of_hash( int i ){
-	//constexpr float inv255 = 1.0f/255.0f;
-	int h = hash_Wang( i );
-	Draw::setRGB( h );
-	//glColor3f( (h&0xFF)*inv255, ((h>>8)&0xFF)*inv255, ((h>>16)&0xFF)*inv255 );
-};
-
-void Draw::color_of_hash( int i, Vec3f& color ){
-    int h = hash_Wang( i );
-    Draw::setRGB( h, color );
-};
-
 void Draw::colorScale( double d, int ncol, const uint32_t * colors ){
     constexpr float inv255 = 1.0f/255.0f;
     d*=(ncol-1);
