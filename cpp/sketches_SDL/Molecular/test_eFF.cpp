@@ -678,7 +678,7 @@ bool checkFinite(const EFF& ff, double vmin, double vmax ){
 
 void TestAppRARFF::draw(){
     //printf( " ==== frame %i \n", frameCount );
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
@@ -776,13 +776,15 @@ void TestAppRARFF::draw(){
     }
 
     //glColor3f(1.0,1.0,1.0);
+    glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //glBlendFunc(GL_DST_COLOR, GL_SRC_ALPHA);
     for(int i=0; i<ff.ne; i++){
         //printf( "epos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
         //if(ff.espin[i]>0){ glColor3f(0.0,0.5,1.0); }else{ glColor3f(1.0,0.5,0.0); };
-        if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, 0.2); }else{ glColor4f(1.0,0.0,0.0, 0.2 ); };
+        float alpha=0.1;
+        if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, alpha); }else{ glColor4f(1.0,0.0,0.0, alpha); };
         Draw3D::drawShape( oglSph, ff.epos[i], Mat3dIdentity*ff.esize[i],  false );
         //Draw3D::drawSphere_oct(3,ff.esize[i],ff.epos[i]);
 

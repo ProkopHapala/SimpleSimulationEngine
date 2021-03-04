@@ -94,19 +94,30 @@ void testColorOfHash(){
     }
 }
 
-void drawSolver(const CLCFGO& solver, float fsc ){
+void drawSolver(const CLCFGO& solver, int oglSph, float fsc=1.0, float asc=1.0, float alpha=0.1 ){
+    glEnable(GL_DEPTH_TEST);
     glColor3f(0.,0.,0.);
     for(int i=0; i<solver.natom; i++){
         Vec3d p = solver.apos[i];
-        Draw3D::drawPointCross( p, solver.aPsize[i] );
+        Draw3D::drawPointCross( p, solver.aPsize[i]*asc );
         Draw3D::drawVecInPos( solver.aforce[i]*fsc, p );
     }
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for(int io=0; io<solver.nOrb; io++){
-        Draw::color_of_hash(io*15446+7545);
+        Vec3f clr;
+        Draw::color_of_hash(io*15446+7545,clr);
+        glColor4f(clr.x,clr.y,clr.z,0.1);
         for(int j=0; j<solver.perOrb; j++){
             int i = io*solver.perOrb+j;
             Vec3d p = solver.epos[i];
-            Draw3D::drawSphereOctLines(16, solver.esize[i], p, Mat3dIdentity, false );
+
+            //float alpha=0.1;
+            //if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, alpha); }else{ glColor4f(1.0,0.0,0.0, alpha); };
+
+            Draw3D::drawShape( oglSph, solver.epos[i], Mat3dIdentity*solver.esize[i],  false );
+            //Draw3D::drawSphereOctLines(16, solver.esize[i], p, Mat3dIdentity, false );
             Draw3D::drawVecInPos( solver.efpos[i]*fsc, p );
         }
     }
@@ -126,10 +137,12 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
     double dt;
 
     CLCFGO solver;
-
     Plot2D plot1;
 
-    int  ogl=0;
+    bool bDrawPlots   = true;
+    bool bDrawObjects = true;
+
+    int  ogl=0,oglSph=0;
     int  fontTex=0;
 
     virtual void draw   ();
@@ -240,7 +253,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     dt = 0.001;
     */
 
-
+    /*
     // ---- 2 electron 1 basis each in Soft Atom potential   (1a,2o,1b)
     //      natom  nOrb perOrb natypes
     solver.realloc( 1, 2, 1, 1 );
@@ -252,11 +265,15 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
         _.setElectron( 1,0, (Vec3d){  -0.3, 0.0, 0.0 }, 0.5, +1.0 );
     }
     dt = 0.001;
+    */
 
-
-    //solver.loadFromFile( "data/H2.fgo", true);
+    solver.loadFromFile( "data/H2.fgo", true);
     dt = 0.001;
     //exit(0);
+
+    solver.printAtoms();
+    solver.printElectrons();
+
 
     solver.turnAllSwitches(false);
     solver.bNormalize     = 1;
@@ -302,29 +319,34 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     plot1.update();
     plot1.render();
 
+    oglSph=Draw::list(oglSph);
+    Draw3D::drawSphere_oct(4,1.0d,(Vec3d){0.,0.,0.});
+    glEndList();
+
 }
 
 void TestAppCLCFSF::draw(){
     //printf( " ==== frame %i \n", frameCount );
-    glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable( GL_DEPTH_TEST );
 
     //testColorOfHash();
     double E = solver.eval();
     float F2 = solver.moveGD(dt);
-    printf( "frame[%i] E %g |F| %g \n", frameCount, E, sqrt(F2) );
+    //printf( "frame[%i] E %g |F| %g \n", frameCount, E, sqrt(F2) );
 
-    drawSolver( solver, 1.0 );
-    plotOrb( solver, plot1.lines[3], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
-    testDerivsTotal( 0, 0, 0, solver, plot1, 0 );
-    plot1.update();
-    plot1.render();
-    //delay=500;
+    if(bDrawObjects)drawSolver( solver, oglSph );
+    if(bDrawPlots){
+        plotOrb( solver, plot1.lines[3], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
+        testDerivsTotal( 0, 0, 0, solver, plot1, 0 );
+        plot1.update();
+        plot1.render();
+        //glCallList( ogl );
+        //glDisable(GL_DEPTH_TEST);
+        plot1.view();
+    }
 
-    //glCallList( ogl );
-    //glDisable(GL_DEPTH_TEST);
-    plot1.view();
 };
 
 
@@ -343,8 +365,12 @@ void TestAppCLCFSF::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                case SDLK_p:  first_person = !first_person; break;
-                case SDLK_o:  perspective  = !perspective; break;
+                //case SDLK_p:  first_person = !first_person; break;
+                //case SDLK_o:  perspective  = !perspective; break;
+                case SDLK_p:  bDrawPlots   = !bDrawPlots;    break;
+                case SDLK_o:  bDrawObjects = !bDrawObjects;  break;
+                //case SDLK_a:    = !perspective; break;
+
                 case SDLK_SPACE: bRun = !bRun;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
