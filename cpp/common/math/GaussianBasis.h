@@ -122,24 +122,35 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
     double ir   = 1./r; //(r+1.e-8);
     double is   = 1./s; //(s+1.e-8);
-
-
-
     double r_s  = r*is;
     double r_2s = M_SQRT2 * r_s;
     double e1   = ir * const_El_eVA;
-    double e2   = erf(  r_2s      );
+    double e2   = erf(  r_2s      );            // ToDo : this should be possible to compute together !!!
     double g    = exp( -r_2s*r_2s ) * const_F2;
-
     double f1   = -e1*ir;
     double f2   = g*is;
     double e1f2 = e1*f2;
     fr = (f1*e2 + e1f2)*ir;
-    //fs =          e1f2 *r_s * is * M_SQRT1_2; // WARRNING : Not sure if there should be factor sqrt(2) 
+    //fs =          e1f2 *r_s * is * M_SQRT1_2; // WARRNING : Not sure if there should be factor sqrt(2)
     fs =          e1f2 *r_s * is;
-    //if(DEBUG_iter==DEBUG_log_iter) printf( "ir %g is %g e1 %g e2 %g g %g f1 %g f2 %g  fr %g fs %g \n", ir, is, e1, e2, g, f1, f2, fr, fs ); 
+    //if(DEBUG_iter==DEBUG_log_iter) printf( "ir %g is %g e1 %g e2 %g g %g f1 %g f2 %g  fr %g fs %g \n", ir, is, e1, e2, g, f1, f2, fr, fs );
     //printf( "Gauss::Coulomb r %g s %g E %g fr %g \n", r, s, e1*e2, fr ); // This works (same as in python)
     return e1 * e2;
+}
+
+
+inline double Coulomb( const Vec3d& Rij, double r2, double si, double sj, double qij, Vec3d& fp, double& fs ){
+    constexpr const double R2SAFE = 1.0e-8;
+    double r    = sqrt(r2 + R2SAFE);
+    double s2   = si*si + sj*sj;
+    double s    = sqrt(s2);
+    double fr;
+    double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
+    // --- Derivatives (Forces)
+    fp  = Rij*( fr * qij );   // use:   rhofP[i].add(fp);    rhofP[j].sub(fp);
+    fs *=            qij;     // use:   rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
+    //return e*qij;
+    return e;
 }
 
 
@@ -183,7 +194,7 @@ inline double product3D_s_deriv(
     double e1   = a2*a;
     double e2   = exp( -r2*is2 );
 
-    //if(DEBUG_iter==DEBUG_log_iter) printf( "r2 %g ss(%g,%g) a2 %g e1 %g e2 %g \n", r2, si, sj, a2, e1, e2 ); 
+    //if(DEBUG_iter==DEBUG_log_iter) printf( "r2 %g ss(%g,%g) a2 %g e1 %g e2 %g \n", r2, si, sj, a2, e1, e2 );
 
     double f1   = 3.*a  * (si2-sj2)*is4;
     double f2   = 2.*e2 * r2*is4;
@@ -228,10 +239,10 @@ inline double product3DDeriv( double si, Vec3d pi, double sj, Vec3d pj, Blob& ou
     return C;
 }
 
-inline void productBackForce( 
+inline void productBackForce(
     const Blob& fB, const PairDeriv& Ds,
-    Vec3d Rij, double cij,  
-    Vec3d& Fxi, Vec3d& Fxj, double& fsi, double& fsj  
+    Vec3d Rij, double cij,
+    Vec3d& Fxi, Vec3d& Fxj, double& fsi, double& fsj
 ){
     //if(DEBUG_iter==DEBUG_log_iter) printf( "cij %g dEdQ %g Fx %g \n", cij, dEdQ, Fp.x );
     fsi += ( fB.pos.dot( Ds.dXsi ) + fB.size*Ds.dSsi + fB.charge*Ds.dCsi*cij );
@@ -247,7 +258,7 @@ inline void productBackForce(
 
 struct PairDerivs{
     double C;
-    double s;    
+    double s;
     Vec3d  p;
     double dSsi,dSsj;
     Vec3d  dXsi,dXsj;
@@ -264,9 +275,9 @@ struct PairDerivs{
         );
     }
 
-    inline void backForce( 
-        Vec3d Rij, double cij, double dEdQ, Vec3d Fp, double Fs,   
-        Vec3d& Fxi, Vec3d& Fxj, double& fsi, double& fsj  
+    inline void backForce(
+        Vec3d Rij, double cij, double dEdQ, Vec3d Fp, double Fs,
+        Vec3d& Fxi, Vec3d& Fxj, double& fsi, double& fsj
     ){
         //if(DEBUG_iter==DEBUG_log_iter) printf( "cij %g dEdQ %g Fx %g \n", cij, dEdQ, Fp.x );
         fsi += ( Fp.dot( dXsi ) + Fs*dSsi + dEdQ*dCsi*cij );

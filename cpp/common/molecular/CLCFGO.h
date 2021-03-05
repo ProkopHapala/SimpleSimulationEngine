@@ -635,25 +635,22 @@ constexpr static const Quat4d default_AtomParams[] = {
         double qj = rhoQ[j];
         double sj = rhoS[j];
 
-        double qij = qi*qj;
-
         Vec3d Rij = pj-pi;
         double r2 = Rij.norm2();
-
+        Vec3d fp; double fs;
+        double E = Gauss::Coulomb( Rij, r2, si, sj, qi*qj, fp, fs );
+        /*
         double r    = sqrt(r2 + R2SAFE);
         double s2   = si*si + sj*sj;
         double s    = sqrt(s2);
-
         double fr,fs;
         //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
-
         //double E  = Gauss::Coulomb( r, s*2, fr, fs );   // Q :  Should there be the constant s*2 ????
         double E  = Gauss::Coulomb( r, s, fr, fs );       // WARRNING  :  removed the contant s*2 to s  ... is it correct ?
-
         //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
-
         Vec3d fp = Rij*(fr*qij);
         fs *= qij;
+        */
         rhofP[i].add(fp);   rhofP[j].sub(fp);
         rhofS[i] -= fs*si;  rhofS[j] -= fs*sj; // Q: ??? Should not this be switched (i<->j)  rhofS[i] -= fs*sj instead of rhofS[i] -= fs*si ???
         rhofQ[i] += E*qj;   rhofQ[j] += E*qi;  // ToDo : need to be made more stable ... different (qi,qj)
@@ -680,31 +677,31 @@ constexpr static const Quat4d default_AtomParams[] = {
                 Vec3d  pj = rhoP[j];
                 Vec3d Rij = pj-pi;
                 double r2 = Rij.norm2();
-                //if(r2>Rcut2) continue;
-
+                //if(r2>Rcut2) continue;    // ToDo : do this check
                 double qj = rhoQ[j];
                 double sj = rhoS[j];
-
+                Vec3d fp; double fs,qij = qi*qj;
+                double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
+                /*
                 double r    = sqrt(r2 + R2SAFE);
                 double s2   = si*si + sj*sj;
                 double s    = sqrt(s2);
-
                 double qij = qi*qj;
                 double fr,fs;
                 // see    InteractionsGauss.h :: addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, double qq ){
                 //double Eqq  = CoulombGauss( r, s*2, fr, fs, qij );
                 //fs*=4;
-
                 double E  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
-
                 // --- Derivatives (Forces)
                 Vec3d fp = Rij*(fr * qij);
                 fs       *=           qij;
                 //fs      *= M_SQRT1_2 * qij;
+                */
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
                 rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
                 Ecoul    += E*qij;
+
 
                 if(DEBUG_iter=DEBUG_log_iter){
                     //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
@@ -1193,6 +1190,9 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         //if(r2>Rcut2) continue;
         double qj = rhoQ[j];
         double sj = rhoS[j];
+        Vec3d fp; double fs,qij=qi*qj;
+        double e = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
+        /*
         double r    = sqrt(r2 + R2SAFE);
         double s2   = si*si + sj*sj;
         double s    = sqrt(s2);
@@ -1203,6 +1203,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         Vec3d fp = Rij*( fr * qij );
         fs       *=           qij;
         //fs      *= M_SQRT1_2 * qij;
+        */
         aforce[ia].add(fp);
         rhofP [j] .sub(fp);
         rhofS [j] += fs*sj;
@@ -1306,6 +1307,37 @@ double evalAA(){
     //          for kbas in basis_decomposition[j]:
     //              for pos in grid:
     //                  Iij += kbas(pos)^2 * wf_j[pos]^2
+
+    double atomsPotAtPoint( const Vec3d& pos, double s, double Q )const{
+        //Gauss::PairDeriv dBs[perOrb];
+        //double            Ss[perOrb];
+        double E =0;
+        Vec3d fp; double fs;
+        for(int ia=0; ia<natom; ia++){
+            /*
+            if(bEvalAEPauli){
+                Vec3d pij; double sij;
+                double S = Gauss::product3D_s_new( aPsize[ia], apos[ia], s, pos, sij, pij );
+                E += aPcoef[ia]*S*S;
+            }
+            */
+            if(bEvalAECoulomb){
+                Vec3d Rij = pos - apos[ia];
+                // Coulomb( const Vec3d& Rij, double r2, double si, double sj, double qij, Vec3d& fp, double& fs ){
+                E += Gauss::Coulomb( Rij, Rij.norm2(), aQsize[ia], s, 1, fp, fs )*aQs[ia]*Q;
+            }
+        }
+        return E;
+    }
+
+    double* atomsPotAtPoints( int n, Vec3d* ps, double* out=0, double s=0.0, double Q=1.0 )const{
+        if(out==0){ out = new double[n]; };
+        for(int i=0; i<n; i++){
+            out[i] = atomsPotAtPoint( ps[i], s, Q );
+            //printf( "atomsPotAtPoints[%i/%i] %g @(%g,%g,%g) Q[0] %g \n", i, n, out[i], ps[i].x,ps[i].y,ps[i].z, aQs[0] );
+        }
+        return out;
+    }
 
     double orbAtPoint( int io, const Vec3d& pos )const{
         int i0     = getOrbOffset( io );

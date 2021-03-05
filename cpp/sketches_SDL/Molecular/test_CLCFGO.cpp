@@ -278,8 +278,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     solver.turnAllSwitches(false);
     solver.bNormalize     = 1;
     solver.bEvalAE        = 1;
-    //solver.bEvalAECoulomb = 1;
-    //solver.bEvalCoulomb   = 1;
+    solver.bEvalAECoulomb = 1;
+    solver.bEvalCoulomb   = 1;
     solver.bEvalPauli     = 1;
     solver.bEvalKinetic   = 1;
 
@@ -312,8 +312,14 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //GridShape grid; grid.init( 5.0, 0.2, false);
     //solver.orb2xsf( grid, 0, "temp/orb0.xsf" );
 
-    testDerivsTotal( 100, -1.0, 0.05, solver, plot1 );
-    plot1.xsharingLines(1, 100, -3.0, 0.1 );
+    //testDerivsTotal( 100, -1.0, 0.05, solver, plot1 );
+    //plot1.xsharingLines(1, 100, -3.0, 0.1 );
+    //plot1.xsharingLines( 2, 100,   -3.0, 0.1 );
+
+    plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFF0000FF, "Vatom" ) );
+    plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFFFF0000, "Orb1"     ) );
+    plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFFFF8000, "Orb2"     ) );
+
 
     plot1.scaling.y=0.05;
     plot1.update();
@@ -338,8 +344,11 @@ void TestAppCLCFSF::draw(){
 
     if(bDrawObjects)drawSolver( solver, oglSph );
     if(bDrawPlots){
-        plotOrb( solver, plot1.lines[3], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
-        testDerivsTotal( 0, 0, 0, solver, plot1, 0 );
+        plotAtomsPot( solver, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0 );
+        plotOrb     ( solver, plot1.lines[1], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
+        plotOrb     ( solver, plot1.lines[2], 1, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
+        //testDerivsTotal( 0, 0, 0, solver, plot1, 0 );
+        plot1.bGrid=false;
         plot1.update();
         plot1.render();
         //glCallList( ogl );
