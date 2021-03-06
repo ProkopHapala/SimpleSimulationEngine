@@ -674,6 +674,11 @@ void start(double dist_){
     defender.advanced = 0;
 }
 
+void clear(){
+    attacker.composition.units.clear();
+    defender.composition.units.clear();
+}
+
 /*
 // Maybe call it rather Fire-Attractivity or Fire-Magnet
 double assembleTargetAttraction( const BattleField& conds, double dist ){
