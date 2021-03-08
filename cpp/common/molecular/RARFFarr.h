@@ -81,12 +81,13 @@ inline void overlapFE(double r, double amp, double beta, double& e, double& fr )
 }
 
 struct RigidAtomType{
+    int id = -1;
+    char name[4]="C";
     int    nbond = N_BOND_MAX;  // number bonds
-
     double rbond0 =  0.5;
     double aMorse =  4.0;
     double bMorse = -0.7;
-
+    // TODO : use REQs here ?
     double Epz    =  0.5;
     double c6     = -15.0;
     double R2vdW  =  8.0;
@@ -109,6 +110,18 @@ struct RigidAtomType{
         printf( "c6     %g r2vdW  %g\n", c6, R2vdW );
         //exit(0);
     }
+
+    //RigidAtomType()=default;
+    //RigidAtomType():nbond(nbond_),rbond(rbond_),aMorse(){};
+
+};
+
+struct CapType{
+    int    id = -1;
+    char name[4]="H";
+    double rbond0 =  1.0;
+    double RvdW   =  3.0;
+    double EvdW   =  0.01;
 };
 
 /*
@@ -151,6 +164,7 @@ struct RigidAtom{
 class RARFF2arr{ public:
 
     bool bRepelCaps = true;
+    bool bDonorAcceptorCap = false;
 
     double lcap       =   1.0;
     double aMorseCap  =   1.0;
@@ -171,7 +185,7 @@ class RARFF2arr{ public:
     //RigidAtom*     atoms =0;
 
     // atom properties
-    RigidAtomType** types = 0;
+    const RigidAtomType** types = 0;
     Vec3d*  apos   = 0;
     Quat4d* qrots  = 0;
     Vec3d*  aforce = 0;
@@ -231,7 +245,7 @@ class RARFF2arr{ public:
     void resize( int natom_new ){
         int natom_=natom;
         // save old
-        RigidAtomType** types_ = types;
+        const RigidAtomType** types_ = types;
         Vec3d*  apos_   = apos;
         Quat4d* qrots_  = qrots;
         Vec3d*  aforce_ = aforce;
@@ -381,6 +395,7 @@ class RARFF2arr{ public:
                 const Vec3d& hj = hjs[jb];
                 Vec3d& fj = fjs[jb];
 
+                if( bDonorAcceptorCap && capi && (capjs[jb]>=0) ) continue;
 
                 if( bRepelCaps && capi && (capjs[jb]>=0) ){ // repulsion of capping atoms
                     Vec3d pi = apos[ia] + hi*lcap;
@@ -461,7 +476,7 @@ class RARFF2arr{ public:
         double E = 0;
         for(int i=0; i<natom; i++){
             if(ignoreAtoms[i])continue;
-            RigidAtomType& typei = *types[i];
+            const RigidAtomType& typei = *types[i];
             Vec3d           pi   = apos[i];
             for(int j=i+1; j<natom; j++){
             //for(int j=0; j<natom; j++){
@@ -484,7 +499,7 @@ class RARFF2arr{ public:
         int nb   = natom*N_BOND_MAX;
         for(int i=0; i<nb;   i++){
             ebonds  [i]=0;
-            bondCaps[i]=-1;
+            //bondCaps[i]=-1;
             fbonds  [i].set(0.0);
         }
     }
@@ -500,8 +515,8 @@ class RARFF2arr{ public:
         int nval = natom*N_BOND_MAX*3;  for(int i=0; i<nval; i++){ ((double*)fbonds)[i]=0;}
     }
 
-    double evalF2rot(){ double F2=0; for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; F2+=torqs [i].norm2(); }; return F2; }
-    double evalF2pos(){ double F2=0; for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; F2+=aforce[i].norm2(); }; return F2; }
+    double evalF2rot()const{ double F2=0; for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; F2+=torqs [i].norm2(); }; return F2; }
+    double evalF2pos()const{ double F2=0; for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; F2+=aforce[i].norm2(); }; return F2; }
 
     inline void projectAtomBons(int ia){
         qrots[ia].rotateVectors( N_BOND_MAX, types[ia]->bh0s, hbonds+ia*N_BOND_MAX, false );
@@ -511,7 +526,7 @@ class RARFF2arr{ public:
         for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; projectAtomBons(i); }
     }
 
-    inline Vec3d bondPos( int i, double sc=1.0 ){
+    inline Vec3d bondPos( int i, double sc=1.0 )const{
         //int i = ia*N_BOND_MAX + j;
         int ia = i/N_BOND_MAX;
         double R = types[ia]->rbond0;
@@ -605,6 +620,95 @@ class RARFF2arr{ public:
         }
         return n;
     }
+
+    int saveXYZ(const char* fname, CapType* capTypes )const{
+        printf( "RARFFarr::saveXYZ(%s) \n", fname );
+        FILE * pFile = fopen(fname,"w");
+        int na = 0;
+        for(int i=0; i<natom; i++){ if(!ignoreAtoms[i])na++; }
+        fprintf( pFile, "        \n" );
+        fprintf( pFile, "#comment \n" );
+        int n = 0;
+        for(int ia=0; ia<natom; ia++){
+            if(ignoreAtoms[ia])continue;
+            int i0   = ia*N_BOND_MAX;
+            fprintf( pFile, "%s %3.6f %3.6f %3.6f \n", types[ia]->name, apos[ia].x,apos[ia].y,apos[ia].z ); n++;
+            for(int j=0; j<N_BOND_MAX; j++){
+                int icap = bondCaps[i0+j];
+                if(icap>=0){
+                    capTypes[icap];
+                    CapType* ct = &capTypes[icap];
+                    Vec3d p = apos[ia] + hbonds[i0+j]*ct->rbond0;
+                    fprintf( pFile, "%s %3.6f %3.6f %3.6f \n", capTypes[icap].name, p.x,p.y,p.z ); n++;
+                }
+            }
+        }
+        fseek(pFile, 0L, SEEK_SET);
+        fprintf( pFile, "%4i ", n ); // write number of atoms at the beggining of file
+        fclose(pFile);
+        return natom;
+    }
+
+    int save(const char* fname )const{
+        printf( "RARFFarr::save(%s) \n", fname );
+        FILE * pFile = fopen(fname,"w");
+        int na = 0;
+        for(int i=0; i<natom; i++){ if(!ignoreAtoms[i])na++; }
+        fprintf( pFile, "%i %i \n", na, N_BOND_MAX );
+        for(int ia=0; ia<natom; ia++){
+            if(ignoreAtoms[ia])continue;
+            int i0 = ia*N_BOND_MAX;
+            int nret = fprintf( pFile, "%i   %3.6f %3.6f %3.6f    %3.6f %3.6f %3.6f %3.6f   %i %i %i %i  \n", types[ia]->id,
+                    apos [ia].x,apos [ia].y,apos [ia].z,
+                    qrots[ia].x,qrots[ia].y,qrots[ia].z,qrots[ia].w,
+                    bondCaps[i0+0],bondCaps[i0+1],bondCaps[i0+2],bondCaps[i0+3]
+                );
+        }
+        fclose(pFile);
+        return natom;
+    }
+
+    int load(const char* fname, const RigidAtomType** typeList ){
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){ printf("ERROR RARFFarr::load() cannot find %s\n", fname ); return -1; }
+        char buff[1024];
+        char * line;
+        int nl,nba,na;
+        line = fgets( buff, 1024, pFile ); printf("%s",line);
+        sscanf( line, "%i %i \n", &na, &nba ); printf( "na %i nba %i \n", na, nba );
+        if(nba!=N_BOND_MAX){ printf("ERROR RARFFarr::load() nba(%i)!=N_BOND_MAX(%i)\n", nba, N_BOND_MAX ); return -1; }
+        //allocate(natoms,nbonds);
+        resize( na );
+        //line = fgets( buff, 1024, pFile ); // comment
+        int ityp;
+        for(int ia=0; ia<natom; ia++){
+            int i0 = ia*N_BOND_MAX;
+            line = fgets( buff, 1024, pFile );  printf("%s",line);
+            Vec3d  p;
+            Quat4d q;
+            Quat4i cp;
+            int nret = sscanf( line, "%i   %lf %lf %lf    %lf %lf %lf %lf   %i %i %i %i", &ityp, &p.x,&p.y,&p.z, &q.x,&q.y,&q.z,&q.w, &cp.x,&cp.y,&cp.z,&cp.w    );
+            apos[ia]=p; qrots[ia]=q;  (*((Quat4i*)(bondCaps+i0)))=cp;
+            /*
+            int nret = sscanf( line, "%i    %lf %lf %lf   %i %i %i %i    %lf %lf %lf  ", ityp,
+            &apos [ia].x,&apos [ia].y,&apos [ia].z,
+            &qrots[ia].x,&qrots[ia].y,&qrots[ia].z,
+            &bondCaps[i0+0],&bondCaps[i0+1],&bondCaps[i0+2],&bondCaps[i0+3]    );
+            qrots[ia].normalizeW();
+            */
+            types[ia] = typeList[ityp];
+            printf( "atom[%i] %i   p(%g,%g,%g)    qrot(%g,%g,%g)  caps(%i,%i,%i,%i)\n", ia, ityp,
+                apos [ia].x,apos [ia].y,apos [ia].z,
+                qrots[ia].x,qrots[ia].y,qrots[ia].z,
+                bondCaps[i0+0],bondCaps[i0+1],bondCaps[i0+2],bondCaps[i0+3] );
+            ignoreAtoms[ia]=false;
+        }
+        cleanAux();
+        projectBonds();
+        fclose(pFile);
+        return natom;
+    }
+
 
 };
 

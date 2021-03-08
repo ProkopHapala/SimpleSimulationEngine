@@ -99,6 +99,11 @@ class Quat4T {
 		x *= inorm;    y *= inorm;    z *= inorm;   w *= inorm;
 		return norm;
     }
+    inline void normalizeW(){
+        double r2 = x*x + y*y + z*z;
+        if(r2>1){ printf( "ERROR Quat4<T>::normalizeW() r2>1\n"); exit(0); };
+        w = sqrt( 1-r2 );
+    }
 
     inline void checkNormalized( T D2 ){
         T r2 =  x*x + y*y + z*z + w*w;

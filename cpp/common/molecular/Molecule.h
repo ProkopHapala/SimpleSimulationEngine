@@ -364,6 +364,7 @@ class Molecule{ public:
             bond2atom[i].x--;
             bond2atom[i].y--;
         }
+        fclose(pFile);
         return natoms + nbonds;
     }
 
@@ -403,7 +404,7 @@ class Molecule{ public:
             }
             //printf( " i %i name %s ityp %i \n", i, at_name, atomType[i] );
         }
-
+        fclose(pFile);
         //printf( "atypNames.size() %i \n", atypNames->size() );
         //for ( auto element : *atypNames ){
 	    //    printf(  "atypNames[%s]-> %i \n", element.first.c_str(), element.second );
@@ -441,6 +442,7 @@ class Molecule{ public:
             printf(       "mol[%i] %i %lf %lf %lf  %lf    n", i,  atomType[i], pos[i].x,  pos[i].y,  pos[i].z,   REQs[i].z  );
             // atomType[i] = atomChar2int( ch );
         }
+        fclose(pFile);
         return natoms;
     }
 

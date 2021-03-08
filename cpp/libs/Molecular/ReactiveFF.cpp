@@ -91,7 +91,7 @@ void ralloc(int natom){
 }
 
 int*    getTypes (){ return (int*)   ff.types;  }
-double* getPoss  (){ return (double*)ff.poss;   }
+double* getPoss  (){ return (double*)ff.apos;   }
 double* getQrots (){ return (double*)ff.qrots;  }
 double* getHbonds(){ return (double*)ff.hbonds; }
 double* getEbonds(){ return (double*)ff.ebonds; }
