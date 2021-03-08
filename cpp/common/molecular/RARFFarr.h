@@ -41,11 +41,20 @@ where rij is distance  K = (ci.cj.cj) where ci=dot(hi,hij), cj=dot(hj,hij), cij=
 #define N_BOND_MAX 4
 #define R1SAFE    1e-8
 
+/*
 static const double sp3_hs[] = {
 -0.57735026919, -0.57735026919, -0.57735026919,
 +0.57735026919, +0.57735026919, -0.57735026919,
 -0.57735026919, +0.57735026919, +0.57735026919,
 +0.57735026919, -0.57735026919, +0.57735026919
+};
+*/
+
+static const double sp3_hs[] = {
+1.000000000000,  0.00000000000,  0.00000000000,
+-0.33380685923,  0.94264149109,  0.00000000000,
+-0.33380685923, -0.47132074554, -0.81635147794,
+-0.33380685923, -0.47132074554, +0.81635147794
 };
 
 static const double sp2_hs[] = {
@@ -72,7 +81,7 @@ inline void overlapFE(double r, double amp, double beta, double& e, double& fr )
 }
 
 struct RigidAtomType{
-    int    nbond = 4;  // number bonds
+    int    nbond = N_BOND_MAX;  // number bonds
 
     double rbond0 =  0.5;
     double aMorse =  4.0;
@@ -141,6 +150,8 @@ struct RigidAtom{
 
 class RARFF2arr{ public:
 
+    bool bRepelCaps = true;
+
     double lcap       =   1.0;
     double aMorseCap  =   1.0;
     double bMorseCap  =  -0.7;
@@ -197,8 +208,9 @@ class RARFF2arr{ public:
         for(int i=0; i<natom; i++){ ignoreAtoms[i]=false; }
     }
 
-    void realloc(int natom_){
-        natom=natom_;
+    void realloc(int natom_, int nbuff=0 ){
+        natomActive=natom_;
+        natom=natom_+nbuff;
         //_realloc(atoms,natom   );
         _realloc(types  ,natom);
         _realloc(apos   ,natom);
@@ -212,9 +224,9 @@ class RARFF2arr{ public:
         _realloc(hbonds ,natom*N_BOND_MAX);
         _realloc(fbonds ,natom*N_BOND_MAX);
         _realloc(bondCaps ,natom*N_BOND_MAX);
-        for(int i=0; i<natom; i++){ ignoreAtoms[i]=false; }
+        for(int i=0;      i<natom_; i++){ ignoreAtoms[i]=false; }
+        for(int i=natom_; i<natom;  i++){ ignoreAtoms[i]=true;  }
     }
-
 
     void resize( int natom_new ){
         int natom_=natom;
@@ -255,6 +267,7 @@ class RARFF2arr{ public:
             }
             ja++;
         }
+        cleanAux();
         natomActive=ja;
         for(int ia=ja; ia<natom; ia++){
             ignoreAtoms[ia] = true;
@@ -270,6 +283,7 @@ class RARFF2arr{ public:
         delete[] hbonds_;
         delete[] fbonds_;
         delete[] bondCaps_;
+        delete[] ignoreAtoms_;
     }
 
     bool tryResize( int nMaskMin=5, int nMaskMax=20, int nMaskGoal=10 ){
@@ -284,27 +298,30 @@ class RARFF2arr{ public:
         return false;
     }
 
-    void inserAtom( RigidAtomType* typ, const int* caps, const Vec3d& p, const Vec3d& dir, const Vec3d& up ){
+    int inserAtom( RigidAtomType* typ, const int* caps, const Vec3d& p, const Vec3d& dir, const Vec3d& up ){
         Mat3d m;
-        m.c=dir;
-        double r = m.c.normalize();
-        if(r<1e-3)return;
-        //m.b=up; m.b.makeOrthoU(m.c);
-        m.b.set_cross(up ,m.c); m.b.normalize();
-        m.a.set_cross(m.b,m.c); m.a.normalize();
+        //m.c=dir; double r = m.c.normalize();
+        m.a=dir; double r = m.a.normalize();
+        if(r<1e-3)return -1;
+        //m.b.set_cross(up ,m.c); m.b.normalize();
+        //m.a.set_cross(m.b,m.c); m.a.normalize();
+        m.b=up; m.b.makeOrthoU( m.a ); m.b.normalize();
+        m.c.set_cross(m.a,m.b);
         int ia=natomActive;
         if( ia>=natom ){ resize(natom+5); }
         natomActive++;
         ignoreAtoms[ia] = false;
         types[ia] = typ;
         apos [ia] = p;
-        qrots[ia].fromMatrix(m);
+        qrots[ia].fromMatrixT(m);
         vels [ia]  = Vec3dZero;
         omegas[ia] = Vec3dZero;
-        for(int j=0; j<4;j++){
+        for(int j=0; j<N_BOND_MAX;j++){
             int i = ia*N_BOND_MAX + j;
             bondCaps[i] = caps[j];
+            //printf( "caps[%i] %i \n", j, caps[j] );
         }
+        return ia;
     }
 
     // ======== Force Evaluation
@@ -365,7 +382,7 @@ class RARFF2arr{ public:
                 Vec3d& fj = fjs[jb];
 
 
-                if( capi && (capjs[jb]>=0) ){ // repulsion of capping atoms
+                if( bRepelCaps && capi && (capjs[jb]>=0) ){ // repulsion of capping atoms
                     Vec3d pi = apos[ia] + hi*lcap;
                     Vec3d pj = apos[ja] + hj*lcap;
 
@@ -486,12 +503,19 @@ class RARFF2arr{ public:
     double evalF2rot(){ double F2=0; for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; F2+=torqs [i].norm2(); }; return F2; }
     double evalF2pos(){ double F2=0; for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; F2+=aforce[i].norm2(); }; return F2; }
 
+    inline void projectAtomBons(int ia){
+        qrots[ia].rotateVectors( N_BOND_MAX, types[ia]->bh0s, hbonds+ia*N_BOND_MAX, false );
+    }
+
     void projectBonds(){
-        for(int i=0; i<natom; i++){
-            if(ignoreAtoms[i])continue;
-            //rotateVectors( N_BOND_MAX, qrots[i], types[i]->bh0s, hbonds + i*N_BOND_MAX );
-            qrots[i].rotateVectors( N_BOND_MAX, types[i]->bh0s, hbonds+i*N_BOND_MAX, false );
-        }
+        for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; projectAtomBons(i); }
+    }
+
+    inline Vec3d bondPos( int i, double sc=1.0 ){
+        //int i = ia*N_BOND_MAX + j;
+        int ia = i/N_BOND_MAX;
+        double R = types[ia]->rbond0;
+        return apos[ia]  + hbonds[i]*(R*sc);
     }
 
     void applyForceHarmonic1D(const Vec3d& h, double x0, double K){
