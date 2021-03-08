@@ -154,18 +154,19 @@ class RARFF2arr{ public:
 
     double invRotMass = 2.0;
 
-    int natom            =0;
+    int natomActive   = 0;
+    int natom         = 0;
     //RigidAtomType* types =0;
     //RigidAtom*     atoms =0;
 
     // atom properties
     RigidAtomType** types = 0;
-    Vec3d*  poss   = 0;
+    Vec3d*  apos   = 0;
     Quat4d* qrots  = 0;
-    Vec3d*  forces = 0;
+    Vec3d*  aforce = 0;
     Vec3d*  torqs  = 0;
-    Vec3d*  omegas = 0;
-    Vec3d*  vels   = 0;
+    Vec3d*  omegas = 0;  // just for MD
+    Vec3d*  vels   = 0;  // just for MD
 
     // aux
     double*        ebonds=0;
@@ -173,28 +174,144 @@ class RARFF2arr{ public:
     Vec3d*         fbonds=0;
     int  *         bondCaps = 0;
 
+    bool * ignoreAtoms = 0;
     //double F2pos=0;
     //double F2rot=0;
+
+    void alloc(int natom_){
+        natom=natom_;
+        //printf(  "FARFF aloc na %i no %i nDOF %i \n", natom, norb, nDOF );
+        _alloc(types  ,natom);
+        _alloc(apos   ,natom);
+        _alloc(qrots  ,natom);
+        _alloc(aforce ,natom);
+        _alloc(torqs  ,natom);
+        _alloc(omegas ,natom);  // just for MD
+        _alloc(vels   ,natom);  // just for MD
+        _alloc(ignoreAtoms, natom);
+        _alloc(ebonds ,natom*N_BOND_MAX);
+        _alloc(hbonds ,natom*N_BOND_MAX);
+        _alloc(fbonds ,natom*N_BOND_MAX);
+        _alloc(bondCaps ,natom*N_BOND_MAX);
+        natomActive=natom;
+        for(int i=0; i<natom; i++){ ignoreAtoms[i]=false; }
+    }
 
     void realloc(int natom_){
         natom=natom_;
         //_realloc(atoms,natom   );
         _realloc(types  ,natom);
-        _realloc(poss   ,natom);
+        _realloc(apos   ,natom);
         _realloc(qrots  ,natom);
-        _realloc(forces ,natom);
+        _realloc(aforce ,natom);
         _realloc(torqs  ,natom);
         _realloc(omegas ,natom);
         _realloc(vels   ,natom);
+        _realloc(ignoreAtoms, natom);
         _realloc(ebonds ,natom*N_BOND_MAX);
         _realloc(hbonds ,natom*N_BOND_MAX);
         _realloc(fbonds ,natom*N_BOND_MAX);
         _realloc(bondCaps ,natom*N_BOND_MAX);
+        for(int i=0; i<natom; i++){ ignoreAtoms[i]=false; }
     }
+
+
+    void resize( int natom_new ){
+        int natom_=natom;
+        // save old
+        RigidAtomType** types_ = types;
+        Vec3d*  apos_   = apos;
+        Quat4d* qrots_  = qrots;
+        Vec3d*  aforce_ = aforce;
+        Vec3d*  torqs_  = torqs;
+        Vec3d*  omegas_ = omegas; // just for MD
+        Vec3d*  vels_   = vels;   // just for MD
+        bool*   ignoreAtoms_ = ignoreAtoms;
+        double* ebonds_ = ebonds;
+        Vec3d*  hbonds_ = hbonds;
+        Vec3d*  fbonds_ = fbonds;
+        int  *  bondCaps_  = bondCaps;
+        // copy
+        alloc(natom_new);
+        int ja=0;
+        for(int ia=0; ia<natom_; ia++){
+            if(ignoreAtoms_[ia]) continue;
+            types [ja] = types_ [ia];
+            apos  [ja] = apos_  [ia];
+            qrots [ja] = qrots_ [ia];
+            aforce[ja] = aforce_[ia];
+            torqs [ja] = torqs_ [ia];
+            omegas[ja] = omegas_[ia];
+            vels  [ja] = vels_  [ia];
+            ignoreAtoms[ja] = false;
+            for(int ib=0; ib<N_BOND_MAX; ib++){
+                int i=ia*N_BOND_MAX + ib;
+                int j=ja*N_BOND_MAX + ib;
+                ebonds  [j] = ebonds_  [i];
+                hbonds  [j] = hbonds_  [i];
+                fbonds  [j] = fbonds_  [i];
+                bondCaps[j] = bondCaps_[i];
+                //oforce [j]=oforce_ [i];
+            }
+            ja++;
+        }
+        natomActive=ja;
+        for(int ia=ja; ia<natom; ia++){
+            ignoreAtoms[ia] = true;
+        }
+        delete[] types_;
+        delete[] apos_;
+        delete[] qrots_;
+        delete[] aforce_;
+        delete[] torqs_;
+        delete[] omegas_;  // just for MD
+        delete[] vels_;    // just for MD
+        delete[] ebonds_;
+        delete[] hbonds_;
+        delete[] fbonds_;
+        delete[] bondCaps_;
+    }
+
+    bool tryResize( int nMaskMin=5, int nMaskMax=20, int nMaskGoal=10 ){
+        int nmask = 0;
+        for(int i=0; i<natom; i++){ if(ignoreAtoms[i]){ nmask++; } }
+        if( (nmask<nMaskMin)||(nmask>nMaskMax) ){
+            int natom_new = natom-nmask+nMaskGoal;
+            printf( "RARFF::resize(%i) from %i nmaxk %i \n", natom_new, natom, nmask );
+            resize( natom_new );
+            return true;
+        }
+        return false;
+    }
+
+    void inserAtom( RigidAtomType* typ, const int* caps, const Vec3d& p, const Vec3d& dir, const Vec3d& up ){
+        Mat3d m;
+        m.c=dir;
+        double r = m.c.normalize();
+        if(r<1e-3)return;
+        //m.b=up; m.b.makeOrthoU(m.c);
+        m.b.set_cross(up ,m.c); m.b.normalize();
+        m.a.set_cross(m.b,m.c); m.a.normalize();
+        int ia=natomActive;
+        if( ia>=natom ){ resize(natom+5); }
+        natomActive++;
+        ignoreAtoms[ia] = false;
+        types[ia] = typ;
+        apos [ia] = p;
+        qrots[ia].fromMatrix(m);
+        vels [ia]  = Vec3dZero;
+        omegas[ia] = Vec3dZero;
+        for(int j=0; j<4;j++){
+            int i = ia*N_BOND_MAX + j;
+            bondCaps[i] = caps[j];
+        }
+    }
+
+    // ======== Force Evaluation
 
     inline double pairEF( int ia, int ja, int nbi, int nbj, RigidAtomType& type){
 
-        Vec3d  dij = poss[ja] - poss[ia];
+        Vec3d  dij = apos[ja] - apos[ia];
         double r2  = dij.norm2() + R2SAFE;
         double rij = sqrt( r2 );
         Vec3d hij  = dij*(1/rij);
@@ -249,8 +366,8 @@ class RARFF2arr{ public:
 
 
                 if( capi && (capjs[jb]>=0) ){ // repulsion of capping atoms
-                    Vec3d pi = poss[ia] + hi*lcap;
-                    Vec3d pj = poss[ja] + hj*lcap;
+                    Vec3d pi = apos[ia] + hi*lcap;
+                    Vec3d pj = apos[ja] + hj*lcap;
 
                     Vec3d  dij   = pi-pj;
                     double r2    = dij.norm2() + R2SAFE;
@@ -317,19 +434,21 @@ class RARFF2arr{ public:
             //force      // TODO: proper derivatives of energy
         }
 
-        forces[ja].sub(force);
-        forces[ia].add(force);
+        aforce[ja].sub(force);
+        aforce[ia].add(force);
         return E;
     }
 
     double interEF(){
-        Vec3d bhs[N_BOND_MAX];
+        //Vec3d bhs[N_BOND_MAX];
         double E = 0;
         for(int i=0; i<natom; i++){
+            if(ignoreAtoms[i])continue;
             RigidAtomType& typei = *types[i];
-            Vec3d           pi   = poss[i];
+            Vec3d           pi   = apos[i];
             for(int j=i+1; j<natom; j++){
             //for(int j=0; j<natom; j++){
+                if(ignoreAtoms[j])continue;
                 RigidAtomType pairType;
                 pairType.combine( typei, *types[j] );
                 E += pairEF( i, j, typei.nbond, types[j]->nbond, pairType );
@@ -343,7 +462,7 @@ class RARFF2arr{ public:
             vels  [i]=Vec3dZero;
             omegas[i]=Vec3dZero;
             torqs [i]=Vec3dZero;
-            forces[i]=Vec3dZero;
+            aforce[i]=Vec3dZero;
         }
         int nb   = natom*N_BOND_MAX;
         for(int i=0; i<nb;   i++){
@@ -357,18 +476,19 @@ class RARFF2arr{ public:
         for(int i=0; i<natom; i++){
             //atoms[i].cleanForceTorq();
             torqs [i]=Vec3dZero;
-            forces[i]=Vec3dZero;
+            aforce[i]=Vec3dZero;
         }
         int nb   = natom*N_BOND_MAX;    for(int i=0; i<nb;   i++){ ebonds[i]=0; }
         //printf("\n"); for(int i=0; i<nb;   i++){ printf("%i ", bondCaps[i] ); }; printf("\n");
         int nval = natom*N_BOND_MAX*3;  for(int i=0; i<nval; i++){ ((double*)fbonds)[i]=0;}
     }
 
-    double evalF2rot(){ double F2=0; for(int i=0; i<natom; i++){ F2+=torqs [i].norm2(); }; return F2; }
-    double evalF2pos(){ double F2=0; for(int i=0; i<natom; i++){ F2+=forces[i].norm2(); }; return F2; }
+    double evalF2rot(){ double F2=0; for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; F2+=torqs [i].norm2(); }; return F2; }
+    double evalF2pos(){ double F2=0; for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; F2+=aforce[i].norm2(); }; return F2; }
 
     void projectBonds(){
         for(int i=0; i<natom; i++){
+            if(ignoreAtoms[i])continue;
             //rotateVectors( N_BOND_MAX, qrots[i], types[i]->bh0s, hbonds + i*N_BOND_MAX );
             qrots[i].rotateVectors( N_BOND_MAX, types[i]->bh0s, hbonds+i*N_BOND_MAX, false );
         }
@@ -377,8 +497,9 @@ class RARFF2arr{ public:
     void applyForceHarmonic1D(const Vec3d& h, double x0, double K){
         //printf( "applyForceHarmonic1D %g %g (%g,%g,%g) \n", x0, K, h.x,h.y,h.z  );
         for(int ia=0; ia<natom; ia++){
-            double x = h.dot(poss[ia])-x0;
-            forces[ia].add_mul( h, K*x );
+            if(ignoreAtoms[ia])continue;
+            double x = h.dot(apos[ia])-x0;
+            aforce[ia].add_mul( h, K*x );
         }
     }
 
@@ -386,7 +507,8 @@ class RARFF2arr{ public:
         //printf( "applyForceHarmonic1D %g %g (%g,%g,%g) (%g,%g,%g) \n", K, fmax, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z  );
         double f2max = fmax*fmax;
         for(int ia=0; ia<natom; ia++){
-            Vec3d p = poss[ia];
+            if(ignoreAtoms[ia])continue;
+            Vec3d p = apos[ia];
             Vec3d f;
             Vec3d d0,d1;
             d0=p-p0;
@@ -399,12 +521,13 @@ class RARFF2arr{ public:
                 f.mul( sqrt(f2max/f2) );
             }
             //printf( "ia %i (%g,%g,%g) (%g,%g,%g) \n", ia, p.x,p.y,p.z,  f.x,f.y,f.z );
-            forces[ia].add(f);
+            aforce[ia].add(f);
         }
     }
 
     void evalTorques(){
         for(int ia=0; ia<natom; ia++){
+            if(ignoreAtoms[ia])continue;
             //RigidAtom& atomi = atoms[ia];
             //Vec3d torq = Vec3dZero;
             //int nbi =  types[ia]->nbond;
@@ -420,20 +543,22 @@ class RARFF2arr{ public:
 
     void move(double dt){
         for(int i=0; i<natom; i++){
+            if(ignoreAtoms[i])continue;
             //atoms[i].moveRotGD(dt*invRotMass);
             //atoms[i].movePosGD(dt);
             qrots[i].dRot_exact( dt, torqs[i] );  qrots[i].normalize();          // costly => debug
             //dRot_taylor2( dt, torqs[i] );   qrots[i].normalize_taylor3();  // fast => op
-            poss[i].add_mul(forces[i],dt);
+            apos[i].add_mul(aforce[i],dt);
         }
     }
 
     void moveMDdamp(double dt, double damp){
         for(int i=0; i<natom; i++){
+            if(ignoreAtoms[i])continue;
             //atoms[i].moveMDdamp( dt, invRotMass, damp);
-            vels  [i].set_lincomb( damp, vels  [i], dt,            forces[i] );
+            vels  [i].set_lincomb( damp, vels  [i], dt,            aforce[i] );
             omegas[i].set_lincomb( damp, omegas[i], dt*invRotMass, torqs [i] );
-            poss  [i].add_mul    ( vels[i], dt    );
+            apos  [i].add_mul    ( vels[i], dt    );
             qrots [i].dRot_exact ( dt,  omegas[i] );
             qrots [i].normalize();
         }
@@ -444,6 +569,7 @@ class RARFF2arr{ public:
         for(int i=0; i<natom*N_BOND_MAX; i++){ bondCaps[i]=-1; };
         int n=0;
         for(int ia=0; ia<natom; ia++){
+            if(ignoreAtoms[ia])continue;
             int nbi =  types[ia]->nbond;
             for(int ib=0; ib<nbi; ib++){
                 int i = ia*N_BOND_MAX + ib;
