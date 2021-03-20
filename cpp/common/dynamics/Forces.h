@@ -167,13 +167,13 @@ inline Vec3d getForceSpringPlane( const Vec3d& p, const Vec3d& normal, double c0
     return normal * (cdot * k);
 }
 
-inline Vec3d getForceHamakerPlane( const Vec3d& p, const Vec3d& normal, double c0, double e0, double r0 ){
+inline Vec3d getForceHamakerPlane( const Vec3d& p, const Vec3d& normal, double z0, double amp, double R ){
     // https://en.wikipedia.org/wiki/Lennard-Jones_potential
     //printf(  " normal %g %g %g \n", normal.x, normal.y, normal.z );
-    double cdot = normal.dot(p) - c0;
-    double ir   = r0/cdot;
+    double cdot = normal.dot(p) - z0;
+    double ir   = R/cdot;
     double ir3  = ir*ir*ir;
-    double f    = e0*(ir/r0)*ir3*(ir3-1);
+    double f    = amp*(ir/R)*ir3*(ir3-1);
     //printf( "%g %g %g %g %g %g %g \n", f, cdot, ir, ir3, e0, c0, r0  );
     return normal * f;
 }

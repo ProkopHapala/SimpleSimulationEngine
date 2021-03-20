@@ -1,7 +1,7 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include "Draw.h"
-#include "Draw2D.h"
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h>
+//#include "Draw.h"
+//#include "Draw2D.h"
 
 #include "LTSquad.h" // THE HEADER
 
@@ -26,7 +26,7 @@ void LTSquad::fire_at_squad( LTSquad * target ){
     d.set_sub( target->pos, pos );
     double dist = d.normalize();
     // this does not care about time-of-flight neither raytracing we may later emit projectile instead of this
-    Draw2D::drawLine_d(pos,target->pos);
+    //Draw2D::drawLine_d(pos,target->pos);
     LTGunType& gunType = *type->guns[0]; // TODO: which gun ?
     double crossection = 1.0; // TODO: get target crossection
     double dHeight     = 0.0; // TODO: height difference
@@ -105,7 +105,7 @@ void LTSquad::updateBBox(){
     radius = 0.5*sqrt( bbox.l2Diag() );
 };
 
-
+/*
 void LTSquad::render( uint32_t color, int iLOD, bool bDrawGoal ){
     //printf( "squad \n" );
     //printf( "squad pos (%f,%f) \n", pos.x, pos.y );
@@ -119,7 +119,7 @@ void LTSquad::render( uint32_t color, int iLOD, bool bDrawGoal ){
     if(iLOD>0){
         for(const LTUnit& u: units ){
             //printf( "unit \n"  );
-            u.render( color|0xFF000000, iLOD );
+            render( u, color|0xFF000000, iLOD );
             Draw::setRGBA(color);
             if( bDrawGoal ){
                Draw2D::drawLine_d( u.goal_pos, u.pos );
@@ -132,6 +132,7 @@ void LTSquad::render( uint32_t color, int iLOD, bool bDrawGoal ){
     //Draw2D::drawString( str, (float)pos.x, (float)pos.y, 0.4f, default_font_texture );
     Draw2D::drawText( str, 0, {pos.x,pos.y}, 0.0, default_font_texture, 2.0 );
 }
+*/
 
 void LTSquad::populate(int n){
     units.reserve(n);
@@ -176,11 +177,13 @@ void LTSquad::fromString(const char * str_, const UnitTypeDict& dct ){
     //populate(n);
 };
 
+/*
 void LTSquad::renderJob( uint32_t c){
     if(job == Unit_JOB_GOTO         ) Draw2D::drawLine_d( pos, goal );
     if(job == Unit_JOB_FIRE_AT_UNIT ) Draw2D::drawLine_d( pos, opponent->pos );
     //printf( "render (%3.3f,%3.3f) (%3.3f,%3.3f,%3.3f) \n", pos.x, pos.y, pos.x, c.x, c.y, c.z );
 }
+*/
 
 LTSquad::LTSquad( LTUnitType* type_, LTFaction* faction_, const Vec2d& pos_ ){
     pos.set(pos_);

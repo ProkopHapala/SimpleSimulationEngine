@@ -107,14 +107,15 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     //RigidAtom     atom1;
     //  type1,type2, typH2O;
-    RigidAtomType  typeList [3];
-    RigidAtomType* typeList_[3];
+    RigidAtomType  typeList [4];
+    //RigidAtomType* typeList_[3];
     RigidAtomType* curType=0;
 
     CapType capTypes[2];
 
     Quat4i capsBrush;
 
+    bool bBlockAddAtom=false;
     int ipicked = -1;
     Vec3d ray0;
     Vec3d mouse_p0;
@@ -144,7 +145,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     {RigidAtomType& typ=typeList[0]; // C-sp2
-    typeList_[0]=&typ;
+    //typeList_[0]=&typ;
     typ.id = 0;
     typ.nbond  = 3;  // number bonds
     typ.rbond0 =  1.2/2;
@@ -155,7 +156,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //exit(0);
     }
     {RigidAtomType& typ=typeList[1]; // C-sp3
-    typeList_[1]=&typ;
+    //typeList_[1]=&typ;
     typ.id = 1;
     typ.nbond  = 4;  // number bonds
     typ.rbond0 =  1.5/2;
@@ -165,7 +166,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     typ.print();
     }
     {RigidAtomType& typ=typeList[2];  // H2O
-    typeList_[2]=&typ;
+    //typeList_[2]=&typ;
     //typ.name = "O";
     strcpy(typ.name, "O");
     typ.id = 2;
@@ -176,7 +177,19 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     typ.bh0s   = (Vec3d*)sp3_hs;
     typ.print();
     }
-    curType = &typeList[2];
+    {RigidAtomType& typ=typeList[3];  // H2O
+    //typeList_[2]=&typ;
+    //typ.name = "O";
+    strcpy(typ.name, "O");
+    typ.id = 3;
+    typ.nbond  = 3;
+    typ.rbond0 = 2.9/2;
+    typ.aMorse = 1.0;
+    typ.bMorse = -0.7;
+    typ.bh0s   = (Vec3d*)sp2_hs;
+    typ.print();
+    }
+    curType = &typeList[3];
 
     {CapType& typ=capTypes[1]; // C-sp3
         typ.id = 1;
@@ -185,6 +198,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     }
 
     capsBrush.set(1,1,-1,-1);
+
+    ff.capTypeList = capTypes;
+    ff.typeList    = typeList;
 
     ff.bRepelCaps =  false; // ignore caps .... good e.g. for water
     ff.bDonorAcceptorCap = true;
@@ -248,7 +264,8 @@ void TestAppRARFF::draw(){
     glEnable(GL_DEPTH_TEST);
     glDisable( GL_LIGHTING );
 
-    if( ff.tryResize( 5, 100, 10) );
+
+    //if( ff.tryResize( 5, 100, 10) );
 
     // ---------- Simulate
     //bRun = false;
@@ -262,18 +279,19 @@ void TestAppRARFF::draw(){
                 Vec3d f = getForceSpringRay( ff.apos[ipicked], (Vec3d)cam.rot.c, ray0, -1.0 );
                 ff.aforce[ipicked].add( f );
             }
-            //for(int i=0; i<ff.natoms; i++){
-            //    ff.aforce[i].add( getForceHamakerPlane( ff.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
-            //    //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
-            //}
-            ff.applyForceHarmonic1D( Vec3dZ, 0.0, -2.1);
+            //for(int i=0; i<ff.natom; i++){ ff.aforce[i].add( getForceHamakerPlane( ff.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );}
+            //ff.applyForceHarmonic1D( Vec3dZ, 0.0, -30.1);
+            ff.applyForceHarmonic1D( Vec3dZ, 0.0, -1.0);
+            //ff.applyForceHamacker(true, -5.0, 10.0, 2.0 );
             ff.evalTorques();
             ff.moveMDdamp(0.05, 0.9);
         }
     }else{
-        Vec3d dpos = ray0 - ff.apos[ipicked];
-        dpos.makeOrthoU( (Vec3d)cam.rot.c );
-        ff.apos[ipicked].add(dpos);
+        if(ipicked>=0){
+            Vec3d dpos = ray0 - ff.apos[ipicked];
+            dpos.makeOrthoU( (Vec3d)cam.rot.c );
+            ff.apos[ipicked].add(dpos);
+        }
     }
     if( frameCount>10 ){
         //bRun=0;
@@ -288,10 +306,12 @@ void TestAppRARFF::draw(){
     glColor3f(0.0,0.0,0.0);
     double fsc = 0.1;
     double tsc = 0.1;
+    //printf( "ff.natom %i \n", ff.natom );
     for(int ia=0; ia<ff.natom; ia++){
         if(ff.ignoreAtoms[ia])continue;
         glColor3f(0.3,0.3,0.3);
         Draw3D::drawShape( ogl_sph, ff.apos[ia], Mat3dIdentity );
+
         for(int j=0; j<ff.types[ia]->nbond; j++){
             int i=ia*N_BOND_MAX+j;
             Vec3d pb = ff.bondPos( i );
@@ -305,6 +325,7 @@ void TestAppRARFF::draw(){
 
     };
     Draw3D::drawAxis( 1.0);
+
 };
 
 void TestAppRARFF::drawHUD(){
@@ -347,10 +368,9 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
                 case SDLK_KP_MULTIPLY: caps->mul(-1); printf("capsBrush(%i,%i,%i,%i)\n",  caps->x,caps->y,caps->z,caps->w ); break;
 
 
-
-                case SDLK_l: ff.load(workFileName, (const RigidAtomType**)typeList_); bRun=false; break;
+                case SDLK_l: ff.load(workFileName); bRun=false; break;
                 case SDLK_k: ff.save(workFileName);  break;
-                case SDLK_x: ff.saveXYZ("data/RARFF_out.xyz", capTypes);  break;
+                case SDLK_x: ff.saveXYZ("data/RARFF_out.xyz");  break;
                 case SDLK_SPACE: bRun = !bRun;  break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
@@ -360,9 +380,13 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:{
                     int ip = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
-                    if( (ip>=0)&&(ip!=ipicked) ){ ipicked=ip; }else{ ipicked=-1; }
+                    bBlockAddAtom=false;
+                    if( ip>=0){
+                        if(ipicked==ip){ ipicked=-1; bBlockAddAtom=true; printf("inv\n"); }
+                        else           { ipicked=ip;                     printf("set\n"); }
+                    }else{ ipicked=-1; }
                     mouse_p0 = (Vec3d)( cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y );
-                    printf( "picked atom %i \n", ipicked );
+                    printf( "LMB DOWN picked %i/%i bblock %i \n", ipicked,ip, bBlockAddAtom );
                     }break;
                 case SDL_BUTTON_RIGHT:{
                     ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
@@ -374,7 +398,8 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    if( ipicked==-1 ){
+                    printf( "LMB UP picked %i bblock %i \n", ipicked, bBlockAddAtom );
+                    if( (ipicked==-1)&&(!bBlockAddAtom) ){
                         Vec3d mouse_p = (Vec3d)( cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y );
                         Vec3d dir = mouse_p-mouse_p0;
                         if(dir.norm2()<1e-6){ dir=(Vec3d)cam.rot.b; };

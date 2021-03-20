@@ -77,9 +77,10 @@ class LTSquad : public RigidBody2D { public:
     void setGoal      ( const Vec2d& goal_ );
     void setType      ( LTUnitType* type_ );
     void makeUnits    ( int n );
-    void render       ( uint32_t c, int iLOD, bool );
-    void renderJob    ( uint32_t c );
-    void view();
+
+    //void render       ( uint32_t c, int iLOD, bool );
+    //void renderJob    ( uint32_t c );
+    //void view();
 
     void updateBBox();
 

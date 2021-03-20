@@ -29,6 +29,11 @@
 //std::unordered_map<std::string,UnitType*>   unitTypes;
 //std::unordered_map<std::string,UnitState*>  units;
 
+
+// Compare with units from:
+// /apps/LandTactics/LTUnitType.h
+// ultimately, there shoould be one unified system of units
+
 std::vector<WeaponType*> weaponTypes;
 std::vector<UnitType*>   unitTypes;
 std::vector<UnitState*>  units;

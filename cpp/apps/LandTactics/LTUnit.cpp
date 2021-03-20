@@ -1,8 +1,8 @@
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include "Draw.h"
-#include "Draw2D.h"
+//#include <SDL2/SDL.h>
+//#include <SDL2/SDL_opengl.h>
+//#include "Draw.h"
+//#include "Draw2D.h"
 
 #include "LTUnit.h" // THE HEADER
 
@@ -35,7 +35,7 @@ void LTUnit::move_to_goal( double dt ){
     }
 }
 
-void LTUnit::fireGun( int i, LTUnit& target ){
+double LTUnit::fireGun( int i, LTUnit& target ){
     LTGun&     gun   = guns[i];
     if( gun.timer > 0.0 ){
         const LTGunType& gtype = *gun.type;
@@ -47,9 +47,9 @@ void LTUnit::fireGun( int i, LTUnit& target ){
 
         double velocity = gtype.getVelocityDecay(r);
         double Ek       = gtype.getKineticDamage(r,dh);
-        target.getShot( hdir, gtype.nburst, gtype.crossArea, gtype.ExDMG, Ek, gtype.AP );
-
+        return target.getShot( hdir, gtype.nburst, gtype.crossArea, gtype.ExDMG, Ek, gtype.AP );
     }
+    return 0;
 };
 
 double LTUnit::getProjectedArea( Vec3d from ){
@@ -60,13 +60,13 @@ double LTUnit::getProjectedArea( Vec3d from ){
     return type->szAreas.dot( from );
 }
 
-void LTUnit::getShot( const Vec3d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration ){
+double LTUnit::getShot( const Vec3d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration ){
     // evaluate expected damage
     //double  ca  = from.dot( dir );
     // double armor = 0.5* (1+ca) * (type->armorFw - type->armorBg )  + type->armorBg;
     double pass = ( penetration - type->armorFront )/penetration; // TODO: evaluate directionality
-    printf( "pass %f \n", pass );
-    if( pass < 0 ) return;
+    //printf( "pass %f \n", pass );
+    if( pass < 0 ) return 0;
     double damage = pass*damage_kinetic + damage_const;
 
     // evaluate hit probability
@@ -82,7 +82,12 @@ void LTUnit::getShot( const Vec3d& from, int nburst, double area, double damage_
         //n--;  // soft kill
         //if( randf() > type->heal_prob ){ alive = false; } // hard kill
     }
+    return kill_prob;
 }
+
+/*
+
+// this should be external function
 
 void LTUnit::render( uint32_t color, int iLOD ) const {
     Draw::setRGBA(color);
@@ -106,3 +111,5 @@ void LTUnit::render( uint32_t color, int iLOD ) const {
             break;
     }
 };
+
+*/

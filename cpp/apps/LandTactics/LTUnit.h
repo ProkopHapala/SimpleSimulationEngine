@@ -40,7 +40,7 @@ class LTUnit : public RigidBody2D { public:
 
     void move_to_goal ( double dt );
     double getProjectedArea( Vec3d from );
-    void fireGun( int i, LTUnit& target );
+    double fireGun( int i, LTUnit& target );
     //void fire_at_unit ( LTUnit * target );
     //void update       ( double dt );
     //double damage_ramp( double att, double def );
@@ -48,9 +48,9 @@ class LTUnit : public RigidBody2D { public:
     //void setGoal      ( const Vec2d& goal_ );
     void setType( LTUnitType* type_ );
     void update ( double dt );
-    void render ( uint32_t color, int iLOD) const;
+    // void render ( uint32_t color, int iLOD) const; // this should be external function
 
-    void getShot( const Vec3d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration );
+    double getShot( const Vec3d& from, int nburst, double area, double damage_const, double damage_kinetic, double penetration );
 
     //void renderJob    ( uint32_t c );
     //void view();

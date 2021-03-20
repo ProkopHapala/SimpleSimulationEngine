@@ -163,6 +163,9 @@ struct RigidAtom{
 
 class RARFF2arr{ public:
 
+    const CapType       * capTypeList = 0;
+    const RigidAtomType * typeList    = 0;
+
     bool bRepelCaps = true;
     bool bDonorAcceptorCap = false;
 
@@ -243,6 +246,7 @@ class RARFF2arr{ public:
     }
 
     void resize( int natom_new ){
+        printf( "RARFFarr::resize %i -> %i \n", natom, natom_new );
         int natom_=natom;
         // save old
         const RigidAtomType** types_ = types;
@@ -259,6 +263,7 @@ class RARFF2arr{ public:
         int  *  bondCaps_  = bondCaps;
         // copy
         alloc(natom_new);
+        //printf( "resize natom_ %i natom %i natom_new %i \n", natom_, natom, natom_new );
         int ja=0;
         for(int ia=0; ia<natom_; ia++){
             if(ignoreAtoms_[ia]) continue;
@@ -277,7 +282,6 @@ class RARFF2arr{ public:
                 hbonds  [j] = hbonds_  [i];
                 fbonds  [j] = fbonds_  [i];
                 bondCaps[j] = bondCaps_[i];
-                //oforce [j]=oforce_ [i];
             }
             ja++;
         }
@@ -293,11 +297,11 @@ class RARFF2arr{ public:
         delete[] torqs_;
         delete[] omegas_;  // just for MD
         delete[] vels_;    // just for MD
+        delete[] ignoreAtoms_;
         delete[] ebonds_;
         delete[] hbonds_;
         delete[] fbonds_;
         delete[] bondCaps_;
-        delete[] ignoreAtoms_;
     }
 
     bool tryResize( int nMaskMin=5, int nMaskMax=20, int nMaskGoal=10 ){
@@ -322,6 +326,7 @@ class RARFF2arr{ public:
         m.b=up; m.b.makeOrthoU( m.a ); m.b.normalize();
         m.c.set_cross(m.a,m.b);
         int ia=natomActive;
+        printf( "inserAtom ia %i | natom %i \n", ia, natom );
         if( ia>=natom ){ resize(natom+5); }
         natomActive++;
         ignoreAtoms[ia] = false;
@@ -526,6 +531,11 @@ class RARFF2arr{ public:
         for(int i=0; i<natom; i++){ if(ignoreAtoms[i])continue; projectAtomBons(i); }
     }
 
+    inline Vec3d bondPosBare( int i, double r )const{
+        int ia = i/N_BOND_MAX;
+        return apos[ia]  + hbonds[i]*r;
+    }
+
     inline Vec3d bondPos( int i, double sc=1.0 )const{
         //int i = ia*N_BOND_MAX + j;
         int ia = i/N_BOND_MAX;
@@ -541,6 +551,32 @@ class RARFF2arr{ public:
             aforce[ia].add_mul( h, K*x );
         }
     }
+
+    void applyForceHamacker( bool bCaps, double z0=0.0, double E=0.5, double R=2.0, const Vec3d& normal=Vec3dZ ){
+        for(int ia=0; ia<natom; ia++){
+            if(ignoreAtoms[ia])continue;
+            const RigidAtomType* t = types[ia];
+            double rbond       = t->rbond0;
+            Vec3d f = getForceHamakerPlane( apos[ia], normal, z0+rbond, E, R );
+            aforce[ia].add( f );
+            if(bCaps){
+                int    nb    = t->nbond;
+                for(int j=0; j<nb; j++){
+                    int i    = ia*N_BOND_MAX + j;
+                    //printf( "ia %i j %i i %i nb %i \n", ia, j, i, nb );
+                    int icap = bondCaps[i];
+                    if(icap<0)continue;
+                    double rbcap = capTypeList[icap].rbond0;
+                    Vec3d p  = bondPosBare( i, rbcap );
+                    fbonds[i].add( getForceHamakerPlane( p, normal, z0+rbcap, E*0.5, R ) );
+                }
+            }
+            //printf( "types[%i] %li \n", ia, (long)types[ia] );
+            //aforce[ia].z += 0.0001 * t->rbond0;
+        }
+        //printf( "HAMACKER DONE \n" );
+    }
+
 
     void applyForceBox(const Vec3d& p0, const Vec3d& p1, double K, double fmax){
         //printf( "applyForceHarmonic1D %g %g (%g,%g,%g) (%g,%g,%g) \n", K, fmax, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z  );
@@ -621,7 +657,7 @@ class RARFF2arr{ public:
         return n;
     }
 
-    int saveXYZ(const char* fname, CapType* capTypes )const{
+    int saveXYZ(const char* fname )const{
         printf( "RARFFarr::saveXYZ(%s) \n", fname );
         FILE * pFile = fopen(fname,"w");
         int na = 0;
@@ -633,13 +669,12 @@ class RARFF2arr{ public:
             if(ignoreAtoms[ia])continue;
             int i0   = ia*N_BOND_MAX;
             fprintf( pFile, "%s %3.6f %3.6f %3.6f \n", types[ia]->name, apos[ia].x,apos[ia].y,apos[ia].z ); n++;
-            for(int j=0; j<N_BOND_MAX; j++){
+            for(int j=0; j<types[ia]->nbond; j++){
                 int icap = bondCaps[i0+j];
                 if(icap>=0){
-                    capTypes[icap];
-                    CapType* ct = &capTypes[icap];
-                    Vec3d p = apos[ia] + hbonds[i0+j]*ct->rbond0;
-                    fprintf( pFile, "%s %3.6f %3.6f %3.6f \n", capTypes[icap].name, p.x,p.y,p.z ); n++;
+                    const CapType& ct = capTypeList[icap];
+                    Vec3d p = apos[ia] + hbonds[i0+j]*ct.rbond0;
+                    fprintf( pFile, "%s %3.6f %3.6f %3.6f \n", ct.name, p.x,p.y,p.z ); n++;
                 }
             }
         }
@@ -668,7 +703,7 @@ class RARFF2arr{ public:
         return natom;
     }
 
-    int load(const char* fname, const RigidAtomType** typeList ){
+    int load(const char* fname ){
         FILE * pFile = fopen(fname,"r");
         if( pFile == NULL ){ printf("ERROR RARFFarr::load() cannot find %s\n", fname ); return -1; }
         char buff[1024];
@@ -678,10 +713,11 @@ class RARFF2arr{ public:
         sscanf( line, "%i %i \n", &na, &nba ); printf( "na %i nba %i \n", na, nba );
         if(nba!=N_BOND_MAX){ printf("ERROR RARFFarr::load() nba(%i)!=N_BOND_MAX(%i)\n", nba, N_BOND_MAX ); return -1; }
         //allocate(natoms,nbonds);
-        resize( na );
+        if(natom<na)resize( na );
+        //resize( na );
         //line = fgets( buff, 1024, pFile ); // comment
         int ityp;
-        for(int ia=0; ia<natom; ia++){
+        for(int ia=0; ia<na; ia++){
             int i0 = ia*N_BOND_MAX;
             line = fgets( buff, 1024, pFile );  printf("%s",line);
             Vec3d  p;
@@ -689,20 +725,14 @@ class RARFF2arr{ public:
             Quat4i cp;
             int nret = sscanf( line, "%i   %lf %lf %lf    %lf %lf %lf %lf   %i %i %i %i", &ityp, &p.x,&p.y,&p.z, &q.x,&q.y,&q.z,&q.w, &cp.x,&cp.y,&cp.z,&cp.w    );
             apos[ia]=p; qrots[ia]=q;  (*((Quat4i*)(bondCaps+i0)))=cp;
-            /*
-            int nret = sscanf( line, "%i    %lf %lf %lf   %i %i %i %i    %lf %lf %lf  ", ityp,
-            &apos [ia].x,&apos [ia].y,&apos [ia].z,
-            &qrots[ia].x,&qrots[ia].y,&qrots[ia].z,
-            &bondCaps[i0+0],&bondCaps[i0+1],&bondCaps[i0+2],&bondCaps[i0+3]    );
-            qrots[ia].normalizeW();
-            */
-            types[ia] = typeList[ityp];
+            types[ia] = &typeList[ityp];
             printf( "atom[%i] %i   p(%g,%g,%g)    qrot(%g,%g,%g)  caps(%i,%i,%i,%i)\n", ia, ityp,
                 apos [ia].x,apos [ia].y,apos [ia].z,
                 qrots[ia].x,qrots[ia].y,qrots[ia].z,
                 bondCaps[i0+0],bondCaps[i0+1],bondCaps[i0+2],bondCaps[i0+3] );
             ignoreAtoms[ia]=false;
         }
+        if(natomActive<na)natomActive=na;
         cleanAux();
         projectBonds();
         fclose(pFile);

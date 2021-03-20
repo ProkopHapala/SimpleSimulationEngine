@@ -129,7 +129,7 @@ class LTGunType{ public:
     inline double getKineticDamage(double dist,double dHeight)const { return pMass * ( sq( vMuzzle * getVelocityDecay(dist) ) - dHeight*GravityAcc );   };
 
     LTGunType(){};
-    LTGunType( char * fname ){ fromString(fname); }
+    LTGunType( const char * fname ){ fromString(fname); }
 
 };
 
@@ -173,7 +173,7 @@ class LTUnitType{ public:
     char* toStrCaptioned( char * sout, bool bGunDetials );
 
     LTUnitType(){};
-    LTUnitType( char * fname, GunTypeDict& gunTypeDict ){ fromString(fname, gunTypeDict); }
+    LTUnitType( const char * fname, GunTypeDict& gunTypeDict ){ fromString(fname, gunTypeDict); }
 
  };
 

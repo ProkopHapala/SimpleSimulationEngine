@@ -28,12 +28,13 @@
 
 #include "LTcommon.h"
 
-
 #include "LTUnitType.h"
 #include "LTUnit.h"
 #include "LTShelter.h"
 #include "LTFaction.h"
 #include "LTWorld.h"
+
+#include "LTrender.h"
 
 #include "GUI.h"
 #include "Plot2D.h"
@@ -303,8 +304,8 @@ void FormationTacticsApp::draw(){
         if( (u!= NULL) ){
             // TODO : check if on screen
             //printf( "squad %i \n", i ); i++;
-            if  ( u == currentSquad ){ u->render( u->faction->color&0x1fFFFFFF, 1, bDrawGoal ); }
-            else                     { u->render( u->faction->color&0x1fFFFFFF, 1, false     ); }
+            if  ( u == currentSquad ){ render( *u, u->faction->color&0x1fFFFFFF, 1, bDrawGoal ); }
+            else                     { render( *u, u->faction->color&0x1fFFFFFF, 1, false     ); }
         }
     }
     tDraw = getCPUticks() - tDraw;
