@@ -489,7 +489,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
 
     // ===== SETUP GEOM
-    //char* fname = "data/H_eFF.xyz";
+    char* fname = "data/H_eFF.xyz";
     //char* fname = "data/H2_eFF_spin.xyz";
     //char* fname = "data/Ce1_eFF.xyz";
     //char* fname = "data/Ce2_eFF.xyz";
@@ -500,12 +500,12 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/C2_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin_.xyz";
-    char* fname = "data/C2H6_eFF_spin.xyz";
+    //char* fname = "data/C2H6_eFF_spin.xyz";
     //char* fname = "data/C2H6_eFF_spin_.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
-    //ff.loadFromFile_xyz( fname );
+    ff.loadFromFile_xyz( fname );
 
-
+    /*
     // ================== Generate Atomic
 
     //const int natom=4,nbond=3,nang=2,ntors=1;
@@ -548,7 +548,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     }
     //builder.toMMFFmini( ff );
     builder.toEFF( ff, EFFparams, 0.5, 0.025 );
-
+    */
 
     DEBUG
 
@@ -561,8 +561,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //double sz = 0.51;
     // break symmetry
     //for(int i=0; i<ff.na; i++){ ff.apos[i].add( randf(-sz,sz),randf(-sz,sz),randf(-sz,sz) );  }
-    for(int i=0; i<ff.na; i++){ printf( "A_pos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z ); }
-    for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
+    //for(int i=0; i<ff.na; i++){ printf( "A_pos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z ); }
+    //for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
     //exit(0);
 
     DEBUG
@@ -572,13 +572,6 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //VecN::set(ff.ne,4.0,ff.esize);
 
     // ==== Test Eval
-
-    DEBUG
-    i_DEBUG = 1;
-    ff.eval();
-    printf( "Ek %g Eaa %g Eae %g Eee %g EeePaul %g \n", ff.Ek, ff.Eaa, ff.Eae, ff.Eee, ff.EeePaul );
-    i_DEBUG = 0;
-    //exit(0);
 
     //makePlots( plot1, ff );
     //ff.loadFromFile_xyz( fname  );
@@ -592,14 +585,18 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     opt.initOpt( 0.05, 0.1 );
     opt.f_limit = 1000.0;
 
-    ff.eval();
+    double E = ff.eval();
 
     //setGeom(ff);
     //double sz = 0.51;
     // break symmetry
     //for(int i=0; i<ff.na; i++){ ff.apos[i].add( randf(-sz,sz),randf(-sz,sz),randf(-sz,sz) );  }
-    for(int i=0; i<ff.na; i++){ printf( "A_pos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z ); }
-    for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
+    //for(int i=0; i<ff.na; i++){ printf( "A_pos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z ); }
+    //for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
+    ff.info();
+    printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+    exit(0);
+
 
     //ff.apos[0].z = 2.0;
 
@@ -692,9 +689,9 @@ void TestAppRARFF::draw(){
 
     double sum = 0;
     if(bRun){
+        double F2 = 1.0;
         for(int itr=0;itr<perFrame;itr++){
             //printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
-            double F2 = 1.0;
 
             ff.clearForce();
             //ff.clearForce_noAlias();
@@ -706,7 +703,7 @@ void TestAppRARFF::draw(){
             //ff.evalEE();
             //ff.evalAE();
             //ff.evalAA();
-            ff.eval();
+            double E = ff.eval();
             //ff.apos[0].set(.0);
             //checkFinite( ff, vminOK, vmaxOK );
 
@@ -723,9 +720,12 @@ void TestAppRARFF::draw(){
 
             //checkFinite( ff, vminOK, vmaxOK );
 
-            printf( "Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
             printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
-            //if(!(F2<1000000.0))perFrame=0;
+        }
+        if( F2 < 1e-6 ){
+            ff.info();
+            bRun=false;
         }
     }
 

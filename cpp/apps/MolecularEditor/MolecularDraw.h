@@ -149,7 +149,7 @@ void renderSubstrate_( const GridShape& grid, Vec3d * FF, double isoval, bool si
     //exit(0);
 }
 
-void renderSubstrate_( const GridShape& grid, Vec3d * FF, Vec3d * FFel, double isoval, bool sign ){
+void renderSubstrate_( const GridShape& grid, Vec3d * FF, Vec3d * FFel, double isoval, bool sign, float sclr=1.0 ){
     //printf( "iso_points.size() %i \n", iso_points.size() );
     Vec3d * pos     = new Vec3d[grid.n.x * grid.n.y];
     Vec3d * normals = new Vec3d[grid.n.x * grid.n.y];
@@ -178,8 +178,8 @@ void renderSubstrate_( const GridShape& grid, Vec3d * FF, Vec3d * FFel, double i
             //glColor3f( fel1.x, fel1.y, fel1.z ); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
             //glColor3f( fel2.x, fel2.y, fel2.z ); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
 
-            colorRB( fel1.z ); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
-            colorRB( fel2.z ); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
+            colorRB( fel1.z*sclr ); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
+            colorRB( fel2.z*sclr ); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
         }
         glEnd();
     }

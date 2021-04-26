@@ -327,6 +327,7 @@ inline double product3D_s_new(
     //double Aa2  = amp*a2;
     //double e1   = Aa2*a;              // (2/(si/sj+si/sj))^3
     //double e2   = exp( -2*r2*is2 );   // exp( -2*r^2/(si^2+sj^2) )
+    //printf( "r %g e1 %g e2 %g a2 %g is2 %g | si %g sj %g \n", sqrt(r2), e1, e2, a2, is2, si, sj );
 
     return e1 * e2;
 }
@@ -480,13 +481,13 @@ inline double kinetic_w(  double r2, double w1, double w2 ){
     return C*wprod * ( 2*wprod*r2 - 3*wsum )*g*iwsum*iwsum*iwsum*sqrtiwsum;
 }
 
-
-
 inline double kinetic_s(  double r2, double si, double sj,   double& fr, double& fsi, double& fsj ){
- // (2^(3/2)*%pi^(3/2)*s1^3*s2^3*(  r2   -3*(s2^2+s1^2)*exp(-r2/(2*s2^2+2*s1^2)))/(s2^2+s1^2)^(7/2)
+ // (2^(3/2)*%pi^(3/2)*s1^3*s2^3*(  r2   -3*(s2^2+s1^2)*exp( -r2/(2*s2^2+2*s1^2) ) )/(s2^2+s1^2)^(7/2)
  //  2^(3/2)*pi^(3/2)    *si^3*sj^3*(  r2   -3*(sj^2+si^2)*exp(-r2/(2*sj^2+2*si^2)))     /     (s2^2+s1^2)^(7/2)
  //  2^(3/2)*pi^(3/2)    *sij^3*(  r2   -3* s2 *exp( -r2/(2*s2) ) ) /  s2^(7/2)
- double C = -15.7496099457;
+ //const double const_Ke_eVA = 11.4299466055;
+ //const double const_K_eVA = 7.6199644036;
+ const double C            = -15.7496099457 * const_K_eVA * 2;  //    2^(3/2)*pi^(3/2)
  double dCi,dCj;
  //C *= sqnorm3Ds(si) * sqnorm3Ds(sj);
  double Ci = sqnorm3Ds_deriv( si, dCi );
@@ -507,10 +508,11 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  double invs  = sqrt( invs2 );
  double g     = exp( -r2*0.5*invs2 );
  double denom = invs4*invs2*invs;
- double comm  = C*sij*sij * g * denom;
+ double comm  = C*sij2 * g * denom;
  //double poly     = sij*sij*sij  * ( r2  - 3*s2 );
  //double dpoly_si = 3*sij*sij*sj * ( r2  - 3*sj2 - 5*si2 );
  //double dpoly_sj = 3*sij*sij*sj * ( r2  - 3*si2 - 5*sj2 );
+
  double E = comm * sij * ( r2  -  3*s2 );
  comm*=invs2;
  fr       = comm * sij * ( r2  -  5*s2 );
@@ -525,6 +527,8 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  E *=Cij;
  fr*=Cij;
 
+ printf( "Gauss::kinetic_s() E %g r %g s%g(%g,%g) \n", E, sqrt(r2), sij, si, sj );
+
 
  //double fsi  = C* (  *poly*g*denom +  ddenom
  //( s1 ^2*x1^4+3*s2^4*x1^2-4*s1^2*s2^2*x1^2-7*s1^4*x1^2-9*s2^6-12*s1^2*s2^4+3*s1^4*s2^2+6*s1^6)
@@ -535,6 +539,17 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
 
  return   E;
 }
+
+/*
+inline double kinetic_s(  double r2, double si, double& fsi ){
+ //  from  Eq.   [Su, J. T. & Goddard, W. A. Excited Electron Dynamics Modeling of Warm Dense Matter. Phys. Rev. Lett. 99, 185003 (2007).]
+ // (3/2)  * ( 1/si + 1/sj ) + 2*( 2*rij - 3*(si^2 + sj^2)  )/(si^2 + sj^2)^2
+ // (3/2)  * ( 2/si ) - 2*(2*3*si^2  )/4*(si^2)^2
+ // 3/si^2 - 3/(si^2)
+ return   E;
+}
+*/
+
 
 inline double kinetic( double s ){
     //     -(3*pi^(3/2)*s)/2

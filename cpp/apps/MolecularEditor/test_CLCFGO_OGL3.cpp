@@ -46,7 +46,7 @@ Vec3f lookAt    { 0.0f, 0.f,  0.f};
 Vec3f camPos    { 0.0f, 0.f, -5.f};
 float zoom = 5.0;
 float isoWf = 0.1;
-float isoV  = 0.5;
+float isoV  = 2.5;
 
 Quat4f qCamera = Quat4fIdentity;
 
@@ -158,7 +158,8 @@ void draw(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT  );
 
     double E = eff.eval();
-    float F2 = eff.moveGD(dt);
+    //float F2 = eff.moveGD(dt);
+
 
     GLuint uloc;
 

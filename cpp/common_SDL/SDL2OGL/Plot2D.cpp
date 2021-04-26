@@ -121,6 +121,7 @@ void Plot2D::autoAxes(double dx, double dy){
 
 void Plot2D::drawTexts(){
     char str[16];
+    if(bTicks){
     Draw::setRGBA(clrTicksX);
     Draw2D::drawText( xlabel.c_str(), 0, {shift.x,shift.y-2*tickSz*scaling.y}, 0.0, fontTex, tickSz );
     for(int i=0; i<nXTicks; i++){
@@ -136,7 +137,8 @@ void Plot2D::drawTexts(){
         else     { sprintf(str,tickFormat,yTicks[i]); }
         Draw2D::drawText(str, 0, {shift.x+axPos.x*scaling.x,shift.x+yTicks[i]*scaling.y}, 0.0, fontTex, tickSz );
     }
-    for( DataLine2D* line : lines ){
+    }
+    for( DataLine2D* line : lines ){ // lines labels
         Draw::setRGBA(line->clr);
         //Draw2D::drawLine({5.0,i+0.5},{0.0,0.0});
         //Draw2D::drawText(line->label.c_str(), 0, (Vec2d)legend_pos+(Vec2d){0,tickSz*i}, 0., fontTex, tickSz );

@@ -168,6 +168,7 @@ class EFF{ public:
     double sea2 = see*see;
     */
 
+    constexpr static const double default_esize = 0.5;
     constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
     //Vec3d KRSrho = { 1.125, 0.9, 0.2 };
 
@@ -438,6 +439,15 @@ void autoAbWs( const Vec3d * AAs, const Vec3d * AEs ){
     }
 }
 
+void info(){
+    for(int i=0; i<ne; i++){
+        printf( "a[%i] p(%g,%g,%g) q %g eAbW(%g,%g,%g) aAbW(%g,%g,%g) \n", i, apos[i].x, apos[i].y, apos[i].z, aQ[i], eAbWs[i].z,eAbWs[i].z,eAbWs[i].z, aAbWs[i].z,aAbWs[i].z,aAbWs[i].z );
+    }
+    for(int i=0; i<ne; i++){
+        printf( "e[%i] p(%g,%g,%g) sz %g s %i \n", i, epos[i].x, epos[i].y, epos[i].z, esize[i], espin[i] );
+    }
+}
+
 bool loadFromFile_xyz( char const* filename ){
     printf(" filename: >>%s<< \n", filename );
     FILE * pFile;
@@ -457,16 +467,17 @@ bool loadFromFile_xyz( char const* filename ){
     //int ia=0;
     //int ie=nDOFs-1;
     for (int i=0; i<ntot; i++){
-        double x,y,z;
+        double x,y,z,s;
         int e;
         fgets( buf, 256, pFile); //printf( ">%s<\n", buf );
-        int nw = sscanf (buf, " %i %lf %lf %lf", &e, &x, &y, &z );
+        int nw = sscanf (buf, " %i %lf %lf %lf", &e, &x, &y, &z, &s );
         if( e<0){
             epos[ie]=(Vec3d){x,y,z};
             if     (e==-1){ espin[ie]= 1; }
             else if(e==-2){ espin[ie]=-1; }
+            if( nw>4 ){ esize[ie]=s; }else{ esize[ie]=default_esize; }
             //esize[ie] = 1.0;
-            esize[ie] = 0.5;
+            //esize[ie] = 0.5;
             //esize[ie] = 0.25;
             ie++;
             //printf( " e[%i] ", ie );
@@ -479,7 +490,7 @@ bool loadFromFile_xyz( char const* filename ){
             ia++;
             printf( " a[%i] ", ia );
         };
-        printf( " %i %f %f %f  \n", e, x,y,z );
+        //printf( " %i %f %f %f  \n", e, x,y,z );
     }
     clearForce();
     printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - ne, Qasum, ne );

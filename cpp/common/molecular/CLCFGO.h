@@ -93,6 +93,8 @@ constexpr static const Quat4d default_AtomParams[] = {
     bool bEvalAA        = true;
     int  iPauliModel    = 0;
 
+    double Ek=0, Eee=0,EeePaul=0,EeeExch=0, Eae=0,EaePaul=0, Eaa=0; ///< different kinds of energy
+
     bool bOptAtom = true;
     bool bOptEPos = true;
     bool bOptSize = true;
@@ -386,7 +388,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //double fEki;
                 //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
                 //Ek += qii*Gauss::kinetic( si );
-                Ek += qii*Gauss:: kinetic_s(  0.0, si, si,   fr, fsi, fsj );
+                Ek += qii*Gauss::kinetic_s(  0.0, si, si,   fr, fsi, fsj );
                 efsize[i]+= -2*fsi*qii;
             }
 
@@ -464,7 +466,7 @@ constexpr static const Quat4d default_AtomParams[] = {
         int nqOrb = perOrb*(perOrb+1)/2;
         int i0 =0;
         int ii0=0;
-        double Ek = 0;
+        Ek = 0;
         for(int io=0; io<nOrb; io++){
             //int i0  = getOrbOffset(jo);
             //oQs[io] =
@@ -702,6 +704,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
                 Ecoul    += E*qij;
 
+                //printf( "CoulombOrbPair[%i,%i|%i,%i] E %g E,q(%g,%g) r %g s(%g,%g) \n",io,jo,i,j, Ecoul, E, qij, sqrt(r2), si, sj );
 
                 if(DEBUG_iter=DEBUG_log_iter){
                     //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
@@ -738,7 +741,8 @@ constexpr static const Quat4d default_AtomParams[] = {
     double evalElectrostatICoulomb( ){
         /// Calculate detailed short-range electrostatICoulomb
         double r2safe = 0.1;
-        double E = 0;
+        //double E = 0;
+        double Eee = 0;
         for(int io=0; io<nOrb; io++){
             int i0 = getRhoOffset(io);
             Vec3d opi  = opos[io];
@@ -748,7 +752,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 double r2 = dop.norm2();
                 //printf( "evalElectrostatICoulomb[%i,%i]  %g <? %g \n", io, jo, r2,RcutOrb2 );
 
-                E += CoulombOrbPair( io, jo );
+                Eee += CoulombOrbPair( io, jo );
 
                 /*
                 // ==== Long Range Electrostatics Approximation
@@ -768,7 +772,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 */
             }
         }
-        return E;
+        return Eee;
     }
 
 
@@ -1069,9 +1073,9 @@ constexpr static const Quat4d default_AtomParams[] = {
     }
 
     double evalCrossOrb(int io, int jo){
+        double dEpaul=0, dEexch=0;
         const double R2Safe = sq(0.1);
         // we first project on axuliary density
-        double E =0;
         Gauss::PairDeriv dBs[perOrb2];
         Gauss::Blob       Bs[perOrb2];
         Gauss::Blob      fBs[perOrb2];
@@ -1082,25 +1086,29 @@ constexpr static const Quat4d default_AtomParams[] = {
         if( bEvalPauli && (iPauliModel==1) ){
             bool anti = ( ospin[io] != ospin[jo] );
             T  = pairOverlapAndKineticDervis( io, jo, Bs, dBs, TDs, S );
-            E += pauliCrossKinetic          ( io, jo, Bs, dBs, TDs, S, T, KRSrho,  anti  );
+            dEpaul = pauliCrossKinetic          ( io, jo, Bs, dBs, TDs, S, T, KRSrho,  anti  );
         }else{
             S = pairOverlapDervis( io, jo, Bs, dBs );
             if(bEvalPauli){
-                E += S*S*KPauliOverlap;
+                dEpaul = S*S*KPauliOverlap;
                 applyPairForce   ( io, jo, Bs, dBs, S*2*KPauliOverlap );
             }
         }
         // evaluate coulombic terms in axuilary density basis ( i.e. between charge blobs )
-        if(bEvalExchange) E += evalCoulombPair( perOrb2, perOrb2, Bs, Bs, fBs, fBs );
+        if(bEvalExchange) dEexch = evalCoulombPair( perOrb2, perOrb2, Bs, Bs, fBs, fBs );
         //printf( "nqOrb %i \n", perOrb2 );
         //for(int i=0; i<nqOrb; i++){ printf( "fBs[%i] fq %g fs %g fp(%g,%g,%g) \n", i, fBs[i].charge, fBs[i].size,    fBs[i].pos.x,fBs[i].pos.x,fBs[i].pos.x ); }
         // transform forces back to wave-function basis, using previously calculated derivatives
+        EeePaul+=dEpaul;
+        EeeExch+=dEexch;
         forceFromOverlaps( io, jo, dBs, fBs );
-        return E;
+        return dEexch + dEpaul;
     }
 
     double evalCrossTerms(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
         double E = 0;
+        EeePaul=0;
+        EeeExch=0;
         for(int io=0; io<nOrb; io++){ for(int jo=0; jo<io; jo++){
         //for(int io=0; io<nOrb; io++){ for(int jo=io+1; jo<nOrb; jo++){
                 //if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
@@ -1209,6 +1217,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         rhofS [j] += fs*sj;
         //rhofQ [j] += e*qi*0.0; // Not sure why this is not used here
         E         += e*qij;
+        printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );
         //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
     }
     return E;
@@ -1217,7 +1226,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
 double evalAE(){
     Gauss::PairDeriv dBs[perOrb];
     double            Ss[perOrb];
-    double E =0;
+    Eae=0,EaePaul=0;
     for(int ia=0; ia<natom; ia++){
         //const Vec3d  pi   = apos [ia];
         //const double qqi  = aQs  [ia];
@@ -1226,22 +1235,22 @@ double evalAE(){
             if(bEvalAEPauli){// --- Pauli Overlap
                 double S = evalAEoverlap( jo, dBs, Ss, aPsize[ia], apos[ia] );
                 double K   = aPcoef[ia];
-                E         += K*S*S;
+                EaePaul   += K*S*S;
                 double Amp = K*S*2;
                 applyPairForceAE ( ia, jo, dBs, Ss, Amp );
             }
             // ---- Coulomb
             if(bEvalAECoulomb){
-                E += evalArho( ia, jo );
+                Eae      += evalArho( ia, jo );
             }
         }
     }
-    return E;
+    return Eae + EaePaul;
 }
 
 /// evaluate Atom-Atom forces
 double evalAA(){
-    double E=0;
+    Eaa=0;
     for(int i=0; i<natom; i++){
         const Vec3d  pi   = apos[i];
         const double qi   = aQs[i];
@@ -1249,12 +1258,12 @@ double evalAA(){
             Vec3d f = Vec3dZero; // HERE WAS THE ERROR (missing initialization !!!! )
             Vec3d  abw;
             const Vec3d dR  = apos[j] - pi;
-            E +=  addAtomicForceQ( dR, f, qi*aQs[j] );
+            Eaa +=  addAtomicForceQ( dR, f, qi*aQs[j] );
             aforce[j].sub(f);
             aforce[i].add(f);
         }
     }
-    return E;
+    return Eaa;
 }
 
 // ==================================================================
@@ -1314,13 +1323,12 @@ double evalAA(){
         double E =0;
         Vec3d fp; double fs;
         for(int ia=0; ia<natom; ia++){
-            /*
             if(bEvalAEPauli){
                 Vec3d pij; double sij;
                 double S = Gauss::product3D_s_new( aPsize[ia], apos[ia], s, pos, sij, pij );
+                //printf( "atomsPotAtPoint[%i] Pauli S %g c %g pij.x %g sij %g aPsize %g \n", ia, S, aPcoef[ia], pij.x, sij, aPsize[ia] );
                 E += aPcoef[ia]*S*S;
             }
-            */
             if(bEvalAECoulomb){
                 Vec3d Rij = pos - apos[ia];
                 // Coulomb( const Vec3d& Rij, double r2, double si, double sj, double qij, Vec3d& fp, double& fs ){
@@ -1462,11 +1470,12 @@ bool loadFromFile( char const* filename, bool bCheck ){
     const int nbuff = 1024;
     char buff[nbuff]; char* line;
     //fscanf (pFile, " %i \n", &ntot );
-    int natom_=0, nOrb_=0, perOrb_=0;
+    int natom_=0, nOrb_=0, perOrb_=0; bool bClosedShell=0;
     line=fgets(buff,nbuff,pFile);
-    sscanf (line, "%i %i %i\n", &natom_, &nOrb_, &perOrb_ );
+    sscanf (line, "%i %i %i\n", &natom_, &nOrb_, &perOrb_, &bClosedShell );
     //printf("na %i ne %i perORb %i \n", natom, nOrb, perOrb_);
     //printf("na %i ne %i perORb %i \n", natom_, nOrb_, perOrb_ );
+    if(bClosedShell) nOrb_*=2;
     realloc( natom_, nOrb_, perOrb_, 1 );
     double Qasum = 0.0;
     for(int i=0; i<natom; i++){
@@ -1482,15 +1491,25 @@ bool loadFromFile( char const* filename, bool bCheck ){
         aPcoef[i]=cP;
         Qasum += Q;
     }
-    for(int i=0; i<nBas; i++){
+    int nBasRead = nBas;
+    if( bClosedShell ) nBasRead/=2;
+    for(int i=0; i<nBasRead; i++){
         double x,y,z;
         double s,c;
         fgets( buff, nbuff, pFile); // printf( "fgets: >%s<\n", buf );
         int nw = sscanf (buff, "%lf %lf %lf %lf %lf", &x, &y, &z,  &s, &c );
         //printf( "ebasis[%i,%i|5i] p(%g,%g,%g) s %g c %g \n", i/perOrb, i%perOrb,i, x, y, z,  s, c );
-        epos[i]=(Vec3d){x,y,z};
+        epos [i]=(Vec3d){x,y,z};
         esize[i]=s;
         ecoef[i]=c;
+    }
+    if( bClosedShell ){
+        for(int i=0; i<nBasRead; i++){
+            int j = i+nBasRead;
+            epos [j]=epos[i];
+            esize[j]=esize[i];
+            ecoef[j]=ecoef[i];
+        }
     }
     //printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - nOrb, Qasum, nOrb );
     fclose (pFile);

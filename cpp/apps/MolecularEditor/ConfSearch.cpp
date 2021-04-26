@@ -98,7 +98,7 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
     double drndv =  10.0;
     double drndp =  0.5;
 
-    double  atomSize = 0.25;
+    double  atomSize = 0.25 * 4.0;
 
     int itest=0;
 
@@ -461,7 +461,9 @@ void AppMolecularEditor2::draw(){
         //Mat3d rot; qrot.toMatrix(rot);
         //rot.setOne();
         //world.tryPose( 0, 5, world.apos[0], world.apos[0]+shift, rot );
-        world.tryFragPose( 0, false, shift, qrot );
+
+        // !!!!! UNCOMMENT THIS !!!!!
+        //world.tryFragPose( 0, false, shift, qrot ); //
 
         world.frags2atoms();       //printf( "DEBUG 5.2\n" );
 
@@ -516,7 +518,8 @@ void AppMolecularEditor2::draw(){
 
     }
 
-    glColor3f(0.0f,0.6f,0.0f); Draw3D::drawBBox ( world.Collision_box.a, world.Collision_box.b );
+    // ------- DrawCollision Box
+    //glColor3f(0.0f,0.6f,0.0f); Draw3D::drawBBox ( world.Collision_box.a, world.Collision_box.b );
     //printf( "Box (%f,%f,%f)  (%f,%f,%f) \n", world.Try_box.a.x, world.Try_box.a.y, world.Try_box.a.z,    world.Try_box.b.x, world.Try_box.b.y, world.Try_box.b.z  );
 
     glColor3f(0.6f,0.6f,0.6f); plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
@@ -544,7 +547,7 @@ void AppMolecularEditor2::draw(){
         glEnable(GL_LIGHTING);
         Mat3d mat;
         mat.setOne();
-        mat.mul( atomSize*params.atypes[world.atypes[i]].RvdW );
+        mat.mul( atomSize*( params.atypes[world.atypes[i]].RvdW - 1.0 ) );
         //glColor3f(0.8f,0.8f,0.8f);
         Draw::setRGB( params.atypes[world.atypes[i]].color );
         Draw3D::drawShape(ogl_sph,world.apos[i],mat);

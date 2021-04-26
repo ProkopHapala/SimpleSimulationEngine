@@ -101,11 +101,11 @@ void plotOrb( CLCFGO& solver, DataLine2D *line, int io, Vec3d p0, Vec3d dp, floa
     for(int i=0; i<line->n; i++){  line->ys[i]*=sc; }
 }
 
-void plotAtomsPot( CLCFGO& solver, DataLine2D *line, Vec3d p0, Vec3d dp, float sc=1.0 ){
+void plotAtomsPot( CLCFGO& solver, DataLine2D *line, Vec3d p0, Vec3d dp, float sc=1.0, double s=0.0 ){
     Vec3d ps[line->n];
     for(int i=0; i<line->n; i++){  ps[i]=p0+dp*line->xs[i]; }
     //solver.orbAtPoints( io, line->n, ps, line->ys );
-    solver.atomsPotAtPoints( line->n, ps, line->ys, 0.0, 1.0 );
+    solver.atomsPotAtPoints( line->n, ps, line->ys, s, 1.0 );
     for(int i=0; i<line->n; i++){  line->ys[i]*=sc; }
 }
 

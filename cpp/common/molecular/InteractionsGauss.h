@@ -63,6 +63,7 @@ const double const_Ke_eVA = const_K_eVA*1.5;
 inline double addKineticGauss( double s, double& fs ){
     double is  = 1/s;
     double is2 = is*is*const_Ke_eVA;
+    printf( "addKineticGauss s %g is %g is2 %g const_Ke_eVA %20.10f const_K_eVA %20.10f \n", s, is, is2, const_Ke_eVA, const_K_eVA );
     fs += 2.*is2*is;
     return is2;
 }
@@ -77,6 +78,8 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
     double ir   = 1./r; //(r+1.e-8);
     double is   = 1./s; //(s+1.e-8);
+    //double ir   = 1./(r+1.e-16);
+    //double is   = 1./(s+1.e-16);
     double r_s  = r*is;
     double r_2s = M_SQRT2 * r_s;
     double e1   = qq*ir * const_El_eVA;
@@ -136,6 +139,7 @@ inline double addCoulombGauss( const Vec3d& dR, double s, Vec3d& f, double& fsi,
     double r    = dR.norm();
     double fr,fs;
     double E = CoulombGauss( r, s, fr, fs, qq );
+    printf( "addCoulombGauss E %g s %g r %g \n", E, s, r );
     fsi += fs*s;
     f.add_mul( dR, fr );
     return E;

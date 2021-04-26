@@ -26,6 +26,9 @@
 
 //#include "RBMMFF.h"
 
+#include "IO_utils.h"
+
+
 #include "DynamicOpt.h"
 
 #include "AppSDL2OGL_3D.h"
@@ -82,7 +85,7 @@ class AppMolecularEditor2 : public AppSDL2OGL_3D {
     double drndv =  10.0;
     double drndp =  0.5;
 
-    double  atomSize = 0.25;
+    double  atomSize = 0.25 * 4.0;
 
 	virtual void draw   ()  override;
 	virtual void drawHUD()  override;
@@ -163,10 +166,17 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     //Vec3d pos = (Vec3d){0.0,0.0,0.0};
     Mat3d rot; rot.setOne();
-    builder.insertMolecule (&mol, {0.0,0.0,0.0}, rot, false );
-    builder.insertMolecule (&mol, {5.0,0.0,0.0}, rot, false );
-    builder.insertMolecule (&mol, {0.0,5.0,0.0}, rot, false );
-    builder.insertMolecule (&mol, {5.0,5.0,0.0}, rot, false );
+    //builder.insertMolecule (&mol, {0.0,0.0,0.0}, rot, false );
+    //builder.insertMolecule (&mol, {5.0,0.0,0.0}, rot, false );
+    //builder.insertMolecule (&mol, {0.0,5.0,0.0}, rot, false );
+    //builder.insertMolecule (&mol, {5.0,5.0,0.0}, rot, false );
+
+    double z0 = 4.0;
+    builder.insertMolecule (&mol, {0.0,0.0,z0}, rot, false );
+    builder.insertMolecule (&mol, {5.0,0.0,z0}, rot, false );
+    builder.insertMolecule (&mol, {0.0,5.0,z0}, rot, false );
+    builder.insertMolecule (&mol, {5.0,5.0,z0}, rot, false );
+
     //builder.assignAtomTypes();
     builder.assignAtomREQs( &params );
     builder.toMMFF( &world, &params );
@@ -229,11 +239,13 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     world.gridFF.grid.n    = (Vec3i){60,60,100};
     //world.substrate.grid.n    = (Vec3i){12,12,20};
     world.gridFF.grid.pos0 = (Vec3d){0.0d,0.0d,0.0d};
-    //world.gridFF.loadCell ( "inputs/cel.lvs" );
-    world.gridFF.loadCell ( "inputs/cel_2.lvs" );
+    world.gridFF.loadCell ( "inputs/cel.lvs" );
+    //world.gridFF.loadCell ( "inputs/cel_2.lvs" );
     world.gridFF.grid.printCell();
     //world.gridFF.loadXYZ  ( "inputs/answer_Na_L1.xyz", params );
-    world.gridFF.loadXYZ  ( "inputs/Xe_instead_Na.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/Xe_instead_Na.xyz", params );
+    //world.gridFF.loadXYZ  ( "inputs/NaCl_wo4.xyz", params );
+    world.gridFF.loadXYZ  ( "inputs/NaCl_sym.xyz", params );
     //world.gridFF.loadXYZ( "inputs/Cl.xyz", params );
 
     world.translate( {0.0,0.0,2.5} );
@@ -251,8 +263,22 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     world.genPLQ();
     world.gridFF.allocateFFs();
-    world.gridFF.evalGridFFs( {0,0,0} );
+    //world.gridFF.evalGridFFs( {0,0,0} );
+    //world.gridFF.evalGridFFs( {1,1,1} );
     //world.gridFF.evalGridFFs(int natoms, Vec3d * apos, Vec3d * REQs );
+
+    bool recalcFF = false;
+    //bool recalcFF = true;
+    if( recalcFF ){
+        world.gridFF.evalGridFFs( {1,1,1} );
+        if(world.gridFF.FFelec )  saveBin( "data/FFelec-.bin",   world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFelec );
+        if(world.gridFF.FFPauli)  saveBin( "data/FFPauli-.bin",  world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
+        if(world.gridFF.FFLondon) saveBin( "data/FFLondon-.bin", world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
+    }else{
+        if(world.gridFF.FFelec )  loadBin( "data/FFelec-.bin",   world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFelec );
+        if(world.gridFF.FFPauli)  loadBin( "data/FFPauli-.bin",  world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
+        if(world.gridFF.FFLondon) loadBin( "data/FFLondon-.bin", world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFLondon );
+    }
 
     DEBUG
     int iatom = 11;
@@ -278,9 +304,9 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
     //renderSubstrate_( world.gridFF.grid, FFtot, 0.1, true );
 
     DEBUG
-    renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
+    //renderSubstrate_( world.gridFF.grid, FFtot, 0.01, true );
     DEBUG
-    //renderSubstrate_( world.gridFF.grid, FFtot, world.gridFF.FFelec, 0.01, true );
+    renderSubstrate_( world.gridFF.grid, FFtot, world.gridFF.FFelec, 0.01, true, 0.1);
     Draw3D::drawAxis(1.0);
     glEndList();
     DEBUG
@@ -375,8 +401,11 @@ void AppMolecularEditor2::draw(){
         glColor3f(0.0f,0.0f,0.0f);
         if(i==ibpicked) glColor3f(1.0f,0.0f,0.0f); ;
         Draw3D::drawLine(world.apos[ib.x],world.apos[ib.y]);
+        /*
+        // --- bond llabels
         sprintf(str,"%i\0",i);
         Draw3D::drawText(str, (world.apos[ib.x]+world.apos[ib.y])*0.5, fontTex, 0.02, 0 );
+        */
     }
 
     glEnable(GL_LIGHTING);
@@ -390,7 +419,8 @@ void AppMolecularEditor2::draw(){
         glEnable(GL_LIGHTING);
         Mat3d mat;
         mat.setOne();
-        mat.mul( atomSize*params.atypes[world.atypes[i]].RvdW );
+        mat.mul( atomSize * ( params.atypes[ world.atypes[i]].RvdW  - 1.0 ) );
+        //mat.mul( 2.0 );
         //glColor3f(0.8f,0.8f,0.8f);
         Draw::setRGB( params.atypes[world.atypes[i]].color );
         Draw3D::drawShape(ogl_sph, world.apos[i],mat);
