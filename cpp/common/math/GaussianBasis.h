@@ -7,7 +7,7 @@
 
 namespace Gauss{
 
-
+static int iDEBUG = 0;
 
 
 
@@ -206,7 +206,7 @@ inline double product3D_s_deriv(
     //double logC =  wxi*xi + wxj*xj - wx*X;
     //double C   = np.exp(-logC) * Ci * Cj
     double C = e1*e2;
-    //printf( "product3D_s_deriv r %g s %g S %g dS %g \n", sqrt(r2), S, C, dCr  );
+    if(iDEBUG>0) printf( "product3D_s_deriv C %g e1 %g e2 %g(%g) r %g s%g(%g,%g) \n", C, e1, e2, -r2*is2, sqrt(r2), is2, si, sj );
 
     return C;
 }

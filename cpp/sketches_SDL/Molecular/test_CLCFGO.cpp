@@ -82,6 +82,8 @@ Vec3d DEBUG_dQdp;
 int DEBUG_iter     = 0;
 int DEBUG_log_iter = 0;
 
+int i_DEBUG = 0;
+
 #include "Grid.h"
 #include "GaussianBasis.h"
 #include "CLCFGO.h"
@@ -293,11 +295,12 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //solver.loadFromFile( "data/Li_3g.fgo", true);
     //solver.loadFromFile( "data/Li_4g.fgo", true);
     //solver.loadFromFile( "data/C_2g_o1.fgo", true);
-    solver.loadFromFile( "data/H_1g_1o.fgo", true);
+    //solver.loadFromFile( "data/H_1g_1o.fgo", true);
+    //solver.loadFromFile( "data/H2_1g_2o.fgo", true);
+    solver.loadFromFile( "data/H2O_1g_8o.fgo", true);
     dt = 0.001;
     //exit(0);
-    solver.printAtoms();
-    solver.printElectrons();
+
 
     solver.turnAllSwitches(false);
     solver.bNormalize     = 1;
@@ -307,6 +310,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     solver.bEvalCoulomb   = 1;
     solver.bEvalPauli     = 1;
     solver.bEvalKinetic   = 1;
+    solver.bEvalAA        = 1;
 
     solver.bOptEPos = 1;
     solver.bOptSize = 1;
@@ -330,6 +334,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     solver.bOptSize = false;
     solver.bOptCoef = false;
     */
+
+    solver.printSetup();
+    solver.printAtoms();
+    solver.printElectrons();
 
     double E = solver.eval();
     printf( "E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g \n",E, solver.Ek, solver.Eee,solver.EeePaul,solver.EeeExch, solver.Eae,solver.EaePaul, solver.Eaa );

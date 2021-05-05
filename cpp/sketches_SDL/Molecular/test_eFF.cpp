@@ -489,7 +489,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
 
     // ===== SETUP GEOM
-    char* fname = "data/H_eFF.xyz";
+    //char* fname = "data/H_eFF.xyz";
+    //char* fname = "data/H2_eFF.xyz";
+    char* fname = "data/H2O_eFF.xyz";
     //char* fname = "data/H2_eFF_spin.xyz";
     //char* fname = "data/Ce1_eFF.xyz";
     //char* fname = "data/Ce2_eFF.xyz";
@@ -585,6 +587,10 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     opt.initOpt( 0.05, 0.1 );
     opt.f_limit = 1000.0;
 
+    ff.iPauliMode = 0; // dens overlap
+
+    ff.info();
+
     double E = ff.eval();
 
     //setGeom(ff);
@@ -593,7 +599,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //for(int i=0; i<ff.na; i++){ ff.apos[i].add( randf(-sz,sz),randf(-sz,sz),randf(-sz,sz) );  }
     //for(int i=0; i<ff.na; i++){ printf( "A_pos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z ); }
     //for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
-    ff.info();
+
     printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
     exit(0);
 

@@ -136,7 +136,8 @@ inline double CoulombGauss_FixSize( double r, double beta, double& fr, double qq
 }
 
 inline double addCoulombGauss( const Vec3d& dR, double s, Vec3d& f, double& fsi, double qq ){
-    double r    = dR.norm();
+    //double r    = dR.norm();
+    double r    = sqrt( dR.norm2() + 1e-16 );
     double fr,fs;
     double E = CoulombGauss( r, s, fr, fs, qq );
     printf( "addCoulombGauss E %g s %g r %g \n", E, s, r );
@@ -148,7 +149,8 @@ inline double addCoulombGauss( const Vec3d& dR, double s, Vec3d& f, double& fsi,
 inline double addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, double qq ){
     double s2   = si*si + sj*sj;
     double s    = sqrt(s2);
-    double r    = dR.norm();
+    //double r    = dR.norm();
+    double r    = sqrt( dR.norm2() + 1e-16 );
     double fs,fr;
     double E = CoulombGauss( r, s, fr, fs, qq );
     //printf( "addCoulombGauss: fs %g s[i,j](%g,%g) fs[i,j](%g,%g) \n", fs, si,sj, fs*si, fs*sj );
@@ -179,6 +181,8 @@ inline double DensOverlapGauss_S( double r2, double amp, double si, double sj, d
     double f1e2 = 6.*e2*Aa2*(si2-sj2)*is4;
     double e1f2 = 4.*E     * r2      *is4;
 
+    if(i_DEBUG>0) printf( "E %g e1 %g e2 %g(%g) r %g s%g(%g,%g) \n", E, e1, e2,-2*r2*is2, sqrt(r2), is2, si, sj );
+
     dSsi = -(e1f2*si - f1e2*sj);
     dSsj = -(e1f2*sj + f1e2*si);
     dSr  = E   *(-4.*is2);
@@ -192,7 +196,7 @@ inline double DensOverlapGauss_Snorm( double r2, double amp, double si, double s
     /// eq. 12 in (Xiao, H., et. al. Mechanics of Materials, 90, 243–252 (2015). https://doi.org/10.1016/j.mechmat.2015.02.008 )
     /// E = (2/(si/sj+si/sj))^3 * exp( -2*r^2/(si^2+sj^2) )
 
-    amp*= const_K_eVA;
+    //amp*= const_K_eVA;
 
     double a    = 2.*(si*sj)*is2;
     double a2   = a*a;
@@ -206,7 +210,7 @@ inline double DensOverlapGauss_Snorm( double r2, double amp, double si, double s
     //double isisj2 = 1/sisj2;
     double si4    = si2*si2;
     double sj4    = sj2*sj2;
-    double pre    = amp * 3.3;
+    double pre    = amp * 3.3; // What is this 3.3 constant ?
     double e0     = pre * (     si4 +  sj4 - 1.25*sisj2 )*is2/sisj2;
     //double e0     = amp;
     double e0si   = pre * ( 4.5*si4 -2*sj4 - 4*sisj2 )*is4/(si2*si);
@@ -214,6 +218,7 @@ inline double DensOverlapGauss_Snorm( double r2, double amp, double si, double s
 
     double e1e2 = e1*e2;
     double E    = e1e2*e0;
+    if(i_DEBUG>0) printf( "E %g e1 %g e2 %g(%g)  e0 %g r %g s%g(%g,%g) \n", E, e1, e2,-2*r2*is2, e0, sqrt(r2), is2, si, sj );
     double f1e2 = 6.*e2*a2*(si2-sj2)*is4;
     double e1f2 = 4.*e1e2 * r2      *is4;
 
@@ -277,8 +282,8 @@ inline double addDensOverlapGauss_S( const Vec3d& dR, double si, double sj, doub
 
 
     double fr,fi,fj;
-    //double E = DensOverlapGauss_S( r2,amp,si,sj,    fr,fi,fj, si2, sj2, is2, is4 );
-    double E = DensOverlapGauss_Snorm( r2,amp,si,sj,    fr,fi,fj, si2, sj2, is2, is4 );
+    double E = DensOverlapGauss_S( r2,amp,si,sj,    fr,fi,fj, si2, sj2, is2, is4 );
+    //double E = DensOverlapGauss_Snorm( r2,amp,si,sj,    fr,fi,fj, si2, sj2, is2, is4 );
     //printf(  " dR.x %g amp %g si %g sj %g -> %g \n ", dR.x, amp, si, sj, E );
     fsi += fi;
     fsj += fj;
@@ -457,7 +462,7 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     r2 *= KRSrho.x*KRSrho.x;
     si *= KRSrho.y;
     sj *= KRSrho.y;
-    double r = sqrt(r2);
+    double r = sqrt(r2 + 1e-16);
 
     double si2  = si*si;
     double sj2  = sj*sj;
@@ -498,7 +503,7 @@ inline double addPauliGaussS( const Vec3d& dR, double si, double sj, Vec3d& f, d
     r2 *= KRSrho.x*KRSrho.x;
     si *= KRSrho.y;
     sj *= KRSrho.y;
-    double r = sqrt(r2);
+    double r = sqrt(r2+1e-16);
 
     double si2  = si*si;
     double sj2  = sj*sj;

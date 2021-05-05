@@ -59,20 +59,28 @@ Erf approximation:
 #define QE -1.0
 
 // ToDo : Later properly
+// ToDo : Perhaps we should use differenw size(width) for Pauli and Coulomb similarly to CLCFGO
 constexpr static const Vec3d default_eAbWs[] = {
+// amp[eV]  exp[1/A]  size[A]
 { 0.0,  0.0, 0.0},  // Q = 0 //
 { 0.0,  0.0, 0.01}, // Q = 1 // H
-{ 2.0, -3.0, 0.1},  // Q = 2 // Be?
+{ 2.0, -3.0, 0.1},  // Q = 2 // Be
 { 2.0, -3.0, 0.1},  // Q = 3 // B
 { 2.0, -3.0, 0.1},  // Q = 4 // C
+{ 2.0, -3.0, 0.1},  // Q = 5 // N
+{ 2.0, -3.0, 0.1},  // Q = 6 // O
+{ 2.0, -3.0, 0.1},  // Q = 6 // F
 };
 
 constexpr static const Vec3d default_aAbWs[] = {
 { 0.0,  0.0, 0.1},  // Q = 0 //
-{ 0.0,  0.0, 0.01},  // Q = 1 // H
-{ 1.0, -5.0, 0.1},  // Q = 2 // Be?
+{ 0.0,  0.0, 0.01}, // Q = 1 // H
+{ 1.0, -5.0, 0.1},  // Q = 2 // Be
 { 1.0, -5.0, 0.1},  // Q = 3 // B
 { 1.0, -5.0, 0.1},  // Q = 4 // C
+{ 1.0, -5.0, 0.1},  // Q = 5 // N
+{ 1.0, -5.0, 0.1},  // Q = 6 // O
+{ 1.0, -5.0, 0.1},  // Q = 6 // F
 };
 
 constexpr static const  double default_EPCs[] = {
@@ -167,6 +175,12 @@ class EFF{ public:
     double se2  = see*see;
     double sea2 = see*see;
     */
+
+    int iPauliMode = 1;
+
+
+    double KPauliOverlap = 50.0; // ToDo : This is just "bulgarian constant" for now
+    double KPauliKin     = 50.0; // ToDo : Not sure if we should use this - perhaps this model of pauli energy should work "ab inition"
 
     constexpr static const double default_esize = 0.5;
     constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
@@ -281,9 +295,22 @@ double evalEE(){
             const Vec3d  dR = epos [j] - pi;
             const double sj = esize[j];
             double& fsj = fsize[j];
-            Eee     += addCoulombGauss( dR, si, sj, f, fsi, fsj, qq );
-            //EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
-            if( spini==espin[j] ) EeePaul += addPauliGauss  ( dR, si, sj, f, fsi, fsj, false, KRSrho );
+
+            double dEee = addCoulombGauss( dR, si, sj, f, fsi, fsj, qq ); Eee += dEee;
+            //printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
+            if( iPauliMode == 1 ){
+                double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho ); EeePaul+=dEpaul;
+                printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
+            }else{
+                if( spini==espin[j] ){
+                    printf( "EeePaul[%i,%i] ", i, j );
+                    i_DEBUG=1;
+                    double dEpaul = addDensOverlapGauss_S( dR, si*M_SQRT2, sj*M_SQRT2, KPauliOverlap, f, fsi, fsj ); EeePaul+=dEpaul;
+                    //double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, false, KRSrho ); EeePaul+=dEpaul;
+                    i_DEBUG=0;
+                    //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
+                }
+            }
             //if( spini==espin[j] ) EeePaul += addDensOverlapGauss_S( dR,si,sj, 1, f, fsi, fsj );
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
             //if( i_DEBUG>0 ) printf( "evalEE[%i,%i] dR(%g,%g,%g) s(%g,%g) q %g  ->   f(%g,%g,%g) fs(%g,%g) \n", i,j, dR.x,dR.y,dR.z, si,sj, qq,   f.x,f.y,f.z, fsi,fsj );
@@ -299,6 +326,7 @@ double evalEE(){
             //}
         }
     }
+    printf( "Eee %g EeePaul %g \n", Eee, EeePaul );
     //if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalEE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
     return Eee+EeePaul;
 }
@@ -323,8 +351,12 @@ double evalAE(){
             double  fs_junk;
             //Eae += addPairEF_expQ( epos[j]-pi, f, abwi.z, qi*QE, abwi.y, abwi.x );
             Eae                      += addCoulombGauss      ( dR,sj,                 f, fsj, qqi     );     // correct
-            if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
-            //if(qqi<-1.00001) EaePaul += addPauliGauss  ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );     // correct
+            if(qqi<-1.00001){
+                //double dEaePaul = addPauliGauss      ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );     // correct
+                double dEaePaul = addDensOverlapGauss_S( dR, sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
+                EaePaul+=dEaePaul;
+                //printf( "EaePaul[%i,%i] E %g r %g s %g abw(%g,%g) \n", i, j, dEaePaul, dR.norm(), sj, abwi.z, abwi.a );
+            }
 
             //if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             eforce[j].sub(f);
@@ -440,7 +472,7 @@ void autoAbWs( const Vec3d * AAs, const Vec3d * AEs ){
 }
 
 void info(){
-    for(int i=0; i<ne; i++){
+    for(int i=0; i<na; i++){
         printf( "a[%i] p(%g,%g,%g) q %g eAbW(%g,%g,%g) aAbW(%g,%g,%g) \n", i, apos[i].x, apos[i].y, apos[i].z, aQ[i], eAbWs[i].z,eAbWs[i].z,eAbWs[i].z, aAbWs[i].z,aAbWs[i].z,aAbWs[i].z );
     }
     for(int i=0; i<ne; i++){
