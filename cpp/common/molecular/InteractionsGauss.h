@@ -2,6 +2,8 @@
 #ifndef InteractionsGauss_h
 #define InteractionsGauss_h
 
+#include "math.h"
+
 /// @file
 /// @ingroup eFF
 
@@ -362,7 +364,14 @@ inline double getDeltaTGauss( double r2, double si, double sj,  double& dTr, dou
     dTsj = const_K_eVA*( -3.*isj2*isj2 + B )*sj;
     //f.add_mul( dR, const_K_eVA * (8.*is4) );
     dTr  = const_K_eVA*(8.*is4);
+    double T = const_K_eVA * ( 1.5*s2*isi2*isj2 -2.*( 3.*s2 - 2.*r2 )*is4 );
 
+    // This is kinetic energy change normalized by overlap
+    // see e.g.   eq.4   in http://aip.scitation.org/doi/10.1063/1.3272671
+    //       or   eq.3   in https://link.aps.org/doi/10.1103/PhysRevLett.99.185003
+    // see also   eq.3,4 in https://iopscience.iop.org/article/10.1088/1367-2630/14/8/083023
+
+    printf( "getDeltaTGauss T %g r %g si %g sj %g ", T, sqrt(r2), si, sj );
     //printf( "getDeltaTGauss: e1 %g \n", 1.5*s2*isi2*isj2 );
     //printf( "getDeltaTGauss: e2 %g \n", -2.*( 3.*s2 - 2.*r2 )*is4 );
     //printf( "getDeltaTGauss: T  %g \n", const_K_eVA * ( 1.5*s2*isi2*isj2 -2.*( 3.*s2 - 2.*r2 )*is4 ) );
@@ -372,7 +381,7 @@ inline double getDeltaTGauss( double r2, double si, double sj,  double& dTr, dou
     //printf( "getDeltaTGauss: dTr  %g \n", dTr  );
     //printf( "getDeltaTGauss: fr   %g \n", dTr*sqrt(r2) );
 
-    return const_K_eVA * ( 1.5*s2*isi2*isj2 -2.*( 3.*s2 - 2.*r2 )*is4 );
+    return T;
 }
 
 
@@ -492,6 +501,8 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     //printf( "addPauliGauss S, eS, fS  %g %g %g \n", S, eS, fS  );
     //printf( "addPauliGauss fr1, fr2 fr %g %g %g %g \n", dTr*eS, TfS*dSr, (dTr *eS + TfS*dSr )*KRSrho.x, dR.z );
     //printf( "---------------------- \n" );
+
+    printf( "E %g T %g eS %g S %g \n", T*eS, T, eS, S );
 
     return T * eS;
 

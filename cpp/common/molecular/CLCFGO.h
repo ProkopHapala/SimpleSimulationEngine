@@ -91,7 +91,9 @@ constexpr static const Quat4d default_AtomParams[] = {
     bool bEvalAEPauli   = true;
     bool bEvalAE        = true;
     bool bEvalAA        = true;
-    int  iPauliModel    = 0;
+    int  iPauliModel    = 1;
+
+    bool bRescaleKinetic = true;
 
     double Ek=0, Eee=0,EeePaul=0,EeeExch=0, Eae=0,EaePaul=0, Eaa=0; ///< different kinds of energy
 
@@ -880,10 +882,12 @@ constexpr static const Quat4d default_AtomParams[] = {
                 S += Bs[ij].charge;
                 // ---- Kinetic
                 Quat4d& TD = TDs[ij];
-                //r2 *= KRSrho.x*KRSrho.x;
-                //si *= KRSrho.y;
-                //sj *= KRSrho.y;
-                double Tij = Gauss:: kinetic_s(  r2, si, sj,  TD.z, TD.x, TD.y );
+                if(bRescaleKinetic){
+                    r2 *= KRSrho.x*KRSrho.x;
+                    si *= KRSrho.y*M_SQRT1_2;
+                    sj *= KRSrho.y*M_SQRT1_2;
+                }
+                double Tij = Gauss::kinetic_s(  r2, si, sj,  TD.z, TD.x, TD.y );
                 TD.e  = Tij;
                 T    += Tij;
                 //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:Project[%i,%i] ss(%g,%g) cij %g Sij %g Qij %g r %g x(%g,%g) \n", i, j, si, sj, cij, pairs[ij].C, cij*pairs[ij].C, sqrt(r2), pi.x, pj.x );
@@ -1069,6 +1073,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 ij++;
             }
         }
+        printf( "E %g T %g eS %g S %g \n", T*eS, T, eS, S );
         return T*eS;
         //return E;
     }
@@ -1086,8 +1091,10 @@ constexpr static const Quat4d default_AtomParams[] = {
         for(int i=0; i<perOrb2; i++){ fBs[i].setZero(); }
         bool anti = ( ospin[io] != ospin[jo] );
         if( bEvalPauli && (iPauliModel==1) ){
+            printf( "EeePaul[%i,%i] ", io, jo );
             T  = pairOverlapAndKineticDervis( io, jo, Bs, dBs, TDs, S );
             dEpaul = pauliCrossKinetic          ( io, jo, Bs, dBs, TDs, S, T, KRSrho,  anti  );
+            //printf( "EeePaul[%i,%i] %g ", io, jo, dEpaul );
         }else{
             if( bEvalPauli && (!anti) ){
                 Gauss::iDEBUG=1;
@@ -1531,6 +1538,10 @@ bool loadFromFile( char const* filename, bool bCheck ){
 void printSetup(){
     printf("===CLCFGO Setup :\n");
     printf("iPauliModel %i \n", iPauliModel );
+    printf("bRescaleKinetic %i \n", bRescaleKinetic );
+    printf("KPauliKin %g KPauliOverlap %g \n", KPauliKin, KPauliOverlap );
+    printf("KRSrho (%g,%g,%g) \n", KRSrho.x, KRSrho.y, KRSrho.z );
+    printf("Rcut %g RcutOrb %g \n",  Rcut,  RcutOrb );
     printf("bOptEPos %i \n",bOptAtom );
     printf("bOptEPos %i \n",bOptEPos );
     printf("bOptSize %i \n",bOptSize );
@@ -1544,9 +1555,6 @@ void printSetup(){
     printf("bEvalAECoulomb %i \n",bEvalAECoulomb );
     printf("bEvalAEPauli   %i \n",bEvalAEPauli   );
     printf("bEvalAA        %i \n",bEvalAEPauli   );
-    printf("Rcut %g RcutOrb %g \n",  Rcut,  RcutOrb );
-    printf("KPauliKin %g KPauliOverlap %g \n", KPauliKin, KPauliOverlap );
-    printf("KRSrho (%g,%g,%g) \n", KRSrho.x, KRSrho.y, KRSrho.z );
 }
 
 void printAtoms(){
