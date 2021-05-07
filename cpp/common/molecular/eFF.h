@@ -302,6 +302,10 @@ double evalEE(){
                 printf( "EeePaul[%i,%i]  ", i, j );
                 double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho ); EeePaul+=dEpaul;
                 //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
+            }else if( iPauliModel == 2 ){
+                if(spini!=espin[j]) printf( "EeePaul[%i,%i]  ", i, j );
+                double dEpaul = addPauliGaussVB( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho ); EeePaul+=dEpaul;
+                //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
             }else{
                 if( spini==espin[j] ){
                     printf( "EeePaul[%i,%i] ", i, j );

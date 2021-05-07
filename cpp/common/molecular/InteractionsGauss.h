@@ -486,10 +486,10 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     double T = getDeltaTGauss  ( r2, si, sj, dTr, dTsi, dTsj, 1./si2, 1./sj2, s2,is2,is4 );
     double S = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj,    si2,    sj2    ,is2,is4 );
 
+    // Eq.3 in http://aip.scitation.org/doi/10.1063/1.3272671
     double eS,fS;
     if(anti){ eS = PauliSGauss_anti( S, fS, KRSrho.z ); }
     else    { eS = PauliSGauss_syn ( S, fS, KRSrho.z ); }
-
     double TfS = T*fS;
     fsi +=         -(dTsi*eS + TfS*dSsi)*KRSrho.y;
     fsj +=         -(dTsj*eS + TfS*dSsj)*KRSrho.y;
@@ -508,6 +508,43 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
 
 }
 
+inline double addPauliGaussVB( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
+
+    if (anti) return 0;
+
+    double r2 = dR.norm2();
+    double r = sqrt(r2 + 1e-16);
+
+    double si2  = si*si;
+    double sj2  = sj*sj;
+    double s2   = si2 + sj2;
+    double is2  = 1./s2;
+    double is4  = is2 * is2;
+
+    double dTr,dTsi,dTsj;
+    double dSr,dSsi,dSsj;
+    double T = getDeltaTGauss  ( r2, si, sj, dTr, dTsi, dTsj, 1./si2, 1./sj2, s2,is2,is4 );
+    double S = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj,    si2,    sj2    ,is2,is4 );
+
+    // Delta Ek = S^2/(1-S^2) * DeltaT   Eq.2 in  http://doi.wiley.com/10.1002/jcc.21637
+    //double S2  = S*S;
+    double D   = 1./(1.-S*S);
+    double SD  = S*D;
+    double fS  = 2.*( D*SD );
+    double eS  =      S*SD  ;
+
+    double TfS = T*fS;
+    fsi +=         -(dTsi*eS + TfS*dSsi);
+    fsj +=         -(dTsj*eS + TfS*dSsj);
+    f.add_mul( dR,  (dTr *eS + TfS*dSr ) ); // second *KRSrho.x because dR is not multiplied
+
+    printf( "E %g T %g eS %g S %g \n", T*eS, T, eS, S );
+
+    return T * eS;
+
+}
+
+/*
 inline double addPauliGaussS( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
 
     double r2 = dR.norm2();
@@ -551,6 +588,7 @@ inline double addPauliGaussS( const Vec3d& dR, double si, double sj, Vec3d& f, d
     return T * eS;
 
 }
+*/
 
 ///  @}
 

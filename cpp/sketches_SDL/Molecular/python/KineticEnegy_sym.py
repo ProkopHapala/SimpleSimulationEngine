@@ -4,6 +4,12 @@ import sympy as sy
 
 '''
 
+Derive eq.2 in http://doi.wiley.com/10.1002/jcc.21637
+Jaramillo-Botero, A., Su, J., Qi, A., & Goddard, W. A. (2011). Large-scale, long-term nonadiabatic electron molecular dynamics for describing material Properties and phenomena in extreme environments. Journal of Computational Chemistry, 32(3), 497-512. https://doi.org/10.1002/jcc.21637
+
+dT = (s12^2/(1-s12^2))*( t11 + t22 + t12/s12 )
+dT = Tsyn + Tanti - t11 - t22
+
 Increase of Kinetic energy by orthogonalization of two everlaping orbitas f1,f2
 
 d1,d2 are laplacians of the orbitals
@@ -73,10 +79,8 @@ s21 = f2*f1
 
 t11, t22, t12, t21, s = sy.symbols('t11 t22 t12 t21 s')
 
-s11 = 1
-s22 = 1
-s12 = s
-s21 = s
+t21=t12
+s11 = 1; s22 = 1; s12 = s; s21 = s
 
 Tsyn  = (t11+t22+t12+t21)/(s11+s22+s12+s21)
 Tanti = (t11+t22-t12-t21)/(s11+s22-s12-s21)
@@ -88,10 +92,9 @@ Tanti = (t11+t22-t12-t21)/(s11+s22-s12-s21)
 #print "check Tanti: ", sy.simplify( Tanti_ - Tanti  )
 
 dT = Tsyn + Tanti - t11 - t22
-
-dT_ = s*(s*(t11 + t22) - t12 - t21)/( 1 - s**2 )
+dT_ = ((s**2)/(1-s**2)) * ( t11 + t22 - 2*t12/s )   # eq.2 in http://doi.wiley.com/10.1002/jcc.21637
 
 print "change of kinetic energy: "
 print "DeltaT ", sy.simplify( dT )
-print "DeltaT ", sy.simplify( dT_ )
+print "DeltaT ",  dT_ 
 print "check : ", sy.simplify( dT_ - dT )

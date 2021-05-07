@@ -587,7 +587,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     opt.initOpt( 0.05, 0.1 );
     opt.f_limit = 1000.0;
 
-    ff.iPauliModel = 1; // dens overlap
+    ff.iPauliModel = 2; // dens overlap
 
     ff.info();
 
