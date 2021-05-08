@@ -315,7 +315,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     solver.bOptEPos = 1;
     solver.bOptSize = 1;
 
-    solver.iPauliModel = 1;
+    solver.iPauliModel = 2;
 
     /*
     //solver.bNormalize     = false;

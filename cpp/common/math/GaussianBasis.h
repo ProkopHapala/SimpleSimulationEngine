@@ -277,9 +277,12 @@ inline double overlap_s_deriv( // derived/simplified from product3D_s_deriv(
     double sj,    Vec3d   pj,
     double& dCr, double& dCsi, double& dCsj
 ){
-     double C;
+    double C;
     _productAux
     _productOverlap(C,dCsi,dCsj,dCr)
+
+    //printf( " overlap_s_deriv r %g s(%g,%g) S %g ", sqrt(r2), si, sj, C );
+
     /*
     double si2   = si*si;
     double sj2   = sj*sj;
@@ -578,6 +581,7 @@ inline double kinetic_w(  double r2, double w1, double w2 ){
 inline double kinetic_s(  double r2, double si, double sj,   double& fr, double& fsi, double& fsj ){
 
  //  This is total kinetic energy ( not kinetic energy change upon renormalization, not normalized by overlap, not subtracted )
+ // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
 
  // Look also here  http://dx.doi.org/10.1016/j.mechmat.2015.02.008
  // (2^(3/2)*%pi^(3/2)*s1^3*s2^3*(  r2   -3*(s2^2+s1^2)*exp( -r2/(2*s2^2+2*s1^2) ) )/(s2^2+s1^2)^(7/2)
@@ -613,6 +617,7 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  //double dpoly_sj = 3*sij*sij*sj * ( r2  - 3*si2 - 5*sj2 );
 
  //double T = const_K_eVA * ( 1.5*s2*isi2*isj2 -2.*( 3.*s2 - 2.*r2 )*is4 );
+ //double T = const_K_eVA * ( -2.*( 3.*s2 - 2.*r2 )*is4 );
 
  double E = comm * sij * ( r2  -  3*s2 );
  comm*=invs2;
@@ -628,8 +633,7 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  E *=Cij;
  fr*=Cij;
 
- printf( "kinetic_s T %g r %g si %g sj %g ", E, sqrt(r2), si, sj );
-
+ //printf( "kinetic_s T %g r %g si %g sj %g ", E, sqrt(r2), si, sj );
  //printf( "Gauss::kinetic_s() E %g r %g s%g(%g,%g) \n", E, sqrt(r2), sij, si, sj );
 
  //double fsi  = C* (  *poly*g*denom +  ddenom

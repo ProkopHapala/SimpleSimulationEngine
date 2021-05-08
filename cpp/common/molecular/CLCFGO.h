@@ -1086,7 +1086,7 @@ constexpr static const Quat4d default_AtomParams[] = {
         // psi_sym = (psi_1+psi_2)/|psi_1+psi_1| = (psi_1+psi_2)/2(1-S12)
         // From this it can be derived
         // Detla_T =  ( T11 + T22 - T12/S12 )/( S12^2/(1-S12^2) )
-        printf( "EeePaul[%i,%i] ", io, jo );
+        printf( "pauliKineticChnageVB[%i,%i] ", io, jo );
         double T = 0;
         double S = 0;
         int i0=io*perOrb;
@@ -1108,20 +1108,28 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //pairs[ij].get(si,pi, sj,pj);
                 //const Gauss::PairDeriv& dB = dBs[ij];
                 //const Quat4d&           TD = TDs[ij];
-                double  dTr, dTsi, dTsj, dSr, dSsi, dSsj;
+                double  dTr, dTsi, dTsj, dSr, dSsi, dSsj,   dS;
                 { //                Overlap Integral
-                    double dS = Gauss::overlap_s_deriv(  si,pi,  sj,pj,  dSr, dSsi, dSsj );
+                    dS = Gauss::overlap_s_deriv(  si,pi,  sj,pj,  dSr, dSsi, dSsj );
                     dS*=cij; S+=dS;  // integrate S12 = <psi_1|psi_2>
                 }
+                // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
                 if(iPauliModel>0){ // Kinetic Energy integral
+                    /*
                     double dT = Gauss::kinetic_s      (  r2, si, sj,     dTr, dTsi, dTsj );
-                    dT*=cij; T+=dT;  // integrate T12 = <psi_1|T|psi_2>
+                    dT*=cij;
+                    */
+                    double s2  = si*si + sj*sj;
+                    double tau = ( r2 - 3*s2)/(s2*s2);    // tau <=> Tij/Sij
+                    double dT  = dS * tau;
+                    T+=dT;  // integrate T12 = <psi_1|T|psi_2>
                 }
                 ij++;
             }
         }
         double E;
         if(iPauliModel==2){
+            printf( " T %g S %g T/2S %g ", T, S, 0.5*T/S );
             double T11 = oEs[io];
             double T22 = oEs[jo];
             double S2 = S*S;
@@ -1192,10 +1200,11 @@ constexpr static const Quat4d default_AtomParams[] = {
     }
 
     double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
+        printf( "======== evalPauli() \n" );
         double E = 0;
         for(int io=0; io<nOrb; io++){
             for(int jo=0; jo<io; jo++){
-                E += pauliKineticChnageVB(io,jo);
+                if( ospin[io]==ospin[jo] ) E += pauliKineticChnageVB(io,jo);
             }
         }
         return E;
@@ -1641,387 +1650,6 @@ void printElectrons(){
         }
     }
 }
-
-
-
-// ===========================================================================================================================
-// ==================== Old Versions of Functions - Should be removed
-// ===========================================================================================================================
-
-// ===========================================================================================================================
-// ==================== Old Version of overlap and Pauli Evaluation - ToDo : Remove This
-// ===========================================================================================================================
-
-/*
-
-    double DensOverlapOrbPair( int io, int jo ){
-        int i0 = getRhoOffset(io);
-        int j0 = getRhoOffset(jo);
-        int ni = onq[io];
-        int nj = onq[jo];
-        //printf( "DEBUG DensOverlapOrbPair i0,j0  %i,%i ni,nj %i,%i \n", i0,j0, ni, nj );
-        double Srho = 0;
-
-        double renorm = Gauss::norm3Ds(1);
-        for(int i=i0; i<i0+ni; i++){
-            Vec3d  pi = rhoP[i];
-            double qi = rhoQ[i];
-            double si = rhoS[i];
-            for(int j=j0; j<j0+nj; j++){
-                Vec3d  pj = rhoP[j];
-                Vec3d Rij = pj-pi;
-                double r2 = Rij.norm2();
-
-                if(r2>Rcut2) continue;
-
-                double qj = rhoQ[j];
-                double sj = rhoS[j];
-
-                double dSr,dSsi,dSsj;
-                //double Sij = getOverlapSGauss( r2, si*M_SQRT2, sj*M_SQRT2, dSr, dSsi, dSsj )*M_SQRT1_2;
-                double Sij = getOverlapSGauss( r2, si*M_SQRT2, sj*M_SQRT2, dSr, dSsi, dSsj )*renorm;
-                //double Sij = getOverlapSGauss( r2, si*2, sj*2, dSr, dSsi, dSsj );
-                //double Sij = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj );
-
-                //printf( "i,j %i %i  r %g si,j(%g,%g) qi*qj*S(%g,%g|%g):%g \n", i,j, sqrt(r2),  si,sj, qi,qj,Sij, Sij*qi*qj );
-
-                Srho += Sij*qi*qj;
-
-            }
-        }
-        return Srho;
-    }
-
-    //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
-    inline double evalOverlap( int io, int jo ){
-        /// Pauli Energy between two orbitals depend on IKinetic overlap  ~S^2
-        ///   See addPauliGauss() in common/molecular/InteractionsGauss.h
-        int i0 = getOrbOffset(io);
-        int j0 = getOrbOffset(jo);
-         /// ToDo : we may allow different number of orbitals per electron later (?)
-        double Ssum = 0;
-        //printf("============ i0 %i j0 %i perOrb %i \n", i0, j0, perOrb);
-        for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi = epos[i];
-            double si = esize[i];
-            double ci = ecoef[i];
-
-            //Vec3d& fpi = efpos [i];
-            //double fsi = efsize[i];
-            //double fci = efcoef[i];
-            for(int j=j0; j<j0+perOrb; j++){
-                /// ToDo: Rcut may be read from
-                Vec3d Rij = epos[j]-pi;
-                double r2 = Rij.norm2();
-                if(r2>Rcut2)continue; //{ fij = Vec3dZero; return 0; }
-                double sj = esize[j];
-                double cj = ecoef[j];
-                double dSr, dSsi, dSsj;
-                //double Sij = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj );
-                //double Sij = getOverlapSGauss( r2, si*2, sj*2, dSr, dSsi, dSsj );
-                double Sij = getOverlapSGauss( r2, si*M_SQRT2, sj*M_SQRT2, dSr, dSsi, dSsj );   dSr=-dSr; //dSsi=dSsi; dSsj=dSsj;
-                /// NOTE : si,sj scaled by sqrt(2) because they are made for density widths not wave-functions width
-                //printf( "[%i,%i]x[%i,%i] r,S %g %g ci,j  %g %g -> %g \n", io,i, jo,j, sqrt(r2), Sij, ci, cj, Sij*ci*cj );
-                double cij = ci*cj;
-                Ssum += Sij*cij;
-
-                dSsi*=M_SQRT2;
-                dSsj*=M_SQRT2;
-
-                // --- Derivatives ( i.e. Forces )
-                Vec3d fij = Rij*(dSr*cij);
-                efpos [i].add( fij     ); efpos[j].sub ( fij );
-                efsize[i]+= dSsi*cij ; efsize[j]+= dSsj*cij ;
-                efcoef[i]+= Sij*cj   ; efcoef[j]+= Sij*ci  ;
-            }
-        }
-        return Ssum;
-    }
-
-    double orbNorm(int io )const{
-        int i0=getOrbOffset(io);
-        double Ssum=0;
-        int ii=0;
-        for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi  = epos [i];
-            double si  = esize[i];
-            double ci  = ecoef[i];
-            for(int j=i0; j<i; j++){
-                Vec3d Rij = epos[j]-pi;
-                double r2 = Rij.norm2();
-                if(r2>Rcut2)continue; //{ fij = Vec3dZero; return 0; }
-                double sj = esize[j];
-                double cj = ecoef[j];
-                double dSr, dSsi, dSsj;
-                double Sij = getOverlapSGauss( r2, si*M_SQRT2, sj*M_SQRT2, dSr, dSsi, dSsj );
-                // NOTE : si,sj scaled by sqrt(2) because they are made for density widths not wave-functions width
-                Ssum += Sij*ci*cj;
-            }
-        }
-        return Ssum;
-    }
-
-    //inline double evalShotRange( Vec3d Rij, double* Is, int i, int j ){
-    inline double evalPauli( int io, int jo ){
-        /// Pauli Energy between two orbitals depend on IKinetic overlap  ~S^2
-        ///  See addPauliGauss() in common/molecular/InteractionsGauss.h
-        int i0 = getOrbOffset(io);
-        int j0 = getOrbOffset(jo);
-         // ToDo : we may allow different number of orbitals per electron later (?)
-         double E = 0;
-         for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi = epos[i];
-            double si = esize[i];
-            for(int j=j0; j<j0+perOrb; j++){
-                // ToDo: Rcut may be read from
-                Vec3d Rij = epos[j]-pi;
-                double r2 = Rij.norm2();
-                if(r2>Rcut2)continue; //{ fij = Vec3dZero; return 0; }
-                double sj = esize[j];
-
-                double dSr, dSsi, dSsj;
-
-                double Sij = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj );
-
-                double ci = ecoef[i];
-                double cj = ecoef[j];
-                double cij = ci*cj;
-
-                // TODO: We need model for Pauli !!!!
-                double eP = 0;
-                double fP = 0; //
-                Vec3d fij;
-
-                //fij.set_mul( Rij, cij*fP/r ); // ToDo:  evaluate fP properly
-
-                // ToDo:  ecfs should be set as well
-                //ecfs[i] +=dcP;
-                //ecfs[j] +=dcP;
-                //epfs[i].add(fij);
-                //epfs[j].sub(fij);
-                //return eP*cij;
-                E += eP*cij;
-            }
-        }
-        return E;
-    }
-
-
-    inline double CrossOverlap( int io, int jo ){
-        // NOTE : Later we need to evaluate some function F(S(x)) ( e.g. polynominal of cross-overlap  )
-        //          => we need chain derivs   dF(S(x))/dx = (dF/dS)*(dS/dx)
-        //        Most probably it will be integral of overlap density Sum{rho} = Sum{Sij^2}
-        //         in such case derivative    dF(S(xi))/dx =  Stot * (dSij/dxi)
-        int i0 = getOrbOffset(io);
-        int j0 = getOrbOffset(jo);
-         double E = 0;
-         double SOij = 0.0;
-         double CAmp = 1.0;
-         for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi = epos [i];
-            double si = esize[i];
-            double ci = ecoef[i];
-            for(int j=j0; j<j0+perOrb; j++){
-                Vec3d pj  = epos[j];
-                Vec3d Rij = pj-pi;
-                double r2 = Rij.norm2();
-                if(r2>Rcut2)continue; //{ fij = Vec3dZero; return 0; }
-                double sj = esize[j];
-                double cj = ecoef[j];
-                double cij = ci*cj;
-
-                double Sij;
-                Vec3d  p;
-                double s;
-                double dssi,dssj;
-                Vec3d  dxsi,dxsj;
-                double dxxi,dxxj;
-                double dSr;
-                double dSsi,dSsj;
-
-                Sij = Gauss::product3D_s_deriv(
-                    si,   pi,
-                    sj,   pj,
-                    s ,   p ,
-                    dssi, dssj,
-                    dxsi, dxsj,
-                    dxxi, dxxj,
-                    dSsi, dSsj, dSr
-                );
-
-                double eij=CAmp*Sij;
-                E   += eij*cij;
-                Vec3d Fp = Rij*(dSr*cij);
-                efpos [i].add( Fp ); efpos[j].sub( Fp );
-                efsize[i]+= dSsi*cij; efsize[j]+= dSsj*cij;
-                efcoef[i]+= eij*cj ;  efcoef[j]+= eij*ci;
-
-            }
-        }
-        return E;
-    }
-
-    double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
-        double E = 0;
-        for(int io=0; io<nOrb; io++){
-            for(int jo=0; jo<nOrb; jo++){
-                //if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
-                //E += evalPauli( io, jo );
-                E += CrossOverlap( io, jo ); // WARRNING : This is just DEBUG, later we need to use some function of overlap
-            }
-        }
-        return E;
-    }
-
-    double ExchangeOrbPair(int io, int jo){
-
-        // ToDo : Remove This   --   This was replaced by other functions like
-        //    pairOverlapDervis()
-        //    pairKineticDervis()
-
-        // It may be actually easier to evaluate Hartree-Fock like exchange, because it is linear
-        // see:   https://en.wikipedia.org/wiki/Exchange_interaction#Exchange_of_spatial_coordinates
-        // https://chemistry.stackexchange.com/questions/61176/what-is-the-exchange-interaction
-        // => Exchange integral should be rather easy to compute, just by calculating overlap between the two functions   K = <rho_ij(r1)| 1/|r1-r2| |rho_ij(r2)>
-        // scheme:
-        //  1) for pair of orbital, construct auxiliary rho_ij (by expansion on auxuliary functions)
-        //  2) callculate self-convolution of this auxuliary function
-
-        //if( ~(0==io) ) return 0;
-        //if(DEBUG_iter==DEBUG_log_iter)printf( " -- ExchangeOrbPair[%i,%i] \n", io, jo );
-
-        const double R2Safe = sq(0.1);
-        // we first project on axuliary density
-
-        double cijs[nqOrb];
-
-        Vec3d  fPs[nqOrb];
-        double fSs[nqOrb];
-        double fQs[nqOrb];
-
-        Gauss::PairDerivs pairs[nqOrb];
-
-        int i0=io*perOrb;
-        int j0=jo*perOrb;
-        int ij=0;
-        // --- Project   rho_ij(r)  to temp axuliary basis
-        //if(DEBUG_iter==DEBUG_log_iter) reportOrbitals();
-        for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi  = epos [i];
-            double ci  = ecoef[i];
-            double si  = esize[i];
-            for(int j=j0; j<j0+perOrb; j++){
-                Vec3d pj  = epos[j];
-                Vec3d Rij = pj-pi;
-                double r2 = Rij.norm2();
-                //if(r2>Rcut2) continue;
-                double cj  = ecoef[j];
-                double sj  = esize[j];
-                double cij = ci*cj;
-                cijs [ij] = cij;
-                pairs[ij].get(si,pi, sj,pj);
-                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:Project[%i,%i] ss(%g,%g) cij %g Sij %g Qij %g r %g x(%g,%g) \n", i, j, si, sj, cij, pairs[ij].C, cij*pairs[ij].C, sqrt(r2), pi.x, pj.x );
-                ij++;
-            }
-        }
-        // --- self-coulomb  of   rho_ij(r)
-        double E = 0;
-        for(int i=0; i<nqOrb; i++){
-            fPs[i] = Vec3dZero;
-            fSs[i] = 0;
-            fQs[i] = 0;
-        }
-        for(int i=0; i<nqOrb; i++){
-        //int i=0;{
-            //Vec3d  pi = posij[i];
-            //double qi = rhoij[i];
-            //double si = szij [i];
-            const Gauss::PairDerivs& A = pairs[i];
-            double ci = cijs[i];
-            double qi = ci*A.C;
-            for(int j=0; j<=i; j++){
-            //int j=1; {
-                const Gauss::PairDerivs& B = pairs[j];
-                Vec3d Rij = B.p - A.p;
-                double r2 = Rij.norm2();
-                double cj = cijs[j];
-                double qj = cj*B.C;
-
-                double r  = sqrt(r2 + R2SAFE );
-                double s2 = A.s*A.s + B.s*B.s;
-                double s  = sqrt(s2);
-                double fr,fs;
-
-                double qij = qi*qj*2;
-
-                //printf( "//Exchange:Coulomb[%i,%i] r %g s %g \n", i, j, r, s  );
-                double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
-                //printf( "Exchange:Coulomb[%i,%i] qij %g E %g fr %g fs %g \n", i, j, r, s, qij, E*qij, fs, fs );
-
-                // --- Derivatives (Forces)
-                Vec3d fp = Rij*(-fr * qij);
-                fs       *=           qij;
-
-                //if(DEBUG_iter==DEBUG_log_iter) printf( "ExchangeOrbPair:Coulomb[%i,%i] qij %g e %g fx %g fs %g | r %g s %g fr %g fs %g  \n", i,j, qij, e, fp.x, fs,    r, s, fr, fs );
-
-                fPs[i].add(fp);    fPs[j].sub(fp);
-                fSs[i] -= fs*A.s;  fSs[j] -= fs*B.s;
-                fQs[i] += e*qj*2;  fQs[j] += e*qi*2; // ToDo : need to be made more stable ... different (qi,qj)
-                E      += e*qij;
-            }
-        }
-
-        //if(DEBUG_iter==DEBUG_log_iter){for(int i=0; i<nqOrb; i++){printf( "[%i] e %g fx %g | x %g q %g \n", i,  fQs[i], fPs[i].x,     pairs[i].p.x, pairs[i].C*cijs[i] );}}
-
-        //printf( " Exchange:Coulomb DONE \n" );
-        //printf( " Exchange:Coulomb DONE \n" );
-        // --- From Rho
-        ij=0;
-        for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi  = epos [i];
-            double ci  = ecoef[i];
-            double si  = esize[i];
-            for(int j=j0; j<j0+perOrb; j++){
-                Vec3d pj  = epos[j];
-                Vec3d Rij = pj-pi;
-                double r2 = Rij.norm2();
-                //if(r2>Rcut2) continue;
-                double cj  = ecoef[j];
-                double sj  = esize[j];
-                double cij = ci*cj;
-                //cijs[ij] = cij;
-                Gauss::PairDerivs& pair = pairs[ij];
-                //if(DEBUG_iter==DEBUG_log_iter) printf( "Exchange:fromRho[%i,%i] x(%g,%g) ", i, j, pi.x, pj.x );
-                pair.backForce( Rij, cij, fQs[ij], fPs[ij], fSs[ij],  efpos[i], efpos[j], efsize[i], efsize[j] );
-                ij++;
-            }
-        }
-        //printf( " Exchange:FromRho DONE \n" );
-        //if(DEBUG_iter==DEBUG_log_iter)printf( "ExchangeOrbPair() E=%g \n", E  );
-        return E;
-    }
-
-    double evalExchange(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
-        double E = 0;
-        for(int io=0; io<nOrb; io++){ for(int jo=0; jo<io; jo++){
-        //for(int io=0; io<nOrb; io++){ for(int jo=io+1; jo<nOrb; jo++){
-                //if( !checkOrbitalCutoff(io,jo) ) continue; // optimization, not to calculate needless interactions
-                E += ExchangeOrbPair( io, jo);
-            }
-        }
-        //printf( "evalExchange() E=%g \n", E  );
-        return E;
-    }
-
-
-*/
-
-
-
-
-
-
-
 
 };
 

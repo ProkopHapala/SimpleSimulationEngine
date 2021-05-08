@@ -359,19 +359,23 @@ inline double getDeltaTGauss( double r2, double si, double sj,  double& dTr, dou
     double isi2, double isj2, double s2, double is2, double is4
   ){
 
+    // see eq.4 in http://aip.scitation.org/doi/10.1063/1.3272671
+    // and eq.2 in http://doi.wiley.com/10.1002/jcc.21637
+
     double B   =  4.*( 3.*s2 - 4.*r2 )*is4*is2;
     dTsi = const_K_eVA*( -3.*isi2*isi2 + B )*si;
     dTsj = const_K_eVA*( -3.*isj2*isj2 + B )*sj;
     //f.add_mul( dR, const_K_eVA * (8.*is4) );
     dTr  = const_K_eVA*(8.*is4);
-    double T = const_K_eVA * ( 1.5*s2*isi2*isj2 -2.*( 3.*s2 - 2.*r2 )*is4 );
+    //double T = const_K_eVA * ( 1.5*s2*isi2*isj2 -2.*( 3.*s2 - 2.*r2 )*is4 );  // (t11+t22-t12/s12) eq.4 in http://aip.scitation.org/doi/10.1063/1.3272671
+    double T = const_K_eVA * ( -2.*( 3.*s2 - 2.*r2 )*is4 );                     // WARRNING : this is just debugging - ommit t11,t22 from (  )
 
     // This is kinetic energy change normalized by overlap
     // see e.g.   eq.4   in http://aip.scitation.org/doi/10.1063/1.3272671
     //       or   eq.3   in https://link.aps.org/doi/10.1103/PhysRevLett.99.185003
     // see also   eq.3,4 in https://iopscience.iop.org/article/10.1088/1367-2630/14/8/083023
 
-    printf( "getDeltaTGauss T %g r %g si %g sj %g ", T, sqrt(r2), si, sj );
+    //printf( "getDeltaTGauss T %g r %g si %g sj %g ", T, sqrt(r2), si, sj );
     //printf( "getDeltaTGauss: e1 %g \n", 1.5*s2*isi2*isj2 );
     //printf( "getDeltaTGauss: e2 %g \n", -2.*( 3.*s2 - 2.*r2 )*is4 );
     //printf( "getDeltaTGauss: T  %g \n", const_K_eVA * ( 1.5*s2*isi2*isj2 -2.*( 3.*s2 - 2.*r2 )*is4 ) );
@@ -402,6 +406,8 @@ inline double getOverlapSGauss( double r2, double si, double sj, double& dSr, do
     dSsj = e1*f2*sj + e2*f1*si;
     //f.add_mul( dR, e1*e2*(-2.*is2) );
     dSr  = e1*e2*(-2.*is2);
+
+    printf( "getDeltaSGauss r %g s(%g,%g) S %g ", sqrt(r2), si, sj, e1*e2 );
 
     //printf( "getDeltaSGauss :e1  %g \n", e1 );
     //printf( "getDeltaSGauss :e2 %g \n", e2 );
@@ -502,15 +508,15 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     //printf( "addPauliGauss fr1, fr2 fr %g %g %g %g \n", dTr*eS, TfS*dSr, (dTr *eS + TfS*dSr )*KRSrho.x, dR.z );
     //printf( "---------------------- \n" );
 
-    printf( "E %g T %g eS %g S %g \n", T*eS, T, eS, S );
+    printf( " E %g T %g eS %g S %g ", T*eS, T, eS, S );
 
     return T * eS;
 
 }
 
-inline double addPauliGaussVB( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
+inline double addPauliGaussVB( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj ){
 
-    if (anti) return 0;
+    //if (anti) return 0;
 
     double r2 = dR.norm2();
     double r = sqrt(r2 + 1e-16);
@@ -538,7 +544,7 @@ inline double addPauliGaussVB( const Vec3d& dR, double si, double sj, Vec3d& f, 
     fsj +=         -(dTsj*eS + TfS*dSsj);
     f.add_mul( dR,  (dTr *eS + TfS*dSr ) ); // second *KRSrho.x because dR is not multiplied
 
-    printf( "E %g T %g eS %g S %g \n", T*eS, T, eS, S );
+    printf( " E %g T %g eS %g S %g ", T*eS, T, eS, S );
 
     return T * eS;
 
