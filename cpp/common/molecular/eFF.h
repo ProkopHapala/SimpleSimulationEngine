@@ -212,7 +212,7 @@ class EFF{ public:
     Vec3d  * eAbWs  =0; ///< electron parameters (amplitude, decay, width)
 
     //double * espin  =0;
-    int8_t * espin  =0; ///< electron spins
+    int    * espin  =0; ///< electron spins
     Vec3d  * epos   =0; ///< electron positions
     Vec3d  * eforce =0; ///< electron forces
     double * esize  =0; ///< electron size

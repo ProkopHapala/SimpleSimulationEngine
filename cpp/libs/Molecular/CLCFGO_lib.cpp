@@ -156,6 +156,8 @@ void setIBuff(const char* name, int* buff){
     //else                    { return got->second; }
 }
 
+void eval(){ solver.eval(); };
+
 #define NEWBUFF(name,N)   double* name = new double[N]; buffers.insert( {#name, name} );
 
 void testDerivsP_Coulomb_model( int n, double x0, double dx ){

@@ -6,5 +6,6 @@ add_library(RigidMol    SHARED RigidMol.cpp   $<TARGET_OBJECTS:MolecularEngine> 
 add_library(ReactiveFF  SHARED ReactiveFF.cpp )
 
 add_library(CLCFGO_lib  SHARED CLCFGO_lib.cpp )
+add_library(eFF_lib  SHARED CLCFGO_lib.cpp )
 
 
