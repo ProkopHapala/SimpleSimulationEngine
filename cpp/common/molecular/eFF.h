@@ -489,13 +489,14 @@ void info(){
 }
 
 bool loadFromFile_xyz( char const* filename ){
-    printf(" filename: >>%s<< \n", filename );
+    //printf(" filename: >>%s<< \n", filename );
     FILE * pFile;
     pFile = fopen (filename,"r");
+    if (pFile==0){ printf("file >>%s<< not found \n", filename ); return true; }
     int ntot;
     fscanf (pFile, " %i \n", &ntot );
     fscanf (pFile, " %i %i\n", &na, &ne );
-    printf("na %i ne %i \n", na, ne );
+    //printf("na %i ne %i \n", na, ne );
     realloc( na, ne );
     char buf[1024];
     //int ntot=na+ne;
@@ -528,12 +529,12 @@ bool loadFromFile_xyz( char const* filename ){
             //eAbws[ia] = default_eAbWs[e];
             Qasum += e;
             ia++;
-            printf( " a[%i] ", ia );
+            //printf( " a[%i] ", ia );
         };
         //printf( " %i %f %f %f  \n", e, x,y,z );
     }
     clearForce();
-    printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - ne, Qasum, ne );
+    //printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - ne, Qasum, ne );
     fclose (pFile);
     return 0;
 }

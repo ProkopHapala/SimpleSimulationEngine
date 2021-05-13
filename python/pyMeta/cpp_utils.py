@@ -3,6 +3,7 @@ import os
 import ctypes
 
 clean_build = True 
+recompile_glob = True
 lib_ext   ='.so'
 s_numpy_data_as_call = "_np_as(%s,%s)"
 
@@ -49,7 +50,7 @@ def make( what="" ):
     os.chdir ( current_directory )
 
 def loadLib( cpp_name, recompile=True ):
-    if recompile:
+    if recompile and recompile_glob:
         make(cpp_name)
     return ctypes.CDLL(  BUILD_PATH + "/lib" + cpp_name + lib_ext ) 
 

@@ -32,11 +32,35 @@ c_double_p = ctypes.POINTER(c_double)
 
 # ========= C functions
 
+#void loadFromFile( char const* filename, bool bCheck ){
+lib.loadFromFile.argtypes = [ c_char_p, c_bool ]
+lib.loadFromFile.restype  = c_bool
+def loadFromFile( fname, bCheck=True ):
+    return lib.loadFromFile( fname, bCheck )
+
 #void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
 lib.init.argtypes = [ c_int, c_int, c_int, c_int ]
 lib.init.restype  = None
 def init( natom, nOrb, perOrb, natypes ):
     lib.init( natom, nOrb, perOrb, natypes )
+
+# void eval(){
+lib.eval.argtypes = [ ]
+lib.eval.restype  = None
+def eval( ):
+    lib.eval( )
+
+# void printAtomsAndElectrons(){
+lib.printAtomsAndElectrons.argtypes = [ ]
+lib.printAtomsAndElectrons.restype  = None
+def printAtomsAndElectrons( ):
+    lib.printAtomsAndElectrons( )
+
+# void printSetup(){
+lib.printSetup .argtypes = [ ]
+lib.printSetup .restype  = None
+def printSetup ( ):
+    lib.printSetup ( )
 
 #int* getIBuff(const char* name){ 
 lib.getIBuff.argtypes = [c_char_p]
@@ -98,55 +122,7 @@ def setSwitches( normalize=True, kinetic=True, coulomb=True, exchange=True, paul
 
 # ========= Python Functions
 
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    import CLCFGO_coulomb_derivs as ref
-
-
-    natom   = 1
-    aposs   = [[0.0,0.0,0.0],]
-    aQs     = [4.0,]  # atomic nuclei charge (after screening core electrons)
-    aPcoefs = [500.0,]  # atomic core pauli repulsion coeficient (strenght)
-    aQsizes = [0.5,]  # atomic nuclei/pseudopotential size (radius of core electrons )
-    aPsizes = [0.1,]  # atomic nuclei/pseudopotential size (radius of core electrons )
-
-    norb   = 1
-    perORb = 1
-    ecoefs = [[1.0,], ]
-    esizes = [[0.1,],]
-    #eXpos  = [[0.,],]
-    eXpos  = [[0.,],]
-    eYpos  = [[0.,],]
-    eZpos  = [[0.,],]
-
-    '''
-    norb   = 2
-    perORb = 2
-    ecoefs = [[1.0,1.0],[1.0,1.0] ]
-    esizes = [[1.0,1.0],[1.0,1.0] ]
-    #eXpos  = [[0.,+0.5],[-3.5,-1.5]]
-    eXpos  = [[0.,+0.0],[ -0.5, 0.5]]
-    eYpos  = [[0.,+0.0],[ 0.0, 0.0]]
-    eZpos  = [[0.,+0.0],[ 0.0, 0.0]]
-    '''
-
-    '''
-    norb   = 2
-    perORb = 2
-    #ecoefs = [[+0.93,+0.68],[+0.65,+1.3]]
-    #esizes = [[+1.30,+0.90],[+1.60,+0.7]]
-    #eXpos  = [[+0.00,+0.50],[-3.50,-2.0]]
-    #eYpos  = [[+0.00,+0.00],[+0.00,+0.0]]
-    #eZpos  = [[+0.50,-0.30],[-0.40,+0.8]]
-    '''
-
-    x0 =  -1.0
-    dx =  0.05
-    xs =  np.arange( x0, 4.0, dx )
-    xs_ = (xs[1:]+xs[:-1])*0.5
-
-    '''
-
+def test_Gaussian_Overlap_Product_derivatives():
     # ============== Gaussian Overlap Product derivatives
     #esizes[0][0] = xs
     print "esizes", esizes
@@ -173,6 +149,7 @@ if __name__ == "__main__":
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
     plt.title('Gaussian Overlap Derivative')
 
+def test_Gaussian_Electrostatics_derivatives():
     # ============== Gaussian Electrostatics derivatives
     print "esizes", esizes
 
@@ -193,26 +170,12 @@ if __name__ == "__main__":
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
     plt.title('Gaussian Coulomb Derivative')
 
-    '''
-
-    #plt.show()
-    #exit()
-    # =====================
-
-    #ylims=[-5,5]
-    #ylims=[-5,20]
-    #ylims=[-30,80]
-    ylims=[-200,400]
-    plt.figure(figsize=(14,8))
-    
-    # =========================================
-    # ============== Derivs in Python =========
-    # =========================================
-    '''
+# =========================================
+# ============== Derivs in Python ============
+# =========================================
+def plot_Derivs_Python():
     print " ========== Derivs in Python "
-
     #eXpos[0][0] = xa 
-
     (E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, xa=xs ); F=Fp
     #(E, Fp,Fs) = ref.evalEFtot( ecoefs, esizes, eXpos, sa=xs ); F=Fs
     #(E, F) = ref.evalEF_S_off ( xs, ecoefs, esizes, eXpos )
@@ -238,11 +201,11 @@ if __name__ == "__main__":
     plt.grid()
     plt.minorticks_on()
     plt.grid(which='minor', linestyle=':', linewidth='0.5', color='gray')
-    '''
 
-    # =========================================
-    # ============== Derivs in C++ ============
-    # =========================================
+# =========================================
+# ============== Derivs in C++ ============
+# =========================================
+def plot_Derivs_Cpp():
 
     init(natom,norb,perORb,1)  #  natom, nOrb, perOrb, natypes
     ecoef = getBuff("ecoef",(norb,perORb)  )
@@ -290,6 +253,76 @@ if __name__ == "__main__":
     plt.plot(xs ,-Fs,label="Fana")
     plt.plot(xs_,(Es[1:]-Es[:-1])/dx,label="Fnum",ls=':',lw=3)
 
+
+if __name__ == "__main__":
+
+    loadFromFile( "../../cpp/sketches_SDL/Molecular/data/e2_1g_2o.fgo" )
+    #loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H2O_1g_8o.fgo" )
+    printSetup()
+    printAtomsAndElectrons()
+    eval()
+    exit()
+
+    import matplotlib.pyplot as plt
+    import CLCFGO_coulomb_derivs as ref
+
+    natom   = 1
+    aposs   = [[0.0,0.0,0.0],]
+    aQs     = [4.0,]  # atomic nuclei charge (after screening core electrons)
+    aPcoefs = [500.0,]  # atomic core pauli repulsion coeficient (strenght)
+    aQsizes = [0.5,]  # atomic nuclei/pseudopotential size (radius of core electrons )
+    aPsizes = [0.1,]  # atomic nuclei/pseudopotential size (radius of core electrons )
+
+    norb   = 1
+    perORb = 1
+    ecoefs = [[1.0,], ]
+    esizes = [[0.1,],]
+    #eXpos  = [[0.,],]
+    eXpos  = [[0.,],]
+    eYpos  = [[0.,],]
+    eZpos  = [[0.,],]
+
+    '''
+    norb   = 2
+    perORb = 2
+    ecoefs = [[1.0,1.0],[1.0,1.0] ]
+    esizes = [[1.0,1.0],[1.0,1.0] ]
+    #eXpos  = [[0.,+0.5],[-3.5,-1.5]]
+    eXpos  = [[0.,+0.0],[ -0.5, 0.5]]
+    eYpos  = [[0.,+0.0],[ 0.0, 0.0]]
+    eZpos  = [[0.,+0.0],[ 0.0, 0.0]]
+    '''
+
+    '''
+    norb   = 2
+    perORb = 2
+    #ecoefs = [[+0.93,+0.68],[+0.65,+1.3]]
+    #esizes = [[+1.30,+0.90],[+1.60,+0.7]]
+    #eXpos  = [[+0.00,+0.50],[-3.50,-2.0]]
+    #eYpos  = [[+0.00,+0.00],[+0.00,+0.0]]
+    #eZpos  = [[+0.50,-0.30],[-0.40,+0.8]]
+    '''
+
+    x0 =  -1.0
+    dx =  0.05
+    xs =  np.arange( x0, 4.0, dx )
+    xs_ = (xs[1:]+xs[:-1])*0.5
+
+    #test_Gaussian_Overlap_Product_derivatives()
+    test_Gaussian_Electrostatics_derivatives()
+
+    #plt.show()
+    #exit()
+    # =====================
+
+    #ylims=[-5,5]
+    #ylims=[-5,20]
+    #ylims=[-30,80]
+    ylims=[-200,400]
+    plt.figure(figsize=(14,8))
+
+    plot_Derivs_Python()
+    plot_Derivs_Cpp()
 
     plt.legend()
     #plt.ylim(-30,40)

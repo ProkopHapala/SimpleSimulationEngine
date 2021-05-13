@@ -24,7 +24,7 @@
 Vec3d DEBUG_dQdp;
 int DEBUG_iter     = 0;
 int DEBUG_log_iter = 0;
-
+int i_DEBUG=0;
 
 #include "Grid.h"
 #include "GaussianBasis.h"
@@ -42,51 +42,7 @@ std::unordered_map<std::string, int*>     ibuffers;
 extern "C"{
 // ========= Grid initialization
 
-void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
-    solver.realloc( natom_, nOrb_, perOrb_, natypes_ );
-    solver.setDefaultValues();
-    /*
-    int natom =0; ///< number of atoms (nuclei, ions)
-    int perOrb=0; //!< Brief number of spherical functions per orbital
-    int nOrb  =0; //!< Brief number of single-electron orbitals in system
-    // this is evaluated automaticaly
-    int nBas  =0; ///< number of basis functions
-    int nqOrb =0; ///< number of charges (axuliary density elements) per orbital
-    int nQtot =0; ///< total number of charge elements
-
-    // atoms (ions)
-    Vec3d*  apos   =0;  ///< positioon of atoms
-    Vec3d*  aforce =0;  ///< positioon of atoms
-    Vec3d*  aQs    =0;  ///< charge of atom
-    int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
-
-    // orbitals
-    Vec3d*  opos =0;   ///< store positions for the whole orbital
-    Vec3d*  odip =0;   ///< Axuliary array to store dipoles for the whole orbital
-    double* oEs  =0;   ///< orbital energies
-    double* oQs  =0;   ///< total charge in orbital before renormalization (just DEBUG?)
-    int*    onq  =0;   ///< number of axuliary density functions per orbital
-
-    // --- Wave-function components for each orbital
-    Vec3d*  epos  =0; ///< position of spherical function for expansion of orbitals
-    double* esize =0;
-    double* ecoef =0;  ///< expansion coefficient of expansion of given orbital
-    // --- Forces acting on wave-functions components
-    Vec3d*  efpos  =0; ///<   force acting on position of orbitals
-    double* efsize =0; ///<   force acting on combination coefficnet of orbitals
-    double* efcoef =0; ///<  force acting on size of gaussians
-
-    // --- Auxuliary electron density expansion basis functions
-    Vec3d * rhoP  =0; ///< position of density axuliary functio
-    double* rhoQ  =0; ///< temporary array to store density projection on pair overlap functions
-    double* rhoS  =0;
-    // --- Forces acting on auxuliary density basis functions
-    Vec3d * rhofP =0; ///< position of density axuliary functio
-    double* rhofQ =0; ///< temporary array to store density projection on pair overlap functions
-    double* rhofS =0;
-    double* rhoEQ =0; /// coulomb energy
-    */
-    
+void makeDefaultBuffers(){
     // atoms (ions)
     buffers.insert( { "apos",   (double*)solver.apos   } );
     buffers.insert( { "aforce", (double*)solver.aforce } );
@@ -101,6 +57,7 @@ void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
     buffers.insert( { "oEs",           solver.oEs   } );
     buffers.insert( { "oQs",           solver.oQs   } );
     buffers.insert( { "onq",  (double*)solver.onq   } );
+    ibuffers.insert( { "ospin",  solver.ospin   } );
     // --- Wave-function components for each orbital
     buffers.insert( { "epos", (double*)solver.epos   } );
     buffers.insert( { "esize",         solver.esize  } );
@@ -118,8 +75,25 @@ void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
     buffers.insert( { "rhofQ",          solver.rhofQ } );
     buffers.insert( { "rhofS",          solver.rhofS } );
     //buffers.insert( { "rhoEQ",          solver.rhoEQ } );
-
 }
+
+void loadFromFile( char const* filename, bool bCheck ){
+    solver.loadFromFile( filename, bCheck );
+    //solver.setDefaultValues();
+    makeDefaultBuffers();
+}
+
+void init( int natom_, int nOrb_, int perOrb_, int natypes_ ){
+    solver.realloc( natom_, nOrb_, perOrb_, natypes_ );
+    solver.setDefaultValues();
+    makeDefaultBuffers();
+}
+
+void eval(){ solver.eval(); };
+
+void printSetup            (){ solver.printSetup();                          }
+void printAtomsAndElectrons(){ solver.printAtoms(); solver.printElectrons(); }
+
 
 /*
 int*    getTypes (){ return (int*)   ff.types;  }
@@ -155,8 +129,6 @@ void setIBuff(const char* name, int* buff){
     //if( got==buffers.end() ){ return null;        }
     //else                    { return got->second; }
 }
-
-void eval(){ solver.eval(); };
 
 #define NEWBUFF(name,N)   double* name = new double[N]; buffers.insert( {#name, name} );
 

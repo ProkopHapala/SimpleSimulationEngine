@@ -23,6 +23,7 @@
 Vec3d DEBUG_dQdp;
 int DEBUG_iter     = 0;
 int DEBUG_log_iter = 0;
+int i_DEBUG=0;
 
 #include "InteractionsGauss.h"
 #include "eFF.h"
@@ -53,8 +54,9 @@ void init_buffers(){
     ibuffers.insert( { "espin",         ff.espin  } );
 }
 
-void load_xyz( const char* fname ){ 
-    ff.loadFromFile_xyz( fname ); 
+bool load_xyz( const char* fname ){ 
+    //printf( "load_xyz \n" );
+    return ff.loadFromFile_xyz( fname ); 
 }
 
 void init( int na, int ne ){
