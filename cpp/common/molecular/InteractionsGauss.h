@@ -407,18 +407,7 @@ inline double getOverlapSGauss( double r2, double si, double sj, double& dSr, do
     //f.add_mul( dR, e1*e2*(-2.*is2) );
     dSr  = e1*e2*(-2.*is2);
 
-    printf( "getDeltaSGauss r %g s(%g,%g) S %g ", sqrt(r2), si, sj, e1*e2 );
-
-    //printf( "getDeltaSGauss :e1  %g \n", e1 );
-    //printf( "getDeltaSGauss :e2 %g \n", e2 );
-    //printf( "getDeltaSGauss :f1 %g \n", f1 );
-    //printf( "getDeltaSGauss :f2 %g \n", f2 );
-    //printf( "getDeltaSGauss :S    %g \n", e1*e2 );
-    //printf( "getDeltaSGauss :dSsi %g \n", dSsi  );
-    //printf( "getDeltaSGauss :dSsj %g \n", dSsj  );
-    //printf( "getDeltaSGauss :dSr  %g \n", dSr   );
-    //printf( "getDeltaSGauss :fr  %g \n",  dSr*sqrt(r2) );
-
+    printf( "getOverlapSGauss r %g s(%g,%g) S %g ", sqrt(r2), si, sj, e1*e2 );
     return e1 * e2;
 }
 

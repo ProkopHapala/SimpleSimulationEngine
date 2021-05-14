@@ -46,9 +46,25 @@ def init( natom, nOrb, perOrb, natypes ):
 
 # void eval(){
 lib.eval.argtypes = [ ]
-lib.eval.restype  = None
+lib.eval.restype  = c_double
 def eval( ):
-    lib.eval( )
+    return lib.eval( )
+
+#  double* getEnergyPointer(){
+lib.getEnergyPointer.argtypes  = [] 
+lib.getEnergyPointer.restype   = c_double_p
+def getEnergyTerms( sh=(7,) ):
+    # Ek=0, Eee EeePaul EeeExch Eae EaePaul Eaa
+    ptr = lib.getEnergyPointer()
+    return  np.ctypeslib.as_array( ptr, shape=sh )
+
+#int*    getDimPointer   (){
+lib.getDimPointer.argtypes  = [] 
+lib.getDimPointer.restype   = c_int_p
+def getDimPointer( sh=(8,) ):
+    # natypes   natom  nOrb  nBas  perOrb  perOrb2   nqOrb  nQtot 
+    ptr = lib.getDimPointer()
+    return  np.ctypeslib.as_array( ptr, shape=sh )
 
 # void printAtomsAndElectrons(){
 lib.printAtomsAndElectrons.argtypes = [ ]
@@ -65,9 +81,10 @@ def printSetup ( ):
 #int* getIBuff(const char* name){ 
 lib.getIBuff.argtypes = [c_char_p]
 lib.getIBuff.restype  = c_int_p
-def getIBuff(name,natom):
+def getIBuff(name,sh):
+    if not isinstance(sh, tuple): sh=(sh,)
     ptr = lib.getIBuff(name)
-    return np.ctypeslib.as_array( ptr, shape=(natom,))
+    return np.ctypeslib.as_array( ptr, shape=sh)
 
 
 #double* getBuff(const char* name){ 
@@ -75,9 +92,11 @@ lib.getBuff.argtypes = [c_char_p]
 lib.getBuff.restype  = c_double_p 
 def getBuff(name,sh):
     ptr = lib.getBuff(name)
+    if not isinstance(sh, tuple): sh=(sh,)
     #sh_ = (natom,)
     #if sh is not None:
     #    sh_ = sh_ + sh
+    print "DEBUG type( ptr ) ", type( ptr ), sh
     return np.ctypeslib.as_array( ptr, shape=sh)
 
 #void testDerivs_Coulomb_model( int n, double x0, double dx ){
@@ -119,6 +138,18 @@ lib.setSwitches.argtypes = [ c_bool, c_bool, c_bool, c_bool, c_bool, c_int, c_bo
 lib.setSwitches.restype  = None
 def setSwitches( normalize=True, kinetic=True, coulomb=True, exchange=True, pauli=True, pauliModel=0, AA=True, AE=True, AECoulomb=True, AEPauli=True ):
     lib.setSwitches( normalize, kinetic, coulomb, exchange, pauli, pauliModel, AA, AE, AECoulomb, AEPauli )
+
+#void setSwitches_(int bNormalize, int bEvalKinetic, int bEvalCoulomb, int  bEvalExchange, int  bEvalPauli, int bEvalAA, int bEvalAE, int bEvalAECoulomb, int bEvalAEPauli ){
+lib.setSwitches_.argtypes = [ c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int ]
+lib.setSwitches_.restype  = None
+def setSwitches_( normalize=0, kinetic=0, coulomb=0, exchange=0, pauli=0, AA=0, AE=0, AECoulomb=0, AEPauli=0 ):
+    lib.setSwitches_( normalize, kinetic, coulomb, exchange, pauli, AA, AE, AECoulomb, AEPauli )
+
+#void setPauli( int iPauli ){ 
+lib.setPauli.argtypes = [ c_int ]
+lib.setPauli.restype  = None
+def setPauli( iPauli ):
+    lib.setPauli( iPauli )
 
 # ========= Python Functions
 

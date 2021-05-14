@@ -221,7 +221,7 @@ class EFF{ public:
     double* pDOFs =0;  ///< buffer of degrees of freedom
     double* fDOFs =0;  ///< buffer of forces on degrees of freedom
 
-    double Ek=0, Eee=0,Eae=0,Eaa=0, EeePaul=0,EaePaul=0; ///< different kinds of energy
+    double Ek=0, Eee=0,EeePaul=0,EeeExch=0,  Eae=0,EaePaul=0,  Eaa=0; ///< different kinds of energy
 
 void realloc(int na_, int ne_){
     na=na_; ne=ne_;
@@ -304,10 +304,11 @@ double evalEE(){
                 //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
             }else if( iPauliModel == 2 ){
                 if(spini==espin[j]){ // Pauli repulsion only for electrons with same spin
-                    printf( "EeePaul[%i,%i]  ", i, j );
-                    double dEpaul = addPauliGaussVB( dR, si*M_SQRT2, sj*M_SQRT2, f, fsi, fsj ); EeePaul+=dEpaul;
+                    printf( "EeePaul[%i,%i] >> ", i, j );
+                    //double dEpaul = addPauliGaussVB( dR, si*M_SQRT2, sj*M_SQRT2, f, fsi, fsj ); EeePaul+=dEpaul;
+                    double dEpaul = addPauliGaussVB( dR, si, sj, f, fsi, fsj ); EeePaul+=dEpaul;
                     //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
-                    printf( " dEpaul %g \n", dEpaul );
+                    printf( "<< dEpaul %g \n", dEpaul );
                 }
             }else{
                 if( spini==espin[j] ){
@@ -480,6 +481,7 @@ void autoAbWs( const Vec3d * AAs, const Vec3d * AEs ){
 }
 
 void info(){
+    printf( "iPauliModel %i KPauliOverlap %g \n", iPauliModel, KPauliOverlap );
     for(int i=0; i<na; i++){
         printf( "a[%i] p(%g,%g,%g) q %g eAbW(%g,%g,%g) aAbW(%g,%g,%g) \n", i, apos[i].x, apos[i].y, apos[i].z, aQ[i], eAbWs[i].z,eAbWs[i].z,eAbWs[i].z, aAbWs[i].z,aAbWs[i].z,aAbWs[i].z );
     }
@@ -492,11 +494,12 @@ bool loadFromFile_xyz( char const* filename ){
     //printf(" filename: >>%s<< \n", filename );
     FILE * pFile;
     pFile = fopen (filename,"r");
-    if (pFile==0){ printf("file >>%s<< not found \n", filename ); return true; }
+    if (pFile==0){ printf("ERROR file >>%s<< not found \n", filename ); return true; }
     int ntot;
     fscanf (pFile, " %i \n", &ntot );
     fscanf (pFile, " %i %i\n", &na, &ne );
-    //printf("na %i ne %i \n", na, ne );
+    if((ne+na)!=ntot){ printf("ERROR ne(%i)+na(%i) != ntot(%i) >>%s<< \n", ne, na, ntot, filename ); return true; }
+    printf("na %i ne %i ntot %i \n", na, ne, ntot );
     realloc( na, ne );
     char buf[1024];
     //int ntot=na+ne;
@@ -511,6 +514,7 @@ bool loadFromFile_xyz( char const* filename ){
         double x,y,z,s;
         int e;
         fgets( buf, 256, pFile); //printf( ">%s<\n", buf );
+        //printf( "buf[%i]  >>%s<< \n", ie, buf );
         int nw = sscanf (buf, " %i %lf %lf %lf", &e, &x, &y, &z, &s );
         if( e<0){
             epos[ie]=(Vec3d){x,y,z};
@@ -520,8 +524,8 @@ bool loadFromFile_xyz( char const* filename ){
             //esize[ie] = 1.0;
             //esize[ie] = 0.5;
             //esize[ie] = 0.25;
+            printf( " e[%i] pos(%g,%g,%g) spin %i size %g \n", ie, epos[ie].x, epos[ie].y, epos[ie].z, espin[ie], esize[ie] );
             ie++;
-            //printf( " e[%i] ", ie );
         }else{
             apos[ia]=(Vec3d){x,y,z};
             aQ  [ia]=e;  // change this later

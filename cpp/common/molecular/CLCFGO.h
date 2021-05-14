@@ -111,16 +111,15 @@ constexpr static const Quat4d default_AtomParams[] = {
     double Rcut2     =Rcut*Rcut;
     double RcutOrb2  =RcutOrb*RcutOrb;
 
-    int natypes =0;
-
-    int natom =0; ///< number of atoms (nuclei, ions)
-    int perOrb=0; //!< Brief number of spherical functions per orbital
+    int natypes=0;
+    int natom  =0; ///< number of atoms (nuclei, ions)
+    int nOrb   =0; //!< Brief number of single-electron orbitals in system
+    int nBas   =0; ///< number of basis functions
+    int perOrb =0; //!< Brief number of spherical functions per orbital
     int perOrb2=0;
-    int nOrb  =0; //!< Brief number of single-electron orbitals in system
     // this is evaluated automaticaly
-    int nBas  =0; ///< number of basis functions
-    int nqOrb =0; ///< number of charges (axuliary density elements) per orbital
-    int nQtot =0; ///< total number of charge elements
+    int nqOrb  =0; ///< number of charges (axuliary density elements) per orbital
+    int nQtot  =0; ///< total number of charge elements
 
     // atoms (ions)
     Vec3d*  apos   =0;  ///< [A] positioon of atoms
@@ -1200,14 +1199,14 @@ constexpr static const Quat4d default_AtomParams[] = {
     }
 
     double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
-        printf( "======== evalPauli() \n" );
-        double E = 0;
+        //printf( "======== evalPauli() \n" );
+        EeePaul = 0;
         for(int io=0; io<nOrb; io++){
             for(int jo=0; jo<io; jo++){
-                if( ospin[io]==ospin[jo] ) E += pauliKineticChnageVB(io,jo);
+                if( ospin[io]==ospin[jo] ) EeePaul += pauliKineticChnageVB(io,jo);
             }
         }
-        return E;
+        return EeePaul;
     }
 
     void evalExchangeCorrelation(){

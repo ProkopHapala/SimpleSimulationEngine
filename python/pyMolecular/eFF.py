@@ -26,6 +26,8 @@ header_strings = [
 "void init( int na, int ne ){",
 "void eval(){",
 "void info(){",
+"double* getEnergyPointer(){",
+"int*    getDimPointer   (){",
 "double* getBuff(const char* name){",
 "void setBuff(const char* name, double* buff){",
 "int* getIBuff(const char* name){",
@@ -71,7 +73,7 @@ def init(na, ne):
 
 #  void eval(){
 lib.eval.argtypes  = [] 
-lib.eval.restype   =  None
+lib.eval.restype   =  c_double
 def eval():
     return lib.eval() 
 
@@ -81,12 +83,33 @@ lib.info.restype   =  None
 def info():
     return lib.info() 
 
+#  double* getEnergyPointer(){
+lib.getEnergyPointer.argtypes  = [] 
+lib.getEnergyPointer.restype   = c_double_p
+def getEnergyTerms( sh=(7,) ):
+    # Ek=0, Eee EeePaul EeeExch Eae EaePaul Eaa
+    ptr = lib.getEnergyPointer()
+    return  np.ctypeslib.as_array( ptr, shape=sh )
+
+#int*    getDimPointer   (){
+lib.getDimPointer.argtypes  = [] 
+lib.getDimPointer.restype   = c_int_p
+def getDimPointer( sh=(3,) ):
+    # ne=0 na=0 nDOFs=0
+    ptr = lib.getDimPointer()
+    return  np.ctypeslib.as_array( ptr, shape=sh )
+
 #  double* getBuff(const char* name){
 lib.getBuff.argtypes  = [c_char_p] 
 lib.getBuff.restype   =  c_double_p
-def getBuff(name):
-    return lib.getBuff(name) 
-    #return lib.getBuff(_np_as(name,c_char_p)) 
+def getBuff( name, sh ):
+    ptr = lib.getBuff(name)
+    if not isinstance(sh, tuple): sh=(sh,)
+    #sh_ = (natom,)
+    #if sh is not None:
+    #    sh_ = sh_ + sh
+    print "DEBUG type( ptr ) ", type( ptr ), sh
+    return np.ctypeslib.as_array( ptr, shape=sh)
 
 #  void setBuff(const char* name, double* buff){
 lib.setBuff.argtypes  = [c_char_p, c_double_p] 
@@ -98,8 +121,10 @@ def setBuff(name, buff):
 #  int* getIBuff(const char* name){
 lib.getIBuff.argtypes  = [c_char_p] 
 lib.getIBuff.restype   =  c_int_p
-def getIBuff(name):
-    return lib.getIBuff(name) 
+def getIBuff(name,sh):
+    ptr = lib.getIBuff(name)
+    if not isinstance(sh, tuple): sh=(sh,)
+    return np.ctypeslib.as_array( ptr, shape=sh)
     #return lib.getIBuff(_np_as(name,c_char_p)) 
 
 #  void setIBuff(const char* name, int* buff){

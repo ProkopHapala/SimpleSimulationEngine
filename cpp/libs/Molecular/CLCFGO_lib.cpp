@@ -77,10 +77,11 @@ void makeDefaultBuffers(){
     //buffers.insert( { "rhoEQ",          solver.rhoEQ } );
 }
 
-void loadFromFile( char const* filename, bool bCheck ){
-    solver.loadFromFile( filename, bCheck );
+bool loadFromFile( char const* filename, bool bCheck ){
+    bool b = solver.loadFromFile( filename, bCheck );
     //solver.setDefaultValues();
     makeDefaultBuffers();
+    return b;
 }
 
 void init( int natom_, int nOrb_, int perOrb_, int natypes_ ){
@@ -89,7 +90,9 @@ void init( int natom_, int nOrb_, int perOrb_, int natypes_ ){
     makeDefaultBuffers();
 }
 
-void eval(){ solver.eval(); };
+double  eval(){ return solver.eval(); };
+double* getEnergyPointer(){ return &solver.Ek; }
+int*    getDimPointer   (){ return &solver.natypes; }
 
 void printSetup            (){ solver.printSetup();                          }
 void printAtomsAndElectrons(){ solver.printAtoms(); solver.printElectrons(); }
@@ -300,5 +303,21 @@ void setSwitches(bool bNormalize, bool bEvalKinetic, bool bEvalCoulomb, bool  bE
     solver.bEvalAECoulomb = bEvalAECoulomb;
     solver.bEvalAEPauli   = bEvalAEPauli;
 }
+
+void setSwitches_(int bNormalize, int bEvalKinetic, int bEvalCoulomb, int  bEvalExchange, int  bEvalPauli, int bEvalAA, int bEvalAE, int bEvalAECoulomb, int bEvalAEPauli ){
+#define _setbool(b,i) { if(i>0){b=true;}else if(i<0){b=false;} }
+    _setbool( solver.bNormalize     , bNormalize     );
+    _setbool( solver.bEvalKinetic   , bEvalKinetic   );
+    _setbool( solver.bEvalCoulomb   , bEvalCoulomb   );
+    _setbool( solver.bEvalExchange  , bEvalExchange  );
+    _setbool( solver.bEvalPauli     , bEvalPauli     );
+    _setbool( solver.bEvalAA        , bEvalAA        );
+    _setbool( solver.bEvalAE        , bEvalAE        );
+    _setbool( solver.bEvalAECoulomb , bEvalAECoulomb );
+    _setbool( solver.bEvalAEPauli   , bEvalAEPauli   );
+#undef _setbool
+}
+
+void setPauli( int iPauli ){ solver.iPauliModel = iPauli; }
 
 } // extern "C"
