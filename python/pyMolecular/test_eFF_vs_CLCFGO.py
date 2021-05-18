@@ -11,6 +11,7 @@ cpp_utils.clean_build    = False  # Recompile only if changed
 
 import eFF
 import CLCFGO as effmc
+import eFF_terms as effpy
 
 print( "\n ============ CLCFGO \n" );
 effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/e2_1g_2o.fgo" )
@@ -21,7 +22,7 @@ effmc.printAtomsAndElectrons()
 
 print "effmc dims ", effmc.getDimPointer()
 effmc_esize = effmc.getBuff("esize",2)    
-effmc_esize[:] *= np.sqrt(2)   # ToDo : If esize multiplied by sqrt(2)   Ek and Eee agrees (eFF-vs-CLCDGO) but EeePaul, if without factor sqrt(2) EeePaul agree but Ek and Eee does not !!!
+#effmc_esize[:] *= np.sqrt(2)   # ToDo : :If esize multiplied by sqrt(2)   Ek and Eee agrees (eFF-vs-CLCDGO) but EeePaul, if without factor sqrt(2) EeePaul agree but Ek and Eee does not !!!
 print " effmc_esize ", effmc_esize
 
 E = effmc.eval()
@@ -44,5 +45,8 @@ E = eFF.eval()
 print " # Ek Eee EeePaul EeeExch Eae EaePaul Eaa"
 print "E_terms ", eFF.getEnergyTerms()
 print "Etot ", E 
+
+print "effpy.Kinetic(0.5)*2 ", effpy.Kinetic(0.5)*2 
+
 
 print( " ===== ALL DONE !!! \n" )

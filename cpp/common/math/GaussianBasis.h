@@ -587,10 +587,7 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  // (2^(3/2)*%pi^(3/2)*s1^3*s2^3*(  r2   -3*(s2^2+s1^2)*exp( -r2/(2*s2^2+2*s1^2) ) )/(s2^2+s1^2)^(7/2)
  //  2^(3/2)*pi^(3/2)    *si^3*sj^3*(  r2   -3*(sj^2+si^2)*exp(-r2/(2*sj^2+2*si^2)))     /     (s2^2+s1^2)^(7/2)
  //  2^(3/2)*pi^(3/2)    *sij^3*(  r2   -3* s2 *exp( -r2/(2*s2) ) ) /  s2^(7/2)
- //const double const_Ke_eVA = 11.4299466055;
- //const double const_K_eVA = 7.6199644036;
- const double C            = -15.7496099457 * const_K_eVA * 2;  //    2^(3/2)*pi^(3/2)
- //const double C            = const_K_eVA * 2;  //    2^(3/2)*pi^(3/2)
+ const double C  = -15.7496099457 * const_K_eVA;  //    2^(3/2)*pi^(3/2)   // NOTE:  factor 2x was here for wrong reason
  double dCi,dCj;
  //C *= sqnorm3Ds(si) * sqnorm3Ds(sj);
  double Ci = sqnorm3Ds_deriv( si, dCi );
@@ -633,7 +630,7 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  E *=Cij;
  fr*=Cij;
 
- //printf( "kinetic_s T %g r %g si %g sj %g ", E, sqrt(r2), si, sj );
+ printf( "kinetic_s T %g r %g si %g sj %g ", E, sqrt(r2), si, sj );
  //printf( "Gauss::kinetic_s() E %g r %g s%g(%g,%g) \n", E, sqrt(r2), sij, si, sj );
 
  //double fsi  = C* (  *poly*g*denom +  ddenom
