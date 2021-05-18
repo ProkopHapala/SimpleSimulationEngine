@@ -297,7 +297,7 @@ double evalEE(){
             double& fsj = fsize[j];
 
             double dEee = addCoulombGauss( dR, si, sj, f, fsi, fsj, qq ); Eee += dEee;
-            //printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
+            printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
             if( iPauliModel == 1 ){
                 printf( "EeePaul[%i,%i]  ", i, j );
                 double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho ); EeePaul+=dEpaul;
