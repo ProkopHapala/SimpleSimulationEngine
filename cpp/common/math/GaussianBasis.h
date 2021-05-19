@@ -120,10 +120,15 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
     //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
     constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
+
+    //s*=2;
+
     double ir   = 1./r; //(r+1.e-8);
     double is   = 1./s; //(s+1.e-8);
     double r_s  = r*is;
-    double r_2s = M_SQRT2 * r_s;
+    double r_2s = M_SQRT1_2 * r_s; // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    //double r_2s = r_s;
+    //double r_2s = M_SQRT2   * r_s; // This is for wavefunction blobs (assuming si,sj comes from wavefunction)
     double e1   = ir * const_El_eVA;
     double e2   = erf(  r_2s      );            // ToDo : this should be possible to compute together !!!
     double g    = exp( -r_2s*r_2s ) * const_F2;
@@ -630,7 +635,7 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
  E *=Cij;
  fr*=Cij;
 
- printf( "kinetic_s T %g r %g si %g sj %g ", E, sqrt(r2), si, sj );
+ //printf( "kinetic_s T %g r %g si %g sj %g ", E, sqrt(r2), si, sj );
  //printf( "Gauss::kinetic_s() E %g r %g s%g(%g,%g) \n", E, sqrt(r2), sij, si, sj );
 
  //double fsi  = C* (  *poly*g*denom +  ddenom

@@ -6,6 +6,7 @@
 #include "AOIntegrals.h"
 //#include "AOrotations.h"
 #include "Grid.h"
+#include "GridUtils.h"
 #include "CLCFGO.h"
 #include "VecN.h"
 
@@ -562,13 +563,17 @@ void test_DensityOverlap( CLCFGO& solver, Plot2D& plot1 ){
 
 void test_ElectroStatics( CLCFGO& solver, Plot2D& plot1 ){
     // ======= Test Orbital Density Overlap
-    int    nint = 10;
+    int    nint = 60;
     double Lmax = 6.0;
     DataLine2D* line_IElGrid = new DataLine2D( nint, 0, Lmax/nint, 0xFF0000FF, "IEl_grid" ); plot1.add(line_IElGrid );
-    DataLine2D* line_IElAna  = new DataLine2D( 100, 0, 0.1       , 0xFF0080FF, "IEl_ana"  ); plot1.add(line_IElAna  );
+    DataLine2D* line_IElAna  = new DataLine2D( 60, 0, 0.1       , 0xFF0080FF, "IEl_ana"  ); plot1.add(line_IElAna  );
     //DataLine2D* line_IrhoWf   = new DataLine2D( 100, 0, 0.1      , 0xFFFF00FF, "Irho_Wf"   ); plot1.add(line_IrhoWf  );
+
+    solver.epos[0]=Vec3dZero;
+    solver.epos[1]=Vec3dZero;
+
     for(int i=0; i<line_IElAna->n; i++){
-        solver.epos[2].x=line_IElAna->xs[i];
+        solver.epos[0].x=line_IElAna->xs[i];
         solver.projectOrbs( true );
         //line_IrhoAna->ys[i] = solver.DensOverlapOrbPair( 0, 1 );
         line_IElAna->ys[i] = solver.CoulombOrbPair( 0, 1 );
@@ -578,7 +583,7 @@ void test_ElectroStatics( CLCFGO& solver, Plot2D& plot1 ){
     DEBUG_saveFile2="temp/rho1.xsf";
     auto func1 = [&](GridShape& grid, double* f, double x ){     //    ---- Potencial of Orb_1
         int ntot=grid.n.totprod();
-        //solver.epos[0].x=x;
+        solver.epos[0].x=0;
         solver.projectOrbs( true );
         //solver.orb2grid( 0, grid, f );
         //solver.rho2grid( 0, grid, f );
@@ -587,15 +592,81 @@ void test_ElectroStatics( CLCFGO& solver, Plot2D& plot1 ){
     };
     auto func2 = [&](GridShape& grid, double* f, double x ){     //    ---- Density of Orb_2
         int ntot=grid.n.totprod();
-        solver.epos[2].x=x;
+        solver.epos[1].x=x;
         //solver.projectOrbs();
         solver.orb2grid( 1, grid, f );
         for(int i=0; i<ntot; i++){ double fi=f[i]; f[i]=fi*fi; }
     };
     gridNumIntegral( nint, 0.2, 6.0, Lmax, line_IElGrid->ys, func1, func2, true );
+    for(int i=0; i<line_IElAna->n; i++){ printf( "%i %g %g  %g %g %g \n", i, line_IElAna->xs[i], line_IElAna->ys[i], line_IElGrid->xs[i], line_IElGrid->ys[i],  line_IElGrid->ys[i]*2 ); };
     printf( "DEBUG rho*rho grid %g | | %g \n", line_IElGrid->ys[0], line_IElAna->ys[0], Gauss::norm3Ds(1) );
     }
 }
+
+
+
+// =========================================================================
+///        test   Electrostatics   ( density * Hartree-Potential overlap )
+// =========================================================================
+
+void test_ElectroStaticsBrute( CLCFGO& solver, Plot2D& plot1 ){
+    // ======= Test Orbital Density Overlap
+    int    nint = 10;
+    double Lmax = 6.0;
+    DataLine2D* line_IElGrid = new DataLine2D( nint, 0, Lmax/nint, 0xFF0000FF, "IEl_grid" ); plot1.add(line_IElGrid );
+    DataLine2D* line_IElAna  = new DataLine2D( 100, 0, 0.1       , 0xFF0080FF, "IEl_ana"  ); plot1.add(line_IElAna  );
+    //DataLine2D* line_IrhoWf   = new DataLine2D( 100, 0, 0.1      , 0xFFFF00FF, "Irho_Wf"   ); plot1.add(line_IrhoWf  );
+
+    // --- define grid
+    GridShape gsh;
+    double Rmax  = 4.0;
+    double gStep = 0.15;
+    int ng = (2*Rmax)/gStep;
+    gsh.cell = (Mat3d){ (2*Rmax),0.0,0.0,  0.0,(2*Rmax),0.0,  0.0,0.0,(2*Rmax) };
+    gsh.n    = {ng,ng,ng};
+    gsh.pos0 = (Vec3d){-Rmax,-Rmax,-Rmax};
+    gsh.updateCell();
+    double  dV = gsh.voxelVolume();
+
+    solver.epos[0]=Vec3dZero;
+    solver.epos[1]=Vec3dZero;
+
+    double * grid1 = new double[ gsh.n.totprod() ];
+    double * grid2 = new double[ gsh.n.totprod() ];
+    solver.orb2grid( 0, gsh, grid1 );
+    solver.orb2grid( 0, gsh, grid2 );
+
+    double Q1=0,Q2=0;
+    for(int i=0; i<gsh.n.totprod(); i++){
+        double dq;
+        dq = grid1[i]; dq*=dq; grid1[i]=dq; Q1+=dq;
+        dq = grid2[i]; dq*=dq; grid2[i]=dq; Q2+=dq;
+    }
+
+    printf( "gsh n%i(%i,%i,%i) Giga-ops %g dV %g Q1 %g Q2 %g const_El_eVA %g \n", gsh.n.totprod(), gsh.n.x, gsh.n.y, gsh.n.z, sq( (double)gsh.n.totprod() )*1e-9, dV, Q1, Q2, const_El_eVA );
+
+    for(int i=0; i<line_IElAna->n; i++){
+        double r = line_IElAna->xs[i];
+        //printf( "test_ElectroStaticsBrute()[%i] r=%g ", i, r );
+        solver.epos[0].x=r;
+
+        // --- Analytical
+        solver.projectOrbs( true );
+        line_IElAna->ys[i] = solver.CoulombOrbPair( 0, 1 );
+
+        // Numerical
+        //line_IElGrid->ys[i] = coulombGrid_brute( gsh.n, gsh.n, Vec3dZero, Vec3d{r,0,0}, gsh.dCell, gsh.dCell, grid1, grid2, 0, gsh.dCell.a.norm() )*(dV*dV) * const_El_eVA;
+        line_IElGrid->ys[i]=0;
+
+        //printf( " Ana %g Grid %g \n", line_IElAna->ys[i], line_IElGrid->ys[i] );
+
+        printf( "%i %g %g %g \n", i, r, line_IElAna->ys[i], line_IElGrid->ys[i] );
+    }
+
+    delete [] grid1;
+    delete [] grid2;
+}
+
 
 
 #endif

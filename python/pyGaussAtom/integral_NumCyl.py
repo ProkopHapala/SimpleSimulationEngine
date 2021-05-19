@@ -11,6 +11,9 @@ import quadratureCoefs as qc
 def gauss( r, b=1.0):
     return np.exp( -b*r*r )
 
+def gauss_s( r, s=1.0):
+    return np.exp( -0.5*(r/s)**2 )
+
 def slater( r, b=1.0):
     return np.exp( -b*r )
 

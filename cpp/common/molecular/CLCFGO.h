@@ -684,6 +684,8 @@ constexpr static const Quat4d default_AtomParams[] = {
                 double qj = rhoQ[j];
                 double sj = rhoS[j];
                 Vec3d fp; double fs,qij = qi*qj;
+
+                //si*=M_SQRT2; sj*=M_SQRT2;
                 double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
                 /*
                 double r    = sqrt(r2 + R2SAFE);
@@ -705,7 +707,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 rhofQ[i] += E*qj;    rhofQ[j] += E*qi; // ToDo : need to be made more stable ... different (qi,qj)
                 Ecoul    += E*qij;
 
-                printf( "CoulombOrbPair[%i,%i|%i,%i] E %g E,q(%g,%g) r %g s(%g,%g) \n",io,jo,i,j, Ecoul, E, qij, sqrt(r2), si, sj );
+                //printf( "CoulombOrbPair[%i,%i|%i,%i] E %g E,q(%g,%g) r %g s(%g,%g) \n",io,jo,i,j, Ecoul, E, qij, sqrt(r2), si, sj );
 
                 if(DEBUG_iter=DEBUG_log_iter){
                     //printf( "CoublombElement[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g \n", i,j, qi,qj, E, fs, fr, s, r );
@@ -1531,15 +1533,19 @@ double evalAA(){
         //for(int i=0; i<ni; i++){ printf( "rho[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
         //printf( "DEBUG norm3Ds(1) %g %g \n", Gauss::norm3Ds( 1.0 ), pow( M_PI*2,-3./2) );
         return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){
+            const double sqrtpi = sqrt(M_PI);
             double v_sum = 0.0;
             for(int i=0; i<ni; i++){
                 Vec3d dR  = pos - Ps[i];
                 double r2 = dR.norm2();
                 double si = Ss[i];
                 double ci = Cs[i];
+
+                double r = sqrt(r2);
                 //if(i==2) ci*=1.28;
-                //rho_sum += Gauss::elpot( sqrt(r2)/si ) * ci;
-                v_sum += erfx_e6( sqrt(r2)/(si*M_SQRT2) ) * (ci * const_El_eVA);
+                //v_sum += erfx_e6( r/si           ) * (ci * const_El_eVA);  // This is using spread/size of wavefunction blob
+                v_sum += erfx_e6( r/(si*M_SQRT2) ) * (ci * const_El_eVA);  // This is using spread/size of density      blob
+
                 // ToDo : Fast Gaussian ?
             }
             buff[ig] = v_sum;

@@ -83,7 +83,8 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     //double ir   = 1./(r+1.e-16);
     //double is   = 1./(s+1.e-16);
     double r_s  = r*is;
-    double r_2s = M_SQRT2 * r_s;
+    //double r_2s = M_SQRT2 * r_s; // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
+    double r_2s = r_s;             // modified according to derivation   following eq.11 http://doi.wiley.com/10.1002/wcms.78
     double e1   = qq*ir * const_El_eVA;
     double e2   = erf(  r_2s      );
     double g    = exp( -r_2s*r_2s ) * const_F2;

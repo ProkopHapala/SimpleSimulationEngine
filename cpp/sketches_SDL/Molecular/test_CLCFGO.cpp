@@ -297,9 +297,11 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //solver.loadFromFile( "data/C_2g_o1.fgo", true);
     //solver.loadFromFile( "data/H_1g_1o.fgo", true);
     //solver.loadFromFile( "data/H2_1g_2o.fgo", true);
-    solver.loadFromFile( "data/H2O_1g_8o.fgo", true);
+    //solver.loadFromFile( "data/H2O_1g_8o.fgo", true);
+    solver.loadFromFile( "data/e2_1g_2o.fgo", true);
     dt = 0.001;
     //exit(0);
+
 
 
     solver.turnAllSwitches(false);
@@ -341,7 +343,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     double E = solver.eval();
     printf( "E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g \n",E, solver.Ek, solver.Eee,solver.EeePaul,solver.EeeExch, solver.Eae,solver.EaePaul, solver.Eaa );
-    exit(0);
+    //exit(0);
 
     // ======= Test Density projection
     plot1.init();
@@ -353,6 +355,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //plot1.xsharingLines(1, 100, -3.0, 0.1 );
     //plot1.xsharingLines( 2, 100,   -3.0, 0.1 );
 
+    /*
     nOrbPlot=_min(5,solver.nOrb);
     printf( " nOrbPlot %i solver.nOrb %i \n", nOrbPlot, solver.nOrb );
     plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFF0000FF, "Vatom" ) );
@@ -363,6 +366,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     }
     //plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFFFF0000, "Orb1"     ) );
     //plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFFFF8000, "Orb2"     ) );
+    */
+
+    //test_ElectroStaticsBrute( solver, plot1 );
+    test_ElectroStatics( solver, plot1 );
 
     plot1.scaling.y=0.05;
     plot1.update();

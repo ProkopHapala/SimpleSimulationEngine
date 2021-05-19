@@ -398,26 +398,29 @@ void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* 
     //printf( "DEBUG integral{f1} %g |f^2| %g \n", grid.integrate( f1 ), VecN::dot(ng, f1, f1 )*dV );
     double dx = Lmax/nint;
     //if(bDebugXsf)grid. saveXSF( DEBUG_saveFile1, f1, -1 );
+    //int iplot = nint-1;
+    int iplot = 0;
     for(int i=0; i<nint; i++){
         double x = dx*i;
         func1( grid, f1, x );
         func2( grid, f2, x );
-        //printf( " |f1| %g \n" , VecN::sum2( ng, f1 ) );
-        //printf( " |f2| %g \n" , VecN::sum2( ng, f2 ) );
+        //printf( " |f1| %g \n" , VecN::sum2( ng, f1 )*dV*dV );
+        //printf( " |f2| %g \n" , VecN::sum2( ng, f2 )*dV*dV );
+        //printf( " |f2| %g \n" , VecN::sum( ng, f2 )*dV );
 
 
-        if(bDebugXsf&&(i==nint-1)) grid. saveXSF( DEBUG_saveFile1, f1, -1 );
-        if(bDebugXsf&&(i==nint-1)) grid. saveXSF( DEBUG_saveFile2, f2, -1 );
+        if(bDebugXsf&&(i==iplot)) grid.saveXSF( DEBUG_saveFile1, f1, -1 );
+        if(bDebugXsf&&(i==iplot)) grid.saveXSF( DEBUG_saveFile2, f2, -1 );
 
 
         //double Q = dV * VecN::dot( ng, f1, f2 );
         double Q=0;
         for(int j=0; j<ng; j++){ f2[j]*=f1[j]; Q+=dV*f2[j]; };
-        printf( "[%i]  x %g Q %g dV %e \n", i, x, Q, dV );
+        //printf( "[%i]  x %g Q %g dV %e \n", i, x, Q, dV );
         ys[i] = Q;
 
 
-        if(bDebugXsf&&(i==nint-1)){
+        if(bDebugXsf&&(i==iplot)){
             //for(int j=0; j<ng; j++) f2[j]*=f1[j];
             //for(int j=0; j<ng; j++) f2[j]*=0;
             grid. saveXSF( DEBUG_saveFile12, f2, -1 );
