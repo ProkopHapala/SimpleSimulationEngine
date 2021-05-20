@@ -214,14 +214,14 @@ class GridShape {
             for ( int ib=0; ib<ny; ib++ ){
                 for ( int ia=0; ia<nx; ia++ ){
                     //printf(" %i %i %i \n", ic, ib, ia );
-                    if((ia==0)||(ia==(nx-1))||(ib==0)||(ib==(ny-1))||(ic==0)||(ic==(nz-1))){ out[i3D(ia,ib,ic)]=0.0; continue; }
+                    if((ia==0)||(ia==(nx-1))||(ib==0)||(ib==(ny-1))||(ic==0)||(ic==(nz-1))){ if(out)out[i3D(ia,ib,ic)]=0.0; continue; }
                     double f00 = f[i3D(ia,ib,ic)]*2;
                     double ddf =
                         (f[i3D(ia+1,ib,ic)]+f[i3D(ia-1,ib,ic)]-f00)*idx2
                       + (f[i3D(ia,ib+1,ic)]+f[i3D(ia,ib-1,ic)]-f00)*idy2
                       + (f[i3D(ia,ib,ic+1)]+f[i3D(ia,ib,ic-1)]-f00)*idz2;
                     Ek += ddf*f00;
-                    out[i3D(ia,ib,ic)] = ddf;
+                    if(out)out[i3D(ia,ib,ic)] = ddf;
                 }
             }
         }

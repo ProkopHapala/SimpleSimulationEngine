@@ -368,8 +368,15 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFFFF8000, "Orb2"     ) );
     */
 
+
+    solver.epos [0]=Vec3dZero;
+    //solver.esize[0]=1.0;
+    solver.esize[0]=0.5;
+    //test_Poisson( solver, 6.0, 0.1 );
+    test_Poisson( solver, 0, 4.0, 0.05, 0,0,  true, false, true );
     //test_ElectroStaticsBrute( solver, plot1 );
-    test_ElectroStatics( solver, plot1 );
+    //test_ElectroStatics( solver, plot1 );
+    exit(0);
 
     plot1.scaling.y=0.05;
     plot1.update();

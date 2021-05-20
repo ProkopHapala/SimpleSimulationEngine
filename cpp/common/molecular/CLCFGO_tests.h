@@ -557,6 +557,79 @@ void test_DensityOverlap( CLCFGO& solver, Plot2D& plot1 ){
 }
 */
 
+// =================================================================================
+///        test   Poisson Equation   :   density  = Laplace { Hartree-Potential }
+// =================================================================================
+
+double test_Poisson( CLCFGO& solver, int io, double Rmax, double gStep, double * line_rho=0, double* line_rho_=0, bool bPrint=0, bool bSave=0, bool useWf=true ){
+
+    // --- define grid shape
+    GridShape gsh;
+    int ng = (2*Rmax)/gStep;
+    gsh.cell = (Mat3d){ (2*Rmax),0.0,0.0,  0.0,(2*Rmax),0.0,  0.0,0.0,(2*Rmax) };
+    gsh.n    = {ng,ng,ng};
+    gsh.pos0 = (Vec3d){-Rmax,-Rmax,-Rmax};
+    gsh.updateCell();
+    double  dV = gsh.voxelVolume();
+
+    // --- allocate arrays
+    int nbuf = gsh.n.totprod();
+    double * buf_rho  = new double[ nbuf ];
+    double * buf_V    = new double[ nbuf ];
+    double * buf_rho_ = new double[ nbuf ];
+
+
+    solver.projectOrbs( true );
+    solver.hartree2grid( io, gsh, buf_V  );
+    gsh.Laplace        ( buf_V, buf_rho_ );
+
+    double Q  = 0;
+    if(useWf){ // Use wf projection
+        solver.orb2grid    ( io, gsh, buf_rho );
+        for( int i=0; i<nbuf; i++ ){
+            double dq = buf_rho[i];
+            dq*=dq;
+            buf_rho[i] = dq;
+            Q+=dq;
+        }
+    }else{ // Use density projection
+        solver.rho2grid    ( io, gsh, buf_rho );
+        for( int i=0; i<nbuf; i++ ){ Q+=buf_rho[i]; }
+    }
+    Q*=dV;
+    if(bPrint) printf( "test_Poisson  Q %g dV %g \n", Q, dV );
+
+    int nx = gsh.n.x; int ny = gsh.n.y; int nz = gsh.n.z; int nxy = ny * nx;
+    int iy=ny/2;
+    int iz=nz/2;
+    //double C = -1.;
+    //double C = -0.01107438611111111;
+    double C = -0.5/90.29845898154878;
+    double Err2=0;
+    for( int ix=0; ix<gsh.n.x; ix++ ){
+        int i = i3D(ix,iy,iz);
+        buf_rho_[i] *= C;
+        double qi  = buf_rho [i];
+        double qi_ = buf_rho_[i];
+        Err2 += sq( qi-qi_ );
+        if(line_rho )line_rho [ix]=qi;
+        if(line_rho_)line_rho_[ix]=qi_;
+        //if(bPrint) printf( "%g %g %g \n", ix*gStep, qi, qi_ );
+        if(bPrint) printf( "%g %g %g %g \n", ix*gStep, qi, qi_, qi/qi_ );
+    }
+
+    if(bSave){
+        gsh.saveXSF( "temp/rho.xsf",        buf_rho,  -1 );
+        gsh.saveXSF( "temp/V.xsf",          buf_V,    -1 );
+        gsh.saveXSF( "temp/rho_from_V.xsf", buf_rho_, -1 );
+    }
+
+    delete [] buf_rho;
+    delete [] buf_V;
+    delete [] buf_rho_;
+    return sqrt(Err2)*dV;
+}
+
 // =========================================================================
 ///        test   Electrostatics   ( density * Hartree-Potential overlap )
 // =========================================================================

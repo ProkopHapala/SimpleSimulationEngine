@@ -97,7 +97,6 @@ int*    getDimPointer   (){ return &solver.natypes; }
 void printSetup            (){ solver.printSetup();                          }
 void printAtomsAndElectrons(){ solver.printAtoms(); solver.printElectrons(); }
 
-
 /*
 int*    getTypes (){ return (int*)   ff.types;  }
 double* getPoss  (){ return (double*)ff.poss;   }
@@ -131,6 +130,15 @@ void setIBuff(const char* name, int* buff){
     //auto got = buffers.find( name );
     //if( got==buffers.end() ){ return null;        }
     //else                    { return got->second; }
+}
+
+void atomsPotAtPoints(         int n, double* ps, double* out, double s, double Q ){ solver.atomsPotAtPoints( n, (Vec3d*)ps, out, s, Q ); };
+void orbAtPoints     ( int io, int n, double* ps, double* out ){ solver.orbAtPoints     ( io, n, (Vec3d*)ps, out ); };
+void rhoAtPoints     ( int io, int n, double* ps, double* out ){ solver.rhoAtPoints     ( io, n, (Vec3d*)ps, out ); };
+void hartreeAtPoints ( int io, int n, double* ps, double* out ){ solver.hartreeAtPoints ( io, n, (Vec3d*)ps, out ); };
+
+double test_Poisson( int io, double Rmax, double gStep, double * line_rho, double* line_rho_, bool bPrint, bool bSave, bool useWf ){
+    return test_Poisson( solver, io, Rmax, gStep, line_rho, line_rho_, bPrint, bSave, useWf );
 }
 
 #define NEWBUFF(name,N)   double* name = new double[N]; buffers.insert( {#name, name} );

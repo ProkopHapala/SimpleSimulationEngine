@@ -103,6 +103,11 @@ inline double erf_6_plus(double x){
 }
 inline double erf_6(double x){ if(x>0){ return erf_6_plus(x); }else{ return -erf_6_plus(-x); } }
 
+/*
+
+// === Approx erf(x)/x
+//   Problem - we need erf(w*x)/x which is function of two parameters x,w
+
 inline double erfx_e6( double x ){
     if( x>4.5 ){ return 1./x; }
     double xx = x*x;
@@ -119,12 +124,14 @@ inline double erfx_e9( double x ){
     if(x<1.){
         return 1.1283791662308296 +xx*(-0.3761262972953429 +xx*(0.1128363404233098 +xx*(-0.02685603827999912 +xx*(0.005192885862299865 +xx*(-0.0008053004722300972 +xx*(8.004020068129447e-05 ) ) ) ) ) );
     }
-    double even =   0.9903386741213333  +xx*( 0.08180278811069948 +xx*( 0.219787883285348  +xx*( 0.0893543139653664  +xx*( 0.0071698531450102   +xx*( 8.644883946761633e-05 ) ) ) ) ); 
+    double even =   0.9903386741213333  +xx*( 0.08180278811069948 +xx*( 0.219787883285348  +xx*( 0.0893543139653664  +xx*( 0.0071698531450102   +xx*( 8.644883946761633e-05 ) ) ) ) );
     double odd  =  -0.17511814497584813 +xx*(-0.2010794452848663  +xx*(-0.1692686167813105 +xx*(-0.03129254573733003 +xx*(-0.001037968593234627 +xx*(-3.164137211658646e-06 ) ) ) ) );
     double t = even + x*odd;
     t*=t; t*=t; t*=t; // ^8
     return 1./( t + x );
 }
+*/
+
 
 inline double exp_p8( double x ){
     // optimized for decreasing exp(-x)
@@ -134,11 +141,11 @@ inline double exp_p8( double x ){
     //double even = 1.0 +xx*(0.5000000000000000 +xx*(0.04166189077950237  +xx*(0.001321435070258156  ) ) );
     //double odd  = 1.0 +xx*(0.1666664718006032 +xx*(0.008304046626191663 +xx*(0.0001332637951696261 ) ) );
     //double p   = even + x*odd;
-    double p = (1+x) + 
+    double p = (1+x) +
                xx*( 0.5000000000000000   + 0.1666664718006032   *x +
                xx*( 0.04166189077950237  + 0.008304046626191663 *x +
                xx*( 0.001321435070258156 + 0.0001332637951696261*x ) ) );
-    p*=p; p*=p; p*=p; 
+    p*=p; p*=p; p*=p;
     return p;
 }
 

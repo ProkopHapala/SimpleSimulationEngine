@@ -137,7 +137,7 @@ constexpr static const Quat4d default_AtomParams[] = {
     Vec3d*  odip  =0;   ///< [eA] Axuliary array to store dipoles for the whole orbital
     double* oEs   =0;   ///< [eV] orbital energies
     double* oQs   =0;   ///< [e] total charge in orbital before renormalization (just DEBUG?)
-    int*    onq   =0;   ///< number of axuliary density functions per orbital
+    int*    onq   =0;   ///< number of axuliary density functions per orbital, should be equal to nQorb
     int*    ospin =0;
 
     // --- Wave-function components for each orbital
@@ -425,7 +425,9 @@ constexpr static const Quat4d default_AtomParams[] = {
                     double sij;
                     //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
                     double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
-                    double qij = Sij*cij;
+                    //double qij = Sij*cij;
+                    double qij = Sij*cij*2; // because qij=qji   (a+b)*(a+b) = a^2 + b^2 + 2*ab
+                    //qij*=M_SQRT2*0.96; // This does not help for all distances - at close it produce to high, at distance too low => Sij must decay slower
                     Qs[ii] = qij;
                     Ps[ii] = pij;
                     Ss[ii] = sij;
@@ -450,6 +452,7 @@ constexpr static const Quat4d default_AtomParams[] = {
             }
         }
         onq[io] = ii;
+        //printf( "orb[%i] onq %i nQorb %i \n", io, onq[io], nqOrb );
         oQs[io] = Q;
         opos[io].set_mul( qcog, 1./Q );
         if(bNormalize){
@@ -1429,12 +1432,10 @@ double evalAA(){
         }
         return E;
     }
-
     double* atomsPotAtPoints( int n, Vec3d* ps, double* out=0, double s=0.0, double Q=1.0 )const{
         if(out==0){ out = new double[n]; };
         for(int i=0; i<n; i++){
             out[i] = atomsPotAtPoint( ps[i], s, Q );
-            //printf( "atomsPotAtPoints[%i/%i] %g @(%g,%g,%g) Q[0] %g \n", i, n, out[i], ps[i].x,ps[i].y,ps[i].z, aQs[0] );
         }
         return out;
     }
@@ -1450,21 +1451,66 @@ double evalAA(){
         }
         return wfsum;
     }
-
     double* orbAtPoints( int io, int n, Vec3d* ps, double* out=0 )const{
         if(out==0){ out = new double[n]; };
         for(int i=0; i<n; i++){
             out[i] = orbAtPoint( io, ps[i] );
-            //printf( "orbAtPoints[%i/%i] %g @(%g,%g,%g) \n", i, n, out[i], ps[i].x,ps[i].y,ps[i].z );
         }
         return out;
     }
+
+    double rhoAtPoint( int io, const Vec3d& pos )const{
+        //int i0 = getOrbOffset( io );
+        int i0   = getRhoOffset(io);
+        int ni   = onq[io];
+        double rho_sum=0;
+        for(int i=0; i<ni; i++){
+            int i_=i0+i;
+            Vec3d dR  = pos - rhoP[i_];
+            double r2 = dR.norm2();
+            rho_sum += Gauss::rho3D_r2( r2, rhoS[i_] ) * rhoQ[i_];
+        }
+        return rho_sum;
+    }
+    double* rhoAtPoints( int io, int n, Vec3d* ps, double* out=0 )const{
+        if(out==0){ out = new double[n]; };
+        for(int i=0; i<n; i++){
+            out[i] = rhoAtPoint( io, ps[i] );
+        }
+        return out;
+    }
+
+    double hartreeAtPoint( int io, const Vec3d& pos )const{
+        //int i0   = getOrbOffset( io );
+        int i0     = getRhoOffset(io);
+        int perOrb = onq[io];
+        double v_sum=0;
+        for(int i=0; i<perOrb; i++){
+            int i_=i0+i;
+            //Vec3d dR  = pos - epos[i_];
+            Vec3d dR  = pos - rhoP[i_];
+            double r2 = dR.norm2() + 1e-16;
+            double r = sqrt(r2);
+            //v_sum +=  (ecoef[i_] * const_El_eVA) * erf_6_plus( r/( esize[i_]        ) )/r; // This is using spread/size of wavefunction blob
+            v_sum   +=  (rhoQ [i_] * const_El_eVA) * erf_6_plus( r/( rhoS [i_]*M_SQRT2) )/r; // This is using spread/size of density      blob
+        }
+        return v_sum;
+    }
+    double* hartreeAtPoints( int io, int n, Vec3d* ps, double* out=0 )const{
+        if(out==0){ out = new double[n]; };
+        for(int i=0; i<n; i++){
+            out[i] = hartreeAtPoint( io, ps[i] );
+        }
+        return out;
+    }
+
 
     double orb2grid( int io, const GridShape& gridShape, double* buff )const{
         int i0     = getOrbOffset( io );
         Vec3d*  Ps = epos +i0;
         double* Cs = ecoef+i0;
         double* Ss = esize+i0;
+        printf( "DEBUG orb2grid io %i i0 %i perOrb %i | s %g p (%g,%g,%g) \n", io, i0, perOrb, Ss[0], Ps[0].x,Ps[0].y,Ps[0].z );
         //printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
         //for(int i=0; i<perOrb; i++){ printf( "wf[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
         //printf( "DEBUG norm3Ds(1) %g %g \n", Gauss::norm3Ds( 1.0 ), pow( M_PI*2,-3./2) );
@@ -1537,14 +1583,17 @@ double evalAA(){
             double v_sum = 0.0;
             for(int i=0; i<ni; i++){
                 Vec3d dR  = pos - Ps[i];
-                double r2 = dR.norm2();
+                double r2 = dR.norm2() + 1e-16;
                 double si = Ss[i];
                 double ci = Cs[i];
 
                 double r = sqrt(r2);
                 //if(i==2) ci*=1.28;
                 //v_sum += erfx_e6( r/si           ) * (ci * const_El_eVA);  // This is using spread/size of wavefunction blob
-                v_sum += erfx_e6( r/(si*M_SQRT2) ) * (ci * const_El_eVA);  // This is using spread/size of density      blob
+                //v_sum += erfx_e6( r/(si*M_SQRT2) ) * (ci * const_El_eVA);  // This is using spread/size of density      blob
+
+                //v_sum +=  (ci * const_El_eVA) * erf_6_plus( r/(si        ) )/r; // This is using spread/size of wavefunction blob
+                v_sum +=  (ci * const_El_eVA) * erf_6_plus( r/(si*M_SQRT2) )/r;  // This is using spread/size of density      blob
 
                 // ToDo : Fast Gaussian ?
             }

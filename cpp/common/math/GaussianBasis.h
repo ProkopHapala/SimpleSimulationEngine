@@ -404,8 +404,7 @@ inline double product3D_s_new(
     double si2   = si*si;
     double sj2   = sj*sj;
     double s2    = si2 + sj2;
-    double is2   = 1/(si2 + sj2);
-    //double is4   = is2*is2;
+    double is2   = 1/s2;
     double sqrtis2 = sqrt(is2);
 
     S      =  si*sj*sqrtis2;
@@ -418,10 +417,10 @@ inline double product3D_s_new(
 
     double r2 = dp.norm2();
 
-    double a2   = 2.*(si*sj)*is2;
+    double a2   = (si*sj)*is2;
     double a    = sqrt(a2);
-    double e1   = a2*a;
-    double e2   = exp( -r2*is2 );
+    double e1   = a2*a*M_SQRT2;
+    double e2   = exp( -r2*(is2*0.5) );
 
     // From  DensOverlapGauss_S() @  InteractionsGauss.h
     //double a    = 2.*(si*sj)*is2;

@@ -96,8 +96,59 @@ def getBuff(name,sh):
     #sh_ = (natom,)
     #if sh is not None:
     #    sh_ = sh_ + sh
-    print "DEBUG type( ptr ) ", type( ptr ), sh
+    #print "DEBUG type( ptr ) ", type( ptr ), sh
     return np.ctypeslib.as_array( ptr, shape=sh)
+
+#void atomsPotAtPoints(         int n, double* ps, double* out, double s, double Q )
+#void orbAtPoints     ( int io, int n, double* ps, double* out )
+#void rhoAtPoints     ( int io, int n, double* ps, double* out )
+#void hartreeAtPoints ( int io, int n, double* ps, double* out )
+
+#void atomsPotAtPoints(         int n, double* ps, double* out, double s, double Q )
+lib.atomsPotAtPoints.argtypes = [ c_int, array2d, array1d, c_double, c_double ]
+lib.atomsPotAtPoints.restype  = c_double
+def atomsPotAtPoints( ps, out=None, s=0.0, Q=1.0 ):
+    n = len(ps)
+    if out is None: out=np.zeros(n)
+    lib.atomsPotAtPoints( n, ps, out, s, Q )
+    return out
+
+#void orbAtPoints     ( int io, int n, double* ps, double* out )
+lib.orbAtPoints.argtypes = [ c_int, c_int, array2d, array1d ]
+lib.orbAtPoints.restype  = c_double
+def orbAtPoints( ps, io=0, out=None ):
+    n = len(ps)
+    if out is None: out=np.zeros(n)
+    lib.orbAtPoints( io, n, ps, out )
+    return out
+
+#void rhoAtPoints     ( int io, int n, double* ps, double* out )
+lib.rhoAtPoints.argtypes = [ c_int, c_int, array2d, array1d ]
+lib.rhoAtPoints.restype  = c_double
+def rhoAtPoints( ps, io=0, out=None ):
+    n = len(ps)
+    if out is None: out=np.zeros(n)
+    lib.rhoAtPoints( io, n, ps, out )
+    return out
+
+#void hartreeAtPoints     ( int io, int n, double* ps, double* out )
+lib.hartreeAtPoints.argtypes = [ c_int, c_int, array2d, array1d ]
+lib.hartreeAtPoints.restype  = c_double
+def hartreeAtPoints( ps, io=0, out=None ):
+    n = len(ps)
+    if out is None: out=np.zeros(n)
+    lib.hartreeAtPoints( io, n, ps, out )
+    return out
+
+#test_Poisson( double Rmax, double gStep, double * line_rho=0, double* line_rho_=0, bool bPrint=0, bool bSave=0, useWf=true ){
+lib.test_Poisson.argtypes = [ c_int, c_double, c_double, array1d, array1d, c_bool, c_bool, c_bool ]
+lib.test_Poisson.restype  = c_double
+def test_Poisson( io=0, Rmax=5.0, dx=0.1, bPrint=False, bSave=False, useWf=True, line_rho=None, line_rho_=None ):
+    n = int(2*Rmax/dx)
+    if line_rho  is None: line_rho =np.zeros(n)
+    if line_rho_ is None: line_rho_=np.zeros(n)
+    err2 = lib.test_Poisson( io, Rmax, dx, line_rho, line_rho_, bPrint, bSave, useWf )
+    return err2, line_rho, line_rho_
 
 #void testDerivs_Coulomb_model( int n, double x0, double dx ){
 lib.testDerivsP_Coulomb_model.argtypes = [ c_int, c_double, c_double ]
