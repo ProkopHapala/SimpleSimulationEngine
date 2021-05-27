@@ -357,8 +357,8 @@ class Vec3T{
 	//}
 
     inline bool isLower  ( const VEC& vmax ) const { return (x<vmax.x)&&(y<vmax.y)&&(x<vmax.z); }
-    inline bool isGreater( const VEC& vmin ) const { return (x>vmin.x)&&(y>vmin.y)&&(x>vmin.z); }
-    inline bool isBetween( const VEC& vmin, const VEC& vmax ) const { return (x>vmin.x)&&(x<vmax.x)&&(y>vmin.y)&&(y<vmax.y)&&(z>vmin.z)&&(z<vmax.z); }
+    inline bool isGreater( const VEC& vmin ) const { return (x>=vmin.x)&&(y>=vmin.y)&&(x>=vmin.z); }
+    inline bool isBetween( const VEC& vmin, const VEC& vmax ) const { return (x>=vmin.x)&&(x<vmax.x)&&(y>=vmin.y)&&(y<vmax.y)&&(z>=vmin.z)&&(z<vmax.z); }
 
     inline VEC& setIfLower  (const VEC& a){ if(a.x<x)x=a.x;if(a.y<y)y=a.y;if(a.z<z)z=a.z; return *this; }
     inline VEC& setIfGreater(const VEC& a){ if(a.x>x)x=a.x;if(a.y>y)y=a.y;if(a.z>z)z=a.z; return *this; }

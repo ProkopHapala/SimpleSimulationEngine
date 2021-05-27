@@ -150,6 +150,24 @@ def test_Poisson( io=0, Rmax=5.0, dx=0.1, bPrint=False, bSave=False, useWf=True,
     err2 = lib.test_Poisson( io, Rmax, dx, line_rho, line_rho_, bPrint, bSave, useWf )
     return err2, line_rho, line_rho_
 
+#double test_CrossKinetic( int io, int jo, int nint, double dx, double Rmax, double gStep, double * line_Ek=0, double* line_Ek_g=0,  double * line_f1=0, double* line_f2=0, int bPrint=0, bool bSave=0 ){
+lib.test_OrbInteraction.argtypes = [ c_int, c_int, c_int, c_int, c_double, c_double, c_double, array1d, array1d, array1d, array1d, c_int, c_bool ]
+lib.test_OrbInteraction.restype  = c_double
+def test_OrbInteraction( iMODE=1, io=0, jo=0, nint=40, dx=0.2, Rmax=5.0, gStep=0.1, bPrint=0, bSave=False, line_Ek=None, line_Ek_g=None, line_f1=None, line_f2=None ):
+    '''
+    iMODE :  1) Overlap S12 2) Kinetic T12 3) Colomb K12 
+    '''
+    ng = int( ( 2*Rmax + nint*dx )/gStep )
+    #print(" test_OrbInteraction ng ", ng)
+    if line_Ek   is None: line_Ek   =np.zeros(nint)
+    if line_Ek_g is None: line_Ek_g =np.zeros(nint)
+    if line_f1   is None: line_f1   =np.zeros(ng)
+    if line_f2   is None: line_f2   =np.zeros(ng)
+    err2 = lib.test_OrbInteraction( iMODE, io, jo, nint, dx, Rmax, gStep, line_Ek, line_Ek_g, line_f1, line_f2, bPrint, bSave )
+    #print "line_Ek_g ", line_Ek_g
+    #print "line_Ek   ", line_Ek
+    return err2, line_Ek, line_Ek_g, line_f1, line_f2
+
 #void testDerivs_Coulomb_model( int n, double x0, double dx ){
 lib.testDerivsP_Coulomb_model.argtypes = [ c_int, c_double, c_double ]
 lib.testDerivsP_Coulomb_model.restype  = c_double

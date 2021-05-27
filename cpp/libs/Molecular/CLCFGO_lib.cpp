@@ -44,36 +44,36 @@ extern "C"{
 
 void makeDefaultBuffers(){
     // atoms (ions)
-    buffers.insert( { "apos",   (double*)solver.apos   } );
-    buffers.insert( { "aforce", (double*)solver.aforce } );
-    buffers.insert( { "aQs",             solver.aQs    } );
-    buffers.insert( { "aQsize",          solver.aQsize    } );
-    buffers.insert( { "aPsize",          solver.aPsize    } );
-    buffers.insert( { "aPcoef",          solver.aPcoef    } );
-    ibuffers.insert( { "atype",          solver.atype  } );
+    buffers["apos"  ]= (double*)solver.apos ;
+    buffers["aforce"]= (double*)solver.aforce ;
+    buffers["aQs"   ]=            solver.aQs  ;
+    buffers["aQsize"]=          solver.aQsize ;
+    buffers["aPsize"]=          solver.aPsize ;
+    buffers["aPcoef"]=          solver.aPcoef ;
+    ibuffers["atype"]=          solver.atype  ;
     // orbitals
-    buffers.insert( { "opos", (double*)solver.opos  } );
-    buffers.insert( { "odip", (double*)solver.odip  } );
-    buffers.insert( { "oEs",           solver.oEs   } );
-    buffers.insert( { "oQs",           solver.oQs   } );
-    buffers.insert( { "onq",  (double*)solver.onq   } );
-    ibuffers.insert( { "ospin",  solver.ospin   } );
+    buffers["opos"]= (double*)solver.opos  ;
+    buffers["odip"]= (double*)solver.odip  ;
+    buffers["oEs" ]=           solver.oEs  ;
+    buffers["oQs" ]=           solver.oQs  ;
+    buffers["onq" ]=  (double*)solver.onq  ;
+    ibuffers["ospin"]=  solver.ospin   ;
     // --- Wave-function components for each orbital
-    buffers.insert( { "epos", (double*)solver.epos   } );
-    buffers.insert( { "esize",         solver.esize  } );
-    buffers.insert( { "ecoef",         solver.ecoef  } );
+    buffers["epos" ]= (double*)solver.epos  ;
+    buffers["esize"]=         solver.esize  ;
+    buffers["ecoef"]=         solver.ecoef  ;
     // --- Forces acting on wave-functions components
-    buffers.insert( { "efpos", (double*)solver.efpos  } );
-    buffers.insert( { "efsize",         solver.efsize } );
-    buffers.insert( { "efcoef",         solver.efcoef } );
+    buffers["efpos" ]= (double*)solver.efpos ;
+    buffers["efsize"]=         solver.efsize ;
+    buffers["efcoef"]=         solver.efcoef ;
     // --- Auxuliary electron density expansion basis functions
-    buffers.insert( { "rhoP", (double*)solver.rhoP } );
-    buffers.insert( { "rhoQ",          solver.rhoQ } );
-    buffers.insert( { "rhoS",          solver.rhoS } );
+    buffers["rhoP"]= (double*)solver.rhoP ;
+    buffers["rhoQ"]=          solver.rhoQ ;
+    buffers["rhoS"]=          solver.rhoS ;
     // --- Forces acting on auxuliary density basis functions
-    buffers.insert( { "rhofP", (double*)solver.rhofP } );
-    buffers.insert( { "rhofQ",          solver.rhofQ } );
-    buffers.insert( { "rhofS",          solver.rhofS } );
+    buffers["rhofP"]= (double*)solver.rhofP ;
+    buffers["rhofQ"]=          solver.rhofQ ;
+    buffers["rhofS"]=          solver.rhofS ;
     //buffers.insert( { "rhoEQ",          solver.rhoEQ } );
 }
 
@@ -139,6 +139,10 @@ void hartreeAtPoints ( int io, int n, double* ps, double* out ){ solver.hartreeA
 
 double test_Poisson( int io, double Rmax, double gStep, double * line_rho, double* line_rho_, bool bPrint, bool bSave, bool useWf ){
     return test_Poisson( solver, io, Rmax, gStep, line_rho, line_rho_, bPrint, bSave, useWf );
+}
+
+double test_OrbInteraction( int iMODE, int io, int jo, int nint, double dx, double Rmax, double gStep, double * line_Ek, double* line_Ek_g, double * line_f1, double* line_f2, int bPrint, bool bSave ){
+    return test_OrbInteraction( solver, iMODE, io, jo, nint, dx, Rmax, gStep, line_Ek, line_Ek_g, line_f1, line_f2, bPrint, bSave );
 }
 
 #define NEWBUFF(name,N)   double* name = new double[N]; buffers.insert( {#name, name} );

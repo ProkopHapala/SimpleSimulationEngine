@@ -256,8 +256,8 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
 
     //DataLine2D* line_Frho = new DataLine2D( n, x0, dx, 0xFF00FFFF, "F_rho" ); plot1.add(line_Frho ); // yellow  // rhofP[0].x
 
-    DataLine2D* line_dQi_num  = new DataLine2D( n, x0, dx, 0xFF080FF00, "dQi_num" ); //plot1.add(line_dQi_num );
-    DataLine2D* line_dQi_ana  = new DataLine2D( n, x0, dx, 0xFF0FF8000, "dQi_ana" ); //plot1.add(line_dQi_ana );
+    DataLine2D* line_dQi_num  = new DataLine2D( n, x0, dx, 0xFF80FF00, "dQi_num" ); //plot1.add(line_dQi_num );
+    DataLine2D* line_dQi_ana  = new DataLine2D( n, x0, dx, 0xFFFF8000, "dQi_ana" ); //plot1.add(line_dQi_ana );
 
     DataLine2D* line_Qi   = new DataLine2D( n, x0, dx, 0xFF008000, "Qi" ); plot1.add(line_Qi );
     //DataLine2D* line_Si   = new DataLine2D( n, x0, dx, 0xFFFF00FF, "Si" ); //plot1.add(line_Si );
@@ -442,10 +442,11 @@ void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
 
 // ===================================================
 ///        test   Wave Function Overlap
-// ===================================================
-
+// ===================================================    
 void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
     // ======= Test Orbital Wavefunction Overlap
+    double dx  = 0.1;
+    double dx2 = dx*5;
     int    nint = 20;
     double Lmax = 8.0;
     DataLine2D* line_ITgrid = new DataLine2D( nint, 0, Lmax/nint, 0xFFFF0000, "IT_grid" ); plot1.add(line_ITgrid );
@@ -469,8 +470,76 @@ void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
         solver.epos[0].x=line_ITana->xs[i];
         line_ITana->ys[i] = solver.projectOrb( 0, dip );
     }
-    printf( "Ek[0] ana %g num %g / %g \n", line_ITana->ys[0], line_ITgrid->ys[0], line_ITana->ys[0]/line_ITgrid->ys[0] );
-    printf( "KineticIntegral(0) Grid %g Ana %g ratio %g /%g \n", line_ITgrid->ys[0], line_ITana->ys[0],  line_ITgrid->ys[0]/line_ITana->ys[0],  line_ITana->ys[0]/line_ITgrid->ys[0]  );
+    //printf( "Ek[0] ana %g num %g / %g \n", line_ITana->ys[0], line_ITgrid->ys[0], line_ITana->ys[0]/line_ITgrid->ys[0] );
+    //printf( "KineticIntegral(0) Grid %g Ana %g ratio %g /%g \n", line_ITgrid->ys[0], line_ITana->ys[0],  line_ITgrid->ys[0]/line_ITana->ys[0],  line_ITana->ys[0]/line_ITgrid->ys[0]  );
+    //return err2;
+}
+
+double test_OrbInteraction( CLCFGO& solver, int iMODE, int io, int jo, int nint, double dx, double Rmax, double gStep, double * line_Ek=0, double* line_Ek_g=0, double * line_f1=0, double* line_f2=0, int bPrint=0, bool bSave=0 ){
+    //int nint=40;
+    if(bPrint>0)printf( "# ===== test_CrossKinetic(%i,%i) \n ", io, jo );
+    Vec3d dip;
+    solver.bNormalize = false;
+    int ibas=io*solver.perOrb;
+    double Lmax = dx*nint;
+    //double dx   = Lmax/nint;
+    //int iMODE = 1;
+    //int iMODE = 2;
+    //int iMODE = 3;
+    for(int i=0; i<nint; i++){
+        solver.epos[ibas].x= i*dx;
+        double T11 = solver.projectOrb( io, dip );
+        double T22 = solver.projectOrb( jo, dip );
+        if     ( iMODE==1 ){ solver.iPauliModel = 4; line_Ek[i] = solver.pauliKineticChnageVB(io,jo); } // Just Cross-Overlap S12 = <psi1|T|psi2>
+        else if( iMODE==2 ){ solver.iPauliModel = 3; line_Ek[i] = solver.pauliKineticChnageVB(io,jo); } // Just Cross-Kinetic T12 = <psi1|T|psi2>
+        else if( iMODE==3 ){ line_Ek[i] = solver.CoulombOrbPair( io, jo ); }  // Just Cross-Kinetic K12 = Int[r1,r2]{ ( |psi1(r1)|^2 |psi1(r2)|^2) ) /|r1-r2| } 
+    }
+    DEBUG_f1=line_f1;
+    DEBUG_f2=line_f2;
+    DEBUG_saveFile1="temp/wf0.xsf";
+    DEBUG_saveFile2="temp/Lwf1.xsf";
+    auto func1 = [&](GridShape& grid, double* f, double x ){ 
+        if(bPrint>1) printf( " gridNumIntegral( %g ) func1\n", x );
+        solver.epos[ibas].x=x; 
+        double T11 = solver.projectOrb( io, dip );
+        double T22 = solver.projectOrb( jo, dip );
+        solver.orb2grid( io, grid, f );      
+    };
+    auto func2_T = [&](GridShape& grid, double* f, double x ){
+        //if(bPrint>1) printf( " gridNumIntegral( %g ) func2\n", x );
+        double* tmp = new double[grid.n.totprod()];
+        solver.epos[ibas].x=x;
+        double T11 = solver.projectOrb( io, dip );
+        double T22 = solver.projectOrb( jo, dip );
+        solver.orb2grid( jo, grid, tmp );
+        grid.Laplace   ( tmp, f );
+        delete [] tmp;
+    };
+    auto func2_S = [&](GridShape& grid, double* f, double x ){
+        solver.epos[ibas].x=x;
+        double T11 = solver.projectOrb( io, dip );
+        double T22 = solver.projectOrb( jo, dip );
+        solver.orb2grid( jo, grid, f );
+    };
+    auto func2_V = [&](GridShape& grid, double* f, double x ){
+        solver.epos[ibas].x=x;
+        double T11 = solver.projectOrb( io, dip );
+        double T22 = solver.projectOrb( jo, dip );
+        solver.hartree2grid( jo, grid, f );
+    };
+    if     ( iMODE==1 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_S, bSave ); } // Overlap
+    else if( iMODE==2 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_T, bSave ); } // Kinetic
+    else if( iMODE==3 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_V, bSave ); } // Hartree
+    double err2 = 0; 
+    for(int i=0; i<nint; i++){
+        //line_Ek_g[i] = 0;
+        double dE = line_Ek[i]-line_Ek_g[i];
+        if(bPrint>0) printf( " %g %g %g \n", i*dx, line_Ek[i]-line_Ek_g[i], dE );
+        err2 += dE*dE;
+    }
+    //printf( "Ek[0] ana %g num %g / %g \n", line_ITana->ys[0], line_ITgrid->ys[0], line_ITana->ys[0]/line_ITgrid->ys[0] );
+    //printf( "KineticIntegral(0) Grid %g Ana %g ratio %g /%g \n", line_ITgrid->ys[0], line_ITana->ys[0],  line_ITgrid->ys[0]/line_ITana->ys[0],  line_ITana->ys[0]/line_ITgrid->ys[0]  );
+    return err2;
 }
 
 // ===================================================
@@ -562,7 +631,7 @@ void test_DensityOverlap( CLCFGO& solver, Plot2D& plot1 ){
 // =================================================================================
 
 double test_Poisson( CLCFGO& solver, int io, double Rmax, double gStep, double * line_rho=0, double* line_rho_=0, bool bPrint=0, bool bSave=0, bool useWf=true ){
-
+    //printf( " !!!!!!!!!!!!!!!! C++ DEBUG 0 \n" );
     // --- define grid shape
     GridShape gsh;
     int ng = (2*Rmax)/gStep;
@@ -571,18 +640,17 @@ double test_Poisson( CLCFGO& solver, int io, double Rmax, double gStep, double *
     gsh.pos0 = (Vec3d){-Rmax,-Rmax,-Rmax};
     gsh.updateCell();
     double  dV = gsh.voxelVolume();
-
+    //printf( "C++ DEBUG 0 \n" );
     // --- allocate arrays
     int nbuf = gsh.n.totprod();
     double * buf_rho  = new double[ nbuf ];
     double * buf_V    = new double[ nbuf ];
     double * buf_rho_ = new double[ nbuf ];
-
-
+    //printf( "C++ DEBUG 1 " );
     solver.projectOrbs( true );
     solver.hartree2grid( io, gsh, buf_V  );
     gsh.Laplace        ( buf_V, buf_rho_ );
-
+    //printf( "C++ DEBUG 2 \n" );
     double Q  = 0;
     if(useWf){ // Use wf projection
         solver.orb2grid    ( io, gsh, buf_rho );
@@ -596,6 +664,7 @@ double test_Poisson( CLCFGO& solver, int io, double Rmax, double gStep, double *
         solver.rho2grid    ( io, gsh, buf_rho );
         for( int i=0; i<nbuf; i++ ){ Q+=buf_rho[i]; }
     }
+    //printf( "C++ DEBUG 3 \n" );
     Q*=dV;
     if(bPrint) printf( "test_Poisson  Q %g dV %g \n", Q, dV );
 
@@ -606,6 +675,7 @@ double test_Poisson( CLCFGO& solver, int io, double Rmax, double gStep, double *
     //double C = -0.01107438611111111;
     double C = -0.5/90.29845898154878;
     double Err2=0;
+    //printf( "C++ DEBUG 4 \n" );
     for( int ix=0; ix<gsh.n.x; ix++ ){
         int i = i3D(ix,iy,iz);
         buf_rho_[i] *= C;
@@ -617,13 +687,13 @@ double test_Poisson( CLCFGO& solver, int io, double Rmax, double gStep, double *
         //if(bPrint) printf( "%g %g %g \n", ix*gStep, qi, qi_ );
         if(bPrint) printf( "%g %g %g %g \n", ix*gStep, qi, qi_, qi/qi_ );
     }
-
+    //printf( "C++ DEBUG 5 \n" );
     if(bSave){
         gsh.saveXSF( "temp/rho.xsf",        buf_rho,  -1 );
         gsh.saveXSF( "temp/V.xsf",          buf_V,    -1 );
         gsh.saveXSF( "temp/rho_from_V.xsf", buf_rho_, -1 );
     }
-
+    //printf( "C++ DEBUG 6 \n" );
     delete [] buf_rho;
     delete [] buf_V;
     delete [] buf_rho_;
@@ -716,7 +786,7 @@ void test_ElectroStaticsBrute( CLCFGO& solver, Plot2D& plot1 ){
         dq = grid2[i]; dq*=dq; grid2[i]=dq; Q2+=dq;
     }
 
-    printf( "gsh n%i(%i,%i,%i) Giga-ops %g dV %g Q1 %g Q2 %g const_El_eVA %g \n", gsh.n.totprod(), gsh.n.x, gsh.n.y, gsh.n.z, sq( (double)gsh.n.totprod() )*1e-9, dV, Q1, Q2, const_El_eVA );
+    //printf( "gsh n%i(%i,%i,%i) Giga-ops %g dV %g Q1 %g Q2 %g const_El_eVA %g \n", gsh.n.totprod(), gsh.n.x, gsh.n.y, gsh.n.z, sq( (double)gsh.n.totprod() )*1e-9, dV, Q1, Q2, const_El_eVA );
 
     for(int i=0; i<line_IElAna->n; i++){
         double r = line_IElAna->xs[i];

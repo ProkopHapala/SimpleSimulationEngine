@@ -165,6 +165,7 @@ inline double interp_gx4(double r2, double y1, double y2 ){
 
 /// EFF solver
 class EFF{ public:
+    bool bDealoc = false;
     //double dvmax = 0.1;
     //double dpmax = 0.1;
     /*
@@ -224,6 +225,7 @@ class EFF{ public:
     double Ek=0, Eee=0,EeePaul=0,EeeExch=0,  Eae=0,EaePaul=0,  Eaa=0; ///< different kinds of energy
 
 void realloc(int na_, int ne_){
+    bDealoc = true;
     na=na_; ne=ne_;
     nDOFs=na*3+ne*3 + ne;
     _realloc( pDOFs, nDOFs);
@@ -267,6 +269,7 @@ void dealloc(){
     delete [] eAbWs;
     delete [] espin;
 }
+~EFF(){ if(bDealoc)dealloc(); }
 
 /// evaluate kinetic energy of each electron
 double evalKinetic(){

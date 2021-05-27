@@ -66,7 +66,7 @@
     - http://www.tina-vision.net/docs/memos/2003-003.pdf
 */
 class CLCFGO{ public:
-
+    bool bDealoc=false;
 // ToDo : Later properly
 constexpr static const Quat4d default_AtomParams[] = {
 //  Q   sQ   sP   cP
@@ -162,6 +162,7 @@ constexpr static const Quat4d default_AtomParams[] = {
     // ======= Functions
 
     void realloc( int natom_, int nOrb_, int perOrb_, int natypes_ ){
+        bDealoc=true;
         // ToDo : We may automatize this somehow ????
         // atoms
         if( natom != natom_ ){
@@ -212,6 +213,43 @@ constexpr static const Quat4d default_AtomParams[] = {
             //_realloc( rhoEQ, nQtot );
         }
     }
+
+    void dealloc(){
+        // atoms
+        delete [] apos  ;
+        delete [] aforce;
+        delete [] aQs   ;
+        delete [] aPcoef;
+        delete [] aPsize;
+        delete [] aQsize;
+        delete [] atype ; // not used  now
+        // orbitals
+        delete [] ospin;
+        delete [] opos;
+        delete [] odip;
+        delete [] oEs ;
+        delete [] oQs ;
+        delete [] onq ;
+        // --- Wave-function components for each orbital
+        delete [] epos ;
+        delete [] esize;
+        delete [] ecoef;
+        // --- Forces acting on wave-functions components
+        delete [] efpos ;
+        delete [] efsize;
+        delete [] efcoef;
+        // --- Auxuliary electron density expansion basis functions
+        delete [] rhoP;
+        delete [] rhoQ;
+        delete [] rhoS;
+        // --- Forces acting on auxuliary density basis functions
+        delete [] rhofP;
+        delete [] rhofQ;
+        delete [] rhofS;
+        //_realloc( rhoEQ, nQtot );
+    }
+
+    ~CLCFGO(){ if(bDealoc)dealloc(); }
 
     void setDefaultValues( ){
         // ToDo : We may automatize this somehow ????
@@ -759,7 +797,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //printf( "evalElectrostatICoulomb[%i,%i]  %g <? %g \n", io, jo, r2,RcutOrb2 );
 
                 double dEee = CoulombOrbPair( io, jo ); Eee+=dEee;
-                printf( "evalElectrostatICoulomb[%i,%i] Eee %g r2(%g)<?R2cutOrb2(%g) \n", io, jo, dEee, r2, RcutOrb2 );
+                //printf( "evalElectrostatICoulomb[%i,%i] Eee %g r2(%g)<?R2cutOrb2(%g) \n", io, jo, dEee, r2, RcutOrb2 );
 
                 /*
                 // ==== Long Range Electrostatics Approximation
@@ -1090,7 +1128,7 @@ constexpr static const Quat4d default_AtomParams[] = {
         // psi_sym = (psi_1+psi_2)/|psi_1+psi_1| = (psi_1+psi_2)/2(1-S12)
         // From this it can be derived
         // Detla_T =  ( T11 + T22 - T12/S12 )/( S12^2/(1-S12^2) )
-        printf( "pauliKineticChnageVB[%i,%i] ", io, jo );
+        //printf( "pauliKineticChnageVB[%i,%i] ", io, jo );
         double T = 0;
         double S = 0;
         int i0=io*perOrb;
@@ -1119,10 +1157,6 @@ constexpr static const Quat4d default_AtomParams[] = {
                 }
                 // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
                 if(iPauliModel>0){ // Kinetic Energy integral
-                    /*
-                    double dT = Gauss::kinetic_s      (  r2, si, sj,     dTr, dTsi, dTsj );
-                    dT*=cij;
-                    */
                     double s2  = si*si + sj*sj;
                     double tau = ( r2 - 3*s2)/(s2*s2);    // tau <=> Tij/Sij
                     double dT  = dS * tau;
@@ -1133,18 +1167,23 @@ constexpr static const Quat4d default_AtomParams[] = {
         }
         double E;
         if(iPauliModel==2){
-            printf( " T %g S %g T/2S %g ", T, S, 0.5*T/S );
-            double T11 = oEs[io];
-            double T22 = oEs[jo];
+            //printf( " T %g S %g T/2S %g ", T, S, 0.5*T/S );
+            double T11,T22;
+            T11 = oEs[io];
+            T22 = oEs[jo];
             double S2 = S*S;
             E = (T11 + T22 - 2*T/S)*(S2/(1-S2));
             // ToDo : Here we will need derivatives of kinetic energy according to forces
             //   This can be done if we calculate kinetic forces first and
             E *= const_K_eVA;
+        }else if(iPauliModel==3){ // Juat for debugging
+            E = T; // Just Cross-Kinetic T12 = <psi1|T|psi2>
+        }else if(iPauliModel==4){
+            E = S; // Just Cross-Overlap S12 = <psi1|T|psi2>
         }else{
             E = S*S*KPauliOverlap;
         }
-        printf( "E %g \n", E );
+        //printf( "E %g \n", E );
         return E;
         //return E;
     }
@@ -1162,14 +1201,14 @@ constexpr static const Quat4d default_AtomParams[] = {
         for(int i=0; i<perOrb2; i++){ fBs[i].setZero(); }
         bool anti = ( ospin[io] != ospin[jo] );
         if( bEvalPauli && (iPauliModel==1) ){
-            printf( "EeePaul[%i,%i] ", io, jo );
-            T  = pairOverlapAndKineticDervis( io, jo, Bs, dBs, TDs, S );
+            //printf( "EeePaul[%i,%i] ", io, jo );
+            T      = pairOverlapAndKineticDervis( io, jo, Bs, dBs, TDs, S );
             dEpaul = pauliCrossKinetic          ( io, jo, Bs, dBs, TDs, S, T, KRSrho,  anti  );
             //printf( "EeePaul[%i,%i] %g ", io, jo, dEpaul );
         }else{
             if( bEvalPauli && (!anti) ){
                 Gauss::iDEBUG=1;
-                printf( "EeePaul[%i,%i] ", io, jo );
+                //printf( "EeePaul[%i,%i] ", io, jo );
             }
             S = pairOverlapDervis( io, jo, Bs, dBs );
             Gauss::iDEBUG=0;
@@ -1312,7 +1351,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         rhofS [j] += fs*sj;
         //rhofQ [j] += e*qi*0.0; // Not sure why this is not used here
         E         += e*qij;
-        printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );
+        //printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );
         //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
     }
     return E;
@@ -1510,7 +1549,7 @@ double evalAA(){
         Vec3d*  Ps = epos +i0;
         double* Cs = ecoef+i0;
         double* Ss = esize+i0;
-        printf( "DEBUG orb2grid io %i i0 %i perOrb %i | s %g p (%g,%g,%g) \n", io, i0, perOrb, Ss[0], Ps[0].x,Ps[0].y,Ps[0].z );
+        //printf( "DEBUG orb2grid io %i i0 %i perOrb %i | s %g p (%g,%g,%g) \n", io, i0, perOrb, Ss[0], Ps[0].x,Ps[0].y,Ps[0].z );
         //printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
         //for(int i=0; i<perOrb; i++){ printf( "wf[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
         //printf( "DEBUG norm3Ds(1) %g %g \n", Gauss::norm3Ds( 1.0 ), pow( M_PI*2,-3./2) );

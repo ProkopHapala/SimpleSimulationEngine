@@ -43,10 +43,12 @@ class GridShape {
 
 	inline double voxelVolume()const{ return dCell.determinant(); }
 
+    inline int ip2i(const Vec3i& ip){ return ip.a + ( n.a*( ip.b + n.b*ip.c) );  }
+
 	inline void updateCell(){
-        dCell.a.set_mul( cell.a, 1.0d/n.a );
-		dCell.b.set_mul( cell.b, 1.0d/n.b );
-		dCell.c.set_mul( cell.c, 1.0d/n.c );
+        dCell.a.set_mul( cell.a, 1.0/n.a );
+		dCell.b.set_mul( cell.b, 1.0/n.b );
+		dCell.c.set_mul( cell.c, 1.0/n.c );
 		dCell.invert_T_to( diCell );
 	}
 
@@ -55,6 +57,19 @@ class GridShape {
 		cell.set( cell_ );
         updateCell();
 	}
+
+    int cut1D( Vec3i iv0,  Vec3i di, double* data, double* line ){
+        Vec3i iv = iv0;
+        int i=0;
+        //printf( "iv0(%i,%i,%i) di(%i,%i,%i) n(%i,%i,%i) \n", iv.a,iv.b,iv.c,  di.a,di.b,di.c,    n.a,n.b,n.c );
+        while( iv.isBetween( Vec3iZero, n) ){
+            line[i] = data[ ip2i(iv) ];
+            //printf( "[%i] (%i,%i,%i) -> %g \n", i, iv.a,iv.b,iv.c, line[i] );
+            iv.add(di);
+            i++;
+        }
+        return i;
+    }
 
 	int init(double R, double step, bool bPow2=false){
         cell = (Mat3d){ (2*R),0.0,0.0,  0.0,(2*R),0.0,  0.0,0.0,(2*R) };
@@ -166,6 +181,7 @@ class GridShape {
         headerToXsf( fout );
         int nx  = n.x; 	int ny  = n.y; 	int nz  = n.z; int nxy = ny * nx;
         for ( int ic=0; ic<nz; ic++ ){
+            //printf( "toXSF ic %i \n", ic );
             for ( int ib=0; ib<ny; ib++ ){
                 for ( int ia=0; ia<nx; ia++ ){
                    int i = i3D( ia, ib, ic );
@@ -197,6 +213,7 @@ class GridShape {
         printf( "saving %s\n", fname );
         FILE *fout;
         fout = fopen(fname,"w");
+        if( fout==0 ){ printf( "ERROR saveXSF(%s) : Cannot open file for writing \n", fname ); return; }
         //fprintf( fout, "   ATOMS\n" );
         //fprintf( fout, "    1   0.0   0.0   0.0\n" );
         //fprintf( fout, "\n" );
@@ -379,6 +396,8 @@ void interateGrid3D( const GridShape& grid, FUNC func ){
 char* DEBUG_saveFile1="temp/f1.xsf";
 char* DEBUG_saveFile2="temp/f2.xsf";
 char* DEBUG_saveFile12="temp/prod_f1_f2.xsf";
+double* DEBUG_f1=0;
+double* DEBUG_f2=0;
 
 template<typename Func1, typename Func2>
 void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* ys, Func1 func1, Func2 func2, bool bDebugXsf = false ){
@@ -387,11 +406,11 @@ void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* 
     //grid.n    = {(int)((2*Rmax+Lmax)/gStep)+1,(int)(2*Rmax/gStep)+1,(int)(2*Rmax/gStep)+1};
     grid.cell = (Mat3d){ (2*Rmax+Lmax),0.0,0.0,  0.0,(2*Rmax),0.0,  0.0,0.0,(2*Rmax) };
     int ngx = (2*Rmax)/gStep;
-    grid.n    = {(2*Rmax+Lmax)/gStep,ngx,ngx};
+    grid.n    = {(2*Rmax+Lmax)/gStep,ngx,ngx};  //printf( "gridNumIntegral grid.n.x %i \n", grid.n.x);
     grid.pos0 = (Vec3d){-Rmax,-Rmax,-Rmax};
     grid.updateCell();
     int ng = grid.n.totprod();
-    double  dV = grid.voxelVolume(); printf( "dV %e \n", dV );
+    double  dV = grid.voxelVolume(); //printf( "dV %e \n", dV );
     double* f1 = new double[ ng ];
     double* f2 = new double[ ng ];
     //func1( grid, f1, 0.0 );
@@ -402,29 +421,40 @@ void gridNumIntegral( int nint, double gStep, double Rmax, double Lmax, double* 
     int iplot = 0;
     for(int i=0; i<nint; i++){
         double x = dx*i;
+        //printf( "DEBUG 0 \n" );
         func1( grid, f1, x );
         func2( grid, f2, x );
         //printf( " |f1| %g \n" , VecN::sum2( ng, f1 )*dV*dV );
         //printf( " |f2| %g \n" , VecN::sum2( ng, f2 )*dV*dV );
         //printf( " |f2| %g \n" , VecN::sum( ng, f2 )*dV );
-
-
-        if(bDebugXsf&&(i==iplot)) grid.saveXSF( DEBUG_saveFile1, f1, -1 );
-        if(bDebugXsf&&(i==iplot)) grid.saveXSF( DEBUG_saveFile2, f2, -1 );
-
+        //printf( "DEBUG 1 \n" );
+        if(i==iplot){
+            Vec3i iv0 = (Vec3i){0,grid.n.b/2,grid.n.c/2};
+            Vec3i di  = (Vec3i){1,0,0};
+            //printf( "DEBUG_f1 %li DEBUG_f2 %li \n", (long)DEBUG_f1, (long)DEBUG_f2 );
+            if(DEBUG_f1) grid.cut1D( iv0, di, f1, DEBUG_f1 );
+            if(DEBUG_f2) grid.cut1D( iv0, di, f2, DEBUG_f2 );
+            if(bDebugXsf){ 
+                grid.saveXSF( DEBUG_saveFile1, f1, -1 );
+                grid.saveXSF( DEBUG_saveFile2, f2, -1 );
+            }
+        }
+        //printf( "DEBUG 2 \n" );
 
         //double Q = dV * VecN::dot( ng, f1, f2 );
-        double Q=0;
-        for(int j=0; j<ng; j++){ f2[j]*=f1[j]; Q+=dV*f2[j]; };
-        //printf( "[%i]  x %g Q %g dV %e \n", i, x, Q, dV );
+        double Q11=0,Q22=0,Q=0;
+        for(int j=0; j<ng; j++){ Q11+=sq(f1[j]); Q22+=sq(f2[j]); f2[j]*=f1[j]; Q+=f2[j]; };
+        Q*=dV;
+        //printf( "[%i]  x %g Q %g Q11 %g Q22 %g dV %e \n", i, x, Q, Q11*dV, Q22*dV, dV );
         ys[i] = Q;
-
+        //printf( "DEBUG 3 \n" );
 
         if(bDebugXsf&&(i==iplot)){
             //for(int j=0; j<ng; j++) f2[j]*=f1[j];
             //for(int j=0; j<ng; j++) f2[j]*=0;
             grid. saveXSF( DEBUG_saveFile12, f2, -1 );
         }
+        //printf( "DEBUG 4 \n" );
         //printf( "[i] Q %g |  CPUtime %g [Mticks]\n", i, Q, (getCPUticks()-timeStart)*1e-6  );
     }
     delete [] f1;
