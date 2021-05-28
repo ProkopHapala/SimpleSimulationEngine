@@ -16,10 +16,13 @@ import matplotlib.pyplot as plt
 
 bDebug = 0
 
+natom=0; norb=2; perOrb=1
+
 # ========= Functions
 
 def init_2x1_electrons( sz = 0.5, dist=1.0 ):
     # ---- setup
+    global natom,norb,perOrb
     natom=0; norb=2; perOrb=1
     effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
     ecoef = effmc.getBuff( "ecoef",(norb,perOrb)   )
@@ -97,9 +100,9 @@ def test_OrbInteraction( plt = None, Etoll=1e-5, iMODE=1 ):
     #init_2x1_electrons( sz = 0.1, dist=0.0 )
     #init_2x1_electrons ( sz = 0.25, dist=0.0 )
     #init_2x1_electrons( sz = 0.5, dist=0.0 )
-    init_2x1_electrons( sz = 0.75, dist=0.0 )
+    #init_2x1_electrons( sz = 0.75, dist=0.0 )
     #init_2x1_electrons( sz = 1.0, dist=0.0 )
-    #init_2x1_electrons( sz = 1.5, dist=0.0 )
+    init_2x1_electrons( sz = 1.5, dist=0.0 )
     #print "DEBUG 1 "
 
     effmc.eval() # we have to run it to project wavefuction to aux density
@@ -140,20 +143,70 @@ def test_Kinetic_Tij(plt=None):
 def test_Coulomb_Kij(plt=None):
     return test_OrbInteraction(iMODE=3,plt=plt)
 
+def processForces( xs,Es,fs, plt=plt, label="" ):
+    n=len(xs)
+    dx=xs[1]-xs[0]
+    fs_num=(Es[2:]-Es[:-2])/(-2*dx)
+    Err = np.sqrt( ( (fs_num-fs[1:-1])**2 ).sum()/(n-1) )
+    #print "Error ", err
+    if(plt):
+        plt.figure(figsize=(5,5))
+        plt.plot( xs,      Es    ,      label="E" )
+        plt.plot( xs,      fs    ,      label="f_ana" )
+        plt.plot( xs[1:-1],fs_num, ":", label="f_num" )
+        plt.grid();plt.legend();
+        plt.title(label)
+    return Err
 
+def checkForces_epos( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_epos" ):
+    #esize = effmc.getBuff( "esize",(norb,perOrb)   )
+    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
+    efpos = effmc.getBuff( "efpos",(norb,perOrb,3) )
+    xs = np.arange(x0,x0+n*dx,dx)
+    Es = np.zeros(len(xs))
+    fs = np.zeros(len(xs))
+    for i in range(n):
+        epos[0,0,0] = xs[i]
+        Es[i] = effmc.eval()
+        fs[i] = efpos[0,0,0]
+    return processForces( xs,Es,fs, plt=plt, label=label )
+
+def checkForces_esize( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
+    esize  = effmc.getBuff( "esize" ,(norb,perOrb) )
+    efsize = effmc.getBuff( "efsize",(norb,perOrb) )
+    xs = np.arange(x0,x0+n*dx,dx)
+    Es = np.zeros(len(xs))
+    fs = np.zeros(len(xs))
+    for i in range(n):
+        esize[0,0] = xs[i]
+        Es[i] = effmc.eval()
+        fs[i] = efsize[0,0]
+    return processForces( xs,Es,fs, plt=plt, label=label )
+
+def checkForces_Kinetic( n=100, dx=0.05, plt=None ):
+    init_2x1_electrons( sz = 0.5, dist=0.0 )
+    effmc.setSwitches_( normalize=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    return checkForces_esize( x0=0.5, n=n, dx=dx, plt=plt, label="checkForces_Kinetic" )
+
+def checkForces_Hartree_epos( n=100, dx=0.05, plt=None ):
+    init_2x1_electrons( sz = 0.5, dist=0.0 )
+    effmc.setSwitches_( normalize=1, kinetic=-1, coulomb=1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    return checkForces_epos( n=n, dx=dx, plt=plt, label="checkForces_Hartree_epos" )
+    
 #def test_Kinetic( plt = None, Etoll=1e-5 ):
-#
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    tests_funcs = [ test_ProjectWf, test_Poisson, test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
+    #tests_funcs = [ test_ProjectWf, test_Poisson, test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     #tests_funcs = [ test_ProjectWf ,  test_Poisson  ]
     #tests_funcs = [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
     #tests_funcs = [ test_Overlap_Sij  ]
     #tests_funcs = [ test_Coulomb_Kij  ]
+    #tests_funcs = [checkForces_Hartree_epos]
+    tests_funcs = [checkForces_Kinetic, checkForces_Hartree_epos ]
     tests_results = []
     for test_func in tests_funcs:
-        tests_results.append( test_func(plt) )
+        tests_results.append( test_func(plt=plt) )
     print ""
     print " ##### Test Result Summary ##### "
     for i,test_func in enumerate(tests_funcs):
