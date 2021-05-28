@@ -281,28 +281,25 @@ void TestAppFARFF::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
-                case SDLK_SPACE: bRun = !bRun;
+                case SDLK_SPACE: bRun = !bRun; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
-
-
                 //case SDLK_LEFTBRACKET:  i_DEBUG=(i_DEBUG+1)%6; break;
                 case SDLK_RIGHTBRACKET: i_DEBUG=(i_DEBUG+1)%6; printf("i_DEBUG %i\n", i_DEBUG); break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
-                case SDL_BUTTON_LEFT:
+                case SDL_BUTTON_LEFT:{
                     ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
                     mouse_p0 = (Vec3d)( cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y );
                     printf( "picked atom %i \n", ipicked );
-                    break;
-                case SDL_BUTTON_RIGHT:
+                    }break;
+                case SDL_BUTTON_RIGHT:{
                     ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
                     printf( "remove atom %i \n", ipicked );
                     ff.ignoreAtoms[ ipicked ] = true;
-                    break;
-            }
-            break;
+                }break;
+            }break;
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
@@ -316,8 +313,7 @@ void TestAppFARFF::eventHandling ( const SDL_Event& event  ){
                 case SDL_BUTTON_RIGHT:
                     ipicked = -1;
                     break;
-            }
-            break;
+            }break;
     };
     AppSDL2OGL::eventHandling( event );
 }

@@ -156,11 +156,11 @@ class ShockSystem1D{
                 double r2 = r*r;
                 volume = 4.18879020479*r2*r;
                 area   = 12.5663706144*r2;
-                break;}
+                break;} break;
             case( 2 ): {          //  cylinder
                 volume = 3.14159265359*r*r;
                 area   = 6.28318530718*r;
-                break;  }
+                break;  } break;
             default:  {        //  1 plane
                 area   = 1;
                 volume = r;
@@ -179,7 +179,7 @@ class ShockSystem1D{
                 double m4  = rr1*rr1 - rr2*rr2;
                 dr1   = ( 3*rrr1 -  2.25*rr1*m4*im3)*im3;
                 dr2   = (-3*rrr2 +  2.25*rr2*m4*im3)*im3;
-                }
+                } break;
             case 2: {          //  cylinder
                 //Cylinder dcog/dr1:  2*r1**2/(r1**2 - r2**2) - 4*r1*(r1**3 - r2**3)/(3*(r1**2 - r2**2)**2)
                 //Cylinder dcog/dr2:  -2*r2**2/(r1**2 - r2**2) + 4*r2*(r1**3 - r2**3)/(3*(r1**2 - r2**2)**2
@@ -189,7 +189,7 @@ class ShockSystem1D{
                 double m3  = rr1*r1 - rr2*r2;
                 dr1   = ( 3*rr1 -  1.33333333333*r1*m3*im2)*im2;
                 dr2   = (-3*rr2 +  1.33333333333*r2*m3*im2)*im2;
-                }
+                } break;
             default: {         //  1 plane
                 dr1=1; dr2=1;
                 }

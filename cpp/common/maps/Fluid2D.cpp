@@ -74,10 +74,10 @@ void Fluid2D::boundary_periodic( double* u) {
 
 void Fluid2D::set_bnd( int b, double* u) {
     switch(b){
-        case 0: boundary_zero    (u);
-        case 1: boundary_reflect (u);
-        case 2: boundary_absorb  (u);
-        case 3: boundary_periodic(u);
+        case 0: boundary_zero    (u); break;
+        case 1: boundary_reflect (u); break;
+        case 2: boundary_absorb  (u); break;
+        case 3: boundary_periodic(u); break;
     }
     //corners(u);
 }

@@ -847,18 +847,18 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
 
-                case SDLK_i: printFFInfo(ff);
+                case SDLK_i: printFFInfo(ff); break;
                 case SDLK_LEFTBRACKET :  Espread *= 1.2; ogl_fs=genFieldMap(ogl_fs, field_ns, field_ps, field_Es, E0-Espread, E0+Espread ); break;
                 case SDLK_RIGHTBRACKET:  Espread /= 1.2; ogl_fs=genFieldMap(ogl_fs, field_ns, field_ps, field_Es, E0-Espread, E0+Espread ); break;
-                case SDLK_e: bMapElectron=!bMapElectron;
-                case SDLK_f:
+                case SDLK_e: bMapElectron=!bMapElectron; break;
+                case SDLK_f:{
                     pa0 = ff.apos[ipicked];
                     sampleScalarField( Efunc, field_ns, {-5.0,-5.0,+0.1}, {0.1,0.0,0.0}, {0.0,0.1,0.0}, field_ps, field_Es, Erange );
                     E0 = field_Es[0];
                     ogl_fs = genFieldMap( ogl_fs, field_ns, field_ps, field_Es, E0-Espread, E0+Espread );
                     ff.apos[ipicked]= pa0;
-                    break;
-                case SDLK_SPACE: bRun = !bRun;
+                    }break;
+                case SDLK_SPACE: bRun = !bRun; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             break;

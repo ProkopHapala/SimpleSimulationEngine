@@ -40,7 +40,7 @@ class HashMapT64{ public:
 		//i = 1664525*(i+15445) ^ 1013904223; return (1664525*i ^ 1013904223) & mask;
 		//return ((i >> power)^i) & mask;
 		//return (i*2654435761 >> 16)&mask;   // Knuth's multiplicative method
-		return ( ibox * 11400714819323198549L )&mask;  // Knuth's multiplicative method  64bit
+		return ( ibox * 11400714819323198549UL )&mask;  // Knuth's multiplicative method  64bit
 		//i = ((i >> 16) ^ i) * 0x45d9f3b; i = ((i >> 16) ^ i) * 0x45d9f3b; return  ((i >> 16) ^ i)&mask;
 		//i = ((i >> 16) ^ i) * 0x45d9f3b; return  ((i >> 16) ^ i)&mask;
 		//i = ((i >> 16) ^ i) * 0x3335b369; i = ((i >> 16) ^ i) * 0x3335b369; return  ((i >> 16) ^ i)&mask;

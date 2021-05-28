@@ -28,6 +28,7 @@ class Projectile : public PointBody {
 	virtual void evalForce( );
 	//virtual void move( double dt );
 	virtual void draw();
+	virtual ~Projectile(){};
 };
 
 // ============== template implementation

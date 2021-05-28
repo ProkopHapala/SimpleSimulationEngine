@@ -148,7 +148,7 @@ class Builder{ public:
         for(int iv=0; iv<nv; iv++){
             int i0  = v0s[iv];
             int nve = vNs[iv];
-            if(nve<nve){ printf("ERROR in Mesh2D::Builder::makeTris(): number of edges per vertex(%i) > perVertMax(%i) \n", nve,perVertMax); exit(0); };
+            if(perVertMax<=nve){ printf("ERROR in Mesh2D::Builder::makeTris(): number of edges per vertex(%i) > perVertMax(%i) \n", nve,perVertMax); exit(0); };
             printf("-----------\n");
             for(int k=0; k<nve; k++){
                 /*

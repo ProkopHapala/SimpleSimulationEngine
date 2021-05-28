@@ -184,7 +184,7 @@ inline double DensOverlapGauss_S( double r2, double amp, double si, double sj, d
     double f1e2 = 6.*e2*Aa2*(si2-sj2)*is4;
     double e1f2 = 4.*E     * r2      *is4;
 
-    if(i_DEBUG>0) printf( "E %g e1 %g e2 %g(%g) r %g s%g(%g,%g) \n", E, e1, e2,-2*r2*is2, sqrt(r2), is2, si, sj );
+    //if(i_DEBUG>0) printf( "E %g e1 %g e2 %g(%g) r %g s%g(%g,%g) \n", E, e1, e2,-2*r2*is2, sqrt(r2), is2, si, sj );
 
     dSsi = -(e1f2*si - f1e2*sj);
     dSsj = -(e1f2*sj + f1e2*si);
@@ -221,7 +221,7 @@ inline double DensOverlapGauss_Snorm( double r2, double amp, double si, double s
 
     double e1e2 = e1*e2;
     double E    = e1e2*e0;
-    if(i_DEBUG>0) printf( "E %g e1 %g e2 %g(%g)  e0 %g r %g s%g(%g,%g) \n", E, e1, e2,-2*r2*is2, e0, sqrt(r2), is2, si, sj );
+    //if(i_DEBUG>0) printf( "E %g e1 %g e2 %g(%g)  e0 %g r %g s%g(%g,%g) \n", E, e1, e2,-2*r2*is2, e0, sqrt(r2), is2, si, sj );
     double f1e2 = 6.*e2*a2*(si2-sj2)*is4;
     double e1f2 = 4.*e1e2 * r2      *is4;
 

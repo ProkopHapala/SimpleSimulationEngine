@@ -181,7 +181,7 @@ _template_T  using Func3 = std::function<T(const T&,const T&,const T&)>;
 _template_T
 struct VecN{
     int n;
-    T*  data;
+    T*  data=0;
 
     void copy(int i0,int i1,T*       from){ T* to=data+i0; int n=i1-i0;
         _forN(i,n){

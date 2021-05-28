@@ -46,9 +46,9 @@ class HashMap64{ public:
 		//return (i*2654435761 >> 16)&mask;   // Knuth's multiplicative method
         //printf( "hash ibox %li ", ibox );
 		//return (ibox*2654435761 >> 16)&mask;   // Knuth's multiplicative method
-		//return ( ( (ibox * 11400714819323198549L) >> 32 ) + ibox )&mask;  // Knuth's multiplicative method  64bit
-		//return ( ( (ibox * 11400714819323198549L) >> 32 )  ^  ( ( (ibox>>32) * 11400714819323198549L) >> 32 )  )&mask;
-		return ( ( ( ibox * 11400714819323198549L )  ^  ( (ibox>>32) * 11400714819323198549L ) ) >> 32 )&mask;
+		//return ( ( (ibox * 11400714819323198549UL) >> 32 ) + ibox )&mask;  // Knuth's multiplicative method  64bit
+		//return ( ( (ibox * 11400714819323198549UL) >> 32 )  ^  ( ( (ibox>>32) * 11400714819323198549L) >> 32 )  )&mask;
+		return ( ( ( ibox * 11400714819323198549UL )  ^  ( (ibox>>32) * 11400714819323198549UL ) ) >> 32 )&mask;
 		//return ( ( ( ((uint32_t)ibox)*265443576) ^ ( (uint32_t)(ibox>>32)*265443576) ) >> 16 )&mask;
 		//return ( ibox )&mask;  // Knuth's multiplicative method  64bit
 		//i = ((i >> 16) ^ i) * 0x45d9f3b; i = ((i >> 16) ^ i) * 0x45d9f3b; return  ((i >> 16) ^ i)&mask;

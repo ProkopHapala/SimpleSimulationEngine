@@ -220,9 +220,9 @@ double DynamicOpt::optStep(){
     getForce( n, pos, force );
     switch( method ){
         //case 0: move_LeapFrog(dt);
-        case 0: move_GD(dt);
-        case 1: move_MDquench();
-        case 2: move_FIRE();
+        case 0: move_GD(dt);     break;
+        case 1: move_MDquench(); break;
+        case 2: move_FIRE();     break;
     }
     return getFmaxAbs( );
 }

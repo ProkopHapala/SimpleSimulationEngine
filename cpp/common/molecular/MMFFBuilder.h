@@ -194,7 +194,7 @@ struct Fragment{
 
     Fragment()=default;
     Fragment(Molecule* mol_, Vec3d pos_, Quat4d rot_, Vec2i atomRange_ ):
-        pos(pos),rot(rot),
+        pos(pos_),rot(rot_),
         atomRange{atomRange_},bondRange{0,0},angRange{0,0},dihRange{0,0},
         mol{mol_},pos0s{mol_->pos}{};
 };
