@@ -117,9 +117,11 @@ inline double product1D_s_deriv( double si, double r2, double xi,   double sj,do
 
 
 inline double Coulomb( double r, double s, double& fr, double& fs ){
+    // "s" is considered from rho ( density blobl; not wave function blob )
     // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
     //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
     constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
+    // NOTE : there cannot be any non-constant prefactors because at large distance ( r -> +inf) it must converge to point-charge coulomb (1/r)*qi*qj 
 
     //s*=2;
 
@@ -143,14 +145,18 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     return e1 * e2;
 }
 
-
 inline double Coulomb( const Vec3d& Rij, double r2, double si, double sj, double qij, Vec3d& fp, double& fs ){
     constexpr const double R2SAFE = 1.0e-8;
     double r    = sqrt(r2 + R2SAFE);
     double s2   = si*si + sj*sj;
     double s    = sqrt(s2);
     double fr;
-    double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
+    // NOTE : there cannot be any non-constant prefactors because at large distance ( r -> +inf) it must converge to point-charge coulomb (1/r)*qi*qj 
+
+    double e  = qij*Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
+    //double e    = const_El_eVA*qij/sqrt( r*r - 0.01 );    // assymptotic limit for ( r -> +inf)
+    //printf( "qij %g | s (%g,%g) r %g E %g  \n", qij, si, sj, r, e );
+
     // --- Derivatives (Forces)
     fp  = Rij*( fr * qij );   // use:   rhofP[i].add(fp);    rhofP[j].sub(fp);
     fs *=            qij;     // use:   rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;

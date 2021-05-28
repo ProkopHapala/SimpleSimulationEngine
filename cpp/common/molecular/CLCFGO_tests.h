@@ -503,8 +503,23 @@ double test_OrbInteraction( CLCFGO& solver, int iMODE, int io, int jo, int nint,
         solver.epos[ibas].x=x; 
         double T11 = solver.projectOrb( io, dip );
         double T22 = solver.projectOrb( jo, dip );
-        solver.orb2grid( io, grid, f );      
+        if(iMODE==3){ solver.rho2grid( io, grid, f ); } 
+        else        { solver.orb2grid( io, grid, f ); }   
     };
+    auto func2 = [&](GridShape& grid, double* f, double x ){
+        solver.epos[ibas].x=x;
+        double T11 = solver.projectOrb( io, dip );
+        double T22 = solver.projectOrb( jo, dip );
+        if     (iMODE==1){ solver.orb2grid    ( jo, grid, f ); }
+        else if(iMODE==3){ solver.hartree2grid( jo, grid, f ); } 
+        else if(iMODE==2){ 
+            double* tmp = new double[grid.n.totprod()];
+            solver.orb2grid( jo, grid, tmp );
+            grid.Laplace   ( tmp, f );
+            delete [] tmp;
+        }
+    };
+    /*
     auto func2_T = [&](GridShape& grid, double* f, double x ){
         //if(bPrint>1) printf( " gridNumIntegral( %g ) func2\n", x );
         double* tmp = new double[grid.n.totprod()];
@@ -527,9 +542,11 @@ double test_OrbInteraction( CLCFGO& solver, int iMODE, int io, int jo, int nint,
         double T22 = solver.projectOrb( jo, dip );
         solver.hartree2grid( jo, grid, f );
     };
-    if     ( iMODE==1 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_S, bSave ); } // Overlap
-    else if( iMODE==2 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_T, bSave ); } // Kinetic
-    else if( iMODE==3 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_V, bSave ); } // Hartree
+    */
+    //if     ( iMODE==1 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_S, bSave ); } // Overlap
+    //else if( iMODE==2 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_T, bSave ); } // Kinetic
+    //else if( iMODE==3 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_V, bSave ); } // Hartree
+    gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2, bSave );
     double err2 = 0; 
     for(int i=0; i<nint; i++){
         //line_Ek_g[i] = 0;

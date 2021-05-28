@@ -728,6 +728,7 @@ constexpr static const Quat4d default_AtomParams[] = {
 
                 //si*=M_SQRT2; sj*=M_SQRT2; // WARRNING : Even if this helps - it should go inside  Gauss::Coulomb()
                 double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
+                
                 //E*=2*M_SQRT2;
                 //E-=1.0;
                 /*

@@ -94,16 +94,19 @@ def test_OrbInteraction( plt = None, Etoll=1e-5, iMODE=1 ):
     labels=[ "NONE", "Overlap Sij", "Kinetic Tij", "Coulomb Kij", ]
     label=labels[iMODE]
     print " ===== test_OrbInteraction "+label
-    init_2x1_electrons( sz = 0.1, dist=0.0 )
-    #init_2x1_electrons( sz = 0.25, dist=0.0 )
+    #init_2x1_electrons( sz = 0.1, dist=0.0 )
+    #init_2x1_electrons ( sz = 0.25, dist=0.0 )
     #init_2x1_electrons( sz = 0.5, dist=0.0 )
-    #init_2x1_electrons( sz = 0.75, dist=0.0 )
+    init_2x1_electrons( sz = 0.75, dist=0.0 )
     #init_2x1_electrons( sz = 1.0, dist=0.0 )
     #init_2x1_electrons( sz = 1.5, dist=0.0 )
     #print "DEBUG 1 "
+
     effmc.eval() # we have to run it to project wavefuction to aux density
     #print "DEBUG 2 "
-    dx=0.2; nint=30
+    dx=0.2; 
+    #nint=30;
+    nint=50
     err2, Ek, Ek_, f1, f2 =  effmc.test_OrbInteraction( iMODE=iMODE, io=0,jo=1, nint=nint, dx=dx, Rmax=5.0, bPrint=0, bSave=0  )
     #err2, rho, rho_ =  effmc.test_Poisson( dx=dx, Rmax=R, useWf=False )
     Err = np.sqrt( err2/len(Ek) )
@@ -126,6 +129,7 @@ def test_OrbInteraction( plt = None, Etoll=1e-5, iMODE=1 ):
         plt.plot( xs, Ek ,    label=('Ek_ana' ) ); 
         plt.plot( xs, Ek_, ":", label=('Ek_num' ) ); 
         plt.title( "test_OrbInteraction "+label )
+        #plt.ylim( 0, 20.0 )
         plt.legend(); plt.grid()
     #print "DEBUG 4 "
     return Err
@@ -142,12 +146,11 @@ def test_Coulomb_Kij(plt=None):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    tests_funcs = [ test_ProjectWf, test_Poisson, test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     #tests_funcs = [ test_ProjectWf ,  test_Poisson  ]
-    tests_funcs = [ test_ProjectWf ,  test_Poisson , test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
-    #tests_funcs = [ test_ProjectWf ,  test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
-    #tests_funcs = [ test_Poisson ,  test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
-    #tests_funcs   = [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
-    #tests_funcs   = [ test_Overlap_Sij  ]
+    #tests_funcs = [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
+    #tests_funcs = [ test_Overlap_Sij  ]
+    #tests_funcs = [ test_Coulomb_Kij  ]
     tests_results = []
     for test_func in tests_funcs:
         tests_results.append( test_func(plt) )
