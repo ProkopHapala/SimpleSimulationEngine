@@ -50,9 +50,9 @@ def test_ProjectWf( plt = None, Etoll=1e-5 ):
     ps[:,0] = np.linspace( -5.0, 5.0, nps )
     effmc.eval() # we have to run it to project wavefuction to aux density
     wf  = effmc.orbAtPoints(ps)
-    wf2 = wf**2
     rho = effmc.rhoAtPoints(ps)
     #print "DEBUG 2 "
+    wf2 = wf**2
     err = rho - wf2
     Err = np.sqrt( (err**2).sum()/len(err) )
     print " Error ", Err
@@ -94,7 +94,12 @@ def test_OrbInteraction( plt = None, Etoll=1e-5, iMODE=1 ):
     labels=[ "NONE", "Overlap Sij", "Kinetic Tij", "Coulomb Kij", ]
     label=labels[iMODE]
     print " ===== test_OrbInteraction "+label
-    init_2x1_electrons( sz = 0.5, dist=0.0 )
+    init_2x1_electrons( sz = 0.1, dist=0.0 )
+    #init_2x1_electrons( sz = 0.25, dist=0.0 )
+    #init_2x1_electrons( sz = 0.5, dist=0.0 )
+    #init_2x1_electrons( sz = 0.75, dist=0.0 )
+    #init_2x1_electrons( sz = 1.0, dist=0.0 )
+    #init_2x1_electrons( sz = 1.5, dist=0.0 )
     #print "DEBUG 1 "
     effmc.eval() # we have to run it to project wavefuction to aux density
     #print "DEBUG 2 "
@@ -102,6 +107,7 @@ def test_OrbInteraction( plt = None, Etoll=1e-5, iMODE=1 ):
     err2, Ek, Ek_, f1, f2 =  effmc.test_OrbInteraction( iMODE=iMODE, io=0,jo=1, nint=nint, dx=dx, Rmax=5.0, bPrint=0, bSave=0  )
     #err2, rho, rho_ =  effmc.test_Poisson( dx=dx, Rmax=R, useWf=False )
     Err = np.sqrt( err2/len(Ek) )
+    print "Error ", Err
     #print "DEBUG 3 "
     if(plt):
         #print "DEBUG 3.0 "
@@ -136,6 +142,7 @@ def test_Coulomb_Kij(plt=None):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    #tests_funcs = [ test_ProjectWf ,  test_Poisson  ]
     tests_funcs = [ test_ProjectWf ,  test_Poisson , test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
     #tests_funcs = [ test_ProjectWf ,  test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
     #tests_funcs = [ test_Poisson ,  test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]

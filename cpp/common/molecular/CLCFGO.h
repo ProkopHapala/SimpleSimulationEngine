@@ -416,7 +416,7 @@ constexpr static const Quat4d default_AtomParams[] = {
             if(bMakeRho){
                 Qs[ii]  = qii;
                 Ps[ii]  = pi;
-                Ss[ii]  = si*M_SQRT1_2;
+                Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii
                 Q      += qii;
                 qcog.add_mul( pi, qii );
                 //printf( "projectOrb[%i|%i]:bMakeRho %i  qii %g  i0 %i \n", io,i, bMakeRho, qii, i0 );
@@ -726,8 +726,10 @@ constexpr static const Quat4d default_AtomParams[] = {
                 double sj = rhoS[j];
                 Vec3d fp; double fs,qij = qi*qj;
 
-                //si*=M_SQRT2; sj*=M_SQRT2;
+                //si*=M_SQRT2; sj*=M_SQRT2; // WARRNING : Even if this helps - it should go inside  Gauss::Coulomb()
                 double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
+                //E*=2*M_SQRT2;
+                //E-=1.0;
                 /*
                 double r    = sqrt(r2 + R2SAFE);
                 double s2   = si*si + sj*sj;
@@ -1145,6 +1147,9 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //if(r2>Rcut2) continue;
                 double cj  = ecoef[j];
                 double sj  = esize[j];
+
+                //si*=M_SQRT2; sj*=M_SQRT2; // This helps - but should be solved differently - inside overlap_s_deriv
+
                 //double cij = ci*cj*Amp;
                 double cij = ci*cj;
                 //pairs[ij].get(si,pi, sj,pj);
@@ -1152,7 +1157,8 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //const Quat4d&           TD = TDs[ij];
                 double  dTr, dTsi, dTsj, dSr, dSsi, dSsj,   dS;
                 { //                Overlap Integral
-                    dS = Gauss::overlap_s_deriv(  si,pi,  sj,pj,  dSr, dSsi, dSsj );
+                    dS = Gauss::overlap_s_deriv(  si*M_SQRT2,pi,  sj*M_SQRT2,pj,  dSr, dSsi, dSsj );  // This helps - but should be solved differently - inside overlap_s_deriv
+                    //dS = Gauss::overlap_s_deriv(  si,pi,  sj,pj,  dSr, dSsi, dSsj );
                     dS*=cij; S+=dS;  // integrate S12 = <psi_1|psi_2>
                 }
                 // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
