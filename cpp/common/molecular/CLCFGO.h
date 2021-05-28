@@ -413,6 +413,8 @@ constexpr static const Quat4d default_AtomParams[] = {
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
 
+            printf(  " epos[%i,%i] (%g,%g,%g)\n", io, i, pi.x, pi.y, pi.z );
+
             if(bMakeRho){
                 Qs[ii]  = qii;
                 Ps[ii]  = pi;
@@ -490,6 +492,7 @@ constexpr static const Quat4d default_AtomParams[] = {
             }
         }
         onq[io] = ii;
+        //printf( "orb[%i] onq %i nQorb %i \n", io, onq[io], nqOrb );
         //printf( "orb[%i] onq %i nQorb %i \n", io, onq[io], nqOrb );
         oQs[io] = Q;
         opos[io].set_mul( qcog, 1./Q );

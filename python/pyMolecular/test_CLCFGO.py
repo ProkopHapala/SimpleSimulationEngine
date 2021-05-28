@@ -165,7 +165,9 @@ def checkForces_epos( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_epos"
     xs = np.arange(x0,x0+n*dx,dx)
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
+    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
     for i in range(n):
+        print "# ", i, xs[i] 
         epos[0,0,0] = xs[i]
         Es[i] = effmc.eval()
         fs[i] = efpos[0,0,0]
@@ -177,6 +179,7 @@ def checkForces_esize( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esiz
     xs = np.arange(x0,x0+n*dx,dx)
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
+    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
     for i in range(n):
         esize[0,0] = xs[i]
         Es[i] = effmc.eval()
@@ -187,6 +190,11 @@ def checkForces_Kinetic( n=100, dx=0.05, plt=None ):
     init_2x1_electrons( sz = 0.5, dist=0.0 )
     effmc.setSwitches_( normalize=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
     return checkForces_esize( x0=0.5, n=n, dx=dx, plt=plt, label="checkForces_Kinetic" )
+
+def checkForces_Kinetic_pos( n=100, dx=0.05, plt=None ):
+    init_2x2_electrons( sz = 0.5, dist=-1.0 )
+    effmc.setSwitches_( normalize=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    return checkForces_epos( x0=1.0, n=n, dx=dx, plt=plt, label="checkForces_Kinetic" )
 
 def checkForces_Hartree_epos( n=100, dx=0.05, plt=None ):
     init_2x1_electrons( sz = 0.5, dist=0.0 )
@@ -203,7 +211,8 @@ if __name__ == "__main__":
     #tests_funcs = [ test_Overlap_Sij  ]
     #tests_funcs = [ test_Coulomb_Kij  ]
     #tests_funcs = [checkForces_Hartree_epos]
-    tests_funcs = [checkForces_Kinetic, checkForces_Hartree_epos ]
+    #tests_funcs = [checkForces_Kinetic,  checkForces_Kinetic_pos, checkForces_Hartree_epos ]
+    tests_funcs = [ checkForces_Kinetic_pos ]
     tests_results = []
     for test_func in tests_funcs:
         tests_results.append( test_func(plt=plt) )
