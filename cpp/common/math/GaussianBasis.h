@@ -9,7 +9,39 @@ namespace Gauss{
 
 static int iDEBUG = 0;
 
+#define _Gauss_sij_aux( si, sj ) \
+    double si2  = si*si; \
+    double sj2  = sj*sj; \
+    double s2   = si2 + sj2; \
+    double is2  = 1/s2; \
+    double is4  = is2*is2; \
 
+#define _Gauss_overlap( r2, si, sj ) \
+    double sij     = si*sj; \
+    double inv_sij = 1/sij; \
+    double g       = exp( -r2/(2*s2) );    \
+    double S       =  (2*M_SQRT2) * g *  sij*sij*is2 * sqrt( inv_sij*is2 ) ;  \
+    double dS_dr   = -S * is2; \
+    double inv_si  = sj*inv_sij; \
+    double inv_sj  = si*inv_sij; \
+    double S_s4    = S * is4; \
+    double dS_dsi  = S_s4 * ( si2*r2 + 3*sj2*s2 ) * inv_si; \
+    double dS_dsj  = S_s4 * ( sj2*r2 + 3*si2*s2 ) * inv_sj; \
+    dS_dsi        -= 1.5*S * inv_si;    \
+    dS_dsj        -= 1.5*S * inv_sj;    \
+
+#define _Gauss_tau( r2, si, sj ) \
+    double tau         = -(r2 - 3*s2)*is4; \
+    double dTau_dr     = -2*is4; \
+    double dTau_ds     =  2*( 2*r2 - 3*s2 )*is4*is2; \
+    double dTau_dsi    =  si*dTau_ds; \
+    double dTau_dsj    =  sj*dTau_ds; \
+
+#define _Gauss_kinetic( r2, si, sj ) \
+    double T = S*tau;  \
+    double dT_dr  = S*dTau_dr  + tau*dS_dr;  \
+    double dT_dsi = S*dTau_dsi + tau*dS_dsi; \
+    double dT_dsj = S*dTau_dsj + tau*dS_dsj; \
 
 // TODO : this should go elsewhere (physical constants or something)
 const double const_hbar_SI      = 1.054571817e-34;    ///< [J.s]  #6.582119569e-16 # [eV/s]
@@ -188,16 +220,70 @@ inline productCenter(
 }
 */
 
-#define _productAux \
-    double si2  = si*si; \
-    double sj2  = sj*sj; \
-    double s2   = si2 + sj2; \
-    double is2  = 1/s2; \
-    double is4  = is2*is2; \
+
+
+
+
+inline double overlap( double r, double si, double sj,   double& fr, double& fsi, double& fsj ){
+    // NOTE : this is for normalized gaussian
+    // see pyMolecular/eFF_KineticAndOverlap.py
+    const double C = 2*M_SQRT2; // 2^(3/2)
+
+    _Gauss_sij_aux( si, sj )
+
+    double r2    = r*r;
+
+    double sij     = si*sj;
+    double inv_sij = 1/sij;
+    double inv_sqrt_sij = sqrt(inv_sij);
+    double norm  = inv_sij*inv_sqrt_sij;     //  (si*sj)**(1.5)
+    double g     = exp( -r2/(2*s2) );
+    //double S   = const * norm * sij^3/( s2^1.5 ) * g
+    double S     =  C * g *  sij*is2 * sqrt( inv_sij*is2 );
+    fr           = -S / s2;
+    fsi          =  S *  ( si2*r2 + 3*sj2*s2 )/(  si*s2*s2 );
+    fsj          =  S *  ( sj2*r2 + 3*si2*s2 )/(  sj*s2*s2 );
+    // corection by derivative of normalization
+    fsi          = fsi - 1.5*S/si;
+    fsj          = fsj - 1.5*S/sj;
+    return S;
+}
+
+inline double tau_func( double r, double si, double sj, double& fr, double& fsi, double& fsj ){ 
+    // Kinetic/Overlap Tij/Sij
+    // // see pyMolecular/eFF_KineticAndOverlap.py
+    double si2  = si*si;
+    double sj2  = sj*sj;
+    double s2   = si2 + sj2;
+    double r2   = r*r;
+    double is2  = 1/s2;
+    double is4  = is2*is2; 
+
+    double tau  = -(r2 - 3*s2)*is2*is2;
+    fr          = -2*r*is4;
+    double fs   =  2*si*( 2*r2 - 3*s2 )*is4*is2;
+    fsi         =  fs*si;
+    fsj         =  fs*sj;
+    return tau;
+}
+
+/*
+inline double kinetic_STau(double r,double si,double sj){
+    double S  ,dTau_dr,dTau_dsi,dTau_dsj; S   = tau_func(r,si,sj);
+    double tau,dTau_dr,dTau_dsi,dTau_dsj; tau = overlap (r,si,sj);
+    T = S*tau
+    dT_dsi = S*dTau_dsi +tau*dS_dsi
+    dT_dr  = S*dTau_dr  +tau*dS_dr 
+    return T, dT_dr, dT_dsi
+}
+*/
+
+#define _Gauss_productAux \
+    _Gauss_sij_aux( si, sj ) \
     Vec3d dp    = pi-pj; \
     double r2   = dp.norm2();
 
-#define _productCenter(S,p,dSsi,dSsj,dXsi,dXsj,dXxi,dXxj){ \
+#define _Gauss_productCenter(S,p,dSsi,dSsj,dXsi,dXsj,dXxi,dXxj){ \
     double sqrtis2 = sqrt(is2); \
     S      =  si*sj*sqrtis2; \
     p      =  pj*(si2*is2) + pi*(sj2*is2); \
@@ -210,7 +296,7 @@ inline productCenter(
     dXxj   = si2*is2; \
  }
 
-#define _productOverlap(C,dCsi,dCsj,dCr){ \
+#define _Gauss_productOverlap(C,dCsi,dCsj,dCr){ \
     double a2   = 2.*(si*sj)*is2; \
     double a    = sqrt(a2); \
     double e1   = a2*a; \
@@ -233,9 +319,9 @@ inline double product3D_s_deriv(
     double& dCsi, double& dCsj, double& dCr
 ){
     double C;
-    _productAux
-    _productCenter (S,p,dSsi,dSsj,dXsi,dXsj,dXxi,dXxj)
-    _productOverlap(C,dCsi,dCsj,dCr)
+    _Gauss_productAux
+    _Gauss_productCenter (S,p,dSsi,dSsj,dXsi,dXsj,dXxi,dXxj)
+    _Gauss_productOverlap(C,dCsi,dCsj,dCr)
 
     /*
     double si2   = si*si;
@@ -289,8 +375,8 @@ inline double overlap_s_deriv( // derived/simplified from product3D_s_deriv(
     double& dCr, double& dCsi, double& dCsj
 ){
     double C;
-    _productAux
-    _productOverlap(C,dCsi,dCsj,dCr)
+    _Gauss_productAux
+    _Gauss_productOverlap(C,dCsi,dCsj,dCr)
 
     //printf( " overlap_s_deriv r %g s(%g,%g) S %g ", sqrt(r2), si, sj, C );
 
@@ -546,7 +632,7 @@ inline double sqnorm3Ds_deriv( double s, double& d ){
     double insqrt  = sqrt(invs);
     double N = invs*insqrt;   //   ()^(-3/2)
     d        = dC * N * invs; //   ()^(-5/2)
-    return N*C;
+    return      C * N;
 }
 
 inline double sqnorm3Ds_sq( double s ){

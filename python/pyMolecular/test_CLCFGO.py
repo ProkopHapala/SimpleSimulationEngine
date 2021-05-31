@@ -238,12 +238,13 @@ def checkForces_Hartree_epos( n=100, dx=0.05, plt=None ):
     init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=0.0 )
     effmc.setSwitches_( normalize=1, kinetic=-1, coulomb=1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
     return checkForces_epos( n=n, dx=dx, plt=plt, label="checkForces_Hartree_epos" )
-    
+
 #def test_Kinetic( plt = None, Etoll=1e-5 ):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    #tests_funcs = [ test_ProjectWf, test_Poisson, test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
+    
+    tests_funcs = [ test_ProjectWf, test_Poisson, test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     #tests_funcs = [ test_ProjectWf ,  test_Poisson  ]
     #tests_funcs = [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
     #tests_funcs = [ test_Overlap_Sij  ]
@@ -251,7 +252,7 @@ if __name__ == "__main__":
     #tests_funcs = [checkForces_Hartree_epos]
     #tests_funcs = [checkForces_Kinetic,  checkForces_Kinetic_pos, checkForces_Hartree_epos ]
     #tests_funcs = [ checkForces_Kinetic ]
-    tests_funcs = [ checkForces_Kinetic , checkForces_Kinetic_pos ]
+    #tests_funcs = [ checkForces_Kinetic , checkForces_Kinetic_pos ]
     #tests_funcs = [ checkForces_Kinetic ]
     tests_results = []
     for test_func in tests_funcs:

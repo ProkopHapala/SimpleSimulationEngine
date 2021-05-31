@@ -140,6 +140,20 @@ def hartreeAtPoints( ps, io=0, out=None ):
     lib.hartreeAtPoints( io, n, ps, out )
     return out
 
+#double test_GaussIntegral_ST( int iMODE, int n, double sj, double* sis, double* rs, double* E, double* fr, double* fs ){
+lib.test_GaussIntegral_ST.argtypes = [ c_int, c_int, c_double, array1d, array1d, array1d, array1d, array1d ]
+lib.test_GaussIntegral_ST.restype  = c_double
+def test_GaussIntegral_ST( iMODE=0, sj=1.0, sis=None, rs=None, r0=0.0, si=1.0 ):
+    if rs  is None:
+        n=len(sis)
+        rs =np.zeros(n); rs[:]=r0
+    if sis is None:
+        n=len(rs) 
+        sis=np.zeros(n); sis[:]=si
+    E=np.zeros(n); fr=np.zeros(n); fs=np.zeros(n)
+    lib.test_GaussIntegral_ST( iMODE, n, sj, sis, rs, E, fr, fs )
+    return E, fr, fs
+
 #test_Poisson( double Rmax, double gStep, double * line_rho=0, double* line_rho_=0, bool bPrint=0, bool bSave=0, useWf=true ){
 lib.test_Poisson.argtypes = [ c_int, c_double, c_double, array1d, array1d, c_bool, c_bool, c_bool ]
 lib.test_Poisson.restype  = c_double

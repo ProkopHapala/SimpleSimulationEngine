@@ -145,6 +145,29 @@ double test_OrbInteraction( int iMODE, int io, int jo, int nint, double dx, doub
     return test_OrbInteraction( solver, iMODE, io, jo, nint, dx, Rmax, gStep, line_Ek, line_Ek_g, line_f1, line_f2, bPrint, bSave );
 }
 
+void test_GaussIntegral_ST( int iMODE, int n, double sj, double* sis, double* rs, double* E, double* fr, double* fs ){
+    for(int i=0; i<n; i++){
+        double si = sis[i];
+        double r_ = rs [i];
+        double r2 = r_*r_;
+        _Gauss_sij_aux( si, sj ) 
+        if       ( iMODE==1 ){
+            _Gauss_overlap( r2, si, sj );
+            E[i]=S; fr[i]=dS_dr*r_; fs[i]=dS_dsi;   
+        }else if ( iMODE==2 ) {
+            _Gauss_tau    ( r2, si, sj );
+            E[i]=tau; fr[i]=dTau_dr*r_; fs[i]=dTau_dsi;
+        }else if ( iMODE==3 ) { 
+            _Gauss_overlap( r2, si, sj );
+            _Gauss_tau    ( r2, si, sj );
+            _Gauss_kinetic( r2, si, sj );
+            E[i]=T; fr[i]=dT_dr*r_; fs[i]=dT_dsi;
+        }
+    }
+}
+
+
+
 #define NEWBUFF(name,N)   double* name = new double[N]; buffers.insert( {#name, name} );
 
 void testDerivsP_Coulomb_model( int n, double x0, double dx ){

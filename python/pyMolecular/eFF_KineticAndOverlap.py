@@ -76,20 +76,23 @@ def overlap(r,si,sj):
 
     dS_dr  = S *  -r/s2
     dS_dsi = S *  ( si2*r2 + 3*sj2*s2 )/(  si*s2*s2   )
+
+    # --- corection by derivative of normalization
+    dS_dsi = dS_dsi - 1.5*S/si
     
     return S, dS_dr, dS_dsi 
 
-def tau(r,si,sj): # Kinetic/Overlap Tij/Sij
+def tau_func(r,si,sj): # Kinetic/Overlap Tij/Sij
     s2      = si**2 + sj**2
     r2      = r**2
     tau     = -(r2 - 3 * s2)/(s2**2)
-    dTau_dr  =   2*r/(s2*s2)
-    dTau_dsi =  -2*si*( 2*r2 - 3*s2 )/(s2*s2*s2)
+    dTau_dr  =  -2*r/(s2*s2)
+    dTau_dsi =  +2*si*( 2*r2 - 3*s2 )/(s2*s2*s2)
     return tau, dTau_dr, dTau_dsi
 
 def kinetic_S(r,si,sj):
     tau, dTau_dr, dTau_dsi = overlap(r,si,sj)
-    S  , dS_dr  , dS_dsi   = tau    (r,si,sj)
+    S  , dS_dr  , dS_dsi   = tau_func(r,si,sj)
     T = S*tau
     dT_dsi = S*dTau_dsi +tau*dS_dsi
     dT_dr  = S*dTau_dr  +tau*dS_dr 
@@ -110,7 +113,7 @@ def kinetic(r,si,sj):
 def processForces( xs,Es,fs, plt=plt, label="" ):
     n=len(xs)
     dx=xs[1]-xs[0]
-    fs_num=(Es[2:]-Es[:-2])/(-2*dx)
+    fs_num=(Es[2:]-Es[:-2])/(2*dx)
     Err = np.sqrt( ( (fs_num-fs[1:-1])**2 ).sum()/(n-1) )
     #print "Error ", err
     if(plt):
@@ -118,6 +121,7 @@ def processForces( xs,Es,fs, plt=plt, label="" ):
         plt.plot( xs,      Es    ,      label="E" )
         plt.plot( xs,      fs    ,      label="f_ana" )
         plt.plot( xs[1:-1],fs_num, ":", label="f_num" )
+        #plt.plot( xs[1:-1],(Es[1:-1]/(-0.68566581218*xs[1:-1]) ) /(fs_num-fs[1:-1]) , ":", label="diff" )
         plt.grid();plt.legend();
         plt.title(label)
     return Err
@@ -129,7 +133,8 @@ if __name__ == "__main__":
     #si=1.0; sj=1.0;
     #si=0.5; sj=0.5;
     #si=2.0; sj=2.0;
-    si=0.5**0.5; sj=0.5**0.5;
+    #si=0.5**0.5; sj=0.5**0.5;
+    si=1.5**0.5; sj=1.5**0.5;  r0 = 0.35 
     #si=0.5; sj=2.0;
     #si=2.0; sj=0.5;
     
@@ -147,12 +152,23 @@ if __name__ == "__main__":
     plt.grid()
     '''
 
-    rs  = np.arange(0,1,0.02)
-    sis = np.arange(0.3,5.0,0.1)
+    sis = np.arange(0,1,0.02)
+    rs  = np.arange(0.3,5.0,0.1)
 
-    E,fr,fs = overlap(rs,si,sj)
-    processForces( xs,E,fr, plt=plt, label="" )
+    E,fr,fs = overlap( rs,si ,sj);   processForces( rs ,E,fr, plt=plt, label="dS/dr" )
+    E,fr,fs = overlap( r0,sis,sj);   processForces( sis,E,fs, plt=plt, label="dS/dsi" )
+    E,fr,fs = tau_func( rs,si ,sj);   processForces( rs ,E,fr, plt=plt, label="dTau/dr" )
+    E,fr,fs = tau_func( r0,sis,sj);   processForces( sis,E,fs, plt=plt, label="dTau/dsi" )
+    E,fr,fs = kinetic_S( rs,si ,sj);   processForces( rs ,E,fr, plt=plt, label="dT/dr"  )
+    E,fr,fs = kinetic_S( r0,sis,sj);   processForces( sis,E,fs, plt=plt, label="dT/dsi" )
 
+    #import CLCFGO as effmc
+    #E,fr,fs = effmc.test_GaussIntegral_ST( iMODE=1, sj=sj, rs=rs,    si=si );   processForces( rs ,E,fr, plt=plt, label="dS/dr" )
+    #E,fr,fs = effmc.test_GaussIntegral_ST( iMODE=1, sj=sj, sis=sis, r0 = r0  );   processForces( sis,E,fs, plt=plt, label="dS/dsi" )
+    #E,fr,fs = effmc.test_GaussIntegral_ST( iMODE=2, sj=sj, rs=rs,    si=si );   processForces( rs ,E,fr, plt=plt, label="dTau/dr" )
+    #E,fr,fs = effmc.test_GaussIntegral_ST( iMODE=2, sj=sj, sis=sis, r0 = r0  );   processForces( sis,E,fs, plt=plt, label="dTau/dsi" )
+    #E,fr,fs = effmc.test_GaussIntegral_ST( iMODE=3, sj=sj, rs=rs,   si=si );   processForces( rs ,E,fr, plt=plt, label="dT/dr" )
+    #E,fr,fs = effmc.test_GaussIntegral_ST( iMODE=3, sj=sj, sis=sis, r0 = r0  );   processForces( sis,E,fs, plt=plt, label="dT/dsi" )
     plt.legend()
     plt.show()
 

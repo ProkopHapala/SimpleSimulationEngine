@@ -400,9 +400,14 @@ constexpr static const Quat4d default_AtomParams[] = {
                 if(r2>Rcut2) continue;
                 double cj  = ecoef[j];
                 double sj  = esize[j];
-                double sij; Vec3d pij;
-                double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij ); // ToDo : use more efficient/cheaper method here ( without sij,pij etc. )
-                Q += Sij*(ci*cj*2)*2;
+                //double sij; Vec3d pij;
+                //double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij ); // ToDo : use more efficient/cheaper method here ( without sij,pij etc. )
+
+                _Gauss_sij_aux( si, sj );
+                _Gauss_overlap( r2, si, sj );
+                double qij = S*ci*cj*2;
+
+                Q += S*(ci*cj)*2;
             }
         }
         double renorm  = sqrt(1./Q);
@@ -474,15 +479,26 @@ constexpr static const Quat4d default_AtomParams[] = {
                 double cij = ci*cj*2;
 
                 // ToDo : it would be more efficient calculate as from Tij = tau_ij * S_ij in order to reuse this callculation
+
+                _Gauss_sij_aux( si, sj );
+                _Gauss_overlap( r2, si, sj );
+
+                double qij = S*cij;
+
                 if(bMakeRho){
                     //printf( "projectOrb[%i|%i,%i]:bMakeRho %i \n", io,i,j, bMakeRho );
                     // --- Project on auxuliary density functions
-                    Vec3d  pij;
-                    double sij;
+
+                    double sqrtis2 = sqrt(is2);
+                    double sij  =  si*sj*sqrtis2;
+                    Vec3d  pij  =  pj*(si2*is2) + pi*(sj2*is2);
+
+                    //Vec3d  pij;
+                    //double sij;
                     //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
-                    double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
+                    //double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
                     //double qij = Sij*cij;
-                    double qij = Sij*cij*2; // because qij=qji   (a+b)*(a+b) = a^2 + b^2 + 2*ab
+                    //double qij = Sij*cij*2; // because qij=qji   (a+b)*(a+b) = a^2 + b^2 + 2*ab
                     Qs[ii] = qij;
                     Ps[ii] = pij;
                     Ss[ii] = sij;
@@ -493,12 +509,14 @@ constexpr static const Quat4d default_AtomParams[] = {
 
                 if(bEvalKinetic){
                     //double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
-                    double Kij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj );   // fr*=2; fsi*=2, fsj*=2;
-                    Ek += Kij*cij;
-                    Vec3d fij = Rij*(fr*cij);
-                    efpos [i].add( fij ); efpos[j].sub( fij );
-                    efsize[i]-= fsi*cij ; efsize[j]-= fsj*cij;
-                    efcoef[i]-= Kij*cj  ; efcoef[j]-= Kij*ci;
+                    //double Kij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj );   // fr*=2; fsi*=2, fsj*=2;
+                    _Gauss_tau    ( r2, si, sj );
+                    _Gauss_kinetic( r2, si, sj );
+                    Ek += T*cij;
+                    Vec3d fij = Rij*(dT_dr*cij);
+                    efpos [i].add( fij )  ; efpos[j].sub( fij )   ;
+                    efsize[i]-= dT_dsi*cij; efsize[j]-= dT_dsi*cij;
+                    efcoef[i]-= T*cj      ; efcoef[j]-= T*ci      ;
                     //if(DEBUG_iter==DEBUG_log_iter){ printf(" Kij %g cij %g Ekij \n", Kij, cij, Kij*cij ); }
                 }
 
