@@ -462,8 +462,20 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //double fEki;
                 //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
                 //Ek += qii*Gauss::kinetic( si );
-                Ek += qii*Gauss::kinetic_s(  0.0, si, si,   fr, fsi, fsj );
-                efsize[i]+= -2*fsi*qii;
+                //Ek += qii*Gauss::kinetic_s(  0.0, si, si,   fr, fsi, fsj );
+
+                double Tii  = _Gauss_Tr0(si);
+                double Tii_ =  Gauss::kinetic_s(  0.0, si, si,   fr, fsi, fsj );
+
+                double fsii = _Gauss_dTr0_ds;
+
+                printf(  "kin[%i,%i] si %g T %g T_ %g    dT_ds %g  dT_ds_ %g  | fac %g \n", io, i, si, Tii, Tii_,  fsii, fsi, Tii/Tii_, fsii/fsi );
+
+                //Ek       += qii*   Tii;
+                //efsize[i]+= qii*-2*fsii;
+
+                Ek       += qii*   Tii_;
+                efsize[i]+= qii*-2*fsi;
             }
 
             ii++;
@@ -515,7 +527,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                     Ek += T*cij;
                     Vec3d fij = Rij*(dT_dr*cij);
                     efpos [i].add( fij )  ; efpos[j].sub( fij )   ;
-                    efsize[i]-= dT_dsi*cij; efsize[j]-= dT_dsi*cij;
+                    efsize[i]-= dT_dsi*cij; efsize[j]-= dT_dsj*cij;
                     efcoef[i]-= T*cj      ; efcoef[j]-= T*ci      ;
                     //if(DEBUG_iter==DEBUG_log_iter){ printf(" Kij %g cij %g Ekij \n", Kij, cij, Kij*cij ); }
                 }

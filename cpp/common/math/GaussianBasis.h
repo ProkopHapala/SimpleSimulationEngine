@@ -9,6 +9,27 @@ namespace Gauss{
 
 static int iDEBUG = 0;
 
+// TODO : this should go elsewhere (physical constants or something)
+const double const_hbar_SI      = 1.054571817e-34;    ///< [J.s]  #6.582119569e-16 # [eV/s]
+const double const_Me_SI        = 9.10938356e-31;     ///< [kg]
+const double const_e_SI         = 1.602176620898e-19; ///< [Coulomb]
+const double const_eps0_SI      = 8.854187812813e-12; ///< [F.m = Coulomb/(Volt*m)]
+const double const_eV_SI        = 1.602176620898e-19; ///< [J]
+const double const_Angstroem_SI = 1.0e-10;
+
+const double const_K_SI     =  const_hbar_SI*const_hbar_SI/const_Me_SI;
+const double const_El_SI    =  const_e_SI*const_e_SI/(4.*M_PI*const_eps0_SI);
+const double const_Ry_SI    = 0.5 * const_El_SI*const_El_SI/const_K_SI;
+
+const double const_Ry_eV  = 13.6056925944;
+const double const_El_eVA = const_El_SI/( const_e_SI*const_Angstroem_SI );
+const double const_K_eVA  = (const_El_eVA*const_El_eVA)/(2*const_Ry_eV);
+const double const_Ke_eVA = const_K_eVA*1.5;
+
+
+#define _Gauss_Tr0(s)      const_K_eVA*-8.35249199525*s
+#define _Gauss_dTr0_ds     const_K_eVA*-8.35249199525
+
 #define _Gauss_sij_aux( si, sj ) \
     double si2  = si*si; \
     double sj2  = sj*sj; \
@@ -38,27 +59,12 @@ static int iDEBUG = 0;
     double dTau_dsj    =  sj*dTau_ds; \
 
 #define _Gauss_kinetic( r2, si, sj ) \
-    double T = S*tau;  \
-    double dT_dr  = S*dTau_dr  + tau*dS_dr;  \
-    double dT_dsi = S*dTau_dsi + tau*dS_dsi; \
-    double dT_dsj = S*dTau_dsj + tau*dS_dsj; \
-
-// TODO : this should go elsewhere (physical constants or something)
-const double const_hbar_SI      = 1.054571817e-34;    ///< [J.s]  #6.582119569e-16 # [eV/s]
-const double const_Me_SI        = 9.10938356e-31;     ///< [kg]
-const double const_e_SI         = 1.602176620898e-19; ///< [Coulomb]
-const double const_eps0_SI      = 8.854187812813e-12; ///< [F.m = Coulomb/(Volt*m)]
-const double const_eV_SI        = 1.602176620898e-19; ///< [J]
-const double const_Angstroem_SI = 1.0e-10;
-
-const double const_K_SI     =  const_hbar_SI*const_hbar_SI/const_Me_SI;
-const double const_El_SI    =  const_e_SI*const_e_SI/(4.*M_PI*const_eps0_SI);
-const double const_Ry_SI    = 0.5 * const_El_SI*const_El_SI/const_K_SI;
-
-const double const_Ry_eV  = 13.6056925944;
-const double const_El_eVA = const_El_SI/( const_e_SI*const_Angstroem_SI );
-const double const_K_eVA  = (const_El_eVA*const_El_eVA)/(2*const_Ry_eV);
-const double const_Ke_eVA = const_K_eVA*1.5;
+    double S_     = S*const_K_eVA; \
+    double tau_   = tau*const_K_eVA; \
+    double T      = S_*tau; \
+    double dT_dr  = S_*dTau_dr  + tau_*dS_dr;  \
+    double dT_dsi = S_*dTau_dsi + tau_*dS_dsi; \
+    double dT_dsj = S_*dTau_dsj + tau_*dS_dsj; \
 
 /*
 ######  Product of Gaussians 1D
@@ -277,6 +283,11 @@ inline double kinetic_STau(double r,double si,double sj){
     return T, dT_dr, dT_dsi
 }
 */
+
+
+
+
+
 
 #define _Gauss_productAux \
     _Gauss_sij_aux( si, sj ) \
