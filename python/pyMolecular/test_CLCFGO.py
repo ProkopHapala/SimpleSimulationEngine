@@ -20,6 +20,31 @@ natom=0; norb=2; perOrb=1
 
 # ========= Functions
 
+def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0 ):
+    global natom,norb,perOrb
+    natom=natom_; norb=norb_; perOrb=perOrb_
+    effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
+    ecoef = effmc.getBuff( "ecoef",(norb,perOrb)   )
+    esize = effmc.getBuff( "esize",(norb,perOrb)   )
+    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
+    ecoef[:,:  ]=1
+    esize[:,:  ]=sz
+    if norb_>1:
+        epos [1,0,0]=dist
+
+'''
+def init_1x2_electrons( sz = 0.5, dist=1.0 ):
+    # ---- setup
+    global natom,norb,perOrb
+    natom=0; norb=1; perOrb=2
+    effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
+    ecoef = effmc.getBuff( "ecoef",(norb,perOrb)   )
+    esize = effmc.getBuff( "esize",(norb,perOrb)   )
+    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
+    ecoef[:,:  ]=1
+    esize[:,:  ]=sz
+    epos [1,0,0]=dist
+
 def init_2x1_electrons( sz = 0.5, dist=1.0 ):
     # ---- setup
     global natom,norb,perOrb
@@ -42,10 +67,12 @@ def init_2x2_electrons( sz = 0.5, dist=1.0 ):
     ecoef[:,:  ]=1
     esize[:,:  ]=sz
     epos [:,1,0]=dist
+'''
 
 def test_ProjectWf( plt = None, Etoll=1e-5 ):
     print "\n ============ test_ProjectWf ( rho = |wf|^2 )"
-    init_2x2_electrons( sz = 0.5, dist=1.0 )
+    #init_2x2_electrons( sz = 0.5, dist=1.0 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     #print "DEBUG 1 "
     # ---- test
     nps = 400+1
@@ -74,7 +101,8 @@ def test_ProjectWf( plt = None, Etoll=1e-5 ):
 
 def test_Poisson( plt = None, Etoll=1e-5 ):
     print " ===== test_Poisson ( rho = dd_xyz V )"
-    init_2x2_electrons( sz = 0.5, dist=1.0 )
+    #init_2x2_electrons( sz = 0.5, dist=1.0 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.eval() # we have to run it to project wavefuction to aux density
     #print "DEBUG 1 "
     dx=0.03; R=3.0
@@ -102,7 +130,8 @@ def test_OrbInteraction( plt = None, Etoll=1e-5, iMODE=1 ):
     #init_2x1_electrons( sz = 0.5, dist=0.0 )
     #init_2x1_electrons( sz = 0.75, dist=0.0 )
     #init_2x1_electrons( sz = 1.0, dist=0.0 )
-    init_2x1_electrons( sz = 1.5, dist=0.0 )
+    #init_2x1_electrons( sz = 1.5, dist=0.0 )
+    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=1.0 )
     #print "DEBUG 1 "
 
     effmc.eval() # we have to run it to project wavefuction to aux density
@@ -158,7 +187,7 @@ def processForces( xs,Es,fs, plt=plt, label="" ):
         plt.title(label)
     return Err
 
-def checkForces_epos( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_epos" ):
+def checkForces_epos( x0=0.0, n=100, dx=0.02, plt=None, label="checkForces_epos" ):
     #esize = effmc.getBuff( "esize",(norb,perOrb)   )
     epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
     efpos = effmc.getBuff( "efpos",(norb,perOrb,3) )
@@ -171,6 +200,7 @@ def checkForces_epos( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_epos"
         epos[0,0,0] = xs[i]
         Es[i] = effmc.eval()
         fs[i] = efpos[0,0,0]
+    fs *= -1
     return processForces( xs,Es,fs, plt=plt, label=label )
 
 def checkForces_esize( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
@@ -187,17 +217,25 @@ def checkForces_esize( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esiz
     return processForces( xs,Es,fs, plt=plt, label=label )
 
 def checkForces_Kinetic( n=100, dx=0.05, plt=None ):
-    init_2x1_electrons( sz = 0.5, dist=0.0 )
-    effmc.setSwitches_( normalize=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    #init_2x1_electrons( sz = 0.5, dist=0.0 )
+    #init_2x2_electrons( sz = 0.5, dist=-0.5 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=10.0 )
+    effmc.printAtomsAndElectrons()
+    #init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=0.0 )
+    #effmc.setSwitches_( normalize=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    effmc.setSwitches_( normalize=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
     return checkForces_esize( x0=0.5, n=n, dx=dx, plt=plt, label="checkForces_Kinetic" )
 
 def checkForces_Kinetic_pos( n=100, dx=0.05, plt=None ):
-    init_2x2_electrons( sz = 0.5, dist=-1.0 )
+    #init_2x2_electrons( sz = 0.75, dist=-0.1 )
+    init_effmc( norb_=1, perOrb_=2, sz=0.75, dist=-0.1 )
     effmc.setSwitches_( normalize=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    #effmc.setSwitches_( normalize=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
     return checkForces_epos( x0=1.0, n=n, dx=dx, plt=plt, label="checkForces_Kinetic" )
 
 def checkForces_Hartree_epos( n=100, dx=0.05, plt=None ):
-    init_2x1_electrons( sz = 0.5, dist=0.0 )
+    #init_2x1_electrons( sz = 0.5, dist=0.0 )
+    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=0.0 )
     effmc.setSwitches_( normalize=1, kinetic=-1, coulomb=1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
     return checkForces_epos( n=n, dx=dx, plt=plt, label="checkForces_Hartree_epos" )
     
@@ -212,7 +250,9 @@ if __name__ == "__main__":
     #tests_funcs = [ test_Coulomb_Kij  ]
     #tests_funcs = [checkForces_Hartree_epos]
     #tests_funcs = [checkForces_Kinetic,  checkForces_Kinetic_pos, checkForces_Hartree_epos ]
-    tests_funcs = [ checkForces_Kinetic_pos ]
+    #tests_funcs = [ checkForces_Kinetic ]
+    tests_funcs = [ checkForces_Kinetic , checkForces_Kinetic_pos ]
+    #tests_funcs = [ checkForces_Kinetic ]
     tests_results = []
     for test_func in tests_funcs:
         tests_results.append( test_func(plt=plt) )

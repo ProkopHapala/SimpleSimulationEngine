@@ -152,7 +152,7 @@ def getT( r, si, sj ):
     #print "getT T ", const_K_eVA * (e1 + e2 )
 
     #return const_K * ( 1.5*( 1./si2 + 1./sj2 ) )   - 2.*( 3.*(si2+sj2) - 2.*r2 )/( si2 + sj2 )**2 )
-    return const_K_eVA * ( 1.5*s2/(si2*sj2) - 2.*( 3.*s2 - 2.*r2 )/s4 )
+    return const_K_eVA * ( e1 + e2 )
     #return const_K_eVA * 1.5*( s2/(si2*sj2) )
     #return const_K_eVA * -2. *( 3.*s2 - 2.*r2 )/s4
 
@@ -352,15 +352,15 @@ if __name__ == "__main__":
     #print "EPaul_dS syn  ", EPaul_dS( S0   , anti=False )
 
 
-    print "getS E   \n", EPauli   ( r0, si, sj, anti=True)
-    print "getS ds  \n", EPauli_ds( r0, si, sj, anti=True)
-    print "getS dr  \n", EPauli_dr( r0, si, sj, anti=True)
+    #print "getS E   \n", EPauli   ( r0, si, sj, anti=True)
+    #print "getS ds  \n", EPauli_ds( r0, si, sj, anti=True)
+    #print "getS dr  \n", EPauli_dr( r0, si, sj, anti=True)
 
     #print "getS E   \n", EPauli   ( r, x, sj, anti=False)
     #print "getS ds  \n", EPauli_dr( r, x, sj, anti=False)
     #print "getS dr  \n", EPauli_dr( r, x, sj, anti=False)
 
-    exit()
+    #exit()
 
 
     #checkNumDeriv( s, Kinetic, Kinetic_ds, "dKinetic" )
@@ -373,11 +373,11 @@ if __name__ == "__main__":
     #checkNumDeriv( s, lambda x: EPauli( r, x, sj, anti=True), lambda x : EPauli_ds( r, x, sj, anti=True)[0], "dPauli69_ds" )
 
     #checkNumDeriv( rs, lambda x: El(x,qq,si,sj), lambda x : El_dr(x,qq,si,sj), "dEl_dr" )
-    #checkNumDeriv( rs, lambda x: getT(x,si,sj), lambda x : getT_dr(x,si,sj), "dT_dr" )
+    checkNumDeriv( rs, lambda x: getT(x,si,sj), lambda x : getT_dr(x,si,sj), "dT_dr" )
     #checkNumDeriv( rs, lambda x: getS(x,si,sj), lambda x : getS_dr(x,si,sj), "dS_dr" )
 
-    checkNumDeriv( rs, lambda x: EPauli( x, si, sj, anti=False), lambda x : EPauli_dr( x, si, sj, anti=False), "dPauli66++_dr" )
-    checkNumDeriv( rs, lambda x: EPauli( x, si, sj, anti=True), lambda x : EPauli_dr( x, si, sj, anti=True), "dPauli69_dr" )
+    #checkNumDeriv( rs, lambda x: EPauli( x, si, sj, anti=False), lambda x : EPauli_dr( x, si, sj, anti=False), "dPauli66++_dr" )
+    #checkNumDeriv( rs, lambda x: EPauli( x, si, sj, anti=True), lambda x : EPauli_dr( x, si, sj, anti=True), "dPauli69_dr" )
 
     #ylim=100.0; plt.ylim(-ylim,ylim)
 

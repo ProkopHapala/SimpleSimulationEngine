@@ -381,7 +381,35 @@ constexpr static const Quat4d default_AtomParams[] = {
     void reportCharges(){ for(int io=0; io<nOrb; io++){ reportCharges(io); } }
 
 
+// ===========================================================================================================================
+// ==================== Normalize Orb - This is to make sure we do nothing wrong by normalization after evaluation of kinetic energy
+// ===========================================================================================================================
 
+    double normalizeOrb(int io ){
+        int i0    = getOrbOffset(io);
+        double Q=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            Q      += ci*ci; // overlap = 1
+            for(int j=i0; j<i; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                if(r2>Rcut2) continue;
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+                double sij; Vec3d pij;
+                double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij ); // ToDo : use more efficient/cheaper method here ( without sij,pij etc. )
+                Q += Sij*(ci*cj*2)*2;
+            }
+        }
+        double renorm  = sqrt(1./Q);
+        double renorm2 = renorm*renorm;
+        for(int i=i0; i<i0+perOrb; i++){ ecoef[i] *=renorm;  };
+        return Ek;
+    }
 
 // ===========================================================================================================================
 // ==================== Project Orbitals ( Normalize, Eval Kinetic Energy, Project to Auxiliary Density Basis )
@@ -389,7 +417,108 @@ constexpr static const Quat4d default_AtomParams[] = {
 
     //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
     double projectOrb(int io, Vec3d& dip ){
+        
+        int i0      = getOrbOffset(io);
+        int irho0   = getRhoOffset(io);
+        Vec3d*   Ps = rhoP+irho0;
+        double*  Qs = rhoQ+irho0;
+        double*  Ss = rhoS+irho0;
+        double Q=0;
+        //double DT=0; // kinetic energy change by orthognalization
+        double Ek=0; // kinetic energy
+        dip         = Vec3dZero;
+        Vec3d qcog  = Vec3dZero;
+        int ii=0;
 
+        //bool bDEBUG_Q = true;
+        //printf( "bNormalize %i \n", bNormalize );
+        bool bMakeRho = bEvalCoulomb || bEvalAECoulomb || bNormalize;   // in order to normalize we must calculate total charge in orbital
+
+        for(int i=i0; i<i0+perOrb; i++){
+
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            double qii = ci*ci; // overlap = 1
+
+            //printf(  " epos[%i,%i] (%g,%g,%g)\n", io, i, pi.x, pi.y, pi.z );
+
+            if(bMakeRho){
+                Qs[ii]  = qii;
+                Ps[ii]  = pi;
+                Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii
+                Q      += qii;
+                qcog.add_mul( pi, qii );
+                //printf( "projectOrb[%i|%i]:bMakeRho %i  qii %g  i0 %i \n", io,i, bMakeRho, qii, i0 );
+            }
+
+            double fr,fsi,fsj;
+            if(bEvalKinetic){
+                //double fEki;
+                //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
+                //Ek += qii*Gauss::kinetic( si );
+                Ek += qii*Gauss::kinetic_s(  0.0, si, si,   fr, fsi, fsj );
+                efsize[i]+= -2*fsi*qii;
+            }
+
+            ii++;
+
+            for(int j=i0; j<i; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                if(r2>Rcut2) continue;
+
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+                double cij = ci*cj*2;
+
+                // ToDo : it would be more efficient calculate as from Tij = tau_ij * S_ij in order to reuse this callculation
+                if(bMakeRho){
+                    //printf( "projectOrb[%i|%i,%i]:bMakeRho %i \n", io,i,j, bMakeRho );
+                    // --- Project on auxuliary density functions
+                    Vec3d  pij;
+                    double sij;
+                    //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
+                    double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
+                    //double qij = Sij*cij;
+                    double qij = Sij*cij*2; // because qij=qji   (a+b)*(a+b) = a^2 + b^2 + 2*ab
+                    Qs[ii] = qij;
+                    Ps[ii] = pij;
+                    Ss[ii] = sij;
+
+                    Q += qij;
+                    qcog.add_mul( pij, qij );
+                }
+
+                if(bEvalKinetic){
+                    //double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
+                    double Kij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj );   // fr*=2; fsi*=2, fsj*=2;
+                    Ek += Kij*cij;
+                    Vec3d fij = Rij*(fr*cij);
+                    efpos [i].add( fij ); efpos[j].sub( fij );
+                    efsize[i]-= fsi*cij ; efsize[j]-= fsj*cij;
+                    efcoef[i]-= Kij*cj  ; efcoef[j]-= Kij*ci;
+                    //if(DEBUG_iter==DEBUG_log_iter){ printf(" Kij %g cij %g Ekij \n", Kij, cij, Kij*cij ); }
+                }
+
+                ii++;
+                // ToDo : Store qij to list of axuliary functions
+            }
+        }
+        if( bMakeRho && ( fabs(Q-1)>1e-8 ) ){  printf( "ERROR in CLCFGO::projectOrb(): psi_%i is not normalized |psi|^2 = %g \n", io, Q ); exit(0); }
+        onq[io] = ii;
+        opos[io] = qcog;
+        return Ek;
+    }
+
+// ===========================================================================================================================
+// ==================== Project Orbitals ( Normalize, Eval Kinetic Energy, Project to Auxiliary Density Basis )
+// ===========================================================================================================================
+
+    //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
+    double projectOrb_norm(int io, Vec3d& dip ){
+ 
         bool bMakeRho = bEvalCoulomb || bEvalAECoulomb || bNormalize;   // in order to normalize we must calculate total charge in orbital
         //printf( "projectOrb() bMakeRho %i  | bEvalCoulomb %i bEvalAECoulomb %i bNormalize %i \n",  bMakeRho , bEvalCoulomb , bEvalAECoulomb , bNormalize );
 
@@ -413,7 +542,7 @@ constexpr static const Quat4d default_AtomParams[] = {
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
 
-            printf(  " epos[%i,%i] (%g,%g,%g)\n", io, i, pi.x, pi.y, pi.z );
+            //printf(  " epos[%i,%i] (%g,%g,%g)\n", io, i, pi.x, pi.y, pi.z );
 
             if(bMakeRho){
                 Qs[ii]  = qii;
@@ -499,6 +628,17 @@ constexpr static const Quat4d default_AtomParams[] = {
         if(bNormalize){
             double renorm  = sqrt(1./Q);
             double renorm2 = renorm*renorm;
+            if(perOrb>1)printf( "io[%i] Q %g  s(%g,%g) r %g \n", io, Q, ecoef[0], ecoef[1], (epos[1]-epos[0]).norm() );
+            if(bEvalKinetic){ // ToDo: we should  renormalize also coefs
+
+                Ek *= renorm2;
+                for(int i=i0; i<i0+perOrb; i++){
+                    efpos [i].mul(renorm2);
+                    efsize[i]*=renorm2;
+                    //efsize[i]*=renorm;
+                    efcoef[i]*=renorm;
+                }
+            }
             //printf( "project orb[$i]: Q %g renorm %g renorm2 %g \n", io, Q, renorm, renorm2 );
             for(int i=i0; i<i0+perOrb; i++){ ecoef[i] *=renorm;  };
             for(int i= 0; i<ii       ; i++){ Qs   [i] *=renorm2; };
@@ -507,7 +647,8 @@ constexpr static const Quat4d default_AtomParams[] = {
         return Ek;
     }
 
-    double projectOrbs(bool bNormalize){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
+    double projectOrbs( ){   // project density of all orbitals onto axuliary charge representation ( charges, dipoles and axuliary functions )
+        //printf( "   bNormalize %i \n", bNormalize );
         int nqOrb = perOrb*(perOrb+1)/2;
         int i0 =0;
         int ii0=0;
@@ -515,9 +656,13 @@ constexpr static const Quat4d default_AtomParams[] = {
         for(int io=0; io<nOrb; io++){
             //int i0  = getOrbOffset(jo);
             //oQs[io] =
-            Ek += projectOrb( io, odip[io] );
+            //Ek += projectOrb( io, odip[io] );
             //projectOrb(  io, rhoP+ii0, rhoQ+ii0, rhoS+ii0, odip[io], true );
             //projectOrb(io, ecoefs+i0, erho+irho0, erhoP+irho0, odip[io] );
+
+            if(bNormalize) normalizeOrb( io );
+            Ek          += projectOrb  ( io, odip[io] );
+
             ii0+=nqOrb;
             i0 +=perOrb;
         }
@@ -1418,8 +1563,7 @@ double evalAA(){
         double E=0;
         cleanForces();
         if( bEvalCoulomb || (bEvalAECoulomb && bEvalAE) ) clearAuxDens();
-        //projectOrbs( true );
-        double Ek = projectOrbs( false ); // here we calculate kinetic energy of each orbital and project them to auxuliary charge density basis
+        double Ek = projectOrbs( ); // here we calculate kinetic energy of each orbital and project them to auxuliary charge density basis
         if( bEvalKinetic  ) E+=Ek;
         //reportCharges();
         if( bEvalPauli    ) E += evalPauli();

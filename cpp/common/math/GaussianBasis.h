@@ -628,13 +628,17 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
 
  double E = comm * sij * ( r2  -  3*s2 );
  comm*=invs2;
- fr       = comm * sij * ( r2  -  5*s2 );
+ fr       = comm * sij * ( r2  -  0.5*5*s2 );   // factor 0.5 here hellps but not fully
  comm*=invs2;
  fsi  = comm * sj  * (  si2*r2*r2  + ( 3*sj4  - 4*sij2 - 7*si4 )*r2 - 9*sj6 + (-12*sj2 + 3*si2)*sij2 + 6*si6 );
  fsj  = comm * si  * (  sj2*r2*r2  + ( 3*si4  - 4*sij2 - 7*sj4 )*r2 - 9*si6 + (-12*si2 + 3*sj2)*sij2 + 6*sj6 );
 
  //printf( "E %g fr %g fsi %g fsj %g \n", E, fr, fsi, fsj );
 
+//double k=0.5;
+//dCi*=k;
+//dCj*=k;
+ 
  fsi = Cij*fsi + Cj*dCi*E;
  fsj = Cij*fsj + Ci*dCj*E;
  E *=Cij;

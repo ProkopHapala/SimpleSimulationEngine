@@ -617,7 +617,7 @@ void test_DensityOverlap( CLCFGO& solver, Plot2D& plot1 ){
     //for(int i=0; i<line_ISana->n; i++){ line_IrhoWf ->ys[i] = sq(line_ISana->ys[i]); }
     for(int i=0; i<line_IrhoAna->n; i++){
         solver.epos[2].x=line_IrhoAna->xs[i];
-        solver.projectOrbs( true );
+        solver.projectOrbs( );
         line_IrhoAna->ys[i] = solver.DensOverlapOrbPair( 0, 1 );
     }
     { // ---- Test On Grid
@@ -664,7 +664,7 @@ double test_Poisson( CLCFGO& solver, int io, double Rmax, double gStep, double *
     double * buf_V    = new double[ nbuf ];
     double * buf_rho_ = new double[ nbuf ];
     //printf( "C++ DEBUG 1 " );
-    solver.projectOrbs( true );
+    solver.projectOrbs( );
     solver.hartree2grid( io, gsh, buf_V  );
     gsh.Laplace        ( buf_V, buf_rho_ );
     //printf( "C++ DEBUG 2 \n" );
@@ -734,7 +734,7 @@ void test_ElectroStatics( CLCFGO& solver, Plot2D& plot1 ){
 
     for(int i=0; i<line_IElAna->n; i++){
         solver.epos[0].x=line_IElAna->xs[i];
-        solver.projectOrbs( true );
+        solver.projectOrbs( );
         //line_IrhoAna->ys[i] = solver.DensOverlapOrbPair( 0, 1 );
         line_IElAna->ys[i] = solver.CoulombOrbPair( 0, 1 );
     }
@@ -744,7 +744,7 @@ void test_ElectroStatics( CLCFGO& solver, Plot2D& plot1 ){
     auto func1 = [&](GridShape& grid, double* f, double x ){     //    ---- Potencial of Orb_1
         int ntot=grid.n.totprod();
         solver.epos[0].x=0;
-        solver.projectOrbs( true );
+        solver.projectOrbs( );
         //solver.orb2grid( 0, grid, f );
         //solver.rho2grid( 0, grid, f );
         solver.hartree2grid( 0, grid, f );
@@ -811,7 +811,7 @@ void test_ElectroStaticsBrute( CLCFGO& solver, Plot2D& plot1 ){
         solver.epos[0].x=r;
 
         // --- Analytical
-        solver.projectOrbs( true );
+        solver.projectOrbs( );
         line_IElAna->ys[i] = solver.CoulombOrbPair( 0, 1 );
 
         // Numerical

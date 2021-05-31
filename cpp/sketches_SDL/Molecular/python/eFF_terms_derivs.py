@@ -351,16 +351,15 @@ if __name__ == "__main__":
     #print "EPaul_S2 syn  ", EPaul_S2( S0*S0, anti=False )
     #print "EPaul_dS syn  ", EPaul_dS( S0   , anti=False )
 
-
-    print "getS E   \n", EPauli   ( r0, si, sj, anti=True)
-    print "getS ds  \n", EPauli_ds( r0, si, sj, anti=True)
-    print "getS dr  \n", EPauli_dr( r0, si, sj, anti=True)
+    #print "getS E   \n", EPauli   ( r0, si, sj, anti=True)
+    #print "getS ds  \n", EPauli_ds( r0, si, sj, anti=True)
+    #print "getS dr  \n", EPauli_dr( r0, si, sj, anti=True)
 
     #print "getS E   \n", EPauli   ( r, x, sj, anti=False)
     #print "getS ds  \n", EPauli_dr( r, x, sj, anti=False)
     #print "getS dr  \n", EPauli_dr( r, x, sj, anti=False)
 
-    exit()
+    #exit()
 
 
     #checkNumDeriv( s, Kinetic, Kinetic_ds, "dKinetic" )
@@ -376,8 +375,8 @@ if __name__ == "__main__":
     #checkNumDeriv( rs, lambda x: getT(x,si,sj), lambda x : getT_dr(x,si,sj), "dT_dr" )
     #checkNumDeriv( rs, lambda x: getS(x,si,sj), lambda x : getS_dr(x,si,sj), "dS_dr" )
 
-    checkNumDeriv( rs, lambda x: EPauli( x, si, sj, anti=False), lambda x : EPauli_dr( x, si, sj, anti=False), "dPauli66++_dr" )
-    checkNumDeriv( rs, lambda x: EPauli( x, si, sj, anti=True), lambda x : EPauli_dr( x, si, sj, anti=True), "dPauli69_dr" )
+    #checkNumDeriv( rs, lambda x: EPauli( x, si, sj, anti=False), lambda x : EPauli_dr( x, si, sj, anti=False), "dPauli66++_dr" )
+    #checkNumDeriv( rs, lambda x: EPauli( x, si, sj, anti=True), lambda x : EPauli_dr( x, si, sj, anti=True), "dPauli69_dr" )
 
     #ylim=100.0; plt.ylim(-ylim,ylim)
 
