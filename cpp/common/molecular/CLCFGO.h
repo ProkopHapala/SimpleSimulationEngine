@@ -281,7 +281,7 @@ constexpr static const Quat4d default_AtomParams[] = {
             odip[i]=Vec3dZero;
             oEs [i]=0;
             oQs [i]=0;
-            onq [i]=0;
+            onq [i]=nqOrb;
             ospin [i]=1;
         }
         for(int i=0; i<nBas;  i++){
@@ -728,6 +728,7 @@ constexpr static const Quat4d default_AtomParams[] = {
 // ==================== Eval Coulombin interaction  -  Using Auxuliary density basis
 // ===========================================================================================================================
 
+
     void toRho( int i, int j, int ij ){
         /// NOTE : this function is mostly for debugging of  projectOrb()
         Vec3d  pi  = epos [i];
@@ -746,21 +747,27 @@ constexpr static const Quat4d default_AtomParams[] = {
 
         // ToDo : we should not need   getOverlapSGauss,    Gauss::product3D_s  should calculate Sij
 
-        Vec3d  pij;
-        double sij;
+        //Vec3d  pij;
+        //double sij;
         //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
-        double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
+        //double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
+
+        _Gauss_sij_aux(si,sj)
+        _Gauss_overlap(r2,si,sj)
+        _Gauss_product(pi,pj,si,sj)
+
         double cij = ci *cj;
         //printf(  "ci*cj %g ci %g cj %g \n", cij, ci, cj );
-        double qij = Sij*cij*2; // TODO CHECK: should there by realy coefficeint 2.0 ?  .... test by grid !
+        double qij = S*cij*2; // TODO CHECK: should there by realy coefficeint 2.0 ?  .... test by grid !
         //double qij = Sij;
         //double qij = Sij*cij*4.85;
         //double qij = Sij_*cij*4;
         //double qij = Cij*cij*2;
         rhoQ[ij] = qij;
-        rhoP[ij] = pij;
-        rhoS[ij] = sij;
+        rhoP[ij] = pos_ij;
+        rhoS[ij] = size_ij;
     }
+
 
     //Vec3d fromRho( int i, int j, int ij ){
     void fromRhoDiag( int i, int ij ){
@@ -912,7 +919,7 @@ constexpr static const Quat4d default_AtomParams[] = {
         int nio = onq[io];
         int njo = onq[jo];
         double Ecoul=0;
-        //printf( "CoulombOrbPair[%i,%i] (%i:%i) (%i:%i) \n", io, jo, i0,i0+nio, j0,j0+njo );
+        printf( "CoulombOrbPair[%i,%i] (%i:%i) (%i:%i) \n", io, jo, i0,i0+nio, j0,j0+njo );
         for(int i=i0; i<i0+nio; i++){
         //int i=2;{ // DEBUG
             Vec3d  pi = rhoP[i];
@@ -927,6 +934,8 @@ constexpr static const Quat4d default_AtomParams[] = {
                 double qj = rhoQ[j];
                 double sj = rhoS[j];
                 Vec3d fp; double fs,qij = qi*qj;
+
+                printf( "CoulombOrbPair[%i|%i,%i|%i] q(%g,%g) s(%g,%g) \n", io,i, jo,j, qi,qj, si,sj );
 
                 //si*=M_SQRT2; sj*=M_SQRT2; // WARRNING : Even if this helps - it should go inside  Gauss::Coulomb()
                 double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );

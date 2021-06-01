@@ -95,6 +95,15 @@ void init( int natom_, int nOrb_, int perOrb_, int natypes_ ){
 }
 
 double  eval(){ return solver.eval(); };
+double  coulombOrbPair( int io, int jo ){ solver.clearAuxDens(); return solver.CoulombOrbPair( io, jo ); }
+double projectOrb( int io, bool bNormalize  ){
+    solver.bNormalize=bNormalize;
+    solver.bNormForce=true; solver.bNormForce=true; 
+    if(bNormalize)solver.normalizeOrb(io);
+    Vec3d dip;
+    solver.cleanForces();
+    return solver.projectOrb(io, dip);
+}
 double* getEnergyPointer(){ return &solver.Ek; }
 int*    getDimPointer   (){ return &solver.natypes; }
 

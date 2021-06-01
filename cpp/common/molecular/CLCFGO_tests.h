@@ -242,7 +242,6 @@ void testDerivs_Total( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot
     //for(int i=0;i<n;i++){ line_E->ys[i]   -= line_E->ys[n-1]; };
 }
 
-
 void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1 ){
     // ======= Test Orbital Wavefunction Overlap
     //printf( "n  %i dx %g  \n", n , dx );
@@ -348,8 +347,6 @@ void testDerivs_Coulomb_model( int n, double x0, double dx, CLCFGO& solver, Plot
     }
 }
 
-
-
 void testDerivs_Coulomb_model_S( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot1 ){
 
     //DataLine2D* line_Eq    = new DataLine2D( n, x0, dx, 0xFFFF8080,  "Eq"     ); //plot1.add(line_Eq    );
@@ -411,7 +408,6 @@ void testDerivs_Coulomb_model_S( int n, double x0, double dx, CLCFGO& solver, Pl
 
     }
 }
-
 
 
 /*

@@ -16,19 +16,25 @@ import matplotlib.pyplot as plt
 
 bDebug = 0
 
-natom=0; norb=2; perOrb=1
+natom=0; norb=2; perOrb=1; nqOrb=1
 
 # ========= Functions
 
 def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0 ):
-    global natom,norb,perOrb
-    natom=natom_; norb=norb_; perOrb=perOrb_
+    global natom,norb,perOrb,nqOrb
+    natom=natom_; norb=norb_; perOrb=perOrb_; nqOrb=perOrb*(perOrb+1)/2
     effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
     ecoef = effmc.getBuff( "ecoef",(norb,perOrb)   )
     esize = effmc.getBuff( "esize",(norb,perOrb)   )
     epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
+    rhoQ  = effmc.getBuff( "rhoQ" ,(norb,nqOrb) )
+    rhoS  = effmc.getBuff( "rhoS" ,(norb,nqOrb) )
+    rhoP  = effmc.getBuff( "rhoP" ,(norb,nqOrb,3) )
     ecoef[:,:  ]=1
     esize[:,:  ]=sz
+    rhoS [:,:  ]=sz*np.sqrt(0.5)
+    rhoQ [:,:  ]=1
+    rhoP [:,:,:]=0
     if norb_>1:
         epos [1,0,0]=dist
 
@@ -332,13 +338,70 @@ def checkForces_Hartree_epos( n=100, dx=0.05, plt=None ):
 
 #def test_Kinetic( plt = None, Etoll=1e-5 ):
 
+# ========= Check Normalization derivatives
+
+def check_Coulomb_rhoP( x0=0.0, n=100, dx=0.02, plt=None, label="checkForces_epos" ):
+    #esize = effmc.getBuff( "esize",(norb,perOrb)   )
+    rhoP  = effmc.getBuff( "rhoP" ,(norb,nqOrb,3) )
+    rhofP= effmc.getBuff( "rhofP",(norb,nqOrb,3) )
+    xs = np.arange(x0,x0+n*dx,dx)
+    Es = np.zeros(len(xs))
+    fs = np.zeros(len(xs))
+    #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    for i in range(n):
+        rhoP[0,0,0] = xs[i]
+        Es[i] = effmc.coulombOrbPair( 0, 1 )
+        fs[i] = rhofP[0,0,0]
+    return processForces( xs,Es,fs, plt=plt, label=label )
+
+def check_Coulomb_rhoS( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
+    rhoS  = effmc.getBuff( "rhoS" ,(norb,nqOrb) )
+    rhofS = effmc.getBuff( "rhofS",(norb,nqOrb) )
+    xs = np.arange(x0,x0+n*dx,dx)
+    Es = np.zeros(len(xs))
+    fs = np.zeros(len(xs))
+    #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    for i in range(n):
+        rhoS[0,0] = xs[i]
+        Es[i]     = effmc.coulombOrbPair( 0, 1 )
+        fs[i]     = -rhofS[0,0]
+    return processForces( xs,Es,fs, plt=plt, label=label )
+
+def check_Coulomb_rhoQ( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
+    rhoQ  = effmc.getBuff( "rhoQ" ,(norb,nqOrb) )
+    rhofQ = effmc.getBuff( "rhofQ",(norb,nqOrb) )
+    xs = np.arange(x0,x0+n*dx,dx)
+    Es = np.zeros(len(xs))
+    fs = np.zeros(len(xs))
+    #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    for i in range(n):
+        rhoQ[0,0]  = xs[i]
+        Es[i]      = effmc.coulombOrbPair( 0, 1 )
+        fs[i]      = -rhofQ[0,0]
+    return processForces( xs,Es,fs, plt=plt, label=label )
+
+def check_Coulomb_rhoP_( n=100, dx=0.05, plt=None ):
+    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=-0.1 )
+    print( "norb, perOrb, nqOrb ",norb, perOrb, nqOrb )
+    return check_Coulomb_rhoP( x0=1.0, n=n, dx=dx, plt=plt, label="check_Coulomb_rhoP_" )
+
+def check_Coulomb_rhoS_( n=100, dx=0.05, plt=None ):
+    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=-0.1 )
+    return check_Coulomb_rhoS( x0=0.0, n=n, dx=dx, plt=plt, label="check_Coulomb_rhoS_" )
+
+def check_Coulomb_rhoQ_( n=100, dx=0.05, plt=None ):
+    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=-0.1 )
+    return check_Coulomb_rhoQ( n=n, dx=dx, plt=plt, label="check_Coulomb_rhoQ_" )
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     tests_funcs = []
-    tests_funcs += [ test_ProjectWf, test_Poisson ]
-    tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
-    tests_funcs += [ check_dS_epos_,           check_dS_esize_,             check_dS_ecoef_            ]
-    tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
+    #tests_funcs += [ test_ProjectWf, test_Poisson ]
+    #tests_funcs += [ check_Coulomb_rhoQ_ ]
+    tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
+    #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
+    #tests_funcs += [ check_dS_epos_,           check_dS_esize_,             check_dS_ecoef_            ]
+    #tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     tests_results = []
     for test_func in tests_funcs:
         tests_results.append( test_func(plt=plt) )

@@ -50,6 +50,18 @@ lib.eval.restype  = c_double
 def eval( ):
     return lib.eval( )
 
+#double  coulombOrbPair( int io, int jo ){ return solver.CoulombOrbPair( io, jo ); }
+lib.coulombOrbPair.argtypes = [ c_int, c_int ]
+lib.coulombOrbPair.restype  = c_double
+def coulombOrbPair( io, jo ):
+    return lib.coulombOrbPair( io, jo )
+
+#double projectOrb( int io, bool bNormalize  ){
+lib.projectOrb.argtypes = [ c_int, c_bool ]
+lib.projectOrb.restype  = c_double
+def projectOrb( io, bNormalize=False ):
+    return lib.projectOrb( io, bNormalize )
+
 #  double* getEnergyPointer(){
 lib.getEnergyPointer.argtypes  = [] 
 lib.getEnergyPointer.restype   = c_double_p
