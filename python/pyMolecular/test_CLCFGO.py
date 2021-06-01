@@ -170,7 +170,10 @@ def test_Overlap_Sij(plt=None):
 def test_Kinetic_Tij(plt=None):
     return test_OrbInteraction(iMODE=2,plt=plt)
 def test_Coulomb_Kij(plt=None):
+    effmc.setSwitches_( normalize=1, kinetic=-1, coulomb=1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
     return test_OrbInteraction(iMODE=3,plt=plt)
+
+# ========= Check Forces
 
 def processForces( xs,Es,fs, plt=plt, label="" ):
     n=len(xs)
@@ -196,7 +199,6 @@ def checkForces_epos( x0=0.0, n=100, dx=0.02, plt=None, label="checkForces_epos"
     fs = np.zeros(len(xs))
     effmc.eval()  # ---- This is to make sure initial normalization is not a problem
     for i in range(n):
-        print "# ", i, xs[i] 
         epos[0,0,0] = xs[i]
         Es[i] = effmc.eval()
         fs[i] = efpos[0,0,0]
@@ -216,22 +218,111 @@ def checkForces_esize( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esiz
         fs[i] = efsize[0,0]
     return processForces( xs,Es,fs, plt=plt, label=label )
 
-def checkForces_Kinetic( n=100, dx=0.05, plt=None ):
+def checkForces_ecoef( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
+    esize  = effmc.getBuff( "ecoef" ,(norb,perOrb) )
+    efsize = effmc.getBuff( "efcoef",(norb,perOrb) )
+    xs = np.arange(x0,x0+n*dx,dx)
+    Es = np.zeros(len(xs))
+    fs = np.zeros(len(xs))
+    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    for i in range(n):
+        esize[0,0] = xs[i]
+        Es[i] = effmc.eval()
+        fs[i] = efsize[0,0]
+    return processForces( xs,Es,fs, plt=plt, label=label )
+
+# ========= Check Normalization derivatives
+
+def check_dS_epos( x0=0.0, n=100, dx=0.02, plt=None, label="checkForces_epos" ):
+    #esize = effmc.getBuff( "esize",(norb,perOrb)   )
+    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
+    enfpos= effmc.getBuff( "enfpos",(norb,perOrb,3) )
+    oQs   = effmc.getBuff( "oQs",(norb) )
+    xs = np.arange(x0,x0+n*dx,dx)
+    Es = np.zeros(len(xs))
+    fs = np.zeros(len(xs))
+    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    for i in range(n):
+        epos[0,0,0] = xs[i]
+        E     = effmc.eval();
+        Es[i] = oQs[0]
+        fs[i] = enfpos[0,0,0]
+    fs *= -1
+    return processForces( xs,Es,fs, plt=plt, label=label )
+
+def check_dS_esize( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
+    esize  = effmc.getBuff( "esize" ,(norb,perOrb) )
+    enfsize= effmc.getBuff( "enfsize",(norb,perOrb) )
+    oQs    = effmc.getBuff( "oQs",(norb) )
+    xs = np.arange(x0,x0+n*dx,dx)
+    Es = np.zeros(len(xs))
+    fs = np.zeros(len(xs))
+    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    for i in range(n):
+        esize[0,0] = xs[i]
+        E     = effmc.eval()
+        Es[i] = oQs[0]
+        fs[i] = enfsize[0,0]
+    return processForces( xs,Es,fs, plt=plt, label=label )
+
+def check_dS_ecoef( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
+    esize  = effmc.getBuff( "ecoef" ,(norb,perOrb) )
+    enfcoef= effmc.getBuff( "enfcoef",(norb,perOrb) )
+    oQs    = effmc.getBuff( "oQs",(norb) )
+    xs = np.arange(x0,x0+n*dx,dx)
+    Es = np.zeros(len(xs))
+    fs = np.zeros(len(xs))
+    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    for i in range(n):
+        esize[0,0] = xs[i]
+        E     = effmc.eval()
+        Es[i] = oQs[0]
+        fs[i] = enfcoef[0,0]
+    return processForces( xs,Es,fs, plt=plt, label=label )
+
+def check_dS_epos_( n=100, dx=0.05, plt=None ):
+    init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
+    effmc.printAtomsAndElectrons()
+    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=-1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    return check_dS_epos( x0=0.25, n=n, dx=dx, plt=plt, label="check_dS_epos" )
+
+def check_dS_esize_( n=100, dx=0.05, plt=None ):
+    init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
+    effmc.printAtomsAndElectrons()
+    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=-1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    return check_dS_esize( x0=0.25, n=n, dx=dx, plt=plt, label="check_dS_esize" )
+
+def check_dS_ecoef_( n=100, dx=0.05, plt=None ):
+    init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
+    effmc.printAtomsAndElectrons()
+    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=-1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    return check_dS_ecoef( x0=0.0, n=n, dx=dx, plt=plt, label="check_dS_ecoef" )
+
+# ========= Check Forces
+
+def checkForces_Kinetic_esize( n=100, dx=0.05, plt=None ):
     #init_2x1_electrons( sz = 0.5, dist=0.0 )
     #init_2x2_electrons( sz = 0.5, dist=-0.5 )
     init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=10.0 )
     effmc.printAtomsAndElectrons()
     #init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=0.0 )
-    #effmc.setSwitches_( normalize=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    effmc.setSwitches_( normalize=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return checkForces_esize( x0=0.5, n=n, dx=dx, plt=plt, label="checkForces_Kinetic" )
+    #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    return checkForces_esize( x0=0.5, n=n, dx=dx, plt=plt, label="checkForces_Kinetic_esize" )
 
-def checkForces_Kinetic_pos( n=100, dx=0.05, plt=None ):
+def checkForces_Kinetic_epos( n=100, dx=0.05, plt=None ):
     #init_2x2_electrons( sz = 0.75, dist=-0.1 )
     init_effmc( norb_=1, perOrb_=2, sz=0.75, dist=-0.1 )
-    effmc.setSwitches_( normalize=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    #effmc.setSwitches_( normalize=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return checkForces_epos( x0=1.0, n=n, dx=dx, plt=plt, label="checkForces_Kinetic" )
+    #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    return checkForces_epos( x0=1.0, n=n, dx=dx, plt=plt, label="checkForces_Kinetic_epos" )
+
+def checkForces_Kinetic_ecoef( n=100, dx=0.05, plt=None ):
+    #init_2x2_electrons( sz = 0.75, dist=-0.1 )
+    init_effmc( norb_=1, perOrb_=2, sz=0.75, dist=-0.1 )
+    #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+    return checkForces_ecoef( x0=0.0, n=n, dx=dx, plt=plt, label="checkForces_Kinetic_ecoef" )
 
 def checkForces_Hartree_epos( n=100, dx=0.05, plt=None ):
     #init_2x1_electrons( sz = 0.5, dist=0.0 )
@@ -243,17 +334,11 @@ def checkForces_Hartree_epos( n=100, dx=0.05, plt=None ):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    
-    tests_funcs = [ test_ProjectWf, test_Poisson, test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
-    #tests_funcs = [ test_ProjectWf ,  test_Poisson  ]
-    #tests_funcs = [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
-    #tests_funcs = [ test_Overlap_Sij  ]
-    #tests_funcs = [ test_Coulomb_Kij  ]
-    #tests_funcs = [checkForces_Hartree_epos]
-    #tests_funcs = [checkForces_Kinetic,  checkForces_Kinetic_pos, checkForces_Hartree_epos ]
-    #tests_funcs = [ checkForces_Kinetic ]
-    #tests_funcs = [ checkForces_Kinetic , checkForces_Kinetic_pos ]
-    #tests_funcs = [ checkForces_Kinetic ]
+    tests_funcs = []
+    tests_funcs += [ test_ProjectWf, test_Poisson ]
+    tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
+    tests_funcs += [ check_dS_epos_,           check_dS_esize_,             check_dS_ecoef_            ]
+    tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     tests_results = []
     for test_func in tests_funcs:
         tests_results.append( test_func(plt=plt) )

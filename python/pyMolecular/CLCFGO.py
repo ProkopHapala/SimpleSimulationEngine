@@ -222,11 +222,11 @@ lib.setSwitches.restype  = None
 def setSwitches( normalize=True, kinetic=True, coulomb=True, exchange=True, pauli=True, pauliModel=0, AA=True, AE=True, AECoulomb=True, AEPauli=True ):
     lib.setSwitches( normalize, kinetic, coulomb, exchange, pauli, pauliModel, AA, AE, AECoulomb, AEPauli )
 
-#void setSwitches_(int bNormalize, int bEvalKinetic, int bEvalCoulomb, int  bEvalExchange, int  bEvalPauli, int bEvalAA, int bEvalAE, int bEvalAECoulomb, int bEvalAEPauli ){
-lib.setSwitches_.argtypes = [ c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int ]
+#void setSwitches_(int bNormalize, int bNormForce, int bEvalKinetic, int bEvalCoulomb, int  bEvalExchange, int  bEvalPauli, int bEvalAA, int bEvalAE, int bEvalAECoulomb, int bEvalAEPauli ){
+lib.setSwitches_.argtypes = [ c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int ]
 lib.setSwitches_.restype  = None
-def setSwitches_( normalize=0, kinetic=0, coulomb=0, exchange=0, pauli=0, AA=0, AE=0, AECoulomb=0, AEPauli=0 ):
-    lib.setSwitches_( normalize, kinetic, coulomb, exchange, pauli, AA, AE, AECoulomb, AEPauli )
+def setSwitches_( normalize=0, normForce=0, kinetic=0, coulomb=0, exchange=0, pauli=0, AA=0, AE=0, AECoulomb=0, AEPauli=0 ):
+    lib.setSwitches_( normalize, normForce, kinetic, coulomb, exchange, pauli, AA, AE, AECoulomb, AEPauli )
 
 #void setPauli( int iPauli ){ 
 lib.setPauli.argtypes = [ c_int ]

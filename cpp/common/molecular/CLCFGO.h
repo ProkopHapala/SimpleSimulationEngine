@@ -83,6 +83,7 @@ constexpr static const Quat4d default_AtomParams[] = {
 };
 
     bool bNormalize     = true;
+    bool bNormForce     = false; // remove/constrain normal force
     bool bEvalKinetic   = true;
     bool bEvalCoulomb   = true;
     bool bEvalPauli     = true;
@@ -148,6 +149,10 @@ constexpr static const Quat4d default_AtomParams[] = {
     Vec3d*  efpos  =0; ///< [eV/A]  force acting on position of orbitals   d_E/d_epos[i]
     double* efsize =0; ///< [eV/A]  force acting on combination coefficnet of orbitals  d_E/d_esize[i]
     double* efcoef =0; ///< [e^.5V] force acting on size of gaussians d_E/d_ecoef[i]
+    // --- normal forces ( to constrain normality of wavefunction )
+    Vec3d*  enfpos  =0; 
+    double* enfsize =0; 
+    double* enfcoef =0;
 
     // --- Auxuliary electron density expansion basis functions
     Vec3d * rhoP  =0; ///< [A] position of axuliary electron density function
@@ -201,6 +206,10 @@ constexpr static const Quat4d default_AtomParams[] = {
             _realloc( efpos ,   nBas );
             _realloc( efsize,   nBas );
             _realloc( efcoef,   nBas );
+            // --- normal forces ( to constrain normality of wavefunction )
+            _realloc( enfpos ,   nBas );
+            _realloc( enfsize,   nBas );
+            _realloc( enfcoef,   nBas );
 
             // --- Auxuliary electron density expansion basis functions
             _realloc( rhoP, nQtot );
@@ -238,6 +247,10 @@ constexpr static const Quat4d default_AtomParams[] = {
         delete [] efpos ;
         delete [] efsize;
         delete [] efcoef;
+        // --- normal forces ( to constrain normality of wavefunction )
+        delete [] enfpos ;
+        delete [] enfsize;
+        delete [] enfcoef;
         // --- Auxuliary electron density expansion basis functions
         delete [] rhoP;
         delete [] rhoQ;
@@ -274,12 +287,16 @@ constexpr static const Quat4d default_AtomParams[] = {
         for(int i=0; i<nBas;  i++){
             // --- Wave-function components for each orbital
             epos [i]=Vec3dZero;
-            esize[i]=1.;
-            ecoef[i]=1.;
+            esize[i]=1;
+            ecoef[i]=1;
             // --- Forces acting on wave-functions components
             efpos [i]=Vec3dZero;
-            efsize[i]=1.;
-            efcoef[i]=1.;
+            efsize[i]=0;
+            efcoef[i]=0;
+            // --- normal forces ( to constrain normality of wavefunction )
+            enfpos [i]=Vec3dZero;
+            enfsize[i]=0;
+            enfcoef[i]=0;
         }
         for(int i=0; i<nQtot;  i++){
             // --- Auxuliary electron density expansion basis functions
@@ -355,6 +372,11 @@ constexpr static const Quat4d default_AtomParams[] = {
         for(int i=0; i<nBas;  i++){ efpos [i] = Vec3dZero; }
         for(int i=0; i<nBas;  i++){ efsize[i] = 0;         }
         for(int i=0; i<nBas;  i++){ efcoef[i] = 0;         }
+        if(bNormForce){
+            for(int i=0; i<nBas;  i++){ enfpos [i] = Vec3dZero; }
+            for(int i=0; i<nBas;  i++){ enfsize[i] = 0;         }
+            for(int i=0; i<nBas;  i++){ enfcoef[i] = 0;         }
+        }
         //clearAuxDens();
     }
 
@@ -428,15 +450,13 @@ constexpr static const Quat4d default_AtomParams[] = {
         Vec3d*   Ps = rhoP+irho0;
         double*  Qs = rhoQ+irho0;
         double*  Ss = rhoS+irho0;
-        double Q=0;
-        //double DT=0; // kinetic energy change by orthognalization
-        double Ek=0; // kinetic energy
+
+        double   Q  = 0;
+        double   Ek = 0; // kinetic energy
         dip         = Vec3dZero;
         Vec3d qcog  = Vec3dZero;
         int ii=0;
 
-        //bool bDEBUG_Q = true;
-        //printf( "bNormalize %i \n", bNormalize );
         bool bMakeRho = bEvalCoulomb || bEvalAECoulomb || bNormalize;   // in order to normalize we must calculate total charge in orbital
 
         for(int i=i0; i<i0+perOrb; i++){
@@ -445,27 +465,26 @@ constexpr static const Quat4d default_AtomParams[] = {
             double ci  = ecoef[i];
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
+            Q      += qii;
 
-            //printf(  " epos[%i,%i] (%g,%g,%g)\n", io, i, pi.x, pi.y, pi.z );
-
-            if(bMakeRho){
+            if( bMakeRho ){
                 Qs[ii]  = qii;
                 Ps[ii]  = pi;
-                Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii
-                Q      += qii;
+                Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii    
                 qcog.add_mul( pi, qii );
-                //printf( "projectOrb[%i|%i]:bMakeRho %i  qii %g  i0 %i \n", io,i, bMakeRho, qii, i0 );
             }
-
-            if(bEvalKinetic){
-                //double Tii  = Gauss:: kinetic_r0   ( si );
-                //double fsii = Gauss::dKinetic_r0_ds( si );
+            if( bEvalKinetic ){
                 double fsi;
                 double Tii  = Gauss::kinetic_r0_derivs( si, fsi );
                 Ek       += qii*   Tii;
                 efsize[i]+= qii*-2*fsi;
+                efcoef[i]+= Tii*-2*ci ; // ToDo : This needs to be checked
             }
-
+            if( bNormForce ){
+                //  Sii      = ci^2 <Gi|Gj> ( where <Gi|Gj>=1 because they are normalized )
+                // =>  d_Sii/d_si = 0    and   d_Sii/d_ci = 2*ci
+                enfcoef[i]  += -2*ci;
+            }
             ii++;
 
             for(int j=i0; j<i; j++){
@@ -478,55 +497,43 @@ constexpr static const Quat4d default_AtomParams[] = {
                 double sj  = esize[j];
                 double cij = ci*cj*2;
 
-                // ToDo : it would be more efficient calculate as from Tij = tau_ij * S_ij in order to reuse this callculation
-
                 _Gauss_sij_aux( si, sj );
                 _Gauss_overlap( r2, si, sj );
                 double qij = S*cij;
+                Q     += qij;
 
-                if(bMakeRho){
-                    //printf( "projectOrb[%i|%i,%i]:bMakeRho %i \n", io,i,j, bMakeRho );
-                    // --- Project on auxuliary density functions
-
-                    //double szij     =  si*sj*sqrt(is2);             // size
-                    //Vec3d  pij      =  pj*(si2*is2) + pi*(sj2*is2); // position
-
-                    //Vec3d  pij;
-                    //double sij;
-                    //double Cij = Gauss::product3D_s( si, pi, sj, pj, sij, pij );
-                    //double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
-                    //double qij = Sij*cij;
-                    //double qij = Sij*cij*2; // because qij=qji   (a+b)*(a+b) = a^2 + b^2 + 2*ab
-                    
+                if( bNormForce ){
+                    Vec3d fij = Rij*(dS_dr*cij);
+                    enfpos [i].sub( fij )  ; enfpos [j].add( fij )   ;
+                    enfsize[i]-= dS_dsi*cij; enfsize[j]-= dS_dsj*cij;
+                    enfcoef[i]-= S*cj*2    ; enfcoef[j]-= S*ci*2   ;
+                }
+                if( bMakeRho ){                    
                     _Gauss_product(pi,pj,si,sj)
                     Qs[ii] = qij;
                     Ps[ii] = pos_ij;
-                    Ss[ii] = size_ij; 
-                    Q     += qij;
+                    Ss[ii] = size_ij;     
                     qcog.add_mul( pos_ij, qij );
                 }
-
-                if(bEvalKinetic){
-                    //double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
-                    //double Kij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj );   // fr*=2; fsi*=2, fsj*=2;
-                    
+                if( bEvalKinetic ){                    
                     _Gauss_tau    ( r2, si, sj );
                     _Gauss_kinetic( r2, si, sj );
                     Ek += T*cij;
                     Vec3d fij = Rij*(dT_dr*cij);
-                    efpos [i].add( fij )  ; efpos[j].sub( fij )   ;
+                    efpos [i].sub( fij )  ; efpos [j].add( fij )  ;
                     efsize[i]-= dT_dsi*cij; efsize[j]-= dT_dsj*cij;
-                    efcoef[i]-= T*cj      ; efcoef[j]-= T*ci      ;
-                    //if(DEBUG_iter==DEBUG_log_iter){ printf(" Kij %g cij %g Ekij \n", Kij, cij, Kij*cij ); }
+                    efcoef[i]-= T*cj*2    ; efcoef[j]-= T*ci*2    ;
                 }
-
                 ii++;
-                // ToDo : Store qij to list of axuliary functions
+
             }
         }
         if( bMakeRho && ( fabs(Q-1)>1e-8 ) ){  printf( "ERROR in CLCFGO::projectOrb(): psi_%i is not normalized |psi|^2 = %g \n", io, Q ); exit(0); }
-        onq[io] = ii;
+        //printf( "projectOrb[%i] Q %g Ek %g \n", io, Q, Ek );
+        onq [io] = ii;
         opos[io] = qcog;
+        oQs [io] = Q;
+        oEs [io] = Ek;
         return Ek;
     }
 
@@ -673,7 +680,6 @@ constexpr static const Quat4d default_AtomParams[] = {
         Ek = 0;
         for(int io=0; io<nOrb; io++){
             //int i0  = getOrbOffset(jo);
-            //oQs[io] =
             //Ek += projectOrb( io, odip[io] );
             //projectOrb(  io, rhoP+ii0, rhoQ+ii0, rhoS+ii0, odip[io], true );
             //projectOrb(io, ecoefs+i0, erho+irho0, erhoP+irho0, odip[io] );
@@ -685,6 +691,36 @@ constexpr static const Quat4d default_AtomParams[] = {
             i0 +=perOrb;
         }
         return Ek;
+    }
+
+    double outProjectNormalForces( int io ){
+        /// out project component of force which break normalization
+        //   f -= ds*( <f|ds>/|ds| ) 
+        int i0      = getOrbOffset(io);
+        // --- find projection constant c = <f|ds>/|ds|
+        double ss=0,sf=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            ss += enfpos [i].norm2();
+            ss += sq(enfsize[i]);
+            ss += sq(enfcoef[i]);
+            sf += efpos  [i].dot(enfpos [i]);
+            sf += efsize [i]*    enfsize[i];
+            sf += efcoef [i]*    enfcoef[i];
+        }
+        double c=-sf/sqrt(ss);  // c = <f|ds>/|ds|
+        // ---- out-project f -= ds*c
+        for(int i=i0; i<i0+perOrb; i++){
+            efpos [i] .add_mul( enfpos [i], c );
+            efsize[i] +=        enfsize[i]* c  ;
+            efcoef[i] +=        enfcoef[i]* c  ;
+        }
+        return c;
+    }
+
+    double outProjectNormalForces( ){
+        double csum=0; 
+        for(int io=0; io<nOrb; io++){ csum += outProjectNormalForces( io ); }
+        return csum;
     }
 
 
@@ -1600,6 +1636,7 @@ double evalAA(){
         }
         //E += evalCrossTerms(); // ToDo : This should replace evalPauli and evalExchange()
         //printf( "eval() E=%g \n", E  );
+        if( bNormForce && bNormalize){ outProjectNormalForces(); }
         return E;
     }
 

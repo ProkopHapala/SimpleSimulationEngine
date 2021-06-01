@@ -66,6 +66,10 @@ void makeDefaultBuffers(){
     buffers["efpos" ]= (double*)solver.efpos ;
     buffers["efsize"]=         solver.efsize ;
     buffers["efcoef"]=         solver.efcoef ;
+    // --- Forces acting on wave-functions components
+    buffers["enfpos" ]= (double*)solver.enfpos ;
+    buffers["enfsize"]=          solver.enfsize ;
+    buffers["enfcoef"]=          solver.enfcoef ;
     // --- Auxuliary electron density expansion basis functions
     buffers["rhoP"]= (double*)solver.rhoP ;
     buffers["rhoQ"]=          solver.rhoQ ;
@@ -339,9 +343,10 @@ void setSwitches(bool bNormalize, bool bEvalKinetic, bool bEvalCoulomb, bool  bE
     solver.bEvalAEPauli   = bEvalAEPauli;
 }
 
-void setSwitches_(int bNormalize, int bEvalKinetic, int bEvalCoulomb, int  bEvalExchange, int  bEvalPauli, int bEvalAA, int bEvalAE, int bEvalAECoulomb, int bEvalAEPauli ){
+void setSwitches_(int bNormalize, int bNormForce, int bEvalKinetic, int bEvalCoulomb, int  bEvalExchange, int  bEvalPauli, int bEvalAA, int bEvalAE, int bEvalAECoulomb, int bEvalAEPauli ){
 #define _setbool(b,i) { if(i>0){b=true;}else if(i<0){b=false;} }
     _setbool( solver.bNormalize     , bNormalize     );
+    _setbool( solver.bNormForce     , bNormForce     );
     _setbool( solver.bEvalKinetic   , bEvalKinetic   );
     _setbool( solver.bEvalCoulomb   , bEvalCoulomb   );
     _setbool( solver.bEvalExchange  , bEvalExchange  );
