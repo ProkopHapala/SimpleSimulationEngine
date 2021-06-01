@@ -457,24 +457,12 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //printf( "projectOrb[%i|%i]:bMakeRho %i  qii %g  i0 %i \n", io,i, bMakeRho, qii, i0 );
             }
 
-            double fr,fsi,fsj;
             if(bEvalKinetic){
-                //double fEki;
-                //Ek += qii*addKineticGauss( si*M_SQRT2, fEki );
-                //Ek += qii*Gauss::kinetic( si );
-                //Ek += qii*Gauss::kinetic_s(  0.0, si, si,   fr, fsi, fsj );
-
-                double Tii  = _Gauss_Tr0(si);
-                double Tii_ =  Gauss::kinetic_s(  0.0, si, si,   fr, fsi, fsj );
-
-                double fsii = _Gauss_dTr0_ds;
-
-                printf(  "kin[%i,%i] si %g T %g T_ %g    dT_ds %g  dT_ds_ %g  | fac %g \n", io, i, si, Tii, Tii_,  fsii, fsi, Tii/Tii_, fsii/fsi );
-
-                //Ek       += qii*   Tii;
-                //efsize[i]+= qii*-2*fsii;
-
-                Ek       += qii*   Tii_;
+                //double Tii  = Gauss:: kinetic_r0   ( si );
+                //double fsii = Gauss::dKinetic_r0_ds( si );
+                double fsi;
+                double Tii  = Gauss::kinetic_r0_derivs( si, fsi );
+                Ek       += qii*   Tii;
                 efsize[i]+= qii*-2*fsi;
             }
 
@@ -494,16 +482,14 @@ constexpr static const Quat4d default_AtomParams[] = {
 
                 _Gauss_sij_aux( si, sj );
                 _Gauss_overlap( r2, si, sj );
-
                 double qij = S*cij;
 
                 if(bMakeRho){
                     //printf( "projectOrb[%i|%i,%i]:bMakeRho %i \n", io,i,j, bMakeRho );
                     // --- Project on auxuliary density functions
 
-                    double sqrtis2 = sqrt(is2);
-                    double sij  =  si*sj*sqrtis2;
-                    Vec3d  pij  =  pj*(si2*is2) + pi*(sj2*is2);
+                    //double szij     =  si*sj*sqrt(is2);             // size
+                    //Vec3d  pij      =  pj*(si2*is2) + pi*(sj2*is2); // position
 
                     //Vec3d  pij;
                     //double sij;
@@ -511,17 +497,19 @@ constexpr static const Quat4d default_AtomParams[] = {
                     //double Sij = Gauss::product3D_s_new( si, pi, sj, pj, sij, pij );
                     //double qij = Sij*cij;
                     //double qij = Sij*cij*2; // because qij=qji   (a+b)*(a+b) = a^2 + b^2 + 2*ab
+                    
+                    _Gauss_product(pi,pj,si,sj)
                     Qs[ii] = qij;
-                    Ps[ii] = pij;
-                    Ss[ii] = sij;
-
-                    Q += qij;
-                    qcog.add_mul( pij, qij );
+                    Ps[ii] = pos_ij;
+                    Ss[ii] = size_ij; 
+                    Q     += qij;
+                    qcog.add_mul( pos_ij, qij );
                 }
 
                 if(bEvalKinetic){
                     //double Ekij = Gauss::kinetic(  r2, si, sj ) * 2; // TODO : <i|Lapalace|j> between the two gaussians
                     //double Kij = Gauss:: kinetic_s(  r2, si, sj,   fr, fsi, fsj );   // fr*=2; fsi*=2, fsj*=2;
+                    
                     _Gauss_tau    ( r2, si, sj );
                     _Gauss_kinetic( r2, si, sj );
                     Ek += T*cij;
@@ -1310,8 +1298,8 @@ constexpr static const Quat4d default_AtomParams[] = {
         // From this it can be derived
         // Detla_T =  ( T11 + T22 - T12/S12 )/( S12^2/(1-S12^2) )
         //printf( "pauliKineticChnageVB[%i,%i] ", io, jo );
-        double T = 0;
-        double S = 0;
+        double Tsum = 0;
+        double Ssum = 0;
         int i0=io*perOrb;
         int j0=jo*perOrb;
         int ij=0;
@@ -1334,18 +1322,24 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //pairs[ij].get(si,pi, sj,pj);
                 //const Gauss::PairDeriv& dB = dBs[ij];
                 //const Quat4d&           TD = TDs[ij];
+                /*
                 double  dTr, dTsi, dTsj, dSr, dSsi, dSsj,   dS;
                 { //                Overlap Integral
                     dS = Gauss::overlap_s_deriv(  si*M_SQRT2,pi,  sj*M_SQRT2,pj,  dSr, dSsi, dSsj );  // This helps - but should be solved differently - inside overlap_s_deriv
                     //dS = Gauss::overlap_s_deriv(  si,pi,  sj,pj,  dSr, dSsi, dSsj );
                     dS*=cij; S+=dS;  // integrate S12 = <psi_1|psi_2>
                 }
+                */
+                _Gauss_sij_aux(si,sj)
+                _Gauss_overlap(r2,si,sj)
+                Ssum += S;
                 // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
                 if(iPauliModel>0){ // Kinetic Energy integral
-                    double s2  = si*si + sj*sj;
-                    double tau = ( r2 - 3*s2)/(s2*s2);    // tau <=> Tij/Sij
-                    double dT  = dS * tau;
-                    T+=dT;  // integrate T12 = <psi_1|T|psi_2>
+                    //double s2  = si*si + sj*sj;
+                    //double tau = ( r2 - 3*s2)/(s2*s2);    // tau <=> Tij/Sij
+                    //double dT  = dS * tau;
+                    _Gauss_tau( r2,si,sj )
+                    Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
                 }
                 ij++;
             }
@@ -1356,17 +1350,17 @@ constexpr static const Quat4d default_AtomParams[] = {
             double T11,T22;
             T11 = oEs[io];
             T22 = oEs[jo];
-            double S2 = S*S;
-            E = (T11 + T22 - 2*T/S)*(S2/(1-S2));
+            double S2 = Ssum*Ssum;
+            E = (T11 + T22 - 2*Tsum/Ssum)*(S2/(1-S2));
             // ToDo : Here we will need derivatives of kinetic energy according to forces
             //   This can be done if we calculate kinetic forces first and
             E *= const_K_eVA;
         }else if(iPauliModel==3){ // Juat for debugging
-            E = T; // Just Cross-Kinetic T12 = <psi1|T|psi2>
+            E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
         }else if(iPauliModel==4){
-            E = S; // Just Cross-Overlap S12 = <psi1|T|psi2>
+            E = Ssum; // Just Cross-Overlap S12 = <psi1|T|psi2>
         }else{
-            E = S*S*KPauliOverlap;
+            E = Ssum*Ssum*KPauliOverlap;
         }
         //printf( "E %g \n", E );
         return E;

@@ -17,9 +17,9 @@ const double const_eps0_SI      = 8.854187812813e-12; ///< [F.m = Coulomb/(Volt*
 const double const_eV_SI        = 1.602176620898e-19; ///< [J]
 const double const_Angstroem_SI = 1.0e-10;
 
-const double const_K_SI     =  const_hbar_SI*const_hbar_SI/const_Me_SI;
-const double const_El_SI    =  const_e_SI*const_e_SI/(4.*M_PI*const_eps0_SI);
-const double const_Ry_SI    = 0.5 * const_El_SI*const_El_SI/const_K_SI;
+const double const_K_SI   =  const_hbar_SI*const_hbar_SI/const_Me_SI;
+const double const_El_SI  =  const_e_SI*const_e_SI/(4.*M_PI*const_eps0_SI);
+const double const_Ry_SI  = 0.5 * const_El_SI*const_El_SI/const_K_SI;
 
 const double const_Ry_eV  = 13.6056925944;
 const double const_El_eVA = const_El_SI/( const_e_SI*const_Angstroem_SI );
@@ -36,6 +36,10 @@ const double const_Ke_eVA = const_K_eVA*1.5;
     double s2   = si2 + sj2; \
     double is2  = 1/s2; \
     double is4  = is2*is2; \
+
+#define _Gauss_product(pi,pj,si,sj) \
+    double size_ij =  si*sj*sqrt(is2);             \
+    Vec3d  pos_ij  =  pj*(si2*is2) + pi*(sj2*is2); \
 
 #define _Gauss_overlap( r2, si, sj ) \
     double sij     = si*sj; \
@@ -650,6 +654,17 @@ inline double sqnorm3Ds_sq( double s ){
     const double sqrt_pi = 1.77245385091;
     double c = 1/(sqrt_pi*s); // sqrt(sqrt(pi)*s)
     return c*c*c;
+}
+
+inline double  kinetic_r0   (double s){
+    return 1.5*const_K_eVA/(s*s);
+}
+
+inline double  kinetic_r0_derivs(double s, double& dT_ds){
+    double is = 1/s;
+    double T = 1.5*const_K_eVA*is*is;
+    dT_ds    = -T*is;
+    return T;
 }
 
 //inline double uy3Ds( double r, double s ){ return norm3Ds(s)* exp( (r*r)/(-2*s*s) ); }

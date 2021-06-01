@@ -244,7 +244,7 @@ def checkForces_Hartree_epos( n=100, dx=0.05, plt=None ):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     
-    #tests_funcs = [ test_ProjectWf, test_Poisson, test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
+    tests_funcs = [ test_ProjectWf, test_Poisson, test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     #tests_funcs = [ test_ProjectWf ,  test_Poisson  ]
     #tests_funcs = [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij  ]
     #tests_funcs = [ test_Overlap_Sij  ]
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     #tests_funcs = [checkForces_Kinetic,  checkForces_Kinetic_pos, checkForces_Hartree_epos ]
     #tests_funcs = [ checkForces_Kinetic ]
     #tests_funcs = [ checkForces_Kinetic , checkForces_Kinetic_pos ]
-    tests_funcs = [ checkForces_Kinetic ]
+    #tests_funcs = [ checkForces_Kinetic ]
     tests_results = []
     for test_func in tests_funcs:
         tests_results.append( test_func(plt=plt) )
