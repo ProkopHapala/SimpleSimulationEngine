@@ -12,11 +12,13 @@ import eFF
 import CLCFGO as effmc
 import eFF_terms as effpy
 
-import matplotlib.pyplot as plt
+# ========== Globals
 
 bDebug = 0
-
 natom=0; norb=2; perOrb=1; nqOrb=1
+bPrintInfo = False
+label=""
+plt  =None
 
 # ========= Functions
 
@@ -37,49 +39,11 @@ def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0 ):
     rhoP [:,:,:]=0
     if norb_>1:
         epos [1,0,0]=dist
+    if(bPrintInfo): effmc.printAtomsAndElectrons()
 
-'''
-def init_1x2_electrons( sz = 0.5, dist=1.0 ):
-    # ---- setup
-    global natom,norb,perOrb
-    natom=0; norb=1; perOrb=2
-    effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
-    ecoef = effmc.getBuff( "ecoef",(norb,perOrb)   )
-    esize = effmc.getBuff( "esize",(norb,perOrb)   )
-    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
-    ecoef[:,:  ]=1
-    esize[:,:  ]=sz
-    epos [1,0,0]=dist
-
-def init_2x1_electrons( sz = 0.5, dist=1.0 ):
-    # ---- setup
-    global natom,norb,perOrb
-    natom=0; norb=2; perOrb=1
-    effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
-    ecoef = effmc.getBuff( "ecoef",(norb,perOrb)   )
-    esize = effmc.getBuff( "esize",(norb,perOrb)   )
-    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
-    ecoef[:,:  ]=1
-    esize[:,:  ]=sz
-    epos [1,0,0]=dist
-
-def init_2x2_electrons( sz = 0.5, dist=1.0 ):
-    # ---- setup
-    natom=0; norb=2; perOrb=2
-    effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
-    ecoef = effmc.getBuff( "ecoef",(norb,perOrb)   )
-    esize = effmc.getBuff( "esize",(norb,perOrb)   )
-    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
-    ecoef[:,:  ]=1
-    esize[:,:  ]=sz
-    epos [:,1,0]=dist
-'''
-
-def test_ProjectWf( plt = None, Etoll=1e-5 ):
+def test_ProjectWf( Etoll=1e-5 ):
     print "\n ============ test_ProjectWf ( rho = |wf|^2 )"
-    #init_2x2_electrons( sz = 0.5, dist=1.0 )
     init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
-    #print "DEBUG 1 "
     # ---- test
     nps = 400+1
     ps  = np.zeros((nps,3))
@@ -87,16 +51,12 @@ def test_ProjectWf( plt = None, Etoll=1e-5 ):
     effmc.eval() # we have to run it to project wavefuction to aux density
     wf  = effmc.orbAtPoints(ps)
     rho = effmc.rhoAtPoints(ps)
-    #print "DEBUG 2 "
     wf2 = wf**2
     err = rho - wf2
     Err = np.sqrt( (err**2).sum()/len(err) )
     print " Error ", Err
-    #Vh  = effmc.hartreeAtPoints(ps)
-    #print "DEBUG 3 "
     if plt is not None:
         plt.figure(figsize=(5,5))
-        #plt.subplot(2,1,1);
         plt.plot( ps[:,0],    wf, label='wf'  )
         plt.plot( ps[:,0],   rho, label='rho' )
         plt.plot( ps[:,0],   wf2,':', label='wf^2')
@@ -105,17 +65,13 @@ def test_ProjectWf( plt = None, Etoll=1e-5 ):
     #print "DEBUG 4 "
     return Err
 
-def test_Poisson( plt = None, Etoll=1e-5 ):
+def test_Poisson( Etoll=1e-5 ):
     print " ===== test_Poisson ( rho = dd_xyz V )"
-    #init_2x2_electrons( sz = 0.5, dist=1.0 )
     init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.eval() # we have to run it to project wavefuction to aux density
-    #print "DEBUG 1 "
     dx=0.03; R=3.0
     err2, rho, rho_ =  effmc.test_Poisson( dx=dx, Rmax=R )
-    #err2, rho, rho_ =  effmc.test_Poisson( dx=dx, Rmax=R, useWf=False )
     Err = np.sqrt( err2/len(rho) )
-    #print "DEBUG 2 "
     if(plt):
         xs=np.arange(0,R*2,dx)
         plt.figure(figsize=(5,5))
@@ -123,25 +79,16 @@ def test_Poisson( plt = None, Etoll=1e-5 ):
         plt.plot( xs, rho_, ":", label=('rho_' ) ); 
         plt.title( "test_Poisson( rho = dd_xyz V )" )
         plt.legend(); plt.grid()
-    #print "DEBUG 3 "
     print " Error ", Err
     return Err
 
-def test_OrbInteraction( plt = None, Etoll=1e-5, iMODE=1 ):
+def test_OrbInteraction( Etoll=1e-5, iMODE=1 ):
     labels=[ "NONE", "Overlap Sij", "Kinetic Tij", "Coulomb Kij", ]
     label=labels[iMODE]
     print " ===== test_OrbInteraction "+label
-    #init_2x1_electrons( sz = 0.1, dist=0.0 )
-    #init_2x1_electrons ( sz = 0.25, dist=0.0 )
-    #init_2x1_electrons( sz = 0.5, dist=0.0 )
-    #init_2x1_electrons( sz = 0.75, dist=0.0 )
-    #init_2x1_electrons( sz = 1.0, dist=0.0 )
-    #init_2x1_electrons( sz = 1.5, dist=0.0 )
     init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=1.0 )
-    #print "DEBUG 1 "
 
     effmc.eval() # we have to run it to project wavefuction to aux density
-    #print "DEBUG 2 "
     dx=0.2; 
     #nint=30;
     nint=50
@@ -149,39 +96,32 @@ def test_OrbInteraction( plt = None, Etoll=1e-5, iMODE=1 ):
     #err2, rho, rho_ =  effmc.test_Poisson( dx=dx, Rmax=R, useWf=False )
     Err = np.sqrt( err2/len(Ek) )
     print "Error ", Err
-    #print "DEBUG 3 "
     if(plt):
-        #print "DEBUG 3.0 "
         xs=np.arange(0,dx*nint,dx)
-        #print "DEBUG 3.0.1 "
         plt.figure(figsize=(10,5))
         plt.subplot(1,2,1)
-        #print "DEBUG 3.1 "
         plt.plot( f1,      label=('f1' ) ); 
         plt.plot( f2, ":", label=('f2' ) );
         plt.title( "test_OrbInteraction funcs "+ label )
         plt.legend(); plt.grid()
         plt.subplot(1,2,2)
-        #print "DEBUG 3.2 "
-        #plt.figure(figsize=(5,5))
         plt.plot( xs, Ek ,    label=('Ek_ana' ) ); 
         plt.plot( xs, Ek_, ":", label=('Ek_num' ) ); 
         plt.title( "test_OrbInteraction "+label )
         #plt.ylim( 0, 20.0 )
         plt.legend(); plt.grid()
-    #print "DEBUG 4 "
     return Err
-def test_Overlap_Sij(plt=None):
-    return test_OrbInteraction(iMODE=1,plt=plt)
-def test_Kinetic_Tij(plt=None):
-    return test_OrbInteraction(iMODE=2,plt=plt)
-def test_Coulomb_Kij(plt=None):
+def test_Overlap_Sij():
+    return test_OrbInteraction(iMODE=1)
+def test_Kinetic_Tij():
+    return test_OrbInteraction(iMODE=2)
+def test_Coulomb_Kij():
     effmc.setSwitches_( normalize=1, kinetic=-1, coulomb=1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return test_OrbInteraction(iMODE=3,plt=plt)
+    return test_OrbInteraction(iMODE=3)
 
 # ========= Check Forces
 
-def processForces( xs,Es,fs, plt=plt, label="" ):
+def processForces( xs,Es,fs ):
     n=len(xs)
     dx=xs[1]-xs[0]
     fs_num=(Es[2:]-Es[:-2])/(-2*dx)
@@ -196,215 +136,141 @@ def processForces( xs,Es,fs, plt=plt, label="" ):
         plt.title(label)
     return Err
 
-def checkForces_epos( x0=0.0, n=100, dx=0.02, plt=None, label="checkForces_epos" ):
-    #esize = effmc.getBuff( "esize",(norb,perOrb)   )
-    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
-    efpos = effmc.getBuff( "efpos",(norb,perOrb,3) )
-    xs = np.arange(x0,x0+n*dx,dx)
+def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0 ):
+    nind = len(inds)
+    szs  = (norb,perOrb,3)[:nind]
+    xbuf = effmc.getBuff( xname,szs )
+    fbuf = effmc.getBuff( fname,szs )
+    xs = np.arange(x0,x0+nx*dx,dx)
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
     effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(n):
-        epos[0,0,0] = xs[i]
+    for i in range(nx):
+        if(nind>2):
+            xbuf[inds[0],inds[1],inds[2]] = xs[i]
+        else:
+            xbuf[inds[0],inds[1]]         = xs[i]
         Es[i] = effmc.eval()
-        fs[i] = efpos[0,0,0]
-    fs *= -1
-    return processForces( xs,Es,fs, plt=plt, label=label )
+        if(nind>2):
+            fs[i] = fbuf[inds[0],inds[1],inds[2]]
+        else:
+            fs[i] = fbuf[inds[0],inds[1]]
+    return processForces( xs,Es,fs )
 
-def checkForces_esize( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
-    esize  = effmc.getBuff( "esize" ,(norb,perOrb) )
-    efsize = effmc.getBuff( "efsize",(norb,perOrb) )
-    xs = np.arange(x0,x0+n*dx,dx)
-    Es = np.zeros(len(xs))
-    fs = np.zeros(len(xs))
-    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(n):
-        esize[0,0] = xs[i]
-        Es[i] = effmc.eval()
-        fs[i] = efsize[0,0]
-    return processForces( xs,Es,fs, plt=plt, label=label )
-
-def checkForces_ecoef( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
-    esize  = effmc.getBuff( "ecoef" ,(norb,perOrb) )
-    efsize = effmc.getBuff( "efcoef",(norb,perOrb) )
-    xs = np.arange(x0,x0+n*dx,dx)
-    Es = np.zeros(len(xs))
-    fs = np.zeros(len(xs))
-    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(n):
-        esize[0,0] = xs[i]
-        Es[i] = effmc.eval()
-        fs[i] = efsize[0,0]
-    return processForces( xs,Es,fs, plt=plt, label=label )
-
-# ========= Check Normalization derivatives
-
-def check_dS_epos( x0=0.0, n=100, dx=0.02, plt=None, label="checkForces_epos" ):
-    #esize = effmc.getBuff( "esize",(norb,perOrb)   )
-    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
-    enfpos= effmc.getBuff( "enfpos",(norb,perOrb,3) )
-    oQs   = effmc.getBuff( "oQs",(norb) )
-    xs = np.arange(x0,x0+n*dx,dx)
-    Es = np.zeros(len(xs))
-    fs = np.zeros(len(xs))
-    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(n):
-        epos[0,0,0] = xs[i]
-        E     = effmc.eval();
-        Es[i] = oQs[0]
-        fs[i] = enfpos[0,0,0]
-    fs *= -1
-    return processForces( xs,Es,fs, plt=plt, label=label )
-
-def check_dS_esize( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
-    esize  = effmc.getBuff( "esize" ,(norb,perOrb) )
-    enfsize= effmc.getBuff( "enfsize",(norb,perOrb) )
-    oQs    = effmc.getBuff( "oQs",(norb) )
-    xs = np.arange(x0,x0+n*dx,dx)
-    Es = np.zeros(len(xs))
-    fs = np.zeros(len(xs))
-    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(n):
-        esize[0,0] = xs[i]
-        E     = effmc.eval()
-        Es[i] = oQs[0]
-        fs[i] = enfsize[0,0]
-    return processForces( xs,Es,fs, plt=plt, label=label )
-
-def check_dS_ecoef( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
-    esize  = effmc.getBuff( "ecoef" ,(norb,perOrb) )
-    enfcoef= effmc.getBuff( "enfcoef",(norb,perOrb) )
-    oQs    = effmc.getBuff( "oQs",(norb) )
-    xs = np.arange(x0,x0+n*dx,dx)
-    Es = np.zeros(len(xs))
-    fs = np.zeros(len(xs))
-    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(n):
-        esize[0,0] = xs[i]
-        E     = effmc.eval()
-        Es[i] = oQs[0]
-        fs[i] = enfcoef[0,0]
-    return processForces( xs,Es,fs, plt=plt, label=label )
-
-def check_dS_epos_( n=100, dx=0.05, plt=None ):
-    init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
-    effmc.printAtomsAndElectrons()
-    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=-1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return check_dS_epos( x0=0.25, n=n, dx=dx, plt=plt, label="check_dS_epos" )
-
-def check_dS_esize_( n=100, dx=0.05, plt=None ):
-    init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
-    effmc.printAtomsAndElectrons()
-    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=-1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return check_dS_esize( x0=0.25, n=n, dx=dx, plt=plt, label="check_dS_esize" )
-
-def check_dS_ecoef_( n=100, dx=0.05, plt=None ):
-    init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
-    effmc.printAtomsAndElectrons()
-    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=-1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return check_dS_ecoef( x0=0.0, n=n, dx=dx, plt=plt, label="check_dS_ecoef" )
-
-# ========= Check Forces
-
-def checkForces_Kinetic_esize( n=100, dx=0.05, plt=None ):
-    #init_2x1_electrons( sz = 0.5, dist=0.0 )
-    #init_2x2_electrons( sz = 0.5, dist=-0.5 )
+def checkForces_Kinetic_esize( ):
     init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=10.0 )
-    effmc.printAtomsAndElectrons()
-    #init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=0.0 )
-    #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return checkForces_esize( x0=0.5, n=n, dx=dx, plt=plt, label="checkForces_Kinetic_esize" )
+    effmc.setSwitches_( normalize=-1, kinetic=1 )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0), x0=0.25 )
 
-def checkForces_Kinetic_epos( n=100, dx=0.05, plt=None ):
-    #init_2x2_electrons( sz = 0.75, dist=-0.1 )
+def checkForces_Kinetic_epos( ):
     init_effmc( norb_=1, perOrb_=2, sz=0.75, dist=-0.1 )
-    #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return checkForces_epos( x0=1.0, n=n, dx=dx, plt=plt, label="checkForces_Kinetic_epos" )
+    effmc.setSwitches_( normalize=-1, kinetic=1 )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
 
-def checkForces_Kinetic_ecoef( n=100, dx=0.05, plt=None ):
-    #init_2x2_electrons( sz = 0.75, dist=-0.1 )
+def checkForces_Kinetic_ecoef( ):
     init_effmc( norb_=1, perOrb_=2, sz=0.75, dist=-0.1 )
-    #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    effmc.setSwitches_( normalize=-1, normForce=1, kinetic=1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return checkForces_ecoef( x0=0.0, n=n, dx=dx, plt=plt, label="checkForces_Kinetic_ecoef" )
+    effmc.setSwitches_( normalize=-1, kinetic=1 )
+    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
-def checkForces_Hartree_epos( n=100, dx=0.05, plt=None ):
-    #init_2x1_electrons( sz = 0.5, dist=0.0 )
+def checkForces_Hartree_epos( ):
     init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=0.0 )
-    effmc.setSwitches_( normalize=1, kinetic=-1, coulomb=1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
-    return checkForces_epos( n=n, dx=dx, plt=plt, label="checkForces_Hartree_epos" )
-
-#def test_Kinetic( plt = None, Etoll=1e-5 ):
+    effmc.setSwitches_( normalize=1, coulomb=1 )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
 
 # ========= Check Normalization derivatives
 
-def check_Coulomb_rhoP( x0=0.0, n=100, dx=0.02, plt=None, label="checkForces_epos" ):
-    #esize = effmc.getBuff( "esize",(norb,perOrb)   )
-    rhoP  = effmc.getBuff( "rhoP" ,(norb,nqOrb,3) )
-    rhofP= effmc.getBuff( "rhofP",(norb,nqOrb,3) )
-    xs = np.arange(x0,x0+n*dx,dx)
+def check_dS( xname="ecoef", fname="enfcoef", inds=(0,0), x0=0 ):
+    nind = len(inds)
+    szs  = (norb,perOrb,3)[:nind]
+    xbuf = effmc.getBuff( xname,szs )
+    fbuf = effmc.getBuff( fname,szs )
+    oQs  = effmc.getBuff( "oQs",(norb) )
+    xs   = np.arange(x0,x0+nx*dx,dx)
+    Es   = np.zeros(len(xs))
+    fs   = np.zeros(len(xs))
+    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    for i in range(nx):
+        if(nind>2):
+            xbuf[inds[0],inds[1],inds[2]] = xs[i]
+        else:
+            xbuf[inds[0],inds[1]]         = xs[i]
+        E     = effmc.eval()
+        Es[i] = oQs[0]
+        if(nind>2):
+            fs[i] = fbuf[inds[0],inds[1],inds[2]]
+        else:
+            fs[i] = fbuf[inds[0],inds[1]]
+    return processForces( xs,Es,fs )
+
+def check_dS_epos( ):
+    init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
+    effmc.setSwitches_( normalize=-1, normForce=1 )
+    return check_dS( xname="epos", fname="enfpos", inds=(0,0,0) )
+
+def check_dS_esize(  ):
+    init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
+    effmc.setSwitches_( normalize=-1, normForce=1 )
+    return check_dS( xname="esize", fname="enfsize", inds=(0,0), x0=0.25 )
+
+def check_dS_ecoef( ):
+    init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
+    effmc.setSwitches_( normalize=-1, normForce=1 )
+    return check_dS( xname="ecoef", fname="enfcoef", inds=(0,0) )
+
+# ========= Check Normalization derivatives
+
+def check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0), x0=0 ):
+    nind = len(inds)
+    szs  = (norb,perOrb,3)[:nind]
+    xbuf = effmc.getBuff( xname,szs )
+    fbuf = effmc.getBuff( fname,szs )
+    xs = np.arange(x0,x0+nx*dx,dx)
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
-    #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(n):
-        rhoP[0,0,0] = xs[i]
+    for i in range(nx):
+        if(nind>2):
+            xbuf[inds[0],inds[1],inds[2]] = xs[i]
+        else:
+            xbuf[inds[0],inds[1]]         = xs[i]
         Es[i] = effmc.coulombOrbPair( 0, 1 )
-        fs[i] = rhofP[0,0,0]
-    return processForces( xs,Es,fs, plt=plt, label=label )
+        if(nind>2):
+            fs[i] = fbuf[inds[0],inds[1],inds[2]]
+        else:
+            fs[i] = fbuf[inds[0],inds[1]]
+    return processForces( xs,Es,fs )
 
-def check_Coulomb_rhoS( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
-    rhoS  = effmc.getBuff( "rhoS" ,(norb,nqOrb) )
-    rhofS = effmc.getBuff( "rhofS",(norb,nqOrb) )
-    xs = np.arange(x0,x0+n*dx,dx)
-    Es = np.zeros(len(xs))
-    fs = np.zeros(len(xs))
-    #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(n):
-        rhoS[0,0] = xs[i]
-        Es[i]     = effmc.coulombOrbPair( 0, 1 )
-        fs[i]     = -rhofS[0,0]
-    return processForces( xs,Es,fs, plt=plt, label=label )
+def check_Coulomb_rhoP_( ):
+    init_effmc( norb_=2, perOrb_=1, sz=0.75, dist=-0.5 )
+    return check_Coulomb( xname="rhoP", fname="rhofP", inds=(0,0,0) )
 
-def check_Coulomb_rhoQ( x0=0.0, n=100, dx=0.05, plt=None, label="checkForces_esize" ):
-    rhoQ  = effmc.getBuff( "rhoQ" ,(norb,nqOrb) )
-    rhofQ = effmc.getBuff( "rhofQ",(norb,nqOrb) )
-    xs = np.arange(x0,x0+n*dx,dx)
-    Es = np.zeros(len(xs))
-    fs = np.zeros(len(xs))
-    #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(n):
-        rhoQ[0,0]  = xs[i]
-        Es[i]      = effmc.coulombOrbPair( 0, 1 )
-        fs[i]      = -rhofQ[0,0]
-    return processForces( xs,Es,fs, plt=plt, label=label )
+def check_Coulomb_rhoS_( ):
+    init_effmc( norb_=2, perOrb_=1, sz=0.75, dist=-0.5 )
+    return check_Coulomb( xname="rhoS", fname="rhofS", inds=(0,0), x0=0.5 )
 
-def check_Coulomb_rhoP_( n=100, dx=0.05, plt=None ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=-0.1 )
-    print( "norb, perOrb, nqOrb ",norb, perOrb, nqOrb )
-    return check_Coulomb_rhoP( x0=1.0, n=n, dx=dx, plt=plt, label="check_Coulomb_rhoP_" )
-
-def check_Coulomb_rhoS_( n=100, dx=0.05, plt=None ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=-0.1 )
-    return check_Coulomb_rhoS( x0=0.0, n=n, dx=dx, plt=plt, label="check_Coulomb_rhoS_" )
-
-def check_Coulomb_rhoQ_( n=100, dx=0.05, plt=None ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=-0.1 )
-    return check_Coulomb_rhoQ( n=n, dx=dx, plt=plt, label="check_Coulomb_rhoQ_" )
+def check_Coulomb_rhoQ_( ):
+    init_effmc( norb_=2, perOrb_=1, sz=0.75, dist=-0.5 )
+    return check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0) )
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt_
+    global plt,label
+    global dx,nx
+    dx=0.05
+    nx=100
+    plt=plt_
+    #bPrintInfo = True
     tests_funcs = []
-    #tests_funcs += [ test_ProjectWf, test_Poisson ]
-    #tests_funcs += [ check_Coulomb_rhoQ_ ]
+    tests_funcs += [ test_ProjectWf, test_Poisson ]
+    tests_funcs += [ check_dS_epos,           check_dS_esize,             check_dS_ecoef               ]
+    tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
     tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
-    #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
-    #tests_funcs += [ check_dS_epos_,           check_dS_esize_,             check_dS_ecoef_            ]
-    #tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
+    tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     tests_results = []
+
     for test_func in tests_funcs:
-        tests_results.append( test_func(plt=plt) )
+        label = test_func.__name__
+        effmc.setSwitches_( normalize=1, normForce=-1, kinetic=-1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
+        tests_results.append( test_func() )
     print ""
     print " ##### Test Result Summary ##### "
     for i,test_func in enumerate(tests_funcs):

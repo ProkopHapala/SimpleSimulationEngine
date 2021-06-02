@@ -164,9 +164,6 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
     constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
     // NOTE : there cannot be any non-constant prefactors because at large distance ( r -> +inf) it must converge to point-charge coulomb (1/r)*qi*qj 
-
-    //s*=2;
-
     double ir   = 1./r; //(r+1.e-8);
     double is   = 1./s; //(s+1.e-8);
     double r_s  = r*is;
@@ -177,13 +174,10 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     double e2   = erf(  r_2s      );            // ToDo : this should be possible to compute together !!!
     double g    = exp( -r_2s*r_2s ) * const_F2;
     double f1   = -e1*ir;
-    double f2   = g*is;
+    double f2   = g*is*0.5;
     double e1f2 = e1*f2;
-    fr = (f1*e2 + e1f2)*ir;
-    //fs =          e1f2 *r_s * is * M_SQRT1_2; // WARRNING : Not sure if there should be factor sqrt(2)
-    fs =          e1f2 *r_s * is;
-    //if(DEBUG_iter==DEBUG_log_iter) printf( "ir %g is %g e1 %g e2 %g g %g f1 %g f2 %g  fr %g fs %g \n", ir, is, e1, e2, g, f1, f2, fr, fs );
-    //printf( "Gauss::Coulomb r %g s %g E %g fr %g \n", r, s, e1*e2, fr ); // This works (same as in python)
+    fr          = (f1*e2 + e1f2)*ir;
+    fs          =          e1f2 *r_s * is;
     return e1 * e2;
 }
 
@@ -194,7 +188,6 @@ inline double Coulomb( const Vec3d& Rij, double r2, double si, double sj, double
     double s    = sqrt(s2);
     double fr;
     // NOTE : there cannot be any non-constant prefactors because at large distance ( r -> +inf) it must converge to point-charge coulomb (1/r)*qi*qj 
-
     double e  = qij*Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
     //double e    = const_El_eVA*qij/sqrt( r*r - 0.01 );    // assymptotic limit for ( r -> +inf)
     //printf( "qij %g | s (%g,%g) r %g E %g  \n", qij, si, sj, r, e );
