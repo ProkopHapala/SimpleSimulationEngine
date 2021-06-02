@@ -528,7 +528,7 @@ constexpr static const Quat4d default_AtomParams[] = {
 
             }
         }
-        if( bMakeRho && ( fabs(Q-1)>1e-8 ) ){  printf( "ERROR in CLCFGO::projectOrb(): psi_%i is not normalized |psi|^2 = %g \n", io, Q ); exit(0); }
+        if( bNormalize && ( fabs(Q-1)>1e-8 ) ){  printf( "ERROR in CLCFGO::projectOrb(): psi_%i is not normalized |psi|^2 = %g \n", io, Q ); exit(0); }
         //printf( "projectOrb[%i] Q %g Ek %g \n", io, Q, Ek );
         onq [io] = ii;
         opos[io] = qcog;
@@ -653,7 +653,7 @@ constexpr static const Quat4d default_AtomParams[] = {
         if(bNormalize){
             double renorm  = sqrt(1./Q);
             double renorm2 = renorm*renorm;
-            if(perOrb>1)printf( "io[%i] Q %g  s(%g,%g) r %g \n", io, Q, ecoef[0], ecoef[1], (epos[1]-epos[0]).norm() );
+            //if(perOrb>1)printf( "io[%i] Q %g  s(%g,%g) r %g \n", io, Q, ecoef[0], ecoef[1], (epos[1]-epos[0]).norm() );
             if(bEvalKinetic){ // ToDo: we should  renormalize also coefs
 
                 Ek *= renorm2;
@@ -778,10 +778,13 @@ constexpr static const Quat4d default_AtomParams[] = {
         Vec3d  Fpi  = rhofP[ij];
         double Fsi  = rhofS[ij];
         double dEdQ = rhofQ[ij];
-        double Q    = rhoQ[ij];
+        //double Q    = rhoQ[ij];
         //double Eqi = rhoEQ[ij];
+        double   ci = ecoef[i]; 
         efpos [i].add( Fpi );
-        efsize[i] += Fsi*Q * M_SQRT1_2;
+        efsize[i] += Fsi*ci*ci * M_SQRT1_2;
+        //efcoef[i] += dEdQ*sqrt(Q)*2;
+        efcoef[i] += dEdQ*ci*2;
         if(DEBUG_iter==DEBUG_log_iter){
             //printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
             //printf( "fromRho[%i]ii[%i] E %g qij %g Fs %g \n", i, ij, dEdQ*Q, Q, Fsi*Q );
@@ -842,7 +845,7 @@ constexpr static const Quat4d default_AtomParams[] = {
         Vec3d  fxi = Fp*dxxi;
         Vec3d  fxj = Fp*dxxj;
 
-        Vec3d  dSdp = Rij*(dSr*cij);
+        Vec3d dSdp = Rij*(dSr*cij);
         DEBUG_dQdp = dSdp;
         Vec3d Fq   = dSdp*dEdQ;
         Vec3d Fxi  = fxi + Fq;
@@ -852,6 +855,10 @@ constexpr static const Quat4d default_AtomParams[] = {
         efpos [j].add( Fxj );
         efsize[i] += fsi;
         efsize[j] += fsj;
+
+        efcoef[i] += dEdQ*cj;
+        efcoef[j] += dEdQ*ci;
+        // ToDo : What about efcoef[i], efcoef[j] ?
 
         if(DEBUG_iter==DEBUG_log_iter){
             //printf( "fromRho[%i,%i] eqj %g E %g Fs %g dSsi %g dCsi %g cij %g \n", i,j, dEdQ, dEdQ*rhoQ[ij], Fs, dssi, dSsi, cij );

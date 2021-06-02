@@ -157,15 +157,15 @@ def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0 ):
             fs[i] = fbuf[inds[0],inds[1]]
     return processForces( xs,Es,fs )
 
-def checkForces_Kinetic_esize( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=10.0 )
-    effmc.setSwitches_( normalize=-1, kinetic=1 )
-    return checkForces( xname="esize",fname="efsize",inds=(0,0), x0=0.25 )
-
 def checkForces_Kinetic_epos( ):
     init_effmc( norb_=1, perOrb_=2, sz=0.75, dist=-0.1 )
     effmc.setSwitches_( normalize=-1, kinetic=1 )
     return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+
+def checkForces_Kinetic_esize( ):
+    init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=10.0 )
+    effmc.setSwitches_( normalize=-1, kinetic=1 )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0), x0=0.25 )
 
 def checkForces_Kinetic_ecoef( ):
     init_effmc( norb_=1, perOrb_=2, sz=0.75, dist=-0.1 )
@@ -173,9 +173,19 @@ def checkForces_Kinetic_ecoef( ):
     return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
 def checkForces_Hartree_epos( ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=0.0 )
-    effmc.setSwitches_( normalize=1, coulomb=1 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.0 )
+    effmc.setSwitches_( normalize=-1, coulomb=1 )
     return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+
+def checkForces_Hartree_esize( ):
+    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.0 )
+    effmc.setSwitches_( normalize=-1, coulomb=1 )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0) )
+
+def checkForces_Hartree_ecoef( ):
+    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.0 )
+    effmc.setSwitches_( normalize=-1, coulomb=1 )
+    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
 # ========= Check Normalization derivatives
 
@@ -260,11 +270,12 @@ if __name__ == "__main__":
     plt=plt_
     #bPrintInfo = True
     tests_funcs = []
-    tests_funcs += [ test_ProjectWf, test_Poisson ]
-    tests_funcs += [ check_dS_epos,           check_dS_esize,             check_dS_ecoef               ]
-    tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
-    tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
-    tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
+    #tests_funcs += [ test_ProjectWf, test_Poisson ]
+    #tests_funcs += [ check_dS_epos,            check_dS_esize,              check_dS_ecoef             ]
+    #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
+    tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
+    #tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
+    #tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     tests_results = []
 
     for test_func in tests_funcs:
