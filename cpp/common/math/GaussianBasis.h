@@ -232,7 +232,7 @@ inline double Coulomb( const Vec3d& Rij, double r2, double si, double sj, double
     double e  = qij*Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
     //double e    = const_El_eVA*qij/sqrt( r*r - 0.01 );    // assymptotic limit for ( r -> +inf)
     //printf( "qij %g | s (%g,%g) r %g E %g  \n", qij, si, sj, r, e );
-
+    if(fabs(qij)>1e-16)printf( "Gauss::Coulomb() r %g E %g fr %g fs %g \n", r,  e, fr, fs  );
     // --- Derivatives (Forces)
     fp  = Rij*( fr * qij );   // use:   rhofP[i].add(fp);    rhofP[j].sub(fp);
     fs *=            qij;     // use:   rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;

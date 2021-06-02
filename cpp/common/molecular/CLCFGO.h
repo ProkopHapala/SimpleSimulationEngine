@@ -471,13 +471,14 @@ constexpr static const Quat4d default_AtomParams[] = {
                 Qs[ii]  = qii;
                 Ps[ii]  = pi;
                 Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii  
-                //Qs[ii]  = 0; // !!!! DEBUG !!!! - remove diagonal part of density ( ignore fromRhoDiag )
+                Qs[ii]  = 0; // !!!! DEBUG !!!! - remove diagonal part of density ( ignore fromRhoDiag )
+                if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i] q %g s %g p(%g,%g,%g) \n", io, ii,i, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z ); 
                 qcog.add_mul( pi, qii );
             }
             
             if( bEvalKinetic ){
                 double fsi;
-                double Tii  = Gauss::kinetic_r0_derivs( si, fsi );
+                double Tii = Gauss::kinetic_r0_derivs( si, fsi );
                 Ek       += qii*   Tii;
                 efsize[i]+= qii*-2*fsi;
                 efcoef[i]+= Tii*-2*ci ; // ToDo : This needs to be checked
@@ -516,7 +517,8 @@ constexpr static const Quat4d default_AtomParams[] = {
                     Qs[ii] = qij;
                     Ps[ii] = pos_ij;
                     Ss[ii] = size_ij;
-                    //Qs[ii] = 0; // !!!!! DEBUG !!!!! - only diagonal   
+                    //Qs[ii] = 0; // !!!!! DEBUG !!!!! - only diagonal  
+                    if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i,%i] q %g s %g p(%g,%g,%g) \n", io, ii,i,j, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z ); 
                     qcog.add_mul( pos_ij, qij );
                 }
                 
@@ -834,29 +836,45 @@ constexpr static const Quat4d default_AtomParams[] = {
 
         Vec3d  Fp   = rhofP[ij];  //   fij = Rij*(-fr*qij);   ... from CoulombElement
         double Fs   = rhofS[ij];
-        double dEdQ = rhofQ[ij];  // TODO: Eqi is probably redudent ( Fqi is the same )  !!!
+        double dEdQ = rhofQ[ij];  
 
         double cij = 2*ci*cj;
 
-        // TODO : we should make sure there is a recoil ( forces point to opposite direction )
+
         double fsi = Fp.dot( dxsi ) + Fs*dssi + dEdQ*dSsi*cij;
         double fsj = Fp.dot( dxsj ) + Fs*dssj + dEdQ*dSsj*cij;
-        Vec3d  fxi = Fp*dxxi;
-        Vec3d  fxj = Fp*dxxj;
+
+        // Derivation:
+        // dE/dpi = (dE/dQij)*(dQij/dpi) + (dE/dpij)*(dpij/dpi)  + (dE/dsij)*(dsij/dpi) // dsij/dpi = 0 
+        // dE/dpi = (dE/dQij)*(dQij/dpi) + (dE/dpij)*(dpij/dpi)
+        // TODO : we should make sure there is a recoil ( forces point to opposite direction )
 
         Vec3d dSdp = Rij*(dSr*cij);
-        DEBUG_dQdp = dSdp;
+        //DEBUG_dQdp = dSdp;
         Vec3d Fq   = dSdp*dEdQ;
-        Vec3d Fxi  = fxi + Fq;
-        Vec3d Fxj  = fxj + Fq;
+        Vec3d Fxi  = Fp*dxxi + Fq;
+        Vec3d Fxj  = Fp*dxxj + Fq;
+        //Vec3d Fxi  = Fp*dxxi*0.0058 + Fq;
+        //Vec3d Fxj  = Fp*dxxj*0.0058 + Fq;
+
+        //Vec3d Fxi  = Fp*dxxi*Sij + Fq;
+        //Vec3d Fxj  = Fp*dxxj*Sij + Fq;
+
+        //Vec3d Fxi  = Fp;
+        //Vec3d Fxj  = Fp;
 
         efpos [i].add( Fxi );
         efpos [j].add( Fxj );
         efsize[i] += fsi;
         efsize[j] += fsj;
 
-        efcoef[i] += dEdQ*cj;
-        efcoef[j] += dEdQ*ci;
+        //efcoef[i] += dEdQ*cj*Sij;
+        //efcoef[j] += dEdQ*ci*Sij;
+        efcoef[i] += dEdQ*cj*Sij*2;
+        efcoef[j] += dEdQ*ci*Sij*2;
+
+        //efcoef[i] += dEdQ*cj;
+        //efcoef[j] += dEdQ*ci;
         // ToDo : What about efcoef[i], efcoef[j] ?
 
         if(DEBUG_iter==DEBUG_log_iter){
@@ -931,11 +949,14 @@ constexpr static const Quat4d default_AtomParams[] = {
                 Vec3d fp; double fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently 
                 //printf( "CoulombOrbPair[%i|%i,%i|%i] q(%g,%g) s(%g,%g) \n", io,i, jo,j, qi,qj, si,sj );
                 double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
+
+                //fp.mul(0.1);
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
                 rhofS[i] += fs*si;   rhofS[j] += fs*sj;
-                rhofQ[i] += E*qj*-2;  rhofQ[j] += E*qi*-2; 
+                rhofQ[i] += E*qj*-2; rhofQ[j] += E*qi*-2; 
+                //rhofQ[i] += E;  rhofQ[j] += E;
                 Ecoul    += E*qij;
-                //printf( "CoulombOrbPair[%i,%i|%i,%i] E %g E,q(%g,%g) r %g s(%g,%g) \n",io,jo,i,j, Ecoul, E, qij, sqrt(r2), si, sj );
+                if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), E, si, sj );
                 if(DEBUG_iter=DEBUG_log_iter){
                     //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qij,r,  );
                 }
