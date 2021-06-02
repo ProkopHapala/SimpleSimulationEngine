@@ -472,7 +472,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 Ps[ii]  = pi;
                 Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii  
                 Qs[ii]  = 0; // !!!! DEBUG !!!! - remove diagonal part of density ( ignore fromRhoDiag )
-                if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i] q %g s %g p(%g,%g,%g) \n", io, ii,i, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z ); 
+                //if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i] q %g s %g p(%g,%g,%g) \n", io, ii,i, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z ); 
                 qcog.add_mul( pi, qii );
             }
             
@@ -518,7 +518,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                     Ps[ii] = pos_ij;
                     Ss[ii] = size_ij;
                     //Qs[ii] = 0; // !!!!! DEBUG !!!!! - only diagonal  
-                    if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i,%i] q %g s %g p(%g,%g,%g) \n", io, ii,i,j, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z ); 
+                    //if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i,%i] q %g s %g p(%g,%g,%g) \n", io, ii,i,j, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z ); 
                     qcog.add_mul( pos_ij, qij );
                 }
                 
@@ -956,7 +956,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 rhofQ[i] += E*qj*-2; rhofQ[j] += E*qi*-2; 
                 //rhofQ[i] += E;  rhofQ[j] += E;
                 Ecoul    += E*qij;
-                if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), E, si, sj );
+                //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), E, si, sj );
                 if(DEBUG_iter=DEBUG_log_iter){
                     //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qij,r,  );
                 }

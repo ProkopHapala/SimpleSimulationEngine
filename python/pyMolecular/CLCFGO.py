@@ -50,6 +50,12 @@ lib.eval.restype  = c_double
 def eval( ):
     return lib.eval( )
 
+# double evalFunc( double r, double s ){
+lib.evalFunc.argtypes = [ c_double, c_double ]
+lib.evalFunc.restype  = c_double
+def evalFunc( r, s ):
+    return lib.evalFunc( r, s )
+
 #double  coulombOrbPair( int io, int jo ){ return solver.CoulombOrbPair( io, jo ); }
 lib.coulombOrbPair.argtypes = [ c_int, c_int ]
 lib.coulombOrbPair.restype  = c_double

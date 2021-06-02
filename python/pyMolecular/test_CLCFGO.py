@@ -274,6 +274,20 @@ if __name__ == "__main__":
     nx=40
     plt=plt_
     bPrintInfo = True
+
+
+    xs = np.arange(0.0,1.0,0.25)
+    ys = np.zeros(len(xs))
+    for i,x in enumerate(xs):
+        x = xs[i]
+        s = 0.2
+        E = effmc.evalFunc(xs[i],s)
+        print(  x, s, "-> ", E )
+
+
+    #exit(0)
+
+
     tests_funcs = []
     #tests_funcs += [ test_ProjectWf, test_Poisson ]
     #tests_funcs += [ check_dS_epos,            check_dS_esize,              check_dS_ecoef             ]
