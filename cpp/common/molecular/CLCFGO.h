@@ -466,13 +466,15 @@ constexpr static const Quat4d default_AtomParams[] = {
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
             Q      += qii;
-
+            
             if( bMakeRho ){
                 Qs[ii]  = qii;
                 Ps[ii]  = pi;
-                Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii    
+                Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii  
+                //Qs[ii]  = 0; // !!!! DEBUG !!!! - remove diagonal part of density ( ignore fromRhoDiag )
                 qcog.add_mul( pi, qii );
             }
+            
             if( bEvalKinetic ){
                 double fsi;
                 double Tii  = Gauss::kinetic_r0_derivs( si, fsi );
@@ -508,13 +510,16 @@ constexpr static const Quat4d default_AtomParams[] = {
                     enfsize[i]-= dS_dsi*cij; enfsize[j]-= dS_dsj*cij;
                     enfcoef[i]-= S*cj*2    ; enfcoef[j]-= S*ci*2   ;
                 }
+                
                 if( bMakeRho ){                    
                     _Gauss_product(pi,pj,si,sj)
                     Qs[ii] = qij;
                     Ps[ii] = pos_ij;
-                    Ss[ii] = size_ij;     
+                    Ss[ii] = size_ij;
+                    //Qs[ii] = 0; // !!!!! DEBUG !!!!! - only diagonal   
                     qcog.add_mul( pos_ij, qij );
                 }
+                
                 if( bEvalKinetic ){                    
                     _Gauss_tau    ( r2, si, sj );
                     _Gauss_kinetic( r2, si, sj );
@@ -772,18 +777,13 @@ constexpr static const Quat4d default_AtomParams[] = {
     //Vec3d fromRho( int i, int j, int ij ){
     void fromRhoDiag( int i, int ij ){
         /// This function function cares about diagonal density terms rho_ii = wi * wi
-        //Vec3d  pi  = epos [i];
-        //double ci  = ecoef[i];
-        //double si  = esize[i];
         Vec3d  Fpi  = rhofP[ij];
         double Fsi  = rhofS[ij];
         double dEdQ = rhofQ[ij];
         //double Q    = rhoQ[ij];
-        //double Eqi = rhoEQ[ij];
         double   ci = ecoef[i]; 
         efpos [i].add( Fpi );
         efsize[i] += Fsi*ci*ci * M_SQRT1_2;
-        //efcoef[i] += dEdQ*sqrt(Q)*2;
         efcoef[i] += dEdQ*ci*2;
         if(DEBUG_iter==DEBUG_log_iter){
             //printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
@@ -817,7 +817,6 @@ constexpr static const Quat4d default_AtomParams[] = {
         double dxxi,dxxj;
         double dSr;
         double dSsi,dSsj;
-
 
         // NOTE: we must compute it twice
         // 1) in toRho() to obtain charges and positions
@@ -1326,30 +1325,12 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //if(r2>Rcut2) continue;
                 double cj  = ecoef[j];
                 double sj  = esize[j];
-
-                //si*=M_SQRT2; sj*=M_SQRT2; // This helps - but should be solved differently - inside overlap_s_deriv
-
-                //double cij = ci*cj*Amp;
                 double cij = ci*cj;
-                //pairs[ij].get(si,pi, sj,pj);
-                //const Gauss::PairDeriv& dB = dBs[ij];
-                //const Quat4d&           TD = TDs[ij];
-                /*
-                double  dTr, dTsi, dTsj, dSr, dSsi, dSsj,   dS;
-                { //                Overlap Integral
-                    dS = Gauss::overlap_s_deriv(  si*M_SQRT2,pi,  sj*M_SQRT2,pj,  dSr, dSsi, dSsj );  // This helps - but should be solved differently - inside overlap_s_deriv
-                    //dS = Gauss::overlap_s_deriv(  si,pi,  sj,pj,  dSr, dSsi, dSsj );
-                    dS*=cij; S+=dS;  // integrate S12 = <psi_1|psi_2>
-                }
-                */
                 _Gauss_sij_aux(si,sj)
                 _Gauss_overlap(r2,si,sj)
                 Ssum += S;
                 // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
                 if(iPauliModel>0){ // Kinetic Energy integral
-                    //double s2  = si*si + sj*sj;
-                    //double tau = ( r2 - 3*s2)/(s2*s2);    // tau <=> Tij/Sij
-                    //double dT  = dS * tau;
                     _Gauss_tau( r2,si,sj )
                     Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
                 }

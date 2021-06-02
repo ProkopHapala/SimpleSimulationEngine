@@ -38,7 +38,9 @@ def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0 ):
     rhoQ [:,:  ]=1
     rhoP [:,:,:]=0
     if norb_>1:
-        epos [1,0,0]=dist
+        epos [1,0,0]= dist
+    if perOrb_>1:    
+        epos [:,1,0]= epos [:,0,0] + dist
     if(bPrintInfo): effmc.printAtomsAndElectrons()
 
 def test_ProjectWf( Etoll=1e-5 ):
@@ -173,17 +175,17 @@ def checkForces_Kinetic_ecoef( ):
     return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
 def checkForces_Hartree_epos( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.0 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
     effmc.setSwitches_( normalize=-1, coulomb=1 )
     return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
 
 def checkForces_Hartree_esize( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.0 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
     effmc.setSwitches_( normalize=-1, coulomb=1 )
     return checkForces( xname="esize",fname="efsize",inds=(0,0) )
 
 def checkForces_Hartree_ecoef( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.0 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
     effmc.setSwitches_( normalize=-1, coulomb=1 )
     return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
@@ -270,7 +272,7 @@ if __name__ == "__main__":
     plt=plt_
     #bPrintInfo = True
     tests_funcs = []
-    #tests_funcs += [ test_ProjectWf, test_Poisson ]
+    tests_funcs += [ test_ProjectWf, test_Poisson ]
     #tests_funcs += [ check_dS_epos,            check_dS_esize,              check_dS_ecoef             ]
     #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
     tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
