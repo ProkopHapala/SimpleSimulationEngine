@@ -878,7 +878,7 @@ constexpr static const Quat4d default_AtomParams[] = {
         // ToDo : What about efcoef[i], efcoef[j] ?
 
         if(DEBUG_iter==DEBUG_log_iter){
-            if(j==0)printf( "fromRho x %g  F %g =(Fpi %g * dXxi %g)+(dSdp %g * dEdQ %g)\n", pj.x, Fxj.x,  Fp.x, dxxj, dSdp.x, dEdQ );
+            //if(j==0)printf( "fromRho x %g  F %g =(Fpi %g * dXxi %g)+(dSdp %g * dEdQ %g)\n", pj.x, Fxj.x,  Fp.x, dxxj, dSdp.x, dEdQ );
             //printf( "fromRho x %g  dSdp %g =( dSr %g * cij %g )\n", pi.x, dSdp.x, dSr*Rij.x, cij );
         }
     }
@@ -949,20 +949,23 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //printf( "CoulombOrbPair[%i|%i,%i|%i] q(%g,%g) s(%g,%g) \n", io,i, jo,j, qi,qj, si,sj );
                 //double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
 
+                if( fabs(qij)<1e-16) continue;
                 double e = Gauss::Coulomb( sqrt(r2+1.0e-16), (si*si+sj*sj), fr, fs );
                 Vec3d fp = Rij*(fr*qij);
                 fs*=qij;
 
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
                 rhofS[i] += fs*si;   rhofS[j] += fs*sj;
-                rhofQ[i] += e*qj; rhofQ[j] += e*qi; 
+                rhofQ[i] += e*qj;    rhofQ[j] += e*qi; 
                 Ecoul    += e*qij;
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), E, si, sj );
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g qij(%g,%g) E %g s(%g,%g) \n",io,jo,i,j, sqrt(r2), qi,qj,  E, si, sj );
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g qij(%g,%g) E %g fp %g \n",io,jo,i,j, sqrt(r2), qi,qj,  E, fp.x );
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g | dEdq %g = ( e %g * qj %g ) E %g \n",io,jo,i,j, sqrt(r2), e*qj*-2, e, qj, e*qij );
+                //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g E %g fp %g fr %g qij %g Eij.x %g \n", io,jo,i,j,sqrt(r2),e*qij,fp.x, fr, qij, Rij.x );
                 if(DEBUG_iter=DEBUG_log_iter){
                     //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qij,r,  );
+                    
                 }
             }
         }

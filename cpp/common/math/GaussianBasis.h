@@ -174,6 +174,7 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
     //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
     constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
+    //const double const_F2 = M_2_SQRTPI;
     // NOTE : there cannot be any non-constant prefactors because at large distance ( r -> +inf) it must converge to point-charge coulomb (1/r)*qi*qj 
     double ir   = 1./r; //(r+1.e-8);
     double is   = 1./s; //(s+1.e-8);
@@ -187,9 +188,31 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     double f1   = -e1*ir;
     double f2   = g*is*0.5;
     double e1f2 = e1*f2;
-    fr          = (f1*e2 + e1f2)*ir;
+    fr          = (f1*e2 + e1f2)*ir      ;
+    printf( "r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) \n", r, fr, f1, e2, e1, f2 );
     fs          =          e1f2 *r_s * is;
     return e1 * e2;
+
+    /*
+    const_F2 = 2*np.sqrt(2/np.pi)
+    const_F2 = 1.59576912161
+    ir   = 1./r                         #(r+1.e-8);
+    is_  = 1./s                         #(s+1.e-8);
+    r_s  = r*is_
+    r_2s = M_SQRT1_2 * r_s; # This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    #r_2s = r_s;
+    #r_2s = M_SQRT2   * r_s; # This is for wavefunction blobs (assuming si,sj comes from wavefunction)
+    e1   = ir * const_El_eVA
+    e2   = spc.erf(  r_2s      )
+    g    = np.exp( -r_2s*r_2s ) * const_F2
+    f1   = -e1*ir
+    #f2   = g*is_        # This is for wavefunction blobs (assuming si,sj comes from wavefunction)
+    f2   = g*is_*0.5     # This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    e1f2 = e1*f2
+    fr = (f1*e2 + e1f2)*ir
+    fs =          e1f2 *r_s * is_
+    E  = e1 * e2
+    */
 }
 
 
