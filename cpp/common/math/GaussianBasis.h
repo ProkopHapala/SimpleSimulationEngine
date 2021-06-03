@@ -52,21 +52,6 @@ const double const_Ke_eVA = const_K_eVA*1.5;
     dXxj   = si2*is2; \
 } \
 
-/*
-#define _Gauss_productCenter(S,p,dSsi,dSsj,dXsi,dXsj,dXxi,dXxj){ \
-    double sqrtis2 = sqrt(is2); \
-    S      =  si*sj*sqrtis2; \
-    p      =  pj*(si2*is2) + pi*(sj2*is2); \
-    double inv3_2 = sqrtis2*is2; \
-    dSsi   = sj*sj2*inv3_2; \
-    dSsj   = si*si2*inv3_2; \
-    dXsi   = dp*(-2*si*sj2*is4); \
-    dXsj   = dp*( 2*sj*si2*is4); \
-    dXxi   = sj2*is2; \
-    dXxj   = si2*is2; \
-}
-*/
-
 #define _Gauss_overlap( r2, si, sj ) \
     double sisj    = si*sj; \
     double inv_sisj= 1/sisj; \
@@ -80,21 +65,6 @@ const double const_Ke_eVA = const_K_eVA*1.5;
     double dS_dsj  = S_s4 * ( sj2*r2 + 3*si2*s2 ) * inv_sj; \
     dS_dsi        -= 1.5*S * inv_si;    \
     dS_dsj        -= 1.5*S * inv_sj;    \
-
-/*
-#define _BAK_Gauss_productOverlap(C,dCsi,dCsj,dCr){ \
-    double a2   = 2.*(si*sj)*is2; \
-    double a    = sqrt(a2); \
-    double e1   = a2*a; \
-    double e2   = exp( -r2*is2 ); \
-    double f1   = 3.*a  * (si2-sj2)*is4; \
-    double f2   = 2.*e2 * r2*is4; \
-    dCsi        = e1*f2*si - e2*f1*sj; \
-    dCsj        = e1*f2*sj + e2*f1*si; \
-    dCr         = e1*e2*(-2.*is2);     \
-    C           = e1*e2; \
-}
-*/
 
 #define _Gauss_tau( r2, si, sj ) \
     double tau         = -(r2 - 3*s2)*is4; \
@@ -222,6 +192,7 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     return e1 * e2;
 }
 
+
 inline double Coulomb( const Vec3d& Rij, double r2, double si, double sj, double qij, Vec3d& fp, double& fs ){
     constexpr const double R2SAFE = 1.0e-8;
     double r    = sqrt(r2 + R2SAFE);
@@ -232,11 +203,10 @@ inline double Coulomb( const Vec3d& Rij, double r2, double si, double sj, double
     double e  = qij*Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
     //double e    = const_El_eVA*qij/sqrt( r*r - 0.01 );    // assymptotic limit for ( r -> +inf)
     //printf( "qij %g | s (%g,%g) r %g E %g  \n", qij, si, sj, r, e );
-    if(fabs(qij)>1e-16)printf( "Gauss::Coulomb() r %g s %g(%g,%g) q %g -> E %g fr %g fs %g \n", r, s,si,sj,  e, fr, fs  );
+    //if(fabs(qij)>1e-16)printf( "Gauss::Coulomb() r %g s %g(%g,%g) q %g -> E %g fr %g fs %g \n", r, s,si,sj,  e, fr, fs  );
     // --- Derivatives (Forces)
     fp  = Rij*( fr * qij );   // use:   rhofP[i].add(fp);    rhofP[j].sub(fp);
     fs *=            qij;     // use:   rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
-    //return e*qij;
     return e;
 }
 

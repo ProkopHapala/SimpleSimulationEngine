@@ -878,9 +878,8 @@ constexpr static const Quat4d default_AtomParams[] = {
         // ToDo : What about efcoef[i], efcoef[j] ?
 
         if(DEBUG_iter==DEBUG_log_iter){
-            //printf( "fromRho[%i,%i] eqj %g E %g Fs %g dSsi %g dCsi %g cij %g \n", i,j, dEdQ, dEdQ*rhoQ[ij], Fs, dssi, dSsi, cij );
-            //printf( "fromRho[%i,%i] E %g qij %g Fp %g fp*dxxi %g Fq %g \n", i,j, dEdQ*rhoQ[ij], rhoQ[ij], Fxi.x, (Fp*dxxi).x, Fq.x  );
-            //printf( "fromRho[%i,%i] dS %g  dSr %g cij %g dEdQ %g Fq.x %g F %g F[i] %g F[j] %g \n", i,j, dSdp.x, dSr*Rij.x, ci*cj, dEdQ, Fq.x, Fxi.x, efpos[i].x, efpos[j].x );
+            if(j==0)printf( "fromRho x %g  F %g =(Fpi %g * dXxi %g)+(dSdp %g * dEdQ %g)\n", pj.x, Fxj.x,  Fp.x, dxxj, dSdp.x, dEdQ );
+            //printf( "fromRho x %g  dSdp %g =( dSr %g * cij %g )\n", pi.x, dSdp.x, dSr*Rij.x, cij );
         }
     }
 
@@ -946,17 +945,22 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //if(r2>Rcut2) continue;    // ToDo : do this check
                 double qj = rhoQ[j];
                 double sj = rhoS[j];
-                Vec3d fp; double fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently 
+                double fr,fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently 
                 //printf( "CoulombOrbPair[%i|%i,%i|%i] q(%g,%g) s(%g,%g) \n", io,i, jo,j, qi,qj, si,sj );
-                double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
+                //double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
 
-                //fp.mul(0.1);
+                double e = Gauss::Coulomb( sqrt(r2+1.0e-16), (si*si+sj*sj), fr, fs );
+                Vec3d fp = Rij*(fr*qij);
+                fs*=qij;
+
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
                 rhofS[i] += fs*si;   rhofS[j] += fs*sj;
-                rhofQ[i] += E*qj*-2; rhofQ[j] += E*qi*-2; 
-                //rhofQ[i] += E;  rhofQ[j] += E;
-                Ecoul    += E*qij;
+                rhofQ[i] += e*qj; rhofQ[j] += e*qi; 
+                Ecoul    += e*qij;
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), E, si, sj );
+                //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g qij(%g,%g) E %g s(%g,%g) \n",io,jo,i,j, sqrt(r2), qi,qj,  E, si, sj );
+                //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g qij(%g,%g) E %g fp %g \n",io,jo,i,j, sqrt(r2), qi,qj,  E, fp.x );
+                //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g | dEdq %g = ( e %g * qj %g ) E %g \n",io,jo,i,j, sqrt(r2), e*qj*-2, e, qj, e*qij );
                 if(DEBUG_iter=DEBUG_log_iter){
                     //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qij,r,  );
                 }
@@ -998,6 +1002,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //printf( "evalElectrostatICoulomb[%i,%i]  %g <? %g \n", io, jo, r2,RcutOrb2 );
 
                 double dEee = CoulombOrbPair( io, jo ); Eee+=dEee;
+                //printf("dEee[%i,%i] %g \n", io,jo, Eee );
                 //printf( "evalElectrostatICoulomb[%i,%i] Eee %g r2(%g)<?R2cutOrb2(%g) \n", io, jo, dEee, r2, RcutOrb2 );
 
                 /*
@@ -1018,6 +1023,7 @@ constexpr static const Quat4d default_AtomParams[] = {
                 */
             }
         }
+        //printf("Eee %g \n", Eee );
         return Eee;
     }
 

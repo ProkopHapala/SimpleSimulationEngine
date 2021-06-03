@@ -160,6 +160,7 @@ def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0 ):
             fs[i] = fbuf[inds[0],inds[1],inds[2]]
         else:
             fs[i] = fbuf[inds[0],inds[1]]
+    #print "Es ", Es
     return processForces( xs,Es,fs )
 
 def checkForces_Kinetic_epos( ):
@@ -180,7 +181,7 @@ def checkForces_Kinetic_ecoef( ):
 def checkForces_Hartree_epos( ):
     init_effmc( norb_=2, perOrb_=2, sz=0.2, dist=1.0 )
     effmc.setSwitches_( normalize=-1, coulomb=1 )
-    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0), x0=0.75 )
 
 def checkForces_Hartree_esize( ):
     init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
@@ -271,11 +272,13 @@ if __name__ == "__main__":
     global plt,label
     global dx,nx
     dx=0.05
-    nx=40
+    #nx=40
+    nx=10
+    #nx=2
     plt=plt_
     bPrintInfo = True
 
-
+    '''
     xs = np.arange(0.0,1.0,0.25)
     ys = np.zeros(len(xs))
     for i,x in enumerate(xs):
@@ -283,9 +286,8 @@ if __name__ == "__main__":
         s = 0.2
         E = effmc.evalFunc(xs[i],s)
         print(  x, s, "-> ", E )
-
-
     #exit(0)
+    '''
 
 
     tests_funcs = []

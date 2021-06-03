@@ -52,20 +52,41 @@ const_Ke_eVA = const_K_eVA*1.5;
 
 
 def Coulomb( r, s ):
+    '''
+    double ir   = 1./r; //(r+1.e-8);
+    double is   = 1./s; //(s+1.e-8);
+    double r_s  = r*is;
+    double r_2s = M_SQRT1_2 * r_s; // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    //double r_2s = r_s;
+    //double r_2s = M_SQRT2   * r_s; // This is for wavefunction blobs (assuming si,sj comes from wavefunction)
+    double e1   = ir * const_El_eVA;
+    double e2   = erf(  r_2s      );            // ToDo : this should be possible to compute together !!!
+    double g    = exp( -r_2s*r_2s ) * const_F2;
+    double f1   = -e1*ir;
+    double f2   = g*is*0.5;
+    double e1f2 = e1*f2;
+    fr          = (f1*e2 + e1f2)*ir;
+    fs          =          e1f2 *r_s * is;
+    return e1 * e2;
+    '''
     # ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
     #constexpr const double const_F2 = -2.*sqrt(2./np.pi);
     #const_F2 = M_2_SQRTPI * M_SQRT2;
-    M_SQRT2 = 1.41421356237 
+    M_SQRT2 = 1.41421356237
+    M_SQRT1_2 = 1/M_SQRT2 
     const_F2 = 2*np.sqrt(2/np.pi)
     ir   = 1./r                         #(r+1.e-8);
     is_  = 1./s                         #(s+1.e-8);
     r_s  = r*is_
-    r_2s = M_SQRT2 * r_s
+    r_2s = M_SQRT1_2 * r_s; # This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    #r_2s = r_s;
+    #r_2s = M_SQRT2   * r_s; # This is for wavefunction blobs (assuming si,sj comes from wavefunction)
     e1   = ir * const_El_eVA
     e2   = spc.erf(  r_2s      )
     g    = np.exp( -r_2s*r_2s ) * const_F2
     f1   = -e1*ir
-    f2   = g*is_
+    #f2   = g*is_        # This is for wavefunction blobs (assuming si,sj comes from wavefunction)
+    f2   = g*is_*0.5     # This is for charge-density blobs (assuming si,sj comes from charge denisty)
     e1f2 = e1*f2
     fr = (f1*e2 + e1f2)*ir
     fs =          e1f2 *r_s * is_

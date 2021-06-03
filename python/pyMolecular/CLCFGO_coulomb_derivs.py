@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import scipy.special as spc
-import copy
 
 
 '''
@@ -51,31 +50,51 @@ const_El_eVA = const_El_SI/( const_e_SI*const_Angstroem_SI );
 const_K_eVA  = (const_El_eVA*const_El_eVA)/(2*const_Ry_eV);
 const_Ke_eVA = const_K_eVA*1.5;
 
+M_SQRT2 = 1.41421356237
+M_SQRT1_2 = 1/M_SQRT2 
 
 def Coulomb( r, s ):
+    '''
+    double ir   = 1./r; //(r+1.e-8);
+    double is   = 1./s; //(s+1.e-8);
+    double r_s  = r*is;
+    double r_2s = M_SQRT1_2 * r_s; // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    //double r_2s = r_s;
+    //double r_2s = M_SQRT2   * r_s; // This is for wavefunction blobs (assuming si,sj comes from wavefunction)
+    double e1   = ir * const_El_eVA;
+    double e2   = erf(  r_2s      );            // ToDo : this should be possible to compute together !!!
+    double g    = exp( -r_2s*r_2s ) * const_F2;
+    double f1   = -e1*ir;
+    double f2   = g*is*0.5;
+    double e1f2 = e1*f2;
+    fr          = (f1*e2 + e1f2)*ir;
+    fs          =          e1f2 *r_s * is;
+    return e1 * e2;
+    '''
     # ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
     #constexpr const double const_F2 = -2.*sqrt(2./np.pi);
     #const_F2 = M_2_SQRTPI * M_SQRT2;
-    M_SQRT2   = 1.41421356237 
-    M_SQRT1_2 = 0.70710678118
     const_F2 = 2*np.sqrt(2/np.pi)
-    r=r+1e-8
     ir   = 1./r                         #(r+1.e-8);
     is_  = 1./s                         #(s+1.e-8);
     r_s  = r*is_
-    r_2s = M_SQRT2 * r_s
+    r_2s = M_SQRT1_2 * r_s; # This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    #r_2s = r_s;
+    #r_2s = M_SQRT2   * r_s; # This is for wavefunction blobs (assuming si,sj comes from wavefunction)
     e1   = ir * const_El_eVA
     e2   = spc.erf(  r_2s      )
     g    = np.exp( -r_2s*r_2s ) * const_F2
     f1   = -e1*ir
-    f2   = g*is_
+    #f2   = g*is_        # This is for wavefunction blobs (assuming si,sj comes from wavefunction)
+    f2   = g*is_*0.5     # This is for charge-density blobs (assuming si,sj comes from charge denisty)
     e1f2 = e1*f2
     fr = (f1*e2 + e1f2)*ir
-    fs =       -  e1f2 *r_s * is_ * M_SQRT1_2
+    fs =          e1f2 *r_s * is_
     E  = e1 * e2
 
     #for i in range(len(r)):
     #    print "Gauss::Coulomb r %g s %g E %g fr %g " %(r[i],s, E[i], fr[i]  )
+
 
     return E,fr,fs
 
@@ -87,203 +106,105 @@ def product3D_s_deriv( si,pi, sj,pj ):
     dXxi, dXxj,
     dCsi, dCsj, dCr
     '''
+
+    '''
+    #define _Gauss_sij_aux( si, sj ) \
+    double si2  = si*si; \
+    double sj2  = sj*sj; \
+    double s2   = si2 + sj2; \
+    double is2  = 1/s2; \
+    double is4  = is2*is2; \
+    '''
     si2   = si*si
     sj2   = sj*sj
     s2    = si2 + sj2
     is2   = 1/s2
     is4   = is2*is2
-    sqrtis2 = np.sqrt(is2)
 
-    s      =  si*sj*sqrtis2               # size
-    p      =  pj*(si2*is2) + pi*(sj2*is2) # position
-    #X      =  ( si2*xj + sj2*xi )*inv;
-
-    inv3_2 = sqrtis2*is2
-    dSsi   = sj*sj2*inv3_2
-    dSsj   = si*si2*inv3_2
+    ''''
+    #define _Gauss_product(pi,pj,si,sj)    \
+    double sqrt_is2 = sqrt(is2);       \
+    double size_ij  = si*sj*sqrt_is2;            \
+    Vec3d  pos_ij   = pj*(si2*is2) + pi*(sj2*is2); \
+    '''
+    sqrt_is2 = np.sqrt(is2)
+    s        = si*sj*sqrt_is2               # size
+    p        = pj*(si2*is2) + pi*(sj2*is2) # position
 
     dp     = pi-pj
+    r2  = dp*dp  # r2 = dp.norm2()    in 1D
+
+    '''
+    #define _Gauss_product_derivs(dSsi,dSsj,dXsi,dXsj,dXxi,dXxj){ \
+    double inv3_2 = is2 * sqrt_is2; \
+    dSsi   = sj*sj2*inv3_2; \
+    dSsj   = si*si2*inv3_2; \
+    dXsi   = dp*(-2*si*sj2*is4); \
+    dXsj   = dp*( 2*sj*si2*is4); \
+    dXxi   = sj2*is2; \
+    dXxj   = si2*is2; \
+    '''
+    inv3_2 = is2*sqrt_is2
+    dSsi   = sj*sj2*inv3_2
+    dSsj   = si*si2*inv3_2
     dXsi   = dp*(-2*si*sj2*is4)
     dXsj   = dp*( 2*sj*si2*is4)
-
     dXxi   = sj2*is2
     dXxj   = si2*is2
 
-    #r2 = dp.norm2()
-    r2  = dp*dp
+    '''
+    #define _Gauss_overlap( r2, si, sj ) \
+    double sisj    = si*sj; \
+    double inv_sisj= 1/sisj; \
+    double g       = exp( -r2/(2*s2) );    \
+    double S       =  (2*M_SQRT2) * g *  sisj*sisj*is2 * sqrt( inv_sisj*is2 ) ;  \
+    double dS_dr   = -S * is2; \
+    double inv_si  = sj*inv_sisj; \
+    double inv_sj  = si*inv_sisj; \
+    double S_s4    = S * is4; \
+    double dS_dsi  = S_s4 * ( si2*r2 + 3*sj2*s2 ) * inv_si; \
+    double dS_dsj  = S_s4 * ( sj2*r2 + 3*si2*s2 ) * inv_sj; \
+    dS_dsi        -= 1.5*S * inv_si;    \
+    dS_dsj        -= 1.5*S * inv_sj;    \
+    '''
 
+    sisj    = si*sj
+    inv_sisj= 1/sisj
+    g       = np.exp( -r2/(2*s2) )
+    S       = (2*M_SQRT2) * g *  sisj*sisj*is2 * np.sqrt( inv_sisj*is2 )
+    dS_dr   = -S * is2
+    inv_si  = sj*inv_sisj
+    inv_sj  = si*inv_sisj
+    S_s4    = S * is4
+    dS_dsi  = S_s4 * ( si2*r2 + 3*sj2*s2 ) * inv_si
+    dS_dsj  = S_s4 * ( sj2*r2 + 3*si2*s2 ) * inv_sj
+    dS_dsi -= 1.5*S * inv_si
+    dS_dsj -= 1.5*S * inv_sj
+
+    '''
+    # ==== Overlaps OLD
     a2   = 2.*(si*sj)*is2
     a    = np.sqrt(a2)
     e1   = a2*a
     e2   = np.exp( -r2*is2 )
-
     f1   = 3.*a  * (si2-sj2)*is4
     f2   = 2.*e2 * r2*is4
-
     dCsi = e1*f2*si - e2*f1*sj
     dCsj = e1*f2*sj + e2*f1*si
     C    = e1*e2        # Overlap
     dCr  = C*(-2.*is2)  # derivative is correct, tested !
-    #   TODO : How is it possible that derivative is the same as value (just rescaled) ???? 
+    '''
 
-    #double logC =  wxi*xi + wxj*xj - wx*X;
-    #double C   = np.exp(-logC) * Ci * Cj
-
-    #try:
-    #    for i in range(len(r2)):
-    #        print "product3D_s_deriv r %g s %g S %g dS %g " %(np.sqrt(r2[i]),s, S[i], dCr[i]  )
-    #except: 
-    #    pass
-    return C,s,p, dCr*dp, (dSsi,dXsi,dXxi,dCsi), (dSsj,dXsj,dXxj,dCsj)
-
-def getCoulombEF( r, si, sj, qi, qj, dSi=None, dA=None, ci=None, out=None, i=0, j=0 ):
-
-    o = si*0 + r*0
-
-    s =  combSize(si,sj);
-
-    e, fx, fs = Coulomb( r, s ) 
-    qij = qi * qj
-    E   = e * qij
-
-    # rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
-    # double fsi = Fs*dssi - Fp.dot( dxsi );       # fromRho()
-
-    Fp = fx * r  * qij    # pure derivative of coulombic forcefield
-    Fs = fs * si * qij
-
-    #print "[%i,%i] q(%g,%g) E %g fs %g fr %g s %g r %g " %( i,j, (qi+o)[0],(qj+o)[0], (E+o)[0], (Fp+o)[0], (Fs+o)[0], (s+o)[0], (r+o)[0] )
-
-    #print "qi,qj ", qi[0],qj[0]
-    #if( dA is  None  ):
-    #    print "e Fs %g qij %g Fsq %g "  %( , (fs*si+o)[0], (qij+o)[0], (Fs+o)[0] );
-
-    #print "q(%g,%g)  E %g fs %g fr %g s %g r %g \n"  %( (qi+0*si)[0],(qj+0*si)[0], (e+0*si)[0], (fs+0*si)[0], (fx+0*si)[0], (s+0*si)[0], (r+0*si)[0] )
-
-    if( dA is not None  ):
-        (dSsi,dXsi,dXxi,dCsi) = dA
-        eqj = e*qj
-        Fpq = eqj*dSi *ci
-        #print "eqj %g E %g Fs %g dSsi %g dCsi %g cij %g "  %( (eqj+o)[0], (E+o)[0], (Fs+o)[0], (dSsi+o)[0], (dCsi+o)[0], (ci+o)[0] )
-        Fs  = Fp*dXsi + Fs*dSsi  + eqj*dCsi*ci 
-        Fp_ = Fp*dXxi            + Fpq  # total derivative due to charge change
-        #Fs = ( fs*si*dSsa +  fx*r*dXsa ) * qi*qj   +  e*( dCsa*ci*qj )
-        #print "e %g qij %g Fs %g " %( (e+o)[0], (qi*qj+o)[0], (Fs+o)[0]  )
-        #print "e %g E %g s %g q %g r %g fx %g F %g dS %g dSr %g cc %g dEdQ %g " %( e[0], E[0], s[0], (qi*qj)[0], r[0], fx[0], F[0], (2*dSi*ci)[0], dSi[0], ci[0], eqj[0]  )
-
-        print "fromRho[%i,%i] E %g qij %g Fp %g fp*dxxi %g Fq %g " %(i,j, (E+o)[0], (qi+o)[0], (Fp_+o)[0], (Fp*dXxi+o)[0], (Fpq+o)[0] )
-
-        Fp = Fp_
-        if out is not None:
-            out[0] += eqj
-            out[1] += Fpq
-            out[2] += Fp
-
-    #print "e %g E %g s %g(%g,%g) q %g(%g,%g) r %g fx %g F %g dSi %g " %( e[0], E[0], s[0],si[0],sj[0], (qi*qj)[0],qi[0],qj[0], r[0], fx[0], F[0], 2*dSi*ci )
-    #print "[%i,%i] E %g qij %g Fs %g " %( i,j, (E+o)[0], (qi*qj+o)[0], (Fs+o)[0]  )
-    #print "[%i,%i] E %g qij %g Fp %g " %(i,j,(E+o)[0], (qi*qj+o)[0], (Fp+o)[0])
-
-
-
-    return E,Fp, Fs
-    #outs[0] += E
-    #outs[1] += F 
-
-
-def combSize(si,sj):
-    return np.sqrt(si*si + sj*sj)
-
-def evalEFtot( ecoef, esize, eXpos, xa=0., sa=0. ):
-    o = xa*0 + sa*0
-    if isinstance(xa,float):
-        xa = eXpos[0][0] + o
-    if isinstance(sa,float):
-        sa = esize[0][0] + o
-
-    eXpos = copy.deepcopy(eXpos);  eXpos[0][0] = xa
-    esize = copy.deepcopy(esize);  esize[0][0] = sa
-
-    qs = [[0,0,0],[0,0,0]]
-    xs = [[0,0,0],[0,0,0]]
-    ss = [[0,0,0],[0,0,0]]
-    auxs = [None,None,None,None] 
-    isqrt2 = np.sqrt(0.5)
-    for io in range(2):
-        for ib in range(2):
-            xs[io][ib] = eXpos[io][ib]
-            qs[io][ib] = ecoef[io][ib]**2
-            ss[io][ib] = esize[io][ib]*isqrt2
-        S, s, x, dS, dA, dB = product3D_s_deriv( esize[io][0]+o, eXpos[io][0]+o, esize[io][1]+o, eXpos[io][1]+o )
-        cc = ecoef[io][0]*ecoef[io][1]*2
-        xs[io][2] = x
-        qs[io][2] = S*cc
-        ss[io][2] = s
-        auxs[io]  = ( dS, dA, cc )
-
-    #out = [0.,0.]
-    Etot  = 0
-    Fptot = 0
-    Fstot = 0
-    # -- from Diagonal charges of orb #1 
-    for i in range(2):
-        for j in range(3):
-            E,Fp,Fs = getCoulombEF( xs[0][i]-xs[1][j]+o,  ss[0][i],ss[1][j]+o, qs[0][i]+o, qs[1][j]+o, i=i,j=j )
-            Etot += E
-            #if (i==0)and(j==1):
-            if (i==0):
-                #Etot  += E
-                Fptot += Fp
-                Fstot += Fs
-    # -- from overlap (off-diagonal) charges of orb #1
-    i = 2
-    out = [0.,0.,0.]
-    for j in range(3):
-    #for j in range(2,3):
-        r = xs[0][i]-xs[1][j]
-        E,Fp,Fs = getCoulombEF( r+o,  ss[0][i]+o,ss[1][j]+o, qs[0][i]+o, qs[1][j]+o, dSi=auxs[0][0], dA=auxs[0][1], ci=auxs[0][2], out=out, i=i,j=j )
-        #print "[%i,%i] E %g r %g Fp %g " %(i,j,(E+o)[0],(r+o)[0], (Fp+o)[0])
-        #print "[%i,%i] E %g qij %g Fp %g " %(i,j,(E+o)[0],(qs[0][i]*qs[1][j]+o)[0], (Fp+o)[0])
-        Etot += E
-        Fptot += Fp
-        Fstot += Fs
-    print " sum: dEdQ %g Fq %g F %g " %((o+out[0])[0],(o+out[1])[0],(o+out[2])[0])
-    return Etot,Fptot,Fstot
-
-
-def evalEF_off( xa, ecoef, esize, eXpos ):
-    eXpos[0][0] = xa
-   
-    Sab, si, xab, dSab, dA, dB = product3D_s_deriv( esize[0][0], xa         , esize[0][1],eXpos[0][1] )
-    Scd, sj, xcd, dScd, dC, dD = product3D_s_deriv( esize[1][0], eXpos[1][0], esize[1][1],eXpos[1][1] )
     
-    #out = [0.,0.]
-    
-    ci = ecoef[0][0]*ecoef[0][1]*2
-    cj = ecoef[1][0]*ecoef[1][1]*2
-    qi = Sab*ci
-    qj = Scd*cj
+    return S,s,p, dS_dr*dp, (dSsi,dXsi,dXxi,dS_dsi), (dSsj,dXsj,dXxj,dS_dsj)
 
-    E,Fr,Fs = getCoulombEF( xab-xcd, si, sj, qi, qj,dSi=dSab, dA=dA, ci=ci )
 
-    return E,Fr
 
-def evalEF_S_off( sa, ecoef, esize, eXpos ):
-    #eXpos[0][0] = xa
-    #esize[0][0] = sa
 
-    Sab, si, xab, dSab, dA, dB = product3D_s_deriv( sa,          eXpos[0][0], esize[0][1],eXpos[0][1] )
-    Scd, sj, xcd, dScd, dC, dD = product3D_s_deriv( esize[1][0], eXpos[1][0], esize[1][1],eXpos[1][1] )
-    
-    #out = [0.,0.]
-    
-    ci = ecoef[0][0]*ecoef[0][1]*2
-    cj = ecoef[1][0]*ecoef[1][1]*2
-    qi = Sab*ci
-    qj = Scd*cj
 
-    E,Fr,Fs = getCoulombEF( xab-xcd, si, sj, qi, qj, dSi=dSab, dA=dA, ci=ci )
 
-    return E,Fs
+
+
 
 
 
@@ -311,22 +232,27 @@ if __name__ == "__main__":
     cc = 1.0
     cd = 1.0
 
-    sa = 1.0
-    sb = 1.0
-    sc = 1.0
-    sd = 1.0
+    #ks = np.sqrt(0.5)
+    sa = 0.2
+    sb = 0.2
+    sc = 0.2
+    sd = 0.2
 
-    dx =  0.1
-    xa =  np.arange( 0.01, 3.0, dx )
-    xb =  0.0
-    xc = -1.5
-    xd =  0.0
+    #n  = 40; x0 = 0.00001
+    n  = 10; x0 = 0.75
+    #n  = 1;  x0 = 1.0
+    
+    dx =  0.05
+    xa =  np.arange( x0, x0+dx*n, dx )
+    xb =  1.0
+    xc =  1.0
+    xd =  2.0
 
     xs_ = (xa[1:]+xa[:-1])*0.5
 
     # overlaps
-    Sab, si, xab, dQab, dA, dB = product3D_s_deriv( sa,xa, sb,xb )
-    Scd, sj, xcd, dQcd, dC, dD = product3D_s_deriv( sc,xc, sd,xd )
+    Sab, si, xab, dSab, dA, dB = product3D_s_deriv( sa,xa, sb,xb )
+    Scd, sj, xcd, dScd, dC, dD = product3D_s_deriv( sc,xc, sd,xd )
     # coulomb
     s2        = si*si + sj*sj
     s         = np.sqrt(s2)
@@ -334,33 +260,43 @@ if __name__ == "__main__":
     e, fx, fs = Coulomb( r, s )
     dXxi = dA[2] + xa*0 
 
-    Qab = Sab*ca*cb*2; # factor 2 because offdiagonal is there twice 
-
-    plt.plot( xa, r   , label='r'   )
-    #plt.plot( xa, xab , label='Xab' )
     #plt.plot( xa, Sab , label='Sab' )
-    plt.plot( xa, Qab , label='Qab' )
+    #plt.plot( xa, r   , label='r'   )
     #plt.plot( xa, dQab, label='dSab_ana' )
     #plt.plot( xs_, (Sab[1:]-Sab[:-1])/dx,':', label='dSab_num' )
 
-    qij  = 4*Scd*Sab
-    #qij  = Sab
-    dQij = 4*Scd*dQab
+    qi = 2*Sab
+    qj = 2*Scd
+
+    qij  = qi*qj
+    dQij = qj* 2*dSab
+
+    #Vec3d dSdp = Rij*(dSr*cij);
+    #Vec3d Fq   = dSdp*dEdQ;
+    dSdp = dSab*2;
+    dEdQ = e*qj;
 
     # Q: Why we dont need derivatives of charge ????
     #Fx = -fx*0.5*dA[1] # This works for zero initial distance between blobs
-    Fx  = fx*r*dXxi
+    #Fx  = fx*r*dXxi
     Fpi = fx*r*qij # see 
-    fxi = Fpi*dXxi
-    
-    print "Scd, 4*Scd ", Scd, 4*Scd
-    print "For some reason each charge is scaled by 2.0"
+     
+    #print "Scd, 4*Scd ", Scd, 4*Scd
+    #print "For some reason each charge is scaled by 2.0"
 
     E = e*qij
-    F = fxi + e*dQij   # total derivtive F = dE/dx = d(e*qi)/dx
+    #F = Fpi*dXxi + e*dQij   # total derivtive F = dE/dx = d(e*qi)/dx
+    F = Fpi*dXxi + dEdQ*dSdp
+
 
     # Note:   e,fx=de/dx   are NOT multiplied by charge Qij
     #         Total force Fx = dE/dx = d(e*q)/dx = q*(de/dx) + e*(dq/dx)
+
+    for i in range(len(r)):
+        print "fromRho x %g  F %g =(Fpi %g * dXxi %g)+(dSdp %g * dEdQ %g)"    %(   xa[i], F[i],  Fpi[i], dXxi[i], dSdp[i], dEdQ[i] ) ;
+        #print "fromRho x %g  dSdp %g =(dSab %g * cab %g)" %(  xa[i], dSdp[i], dSab[i], 1 ) ;
+        #print "fromRho x %g  dEdQ %g =(e %g * qj %g)" %(  xa[i], dEdQ[i], e[i], qj ) ;
+        pass
 
     # ==== Derivative of Coulomb term without considering changes of Charges 
     #plt.plot( xa, e ,  label='e' )
@@ -369,8 +305,8 @@ if __name__ == "__main__":
     
     # ==== Derivative of Coulomb term with considering the Charges
     plt.plot( xa, E,  label='E' )
-    #plt.plot( xa, F,  label='dEdx_ana' )
-    #plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='dEdx_num', lw=3 )
+    plt.plot( xa, F,  label='dEdx_ana' )
+    plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='dEdx_num', lw=3 )
     #plt.plot( xa, fxi, label='fxi' )
 
     
@@ -380,16 +316,5 @@ if __name__ == "__main__":
 
     plt.grid()
     plt.legend()
-
-    '''
-    for i in range(len(r)):
-        #print "Gauss::Coulomb r %g s %g E %g Fx %g fx %g " %(r[i], s, E[i], Fx[i], fx[i] )
-        #print "fromRho r %g s %g E %g Fx %g fx %g " %((xa-xb)[i], s, E[i], Fx[i], fx[i] )
-        #print "CoublombElement r %g s %g E %g fr %g qij %g  frq %g fij %g" %((xa-xb)[i], s, e[i], fx[i], qij[i], (fx*qij)[i], (fx*qij*r)[i] )
-        #print "fromRho r %g s %g | E %g e %g qij %g(%g) | Fx %g Fpi %g dQij %g " %((xa-xb)[i], si, E[i],e[i]*2*Scd,qij[i],Sab[i], Fx[i], Fpi[i],dQij[i] )
-        print "fromRho r %g  Eqi %g Cij %g | Fpi %g dXxi %g fxi %g Fxi %g "    %((xa-xb)[i],          e[i]*2*Scd,       Sab[i], Fpi[i], dXxi[i], fxi[i], F[i] );
-        pass
-    '''
-
     plt.show()
 
