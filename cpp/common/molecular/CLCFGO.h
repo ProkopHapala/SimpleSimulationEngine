@@ -730,11 +730,84 @@ constexpr static const Quat4d default_AtomParams[] = {
         return csum;
     }
 
+// ========================================================================================================
+// ==================== Pauli Repulsion Models
+// ========================================================================================================
+
+    double pauliOrbPair( int io, int jo ){
+        // This is Pauli potential derived from change of Kinetic Energy due to orbital orthogonalization;
+        // Detla_T = Tsym + Tanti - T11 - T12
+        // where T11 = <psi_1|T|psi_2>, Tsym=<psi_sym||psi_sym>, Tanti=<psi_anti||psi_anti>
+        // psi_sym = (psi_1+psi_2)/|psi_1+psi_1| = (psi_1+psi_2)/2(1+S12)
+        // psi_sym = (psi_1+psi_2)/|psi_1+psi_1| = (psi_1+psi_2)/2(1-S12)
+        // From this it can be derived
+        // Detla_T =  ( T11 + T22 - T12/S12 )/( S12^2/(1-S12^2) )
+        //printf( "pauliKineticChnageVB[%i,%i] ", io, jo );
+        double Tsum = 0;
+        double Ssum = 0;
+        int i0=io*perOrb;
+        int j0=jo*perOrb;
+        int ij=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            Vec3d  pi  = epos [i];
+            double ci  = ecoef[i];
+            double si  = esize[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                Vec3d pj  = epos[j];
+                Vec3d Rij = pj-pi;
+                double r2 = Rij.norm2();
+                //if(r2>Rcut2) continue;
+                double cj  = ecoef[j];
+                double sj  = esize[j];
+                double cij = ci*cj;
+                _Gauss_sij_aux(si,sj)
+                _Gauss_overlap(r2,si,sj)
+                Ssum += S;
+                // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
+                if(iPauliModel>0){ // Kinetic Energy integral
+                    _Gauss_tau( r2,si,sj )
+                    Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
+                }
+                ij++;
+            }
+        }
+        double E;
+        if(iPauliModel==2){
+            //printf( " T %g S %g T/2S %g ", T, S, 0.5*T/S );
+            double T11,T22;
+            T11 = oEs[io];
+            T22 = oEs[jo];
+            double S2 = Ssum*Ssum;
+            E = (T11 + T22 - 2*Tsum/Ssum)*(S2/(1-S2));
+            // ToDo : Here we will need derivatives of kinetic energy according to forces
+            //   This can be done if we calculate kinetic forces first and
+            E *= const_K_eVA;
+        }else if(iPauliModel==3){ // Juat for debugging
+            E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
+        }else if(iPauliModel==4){
+            E = Ssum; // Just Cross-Overlap S12 = <psi1|T|psi2>
+        }else{
+            E = Ssum*Ssum*KPauliOverlap;
+        }
+        //printf( "E %g \n", E );
+        return E;
+        //return E;
+    }
+
+    double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
+        //printf( "======== evalPauli() \n" );
+        EeePaul = 0;
+        for(int io=0; io<nOrb; io++){
+            for(int jo=0; jo<io; jo++){
+                if( ospin[io]==ospin[jo] ) EeePaul += pauliOrbPair(io,jo);
+            }
+        }
+        return EeePaul;
+    }
 
 // ===========================================================================================================================
-// ==================== Eval Coulombin interaction  -  Using Auxuliary density basis
+// ==================== Coulomb interaction  -  Using Auxuliary density basis
 // ===========================================================================================================================
-
 
     void toRho( int i, int j, int ij ){
         /// NOTE : this function is mostly for debugging of  projectOrb()
@@ -774,7 +847,6 @@ constexpr static const Quat4d default_AtomParams[] = {
         rhoP[ij] = pos_ij;
         rhoS[ij] = size_ij;
     }
-
 
     //Vec3d fromRho( int i, int j, int ij ){
     void fromRhoDiag( int i, int ij ){
@@ -908,7 +980,6 @@ constexpr static const Quat4d default_AtomParams[] = {
         return E;
     }
 
-
     double CoulombOrbPair( int io, int jo ){
         /// Calculate Elecrostatic Energy&Force for projected density of orbitas @io and @jo
         int i0 = getRhoOffset(io);
@@ -958,23 +1029,6 @@ constexpr static const Quat4d default_AtomParams[] = {
         return Ecoul;
     }
 
-
-/*
-
-### Coulomb Force Derivatives
-
-        evalElectrostatICoulomb();
-        for(int i=0; i<nOrb; i++) assembleOrbForces(i);
-
-   Problem is derivative of Q
-     qi = Sab(ra-rb) * Ca * Cb
-     qj = Scd(rc-rd) * Cc * Cd                   ... where Ca,Cb,Cc,Cd are expansion coeficients in given basis and S is overlap integral for given pair of basis functions
-   EQij(r) = qi(ra,rb) * qj(rc,rd) * Kij(ri,rj)  ... where qi,qj are charges in some overlap cloud and Kij is Coulomb Matrix kernel between the two clouds
-   Force calculated by derivatives as:
-     FQ_xa = dEQ/dxa =  (qi*qj) * (dKij/ri)/(dri/dxa) + ( Kij*qj ) * (dqi/dxa)
-
-*/
-
     double evalElectrostatICoulomb( ){
         /// Calculate detailed short-range electrostatICoulomb
         double r2safe = 0.1;
@@ -1015,6 +1069,21 @@ constexpr static const Quat4d default_AtomParams[] = {
         return Eee;
     }
 
+/*
+
+### Coulomb Force Derivatives
+
+        evalElectrostatICoulomb();
+        for(int i=0; i<nOrb; i++) assembleOrbForces(i);
+
+   Problem is derivative of Q
+     qi = Sab(ra-rb) * Ca * Cb
+     qj = Scd(rc-rd) * Cc * Cd                   ... where Ca,Cb,Cc,Cd are expansion coeficients in given basis and S is overlap integral for given pair of basis functions
+   EQij(r) = qi(ra,rb) * qj(rc,rd) * Kij(ri,rj)  ... where qi,qj are charges in some overlap cloud and Kij is Coulomb Matrix kernel between the two clouds
+   Force calculated by derivatives as:
+     FQ_xa = dEQ/dxa =  (qi*qj) * (dKij/ri)/(dri/dxa) + ( Kij*qj ) * (dqi/dxa)
+
+*/
 
 // ===========================================================================================================================
 // ==================== Eval Cross-Terms ( Contact of two different orbitals, such as Pauli and Exchange interaction )
@@ -1239,6 +1308,10 @@ constexpr static const Quat4d default_AtomParams[] = {
         //return E;
     }
 
+// ===========================================================================================================================
+// ==================== Eval Cross-Terms ( Contact of two different orbitals, such as Pauli and Exchange interaction )
+// ===========================================================================================================================
+
     // ToDo : This may be perhaps integrated into  ***  forceFromOverlaps() ***
     double pauliCrossKinetic( int io, int jo, Gauss::Blob* Bs, Gauss::PairDeriv* dBs, Quat4d* TDs, double S, double T, Vec3d KRSrho, bool anti ){
         // This is Pauli potential derived from Kinetic energy;
@@ -1315,66 +1388,6 @@ constexpr static const Quat4d default_AtomParams[] = {
         //return E;
     }
 
-    double pauliKineticChnageVB( int io, int jo ){
-        // This is Pauli potential derived from change of Kinetic Energy due to orbital orthogonalization;
-        // Detla_T = Tsym + Tanti - T11 - T12
-        // where T11 = <psi_1|T|psi_2>, Tsym=<psi_sym||psi_sym>, Tanti=<psi_anti||psi_anti>
-        // psi_sym = (psi_1+psi_2)/|psi_1+psi_1| = (psi_1+psi_2)/2(1+S12)
-        // psi_sym = (psi_1+psi_2)/|psi_1+psi_1| = (psi_1+psi_2)/2(1-S12)
-        // From this it can be derived
-        // Detla_T =  ( T11 + T22 - T12/S12 )/( S12^2/(1-S12^2) )
-        //printf( "pauliKineticChnageVB[%i,%i] ", io, jo );
-        double Tsum = 0;
-        double Ssum = 0;
-        int i0=io*perOrb;
-        int j0=jo*perOrb;
-        int ij=0;
-        for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi  = epos [i];
-            double ci  = ecoef[i];
-            double si  = esize[i];
-            for(int j=j0; j<j0+perOrb; j++){
-                Vec3d pj  = epos[j];
-                Vec3d Rij = pj-pi;
-                double r2 = Rij.norm2();
-                //if(r2>Rcut2) continue;
-                double cj  = ecoef[j];
-                double sj  = esize[j];
-                double cij = ci*cj;
-                _Gauss_sij_aux(si,sj)
-                _Gauss_overlap(r2,si,sj)
-                Ssum += S;
-                // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
-                if(iPauliModel>0){ // Kinetic Energy integral
-                    _Gauss_tau( r2,si,sj )
-                    Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
-                }
-                ij++;
-            }
-        }
-        double E;
-        if(iPauliModel==2){
-            //printf( " T %g S %g T/2S %g ", T, S, 0.5*T/S );
-            double T11,T22;
-            T11 = oEs[io];
-            T22 = oEs[jo];
-            double S2 = Ssum*Ssum;
-            E = (T11 + T22 - 2*Tsum/Ssum)*(S2/(1-S2));
-            // ToDo : Here we will need derivatives of kinetic energy according to forces
-            //   This can be done if we calculate kinetic forces first and
-            E *= const_K_eVA;
-        }else if(iPauliModel==3){ // Juat for debugging
-            E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
-        }else if(iPauliModel==4){
-            E = Ssum; // Just Cross-Overlap S12 = <psi1|T|psi2>
-        }else{
-            E = Ssum*Ssum*KPauliOverlap;
-        }
-        //printf( "E %g \n", E );
-        return E;
-        //return E;
-    }
-
     double evalCrossOrb(int io, int jo){
         double dEpaul=0, dEexch=0;
         const double R2Safe = sq(0.1);
@@ -1427,17 +1440,6 @@ constexpr static const Quat4d default_AtomParams[] = {
         }
         //printf( "evalExchange() E=%g \n", E  );
         return E;
-    }
-
-    double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
-        //printf( "======== evalPauli() \n" );
-        EeePaul = 0;
-        for(int io=0; io<nOrb; io++){
-            for(int jo=0; jo<io; jo++){
-                if( ospin[io]==ospin[jo] ) EeePaul += pauliKineticChnageVB(io,jo);
-            }
-        }
-        return EeePaul;
     }
 
     void evalExchangeCorrelation(){

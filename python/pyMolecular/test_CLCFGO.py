@@ -201,6 +201,21 @@ def checkForces_Hartree_ecoef( ):
     effmc.setSwitches_( normalize=-1, coulomb=1 )
     return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
+def checkForces_Pauli_epos( ):
+    init_effmc( norb_=2, perOrb_=2, sz=0.2, dist=1.0 )
+    effmc.setSwitches_( normalize=-1, pauli=1 )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+
+def checkForces_Pauli_esize( ):
+    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
+    effmc.setSwitches_( normalize=-1, pauli=1 )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0) )
+
+def checkForces_Pauli_ecoef( ):
+    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
+    effmc.setSwitches_( normalize=-1, pauli=1 )
+    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
+
 # ========= Check Normalization derivatives
 
 def check_dS( xname="ecoef", fname="enfcoef", inds=(0,0), x0=0 ):
@@ -301,17 +316,17 @@ if __name__ == "__main__":
         print(  x, s, "-> ", E )
     #exit(0)
     '''
-
-
+    effmc.setPauliMode(0)
+    tests_results = []
     tests_funcs = []
-    tests_funcs += [ test_ProjectWf, test_Poisson ]
+    #tests_funcs += [ test_ProjectWf, test_Poisson ]
     #tests_funcs += [ check_dS_epos,            check_dS_esize,              check_dS_ecoef             ]
     #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
-    tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
-    tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
+    tests_funcs += [ checkForces_Pauli_epos, checkForces_Pauli_esize ,  checkForces_Pauli_ecoef  ]
+    #tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
+    #tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
     #tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
-    tests_results = []
-
+    
     for test_func in tests_funcs:
         label = test_func.__name__
         effmc.setSwitches_( normalize=1, normForce=-1, kinetic=-1, coulomb=-1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )

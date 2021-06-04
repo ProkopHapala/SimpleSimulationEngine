@@ -374,6 +374,6 @@ void setSwitches_(int bNormalize, int bNormForce, int bEvalKinetic, int bEvalCou
 #undef _setbool
 }
 
-void setPauli( int iPauli ){ solver.iPauliModel = iPauli; }
+void setPauliMode( int iPauli ){ solver.iPauliModel = iPauli; }
 
 } // extern "C"
