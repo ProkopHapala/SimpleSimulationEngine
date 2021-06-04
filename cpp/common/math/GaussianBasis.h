@@ -370,7 +370,7 @@ struct PairInt{
     inline void set( const Vec3d& p_, double si_, double sj_, double S_ ){ 
         p=p_; si=si_; sj=sj_; S=S_; 
         //printf( "PairInt::set() p(%g,%g,%g) s(%g,%g) S %g\n", p.x,p.y,p.z, si,sj,S  ); 
-    };
+    }
 
     inline void applyForceScaled( double K, Vec3d& fpi, Vec3d& fpj, double& fsi, double& fsj )const{
         //Vec3d fp = K*p;
@@ -385,7 +385,17 @@ struct Blob{
     Vec3d  pos;
     double size;
     double charge;
+
     inline void setZero(){ pos=Vec3dZero; size=0; charge=0; };
+
+    inline void set( const Vec3d& pos_, double size_, double charge_ ){ pos=pos_; size=size_; charge=charge_; }
+    inline void add( const Vec3d& pos_, double size_, double charge_ ){ pos.add(pos_); size+=size_; charge+=charge_; }
+
+    inline void applyForceScaled( double K, Vec3d& fp, double& fs, double& c )const{
+        fp.add_mul( pos   , K );
+        fs +=       size  * K  ;
+        c  +=       charge* K  ;
+    }
 };
 
 struct PairDeriv{

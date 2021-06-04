@@ -141,6 +141,7 @@ constexpr static const Quat4d default_AtomParams[] = {
     int*    onq   =0;   ///< number of axuliary density functions per orbital, should be equal to nQorb
     int*    ospin =0;
 
+    // ToDo : all this blobs ( pos, size, coef should be probably grouped together in Blob{pos,size,coef} )
     // --- Wave-function components for each orbital
     Vec3d*  epos  =0; ///< [A] position of spherical function for expansion of orbitals
     double* esize =0; ///< [A] spread of gassian basisfunction
@@ -153,6 +154,11 @@ constexpr static const Quat4d default_AtomParams[] = {
     Vec3d*  enfpos  =0; 
     double* enfsize =0; 
     double* enfcoef =0;
+    // --- Kinetic Energy Forces
+    Gauss::Blob* fTs = 0;
+    //Vec3d*  eTfpos  =0; 
+    //double* eTfsize =0; 
+    //double* eTfcoef =0;
 
     // --- Auxuliary electron density expansion basis functions
     Vec3d * rhoP  =0; ///< [A] position of axuliary electron density function
@@ -210,6 +216,11 @@ constexpr static const Quat4d default_AtomParams[] = {
             _realloc( enfpos ,   nBas );
             _realloc( enfsize,   nBas );
             _realloc( enfcoef,   nBas );
+            // --- Kinetic Energy Forces
+            _realloc( fTs ,   nBas );
+            //_realloc( eTfpos ,   nBas );
+            //_realloc( eTfsize,   nBas );
+            //_realloc( eTfcoef,   nBas );
 
             // --- Auxuliary electron density expansion basis functions
             _realloc( rhoP, nQtot );
@@ -251,6 +262,11 @@ constexpr static const Quat4d default_AtomParams[] = {
         delete [] enfpos ;
         delete [] enfsize;
         delete [] enfcoef;
+        // --- Kinetic Energy Forces
+        delete [] fTs;
+        //delete [] eTfpos ;
+        //delete [] eTfsize;
+        //delete [] eTfcoef;
         // --- Auxuliary electron density expansion basis functions
         delete [] rhoP;
         delete [] rhoQ;
@@ -475,11 +491,17 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i] q %g s %g p(%g,%g,%g) \n", io, ii,i, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z ); 
                 qcog.add_mul( pi, qii );
             }
-            
+
+            double fsi;
+            double Tii = Gauss::kinetic_r0_derivs( si, fsi );
+            Ek       += qii*   Tii;
+            // Copy to Kinetic - we will use them for Pauli
+            //eTfsize[i]+= qii*-2*fsi;
+            //eTfcoef[i]+= Tii*-2*ci ; // ToDo : This needs to be checked
+            //fTs[i].set( Vec3dZero, qii*-2*fsi, Tii*-2*ci  );
+            fTs[i].size   += qii*-2*fsi;
+            fTs[i].charge += Tii*-2*ci ;            
             if( bEvalKinetic ){
-                double fsi;
-                double Tii = Gauss::kinetic_r0_derivs( si, fsi );
-                Ek       += qii*   Tii;
                 efsize[i]+= qii*-2*fsi;
                 efcoef[i]+= Tii*-2*ci ; // ToDo : This needs to be checked
             }
@@ -522,14 +544,21 @@ constexpr static const Quat4d default_AtomParams[] = {
                     qcog.add_mul( pos_ij, qij );
                 }
                 
+                _Gauss_tau    ( r2, si, sj );
+                _Gauss_kinetic( r2, si, sj );
+                Ek += T*cij;
+                Vec3d fij = Rij*(dT_dr*cij);
+                fTs[i].add( fij   , dT_dsi*cij, T*cj*2 );
+                fTs[j].add( fij*-1, dT_dsj*cij, T*ci*2 );
                 if( bEvalKinetic ){                    
-                    _Gauss_tau    ( r2, si, sj );
-                    _Gauss_kinetic( r2, si, sj );
-                    Ek += T*cij;
-                    Vec3d fij = Rij*(dT_dr*cij);
                     efpos [i].add( fij )  ; efpos [j].sub( fij )  ;
                     efsize[i]-= dT_dsi*cij; efsize[j]-= dT_dsj*cij;
                     efcoef[i]-= T*cj*2    ; efcoef[j]-= T*ci*2    ;
+                    // Copy to Kinetic - we will use them for Pauli
+                    //eTfpos [i].add( fij )  ; eTfpos [j].sub( fij )  ;
+                    //eTfsize[i]-= dT_dsi*cij; eTfsize[j]-= dT_dsj*cij;
+                    //eTfcoef[i]-= T*cj*2    ; eTfcoef[j]-= T*ci*2    ;
+
                 }
                 ii++;
 
@@ -541,6 +570,7 @@ constexpr static const Quat4d default_AtomParams[] = {
         opos[io] = qcog;
         oQs [io] = Q;
         oEs [io] = Ek;
+        if( !bEvalKinetic ) Ek=0;
         return Ek;
     }
 
@@ -734,6 +764,14 @@ constexpr static const Quat4d default_AtomParams[] = {
 // ==================== Pauli Repulsion Models
 // ========================================================================================================
 
+    void forceOrb( int io, double K, const Gauss::Blob* Bs ){
+        int i0=io*perOrb;
+        for(int i=i0; i<i0+perOrb; i++){
+            Bs[i].applyForceScaled( K, efpos[i], efsize[i], efcoef[i] );
+        }
+    }
+
+    // ToDo : probably we don't have to do this pairwise, we can sum it and use only Blobs
     void forceOrbPair( int io, int jo, double K, const Gauss::PairInt* Is ){
         int i0=io*perOrb;
         int j0=jo*perOrb;
@@ -790,28 +828,39 @@ constexpr static const Quat4d default_AtomParams[] = {
                 _Gauss_overlap(r2,si,sj)
                 double Scij = S*cij;
                 Ssum += Scij;
+                DS.set( Rij*dS_dr, -dS_dsi, -dS_dsj, -Scij );
+                //printf( "pauliOrbPair[%i,%i|%i,%i] r %g pi(%g,%g,%g) pj(%g,%g,%g) \n", io,jo, i,j, sqrt(r2),   pi.x,pi.y,pi.z,  pj.x,pj.y,pj.z );
+                //printf( "pauliOrbPair[%i,%i|%i,%i] r %g si %g sj %g dSr %g dSsi %g dSsj %g S %g ", io,jo, i,j, sqrt(r2), si, sj, dS_dr, dS_dsi, dS_dsj, S );
                 // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
                 if(iPauliModel>0){ // Kinetic Energy integral
-                    _Gauss_tau( r2,si,sj )
-                    Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
-                }else{ // Pauli Model 0 :   E = K*S^2
-                    //printf( "pauliOrbPair[%i,%i|%i,%i] r %g pi(%g,%g,%g) pj(%g,%g,%g) \n", io,jo, i,j, sqrt(r2),   pi.x,pi.y,pi.z,  pj.x,pj.y,pj.z );
-                    //printf( "pauliOrbPair[%i,%i|%i,%i] r %g si %g sj %g dSr %g dSsi %g dSsj %g S %g ", io,jo, i,j, sqrt(r2), si, sj, dS_dr, dS_dsi, dS_dsj, S );
-                    DS.set( Rij*dS_dr, -dS_dsi, -dS_dsj, -Scij );
+                    _Gauss_tau    ( r2,si,sj )
+                    _Gauss_kinetic( r2,si,sj )
+                    double Tcij = T*cij;
+                    Tsum -= Tcij;
+                    DT.set( Rij*dT_dr, -dT_dsi, -dT_dsj, -Tcij );
+                    //Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
                 }
                 ij++;
             }
         }
         double E;
-        if(iPauliModel==2){
-            //printf( " T %g S %g T/2S %g ", T, S, 0.5*T/S );
+        if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
             double T11,T22;
             T11 = oEs[io];
             T22 = oEs[jo];
             double S2 = Ssum*Ssum;
-            E = (T11 + T22 - 2*Tsum/Ssum)*(S2/(1-S2));
-            // ToDo : Here we will need derivatives of kinetic energy according to forces
-            //   This can be done if we calculate kinetic forces first and
+            double D=1/(1-S2);
+            double fS  = S2  *D;
+            double dfS  = 2*Ssum*D*D; // deriv S^2/(1-S^2)
+            double dfS2 = (1+S2)*D*D; // deriv S/(1-S^2)
+            E = (T11 + T22 - 2*Tsum/Ssum)*fS;
+
+            // ToDo : This derivatives can be probably significantly simplified -  we can just reduce them to individual blob forces (instead of pair forces) 
+            forceOrbPair( io,jo, (T11 + T22)*dfS -2*Tsum*dfS2 , DSs );
+            forceOrbPair( io,jo,                 -2*Ssum*D    , DTs );
+            forceOrb    ( io,  fS,          fTs+i0 );
+            forceOrb    ( io,  fS,          fTs+j0 );
+
             E *= const_K_eVA;
         }else if(iPauliModel==3){ // Juat for debugging
             E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
