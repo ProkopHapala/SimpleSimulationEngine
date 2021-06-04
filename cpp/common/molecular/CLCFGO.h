@@ -840,7 +840,6 @@ constexpr static const Quat4d default_AtomParams[] = {
 
         double cij = 2*ci*cj;
 
-
         double fsi = Fp.dot( dxsi ) + Fs*dssi + dEdQ*dSsi*cij;
         double fsj = Fp.dot( dxsj ) + Fs*dssj + dEdQ*dSsj*cij;
 
@@ -852,29 +851,15 @@ constexpr static const Quat4d default_AtomParams[] = {
         Vec3d dSdp = Rij*(dSr*cij);
         //DEBUG_dQdp = dSdp;
         Vec3d Fq   = dSdp*dEdQ;
-        Vec3d Fxi  = Fp*dxxi + Fq;
-        Vec3d Fxj  = Fp*dxxj + Fq;
-        //Vec3d Fxi  = Fp*dxxi*0.0058 + Fq;
-        //Vec3d Fxj  = Fp*dxxj*0.0058 + Fq;
 
-        //Vec3d Fxi  = Fp*dxxi*Sij + Fq;
-        //Vec3d Fxj  = Fp*dxxj*Sij + Fq;
-
-        //Vec3d Fxi  = Fp;
-        //Vec3d Fxj  = Fp;
-
-        efpos [i].add( Fxi );
-        efpos [j].add( Fxj );
+        efpos [i].add( Fp*dxxi + Fq );
+        efpos [j].add( Fp*dxxj + Fq );
         efsize[i] += fsi;
         efsize[j] += fsj;
 
-        //efcoef[i] += dEdQ*cj*Sij;
-        //efcoef[j] += dEdQ*ci*Sij;
         efcoef[i] += dEdQ*cj*Sij*2;
         efcoef[j] += dEdQ*ci*Sij*2;
 
-        //efcoef[i] += dEdQ*cj;
-        //efcoef[j] += dEdQ*ci;
         // ToDo : What about efcoef[i], efcoef[j] ?
 
         if(DEBUG_iter==DEBUG_log_iter){
@@ -950,13 +935,13 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
 
                 if( fabs(qij)<1e-16) continue;
-                double e = Gauss::Coulomb( sqrt(r2+1.0e-16), (si*si+sj*sj), fr, fs );
+                double e = Gauss::Coulomb( sqrt(r2+1e-16), sqrt(si*si+sj*sj), fr, fs );
                 Vec3d fp = Rij*(fr*qij);
                 fs*=qij;
 
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
                 rhofS[i] += fs*si;   rhofS[j] += fs*sj;
-                rhofQ[i] += e*qj;    rhofQ[j] += e*qi; 
+                rhofQ[i] += -e*qj;    rhofQ[j] += -e*qi; 
                 Ecoul    += e*qij;
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), E, si, sj );
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g qij(%g,%g) E %g s(%g,%g) \n",io,jo,i,j, sqrt(r2), qi,qj,  E, si, sj );

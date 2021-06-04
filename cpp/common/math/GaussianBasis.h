@@ -189,7 +189,7 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     double f2   = g*is*0.5;
     double e1f2 = e1*f2;
     fr          = (f1*e2 + e1f2)*ir      ;
-    printf( "r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) \n", r, fr, f1, e2, e1, f2 );
+    //printf( "r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) r_2s %g r %g s %g\n", r, fr, f1, e2, e1, f2, r_2s, r, s );
     fs          =          e1f2 *r_s * is;
     return e1 * e2;
 

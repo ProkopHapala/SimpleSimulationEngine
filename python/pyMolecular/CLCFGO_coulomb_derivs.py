@@ -92,9 +92,9 @@ def Coulomb( r, s ):
     fs =          e1f2 *r_s * is_
     E  = e1 * e2
 
-    for i in range(len(r)):
-        print  " r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) " %(r[i], fr[i], f1[i],e2[i], e1[i],f2[i]) 
-        #print "Gauss::Coulomb r %g s %g E %g fr %g " %(r[i],s, E[i], fr[i]  )
+    #for i in range(len(r)):
+    #    print  " r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) r_2s %g r %g s %g " %(r[i], fr[i], f1[i],e2[i], e1[i],f2[i], r_2s[i], r[i], s ) 
+    #    #print "Gauss::Coulomb r %g s %g E %g fr %g " %(r[i],s, E[i], fr[i]  )
 
 
     return E,fr,fs
@@ -239,8 +239,8 @@ if __name__ == "__main__":
     sc = 0.2
     sd = 0.2
 
-    #n  = 40; x0 = 0.00001
-    n  = 10; x0 = 0.75
+    n  = 40; x0 = 0.00001
+    #n  = 10; x0 = 0.75
     #n  = 1;  x0 = 1.0
     
     dx =  0.05
@@ -294,7 +294,7 @@ if __name__ == "__main__":
     #         Total force Fx = dE/dx = d(e*q)/dx = q*(de/dx) + e*(dq/dx)
 
     for i in range(len(r)):
-        #print "fromRho x %g  F %g =(Fpi %g * dXxi %g)+(dSdp %g * dEdQ %g)"    %(   xa[i], F[i],  Fpi[i], dXxi[i], dSdp[i], dEdQ[i] ) ;
+        print "fromRho x %g  F %g =(Fpi %g * dXxi %g)+(dSdp %g * dEdQ %g)"    %(   xa[i], F[i],  Fpi[i], dXxi[i], dSdp[i], dEdQ[i] ) ;
         #print "fromRho x %g  Fpi %g fx %g qij %g r %g "    %(   xa[i], Fpi[i],  fx[i], qij[i], r[i] ) ;
         #print "fromRho x %g  dSdp %g =(dSab %g * cab %g)" %(  xa[i], dSdp[i], dSab[i], 1 ) ;
         #print "fromRho x %g  dEdQ %g =(e %g * qj %g)" %(  xa[i], dEdQ[i], e[i], qj ) ;
@@ -307,8 +307,9 @@ if __name__ == "__main__":
     
     # ==== Derivative of Coulomb term with considering the Charges
     plt.plot( xa, E,  label='E' )
-    plt.plot( xa, F,  label='dEdx_ana' )
-    plt.plot( xs_, (E[1:]-E[:-1])/dx,':', label='dEdx_num', lw=3 )
+    plt.plot( xa, -F,  label='dEdx_ana' )
+    #plt.plot( xs_, (E[1:]-E[:-1])/-dx,':', label='dEdx_num', lw=3 )
+    plt.plot( xa[1:-1], (E[2:]-E[:-2])/(-2*dx),':', label='dEdx_num', lw=3 )
     #plt.plot( xa, fxi, label='fxi' )
 
     

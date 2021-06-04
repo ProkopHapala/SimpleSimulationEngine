@@ -20,6 +20,10 @@ bPrintInfo = False
 label=""
 plt  =None
 
+rnd_pos  = 0
+rnd_size = 0
+rnd_coef = 0
+
 # ========= Functions
 
 def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0 ):
@@ -32,17 +36,18 @@ def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0 ):
     rhoQ  = effmc.getBuff( "rhoQ" ,(norb,nqOrb) )
     rhoS  = effmc.getBuff( "rhoS" ,(norb,nqOrb) )
     rhoP  = effmc.getBuff( "rhoP" ,(norb,nqOrb,3) )
-    ecoef[:,:  ]=1
-    esize[:,:  ]=sz
-    rhoS [:,:  ]=sz*np.sqrt(0.5)
-    rhoQ [:,:  ]=1
-    rhoP [:,:,:]=0
+    epos [:,:,:]= 0              + (np.random.rand(norb,perOrb,3)-0.5)*rnd_pos
+    esize[:,:  ]=sz              + (np.random.rand(norb,perOrb  )-0.5)*rnd_size
+    ecoef[:,:  ]=1               + (np.random.rand(norb,perOrb  )-0.5)*rnd_coef
+    rhoP [:,:,:]=0               + (np.random.rand(norb,nqOrb,3 )-0.5)*rnd_pos
+    rhoS [:,:  ]=sz*np.sqrt(0.5) + (np.random.rand(norb,nqOrb   )-0.5)*rnd_size
+    rhoQ [:,:  ]=1               + (np.random.rand(norb,nqOrb   )-0.5)*rnd_coef
     if norb_>1:
-        epos [1,0,0]= dist
+        epos [1,0,0] += dist
         #ecoef[1,1]=0   # psi2=(1,0)
         #ecoef[1,0]=1   # psi2=(1,0)
     if perOrb_>1:    
-        epos [:,1,0]= epos [:,0,0] + dist
+        epos [:,1,0] = epos [:,0,0] + dist
     if(bPrintInfo): effmc.printAtomsAndElectrons()
 
 def test_ProjectWf( Etoll=1e-5 ):
@@ -129,8 +134,9 @@ def processForces( xs,Es,fs ):
     n=len(xs)
     dx=xs[1]-xs[0]
     fs_num=(Es[2:]-Es[:-2])/(-2*dx)
-    Err = np.sqrt( ( (fs_num-fs[1:-1])**2 ).sum()/(n-1) )
-    #print "Error ", err
+    normF2 = (fs**2).sum()
+    Err = np.sqrt( ( (fs_num-fs[1:-1])**2/normF2 ).sum()/(n-1) )
+    print "Error ", Err
     if(plt):
         plt.figure(figsize=(5,5))
         plt.plot( xs,      Es    ,      label="E" )
@@ -146,10 +152,11 @@ def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0 ):
     szs  = (norb,perOrb,3)[:nind]
     xbuf = effmc.getBuff( xname,szs )
     fbuf = effmc.getBuff( fname,szs )
+    x0  += x0_glob
     xs = np.arange(x0,x0+nx*dx,dx)
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
-    effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
     for i in range(nx):
         if(nind>2):
             xbuf[inds[0],inds[1],inds[2]] = xs[i]
@@ -161,6 +168,7 @@ def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0 ):
         else:
             fs[i] = fbuf[inds[0],inds[1]]
     #print "Es ", Es
+    #print "fs ", fs
     return processForces( xs,Es,fs )
 
 def checkForces_Kinetic_epos( ):
@@ -181,7 +189,7 @@ def checkForces_Kinetic_ecoef( ):
 def checkForces_Hartree_epos( ):
     init_effmc( norb_=2, perOrb_=2, sz=0.2, dist=1.0 )
     effmc.setSwitches_( normalize=-1, coulomb=1 )
-    return checkForces( xname="epos",fname="efpos",inds=(0,0,0), x0=0.75 )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
 
 def checkForces_Hartree_esize( ):
     init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
@@ -201,6 +209,7 @@ def check_dS( xname="ecoef", fname="enfcoef", inds=(0,0), x0=0 ):
     xbuf = effmc.getBuff( xname,szs )
     fbuf = effmc.getBuff( fname,szs )
     oQs  = effmc.getBuff( "oQs",(norb) )
+    x0  += x0_glob
     xs   = np.arange(x0,x0+nx*dx,dx)
     Es   = np.zeros(len(xs))
     fs   = np.zeros(len(xs))
@@ -240,6 +249,7 @@ def check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0), x0=0 ):
     szs  = (norb,perOrb,3)[:nind]
     xbuf = effmc.getBuff( xname,szs )
     fbuf = effmc.getBuff( fname,szs )
+    x0  += x0_glob
     xs = np.arange(x0,x0+nx*dx,dx)
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
@@ -270,14 +280,18 @@ def check_Coulomb_rhoQ_( ):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt_
     global plt,label
-    global dx,nx
+    global dx,nx,x0_glob
+    global rnd_pos, rnd_size, rnd_coef
+    x0_glob = 0.0001
     dx=0.05
-    #nx=40
-    nx=10
+    nx=40
+    #nx=10
     #nx=2
     plt=plt_
-    bPrintInfo = True
-
+    #bPrintInfo = True
+    rnd_pos  = 0.2
+    rnd_size = 0.2
+    rnd_coef = 0.2
     '''
     xs = np.arange(0.0,1.0,0.25)
     ys = np.zeros(len(xs))
@@ -291,13 +305,11 @@ if __name__ == "__main__":
 
 
     tests_funcs = []
-    #tests_funcs += [ test_ProjectWf, test_Poisson ]
+    tests_funcs += [ test_ProjectWf, test_Poisson ]
     #tests_funcs += [ check_dS_epos,            check_dS_esize,              check_dS_ecoef             ]
     #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
-    #tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
-    #tests_funcs  += [ checkForces_Hartree_ecoef  ]
-    tests_funcs += [ checkForces_Hartree_epos  ]
-    #tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
+    tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
+    tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
     #tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     tests_results = []
 
