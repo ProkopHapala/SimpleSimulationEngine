@@ -743,9 +743,10 @@ constexpr static const Quat4d default_AtomParams[] = {
             for(int j=j0; j<j0+perOrb; j++){
                 double cj  = ecoef[j];
                 const Gauss::PairInt& I = Is[ij];
-                I.applyForceScaled( K, epos[i], epos[j], esize[i], esize[j] );
-                ecoef[i]+=I.S*cj;
-                ecoef[j]+=I.S*ci;
+                I.applyForceScaled( K, efpos[i], efpos[j], efsize[i], efsize[j] );
+                //double KS = -K; 
+                efcoef[i]+=-K*cj*0.64;
+                efcoef[j]+=-K*ci*0.64;
                 ij++;
             }
         }
@@ -787,13 +788,16 @@ constexpr static const Quat4d default_AtomParams[] = {
                 double cij = ci*cj;
                 _Gauss_sij_aux(si,sj)
                 _Gauss_overlap(r2,si,sj)
-                Ssum += S;
+                double Scij = S*cij;
+                Ssum += Scij;
                 // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
                 if(iPauliModel>0){ // Kinetic Energy integral
                     _Gauss_tau( r2,si,sj )
                     Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
                 }else{ // Pauli Model 0 :   E = K*S^2
-                    DS.set( Rij*dS_dr, dS_dsi, dS_dsj, S );
+                    //printf( "pauliOrbPair[%i,%i|%i,%i] r %g pi(%g,%g,%g) pj(%g,%g,%g) \n", io,jo, i,j, sqrt(r2),   pi.x,pi.y,pi.z,  pj.x,pj.y,pj.z );
+                    //printf( "pauliOrbPair[%i,%i|%i,%i] r %g si %g sj %g dSr %g dSsi %g dSsj %g S %g ", io,jo, i,j, sqrt(r2), si, sj, dS_dr, dS_dsi, dS_dsj, S );
+                    DS.set( Rij*dS_dr, -dS_dsi, -dS_dsj, -Scij );
                 }
                 ij++;
             }
@@ -818,8 +822,9 @@ constexpr static const Quat4d default_AtomParams[] = {
             forceOrbPair( io,jo, 2*Ssum*KPauliOverlap, DSs );
         }
         //printf( "E %g \n", E );
-        return E;
         //return E;
+        //return Ssum;
+        return E;
     }
 
     double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )

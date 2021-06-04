@@ -202,17 +202,17 @@ def checkForces_Hartree_ecoef( ):
     return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
 def checkForces_Pauli_epos( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.2, dist=1.0 )
+    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=-1, pauli=1 )
     return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
 
 def checkForces_Pauli_esize( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
+    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=-1, pauli=1 )
     return checkForces( xname="esize",fname="efsize",inds=(0,0) )
 
 def checkForces_Pauli_ecoef( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
+    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=-1, pauli=1 )
     return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
@@ -303,9 +303,9 @@ if __name__ == "__main__":
     #nx=10
     #nx=2
     plt=plt_
-    #bPrintInfo = True
-    #rnd_pos  = 0.0; rnd_size = 0.0; rnd_coef = 0.0
-    rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
+    bPrintInfo = True
+    rnd_pos  = 0.0; rnd_size = 0.0; rnd_coef = 0.0
+    #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
     '''
     xs = np.arange(0.0,1.0,0.25)
     ys = np.zeros(len(xs))
@@ -322,6 +322,7 @@ if __name__ == "__main__":
     #tests_funcs += [ test_ProjectWf, test_Poisson ]
     #tests_funcs += [ check_dS_epos,            check_dS_esize,              check_dS_ecoef             ]
     #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
+    #tests_funcs += [ checkForces_Pauli_epos ]
     tests_funcs += [ checkForces_Pauli_epos, checkForces_Pauli_esize ,  checkForces_Pauli_ecoef  ]
     #tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
     #tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]

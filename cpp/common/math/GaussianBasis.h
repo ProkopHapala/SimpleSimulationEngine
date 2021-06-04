@@ -367,14 +367,17 @@ struct PairInt{
     //    _Gauss_overlap()
     //}
     //double fromDerivsS(){}
-    inline void set( const Vec3d& p_, double si_, double sj_, double S_ ){ p=p_; si=si_; sj=sj_; S=S_; };
+    inline void set( const Vec3d& p_, double si_, double sj_, double S_ ){ 
+        p=p_; si=si_; sj=sj_; S=S_; 
+        //printf( "PairInt::set() p(%g,%g,%g) s(%g,%g) S %g\n", p.x,p.y,p.z, si,sj,S  ); 
+    };
 
-    inline void applyForceScaled( double K, Vec3d& fpi, Vec3d& fpj, double fsi, double fsj )const{
+    inline void applyForceScaled( double K, Vec3d& fpi, Vec3d& fpj, double& fsi, double& fsj )const{
         //Vec3d fp = K*p;
         fpi.add_mul( p,  K );
         fpj.add_mul( p, -K );
-        fsi += fsi*K;
-        fsj += fsj*K;
+        fsi += si*K;
+        fsj += sj*K;
     }
 };
 
