@@ -136,7 +136,7 @@ def processForces( xs,Es,fs ):
     fs_num=(Es[2:]-Es[:-2])/(-2*dx)
     normF2 = (fs**2).sum()
     Err = np.sqrt( ( (fs_num-fs[1:-1])**2/normF2 ).sum()/(n-1) )
-    print "Error ", Err
+    print label, "Error ", Err
     if(plt):
         plt.figure(figsize=(5,5))
         plt.plot( xs,      Es    ,      label="E" )
@@ -289,9 +289,8 @@ if __name__ == "__main__":
     #nx=2
     plt=plt_
     #bPrintInfo = True
-    rnd_pos  = 0.2
-    rnd_size = 0.2
-    rnd_coef = 0.2
+    #rnd_pos  = 0.0; rnd_size = 0.0; rnd_coef = 0.0
+    rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
     '''
     xs = np.arange(0.0,1.0,0.25)
     ys = np.zeros(len(xs))
