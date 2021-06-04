@@ -357,6 +357,27 @@ inline double overlap_s_deriv( // derived/simplified from product3D_s_deriv(
 
 /// ====== Product Blobs and its derivativs
 
+struct PairInt{
+    Vec3d  p;
+    double si,sj;
+    //double ci,cj;
+    double S;
+
+    //double fromDerivsT( double r2, double si, double sj ){
+    //    _Gauss_overlap()
+    //}
+    //double fromDerivsS(){}
+    inline void set( const Vec3d& p_, double si_, double sj_, double S_ ){ p=p_; si=si_; sj=sj_; S=S_; };
+
+    inline void applyForceScaled( double K, Vec3d& fpi, Vec3d& fpj, double fsi, double fsj )const{
+        //Vec3d fp = K*p;
+        fpi.add_mul( p,  K );
+        fpj.add_mul( p, -K );
+        fsi += fsi*K;
+        fsj += fsj*K;
+    }
+};
+
 struct Blob{
     Vec3d  pos;
     double size;
@@ -395,6 +416,7 @@ inline void productBackForce(
     Fxi.add( fB.pos*Ds.dXxi + Fq );
     Fxj.add( fB.pos*Ds.dXxj + Fq );
 }
+
 
 
 

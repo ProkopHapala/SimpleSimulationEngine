@@ -734,6 +734,23 @@ constexpr static const Quat4d default_AtomParams[] = {
 // ==================== Pauli Repulsion Models
 // ========================================================================================================
 
+    void forceOrbPair( int io, int jo, double K, const Gauss::PairInt* Is ){
+        int i0=io*perOrb;
+        int j0=jo*perOrb;
+        int ij=0;
+        for(int i=i0; i<i0+perOrb; i++){
+            double ci  = ecoef[i];
+            for(int j=j0; j<j0+perOrb; j++){
+                double cj  = ecoef[j];
+                const Gauss::PairInt& I = Is[ij];
+                I.applyForceScaled( K, epos[i], epos[j], esize[i], esize[j] );
+                ecoef[i]+=I.S*cj;
+                ecoef[j]+=I.S*ci;
+                ij++;
+            }
+        }
+    }
+
     double pauliOrbPair( int io, int jo ){
         // This is Pauli potential derived from change of Kinetic Energy due to orbital orthogonalization;
         // Detla_T = Tsym + Tanti - T11 - T12
@@ -748,6 +765,10 @@ constexpr static const Quat4d default_AtomParams[] = {
         int i0=io*perOrb;
         int j0=jo*perOrb;
         int ij=0;
+
+        Gauss::PairInt DSs[perOrb2];
+        Gauss::PairInt DTs[perOrb2];
+
         for(int i=i0; i<i0+perOrb; i++){
             Vec3d  pi  = epos [i];
             double ci  = ecoef[i];
@@ -759,6 +780,10 @@ constexpr static const Quat4d default_AtomParams[] = {
                 //if(r2>Rcut2) continue;
                 double cj  = ecoef[j];
                 double sj  = esize[j];
+
+                Gauss::PairInt& DS = DSs[ij];
+                Gauss::PairInt& DT = DTs[ij];
+
                 double cij = ci*cj;
                 _Gauss_sij_aux(si,sj)
                 _Gauss_overlap(r2,si,sj)
@@ -767,6 +792,8 @@ constexpr static const Quat4d default_AtomParams[] = {
                 if(iPauliModel>0){ // Kinetic Energy integral
                     _Gauss_tau( r2,si,sj )
                     Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
+                }else{ // Pauli Model 0 :   E = K*S^2
+                    DS.set( Rij*dS_dr, dS_dsi, dS_dsj, S );
                 }
                 ij++;
             }
@@ -786,8 +813,9 @@ constexpr static const Quat4d default_AtomParams[] = {
             E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
         }else if(iPauliModel==4){
             E = Ssum; // Just Cross-Overlap S12 = <psi1|T|psi2>
-        }else{
+        }else{ // Pauli Model 0 :   E = K*S^2 
             E = Ssum*Ssum*KPauliOverlap;
+            forceOrbPair( io,jo, 2*Ssum*KPauliOverlap, DSs );
         }
         //printf( "E %g \n", E );
         return E;
