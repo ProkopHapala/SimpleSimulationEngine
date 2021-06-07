@@ -393,6 +393,11 @@ constexpr static const Quat4d default_AtomParams[] = {
             for(int i=0; i<nBas;  i++){ enfsize[i] = 0;         }
             for(int i=0; i<nBas;  i++){ enfcoef[i] = 0;         }
         }
+        if(bEvalPauli){
+            for(int i=0; i<nBas;  i++){ fTs[i].pos    = Vec3dZero; }
+            for(int i=0; i<nBas;  i++){ fTs[i].size   = 0;         }
+            for(int i=0; i<nBas;  i++){ fTs[i].charge = 0;         }
+        }
         //clearAuxDens();
     }
 
@@ -767,6 +772,7 @@ constexpr static const Quat4d default_AtomParams[] = {
     void forceOrb( int io, double K, const Gauss::Blob* Bs ){
         int i0=io*perOrb;
         for(int i=i0; i<i0+perOrb; i++){
+            //printf( "forceOrb[%i,%i]  K %g fs %g  \n", io,i, K, efsize[i] );
             Bs[i].applyForceScaled( K, efpos[i], efsize[i], efcoef[i] );
         }
     }
@@ -847,23 +853,18 @@ constexpr static const Quat4d default_AtomParams[] = {
         }
         double E;
         if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
-            double T11,T22;
-            T11 = oEs[io];
-            T22 = oEs[jo];
-            double S2 = Ssum*Ssum;
-            double D=1/(1-S2);
-            double fS  = S2  *D;
-            double dfS  = 2*Ssum*D*D; // deriv S^2/(1-S^2)
-            double dfS2 = (1+S2)*D*D; // deriv S/(1-S^2)
-            E = (T11 + T22 - 2*Tsum/Ssum)*fS;
-
-            // ToDo : This derivatives can be probably significantly simplified -  we can just reduce them to individual blob forces (instead of pair forces) 
-            forceOrbPair( io,jo, (T11 + T22)*dfS -2*Tsum*dfS2 , DTs );
-            forceOrbPair( io,jo,                 -2*Ssum*D    , DSs );
-            forceOrb    ( io,  fS,          fTs+i0 );
-            forceOrb    ( io,  fS,          fTs+j0 );
-
-            E *= const_K_eVA;
+            double T11 = oEs[io];
+            double T22 = oEs[jo];
+            double S2  = Ssum*Ssum;
+            double D   = 1/(1-S2);
+            double D2  = D*D;
+            double  fS = Ssum*D;
+            double fS2 = Ssum*fS;
+            E         =            (T11 + T22)*fS2     -2*Tsum*fS;
+            forceOrbPair( io,jo, ( (T11 + T22)*2*Ssum  -2*Tsum*(1+S2) )*D2, DSs );
+            forceOrbPair( io,jo, -2*fS , DTs    ); // d_T( Tij*S  /(1+S^2) )
+            forceOrb    ( io,       fS2, fTs );  // d_T( Tii*S^2/(1+S^2) )
+            forceOrb    ( jo,       fS2, fTs );  // d_T( Tjj*S^2/(1+S^2) )
         }else if(iPauliModel==3){ // Juat for debugging
             E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
             forceOrbPair( io,jo, 1, DTs );
@@ -871,15 +872,12 @@ constexpr static const Quat4d default_AtomParams[] = {
             E = Ssum; // Just Cross-Overlap S12 = <psi1|psi2>
             forceOrbPair( io,jo, 1, DSs );
         }else if(iPauliModel==5){   //   Ep = ( Sij/(1-Sij^2) )* Tij   =  ( Sij^2/(1-Sij^2) )* ( Tij/Sij )
-            //E = Ssum/(1-Ssum*Ssum)*Tsum;
-            //forceOrbPair( io,jo,      Ssum         /(1-Ssum*Ssum)                , DTs );
-            //forceOrbPair( io,jo, Tsum*(1+Ssum*Ssum)/((1-Ssum*Ssum)*(1-Ssum*Ssum)), DSs );
             double S2 = Ssum*Ssum;
             double D  = 1/(1-S2);
             double  fS = Ssum*D;
             double dfS = (1+S2)*D*D;
             E         = fS*Tsum;
-            forceOrbPair( io,jo,      fS, DTs );
+            forceOrbPair( io,jo,       fS, DTs );
             forceOrbPair( io,jo, Tsum*dfS, DSs );
         }else if(iPauliModel==6){   //   Ep = Sij*Tij
             E = Ssum*Tsum;

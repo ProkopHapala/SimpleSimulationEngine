@@ -305,7 +305,7 @@ if __name__ == "__main__":
     global rnd_pos, rnd_size, rnd_coef
     x0_glob = 0.0001
     dx=0.0125
-    nx=100
+    nx=150
     #nx=50
     #nx=10
     #nx=2
@@ -325,11 +325,11 @@ if __name__ == "__main__":
     #exit(0)
     '''
     #effmc.setPauliMode(0)  # E = K*S^2
-    #effmc.setPauliMode(2)  # E = Sij^2/(1-Sij^2) * ( Tii + Tjj - 2Tij/Sij )
+    effmc.setPauliMode(2)  # E = Sij^2/(1-Sij^2) * ( Tii + Tjj - 2Tij/Sij )
     #effmc.setPauliMode(3)  # E=T
-    #effmc.setPauliMode(4)  # E=S
-    effmc.setPauliMode(5)   # Ep = ( Sij/(1-Sij^2) )* Tij 
-    #effmc.setPauliMode(6)  # Ep = Sij*Tij
+    #effmc.setPauliMode(4)  # E=Sface
+    #effmc.setPauliMode(5)   # Ep = ( Sij/(1-Sij^2) )* Tij 
+    #effmc.setPauliMode(6)   see# Ep = Sij*Tij
     tests_results = []
     tests_funcs = []
     #tests_funcs += [ test_ProjectWf, test_Poisson ]

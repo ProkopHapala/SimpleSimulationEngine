@@ -74,7 +74,7 @@ const double const_Ke_eVA = const_K_eVA*1.5;
     double dTau_dsj    =  sj*dTau_ds; \
 
 #define _Gauss_kinetic( r2, si, sj ) \
-    double S_     = S*const_K_eVA; \
+    double S_     = S  *const_K_eVA; \
     double tau_   = tau*const_K_eVA; \
     double T      = S_*tau; \
     double dT_dr  = S_*dTau_dr  + tau_*dS_dr;  \
