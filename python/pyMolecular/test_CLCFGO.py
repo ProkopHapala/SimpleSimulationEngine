@@ -294,8 +294,11 @@ def check_Coulomb_rhoQ_( ):
 
 if __name__ == "__main__":
 
-    np.random.seed( 451)
-
+    #np.random.seed( 451)
+    #np.random.seed( 1)   # good
+    #np.random.seed( 3)
+    #np.random.seed( 5)
+    np.random.seed( 8)
     import matplotlib.pyplot as plt_
     global plt,label
     global dx,nx,x0_glob
@@ -309,7 +312,8 @@ if __name__ == "__main__":
     plt=plt_
     bPrintInfo = True
     #rnd_pos  = 0.0; rnd_size = 0.0; rnd_coef = 0.0
-    rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
+    rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
+    #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
     '''
     xs = np.arange(0.0,1.0,0.25)
     ys = np.zeros(len(xs))
@@ -322,10 +326,10 @@ if __name__ == "__main__":
     '''
     #effmc.setPauliMode(0)  # E = K*S^2
     #effmc.setPauliMode(2)  # E = Sij^2/(1-Sij^2) * ( Tii + Tjj - 2Tij/Sij )
-    effmc.setPauliMode(3)  # E=T
+    #effmc.setPauliMode(3)  # E=T
     #effmc.setPauliMode(4)  # E=S
-    #effmc.setPauliMode(5)   # Ep = ( Sij^2/(1-Sij^2) )* ( - 2*Tij/Sij )
-    #effmc.setPauliMode(6)   # Ep = Sij*Tij
+    effmc.setPauliMode(5)   # Ep = ( Sij/(1-Sij^2) )* Tij 
+    #effmc.setPauliMode(6)  # Ep = Sij*Tij
     tests_results = []
     tests_funcs = []
     #tests_funcs += [ test_ProjectWf, test_Poisson ]
