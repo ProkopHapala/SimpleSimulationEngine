@@ -837,7 +837,8 @@ constexpr static const Quat4d default_AtomParams[] = {
                     _Gauss_kinetic( r2,si,sj )
                     double Tcij = T*cij;
                     Tsum -= Tcij;
-                    DT.set( Rij*dT_dr, -dT_dsi, -dT_dsj, -Tcij );
+                    //DT.set( Rij*dT_dr, -dT_dsi, -dT_dsj, -Tcij );
+                    DT.set( Rij*(-dT_dr), dT_dsi, dT_dsj, Tcij );
                     //Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
                 }
                 ij++;
@@ -856,16 +857,33 @@ constexpr static const Quat4d default_AtomParams[] = {
             E = (T11 + T22 - 2*Tsum/Ssum)*fS;
 
             // ToDo : This derivatives can be probably significantly simplified -  we can just reduce them to individual blob forces (instead of pair forces) 
-            forceOrbPair( io,jo, (T11 + T22)*dfS -2*Tsum*dfS2 , DSs );
-            forceOrbPair( io,jo,                 -2*Ssum*D    , DTs );
+            forceOrbPair( io,jo, (T11 + T22)*dfS -2*Tsum*dfS2 , DTs );
+            forceOrbPair( io,jo,                 -2*Ssum*D    , DSs );
             forceOrb    ( io,  fS,          fTs+i0 );
             forceOrb    ( io,  fS,          fTs+j0 );
 
             E *= const_K_eVA;
         }else if(iPauliModel==3){ // Juat for debugging
             E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
+            forceOrbPair( io,jo, 1, DTs );
         }else if(iPauliModel==4){
-            E = Ssum; // Just Cross-Overlap S12 = <psi1|T|psi2>
+            E = Ssum; // Just Cross-Overlap S12 = <psi1|psi2>
+            forceOrbPair( io,jo, 1, DSs );
+        }else if(iPauliModel==5){   //   Ep = ( Sij^2/(1-Sij^2) )* ( - 2*Tij/Sij )
+            //E = Ssum*Ssum*Tsum;
+            //forceOrbPair( io,jo, Ssum*Ssum,  DTs );
+            //forceOrbPair( io,jo, Tsum*Ssum*2, DSs );
+            //E = Ssum/(1+Ssum*Ssum)*Tsum;
+            //forceOrbPair( io,jo,      Ssum         /(1+Ssum*Ssum)                , DTs );
+            //forceOrbPair( io,jo, Tsum*(1-Ssum*Ssum)/((1+Ssum*Ssum)*(1+Ssum*Ssum)), DSs );
+
+            E = Ssum/(1-Ssum*Ssum)*Tsum;
+            forceOrbPair( io,jo,      Ssum         /(1-Ssum*Ssum)                , DTs );
+            forceOrbPair( io,jo, Tsum*(1+Ssum*Ssum)/((1-Ssum*Ssum)*(1-Ssum*Ssum)), DSs );
+        }else if(iPauliModel==6){   //   Ep = Sij*Tij
+            E = Ssum*Tsum;
+            forceOrbPair( io,jo,  Ssum, DTs );
+            forceOrbPair( io,jo,  Tsum, DSs );
         }else{ // Pauli Model 0 :   E = K*S^2 
             E = Ssum*Ssum*KPauliOverlap;
             forceOrbPair( io,jo, 2*Ssum*KPauliOverlap, DSs );

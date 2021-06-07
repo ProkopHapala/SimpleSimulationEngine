@@ -8,7 +8,7 @@ sys.path.append('../')
 from pyMeta import cpp_utils 
 cpp_utils.clean_build    = False   # Recompile only if changed
 
-import eFF
+#import eFF
 import CLCFGO as effmc
 import eFF_terms as effpy
 
@@ -293,19 +293,23 @@ def check_Coulomb_rhoQ_( ):
     return check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0) )
 
 if __name__ == "__main__":
+
+    np.random.seed( 451)
+
     import matplotlib.pyplot as plt_
     global plt,label
     global dx,nx,x0_glob
     global rnd_pos, rnd_size, rnd_coef
     x0_glob = 0.0001
-    dx=0.05
-    nx=40
+    dx=0.0125
+    nx=100
+    #nx=50
     #nx=10
     #nx=2
     plt=plt_
     bPrintInfo = True
-    rnd_pos  = 0.0; rnd_size = 0.0; rnd_coef = 0.0
-    #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
+    #rnd_pos  = 0.0; rnd_size = 0.0; rnd_coef = 0.0
+    rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
     '''
     xs = np.arange(0.0,1.0,0.25)
     ys = np.zeros(len(xs))
@@ -316,7 +320,12 @@ if __name__ == "__main__":
         print(  x, s, "-> ", E )
     #exit(0)
     '''
-    effmc.setPauliMode(0)
+    #effmc.setPauliMode(0)  # E = K*S^2
+    #effmc.setPauliMode(2)  # E = Sij^2/(1-Sij^2) * ( Tii + Tjj - 2Tij/Sij )
+    effmc.setPauliMode(3)  # E=T
+    #effmc.setPauliMode(4)  # E=S
+    #effmc.setPauliMode(5)   # Ep = ( Sij^2/(1-Sij^2) )* ( - 2*Tij/Sij )
+    #effmc.setPauliMode(6)   # Ep = Sij*Tij
     tests_results = []
     tests_funcs = []
     #tests_funcs += [ test_ProjectWf, test_Poisson ]
