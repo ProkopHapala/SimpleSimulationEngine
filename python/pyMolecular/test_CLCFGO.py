@@ -202,17 +202,17 @@ def checkForces_Hartree_ecoef( ):
     return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
 def checkForces_Pauli_epos( ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=1.0 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=-1, pauli=1 )
     return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
 
 def checkForces_Pauli_esize( ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=1.0 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=-1, pauli=1 )
     return checkForces( xname="esize",fname="efsize",inds=(0,0) )
 
 def checkForces_Pauli_ecoef( ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=1.0 )
+    init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=-1, pauli=1 )
     return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
@@ -298,12 +298,12 @@ if __name__ == "__main__":
     #np.random.seed( 1)   # good
     #np.random.seed( 3)
     #np.random.seed( 5)
-    np.random.seed( 8)
+    #np.random.seed( 8)
     import matplotlib.pyplot as plt_
     global plt,label
     global dx,nx,x0_glob
     global rnd_pos, rnd_size, rnd_coef
-    x0_glob = 0.0001
+    x0_glob = 0.25001
     dx=0.0125
     nx=150
     #nx=50
@@ -327,9 +327,9 @@ if __name__ == "__main__":
     #effmc.setPauliMode(0)  # E = K*S^2
     effmc.setPauliMode(2)  # E = Sij^2/(1-Sij^2) * ( Tii + Tjj - 2Tij/Sij )
     #effmc.setPauliMode(3)  # E=T
-    #effmc.setPauliMode(4)  # E=Sface
+    #effmc.setPauliMode(4)  # E=S
     #effmc.setPauliMode(5)   # Ep = ( Sij/(1-Sij^2) )* Tij 
-    #effmc.setPauliMode(6)   see# Ep = Sij*Tij
+    #effmc.setPauliMode(6)   # Ep = Sij*Tij
     tests_results = []
     tests_funcs = []
     #tests_funcs += [ test_ProjectWf, test_Poisson ]

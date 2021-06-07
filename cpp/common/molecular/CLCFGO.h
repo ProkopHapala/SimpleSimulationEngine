@@ -553,8 +553,8 @@ constexpr static const Quat4d default_AtomParams[] = {
                 _Gauss_kinetic( r2, si, sj );
                 Ek += T*cij;
                 Vec3d fij = Rij*(dT_dr*cij);
-                fTs[i].add( fij   , dT_dsi*cij, T*cj*2 );
-                fTs[j].add( fij*-1, dT_dsj*cij, T*ci*2 );
+                fTs[i].add( fij   , -dT_dsi*cij, T*cj*-2 );
+                fTs[j].add( fij*-1, -dT_dsj*cij, T*ci*-2 );
                 if( bEvalKinetic ){                    
                     efpos [i].add( fij )  ; efpos [j].sub( fij )  ;
                     efsize[i]-= dT_dsi*cij; efsize[j]-= dT_dsj*cij;
