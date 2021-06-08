@@ -1072,14 +1072,22 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
     //Vec3d fromRho( int i, int j, int ij ){
     void fromRhoDiag( int i, int ij ){
+        // Q = ci*ci*Sii
+        // dE(pa,sa,qa)/dsi = (dE/dpa)*(dpa/dsi) + (dE/dsa)*(dsa/dsi) + (dE/dqa)*(dqa/dsi)
+        //  (dqa/dsi)=0         because normalized
+        //  (dpa/dsi)=0         because in center
+        //  (dsa/dsi)=sqrt(0.5) because exp(-r2/2si^2)*exp(-r2/2si^2) = exp(-r2/si^2) 
+        // dE(pa,sa,qa)/dpi = (dE/dpa)*(dpa/dpi) + (dE/dsa)*(dsa/dpi) + (dE/dqa)*(dqa/dpi)
+        //  (dqa/dpi)=0         because in center
+        //  (dpa/dpi)=1         because in center
+        //  (dsa/dpi)=0         because in center
         /// This function function cares about diagonal density terms rho_ii = wi * wi
         Vec3d  Fpi  = rhofP[ij];
         double Fsi  = rhofS[ij];
         double dEdQ = rhofQ[ij];
-        //double Q    = rhoQ[ij];
         double   ci = ecoef[i]; 
         efpos [i].add( Fpi );
-        efsize[i] += Fsi*ci*ci * M_SQRT1_2;
+        efsize[i] += Fsi*M_SQRT1_2;
         efcoef[i] += dEdQ*ci*2;
         if(DEBUG_iter==DEBUG_log_iter){
             //printf( "fromRho[%i]ii[%i] Fpi(%g,%g,%g) Fqi %g | Qi %g \n", i, ij, Fpi.x,Fpi.y,Fpi.z, rhoEQ[ij],    rhofQ[ij] );
@@ -1752,19 +1760,11 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         if( fabs(qij)<1e-16) continue;
         double e = Gauss::Coulomb( sqrt(r2+1e-16), sqrt(si*si+sj*sj), fr, fs );
         Vec3d fp = Rij*(fr*qij);
-        //Vec3d fp = Rij*(fr*qj);
-        //fs*=qij;
+        fs*=qij;
         
         aforce[ia].add(fp);
         rhofP[j]  .sub(fp);
-        //rhofS[j] += fs*sj*qi;
         rhofS[j] += fs*sj;
-
-        //printf( "qj %g \n", qj );
-        //e*= qj; //   dE/dpos=Bad     dE/dpos=Good
-        //e*= 1;  //   dE/dpos=GOOD    dE/dpos=BAD
-        //e*= 0.916634;
-
         rhofQ[j] += -e*qi; 
         E        +=  e*qij;
         //printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );

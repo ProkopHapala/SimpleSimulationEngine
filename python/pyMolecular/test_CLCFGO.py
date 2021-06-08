@@ -38,11 +38,15 @@ def init_effmc_2x2( sz=0.5 ):
     #epos [1,0,1]= -0.5; epos [1,1,1]= -0.25     
     epos [0,0,0]= 0.0; epos [0,1,0]= 1.0; 
     epos [1,0,1]= 1.0;  epos [1,1,1]= 2.0   
-    esize[:,:]= 1
-    #esize[0,0]= 1.8;    esize[0,1]= 1.1;   
-    #esize[1,0]= 1.5;    esize[1,1]= 0.3;     
+    #esize[:,:]= 1
+    #esize[:,:]= 0.5
+    esize[0,0]= 1.8;    esize[0,1]= 1.1;   
+    esize[1,0]= 1.5;    esize[1,1]= 0.3;     
     ecoef[:,:]= 1
-    ecoef[0,0  ]= 0.4;  ecoef[0,1]= 0.3;  
+    ecoef[0,0  ]= 0.4;  ecoef[0,1]= 0.3; 
+    epos [:,:,:] += (np.random.rand(norb,perOrb,3)-0.5)*0.2 
+    esize[:,:  ] += (np.random.rand(norb,perOrb  )-0.5)*0.2
+    ecoef[:,:  ] += (np.random.rand(norb,perOrb  )-0.5)*0.2
     #ecoef[1,0  ]= 0.7;  ecoef[1,1]= 1.6               
     if(bPrintInfo): effmc.printAtomsAndElectrons()
 
@@ -472,9 +476,8 @@ if __name__ == "__main__":
     #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
     #tests_funcs += [ checkForces_Pauli_epos ]
     #tests_funcs += [ checkForces_Pauli_epos, checkForces_Pauli_esize ,  checkForces_Pauli_ecoef  ]
-    tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize  ]
-    #tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
-    #tests_funcs += [ checkForces_AQ_epos, checkForces_AQ_esize ,  checkForces_AQ_ecoef  ]
+    tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
+    tests_funcs += [ checkForces_AQ_epos, checkForces_AQ_esize ,  checkForces_AQ_ecoef  ]
 
     #tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize , checkForces_AQ_epos, checkForces_AQ_esize  ]
 
