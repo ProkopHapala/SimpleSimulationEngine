@@ -26,6 +26,26 @@ rnd_coef = 0
 
 # ========= Functions
 
+def init_effmc_2x2( sz=0.5 ):
+    global natom,norb,perOrb,nqOrb
+    natom=0; norb=2; perOrb=2; nqOrb=perOrb*(perOrb+1)/2
+    effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
+    ecoef = effmc.getBuff( "ecoef",(norb,perOrb)   )
+    esize = effmc.getBuff( "esize",(norb,perOrb)   )
+    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
+    epos [:,:,:]= 0
+    #epos [0,0,0]=  0.0; epos [0,1,0]= -0.25; 
+    #epos [1,0,1]= -0.5; epos [1,1,1]= -0.25     
+    epos [0,0,0]= 0.0; epos [0,1,0]= 1.0; 
+    epos [1,0,1]= 1.0;  epos [1,1,1]= 2.0   
+    esize[:,:]= 1
+    #esize[0,0]= 1.8;    esize[0,1]= 1.1;   
+    #esize[1,0]= 1.5;    esize[1,1]= 0.3;     
+    ecoef[:,:]= 1
+    ecoef[0,0  ]= 0.4;  ecoef[0,1]= 0.3;  
+    #ecoef[1,0  ]= 0.7;  ecoef[1,1]= 1.6               
+    if(bPrintInfo): effmc.printAtomsAndElectrons()
+
 def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aP=100.0, aPsz=0.1, aQsz=0.25 ):
     global natom,norb,perOrb,nqOrb
     natom=natom_; norb=norb_; perOrb=perOrb_; nqOrb=perOrb*(perOrb+1)/2
@@ -235,17 +255,20 @@ def checkForces_Kinetic_ecoef( ):
 # ========= Hartree
 
 def checkForces_Hartree_epos( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.2, dist=1.0 )
+    #init_effmc( norb_=2, perOrb_=2, sz=0.2, dist=1.0 )
+    init_effmc_2x2( sz=0.5 )
     effmc.setSwitches_( normalize=-1, coulomb=1 )
     return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
 
 def checkForces_Hartree_esize( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
+    #init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
+    init_effmc_2x2( sz=0.5 )
     effmc.setSwitches_( normalize=-1, coulomb=1 )
     return checkForces( xname="esize",fname="efsize",inds=(0,0) )
 
 def checkForces_Hartree_ecoef( ):
-    init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
+    #init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
+    init_effmc_2x2( sz=0.5 )
     effmc.setSwitches_( normalize=-1, coulomb=1 )
     return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
 
@@ -400,8 +423,8 @@ if __name__ == "__main__":
 
     #np.random.seed( 451)
     #np.random.seed( 1)   # good
-    #np.random.seed( 3)
-    #np.random.seed( 5)
+    np.random.seed( 3)
+    #np.random.seed( 5)    # exact
     #np.random.seed( 8)
     import matplotlib.pyplot as plt_
     global plt,label
@@ -416,7 +439,8 @@ if __name__ == "__main__":
     plt=plt_
     bPrintInfo = True
     #rnd_pos  = 0.0; rnd_size = 0.0; rnd_coef = 0.0
-    rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
+    #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
+    rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.5
     #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
     '''
     xs = np.arange(0.0,1.0,0.25)
@@ -448,8 +472,12 @@ if __name__ == "__main__":
     #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
     #tests_funcs += [ checkForces_Pauli_epos ]
     #tests_funcs += [ checkForces_Pauli_epos, checkForces_Pauli_esize ,  checkForces_Pauli_ecoef  ]
+    tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize  ]
     #tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
-    tests_funcs += [ checkForces_AQ_epos, checkForces_AQ_esize ,  checkForces_AQ_ecoef  ]
+    #tests_funcs += [ checkForces_AQ_epos, checkForces_AQ_esize ,  checkForces_AQ_ecoef  ]
+
+    #tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize , checkForces_AQ_epos, checkForces_AQ_esize  ]
+
     #tests_funcs += [ checkForces_AP_epos, checkForces_AP_esize ,  checkForces_AP_ecoef  ]
     #tests_funcs += [ checkForces_Tot_epos, checkForces_Tot_esize ,  checkForces_Tot_ecoef  ]
     #tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]

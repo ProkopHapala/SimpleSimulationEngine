@@ -147,24 +147,6 @@ inline double product1D_s_deriv( double si, double r2, double xi,   double sj,do
     dXxi   = 2*sj2;
     dXxj   = 2*si2;
 
-    // --- constant
-    /*
-
-    double is4  = is2 * is2;
-
-    double a2   = 2.*(si*sj)*is2;
-    double a    = sqrt(a2);
-    double e1   = a2*a;
-    double e2   = exp( -r2*is2 );
-
-    double f1   = 3.*a  * (si2-sj2)*is4;
-    double f2   = 2.*e2 * r2*is4;
-
-    dCsi = e1*f2*si - e2*f1*sj;
-    dCsj = e1*f2*sj + e2*f1*si;
-    dCr  = e1*e2*(-2.*is2);
-     return e1 * e2;
-    */
    return 1;
 }
 
@@ -192,27 +174,6 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     //printf( "r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) r_2s %g r %g s %g\n", r, fr, f1, e2, e1, f2, r_2s, r, s );
     fs          =          e1f2 *r_s * is;
     return e1 * e2;
-
-    /*
-    const_F2 = 2*np.sqrt(2/np.pi)
-    const_F2 = 1.59576912161
-    ir   = 1./r                         #(r+1.e-8);
-    is_  = 1./s                         #(s+1.e-8);
-    r_s  = r*is_
-    r_2s = M_SQRT1_2 * r_s; # This is for charge-density blobs (assuming si,sj comes from charge denisty)
-    #r_2s = r_s;
-    #r_2s = M_SQRT2   * r_s; # This is for wavefunction blobs (assuming si,sj comes from wavefunction)
-    e1   = ir * const_El_eVA
-    e2   = spc.erf(  r_2s      )
-    g    = np.exp( -r_2s*r_2s ) * const_F2
-    f1   = -e1*ir
-    #f2   = g*is_        # This is for wavefunction blobs (assuming si,sj comes from wavefunction)
-    f2   = g*is_*0.5     # This is for charge-density blobs (assuming si,sj comes from charge denisty)
-    e1f2 = e1*f2
-    fr = (f1*e2 + e1f2)*ir
-    fs =          e1f2 *r_s * is_
-    E  = e1 * e2
-    */
 }
 
 
@@ -232,34 +193,6 @@ inline double Coulomb( const Vec3d& Rij, double r2, double si, double sj, double
     fs *=            qij;     // use:   rhofS[i] -= fs*si;   rhofS[j] -= fs*sj;
     return e;
 }
-
-/*
-inline productCenter(
-    double si,    const Vec3d& pi,
-    double sj,    const Vec3d& pj,
-    double si2, double sj2, const Vec3d& dp,
-    double s2 ,  double is2, double is4, double sqrtis2,
-    double& S,    Vec3d & p,
-    double& dSsi, double& dSsj,
-    Vec3d & dXsi, Vec3d & dXsj,
-    double& dXxi, double& dXxj,
-){
-    S      =  si*sj*sqrtis2;
-    p      =  pj*(si2*is2) + pi*(sj2*is2);
-    //X      =  ( si2*xj + sj2*xi )*inv;
-    double inv3_2 = sqrtis2*is2;
-    dSsi   = sj*sj2*inv3_2;
-    dSsj   = si*si2*inv3_2;
-    dXsi   = dp*(-2*si*sj2*is4);
-    dXsj   = dp*( 2*sj*si2*is4);
-    dXxi   = sj2*is2;
-    dXxj   = si2*is2;
-}
-*/
-
-
-
-
 
 inline double overlap( double r, double si, double sj,   double& fr, double& fsi, double& fsj ){
     // NOTE : this is for normalized gaussian
@@ -303,17 +236,6 @@ inline double tau_func( double r, double si, double sj, double& fr, double& fsi,
     fsj         =  fs*sj;
     return tau;
 }
-
-/*
-inline double kinetic_STau(double r,double si,double sj){
-    double S  ,dTau_dr,dTau_dsi,dTau_dsj; S   = tau_func(r,si,sj);
-    double tau,dTau_dr,dTau_dsi,dTau_dsj; tau = overlap (r,si,sj);
-    T = S*tau
-    dT_dsi = S*dTau_dsi +tau*dS_dsi
-    dT_dr  = S*dTau_dr  +tau*dS_dr 
-    return T, dT_dr, dT_dsi
-}
-*/
 
 inline double product3D_s_deriv(
     double si,    Vec3d   pi,

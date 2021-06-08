@@ -1134,8 +1134,9 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
         double cij = 2*ci*cj;
 
-        double fsi = Fp.dot( dxsi ) + Fs*dssi + dEdQ*dSsi*cij;
-        double fsj = Fp.dot( dxsj ) + Fs*dssj + dEdQ*dSsj*cij;
+        // BACKUP
+        //double fsi = Fp.dot( dxsi ) + Fs*dssi + dEdQ*dSsi*cij;
+        //double fsj = Fp.dot( dxsj ) + Fs*dssj + dEdQ*dSsj*cij;
 
         // Derivation:
         // dE/dpi = (dE/dQij)*(dQij/dpi) + (dE/dpij)*(dpij/dpi)  + (dE/dsij)*(dsij/dpi) // dsij/dpi = 0 
@@ -1148,8 +1149,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
         efpos [i].add( Fp*dxxi + Fq );
         efpos [j].add( Fp*dxxj + Fq );
-        efsize[i] += fsi;
-        efsize[j] += fsj;
+        efsize[i] += Fp.dot( dxsi ) + Fs*dssi + dEdQ*dSsi*cij;
+        efsize[j] += Fp.dot( dxsj ) + Fs*dssj + dEdQ*dSsj*cij;
 
         efcoef[i] += dEdQ*cj*Sij*2;
         efcoef[j] += dEdQ*ci*Sij*2;
@@ -1233,8 +1234,10 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 fs*=qij;
 
                 rhofP[i].add(fp);    rhofP[j].sub(fp);
+                //rhofS[i] += fs*si*qi;   rhofS[j] += fs*sj*qj;
                 rhofS[i] += fs*si;   rhofS[j] += fs*sj;
-                rhofQ[i] += -e*qj;    rhofQ[j] += -e*qi; 
+                //rhofS[i] += fs;   rhofS[j] += fs;
+                rhofQ[i] += -e*qj;   rhofQ[j] += -e*qi; 
                 Ecoul    += e*qij;
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), E, si, sj );
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g qij(%g,%g) E %g s(%g,%g) \n",io,jo,i,j, sqrt(r2), qi,qj,  E, si, sj );
@@ -1744,25 +1747,26 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         //if(r2>Rcut2) continue;
         double qj = rhoQ[j];
         double sj = rhoS[j];
-        Vec3d fp; double fs,qij=qi*qj;
-        double e = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
-        /*
-        double r    = sqrt(r2 + R2SAFE);
-        double s2   = si*si + sj*sj;
-        double s    = sqrt(s2);
-        double qij = -qi*qj;
-        double fr,fs;
-        double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
-        // --- Derivatives (Forces)
-        Vec3d fp = Rij*( fr * qij );
-        fs       *=           qij;
-        //fs      *= M_SQRT1_2 * qij;
-        */
+             
+        double fr,fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently 
+        if( fabs(qij)<1e-16) continue;
+        double e = Gauss::Coulomb( sqrt(r2+1e-16), sqrt(si*si+sj*sj), fr, fs );
+        Vec3d fp = Rij*(fr*qij);
+        //Vec3d fp = Rij*(fr*qj);
+        //fs*=qij;
+        
         aforce[ia].add(fp);
-        rhofP [j] .sub(fp);
-        rhofS [j] += fs*sj;
-        //rhofQ [j] += e*qi*0.0; // Not sure why this is not used here
-        E         += e*qij;
+        rhofP[j]  .sub(fp);
+        //rhofS[j] += fs*sj*qi;
+        rhofS[j] += fs*sj;
+
+        //printf( "qj %g \n", qj );
+        //e*= qj; //   dE/dpos=Bad     dE/dpos=Good
+        //e*= 1;  //   dE/dpos=GOOD    dE/dpos=BAD
+        //e*= 0.916634;
+
+        rhofQ[j] += -e*qi; 
+        E        +=  e*qij;
         //printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );
         //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
     }
@@ -1833,7 +1837,7 @@ double evalAA(){
         }
         //E += evalCrossTerms(); // ToDo : This should replace evalPauli and evalExchange()
         if( bNormForce && bNormalize){ outProjectNormalForces(); }
-        printf( "eval() E=%g Ek %g Eee %g EeePaul %g EeeExch %g Eae %g EaePaul %g Eaa %g \n", E, Ek,Eee,EeePaul,EeeExch,Eae,EaePaul,Eaa   );
+        //printf( "eval() E=%g Ek %g Eee %g EeePaul %g EeeExch %g Eae %g EaePaul %g Eaa %g \n", E, Ek,Eee,EeePaul,EeeExch,Eae,EaePaul,Eaa   );
         return E;
     }
 
