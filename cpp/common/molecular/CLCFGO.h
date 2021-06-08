@@ -800,103 +800,38 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         }
     }
 
-    double pauliOrbPair_bak( int io, int jo ){
-        // This is Pauli potential derived from change of Kinetic Energy due to orbital orthogonalization;
-        // Detla_T = Tsym + Tanti - T11 - T12
-        // where T11 = <psi_1|T|psi_2>, Tsym=<psi_sym||psi_sym>, Tanti=<psi_anti||psi_anti>
-        // psi_sym = (psi_1+psi_2)/|psi_1+psi_1| = (psi_1+psi_2)/2(1+S12)
-        // psi_sym = (psi_1+psi_2)/|psi_1+psi_1| = (psi_1+psi_2)/2(1-S12)
-        // From this it can be derived
-        // Detla_T =  ( T11 + T22 - T12/S12 )/( S12^2/(1-S12^2) )
-        //printf( "pauliKineticChnageVB[%i,%i] ", io, jo );
-        double Tsum = 0;
+    double pauliAtomOrb( int ia, int io ){
         double Ssum = 0;
         int i0=io*perOrb;
-        int j0=jo*perOrb;
-        int ij=0;
-
-        Gauss::PairInt DSs[perOrb2];
-        Gauss::PairInt DTs[perOrb2];
-
-        for(int i=i0; i<i0+perOrb; i++){
-            Vec3d  pi  = epos [i];
-            double ci  = ecoef[i];
-            double si  = esize[i];
-            for(int j=j0; j<j0+perOrb; j++){
-                Vec3d pj  = epos[j];
-                Vec3d Rij = pj-pi;
-                double r2 = Rij.norm2();
-                //if(r2>Rcut2) continue;
-                double cj  = ecoef[j];
-                double sj  = esize[j];
-
-                Gauss::PairInt& DS = DSs[ij];
-                Gauss::PairInt& DT = DTs[ij];
-
-                double cij = ci*cj;
-                _Gauss_sij_aux(si,sj)
-                _Gauss_overlap(r2,si,sj)
-                double Scij = S*cij;
-                Ssum += Scij;
-                //DS.set( Rij*dS_dr*cij, dS_dsi*cij, dS_dsj*cij, Scij );
-                DS.set( Rij*dS_dr*cij, -dS_dsi*cij, -dS_dsj*cij, -Scij );
-                //printf( "pauliOrbPair[%i,%i|%i,%i] r %g pi(%g,%g,%g) pj(%g,%g,%g) \n", io,jo, i,j, sqrt(r2),   pi.x,pi.y,pi.z,  pj.x,pj.y,pj.z );
-                //printf( "pauliOrbPair[%i,%i|%i,%i] r %g si %g sj %g dSr %g dSsi %g dSsj %g S %g ", io,jo, i,j, sqrt(r2), si, sj, dS_dr, dS_dsi, dS_dsj, S );
-                // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
-                if(iPauliModel>0){ // Kinetic Energy integral
-                    _Gauss_tau    ( r2,si,sj )
-                    _Gauss_kinetic( r2,si,sj )
-                    double Tcij = T*cij;
-                    Tsum -= Tcij;
-                    //DT.set( Rij*dT_dr       , dT_dsi,     dT_dsj,     Tcij );
-                    DT  .set( Rij*(-dT_dr*cij), dT_dsi*cij, dT_dsj*cij, Tcij );
-                    //Tsum -= S*tau;  // integrate T12 = <psi_1|T|psi_2>
-                }
-                ij++;
-            }
+        Gauss::Blob DiS[perOrb];
+        for(int i=0; i<perOrb;i++){ DiS[i].setZero(); }
+        Vec3d  pj  = apos  [ia]; 
+        double cj  = aPcoef[ia];
+        double sj  = aPsize[ia];
+        Vec3d  fpj = Vec3dZero;
+        for(int i_=0; i_<perOrb; i_++){
+            int i=i0+i_;
+            Vec3d  pi = epos [i];
+            double ci = ecoef[i];
+            double si = esize[i];
+            Vec3d Rij = pj-pi;
+            double r2 = Rij.norm2();
+            //if(r2>Rcut2) continue;
+            double cij = ci*cj;
+            _Gauss_sij_aux(si,sj)
+            _Gauss_overlap(r2,si,sj)
+            double Scij = S*cij;
+            Ssum += Scij;
+            Vec3d fp = Rij* dS_dr*cij;
+            DiS[i_].add( fp, -dS_dsi*cij, -S*cj );
+            fpj    .sub( fp );
         }
-        double E;
-        if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
-            double T11 = oEs[io];
-            double T22 = oEs[jo];
-            double S2  = Ssum*Ssum;
-            double D   = 1/(1-S2);
-            double D2  = D*D;
-            double  fS = Ssum*D;
-            double fS2 = Ssum*fS;
-            E         =            (T11 + T22)*fS2     -2*Tsum*fS;
-            forceOrbPair( io,jo, ( (T11 + T22)*2*Ssum  -2*Tsum*(1+S2) )*D2, DSs );
-            forceOrbPair( io,jo, -2*fS , DTs    ); // d_T( Tij*S  /(1+S^2) )
-            forceOrb    ( io,       fS2, fTs+i0 );  // d_T( Tii*S^2/(1+S^2) )
-            forceOrb    ( jo,       fS2, fTs+j0 );  // d_T( Tjj*S^2/(1+S^2) )
-        }else if(iPauliModel==3){ // Juat for debugging
-            E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
-            forceOrbPair( io,jo, 1, DTs );
-        }else if(iPauliModel==4){
-            E = Ssum; // Just Cross-Overlap S12 = <psi1|psi2>
-            forceOrbPair( io,jo, 1, DSs );
-        }else if(iPauliModel==5){   //   Ep = ( Sij/(1-Sij^2) )* Tij   =  ( Sij^2/(1-Sij^2) )* ( Tij/Sij )
-            double S2 = Ssum*Ssum;
-            double D  = 1/(1-S2);
-            double  fS = Ssum*D;
-            double dfS = (1+S2)*D*D;
-            E         = fS*Tsum;
-            forceOrbPair( io,jo,       fS, DTs );
-            forceOrbPair( io,jo, Tsum*dfS, DSs );
-        }else if(iPauliModel==6){   //   Ep = Sij*Tij
-            E = Ssum*Tsum;
-            forceOrbPair( io,jo,  Ssum, DTs );
-            forceOrbPair( io,jo,  Tsum, DSs );
-        }else{ // Pauli Model 0 :   E = K*S^2 
-            E = Ssum*Ssum*KPauliOverlap;
-            forceOrbPair( io,jo, 2*Ssum*KPauliOverlap, DSs );
-        }
-        //printf( "E %g \n", E );
-        //return E;
-        //return Ssum;
+        double E = Ssum*Ssum*KPauliOverlap;
+        double f =    2*Ssum*KPauliOverlap;
+        forceOrb( io, f, DiS+i0 );
+        aforce[ia].add(fpj);
         return E;
     }
-
 
     double pauliOrbPair( int io, int jo ){
         // This is Pauli potential derived from change of Kinetic Energy due to orbital orthogonalization;
@@ -1015,7 +950,6 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         return E;
     }
 
-
     double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
         //printf( "======== evalPauli() \n" );
         EeePaul = 0;
@@ -1074,7 +1008,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     void fromRhoDiag( int i, int ij ){
         // Q = ci*ci*Sii
         // dE(pa,sa,qa)/dsi = (dE/dpa)*(dpa/dsi) + (dE/dsa)*(dsa/dsi) + (dE/dqa)*(dqa/dsi)
-        //  (dqa/dsi)=0         because normalized
+        //  (dqa/dsi)=0         because normalized ???? really even if we have normalization of ?
         //  (dpa/dsi)=0         because in center
         //  (dsa/dsi)=sqrt(0.5) because exp(-r2/2si^2)*exp(-r2/2si^2) = exp(-r2/si^2) 
         // dE(pa,sa,qa)/dpi = (dE/dpa)*(dpa/dpi) + (dE/dsa)*(dsa/dpi) + (dE/dqa)*(dqa/dpi)
@@ -1685,7 +1619,6 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 // ==================== Interactions with atomic cores
 // ==================================================================
 
-
 double evalAEoverlap( int jo, Gauss::PairDeriv*  dBs, double* Ss, double si, const Vec3d&  pi ){  // Interaction of atomic core with electron wavefunction (Pauli)
     ///const Vec3d  pi   = apos [ia];
     //const Vec3d  abwi = eAbWs[ia]; // ToDo: We actually need only the width
@@ -1778,16 +1711,16 @@ double evalAE(){
     double            Ss[perOrb];
     Eae=0,EaePaul=0;
     for(int ia=0; ia<natom; ia++){
-        //const Vec3d  pi   = apos [ia];
-        //const double qqi  = aQs  [ia];
-        //const Vec3d  abwi = eAbWs[ia];
         for(int jo=0; jo<nOrb; jo++){
             if(bEvalAEPauli){// --- Pauli Overlap
+                /*
                 double S   = evalAEoverlap( jo, dBs, Ss, aPsize[ia], apos[ia] );
                 double K   = aPcoef[ia];
                 EaePaul   += K*S*S;
                 double Amp = K*S*2;
                 applyPairForceAE ( ia, jo, dBs, Ss, Amp );
+                */
+                EaePaul += pauliAtomOrb( ia, jo );
             }
             // ---- Coulomb
             if(bEvalAECoulomb){

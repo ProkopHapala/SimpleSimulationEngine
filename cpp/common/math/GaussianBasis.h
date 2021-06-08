@@ -313,10 +313,10 @@ struct Blob{
     inline void set( const Vec3d& pos_, double size_, double charge_ ){ p=pos_; s=size_; c=charge_; }
     inline void add( const Vec3d& pos_, double size_, double charge_ ){ p.add(pos_); s+=size_; c+=charge_; }
 
-    inline void applyForceScaled( double K, Vec3d& fp, double& fs, double& c )const{
-        fp.add_mul( p   , K );
-        fs +=       s  * K  ;
-        c  +=       c* K  ;
+    inline void applyForceScaled( double K, Vec3d& fp, double& fs, double& c_ )const{
+        fp.add_mul( p,  K );
+        fs +=       s * K  ;
+        c_ +=       c * K  ;
     }
 };
 
