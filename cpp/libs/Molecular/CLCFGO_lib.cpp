@@ -94,14 +94,13 @@ void init( int natom_, int nOrb_, int perOrb_, int natypes_ ){
     makeDefaultBuffers();
 }
 
-
 double evalFunc( double r, double s ){
     double fr,fs;
     return Gauss::Coulomb( r, s, fr, fs );
 }
 
-
 double  eval(){ return solver.eval(); };
+
 double  coulombOrbPair( int io, int jo ){ solver.clearAuxDens(); return solver.CoulombOrbPair( io, jo ); }
 double projectOrb( int io, bool bNormalize  ){
     solver.bNormalize=bNormalize;

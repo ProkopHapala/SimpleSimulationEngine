@@ -382,19 +382,19 @@ struct PairInt{
 };
 
 struct Blob{
-    Vec3d  pos;
-    double size;
-    double charge;
+    Vec3d  p;
+    double s;
+    double c;
 
-    inline void setZero(){ pos=Vec3dZero; size=0; charge=0; };
+    inline void setZero(){ p=Vec3dZero; s=0; c=0; };
 
-    inline void set( const Vec3d& pos_, double size_, double charge_ ){ pos=pos_; size=size_; charge=charge_; }
-    inline void add( const Vec3d& pos_, double size_, double charge_ ){ pos.add(pos_); size+=size_; charge+=charge_; }
+    inline void set( const Vec3d& pos_, double size_, double charge_ ){ p=pos_; s=size_; c=charge_; }
+    inline void add( const Vec3d& pos_, double size_, double charge_ ){ p.add(pos_); s+=size_; c+=charge_; }
 
     inline void applyForceScaled( double K, Vec3d& fp, double& fs, double& c )const{
-        fp.add_mul( pos   , K );
-        fs +=       size  * K  ;
-        c  +=       charge* K  ;
+        fp.add_mul( p   , K );
+        fs +=       s  * K  ;
+        c  +=       c* K  ;
     }
 };
 
@@ -407,13 +407,13 @@ struct PairDeriv{
 
 inline double product3DDeriv( double si, Vec3d pi, double sj, Vec3d pj, Blob& out, PairDeriv& dOut ){
     double C = product3D_s_deriv( si, pi, sj, pj,
-        out.size, out.pos,
+        out.s, out.p,
         dOut.dSsi, dOut.dSsj,
         dOut.dXsi, dOut.dXsj,
         dOut.dXxi, dOut.dXxj,
         dOut.dCsi, dOut.dCsj, dOut.dCr
     );
-    out.charge = C;
+    out.c = C;
     return C;
 }
 
@@ -423,11 +423,11 @@ inline void productBackForce(
     Vec3d& Fxi, Vec3d& Fxj, double& fsi, double& fsj
 ){
     //if(DEBUG_iter==DEBUG_log_iter) printf( "cij %g dEdQ %g Fx %g \n", cij, dEdQ, Fp.x );
-    fsi += ( fB.pos.dot( Ds.dXsi ) + fB.size*Ds.dSsi + fB.charge*Ds.dCsi*cij );
-    fsj += ( fB.pos.dot( Ds.dXsj ) + fB.size*Ds.dSsj + fB.charge*Ds.dCsj*cij );
-    Vec3d  Fq = Rij*(Ds.dCr*cij)*fB.charge;
-    Fxi.add( fB.pos*Ds.dXxi + Fq );
-    Fxj.add( fB.pos*Ds.dXxj + Fq );
+    fsi += ( fB.p.dot( Ds.dXsi ) + fB.s*Ds.dSsi + fB.c*Ds.dCsi*cij );
+    fsj += ( fB.p.dot( Ds.dXsj ) + fB.s*Ds.dSsj + fB.c*Ds.dCsj*cij );
+    Vec3d  Fq = Rij*(Ds.dCr*cij)*fB.c;
+    Fxi.add( fB.p*Ds.dXxi + Fq );
+    Fxj.add( fB.p*Ds.dXxj + Fq );
 }
 
 
