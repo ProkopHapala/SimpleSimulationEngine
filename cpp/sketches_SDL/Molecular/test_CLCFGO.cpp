@@ -295,14 +295,12 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //solver.loadFromFile( "data/Li_3g.fgo", true);
     //solver.loadFromFile( "data/Li_4g.fgo", true);
     //solver.loadFromFile( "data/C_2g_o1.fgo", true);
-    //solver.loadFromFile( "data/H_1g_1o.fgo", true);
+    solver.loadFromFile( "data/H_1g_1o.fgo", true);
     //solver.loadFromFile( "data/H2_1g_2o.fgo", true);
     //solver.loadFromFile( "data/H2O_1g_8o.fgo", true);
-    solver.loadFromFile( "data/e2_1g_2o.fgo", true);
+    //solver.loadFromFile( "data/e2_1g_2o.fgo", true);
     dt = 0.001;
     //exit(0);
-
-
 
     solver.turnAllSwitches(false);
     solver.bNormalize     = 1;
@@ -319,23 +317,6 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     solver.iPauliModel = 2;
 
-    /*
-    //solver.bNormalize     = false;
-    solver.bEvalKinetic   = false;
-    //solver.bEvalCoulomb   = false;
-    solver.bEvalPauli     = false;
-    solver.bEvalExchange  = false;
-    //solver.bEvalAECoulomb = false;
-    solver.bEvalAEPauli   = false;
-    //solver.bEvalAE      = false;
-    solver.bEvalAA        = false;
-    solver.iPauliModel    = 1;
-
-    solver.bOptAtom = false;
-    //solver.bOptEPos = false;
-    solver.bOptSize = false;
-    solver.bOptCoef = false;
-    */
 
     solver.printSetup();
     solver.printAtoms();
@@ -355,7 +336,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //plot1.xsharingLines(1, 100, -3.0, 0.1 );
     //plot1.xsharingLines( 2, 100,   -3.0, 0.1 );
 
-    /*
+
     nOrbPlot=_min(5,solver.nOrb);
     printf( " nOrbPlot %i solver.nOrb %i \n", nOrbPlot, solver.nOrb );
     plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFF0000FF, "Vatom" ) );
@@ -366,9 +347,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     }
     //plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFFFF0000, "Orb1"     ) );
     //plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFFFF8000, "Orb2"     ) );
-    */
 
 
+    /*
     solver.epos [0]=Vec3dZero;
     //solver.esize[0]=1.0;
     solver.esize[0]=0.5;
@@ -377,6 +358,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //test_ElectroStaticsBrute( solver, plot1 );
     //test_ElectroStatics( solver, plot1 );
     exit(0);
+    */
 
     plot1.scaling.y=0.05;
     plot1.update();
@@ -388,7 +370,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     bRun = false;
 
-    dt = 0.000001;
+    //dt = 0.000001;
+    dt = 0.001;
 
 }
 

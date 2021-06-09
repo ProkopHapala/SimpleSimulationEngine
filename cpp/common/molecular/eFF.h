@@ -300,22 +300,22 @@ double evalEE(){
             double& fsj = fsize[j];
 
             double dEee = addCoulombGauss( dR, si, sj, f, fsi, fsj, qq ); Eee += dEee;
-            printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
+            //printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
             if( iPauliModel == 1 ){
-                printf( "EeePaul[%i,%i]  ", i, j );
+                //printf( "EeePaul[%i,%i]  ", i, j );
                 double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho ); EeePaul+=dEpaul;
                 //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
             }else if( iPauliModel == 2 ){
                 if(spini==espin[j]){ // Pauli repulsion only for electrons with same spin
-                    printf( "EeePaul[%i,%i] >> ", i, j );
+                    //printf( "EeePaul[%i,%i] >> ", i, j );
                     //double dEpaul = addPauliGaussVB( dR, si*M_SQRT2, sj*M_SQRT2, f, fsi, fsj ); EeePaul+=dEpaul;
                     double dEpaul = addPauliGaussVB( dR, si, sj, f, fsi, fsj ); EeePaul+=dEpaul;
                     //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
-                    printf( "<< dEpaul %g \n", dEpaul );
+                    //printf( "<< dEpaul %g \n", dEpaul );
                 }
             }else{
                 if( spini==espin[j] ){
-                    printf( "EeePaul[%i,%i] ", i, j );
+                    //printf( "EeePaul[%i,%i] ", i, j );
                     i_DEBUG=1;
                     double dEpaul = addDensOverlapGauss_S( dR, si*M_SQRT2, sj*M_SQRT2, KPauliOverlap, f, fsi, fsj ); EeePaul+=dEpaul;
                     //double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, false, KRSrho ); EeePaul+=dEpaul;
@@ -338,7 +338,7 @@ double evalEE(){
             //}
         }
     }
-    printf( "Eee %g EeePaul %g \n", Eee, EeePaul );
+    //printf( "Eee %g EeePaul %g \n", Eee, EeePaul );
     //if( i_DEBUG>0 )  for(int j=0; j<ne; j++){  printf( "evalEE: esize[%i] %g f %g \n", j, esize[j], fsize[j] ); }
     return Eee+EeePaul;
 }
@@ -479,7 +479,7 @@ void autoAbWs( const Vec3d * AAs, const Vec3d * AEs ){
         int ityp =(int)round(aQ[i]);
         aAbWs[i] = AAs[ityp];
         eAbWs[i] = AEs[ityp];
-        printf( "atom[%i] typ %i aAbW(%g,%g,%g) eAbW(%g,%g,%g) \n", i, ityp, aAbWs[i].x, aAbWs[i].y, aAbWs[i].z,  eAbWs[i].x, eAbWs[i].y, eAbWs[i].z );
+        //printf( "atom[%i] typ %i aAbW(%g,%g,%g) eAbW(%g,%g,%g) \n", i, ityp, aAbWs[i].x, aAbWs[i].y, aAbWs[i].z,  eAbWs[i].x, eAbWs[i].y, eAbWs[i].z );
     }
 }
 
@@ -502,7 +502,7 @@ bool loadFromFile_xyz( char const* filename ){
     fscanf (pFile, " %i \n", &ntot );
     fscanf (pFile, " %i %i\n", &na, &ne );
     if((ne+na)!=ntot){ printf("ERROR ne(%i)+na(%i) != ntot(%i) >>%s<< \n", ne, na, ntot, filename ); return true; }
-    printf("na %i ne %i ntot %i \n", na, ne, ntot );
+    //printf("na %i ne %i ntot %i \n", na, ne, ntot );
     realloc( na, ne );
     char buf[1024];
     //int ntot=na+ne;
@@ -527,7 +527,7 @@ bool loadFromFile_xyz( char const* filename ){
             //esize[ie] = 1.0;
             //esize[ie] = 0.5;
             //esize[ie] = 0.25;
-            printf( " e[%i] pos(%g,%g,%g) spin %i size %g \n", ie, epos[ie].x, epos[ie].y, epos[ie].z, espin[ie], esize[ie] );
+            //printf( " e[%i] pos(%g,%g,%g) spin %i size %g \n", ie, epos[ie].x, epos[ie].y, epos[ie].z, espin[ie], esize[ie] );
             ie++;
         }else{
             apos[ia]=(Vec3d){x,y,z};

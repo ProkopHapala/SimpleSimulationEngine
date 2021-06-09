@@ -65,7 +65,7 @@ const double const_Ke_eVA = const_K_eVA*1.5;
 inline double addKineticGauss( double s, double& fs ){
     double is  = 1/s;
     double is2 = is*is*const_Ke_eVA;
-    printf( "addKineticGauss s %g is %g is2 %g const_Ke_eVA %20.10f const_K_eVA %20.10f \n", s, is, is2, const_Ke_eVA, const_K_eVA );
+    //printf( "addKineticGauss s %g is %g is2 %g const_Ke_eVA %20.10f const_K_eVA %20.10f \n", s, is, is2, const_Ke_eVA, const_K_eVA );
     fs += 2.*is2*is;
     return is2;
 }
@@ -143,7 +143,7 @@ inline double addCoulombGauss( const Vec3d& dR, double s, Vec3d& f, double& fsi,
     double r    = sqrt( dR.norm2() + 1e-16 );
     double fr,fs;
     double E = CoulombGauss( r, s, fr, fs, qq );
-    printf( "addCoulombGauss E %g s %g r %g \n", E, s, r );
+    //printf( "addCoulombGauss E %g s %g r %g \n", E, s, r );
     fsi += fs*s;
     f.add_mul( dR, fr );
     return E;
@@ -408,7 +408,7 @@ inline double getOverlapSGauss( double r2, double si, double sj, double& dSr, do
     //f.add_mul( dR, e1*e2*(-2.*is2) );
     dSr  = e1*e2*(-2.*is2);
 
-    printf( "getOverlapSGauss r %g s(%g,%g) S %g ", sqrt(r2), si, sj, e1*e2 );
+    //printf( "getOverlapSGauss r %g s(%g,%g) S %g ", sqrt(r2), si, sj, e1*e2 );
     return e1 * e2;
 }
 
@@ -498,7 +498,7 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     //printf( "addPauliGauss fr1, fr2 fr %g %g %g %g \n", dTr*eS, TfS*dSr, (dTr *eS + TfS*dSr )*KRSrho.x, dR.z );
     //printf( "---------------------- \n" );
 
-    printf( " E %g T %g eS %g S %g ", T*eS, T, eS, S );
+    //printf( " E %g T %g eS %g S %g ", T*eS, T, eS, S );
 
     return T * eS;
 
@@ -534,7 +534,7 @@ inline double addPauliGaussVB( const Vec3d& dR, double si, double sj, Vec3d& f, 
     fsj +=         -(dTsj*eS + TfS*dSsj);
     f.add_mul( dR,  (dTr *eS + TfS*dSr ) ); // second *KRSrho.x because dR is not multiplied
 
-    printf( " E %g T %g eS %g S %g ", T*eS, T, eS, S );
+    //printf( " E %g T %g eS %g S %g ", T*eS, T, eS, S );
 
     return T * eS;
 
