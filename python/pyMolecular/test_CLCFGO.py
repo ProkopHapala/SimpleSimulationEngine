@@ -438,9 +438,19 @@ if __name__ == "__main__":
     #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
     rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.5
     #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
-    '''
-    xs = np.arange(0.0,1.0,0.25)
+    
+    #xs = np.arange(0.0,6.0,0.025)
+    xs = np.arange(0.1,3.0,0.005)
     ys = np.zeros(len(xs))
+
+    #Es,Fs = effmc.evalFuncDerivs(xs,0.6)
+    Es,Fs = effmc.evalFuncDerivs(0.165,xs)
+    plt.plot(xs,Es,label="E")
+    plt.plot(xs,Fs,label="F")
+    plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
+    plt.legend(); plt.grid(); plt.show(); exit(0)
+
+    '''
     for i,x in enumerate(xs):
         x = xs[i]
         s = 0.2

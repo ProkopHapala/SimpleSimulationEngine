@@ -56,6 +56,18 @@ lib.evalFunc.restype  = c_double
 def evalFunc( r, s ):
     return lib.evalFunc( r, s )
 
+#void evalFuncDerivs( int n, double* r, double* s, double* Es, double* Fs ){
+lib.evalFuncDerivs.argtypes = [ c_int, array1d, array1d, array1d, array1d ]
+lib.evalFuncDerivs.restype  = None
+def evalFuncDerivs( r, s, Es=None, Fs=None ):
+    r = r + s*0
+    s = s + r*0
+    n = len(r)
+    if Es is None: Es=np.zeros(n)
+    if Fs is None: Fs=np.zeros(n) 
+    lib.evalFuncDerivs( n, r, s, Es, Fs )
+    return Es,Fs
+
 #double  coulombOrbPair( int io, int jo ){ return solver.CoulombOrbPair( io, jo ); }
 lib.coulombOrbPair.argtypes = [ c_int, c_int ]
 lib.coulombOrbPair.restype  = c_double

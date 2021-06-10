@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
 import numpy as np
-import matplotlib.pyplot as plt
-
 import scipy.special as spc
 
 
@@ -199,16 +197,6 @@ def product3D_s_deriv( si,pi, sj,pj ):
     
     return S,s,p, dS_dr*dp, (dSsi,dXsi,dXxi,dS_dsi), (dSsj,dXsj,dXxj,dS_dsj)
 
-
-
-
-
-
-
-
-
-
-
 def checkNumDeriv( x, func, dfunc, name ):
     dy         = dfunc( x )
     y          = func(x)
@@ -219,9 +207,109 @@ def checkNumDeriv( x, func, dfunc, name ):
     plt.plot(x, y,'-.', label=name+"_F" )
 
 
+'''
+inline double erfx_e6( double x ){
+    if( x>4.5 ){ return 1./x; }
+    double xx = x*x;
+    double even =  0.9850156202961753  +xx*(-0.02756061032579559  +xx*(-0.00188409579491924  +xx*(-0.003098629936170076 +xx*(-0.001348858853909826  +xx*(-3.98946569988845e-05 ) ) ) ) );
+    double odd  = -0.13893350387140332 +xx*(-0.007664292475021448 +xx*( 0.003046826535877866 +xx*( 0.002879338499080343 +xx*( 0.0003260490382458129 +xx*( 1.97093650414204e-06 ) ) ) ) );
+    double  t = even + x*odd;
+    t*=t; t*=t; t*=t; // ^8
+    return 1./( t + x );
+}
 
+inline double erfx_e9( double x ){
+    if( x>4.5 ) return 1./x;
+    double xx = x*x;
+    if(x<1.){
+        return 1.1283791662308296 +xx*(-0.3761262972953429 +xx*(0.1128363404233098 +xx*(-0.02685603827999912 +xx*(0.005192885862299865 +xx*(-0.0008053004722300972 +xx*(8.004020068129447e-05 ) ) ) ) ) );
+    }
+    double even =   0.9903386741213333  +xx*( 0.08180278811069948 +xx*( 0.219787883285348  +xx*( 0.0893543139653664  +xx*( 0.0071698531450102   +xx*( 8.644883946761633e-05 ) ) ) ) );
+    double odd  =  -0.17511814497584813 +xx*(-0.2010794452848663  +xx*(-0.1692686167813105 +xx*(-0.03129254573733003 +xx*(-0.001037968593234627 +xx*(-3.164137211658646e-06 ) ) ) ) );
+    double t = even + x*odd;
+    t*=t; t*=t; t*=t; // ^8
+    return 1./( t + x );
+}
+'''
+
+def erfx_approx( x, s ):
+    x=np.abs(x)
+    ys   = 1./x 
+    invs = 1/s
+    x *= invs
+    xx = x*x;
+    even =  0.9850156202961753  +xx*(-0.02756061032579559  +xx*(-0.00188409579491924  +xx*(-0.003098629936170076 +xx*(-0.001348858853909826  +xx*(-3.98946569988845e-05 ) ) ) ) );
+    odd  = -0.13893350387140332 +xx*(-0.007664292475021448 +xx*( 0.003046826535877866 +xx*( 0.002879338499080343 +xx*( 0.0003260490382458129 +xx*( 1.97093650414204e-06 ) ) ) ) );
+    t    = even + x*odd;
+    t*=t; t*=t; t*=t; # ^8
+    mask = np.abs(x)<4.5
+    ys[mask] = (invs/( t + x ))[mask]
+    #ys[mask] = ( t )[mask]
+    return ys
+
+def derfx_approx( x, s ):
+    '''
+    df(t(x))/dx = (df/dt)*(dt/dx)
+    df/dt = (  ) 
+    '''
+    x=np.abs(x)
+    ys  =  1./x 
+    dys  = -1./(x*x) 
+    invs = 1/s
+    x *= invs
+    xx = x*x;
+    even =  0.9850156202961753  +xx*(-0.02756061032579559  +xx*(-0.00188409579491924  +xx*(-0.003098629936170076 +xx*(-0.001348858853909826  +xx*(-3.98946569988845e-05 ) ) ) ) )
+    odd  = -0.13893350387140332 +xx*(-0.007664292475021448 +xx*( 0.003046826535877866 +xx*( 0.002879338499080343 +xx*( 0.0003260490382458129 +xx*( 1.97093650414204e-06 ) ) ) ) )
+
+    #deven =                           -0.02756061032579559*2  +xx*(-0.00188409579491924*4  +xx*(-0.003098629936170076*6 +xx*(-0.001348858853909826*8  +xx*(-3.98946569988845e-05*10 ) ) ) ) 
+    #dodd  = -0.13893350387140332 +xx*(-0.007664292475021448*3 +xx*( 0.003046826535877866*5 +xx*( 0.002879338499080343*7 +xx*( 0.0003260490382458129*9 +xx*( 1.97093650414204e-06*11 ) ) ) ) )
+
+    deven =                          -0.05512122065159118 +xx*(-0.00753638317967696 +xx*(-0.01859177961702045 +xx*(-0.01079087083127861  +xx*(-0.000398946569988845 ) ) ) )      
+    dodd  = -0.1389335038714033 +xx*(-0.02299287742506434 +xx*( 0.01523413267938933 +xx*( 0.0201553694935624  +xx*( 0.002934441344212316 +xx*(2.168030154556244e-05 ) ) ) ) )
+
+    print "%.16g %.16g %.16g %.16g %.16g      " %( -0.02756061032579559*2, -0.00188409579491924*4,  -0.003098629936170076*6, -0.001348858853909826*8, -3.98946569988845e-05*10 )
+    print "%.16g %.16g %.16g %.16g %.16g %.16g" %(-0.13893350387140332   , -0.007664292475021448*3,  0.003046826535877866*5,  0.002879338499080343*7, 0.0003260490382458129*9, 1.97093650414204e-06*11 )
+
+    t    =  even   + x*odd;
+    dt   = deven*x +  dodd;
+    t2 = t*t
+    t4 = t2*t2
+    t8 = t4*t4
+    dt8_dx = 8*dt*t*t2*t4
+    
+    D = 1/(t8 + x)
+    mask = np.abs(x)<4.5
+    ys [mask] = (      invs           *D   )[mask]
+    dys[mask] = (-invs*invs*(dt8_dx+1)*D*D )[mask]
+    #ys[mask] = ( t )[mask]
+    return ys, dys
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    x=np.linspace(0.001,6,1000)
+    s = 1.0
+    #y     = erfx_approx( x, s )
+    y,dy     = derfx_approx( x, s )
+    y_ref = spc.erf( x/s )/x
+    #dy_ref = (  (2/np.sqrt(np.pi))*np.exp(-x*x/(s*s)) - spc.erf( x/s )  )/(x**2)
+    dy_ref = (  (2/np.sqrt(np.pi))*np.exp(-x**2)*x - spc.erf( x )  )/(x**2)
+
+    plt.plot(x,y    , label="erfx(x,s)")
+    plt.plot(x,y_ref, label="erf(x/s)/x")
+
+    x_= x[1:-1]
+    dx=x[1]-x[0]
+    #dy_num = (y_ref[2:]-y_ref[:-2])/(2.*dx)
+    
+    plt.plot(x      ,dy     , label="derfx(x,s)")
+    plt.plot(x      ,dy_ref , label="derfx(x/s)/x")
+    #plt.plot(x_,dy_num, label="derf(x/s)/x")
+
+    plt.plot(x,(y -y_ref)*1e+6, label="error * 1e+6")
+    plt.plot(x,(dy -dy_ref)*1e+6, label="derror * 1e+6")
+    #plt.plot(x_,(dy[1:-1]-dy_num)*1e+6, label="derror * 1e+6")
+    plt.legend(); plt.grid(); plt.show()
+    exit(0)
 
     #s  = np.arange( 0.1, 5.0, 0.05 )
     #rs = np.arange( 0.1, 5.0, 0.05 )

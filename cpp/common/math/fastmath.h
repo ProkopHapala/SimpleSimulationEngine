@@ -103,39 +103,61 @@ inline double erf_6_plus(double x){
 }
 inline double erf_6(double x){ if(x>0){ return erf_6_plus(x); }else{ return -erf_6_plus(-x); } }
 
-/*
+
 
 // === Approx erf(x)/x
 //   Problem - we need erf(w*x)/x which is function of two parameters x,w
 
-inline double erfx_e6( double x ){
-    if( x>4.5 ){ return 1./x; }
+
+inline double erfx_e6( double x_, double k, double& dy ){
+    // approximation of erf(k*x)/x and its derivative with maximum error ~ 1e-6
+    double x =x_*k;
+    if( x>4.5 ){ double y=1/x_; dy=-y*y; return y; }
+    double xx = x*x;
+    double even  =  0.9850156202961753  +xx*(-0.02756061032579559  +xx*(-0.00188409579491924  +xx*(-0.003098629936170076 +xx*(-0.001348858853909826  +xx*(-3.98946569988845e-05 ) ) ) ) );
+    double odd   = -0.13893350387140332 +xx*(-0.007664292475021448 +xx*( 0.003046826535877866 +xx*( 0.002879338499080343 +xx*( 0.0003260490382458129 +xx*( 1.97093650414204e-06 ) ) ) ) );
+    double deven =                           -0.05512122065159118  +xx*(-0.00753638317967696  +xx*(-0.01859177961702045  +xx*(-0.01079087083127861   +xx*(-0.000398946569988845 ) ) ) )  ;
+    double dodd  = -0.1389335038714033  +xx*(-0.02299287742506434  +xx*( 0.01523413267938933  +xx*( 0.0201553694935624   +xx*( 0.002934441344212316  +xx*(2.168030154556244e-05 ) ) ) ) );
+    double  t = even    + x*odd;
+    double dt = deven*x +  dodd;
+    double t2 = t*t;
+    double t4 = t2*t2;
+    double dt8_dx = 8*dt*t*t2*t4;
+    double y      = k/(t4*t4 + x);
+    dy            = -y*y*(dt8_dx+1);
+    return y;
+}
+
+inline double erfx_e6( double x_, double k ){
+    double x =x_*k;
+    if( x>4.5 ){ return 1./x_; }
     double xx = x*x;
     double even =  0.9850156202961753  +xx*(-0.02756061032579559  +xx*(-0.00188409579491924  +xx*(-0.003098629936170076 +xx*(-0.001348858853909826  +xx*(-3.98946569988845e-05 ) ) ) ) );
     double odd  = -0.13893350387140332 +xx*(-0.007664292475021448 +xx*( 0.003046826535877866 +xx*( 0.002879338499080343 +xx*( 0.0003260490382458129 +xx*( 1.97093650414204e-06 ) ) ) ) );
     double  t = even + x*odd;
     t*=t; t*=t; t*=t; // ^8
-    return 1./( t + x );
+    return k/( t + x );
 }
 
-inline double erfx_e9( double x ){
-    if( x>4.5 ) return 1./x;
+inline double erfx_e9( double x_, double k ){
+    double x =x_*k;
+    if( x>4.5 ) return 1./x_;
     double xx = x*x;
-    if(x<1.){
+    if(x<1./k){
         return 1.1283791662308296 +xx*(-0.3761262972953429 +xx*(0.1128363404233098 +xx*(-0.02685603827999912 +xx*(0.005192885862299865 +xx*(-0.0008053004722300972 +xx*(8.004020068129447e-05 ) ) ) ) ) );
     }
     double even =   0.9903386741213333  +xx*( 0.08180278811069948 +xx*( 0.219787883285348  +xx*( 0.0893543139653664  +xx*( 0.0071698531450102   +xx*( 8.644883946761633e-05 ) ) ) ) );
     double odd  =  -0.17511814497584813 +xx*(-0.2010794452848663  +xx*(-0.1692686167813105 +xx*(-0.03129254573733003 +xx*(-0.001037968593234627 +xx*(-3.164137211658646e-06 ) ) ) ) );
     double t = even + x*odd;
     t*=t; t*=t; t*=t; // ^8
-    return 1./( t + x );
+    return k/( t + x );
 }
-*/
+
 
 
 inline double exp_p8( double x ){
     // optimized for decreasing exp(-x)
-    if(x>25) return 0;
+    if(x<-25) return 0;
     x *= 0.125;
     double xx = x*x;
     //double even = 1.0 +xx*(0.5000000000000000 +xx*(0.04166189077950237  +xx*(0.001321435070258156  ) ) );
@@ -147,6 +169,20 @@ inline double exp_p8( double x ){
                xx*( 0.001321435070258156 + 0.0001332637951696261*x ) ) );
     p*=p; p*=p; p*=p;
     return p;
+}
+
+inline double gauss_p8( double x ){ return exp_p8( -x*x );
+    /*
+    if(x_>5) return 0;
+    double x  = x_*x_*0.125;
+    double xx = x *x;
+    double p = (1-x) +
+               xx*( 0.5000000000000000   + -0.1666664718006032   *x +
+               xx*( 0.04166189077950237  + -0.008304046626191663 *x +
+               xx*( 0.001321435070258156 + -0.0001332637951696261*x ) ) );
+    p*=p; p*=p; p*=p;
+    return p;
+    */
 }
 
 template <typename T>

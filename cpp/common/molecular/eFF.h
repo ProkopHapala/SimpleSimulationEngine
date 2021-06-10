@@ -165,6 +165,21 @@ inline double interp_gx4(double r2, double y1, double y2 ){
 
 /// EFF solver
 class EFF{ public:
+
+constexpr static const Quat4d default_AtomParams[] = {
+//  Q   sQ   sP   cP
+{ 0.,  1.0, 1.0, 0.0 }, // 0
+{ 1.,  0.1, 0.1, 0.0 }, // 1 H
+{ 0.,  1.0, 1.0, 2.0 }, // 2 He
+{ 1.,  0.1, 0.1, 2.0 }, // 3 Li
+{ 2.,  0.1, 0.1, 2.0 }, // 4 Be
+{ 3.,  0.1, 0.1, 2.0 }, // 5 B
+{ 4.,  0.1, 0.1, 2.0 }, // 6 C
+{ 5.,  0.1, 0.1, 2.0 }, // 7 N
+{ 6.,  0.1, 0.1, 2.0 }, // 8 O
+{ 7.,  0.1, 0.1, 2.0 }, // 9 F
+};
+
     bool bDealoc = false;
     //double dvmax = 0.1;
     //double dpmax = 0.1;
@@ -205,12 +220,13 @@ class EFF{ public:
     int ne=0,na=0,nDOFs=0; ///< number of electrons, atoms, degrees of freedom
     //int*   atype  =0;
 
-    double * aQ     =0; ///< atomic charges
     Vec3d  * apos   =0; ///< atomic positions
     Vec3d  * aforce =0; ///< atomic forces
 
-    Vec3d  * aAbWs  =0; ///< atomic   parameters (amplitude, decay, width)
-    Vec3d  * eAbWs  =0; ///< electron parameters (amplitude, decay, width)
+    //double * aQ     =0; ///< atomic charges
+    //Vec3d  * aAbWs  =0; ///< atomic   parameters (amplitude, decay, width)
+    //Vec3d  * eAbWs  =0; ///< electron parameters (amplitude, decay, width)
+    Quat4d * aPars = 0;
 
     //double * espin  =0;
     int    * espin  =0; ///< electron spins
@@ -231,9 +247,10 @@ void realloc(int na_, int ne_){
     _realloc( pDOFs, nDOFs);
     _realloc( fDOFs, nDOFs);
 
-    _realloc( aQ  ,  na);
-    _realloc( aAbWs, na);
-    _realloc( eAbWs, na);
+    //_realloc( aQ  ,  na);
+    //_realloc( aAbWs, na); // deprecated
+    //_realloc( eAbWs, na); // deprecated
+    _realloc( aPars, na);
     //_realloc( apos,   na);
     //_realloc( aforce, na);
     //_realloc( avel,   na);
@@ -264,9 +281,10 @@ void realloc(int na_, int ne_){
 void dealloc(){
     delete [] pDOFs;
     delete [] fDOFs;
-    delete [] aQ   ;
-    delete [] aAbWs;
-    delete [] eAbWs;
+    //delete [] aQ   ;
+    //delete [] aAbWs;
+    //delete [] eAbWs;
+    delete [] aPars;
     delete [] espin;
 }
 ~EFF(){ if(bDealoc)dealloc(); }
@@ -353,8 +371,10 @@ double evalAE(){
     //double w2ae = wae*wae;
     for(int i=0; i<na; i++){
         const Vec3d  pi   = apos[i];
-        const double qqi  = aQ[i]*QE;
-        const Vec3d  abwi = eAbWs[i];
+        //const double qqi  = aQ[i]*QE;
+        //const Vec3d  abwi = eAbWs[i];
+        const Quat4d aPar = aPars[i]; // { x=Q,y=sQ,z=sP,w=cP }
+        const double qq  = aPar.x*QE;
         for(int j=0; j<ne; j++){
             Vec3d f=Vec3dZero;
             const Vec3d   dR  = epos [j] - pi;
@@ -362,13 +382,16 @@ double evalAE(){
             double& fsj = fsize[j];
             double  fs_junk;
             //Eae += addPairEF_expQ( epos[j]-pi, f, abwi.z, qi*QE, abwi.y, abwi.x );
-            Eae                      += addCoulombGauss      ( dR,sj,                 f, fsj, qqi     );     // correct
+            //Eae  += addCoulombGauss( dR,sj,      f, fsj,      qqi );     // correct
+            Eae  += addCoulombGauss( dR, aPar.y, sj, f, fs_junk, fsj, qq );
+            /*
             if(qqi<-1.00001){
                 //double dEaePaul = addPauliGauss      ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );     // correct
                 double dEaePaul = addDensOverlapGauss_S( dR, sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
                 EaePaul+=dEaePaul;
                 //printf( "EaePaul[%i,%i] E %g r %g s %g abw(%g,%g) \n", i, j, dEaePaul, dR.norm(), sj, abwi.z, abwi.a );
             }
+            */
 
             //if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             eforce[j].sub(f);
@@ -395,17 +418,19 @@ double evalAA(){
     //double w2aa = waa*waa;
     for(int i=0; i<na; i++){
         const Vec3d  pi   = apos[i];
-        const double qi   = aQ[i];
-        const Vec3d  abwi = aAbWs[i];
+        //const double qi   = aQ[i];
+        //const Vec3d  abwi = aAbWs[i];
+        const Quat4d aPari = aPars[i];
         for(int j=0; j<i; j++){
             Vec3d f = Vec3dZero; // HERE WAS THE ERROR (missing initialization !!!! )
-            Vec3d  abw;
-            combineAbW( abwi, aAbWs[j], abw );
-            const Vec3d dR  = apos[j] - pi;
+            //Vec3d  abw;
+            //combineAbW( abwi, aAbWs[j], abw );
+            const Quat4d& aParj = aPars[i];
+            const Vec3d   dR    = apos[j] - pi;
             //if( (i_DEBUG>0) && (1==qi==aQ[j]) ){ printf( " abw(H-H): %i,%i A %g B %g w %g \n", i,j, abw.x, abw.y, abw.z ); }
             //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
             //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
-            Eaa +=  addAtomicForceQ( dR, f, qi*aQ[j] );
+            Eaa +=  addAtomicForceQ( dR, f, aPari.x*aParj.x );
             //   ToDo : Pauli Repulsion of core electrons ?????
             aforce[j].sub(f);
             aforce[i].add(f);
@@ -428,9 +453,9 @@ double evalAA(){
 double eval(){
     return
     evalKinetic()
-    + evalEE()
+    //+ evalEE()
     + evalAE()
-    + evalAA()
+    //+ evalAA()
     ;
 }
 
@@ -474,6 +499,7 @@ void move_GD_noAlias(double dt){
     //printf( "fs %g fe(%g,%g,%g) fa(%g,%g,%g)\n", fs, fe.x,fe.y,fe.z, fa.x,fa.y,fa.z );
 }
 
+/*
 void autoAbWs( const Vec3d * AAs, const Vec3d * AEs ){
     for(int i=0;i<na;i++){
         int ityp =(int)round(aQ[i]);
@@ -482,12 +508,14 @@ void autoAbWs( const Vec3d * AAs, const Vec3d * AEs ){
         //printf( "atom[%i] typ %i aAbW(%g,%g,%g) eAbW(%g,%g,%g) \n", i, ityp, aAbWs[i].x, aAbWs[i].y, aAbWs[i].z,  eAbWs[i].x, eAbWs[i].y, eAbWs[i].z );
     }
 }
+*/
 
 void info(){
     printf( "iPauliModel %i KPauliOverlap %g \n", iPauliModel, KPauliOverlap );
     //printf( "Etot %g Ek %g Eel %g(ee %g, ea %g aa %g)  EPaul %g(ee %g, ae %g) \n", Etot, Ek, Eel, Eee,Eae,Eaa,   EPaul, EeePaul, EaePaul );
     for(int i=0; i<na; i++){
-        printf( "a[%i] p(%g,%g,%g) q %g eAbW(%g,%g,%g) aAbW(%g,%g,%g) \n", i, apos[i].x, apos[i].y, apos[i].z, aQ[i], eAbWs[i].z,eAbWs[i].z,eAbWs[i].z, aAbWs[i].z,aAbWs[i].z,aAbWs[i].z );
+        //printf( "a[%i] p(%g,%g,%g) q %g eAbW(%g,%g,%g) aAbW(%g,%g,%g) \n", i, apos[i].x, apos[i].y, apos[i].z, aQ[i], eAbWs[i].z,eAbWs[i].z,eAbWs[i].z, aAbWs[i].z,aAbWs[i].z,aAbWs[i].z );
+        printf( "a[%i] p(%g,%g,%g) Par(Q,sQ,sP,P)(%g,%g,%g,%g)  \n", i, apos[i].x, apos[i].y, apos[i].z, aPars[i].x,aPars[i].y,aPars[i].z,aPars[i].w );
         //printf( "a[%i] xyzs(%g,%g,%g) fxyzs(%g,%g,%g) \n", i, apos[i].x, apos[i].y, apos[i].z, aforce[i].x, aforce[i].y, aforce[i].z );
     }
     for(int i=0; i<ne; i++){
@@ -534,9 +562,10 @@ bool loadFromFile_xyz( char const* filename ){
             ie++;
         }else{
             apos[ia]=(Vec3d){x,y,z};
-            aQ  [ia]=e;  // change this later
+            //aQ  [ia]=e;  // change this later
             //aAbws[ia] = default_aAbWs[e];
             //eAbws[ia] = default_eAbWs[e];
+            aPars [ia] = default_AtomParams[e]; ;
             Qasum += e;
             ia++;
             //printf( " a[%i] ", ia );

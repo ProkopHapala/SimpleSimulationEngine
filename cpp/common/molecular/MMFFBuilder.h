@@ -1337,7 +1337,8 @@ class Builder{  public:
             if( ityp==capAtomEpair.type || ityp==capAtomPi.type ) continue;
             //printf( "[%i] ityp %i \n" );
             ff.apos [i]  = atoms[i].pos;
-            ff.aQ   [i]  = params[ ityp ].ne; // ToDo
+            //ff.aQ [i]  = params[ ityp ].ne; // ToDo
+            ff.aPars[i]  = EFF::default_AtomParams[ityp];
         }
         DEBUG
         for(int i=0; i<bonds.size(); i++){

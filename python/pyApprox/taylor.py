@@ -158,6 +158,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     np.set_printoptions(precision=16, linewidth=200 )
 
+    '''
     #xs    = np.linspace( 0.0, 2.5, 100 )
     xs    = np.linspace( 0.0, 1.0, 6 ); xs*=xs; xs*=1.5
     npow = 3
@@ -186,7 +187,7 @@ if __name__ == "__main__":
     plt.grid()
     plt.title( "Polynominal Approx exp(-x)" )
     plt.show()
-
+    '''
 
     '''
     import scipy.special as spc
@@ -233,6 +234,53 @@ if __name__ == "__main__":
         print maxOrder,":  "; printHornerPolynom_EvenOdd(coefs)
     
     plt.yscale('log')
+    plt.legend()
+    plt.grid()
+    plt.title( "Polynominal Approx tan(x)" )
+    plt.show()
+    exit()
+    '''
+
+
+    xs     = np.linspace( -5.0, 5.5, 300  )
+    ys_ref = np.exp(-xs**2)
+
+    x = xs*xs*0.125
+    xx = x*x
+    p = (1-x) + xx*( 0.5000000000000000   + -0.1666664718006032   *x +
+                xx*( 0.04166189077950237  + -0.008304046626191663 *x +
+                xx*( 0.001321435070258156 + -0.0001332637951696261*x ) ) );
+    p*=p; p*=p; p*=p;
+    ys = p
+    #print p
+    plt.plot(xs,ys_ref, '-k',lw=4,  label='exp(-x^2)' )
+    plt.plot(xs,ys,                 label='approx'    )
+    plt.plot(xs,(ys-ys_ref)*1e+8,  label='error' )
+    plt.ylim(-0.5,1.1); plt.legend(); plt.show()
+
+
+    '''
+    k=16
+    xs     = np.linspace( -8.0, 8.0, 100  )
+    y_ref  = np.exp(-xs**2)
+    y_ref_ = y_ref**(1./k)
+    #plt.plot(xs_, y_ref__    , '-',label=('y_ref' ) )
+    coefs0 = np.array([])
+    #for maxOrder in [4,6,8,12,14,16,18]:
+    #for maxOrder in [4,6,8,10,12,14,16,18]:
+    plt.plot(xs,y_ref_ , '-k', lw=4,label="y_ref_" )
+    for maxOrder in [4,6,8]:
+        #coefs, ys = polyFitFunc( xs, y_ref_, coefs0, range(0,maxOrder,2) )
+        coefs, ys = polyFitFunc( xs, y_ref_, coefs0, range(0,maxOrder,2) )
+        #coefs, ys = polyFitFunc( xs, y_ref_, coefs0, range(0,maxOrder,1) )
+        ys_     = np.polyval(coefs[::-1],xs)
+        ys      = ys_**k
+        y_err   = ys - y_ref
+        plt.plot(xs,ys_, ':',label=('err_%i' %maxOrder ) )
+        #plt.plot(xs,abs(y_err), '-',label=('err_%i' %maxOrder ) )
+        #print maxOrder,":  "; printHornerPolynom_EvenOdd(coefs)
+    
+    #plt.yscale('log')
     plt.legend()
     plt.grid()
     plt.title( "Polynominal Approx tan(x)" )

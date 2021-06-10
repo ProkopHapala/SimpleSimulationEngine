@@ -50,9 +50,10 @@ void init_buffers(){
     buffers.insert( { "eforce", (double*)ff.eforce } );
     buffers.insert( { "esize",  (double*)ff.esize   } );
     buffers.insert( { "fsize",  (double*)ff.fsize } );
-    buffers.insert ( { "aQ",            ff.aQ    } );
-    buffers.insert ( { "aAbWs",         (double*)ff.aAbWs } );
-    buffers.insert ( { "eAbWs",         (double*)ff.eAbWs } );
+    //buffers.insert ( { "aQ",            ff.aQ    } );
+    //buffers.insert ( { "aAbWs",         (double*)ff.aAbWs } );
+    //buffers.insert ( { "eAbWs",         (double*)ff.eAbWs } );
+    buffers.insert ( { "aPars",         (double*)ff.aPars } );
     ibuffers.insert( { "espin",         ff.espin  } );
 }
 
@@ -65,7 +66,7 @@ bool load_xyz( const char* fname ){
 
 void init( int na, int ne ){
     ff.realloc ( na, ne );
-    ff.autoAbWs( default_aAbWs, default_eAbWs );
+    //ff.autoAbWs( default_aAbWs, default_eAbWs );
     init_buffers();
 }
 

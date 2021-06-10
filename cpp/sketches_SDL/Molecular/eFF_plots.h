@@ -129,9 +129,9 @@ void checkDerivs2(){
 
     EFF ff;
     ff.realloc(2,2);
-    ff.aQ   [0]= 4;
-    ff.aQ   [1]= 4;
-    ff.autoAbWs( default_aAbWs, default_eAbWs );
+    ff.aPars [0].x= 4;
+    ff.aPars [1].x= 4;
+    //ff.autoAbWs( default_aAbWs, default_eAbWs );
 
     ff.apos [0]= {+0.7,+0.2,0.0};
     ff.apos [1]= {-0.7,-0.2,0.0};
@@ -325,12 +325,13 @@ void makePlots2( Plot2D& plot ){
     plot.lines[1]->clr = 0xFF00FF00; // F-pos
     plot.lines[2]->clr = 0xFF0000FF; // F-size
 
-    ff.aQ   [0]= 4;
+    //ff.aQ   [0]= 4;
+    ff.aPars[0].x= 4;
     ff.apos [0]= Vec3dZero;
     ff.epos [0]= Vec3dZero;
     ff.esize[0]=1.0;
 
-    ff.autoAbWs( default_aAbWs, default_eAbWs );
+    //ff.autoAbWs( default_aAbWs, default_eAbWs );
 
     double sc=0.05;
     double Etot;

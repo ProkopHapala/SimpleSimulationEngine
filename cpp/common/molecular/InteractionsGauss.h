@@ -3,6 +3,7 @@
 #define InteractionsGauss_h
 
 #include "math.h"
+#include "fastmath.h"
 
 /// @file
 /// @ingroup eFF
@@ -74,14 +75,36 @@ inline double addKineticGauss( double s, double& fs ){
 // ========= Coulomb
 // ================================================================
 
+/*
+inline double Coulomb( double r, double s, double& fr, double& fs ){
+    constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
+    double ir   = 1./r;
+    double is   = 1./s;
+    double r_s  = r*is;
+    double r_2s = M_SQRT1_2 * r_s; // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    //double r_2s = r_s;
+    //double r_2s = M_SQRT2   * r_s; // This is for wavefunction blobs (assuming si,sj comes from wavefunction)
+    double e1   = ir * const_El_eVA;
+    double e2   = erf(  r_2s      );            // ToDo : this should be possible to compute together !!!
+    double g    = exp( -r_2s*r_2s ) * const_F2;
+    double f1   = -e1*ir;
+    double f2   = g*is*0.5;
+    double e1f2 = e1*f2;
+    fr          = (f1*e2 + e1f2)*ir      ;
+    //printf( "r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) r_2s %g r %g s %g\n", r, fr, f1, e2, e1, f2, r_2s, r, s );
+    fs          =          e1f2 *r_s * is;
+    return e1 * e2;
+}
+*/
 inline double CoulombGauss( double r, double s, double& fr, double& fs, double qq ){
     // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
+    /*
     //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
     constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
-    double ir   = 1./r; //(r+1.e-8);
-    double is   = 1./s; //(s+1.e-8);
-    //double ir   = 1./(r+1.e-16);
-    //double is   = 1./(s+1.e-16);
+    //double ir   = 1/r; //(r+1.e-8);
+    //double is   = 1/s; //(s+1.e-8);
+    double ir   = 1/(r+1.e-8);
+    double is   = 1/(s+1.e-8);
     double r_s  = r*is;
     //double r_2s = M_SQRT2 * r_s; // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
     double r_2s = r_s;             // modified according to derivation   following eq.11 http://doi.wiley.com/10.1002/wcms.78
@@ -93,6 +116,20 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     double e1f2 = e1*f2;
     fr = (f1*e2 + e1f2)*ir;
     fs =          e1f2 *r_s * is;
+    */
+
+
+    double is  = M_SQRT1_2/s;
+    double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    double r_s = r*is;
+    //fs  = exp(-r_s*r_s) *is*is*(M_SQRT2*M_2_SQRTPI*const_El_eVA);
+    //fs  = exp_p8(-r_s*r_s) *is*is*(M_SQRT2*M_2_SQRTPI*const_El_eVA);
+    fs  = gauss_p8(r_s) *is*is*(M_SQRT2*M_2_SQRTPI*const_El_eVA);
+    E *= const_El_eVA;
+    fr*=-const_El_eVA;
+    //fs*=const_El_eVA;
+
+    //printf( "addCoulombGauss E %g s %g r %g fr %g fs %g | f1*e2 %g e1f2 %g \n", e1*e2, s, r, fr, fs,   f1*e2, e1f2 );
     //printf( "CoulombGauss: E %g fr %g fs %g \n", e1*e2, fr, fs );
     //printf( "CoulombGauss r,s,q %g %g %g -> fr,fs %g %g \n", r, s, qq , fr, fs );
     //printf( "CoulombGauss : e1 %g \n", e1 );
@@ -101,7 +138,8 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     //printf( "CoulombGauss : f2 %g \n", f2 );
     //printf( "CoulombGauss : fr %g \n", fr );
     //printf( "CoulombGauss : fs %g \n", fs );
-    return e1 * e2;
+    //exit(0);
+    return E;
 }
 
 /*
@@ -140,10 +178,10 @@ inline double CoulombGauss_FixSize( double r, double beta, double& fr, double qq
 
 inline double addCoulombGauss( const Vec3d& dR, double s, Vec3d& f, double& fsi, double qq ){
     //double r    = dR.norm();
-    double r    = sqrt( dR.norm2() + 1e-16 );
+    double r    = sqrt( dR.norm2() + 1e-8 );
     double fr,fs;
     double E = CoulombGauss( r, s, fr, fs, qq );
-    //printf( "addCoulombGauss E %g s %g r %g \n", E, s, r );
+    //printf( "addCoulombGauss E %g s %g r %g fr %g fs %g \n", E, s, r, fs, fr );
     fsi += fs*s;
     f.add_mul( dR, fr );
     return E;
@@ -153,7 +191,7 @@ inline double addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, 
     double s2   = si*si + sj*sj;
     double s    = sqrt(s2);
     //double r    = dR.norm();
-    double r    = sqrt( dR.norm2() + 1e-16 );
+    double r    = sqrt( dR.norm2() + 1e-8 );
     double fs,fr;
     double E = CoulombGauss( r, s, fr, fs, qq );
     //printf( "addCoulombGauss: fs %g s[i,j](%g,%g) fs[i,j](%g,%g) \n", fs, si,sj, fs*si, fs*sj );

@@ -31,6 +31,7 @@ int i_DEBUG=0;
 #include "CLCFGO.h"
 #include "CLCFGO_tests.h"
 
+#include "eFF.h"
 
 // ============ Global Variables
 
@@ -97,6 +98,16 @@ void init( int natom_, int nOrb_, int perOrb_, int natypes_ ){
 double evalFunc( double r, double s ){
     double fr,fs;
     return Gauss::Coulomb( r, s, fr, fs );
+}
+
+void evalFuncDerivs( int n, double* r, double* s, double* Es, double* Fs ){
+    double fr,fs;
+    for(int i=0; i<n; i++){
+        //return Gauss::Coulomb( r, s, fr, fs );
+        //Es[i] = erfx_e6( r[i], s[i], Fs[i] );
+        //Es[i] = CoulombGauss( r[i], s[i], Fs[i], fs, 1  );
+        Es[i] = CoulombGauss( r[i], s[i], fr, Fs[i], 1  );
+    }
 }
 
 double  eval(){ return solver.eval(); };

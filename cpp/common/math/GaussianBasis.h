@@ -152,12 +152,13 @@ inline double product1D_s_deriv( double si, double r2, double xi,   double sj,do
 
 
 inline double Coulomb( double r, double s, double& fr, double& fs ){
+
     // "s" is considered from rho ( density blobl; not wave function blob )
     // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
     //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
     constexpr const double const_F2 = M_2_SQRTPI * M_SQRT2;
     //const double const_F2 = M_2_SQRTPI;
-    // NOTE : there cannot be any non-constant prefactors because at large distance ( r -> +inf) it must converge to point-charge coulomb (1/r)*qi*qj 
+    // NOTE : there cannot be any non-constant prefactors because at large distance ( r -> +inf) it must converge to point-charge coulomb (1/r)*qi*qj
     double ir   = 1./r; //(r+1.e-8);
     double is   = 1./s; //(s+1.e-8);
     double r_s  = r*is;
@@ -174,6 +175,14 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     //printf( "r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) r_2s %g r %g s %g\n", r, fr, f1, e2, e1, f2, r_2s, r, s );
     fs          =          e1f2 *r_s * is;
     return e1 * e2;
+
+    /*
+    double is  = M_SQRT1_2/s;
+    double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    double r_s = r*is;
+    fs         = exp(-r_s*r_s) *r_s*is*(M_SQRT1_2*const_F2);
+    */
+
 }
 
 
@@ -183,7 +192,7 @@ inline double Coulomb( const Vec3d& Rij, double r2, double si, double sj, double
     double s2   = si*si + sj*sj;
     double s    = sqrt(s2);
     double fr;
-    // NOTE : there cannot be any non-constant prefactors because at large distance ( r -> +inf) it must converge to point-charge coulomb (1/r)*qi*qj 
+    // NOTE : there cannot be any non-constant prefactors because at large distance ( r -> +inf) it must converge to point-charge coulomb (1/r)*qi*qj
     double e  = qij*Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
     //double e    = const_El_eVA*qij/sqrt( r*r - 0.01 );    // assymptotic limit for ( r -> +inf)
     //printf( "qij %g | s (%g,%g) r %g E %g  \n", qij, si, sj, r, e );
@@ -219,7 +228,7 @@ inline double overlap( double r, double si, double sj,   double& fr, double& fsi
     return S;
 }
 
-inline double tau_func( double r, double si, double sj, double& fr, double& fsi, double& fsj ){ 
+inline double tau_func( double r, double si, double sj, double& fr, double& fsi, double& fsj ){
     // Kinetic/Overlap Tij/Sij
     // // see pyMolecular/eFF_KineticAndOverlap.py
     double si2  = si*si;
@@ -227,7 +236,7 @@ inline double tau_func( double r, double si, double sj, double& fr, double& fsi,
     double s2   = si2 + sj2;
     double r2   = r*r;
     double is2  = 1/s2;
-    double is4  = is2*is2; 
+    double is4  = is2*is2;
 
     double tau  = -(r2 - 3*s2)*is2*is2;
     fr          = -2*r*is4;
@@ -253,7 +262,7 @@ inline double product3D_s_deriv(
     _Gauss_product(pi,pj,si,sj)
     _Gauss_product_derivs(dSsi,dSsj,dXsi,dXsj,dXxi,dXxj)
     _Gauss_overlap( r2, si, sj )
-    C    = S; 
+    C    = S;
     dCsi = dS_dsi;
     dCsj = dS_dsj;
     dCr  = dS_dr;
@@ -270,7 +279,7 @@ inline double overlap_s_deriv( // derived/simplified from product3D_s_deriv(
     Vec3d dp    = pi-pj;
     double r2   = dp.norm2();
     _Gauss_overlap( r2, si, sj )
-    C    = S; 
+    C    = S;
     dCsi = dS_dsi;
     dCsj = dS_dsj;
     dCr  = dS_dr;
@@ -289,9 +298,9 @@ struct PairInt{
     //    _Gauss_overlap()
     //}
     //double fromDerivsS(){}
-    inline void set( const Vec3d& p_, double si_, double sj_, double S_ ){ 
-        p=p_; si=si_; sj=sj_; S=S_; 
-        //printf( "PairInt::set() p(%g,%g,%g) s(%g,%g) S %g\n", p.x,p.y,p.z, si,sj,S  ); 
+    inline void set( const Vec3d& p_, double si_, double sj_, double S_ ){
+        p=p_; si=si_; sj=sj_; S=S_;
+        //printf( "PairInt::set() p(%g,%g,%g) s(%g,%g) S %g\n", p.x,p.y,p.z, si,sj,S  );
     }
 
     inline void applyForceScaled( double K, Vec3d& fpi, Vec3d& fpj, double& fsi, double& fsj )const{
@@ -642,7 +651,7 @@ inline double kinetic_s(  double r2, double si, double sj,   double& fr, double&
 //double k=0.5;
 //dCi*=k;
 //dCj*=k;
- 
+
  fsi = Cij*fsi + Cj*dCi*E;
  fsj = Cij*fsj + Ci*dCj*E;
  E *=Cij;
