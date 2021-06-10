@@ -119,14 +119,16 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     */
 
 
+    double Amp = qq*const_El_eVA;
+
     double is  = M_SQRT1_2/s;
     double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
     double r_s = r*is;
     //fs  = exp(-r_s*r_s) *is*is*(M_SQRT2*M_2_SQRTPI*const_El_eVA);
     //fs  = exp_p8(-r_s*r_s) *is*is*(M_SQRT2*M_2_SQRTPI*const_El_eVA);
-    fs  = gauss_p8(r_s) *is*is*(M_SQRT2*M_2_SQRTPI*const_El_eVA);
-    E *= const_El_eVA;
-    fr*=-const_El_eVA;
+    fs  = gauss_p8(r_s) *is*is*(M_SQRT2*M_2_SQRTPI*Amp);
+    E *= Amp;
+    fr*=-Amp;
     //fs*=const_El_eVA;
 
     //printf( "addCoulombGauss E %g s %g r %g fr %g fs %g | f1*e2 %g e1f2 %g \n", e1*e2, s, r, fr, fs,   f1*e2, e1f2 );
@@ -194,7 +196,7 @@ inline double addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, 
     double r    = sqrt( dR.norm2() + 1e-8 );
     double fs,fr;
     double E = CoulombGauss( r, s, fr, fs, qq );
-    //printf( "addCoulombGauss: fs %g s[i,j](%g,%g) fs[i,j](%g,%g) \n", fs, si,sj, fs*si, fs*sj );
+    printf( "addCoulombGauss: fs %g s[i,j](%g,%g) fs[i,j](%g,%g) \n", fs, si,sj, fs*si, fs*sj );
     fsi += fs*si;
     fsj += fs*sj;
     f.add_mul( dR, fr );

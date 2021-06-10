@@ -144,7 +144,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     DEBUG_fa_aa = new Vec3d[ff.na];
 
     //setGeom(ff);
+    //double sz = 0.2;
     //for(int i=0; i<ff.na; i++){ ff.apos[i].add( randf(-sz,sz),randf(-sz,sz),randf(-sz,sz) );  }
+    //for(int i=0; i<ff.ne; i++){ ff.epos[i].add( randf(-sz,sz),randf(-sz,sz),randf(-sz,sz) );  }
     //ff.autoAbWs( default_aAbWs, default_eAbWs );
     //VecN::set(ff.ne,4.0,ff.esize);
 
@@ -219,7 +221,7 @@ void TestAppRARFF::draw(){
             //checkFinite( ff, vminOK, vmaxOK );
 
             //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) \n", frameCount, E,   ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z );
-            printf( "frame[%i] E %g pe[0](%g,%g,%g) fe[0](%g,%g,%g) \n", frameCount, E,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z, ff.eforce[0].x,ff.eforce[0].y,ff.eforce[0].z );
+            printf( "frame[%i] E %g pe[0](%g,%g,%g) s %g fe[0](%g,%g,%g) fs %g \n", frameCount, E,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0],   ff.eforce[0].x,ff.eforce[0].y,ff.eforce[0].z, ff.fsize[0] );
 
             //printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
             //printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
