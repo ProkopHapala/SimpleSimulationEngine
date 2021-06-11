@@ -456,7 +456,8 @@ if __name__ == "__main__":
     init_effmc( natom_=1, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.0 )
     effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1,    AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
     xs = np.arange(0.4,3.0,0.05)
-    ss = xs*np.sqrt(0.5); 
+    #ss = xs*np.sqrt(0.5); 
+    ss = xs*1.0; 
     import test_eFF as efft
     efft.init_eff( natom_=1, nelec_=1, s=0.5 ) 
     E_eff,dE_eff   = efft.eff.evalFuncDerivs(1,ss)
@@ -470,8 +471,8 @@ if __name__ == "__main__":
     plt.plot(xs,Es,'-k',  label="E")
     #plt.plot(xs,Eae,':'  ,label="Eae_ref")
     plt.plot(xs,E_eff,':',label="E_eff")
-    #plt.plot(xs,Fs,       label="Fs")
-    #plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
+    plt.plot(xs,Fs,       label="Fs")
+    plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
     plt.legend(); plt.grid(); plt.show(); exit(0)
 
 

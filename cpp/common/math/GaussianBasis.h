@@ -177,23 +177,13 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     return e1 * e2;
     */
     
-    /*
-    double is  = M_SQRT1_2/s;
-    double Amp = const_El_eVA * 2;
-    double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
-    double r_s = r*is;
-    //fs         = exp(-r_s*r_s) *r_s*is*(M_SQRT1_2*const_F2);
-    fs  = gauss_p8(r_s) *is*is*is*(M_SQRT2*M_2_SQRTPI*Amp);
-    E *= Amp;
-    fr*=-Amp;
-    */
-
     double Amp = const_El_eVA;
-    double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
+    //double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
+    double is  = 1/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
     double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
     //double E   = erf( r*is )/r;
     double r_s = r*is;
-    fs  = gauss_p8(r_s) *is*is*is*(0.5*M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
+    fs  = gauss_p8(r_s) *is*is*is*(M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
     //fs  = is*is*is*(0.5*M_2_SQRTPI*Amp);                 //   1/is^3   because it is multiplied by si and sj later to get (si/(si^2+sj^2)^(3/2) )
     E *= Amp;
     fr*=-Amp;
@@ -579,7 +569,7 @@ inline double  kinetic_r0   (double s){
 }
 
 inline double  kinetic_r0_derivs(double s, double& dT_ds){
-    printf( "kinetic_r0_derivs s %g \n", s );
+    //printf( "kinetic_r0_derivs s %g \n", s );
     double is = 1/s;
     double T = 1.5*const_K_eVA*is*is;
     dT_ds    = -T*is;
