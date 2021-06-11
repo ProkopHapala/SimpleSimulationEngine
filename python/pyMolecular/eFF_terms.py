@@ -44,12 +44,15 @@ const_eps0  = 8.854187812813e-12 # [F.m = Coulomb/(Volt*m)]
 const_eV    = 1.602176620898e-19 # [J]
 const_Angstroem = 1.0e-10 
 
+const_bohr_eVA =  0.52917724
+
 const_K     =  const_hbar**2/const_Me
 const_El    =  const_e**2/(4.*np.pi*const_eps0)
 
-const_Ry     = 0.5 * const_El**2/const_K
-const_Ry_eV  = 13.6056925944
-const_El_eVA = const_El/( const_e*const_Angstroem )
+const_Hartree = const_El**2/const_K
+const_Ry      = 0.5 * const_Hartree
+const_Ry_eV   = 13.6056925944
+const_El_eVA  = const_El/( const_e*const_Angstroem )
 
 const_K_eVA  = (const_El_eVA**2)/(2*const_Ry_eV)
 
@@ -117,8 +120,6 @@ def getAmp( si, sj ):
     #return const_K_eVA * 3.14*( si2*si2 + sj2*sj2 - 1.25*(si2*sj2) )/((si2*sj2)*(si2+sj2))
     #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 ) ) 
     #return const_K_eVA * ( 1.5*( 1./si2 + 1./sj2 )  - 2.*3./( si2 + sj2 ) )
-
-
 
 def getS( r, si, sj ):
     #print "getS si, sj ", si, sj
@@ -194,12 +195,9 @@ def H2molecule( r, s, cr=0.5 ):
     EPaul =   EPauli( r*(1.-2.*cr), s, s, anti=True )   # Pauli repulsion electron_1 * electron_2
     return Ek, Eae, Eaa, Eee, EPaul
 
-if __name__ == "__main__":
+# =========== Macro Functions
 
-    extent=( 0.5,8.0,  0.5,4.5 )
-    xs = np.arange( extent[0], extent[1], 0.05 )
-    ys = np.arange( extent[2], extent[3], 0.1  )
-
+def run_ee_onsite():
     # ============= e-e onsite 
     r0 = 0.01
     ss = np.arange( 0.25, 5.0, 0.1 )
@@ -223,8 +221,7 @@ if __name__ == "__main__":
     plt.grid()
     #plt.show(); exit()
 
-    # ============= e-e
-
+def run_ee():
     rs = np.arange( 0.1, 6.0, 0.05 )
     #ss = [0.5, 1.0, 1.5 ]
     ss = [0.25, 1.0, 2.5 ]
@@ -264,11 +261,9 @@ if __name__ == "__main__":
             plt.legend()
             plt.grid()
             #plt.plot( ys, Etot, 'k', label="Etot" )
+    #plt.show(); exit()
 
-    plt.show(); exit()
-
-    # ============= H-atom
-
+def run_Hatom():
     #Ek  = Kinetic( ys )
     #Eae = El_ae( 0.01, -1., ys )
 
@@ -281,15 +276,17 @@ if __name__ == "__main__":
 
     imin = np.argmin( Etot )
     print "H-atom Rmin Emin(Ek,Eel) ", ys[imin], Etot[imin], Ek[imin], Eae[imin] 
+    print "should be Rmin=%g[A](1.88[bohr]) Emin=%g[eV](-0.424[hartree])" %(1.88*0.52917724, -0.424*const_Hartree/const_eV )
 
     EHatom = Etot[imin]
 
+    plt.title("H-atom")
+    plt.xlabel("s [A]")
     plt.legend()
     plt.grid()
     #plt.show(); exit()
 
-    # ============= H2-cation
-
+def run_Hcation():
     Xs,Ys = np.meshgrid( xs,ys )
 
     Ek, Eae, Eaa = H2cation( Xs, Ys, cr=0.5 )
@@ -313,12 +310,10 @@ if __name__ == "__main__":
     #plt.subplot(1,4,2); plt.imshow( Ek  , origin='image', extent=extent ) ;plt.colorbar()  ;plt.title('Ek'  )
     #plt.subplot(1,4,3); plt.imshow( Eaa , origin='image', extent=extent ) ;plt.colorbar()  ;plt.title('Eaa' )
     #plt.subplot(1,4,4); plt.imshow( Eae , origin='image', extent=extent ) ;plt.colorbar()  ;plt.title('Eel' )
-    # ============= H2-molecule
 
+def run_Hmolecule():
     Ek, Eae, Eaa, Eee, EPaul = H2molecule( Xs, Ys, cr=0.49 )
-
     Etot = Ek + Eae + Eaa + Eee + EPaul
-
     #Emin = Etot.min()
     imin = np.unravel_index( np.argmin(Etot), Etot.shape )
     Emin = Etot[imin]
@@ -340,6 +335,18 @@ if __name__ == "__main__":
     plt.subplot(1,6,4); plt.imshow( Eae , origin='image', extent=extent ) ;plt.colorbar()  ;plt.title('Eea' )
     plt.subplot(1,6,5); plt.imshow( Eee , origin='image', extent=extent  ) ;plt.colorbar()  ;plt.title('Eee' )
     plt.subplot(1,6,6); plt.imshow( EPaul, origin='image', extent=extent ) ;plt.colorbar()  ;plt.title('EPaul')
+
+if __name__ == "__main__":
+
+    extent=( 0.5,8.0,  0.5,4.5 )
+    xs = np.arange( extent[0], extent[1], 0.05 )
+    ys = np.arange( extent[2], extent[3], 0.1  )
+
+    #run_ee_onsite()
+    #run_ee()
+    run_Hatom()
+    #run_Hcation()
+    #run_Hmolecule()
     plt.show()
 
 

@@ -118,28 +118,20 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     fs =          e1f2 *r_s * is;
     */
 
-
     double Amp = qq*const_El_eVA;
+    //double Amp = 1;
 
-    double is  = M_SQRT1_2/s;
+    //double is  = M_SQRT1_2/s;
+    double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
     double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    //double E   = erf( r*is )/r;
     double r_s = r*is;
-    //fs  = exp(-r_s*r_s) *is*is*(M_SQRT2*M_2_SQRTPI*const_El_eVA);
-    //fs  = exp_p8(-r_s*r_s) *is*is*(M_SQRT2*M_2_SQRTPI*const_El_eVA);
-    fs  = gauss_p8(r_s) *is*is*(M_SQRT2*M_2_SQRTPI*Amp);
+    fs  = gauss_p8(r_s) *is*is*is*(0.5*M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
+    //fs  = is*is*is*(0.5*M_2_SQRTPI*Amp);                 //   1/is^3   because it is multiplied by si and sj later to get (si/(si^2+sj^2)^(3/2) )
     E *= Amp;
     fr*=-Amp;
-    //fs*=const_El_eVA;
 
-    //printf( "addCoulombGauss E %g s %g r %g fr %g fs %g | f1*e2 %g e1f2 %g \n", e1*e2, s, r, fr, fs,   f1*e2, e1f2 );
-    //printf( "CoulombGauss: E %g fr %g fs %g \n", e1*e2, fr, fs );
-    //printf( "CoulombGauss r,s,q %g %g %g -> fr,fs %g %g \n", r, s, qq , fr, fs );
-    //printf( "CoulombGauss : e1 %g \n", e1 );
-    //printf( "CoulombGauss : e2 %g \n", e2 );
-    //printf( "CoulombGauss : f1 %g \n", f1 );
-    //printf( "CoulombGauss : f2 %g \n", f2 );
-    //printf( "CoulombGauss : fr %g \n", fr );
-    //printf( "CoulombGauss : fs %g \n", fs );
+    //printf( "CoulombGauss(r %g,s %g)-> E %g fr %g fs %g qq %g \n", r, s, E, fr, fs, qq );
     //exit(0);
     return E;
 }
@@ -179,8 +171,8 @@ inline double CoulombGauss_FixSize( double r, double beta, double& fr, double qq
 }
 
 inline double addCoulombGauss( const Vec3d& dR, double s, Vec3d& f, double& fsi, double qq ){
-    //double r    = dR.norm();
-    double r    = sqrt( dR.norm2() + 1e-8 );
+    double r    = dR.norm();
+    //double r    = sqrt( dR.norm2() + 1e-8 );
     double fr,fs;
     double E = CoulombGauss( r, s, fr, fs, qq );
     //printf( "addCoulombGauss E %g s %g r %g fr %g fs %g \n", E, s, r, fs, fr );
@@ -192,11 +184,11 @@ inline double addCoulombGauss( const Vec3d& dR, double s, Vec3d& f, double& fsi,
 inline double addCoulombGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, double qq ){
     double s2   = si*si + sj*sj;
     double s    = sqrt(s2);
-    //double r    = dR.norm();
-    double r    = sqrt( dR.norm2() + 1e-8 );
+    double r    = dR.norm();
+    //double r    = sqrt( dR.norm2() + 1e-8 );
     double fs,fr;
     double E = CoulombGauss( r, s, fr, fs, qq );
-    printf( "addCoulombGauss: fs %g s[i,j](%g,%g) fs[i,j](%g,%g) \n", fs, si,sj, fs*si, fs*sj );
+    //printf( "addCoulombGauss: fs %g s[i,j](%g,%g) fs[i,j](%g,%g) \n", fs, si,sj, fs*si, fs*sj );
     fsi += fs*si;
     fsj += fs*sj;
     f.add_mul( dR, fr );

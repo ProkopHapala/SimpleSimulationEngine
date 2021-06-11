@@ -176,11 +176,14 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     fs          =          e1f2 *r_s * is;
     return e1 * e2;
 
-    /*
-    double is  = M_SQRT1_2/s;
+    /*    
+    //double is  = M_SQRT1_2/s;
     double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
     double r_s = r*is;
     fs         = exp(-r_s*r_s) *r_s*is*(M_SQRT1_2*const_F2);
+    fs  = gauss_p8(r_s) *is*is*(M_SQRT2*M_2_SQRTPI*Amp);
+    E *= Amp;
+    fr*=-Amp;
     */
 
 }

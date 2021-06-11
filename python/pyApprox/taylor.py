@@ -121,22 +121,24 @@ def getHermitePoly( xs, H, yds ):
     coefs = np.dot( H, yds ) #  ;print "cC ", cC
     return np.polyval( coefs[::-1], xs )
 
-def makePolynomBasis( xs, orders ):
+def makePolynomBasis( xs, orders, ws=None ):
     Bas = np.empty( ( len(orders), len(xs) ) )
     for i,k in enumerate( orders ):
         Bas[i,:] = xs**k
+        if ws is not None:
+            Bas[i,:]*=ws
     return Bas
 
-def polySolve( xs, y_ref, orders ):
-    Bas    = makePolynomBasis( xs, orders )
+def polySolve( xs, y_ref, orders, ws=None ):
+    Bas    = makePolynomBasis( xs, orders, ws=ws )
     coefs_ = np.linalg.solve( Bas.T, y_ref )[0]
     coefs  = np.zeros( orders[-1]+1 )
     for i,k in enumerate(orders):
         coefs[k] = coefs_[i]
     return coefs
 
-def polyFit( xs, y_ref, orders ):
-    Bas    = makePolynomBasis( xs, orders )
+def polyFit( xs, y_ref, orders, ws=None ):
+    Bas    = makePolynomBasis( xs, orders, ws=ws )
     #print Bas.shape, xs.shape
     coefs_ = np.linalg.lstsq( Bas.T, y_ref )[0]
     coefs  = np.zeros( orders[-1]+1 )
@@ -146,12 +148,14 @@ def polyFit( xs, y_ref, orders ):
         coefs[k] = coefs_[i]
     return coefs
 
-def polyFitFunc( xs, y_ref, coef0, orders, nps=100 ):
+def polyFitFunc( xs, y_ref, coef0, orders, nps=100, ws=None ):
     coef0 = np.array( coef0 )
-    y0s   = np.polyval( coef0[::-1], xs )
-    coefs = polyFit( xs, y_ref-y0s, orders )
+    y0s   = np.polyval( coef0[::-1], xs )*ws
+    coefs = polyFit( xs, y_ref-y0s, orders, ws=ws )
     coefs[:len(coef0)] = coef0[:]
     ys = np.polyval( coefs[::-1], xs )
+    if ws is not None:
+        ys *= ws
     return coefs, ys
 
 if __name__ == "__main__":
@@ -241,10 +245,9 @@ if __name__ == "__main__":
     exit()
     '''
 
-
+    '''
     xs     = np.linspace( -5.0, 5.5, 300  )
-    ys_ref = np.exp(-xs**2)
-
+    ys_ref = np.exp(-xs**2);   plt.plot(xs,ys_ref, '-k',lw=4,  label='exp(-x^2)' )
     x = xs*xs*0.125
     xx = x*x
     p = (1-x) + xx*( 0.5000000000000000   + -0.1666664718006032   *x +
@@ -253,11 +256,48 @@ if __name__ == "__main__":
     p*=p; p*=p; p*=p;
     ys = p
     #print p
-    plt.plot(xs,ys_ref, '-k',lw=4,  label='exp(-x^2)' )
-    plt.plot(xs,ys,                 label='approx'    )
-    plt.plot(xs,(ys-ys_ref)*1e+8,  label='error' )
+    for i in [1,2,4,8,16]:
+        ys     = ( 1 - (xs**2)/(i) )**i 
+        plt.plot(xs,ys,                 label='approx %i' %i    )
+        #plt.plot(xs,(ys-ys_ref)*1e+8,  label='error %i' %i )
     plt.ylim(-0.5,1.1); plt.legend(); plt.show()
+    '''
 
+    
+    k=8
+    #xs     = np.linspace( -8.0, 8.0, 100  )
+    xs     = np.linspace( -7.5, 7.5, 100  )
+    #ws     = 1-(xs)**2 
+    ws     = (1-(xs/8)**2)**2 
+    #ws     = 1 + xs*0
+    y_ref  = np.exp(-(xs)**2)
+    y_ref_ = y_ref**(1./k)
+    coefs0 = np.array([1])
+    #coefs0 = np.array([])
+    plt.plot(xs,y_ref_, '-k', lw=4,label="y_ref_" )
+    plt.plot(xs,ws, '--k', lw=4,label="weights" )
+
+    #Bs    = makePolynomBasis( xs, [2,4,6,8], ws=ws )
+    #for i,b in enumerate(Bs):
+    #    plt.plot(xs,b,"b")
+
+    for maxOrder in [4,6,8]:
+        coefs, ys = polyFitFunc( xs, y_ref_, coefs0, range(2,maxOrder,2),ws=ws  )
+        #coefs, ys = polyFitFunc( xs, y_ref_, coefs0, range(0,maxOrder,1) )
+        ys_     = np.polyval(coefs[::-1],xs)*ws
+        ys      = ys_**k
+        y_err   = ys - y_ref
+        plt.plot(xs,ys_, ':',label=('approx_%i' %maxOrder ) )
+        #plt.plot(xs,ys, ':',label=('approx_%i' %maxOrder ) )
+        #plt.plot(xs,abs(y_err), '-',label=('err_%i' %maxOrder ) )
+        #print maxOrder,":  "; printHornerPolynom_EvenOdd(coefs)
+    
+    #plt.yscale('log')
+    plt.legend()
+    plt.grid()
+    plt.title( "Polynominal Approx Gauss(x)" )
+    plt.show()
+    exit()
 
     '''
     k=16

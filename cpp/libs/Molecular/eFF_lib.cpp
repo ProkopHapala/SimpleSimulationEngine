@@ -40,6 +40,14 @@ extern "C"{
 
 double eval(){ return ff.eval(); };
 
+void evalFuncDerivs( int n, double* r, double* s, double* Es, double* Fs ){
+    double fr,fs;
+    for(int i=0; i<n; i++){
+        ff.esize[0] = s[i]; Es[i] = ff.eval(); Fs[i]=ff.fsize[0];
+        //printf( "[%i] %g \n", i, ff.fsize[0] );
+    }
+}
+
 void init_buffers(){
     // atoms (ions)
     buffers.insert( { "pDOFs",   ff.pDOFs } );

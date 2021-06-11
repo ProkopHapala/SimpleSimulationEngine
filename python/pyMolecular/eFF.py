@@ -49,7 +49,12 @@ header_strings = [
 
 cpp_utils.BUILD_PATH = os.path.normpath( cpp_utils.PACKAGE_PATH + '../../../cpp/Build/libs/Molecular' ) 
 lib = cpp_utils.loadLib('eFF_lib')
-
+array1ui = np.ctypeslib.ndpointer(dtype=np.uint32, ndim=1, flags='CONTIGUOUS')
+array1i  = np.ctypeslib.ndpointer(dtype=np.int32,  ndim=1, flags='CONTIGUOUS')
+array2i  = np.ctypeslib.ndpointer(dtype=np.int32,  ndim=2, flags='CONTIGUOUS')
+array1d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=1, flags='CONTIGUOUS')
+array2d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=2, flags='CONTIGUOUS')
+array3d  = np.ctypeslib.ndpointer(dtype=np.double, ndim=3, flags='CONTIGUOUS')
 # ========= C functions
 
 #  void init_buffers(){
@@ -76,6 +81,18 @@ lib.eval.argtypes  = []
 lib.eval.restype   =  c_double
 def eval():
     return lib.eval() 
+
+#void evalFuncDerivs( int n, double* r, double* s, double* Es, double* Fs ){
+lib.evalFuncDerivs.argtypes = [ c_int, array1d, array1d, array1d, array1d ]
+lib.evalFuncDerivs.restype  = None
+def evalFuncDerivs( r, s, Es=None, Fs=None ):
+    r = r + s*0
+    s = s + r*0
+    n = len(r)
+    if Es is None: Es=np.zeros(n)
+    if Fs is None: Fs=np.zeros(n) 
+    lib.evalFuncDerivs( n, r, s, Es, Fs )
+    return Es,Fs
 
 #  void info(){
 lib.info.argtypes  = [] 
