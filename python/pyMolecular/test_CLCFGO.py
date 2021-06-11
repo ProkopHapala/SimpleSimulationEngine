@@ -50,7 +50,7 @@ def init_effmc_2x2( sz=0.5 ):
     #ecoef[1,0  ]= 0.7;  ecoef[1,1]= 1.6               
     if(bPrintInfo): effmc.printAtomsAndElectrons()
 
-def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1, aP=1.0, aPsz=0.1, aQsz=0.25 ):
+def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.1  ):
     global natom,norb,perOrb,nqOrb
     natom=natom_; norb=norb_; perOrb=perOrb_; nqOrb=perOrb*(perOrb+1)/2
     effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
@@ -434,21 +434,46 @@ if __name__ == "__main__":
     #nx=2
     plt=plt_
     bPrintInfo = True
-    #rnd_pos  = 0.0; rnd_size = 0.0; rnd_coef = 0.0
+    rnd_pos  = 0.0; rnd_size = 0.0; rnd_coef = 0.0
     #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
-    rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.5
+    #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.5
     #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
     
+    '''
+    # ====== test Gauss::Coulomb()
     #xs = np.arange(0.0,6.0,0.025)
     xs = np.arange(0.1,3.0,0.005)
     ys = np.zeros(len(xs))
-
     #Es,Fs = effmc.evalFuncDerivs(xs,0.6)
     Es,Fs = effmc.evalFuncDerivs(0.165,xs)
     plt.plot(xs,Es,label="E")
     plt.plot(xs,Fs,label="F")
     plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
     plt.legend(); plt.grid(); plt.show(); exit(0)
+    '''
+
+    # ====== test H-atom
+    init_effmc( natom_=1, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.0 )
+    effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1,    AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
+    xs = np.arange(0.4,3.0,0.05)
+    ss = xs*np.sqrt(0.5); 
+    import test_eFF as efft
+    efft.init_eff( natom_=1, nelec_=1, s=0.5 ) 
+    E_eff,dE_eff   = efft.eff.evalFuncDerivs(1,ss)
+    ys = np.zeros(len(xs))
+    Ek,Eae = effpy.Hatom( ss );  E_ref=Ek+Eae 
+    Es,Fs = effmc.evalFuncDerivs(0,xs)
+    #print Es, Fs
+    #print ss
+    plt.plot(xs,E_ref,label="E_ref")
+    #plt.plot(xs,Ek,label="Ek_ref")
+    plt.plot(xs,Es,'-k',  label="E")
+    #plt.plot(xs,Eae,':'  ,label="Eae_ref")
+    plt.plot(xs,E_eff,':',label="E_eff")
+    #plt.plot(xs,Fs,       label="Fs")
+    #plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
+    plt.legend(); plt.grid(); plt.show(); exit(0)
+
 
     '''
     for i,x in enumerate(xs):

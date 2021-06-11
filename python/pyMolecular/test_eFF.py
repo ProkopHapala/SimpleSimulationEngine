@@ -25,7 +25,7 @@ rnd_coef = 0
 
 # ========= Functions
 
-def init_eff( natom_=0, nelec_=1, s=0.5,  aQ=1.0,aQs=0.1,aP=0.0,aPs=0.1 ):
+def init_eff( natom_=0, nelec_=1, s=0.5,  aQ=1.0,aQs=0.0,aP=0.0,aPs=0.1 ):
     global natom,nelec
     natom=natom_; nelec=nelec_; 
     eff.init( natom, nelec )

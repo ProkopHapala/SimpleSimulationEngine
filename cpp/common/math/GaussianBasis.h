@@ -152,7 +152,7 @@ inline double product1D_s_deriv( double si, double r2, double xi,   double sj,do
 
 
 inline double Coulomb( double r, double s, double& fr, double& fs ){
-
+    /*
     // "s" is considered from rho ( density blobl; not wave function blob )
     // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
     //constexpr const double const_F2 = -2.*sqrt(2./M_PI);
@@ -175,17 +175,31 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     //printf( "r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) r_2s %g r %g s %g\n", r, fr, f1, e2, e1, f2, r_2s, r, s );
     fs          =          e1f2 *r_s * is;
     return e1 * e2;
-
-    /*    
-    //double is  = M_SQRT1_2/s;
+    */
+    
+    /*
+    double is  = M_SQRT1_2/s;
+    double Amp = const_El_eVA * 2;
     double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
     double r_s = r*is;
-    fs         = exp(-r_s*r_s) *r_s*is*(M_SQRT1_2*const_F2);
-    fs  = gauss_p8(r_s) *is*is*(M_SQRT2*M_2_SQRTPI*Amp);
+    //fs         = exp(-r_s*r_s) *r_s*is*(M_SQRT1_2*const_F2);
+    fs  = gauss_p8(r_s) *is*is*is*(M_SQRT2*M_2_SQRTPI*Amp);
     E *= Amp;
     fr*=-Amp;
     */
 
+    double Amp = const_El_eVA;
+    double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
+    double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    //double E   = erf( r*is )/r;
+    double r_s = r*is;
+    fs  = gauss_p8(r_s) *is*is*is*(0.5*M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
+    //fs  = is*is*is*(0.5*M_2_SQRTPI*Amp);                 //   1/is^3   because it is multiplied by si and sj later to get (si/(si^2+sj^2)^(3/2) )
+    E *= Amp;
+    fr*=-Amp;
+
+    //printf( "Gauss::Coulomb(r %g,s %g)-> E %g fr %g fs %g \n", r, s, E, fr, fs );
+    return E;
 }
 
 
@@ -565,6 +579,7 @@ inline double  kinetic_r0   (double s){
 }
 
 inline double  kinetic_r0_derivs(double s, double& dT_ds){
+    printf( "kinetic_r0_derivs s %g \n", s );
     double is = 1/s;
     double T = 1.5*const_K_eVA*is*is;
     dT_ds    = -T*is;

@@ -71,7 +71,7 @@ constexpr static const Quat4d default_AtomParams[] = {
 //  Q   sQ   sP   cP
 { 0.,  1.0, 1.0, 0.0 }, // 0
 { 1.,  0.1, 0.1, 0.0 }, // 1 H
-{ 0.,  1.0, 1.0, 2.0 }, // 2 He
+{ 0.,  0.1, 0.1, 2.0 }, // 2 He
 { 1.,  0.1, 0.1, 2.0 }, // 3 Li
 { 2.,  0.1, 0.1, 2.0 }, // 4 Be
 { 3.,  0.1, 0.1, 2.0 }, // 5 B
@@ -1171,7 +1171,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 //double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
 
                 if( fabs(qij)<1e-16) continue;
-                double e = Gauss::Coulomb( sqrt(r2+1e-16), sqrt(si*si+sj*sj), fr, fs );
+                double e = Gauss::Coulomb( sqrt(r2), sqrt(si*si+sj*sj), fr, fs );
                 Vec3d fp = Rij*(fr*qij);
                 fs*=qij;
 
@@ -1691,7 +1691,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
              
         double fr,fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently 
         if( fabs(qij)<1e-16) continue;
-        double e = Gauss::Coulomb( sqrt(r2+1e-16), sqrt(si*si+sj*sj), fr, fs );
+        double e = Gauss::Coulomb( sqrt(r2), sqrt(si*si+sj*sj), fr, fs );
         Vec3d fp = Rij*(fr*qij);
         fs*=qij;
         
@@ -1703,6 +1703,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         //printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );
         //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
     }
+    //printf( "evalArho E %g \n", E );
     return E;
 }
 
@@ -1721,6 +1722,7 @@ double evalAE(){
                 applyPairForceAE ( ia, jo, dBs, Ss, Amp );
                 */
                 EaePaul += pauliAtomOrb( ia, jo );
+                //printf( "EaePaul %g bEvalAEPauli %i \n", EaePaul, bEvalAEPauli );
             }
             // ---- Coulomb
             if(bEvalAECoulomb){
@@ -1759,18 +1761,25 @@ double evalAA(){
         if( bEvalCoulomb || (bEvalAECoulomb && bEvalAE) ) clearAuxDens();
         double Ek = projectOrbs( ); // here we calculate kinetic energy of each orbital and project them to auxuliary charge density basis
         if( bEvalKinetic  ) E+=Ek;
+        //printf( "E1 %g \n", E );
         //reportCharges();
         if( bEvalPauli    ) E += evalPauli();
+        //printf( "E2 %g \n", E );
         //if( bEvalExchange ) E += evalExchange();
         if( bEvalCoulomb  ) E += evalElectrostatICoulomb(); // repulsion between aux-density clouds => should not distinguish density terms here
+        //printf( "E3 %g \n", E );
         if( bEvalAE       ) E += evalAE();
+        //printf( "E4 %g \n", E );
         if( bEvalAA       ) E += evalAA();
+        //printf( "E5 %g \n", E );
         for(int io=0; io<nOrb; io++){
             assembleOrbForces_fromRho(io);
         }
+        //printf( "E6 %g \n", E );
         //E += evalCrossTerms(); // ToDo : This should replace evalPauli and evalExchange()
         if( bNormForce && bNormalize){ outProjectNormalForces(); }
         //printf( "eval() E=%g Ek %g Eee %g EeePaul %g EeeExch %g Eae %g EaePaul %g Eaa %g \n", E, Ek,Eee,EeePaul,EeeExch,Eae,EaePaul,Eaa   );
+        //printf( "E7 %g \n", E );
         return E;
     }
 
