@@ -1889,7 +1889,10 @@ double evalAA(){
             double r2 = dR.norm2() + 1e-16;
             double r = sqrt(r2);
             //v_sum +=  (ecoef[i_] * const_El_eVA) * erf_6_plus( r/( esize[i_]        ) )/r; // This is using spread/size of wavefunction blob
-            v_sum   +=  (rhoQ [i_] * const_El_eVA) * erf_6_plus( r/( rhoS [i_]*M_SQRT2) )/r; // This is using spread/size of density      blob
+            //v_sum   +=  (rhoQ [i_] * const_El_eVA) * erf_6_plus( r/( rhoS [i_]*M_SQRT2) )/r; // This is using spread/size of density      blob
+            double fr,fs;
+            //v_sum += rhoQ [i_] * Gauss::Coulomb( r, rhoS[i_], fr, fs );
+            v_sum += rhoQ [i_] * Gauss::Coulomb( r, rhoS[i_]*M_SQRT2, fr, fs );  // this factor M_SQRT2 should not be necessary if rhoS[i_] is width of charge density blobs (not wave functions)
         }
         return v_sum;
     }
@@ -1901,30 +1904,8 @@ double evalAA(){
         return out;
     }
 
-
     double orb2grid( int io, const GridShape& gridShape, double* buff )const{
-        int i0     = getOrbOffset( io );
-        Vec3d*  Ps = epos +i0;
-        double* Cs = ecoef+i0;
-        double* Ss = esize+i0;
-        //printf( "DEBUG orb2grid io %i i0 %i perOrb %i | s %g p (%g,%g,%g) \n", io, i0, perOrb, Ss[0], Ps[0].x,Ps[0].y,Ps[0].z );
-        //printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
-        //for(int i=0; i<perOrb; i++){ printf( "wf[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
-        //printf( "DEBUG norm3Ds(1) %g %g \n", Gauss::norm3Ds( 1.0 ), pow( M_PI*2,-3./2) );
-        return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double& res){
-            double wfsum = 0.0;
-            for(int i=0; i<perOrb; i++){
-                Vec3d dR  = pos - Ps[i];
-                double r2 = dR.norm2();
-                double si = Ss[i];
-                wfsum += Gauss::bas3D_r2( r2, si ) * Cs[i];
-                //printf( "ig [%i] dR(%g,%g,%g) wf %g  r2 si C %g %g %g \n", ig, dR.x,dR.y,dR.z, wfsum, r2, si, Cs[i] );
-                // ToDo : Fast Gaussian ?
-            }
-            res += wfsum*wfsum;
-            //printf( "ig [%i] wf %g \n", ig, wfsum );
-            buff[ig] = wfsum;
-        });
+        return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double& res){ buff[ig] = orbAtPoint( io, pos ); });
     }
 
     void orb2xsf( const GridShape& grid, int iorb, const char* fname )const{
@@ -1937,67 +1918,12 @@ double evalAA(){
     }
 
     double rho2grid( int io, const GridShape& gridShape, double* buff )const{
-        int i0 = getRhoOffset(io);
-        int ni = onq[io];
-        //printf( "DEBUG rho2grid i0 %i ni %i \n", i0, ni  );
-        //printf( "DEBUG DensOverlapOrbPair i0,j0  %i,%i ni,nj %i,%i \n", i0,j0, ni, nj );
-        double renorm = Gauss::norm3Ds(1);
-        Vec3d*  Ps = rhoP + i0;
-        double* Cs = rhoQ + i0;
-        double* Ss = rhoS + i0;
-        //printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
-        //for(int i=0; i<ni; i++){ printf( "rho[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
-        //printf( "DEBUG norm3Ds(1) %g %g \n", Gauss::norm3Ds( 1.0 ), pow( M_PI*2,-3./2) );
-        return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){
-            double rho_sum = 0.0;
-            for(int i=0; i<ni; i++){
-                Vec3d dR  = pos - Ps[i];
-                double r2 = dR.norm2();
-                double si = Ss[i];
-                double ci = Cs[i];
-                //if(i==2) ci*=1.28;
-                rho_sum += Gauss::rho3D_r2( r2, si ) * ci;
-                // ToDo : Fast Gaussian ?
-            }
-            buff[ig] = rho_sum;
-        });
+        return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){ buff[ig] = rhoAtPoint( io, pos ); });
     }
 
     double hartree2grid( int io, const GridShape& gridShape, double* buff )const{
-        int i0 = getRhoOffset(io);
-        int ni = onq[io];
-        //printf( "DEBUG rho2grid i0 %i ni %i \n", i0, ni  );
-        //printf( "DEBUG DensOverlapOrbPair i0,j0  %i,%i ni,nj %i,%i \n", i0,j0, ni, nj );
-        double renorm = Gauss::norm3Ds(1);
-        Vec3d*  Ps = rhoP + i0;
-        double* Cs = rhoQ + i0;
-        double* Ss = rhoS + i0;
-        //printf( "DEBUG orb2grid io %i i0 %i perOrb %i \n", io, i0, perOrb );
-        //for(int i=0; i<ni; i++){ printf( "rho[%i] C(%e) P(%g,%g,%g) s %g 1/|f^2| %g \n", i, Cs[i], Ps[i].x,Ps[i].y,Ps[i].z, Ss[i], Gauss::sqnorm3Ds( Ss[i] ) ); }
-        //printf( "DEBUG norm3Ds(1) %g %g \n", Gauss::norm3Ds( 1.0 ), pow( M_PI*2,-3./2) );
-        return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){
-            const double sqrtpi = sqrt(M_PI);
-            double v_sum = 0.0;
-            for(int i=0; i<ni; i++){
-                Vec3d dR  = pos - Ps[i];
-                double r2 = dR.norm2() + 1e-16;
-                double si = Ss[i];
-                double ci = Cs[i];
-
-                double r = sqrt(r2);
-                //if(i==2) ci*=1.28;
-                //v_sum += erfx_e6( r/si           ) * (ci * const_El_eVA);  // This is using spread/size of wavefunction blob
-                //v_sum += erfx_e6( r/(si*M_SQRT2) ) * (ci * const_El_eVA);  // This is using spread/size of density      blob
-
-                //v_sum +=  (ci * const_El_eVA) * erf_6_plus( r/(si        ) )/r; // This is using spread/size of wavefunction blob
-                v_sum +=  (ci * const_El_eVA) * erf_6_plus( r/(si*M_SQRT2) )/r;  // This is using spread/size of density      blob
-
-                // ToDo : Fast Gaussian ?
-            }
-            buff[ig] = v_sum;
-        });
+        return evalOnGrid( gridShape, [&](int ig, const Vec3d& pos, double res){ buff[ig] = hartreeAtPoint( io, pos ); });
     }
-
 
 
 bool loadFromFile( char const* filename, bool bCheck ){

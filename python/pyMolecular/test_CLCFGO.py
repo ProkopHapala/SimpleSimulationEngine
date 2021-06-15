@@ -415,6 +415,51 @@ def check_Coulomb_rhoQ_( ):
     init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=-0.1 )
     return check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0) )
 
+
+
+def test_EvalFuncDerivs():
+    # - Note check firts what is currently in evalFuncDerivs()
+    # ====== test Gauss::Coulomb()
+    #xs = np.arange(0.0,6.0,0.025)
+    xs = np.arange(0.1,3.0,0.005)
+    ys = np.zeros(len(xs))
+    #Es,Fs = effmc.evalFuncDerivs(xs,0.6)
+    Es,Fs = effmc.evalFuncDerivs(0.165,xs)
+    plt.plot(xs,Es,label="E")
+    plt.plot(xs,Fs,label="F")
+    plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
+    plt.legend(); plt.grid(); 
+    plt.show(); 
+    #exit(0)
+
+def test_Hatom():
+    # ====== test H-atom
+    # - Note check first what is currently in evalFuncDerivs()
+    init_effmc( natom_=1, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.0 )
+    effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1,    AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
+    xs = np.arange(0.4,3.0,0.05)
+    #ss = xs*np.sqrt(0.5); 
+    ss = xs*1.0; 
+    import test_eFF as efft
+    efft.init_eff( natom_=1, nelec_=1, s=0.5 ) 
+    E_eff,dE_eff   = efft.eff.evalFuncDerivs(1,ss)
+    ys = np.zeros(len(xs))
+    Ek,Eae = effpy.Hatom( ss );  E_ref=Ek+Eae 
+    Es,Fs = effmc.evalFuncDerivs(0,xs)
+    #print Es, Fs
+    #print ss
+    plt.plot(xs,E_ref,label="E_ref")
+    #plt.plot(xs,Ek,label="Ek_ref")
+    plt.plot(xs,Es,'-k',  label="E")
+    #plt.plot(xs,Eae,':'  ,label="Eae_ref")
+    plt.plot(xs,E_eff,':',label="E_eff")
+    plt.plot(xs,Fs,       label="Fs")
+    plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
+    plt.legend(); plt.grid(); 
+    #plt.show(); 
+    #exit(0)
+
+
 if __name__ == "__main__":
 
     #np.random.seed( 451)
@@ -439,67 +484,21 @@ if __name__ == "__main__":
     #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.5
     #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
     
-    '''
-    # ====== test Gauss::Coulomb()
-    #xs = np.arange(0.0,6.0,0.025)
-    xs = np.arange(0.1,3.0,0.005)
-    ys = np.zeros(len(xs))
-    #Es,Fs = effmc.evalFuncDerivs(xs,0.6)
-    Es,Fs = effmc.evalFuncDerivs(0.165,xs)
-    plt.plot(xs,Es,label="E")
-    plt.plot(xs,Fs,label="F")
-    plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
-    plt.legend(); plt.grid(); plt.show(); exit(0)
-    '''
+    #test_EvalFuncDerivs()  # plt.show; exit()
+    #test_EvalFuncDerivs()
 
-    # ====== test H-atom
-    init_effmc( natom_=1, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.0 )
-    effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1,    AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
-    xs = np.arange(0.4,3.0,0.05)
-    #ss = xs*np.sqrt(0.5); 
-    ss = xs*1.0; 
-    import test_eFF as efft
-    efft.init_eff( natom_=1, nelec_=1, s=0.5 ) 
-    E_eff,dE_eff   = efft.eff.evalFuncDerivs(1,ss)
-    ys = np.zeros(len(xs))
-    Ek,Eae = effpy.Hatom( ss );  E_ref=Ek+Eae 
-    Es,Fs = effmc.evalFuncDerivs(0,xs)
-    #print Es, Fs
-    #print ss
-    plt.plot(xs,E_ref,label="E_ref")
-    #plt.plot(xs,Ek,label="Ek_ref")
-    plt.plot(xs,Es,'-k',  label="E")
-    #plt.plot(xs,Eae,':'  ,label="Eae_ref")
-    plt.plot(xs,E_eff,':',label="E_eff")
-    plt.plot(xs,Fs,       label="Fs")
-    plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
-    plt.legend(); plt.grid(); plt.show(); exit(0)
-
-
-    '''
-    for i,x in enumerate(xs):
-        x = xs[i]
-        s = 0.2
-        E = effmc.evalFunc(xs[i],s)
-        print(  x, s, "-> ", E )
-    exit(0)
-    '''
     #effmc.setPauliMode(0)  # E = K*S^2
     effmc.setPauliMode(2)  # E = Sij^2/(1-Sij^2) * ( Tii + Tjj - 2Tij/Sij )
     #effmc.setPauliMode(3)  # E=T
     #effmc.setPauliMode(4)  # E=S
     #effmc.setPauliMode(5)   # Ep = ( Sij/(1-Sij^2) )* Tij 
     #effmc.setPauliMode(6)   # Ep = Sij*Tij
-
-    '''
-    test_ETerms( xname="epos", inds=(0,0), x0=0 )
-    plt.show()    
-    exit(0)
-    '''
+    #test_ETerms( xname="epos", inds=(0,0), x0=0 );   # plt.show(); exit(0)
+    
 
     tests_results = []
     tests_funcs = []
-    #tests_funcs += [ test_ProjectWf, test_Poisson ]
+    tests_funcs += [ test_ProjectWf, test_Poisson ]
     #tests_funcs += [ check_dS_epos,            check_dS_esize,              check_dS_ecoef             ]
     #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
     #tests_funcs += [ checkForces_Pauli_epos ]
@@ -508,7 +507,7 @@ if __name__ == "__main__":
     #tests_funcs += [ checkForces_AQ_epos, checkForces_AQ_esize ,  checkForces_AQ_ecoef  ]
     #tests_funcs += [ checkForces_AP_epos, checkForces_AP_esize ,  checkForces_AP_ecoef  ]
     #tests_funcs += [ checkForces_AA_pos ]
-    tests_funcs += [ checkForces_Tot_epos, checkForces_Tot_esize ,  checkForces_Tot_ecoef  ]
+    #tests_funcs += [ checkForces_Tot_epos, checkForces_Tot_esize ,  checkForces_Tot_ecoef  ]
     #tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
     #tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     
