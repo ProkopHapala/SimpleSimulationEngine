@@ -296,8 +296,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //solver.loadFromFile( "data/Li_3g.fgo", true);
     //solver.loadFromFile( "data/Li_4g.fgo", true);
     //solver.loadFromFile( "data/C_2g_o1.fgo", true);
-    solver.loadFromFile( "data/H_1g_1o.fgo", true);
-    //solver.loadFromFile( "data/H2_1g_2o.fgo", true);
+    //solver.loadFromFile( "data/H_1g_1o.fgo", true);
+    solver.loadFromFile( "data/H2_1g_2o.fgo", true);
     //solver.loadFromFile( "data/H2O_1g_8o.fgo", true);
     //solver.loadFromFile( "data/e2_1g_2o.fgo", true);
     dt = 0.001;

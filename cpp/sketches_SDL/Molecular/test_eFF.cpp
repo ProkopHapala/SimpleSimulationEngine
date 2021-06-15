@@ -120,8 +120,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //checkDerivs2();             // exit(0);
 
     // ===== SETUP GEOM
-    char* fname = "data/H_eFF.xyz";
-    //char* fname = "data/H2_eFF.xyz";
+    //char* fname = "data/H_eFF.xyz";
+    char* fname = "data/H2_eFF.xyz";
     //char* fname = "data/H2O_eFF.xyz";
     //char* fname = "data/H2_eFF_spin.xyz";
     //char* fname = "data/Ce1_eFF.xyz";
