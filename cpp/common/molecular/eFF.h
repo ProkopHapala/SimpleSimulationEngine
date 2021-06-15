@@ -226,7 +226,7 @@ constexpr static const Quat4d default_AtomParams[] = {
     //double * aQ     =0; ///< atomic charges
     //Vec3d  * aAbWs  =0; ///< atomic   parameters (amplitude, decay, width)
     //Vec3d  * eAbWs  =0; ///< electron parameters (amplitude, decay, width)
-    Quat4d * aPars = 0;
+    Quat4d * aPars = 0;   /// electron params { x=Q,y=sQ,z=sP,w=cP }
 
     //double * espin  =0;
     int    * espin  =0; ///< electron spins

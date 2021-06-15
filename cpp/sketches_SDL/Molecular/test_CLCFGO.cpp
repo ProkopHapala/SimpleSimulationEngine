@@ -108,7 +108,8 @@ void drawSolver(const CLCFGO& solver, int oglSph, float fsc=1.0, float asc=0.5, 
     glColor3f(0.,0.,0.);
     for(int i=0; i<solver.natom; i++){
         Vec3d p = solver.apos[i];
-        Draw3D::drawPointCross( p, solver.aPsize[i]*asc );
+        //Draw3D::drawPointCross( p, solver.aPsize[i]*asc );
+        Draw3D::drawPointCross( p, solver.aPars[i].z*asc );
         Draw3D::drawVecInPos( solver.aforce[i]*fsc, p );
     }
     glDisable(GL_DEPTH_TEST);

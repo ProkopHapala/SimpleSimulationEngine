@@ -50,6 +50,30 @@ def init_effmc_2x2( sz=0.5 ):
     #ecoef[1,0  ]= 0.7;  ecoef[1,1]= 1.6               
     if(bPrintInfo): effmc.printAtomsAndElectrons()
 
+def init_effmc_H2mol_1g( adist=1.0, edist=0.1, sz=0.9, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.1 ):
+    global natom,norb,perOrb,nqOrb
+    natom=2; norb=2; perOrb=1; nqOrb=perOrb*(perOrb+1)/2
+    effmc.init(natom,norb,perOrb,1)  #  natom, nOrb, perOrb, natypes
+    ecoef = effmc.getBuff( "ecoef",(norb,perOrb)   )
+    esize = effmc.getBuff( "esize",(norb,perOrb)   )
+    epos  = effmc.getBuff( "epos" ,(norb,perOrb,3) )
+    ospin = effmc.getIBuff( "ospin",(norb)  )
+    apos  = effmc.getBuff( "apos" ,(natom,3)  )
+    aPars = effmc.getBuff( "aPars",(natom,4)  )
+    ospin[0]=1; ospin[1]=-1
+    epos [:,:,:]= 0;  epos[0,:,0]=-edist/2;  epos[1,:,0]=+edist/2; 
+    esize[:,:]= sz   
+    ecoef[:,:]= 1
+    #epos [:,:,:] += (np.random.rand(norb,perOrb,3)-0.5)*0.2 
+    #esize[:,:  ] += (np.random.rand(norb,perOrb  )-0.5)*0.2
+    #ecoef[:,:  ] += (np.random.rand(norb,perOrb  )-0.5)*0.2    
+    apos    [:,:] = 0;  apos[0,0] = -adist/2; apos[1,0] = +adist/2   
+    aPars   [:,0] = aQ
+    aPars   [:,1] = aQsz
+    aPars   [:,2] = aPsz
+    aPars   [:,3] = aP      
+    if(bPrintInfo): effmc.printAtomsAndElectrons()
+
 def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.1  ):
     global natom,norb,perOrb,nqOrb
     natom=natom_; norb=norb_; perOrb=perOrb_; nqOrb=perOrb*(perOrb+1)/2
@@ -74,16 +98,21 @@ def init_effmc( natom_=0, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, 
         epos [:,1,0] = epos [:,0,0] + dist
     if natom_>0:
         apos   = effmc.getBuff( "apos"  ,(natom,3)  )
-        aQs    = effmc.getBuff( "aQs"   ,(natom,) )
-        aQsize = effmc.getBuff( "aQsize",(natom,) )
-        aPcoef = effmc.getBuff( "aPcoef",(natom,) )
-        aPsize = effmc.getBuff( "aPsize",(natom,) )
+        aPars  = effmc.getBuff( "aPars",(natom,4)  )
+        #aQs    = effmc.getBuff( "aQs"   ,(natom,) )
+        #aQsize = effmc.getBuff( "aQsize",(natom,) )
+        #aPcoef = effmc.getBuff( "aPcoef",(natom,) )
+        #aPsize = effmc.getBuff( "aPsize",(natom,) )
         apos[:,:] = 0
         apos[:,0] = np.arange(0,dist*natom_,dist)
-        aQs   [:] = aQ
-        aQsize[:] = aQsz
-        aPcoef[:] = aP
-        aPsize[:] = aPsz
+        #aQs   [:] = aQ
+        #aQsize[:] = aQsz
+        #aPcoef[:] = aP
+        #aPsize[:] = aPsz
+        aPars   [:,0] = aQ
+        aPars   [:,1] = aQsz
+        aPars   [:,2] = aPsz
+        aPars   [:,3] = aP
     if(bPrintInfo): effmc.printAtomsAndElectrons()
 
 def test_ProjectWf( Etoll=1e-5 ):
@@ -164,26 +193,21 @@ def test_Coulomb_Kij():
     effmc.setSwitches_( normalize=1, kinetic=-1, coulomb=1, exchange=-1, pauli=-1, AA=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )
     return test_OrbInteraction(iMODE=3)
 
-def test_ETerms( xname="epos", inds=(0,0), x0=0 ):
-    init_effmc( natom_=1, norb_=2, perOrb_=2, sz=0.25, dist=0.2 )
-    effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=-1,    AA=1, AE=1, AECoulomb=1, AEPauli=1 )
+def plot_Terms( xs=None, xname="epos", inds=(0,0) ):
     nind = len(inds)
     szs  = (norb,perOrb,3)[:nind]
     xbuf = effmc.getBuff( xname, szs )
     Ebuf = effmc.getEnergyTerms( )
     nterm = len(Ebuf)
-    x0  += x0_glob
-    xs = np.arange(x0,x0+nx*dx,dx)
-    Etot = np.zeros(len(xs))
-    Es   = np.zeros((len(xs),nterm))
-    fs = np.zeros(len(xs))
-    for i in range(nx):
+    Etot  = np.zeros(len(xs))
+    Es    = np.zeros((len(xs),nterm))
+    #fs    = np.zeros(len(xs))
+    for i in range(len(xs)):
         if(nind>2):
             xbuf[inds[0],inds[1],inds[2]] = xs[i]
         else:
             xbuf[inds[0],inds[1]]         = xs[i]
         Etot[i] = effmc.eval()
-        #print "Ebuf", Ebuf
         Es[i,:] = Ebuf[:]
     if(plt):
         #print "test_ETerms PLOT"
@@ -191,10 +215,17 @@ def test_ETerms( xname="epos", inds=(0,0), x0=0 ):
         plt.figure(figsize=(5,5))
         for i in range(nterm):
             plt.plot( xs, Es[:,i], label=term_names[i] )
-        plt.plot    ( xs, Etot, "-k", lw=2, label="Etot"  )
+        plt.plot    ( xs, Etot, ":k", lw=2, label="Etot"  )
         plt.grid();plt.legend();
-        plt.title(label)
+        plt.title(label)    
     return xs, Etot, Es
+
+def test_ETerms( xname="epos", inds=(0,0), x0=0 ):
+    init_effmc( natom_=1, norb_=2, perOrb_=2, sz=0.25, dist=0.2 )
+    effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=-1,    AA=1, AE=1, AECoulomb=1, AEPauli=1 )
+    x0  += x0_glob
+    xs = np.arange(x0,x0+nx*dx,dx)
+    return plot_Terms( xname=xname, inds=inds ) 
 
 # ========= Check Forces
 
@@ -416,7 +447,6 @@ def check_Coulomb_rhoQ_( ):
     return check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0) )
 
 
-
 def test_EvalFuncDerivs():
     # - Note check firts what is currently in evalFuncDerivs()
     # ====== test Gauss::Coulomb()
@@ -438,27 +468,23 @@ def test_Hatom():
     init_effmc( natom_=1, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.0 )
     effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1,    AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
     xs = np.arange(0.4,3.0,0.05)
-    #ss = xs*np.sqrt(0.5); 
-    ss = xs*1.0; 
-    import test_eFF as efft
-    efft.init_eff( natom_=1, nelec_=1, s=0.5 ) 
-    E_eff,dE_eff   = efft.eff.evalFuncDerivs(1,ss)
-    ys = np.zeros(len(xs))
-    Ek,Eae = effpy.Hatom( ss );  E_ref=Ek+Eae 
-    Es,Fs = effmc.evalFuncDerivs(0,xs)
-    #print Es, Fs
-    #print ss
-    plt.plot(xs,E_ref,label="E_ref")
-    #plt.plot(xs,Ek,label="Ek_ref")
-    plt.plot(xs,Es,'-k',  label="E")
-    #plt.plot(xs,Eae,':'  ,label="Eae_ref")
-    plt.plot(xs,E_eff,':',label="E_eff")
-    plt.plot(xs,Fs,       label="Fs")
-    plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
-    plt.legend(); plt.grid(); 
-    #plt.show(); 
-    #exit(0)
+    plot_Terms(rs=xs)
 
+
+def test_H2molecule():
+    '''
+    according to http://aip.scitation.org/doi/10.1063/1.3272671
+    s_opt  = 0.94 A (1.77 bohr)
+    lHHopt = 1.47 A     ()
+    E_opt  = -2.91 [eV] (67kcal/mol)
+    '''
+    # ====== test H-atom
+    init_effmc_H2mol_1g()
+    #init_effmc( natom_=1, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.0 )
+    #effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1,    AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
+    effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1, AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
+    xs = np.arange(-3.0,3.0,0.05)
+    plot_Terms( xs=xs, xname="epos", inds=(0,0) )
 
 if __name__ == "__main__":
 
@@ -494,11 +520,11 @@ if __name__ == "__main__":
     #effmc.setPauliMode(5)   # Ep = ( Sij/(1-Sij^2) )* Tij 
     #effmc.setPauliMode(6)   # Ep = Sij*Tij
     #test_ETerms( xname="epos", inds=(0,0), x0=0 );   # plt.show(); exit(0)
-    
+    test_H2molecule()
 
     tests_results = []
     tests_funcs = []
-    tests_funcs += [ test_ProjectWf, test_Poisson ]
+    #tests_funcs += [ test_ProjectWf, test_Poisson ]
     #tests_funcs += [ check_dS_epos,            check_dS_esize,              check_dS_ecoef             ]
     #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
     #tests_funcs += [ checkForces_Pauli_epos ]

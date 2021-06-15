@@ -47,10 +47,11 @@ void makeDefaultBuffers(){
     // atoms (ions)
     buffers["apos"  ]= (double*)solver.apos ;
     buffers["aforce"]= (double*)solver.aforce ;
-    buffers["aQs"   ]=          solver.aQs  ;
-    buffers["aQsize"]=          solver.aQsize ;
-    buffers["aPsize"]=          solver.aPsize ;
-    buffers["aPcoef"]=          solver.aPcoef ;
+    //buffers["aQs"   ]=          solver.aQs  ;
+    //buffers["aQsize"]=          solver.aQsize ;
+    //buffers["aPsize"]=          solver.aPsize ;
+    //buffers["aPcoef"]=          solver.aPcoef ;
+    buffers["aPars"]=    (double*)solver.aPars ;
     ibuffers["atype"]=          solver.atype  ;
     // orbitals
     buffers["opos"]= (double*)solver.opos  ;

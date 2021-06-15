@@ -82,7 +82,7 @@ constexpr static const Quat4d default_AtomParams[] = {
 };
 
 constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
-    
+
     bool bDealoc=false;
 
     bool bNormalize     = true;
@@ -107,12 +107,12 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
     double KPauliOverlap = 50.0; // ToDo : This is just "bulgarian constant" for now
     double KPauliKin     = 50.0; // ToDo : Not sure if we should use this - perhaps this model of pauli energy should work "ab inition"
-    
+
     double Rcut    =6.0;  ///< cutoff beyond which two basis functions chi has no overlap
     double RcutOrb =9.0;  ///< cutoff beoud which orbital (i.e. localized cluster of basis functions) has no overlap
     double Rcut2     =Rcut*Rcut;
     double RcutOrb2  =RcutOrb*RcutOrb;
-    
+
     double Ek=0,Eee=0,EeePaul=0,EeeExch=0,Eae=0,EaePaul=0,Eaa=0; ///< different kinds of energy
 
     int natypes=0;
@@ -128,10 +128,13 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     // atoms (ions)
     Vec3d*  apos   =0;  ///< [A] positioon of atoms
     Vec3d*  aforce =0;  ///< [eV/A] force on atoms
+    /*
     double* aQs    =0;  ///< [e] charge of atomic core ( Q_nucleus - Q_core_electrons )
     double* aPcoef =0;  ///< [eV] coeficient of pauli repulsion of core electrons
     double* aPsize =0;  ///< [A] size of core in Pauli interaction
     double* aQsize =0;  ///< [A] size of core in coulombic interaction
+    */
+    Quat4d * aPars = 0; ///< electron params { x=Q,y=sQ,z=sP,w=cP }
     int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
     //Vec3d  * aAbWs =0; ///< atomic   parameters (amplitude, decay, width)
     //Vec3d  * eAbWs =0; ///< electron parameters (amplitude, decay, width)
@@ -154,13 +157,13 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     double* efsize =0; ///< [eV/A]  force acting on combination coefficnet of orbitals  d_E/d_esize[i]
     double* efcoef =0; ///< [e^.5V] force acting on size of gaussians d_E/d_ecoef[i]
     // --- normal forces ( to constrain normality of wavefunction )
-    Vec3d*  enfpos  =0; 
-    double* enfsize =0; 
+    Vec3d*  enfpos  =0;
+    double* enfsize =0;
     double* enfcoef =0;
     // --- Kinetic Energy Forces
     Gauss::Blob* fTs = 0;
-    //Vec3d*  eTfpos  =0; 
-    //double* eTfsize =0; 
+    //Vec3d*  eTfpos  =0;
+    //double* eTfsize =0;
     //double* eTfcoef =0;
 
     // --- Auxuliary electron density expansion basis functions
@@ -183,12 +186,13 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             natom = natom_;
             _realloc( apos  ,natom );
             _realloc( aforce,natom );
-            _realloc( aQs   ,natom );
+            //_realloc( aQs   ,natom );
             //_realloc( aAbWs ,natom);
             //_realloc( eAbWs ,natom);
-            _realloc( aPcoef ,natom);
-            _realloc( aPsize ,natom);
-            _realloc( aQsize ,natom);
+            //_realloc( aPcoef ,natom);
+            //_realloc( aPsize ,natom);
+            //_realloc( aQsize ,natom);
+            _realloc( aPars, natom );
             _realloc( atype ,natom ); // not used  now
         }
         if( (nOrb != nOrb_)||(perOrb != perOrb_) ){
@@ -241,10 +245,11 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         // atoms
         delete [] apos  ;
         delete [] aforce;
-        delete [] aQs   ;
-        delete [] aPcoef;
-        delete [] aPsize;
-        delete [] aQsize;
+        //delete [] aQs   ;
+        //delete [] aPcoef;
+        //delete [] aPsize;
+        //delete [] aQsize;
+        delete [] aPars;
         delete [] atype ; // not used  now
         // orbitals
         delete [] ospin;
@@ -289,10 +294,11 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         for(int i=0; i<natom;  i++){
             apos  [i]=Vec3dZero;
             aforce[i]=Vec3dZero;
-            aQs   [i]=1.;
-            aQsize[i]=1.0;
-            aPsize[i]=1.0;
-            aPcoef[i]=0.0;
+            //aQs   [i]=1.;
+            //aQsize[i]=1.0;
+            //aPsize[i]=1.0;
+            //aPcoef[i]=0.0;
+            aPars [i] = { 1.0, 0.0, 0.1, 0.0 };   /// { x=Q,y=sQ,z=sP,w=cP }
             atype [i]=0;
         }
         for(int i=0; i<nOrb;  i++){
@@ -366,12 +372,14 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     }
 
     inline void setAtom( int i, Vec3d p, double q, double sQ, double sP, double cP ){
-        apos[i]=p; aQs[i]=q; aQsize[i]=sQ; aPsize[i]=sP; aPcoef[i]=cP;
+        apos[i]=p; aPars[i].set(q,sQ,sP,cP);
+        //aQs[i]=q; aQsize[i]=sQ; aPsize[i]=sP; aPcoef[i]=cP;
     }
 
     inline void setAtom( int i, int itype, Vec3d p ){
         const Quat4d& par = default_AtomParams[itype];
-        apos[i]=p; aQs[i]=par.x; aQsize[i]=par.y; aPsize[i]=par.z; aPcoef[i]=par.w;
+        apos[i]=p; aPars[i] = par;
+        //aQs[i]=par.x; aQsize[i]=par.y; aPsize[i]=par.z; aPcoef[i]=par.w;
     }
 
     void clearAuxDens(){
@@ -468,7 +476,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
     //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
     double projectOrb(int io, Vec3d& dip ){
-        
+
         int i0      = getOrbOffset(io);
         int irho0   = getRhoOffset(io);
         Vec3d*   Ps = rhoP+irho0;
@@ -490,13 +498,13 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
             Q      += qii;
-            
+
             if( bMakeRho ){
                 Qs[ii]  = qii;
                 Ps[ii]  = pi;
-                Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii  
+                Ss[ii]  = si*M_SQRT1_2; //  si is multiplied by sqrt(1/2) when put to rho_ii
                 //Qs[ii]  = 0; // !!!! DEBUG !!!! - remove diagonal part of density ( ignore fromRhoDiag )
-                //if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i] q %g s %g p(%g,%g,%g) \n", io, ii,i, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z ); 
+                //if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i] q %g s %g p(%g,%g,%g) \n", io, ii,i, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z );
                 qcog.add_mul( pi, qii );
             }
 
@@ -508,7 +516,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             //eTfcoef[i]+= Tii*-2*ci ; // ToDo : This needs to be checked
             //fTs[i].set( Vec3dZero, qii*-2*fsi, Tii*-2*ci  );
             fTs[i].s += qii*-2*fsi;
-            fTs[i].c += Tii*-2*ci ;            
+            fTs[i].c += Tii*-2*ci ;
             if( bEvalKinetic ){
                 efsize[i]+= qii*-2*fsi;
                 efcoef[i]+= Tii*-2*ci ; // ToDo : This needs to be checked
@@ -541,24 +549,24 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                     enfsize[i]-= dS_dsi*cij; enfsize[j]-= dS_dsj*cij;
                     enfcoef[i]-= S*cj*2    ; enfcoef[j]-= S*ci*2   ;
                 }
-                
-                if( bMakeRho ){                    
+
+                if( bMakeRho ){
                     _Gauss_product(pi,pj,si,sj)
                     Qs[ii] = qij;
                     Ps[ii] = pos_ij;
                     Ss[ii] = size_ij;
-                    //Qs[ii] = 0; // !!!!! DEBUG !!!!! - only diagonal  
-                    //if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i,%i] q %g s %g p(%g,%g,%g) \n", io, ii,i,j, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z ); 
+                    //Qs[ii] = 0; // !!!!! DEBUG !!!!! - only diagonal
+                    //if( fabs(Qs[ii])>1e-16 )printf( "orb[%i] rho[%i|%i,%i] q %g s %g p(%g,%g,%g) \n", io, ii,i,j, Qs[ii], Ss[ii], Ps[ii].x,Ps[ii].y,Ps[ii].z );
                     qcog.add_mul( pos_ij, qij );
                 }
-                
+
                 _Gauss_tau    ( r2, si, sj );
                 _Gauss_kinetic( r2, si, sj );
                 Ek += T*cij;
                 Vec3d fij = Rij*(dT_dr*cij);
                 fTs[i].add( fij   , -dT_dsi*cij, T*cj*-2 );
                 fTs[j].add( fij*-1, -dT_dsj*cij, T*ci*-2 );
-                if( bEvalKinetic ){                    
+                if( bEvalKinetic ){
                     efpos [i].add( fij )  ; efpos [j].sub( fij )  ;
                     efsize[i]-= dT_dsi*cij; efsize[j]-= dT_dsj*cij;
                     efcoef[i]-= T*cj*2    ; efcoef[j]-= T*ci*2    ;
@@ -588,7 +596,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
     //double projectOrb(int io, Vec3d* Ps, double* Qs, double* Ss, Vec3d& dip, bool bNormalize ){ // project orbital on axuliary density functions
     double projectOrb_norm(int io, Vec3d& dip ){
- 
+
         bool bMakeRho = bEvalCoulomb || bEvalAECoulomb || bNormalize;   // in order to normalize we must calculate total charge in orbital
         //printf( "projectOrb() bMakeRho %i  | bEvalCoulomb %i bEvalAECoulomb %i bNormalize %i \n",  bMakeRho , bEvalCoulomb , bEvalAECoulomb , bNormalize );
 
@@ -740,7 +748,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
     double outProjectNormalForces( int io ){
         /// out project component of force which break normalization
-        //   f -= ds*( <f|ds>/|ds| ) 
+        //   f -= ds*( <f|ds>/|ds| )
         int i0      = getOrbOffset(io);
         // --- find projection constant c = <f|ds>/|ds|
         double ss=0,sf=0;
@@ -763,7 +771,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     }
 
     double outProjectNormalForces( ){
-        double csum=0; 
+        double csum=0;
         for(int io=0; io<nOrb; io++){ csum += outProjectNormalForces( io ); }
         return csum;
     }
@@ -792,7 +800,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 double cj  = ecoef[j];
                 const Gauss::PairInt& I = Is[ij];
                 I.applyForceScaled( K, efpos[i], efpos[j], efsize[i], efsize[j] );
-                //double KS = -K; 
+                //double KS = -K;
                 efcoef[i]+=-K*cj*0.64;
                 efcoef[j]+=-K*ci*0.64;
                 ij++;
@@ -805,9 +813,10 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         int i0=io*perOrb;
         Gauss::Blob DiS[perOrb];
         for(int i=0; i<perOrb;i++){ DiS[i].setZero(); }
-        Vec3d  pj  = apos  [ia]; 
-        double cj  = aPcoef[ia];
-        double sj  = aPsize[ia];
+        Vec3d  pj    = apos  [ia];
+        //Quat4d& apar = aPars[ia];
+        double cj  = aPars[ia].w;
+        double sj  = aPars[ia].z;
         Vec3d  fpj = Vec3dZero;
         for(int i_=0; i_<perOrb; i_++){
             int i=i0+i_;
@@ -898,10 +907,11 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         }
         double E;
         if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
+            const double S2SAFE = 0.0001;
             double T11 = oEs[io];
             double T22 = oEs[jo];
-            double S2  = Ssum*Ssum;
-            double D   = 1/(1-S2);
+            double S2  = Ssum*Ssum;   // Ssum<1 
+            double D   = 1/(1-S2  + S2SAFE);
             double D2  = D*D;
             double  fS = Ssum*D;
             double fS2 = Ssum*fS;
@@ -914,6 +924,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             forceOrb( jo, kT, DjT+j0 );
             forceOrb( io,fS2, fTs+i0 );  // d_T( Tii*S^2/(1+S^2) )
             forceOrb( jo,fS2, fTs+j0 );  // d_T( Tjj*S^2/(1+S^2) )
+            //if(E>1e+4)printf( "pauliOrbPair[%i,%i] E %g S %g T %g D %g | %g %g %g \n", io, jo, E, Ssum, Tsum, D,  (T11 + T22)*fS2,   2*Tsum*fS, fS );
         }else if(iPauliModel==3){ // Juat for debugging
             E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
             forceOrb( io, 1, DiT+i0 );
@@ -938,13 +949,13 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             forceOrb( jo, Tsum, DjS+j0 );
             forceOrb( io, Ssum, DiT+i0 );
             forceOrb( jo, Ssum, DjT+j0 );
-        }else{ // Pauli Model 0 :   E = K*S^2 
+        }else{ // Pauli Model 0 :   E = K*S^2
             E = Ssum*Ssum*KPauliOverlap;
             double f = 2*Ssum*KPauliOverlap;
             forceOrb( io, f, DiS+i0 );
             forceOrb( jo, f, DjS+j0 );
         }
-        //printf( "E %g \n", E );
+        //if(E>1e+4)printf( "pauliOrbPair[%i,%i] E %g S %g T %g \n", io, jo, E, Ssum, Tsum );
         //return E;
         //return Ssum;
         return E;
@@ -1010,7 +1021,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         // dE(pa,sa,qa)/dsi = (dE/dpa)*(dpa/dsi) + (dE/dsa)*(dsa/dsi) + (dE/dqa)*(dqa/dsi)
         //  (dqa/dsi)=0         because normalized ???? really even if we have normalization of ?
         //  (dpa/dsi)=0         because in center
-        //  (dsa/dsi)=sqrt(0.5) because exp(-r2/2si^2)*exp(-r2/2si^2) = exp(-r2/si^2) 
+        //  (dsa/dsi)=sqrt(0.5) because exp(-r2/2si^2)*exp(-r2/2si^2) = exp(-r2/si^2)
         // dE(pa,sa,qa)/dpi = (dE/dpa)*(dpa/dpi) + (dE/dsa)*(dsa/dpi) + (dE/dqa)*(dqa/dpi)
         //  (dqa/dpi)=0         because in center
         //  (dpa/dpi)=1         because in center
@@ -1019,7 +1030,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         Vec3d  Fpi  = rhofP[ij];
         double Fsi  = rhofS[ij];
         double dEdQ = rhofQ[ij];
-        double   ci = ecoef[i]; 
+        double   ci = ecoef[i];
         efpos [i].add( Fpi );
         efsize[i] += Fsi*M_SQRT1_2;
         efcoef[i] += dEdQ*ci*2;
@@ -1072,7 +1083,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
         Vec3d  Fp   = rhofP[ij];  //   fij = Rij*(-fr*qij);   ... from CoulombElement
         double Fs   = rhofS[ij];
-        double dEdQ = rhofQ[ij];  
+        double dEdQ = rhofQ[ij];
 
         double cij = 2*ci*cj;
 
@@ -1081,7 +1092,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         //double fsj = Fp.dot( dxsj ) + Fs*dssj + dEdQ*dSsj*cij;
 
         // Derivation:
-        // dE/dpi = (dE/dQij)*(dQij/dpi) + (dE/dpij)*(dpij/dpi)  + (dE/dsij)*(dsij/dpi) // dsij/dpi = 0 
+        // dE/dpi = (dE/dQij)*(dQij/dpi) + (dE/dpij)*(dpij/dpi)  + (dE/dsij)*(dsij/dpi) // dsij/dpi = 0
         // dE/dpi = (dE/dQij)*(dQij/dpi) + (dE/dpij)*(dpij/dpi)
         // TODO : we should make sure there is a recoil ( forces point to opposite direction )
 
@@ -1166,7 +1177,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 //if(r2>Rcut2) continue;    // ToDo : do this check
                 double qj = rhoQ[j];
                 double sj = rhoS[j];
-                double fr,fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently 
+                double fr,fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently
                 //printf( "CoulombOrbPair[%i|%i,%i|%i] q(%g,%g) s(%g,%g) \n", io,i, jo,j, qi,qj, si,sj );
                 //double E = Gauss::Coulomb( Rij, r2, si, sj, qij, fp, fs );
 
@@ -1179,7 +1190,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 //rhofS[i] += fs*si*qi;   rhofS[j] += fs*sj*qj;
                 rhofS[i] += fs*si;   rhofS[j] += fs*sj;
                 //rhofS[i] += fs;   rhofS[j] += fs;
-                rhofQ[i] += -e*qj;   rhofQ[j] += -e*qi; 
+                rhofQ[i] += -e*qj;   rhofQ[j] += -e*qi;
                 Ecoul    += e*qij;
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), E, si, sj );
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g qij(%g,%g) E %g s(%g,%g) \n",io,jo,i,j, sqrt(r2), qi,qj,  E, si, sj );
@@ -1188,7 +1199,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g E %g fp %g fr %g qij %g Eij.x %g \n", io,jo,i,j,sqrt(r2),e*qij,fp.x, fr, qij, Rij.x );
                 if(DEBUG_iter=DEBUG_log_iter){
                     //printf( "CoulombOrbPair[%i,%i] E %g r %g \n", i-i0,j-j0,E*qij,r,  );
-                    
+
                 }
             }
         }
@@ -1674,8 +1685,10 @@ void applyPairForceAE( int ia, int jo, Gauss::PairDeriv* dBs,  double* Ss, doubl
 double evalArho( int ia, int jo ){ // Interaction of atomic core with electron density  (Coulomb)
     //printf( " evalArho DEBUG \n");
     const Vec3d  pi = apos  [ia];
-    const double qi = aQs   [ia];
-    const double si = aQsize[ia];
+    //const double qi = aQs   [ia];
+    //const double si = aQsize[ia];
+    const double qi = aPars[ia].x;
+    const double si = aPars[ia].y;
     //const double si = eAbWs[ia].z;
     int j0  = getRhoOffset(jo);
     int njo = onq[jo];
@@ -1688,17 +1701,17 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         //if(r2>Rcut2) continue;
         double qj = rhoQ[j];
         double sj = rhoS[j];
-             
-        double fr,fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently 
+
+        double fr,fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently
         if( fabs(qij)<1e-16) continue;
         double e = Gauss::Coulomb( sqrt(r2), sqrt(si*si+sj*sj), fr, fs );
         Vec3d fp = Rij*(fr*qij);
         fs*=qij;
-        
+
         aforce[ia].add(fp);
         rhofP[j]  .sub(fp);
         rhofS[j] += fs*sj;
-        rhofQ[j] += -e*qi; 
+        rhofQ[j] += -e*qi;
         E        +=  e*qij;
         //printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );
         //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
@@ -1738,12 +1751,15 @@ double evalAA(){
     Eaa=0;
     for(int i=0; i<natom; i++){
         const Vec3d  pi   = apos[i];
-        const double qi   = aQs[i];
+        //const double qi   = aQs[i];
+        const double qi   = aPars[i].x;
         for(int j=0; j<i; j++){
             Vec3d f = Vec3dZero; // HERE WAS THE ERROR (missing initialization !!!! )
-            Vec3d  abw;
+            //Vec3d  abw;
+            //double qj = aQs[j];
+            double qj = aPars[j].x;
             const Vec3d dR  = apos[j] - pi;
-            Eaa +=  addAtomicForceQ( dR, f, qi*aQs[j] );
+            Eaa +=  addAtomicForceQ( dR, f, qi*qj );
             aforce[j].sub(f);
             aforce[i].add(f);
         }
@@ -1817,14 +1833,14 @@ double evalAA(){
         for(int ia=0; ia<natom; ia++){
             if(bEvalAEPauli){
                 Vec3d pij; double sij;
-                double S = Gauss::product3D_s_new( aPsize[ia], apos[ia], s, pos, sij, pij );
+                double S = Gauss::product3D_s_new( aPars[ia].z, apos[ia], s, pos, sij, pij );
                 //printf( "atomsPotAtPoint[%i] Pauli S %g c %g pij.x %g sij %g aPsize %g \n", ia, S, aPcoef[ia], pij.x, sij, aPsize[ia] );
-                E += aPcoef[ia]*S*S;
+                E += aPars[ia].w*S*S;
             }
             if(bEvalAECoulomb){
                 Vec3d Rij = pos - apos[ia];
                 // Coulomb( const Vec3d& Rij, double r2, double si, double sj, double qij, Vec3d& fp, double& fs ){
-                E += Gauss::Coulomb( Rij, Rij.norm2(), aQsize[ia], s, 1, fp, fs )*aQs[ia]*Q;
+                E += Gauss::Coulomb( Rij, Rij.norm2(), aPars[ia].y, s, 1, fp, fs )*aPars[ia].x*Q;
             }
         }
         return E;
@@ -1953,10 +1969,11 @@ bool loadFromFile( char const* filename, bool bCheck ){
         int nw = sscanf (buff, "%lf %lf %lf %lf %lf %lf %lf", &x, &y, &z,    &Q, &sQ, &sP, &cP );
         //printf( "atom[%i] p(%g,%g,%g) Q %g sQ %g sP %g cP %g \n", i, x, y, z,    Q, sQ, sP, cP );
         apos  [i]=(Vec3d){x,y,z};
-        aQs   [i]=Q;
-        aQsize[i]=sQ;
-        aPsize[i]=sP;
-        aPcoef[i]=cP;
+        //aQs   [i]=Q;
+        //aQsize[i]=sQ;
+        //aPsize[i]=sP;
+        //aPcoef[i]=cP;
+        aPars[i].set(Q,sQ,sP,cP);
         Qasum += Q;
     }
     int nBasRead = nBas;
@@ -2013,7 +2030,8 @@ void printSetup(){
 void printAtoms(){
     printf( "===CLCFGO::printAtoms()\n");
     for(int i=0; i<natom; i++){
-        printf( "eFF::atom[%i] p(%g,%g,%g)[A] Q(%g[e],%g[A])  Pauli(%g[eV],%g[A]) \n", i, apos[i].x,apos[i].y,apos[i].z,  aQs[i], aQsize[i], aPcoef[i], aPsize[i] );
+        //printf( "eFF::atom[%i] p(%g,%g,%g)[A] Q(%g[e],%g[A])  Pauli(%g[eV],%g[A]) \n", i, apos[i].x,apos[i].y,apos[i].z,  aQs[i], aQsize[i], aPcoef[i], aPsize[i] );
+        printf( "eFF::atom[%i] p(%g,%g,%g)[A] Q(%g[e],%g[A])  Pauli(%g[eV],%g[A]) \n", i, apos[i].x,apos[i].y,apos[i].z,  aPars[i].x, aPars[i].y, aPars[i].w, aPars[i].z );
     }
 }
 
