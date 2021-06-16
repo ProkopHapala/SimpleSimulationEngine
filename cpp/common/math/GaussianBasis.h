@@ -174,12 +174,35 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     fr          = (f1*e2 + e1f2)*ir      ;
     //printf( "r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) r_2s %g r %g s %g\n", r, fr, f1, e2, e1, f2, r_2s, r, s );
     fs          =          e1f2 *r_s * is;
-    return e1 * e2;
+    double E =  e1 * e2;
     */
-    
+
+    /*
+    double Amp = const_El_eVA;
+    double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
+    //double is  = 1/s;
+    double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    double r_s = r*is;
+    fs  = gauss_p8(r_s ) *is*is*is*0.5*(M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
+    E *= Amp;
+    fr*= Amp*(1/(r+1e-16)); // ToDo : erfx_e6( )   should return (fr/r) to make this more efficient
+    //double E   = erfx_e6( r, 1/s, fr );  fs=0;
+    */
+
+    // This gives correct hydrogen molecule
     double Amp = const_El_eVA;
     //double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
-    double is  = 1/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
+    double is  = 1/s;
+    double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    double r_s = r*is;
+    fs  = gauss_p8(r_s ) *is*is*is*(M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
+    E *= Amp;
+    fr*= Amp*(1/(r+1e-16)); // ToDo : erfx_e6( )   should return (fr/r) to make this more efficient
+
+    /*
+    double Amp = const_El_eVA;
+    double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
+    //double is  = 1/s;
     double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
     //double E   = erf( r*is )/r;
     double r_s = r*is;
@@ -187,6 +210,7 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     //fs  = is*is*is*(0.5*M_2_SQRTPI*Amp);                 //   1/is^3   because it is multiplied by si and sj later to get (si/(si^2+sj^2)^(3/2) )
     E *= Amp;
     fr*=-Amp;
+    */
 
     //printf( "Gauss::Coulomb(r %g,s %g)-> E %g fr %g fs %g \n", r, s, E, fr, fs );
     return E;

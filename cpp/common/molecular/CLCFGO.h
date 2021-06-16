@@ -910,7 +910,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             const double S2SAFE = 0.0001;
             double T11 = oEs[io];
             double T22 = oEs[jo];
-            double S2  = Ssum*Ssum;   // Ssum<1 
+            double S2  = Ssum*Ssum;   // Ssum<1
             double D   = 1/(1-S2  + S2SAFE);
             double D2  = D*D;
             double  fS = Ssum*D;
@@ -1192,7 +1192,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 //rhofS[i] += fs;   rhofS[j] += fs;
                 rhofQ[i] += -e*qj;   rhofQ[j] += -e*qi;
                 Ecoul    += e*qij;
-                //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), E, si, sj );
+                //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] q %g r %g E %g s(%g,%g) \n",io,jo,i,j, qij, sqrt(r2), e*qij, si, sj );
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g qij(%g,%g) E %g s(%g,%g) \n",io,jo,i,j, sqrt(r2), qi,qj,  E, si, sj );
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g qij(%g,%g) E %g fp %g \n",io,jo,i,j, sqrt(r2), qi,qj,  E, fp.x );
                 //if( fabs(qij)>1e-16 )printf( "CoulombOrbPair[%i,%i|%i,%i] r %g | dEdq %g = ( e %g * qj %g ) E %g \n",io,jo,i,j, sqrt(r2), e*qj*-2, e, qj, e*qij );
@@ -1385,7 +1385,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
     double evalCoulombPair( int ni, int nj, Gauss::Blob* Bis, Gauss::Blob* Bjs, Gauss::Blob* dBis, Gauss::Blob* dBjs ){
         // ToDo : can we integrate this with    pairOverlapAndKineticDervis()    ???????
-        //        perhaps yes but the cost of duplicating    Bs and dBs
+        //        perhaps yes but tr Gauss:Coulomb()he cost of duplicating    Bs and dBs
         double E = 0;
         for(int i=0; i<ni; i++){
             const Gauss::Blob&  Bi =  Bis[i];
@@ -1405,7 +1405,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 double e  = Gauss::Coulomb( r, s, fr, fs ); // NOTE : remove s*2 ... hope it is fine ?
                 //printf( "Exchange:Coulomb[%i,%i] qij %g E %g fr %g fs %g \n", i, j, r, s, qij, E*qij, fs, fs );
                 // --- Derivatives (Forces)
-                Vec3d fp = Rij*(fr * qij);
+                Vec3d fp  = Rij*(fr * qij);
                 fs       *=           qij;
                 //if(DEBUG_iter==DEBUG_log_iter) printf( "ExchangeOrbPair:Coulomb[%i,%i] qij %g e %g fx %g fs %g | r %g s %g fr %g fs %g  \n", i,j, qij, e, fp.x, fs,    r, s, fr, fs );
                 dBi.p.add(fp);      dBj.p.sub(fp);
@@ -1705,11 +1705,11 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         double fr,fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently
         if( fabs(qij)<1e-16) continue;
         double e = Gauss::Coulomb( sqrt(r2), sqrt(si*si+sj*sj), fr, fs );
-        Vec3d fp = Rij*(fr*qij);
+        Vec3d fp = Rij*(-fr*qij);
         fs*=qij;
 
-        aforce[ia].add(fp);
-        rhofP[j]  .sub(fp);
+        aforce[ia].sub(fp);
+        rhofP[j]  .add(fp);
         rhofS[j] += fs*sj;
         rhofQ[j] += -e*qi;
         E        +=  e*qij;
@@ -1762,6 +1762,8 @@ double evalAA(){
             Eaa +=  addAtomicForceQ( dR, f, qi*qj );
             aforce[j].sub(f);
             aforce[i].add(f);
+            //aforce[j].add(f);
+            //aforce[i].sub(f);
         }
     }
     return Eaa;

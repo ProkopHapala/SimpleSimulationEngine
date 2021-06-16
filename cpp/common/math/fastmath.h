@@ -125,6 +125,7 @@ inline double erfx_e6( double x_, double k, double& dy ){
     double dt8_dx = 8*dt*t*t2*t4;
     double y      = k/(t4*t4 + x);
     dy            = -y*y*(dt8_dx+1);
+    // ToDo : We will need rather (dy/x) for Gauss:Coulomb() => we need to fit it onece more
     return y;
 }
 
@@ -152,8 +153,6 @@ inline double erfx_e9( double x_, double k ){
     t*=t; t*=t; t*=t; // ^8
     return k/( t + x );
 }
-
-
 
 inline double exp_p8( double x ){
     // optimized for decreasing exp(-x)

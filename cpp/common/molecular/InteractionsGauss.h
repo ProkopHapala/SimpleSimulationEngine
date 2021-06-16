@@ -129,7 +129,8 @@ inline double CoulombGauss( double r, double s, double& fr, double& fs, double q
     fs  = gauss_p8(r_s) *is*is*is*(0.5*M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
     //fs  = is*is*is*(0.5*M_2_SQRTPI*Amp);                 //   1/is^3   because it is multiplied by si and sj later to get (si/(si^2+sj^2)^(3/2) )
     E *= Amp;
-    fr*=-Amp;
+    //fr*=-Amp;
+    fr*= Amp*(1/(r+1e-16));
 
     //printf( "CoulombGauss(r %g,s %g)-> E %g fr %g fs %g qq %g \n", r, s, E, fr, fs, qq );
     //exit(0);

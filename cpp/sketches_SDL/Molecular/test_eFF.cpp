@@ -209,7 +209,7 @@ void TestAppRARFF::draw(){
 
             //printf( "fa1(%g,%g,%g) fe1(%g,%g,%g)\n", fa1.x,fa1.x,fa1.x,   fe1.x,fe1.x,fe1.x );
 
-            VecN::set( ff.na*3, 0.0, (double*)ff.aforce );   // FIX ATOMS
+            //VecN::set( ff.na*3, 0.0, (double*)ff.aforce );   // FIX ATOMS
             //VecN::set( ff.ne, 0.0, ff.fsize );               // FIX ELECTRON SIZE
             //if(bRun)ff.move_GD(0.001 );
 
@@ -221,7 +221,9 @@ void TestAppRARFF::draw(){
             //checkFinite( ff, vminOK, vmaxOK );
 
             //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) \n", frameCount, E,   ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z );
-            printf( "frame[%i] E %g pe[0](%g,%g,%g) s %g fe[0](%g,%g,%g) fs %g \n", frameCount, E,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0],   ff.eforce[0].x,ff.eforce[0].y,ff.eforce[0].z, ff.fsize[0] );
+            //printf( "frame[%i] E %g pe[0](%g,%g,%g) s %g fe[0](%g,%g,%g) fs %g \n", frameCount, E,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0],   ff.eforce[0].x,ff.eforce[0].y,ff.eforce[0].z, ff.fsize[0] );
+
+            printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0] );
 
             //printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
             //printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
@@ -253,10 +255,11 @@ void TestAppRARFF::draw(){
     char strtmp[256];
     double Qsz = 0.05;
     double fsc = 1.0;
-    glColor3f(0.0,0.0,0.0);
+
     for(int i=0; i<ff.na; i++){
         //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z );
-        Draw3D::drawPointCross( ff.apos  [i]    , ff.aPars[i].x*Qsz );
+        glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , ff.aPars[i].x*Qsz );
+        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos  ( ff.aforce[i]*fsc, ff.apos[i] );
         //Draw3D::drawVecInPos(   ff.aforce[i]*fsc, ff.apos[i] );
         //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.apos[i].x,ff.apos[i].y,ff.apos[i].z );
         //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.aforce[i].x, ff.aforce[i].y, ff.aforce[i].z );
@@ -280,6 +283,8 @@ void TestAppRARFF::draw(){
         float alpha=0.1;
         if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, alpha); }else{ glColor4f(1.0,0.0,0.0, alpha); };
         Draw3D::drawShape( oglSph, ff.epos[i], Mat3dIdentity*ff.esize[i],  false );
+        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos(  ff.eforce[i]*fsc ,ff.epos[i] );
+        //glColor3f(1.0,0.0,0.0); Draw3D::drawPointCross( ff.epos[i], 0.1 );
         //Draw3D::drawSphere_oct(3,ff.esize[i],ff.epos[i]);
 
         //glColor3f(1.,1.,1.); Draw3D::drawVecInPos( ff.eforce  [i], ff.epos[i] );

@@ -478,7 +478,6 @@ void clearForce_noAlias(){
 void move_GD(double dt){
     double sum = 0;
     for(int i=0;i<nDOFs;i++){
-        //pDOFs[i].add_mul(fDOFs[i],dt);
         sum += fDOFs[i];
         pDOFs[i] += fDOFs[i] * dt;
     }

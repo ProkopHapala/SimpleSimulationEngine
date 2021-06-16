@@ -108,7 +108,9 @@ void evalFuncDerivs( int n, double* r, double* s, double* Es, double* Fs ){
         //Es[i] = erfx_e6( r[i], s[i], Fs[i] );
         //Es[i] = CoulombGauss( r[i], s[i], Fs[i], fs, 1  );
         //Es[i] = CoulombGauss( r[i], s[i], fr, Fs[i], 1  );
-        solver.esize[0] = s[i]; Es[i] = solver.eval(); Fs[i]=solver.efsize[0];
+        //solver.esize[0] = s[i]; Es[i] = solver.eval(); Fs[i]=solver.efsize[0];
+        //Es[i] = erfx_e6( r[i], 1/s[i], Fs[i] );   Fs[i]*=-1;
+        double fs,fr; Es[i]=Gauss::Coulomb( r[i], s[i],fr,fs ); Fs[i]=-fr*r[i];
     }
 }
 

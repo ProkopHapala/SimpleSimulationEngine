@@ -426,6 +426,7 @@ def check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0), x0=0 ):
     fbuf = effmc.getBuff( fname,szs )
     x0  += x0_glob
     xs = np.arange(x0,x0+nx*dx,dx)
+    print " x0  ", x0
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
     for i in range(nx):
@@ -435,32 +436,32 @@ def check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0), x0=0 ):
     return processForces( xs,Es,fs )
 
 def check_Coulomb_rhoP_( ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.75, dist=-0.5 )
+    init_effmc( norb_=2, perOrb_=1, sz=0.8, dist=-0.0 )
     return check_Coulomb( xname="rhoP", fname="rhofP", inds=(0,0,0) )
 
 def check_Coulomb_rhoS_( ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.75, dist=-0.5 )
+    init_effmc( norb_=2, perOrb_=1, sz=0.8, dist=-0.5 )
     return check_Coulomb( xname="rhoS", fname="rhofS", inds=(0,0), x0=0.5 )
 
 def check_Coulomb_rhoQ_( ):
-    init_effmc( norb_=2, perOrb_=1, sz=0.5, dist=-0.1 )
+    init_effmc( norb_=2, perOrb_=1, sz=0.8, dist=-0.1 )
     return check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0) )
 
-
-def test_EvalFuncDerivs():
+def test_EvalFuncDerivs( r0=None, s0=None, label="test_EvalFuncDerivs"):
     # - Note check firts what is currently in evalFuncDerivs()
     # ====== test Gauss::Coulomb()
-    #xs = np.arange(0.0,6.0,0.025)
-    xs = np.arange(0.1,3.0,0.005)
-    ys = np.zeros(len(xs))
-    #Es,Fs = effmc.evalFuncDerivs(xs,0.6)
-    Es,Fs = effmc.evalFuncDerivs(0.165,xs)
+    if r0 is None:
+        xs = np.arange( 0.001, 5.0, 0.05 )
+        Es,Fs = effmc.evalFuncDerivs(xs,s0)
+    else:
+        xs = np.arange( 0.3, 3.0, 0.005 )
+        Es,Fs = effmc.evalFuncDerivs(r0,xs)
     plt.plot(xs,Es,label="E")
     plt.plot(xs,Fs,label="F")
     plt.plot(xs[1:-1],(Es[2:]-Es[:-2])/(-2*(xs[1]-xs[0])),':',label="F_num")
     plt.legend(); plt.grid(); 
-    plt.show(); 
-    #exit(0)
+    plt.title(label)
+    #plt.show(); 
 
 def test_Hatom():
     # ====== test H-atom
@@ -497,9 +498,9 @@ if __name__ == "__main__":
     global plt,label
     global dx,nx,x0_glob
     global rnd_pos, rnd_size, rnd_coef
-    x0_glob = 0.25001
-    dx=0.0125
-    nx=150
+    x0_glob = 0.00001
+    dx=0.05
+    nx=100
     #nx=50
     #nx=10
     #nx=2
@@ -511,7 +512,7 @@ if __name__ == "__main__":
     #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
     
     #test_EvalFuncDerivs()  # plt.show; exit()
-    #test_EvalFuncDerivs()
+    test_EvalFuncDerivs( s0=0.8 )
 
     #effmc.setPauliMode(0)  # E = K*S^2
     effmc.setPauliMode(2)  # E = Sij^2/(1-Sij^2) * ( Tii + Tjj - 2Tij/Sij )
@@ -520,21 +521,22 @@ if __name__ == "__main__":
     #effmc.setPauliMode(5)   # Ep = ( Sij/(1-Sij^2) )* Tij 
     #effmc.setPauliMode(6)   # Ep = Sij*Tij
     #test_ETerms( xname="epos", inds=(0,0), x0=0 );   # plt.show(); exit(0)
-    test_H2molecule()
+    #test_H2molecule()
 
     tests_results = []
     tests_funcs = []
-    #tests_funcs += [ test_ProjectWf, test_Poisson ]
-    #tests_funcs += [ check_dS_epos,            check_dS_esize,              check_dS_ecoef             ]
-    #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize ,  checkForces_Kinetic_ecoef  ]
-    #tests_funcs += [ checkForces_Pauli_epos ]
-    #tests_funcs += [ checkForces_Pauli_epos, checkForces_Pauli_esize ,  checkForces_Pauli_ecoef  ]
-    #tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize ,  checkForces_Hartree_ecoef  ]
-    #tests_funcs += [ checkForces_AQ_epos, checkForces_AQ_esize ,  checkForces_AQ_ecoef  ]
-    #tests_funcs += [ checkForces_AP_epos, checkForces_AP_esize ,  checkForces_AP_ecoef  ]
+    tests_funcs += [ test_ProjectWf, test_Poisson ]
+    #tests_funcs += [ check_dS_epos           , check_dS_esize           , check_dS_ecoef             ]
+    tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize, checkForces_Kinetic_ecoef  ]
+    tests_funcs += [ checkForces_Pauli_epos  , checkForces_Pauli_esize  , checkForces_Pauli_ecoef    ]
+    tests_funcs  += [ checkForces_Hartree_epos, checkForces_Hartree_esize, checkForces_Hartree_ecoef  ]
+    tests_funcs  += [ checkForces_AQ_epos     , checkForces_AQ_esize     ,  checkForces_AQ_ecoef      ]
+    #tests_funcs += [ checkForces_AP_epos     , checkForces_AP_esize     ,  checkForces_AP_ecoef      ]
     #tests_funcs += [ checkForces_AA_pos ]
     #tests_funcs += [ checkForces_Tot_epos, checkForces_Tot_esize ,  checkForces_Tot_ecoef  ]
     #tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_, check_Coulomb_rhoQ_ ]
+    #tests_funcs += [ check_Coulomb_rhoP_ ]
+    #tests_funcs += [ check_Coulomb_rhoP_, check_Coulomb_rhoS_ ]
     #tests_funcs += [ test_Overlap_Sij, test_Kinetic_Tij, test_Coulomb_Kij ]
     
     for test_func in tests_funcs:
