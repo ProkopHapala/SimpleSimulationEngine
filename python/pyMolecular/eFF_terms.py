@@ -179,6 +179,13 @@ def Hatom( s ):
     #Etot = Ek+Eae
     return Ek,Eae
 
+def Hatom_au_( s ):
+    # eq.10 from http://aip.scitation.org/doi/10.1063/1.3272671
+    Ek  =  1.5 * (1/s**2)
+    #Eae = 1.35*   -np.sqrt(8./np.pi) * (1/s)
+    Eae = -np.sqrt(8./np.pi) * (1/s)
+    return Ek,Eae
+
 def H2cation( rHH, s, cr=0.5 ):
     Ek   = Kinetic( s )                  # kinetic energy of electron
     Eaa  = El_aa( rHH,  1. )             # Coulomb repulsion  nuclei_1 + nuclei_2

@@ -83,10 +83,15 @@ if __name__ == "__main__":
 
     import eFF_terms as eff
     EkAn,EaeAn = eff.Hatom(ss); EaeAn*=np.sqrt(0.5); EtotAn = EkAn+EaeAn
+    EkAu,EaeAu = eff.Hatom_au_( ss ); EkAu*=const_K_eVA; EaeAu*=const_K_eVA;   EtotAu = EkAu + EaeAu
 
     plt.plot(ss,EtotAn,"k:",lw=2,label="EtotAn")
     plt.plot(ss,EkAn  ,"r:",lw=2,label="EkinAn")
     plt.plot(ss,EaeAn ,"g:",lw=2,label="EaeAn")
+
+    plt.plot(ss,EtotAu,"k--",lw=2,label="EtotAu")
+    plt.plot(ss,EkAu  ,"r--",lw=2,label="EkinAu")
+    plt.plot(ss,EaeAu ,"g--",lw=2,label="EaeAu")
 
     plt.grid()
 
