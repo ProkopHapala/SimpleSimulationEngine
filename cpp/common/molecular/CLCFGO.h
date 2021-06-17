@@ -918,42 +918,42 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             E          = (T11 + T22)*fS2 -2*Tsum*fS;
             double kS  = ( (T11 + T22)*2*Ssum  -2*Tsum*(1+S2) )*D2;
             double kT  = -2*fS;
-            forceOrb( io, kS, DiS+i0 );
-            forceOrb( jo, kS, DjS+j0 );
-            forceOrb( io, kT, DiT+i0 );
-            forceOrb( jo, kT, DjT+j0 );
+            forceOrb( io, kS, DiS );
+            forceOrb( jo, kS, DjS );
+            forceOrb( io, kT, DiT );
+            forceOrb( jo, kT, DjT );
             forceOrb( io,fS2, fTs+i0 );  // d_T( Tii*S^2/(1+S^2) )
             forceOrb( jo,fS2, fTs+j0 );  // d_T( Tjj*S^2/(1+S^2) )
             //if(E>1e+4)printf( "pauliOrbPair[%i,%i] E %g S %g T %g D %g | %g %g %g \n", io, jo, E, Ssum, Tsum, D,  (T11 + T22)*fS2,   2*Tsum*fS, fS );
         }else if(iPauliModel==3){ // Juat for debugging
             E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
-            forceOrb( io, 1, DiT+i0 );
-            forceOrb( jo, 1, DjT+j0 );
+            forceOrb( io, 1, DiT );
+            forceOrb( jo, 1, DjT );
         }else if(iPauliModel==4){
             E = Ssum; // Just Cross-Overlap S12 = <psi1|psi2>
-            forceOrb( io, 1, DiS+i0 );
-            forceOrb( jo, 1, DjS+j0 );
+            forceOrb( io, 1, DiS );
+            forceOrb( jo, 1, DjS );
         }else if(iPauliModel==5){   //   Ep = ( Sij/(1-Sij^2) )* Tij   =  ( Sij^2/(1-Sij^2) )* ( Tij/Sij )
             double S2 = Ssum*Ssum;
             double D  = 1/(1-S2);
             double  fS  = Ssum*D;
             double dfST = Tsum*(1+S2)*D*D;
             E         = fS*Tsum;
-            forceOrb( io, dfST, DiS+i0 );
-            forceOrb( jo, dfST, DjS+j0 );
-            forceOrb( io, fS,   DiT+i0 );
-            forceOrb( jo, fS,   DjT+j0 );
+            forceOrb( io, dfST, DiS );
+            forceOrb( jo, dfST, DjS );
+            forceOrb( io, fS,   DiT );
+            forceOrb( jo, fS,   DjT );
         }else if(iPauliModel==6){   //   Ep = Sij*Tij
             E = Ssum*Tsum;
-            forceOrb( io, Tsum, DiS+i0 );
-            forceOrb( jo, Tsum, DjS+j0 );
-            forceOrb( io, Ssum, DiT+i0 );
-            forceOrb( jo, Ssum, DjT+j0 );
+            forceOrb( io, Tsum, DiS );
+            forceOrb( jo, Tsum, DjS );
+            forceOrb( io, Ssum, DiT );
+            forceOrb( jo, Ssum, DjT );
         }else{ // Pauli Model 0 :   E = K*S^2
             E = Ssum*Ssum*KPauliOverlap;
             double f = 2*Ssum*KPauliOverlap;
-            forceOrb( io, f, DiS+i0 );
-            forceOrb( jo, f, DjS+j0 );
+            forceOrb( io, f, DiS );
+            forceOrb( jo, f, DjS );
         }
         //if(E>1e+4)printf( "pauliOrbPair[%i,%i] E %g S %g T %g \n", io, jo, E, Ssum, Tsum );
         //return E;
@@ -1820,11 +1820,11 @@ double evalAA(){
         double F2a  = 0;
         double F2ep = 0;
         double F2es = 0;
-        double F2ec = 0;
-        if(bOptAtom)for(int i=0; i<natom;i++){ apos [i].add_mul( aforce[i], dt );    F2a +=aforce[i].norm2(); }
-        if(bOptEPos)for(int i=0; i<nBas; i++){ epos [i].add_mul( efpos [i], dt );    F2ep+=efpos [i].norm2(); }
-        if(bOptSize)for(int i=0; i<nBas; i++){ esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);     }
-        if(bOptCoef)for(int i=0; i<nBas; i++){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     }
+        double F2ec = 0; //DEBUG
+        if(bOptAtom)for(int i=0; i<natom;i++){ apos [i].add_mul( aforce[i], dt );    F2a +=aforce[i].norm2(); } //DEBUG
+        if(bOptEPos)for(int i=0; i<nBas; i++){ epos [i].add_mul( efpos [i], dt );    F2ep+=efpos [i].norm2(); } //DEBUG
+        if(bOptSize)for(int i=0; i<nBas; i++){ esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);     } //DEBUG
+        if(bOptCoef)for(int i=0; i<nBas; i++){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     } //DEBUG
         // ToDo : We should out project directions which breaks normalization (!!!) but we can do it later - it is mostly importaint for dynamics, gradient desncent should be fine
         return F2a + F2ep + F2es + F2ec;
     }

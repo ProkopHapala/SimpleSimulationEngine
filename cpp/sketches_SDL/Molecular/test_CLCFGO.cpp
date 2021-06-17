@@ -216,8 +216,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     solver.bOptEPos = 1;
     solver.bOptSize = 1;
 
-    solver.iPauliModel = 2;
-
+    //solver.iPauliModel = 2;
+    solver.iPauliModel = 0;
 
     solver.printSetup();
     solver.printAtoms();
@@ -283,15 +283,16 @@ void TestAppCLCFSF::draw(){
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable( GL_DEPTH_TEST );
 
-    dt = 0.001;
+    dt = 0.00001;
     if(bRun){
         //testColorOfHash();
         double E = solver.eval();
         solver.forceInfo();
         //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, solver.Ek, solver.Eee,solver.EeePaul,  solver.Eae,solver.EaePaul, solver.Eaa );
 
-        /*
+        DEBUG
         float F2 = solver.moveGD(dt);
+        DEBUG
         //printf( "frame[%i] E %g |F| %g \n", frameCount, E, sqrt(F2) );
         //printf( "frame[%i] |F| %g E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n", frameCount, sqrt(F2), E, solver.Ek, solver.Eee,solver.EeePaul,solver.EeeExch, solver.Eae,solver.EaePaul, solver.Eaa, solver.esize[0] );
         //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, solver.apos[0].x,solver.apos[0].y,solver.apos[0].z,   solver.epos[0].x,solver.epos[0].y,solver.epos[0].z,  solver.esize[0] );
@@ -302,7 +303,7 @@ void TestAppCLCFSF::draw(){
             solver.printAtoms();
             solver.printElectrons();
         }
-        */
+
     }
 
     if(bDrawObjects)drawSolver( solver, oglSph, 10.0, 0.2 );
