@@ -1801,6 +1801,21 @@ double evalAA(){
         return E;
     }
 
+    void forceInfo(){
+        double F2a  = 0;
+        double F2ep = 0;
+        double F2es = 0;
+        double F2ec = 0;
+        Vec3d  fcog = Vec3dZero;
+        if(bOptAtom)for(int i=0; i<natom;i++){ F2a +=aforce[i].norm2(); fcog.add(aforce[i]); }
+        if(bOptEPos)for(int i=0; i<nBas; i++){ F2ep+=efpos [i].norm2(); fcog.add(efpos [i]); }
+        if(bOptSize)for(int i=0; i<nBas; i++){ F2es+=sq(efsize[i]);     }
+        if(bOptCoef)for(int i=0; i<nBas; i++){ F2ec+=sq(efcoef[i]);     }
+        // ToDo : We should out project directions which breaks normalization (!!!) but we can do it later - it is mostly importaint for dynamics, gradient desncent should be fine
+        printf( " Force a %g e:p,s,c( %g, %g, %g ) fcog(%g,%g,%g) \n", sqrt(F2a), sqrt(F2ep), sqrt(F2es), sqrt(F2ec), fcog.x,fcog.y,fcog.z );
+        //return F2a + F2ep + F2es + F2ec;
+    }
+
     double moveGD( double dt){
         double F2a  = 0;
         double F2ep = 0;

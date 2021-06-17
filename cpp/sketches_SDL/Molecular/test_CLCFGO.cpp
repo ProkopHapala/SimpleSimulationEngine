@@ -193,22 +193,24 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //solver.loadFromFile( "data/Li_4g.fgo", true);
     //solver.loadFromFile( "data/C_2g_o1.fgo", true);
     //solver.loadFromFile( "data/H_1g_1o.fgo", true);
-    solver.loadFromFile( "data/H2_1g_2o.fgo", true);
+    //solver.loadFromFile( "data/H2_1g_2o.fgo", true);
     //solver.loadFromFile( "data/H2O_1g_8o.fgo", true);
-    //solver.loadFromFile( "data/e2_1g_2o.fgo", true);
+    //solver.loadFromFile( "data/e2_1g_2o_singlet.fgo", true);
+    solver.loadFromFile( "data/e2_1g_2o_triplet.fgo", true);
     dt = 0.001;
     //exit(0);
 
     solver.turnAllSwitches(false);
 
     solver.bNormalize     = 1;
-    solver.bEvalAE        = 1;
-    solver.bEvalAECoulomb = 1;
-    solver.bEvalAEPauli   = 1;
-    solver.bEvalCoulomb   = 1;
+    //solver.bEvalAE        = 1;
+    //solver.bEvalAECoulomb = 1;
+    //solver.bEvalAEPauli   = 1;
+
+    //solver.bEvalCoulomb   = 1;
     solver.bEvalPauli     = 1;
-    solver.bEvalKinetic   = 1;
-    solver.bEvalAA        = 1;
+    //solver.bEvalKinetic   = 1;
+    //solver.bEvalAA        = 1;
 
     solver.bOptAtom = 1;
     solver.bOptEPos = 1;
@@ -222,6 +224,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     solver.printElectrons();
 
     double E = solver.eval();
+    solver.forceInfo();
     printf( "E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n",E, solver.Ek, solver.Eee,solver.EeePaul,solver.EeeExch, solver.Eae,solver.EaePaul, solver.Eaa, solver.esize[0] );
     //exit(0);
 
@@ -284,6 +287,10 @@ void TestAppCLCFSF::draw(){
     if(bRun){
         //testColorOfHash();
         double E = solver.eval();
+        solver.forceInfo();
+        //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, solver.Ek, solver.Eee,solver.EeePaul,  solver.Eae,solver.EaePaul, solver.Eaa );
+
+        /*
         float F2 = solver.moveGD(dt);
         //printf( "frame[%i] E %g |F| %g \n", frameCount, E, sqrt(F2) );
         //printf( "frame[%i] |F| %g E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n", frameCount, sqrt(F2), E, solver.Ek, solver.Eee,solver.EeePaul,solver.EeeExch, solver.Eae,solver.EaePaul, solver.Eaa, solver.esize[0] );
@@ -295,6 +302,7 @@ void TestAppCLCFSF::draw(){
             solver.printAtoms();
             solver.printElectrons();
         }
+        */
     }
 
     if(bDrawObjects)drawSolver( solver, oglSph, 10.0, 0.2 );
