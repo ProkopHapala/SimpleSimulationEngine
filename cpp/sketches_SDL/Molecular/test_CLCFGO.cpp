@@ -201,14 +201,12 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //exit(0);
 
     solver.turnAllSwitches(false);
-
     solver.bNormalize     = 1;
     //solver.bEvalAE        = 1;
     //solver.bEvalAECoulomb = 1;
     //solver.bEvalAEPauli   = 1;
-
-    //solver.bEvalCoulomb   = 1;
-    solver.bEvalPauli     = 1;
+    solver.bEvalCoulomb   = 1;
+    //solver.bEvalPauli     = 1;
     //solver.bEvalKinetic   = 1;
     //solver.bEvalAA        = 1;
 
@@ -290,13 +288,12 @@ void TestAppCLCFSF::draw(){
         solver.forceInfo();
         //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, solver.Ek, solver.Eee,solver.EeePaul,  solver.Eae,solver.EaePaul, solver.Eaa );
 
-        DEBUG
         float F2 = solver.moveGD(dt);
-        DEBUG
+
         //printf( "frame[%i] E %g |F| %g \n", frameCount, E, sqrt(F2) );
         //printf( "frame[%i] |F| %g E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n", frameCount, sqrt(F2), E, solver.Ek, solver.Eee,solver.EeePaul,solver.EeeExch, solver.Eae,solver.EaePaul, solver.Eaa, solver.esize[0] );
         //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, solver.apos[0].x,solver.apos[0].y,solver.apos[0].z,   solver.epos[0].x,solver.epos[0].y,solver.epos[0].z,  solver.esize[0] );
-        printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (solver.apos[0]-solver.apos[1]).norm(),   (solver.apos[0]-solver.epos[0]).norm(), solver.esize[0] );
+        //printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (solver.apos[0]-solver.apos[1]).norm(),   (solver.apos[0]-solver.epos[0]).norm(), solver.esize[0] );
 
         if(F2<1e-6){
             bRun=false;
