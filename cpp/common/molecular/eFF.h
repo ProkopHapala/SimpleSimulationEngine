@@ -318,6 +318,7 @@ double evalEE(){
             double& fsj = fsize[j];
 
             double dEee = addCoulombGauss( dR, si, sj, f, fsi, fsj, qq ); Eee += dEee;
+            /*
             //printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
             if( iPauliModel == 1 ){
                 //printf( "EeePaul[%i,%i]  ", i, j );
@@ -341,6 +342,7 @@ double evalEE(){
                     //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
                 }
             }
+            */
             //if( spini==espin[j] ) EeePaul += addDensOverlapGauss_S( dR,si,sj, 1, f, fsi, fsj );
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
             //if( i_DEBUG>0 ) printf( "evalEE[%i,%i] dR(%g,%g,%g) s(%g,%g) q %g  ->   f(%g,%g,%g) fs(%g,%g) \n", i,j, dR.x,dR.y,dR.z, si,sj, qq,   f.x,f.y,f.z, fsi,fsj );
@@ -550,7 +552,7 @@ bool loadFromFile_xyz( char const* filename ){
         int e;
         fgets( buf, 256, pFile); //printf( ">%s<\n", buf );
         //printf( "buf[%i]  >>%s<< \n", ie, buf );
-        int nw = sscanf (buf, " %i %lf %lf %lf", &e, &x, &y, &z, &s );
+        int nw = sscanf (buf, " %i %lf %lf %lf %lf", &e, &x, &y, &z, &s );
         if( e<0){
             epos[ie]=(Vec3d){x,y,z};
             if     (e==-1){ espin[ie]= 1; }
@@ -559,7 +561,7 @@ bool loadFromFile_xyz( char const* filename ){
             //esize[ie] = 1.0;
             //esize[ie] = 0.5;
             //esize[ie] = 0.25;
-            //printf( " e[%i] pos(%g,%g,%g) spin %i size %g \n", ie, epos[ie].x, epos[ie].y, epos[ie].z, espin[ie], esize[ie] );
+            //printf( " e[%i] pos(%g,%g,%g) spin %i size %g | nw %i \n", ie, epos[ie].x, epos[ie].y, epos[ie].z, espin[ie], esize[ie], nw );
             ie++;
         }else{
             apos[ia]=(Vec3d){x,y,z};

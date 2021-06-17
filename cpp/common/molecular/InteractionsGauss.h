@@ -520,9 +520,9 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     if(anti){ eS = PauliSGauss_anti( S, fS, KRSrho.z ); }
     else    { eS = PauliSGauss_syn ( S, fS, KRSrho.z ); }
     double TfS = T*fS;
-    fsi +=         -(dTsi*eS + TfS*dSsi)*KRSrho.y;
-    fsj +=         -(dTsj*eS + TfS*dSsj)*KRSrho.y;
-    f.add_mul( dR, (dTr *eS + TfS*dSr )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
+    fsi +=          (dTsi*eS + TfS*dSsi)*KRSrho.y;
+    fsj +=          (dTsj*eS + TfS*dSsj)*KRSrho.y;
+    f.add_mul( dR, -(dTr *eS + TfS*dSr )*KRSrho.x*KRSrho.x ); // second *KRSrho.x because dR is not multiplied
 
     //printf( "addPauliGauss r2, si, sj %g %g %g \n", r2, si, sj );
     //printf( "addPauliGauss T,dTr,dTsi,dTsj %g %g %g %g \n", T,dTr,dTsi,dTsj );
@@ -563,9 +563,9 @@ inline double addPauliGaussVB( const Vec3d& dR, double si, double sj, Vec3d& f, 
     double eS  =      S*SD  ;
 
     double TfS = T*fS;
-    fsi +=         -(dTsi*eS + TfS*dSsi);
-    fsj +=         -(dTsj*eS + TfS*dSsj);
-    f.add_mul( dR,  (dTr *eS + TfS*dSr ) ); // second *KRSrho.x because dR is not multiplied
+    fsi +=          (dTsi*eS + TfS*dSsi);
+    fsj +=          (dTsj*eS + TfS*dSsj);
+    f.add_mul( dR, -(dTr *eS + TfS*dSr ) ); // second *KRSrho.x because dR is not multiplied
 
     //printf( " E %g T %g eS %g S %g ", T*eS, T, eS, S );
 

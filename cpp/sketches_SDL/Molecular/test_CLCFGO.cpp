@@ -287,7 +287,9 @@ void TestAppCLCFSF::draw(){
         float F2 = solver.moveGD(dt);
         //printf( "frame[%i] E %g |F| %g \n", frameCount, E, sqrt(F2) );
         //printf( "frame[%i] |F| %g E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n", frameCount, sqrt(F2), E, solver.Ek, solver.Eee,solver.EeePaul,solver.EeeExch, solver.Eae,solver.EaePaul, solver.Eaa, solver.esize[0] );
-        printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, solver.apos[0].x,solver.apos[0].y,solver.apos[0].z,   solver.epos[0].x,solver.epos[0].y,solver.epos[0].z,  solver.esize[0] );
+        //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, solver.apos[0].x,solver.apos[0].y,solver.apos[0].z,   solver.epos[0].x,solver.epos[0].y,solver.epos[0].z,  solver.esize[0] );
+        printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (solver.apos[0]-solver.apos[1]).norm(),   (solver.apos[0]-solver.epos[0]).norm(), solver.esize[0] );
+
         if(F2<1e-6){
             bRun=false;
             solver.printAtoms();

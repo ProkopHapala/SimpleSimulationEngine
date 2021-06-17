@@ -65,6 +65,11 @@ void applyCartesianBoxForce( const Vec3d& pmin, const Vec3d& pmax,const Vec3d& k
    //for(int i=0;i<n; i++){     if(i==0){ boxForce( ps[i], fs[i], pmin, pmax, k ); printf( " atom[%i] p(%g,%g,%g) f(%g,%g,%g) \n", i, ps[i].x, ps[i].y, ps[i].z,   fs[i].x, fs[i].y, fs[i].z ); }  }
 }
 
+void applyParabolicPotential( const Vec3d& p0, const Vec3d& k, int n, const Vec3d* ps, Vec3d* fs ){
+    for(int i=0;i<n; i++){ Vec3d dp=ps[i]-p0; fs[i].add( dp*dp*k ); }
+}
+
+
 // ======= THE CLASS
 
 class TestAppRARFF: public AppSDL2OGL_3D { public:
@@ -121,7 +126,11 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     // ===== SETUP GEOM
     //char* fname = "data/H_eFF.xyz";
-    char* fname = "data/H2_eFF.xyz";
+    //char* fname = "data/e2_eFF_singlet.xyz";
+    char* fname = "data/e2_eFF_triplet.xyz";
+    //char* fname = "data/H2_eFF.xyz";
+    //char* fname = "data/He_eFF.xyz";
+    //char* fname = "data/He_eFF_triplet.xyz";
     //char* fname = "data/H2O_eFF.xyz";
     //char* fname = "data/H2_eFF_spin.xyz";
     //char* fname = "data/Ce1_eFF.xyz";
@@ -162,7 +171,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     opt.initOpt( 0.05, 0.1 );
     opt.f_limit = 1000.0;
 
-    ff.iPauliModel = 2; // dens overlap
+    //ff.iPauliModel = 0; // dens overlap
+    //ff.iPauliModel = 1; // addPauliGauss   from the article using  KRSrho
+    ff.iPauliModel = 2; // addPauliGaussVB valence bons
     ff.info();
 
     double E = ff.eval();
@@ -203,16 +214,20 @@ void TestAppRARFF::draw(){
 
             //applyCartesianBoxForce( {0.0,0.0,0.0}, {0.0,0.0,0.0}, {0,0,50.0}, ff.na, ff.apos, ff.aforce );
             //applyCartesianBoxForce( {0.0,0.0,0.0}, {0.0,0.0,0.0}, {0,0,5.0},  ff.ne, ff.epos, ff.eforce );
+
+            //applyParabolicPotential( {0.0,0.0,0.0}, {0.1,0.1,0.1}, ff.na, ff.apos, ff.aforce );
+            //applyParabolicPotential( {0.0,0.0,0.0}, {0.1,0.1,0.1}, ff.ne, ff.epos, ff.eforce );
+
             double E = ff.eval();
             //ff.apos[0].set(.0);
             //checkFinite( ff, vminOK, vmaxOK );
 
             //printf( "fa1(%g,%g,%g) fe1(%g,%g,%g)\n", fa1.x,fa1.x,fa1.x,   fe1.x,fe1.x,fe1.x );
 
-            //VecN::set( ff.na*3, 0.0, (double*)ff.aforce );   // FIX ATOMS
-            //VecN::set( ff.ne, 0.0, ff.fsize );               // FIX ELECTRON SIZE
+            //VecN::set( ff.na*3, 0.0, (double*)ff.aforce );  // FIX ATOMS
+            //VecN::set( ff.ne  , 0.0, ff.fsize  );           // FIX ELECTRON SIZE
+            //VecN::set( ff.ne*3, 0.0, (double*)ff.eforce );  // FIX ELECTRON POS
             //if(bRun)ff.move_GD(0.001 );
-
             ff.move_GD( 0.001 );
             //if(bRun) ff.move_GD_noAlias( 0.0001 );
 
@@ -223,7 +238,8 @@ void TestAppRARFF::draw(){
             //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) \n", frameCount, E,   ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z );
             //printf( "frame[%i] E %g pe[0](%g,%g,%g) s %g fe[0](%g,%g,%g) fs %g \n", frameCount, E,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0],   ff.eforce[0].x,ff.eforce[0].y,ff.eforce[0].z, ff.fsize[0] );
 
-            printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0] );
+            //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0] );
+            printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (ff.apos[0]-ff.apos[1]).norm(),   (ff.apos[0]-ff.epos[0]).norm(), ff.esize[0] );
 
             //printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
             //printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
