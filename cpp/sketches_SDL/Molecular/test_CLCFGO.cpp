@@ -204,15 +204,24 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     dt = 0.001;
     //exit(0);
 
-    ff.turnAllSwitches(false);
-    ff.bNormalize     = 1;
-    ff.bEvalAE        = 1;
-    ff.bEvalAECoulomb = 1;
-    ff.bEvalAEPauli   = 1;
-    ff.bEvalCoulomb   = 1;
-    ff.bEvalPauli     = 1;
-    ff.bEvalKinetic   = 1;
-    ff.bEvalAA        = 1;
+    //ff.turnAllSwitches(false);
+    //ff.bNormalize     = 1;
+    //ff.bEvalAE        = 1;
+    //ff.bEvalAECoulomb = 1;
+    //ff.bEvalAEPauli   = 1;
+    //ff.bEvalCoulomb   = 1;
+    //ff.bEvalPauli     = 1;
+    //ff.bEvalKinetic   = 1;
+    //ff.bEvalAA        = 1;
+
+    //ff.bNormalize     = 0;
+    //ff.bEvalAE        = 0;
+    //ff.bEvalAECoulomb = 0;
+    //ff.bEvalAEPauli   = 0;
+    //ff.bEvalCoulomb   = 0;
+    //ff.bEvalPauli     = 0;
+    //ff.bEvalKinetic   = 0;
+    //ff.bEvalAA        = 0;
 
     ff.bOptAtom = 1;
     ff.bOptEPos = 1;

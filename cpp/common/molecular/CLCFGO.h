@@ -837,7 +837,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         }
         double E = Ssum*Ssum*KPauliOverlap;
         double f =    2*Ssum*KPauliOverlap;
-        forceOrb( io, f, DiS+i0 );
+        forceOrb( io, f, DiS );
         aforce[ia].add(fpj);
         return E;
     }
