@@ -103,38 +103,38 @@ int orbColor(int io){
 }
 
 
-void drawSolver(const CLCFGO& solver, int oglSph, float fsc=1.0, float asc=0.5, float alpha=0.1 ){
+void drawff(const CLCFGO& ff, int oglSph, float fsc=1.0, float asc=0.5, float alpha=0.1 ){
     glEnable(GL_DEPTH_TEST);
     glColor3f(0.,0.,0.);
     //glDisable(GL_DEPTH_TEST);
     //glEnable(GL_BLEND);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    for(int i=0; i<solver.natom; i++){
-        Vec3d p = solver.apos[i];
-        //Draw3D::drawPointCross( p, solver.aPsize[i]*asc );
+    for(int i=0; i<ff.natom; i++){
+        Vec3d p = ff.apos[i];
+        //Draw3D::drawPointCross( p, ff.aPsize[i]*asc );
         glColor3f(0.,0.,0.);
-        Draw3D::drawPointCross( p, solver.aPars[i].z*asc );
+        Draw3D::drawPointCross( p, ff.aPars[i].z*asc );
 
         glColor3f( 1.0f,0.0f,0.0f );
-        Draw3D::drawVecInPos( solver.aforce[i]*fsc, p );
+        Draw3D::drawVecInPos( ff.aforce[i]*fsc, p );
     }
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    for(int io=0; io<solver.nOrb; io++){
+    for(int io=0; io<ff.nOrb; io++){
         //Vec3f clr;
         //Draw::color_of_hash(io*15446+7545,clr);
         //glColor4f(clr.x,clr.y,clr.z,0.1);
-        for(int j=0; j<solver.perOrb; j++){
-            int i = io*solver.perOrb+j;
-            Vec3d p = solver.epos[i];
+        for(int j=0; j<ff.perOrb; j++){
+            int i = io*ff.perOrb+j;
+            Vec3d p = ff.epos[i];
             //float alpha=0.1;
             //if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, alpha); }else{ glColor4f(1.0,0.0,0.0, alpha); };
             Draw::setRGBA( (orbColor(io)&0x00FFFFFF)|0x15000000 );
-            Draw3D::drawShape( oglSph, solver.epos[i], Mat3dIdentity*solver.esize[i],  false );
-            //Draw3D::drawSphereOctLines(16, solver.esize[i], p, Mat3dIdentity, false );
+            Draw3D::drawShape( oglSph, ff.epos[i], Mat3dIdentity*ff.esize[i],  false );
+            //Draw3D::drawSphereOctLines(16, ff.esize[i], p, Mat3dIdentity, false );
             glColor3f( 1.0f,0.0f,0.0f );
-            Draw3D::drawVecInPos( solver.efpos[i]*fsc, p );
+            Draw3D::drawVecInPos( ff.efpos[i]*fsc, p );
         }
     }
 }
@@ -152,7 +152,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
     bool bRun = false;
     double dt;
 
-    CLCFGO solver;
+    CLCFGO ff;
     Plot2D plot1;
     int nOrbPlot = 2;
 
@@ -170,7 +170,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
 
     void test_RhoDeriv();
-    void initSolver();
+    void initff();
     void viewPlots();
 
     TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ );
@@ -182,63 +182,67 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     fontTex     = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
-    //solver.loadFromFile( "data/H2.fgo", true);
-    //solver.loadFromFile( "data/H2_2g_half.fgo", true);
-    //solver.loadFromFile( "data/H2_3g_half.fgo", true);
-    //solver.loadFromFile( "data/H2_4g_half.fgo", true);
-    //solver.loadFromFile( "data/N2.fgo", true);
-    //solver.loadFromFile( "data/O2.fgo", true);
-    //solver.loadFromFile( "data/O2_half.fgo", true);
-    //solver.loadFromFile( "data/Li_3g.fgo", true);
-    //solver.loadFromFile( "data/Li_4g.fgo", true);
-    //solver.loadFromFile( "data/C_2g_o1.fgo", true);
-    //solver.loadFromFile( "data/H_1g_1o.fgo", true);
-    //solver.loadFromFile( "data/H2_1g_2o.fgo", true);
-    //solver.loadFromFile( "data/H2O_1g_8o.fgo", true);
-    //solver.loadFromFile( "data/e2_1g_2o_singlet.fgo", true);
-    solver.loadFromFile( "data/e2_1g_2o_triplet.fgo", true);
+    //ff.loadFromFile( "data/e2_1g_2o_singlet.fgo", true);
+    //ff.loadFromFile( "data/e2_1g_2o_triplet.fgo", true);
+    //ff.loadFromFile( "data/H_1g_1o.fgo", true);
+    //ff.loadFromFile( "data/He_singlet.fgo", true);
+    //ff.loadFromFile( "data/He_triplet.fgo", true);
+    //ff.loadFromFile( "data/H2_1g_2o.fgo", true);
+    //ff.loadFromFile( "data/H2.fgo", true);
+    //ff.loadFromFile( "data/H2_2g_half.fgo", true);
+    //ff.loadFromFile( "data/H2_3g_half.fgo", true);
+    //ff.loadFromFile( "data/H2_4g_half.fgo", true);
+    //ff.loadFromFile( "data/Li_3g.fgo", true);
+    //ff.loadFromFile( "data/Li_4g.fgo", true);
+    ff.loadFromFile( "data/C_1g.fgo", true);
+    //ff.loadFromFile( "data/C_2g_o1.fgo", true);
+    //ff.loadFromFile( "data/N2.fgo", true);
+    //ff.loadFromFile( "data/O2.fgo", true);
+    //ff.loadFromFile( "data/O2_half.fgo", true);
+    //ff.loadFromFile( "data/H2O_1g_8o.fgo", true);
+
     dt = 0.001;
     //exit(0);
 
-    solver.turnAllSwitches(false);
-    solver.bNormalize     = 1;
-    //solver.bEvalAE        = 1;
-    //solver.bEvalAECoulomb = 1;
-    //solver.bEvalAEPauli   = 1;
-    solver.bEvalCoulomb   = 1;
-    //solver.bEvalPauli     = 1;
-    //solver.bEvalKinetic   = 1;
-    //solver.bEvalAA        = 1;
+    ff.turnAllSwitches(false);
+    ff.bNormalize     = 1;
+    ff.bEvalAE        = 1;
+    ff.bEvalAECoulomb = 1;
+    ff.bEvalAEPauli   = 1;
+    ff.bEvalCoulomb   = 1;
+    ff.bEvalPauli     = 1;
+    ff.bEvalKinetic   = 1;
+    ff.bEvalAA        = 1;
 
-    solver.bOptAtom = 1;
-    solver.bOptEPos = 1;
-    solver.bOptSize = 1;
+    ff.bOptAtom = 1;
+    ff.bOptEPos = 1;
+    ff.bOptSize = 1;
 
-    //solver.iPauliModel = 2;
-    solver.iPauliModel = 0;
+    ff.iPauliModel = 2;
+    //ff.iPauliModel = 0;
 
-    solver.printSetup();
-    solver.printAtoms();
-    solver.printElectrons();
+    ff.printSetup();
+    ff.printAtoms();
+    ff.printElectrons();
 
-    double E = solver.eval();
-    solver.forceInfo();
-    printf( "E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n",E, solver.Ek, solver.Eee,solver.EeePaul,solver.EeeExch, solver.Eae,solver.EaePaul, solver.Eaa, solver.esize[0] );
+    double E = ff.eval();
+    ff.forceInfo();
+    printf( "E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n",E, ff.Ek, ff.Eee,ff.EeePaul,ff.EeeExch, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
     //exit(0);
 
     // ======= Test Density projection
     plot1.init();
     plot1.fontTex = fontTex;
     //GridShape grid; grid.init( 5.0, 0.2, false);
-    //solver.orb2xsf( grid, 0, "temp/orb0.xsf" );
+    //ff.orb2xsf( grid, 0, "temp/orb0.xsf" );
 
-    //testDerivsTotal( 100, -1.0, 0.05, solver, plot1 );
+    //testDerivsTotal( 100, -1.0, 0.05, ff, plot1 );
     //plot1.xsharingLines(1, 100, -3.0, 0.1 );
     //plot1.xsharingLines( 2, 100,   -3.0, 0.1 );
 
 
-    nOrbPlot=_min(5,solver.nOrb);
-    printf( " nOrbPlot %i solver.nOrb %i \n", nOrbPlot, solver.nOrb );
+    nOrbPlot=_min(5,ff.nOrb);
+    printf( " nOrbPlot %i ff.nOrb %i \n", nOrbPlot, ff.nOrb );
     plot1.add( new DataLine2D( 100, -3.0, 0.1, 0xFF0000FF, "Vatom" ) );
     char str[32];
     for(int io=0; io<nOrbPlot; io++){
@@ -250,13 +254,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
 
     /*
-    solver.epos [0]=Vec3dZero;
-    //solver.esize[0]=1.0;
-    solver.esize[0]=0.5;
-    //test_Poisson( solver, 6.0, 0.1 );
-    test_Poisson( solver, 0, 4.0, 0.05, 0,0,  true, false, true );
-    //test_ElectroStaticsBrute( solver, plot1 );
-    //test_ElectroStatics( solver, plot1 );
+    ff.epos [0]=Vec3dZero;
+    //ff.esize[0]=1.0;
+    ff.esize[0]=0.5;
+    //test_Poisson( ff, 6.0, 0.1 );
+    test_Poisson( ff, 0, 4.0, 0.05, 0,0,  true, false, true );
+    //test_ElectroStaticsBrute( ff, plot1 );
+    //test_ElectroStatics( ff, plot1 );
     exit(0);
     */
 
@@ -281,29 +285,29 @@ void TestAppCLCFSF::draw(){
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable( GL_DEPTH_TEST );
 
-    dt = 0.00001;
+    dt = 0.001;
     if(bRun){
         //testColorOfHash();
-        double E = solver.eval();
-        solver.forceInfo();
-        //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, solver.Ek, solver.Eee,solver.EeePaul,  solver.Eae,solver.EaePaul, solver.Eaa );
+        double E = ff.eval();
+        ff.forceInfo();
+        //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, ff.Ek, ff.Eee,ff.EeePaul,  ff.Eae,ff.EaePaul, ff.Eaa );
 
-        float F2 = solver.moveGD(dt);
+        float F2 = ff.moveGD(dt);
 
         //printf( "frame[%i] E %g |F| %g \n", frameCount, E, sqrt(F2) );
-        //printf( "frame[%i] |F| %g E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n", frameCount, sqrt(F2), E, solver.Ek, solver.Eee,solver.EeePaul,solver.EeeExch, solver.Eae,solver.EaePaul, solver.Eaa, solver.esize[0] );
-        //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, solver.apos[0].x,solver.apos[0].y,solver.apos[0].z,   solver.epos[0].x,solver.epos[0].y,solver.epos[0].z,  solver.esize[0] );
-        //printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (solver.apos[0]-solver.apos[1]).norm(),   (solver.apos[0]-solver.epos[0]).norm(), solver.esize[0] );
+        //printf( "frame[%i] |F| %g E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n", frameCount, sqrt(F2), E, ff.Ek, ff.Eee,ff.EeePaul,ff.EeeExch, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
+        //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0] );
+        //printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (ff.apos[0]-ff.apos[1]).norm(),   (ff.apos[0]-ff.epos[0]).norm(), ff.esize[0] );
 
         if(F2<1e-6){
             bRun=false;
-            solver.printAtoms();
-            solver.printElectrons();
+            ff.printAtoms();
+            ff.printElectrons();
         }
 
     }
 
-    if(bDrawObjects)drawSolver( solver, oglSph, 10.0, 0.2 );
+    if(bDrawObjects)drawff( ff, oglSph, 10.0, 0.2 );
     if(bDrawPlots){ viewPlots(); }
 
 };
@@ -319,14 +323,14 @@ void TestAppCLCFSF::drawHUD(){
 }
 
 void TestAppCLCFSF::viewPlots(){
-        plotAtomsPot( solver, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0, 0.2 );
+        plotAtomsPot( ff, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0, 0.2 );
         for(int io=0; io<nOrbPlot; io++){
             //plot1.add( new DataLine2D( 100, -3.0, 0.1, orbColor(io)|0xFF000000, str ) );
-            plotOrb     ( solver, plot1.lines[io+1], io, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 30.0 );
+            plotOrb     ( ff, plot1.lines[io+1], io, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 30.0 );
         }
-        //plotOrb     ( solver, plot1.lines[1], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
-        //plotOrb     ( solver, plot1.lines[2], 1, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
-        //testDerivsTotal( 0, 0, 0, solver, plot1, 0 );
+        //plotOrb     ( ff, plot1.lines[1], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
+        //plotOrb     ( ff, plot1.lines[2], 1, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
+        //testDerivsTotal( 0, 0, 0, ff, plot1, 0 );
         plot1.bGrid=false;
         plot1.bAxes=false;
         plot1.bTicks=false;
@@ -371,7 +375,7 @@ void TestAppCLCFSF::eventHandling ( const SDL_Event& event  ){
 }
 
 
-void TestAppCLCFSF::initSolver(){
+void TestAppCLCFSF::initff(){
     /*
     Vec3d pij; double sij;
     double S = Gauss::product3D_s_new( 1.0, {0.0,0.0,0.0}, 0.5, {2.0,0.0,0.0}, sij, pij );
@@ -382,10 +386,10 @@ void TestAppCLCFSF::initSolver(){
     /*
     // ---- 2 atoms, 2 orbs, 2 basis per orb
     //      natom  nOrb perOrb natypes
-    solver.realloc( 2, 2, 2, 1 );
-    solver.setRcut( 4.0 );
-    solver.setDefaultValues();
-    {CLCFGO& _=solver;
+    ff.realloc( 2, 2, 2, 1 );
+    ff.setRcut( 4.0 );
+    ff.setDefaultValues();
+    {CLCFGO& _=ff;
         _.setAtom( 0,   1,  (Vec3d){  2.0, 0.,0.} );
         _.setAtom( 0,   1,  (Vec3d){ -2.5, 0.,0.} );
         _.setElectron( 0,0, (Vec3d){  0.0, +0.2, 0.}, 1.0, -0.3 );
@@ -398,10 +402,10 @@ void TestAppCLCFSF::initSolver(){
     /*
     // ---- 1 H atoms, 1 orbs, 1 basis per orb
     //      natom  nOrb perOrb natypes
-    solver.realloc( 1, 1, 1, 1 );
-    solver.setRcut( 4.0 );
-    solver.setDefaultValues();
-    {CLCFGO& _=solver;
+    ff.realloc( 1, 1, 1, 1 );
+    ff.setRcut( 4.0 );
+    ff.setDefaultValues();
+    {CLCFGO& _=ff;
         //_.setAtom( 0,   1,  (Vec3d){  0.0, 0.0, 0.0 } );
         //_.setAtom    ( 0,   (Vec3d){  0.0, 0.0, 0.0 }, 4.0, 0.5, 0.2, 1000 );
         _.setAtom    ( 0,   (Vec3d){  0.0, 0.0, 0.0 }, 1.0,  0.1, 1.0, 0. );
@@ -413,10 +417,10 @@ void TestAppCLCFSF::initSolver(){
     /*
     // ---- 2 basis electron in soft potential   (1a,1o,2b)
     //      natom  nOrb perOrb natypes
-    solver.realloc( 1, 1, 2, 1 );
-    solver.setRcut( 4.0 );
-    solver.setDefaultValues();
-    {CLCFGO& _=solver;
+    ff.realloc( 1, 1, 2, 1 );
+    ff.setRcut( 4.0 );
+    ff.setDefaultValues();
+    {CLCFGO& _=ff;
         _.setAtom    ( 0,   (Vec3d){   0.0, 0.0, 0.0 }, 1.0,  0.9, 1.0, 0. );
         _.setElectron( 0,0, (Vec3d){  +1.0, 0.0, 0.0 }, 0.5, +1.0 );
         _.setElectron( 0,1, (Vec3d){  -1.0, 0.0, 0.0 }, 0.5, -1.0 );
@@ -427,10 +431,10 @@ void TestAppCLCFSF::initSolver(){
     /*
     // ---- H2+ molecule ion - 2 basis electron in 2 atom potential   (2a,1o,2b)
     //      natom  nOrb perOrb natypes
-    solver.realloc( 2, 1, 2, 1 );
-    solver.setRcut( 4.0 );
-    solver.setDefaultValues();
-    {CLCFGO& _=solver;
+    ff.realloc( 2, 1, 2, 1 );
+    ff.setRcut( 4.0 );
+    ff.setDefaultValues();
+    {CLCFGO& _=ff;
         //_.setAtom( 0,   1,  (Vec3d){  0.0, 0.0, 0.0 } );
         //_.setAtom    ( 0,   (Vec3d){  0.0, 0.0, 0.0 }, 4.0, 0.5, 0.2, 1000 );
         _.setAtom    ( 0,   (Vec3d){  +1.0, 0.0, 0.0 }, 1.0,  0.9, 1.0, 0. );
@@ -445,10 +449,10 @@ void TestAppCLCFSF::initSolver(){
     /*
     // ---- Free 2 basis electron    (0a,1o,2b)
     //      natom  nOrb perOrb natypes
-    solver.realloc( 0, 1, 2, 1 );
-    solver.setRcut( 4.0 );
-    solver.setDefaultValues();
-    {CLCFGO& _=solver;
+    ff.realloc( 0, 1, 2, 1 );
+    ff.setRcut( 4.0 );
+    ff.setDefaultValues();
+    {CLCFGO& _=ff;
         _.setElectron( 0,0, (Vec3d){  +0.7, 0.0, 0.0 }, 0.5, +1.0 );
         //_.setElectron( 0,1, (Vec3d){  -0.7, 0.0, 0.0 }, 0.5, +1.0 );
         _.setElectron( 0,1, (Vec3d){  -0.7, 0.0, 0.0 }, 0.5, -1.0 );
@@ -459,10 +463,10 @@ void TestAppCLCFSF::initSolver(){
     /*
     // ---- Free 2 electron 1 basis each    (0a,2o,1b)
     //      natom  nOrb perOrb natypes
-    solver.realloc( 0, 2, 1, 1 );
-    solver.setRcut( 4.0 );
-    solver.setDefaultValues();
-    {CLCFGO& _=solver;
+    ff.realloc( 0, 2, 1, 1 );
+    ff.setRcut( 4.0 );
+    ff.setDefaultValues();
+    {CLCFGO& _=ff;
         _.setElectron( 0,0, (Vec3d){  +0.3, 0.0, 0.0 }, 0.5, +1.0 );
         _.setElectron( 1,0, (Vec3d){  -0.3, 0.0, 0.0 }, 0.5, +1.0 );
     }
@@ -472,10 +476,10 @@ void TestAppCLCFSF::initSolver(){
     /*
     // ---- 2 electron 1 basis each in Soft Atom potential   (1a,2o,1b)
     //      natom  nOrb perOrb natypes
-    solver.realloc( 1, 2, 1, 1 );
-    solver.setRcut( 4.0 );
-    solver.setDefaultValues();
-    {CLCFGO& _=solver;
+    ff.realloc( 1, 2, 1, 1 );
+    ff.setRcut( 4.0 );
+    ff.setDefaultValues();
+    {CLCFGO& _=ff;
         _.setAtom    ( 0,   (Vec3d){  0.0, 0.0, 0.0 }, 1.0,  0.1, 1.0, 0. );
         _.setElectron( 0,0, (Vec3d){  +0.3, 0.0, 0.0 }, 0.5, +1.0 );
         _.setElectron( 1,0, (Vec3d){  -0.3, 0.0, 0.0 }, 0.5, +1.0 );

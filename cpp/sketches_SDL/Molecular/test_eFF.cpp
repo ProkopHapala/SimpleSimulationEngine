@@ -90,6 +90,8 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
     std::function<void   (const Vec3d& p, Vec3d& f)>  FFfunc;
     std::function<double (const Vec3d& p)          >  Efunc ;
 
+    bool bDrawPlots   = true;
+    bool bDrawObjects = true;
     bool bMapElectron = false;
     int ipicked  = 0;
 
@@ -127,9 +129,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     // ===== SETUP GEOM
     //char* fname = "data/H_eFF.xyz";
     //char* fname = "data/e2_eFF_singlet.xyz";
-    char* fname = "data/e2_eFF_triplet.xyz";
+    //char* fname = "data/e2_eFF_triplet.xyz";
     //char* fname = "data/H2_eFF.xyz";
-    //char* fname = "data/He_eFF.xyz";
+    //char* fname = "data/He_eFF_singlet.xyz";
     //char* fname = "data/He_eFF_triplet.xyz";
     //char* fname = "data/H2O_eFF.xyz";
     //char* fname = "data/H2_eFF_spin.xyz";
@@ -145,7 +147,30 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/C2H6_eFF_spin.xyz";
     //char* fname = "data/C2H6_eFF_spin_.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
-    ff.loadFromFile_xyz( fname );
+    //ff.loadFromFile_xyz( fname );
+
+    //ff.loadFromFile_fgo( "data/e2_1g_2o_singlet.fgo" );
+    //ff.loadFromFile_fgo( "data/e2_1g_2o_triplet.fgo );
+    //ff.loadFromFile_fgo( "data/H_1g_1o.fgo" );
+    //ff.loadFromFile_fgo( "data/He_singlet.fgo" );
+    //ff.loadFromFile_fgo( "data/He_triplet.fgo" );
+    //ff.loadFromFile_fgo( "data/H2_1g_2o.fgo" );
+    //ff.loadFromFile_fgo( "data/H2.fgo" );
+    ff.loadFromFile_fgo( "data/C_1g.fgo" );
+    //ff.loadFromFile_fgo( "data/C_2g_o1.fgo" );
+    //ff.loadFromFile_fgo( "data/N2.fgo" );
+    //ff.loadFromFile_fgo( "data/O2.fgo" );
+    //ff.loadFromFile_fgo( "data/O2_half.fgo" );
+    //ff.loadFromFile_fgo( "data/H2O_1g_8o.fgo" );
+
+
+    //ff.bEvalAECoulomb = 0;
+    //ff.bEvalAEPauli   = 0;
+    //ff.bEvalCoulomb   = 0;
+    //ff.bEvalPauli     = 0;
+    //ff.bEvalKinetic   = 0;
+    //ff.bEvalAA        = 0;
+
 
     DEBUG_fe_ae = new Vec3d[ff.ne];
     DEBUG_fa_ae = new Vec3d[ff.na];
@@ -184,7 +209,13 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     Draw3D::drawSphere_oct(3,1.0d,(Vec3d){0.,0.,0.});
     glEndList();
 
-    DEBUG
+    plot1.init();
+    plot1.fontTex = fontTex;
+    plot1.add( new DataLine2D( 200, -10.0, 0.1, 0xFF0000FF, "Vatom" ) );
+    plot1.update();
+    plot1.render();
+    plot1.view();
+
 }
 
 void TestAppRARFF::draw(){
@@ -250,6 +281,16 @@ void TestAppRARFF::draw(){
         }
     }
 
+    if(bDrawPlots){
+        plotAtomsPot( ff, plot1.lines[0], (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, -0.2, 0.1 );
+        plot1.bGrid=false;
+        plot1.bAxes=false;
+        plot1.bTicks=false;
+        plot1.update();
+        plot1.render();
+        plot1.view();
+    }
+
     //printf( "e[0] r %g s %g \n", ff.epos[0].norm(), ff.esize[0] );
 
     //printf( "r07 r %g s %g \n", ff.epos[0].norm(), ff.esize[0] );
@@ -272,6 +313,7 @@ void TestAppRARFF::draw(){
     double Qsz = 0.05;
     double fsc = 1.0;
 
+    if(bDrawObjects){
     for(int i=0; i<ff.na; i++){
         //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z );
         glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , ff.aPars[i].x*Qsz );
@@ -313,6 +355,7 @@ void TestAppRARFF::draw(){
         //Draw3D::drawText(strtmp, ff.epos[i], fontTex, 0.02, 0);
 
     }
+    }
 
 
     //for(int i=0; i<ff.ne; i+=2){
@@ -327,6 +370,10 @@ void TestAppRARFF::draw(){
 
     //glDisable(GL_DEPTH_TEST);
     //plot1.view();
+
+
+
+
 
 };
 

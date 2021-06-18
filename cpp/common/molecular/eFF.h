@@ -217,6 +217,15 @@ constexpr static const Quat4d default_AtomParams[] = {
     //double bAE = -6.0;
     //double aAE = 100.0;
 
+    bool bEvalKinetic   = true;
+    bool bEvalEE        = true;
+    bool bEvalCoulomb   = true;
+    bool bEvalPauli     = true;
+    bool bEvalAE        = true;
+    bool bEvalAECoulomb = true;
+    bool bEvalAEPauli   = true;
+    bool bEvalAA        = true;
+
     int ne=0,na=0,nDOFs=0; ///< number of electrons, atoms, degrees of freedom
     //int*   atype  =0;
 
@@ -317,8 +326,10 @@ double evalEE(){
             const double sj = esize[j];
             double& fsj = fsize[j];
 
+            if(bEvalCoulomb){
             double dEee = addCoulombGauss( dR, si, sj, f, fsi, fsj, qq ); Eee += dEee;
-            /*
+            }
+            if(bEvalPauli){
             //printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
             if( iPauliModel == 1 ){
                 //printf( "EeePaul[%i,%i]  ", i, j );
@@ -342,7 +353,8 @@ double evalEE(){
                     //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
                 }
             }
-            */
+            }
+
             //if( spini==espin[j] ) EeePaul += addDensOverlapGauss_S( dR,si,sj, 1, f, fsi, fsj );
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
             //if( i_DEBUG>0 ) printf( "evalEE[%i,%i] dR(%g,%g,%g) s(%g,%g) q %g  ->   f(%g,%g,%g) fs(%g,%g) \n", i,j, dR.x,dR.y,dR.z, si,sj, qq,   f.x,f.y,f.z, fsi,fsj );
@@ -385,15 +397,15 @@ double evalAE(){
             double  fs_junk;
             //Eae += addPairEF_expQ( epos[j]-pi, f, abwi.z, qi*QE, abwi.y, abwi.x );
             //Eae  += addCoulombGauss( dR,sj,      f, fsj,      qqi );     // correct
+            if(bEvalAECoulomb){
             Eae  += addCoulombGauss( dR, aPar.y, sj, f, fs_junk, fsj, qq );
-            /*
-            if(qqi<-1.00001){
+            }
+            if( bEvalAEPauli && (aPar.w>1e-8) ){
                 //double dEaePaul = addPauliGauss      ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );     // correct
-                double dEaePaul = addDensOverlapGauss_S( dR, sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
+                double dEaePaul = addDensOverlapGauss_S( dR, sj, aPar.z, aPar.w, f, fsj, fs_junk );     // correct
                 EaePaul+=dEaePaul;
                 //printf( "EaePaul[%i,%i] E %g r %g s %g abw(%g,%g) \n", i, j, dEaePaul, dR.norm(), sj, abwi.z, abwi.a );
             }
-            */
             //if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             //printf( "evalAE[%i,%i] E %g r %g s(%g,%g) \n", i,j, Eae, dR.norm(), aPar.y, sj );
             eforce[j].sub(f);
@@ -455,12 +467,12 @@ double evalAA(){
 double eval(){
     //clearForce();
     clearForce_noAlias();
-    return
-    evalKinetic()
-    + evalEE()
-    + evalAE()
-    + evalAA()
-    ;
+    double Etot = 0;
+    if(bEvalKinetic) Etot+= evalKinetic();
+    if(bEvalEE     ) Etot+= evalEE();
+    if(bEvalAE     ) Etot+= evalAE();
+    if(bEvalAA     ) Etot+= evalAA();
+    return Etot;
 }
 
 void clearForce(){
@@ -512,6 +524,33 @@ void autoAbWs( const Vec3d * AAs, const Vec3d * AEs ){
     }
 }
 */
+
+double atomsPotAtPoint( const Vec3d& pos, double s, double Q )const{
+    double Eae    =0;
+    double EaePaul=0;
+    Vec3d fp; double fs;
+    for(int i=0; i<na; i++){
+        const Vec3d  dR   = pos-apos[i];
+        const Quat4d aPar = aPars[i]; // { x=Q,y=sQ,z=sP,w=cP }
+        const double qq   = aPar.x*Q;
+        Vec3d  f;
+        double fsi,fsj;
+        //addCoulombGauss      ( const Vec3d& dR, double si, double sj,             Vec3d& f, double& fsi, double& fsj, double qq ){
+        //addDensOverlapGauss_S( const Vec3d& dR, double si, double sj, double amp, Vec3d& f, double& fsi, double& fsj            ){
+        Eae  += addCoulombGauss              ( dR, s, aPar.y,         f, fsi, fsj, qq );
+        if( aPar.w>1e-8 ){
+            EaePaul+= addDensOverlapGauss_S( dR, s, aPar.z, aPar.w, f, fsi, fsj         );
+        }
+    }
+    return Eae + EaePaul;
+}
+double* atomsPotAtPoints( int n, Vec3d* ps, double* out=0, double s=0.0, double Q=1.0 )const{
+    if(out==0){ out = new double[n]; };
+    for(int i=0; i<n; i++){
+        out[i] = atomsPotAtPoint( ps[i], s, Q );
+    }
+    return out;
+}
 
 void info(){
     printf( "iPauliModel %i KPauliOverlap %g \n", iPauliModel, KPauliOverlap );
@@ -577,6 +616,68 @@ bool loadFromFile_xyz( char const* filename ){
     }
     clearForce();
     //printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - ne, Qasum, ne );
+    fclose (pFile);
+    return 0;
+}
+
+
+bool loadFromFile_fgo( char const* filename ){
+    //printf(" filename: >>%s<< \n", filename );
+    FILE * pFile;
+    pFile = fopen (filename,"r");
+    if( pFile == NULL ){
+        printf("ERROR in eFF::loadFromFile_fgo(%s) : No such file !!! \n", filename );
+        return -1;
+    }
+    int ntot;
+    const int nbuff = 1024;
+    char buff[nbuff]; char* line;
+    //fscanf (pFile, " %i \n", &ntot );
+    int natom_=0, nOrb_=0, perOrb_=0; bool bClosedShell=0;
+    line=fgets(buff,nbuff,pFile);
+    sscanf (line, "%i %i %i\n", &natom_, &nOrb_, &perOrb_, &bClosedShell );
+    //printf("na %i ne %i perORb %i \n", natom, nOrb, perOrb_);
+    //printf("na %i ne %i perORb %i \n", natom_, nOrb_, perOrb_ );
+    if(perOrb_!=1){ printf("ERROR in eFF::loadFromFile_fgo(%s) : perOrb must be =1 ( found %i instead) !!! \n", filename, perOrb_ );};
+    if(bClosedShell) nOrb_*=2;
+    realloc( natom_, nOrb_ );
+    double Qasum = 0.0;
+    for(int i=0; i<na; i++){
+        double x,y,z;
+        double Q,sQ,sP,cP;
+        fgets( buff, nbuff, pFile);
+        int nw = sscanf (buff, "%lf %lf %lf %lf %lf %lf %lf", &x, &y, &z, &Q, &sQ, &sP, &cP );
+        //printf( "atom[%i] p(%g,%g,%g) Q %g sQ %g sP %g cP %g \n", i, x, y, z,    Q, sQ, sP, cP );
+        Q=-Q;
+        apos  [i]=(Vec3d){x,y,z};
+        aPars[i].set(Q,sQ,sP,cP);
+        Qasum += Q;
+    }
+    int nBasRead = ne;
+    if( bClosedShell ) nBasRead/=2;
+    for(int i=0; i<nBasRead; i++){
+        double x,y,z;
+        double s,c;
+        int spin;
+        fgets( buff, nbuff, pFile); // printf( "fgets: >%s<\n", buf );
+        int nw = sscanf (buff, "%lf %lf %lf %lf %lf %i", &x, &y, &z,  &s, &c, &spin );
+        epos [i]=(Vec3d){x,y,z};
+        esize[i]=s;
+        //ecoef[i]=c;
+        //int io=i/perOrb;
+        if( !bClosedShell ){ if(nw>5)espin[i]=spin; }else{ espin[i]=1; };
+        //printf( "ebasis[%i,%i|%i] p(%g,%g,%g) s %g c %g spin %i | nw %i io %i \n", i/perOrb, i%perOrb,i, x, y, z,  s, c, spin,  nw, io  );
+    }
+    if( bClosedShell ){
+        for(int i=0; i<nBasRead; i++){
+            int j = i+nBasRead;
+            epos [j]=epos[i];
+            esize[j]=esize[i];
+            //ecoef[j]=ecoef[i];
+            espin[j]=-1;
+        }
+    }
+    //printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - nOrb, Qasum, nOrb );
     fclose (pFile);
     return 0;
 }

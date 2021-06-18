@@ -155,6 +155,14 @@ void checkDerivs2(){
 // ============ Plotting
 // ===========================================
 
+void plotAtomsPot( EFF& ff, DataLine2D *line, Vec3d p0, Vec3d dp, float sc=1.0, double s=0.0 ){
+    Vec3d ps[line->n];
+    for(int i=0; i<line->n; i++){  ps[i]=p0+dp*line->xs[i]; }
+    //solver.orbAtPoints( io, line->n, ps, line->ys );
+    ff.atomsPotAtPoints( line->n, ps, line->ys, s, 1.0 );
+    for(int i=0; i<line->n; i++){  line->ys[i]*=sc; }
+}
+
 int genFieldMap( int ogl, Vec2i ns, const Vec3d* ps, const double* Es, double vmin, double vmax ){
     //printf( "val_range: %g %g %g \n", val_range.x, val_range.y, Es[0] );
     //float clSz = 3.0;
