@@ -58,7 +58,7 @@ void makeDefaultBuffers(){
     buffers["odip"]= (double*)solver.odip  ;
     buffers["oEs" ]=           solver.oEs  ;
     buffers["oQs" ]=           solver.oQs  ;
-    buffers["onq" ]=  (double*)solver.onq  ;
+    ibuffers["onq" ]=   solver.onq  ;
     ibuffers["ospin"]=  solver.ospin   ;
     // --- Wave-function components for each orbital
     buffers["epos" ]= (double*)solver.epos  ;

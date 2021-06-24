@@ -266,6 +266,48 @@ def setPauliMode( iPauli ):
 
 # ========= Python Functions
 
+def getBuffs( natom, norb, perOrb ):
+    global Ebuf
+    Ebuf  = getEnergyTerms( )
+    global apos,aforce,aPars,atype
+    apos   = getBuff( "apos",    (natom,3) )
+    aforce = getBuff( "aforce",  (natom,3) ) 
+    aPars = getBuff ( "aPars",   (natom,4) )
+    atype = getIBuff( "atype",   (natom) )
+    # orbitals
+    global opos, odip, oEs, oQs, oQs, onq, ospin 
+    opos  = getBuff ( "opos",   (norb,3) )
+    odip  = getBuff ( "odip",   (norb,3) )
+    oEs   = getBuff ( "oEs",    (norb) )
+    oQs   = getBuff ( "oQs",    (norb) )
+    onq   = getIBuff( "onq",    (norb) )
+    ospin = getIBuff( "ospin",  (norb) )
+    # --- Wave-function components for each orbital
+    global epos, esize, ecoef
+    epos   = getBuff( "epos",  (norb,perOrb,3) )
+    esize  = getBuff( "esize", (norb,perOrb) )
+    ecoef  = getBuff( "ecoef", (norb,perOrb) )
+    # --- Forces acting on wave-functions components
+    global efpos, efsize, efcoef
+    efpos  = getBuff( "efpos",  (norb,perOrb,3) )
+    efsize = getBuff( "efsize", (norb,perOrb) )
+    efcoef = getBuff( "efcoef", (norb,perOrb) )
+    # --- Forces acting on wave-functions components
+    global enfpos, enfsize, enfcoef
+    enfpos  = getBuff( "enfpos",  (norb,perOrb,3) )
+    enfsize = getBuff( "enfsize", (norb,perOrb) )
+    enfcoef = getBuff( "enfcoef", (norb,perOrb) )
+    # --- Auxuliary electron density expansion basis functions
+    global rhoP, rhoQ, rhoS
+    rhoP = getBuff( "rhoP",   (norb,perOrb,3) )
+    rhoQ = getBuff( "rhoQ",   (norb,perOrb) )
+    rhoS = getBuff( "rhoS",   (norb,perOrb) )
+    # --- Forces acting on auxuliary density basis functions
+    global rhofP, rhofQ, rhofS
+    rhofP = getBuff( "rhofP", (norb,perOrb,3) )
+    rhofQ = getBuff( "rhofQ", (norb,perOrb) )
+    rhofS = getBuff( "rhofS", (norb,perOrb) )
+
 def test_Gaussian_Overlap_Product_derivatives():
     # ============== Gaussian Overlap Product derivatives
     #esizes[0][0] = xs
