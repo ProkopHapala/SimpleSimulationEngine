@@ -227,10 +227,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/H2_2g_half.fgo"       );
     //ff.loadFromFile( "data/H2_3g_half.fgo"       );
     //ff.loadFromFile( "data/H2_4g_half.fgo"       );
-    ff.loadFromFile( "data/Li_2g.fgo"              );
+    //ff.loadFromFile( "data/He_2g_triplet_sym.fgo"  );
+    ff.loadFromFile( "data/He_2g_triplet_asym.fgo"  );
+    //ff.loadFromFile( "data/Li_2g.fgo"            );
     //ff.loadFromFile( "data/Li_3g.fgo"            );
     //ff.loadFromFile( "data/Li_4g.fgo"            );
     //ff.loadFromFile( "data/C_1g.fgo"             );
+    //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
     //ff.loadFromFile( "data/C_2g_o1.fgo"          );
     //ff.loadFromFile( "data/N2.fgo"               );
     //ff.loadFromFile( "data/O2.fgo"               );
@@ -245,8 +248,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     ff.bEvalAE        = 1;
     ff.bEvalAECoulomb = 1;
     ff.bEvalAEPauli   = 1;
-    //ff.bEvalCoulomb   = 1;
-    //ff.bEvalPauli     = 1;
+    ff.bEvalCoulomb   = 1;
+    ff.bEvalPauli     = 1;
     ff.bEvalKinetic   = 1;
     //ff.bEvalAA        = 1;
 
@@ -269,7 +272,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     ff.iPauliModel = 2;
     //ff.iPauliModel = 0;
-    dt = 0.001;
+    dt = 0.0001;
 
     ff.printSetup();
     ff.printAtoms();
@@ -378,7 +381,7 @@ void TestAppCLCFSF::drawHUD(){
 
 void TestAppCLCFSF::viewPlots(){
         //plotAtomsPot( ff, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0, 0.5 );
-        printf( "szRho %g szWf %g \n", ff.esize[0]*M_SQRT1_2, ff.rhoS[0] );
+        //printf( "szRho %g szWf %g \n", ff.esize[0]*M_SQRT1_2, ff.rhoS[0] );
         plotAtomsPot( ff, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0, ff.esize[0]*M_SQRT1_2 );
         for(int io=0; io<nOrbPlot; io++){
             //plot1.add( new DataLine2D( 100, -3.0, 0.1, orbColor(io)|0xFF000000, str ) );
