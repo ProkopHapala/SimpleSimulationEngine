@@ -83,8 +83,8 @@ void makeDefaultBuffers(){
     //buffers.insert( { "rhoEQ",          solver.rhoEQ } );
 }
 
-bool loadFromFile( char const* filename, bool bCheck ){
-    bool b = solver.loadFromFile( filename, bCheck );
+bool loadFromFile( char const* filename ){
+    bool b = solver.loadFromFile( filename );
     //solver.setDefaultValues();
     makeDefaultBuffers();
     return b;

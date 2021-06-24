@@ -815,7 +815,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         for(int i=0; i<perOrb;i++){ DiS[i].setZero(); }
         Vec3d  pj    = apos  [ia];
         //Quat4d& apar = aPars[ia];
-        double cj  = aPars[ia].w;
+        //double cj  = aPars[ia].w;
+        double cj=1;
         double sj  = aPars[ia].z;
         Vec3d  fpj = Vec3dZero;
         for(int i_=0; i_<perOrb; i_++){
@@ -826,6 +827,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             Vec3d Rij = pj-pi;
             double r2 = Rij.norm2();
             //if(r2>Rcut2) continue;
+            //double cij = ci*cj;
             double cij = ci*cj;
             _Gauss_sij_aux(si,sj)
             _Gauss_overlap(r2,si,sj)
@@ -835,10 +837,11 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             DiS[i_].add( fp, -dS_dsi*cij, -S*cj );
             fpj    .sub( fp );
         }
-        double E = Ssum*Ssum*KPauliOverlap;
-        double f =    2*Ssum*KPauliOverlap;
+        double Amp = KPauliOverlap*aPars[ia].w;
+        double E = Ssum*Ssum*Amp;
+        double f =    2*Ssum*Amp;
         forceOrb( io, f, DiS );
-        aforce[ia].add(fpj);
+        aforce[ia].add_mul(fpj, f );
         return E;
     }
 
@@ -1100,7 +1103,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         //DEBUG_dQdp = dSdp;
         Vec3d Fq   = dSdp*dEdQ;
 
-        efpos [i].add( Fp*dxxi + Fq );
+        efpos [i].add( Fp*dxxi - Fq );
         efpos [j].add( Fp*dxxj + Fq );
         efsize[i] += Fp.dot( dxsi ) + Fs*dssi + dEdQ*dSsi*cij;
         efsize[j] += Fp.dot( dxsj ) + Fs*dssj + dEdQ*dSsj*cij;
@@ -1562,7 +1565,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 ij++;
             }
         }
-        printf( "E %g T %g eS %g S %g \n", T*eS, T, eS, S );
+        printf( "E %g T %g eS %g S %gaPars[ia].w \n", T*eS, T, eS, S );
         return T*eS;
         //return E;
     }
@@ -1842,6 +1845,38 @@ double evalAA(){
     //              for pos in grid:
     //                  Iij += kbas(pos)^2 * wf_j[pos]^2
 
+
+    double atomsPotAtPoint( const Vec3d& pos, double s, double Q )const{
+        //Gauss::PairDeriv dBs[perOrb];
+        //double            Ss[perOrb];
+        double E =0;
+        Vec3d fp; double fs;
+        for(int ia=0; ia<natom; ia++){
+            if(bEvalAEPauli){
+                //Vec3d pij; double sij;
+                double r2 = (apos[ia] - pos).norm2();
+                double si  = aPars[ia].z;
+                //double cij = aPars[ia].w;
+                _Gauss_sij_aux(si,s);
+                _Gauss_overlap(r2,si,s);
+                double Ssum = S;
+                E          += Ssum*Ssum*KPauliOverlap*aPars[ia].w;
+                //double f    =    2*Ssum*KPauliOverlap;
+                //double S = Gauss::product3D_s_new( aPars[ia].z, apos[ia], s, pos, sij, pij );
+                //printf( "atomsPotAtPoint[%i] Pauli S %g c %g pij.x %g sij %g aPsize %g \n", ia, S, aPcoef[ia], pij.x, sij, aPsize[ia] );
+                //E += aPars[ia].w*S*S;
+            }
+            if(bEvalAECoulomb){
+                Vec3d Rij = pos - apos[ia];
+                // Coulomb( const Vec3d& Rij, double r2, double si, double sj, double qij, Vec3d& fp, double& fs ){
+                E += Gauss::Coulomb( Rij, Rij.norm2(), aPars[ia].y, s, 1, fp, fs )*aPars[ia].x*Q;
+            }
+        }
+        return E;
+    }
+
+
+    /*
     double atomsPotAtPoint( const Vec3d& pos, double s, double Q )const{
         //Gauss::PairDeriv dBs[perOrb];
         //double            Ss[perOrb];
@@ -1862,6 +1897,7 @@ double evalAA(){
         }
         return E;
     }
+    */
     double* atomsPotAtPoints( int n, Vec3d* ps, double* out=0, double s=0.0, double Q=1.0 )const{
         if(out==0){ out = new double[n]; };
         for(int i=0; i<n; i++){
@@ -1959,7 +1995,7 @@ double evalAA(){
     }
 
 
-bool loadFromFile( char const* filename, bool bCheck ){
+bool loadFromFile( char const* filename ){
     //printf(" filename: >>%s<< \n", filename );
     FILE * pFile;
     pFile = fopen (filename,"r");

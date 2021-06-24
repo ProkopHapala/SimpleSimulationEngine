@@ -86,8 +86,8 @@ int  drawCapsula        ( Vec3f p0, Vec3f p1,  float r1, float r2, float theta1,
 void drawKite           ( const Vec3f& pos, const Mat3f& rot, float sz );
 void drawPanel          ( const Vec3f& pos, const Mat3f& rot, const Vec2f& sz );
 
-void drawText  ( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend );
-void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3f& up, int fontTex, float textSize, int iend );
+void drawText  ( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend=0 );
+void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3f& up, int fontTex, float textSize, int iend=0 );
 void drawInt   ( const Vec3d& pos, int i   , int fontTex, float sz=0.02 );
 void drawDouble( const Vec3d& pos, double f, int fontTex, float sz=0.02 );
 

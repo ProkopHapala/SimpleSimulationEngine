@@ -33,10 +33,10 @@ c_double_p = ctypes.POINTER(c_double)
 # ========= C functions
 
 #void loadFromFile( char const* filename, bool bCheck ){
-lib.loadFromFile.argtypes = [ c_char_p, c_bool ]
+lib.loadFromFile.argtypes = [ c_char_p ]
 lib.loadFromFile.restype  = c_bool
-def loadFromFile( fname, bCheck=True ):
-    return lib.loadFromFile( fname, bCheck )
+def loadFromFile( fname ):
+    return lib.loadFromFile( fname )
 
 #void init( int natom_, int nOrb_, int perOrb_, int natypes_  ){
 lib.init.argtypes = [ c_int, c_int, c_int, c_int ]
