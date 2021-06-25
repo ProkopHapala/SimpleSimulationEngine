@@ -339,6 +339,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     }
 
     void turnAllEvalSwitches(bool b){
+        bNormForce     = b;
         bNormalize     = b;
         bEvalKinetic   = b;
         bEvalCoulomb   = b;

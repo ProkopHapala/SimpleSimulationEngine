@@ -236,8 +236,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/H_1g.fgo"             );
     //ff.loadFromFile( "data/H_2g.fgo"             );
     //ff.loadFromFile( "data/H_2g_split.fgo"       );
-    //ff.loadFromFile( "data/H_2g_problem.fgo"       );
-    ff.loadFromFile( "data/H_2g_problem_sym.fgo"       );
+    //ff.loadFromFile( "data/H_2g_problem.fgo"     );
+    ff.loadFromFile( "data/H_2g_problem_sym.fgo"   );
     //ff.loadFromFile( "data/Hanti_2g_anti.fgo"    );
     //ff.loadFromFile( "data/He_singlet.fgo"       );
     //ff.loadFromFile( "data/He_triplet.fgo"       );

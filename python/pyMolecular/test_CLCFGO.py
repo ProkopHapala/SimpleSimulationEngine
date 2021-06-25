@@ -227,58 +227,6 @@ def test_ETerms( xname="epos", inds=(0,0), x0=0 ):
     xs = np.arange(x0,x0+nx*dx,dx)
     return plot_Terms( xname=xname, inds=inds ) 
 
-def opt_He_Triplet( xs=None, s0=0.5, s1=0.5 ):
-    #effmc.init(1,2,2,1)
-    #effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/He_2g_triplet_asym.fgo" )
-    effmc.init(1,2,2,1)
-    effmc.getBuffs( 1, 2, 2 )
-    effmc.setSwitches_( normalize=1, normForce=1, kinetic=1, coulomb=1, pauli=1,    AA=-1, AE=1, AECoulomb=1, AEPauli=1 )
-    #epos  = effmc.epos
-    #esize = effmc.esize
-    #ecoef = effmc.ecoef
-    #Ebuf  = effmc.Ebuf
-    #apos  = effmc.apos
-    #aPars = effmc.aPars
-    ff = effmc
-    ff.apos [:,:]=0.0
-    ff.aPars[:,0]=-2;ff.aPars[:,1]=0.2;ff.aPars[:,2]=0.2;ff.aPars[:,3]=0.0;
-    nterm = len(ff.Ebuf)
-    Es  = np.zeros((len(xs),nterm+1))
-    Es_ = np.zeros((len(xs),nterm+1))
-    # -- Orb1
-    ff.epos [0,:,:] = 0.0
-    ff.esize[0,:]   = s0
-    ff.ecoef[0,:]   = 1.0
-    # -- Orb2
-    ff.esize[1,:] = s1
-    ff.ecoef[1,0] =  1.0
-    ff.ecoef[1,1] = -1.0
-    for i in range(len(xs)):
-        ff.epos[1,0,0] = +xs[i]
-        ff.epos[1,1,0] = -xs[i]
-        Es[i,0 ] = ff.eval()
-        Es[i,1:] = ff.Ebuf[:]
-    ff.ecoef[1,0] =  1.0
-    ff.ecoef[1,1] =  1.0
-    for i in range(len(xs)):
-        ff.epos[1,0,0] = +xs[i]
-        ff.epos[1,1,0] = -xs[i]
-        Es_[i,0 ] = ff.eval()
-        Es_[i,1:] = ff.Ebuf[:]
-    if(plt):
-        #print "test_ETerms PLOT"
-        term_clr   = ['k', 'r', 'b',    'm',       '',      'g',   '',        ''  ]
-        term_mask  = [1,     1,   1,      1,        0,        1,    0,        0   ]
-        term_names = ["Etot","Ek","Eee","EeePaul","EeeExch","Eae","EaePaul","Eaa" ]
-        plt.figure(figsize=(5,5))
-        for i in range(nterm):
-            if term_mask[i]==1: plt.plot( xs, Es [:,i],'-', c=term_clr[i], label=term_names[i] )
-        for i in range(nterm):
-            if term_mask[i]==1: plt.plot( xs, Es_[:,i],':', c=term_clr[i] )
-        plt.grid();plt.legend();
-        plt.title(label)  
-    return xs, Es, Es_
-
 # ========= Check Forces
 
 def processForces( xs,Es,fs ):
@@ -298,7 +246,7 @@ def processForces( xs,Es,fs ):
         plt.title(label)
     return Err
 
-def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0 ):
+def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0, xs=None ):
     nind = len(inds)
     if(nind==1):
         szs  = (natom,)
@@ -306,12 +254,13 @@ def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0 ):
         szs  = (norb,perOrb,3)[:nind]
     xbuf = effmc.getBuff( xname,szs )
     fbuf = effmc.getBuff( fname,szs )
-    x0  += x0_glob
-    xs = np.arange(x0,x0+nx*dx,dx)
+    if xs is None:
+        x0  += x0_glob
+        xs = np.arange(x0,x0+nx*dx,dx)
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
     #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
-    for i in range(nx):
+    for i in range(len(xs)):
         xbuf[inds]= xs[i]
         Es[i] = effmc.eval()
         fs[i] = fbuf[inds]
@@ -523,6 +472,15 @@ def test_Hatom():
     xs = np.arange(0.4,3.0,0.05)
     plot_Terms(rs=xs)
 
+def checkForces_H_2g( inds=(0,0) ):
+    global label
+    #effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1,  AE=1, AECoulomb=1 )
+    effmc.setSwitches_( normalize=1, normForce=1, kinetic=1,  AE=1, AECoulomb=1 )
+    effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_problem_sym.fgo"  )
+    label="epos"; checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange(-1.0,1.0,0.01) )
+    #label="epos"; checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange( 0.1,1.0,0.01) )
+    label="esize"; checkForces( xname="esize", fname="efsize", inds=inds, xs=np.arange(1.0,2.0,0.01) )
+    label="ecoef"; checkForces( xname="ecoef", fname="efcoef", inds=inds, xs=np.arange(5.0,7.0,0.01) )
 
 def test_H2molecule():
     '''
@@ -535,9 +493,62 @@ def test_H2molecule():
     init_effmc_H2mol_1g()
     #init_effmc( natom_=1, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.0 )
     #effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1,    AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
-    effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1, AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
+    effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1, AA=1, AE=1, AECoulomb=1, AEPauli=-1  )
     xs = np.arange(-3.0,3.0,0.05)
     plot_Terms( xs=xs, xname="epos", inds=(0,0) )
+
+def opt_He_Triplet( xs=None, s0=0.5, s1=0.5 ):
+    #effmc.init(1,2,2,1)
+    #effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/He_2g_triplet_asym.fgo" )
+    effmc.init(1,2,2,1)
+    effmc.getBuffs( 1, 2, 2 )
+    effmc.setSwitches_( normalize=1, normForce=1, kinetic=1, coulomb=1, pauli=1,    AA=-1, AE=1, AECoulomb=1, AEPauli=1 )
+    #epos  = effmc.epos
+    #esize = effmc.esize
+    #ecoef = effmc.ecoef
+    #Ebuf  = effmc.Ebuf
+    #apos  = effmc.apos
+    #aPars = effmc.aPars
+    ff = effmc
+    ff.apos [:,:]=0.0
+    ff.aPars[:,0]=-2;ff.aPars[:,1]=0.2;ff.aPars[:,2]=0.2;ff.aPars[:,3]=0.0;
+    nterm = len(ff.Ebuf)
+    Es  = np.zeros((len(xs),nterm+1))
+    Es_ = np.zeros((len(xs),nterm+1))
+    # -- Orb1
+    ff.epos [0,:,:] = 0.0
+    ff.esize[0,:]   = s0
+    ff.ecoef[0,:]   = 1.0
+    # -- Orb2
+    ff.esize[1,:] = s1
+    ff.ecoef[1,0] =  1.0
+    ff.ecoef[1,1] = -1.0
+    for i in range(len(xs)):
+        ff.epos[1,0,0] = +xs[i]
+        ff.epos[1,1,0] = -xs[i]
+        Es[i,0 ] = ff.eval()
+        Es[i,1:] = ff.Ebuf[:]
+    ff.ecoef[1,0] =  1.0
+    ff.ecoef[1,1] =  1.0
+    for i in range(len(xs)):
+        ff.epos[1,0,0] = +xs[i]
+        ff.epos[1,1,0] = -xs[i]
+        Es_[i,0 ] = ff.eval()
+        Es_[i,1:] = ff.Ebuf[:]
+    if(plt):
+        #print "test_ETerms PLOT"
+        term_clr   = ['k', 'r', 'b',    'm',       '',      'g',   '',        ''  ]
+        term_mask  = [1,     1,   1,      1,        0,        1,    0,        0   ]
+        term_names = ["Etot","Ek","Eee","EeePaul","EeeExch","Eae","EaePaul","Eaa" ]
+        plt.figure(figsize=(5,5))
+        for i in range(nterm):
+            if term_mask[i]==1: plt.plot( xs, Es [:,i],'-', c=term_clr[i], label=term_names[i] )
+        for i in range(nterm):
+            if term_mask[i]==1: plt.plot( xs, Es_[:,i],':', c=term_clr[i] )
+        plt.grid();plt.legend();
+        plt.title(label)  
+    return xs, Es, Es_
+
 
 if __name__ == "__main__":
 
@@ -563,9 +574,12 @@ if __name__ == "__main__":
     #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.5
     #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
     
+
+    checkForces_H_2g( inds=(0,0) ); plt.show(); exit(0)
+
     dx=0.02
     opt_He_Triplet( np.arange(x0_glob,x0_glob+dx*100,dx), s0=0.5, s1=0.7 )
-    plt.show(); exit(0)
+    
 
 
     #test_EvalFuncDerivs()  # plt.show; exit()
