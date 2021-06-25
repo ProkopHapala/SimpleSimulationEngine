@@ -113,7 +113,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     double Rcut2     =Rcut*Rcut;
     double RcutOrb2  =RcutOrb*RcutOrb;
 
-    double Ek=0,Eee=0,EeePaul=0,EeeExch=0,Eae=0,EaePaul=0,Eaa=0; ///< different kinds of energy
+    double Ek=0,Eee=0,EeePaul=0,EeeExch=0,Eae=0,EaePaul=0,Eaa=0, Etot=0; ///< different kinds of energy
 
     int natypes=0;
     int natom  =0; ///< number of atoms (nuclei, ions)
@@ -1805,6 +1805,7 @@ double evalAA(){
         if( bNormForce && bNormalize){ outProjectNormalForces(); }
         //printf( "eval() E=%g Ek %g Eee %g EeePaul %g EeeExch %g Eae %g EaePaul %g Eaa %g \n", E, Ek,Eee,EeePaul,EeeExch,Eae,EaePaul,Eaa   );
         //printf( "E7 %g \n", E );
+        Etot=E;
         return E;
     }
 
@@ -1819,7 +1820,7 @@ double evalAA(){
         if(bOptSize)for(int i=0; i<nBas; i++){ F2es+=sq(efsize[i]);     }
         if(bOptCoef)for(int i=0; i<nBas; i++){ F2ec+=sq(efcoef[i]);     }
         // ToDo : We should out project directions which breaks normalization (!!!) but we can do it later - it is mostly importaint for dynamics, gradient desncent should be fine
-        printf( " Force a %g e:p,s,c( %g, %g, %g ) fcog(%g,%g,%g) \n", sqrt(F2a), sqrt(F2ep), sqrt(F2es), sqrt(F2ec), fcog.x,fcog.y,fcog.z );
+        //printf( " Force a %g e:p,s,c( %g, %g, %g ) fcog(%g,%g,%g) \n", sqrt(F2a), sqrt(F2ep), sqrt(F2es), sqrt(F2ec), fcog.x,fcog.y,fcog.z );
         //return F2a + F2ep + F2es + F2ec;
     }
 
@@ -2112,6 +2113,34 @@ void printElectrons(){
             printf( "e[%i,%i|%i] p(%g,%g,%g)[A] size %g coef %g \n", io,j,ie, epos[ie].x,epos[ie].y,epos[ie].z, esize[ie], ecoef[ie] );
         }
     }
+}
+
+int bas2str(char* str, int ie){
+    return sprintf( str, "c %2.2f s %2.2f p(%2.2f,%2.2f,%2.2f)\n",  ecoef[ie], esize[ie], epos[ie].x,epos[ie].y,epos[ie].z );
+}
+
+int Eterms2str(char* str){
+    // Ek=0,Eee=0,EeePaul=0,EeeExch=0,Eae=0,EaePaul=0,Eaa=0, Etot=0;
+    return sprintf( str, "Etot %3.3f Ek %3.3f Eee,P(%3.3f,%3.3f) Eae,P(%3.3f,%3.3f) Eaa %g )\n", Etot, Ek, Eee, EeePaul, Eae, EaePaul, Eaa );
+}
+
+char* orb2str(char* str0, int io){
+    char* str=str0;
+    int i0 = getOrbOffset(io);
+    for(int ii=0; ii<perOrb; ii++){
+        int i=i0+ii;
+        str += bas2str(str, i);
+    }
+    return str;
+}
+
+char* orbs2str(char* str0){
+    char* str=str0;
+    for(int i=0; i<nOrb; i++){
+        str+=sprintf(str,"orb_%i\n", i );
+        str=orb2str(str, i);
+    }
+    return str;
 }
 
 };

@@ -95,12 +95,15 @@ void testDerivsTotal( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot,
     //printf( "DEBUG_sum %g size %g \n", DEBUG_sum, solver.esize[0] );
 }
 
-void plotOrb( CLCFGO& solver, DataLine2D *line, int io, Vec3d p0, Vec3d dp, float sc=1.0, bool bDens=false ){
+void plotOrb( CLCFGO& solver, DataLine2D *line, int io, Vec3d p0, Vec3d dp, float sc=1.0, bool bDens=false, bool bNorm=true ){
+    double vmax=0;
     Vec3d ps[line->n];
     for(int i=0; i<line->n; i++){  ps[i]=p0+dp*line->xs[i]; }
     if(bDens){ solver.rhoAtPoints( io, line->n, ps, line->ys ); }
     //if(bDens){ solver.orbAtPoints( io, line->n, ps, line->ys ); for(int i=0; i<line->n; i++){  line->ys[i]*=line->ys[i]; } }
     else     { solver.orbAtPoints( io, line->n, ps, line->ys ); }
+    for(int i=0; i<line->n; i++){  vmax=fmax( vmax, fabs(line->ys[i]) ); }
+    if(bNorm)sc/=vmax;
     for(int i=0; i<line->n; i++){  line->ys[i]*=sc; }
 }
 

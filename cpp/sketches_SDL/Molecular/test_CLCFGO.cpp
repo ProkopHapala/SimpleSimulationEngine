@@ -135,11 +135,13 @@ void drawff_wfs(const CLCFGO& ff, int oglSph, float fsc=1.0, float asc=0.5, int 
             Vec3d p = ff.epos[i];
             //float alpha=0.1;
             //if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, alpha); }else{ glColor4f(1.0,0.0,0.0, alpha); };
-            Draw  ::setRGBA( (orbColor(io)&0x00FFFFFF)|alpha );
-            Draw3D::drawShape( oglSph, ff.epos[i], Mat3dIdentity*ff.esize[i],  false );
-            //Draw3D::drawSphereOctLines(16, ff.esize[i], p, Mat3dIdentity, false );
-            glColor3f( 1.0f,0.0f,0.0f );
-            Draw3D::drawVecInPos( ff.efpos[i]*fsc, p );
+            //int alphaMax=200;
+            //int alpha = alphaMax*fabs(ff.rhoQ[i]); if(alpha>alphaMax)alpha=alphaMax; alpha<<=24;
+            int c = orbColor(io);
+            Draw  ::setRGBA( (c&0x00FFFFFF)|alpha  ); Draw3D::drawShape( oglSph, ff.epos[i], Mat3dIdentity*ff.esize[i],  false );
+            //Draw  ::setRGBA(  c                    ); Draw3D::drawSphereOctLines(16, ff.esize[i], p, Mat3dIdentity, false );
+            Draw  ::setRGBA(  c                    ); Draw3D::drawPointCross( p, 0.01 );
+            glColor3f( 1.0f,0.0f,0.0f );  Draw3D::drawVecInPos( ff.efpos[i]*fsc, p );
 
             Draw  ::setRGBA( orbColor(io) );
             //sprintf(str, "%02i_%02i", io, j  );
@@ -160,17 +162,22 @@ void drawff_rho(const CLCFGO& ff, int oglSph, float fsc=1.0, int alpha=0x1500000
             int i   = ii+i0;
             Vec3d p = ff.rhoP[i];
 
-            Draw  ::setRGBA( (orbColor(io)&0x00FFFFFF)|alpha );
-            Draw3D::drawShape( oglSph, p, Mat3dIdentity*ff.rhoS[i],  false );
-            //Draw3D::drawSphereOctLines(16, ff.esize[i], p, Mat3dIdentity, false );
+            //int alphaMax=200;
+            //int alpha = alphaMax*fabs(ff.rhoQ[i]); if(alpha>alphaMax)alpha=alphaMax; alpha<<=24;
+            int c = orbColor(io);
+            Draw  ::setRGBA( (c&0x00FFFFFF)| alpha ); Draw3D::drawShape( oglSph, p, Mat3dIdentity*ff.rhoS[i],  false );
+            //Draw  ::setRGBA(  c                    ); Draw3D::drawSphereOctLines(16, ff.rhoS[i], p, Mat3dIdentity, false );
+            Draw  ::setRGBA(  c                    ); Draw3D::drawPointCross( p, 0.01 );
 
             glColor3f( 1.0f,0.0f,0.0f );
             Draw3D::drawVecInPos( ff.rhofP[i]*fsc, p );
 
+            /*
             Draw  ::setRGBA( orbColor(io) );
             //sprintf(str, "%02i_%02i_%3.3f", io, ii, ff.ecoef[i]  );
             sprintf(str, "%3.3f", ff.rhoQ[i]  );
             Draw3D::drawText(str, p, fontTex, 0.02,  0 );
+            */
         }
     }
 }
@@ -187,6 +194,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
     bool bRun = false;
     double dt;
+    //double E,dt;
 
     CLCFGO ff;
     Plot2D plot1;
@@ -197,6 +205,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
     bool bDrawAtoms   = true;
     bool bDrawWfs     = true;
     bool bDrawRho     = false;
+    bool bPlotDens    = false;
 
     int  ogl=0,oglSph=0;
 
@@ -220,10 +229,16 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
     //ff.setDefaultValues( );
+    //ff.loadFromFile( "data/e_2g_1o.fgo"            );
+    //ff.loadFromFile( "data/e2_1g_2o_singlet.fgo" );
     //ff.loadFromFile( "data/e2_1g_2o_singlet.fgo" );
     //ff.loadFromFile( "data/e2_1g_2o_triplet.fgo" );
-    //ff.loadFromFile( "data/H_1g_1o.fgo"          );
-    ff.loadFromFile( "data/Hanti_2g_anti.fgo"      );
+    //ff.loadFromFile( "data/H_1g.fgo"             );
+    //ff.loadFromFile( "data/H_2g.fgo"             );
+    //ff.loadFromFile( "data/H_2g_split.fgo"       );
+    //ff.loadFromFile( "data/H_2g_problem.fgo"       );
+    ff.loadFromFile( "data/H_2g_problem_sym.fgo"       );
+    //ff.loadFromFile( "data/Hanti_2g_anti.fgo"    );
     //ff.loadFromFile( "data/He_singlet.fgo"       );
     //ff.loadFromFile( "data/He_triplet.fgo"       );
     //ff.loadFromFile( "data/H2_1g_2o.fgo"         );
@@ -250,14 +265,14 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.turnAllSwitches(false);
     ff.turnAllEvalSwitches(false);
     ff.bNormalize     = 1;
-    //ff.bEvalKinetic   = 1;
-    //ff.bEvalCoulomb   = 1;
-    //ff.bEvalPauli     = 1;
+    ff.bNormForce     = 1;
+    ff.bEvalKinetic   = 1;
+    ff.bEvalCoulomb   = 1;
+    ff.bEvalPauli     = 1;
     ff.bEvalAE        = 1;
     ff.bEvalAECoulomb = 1;
-    //ff.bEvalAEPauli   = 1;
-    //ff.bEvalAA        = 1;
-    ff.bNormForce = 1;
+    ff.bEvalAEPauli   = 1;
+    ff.bEvalAA        = 1;
 
     //ff.bNormalize     = 0;
     //ff.bEvalKinetic   = 0;
@@ -275,7 +290,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     ff.bOptAtom = 0;
     //ff.bOptEPos = 0;
-    ff.bOptSize = 0;
+    //ff.bOptSize = 0;
     //ff.bOptCoef = 0;
     //ff.ofix[0] = 1;
 
@@ -283,7 +298,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.iPauliModel = 0;
     dt = 0.0001;
 
-    bDrawWfs  = 0; bDrawRho  = 1;   // Plot Density blobs instead of wavefunctions
+    //bDrawWfs  = 0; bDrawRho  = 1;   // Plot Density blobs instead of wavefunctions
 
 
     ff.printSetup();
@@ -353,13 +368,13 @@ void TestAppCLCFSF::draw(){
     //dt = 0.001;
     if(bRun){
         //testColorOfHash();
-        double E = ff.eval();
+        ff.eval();
         ff.forceInfo();
         //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, ff.Ek, ff.Eee,ff.EeePaul,  ff.Eae,ff.EaePaul, ff.Eaa );
 
-        float F2 = ff.moveGD(dt);
+        double F2 = ff.moveGD(dt);
 
-        //printf( "frame[%i] E %g |F| %g \n", frameCount, E, sqrt(F2) );
+        printf( "frame[%i] E %g |F| %g \n", frameCount, ff.Etot, sqrt(F2) );
         //printf( "frame[%i] |F| %g E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n", frameCount, sqrt(F2), E, ff.Ek, ff.Eee,ff.EeePaul,ff.EeeExch, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
         //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0] );
         //printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (ff.apos[0]-ff.apos[1]).norm(),   (ff.apos[0]-ff.epos[0]).norm(), ff.esize[0] );
@@ -389,21 +404,40 @@ void TestAppCLCFSF::drawHUD(){
 	//glScalef    ( 20.0,300.00,1.0  );
 	//plot1.view();
 
+
+	//gui.draw();
+
+    glTranslatef( 10.0,HEIGHT-20.0,0.0 );
+	glColor3f(0.5,0.0,0.3);
+
+	int nstr=2048;
+	char str[nstr];
+	char* s=str;
+	s+=ff.Eterms2str(s);
+	ff.orbs2str(s);
+    Draw::drawText( str, fontTex, fontSizeDef, {100,20} );
+
+
 }
 
 void TestAppCLCFSF::viewPlots(){
-        //plotAtomsPot( ff, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0, 0.5 );
-        //printf( "szRho %g szWf %g \n", ff.esize[0]*M_SQRT1_2, ff.rhoS[0] );
-        plotAtomsPot( ff, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0, ff.esize[0]*M_SQRT1_2 );
+        plotAtomsPot( ff, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0, 0.1 );
+        //plotAtomsPot( ff, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0, ff.esize[0]*M_SQRT1_2 );
         for(int io=0; io<nOrbPlot; io++){
             //plot1.add( new DataLine2D( 100, -3.0, 0.1, orbColor(io)|0xFF000000, str ) );
-            plotOrb     ( ff, plot1.lines[io+1], io, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 30.0, false );
+            //plotOrb     ( ff, plot1.lines[io+1], io, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 30.0, false );
+            int i0=ff.getOrbOffset(io);
+            Vec3d dir = ff.epos[i0+1] - ff.epos[i0]; dir.normalize();
+            plotOrb     ( ff, plot1.lines[io+1], io, ff.epos[i0], dir, 20.0,  bPlotDens, true );
+            //plotOrb     ( ff, plot1.lines[io+1], io, ff.epos[i0], dir, 100.0, bPlotDens );
+
         }
+        //Draw3D::drawLine(  );
         //plotOrb     ( ff, plot1.lines[1], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
         //plotOrb     ( ff, plot1.lines[2], 1, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
         //testDerivsTotal( 0, 0, 0, ff, plot1, 0 );
         plot1.bGrid=false;
-        plot1.bAxes=false;
+        //plot1.bAxes=false;
         plot1.bTicks=false;
         plot1.update();
         plot1.render();
@@ -424,6 +458,7 @@ void TestAppCLCFSF::eventHandling ( const SDL_Event& event  ){
                 case SDLK_KP_1:  bDrawAtoms   = !bDrawAtoms;    break;
                 case SDLK_KP_2:  bDrawWfs     = !bDrawWfs;      break;
                 case SDLK_KP_3:  bDrawRho     = !bDrawRho;      break;
+                case SDLK_r:     bPlotDens = !bPlotDens; break;
                 //case SDLK_a:    = !perspective; break;
                 case SDLK_SPACE: bRun = !bRun;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
@@ -571,7 +606,7 @@ int main(int argc, char *argv[]){
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
-	thisApp = new TestAppCLCFSF( junk , 800, 600 );
+	thisApp = new TestAppCLCFSF( junk , 1024, 800 );
 	thisApp->loop( 1000000 );
 	return 0;
 }
