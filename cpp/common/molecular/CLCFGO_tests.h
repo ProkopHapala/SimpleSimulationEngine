@@ -95,10 +95,12 @@ void testDerivsTotal( int n, double x0, double dx, CLCFGO& solver, Plot2D& plot,
     //printf( "DEBUG_sum %g size %g \n", DEBUG_sum, solver.esize[0] );
 }
 
-void plotOrb( CLCFGO& solver, DataLine2D *line, int io, Vec3d p0, Vec3d dp, float sc=1.0 ){
+void plotOrb( CLCFGO& solver, DataLine2D *line, int io, Vec3d p0, Vec3d dp, float sc=1.0, bool bDens=false ){
     Vec3d ps[line->n];
     for(int i=0; i<line->n; i++){  ps[i]=p0+dp*line->xs[i]; }
-    solver.orbAtPoints( io, line->n, ps, line->ys );
+    if(bDens){ solver.rhoAtPoints( io, line->n, ps, line->ys ); }
+    //if(bDens){ solver.orbAtPoints( io, line->n, ps, line->ys ); for(int i=0; i<line->n; i++){  line->ys[i]*=line->ys[i]; } }
+    else     { solver.orbAtPoints( io, line->n, ps, line->ys ); }
     for(int i=0; i<line->n; i++){  line->ys[i]*=sc; }
 }
 
@@ -438,7 +440,7 @@ void test_WfOverlap( CLCFGO& solver, Plot2D& plot1 ){
 
 // ===================================================
 ///        test   Wave Function Overlap
-// ===================================================    
+// ===================================================
 void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
     // ======= Test Orbital Wavefunction Overlap
     double dx  = 0.1;
@@ -488,27 +490,27 @@ double test_OrbInteraction( CLCFGO& solver, int iMODE, int io, int jo, int nint,
         double T22 = solver.projectOrb( jo, dip );
         if     ( iMODE==1 ){ solver.iPauliModel = 4; line_Ek[i] = solver.pauliOrbPair(io,jo); } // Just Cross-Overlap S12 = <psi1|T|psi2>
         else if( iMODE==2 ){ solver.iPauliModel = 3; line_Ek[i] = solver.pauliOrbPair(io,jo); } // Just Cross-Kinetic T12 = <psi1|T|psi2>
-        else if( iMODE==3 ){ line_Ek[i] = solver.CoulombOrbPair( io, jo ); }  // Just Cross-Kinetic K12 = Int[r1,r2]{ ( |psi1(r1)|^2 |psi1(r2)|^2) ) /|r1-r2| } 
+        else if( iMODE==3 ){ line_Ek[i] = solver.CoulombOrbPair( io, jo ); }  // Just Cross-Kinetic K12 = Int[r1,r2]{ ( |psi1(r1)|^2 |psi1(r2)|^2) ) /|r1-r2| }
     }
     DEBUG_f1=line_f1;
     DEBUG_f2=line_f2;
     DEBUG_saveFile1="temp/wf0.xsf";
     DEBUG_saveFile2="temp/Lwf1.xsf";
-    auto func1 = [&](GridShape& grid, double* f, double x ){ 
+    auto func1 = [&](GridShape& grid, double* f, double x ){
         if(bPrint>1) printf( " gridNumIntegral( %g ) func1\n", x );
-        solver.epos[ibas].x=x; 
+        solver.epos[ibas].x=x;
         double T11 = solver.projectOrb( io, dip );
         double T22 = solver.projectOrb( jo, dip );
-        if(iMODE==3){ solver.rho2grid( io, grid, f ); } 
-        else        { solver.orb2grid( io, grid, f ); }   
+        if(iMODE==3){ solver.rho2grid( io, grid, f ); }
+        else        { solver.orb2grid( io, grid, f ); }
     };
     auto func2 = [&](GridShape& grid, double* f, double x ){
         solver.epos[ibas].x=x;
         double T11 = solver.projectOrb( io, dip );
         double T22 = solver.projectOrb( jo, dip );
         if     (iMODE==1){ solver.orb2grid    ( jo, grid, f ); }
-        else if(iMODE==3){ solver.hartree2grid( jo, grid, f ); } 
-        else if(iMODE==2){ 
+        else if(iMODE==3){ solver.hartree2grid( jo, grid, f ); }
+        else if(iMODE==2){
             double* tmp = new double[grid.n.totprod()];
             solver.orb2grid( jo, grid, tmp );
             grid.Laplace   ( tmp, f );
@@ -543,7 +545,7 @@ double test_OrbInteraction( CLCFGO& solver, int iMODE, int io, int jo, int nint,
     //else if( iMODE==2 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_T, bSave ); } // Kinetic
     //else if( iMODE==3 ){  gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2_V, bSave ); } // Hartree
     gridNumIntegral( nint, gStep, Rmax, Lmax, line_Ek_g, func1, func2, bSave );
-    double err2 = 0; 
+    double err2 = 0;
     for(int i=0; i<nint; i++){
         //line_Ek_g[i] = 0;
         double dE = line_Ek[i]-line_Ek_g[i];

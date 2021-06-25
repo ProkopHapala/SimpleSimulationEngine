@@ -142,7 +142,8 @@ void drawff_wfs(const CLCFGO& ff, int oglSph, float fsc=1.0, float asc=0.5, int 
             Draw3D::drawVecInPos( ff.efpos[i]*fsc, p );
 
             Draw  ::setRGBA( orbColor(io) );
-            sprintf(str, "%02i_%02i", io, j  );
+            //sprintf(str, "%02i_%02i", io, j  );
+            sprintf(str, "%3.3f", ff.ecoef[i]  );
             Draw3D::drawText(str, p, fontTex, 0.02,  0 );
         }
     }
@@ -167,7 +168,8 @@ void drawff_rho(const CLCFGO& ff, int oglSph, float fsc=1.0, int alpha=0x1500000
             Draw3D::drawVecInPos( ff.rhofP[i]*fsc, p );
 
             Draw  ::setRGBA( orbColor(io) );
-            sprintf(str, "%02i_%02i", io, ii  );
+            //sprintf(str, "%02i_%02i_%3.3f", io, ii, ff.ecoef[i]  );
+            sprintf(str, "%3.3f", ff.rhoQ[i]  );
             Draw3D::drawText(str, p, fontTex, 0.02,  0 );
         }
     }
@@ -229,7 +231,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/H2_3g_half.fgo"       );
     //ff.loadFromFile( "data/H2_4g_half.fgo"       );
     //ff.loadFromFile( "data/He_2g_triplet_sym.fgo"  );
-    ff.loadFromFile( "data/He_2g_triplet_asym.fgo"  );
+    //ff.loadFromFile( "data/He_2g_triplet_asym.fgo"  );
+    ff.loadFromFile( "data/He_2g_triplet_sym1.fgo"  );
     //ff.loadFromFile( "data/Li_2g.fgo"            );
     //ff.loadFromFile( "data/Li_3g.fgo"            );
     //ff.loadFromFile( "data/Li_4g.fgo"            );
@@ -246,21 +249,22 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.turnAllSwitches(false);
     ff.turnAllEvalSwitches(false);
     ff.bNormalize     = 1;
-    ff.bEvalAE        = 1;
-    ff.bEvalAECoulomb = 1;
-    ff.bEvalAEPauli   = 1;
+    //ff.bEvalKinetic   = 1;
     ff.bEvalCoulomb   = 1;
-    ff.bEvalPauli     = 1;
-    ff.bEvalKinetic   = 1;
+    //ff.bEvalPauli     = 1;
+    //ff.bEvalAE        = 1;
+    //ff.bEvalAECoulomb = 1;
+    //ff.bEvalAEPauli   = 1;
     //ff.bEvalAA        = 1;
 
     //ff.bNormalize     = 0;
+    //ff.bEvalKinetic   = 0;
+    //ff.bEvalCoulomb   = 0;
+    //ff.bEvalPauli     = 0;
     //ff.bEvalAE        = 0;
     //ff.bEvalAECoulomb = 0;
     //ff.bEvalAEPauli   = 0;
-    //ff.bEvalCoulomb   = 0;
-    //ff.bEvalPauli     = 0;
-    //ff.bEvalKinetic   = 0;
+
     //ff.bEvalAA        = 0;
 
     //ff.bOptAtom = 1;
@@ -276,6 +280,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     ff.iPauliModel = 2;
     //ff.iPauliModel = 0;
     dt = 0.0001;
+
+    bDrawWfs  = 0; bDrawRho  = 1;   // Plot Density blobs instead of wavefunctions
+
 
     ff.printSetup();
     ff.printAtoms();
@@ -363,7 +370,7 @@ void TestAppCLCFSF::draw(){
     }
 
     if(bDrawObjects){
-        float fsc=1.0;
+        float fsc=0.01;
         if(bDrawAtoms) drawff_atoms( ff,         fsc, 0.2 );
         if(bDrawWfs  ) drawff_wfs  ( ff, oglSph, fsc      );
         if(bDrawRho  ) drawff_rho  ( ff, oglSph, fsc      );
@@ -388,7 +395,7 @@ void TestAppCLCFSF::viewPlots(){
         plotAtomsPot( ff, plot1.lines[0],    (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 1.0, ff.esize[0]*M_SQRT1_2 );
         for(int io=0; io<nOrbPlot; io++){
             //plot1.add( new DataLine2D( 100, -3.0, 0.1, orbColor(io)|0xFF000000, str ) );
-            plotOrb     ( ff, plot1.lines[io+1], io, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 30.0 );
+            plotOrb     ( ff, plot1.lines[io+1], io, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 30.0, false );
         }
         //plotOrb     ( ff, plot1.lines[1], 0, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
         //plotOrb     ( ff, plot1.lines[2], 1, (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, 100.0 );
