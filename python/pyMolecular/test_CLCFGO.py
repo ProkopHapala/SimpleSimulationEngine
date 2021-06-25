@@ -475,7 +475,9 @@ def test_Hatom():
 def checkForces_H_2g( inds=(0,0) ):
     global label
     #effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1,  AE=1, AECoulomb=1 )
-    effmc.setSwitches_( normalize=1, normForce=1, kinetic=1,  AE=1, AECoulomb=1 )
+    #effmc.setSwitches_( normalize=1, normForce=1, kinetic=1,  AE=1, AECoulomb=1 )
+    #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, AE=-1, AECoulomb=1 )
+    effmc.setSwitches_( normalize=1, normForce=+1, kinetic=1, AE=-1, AECoulomb=-1 )
     effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_problem_sym.fgo"  )
     label="epos"; checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange(-1.0,1.0,0.01) )
     #label="epos"; checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange( 0.1,1.0,0.01) )

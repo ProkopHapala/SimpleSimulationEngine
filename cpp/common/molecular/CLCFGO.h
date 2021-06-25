@@ -756,7 +756,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         // --- find projection constant c = <f|ds>/|ds|
         double ss=0,sf=0;
         for(int i=i0; i<i0+perOrb; i++){
-            ss += enfpos [i].norm2();
+            ss += enfpos[i].norm2();
             ss += sq(enfsize[i]);
             ss += sq(enfcoef[i]);
             sf += efpos  [i].dot(enfpos [i]);
@@ -770,6 +770,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             efsize[i] +=        enfsize[i]* c  ;
             efcoef[i] +=        enfcoef[i]* c  ;
         }
+        //printf( "c %g \n", c );
         return c;
     }
 
