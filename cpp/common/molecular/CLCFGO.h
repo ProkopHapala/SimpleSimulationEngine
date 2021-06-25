@@ -146,7 +146,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     double* oQs   =0;   ///< [e] total charge in orbital before renormalization (just DEBUG?)
     int*    onq   =0;   ///< number of axuliary density functions per orbital, should be equal to nQorb
     int*    ospin =0;
-
+    int*    ofix  =0;
     // ToDo : all this blobs ( pos, size, coef should be probably grouped together in Blob{pos,size,coef} )
     // --- Wave-function components for each orbital
     Vec3d*  epos  =0; ///< [A] position of spherical function for expansion of orbitals
@@ -210,7 +210,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             _realloc( oEs , nOrb);
             _realloc( oQs , nOrb);
             _realloc( onq , nOrb);
-
+            _realloc( ofix, nOrb);
             // --- Wave-function components for each orbital
             _realloc( epos , nBas );
             _realloc( esize, nBas );
@@ -258,6 +258,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         delete [] oEs ;
         delete [] oQs ;
         delete [] onq ;
+        delete [] ofix;
         // --- Wave-function components for each orbital
         delete [] epos ;
         delete [] esize;
@@ -307,7 +308,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             oEs [i]=0;
             oQs [i]=0;
             onq [i]=nqOrb;
-            ospin [i]=1;
+            ospin[i]=1;
+            ofix [i]=0;
         }
         for(int i=0; i<nBas;  i++){
             // --- Wave-function components for each orbital
@@ -895,7 +897,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 DiS[i_].add( Rij* dS_dr*cij, -dS_dsi*cij, -S*cj );
                 DjS[j_].add( Rij*-dS_dr*cij, -dS_dsj*cij, -S*ci );
                 //printf( "pauliOrbPair[%i,%i|%i,%i] r %g pi(%g,%g,%g) pj(%g,%g,%g) \n", io,jo, i,j, sqrt(r2),   pi.x,pi.y,pi.z,  pj.x,pj.y,pj.z );
-                //printf( "pauliOrbPair[%i,%i|%i,%i] r %g si %g sj %g dSr %g dSsi %g dSsj %g S %g ", io,jo, i,j, sqrt(r2), si, sj, dS_dr, dS_dsi, dS_dsj, S );
+                //printf( "pauliOrbPair[%i,%i|%i,%i] r %g si %g sj %g dSr %g dSsi %g dSsj %g S %g Scij %g Ssum %g \n", io,jo, i,j, sqrt(r2), si, sj, dS_dr, dS_dsi, dS_dsj, S, Scij, Ssum );
                 // ToDo : Kinetic and Overlap share much of calculations => make sense to calculate them together in one function
                 if(iPauliModel>0){ // Kinetic Energy integral
                     _Gauss_tau    ( r2,si,sj )
@@ -959,6 +961,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             forceOrb( jo, f, DjS );
         }
         //if(E>1e+4)printf( "pauliOrbPair[%i,%i] E %g S %g T %g \n", io, jo, E, Ssum, Tsum );
+        //printf( "pauliOrbPair[%i,%i] E %g S %g T %g \n", io, jo, E, Ssum, Tsum );
         //return E;
         //return Ssum;
         return E;
@@ -969,6 +972,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         EeePaul = 0;
         for(int io=0; io<nOrb; io++){
             for(int jo=0; jo<io; jo++){
+                //printf( "evalPauli()[%i,%i] spin %i %i \n", io, jo, ospin[io], ospin[jo] );
                 if( ospin[io]==ospin[jo] ) EeePaul += pauliOrbPair(io,jo);
             }
         }
@@ -1825,9 +1829,19 @@ double evalAA(){
         double F2es = 0;
         double F2ec = 0; //DEBUG
         if(bOptAtom)for(int i=0; i<natom;i++){ apos [i].add_mul( aforce[i], dt );    F2a +=aforce[i].norm2(); } //DEBUG
-        if(bOptEPos)for(int i=0; i<nBas; i++){ epos [i].add_mul( efpos [i], dt );    F2ep+=efpos [i].norm2(); } //DEBUG
-        if(bOptSize)for(int i=0; i<nBas; i++){ esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);     } //DEBUG
-        if(bOptCoef)for(int i=0; i<nBas; i++){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     } //DEBUG
+        //if(bOptEPos)for(int i=0; i<nBas; i++){ epos [i].add_mul( efpos [i], dt );    F2ep+=efpos [i].norm2(); } //DEBUG
+        //if(bOptSize)for(int i=0; i<nBas; i++){ esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);     } //DEBUG
+        //if(bOptCoef)for(int i=0; i<nBas; i++){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     } //DEBUG
+        for(int io=0; io<nOrb; io++){
+            int i0=getOrbOffset(io);
+            //printf("ofix[%i] %i \n", io, ofix[io] );
+            if(ofix[io]>0) continue;
+            for(int i=i0; i<i0+perOrb; i++){
+                if(bOptEPos){ epos [i].add_mul( efpos [i], dt );    F2ep+=efpos [i].norm2(); }
+                if(bOptSize){ esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);     }
+                if(bOptCoef){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     }
+            }
+        }
         // ToDo : We should out project directions which breaks normalization (!!!) but we can do it later - it is mostly importaint for dynamics, gradient desncent should be fine
         return F2a + F2ep + F2es + F2ec;
     }
@@ -2014,6 +2028,7 @@ bool loadFromFile( char const* filename ){
     //printf("na %i ne %i perORb %i \n", natom_, nOrb_, perOrb_ );
     if(bClosedShell) nOrb_*=2;
     realloc( natom_, nOrb_, perOrb_, 1 );
+    setDefaultValues( );
     double Qasum = 0.0;
     for(int i=0; i<natom; i++){
         double x,y,z;

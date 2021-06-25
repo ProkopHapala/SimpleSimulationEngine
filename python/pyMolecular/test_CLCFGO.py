@@ -232,48 +232,52 @@ def opt_He_Triplet( xs=None, s0=0.5, s1=0.5 ):
     #effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/He_2g_triplet_asym.fgo" )
     effmc.init(1,2,2,1)
     effmc.getBuffs( 1, 2, 2 )
-    epos  = effmc.epos
-    esize = effmc.esize
-    ecoef = effmc.ecoef
-    Ebuf  = effmc.getEnergyTerms( )
-    apos  = effmc.apos
-    aPars = effmc.aPars
-    #szs   = (norb,perOrb,3)
-    #epos  = effmc.getBuff ( "epos" , szs      )
-    #esize = effmc.getBuff ( "esize", szs[:-1] )
-    #ecoef = effmc.getBuff ( "ecoef", szs[:-1] )
-    #Ebuf  = effmc.getEnergyTerms( )
-    #apos  = effmc.getBuff ( "apos" ,(natom,3)  )
-    #aPars = effmc.getBuff ( "aPars",(natom,4)  )
-    ospin = effmc.getIBuff( "ospin",(natom,4)  )
-    apos [:,:]=0.0
-    aPars[:,0]=-2;aPars[:,1]=0.2;aPars[:,2]=0.2;aPars[:,3]=0.0;
-    nterm = len(Ebuf)
-    Etot  = np.zeros(len(xs))
-    Es    = np.zeros((len(xs),nterm))
+    effmc.setSwitches_( normalize=1, normForce=1, kinetic=1, coulomb=1, pauli=1,    AA=-1, AE=1, AECoulomb=1, AEPauli=1 )
+    #epos  = effmc.epos
+    #esize = effmc.esize
+    #ecoef = effmc.ecoef
+    #Ebuf  = effmc.Ebuf
+    #apos  = effmc.apos
+    #aPars = effmc.aPars
+    ff = effmc
+    ff.apos [:,:]=0.0
+    ff.aPars[:,0]=-2;ff.aPars[:,1]=0.2;ff.aPars[:,2]=0.2;ff.aPars[:,3]=0.0;
+    nterm = len(ff.Ebuf)
+    Es  = np.zeros((len(xs),nterm+1))
+    Es_ = np.zeros((len(xs),nterm+1))
     # -- Orb1
-    epos [0,:,:] = 0.0
-    esize[0,:] = s0
-    ecoef[0,:] =  1.0
+    ff.epos [0,:,:] = 0.0
+    ff.esize[0,:]   = s0
+    ff.ecoef[0,:]   = 1.0
     # -- Orb2
-    esize[1,:] = s1
-    ecoef[1,0] =  1.0
-    ecoef[1,1] = -1.0
+    ff.esize[1,:] = s1
+    ff.ecoef[1,0] =  1.0
+    ff.ecoef[1,1] = -1.0
     for i in range(len(xs)):
-        epos[1,0,0] = +xs[i]
-        epos[1,1,0] = -xs[i]
-        Etot[i] = effmc.eval()
-        Es[i,:] = Ebuf[:]
+        ff.epos[1,0,0] = +xs[i]
+        ff.epos[1,1,0] = -xs[i]
+        Es[i,0 ] = ff.eval()
+        Es[i,1:] = ff.Ebuf[:]
+    ff.ecoef[1,0] =  1.0
+    ff.ecoef[1,1] =  1.0
+    for i in range(len(xs)):
+        ff.epos[1,0,0] = +xs[i]
+        ff.epos[1,1,0] = -xs[i]
+        Es_[i,0 ] = ff.eval()
+        Es_[i,1:] = ff.Ebuf[:]
     if(plt):
         #print "test_ETerms PLOT"
-        term_names = ["Ek","Eee","EeePaul","EeeExch","Eae","EaePaul","Eaa" ]
+        term_clr   = ['k', 'r', 'b',    'm',       '',      'g',   '',        ''  ]
+        term_mask  = [1,     1,   1,      1,        0,        1,    0,        0   ]
+        term_names = ["Etot","Ek","Eee","EeePaul","EeeExch","Eae","EaePaul","Eaa" ]
         plt.figure(figsize=(5,5))
         for i in range(nterm):
-            plt.plot( xs, Es[:,i], label=term_names[i] )
-        plt.plot    ( xs, Etot, ":k", lw=2, label="Etot"  )
+            if term_mask[i]==1: plt.plot( xs, Es [:,i],'-', c=term_clr[i], label=term_names[i] )
+        for i in range(nterm):
+            if term_mask[i]==1: plt.plot( xs, Es_[:,i],':', c=term_clr[i] )
         plt.grid();plt.legend();
-        plt.title(label)    
-    return xs, Etot, Es
+        plt.title(label)  
+    return xs, Es, Es_
 
 # ========= Check Forces
 
@@ -559,8 +563,8 @@ if __name__ == "__main__":
     #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.5
     #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
     
-
-    opt_He_Triplet( np.arange(x0_glob,x0_glob+dx*50,dx), s0=0.5, s1=0.5 )
+    dx=0.02
+    opt_He_Triplet( np.arange(x0_glob,x0_glob+dx*100,dx), s0=0.5, s1=0.7 )
     plt.show(); exit(0)
 
 
