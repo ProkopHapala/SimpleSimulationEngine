@@ -223,6 +223,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/e2_1g_2o_singlet.fgo" );
     //ff.loadFromFile( "data/e2_1g_2o_triplet.fgo" );
     //ff.loadFromFile( "data/H_1g_1o.fgo"          );
+    ff.loadFromFile( "data/Hanti_2g_anti.fgo"      );
     //ff.loadFromFile( "data/He_singlet.fgo"       );
     //ff.loadFromFile( "data/He_triplet.fgo"       );
     //ff.loadFromFile( "data/H2_1g_2o.fgo"         );
@@ -232,7 +233,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/H2_4g_half.fgo"       );
     //ff.loadFromFile( "data/He_2g_triplet_sym.fgo"  );
     //ff.loadFromFile( "data/He_2g_triplet_asym.fgo"  );
-    ff.loadFromFile( "data/He_2g_triplet_sym1.fgo"  );
+    //ff.loadFromFile( "data/He_2g_triplet_sym1.fgo"  );
     //ff.loadFromFile( "data/Li_2g.fgo"            );
     //ff.loadFromFile( "data/Li_3g.fgo"            );
     //ff.loadFromFile( "data/Li_4g.fgo"            );
@@ -250,12 +251,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     ff.turnAllEvalSwitches(false);
     ff.bNormalize     = 1;
     //ff.bEvalKinetic   = 1;
-    ff.bEvalCoulomb   = 1;
+    //ff.bEvalCoulomb   = 1;
     //ff.bEvalPauli     = 1;
-    //ff.bEvalAE        = 1;
-    //ff.bEvalAECoulomb = 1;
+    ff.bEvalAE        = 1;
+    ff.bEvalAECoulomb = 1;
     //ff.bEvalAEPauli   = 1;
     //ff.bEvalAA        = 1;
+    ff.bNormForce = 1;
 
     //ff.bNormalize     = 0;
     //ff.bEvalKinetic   = 0;
@@ -275,7 +277,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.bOptEPos = 0;
     ff.bOptSize = 0;
     //ff.bOptCoef = 0;
-    ff.ofix[0] = 1;
+    //ff.ofix[0] = 1;
 
     ff.iPauliModel = 2;
     //ff.iPauliModel = 0;
