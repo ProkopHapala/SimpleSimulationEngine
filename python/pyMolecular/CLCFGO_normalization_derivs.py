@@ -55,7 +55,7 @@ def potV( x, K=1.0 ):
     return E, dEdx
 
 
-def plotNumDeriv( xs, E, F, title="" ):
+def plotNumDeriv( xs, E, F, F_=None, title="" ):
     plt.figure()
     dx   = xs[1]-xs[0]
     xs_  = xs[1:-1]
@@ -63,6 +63,8 @@ def plotNumDeriv( xs, E, F, title="" ):
     plt.plot( xs , E   ,'-k', label='E'    )
     plt.plot( xs , F   ,'-r', label='Fana' )
     plt.plot( xs_, Fnum,':y', label='Fnum' )
+    if F_ is not None:
+        plt.plot( xs , F_,'-m', label='Fana_' )
     plt.grid()
     plt.legend()
     plt.title(title)
@@ -84,6 +86,8 @@ if __name__ == "__main__":
     #xa =  np.arange( x0, x0+dx*n, dx )
     xa =  np.arange( -2.0, 3.0, 0.01 )
 
+    ts = (xa + xb + ca + cb)*0
+
     xs  = xa
     xs_ = xs[1:-1]
 
@@ -94,34 +98,59 @@ if __name__ == "__main__":
     qbb = ca*cb
     qab = 2*Sab*ca*cb
 
+    # --- Charge constrain 1=Q=<psi|psi> 
+    Qtot  =  qaa + qbb + qab
+    dQdxa =  cab*dSab*2
+    dQdxb = -cab*dSab*2
+    dQdca = 2*ca + 2*Sab*cb
+    dQdcb = 2*cb + 2*Sab*ca
+
+    renorm = 1/np.sqrt(Qtot)
+    ca*=renorm
+    cb*=renorm
+    cab = ca*cb
+
+    # --- Total energy functional
     Va ,dVxa  = potV( xa  )
     Vb ,dVxb  = potV( xb  )
     Vab,dVxab = potV( xab )
-
-    # --- Total energy functional
     Etot  = qaa*Va   + qbb*Vb        + qab*Vab
     dEdxa = qaa*dVxa + cab*Vab*dSab*2  + qab*dVxab*dXxa
     dEdxb = qbb*dVxa - cab*Vab*dSab*2  + qab*dVxab*dXxb
-    dEdca = 2*ca*Va  + cb*Sab*Vab
-    dEdcb = 2*ca*Vb  + ca*Sab*Vab
+    dEdca = 2*ca*Va  + 2*cb*Sab*Vab
+    dEdcb = 2*ca*Vb  + 2*ca*Sab*Vab
 
+    #print dEdcb
+
+    #AdQ = (dQdxa**2    + ts) + (dQdxb**2     + ts) + (dQdca**2     + ts) + (dQdcb**2     + ts)
+    #dQE = (dQdxa*dEdxa + ts) + (dQdxb**dEdxb + ts) + (dQdca**dEdca + ts) + (dQdcb**dEdcb + ts)
+
+    AdQ = dQdxa**2    +  dQdxb**2   + dQdca**2    + dQdcb**2
+    dQE = dQdxa*dEdxa + dQdxb*dEdxb + dQdca*dEdca + dQdcb*dEdcb 
+    C   = -dQE/np.sqrt(AdQ) 
+
+    C *=0.3
+
+    dEdxa_ = dEdxa + C*dQdxa
+    dEdxb_ = dEdxb + C*dQdxb
+    dEdca_ = dEdca + C*dQdca
+    dEdcb_ = dEdcb + C*dQdcb
+    
     #Etot  = qab*Vab
     #dEdxa = cab*Vab*dSab*2  + qab*dVxab*dXxa
     #dEdxb =-cab*Vab*dSab*2  + qab*dVxab*dXxb
     #dEdca = cb*Sab*Vab
     #dEdcb = ca*Sab*Vab
 
-    # --- Charge constrain 1=Q=<psi|psi> 
-    Qtot  =  qaa + qbb + qab
-    dQdxa =  cab*dSab*2
-    dQdxb = -cab*dSab*2
-    dQdca = 2*ca + Sab*cb
-    dQdcb = 2*ca + Sab*ca
-
+    #plotNumDeriv( xa, ca, Qtot, "Qtot(ca)" )
     #plotNumDeriv( xa, Sab, dSab, "Qtot(xa)" )
     #plotNumDeriv( xa, xab, dXxa+xa*0, "xab" )
     #plotNumDeriv( xa, Qtot, dQdxa, "Qtot(xa)" )
-    plotNumDeriv( xa, Etot, dEdxa, "Etot(xa)" )
+    plotNumDeriv( xa, Etot, dEdxa, dEdxa_, "Etot(xa)" )
+    #plotNumDeriv( xa, Etot, dEdxa, dQdxa, "Etot(xa)" )
 
+    #plt.figure(); plt.plot( xa, C, label="C(xa)" )
+
+    plt.legend()
     plt.show()
 
