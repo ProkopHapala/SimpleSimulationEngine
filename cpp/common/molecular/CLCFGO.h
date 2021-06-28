@@ -751,19 +751,13 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 
     double outProjectNormalForces( int io ){
         /// out project component of force which break normalization
-        //   f -= ds*( <f|ds>/|ds| )
+        // We calculate derivative of normalized energy
+        // Ei_    = Ei/Qi
+        // dEi/dx = d(Ei/Qi)/dx = (1/Qi)(dEi/dx) - (Ei/Qi^2)(dQi/dx)
+        // Assuming functions are already normalized Qi=1
+        // dEi/dx = (dEi/dx) - Ei*(dQi/dx)
         int i0      = getOrbOffset(io);
-        // --- find projection constant c = <f|ds>/|ds|
-        double ss=0,sf=0;
-        for(int i=i0; i<i0+perOrb; i++){
-            ss += enfpos[i].norm2();
-            ss += sq(enfsize[i]);
-            ss += sq(enfcoef[i]);
-            sf += efpos  [i].dot(enfpos [i]);
-            sf += efsize [i]*    enfsize[i];
-            sf += efcoef [i]*    enfcoef[i];
-        }
-        double c=-sf/sqrt(ss);  // c = <f|ds>/|ds|
+        double c = -oEs[io];
         // ---- out-project f -= ds*c
         for(int i=i0; i<i0+perOrb; i++){
             efpos [i] .add_mul( enfpos [i], c );
@@ -846,6 +840,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         double f =    2*Ssum*Amp;
         forceOrb( io, f, DiS );
         aforce[ia].add_mul(fpj, f );
+        oEs[io]+=E*0.5;
         return E;
     }
 
@@ -966,6 +961,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         //printf( "pauliOrbPair[%i,%i] E %g S %g T %g \n", io, jo, E, Ssum, Tsum );
         //return E;
         //return Ssum;
+        oEs[io]+=E*0.5;
+        oEs[jo]+=E*0.5;
         return E;
     }
 
@@ -1213,6 +1210,9 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             }
         }
         //printf( " Ecoul[%i,%i] %g \n", io, jo, Ecoul );
+        // ToDo : perhaps there should be factor 2 ( i-j and j-i interaction ?)
+        oEs[io]+=Ecoul*0.5;
+        oEs[jo]+=Ecoul*0.5;
         return Ecoul;
     }
 
@@ -1725,6 +1725,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         //printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );
         //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
     }
+    oEs[jo]+=E*0.5;
     //printf( "evalArho E %g \n", E );
     return E;
 }
