@@ -44,6 +44,10 @@ dE/dcb = 2*cb*V(xb) + Sab*ca*V(xab(xa,xb))
 dE/dxa = ca^2*dV(xa)/dxa + ca*cb*( V(xab)*(dSab/dxa) + Sab*(dV(xab)/dxa) )
 dE/dxb = cb^2*dV(xb)/dxb + ca*cb*( V(xab)*(dSab/dxb) + Sab*(dV(xab)/dxb) )
 
+Ei     = Hii/Sii =  <psi_i|H|psi_i>/<psi_i|psi_i>
+dEi/dx = d(Hii/Sii) = (1/Sii)*(dH/dx) + (Hii/Sii^2)*(dS/dx)
+Because we re-normalize wavefunctions in each step, we can assume S=1, which we substitute to obtain
+dEi/dx = (dH/dx) + Hii*(dS/dx) = (dH/dx) + Ei*(dS/dx)
 '''
 
 def potV( x, K=1.0 ):
@@ -54,12 +58,13 @@ def potV( x, K=1.0 ):
     dEdx = K*np.cos(x)
     return E, dEdx
 
-
 def plotNumDeriv( xs, E, F, F_=None, title="" ):
     plt.figure()
-    dx   = xs[1]-xs[0]
+    #dx   = xs[1]-xs[0]
+    dx2   = xs[2:]-xs[:-2]
     xs_  = xs[1:-1]
-    Fnum = (E[2:]-E[:-2])/(2*dx)
+    #Fnum = (E[2:]-E[:-2])/(2*dx)
+    Fnum = (E[2:]-E[:-2])/(dx2)
     plt.plot( xs , E   ,'-k', label='E'    )
     plt.plot( xs , F   ,'-r', label='Fana' )
     plt.plot( xs_, Fnum,':y', label='Fnum' )
@@ -70,86 +75,120 @@ def plotNumDeriv( xs, E, F, F_=None, title="" ):
     plt.title(title)
     #plt.xlael()
 
+def evalCharge( xa,xb,ca,cb ):
+    Sab, si, xab, dSab, (dSsa,dXsa,dXxa,dS_dsa), (dSsb,dXsb,dXxb,dS_dsb) = clc.product3D_s_deriv( sa,xa, sb,xb )
+    cab = ca*cb
+    qaa = ca*ca
+    qbb = cb*cb
+    qab = 2*Sab*cab
+    Q     =  qaa + qbb + qab
+    dQdxa =  cab*dSab*2
+    dQdxb = -cab*dSab*2
+    dQdca = 2*ca + 2*Sab*cb
+    dQdcb = 2*cb + 2*Sab*ca
+    return Q, (dQdxa,dQdxb,dQdca,dQdcb)
+
+def evalEnergy( xa,xb,ca,cb ):
+    Sab, si, xab, dSab, (dSsa,dXsa,dXxa,dS_dsa), (dSsb,dXsb,dXxb,dS_dsb) = clc.product3D_s_deriv( sa,xa, sb,xb )
+    Va ,dVxa  = potV( xa  )
+    Vb ,dVxb  = potV( xb  )
+    Vab,dVxab = potV( xab )
+    qaa = ca**2
+    qbb = cb**2
+    cab = ca*cb
+    qab = 2*Sab*cab
+    E     = qaa*Va   + qbb*Vb          + qab*Vab
+    dEdxa = qaa*dVxa + cab*Vab*dSab*2  + qab*dVxab*dXxa
+    dEdxb = qbb*dVxb - cab*Vab*dSab*2  + qab*dVxab*dXxb
+    dEdca = 2*ca*Va  + 2*cb*Sab*Vab
+    dEdcb = 2*cb*Vb  + 2*ca*Sab*Vab
+    return E,(dEdxa,dEdxb,dEdca,dEdcb)
+
+def outprojectNormalForce( dEdx, dQdx, E, Q=1 ):
+    if isinstance(Q,int):
+        return dEdx   - E*dQdx
+    else:
+        return dEdx/Q - E*dQdx/Q**2
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     #x0 = 0.00001; x1 = 0.00001; dx =  0.05
 
-    ca = 0.5
-    cb = 0.5
-    sa = 0.5
-    sb = 0.5
+    ca = 1.6
+    cb = -0.4
+    sa = 0.35
+    sb = 0.65
 
     xa =  -0.5
     xb =  +0.5
 
-    #xa =  np.arange( x0, x0+dx*n, dx )
-    xa =  np.arange( -2.0, 3.0, 0.01 )
+    xa =  np.arange( -2.0, 3.0, 0.01 );     xs  = xa
+    #xb =  np.arange( -2.0, 3.0, 0.01 );     xs  = xb
+    #ca =  np.arange( -2.0, 2.0, 0.01 );     xs  = ca
+    #ca =  np.arange( -2.0, 2.0, 0.01 );     xs  = ca.copy()
+    #cb =  np.arange( -2.0, 2.0, 0.01 );     xs  = cb.copy()
 
-    ts = (xa + xb + ca + cb)*0
-
-    xs  = xa
-    xs_ = xs[1:-1]
-
-    Sab, si, xab, dSab, (dSsa,dXsa,dXxa,dS_dsa), (dSsb,dXsb,dXxb,dS_dsb) = clc.product3D_s_deriv( sa,xa, sb,xb )
-
-    cab = ca*cb
-    qaa = ca*ca
-    qbb = ca*cb
-    qab = 2*Sab*ca*cb
+    #print "xs ", xs
 
     # --- Charge constrain 1=Q=<psi|psi> 
-    Qtot  =  qaa + qbb + qab
-    dQdxa =  cab*dSab*2
-    dQdxb = -cab*dSab*2
-    dQdca = 2*ca + 2*Sab*cb
-    dQdcb = 2*cb + 2*Sab*ca
 
-    renorm = 1/np.sqrt(Qtot)
-    ca*=renorm
-    cb*=renorm
-    cab = ca*cb
+    #bNormalize = False
+    bNormalize = True
 
-    # --- Total energy functional
-    Va ,dVxa  = potV( xa  )
-    Vb ,dVxb  = potV( xb  )
-    Vab,dVxab = potV( xab )
-    Etot  = qaa*Va   + qbb*Vb        + qab*Vab
-    dEdxa = qaa*dVxa + cab*Vab*dSab*2  + qab*dVxab*dXxa
-    dEdxb = qbb*dVxa - cab*Vab*dSab*2  + qab*dVxab*dXxb
-    dEdca = 2*ca*Va  + 2*cb*Sab*Vab
-    dEdcb = 2*ca*Vb  + 2*ca*Sab*Vab
+    if bNormalize:
+        Q,_ = evalCharge( xa,xb,ca,cb )
+        rescale = 1./np.sqrt(Q)
+        ca *= rescale
+        cb *= rescale
 
-    #print dEdcb
+    Q,(dQdxa,dQdxb,dQdca,dQdcb) = evalCharge( xa,xb,ca,cb )
+    E,(dEdxa,dEdxb,dEdca,dEdcb) = evalEnergy( xa,xb,ca,cb )
 
-    #AdQ = (dQdxa**2    + ts) + (dQdxb**2     + ts) + (dQdca**2     + ts) + (dQdcb**2     + ts)
-    #dQE = (dQdxa*dEdxa + ts) + (dQdxb**dEdxb + ts) + (dQdca**dEdca + ts) + (dQdcb**dEdcb + ts)
+    #Sab, si, xab, dSab, (dSsa,dXsa,dXxa,dS_dsa), (dSsb,dXsb,dXxb,dS_dsb) = clc.product3D_s_deriv( sa,xa, sb,xb )
+    #plotNumDeriv( xs, xab, dXxa+xs*0, title="xab(xa)" )
 
-    AdQ = dQdxa**2    +  dQdxb**2   + dQdca**2    + dQdcb**2
-    dQE = dQdxa*dEdxa + dQdxb*dEdxb + dQdca*dEdca + dQdcb*dEdcb 
-    C   = -dQE/np.sqrt(AdQ) 
+    #plotNumDeriv( xs, Q, dQdxa, title="Q(xa)" )
+    #plotNumDeriv( xs, Q, dQdxb, title="Q(xb)" )
+    #plotNumDeriv( xs, Q, dQdca, title="Q(ca)" )
+    #plotNumDeriv( xs, Q, dQdcb, title="Q(cb)" )
 
-    C *=0.3
+    '''
+    plotNumDeriv( xs, Q, dQdca, title="E_(ca)" )
+    plotNumDeriv( xs, E, dEdca, title="E_(ca)" )
+    E_     = E/Q
+    dEdca_ = dEdca/Q - (E/Q**2)*dQdca
+    plotNumDeriv( xs, E_, dEdca_, title="E_(ca)" )
+    '''
 
-    dEdxa_ = dEdxa + C*dQdxa
-    dEdxb_ = dEdxb + C*dQdxb
-    dEdca_ = dEdca + C*dQdca
-    dEdcb_ = dEdcb + C*dQdcb
-    
-    #Etot  = qab*Vab
-    #dEdxa = cab*Vab*dSab*2  + qab*dVxab*dXxa
-    #dEdxb =-cab*Vab*dSab*2  + qab*dVxab*dXxb
-    #dEdca = cb*Sab*Vab
-    #dEdcb = ca*Sab*Vab
+    '''
+    plotNumDeriv( xs, Q, dQdcb, title="E_(ca)" )
+    plotNumDeriv( xs, E, dEdcb, title="E_(ca)" )
+    E_     = E/Q
+    dEdcb_ = dEdcb/Q - (E/Q**2)*dQdcb
+    plotNumDeriv( xs, E_, dEdcb_, title="E_(ca)" )
+    '''
 
-    #plotNumDeriv( xa, ca, Qtot, "Qtot(ca)" )
-    #plotNumDeriv( xa, Sab, dSab, "Qtot(xa)" )
-    #plotNumDeriv( xa, xab, dXxa+xa*0, "xab" )
-    #plotNumDeriv( xa, Qtot, dQdxa, "Qtot(xa)" )
-    plotNumDeriv( xa, Etot, dEdxa, dEdxa_, "Etot(xa)" )
-    #plotNumDeriv( xa, Etot, dEdxa, dQdxa, "Etot(xa)" )
+        
+    if bNormalize:
+        Q = 1; E_ = E
+        #E_ = E/Q; 
+        dEdxa_ = outprojectNormalForce( dEdxa, dQdxa, E, Q )
+        dEdxb_ = outprojectNormalForce( dEdxb, dQdxb, E, Q )
+        dEdca_ = outprojectNormalForce( dEdca, dQdca, E, Q )
+        dEdcb_ = outprojectNormalForce( dEdcb, dQdcb, E, Q )
+        #print "xs ", xs
+        #print "E ", E
+        plotNumDeriv( xs, E_, dEdxa_, title="E_(xa)" )
+        #plotNumDeriv( xs, E_, dEdxb_, title="E_(xb)" )
+        #plotNumDeriv( xs, E_, dEdca_, title="E_(ca)" )
+        #plotNumDeriv( xs, E_, dEdcb_, title="E_(cb)" )
+    else:    
+        #plotNumDeriv( xs, E, dEdxa, title="E(xa)" )
+        #plotNumDeriv( xs, E, dEdxb, title="E(xb)" )
+        plotNumDeriv( xs, E, dEdca, title="E(ca)" )
+        #plotNumDeriv( xs, E, dEdcb, title="E(cb)" )
+        pass
 
-    #plt.figure(); plt.plot( xa, C, label="C(xa)" )
 
     plt.legend()
     plt.show()
