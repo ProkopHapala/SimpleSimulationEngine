@@ -113,6 +113,41 @@ def outprojectNormalForce( dEdx, dQdx, E, Q=1 ):
     else:
         return dEdx/Q - E*dQdx/Q**2
 
+def test( what="xa", ca=1.6, cb=-0.4, sa=0.35, sb=0.65, xa=-0.5, xb=+0.5, bNormalize=True ):
+    if   what=="xa":
+        xa =  np.arange( -2.0, 3.0, 0.01 );   xs  = xa
+    elif what=="xb":
+        xb =  np.arange( -2.0, 3.0, 0.01 );   xs  = xb
+    elif what=="sa":
+        sa =  np.arange( 0.5, 1.5, 0.01 );    xs  = sa
+    elif what=="sb":
+        sb =  np.arange( 0.5, 1.5, 0.01 );    xs  = sb
+    elif what=="ca":
+        ca =  np.arange( -2.0, 2.0, 0.01 );   xs  = ca.copy()
+    elif what=="cb":
+        cb =  np.arange( -2.0, 2.0, 0.01 );   xs  = cb.copy()
+    if bNormalize:
+        Q,_ = evalCharge( xa,xb,ca,cb )
+        rescale = 1./np.sqrt(Q)
+        ca *= rescale
+        cb *= rescale
+    Q,(dQdxa,dQdxb,dQdca,dQdcb,dQdsa,dQdsb) = evalCharge( xa,xb,ca,cb )
+    E,(dEdxa,dEdxb,dEdca,dEdcb,dEdsa,dEdsb) = evalEnergy( xa,xb,ca,cb )
+    Sab, si, xab, dSab, (dSsa,dXsa,dXxa,dS_dsa), (dSsb,dXsb,dXxb,dS_dsb) = clc.product3D_s_deriv( sa,xa, sb,xb )
+    if   what=="xa":
+        plotNumDeriv( xs, E, dEdxa, title="E(xa)" )
+    elif what=="xb":
+        plotNumDeriv( xs, E, dEdxb, title="E(xb)" )
+    elif what=="sa":
+        plotNumDeriv( xs, E, dEdsa, title="E(sa)" )
+    elif what=="sb":
+        plotNumDeriv( xs, E, dEdsb, title="E(sb)" )
+    elif what=="ca":
+        plotNumDeriv( xs, E, dEdca, title="E(ca)" )
+    elif what=="cb":
+        plotNumDeriv( xs, E, dEdcb, title="E(cb)" )
+
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     #x0 = 0.00001; x1 = 0.00001; dx =  0.05
@@ -121,16 +156,15 @@ if __name__ == "__main__":
     cb = -0.4
     sa = 0.35
     sb = 0.65
-
     xa =  -0.5
     xb =  +0.5
 
     #xa =  np.arange( -2.0, 3.0, 0.01 );     xs  = xa
     #xb =  np.arange( -2.0, 3.0, 0.01 );     xs  = xb
     #ca =  np.arange( -2.0, 2.0, 0.01 );     xs  = ca
-    #ca =  np.arange( -2.0, 2.0, 0.01 );     xs  = ca.copy()
+    ca =  np.arange( -2.0, 2.0, 0.01 );     xs  = ca.copy()
     #cb =  np.arange( -2.0, 2.0, 0.01 );     xs  = cb.copy()
-    sa =  np.arange( 0.5, 1.5, 0.01 );     xs  = sa
+    #sa =  np.arange( 0.5, 1.5, 0.01 );     xs  = sa
     #sb =  np.arange( 0.5, 1.5, 0.01 );     xs  = sb
 
 
@@ -178,15 +212,18 @@ if __name__ == "__main__":
         dEdsb_ = outprojectNormalForce( dEdsb, dQdsb, E, Q )
         #print "xs ", xs
         #print "E ", E
-        plotNumDeriv( xs, E_, dEdsa_, title="E_(sa)" )
+        #plotNumDeriv( xs, E_, dEdsa_, title="E_(sa)" )
         #plotNumDeriv( xs, E_, dEdsb_, title="E_(sb)" )
         #plotNumDeriv( xs, E_, dEdxa_, title="E_(xa)" )
         #plotNumDeriv( xs, E_, dEdxb_, title="E_(xb)" )
-        #plotNumDeriv( xs, E_, dEdca_, title="E_(ca)" )
-        #plotNumDeriv( ca, E_, dEdca_, title="E_(ca)" )
-        #plotNumDeriv( xs, ca, ca*0, title="E_(ca)" )
-        #print "ca ", ca
-        #plotNumDeriv( xs, E_, dEdcb_, title="E_(cb)" )
+        plotNumDeriv( xs, E_, dEdca_*rescale, title="E_(ca)" )
+        #plotNumDeriv( xs, E_, dEdcb_*rescale, title="E_(cb)" )
+        #dcadx = (ca[2:]-ca[:-2])/(xs[2:]-xs[:-2])
+        #plotNumDeriv( xs, cb, ca, title="cb_(cb)" ); 
+        #plt.plot(xs, 2*Sab*ca*cb, label="qab" ); plt.legend()
+        #plt.plot(xs, ca**2 + cb**2 + 2*Sab*ca*cb, label="Qtot" ); plt.legend()
+        #plotNumDeriv( xs[1:-1], E_[1:-1], dEdcb_[1:-1]*dcadx, title="E_(cb)" )
+       
     else:    
         #plotNumDeriv( xs, E, dEdsa, title="E(sa)" )
         #plotNumDeriv( xs, E, dEdsb, title="E(sb)" )
