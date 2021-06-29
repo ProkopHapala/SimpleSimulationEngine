@@ -57,6 +57,13 @@ def potV( x, K=1.0 ):
     dEdx = K*np.cos(x)
     return E, dEdx
 
+'''
+def potV( x, K=1.0, s=0 ):
+    x0=0
+    E,fr,fs = clc.Coulomb( r, s )
+    return E, fr
+'''
+
 def plotNumDeriv( xs, E, F, F_=None, title="" ):
     plt.figure()
     #dx   = xs[1]-xs[0]
