@@ -41,7 +41,7 @@ Erf approximation:
 \endverbatim
 */
 
-
+/*
 const double const_hbar_SI      = 1.054571817e-34;    ///< [J.s]  #6.582119569e-16 # [eV/s]
 const double const_Me_SI        = 9.10938356e-31;     ///< [kg]
 const double const_e_SI         = 1.602176620898e-19; ///< [Coulomb]
@@ -57,6 +57,9 @@ const double const_Ry_eV  = 13.6056925944;
 const double const_El_eVA = const_El_SI/( const_e_SI*const_Angstroem_SI );
 const double const_K_eVA  = (const_El_eVA*const_El_eVA)/(2*const_Ry_eV);
 const double const_Ke_eVA = const_K_eVA*1.5;
+*/
+
+#include "physics_constants.h"
 
 
 // ================================================================
@@ -65,7 +68,7 @@ const double const_Ke_eVA = const_K_eVA*1.5;
 
 inline double addKineticGauss( double s, double& fs ){
     double is  = 1/s;
-    double is2 = is*is*const_Ke_eVA;
+    double is2 = is*is*(const_K_eVA*1.5);
     //printf( "addKineticGauss s %g is %g is2 %g const_Ke_eVA %20.10f const_K_eVA %20.10f \n", s, is, is2, const_Ke_eVA, const_K_eVA );
     fs += 2.*is2*is;
     return is2;

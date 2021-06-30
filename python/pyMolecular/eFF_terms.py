@@ -46,7 +46,7 @@ const_Angstroem = 1.0e-10
 
 const_bohr_eVA =  0.52917724
 
-const_K     =  const_hbar**2/const_Me
+const_K     =  const_hbar**2/(2*const_Me)    # see schroedinger equation : https://en.wikipedia.org/wiki/Schr%C3%B6dinger_equation#Preliminaries
 const_El    =  const_e**2/(4.*np.pi*const_eps0)
 
 const_Hartree = const_El**2/const_K
@@ -54,20 +54,30 @@ const_Ry      = 0.5 * const_Hartree
 const_Ry_eV   = 13.6056925944
 const_El_eVA  = const_El/( const_e*const_Angstroem )
 
-const_K_eVA  = (const_El_eVA**2)/(2*const_Ry_eV)
+# prefactor ( h^2/(2me)) from Schroedinger equation can be derived from Hartree energy (https://en.wikipedia.org/wiki/Hartree)
+# Eh= 2Ry = me * (e^2/(4pi eps0 hbar ))^2 = (me/(hbar^2)) * (e^2/(4pi eps0))^2 = (2*me/(hbar^2))/2 * const_El^2 = (const_El^2) / (2*const_K)
+# 2Eh=4Ry =  const_El^2/ const_K
+# const_K = const_El^2 / ( 4*Ry ) 
 
-print "const_El, const_El_eVA ", const_El, const_El_eVA
-print "const_Ry const_Ry_eV ", const_Ry, const_Ry/const_eV
-print "const_K, const_K_eVA ", const_K, const_K_eVA
+#const_K_eVA  = (const_El_eVA**2)/(2*const_Ry_eV)  # is wrong
+const_K_eVA  = (const_El_eVA**2)/(4*const_Ry_eV)     # should be, see 
 
-#exit()
+print "const_Ry const_Ry_eV ",   const_Ry, const_Ry/const_eV
+print "const_El, const_El_eVA ", const_El, const_El_eVA,  (const_El/const_El_eVA )/const_Angstroem
+print "const_K, const_K_eVA   ", const_K,  const_K_eVA,   (const_K/const_K_eVA   )/(const_Angstroem**2)
+
+
+const_K_eVA_  = const_K  / ( const_eV * const_Angstroem**2 )
+const_El_eVA_ = const_El / ( const_eV * const_Angstroem    )
+
+print "const_El_eVA const_El_eVA_ ",  const_El_eVA, const_El_eVA_ 
+print "const_K_eVA  const_K_eVA_   ", const_K_eVA, const_K_eVA_ 
+
+
 
 #const_K  =   const_hbar**2/const_Me   #   [ eV * A^2 ]
 #const_K  = 0.1* 30.0824137226  # [eV*A^2] hbar[J.s]^2/(Me [kg])   /  (  eV[J]*A^2[m])    # (6.62607015e-34^2/9.10938356e-31)/1.602176620898e-19/10e-20
 #const_Ke =  1.5*const_K
-
-const_Ke_eVA = const_K_eVA*1.5
-print "const_Ke_eVA ", const_Ke_eVA
 
 #const_El =  14. # 14 (1./((4*np.pi*const_eps0))
 
@@ -75,15 +85,16 @@ sqrt2 = np.sqrt(2.)
 
 def Kinetic( s ):
     '''
-    Ek = (hbar^2/me) (3./2.) 1/s^2
+    Ek = (hbar^2/me) (3./2.) 1/s^2      ... is wrong
+    Ek = (hbar^2/(2*me)) (3./2.) 1/s^2  ... should be, see https://en.wikipedia.org/wiki/Schr%C3%B6dinger_equation#Definition
     '''
-    return const_Ke_eVA/(s**2)
+    return const_K_eVA*(3/2.)/(s**2)
 
 def El( r, qq, si=0, sj=0 ):
     if si>0:
         if sj>0:
             si = np.sqrt( si**2 + sj**2 )
-        return const_El_eVA * (qq/r) * spc.erf( sqrt2 * r/s )
+        return const_El_eVA * (qq/r) * spc.erf( r/s )
     else:
         return const_El_eVA * (qq/r)
 
@@ -91,11 +102,11 @@ def El_aa( r, qq ):
     return const_El_eVA * (qq/r)
 
 def El_ae( r, qq, s ):
-    return const_El_eVA * (qq/r) * spc.erf( sqrt2 * r/s )
+    return const_El_eVA * (qq/r) * spc.erf( r/s )
 
 def El_ee( r, qq, si, sj ):
     s = np.sqrt( si**2 + sj**2 )
-    return const_El_eVA * (qq/r) * spc.erf( sqrt2 * r/s )
+    return const_El_eVA * (qq/r) * spc.erf( r/s )
 
 def getT( r, si, sj ):
     #print "getT si, sj ", si, sj
@@ -345,7 +356,7 @@ def run_Hmolecule():
 
 if __name__ == "__main__":
 
-    extent=( 0.5,8.0,  0.5,4.5 )
+    extent=( 0.25,6.0,  0.25,4.0 )
     xs = np.arange( extent[0], extent[1], 0.05 )
     ys = np.arange( extent[2], extent[3], 0.1  )
 

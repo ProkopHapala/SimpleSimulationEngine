@@ -3,29 +3,11 @@
 #define GaussianBasis_h
 
 #include "fastmath.h"
-
+#include "physics_constants.h"
 
 namespace Gauss{
 
 static int iDEBUG = 0;
-
-// TODO : this should go elsewhere (physical constants or something)
-const double const_hbar_SI      = 1.054571817e-34;    ///< [J.s]  #6.582119569e-16 # [eV/s]
-const double const_Me_SI        = 9.10938356e-31;     ///< [kg]
-const double const_e_SI         = 1.602176620898e-19; ///< [Coulomb]
-const double const_eps0_SI      = 8.854187812813e-12; ///< [F.m = Coulomb/(Volt*m)]
-const double const_eV_SI        = 1.602176620898e-19; ///< [J]
-const double const_Angstroem_SI = 1.0e-10;
-
-const double const_K_SI   =  const_hbar_SI*const_hbar_SI/const_Me_SI;
-const double const_El_SI  =  const_e_SI*const_e_SI/(4.*M_PI*const_eps0_SI);
-const double const_Ry_SI  = 0.5 * const_El_SI*const_El_SI/const_K_SI;
-
-const double const_Ry_eV  = 13.6056925944;
-const double const_El_eVA = const_El_SI/( const_e_SI*const_Angstroem_SI );
-const double const_K_eVA  = (const_El_eVA*const_El_eVA)/(2*const_Ry_eV);
-const double const_Ke_eVA = const_K_eVA*1.5;
-
 
 #define _Gauss_Tr0(s)      const_K_eVA*-8.35249199525*s
 #define _Gauss_dTr0_ds     const_K_eVA*-8.35249199525
@@ -192,10 +174,12 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     // This gives correct hydrogen molecule
     double Amp = const_El_eVA;
     //double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
-    double is  = 1/s;
+    //double is  = 1/s;
+    double is  = 1/(s*M_SQRT2);
     double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
     double r_s = r*is;
-    fs  = gauss_p8(r_s ) *is*is*is*(M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
+    //fs  = gauss_p8(r_s ) *is*is*is*(M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
+    fs  = gauss_p8(r_s ) *is*is*is*(M_2_SQRTPI*2*Amp);  // How is it possible that "is" was added ?
     E *= Amp;
     fr*= Amp*(1/(r+1e-16)); // ToDo : erfx_e6( )   should return (fr/r) to make this more efficient
 

@@ -21,6 +21,8 @@ bPrintInfo = False
 label=""
 plt  =None
 
+ss_glob=None; xs_glob=None; cs_glob=None
+
 rnd_pos  = 0
 rnd_size = 0
 rnd_coef = 0
@@ -216,17 +218,15 @@ def plot_Terms( xs=None, xname="epos", inds=(0,0) ):
         plt.figure(figsize=(5,5))
         for i in range(nterm):
             plt.plot( xs, Es[:,i], label=term_names[i] )
-        plt.plot    ( xs, Etot, ":k", lw=2, label="Etot"  )
+        plt.plot    ( xs, Etot, "k", lw=4, label="Etot"  )
         plt.grid();plt.legend();
         plt.title(label)    
     return xs, Etot, Es
 
-def test_ETerms( xname="epos", inds=(0,0), x0=0 ):
+def test_ETerms( xname="epos", inds=(0,0), xs=xs_glob ):
     init_effmc( natom_=1, norb_=2, perOrb_=2, sz=0.25, dist=0.2 )
     effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=-1,    AA=1, AE=1, AECoulomb=1, AEPauli=1 )
-    x0  += x0_glob
-    xs = np.arange(x0,x0+nx*dx,dx)
-    return plot_Terms( xname=xname, inds=inds ) 
+    return plot_Terms( xname=xname, inds=inds, xs=xs ) 
 
 # ========= Check Forces
 
@@ -247,7 +247,7 @@ def processForces( xs,Es,fs ):
         plt.title(label)
     return Err
 
-def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0, xs=None ):
+def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), xs=None ):
     nind = len(inds)
     if(nind==1):
         szs  = (natom,)
@@ -255,9 +255,9 @@ def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0, xs=None ):
         szs  = (norb,perOrb,3)[:nind]
     xbuf = effmc.getBuff( xname,szs )
     fbuf = effmc.getBuff( fname,szs )
-    if xs is None:
-        x0  += x0_glob
-        xs = np.arange(x0,x0+nx*dx,dx)
+    #if xs is None:
+    #    x0  += x0_glob
+    #    xs = np.arange(x0,x0+nx*dx,dx)
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
     #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
@@ -274,17 +274,17 @@ def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), x0=0, xs=None ):
 def checkForces_Kinetic_epos( ):
     init_effmc( norb_=1, perOrb_=2, sz=0.75, dist=-0.1 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, kinetic=1 )
-    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0), xs=xs_glob )
 
 def checkForces_Kinetic_esize( ):
     init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=10.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, kinetic=1 )
-    return checkForces( xname="esize",fname="efsize",inds=(0,0), x0=0.25 )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0), xs=ss_glob )
 
 def checkForces_Kinetic_ecoef( ):
     init_effmc( norb_=1, perOrb_=2, sz=0.75, dist=-0.1 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, kinetic=1 )
-    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
+    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0), xs=cs_glob )
 
 # ========= Hartree
 
@@ -292,105 +292,106 @@ def checkForces_Hartree_epos( ):
     #init_effmc( norb_=2, perOrb_=2, sz=0.2, dist=1.0 )
     init_effmc_2x2( sz=0.5 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, coulomb=1 )
-    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0), xs=xs_glob )
 
 def checkForces_Hartree_esize( ):
     #init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
     init_effmc_2x2( sz=0.5 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, coulomb=1 )
-    return checkForces( xname="esize",fname="efsize",inds=(0,0) )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0), xs=ss_glob )
 
 def checkForces_Hartree_ecoef( ):
     #init_effmc( norb_=2, perOrb_=2, sz=0.75, dist=0.25 )
     init_effmc_2x2( sz=0.5 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, coulomb=1 )
-    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
+    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0), xs=cs_glob )
 
 # ========= Pauli
 
 def checkForces_Pauli_epos( ):
     init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, pauli=1 )
-    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0), xs=xs_glob )
 
 def checkForces_Pauli_esize( ):
     init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, pauli=1 )
-    return checkForces( xname="esize",fname="efsize",inds=(0,0) )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0), xs=ss_glob )
 
 def checkForces_Pauli_ecoef( ):
     init_effmc( norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, pauli=1 )
-    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
+    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0), xs=cs_glob )
 
 # ========= Atom-Electron Coulomb
 
 def checkForces_AQ_epos( ):
     init_effmc( natom_=1, norb_=1, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm,   AE=1, AECoulomb=1, AEPauli=-1 )
-    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0), xs=xs_glob )
 
 def checkForces_AQ_esize( ):
     init_effmc( natom_=1, norb_=1, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm,  AE=1, AECoulomb=1, AEPauli=-1 )
-    return checkForces( xname="esize",fname="efsize",inds=(0,0) )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0), xs=ss_glob )
 
 def checkForces_AQ_ecoef( ):
     init_effmc( natom_=1, norb_=1, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm,  AE=1, AECoulomb=1, AEPauli=-1 )
-    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
+    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0), xs=cs_glob )
 
 # ========= Atom-Electron Pauli
 
 def checkForces_AP_epos( ):
     init_effmc( natom_=1, norb_=1, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm,   AE=1, AECoulomb=-1, AEPauli=+1 )
-    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0), xs=xs_glob )
 
 def checkForces_AP_esize( ):
     init_effmc( natom_=1, norb_=1, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm,  AE=1, AECoulomb=-1, AEPauli=+1 )
-    return checkForces( xname="esize",fname="efsize",inds=(0,0) )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0), xs=ss_glob )
 
 def checkForces_AP_ecoef( ):
     init_effmc( natom_=1, norb_=1, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm,  AE=1, AECoulomb=-1, AEPauli=+1 )
-    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
+    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0), xs=cs_glob )
 
 # ========= Atom-Atom Electrostatics
 
 def checkForces_AA_pos( ):
     init_effmc( natom_=1, norb_=0, perOrb_=0, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=-1,   AE=1, AECoulomb=+1, AEPauli=+1 )
-    return checkForces( xname="apos",fname="aforce",inds=(0,) )
+    return checkForces( xname="apos",fname="aforce",inds=(0,), xs=xs_glob )
 
 # ========= Total
 
 def checkForces_Tot_epos( ):
     init_effmc( natom_=1, norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, kinetic=1, coulomb=1, pauli=-1,    AA=1, AE=1, AECoulomb=1, AEPauli=1 )
-    return checkForces( xname="epos",fname="efpos",inds=(0,0,0) )
+    return checkForces( xname="epos",fname="efpos",inds=(0,0,0), xs=xs_glob )
 
 def checkForces_Tot_esize( ):
     init_effmc( natom_=1, norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, kinetic=1, coulomb=1, pauli=-1,    AA=1, AE=1, AECoulomb=1, AEPauli=1 )
-    return checkForces( xname="esize",fname="efsize",inds=(0,0) )
+    return checkForces( xname="esize",fname="efsize",inds=(0,0), xs=ss_glob )
 
 def checkForces_Tot_ecoef( ):
     init_effmc( natom_=1, norb_=2, perOrb_=2, sz=0.5, dist=1.0 )
     effmc.setSwitches_( normalize=iNorm, normForce=iNorm, kinetic=1, coulomb=1, pauli=-1,    AA=1, AE=1, AECoulomb=1, AEPauli=1 )
-    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0) )
+    return checkForces( xname="ecoef",fname="efcoef",inds=(0,0), xs=cs_glob )
 
 # ========= Check Normalization derivatives
 
-def check_dS( xname="ecoef", fname="enfcoef", inds=(0,0), x0=0 ):
+def check_dS( xname="ecoef", fname="enfcoef", inds=(0,0), xs=None ):
     nind = len(inds)
     szs  = (norb,perOrb,3)[:nind]
     xbuf = effmc.getBuff( xname,szs )
     fbuf = effmc.getBuff( fname,szs )
     oQs  = effmc.getBuff( "oQs",(norb) )
-    x0  += x0_glob
-    xs   = np.arange(x0,x0+nx*dx,dx)
+    #x0  += x0_glob
+    #xs   = np.arange(x0,x0+nx*dx,dx)
+    #xs=xs_glob
     Es   = np.zeros(len(xs))
     fs   = np.zeros(len(xs))
     effmc.eval()  # ---- This is to make sure initial normalization is not a problem
@@ -404,28 +405,28 @@ def check_dS( xname="ecoef", fname="enfcoef", inds=(0,0), x0=0 ):
 def check_dS_epos( ):
     init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
     effmc.setSwitches_( normalize=-1, normForce=1 )
-    return check_dS( xname="epos", fname="enfpos", inds=(0,0,0) )
+    return check_dS( xname="epos", fname="enfpos", inds=(0,0,0), xs=xs_glob )
 
 def check_dS_esize(  ):
     init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
     effmc.setSwitches_( normalize=-1, normForce=1 )
-    return check_dS( xname="esize", fname="enfsize", inds=(0,0), x0=0.25 )
+    return check_dS( xname="esize", fname="enfsize", inds=(0,0), xs=ss_glob )
 
 def check_dS_ecoef( ):
     init_effmc( norb_=1, perOrb_=2, sz=1.0, dist=0.5 )
     effmc.setSwitches_( normalize=-1, normForce=1 )
-    return check_dS( xname="ecoef", fname="enfcoef", inds=(0,0) )
+    return check_dS( xname="ecoef", fname="enfcoef", inds=(0,0), xs=cs_glob )
 
 # ========= Check Normalization derivatives
 
-def check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0), x0=0 ):
+def check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0), xs=None ):
     nind = len(inds)
     szs  = (norb,perOrb,3)[:nind]
     xbuf = effmc.getBuff( xname,szs )
     fbuf = effmc.getBuff( fname,szs )
-    x0  += x0_glob
-    xs = np.arange(x0,x0+nx*dx,dx)
-    print " x0  ", x0
+    #x0  += x0_glob
+    #xs = np.arange(x0,x0+nx*dx,dx)
+    #print " x0  ", x0
     Es = np.zeros(len(xs))
     fs = np.zeros(len(xs))
     for i in range(nx):
@@ -436,15 +437,15 @@ def check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0), x0=0 ):
 
 def check_Coulomb_rhoP_( ):
     init_effmc( norb_=2, perOrb_=1, sz=0.8, dist=-0.0 )
-    return check_Coulomb( xname="rhoP", fname="rhofP", inds=(0,0,0) )
+    return check_Coulomb( xname="rhoP", fname="rhofP", inds=(0,0,0), xs=xs_glob )
 
 def check_Coulomb_rhoS_( ):
     init_effmc( norb_=2, perOrb_=1, sz=0.8, dist=-0.5 )
-    return check_Coulomb( xname="rhoS", fname="rhofS", inds=(0,0), x0=0.5 )
+    return check_Coulomb( xname="rhoS", fname="rhofS", inds=(0,0), xs=ss_glob )
 
 def check_Coulomb_rhoQ_( ):
     init_effmc( norb_=2, perOrb_=1, sz=0.8, dist=-0.1 )
-    return check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0) )
+    return check_Coulomb( xname="rhoQ", fname="rhofQ", inds=(0,0), xs=cs_glob )
 
 def test_EvalFuncDerivs( r0=None, s0=None, label="test_EvalFuncDerivs"):
     # - Note check firts what is currently in evalFuncDerivs()
@@ -467,8 +468,15 @@ def test_Hatom():
     # - Note check first what is currently in evalFuncDerivs()
     init_effmc( natom_=1, norb_=1, perOrb_=1, sz=0.5, dist=1.0, aQ=-1,aQsz=0.0, aP=0.0,aPsz=0.0 )
     effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=1, coulomb=1, pauli=1,    AA=1, AE=1, AECoulomb=1, AEPauli=-1 )
-    xs = np.arange(0.4,3.0,0.05)
-    plot_Terms(rs=xs)
+    xs = np.arange(0.3,3.0,0.05)
+    plot_Terms( xs=xs, xname="esize" )
+
+    import eFF_terms as eff
+    Ek,Eae = eff.Hatom(xs)
+    plt.plot(xs, Ek, ':',     label="Ek_eFF")
+    plt.plot(xs, Eae,':',     label="Eae_eFF")
+    plt.plot(xs, Ek+Eae, ':', label="Etot_eFF")
+    plt.legend()
 
 def checkForces_H_2g( inds=(0,0) ):
     global label
@@ -559,7 +567,8 @@ if __name__ == "__main__":
     #np.random.seed( 8)
     import matplotlib.pyplot as plt_
     global plt,label
-    global dx,nx,x0_glob
+    #global dx,nx,x0_glob
+    global ss_glob,xs_glob,cs_glob
     global rnd_pos, rnd_size, rnd_coef
     global iNorm
     x0_glob = 0.00001
@@ -574,9 +583,14 @@ if __name__ == "__main__":
     #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.2
     #rnd_pos  = 0.2; rnd_size = 0.2; rnd_coef = 0.5
     #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
-    
-    iNorm = +1
 
+    ss_glob = np.arange( 0.1,3.0,0.01)
+    xs_glob = np.arange(-2.0,2.0,0.02)
+    cs_glob = np.arange(-1.0,2.0,0.02)
+    
+    #iNorm = +1
+
+    test_Hatom()     #; plt.show(); exit(0)
     #checkForces_H_2g( inds=(0,0) ); plt.show(); exit(0)
 
     #dx=0.02
@@ -596,12 +610,13 @@ if __name__ == "__main__":
 
     tests_results = []
     tests_funcs = []
-    #tests_funcs += [ test_ProjectWf, test_Poisson ]
+
+    tests_funcs += [ test_ProjectWf, test_Poisson ]
     #tests_funcs += [ check_dS_epos           , check_dS_esize           , check_dS_ecoef             ]
-    tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize, checkForces_Kinetic_ecoef  ]
-    tests_funcs += [ checkForces_Pauli_epos  , checkForces_Pauli_esize  , checkForces_Pauli_ecoef    ]
-    #tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize, checkForces_Hartree_ecoef  ]
-    tests_funcs += [ checkForces_AQ_epos     , checkForces_AQ_esize     ,  checkForces_AQ_ecoef      ]
+    #tests_funcs += [ checkForces_Kinetic_epos, checkForces_Kinetic_esize, checkForces_Kinetic_ecoef  ]
+    #tests_funcs += [ checkForces_Pauli_epos  , checkForces_Pauli_esize  , checkForces_Pauli_ecoef    ]
+    tests_funcs += [ checkForces_Hartree_epos, checkForces_Hartree_esize, checkForces_Hartree_ecoef  ]
+    #tests_funcs += [ checkForces_AQ_epos     , checkForces_AQ_esize     ,  checkForces_AQ_ecoef      ]
     #tests_funcs += [ checkForces_AP_epos     , checkForces_AP_esize     ,  checkForces_AP_ecoef      ]
     #tests_funcs += [ checkForces_AA_pos ]
     #tests_funcs += [ checkForces_Tot_epos, checkForces_Tot_esize ,  checkForces_Tot_ecoef  ]

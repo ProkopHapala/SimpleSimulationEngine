@@ -5,8 +5,11 @@ E = <psi|   Nabla^2 + V |psi>
 
 '''
 
-const_K_eVA  =  7.61996440364  # [eV]
-const_El_eVA = 14.3996453606  # [eV]
+#const_K_eVA  =  7.61996440364  # [eV]
+const_K_eVA  =  3.80998220182  # [eV]
+const_El_eVA = 14.3996453606   # [eV]
+bohr_eVA     = 0.52917724      # [A]
+
 
 import numpy as np
 
@@ -82,8 +85,10 @@ if __name__ == "__main__":
     plt.plot(ss,Es[2,:],'g',label="Eae")
 
     import eFF_terms as eff
-    EkAn,EaeAn = eff.Hatom(ss); EaeAn*=np.sqrt(0.5); EtotAn = EkAn+EaeAn
-    EkAu,EaeAu = eff.Hatom_au_( ss ); EkAu*=const_K_eVA; EaeAu*=const_K_eVA;   EtotAu = EkAu + EaeAu
+    EkAn,EaeAn = eff.Hatom(ss);       
+    #EaeAn*=np.sqrt(0.5); 
+    EtotAn = EkAn+EaeAn
+    EkAu,EaeAu = eff.Hatom_au_( ss*eff.const_Ry_eV*np.sqrt(2) ); EkAu*=2*eff.const_Ry_eV; EaeAu*=2*eff.const_Ry_eV;   EtotAu = EkAu + EaeAu
 
     plt.plot(ss,EtotAn,"k:",lw=2,label="EtotAn")
     plt.plot(ss,EkAn  ,"r:",lw=2,label="EkinAn")
@@ -93,6 +98,7 @@ if __name__ == "__main__":
     plt.plot(ss,EkAu  ,"r--",lw=2,label="EkinAu")
     plt.plot(ss,EaeAu ,"g--",lw=2,label="EaeAu")
 
+    plt.legend()
     plt.grid()
 
     #plt.figure()

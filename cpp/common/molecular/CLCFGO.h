@@ -1978,8 +1978,8 @@ double evalAA(){
             //v_sum +=  (ecoef[i_] * const_El_eVA) * erf_6_plus( r/( esize[i_]        ) )/r; // This is using spread/size of wavefunction blob
             //v_sum   +=  (rhoQ [i_] * const_El_eVA) * erf_6_plus( r/( rhoS [i_]*M_SQRT2) )/r; // This is using spread/size of density      blob
             double fr,fs;
-            //v_sum += rhoQ [i_] * Gauss::Coulomb( r, rhoS[i_], fr, fs );
-            v_sum += rhoQ [i_] * Gauss::Coulomb( r, rhoS[i_]*M_SQRT2, fr, fs );  // this factor M_SQRT2 should not be necessary if rhoS[i_] is width of charge density blobs (not wave functions)
+            v_sum += rhoQ [i_] * Gauss::Coulomb( r, rhoS[i_], fr, fs );
+            //v_sum += rhoQ [i_] * Gauss::Coulomb( r, rhoS[i_]*M_SQRT2, fr, fs );  // this factor M_SQRT2 should not be necessary if rhoS[i_] is width of charge density blobs (not wave functions)
         }
         return v_sum;
     }
@@ -2079,6 +2079,7 @@ bool loadFromFile( char const* filename ){
 
 void printSetup(){
     printf("===CLCFGO Setup :\n");
+    printf("const_K_eVA %g const_El_eVA %g \n", const_K_eVA, const_El_eVA );
     printf("iPauliModel %i \n", iPauliModel );
     printf("bRescaleKinetic %i \n", bRescaleKinetic );
     printf("KPauliKin %g KPauliOverlap %g \n", KPauliKin, KPauliOverlap );
