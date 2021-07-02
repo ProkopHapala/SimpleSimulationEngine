@@ -3,7 +3,7 @@
 import numpy as np
 import scipy.special as spc
 import CLCFGO_coulomb_derivs as clc
-
+import matplotlib.pyplot as plt
 
 '''
 
@@ -50,23 +50,26 @@ Because we re-normalize wavefunctions in each step, we can assume S=1, which we 
 dEi/dx = (dH/dx) + Hii*(dS/dx) = (dH/dx) + Ei*(dS/dx)
 '''
 
-def potV( x, s=0, K=1.0, x0=0, s0=0.2, y0=0.2 ):
+def potV( x, s=0, K=-1.0, x0=0, s0=0.2, y0=0.2 ):
+    #print " s ", s
     x_   = x-x0
     r    = np.sqrt( x_**2 + y0**2  )
     dr_x = x_/r
     #s_   = np.sqrt( s**2 + s0**2 )
     #ds_s = s/s_
-    E,fr,fs = clc.Coulomb( r, s )
+    #E,fr,fs = clc.Coulomb( r, s )
+    E,fr,fs = clc.Coulomb_new(r, s )
     return E*K, fr*r*dr_x*K, fs*-s*K
 
-def plotNumDeriv( xs, E, F, F_=None, title="" ):
-    plt.figure()
+def plotNumDeriv( xs, E, F, F_=None, title="", bNewFig=True ):
+    if bNewFig:
+        plt.figure()
     #dx   = xs[1]-xs[0]
     dx2   = xs[2:]-xs[:-2]
     xs_  = xs[1:-1]
     #Fnum = (E[2:]-E[:-2])/(2*dx)
     Fnum = (E[2:]-E[:-2])/(dx2)
-    plt.plot( xs , E   ,'-k', label='E'    )
+    plt.plot( xs , E   ,'--k', lw=3, label='E'    )
     plt.plot( xs , F   ,'-r', label='Fana' )
     plt.plot( xs_, Fnum,':y', label='Fnum' )
     if F_ is not None:
@@ -94,16 +97,18 @@ def evalCharge(  A, B ):
     return Q, (dQdxa,dQdsa,dQdca),(dQdxb,dQdcb,dQdsb)
 
 def evalEnergy( A, B ):
+    M_SQRT1_2 = 1/np.sqrt(2)
     (xa,sa,ca) = A
     (xb,sb,cb) = B
     Sab, sab , xab, dSab, (dSsa,dXsa,dXxa,dS_dsa), (dSsb,dXsb,dXxb,dS_dsb) = clc.product3D_s_deriv( sa,xa, sb,xb )
-    Va ,dVxa ,dVsa  = potV( xa,  sa  )
-    Vb ,dVxb ,dVsb  = potV( xb,  sb  )
+    Va ,dVxa ,dVsa  = potV( xa,  sa*M_SQRT1_2  )
+    Vb ,dVxb ,dVsb  = potV( xb,  sb*M_SQRT1_2  )
     Vab,dVxab,dVsab = potV( xab, sab )
     qaa = ca**2
     qbb = cb**2
     cab = ca*cb
     qab = 2*Sab*cab
+    
     E     = qaa*Va   + qbb*Vb          + qab*Vab
     dEdxa = qaa*dVxa + cab*Vab*dSab*2  + qab*dVxab*dXxa
     dEdxb = qbb*dVxb - cab*Vab*dSab*2  + qab*dVxab*dXxb
@@ -111,14 +116,27 @@ def evalEnergy( A, B ):
     dEdcb = 2*cb*Vb  + 2*ca*Sab*Vab
     dEdsa = cab*Vab*dS_dsa*2 + qab*dVxab*dXsa  + qab*dVsab*dSsa + qaa*dVsa
     dEdsb = cab*Vab*dS_dsb*2 + qab*dVxab*dXsb  + qab*dVsab*dSsb + qaa*dVsb
+    
     '''
-    E     =  qab*Vab
+    E     = qab*Vab
     dEdxa = +cab*Vab*dSab*2  + qab*dVxab*dXxa
     dEdxb = -cab*Vab*dSab*2  + qab*dVxab*dXxb
-    dEdca = +2*cb*Sab*Vab + ca*0
-    dEdcb = +2*ca*Sab*Vab + cb*0
-    dEdsa = cab*Vab*dS_dsa*2 + qab*dVxab*dXsa + qab*dVsab*dSsa
-    dEdsb = cab*Vab*dS_dsb*2 + qab*dVxab*dXsb + qab*dVsab*dSsb
+    dEdca = + 2*cb*Sab*Vab
+    dEdcb = + 2*ca*Sab*Vab
+    dEdsa = cab*Vab*dS_dsa*2 + qab*dVxab*dXsa  + qab*dVsab*dSsa
+    dEdsb = cab*Vab*dS_dsb*2 + qab*dVxab*dXsb  + qab*dVsab*dSsb
+    '''
+    '''
+    E     = qaa*Va      +Sab*0
+    #for i in range(len(xa)):
+    #    #print "py xa %g E %g  qaa %g Va %g " %(xa[i], E[i], qaa, Va[i] )
+    #    print "py xa %g E %g  e %g qij %g qi %g qj %g " %(xa[i], E[i], Va[i], qaa, ca, ca )
+    dEdxa = qaa*dVxa    +Sab*0
+    dEdxb = 0           +Sab*0
+    dEdca = 2*ca*Va     +Sab*0
+    dEdcb = 0           +Sab*0
+    dEdsa =  + qaa*dVsa +Sab*0
+    dEdsb = 0           +Sab*0
     '''
     return E,(dEdxa,dEdsa,dEdca),(dEdxb,dEdsb,dEdcb)
 
@@ -128,11 +146,12 @@ def outprojectNormalForce( dEdx, dQdx, E, Q=1 ):
     else:
         return dEdx/Q - E*dQdx/Q**2
 
-def run_test( what="xa", bNormalize=True,     ca=1.6,cb=-0.4, sa=0.35,sb=0.55, xa=-0.4,xb=+0.5 ):
+def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4  ):
     if what=="xa":
-        xa  =  np.arange( -2.0, 3.0, 0.01 );   xs  = xa
+        #xa  =  np.arange( -2.0, 3.0, 0.01 );   xs  = xa
+        xa  =  np.arange( -2.0, 3.0, 0.1 );   xs  = xa
     elif what=="sa":
-        sa =  np.arange(  0.25, 2.0, 0.01 );     xs  = sa
+        sa =  np.arange(  0.25, 2.0, 0.01 );   xs  = sa
     elif what=="ca":
         ca =  np.arange( -2.0, 2.0, 0.01 );    xs  = ca.copy()
 
@@ -146,10 +165,6 @@ def run_test( what="xa", bNormalize=True,     ca=1.6,cb=-0.4, sa=0.35,sb=0.55, x
     Q,(dQdxa,dQdsa,dQdca),(dQdxb,dQdcb,dQdsb) = evalCharge( A,B )
     E,(dEdxa,dEdsa,dEdca),(dEdxb,dEdsb,dEdcb) = evalEnergy( A,B )
 
-    #Sab, sab, xab, dSab, (dSsa,dXsa,dXxa,dS_dsa), (dSsb,dXsb,dXxb,dS_dsb) = clc.product3D_s_deriv( sa,xa, sb,xb )
-    #Va ,dVxa ,dVsa  = potV( xa, s=sa )
-    #Vab,dVxab,dVsab = potV( xab, sab )
-        
     if bNormalize:
         Q = 1; E_ = E
         dEdxa = outprojectNormalForce( dEdxa, dQdxa, E, Q )
@@ -158,7 +173,14 @@ def run_test( what="xa", bNormalize=True,     ca=1.6,cb=-0.4, sa=0.35,sb=0.55, x
         #dEdxb = outprojectNormalForce( dEdxb, dQdxb, E, Q )
         #dEdsb = outprojectNormalForce( dEdsb, dQdsb, E, Q )
         #dEdcb = outprojectNormalForce( dEdcb, dQdcb, E, Q )*rescale
+    
+    return Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs
 
+def run_test( what="xa", bNormalize=True, xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 ):
+    Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs= evalTest( what=what, bNormalize=bNormalize,     xa=xa,sa=sa,ca=ca,     xb=xb,sb=sb,cb=cb  )
+    #Sab, sab, xab, dSab, (dSsa,dXsa,dXxa,dS_dsa), (dSsb,dXsb,dXxb,dS_dsb) = clc.product3D_s_deriv( sa,xa, sb,xb )
+    #Va ,dVxa ,dVsa  = potV( xa, s=sa )
+    #Vab,dVxab,dVsab = potV( xab, sab )
     if   what=="xa":
         #plotNumDeriv( xs, Va, dVxa, title="Va(xa)" )
         #plotNumDeriv( xs, Vab, dVxab*dXxa, title="Vab(xa)" )
@@ -173,12 +195,12 @@ def run_test( what="xa", bNormalize=True,     ca=1.6,cb=-0.4, sa=0.35,sb=0.55, x
     elif what=="ca":
         plotNumDeriv( xs, E, dEdca, title="E(ca)" )
 
-
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    run_test( what="xa", bNormalize=True )
-    run_test( what="sa", bNormalize=True )
-    run_test( what="ca", bNormalize=True )
+    bNormalize=False
+    #bNormalize=True
+    run_test( what="xa", bNormalize=bNormalize )
+    run_test( what="sa", bNormalize=bNormalize )
+    run_test( what="ca", bNormalize=bNormalize )
     plt.legend()
     plt.show()
 

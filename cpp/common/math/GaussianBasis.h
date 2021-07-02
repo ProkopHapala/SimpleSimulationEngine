@@ -134,6 +134,10 @@ inline double product1D_s_deriv( double si, double r2, double xi,   double sj,do
 
 
 inline double Coulomb( double r, double s, double& fr, double& fs ){
+
+    //printf( "Gauss::Coulomb s %g \n", s );
+    //printf( " %g ", s );
+
     /*
     // "s" is considered from rho ( density blobl; not wave function blob )
     // ToDo: maybe we can do without s=sqrt(s2) and r=sqrt(r2)
@@ -182,7 +186,7 @@ inline double Coulomb( double r, double s, double& fr, double& fs ){
     fs  = gauss_p8(r_s ) *is*is*is*(M_2_SQRTPI*2*Amp);  // How is it possible that "is" was added ?
     E *= Amp;
     fr*= Amp*(1/(r+1e-16)); // ToDo : erfx_e6( )   should return (fr/r) to make this more efficient
-
+    //printf( "C++ r %g is %g E %g \n", r, is, E );
     /*
     double Amp = const_El_eVA;
     double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671

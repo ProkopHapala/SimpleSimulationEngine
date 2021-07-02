@@ -501,6 +501,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             double si  = esize[i];
             double qii = ci*ci; // overlap = 1
             Q      += qii;
+            //if(ii==0) printf( "\n qii(%g|%g)", qii, ci );
 
             if( bMakeRho ){
                 Qs[ii]  = qii;
@@ -1571,7 +1572,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 ij++;
             }
         }
-        printf( "E %g T %g eS %g S %gaPars[ia].w \n", T*eS, T, eS, S );
+        printf( "E %g T %g eS %g S %g \n", T*eS, T, eS, S );
         return T*eS;
         //return E;
     }
@@ -1698,12 +1699,15 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
     //const double si = aQsize[ia];
     const double qi = aPars[ia].x;
     const double si = aPars[ia].y;
+    //printf( "si %g \n", si );
     //const double si = eAbWs[ia].z;
     int j0  = getRhoOffset(jo);
     int njo = onq[jo];
     double E=0;
+    //printf( "evalArho s: " );
     for(int j=j0; j<j0+njo; j++){
     //int j=j0+2;{ // DEBUG
+        //if(j!=0) continue;
         Vec3d  pj = rhoP[j];
         Vec3d Rij = pj-pi;
         double r2 = Rij.norm2();
@@ -1714,6 +1718,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         double fr,fs, qij = qi*qj; // NOTE : there should not be factor of 2 (2*qi*qj) because all pairs qi,qj are evaluated independently
         if( fabs(qij)<1e-16) continue;
         double e = Gauss::Coulomb( sqrt(r2), sqrt(si*si+sj*sj), fr, fs );
+        //printf( "e %g \n", e   );
         Vec3d fp = Rij*(-fr*qij);
         fs*=qij;
 
@@ -1722,9 +1727,12 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         rhofS[j] += fs*sj;
         rhofQ[j] += -e*qi;
         E        +=  e*qij;
+        //printf( "C++ r %g E %g e %g qij %g qi %g qj %g \n", sqrt(r2), e*qij, e, qij, qi, qj );
         //printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );
         //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
     }
+    
+    //printf( "\n" );
     oEs[jo]+=E*0.5;
     //printf( "evalArho E %g \n", E );
     return E;
@@ -1745,7 +1753,7 @@ double evalAE(){
                 applyPairForceAE ( ia, jo, dBs, Ss, Amp );
                 */
                 EaePaul += pauliAtomOrb( ia, jo );
-                //printf( "EaePaul %g bEvalAEPauli %i \n", EaePaul, bEvalAEPauli );
+                printf( "EaePaul %g bEvalAEPauli %i \n", EaePaul, bEvalAEPauli );
             }
             // ---- Coulomb
             if(bEvalAECoulomb){

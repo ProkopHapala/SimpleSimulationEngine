@@ -48,8 +48,9 @@ const_El_eVA = const_El_SI/( const_e_SI*const_Angstroem_SI );
 const_K_eVA  = (const_El_eVA*const_El_eVA)/(2*const_Ry_eV);
 const_Ke_eVA = const_K_eVA*1.5;
 
-M_SQRT2 = 1.41421356237
-M_SQRT1_2 = 1/M_SQRT2 
+M_SQRT2    = 1.41421356237
+M_SQRT1_2  = 1/M_SQRT2 
+M_2_SQRTPI = 1.12837916709551257390
 
 def Coulomb( r, s ):
     '''
@@ -94,7 +95,37 @@ def Coulomb( r, s ):
     #    #print  " r %g fr %g = (f1 %g * e2 %g )+(e1 %g *f2 %g) r_2s %g r %g s %g " %(r[i], fr[i], f1[i],e2[i], e1[i],f2[i], r_2s[i], r[i], s ) 
     #    #print "Gauss::Coulomb r %g s %g E %g fr %g fs %g " %((r+0*s)[i],(s+0*r)[i], E[i], fr[i], fs[i]  )
     #    print "Gauss::Coulomb r,s %g,%g  f1,2 %g,%g e1,2 %g,%g ir %g " %( (r+0*s)[i],(s+0*r)[i], (f1+s*0)[i], (f2+s*0)[i], (e1+s*0)[i], (e2+s*0)[i],   (ir+s*0)[i]  )
+    return E,fr,fs
 
+def Coulomb_new( r, s ):
+    '''
+    // This gives correct hydrogen molecule
+    double Amp = const_El_eVA;
+    //double is  = M_SQRT2/s;  // Original from paper (eq.2c)        http://aip.scitation.org/doi/10.1063/1.3272671
+    //double is  = 1/s;
+    double is  = 1/(s*M_SQRT2);
+    double E   = erfx_e6( r, is, fr ); // This is for charge-density blobs (assuming si,sj comes from charge denisty)
+    double r_s = r*is;
+    //fs  = gauss_p8(r_s ) *is*is*is*(M_2_SQRTPI*Amp);  // How is it possible that "is" was added ?
+    fs  = gauss_p8(r_s ) *is*is*is*(M_2_SQRTPI*2*Amp);  // How is it possible that "is" was added ?
+    E *= Amp;
+    fr*= Amp*(1/(r+1e-16)); // ToDo : erfx_e6( )   should return (fr/r) to make this more efficient
+    '''
+    Amp   = const_El_eVA
+    is_   = 1./(s*M_SQRT2)
+    #print len(r) 
+    #print len(is_) 
+    E, fr = erfx_approx_d( r, is_ )                        # This is for charge-density blobs (assuming si,sj comes from charge denisty)
+
+    #print " E ", E 
+    #print " r ", r 
+    r_s   = r*is_
+    #fs   = gauss_p8(r_s ) *is*is*is*(M_2_SQRTPI*Amp)     # How is it possible that "is" was added ?
+    fs    = gauss_p8(r_s ) *is_*is_*is_*(M_2_SQRTPI*2*Amp)   # How is it possible that "is" was added ?
+    E    *= Amp
+    fr   *= Amp*(1/(r+1e-16))                             # ToDo : erfx_e6( )   should return (fr/r) to make this more efficient
+    #for i in range(len(r)):
+    #    print "py r %g is %g E %g " %(r[i], (is_+r*0)[i], E[i] );
 
     return E,fr,fs
 
@@ -207,32 +238,6 @@ def checkNumDeriv( x, func, dfunc, name ):
     plotVsNum( x,dy,dynum, name )
     plt.plot(x, y,'-.', label=name+"_F" )
 
-
-'''
-inline double erfx_e6( double x ){
-    if( x>4.5 ){ return 1./x; }
-    double xx = x*x;
-    double even =  0.9850156202961753  +xx*(-0.02756061032579559  +xx*(-0.00188409579491924  +xx*(-0.003098629936170076 +xx*(-0.001348858853909826  +xx*(-3.98946569988845e-05 ) ) ) ) );
-    double odd  = -0.13893350387140332 +xx*(-0.007664292475021448 +xx*( 0.003046826535877866 +xx*( 0.002879338499080343 +xx*( 0.0003260490382458129 +xx*( 1.97093650414204e-06 ) ) ) ) );
-    double  t = even + x*odd;
-    t*=t; t*=t; t*=t; // ^8
-    return 1./( t + x );
-}
-
-inline double erfx_e9( double x ){
-    if( x>4.5 ) return 1./x;
-    double xx = x*x;
-    if(x<1.){
-        return 1.1283791662308296 +xx*(-0.3761262972953429 +xx*(0.1128363404233098 +xx*(-0.02685603827999912 +xx*(0.005192885862299865 +xx*(-0.0008053004722300972 +xx*(8.004020068129447e-05 ) ) ) ) ) );
-    }
-    double even =   0.9903386741213333  +xx*( 0.08180278811069948 +xx*( 0.219787883285348  +xx*( 0.0893543139653664  +xx*( 0.0071698531450102   +xx*( 8.644883946761633e-05 ) ) ) ) );
-    double odd  =  -0.17511814497584813 +xx*(-0.2010794452848663  +xx*(-0.1692686167813105 +xx*(-0.03129254573733003 +xx*(-0.001037968593234627 +xx*(-3.164137211658646e-06 ) ) ) ) );
-    double t = even + x*odd;
-    t*=t; t*=t; t*=t; // ^8
-    return 1./( t + x );
-}
-'''
-
 def erfx_approx( x, s ):
     x=np.abs(x)
     ys   = 1./x 
@@ -248,42 +253,84 @@ def erfx_approx( x, s ):
     #ys[mask] = ( t )[mask]
     return ys
 
-def derfx_approx( x, s ):
+'''
+inline double erfx_e6( double x_, double k, double& dy ){
+    // approximation of erf(k*x)/x and its derivative with maximum error ~ 1e-6
+    double x =x_*k;
+    if( x>4.5 ){ double y=1/x_; dy=-y*y; return y; }
+    double xx = x*x;
+    double even  =  0.9850156202961753  +xx*(-0.02756061032579559  +xx*(-0.00188409579491924  +xx*(-0.003098629936170076 +xx*(-0.001348858853909826  +xx*(-3.98946569988845e-05 ) ) ) ) );
+    double odd   = -0.13893350387140332 +xx*(-0.007664292475021448 +xx*( 0.003046826535877866 +xx*( 0.002879338499080343 +xx*( 0.0003260490382458129 +xx*( 1.97093650414204e-06 ) ) ) ) );
+    double deven =                           -0.05512122065159118  +xx*(-0.00753638317967696  +xx*(-0.01859177961702045  +xx*(-0.01079087083127861   +xx*(-0.000398946569988845 ) ) ) )  ;
+    double dodd  = -0.1389335038714033  +xx*(-0.02299287742506434  +xx*( 0.01523413267938933  +xx*( 0.0201553694935624   +xx*( 0.002934441344212316  +xx*(2.168030154556244e-05 ) ) ) ) );
+    double  t = even    + x*odd;
+    double dt = deven*x +  dodd;
+    double t2 = t*t;
+    double t4 = t2*t2;
+    double dt8_dx = 8*dt*t*t2*t4;
+    double y      = k/(t4*t4 + x);
+    dy            = -y*y*(dt8_dx+1);
+    // ToDo : We will need rather (dy/x) for Gauss:Coulomb() => we need to fit it onece more
+    return y;
+}
+'''
+
+def erfx_approx_d( x_, k ):
     '''
     df(t(x))/dx = (df/dt)*(dt/dx)
     df/dt = (  ) 
     '''
-    x=np.abs(x)
-    ys  =  1./x 
-    dys  = -1./(x*x) 
-    invs = 1/s
-    x *= invs
+    ys  =  1./x_ 
+    dys  = -ys*ys
+
+    x =x_*k;
+
+    mask = np.abs(x)<4.5
     xx = x*x;
     even =  0.9850156202961753  +xx*(-0.02756061032579559  +xx*(-0.00188409579491924  +xx*(-0.003098629936170076 +xx*(-0.001348858853909826  +xx*(-3.98946569988845e-05 ) ) ) ) )
     odd  = -0.13893350387140332 +xx*(-0.007664292475021448 +xx*( 0.003046826535877866 +xx*( 0.002879338499080343 +xx*( 0.0003260490382458129 +xx*( 1.97093650414204e-06 ) ) ) ) )
-
     #deven =                           -0.02756061032579559*2  +xx*(-0.00188409579491924*4  +xx*(-0.003098629936170076*6 +xx*(-0.001348858853909826*8  +xx*(-3.98946569988845e-05*10 ) ) ) ) 
     #dodd  = -0.13893350387140332 +xx*(-0.007664292475021448*3 +xx*( 0.003046826535877866*5 +xx*( 0.002879338499080343*7 +xx*( 0.0003260490382458129*9 +xx*( 1.97093650414204e-06*11 ) ) ) ) )
-
     deven =                          -0.05512122065159118 +xx*(-0.00753638317967696 +xx*(-0.01859177961702045 +xx*(-0.01079087083127861  +xx*(-0.000398946569988845 ) ) ) )      
     dodd  = -0.1389335038714033 +xx*(-0.02299287742506434 +xx*( 0.01523413267938933 +xx*( 0.0201553694935624  +xx*( 0.002934441344212316 +xx*(2.168030154556244e-05 ) ) ) ) )
-
-    print "%.16g %.16g %.16g %.16g %.16g      " %( -0.02756061032579559*2, -0.00188409579491924*4,  -0.003098629936170076*6, -0.001348858853909826*8, -3.98946569988845e-05*10 )
-    print "%.16g %.16g %.16g %.16g %.16g %.16g" %(-0.13893350387140332   , -0.007664292475021448*3,  0.003046826535877866*5,  0.002879338499080343*7, 0.0003260490382458129*9, 1.97093650414204e-06*11 )
-
+    #print "%.16g %.16g %.16g %.16g %.16g      " %( -0.02756061032579559*2, -0.00188409579491924*4,  -0.003098629936170076*6, -0.001348858853909826*8, -3.98946569988845e-05*10 )
+    #print "%.16g %.16g %.16g %.16g %.16g %.16g" %(-0.13893350387140332   , -0.007664292475021448*3,  0.003046826535877866*5,  0.002879338499080343*7, 0.0003260490382458129*9, 1.97093650414204e-06*11 )
     t    =  even   + x*odd;
     dt   = deven*x +  dodd;
     t2 = t*t
     t4 = t2*t2
-    t8 = t4*t4
-    dt8_dx = 8*dt*t*t2*t4
-    
-    D = 1/(t8 + x)
-    mask = np.abs(x)<4.5
-    ys [mask] = (      invs           *D   )[mask]
-    dys[mask] = (-invs*invs*(dt8_dx+1)*D*D )[mask]
-    #ys[mask] = ( t )[mask]
+    dt8_dx = 8*dt*t*t2*t4;
+    y      = k/(t4*t4 + x);
+    dy     = -y*y*(dt8_dx+1);
+    if isinstance( x, float ):
+        if mask: 
+            ys  = y
+            dys = dy
+    else:
+        ys [mask] = y[mask]
+        dys[mask] = dy[mask]
     return ys, dys
+
+def exp_p8( x ):
+    # optimized for decreasing exp(-x)
+    #if(x<-25) return 0;
+    mask = x<-25
+    x = x*0.125;
+    xx = x*x;
+    p = ( (1+x) +
+               xx*( 0.5000000000000000   + 0.1666664718006032   *x +
+               xx*( 0.04166189077950237  + 0.008304046626191663 *x +
+               xx*( 0.001321435070258156 + 0.0001332637951696261*x ) ) ) );
+    p*=p; p*=p; p*=p;
+    if isinstance( x, float ):
+        if mask:
+            p=0
+    else:
+        p[mask]=0
+    return p;
+
+def gauss_p8( x ): 
+    return exp_p8( -x*x );
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

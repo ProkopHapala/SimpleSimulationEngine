@@ -182,7 +182,7 @@ def test_OrbInteraction( Etoll=1e-5, iMODE=1 ):
         plt.title( "test_OrbInteraction funcs "+ label )
         plt.legend(); plt.grid()
         plt.subplot(1,2,2)
-        plt.plot( xs, Ek ,    label=('Ek_ana' ) ); 
+        plt.plot( xs, Ek ,      label=('Ek_ana' ) ); 
         plt.plot( xs, Ek_, ":", label=('Ek_num' ) ); 
         plt.title( "test_OrbInteraction "+label )
         #plt.ylim( 0, 20.0 )
@@ -233,14 +233,14 @@ def test_ETerms( xname="epos", inds=(0,0), xs=xs_glob ):
 def processForces( xs,Es,fs ):
     n=len(xs)
     dx=xs[1]-xs[0]
-    fs_num=(Es[2:]-Es[:-2])/(-2*dx)
+    fs_num=(Es[2:]-Es[:-2])/(2*dx)
     normF2 = (fs**2).sum()
     Err = np.sqrt( ( (fs_num-fs[1:-1])**2/normF2 ).sum()/(n-1) )
     print label, "Error ", Err
     if(plt):
         plt.figure(figsize=(5,5))
         plt.plot( xs,      Es    ,      label="E" )
-        plt.plot( xs,      fs    ,      label="f_ana" )
+        plt.plot( xs,     -fs    ,      label="f_ana" )
         plt.plot( xs[1:-1],fs_num, ":", label="f_num" )
         #plt.plot( xs[1:-1],(fs_num-fs[1:-1])*10.0, label="(f_ana-f_num)*10.0" )
         plt.grid();plt.legend();
@@ -485,10 +485,34 @@ def checkForces_H_2g( inds=(0,0) ):
     #effmc.setSwitches_( normalize=1, normForce=1, kinetic=1,  AE=1, AECoulomb=1 )
     effmc.setSwitches_( normalize=1, normForce=+1, kinetic=1, AE=-1, AECoulomb=-1 )
     effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_problem_sym.fgo"  )
+    effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_compare.fgo"  )
     label="epos"; checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange(-1.0,1.0,0.01) )
     #label="epos"; checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange( 0.1,1.0,0.01) )
     label="esize"; checkForces( xname="esize", fname="efsize", inds=inds, xs=np.arange(1.0,2.0,0.01) )
     label="ecoef"; checkForces( xname="ecoef", fname="efcoef", inds=inds, xs=np.arange(5.0,7.0,0.01) )
+
+def compareForces_H_2g( inds=(0,0), bNormalize=True ):
+    import CLCFGO_normalization_derivs_2 as effpy
+    global label
+    if bNormalize:
+        effmc.setSwitches_( normalize=1, normForce=1, kinetic=-1,  AE=1, AECoulomb=1, AEPauli=-1 )
+    else:
+        effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=-1,  AE=1, AECoulomb=1, AEPauli=-1 )
+    #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, AE=-1, AECoulomb=-1 )
+    #effmc.setSwitches_( normalize=1, normForce=1, kinetic=1,  AE=1, AECoulomb=1 )
+    #effmc.setSwitches_( normalize=1, normForce=+1, kinetic=1, AE=-1, AECoulomb=-1 )
+    effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_compare.fgo"  )
+    effmc.printSetup()
+    effmc.printAtomsAndElectrons()
+
+    Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( bNormalize=bNormalize,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
+
+    label="epos";  checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange(-2.0,3.0,0.1) )
+    effpy.plotNumDeriv( xs, E, dEdxa, F_=None, title="", bNewFig=False )
+    plt.grid()
+
+    #label="esize"; checkForces( xname="esize", fname="efsize", inds=inds, xs=np.arange(1.0,2.0,0.01) )
+    #label="ecoef"; checkForces( xname="ecoef", fname="efcoef", inds=inds, xs=np.arange(5.0,7.0,0.01) )
 
 def test_H2molecule():
     '''
@@ -585,12 +609,14 @@ if __name__ == "__main__":
     #rnd_pos  = 1.0; rnd_size = 0.2; rnd_coef = 0.2
 
     ss_glob = np.arange( 0.1,3.0,0.01)
-    xs_glob = np.arange(-2.0,2.0,0.02)
-    cs_glob = np.arange(-1.0,2.0,0.02)
+    xs_glob = np.arange(-2.0,3.0,0.01)
+    cs_glob = np.arange(-1.0,2.0,0.01)
     
     #iNorm = +1
 
-    test_Hatom()     #; plt.show(); exit(0)
+    #test_Hatom()     #; plt.show(); exit(0)
+    compareForces_H_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
+    #compareForces_H_2g( inds=(0,0), bNormalize=False ); plt.show(); exit(0)
     #checkForces_H_2g( inds=(0,0) ); plt.show(); exit(0)
 
     #dx=0.02
