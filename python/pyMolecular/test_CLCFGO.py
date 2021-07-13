@@ -525,13 +525,15 @@ def checkForces_H_2g( inds=(0,0) ):
     label="esize"; checkForces( xname="esize", fname="efsize", inds=inds, xs=np.arange(1.0,2.0,0.01) )
     label="ecoef"; checkForces( xname="ecoef", fname="efcoef", inds=inds, xs=np.arange(5.0,7.0,0.01) )
 
-def compareForces_H_2g( inds=(0,0), bNormalize=True ):
+def compareForces_H_2g( inds=(0,0), bNormalize=1 ):
     import CLCFGO_normalization_derivs_2 as effpy
     global label
-    if bNormalize:
-        effmc.setSwitches_( normalize=1, normForce=1, kinetic=-1,  AE=1, AECoulomb=1, AEPauli=-1 )
-    else:
-        effmc.setSwitches_( normalize=-1, normForce=-1, kinetic=-1,  AE=1, AECoulomb=1, AEPauli=-1 )
+    
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1,  AE=1, AECoulomb=1, AEPauli=-1 )
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1,  AE=1, AECoulomb=-1, AEPauli=1 )
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=1,  AE=-1, AECoulomb=1, AEPauli=-1 )
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=1,  AE=-1, AECoulomb=1, AEPauli=-1 )
+
     #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, AE=-1, AECoulomb=-1 )
     #effmc.setSwitches_( normalize=1, normForce=1, kinetic=1,  AE=1, AECoulomb=1 )
     #effmc.setSwitches_( normalize=1, normForce=+1, kinetic=1, AE=-1, AECoulomb=-1 )
@@ -543,13 +545,32 @@ def compareForces_H_2g( inds=(0,0), bNormalize=True ):
 
     label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )
     ##label="epos";  checkForces( xname="epos",  fname="enfpos",  inds=inds, xs=np.arange(-2.0,3.0,0.1) )
-    plt.plot( xs, dQdxa*-fnnScale, label="dQdxa_py" )
-    effpy.plotNumDeriv( xs, E, dEdxa, F_=None, title="", bNewFig=False )
+    #plt.plot( xs, dQdxa*-fnnScale, label="dQdxa_py" )
+    #effpy.plotNumDeriv( xs, E, dEdxa, F_=None, title="", bNewFig=False )
     
     plt.grid()
 
     #label="esize"; checkForces( xname="esize", fname="efsize", inds=inds, xs=np.arange(1.0,2.0,0.01) )
     #label="ecoef"; checkForces( xname="ecoef", fname="efcoef", inds=inds, xs=np.arange(5.0,7.0,0.01) )
+
+def compareForces_He_2g( inds=(0,0), bNormalize=1 ):
+    import CLCFGO_normalization_derivs_2 as effpy
+    global label
+    effmc.setPauliMode(0)
+    #effmc.setPauliMode(2)
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=1, pauli=-1, coulomb=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )   # Kinetic -  OK
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=-1, coulomb=-1, AE=1, AECoulomb=1, AEPauli=-1 )   # AECoulomb -  OK
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=-1, coulomb=-1, AE=1, AECoulomb=-1, AEPauli=1 )    # AEPauli   - OK
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=-1, coulomb=1, AE=-1, AECoulomb=-1, AEPauli=-1 )    # ee Coulomb - OK 
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=1, coulomb=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )    # ee Pauli - probably OK (some small difference when energy is high for iPaulModel=2; iPauliModel=0 work well) 
+    effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=1, pauli=1, coulomb=1, AE=1, AECoulomb=1, AEPauli=1 )    # Total - OK
+    effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/He_2g_triplet_asym.fgo"  )
+    effmc.printSetup()
+    effmc.printAtomsAndElectrons()
+    #label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )    
+    label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.02) )  
+    plt.grid()
+
 
 def test_H2molecule():
     '''
@@ -652,7 +673,8 @@ if __name__ == "__main__":
     #iNorm = +1
 
     #test_Hatom()     #; plt.show(); exit(0)
-    compareForces_H_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
+    #compareForces_H_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
+    compareForces_He_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
     #compareForces_H_2g( inds=(0,0), bNormalize=False ); plt.show(); exit(0)
     #checkForces_H_2g( inds=(0,0) ); plt.show(); exit(0)
 

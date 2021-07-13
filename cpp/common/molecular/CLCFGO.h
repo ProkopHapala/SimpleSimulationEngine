@@ -103,7 +103,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     bool bOptSize = true;
     bool bOptCoef = true;
 
-    int  iPauliModel    = 1;
+    int  iPauliModel    = 2;
 
     double KPauliOverlap = 50.0; // ToDo : This is just "bulgarian constant" for now
     double KPauliKin     = 50.0; // ToDo : Not sure if we should use this - perhaps this model of pauli energy should work "ab inition"
@@ -767,7 +767,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         double c = -oEs[io];
         // ---- out-project f -= ds*c
         for(int i=i0; i<i0+perOrb; i++){
-            if(i==0){ printf( "F: %g -= %g * %g \n", efpos[i].x, enfpos[i].x, c   ); }
+            //if(i==0){ printf( "F: %g -= %g * %g \n", efpos[i].x, enfpos[i].x, c   ); }
             efpos [i] .add_mul( enfpos [i], c );
             efsize[i] +=        enfsize[i]* c  ;
             efcoef[i] +=        enfcoef[i]* c  ;
@@ -917,10 +917,11 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             }
         }
         double E;
+        printf("iPauliModel %i \n", iPauliModel);
         if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
             const double S2SAFE = 0.0001;
             double T11 = oEs[io]; // why 0.5 ?
-            double T22 = oEs[jo]; 
+            double T22 = oEs[jo];
             double S2  = Ssum*Ssum;   // Ssum<1
             double D   = 1/(1-S2  + S2SAFE);
             double D2  = D*D;
@@ -935,7 +936,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             forceOrb( jo, kT, DjT );
             forceOrb( io,fS2, fTs+i0 );  // d_T( Tii*S^2/(1+S^2) )
             forceOrb( jo,fS2, fTs+j0 );  // d_T( Tjj*S^2/(1+S^2) )
-            //if(E>1e+4)printf( "pauliOrbPair[%i,%i] E %g S %g T %g D %g | %g %g %g \n", io, jo, E, Ssum, Tsum, D,  (T11 + T22)*fS2,   2*Tsum*fS, fS );
+            printf( "pauliOrbPair[%i,%i] E %g S %g T %g D %g | %g %g %g \n", io, jo, E, Ssum, Tsum, D,  (T11 + T22)*fS2,   2*Tsum*fS, fS );
         }else if(iPauliModel==3){ // Juat for debugging
             E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
             forceOrb( io, 1, DiT );
@@ -978,7 +979,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     }
 
     double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
-        //printf( "======== evalPauli() \n" );
+        printf( "======== evalPauli() \n" );
         EeePaul = 0;
         for(int io=0; io<nOrb; io++){
             for(int jo=0; jo<io; jo++){
@@ -1743,7 +1744,7 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
         //printf( "evalArho[%i,%i] E %g e,q(%g,%g) r %g s(%g,%g) \n", ia,j, e*qij,e,qij, sqrt(r2), si, sj );
         //if(DEBUG_iter==DEBUG_log_iter) printf( "evalArho[%i,%i] qij %g e %g fp.x %g fr %g fs %g | r %g s %g \n", ia,j, qij, e, fp.x,   fr, fs,    s, r );
     }
-    
+
     //printf( "\n" );
     //oEs[jo]+=E*0.5; // why 0.5 ?
     oEs[jo]+=E;
@@ -2162,7 +2163,7 @@ char* orb2str(char* str0, int io){
 char* orbs2str(char* str0){
     char* str=str0;
     for(int i=0; i<nOrb; i++){
-        str+=sprintf(str,"orb_%i\n", i );
+        str+=sprintf(str,"orb_%i E %g \n", i, oEs[i] );
         str=orb2str(str, i);
     }
     return str;

@@ -168,8 +168,8 @@ def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.
     if bNormalize:
         Q = 1; E_ = E
 
-        for i in range(len(dEdxa)):
-            print "pyF: %g -= %g * %g" %(dEdxa[i], dQdxa[i], E[i])
+        #for i in range(len(dEdxa)):
+        #    print "pyF: %g -= %g * %g" %(dEdxa[i], dQdxa[i], E[i])
         dEdxa = outprojectNormalForce( dEdxa, dQdxa, E, Q )
         dEdsa = outprojectNormalForce( dEdsa, dQdsa, E, Q )
         dEdca = outprojectNormalForce( dEdca, dQdca, E, Q )*rescale

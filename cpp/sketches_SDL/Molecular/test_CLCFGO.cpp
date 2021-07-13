@@ -191,7 +191,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
     //RigidAtom     atom1;
     //RigidAtomType type1,type2;
-
+    int perFrame = 10;
     bool bRun = false;
     double dt;
     //double E,dt;
@@ -237,7 +237,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/H_2g.fgo"             );
     //ff.loadFromFile( "data/H_2g_split.fgo"       );
     //ff.loadFromFile( "data/H_2g_problem.fgo"     );
-    ff.loadFromFile( "data/H_2g_problem_sym.fgo"   );
+    //ff.loadFromFile( "data/H_2g_problem_sym.fgo"   );
+    //ff.loadFromFile( "data/H_3g.fgo"   );
+    //ff.loadFromFile( "data/H_5g.fgo"   );
     //ff.loadFromFile( "data/Hanti_2g_anti.fgo"    );
     //ff.loadFromFile( "data/He_singlet.fgo"       );
     //ff.loadFromFile( "data/He_triplet.fgo"       );
@@ -254,6 +256,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/Li_4g.fgo"            );
     //ff.loadFromFile( "data/C_1g.fgo"             );
     //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
+    ff.loadFromFile( "data/C_2g_triplet-.fgo"     );
     //ff.loadFromFile( "data/C_2g_o1.fgo"          );
     //ff.loadFromFile( "data/N2.fgo"               );
     //ff.loadFromFile( "data/O2.fgo"               );
@@ -294,9 +297,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.bOptCoef = 0;
     //ff.ofix[0] = 1;
 
-    ff.iPauliModel = 2;
+    //ff.iPauliModel = 2;
     //ff.iPauliModel = 0;
-    dt = 0.0001;
+    dt = 0.001;
 
     //bDrawWfs  = 0; bDrawRho  = 1;   // Plot Density blobs instead of wavefunctions
 
@@ -367,12 +370,14 @@ void TestAppCLCFSF::draw(){
 
     //dt = 0.001;
     if(bRun){
-        //testColorOfHash();
-        ff.eval();
-        ff.forceInfo();
-        //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, ff.Ek, ff.Eee,ff.EeePaul,  ff.Eae,ff.EaePaul, ff.Eaa );
-
-        double F2 = ff.moveGD(dt);
+        double F2;
+        for(int itr=0; itr<perFrame; itr++){
+            //testColorOfHash();
+            ff.eval();
+            ff.forceInfo();
+            //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, ff.Ek, ff.Eee,ff.EeePaul,  ff.Eae,ff.EaePaul, ff.Eaa );
+            F2 = ff.moveGD(dt);
+        }
 
         printf( "frame[%i] E %g |F| %g \n", frameCount, ff.Etot, sqrt(F2) );
         //printf( "frame[%i] |F| %g E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n", frameCount, sqrt(F2), E, ff.Ek, ff.Eee,ff.EeePaul,ff.EeeExch, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
