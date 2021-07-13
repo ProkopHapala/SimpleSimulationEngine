@@ -374,6 +374,7 @@ void setSwitches(bool bNormalize, bool bEvalKinetic, bool bEvalCoulomb, bool  bE
 }
 
 void setSwitches_(int bNormalize, int bNormForce, int bEvalKinetic, int bEvalCoulomb, int  bEvalExchange, int  bEvalPauli, int bEvalAA, int bEvalAE, int bEvalAECoulomb, int bEvalAEPauli ){
+    //printf( "\n\n\n\n#### setSwitches_ bEvalAEPauli %i \n", bEvalAEPauli );
 #define _setbool(b,i) { if(i>0){b=true;}else if(i<0){b=false;} }
     _setbool( solver.bNormalize     , bNormalize     );
     _setbool( solver.bNormForce     , bNormForce     );

@@ -529,31 +529,30 @@ def compareForces_H_2g( inds=(0,0), bNormalize=1 ):
     import CLCFGO_normalization_derivs_2 as effpy
     global label
     
-    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1,  AE=1, AECoulomb=1, AEPauli=-1 )
-    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1,  AE=1, AECoulomb=-1, AEPauli=1 )
-    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=1,  AE=-1, AECoulomb=1, AEPauli=-1 )
-    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=1,  AE=-1, AECoulomb=1, AEPauli=-1 )
+    bNormalize = 0
 
-    #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, AE=-1, AECoulomb=-1 )
-    #effmc.setSwitches_( normalize=1, normForce=1, kinetic=1,  AE=1, AECoulomb=1 )
-    #effmc.setSwitches_( normalize=1, normForce=+1, kinetic=1, AE=-1, AECoulomb=-1 )
+    effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=+1,  AE=-1, AECoulomb=+1, AEPauli=-1 )    # Kinetic
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1,  AE=+1, AECoulomb=+1, AEPauli=-1 )    # AECoulomb
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1,  AE=+1, AECoulomb=-1, AEPauli=-1 )    # AEPauli
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=+1,  AE=+1, AECoulomb=+1, AEPauli=+1 )    # Total
+
+    #effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g-.fgo"  )
     effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_compare.fgo"  )
     effmc.printSetup()
     effmc.printAtomsAndElectrons()
 
-    Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( bNormalize=bNormalize,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
+    #Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="xa", bNormalize=bNormalize,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
+    Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="ca", bNormalize=bNormalize,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
 
-    label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )
+    #label="epos";   checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )
+    label="ecoef";  checkForces_norm( xname="ecoef",  fname="efcoef", fnname="enfcoef", inds=inds, xs=np.arange( 0.0, 2.0, 0.01 ) )
     ##label="epos";  checkForces( xname="epos",  fname="enfpos",  inds=inds, xs=np.arange(-2.0,3.0,0.1) )
     #plt.plot( xs, dQdxa*-fnnScale, label="dQdxa_py" )
-    #effpy.plotNumDeriv( xs, E, dEdxa, F_=None, title="", bNewFig=False )
+    effpy.plotNumDeriv( xs, E, dEdxa, F_=None, title="", bNewFig=False )
     
     plt.grid()
 
-    #label="esize"; checkForces( xname="esize", fname="efsize", inds=inds, xs=np.arange(1.0,2.0,0.01) )
-    #label="ecoef"; checkForces( xname="ecoef", fname="efcoef", inds=inds, xs=np.arange(5.0,7.0,0.01) )
-
-def compareForces_He_2g( inds=(0,0), bNormalize=1 ):
+def checkForces_He_2g( inds=(0,0), bNormalize=1 ):
     import CLCFGO_normalization_derivs_2 as effpy
     global label
     effmc.setPauliMode(0)
@@ -563,12 +562,14 @@ def compareForces_He_2g( inds=(0,0), bNormalize=1 ):
     #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=-1, coulomb=-1, AE=1, AECoulomb=-1, AEPauli=1 )    # AEPauli   - OK
     #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=-1, coulomb=1, AE=-1, AECoulomb=-1, AEPauli=-1 )    # ee Coulomb - OK 
     #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=1, coulomb=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )    # ee Pauli - probably OK (some small difference when energy is high for iPaulModel=2; iPauliModel=0 work well) 
-    effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=1, pauli=1, coulomb=1, AE=1, AECoulomb=1, AEPauli=1 )    # Total - OK
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=1, pauli=1, coulomb=1, AE=1, AECoulomb=1, AEPauli=1 )    # Total - OK
     effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/He_2g_triplet_asym.fgo"  )
+    #effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g-.fgo"  )
     effmc.printSetup()
     effmc.printAtomsAndElectrons()
     #label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )    
-    label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.02) )  
+    #label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.02) )  
+    label="ecoef";  checkForces_norm( xname="ecoef",  fname="efcoef", fnname="enfcoef", inds=inds, xs=np.arange(-1.0,1.0,0.02) )  
     plt.grid()
 
 
@@ -673,8 +674,8 @@ if __name__ == "__main__":
     #iNorm = +1
 
     #test_Hatom()     #; plt.show(); exit(0)
-    #compareForces_H_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
-    compareForces_He_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
+    compareForces_H_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
+    #checkForces_He_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
     #compareForces_H_2g( inds=(0,0), bNormalize=False ); plt.show(); exit(0)
     #checkForces_H_2g( inds=(0,0) ); plt.show(); exit(0)
 

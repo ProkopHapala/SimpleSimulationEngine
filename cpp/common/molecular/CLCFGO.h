@@ -979,7 +979,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     }
 
     double evalPauli(){ // evaluate Energy components given by direct wave-function overlap ( below cutoff Rcut )
-        printf( "======== evalPauli() \n" );
+        //printf( "======== evalPauli() \n" );
         EeePaul = 0;
         for(int io=0; io<nOrb; io++){
             for(int jo=0; jo<io; jo++){
@@ -1759,15 +1759,8 @@ double evalAE(){
     for(int ia=0; ia<natom; ia++){
         for(int jo=0; jo<nOrb; jo++){
             if(bEvalAEPauli){// --- Pauli Overlap
-                /*
-                double S   = evalAEoverlap( jo, dBs, Ss, aPsize[ia], apos[ia] );
-                double K   = aPcoef[ia];
-                EaePaul   += K*S*S;
-                double Amp = K*S*2;
-                applyPairForceAE ( ia, jo, dBs, Ss, Amp );
-                */
                 EaePaul += pauliAtomOrb( ia, jo );
-                printf( "EaePaul %g bEvalAEPauli %i \n", EaePaul, bEvalAEPauli );
+                //printf( "EaePaul %g bEvalAEPauli %i \n", EaePaul, bEvalAEPauli );
             }
             // ---- Coulomb
             if(bEvalAECoulomb){

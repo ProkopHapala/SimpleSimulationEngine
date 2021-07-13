@@ -153,7 +153,8 @@ def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.
     elif what=="sa":
         sa =  np.arange(  0.25, 2.0, 0.01 );   xs  = sa
     elif what=="ca":
-        ca =  np.arange( -2.0, 2.0, 0.01 );    xs  = ca.copy()
+        #ca = np.arange( -2.0, 2.0, 0.01 );    xs  = ca.copy()
+        ca = np.arange( 0.0, 2.0, 0.01 ); xs  = ca.copy()
 
     if bNormalize:
         Q,_,_ = evalCharge( [xa,sa,ca], [xb,sb,cb] )
