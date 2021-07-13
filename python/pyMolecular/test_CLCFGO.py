@@ -27,6 +27,8 @@ rnd_pos  = 0
 rnd_size = 0
 rnd_coef = 0
 
+fnnScale = 10
+
 # ========= Functions
 
 def init_effmc_2x2( sz=0.5 ):
@@ -230,7 +232,7 @@ def test_ETerms( xname="epos", inds=(0,0), xs=xs_glob ):
 
 # ========= Check Forces
 
-def processForces( xs,Es,fs ):
+def processForces( xs,Es,fs, fns=None, es=None ):
     n=len(xs)
     dx=xs[1]-xs[0]
     fs_num=(Es[2:]-Es[:-2])/(2*dx)
@@ -242,6 +244,10 @@ def processForces( xs,Es,fs ):
         plt.plot( xs,      Es    ,      label="E" )
         plt.plot( xs,     -fs    ,      label="f_ana" )
         plt.plot( xs[1:-1],fs_num, ":", label="f_num" )
+        if fns is not None:
+            plt.plot( xs,fns*fnnScale, ":", label="fns" )
+        if fns is not None:
+            plt.plot( xs,es, ":", label="es" )
         #plt.plot( xs[1:-1],(fs_num-fs[1:-1])*10.0, label="(f_ana-f_num)*10.0" )
         plt.grid();plt.legend();
         plt.title(label)
@@ -268,6 +274,34 @@ def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), xs=None ):
     #print "Es ", Es
     #print "fs ", fs
     return processForces( xs,Es,fs )
+
+def checkForces_norm( xname="ecoef", fname="efcoef", fnname="enfcoef", inds=(0,0), xs=None ):
+    nind = len(inds)
+    if(nind==1):
+        szs  = (natom,)
+    else:    
+        szs  = (norb,perOrb,3)[:nind]
+    xbuf   = effmc.getBuff( xname,szs )
+    fbuf   = effmc.getBuff( fname,szs )
+    fnbuf  = effmc.getBuff( fnname,szs )
+    epsbuf = effmc.getBuff( "oEs",szs[0] )
+    #if xs is None:
+    #    x0  += x0_glob
+    #    xs = np.arange(x0,x0+nx*dx,dx)
+    Es  = np.zeros(len(xs))
+    fs  = np.zeros(len(xs))
+    fns = np.zeros(len(xs))
+    es  = np.zeros(len(xs))
+    #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    for i in range(len(xs)):
+        xbuf[inds]= xs[i]
+        Es[i]  = effmc.eval()
+        fs[i]  = fbuf[inds]
+        fns[i] = fnbuf[inds]
+        es[i]  = epsbuf[inds[0]]
+    #print "Es ", Es
+    #print "fs ", fs
+    return processForces( xs,Es,fs, fns=fns, es=es )
 
 # ========= Kinetic
 
@@ -507,8 +541,11 @@ def compareForces_H_2g( inds=(0,0), bNormalize=True ):
 
     Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( bNormalize=bNormalize,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
 
-    label="epos";  checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange(-2.0,3.0,0.1) )
+    label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )
+    ##label="epos";  checkForces( xname="epos",  fname="enfpos",  inds=inds, xs=np.arange(-2.0,3.0,0.1) )
+    plt.plot( xs, dQdxa*-fnnScale, label="dQdxa_py" )
     effpy.plotNumDeriv( xs, E, dEdxa, F_=None, title="", bNewFig=False )
+    
     plt.grid()
 
     #label="esize"; checkForces( xname="esize", fname="efsize", inds=inds, xs=np.arange(1.0,2.0,0.01) )

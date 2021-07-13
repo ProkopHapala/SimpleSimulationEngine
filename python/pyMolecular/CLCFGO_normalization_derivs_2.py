@@ -70,7 +70,7 @@ def plotNumDeriv( xs, E, F, F_=None, title="", bNewFig=True ):
     #Fnum = (E[2:]-E[:-2])/(2*dx)
     Fnum = (E[2:]-E[:-2])/(dx2)
     plt.plot( xs , E   ,'--k', lw=3, label='E'    )
-    plt.plot( xs , F   ,'-r', label='Fana' )
+    plt.plot( xs , F   ,'--r', label='Fana' )
     plt.plot( xs_, Fnum,':y', label='Fnum' )
     if F_ is not None:
         plt.plot( xs , F_,'-m', label='Fana_' )
@@ -167,13 +167,15 @@ def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.
 
     if bNormalize:
         Q = 1; E_ = E
+
+        for i in range(len(dEdxa)):
+            print "pyF: %g -= %g * %g" %(dEdxa[i], dQdxa[i], E[i])
         dEdxa = outprojectNormalForce( dEdxa, dQdxa, E, Q )
         dEdsa = outprojectNormalForce( dEdsa, dQdsa, E, Q )
         dEdca = outprojectNormalForce( dEdca, dQdca, E, Q )*rescale
         #dEdxb = outprojectNormalForce( dEdxb, dQdxb, E, Q )
         #dEdsb = outprojectNormalForce( dEdsb, dQdsb, E, Q )
         #dEdcb = outprojectNormalForce( dEdcb, dQdcb, E, Q )*rescale
-    
     return Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs
 
 def run_test( what="xa", bNormalize=True, xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 ):

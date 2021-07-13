@@ -398,6 +398,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     }
 
     inline void cleanForces(){
+        for(int i=0; i<nOrb; i++){ oEs[i]=0; };
         for(int i=0; i<natom; i++){ aforce[i] = Vec3dZero; }
         for(int i=0; i<nBas;  i++){ efpos [i] = Vec3dZero; }
         for(int i=0; i<nBas;  i++){ efsize[i] = 0;         }
@@ -529,6 +530,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 //  Sii      = ci^2 <Gi|Gj> ( where <Gi|Gj>=1 because they are normalized )
                 // =>  d_Sii/d_si = 0    and   d_Sii/d_ci = 2*ci
                 enfcoef[i]  += -2*ci;
+                //enfcoef[i]  +=  2*ci;
             }
             ii++;
 
@@ -552,6 +554,9 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                     enfpos [i].add( fij )  ; enfpos [j].sub( fij )   ;
                     enfsize[i]-= dS_dsi*cij; enfsize[j]-= dS_dsj*cij;
                     enfcoef[i]-= S*cj*2    ; enfcoef[j]-= S*ci*2   ;
+                    //enfpos [i].sub( fij )  ; enfpos [j].add( fij )   ;
+                    //enfsize[i]+= dS_dsi*cij; enfsize[j]+= dS_dsj*cij;
+                    //enfcoef[i]+= S*cj*2    ; enfcoef[j]+= S*ci*2   ;
                 }
 
                 if( bMakeRho ){
@@ -589,7 +594,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         onq [io] = ii;
         opos[io] = qcog;
         oQs [io] = Q;
-        oEs [io] = Ek;
+        if(bEvalKinetic)oEs [io] = Ek;
         if( !bEvalKinetic ) Ek=0;
         return Ek;
     }
@@ -751,16 +756,18 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     }
 
     double outProjectNormalForces( int io ){
+        //return 0;
         /// out project component of force which break normalization
         // We calculate derivative of normalized energy
         // Ei_    = Ei/Qi
         // dEi/dx = d(Ei/Qi)/dx = (1/Qi)(dEi/dx) - (Ei/Qi^2)(dQi/dx)
         // Assuming functions are already normalized Qi=1
         // dEi/dx = (dEi/dx) - Ei*(dQi/dx)
-        int i0      = getOrbOffset(io);
+        int i0   = getOrbOffset(io);
         double c = -oEs[io];
         // ---- out-project f -= ds*c
         for(int i=i0; i<i0+perOrb; i++){
+            if(i==0){ printf( "F: %g -= %g * %g \n", efpos[i].x, enfpos[i].x, c   ); }
             efpos [i] .add_mul( enfpos [i], c );
             efsize[i] +=        enfsize[i]* c  ;
             efcoef[i] +=        enfcoef[i]* c  ;
@@ -841,7 +848,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         double f =    2*Ssum*Amp;
         forceOrb( io, f, DiS );
         aforce[ia].add_mul(fpj, f );
-        oEs[io]+=E*0.5;
+        //oEs[io]+=E*0.5; // why 0.5 ?
+        oEs[io]+=E;
         return E;
     }
 
@@ -911,8 +919,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         double E;
         if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
             const double S2SAFE = 0.0001;
-            double T11 = oEs[io];
-            double T22 = oEs[jo];
+            double T11 = oEs[io]; // why 0.5 ?
+            double T22 = oEs[jo]; 
             double S2  = Ssum*Ssum;   // Ssum<1
             double D   = 1/(1-S2  + S2SAFE);
             double D2  = D*D;
@@ -962,8 +970,10 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         //printf( "pauliOrbPair[%i,%i] E %g S %g T %g \n", io, jo, E, Ssum, Tsum );
         //return E;
         //return Ssum;
-        oEs[io]+=E*0.5;
-        oEs[jo]+=E*0.5;
+        //oEs[io]+=E*0.5; // why 0.5 ?
+        //oEs[jo]+=E*0.5;
+        oEs[io]+=E; // why 0.5 ?
+        oEs[jo]+=E;
         return E;
     }
 
@@ -1212,8 +1222,10 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         }
         //printf( " Ecoul[%i,%i] %g \n", io, jo, Ecoul );
         // ToDo : perhaps there should be factor 2 ( i-j and j-i interaction ?)
-        oEs[io]+=Ecoul*0.5;
-        oEs[jo]+=Ecoul*0.5;
+        //oEs[io]+=Ecoul*0.5; // why 0.5 ?
+        //oEs[jo]+=Ecoul*0.5;
+        oEs[io]+=Ecoul;
+        oEs[jo]+=Ecoul;
         return Ecoul;
     }
 
@@ -1733,7 +1745,8 @@ double evalArho( int ia, int jo ){ // Interaction of atomic core with electron d
     }
     
     //printf( "\n" );
-    oEs[jo]+=E*0.5;
+    //oEs[jo]+=E*0.5; // why 0.5 ?
+    oEs[jo]+=E;
     //printf( "evalArho E %g \n", E );
     return E;
 }
