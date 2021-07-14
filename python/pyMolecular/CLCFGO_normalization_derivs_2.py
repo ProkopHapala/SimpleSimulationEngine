@@ -155,8 +155,10 @@ def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.
     elif what=="ca":
         #ca = np.arange( -2.0, 2.0, 0.01 );    xs  = ca.copy()
         ca = np.arange( 0.0, 2.0, 0.01 ); xs  = ca.copy()
+        cb = 1 + ca*0
 
     if bNormalize:
+        print "NORMALIZING ", bNormalize
         Q,_,_ = evalCharge( [xa,sa,ca], [xb,sb,cb] )
         rescale = 1./np.sqrt(Q)
         ca *= rescale
@@ -177,6 +179,9 @@ def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.
         #dEdxb = outprojectNormalForce( dEdxb, dQdxb, E, Q )
         #dEdsb = outprojectNormalForce( dEdsb, dQdsb, E, Q )
         #dEdcb = outprojectNormalForce( dEdcb, dQdcb, E, Q )*rescale
+    n = len(ca)
+    for i in range( n ):
+        print "ca, cb ", ca[i], cb[i]
     return Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs
 
 def run_test( what="xa", bNormalize=True, xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 ):
@@ -199,8 +204,8 @@ def run_test( what="xa", bNormalize=True, xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb
         plotNumDeriv( xs, E, dEdca, title="E(ca)" )
 
 if __name__ == "__main__":
-    bNormalize=False
-    #bNormalize=True
+    #bNormalize=False
+    bNormalize=True
     run_test( what="xa", bNormalize=bNormalize )
     run_test( what="sa", bNormalize=bNormalize )
     run_test( what="ca", bNormalize=bNormalize )

@@ -752,6 +752,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             ii0+=nqOrb;
             i0 +=perOrb;
         }
+        printf( "C++ ca,cb %g %g \n", ecoef[0], ecoef[1] );
         return Ek;
     }
 

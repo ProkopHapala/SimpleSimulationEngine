@@ -277,6 +277,7 @@ def checkForces( xname="ecoef", fname="efcoef", inds=(0,0), xs=None ):
 
 def checkForces_norm( xname="ecoef", fname="efcoef", fnname="enfcoef", inds=(0,0), xs=None ):
     nind = len(inds)
+    print norb,perOrb, " in checkForces_norm "
     if(nind==1):
         szs  = (natom,)
     else:    
@@ -293,7 +294,10 @@ def checkForces_norm( xname="ecoef", fname="efcoef", fnname="enfcoef", inds=(0,0
     fns = np.zeros(len(xs))
     es  = np.zeros(len(xs))
     #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
+    print "xbuf.shape", xbuf.shape, szs, norb, perOrb
     for i in range(len(xs)):
+        if xname=="ecoef":
+            xbuf[(0,1)] = 1
         xbuf[inds]= xs[i]
         Es[i]  = effmc.eval()
         fs[i]  = fbuf[inds]
@@ -518,7 +522,7 @@ def checkForces_H_2g( inds=(0,0) ):
     #effmc.setSwitches_( normalize=1, normForce=-1, kinetic=1, AE=-1, AECoulomb=-1 )
     #effmc.setSwitches_( normalize=1, normForce=1, kinetic=1,  AE=1, AECoulomb=1 )
     effmc.setSwitches_( normalize=1, normForce=+1, kinetic=1, AE=-1, AECoulomb=-1 )
-    effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_problem_sym.fgo"  )
+    #effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_problem_sym.fgo"  )
     effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_compare.fgo"  )
     label="epos"; checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange(-1.0,1.0,0.01) )
     #label="epos"; checkForces( xname="epos",  fname="efpos",  inds=inds, xs=np.arange( 0.1,1.0,0.01) )
@@ -529,10 +533,11 @@ def compareForces_H_2g( inds=(0,0), bNormalize=1 ):
     import CLCFGO_normalization_derivs_2 as effpy
     global label
     
-    bNormalize = 0
+    #bNormalize = -1
+    bNormalize = +1
 
-    effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=+1,  AE=-1, AECoulomb=+1, AEPauli=-1 )    # Kinetic
-    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1,  AE=+1, AECoulomb=+1, AEPauli=-1 )    # AECoulomb
+    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=+1,  AE=-1, AECoulomb=+1, AEPauli=-1 )    # Kinetic
+    effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1,  AE=+1, AECoulomb=+1, AEPauli=-1 )    # AECoulomb
     #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1,  AE=+1, AECoulomb=-1, AEPauli=-1 )    # AEPauli
     #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=+1,  AE=+1, AECoulomb=+1, AEPauli=+1 )    # Total
 
@@ -540,15 +545,23 @@ def compareForces_H_2g( inds=(0,0), bNormalize=1 ):
     effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g_compare.fgo"  )
     effmc.printSetup()
     effmc.printAtomsAndElectrons()
+    global norb,perOrb
+    # natypes,natom,nOrb,nBas,perOrb,perOrb2,nqOrb,nQtot
+    arr = effmc.getDimPointer();    
+    norb   = arr[2]
+    perOrb = arr[4]
+    print norb,perOrb, arr
 
-    #Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="xa", bNormalize=bNormalize,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
-    Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="ca", bNormalize=bNormalize,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
+    #Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="xa", bNormalize=bNormalize,    xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
+    Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="ca", bNormalize=(bNormalize>0),     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
 
     #label="epos";   checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )
     label="ecoef";  checkForces_norm( xname="ecoef",  fname="efcoef", fnname="enfcoef", inds=inds, xs=np.arange( 0.0, 2.0, 0.01 ) )
     ##label="epos";  checkForces( xname="epos",  fname="enfpos",  inds=inds, xs=np.arange(-2.0,3.0,0.1) )
     #plt.plot( xs, dQdxa*-fnnScale, label="dQdxa_py" )
-    effpy.plotNumDeriv( xs, E, dEdxa, F_=None, title="", bNewFig=False )
+    plt.plot( xs, dQdca*-fnnScale, label="dQdca_py" )
+    #effpy.plotNumDeriv( xs, E, dEdxa, F_=None, title="", bNewFig=False )
+    effpy.plotNumDeriv( xs, E, dEdca, F_=None, title="", bNewFig=False )
     
     plt.grid()
 

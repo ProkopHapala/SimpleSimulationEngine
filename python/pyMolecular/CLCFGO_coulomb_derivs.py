@@ -280,7 +280,7 @@ def erfx_approx_d( x_, k ):
     df(t(x))/dx = (df/dt)*(dt/dx)
     df/dt = (  ) 
     '''
-    ys  =  1./x_ 
+    ys  =  1./x_ + 0*k 
     dys  = -ys*ys
 
     x =x_*k;
@@ -302,11 +302,13 @@ def erfx_approx_d( x_, k ):
     dt8_dx = 8*dt*t*t2*t4;
     y      = k/(t4*t4 + x);
     dy     = -y*y*(dt8_dx+1);
-    if isinstance( x, float ):
+    if isinstance( ys, float ):
         if mask: 
             ys  = y
             dys = dy
     else:
+        #print "\n\n\n\n\n ###################"
+        #print " type(ys) ", type(ys), " type(y) ", type(y), " type(k) ", type(k)
         ys [mask] = y[mask]
         dys[mask] = dy[mask]
     return ys, dys
