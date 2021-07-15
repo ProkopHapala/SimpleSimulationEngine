@@ -256,12 +256,12 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/Li_3g.fgo"            );
     //ff.loadFromFile( "data/Li_4g.fgo"            );
     //ff.loadFromFile( "data/B_2g_triplet.fgo"     );
-    ff.loadFromFile( "data/B_2g_triplet_asym.fgo"     );
+    //ff.loadFromFile( "data/B_2g_triplet_asym.fgo"     );
     //ff.loadFromFile( "data/C_1g.fgo"             );
     //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
     //ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
     //ff.loadFromFile( "data/C_2g_o1.fgo"          );
-    //ff.loadFromFile( "data/C_2g_problem.fgo"      );
+    ff.loadFromFile( "data/C_2g_problem.fgo"      );
     //ff.loadFromFile( "data/N2.fgo"               );
     //ff.loadFromFile( "data/O2.fgo"               );
     //ff.loadFromFile( "data/O2_half.fgo"          );
@@ -282,6 +282,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     ff.bEvalAA        = 1;
 
     //ff.bNormalize     = 0;
+    //ff.bNormForce     = 0;
     //ff.bEvalKinetic   = 0;
     //ff.bEvalCoulomb   = 0;
     //ff.bEvalPauli     = 0;
@@ -316,6 +317,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     ff.forceInfo();
     printf( "E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n",E, ff.Ek, ff.Eee,ff.EeePaul,ff.EeeExch, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
     //exit(0);
+
+    printf( "epos[0].x " ); getNumDeriv( ff, ff.epos [0].x, ff.efpos [0].x, 0.0001, 0 );
+    printf( "esize[0]  " ); getNumDeriv( ff, ff.esize[0]  , ff.efsize[0]  , 0.0001, 0 );
+    printf( "ecoef[0]  " ); getNumDeriv( ff, ff.ecoef[0]  , ff.efcoef[0]  , 0.0001, 0 );
+    //ff.eval();
+    //ff.printElectrons();
+    exit(0);
 
     // ======= Test Density projection
     plot1.init();

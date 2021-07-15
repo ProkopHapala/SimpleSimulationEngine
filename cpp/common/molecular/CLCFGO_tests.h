@@ -16,6 +16,23 @@
 #define iTEST_POS_DERIV  0
 #define iTEST_SIZE_DERIV 1
 
+
+
+void getNumDeriv( CLCFGO& ff, double& x_prt, double& fx_prt, double dx, bool bNromalize=1 ){
+    //printf( " ######## getNumDeriv() \n" );
+    //if(bNromalize){ ff.bNormalize=true; ff.bNormForce=true; }
+    ff.eval();
+    double x0 = x_prt ;
+    double fx = fx_prt;
+    //if(bNromalize){ ff.bNormalize=false; ff.bNormForce=false; }
+    x_prt = x0-dx; double E1 = ff.eval();
+    x_prt = x0+dx; double E2 = ff.eval();
+    x_prt = x0;
+    printf( "Fana %g Fnum %g \n", fx, -(E2-E1)/(2*dx) );
+}
+
+
+
 void testDerivsCoulombModel( CLCFGO& solver, int n, double* xs, double* Es, double* Fs, int what  ){
     //initTestElectrons( );
     solver.toRho(0,1, 0);

@@ -475,6 +475,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             }
         }
         double renorm  = sqrt(1./Q);
+        //printf( "normalizeOrb(%i) Q %g renorm %g \n", io, Q, renorm );
         //DEBUG_rescale_Q = renorm;
         oQresc[io] = renorm; // ToDo: probably not needed, but makes debugging easier
         double renorm2 = renorm*renorm;
@@ -948,7 +949,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             forceOrb( jo, kT, DjT );
             forceOrb( io,fS2, fTs+i0 );  // d_T( Tii*S^2/(1+S^2) )
             forceOrb( jo,fS2, fTs+j0 );  // d_T( Tjj*S^2/(1+S^2) )
-            printf( "pauliOrbPair[%i,%i] E %g S %g T %g D %g | %g %g %g \n", io, jo, E, Ssum, Tsum, D,  (T11 + T22)*fS2,   2*Tsum*fS, fS );
+            //printf( "pauliOrbPair[%i,%i] E %g S %g T %g D %g | %g %g %g \n", io, jo, E, Ssum, Tsum, D,  (T11 + T22)*fS2,   2*Tsum*fS, fS );
         }else if(iPauliModel==3){ // Juat for debugging
             E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
             forceOrb( io, 1, DiT );
