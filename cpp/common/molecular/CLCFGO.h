@@ -777,7 +777,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         // ---- out-project f -= ds*c
         for(int i=i0; i<i0+perOrb; i++){
             //if(i==0){ printf( "F: %g -= %g * %g \n", efpos[i].x, enfpos[i].x, c   ); }
-            if(i==0){ printf( "C++ F: %g -= %g * %g \n", efcoef[i], enfcoef[i], c   ); }
+            //if(i==0){ printf( "C++ F: %g -= %g * %g \n", efcoef[i], enfcoef[i], c   ); }
             efpos [i] .add_mul( enfpos [i], c );
             efsize[i] +=        enfsize[i]* c  ;
             efcoef[i] +=        enfcoef[i]* c  ;

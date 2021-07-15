@@ -114,8 +114,8 @@ def evalEnergy( A, B ):
     dEdxb = qbb*dVxb - cab*Vab*dSab*2  + qab*dVxab*dXxb
     dEdca = 2*ca*Va  + 2*cb*Sab*Vab
     dEdcb = 2*cb*Vb  + 2*ca*Sab*Vab
-    dEdsa = cab*Vab*dS_dsa*2 + qab*dVxab*dXsa  + qab*dVsab*dSsa + qaa*dVsa
-    dEdsb = cab*Vab*dS_dsb*2 + qab*dVxab*dXsb  + qab*dVsab*dSsb + qaa*dVsb
+    dEdsa = cab*Vab*dS_dsa*2 + qab*dVxab*dXsa  + qab*dVsab*dSsa + qaa*dVsa*M_SQRT1_2
+    dEdsb = cab*Vab*dS_dsb*2 + qab*dVxab*dXsb  + qab*dVsab*dSsb + qaa*dVsb*M_SQRT1_2
     
     '''
     E     = qab*Vab
@@ -151,14 +151,14 @@ def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.
         #xa  =  np.arange( -2.0, 3.0, 0.01 );   xs  = xa
         xa  =  np.arange( -2.0, 3.0, 0.1 );   xs  = xa
     elif what=="sa":
-        sa =  np.arange(  0.25, 2.0, 0.01 );   xs  = sa
+        sa =  np.arange(  0.1, 2.0, 0.01 );   xs  = sa
     elif what=="ca":
         #ca = np.arange( -2.0, 2.0, 0.01 );    xs  = ca.copy()
         ca = np.arange( 0.0, 2.0, 0.01 ); xs  = ca.copy()
         cb = 1 + ca*0
 
     if bNormalize:
-        print "NORMALIZING ", bNormalize
+        #print "NORMALIZING ", bNormalize
         Q,_,_ = evalCharge( [xa,sa,ca], [xb,sb,cb] )
         rescale = 1./np.sqrt(Q)
         ca *= rescale
@@ -171,16 +171,16 @@ def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.
     if bNormalize:
         Q = 1; E_ = E
 
-        for i in range(len(dEdxa)):
-            #print "py F: %g -= %g * %g" %(dEdxa[i], dQdxa[i], E[i])
-            print "py F: %g -= %g * %g" %(dEdca[i], dQdca[i], E[i])
+        #for i in range(len(dEdxa)):
+        #    #print "py F: %g -= %g * %g" %(dEdxa[i], dQdxa[i], E[i])
+        #    print "py F: %g -= %g * %g" %(dEdca[i], dQdca[i], E[i])
         dEdxa = outprojectNormalForce( dEdxa, dQdxa, E, Q )
         dEdsa = outprojectNormalForce( dEdsa, dQdsa, E, Q )
         dEdca = outprojectNormalForce( dEdca, dQdca, E, Q )*rescale
         #dEdxb = outprojectNormalForce( dEdxb, dQdxb, E, Q )
         #dEdsb = outprojectNormalForce( dEdsb, dQdsb, E, Q )
         #dEdcb = outprojectNormalForce( dEdcb, dQdcb, E, Q )*rescale
-    n = len(ca)
+    #n = len(ca)
     #for i in range( n ):
     #    print "ca, cb ", ca[i], cb[i]
     return Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs

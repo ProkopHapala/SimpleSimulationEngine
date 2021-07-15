@@ -553,15 +553,19 @@ def compareForces_H_2g( inds=(0,0), bNormalize=1 ):
     print norb,perOrb, arr
 
     #Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs, rescale = effpy.evalTest( what="xa", bNormalize=bNormalize,    xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
-    Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="ca", bNormalize=(bNormalize>0),     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
+    #Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="ca", bNormalize=(bNormalize>0),     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
+    Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="sa", bNormalize=(bNormalize>0),     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
 
     #label="epos";   checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )
-    label="ecoef";  checkForces_norm( xname="ecoef",  fname="efcoef", fnname="enfcoef", inds=inds, xs=np.arange( 0.0, 2.0, 0.01 ) )
+    #label="ecoef";  checkForces_norm( xname="ecoef",  fname="efcoef", fnname="enfcoef", inds=inds, xs=np.arange( 0.0, 2.0, 0.01 ) )
+    label="esize";  checkForces_norm( xname="esize",  fname="efsize", fnname="enfsize", inds=inds, xs=np.arange( 0.1, 2.0, 0.01 ) )
     ##label="epos";  checkForces( xname="epos",  fname="enfpos",  inds=inds, xs=np.arange(-2.0,3.0,0.1) )
     #plt.plot( xs, dQdxa*-fnnScale, label="dQdxa_py" )
-    plt.plot( xs, dQdca*-fnnScale, label="dQdca_py" )
+    #plt.plot( xs, dQdca*-fnnScale, label="dQdca_py" )
+    plt.plot( xs, dQdsa*-fnnScale, label="dQdsa_py" )
     #effpy.plotNumDeriv( xs, E, dEdxa, F_=None, title="", bNewFig=False )
-    effpy.plotNumDeriv( xs, E, dEdca, F_=None, title="", bNewFig=False )
+    #effpy.plotNumDeriv( xs, E, dEdca, F_=None, title="", bNewFig=False )
+    effpy.plotNumDeriv( xs, E, dEdsa, F_=None, title="", bNewFig=False )
     
     plt.grid()
 
