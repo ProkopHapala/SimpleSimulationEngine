@@ -552,7 +552,7 @@ def compareForces_H_2g( inds=(0,0), bNormalize=1 ):
     perOrb = arr[4]
     print norb,perOrb, arr
 
-    #Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="xa", bNormalize=bNormalize,    xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
+    #Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs, rescale = effpy.evalTest( what="xa", bNormalize=bNormalize,    xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
     Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs = effpy.evalTest( what="ca", bNormalize=(bNormalize>0),     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 )
 
     #label="epos";   checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )

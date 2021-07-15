@@ -171,8 +171,9 @@ def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.
     if bNormalize:
         Q = 1; E_ = E
 
-        #for i in range(len(dEdxa)):
-        #    print "pyF: %g -= %g * %g" %(dEdxa[i], dQdxa[i], E[i])
+        for i in range(len(dEdxa)):
+            #print "py F: %g -= %g * %g" %(dEdxa[i], dQdxa[i], E[i])
+            print "py F: %g -= %g * %g" %(dEdca[i], dQdca[i], E[i])
         dEdxa = outprojectNormalForce( dEdxa, dQdxa, E, Q )
         dEdsa = outprojectNormalForce( dEdsa, dQdsa, E, Q )
         dEdca = outprojectNormalForce( dEdca, dQdca, E, Q )*rescale
@@ -180,8 +181,8 @@ def evalTest( what="xa", bNormalize=True,     xa=-0.4,sa=0.35,ca=1.6,     xb=+0.
         #dEdsb = outprojectNormalForce( dEdsb, dQdsb, E, Q )
         #dEdcb = outprojectNormalForce( dEdcb, dQdcb, E, Q )*rescale
     n = len(ca)
-    for i in range( n ):
-        print "ca, cb ", ca[i], cb[i]
+    #for i in range( n ):
+    #    print "ca, cb ", ca[i], cb[i]
     return Q,E, (dEdxa,dEdsa,dEdca),(dQdxa,dQdsa,dQdca),xs
 
 def run_test( what="xa", bNormalize=True, xa=-0.4,sa=0.35,ca=1.6,     xb=+0.5,sb=0.55,cb=-0.4 ):

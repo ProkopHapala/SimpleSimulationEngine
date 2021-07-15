@@ -83,6 +83,8 @@ constexpr static const Quat4d default_AtomParams[] = {
 
 constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
 
+    //double DEBUG_rescale_Q =0;
+
     bool bDealoc=false;
 
     bool bNormalize     = true;
@@ -143,6 +145,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     Vec3d*  opos  =0;   ///< [A] store positions for the whole orbital
     Vec3d*  odip  =0;   ///< [eA] Axuliary array to store dipoles for the whole orbital
     double* oEs   =0;   ///< [eV] orbital energies
+    double* oQresc=0;   ///< probably not needed byt makes debugging of outProjectNormalForces() easier
     double* oQs   =0;   ///< [e] total charge in orbital before renormalization (just DEBUG?)
     int*    onq   =0;   ///< number of axuliary density functions per orbital, should be equal to nQorb
     int*    ospin =0;
@@ -208,6 +211,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             _realloc( opos, nOrb);
             _realloc( odip, nOrb);
             _realloc( oEs , nOrb);
+            _realloc( oQresc , nOrb); ///< probably not needed byt makes debugging of outProjectNormalForces() easier
             _realloc( oQs , nOrb);
             _realloc( onq , nOrb);
             _realloc( ofix, nOrb);
@@ -256,6 +260,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         delete [] opos;
         delete [] odip;
         delete [] oEs ;
+        delete [] oQresc; // ToDo: probably not needed, but makes debugging easier
         delete [] oQs ;
         delete [] onq ;
         delete [] ofix;
@@ -306,6 +311,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             opos[i]=Vec3dZero;
             odip[i]=Vec3dZero;
             oEs [i]=0;
+            oQresc[i] = 1; // ToDo: probably not needed, but makes debugging easier
             oQs [i]=0;
             onq [i]=nqOrb;
             ospin[i]=1;
@@ -469,6 +475,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             }
         }
         double renorm  = sqrt(1./Q);
+        //DEBUG_rescale_Q = renorm;
+        oQresc[io] = renorm; // ToDo: probably not needed, but makes debugging easier
         double renorm2 = renorm*renorm;
         for(int i=i0; i<i0+perOrb; i++){ ecoef[i] *=renorm;  };
         return Ek;
@@ -752,7 +760,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             ii0+=nqOrb;
             i0 +=perOrb;
         }
-        printf( "C++ ca,cb %g %g \n", ecoef[0], ecoef[1] );
+        //printf( "C++ ca,cb %g %g \n", ecoef[0], ecoef[1] );
         return Ek;
     }
 
@@ -769,9 +777,12 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         // ---- out-project f -= ds*c
         for(int i=i0; i<i0+perOrb; i++){
             //if(i==0){ printf( "F: %g -= %g * %g \n", efpos[i].x, enfpos[i].x, c   ); }
+            if(i==0){ printf( "C++ F: %g -= %g * %g \n", efcoef[i], enfcoef[i], c   ); }
             efpos [i] .add_mul( enfpos [i], c );
             efsize[i] +=        enfsize[i]* c  ;
             efcoef[i] +=        enfcoef[i]* c  ;
+            //efcoef[i] *= DEBUG_rescale_Q;
+            efcoef[i] *= oQresc[io]; // probably not needed but makes debugging easier
         }
         //printf( "c %g \n", c );
         return c;
