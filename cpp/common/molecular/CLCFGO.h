@@ -929,7 +929,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             }
         }
         double E;
-        printf("iPauliModel %i \n", iPauliModel);
+        //printf("iPauliModel %i \n", iPauliModel);
         if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
             const double S2SAFE = 0.0001;
             double T11 = oEs[io]; // why 0.5 ?
@@ -2054,11 +2054,13 @@ bool loadFromFile( char const* filename ){
     //fscanf (pFile, " %i \n", &ntot );
     int natom_=0, nOrb_=0, perOrb_=0; bool bClosedShell=0;
     line=fgets(buff,nbuff,pFile);
-    sscanf (line, "%i %i %i\n", &natom_, &nOrb_, &perOrb_, &bClosedShell );
+    sscanf (line, "%i %i %i %b\n", &natom_, &nOrb_, &perOrb_, &bClosedShell );
+    //printf( ">>%s<< | na %i no %i perOrb %i  bClosedShell %i \n", line, natom_, nOrb_, perOrb_, bClosedShell );
     //printf("na %i ne %i perORb %i \n", natom, nOrb, perOrb_);
     //printf("na %i ne %i perORb %i \n", natom_, nOrb_, perOrb_ );
     if(bClosedShell) nOrb_*=2;
     realloc( natom_, nOrb_, perOrb_, 1 );
+    //printf("na %i ne %i perOrb %i | na_ %i ne_ %i perOrb_ %i \n", natom, nOrb, perOrb,  natom_, nOrb_, perOrb_);
     setDefaultValues( );
     double Qasum = 0.0;
     for(int i=0; i<natom; i++){
@@ -2083,6 +2085,7 @@ bool loadFromFile( char const* filename ){
         int spin;
         fgets( buff, nbuff, pFile); // printf( "fgets: >%s<\n", buf );
         int nw = sscanf (buff, "%lf %lf %lf %lf %lf %i", &x, &y, &z,  &s, &c, &spin );
+        //printf( "bas[%i|%i,%i] p(%g,%g,%g) s %g c %g spin %i \n", i, i/perOrb, i%perOrb, x, y, z,    s, c, spin );
         epos [i]=(Vec3d){x,y,z};
         esize[i]=s;
         ecoef[i]=c;
@@ -2103,6 +2106,32 @@ bool loadFromFile( char const* filename ){
     fclose (pFile);
     return 0;
 }
+
+bool saveToFile( char const* filename ){
+    //printf(" filename: >>%s<< \n", filename );
+    FILE * pFile;
+    pFile = fopen (filename,"w");
+    if( pFile == NULL ){
+        printf("ERROR in CLCFGO::saveToFile(%s) : No such file !!! \n", filename );
+        return -1;
+    }
+    fprintf( pFile, "%i %i %i %i\n", natom, nOrb, perOrb, 0 );
+    for(int i=0; i<natom; i++){
+        fprintf( pFile, "%3.6f %3.6lf %3.6lf   %3.6lf %3.6f %3.6f %3.6f \n", apos[i].x, apos[i].y, apos[i].z,    aPars[i].x, aPars[i].y, aPars[i].z, aPars[i].w );
+    }
+    int i=0;
+    for(int io=0; io<nOrb;   io++){
+        for(int ii=0; ii<perOrb; ii++){
+            fprintf( pFile, "%3.6f %3.6f %3.6f  %2.6f  %2.6f  %i", epos[i].x, epos[i].y, epos[i].z,  esize[i], ecoef[i], ospin[io] );
+            if(ii==0){ fprintf( pFile, " // Orb #%i", io ); }
+            fprintf( pFile, "\n" );
+            i++;
+        }
+    }
+    fclose (pFile);
+    return 0;
+}
+
 
 void printSetup(){
     printf("===CLCFGO Setup :\n");

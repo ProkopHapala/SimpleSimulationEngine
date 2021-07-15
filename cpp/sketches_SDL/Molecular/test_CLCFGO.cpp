@@ -191,6 +191,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
     //RigidAtom     atom1;
     //RigidAtomType type1,type2;
+    int iter=0;
     int perFrame = 10;
     bool bRun = false;
     double dt;
@@ -249,15 +250,18 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/H2_3g_half.fgo"       );
     //ff.loadFromFile( "data/H2_4g_half.fgo"       );
     //ff.loadFromFile( "data/He_2g_triplet_sym.fgo"  );
-    //ff.loadFromFile( "data/He_2g_triplet_asym.fgo"  );
-    //ff.loadFromFile( "data/He_2g_triplet_sym1.fgo"  );
+    //ff.loadFromFile( "data/He_2g_triplet_asym.fgo" );
+    //ff.loadFromFile( "data/He_2g_triplet_sym1.fgo" );
     //ff.loadFromFile( "data/Li_2g.fgo"            );
     //ff.loadFromFile( "data/Li_3g.fgo"            );
     //ff.loadFromFile( "data/Li_4g.fgo"            );
+    //ff.loadFromFile( "data/B_2g_triplet.fgo"     );
+    ff.loadFromFile( "data/B_2g_triplet_asym.fgo"     );
     //ff.loadFromFile( "data/C_1g.fgo"             );
     //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
-    ff.loadFromFile( "data/C_2g_triplet-.fgo"     );
+    //ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
     //ff.loadFromFile( "data/C_2g_o1.fgo"          );
+    //ff.loadFromFile( "data/C_2g_problem.fgo"      );
     //ff.loadFromFile( "data/N2.fgo"               );
     //ff.loadFromFile( "data/O2.fgo"               );
     //ff.loadFromFile( "data/O2_half.fgo"          );
@@ -377,6 +381,7 @@ void TestAppCLCFSF::draw(){
             ff.forceInfo();
             //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, ff.Ek, ff.Eee,ff.EeePaul,  ff.Eae,ff.EaePaul, ff.Eaa );
             F2 = ff.moveGD(dt);
+            iter++;
         }
 
         printf( "frame[%i] E %g |F| %g \n", frameCount, ff.Etot, sqrt(F2) );
@@ -453,19 +458,25 @@ void TestAppCLCFSF::viewPlots(){
 
 void TestAppCLCFSF::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
+    char strtmp[64];
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
                 //case SDLK_p:  first_person = !first_person; break;
                 //case SDLK_o:  perspective  = !perspective; break;
-                case SDLK_p:  bDrawPlots   = !bDrawPlots;    break;
-                case SDLK_o:  bDrawObjects = !bDrawObjects;  break;
+                case SDLK_i:
+                    sprintf(strtmp, "temp/snapshot_iter_%i03.fgo", iter );
+                    ff.saveToFile( strtmp );
+                    break;
+                case SDLK_p:     bDrawPlots   = !bDrawPlots;    break;
+                case SDLK_o:     bDrawObjects = !bDrawObjects;  break;
                 case SDLK_KP_1:  bDrawAtoms   = !bDrawAtoms;    break;
                 case SDLK_KP_2:  bDrawWfs     = !bDrawWfs;      break;
                 case SDLK_KP_3:  bDrawRho     = !bDrawRho;      break;
                 case SDLK_r:     bPlotDens = !bPlotDens; break;
                 //case SDLK_a:    = !perspective; break;
                 case SDLK_SPACE: bRun = !bRun;
+
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
             break;

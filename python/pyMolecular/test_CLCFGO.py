@@ -296,8 +296,8 @@ def checkForces_norm( xname="ecoef", fname="efcoef", fnname="enfcoef", inds=(0,0
     #effmc.eval()  # ---- This is to make sure initial normalization is not a problem
     print "xbuf.shape", xbuf.shape, szs, norb, perOrb
     for i in range(len(xs)):
-        if xname=="ecoef":
-            xbuf[(0,1)] = 1
+        if xname=="ecoef" :
+            xbuf[0,:] = 1
         xbuf[inds]= xs[i]
         Es[i]  = effmc.eval()
         fs[i]  = fbuf[inds]
@@ -579,13 +579,21 @@ def checkForces_He_2g( inds=(0,0), bNormalize=1 ):
     #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=-1, coulomb=-1, AE=1, AECoulomb=-1, AEPauli=1 )    # AEPauli   - OK
     #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=-1, coulomb=1, AE=-1, AECoulomb=-1, AEPauli=-1 )    # ee Coulomb - OK 
     #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=-1, pauli=1, coulomb=-1, AE=-1, AECoulomb=-1, AEPauli=-1 )    # ee Pauli - probably OK (some small difference when energy is high for iPaulModel=2; iPauliModel=0 work well) 
-    #effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=1, pauli=1, coulomb=1, AE=1, AECoulomb=1, AEPauli=1 )    # Total - OK
+    effmc.setSwitches_( normalize=bNormalize, normForce=bNormalize, kinetic=1, pauli=1, coulomb=1, AE=1, AECoulomb=1, AEPauli=1 )    # Total - OK
+    
     effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/He_2g_triplet_asym.fgo"  )
     #effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H_2g-.fgo"  )
     effmc.printSetup()
     effmc.printAtomsAndElectrons()
+    arr = effmc.getDimPointer(); 
+    global norb,perOrb   
+    norb   = arr[2]
+    perOrb = arr[4]
+    print norb,perOrb, arr
+
     #label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.1) )    
     #label="epos";  checkForces_norm( xname="epos",  fname="efpos", fnname="enfpos", inds=inds, xs=np.arange(-2.0,3.0,0.02) )  
+    #label="esize";  checkForces_norm( xname="esize",  fname="efsize", fnname="enfsize", inds=inds, xs=np.arange(0.4,2.0,0.02) )  
     label="ecoef";  checkForces_norm( xname="ecoef",  fname="efcoef", fnname="enfcoef", inds=inds, xs=np.arange(-1.0,1.0,0.02) )  
     plt.grid()
 
@@ -691,8 +699,8 @@ if __name__ == "__main__":
     #iNorm = +1
 
     #test_Hatom()     #; plt.show(); exit(0)
-    compareForces_H_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
-    #checkForces_He_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
+    #compareForces_H_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
+    checkForces_He_2g( inds=(0,0), bNormalize=True ); plt.show(); exit(0)
     #compareForces_H_2g( inds=(0,0), bNormalize=False ); plt.show(); exit(0)
     #checkForces_H_2g( inds=(0,0) ); plt.show(); exit(0)
 
