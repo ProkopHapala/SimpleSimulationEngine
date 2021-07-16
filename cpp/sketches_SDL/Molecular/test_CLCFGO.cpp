@@ -261,7 +261,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
     //ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
     //ff.loadFromFile( "data/C_2g_o1.fgo"          );
-    ff.loadFromFile( "data/C_2g_problem.fgo"      );
+    //ff.loadFromFile( "data/C_2g_problem.fgo"      );
+    //ff.loadFromFile( "data/C_1g_sp2.fgo"      );
+    //ff.loadFromFile( "data/C_2g_sp2.fgo"      );
+    ff.loadFromFile( "data/C_2g_sp2_problem.fgo"      );
     //ff.loadFromFile( "data/N2.fgo"               );
     //ff.loadFromFile( "data/O2.fgo"               );
     //ff.loadFromFile( "data/O2_half.fgo"          );
@@ -298,13 +301,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     ff.bOptAtom = 0;
     //ff.bOptEPos = 0;
-    //ff.bOptSize = 0;
+    ff.bOptSize = 0;
     //ff.bOptCoef = 0;
     //ff.ofix[0] = 1;
 
     //ff.iPauliModel = 2;
     //ff.iPauliModel = 0;
-    dt = 0.001;
+    dt = 0.0001;
 
     //bDrawWfs  = 0; bDrawRho  = 1;   // Plot Density blobs instead of wavefunctions
 
@@ -318,12 +321,14 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     printf( "E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n",E, ff.Ek, ff.Eee,ff.EeePaul,ff.EeeExch, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
     //exit(0);
 
+    /*
     printf( "epos[0].x " ); getNumDeriv( ff, ff.epos [0].x, ff.efpos [0].x, 0.0001, 0 );
     printf( "esize[0]  " ); getNumDeriv( ff, ff.esize[0]  , ff.efsize[0]  , 0.0001, 0 );
     printf( "ecoef[0]  " ); getNumDeriv( ff, ff.ecoef[0]  , ff.efcoef[0]  , 0.0001, 0 );
     //ff.eval();
     //ff.printElectrons();
     exit(0);
+    */
 
     // ======= Test Density projection
     plot1.init();
@@ -381,6 +386,7 @@ void TestAppCLCFSF::draw(){
     glEnable( GL_DEPTH_TEST );
 
     //dt = 0.001;
+    perFrame = 1;
     if(bRun){
         double F2;
         for(int itr=0; itr<perFrame; itr++){
