@@ -89,7 +89,18 @@ int i_DEBUG = 0;
 #include "CLCFGO.h"
 #include "CLCFGO_tests.h"
 
+#include "OptRandomWalk.h"
+
 int  fontTex=0;
+
+
+CLCFGO ff;
+
+double getE( int n, double * X ){
+    return ff.eval();
+}
+
+
 
 void testColorOfHash(){
     for(int i=0; i<10; i++){
@@ -197,9 +208,11 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
     double dt;
     //double E,dt;
 
-    CLCFGO ff;
+    int idof = 0;
     Plot2D plot1;
     int nOrbPlot = 2;
+
+    OptRandomWalk ropt;
 
     bool bDrawPlots   = true;
     bool bDrawObjects = true;
@@ -259,12 +272,12 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/B_2g_triplet_asym.fgo"     );
     //ff.loadFromFile( "data/C_1g.fgo"             );
     //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
-    //ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
+    ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
     //ff.loadFromFile( "data/C_2g_o1.fgo"          );
     //ff.loadFromFile( "data/C_2g_problem.fgo"      );
     //ff.loadFromFile( "data/C_1g_sp2.fgo"      );
     //ff.loadFromFile( "data/C_2g_sp2.fgo"      );
-    ff.loadFromFile( "data/C_2g_sp2_problem.fgo"      );
+    //ff.loadFromFile( "data/C_2g_sp2_problem.fgo"      );
     //ff.loadFromFile( "data/N2.fgo"               );
     //ff.loadFromFile( "data/O2.fgo"               );
     //ff.loadFromFile( "data/O2_half.fgo"          );
@@ -306,7 +319,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.ofix[0] = 1;
 
     //ff.iPauliModel = 2;
-    //ff.iPauliModel = 0;
+    ff.iPauliModel = 0;
+    //ff.KPauliOverlap = 50.0;
+    ff.KPauliOverlap = 500.0;
     dt = 0.0001;
 
     //bDrawWfs  = 0; bDrawRho  = 1;   // Plot Density blobs instead of wavefunctions
@@ -374,42 +389,68 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     bRun = false;
 
+
+    idof = 1;
+    //ropt.realloc( ff.ndofs,  ff.dofs );             // Optimize all
+    ropt.realloc( ff.nBas*5, ff.dofs+ff.natom*3 );    // Optimize only electrons
+    ropt.getEnergy = getE;
+    ropt.stepSize  = 0.01;
+
+    //VecN::set( ropt.n, 0.0, ropt.scales );
+    //VecN::set( (ff.nBas*2), 0.0, ropt.scales+(ff.nBas*3) ); // fix everything but poss
+    //VecN::set( (ff.nBas), 0.0, ropt.scales+(ff.nBas*3) ); // fix size
+    //ropt.scales[idof]=1;
+
     //dt = 0.000001;
     //dt = 0.001;
 
+    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+    glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 }
 
 void TestAppCLCFSF::draw(){
     //printf( " ==== frame %i \n", frameCount );
+    /*
     glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable( GL_DEPTH_TEST );
+    */
 
     //dt = 0.001;
-    perFrame = 1;
+    perFrame = 1000;
     if(bRun){
+        /*
         double F2;
         for(int itr=0; itr<perFrame; itr++){
             //testColorOfHash();
             ff.eval();
             ff.forceInfo();
             //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, ff.Ek, ff.Eee,ff.EeePaul,  ff.Eae,ff.EaePaul, ff.Eaa );
-            F2 = ff.moveGD(dt);
+            //F2 = ff.moveGD(dt);
             iter++;
         }
-
         printf( "frame[%i] E %g |F| %g \n", frameCount, ff.Etot, sqrt(F2) );
         //printf( "frame[%i] |F| %g E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n", frameCount, sqrt(F2), E, ff.Ek, ff.Eee,ff.EeePaul,ff.EeeExch, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
         //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0] );
         //printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (ff.apos[0]-ff.apos[1]).norm(),   (ff.apos[0]-ff.epos[0]).norm(), ff.esize[0] );
-
         if(F2<1e-6){
             bRun=false;
             ff.printAtoms();
             ff.printElectrons();
         }
+        */
+
+        for(int itr=0; itr<perFrame; itr++){
+            ropt.run( 1 );
+            Draw2D::drawPoint( { ropt.X[idof]-ropt.Xbest[idof] , (ropt.E-ropt.Ebest)*0.1 } );
+        }
+
     }
 
+    VecN::set(ropt.n, ropt.Xbest, ropt.X );
+    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+    glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    glEnable( GL_DEPTH_TEST );
     if(bDrawObjects){
         float fsc=0.01;
         if(bDrawAtoms) drawff_atoms( ff,         fsc, 0.2 );
@@ -417,6 +458,7 @@ void TestAppCLCFSF::draw(){
         if(bDrawRho  ) drawff_rho  ( ff, oglSph, fsc      );
     }
     if(bDrawPlots){ viewPlots(); }
+
 
 };
 
@@ -427,7 +469,6 @@ void TestAppCLCFSF::drawHUD(){
 	//glTranslatef( 100.0,100.0,0.0 );
 	//glScalef    ( 20.0,300.00,1.0  );
 	//plot1.view();
-
 
 	//gui.draw();
 
@@ -440,6 +481,21 @@ void TestAppCLCFSF::drawHUD(){
 	s+=ff.Eterms2str(s);
 	ff.orbs2str(s);
     Draw::drawText( str, fontTex, fontSizeDef, {100,20} );
+
+
+    glColor3f(1.0,0.0,0.0);
+    glTranslatef( 300.0,-20.0,0.0 );
+    s=str;
+    int iPauliModel = ff.iPauliModel;  ff.iPauliModel=4; // cross-overlap
+    for(int i=0; i<ff.nOrb; i++){
+        for(int j=0; j<ff.nOrb; j++){
+            double Sij = ff.pauliOrbPair( i,j );
+            s+=sprintf(s,"|%8.4f", Sij );
+        }
+        s+=sprintf(s,"|\n" );
+    }
+    Draw::drawText( str, fontTex, fontSizeDef, {100,20} );
+    ff.iPauliModel = iPauliModel;
 
 
 }

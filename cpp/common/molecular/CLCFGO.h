@@ -121,11 +121,15 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     int natom  =0; ///< number of atoms (nuclei, ions)
     int nOrb   =0; //!< Brief number of single-electron orbitals in system
     int nBas   =0; ///< number of basis functions
+    int ndofs=0;
     int perOrb =0; //!< Brief number of spherical functions per orbital
     int perOrb2=0;
     // this is evaluated automaticaly
     int nqOrb  =0; ///< number of charges (axuliary density elements) per orbital
     int nQtot  =0; ///< total number of charge elements
+
+    double* dofs=0;
+    double* fdofs=0;
 
     // atoms (ions)
     Vec3d*  apos   =0;  ///< [A] positioon of atoms
@@ -140,6 +144,11 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     int*    atype  =0;  ///< type of atom (in particular IKinetic pseudo-potential)
     //Vec3d  * aAbWs =0; ///< atomic   parameters (amplitude, decay, width)
     //Vec3d  * eAbWs =0; ///< electron parameters (amplitude, decay, width)
+
+
+
+
+
 
     // orbitals
     Vec3d*  opos  =0;   ///< [A] store positions for the whole orbital
@@ -185,10 +194,28 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         bDealoc=true;
         // ToDo : We may automatize this somehow ????
         // atoms
+        nBas    = nOrb_ * perOrb_;
+        ndofs = natom_*3 + nBas*(3+1+1);
+        _realloc(  dofs  ,ndofs );
+        _realloc( fdofs  ,ndofs );
+        printf( " nAtom %i nOrb %i perOrb %i nBas %i nDOFs %i \n", natom_, nOrb_, perOrb_, nBas, ndofs );
+
+        apos  =(Vec3d*) dofs;
+        aforce=(Vec3d*)fdofs;
+        epos  =(Vec3d*) (  dofs + (natom_*3)          );
+        esize =         (  dofs + (natom_*3) + 3*nBas );
+        ecoef =         (  dofs + (natom_*3) + 4*nBas );
+        efpos =(Vec3d*) ( fdofs + (natom_*3)          );
+        efsize=         ( fdofs + (natom_*3) + 3*nBas );
+        efcoef=         ( fdofs + (natom_*3) + 4*nBas );
+
+
+        printf( "CLCFGO::realloc *X %li %li \n", dofs+(natom_*3), dofs+((natom_*3)+(5*nBas)-1) );
+
         if( natom != natom_ ){
             natom = natom_;
-            _realloc( apos  ,natom );
-            _realloc( aforce,natom );
+            //_realloc( apos  ,natom );
+            //_realloc( aforce,natom );
             //_realloc( aQs   ,natom );
             //_realloc( aAbWs ,natom);
             //_realloc( eAbWs ,natom);
@@ -216,13 +243,13 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             _realloc( onq , nOrb);
             _realloc( ofix, nOrb);
             // --- Wave-function components for each orbital
-            _realloc( epos , nBas );
-            _realloc( esize, nBas );
-            _realloc( ecoef, nBas );
+            //_realloc( epos , nBas );
+            //_realloc( esize, nBas );
+            //_realloc( ecoef, nBas );
             // --- Forces acting on wave-functions components
-            _realloc( efpos ,   nBas );
-            _realloc( efsize,   nBas );
-            _realloc( efcoef,   nBas );
+            //_realloc( efpos ,   nBas );
+            //_realloc( efsize,   nBas );
+            //_realloc( efcoef,   nBas );
             // --- normal forces ( to constrain normality of wavefunction )
             _realloc( enfpos ,   nBas );
             _realloc( enfsize,   nBas );
@@ -2198,7 +2225,7 @@ char* orb2str(char* str0, int io){
 char* orbs2str(char* str0){
     char* str=str0;
     for(int i=0; i<nOrb; i++){
-        str+=sprintf(str,"orb_%i E %g \n", i, oEs[i] );
+        str+=sprintf(str,"\norb_%i E %g \n", i, oEs[i] );
         str=orb2str(str, i);
     }
     return str;
