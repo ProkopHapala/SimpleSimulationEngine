@@ -90,13 +90,68 @@ int i_DEBUG = 0;
 #include "CLCFGO_tests.h"
 
 #include "OptRandomWalk.h"
+#include "approximation.h"
 
 int  fontTex=0;
 
 
 CLCFGO ff;
 
+Approx::PolyFit<3> quadratic_fit;
+
+void symmetrize_carbon( CLCFGO& ff ){
+
+    /*
+    // === Positions
+    // --------- orb 1
+    ff.epos[2].y=0; ff.epos[2].z=0;
+    ff.epos[3].y=0; ff.epos[3].z=0;
+    // --------- orb 2
+    ff.epos[4].x=0; ff.epos[4].z=0;
+    ff.epos[5].x=0; ff.epos[5].z=0;
+    // --------- orb 3
+    ff.epos[6].y=0; ff.epos[6].x=0;
+    ff.epos[7].y=0; ff.epos[7].x=0;
+    */
+
+    ff.epos[2].z*=0.9;
+    ff.epos[4].z*=0.9;
+    //ff.epos[6].z*=0.9;
+
+    /*
+    // === Sizes
+    // --------- orb 1
+    double s = ff.esize[2];
+    ff.esize[3]=s;
+    // --------- orb 2
+    ff.esize[4]=s;
+    ff.esize[5]=s;
+    // --------- orb 3
+    ff.esize[6]=s;
+    ff.esize[7]=s;
+    */
+
+    /*
+    // ==== Coeffitients
+    // ---------- orb 0
+    //ff.ecoef[0] = ;
+    ff.ecoef[1] = 0;
+    // ---------- orb 1
+    //ff.ecoef[2] = ;
+    ff.ecoef[3] = -ff.ecoef[2];
+    // ---------- orb 2
+    //ff.ecoef[4] = ;
+    ff.ecoef[5] = -ff.ecoef[4];
+    // ---------- orb 3
+    //ff.ecoef[6] = ;
+    ff.ecoef[7] = -ff.ecoef[6];
+    */
+}
+
 double getE( int n, double * X ){
+    symmetrize_carbon( ff );
+    ff.checkOrder();
+    ff.normalizeOrbSigns();
     return ff.eval();
 }
 
@@ -154,10 +209,10 @@ void drawff_wfs(const CLCFGO& ff, int oglSph, float fsc=1.0, float asc=0.5, int 
             Draw  ::setRGBA(  c                    ); Draw3D::drawPointCross( p, 0.01 );
             glColor3f( 1.0f,0.0f,0.0f );  Draw3D::drawVecInPos( ff.efpos[i]*fsc, p );
 
-            Draw  ::setRGBA( orbColor(io) );
+            //Draw  ::setRGBA( orbColor(io) );
             //sprintf(str, "%02i_%02i", io, j  );
-            sprintf(str, "%3.3f", ff.ecoef[i]  );
-            Draw3D::drawText(str, p, fontTex, 0.02,  0 );
+            //sprintf(str, "%3.3f", ff.ecoef[i]  );
+            //Draw3D::drawText(str, p, fontTex, 0.02,  0 );
         }
     }
 }
@@ -192,7 +247,6 @@ void drawff_rho(const CLCFGO& ff, int oglSph, float fsc=1.0, int alpha=0x1500000
         }
     }
 }
-
 
 // =========================================================================
 ///       class   TestAppCLCFSF
@@ -237,7 +291,6 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
 };
 
-
 TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
@@ -271,8 +324,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/B_2g_triplet.fgo"     );
     //ff.loadFromFile( "data/B_2g_triplet_asym.fgo"     );
     //ff.loadFromFile( "data/C_1g.fgo"             );
-    //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
-    ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
+    ff.loadFromFile( "data/C_2g_triplet.fgo"     );
+    //ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
+    //ff.loadFromFile( "data/C_2g_symOpt.fgo");
     //ff.loadFromFile( "data/C_2g_o1.fgo"          );
     //ff.loadFromFile( "data/C_2g_problem.fgo"      );
     //ff.loadFromFile( "data/C_1g_sp2.fgo"      );
@@ -314,14 +368,15 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     ff.bOptAtom = 0;
     //ff.bOptEPos = 0;
-    ff.bOptSize = 0;
+    //ff.bOptSize = 0;
     //ff.bOptCoef = 0;
     //ff.ofix[0] = 1;
 
     //ff.iPauliModel = 2;
     ff.iPauliModel = 0;
     //ff.KPauliOverlap = 50.0;
-    ff.KPauliOverlap = 500.0;
+    ff.KPauliOverlap = 5000.0;
+    //ff.KPauliOverlap = 500.0;
     dt = 0.0001;
 
     //bDrawWfs  = 0; bDrawRho  = 1;   // Plot Density blobs instead of wavefunctions
@@ -394,7 +449,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ropt.realloc( ff.ndofs,  ff.dofs );             // Optimize all
     ropt.realloc( ff.nBas*5, ff.dofs+ff.natom*3 );    // Optimize only electrons
     ropt.getEnergy = getE;
-    ropt.stepSize  = 0.01;
+    //ropt.stepSize  = 0.002;
+    ropt.stepSize  = 0.001;
+    //ropt.stepSize  = 0.1;
+    ropt.start();
 
     //VecN::set( ropt.n, 0.0, ropt.scales );
     //VecN::set( (ff.nBas*2), 0.0, ropt.scales+(ff.nBas*3) ); // fix everything but poss
@@ -404,14 +462,31 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //dt = 0.000001;
     //dt = 0.001;
 
+
+    /*
+    // ------- Test PolyFit
+    double xs[]= {-0.09967533,  0.28359467, -0.01538476,  0.31646855,  0.19553444, -0.16558772 };
+    double ys[]= {-0.57169038, -0.65147963, -0.67579430, -0.62206212, -0.67322563, -0.53299620 };
+    quadratic_fit.init();
+    for(int i=0; i<6; i++){ quadratic_fit.addPoint(  xs[i], ys[i], 1 ); };
+    printf( "bs : "); for(int i=0; i<3; i++){ printf( "%g ", quadratic_fit.By[i] ); }; printf( "\n");
+    printf( "M \n "); for(int i=0; i<3; i++){ for(int j=0; j<3; j++){ printf( " %g ", quadratic_fit.BB[i*3+j] ); }; printf( "\n"); };
+    double coefs[3];
+    quadratic_fit.solve( coefs );
+    printf( "coefs %g %g %g \n", coefs[0], coefs[1], coefs[2] );
+    printf( "DONE !!!!!!! \n" );
+    exit(0);
+    */
+
+
     glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 }
 
 void TestAppCLCFSF::draw(){
+    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     //printf( " ==== frame %i \n", frameCount );
     /*
-    glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable( GL_DEPTH_TEST );
     */
@@ -440,12 +515,67 @@ void TestAppCLCFSF::draw(){
         }
         */
 
+
+
         for(int itr=0; itr<perFrame; itr++){
             ropt.run( 1 );
             Draw2D::drawPoint( { ropt.X[idof]-ropt.Xbest[idof] , (ropt.E-ropt.Ebest)*0.1 } );
         }
 
+
+
+
+        // ======= Curvature Testing
+        /*
+        glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+        VecN::set(ropt.n,ropt.Xbest,ropt.X);
+        double Ebest = ff.eval();
+        double Delta = 0.2;
+        int nsamp = 100;
+
+        double yscale = 0.1;
+        quadratic_fit.init();
+        glColor3f(1.0,0.0,0.0);
+        for(int itr=0; itr<nsamp; itr++){
+            VecN::set(ropt.n,ropt.Xbest,ropt.X);
+            double d = randf(-Delta,Delta);
+            //ff.epos[0].x += d;
+            //ff.epos[0].y += d;
+            //ff.epos[0].z += d;
+
+            //ff.epos[2].x += d;
+            //ff.epos[2].y += d;
+            //ff.epos[2].z += d;
+
+            //ff.esize[0] += d;
+            //ff.esize[2] += d;
+
+            ff.esize[0] += d;
+            //ff.esize[2] += d;
+
+            double E = ff.eval();
+            double dE = E - Ebest;
+            Draw2D::drawPoint( { d, dE*yscale } );
+            quadratic_fit.addPoint( d, E, 1 );
+        }
+        glColor3f(0.0,0.0,1.0);
+        double coefs[3];
+        quadratic_fit.solve( coefs );
+        printf( "coefs %g %g %g \n", coefs[0], coefs[1], coefs[2] );
+        glBegin(GL_LINE_STRIP);
+        for(int i=0; i<10; i++){
+            double x =(i-5)*(Delta/5);
+            double y = coefs[0] + coefs[1]*x + coefs[2]*x*x;
+            //double y = coefs[2] + coefs[1]*x + coefs[0]*x*x;
+            glVertex3f( x, (y-Ebest)*0.1, 0 );
+        }
+        glEnd();
+        */
+
+
     }
+
 
     VecN::set(ropt.n, ropt.Xbest, ropt.X );
     glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );

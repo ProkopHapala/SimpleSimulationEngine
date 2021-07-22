@@ -476,6 +476,37 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 // ==================== Normalize Orb - This is to make sure we do nothing wrong by normalization after evaluation of kinetic energy
 // ===========================================================================================================================
 
+    void swapBas( int i, int j){
+        _swap( epos [i], epos [j] );
+        _swap( esize[i], esize[j] );
+        _swap( ecoef[i], ecoef[j] );
+    }
+
+    void checkOrder(){
+        for(int io=0; io<nOrb; io++){
+            int i0=getOrbOffset(io);
+            for(int ii=1; ii<perOrb; ii++){
+                int i=i0+ii;
+                double c0 = ecoef[i-1];
+                double c1 = ecoef[i  ];
+                if( (c0*c0)<(c1*c1) ){ swapBas(i,i-1); }
+            }
+        }
+    }
+
+    void normalizeOrbSigns(){
+        for(int io=0; io<nOrb; io++){
+            int i0=getOrbOffset(io);
+            double c0 = ecoef[i0];
+            if(c0<0){
+                for(int ii=0; ii<perOrb; ii++){
+                    double& ec = ecoef[i0+ii];
+                    ec = -ec;
+                }
+            }
+        }
+    }
+
     double normalizeOrb(int io ){
         int i0    = getOrbOffset(io);
         double Q=0;

@@ -54,6 +54,53 @@ void polyProject( int n, int m, double* xs, double* ys, double* BB, double* By )
     Lingebra::symCopy( m, BB, false );
 }
 
+
+
+template<int N>
+class PolyFit{ public:
+
+    static constexpr int m=N;
+    double BB[N*N];
+    double By [N];
+
+    void init(){
+        VecN::set( m*m, 0., BB );
+        VecN::set(   m, 0., By );
+    }
+
+    void addPoint(double x, double y, double w=0){
+        double bas[m];
+        y*=w;
+        double xn = 1;
+        for(int i=0;i<m;i++){
+            bas[i]=xn*w;
+            xn*=x;
+        }
+        for(int i=0;i<m;i++){
+            double bi   = bas[i];
+            By[i]      += bi*y;
+            //printf( "By[%i] %g %g %g \n", i, bi, y, By[i] );
+            //for(int j=0;j<=i;j++){
+            for(int j=0;j<m;j++){
+                //if(ip==0) printf( "i %i j %i i*m+j %i \n", i, j, i*m+j );
+                BB[i*m+j] += bi*bas[j];
+            }
+        }
+    }
+
+    void solve( double* coefs ){
+        double*BB_[m];
+        int  index[m];
+        Lingebra::from_continuous( m, m, BB, BB_ );
+        Lingebra::linSolve_gauss ( m, BB_, By, index, coefs );
+    }
+
+};
+
+
+
+
+
 void polyProject( int n, int m, int* pows, double* xs, double* ys, double* BB, double* By, double* ws=0 ){
     double bas[m];  // eventually we can use any function instead of xns
     int maxOrder = pows[m-1];

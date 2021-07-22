@@ -21,13 +21,16 @@ class OptRandomWalk{ public:
     double * Xdir  = 0; // decent solution at reasonable distance from Xbest (not too far, not too close) which approximates soft-mode direction
     double * scales = 0;
 
-    double biasDir;
-    double biasSpread;
+    int nTryDir = 0;
+
+    //double biasDir;
+    //double biasSpread;
 
     EnergyFunction getEnergy = 0;
 
     double stepSize=0.1;
     double Ebest,E;
+    double Edir,Rdir; // dir bias
 
     // ====  Functions
 
@@ -53,10 +56,18 @@ class OptRandomWalk{ public:
     }
 
     void mutate( double step ){
+        double rndDir = randf();
+        double cfw    = 0.5 + 1.0/nTryDir;
+        double cbak   = 0.5;
+        double c      = cfw+cbak;
         for( int i=0; i<n; i++){
             //X[i] = X[i] + (randf()-0.5);
-            X[i] = Xbest[i] + (randf()-0.5)*scales[i]*step;
-            //X[i] = Xbest[i] + (randf()-0.5)* ( scales[i] + biasSpread*(Xbest[i]-Xdir) );
+            //X[i] = Xbest[i] + (randf()-0.5)*scales[i]*step;
+            //X[i] = Xbest[i] + (randf()-0.5)*scales[i]*step  +  (Xdir[i]-Xbest[i])*rndDir;
+            //X[i] = Xbest[i] + (randf()-0.5)*scales[i]*step  +  (Xdir[i]-Xbest[i])*(rndDir*3.0-1.0);
+            //X[i] = Xbest[i] + (randf()-0.5)*scales[i]*step  +  (Xdir[i]-Xbest[i])*(rndDir*0.75-0.25);
+            X[i] = Xbest[i] + (randf()-0.5)*scales[i]*step  +  (Xdir[i]-Xbest[i])*(rndDir*1.2-0.2);
+            //X[i] = Xbest[i] + (randf()-0.5)*scales[i]*step  +  (Xdir[i]-Xbest[i])*(rndDir*c-cbak);
         }
     }
 
@@ -67,9 +78,29 @@ class OptRandomWalk{ public:
             if(E<Ebest){
                 printf( "Energy improved %g -> %g \n", Ebest, E );
                 VecN::set(n,X,Xbest);
+                //Rdir = VecN::err2( n, X, Xbest );
+                Edir = 1e+300;
                 Ebest=E;
+            }else{
+                double R = VecN::err2( n, X   , Xbest );
+                Rdir     = VecN::err2( n, Xdir, Xbest );
+                double curv    = (E   -Ebest)/(R*R);
+                double curvDir = (Edir-Ebest)/(Rdir*Rdir);
+                if( curv<curvDir ){
+                    //printf( "dir update: (%g|dE %g R %g ) -> ( %g|dE %g R %g ) \n", curvDir,(Edir-Ebest), Rdir,    curv,(E   -Ebest), R    );
+                    VecN::set(n,X,Xdir);
+                    Rdir=R;
+                    Edir=E;
+                    nTryDir=0;
+                }else{
+                    nTryDir++;
+                }
             }
         }
+    }
+
+    void start(){
+         Ebest = getEnergy( n, X );
     }
 
 };
