@@ -430,12 +430,17 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         //for(int i=0; i<nQtot; i++){ rhoEQ[i] = 0; };
     }
 
-    inline void cleanForces(){
-        for(int i=0; i<nOrb; i++){ oEs[i]=0; };
-        for(int i=0; i<natom; i++){ aforce[i] = Vec3dZero; }
+
+    void cleanEForces(){
         for(int i=0; i<nBas;  i++){ efpos [i] = Vec3dZero; }
         for(int i=0; i<nBas;  i++){ efsize[i] = 0;         }
         for(int i=0; i<nBas;  i++){ efcoef[i] = 0;         }
+    }
+
+    inline void cleanForces(){
+        for(int i=0; i<nOrb; i++){ oEs[i]=0; };
+        for(int i=0; i<natom; i++){ aforce[i] = Vec3dZero; }
+        cleanEForces();
         if(bNormForce){
             for(int i=0; i<nBas;  i++){ enfpos [i] = Vec3dZero; }
             for(int i=0; i<nBas;  i++){ enfsize[i] = 0;         }
@@ -1898,6 +1903,31 @@ double evalAA(){
         return E;
     }
 
+
+    void orthogonalizeStep( int niter ){
+        /// Exact Iterative Symetric Orthogonalization
+        /// to make absolutely sure the orbitals are orthogonal, we do several step of orthogonalization per each step of
+        /// according to https://scicomp.stackexchange.com/a/37683/4696
+        ///  phi_i <= phi_i - 0.5 * Sum_j phi_j  <phi_i|phi_j>
+        ///  therefore we compute force f = Sum_j phi_j  <phi_i|phi_j>
+        /// and then perform gradient descent   phi_i <= phi_i + f*0.5     (dt=0.5)
+        double K  = KPauliOverlap;
+        int iMode = iPauliModel;
+        K = 0.5;
+        iPauliModel = 0;
+        for(int i=0; i<niter; i++){
+            //cleanForces();
+            cleanEForces();
+            //if( bEvalCoulomb || (bEvalAECoulomb && bEvalAE) ) clearAuxDens();
+            //double Ek = projectOrbs( );
+            evalPauli(); // ToDo : perhaps we should output maximum ramianing overlap ?
+            //if( bNormForce && bNormalize){ outProjectNormalForces(); }
+            moveElectrons( 0.5 );
+        }
+        KPauliOverlap = K;
+        iPauliModel   = iMode;
+    }
+
     void forceInfo(){
         double F2a  = 0;
         double F2ep = 0;
@@ -1913,15 +1943,10 @@ double evalAA(){
         //return F2a + F2ep + F2es + F2ec;
     }
 
-    double moveGD( double dt){
-        double F2a  = 0;
+    double moveElectrons( double dt ){
         double F2ep = 0;
         double F2es = 0;
         double F2ec = 0; //DEBUG
-        if(bOptAtom)for(int i=0; i<natom;i++){ apos [i].add_mul( aforce[i], dt );    F2a +=aforce[i].norm2(); } //DEBUG
-        //if(bOptEPos)for(int i=0; i<nBas; i++){ epos [i].add_mul( efpos [i], dt );    F2ep+=efpos [i].norm2(); } //DEBUG
-        //if(bOptSize)for(int i=0; i<nBas; i++){ esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);     } //DEBUG
-        //if(bOptCoef)for(int i=0; i<nBas; i++){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     } //DEBUG
         for(int io=0; io<nOrb; io++){
             int i0=getOrbOffset(io);
             //printf("ofix[%i] %i \n", io, ofix[io] );
@@ -1932,8 +1957,18 @@ double evalAA(){
                 if(bOptCoef){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     }
             }
         }
+        return F2ep + F2es + F2ec;
+    }
+
+    double moveGD( double dt){
+        double F2a  = 0;
+        if(bOptAtom)for(int i=0; i<natom;i++){ apos [i].add_mul( aforce[i], dt );    F2a +=aforce[i].norm2(); } //DEBUG
+        double F2e = moveElectrons( dt );
+        //if(bOptEPos)for(int i=0; i<nBas; i++){ epos [i].add_mul( efpos [i], dt );    F2ep+=efpos [i].norm2(); } //DEBUG
+        //if(bOptSize)for(int i=0; i<nBas; i++){ esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);     } //DEBUG
+        //if(bOptCoef)for(int i=0; i<nBas; i++){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     } //DEBUG
         // ToDo : We should out project directions which breaks normalization (!!!) but we can do it later - it is mostly importaint for dynamics, gradient desncent should be fine
-        return F2a + F2ep + F2es + F2ec;
+        return F2a + F2e;
     }
 
 // ==================================================================
