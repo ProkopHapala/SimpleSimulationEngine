@@ -90,14 +90,15 @@ int i_DEBUG = 0;
 #include "CLCFGO_tests.h"
 
 #include "OptRandomWalk.h"
+#include "DynamicOpt.h"
 #include "approximation.h"
 
 int  fontTex=0;
 
 
 CLCFGO ff;
-
 Approx::PolyFit<3> quadratic_fit;
+
 
 void symmetrize_carbon( CLCFGO& ff ){
 
@@ -267,6 +268,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
     int nOrbPlot = 2;
 
     OptRandomWalk ropt;
+    DynamicOpt    opt;
 
     bool bDrawPlots   = true;
     bool bDrawObjects = true;
@@ -324,11 +326,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/B_2g_triplet.fgo"     );
     //ff.loadFromFile( "data/B_2g_triplet_asym.fgo"     );
     //ff.loadFromFile( "data/C_1g.fgo"             );
-    //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
+    ff.loadFromFile( "data/C_2g_triplet.fgo"     );
+    //ff.loadFromFile( "data/C_2g_triplet_conv_K500.fgo"     );
+    //ff.loadFromFile( "data/C_2g_triplet_conv_K5000.fgo"     );
     //ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
     //ff.loadFromFile( "data/C_2g_symOpt.fgo");
     //ff.loadFromFile( "data/C_2g_o1.fgo"          );
-    ff.loadFromFile( "data/C_2g_problem.fgo"      );
+    //ff.loadFromFile( "data/C_2g_problem.fgo"      );
     //ff.loadFromFile( "data/C_1g_sp2.fgo"      );
     //ff.loadFromFile( "data/C_2g_sp2.fgo"      );
     //ff.loadFromFile( "data/C_2g_sp2_problem.fgo"      );
@@ -374,9 +378,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     //ff.iPauliModel = 2;
     ff.iPauliModel = 0;
-    //ff.KPauliOverlap = 50.0;
+
     ff.KPauliOverlap = 5000.0;
     //ff.KPauliOverlap = 500.0;
+    //ff.KPauliOverlap = 50.0;
     dt = 0.0001;
 
     //bDrawWfs  = 0; bDrawRho  = 1;   // Plot Density blobs instead of wavefunctions
@@ -454,6 +459,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ropt.stepSize  = 0.1;
     ropt.start();
 
+    opt.bindOrAlloc( ff.nBas*5, ff.dofs+ff.natom*3,  0, ff.fdofs+ff.natom*3, 0 );
+    opt.initOpt( 0.01, 0.1 );
+
     //VecN::set( ropt.n, 0.0, ropt.scales );
     //VecN::set( (ff.nBas*2), 0.0, ropt.scales+(ff.nBas*3) ); // fix everything but poss
     //VecN::set( (ff.nBas), 0.0, ropt.scales+(ff.nBas*3) ); // fix size
@@ -493,10 +501,12 @@ void TestAppCLCFSF::draw(){
 
     //printf( " -1 epos (%g,%g,%g) efpos (%g,%g,%g) \n", ff.epos[0].x,ff.epos[0].y,ff.epos[0].z, ff.efpos[0].x,ff.efpos[0].y,ff.efpos[0].z );
 
-    //dt = 0.001;
-    perFrame = 1000;
+    //dt = 0.0001;
+    //perFrame = 1000;
+
+    //opt.se
     if(bRun){
-        /*
+
         double F2;
         for(int itr=0; itr<perFrame; itr++){
             //testColorOfHash();
@@ -504,6 +514,7 @@ void TestAppCLCFSF::draw(){
             ff.forceInfo();
             //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, ff.Ek, ff.Eee,ff.EeePaul,  ff.Eae,ff.EaePaul, ff.Eaa );
             //F2 = ff.moveGD(dt);
+            F2 = opt.move_FIRE();
             iter++;
         }
         printf( "frame[%i] E %g |F| %g \n", frameCount, ff.Etot, sqrt(F2) );
@@ -515,13 +526,15 @@ void TestAppCLCFSF::draw(){
             ff.printAtoms();
             ff.printElectrons();
         }
-        */
 
+
+        /*
         for(int itr=0; itr<1; itr++){
             double F2 = ff.orthogonalizeStep( 1 );
             printf( "[%i] F2 %g \n", frameCount, F2 );
             if( isnan(F2) || (F2<1e-8) ) bRun=false;
         }
+        */
 
         /*
         for(int itr=0; itr<perFrame; itr++){
@@ -529,8 +542,6 @@ void TestAppCLCFSF::draw(){
             Draw2D::drawPoint( { ropt.X[idof]-ropt.Xbest[idof] , (ropt.E-ropt.Ebest)*0.1 } );
         }
         */
-
-
 
 
         // ======= Curvature Testing
