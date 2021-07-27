@@ -324,11 +324,11 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/B_2g_triplet.fgo"     );
     //ff.loadFromFile( "data/B_2g_triplet_asym.fgo"     );
     //ff.loadFromFile( "data/C_1g.fgo"             );
-    ff.loadFromFile( "data/C_2g_triplet.fgo"     );
+    //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
     //ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
     //ff.loadFromFile( "data/C_2g_symOpt.fgo");
     //ff.loadFromFile( "data/C_2g_o1.fgo"          );
-    //ff.loadFromFile( "data/C_2g_problem.fgo"      );
+    ff.loadFromFile( "data/C_2g_problem.fgo"      );
     //ff.loadFromFile( "data/C_1g_sp2.fgo"      );
     //ff.loadFromFile( "data/C_2g_sp2.fgo"      );
     //ff.loadFromFile( "data/C_2g_sp2_problem.fgo"      );
@@ -491,6 +491,8 @@ void TestAppCLCFSF::draw(){
     glEnable( GL_DEPTH_TEST );
     */
 
+    //printf( " -1 epos (%g,%g,%g) efpos (%g,%g,%g) \n", ff.epos[0].x,ff.epos[0].y,ff.epos[0].z, ff.efpos[0].x,ff.efpos[0].y,ff.efpos[0].z );
+
     //dt = 0.001;
     perFrame = 1000;
     if(bRun){
@@ -515,12 +517,18 @@ void TestAppCLCFSF::draw(){
         }
         */
 
+        for(int itr=0; itr<1; itr++){
+            double F2 = ff.orthogonalizeStep( 1 );
+            printf( "[%i] F2 %g \n", frameCount, F2 );
+            if( isnan(F2) || (F2<1e-8) ) bRun=false;
+        }
 
-
+        /*
         for(int itr=0; itr<perFrame; itr++){
             ropt.run( 1 );
             Draw2D::drawPoint( { ropt.X[idof]-ropt.Xbest[idof] , (ropt.E-ropt.Ebest)*0.1 } );
         }
+        */
 
 
 
@@ -577,7 +585,8 @@ void TestAppCLCFSF::draw(){
     }
 
 
-    VecN::set(ropt.n, ropt.Xbest, ropt.X );
+    //VecN::set(ropt.n, ropt.Xbest, ropt.X );
+
     glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable( GL_DEPTH_TEST );
@@ -588,6 +597,8 @@ void TestAppCLCFSF::draw(){
         if(bDrawRho  ) drawff_rho  ( ff, oglSph, fsc      );
     }
     if(bDrawPlots){ viewPlots(); }
+
+    //printf( " 4 epos (%g,%g,%g) efpos (%g,%g,%g) \n", ff.epos[0].x,ff.epos[0].y,ff.epos[0].z, ff.efpos[0].x,ff.efpos[0].y,ff.efpos[0].z );
 
 
 };

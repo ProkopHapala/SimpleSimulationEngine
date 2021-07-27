@@ -115,6 +115,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
     double Rcut2     =Rcut*Rcut;
     double RcutOrb2  =RcutOrb*RcutOrb;
 
+    double minSize=0.1,maxSize=3.0;
+
     double Ek=0,Eee=0,EeePaul=0,EeeExch=0,Eae=0,EaePaul=0,Eaa=0, Etot=0; ///< different kinds of energy
 
     int natypes=0;
@@ -481,6 +483,14 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
 // ==================== Normalize Orb - This is to make sure we do nothing wrong by normalization after evaluation of kinetic energy
 // ===========================================================================================================================
 
+    void clampSizes(){
+        for(int i=0; i<nBas; i++){
+            //printf( " esize[%i] %g -> ", i, esize[i] );
+            esize[i] = _clamp(esize[i], minSize, maxSize);
+            //printf( " %g \n", esize[i] );
+        }
+    }
+
     void swapBas( int i, int j){
         _swap( epos [i], epos [j] );
         _swap( esize[i], esize[j] );
@@ -544,6 +554,10 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         double renorm2 = renorm*renorm;
         for(int i=i0; i<i0+perOrb; i++){ ecoef[i] *=renorm;  };
         return Ek;
+    }
+
+    void normalizeOrbs(){
+        for(int io=0; io<nOrb; io++) normalizeOrb(io);
     }
 
 // ===========================================================================================================================
@@ -1040,6 +1054,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         }else{ // Pauli Model 0 :   E = K*S^2
             E = Ssum*Ssum*KPauliOverlap;
             double f = 2*Ssum*KPauliOverlap;
+            //printf( "pauliOrbPair(%i,%i) E %g f %g Ssum %g KPauli %g iPauliModel %i\n", io, jo, E, f, Ssum, KPauliOverlap, iPauliModel );
             forceOrb( io, f, DiS );
             forceOrb( jo, f, DjS );
         }
@@ -1904,28 +1919,36 @@ double evalAA(){
     }
 
 
-    void orthogonalizeStep( int niter ){
+    double orthogonalizeStep( int niter = 1 ){
         /// Exact Iterative Symetric Orthogonalization
         /// to make absolutely sure the orbitals are orthogonal, we do several step of orthogonalization per each step of
         /// according to https://scicomp.stackexchange.com/a/37683/4696
         ///  phi_i <= phi_i - 0.5 * Sum_j phi_j  <phi_i|phi_j>
         ///  therefore we compute force f = Sum_j phi_j  <phi_i|phi_j>
         /// and then perform gradient descent   phi_i <= phi_i + f*0.5     (dt=0.5)
+        //printf( " 0 epos (%g,%g,%g) efpos (%g,%g,%g) \n", epos[0].x,epos[0].y,epos[0].z, efpos[0].x,efpos[0].y,efpos[0].z );
         double K  = KPauliOverlap;
         int iMode = iPauliModel;
-        K = 0.5;
+        KPauliOverlap = 0.5;
         iPauliModel = 0;
+        double F2 = 0;
         for(int i=0; i<niter; i++){
             //cleanForces();
+            clampSizes();
+            normalizeOrbs();
             cleanEForces();
             //if( bEvalCoulomb || (bEvalAECoulomb && bEvalAE) ) clearAuxDens();
             //double Ek = projectOrbs( );
+            //printElectrons();
             evalPauli(); // ToDo : perhaps we should output maximum ramianing overlap ?
+            //printElectronForces();
             //if( bNormForce && bNormalize){ outProjectNormalForces(); }
-            moveElectrons( 0.5 );
+            F2 += moveElectrons( 0.5 );
         }
+        //printf( " 3 epos (%g,%g,%g) efpos (%g,%g,%g) \n", epos[0].x,epos[0].y,epos[0].z, efpos[0].x,efpos[0].y,efpos[0].z );
         KPauliOverlap = K;
         iPauliModel   = iMode;
+        return F2;
     }
 
     void forceInfo(){
@@ -1947,6 +1970,7 @@ double evalAA(){
         double F2ep = 0;
         double F2es = 0;
         double F2ec = 0; //DEBUG
+        //printf( " 1 epos (%g,%g,%g) efpos (%g,%g,%g) \n", epos[0].x,epos[0].y,epos[0].z, efpos[0].x,efpos[0].y,efpos[0].z );
         for(int io=0; io<nOrb; io++){
             int i0=getOrbOffset(io);
             //printf("ofix[%i] %i \n", io, ofix[io] );
@@ -1957,6 +1981,8 @@ double evalAA(){
                 if(bOptCoef){ ecoef[i] +=       efcoef[i]* dt  ;    F2ec+=sq(efcoef[i]);     }
             }
         }
+        //printf( " 2 epos (%g,%g,%g) efpos (%g,%g,%g) \n", epos[0].x,epos[0].y,epos[0].z, efpos[0].x,efpos[0].y,efpos[0].z );
+        //printf( " F2ep %g F2es %g F2ec %g \n", F2ep, F2es, F2ec );
         return F2ep + F2es + F2ec;
     }
 
@@ -2261,10 +2287,20 @@ void printAtoms(){
 void printElectrons(){
     printf( "===CLCFGO::printElectrons()\n");
     for(int io=0; io<nOrb; io++){
-        printf( ">> orb[%i] spin %i \n", io, ospin[io] );
+        //printf( ">> orb[%i] spin %i \n", io, ospin[io] );
         for(int j=0; j<perOrb; j++){
             int ie=io*perOrb+j;
             printf( "e[%i,%i|%i] p(%g,%g,%g)[A] size %g coef %g \n", io,j,ie, epos[ie].x,epos[ie].y,epos[ie].z, esize[ie], ecoef[ie] );
+        }
+    }
+}
+
+void printElectronForces(){
+    printf( "===CLCFGO::printElectronForces()\n");
+    for(int io=0; io<nOrb; io++){
+        for(int j=0; j<perOrb; j++){
+            int ie=io*perOrb+j;
+            printf( "F e[%i,%i|%i] p(%g,%g,%g)[A] size %g coef %g \n", io,j,ie, efpos[ie].x,efpos[ie].y,efpos[ie].z, efsize[ie], efcoef[ie] );
         }
     }
 }
