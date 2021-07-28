@@ -496,14 +496,17 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/Ce4_eFF.xyz";
     //char* fname = "data/CH3_eFF_spin.xyz";
     //char* fname = "data/CH4_eFF_flat_spin.xyz";
-    //char* fname = "data/CH4_eFF_spin.xyz";
+    char* fname = "data/CH4_eFF_spin.xyz";
     //char* fname = "data/C2_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin_.xyz";
     //char* fname = "data/C2H6_eFF_spin.xyz";
     //char* fname = "data/C2H6_eFF_spin_.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
-    //ff.loadFromFile_xyz( fname );
+    ff.loadFromFile_xyz( fname );
+
+    //ff.loadFromFile_fgo( "data/CH4.fgo" );
+    //ff.info();
 
 
     // ================== Generate Atomic
@@ -523,7 +526,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     };
 
     // ============ Build molecule
-
+    /*
     MM::Atom brushAtom{  6, -1,-1, Vec3dZero, MM::Atom::defaultREQ };
     MM::Bond brushBond{ -1, {-1,-1}, 1.5, 25.0 };
 
@@ -548,7 +551,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     }
     //builder.toMMFFmini( ff );
     builder.toEFF_old( ff, EFFparams, 0.5, 0.025 );
-
+    */
 
     DEBUG
 
@@ -595,6 +598,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
     ff.info();
     printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+    printf( " test_eFF_old exits ... \n" ); exit(0);
     //exit(0);
 
 

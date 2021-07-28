@@ -160,7 +160,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/Ce4_eFF.xyz";
     //char* fname = "data/CH3_eFF_spin.xyz";
     //char* fname = "data/CH4_eFF_flat_spin.xyz";
-    char* fname = "data/CH4_eFF_spin.xyz";
+    //char* fname = "data/CH4_eFF_spin.xyz";
     //char* fname = "data/C2_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin_.xyz";
@@ -183,7 +183,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.loadFromFile_fgo( "data/O2_half.fgo" );
     //ff.loadFromFile_fgo( "data/H2O_1g_8o.fgo" );
 
-    //ff.loadFromFile_fgo( "data/CH4.fgo" );
+    ff.loadFromFile_fgo( "data/CH4.fgo" );
 
 
     //ff.bEvalAECoulomb = 0;
@@ -225,7 +225,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     double E = ff.eval();
     printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
-    //exit(0);
+    printf( " test_eFF exits ... \n" ); exit(0);
 
     oglSph=Draw::list(oglSph);
     Draw3D::drawSphere_oct(3,1.0d,(Vec3d){0.,0.,0.});

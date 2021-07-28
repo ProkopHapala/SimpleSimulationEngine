@@ -472,7 +472,7 @@ double* atomsPotAtPoints( int n, Vec3d* ps, double* out=0, double s=0.0, double 
 }
 
 void info(){
-    for(int i=0; i<ne; i++){
+    for(int i=0; i<na; i++){
         printf( "a[%i] p(%g,%g,%g) q %g eAbW(%g,%g,%g) aAbW(%g,%g,%g) \n", i, apos[i].x, apos[i].y, apos[i].z, aQ[i], eAbWs[i].z,eAbWs[i].z,eAbWs[i].z, aAbWs[i].z,aAbWs[i].z,aAbWs[i].z );
     }
     for(int i=0; i<ne; i++){
@@ -526,6 +526,71 @@ bool loadFromFile_xyz( char const* filename ){
     }
     clearForce();
     printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - ne, Qasum, ne );
+    fclose (pFile);
+    return 0;
+}
+
+
+bool loadFromFile_fgo( char const* filename ){
+    //printf(" filename: >>%s<< \n", filename );
+    FILE * pFile;
+    pFile = fopen (filename,"r");
+    if( pFile == NULL ){
+        printf("ERROR in eFF::loadFromFile_fgo(%s) : No such file !!! \n", filename );
+        return -1;
+    }
+    int ntot;
+    const int nbuff = 1024;
+    char buff[nbuff]; char* line;
+    //fscanf (pFile, " %i \n", &ntot );
+    int natom_=0, nOrb_=0, perOrb_=0; bool bClosedShell=0;
+    line=fgets(buff,nbuff,pFile);
+    sscanf (line, "%i %i %i\n", &natom_, &nOrb_, &perOrb_, &bClosedShell );
+    //printf("na %i ne %i perORb %i \n", natom, nOrb, perOrb_);
+    //printf("na %i ne %i perORb %i \n", natom_, nOrb_, perOrb_ );
+    if(perOrb_!=1){ printf("ERROR in eFF::loadFromFile_fgo(%s) : perOrb must be =1 ( found %i instead) !!! \n", filename, perOrb_ );};
+    if(bClosedShell) nOrb_*=2;
+    realloc( natom_, nOrb_ );
+    double Qasum = 0.0;
+    for(int i=0; i<na; i++){
+        double x,y,z;
+        double Q,sQ,sP,cP;
+        fgets( buff, nbuff, pFile);
+        int nw = sscanf (buff, "%lf %lf %lf %lf %lf %lf %lf", &x, &y, &z, &Q, &sQ, &sP, &cP );
+        //printf( "atom[%i] p(%g,%g,%g) Q %g sQ %g sP %g cP %g \n", i, x, y, z,    Q, sQ, sP, cP );
+        Q=-Q;
+        apos  [i]=(Vec3d){x,y,z};
+        //aPars[i].set(Q,sQ,sP,cP);
+        aQ  [i]=Q;
+
+        Qasum += Q;
+    }
+    int nBasRead = ne;
+    if( bClosedShell ) nBasRead/=2;
+    for(int i=0; i<nBasRead; i++){
+        double x,y,z;
+        double s,c;
+        int spin;
+        fgets( buff, nbuff, pFile); // printf( "fgets: >%s<\n", buf );
+        int nw = sscanf (buff, "%lf %lf %lf %lf %lf %i", &x, &y, &z,  &s, &c, &spin );
+        epos [i]=(Vec3d){x,y,z};
+        esize[i]=s;
+        //ecoef[i]=c;
+        //int io=i/perOrb;
+        if( !bClosedShell ){ if(nw>5)espin[i]=spin; }else{ espin[i]=1; };
+        //printf( "ebasis[%i,%i|%i] p(%g,%g,%g) s %g c %g spin %i | nw %i io %i \n", i/perOrb, i%perOrb,i, x, y, z,  s, c, spin,  nw, io  );
+    }
+    if( bClosedShell ){
+        for(int i=0; i<nBasRead; i++){
+            int j = i+nBasRead;
+            epos [j]=epos[i];
+            esize[j]=esize[i];
+            //ecoef[j]=ecoef[i];
+            espin[j]=-1;
+        }
+    }
+    printf( "na %i ne %i \n", na, ne );
+    //printf( "Qtot = %g (%g - 2*%i) \n",  Qasum - nOrb, Qasum, nOrb );
     fclose (pFile);
     return 0;
 }
