@@ -1,4 +1,21 @@
 
+/*
+
+NOTE:
+
+WORKING COMMITS - ( Relax CH4 and C4H12 )
+commit d8b1156f6ef8f283785dae1fee71105d591a3280    2021-Apr-26  testing CLCFGO.h vs eFF.h for Hydrogen atom with electron radius 0.5A…
+
+NOT WORKING COMMITS
+commit dae1d0b16d3b892f0c3d982c5f277df38bfb4179    2021-Jun-01    CLCFGO : option to out-project force components which breaks normaliz…
+commit 94a94e956acad8e3d23a54acbd0f715fe0d1f827    2021-May-05    CLCFGO : tested H2 and H2O molecule with respect to eFF; total energy…
+
+
+*/
+
+
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,11 +55,14 @@ Vec3d* DEBUG_fa_aa =0;
 
 
 #include "DynamicOpt.h"
+
 #include "InteractionsGauss.h"
 #include "eFF.h"
+
+//#include "InteractionsGauss_old.h"
+//#include "eFF_old.h"
+
 //#include "e2FF.h" // old currently not working
-
-
 
 #include "Forces.h"
 
@@ -140,14 +160,14 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/Ce4_eFF.xyz";
     //char* fname = "data/CH3_eFF_spin.xyz";
     //char* fname = "data/CH4_eFF_flat_spin.xyz";
-    //char* fname = "data/CH4_eFF_spin.xyz";
+    char* fname = "data/CH4_eFF_spin.xyz";
     //char* fname = "data/C2_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin.xyz";
     //char* fname = "data/C2H4_eFF_spin_.xyz";
     //char* fname = "data/C2H6_eFF_spin.xyz";
     //char* fname = "data/C2H6_eFF_spin_.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
-    //ff.loadFromFile_xyz( fname );
+    ff.loadFromFile_xyz( fname );
 
     //ff.loadFromFile_fgo( "data/e2_1g_2o_singlet.fgo" );
     //ff.loadFromFile_fgo( "data/e2_1g_2o_triplet.fgo );
@@ -156,12 +176,14 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.loadFromFile_fgo( "data/He_triplet.fgo" );
     //ff.loadFromFile_fgo( "data/H2_1g_2o.fgo" );
     //ff.loadFromFile_fgo( "data/H2.fgo" );
-    ff.loadFromFile_fgo( "data/C_1g.fgo" );
+    //ff.loadFromFile_fgo( "data/C_1g.fgo" );
     //ff.loadFromFile_fgo( "data/C_2g_o1.fgo" );
     //ff.loadFromFile_fgo( "data/N2.fgo" );
     //ff.loadFromFile_fgo( "data/O2.fgo" );
     //ff.loadFromFile_fgo( "data/O2_half.fgo" );
     //ff.loadFromFile_fgo( "data/H2O_1g_8o.fgo" );
+
+    //ff.loadFromFile_fgo( "data/CH4.fgo" );
 
 
     //ff.bEvalAECoulomb = 0;
@@ -317,6 +339,7 @@ void TestAppRARFF::draw(){
     for(int i=0; i<ff.na; i++){
         //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z );
         glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , ff.aPars[i].x*Qsz );
+        //glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , Qsz );
         glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos  ( ff.aforce[i]*fsc, ff.apos[i] );
         //Draw3D::drawVecInPos(   ff.aforce[i]*fsc, ff.apos[i] );
         //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.apos[i].x,ff.apos[i].y,ff.apos[i].z );

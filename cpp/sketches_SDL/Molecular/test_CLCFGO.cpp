@@ -326,7 +326,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/B_2g_triplet.fgo"     );
     //ff.loadFromFile( "data/B_2g_triplet_asym.fgo"     );
     //ff.loadFromFile( "data/C_1g.fgo"             );
-    ff.loadFromFile( "data/C_2g_triplet.fgo"     );
+    //ff.loadFromFile( "data/C_2g_triplet.fgo"     );
     //ff.loadFromFile( "data/C_2g_triplet_conv_K500.fgo"     );
     //ff.loadFromFile( "data/C_2g_triplet_conv_K5000.fgo"     );
     //ff.loadFromFile( "data/C_2g_triplet-.fgo"      );
@@ -336,6 +336,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/C_1g_sp2.fgo"      );
     //ff.loadFromFile( "data/C_2g_sp2.fgo"      );
     //ff.loadFromFile( "data/C_2g_sp2_problem.fgo"      );
+    ff.loadFromFile( "data/CH4.fgo"      );
+
     //ff.loadFromFile( "data/N2.fgo"               );
     //ff.loadFromFile( "data/O2.fgo"               );
     //ff.loadFromFile( "data/O2_half.fgo"          );
@@ -370,17 +372,18 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.bOptEPos = 1;
     //ff.bOptSize = 1;
 
-    ff.bOptAtom = 0;
+    //ff.bOptAtom = 0;
     //ff.bOptEPos = 0;
     //ff.bOptSize = 0;
     //ff.bOptCoef = 0;
     //ff.ofix[0] = 1;
 
-    //ff.iPauliModel = 2;
-    ff.iPauliModel = 0;
+    ff.iPauliModel = 2;
+    //ff.iPauliModel = 0;
 
-    ff.KPauliOverlap = 5000.0;
-    //ff.KPauliOverlap = 500.0;
+    //ff.KPauliOverlap = 50000.0;
+    //ff.KPauliOverlap = 5000.0;
+    ff.KPauliOverlap = 500.0;
     //ff.KPauliOverlap = 50.0;
     dt = 0.0001;
 
@@ -459,7 +462,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ropt.stepSize  = 0.1;
     ropt.start();
 
-    opt.bindOrAlloc( ff.nBas*5, ff.dofs+ff.natom*3,  0, ff.fdofs+ff.natom*3, 0 );
+    opt.bindOrAlloc( ff.ndofs,  ff.dofs, 0, ff.fdofs, 0 );
+    //opt.bindOrAlloc( ff.nBas*5, ff.dofs+ff.natom*3,  0, ff.fdofs+ff.natom*3, 0 );
     opt.initOpt( 0.01, 0.1 );
 
     //VecN::set( ropt.n, 0.0, ropt.scales );
@@ -513,8 +517,8 @@ void TestAppCLCFSF::draw(){
             ff.eval();
             ff.forceInfo();
             //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, ff.Ek, ff.Eee,ff.EeePaul,  ff.Eae,ff.EaePaul, ff.Eaa );
-            //F2 = ff.moveGD(dt);
-            F2 = opt.move_FIRE();
+            F2 = ff.moveGD(dt);
+            //F2 = opt.move_FIRE();
             iter++;
         }
         printf( "frame[%i] E %g |F| %g \n", frameCount, ff.Etot, sqrt(F2) );

@@ -122,6 +122,7 @@ void checkDerivs( Vec3d KRSrho ){
 
 }
 
+/*
 void checkDerivs2(){
 
     double d = 0.0001;
@@ -150,6 +151,7 @@ void checkDerivs2(){
     //exit(0);
 
 }
+*/
 
 // ===========================================
 // ============ Plotting
@@ -320,6 +322,7 @@ void makePlots( Plot2D& plot, EFF& ff ){
 
 }
 
+/*
 void makePlots2( Plot2D& plot ){
 
     EFF ff;
@@ -352,13 +355,13 @@ void makePlots2( Plot2D& plot ){
         ff.esize[0]=1.0; plot.lines[1]->ys[i] = sc* ff.eval();
         ff.esize[0]=1.5; plot.lines[2]->ys[i] = sc* ff.eval();
 
-        /*
-        ff.clearForce();
-        Etot = ff.eval();
-        plot.lines[0]->ys[i] = sc*Etot;
-        plot.lines[1]->ys[i] = sc*ff.eforce[0].x;
-        plot.lines[2]->ys[i] = sc*ff.fsize [0];
-        */
+
+        //ff.clearForce();
+        //Etot = ff.eval();
+        //plot.lines[0]->ys[i] = sc*Etot;
+        //plot.lines[1]->ys[i] = sc*ff.eforce[0].x;
+        //plot.lines[2]->ys[i] = sc*ff.fsize [0];
+
         //printf( "makePlots2[%i] %g -> E %g fe %g fize %g \n", i, x, Etot, ff.eforce[0].x, ff.fsize[0] );
         //printf( "makePlots[%i] %g -> %g (%g,%g(4*%g),%g) %g,%g \n", i, x,   Etot, ff.Eaa,ff.Eae,ff.Eae*0.5,ff.Eee, ff.Ek, ff.EeePaul );
     }
@@ -372,6 +375,7 @@ void makePlots2( Plot2D& plot ){
     ff.dealloc();
 
 }
+*/
 
 void gen_molecule( EFF& ff ){
 
@@ -418,7 +422,7 @@ void gen_molecule( EFF& ff ){
         //builder.makeSPConf(i);
     }
     //builder.toMMFFmini( ff );
-    builder.toEFF( ff, EFFparams, 0.5, 0.025 );
+    //builder.toEFF( ff, EFFparams, 0.5, 0.025 );
 
 
 }
