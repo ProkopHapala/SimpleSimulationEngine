@@ -167,7 +167,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //char* fname = "data/C2H6_eFF_spin.xyz";
     //char* fname = "data/C2H6_eFF_spin_.xyz";
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
-    ff.loadFromFile_xyz( fname );
+    //ff.loadFromFile_xyz( fname );
 
     //ff.loadFromFile_fgo( "data/e2_1g_2o_singlet.fgo" );
     //ff.loadFromFile_fgo( "data/e2_1g_2o_triplet.fgo );
@@ -183,7 +183,12 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.loadFromFile_fgo( "data/O2_half.fgo" );
     //ff.loadFromFile_fgo( "data/H2O_1g_8o.fgo" );
 
-    ff.loadFromFile_fgo( "data/CH4.fgo" );
+    //ff.loadFromFile_fgo( "data/C_e4_1g.fgo" );
+    //ff.loadFromFile_fgo( "data/CH4.fgo" );
+    //ff.loadFromFile_fgo( "data/NH3.fgo" );
+    //ff.loadFromFile_fgo( "data/H2O.fgo" );
+    ff.loadFromFile_fgo( "data/C2H4.fgo" );
+
 
 
     //ff.bEvalAECoulomb = 0;
@@ -215,7 +220,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     // ==== Bind Optimizer
     opt.bindOrAlloc( ff.nDOFs, ff.pDOFs, 0, ff.fDOFs, 0 );
     opt.cleanVel( );
-    opt.initOpt( 0.05, 0.1 );
+    opt.initOpt( 0.01, 0.2 );
     opt.f_limit = 1000.0;
 
     //ff.iPauliModel = 0; // dens overlap
@@ -225,7 +230,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     double E = ff.eval();
     printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
-    printf( " test_eFF exits ... \n" ); exit(0);
+    //printf( " test_eFF exits ... \n" ); exit(0);
 
     oglSph=Draw::list(oglSph);
     Draw3D::drawSphere_oct(3,1.0d,(Vec3d){0.,0.,0.});
@@ -257,6 +262,7 @@ void TestAppRARFF::draw(){
     double sum = 0;
     if(bRun){
         double F2 = 1.0;
+        double Etot;
         for(int itr=0;itr<perFrame;itr++){
             //printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
 
@@ -271,7 +277,7 @@ void TestAppRARFF::draw(){
             //applyParabolicPotential( {0.0,0.0,0.0}, {0.1,0.1,0.1}, ff.na, ff.apos, ff.aforce );
             //applyParabolicPotential( {0.0,0.0,0.0}, {0.1,0.1,0.1}, ff.ne, ff.epos, ff.eforce );
 
-            double E = ff.eval();
+            Etot = ff.eval();
             //ff.apos[0].set(.0);
             //checkFinite( ff, vminOK, vmaxOK );
 
@@ -281,10 +287,10 @@ void TestAppRARFF::draw(){
             //VecN::set( ff.ne  , 0.0, ff.fsize  );           // FIX ELECTRON SIZE
             //VecN::set( ff.ne*3, 0.0, (double*)ff.eforce );  // FIX ELECTRON POS
             //if(bRun)ff.move_GD(0.001 );
-            ff.move_GD( 0.001 );
+            //ff.move_GD( 0.0001 );
             //if(bRun) ff.move_GD_noAlias( 0.0001 );
 
-            //F2 = opt.move_FIRE();
+            F2 = opt.move_FIRE();
 
             //checkFinite( ff, vminOK, vmaxOK );
 
@@ -292,13 +298,17 @@ void TestAppRARFF::draw(){
             //printf( "frame[%i] E %g pe[0](%g,%g,%g) s %g fe[0](%g,%g,%g) fs %g \n", frameCount, E,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0],   ff.eforce[0].x,ff.eforce[0].y,ff.eforce[0].z, ff.fsize[0] );
 
             //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0] );
-            printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (ff.apos[0]-ff.apos[1]).norm(),   (ff.apos[0]-ff.epos[0]).norm(), ff.esize[0] );
+            //printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (ff.apos[0]-ff.apos[1]).norm(),   (ff.apos[0]-ff.epos[0]).norm(), ff.esize[0] );
+
+             printf( "frame[%i,%i] E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", frameCount, itr, Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
 
             //printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
             //printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
         }
         if( F2 < 1e-6 ){
+            printf( "Finished: E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
             ff.info();
+            printDistFormAtom( ff.na, ff.apos, 0 );
             bRun=false;
         }
     }

@@ -327,14 +327,18 @@ double evalEE(){
             double& fsj = fsize[j];
 
             if(bEvalCoulomb){
-            double dEee = addCoulombGauss( dR, si, sj, f, fsi, fsj, qq ); Eee += dEee;
+                //double dEee = addCoulombGauss( dR, si, sj, f, fsi, fsj, qq ); Eee += dEee;
+                double dEee = addCoulombGauss( dR, si*M_SQRT2, sj*M_SQRT2, f, fsi, fsj, qq ); Eee += dEee;
+                //double dEee = addCoulombGauss( dR, si*2, sj*2, f, fsi, fsj, qq ); Eee += dEee;
             }
             if(bEvalPauli){
             //printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
             if( iPauliModel == 1 ){
-                //printf( "EeePaul[%i,%i]  ", i, j );
-                double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho ); EeePaul+=dEpaul;
-                //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
+                if( spini==espin[j] ){
+                    //printf( "EeePaul[%i,%i]  ", i, j );
+                    double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho ); EeePaul+=dEpaul;
+                    //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
+                }
             }else if( iPauliModel == 2 ){
                 if(spini==espin[j]){ // Pauli repulsion only for electrons with same spin
                     //printf( "EeePaul[%i,%i] >> ", i, j );
@@ -401,6 +405,7 @@ double evalAE(){
             Eae  += addCoulombGauss( dR, aPar.y, sj, f, fs_junk, fsj, qq );
             }
             if( bEvalAEPauli && (aPar.w>1e-8) ){
+                //if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
                 //double dEaePaul = addPauliGauss      ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );     // correct
                 double dEaePaul = addDensOverlapGauss_S( dR, sj, aPar.z, aPar.w, f, fsj, fs_junk );     // correct
                 EaePaul+=dEaePaul;
@@ -439,12 +444,13 @@ double evalAA(){
             Vec3d f = Vec3dZero; // HERE WAS THE ERROR (missing initialization !!!! )
             //Vec3d  abw;
             //combineAbW( abwi, aAbWs[j], abw );
-            const Quat4d& aParj = aPars[i];
+            const Quat4d& aParj = aPars[j];
             const Vec3d   dR    = apos[j] - pi;
             //if( (i_DEBUG>0) && (1==qi==aQ[j]) ){ printf( " abw(H-H): %i,%i A %g B %g w %g \n", i,j, abw.x, abw.y, abw.z ); }
             //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
             //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
             Eaa +=  addAtomicForceQ( dR, f, aPari.x*aParj.x );
+            //printf( " Eaa[%i,%i]  Q %g(%g,%g) \n", i, j, aPari.x*aParj.x, aPari.x, aParj.x  );
             //   ToDo : Pauli Repulsion of core electrons ?????
             aforce[j].sub(f);
             aforce[i].add(f);

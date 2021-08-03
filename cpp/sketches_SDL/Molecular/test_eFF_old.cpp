@@ -86,7 +86,11 @@ void printFFInfo(const EFF& ff){
     }
 }
 
-
+void printDistFormAtom( int n, Vec3d* pos, int i0 ){
+    for(int i=0; i<n; i++){
+        if ( i!=i0 )printf( "atom_dist[%i,%i] %g \n", i0, i, pos[i0].dist( pos[i] )  );
+    }
+}
 
 int genFieldMap( int ogl, Vec2i ns, const Vec3d* ps, const double* Es, double vmin, double vmax ){
     //printf( "val_range: %g %g %g \n", val_range.x, val_range.y, Es[0] );
@@ -188,10 +192,10 @@ void checkDerivs2(){
 
 void makePlots( Plot2D& plot, EFF& ff ){
 
-    int ielem = 1;
-    double QQae = -1.0;
-    double QQaa = +1.0;
-    double QQee = QE*QE;
+    int    ielem = 1;
+    double QQae  = -1.0;
+    double QQaa  = +1.0;
+    double QQee  = QE*QE;
 
     double bEE     = -1.0;
     double aEE     =  2.0;
@@ -489,28 +493,31 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
 
     // ===== SETUP GEOM
-    //char* fname = "data/H_eFF.xyz";
-    //char* fname = "data/H2_eFF_spin.xyz";
-    //char* fname = "data/Ce1_eFF.xyz";
-    //char* fname = "data/Ce2_eFF.xyz";
-    //char* fname = "data/Ce4_eFF.xyz";
-    //char* fname = "data/CH3_eFF_spin.xyz";
-    //char* fname = "data/CH4_eFF_flat_spin.xyz";
-    char* fname = "data/CH4_eFF_spin.xyz";
-    //char* fname = "data/C2_eFF_spin.xyz";
-    //char* fname = "data/C2H4_eFF_spin.xyz";
-    //char* fname = "data/C2H4_eFF_spin_.xyz";
-    //char* fname = "data/C2H6_eFF_spin.xyz";
-    //char* fname = "data/C2H6_eFF_spin_.xyz";
+    //ff.loadFromFile_xyz( "data/H_eFF.xyz");
+    //ff.loadFromFile_xyz( "data/H2_eFF_spin.xyz");
+    //ff.loadFromFile_xyz( "data/Ce1_eFF.xyz");
+    //ff.loadFromFile_xyz( "data/Ce2_eFF.xyz");
+    //ff.loadFromFile_xyz( "data/Ce4_eFF.xyz");
+    //ff.loadFromFile_xyz( "data/CH3_eFF_spin.xyz");
+    //ff.loadFromFile_xyz( "data/CH4_eFF_flat_spin.xyz");
+    //ff.loadFromFile_xyz( "data/CH4_eFF_spin.xyz" );
+    //ff.loadFromFile_xyz( "data/C2_eFF_spin.xyz");
+    //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz");
+    //ff.loadFromFile_xyz( "data/C2H4_eFF_spin_.xyz");
+    //ff.loadFromFile_xyz( "data/C2H6_eFF_spin.xyz");
+    //ff.loadFromFile_xyz( "data/C2H6_eFF_spin_.xyz");
     //ff.loadFromFile_xyz( "data/C2H4_eFF_spin.xyz" );
-    ff.loadFromFile_xyz( fname );
+    //ff.loadFromFile_xyz( fname );
 
+    //ff.loadFromFile_fgo( "data/C_e4_1g.fgo" );
     //ff.loadFromFile_fgo( "data/CH4.fgo" );
+    //ff.loadFromFile_fgo( "data/NH3.fgo" );
+    ff.loadFromFile_fgo( "data/H2O.fgo" );
+    //ff.loadFromFile_fgo( "data/C2H4.fgo" );
     //ff.info();
 
-
-    // ================== Generate Atomic
-
+    /*
+    // ============ Build molecule
     //const int natom=4,nbond=3,nang=2,ntors=1;
     const int natom=4,nbond=3;
     Vec3d apos0[] = {
@@ -524,9 +531,6 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         {1,2},  // 1
         {2,3},  // 2
     };
-
-    // ============ Build molecule
-    /*
     MM::Atom brushAtom{  6, -1,-1, Vec3dZero, MM::Atom::defaultREQ };
     MM::Bond brushBond{ -1, {-1,-1}, 1.5, 25.0 };
 
@@ -598,7 +602,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
     ff.info();
     printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
-    printf( " test_eFF_old exits ... \n" ); exit(0);
+    //printf( " test_eFF_old exits ... \n" ); exit(0);
     //exit(0);
 
 
@@ -694,6 +698,7 @@ void TestAppRARFF::draw(){
     double sum = 0;
     if(bRun){
         double F2 = 1.0;
+        double Etot=0;
         for(int itr=0;itr<perFrame;itr++){
             //printf( " ==== frame %i i_DEBUG  %i \n", frameCount, i_DEBUG );
 
@@ -707,7 +712,7 @@ void TestAppRARFF::draw(){
             //ff.evalEE();
             //ff.evalAE();
             //ff.evalAA();
-            double E = ff.eval();
+            Etot = ff.eval();
             //ff.apos[0].set(.0);
             //checkFinite( ff, vminOK, vmaxOK );
 
@@ -717,18 +722,19 @@ void TestAppRARFF::draw(){
             //VecN::set( ff.ne, 0.0, ff.fsize ); // FIX ELECTRON SIZE
             //if(bRun)ff.move_GD(0.001 );
 
-            //ff.move_GD( 0.001 );
+            //ff.move_GD( 0.0001 );
             //if(bRun) ff.move_GD_noAlias( 0.0001 );
-
             F2 = opt.move_FIRE();
 
             //checkFinite( ff, vminOK, vmaxOK );
 
-            printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
-            printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
+            printf( "frame[%i,%i] E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", frameCount, itr, Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            //printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
         }
         if( F2 < 1e-6 ){
+            printf( "Finished: E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
             ff.info();
+            printDistFormAtom( ff.na, ff.apos, 0 );
             bRun=false;
         }
     }

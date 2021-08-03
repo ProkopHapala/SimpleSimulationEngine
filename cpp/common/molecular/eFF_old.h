@@ -65,6 +65,8 @@ constexpr static const Vec3d default_eAbWs[] = {
 { 2.0, -3.0, 0.1},  // Q = 2 // Be?
 { 2.0, -3.0, 0.1},  // Q = 3 // B
 { 2.0, -3.0, 0.1},  // Q = 4 // C
+{ 2.0, -3.0, 0.1},  // Q = 4 // N
+{ 2.0, -3.0, 0.1},  // Q = 4 // O
 };
 
 constexpr static const Vec3d default_aAbWs[] = {
@@ -73,6 +75,8 @@ constexpr static const Vec3d default_aAbWs[] = {
 { 1.0, -5.0, 0.1},  // Q = 2 // Be?
 { 1.0, -5.0, 0.1},  // Q = 3 // B
 { 1.0, -5.0, 0.1},  // Q = 4 // C
+{ 1.0, -5.0, 0.1},  // Q = 4 // N
+{ 1.0, -5.0, 0.1},  // Q = 4 // O
 };
 
 constexpr static const  double default_EPCs[] = {
@@ -364,6 +368,7 @@ double evalAA(){
             //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
             //Eaa += addPairEF_expQ( apos[j]-pi, f, abw.z, qi*aQ[j], abw.y, abw.x );
             Eaa +=  addAtomicForceQ( dR, f, qi*aQ[j] );
+            //printf( " Eaa[%i,%i]  Q %g(%g,%g) \n", i, j, qi*aQ[j], qi, aQ[j]  );
             //   ToDo : Pauli Repulsion of core electrons ?????
             aforce[j].sub(f);
             aforce[i].add(f);

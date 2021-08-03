@@ -27,6 +27,12 @@ Vec3d v3max(int n, Vec3d* fs){
     return f;
 }
 
+void printDistFormAtom( int n, Vec3d* pos, int i0 ){
+    for(int i=0; i<n; i++){
+         if (i!=i0) printf( "atom_dist[%i,%i] %g \n", i0, i, pos[i0].dist( pos[i] )  );
+    }
+}
+
 bool checkScalar(const char* s, double v, double vmin, double vmax){
     bool b = false;
     if( v<vmin ){
