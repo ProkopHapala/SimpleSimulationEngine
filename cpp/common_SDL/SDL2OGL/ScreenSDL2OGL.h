@@ -69,8 +69,8 @@ class ScreenSDL2OGL{
 
 	void update( );
 
-	void init( int& id, int WIDTH_, int HEIGHT_ );
-	ScreenSDL2OGL ( int& id, int WIDTH_, int HEIGHT_ );
+	void init     ( int& id, int WIDTH_, int HEIGHT_, const char* name=0 );
+	ScreenSDL2OGL ( int& id, int WIDTH_, int HEIGHT_, const char* name=0 );
 	virtual ~ScreenSDL2OGL();
 	virtual void removeChild(ScreenSDL2OGL* child);
 

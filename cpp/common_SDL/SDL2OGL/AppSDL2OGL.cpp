@@ -135,7 +135,7 @@ void AppSDL2OGL::removeChild(ScreenSDL2OGL* child){
     }
 }
 
-AppSDL2OGL::AppSDL2OGL( int& id, int WIDTH_, int HEIGHT_ ) : ScreenSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+AppSDL2OGL::AppSDL2OGL( int& id, int WIDTH_, int HEIGHT_, const char* name ) : ScreenSDL2OGL( id, WIDTH_, HEIGHT_, name ) {
 
 }
 

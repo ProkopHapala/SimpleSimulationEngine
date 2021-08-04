@@ -479,7 +479,7 @@ void TestAppRARFF::init2DMap( int n, double dx ){
 
 }
 
-TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_, "test_eFF_old" ) {
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     plot1.fontTex=fontTex;
@@ -510,10 +510,11 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.loadFromFile_xyz( fname );
 
     //ff.loadFromFile_fgo( "data/C_e4_1g.fgo" );
-    //ff.loadFromFile_fgo( "data/CH4.fgo" );
+    ff.loadFromFile_fgo( "data/CH4.fgo" );
     //ff.loadFromFile_fgo( "data/NH3.fgo" );
-    ff.loadFromFile_fgo( "data/H2O.fgo" );
+    //ff.loadFromFile_fgo( "data/H2O.fgo" );
     //ff.loadFromFile_fgo( "data/C2H4.fgo" );
+    //ff.loadFromFile_fgo( "data/C2H2.fgo" );
     //ff.info();
 
     /*
@@ -601,7 +602,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //for(int i=0; i<ff.na; i++){ printf( "A_pos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z ); }
     //for(int i=0; i<ff.ne; i++){ printf( "e_pos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z ); }
     ff.info();
-    printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+    //printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+    ff.printEnergies();
     //printf( " test_eFF_old exits ... \n" ); exit(0);
     //exit(0);
 
@@ -728,11 +730,13 @@ void TestAppRARFF::draw(){
 
             //checkFinite( ff, vminOK, vmaxOK );
 
-            printf( "frame[%i,%i] E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", frameCount, itr, Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            //printf( "frame[%i,%i] E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", frameCount, itr, Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            printf( "frame[%i,%i] " );  ff.printEnergies();
             //printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
         }
         if( F2 < 1e-6 ){
-            printf( "Finished: E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            //printf( "Finished: E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            printf( "Finished:"); ff.printEnergies();
             ff.info();
             printDistFormAtom( ff.na, ff.apos, 0 );
             bRun=false;
@@ -827,9 +831,21 @@ void TestAppRARFF::draw(){
 
 
 void TestAppRARFF::drawHUD(){
-	glTranslatef( 100.0, 250.0, 0.0 );
-	glScalef    ( 100.0, 100.0, 1.0 );
+	//glTranslatef( 100.0, 250.0, 0.0 );
+	//glScalef    ( 100.0, 100.0, 1.0 );
 	//plot1.view();
+
+    glTranslatef( 10.0,HEIGHT-20.0,0.0 );
+	glColor3f(0.5,0.0,0.3);
+
+    //Draw::drawText( "AHOJ ", fontTex, fontSizeDef, {100,20} );
+
+    int nstr=2048;
+	char str[nstr];
+	char* s=str;
+	s+=ff.Eterms2str(s);
+	ff.orbs2str(s);
+    Draw::drawText( str, fontTex, fontSizeDef, {100,20} );
 }
 
 /*

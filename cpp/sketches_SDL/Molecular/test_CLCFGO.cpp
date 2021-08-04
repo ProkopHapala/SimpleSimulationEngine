@@ -150,13 +150,11 @@ void symmetrize_carbon( CLCFGO& ff ){
 }
 
 double getE( int n, double * X ){
-    symmetrize_carbon( ff );
-    ff.checkOrder();
-    ff.normalizeOrbSigns();
+    //symmetrize_carbon( ff );
+    //ff.checkOrder();
+    //ff.normalizeOrbSigns();
     return ff.eval();
 }
-
-
 
 void testColorOfHash(){
     for(int i=0; i<10; i++){
@@ -293,7 +291,7 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
 };
 
-TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_, "test_CLCFGO" ) {
 
     fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
@@ -336,7 +334,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/C_1g_sp2.fgo"      );
     //ff.loadFromFile( "data/C_2g_sp2.fgo"      );
     //ff.loadFromFile( "data/C_2g_sp2_problem.fgo"      );
-    ff.loadFromFile( "data/CH4.fgo"      );
+
+    //ff.loadFromFile( "data/C_e4_1g.fgo" );
+    ff.loadFromFile( "data/CH4.fgo" );
+    //ff.loadFromFile( "data/NH3.fgo" );
+    //ff.loadFromFile( "data/H2O.fgo" );
+    //ff.loadFromFile( "data/C2H4.fgo" );
+    //ff.loadFromFile( "data/C2H2.fgo" );
 
     //ff.loadFromFile( "data/N2.fgo"               );
     //ff.loadFromFile( "data/O2.fgo"               );
@@ -383,8 +387,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     //ff.KPauliOverlap = 50000.0;
     //ff.KPauliOverlap = 5000.0;
-    ff.KPauliOverlap = 500.0;
-    //ff.KPauliOverlap = 50.0;
+    //ff.KPauliOverlap = 500.0;
+    ff.KPauliOverlap = 50.0;
     dt = 0.0001;
 
     //bDrawWfs  = 0; bDrawRho  = 1;   // Plot Density blobs instead of wavefunctions
@@ -396,7 +400,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     double E = ff.eval();
     ff.forceInfo();
-    printf( "E %g | Ek %g Eee,p,ex(%g,%g,%g) Eae,p(%g,%g) Eaa %g | s[0] %g \n",E, ff.Ek, ff.Eee,ff.EeePaul,ff.EeeExch, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
+    ff.printEnergies();
+    //printf( "E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n",E, ff.Ek, ff.Eee,ff.EeePaul, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
     //exit(0);
 
     /*
@@ -417,7 +422,6 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //testDerivsTotal( 100, -1.0, 0.05, ff, plot1 );
     //plot1.xsharingLines(1, 100, -3.0, 0.1 );
     //plot1.xsharingLines( 2, 100,   -3.0, 0.1 );
-
 
     nOrbPlot=_min(5,ff.nOrb);
     printf( " nOrbPlot %i ff.nOrb %i \n", nOrbPlot, ff.nOrb );
@@ -452,7 +456,6 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     bRun = false;
 
-
     idof = 1;
     //ropt.realloc( ff.ndofs,  ff.dofs );             // Optimize all
     ropt.realloc( ff.nBas*5, ff.dofs+ff.natom*3 );    // Optimize only electrons
@@ -461,6 +464,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     ropt.stepSize  = 0.001;
     //ropt.stepSize  = 0.1;
     ropt.start();
+
 
     opt.bindOrAlloc( ff.ndofs,  ff.dofs, 0, ff.fdofs, 0 );
     //opt.bindOrAlloc( ff.nBas*5, ff.dofs+ff.natom*3,  0, ff.fdofs+ff.natom*3, 0 );
@@ -493,6 +497,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    //ff.printElectrons();
+
+    printf( "==== SETUP DONE ==== \n" );
 }
 
 void TestAppCLCFSF::draw(){
@@ -631,14 +639,17 @@ void TestAppCLCFSF::drawHUD(){
     glTranslatef( 10.0,HEIGHT-20.0,0.0 );
 	glColor3f(0.5,0.0,0.3);
 
+	ff.eval();
 	int nstr=2048;
 	char str[nstr];
 	char* s=str;
 	s+=ff.Eterms2str(s);
 	ff.orbs2str(s);
     Draw::drawText( str, fontTex, fontSizeDef, {100,20} );
+    //ff.printElectrons();
 
-
+    /*
+    // --- Cross Overlap
     glColor3f(1.0,0.0,0.0);
     glTranslatef( 300.0,-20.0,0.0 );
     s=str;
@@ -652,7 +663,7 @@ void TestAppCLCFSF::drawHUD(){
     }
     Draw::drawText( str, fontTex, fontSizeDef, {100,20} );
     ff.iPauliModel = iPauliModel;
-
+    */
 
 }
 

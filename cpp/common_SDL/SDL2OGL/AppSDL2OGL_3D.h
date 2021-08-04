@@ -55,7 +55,7 @@ class AppSDL2OGL_3D : public AppSDL2OGL{ public:
 	inline Vec3f mouseRay0(){ return cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y; }
 	void drawCrosshair( float sz );
 
-	AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_ );
+	AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_, const char* name=0 );
 
 };
 

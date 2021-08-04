@@ -244,10 +244,12 @@ constexpr static const Quat4d default_AtomParams[] = {
     double * esize  =0; ///< electron size
     double * fsize  =0; ///< electron force on size
 
+    double * eE = 0;
+
     double* pDOFs =0;  ///< buffer of degrees of freedom
     double* fDOFs =0;  ///< buffer of forces on degrees of freedom
 
-    double Ek=0, Eee=0,EeePaul=0,EeeExch=0,  Eae=0,EaePaul=0,  Eaa=0; ///< different kinds of energy
+    double Etot=0,Ek=0, Eee=0,EeePaul=0,EeeExch=0,  Eae=0,EaePaul=0,  Eaa=0; ///< different kinds of energy
 
 void realloc(int na_, int ne_){
     bDealoc = true;
@@ -270,6 +272,8 @@ void realloc(int na_, int ne_){
     //_realloc( eforce ,ne);
     //_realloc( evel   ,ne);
 
+    _realloc( eE, ne );
+
     apos   = (Vec3d*)pDOFs;
     aforce = (Vec3d*)fDOFs;
 
@@ -277,6 +281,8 @@ void realloc(int na_, int ne_){
     eforce = (Vec3d*)(fDOFs + na*3);
     esize  =          pDOFs + na*3 + ne*3;
     fsize  =          fDOFs + na*3 + ne*3;
+
+
 
     //_realloc(apos  ,na );
     //_realloc(aforce,na );
@@ -295,6 +301,7 @@ void dealloc(){
     //delete [] eAbWs;
     delete [] aPars;
     delete [] espin;
+    delete [] eE;
 }
 ~EFF(){ if(bDealoc)dealloc(); }
 
@@ -302,8 +309,10 @@ void dealloc(){
 double evalKinetic(){
     Ek=0;
     for(int i=0; i<ne; i++){
-        Ek += addKineticGauss( esize[i], fsize[i] );
+        double dEk = addKineticGauss( esize[i], fsize[i] );
         //if( i_DEBUG>0 ) printf( "evalKinetic[%i] s %g -> f %g Ek %g \n", i, esize[i], fsize[i], Ek );
+        eE[i] =dEk;
+        Ek   +=dEk;
     }
     return Ek;
 }
@@ -326,39 +335,44 @@ double evalEE(){
             const double sj = esize[j];
             double& fsj = fsize[j];
 
+            double dEee=0,dEpaul=0;
             if(bEvalCoulomb){
-                //double dEee = addCoulombGauss( dR, si, sj, f, fsi, fsj, qq ); Eee += dEee;
-                double dEee = addCoulombGauss( dR, si*M_SQRT2, sj*M_SQRT2, f, fsi, fsj, qq ); Eee += dEee;
-                //double dEee = addCoulombGauss( dR, si*2, sj*2, f, fsi, fsj, qq ); Eee += dEee;
+                dEee = addCoulombGauss( dR, si, sj, f, fsi, fsj, qq );
+                //dEee = addCoulombGauss( dR, si*M_SQRT2, sj*M_SQRT2, f, fsi, fsj, qq );
+                //dEee = addCoulombGauss( dR, si*2, sj*2, f, fsi, fsj, qq );
             }
             if(bEvalPauli){
-            //printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
-            if( iPauliModel == 1 ){
-                if( spini==espin[j] ){
-                    //printf( "EeePaul[%i,%i]  ", i, j );
-                    double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho ); EeePaul+=dEpaul;
-                    //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
-                }
-            }else if( iPauliModel == 2 ){
-                if(spini==espin[j]){ // Pauli repulsion only for electrons with same spin
-                    //printf( "EeePaul[%i,%i] >> ", i, j );
-                    //double dEpaul = addPauliGaussVB( dR, si*M_SQRT2, sj*M_SQRT2, f, fsi, fsj ); EeePaul+=dEpaul;
-                    double dEpaul = addPauliGaussVB( dR, si, sj, f, fsi, fsj ); EeePaul+=dEpaul;
-                    //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
-                    //printf( "<< dEpaul %g \n", dEpaul );
-                }
-            }else{
-                if( spini==espin[j] ){
-                    //printf( "EeePaul[%i,%i] ", i, j );
-                    i_DEBUG=1;
-                    double dEpaul = addDensOverlapGauss_S( dR, si*M_SQRT2, sj*M_SQRT2, KPauliOverlap, f, fsi, fsj ); EeePaul+=dEpaul;
-                    //double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, false, KRSrho ); EeePaul+=dEpaul;
-                    i_DEBUG=0;
-                    //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
+                //printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
+                if( iPauliModel == 1 ){
+                    if( spini==espin[j] ){
+                        //printf( "EeePaul[%i,%i]  ", i, j );
+                        dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
+                        //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
+                    }
+                }else if( iPauliModel == 2 ){
+                    if(spini==espin[j]){ // Pauli repulsion only for electrons with same spin
+                        //printf( "EeePaul[%i,%i] >> ", i, j );
+                        //double dEpaul = addPauliGaussVB( dR, si*M_SQRT2, sj*M_SQRT2, f, fsi, fsj ); EeePaul+=dEpaul;
+                        dEpaul = addPauliGaussVB( dR, si, sj, f, fsi, fsj );
+                        //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
+                        //printf( "<< dEpaul %g \n", dEpaul );
+                    }
+                }else{
+                    if( spini==espin[j] ){
+                        //printf( "EeePaul[%i,%i] ", i, j );
+                        i_DEBUG=1;
+                        dEpaul = addDensOverlapGauss_S( dR, si*M_SQRT2, sj*M_SQRT2, KPauliOverlap, f, fsi, fsj );
+                        //double dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, false, KRSrho ); EeePaul+=dEpaul;
+                        i_DEBUG=0;
+                        //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
+                    }
                 }
             }
-            }
-
+            Eee    += dEee;
+            EeePaul+= dEpaul;
+            double dE = 0.5*( dEee + dEpaul );
+            eE[i]+=dE;
+            eE[j]+=dE;
             //if( spini==espin[j] ) EeePaul += addDensOverlapGauss_S( dR,si,sj, 1, f, fsi, fsj );
             //Eee += addPairEF_expQ( epos[j]-pi, f, w2ee, +1, 0, 0 );
             //if( i_DEBUG>0 ) printf( "evalEE[%i,%i] dR(%g,%g,%g) s(%g,%g) q %g  ->   f(%g,%g,%g) fs(%g,%g) \n", i,j, dR.x,dR.y,dR.z, si,sj, qq,   f.x,f.y,f.z, fsi,fsj );
@@ -401,18 +415,22 @@ double evalAE(){
             double  fs_junk;
             //Eae += addPairEF_expQ( epos[j]-pi, f, abwi.z, qi*QE, abwi.y, abwi.x );
             //Eae  += addCoulombGauss( dR,sj,      f, fsj,      qqi );     // correct
+            double dEae=0,dEaePaul=0;
             if(bEvalAECoulomb){
-            Eae  += addCoulombGauss( dR, aPar.y, sj, f, fs_junk, fsj, qq );
+                dEae  = addCoulombGauss( dR, aPar.y, sj, f, fs_junk, fsj, qq );
             }
             if( bEvalAEPauli && (aPar.w>1e-8) ){
                 //if(qqi<-1.00001) EaePaul += addDensOverlapGauss_S( dR,sj, abwi.z, abwi.a, f, fsj, fs_junk );     // correct
                 //double dEaePaul = addPauliGauss      ( dR, sj, abwi.z, f, fsj, fs_junk, false, KRSrho );     // correct
                 double dEaePaul = addDensOverlapGauss_S( dR, sj, aPar.z, aPar.w, f, fsj, fs_junk );     // correct
-                EaePaul+=dEaePaul;
+
                 //printf( "EaePaul[%i,%i] E %g r %g s %g abw(%g,%g) \n", i, j, dEaePaul, dR.norm(), sj, abwi.z, abwi.a );
             }
             //if( i_DEBUG>0 ) printf( "evalAE[%i,%i] dR(%g,%g,%g) s %g q %g  ->   f(%g,%g,%g) fs %g \n", i,j, dR.x,dR.y,dR.z, sj, qqi,   f.x,f.y,f.z, fsj );
             //printf( "evalAE[%i,%i] E %g r %g s(%g,%g) \n", i,j, Eae, dR.norm(), aPar.y, sj );
+            Eae    +=dEae;
+            EaePaul+=dEaePaul;
+            eE[j]  +=dEae+dEaePaul;
             eforce[j].sub(f);
             aforce[i].add(f);
 
@@ -473,7 +491,7 @@ double evalAA(){
 double eval(){
     //clearForce();
     clearForce_noAlias();
-    double Etot = 0;
+    Etot = 0;
     if(bEvalKinetic) Etot+= evalKinetic();
     if(bEvalEE     ) Etot+= evalEE();
     if(bEvalAE     ) Etot+= evalAE();
@@ -492,6 +510,7 @@ void clearForce_noAlias(){
     for(int i=0;i<ne;i++){
         eforce[i]=Vec3dZero;
         fsize[i]=0;
+        eE[i] = 0;
     }
 }
 
@@ -558,19 +577,53 @@ double* atomsPotAtPoints( int n, Vec3d* ps, double* out=0, double s=0.0, double 
     return out;
 }
 
-void info(){
-    printf( "iPauliModel %i KPauliOverlap %g \n", iPauliModel, KPauliOverlap );
+void printEnergies(){
+    printf( "Etot %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", Etot, Ek, Eee,EeePaul, Eae,EaePaul, Eaa );
+}
+
+void printAtoms(){
     //printf( "Etot %g Ek %g Eel %g(ee %g, ea %g aa %g)  EPaul %g(ee %g, ae %g) \n", Etot, Ek, Eel, Eee,Eae,Eaa,   EPaul, EeePaul, EaePaul );
     for(int i=0; i<na; i++){
         //printf( "a[%i] p(%g,%g,%g) q %g eAbW(%g,%g,%g) aAbW(%g,%g,%g) \n", i, apos[i].x, apos[i].y, apos[i].z, aQ[i], eAbWs[i].z,eAbWs[i].z,eAbWs[i].z, aAbWs[i].z,aAbWs[i].z,aAbWs[i].z );
         printf( "a[%i] p(%g,%g,%g) Par(Q,sQ,sP,P)(%g,%g,%g,%g)  \n", i, apos[i].x, apos[i].y, apos[i].z, aPars[i].x,aPars[i].y,aPars[i].z,aPars[i].w );
         //printf( "a[%i] xyzs(%g,%g,%g) fxyzs(%g,%g,%g) \n", i, apos[i].x, apos[i].y, apos[i].z, aforce[i].x, aforce[i].y, aforce[i].z );
     }
+}
+
+void printElectrons(){
     for(int i=0; i<ne; i++){
         printf( "e[%i] p(%g,%g,%g) sz %g s %i \n", i, epos[i].x, epos[i].y, epos[i].z, esize[i], espin[i] );
         //printf( "e[%i] xyzs(%g,%g,%g,%g) fxyzs(%g,%g,%g,%g) \n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z, ff.esize[i], ff.eforce[i].x, ff.eforce[i].y, ff.eforce[i].z, ff.fsize[i] );
     }
 }
+
+void info(){
+    printf( "iPauliModel %i KPauliOverlap %g \n", iPauliModel, KPauliOverlap );
+    printAtoms();
+    printElectrons();
+}
+
+int Eterms2str(char* str){
+    // Ek=0,Eee=0,EeePaul=0,EeeExch=0,Eae=0,EaePaul=0,Eaa=0, Etot=0;
+    double Eorbs = 0;
+    for(int i=0; i<ne; i++){ Eorbs+=eE[i]; }
+    return sprintf( str, "Etot %3.3f|%3.3f Ek %3.3f Eee,P(%3.3f,%3.3f) Eae,P(%3.3f,%3.3f) Eaa %g )\n", Etot, Eorbs+Eaa, Ek, Eee, EeePaul, Eae, EaePaul, Eaa );
+}
+
+int orb2str(char* str, int ie){
+    return sprintf( str, "e[%i] E %7.3f s %5.2f  p(%5.2f,%5.2f,%5.2f) \n", ie, eE[ie], esize[ie], epos[ie].x,epos[ie].y,epos[ie].z );
+}
+
+char* orbs2str(char* str0){
+    char* str=str0;
+    for(int i=0; i<ne; i++){
+        //str+=sprintf(str,"\norb_%i E %g \n", i, oEs[i] );
+        str+=orb2str(str, i);
+    }
+    return str;
+}
+
+
 
 bool loadFromFile_xyz( char const* filename ){
     //printf(" filename: >>%s<< \n", filename );

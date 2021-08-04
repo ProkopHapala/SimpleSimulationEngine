@@ -136,7 +136,7 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
 };
 
-TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_, " test_eFF " ) {
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     plot1.fontTex=fontTex;
@@ -184,10 +184,11 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.loadFromFile_fgo( "data/H2O_1g_8o.fgo" );
 
     //ff.loadFromFile_fgo( "data/C_e4_1g.fgo" );
-    //ff.loadFromFile_fgo( "data/CH4.fgo" );
+    ff.loadFromFile_fgo( "data/CH4.fgo" );
     //ff.loadFromFile_fgo( "data/NH3.fgo" );
     //ff.loadFromFile_fgo( "data/H2O.fgo" );
-    ff.loadFromFile_fgo( "data/C2H4.fgo" );
+    //ff.loadFromFile_fgo( "data/C2H4.fgo" );
+    //ff.loadFromFile_fgo( "data/C2H2.fgo" );
 
 
 
@@ -229,7 +230,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.info();
 
     double E = ff.eval();
-    printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+    //printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+     ff.printEnergies();
     //printf( " test_eFF exits ... \n" ); exit(0);
 
     oglSph=Draw::list(oglSph);
@@ -300,13 +302,14 @@ void TestAppRARFF::draw(){
             //printf( "frame[%i] E %g pa[0](%g,%g,%g) pe[0](%g,%g,%g) s %g \n", frameCount, E, ff.apos[0].x,ff.apos[0].y,ff.apos[0].z,   ff.epos[0].x,ff.epos[0].y,ff.epos[0].z,  ff.esize[0] );
             //printf( "frame[%i] E %g lHH %g lH1e1 %g se1 %g \n", frameCount, E, (ff.apos[0]-ff.apos[1]).norm(),   (ff.apos[0]-ff.epos[0]).norm(), ff.esize[0] );
 
-             printf( "frame[%i,%i] E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", frameCount, itr, Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
-
+            //printf( "frame[%i,%i] E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", frameCount, itr, Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            printf( "frame[%i,%i] " );  ff.printEnergies();
             //printf( "E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", E, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
             //printf( "=== %i %i frame[%i][%i] |F| %g \n", ff.na, ff.ne, frameCount, itr, sqrt(F2) );
         }
         if( F2 < 1e-6 ){
-            printf( "Finished: E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            //printf( "Finished: E %g | Ek %g Eee %g EeePaul %g Eaa %g Eae %g EaePaul %g \n", Etot, ff.Ek, ff.Eee, ff.EeePaul, ff.Eaa, ff.Eae, ff.EaePaul );
+            printf( "Finished:"); ff.printEnergies();
             ff.info();
             printDistFormAtom( ff.na, ff.apos, 0 );
             bRun=false;
@@ -412,9 +415,23 @@ void TestAppRARFF::draw(){
 
 
 void TestAppRARFF::drawHUD(){
-	glTranslatef( 100.0, 250.0, 0.0 );
-	glScalef    ( 100.0, 100.0, 1.0 );
+	//glTranslatef( 100.0, 250.0, 0.0 );
+	//glScalef    ( 100.0, 100.0, 1.0 );
 	//plot1.view();
+
+
+    glTranslatef( 10.0,HEIGHT-20.0,0.0 );
+	glColor3f(0.5,0.0,0.3);
+
+    //Draw::drawText( "AHOJ ", fontTex, fontSizeDef, {100,20} );
+
+    int nstr=2048;
+	char str[nstr];
+	char* s=str;
+	s+=ff.Eterms2str(s);
+	ff.orbs2str(s);
+    Draw::drawText( str, fontTex, fontSizeDef, {100,20} );
+
 }
 
 /*
@@ -518,6 +535,10 @@ int main(int argc, char *argv[]){
 	int junk;
 	thisApp = new TestAppRARFF( junk , 800, 600 );
 	thisApp->loop( 1000000 );
+
+    //char str[40];  sprintf(str,  );
+	//SDL_SetWindowTitle( thisApp->child_windows[1]->window, " test_eFF " );
+
 	return 0;
 }
 

@@ -230,7 +230,7 @@ void ScreenSDL2OGL::setDefaults(){
 
 #define DEBUG_ printf( "DEBUG LINE %i %s %s \n", __LINE__, __FUNCTION__, __FILE__ );
 
-void ScreenSDL2OGL::init( int& id_, int WIDTH_, int HEIGHT_ ){
+void ScreenSDL2OGL::init( int& id_, int WIDTH_, int HEIGHT_, const char* name ){
 	WIDTH  = WIDTH_;
 	HEIGHT = HEIGHT_;
 	setDefaults();
@@ -238,18 +238,22 @@ void ScreenSDL2OGL::init( int& id_, int WIDTH_, int HEIGHT_ ){
 	window = SDL_CreateWindow( "Some_Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
 	glctx  = SDL_GL_CreateContext(window);
     //SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, SDL_WINDOW_OPENGL, &window, &renderer);
-	id = SDL_GetWindowID(window); printf( " win id %i \n", id );
-	id_=id;
-	char str[40];  sprintf(str, " Window id = %d", id );
-	SDL_SetWindowTitle( window, str );
+    if(name==0){
+        id = SDL_GetWindowID(window); printf( " win id %i \n", id );
+        id_=id;
+        char str[40];  sprintf(str, " Window id = %d", id );
+        SDL_SetWindowTitle( window, str );
+    }else{
+        SDL_SetWindowTitle( window, name );
+    }
 	//setupRenderer();
 	//setupOpenGLglobals();
 	setLightingNormal();
 	//printf( " ASPECT_RATIO %f \n", ASPECT_RATIO );
 }
 
-ScreenSDL2OGL::ScreenSDL2OGL( int& id, int WIDTH_, int HEIGHT_ ){
-	init( id, WIDTH_, HEIGHT_ );
+ScreenSDL2OGL::ScreenSDL2OGL( int& id, int WIDTH_, int HEIGHT_, const char* name ){
+	init( id, WIDTH_, HEIGHT_, name );
 }
 
 ScreenSDL2OGL::~ScreenSDL2OGL(){

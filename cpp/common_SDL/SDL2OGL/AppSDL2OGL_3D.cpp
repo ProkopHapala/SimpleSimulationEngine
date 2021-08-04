@@ -221,7 +221,7 @@ void AppSDL2OGL_3D::drawCrosshair( float sz ){
     glEnd();
 }
 
-AppSDL2OGL_3D::AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
+AppSDL2OGL_3D::AppSDL2OGL_3D( int& id, int WIDTH_, int HEIGHT_, const char* name ) : AppSDL2OGL( id, WIDTH_, HEIGHT_, name ) {
 	qCamera.setOne();
 	qCamera.toMatrix_unitary( cam.rot );
 	cam.pos.set(0.0d);

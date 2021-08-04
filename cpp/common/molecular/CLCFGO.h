@@ -2276,6 +2276,10 @@ void printSetup(){
     printf("bEvalAA        %i \n",bEvalAEPauli   );
 }
 
+void printEnergies(){
+    printf( "Etot %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", Etot, Ek, Eee,EeePaul, Eae,EaePaul, Eaa );
+}
+
 void printAtoms(){
     printf( "===CLCFGO::printAtoms()\n");
     for(int i=0; i<natom; i++){
@@ -2306,7 +2310,7 @@ void printElectronForces(){
 }
 
 int bas2str(char* str, int ie){
-    return sprintf( str, "c %2.2f s %2.2f p(%2.2f,%2.2f,%2.2f)\n",  ecoef[ie], esize[ie], epos[ie].x,epos[ie].y,epos[ie].z );
+    return sprintf( str, "c %5.2f s %5.2f p(%5.2f,%5.2f,%5.2f)\n",  ecoef[ie], esize[ie], epos[ie].x,epos[ie].y,epos[ie].z );
 }
 
 int Eterms2str(char* str){

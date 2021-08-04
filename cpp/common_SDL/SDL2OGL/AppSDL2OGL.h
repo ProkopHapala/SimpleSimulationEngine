@@ -28,7 +28,7 @@ class AppSDL2OGL : public ScreenSDL2OGL{ public:
 	//void defaultMouseHandling    ( const int& mouseX, const int& mouseY );
     virtual void removeChild(ScreenSDL2OGL* child);
 
-	AppSDL2OGL( int& id, int WIDTH_, int HEIGHT_ );
+	AppSDL2OGL( int& id, int WIDTH_, int HEIGHT_, const char* name=0 );
 
 };
 
