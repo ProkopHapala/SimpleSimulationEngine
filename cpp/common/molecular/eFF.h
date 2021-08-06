@@ -199,7 +199,9 @@ constexpr static const Quat4d default_AtomParams[] = {
     double KPauliKin     = 50.0; // ToDo : Not sure if we should use this - perhaps this model of pauli energy should work "ab inition"
 
     constexpr static const double default_esize = 0.5;
-    constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
+    //constexpr static const Vec3d KRSrho = { 1.125, 0.9, -0.2 }; ///< eFF universal parameters
+    constexpr static const Vec3d KRSrho = { 1.125, 0.9, -0.3 }; ///< eFF universal parameters // If it is sufficiently strong electron pairs are formed
+    //constexpr static const Vec3d KRSrho = { 1.125, 0.9, -1.0 }; ///< eFF universal parameters // If it is sufficiently strong electron pairs are formed
     //Vec3d KRSrho = { 1.125, 0.9, 0.2 };
 
     //double wee = 2.0;
@@ -344,11 +346,11 @@ double evalEE(){
             if(bEvalPauli){
                 //printf( "Eee[%i,%i]= %g(%g) r %g s(%g,%g) \n", i, j, dEee, Eee, dR.norm(), si,sj );
                 if( iPauliModel == 1 ){
-                    if( spini==espin[j] ){
-                        //printf( "EeePaul[%i,%i]  ", i, j );
+                    //if( spini==espin[j] ){
+                        //printf( "EeePaul_1[%i,%i]  ", i, j );
                         dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
                         //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
-                    }
+                    //}
                 }else if( iPauliModel == 2 ){
                     if(spini==espin[j]){ // Pauli repulsion only for electrons with same spin
                         //printf( "EeePaul[%i,%i] >> ", i, j );

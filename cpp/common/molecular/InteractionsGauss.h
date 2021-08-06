@@ -479,6 +479,7 @@ inline double PauliSGauss_anti( double S, double& fS, double rho ){
     double D     = 1./(1.+S2);
     double SDrho = rho*S*D;
     fS  = 2.*D*SDrho;
+    //printf( "EpAnti %g a  %g \n", S*SDrho, rho );
     return   S*SDrho;
 }
 

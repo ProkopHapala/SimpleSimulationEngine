@@ -933,7 +933,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             DiS[i_].add( fp, -dS_dsi*cij, -S*cj );
             fpj    .sub( fp );
         }
-        double Amp = KPauliOverlap*aPars[ia].w;
+        double Amp = aPars[ia].w;    // lets consider KPauliOverlap ias olready in aPars[ia].w
+        //double Amp = KPauliOverlap*aPars[ia].w;
         double E = Ssum*Ssum*Amp;
         double f =    2*Ssum*Amp;
         forceOrb( io, f, DiS );

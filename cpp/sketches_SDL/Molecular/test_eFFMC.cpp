@@ -1,37 +1,4 @@
 
-
-/*
-
-==========================================================================
-    Test: Compact Linear Combination of Floating Gaussian Orbitals
-==========================================================================
-
-### DONE ###
-------------
- - tested Wf projection of grid
- - tested Density projection on Aux Basis & on grid
- - tested Electrostatics (Hartree) evaluation
- - tested kinetic energy
-
-### TO DO ###
---------------
- - How to test Fock Exchange ?
-    - possibly check overlap density
- - Model for Pauli Energy
-    - Perhaps Some inspire by pauli in pseudpotentials
- - Electron-ion interaction  (Electrostatics - Pauli - look how pseudopotentials are done)
- - Make derivatives
-
-
- # How test Forces on AuxDensity
- --------------------------------
- 1) move wf basis function
- 2) calculate some force and energy in on aux-basis
- 3) make numerical derivative
-
-*/
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -66,9 +33,8 @@
 
 #include "testUtils.h"
 
-#include "Lingebra.h"
-#include "approximation.h"
-
+//#include "Lingebra.h"
+//#include "approximation.h"
 #include  "Fourier.h"
 
 //#include "MMFF.h"
@@ -89,65 +55,22 @@ int i_DEBUG = 0;
 #include "CLCFGO.h"
 #include "CLCFGO_tests.h"
 
+#include "eFF.h"
+#include "eFF_plots.h"
+
 #include "OptRandomWalk.h"
 #include "DynamicOpt.h"
-#include "approximation.h"
+//#include "approximation.h"
 
 int  fontTex=0;
 
 
-CLCFGO ff;
-Approx::PolyFit<3> quadratic_fit;
+EFF    eff;
+CLCFGO  ff;
+//Approx::PolyFit<3> quadratic_fit;
 
 
-void symmetrize_carbon( CLCFGO& ff ){
-
-    /*
-    // === Positions
-    // --------- orb 1
-    ff.epos[2].y=0; ff.epos[2].z=0;
-    ff.epos[3].y=0; ff.epos[3].z=0;
-    // --------- orb 2
-    ff.epos[4].x=0; ff.epos[4].z=0;
-    ff.epos[5].x=0; ff.epos[5].z=0;
-    // --------- orb 3
-    ff.epos[6].y=0; ff.epos[6].x=0;
-    ff.epos[7].y=0; ff.epos[7].x=0;
-    */
-
-    ff.epos[2].z*=0.9;
-    ff.epos[4].z*=0.9;
-    //ff.epos[6].z*=0.9;
-
-    /*
-    // === Sizes
-    // --------- orb 1
-    double s = ff.esize[2];
-    ff.esize[3]=s;
-    // --------- orb 2
-    ff.esize[4]=s;
-    ff.esize[5]=s;
-    // --------- orb 3
-    ff.esize[6]=s;
-    ff.esize[7]=s;
-    */
-
-    /*
-    // ==== Coeffitients
-    // ---------- orb 0
-    //ff.ecoef[0] = ;
-    ff.ecoef[1] = 0;
-    // ---------- orb 1
-    //ff.ecoef[2] = ;
-    ff.ecoef[3] = -ff.ecoef[2];
-    // ---------- orb 2
-    //ff.ecoef[4] = ;
-    ff.ecoef[5] = -ff.ecoef[4];
-    // ---------- orb 3
-    //ff.ecoef[6] = ;
-    ff.ecoef[7] = -ff.ecoef[6];
-    */
-}
+//========================================
 
 double getE( int n, double * X ){
     //symmetrize_carbon( ff );
@@ -255,15 +178,15 @@ class TestAppCLCFSF: public AppSDL2OGL_3D { public:
 
     //RigidAtom     atom1;
     //RigidAtomType type1,type2;
-    int iter=0;
-    int perFrame = 10;
-    bool bRun = false;
+    int    iter=0;
+    int    perFrame = 10;
+    bool   bRun = false;
     double dt;
     //double E,dt;
 
-    int idof = 0;
+    int    idof = 0;
     Plot2D plot1;
-    int nOrbPlot = 2;
+    int    nOrbPlot = 2;
 
     OptRandomWalk ropt;
     DynamicOpt    opt;
@@ -295,6 +218,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
+
+    char* fname;
     //ff.setDefaultValues( );
     //ff.loadFromFile( "data/e_2g_1o.fgo"            );
     //ff.loadFromFile( "data/e2_1g_2o_singlet.fgo" );
@@ -336,7 +261,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/C_2g_sp2_problem.fgo"      );
 
     //ff.loadFromFile( "data/C_e4_1g.fgo" );
-    ff.loadFromFile( "data/CH4.fgo" );
+    fname =  "data/CH4.fgo" ;
     //ff.loadFromFile( "data/NH3.fgo" );
     //ff.loadFromFile( "data/H2O.fgo" );
     //ff.loadFromFile( "data/C2H4.fgo" );
@@ -346,6 +271,10 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/O2.fgo"               );
     //ff.loadFromFile( "data/O2_half.fgo"          );
     //ff.loadFromFile( "data/H2O_1g_8o.fgo"        );
+
+
+    ff.loadFromFile     ( fname );
+    eff.loadFromFile_fgo( fname );
 
     //exit(0);
 
@@ -398,11 +327,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     ff.printAtoms();
     ff.printElectrons();
 
-    double E = ff.eval();
+    ff.eval();
     ff.forceInfo();
     ff.printEnergies();
     //printf( "E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n",E, ff.Ek, ff.Eee,ff.EeePaul, ff.Eae,ff.EaePaul, ff.Eaa, ff.esize[0] );
     //exit(0);
+
+    eff.eval();
 
     /*
     printf( "epos[0].x " ); getNumDeriv( ff, ff.epos [0].x, ff.efpos [0].x, 0.0001, 0 );
@@ -446,16 +377,13 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     exit(0);
     */
 
-    plot1.scaling.y=0.05;
-    plot1.update();
-    plot1.render();
-
     oglSph=Draw::list(oglSph);
     Draw3D::drawSphere_oct(4,1.0d,(Vec3d){0.,0.,0.});
     glEndList();
 
     bRun = false;
 
+    /*
     idof = 1;
     //ropt.realloc( ff.ndofs,  ff.dofs );             // Optimize all
     ropt.realloc( ff.nBas*5, ff.dofs+ff.natom*3 );    // Optimize only electrons
@@ -464,36 +392,11 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     ropt.stepSize  = 0.001;
     //ropt.stepSize  = 0.1;
     ropt.start();
-
+    */
 
     opt.bindOrAlloc( ff.ndofs,  ff.dofs, 0, ff.fdofs, 0 );
     //opt.bindOrAlloc( ff.nBas*5, ff.dofs+ff.natom*3,  0, ff.fdofs+ff.natom*3, 0 );
     opt.initOpt( 0.01, 0.1 );
-
-    //VecN::set( ropt.n, 0.0, ropt.scales );
-    //VecN::set( (ff.nBas*2), 0.0, ropt.scales+(ff.nBas*3) ); // fix everything but poss
-    //VecN::set( (ff.nBas), 0.0, ropt.scales+(ff.nBas*3) ); // fix size
-    //ropt.scales[idof]=1;
-
-    //dt = 0.000001;
-    //dt = 0.001;
-
-
-    /*
-    // ------- Test PolyFit
-    double xs[]= {-0.09967533,  0.28359467, -0.01538476,  0.31646855,  0.19553444, -0.16558772 };
-    double ys[]= {-0.57169038, -0.65147963, -0.67579430, -0.62206212, -0.67322563, -0.53299620 };
-    quadratic_fit.init();
-    for(int i=0; i<6; i++){ quadratic_fit.addPoint(  xs[i], ys[i], 1 ); };
-    printf( "bs : "); for(int i=0; i<3; i++){ printf( "%g ", quadratic_fit.By[i] ); }; printf( "\n");
-    printf( "M \n "); for(int i=0; i<3; i++){ for(int j=0; j<3; j++){ printf( " %g ", quadratic_fit.BB[i*3+j] ); }; printf( "\n"); };
-    double coefs[3];
-    quadratic_fit.solve( coefs );
-    printf( "coefs %g %g %g \n", coefs[0], coefs[1], coefs[2] );
-    printf( "DONE !!!!!!! \n" );
-    exit(0);
-    */
-
 
     glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -556,61 +459,12 @@ void TestAppCLCFSF::draw(){
         */
 
 
-
-        // ======= Curvature Testing
-        /*
-        glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-        VecN::set(ropt.n,ropt.Xbest,ropt.X);
-        double Ebest = ff.eval();
-        double Delta = 0.2;
-        int nsamp = 100;
-
-        double yscale = 0.1;
-        quadratic_fit.init();
-        glColor3f(1.0,0.0,0.0);
-        for(int itr=0; itr<nsamp; itr++){
-            VecN::set(ropt.n,ropt.Xbest,ropt.X);
-            double d = randf(-Delta,Delta);
-            //ff.epos[0].x += d;
-            //ff.epos[0].y += d;
-            //ff.epos[0].z += d;
-
-            //ff.epos[2].x += d;
-            //ff.epos[2].y += d;
-            //ff.epos[2].z += d;
-
-            //ff.esize[0] += d;
-            //ff.esize[2] += d;
-
-            ff.esize[0] += d;
-            //ff.esize[2] += d;
-
-            double E = ff.eval();
-            double dE = E - Ebest;
-            Draw2D::drawPoint( { d, dE*yscale } );
-            quadratic_fit.addPoint( d, E, 1 );
-        }
-        glColor3f(0.0,0.0,1.0);
-        double coefs[3];
-        quadratic_fit.solve( coefs );
-        printf( "coefs %g %g %g \n", coefs[0], coefs[1], coefs[2] );
-        glBegin(GL_LINE_STRIP);
-        for(int i=0; i<10; i++){
-            double x =(i-5)*(Delta/5);
-            double y = coefs[0] + coefs[1]*x + coefs[2]*x*x;
-            //double y = coefs[2] + coefs[1]*x + coefs[0]*x*x;
-            glVertex3f( x, (y-Ebest)*0.1, 0 );
-        }
-        glEnd();
-        */
-
-
     }
 
+    //VecN::set(ropt.n, ropt.Xbest, ropt.X );
 
-    VecN::set(ropt.n, ropt.Xbest, ropt.X );
 
+    // ------- View CLCFGO
     glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable( GL_DEPTH_TEST );
@@ -620,7 +474,8 @@ void TestAppCLCFSF::draw(){
         if(bDrawWfs  ) drawff_wfs  ( ff, oglSph, fsc      );
         if(bDrawRho  ) drawff_rho  ( ff, oglSph, fsc      );
     }
-    if(bDrawPlots){ viewPlots(); }
+
+    drawEFF( eff, oglSph, 1.0, 0.05, 0.1 );
 
     //printf( " 4 epos (%g,%g,%g) efpos (%g,%g,%g) \n", ff.epos[0].x,ff.epos[0].y,ff.epos[0].z, ff.efpos[0].x,ff.efpos[0].y,ff.efpos[0].z );
 

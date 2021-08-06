@@ -433,6 +433,7 @@ inline double PauliSGauss_anti( double S, double& fS, double rho ){
     double D     = 1./(1.+S2);
     double SDrho = rho*S*D;
     fS  = 2.*D*SDrho;
+    //printf( "EpAnti %g a  %g \n", S*SDrho, rho );
     return   S*SDrho;
 }
 
@@ -452,7 +453,6 @@ inline double PauliSGauss_syn( double S, double& fS, double rho ){
 }
 
 inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
-
     double r2 = dR.norm2();
     r2 *= KRSrho.x*KRSrho.x;
     si *= KRSrho.y;
@@ -471,6 +471,7 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     double dSr,dSsi,dSsj;
     double T = getDeltaTGauss  ( r2, si, sj, dTr, dTsi, dTsj, 1./si2, 1./sj2, s2,is2,is4 );
     double S = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj,    si2,    sj2    ,is2,is4 );
+
 
     double eS,fS;
     if(anti){ eS = PauliSGauss_anti( S, fS, KRSrho.z ); }

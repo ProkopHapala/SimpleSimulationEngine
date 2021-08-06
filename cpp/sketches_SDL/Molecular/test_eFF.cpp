@@ -184,9 +184,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.loadFromFile_fgo( "data/H2O_1g_8o.fgo" );
 
     //ff.loadFromFile_fgo( "data/C_e4_1g.fgo" );
-    ff.loadFromFile_fgo( "data/CH4.fgo" );
+    //ff.loadFromFile_fgo( "data/CH4.fgo" );
     //ff.loadFromFile_fgo( "data/NH3.fgo" );
-    //ff.loadFromFile_fgo( "data/H2O.fgo" );
+    ff.loadFromFile_fgo( "data/H2O.fgo" );
     //ff.loadFromFile_fgo( "data/C2H4.fgo" );
     //ff.loadFromFile_fgo( "data/C2H2.fgo" );
 
@@ -225,8 +225,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     opt.f_limit = 1000.0;
 
     //ff.iPauliModel = 0; // dens overlap
-    //ff.iPauliModel = 1; // addPauliGauss   from the article using  KRSrho
-    ff.iPauliModel = 2; // addPauliGaussVB valence bons
+    ff.iPauliModel = 1; // addPauliGauss   from the article using  KRSrho
+    //ff.iPauliModel = 2; // addPauliGaussVB valence bons
     ff.info();
 
     double E = ff.eval();
@@ -316,6 +316,8 @@ void TestAppRARFF::draw(){
         }
     }
 
+    drawEFF( ff, oglSph, 1.0, 0.1 );
+
     if(bDrawPlots){
         plotAtomsPot( ff, plot1.lines[0], (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, -0.2, 0.1 );
         plot1.bGrid=false;
@@ -348,52 +350,6 @@ void TestAppRARFF::draw(){
     double Qsz = 0.05;
     double fsc = 1.0;
 
-    if(bDrawObjects){
-    for(int i=0; i<ff.na; i++){
-        //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z );
-        glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , ff.aPars[i].x*Qsz );
-        //glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , Qsz );
-        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos  ( ff.aforce[i]*fsc, ff.apos[i] );
-        //Draw3D::drawVecInPos(   ff.aforce[i]*fsc, ff.apos[i] );
-        //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.apos[i].x,ff.apos[i].y,ff.apos[i].z );
-        //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.aforce[i].x, ff.aforce[i].y, ff.aforce[i].z );
-        //sprintf(strtmp,"%i",i);
-        //Draw3D::drawText(strtmp, ff.apos[i], fontTex, 0.02, 0);
-
-        //glColor3f(0.,0.,0.); Draw3D::drawVecInPos( ff.aforce[i],   ff.apos[i] );
-        //glColor3f(0.,1.,0.); Draw3D::drawVecInPos( DEBUG_fa_ae[i], ff.apos[i] );
-        //glColor3f(1.,0.,0.); Draw3D::drawVecInPos( DEBUG_fa_aa[i], ff.apos[i] );
-
-    }
-
-    //glColor3f(1.0,1.0,1.0);
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    //glBlendFunc(GL_DST_COLOR, GL_SRC_ALPHA);
-    for(int i=0; i<ff.ne; i++){
-        //printf( "epos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
-        //if(ff.espin[i]>0){ glColor3f(0.0,0.5,1.0); }else{ glColor3f(1.0,0.5,0.0); };
-        float alpha=0.1;
-        if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, alpha); }else{ glColor4f(1.0,0.0,0.0, alpha); };
-        Draw3D::drawShape( oglSph, ff.epos[i], Mat3dIdentity*ff.esize[i],  false );
-        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos(  ff.eforce[i]*fsc ,ff.epos[i] );
-        //glColor3f(1.0,0.0,0.0); Draw3D::drawPointCross( ff.epos[i], 0.1 );
-        //Draw3D::drawSphere_oct(3,ff.esize[i],ff.epos[i]);
-
-        //glColor3f(1.,1.,1.); Draw3D::drawVecInPos( ff.eforce  [i], ff.epos[i] );
-        //glColor3f(1.,0.,1.); Draw3D::drawVecInPos( DEBUG_fe_ae[i], ff.epos[i] );
-
-        //Draw3D::drawPointCross( ff.epos  [i], ff.esize[i] );
-        //Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
-        //Draw3D::drawSphereOctLines( 8, ff.esize[i], ff.epos[i] );
-        //sprintf(strtmp,"%i",i);
-        //Draw3D::drawText(strtmp, ff.epos[i], fontTex, 0.02, 0);
-
-    }
-    }
-
-
     //for(int i=0; i<ff.ne; i+=2){
     //    Draw3D::drawLine(ff.epos[i],ff.epos[i+1] );
     //}
@@ -406,10 +362,6 @@ void TestAppRARFF::draw(){
 
     //glDisable(GL_DEPTH_TEST);
     //plot1.view();
-
-
-
-
 
 };
 

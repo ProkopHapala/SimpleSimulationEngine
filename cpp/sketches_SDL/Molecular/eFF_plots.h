@@ -46,6 +46,46 @@ bool checkScalar(const char* s, double v, double vmin, double vmax){
     return b;
 }
 
+
+void drawEFF( EFF& ff, int oglSph, float fsc=1.0, float Qsz=0.05, float alpha=0.1 ){
+    for(int i=0; i<ff.na; i++){
+        //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z );
+        glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , ff.aPars[i].x*Qsz );
+        //glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , Qsz );
+        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos  ( ff.aforce[i]*fsc, ff.apos[i] );
+        //Draw3D::drawVecInPos(   ff.aforce[i]*fsc, ff.apos[i] );
+        //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.apos[i].x,ff.apos[i].y,ff.apos[i].z );
+        //printf( " %i %f %f %f %f  \n", i, ff.aQ[i], ff.aforce[i].x, ff.aforce[i].y, ff.aforce[i].z );
+        //sprintf(strtmp,"%i",i);
+        //Draw3D::drawText(strtmp, ff.apos[i], fontTex, 0.02, 0);
+        //glColor3f(0.,0.,0.); Draw3D::drawVecInPos( ff.aforce[i],   ff.apos[i] );
+        //glColor3f(0.,1.,0.); Draw3D::drawVecInPos( DEBUG_fa_ae[i], ff.apos[i] );
+        //glColor3f(1.,0.,0.); Draw3D::drawVecInPos( DEBUG_fa_aa[i], ff.apos[i] );
+    }
+    //glColor3f(1.0,1.0,1.0);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendFunc(GL_DST_COLOR, GL_SRC_ALPHA);
+    for(int i=0; i<ff.ne; i++){
+        //printf( "epos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
+        //if(ff.espin[i]>0){ glColor3f(0.0,0.5,1.0); }else{ glColor3f(1.0,0.5,0.0); };
+        //float alpha=0.1;
+        if(ff.espin[i]>0){ glColor4f(0.0,0.0,1.0, alpha); }else{ glColor4f(1.0,0.0,0.0, alpha); };
+        Draw3D::drawShape( oglSph, ff.epos[i], Mat3dIdentity*ff.esize[i],  false );
+        glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos(  ff.eforce[i]*fsc ,ff.epos[i] );
+        //glColor3f(1.0,0.0,0.0); Draw3D::drawPointCross( ff.epos[i], 0.1 );
+        //Draw3D::drawSphere_oct(3,ff.esize[i],ff.epos[i]);
+        //glColor3f(1.,1.,1.); Draw3D::drawVecInPos( ff.eforce  [i], ff.epos[i] );
+        //glColor3f(1.,0.,1.); Draw3D::drawVecInPos( DEBUG_fe_ae[i], ff.epos[i] );
+        //Draw3D::drawPointCross( ff.epos  [i], ff.esize[i] );
+        //Draw3D::drawVecInPos(   ff.eforce[i]*fsc, ff.epos[i] );
+        //Draw3D::drawSphereOctLines( 8, ff.esize[i], ff.epos[i] );
+        //sprintf(strtmp,"%i",i);
+        //Draw3D::drawText(strtmp, ff.epos[i], fontTex, 0.02, 0);
+    }
+}
+
 bool checkFinite(const EFF& ff, double vmin, double vmax ){
     bool bErr = false;
     Vec3d pmin,pmax,  fmin,fmax, psum,fsum;
