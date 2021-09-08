@@ -67,6 +67,12 @@ void bondLabels( int n, const Vec2i* b2a, const Vec3d* apos, int fontTex, float 
     }
 }
 
+void atomLabels( int n, const Vec3d* apos, int fontTex, float sz=0.02 ){
+    for(int i=0; i<n; i++){
+        drawInt( apos[i], i, fontTex, sz );
+    }
+}
+
 void bondsPBC( int n, const Vec2i* b2a, const Vec3d* apos, const Vec3i* pbc, const Mat3d& lvec ){
     for(int i=0; i<n; i++){
         Vec2i b = b2a[i];

@@ -934,6 +934,27 @@ class Builder{  public:
         return n;
     }
 
+    int saveMol( const char* fname ){
+        FILE* pfile = fopen(fname, "w");
+        if( pfile == NULL ) return -1;
+        fprintf(pfile, "\n" );
+        fprintf(pfile, "SimpleSimulationEngine::MMFFBuilder:: saveMol()\n" );
+        fprintf(pfile, "\n" );
+        fprintf(pfile, "%3i%3i  0  0  0  0  0  0  0  0999 V2000\n", atoms.size(), bonds.size() );
+        for(int i=0; i<atoms.size(); i++){
+            int ityp         = atoms[i].type;
+            const Vec3d&  pi = atoms[i].pos;
+            fprintf( pfile, "%10.4f%10.4f%10.4f %-3s 0  0  0  0  0  0  0  0  0  0  0  0\n",  pi.x,pi.y,pi.z, (*atomTypeNames)[ityp].c_str() );
+        }
+        for(int i=0; i<bonds.size(); i++){
+            int ityp          = bonds[i].type;   if(ityp==-1) ityp=1;
+            const Vec2i&  ats = bonds[i].atoms;
+            fprintf( pfile, "%3i%3i%3i  0  0  0  0\n",  ats.a+1, ats.b+1, ityp );
+        }
+        fclose(pfile);
+        return atoms.size() + bonds.size();
+    }
+
     int load_xyz( const char * fname, bool noH=false, bool bConf=true, bool bDebug=false ){
         if(bDebug)printf( "MM::Builder.load_xyz(%s)\n", fname );
         FILE * pFile = fopen(fname,"r");
@@ -1209,6 +1230,15 @@ class Builder{  public:
     }
 #endif // ForceField_h
 
+
+void updatePBC( Vec3d* pbcShifts ){
+    for(int i=0; i<bonds.size(); i++){
+        pbcShifts[i] = pbcShift( bondPBC[i] );
+    }
+}
+
+
+
 #ifdef MMFFmini_h
     void toMMFFmini( MMFFmini& ff, const MMFFparams* params ){
         ff.realloc( atoms.size(), bonds.size(), angles.size(), dihedrals.size() );
@@ -1217,12 +1247,7 @@ class Builder{  public:
         export_angles   ( ff.ang2bond, 0, ff.ang_cs0, ff.ang_k  );
         export_dihedrals( ff.tors2bond,   ff.tors_n,  ff.tors_k );
 
-        if( bPBC ){
-            ff.initPBC();
-            for(int i=0; i<bonds.size(); i++){
-                ff.pbcShifts[i] = pbcShift( bondPBC[i] );
-            };
-        }
+        if( bPBC ){ ff.initPBC(); updatePBC( ff.pbcShifts ); }
 
         ff.angles_bond2atom();
         ff.torsions_bond2atom();

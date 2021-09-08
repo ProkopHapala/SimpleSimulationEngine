@@ -168,6 +168,7 @@ double evalLJQs(){
 }
 
 double evalLJQ_sortedMask( const Vec3d& shift=Vec3dZero ){
+    //printf(  "evalLJQ_sortedMask \n" );
     int im=0;
     const int N=n;
     double E=0;
@@ -187,13 +188,14 @@ double evalLJQ_sortedMask( const Vec3d& shift=Vec3dZero ){
 
             /*
             if(E>100.0){
-                printf( "%i %i  %g \n", i, j, E );
-                //glColor3f(0.0,1.0,0.0); Draw3D::drawLine( ps[j],pi);
+                //printf( "%i %i  %g \n", i, j, E );
+                glColor3f(0.0,1.0,0.0); Draw3D::drawLine( ps[j],pi);
                 //printf("%i %i %g \n", i, j, fij.norm());
-                //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fij*-1000,ps[j]);
-                //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fij*1000 ,ps[i]);
+                glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fij*-1000,ps[j]);
+                glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( fij*1000 ,ps[i]);
             }
             */
+
             fs[j].sub(fij);
             fi   .add(fij);
 

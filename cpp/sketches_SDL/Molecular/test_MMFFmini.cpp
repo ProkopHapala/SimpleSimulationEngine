@@ -36,6 +36,66 @@
 #include "AppSDL2OGL_3D.h"
 
 
+
+
+
+
+
+
+
+// ============= Graph analysis
+
+
+
+//int splitGraphs( int nb, Vec2i* bonds, int a0, int b0 ){
+int splitGraphs( int nb, Vec2i* bonds, int b0, std::unordered_set<int>& innodes ){
+    //printf( "splitGraphs \n" );
+    std::unordered_set<int> exbonds; // excluded bonds
+    //std::unordered_set<int> innodes;
+    exbonds.insert(b0);
+    //innodes.insert(a0);
+    int n0;
+    do{
+        n0=innodes.size();
+        for( int ib=0; ib<nb; ib++ ){
+            //printf( "ib %i n0 %i \n", ib, n0 );
+            if( exbonds.find(ib) != innodes.end() ) continue;
+            const Vec2i& b = bonds[ib];
+            int ia=-1;
+            if     ( innodes.find(b.a) != innodes.end() ){ ia=b.b; }
+            else if( innodes.find(b.b) != innodes.end() ){ ia=b.a; }
+            if(ia>=0){
+                innodes.insert(ia);
+                exbonds.insert(ib);
+            }
+        }
+    }while( innodes.size()>n0 );
+    /*
+    int i=0;
+    for( int ia : innodes){
+        printf( "splitGraphs[%i] %i \n", i, ia );
+        i++;
+    }
+    exit(0);
+    */
+    return innodes.size();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ==========================
 // TestAppMMFFmini
 // ==========================
@@ -71,6 +131,25 @@ void drawTors(int i, MMFFmini& ff){
     //if(b.i&SIGN_MASK){ Draw3D::drawArrow(apos[a.x],apos[a.y]); }else{ Draw3D::drawArrow(apos[a.x],apos[a.y]); };
     //if(b.j&SIGN_MASK){   };
 }
+
+
+
+/*
+void rotateAtoms( Vec3d p0, Vec3d ax, int n, int* selection, Vec3d* atoms, double angle ){
+    Vec2d rot; rot.fromAngle(angle);
+    for(int i=0; i<n; i++){
+        int ia  = selection[i];
+        Vec3d d = selection - p0;
+        d.rotate()
+
+    }
+}
+*/
+
+
+
+
+
 
 bool bPrint = true;
 
@@ -250,6 +329,10 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
 
     bool bNonBonded = true;
 
+
+    std::vector<int> selection;
+
+
     //std::unordered_map<std::string,int> atomTypeDict;
 
     //Mat3d lvec;
@@ -296,6 +379,8 @@ int TestAppMMFFmini::loadMoleculeXYZ( const char* fname, bool bAutoH ){
     int nheavy = builder.load_xyz( fname, bAutoH, true, true );
     readMatrix( "common_resources/polymer.lvs", 3, 3, (double*)&builder.lvec );
 
+
+
     //builder.printAtoms ();
     //builder.printConfs ();
     builder.printAtomConfs();
@@ -309,9 +394,12 @@ int TestAppMMFFmini::loadMoleculeXYZ( const char* fname, bool bAutoH ){
     builder.autoAngles( 0.5, 0.5 );     builder.printAngles();
 
 
-    bNonBonded = false;
+    //bNonBonded = false;
     //exit(0);
     builder.toMMFFmini( ff, &params );
+
+    builder.saveMol( "data/polymer.mol" );
+
     return nheavy;
 }
 
@@ -557,12 +645,23 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     //exit(0);
 
     Draw3D::makeSphereOgl( ogl_sph, 3, 1.0 );
+
+    //selection.insert( selection.end(), {12, 16, 14, 6, 2, 3,   20,18,31,25,26} );
+    //selection.insert( selection.end(), {13,29,30} );
+    //splitGraphs( ff.nbonds, ff.bond2atom, 12, 22 );
+    std::unordered_set<int> innodes;
+    //innodes.insert(12);
+    innodes.insert(11);
+    splitGraphs( ff.nbonds, ff.bond2atom, 22, innodes );
+    for( int i : innodes ){ selection.push_back(i); }
+
 }
 
 void TestAppMMFFmini::drawSystem( ){
     //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLines ( ff.nbonds, (int*)ff.bond2atom, ff.apos );
     glColor3f(0.0f,0.0f,0.0f); Draw3D::bondsPBC(  ff.nbonds, ff.bond2atom, ff.apos, &builder.bondPBC[0], builder.lvec );
-    //glColor3f(0.0f,0.0f,0.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );
+    glColor3f(0.5f,0.0f,0.0f); Draw3D::atomLabels(  ff.natoms,  ff.apos, fontTex );
+    glColor3f(0.0f,0.0f,1.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );
     //glColor3f(1.0f,0.0f,0.0f); Draw3D::vecsInPoss( ff.natoms, ff.aforce, ff.apos, 300.0              );
     //Draw3D::atomsREQ  ( ff.natoms, ff.apos,   nff.REQs, ogl_sph, 1.0, 0.25, 1.0 );
     Draw3D::atoms( ff.natoms, ff.apos, atypes, params, ogl_sph, 1.0, 0.25, 1.0 );
@@ -594,7 +693,14 @@ void TestAppMMFFmini::draw(){
     perFrame = 1;
     //perFrame = 50;
     //bRunRelax = false;
+
+    //Vec3d::rotate( selection.size(), &selection[0], ff.apos, ff.apos[12], (ff.apos[13]-ff.apos[12]).normalized(), 0.1 );
+    Vec3d::rotate( selection.size(), &selection[0], ff.apos, ff.apos[13], (ff.apos[11]-ff.apos[13]).normalized(), 0.1 );
+
     if(bRunRelax){
+
+        //builder.lvec.a.mul(1.001);
+        builder.lvec.a.mul(0.999);
         for(int itr=0; itr<perFrame; itr++){
             //if(bConverged) break;
             //printf( "======= frame %i \n", frameCount );
@@ -609,7 +715,7 @@ void TestAppMMFFmini::draw(){
             E += ff.eval(false);
             if(bNonBonded){
                 //E += nff.evalLJQ_sortedMask();   // This is fast but does not work in PBC
-                //E += nff.evalLJQ_pbc( builder.lvec, {1,1,1} );
+                E += nff.evalLJQ_pbc( builder.lvec, {1,1,1} );
             }
             //Vec3d cog,fsum,torq;
             //checkForceInvariatns( ff.natoms, ff.aforce, ff.apos, cog, fsum, torq );
@@ -664,11 +770,18 @@ void TestAppMMFFmini::draw(){
     glColor3f(0.6f,0.6f,0.6f); Draw3D::plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
 
     if(builder.bPBC){
-        printf( "draw PBC \n" );
+        //printf( "draw PBC \n" );
         Draw3D::drawPBC( (Vec3i){1,1,0}, builder.lvec, [&](){drawSystem();} );
     }else{
         drawSystem();
     }
+
+    for(int i=0; i<selection.size(); i++){
+        int ia = selection[i];
+        glColor3f( 0.f,1.f,0.f );
+        Draw3D::drawSphereOctLines( 8, 0.3, ff.apos[ia] );
+    }
+
 
     if(iangPicked>=0){
         glColor3f(0.,1.,0.);

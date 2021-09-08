@@ -113,7 +113,8 @@ void setup(){
 
 
     //eff.loadFromFile( "data/H2.fgo", true);
-    eff.loadFromFile( "inputs/H2.fgo", true);
+    //eff.loadFromFile( "inputs/H2.fgo", true);
+    eff.loadFromFile( "inputs/H2.fgo");
     dt = 0.001;
     //exit(0);
 
@@ -197,9 +198,11 @@ void draw(){
     //printf( "natom %i \n", eff.natom );
     for(int i=0; i<eff.natom; i++){
         atoms[i].f = (Vec3f)eff.apos[i];
-        atoms[i].e = eff.aQsize[i];
+        //atoms[i].e = eff.aQsize[i];
+        atoms[i].e = eff.aPars[i].y;
         coefs[i].f = Vec3fZero; // ToDo : we can use this for Pauli-repulsion coeficients
-        coefs[i].e = eff.aQs[i];
+        //coefs[i].e = eff.aQs[i];
+        coefs[i].e = eff.aPars[i].x;
         //atoms[j].set(j*0.25,0,0,0.1);
         //coefs[j].set(0,0,0,1.0 - 2*(j%2) );
     }

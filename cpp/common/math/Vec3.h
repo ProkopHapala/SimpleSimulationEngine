@@ -456,8 +456,8 @@ class Vec3T{
 
     static inline void move  (int n, int* selection, VEC* ps, const VEC& shift                                ){ for(int i =0;  i<n;  i++)  ps[selection[i]].add(shift);                        }
     static inline void scale (int n, int* selection, VEC* ps, const VEC& center, const VEC& sc                ){ for(int ii=0; ii<n; ii++){ ps[selection[ii]].scale     ( sc, center ); }; }
-    static inline void rotate(int n, int* selection, VEC* ps, const VEC& center, const VEC& uaxis, T ca, T sa ){ for(int ii=0; ii<n; ii++){ ps[selection[ii]].rotate_csa( ca, sa, uaxis, center   ); }; }
-    static inline void rotate(int n, int* selection, VEC* ps, const VEC& center, const VEC&  axis, double phi ){ rotate( n,ps,center,axis.normalized(), cos(phi), sin(phi) ); }
+    static inline void rotate(int n, int* selection, VEC* ps,       VEC  center, const VEC& uaxis, T ca, T sa ){ for(int ii=0; ii<n; ii++){ ps[selection[ii]].rotate_csa( ca, sa, uaxis, center   ); }; }
+    static inline void rotate(int n, int* selection, VEC* ps, const VEC& center, const VEC&  axis, double phi ){ rotate( n,selection,ps,center,axis.normalized(), cos(phi), sin(phi) ); }
 
 };
 
