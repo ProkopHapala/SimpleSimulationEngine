@@ -35,67 +35,6 @@
 
 #include "AppSDL2OGL_3D.h"
 
-
-
-
-
-
-
-
-
-// ============= Graph analysis
-
-
-
-//int splitGraphs( int nb, Vec2i* bonds, int a0, int b0 ){
-int splitGraphs( int nb, Vec2i* bonds, int b0, std::unordered_set<int>& innodes ){
-    //printf( "splitGraphs \n" );
-    std::unordered_set<int> exbonds; // excluded bonds
-    //std::unordered_set<int> innodes;
-    exbonds.insert(b0);
-    //innodes.insert(a0);
-    int n0;
-    do{
-        n0=innodes.size();
-        for( int ib=0; ib<nb; ib++ ){
-            //printf( "ib %i n0 %i \n", ib, n0 );
-            if( exbonds.find(ib) != innodes.end() ) continue;
-            const Vec2i& b = bonds[ib];
-            int ia=-1;
-            if     ( innodes.find(b.a) != innodes.end() ){ ia=b.b; }
-            else if( innodes.find(b.b) != innodes.end() ){ ia=b.a; }
-            if(ia>=0){
-                innodes.insert(ia);
-                exbonds.insert(ib);
-            }
-        }
-    }while( innodes.size()>n0 );
-    /*
-    int i=0;
-    for( int ia : innodes){
-        printf( "splitGraphs[%i] %i \n", i, ia );
-        i++;
-    }
-    exit(0);
-    */
-    return innodes.size();
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ==========================
 // TestAppMMFFmini
 // ==========================
@@ -329,9 +268,14 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
 
     bool bNonBonded = true;
 
+    std::vector<Molecule*> molecules;
 
     std::vector<int> selection;
-
+    bool bDragging = false;
+    Vec3d  ray0_start;
+    Vec3d  rotation_center = Vec3dZero;
+    Vec3d  rotation_axis   = Vec3dZ;
+    double rotation_step   = 15.0 * (M_PI/180.0);
 
     //std::unordered_map<std::string,int> atomTypeDict;
 
@@ -369,7 +313,61 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
 
 	void drawSystem( );
 
+
+	void selectShorterSegment( const Vec3d& ro, const Vec3d& rd );
+	void selectRect( const Vec3d& p0, const Vec3d& p1 );
+
 };
+
+/*
+int pickBond( const MMFFmini& ff, const Vec3d& ro, const Vec3d& rd, double R ){
+    int    imin=-1;
+    double rmin=1e+300;
+    for(int i=0; i<ff.nbonds;i++){
+        const Vec2i& b  = ff.bond2atom[i];
+        const Vec3d& p0 = ff.apos[b.a];
+        const Vec3d& p1 = ff.apos[b.b];
+        //double r = rayLineDist( ro, rd, p0, p1-p0 );
+        double r = capsulaIntersect( ro, rd, p0, p1, R );
+        if(r<rmin){ rmin=r; imin=i; }
+    }
+    return imin;
+}
+*/
+
+void TestAppMMFFmini::selectRect( const Vec3d& p0, const Vec3d& p1 ){
+    Vec3d Tp0,Tp1,Tp;
+    Mat3d rot = (Mat3d)cam.rot;
+    rot.dot_to(p0,Tp0);
+    rot.dot_to(p1,Tp1);
+    _order(Tp0.x,Tp1.x);
+    _order(Tp0.y,Tp1.y);
+    Tp0.z=-1e+300;
+    Tp1.z=+1e+300;
+    selection.clear();
+    for(int i=0; i<ff.natoms; i++ ){
+        rot.dot_to(ff.apos[i],Tp);
+        if( Tp.isBetween(Tp0,Tp1) ){
+            selection.push_back( i );
+        }
+    }
+}
+
+void  TestAppMMFFmini::selectShorterSegment( const Vec3d& ro, const Vec3d& rd ){
+    //int ib         = builder.rayBonds( ro, rd, 0.3 );
+    int ib = pickBondCenter( ff.nbonds, ff.bond2atom, ff.apos, ro, rd, 0.5 );
+    printf( "picked bond  %i \n", ib );
+    const Vec2i& b = builder.bonds[ib].atoms;
+    rotation_axis = (ff.apos[b.b]-ff.apos[b.a]).normalized();
+    std::unordered_set<int> innodes1; innodes1.insert( b.a );
+    std::unordered_set<int> innodes2; innodes2.insert( b.b );
+    MM::splitGraphs( ff.nbonds, ff.bond2atom, ib, innodes1 );
+    MM::splitGraphs( ff.nbonds, ff.bond2atom, ib, innodes2 );
+    std::unordered_set<int>* sel;
+    if( innodes1.size()<innodes2.size()  ){ sel=&innodes1;  rotation_center = ff.apos[b.a]; }else{ sel=&innodes2; rotation_center = ff.apos[b.b]; rotation_axis.mul(-1); }
+    selection.clear();
+    for( int i:*sel){ selection.push_back(i); };
+}
 
 
 int TestAppMMFFmini::loadMoleculeXYZ( const char* fname, bool bAutoH ){
@@ -609,8 +607,38 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     // >> This algorithm assumes all atoms with conf precede atoms without confs in the array
     // >>   ERROR in builder.sortBonds() => exit
 
+
     int nheavy = 0;
-    nheavy = loadMoleculeXYZ( "common_resources/polymer.xyz", false );
+    //nheavy = loadMoleculeXYZ( "common_resources/polymer.xyz", false );
+    nheavy = loadMoleculeXYZ( "common_resources/polymer-R.xyz", false );
+
+    printf( "# =========== INSERTING Groups !!!! \n" );
+    //molecules.push_back( new Molecule() ); molecules[0]->atomTypeDict = builder.atomTypeDict; molecules[0]->loadMol("common_resources/EndGroup_X_1.mol");
+    //molecules.push_back( new Molecule() ); molecules[1]->atomTypeDict = builder.atomTypeDict; molecules[1]->loadMol("common_resources/EndGroup_Y_1.mol");
+    molecules.push_back( new Molecule() ); molecules[0]->atomTypeDict = builder.atomTypeDict; molecules[0]->load_xyz("common_resources/EndGroup_X_1.xyz", true);
+    molecules.push_back( new Molecule() ); molecules[1]->atomTypeDict = builder.atomTypeDict; molecules[1]->load_xyz("common_resources/EndGroup_Y_1.xyz", true);
+    molecules[0]->orient( 0, 1, 2 ); // molecules[0]->findBonds_brute(1.8);
+    molecules[1]->orient( 0, 1, 2 ); // molecules[1]->findBonds_brute(1.8);
+    int ityp = builder.atomTypeDict->find( "Cl" )->second;  printf( "atomTypeDict[Cl] -> %i \n", ityp );
+
+    Mat3d rot;
+    rot.fromDirUp( builder.vecBetweenAtoms(2, 3).normalized(), Vec3dZ ); builder.insertFlexibleMolecule(  molecules[0], builder.atoms[2].pos, rot.transposed(), 5 );
+    rot.fromDirUp( builder.vecBetweenAtoms(7, 6).normalized(), Vec3dZ ); builder.insertFlexibleMolecule(  molecules[1], builder.atoms[7].pos, rot.transposed(), 5 );
+    //builder.rotationFromAtoms( 2, 3, 4, rot ); builder.insertFlexibleMolecule(  molecules[0], builder.atoms[2].pos, rot.transposed() );
+    //builder.rotationFromAtoms( 7, 6, 5, rot ); builder.insertFlexibleMolecule(  molecules[1], builder.atoms[7].pos, rot.transposed() );
+    //builder.insertFlexibleMolecule(  molecules[0], builder.atoms[builder.findNthAtomOfType(ityp,2)].pos - molecules[0]->pos[0], Mat3dIdentity );
+    //builder.insertFlexibleMolecule(  molecules[1], builder.atoms[builder.findNthAtomOfType(ityp,2)].pos, Mat3dIdentity );
+
+    builder.removeAtom(6);
+    builder.removeAtom(3);
+    builder.clearBonds();
+    _dealloc(atypes); atypes=0; builder.export_atypes(atypes);
+
+    builder.autoBondsPBC();             builder.printBonds ();  // exit(0);
+    //builder.autoAngles( 0.5, 0.5 );     builder.printAngles();
+    builder.toMMFFmini( ff, &params );
+    printf( "# =========== INSERTING Groups DONE !!!! \n" );
+
     //nheavy = loadMoleculeXYZ( "common_resources/polymer-noH.xyz", false );
     //nheavy = loadMoleculeMol(  "/home/prokop/Dropbox/TEMP/ERC2021/Molecules/chain--frag-4---N-----.mol", false, true);
     //nheavy = loadMoleculeMol( "common_resources/propylacid-q.mol", false, true);   // use old method loading whole .mol file with hydrogens // currently distorted molecule :-(
@@ -621,6 +649,7 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     nff.bindOrRealloc( ff.natoms, ff.nbonds, ff.apos, ff.aforce, 0, ff.bond2atom );
     builder.export_REQs( nff.REQs );
 
+    //bNonBonded = false;
     if(bNonBonded){
         if( !checkPairsSorted( nff.nmask, nff.pairMask ) ){
             printf( "ERROR: nff.pairMask is not sorted => exit \n" );
@@ -630,9 +659,13 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         printf( "WARRNING : we ignore non-bonded interactions !!!! \n" );
     }
 
+    DEBUG
+
     opt.bindOrAlloc( 3*ff.natoms, (double*)ff.apos, 0, (double*)ff.aforce, 0 );
     //opt.setInvMass( 1.0 );
     opt.cleanVel( );
+
+    DEBUG
 
     // ======== Test before we run
     nff.printAtomParams();
@@ -644,6 +677,8 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     printf("TestAppMMFFmini.init() DONE \n");
     //exit(0);
 
+    DEBUG
+
     Draw3D::makeSphereOgl( ogl_sph, 3, 1.0 );
 
     //selection.insert( selection.end(), {12, 16, 14, 6, 2, 3,   20,18,31,25,26} );
@@ -652,19 +687,21 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     std::unordered_set<int> innodes;
     //innodes.insert(12);
     innodes.insert(11);
-    splitGraphs( ff.nbonds, ff.bond2atom, 22, innodes );
+    MM::splitGraphs( ff.nbonds, ff.bond2atom, 22, innodes );
     for( int i : innodes ){ selection.push_back(i); }
+
+    DEBUG
 
 }
 
 void TestAppMMFFmini::drawSystem( ){
     //glColor3f(0.0f,0.0f,0.0f); Draw3D::drawLines ( ff.nbonds, (int*)ff.bond2atom, ff.apos );
-    glColor3f(0.0f,0.0f,0.0f); Draw3D::bondsPBC(  ff.nbonds, ff.bond2atom, ff.apos, &builder.bondPBC[0], builder.lvec );
-    glColor3f(0.5f,0.0f,0.0f); Draw3D::atomLabels(  ff.natoms,  ff.apos, fontTex );
-    glColor3f(0.0f,0.0f,1.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );
+    glColor3f(0.0f,0.0f,0.0f); Draw3D::bondsPBC(  ff.nbonds, ff.bond2atom, ff.apos, &builder.bondPBC[0], builder.lvec ); // DEBUG
+    glColor3f(0.5f,0.0f,0.0f); Draw3D::atomLabels(  ff.natoms,  ff.apos, fontTex );                                      //DEBUG
+    glColor3f(0.0f,0.0f,1.0f); Draw3D::bondLabels( ff.nbonds,       ff.bond2atom, ff.apos, fontTex, 0.02 );              //DEBUG
     //glColor3f(1.0f,0.0f,0.0f); Draw3D::vecsInPoss( ff.natoms, ff.aforce, ff.apos, 300.0              );
     //Draw3D::atomsREQ  ( ff.natoms, ff.apos,   nff.REQs, ogl_sph, 1.0, 0.25, 1.0 );
-    Draw3D::atoms( ff.natoms, ff.apos, atypes, params, ogl_sph, 1.0, 0.25, 1.0 );
+    Draw3D::atoms( ff.natoms, ff.apos, atypes, params, ogl_sph, 1.0, 0.25, 1.0 );       //DEBUG
 }
 
 void TestAppMMFFmini::draw(){
@@ -695,12 +732,16 @@ void TestAppMMFFmini::draw(){
     //bRunRelax = false;
 
     //Vec3d::rotate( selection.size(), &selection[0], ff.apos, ff.apos[12], (ff.apos[13]-ff.apos[12]).normalized(), 0.1 );
-    Vec3d::rotate( selection.size(), &selection[0], ff.apos, ff.apos[13], (ff.apos[11]-ff.apos[13]).normalized(), 0.1 );
+    //Vec3d::rotate( selection.size(), &selection[0], ff.apos, ff.apos[13], (ff.apos[11]-ff.apos[13]).normalized(), 0.1 );
 
     if(bRunRelax){
 
         //builder.lvec.a.mul(1.001);
-        builder.lvec.a.mul(0.999);
+        //builder.lvec.a.mul(0.999);
+
+        //builder.lvec.a.rotate( 0.01, Vec3dZ );
+        //builder.lvec.b.rotate( 0.01, Vec3dZ );
+
         for(int itr=0; itr<perFrame; itr++){
             //if(bConverged) break;
             //printf( "======= frame %i \n", frameCount );
@@ -766,7 +807,9 @@ void TestAppMMFFmini::draw(){
         }
     }
 
-    Draw3D::drawTriclinicBox(builder.lvec, Vec3dZero, Vec3dOne );
+    if(bDragging)Draw3D::drawTriclinicBox(cam.rot.transposed(), (Vec3f)ray0_start, (Vec3f)ray0 );
+    //Draw3D::drawTriclinicBox(builder.lvec, Vec3dZero, Vec3dOne );
+    Draw3D::drawTriclinicBox(builder.lvec.transposed(), Vec3dZero, Vec3dOne );
     glColor3f(0.6f,0.6f,0.6f); Draw3D::plotSurfPlane( (Vec3d){0.0,0.0,1.0}, -3.0, {3.0,3.0}, {20,20} );
 
     if(builder.bPBC){
@@ -781,7 +824,6 @@ void TestAppMMFFmini::draw(){
         glColor3f( 0.f,1.f,0.f );
         Draw3D::drawSphereOctLines( 8, 0.3, ff.apos[ia] );
     }
-
 
     if(iangPicked>=0){
         glColor3f(0.,1.,0.);
@@ -808,8 +850,8 @@ void TestAppMMFFmini::eventHandling ( const SDL_Event& event  ){
                 //case SDLK_o:  perspective  = !perspective; break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
 
-                case SDLK_LEFTBRACKET:  ff.i_DEBUG=(ff.i_DEBUG+1)%ff.nang; break;
-                case SDLK_RIGHTBRACKET: ff.i_DEBUG=(ff.i_DEBUG+1)%ff.nang; break;
+                //case SDLK_LEFTBRACKET:  ff.i_DEBUG=(ff.i_DEBUG+1)%ff.nang; break;
+                //case SDLK_RIGHTBRACKET: ff.i_DEBUG=(ff.i_DEBUG+1)%ff.nang; break;
 
                 //case SDLK_v: for(int i=0; i<world.natoms; i++){ ((Vec3d*)opt.vel)[i].add(randf(-drndv,drndv),randf(-drndv,drndv),randf(-drndv,drndv)); } break;
                 //case SDLK_p: for(int i=0; i<world.natoms; i++){ world.apos[i].add(randf(-drndp,drndp),randf(-drndp,drndp),randf(-drndp,drndp)); } break;
@@ -824,6 +866,20 @@ void TestAppMMFFmini::eventHandling ( const SDL_Event& event  ){
                 //case SDLK_s: world.apos[1].mul( 0.9 ); break;
 
 
+                case SDLK_f:
+                    //selectShorterSegment( (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y + cam.rot.c*-1000.0), (Vec3d)cam.rot.c );
+                    selectShorterSegment( ray0, (Vec3d)cam.rot.c );
+                    //selection.erase();
+                    //for(int i:builder.selection){ selection.insert(i); };
+                    break;
+
+                case SDLK_LEFTBRACKET:
+                    Vec3d::rotate( selection.size(), &selection[0], ff.apos, rotation_center, rotation_axis, +rotation_step );
+                    break;
+                case SDLK_RIGHTBRACKET:
+                    Vec3d::rotate( selection.size(), &selection[0], ff.apos, rotation_center, rotation_axis, -rotation_step );
+                    break;
+
                 case SDLK_SPACE: bRunRelax=!bRunRelax; break;
 
                 case SDLK_g: iangPicked=(iangPicked+1)%ff.nang;
@@ -836,8 +892,14 @@ void TestAppMMFFmini::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
+                    /*
                     ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natoms, ff.apos );
+                    selection.clear();
+                    if(ipicked>=0){ selection.push_back(ipicked); };
                     printf( "picked atom %i \n", ipicked );
+                    */
+                    ray0_start = ray0;
+                    bDragging = true;
                     break;
                 case SDL_BUTTON_RIGHT:
                     //ibpicked = ff.pickBond( ray0, (Vec3d)cam.rot.c , 0.5 );
@@ -848,7 +910,17 @@ void TestAppMMFFmini::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    ipicked = -1;
+                    //ipicked = -1;
+                    //ray0_start
+                    if( ray0.dist2(ray0_start)<0.1 ){
+                        ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natoms, ff.apos );
+                        selection.clear();
+                        if(ipicked>=0){ selection.push_back(ipicked); };
+                        printf( "picked atom %i \n", ipicked );
+                    }else{
+                        selectRect( ray0_start, ray0 );
+                    }
+                    bDragging=false;
                     break;
                 case SDL_BUTTON_RIGHT:
                     //ibpicked = -1;

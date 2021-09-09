@@ -3,7 +3,6 @@
 #define  macroUtils_h
 
 #define SWAP( a, b, TYPE ) { TYPE t = a; a = b; b = t; }
-
 //#define _max(a,b)      ((a>b)?a:b)
 //#define _min(a,b)      ((a<b)?a:b)
 //#define _abs(a)        ((a>0)?a:-a)
@@ -90,7 +89,8 @@ struct Arr{
 #define _inline_T        template<typename T> inline
 
 
-_inline_T void _swap (T& a, T& b) { T t=a; a=b; b=t; }
+_inline_T void _swap  (T& a, T& b) { T t=a; a=b; b=t;   }
+_inline_T void _order (T& a, T& b) { if(a>b)_swap(a,b); }
 
 _inline_T const T& _min  (const T& a, const T& b){ return (a>b)?b:a; }
 _inline_T const T& _max  (const T& a, const T& b){ return (a<b)?b:a; }

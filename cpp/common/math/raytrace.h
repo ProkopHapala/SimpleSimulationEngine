@@ -96,6 +96,34 @@ inline double rayLine( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p0, co
     //return
 }
 
+inline double capsulaIntersect( const Vec3d& ro, const Vec3d&  rd, const Vec3d&  pa, const Vec3d&  pb, double r ){
+    // https://www.shadertoy.com/view/Xt3SzX
+    Vec3d  ba = pb - pa;
+    Vec3d  oa = ro - pa;
+    double baba = ba.norm2();
+    double oaoa = oa.norm2();
+    double bard = ba.dot(rd);
+    double baoa = ba.dot(oa);
+    double rdoa = rd.dot(oa);
+    double a = baba      - bard*bard;
+    double b = baba*rdoa - baoa*bard;
+    double c = baba*oaoa - baoa*baoa - r*r*baba;
+    double h = b*b - a*c;
+    if( h>=0 ){
+        float t = (-b-sqrt(h))/a;
+        float y = baoa + t*bard;
+        // body
+        if( y>0.0 && y<baba ) return t;
+        // caps
+        Vec3d oc = (y<=0.0) ? oa : ro - pb;
+        b = rd.dot(oc);
+        c = oc.dot(oc) - r*r;
+        h = b*b - c;
+        if( h>0.0 ) return -b - sqrt(h);
+    }
+    return 1e+300;
+}
+
 // =========== Plane
 
 inline double rayPlane( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& normal, const Vec3d& point ){
@@ -285,6 +313,28 @@ inline int pickPoinMinDist( const Vec3d &ray0, const Vec3d &hRay, int n, const V
     }
     return imin;
 };
+
+inline int pickBondCenter( int nb, const Vec2i* bonds, const Vec3d* ps, const Vec3d& ray0, const Vec3d& hRay, double R ){
+    double tmin =  1e+300;
+    int imin    = -1;
+
+    printf( "ray0(%g,%g,%g) hRay(%g,%g,%g) \n", ray0.x,ray0.y,ray0.z, hRay.x,hRay.y,hRay.z );
+    for(int i=0; i<nb; i++){
+        const Vec2i& b = bonds[i];
+        Vec3d p = (ps[b.a]+ps[b.b])*0.5;
+        double ti = raySphere( ray0, hRay, R, p );
+        printf( "ti[%i] %g  p(%g,%g,%g)\n", i, ti, p.x,p.y,p.z );
+        if(ti<tmin){ imin=i; tmin=ti; }
+    }
+    printf( ">>>> imin %i tmin %g \n", imin, tmin );
+    return imin;
+}
+
+/*
+inline bool pointInRect( const Vec3d& p, const Mat3d& rot, Vec2d ){
+    double x =
+}
+*/
 
 // =========== BoundingBox
 

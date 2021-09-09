@@ -66,6 +66,7 @@ class Molecule{ public:
     Vec3d  * REQs      = NULL;
     int    * atomType  = NULL;
     int    * bondType  = NULL;
+    int    * npis      = NULL;
 
     int   * atom_nb    = NULL;
     int   * atom2bond  = NULL;
@@ -86,8 +87,10 @@ class Molecule{ public:
         //_realloc( charges   , natoms );
         _realloc( REQs      , natoms );
         _realloc( atomType  , natoms );
+        _realloc( npis      , natoms );
         _realloc( bondType  , nbonds );
         _realloc( bond2atom , nbonds );
+
     }
 
     void bondsOfAtoms(){
@@ -246,6 +249,19 @@ class Molecule{ public:
 
     void addToPos( Vec3d dp ){ for(int i=0; i<natoms; i++){ pos[i].add(dp); } }
 
+    void orient( Vec3d center, Vec3d dir, Vec3d up ){
+        Mat3d rot; rot.fromDirUp( dir, up );
+        for(int i=0; i<natoms; i++){
+            Vec3d p = pos[i]-center;
+            rot.dot_to(p,pos[i]);
+        }
+    }
+
+    void orient( int i0, int i1, int i2 ){
+        Vec3d center = pos[i0];
+        orient( center, (pos[i1]-center).normalized(), pos[i2]-center );
+    }
+
     /*
     // DEPRECATED
     int loadMol_old( const char* fname ){
@@ -299,6 +315,7 @@ class Molecule{ public:
             auto it = atomTypeDict->find( at_name );
             if( it != atomTypeDict->end() ){
                 atomType[i] = it->second;
+                printf( " %s -> %i \n", at_name,  atomType[i] );
                 if(1==it->second)REQs[i].x=1.0; // Hydrogen is smaller
             }else{
                 //atomType[i] = atomChar2int( at_name[0] );
@@ -368,6 +385,37 @@ class Molecule{ public:
         return natoms + nbonds;
     }
 
+    int load_xyz( const char * fname, bool bDebug=false ){
+        if(bDebug)printf( "Molecule.load_xyz(%s)\n", fname );
+        FILE * pFile = fopen(fname,"r");
+        if( pFile == NULL ){
+            printf("cannot find %s\n", fname );
+            return -1;
+        }
+        //DEBUG
+        int natoms; char at_name[8]; int npi,ne=0;
+        const int nbuf=1024;
+        char buff[nbuf]; char* line;
+        line = fgets( buff, nbuf, pFile ); // number of atoms
+        sscanf( line, "%i", &natoms );
+        if(bDebug)printf( "natoms %i \n", natoms );
+        line = fgets( buff, nbuf, pFile ); // comment, ignore
+        //DEBUG
+        allocate(natoms,0);
+        for(int i=0; i<natoms; i++){
+            //printf( "%i \n", i );
+            Vec3d& p = pos[i];
+            line     = fgets( buff, nbuf, pFile ); // comment, ignore
+            int nret = sscanf( line,       "%s %lf %lf %lf %lf %i  ",    at_name, &p.x, &p.y, &p.z, &REQs[i].z, &npis[i]  );
+            if(bDebug)printf   (  ".xyz[%i] %s %lf %lf %lf %lf %i\n", i, at_name,  p.x,  p.y,  p.z,  REQs[i].z,  npis[i]  );
+            if( nret < 5 ){ REQs[i].z= 0; };
+            if( nret < 6 ){ npis[i]  =-1; };
+            assignAtomType(i, at_name );
+        }
+        //DEBUG
+        return natoms;
+    }
+
     int loadXYZ(const char* fname ){
         // xxxxx.xxxxyyyyy.yyyyzzzzz.zzzz aaaddcccssshhhbbbvvvHHHrrriiimmmnnneee
         // http://www.daylight.com/meetings/mug05/Kappler/ctfile.pdf
@@ -382,8 +430,8 @@ class Molecule{ public:
         line = fgets( buff, 1024, pFile ); //printf("%s",line);
         sscanf( line, "%i \n", &natoms );
         //printf("natoms %i \n", natoms );
-        //allocate(natoms,0);
-        allocate(natoms,nbonds);
+        allocate(natoms,0);
+        //allocate(natoms,nbonds);
         line = fgets( buff, 1024, pFile ); // comment
         for(int i=0; i<natoms; i++){
             //char ch;
@@ -483,11 +531,15 @@ class Molecule{ public:
         _dealloc( bond2atom );
         _dealloc( REQs      );
         _dealloc( atomType  );
+        _dealloc( npis      );
         _dealloc( bondType  );
         _dealloc( atom_nb   );
         _dealloc( atom2bond );
         _dealloc( ang2bond  );
     }
+    ~Molecule(){
+        dealloc();
+    };
 
 };
 

@@ -200,9 +200,39 @@ struct Fragment{
 };
 #endif // Molecule_h
 
+
+//int splitGraphs( int nb, Vec2i* bonds, int a0, int b0 ){
+int splitGraphs( int nb, Vec2i* bonds, int b0, std::unordered_set<int>& innodes ){
+    //printf( "splitGraphs \n" );
+    std::unordered_set<int> exbonds; // excluded bonds
+    //std::unordered_set<int> innodes;
+    exbonds.insert(b0);
+    //innodes.insert(a0);
+    int n0;
+    do{
+        n0=innodes.size();
+        for( int ib=0; ib<nb; ib++ ){
+            //printf( "ib %i n0 %i \n", ib, n0 );
+            if( exbonds.find(ib) != innodes.end() ) continue;
+            const Vec2i& b = bonds[ib];
+            int ia=-1;
+            if     ( innodes.find(b.a) != innodes.end() ){ ia=b.b; }
+            else if( innodes.find(b.b) != innodes.end() ){ ia=b.a; }
+            if(ia>=0){
+                innodes.insert(ia);
+                exbonds.insert(ib);
+            }
+        }
+    }while( innodes.size()>n0 );
+    return innodes.size();
+}
+
+
 class Builder{  public:
 
     bool bDEBUG = false;
+
+    std::unordered_set<int> selection;
 
     //static int iDebug = 0;
     std::vector<Atom>       atoms;
@@ -248,9 +278,67 @@ class Builder{  public:
 
     // =================== Functions =====================
 
+    Mat3d rotationFromAtoms( int i0, int i1, int i2 ){
+        Mat3d rot;
+        Vec3d center = atoms[i0].pos;
+        rot.fromDirUp( (atoms[i1].pos-center).normalized(), atoms[i2].pos-center);
+        return rot;
+    }
+
+    Vec3d vecBetweenAtoms(int i, int j){ return atoms[j].pos-atoms[i].pos; }
+
+    int rayBonds( const Vec3d& ro, const Vec3d& rd, double R ){
+        int    imin=-1;
+        double rmin=1e+300;
+        for(int i=0; i<bonds.size();i++){
+            const Vec2i& b  = bonds[i].atoms;
+            const Vec3d& p0 = atoms[b.a].pos;
+            const Vec3d& p1 = atoms[b.b].pos;
+            //double r = rayLineDist( ro, rd, p0, p1-p0 );
+            double r = capsulaIntersect( ro, rd, p0, p1, R );
+            if(r<rmin){ rmin=r; imin=i; }
+        }
+        return imin;
+    }
+
+    /*
+    void selectShorterSegment( const Vec3d& ro, const Vec3d& rd ){
+        int ib = rayBonds( ro, rd, 0.3 );
+        std::unordered_set<int> innodes1; innodes1.insert( bonds[ib].a );
+        std::unordered_set<int> innodes2; innodes2.insert( bonds[ib].b );
+        splitGraphs( bonds.size(), &bonds[0], ib, innodes1 );
+        splitGraphs( bonds.size(), &bonds[0], ib, innodes2 );
+        std::unordered_set<int>* sel;
+        if( innodes1.size()<innodes2.size()  ){ sel=innodes1; }else{ sel=innodes2; }
+        selection.erase();
+        for( int i:*sel){ selection.insert(i); };
+    }
+    */
+
+    int findNthAtomOfType( int ityp, int n){
+        int j=0;
+        for(int i=0; i<atoms.size(); i++){
+            if( atoms[i].type==ityp ){
+                j++; if(j==n) return i;
+            }
+        }
+        return -1;
+    }
+
+    void clearBonds(){
+        //atoms.clear();
+        bonds.clear();
+        bondPBC.clear();
+        angles.clear();
+        dihedrals.clear();
+        confs.clear();
+        for(Atom& a:atoms){ a.iconf=-1; };
+    }
+
     void clear(){
         atoms.clear(); //printf("DEBUG a.1 \n");
         bonds.clear(); //printf("DEBUG a.2 \n");
+        bondPBC.clear();
         angles.clear();
         dihedrals.clear();
 #ifdef Molecule_h
@@ -336,6 +424,12 @@ class Builder{  public:
         }
         atoms.push_back( Atom    ( ityp,-1,iconf, pos, *REQ )  );
     }
+
+    void removeAtom(int i, bool checkBrute=true){
+        int iend = atoms.size()-1;
+        _swap( atoms[i], atoms[iend] );
+        atoms.resize(iend);
+    };
 
     void tryAddBondToAtomConf( int ib, int ia, bool bCheck ){
         int ic = atoms[ia].iconf;
@@ -677,7 +771,7 @@ class Builder{  public:
             const Atom& A = atoms[i];
             R = A.REQ.x;
             int ipbc=0;
-            //printf( "#==== Atom[%i] \n", i );
+            printf( "#==== Atom[%i] R %g \n", i, R );
             for(int ix=-npbc.x;ix<=npbc.x;ix++){
                 for(int iy=-npbc.y;iy<=npbc.y;iy++){
                     for(int iz=-npbc.z;iz<=npbc.z;iz++){
@@ -686,9 +780,9 @@ class Builder{  public:
                         //Vec3d vpbc; lvec.dot_to_T( {(double)ix,(double)iy,(double)iz} );
                         //Vec3d p = A.pos - pbcShift( {ix,iy,iz} );
                         Vec3d p = A.pos - lvec.lincomb( ix, iy, iz );
-                        //printf( "# pbc[%i,%i,%i][%i] v(%g,%g,%g)\n", ix,iy,iz, ipbc,  vpbc.x, vpbc.y, vpbc.z );
                         found.clear();
                         touchingAtoms( j0, imax, p, R, Rfac, found );
+                        if(i==12)printf( "# pbc[%i,%i,%i][%i] nfound %i \n", ix,iy,iz, ipbc, found.size() );
                         for(int j:found){
                             bondBrush.atoms={i,j};
                             insertBond( bondBrush );
@@ -972,13 +1066,14 @@ class Builder{  public:
         int n0 = atoms.size();
         for(int i=0; i<natoms; i++){
             line     = fgets( buff, nbuf, pFile ); // comment, ignore
-            int nret = sscanf( line,       "%s %lf %lf %lf %lf %i  ",     at_name, &pos.x, &pos.y, &pos.z, &REQ.z, &npi );
+            int nret = sscanf( line,       "%s %lf %lf %lf %lf %i  ",    at_name, &pos.x, &pos.y, &pos.z, &REQ.z, &npi );
             if(bDebug)printf   (  ".xyz[%i] %s %lf %lf %lf %lf %i\n", i, at_name,  pos.x,  pos.y,  pos.z,  REQ.z,  npi  );
             if( nret < 5 ){ REQ.z=0;  };
             if( nret < 6 ){ npi  =-1; };
             auto it = atomTypeDict->find( at_name );
             if( it != atomTypeDict->end() ){
                 int ityp=it->second;
+                printf( " %s -> %i \n", at_name, ityp );
                 if(params){
                     params->assignRE( ityp, REQ );
                     ne = params->atypes[ityp].nepair();
@@ -989,6 +1084,7 @@ class Builder{  public:
         }
         return atoms.size() - n0;
     }
+
 
     inline void natom_def(int& n,int i0)const{ if(n<0){ n=atoms .size()-i0; }; }
     inline void nbond_def(int& n,int i0)const{ if(n<0){ n=bonds .size()-i0; }; }
@@ -1116,17 +1212,34 @@ class Builder{  public:
         }
     }
 
-    void insertFlexibleMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot ){
-        //printf( "# MM::Builder::insertFlexibleMolecule \n" );
+    void insertFlexibleMolecule( Molecule * mol, const Vec3d& pos, const Mat3d& rot, int ignoreType=-1 ){
+        printf( "# MM::Builder::insertFlexibleMolecule  natoms %i nbonds %i \n", mol->natoms, mol->nbonds );
         int natom0  = atoms.size();
         int nbond0  = bonds.size();
+
+        //for(int i=0; i<5;i++){ printf( "params[%i] R %g E %g \n",i, params->atypes[i].RvdW, params->atypes[i].EvdW ); };
+
         for(int i=0; i<mol->natoms; i++){
-            //Vec3d LJq = (Vec3d){0.0,0.0,0.0};  // TO DO : LJq can be set by type
-            //Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
-            Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y);
-            Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
+            ////Vec3d LJq = (Vec3d){0.0,0.0,0.0};  // TO DO : LJq can be set by type
+            ////Vec3d LJq = (Vec3d){1.0,0.03,0.0}; // TO DO : LJq can be set by type
+            //Vec3d  REQi = mol->REQs[i];   REQi.y = sqrt(REQi.y);
+            //Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
             //printf( "insertAtom[%i] pos(%g,%g,%g) -> p(%g,%g,%g)\n", i, mol->pos[i].x, mol->pos[i].y, mol->pos[i].z, p.x,p.y,p.z );
-            atoms.push_back( (Atom){mol->atomType[i], -1, -1, p, REQi } );
+            //atoms.push_back( (Atom){mol->atomType[i], -1, -1, p, REQi } );
+            //printf( " %s -> %i \n", at_name, ityp );
+            int ne=0;
+            Vec3d REQ=mol->REQs[i];
+            int ityp = mol->atomType[i];
+            if( ityp==ignoreType ) continue;
+            if(params){
+                //printf( "params \n" );
+                params->assignRE( ityp, REQ );
+                ne = params->atypes[ityp].nepair();
+                REQ.z=mol->REQs[i].z;
+            }
+            //printf( "insert Atom[%i] ityp %i REQ(%g,%g,%g) npi,ne %i %i \n", i, ityp, REQ.x, REQ.y, REQ.z, mol->npis[i], ne  );
+            Vec3d p; rot.dot_to(mol->pos[i],p); p.add( pos );
+            insertAtom( ityp, p, &REQ, mol->npis[i], ne );
         }
         for(int i=0; i<mol->nbonds; i++){
             //bonds.push_back( (Bond){mol->bondType[i], mol->bond2atom[i] + ((Vec2i){natom0,natom0}), defaultBond.l0, defaultBond.k } );
@@ -1230,14 +1343,12 @@ class Builder{  public:
     }
 #endif // ForceField_h
 
-
 void updatePBC( Vec3d* pbcShifts ){
     for(int i=0; i<bonds.size(); i++){
         pbcShifts[i] = pbcShift( bondPBC[i] );
+        if( pbcShifts[i].norm2()>1 ){ printf( "PBC-bond[%i]  atoms(%i,%i)  pbcShift(%g,%g,%g) \n",  bonds[i].atoms.a, bonds[i].atoms.b, pbcShifts[i].x,pbcShifts[i].y,pbcShifts[i].z );  };  // DEBUG
     }
 }
-
-
 
 #ifdef MMFFmini_h
     void toMMFFmini( MMFFmini& ff, const MMFFparams* params ){
