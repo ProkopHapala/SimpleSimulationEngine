@@ -1303,14 +1303,14 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
         glPopMatrix();
 	}
 
-	void drawInt( const Vec3d& pos, int i, int fontTex, float sz ){
+	void drawInt( const Vec3d& pos, int i, int fontTex, float sz, const char* format ){
         char str[16];
-        sprintf(str,"%i\0",i);
+        sprintf(str,format,i);
         Draw3D::drawText(str, pos, fontTex, sz, 0);
     }
-    void drawDouble( const Vec3d& pos, double f, int fontTex, float sz ){
+    void drawDouble( const Vec3d& pos, double f, int fontTex, float sz, const char* format ){
         char str[24];
-        sprintf(str,"%g\0",f);
+        sprintf(str,format,f);
         Draw3D::drawText(str, pos, fontTex, sz, 0);
     }
 

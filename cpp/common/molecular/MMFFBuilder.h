@@ -261,7 +261,7 @@ class Builder{  public:
 #endif // Molecule_h
 
     Vec3d defaultREQ  {  1.5, 0.0, 0.0 };
-    Bond  defaultBond { -1, {-1,-1}, 1.5, 1.0 };
+    Bond  defaultBond { -1, {-1,-1}, 1.5, 10.0 };
     //Angle defaultAngle{ -1, {-1,-1}, 0.0, 0.5 };
     Angle defaultAngle{ -1, {-1,-1}, M_PI, 0.5 };
 

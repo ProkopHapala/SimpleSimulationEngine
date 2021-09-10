@@ -73,6 +73,13 @@ void atomLabels( int n, const Vec3d* apos, int fontTex, float sz=0.02 ){
     }
 }
 
+void atomPropertyLabel( int n, double* data, Vec3d* ps, int pitch, int offset, int fontTex, float sz=0.02, const char* format="%4.2f\0" ){
+    for(int i=0; i<n; i++){
+        drawDouble( ps[i], data[i*pitch+offset], fontTex, sz, format );
+        //drawInt( ps[i], (int)data[i*pitch+offset], fontTex, sz );
+    }
+}
+
 void bondsPBC( int n, const Vec2i* b2a, const Vec3d* apos, const Vec3i* pbc, const Mat3d& lvec ){
     for(int i=0; i<n; i++){
         Vec2i b = b2a[i];

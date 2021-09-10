@@ -62,8 +62,9 @@ class MMFFmini{ public:
     int  natoms=0, nbonds=0, nang=0, ntors=0;
     bool bPBC=false;
 
-    // --- Parameters
+    double Eb,Ea,Et;
 
+    // --- Parameters
     Vec2i  * bond2atom = 0;
     double * bond_l0   = 0;  // [A]
     double * bond_k    = 0;  // [eV/A] ?
@@ -495,10 +496,10 @@ double eval_torsions(){
 
 double eval( bool bClean=true ){
     if(bClean)cleanAtomForce();
-    double Eb = eval_bonds();
-    double Ea = eval_angles();
-    double Et = eval_torsions();
-    printf( "Eb %g Ea %g Et %g\n", Eb, Ea, Et );
+    Eb = eval_bonds();
+    Ea = eval_angles();
+    Et = eval_torsions();
+    //printf( "Eb %g Ea %g Et %g\n", Eb, Ea, Et );
     return Eb+Ea+Et;
 };
 
@@ -554,6 +555,13 @@ void printAngleParams(){
     printf( "# MMFFmini.printAngleParams() \n"  );
     for( int i=0; i<nang; i++ ){
         printf( "angle[%i] (%i,%i,%i) cs0(%g,%g) k %g \n", i, ang2atom[i].a+1, ang2atom[i].b+1, ang2atom[i].c+1, ang_cs0[i].x, ang_cs0[i].y, ang_k[i] );
+    }
+}
+
+void printTorsionParams(){
+    printf( "# MMFFmini.printTorsionParams() \n"  );
+    for( int i=0; i<ntors; i++ ){
+        printf( "torsion[%i] (%i,%i,%i,%i) nk %i k %g \n", i, tors2atom[i].x+1, tors2atom[i].y+1, tors2atom[i].z+1, tors2atom[i].w+1, tors_n[i], tors_k[i] );
     }
 }
 
