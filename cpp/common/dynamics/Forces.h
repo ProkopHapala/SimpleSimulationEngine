@@ -178,6 +178,18 @@ inline Vec3d getForceHamakerPlane( const Vec3d& p, const Vec3d& normal, double z
     return normal * f;
 }
 
+inline Vec3d getForceMorsePlane( const Vec3d& p, const Vec3d& normal, double amp, double R, double beta ){
+    // https://en.wikipedia.org/wiki/Lennard-Jones_potential
+    //printf(  " normal %g %g %g \n", normal.x, normal.y, normal.z );
+    double r       = normal.dot(p) - R;
+    double expar   = exp( beta*r );
+    double m_expar = 1-expar;
+    double E       =  amp*m_expar*m_expar;
+    double f       = -amp*m_expar*  expar * beta;
+    //printf( "%g %g %g %g %g %g %g \n", f, cdot, ir, ir3, e0, c0, r0  );
+    return normal * f;
+}
+
 inline Vec3d getForceSpringRay( const Vec3d& p, const Vec3d& hray, const Vec3d& ray0, double k ){
     Vec3d dp; dp.set_sub( p, ray0 );
     double cdot = hray.dot(dp);

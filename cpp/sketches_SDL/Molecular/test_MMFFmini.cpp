@@ -318,9 +318,10 @@ class TestAppMMFFmini : public AppSDL2OGL_3D { public:
 
 	void drawSystem( );
 
-
 	void selectShorterSegment( const Vec3d& ro, const Vec3d& rd );
 	void selectRect( const Vec3d& p0, const Vec3d& p1 );
+
+	void saveScreenshot( int i=0, const char* fname="data/screenshot_%04i.bmp" );
 
 };
 
@@ -612,7 +613,38 @@ TestAppMMFFmini::TestAppMMFFmini( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
 
     int nheavy = 0;
     //nheavy = loadMoleculeXYZ( "common_resources/polymer.xyz", false );
-    nheavy = loadMoleculeXYZ( "common_resources/polymer-2.xyz", "common_resources/polymer-2.lvs", false );
+    //nheavy = loadMoleculeXYZ    ( "common_resources/polymer-2.xyz", "common_resources/polymer-2.lvs", false );
+    //nheavy = loadMoleculeXYZ    ( "common_resources/polymer-2-monomer.xyz", "common_resources/polymer-2.lvs", false );
+
+
+    params.loadAtomTypes( "common_resources/AtomTypes.dat" );
+    params.loadBondTypes( "common_resources/BondTypes.dat" );
+    builder.bindParams(&params);
+
+    readMatrix( "common_resources/polymer-2.lvs", 3, 3, (double*)&builder.lvec );
+    molecules.push_back( new Molecule() ); molecules[0]->atomTypeDict = builder.atomTypeDict; molecules[0]->load_xyz("common_resources/polymer-2.xyz", true);
+    molecules.push_back( new Molecule() ); molecules[1]->atomTypeDict = builder.atomTypeDict; molecules[1]->load_xyz("common_resources/polymer-2-monomer.xyz", true);
+    builder.insertFlexibleMolecule(  molecules[0], {0,0,0}       , Mat3dIdentity, -1 );
+    builder.insertFlexibleMolecule(  molecules[1], builder.lvec.a*1.2, Mat3dIdentity, -1 );
+
+    builder.lvec.a.x *= 2.3;
+
+    //builder.printAtoms ();
+    //builder.printConfs ();
+    builder.printAtomConfs();
+    builder.export_atypes(atypes);
+    builder.bDEBUG = true;
+    //builder.autoBonds ();             builder.printBonds ();
+    builder.autoBondsPBC();             builder.printBonds ();  // exit(0);
+    //builder.autoBondsPBC(-0.5, 0, -1, {0,0,0});             builder.printBonds ();  // exit(0);
+    //builder.autoAngles( 0.5, 0.5 );     builder.printAngles();
+    builder.autoAngles( 10.0, 10.0 );     builder.printAngles();
+    builder.toMMFFmini( ff, &params );
+    builder.saveMol( "data/polymer.mol" );
+
+
+
+    //builder.lvec.a.x *= 2.0;
 
     /*
     printf( "# =========== INSERTING Groups !!!! \n" );
@@ -712,6 +744,40 @@ void TestAppMMFFmini::drawSystem( ){
     //Draw3D::atoms( ff.natoms, ff.apos, atypes, params, ogl_sph, 1.0, 0.25, 1.0 );       //DEBUG
 }
 
+
+void TestAppMMFFmini::saveScreenshot( int i, const char* fname ){
+    //if(makeScreenshot){
+        char str[64];
+        sprintf( str, fname, i );               // DEBUG
+        printf( "save to %s \n", str );
+        unsigned int *screenPixels = new unsigned int[WIDTH*HEIGHT*4];  //DEBUG
+        glFlush();                                                      //DEBUG
+        glFinish();                                                     //DEBUG
+        //glReadPixels(0, 0, WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_INT, screenPixels);
+        glReadPixels(0, 0, WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, screenPixels);   //DEBUG
+        //SDL_Surface *bitmap = SDL_CreateRGBSurfaceFrom(screenPixels, WIDTH, HEIGHT, 32, WIDTH*4, 0xff000000, 0x00ff0000, 0x0000ff00, 0x000000ff );   //DEBUG
+        SDL_Surface *bitmap = SDL_CreateRGBSurfaceFrom(screenPixels, WIDTH, HEIGHT, 32, WIDTH*4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 );   //DEBUG
+        SDL_SaveBMP(bitmap, str);    //DEBUG
+        SDL_FreeSurface(bitmap);
+        delete[] screenPixels;
+        /*
+        DEBUG
+        //SDL_Window* window = this->child_windows[0]->window;
+        SDL_Window* window = this->window;
+        printf( "window @ptr %li \n", window );
+        DEBUG
+        SDL_Renderer* renderer = SDL_GetRenderer(window);
+        DEBUG
+        SDL_Surface *sshot = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
+        DEBUG
+        SDL_RenderReadPixels( renderer, NULL, SDL_PIXELFORMAT_ARGB8888, sshot->pixels, sshot->pitch);
+        DEBUG
+        SDL_SaveBMP(sshot, str );
+        DEBUG
+        SDL_FreeSurface(sshot);
+        */
+}
+
 void TestAppMMFFmini::draw(){
     //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
     glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
@@ -752,7 +818,8 @@ void TestAppMMFFmini::draw(){
 
     //ff.apos[0].set(-2.0,0.0,0.0);
     //perFrame = 1;
-    perFrame = 100;
+    //perFrame = 100;
+    perFrame = 20;
     //bRunRelax = false;
 
     //Vec3d::rotate( selection.size(), &selection[0], ff.apos, ff.apos[12], (ff.apos[13]-ff.apos[12]).normalized(), 0.1 );
@@ -764,6 +831,8 @@ void TestAppMMFFmini::draw(){
         //builder.lvec.a.mul(0.999);
         //builder.lvec.a.rotate( 0.01, Vec3dZ );
         //builder.lvec.b.rotate( 0.01, Vec3dZ );
+
+        /*
         if(frameCount>1){
             //int icell    = frameCount/10;
             int ncell    = 10;
@@ -772,6 +841,9 @@ void TestAppMMFFmini::draw(){
             builder.lvec.a.x += (abs( icell%ncell - ncell/2 )-ncell/3)*dcell;
             builder.lvec.a.y += (icell/ncell)*dcell;
         }
+        */
+        builder.lvec.a    = lvec_a0 + Vec3d{-1.0,0.0,0.0};
+
         for(int itr=0; itr<perFrame; itr++){
             //if(bConverged) break;
             //printf( "======= frame %i \n", frameCount );
@@ -802,6 +874,7 @@ void TestAppMMFFmini::draw(){
             //printf( "DEBUG x.3 \n" );
             //world.eval_LJq_On2();
 
+
             //exit(0);
             if(ipicked>=0){
                 Vec3d f = getForceSpringRay( ff.apos[ipicked], (Vec3d)cam.rot.c, ray0, -1.0 );
@@ -809,8 +882,13 @@ void TestAppMMFFmini::draw(){
                 ff.aforce[ipicked].add( f );
             };
 
+
+            float K = -0.01;
             for(int i=0; i<ff.natoms; i++){
                 //ff.aforce[i].add( getForceHamakerPlane( ff.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );
+                ff.aforce[i].add( getForceMorsePlane( ff.apos[i], {0.0,0.0,1.0}, -5.0, 0.0, 0.01 ) );
+                //ff.aforce[i].z += ff.apos[i].z * K;
+
                 //printf( "%g %g %g\n",  world.aforce[i].x, world.aforce[i].y, world.aforce[i].z );
             }
 
@@ -824,18 +902,28 @@ void TestAppMMFFmini::draw(){
             //opt.move_MDquench();
 
             //opt.move_GD(0.001);
-            double f2 = opt.move_FIRE();
+            //double f2 = opt.move_FIRE();
+
+            float d = 0.05;
+            for(int i=0; i<ff.natoms; i++){ ff.aforce[i].add({randf(-d,d),randf(-d,d),randf(-d,d)});  };
+
+            double f2; opt.move_MD( 0.1, 0.005 );
+
+
             //exit(0);
 
+            //makeScreenshot = true;
 
             //printf( "E %g |F| %g |Ftol %g \n", E, sqrt(f2), Ftol );
             if(f2<sq(Ftol)){
                 bConverged=true;
+                /*
                 if((icell<400)&&(frameCount>frameCountPrev+10)){
                     printf( "CONVERGED icell %i \n", icell );
                     icell++; frameCountPrev=frameCount;
                     makeScreenshot = true;
                 }
+                */
             }
 
         }
@@ -875,36 +963,10 @@ void TestAppMMFFmini::draw(){
     */
 
     if(makeScreenshot){
-        char str[64];
-        sprintf( str,"data/screenshot_%04i.bmp", icell );               // DEBUG
-        unsigned int *screenPixels = new unsigned int[WIDTH*HEIGHT*4];  //DEBUG
-        glFlush();                                                      //DEBUG
-        glFinish();                                                     //DEBUG
-        //glReadPixels(0, 0, WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_INT, screenPixels);
-        glReadPixels(0, 0, WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, screenPixels);   //DEBUG
-        //SDL_Surface *bitmap = SDL_CreateRGBSurfaceFrom(screenPixels, WIDTH, HEIGHT, 32, WIDTH*4, 0xff000000, 0x00ff0000, 0x0000ff00, 0x000000ff );   //DEBUG
-        SDL_Surface *bitmap = SDL_CreateRGBSurfaceFrom(screenPixels, WIDTH, HEIGHT, 32, WIDTH*4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 );   //DEBUG
-        SDL_SaveBMP(bitmap, str);    //DEBUG
-        SDL_FreeSurface(bitmap);
-        delete[] screenPixels;
-
-        /*
-        DEBUG
-        //SDL_Window* window = this->child_windows[0]->window;
-        SDL_Window* window = this->window;
-        printf( "window @ptr %li \n", window );
-        DEBUG
-        SDL_Renderer* renderer = SDL_GetRenderer(window);
-        DEBUG
-        SDL_Surface *sshot = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
-        DEBUG
-        SDL_RenderReadPixels( renderer, NULL, SDL_PIXELFORMAT_ARGB8888, sshot->pixels, sshot->pitch);
-        DEBUG
-        SDL_SaveBMP(sshot, str );
-        DEBUG
-        SDL_FreeSurface(sshot);
-        */
+        saveScreenshot( icell );
+        icell++;
     }
+
 
 };
 
