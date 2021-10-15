@@ -47,10 +47,14 @@ bool checkScalar(const char* s, double v, double vmin, double vmax){
 }
 
 
-void drawEFF( EFF& ff, int oglSph, float fsc=1.0, float Qsz=0.05, float alpha=0.1 ){
+void drawEFF( EFF& ff, int oglSph, float fsc=1.0, float Qsz=0.05, float alpha=0.1, double rBond=-1 ){
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for(int i=0; i<ff.na; i++){
         //printf( "apos[%i] (%g,%g,%g)\n", i, ff.apos[i].x, ff.apos[i].y, ff.apos[i].z );
-        glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , ff.aPars[i].x*Qsz );
+        //glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]      , ff.aPars[i].x*Qsz );
+        glColor4f(0.0,0.0,0.0, 0.5); Draw3D::drawShape( oglSph, ff.apos[i], Mat3dIdentity*ff.aPars[i].x*Qsz*0.5,  false );
         //glColor3f(0.0,0.0,0.0); Draw3D::drawPointCross( ff.apos  [i]    , Qsz );
         glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos  ( ff.aforce[i]*fsc, ff.apos[i] );
         //Draw3D::drawVecInPos(   ff.aforce[i]*fsc, ff.apos[i] );
@@ -63,9 +67,9 @@ void drawEFF( EFF& ff, int oglSph, float fsc=1.0, float Qsz=0.05, float alpha=0.
         //glColor3f(1.,0.,0.); Draw3D::drawVecInPos( DEBUG_fa_aa[i], ff.apos[i] );
     }
     //glColor3f(1.0,1.0,1.0);
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glDisable(GL_DEPTH_TEST);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //glBlendFunc(GL_DST_COLOR, GL_SRC_ALPHA);
     for(int i=0; i<ff.ne; i++){
         //printf( "epos[%i] (%g,%g,%g)\n", i, ff.epos[i].x, ff.epos[i].y, ff.epos[i].z );
@@ -84,6 +88,17 @@ void drawEFF( EFF& ff, int oglSph, float fsc=1.0, float Qsz=0.05, float alpha=0.
         //sprintf(strtmp,"%i",i);
         //Draw3D::drawText(strtmp, ff.epos[i], fontTex, 0.02, 0);
     }
+    if(rBond>0){
+    glColor3f(0.0,0.0,0.0);
+    for(int i=0; i<ff.na; i++){
+        for(int j=0; j<i; j++){
+            Vec3d d  = ff.apos[i]-ff.apos[j];
+            double r = d.norm();
+            if(r<rBond){
+                Draw3D::drawLine( ff.apos[i], ff.apos[j] );
+            }
+        }
+    }}
 }
 
 bool checkFinite(const EFF& ff, double vmin, double vmax ){

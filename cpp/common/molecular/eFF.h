@@ -625,6 +625,27 @@ char* orbs2str(char* str0){
     return str;
 }
 
+void to_xyz( FILE* pFile ){
+    fprintf( pFile, " %i \n", na+ne );
+    fprintf( pFile, " %i %i \n", na,ne );
+    for (int i=0; i<na; i++){
+        fprintf( pFile, "%3i %10.6f %10.6f %10.6f \n", (int)(aPars[i].y+2.5), apos[i].x, apos[i].y, apos[i].z );
+    }
+    for (int i=0; i<ne; i++){
+        int e = espin[i];
+        if(e==1 ){e=92;}
+        if(e==-1){e=93;}
+        fprintf( pFile, "%3i %10.6f %10.6f %10.6f 0 %10.6f \n", e, epos[i].x, epos[i].y, epos[i].z,  esize[i]*4.0 );
+    }
+}
+
+void save_xyz( char const* filename ){
+    printf( "EFF::save_xyz(%s)\n", filename );
+    FILE * pFile;
+    pFile = fopen (filename,"w");
+    to_xyz( pFile );
+    fclose(pFile);
+}
 
 
 bool loadFromFile_xyz( char const* filename ){

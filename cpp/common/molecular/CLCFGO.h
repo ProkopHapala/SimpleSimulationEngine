@@ -1797,6 +1797,23 @@ void applyPairForceAE( int ia, int jo, Gauss::PairDeriv* dBs,  double* Ss, doubl
     //return E;
 }
 
+void fixArray( double* arr ){
+    //apos  =(Vec3d*) dofs;
+    //epos  =(Vec3d*) (  dofs + (natom_*3)          );
+    //esize =         (  dofs + (natom_*3) + 3*nBas );
+    //ecoef =         (  dofs + (natom_*3) + 4*nBas );
+    if(!bOptAtom)VecN::set( natom*3, 0.0, arr                       );
+    if(!bOptEPos)VecN::set( nBas *3, 0.0, arr + (natom*3)          );
+    if(!bOptSize)VecN::set( nBas   , 0.0, arr + (natom*3) + 3*nBas );
+    if(!bOptCoef)VecN::set( nBas   , 0.0, arr + (natom*3) + 4*nBas );
+}
+
+void fixDofs( double* vdofs=0 ){
+    //printf( "fixDofs %i %i %i %i \n", (int)bOptAtom, (int)bOptEPos, (int)bOptSize, (int)bOptCoef );
+    fixArray( fdofs );
+    if(vdofs) fixArray( vdofs );
+}
+
 double evalArho( int ia, int jo ){ // Interaction of atomic core with electron density  (Coulomb)
     //printf( " evalArho DEBUG \n");
     const Vec3d  pi = apos  [ia];
@@ -1976,6 +1993,7 @@ double evalAA(){
             int i0=getOrbOffset(io);
             //printf("ofix[%i] %i \n", io, ofix[io] );
             if(ofix[io]>0) continue;
+            //printf("moveElectrons[%i] %i %i %i dt %g \n", io, (int)bOptEPos, (int)bOptSize, (int)bOptCoef, dt );
             for(int i=i0; i<i0+perOrb; i++){
                 if(bOptEPos){ epos [i].add_mul( efpos [i], dt );    F2ep+=efpos [i].norm2(); }
                 if(bOptSize){ esize[i] +=       efsize[i]* dt  ;    F2es+=sq(efsize[i]);     }

@@ -336,9 +336,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.loadFromFile( "data/C_2g_sp2_problem.fgo"      );
 
     //ff.loadFromFile( "data/C_e4_1g.fgo" );
-    ff.loadFromFile( "data/CH4.fgo" );
+    //ff.loadFromFile( "data/CH4.fgo" );
     //ff.loadFromFile( "data/NH3.fgo" );
-    //ff.loadFromFile( "data/H2O.fgo" );
+    ff.loadFromFile( "data/H2O.fgo" );
     //ff.loadFromFile( "data/C2H4.fgo" );
     //ff.loadFromFile( "data/C2H2.fgo" );
 
@@ -379,7 +379,7 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     //ff.bOptAtom = 0;
     //ff.bOptEPos = 0;
     //ff.bOptSize = 0;
-    //ff.bOptCoef = 0;
+    ff.bOptCoef = 0;
     //ff.ofix[0] = 1;
 
     ff.iPauliModel = 2;
@@ -468,7 +468,9 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
 
     opt.bindOrAlloc( ff.ndofs,  ff.dofs, 0, ff.fdofs, 0 );
     //opt.bindOrAlloc( ff.nBas*5, ff.dofs+ff.natom*3,  0, ff.fdofs+ff.natom*3, 0 );
-    opt.initOpt( 0.01, 0.1 );
+    //opt.initOpt( 0.01, 0.1 );
+    //opt.initOpt( 0.001, 0.01 );
+    opt.initOpt( 0.001, 0.1 );
 
     //VecN::set( ropt.n, 0.0, ropt.scales );
     //VecN::set( (ff.nBas*2), 0.0, ropt.scales+(ff.nBas*3) ); // fix everything but poss
@@ -525,8 +527,9 @@ void TestAppCLCFSF::draw(){
             ff.eval();
             ff.forceInfo();
             //printf( "frame[%i] E %g | Ek %g Eee,p(%g,%g) Eae,p(%g,%g) Eaa %g \n", frameCount, E, ff.Ek, ff.Eee,ff.EeePaul,  ff.Eae,ff.EaePaul, ff.Eaa );
-            F2 = ff.moveGD(dt);
-            //F2 = opt.move_FIRE();
+            ff.fixDofs( opt.vel );
+            //F2 = ff.moveGD(dt);
+            F2 = opt.move_FIRE();
             iter++;
         }
         printf( "frame[%i] E %g |F| %g \n", frameCount, ff.Etot, sqrt(F2) );
@@ -609,7 +612,7 @@ void TestAppCLCFSF::draw(){
     }
 
 
-    VecN::set(ropt.n, ropt.Xbest, ropt.X );
+    //VecN::set(ropt.n, ropt.Xbest, ropt.X );
 
     glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );

@@ -313,10 +313,12 @@ void TestAppRARFF::draw(){
             ff.info();
             printDistFormAtom( ff.na, ff.apos, 0 );
             bRun=false;
+
+            ff.save_xyz( "data/eff_relaxed.xyz" );
         }
     }
 
-    drawEFF( ff, oglSph, 1.0, 0.1 );
+    drawEFF( ff, oglSph, 1.0, 0.1, 0.1, 1.5 );
 
     if(bDrawPlots){
         plotAtomsPot( ff, plot1.lines[0], (Vec3d){0.0,0.0,0.0}, (Vec3d){1.0,0.0,0.0}, -0.2, 0.1 );
