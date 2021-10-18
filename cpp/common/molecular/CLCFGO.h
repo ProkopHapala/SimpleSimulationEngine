@@ -1009,7 +1009,30 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         }
         double E;
         //printf("iPauliModel %i \n", iPauliModel);
-        if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
+        if(iPauliModel==1){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
+            // TODO : Implement this
+            //  multiply by this :   (1-S12)/(1+S12)
+            double S = Ssum;
+            const double S2SAFE = 0.0001;
+            double T11 = oEs[io]; // why 0.5 ?
+            double T22 = oEs[jo];
+            double S2  = S*S;   // Ssum<1
+            double D   = 1/(1-S2  + S2SAFE);  // Valence Bond
+            double D_  = 1/(1+S2          );  // Klakow 
+            double D2  = D*D;
+            double  fS = S*D;
+            double fS2 = S*fS;
+            E          = ( (T11 + T22) -2*Tsum/S )  * S2 * ( D +  (1-KRSrho.y)*D_  );   // Eq. 3a in https://doi.org/10.1063/1.3272671 
+            double kS  = ( (T11 + T22)*2*S  -2*Tsum*(1+S2) )*D2;
+            double kT  = -2*fS;
+            forceOrb( io, kS, DiS );
+            forceOrb( jo, kS, DjS );
+            forceOrb( io, kT, DiT );
+            forceOrb( jo, kT, DjT );
+            forceOrb( io,fS2, fTs+i0 );  // d_T( Tii*S^2/(1+S^2) )
+            forceOrb( jo,fS2, fTs+j0 );  // d_T( Tjj*S^2/(1+S^2) )
+
+        }else if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
             const double S2SAFE = 0.0001;
             double T11 = oEs[io]; // why 0.5 ?
             double T22 = oEs[jo];

@@ -72,6 +72,13 @@ bool load_xyz( const char* fname ){
     return b; 
 }
 
+bool load_fgo( const char* fname ){ 
+    //printf( "load_xyz \n" );
+    bool b = ff.loadFromFile_fgo( fname );
+    init_buffers();
+    return b; 
+}
+
 void init( int na, int ne ){
     ff.realloc ( na, ne );
     //ff.autoAbWs( default_aAbWs, default_eAbWs );

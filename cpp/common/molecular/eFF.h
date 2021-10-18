@@ -647,7 +647,6 @@ void save_xyz( char const* filename ){
     fclose(pFile);
 }
 
-
 bool loadFromFile_xyz( char const* filename ){
     //printf(" filename: >>%s<< \n", filename );
     FILE * pFile;

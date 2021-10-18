@@ -70,6 +70,13 @@ def load_xyz(fname):
     return lib.load_xyz(fname)
     #return lib.load_xyz(_np_as(fname,c_char_p)) 
 
+#  void load_xyz( const char* fname ){
+lib.load_fgo.argtypes  = [c_char_p] 
+lib.load_fgo.restype   =  c_bool
+def load_fgo(fname):
+    return lib.load_fgo(fname);
+    #return lib.load_xyz(_np_as(fname,c_char_p)) 
+
 #  void init( int na, int ne ){
 lib.init.argtypes  = [c_int, c_int] 
 lib.init.restype   =  None
