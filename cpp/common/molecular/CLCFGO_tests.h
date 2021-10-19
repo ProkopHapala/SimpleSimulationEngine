@@ -508,8 +508,8 @@ double test_OrbInteraction( CLCFGO& solver, int iMODE, int io, int jo, int nint,
         solver.epos[ibas].x= i*dx;
         double T11 = solver.projectOrb( io, dip );
         double T22 = solver.projectOrb( jo, dip );
-        if     ( iMODE==1 ){ solver.iPauliModel = 4; line_Ek[i] = solver.pauliOrbPair(io,jo); } // Just Cross-Overlap S12 = <psi1|T|psi2>
-        else if( iMODE==2 ){ solver.iPauliModel = 3; line_Ek[i] = solver.pauliOrbPair(io,jo); } // Just Cross-Kinetic T12 = <psi1|T|psi2>
+        if     ( iMODE==1 ){ solver.iPauliModel = 4; line_Ek[i] = solver.pauliOrbPair(io,jo,true); } // Just Cross-Overlap S12 = <psi1|T|psi2>
+        else if( iMODE==2 ){ solver.iPauliModel = 3; line_Ek[i] = solver.pauliOrbPair(io,jo,true); } // Just Cross-Kinetic T12 = <psi1|T|psi2>
         else if( iMODE==3 ){ line_Ek[i] = solver.CoulombOrbPair( io, jo ); }  // Just Cross-Kinetic K12 = Int[r1,r2]{ ( |psi1(r1)|^2 |psi1(r2)|^2) ) /|r1-r2| }
     }
     DEBUG_f1=line_f1;

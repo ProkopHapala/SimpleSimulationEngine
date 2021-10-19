@@ -944,7 +944,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         return E;
     }
 
-    double pauliOrbPair( int io, int jo ){
+    double pauliOrbPair( int io, int jo, bool sameSpin ){
         // This is Pauli potential derived from change of Kinetic Energy due to orbital orthogonalization;
         // Detla_T = Tsym + Tanti - T11 - T12
         // where T11 = <psi_1|T|psi_2>, Tsym=<psi_sym||psi_sym>, Tanti=<psi_anti||psi_anti>
@@ -953,6 +953,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         // From this it can be derived
         // Detla_T =  ( T11 + T22 - T12/S12 )/( S12^2/(1-S12^2) )
         //printf( "pauliKineticChnageVB[%i,%i] ", io, jo );
+        if( (!sameSpin) && (iPauliModel!=1) ) return 0; 
+
         double Tsum = 0;
         double Ssum = 0;
         int i0=io*perOrb;
@@ -1009,31 +1011,39 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         }
         double E;
         //printf("iPauliModel %i \n", iPauliModel);
-        if(iPauliModel==1){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
+        const double S2SAFE = 0.0001;
+        double S = Ssum;
+        switch(iPauliModel){
+        case 1:{
+            double rho  = KRSrho.y;
             // TODO : Implement this
             //  multiply by this :   (1-S12)/(1+S12)
-            double S = Ssum;
-            const double S2SAFE = 0.0001;
             double T11 = oEs[io]; // why 0.5 ?
             double T22 = oEs[jo];
             double S2  = S*S;   // Ssum<1
-            double D   = 1/(1-S2  + S2SAFE);  // Valence Bond
-            double D_  = 1/(1+S2          );  // Klakow 
-            double D2  = D*D;
-            double  fS = S*D;
-            double fS2 = S*fS;
-            E          = ( (T11 + T22) -2*Tsum/S )  * S2 * ( D +  (1-KRSrho.y)*D_  );   // Eq. 3a in https://doi.org/10.1063/1.3272671 
-            double kS  = ( (T11 + T22)*2*S  -2*Tsum*(1+S2) )*D2;
-            double kT  = -2*fS;
+            double Du  = 1/(1-S2  + S2SAFE);  // Valence Bond
+            double Dg  = 1/(1+S2          );  // Klakow
+            double ES,fS;
+            if(sameSpin){
+                ES  =  S2*(Du   -1-rho*Dg);
+                fS  =  2 *(Du*Du-1-rho   )*Dg*Dg;
+            }else{
+                ES  =  S2*         rho*Dg;
+                fS  =  2*          rho*Dg*Dg;
+            }
+            E          = ( (T11 + T22)      -2*Tsum/S      ) * ES;           // Eq. 3a in https://doi.org/10.1063/1.3272671
+            double kS  = ( (T11 + T22)*2*S  -2*Tsum*(1+S2) ) * fS;
+            double fS2 =  S*ES;
+            double kT  = -2*ES;
             forceOrb( io, kS, DiS );
             forceOrb( jo, kS, DjS );
             forceOrb( io, kT, DiT );
             forceOrb( jo, kT, DjT );
             forceOrb( io,fS2, fTs+i0 );  // d_T( Tii*S^2/(1+S^2) )
             forceOrb( jo,fS2, fTs+j0 );  // d_T( Tjj*S^2/(1+S^2) )
-
-        }else if(iPauliModel==2){ // Orthogonalization Kinetic energy Valence Bond KE:  Ep = ( Sij^2/(1-Sij^2) )* ( Tii + Tjj - 2*Tij/Sij )
-            const double S2SAFE = 0.0001;
+        }break;
+        case 2:{
+            if(sameSpin) break;           
             double T11 = oEs[io]; // why 0.5 ?
             double T22 = oEs[jo];
             double S2  = Ssum*Ssum;   // Ssum<1
@@ -1051,15 +1061,18 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             forceOrb( io,fS2, fTs+i0 );  // d_T( Tii*S^2/(1+S^2) )
             forceOrb( jo,fS2, fTs+j0 );  // d_T( Tjj*S^2/(1+S^2) )
             //printf( "pauliOrbPair[%i,%i] E %g S %g T %g D %g | %g %g %g \n", io, jo, E, Ssum, Tsum, D,  (T11 + T22)*fS2,   2*Tsum*fS, fS );
-        }else if(iPauliModel==3){ // Juat for debugging
+        }break;
+        case 3:{
             E = Tsum; // Just Cross-Kinetic T12 = <psi1|T|psi2>
             forceOrb( io, 1, DiT );
             forceOrb( jo, 1, DjT );
-        }else if(iPauliModel==4){
+        }break;
+        case 4:{
             E = Ssum; // Just Cross-Overlap S12 = <psi1|psi2>
             forceOrb( io, 1, DiS );
             forceOrb( jo, 1, DjS );
-        }else if(iPauliModel==5){   //   Ep = ( Sij/(1-Sij^2) )* Tij   =  ( Sij^2/(1-Sij^2) )* ( Tij/Sij )
+        }break;
+        case 5:{
             double S2 = Ssum*Ssum;
             double D  = 1/(1-S2);
             double  fS  = Ssum*D;
@@ -1069,25 +1082,21 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             forceOrb( jo, dfST, DjS );
             forceOrb( io, fS,   DiT );
             forceOrb( jo, fS,   DjT );
-        }else if(iPauliModel==6){   //   Ep = Sij*Tij
+        }break;
+        case 6:{
             E = Ssum*Tsum;
             forceOrb( io, Tsum, DiS );
             forceOrb( jo, Tsum, DjS );
             forceOrb( io, Ssum, DiT );
             forceOrb( jo, Ssum, DjT );
-        }else{ // Pauli Model 0 :   E = K*S^2
+        }break;
+        default:{
             E = Ssum*Ssum*KPauliOverlap;
             double f = 2*Ssum*KPauliOverlap;
             //printf( "pauliOrbPair(%i,%i) E %g f %g Ssum %g KPauli %g iPauliModel %i\n", io, jo, E, f, Ssum, KPauliOverlap, iPauliModel );
             forceOrb( io, f, DiS );
             forceOrb( jo, f, DjS );
-        }
-        //if(E>1e+4)printf( "pauliOrbPair[%i,%i] E %g S %g T %g \n", io, jo, E, Ssum, Tsum );
-        //printf( "pauliOrbPair[%i,%i] E %g S %g T %g \n", io, jo, E, Ssum, Tsum );
-        //return E;
-        //return Ssum;
-        //oEs[io]+=E*0.5; // why 0.5 ?
-        //oEs[jo]+=E*0.5;
+        }}
         oEs[io]+=E; // why 0.5 ?
         oEs[jo]+=E;
         return E;
@@ -1099,7 +1108,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         for(int io=0; io<nOrb; io++){
             for(int jo=0; jo<io; jo++){
                 //printf( "evalPauli()[%i,%i] spin %i %i \n", io, jo, ospin[io], ospin[jo] );
-                if( ospin[io]==ospin[jo] ) EeePaul += pauliOrbPair(io,jo);
+                EeePaul += pauliOrbPair(io,jo, ospin[io]==ospin[jo] );
             }
         }
         return EeePaul;

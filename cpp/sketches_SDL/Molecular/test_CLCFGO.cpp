@@ -382,7 +382,8 @@ TestAppCLCFSF::TestAppCLCFSF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D
     ff.bOptCoef = 0;
     //ff.ofix[0] = 1;
 
-    ff.iPauliModel = 2;
+    //ff.iPauliModel = 2;
+    ff.iPauliModel = 1;
     //ff.iPauliModel = 0;
 
     //ff.KPauliOverlap = 50000.0;
