@@ -501,9 +501,14 @@ inline double PauliSGauss_syn( double S, double& fS, double rho ){
 inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj, bool anti, const Vec3d& KRSrho ){
 
     double r2 = dR.norm2();
-    r2 *= KRSrho.x*KRSrho.x;
-    si *= KRSrho.y;
-    sj *= KRSrho.y;
+    
+    //WARRNING : switched off  KRSrho-scalling 
+    //r2 *= KRSrho.x*KRSrho.x;
+    //si *= KRSrho.y;
+    //sj *= KRSrho.y;
+
+    //si*=M_SQRT2; sj*=M_SQRT2;  // DEBUG - with this it is OK
+
     double r = sqrt(r2 + 1e-16);
 
     double si2  = si*si;
@@ -518,6 +523,8 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
     double dSr,dSsi,dSsj;
     double T = getDeltaTGauss  ( r2, si, sj, dTr, dTsi, dTsj, 1./si2, 1./sj2, s2,is2,is4 );
     double S = getOverlapSGauss( r2, si, sj, dSr, dSsi, dSsj,    si2,    sj2    ,is2,is4 );
+
+    
 
     // Eq.3 in http://aip.scitation.org/doi/10.1063/1.3272671
     double eS,fS;
@@ -537,7 +544,13 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
 
     //printf( " E %g T %g eS %g S %g ", T*eS, T, eS, S );
 
+    printf( "addPauliGauss() E %g T %g S %g | r %g anti %i \n", T*eS, T, S, sqrt(r2), (int)anti  );
+
     return T * eS;
+
+    //return S;
+    //return eS*-3;
+    //return T*-2;
 
 }
 

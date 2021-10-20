@@ -17,14 +17,15 @@ import matplotlib.pyplot as plt
 
 iPauli = 1
 
-def sampleEnergy( func=None, n=30, dx=0.1, buff=None ):
+def sampleEnergy( func=None, n=30, dx=0.1, buff=None, label=None, sc=1. ):
     Es = np.zeros(n)
     xs = np.arange(0,n*dx-1e-8,dx) 
     ind = (0,)*len(buff.shape)
+    buff[ind] = 0
     for i in range(n):
-        buff[ind] += xs[i]
+        buff[ind] = xs[i]
         Es[i] = func()
-    plt.plot( xs, Es  )
+    plt.plot( xs, Es*sc, label=label  )
     return Es
 
 #==================================================
@@ -35,6 +36,8 @@ effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/e2_1g_2o_singlet.fgo"
 #effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/e2_1g_2o_triplet.fgo" )
 #effmc.loadFromFile( "../../cpp/sketches_SDL/Molecular/data/H2O_1g_8o.fgo" )
 effmc.setPauliMode(iPauli)
+effmc.setSwitches_(coulomb=-1,kinetic=-1,pauli=+1)
+#effmc.setSwitches_(coulomb=+1,kinetic=-1,pauli=-1)
 effmc.printSetup()
 effmc.printAtomsAndElectrons()
 
@@ -50,7 +53,7 @@ print " # Ek Eee EeePaul EeeExch Eae EaePaul Eaa"
 print "E_terms ", effmc.getEnergyTerms()
 print "Etot ", E
 
-sampleEnergy( effmc.eval, buff=effmc_pos )
+sampleEnergy( effmc.eval, buff=effmc_pos, label="eFF-MC" )
 
 
 #==================================================
@@ -63,6 +66,9 @@ eFF.load_fgo( "../../cpp/sketches_SDL/Molecular/data/e2_1g_2o_singlet.fgo" )
 #eFF.load_xyz("../../cpp/sketches_SDL/Molecular/data/e2_eFF_triplet.xyz")
 #eff.load_xyz("../../cpp/sketches_SDL/Molecular/data/H2O_eFF.xyz")
 eFF.setPauliModel(iPauli)
+eFF.setSwitches(coulomb=-1,kinetic=-1,pauli=+1)
+#eFF.setSwitches(coulomb=+1,kinetic=-1,pauli=-1)
+
 eFF.info()
 
 print "eFF dims ", eFF.getDimPointer()
@@ -75,8 +81,7 @@ print " # Ek Eee EeePaul EeeExch Eae EaePaul Eaa"
 print "E_terms ", eFF.getEnergyTerms()
 print "Etot ", E 
 
-
-sampleEnergy( eFF.eval,buff=eFF_epos )
+sampleEnergy( eFF.eval,buff=eFF_epos, label="eFF", sc=1.0 )
 
 
 
@@ -84,6 +89,7 @@ sampleEnergy( eFF.eval,buff=eFF_epos )
 
 print "effpy.Kinetic(0.5)*2 ", effpy.Kinetic(0.5)*2 
 
+plt.legend()
 plt.grid()
 plt.show()
 

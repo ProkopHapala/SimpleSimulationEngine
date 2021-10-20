@@ -329,12 +329,14 @@ double evalEE(){
         const Vec3d    pi  = epos[i];
         //Vec3d&   fi  = eforce[i];
         const int8_t spini = espin[i];
-        const double   si  = esize[i];
+        //const double   si  = esize[i];
+        const double   si  = esize[i] * M_SQRT2;
         double&       fsi  = fsize[i];
         for(int j=0; j<i; j++){
             Vec3d  f  = Vec3dZero;
             const Vec3d  dR = epos [j] - pi;
-            const double sj = esize[j];
+            //const double sj = esize[j];
+            const double sj = esize[j] * M_SQRT2;
             double& fsj = fsize[j];
 
             double dEee=0,dEpaul=0;
@@ -348,6 +350,7 @@ double evalEE(){
                 if( iPauliModel == 1 ){
                     //if( spini==espin[j] ){
                         //printf( "EeePaul_1[%i,%i]  ", i, j );
+                        printf( "evalEE() r %g pi (%g,%g,%g) pj (%g,%g,%g) \n", dR.norm(), epos[j].x,epos[j].y,epos[j].z, pi.x,pi.y,pi.z  );
                         dEpaul = addPauliGauss  ( dR, si, sj, f, fsi, fsj, spini!=espin[j], KRSrho );
                         //printf( "EeePaul[%i,%i]= %g \n", i, j, dEpaul );
                     //}
@@ -413,6 +416,7 @@ double evalAE(){
             Vec3d f=Vec3dZero;
             const Vec3d   dR  = epos [j] - pi;
             const double  sj  = esize[j];
+            //const double  sj  = esize[j] * M_SQRT2;
             double& fsj = fsize[j];
             double  fs_junk;
             //Eae += addPairEF_expQ( epos[j]-pi, f, abwi.z, qi*QE, abwi.y, abwi.x );

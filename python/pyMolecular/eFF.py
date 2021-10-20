@@ -170,6 +170,12 @@ lib.setKPauli.restype   =  None
 def setKPauli(KPauli):
     return lib.setKPauli(KPauli) 
 
+#void setSwitches_(int bNormalize, int bNormForce, int bEvalKinetic, int bEvalCoulomb, int  bEvalExchange, int  bEvalPauli, int bEvalAA, int bEvalAE, int bEvalAECoulomb, int bEvalAEPauli ){
+lib.setSwitches.argtypes = [ c_int, c_int, c_int, c_int, c_int, c_int, c_int ]
+lib.setSwitches.restype  = None
+def setSwitches( kinetic=0, coulomb=0, pauli=0, AA=0, AE=0, AECoulomb=0, AEPauli=0 ):
+    lib.setSwitches( kinetic, coulomb, pauli, AA, AE, AECoulomb, AEPauli )
+
 # ========= Python Functions
 
 if __name__ == "__main__":

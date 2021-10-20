@@ -121,4 +121,20 @@ void setKPauli( double KPauli ){
     else                  { ff.KPauliKin=KPauli;     }
 }
 
+void setSwitches( int bEvalKinetic, int bEvalCoulomb, int  bEvalPauli, int bEvalAA, int bEvalAE, int bEvalAECoulomb, int bEvalAEPauli ){
+    //printf( "\n\n\n\n#### setSwitches_ bEvalAEPauli %i \n", bEvalAEPauli );
+#define _setbool(b,i) { if(i>0){b=true;}else if(i<0){b=false;} }
+    //_setbool( ff.bNormalize     , bNormalize     );
+    //_setbool( ff.bNormForce     , bNormForce     );
+    _setbool( ff.bEvalKinetic   , bEvalKinetic   );
+    _setbool( ff.bEvalCoulomb   , bEvalCoulomb   );
+    //_setbool( ff.bEvalExchange  , bEvalExchange  );
+    _setbool( ff.bEvalPauli     , bEvalPauli     );
+    _setbool( ff.bEvalAA        , bEvalAA        );
+    _setbool( ff.bEvalAE        , bEvalAE        );
+    _setbool( ff.bEvalAECoulomb , bEvalAECoulomb );
+    _setbool( ff.bEvalAEPauli   , bEvalAEPauli   );
+#undef _setbool
+}
+
 } // extern "C"

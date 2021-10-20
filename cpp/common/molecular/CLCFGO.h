@@ -1031,7 +1031,10 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
                 ES  =  S2*         rho*Dg;
                 fS  =  2*          rho*Dg*Dg;
             }
-            E          = ( (T11 + T22)      -2*Tsum/S      ) * ES;           // Eq. 3a in https://doi.org/10.1063/1.3272671
+            //E = S;
+            //E = ES;
+            //E = ( (T11 + T22)      -2*Tsum/S      );
+            E          = ( (T11 + T22)      -2*Tsum/S      ) * ES/6.0;      // TODO: Why factor 1/6.0 ?  => Investigate the origin
             double kS  = ( (T11 + T22)*2*S  -2*Tsum*(1+S2) ) * fS;
             double fS2 =  S*ES;
             double kT  = -2*ES;
@@ -1041,6 +1044,8 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             forceOrb( jo, kT, DjT );
             forceOrb( io,fS2, fTs+i0 );  // d_T( Tii*S^2/(1+S^2) )
             forceOrb( jo,fS2, fTs+j0 );  // d_T( Tjj*S^2/(1+S^2) )
+            printf( "pauliOrbPair() r %g  pi(%g,%g,%g) pj(%g,%g,%g) \n", (epos[i0]-epos[j0]).norm() , epos[i0].x,epos[i0].y,epos[i0].z,   epos[j0].x,epos[j0].y,epos[j0].z  );
+            printf( "pauliOrbPair() E %g eS %g T %g S %g | r %g anti %i \n", E, ES, (T11+T22)-2*Tsum/S, S, (epos[i0]-epos[j0]).norm(), (int)(!sameSpin)  );
         }break;
         case 2:{
             if(sameSpin) break;           

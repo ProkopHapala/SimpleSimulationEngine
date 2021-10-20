@@ -186,8 +186,8 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //ff.loadFromFile_fgo( "data/C_e4_1g.fgo" );
     //ff.loadFromFile_fgo( "data/CH4.fgo" );
     //ff.loadFromFile_fgo( "data/NH3.fgo" );
-    ff.loadFromFile_fgo( "data/H2O.fgo" );
-    //ff.loadFromFile_fgo( "data/C2H4.fgo" );
+    //ff.loadFromFile_fgo( "data/H2O.fgo" );
+    ff.loadFromFile_fgo( "data/C2H4.fgo" );
     //ff.loadFromFile_fgo( "data/C2H2.fgo" );
 
 
