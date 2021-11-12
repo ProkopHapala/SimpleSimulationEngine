@@ -81,7 +81,10 @@ constexpr static const Quat4d default_AtomParams[] = {
 { 7.,  0.1, 0.1, 2.0 }, // 9 F
 };
 
-constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal parameters
+    //constexpr static const Vec3d KRSrho = { 1.125, 0.9, -0.2 }; ///< eFF universal parameters
+    constexpr static const Vec3d KRSrho = { 1.125, 0.9, -0.3 }; ///< eFF universal parameters // If it is sufficiently strong electron pairs are formed
+    //constexpr static const Vec3d KRSrho = { 1.125, 0.9, -1.0 }; ///< eFF universal parameters // If it is sufficiently strong electron pairs are formed
+    //Vec3d KRSrho = { 1.125, 0.9, 0.2 };
 
     //double DEBUG_rescale_Q =0;
 
@@ -1015,7 +1018,7 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
         double S = Ssum;
         switch(iPauliModel){
         case 1:{
-            double rho  = KRSrho.y;
+            double rho  = KRSrho.z;
             // TODO : Implement this
             //  multiply by this :   (1-S12)/(1+S12)
             double T11 = oEs[io]; // why 0.5 ?
@@ -1030,11 +1033,14 @@ constexpr static const Vec3d KRSrho = { 1.125, 0.9, 0.2 }; ///< eFF universal pa
             }else{
                 ES  =  S2*         rho*Dg;
                 fS  =  2*          rho*Dg*Dg;
+                //printf( "rho %g \n", rho);
+                //ES = rho;
             }
             //E = S;
             //E = ES;
-            //E = ( (T11 + T22)      -2*Tsum/S      );
-            E          = ( (T11 + T22)      -2*Tsum/S      ) * ES/6.0;      // TODO: Why factor 1/6.0 ?  => Investigate the origin
+            E = ( (T11 + T22)      -2*Tsum/S      );
+            //E          = ( (T11 + T22)      -2*Tsum/S      ) * ES/6.0;      // TODO: Why factor 1/6.0 ?  => Investigate the origin
+            //E          = ( (T11 + T22)      -2*Tsum/S      ) * ES;
             double kS  = ( (T11 + T22)*2*S  -2*Tsum*(1+S2) ) * fS;
             double fS2 =  S*ES;
             double kT  = -2*ES;

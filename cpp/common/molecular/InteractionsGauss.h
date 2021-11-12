@@ -479,8 +479,10 @@ inline double PauliSGauss_anti( double S, double& fS, double rho ){
     double D     = 1./(1.+S2);
     double SDrho = rho*S*D;
     fS  = 2.*D*SDrho;
-    //printf( "EpAnti %g a  %g \n", S*SDrho, rho );
     return   S*SDrho;
+    //printf( "EpAnti %g a  %g \n", S*SDrho, rho );
+    //printf( "rho %g \n", rho);
+    //return rho;
 }
 
 inline double PauliSGauss_syn( double S, double& fS, double rho ){
@@ -546,12 +548,12 @@ inline double addPauliGauss( const Vec3d& dR, double si, double sj, Vec3d& f, do
 
     printf( "addPauliGauss() E %g T %g S %g | r %g anti %i \n", T*eS, T, S, sqrt(r2), (int)anti  );
 
-    return T * eS;
-
+    //return T * eS;
+    //return eS;
     //return S;
     //return eS*-3;
-    //return T*-2;
-
+    //return T;
+    return T;
 }
 
 inline double addPauliGaussVB( const Vec3d& dR, double si, double sj, Vec3d& f, double& fsi, double& fsj ){
