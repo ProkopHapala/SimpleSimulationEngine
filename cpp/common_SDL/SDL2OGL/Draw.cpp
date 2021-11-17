@@ -5,6 +5,7 @@
 
 void Draw::colorScale( double d, int ncol, const uint32_t * colors ){
     constexpr float inv255 = 1.0f/255.0f;
+    //if(d<0){d=0;}else if(d>1){d=1;};  // use clamp instead outside this function
     d*=(ncol-1);
     int icol = (int)d;
     d-=icol; double md = 1-d;
