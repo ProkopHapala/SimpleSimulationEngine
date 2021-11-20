@@ -60,20 +60,93 @@ void fourier_eval_array( int n, double * ca, double * sa, double * vals, int m, 
 // data[2*i ]=Re data[2*i+1]=Im;   nn=2^pow;
 
 
+
+// USE LIKE THIS:
+//  Forward-FFT:   FFT( (double*)data, n,  1);    where n = 2^m
+//  inverse-FFT:   FFT( (double*)data, n, -1);
+
+
+#define SWAP(a,b) tempr=(a);(a)=(b);(b)=tempr
+void FFT(double *data, unsigned long nn, int isign){
+    unsigned long n,mmax,m,j,istep,i;
+    double wtemp,wr,wpr,wpi,wi,theta;
+    double tempr,tempi;
+
+    n=nn << 1;
+    j=1;
+    for (i=1;i<n;i+=2) {
+        if (j > i) {
+            SWAP(data[j],data[i]);
+            SWAP(data[j+1],data[i+1]);
+        }
+        m=n >> 1;
+        while (m >= 2 && j > m) {
+            j -= m;
+            m >>= 1;
+        }
+        j += m;
+    }
+    mmax=2;
+    while (n > mmax) {
+        istep=mmax << 1;
+        theta=isign*(2*M_PI/mmax);
+        wtemp=sin(0.5*theta);
+        wpr = -2.0*wtemp*wtemp;
+        wpi=sin(theta);
+        wr=1.0;
+        wi=0.0;
+        for (m=1;m<mmax;m+=2) {
+            for (i=m;i<=n;i+=istep) {
+                j=i+mmax;
+                tempr=wr*data[j]-wi*data[j+1];
+                tempi=wr*data[j+1]+wi*data[j];
+                data[j]=data[i]-tempr;
+                data[j+1]=data[i+1]-tempi;
+                data[i] += tempr;
+                data[i+1] += tempi;
+            }
+            wr=(wtemp=wr)*wpr-wi*wpi+wr;
+            wi=wi*wpr+wtemp*wpi+wi;
+        }
+        mmax=istep;
+    }
+    if( isign<0 ){
+		double renorm=1./nn;
+		for (int i=0; i<n; i+=2) {
+			data[i  ]*=renorm;
+			data[i+1]*=renorm;
+			//ops++;
+		}
+	}
+}
+#undef SWAP
+
+
+
+/*
 int FFT(double * data, int nn, int isign){
+    // see   https://stackoverflow.com/questions/2220879/c-numerical-recipies-fft
     //int n, mmax, m, j, istep, i;
     //double wtemp, wr, wpr, wpi, wi, theta;
     //double tempr, tempi;
-	int ops = 0;
-    int n = nn << 1;
+    unsigned long n,mmax,m,j,istep,i;
+    double wtemp,wr,wpr,wpi,wi,theta;
+    double tempr,tempi;
+    n=nn << 1;
+    j=1;
+
+	//int ops = 0;
+    //int n = nn*2;
     int j = 1;
     //DEBUG
     for (int i = 1; i < n; i += 2) {
 		if (j > i) {
-			double tempr;
-			tempr = data[j  ]; data[j  ] = data[i  ]; data[i  ] = tempr; // swap(i,j)
-			tempr = data[j+1]; data[j+1] = data[i+1]; data[i+1] = tempr;
-			ops++;
+			//double tempr;
+			//tempr = data[j  ]; data[j  ] = data[i  ]; data[i  ] = tempr; // swap(i,j)
+			//tempr = data[j+1]; data[j+1] = data[i+1]; data[i+1] = tempr;
+			_swap(data[j  ],data[j  ]);
+			_swap(data[j+1],data[j+1]);
+			//ops++;
 		}
 		int m = n >> 1;
 		while (m >= 2 && j > m) { j -= m; m >>= 1; }
@@ -83,12 +156,13 @@ int FFT(double * data, int nn, int isign){
     //DEBUG
     while (n > mmax) {
 		int istep = 2*mmax;
-		double theta = 2*M_PI/(isign*mmax);
+		double theta = (2*M_PI)/(isign*mmax);
 		double wtemp = sin(0.5*theta);
 		double wpr   = -2.0*wtemp*wtemp;
 		double wpi   = sin(theta);
 		double wr    = 1.0;
 		double wi    = 0.0;
+		//int iDEBUG = 0;
 		for (int m = 1; m < mmax; m += 2) {
 			for (int i = m; i <= n; i += istep) {
 				j =i + mmax;
@@ -98,24 +172,27 @@ int FFT(double * data, int nn, int isign){
 				data[j+1]    = data[i+1] - tempi;
 				data[i  ]   += tempr;
 				data[i+1]   += tempi;
-				ops++;
+				//ops++;
+				//iDEBUG++;
 			}
 			wr = (wtemp = wr)*wpr - wi*wpi + wr;
 			wi = wi*wpr + wtemp*wpi + wi;
 		}
+		//printf( "iDEBUG %i | nn %i n %i mmax %i istep %i \n", iDEBUG, nn, n, mmax, istep );
 		mmax = istep;
     }
     //DEBUG
 	if( isign<0 ){
-		double renorm=1.0d/nn;
-		for (int i=0; i<(nn<<1); i+=2) {
+		double renorm=1./nn;
+		for (int i=0; i<n; i+=2) {
 			data[i  ]*=renorm;
 			data[i+1]*=renorm;
-			ops++;
+			//ops++;
 		}
 	}
 	return ops;
 }
+*/
 
 void FFT_2D(int nnx, int nny, double * data, int isign, double* tmp = 0 ){
     bool bAllocTmp = (tmp == 0);

@@ -422,6 +422,55 @@ TestAppElectromagnetic::TestAppElectromagnetic( int& id, int WIDTH_, int HEIGHT_
 
     VecN::set( gridFF.ntot, 0.0, gridFF.dens );
 
+
+
+    // test FFT
+    int nn = 10;
+    int n  = 1 << nn;
+    Vec2d data[n];
+    double f =0;
+    double df=0.2;
+    double kf = (2*M_PI/n);
+    for(int i=0; i<n; i++){
+        double w = ( 1-cos(i*2*kf) );
+        //data[i].set( cos( i*kf*16 )*w, sin( i*kf*8 )*w*0 );
+        //data[i].set( cos( i*(0.04 +0.08*sin(i*0.04) )  ), 0.0 );
+
+        //f+=randf(-df,df);
+        //data[i].set(f,0);
+        //data[i].set( cos(i*0.04) + cos(i*0.3) + cos(i*1.0)  , 0 );
+
+        data[i].set( 0, 0 );
+
+        //data[i].set( cos(i*0.04) + cos(i*0.3) + cos(i*1.0)  , sin(i*0.04) + sin(i*0.3) + sin(i*1.0) );
+    }
+    data[n/4].set(100.0,0);
+
+    FFT( (double*)data, n/2,  1);
+    for(int i=0; i<(n/4); i++){
+        //double k = i;
+        double k = i+1;
+        double f=0;
+        if(k!=0){ f=5.0/(k*k); }
+        data[    i  ].mul(f);
+        data[n/2-i-1].mul(f); // it is symmetric
+    } // poisson kernell
+    FFT( (double*)data, n/2, -1);
+
+    ogl = Draw::list( );
+    for(int i=0; i<n; i++){
+        double x=i*0.1;
+        glColor3f(1,0,0); Draw3D::drawLine( (Vec3d){x,0,0}, (Vec3d){x,data[i].x,0} );
+        glColor3f(0,0,1); Draw3D::drawLine( (Vec3d){x,0,0}, (Vec3d){x,data[i].y,0} );
+
+        glColor3f(0,0,0); Draw3D::drawLine( (Vec3d){x,0,0}, (Vec3d){x,0.1,0} );
+    }
+    glEndList();
+
+
+
+
+    /*
     ogl = Draw::list( );
     glColor3f(0.0,0.0,1.0);
     //plotVecPlane( {30,30}, {0.0,0.0,0.0}, {0.0,0.0,0.25}, {0.25,0.0,0.0},  -1.0, 1.0, coilFieldGrid );
@@ -431,13 +480,12 @@ TestAppElectromagnetic::TestAppElectromagnetic( int& id, int WIDTH_, int HEIGHT_
     //drawCoils();
     drawWires(3.);
     glColor3f(1.0,0.0,0.0);
-    /*
-    Particle p;
-    p.pos.fromRandomBox({-0.5,-0.5,-0.5},{0.5,0.5,0.5});
-    p.makeThermal(100e+6,1);
-    drawParticleTrj( 5000, 0.5e-8, p, coilField );
-    */
+    //Particle p;
+    //p.pos.fromRandomBox({-0.5,-0.5,-0.5},{0.5,0.5,0.5});
+    //p.makeThermal(100e+6,1);
+    //drawParticleTrj( 5000, 0.5e-8, p, coilField );
     glEndList();
+    */
 
 }
 
@@ -453,6 +501,11 @@ void TestAppElectromagnetic::draw(){
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+
+
+        glCallList(ogl);
+        return;
 
 
         bElFieldFromGrid = false;
