@@ -3,6 +3,7 @@
 #define  Fourier_h
 
 #include <math.h>
+#include "macroUtils.h"
 
 //sincos_basis( ){}
 
@@ -66,7 +67,7 @@ void fourier_eval_array( int n, double * ca, double * sa, double * vals, int m, 
 //  inverse-FFT:   FFT( (double*)data, n, -1);
 
 
-#define SWAP(a,b) tempr=(a);(a)=(b);(b)=tempr
+//#define SWAP(a,b) tempr=(a);(a)=(b);(b)=tempr
 void FFT(double *data, unsigned long nn, int isign){
     unsigned long n,mmax,m,j,istep,i;
     double wtemp,wr,wpr,wpi,wi,theta;
@@ -76,8 +77,8 @@ void FFT(double *data, unsigned long nn, int isign){
     j=1;
     for (i=1;i<n;i+=2) {
         if (j > i) {
-            SWAP(data[j],data[i]);
-            SWAP(data[j+1],data[i+1]);
+            SWAP(data[j  ],data[i  ], double );
+            SWAP(data[j+1],data[i+1], double );
         }
         m=n >> 1;
         while (m >= 2 && j > m) {
@@ -119,7 +120,7 @@ void FFT(double *data, unsigned long nn, int isign){
 		}
 	}
 }
-#undef SWAP
+//#undef SWAP
 
 
 

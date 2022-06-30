@@ -208,21 +208,21 @@ class RigidMolecularWorldOCL{ public:
         prepareBuffers( nSystems_, nMols_, gridFF.grid.n, (float*)gridFF.FFPauli_f, (float*)gridFF.FFLondon_f, (float*)gridFF.FFelec_f );
     }
 
-    void upload_mol2atoms(){ cl->upload  ( id_mol2atoms,  mol2atoms ); }
-    void upload_poses    (){ cl->upload  ( id_poses,      poses     ); }
-    void upload_vposes   (){ cl->upload  ( id_vposes,     vposes    ); }
-    void upload_invMasses(){ cl->upload  ( id_invMasses,  invMasses ); }
-    void download_poses  (){ cl->download( id_poses,      poses     ); }
-    void download_fposes (){ cl->download( id_fposes,     fposes    ); }
-    void download_vposes (){ cl->download( id_vposes,     vposes    ); }
+    int upload_mol2atoms(){ return cl->upload  ( id_mol2atoms,  mol2atoms ); }
+    int upload_poses    (){ return cl->upload  ( id_poses,      poses     ); }
+    int upload_vposes   (){ return cl->upload  ( id_vposes,     vposes    ); }
+    int upload_invMasses(){ return cl->upload  ( id_invMasses,  invMasses ); }
+    int download_poses  (){ return cl->download( id_poses,      poses     ); }
+    int download_fposes (){ return cl->download( id_fposes,     fposes    ); }
+    int download_vposes (){ return cl->download( id_vposes,     vposes    ); }
 
     void clean_vposes(){ float* vs = (float*)vposes; for(int i=0; i<nMolInstances*8; i++) vs[i]=0.0f; };
 
-    void upload_poss  ( ){ cl->upload  ( id_poss, poss ); }
-    void upload_PLQs  ( ){ cl->upload  ( id_PLQs, PLQs ); }
-    void download_FEs ( ){ cl->download( id_FEs,  FEs  ); }
+    int upload_poss  ( ){ return cl->upload  ( id_poss, poss ); }
+    int upload_PLQs  ( ){ return cl->upload  ( id_PLQs, PLQs ); }
+    int download_FEs ( ){ return cl->download( id_FEs,  FEs  ); }
 
-    void upload_PLQinTypes(){
+    int upload_PLQinTypes(){
         //_realloc(  );
         Quat4f * atoms = (Quat4f*)atomsInTypes.data();
         for(int i=0; i<atomsInTypes.size(); i++){
@@ -231,7 +231,7 @@ class RigidMolecularWorldOCL{ public:
             printf( "PLQinTypes %i RE(%5.5e,%5.5e) PL(%5.5e,%5.5e)\n", i, atoms[1].f.x, atoms[1].f.y, PLQinTypes[i].f.x, PLQinTypes[i].f.y );
             atoms+=2;
         }
-        cl->upload  ( id_PLQinTypes,  PLQinTypes );
+        return cl->upload  ( id_PLQinTypes,  PLQinTypes );
     }
 
     void setupKernel_getFEgrid( GridShape& grid ){
@@ -341,20 +341,24 @@ class RigidMolecularWorldOCL{ public:
     }
 
     int evalForceGPU(){
-       upload_poses   ();
-       task_getForceRigidSystemSurfGrid->enque();
-       download_fposes();
-       return clFinish(cl->commands);
+       int err=CL_SUCCESS;
+       err =upload_poses   ();                            OCL_checkError(err, "evalForceGPU::upload_poses(); ");
+       err =task_getForceRigidSystemSurfGrid->enque();    OCL_checkError(err, "evalForceGPU::task_getForceRigidSystemSurfGrid->enque(); ");
+       err =download_fposes();                            OCL_checkError(err, "evalForceGPU::download_fposes(); ");
+       err = clFinish(cl->commands);                      OCL_checkError(err, "evalForceGPU::clFinish(); ");
+       return err;
     };
 
     int relaxStepGPU( int nStep, float dt ){
+        int err=CL_SUCCESS;
         task_getForceRigidSystemSurfGrid->args[16].f = alpha;
         task_getForceRigidSystemSurfGrid->args[17].f = dt;
         task_getForceRigidSystemSurfGrid->args[18].f = damp;
         task_getForceRigidSystemSurfGrid->args[19].i = nStep;
-        task_getForceRigidSystemSurfGrid->enque();
-        download_poses();
-        return clFinish(cl->commands);
+        err = task_getForceRigidSystemSurfGrid->enque();    OCL_checkError(err, "relaxStepGPU::task_getForceRigidSystemSurfGrid->enque(); ");
+        err = download_poses();                             OCL_checkError(err, "relaxStepGPU::download_poses(); ");
+        err = clFinish(cl->commands);                       OCL_checkError(err, "relaxStepGPU::clFinish(); ");
+        return err;
     };
 
     int system2PLQs( int isystem, Quat4f* PLQs ){

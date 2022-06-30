@@ -189,7 +189,9 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     typ.bh0s   = (Vec3d*)sp2_hs;
     typ.print();
     }
-    curType = &typeList[3];
+    //curType = &typeList[3];
+    //curType = &typeList[0];
+    curType = &typeList[1];
 
     {CapType& typ=capTypes[1]; // C-sp3
         typ.id = 1;
@@ -197,7 +199,10 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
         strcpy(typ.name, "H");
     }
 
-    capsBrush.set(1,1,-1,-1);
+    //capsBrush.set(1,1,-1,-1);
+    //capsBrush.set(1,1,1,1);
+    capsBrush.set(-1,-1,-1,-1);
+    //capsBrush.set(0,0,0,0);
 
     ff.capTypeList = capTypes;
     ff.typeList    = typeList;
@@ -228,18 +233,20 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     //exit(0);
     */
 
-    int nat=1;
+    //int nat=1;
+    int nat=10;
     ff.realloc( nat, 100 );
-    for(int i=0; i<1; i++){
+    for(int i=0; i<nat; i++){
         //if(randf()>0.5){ ff.types[i]=&type1;  }else{ ff.types[i]=&type2; }
         ff.types[i]=curType;
         ff.apos [i].fromRandomBox((Vec3d){-5.0,-5.0,-1.0},(Vec3d){5.0,5.0,1.0});
         ff.qrots[i].setRandomRotation();
+        ((Quat4i*)ff.bondCaps)[i]=capsBrush;
     }
     ff.apos [0]=Vec3dZero;
     ff.qrots[0]=Quat4dIdentity;
     ff.cleanAux();
-    ((Quat4i*)ff.bondCaps)[0]=capsBrush;
+    
 
     //ff.resize(15);
 

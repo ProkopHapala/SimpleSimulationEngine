@@ -22,6 +22,8 @@
 
 #include <CL/cl.h>
 
+extern int bOCL_checkError=1;
+
 const char *OCL_err_code (cl_int err_in){
     switch (err_in) {
         case CL_SUCCESS:                        return (char*)"CL_SUCCESS";
@@ -94,11 +96,13 @@ void OCL_check_error(cl_int err, const char *operation, char *filename, int line
     if (err != CL_SUCCESS){
         fprintf(stderr, "Error during operation '%s', ", operation);
         fprintf(stderr, "in '%s' on line %d\n", filename, line);
-        fprintf(stderr, "Error code was \"%s\" (%d)\n", OCL_err_code(err), err);
+        fprintf(stderr, "Error code was '%s' (%d)\n", OCL_err_code(err), err);
         exit(0);
+    }else{
+       if(bOCL_checkError>1) fprintf(stderr, "CL_SUCCESS in '%s' \n", operation );
     }
 }
 
-#define OCL_checkError(E, S) OCL_check_error(E,S,__FILE__,__LINE__)
+#define OCL_checkError(E, S) if(bOCL_checkError){ OCL_check_error(E,S,__FILE__,__LINE__); }
 
 #endif

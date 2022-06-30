@@ -2,7 +2,7 @@
 #ifndef BatchBuff_h
 #define BatchBuff_h
 
-#include <vector>;
+#include <vector>
 
 template<typename T>
 class BatchBuffPow2{ public:

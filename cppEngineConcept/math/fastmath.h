@@ -36,7 +36,6 @@ template <class TYPE> inline TYPE clip(TYPE x, TYPE xmin, TYPE xmax ){ if( x<xmi
 #define _circ_inc( i, n )   i++; if(i>=n) i=0;
 #define _circ_dec( i, n )   i--; if(i< 0) i=n-1;
 
-
 typedef float  (*Func1f)( float  );
 typedef double (*Func1d)( double );
 
