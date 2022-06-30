@@ -1109,6 +1109,22 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
         }
     }
 
+    void drawVectorGrid(Vec2i ns, const Vec3d& p0, const Vec3d& a, const Vec3d& b,const Vec2d* data, double scale ){
+        glBegin( GL_LINES );
+        for(int iy=1;iy<ns.y;iy++){
+            for(int ix=0;ix<ns.x;ix++){
+                int i = iy*ns.x + ix;
+                Vec3d p = a*ix + b*iy + p0;
+                vertex(p);
+                Vec2d ab = data[i];
+                p.add_mul( a, ab.a*scale );
+                p.add_mul( b, ab.b*scale );
+                vertex(p);
+            }
+        }
+        glEnd();
+    }
+
     void drawColorScale( int n, const Vec3d& p0, const Vec3d& fw, const Vec3d& up, const uint32_t * colors, int ncol ){
         //printf( " debug_draw_GridFF \n" );
         double step = 1./(n-1);

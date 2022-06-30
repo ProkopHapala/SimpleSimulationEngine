@@ -22,11 +22,15 @@
 #include "AppSDL2OGL_3D.h"
 #include "testUtils.h"
 
+#include "VecN.h"
+
 #include "appliedPhysics.h"
 #include "PotentialFlow.h"
 #include "DrawField.h"
 
 #include "Ruler2DFast.h"
+
+#include "Fourier.h"
 
 
 /*
@@ -39,6 +43,12 @@ https://physics.stackexchange.com/questions/30261/analogy-between-magnetic-bottl
 
 
 */
+
+bool   bElFieldFromGrid = false;
+double scaleFgrid       = 1;
+double scaleFwire       = 1;
+
+double Rwire = 1.0;
 
 const int nCoillSteps = 8;
 //const int nCoils = 5;
@@ -96,7 +106,7 @@ struct Particle{
 };
 
 class GridFF2d : public Ruler2DFast{ public:
-    Vec2d*  data=0;
+    Vec2d*  force=0;
     double* dens=0;
     double* Vpot=0;
     double* Vpot_=0;
@@ -106,7 +116,7 @@ class GridFF2d : public Ruler2DFast{ public:
         setup( pmin, {span.x/n_.x,span.y/n_.y} );
         n_.x++; n_.y++;
         setN( n_ );
-        _realloc(data, ntot);
+        _realloc(force, ntot);
         _realloc(dens, ntot);
         for(int i=0; i<ntot; i++){ dens[i]=0; };
     }
@@ -120,10 +130,10 @@ class GridFF2d : public Ruler2DFast{ public:
             double mx=1-d.x;
             double my=1-d.y;
             Vec2d f;
-            f.set_mul( data[i      ], my*mx  );
-            f.add_mul( data[i    +1], my*d.x );
-            f.add_mul( data[i+n.x  ],d.y*mx  );
-            f.add_mul( data[i+n.x+1],d.y*d.x );
+            f.set_mul( force[i      ], my*mx  );
+            f.add_mul( force[i    +1], my*d.x );
+            f.add_mul( force[i+n.x  ],d.y*mx  );
+            f.add_mul( force[i+n.x+1],d.y*d.x );
             return f;
         }
         return Vec2dZero;
@@ -161,12 +171,22 @@ class GridFF2d : public Ruler2DFast{ public:
         _swap(Vpot,Vpot_);
     }
 
-    void solvePoisson( int nstep, double eps){
+    void potential2force(){
+        for(int iy=0; iy<n.y; iy++ ){
+            for(int ix=0; ix<n.x; ix++ ){
+                int i = ip2i({ix,iy});
+                if(iy!=0){ force[i].y = (Vpot[i+n.x]-Vpot[i])*invStep.y; }else{ force[i].y=0; }
+                if(ix!=0){ force[i].x = (Vpot[i+1  ]-Vpot[i])*invStep.x; }else{ force[i].x=0; }
+            }
+        }
+    }
+
+    void solvePoisson( int nstep, double eps, bool bMakeFF=true){
         _realloc(Vpot ,ntot);
         _realloc(Vpot_,ntot);
         for(int i=0;i<ntot;i++){ Vpot[i]=0; Vpot_[i]=0; }
         double h    = sqrt(step.x*step.y);
-        double cRho = h*h/eps;
+        double cRho =  1e-6 *  h*h/eps;
         double t    = cos(M_PI/n.x) + cos(M_PI/n.y);
         //double cR   = ( 8 - sqrt( 64 - 16*t*t ) )/(t*t);
         double cR   = 1.0;
@@ -178,21 +198,74 @@ class GridFF2d : public Ruler2DFast{ public:
         double vmin=+1e+300,vmax=-1e+300;
         for(int i=0;i<ntot;i++){ vmin=_min(vmin,Vpot[i]); vmax=_max(vmax,Vpot[i]); }
         printf( "solvePoisson vmin %g vmax %g \n", vmin, vmax );
+        if(bMakeFF)potential2force();
+    }
+
+    void solvePoissonFFT(bool bMakeFF=true){
+        _realloc(Vpot ,ntot);
+        _realloc(Vpot_,ntot);
+        int nnx = log2(n.x);
+        int nny = log2(n.y);
+        printf( "nn(%i,%i) \n", nnx, nny );
+        FFT_2D(nnx, nny, dens,  1, Vpot_ );
+        /*
+        double C = 1;
+        int nhx=n.x/2;
+        int nhy=n.y/2;
+        for(int iy=0; iy<n.y; iy++ ){
+            for(int ix=0; ix<n.x; ix++ ){
+                int i = ip2i({ix,iy});
+                int ix_=ix-nhx;
+                int iy_=iy-nhy;
+                Vpot_[i] *= C/( ix_*ix_ + iy_*iy_ );
+            }
+        }
+        FFT_2D(nnx, nny, Vpot, -1, Vpot  );
+        */
+        if(bMakeFF)potential2force();
+    }
+
+    void solvePoisson(){
+        solvePoisson(20,1.0);
+        //solvePoissonFFT();
+    }
+
+    void dampDens( double bmix ) { // ToDo : we may use VecN::mult()
+        double damp = 1-bmix;
+        double vmin =  1e+300;
+        double vmax = -1e+300;
+
+        for(int i=0;i<ntot;i++){ dens[i]*=damp;
+            double v = dens[i];  _setmin(vmin,v); _setmax(vmax,v);
+        }
+
+        /*
+        // DEBUG - replace by simple fixed test density distribution
+        for(int iy=0; iy<n.y; iy++ ){
+            for(int ix=0; ix<n.x; ix++ ){
+                int i = ip2i({ix,iy});
+                if( (ix<260)&&(ix>250)  &&  (iy<260)&&(iy>250) ){ dens[i]=1000; }else{ dens[i]=0; }
+            }
+        }
+        */
+
+        printf( "dampDens() vmin %g vmax %g \n", vmin, vmax );
     }
 
 };
 
 //GridFF2d gridFF( {121,41}, {-5.,0.}, {7.,4.} );
 
-GridFF2d gridFF( {128,64}, {-5.,-3.0}, {7.7,3.3} );
+//GridFF2d gridFF( {128,64}, {-5.,-3.0}, {7.7,3.3} );
+GridFF2d gridFF( {512,512}, {-25.0,-25.0}, {25.0,25.0} );
 
-void drawParticleTrj( int n, double dt, Particle p, VecFieldFunc func ){
+void traceParticleTrj( int n, double dt, Particle p, VecFieldFunc func, bool bDraw=true ){
     //Vec3d opos=p.pos;
     //const bool bCylindrical = true;
     //const bool bMagnetic    = true;
     const bool bCylindrical = false;
     const bool bMagnetic    = false;
-    glBegin(GL_LINE_STRIP);
+    if(bDraw)glBegin(GL_LINE_STRIP);
     for(int i=0; i<n; i++ ){
         Vec3d f;
         if(bMagnetic){ // Magnetic Coils
@@ -221,15 +294,15 @@ void drawParticleTrj( int n, double dt, Particle p, VecFieldFunc func ){
 
         float dtfac = 1. + 0.5*randf(-1,1);
         p.move(dt*dtfac,f);
-        Draw3D::vertex(p.pos);
-
-        //Draw3D::vertex(p.pos + f*dt*10000.0);
-        //Draw3D::vertex(p.pos);
-
+        if(bDraw){
+            Draw3D::vertex(p.pos);
+            //Draw3D::vertex(p.pos + f*dt*10000.0);
+            //Draw3D::vertex(p.pos);
+        }
         //if(i==0){ printf( "f(%g,%g,%g) dt %g m %g \n", f.x,f.y,f.z,  dt, 1/p.invMass ); }
 
     }
-    glEnd();
+    if(bDraw)glEnd();
 }
 
 Vec3d coilField( Vec3d pos, Vec3d h, double R, int n, bool bDraw=false ){
@@ -268,15 +341,6 @@ Vec3d coilField( Vec3d pos ){
     return B;
 }
 
-Vec3d elecField( Vec3d pos ){
-    Vec3d E=Vec3dZero;
-    for(int i=0; i<nWire; i++){
-        Vec3d dp; dp.set_sub(pos, (Vec3d){wire_y[i], pos.y, wire_z[i] } );
-        E.add_mul( dp, wire_Q[i]/dp.norm2() );
-    }
-    return E;
-}
-
 Vec3d coilFieldGrid( Vec3d pos ){
     Vec2d p2d;
     p2d.x     = pos.z;
@@ -285,6 +349,28 @@ Vec3d coilFieldGrid( Vec3d pos ){
     Vec2d f2d = gridFF.interpolate( p2d );
     return (Vec3d){ f2d.y*pos.x*invr, f2d.y*pos.y*invr, f2d.x };
 }
+
+
+Vec3d elecField( Vec3d pos ){
+    Vec3d E=Vec3dZero;
+    double R2wire = Rwire*Rwire;
+    for(int i=0; i<nWire; i++){
+        Vec3d dp; dp.set_sub(pos, (Vec3d){wire_y[i], pos.y, wire_z[i] } );
+        E.add_mul( dp, scaleFwire*wire_Q[i]/( dp.norm2() + R2wire ) );
+
+        if(bElFieldFromGrid){
+            Vec2d p2d;
+            p2d.x     = pos.z;
+            p2d.y     = pos.x;
+            Vec2d f2d = gridFF.interpolate( p2d ) * -scaleFgrid;
+            E.add( f2d.y, 0, f2d.x );
+            //E.add( f2d.y, 0, f2d.x );
+        }
+
+    }
+    return E;
+}
+
 
 void drawCoils(){
     for(int i=0; i<nCoils; i++){
@@ -305,7 +391,7 @@ void prepareFFgrid( GridFF2d& grid ){
             grid.index2pos( {ix,iy},{0,0}, p );
             Vec3d B = coilField( {0,p.y,p.x} );
             int   i = grid.ip2i( {ix,iy} );
-            grid.data[i].set( B.z, B.y );
+            grid.force[i].set( B.z, B.y );
         }
     }
 };
@@ -316,6 +402,9 @@ class TestAppElectromagnetic : public AppSDL2OGL_3D { public:
 
     int ogl;
     bool bIntegrate=false;
+    bool bDrawTrj  = true;
+    bool bPlotGridForceField = false;
+    int perFrame   = 100;
 
 	virtual void draw   ();
 	virtual void drawHUD();
@@ -331,6 +420,57 @@ TestAppElectromagnetic::TestAppElectromagnetic( int& id, int WIDTH_, int HEIGHT_
 
     prepareFFgrid( gridFF );
 
+    VecN::set( gridFF.ntot, 0.0, gridFF.dens );
+
+
+
+    // test FFT
+    int nn = 10;
+    int n  = 1 << nn;
+    Vec2d data[n];
+    double f =0;
+    double df=0.2;
+    double kf = (2*M_PI/n);
+    for(int i=0; i<n; i++){
+        double w = ( 1-cos(i*2*kf) );
+        //data[i].set( cos( i*kf*16 )*w, sin( i*kf*8 )*w*0 );
+        //data[i].set( cos( i*(0.04 +0.08*sin(i*0.04) )  ), 0.0 );
+
+        //f+=randf(-df,df);
+        //data[i].set(f,0);
+        //data[i].set( cos(i*0.04) + cos(i*0.3) + cos(i*1.0)  , 0 );
+
+        data[i].set( 0, 0 );
+
+        //data[i].set( cos(i*0.04) + cos(i*0.3) + cos(i*1.0)  , sin(i*0.04) + sin(i*0.3) + sin(i*1.0) );
+    }
+    data[n/4].set(100.0,0);
+
+    FFT( (double*)data, n/2,  1);
+    for(int i=0; i<(n/4); i++){
+        //double k = i;
+        double k = i+1;
+        double f=0;
+        if(k!=0){ f=5.0/(k*k); }
+        data[    i  ].mul(f);
+        data[n/2-i-1].mul(f); // it is symmetric
+    } // poisson kernell
+    FFT( (double*)data, n/2, -1);
+
+    ogl = Draw::list( );
+    for(int i=0; i<n; i++){
+        double x=i*0.1;
+        glColor3f(1,0,0); Draw3D::drawLine( (Vec3d){x,0,0}, (Vec3d){x,data[i].x,0} );
+        glColor3f(0,0,1); Draw3D::drawLine( (Vec3d){x,0,0}, (Vec3d){x,data[i].y,0} );
+
+        glColor3f(0,0,0); Draw3D::drawLine( (Vec3d){x,0,0}, (Vec3d){x,0.1,0} );
+    }
+    glEndList();
+
+
+
+
+    /*
     ogl = Draw::list( );
     glColor3f(0.0,0.0,1.0);
     //plotVecPlane( {30,30}, {0.0,0.0,0.0}, {0.0,0.0,0.25}, {0.25,0.0,0.0},  -1.0, 1.0, coilFieldGrid );
@@ -340,13 +480,12 @@ TestAppElectromagnetic::TestAppElectromagnetic( int& id, int WIDTH_, int HEIGHT_
     //drawCoils();
     drawWires(3.);
     glColor3f(1.0,0.0,0.0);
-    /*
-    Particle p;
-    p.pos.fromRandomBox({-0.5,-0.5,-0.5},{0.5,0.5,0.5});
-    p.makeThermal(100e+6,1);
-    drawParticleTrj( 5000, 0.5e-8, p, coilField );
-    */
+    //Particle p;
+    //p.pos.fromRandomBox({-0.5,-0.5,-0.5},{0.5,0.5,0.5});
+    //p.makeThermal(100e+6,1);
+    //drawParticleTrj( 5000, 0.5e-8, p, coilField );
     glEndList();
+    */
 
 }
 
@@ -364,28 +503,53 @@ void TestAppElectromagnetic::draw(){
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
 
-        Particle p;
-        //p.pos.fromRandomBox({-1.0,-1.0,-1.0},{1.0,1.0,1.0});
-        //p.pos.fromRandomBox({-0.5,-0.5,-0.5},{0.5,0.5,0.5});
 
-        p.pos.fromRandomBox({-2.5,-0.5,-4.5},{+2.5,0.5,-3.5});
+        glCallList(ogl);
+        return;
 
-        //p.makeThermal(100e+6,1);
 
-        p.vel.fromRandomBox({-0.1,-0.1,-0.1},{0.1,0.1,0.1});
-        p.vel.z = 1.0;
-        p.vel.mul( 100e+6 );
-        p.Q = 1.0; if((frameCount%2)==0){ p.Q*=-1; };
-
+        bElFieldFromGrid = false;
+        scaleFgrid=1e+6 * 0;
+        scaleFwire=1;
+        //perFrame = 0;
+        perFrame = 1000;
+        int nstep=100;
         long t = getCPUticks();
-        int nstep=5000;
-        //drawParticleTrj( 5000, 0.5e-8, p, coilField );
-        //drawParticleTrj( nstep, 0.5e-8, p, coilFieldGrid );
+        bDrawTrj = true;
+        for(int i=0; i<perFrame; i++){
+            Particle p;
+            //p.pos.fromRandomBox({-1.0,-1.0,-1.0},{1.0,1.0,1.0});
+            //p.pos.fromRandomBox({-0.5,-0.5,-0.5},{0.5,0.5,0.5});
+            p.pos.fromRandomBox({-2.5,-0.5,-4.5},{+2.5,0.5,-3.5});
+            //p.makeThermal(100e+6,1);
+            p.vel.fromRandomBox({-0.1,-0.1,-0.1},{0.1,0.1,0.1});
+            p.vel.z = 1.0;
+            p.vel.mul( 1e+8 );
+            //p.vel.mul( 5e+7 );
+            //p.vel.mul( 2e+7 );
+            p.Q = 1.0;
+            if((frameCount%2)==0){ p.Q*=-1; p.invMass*=10.0;  };
 
-        //glColor4f(1.0,1.0,1.0,0.1);
-        //glColor4f(0.0,0.0,0.0,0.1);
-        if(p.Q>0){ glColor4f(0.0,0.0,1.0,0.1); }else{ glColor4f(1.0,0.0,0.0,0.1); };
-        drawParticleTrj( nstep, 0.5e-8, p, elecField );
+
+            //int nstep=5000;
+            //drawParticleTrj( 5000, 0.5e-8, p, coilField );
+            //drawParticleTrj( nstep, 0.5e-8, p, coilFieldGrid );
+            //glColor4f(1.0,1.0,1.0,0.1);
+            //glColor4f(0.0,0.0,0.0,0.1);
+            if(p.Q<0){ glColor4f(0.0,0.0,1.0,0.1); }else{ glColor4f(1.0,0.0,0.0,0.1); };
+
+            if(i>20)bDrawTrj=false;
+            traceParticleTrj( nstep, 0.5e-8, p, elecField, bDrawTrj );
+        }
+
+        gridFF.dampDens(0.01);
+        if((frameCount%5)==0){
+            //gridFF.solvePoisson(20,1.0);
+            gridFF.solvePoisson();
+        }
+
+
+
 
         t= getCPUticks()-t;
         printf( " %g CPUticks/step \n", t/(double)nstep );
@@ -405,11 +569,21 @@ void TestAppElectromagnetic::draw(){
         double logHist[gridFF.ntot];
         //for(int i=0; i<gridFF.ntot; i++){ logHist[i]=log(gridFF.dens[i]+1); };
         //Draw3D::drawScalarGrid( gridFF.n, {0,gridFF.pos0.y,gridFF.pos0.x}, {0.0,0.0,gridFF.step.x}, {-gridFF.step.y,0.0,0.0}, logHist,  0.0, 12.0 );
-
-        for(int i=0; i<gridFF.ntot; i++){ logHist[i]=sinh(gridFF.dens[i]); };
+        //DEBUG
+        //for(int i=0; i<gridFF.ntot; i++){ logHist[i]=sinh(gridFF.dens[i]); };
         //Draw3D::drawScalarGrid( gridFF.n, {-gridFF.pos0.y,0.0,gridFF.pos0.x}, {0.0,0.0,gridFF.step.x}, {-gridFF.step.y,0.0,0.0}, gridFF.dens,  -5.0, 5.0, Draw::colors_RWB );
-        if(gridFF.Vpot)Draw3D::drawScalarGrid( gridFF.n, {-gridFF.pos0.y,0.0,gridFF.pos0.x}, {0.0,0.0,gridFF.step.x}, {-gridFF.step.y,0.0,0.0}, gridFF.Vpot, -10000.0, 10000.0, Draw::colors_RWB );
-        //Draw3D::drawScalarGrid( gridFF.n, {0,gridFF.pos0.y,gridFF.pos0.x}, {0.0,0.0,gridFF.step.x}, {-gridFF.step.y,0.0,0.0}, logHist,  -5.0, 5.0 );
+        //DEBUG
+        if(gridFF.Vpot){
+            printf( "Vpot min %g max %g \n", VecN::min(gridFF.ntot,gridFF.Vpot), VecN::max(gridFF.ntot,gridFF.Vpot) );
+            Draw3D::drawScalarGrid( gridFF.n, {-gridFF.pos0.y,0.0,gridFF.pos0.x}, {0.0,0.0,gridFF.step.x}, {-gridFF.step.y,0.0,0.0}, gridFF.Vpot, -1.0, 1.0, Draw::colors_RWB );
+            //Draw3D::drawScalarGrid( gridFF.n, {0,gridFF.pos0.y,gridFF.pos0.x}, {0.0,0.0,gridFF.step.x}, {-gridFF.step.y,0.0,0.0}, logHist,  -5.0, 5.0 );
+        }
+        //DEBUG
+
+        if(bPlotGridForceField){
+        glColor3f(0.,0.,0.);
+        Draw3D::drawVectorGrid( gridFF.n, {-gridFF.pos0.y,0.0,gridFF.pos0.x}, {0.0,0.0,gridFF.step.x}, {-gridFF.step.y,0.0,0.0}, gridFF.force, 10.0 );
+        }
 
 
     }
@@ -425,7 +599,7 @@ void TestAppElectromagnetic::eventHandling ( const SDL_Event& event  ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
                 case SDLK_m:  bIntegrate=!bIntegrate;
-                    if(bIntegrate==false){ gridFF.solvePoisson(20,1.0); }
+                    if(bIntegrate==false){ gridFF.solvePoisson(); }
                     break;
                 //case SDLK_r:  world.fireProjectile( warrior1 ); break;
             }
