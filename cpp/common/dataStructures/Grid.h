@@ -496,9 +496,14 @@ void getIsoSurfZ( const GridShape& grid, double isoval, bool sign, Vec3d  *FF, V
             double fz;
             int ic;
             //printf( "iba (%i,%i)\n", ib,ia );
+
+            double debug_vmin=+1e+300;
+            double debug_vmax=-1e+300;
             for ( ic=nz-1; ic>1; ic-- ){
                 int ibuff_ = ibuff + nxy*ic;
                 fz = FF[ibuff_].z;
+                debug_vmin=fmin(debug_vmin,fz);
+                debug_vmax=fmax(debug_vmax,fz);
                 if( (fz>isoval)==sign ){
                     ibuff = ibuff_;
                     break;
@@ -517,6 +522,8 @@ void getIsoSurfZ( const GridShape& grid, double isoval, bool sign, Vec3d  *FF, V
             //DEBUG
             normal[ibxy].normalize();
             //normal[ibxy] = interpolate3DvecWrap( FF, grid.n, {ia,ib, ic+fc } );
+
+            //printf( "getIsoSurfZ[%i,%i] ic %i ofz %g fz %g vmin,max %g,%g pos(%g,%g,%g) normal(%g,%g,%g) \n", ib,ia,  ic, ofz, ic+fc, debug_vmin,debug_vmax,  pos[ibxy].x,pos[ibxy].y,pos[ibxy].z,   normal[ibxy].x,normal[ibxy].y,normal[ibxy].z );
             //printf("done \n");
         }
     }

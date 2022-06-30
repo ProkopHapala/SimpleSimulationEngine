@@ -1,5 +1,5 @@
-#ifndef  NBody_h
-#define  NBody_h
+#ifndef  NBody2D_h
+#define  NBody2D_h
 
 #include "arrayAlgs.h"
 

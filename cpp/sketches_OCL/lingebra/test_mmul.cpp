@@ -17,12 +17,12 @@ float error( int n, float * xs, float * x0s ){
     return sum;
 }
 
-float setArrayRandom( int n, float xmin, float xmax, float * out ){
+void setArrayRandom( int n, float xmin, float xmax, float * out ){
     float xrange = xmax - xmin;
     for (int i=0; i<n; i++ ){		out[i] = xmin + xrange*randf();	}
 }
 
-float setArray( int n, float val, float * out ){  for (int i=0; i<n; i++ ){ out[i] = val; } }
+void setArray( int n, float val, float * out ){  for (int i=0; i<n; i++ ){ out[i] = val; } }
 
 void mmul_cpu(int N, float *A, float *B, float *C){
     for (int i = 0; i < N; i++) {

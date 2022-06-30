@@ -14,6 +14,8 @@
 #include "Mat3.h"
 #include "quaternion.h"
 
+#include "testUtils.h"
+
 /*
 ToDo:
  - make evaluation of gridFF inside OpenCL kernel
@@ -403,7 +405,7 @@ class RigidMolecularWorldOCL{ public:
         return atom_count;
     }
 
-    int evalForceCPU( int isystem, const GridFF& gridFF, float8* atoms, Vec3f* fatoms=0 ){
+    void evalForceCPU( int isystem, const GridFF& gridFF, float8* atoms, Vec3f* fatoms=0 ){
         printf("evalForceCPU \n");
         int isoff   = isystem * nMols;
         //float8* atom0s = atomsInTypes.data();
@@ -544,9 +546,10 @@ class RigidMolecularWorldOCL{ public:
             fatomim += natomi;
             posei  +=2;
         } // imol
+
     } // evalForceCPU
 
-    int getFEgridCPU( const GridFF& gridFF ){
+    void getFEgridCPU( const GridFF& gridFF ){
         for(int ia=0; ia<nAtoms; ia++){
             printf( " getFEgridCPU[%i] poss(%5.5e,%5.5e,%5.5e) PLQ(%5.5e,%5.5e,%5.5e) \n", ia, poss[ia].f.x,poss[ia].f.y,poss[ia].f.z,   PLQs[ia].f.x,PLQs[ia].f.y,PLQs[ia].f.z );
             Vec3d fd = Vec3dZero;

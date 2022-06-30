@@ -39,8 +39,8 @@ inline void printMat( const Mat3d& mat  ){
 	printf( " %f %f %f \n", mat.cx, mat.cy, mat.cz );
 }
 
-_template_T void println(const T& t){t.print(); puts(""); };
-_template_T void println(const char* s,const T& t){ printf("%s",s);t.print(); puts(""); };
+template<typename T> void println(const T& t){t.print(); puts(""); };
+template<typename T> void println(const char* s,const T& t){ printf("%s",s);t.print(); puts(""); };
 
 // CPU ticks timer
 // http://stackoverflow.com/questions/6432669/variance-in-rdtsc-overhead

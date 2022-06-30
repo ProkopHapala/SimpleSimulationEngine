@@ -97,7 +97,7 @@ void drawAtomsF8( int n, float8 * atoms, float sc, int oglSphere ){
         float r = atomi[4]*sc;
         float q = atomi[6];
         glColor3f( 0.5+q, 0.5, 0.5-q );
-        Draw3D::drawShape( *(Vec3f*)atomi, {0.0,0.0,0.0,1.0}, (Vec3f){r,r,r}, oglSphere );
+        Draw3D::drawShape( oglSphere, *(Vec3f*)atomi, {0.0,0.0,0.0,1.0}, (Vec3f){r,r,r} );
     }
 }
 
@@ -124,7 +124,7 @@ void drawRigidMolAtomForce( const Vec3f& pos, const Quat4f& qrot, const Vec3f& f
         f.set_cross(torq,Mp);
         f.add(fpos);
 
-        //Draw3D::drawShape( pi, {0.0,0.0,0.0,1.0}, (Vec3f){r,r,r}, oglSphere );
+        //Draw3D::drawShape( oglSphere, pi, {0.0,0.0,0.0,1.0}, (Vec3f){r,r,r} );
         Draw3D::drawPointCross( Mp, rsc   );
         Draw3D::drawVecInPos  ( f*fsc, Mp );
     }
@@ -137,7 +137,7 @@ void drawRigidMolAtomCOG( const Vec3f& pos, const Quat4f& qrot, int n, const flo
         //p = *((Vec3f*)(atom0s+j));
         mrot.dot_to( *((Vec3f*)(atom0s+i)), Mp );
         Mp.add( pos );
-        //Draw3D::drawShape( pi, {0.0,0.0,0.0,1.0}, (Vec3f){r,r,r}, oglSphere );
+        //Draw3D::drawShape( oglSphere , pi, {0.0,0.0,0.0,1.0}, (Vec3f){r,r,r});
         Draw3D::drawPointCross( Mp, rsc   );
         Draw3D::drawLine      ( Mp, pos   );
     }
@@ -184,7 +184,7 @@ class AppMolecularEditorOCL : public AppSDL2OGL_3D { public:
 	//Molecule    mol;
 	MMFFparams  params;
     MMFF        world;
-    MMFFBuilder builder;
+    MM::Builder builder;
 
     OCLsystem* cl;
     GridFF_OCL              gridFFocl;
@@ -253,12 +253,12 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
     //world.substrate.init( (Vec3i){100,100,100}, (Mat3d){ 10.0,0.0f,0.0f,  0.0,10.0f,0.0f,  0.0,0.0f,10.0f }, (Vec3d){-5.0,-5.0,-5.0} );
 
     printf( "params.atypNames:\n" );
-    for(auto kv : params.atypNames) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
+    for(auto kv : params.atomTypeDict) { printf(" %s %i \n", kv.first.c_str(), kv.second ); }
     //exit(0);
     //world.substrate.grid.n    = (Vec3i){120,120,200};
     world.gridFF.grid.n    = (Vec3i){60,60,100};
     //world.substrate.grid.n    = (Vec3i){12,12,20};
-    world.gridFF.grid.pos0 = (Vec3d){0.0d,0.0d,0.0d};
+    world.gridFF.grid.pos0 = (Vec3d){0.0,0.0,0.0};
     world.gridFF.loadCell ( "inputs/cel.lvs" );
     //world.gridFF.loadCell ( "inputs/cel_2.lvs" );
     world.gridFF.grid.printCell();
@@ -360,10 +360,10 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     params.loadBondTypes( "common_resources/BondTypes.dat" );
     //for(auto kv : params.atypNames) { printf( ">>%s<< %i \n", kv.first.c_str(), kv.second ); };
     char str[1024];
-    printf( "type %s \n", params.atypes[ params.atypNames.find( "C" )->second ].toString( str ) );
-    printf( "type %s \n", params.atypes[ params.atypNames.find( "H" )->second ].toString( str ) );
-    printf( "type %s \n", params.atypes[ params.atypNames.find( "O" )->second ].toString( str ) );
-    printf( "type %s \n", params.atypes[ params.atypNames.find( "N" )->second ].toString( str ) );
+    printf( "type %s \n", params.atypes[ params.atomTypeDict.find( "C" )->second ].toString( str ) );
+    printf( "type %s \n", params.atypes[ params.atomTypeDict.find( "H" )->second ].toString( str ) );
+    printf( "type %s \n", params.atypes[ params.atomTypeDict.find( "O" )->second ].toString( str ) );
+    printf( "type %s \n", params.atypes[ params.atomTypeDict.find( "N" )->second ].toString( str ) );
     DEBUG
     /*
     auto it = params.atypNames.find( "C" );
@@ -406,7 +406,8 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
     //opt.bindArrays( 8*world.nFrag, world.poses, world.poseVs, world.poseFs );
     world.allocateDyn();
     world.initDyn();
-    opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce ); DEBUG
+    //opt.bindArrays( world.nDyn, world.dynPos, world.dynVel, world.dynForce ); DEBUG
+    opt.bindOrAlloc( world.nDyn, world.dynPos, world.dynVel, world.dynForce,0 ); DEBUG
     opt.setInvMass( 1.0 );
     opt.cleanVel  ( );
     //exit(0);
@@ -828,7 +829,7 @@ void AppMolecularEditorOCL::drawCPU(){
         mat.setOne();
         mat.mul( atomSize*params.atypes[world.atypes[i]].RvdW );
         Draw::setRGB( params.atypes[world.atypes[i]].color );
-        Draw3D::drawShape(world.apos[i],mat,ogl_sph);
+        Draw3D::drawShape(ogl_sph,world.apos[i],mat);
         glDisable(GL_LIGHTING);
     }
     glDisable(GL_LIGHTING);
@@ -912,7 +913,8 @@ void AppMolecularEditorOCL::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    ipicked = pickParticle( world.natoms, world.apos, ray0, (Vec3d)cam.rot.c , 0.5 );
+                    // inline int pickParticle( const Vec3d& ray0, const Vec3d& hRay, double R, int n, Vec3d * ps, bool* ignore=0 ){
+                    ipicked = pickParticle( ray0, (Vec3d)cam.rot.c , 0.5, world.natoms, world.apos  );
                     printf("ipicked %i \n", ipicked);
                     break;
                 case SDL_BUTTON_RIGHT:

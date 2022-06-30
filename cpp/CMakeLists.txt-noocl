@@ -55,7 +55,6 @@ include_directories(
         ${COMMON_SRCS}/dynamics
 	${COMMON_SRCS}/CombatModels
         ${COMMON_SRCS}/maps
-        ${COMMON_SRCS}/OCL
         #${COMMON_SRCS}/optimization
         ${COMMON_SRCS}/utils
         ${COMMON_SRCS}/dataStructures
@@ -85,7 +84,5 @@ add_subdirectory( ${MY_SRC_DIR}/tests    )   # currently empty
 add_subdirectory( ${MY_SRC_DIR}/common_SDL   ${MY_BIN_SHARE}/common_SDL )
 add_subdirectory( ${MY_SRC_DIR}/libs_SDL     )
 add_subdirectory( ${MY_SRC_DIR}/sketches_SDL )
-add_subdirectory( ${MY_SRC_DIR}/sketches_OCL )
 #add_subdirectory( ${MY_SRC_DIR}/engines      )
 add_subdirectory( ${MY_SRC_DIR}/apps         )
-add_subdirectory( ${MY_SRC_DIR}/apps_OCL     )

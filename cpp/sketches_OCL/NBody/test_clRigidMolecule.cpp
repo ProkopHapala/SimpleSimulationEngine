@@ -178,7 +178,7 @@ void TestApp_clRigidMolecule::draw(){
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     //delay = 100;
-    double f2err;
+    double f2err=0;
     t1=getCPUticks();
     switch(method){
         case 1:
@@ -186,7 +186,7 @@ void TestApp_clRigidMolecule::draw(){
                 transformAllAtoms( nMols, nAtoms, pos, molecule, atomsT );
                 setArray      ( nMols*8, force, 0.0f );
                 RBodyForce    ( nMols, nAtoms, pos, force, atomsT, molecule );
-                move_leap_frog( nMols, pos, vel, force, dt, damp );
+                f2err=move_leap_frog( nMols, pos, vel, force, dt, damp );
             }
             break;
         case 2:
@@ -195,7 +195,7 @@ void TestApp_clRigidMolecule::draw(){
                 task1->enque();
                 clFinish(cl.commands);
                 cl.download(2);
-                move_leap_frog( nMols, pos, vel, force, dt, damp );
+                f2err=move_leap_frog( nMols, pos, vel, force, dt, damp );
             }
             break;
         case 3:
@@ -204,7 +204,7 @@ void TestApp_clRigidMolecule::draw(){
                 task2->enque();
                 clFinish(cl.commands);
                 cl.download(2);
-                move_leap_frog( nMols, pos, vel, force, dt, damp );
+                f2err=move_leap_frog( nMols, pos, vel, force, dt, damp );
             }
             break;
     }
@@ -231,7 +231,7 @@ void TestApp_clRigidMolecule::draw(){
             //printf( " %i (%g,%g,%g)  \n", i, atomsT[i].x, atomsT[i].y, atomsT[i].z );
             //float cq = (*(molecule+(iatom<<3)+5))*3.0f;
             //glColor3f( 1.0f+cq, 1.0f-fabs(cq), 1.0f-cq );
-            Draw3D::drawShape(atomsT[i],mrot,atomView);
+            Draw3D::drawShape(atomView,atomsT[i],mrot);
             //Draw3D::drawPointCross(atomsT[i],0.1);
            // Draw3D::drawVecInPos(forceAtomT[i]*10.0f,atomsT[i]);
            i++;

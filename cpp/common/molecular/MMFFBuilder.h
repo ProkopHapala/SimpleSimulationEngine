@@ -1159,12 +1159,13 @@ class Builder{  public:
         }
     }
 
-    int loadMolTypeXYZ(const char* fname, const MMFFparams* params ){
+    int loadMolTypeXYZ(const char* fname, const MMFFparams* params_=0 ){
+        if(params_==0)params_=params;
         Molecule* mol = new Molecule();      //printf( "DEBUG 1.1.1 \n" );
         mol->atomTypeDict = &params->atomTypeDict; //printf( "DEBUG 1.1.2 \n" );
         //printf("mol->atypNames %i %i \n", mol->atypNames, &params->atypNames );
         mol->loadXYZ( fname );             //printf( "DEBUG 1.1.3 \n" );
-        if(params) params->assignREs( mol->natoms, mol->atomType, mol->REQs ); //printf( "DEBUG 1.1.4 \n" );
+        if(params_) params_->assignREs( mol->natoms, mol->atomType, mol->REQs ); //printf( "DEBUG 1.1.4 \n" );
         int ityp = molTypes.size();
         mol2molType[(size_t)mol]=ityp;
         molTypes.push_back(mol);  //printf( "DEBUG 1.1.5 \n" );
@@ -1181,9 +1182,10 @@ class Builder{  public:
         return molTypes.size()-1;
     }
 
-    int loadMolType(const std::string& fname, const std::string& label, const MMFFparams* params ){
+    int loadMolType(const std::string& fname, const std::string& label, const MMFFparams* params_=0 ){
         //printf( "fname:`%s` label:`%s` \n", fname.c_str(), label.c_str()  );
-        int itype = loadMolTypeXYZ( fname.c_str(), params );
+        if(params_==0)params_=params;
+        int itype = loadMolTypeXYZ( fname.c_str(), params_ );
         //printf( "fname:`%s` label:`%s` itype %i \n", fname.c_str(), label.c_str(), itype  );
         molTypeDict[label] = itype;
         return itype;
@@ -1410,7 +1412,8 @@ void updatePBC( Vec3d* pbcShifts ){
 #endif // MMFFmini_h
 
 #ifdef MMFF_h
-    void toMMFF( MMFF * mmff, MMFFparams* params ){
+    void toMMFF( MMFF * mmff, MMFFparams* params_=0 ){
+        if(params_==0)params_=params;
         //mmff->deallocate();
         mmff->allocate( atoms.size(), bonds.size(), angles.size(), 0 );
         //int * atomTypes = new int[atoms.size()];
@@ -1426,7 +1429,7 @@ void updatePBC( Vec3d* pbcShifts ){
         for(int i=0; i<bonds.size(); i++){
             mmff->bond2atom[i] = bonds[i].atoms;
             Vec2i ib           = bonds[i].atoms;
-            params->getBondParams( atoms[ib.x].type, atoms[ib.y].type, bonds[i].type, mmff->bond_0[i], mmff->bond_k[i] );
+            params_->getBondParams( atoms[ib.x].type, atoms[ib.y].type, bonds[i].type, mmff->bond_0[i], mmff->bond_k[i] );
             //bondTypes[i]       = bonds[i].type;
         }
         for(int i=0; i<angles.size(); i++){
@@ -1446,7 +1449,7 @@ void updatePBC( Vec3d* pbcShifts ){
                 *(Quat4d*)(posi+4)= fragi.rot;
             }
         }
-        //params.fillBondParams( mmff->nbonds, mmff->bond2atom, bondTypes, atomTypes, mmff->bond_0, mmff->bond_k );
+        //params_.fillBondParams( mmff->nbonds, mmff->bond2atom, bondTypes, atomTypes, mmff->bond_0, mmff->bond_k );
         //delete [] atomTypes;
         //delete [] bondTypes;
     }

@@ -180,13 +180,16 @@ void renderSubstrate_( const GridShape& grid, Vec3d * FF, Vec3d * FFel, double i
 
             colorRB( fel1.z*sclr ); glNormal3f(normals[ip1].x,normals[ip1].y,normals[ip1].z); glVertex3f(pos[ip1].x,pos[ip1].y,pos[ip1].z);
             colorRB( fel2.z*sclr ); glNormal3f(normals[ip2].x,normals[ip2].y,normals[ip2].z); glVertex3f(pos[ip2].x,pos[ip2].y,pos[ip2].z);
+
+            //printf( "ib,ia %i,%i ip1,2 %i,%i p1(%g,%g,%g) p2(%g,%g,%g) \n", ia,ib, ip1,ip2, pos[ip1].x,pos[ip1].y,pos[ip1].z, pos[ip2].x,pos[ip2].y,pos[ip2].z );
+
         }
         glEnd();
     }
     //printf( " -- DEBUG 3 \n" );
     delete [] pos;
     delete [] normals;
-    //exit(0);
+    //xit(0);
 }
 
 void viewSubstrate( int nx, int ny, int isoOgl, Vec3d a, Vec3d b ){

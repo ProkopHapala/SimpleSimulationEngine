@@ -269,7 +269,11 @@ AppMolecularEditor2::AppMolecularEditor2( int& id, int WIDTH_, int HEIGHT_ ) : A
 
     bool recalcFF = false;
     //bool recalcFF = true;
+    { FILE* f=fopen( "data/FFelec-.bin","rb");   if(0==f){ recalcFF=true; }else{ fclose(f); };} // Test if file exist
+    { FILE* f=fopen( "data/FFPauli-.bin","rb");  if(0==f){ recalcFF=true; }else{ fclose(f); };} // Test if file exist
+    { FILE* f=fopen( "data/FFLondon-.bin","rb"); if(0==f){ recalcFF=true; }else{ fclose(f); };} // Test if file exist
     if( recalcFF ){
+        printf( "Building GridFF for substrate ... (please wait... )\n" );
         world.gridFF.evalGridFFs( {1,1,1} );
         if(world.gridFF.FFelec )  saveBin( "data/FFelec-.bin",   world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFelec );
         if(world.gridFF.FFPauli)  saveBin( "data/FFPauli-.bin",  world.gridFF.grid.getNtot()*sizeof(Vec3d), (char*)world.gridFF.FFPauli );
