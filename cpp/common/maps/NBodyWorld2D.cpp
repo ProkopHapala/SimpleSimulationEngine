@@ -266,7 +266,7 @@ void NBodyWorld::activateCell( ULONG i ){
     UINT ni = map.HashMap<Particle2D>::getBucketObjects( i, &buf_i[0] );
     for(int ii=0; ii<ni; ii++ ){
         Particle2D* pi = buf_i[ii];
-        pi->force.set( 0.0d, 0.0d );
+        pi->force.set( 0.0, 0.0 );
         activeParticles[nActiveParticles] = pi;
         nActiveParticles++;
     }
