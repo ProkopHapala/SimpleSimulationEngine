@@ -83,22 +83,39 @@ inline void overlapFE(double r, double amp, double beta, double& e, double& fr )
     fr = (expar*(6 + 5*x +            x*x )*beta*0.33333333)/r;
 }
 
+inline double finiteExp( double x, double& fr,  double beta, double Rcut ){
+    const int k=16;
+    const double RN  = Rcut*0.5*k;
+    const double cor = 1.15/RN; 
+    const double C   = beta/k - cor;
+    double y    = (1-C*x);
+    y=y*y; // ^2
+    y=y*y; // ^4
+    y=y*y; // ^8
+    y=y*y; // ^16
+    double ycut = 1-x/Rcut;
+    y*= ycut*ycut;
+    fr = 0;
+    return y;
+}
+
+
 struct RigidAtomType{
     int id = -1;
     char name[4]="C";
     int    nbond = N_BOND_MAX;  // number bonds
 
-    double Rcut;  // total cutoff (also bond cutoff)
-    double Rrep;  // repulsion cutoff
-    double Abond; // Bond strengh
-    double Arep;  // repulsion strenght
+    //double Rcut;  // total cutoff (also bond cutoff)
+    //double Rrep;  // repulsion cutoff
+    //double Rbond; // repulsion cutoff
+    //double Ebond; // Bond strengh
+    //double Wbond; // Wbond - stiffnes of attraction
+    //double Arep;  // repulsion strenght
 
-    double rbond0 =  0.5;
     double Epz    =  0.5;   // pi-bond strenght
-
-    //double rbond0 =  0.5;
-    //double aMorse =  4.0;
-    //double bMorse = -0.7;
+    double rbond0 =  0.5;
+    double aMorse =  4.0;
+    double bMorse = -0.7;
     // TODO : use REQs here ?
 
     //double c6     = -15.0;
@@ -107,18 +124,53 @@ struct RigidAtomType{
 
     inline void combine(const RigidAtomType& a, const RigidAtomType& b ){
         nbond  = a.nbond;
-        Rcut   = a.Rcut  + b.Rcut;  
-        Rrep   = a.Rrep  + b.Rrep;  
-        Abond  = a.Abond * b.Abond;  
-        Arep   = a.Arep  * b.Arep;  
+        aMorse  = a.aMorse * b.aMorse;  // TODO
+        bMorse  = a.bMorse + b.bMorse;
+        rbond0  = a.rbond0 + b.rbond0;
+        //Rcut   = a.Rcut  + b.Rcut;  
+        //Rrep   = a.Rrep  + b.Rrep;  
+        //Rbond  = a.Rbond  + b.Rbond;
+        //Wbond  = a.Wbond  + b.Wbond;
+        //Ebond  = a.Ebond * b.Ebond;
+        //Erep   = a.Arep  * b.Arep;  
+        //printf( "nbond %i Rcut %g Rrep %g Abond %g Arep %g \n", nbond, Rcut, Rrep, Abond, Arep );
     }
 
     void print(){
-        printf( "nbond  %i Epz %g \n", nbond, Epz );
-        printf( "Bond  Rcut %g Abond %g\n", Rcut, Abond );
-        printf( "Core  Rrep %g Arep  %g\n", Rrep, Arep  );
+        //printf( "nbond  %i Epz %g \n", nbond, Epz );
+        //printf( "Bond  Rcut %g Abond %g\n", Rcut, Abond );
+        //printf( "Core  Rrep %g Arep  %g\n", Rrep, Arep  );
+        printf( "nbond  %i rbond0 %g\n", nbond, rbond0 );
+        printf( "aMorse %g bMorse %g Epz %g \n", aMorse, bMorse, Epz );
+        //printf( "c6     %g r2vdW  %g\n", c6, R2vdW );
         //exit(0);
     }
+
+    /*
+    inline double evalRadial( double r, double fr ){
+        if(r>Rb){ // attraction
+            const double sc  = 1/( Rcut-Rbond );
+            const double iw2 = 1/(Wbond*Wbond);
+            double x  = (r-Rbond)*sc;
+            double mx = 1-x;
+            double  y1 =mx*mx;
+            double  yL = 1/(1-x*x*iw2);
+            double dy1 =2*(x-1)*sc;
+            double dyL =yL*yL*2*x*sc*iw2;
+            fr    = y1*dyL + yL*dy1;
+            return y1*yL;
+        }else{    // contanct - Parabolic appox
+            double Rd = Rbond-Rrep;
+            double K  = Eb/(Rd*Rd);
+            r-=Rbond;
+            fr   = K*2*r;
+            return K*r*r - Eb;
+        }
+    }
+    */
+
+   
+
 
     //RigidAtomType()=default;
     //RigidAtomType():nbond(nbond_),rbond(rbond_),aMorse(){};
@@ -136,6 +188,7 @@ struct CapType{
 class RARFF_SR{ public:
     // This is modified from RARFFarr
     double RcutMax = 5.0; // [A]
+    double R2cut = RcutMax*RcutMax;
     Buckets3D map;
 
     const CapType       * capTypeList = 0;
@@ -334,7 +387,10 @@ class RARFF_SR{ public:
     inline double pairEF( int ia, int ja, int nbi, int nbj, RigidAtomType& type){
 
         Vec3d  dij = apos[ja] - apos[ia];
-        double r2  = dij.norm2() + R2SAFE;
+        double r2  = dij.norm2();
+        //printf( "pairEF r %g  Rcut %g \n", sqrt(r2), type.Rcut );
+        if( r2>R2cut ) return 0;
+
         double rij = sqrt( r2 );
         Vec3d hij  = dij*(1/rij);
 
@@ -350,22 +406,19 @@ class RARFF_SR{ public:
         double dyy=(xx+zz)*ir3;
         double dzz=(xx+yy)*ir3;
 
-        //double ir2vdW = 1/(r2 + type.R2vdW);
-        //double evdW   =  type.c6*ir2vdW*ir2vdW*ir2vdW;
-
-        // Exponential - OLD
         //double expar = exp( type.bMorse*(rij-type.rbond0) );
-        //double E     =    type.aMorse*expar*expar;            // repulsive
-        //double Eb    = -2*type.aMorse*expar;                  // attractive
-
-
-        // Need to define some nice radial function with finite support here
-        double fr,frb;
-        double E   =  funcR2( rij, type.Arep,  type.Rrep,  fr );           // repulsive
-        double Eb  =  funcR2( rij, type.Abond, type.Rcut, frb ); 
-        E         += Eb;
-        fr+=frb;
-
+        //double E     =    type.aMorse*expar*expar;
+        //double Eb    = -2*type.aMorse*expar;
+        //double fr    =  2*type.bMorse* E +   6*evdW*ir2vdW;
+        //double frb   =    type.bMorse* Eb;
+        //evalRadial( double r, double fr );
+        
+        double dexpr;
+        double expr = finiteExp( rij, dexpr, type.bMorse, type.rbond0 );
+        double E     =    type.aMorse*expr* expr;
+        double fr    =  2*type.aMorse*expr*dexpr;
+        double Eb    = -2*type.aMorse*      expr;
+        double frb   = -2*type.aMorse*     dexpr;
 
         Vec3d force=hij*fr;
 
@@ -493,6 +546,7 @@ class RARFF_SR{ public:
         int* neighs = map.neighs_in;
         double E = 0;
         Vec3i ip;
+        RigidAtomType pairType;
 
         //printf("DEBUG interEF_buckets() 2 \n");
         for(int ic=0; ic<map.ncell; ic++){
@@ -514,18 +568,16 @@ class RARFF_SR{ public:
                     for(int j=i+1; j<nic; j++){
                         int ja = neighs[j];
                         //printf("DEBUG interEF_buckets() j,ja %i,%i \n", j, ja );
-                        //RigidAtomType pairType;
-                        //pairType.combine( typei, *types[ja] );
-                        //E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );
+                        pairType.combine( typei, *types[ja] );
+                        E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );
                         //printf( "%i-%i \n", ia, ja );
                         //glColor3f(0,0,0); Draw3D::drawLine( apos[ia], apos[ja] );
                     }
                     // -- with neighbor cells
                     for(int j=0; j<nrest; j++){
                         int ja = neighs_[j];
-                        //RigidAtomType pairType;
-                        //pairType.combine( typei, *types[ja] );
-                        //E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );
+                        pairType.combine( typei, *types[ja] );
+                        E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );
                         if( ic==31 ){ glColor3f(0,0,0); Draw3D::drawLine( apos[ia], apos[ja] ); }
                     }
                 }

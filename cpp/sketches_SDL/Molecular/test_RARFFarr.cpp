@@ -318,7 +318,6 @@ void TestAppRARFF::draw(){
         if(ff.ignoreAtoms[ia])continue;
         glColor3f(0.3,0.3,0.3);
         Draw3D::drawShape( ogl_sph, ff.apos[ia], Mat3dIdentity );
-
         for(int j=0; j<ff.types[ia]->nbond; j++){
             int i=ia*N_BOND_MAX+j;
             Vec3d pb = ff.bondPos( i );

@@ -72,6 +72,30 @@ int pickBond( FF ff, Vec3d& ray0, const Vec3d& hRay, double R ){
     return imin;
 }
 
+void testEF( RARFF_SR& ff, double rmin, double rmax, int n, double* Eout=0, double* Fout=0, double* xs=0  ){
+    printf( "DEBUG testEF \n" );
+    int i1=0;
+    int i2=1;
+    ff.apos[i1]=Vec3dZero;
+    double dx = (rmax-rmin)/n;
+    RigidAtomType pairType;
+    printf( "DEBUG testEF 2 \n" );
+    for(int i=0; i<n; i++){
+        double x = rmin+dx*i;
+        ff.apos[i2]=(Vec3d){ x, 0.0,0.0 };
+        pairType.combine( *ff.types[i1], *ff.types[i2] );
+        ff.aforce[i2] = Vec3dZero;
+        printf( "testEF[%i] x %g -> ", i, x );
+        double E = ff.pairEF( i1, i2, ff.types[i1]->nbond, ff.types[i1]->nbond, pairType);
+        printf( " E %g F(%g,%g,%g) \n", E, ff.aforce[i2].x,ff.aforce[i2].y,ff.aforce[i2].z );
+        if(Eout) Eout[i]=E;
+        if(Fout) Fout[i]=ff.aforce[i2].x;
+        if(xs) xs[i]=x;
+    }
+    //exit(0);
+}
+
+
 class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     //RigidAtom     atom1;
@@ -113,6 +137,25 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
+    {RigidAtomType& typ=typeList[1]; // C-sp3
+        //typeList_[1]=&typ;
+        typ.id = 1;
+        typ.nbond  = 4;  // number bonds
+        //typ.rbond0 =  1.5/2;
+        //typ.Arep  =  2;
+        //typ.Abond =  0.5;
+        //typ.Rrep  =  0.75;
+        //typ.Rcut  =  2.0;
+        typ.rbond0 =  1.5/2;
+        typ.aMorse =  1.0;
+        typ.bMorse = -0.7;
+        typ.bh0s  = (Vec3d*)sp3_hs;
+        typ.print();
+    }
+
+
+    curType = &typeList[1];
+
     printf("DEBUG 0 \n");
     //capsBrush.set(1,1,-1,-1);
     //capsBrush.set(1,1,1,1);
@@ -145,6 +188,24 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.cleanAux();
     //printf("DEBUG 3 \n");
 
+    ff.qrots[0]=Quat4dFront;
+    ff.qrots[1]=Quat4dBack;
+    //testEF( ff, 0.0, 10.0, 100 );
+
+    //testEF( ff, 0.0, 6.0, 60 );
+    
+    DataLine2D * line_Er = new DataLine2D(100); //line_Er->linspan(0,10.0);
+    line_Er->clr = 0xFF00FF00;
+    testEF( ff, 0.0, 6.0, 60, line_Er->ys, 0,  line_Er->xs );
+
+    plot1.init();
+    plot1.fontTex = fontTex;
+    plot1.clrGrid = 0xFF404040;
+    //plot1.clrBg   = 0xFF408080;
+    //plot1.lines.push_back( line1  );
+    plot1.lines.push_back( line_Er  );
+    plot1.render();
+
     Draw3D::makeSphereOgl( ogl_sph, 3, 0.25 );
 
 }
@@ -158,6 +219,8 @@ void TestAppRARFF::draw(){
     printf("frame %i \n", frameCount);
 
     //if( ff.tryResize( 5, 100, 10) );
+
+    return;
 
     // ---------- Simulate
     //bRun = false;
@@ -250,8 +313,8 @@ void TestAppRARFF::draw(){
 };
 
 void TestAppRARFF::drawHUD(){
-	glTranslatef( 100.0,100.0,0.0 );
-	glScalef    ( 10.0,10.00,1.0  );
+	glTranslatef( 200.0,200.0,0.0 );
+	glScalef    ( 20.0,20.00,1.0  );
 	plot1.view();
 }
 
