@@ -114,7 +114,7 @@ struct RigidAtomType{
     }
 
     void print(){
-        printf( "nbond  %i rbond0 Epz %g \n", nbond, rbodn0, Epz );
+        printf( "nbond  %i Epz %g \n", nbond, Epz );
         printf( "Bond  Rcut %g Abond %g\n", Rcut, Abond );
         printf( "Core  Rrep %g Arep  %g\n", Rrep, Arep  );
         //exit(0);
@@ -135,6 +135,8 @@ struct CapType{
 
 class RARFF_SR{ public:
     // This is modified from RARFFarr
+    double RcutMax = 5.0; // [A]
+    Buckets3D map;
 
     const CapType       * capTypeList = 0;
     const RigidAtomType * typeList    = 0;
@@ -466,7 +468,7 @@ class RARFF_SR{ public:
         return E;
     }
 
-    double interEF(){
+    double interEF_brute(){
         //Vec3d bhs[N_BOND_MAX];
         double E = 0;
         for(int i=0; i<natom; i++){
@@ -479,6 +481,54 @@ class RARFF_SR{ public:
                 RigidAtomType pairType;
                 pairType.combine( typei, *types[j] );
                 E += pairEF( i, j, typei.nbond, types[j]->nbond, pairType );
+            }
+        }
+        return E;
+    }
+
+    double interEF_buckets(){
+        //Vec3d bhs[N_BOND_MAX];
+        //printf("DEBUG interEF_buckets() 1 \n");
+        map.updateNeighsBufferSize(); // make sure neighs has sufficient size
+        int* neighs = map.neighs_in;
+        double E = 0;
+        Vec3i ip;
+
+        //printf("DEBUG interEF_buckets() 2 \n");
+        for(int ic=0; ic<map.ncell; ic++){
+            int nic = map.getInCell( ic, neighs );   // list atoms in same cell
+            //printf("DEBUG interEF_buckets[ic=%i] nic=%i \n", ic, nic );
+            if( nic>0){
+                map.i2ixyz(ic,ip);
+                int* neighs_ = neighs+nic;
+                //printf("DEBUG interEF_buckets() 4 ic(%i)->ip(%i,%i,%i) \n", ic, ip.x,ip.y,ip.z );
+                int nrest = map.getForwardNeighbors( ip, neighs_ ); // list atoms in neighboring cells
+                printf("DEBUG interEF_buckets()[ic=%i] nic %i nrest %i \n", ic, nic, nrest );
+
+                for(int i=0; i<nic; i++){
+                    int ia = neighs[i];
+                    //printf("DEBUG interEF_buckets() i,ia %i,%i \n", i, ia );
+                    const RigidAtomType& typei = *types[ia];
+                    Vec3d                pi    =  apos [ia];
+                    // -- within same cell
+                    for(int j=i+1; j<nic; j++){
+                        int ja = neighs[j];
+                        //printf("DEBUG interEF_buckets() j,ja %i,%i \n", j, ja );
+                        //RigidAtomType pairType;
+                        //pairType.combine( typei, *types[ja] );
+                        //E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );
+                        //printf( "%i-%i \n", ia, ja );
+                        //glColor3f(0,0,0); Draw3D::drawLine( apos[ia], apos[ja] );
+                    }
+                    // -- with neighbor cells
+                    for(int j=0; j<nrest; j++){
+                        int ja = neighs_[j];
+                        //RigidAtomType pairType;
+                        //pairType.combine( typei, *types[ja] );
+                        //E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );
+                        if( ic==31 ){ glColor3f(0,0,0); Draw3D::drawLine( apos[ia], apos[ja] ); }
+                    }
+                }
             }
         }
         return E;

@@ -89,7 +89,8 @@ class CubeGridRuler : public GridRulerInterface { public:
         pos0=pmin;
         pmax=pmax_;
         span=pmax-pos0;
-        setn( { (int)(span.z*invStep+1), (int)(span.y*invStep+1), (int)(span.z*invStep+1) } );
+        setn( { (int)(span.x*invStep+1), (int)(span.y*invStep+1), (int)(span.z*invStep+1) } );
+        printf( "DEBUG CubeGridRuler: n(%i,%i,%i) ntot %i \n", n.x,n.y,n.z, ntot );
     };
 
     inline void pos2box( const Vec3d& pos, Vec3i& ipos, Vec3d& dpos ) const {
@@ -108,6 +109,13 @@ class CubeGridRuler : public GridRulerInterface { public:
             step*ipos.x + pos0.x + dpos.x,
             step*ipos.y + pos0.y + dpos.y,
             step*ipos.z + pos0.z + dpos.z };
+    }
+
+    inline Vec3d box2pos2( const Vec3i& ipos, const Vec3d& dpos ) const {
+        return (Vec3d){
+            step*(ipos.x+dpos.x) + pos0.x,
+            step*(ipos.y+dpos.y) + pos0.y,
+            step*(ipos.z+dpos.z) + pos0.z };
     }
 
     int overlap_Sphere( Vec3d pos, double r, int* icells ) const {
@@ -181,6 +189,15 @@ class CubeGridRuler : public GridRulerInterface { public:
 
     inline int  ixyz2i( Vec3i ip         ) const { return ip.x + n.x*(ip.y + n.y*ip.z);          }
     inline void i2ixyz( int i, Vec3i& ip ) const { ip.z=i/nxy; i=i%nxy; ip.y=i/n.x; ip.x=i%n.x;  }
+
+
+    //inline int wrap(int , n)
+    inline int  ixyz2i_wrap( Vec3i ip         ) const {
+        int ix = wrap_index_fast( ip.x,n.x);
+        int iy = wrap_index_fast( ip.y,n.y);
+        int iz = wrap_index_fast( ip.z,n.z);
+        return ix + n.x*(iy + n.y*iz);
+    }
 
 };
 

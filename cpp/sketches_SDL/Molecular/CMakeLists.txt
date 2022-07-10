@@ -46,7 +46,7 @@ target_link_libraries( test_RARFF ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRAR
 add_executable       ( test_RARFFarr test_RARFFarr.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
 target_link_libraries( test_RARFFarr ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-add_executable       ( test_RARFF_SR test_RARFFarr.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
+add_executable       ( test_RARFF_SR test_RARFF_SR.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
 target_link_libraries( test_RARFF_SR ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 
