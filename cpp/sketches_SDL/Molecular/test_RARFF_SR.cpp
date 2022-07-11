@@ -72,26 +72,31 @@ int pickBond( FF ff, Vec3d& ray0, const Vec3d& hRay, double R ){
     return imin;
 }
 
-void testEF( RARFF_SR& ff, double rmin, double rmax, int n, double* Eout=0, double* Fout=0, double* xs=0  ){
+void testEF( RARFF_SR& ff, double rmin, double rmax, int n, double* Eout=0, double* Fout=0, double* xs=0, double* Fnum=0 ){
     printf( "DEBUG testEF \n" );
     int i1=0;
     int i2=1;
     ff.apos[i1]=Vec3dZero;
     double dx = (rmax-rmin)/n;
     RigidAtomType pairType;
-    printf( "DEBUG testEF 2 \n" );
+    //printf( "DEBUG testEF 2 \n" );
     for(int i=0; i<n; i++){
         double x = rmin+dx*i;
         ff.apos[i2]=(Vec3d){ x, 0.0,0.0 };
         pairType.combine( *ff.types[i1], *ff.types[i2] );
         ff.aforce[i2] = Vec3dZero;
-        printf( "testEF[%i] x %g -> ", i, x );
+        //printf( "testEF[%i] x %g -> ", i, x );
         double E = ff.pairEF( i1, i2, ff.types[i1]->nbond, ff.types[i1]->nbond, pairType);
-        printf( " E %g F(%g,%g,%g) \n", E, ff.aforce[i2].x,ff.aforce[i2].y,ff.aforce[i2].z );
+        //printf( " E %g F(%g,%g,%g) \n", E, ff.aforce[i2].x,ff.aforce[i2].y,ff.aforce[i2].z );
         if(Eout) Eout[i]=E;
         if(Fout) Fout[i]=ff.aforce[i2].x;
         if(xs) xs[i]=x;
+        if(Fnum){ if(i<2) continue;
+            Fnum[i-1] = (Eout[i]-Eout[i-2])/(-2*dx);
+            //Fnum[i-1] -= Fout[i-1];  Fnum[i-1]*=1000; 
+        }
     }
+    if(Fnum){ Fnum[0]=NAN; Fnum[n-1]=NAN; }
     //exit(0);
 }
 
@@ -174,7 +179,7 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.map.setup_Buckets3D( (Vec3d){-20.0,-20.0,-5.0}, (Vec3d){20.0,20.0,5.0}, 5.0 );
     //printf("DEBUG 2 \n");
     //int nat=1;
-    int nat=1000;
+    int nat=2;
     ff.realloc( nat, 100 );
     for(int i=0; i<nat; i++){
         //if(randf()>0.5){ ff.types[i]=&type1;  }else{ ff.types[i]=&type2; }
@@ -188,22 +193,27 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
     ff.cleanAux();
     //printf("DEBUG 3 \n");
 
-    ff.qrots[0]=Quat4dFront;
-    ff.qrots[1]=Quat4dBack;
+    ff.qrots[1]=Quat4dFront;
+    ff.qrots[0]=Quat4dBack;
     //testEF( ff, 0.0, 10.0, 100 );
+    ff.projectBonds();
 
     //testEF( ff, 0.0, 6.0, 60 );
     
-    DataLine2D * line_Er = new DataLine2D(100); //line_Er->linspan(0,10.0);
-    line_Er->clr = 0xFF00FF00;
-    testEF( ff, 0.0, 6.0, 60, line_Er->ys, 0,  line_Er->xs );
+    DataLine2D * line_Er = new DataLine2D(100); line_Er->clr = 0xFF0000FF; 
+    DataLine2D * line_Fr = new DataLine2D(100); line_Fr->clr = 0xFFFF0000;   line_Fr->replace_xs( line_Er->xs );
+    DataLine2D * line_Fn = new DataLine2D(100); line_Fn->clr = 0xFF008000;   line_Fn->replace_xs( line_Er->xs );
+    testEF( ff, 0.0, 6.0, 60, line_Er->ys, line_Fr->ys,  line_Er->xs, line_Fn->ys );
 
     plot1.init();
+    plot1.scaling.y = 1.0;
     plot1.fontTex = fontTex;
     plot1.clrGrid = 0xFF404040;
     //plot1.clrBg   = 0xFF408080;
     //plot1.lines.push_back( line1  );
     plot1.lines.push_back( line_Er  );
+    plot1.lines.push_back( line_Fr  );
+    plot1.lines.push_back( line_Fn  );
     plot1.render();
 
     Draw3D::makeSphereOgl( ogl_sph, 3, 0.25 );
@@ -216,14 +226,14 @@ void TestAppRARFF::draw(){
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     glEnable(GL_DEPTH_TEST);
     glDisable( GL_LIGHTING );
-    printf("frame %i \n", frameCount);
+    //printf("frame %i \n", frameCount);
 
     //if( ff.tryResize( 5, 100, 10) );
 
-    return;
+    //return;
 
     // ---------- Simulate
-    //bRun = false;
+    bRun = false;
     perFrame = 1;
     if(bRun){
         for(int i=0; i<perFrame; i++){
@@ -234,7 +244,7 @@ void TestAppRARFF::draw(){
             //continue;
 
             ff.cleanAtomForce();     printf( "DEBUG 1 \n " );
-            //ff.projectBonds();       printf( "DEBUG 2 \n " );
+            ff.projectBonds();       printf( "DEBUG 2 \n " );
             //ff.interEF_brute();    printf( "DEBUG 3 \n " );
             ff.interEF_buckets();    printf( "DEBUG 4 \n " );
 
@@ -263,6 +273,7 @@ void TestAppRARFF::draw(){
         //exit(0);
     }
 
+    /*
     for(int ic=0;ic<ff.map.ncell;ic++){
         int i0=ff.map.cellI0s[ic];
         int ni=ff.map.cellNs [ic];
@@ -279,11 +290,13 @@ void TestAppRARFF::draw(){
             Draw3D::drawPointCross( p, 0.2 );            
         }
     }
+    */
 
-/*
+    /*
     ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     Draw3D::drawPointCross( ray0, 0.1 );
     if(ipicked>=0) Draw3D::drawLine( ff.apos[ipicked], ray0);
+    */
 
     // ---------- Draw
     glColor3f(0.0,0.0,0.0);
@@ -308,13 +321,13 @@ void TestAppRARFF::draw(){
 
     };
     Draw3D::drawAxis( 1.0);
-*/
+
 
 };
 
 void TestAppRARFF::drawHUD(){
-	glTranslatef( 200.0,200.0,0.0 );
-	glScalef    ( 20.0,20.00,1.0  );
+	glTranslatef( 400.0,400.0,0.0 );
+	glScalef    ( 40.0,40.0,1.0  );
 	plot1.view();
 }
 
@@ -373,9 +386,11 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
                     printf( "LMB DOWN picked %i/%i bblock %i \n", ipicked,ip, bBlockAddAtom );
                     }break;
                 case SDL_BUTTON_RIGHT:{
+                    /*
                     ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
                     printf( "remove atom %i \n", ipicked );
                     ff.ignoreAtoms[ ipicked ] = true;
+                    */
                     }break;
             }
             break;
@@ -418,7 +433,7 @@ int main(int argc, char *argv[]){
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
-	thisApp = new TestAppRARFF( junk , 800, 600 );
+	thisApp = new TestAppRARFF( junk , 1400, 1000 );
 	thisApp->loop( 1000000 );
 	return 0;
 }

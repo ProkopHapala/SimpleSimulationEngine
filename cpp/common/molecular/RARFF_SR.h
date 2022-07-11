@@ -84,19 +84,26 @@ inline void overlapFE(double r, double amp, double beta, double& e, double& fr )
 }
 
 inline double finiteExp( double x, double& fr,  double beta, double Rcut ){
-    const int k=16;
+    // y  = (1-C*x)^17 * (1-B*x)^2 
+    // dy = (1-C x)^16   (1-B*x)    (-2 B - 17 C + 19 B C x)
+    //printf( " x %g x/Rcut %g Rcut %g ", x, x/Rcut, Rcut );
+    const int k=17;
     const double RN  = Rcut*0.5*k;
     const double cor = 1.15/RN; 
     const double C   = beta/k - cor;
-    double y    = (1-C*x);
-    y=y*y; // ^2
+    const double B   = 1/Rcut; 
+    //printf( " x %g C %g cor %g beta/k %g ", x, C, cor, beta/k );
+    double y1 = 1-x*C; 
+    double y  = y1*y1;  // ^2
     y=y*y; // ^4
     y=y*y; // ^8
     y=y*y; // ^16
-    double ycut = 1-x/Rcut;
-    y*= ycut*ycut;
-    fr = 0;
-    return y;
+    double ycut = 1-x*B;
+    y*=ycut;
+    fr = y* ( -2*B - k*C + (k+2)*B*C*x );
+    y*=ycut;
+    //y=ycut;
+    return y*y1;
 }
 
 
@@ -189,6 +196,8 @@ class RARFF_SR{ public:
     // This is modified from RARFFarr
     double RcutMax = 5.0; // [A]
     double R2cut = RcutMax*RcutMax;
+    double RcutCap = 3.0; // [A]
+    double R2cutCap = RcutCap*RcutCap;
     Buckets3D map;
 
     const CapType       * capTypeList = 0;
@@ -414,12 +423,15 @@ class RARFF_SR{ public:
         //evalRadial( double r, double fr );
         
         double dexpr;
-        double expr = finiteExp( rij, dexpr, type.bMorse, type.rbond0 );
+        double expr = finiteExp( rij - type.rbond0, dexpr, -type.bMorse, RcutMax-type.rbond0 );
+        //aforce[ja].x=dexpr; return expr;
+        
         double E     =    type.aMorse*expr* expr;
         double fr    =  2*type.aMorse*expr*dexpr;
         double Eb    = -2*type.aMorse*      expr;
         double frb   = -2*type.aMorse*     dexpr;
-
+        //aforce[ja].x=fr+frb; return E + Eb;
+        
         Vec3d force=hij*fr;
 
         Vec3d* his = hbonds+ia*N_BOND_MAX;
@@ -446,29 +458,26 @@ class RARFF_SR{ public:
                 Vec3d& fj = fjs[jb];
 
                 if( bDonorAcceptorCap && capi && (capjs[jb]>=0) ) continue;
-
                 if( bRepelCaps && capi && (capjs[jb]>=0) ){ // repulsion of capping atoms
                     Vec3d pi = apos[ia] + hi*lcap;
                     Vec3d pj = apos[ja] + hj*lcap;
-
                     Vec3d  dij   = pi-pj;
                     double r2    = dij.norm2() + R2SAFE;
-
-                    // Morse
-                    double rij   = sqrt( r2 );
-                    double e     = aMorseCap * exp( bMorseCap*rij );
-                    Vec3d  f     = dij * (-bMorseCap * e / rij);
-
-                    // Lenard-Jones
-                    //double ir2 = 1/r2;
-                    //double ir6 = r2*r2*r2;
-                    //Vec3d  f   = dij * ( ( 6*c6cap - 12*c12cap*ir6 ) * ir6 * -ir2 );
-
-                    force.add(f);
-                    f.mul(1.0/lcap);
-                    fi.add(f);
-                    fj.sub(f);
-                    continue;
+                    if( r2<R2cutCap ){ 
+                        // Morse
+                        double rij   = sqrt( r2 );
+                        //double e     = aMorseCap * exp( bMorseCap*rij );
+                        //Vec3d  f     = dij * (-bMorseCap * e / rij);
+                        double frc;
+                        double e     = aMorseCap * finiteExp( rij, frc, -bMorseCap, RcutCap );   
+                        Vec3d  f     = dij * (aMorseCap * frc / rij );     
+                        E+=e;
+                        force.add(f);
+                        f.mul(1.0/lcap);
+                        fi.add(f);
+                        fj.sub(f);
+                        continue;
+                    }
                 }
 
                 double cj       = hij.dot( hj );  // cj  = <hj|hij>
