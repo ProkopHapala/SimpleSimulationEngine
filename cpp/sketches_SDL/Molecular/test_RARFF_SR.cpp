@@ -50,7 +50,6 @@ std::vector<RigidAtomType*> atomTypes;
 RARFF_SR ff;
 QEq       qeq;
 
-
 // ============= Functions
 
 template< typename FF>
@@ -99,8 +98,6 @@ void testEF( RARFF_SR& ff, double rmin, double rmax, int n, double* Eout=0, doub
     if(Fnum){ Fnum[0]=NAN; Fnum[n-1]=NAN; }
     //exit(0);
 }
-
-
 class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     //RigidAtom     atom1;
@@ -136,88 +133,52 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 
     TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ );
 
+    void simulation();
+    void makePotentialPlot();
+    void visualize_cells();
+    void visualize_atoms();
+    void generate_atoms( int natom, double xspan, double step );
+
 };
 
 TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
-
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
-
     {RigidAtomType& typ=typeList[1]; // C-sp3
-        //typeList_[1]=&typ;
         typ.id = 1;
         typ.nbond  = 4;  // number bonds
-        //typ.rbond0 =  1.5/2;
-        //typ.Arep  =  2;
-        //typ.Abond =  0.5;
-        //typ.Rrep  =  0.75;
-        //typ.Rcut  =  2.0;
         typ.rbond0 =  1.5/2;
         typ.aMorse =  1.0;
         typ.bMorse = -0.7;
-        typ.bh0s  = (Vec3d*)sp3_hs;
+        typ.bh0s   = (Vec3d*)sp3_hs;
         typ.print();
     }
-
-
     curType = &typeList[1];
-
-    printf("DEBUG 0 \n");
-    //capsBrush.set(1,1,-1,-1);
-    //capsBrush.set(1,1,1,1);
     capsBrush.set(-1,-1,-1,-1);
-    //capsBrush.set(0,0,0,0);
-
     ff.capTypeList = capTypes;
     ff.typeList    = typeList;
-
-    ff.bRepelCaps =  false; // ignore caps .... good e.g. for water
+    ff.bRepelCaps  =  false; // ignore caps .... good e.g. for water
     ff.bDonorAcceptorCap = true;
 
-    //Vec3d pmin={-5.,-5.,-1.0};
-    //Vec3d pmin={-5.,-5.,-1.0};
-    //printf("DEBUG 1 \n");
-    ff.map.setup_Buckets3D( (Vec3d){-20.0,-20.0,-5.0}, (Vec3d){20.0,20.0,5.0}, 5.0 );
-    //printf("DEBUG 2 \n");
-    //int nat=1;
-    int nat=2;
-    ff.realloc( nat, 100 );
-    for(int i=0; i<nat; i++){
-        //if(randf()>0.5){ ff.types[i]=&type1;  }else{ ff.types[i]=&type2; }
-        ff.types[i]=curType;
-        ff.apos [i].fromRandomBox( ff.map.pos0 , ff.map.pmax );
-        ff.qrots[i].setRandomRotation();
-        ((Quat4i*)ff.bondCaps)[i]=capsBrush;
-    }
-    ff.apos [0]=Vec3dZero;
-    ff.qrots[0]=Quat4dIdentity;
-    ff.cleanAux();
-    //printf("DEBUG 3 \n");
-
+    generate_atoms( 1000, 20.0, ff.RcutMax );
     ff.qrots[1]=Quat4dFront;
     ff.qrots[0]=Quat4dBack;
-    //testEF( ff, 0.0, 10.0, 100 );
     ff.projectBonds();
-
-    //testEF( ff, 0.0, 6.0, 60 );
-    
-    DataLine2D * line_Er = new DataLine2D(100); line_Er->clr = 0xFF0000FF; 
-    DataLine2D * line_Fr = new DataLine2D(100); line_Fr->clr = 0xFFFF0000;   line_Fr->replace_xs( line_Er->xs );
-    DataLine2D * line_Fn = new DataLine2D(100); line_Fn->clr = 0xFF008000;   line_Fn->replace_xs( line_Er->xs );
-    testEF( ff, 0.0, 6.0, 60, line_Er->ys, line_Fr->ys,  line_Er->xs, line_Fn->ys );
-
-    plot1.init();
-    plot1.scaling.y = 1.0;
-    plot1.fontTex = fontTex;
-    plot1.clrGrid = 0xFF404040;
-    //plot1.clrBg   = 0xFF408080;
-    //plot1.lines.push_back( line1  );
-    plot1.lines.push_back( line_Er  );
-    plot1.lines.push_back( line_Fr  );
-    plot1.lines.push_back( line_Fn  );
-    plot1.render();
+    //makePotentialPlot();
 
     Draw3D::makeSphereOgl( ogl_sph, 3, 0.25 );
 
+}
+
+void TestAppRARFF::simulation(){
+    for(int i=0; i<perFrame; i++){        
+        ff.eval();
+        //ff.applyForceHarmonic1D( Vec3dZ, 0.0, -1.0); // Press atoms together in z-diraction (like on substrate) 
+        if(ipicked>=0){                                // Drag atoms by Mouse
+            Vec3d f = getForceSpringRay( ff.apos[ipicked], (Vec3d)cam.rot.c, ray0, -1.0 );
+            ff.aforce[ipicked].add( f );
+        }
+        ff.moveMDdamp(0.05, 0.9);
+    }
 }
 
 void TestAppRARFF::draw(){
@@ -227,40 +188,19 @@ void TestAppRARFF::draw(){
     glEnable(GL_DEPTH_TEST);
     glDisable( GL_LIGHTING );
     //printf("frame %i \n", frameCount);
-
     //if( ff.tryResize( 5, 100, 10) );
-
     //return;
-
     // ---------- Simulate
-    bRun = false;
-    perFrame = 1;
+    //bRun = false;
+    perFrame = 10;
+    //ff.bGridAccel=false;
     if(bRun){
-        for(int i=0; i<perFrame; i++){
-
-            ff.map.pointsToCells( ff.natomActive, ff.apos, ff.ignoreAtoms );
-            //ff.map.printCells(0);
-            //printf( "DEBUG pointsToCells() DONE \n"  );
-            //continue;
-
-            ff.cleanAtomForce();     printf( "DEBUG 1 \n " );
-            ff.projectBonds();       printf( "DEBUG 2 \n " );
-            //ff.interEF_brute();    printf( "DEBUG 3 \n " );
-            ff.interEF_buckets();    printf( "DEBUG 4 \n " );
-
-            /*
-            if(ipicked>=0){
-                Vec3d f = getForceSpringRay( ff.apos[ipicked], (Vec3d)cam.rot.c, ray0, -1.0 );
-                ff.aforce[ipicked].add( f );
-            }
-            //for(int i=0; i<ff.natom; i++){ ff.aforce[i].add( getForceHamakerPlane( ff.apos[i], {0.0,0.0,1.0}, -3.0, 0.3, 2.0 ) );}
-            //ff.applyForceHarmonic1D( Vec3dZ, 0.0, -30.1);
-            ff.applyForceHarmonic1D( Vec3dZ, 0.0, -1.0);
-            //ff.applyForceHamacker(true, -5.0, 10.0, 2.0 );
-            ff.evalTorques();
-            ff.moveMDdamp(0.05, 0.9);
-            */
-        }
+        long T=getCPUticks();
+        simulation();
+        T=getCPUticks()-T;
+        printf( "T %g[MTicks/Step] %g [ticks/Pair]  pairs_tried %g n_pairs_evaluated %g \n", T*1.0e-6/perFrame, T/(ff.n_pairs_evaluated*1.), ff.n_pairs_tried/(perFrame*1.), ff.n_pairs_evaluated/(perFrame*1.) );
+        ff.n_pairs_tried    =0;
+        ff.n_pairs_evaluated=0;
     }else{
         if(ipicked>=0){
             Vec3d dpos = ray0 - ff.apos[ipicked];
@@ -268,61 +208,12 @@ void TestAppRARFF::draw(){
             ff.apos[ipicked].add(dpos);
         }
     }
-    if( frameCount>10 ){
-        //bRun=0;
-        //exit(0);
-    }
-
-    /*
-    for(int ic=0;ic<ff.map.ncell;ic++){
-        int i0=ff.map.cellI0s[ic];
-        int ni=ff.map.cellNs [ic];
-        //printf( "ic %i io %i ni %i \n", ic, i0, ni );
-        Vec3i ip;
-        Draw  ::color_of_hash( 464+645*ic );
-        ff.map.i2ixyz( ic, ip );
-        Draw3D::drawBBox( ff.map.box2pos2( ip, {0.,0.,0.} ),  ff.map.box2pos2( ip, {1.,1.,1.} ) );
-        for(int j=i0; j<i0+ni;j++){
-            int io = ff.map.cell2obj[j];
-            Vec3d p = ff.apos[io];
-            //printf( "j %i io %i p(%g,%g,%g) \n", j, io, p.x,p.y,p.z );
-            //Draw  ::color_of_hash( 464+645*ic );
-            Draw3D::drawPointCross( p, 0.2 );            
-        }
-    }
-    */
-
-    /*
+    if(ff.bGridAccel)visualize_cells();
+    visualize_atoms();
     ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     Draw3D::drawPointCross( ray0, 0.1 );
     if(ipicked>=0) Draw3D::drawLine( ff.apos[ipicked], ray0);
-    */
-
-    // ---------- Draw
-    glColor3f(0.0,0.0,0.0);
-    double fsc = 0.1;
-    double tsc = 0.1;
-    //printf( "ff.natom %i \n", ff.natom );
-    for(int ia=0; ia<ff.natom; ia++){
-        if(ff.ignoreAtoms[ia])continue;
-        glColor3f(0.3,0.3,0.3);
-        Draw3D::drawShape( ogl_sph, ff.apos[ia], Mat3dIdentity );
-
-        for(int j=0; j<ff.types[ia]->nbond; j++){
-            int i=ia*N_BOND_MAX+j;
-            Vec3d pb = ff.bondPos( i );
-            //printf( "bondCaps[%i] %i\n", i, ff.bondCaps[i] );
-            if( ff.bondCaps[i]>=0 ){ glColor3f(1.0,0.0,0.0); } else{ glColor3f(0.0,0.0,0.0); }
-            Draw3D::drawLine( ff.apos[ia] , pb );
-            glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( ff.fbonds[i]*fsc, pb );
-            //glColor3f(0.0,0.0,0.0); Draw3D::drawVecInPos( ff.hbonds[i], ff.apos[i] );
-            //glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( ff.fbonds[io]*fsc, ff.apos[i]+ff.hbonds[io] );
-        }
-
-    };
     Draw3D::drawAxis( 1.0);
-
-
 };
 
 void TestAppRARFF::drawHUD(){
@@ -331,9 +222,7 @@ void TestAppRARFF::drawHUD(){
 	plot1.view();
 }
 
-
 void TestAppRARFF::keyStateHandling( const Uint8 *keys ){
-
     if( keys[ SDL_SCANCODE_R ] ){
         if(ipicked>=0){
             //Mat3d rot;
@@ -342,7 +231,6 @@ void TestAppRARFF::keyStateHandling( const Uint8 *keys ){
             ff.projectAtomBons(ipicked);
         }
     }
-
 	AppSDL2OGL_3D::keyStateHandling( keys );
 };
 
@@ -357,13 +245,13 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
+                case SDLK_g:  ff.bGridAccel = !ff.bGridAccel; break;
 
                 case SDLK_KP_0: caps->array[0]*=-1; break;
                 case SDLK_KP_1: caps->array[1]*=-1; break;
                 case SDLK_KP_2: caps->array[2]*=-1; break;
                 case SDLK_KP_3: caps->array[3]*=-1; break;
                 case SDLK_KP_MULTIPLY: caps->mul(-1); printf("capsBrush(%i,%i,%i,%i)\n",  caps->x,caps->y,caps->z,caps->w ); break;
-
 
                 case SDLK_l: ff.load(workFileName); bRun=false; break;
                 case SDLK_k: ff.save(workFileName);  break;
@@ -422,6 +310,87 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
             break;
     };
     AppSDL2OGL::eventHandling( event );
+}
+
+void TestAppRARFF::makePotentialPlot(){
+    DataLine2D * line_Er = new DataLine2D(100); line_Er->clr = 0xFF0000FF; 
+    DataLine2D * line_Fr = new DataLine2D(100); line_Fr->clr = 0xFFFF0000;   line_Fr->replace_xs( line_Er->xs );
+    DataLine2D * line_Fn = new DataLine2D(100); line_Fn->clr = 0xFF008000;   line_Fn->replace_xs( line_Er->xs );
+    testEF( ff, 0.0, 6.0, 60, line_Er->ys, line_Fr->ys,  line_Er->xs, line_Fn->ys );
+    plot1.init();
+    plot1.scaling.y = 1.0;
+    plot1.fontTex = fontTex;
+    plot1.clrGrid = 0xFF404040;
+    //plot1.clrBg   = 0xFF408080;
+    //plot1.lines.push_back( line1  );
+    plot1.lines.push_back( line_Er  );
+    plot1.lines.push_back( line_Fr  );
+    plot1.lines.push_back( line_Fn  );
+    plot1.render();
+}
+
+void TestAppRARFF::visualize_cells(){
+    for(int ic=0;ic<ff.map.ncell;ic++){
+        int i0=ff.map.cellI0s[ic];
+        int ni=ff.map.cellNs [ic];
+        //printf( "ic %i io %i ni %i \n", ic, i0, ni );
+        Vec3i ip;
+        Draw  ::color_of_hash( 464+645*ic );
+        ff.map.i2ixyz( ic, ip );
+        Draw3D::drawBBox( ff.map.box2pos2( ip, {0.,0.,0.} ),  ff.map.box2pos2( ip, {1.,1.,1.} ) );
+        for(int j=i0; j<i0+ni;j++){
+            int io = ff.map.cell2obj[j];
+            Vec3d p = ff.apos[io];
+            //printf( "j %i io %i p(%g,%g,%g) \n", j, io, p.x,p.y,p.z );
+            //Draw  ::color_of_hash( 464+645*ic );
+            Draw3D::drawPointCross( p, 0.2 );            
+        }
+    }
+}
+
+void TestAppRARFF::visualize_atoms(){
+    // ---------- Draw
+    glColor3f(0.0,0.0,0.0);
+    double fsc = 0.1;
+    double tsc = 0.1;
+    //printf( "ff.natom %i \n", ff.natom );
+    for(int ia=0; ia<ff.natom; ia++){
+        if(ff.ignoreAtoms[ia])continue;
+        glColor3f(0.3,0.3,0.3);
+        Draw3D::drawShape( ogl_sph, ff.apos[ia], Mat3dIdentity );
+        for(int j=0; j<ff.types[ia]->nbond; j++){
+            int i=ia*N_BOND_MAX+j;
+            Vec3d pb = ff.bondPos( i );
+            //printf( "bondCaps[%i] %i\n", i, ff.bondCaps[i] );
+            if( ff.bondCaps[i]>=0 ){ glColor3f(1.0,0.0,0.0); } else{ glColor3f(0.0,0.0,0.0); }
+            Draw3D::drawLine( ff.apos[ia] , pb );
+            glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( ff.fbonds[i]*fsc, pb );
+            //glColor3f(0.0,0.0,0.0); Draw3D::drawVecInPos( ff.hbonds[i], ff.apos[i] );
+            //glColor3f(0.0,1.0,0.0); Draw3D::drawVecInPos( ff.fbonds[io]*fsc, ff.apos[i]+ff.hbonds[io] );
+        }
+    };
+}
+
+void TestAppRARFF::generate_atoms( int natom, double xspan, double step  ){
+    //Vec3d pmin={-5.,-5.,-1.0};
+    //Vec3d pmin={-5.,-5.,-1.0};
+    //printf("DEBUG 1 \n");
+    ff.map.setup_Buckets3D( (Vec3d){-xspan,-xspan,-step}, (Vec3d){xspan,xspan,step}, step );
+    //printf("DEBUG 2 \n");
+    int nat=natom;
+    //int nat=2;
+    ff.realloc( nat, 100 );
+    for(int i=0; i<nat; i++){
+        //if(randf()>0.5){ ff.types[i]=&type1;  }else{ ff.types[i]=&type2; }
+        ff.types[i]=curType;
+        ff.apos [i].fromRandomBox( ff.map.pos0 , ff.map.pmax );
+        ff.qrots[i].setRandomRotation();
+        ((Quat4i*)ff.bondCaps)[i]=capsBrush;
+    }
+    ff.apos [0]=Vec3dZero;
+    ff.qrots[0]=Quat4dIdentity;
+    ff.cleanAux();
+    //printf("DEBUG 3 \n");
 }
 
 // ===================== MAIN

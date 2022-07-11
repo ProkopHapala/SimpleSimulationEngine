@@ -130,7 +130,7 @@ struct RigidAtomType{
     Vec3d* bh0s = (Vec3d*)sp3_hs;
 
     inline void combine(const RigidAtomType& a, const RigidAtomType& b ){
-        nbond  = a.nbond;
+        nbond   = a.nbond;
         aMorse  = a.aMorse * b.aMorse;  // TODO
         bMorse  = a.bMorse + b.bMorse;
         rbond0  = a.rbond0 + b.rbond0;
@@ -142,7 +142,6 @@ struct RigidAtomType{
         //Erep   = a.Arep  * b.Arep;  
         //printf( "nbond %i Rcut %g Rrep %g Abond %g Arep %g \n", nbond, Rcut, Rrep, Abond, Arep );
     }
-
     void print(){
         //printf( "nbond  %i Epz %g \n", nbond, Epz );
         //printf( "Bond  Rcut %g Abond %g\n", Rcut, Abond );
@@ -152,7 +151,6 @@ struct RigidAtomType{
         //printf( "c6     %g r2vdW  %g\n", c6, R2vdW );
         //exit(0);
     }
-
     /*
     inline double evalRadial( double r, double fr ){
         if(r>Rb){ // attraction
@@ -175,10 +173,6 @@ struct RigidAtomType{
         }
     }
     */
-
-   
-
-
     //RigidAtomType()=default;
     //RigidAtomType():nbond(nbond_),rbond(rbond_),aMorse(){};
 
@@ -203,6 +197,7 @@ class RARFF_SR{ public:
     const CapType       * capTypeList = 0;
     const RigidAtomType * typeList    = 0;
 
+    bool bGridAccel = true;
     bool bRepelCaps = true;
     bool bDonorAcceptorCap = false;
 
@@ -242,6 +237,9 @@ class RARFF_SR{ public:
     bool * ignoreAtoms = 0;
     //double F2pos=0;
     //double F2rot=0;
+
+    int n_pairs_tried=0;
+    int n_pairs_evaluated=0;
 
     void alloc(int natom_){
         natom=natom_;
@@ -398,8 +396,9 @@ class RARFF_SR{ public:
         Vec3d  dij = apos[ja] - apos[ia];
         double r2  = dij.norm2();
         //printf( "pairEF r %g  Rcut %g \n", sqrt(r2), type.Rcut );
+        n_pairs_tried++;
         if( r2>R2cut ) return 0;
-
+        n_pairs_evaluated++;
         double rij = sqrt( r2 );
         Vec3d hij  = dij*(1/rij);
 
@@ -566,7 +565,7 @@ class RARFF_SR{ public:
                 int* neighs_ = neighs+nic;
                 //printf("DEBUG interEF_buckets() 4 ic(%i)->ip(%i,%i,%i) \n", ic, ip.x,ip.y,ip.z );
                 int nrest = map.getForwardNeighbors( ip, neighs_ ); // list atoms in neighboring cells
-                printf("DEBUG interEF_buckets()[ic=%i] nic %i nrest %i \n", ic, nic, nrest );
+                //printf("DEBUG interEF_buckets()[ic=%i] nic %i nrest %i \n", ic, nic, nrest );
 
                 for(int i=0; i<nic; i++){
                     int ia = neighs[i];
@@ -587,7 +586,7 @@ class RARFF_SR{ public:
                         int ja = neighs_[j];
                         pairType.combine( typei, *types[ja] );
                         E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );
-                        if( ic==31 ){ glColor3f(0,0,0); Draw3D::drawLine( apos[ia], apos[ja] ); }
+                        //if( ic==31 ){ glColor3f(0,0,0); Draw3D::drawLine( apos[ia], apos[ja] ); }
                     }
                 }
             }
@@ -718,7 +717,19 @@ class RARFF_SR{ public:
         }
     }
 
+    void eval(){
+        cleanAtomForce();     //printf( "DEBUG 1 \n " );
+        projectBonds();       //printf( "DEBUG 2 \n " );
+        if(bGridAccel){
+            map.pointsToCells( natomActive, apos, ignoreAtoms ); //ff.map.printCells(0);
+            interEF_buckets();    //printf( "DEBUG 4 \n " );
+        }else{
+            interEF_brute();    //printf( "DEBUG 3 \n " );
+        }
+    }
+
     void move(double dt){
+        evalTorques();
         for(int i=0; i<natom; i++){
             if(ignoreAtoms[i])continue;
             //atoms[i].moveRotGD(dt*invRotMass);
@@ -730,6 +741,7 @@ class RARFF_SR{ public:
     }
 
     void moveMDdamp(double dt, double damp){
+        evalTorques();
         for(int i=0; i<natom; i++){
             if(ignoreAtoms[i])continue;
             //atoms[i].moveMDdamp( dt, invRotMass, damp);
