@@ -6,6 +6,7 @@
 #include "fastmath.h"
 #include "Vec2.h"
 #include "Vec3.h"
+#include "SMat3.h"
 #include "quaternion.h"
 #include "Forces.h"
 
@@ -82,30 +83,6 @@ inline void overlapFE(double r, double amp, double beta, double& e, double& fr )
     e  =  expar*(1 +   x + 0.33333333*x*x );
     fr = (expar*(6 + 5*x +            x*x )*beta*0.33333333)/r;
 }
-
-inline double finiteExp( double x, double& fr,  double beta, double Rcut ){
-    // y  = (1-C*x)^17 * (1-B*x)^2 
-    // dy = (1-C x)^16   (1-B*x)    (-2 B - 17 C + 19 B C x)
-    //printf( " x %g x/Rcut %g Rcut %g ", x, x/Rcut, Rcut );
-    const int k=17;
-    const double RN  = Rcut*0.5*k;
-    const double cor = 1.15/RN; 
-    const double C   = beta/k - cor;
-    const double B   = 1/Rcut; 
-    //printf( " x %g C %g cor %g beta/k %g ", x, C, cor, beta/k );
-    double y1 = 1-x*C; 
-    double y  = y1*y1;  // ^2
-    y=y*y; // ^4
-    y=y*y; // ^8
-    y=y*y; // ^16
-    double ycut = 1-x*B;
-    y*=ycut;
-    fr = y* ( -2*B - k*C + (k+2)*B*C*x );
-    y*=ycut;
-    //y=ycut;
-    return y*y1;
-}
-
 
 struct RigidAtomType{
     int id = -1;
@@ -393,6 +370,7 @@ class RARFF_SR{ public:
 
     inline double pairEF( int ia, int ja, int nbi, int nbj, RigidAtomType& type){
 
+        // subtract atom positions, check if within cutoff
         Vec3d  dij = apos[ja] - apos[ia];
         double r2  = dij.norm2();
         //printf( "pairEF r %g  Rcut %g \n", sqrt(r2), type.Rcut );
@@ -401,49 +379,29 @@ class RARFF_SR{ public:
         n_pairs_evaluated++;
         double rij = sqrt( r2 );
         Vec3d hij  = dij*(1/rij);
-
-        double ir3 = 1/(rij*r2);
-        double xx  = dij.x*dij.x;
-        double yy  = dij.y*dij.y;
-        double zz  = dij.z*dij.z;
-
-        double dxy=-dij.x*dij.y*ir3;
-        double dxz=-dij.x*dij.z*ir3;
-        double dyz=-dij.y*dij.z*ir3;
-        double dxx=(yy+zz)*ir3;
-        double dyy=(xx+zz)*ir3;
-        double dzz=(xx+yy)*ir3;
-
-        //double expar = exp( type.bMorse*(rij-type.rbond0) );
-        //double E     =    type.aMorse*expar*expar;
-        //double Eb    = -2*type.aMorse*expar;
-        //double fr    =  2*type.bMorse* E +   6*evdW*ir2vdW;
-        //double frb   =    type.bMorse* Eb;
-        //evalRadial( double r, double fr );
         
+        // Evaluate radial Potential and Force
         double dexpr;
         double expr = finiteExp( rij - type.rbond0, dexpr, -type.bMorse, RcutMax-type.rbond0 );
-        //aforce[ja].x=dexpr; return expr;
-        
         double E     =    type.aMorse*expr* expr;
         double fr    =  2*type.aMorse*expr*dexpr;
         double Eb    = -2*type.aMorse*      expr;
         double frb   = -2*type.aMorse*     dexpr;
-        //aforce[ja].x=fr+frb; return E + Eb;
-        
         Vec3d force=hij*fr;
 
-        Vec3d* his = hbonds+ia*N_BOND_MAX;
-        Vec3d* hjs = hbonds+ja*N_BOND_MAX;
-        Vec3d* fis = fbonds+ia*N_BOND_MAX;
-        Vec3d* fjs = fbonds+ja*N_BOND_MAX;
+        // Find block corresponding to bonds of this atoms in global arrays
+        Vec3d* his  = hbonds  +ia*N_BOND_MAX;
+        Vec3d* hjs  = hbonds  +ja*N_BOND_MAX;
+        Vec3d* fis  = fbonds  +ia*N_BOND_MAX;
+        Vec3d* fjs  = fbonds  +ja*N_BOND_MAX;
+        double* eis = ebonds  +ia*N_BOND_MAX;
+        double* ejs = ebonds  +ja*N_BOND_MAX;
+        int* capis  = bondCaps+ia*N_BOND_MAX;
+        int* capjs  = bondCaps+ja*N_BOND_MAX;
 
-        double* eis = ebonds+ia*N_BOND_MAX;
-        double* ejs = ebonds+ja*N_BOND_MAX;
+        SMat3d Dij;  Dij.fromDeriv( dij, 1/(rij*r2) ); // Evaluate angular derivative matrix
 
-        int* capis = bondCaps+ia*N_BOND_MAX;
-        int* capjs = bondCaps+ja*N_BOND_MAX;
-
+        // Interactions between all pairs of bonds on that atom 
         for(int ib=0; ib<nbi; ib++){
             const Vec3d& hi = his[ib];
             Vec3d& fi       = fis[ib];
@@ -455,7 +413,7 @@ class RARFF_SR{ public:
             for(int jb=0; jb<nbj; jb++){
                 const Vec3d& hj = hjs[jb];
                 Vec3d& fj = fjs[jb];
-
+                // Interaction between capped (i.e. passivated) bonds - Only repulsive
                 if( bDonorAcceptorCap && capi && (capjs[jb]>=0) ) continue;
                 if( bRepelCaps && capi && (capjs[jb]>=0) ){ // repulsion of capping atoms
                     Vec3d pi = apos[ia] + hi*lcap;
@@ -479,36 +437,39 @@ class RARFF_SR{ public:
                     }
                 }
 
+                // cosines of angles between the bonds
                 double cj       = hij.dot( hj );  // cj  = <hj|hij>
                 double cij      = hi .dot( hj );  // cij = <hj|hi>
+                if( (cj>0)||(cij>0) ) continue;   // check if bonds oriented toward each other
 
-                if( (cj>0)||(cij>0) ) continue;
-
+                // Angular potential     E =  (cos(ai)*cos(aj)*cos(aij)) ^ 4
                 double cc  = ci*cj*cij;
                 double cc2 = cc*cc;
-                double e   = cc2*cc2;
-                double de  = 4*cc2*cc;
+                double e   = cc2*cc2;   // Angular Energy 
+                double de  = 4*cc2*cc;  // Angular derivative
 
+                // Acumulate bond energy
                 double eEb = e * Eb;
                 eis[ib]+=eEb*0.5;
                 ejs[jb]+=eEb*0.5;
-                E += eEb;
+                E      += eEb;
 
-                force.x += Eb*de*cij*( cj*( hi.x*dxx + hi.y*dxy + hi.z*dxz )     +    ci*( hj.x*dxx + hj.y*dxy + hj.z*dxz )   )  + hij.x*frb*e;
-                force.y += Eb*de*cij*( cj*( hi.x*dxy + hi.y*dyy + hi.z*dyz )     +    ci*( hj.x*dxy + hj.y*dyy + hj.z*dyz )   )  + hij.y*frb*e;
-                force.z += Eb*de*cij*( cj*( hi.x*dxz + hi.y*dyz + hi.z*dzz )     +    ci*( hj.x*dxz + hj.y*dyz + hj.z*dzz )   )  + hij.z*frb*e;
-
-                fi.x -= ( cij*cj*hij.x + ci*cj*hj.x )*de*Eb;
-                fi.y -= ( cij*cj*hij.y + ci*cj*hj.y )*de*Eb;
-                fi.z -= ( cij*cj*hij.z + ci*cj*hj.z )*de*Eb;
-
-                fj.x -= ( cij*ci*hij.x + ci*cj*hi.x )*de*Eb;
-                fj.y -= ( cij*ci*hij.y + ci*cj*hi.y )*de*Eb;
-                fj.z -= ( cij*ci*hij.z + ci*cj*hi.z )*de*Eb;
-
+                // Evaluate forces due to bonds
+                double deEb  = de*Eb;
+                double cicj  = ci*cj;
+                double cijcideEb = cij*ci*deEb;
+                double cijcjdeEb = cij*cj*deEb;
+                double frbe  = frb*e;
+                fi.add_mul( hij, -cijcjdeEb ); fi.add_mul( hj, -cicj*deEb );
+                fj.add_mul( hij, -cijcideEb ); fj.add_mul( hi, -cicj*deEb );
+                Vec3d hv;
+                Dij.dot_to( hi, hv ); force.add_mul( hv, cijcjdeEb );
+                Dij.dot_to( hj, hv ); force.add_mul( hv, cijcideEb );
+                force.add_mul( hij, frb*e );
             }
         }
 
+        // pi-pi interactions ( trying to align pi-orbitals in aromatic molecules, planarize them )
         //printf( "%i,%i nbi %i nbj %i \n", ia, ja, nbi, nbj );
         if( (nbi==3)&&(nbj==3) ){ // align pz-pz in sp2-sp2 pair
             const Vec3d& hi = his[3];
@@ -523,13 +484,13 @@ class RARFF_SR{ public:
             fj.add_mul(hi,de);
             //force      // TODO: proper derivatives of energy
         }
-
+        // Accumulate atomic forces
         aforce[ja].sub(force);
         aforce[ia].add(force);
         return E;
     }
 
-    double interEF_brute(){
+    double interEF_brute(){   // Naieve algorithm for pairwise interactions between atoms O(n2)
         //Vec3d bhs[N_BOND_MAX];
         double E = 0;
         for(int i=0; i<natom; i++){
@@ -547,45 +508,34 @@ class RARFF_SR{ public:
         return E;
     }
 
-    double interEF_buckets(){
-        //Vec3d bhs[N_BOND_MAX];
-        //printf("DEBUG interEF_buckets() 1 \n");
+    double interEF_buckets(){  // Grid-accelerated algorithm for pairwise interactions between atoms O(n), but rather large prefactor
         map.updateNeighsBufferSize(); // make sure neighs has sufficient size
         int* neighs = map.neighs_in;
         double E = 0;
         Vec3i ip;
         RigidAtomType pairType;
-
-        //printf("DEBUG interEF_buckets() 2 \n");
-        for(int ic=0; ic<map.ncell; ic++){
+        for(int ic=0; ic<map.ncell; ic++){           // go over all cells
             int nic = map.getInCell( ic, neighs );   // list atoms in same cell
-            //printf("DEBUG interEF_buckets[ic=%i] nic=%i \n", ic, nic );
-            if( nic>0){
-                map.i2ixyz(ic,ip);
-                int* neighs_ = neighs+nic;
-                //printf("DEBUG interEF_buckets() 4 ic(%i)->ip(%i,%i,%i) \n", ic, ip.x,ip.y,ip.z );
-                int nrest = map.getForwardNeighbors( ip, neighs_ ); // list atoms in neighboring cells
-                //printf("DEBUG interEF_buckets()[ic=%i] nic %i nrest %i \n", ic, nic, nrest );
-
-                for(int i=0; i<nic; i++){
+            if( nic>0){                              // if cell is not empty
+                map.i2ixyz(ic,ip);                   // unfold 1d-cell index to 3d-cell index
+                int* neighs_ = neighs+nic;           // rewind neighs to free slots
+                int nrest    = map.getForwardNeighbors( ip, neighs_ );    // list atoms in neighboring cells
+                for(int i=0; i<nic; i++){            // for all atoms in pivot cell
                     int ia = neighs[i];
-                    //printf("DEBUG interEF_buckets() i,ia %i,%i \n", i, ia );
                     const RigidAtomType& typei = *types[ia];
                     Vec3d                pi    =  apos [ia];
                     // -- within same cell
-                    for(int j=i+1; j<nic; j++){
+                    for(int j=i+1; j<nic; j++){    // all other atoms in the same cell (prevent double-counting)  
                         int ja = neighs[j];
-                        //printf("DEBUG interEF_buckets() j,ja %i,%i \n", j, ja );
-                        pairType.combine( typei, *types[ja] );
-                        E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );
-                        //printf( "%i-%i \n", ia, ja );
+                        pairType.combine( typei, *types[ja] );                           // evaluate interaction parameters form the two atom types 
+                        E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );  // Interact
                         //glColor3f(0,0,0); Draw3D::drawLine( apos[ia], apos[ja] );
                     }
                     // -- with neighbor cells
-                    for(int j=0; j<nrest; j++){
+                    for(int j=0; j<nrest; j++){   // all atoms in the other cells
                         int ja = neighs_[j];
-                        pairType.combine( typei, *types[ja] );
-                        E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );
+                        pairType.combine( typei, *types[ja] );                           // evaluate interaction parameters form the two atom types 
+                        E += pairEF( ia, ja, typei.nbond, types[ja]->nbond, pairType );  // Interact
                         //if( ic==31 ){ glColor3f(0,0,0); Draw3D::drawLine( apos[ia], apos[ja] ); }
                     }
                 }
@@ -651,33 +601,6 @@ class RARFF_SR{ public:
             aforce[ia].add_mul( h, K*x );
         }
     }
-
-/*
-    void applyForceHamacker( bool bCaps, double z0=0.0, double E=0.5, double R=2.0, const Vec3d& normal=Vec3dZ ){
-        for(int ia=0; ia<natom; ia++){
-            if(ignoreAtoms[ia])continue;
-            const RigidAtomType* t = types[ia];
-            double rbond       = t->rbond0;
-            Vec3d f = getForceHamakerPlane( apos[ia], normal, z0+rbond, E, R );
-            aforce[ia].add( f );
-            if(bCaps){
-                int    nb    = t->nbond;
-                for(int j=0; j<nb; j++){
-                    int i    = ia*N_BOND_MAX + j;
-                    //printf( "ia %i j %i i %i nb %i \n", ia, j, i, nb );
-                    int icap = bondCaps[i];
-                    if(icap<0)continue;
-                    double rbcap = capTypeList[icap].rbond0;
-                    Vec3d p  = bondPosBare( i, rbcap );
-                    fbonds[i].add( getForceHamakerPlane( p, normal, z0+rbcap, E*0.5, R ) );
-                }
-            }
-            //printf( "types[%i] %li \n", ia, (long)types[ia] );
-            //aforce[ia].z += 0.0001 * t->rbond0;
-        }
-        //printf( "HAMACKER DONE \n" );
-    }
-*/
 
     void applyForceBox(const Vec3d& p0, const Vec3d& p1, double K, double fmax){
         //printf( "applyForceHarmonic1D %g %g (%g,%g,%g) (%g,%g,%g) \n", K, fmax, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z  );

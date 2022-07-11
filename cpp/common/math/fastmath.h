@@ -170,6 +170,29 @@ inline double exp_p8( double x ){
     return p;
 }
 
+inline double finiteExp( double x, double& fr,  double beta, double Rcut ){
+    // y  = (1-C*x)^17 * (1-B*x)^2 
+    // dy = (1-C x)^16   (1-B*x)    (-2 B - 17 C + 19 B C x)
+    //printf( " x %g x/Rcut %g Rcut %g ", x, x/Rcut, Rcut );
+    const int k=17;
+    const double RN  = Rcut*0.5*k;
+    const double cor = 1.15/RN; 
+    const double C   = beta/k - cor;
+    const double B   = 1/Rcut; 
+    //printf( " x %g C %g cor %g beta/k %g ", x, C, cor, beta/k );
+    double y1 = 1-x*C; 
+    double y  = y1*y1;  // ^2
+    y=y*y; // ^4
+    y=y*y; // ^8
+    y=y*y; // ^16
+    double ycut = 1-x*B;
+    y*=ycut;
+    fr = y* ( -2*B - k*C + (k+2)*B*C*x );
+    y*=ycut;
+    //y=ycut;
+    return y*y1;
+}
+
 inline double gauss_p8( double x ){ return exp_p8( -x*x );
     /*
     if(x_>5) return 0;
