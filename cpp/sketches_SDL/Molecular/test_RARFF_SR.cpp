@@ -48,6 +48,7 @@
 
 std::vector<RigidAtomType*> atomTypes;
 RARFF_SR ff;
+PairList pairList;
 QEq       qeq;
 
 // ============= Functions
@@ -170,6 +171,10 @@ TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( 
 }
 
 void TestAppRARFF::simulation(){
+    if(ff.AccelType==2){ 
+        pairList.makeSRList( ff.natomActive, ff.apos, ff.RcutMax ); 
+        pairList.bind( ff.npairs, ff.pairs );
+    }
     for(int i=0; i<perFrame; i++){        
         ff.eval();
         //ff.applyForceHarmonic1D( Vec3dZ, 0.0, -1.0); // Press atoms together in z-diraction (like on substrate) 
@@ -208,7 +213,7 @@ void TestAppRARFF::draw(){
             ff.apos[ipicked].add(dpos);
         }
     }
-    if(ff.bGridAccel)visualize_cells();
+    if(ff.AccelType==1)visualize_cells();
     visualize_atoms();
     ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     Draw3D::drawPointCross( ray0, 0.1 );
@@ -245,7 +250,7 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 case SDLK_p:  first_person = !first_person; break;
                 case SDLK_o:  perspective  = !perspective; break;
-                case SDLK_g:  ff.bGridAccel = !ff.bGridAccel; break;
+                case SDLK_g:  ff.AccelType = (ff.AccelType+1)%3; break;
 
                 case SDLK_KP_0: caps->array[0]*=-1; break;
                 case SDLK_KP_1: caps->array[1]*=-1; break;

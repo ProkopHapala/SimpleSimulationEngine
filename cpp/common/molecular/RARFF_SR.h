@@ -3,6 +3,8 @@
 #define RARFF_SR_h
 // This is modified from RARFFarr.h
 
+#include <vector>
+
 #include "fastmath.h"
 #include "Vec2.h"
 #include "Vec3.h"
@@ -163,6 +165,28 @@ struct CapType{
     double EvdW   =  0.01;
 };
 
+class PairList{ public:
+    std::vector<Vec2i> neighList;
+
+    void makeSRList( int na, Vec3d* ps, double R ){
+        //printf( "DEBUG makeSRList \n" );
+        neighList.clear();
+        double R2=R*R;
+        for(int i=0; i<na; i++){
+            const Vec3d& pi = ps[i];
+            for(int j=i+1; j<na; j++){    // atom-atom
+                Vec3d d   = ps[j]-pi;
+                double r2 = d.norm2();
+                if( r2<R2 ){
+                    neighList.push_back({i,j});  //  TODO: is this fast enough?
+                }
+            }
+        }
+        //printf( "DEBUG makeSRList DONE npair %i \n", neighList.size() );
+    }
+    void bind( int& n, Vec2i*& buff ){ n=neighList.size(); buff=&neighList[0]; }
+};
+
 class RARFF_SR{ public:
     // This is modified from RARFFarr
     double RcutMax = 5.0; // [A]
@@ -171,10 +195,14 @@ class RARFF_SR{ public:
     double R2cutCap = RcutCap*RcutCap;
     Buckets3D map;
 
+    int    npairs = 0;
+    Vec2i* pairs  = 0;
+
     const CapType       * capTypeList = 0;
     const RigidAtomType * typeList    = 0;
 
-    bool bGridAccel = true;
+    int  AccelType  = 1; // 1=grid, 2=list, 0=brute
+    //bool bGridAccel = true;
     bool bRepelCaps = true;
     bool bDonorAcceptorCap = false;
 
@@ -357,17 +385,6 @@ class RARFF_SR{ public:
 
     // ======== Force Evaluation
 
-    double funcR2( double r, double A, double Rcut, double& dy ){
-        double fcut = 1/Rcut;
-        double x    = r*fcut;
-        double x2   = x*x;
-        double t    = 1-x2;
-        dy          = -4*t*x2*A*fcut;
-        return t*t*A;
-    }
-
-
-
     inline double pairEF( int ia, int ja, int nbi, int nbj, RigidAtomType& type){
 
         // subtract atom positions, check if within cutoff
@@ -508,6 +525,21 @@ class RARFF_SR{ public:
         return E;
     }
 
+    double interEF_list(){   // Naieve algorithm for pairwise interactions between atoms O(n2)
+        //printf( "DEBUG interEF_list() npairs %i pairs %li \n", npairs, (long)pairs );
+        double E = 0;
+        RigidAtomType pairType;
+        for(int i=0; i<npairs; i++){
+            //printf( "pair[%i] \n" );
+            Vec2i ij = pairs[i];
+            //printf( "pair[%i]( %i,%i) \n", i, ij.i, ij.j );
+            pairType.combine( *types[ij.i], *types[ij.j] );
+            E += pairEF( ij.i, ij.j, types[ij.i]->nbond, types[ij.j]->nbond, pairType );
+        }
+        //printf( "DEBUG interEF_list() DONE \n" );
+        return E;
+    }
+
     double interEF_buckets(){  // Grid-accelerated algorithm for pairwise interactions between atoms O(n), but rather large prefactor
         map.updateNeighsBufferSize(); // make sure neighs has sufficient size
         int* neighs = map.neighs_in;
@@ -643,11 +675,13 @@ class RARFF_SR{ public:
     void eval(){
         cleanAtomForce();     //printf( "DEBUG 1 \n " );
         projectBonds();       //printf( "DEBUG 2 \n " );
-        if(bGridAccel){
+        if(AccelType==1){
             map.pointsToCells( natomActive, apos, ignoreAtoms ); //ff.map.printCells(0);
-            interEF_buckets();    //printf( "DEBUG 4 \n " );
+            interEF_buckets();   //printf( "DEBUG 4 \n " );
+        }else if(AccelType==2){
+            interEF_list();      //printf( "DEBUG 4 \n " );
         }else{
-            interEF_brute();    //printf( "DEBUG 3 \n " );
+            interEF_brute();     //printf( "DEBUG 3 \n " );
         }
     }
 
