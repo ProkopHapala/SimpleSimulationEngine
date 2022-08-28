@@ -10,6 +10,9 @@ target_link_libraries( test_Projection ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_L
 add_executable       ( test_Solids test_Solids.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_Solids ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_SceneGraph test_SceneGraph.cpp $<TARGET_OBJECTS:SDL2OGL> )
+target_link_libraries( test_SceneGraph ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
 add_executable       ( test_SphereSampling test_SphereSampling.cpp $<TARGET_OBJECTS:SDL2OGL> )
 target_link_libraries( test_SphereSampling ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
