@@ -20,8 +20,9 @@ char str[4096];
 int fontTex = 0;
 lua_State  * theLua=0;
 SpaceCraft * theSpaceCraft=0;
-std::unordered_map<std::string,Material*>  materials;
-std::unordered_map<std::string,Commodity*> comodities;
+std::unordered_map<std::string,Material*>      materials;
+std::unordered_map<std::string,PanelMaterial*> panelMaterials;
+std::unordered_map<std::string,Commodity*>     comodities;
 
 Radiosity radiositySolver;
 
@@ -49,6 +50,18 @@ int l_Material (lua_State * L){
     printf( "Material %s dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", mat->name, mat->density, mat->Kpull,mat->Kpush,   mat->Spull,mat->Spush,  mat->reflectivity, mat->Tmelt );
     return 0;
 };
+
+/*
+int l_PanelMaterial (lua_State * L){
+    PanelMaterials *mat = new PanelMaterials();
+    Lua::dumpStack(L);
+    strcpy( mat->name,  Lua::getStringField(L, "name"    ) );
+    auto it = materials.find( mat->name );
+    if( it == materials.end() ){ materials.insert({mat->name,mat}); }else{ printf( "Material `%s` replaced\n", mat->name ); delete it->second; it->second = mat;  }
+    printf( "Material %s dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", mat->name, mat->density, mat->Kpull,mat->Kpush,   mat->Spull,mat->Spush,  mat->reflectivity, mat->Tmelt );
+    return 0;
+};
+*/
 
 int l_Node    (lua_State * L){
     Vec3d pos;

@@ -54,20 +54,30 @@ int glo_truss=0;
 //char str[8096];
 double elementSize  = 5.;
 
+/**
+ * Creates a ship truss structure assuming that the ship is composed of a central spine and peripheral maneuvering pendulums all connected by ropes.
+ * 
+ * @param truss Truss object to store the truss structure.
+ * @param n number of central spine points. 
+ * @param m number of peripheral maneuvering pendulum points. (legs)
+ * @param L length of each truss segment.
+ * @param perRope The number of ropes per connection.
+ */
 void makeShipTruss1( Truss& truss, int n, int m, double L, int perRope ){
     // central spine
     for(int i=0; i<(n+1); i++){
         truss.points.push_back( (Vec3d){0.,0.,i*L} ); // 1
         if(i>0) truss.edges.push_back( (TrussEdge){ i-1,i,   0 }   );
     }
-    // peripheral maneuvering pendulum points
+    // peripheral maneuvering pendulum points (legs)
     int ip0=truss.points.size();
     for(int i=0; i<n; i++){
-        for(int j=0; j<m; j++){
+        for(int j=0; j<m; j++){ 
             Vec2d rot; rot.fromAngle( (j  + 0.5*i )*2*M_PI/m );
             truss.points.push_back( (Vec3d){rot.x*L,rot.y*L,L*(i+.5)} );
         }
     }
+    // ropes
     for(int i=0; i<n; i++){
         int ip=ip0+i*m;
         for(int j=0; j<m; j++){
@@ -84,6 +94,13 @@ void makeShipTruss1( Truss& truss, int n, int m, double L, int perRope ){
     // ToDo : radiators between lengs ?
 }
 
+/**
+ * Converts a Truss object (which define abstract structure of truss composed of points and edges, and faces) to a SoftBody object (which is a physical model of the truss used in simulations - evaulates forces and moves points). 
+ * 
+ * @param truss     Truss object to convert.
+ * @param bondTypes array of BondType objects.
+ * @param body      The SoftBody object to store the converted data and do the simulation later.
+ */
 void truss2SoftBody( const Truss& truss, BondType* bondTypes, SoftBody& body ){
     //printf( "npoints %i nedge %i \n", truss.points.size(), truss.edges.size() );
     body.allocate( truss.points.size(), truss.edges.size() );
@@ -118,11 +135,9 @@ void drawSoftBody( SoftBody& body, float vsc, float fsc ){
     for(int i=0; i<body.nbonds; i++){
         Bond& b = body.bonds[i];
         //Draw::color_of_hash( b.type->id*1545 + 456 );
-
         float c =  b.type->kTens*0.5 - b.type->kPress;
         glColor3f(c,c,c);
         //if(c<0){ glLineWidth(2); }else{ glLineWidth(1); }
-
         Draw3D::vertex( body.points[b.i] );
         Draw3D::vertex( body.points[b.j] );
     }
@@ -142,6 +157,7 @@ void drawSoftBody( SoftBody& body, float vsc, float fsc ){
     glEnd();
 }
 
+// =======================================================================
 class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
     bool bDrawTrj=false;
@@ -319,12 +335,6 @@ void SpaceCraftDynamicsApp::draw(){
 void SpaceCraftDynamicsApp::drawHUD(){
     glDisable( GL_LIGHTING );
     glDisable(GL_DEPTH_TEST);
-
-
-
-
-
-
     //gui.draw();
     //glColor3f(1.0f,1.0f,1.0f);   txtStatic.view3D( {5,5}, fontTex, 8 );
     //glPopMatrix();

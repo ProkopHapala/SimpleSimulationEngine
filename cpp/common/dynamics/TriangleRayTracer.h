@@ -43,7 +43,7 @@ class SurfElement{ public:
 class TriangleRayTracer{ public:
 
     std::vector<Triangle3D>  triangleObstacles;
-    std::vector<SurfElement> elements;
+    std::vector<SurfElement> elements; 
 
     void clearTriangles(){
         triangleObstacles.clear();

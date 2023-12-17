@@ -43,6 +43,25 @@ class CatalogItem{ public:
 	char name[NAME_LEN] = "\n";
 };
 
+
+class PanelLayer{ public:
+    double thickness;    // [m]
+    int    materiallId;  // index of material in catalog
+};
+
+class PanelMaterial : public CatalogItem { public:
+    std::vector<PanelLayer> layers; 
+    double areaDensity;  // [kg/m3]
+    //double reflectivity; // [1] reflectivity
+ 	// ToDo: how to calculate response to impact of projectile ? Or irradiation by laser ?
+
+    void evalAreaDensity(){
+        areaDensity = 0.0;
+        for( PanelLayer& l : layers ){ areaDensity += l.thickness * l.materiallId; }
+    }
+};
+
+
 class Material : public CatalogItem { public:
 	double density;      // [kg/m3]
 	double Spull,Spush;  // [Pa] Strenght
@@ -73,10 +92,14 @@ class ShipComponent{ public:
     int    id;
     int    kind;
     int    shape;
+    int    face_mat=-1;
+    int    edge_mat=-1;
     //int    p0; // anchor node
     // char name[NAME_LEN];
 	double mass;           // [kg]
 	//RigidBody pose;
+    Vec2i poitRange;  // index of start and end in Truss
+    Vec2i stickRange; // --,,--
 };
 
 class Modul: public ShipComponent { public:
@@ -135,8 +158,8 @@ class Girder : public NodeLinker { public:
     //double SPull,SPush;
     //double kPull,kPush;
     Material * material;
-    Vec2i poitRange;  // index of start and end in Truss
-    Vec2i stickRange; // --,,---
+    //Vec2i poitRange;  // index of start and end in Truss
+    //Vec2i stickRange; // --,,---
     //GirderType * type = NULL;
 };
 
@@ -149,8 +172,8 @@ class Ring : public ShipComponent { public:
     double R;
     Vec2d wh;
     Material * material;
-    Vec2i poitRange;  // index of start and end in Truss
-    Vec2i stickRange; // --,,---
+    //Vec2i poitRange;  // index of start and end in Truss
+    //Vec2i stickRange; // --,,---
     //GirderType * type = NULL;
 };
 
@@ -269,6 +292,11 @@ enum class ComponetKind:int{ Node, Rope, Girder, Ring, Thruster, Gun, Radiator, 
 
 class SpaceCraft : public CatalogItem { public:
 
+    std::vector<Material*>   materials;
+    std::vector<Commodity*>  commodities;
+    std::vector<FuelType*>   fuels;
+    std::vector<PanelMaterial*>  panelMaterials;
+
     std::vector<int>       LODs;
     Truss truss;
     std::vector<Node>      nodes;
@@ -290,8 +318,7 @@ class SpaceCraft : public CatalogItem { public:
 	// aux
 	int pickedTyp = -1;
 
-
-
+    // ==== functions
 
 	void clear(){
         nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrusters.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
@@ -330,6 +357,14 @@ class SpaceCraft : public CatalogItem { public:
         return t;
 	}
 
+/**
+ * Picks the closest component intersected by a ray in the scene. Used e.g. for mouse picking.
+ * 
+ * @param ro The origin of the ray.
+ * @param rd The direction of the ray.
+ * @param rmax The maximum distance to consider for picking (default: 1.0).
+ * @return The index of the picked component, or -1 if no component is picked.
+ */
 	int pick(Vec3d ro, Vec3d rd, double rmax = 1.0 ){
         Quad3d qd;
         Vec3d  nr;
@@ -364,6 +399,12 @@ class SpaceCraft : public CatalogItem { public:
         return imin;
 	}
 
+/**
+ * Returns picked ship component
+ * 
+ * @param picked The index of the picked component.
+ * @return The picked component. The type of the component is determined by the internal variable pickedTyp .
+ */
 	ShipComponent* getPicked( int picked ){
 	    switch( (ComponetKind)pickedTyp){
             case ComponetKind::Radiator : return &radiators[picked]; break;
@@ -374,7 +415,12 @@ class SpaceCraft : public CatalogItem { public:
         return 0;
     }
 
-	void toTruss(Truss& truss){
+/**
+ * Converts the SpaceCraft object to a Truss object. Nodes, ropes, girders and rings are converted to points and edges of the truss. Each ship component is assigned a range of points and edges in the truss.
+ * 
+ * @param truss The Truss object to populate with the converted data.
+ */
+	void toTruss(Truss& truss, bool bTanks=false ){
         int i=0;
         truss.newBlock();
         int ip0 = truss.points.size();
@@ -403,6 +449,20 @@ class SpaceCraft : public CatalogItem { public:
             o.stickRange = {bak.y,truss.edges .size()};
             i++;
         }
+        // ToDo: Tanks
+        // ToDo: maybe Tanks would be better simulated as rigid-body objects, but than we need to couple the Truss (SoftBody) and RigidBody ?
+        if( bTanks ){
+            for(Tank o: tanks){
+                //printf("DEBUG toTruss : tank #%i \n", i);
+                Vec3d p0 = o.pose.pos + o.pose.rot.a*o.span.a*0.5;
+                Vec3d p1 = o.pose.pos - o.pose.rot.a*o.span.a*0.5;
+                truss.makeCylinder( p0, p1, o.span.b, o.span.b, -1, -1, 1.0, o.edge_mat, o.face_mat );
+                Vec2i& bak = truss.blocks.back();
+                o.poitRange  = {bak.x,truss.points.size()};
+                o.stickRange = {bak.y,truss.edges .size()};
+                i++;
+            }
+        }
         printf( "npoint %i nstick %i nblocks %i \n", truss.points.size(), truss.edges.size(), truss.blocks.size()  );
 	}
 	void toTruss(){ truss.clear(); toTruss(truss); };
@@ -419,6 +479,33 @@ class SpaceCraft : public CatalogItem { public:
         for(int i=0; i<radiators.size(); i++){ plate2raytracer( radiators[i], raytracer, elemMaxSize, true ); }
         for(int i=0; i<shields.size();   i++){ plate2raytracer( shields  [i], raytracer, elemMaxSize, true ); }
 	}
+
+    void updatePanelMaterials(){
+        for (PanelMaterial* pm : panelMaterials){ 
+            double areaDensity = 0.0;
+            for( PanelLayer& l : pm->layers ){ 
+                areaDensity += l.materiallId = materials[l.materiallId]->density * l.thickness; // [kg/m2]
+            }   
+            pm->areaDensity = areaDensity;
+        }
+    }
+
+    void updateTrussEdges( Truss& truss ){
+        for( TrussEdge& e : truss.edges ){
+            Material* mat = materials[ e.type ];
+            double c = e.crossection / e.l0;
+            e.kT = mat->Kpull * c;
+            e.kP = mat->Kpush * c;
+            e.mass = mat->density * e.crossection * e.l0;
+        }
+    }
+
+    void updateTrussFaces( Truss& truss ){
+        for( TrussFace& f : truss.faces ){
+            PanelMaterial* mat = panelMaterials[ f.type ];
+            f.mass = mat->areaDensity * f.area;
+        }
+    }
 
 };
 

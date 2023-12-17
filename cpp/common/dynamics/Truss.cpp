@@ -11,7 +11,12 @@ void Truss::clear(){
     removed_edges.clear();
 }
 
-void Truss::sticksFormString( char * str ){
+/**
+ * Parses a string and adds TrussEdges to Truss
+ * 
+ * @param str The string containing TrussEdge information separated by ';' or '\n'.
+ */
+void Truss::sticksFormString( char * str ){ 
     //puts( str );
     char * pch = strtok (str,";\n");
     while (pch != NULL){
@@ -27,7 +32,13 @@ void Truss::sticksFormString( char * str ){
     }
 }
 
-int Truss::loadXYZ( char* fname ){
+/**
+ * Loads the data of a truss from an XYZ file. The nodes are loaded form the body. The sticks are loaded from the comment line if format of three integers separated by ';' like "i1 j1 typ1; i2 j2 typ2; i3 j3 typ3;"
+ * 
+ * @param fname The file name of the XYZ file.
+ * @return The number of vertices loaded from the file, or -1 if the file cannot be found.
+ */
+int Truss::loadXYZ( char* fname ){ 
     FILE * pFile = fopen(fname,"r");
     if( pFile == NULL ){
         printf("cannot find %s\n", fname );
@@ -42,7 +53,7 @@ int Truss::loadXYZ( char* fname ){
     printf(       "%i %i \n",  nvert,  nedges );
 
     line = fgets( buff, 1024, pFile );
-    sticksFormString(line); // load stricks // like comment in .xyz file
+    sticksFormString(line); // load sticks from comment line in .xyz file
 
     for(int i=0; i<nvert; i++){
         char at_name[8];
@@ -56,11 +67,25 @@ int Truss::loadXYZ( char* fname ){
     return nvert;
 }
 
-void Truss::affineTransform( Mat3d mat, bool T ){
-    if( T ) { for(int i=0; i<points.size(); i++){ points[i] = mat.dotT(points[i]); }; }
-    else    { for(int i=0; i<points.size(); i++){ points[i] = mat.dot (points[i]); }; }
+/**
+ * Applies an affine transformation to the points of the truss.
+ * 
+ * @param mat The transformation matrix to apply.
+ * @param T   If true, the transpose of the matrix is used for the transformation.
+ *            If false, the matrix is used as is.
+ */
+void Truss::affineTransform( Mat3d mat, bool T, Vec3d p0, Vec3d p ){
+    if( T ) { for(int i=0; i<points.size(); i++){ points[i] = mat.dotT(points[i]-p0)+p; }; }
+    else    { for(int i=0; i<points.size(); i++){ points[i] = mat.dot (points[i]-p0)-p; }; }
 }
 
+/**
+ * Picks the vertex in the truss that is closest to the given ray. Usefull e.g. for picking a vertex with the mouse.
+ *
+ * @param ray0 The starting point of the ray.
+ * @param hRay The direction vector of the ray.
+ * @return The index of the closest vertex in the truss.
+ */
 int Truss::pickVertex( const Vec3d &ray0, const Vec3d &hRay ) const {
     double r2min=1e+300;
     int imin=0;
@@ -72,6 +97,14 @@ int Truss::pickVertex( const Vec3d &ray0, const Vec3d &hRay ) const {
     return imin;
 };
 
+/**
+ * Finds the index of the vertex in the Truss object that is closest to the given ray. Usefull e.g. for picking a vertex with the mouse.
+ * 
+ * @param ray0 The starting point of the ray.
+ * @param hRay The direction vector of the ray.
+ * @param R The radius of the sphere used for distance comparison.
+ * @return The index of the closest vertex.
+ */
 int Truss::pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R ) const {
     //double tmin =  1e+300;
     double r2min =  R*R;
@@ -87,6 +120,14 @@ int Truss::pickVertex( const Vec3d& ray0, const Vec3d& hRay, double R ) const {
     return imin;
 }
 
+/**
+ * Finds the index of the closest edge to a given ray within a specified radius. Usefull e.g. for picking a edges with the mouse.
+ *
+ * @param ray0 The starting point of the ray.
+ * @param hRay The direction vector of the ray.
+ * @param R The radius within which to search for the closest edge.
+ * @return The index of the closest edge, or -1 if no edge is found within the radius.
+ */
 int Truss::pickEdge( const Vec3d& ray0, const Vec3d& hRay, double R ) const {
     double dist_min =  R;
     int    imin     = -1;
@@ -104,6 +145,35 @@ int Truss::pickEdge( const Vec3d& ray0, const Vec3d& hRay, double R ) const {
     return imin;
 };
 
+
+void Truss::updateEdgesLengths(){
+    for(TrussEdge& e : edges){ e.l0 = (points[e.a] - points[e.b]).norm(); }
+};
+
+void Truss::updateFacesAreas(){
+    for(TrussFace& f : faces){
+        Vec3d n; 
+        //f.area  = normalAreaTriangle( n, points[f.a], points[f.b], points[f.c] ); // we want to be independent geom3d.h
+        Vec3d a = points[f.a];
+        Vec3d b = points[f.b];
+        Vec3d c = points[f.c];
+        n.set_cross( b-a, c-a );
+        f.area = n.norm()*0.5;
+    }
+};
+
+
+/**
+ * Creates a panel of truss elements between four corner points. Adds the points and edges to the Truss object.
+ * // TODO: make also triangular panel
+ * 
+ * @param p00 The first corner point.
+ * @param p01 The second corner point.
+ * @param p10 The third corner point.
+ * @param p11 The fourth corner point.
+ * @param n The number of subdivisions along each side of the panel.
+ * @param width The width of the truss elements.
+ */
 void Truss::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width ){
     int kind_long   = 0;
     int kind_perp   = 1;
@@ -324,6 +394,134 @@ void Truss::makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vec
     }
 };
 
+
+
+
+
+// ToDo: makeCilinder     - for center of tanks and tubes
+// ToDo: makeSphericalCap - for caps of tanks and exhaust nozzles
+// ToDo: makeParaboloid   - for exhaust nozzle
+
+int Truss::makeCylinder( Vec3d p0, Vec3d p1, double r0, double r1, int nPhi, int nL, double dStep, int edgeTyp, int faceTyp ){
+    Vec3d ax   = p1-p0;  double L = ax.normalize();
+    if( nPhi<0 ) nPhi = (int)(2*M_PI*fmax(r0,r1)/dStep); if(nPhi<6){ nPhi==6; } // make the elements are not longer than dStep
+    if( nL  <0 ) nL   = (int)(L/dStep); if(nL<1)nL=1;
+    Vec3d up,left;       ax.getSomeOrtho(up,left);
+    Vec2d cph=Vec2dX, dph;
+    double dr = (r1-r0)/nL;
+    int ia0=0, ib0=0;
+    for(int il=0; il<=nL; il++){ // longitudinal loop
+        int ia_,ib_;
+        double r = r0 + dr*il;   
+        // one circle
+        for(int iph=0; iph<=nPhi; iph++){ // loop over phi
+            if(iph<nPhi){
+                int ia = addPoint( p0 + left*(cph.x*r) + up*(cph.y*r) ); 
+                addEdge( ia,(ia+1)%nPhi, edgeTyp );
+                cph.mul_cmplx(dph);
+            }
+        } // end of loop over phi
+        // between two circles
+        if(il<nL){
+            int ia0 = points.size()-1;
+            int ia1 = ia0-nPhi;
+            for(int iph=0; iph<nPhi; iph++){
+                addEdge( iph+ia0,   iph         +ia1, edgeTyp );
+                addEdge( iph+ia0, ((iph+1)%nPhi)+ia1, edgeTyp );
+            }
+        }
+        // ToDo: add faces
+        // ToDo: we can add edgest toward the center of the cylinder to make it more rigid
+    }
+    return 0;
+}
+
+
+/*
+int Truss::makeCapsula( Vec3d p0, Vec3d p1, double r1, double r2, double theta1, double theta2, double dTheta, int nPhi, int edgeTyp, int faceTyp, bool capped ){
+    // modified from Draw3D::drawCapsula()
+    int nvert=0;
+    Vec3d ax   = p1-p0;  double L = ax.normalize();
+    Vec3d up,left;       ax.getSomeOrtho(up,left);
+    Vec2d cph=Vec2dX, dph;
+    dph.fromAngle( 2*M_PI/nPhi );
+    // Cylinder
+    Vec2d cth,dth;
+    double dr = (r2-r1);
+    double cv = sqrt(L*L+dr*dr);
+    cth.set( L/cv, -dr/cv );
+    
+    // Central Cylinder part
+    int ia0=0, ib0=0;
+    for(int iph=0; iph<=nPhi; iph++){
+        int ia_,ib_;
+        if(iph<nPhi){
+            int ia = addPoint( p0 + left*(cph.x*r1) + up*(cph.y*r1) ); 
+            int ib = addPoint( p1 + left*(cph.x*r2) + up*(cph.y*r2) );
+            if(iph==0){ ia0=ia; ib0=ib; }
+            cph.mul_cmplx(dph);
+        }
+        if(iph>0){
+            addEdge( ia_,ia, edgeTyp );
+            addEdge( ib_,ib, edgeTyp );
+            addEdge( ia, ib, edgeTyp );
+            addEdge( ia, ib_,edgeTyp );
+            ia_=ia; ib_=ib;
+        }
+        // ToDo: add faces
+        nvert+=2;
+    }
+    
+    double DTh,h;
+    int nTheta;
+
+    // Spherical Cap 1
+    cph=Vec2dX;
+    cth.set( L/cv, -dr/cv );
+    DTh = (-theta1 - asin(cth.y));
+    nTheta = (int)(fabs(DTh)/dTheta);
+    dth.fromAngle( DTh/nTheta );
+    //printf( " cth (%f,%f)  dth (%f,%f) \n", cth.x, cth.y,  dth.x, dth.y );
+    r1/=cth.x;
+    h  =-cth.y*r1;
+    for(int ith=0; ith<(nTheta+1); ith++){
+        Vec2d cth_ = Vec2d::mul_cmplx(cth,dth);
+        for(int iph=0; iph<(nPhi+1); iph++){            
+            int ia = addPoint( p0 + (left*(cph.x*r1) + up*(cph.y*r1))*cth.x  + ax*(h+cth.y*r1) ); 
+            int ib = addPoint( p0 + (left*(cph.x*r1) + up*(cph.y*r1))*cth_.x + ax*(h+cth_.y*r1) );
+            nvert+=2;
+            cph.mul_cmplx(dph);
+
+            // ToDo: add edges
+            // ToDo: add faces
+
+        }
+        //printf( "%i cth (%f,%f)  cth_ (%f,%f) \n", ith, cth.x, cth.y,  cth_.x, cth_.y );
+        cth=cth_;
+    }
+
+    // Spherical Cap 2
+    cph=Vec2dX;
+    cth.set( L/cv, -dr/cv );
+    DTh    = (theta2-asin(cth.y));
+    nTheta = (int)(fabs(DTh)/dTheta);
+    dth.fromAngle(DTh/nTheta );
+    r2/= cth.x;
+    h  =-cth.y*r2;
+    for(int ith=0; ith<(nTheta+1); ith++){
+        Vec2d cth_ = Vec2d::mul_cmplx(cth,dth);
+        for(int iph=0; iph<(nPhi+1); iph++){
+            int ia = addPoint( p1 + (left*(cph.x*r2) + up*(cph.y*r2))*cth.x  + ax*(h+cth.y*r2) );
+            int ib = addPoint(p1 + (left*(cph.x*r2) + up*(cph.y*r2))*cth_.x + ax*(h+cth_.y*r2) );
+            nvert+=2;
+            cph.mul_cmplx(dph);
+        }
+        cth=cth_;
+    }
+    return nvert;
+}
+*/
+
 int Truss::addRope( int ip1, int ip2, int type, int nsub ){
     Vec3d& p1 =  points[ip1];
     Vec3d  d  = (points[ip2]-p1)*(1./nsub);
@@ -363,6 +561,20 @@ void Truss::autoBridge(int n, Vec2i * ips, double rmax, int kind ){
     //printf( "autoBridge end %i %i\n", points.size(),edges.size() );
     //exit(0);
 };
+
+void Truss::massesToPoints( double* masses ){
+    for( TrussEdge& e: edges ){
+        masses[ e.a ] += e.mass*0.5;
+        masses[ e.b ] += e.mass*0.5;
+    }
+    double c = 1./3;
+    for( TrussFace& f: faces ){
+        double m = f.mass*c;
+        masses[ f.a ] += m;
+        masses[ f.b ] += m;
+        masses[ f.c ] += m;
+    }
+}
 
 Vec2i* Truss::getIJs(){
     Vec2i* ijs = new Vec2i[edges.size()];

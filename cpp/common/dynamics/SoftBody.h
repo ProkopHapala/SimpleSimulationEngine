@@ -211,10 +211,10 @@ class SoftBody{ public:
 	Vec3d gravity = (Vec3d){0.0,-9.81,0.0};
 	Vec3d airFlow = (Vec3d){0.0,0.0,0.0};
 	//Vec3d gravity, airFlow;
-    double dt   = 0.01d;
-    double damp = 0.0d;
-    double damp_stick = 0.0d;
-    double damp_fvdot = 0.0;
+    double dt   = 0.01;
+    double damp = 0.0;
+    double damp_stick =  0.0;
+    double damp_fvdot =  0.0;
     double viscosity  = -0.0;
     double fmax       = 1e+300;
     double vdamp      = 1.0;  // [m/s]  maximum speed for velocity based damping
