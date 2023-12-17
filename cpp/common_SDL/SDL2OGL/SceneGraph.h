@@ -114,7 +114,7 @@ class Capsula : public Primitive { public:
     double theta0,theta1;
     Vec3d p0;
     Vec3d p1;
-    Capsula(int n_,Vec3d p0_,Vec3d p1_,double R0_,double R1_,double theta0_, double theta1_):n(n_),p0(p0_),p1(p1_),R0(R0_),R1(R1_),theta0(theta0_),theta1(theta1_){ }
+    Capsula(int n_,Vec3d p0_,Vec3d p1_,double R0_,double R1_,double theta0_,double theta1_):n(n_),p0(p0_),p1(p1_),R0(R0_),R1(R1_),theta0(theta0_),theta1(theta1_){ }
     virtual void render() override{
         //printf("DEBUG Scene::Capsula::render() \n");
         Draw3D::drawCapsula( p0, p1, R0, R1, theta0, theta1, 0.2, n, true );

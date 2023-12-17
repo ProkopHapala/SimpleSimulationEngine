@@ -1,4 +1,11 @@
 
+/**
+ * @file test_CityGen.cpp
+ * @brief Example of city map generation.
+ *
+ * The application uses SDL2 and OpenGL to visualize the generated city.
+ * It includes classes for quadtree-based city generation and bin search.
+ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

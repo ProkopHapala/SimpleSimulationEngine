@@ -1,4 +1,8 @@
 
+/**
+ * @file test_AutoMesh2D.cpp
+ * @brief This is example of 2D finite element simulation, and comparison of different methods implemnented in MechGrid2D.h, MechPIC2D.h, and MechMesh2D.h
+ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,8 +22,6 @@
 CompressibleMaterial materials[] = {
     {1.,1.}
 };
-
-
 
 class TestAppMech2D : public AppSDL2OGL { public:
 

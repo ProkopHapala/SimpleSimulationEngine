@@ -1,4 +1,12 @@
 
+/**
+ * @file test_AppSDL2OGL.cpp
+ * @brief this is simple example how to use AppSDL2OGL class for creating OpenGL application with SDL2
+ * 
+ * The TestApp class represents a test application that uses SDL2 and OpenGL for rendering.
+ * It demonstrates how to draw a line using the Draw2D class.
+*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

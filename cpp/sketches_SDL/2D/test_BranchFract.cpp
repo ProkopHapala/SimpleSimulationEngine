@@ -1,4 +1,9 @@
 
+/**
+ * @file test_BranchFract.cpp
+ * @brief Example of generation of city-like mapt using binary tree fractal subdivision of a quad
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

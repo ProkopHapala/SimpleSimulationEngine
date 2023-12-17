@@ -1,4 +1,22 @@
 
+/**
+ * @file test_AnalyticalMushroomVortex.cpp
+ * @brief Analytical Mushroom Vortex velocity field
+ * 
+ * Here we try to create velocity field of a mushroom vortex (e.g. like in a nuclear explosion) and visualize it with streamlines.
+ * 
+ * Analytical expression:
+ * Cornu Spiral
+ * 
+ * https://en.wikipedia.org/wiki/Fresnel_integral#Euler_spiral
+ * 
+ * Doublet Vortex:
+ * https://nbviewer.jupyter.org/github/barbagroup/AeroPython/blob/master/lessons/03_Lesson03_doublet.ipynb
+ * 
+ * https://www.ecourses.ou.edu/cgi-bin/ebook.cgi?doc=&topic=fl&chap_sec=07.4&page=theory
+ * https://link.springer.com/chapter/10.1007/978-981-13-1678-4_4
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,25 +33,6 @@
 #include "Plot2D.h"
 
 #include "PotentialFlow.h"
-
-
-/*
-
-Analytical expression:
-Cornu Spiral
-
-
-https://en.wikipedia.org/wiki/Fresnel_integral#Euler_spiral
-
-Doublet Vortex:
-https://nbviewer.jupyter.org/github/barbagroup/AeroPython/blob/master/lessons/03_Lesson03_doublet.ipynb
-
-https://www.ecourses.ou.edu/cgi-bin/ebook.cgi?doc=&topic=fl&chap_sec=07.4&page=theory
-https://link.springer.com/chapter/10.1007/978-981-13-1678-4_4
-
-
-*/
-
 
 Vec2d flowCurve( double t, double a ){
     double sa = sin(t);

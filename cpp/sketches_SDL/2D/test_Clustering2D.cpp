@@ -1,4 +1,9 @@
 
+/**
+ * @file test_Clustering2D.cpp
+ * @brief Example of 2D clustering in 2D 
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,7 +19,10 @@
 
 #include "clustering3D.h"
 
-
+/**
+ * @class TestAppClustering2D
+ * @brief This class represents a test application for 2D clustering.
+ */
 class TestAppClustering2D: public AppSDL2OGL { public:
 
     double R = 3.0;
@@ -31,6 +39,12 @@ class TestAppClustering2D: public AppSDL2OGL { public:
 
 };
 
+/**
+ * @brief Constructor for the TestAppClustering2D class.
+ * @param id The ID of the application.
+ * @param WIDTH_ The width of the application window.
+ * @param HEIGHT_ The height of the application window.
+ */
 TestAppClustering2D::TestAppClustering2D( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL( id, WIDTH_, HEIGHT_ ) {
 
     //std::ve
@@ -45,6 +59,9 @@ TestAppClustering2D::TestAppClustering2D( int& id, int WIDTH_, int HEIGHT_ ) : A
     }
 }
 
+/**
+ * @brief Draws the application.
+ */
 void TestAppClustering2D::draw(){
     long tstart = getCPUticks();
     glClearColor( 0.9f, 0.9f, 0.9f, 0.0f );
@@ -83,11 +100,18 @@ void TestAppClustering2D::draw(){
 
 };
 
+/**
+ * @brief Handles mouse events.
+ */
 void TestAppClustering2D::mouseHandling( ){
     Uint32 buttons = SDL_GetMouseState( &mouseX, &mouseY );
     defaultMouseHandling( mouseX, mouseY );
 }
 
+/**
+ * @brief Handles SDL events.
+ * @param event The SDL event.
+ */
 void TestAppClustering2D::eventHandling ( const SDL_Event& event  ){
     //printf( "TestAppClustering2D::eventHandling() \n" );
     switch( event.type ){
@@ -107,6 +131,9 @@ void TestAppClustering2D::eventHandling ( const SDL_Event& event  ){
     AppSDL2OGL::eventHandling( event );
 }
 
+/**
+ * @brief Draws the heads-up display (HUD).
+ */
 void TestAppClustering2D::drawHUD(){
 
 }
@@ -115,6 +142,12 @@ void TestAppClustering2D::drawHUD(){
 
 TestAppClustering2D* thisApp;
 
+/**
+ * @brief The main function.
+ * @param argc The number of command-line arguments.
+ * @param argv The command-line arguments.
+ * @return The exit status of the program.
+ */
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
