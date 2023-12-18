@@ -17,7 +17,6 @@
 
 #include "testUtils.h"
 
-
 #include "spaceCombat.h"
 
 CombatAssembly battle;

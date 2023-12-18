@@ -17,6 +17,9 @@ int verbosity = 0;
 //#include "OCL_DFT.h"
 //#include "OCL_PP.h"
 
+#include "SpaceCraft.h"
+#include "spaceCombat.h"
+
 //OCL_PP oclfft;
 
 //#include "FireCoreAPI.h"

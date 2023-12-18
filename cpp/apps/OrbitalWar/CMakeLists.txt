@@ -1,5 +1,5 @@
 
-include_directories( ${MY_SRC_DIR}/libs/KosmoSuite/cpp )
+include_directories( ${MY_SRC_DIR}/libs/KosmoSuite/cpp ${COMMON_SRCS}/Orbital )
 
 add_executable( orbitEditor
 	orbitEditor.cpp
