@@ -49,7 +49,7 @@ class Radiosity : public TriangleRayTracer, public LinSolver { public:
 
                 Vec3d  d = elj.pos - eli.pos;
                 //double r = d.normalize();
-                double r2 = d.normalize();
+                double r2 = d.normalize(); // ToDo: this is probably wrong, should be r2 ?
                 double coupling = d.dot(eli.normal)*d.dot(elj.normal)/r2;
                 if( fabs(coupling) < couplingTrashold ){ M[i*n+j]=0.0; continue; };
                 coupling /= ( r2 + eli.area + elj.area );
