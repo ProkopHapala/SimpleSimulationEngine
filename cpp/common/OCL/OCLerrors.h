@@ -2,6 +2,10 @@
 #ifndef  OCLerrors_h
 #define  OCLerrors_h
 
+#define     OCL_DEBUG      1
+//#define     OCL_DEBUG        0
+static bool bOCLCheckError = true;
+
 //----------------------------------------------------------------------------
 // Purpose:  Function to output descriptions of errors for an input error code
 //           and quit a program on an error with a user message
@@ -19,10 +23,8 @@
 //----------------------------------------------------------------------------
 
 #include <cstdio>
-
+#define CL_TARGET_OPENCL_VERSION 200
 #include <CL/cl.h>
-
-extern int bOCL_checkError=1;
 
 const char *OCL_err_code (cl_int err_in){
     switch (err_in) {
@@ -92,17 +94,51 @@ void OCL_buildProgramFailure( cl_program program, cl_device_id device ){
     delete [] log;
 }
 
-void OCL_check_error(cl_int err, const char *operation, char *filename, int line){
-    if (err != CL_SUCCESS){
-        fprintf(stderr, "Error during operation '%s', ", operation);
-        fprintf(stderr, "in '%s' on line %d\n", filename, line);
-        fprintf(stderr, "Error code was '%s' (%d)\n", OCL_err_code(err), err);
+void OCL_check_error(cl_int err, const char *operation=0, char *filename=0, int line=-1, int i=-999999, const char* name=0){
+    //printf( "OCL_check_error(%s) err=%i \n", operation, err );
+    if (err != CL_SUCCESS){        
+        //if(i==-999999){ fprintf(stderr, "Error during operation '%s'",     operation   ); }
+        //else   { fprintf(stderr, "Error during operation '%s'[%i] '%s'", operation, i, name ); }
+        //fprintf(stderr, "in '%s' on line %d\n", filename, line);
+        //fprintf(stderr, "Error code was \"%s\" (%d)\n", OCL_err_code(err), err);
+        //if(i==-999999){ fprintf(stderr, "OCL_ERROR(%i) %s during operation '%s'", err, OCL_err_code(err), operation ); }
+        //else          { fprintf(stderr, "OCL_ERROR(%i) %s during operation '%s'", err, OCL_err_code(err), operation, i, name );  }
+        fprintf(stderr, "OCL_ERROR(%i) %s", err, OCL_err_code(err));
+        if(operation)fprintf(stderr, " during %s", operation );
+        if(filename )fprintf(stderr, "%s #line=%i", filename, line );
+        if(name     )fprintf(stderr, "%s[%i]", name, i );
+        fprintf(stderr, "\n" );
         exit(0);
-    }else{
-       if(bOCL_checkError>1) fprintf(stderr, "CL_SUCCESS in '%s' \n", operation );
     }
 }
 
-#define OCL_checkError(E, S) if(bOCL_checkError){ OCL_check_error(E,S,__FILE__,__LINE__); }
+void OCL_error_warn(cl_int err, const char *operation, int i=-999999 ){
+    if (err != CL_SUCCESS){        
+        if(i==-999999){ fprintf(stderr, "WARRNING: Error in '%s'     \"%s\" (%d)\n", operation   , OCL_err_code(err), err ); }
+        else          { fprintf(stderr, "WARRNING: Error in '%s'[%i] \"%s\" (%d)\n", operation, i, OCL_err_code(err), err ); }
+    }
+}
+
+void printBinary( int err ){
+    for(int i=0;i<32;i++){
+        err>>=1;
+        printf("%1i", err&1 );
+    }
+    printf("\n" );
+}
+
+#if OCL_DEBUG
+#define OCLerr(E)                                       OCL_check_error(E,"",__FILE__,__LINE__);
+#define OCL_checkError(E, S)          if(bOCLCheckError)OCL_check_error(E,S,__FILE__,__LINE__);
+#define OCL_checkError_(E, S,I)       if(bOCLCheckError)OCL_check_error(E,S,__FILE__,__LINE__,I);
+#define OCL_checkError__(E, S,I,name) if(bOCLCheckError)OCL_check_error(E,S,__FILE__,__LINE__,I,name);
+#define OCL_error_warn_(E,S,I)        if(bOCLCheckError)OCL_error_warn(E,S,I);
+
+#else
+#define OCLerr(E)               {}
+#define OCL_checkError(E, S)    {}
+#define OCL_checkError_(E, S,I) {}
+#define OCL_checkError__(E, S,I,name) {}
+#endif
 
 #endif

@@ -5,21 +5,9 @@
 
 #define CL_TARGET_OPENCL_VERSION 200
 
-#include <CL/cl.h>
-//#include <clFFT.h>
-#include "OCLfft_errors.h"
-
-#include "testUtils.h"
-#include "OCL.h"
-#include "IO_utils.h"
-
 int verbosity = 0;
-//#include "OCL_DFT.h"
-//#include "OCL_PP.h"
-
-#include "SpaceCraft.h"
-#include "spaceCombat.h"
-
+#include "SpaceCombatOCL.h"
+ 
 //OCL_PP oclfft;
 
 //#include "FireCoreAPI.h"
