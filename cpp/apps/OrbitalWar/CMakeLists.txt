@@ -1,10 +1,5 @@
 
-# === Lua # https://www.gamedev.net/forums/topic/681869-linking-lua-via-cmake/
-find_package( Lua52   REQUIRED )
-set(INCLUDE_DIRS ${LUA_INCLUDE_DIR} ${MY_SRC_DIR}/libs/KosmoSuite/cpp ${COMMON_SDL_SRCS}/Lua )
-add_definitions(-DLUA)
-include_directories( ${INCLUDE_DIRS} )
-#include_directories( ${MY_SRC_DIR}/libs/KosmoSuite/cpp  ${COMMON_SDL_SRCS}/Lua )
+include_directories( ${MY_SRC_DIR}/libs/KosmoSuite/cpp )
 
 add_executable( orbitEditor
 	orbitEditor.cpp
@@ -22,7 +17,6 @@ add_executable( spaceTactics
 )
 target_link_libraries( spaceTactics ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
-
 add_executable( SolarSystemMap
 	SolarSystemMap.cpp
 	$<TARGET_OBJECTS:Body>
@@ -33,7 +27,7 @@ target_link_libraries( SolarSystemMap ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_
 
 
 add_executable( test_OptContinuousThrust
-	test_OptContinuousThrust
+	test_OptContinuousThrust.cpp
 	$<TARGET_OBJECTS:SDL2OGL>
 	$<TARGET_OBJECTS:DynamicOpt>
 )
@@ -44,6 +38,14 @@ add_executable( test_SpaceFlightODE
     $<TARGET_OBJECTS:SDL2OGL>
 )
 target_link_libraries( test_SpaceFlightODE  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
+
+
+# ====== WITH_LUA    START
+if( WITH_LUA )
+# === Lua # https://www.gamedev.net/forums/topic/681869-linking-lua-via-cmake/
+find_package( Lua52   REQUIRED )
+add_definitions(-DLUA)
+include_directories( ${LUA_INCLUDE_DIR}  ${COMMON_SDL_SRCS}/Lua )
 
 add_executable( spaceCraftEditor
     spaceCraftEditor.cpp
@@ -63,11 +65,15 @@ add_executable( spaceCraftDynamics
 )
 target_link_libraries( spaceCraftDynamics  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
+endif()   # WITH_LUA
+# ====== WITH_LUA   END
+
+
 file(GLOB OrbitalWar_HEADERS_ *.h )
 add_custom_target( OrbitalWar_HEADERS SOURCES ${OrbitalWar_HEADERS_} )
 
 add_custom_command(
-    TARGET ${PROJECT_NAME} orbitEditor test_OptContinuousThrust test_SpaceFlightODE spaceCraftEditor
+    TARGET ${PROJECT_NAME} orbitEditor test_OptContinuousThrust test_SpaceFlightODE
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${MY_SRC_DIR}/common_resources ${CMAKE_CURRENT_BINARY_DIR}/common_resources
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/py ${CMAKE_CURRENT_BINARY_DIR}/py
