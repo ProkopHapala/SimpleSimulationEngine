@@ -12,93 +12,17 @@
 #include <dirent.h>
 
 
-
-
-
-
-
-
-
-
-// list files in directory
-//  https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
-
-/*
-// moved to IO_utils_h
-
-int listDirContaining( char * dirName, char * fname_contains, std::vector<std::string>& fnames_found ){
-    DIR *dir=NULL;
-    int n=0;
-    struct dirent *ent=NULL;
-    int i=0;
-    if ( (dir = opendir( dirName )) != NULL) {
-        while ( (ent = readdir (dir)) != NULL) {
-            char* found = strstr( ent->d_name, fname_contains );
-            if( found ){
-                printf("%i %s\n", i, ent->d_name);
-                fnames_found.push_back( ent->d_name );
-                i++;
-            }
-        }
-        n++;
-        closedir(dir);
-    } else {
-        printf("Cannot open directory %s \n", dirName );
-        return -1;
-    }
-    return i;
-}
-*/
-
-/*
-int dir2tree(TreeViewTree& node, char * name, int level ){
-
-    if (niters >100) return -1;
-    niters++;
-
-    if((name[0]=='.'))return 0;
-
-    for(int i=0; i<level; i++) printf("_");
-
+int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="", bool bPrint=false ){
     node.content.caption = name;
-    DIR *dir=NULL;
-    struct dirent *ent=NULL;
-
-    if( chdir(name)==0 ){
-    //if( (dir = opendir( name )) != NULL){
-        dir = opendir( "." );
-        printf("dir '%s' | %i \n", name, level );
-        while( (ent = readdir(dir)) != NULL){
-            node.branches.push_back( TreeViewTree() );
-            dir2tree( node.branches.back(), ent->d_name, level+1 );
-        }
-        closedir(dir);
-        chdir("..");
-    }else{
-        printf("leaf '%s' | %i \n", name, level );
-    }
-    return 0;
-}
-*/
-
-int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="" ){
-
-    node.content.caption = name;
-
     std::string path;
-    if (prefix.length()==0){
-        path = name;
-    } else{
-        path= (prefix+"/")+name;
-    }
-
-    DIR *dir=NULL;
-    struct dirent *ent=NULL;
-
+    if (prefix.length()==0){ path = name;              } 
+    else                   { path= (prefix+"/")+name;  }
+    DIR           *dir=0;
+    struct dirent *ent=0;
     //if( chdir(name)==0 ){
-    if( (dir = opendir( path.c_str() )) != NULL){
-        printf("dir '%s' \n", path.c_str() );
-        while( (ent = readdir(dir)) != NULL){
+    if( (dir = opendir( path.c_str() ))!=0){
+        if(bPrint)printf("dir2tree(%s)\n", path.c_str() );
+        while( (ent = readdir(dir)) != 0){
             //printf("dir '%s' \n", path.c_str() );
             if((ent->d_name[0]=='.'))continue;
             TreeViewTree* tr = new TreeViewTree();
@@ -108,7 +32,7 @@ int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="" ){
         }
         closedir(dir);
     }else{
-        printf("leaf '%s'\n", path.c_str() );
+        if(bPrint)printf("leaf '%s'\n", path.c_str() );
     }
     return 0;
 }

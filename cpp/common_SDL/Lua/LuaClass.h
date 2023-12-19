@@ -10,14 +10,14 @@ class LuaClass{ public:
     void clean   () { int n = lua_gettop(L); lua_pop(L, n); }
 
     void dumpStack(){
-        int n = lua_gettop( L);  printf("LuaStack[%i] = {",n);
+        int n = lua_gettop( L);     printf("LuaStack[%i] = {",n);
         for (int i=1; i<=n; i++){
             int t = lua_type( L, i);
             switch (t) {
-                case LUA_TSTRING:  printf(" %i:'%s';", i, lua_tostring ( L, i)); break;
-                case LUA_TBOOLEAN: printf(" %i:%s;",   i, lua_toboolean( L, i) ? "true" : "false"); break;
-                case LUA_TNUMBER:  printf(" %i:%g;",   i, lua_tonumber ( L, i)); break;
-                default:           printf(" %i:%s;",   i, lua_typename ( L, t)); break;
+                case LUA_TSTRING:   printf(" %i:'%s';", i, lua_tostring ( L, i)); break;
+                case LUA_TBOOLEAN:  printf(" %i:%s;",   i, lua_toboolean( L, i) ? "true" : "false"); break;
+                case LUA_TNUMBER:   printf(" %i:%g;",   i, lua_tonumber ( L, i)); break;
+                default:            printf(" %i:%s;",   i, lua_typename ( L, t)); break;
             }
         }
         printf("}\n");

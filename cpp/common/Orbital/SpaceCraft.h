@@ -93,8 +93,9 @@ class SpaceCraft : public CatalogItem { public:
 	}
 
 int add_Node( const Vec3d& pos ){ 
-    Node o(pos);
-    o.id = nodes.size();
+    Node o;
+    o.pos = pos;
+    o.id  = nodes.size();
     nodes.push_back( o );
     //if(bPrint)printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
     if(bPrint) o.print();
@@ -296,6 +297,7 @@ int add_Gun     ( int suppId, const Vec2d& suppSpan, int type=-1 ){
  * @param truss The Truss object to populate with the converted data.
  */
 	void toTruss(Truss& truss, bool bTanks=false )const {
+        printf( "SpaceCraft::toTruss() \n" );
         int i=0;
         truss.newBlock();
         int ip0 = truss.points.size();

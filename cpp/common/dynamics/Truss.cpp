@@ -183,6 +183,7 @@ int Truss::getMaxNeighs(){
  * @param width The width of the truss elements.
  */
 void Truss::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width ){
+    printf( "Truss::panel() n(%i,%i) w=%g p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g) \n", n.x,n.y, p00.x,p00.y,p00.z, p01.x,p01.y,p01.z, p10.x,p10.y,p10.z, p11.x,p11.y,p11.z );
     int kind_long   = 0;
     int kind_perp   = 1;
     int kind_zigIn  = 2;
@@ -244,7 +245,18 @@ void Truss::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double w
     }
 }
 
-void Truss::girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width ){
+/**
+ * Creates a girder in the truss structure.
+ * 
+ * @param p0 starting point
+ * @param p1 ending point
+ * @param up up-vector 
+ * @param n  number of segments along the girder 
+ * @param width The width of the girder.
+ * @return The index of the created block containing the starting indexes of the points and edges
+ */
+int Truss::girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width ){
+    printf( "Truss::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z );
     int kind_long   = 0;
     int kind_perp   = 1;
     int kind_zigIn  = 2;
@@ -260,6 +272,7 @@ void Truss::girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width ){
     int dnp = 4;
     int i00 = points.size();
 
+    int ibloc = blocks.size();
     blocks.push_back( {i00,edges.size()} );
 
     for (int i=0; i<n; i++){
@@ -286,6 +299,7 @@ void Truss::girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width ){
         }
         i00+=dnp;
     }
+    return ibloc;
 }
 
 void Truss::girder1_caps( int ip0, int ip1, int kind ){
@@ -301,7 +315,18 @@ void Truss::girder1_caps( int ip0, int ip1, int kind ){
     edges.push_back( (TrussEdge){ip1,ipend+3,kind} );
 }
 
-void Truss::wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width ){
+/**
+ * Creates a wheel-shaped truss structure.
+ *
+ * @param p0 starting point ( center of the wheel )
+ * @param p1 ending point   ( on the perimeter of the wheel )
+ * @param ax axis vector
+ * @param n The number of segments along the perimeter of the wheel.
+ * @param width The width of the wheel rim.
+ * @return The index of the created block containing the starting indexes of the points and edges
+ */
+int Truss::wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width ){
+    printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z );
     int kind_long   = 0;
     int kind_perp   = 1;
     int kind_zigIn  = 2;
@@ -312,14 +337,14 @@ void Truss::wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width ){
     Vec3d side; side.set_cross(dir,ax);
     //double dl = length/(2*n + 1);
     //int dnb = 2+4+4+4;
-    print(dir); print(ax); print(side); printf("dir up side \n");
+    //print(dir); print(ax); print(side); printf("dir up side \n");
     int dnp = 4;
     int i00 = points.size();
     int i000 = i00;
 
     Vec2d  rot = {1.0,0.0};
     Vec2d drot; drot.fromAngle( M_PI/n );
-
+    int ibloc = blocks.size();
     blocks.push_back( {i00,edges.size()} );
     for (int i=0; i<n; i++){
         int i01=i00+1; int i10=i00+2; int i11=i00+3;
@@ -360,17 +385,41 @@ void Truss::wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width ){
         }
         i00+=dnp;
     }
+    return ibloc;
 }
 
-void Truss::makeGriders( int nEdges, TrussEdge* edges, Vec3d* points, GirderParams* params, Vec3d * ups ){
+/**
+ * Creates griders from lists of points and edges.
+ * 
+ * @param nEdges number of edges
+ * @param edges  array of TrussEdge objects  ToDo: we should rathe use Vec2i ( it is more general )
+ * @param points array of node points
+ * @param params array of GirderParams objects representing the parameters for each girder.
+ * @param ups An array of Vec3d objects representing the up vectors for each girder.
+ */
+int Truss::makeGriders( int nEdges, TrussEdge* edges, Vec3d* points, GirderParams* params, Vec3d * ups ){
+    int ib0 = blocks.size();
     for( int i=0; i<nEdges; i++ ){
         TrussEdge& ed = edges[i];
         girder1( points[ed.a], points[ed.b], ups[i], params[i].n, params[i].widthX );
     }
+    return ib0;
 };
 
-void Truss::makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vector<Vec2i>* ends ){
+/**
+ * @brief Creates griders based on plan stored in a Truss object.
+ *
+ * This function adds griders to the truss based on the provided plan, girder parameters, ups vector, and ends vector.
+ *
+ * @param plan   truss plan to use for creating griders
+ * @param params array of parameters for each girder
+ * @param ups    array of up-vectors for each girder
+ * @param ends   pointer to a vector of Vec2i to store the ends of each girder.
+ * @return The index of the created block containing the starting indexes of the points and edges
+ */
+int Truss::makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vector<Vec2i>* ends ){ 
     int np0 = points.size();
+    int ib0 = blocks.size();
     blocks.push_back( {np0,edges.size()} );
     for( int i=0; i<plan.points.size(); i++ ){
         points.push_back( plan.points[i] );
@@ -400,6 +449,7 @@ void Truss::makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vec
             ends->push_back( (Vec2i){np0j-4,i} );
         }
     }
+    return ib0;
 };
 
 

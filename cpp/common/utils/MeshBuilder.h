@@ -164,6 +164,7 @@ class MeshBuilder{ public:
     };
 
     int addCircleAxis( int n, const Vec3f& pos, const Vec3f& v0, const Vec3f& uaxis, float R ){
+        printf( "MeshBuilder::addCircleAxis() n=%i pos(%6.3f,%6.3f,%6.3f) v0(%6.3f,%6.3f,%6.3f) uaxis(%6.3f,%6.3f,%6.3f) R=%3.3f )\n", n, pos.x,pos.y,pos.z, v0.x,v0.y,v0.z, uaxis.x,uaxis.y,uaxis.z, R );
         float dphi = 2*M_PI/n;
         float dca  = cos( dphi );
         float dsa  = sin( dphi );
@@ -185,9 +186,8 @@ class MeshBuilder{ public:
     void scaleSub    ( int i, Vec3f sc    ){ scale( subVertRange(i), sc   ); }
     void rotateSub   ( int i, Vec3f p0, Vec3f p1, float angle ){ rotate( subVertRange(i), p0, p1, angle ); }
 
-
-
     int  addCapsula( Vec3f p0, Vec3f p1, float r1, float r2, float theta1, float theta2, float dTheta, int nPhi, bool capped ){
+        printf( "MeshBuilder::addCapsula() p0(%g,%g,%g), p1(%g,%g,%g), rs(%g,%g) theta(%g,%g) dTheta=%g nPhi=%i capped=%i\n", p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, r1,r2, theta1,theta2, dTheta, nPhi, capped );
         int nvert=0;
         Vec3f ax   = p1-p0;  float L = ax.normalize();
         Vec3f up,left;       ax.getSomeOrtho(up,left);
@@ -284,9 +284,8 @@ class MeshBuilder{ public:
     //GLMesh* normals2GLmesh( float sc ){ return vecs2mesh( vpos.size(), &vpos[0], &vnor[0], sc ); }
 
 
-
-
     void write_obj( char* fname ){
+        printf( "MeshBuilder::write_obj(%s)\n", fname );
         int nsubs  = subs.size();
         Vec3i osub = subs[0];
 
@@ -300,8 +299,7 @@ class MeshBuilder{ public:
             Vec3i sub = subs[i];
             int mode  = osub.z;
             if      (mode == GL_TRIANGLES ){      // un-indexed triangles
-
-                printf(         "o OBJ_TRIANGLES.%i  [ %i ... %i ] \n", nobj, osub.x, sub.x );
+                //printf(         "o OBJ_TRIANGLES.%i  [ %i ... %i ] \n", nobj, osub.x, sub.x );
                 fprintf( pFile, "o OBJ_TRIANGLES.%i \n", nobj ); nobj++;
                 int iii = 0;
                 for(int j=osub.x; j<sub.x; j++){
@@ -312,9 +310,8 @@ class MeshBuilder{ public:
                     if(iii%3==2) fprintf( pFile, "f %i//%i %i//%i %i//%i \n", nvert-2,nnor-2,  nvert-1,nnor-1,   nvert,nnor );
                     iii++;
                 }
-
             }else if(mode == GL_TRIANGLE_STRIP ) {  // Indexed Triangles
-                printf(         "o OBJ_TRIANGLE_STRIP.%i  [ %i ... %i ] \n", nobj, osub.x, sub.x );
+                //printf(         "o OBJ_TRIANGLE_STRIP.%i  [ %i ... %i ] \n", nobj, osub.x, sub.x );
                 fprintf( pFile, "o OBJ_TRIANGLE_STRIP.%i \n", nobj ); nobj++;
                 /*
                 //  ToDo - This does not work for some reason => brute force polygonization

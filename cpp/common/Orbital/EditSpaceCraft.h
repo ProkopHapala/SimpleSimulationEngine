@@ -35,7 +35,7 @@ inline int  idKind2i( int kind, int id ){ return (kind<<NBIT_id)|(MASK_id&&id); 
 
 int l_Material (lua_State * L){
     Material *mat = new Material();
-    Lua::dumpStack(L);
+    //Lua::dumpStack(L);   // DEBUG
     strcpy( mat->name,  Lua::getStringField(L, "name"    ) );
     mat->density      = Lua::getDoubleField(L, "density" );
     mat->Spull        = Lua::getDoubleField(L, "Spull"   );
@@ -46,7 +46,8 @@ int l_Material (lua_State * L){
     mat->Tmelt        = Lua::getDoubleField(L, "Tmelt"   );
     //auto it = worshop.materials_dict.find( mat->name );
     //if( it == worshop.materials_dict.end() ){ materials.insert({mat->name,mat}); }else{ printf( "Material `%s` replaced\n", mat->name ); delete it->second; it->second = mat;  }
-    if( workshop.materials.add(mat) ) printf( "Material `%s` replaced\n", mat->name );
+    if( workshop.materials.add(mat) && (verbosity>0) ) printf( "Material(%s) replaced\n", mat->name );
+    if(verbosity>1) mat->print();
     //printf( "Material %s dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", mat->name, mat->density, mat->Kpull,mat->Kpush,   mat->Spull,mat->Spush,  mat->reflectivity, mat->Tmelt );
     return 0;
 };
@@ -54,7 +55,7 @@ int l_Material (lua_State * L){
 /*
 int l_PanelMaterial (lua_State * L){
     PanelMaterials *mat = new PanelMaterials();
-    Lua::dumpStack(L);
+    //Lua::dumpStack(L); DEBUG
     strcpy( mat->name,  Lua::getStringField(L, "name"    ) );
     auto it = materials.find( mat->name );
     if( it == materials.end() ){ materials.insert({mat->name,mat}); }else{ printf( "Material `%s` replaced\n", mat->name ); delete it->second; it->second = mat;  }
@@ -64,12 +65,14 @@ int l_PanelMaterial (lua_State * L){
 */
 
 int l_Node    (lua_State * L){
-    Vec3d pos;
-    Lua::getVec3(L, 1, pos );
-    int id =  theSpaceCraft->nodes.size();
-    theSpaceCraft->nodes.push_back( Node(pos) );
-    printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
-    lua_pushnumber(L, id);
+    Node o;
+    //Vec3d pos;
+    Lua::getVec3(L, 1, o.pos );
+    o.id =  theSpaceCraft->nodes.size();
+    theSpaceCraft->nodes.push_back( o  );
+    //printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
+    if(verbosity>1) o.print();
+    lua_pushnumber(L, o.id);
     return 1;
 };
 
@@ -83,7 +86,8 @@ int l_Rope    (lua_State * L){
     //if( it != worshop.materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
     o.material = workshop.materials.get( matn );
     o.id   = theSpaceCraft->ropes.size();
-    printf( "Rope (%i,%i) %g %s ->  %i\n", o.p0, o.p1, o.thick, matn, o.id );
+    //printf( "Rope (%i,%i) %g %s ->  %i\n", o.p0, o.p1, o.thick, matn, o.id );
+    if(verbosity>1) o.print();
     theSpaceCraft->ropes.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;
@@ -104,7 +108,8 @@ int l_Girder  (lua_State * L){
     //o.material = worshop.materials.get( matn );
     o.face_mat = workshop.panelMaterials.getId( matn );
     o.id     = theSpaceCraft->girders.size();
-    printf( "Girder (%i,%i) (%g,%g,%g) (%i,%i), (%g,%g) %s ->  %i\n", o.p0, o.p1, o.up.x, o.up.y, o.up.z, o.nseg, o.mseg, o.wh.x, o.wh.y, matn, o.id );
+    //printf( "Girder (%i,%i) (%g,%g,%g) (%i,%i), (%g,%g) %s ->  %i\n", o.p0, o.p1, o.up.x, o.up.y, o.up.z, o.nseg, o.mseg, o.wh.x, o.wh.y, matn, o.id );
+    if(verbosity>1) o.print();
     theSpaceCraft->girders.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;
@@ -129,12 +134,13 @@ int l_Ring    (lua_State * L){
     //o.material = workshop.materials.get( matn );
     o.face_mat = workshop.panelMaterials.getId( matn );
     o.id     = theSpaceCraft->rings.size();
-    printf( "Ring (%i,%i) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%i), %g, (%g,%g) %s ->  %i\n", o.nseg,
-        o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,
-        o.pose.rot.a.x, o.pose.rot.a.y, o.pose.rot.a.z,
-        o.pose.rot.b.x, o.pose.rot.b.y, o.pose.rot.b.z,
-        o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,
-        o.R, o.wh.x, o.wh.y, matn, o.id );
+    if(verbosity>1) o.print();
+    // printf( "Ring (%i,%i) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%i), %g, (%g,%g) %s ->  %i\n", o.nseg,
+    //     o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,
+    //     o.pose.rot.a.x, o.pose.rot.a.y, o.pose.rot.a.z,
+    //     o.pose.rot.b.x, o.pose.rot.b.y, o.pose.rot.b.z,
+    //     o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,
+    //     o.R, o.wh.x, o.wh.y, matn, o.id );
     //printf( "Ring (%i,%i) (%g,%g,%g) (%i), %g, (%g,%g) %s ->  %i\n", o.p0, o.p1, o.up.x, o.up.y, o.up.z, o.nseg, o.R, o.wh.x, o.wh.y, matn, o.id );
     theSpaceCraft->rings.push_back( o );
     lua_pushnumber(L, o.id);
@@ -155,7 +161,8 @@ int l_Radiator (lua_State * L){
     //auto it = materials.find(matn);
     //if( it != materials.end() ){r.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
     o.id   = theSpaceCraft->radiators.size();
-    printf( "Radiator %i(%.2f,%.2f) %i(%.2f,%.2f) %f -> %i\n", o.g1, o.g1span.x, o.g1span.y,   o.g2, o.g2span.x, o.g2span.y,  o.temperature, o.id );
+    if(verbosity>1) o.print();
+    //printf( "Radiator %i(%.2f,%.2f) %i(%.2f,%.2f) %f -> %i\n", o.g1, o.g1span.x, o.g1span.y,   o.g2, o.g2span.x, o.g2span.y,  o.temperature, o.id );
     theSpaceCraft->radiators.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;
@@ -174,7 +181,8 @@ int l_Shield (lua_State * L){
     //auto it = materials.find(matn);
     //if( it != materials.end() ){r.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
     o.id   = theSpaceCraft->shields.size();
-    printf( "Radiator %i(%.2f,%.2f) %i(%.2f,%.2f) %f -> %i\n", o.g1, o.g1span.x, o.g1span.y,   o.g2, o.g2span.x, o.g2span.y, o.id );
+    if(verbosity>1) o.print();
+    //printf( "Radiator %i(%.2f,%.2f) %i(%.2f,%.2f) %f -> %i\n", o.g1, o.g1span.x, o.g1span.y,   o.g2, o.g2span.x, o.g2span.y, o.id );
     theSpaceCraft->shields.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;
@@ -190,9 +198,9 @@ int l_Tank (lua_State * L){
     Lua::getVec3(L, 3, o.span );
     const char * matn = Lua::getString(L,4);
     o.id   = theSpaceCraft->tanks.size();
-    printf( "Tank pos (%f,%f,%f) dir (%f,%f,%f) l %f r %f -> %i\n",  o.pose.pos.x,o.pose.pos.x,o.pose.pos.x,  o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,   o.span.b, o.span.c, o.id );
+    if(verbosity>1) o.print();
+    //printf( "Tank pos (%f,%f,%f) dir (%f,%f,%f) l %f r %f -> %i\n",  o.pose.pos.x,o.pose.pos.x,o.pose.pos.x,  o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,   o.span.b, o.span.c, o.id );
     theSpaceCraft->tanks.push_back( o );
-
     lua_pushnumber(L, o.id);
     return 1;
 };
@@ -207,9 +215,9 @@ int l_Thruster (lua_State * L){
     Lua::getVec3(L, 3, o.span );
     const char * skind = Lua::getString(L,4);
     o.id   = theSpaceCraft->thrusters.size();
-    printf( "Thruster pos (%f,%f,%f) dir (%f,%f,%f) l %f r %f -> %i\n",  o.pose.pos.x,o.pose.pos.x,o.pose.pos.x,  o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,   o.span.b, o.span.c, o.id );
+    if(verbosity>1) o.print();
+    //printf( "Thruster pos (%f,%f,%f) dir (%f,%f,%f) l %f r %f -> %i\n",  o.pose.pos.x,o.pose.pos.x,o.pose.pos.x,  o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,   o.span.b, o.span.c, o.id );
     theSpaceCraft->thrusters.push_back( o );
-
     lua_pushnumber(L, o.id);
     return 1;
 };
@@ -223,7 +231,8 @@ int l_Gun     (lua_State * L){
     //auto it = materials.find(matn);
     //if( it != materials.end() ){r.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
     o.id   = theSpaceCraft->guns.size();
-    printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o.suppId, o.suppSpan.x, o.suppSpan.y,   skind, o.id );
+    if(verbosity>1) o.print();
+    //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o.suppId, o.suppSpan.x, o.suppSpan.y,   skind, o.id );
     theSpaceCraft->guns.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;
@@ -234,13 +243,12 @@ int l_Rock     (lua_State * L){
     Rock o;
     Vec3d dir,up;
     Lua::getVec3(L, 1, o.pose.pos   );
-
     Lua::getVec3(L, 2, dir );
     Lua::getVec3(L, 3, up  );
     o.pose.rot.fromDirUp(dir, up);
     Lua::getVec3(L, 4, o.span );
-
     o.id   = theSpaceCraft->rocks.size();
+    if(verbosity>1) o.print();
     //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o., o.suppSpan.x, o.suppSpan.y,   skind, o.id );
     theSpaceCraft->rocks.push_back( o );
     lua_pushnumber(L, o.id);
@@ -251,13 +259,12 @@ int l_Balloon     (lua_State * L){
     Balloon o;
     Vec3d dir,up;
     Lua::getVec3(L, 1, o.pose.pos   );
-
     Lua::getVec3(L, 2, dir );
     Lua::getVec3(L, 3, up  );
     o.pose.rot.fromDirUp(dir, up);
     Lua::getVec3(L, 4, o.span );
-
     o.id   = theSpaceCraft->balloons.size();
+    if(verbosity>1) o.print();
     //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o., o.suppSpan.x, o.suppSpan.y,   skind, o.id );
     theSpaceCraft->balloons.push_back( o );
     lua_pushnumber(L, o.id);

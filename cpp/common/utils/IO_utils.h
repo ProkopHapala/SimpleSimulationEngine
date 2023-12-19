@@ -190,7 +190,7 @@ inline int fileExist(const char * fname ){
 // list files in directory
 //  https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
 
-inline int listDirContaining( char * dirName, char * fname_contains, std::vector<std::string>& fnames_found ){
+inline int listDirContaining( char * dirName, char * fname_contains, std::vector<std::string>& fnames_found, bool bPrint=false ){
     DIR *dir=NULL;
     int n=0;
     struct dirent *ent=NULL;
@@ -199,7 +199,7 @@ inline int listDirContaining( char * dirName, char * fname_contains, std::vector
         while ( (ent = readdir (dir)) != NULL) {
             char* found = strstr( ent->d_name, fname_contains );
             if( found ){
-                printf("%i %s\n", i, ent->d_name);
+                if(bPrint)printf("%i %s\n", i, ent->d_name);
                 fnames_found.push_back( ent->d_name );
                 i++;
             }
@@ -207,7 +207,7 @@ inline int listDirContaining( char * dirName, char * fname_contains, std::vector
         n++;
         closedir(dir);
     } else {
-        printf("Cannot open directory %s \n", dirName );
+       printf("Cannot open directory %s \n", dirName );
         return -1;
     }
     return i;

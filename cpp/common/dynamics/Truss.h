@@ -18,6 +18,8 @@
 #include "Vec3.h"
 #include "Mat3.h"
 
+
+// ToDo: should move this to SpaceCraftComponents.h ?
 class GirderParams{  public:
     int n=5;    // number of segments along the girder
     int m=2;    // number of segments 
@@ -100,11 +102,11 @@ class Truss{ public:
     int pickEdge( const Vec3d& ray0, const Vec3d& hRay, double R ) const;
 
     void panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width );
-    void girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width );
+    int girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width );
     void girder1_caps( int ip0, int ip1, int kind );
-    void wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width );
-    void makeGriders( int nEdges, TrussEdge* edges, Vec3d* points, GirderParams* params, Vec3d * ups );
-    void makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vector<Vec2i>* ends );
+    int wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width );
+    int makeGriders( int nEdges, TrussEdge* edges, Vec3d* points, GirderParams* params, Vec3d * ups );
+    int makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vector<Vec2i>* ends );
     int makeCylinder( Vec3d p0, Vec3d p1, double r0, double r1, int nPhi=-1, int nL=-1, double dStep=1.0, int edgeTyp=-1, int faceTyp=-1 );
     //void makeCapsular( int n, Vec3d * points, Vec3d * ups, double R, double width, double mass );  // 
     int  addRope( int i, int j, int type, int nsub );

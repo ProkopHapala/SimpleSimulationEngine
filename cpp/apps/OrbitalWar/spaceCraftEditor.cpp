@@ -11,6 +11,9 @@
 #include "Draw3D.h"
 #include "SDL_utils.h"
 
+int verbosity = 0;
+
+
 #include "fastmath.h"
 #include "Vec3.h"
 #include "Mat3.h"
@@ -40,6 +43,8 @@
 
 #include "spaceCraftEditorUtils.h"
 
+#include "argparse.h"
+
 using namespace SpaceCrafting;
 
 enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
@@ -55,6 +60,7 @@ double elementSize  = 5.;
 
 
 void renderShip(){
+    printf( "spaceCraftEditor.cpp::renderShip() \n" );
     if(glo_ship){ glDeleteLists(glo_ship,1); };
     glo_ship = glGenLists(1);
     glNewList( glo_ship, GL_COMPILE );
@@ -90,15 +96,15 @@ void renderShip(){
 }
 
 void reloadShip( const char* fname  ){
-    theSpaceCraft->clear();
+    theSpaceCraft->clear();                  // clear all components
     //luaL_dofile(theLua, "data/spaceshil1.lua");
-    printf("reloadShip('%s')", fname );
+    printf("#### START reloadShip('%s')\n", fname );
     Lua::dofile(theLua,fname);
+    printf( "Lua::dofile(%s) DONE \n", fname );
     //luaL_dostring(theLua, "print('LuaDEBUG 1'); n1 = Node( {-100.0,0.0,0.0} ); print('LuaDEBUG 2'); print(n1)");
-
     theSpaceCraft->toTruss();
     renderShip();
-
+    printf("#### END reloadShip('%s')\n", fname );
 };
 
 void drawPicked( const SpaceCraft& craft, int ipick ){
@@ -290,16 +296,18 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     //std::vector<std::string> luaFiles;
     listDirContaining( "data", ".lua", lstLuaFiles->labels );
 
+    /*
     Vec3f pf;
     Vec3d pd;
-    //pd.set(1.5d,1.800001d,1.9d);
-    pd.set(1.5d,1.800000001d,1.9d);
+    //pd.set(1.5,1.800001,1.9);
+    pd.set(1.5,1.800000001,1.9);
     //pd = pf;
     //pd = (Vec3d)pf;
     pf = (Vec3f)pd;
     print(pf);printf(" // pf\n");
     print(pd);printf(" // pd\n");
     //exit(0);
+    */
 
     //camera();
 
@@ -542,13 +550,17 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
 
 // ===================== MAIN
 
-SpaceCraftEditGUI * thisApp;
+LambdaDict funcs;
+SpaceCraftEditGUI * app;
 
 int main(int argc, char *argv[]){
+
+    // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
+    //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
+    funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
+
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-
-
 	// https://www.opengl.org/discussion_boards/showthread.php/163904-MultiSampling-in-SDL
 	//https://wiki.libsdl.org/SDL_GLattr
 	//SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
@@ -569,9 +581,12 @@ int main(int argc, char *argv[]){
 	int junk;
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
-	thisApp = new SpaceCraftEditGUI( junk , dm.w-150, dm.h-100 );
-	//thisApp = new SpaceCraftEditGUI( junk , 800, 600 );
-	thisApp->loop( 1000000 );
+	app = new SpaceCraftEditGUI( junk , dm.w-150, dm.h-100 );
+
+    process_args( argc, argv, funcs );
+
+	//app = new SpaceCraftEditGUI( junk , 800, 600 );
+	app->loop( 1000000 );
 	return 0;
 }
 

@@ -44,6 +44,9 @@ class CatalogItem{ public:
 	int  id;
 	int  kind;
 	char name[NAME_LEN] = "\n";
+
+    virtual void print(){ printf("CatalogItem(%i|%s) kidn=%i \n", id, name, kind ); }
+    virtual ~CatalogItem(){}   // this is necessary to avoid error see. https://stackoverflow.com/questions/12994920/how-to-delete-an-object-of-a-polymorphic-class-type-that-has-no-virtual-destruct
 };
 
 class Material : public CatalogItem { public:
@@ -52,16 +55,22 @@ class Material : public CatalogItem { public:
 	double Kpull,Kpush;  // [Pa] elastic modulus
 	double reflectivity; // [1] reflectivity
 	double Tmelt;        // [T] temperature of failure
+
+    virtual void print(){ printf( "Material(%i|%s) dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", id, name, density, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
  	// What about heat, electricity etc. ?
 };
 
 class Commodity : public CatalogItem { public:
 	double density;      // [kg/m3]
 	// What about heat, electricity etc. ?
+
+    virtual void print(){ printf( "Commodity(%i|%s) %s dens %g \n", id, name, density ); };
 };
 
 class FuelType : public Commodity { public:
     double EnergyDesity;   // [J/kg]
+
+    virtual void print(){ printf( "FuelType(%i|%s) %s dens %g E=%g[J/kg] \n", id, name, density, EnergyDesity ); };
 };
 
 
@@ -76,8 +85,11 @@ class StickMaterial : public CatalogItem { public:
     double reflectivity;   // [1] reflectivity
     double Tmelt;          // [T] temperature of failure  
     double damping;
-    double Kpull,Kpush;    // [Pa] elastic modulus
+    double Kpull,Kpush;    // [N/m] elastic modulus
+    double Spull,Spush;    // [N]   Strenght
     int    materiallId;    // index of material in catalog
+
+    virtual void print(){ printf( "StickMaterial(%i|%s) d=%g[m] dens=%g[kg/m] S(%g,%g)[N] K(%g,%g)[N/m] Refl=%g Tmelt=%g[K] \n", id, name, diameter, linearDensity, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
 };
 
 class PanelMaterial : public CatalogItem { public:
@@ -91,6 +103,8 @@ class PanelMaterial : public CatalogItem { public:
         areaDensity = 0.0;
         for( PanelLayer& l : layers ){ areaDensity += l.thickness * l.materiallId; }
     }
+
+    virtual void print(){ printf( "PanelMaterial(%i|%s) dens=%g[kg/m2] nlayer=%i \n", id, name, areaDensity, layers.size() ); };
 };
 
 class ThrusterType : public CatalogItem { public:
@@ -100,11 +114,15 @@ class ThrusterType : public CatalogItem { public:
 	bool   exhaustFuel;   // if true the burned fuel is added to propellant mass
 	FuelType  * fuel      = NULL;
 	Commodity  * Propelant = NULL;
+
+    virtual void print(){ printf( "ThrusterType(%i|%s) eff=%g ve(%g,%g)[m/s] fuel=%s propelant=%s \n", id, name, efficiency, veMin, veMax, fuel->name, Propelant->name ); };
 };
 
 class GunType : public CatalogItem { public:
 	double recoil;
 	// scaling laws - how performace (power, accuracy, penetration, time of flight ...) scales with size ?
+
+    virtual void print(){ printf( "GunType(%i|%s) recoil=%g \n", id, name, recoil ); };
 };
 
 // ==== Components
@@ -113,7 +131,7 @@ class Node{ public:
     Vec3d pos;
     std::vector<Vec2i> components; // {kind,index}  // TODO: is this still valid ?
     int id;
-    Node(Vec3d pos):pos(pos){};
+    //Node(Vec3d pos):pos(pos){};
 
     virtual void print(){ printf("Node(id=%i) kidn=%i face_mat=%i \n", id, pos.x,pos.y,pos.z ); };
 };
@@ -392,7 +410,7 @@ class SpaceCraftWorkshop{ public:
         mat->reflectivity= reflectivity;
         mat->Tmelt       = Tmelt;
         materials.add( mat );
-        if(bPrint)printf( "Material %s dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", mat->name, mat->density, mat->Kpull,mat->Kpush, mat->Spull,mat->Spush, mat->reflectivity, mat->Tmelt );
+        if(bPrint)mat->print();
         return 0;
     };
 
