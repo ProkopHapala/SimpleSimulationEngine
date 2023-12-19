@@ -197,6 +197,10 @@ class OCLtask{ public:
     //OCLtask          ( OCLsystem  * cl_, size_t ikernel_, size_t dim_, size_t global_, size_t local_ ): cl(cl_),ikernel(ikernel_),dim(dim_){ global[0]=global_;global[1]=global_;global[2]=global_; local[0]=local_;local[1]=local_;local[2]=local_; };
     OCLtask()=default;
     OCLtask          ( OCLsystem  * cl_, size_t ikernel_, size_t dim_, size_t4 global_, size_t4 local_ ):cl(cl_),ikernel(ikernel_),dim(dim_),global(global_),local(local_){};
+    
+    //OCLtask( &cl, iker, 2, n, 16    ); 
+    OCLtask          ( OCLsystem  * cl_, size_t ikernel_, size_t dim_, int nglob, int nloc ):cl(cl_),ikernel(ikernel_),dim(dim_),global( (size_t4){(size_t)nglob,(size_t)nglob,(size_t)nglob,(size_t)nglob}),local((size_t4){(size_t)nloc,(size_t)nloc,(size_t)nloc,(size_t)nloc}){};
+    
     inline void setup( OCLsystem  * cl_, size_t ikernel_, size_t dim_, size_t4 global_, size_t4 local_ ){cl=cl_; ikernel=ikernel_; dim=dim_; global=global_; local=local_; };
 
     //OCLtask(){}

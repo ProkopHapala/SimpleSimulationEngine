@@ -6,9 +6,7 @@ find_package( GLU    REQUIRED )
 find_package( SDL2   REQUIRED )
 find_package( OpenCL REQUIRED )
 
-include_directories( 
-        ${COMMON_SRCS}/OCL
-)
+include_directories( ${COMMON_SRCS}/OCL )
 
 #add_subdirectory (OCL)
 add_subdirectory (lingebra)

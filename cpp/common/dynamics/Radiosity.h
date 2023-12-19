@@ -74,10 +74,12 @@ class Radiosity : public TriangleRayTracer, public LinSolver { public:
                 */
 
                 coupling = fabs( coupling );
-                if( occlusion <0.5 ){
-                    Draw3D::drawLine( eli.pos, elj.pos );
-                    //printf( " %i %i %g \n", i, j, coupling );
-                }
+                
+                // DEBUG DRAW
+                //if( occlusion <0.5 ){
+                //    Draw3D::drawLine( eli.pos, elj.pos );
+                //    //printf( " %i %i %g \n", i, j, coupling );
+                //}
 
                 M[i*n+j] = coupling;
                 M[j*n+i] = coupling;

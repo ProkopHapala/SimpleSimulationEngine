@@ -29,7 +29,7 @@ int i_DEBUG=0;
 #include "Grid.h"
 #include "GaussianBasis.h"
 #include "CLCFGO.h"
-#include "CLCFGO_tests.h"
+#include "CLCFGO_tests.h"  // NOTE: this imports Plot2D.h which depends on SDL2 therefore we cannot compile this when WITH_SDL=OFF
 
 #include "eFF.h"
 

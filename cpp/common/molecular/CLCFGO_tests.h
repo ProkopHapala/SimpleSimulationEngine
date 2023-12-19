@@ -11,7 +11,7 @@
 #include "VecN.h"
 
 
-#include "Plot2D.h"
+#include "Plot2D.h"     // This cause problem with compiltaion for WITH_SDL=OFF
 
 #define iTEST_POS_DERIV  0
 #define iTEST_SIZE_DERIV 1
@@ -38,7 +38,7 @@ void testDerivsCoulombModel( CLCFGO& solver, int n, double* xs, double* Es, doub
     solver.toRho(0,1, 0);
     solver.toRho(2,3, 1);
     for(int i=0; i<n; i++){
-        DEBUG_iter=i;
+        //DEBUG_iter=i;
         solver.clearAuxDens();
         solver.cleanForces();
         switch(what){
@@ -64,7 +64,7 @@ void testDerivsTotal( CLCFGO& solver, int n, double* xs, double* Es, double* Fs,
     solver.reportOrbitals();
     for(int i=0; i<n; i++){
         //printf( "===== testDerivsTotal[%i]\n", i  );
-        DEBUG_iter=i;
+        //DEBUG_iter=i;
         //if(DEBUG_iter==DEBUG_log_iter){ printf("before switch(what) \n"); solver.reportOrbitals(); }
         switch(what){
             case iTEST_POS_DERIV : solver.epos [0].x=xs[i];        break;
@@ -80,6 +80,39 @@ void testDerivsTotal( CLCFGO& solver, int n, double* xs, double* Es, double* Fs,
             case iTEST_POS_DERIV : Fs[i]=solver.efpos [0].x; break;
             case iTEST_SIZE_DERIV: Fs[i]=solver.efsize[0];   break;
         }
+    }
+}
+
+void initTestElectrons( CLCFGO& solver ){
+    /*
+    {auto& _=solver;
+        _.ecoef[0] =   1.0;
+        _.ecoef[1] =   1.0;
+        _.ecoef[2] =  -0.5;
+        _.ecoef[3] =   1.0;
+        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [2] = (Vec3d){-3.0,-0.1,0.0};
+        _.epos [3] = (Vec3d){-3.0,+1.5,0.0};
+        //_.ecoef[3] = +0.3;
+    }
+    */
+    {auto& _=solver;
+        _.ecoef[0] =   1.0;
+        _.ecoef[1] =   1.0;
+        _.ecoef[2] =   1.0;
+        _.ecoef[3] =   1.0;
+
+        _.esize[0] =   1.0;
+        _.esize[1] =   1.0;
+        _.esize[2] =   1.0;
+        _.esize[3] =   1.0;
+
+        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
+        _.epos [2] = (Vec3d){-1.5, 0.0,0.0};
+        _.epos [3] = (Vec3d){ 0.0, 0.0,0.0};
+        //_.ecoef[3] = +0.3;
     }
 }
 
@@ -186,40 +219,6 @@ void testDerivs_Coulomb( int n, double x0, double dx, CLCFGO& solver, Plot2D& pl
     }
 }
 
-
-
-void initTestElectrons( CLCFGO& solver ){
-    /*
-    {auto& _=solver;
-        _.ecoef[0] =   1.0;
-        _.ecoef[1] =   1.0;
-        _.ecoef[2] =  -0.5;
-        _.ecoef[3] =   1.0;
-        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
-        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
-        _.epos [2] = (Vec3d){-3.0,-0.1,0.0};
-        _.epos [3] = (Vec3d){-3.0,+1.5,0.0};
-        //_.ecoef[3] = +0.3;
-    }
-    */
-    {auto& _=solver;
-        _.ecoef[0] =   1.0;
-        _.ecoef[1] =   1.0;
-        _.ecoef[2] =   1.0;
-        _.ecoef[3] =   1.0;
-
-        _.esize[0] =   1.0;
-        _.esize[1] =   1.0;
-        _.esize[2] =   1.0;
-        _.esize[3] =   1.0;
-
-        _.epos [0] = (Vec3d){ 0.0, 0.0,0.0};
-        _.epos [1] = (Vec3d){ 0.0, 0.0,0.0};
-        _.epos [2] = (Vec3d){-1.5, 0.0,0.0};
-        _.epos [3] = (Vec3d){ 0.0, 0.0,0.0};
-        //_.ecoef[3] = +0.3;
-    }
-}
 
 
 /*
@@ -493,6 +492,7 @@ void test_Kinetic( CLCFGO& solver, Plot2D& plot1 ){
     //return err2;
 }
 
+
 double test_OrbInteraction( CLCFGO& solver, int iMODE, int io, int jo, int nint, double dx, double Rmax, double gStep, double * line_Ek=0, double* line_Ek_g=0, double * line_f1=0, double* line_f2=0, int bPrint=0, bool bSave=0 ){
     //int nint=40;
     if(bPrint>0)printf( "# ===== test_CrossKinetic(%i,%i) \n ", io, jo );
@@ -613,8 +613,8 @@ void test_ProjectDensity( CLCFGO& solver, Plot2D& plot1 ){
     printf      ( "DEBUG |rho| %g |wf^2| %g \n", sumRho*dV, sumWf2*dV );
     float DEBUG_sc = 0.1;
     int ixy = grid.n.x*grid.n.y*grid.n.z/2 + grid.n.x*grid.n.y/2;
-    DataLine2D* line_wf2  = new DataLine2D( grid.n.x, 0, 0.1      , 0xFF0080FF, "wf2"  ); plot1.add(line_wf2  );
-    DataLine2D* line_rho  = new DataLine2D( grid.n.x, 0, 0.1      , 0xFFFF00FF, "rho"  ); plot1.add(line_rho  );
+    //DataLine2D* line_wf2  = new DataLine2D( grid.n.x, 0, 0.1      , 0xFF0080FF, "wf2"  ); plot1.add(line_wf2  );
+    //DataLine2D* line_rho  = new DataLine2D( grid.n.x, 0, 0.1      , 0xFFFF00FF, "rho"  ); plot1.add(line_rho  );
     for(int i=0; i<grid.n.x; i++){ line_wf2->ys[i]=gorb1[ixy+i]*DEBUG_sc; line_rho->ys[i]=grho1[ixy+i]*DEBUG_sc; }
     grid.saveXSF( "temp/rho_orb.xsf", gorb1.data() );
     grid.saveXSF( "temp/rho_aux.xsf", grho1.data() );

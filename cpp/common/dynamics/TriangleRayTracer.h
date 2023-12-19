@@ -8,7 +8,7 @@
 #include "CMesh.h"
 #include "Lingebra.h"
 
-#include "Draw3D.h" // DEBUG
+//#include "Draw3D.h" // DEBUG
 
 class SurfElement{ public:
     Vec3d pos;    //= Vec3dZero;

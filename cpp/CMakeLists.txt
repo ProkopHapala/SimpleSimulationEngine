@@ -113,6 +113,7 @@ add_subdirectory( ${MY_SRC_DIR}/tests    )   # currently empty
 # ====== OpenCL
 
 if ( WITH_OPENCL )
+    include_directories(${COMMON_SRCS}/OCL)
     add_subdirectory( ${MY_SRC_DIR}/libs_OCL )
 endif()
 
