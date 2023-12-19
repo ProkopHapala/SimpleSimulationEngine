@@ -17,6 +17,8 @@
 #include "quaternion.h"
 #include "raytrace.h"
 
+int verbosity = 0;
+
 #include "Truss.h"
 #include "SpaceCraft.h"
 #include "SpaceCraftDraw.h"
