@@ -329,7 +329,7 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
 
 AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
-    bOCL_checkError = 2;
+    bOCLCheckError = true;
 
 
     cl = new OCLsystem();  DEBUG

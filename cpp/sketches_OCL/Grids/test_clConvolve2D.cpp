@@ -60,8 +60,8 @@ TestApp_clConvolve2D::TestApp_clConvolve2D( int& id, int WIDTH_, int HEIGHT_ ) :
     task1 = new OCLtask( &cl, cl.newKernel("blur2D_naive"), 2, 0, 0 );
     //task1 = new OCLtask( &cl, cl.newKernel("blur2D_Gauss"), 2, 0, 0 );
     //task1 = new OCLtask( &cl, cl.newKernel("blur2D_local"), 2, 0, 0 );
-    task1->global[0] = nx-2; task1->global[1] = ny-2;
-    task1->local [0] = 16;   task1->local [1] = 16;
+    task1->global.x = nx-2; task1->global.y = ny-2;
+    task1->local.x  = 16;   task1->local.y = 16;
     task1->args = { BUFFarg(0), BUFFarg(1) };
     task1->print_arg_list();
 
@@ -72,8 +72,8 @@ TestApp_clConvolve2D::TestApp_clConvolve2D( int& id, int WIDTH_, int HEIGHT_ ) :
 
     task3 = new OCLtask( &cl, cl.newKernel("blur2D_local_async"), 2, 0, 0 );
     //task3 = new OCLtask( &cl, cl.newKernel("blur2D_naive"), 2, 0, 0 );
-    task3->global[0] = nx-2; task3->global[1] = 16;
-    task3->local [0] = 16;   task3->local [1] = 16;
+    task3->global.x = nx-2; task3->global.y = 16;
+    task3->local .x = 16;   task3->local .y = 16;
     task3->args = { BUFFarg(0), BUFFarg(1) };
     task3->print_arg_list();
 

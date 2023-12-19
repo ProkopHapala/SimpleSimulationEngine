@@ -109,14 +109,14 @@ TestApp_clConvolve2D::TestApp_clConvolve2D( int& id, int WIDTH_, int HEIGHT_ ) :
 
     //task1 = new OCLtask( &cl, cl.newKernel("cloth_force"), 2, 0, 0 );
     task1 = new OCLtask( &cl, cl.newKernel("sheet_force"), 2, 0, 0 );
-    task1->global[0] = nx; task1->global[1] = ny;
-    task1->local [0] = 16; task1->local [1] = 16;
+    task1->global.x = nx; task1->global.y = ny;
+    task1->local .x = 16; task1->local .y = 16;
     task1->args = { BUFFarg(0), BUFFarg(2) };
     task1->print_arg_list();
 
     task2 = new OCLtask( &cl, cl.newKernel("cloth_dynamics"), 2, 0, 0 );
-    task2->global[0] = nx; task2->global[1] = ny;
-    task2->local [0] = 16; task2->local [1] = 16;
+    task2->global.x = nx; task2->global.y = ny;
+    task2->local .x = 16; task2->local .y = 16;
     task2->args = { BUFFarg(0), BUFFarg(1), FLOATarg(dt), FLOATarg(damp) };
     task2->print_arg_list();
 
@@ -192,7 +192,7 @@ void TestApp_clConvolve2D::draw(){
             cl.upload(0);
             cl.upload(1);
             //cl.upload(1);
-            taskConstr->global[0] = 1;
+            taskConstr->global.x = 1;
             iConstrains       [0] = i_picked;
             constrains        [0] = pMouse.x;
             constrains        [1] = pMouse.y;

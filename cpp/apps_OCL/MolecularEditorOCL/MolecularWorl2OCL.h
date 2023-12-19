@@ -246,9 +246,9 @@ class RigidMolecularWorldOCL{ public:
         //float4 dinvB,
         //float4 dinvC
 
-        task_getFEgrid->dim       = 1;
-        task_getFEgrid->local [0] = 1;
-        task_getFEgrid->global[0] = nAtoms;
+        task_getFEgrid->dim      = 1;
+        task_getFEgrid->local.x  = 1;
+        task_getFEgrid->global.x = nAtoms;
 
 
         pos0.f = (Vec3f)( grid.dCell.a + grid.dCell.b + grid.dCell.c )*0.5;
@@ -309,8 +309,8 @@ class RigidMolecularWorldOCL{ public:
         int nLoc = _max( nMols, nAtomInMolMax );
 
         task_getForceRigidSystemSurfGrid->dim       = 1;
-        task_getForceRigidSystemSurfGrid->local [0] = nLoc;
-        task_getForceRigidSystemSurfGrid->global[0] = nSystems* task_getForceRigidSystemSurfGrid->local[0];
+        task_getForceRigidSystemSurfGrid->local .x = nLoc;
+        task_getForceRigidSystemSurfGrid->global.x = nSystems* task_getForceRigidSystemSurfGrid->local.x;
         pos0.f = (Vec3f)( grid.dCell.a + grid.dCell.b + grid.dCell.c )*0.5;
         dA  .setXYZ( (Vec3f)grid.diCell.a );
         dB  .setXYZ( (Vec3f)grid.diCell.b );
@@ -636,7 +636,7 @@ class GridFF_OCL{ public:
 
         DEBUG;
 
-        //task_FFPLE->global[0] = nGrid;
+        //task_FFPLE->global.x = nGrid;
         //task_FFPLE->args = { INTarg(nAtoms), BUFFarg(id_atoms), BUFFarg(id_gridPoints), BUFFarg(id_FFPauli), BUFFarg(id_FFLondon), BUFFarg(id_FFelec) };
         //task_FFPLE->print_arg_list();
 
@@ -645,7 +645,7 @@ class GridFF_OCL{ public:
 
     void setupKernel( GridFF& gridFF ){
 
-        task_FFPLE->global[0] = nGridTot;
+        task_FFPLE->global.x = nGridTot;
         //task_FFPLE->args = { INTarg(nAtoms), BUFFarg(id_atoms), BUFFarg(id_gridPoints), BUFFarg(id_FFPauli), BUFFarg(id_FFLondon), BUFFarg(id_FFelec) };
         //task_FFPLE->print_arg_list();
         //__kernel void evalPLE(

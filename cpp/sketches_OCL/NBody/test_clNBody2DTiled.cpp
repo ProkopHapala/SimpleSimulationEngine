@@ -160,10 +160,10 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
     atomsToCells( );
     sortCells();
     printf("nFilledCells %i\n", nFilledCells );
-    taskSorted->global[0] = nloc*nFilledCells;
-    taskSorted->local [0] = nloc;
-    //taskTiled->global[0] = nloc*nFilledCells;
-    //taskTiled->local [0] = nloc;
+    taskSorted->global.x = nloc*nFilledCells;
+    taskSorted->local .x = nloc;
+    //taskTiled->global.x = nloc*nFilledCells;
+    //taskTiled->local .x = nloc;
     clean_array( n, force_ );
     cl.upload(0); cl.upload(2); cl.upload(3); cl.upload(4); //cl.upload(5);
     taskSorted->enque();
@@ -280,8 +280,8 @@ void TestApp_clNBody2DTiled::draw(){
                     sortCells();
                 long t_2 =  getCPUticks();
                     cl.upload(0); cl.upload(3); cl.upload(4);
-                    taskSorted->global[0] = nloc*nFilledCells;
-                    taskSorted->local [0] = nloc;
+                    taskSorted->global.x = nloc*nFilledCells;
+                    taskSorted->local .y = nloc;
                     taskSorted->enque();
                     clFinish(cl.commands);
                     cl.download(2);// cl.download(4);
