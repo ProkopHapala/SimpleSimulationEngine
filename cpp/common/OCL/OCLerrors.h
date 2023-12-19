@@ -23,7 +23,7 @@ static bool bOCLCheckError = true;
 //----------------------------------------------------------------------------
 
 #include <cstdio>
-#define CL_TARGET_OPENCL_VERSION 200
+//#define CL_TARGET_OPENCL_VERSION 200
 #include <CL/cl.h>
 
 const char *OCL_err_code (cl_int err_in){

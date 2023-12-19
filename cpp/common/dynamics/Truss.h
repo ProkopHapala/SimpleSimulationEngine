@@ -30,6 +30,13 @@ class GirderParams{  public:
     int kind_zigOut = 3;
 };
 
+class TrussNode{ public:
+    Vec3d pos;
+    double mass;
+    int nneigh;
+    int i0;       // index of the first neighbor
+
+};
 
 class TrussEdge{ public:
     int a,b;     // indexes of vertices (nodes, points)
@@ -40,6 +47,7 @@ class TrussEdge{ public:
     double mass; // total mass of the edge
     double kT;   // stiffness in tension
     double kP;   // stiffness in pressure
+    double damp; // damping coefficient
 
     void fromString(char* str){ sscanf ( str, "%i %i %i",&a,&b,&type); a--; b--; }
     void toString  (char* str){ sprintf( str, "%i %i %i", a+1, b+1, type); }
@@ -110,6 +118,8 @@ class Truss{ public:
     inline Vec2i newBlock(){ Vec2i ps={points.size(),edges.size()}; blocks.push_back( ps ); return ps; };
     void massesToPoints( double* masses );
     // void toMesh( Mesh& mesh );
+
+    int getMaxNeighs();
 
 };
 

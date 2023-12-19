@@ -15,301 +15,36 @@
 
 #include "Truss.h"
 
+#include "SpaceCraftComponents.h"
+
+
 namespace SpaceCrafting{
 
-const int NAME_LEN = 16;
-
-class BodyPose{ public:
-    Vec3d pos;
-    Mat3d rot;
-    //Quat4d  rot;
-};
-
-
-/*
-//class BBox : public BodyPose{ public:
-class BBox : public BodyPose{ public:
-    //int type;     //  elipsoide, box, ... ?
-    Vec3d pmin;
-    Vec3d pmax;
-};
-*/
-
-// ==== Materials
-
-class CatalogItem{ public:
-	int  id;
-	int  kind;
-	char name[NAME_LEN] = "\n";
-};
-
-
-class PanelLayer{ public:
-    double thickness;    // [m]
-    int    materiallId;  // index of material in catalog
-};
-
-class PanelMaterial : public CatalogItem { public:
-    std::vector<PanelLayer> layers; 
-    double areaDensity;  // [kg/m3]
-    //double reflectivity; // [1] reflectivity
- 	// ToDo: how to calculate response to impact of projectile ? Or irradiation by laser ?
-
-    void evalAreaDensity(){
-        areaDensity = 0.0;
-        for( PanelLayer& l : layers ){ areaDensity += l.thickness * l.materiallId; }
-    }
-};
-
-
-class Material : public CatalogItem { public:
-	double density;      // [kg/m3]
-	double Spull,Spush;  // [Pa] Strenght
-	double Kpull,Kpush;  // [Pa] elastic modulus
-	double reflectivity; // [1] reflectivity
-	double Tmelt;        // [T] temperature of failure
- 	// What about heat, electricity etc. ?
-};
-
-class Commodity : public CatalogItem { public:
-	double density;      // [kg/m3]
-	// What about heat, electricity etc. ?
-};
-
-class FuelType : public Commodity { public:
-    double EnergyDesity;   // [J/kg]
-};
-
-// ==== Components
-
-class Node{ public:
-    Vec3d pos;
-    std::vector<Vec2i> components; // {kind,index}
-    Node(Vec3d pos):pos(pos){};
-};
-
-class ShipComponent{ public:
-    int    id;
-    int    kind;
-    int    shape;
-    int    face_mat=-1;
-    int    edge_mat=-1;
-    //int    p0; // anchor node
-    // char name[NAME_LEN];
-	double mass;           // [kg]
-	//RigidBody pose;
-    Vec2i poitRange;  // index of start and end in Truss
-    Vec2i stickRange; // --,,--
-};
-
-class Modul: public ShipComponent { public:
-    BodyPose pose;
-    Box      bbox;
-    Vec3d    span;
-    double   volume;
-
-    void pick(const Vec3d& ro, const Vec3d& rd){
-
-    }
-
-};
-
-class Tank : public Modul { public:
-	Commodity * typ;
-	//double radius;
-	//double length;
-	        // [m^3]
-	double filled;         // [1]
-};
-
-
-class Balloon : public Modul { public:
-
-};
-
-class Rock : public Modul { public:
-
-};
-
-
-
-//class GirderType : public CatalogItem { public:
-//    int mseg;
-//    Vec3d wh;
-//};
-
-
-class NodeLinker : public ShipComponent { public:
-    int p0,p1;
-    double length;
-
-    void ray( const Vec3d& ro, const Vec3d& rd ){
-
-    }
-};
-
-class Girder : public NodeLinker { public:
-    //int p1; // anchor node; p0 inherate
-    //double length;
-    int nseg;
-    int mseg;
-    Vec2d wh;  // [m] width and height
-    Vec3d up;
-    //double SPull,SPush;
-    //double kPull,kPush;
-    Material * material;
-    //Vec2i poitRange;  // index of start and end in Truss
-    //Vec2i stickRange; // --,,---
-    //GirderType * type = NULL;
-};
-
-//class Ring : public NodeLinker { public:
-class Ring : public ShipComponent { public:
-    //int p1; // anchor node; p0 inherate
-    //double length;
-    BodyPose pose;
-    int nseg;
-    double R;
-    Vec2d wh;
-    Material * material;
-    //Vec2i poitRange;  // index of start and end in Truss
-    //Vec2i stickRange; // --,,---
-    //GirderType * type = NULL;
-};
-
-class Rope : public NodeLinker { public:
-    double thick;
-    Material * material;
-};
-
-class Pipe : public ShipComponent { public:
-    double maxFlow;   // units depend on commodity
-	ShipComponent * a;
-	ShipComponent * b;
-};
-
-//class Hub : public ShipComponent { public:
-//	int   npipes;      // number of pipes going to hub;
-//	Pipe * pipes;      //
-//}
-
-// ==== Motors
-
-class Plate : public ShipComponent { public:
-    double area;
-    int g1,g2;    // anchor girders
-    Vec2d g1span; // pos along girdes
-    Vec2d g2span;
-    //Vec3d normal;
-	//int ntris;
-	//int * tris;  // triangles from points of spaceship
-
-};
-
-class Radiator : public Plate{ public:
-    double temperature;
-};
-
-class Shield : public Plate{ public:
-};
-
-class Collector : public Plate{ public:
-};
-
-// ==== Motors
-
-class ThrusterType : public CatalogItem { public:
-	double efficiency;    // how much power is used for acceleration of propelant
-	double veMin;         // minimal exhaust velocity [m/s]
-	double veMax;         // maximal exhaust velocity [m/s]
-	bool   exhaustFuel;   // if true the burned fuel is added to propellant mass
-	FuelType  * fuel      = NULL;
-	Commodity  * Propelant = NULL;
-};
-
-class Thruster : public Modul { public:
-	ThrusterType * typ = NULL;
-	double thrust;
-	double power;
-	double consumption;
-};
-
-class Rotor : public ShipComponent { public:
-    // Move ship componenets with respect to each other in inner manuevers
-    double Radius;
-    double power;    //  [kg.m^2]
-    double torque;   //  [kg.m^2]
-    double Inertia;  //  [kg.m^2]  moment of inertia
-};
-
-class Slider : public ShipComponent { public:
-    // allow slide a note over a girder
-    int  girder;
-    double power;    //  [kg.m^2]
-    double Force;
-};
-
-// === Guns
-
-class GunType : public CatalogItem { public:
-	double recoil;
-	// scaling laws - how performace (power, accuracy, penetration, time of flight ...) scales with size ?
-};
-
-// Also Accelerator?
-
-class Accelerator : public ShipComponent{ public:
-    // TODO: can be also attached to Ring ?
-    //       This can be perhaps determined from type
-
-    int   suppType; // ring or girder
-    int   suppId;   // anchor girders
-    Vec2f suppSpan; // pos along girdes
-
-    double lenght;        // [m]
-    double PowerPeak;     // [W]
-    double PulseEnergy;   // [J]
-    double PulseDuration; // [s]
-    double PulsePerios;   // [s]
-
-    //std::vector<int> anchors; // anchor points
-};
-
-
-class Gun : public Accelerator{ public:
-	GunType * typ = NULL;
-
-    double Aperture;      // [m^2]
-    double divergence;    // [1] tangens of angle
-    // attached to girder?
-    // incorporated in girder?
-};
-
-// === SpaceShip
-
-
-enum class ComponetKind:int{ Node, Rope, Girder, Ring, Thruster, Gun, Radiator, Shield, Tank, Pipe, Balloon, Rock };
-
 class SpaceCraft : public CatalogItem { public:
+    bool bPrint = true;
 
-    std::vector<Material*>   materials;
-    std::vector<Commodity*>  commodities;
-    std::vector<FuelType*>   fuels;
-    std::vector<PanelMaterial*>  panelMaterials;
+    SpaceCraftWorkshop* workshop = 0;
 
-    std::vector<int>       LODs;
+    std::vector<int>       LODs;  // levels of detail for OpenGL rendering
     Truss truss;
     std::vector<Node>      nodes;
+    
+    // Node-Connectors ( linear structures )
     std::vector<Rope>      ropes;
     std::vector<Girder>    girders;
     std::vector<Ring>      rings;
-	std::vector<Thruster>  thrusters;
 	std::vector<Gun>       guns;
+
+    // Plate components  ( planar structures )     ToDo: maybe we should make just array 'plates' and store all plate-like components there (e.g. radiators, shields, collectors, etc.)
 	std::vector<Radiator>  radiators;
 	std::vector<Shield>    shields;
-	std::vector<Tank>      tanks;
-	std::vector<Pipe>      pipes;
 
+    // Volumetric structures
+	std::vector<Tank>      tanks;    // Also Capacitors ?
+	std::vector<Pipe>      pipes;    // Also Cables, should be attached to girders
+
+    // Shell structures
+	std::vector<Thruster>  thrusters;
 	std::vector<Balloon>  balloons;
 	std::vector<Rock>     rocks;
 	// Truss * coarse = NULL;
@@ -327,7 +62,7 @@ class SpaceCraft : public CatalogItem { public:
 	};
 
 	inline void linker2line( const NodeLinker& o, Line3d& l ){ l.a=nodes[o.p0].pos; l.b=nodes[o.p1].pos; }
-	inline void plate2quad ( const Plate& o, Quad3d& qd ){
+	inline void plate2quad ( const Plate& o, Quad3d& qd )const{
         //qd.l1.a=nodes[ girders[o.g1].p0 ].pos;
         //qd.l1.b=nodes[ girders[o.g1].p1 ].pos;
         //qd.l2.a=nodes[ girders[o.g2].p0 ].pos;
@@ -339,14 +74,14 @@ class SpaceCraft : public CatalogItem { public:
         qd.l2.fromSubLine( nodes[ girders[o.g2].p0 ].pos, nodes[ girders[o.g2].p1 ].pos, o.g2span.x, o.g2span.y );
 	}
 
-    inline double rayPlate( const Plate& plate, const Vec3d& ro, const Vec3d& rd, Vec3d& normal, const Vec3d& hX, const Vec3d& hY ){
+    inline double rayPlate( const Plate& plate, const Vec3d& ro, const Vec3d& rd, Vec3d& normal, const Vec3d& hX, const Vec3d& hY )const{
         Quad3d qd;
         //getQuad(qd);
         plate2quad(plate, qd);
         return qd.ray(ro, rd, normal, hX, hY );
 	}
 
-    inline double rayLinkLine( const NodeLinker& o, const Vec3d& ro, const Vec3d& rd, double rmax ){
+    inline double rayLinkLine( const NodeLinker& o, const Vec3d& ro, const Vec3d& rd, double rmax )const{
         Vec3d lp0=nodes[o.p0].pos;
         Vec3d lpd=nodes[o.p1].pos-lp0;
         double lmax = lpd.normalize();
@@ -356,6 +91,146 @@ class SpaceCraft : public CatalogItem { public:
         if( (r>rmax) || (l>lmax) || (l<0) ) return t_inf;
         return t;
 	}
+
+int add_Node( const Vec3d& pos ){ 
+    Node o(pos);
+    o.id = nodes.size();
+    nodes.push_back( o );
+    //if(bPrint)printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
+    if(bPrint) o.print();
+    return o.id;
+};
+
+int add_Rope( int p0, int p1, double thick, int matId=-1, const char* matn=0 ){
+    Rope o;
+    o.p0   = p0;
+    o.p1   = p1;
+    o.thick= thick;
+    if( (matId<0) && matn){ o.material = workshop->materials.get(matn); }else{ o.material = workshop->materials.vec[matId]; }
+    o.id   = ropes.size();
+    //if(bPrint)printf( "Rope (%i,%i) %g %s ->  %i\n", o.p0, o.p1, o.thick, matn, o.id );
+    if(bPrint) o.print();
+    ropes.push_back( o );
+    return o.id;
+};
+
+int add_Girder  ( int p0, int p1, const Vec3d& up, int nseg, int mseg, const Vec2d& wh, Quat4i stickTypes=Quat4i{1,2,3,4} ){
+    Girder o;
+    o.p0   = p0;
+    o.p1   = p1;
+    o.up   = up;
+    o.nseg = nseg;
+    o.mseg = mseg;
+    o.wh   = wh;
+    o.st   = stickTypes;
+    o.id   = girders.size();
+    //if( (matId<0) && matn){ o.material = workshop->materials.get(matn); }else{ o.material = workshop->materials.vec[matId]; }
+    //if(bPrint)printf( "Girder (%i,%i) (%g,%g,%g) (%i,%i), (%g,%g) st(%i,%i,%i,%i) ->  %i\n", o.p0, o.p1, o.up.x, o.up.y, o.up.z, o.nseg, o.mseg, o.wh.x, o.wh.y, o.st.x,o.st.y,o.st.z,o.st.w,   o.id );
+    if(bPrint) o.print();
+    girders.push_back( o );
+    return o.id;
+};
+
+int add_Ring( Vec3d pos, Vec3d ax, Vec3d up, double R, int nseg, const Vec2d& wh, Quat4i stickTypes=Quat4i{1,2,3,4} ){
+    Ring o;
+    o.pose.pos = pos;
+    o.pose.rot.fromDirUp(ax,up);
+    o.R     = R;
+    o.nseg  = nseg;
+    o.wh    = wh;
+    o.st    = stickTypes;
+    o.id     = rings.size();
+    //if( (matId<0) && matn){ o.material = workshop->materials.get(matn); }else{ o.material = workshop->materials.vec[matId]; }
+    /*
+    if(bPrint)printf( "Ring (%i,%i) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%i), %g, (%g,%g) st(%i,%i,%i,%i) ->  %i\n", o.nseg,
+        o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,
+        o.pose.rot.a.x, o.pose.rot.a.y, o.pose.rot.a.z,
+        o.pose.rot.b.x, o.pose.rot.b.y, o.pose.rot.b.z,
+        o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,
+        o.R, o.wh.x, o.wh.y, o.st.x,o.st.y,o.st.z,o.st.w, o.id );
+    */
+    if(bPrint) o.print();
+    rings.push_back( o );
+    return o.id;
+};
+
+int add_Radiator ( int g1, const Vec2d& g1span, int g2, const Vec2d& g2span, int face_mat=-1, double temperature=0 ){
+    Radiator o;
+    o.g1          = g1;
+    o.g2          = g2;
+    o.g1span      = g1span;
+    o.g2span      = g2span;
+    o.temperature = temperature;
+    //if( (matId<0) && matn){ o.material = workshop->materials.get(matn); }else{ o.material = workshop->materials.vec[matId]; }
+    o.face_mat = face_mat;
+    o.id   = radiators.size();
+    //if(bPrint)printf( "Radiator %i(%.2f,%.2f) %i(%.2f,%.2f) %f %i -> %i\n", o.g1, o.g1span.x, o.g1span.y,   o.g2, o.g2span.x, o.g2span.y,  o.temperature, o.face_mat, o.id );
+    if(bPrint) o.print();
+    radiators.push_back( o );
+    return o.id;
+};
+
+int add_Shield ( int g1, const Vec2d& g1span, int g2, const Vec2d& g2span, double face_mat=-1 ){
+    Shield o;
+    o.g1          = g1;
+    o.g2          = g2;
+    o.g1span      = g1span;
+    o.g2span      = g2span;
+    o.face_mat = face_mat;
+    o.id   = shields.size();
+    //printf( "Radiator %i(%.2f,%.2f) %i(%.2f,%.2f) %f -> %i\n", o.g1, o.g1span.x, o.g1span.y,   o.g2, o.g2span.x, o.g2span.y, o.face_mat, o.id );
+    if(bPrint) o.print();
+    shields.push_back( o );
+    //lua_pushnumber(L, o.id);
+    return o.id;
+};
+
+int add_Tank ( Vec3d pos, Vec3d dir, Vec3d span, int face_mat=-1, int fill=-1, double full=0.0 ){
+    Tank o;
+    o.pose.pos   = pos;
+    o.pose.rot.c.normalize();
+    o.pose.rot.c.getSomeOrtho( o.pose.rot.b, o.pose.rot.a );
+    o.span       = span;
+    o.face_mat     = face_mat;
+    o.commodityId  = fill;
+    o.filled       = full;
+    o.id   = tanks.size();
+    if(bPrint)o.print();
+    //printf( "Tank pos (%f,%f,%f) dir (%f,%f,%f) l %f r %f -> %i\n",  o.pose.pos.x,o.pose.pos.x,o.pose.pos.x,  o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,   o.span.b, o.span.c, o.id );
+    tanks.push_back( o );
+    //lua_pushnumber(L, o.id);
+    return o.id;
+};
+
+int add_Thruster ( Vec3d pos, Vec3d dir, Vec3d span, int type=-1 ){
+    Thruster o;
+    o. pose.pos   = pos;
+    o. pose.rot.c = dir;
+    o. pose.rot.c.normalize();
+    o. pose.rot.c.getSomeOrtho( o.pose.rot.b, o.pose.rot.a );
+    o. span       = span;
+    o.type        = type;
+    o.id   = thrusters.size();
+    //printf( "Thruster pos (%f,%f,%f) dir (%f,%f,%f) l %f r %f -> %i\n",  o.pose.pos.x,o.pose.pos.x,o.pose.pos.x,  o.pose.rot.c.x, o.pose.rot.c.y, o.pose.rot.c.z,   o.span.b, o.span.c, o.id );
+    if(bPrint) o.print();
+    thrusters.push_back( o );
+    //lua_pushnumber(L, o.id);
+    return o.id;
+};
+
+int add_Gun     ( int suppId, const Vec2d& suppSpan, int type=-1 ){
+    Gun o;
+    o.suppId   = suppId;
+    o.suppSpan = suppSpan;
+    o.gunId    = type;
+    o.id   = guns.size();
+    //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o.suppId, o.suppSpan.x, o.suppSpan.y,   skind, o.id );
+    if(bPrint) o.print();
+    guns.push_back( o );
+    //lua_pushnumber(L, o.id);
+    return 1;
+};
+    
 
 /**
  * Picks the closest component intersected by a ray in the scene. Used e.g. for mouse picking.
@@ -420,7 +295,7 @@ class SpaceCraft : public CatalogItem { public:
  * 
  * @param truss The Truss object to populate with the converted data.
  */
-	void toTruss(Truss& truss, bool bTanks=false ){
+	void toTruss(Truss& truss, bool bTanks=false )const {
         int i=0;
         truss.newBlock();
         int ip0 = truss.points.size();
@@ -449,6 +324,9 @@ class SpaceCraft : public CatalogItem { public:
             o.stickRange = {bak.y,truss.edges .size()};
             i++;
         }
+        // ToDo: Shields
+        // ToDo: Radiators
+        // ToDo: Thrusters
         // ToDo: Tanks
         // ToDo: maybe Tanks would be better simulated as rigid-body objects, but than we need to couple the Truss (SoftBody) and RigidBody ?
         if( bTanks ){
@@ -456,7 +334,8 @@ class SpaceCraft : public CatalogItem { public:
                 //printf("DEBUG toTruss : tank #%i \n", i);
                 Vec3d p0 = o.pose.pos + o.pose.rot.a*o.span.a*0.5;
                 Vec3d p1 = o.pose.pos - o.pose.rot.a*o.span.a*0.5;
-                truss.makeCylinder( p0, p1, o.span.b, o.span.b, -1, -1, 1.0, o.edge_mat, o.face_mat );
+                int edgeMat = workshop->panelMaterials.vec[ o.face_mat ]->stickMaterialId;
+                truss.makeCylinder( p0, p1, o.span.b, o.span.b, -1, -1, 1.0, o.face_mat, o.face_mat );
                 Vec2i& bak = truss.blocks.back();
                 o.poitRange  = {bak.x,truss.points.size()};
                 o.stickRange = {bak.y,truss.edges .size()};
@@ -467,7 +346,9 @@ class SpaceCraft : public CatalogItem { public:
 	}
 	void toTruss(){ truss.clear(); toTruss(truss); };
 
-    inline void plate2raytracer( const Plate& o, TriangleRayTracer& raytracer, double elemMaxSize, bool active ){
+
+
+    inline void plate2raytracer( const Plate& o, TriangleRayTracer& raytracer, double elemMaxSize, bool active )const{
         Quad3d qd;
         plate2quad(o, qd);
         raytracer.addTriangle( {qd.l1.a,qd.l1.b,qd.l2.b}, elemMaxSize, active );
@@ -475,16 +356,16 @@ class SpaceCraft : public CatalogItem { public:
         //return fmin(t1,t2);
 	}
 
-	void toRayTracer( TriangleRayTracer& raytracer, double elemMaxSize ){
+	void toRayTracer( TriangleRayTracer& raytracer, double elemMaxSize )const{
         for(int i=0; i<radiators.size(); i++){ plate2raytracer( radiators[i], raytracer, elemMaxSize, true ); }
         for(int i=0; i<shields.size();   i++){ plate2raytracer( shields  [i], raytracer, elemMaxSize, true ); }
 	}
 
     void updatePanelMaterials(){
-        for (PanelMaterial* pm : panelMaterials){ 
+        for (PanelMaterial* pm : workshop->panelMaterials.vec ){     
             double areaDensity = 0.0;
             for( PanelLayer& l : pm->layers ){ 
-                areaDensity += l.materiallId = materials[l.materiallId]->density * l.thickness; // [kg/m2]
+                areaDensity += l.materiallId = workshop->materials.vec[l.materiallId]->density * l.thickness; // [kg/m2]
             }   
             pm->areaDensity = areaDensity;
         }
@@ -492,7 +373,7 @@ class SpaceCraft : public CatalogItem { public:
 
     void updateTrussEdges( Truss& truss ){
         for( TrussEdge& e : truss.edges ){
-            Material* mat = materials[ e.type ];
+            Material* mat = workshop->materials.vec[ e.type ];
             double c = e.crossection / e.l0;
             e.kT = mat->Kpull * c;
             e.kP = mat->Kpush * c;
@@ -502,7 +383,7 @@ class SpaceCraft : public CatalogItem { public:
 
     void updateTrussFaces( Truss& truss ){
         for( TrussFace& f : truss.faces ){
-            PanelMaterial* mat = panelMaterials[ f.type ];
+            PanelMaterial* mat = workshop->panelMaterials.vec[ f.type ];
             f.mass = mat->areaDensity * f.area;
         }
     }

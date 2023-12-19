@@ -3,7 +3,7 @@
 // No need to explicitely include the OpenCL headers 
 //#include <clFFT.h>
 
-#define CL_TARGET_OPENCL_VERSION 200
+//#define CL_TARGET_OPENCL_VERSION 200
 
 int verbosity = 0;
 #include "SpaceCombatOCL.h"

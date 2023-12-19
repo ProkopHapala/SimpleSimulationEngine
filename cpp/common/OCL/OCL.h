@@ -5,7 +5,8 @@
 #include <vector>
 #include <unordered_map>
 
-#define CL_TARGET_OPENCL_VERSION 200
+//#define CL_TARGET_OPENCL_VERSION 200
+
 #include <CL/cl.h>
 
 #include "OCLerrors.h"

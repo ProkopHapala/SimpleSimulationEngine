@@ -65,6 +65,18 @@ add_executable( spaceCraftDynamics
 )
 target_link_libraries( spaceCraftDynamics  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} )
 
+if(  WITH_OPENCL )
+    include_directories( ${COMMON_SRCS}/OCL )
+    add_executable( spaceCraftDynamicsOCL
+        spaceCraftDynamicsOCL.cpp
+        $<TARGET_OBJECTS:SDL2OGL>
+        $<TARGET_OBJECTS:Truss>
+        $<TARGET_OBJECTS:SoftBody>
+        $<TARGET_OBJECTS:DynamicOpt>
+    )
+    target_link_libraries( spaceCraftDynamicsOCL  ${OpenGL_LIBRARIES} ${GLU_LIBRARY} ${SDL2_LIBRARY} ${LUA_LIBRARY} ${OpenCL_LIBRARY} )
+endif()   # WITH_OPENCL
+
 endif()   # WITH_LUA
 # ====== WITH_LUA   END
 

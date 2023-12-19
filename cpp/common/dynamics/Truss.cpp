@@ -162,6 +162,14 @@ void Truss::updateFacesAreas(){
     }
 };
 
+/*
+int Truss::getMaxNeighs(){
+    int nmax=0;
+    for(TrussEdge& e : edges){ if(e.type>0) nmax++; }
+    return nmax;
+};
+*/
+
 
 /**
  * Creates a panel of truss elements between four corner points. Adds the points and edges to the Truss object.

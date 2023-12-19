@@ -21,6 +21,13 @@ class OCL_Orb: public OCLsystem { public:
 
     int4 nDOFs    {0,0,0,0};  // number of DOFs (nPoints,nNeighMax,0,0)
 
+
+    // cpu buffers
+    float4* points=0;
+    float4* forces=0;
+    float4* params=0;
+    int*    neighs=0;
+
     // ------- Grid
     
     // ====================== Functions
@@ -35,15 +42,15 @@ class OCL_Orb: public OCLsystem { public:
         printf( "... makeKrenels_Orb() DONE \n" );
     }
 
-    int initBuffs_Orb( int nPoint_, int nNeighMax_ ){
+    int initBuffs_Orb( int nPoint_, int nNeighMax_, bool bCPU=true ){
         nPoint=nPoint_;
         nNeighMax=nNeighMax_;
         nNeighTot = nPoint*nNeighMax;
         printf( "initAtomsForces() nPoint %i nNeighMax %i \n", nPoint, nNeighMax );
-        ibuff_points  = newBuffer( "atoms",  nPoint   , sizeof(float4), 0, CL_MEM_READ_WRITE ); 
-        ibuff_forces  = newBuffer( "forces", nPoint   , sizeof(float4), 0, CL_MEM_READ_WRITE ); 
-        ibuff_params  = newBuffer( "forces", nNeighTot, sizeof(float4), 0, CL_MEM_READ_WRITE ); 
-        ibuff_neighs  = newBuffer( "REQs",   nNeighTot, sizeof(int), 0, CL_MEM_READ_ONLY  ); 
+        ibuff_points  = newBuffer( "atoms",  nPoint   , sizeof(float4), 0, CL_MEM_READ_WRITE ); if(bCPU)points = (float4*)malloc( nPoint*sizeof(float4)    );
+        ibuff_forces  = newBuffer( "forces", nPoint   , sizeof(float4), 0, CL_MEM_READ_WRITE ); if(bCPU)forces = (float4*)malloc( nPoint*sizeof(float4)    );
+        ibuff_params  = newBuffer( "forces", nNeighTot, sizeof(float4), 0, CL_MEM_READ_WRITE ); if(bCPU)params = (float4*)malloc( nNeighTot*sizeof(float4) );
+        ibuff_neighs  = newBuffer( "REQs",   nNeighTot, sizeof(int)   , 0, CL_MEM_READ_ONLY  ); if(bCPU)neighs = (int*   )malloc( nNeighTot*sizeof(int)    );
         return ibuff_points;
     }
 

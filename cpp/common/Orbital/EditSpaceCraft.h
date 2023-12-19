@@ -20,9 +20,8 @@ char str[4096];
 int fontTex = 0;
 lua_State  * theLua=0;
 SpaceCraft * theSpaceCraft=0;
-std::unordered_map<std::string,Material*>      materials;
-std::unordered_map<std::string,PanelMaterial*> panelMaterials;
-std::unordered_map<std::string,Commodity*>     comodities;
+
+SpaceCraftWorkshop workshop;
 
 Radiosity radiositySolver;
 
@@ -45,9 +44,10 @@ int l_Material (lua_State * L){
     mat->Kpush        = Lua::getDoubleField(L, "Kpush"   );
     mat->reflectivity = Lua::getDoubleField(L, "reflectivity" );
     mat->Tmelt        = Lua::getDoubleField(L, "Tmelt"   );
-    auto it = materials.find( mat->name );
-    if( it == materials.end() ){ materials.insert({mat->name,mat}); }else{ printf( "Material `%s` replaced\n", mat->name ); delete it->second; it->second = mat;  }
-    printf( "Material %s dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", mat->name, mat->density, mat->Kpull,mat->Kpush,   mat->Spull,mat->Spush,  mat->reflectivity, mat->Tmelt );
+    //auto it = worshop.materials_dict.find( mat->name );
+    //if( it == worshop.materials_dict.end() ){ materials.insert({mat->name,mat}); }else{ printf( "Material `%s` replaced\n", mat->name ); delete it->second; it->second = mat;  }
+    if( workshop.materials.add(mat) ) printf( "Material `%s` replaced\n", mat->name );
+    //printf( "Material %s dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", mat->name, mat->density, mat->Kpull,mat->Kpush,   mat->Spull,mat->Spush,  mat->reflectivity, mat->Tmelt );
     return 0;
 };
 
@@ -66,7 +66,6 @@ int l_PanelMaterial (lua_State * L){
 int l_Node    (lua_State * L){
     Vec3d pos;
     Lua::getVec3(L, 1, pos );
-
     int id =  theSpaceCraft->nodes.size();
     theSpaceCraft->nodes.push_back( Node(pos) );
     printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
@@ -80,8 +79,9 @@ int l_Rope    (lua_State * L){
     o.p1    = Lua::getInt   (L,2);
     o.thick = Lua::getDouble(L,3);
     const char * matn = Lua::getString(L,4);
-    auto it = materials.find(matn);
-    if( it != materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
+    //auto it = worshop.materials.find(matn);
+    //if( it != worshop.materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
+    o.material = workshop.materials.get( matn );
     o.id   = theSpaceCraft->ropes.size();
     printf( "Rope (%i,%i) %g %s ->  %i\n", o.p0, o.p1, o.thick, matn, o.id );
     theSpaceCraft->ropes.push_back( o );
@@ -99,8 +99,10 @@ int l_Girder  (lua_State * L){
     o.mseg = Lua::getInt (L,5);
              Lua::getVec2(L,6, o.wh );
     const char * matn = Lua::getString(L,7);
-    auto it  = materials.find(matn);
-    if ( it != materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
+    //auto it  = worshop.materials.find(matn);
+    //if ( it != worshop.materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
+    //o.material = worshop.materials.get( matn );
+    o.face_mat = workshop.panelMaterials.getId( matn );
     o.id     = theSpaceCraft->girders.size();
     printf( "Girder (%i,%i) (%g,%g,%g) (%i,%i), (%g,%g) %s ->  %i\n", o.p0, o.p1, o.up.x, o.up.y, o.up.z, o.nseg, o.mseg, o.wh.x, o.wh.y, matn, o.id );
     theSpaceCraft->girders.push_back( o );
@@ -122,8 +124,10 @@ int l_Ring    (lua_State * L){
     o.R    = Lua::getDouble(L,5);
              Lua::getVec2(L,6, o.wh );
     const char * matn = Lua::getString(L,7);
-    auto it  = materials.find(matn);
-    if ( it != materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
+    //auto it  = worshop.materials.find(matn);
+    //if ( it != worshop.materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
+    //o.material = workshop.materials.get( matn );
+    o.face_mat = workshop.panelMaterials.getId( matn );
     o.id     = theSpaceCraft->rings.size();
     printf( "Ring (%i,%i) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%g,%g,%g) (%i), %g, (%g,%g) %s ->  %i\n", o.nseg,
         o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,

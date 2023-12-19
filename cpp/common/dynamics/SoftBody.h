@@ -9,7 +9,7 @@
 //#include "LinearElasticity.h"
 
 //#include "DynamicOpt.h"
-#include "Draw3D.h"
+//#include "Draw3D.h"
 
 
 inline Vec3d sumMassPoints(int n, const Vec3d* pos, const double* mass, bool bBormalize=true ){
@@ -279,7 +279,7 @@ class SoftBody{ public:
         if(kink.damp>1e-100){
             double v = -( d.dot(velocities[kink.a])*ila + d.dot(velocities[kink.b])*ilb )/(ila+ilb) + d.dot(velocities[kink.c]);
             if(v>0){
-                glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( d*10.0, points[kink.c] );
+                //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( d*10.0, points[kink.c] );
                 //glColor3f(0.0,0.0,1.0); Draw3D::drawVecInPos( v      , points[kink.c] );
                 //printf( "kink[%i|%i,%i] v %g dampEff %g \n", kink.c, kink.a, kink.b, v, v/vdamp );
                 v/=vdamp; if(v>1)v=1;

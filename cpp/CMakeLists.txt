@@ -81,27 +81,26 @@ include_directories(
         ${COMMON_SRCS}/algorithms
         ${COMMON_SRCS}/math
         ${COMMON_SRCS}/dynamics
-	${COMMON_SRCS}/CombatModels
+	    ${COMMON_SRCS}/CombatModels
         ${COMMON_SRCS}/maps
-        ${COMMON_SRCS}/OCL
         #${COMMON_SRCS}/optimization
         ${COMMON_SRCS}/utils
         ${COMMON_SRCS}/dataStructures
         ${COMMON_SRCS}/engine
-        ${COMMON_SDL_SRCS}
-        ${COMMON_SDL_SRCS}/network
-        ${COMMON_SDL_SRCS}/SDL2
-        ${COMMON_SDL_SRCS}/SDL2OGL
-        ${COMMON_SDL_SRCS}/SDL2OGL3
+        #${COMMON_SDL_SRCS}
+        #${COMMON_SDL_SRCS}/network
+        #${COMMON_SDL_SRCS}/SDL2
+        #${COMMON_SDL_SRCS}/SDL2OGL
+        #${COMMON_SDL_SRCS}/SDL2OGL3
         #${MY_SRC_DIR}/engines
 )
 
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake_utils )
 
 #file (GLOB_RECURSE _ALL_SRCS_ *.h *.cpp *.c )
-file (GLOB_RECURSE _COMMON_SRCS_     ${COMMON_SRCS}/*.h     ${COMMON_SRCS}/*.cpp     ${COMMON_SRCS}/*.c     )
-file (GLOB_RECURSE _COMMON_SDL_SRCS_ ${COMMON_SDL_SRCS}/*.h ${COMMON_SDL_SRCS}/*.cpp ${COMMON_SDL_SRCS}/*.c )
-file (GLOB_RECURSE _COMMON_SHADERS_  ${COMMON_SHADERS}/*.glslv  ${COMMON_SHADERS}/*.glslf    )
+file (GLOB_RECURSE _COMMON_SRCS_     ${COMMON_SRCS}/*.h         ${COMMON_SRCS}/*.cpp       ${COMMON_SRCS}/*.c     )
+file (GLOB_RECURSE _COMMON_SDL_SRCS_ ${COMMON_SDL_SRCS}/*.h     ${COMMON_SDL_SRCS}/*.cpp   ${COMMON_SDL_SRCS}/*.c )
+file (GLOB_RECURSE _COMMON_SHADERS_  ${COMMON_SHADERS}/*.glslv  ${COMMON_SHADERS}/*.glslf                         )
 
 # ==============================
 # ==== BUILD TARGETS
@@ -123,16 +122,25 @@ if ( WITH_SDL )
     # https://cmake.org/cmake/help/latest/policy/CMP0072.html
     #set(OpenGL_GL_PREFERENCE LEGACY)
     set(OpenGL_GL_PREFERENCE GLVND)
+    include_directories(
+        ${COMMON_SDL_SRCS}
+        ${COMMON_SDL_SRCS}/network
+        ${COMMON_SDL_SRCS}/SDL2
+        ${COMMON_SDL_SRCS}/SDL2OGL
+        ${COMMON_SDL_SRCS}/SDL2OGL3
+    )
     file (GLOB_RECURSE _COMMON_SDL_SRCS_ ${COMMON_SDL_SRCS}/*.h ${COMMON_SDL_SRCS}/*.cpp ${COMMON_SDL_SRCS}/*.c )
     add_subdirectory( ${MY_SRC_DIR}/common_SDL   ${MY_BIN_SHARE}/common_SDL )
     add_subdirectory( ${MY_SRC_DIR}/libs_SDL     )
     add_subdirectory( ${MY_SRC_DIR}/sketches_SDL )
     add_subdirectory( ${MY_SRC_DIR}/apps         )
+    if ( WITH_OPENCL AND WITH_SDL )
+        add_subdirectory( ${MY_SRC_DIR}/apps_OCL     )
+        add_subdirectory( ${MY_SRC_DIR}/sketches_OCL )
+    endif()
+
 endif()
 
 # ====== OpenCL + SDL@OpenGL
 
-if ( WITH_OPENCL AND WITH_SDL )
-    add_subdirectory( ${MY_SRC_DIR}/apps_OCL     )
-    add_subdirectory( ${MY_SRC_DIR}/sketches_OCL )
-endif()
+
