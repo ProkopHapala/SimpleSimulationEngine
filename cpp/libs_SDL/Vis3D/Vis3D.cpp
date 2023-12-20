@@ -29,7 +29,7 @@ int     default_sphere         = 0;
 class Vis3DApp : public AppSDL2OGL_3D {
 	public:
 
-    Mesh mesh;
+    OMesh mesh;
 
     bool  dragging;
     Vec2f mouse0;

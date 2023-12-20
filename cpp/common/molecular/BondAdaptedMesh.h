@@ -10,7 +10,7 @@
 
 
 class AtomGrid{ public:
-    Mesh mesh;
+    OMesh mesh;
     std::vector<Tetrahedron> tetrahedrons;
 
     void fromNeighbors( int ia0, int nneigh, int* neighs, Vec3d * poss, double Rmax ){

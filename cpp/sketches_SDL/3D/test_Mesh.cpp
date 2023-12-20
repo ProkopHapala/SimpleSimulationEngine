@@ -73,8 +73,8 @@ char str[1024];
 
 class TestAppMesh : public AppSDL2OGL_3D { public:
 
-    Mesh mesh;
-    Mesh mesh2;
+    OMesh mesh;
+    OMesh mesh2;
 
     Plane3D plane1,plane2,plane3,plane4;
     LineInterval3d l12;

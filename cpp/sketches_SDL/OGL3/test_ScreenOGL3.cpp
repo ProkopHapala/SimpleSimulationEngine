@@ -54,7 +54,7 @@ class TestAppScreenOGL3: public AppSDL2OGL3, public SceneOGL3 { public:
         sh1->getDefaultUniformLocation();
 
         /*
-        Mesh mesh;
+        OMesh mesh;
         mesh.fromFileOBJ( "common_resources/turret.obj" );
         mesh.polygonsToTriangles(false);
         mesh.tris2normals(true);

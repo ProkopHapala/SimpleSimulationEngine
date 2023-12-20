@@ -28,7 +28,7 @@ class CollisionShape{ public:
 };
 
 class MeshCollisionShape : public CollisionShape{ public:
-	Mesh * mesh;
+	OMesh * mesh;
 	//virtual bool colideWithTerrain( Terrain25D * terrain, const Mat3d& orientation, const Vec3d& cog, Vec3d& force, Vec3d& torq );
 	virtual bool colideWithTerrain( Terrain25D * terrain, RigidBody& rb );
 };

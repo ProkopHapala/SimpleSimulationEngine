@@ -71,7 +71,7 @@ GLuint makeTestTextureRGBA( int W, int H ){
 
 void setup(){
 
-    Mesh mesh;
+    OMesh mesh;
     mesh.fromFileOBJ( "common_resources/turret.obj" );
     mesh.polygonsToTriangles(false);
     mesh.tris2normals(true);

@@ -41,7 +41,7 @@ Shader   *shader1,*shConst;
 //GLObject * object1;
 GLMesh   *glmesh, *gledges;
 
-Mesh mesh;
+OMesh mesh;
 
 int mouseX, mouseY;
 Quat4f qCamera;

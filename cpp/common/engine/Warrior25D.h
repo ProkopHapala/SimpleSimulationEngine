@@ -20,7 +20,7 @@ class Warrior25D : public RigidBody2D {
 
     double power;
     Vec3d  span;
-    Mesh * mesh;
+    OMesh * mesh;
 
     double  hground  = 0.5;
     double  throttle = 0.0;

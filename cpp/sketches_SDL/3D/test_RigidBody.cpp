@@ -162,7 +162,7 @@ TestAppRigidBody::TestAppRigidBody( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2
     //qCamera.fromMatrix(camMat); // this not work ?
 
 
-    Mesh * mesh = new Mesh();
+    OMesh * mesh = new OMesh();
     mesh->fromFileOBJ( "common_resources/turret.obj" );
     mesh->rendered_shape = glGenLists(1);
     glNewList( mesh->rendered_shape , GL_COMPILE );

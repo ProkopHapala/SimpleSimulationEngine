@@ -32,7 +32,7 @@ GLObject * object1;
 Shader   * shader2;
 GLObject * object2;
 
-Mesh mesh;
+OMesh mesh;
 
 GLuint vao;     // vertex array object
 GLuint textureID;

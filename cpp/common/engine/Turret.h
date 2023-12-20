@@ -15,7 +15,7 @@
 
 class TurretType{
     public:
-    Mesh *  mesh = NULL;
+    OMesh *  mesh = NULL;
     int     shape   = 0;
     int     ngun    = 1;
     double  prjmass = 1.0;
@@ -37,7 +37,7 @@ class TurretType{
         vphi        = vphi*DEG2RAD;
         vtheta      = vtheta*DEG2RAD;
 
-        Mesh * mesh_ = new Mesh();
+        OMesh * mesh_ = new OMesh();
         int res = mesh_->fromFileOBJ( meshname );
         if(res>0) mesh=mesh_;
     }

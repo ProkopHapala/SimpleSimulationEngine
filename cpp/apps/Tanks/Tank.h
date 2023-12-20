@@ -38,7 +38,7 @@ class ArmorPlate{ public:
     int material;
 };
 
-class VehicleBlock : public KinematicBody, public Mesh { public:
+class VehicleBlock : public KinematicBody, public OMesh { public:
     std::vector<ArmorPlate> armor;
     int glo_captions;
     int glo_armor;
@@ -47,7 +47,7 @@ class VehicleBlock : public KinematicBody, public Mesh { public:
         //ray0 -= lpos;
         Vec3d hRay = lrot.dot(hRay_);
         Vec3d ray0 = lrot.dot(ray0_);
-        return Mesh::ray( ray0, hRay, normal, imin );
+        return OMesh::ray( ray0, hRay, normal, imin );
         //normal     = lrot.dotT(normal);
     }
 
