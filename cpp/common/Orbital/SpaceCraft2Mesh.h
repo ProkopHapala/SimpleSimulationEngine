@@ -16,6 +16,7 @@
 #include "SpaceCraft.h"
 //#include "EditSpaceCraft.h"
 #include "MeshBuilder.h"
+#include "MeshBuilder2.h"
 #include "MeshBuilderDraw.h"
 
 namespace SpaceCrafting{
