@@ -23,6 +23,7 @@ int verbosity = 0;
 #include "Truss.h"
 #include "SpaceCraft.h"
 #include "SpaceCraftDraw.h"
+#include "SpaceCraft2Mesh.h"
 #include "SoftBody.h"
 
 #include "SphereSampling.h"
@@ -45,19 +46,19 @@ int verbosity = 0;
 
 #include "argparse.h"
 
-using namespace SpaceCrafting;
 
+// ======================  Global Variables & Declarations
+
+using namespace SpaceCrafting;
 enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
 
 //SpaceCraft craft;
 Truss      truss;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
-
 //char str[8096];
-
-
 double elementSize  = 5.;
 
+// ======================  Free Functions
 
 void renderShip(){
     printf( "spaceCraftEditor.cpp::renderShip() \n" );
@@ -66,13 +67,19 @@ void renderShip(){
     glNewList( glo_ship, GL_COMPILE );
     //glColor3f(0.2,0.2,0.2);
 
+    //  If we use drawSpaceCraft() there are no problems with backface lighting
     //drawSpaceCraft( *theSpaceCraft, 1, false, true );
-    MeshBuilder mesh;
+
+    
+    // If we use drawSpaceCraft_Mesh() there are problems with backface lighting
+    Mesh::Builder mesh;
     glColor3f(1.0,1.0,1.0);
     drawSpaceCraft_Mesh( *theSpaceCraft, mesh, 1, false, true, (Vec3f){0.5,0.5,0.5} );
     mesh.newSub();
-    drawMesh( mesh );
+    mesh.printSizes();
+    Draw3D::drawMeshBuilder( mesh );
     mesh.write_obj( "ship.obj" );
+    
 
     /*
     radiositySolver.clearTriangles();
@@ -137,6 +144,8 @@ class Driver{ public:
     void apply(){ slave=master; }
 };
 */
+
+// ====================== Class Definitions
 
 class GUIPanelWatcher{ public:
     GUIPanel* master;
@@ -257,11 +266,11 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
 	virtual void keyStateHandling( const Uint8 *keys ) override;
     //virtual void mouseHandling( );
 
-	SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ );
+	SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ , int argc, char *argv[]);
 
 };
 
-SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     //Lua1.init();
     fontTex     = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
@@ -292,7 +301,6 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
     //drawAsteroide( 32, 50, 0.1, true );
     glEndList();
 
-
     //std::vector<std::string> luaFiles;
     listDirContaining( "data", ".lua", lstLuaFiles->labels );
 
@@ -313,8 +321,8 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ ) : AppSD
 
     theSpaceCraft = new SpaceCraft();
     initSpaceCraftingLua();
-    //reloadShip( "data/spaceshil1.lua" );
-    onSelectLuaShipScript.GUIcallback(lstLuaFiles);
+    if(argc<=1)reloadShip( "data/ship_ICF_interceptor_1.lua" );
+    //onSelectLuaShipScript.GUIcallback(lstLuaFiles);
 
     /*
     glo_truss = makeTruss(truss);
@@ -360,14 +368,11 @@ void SpaceCraftEditGUI::draw(){
     //printf( " ==== frame %i \n", frameCount );
     //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
     //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
-    //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-    glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
-
+    glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+    //glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
 	//glDisable(GL_DEPTH_TEST);
 	glEnable(GL_DEPTH_TEST);
-
 	glEnable(GL_LIGHTING);
 	glColor3f(1.0,0.5,1.0);
 	if(glo_capsula) glCallList(glo_capsula);
@@ -394,8 +399,7 @@ void SpaceCraftEditGUI::draw(){
     */
 
     if(glo_truss) glCallList(glo_truss);
-
-    if(glo_ship) glCallList(glo_ship);
+    if(glo_ship ) glCallList(glo_ship);
 
     /*
     if(ogl_asteroide){
@@ -469,22 +473,18 @@ void SpaceCraftEditGUI::mouseHandling( ){
 
 
 void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){
-
     //Mat3d camMat;
     //qCamera.toMatrix_T(camMat);
     //Draw3D::drawMatInPos(  (Mat3f)camMat, (Vec3f){0.0,0.0,0.0} );
     //qCamera.toMatrix(camMat);
-
     if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
-
     if( keys[ SDL_SCANCODE_W ] ){ cam.pos.add_mul( cam.rot.b, +0.05*zoom ); }
 	if( keys[ SDL_SCANCODE_S ] ){ cam.pos.add_mul( cam.rot.b, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_A ] ){ cam.pos.add_mul( cam.rot.a, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_D ] ){ cam.pos.add_mul( cam.rot.a, +0.05*zoom );  }
-
 };
 
 void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
@@ -555,6 +555,8 @@ SpaceCraftEditGUI * app;
 
 int main(int argc, char *argv[]){
 
+    printf( "argc %i \n", argc );
+
     // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
     //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
     funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
@@ -581,7 +583,8 @@ int main(int argc, char *argv[]){
 	int junk;
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
-	app = new SpaceCraftEditGUI( junk , dm.w-150, dm.h-100 );
+	app = new SpaceCraftEditGUI( junk , dm.w-150, dm.h-100, argc, argv );
+    
 
     process_args( argc, argv, funcs );
 

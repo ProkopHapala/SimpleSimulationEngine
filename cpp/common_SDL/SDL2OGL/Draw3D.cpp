@@ -870,17 +870,17 @@ void drawPolygonBorder( int n, const int * inds, const Vec3d * points ){
     glEnd();
 }
 
-void drawPlanarPolygon( int ipl, Mesh& mesh ){
+void drawPlanarPolygon( int ipl, OMesh& mesh ){
     Polygon * pl = mesh.polygons[ipl];
     Draw3D:: drawPlanarPolygon( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
 }
 
-void drawPolygonNormal( int ipl, Mesh& mesh ){
+void drawPolygonNormal( int ipl, OMesh& mesh ){
     Polygon * pl = mesh.polygons[ipl];
     Draw3D:: drawPolygonNormal( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
 }
 
-void drawPolygonBorder( int ipl, Mesh& mesh ){
+void drawPolygonBorder( int ipl, OMesh& mesh ){
     Polygon * pl = mesh.polygons[ipl];
     Draw3D:: drawPolygonBorder( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
 }
@@ -1279,7 +1279,7 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
         glEnd();
     }
 
-    int drawMesh( const Mesh& mesh  ){
+    int drawMesh( const OMesh& mesh  ){
         int nvert=0;
         for( Polygon* pl : mesh.polygons ){
             Draw3D::drawPlanarPolygon( pl->ipoints.size(), &pl->ipoints.front(), &mesh.points.front() );
@@ -1287,6 +1287,64 @@ void drawMeshWireframe(const CMesh& msh){ drawLines( msh.nedge, (int*)msh.edges,
         }
         return nvert;
     }
+
+
+/**
+ * Draws content of MeshBuilder using OpenGL 1.0 commands.
+ * The mesh can consist of triangles, triangle strips, or lines.
+ * The mesh is divided into nsubs submeshes, each submesh range is specified by mesh.subs[i].x,y
+ * The drawing mode is specified is specified by mesh.subs[i].z
+ *
+ * @param mesh The MeshBuilder object containing the mesh data.
+ */
+int drawMeshBuilder( const Mesh::Builder& mesh, bool bTwoSided ){
+    if(bTwoSided){
+        glDisable(GL_CULL_FACE);
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+    }
+    int nsubs = mesh.subs.size();
+    Vec3i osub = mesh.subs[0];
+    for( int i=1; i<nsubs; i++ ){
+        Vec3i sub = mesh.subs[i];
+        int mode  = osub.z;
+        if      (mode == Mesh::TRIANGLES ){
+            glBegin(GL_TRIANGLES);
+            //printf( "drawMesh Tris[%i]( %i ... %i ) \n", i, sub.x, sub.y );
+            for(int j=osub.x; j<sub.x; j++){
+                Vec3f vnor = mesh.vnor[j];
+                Vec3f vpos = mesh.vpos[j];
+                glColor3f( 0.9, 0.9, 0.9 );
+                glNormal3f( vnor.x, vnor.y, vnor.z );
+                glVertex3f( vpos.x, vpos.y, vpos.z );
+            }
+            glEnd();
+        }else if(mode == Mesh::TRIANGLE_STRIP ) {
+            glBegin(GL_TRIANGLES);
+            //printf( "drawMesh TriInds[%i]( %i ... %i ) \n", i, sub.x, sub.y );
+            for(int j=osub.y; j<sub.y; j++){
+                Vec3f vpos, vnor;
+                int ii = mesh.inds[j];
+                glColor3f( 0.9, 0.9, 0.9 );
+                vnor  = mesh.vnor[ii]; glNormal3f( vnor.x, vnor.y, vnor.z );
+                vpos  = mesh.vpos[ii]; glVertex3f( vpos.x, vpos.y, vpos.z );
+            }
+            glEnd();
+        }else if(mode == Mesh::LINES ) {
+            glBegin(GL_LINES);
+            //printf( "drawMesh Lines[%i]( %i ... %i ) \n", i, sub.x, sub.y );
+            for(int j=osub.x; j<sub.x; j++){
+                Vec3f vnor = mesh.vnor[j];
+                Vec3f vpos = mesh.vpos[j];
+                glColor3f ( vnor.x, vnor.y, vnor.z );
+                glVertex3f( vpos.x, vpos.y, vpos.z );
+            }
+            glEnd();
+        }
+        osub=sub;
+    }
+    return 0;
+}
+
 
     void drawText( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend ){
         glDisable    ( GL_LIGHTING   );

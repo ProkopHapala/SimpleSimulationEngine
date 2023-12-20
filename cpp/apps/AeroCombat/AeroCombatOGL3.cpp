@@ -237,7 +237,7 @@ AeroCraftGUI::AeroCraftGUI(int W, int H):AppSDL2OGL3(W,H),SceneOGL3(){
 
 	world = new Shooter();
     world->perFrame = 1;
-    world->dt       = 0.005d;
+    world->dt       = 0.005;
 
     printf( " === aerocraft \n" );
 

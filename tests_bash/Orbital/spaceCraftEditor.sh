@@ -29,6 +29,7 @@ ln -s $dir/$name .
 
 # ====== RUN
 
+#./$name
 #./$name -s data/ship_ICF_interceptor_1.lua
 ./$name -s data/ship_ICF_marksman_1.lua
 #./$name -s data/ship_NFPP_pendulum_1.lua

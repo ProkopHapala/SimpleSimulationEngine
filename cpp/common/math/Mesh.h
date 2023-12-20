@@ -32,7 +32,7 @@ inline uint32_t vertIdjk( uint8_t i, uint8_t j, uint8_t k ){
     return pack32(i,j,k,0);
 }
 
-class Mesh{ public:
+class OMesh{ public:    // Note: OMesh is deprecated, we try to converge to using Mesh::MeshBuilder and CMesh instead
     int    rendered_shape;
     Vec3d  center; // center of spherical bounding box
     double Rbound; // radius of spherical bounding box
@@ -716,17 +716,6 @@ void findHull_oct( int npoints, Vec3d * from_points ){
 	*/
 
 };
-
-
-
-
-
-
-
-
-
-
-
 
 #endif
 

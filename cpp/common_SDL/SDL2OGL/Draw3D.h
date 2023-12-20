@@ -18,6 +18,7 @@
 #include "Mesh.h"
 
 #include "Draw.h"
+#include "MeshBuilder.h"
 
 namespace Draw3D{
 
@@ -154,9 +155,11 @@ inline void drawTriclinicBoxT( const Mat3d& lvec_, const Vec3d& c0_, const Vec3d
 void drawPlanarPolygon( int n, const int * inds, const Vec3d * points );
 void drawPolygonNormal( int n, const int * inds, const Vec3d * points );
 void drawPolygonBorder( int n, const int * inds, const Vec3d * points );
-void drawPlanarPolygon( int ipl, Mesh& mesh );
-void drawPolygonBorder( int ipl, Mesh& mesh );
-void drawPolygonNormal( int ipl, Mesh& mesh );
+void drawPlanarPolygon( int ipl, OMesh& mesh );
+void drawPolygonBorder( int ipl, OMesh& mesh );
+void drawPolygonNormal( int ipl, OMesh& mesh );
+
+
 
 //void drawShapeT   ( const Vec3f& pos, const Mat3f&  rot,  int shape );
 //void drawShapeT   ( const Vec3d& pos, const Mat3d&  rot,  int shape );
@@ -188,7 +191,9 @@ void drawSimplexGridLines( int na, int nb, const Vec2d& da, const Vec2d& db,  co
 void drawSimplexGridLinesToned( int na, int nb, const Vec2d& da, const Vec2d& db,  const double * hs );
 void drawRectGridLines( Vec2i n, const Vec3d& p0, const Vec3d& da, const Vec3d& db );
 
-int drawMesh( const Mesh& mesh  );
+int drawMesh( const OMesh& mesh  );
+int drawMeshBuilder( const Mesh::Builder& mesh, bool bTwoSided=true );
+
 
 void drawTetraIso( Vec3f** ps, Quat4d vals );
 void drawSimplexLines( Vec3f** ps );
