@@ -251,7 +251,7 @@ class Ring : public ShipComponent { public:
 
 class Rope : public NodeLinker { public:
     double thick;
-    Material * material;
+    //Material * material;
 
     virtual void print() override { printf("Rope(id=%i) between(%i,%i) L=%g \n", id, p0,p1, length ); };
 };

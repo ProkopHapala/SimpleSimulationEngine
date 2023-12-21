@@ -1346,6 +1346,73 @@ int drawMeshBuilder( const Mesh::Builder& mesh, bool bTwoSided ){
 }
 
 
+/**
+ * Draws content of MeshBuilder using OpenGL 1.0 commands.
+ * The mesh can consist of triangles, triangle strips, or lines.
+ * The mesh is divided into nsubs submeshes, each submesh range is specified by mesh.subs[i].x,y
+ * The drawing mode is specified is specified by mesh.subs[i].z
+ *
+ * 
+ * @param mesh The Mesh::Builder2 object containing the mesh data.
+ * @param mask The bitmask specifying which components of the mesh to draw (points, lines, faces).
+ * @param color_mode The color mode to use for drawing (0 for default, 1 for hash-based colors).
+ * @param bTwoSided Flag indicating whether to render both sides of the mesh.
+ * @param bFlat Flag indicating whether to render the faces with flat shading.
+ * @return 0 if the mesh was successfully drawn.
+ */
+int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool bTwoSided, bool bFlat ){
+    if(bTwoSided){
+        glDisable(GL_CULL_FACE);
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+    }
+    int nblock = mesh.blocks.size();
+    //Quat4i ob  = mesh.blocks[0];
+    Quat4i b   = mesh.latsBlock();
+    Vec3f clr;
+    for( int i=0; i<nblock; i++ ){
+        Quat4i ob = mesh.blocks[i];
+        if(color_mode==0){ Draw::color_of_hash( i*446+161, clr ); color( clr);  }
+        if( mask & 1 ){ // points
+            glBegin(GL_POINTS);
+            for(int j=ob.x; j<b.x; j++){ 
+                vertex( mesh.verts[j].pos ); 
+            }
+            glEnd();
+        }
+        if( mask & 2 ){ // lines
+            glBegin(GL_LINES);
+            for(int j=ob.y; j<b.y; j++){ 
+                Quat4i e = mesh.edges[j];
+                if(color_mode==1){ Draw::color_of_hash( e.w*446+161, clr ); }
+                vertex( mesh.verts[e.x].pos );
+                vertex( mesh.verts[e.y].pos );
+            }
+            glEnd();
+        }
+        if( mask & 3 ){ // faces
+            glBegin(GL_TRIANGLES);
+            for(int j=ob.z; j<b.z; j++){ 
+                Quat4i t = mesh.tris[j];
+                if(color_mode==1){ Draw::color_of_hash( t.w*446+161, clr ); }
+                if(bFlat){
+                    Vec3f a = (Vec3f)mesh.verts[t.x].pos;
+                    Vec3f b = (Vec3f)mesh.verts[t.y].pos;
+                    Vec3f c = (Vec3f)mesh.verts[t.z].pos;
+                    Vec3f nor; nor.set_cross( a-b, b-c ); nor.normalize();
+                    vertex( a ); normal( nor );
+                }else{
+                    vertex( mesh.verts[t.x].pos ); normal( mesh.verts[t.x].nor );
+                    vertex( mesh.verts[t.y].pos ); normal( mesh.verts[t.y].nor );
+                    vertex( mesh.verts[t.z].pos ); normal( mesh.verts[t.z].nor );
+                }
+            }
+            glEnd();
+        }
+        ob=b;
+    }
+    return 0;
+}
+
     void drawText( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend ){
         glDisable    ( GL_LIGHTING   );
         glDisable    ( GL_DEPTH_TEST );

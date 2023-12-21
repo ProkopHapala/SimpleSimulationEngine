@@ -84,7 +84,8 @@ int l_Rope    (lua_State * L){
     const char * matn = Lua::getString(L,4);
     //auto it = worshop.materials.find(matn);
     //if( it != worshop.materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
-    o.material = workshop.materials.get( matn );
+    //o.material = workshop.materials.get( matn );
+    o.face_mat = workshop.panelMaterials.getId( matn );
     o.id   = theSpaceCraft->ropes.size();
     //printf( "Rope (%i,%i) %g %s ->  %i\n", o.p0, o.p1, o.thick, matn, o.id );
     if(verbosity>1) o.print();

@@ -24,6 +24,7 @@ int verbosity = 0;
 #include "SpaceCraft.h"
 #include "SpaceCraftDraw.h"
 #include "SpaceCraft2Mesh.h"
+#include "SpaceCraft2Mesh2.h"
 #include "SoftBody.h"
 
 #include "SphereSampling.h"
@@ -54,6 +55,8 @@ enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.c
 
 //SpaceCraft craft;
 Truss      truss;
+
+Mesh::Builder2 mesh2;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 //char str[8096];
 double elementSize  = 5.;
@@ -70,7 +73,7 @@ void renderShip(){
     //  If we use drawSpaceCraft() there are no problems with backface lighting
     //drawSpaceCraft( *theSpaceCraft, 1, false, true );
 
-    
+    /*
     // If we use drawSpaceCraft_Mesh() there are problems with backface lighting
     Mesh::Builder mesh;
     glColor3f(1.0,1.0,1.0);
@@ -79,6 +82,12 @@ void renderShip(){
     mesh.printSizes();
     Draw3D::drawMeshBuilder( mesh );
     mesh.write_obj( "ship.obj" );
+    */
+
+    mesh2.clear();
+    BuildCraft_truss( mesh2, *theSpaceCraft );
+    mesh2.printSizes();
+    Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
     
 
     /*

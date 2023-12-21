@@ -107,7 +107,8 @@ int add_Rope( int p0, int p1, double thick, int matId=-1, const char* matn=0 ){
     o.p0   = p0;
     o.p1   = p1;
     o.thick= thick;
-    if( (matId<0) && matn){ o.material = workshop->materials.get(matn); }else{ o.material = workshop->materials.vec[matId]; }
+    if( (matId<0) && matn){ o.face_mat = workshop->materials.getId(matn); }else{ o.face_mat = matId; }
+    //if( (matId<0) && matn){ o.material = workshop->materials.get(matn); }else{ o.material = workshop->materials.vec[matId]; }
     o.id   = ropes.size();
     //if(bPrint)printf( "Rope (%i,%i) %g %s ->  %i\n", o.p0, o.p1, o.thick, matn, o.id );
     if(bPrint) o.print();

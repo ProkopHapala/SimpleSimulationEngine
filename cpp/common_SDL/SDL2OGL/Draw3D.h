@@ -19,6 +19,7 @@
 
 #include "Draw.h"
 #include "MeshBuilder.h"
+#include "MeshBuilder2.h"
 
 namespace Draw3D{
 
@@ -193,6 +194,7 @@ void drawRectGridLines( Vec2i n, const Vec3d& p0, const Vec3d& da, const Vec3d& 
 
 int drawMesh( const OMesh& mesh  );
 int drawMeshBuilder( const Mesh::Builder& mesh, bool bTwoSided=true );
+int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask=0b110, int color_mode=1, bool bTwoSided=true, bool bFlat=true );
 
 
 void drawTetraIso( Vec3f** ps, Quat4d vals );

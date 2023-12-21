@@ -29,9 +29,14 @@ struct Vert{ // double8
 };
 
 class Builder2{ public:
-    bool bnor = true;
-    bool bUVs = true;
-    std::vector<Quat4i> subs;    // {ivert,iedge,itri,ichunk}   // blocks of data, drawing of some complex object create one block
+    //bool bnor = true;
+    //bool bUVs = true;
+    bool bSplitSize = false;
+    double max_size = 1.0;
+    int   face_type=0;
+    Vec2i edge_type=Vec2i{0,0}; // uv edges
+
+    std::vector<Quat4i> blocks;  // {ivert,iedge,itri,ichunk}   // blocks of data, drawing of some complex object create one block
     std::vector<Vert>   verts;   // {pos,nor,uv}
     std::vector<Quat4i> edges;   // {a,b, ?, type}={f|e} or  {a,b, f1, f2} => we can store type of the edge in the 4rd component, or adjacent faces
     std::vector<Quat4i> tris;    // {a,b,c|type}={f|e}   => we can store type of the face in the 4th component
@@ -41,21 +46,136 @@ class Builder2{ public:
     int draw_mode = TRIANGLES;
     Vec3f  penColor;
     
-    void clear(){ subs.clear(); verts.clear(); edges.clear(); tris.clear(); chunks.clear(); strips.clear(); }
+    void clear(){ blocks.clear(); verts.clear(); edges.clear(); tris.clear(); chunks.clear(); strips.clear(); }
+    void printSizes(){printf( "MeshBuilder::printSizes() blocks=%i verts=%i edges=%i tris=%i chunks=%i strips=%i \n", blocks.size(), verts.size(), edges.size(), tris.size(), chunks.size(), strips.size() );}
 
-    int vert( const Vec3d& pos, const Vec3d& nor, const Vec2d& uv=Vec2dZero ){ verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; }
-    int edge( int a, int b, int t=-1, int t2=-1 ){ edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; }
-    int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
+    inline Quat4i latsBlock()const{ return Quat4i{(int)verts.size(),(int)edges.size(),(int)tris.size(),(int)chunks.size()}; }
+    inline int block(){ int i=blocks.size(); blocks.push_back( latsBlock() ); return i; };
+    inline int vert( const Vec3d& pos, const Vec3d& nor=Vec3dZero, const Vec2d& uv=Vec2dZero ){ verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; }
+    inline int edge( int a, int b, int t=-1, int t2=-1 ){ edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; }
+    inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
 
-    int chunk( int t, int n, int* inds ){ 
+    inline int chunk( int t, int n, int* inds=0 ){ 
         int i0=strips.size(); 
         chunks.push_back(Quat4i{i0,n,-1,t}); 
-        //for(int i=0;i<n;i++){ strips.push_back(inds[i]); } return chunks.size()-1;  // ToDo: can we copy array to vectro faster ?
-        // https://stackoverflow.com/questions/259297/how-do-you-copy-the-contents-of-an-array-to-a-stdvector-in-c-without-looping
-        strips.insert(strips.end(), &inds[0], &inds[n]);
-        //strips.resize(strips.size()+n); memcpy(&strips[strips.size()-n], &inds[0], n*sizeof(int) );
+        if(inds){
+            //for(int i=0;i<n;i++){ strips.push_back(inds[i]); } return chunks.size()-1;  // ToDo: can we copy array to vectro faster ?
+            // https://stackoverflow.com/questions/259297/how-do-you-copy-the-contents-of-an-array-to-a-stdvector-in-c-without-looping
+            strips.insert(strips.end(), &inds[0], &inds[n]);
+            //strips.resize(strips.size()+n); memcpy(&strips[strips.size()-n], &inds[0], n*sizeof(int) );
+        }
         return chunks.size()-1;
     }  
+
+    inline void quad( Quat4i q, int face_type=-2, int edge_type=-3 ){
+        if( face_type>-2 ){ tri( q.x, q.y, q.z, face_type ); tri( q.x, q.w, q.y, face_type ); }
+        if( edge_type>-3 ){ edge( q.y, q.z, edge_type );  }
+        if( edge_type>-2 ){ edge( q.x, q.y, edge_type ); edge( q.y, q.w, edge_type ); edge( q.w, q.z, edge_type ); edge( q.z, q.x, edge_type ); }
+    }
+
+    int rope( int ip0, int ip1, int typ=-1, int n=1 ){   
+        int i0 = verts.size();
+        Vec3d p0,d;
+        if( (n>1) || (bSplitSize) ){
+            Vec3d d = verts[ip1].pos-verts[ip0].pos;
+            if( bSplitSize ){ double dl = d.norm(); int n2=(int)(dl/max_size)+1; if(n2>n)n=n2; }
+            p0 = verts[ip0].pos;
+            d.mul(1./n);  // we need this only it n>1
+        }
+        for(int i=0; i<n; i++){
+            edge( ip0,ip1, typ );
+            if(i>0) vert(p0+d*i); 
+        }
+        // ToDo: implementation by LINE_STRIP ?
+        return i0;
+    };
+
+    inline int ring( Vec3d p, Vec3d a, Vec3d b, Vec2d cs, int n=4 ){
+        Vec2d rot = Vec2d{1.0,0.0};
+        int i0  = verts.size();
+        int ip0 = ip0 + n;
+        for(int i=0; i<n; i++){
+            int ip = vert(p + a*rot.x + b*rot.y );
+            edge( ip0, ip, edge_type.x );
+            rot.mul_cmplx( cs );
+            ip0 = ip;
+        }
+        return i0;
+    }
+    inline int ring( Vec3d p, Vec3d ax, Vec3d up, double R, int n=4 ){
+        double dphi = 2*M_PI/n;
+        if( bSplitSize ){ double dL   = R*dphi; int n2=(int)(dL/max_size)+1; if(n2>n)n=n2; }
+        Vec2d cs; cs.fromAngle( dphi );
+        Vec3d a,b; 
+        b.set_cross(ax,up); b.normalize();
+        a.set_cross(b ,ax); a.normalize();
+        return ring(p,a*R,b*R,cs,n );
+    }
+
+    void tube( Vec3d p0, Vec3d p1, Vec3d up, Vec2d R, Vec2i n={4,1} ){
+        Vec3d ax = p1-p0; double L = ax.normalize();
+        if( bSplitSize ){
+            int nx=(int)(L/max_size)+1; if(nx>n.x)n.x=nx;
+            double r = fmax(R.x,R.y);
+            int ny=(int)(r/max_size)+1; if(ny>n.y)n.y=ny;
+        }
+        double dL = L/n.y;
+        Vec2d cs; cs.fromAngle( 2*M_PI/n.x );
+        Vec3d a,b; 
+        b.set_cross(ax,up); b.normalize();
+        a.set_cross(b ,ax); a.normalize();
+        int oe;
+        double dR = (R.y-R.x)/n.y;
+        for(int iy=0; iy<n.y; iy++){
+            int e = edges.size();
+            double r = R.x + dR*iy;
+            ring( p0+ax*(dL*iy), a*r, b*r, cs, n.x );
+            if(iy>0){
+                for(int ix=0; ix<n.x; ix++){
+                    Vec2i e1 = edges[e+ix].f.xy();
+                    Vec2i e2 = edges[oe+ix].f.xy(); 
+                    tri( e1.x, e1.y, e2.x, face_type ); 
+                    tri( e1.y, e2.y, e2.x, face_type );
+                    edge( e1.x, e2.x, edge_type.y );        
+                    //edge( e1.y, e2.y, edge_type.y );  // it would do it twice
+                    edge( e1.y, e2.x, edge_type.y );    // diagonal edge
+                }
+            }
+            oe=e;
+        }
+    }
+
+    int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 ){  
+        int ex[n.x];
+        int ey[n.y]; 
+        int i0 = verts.size();
+        Vec3d p00,p01,p10,p11;
+        if( (n.x>1) || (n.y>1) ){ p00 = verts[ip00].pos; p01 = verts[ip01].pos; p10 = verts[ip10].pos; p11 = verts[ip11].pos;};
+        // --- edges
+        ex[0    ]=edges.size(); int i0x = rope( ip00, ip01, typs.x, n.x );
+        ex[n.x-1]=edges.size(); int i1x = rope( ip10, ip11, typs.x, n.x );
+        ey[0    ]=edges.size(); int i0y = rope( ip00, ip10, typs.x, n.y );
+        ey[n.y-1]=edges.size(); int i1y = rope( ip01, ip11, typs.x, n.y );
+        for(int iy=1; iy<n.y-1; iy++){ ex[iy]=rope( i0y+iy, i1y+iy, typs.y, n.x ); }
+        for(int ix=1; ix<n.x-1; ix++){ ex[ix]=rope( i0x+ix, i1x+ix, typs.y, n.y ); }
+        for(int iy=1; iy<n.y; iy++){
+            for(int ix=1; ix<n.x; ix++){
+                Vec2i e1= edges[ex[ix+1]].f.xy();
+                Vec2i e2= edges[ex[ix  ]].f.xy();
+                if(fillType>0){
+                    tri( e1.x, e1.y, e2.x, typs.z );
+                    tri( e1.y, e2.y, e2.x, typs.z );
+                    edge( e1.y, e2.x, typs.y );        // diagonal edge
+                }else{
+                    tri( e2.x, e2.y, e1.x, typs.z );
+                    tri( e2.y, e1.y, e1.x, typs.z );
+                    edge( e2.y, e1.x, typs.y );
+                }
+            }
+        }
+        // ToDo: implementation by TRIANGLE_STRIP ?
+        return i0;
+    };
 
 
 /*
