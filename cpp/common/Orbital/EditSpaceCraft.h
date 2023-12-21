@@ -34,22 +34,24 @@ inline void i2idKind( int i, int& kind, int& id ){ kind=(i>>NBIT_id);  id=(i&&MA
 inline int  idKind2i( int kind, int id ){ return (kind<<NBIT_id)|(MASK_id&&id); }
 
 int l_Material (lua_State * L){
-    Material *mat = new Material();
+    Material *o = new Material();
     //Lua::dumpStack(L);   // DEBUG
-    strcpy( mat->name,  Lua::getStringField(L, "name"    ) );
-    mat->density      = Lua::getDoubleField(L, "density" );
-    mat->Spull        = Lua::getDoubleField(L, "Spull"   );
-    mat->Spush        = Lua::getDoubleField(L, "Spush"   );
-    mat->Kpull        = Lua::getDoubleField(L, "Kpull"   );
-    mat->Kpush        = Lua::getDoubleField(L, "Kpush"   );
-    mat->reflectivity = Lua::getDoubleField(L, "reflectivity" );
-    mat->Tmelt        = Lua::getDoubleField(L, "Tmelt"   );
+    strcpy( o->name,  Lua::getStringField(L, "name"    ) );
+    o->density      = Lua::getDoubleField(L, "density" );
+    o->Spull        = Lua::getDoubleField(L, "Spull"   );
+    o->Spush        = Lua::getDoubleField(L, "Spush"   );
+    o->Kpull        = Lua::getDoubleField(L, "Kpull"   );
+    o->Kpush        = Lua::getDoubleField(L, "Kpush"   );
+    o->reflectivity = Lua::getDoubleField(L, "reflectivity" );
+    o->Tmelt        = Lua::getDoubleField(L, "Tmelt"   );
     //auto it = worshop.materials_dict.find( mat->name );
     //if( it == worshop.materials_dict.end() ){ materials.insert({mat->name,mat}); }else{ printf( "Material `%s` replaced\n", mat->name ); delete it->second; it->second = mat;  }
-    if( workshop.materials.add(mat) && (verbosity>0) ) printf( "Material(%s) replaced\n", mat->name );
-    if(verbosity>1) mat->print();
-    //printf( "Material %s dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", mat->name, mat->density, mat->Kpull,mat->Kpush,   mat->Spull,mat->Spush,  mat->reflectivity, mat->Tmelt );
-    return 0;
+    if( workshop.materials.add(o) && (verbosity>0) ) printf( "Material(%s) replaced\n", o->name );
+    o->id =  workshop.materials.getId( o->name );
+    //if(verbosity>1) 
+    o->print();
+    lua_pushnumber(L, o->id);
+    return 1;
 };
 
 /*
@@ -63,6 +65,31 @@ int l_PanelMaterial (lua_State * L){
     return 0;
 };
 */
+
+int l_StickMaterial(lua_State * L){
+    //printf( "l_StickMaterial()\n" );
+    char mat_name[NAME_LEN];
+    StickMaterial *o = new StickMaterial();
+    //Lua::dumpStack(L); //DEBUG
+    strcpy( o->name,  Lua::getString(L, 1 ) );
+    strcpy( mat_name, Lua::getString(L, 2 ) );
+    o->diameter    =  Lua::getDouble(L, 3 );
+    o->area        =  Lua::getDouble(L, 4 );
+    //strcpy( o->name,  Lua::getStringField(L, "name"     ) );
+    //strcpy( mat_name, Lua::getStringField(L, "material" ) );
+    //o->diameter    =  Lua::getDoubleField(L, "diameter" );
+    //o->area        =  Lua::getDoubleField(L, "area"     );
+    //o->diameter    =  Lua::getDoubleField(L, "density"  );
+    o->materiallId = workshop.materials.getId( mat_name );
+    o->update( workshop.materials.vec[o->materiallId] );
+    if( workshop.stickMaterials.add(o) && (verbosity>0) ) printf( "StickMaterial(%s) replaced\n", o->name );
+    o->id = workshop.stickMaterials.getId( o->name );
+    //if(verbosity>1) 
+    o->print();
+    lua_pushnumber(L, o->id);
+    return 1;
+};
+
 
 int l_Node    (lua_State * L){
     Node o;
@@ -102,15 +129,17 @@ int l_Girder  (lua_State * L){
              Lua::getVec3(L,3, o.up );
     o.nseg = Lua::getInt (L,4);
     o.mseg = Lua::getInt (L,5);
-             Lua::getVec2(L,6, o.wh );
+             Lua::getVec2(L,6, o.wh ); 
     const char * matn = Lua::getString(L,7);
+            Lua::getVec4i(L,8, o.st );
     //auto it  = worshop.materials.find(matn);
     //if ( it != worshop.materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
     //o.material = worshop.materials.get( matn );
     o.face_mat = workshop.panelMaterials.getId( matn );
     o.id     = theSpaceCraft->girders.size();
     //printf( "Girder (%i,%i) (%g,%g,%g) (%i,%i), (%g,%g) %s ->  %i\n", o.p0, o.p1, o.up.x, o.up.y, o.up.z, o.nseg, o.mseg, o.wh.x, o.wh.y, matn, o.id );
-    if(verbosity>1) o.print();
+    //if(verbosity>1) 
+    o.print();
     theSpaceCraft->girders.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;
@@ -130,6 +159,7 @@ int l_Ring    (lua_State * L){
     o.R    = Lua::getDouble(L,5);
              Lua::getVec2(L,6, o.wh );
     const char * matn = Lua::getString(L,7);
+             Lua::getVec4i(L,8, o.st );
     //auto it  = worshop.materials.find(matn);
     //if ( it != worshop.materials.end() ){o.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
     //o.material = workshop.materials.get( matn );
@@ -281,6 +311,9 @@ void initSpaceCraftingLua(){
     lua_State  * L = theLua;
     luaL_openlibs(L);
     lua_register(L, "Material", l_Material );
+    lua_register(L, "StickMaterial", l_StickMaterial );
+    //lua_register(L, "PanelMaterial", l_PanelMaterial );
+
     lua_register(L, "Node",     l_Node     );
     lua_register(L, "Rope",     l_Rope     );
     lua_register(L, "Girder",   l_Girder   );

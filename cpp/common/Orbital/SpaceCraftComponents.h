@@ -56,7 +56,7 @@ class Material : public CatalogItem { public:
 	double reflectivity; // [1] reflectivity
 	double Tmelt;        // [T] temperature of failure
 
-    virtual void print(){ printf( "Material(%i|%s) dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", id, name, density, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
+    virtual void print(){ printf( "Material(%i|%-16s) dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", id, name, density, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
  	// What about heat, electricity etc. ?
 };
 
@@ -80,16 +80,30 @@ class PanelLayer{ public:
 };
 
 class StickMaterial : public CatalogItem { public:
+    int    materiallId;    // index of material in catalog
     double diameter;       // [m]
+    double area;           // [m2]
+    // -- auxuliary
     double linearDensity;  // [kg/m]
     double reflectivity;   // [1] reflectivity
     double Tmelt;          // [T] temperature of failure  
     double damping;
     double Kpull,Kpush;    // [N/m] elastic modulus
     double Spull,Spush;    // [N]   Strenght
-    int    materiallId;    // index of material in catalog
 
-    virtual void print(){ printf( "StickMaterial(%i|%s) d=%g[m] dens=%g[kg/m] S(%g,%g)[N] K(%g,%g)[N/m] Refl=%g Tmelt=%g[K] \n", id, name, diameter, linearDensity, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
+    void update( const Material* mat ){
+        //area          = M_PI*diameter*diameter*0.25;
+        //const Material* mat = mats[materiallId];
+        linearDensity = area*mat->density;
+        Kpull         = area*mat->Kpull;
+        Kpush         = area*mat->Kpush;
+        Spull         = area*mat->Spull;
+        Spush         = area*mat->Spush;
+        reflectivity  = mat->reflectivity;
+        Tmelt         = mat->Tmelt;
+    }
+
+    virtual void print(){ printf( "StickMaterial(%i|%-16s) d=%g[m] A=%g[m2] ldens=%g[kg/m] S(%g,%g)[N] K(%g,%g)[N/m] Refl=%g Tmelt=%g[K] \n", id, name, diameter, area, linearDensity, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
 };
 
 class PanelMaterial : public CatalogItem { public:

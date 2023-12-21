@@ -34,7 +34,7 @@ namespace Mesh{
 int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes ){
     // ToDo: ad p0,p1 etc. - maybe we should rather specify indexes of existing verts rather than positions of new verts ?
     //                       No. this is done in girder1_caps
-    printf( "Mesh::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z );
+    printf( "Mesh::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) stickTypes(%i,%i,%i,%i)\n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
     Vec3d dir = p1-p0;
     double length = dir.normalize();
     up.makeOrthoU(dir);
@@ -107,7 +107,7 @@ int girder1( Builder2& mesh, int ip0, int ip1, Vec3d up, int n, double width, Qu
  * @return The index of the created block containing the starting indexes of the points and edges
  */
 int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, double width, Quat4i stickTypes ){
-    printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z );
+    printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) stickTypes(%i,%i,%i,%i) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
     //int kind_long   = 0;
     //int kind_perp   = 1;
     //int kind_zigIn  = 2;

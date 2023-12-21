@@ -1383,7 +1383,8 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
             glBegin(GL_LINES);
             for(int j=ob.y; j<b.y; j++){ 
                 Quat4i e = mesh.edges[j];
-                if(color_mode==1){ Draw::color_of_hash( e.w*446+161, clr ); }
+                if(color_mode==1){ Draw::color_of_hash( e.w*446+161, clr ); color( clr); }
+                //printf( "drawMeshBuilder2() block[%i] edge[%i] typ=%i clr(%g,%g,%g) color_mode=%i\n", i, j, e.w, clr.x,clr.y,clr.z, color_mode );
                 vertex( mesh.verts[e.x].pos );
                 vertex( mesh.verts[e.y].pos );
             }
@@ -1393,7 +1394,7 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
             glBegin(GL_TRIANGLES);
             for(int j=ob.z; j<b.z; j++){ 
                 Quat4i t = mesh.tris[j];
-                if(color_mode==1){ Draw::color_of_hash( t.w*446+161, clr ); }
+                if(color_mode==1){ Draw::color_of_hash( t.w*446+161, clr ); color( clr); }
                 if(bFlat){
                     Vec3f a = (Vec3f)mesh.verts[t.x].pos;
                     Vec3f b = (Vec3f)mesh.verts[t.y].pos;
