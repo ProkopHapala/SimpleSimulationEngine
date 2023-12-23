@@ -289,8 +289,9 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
 SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     //Lua1.init();
-    fontTex     = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
-    GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    fontTex       = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    Draw::fontTex = fontTex;
 
     plateGui  = (PlateGUI* )gui.addPanel( new PlateGUI ( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
     girderGui = (GirderGUI*)gui.addPanel( new GirderGUI( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
@@ -384,14 +385,14 @@ void SpaceCraftEditGUI::draw(){
     //printf( " ==== frame %i \n", frameCount );
     //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
     //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
-    glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-    //glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
+    //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+    glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	//glDisable(GL_DEPTH_TEST);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glColor3f(1.0,0.5,1.0);
-	if(glo_capsula) glCallList(glo_capsula);
+	//if(glo_capsula) glCallList(glo_capsula);
 
 	/*
     // to make nice antialiased lines without supersampling buffer
@@ -414,8 +415,21 @@ void SpaceCraftEditGUI::draw(){
     }
     */
 
-    if(glo_truss) glCallList(glo_truss);
-    if(glo_ship ) glCallList(glo_ship);
+    //if(glo_truss) glCallList(glo_truss);
+    //if(glo_ship ) glCallList(glo_ship);
+
+    //pointLabels( mesh.verts.size(), &mesh.verts[0].pos, 0.1, 0.0, fontTex, 10.0, 0 );
+    
+    for(int i=0; i<mesh2.verts.size(); i++){ 
+        Draw3D::color( Vec3f{0.0,0.0,1.0} );
+        //sprintf( Draw::tmp_str, "%i", i );
+        //Vec3f p = (Vec3f)mesh2.verts[i].pos;
+        //drawText3D( Draw::tmp_str, (Vec3f)mesh.verts[j].pos, {1.0,0.0,0.0}, {0.1,0.0,0.0}, Draw::fontTex, 10.0, 0 ); 
+        //printf( "point_label[%i](%g,%g,%g)\n", i, p.x, p.y, p.z );
+        //Draw3D::drawText( Draw::tmp_str, p, Draw::fontTex, 10.0, 0 ); 
+        Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );
+    }
+    
 
     /*
     if(ogl_asteroide){
@@ -428,7 +442,7 @@ void SpaceCraftEditGUI::draw(){
 
     //Mat3d camMat;
     //qCamera.toMatrix_T(camMat);
-    Draw3D::drawMatInPos( cam.rot, (Vec3f){0.0,0.0,0.0} );
+    //Draw3D::drawMatInPos( cam.rot, (Vec3f){0.0,0.0,0.0} );
 
     //printf( "%i\n", EDIT_MODE::vertex );
     if(picked>=0){

@@ -51,6 +51,9 @@ namespace Draw{
         Draw::setRGB( h, color );
     };
 
+    static int  fontTex = 0;
+    static char tmp_str[1024];
+
     constexpr int     ncolors = 5;
     //static uint32_t   colors_rainbow[ncolors] = { 0xFF000000, 0xFFFF0000, 0xFF00FF00, 0xFF00FFFF, 0xFFFFFFFF };
     //static uint32_t   colors_rainbow[ncolors]   = { 0xFF000000, 0xFF0000FF, 0xFF00FF00, 0xFF00FFFF, 0xFFFFFFFF };
@@ -72,6 +75,7 @@ namespace Draw{
 
     void billboardCam( );
     void billboardCamProj( );
+    void billboardCamProj( float scale );
     void drawText ( const char * str, int itex, float sz, int iend=0       );
     void drawText ( const char * str, int itex, float sz, Vec2i block_size );
 
