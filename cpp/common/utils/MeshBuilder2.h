@@ -92,6 +92,7 @@ class Builder2{ public:
                     //printf("tri(%i,%i,%i)\n", i,j,j-1 );
                     //printf("tri(%i,%i,%i)\n", i,j,j-1 );
                     tri(j-1,i  ,j  ,ft);  //printf("tri(%i,%i,%i)\n", i,j,j-1 );
+                    //tri(j-1,i  ,i-1,ft);
                     tri(i  ,j-1,i-1,ft);
                     //tri(ip0,ip1,ip1-1,ft); printf("tri(%i,%i,%i)\n", ip0,ip1,ip1-1 );
                     //tri(ip0,ip1,ip1-1, it ); printf("tri(%i,%i,%i)\n", ip0,ip1,ip1-1 );

@@ -1364,7 +1364,6 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
     if(bTwoSided){
         glDisable(GL_CULL_FACE);
         glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
-
     }
     int nblock = mesh.blocks.size();
     //Quat4i ob  = mesh.blocks[0];
@@ -1396,7 +1395,6 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
             glEnd();
         }
         
-        
         if( mask & 4 ){ // faces
             glBegin(GL_TRIANGLES);
             if(bTwoSided){
@@ -1412,13 +1410,15 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
                     Vec3f c = (Vec3f)mesh.verts[t.z].pos;
                     //printf("flat_tri(%i,%i,%i|%i) a(%g,%g,%g) b(%g,%g,%g) c(%g,%g,%g) )\n", t.x, t.y, t.z, t.w,   a.x,a.y,a.z,  b.x,b.y,b.z, c.x,c.y,c.z );
                     Vec3f nor; nor.set_cross( a-b, b-c ); nor.normalize();
+                    normal( nor );
                     vertex( a ); //normal( nor );
                     vertex( b ); //normal( nor );
                     vertex( c ); //normal( nor );
+                    //normal( nor );
                 }else{
-                    vertex( mesh.verts[t.x].pos ); normal( mesh.verts[t.x].nor );
-                    vertex( mesh.verts[t.y].pos ); normal( mesh.verts[t.y].nor );
-                    vertex( mesh.verts[t.z].pos ); normal( mesh.verts[t.z].nor );
+                    normal( mesh.verts[t.x].nor ); vertex( mesh.verts[t.x].pos ); 
+                    normal( mesh.verts[t.y].nor ); vertex( mesh.verts[t.y].pos ); 
+                    normal( mesh.verts[t.z].nor ); vertex( mesh.verts[t.z].pos ); 
                 }
             }
             glEnd();

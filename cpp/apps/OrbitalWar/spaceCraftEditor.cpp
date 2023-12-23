@@ -90,6 +90,10 @@ void renderShip(){
     mesh2.clear();
     BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
     mesh2.printSizes();
+
+    glEnable(GL_LIGHTING);
+    glEnable     ( GL_LIGHT0           );
+    glEnable     ( GL_NORMALIZE        );
     Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
 
     Draw3D::color(Vec3f{1.0,0.,1.});
@@ -393,6 +397,12 @@ void SpaceCraftEditGUI::draw(){
 	glColor3f(1.0,0.5,1.0);
 	//if(glo_capsula) glCallList(glo_capsula);
 
+    //Vec3f cam.rot.c;
+    //float lightPos   []{ 1.0f, -1.0f, 1.0f, 0.0f  };
+    glLightfv( GL_LIGHT0, GL_POSITION,  (float*)&cam.rot.c  );
+    //glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+
 	/*
     // to make nice antialiased lines without supersampling buffer
     // see  https://www.opengl.org/discussion_boards/showthread.php/176559-GL_LINE_SMOOTH-produces-bold-lines-%28big-width%29
@@ -455,6 +465,9 @@ void SpaceCraftEditGUI::draw(){
     mouse_ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     //glColor3f(0.0f,0.0f,0.0f); drawTruss( truss.edges.size(), &truss.edges[0], &truss.points[0] );
     //glColor3f(1.0f,1.0f,1.0f); Draw3D::drawPoints( truss.points.size(), &truss.points[0], 0.1 );
+
+
+    
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
