@@ -64,36 +64,37 @@ class Builder2{ public:
         d.mul(1./n);
         Vec3d p = p0;
         int i0 = verts.size();
-        printf("vstri(%i){", i0 );
+        //printf("vstri(%i){", i0 );
         for(int ii=0; ii<n+1; ii++){
-            int i = vert(p);   printf("%i ", i );
+            int i = vert(p);  // printf("%i ", i );
             if((et>-1)&&(ii>0))edge(i-1,i,et);  // long
             p.add(d);
         }
-        printf("}END\n" );
+        //printf("}END\n" );
         return i0;
     }
 
     inline int fstrip( int ip0, int ip1, int n, int ft=-1, Vec2i et={-1,-1} ){ 
         int i0 = tris.size();
-        printf("fstrip(%i,%i)\n", ip0, ip1 );
+        //printf("fstrip(%i,%i)\n", ip0, ip1 );
         for(int ii=0; ii<n+1; ii++){
             int it = ip0*1000+ii;
             //printf("it %i \n", it );
             int i = ip0+ii;
             int j = ip1+ii;
-            //if(et.x>-1)edge(j,i,et.x);         // perp
-            if(et.x>-1)edge(j,i,it);
+            if(et.x>-1)edge(j,i,et.x);         // perp
+            //if(et.x>-1)edge(j,i,it);
             if(ii>0){
-                //if(et.y>-1)edge(j-1,i,et.y);   // diag
-                if(et.y>-1)edge(j-1,i,it);
+                if(et.y>-1)edge(i,j-1,et.y);   // diag
+                //if(et.y>-1)edge(j-1,i,it);
                 if(ft>-1){ 
                     //tri(j-1,i,j,ft); 
                     //printf("tri(%i,%i,%i)\n", i,j,j-1 );
                     //printf("tri(%i,%i,%i)\n", i,j,j-1 );
-                    //tri(i,j,j-1,ft); 
+                    tri(j-1,i  ,j  ,ft);  //printf("tri(%i,%i,%i)\n", i,j,j-1 );
+                    tri(i  ,j-1,i-1,ft);
                     //tri(ip0,ip1,ip1-1,ft); printf("tri(%i,%i,%i)\n", ip0,ip1,ip1-1 );
-                    tri(ip0,ip1,ip1-1, it ); printf("tri(%i,%i,%i)\n", ip0,ip1,ip1-1 );
+                    //tri(ip0,ip1,ip1-1, it ); printf("tri(%i,%i,%i)\n", ip0,ip1,ip1-1 );
                 }
             }
         }
@@ -242,8 +243,8 @@ class Builder2{ public:
         Vec3d dy1=p11-p01; double ly1=dy1.norm();
         if(n.x<0){ int n1=(int)(lx0/max_size)+1; int n2=(int)(lx1/max_size)+1;  n.x=_max(n1,n2); }
         if(n.y<0){ int n1=(int)(ly0/max_size)+1; int n2=(int)(ly1/max_size)+1;  n.y=_max(n1,n2); }
-        n.x=2;
-        n.y=2;
+        //n.x=5;
+        //n.y=5;
         //Quat4i t_;
         int i0=verts.size();
         int oiv;

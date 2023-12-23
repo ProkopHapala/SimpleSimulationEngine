@@ -86,15 +86,14 @@ void renderShip(){
     mesh.write_obj( "ship.obj" );
     */
 
+    //mesh2.max_size = 30.0;
     mesh2.clear();
-    BuildCraft_truss( mesh2, *theSpaceCraft, 10.0 );
+    BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
     mesh2.printSizes();
     Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
 
     Draw3D::color(Vec3f{1.0,0.,1.});
-    for( const Node& o : theSpaceCraft->nodes ){
-        Draw3D::drawPointCross( o.pos, 20 );
-    }
+    for( const Node& o : theSpaceCraft->nodes ){ Draw3D::drawPointCross( o.pos, 5 ); }
 
 
     /*
@@ -415,20 +414,17 @@ void SpaceCraftEditGUI::draw(){
     }
     */
 
+
+    glDisable(GL_CULL_FACE);
+    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+
     //if(glo_truss) glCallList(glo_truss);
-    //if(glo_ship ) glCallList(glo_ship);
+    if(glo_ship ) glCallList(glo_ship);
 
     //pointLabels( mesh.verts.size(), &mesh.verts[0].pos, 0.1, 0.0, fontTex, 10.0, 0 );
     
-    for(int i=0; i<mesh2.verts.size(); i++){ 
-        Draw3D::color( Vec3f{0.0,0.0,1.0} );
-        //sprintf( Draw::tmp_str, "%i", i );
-        //Vec3f p = (Vec3f)mesh2.verts[i].pos;
-        //drawText3D( Draw::tmp_str, (Vec3f)mesh.verts[j].pos, {1.0,0.0,0.0}, {0.1,0.0,0.0}, Draw::fontTex, 10.0, 0 ); 
-        //printf( "point_label[%i](%g,%g,%g)\n", i, p.x, p.y, p.z );
-        //Draw3D::drawText( Draw::tmp_str, p, Draw::fontTex, 10.0, 0 ); 
-        Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );
-    }
+    Draw3D::color( Vec3f{0.0,0.0,1.0} );
+    //for(int i=0; i<mesh2.verts.size(); i++){  Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );}
     
 
     /*

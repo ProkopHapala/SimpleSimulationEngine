@@ -1364,6 +1364,7 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
     if(bTwoSided){
         glDisable(GL_CULL_FACE);
         glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+
     }
     int nblock = mesh.blocks.size();
     //Quat4i ob  = mesh.blocks[0];
@@ -1379,18 +1380,7 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
             }
             glEnd();
         }
-        /*
-        //if( mask & 8 ){ // point indexes
-            for(int j=ob.x; j<b.x; j++){ 
-                color( Vec3f{0.0,0.0,1.0}   );
-                sprintf( Draw::tmp_str, "%i", j );
-                Vec3f p = (Vec3f)mesh.verts[j].pos;
-                //drawText3D( Draw::tmp_str, (Vec3f)mesh.verts[j].pos, {1.0,0.0,0.0}, {0.1,0.0,0.0}, Draw::fontTex, 10.0, 0 ); 
-                printf( "point_label[%i](%g,%g,%g)\n", j, p.x, p.y, p.z );
-                drawText( Draw::tmp_str, p, Draw::fontTex, 10.0, 0 ); 
-            }
-        //}
-        */
+        
         if( mask & 2 ){ // lines
             glBegin(GL_LINES);
             for(int j=ob.y; j<b.y; j++){ 
@@ -1401,13 +1391,18 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
                 Vec3f b = (Vec3f)mesh.verts[e.y].pos;
                 vertex( a );
                 vertex( b );
-                if(e.w>1000){ printf("edge(%i,%i|%i) a(%g,%g,%g) b(%g,%g,%g) \n", e.x, e.y, e.w,     a.x,a.y,a.z,  b.x,b.y,b.z ); };
+                //if(e.w>1000){ printf("edge(%i,%i|%i) a(%g,%g,%g) b(%g,%g,%g) \n", e.x, e.y, e.w,     a.x,a.y,a.z,  b.x,b.y,b.z ); };
             }
             glEnd();
         }
-        /*
+        
+        
         if( mask & 4 ){ // faces
             glBegin(GL_TRIANGLES);
+            if(bTwoSided){
+                glDisable(GL_CULL_FACE);
+                glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+            }
             for(int j=ob.z; j<b.z; j++){ 
                 Quat4i t = mesh.tris[j];
                 if(color_mode==1){ Draw::color_of_hash( t.w*446+161, clr ); color( clr); }
@@ -1415,11 +1410,11 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
                     Vec3f a = (Vec3f)mesh.verts[t.x].pos;
                     Vec3f b = (Vec3f)mesh.verts[t.y].pos;
                     Vec3f c = (Vec3f)mesh.verts[t.z].pos;
-                    printf("flat_tri(%i,%i,%i|%i) a(%g,%g,%g) b(%g,%g,%g) c(%g,%g,%g) )\n", t.x, t.y, t.z, t.w,   a.x,a.y,a.z,  b.x,b.y,b.z, c.x,c.y,c.z );
+                    //printf("flat_tri(%i,%i,%i|%i) a(%g,%g,%g) b(%g,%g,%g) c(%g,%g,%g) )\n", t.x, t.y, t.z, t.w,   a.x,a.y,a.z,  b.x,b.y,b.z, c.x,c.y,c.z );
                     Vec3f nor; nor.set_cross( a-b, b-c ); nor.normalize();
-                    vertex( a ); normal( nor );
-                    vertex( b ); normal( nor );
-                    vertex( c ); normal( nor );
+                    vertex( a ); //normal( nor );
+                    vertex( b ); //normal( nor );
+                    vertex( c ); //normal( nor );
                 }else{
                     vertex( mesh.verts[t.x].pos ); normal( mesh.verts[t.x].nor );
                     vertex( mesh.verts[t.y].pos ); normal( mesh.verts[t.y].nor );
@@ -1428,7 +1423,7 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
             }
             glEnd();
         }
-        */
+        
         ob=b;
     }
     return 0;
