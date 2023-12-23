@@ -1401,6 +1401,8 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
                     Vec3f c = (Vec3f)mesh.verts[t.z].pos;
                     Vec3f nor; nor.set_cross( a-b, b-c ); nor.normalize();
                     vertex( a ); normal( nor );
+                    vertex( b ); normal( nor );
+                    vertex( c ); normal( nor );
                 }else{
                     vertex( mesh.verts[t.x].pos ); normal( mesh.verts[t.x].nor );
                     vertex( mesh.verts[t.y].pos ); normal( mesh.verts[t.y].nor );

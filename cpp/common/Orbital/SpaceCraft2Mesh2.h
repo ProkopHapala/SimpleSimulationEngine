@@ -259,14 +259,16 @@ int panel( Builder2& mesh, Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, 
     return i0;
 }
 
-void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft ){
+void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft, double max_size=-1 ){
     printf( "BuildCraft_truss() \n" );
+    if(max_size>0){ mesh.max_size=max_size; };
     int i=0;
     mesh.block();
     int ip0 = mesh.verts.size();
     for(Node o: craft.nodes){
         mesh.vert( o.pos );
     }
+    /*
     for(Rope o: craft.ropes){
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
         mesh.rope( o.p0,o.p1, o.face_mat );
@@ -280,6 +282,8 @@ void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft ){
         o.stickRange = {b.y,(int)mesh.edges.size()};
         i++;
     }
+    */
+    /*
     i=0;
     for(Ring o: craft.rings){
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
@@ -289,6 +293,47 @@ void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft ){
         o.stickRange = {b.y,(int)mesh.edges.size()};
         i++;
     }
+    */
+    // --- Radiators
+    printf("BuildCraft_truss().radiators\n");
+    for( const Radiator& o : craft.radiators ){
+        o.print();
+        Vec3d p00 = craft.pointOnGirder(o.g1, o.g1span.x);
+        Vec3d p01 = craft.pointOnGirder(o.g1, o.g1span.y);
+        Vec3d p10 = craft.pointOnGirder(o.g2, o.g2span.x);
+        Vec3d p11 = craft.pointOnGirder(o.g2, o.g2span.y);
+        printf( "p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g)\n", p00.x,p00.y,p00.z,  p01.x,p01.y,p01.z,  p10.x,p10.y,p10.z,  p11.x,p11.y,p11.z );
+        mesh.plate( p00,p01,p10,p11,{0,1,2,0}, {-1,-1} );
+
+        /*
+        const Girder& g1 = craft.girders[o.g1];
+        const Girder& g2 = craft.girders[o.g2];
+        Vec3d p00 = craft.nodes[g1.p0].pos;
+        Vec3d p01 = craft.nodes[g1.p1].pos;
+        Vec3d p10 = craft.nodes[g2.p0].pos;
+        Vec3d p11 = craft.nodes[g2.p1].pos;
+        int ip00 =   mesh.vert( craft.pointOnGirder(o.g1, o.g1span.x) );
+        int ip01 =   mesh.vert( craft.pointOnGirder(o.g1, o.g1span.y) );
+        int ip10 =   mesh.vert( craft.pointOnGirder(o.g2, o.g2span.x) );
+        int ip11 =   mesh.vert( craft.pointOnGirder(o.g2, o.g2span.y) );
+        printf( "p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g)\n", p00.x,p00.y,p00.z,  p01.x,p01.y,p01.z,  p10.x,p10.y,p10.z,  p11.x,p11.y,p11.z );
+        //mesh.plate_quad( g1.p0, g1.p1, g2.p0, g2.p1, Quat4i{0,1,o.face_mat,-1}, Vec2i{-1,-1}, 1  );
+        mesh.plate_quad( ip00, ip01, ip10, ip11, Quat4i{0,1,o.face_mat,-1}, Vec2i{-1,-1}, 1  );
+        */
+
+
+        //drawPlate_mesh( mesh, o, nodes.data(), girders.data());
+
+        break;
+    };
+    // --- Shields
+    for( const Shield& o : craft.shields ){
+        //drawPlate_mesh(mesh, o, nodes.data(), girders.data() );
+    };
+
+
+
+    //int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 );
     /*
     // ToDo: Shields
     // ToDo: Radiators

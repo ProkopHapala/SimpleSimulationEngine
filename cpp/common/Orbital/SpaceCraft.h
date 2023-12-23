@@ -61,6 +61,13 @@ class SpaceCraft : public CatalogItem { public:
         truss.clear();
 	};
 
+    Vec3d pointOnGirder( int g, double c )const{
+        // ToDo: later we have to find point along girder in truss? Maybe we can use vertex range which is stored in girder object inside SpaceCraft2Mesh2 ?
+        return nodes[girders[g].p0].pos*(1-c) + nodes[girders[g].p1].pos*c;
+    }
+
+
+
 	inline void linker2line( const NodeLinker& o, Line3d& l ){ l.a=nodes[o.p0].pos; l.b=nodes[o.p1].pos; }
 	inline void plate2quad ( const Plate& o, Quad3d& qd )const{
         //qd.l1.a=nodes[ girders[o.g1].p0 ].pos;

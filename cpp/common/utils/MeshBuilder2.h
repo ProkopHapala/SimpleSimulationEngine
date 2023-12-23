@@ -16,6 +16,8 @@
 #include "quaternion.h"
 #include "raytrace.h"
 
+#include "testUtils.h"
+
 #include "MeshBuilder.h"
 
 namespace Mesh{
@@ -31,10 +33,12 @@ struct Vert{ // double8
 class Builder2{ public:
     //bool bnor = true;
     //bool bUVs = true;
-    bool bSplitSize = false;
+    //bool bSplitSize = false;
     double max_size = 1.0;
     int   face_type=0;
     Vec2i edge_type=Vec2i{0,0}; // uv edges
+    int ov,oov; // previous edge indexes;
+
 
     std::vector<Quat4i> blocks;  // {ivert,iedge,itri,ichunk}   // blocks of data, drawing of some complex object create one block
     std::vector<Vert>   verts;   // {pos,nor,uv}
@@ -55,6 +59,62 @@ class Builder2{ public:
     inline int edge( int a, int b, int t=-1, int t2=-1 ){ edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; }
     inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
 
+    inline int vstrip(Vec3d p0, Vec3d p1, int n, int et=-1 ){
+        Vec3d d=p1-p0; 
+        d.mul(1./n);
+        Vec3d p = p0;
+        int i0 = verts.size();
+        for(int ii=0; ii<n+1; ii++){
+            int i = vert(p);
+            if((et>-1)&&(ii>0))edge(i-1,i,et);  // long
+            p.add(d);
+        }
+        return i0;
+    }
+
+    inline int fstrip( int ip1, int ip0, int n, int ft=-1, Vec2i et={-1,-1} ){ 
+        int i0 = tris.size();
+        for(int ii=0; ii<n+1; ii++){
+            int i = ip0+ii;
+            int j = ip1+ii;
+            if(et.x>-1)edge(j,i,et.x);         // perp
+            if(ii>0){
+                if(et.y>-1)edge(j-1,i,et.y);   // diag
+                if(ft>-1){ 
+                    //tri(j-1,i,j,ft); 
+                    tri(j,i,j-1,ft); 
+                }
+            }
+        }
+        return i0;
+    }
+
+    /* Too Complicated logic inside
+    inline int vstrip(Vec3d p0, Vec3d p1, int n, Quat4i t=Quat4i{-1,-1,-1,-1}){
+        Vec3d d=p1-p0; 
+        d.mul(1./n);
+        Vec3d p = p0;
+        int oi=-1; 
+        int i0 = verts.size();
+        for(int ii=0; ii<n+1; ii++){
+            int i = vert(p);
+            int j = i-n;
+            if(t.y>-1)edge(j,i,t.y);         // perp
+            if(oi>0){
+                if(t.x>-1)edge(i-1,i,t.x);   // long
+                if(t.y>-1)edge(j-n,i,t.z);   // diag
+                if(t.w>-1){ tri(j-1,j,i,t.w); tri(i,i-1,j,t.w); }
+            p.add(d);
+            oi=i;
+        }
+        return i0;
+    }
+    */
+
+
+    inline int edgst(int v,int t=-1){  int i=edge(ov,v,t); ov=v;         return i; };
+    inline int trist(int v,int t=-1){  int i=tri (ov,v,t); oov=ov; ov=v; return i; };
+
     inline int chunk( int t, int n, int* inds=0 ){ 
         int i0=strips.size(); 
         chunks.push_back(Quat4i{i0,n,-1,t}); 
@@ -74,18 +134,30 @@ class Builder2{ public:
     }
 
     int rope( int ip0, int ip1, int typ=-1, int n=1 ){   
+        //printf( "# rope(%i,%i,n=%i,t=%i)\n", ip0,ip1, n,typ );
         int i0 = verts.size();
         Vec3d p0,d;
-        if( (n>1) || (bSplitSize) ){
-            Vec3d d = verts[ip1].pos-verts[ip0].pos;
-            if( bSplitSize ){ double dl = d.norm(); int n2=(int)(dl/max_size)+1; if(n2>n)n=n2; }
+        if( n!=1 ){
             p0 = verts[ip0].pos;
-            d.mul(1./n);  // we need this only it n>1
+            d  = verts[ip1].pos-p0;
+            if( n<0 ){ 
+                double l = d.norm(); n=(int)(l/max_size)+1;   
+                //printf( "rope() l=%g n=%i ]n", l, n ); 
+            }         
+            //printf( "rope() n=%i d(%g,%g,%g)  p0(%g,%g,%g) \n", n,  d.x,d.y,d.z,  p0.x,p0.y,p0.z );   
+            d.mul(1./(double)n);  // we need this only it n>1
+            //printf( "rope() n=%i d(%g,%g,%g)  p0(%g,%g,%g) \n", n,  d.x,d.y,d.z,  p0.x,p0.y,p0.z );   
         }
-        for(int i=0; i<n; i++){
-            edge( ip0,ip1, typ );
-            if(i>0) vert(p0+d*i); 
+        int oi=ip0;
+        for(int ii=1; ii<n; ii++){
+            Vec3d p = p0+d*ii;
+            int i=vert(p);
+            edge(oi,i, typ);
+            //Vec3d& v = verts.back().pos;
+            //printf( "rope(%i,%i)[%i] p(%g,%g,%g)\n",  ip0,ip1,ii, v.x,v.y,v.z );
+            oi=i;
         }
+        edge( oi,ip1, typ );
         // ToDo: implementation by LINE_STRIP ?
         return i0;
     };
@@ -104,7 +176,7 @@ class Builder2{ public:
     }
     inline int ring( Vec3d p, Vec3d ax, Vec3d up, double R, int n=4 ){
         double dphi = 2*M_PI/n;
-        if( bSplitSize ){ double dL   = R*dphi; int n2=(int)(dL/max_size)+1; if(n2>n)n=n2; }
+        if( n<0 ){ double dL   = R*dphi; int n2=(int)(dL/max_size)+1; }
         Vec2d cs; cs.fromAngle( dphi );
         Vec3d a,b; 
         b.set_cross(ax,up); b.normalize();
@@ -114,11 +186,8 @@ class Builder2{ public:
 
     void tube( Vec3d p0, Vec3d p1, Vec3d up, Vec2d R, Vec2i n={4,1} ){
         Vec3d ax = p1-p0; double L = ax.normalize();
-        if( bSplitSize ){
-            int nx=(int)(L/max_size)+1; if(nx>n.x)n.x=nx;
-            double r = fmax(R.x,R.y);
-            int ny=(int)(r/max_size)+1; if(ny>n.y)n.y=ny;
-        }
+        if( n.x<0 ){ n.x=(int)(L/max_size)+1; }
+        if( n.y<0 ){ double r = fmax(R.x,R.y); n.y=(int)(r/max_size)+1; }
         double dL = L/n.y;
         Vec2d cs; cs.fromAngle( 2*M_PI/n.x );
         Vec3d a,b; 
@@ -145,19 +214,77 @@ class Builder2{ public:
         }
     }
 
-    int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 ){  
-        int ex[n.x];
-        int ey[n.y]; 
+    //int strip( Vec3d p0, Vec3d p1, Vec3d d, int n,  ){
+    //    for(int i=0;i<n;i++){
+    //    }
+    //}
+
+
+    //inline int vstrip(Vec3d p0, Vec3d p1, int n, int et=-1 ){
+    //inline int fstrip( int ip1, int ip0, int n, int ft=-1, Vec2i et={-1,-1} ){ 
+    
+
+    int plate( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Quat4i t={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 ){
+        Vec3d dx0=p01-p00; double lx0=dx0.norm();
+        Vec3d dx1=p11-p10; double lx1=dx1.norm();
+        Vec3d dy0=p10-p00; double ly0=dy0.norm();
+        Vec3d dy1=p11-p01; double ly1=dy1.norm();
+        if(n.x<0){ int n1=(int)(lx0/max_size)+1; int n2=(int)(lx1/max_size)+1;  n.x=_max(n1,n2); }
+        if(n.y<0){ int n1=(int)(ly0/max_size)+1; int n2=(int)(ly1/max_size)+1;  n.y=_max(n1,n2); }
+        n.x=5;
+        n.y=5;
+        //Quat4i t_;
+        int i0=verts.size();
+        int oiv;
+        for(int iy=0;iy<n.y+1;iy++){
+            double cy=iy/(double)n.y;  double my=1-cy; 
+            Vec3d p0y = p00*my+p10*cy;
+            Vec3d p1y = p01*my+p11*cy;
+            //if(iy==0){ t_=Quat4i{t.x,-2,-2,-2}; }else{t=t;}
+            //strip(p0,p1, n.x, t);
+            int iv = vstrip( p0y, p1y, n.x, t.x );
+            if(iy>0){
+                fstrip( oiv, iv, n.x, t.w, {t.y,t.z} );
+                //fstrip( oiv, iv, n.x, -2, {t.y,t.z} );
+            }
+            oiv=iv;
+        }
+        return i0;
+    }
+
+
+
+
+    // ToDo: This is too complicated, put we should remove it or move it elsewhere
+    int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 ){ 
+        printf( "plate_quad(%i,%i;%i,%i) typs{%i,%i,%i,%i} n{%i,%i} fillType=%i \n", ip00,ip01,ip10,ip11, typs.x,typs.y,typs.z,typs.w, n.x, n.y, fillType ); 
         int i0 = verts.size();
         Vec3d p00,p01,p10,p11;
-        if( (n.x>1) || (n.y>1) ){ p00 = verts[ip00].pos; p01 = verts[ip01].pos; p10 = verts[ip10].pos; p11 = verts[ip11].pos;};
+        //DEBUG
+        p00 = verts[ip00].pos; p01 = verts[ip01].pos; p10 = verts[ip10].pos; p11 = verts[ip11].pos;
+        if(n.x<0){ int n1=(int)((p00-p01).norm()/max_size)+1; int n2=(int)((p10-p11).norm()/max_size)+1;  n.x=_max(n1,n2); }
+        if(n.y<0){ int n1=(int)((p10-p00).norm()/max_size)+1; int n2=(int)((p11-p01).norm()/max_size)+1;  n.y=_max(n1,n2); }
+        printf( "p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g)\n", p00.x,p00.y,p00.z,  p01.x,p01.y,p01.z,  p10.x,p10.y,p10.z,  p11.x,p11.y,p11.z );
+        n.x=5; n.y=5;
+        printf( "plate_quad n(%i,%i)\n", n.x, n.y);
+        int ex[n.x];
+        int ey[n.y]; 
+        //DEBUG
         // --- edges
-        ex[0    ]=edges.size(); int i0x = rope( ip00, ip01, typs.x, n.x );
-        ex[n.x-1]=edges.size(); int i1x = rope( ip10, ip11, typs.x, n.x );
-        ey[0    ]=edges.size(); int i0y = rope( ip00, ip10, typs.x, n.y );
-        ey[n.y-1]=edges.size(); int i1y = rope( ip01, ip11, typs.x, n.y );
+        //typs.x = 234234;
+        ex[0    ]=edges.size(); int i0x = rope( ip00, ip01, typs.x, n.y );
+        ex[n.x-1]=edges.size(); int i1x = rope( ip10, ip11, typs.x, n.y );
+        ey[0    ]=edges.size(); int i0y = rope( ip00, ip10, typs.x, n.x );
+        ey[n.y-1]=edges.size(); int i1y = rope( ip01, ip11, typs.x, n.x );
+        //DEBUG
+
+        //rope( i0y+5, i1y+5, typs.y, n.x );
+        // WARRNING: This will not work properly because the points generated here for x-strips and y-strips are generated twice, they are not colapsed => we should generate points first, only then add edges
         for(int iy=1; iy<n.y-1; iy++){ ex[iy]=rope( i0y+iy, i1y+iy, typs.y, n.x ); }
         for(int ix=1; ix<n.x-1; ix++){ ex[ix]=rope( i0x+ix, i1x+ix, typs.y, n.y ); }
+        
+        /*
+        //DEBUG
         for(int iy=1; iy<n.y; iy++){
             for(int ix=1; ix<n.x; ix++){
                 Vec2i e1= edges[ex[ix+1]].f.xy();
@@ -173,9 +300,12 @@ class Builder2{ public:
                 }
             }
         }
+        */
+        //DEBUG
         // ToDo: implementation by TRIANGLE_STRIP ?
         return i0;
     };
+
 
 
 /*

@@ -20,6 +20,8 @@ int verbosity = 0;
 #include "quaternion.h"
 #include "raytrace.h"
 
+#include "testUtils.h"
+
 #include "Truss.h"
 #include "SpaceCraft.h"
 #include "SpaceCraftDraw.h"
@@ -33,8 +35,8 @@ int verbosity = 0;
 
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
+
 #include "IO_utils.h"
-#include "testUtils.h"
 
 #include "EditSpaceCraft.h"
 
@@ -85,10 +87,15 @@ void renderShip(){
     */
 
     mesh2.clear();
-    BuildCraft_truss( mesh2, *theSpaceCraft );
+    BuildCraft_truss( mesh2, *theSpaceCraft, 10.0 );
     mesh2.printSizes();
     Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
-    
+
+    Draw3D::color(Vec3f{1.0,0.,1.});
+    for( const Node& o : theSpaceCraft->nodes ){
+        Draw3D::drawPointCross( o.pos, 20 );
+    }
+
 
     /*
     radiositySolver.clearTriangles();
@@ -488,8 +495,11 @@ void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){
     //qCamera.toMatrix(camMat);
     if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -keyRotSpeed ); }
-	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
-	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
+	//if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
+	//if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
+    if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.roll(  keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.roll( -keyRotSpeed ); }
+
     if( keys[ SDL_SCANCODE_W ] ){ cam.pos.add_mul( cam.rot.b, +0.05*zoom ); }
 	if( keys[ SDL_SCANCODE_S ] ){ cam.pos.add_mul( cam.rot.b, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_A ] ){ cam.pos.add_mul( cam.rot.a, -0.05*zoom );  }
