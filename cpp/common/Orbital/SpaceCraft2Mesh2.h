@@ -16,10 +16,42 @@
 #include "MeshBuilder2.h"
 //#include "MeshBuilderDraw.h"
 #include "SpaceCraft.h"
+#include "OrbSim.h"
 
 using namespace SpaceCrafting;
 
 namespace Mesh{
+
+void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
+    int np = mesh.verts.size();
+    int* nneighs = new int[ np ];
+    printf( "exportSim() np=%i\n", np );
+    // find max number of neighbors
+    for(int i=0; i<np; i++){ nneighs[i]=0; }
+    for(int i=0; i<mesh.edges.size(); i++){ const Vec2i& e = mesh.edges[i].lo; nneighs[e.a]++; nneighs[e.b]++; }
+    int nneighmax = 0;
+    for(int i=0; i<mesh.verts.size(); i++){ int ni=nneighs[i]; if(ni>nneighmax)nneighmax=ni; }
+    printf( "exportSim() nneighmax %i \n", nneighmax );
+    sim.recalloc(np, nneighmax );
+    // fill neighs
+    for(int i=0; i<np; i++){ nneighs[i]=0; }
+    for(int i=0; i<sim.nNeighTot; i++){ sim.neighs[i]=-1; }
+    for(int i=0; i<mesh.edges.size(); i++){
+        const Quat4i& e = mesh.edges[i];
+        int ia = e.x*sim.nNeighMax + nneighs[e.x];
+        int ib = e.y*sim.nNeighMax + nneighs[e.y];
+        sim.neighs[ ia ] = e.y; 
+        sim.neighs[ ib ] = e.x;
+        const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
+        // l0, kPress, kPull, damping
+        double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
+        Quat4f param = (Quat4f){ l0, mat.Kpush, mat.Kpull, mat.damping }; 
+        sim.params[ ia ] = param;
+        sim.params[ ib ] = param;
+        nneighs[e.x]++; nneighs[e.y]++;
+    }
+    delete [] nneighs;
+}
 
 /**
  * Creates a girder in the truss structure.

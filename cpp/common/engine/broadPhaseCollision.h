@@ -296,16 +296,16 @@ class SAPbuff{ public:
         int ncomp=0;
         //for( auto& sweep : sweeps ){
         for( std::vector<SAPitem>& sweep: sweeps ){
-        std::sort( sweep.begin(), sweep.end() );
-        //    std::sort( sweep.begin(), sweep.end(), [](const SAPitem& a, const SAPitem& b){ return a.span.x<b.span.x; } );
-        /*
-        std::sort( sweep.begin(), sweep.end(), [&](const SAPitem& a, const SAPitem& b){
-            ncomp++;
-            bool out  = a.span.x<b.span.x;
-            printf( "compare %i %i a(%g,%g) b(%g,%g) \n", ncomp, out, a.span.x, a.span.y, b.span.x, b.span.y );
-            return out; }
-        );
-        */
+            std::sort( sweep.begin(), sweep.end() );
+            //    std::sort( sweep.begin(), sweep.end(), [](const SAPitem& a, const SAPitem& b){ return a.span.x<b.span.x; } );
+            /*
+            std::sort( sweep.begin(), sweep.end(), [&](const SAPitem& a, const SAPitem& b){
+                ncomp++;
+                bool out  = a.span.x<b.span.x;
+                printf( "compare %i %i a(%g,%g) b(%g,%g) \n", ncomp, out, a.span.x, a.span.y, b.span.x, b.span.y );
+                return out; }
+            );
+            */
         }
     }
 };

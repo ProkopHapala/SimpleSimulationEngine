@@ -19,16 +19,28 @@
 #include "testUtils.h"
 
 #include "MeshBuilder.h"
+#include "datatypes.h"
 
 namespace Mesh{
 
-struct Vert{ // double8
-    Vec3d pos;
-    Vec3d nor;  // normal ( can also store color )
-    Vec2d uv;  
-    Vert()=default;
-    Vert( const Vec3d& pos_, const Vec3d& nor_=Vec3dZero, const Vec2d& uv_=Vec2dZero ):pos(pos_),nor(nor_),uv(uv_){};
+template<typename T>
+struct VertT{ // double8
+    union{
+	    struct{ 
+            Vec3T<T> pos;
+            Vec3T<T> nor;
+            Vec2T<T> uv; 
+        };
+		struct{ 
+            Quat4T<T> lo;
+            Quat4T<T> hi;
+        };
+		T array[8];
+	};
+    VertT()=default;
+    VertT( const Vec3T<T>& pos_, const Vec3T<T>& nor_=Vec3T<T>{0,0,0,0}, const Vec2T<T>& uv_=Vec2T<T>{0,0} ):pos(pos_),nor(nor_),uv(uv_){};
 };
+using Vert = VertT<double>; 
 
 class Builder2{ public:
     //bool bnor = true;
@@ -319,6 +331,26 @@ class Builder2{ public:
         // ToDo: implementation by TRIANGLE_STRIP ?
         return i0;
     };
+
+    int export_pos( Vec3d* ps, int i0=0, int i1=-1 ){   if(i1<0){ i1=verts.size()-i1; };
+        for(int i=i0; i<=i1; i++){ ps[i]=verts[i].pos; }
+        return i1-i0+1;
+    }
+
+    int export_pos( float4* ps, int i0=0, int i1=-1 ){     if(i1<0){ i1=verts.size()-i1; };
+        for(int i=i0; i<=i1; i++){ ps[i]=*(float4*)&verts[i].lo;}
+        return i1-i0+1;
+    }
+
+    int export_edges( Vec2i* eds, int i0=0, int i1=-1 ){   if(i1<0){ i1=edges.size()-i1; };
+        for(int i=i0; i<=i1; i++){ eds[i]=edges[i].lo; }
+        return i1-i0+1;
+    }
+
+    int export_tris( Quat4i* tri, int i0=0, int i1=-1 ){  if(i1<0){ i1=edges.size()-i1; };
+        for(int i=i0; i<=i1; i++){ tri[i]=tris[i]; }
+        return i1-i0+1;
+    }
 
 
 

@@ -40,6 +40,7 @@ int verbosity = 0;
 
 #include "EditSpaceCraft.h"
 
+#include "OrbSim.h"
 #include "TriangleRayTracer.h"
 #include "Radiosity.h"
 
@@ -48,6 +49,14 @@ int verbosity = 0;
 #include "spaceCraftEditorUtils.h"
 
 #include "argparse.h"
+
+
+
+// TODO:
+// Collision Detection:
+//   Try Collisions using [kBoxes.h]    tested in    [test_BoxAndSweep.cpp]
+// 
+
 
 
 // ======================  Global Variables & Declarations
@@ -59,6 +68,7 @@ enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.c
 Truss      truss;
 
 Mesh::Builder2 mesh2;
+OrbSim_f sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 //char str[8096];
 double elementSize  = 5.;
@@ -90,6 +100,8 @@ void renderShip(){
     mesh2.clear();
     BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
     mesh2.printSizes();
+    exportSim( sim, mesh2, workshop );
+    sim.printAllNeighs();
 
     glEnable(GL_LIGHTING);
     glEnable     ( GL_LIGHT0           );
