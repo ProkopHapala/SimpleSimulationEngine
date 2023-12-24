@@ -31,13 +31,27 @@ class OrbSim_f{ public:
     Quat4f* params=0;
     int*    neighs=0;
 
-    void recalloc( int nPoint_, int nNeighMax_ ){
+    int nBonds=0;
+    int2*  bonds  =0;
+    float* strain =0;
+    float* l0s    =0; 
+    Vec2f* maxStrain=0;
+
+    void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0 ){
         nPoint = nPoint_; nNeighMax = nNeighMax_;
         nNeighTot = nPoint*nNeighMax;
         _realloc( points, nPoint    );
         _realloc( forces, nPoint    );
         _realloc( params, nNeighTot );
         _realloc( neighs, nNeighTot );
+
+        if(nBonds_>0){
+            nBonds=nBonds_;
+            _realloc( bonds,     nBonds );
+            _realloc( strain,    nBonds );
+            _realloc( l0s,       nBonds );
+            _realloc( maxStrain, nBonds );
+        }
     }
 
     void evalTrussForce(){
@@ -55,6 +69,15 @@ class OrbSim_f{ public:
             }
             forces[iG] = f; // we may need to do += in future
         } 
+    }
+
+    void evalBondTension(){
+        for(int i=0;i<nBonds; i++ ){
+            int2  b  = bonds[i];
+            float l0 = l0s[i];
+            float s  = ((points[b.y]-points[b.x]).norm() - l0)/l0;
+            // ToDo: break the bond if strain > maxStrain;
+        }
     }
 
     void printNeighs(int i){

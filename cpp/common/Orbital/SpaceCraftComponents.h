@@ -341,6 +341,22 @@ class Slider : public ShipComponent { public:
     virtual void print()const override{ printf("Slider(id=%i) kidn=%i face_mat=%i girder=%i P=%g[W] F=%g \n", id, kind, face_mat, girder, power, Force ); };
 };
 
+//ToDo : We need to move wheel with respect to girder
+
+class Slider2 : public ShipComponent { public:
+    // allow slide a node over a girder
+    // this slider moves one vertex (fixed point) which respect to vertex-loop (e.g. girder,wheel,rope). It will interpolate the position along current edge on the vertex loop. It will apply force to the two vertexes of the current edge.
+    int  ivert;   // to which vertex it is anchored
+    int  iloop;   // index along vetex loop
+    int  nloop;   // number of points int he vetrex loop
+    int* vloop;   // vertex loop - typically along girder, wheel or rope
+    //Vec3d dir;    // orientation of slinding
+    double range;  // how much deflection of the slider perpedicular to the edge on loop this slider allows? 
+    double Force; // max force which ca ne exerted by this slider
+
+    //virtual void print()const override{ printf("Slider(id=%i) kidn=%i face_mat=%i girder=%i P=%g[W] F=%g \n", id, kind, face_mat, girder, power, Force ); };
+};
+
 // === Guns
 
 

@@ -24,19 +24,22 @@ namespace Mesh{
 
 void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
     int np = mesh.verts.size();
+    int nb = mesh.edges.size();
     int* nneighs = new int[ np ];
     printf( "exportSim() np=%i\n", np );
     // find max number of neighbors
     for(int i=0; i<np; i++){ nneighs[i]=0; }
-    for(int i=0; i<mesh.edges.size(); i++){ const Vec2i& e = mesh.edges[i].lo; nneighs[e.a]++; nneighs[e.b]++; }
+    for(int i=0; i<nb; i++){ const Vec2i& e = mesh.edges[i].lo; nneighs[e.a]++; nneighs[e.b]++; }
     int nneighmax = 0;
-    for(int i=0; i<mesh.verts.size(); i++){ int ni=nneighs[i]; if(ni>nneighmax)nneighmax=ni; }
+    for(int i=0; i<np; i++){ int ni=nneighs[i]; if(ni>nneighmax)nneighmax=ni; }
     printf( "exportSim() nneighmax %i \n", nneighmax );
-    sim.recalloc(np, nneighmax );
+    sim.recalloc(np, nneighmax, nb );
     // fill neighs
-    for(int i=0; i<np; i++){ nneighs[i]=0; }
+
+    for(int i=0; i<np; i++){ sim.points[i].f=(Vec3f)mesh.verts[i].pos; sim.points[i].e=0.0f; }
+    for(int i=0; i<np; i++){ nneighs[i]=0;   }
     for(int i=0; i<sim.nNeighTot; i++){ sim.neighs[i]=-1; }
-    for(int i=0; i<mesh.edges.size(); i++){
+    for(int i=0; i<nb; i++){
         const Quat4i& e = mesh.edges[i];
         int ia = e.x*sim.nNeighMax + nneighs[e.x];
         int ib = e.y*sim.nNeighMax + nneighs[e.y];
@@ -45,10 +48,19 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
         // l0, kPress, kPull, damping
         double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
+        double mass = l0*mat.linearDensity;
+        sim.points[e.x].w += mass*0.5;
+        sim.points[e.y].w += mass*0.5;
         Quat4f param = (Quat4f){ l0, mat.Kpush, mat.Kpull, mat.damping }; 
         sim.params[ ia ] = param;
         sim.params[ ib ] = param;
         nneighs[e.x]++; nneighs[e.y]++;
+        if(sim.bonds){
+            sim.bonds[i]     = *(int2*)&e.lo;
+            sim.l0s[i]       =  l0;
+            sim.maxStrain[i] = (Vec2f){ (float)(mat.Spull/mat.Kpull), float(mat.Spush/mat.Kpush) };
+            sim.strain[i] = 0;
+        }
     }
     delete [] nneighs;
 }
@@ -305,6 +317,7 @@ void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft, double max_size=
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
         mesh.rope( o.p0,o.p1, o.face_mat );
     }
+    */
     for(Girder o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
         girder1( mesh, craft.nodes[o.p0].pos, craft.nodes[o.p1].pos, o.up, o.nseg, o.wh.a, o.st );
@@ -314,8 +327,7 @@ void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft, double max_size=
         o.stickRange = {b.y,(int)mesh.edges.size()};
         i++;
     }
-    */
-    /*
+    
     i=0;
     for(Ring o: craft.rings){
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
@@ -325,7 +337,7 @@ void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft, double max_size=
         o.stickRange = {b.y,(int)mesh.edges.size()};
         i++;
     }
-    */
+    
     // --- Radiators
     printf("BuildCraft_truss().radiators\n");
     for( const Radiator& o : craft.radiators ){

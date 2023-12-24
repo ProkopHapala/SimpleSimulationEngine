@@ -73,6 +73,26 @@ int glo_truss=0, glo_capsula=0, glo_ship=0;
 //char str[8096];
 double elementSize  = 5.;
 
+
+
+// Render 
+
+void renderTruss(int nb, int2* bonds, Quat4f* ps, float* strain=0, float sc=1.0 ){
+    glBegin(GL_LINES);
+    for(int i=0; i<nb; i++ ){
+        //printf( "renderTruss()[%i] \n", i );
+        int2 b =  bonds[i];
+        if(strain){
+            float f=strain[i]*sc;
+            if(f>0){  Draw3D::color(Vec3f{f,0,0}); }else{ Draw3D::color(Vec3f{0,0,f}); };
+        } 
+        Draw3D::vertex( ps[b.x].f );
+        Draw3D::vertex( ps[b.y].f );
+        //printf( "renderTruss[%i](%i,%i) p(%g,%g,%g) p(%g,%g,%g)\n", i, b.x, b.y,  ps[b.x].f.x,ps[b.x].f.y,ps[b.x].f.z,   ps[b.y].f.x,ps[b.y].f.y,ps[b.y].f.z );
+    }
+    glEnd();
+}
+
 // ======================  Free Functions
 
 void renderShip(){
@@ -101,16 +121,15 @@ void renderShip(){
     BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
     mesh2.printSizes();
     exportSim( sim, mesh2, workshop );
-    sim.printAllNeighs();
-
+    //sim.printAllNeighs();
+    
     glEnable(GL_LIGHTING);
     glEnable     ( GL_LIGHT0           );
     glEnable     ( GL_NORMALIZE        );
     Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
-
+    
     Draw3D::color(Vec3f{1.0,0.,1.});
     for( const Node& o : theSpaceCraft->nodes ){ Draw3D::drawPointCross( o.pos, 5 ); }
-
 
     /*
     radiositySolver.clearTriangles();
@@ -437,11 +456,15 @@ void SpaceCraftEditGUI::draw(){
     */
 
 
+
+    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+
+
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
     //if(glo_truss) glCallList(glo_truss);
-    if(glo_ship ) glCallList(glo_ship);
+    //if(glo_ship ) glCallList(glo_ship);
 
     //pointLabels( mesh.verts.size(), &mesh.verts[0].pos, 0.1, 0.0, fontTex, 10.0, 0 );
     
