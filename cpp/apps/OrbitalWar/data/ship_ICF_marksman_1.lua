@@ -72,9 +72,12 @@ Radiator( g6,0.15,0.8, g7,0.02,0.8, 1280.0 )
 Radiator( g6,0.15,0.8, g8,0.02,0.8, 1280.0 )
 
 --      node1,2, up,  nseg    R     {width,height}
-Ring( {0.0,0.0,4.0}, zvec, xvec, 16, 100.0, {4.0,4.0}, "Steel", g1_st )
-Ring( {20.0,0.0,0.0}, xvec, yvec, 16, 108.0, {4.0,4.0}, "Steel", g1_st )
+ir1 = Ring( {0.0,0.0,4.0}, zvec, xvec, 16, 100.0, {4.0,4.0}, "Steel", g1_st )
+ir2 = Ring( {20.0,0.0,0.0}, xvec, yvec, 16, 108.0, {4.0,4.0}, "Steel", g1_st )
 -- Ring( {0.0,0.0,0.0}, yvec, xvec, 16, 160.0, {8.0,5.0}, "Steel" )
+
+--- Girder=3,Ring=4,Rope=5,
+Slider( g6,ir1, 3,4,   0,0, 0,0  )
 
 --  There should be mechanism how to generate nodes on-top of ship components (anchor points)
 

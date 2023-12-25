@@ -178,6 +178,32 @@ int l_Ring    (lua_State * L){
     return 1;
 };
 
+int l_Slider(lua_State * L){
+    Lua::dumpStack(L);
+    Slider2 o;
+    int id1  = Lua::getInt   (L,1);
+    int id2  = Lua::getInt   (L,2);
+    int it1  = Lua::getInt   (L,3);
+    int it2  = Lua::getInt   (L,4);
+    int is1  = Lua::getInt   (L,5);
+    int is2  = Lua::getInt   (L,6);
+    double c1 = Lua::getDouble(L,7);
+    double c2 = Lua::getDouble(L,8);
+    o.comp1 = theSpaceCraft->getPathComponent( id1, it1);
+    o.comp2 = theSpaceCraft->getPathComponent( id2, it2);
+    o.along=Vec2d{c1,c2};
+    o.sides=Vec2i{is1,is2};
+    o.id   = theSpaceCraft->sliders.size();
+    //printf( "Girder (%i,%i) (%g,%g,%g) (%i,%i), (%g,%g) %s ->  %i\n", o.p0, o.p1, o.up.x, o.up.y, o.up.z, o.nseg, o.mseg, o.wh.x, o.wh.y, matn, o.id );
+    //if(verbosity>1) 
+    o.print();
+    printf(" - compi1:"); o.comp1->print();
+    printf(" - compi2:"); o.comp2->print();
+    theSpaceCraft->sliders.push_back( o );
+    lua_pushnumber(L, o.id);
+    return 1;
+};
+
 // Radiator( g5,0.2,0.8, g1,0.2,0.8, 1280.0 )
 int l_Radiator (lua_State * L){
     Radiator o;
@@ -313,11 +339,11 @@ void initSpaceCraftingLua(){
     lua_register(L, "Material", l_Material );
     lua_register(L, "StickMaterial", l_StickMaterial );
     //lua_register(L, "PanelMaterial", l_PanelMaterial );
-
     lua_register(L, "Node",     l_Node     );
     lua_register(L, "Rope",     l_Rope     );
     lua_register(L, "Girder",   l_Girder   );
     lua_register(L, "Ring",     l_Ring     );
+    lua_register(L, "Slider",   l_Slider   ); 
     lua_register(L, "Gun",      l_Gun      );
     lua_register(L, "Thruster", l_Thruster );
     lua_register(L, "Tank",     l_Tank     );

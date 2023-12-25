@@ -78,7 +78,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
 int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes ){
     // ToDo: ad p0,p1 etc. - maybe we should rather specify indexes of existing verts rather than positions of new verts ?
     //                       No. this is done in girder1_caps
-    printf( "Mesh::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) stickTypes(%i,%i,%i,%i)\n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
+    //printf( "Mesh::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) stickTypes(%i,%i,%i,%i)\n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
     Vec3d dir = p1-p0;
     double length = dir.normalize();
     up.makeOrthoU(dir);
@@ -151,7 +151,7 @@ int girder1( Builder2& mesh, int ip0, int ip1, Vec3d up, int n, double width, Qu
  * @return The index of the created block containing the starting indexes of the points and edges
  */
 int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, double width, Quat4i stickTypes ){
-    printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) stickTypes(%i,%i,%i,%i) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
+    //printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) stickTypes(%i,%i,%i,%i) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
     //int kind_long   = 0;
     //int kind_perp   = 1;
     //int kind_zigIn  = 2;
@@ -253,7 +253,7 @@ int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, double width, Qu
  */
 int panel( Builder2& mesh, Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width, Quat4i stickTypes ){
     // ToDo: ad p00,p01,p10,p11 etc. - maybe we should rather specify indexes of existing verts rather than positions of new verts ?
-    printf( "Mesh::panel() n(%i,%i) w=%g p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g) \n", n.x,n.y, p00.x,p00.y,p00.z, p01.x,p01.y,p01.z, p10.x,p10.y,p10.z, p11.x,p11.y,p11.z );
+    //printf( "Mesh::panel() n(%i,%i) w=%g p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g) \n", n.x,n.y, p00.x,p00.y,p00.z, p01.x,p01.y,p01.z, p10.x,p10.y,p10.z, p11.x,p11.y,p11.z );
     //int kind_long   = 0;
     //int kind_perp   = 1;
     //int kind_zigIn  = 2;
@@ -303,7 +303,7 @@ int panel( Builder2& mesh, Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, 
     return i0;
 }
 
-void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft, double max_size=-1 ){
+void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     printf( "BuildCraft_truss() \n" );
     if(max_size>0){ mesh.max_size=max_size; };
     int i=0;
@@ -320,27 +320,32 @@ void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft, double max_size=
     */
     for(Girder o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
+        mesh.block();
         girder1( mesh, craft.nodes[o.p0].pos, craft.nodes[o.p1].pos, o.up, o.nseg, o.wh.a, o.st );
         girder1_caps( mesh, o.p0, o.p1, o.st.x );
         Quat4i& b = mesh.blocks.back();
         o.poitRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
+        printf( "BuildCraft_truss() girder.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
         i++;
     }
     
     i=0;
     for(Ring o: craft.rings){
+        mesh.block();
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
         wheel( mesh, o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh.a, o.st );
         Quat4i& b = mesh.blocks.back();
         o.poitRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
+        printf( "BuildCraft_truss() ring.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
         i++;
     }
     
     // --- Radiators
     printf("BuildCraft_truss().radiators\n");
-    for( const Radiator& o : craft.radiators ){
+    for(Radiator& o : craft.radiators ){
+        mesh.block();
         o.print();
         Vec3d p00 = craft.pointOnGirder(o.g1, o.g1span.x);
         Vec3d p01 = craft.pointOnGirder(o.g1, o.g1span.y);
@@ -349,9 +354,13 @@ void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft, double max_size=
         printf( "p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g)\n", p00.x,p00.y,p00.z,  p01.x,p01.y,p01.z,  p10.x,p10.y,p10.z,  p11.x,p11.y,p11.z );
         mesh.plate( p00,p01,p10,p11,{0,1,2,0}, {-1,-1} );
         //break;
+        Quat4i& b = mesh.blocks.back();
+        o.poitRange  = {b.x,(int)mesh.verts.size()};
+        o.stickRange = {b.y,(int)mesh.edges.size()};
     };
     // --- Shields
     for( const Shield& o : craft.shields ){
+        //mesh.block();
         //drawPlate_mesh(mesh, o, nodes.data(), girders.data() );
     };
 

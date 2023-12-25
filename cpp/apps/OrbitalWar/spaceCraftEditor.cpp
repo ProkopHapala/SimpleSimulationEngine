@@ -122,6 +122,7 @@ void renderShip(){
     mesh2.printSizes();
     exportSim( sim, mesh2, workshop );
     //sim.printAllNeighs();
+    theSpaceCraft->updateSliderPaths();
     
     glEnable(GL_LIGHTING);
     glEnable     ( GL_LIGHT0           );

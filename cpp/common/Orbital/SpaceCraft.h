@@ -34,6 +34,8 @@ class SpaceCraft : public CatalogItem { public:
     std::vector<Girder>    girders;
     std::vector<Ring>      rings;
 	std::vector<Gun>       guns;
+    
+    std::vector<Slider2>   sliders;
 
     // Plate components  ( planar structures )     ToDo: maybe we should make just array 'plates' and store all plate-like components there (e.g. radiators, shields, collectors, etc.)
 	std::vector<Radiator>  radiators;
@@ -54,6 +56,16 @@ class SpaceCraft : public CatalogItem { public:
 	int pickedTyp = -1;
 
     // ==== functions
+
+    ShipComponent* getPathComponent( int id, int type ){
+        ComponetKind t = (ComponetKind) type;
+        switch (t){
+            case ComponetKind::Girder : return &girders[id]; break;
+            case ComponetKind::Ring   : return &rings  [id]; break;
+            case ComponetKind::Rope   : return &ropes  [id]; break;
+            default: return 0;
+        }
+    }
 
 	void clear(){
         nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrusters.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
@@ -237,9 +249,19 @@ int add_Gun     ( int suppId, const Vec2d& suppSpan, int type=-1 ){
     if(bPrint) o.print();
     guns.push_back( o );
     //lua_pushnumber(L, o.id);
-    return 1;
+    return o.id;
 };
-    
+
+int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i sides ){
+    Slider2 o;
+    o.comp1 = comp1; o,comp2;
+    o.sides=sides; o.along=along;
+    if(bPrint) o.print();
+    o.id = sliders.size();
+    sliders.push_back( o );
+    return o.id;
+}
+
 
 /**
  * Picks the closest component intersected by a ray in the scene. Used e.g. for mouse picking.
@@ -357,6 +379,27 @@ int add_Gun     ( int suppId, const Vec2d& suppSpan, int type=-1 ){
 	void toTruss(){ truss.clear(); toTruss(truss); };
 
 
+    void updateSliderPaths(){
+        printf("SpaceCraft::updateSliderPaths()\n");
+        for(Slider2& o: sliders){
+            o.print();
+            printf(" - compi1:"); o.comp1->print();
+            printf(" - compi2:"); o.comp2->print();
+            int t1 = o.comp1->component_kind();
+            int i0 = o.comp1->poitRange.x;
+            int n  = o.comp1->poitRange.y-i0;
+            if((n>1000)||(n<=0)){printf( "updateSliderPaths() n=%i seems wrong\n", n ); exit(0);   }
+            printf("SpaceCraft::updateSliderPaths() i0=%i n=%i\n", i0, n );
+            if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){
+                n/=4;
+                o.path.realloc(n);
+                for(int i=0; i<n; i++){ o.path.ps[i] = i0+4*i+o.sides.x; }
+            }else if (t1 == (int)ComponetKind::Rope){
+                o.path.realloc(n);
+                for(int i=0; i<n; i++){ o.path.ps[i] = i0+i; }
+            }
+        }
+    }
 
     inline void plate2raytracer( const Plate& o, TriangleRayTracer& raytracer, double elemMaxSize, bool active )const{
         Quad3d qd;
