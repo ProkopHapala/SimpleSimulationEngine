@@ -65,6 +65,15 @@ class Builder2{ public:
     void clear(){ blocks.clear(); verts.clear(); edges.clear(); tris.clear(); chunks.clear(); strips.clear(); }
     void printSizes(){printf( "MeshBuilder::printSizes() blocks=%i verts=%i edges=%i tris=%i chunks=%i strips=%i \n", blocks.size(), verts.size(), edges.size(), tris.size(), chunks.size(), strips.size() );}
 
+    int findClosestVert(const Vec3d& p0,int i0=0,int n=-1){
+        if(n==-1) n=verts.size();
+        double r2min=1e+300;
+        int imin=-1;
+        for(int j=0;j<n;j++){ double r2=(verts[i0+j].pos-p0).norm2(); if(r2<r2min){r2min=r2; imin=j;} }
+        return imin;
+    }
+
+
     inline Quat4i latsBlock()const{ return Quat4i{(int)verts.size(),(int)edges.size(),(int)tris.size(),(int)chunks.size()}; }
     inline int block(){ int i=blocks.size(); blocks.push_back( latsBlock() ); return i; };
     inline int vert( const Vec3d& pos, const Vec3d& nor=Vec3dZero, const Vec2d& uv=Vec2dZero ){ verts.push_back(Vert(pos,nor,uv)); return verts.size()-1; }

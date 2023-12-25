@@ -475,6 +475,15 @@ void SpaceCraftEditGUI::draw(){
     Draw3D::color( Vec3f{1.0,0.0,1.0} );
     drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
 
+    
+    {
+        glPointSize(10);
+        const Radiator& o =  theSpaceCraft->radiators[0];
+        const Girder& g1  =  theSpaceCraft->girders[o.g1];
+        const Girder& g2  =  theSpaceCraft->girders[o.g2];
+        Draw3D::color(Vec3f{1.f,0.f,0.f}); drawPointRange( 10, g1.poitRange, 4, 0, o.g1span, sim.points );
+        Draw3D::color(Vec3f{0.f,0.f,1.f}); drawPointRange( 10, g2.poitRange, 4, 1, o.g2span, sim.points );
+    }
 
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
