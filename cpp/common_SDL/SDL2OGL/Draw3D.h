@@ -168,7 +168,8 @@ void drawPolygonNormal( int ipl, OMesh& mesh );
 
 //int  drawParaboloid     ( Vec3f p0, Vec3f dir, float r, float l, float nR, int nPhi, bool capped );
 
-void drawPolyLine( int n, Vec3d * ps, bool closed=false );
+void drawPolyLine ( int n, const Vec3d * ps, bool closed=false );
+void drawLineStrip( int n, const int* inds, const Quat4f * ps, bool closed=false );
 
 void drawPoints         ( int n, const Vec3d * points, float sz );
 void drawLines          ( int nlinks, const int * links, const Vec3d * points );

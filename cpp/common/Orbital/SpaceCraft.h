@@ -262,6 +262,37 @@ int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i s
     return o.id;
 }
 
+/*
+    std::vector<Node>      nodes;
+    // Node-Connectors ( linear structures )
+    std::vector<Rope>      ropes;
+    std::vector<Girder>    girders;
+    std::vector<Ring>      rings;
+	std::vector<Gun>       guns;
+    std::vector<Slider2>   sliders;
+    // Plate components  ( planar structures )     ToDo: maybe we should make just array 'plates' and store all plate-like components there (e.g. radiators, shields, collectors, etc.)
+	std::vector<Radiator>  radiators;
+	std::vector<Shield>    shields;
+    // Volumetric structures
+	std::vector<Tank>      tanks;    // Also Capacitors ?
+	std::vector<Pipe>      pipes;    // Also Cables, should be attached to girders
+    // Shell structures
+	std::vector<Thruster>  thrusters;
+	std::vector<Balloon>  balloons;
+	std::vector<Rock>     rocks;
+*/
+
+void printAll_nodes()    { for(int i=0;i<nodes    .size();i++){ nodes[i]    .print(); } };
+void printAll_ropes()    { for(int i=0;i<ropes    .size();i++){ ropes[i]    .print(); } };
+void printAll_girders()  { for(int i=0;i<girders  .size();i++){ girders[i]  .print(); } };
+void printAll_rings()    { for(int i=0;i<rings    .size();i++){ rings[i]    .print(); } };
+void printAll_guns()     { for(int i=0;i<guns     .size();i++){ guns[i]     .print(); } };
+void printAll_sliders()  { for(int i=0;i<sliders  .size();i++){ sliders[i]  .print(); } };
+void printAll_radiators(){ for(int i=0;i<radiators.size();i++){ radiators[i].print(); } };
+void printAll_shields()  { for(int i=0;i<shields  .size();i++){ shields[i]  .print(); } };
+void printAll_pipes()    { for(int i=0;i<pipes    .size();i++){ pipes[i]    .print(); } };
+void printAll_balloons() { for(int i=0;i<balloons .size();i++){ balloons[i] .print(); } };
+void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .print(); } };
 
 /**
  * Picks the closest component intersected by a ray in the scene. Used e.g. for mouse picking.
@@ -326,18 +357,18 @@ int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i s
  * 
  * @param truss The Truss object to populate with the converted data.
  */
-	void toTruss(Truss& truss, bool bTanks=false )const {
+	void toTruss(Truss& truss, bool bTanks=false ){
         printf( "SpaceCraft::toTruss() \n" );
         int i=0;
         truss.newBlock();
         int ip0 = truss.points.size();
-        for(Node o: nodes){
+        for(Node& o: nodes){
             truss.points.push_back( o.pos );
         }
-        for(Rope o: ropes){
+        for(Rope& o: ropes){
             truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
         }
-        for(Girder o: girders){
+        for(Girder& o: girders){
             //printf("DEBUG toTruss : girder #%i \n", i);
             truss.girder1( nodes[o.p0].pos, nodes[o.p1].pos, o.up, o.nseg, o.wh.a );
             truss.girder1_caps( o.p0, o.p1, 1 );
@@ -348,7 +379,7 @@ int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i s
             i++;
         }
         i=0;
-        for(Ring o: rings){
+        for(Ring& o: rings){
             //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
             truss.wheel( o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh.a );
             Vec2i& bak = truss.blocks.back();
@@ -362,7 +393,7 @@ int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i s
         // ToDo: Tanks
         // ToDo: maybe Tanks would be better simulated as rigid-body objects, but than we need to couple the Truss (SoftBody) and RigidBody ?
         if( bTanks ){
-            for(Tank o: tanks){
+            for(Tank& o: tanks){
                 //printf("DEBUG toTruss : tank #%i \n", i);
                 Vec3d p0 = o.pose.pos + o.pose.rot.a*o.span.a*0.5;
                 Vec3d p1 = o.pose.pos - o.pose.rot.a*o.span.a*0.5;
@@ -378,19 +409,56 @@ int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i s
 	}
 	void toTruss(){ truss.clear(); toTruss(truss); };
 
+    int getVertAlong(ShipComponent* s, double c, int side=0){
+            int t1 = s->component_kind();
+            int i0 = s->poitRange.x;
+            int n  = s->poitRange.y-i0;
+            int iv = -1;
+            if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){
+                // ToDo: PBC for closed ring ????s
+                iv = i0 + c*n + side;
+            }else if (t1 == (int)ComponetKind::Rope){
+                iv = i0 + c*n ;
+            }
+        return iv;
+    }
+
+    /*
+    ToDo: this will be complicated - we need to find crossection of the two components
+    int nearestVertAlong(ShipComponent* s, double& c, int side=0){
+            int t1 = s->component_kind();
+            int i0 = s->poitRange.x;
+            int n  = s->poitRange.y-i0;
+            int iv = -1;
+            if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){
+                
+                iv = i0 + c*n + side;
+            }else if (t1 == (int)ComponetKind::Rope){
+                iv = i0 + c*n ;
+            }
+        return iv;
+    }
+    */
 
     void updateSliderPaths(){
         printf("SpaceCraft::updateSliderPaths()\n");
-        for(Slider2& o: sliders){
+        for(int io=0;io<sliders.size();io++){
+            Slider2& o = sliders[io];
             o.print();
             printf(" - compi1:"); o.comp1->print();
             printf(" - compi2:"); o.comp2->print();
+
+            o.ifix = getVertAlong(o.comp2, o.along.y, o.sides.y );
+
             int t1 = o.comp1->component_kind();
+
+            printf( "updateSliderPaths[%i] t=%i | Girder=%i Ring=%i Rope=%i\n", io, t1, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
             int i0 = o.comp1->poitRange.x;
             int n  = o.comp1->poitRange.y-i0;
             if((n>1000)||(n<=0)){printf( "updateSliderPaths() n=%i seems wrong\n", n ); exit(0);   }
             printf("SpaceCraft::updateSliderPaths() i0=%i n=%i\n", i0, n );
             if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){
+                if((t1 == (int)ComponetKind::Ring)) o.path.closed=true;
                 n/=4;
                 o.path.realloc(n);
                 for(int i=0; i<n; i++){ o.path.ps[i] = i0+4*i+o.sides.x; }

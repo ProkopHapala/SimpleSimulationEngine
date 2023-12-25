@@ -150,7 +150,7 @@ int girder1( Builder2& mesh, int ip0, int ip1, Vec3d up, int n, double width, Qu
  * @param width The width of the wheel rim.
  * @return The index of the created block containing the starting indexes of the points and edges
  */
-int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, double width, Quat4i stickTypes ){
+int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, Vec2d wh, Quat4i stickTypes ){
     //printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) stickTypes(%i,%i,%i,%i) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
     //int kind_long   = 0;
     //int kind_perp   = 1;
@@ -175,15 +175,15 @@ int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, double width, Qu
         int i01=i00+1; int i10=i00+2; int i11=i00+3;
 
         Vec3d R = dir*rot.a + side*rot.b;
-        mesh.vert( p0 + R*r );
-        //mesh.vert( p0 + R*(r+width) );
-        mesh.vert( p0 + R*(r-width) );
+        //mesh.vert( p0 + R*r );
+        mesh.vert( p0 + R*(r+wh.x) );
+        mesh.vert( p0 + R*(r-wh.x) );
         // points.push_back( p0 +  R*(r-width) );
         // points.push_back( p0 +  R*(r+width) );
         rot.mul_cmplx(drot);
         R       = dir*rot.a + side*rot.b;
-        mesh.vert( p0 + ax*-width + R*r );
-        mesh.vert( p0 + ax*-width + R*r );
+        mesh.vert( p0 + ax*+wh.y + R*r );
+        mesh.vert( p0 + ax*-wh.y + R*r );
         // points.push_back( p0 + ax*-width + R*r );
         // points.push_back( p0 + ax*+width + R*r );
         rot.mul_cmplx(drot);
@@ -309,7 +309,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     int i=0;
     mesh.block();
     int ip0 = mesh.verts.size();
-    for(Node o: craft.nodes){
+    for(Node& o: craft.nodes){
         mesh.vert( o.pos );
     }
     /*
@@ -318,7 +318,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         mesh.rope( o.p0,o.p1, o.face_mat );
     }
     */
-    for(Girder o: craft.girders){
+    for(Girder& o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
         mesh.block();
         girder1( mesh, craft.nodes[o.p0].pos, craft.nodes[o.p1].pos, o.up, o.nseg, o.wh.a, o.st );
@@ -326,19 +326,19 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         Quat4i& b = mesh.blocks.back();
         o.poitRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
-        printf( "BuildCraft_truss() girder.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
+        //printf( "BuildCraft_truss() girder.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
         i++;
     }
     
     i=0;
-    for(Ring o: craft.rings){
+    for(Ring& o: craft.rings){
         mesh.block();
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
-        wheel( mesh, o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh.a, o.st );
+        wheel( mesh, o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh, o.st );
         Quat4i& b = mesh.blocks.back();
         o.poitRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
-        printf( "BuildCraft_truss() ring.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
+        //printf( "BuildCraft_truss() ring.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
         i++;
     }
     

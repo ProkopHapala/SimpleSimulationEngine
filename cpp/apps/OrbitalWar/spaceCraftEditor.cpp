@@ -122,6 +122,7 @@ void renderShip(){
     mesh2.printSizes();
     exportSim( sim, mesh2, workshop );
     //sim.printAllNeighs();
+    //theSpaceCraft->printAll_girders();
     theSpaceCraft->updateSliderPaths();
     
     glEnable(GL_LIGHTING);
@@ -129,8 +130,19 @@ void renderShip(){
     glEnable     ( GL_NORMALIZE        );
     Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
     
-    Draw3D::color(Vec3f{1.0,0.,1.});
-    for( const Node& o : theSpaceCraft->nodes ){ Draw3D::drawPointCross( o.pos, 5 ); }
+    /*
+    Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
+    for(int i=0; i<theSpaceCraft->sliders.size(); i++){
+        const Slider2& o = theSpaceCraft->sliders[i];
+        Draw3D::drawLineStrip( o.path.n, o.path.ps, sim.points, o.path.closed );
+    }
+    */
+    
+    //Draw3D::color(Vec3f{1.0,0.,1.});
+    //for( const Node& o : theSpaceCraft->nodes ){ Draw3D::drawPointCross( o.pos, 5 ); }
+
+
+
 
     /*
     radiositySolver.clearTriangles();
@@ -456,9 +468,12 @@ void SpaceCraftEditGUI::draw(){
     }
     */
 
-
-
+    glDisable(GL_LIGHTING);
+    glLineWidth(0.5);
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+    glLineWidth(3.0);
+    Draw3D::color( Vec3f{1.0,0.0,1.0} );
+    drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
 
 
     glDisable(GL_CULL_FACE);
@@ -469,6 +484,7 @@ void SpaceCraftEditGUI::draw(){
 
     //pointLabels( mesh.verts.size(), &mesh.verts[0].pos, 0.1, 0.0, fontTex, 10.0, 0 );
     
+
     Draw3D::color( Vec3f{0.0,0.0,1.0} );
     //for(int i=0; i<mesh2.verts.size(); i++){  Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );}
     

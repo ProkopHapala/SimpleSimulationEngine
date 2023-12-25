@@ -90,7 +90,7 @@ int l_StickMaterial(lua_State * L){
     return 1;
 };
 
-
+// ToDo: we need to be able generate nodes at some point along girder or rope. Slider should be child of Node
 int l_Node    (lua_State * L){
     Node o;
     //Vec3d pos;
@@ -144,6 +144,9 @@ int l_Girder  (lua_State * L){
     lua_pushnumber(L, o.id);
     return 1;
 };
+
+
+// ToDo: Make l_Ring function which takes as input 3-4 girders to which the wheel should be attached, that way we can avoid specification of axis, and others
 
 int l_Ring    (lua_State * L){
     //Lua::dumpStack(L);
