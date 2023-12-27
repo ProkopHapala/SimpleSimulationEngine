@@ -85,21 +85,21 @@ int l_StickMaterial(lua_State * L){
 
 // ToDo: we need to be able generate nodes at some point along girder or rope. Slider should be child of Node
 int l_Node    (lua_State * L){
-    Node o;
+    Node* o = new Node();
     //Vec3d pos;
-    Lua::getVec3(L, 1, o.pos );
-    o.id =  theSpaceCraft->nodes.size();
+    Lua::getVec3(L, 1, o->pos );
+    o->id =  theSpaceCraft->nodes.size();
     theSpaceCraft->nodes.push_back( o  );
     //printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
-    if(verbosity>1) o.print();
-    lua_pushnumber(L, o.id);
+    if(verbosity>1) o->print();
+    lua_pushnumber(L, o->id);
     return 1;
 };
 
 int l_Rope    (lua_State * L){
     Rope o;
-    o.nodes.x    = Lua::getInt   (L,1);
-    o.nodes.y    = Lua::getInt   (L,2);
+    o.nodes.x    = theSpaceCraft->nodes[Lua::getInt   (L,1)];
+    o.nodes.y    = theSpaceCraft->nodes[Lua::getInt   (L,2)];
     o.thick = Lua::getDouble(L,3);
     const char * matn = Lua::getString(L,4);
     o.face_mat = workshop.panelMaterials.getId( matn );
@@ -113,8 +113,8 @@ int l_Rope    (lua_State * L){
 int l_Girder  (lua_State * L){
     //Lua::dumpStack(L);
     Girder o;
-    o.nodes.x   = Lua::getInt (L,1);
-    o.nodes.y   = Lua::getInt (L,2);
+    o.nodes.x   = theSpaceCraft->nodes[Lua::getInt (L,1)];
+    o.nodes.y   = theSpaceCraft->nodes[Lua::getInt (L,2)];
              Lua::getVec3(L,3, o.up );
     o.nseg = Lua::getInt (L,4);
     o.mseg = Lua::getInt (L,5);

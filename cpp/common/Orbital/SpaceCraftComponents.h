@@ -193,8 +193,11 @@ class NodeLinker : public ShipComponent { public:
 };
 */
 
+class Node; // forward declaration
+
 class StructuralComponent : public ShipComponent { public:
-    Quat4i nodes;
+    //Quat4i nodes;
+    vec4<Node*> nodes;
     //double length;
     virtual void print()const override { printf("StructuralComponent(id=%i) nodes(%i,%i,%i,%i) \n", id, nodes.x,nodes.y,nodes.z,nodes.w ); };
     void ray( const Vec3d& ro, const Vec3d& rd ){}

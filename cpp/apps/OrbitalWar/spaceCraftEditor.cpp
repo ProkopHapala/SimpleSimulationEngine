@@ -181,19 +181,19 @@ void drawPicked( const SpaceCraft& craft, int ipick ){
     switch( (ComponetKind)craft.pickedTyp){
         case ComponetKind::Radiator :{
             //printf("drawPicked radiator[%i] \n", ipick );
-            drawPlateContour( craft.radiators[ipick], &craft.nodes[0], &craft.girders[0], false );
+            drawPlateContour( craft.radiators[ipick], &craft.girders[0], false );
             }break;
         case ComponetKind::Shield:{
             //printf("drawPicked shield[%i] \n", ipick );
-            drawPlateContour( craft.shields  [ipick], &craft.nodes[0], &craft.girders[0], false );
+            drawPlateContour( craft.shields  [ipick], &craft.girders[0], false );
             }break;
         case ComponetKind::Girder:{
             const Girder& o = craft.girders[ipick];
-            Draw3D::drawLine(craft.nodes[o.nodes.x].pos,craft.nodes[o.nodes.y].pos);
+            Draw3D::drawLine(o.nodes.x->pos,o.nodes.y->pos);
             } break;
         case ComponetKind::Rope:{
             const Rope& o = craft.ropes[ipick];
-            Draw3D::drawLine(craft.nodes[o.nodes.x].pos,craft.nodes[o.nodes.y].pos);
+            Draw3D::drawLine(o.nodes.x->pos,o.nodes.y->pos);
             } break;
     }
 }

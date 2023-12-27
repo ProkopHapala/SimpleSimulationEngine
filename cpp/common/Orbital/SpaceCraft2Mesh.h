@@ -64,11 +64,11 @@ void drawTruss_mesh( Mesh::Builder& mesh, const Truss& truss, bool bColor, float
  * @param nodes   array of SpaceCrafting::Node objects on which the plate girder are attached
  * @param girders array of SpaceCrafting::Girder objects on which the plate is attached
  */
-void drawPlate_mesh( Mesh::Builder& mesh, const Plate& o, const Node* nodes, const Girder* girders ){
-    Vec3f p00=(Vec3f)nodes[ girders[o.g1].nodes.x ].pos;
-    Vec3f p01=(Vec3f)nodes[ girders[o.g1].nodes.y ].pos;
-    Vec3f p10=(Vec3f)nodes[ girders[o.g2].nodes.x ].pos;
-    Vec3f p11=(Vec3f)nodes[ girders[o.g2].nodes.y ].pos;
+void drawPlate_mesh( Mesh::Builder& mesh, const Plate& o, const Girder* girders ){
+    Vec3f p00=(Vec3f)girders[o.g1].nodes.x ->pos;
+    Vec3f p01=(Vec3f)girders[o.g1].nodes.y ->pos;
+    Vec3f p10=(Vec3f)girders[o.g2].nodes.x ->pos;
+    Vec3f p11=(Vec3f)girders[o.g2].nodes.y ->pos;
     Vec3f d;
     d = p01-p00; p01=p00+d*o.g1span.x;  p00.add_mul( d,o.g1span.y);
     d = p11-p10; p11=p10+d*o.g2span.x;  p10.add_mul( d,o.g2span.y);
@@ -84,10 +84,10 @@ void drawPlate_mesh( Mesh::Builder& mesh, const Plate& o, const Node* nodes, con
  * @param girders array of SpaceCrafting::Girder objects on which the plate is attached
  * @param filled  flag indicating whether the plate should be filled or just the contour should be drawn
  */
-void drawPlateContour_mesh( Mesh::Builder& mesh,  const Plate& o, const Node* nodes, const Girder* girders, bool filled ){
+void drawPlateContour_mesh( Mesh::Builder& mesh,  const Plate& o, const Girder* girders, bool filled ){
     Quad3d qd;
-    qd.l1.fromSubLine( nodes[ girders[o.g1].nodes.x ].pos, nodes[ girders[o.g1].nodes.y ].pos, o.g1span.x, o.g1span.y );
-    qd.l2.fromSubLine( nodes[ girders[o.g2].nodes.x ].pos, nodes[ girders[o.g2].nodes.y ].pos, o.g2span.x, o.g2span.y );
+    qd.l1.fromSubLine( girders[o.g1].nodes.x ->pos, girders[o.g1].nodes.y ->pos, o.g1span.x, o.g1span.y );
+    qd.l2.fromSubLine( girders[o.g2].nodes.x ->pos, girders[o.g2].nodes.y ->pos, o.g2span.x, o.g2span.y );
     //printf( );
     //Draw3D::drawQuad(qd, filled);
     mesh.addQuad( (Vec3f)qd.p00, (Vec3f)qd.p01, (Vec3f)qd.p10, (Vec3f)qd.p11 );
@@ -105,20 +105,20 @@ void drawPlateContour_mesh( Mesh::Builder& mesh,  const Plate& o, const Node* no
  * @param color      The color to be used for the mesh.  (cuttently not used)
  * @return           The number of submeshes in the generated mesh.
  */
-int drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, Mesh::Builder& mesh, int iLOD, bool bText, bool bColor, Vec3f color ){
+int drawSpaceCraft_Mesh( const SpaceCraft& craft, Mesh::Builder& mesh, int iLOD, bool bText, bool bColor, Vec3f color ){
     //printf( "##### START drawSpaceCraft_Mesh() \n" );
-    const std::vector<Node>&   nodes   = spaceCraft.nodes;
-    const std::vector<Girder>& girders = spaceCraft.girders;
+    //const std::vector<Node*>&   nodes   = spaceCraft.nodes;
+    //const std::vector<Girder>& girders = craft.girders;
     // --- Ropes
     float line_width = 0.25;   // TODO : this should be set better
     if( iLOD>0 ){
         if(bColor) mesh.penColor = (Vec3f){0.0,0.0,0.0};
-        drawTruss_mesh( mesh, spaceCraft.truss, false, line_width );
+        drawTruss_mesh( mesh, craft.truss, false, line_width );
     }
     if(!bColor) mesh.penColor = (Vec3f){0.2,0.2,0.2};
-    for( const Rope& rp : spaceCraft.ropes ){
-        Vec3f p1=(Vec3f)nodes[rp.nodes.x].pos;
-        Vec3f p2=(Vec3f)nodes[rp.nodes.y].pos;
+    for( const Rope& rp : craft.ropes ){
+        Vec3f p1=(Vec3f)rp.nodes.x->pos;
+        Vec3f p2=(Vec3f)rp.nodes.y->pos;
         if(iLOD==0){
             mesh.newSub( Mesh::LINES ); // toDo
             if(line_width>0){
@@ -132,17 +132,17 @@ int drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, Mesh::Builder& mesh, int 
     };
     // --- Girders
     if(!bColor) mesh.penColor = (Vec3f){0.1,0.1,0.5};
-    for( const Girder& gd : spaceCraft.girders ){
-        Vec3f p0=(Vec3f)nodes[gd.nodes.x].pos;
-        Vec3f p1=(Vec3f)nodes[gd.nodes.y].pos;
+    for( const Girder& gd : craft.girders ){
+        Vec3f p0=(Vec3f)gd.nodes.x->pos;
+        Vec3f p1=(Vec3f)gd.nodes.y->pos;
         if(iLOD==0){
             mesh.newSub( Mesh::LINES ); // toDo
             mesh.addLine( p0, p1 );
         }
     };
-    for( const Gun& o : spaceCraft.guns ){
-        Vec3f p0=(Vec3f)nodes[ girders[o.suppId].nodes.x ].pos;
-        Vec3f p1=(Vec3f)nodes[ girders[o.suppId].nodes.y ].pos;
+    for( const Gun& o : craft.guns ){
+        Vec3f p0=(Vec3f)craft.girders[o.suppId].nodes.x ->pos;
+        Vec3f p1=(Vec3f)craft.girders[o.suppId].nodes.y ->pos;
         Vec3f d;
         d = p1-p0; p1=p0+d*o.suppSpan.x;  p0.add_mul( d,o.suppSpan.y);
         if(iLOD==0){
@@ -159,27 +159,27 @@ int drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, Mesh::Builder& mesh, int 
         }
     };
     // --- Rings
-    for( const Ring& o : spaceCraft.rings ){
+    for( const Ring& o : craft.rings ){
         if(iLOD==0){
             mesh.newSub(Mesh::LINES);
             mesh.addCircleAxis( o.nseg, (Vec3f)o.pose.pos, (Vec3f)o.pose.rot.b, (Vec3f)o.pose.rot.c, o.R );
         };
     };
     // --- Radiators
-    for( const Radiator& o : spaceCraft.radiators ){
-        drawPlate_mesh( mesh, o, nodes.data(), girders.data());
+    for( const Radiator& o : craft.radiators ){
+        drawPlate_mesh( mesh, o, craft.girders.data());
     };
     // --- Shields
-    for( const Shield& o : spaceCraft.shields ){
-        drawPlate_mesh(mesh, o, nodes.data(), girders.data() );
+    for( const Shield& o : craft.shields ){
+        drawPlate_mesh(mesh, o, craft.girders.data() );
     };
     // --- Tanks
-    for( const Tank& o : spaceCraft.tanks ){
+    for( const Tank& o : craft.tanks ){
         //Draw3D::drawCapsula( (Vec3f)(o.pose.pos+o.pose.rot.c*(o.span.c*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.span.c*-0.5)), o.span.a, o.span.b, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
         mesh.newSub(Mesh::TRIANGLES);
         Mesh::drawCapsula( mesh, (Vec3f)(o.pose.pos+o.pose.rot.c*(o.span.c*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.span.c*-0.5)), o.span.a, o.span.b, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
     };
-    for( const Thruster& o : spaceCraft.thrusters ){
+    for( const Thruster& o : craft.thrusters ){
         float R = o.span.b;
         float L = o.span.c;
         if( iLOD>0 ){
@@ -193,7 +193,7 @@ int drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, Mesh::Builder& mesh, int 
         mesh.move       ( mesh.subVertRange(-1), (Vec3f)o.pose.pos );
     };
     /*
-    for( const Rock& o : spaceCraft.rocks ){
+    for( const Rock& o : craft.rocks ){
         glPushMatrix();
         //printf( "rock.pose.rot \n"); o.pose.rot.print(); printf( "Rock pos(%f,%f,%f) span(%f,%f,%f) \n", o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,   o.span.x, o.span.y, o.span.z ); // print(o.pose.rot);
         Draw3D::rigidTransform( o.pose.pos, o.pose.rot, o.span );
@@ -203,7 +203,7 @@ int drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, Mesh::Builder& mesh, int 
     }
     */
     /*
-    for( const Balloon& o : spaceCraft.balloons ){
+    for( const Balloon& o : craft.balloons ){
         glPushMatrix();
         printf( "ballon.pose.rot \n"); o.pose.rot.print(); printf( "ballon pos(%f,%f,%f) span(%f,%f,%f) \n", o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,   o.span.x, o.span.y, o.span.z ); // print(o.pose.rot);
         Draw3D::rigidTransform( o.pose.pos, o.pose.rot, o.span );

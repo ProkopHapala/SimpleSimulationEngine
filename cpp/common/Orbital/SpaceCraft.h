@@ -27,7 +27,9 @@ class SpaceCraft : public CatalogItem { public:
 
     std::vector<int>       LODs;  // levels of detail for OpenGL rendering
     Truss truss;
-    std::vector<Node>      nodes;
+    //std::vector<Node>      nodes;
+    std::vector<Node*>      nodes;
+
     
     // Node-Connectors ( linear structures )
     std::vector<Rope>      ropes;
@@ -81,10 +83,10 @@ class SpaceCraft : public CatalogItem { public:
 
     Vec3d pointOnGirder( int g, double c )const{
         // ToDo: later we have to find point along girder in truss? Maybe we can use vertex range which is stored in girder object inside SpaceCraft2Mesh2 ?
-        return nodes[girders[g].nodes.x].pos*(1-c) + nodes[girders[g].nodes.y].pos*c;
+        return girders[g].nodes.x->pos*(1-c) +girders[g].nodes.y->pos*c;
     }
 
-	inline void linker2line( const NodeLinker& o, Line3d& l ){ l.a=nodes[o.nodes.x].pos; l.b=nodes[o.nodes.y].pos; }
+	inline void linker2line( const NodeLinker& o, Line3d& l ){ l.a=o.nodes.x->pos; l.b=o.nodes.y->pos; }
 	inline void plate2quad ( const Plate& o, Quad3d& qd )const{
         //qd.l1.a=nodes[ girders[o.g1].p0 ].pos;
         //qd.l1.b=nodes[ girders[o.g1].p1 ].pos;
@@ -93,8 +95,8 @@ class SpaceCraft : public CatalogItem { public:
         //Vec3d d;
         //d = p01-p00; qd.p01=qd.p00+d*o.g1span.x;  qd.p00.add_mul( d,o.g1span.y);
         //d = p11-p10; qd.p11=qd.p10+d*o.g2span.x;  qd.p10.add_mul( d,o.g2span.y);
-        qd.l1.fromSubLine( nodes[ girders[o.g1].nodes.x ].pos, nodes[ girders[o.g1].nodes.y ].pos, o.g1span.x, o.g1span.y );
-        qd.l2.fromSubLine( nodes[ girders[o.g2].nodes.x ].pos, nodes[ girders[o.g2].nodes.y ].pos, o.g2span.x, o.g2span.y );
+        qd.l1.fromSubLine( girders[o.g1].nodes.x->pos, girders[o.g1].nodes.y->pos, o.g1span.x, o.g1span.y );
+        qd.l2.fromSubLine( girders[o.g2].nodes.x->pos, girders[o.g2].nodes.y->pos, o.g2span.x, o.g2span.y );
 	}
 
     inline double rayPlate( const Plate& plate, const Vec3d& ro, const Vec3d& rd, Vec3d& normal, const Vec3d& hX, const Vec3d& hY )const{
@@ -105,8 +107,8 @@ class SpaceCraft : public CatalogItem { public:
 	}
 
     inline double rayLinkLine( const NodeLinker& o, const Vec3d& ro, const Vec3d& rd, double rmax )const{
-        Vec3d lp0=nodes[o.nodes.x].pos;
-        Vec3d lpd=nodes[o.nodes.y].pos-lp0;
+        Vec3d lp0=o.nodes.x->pos;
+        Vec3d lpd=o.nodes.y->pos-lp0;
         double lmax = lpd.normalize();
         double t,l;
         double r = rayLine(ro, rd, lp0, lpd, t, l );
@@ -116,19 +118,19 @@ class SpaceCraft : public CatalogItem { public:
 	}
 
 int add_Node( const Vec3d& pos ){ 
-    Node o;
-    o.pos = pos;
-    o.id  = nodes.size();
+    Node* o = new Node();
+    o->pos = pos;
+    o->id  = nodes.size();
     nodes.push_back( o );
     //if(bPrint)printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
-    if(bPrint) o.print();
-    return o.id;
+    if(bPrint) o->print();
+    return o->id;
 };
 
 int add_Rope( int p0, int p1, double thick, int matId=-1, const char* matn=0 ){
     Rope o;
-    o.nodes.x   = p0;
-    o.nodes.y   = p1;
+    o.nodes.x   = nodes[p0];
+    o.nodes.y   = nodes[p1];
     o.thick= thick;
     if( (matId<0) && matn){ o.face_mat = workshop->materials.getId(matn); }else{ o.face_mat = matId; }
     //if( (matId<0) && matn){ o.material = workshop->materials.get(matn); }else{ o.material = workshop->materials.vec[matId]; }
@@ -141,8 +143,8 @@ int add_Rope( int p0, int p1, double thick, int matId=-1, const char* matn=0 ){
 
 int add_Girder  ( int p0, int p1, const Vec3d& up, int nseg, int mseg, const Vec2d& wh, Quat4i stickTypes=Quat4i{1,2,3,4} ){
     Girder o;
-    o.nodes.x   = p0;
-    o.nodes.y   = p1;
+    o.nodes.x   = nodes[p0];
+    o.nodes.y   = nodes[p1];
     o.up   = up;
     o.nseg = nseg;
     o.mseg = mseg;
@@ -286,7 +288,7 @@ int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i s
 	std::vector<Rock>     rocks;
 */
 
-void printAll_nodes()    { for(int i=0;i<nodes    .size();i++){ nodes[i]    .print(); } };
+void printAll_nodes()    { for(int i=0;i<nodes    .size();i++){ nodes[i]    ->print(); } };
 void printAll_ropes()    { for(int i=0;i<ropes    .size();i++){ ropes[i]    .print(); } };
 void printAll_girders()  { for(int i=0;i<girders  .size();i++){ girders[i]  .print(); } };
 void printAll_rings()    { for(int i=0;i<rings    .size();i++){ rings[i]    .print(); } };
@@ -366,16 +368,16 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
         int i=0;
         truss.newBlock();
         int ip0 = truss.points.size();
-        for(Node& o: nodes){
-            truss.points.push_back( o.pos );
+        for(Node* o: nodes){
+            truss.points.push_back( o->pos );
         }
         for(Rope o: ropes){
-            truss.edges.push_back( (TrussEdge){o.nodes.x,o.nodes.y,0} );
+            truss.edges.push_back( (TrussEdge){o.nodes.x->id,o.nodes.y->id,0} );
         }
         for(Girder& o: girders){
             //printf("DEBUG toTruss : girder #%i \n", i);
-            truss.girder1( nodes[o.nodes.x].pos, nodes[o.nodes.y].pos, o.up, o.nseg, o.wh.a );
-            truss.girder1_caps( o.nodes.x, o.nodes.y, 1 );
+            truss.girder1( o.nodes.x->pos, o.nodes.y->pos, o.up, o.nseg, o.wh.a );
+            truss.girder1_caps( o.nodes.x->id, o.nodes.y->id, 1 );
 
             Vec2i& bak = truss.blocks.back();
             o.poitRange  = {bak.x,truss.points.size()};

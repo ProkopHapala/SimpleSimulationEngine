@@ -2,6 +2,30 @@
 #ifndef datatypes_h
 #define datatypes_h
 
+template <typename T> struct vec2{
+    union{
+        struct{ T x,y; };
+        T array[2];
+    };
+};
+
+template <typename T> struct vec3{
+    union{
+        struct{ T x,y,z; };
+        T array[3];
+    };
+};
+
+template <typename T> struct vec4{
+    union{
+        struct{ T x,y,z,w;      };
+        struct{ vec3<T> f; T e; };
+        struct{ vec2<T> hi,lo;  };
+        T array[4];
+    };
+};
+
+
 //======= int
 
 struct int2   { int x,y; };

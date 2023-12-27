@@ -127,11 +127,11 @@ void drawTruss( const Truss& truss, bool bColor ){
     //printf( "points.size() %i \n", truss.points.size() );
 };
 
-void drawPlate( const Plate& o, const Node* nodes, const Girder* girders ){
-    Vec3f p00=(Vec3f)nodes[ girders[o.g1].nodes.x ].pos;
-    Vec3f p01=(Vec3f)nodes[ girders[o.g1].nodes.y ].pos;
-    Vec3f p10=(Vec3f)nodes[ girders[o.g2].nodes.x ].pos;
-    Vec3f p11=(Vec3f)nodes[ girders[o.g2].nodes.y ].pos;
+void drawPlate( const Plate& o, const Girder* girders ){
+    Vec3f p00=(Vec3f)girders[o.g1].nodes.x ->pos;
+    Vec3f p01=(Vec3f)girders[o.g1].nodes.y ->pos;
+    Vec3f p10=(Vec3f)girders[o.g2].nodes.x ->pos;
+    Vec3f p11=(Vec3f)girders[o.g2].nodes.y ->pos;
     Vec3f d;
     d = p01-p00; p01=p00+d*o.g1span.x;  p00.add_mul( d,o.g1span.y);
     d = p11-p10; p11=p10+d*o.g2span.x;  p10.add_mul( d,o.g2span.y);
@@ -148,10 +148,10 @@ void drawPlate( const Plate& o, const Node* nodes, const Girder* girders ){
     glEnd();
 }
 
-void drawPlateContour( const Plate& o, const Node* nodes, const Girder* girders, bool filled ){
+void drawPlateContour( const Plate& o, const Girder* girders, bool filled ){
     Quad3d qd;
-    qd.l1.fromSubLine( nodes[ girders[o.g1].nodes.x ].pos, nodes[ girders[o.g1].nodes.y ].pos, o.g1span.x, o.g1span.y );
-    qd.l2.fromSubLine( nodes[ girders[o.g2].nodes.x ].pos, nodes[ girders[o.g2].nodes.y ].pos, o.g2span.x, o.g2span.y );
+    qd.l1.fromSubLine( girders[o.g1].nodes.x ->pos, girders[o.g1].nodes.y->pos, o.g1span.x, o.g1span.y );
+    qd.l2.fromSubLine( girders[o.g2].nodes.x ->pos, girders[o.g2].nodes.y->pos, o.g2span.x, o.g2span.y );
     //printf( );
     Draw3D::drawQuad(qd, filled);
     //mesh.addQuad( qd.p00, qd.p01, qd.p10, qd.p11 );
@@ -198,18 +198,18 @@ int drawPointRange( int n, Vec2i prange, int byN, int off, Vec2d span, const Qua
 }
 
 
-void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bColor ){
+void drawSpaceCraft( const SpaceCraft& craft, int iLOD, bool bText, bool bColor ){
     //nodes,ropes;girders;thrustes;guns;radiators;shields;tanks;pipes;
     //for( None nd : nodes ){};
-    const std::vector<Node>&   nodes   = spaceCraft.nodes;
-    const std::vector<Girder>& girders = spaceCraft.girders;
+    //const std::vector<Node*>&   nodes  = craft.nodes;
+    //const std::vector<Girder>& girders = craft.girders;
 
     // --- Ropes
     glLineWidth(0.5);
     if(!bColor)glColor3f(0.2,0.2,0.2);
-    for( const Rope& rp : spaceCraft.ropes ){
-        Vec3f p0=(Vec3f)nodes[rp.nodes.x].pos;
-        Vec3f p1=(Vec3f)nodes[rp.nodes.y].pos;
+    for( const Rope& rp : craft.ropes ){
+        Vec3f p0=(Vec3f)rp.nodes.x->pos;
+        Vec3f p1=(Vec3f)rp.nodes.y->pos;
         glEnable( GL_BLEND );
         glEnable(GL_DEPTH_TEST);
         if(iLOD==0) Draw3D::drawLine( p0,p1 );
@@ -229,8 +229,8 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     if( iLOD>0 ){
         glLineWidth(1.0);
         //if(bColor)glColor3f(0.0,0.0,0.0);
-        //drawTruss( spaceCraft.truss, bColor );
-        drawTruss( spaceCraft.truss, false );
+        //drawTruss( craft.truss, bColor );
+        drawTruss( craft.truss, false );
     }
     // --- Girders
     glLineWidth(3);
@@ -238,9 +238,9 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     glDisable(GL_CULL_FACE);
     //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     if(bColor)glColor3f(0.1,0.1,0.5);
-    for( const Girder& gd : spaceCraft.girders ){
-        Vec3f p0=(Vec3f)nodes[gd.nodes.x].pos;
-        Vec3f p1=(Vec3f)nodes[gd.nodes.y].pos;
+    for( const Girder& gd : craft.girders ){
+        Vec3f p0=(Vec3f)gd.nodes.x->pos;
+        Vec3f p1=(Vec3f)gd.nodes.y->pos;
         glEnable( GL_BLEND );
         glEnable(GL_DEPTH_TEST);
         if(iLOD==0) Draw3D::drawLine( p0,p1 );
@@ -256,9 +256,9 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     };
     glLineWidth(5);
     if(bColor)glColor3f(0.6,0.1,0.1);
-    for( const Gun& o : spaceCraft.guns ){
-        Vec3f p0=(Vec3f)nodes[ girders[o.suppId].nodes.x ].pos;
-        Vec3f p1=(Vec3f)nodes[ girders[o.suppId].nodes.y ].pos;
+    for( const Gun& o : craft.guns ){
+        Vec3f p0=(Vec3f)craft.girders[o.suppId].nodes.x ->pos;
+        Vec3f p1=(Vec3f)craft.girders[o.suppId].nodes.y ->pos;
         Vec3f d;
         d = p1-p0; p1=p0+d*o.suppSpan.x;  p0.add_mul( d,o.suppSpan.y);
         if(iLOD==0) Draw3D::drawLine( p0,p1 );
@@ -280,9 +280,9 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     //glDisable(GL_CULL_FACE);
     //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     if(bColor)glColor3f(0.1,0.1,0.5);
-    for( const Ring& o : spaceCraft.rings ){
-        //Vec3f p0=(Vec3f)nodes[o.nodes.x].pos;
-        //Vec3f p1=(Vec3f)nodes[o.nodes.y].pos;
+    for( const Ring& o : craft.rings ){
+        //Vec3f p0=(Vec3f)o.nodes.x->pos;
+        //Vec3f p1=(Vec3f)o.nodes.y->pos;
         //Vec3f uax = (p1-p0); uax.normalize();
         glEnable( GL_BLEND );
         glEnable(GL_DEPTH_TEST);
@@ -298,8 +298,8 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
     if(bColor)glColor3f(0.3,0.1,0.1); // ToDo by temperature
-    for( const Radiator& o : spaceCraft.radiators ){
-        drawPlate(o, nodes.data(), girders.data());
+    for( const Radiator& o : craft.radiators ){
+        drawPlate(o, craft.girders.data() );
     };
     // --- Shields
     glEnable(GL_DEPTH_TEST);
@@ -309,8 +309,8 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     //glDisable(GL_CULL_FACE);
     //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     if(bColor)glColor3f(0.2,0.2,0.2);
-    for( const Shield& o : spaceCraft.shields ){
-        drawPlate(o, nodes.data(), girders.data() );
+    for( const Shield& o : craft.shields ){
+        drawPlate(o, craft.girders.data() );
     };
     
     // --- Tanks
@@ -319,7 +319,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     //glDisable(GL_CULL_FACE);
     //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     if(bColor)glColor3f(0.5,0.5,0.5);
-    for( const Tank& o : spaceCraft.tanks ){
+    for( const Tank& o : craft.tanks ){
         Draw3D::drawCapsula( (Vec3f)(o.pose.pos+o.pose.rot.c*(o.span.c*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.span.c*-0.5)), o.span.a, o.span.b, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
         //sprintf( str, "Radiator_%03i", gd.id );
         //Vec3f d = p1-p0; d.normalize();
@@ -333,7 +333,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     //glDisable(GL_CULL_FACE);
     //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     if(bColor)glColor3f(0.5,0.5,0.5);
-    for( const Thruster& o : spaceCraft.thrusters ){
+    for( const Thruster& o : craft.thrusters ){
         //Draw3D::drawMatInPos( (Mat3f)o.pose.rot*10.0, (Vec3f)o.pose.pos );
         glPushMatrix();
         //glTranslatef( o.pose.pos.x, o.pose.pos.y, o.pose.pos.z );
@@ -362,7 +362,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
         //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
         glPopMatrix();
     };
-    for( const Rock& o : spaceCraft.rocks ){
+    for( const Rock& o : craft.rocks ){
         glPushMatrix();
         //printf( "rock.pose.rot \n"); o.pose.rot.print(); printf( "Rock pos(%f,%f,%f) span(%f,%f,%f) \n", o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,   o.span.x, o.span.y, o.span.z ); // print(o.pose.rot);
         Draw3D::rigidTransform( o.pose.pos, o.pose.rot, o.span );
@@ -370,7 +370,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
         glCallList(ogl_asteroide);
         glPopMatrix();
     }
-    for( const Balloon& o : spaceCraft.balloons ){
+    for( const Balloon& o : craft.balloons ){
         glPushMatrix();
         printf( "ballon.pose.rot \n"); o.pose.rot.print(); printf( "ballon pos(%f,%f,%f) span(%f,%f,%f) \n", o.pose.pos.x, o.pose.pos.y, o.pose.pos.z,   o.span.x, o.span.y, o.span.z ); // print(o.pose.rot);
         Draw3D::rigidTransform( o.pose.pos, o.pose.rot, o.span );
