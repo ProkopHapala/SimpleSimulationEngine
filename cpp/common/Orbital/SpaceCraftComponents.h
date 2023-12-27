@@ -208,7 +208,7 @@ class StructuralComponent : public ShipComponent { public:
 
     virtual double rotMat( Mat3d& rot)const = 0;
     virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 ) const = 0;
-    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero ) const = 0;
+    virtual int pointAlong( double c, int side, Vec3d* pout=0 ) const = 0;
 
 };
 
@@ -218,11 +218,11 @@ class Node{ public:
     int id;
     StructuralComponent* boundTo=0; // node can be bound to a girder, rope or ring. if boundTo==0 then node is free in space
     double calong;           // position along the bound component
-    Vec2i  along;            // index of
+    Vec2i  along{-1,-1};     // index of
     double length;           // length of the bound component
     //Node(Vec3d pos):pos(pos){};
 
-    int updateBound(){ if(boundTo){ along.x = boundTo->pointAlong( calong, -1, &pos ); }else{ along.x=-1; } return along.x; } 
+    int updateBound(Vec3d p0=Vec3dZero){ if(boundTo){ if(along.y<0)along.y=boundTo->nearSide(p0); along.x = boundTo->pointAlong( calong, along.y, &pos); }else{ along.x=-1; } return along.x; } 
 
     virtual void print(bool bShort=false)const{  if(bShort){printf("Node(id=%i)",id);}else{ 
         printf("Node(id=%i) pos(%g,%g,%g) \n", id, pos.x,pos.y,pos.z ); if(boundTo){printf(" -- boundTo(along.x=%i calong=%g ", along.x, calong ); boundTo->print(true); printf(")\n");} } 
@@ -284,23 +284,18 @@ class Girder : public NodeLinker { public:
         Mat3d rot_;
         if(rot==0){ rotMat(rot_); rot=&rot_; }
         Vec3d d = p - nodes.x->pos;
-        // -- nearest point to line segment
-        //double c = rot->c.dot(d);
-        //c = clamp( c, 0.0, length );
-        //Vec3d p0 = nodes.x->pos + rot->c*c;
-        d.makeOrthoU( rot->c );
         double ca = rot->a.dot(d);
         double cb = rot->b.dot(d);
-        // --- which of the 4 sides of the girder is the point closest to ?
+        printf( "Girder::nearSide() ca,cb(%g,%g) d(%g,%g,%g) rot(%g,%g,%g)(%g,%g,%g)(%g,%g,%g)\n", ca, cb,  d.x,d.y,d.z,   rot->a.x,rot->a.y,rot->a.z, rot->b.x,rot->b.y,rot->b.z, rot->c.x,rot->c.y,rot->c.z );
         int side;
-        if    ( fabs(ca)>fabs(cb) ){ if( ca<0 ){ side=0; }else{ side=1; } }
-        else                       { if( cb<0 ){ side=2; }else{ side=3; } }
+        if    ( fabs(ca)>fabs(cb) ){ if( ca<0 ){ side=0; }else{ side=1; } }  // height
+        else                       { if( cb<0 ){ side=2; }else{ side=3; } }  // width
         return side;
     };
-    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d pOther=Vec3dZero )const override{ 
+    virtual int pointAlong( double c, int side, Vec3d* pout=0 )const override{ 
         Mat3d rot;
         rotMat(rot);
-        if(side<0){ side=nearSide(pOther,&rot); }
+        //if(side<0){ side=nearSide(pOther,&rot); }
         //side = 0;
         //side = 1;
         //side = 2;
@@ -324,7 +319,8 @@ class Girder : public NodeLinker { public:
                 pout->add_mul( rot.a, (side-0.5)*2*wh.x );
             }            
         }
-        printf( "Girder::pointAlong(c=%g) i=%i side=%i nseg=%i (nv/4)=%i \n", c, i, side, nseg, pointRange.y-pointRange.x );
+        //if(side_out){ *side_out=side; }
+        //printf( "Girder::pointAlong(c=%g) i=%i side=%i nseg=%i (nv/4)=%i \n", c, i, side, nseg, pointRange.y-pointRange.x );
         return ip; 
     };
 
@@ -357,7 +353,7 @@ class Ring : public StructuralComponent { public:
 
     virtual double rotMat( Mat3d& rot)const override{ rot=Mat3dIdentity; return 0; };
     virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 )const override{ return -1; };
-    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )const override{ return -1; };
+    virtual int pointAlong( double c, int side, Vec3d* pout=0 )const override{ return -1; };
 
 };
 
@@ -373,7 +369,7 @@ class Rope : public NodeLinker { public:
 
     virtual double rotMat( Mat3d& rot)const override{ rot.c = nodes.y->pos - nodes.x->pos; double l=rot.c.normalize(); return l; };
     virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 ) const override{ return 0; };
-    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )const override{ 
+    virtual int pointAlong( double c, int side, Vec3d* pout=0 )const override{ 
         int i = (int)(c*nseg+0.5);
         if(pout){
             Vec3d d = (nodes.y->pos - nodes.x->pos)*(1./nseg);

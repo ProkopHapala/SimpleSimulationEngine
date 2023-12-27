@@ -402,6 +402,7 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_, int argc
 
     VIEW_DEPTH = 10000.0;
     zoom = 1000.0;
+    printf( "### SpaceCraftEditGUI() DONE\n" );
 }
 
 //void SpaceCraftEditGUI::camera(){
@@ -474,14 +475,26 @@ void SpaceCraftEditGUI::draw(){
     glLineWidth(3.0);
     Draw3D::color( Vec3f{1.0,0.0,1.0} );
     drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
-    
     //drawSpaceCraft_nodes( theSpaceCraft, const Quat4f* ps=0, float sz=10, int i0=0, int i1=-1 );
     Draw3D::color(Vec3f{0.f,0.5f,0.f});  drawSpaceCraft_nodes( *theSpaceCraft, 0, 10 );
     glLineWidth(5.0);
     Draw3D::color(Vec3f{0.5f,0.5f,0.f}); drawSpaceCraft_nodes( *theSpaceCraft, sim.points, 5 );
-    Node* nd = theSpaceCraft->nodes[7];
-    Draw3D::color(Vec3f{0.f,0.5f,0.5f});  Draw3D::drawPointCross( nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong, 5 );
-
+    //printf( "nodes.size() = %i \n", theSpaceCraft->nodes.size() );
+    /*
+    for(Node* nd: theSpaceCraft->nodes ){
+        printf( "node[%i] %li \n", nd->id, (long)nd->boundTo );
+        if(nd->boundTo==0) continue;
+        //Node* nd = theSpaceCraft->nodes[7];
+        //Draw3D::color(Vec3f{0.f,0.5f,0.5f});  Draw3D::drawPointCross( nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong, 5 );
+        Mat3d rot;
+        nd->boundTo->rotMat( rot );
+        Vec3d pos = nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong;
+        Draw3D::drawMatInPos( rot, pos, Vec3dOne*10.0 );
+        glLineWidth(3.0);
+        Draw3D::color(Vec3f{1.f,1.0f,1.0f});
+        Draw3D::drawVecInPos( ((Girder*)nd->boundTo)->up*30.0, pos );
+    }
+    */
     {
         glPointSize(10);
         const Radiator& o =  theSpaceCraft->radiators[0];
@@ -490,7 +503,6 @@ void SpaceCraftEditGUI::draw(){
         Draw3D::color(Vec3f{1.f,0.f,0.f}); drawPointRange( 10, g1.pointRange, 4, 0, o.g1span, sim.points );
         Draw3D::color(Vec3f{0.f,0.f,1.f}); drawPointRange( 10, g2.pointRange, 4, 1, o.g2span, sim.points );
     }
-
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
@@ -502,7 +514,6 @@ void SpaceCraftEditGUI::draw(){
 
     Draw3D::color( Vec3f{0.0,0.0,1.0} );
     //for(int i=0; i<mesh2.verts.size(); i++){  Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );}
-    
 
     /*
     if(ogl_asteroide){
@@ -528,7 +539,6 @@ void SpaceCraftEditGUI::draw(){
         }
 
     }
-
     mouse_ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     //glColor3f(0.0f,0.0f,0.0f); drawTruss( truss.edges.size(), &truss.edges[0], &truss.points[0] );
     //glColor3f(1.0f,1.0f,1.0f); Draw3D::drawPoints( truss.points.size(), &truss.points[0], 0.1 );
@@ -542,7 +552,6 @@ void SpaceCraftEditGUI::draw(){
         glColor3f(0,1.0,0);
         drawPicked( *theSpaceCraft, picked );
     }
-
 };
 
 void SpaceCraftEditGUI::drawHUD(){

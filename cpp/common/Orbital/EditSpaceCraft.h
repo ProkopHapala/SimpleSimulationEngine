@@ -105,7 +105,7 @@ int l_BoundNode(lua_State * L){
     Vec3d p0; Lua::getVec3(L, 4, p0 );
     o->boundTo = theSpaceCraft->getStructuralComponent( gid, kind);
     //o->along.x = o->boundTo->pointAlong( o->calong, -1, &o->pos, p0 );
-    o->updateBound();
+    o->updateBound( p0 );
     o->id =  theSpaceCraft->nodes.size();
     theSpaceCraft->nodes.push_back( o  );
     //if(verbosity>1) 
@@ -146,8 +146,15 @@ int l_Rope    (lua_State * L){
 int l_Girder  (lua_State * L){
     //Lua::dumpStack(L);
     Girder o;
-    o.nodes.x   = theSpaceCraft->nodes[Lua::getInt (L,1)];
-    o.nodes.y   = theSpaceCraft->nodes[Lua::getInt (L,2)];
+    int id1  = Lua::getInt   (L,1);
+    int id2  = Lua::getInt   (L,2);
+    printf( "l_Girder() id1,id2 %i,%i\n", id1, id2 );
+    if(id1>=theSpaceCraft->nodes.size() || (id1)<0 ){ printf( "ERROR in l_Girder() node1(%i) out of bounds (0,%i)", id1, theSpaceCraft->nodes.size() ); return 0; }
+    if(id2>=theSpaceCraft->nodes.size() || (id2)<0 ){ printf( "ERROR in l_Girder() node2(%i) out of bounds (0,%i)", id2, theSpaceCraft->nodes.size() ); return 0; }
+    o.nodes.x = theSpaceCraft->nodes[id1];
+    o.nodes.y = theSpaceCraft->nodes[id2];
+    //o.nodes.x = theSpaceCraft->nodes[Lua::getInt (L,1)];
+    //o.nodes.y = theSpaceCraft->nodes[Lua::getInt (L,2)];
              Lua::getVec3(L,3, o.up );
     o.nseg = Lua::getInt (L,4);
     o.mseg = Lua::getInt (L,5);

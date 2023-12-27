@@ -62,9 +62,12 @@ Rope(nRt,nUp, 25, "Kevlar");
 
 --- Finished basic layout of the ship ( main girders and ropes )
 
-nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {0.0,100.0,0.0} );
--- nB2 = BoundNode( gUp, ComponetKind.Girder, 0.5, {0.0,100.0,0.0} );
--- gB  = Girder( nB1, nB2, xvec, 10, 2, {4.0,4.0}, "Steel", g1_st )
+nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {0.0,100.0,100.0} );
+--nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {0.0,-100.0,0.0} );
+--nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {100.0,0.0,0.0} );
+--nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {-100.0,0.0,0.0} );
+nB2 = BoundNode( gUp, ComponetKind.Girder, 0.5, {0.0,100.0,100.0} );
+gB  = Girder( nB1, nB2, xvec, 10, 2, {4.0,4.0}, "Steel", g1_st )
 
 print( "#------ Lua:girderFans:" )
 
@@ -80,7 +83,7 @@ r_pitch = Ring( {8.0,0.0,0.0}, xvec, yvec, 64, 80.0, {16.0,4.0}, "Steel", g1_st 
 
 --- print( "ComponetKind[Girder,Ring,Rope]", ComponetKind.Girder,ComponetKind.Ring,ComponetKind.Rope)
 --- Slider( gFw,r_roll, ComponetKind.Girder,ComponetKind.Ring,   3,0, 0,0  )
-Slider( r_pitch,gFw, ComponetKind.Ring,ComponetKind.Girder,   3,3, 0,0.1  )
+-- Slider( r_pitch,gFw, ComponetKind.Ring,ComponetKind.Girder,   3,3, 0,0.1  )
 
 --  There should be mechanism how to generate nodes on-top of ship components (anchor points)
 
