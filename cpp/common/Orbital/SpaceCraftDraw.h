@@ -162,7 +162,7 @@ int drawSpaceCraft_sliderPaths( const SpaceCraft& craft, const Quat4f* ps, float
     //Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
     int n = craft.sliders.size();
     for(int i=0; i<n; i++){
-        const Slider2& o = craft.sliders[i];
+        const Slider& o = craft.sliders[i];
         Draw3D::drawPointCross( ps[o.ifix].f, sz );
         Draw3D::drawLineStrip( o.path.n, o.path.ps, ps, o.path.closed );
     }

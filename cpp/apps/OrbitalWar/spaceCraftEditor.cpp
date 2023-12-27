@@ -133,7 +133,7 @@ void renderShip(){
     /*
     Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
     for(int i=0; i<theSpaceCraft->sliders.size(); i++){
-        const Slider2& o = theSpaceCraft->sliders[i];
+        const Slider& o = theSpaceCraft->sliders[i];
         Draw3D::drawLineStrip( o.path.n, o.path.ps, sim.points, o.path.closed );
     }
     */

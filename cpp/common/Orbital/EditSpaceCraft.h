@@ -155,8 +155,8 @@ int l_Ring    (lua_State * L){
 };
 
 int l_Slider(lua_State * L){
-    Lua::dumpStack(L);
-    Slider2 o;
+    //Lua::dumpStack(L);
+    Slider o;
     int id1  = Lua::getInt   (L,1);
     int id2  = Lua::getInt   (L,2);
     int it1  = Lua::getInt   (L,3);

@@ -35,7 +35,7 @@ class SpaceCraft : public CatalogItem { public:
     std::vector<Ring>      rings;
 	std::vector<Gun>       guns;
     
-    std::vector<Slider2>   sliders;
+    std::vector<Slider>   sliders;
 
     // Plate components  ( planar structures )     ToDo: maybe we should make just array 'plates' and store all plate-like components there (e.g. radiators, shields, collectors, etc.)
 	std::vector<Radiator>  radiators;
@@ -59,11 +59,16 @@ class SpaceCraft : public CatalogItem { public:
 
     ShipComponent* getPathComponent( int id, int type ){
         ComponetKind t = (ComponetKind) type;
+        printf( "getPathComponent(id=%i,type=%i) (known Girder=%i,Ring=%i,Rope=%i) \n", id, type, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
         switch (t){
             case ComponetKind::Girder : return &girders[id]; break;
             case ComponetKind::Ring   : return &rings  [id]; break;
             case ComponetKind::Rope   : return &ropes  [id]; break;
-            default: return 0;
+            default:{
+                printf( "getPathComponent( int id, int type ); ERROR: unknown type %i (known Girder=%i,Ring=%i,Rope=%i)\n", type, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );  
+                exit(0); 
+                return 0;
+            };
         }
     }
 
@@ -252,7 +257,7 @@ int add_Gun     ( int suppId, const Vec2d& suppSpan, int type=-1 ){
 };
 
 int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i sides ){
-    Slider2 o;
+    Slider o;
     o.comp1 = comp1; o,comp2;
     o.sides=sides; o.along=along;
     if(bPrint) o.print();
@@ -268,7 +273,7 @@ int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i s
     std::vector<Girder>    girders;
     std::vector<Ring>      rings;
 	std::vector<Gun>       guns;
-    std::vector<Slider2>   sliders;
+    std::vector<Slider>   sliders;
     // Plate components  ( planar structures )     ToDo: maybe we should make just array 'plates' and store all plate-like components there (e.g. radiators, shields, collectors, etc.)
 	std::vector<Radiator>  radiators;
 	std::vector<Shield>    shields;
@@ -442,7 +447,7 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
     void updateSliderPaths(){
         printf("SpaceCraft::updateSliderPaths()\n");
         for(int io=0;io<sliders.size();io++){
-            Slider2& o = sliders[io];
+            Slider& o = sliders[io];
             o.print();
             printf(" - compi1:"); o.comp1->print();
             printf(" - compi2:"); o.comp2->print();

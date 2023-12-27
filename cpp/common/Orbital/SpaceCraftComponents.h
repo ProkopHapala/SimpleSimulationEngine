@@ -38,7 +38,7 @@ class BBox : public BodyPose{ public:
 // === SpaceShip Component Types
 
 //enum class ComponetKind:int{ Node, Rope, Girder, Ring, Thruster, Gun, Radiator, Shield, Tank, Pipe, Balloon, Rock };
-enum class ComponetKind:int{Node=0,ShipComponent=1,NodeLinker=2,Girder=3,Ring=4,Rope=5,Pipe=6,Plate=7,Radiator=8,Shield=9,Collector=10,Thruster=11,Rotor=12,Slider=13,Slider2=14,Accelerator=15,Gun,Modul=16,Tank=17,Balloon=18,Rock=19};
+enum class ComponetKind:int{Node=0,ShipComponent=1,StructuralComponent=2,NodeLinker=3,Girder=4,Ring=5,Rope=6,Pipe=7,Plate=8,Radiator=9,Shield=10,Collector=11,Thruster=12,Rotor=13,Slider=14,Accelerator=15,Gun=16,Modul=17,Tank=18,Balloon=19,Rock=20};
 // ==== Materials
 
 class CatalogItem{ public:
@@ -161,6 +161,7 @@ class Path{ public:
 class ShipComponent{ public:
     int    id;
     int    kind;
+    //int    compKind = (int)ComponetKind::ShipComponent;
     int    shape;
     int    face_mat=-1;
     //int    edge_mat=-1;
@@ -197,6 +198,11 @@ class StructuralComponent : public ShipComponent { public:
     //double length;
     virtual void print()const override { printf("StructuralComponent(id=%i) nodes(%i,%i,%i,%i) \n", id, nodes.x,nodes.y,nodes.z,nodes.w ); };
     void ray( const Vec3d& ro, const Vec3d& rd ){}
+    virtual int component_kind(){ return (int)ComponetKind::StructuralComponent; };
+
+    virtual int nearSide  ( Vec3d p ) = 0;
+    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero ) = 0;
+
 };
 
 class Node{ public:
@@ -213,7 +219,7 @@ class NodeLinker : public StructuralComponent { public:
     double length;
     virtual void print()const override { printf("NodeLinker(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
     void ray( const Vec3d& ro, const Vec3d& rd ){}
-     virtual int component_kind(){ return (int)ComponetKind::NodeLinker; };
+    virtual int component_kind(){ return (int)ComponetKind::NodeLinker; };
 };
 
 
@@ -237,6 +243,9 @@ class Girder : public NodeLinker { public:
         printf( "Girder(%i) ps(%i,%i) up(%g,%g,%g) nm(%i,%i) wh(%g,%g) st(%i,%i,%i,%i) poitRange(%i,%i)\n", id, nodes.x, nodes.y, up.x, up.y, up.z, nseg, mseg, wh.x, wh.y, st.x,st.y,st.z,st.w, poitRange.x,poitRange.y );
     }
     virtual int component_kind(){ return (int)ComponetKind::Girder; };
+
+    virtual int nearSide  ( Vec3d p )override{ return -1; };
+    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )override{ return -1; };
 
 };
 
@@ -265,6 +274,9 @@ class Ring : public StructuralComponent { public:
     }
     virtual int component_kind(){ return (int)ComponetKind::Ring; };
 
+    virtual int nearSide  ( Vec3d p )override{ return -1; };
+    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )override{ return -1; };
+
 };
 
 class Rope : public NodeLinker { public:
@@ -274,6 +286,9 @@ class Rope : public NodeLinker { public:
 
     virtual void print()const override { printf("Rope(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
     virtual int component_kind(){ return (int)ComponetKind::Rope; };
+
+    virtual int nearSide  ( Vec3d p )override{ return -1; };
+    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )override{ return -1; };
 };
 
 class Modul: public ShipComponent { public:
@@ -397,8 +412,8 @@ class Slider : public ShipComponent { public:
 //ToDo : We need to move wheel with respect to girder
 
 
-//class Slider2 : public Node { public:    // If we make Slider child of Node we can easily generate it somewhere along a girder  
-class Slider2 : public ShipComponent { public:
+//class Slider : public Node { public:    // If we make Slider child of Node we can easily generate it somewhere along a girder  
+class Slider : public ShipComponent { public:
     // allow slide a node over a girder
     // this slider moves one vertex (fixed point) which respect to vertex-loop (e.g. girder,wheel,rope). It will interpolate the position along current edge on the vertex loop. It will apply force to the two vertexes of the current edge.
     ShipComponent* comp1;  // Warrning - this becomes invalid when arrays are re-allocated !!!!
@@ -415,7 +430,7 @@ class Slider2 : public ShipComponent { public:
     double forceMax; // max force which ca ne exerted by this slider
     double powerMax;
 
-    virtual void print()const override{ printf("Slider2(id=%i) kidn=%i face_mat=%i girder=%i P=%g[W] F=%g \n", id, kind,  ifix, forceMax, powerMax ); };
+    virtual void print()const override{ printf("Slider(id=%i) kidn=%i girder=%i P=%g[W] F=%g \n", id, kind, ifix, forceMax, powerMax ); };
     virtual int component_kind(){ return (int)ComponetKind::Slider; };
 };
 
@@ -511,7 +526,7 @@ class SpaceCraftWorkshop{ public:
     /*
     int l_PanelMaterial (lua_State * L){
         PanelMaterials *mat = new PanelMaterials();
-        Lua::dumpStack(L);
+        //Lua::dumpStack(L);
         strcpy( mat->name,  Lua::getStringField(L, "name"    ) );
         auto it = materials.find( mat->name );
         if( it == materials.end() ){ materials.insert({mat->name,mat}); }else{ printf( "Material `%s` replaced\n", mat->name ); delete it->second; it->second = mat;  }
