@@ -353,11 +353,13 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     */
     for(Girder& o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
+        mesh.block();
         girder1( mesh, craft.nodes[o.nodes.x].pos, craft.nodes[o.nodes.y].pos, o.up, o.nseg, o.wh.a, o.st );
         girder1_caps( mesh, o.nodes.x, o.nodes.y, o.st.x );
         Quat4i& b = mesh.blocks.back();
         o.poitRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
+        o.print();
         //printf( "BuildCraft_truss() girder.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
         i++;
     }

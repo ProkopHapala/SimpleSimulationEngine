@@ -234,7 +234,7 @@ class Girder : public NodeLinker { public:
     //GirderType * type = NULL;
     
     virtual void print()const override {
-        printf( "Girder(%i) ps(%i,%i) up(%g,%g,%g) nm(%i,%i) wh(%g,%g) st(%i,%i,%i,%i)\n", id, nodes.x, nodes.y, up.x, up.y, up.z, nseg, mseg, wh.x, wh.y, st.x,st.y,st.z,st.w, poitRange.x,poitRange.y  );
+        printf( "Girder(%i) ps(%i,%i) up(%g,%g,%g) nm(%i,%i) wh(%g,%g) st(%i,%i,%i,%i) poitRange(%i,%i)\n", id, nodes.x, nodes.y, up.x, up.y, up.z, nseg, mseg, wh.x, wh.y, st.x,st.y,st.z,st.w, poitRange.x,poitRange.y );
     }
     virtual int component_kind(){ return (int)ComponetKind::Girder; };
 
