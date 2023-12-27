@@ -168,7 +168,7 @@ class Builder2{ public:
     }
 
     int rope( int ip0, int ip1, int typ=-1, int n=1 ){   
-        //printf( "# rope(%i,%i,n=%i,t=%i)\n", ip0,ip1, n,typ );
+        printf( "# rope(%i,%i,n=%i,t=%i)\n", ip0,ip1, n,typ );
         int i0 = verts.size();
         Vec3d p0,d;
         if( n!=1 ){

@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include "datatypes.h"
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Mat3.h"
@@ -203,8 +204,9 @@ class StructuralComponent : public ShipComponent { public:
     void ray( const Vec3d& ro, const Vec3d& rd ){}
     virtual int component_kind(){ return (int)ComponetKind::StructuralComponent; };
 
-    virtual int nearSide  ( Vec3d p ) = 0;
-    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero ) = 0;
+    virtual double rotMat( Mat3d& rot)const = 0;
+    virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 ) const = 0;
+    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero ) const = 0;
 
 };
 
@@ -213,7 +215,9 @@ class Node{ public:
     //std::vector<Vec2i> components; // {kind,index}  // TODO: is this still valid ?
     int id;
     StructuralComponent* boundTo=0; // node can be bound to a girder, rope or ring. if boundTo==0 then node is free in space
-    Vec2i along;              // index of 
+    double calong;           // position along the bound component
+    Vec2i  along;            // index of
+    double length;           // length of the bound component
     //Node(Vec3d pos):pos(pos){};
 
     virtual void print()const{ printf("Node(id=%i) kidn=%i face_mat=%i \n", id, pos.x,pos.y,pos.z ); };
@@ -223,6 +227,10 @@ class NodeLinker : public StructuralComponent { public:
     virtual void print()const override { printf("NodeLinker(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
     void ray( const Vec3d& ro, const Vec3d& rd ){}
     virtual int component_kind(){ return (int)ComponetKind::NodeLinker; };
+
+    //virtual double rotMat( Mat3d& rot)const override = 0;
+    //virtual int nearSide  ( Vec3d p, const Mat3d* rot=0) const override = 0;
+    //virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero ) const override = 0;
 };
 
 
@@ -247,8 +255,50 @@ class Girder : public NodeLinker { public:
     }
     virtual int component_kind(){ return (int)ComponetKind::Girder; };
 
-    virtual int nearSide  ( Vec3d p )override{ return -1; };
-    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )override{ return -1; };
+    virtual double rotMat( Mat3d& rot)const override{
+        rot.c = nodes.y->pos - nodes.x->pos;
+        double length = rot.c.normalize();
+        rot.b = up;
+        rot.b.makeOrthoU( rot.c );
+        rot.a.set_cross( rot.c, rot.b );
+        rot.a.normalize();
+        return length;
+    }
+    virtual int nearSide( Vec3d p, const Mat3d* rot=0)const override{
+        Mat3d rot_;
+        if(rot==0){ rotMat(rot_); rot=&rot_; }
+        Vec3d d = p - nodes.x->pos;
+        // -- nearest point to line segment
+        //double c = rot->c.dot(d);
+        //c = clamp( c, 0.0, length );
+        //Vec3d p0 = nodes.x->pos + rot->c*c;
+        d.makeOrthoU( rot->c );
+        double ca = rot->a.dot(d);
+        double cb = rot->b.dot(d);
+        // --- which of the 4 sides of the girder is the point closest to ?
+        int side;
+        if    ( fabs(ca)>fabs(cb) ){ if( ca<0 ){ side=0; }else{ side=1; } }
+        else                       { if( cb<0 ){ side=2; }else{ side=3; } }
+        return side;
+    };
+    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d pOther=Vec3dZero )const override{ 
+        Mat3d rot;
+        rotMat(rot);
+        if(side<0){ side=nearSide(pOther,&rot); }
+        int i = (int)(c*nseg+0.5);
+        i*=4 + side;
+        if(pout){
+            Vec3d d = (nodes.y->pos - nodes.x->pos)*(1./nseg);
+            *pout = nodes.x->pos + d*i;
+            if(side>1){ 
+                pout->add_mul( rot.a, (side-0.5)*2*wh.x ); 
+            }else{     
+                pout->add_mul( d, 0.5 );
+                pout->add_mul( rot.b, (side-2.5)*2*wh.y ); 
+            }
+        }
+        return i; 
+    };
 
 };
 
@@ -277,8 +327,9 @@ class Ring : public StructuralComponent { public:
     }
     virtual int component_kind(){ return (int)ComponetKind::Ring; };
 
-    virtual int nearSide  ( Vec3d p )override{ return -1; };
-    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )override{ return -1; };
+    virtual double rotMat( Mat3d& rot)const override{ rot=Mat3dIdentity; return 0; };
+    virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 )const override{ return -1; };
+    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )const override{ return -1; };
 
 };
 
@@ -290,8 +341,16 @@ class Rope : public NodeLinker { public:
     virtual void print()const override { printf("Rope(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
     virtual int component_kind(){ return (int)ComponetKind::Rope; };
 
-    virtual int nearSide  ( Vec3d p )override{ return -1; };
-    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )override{ return -1; };
+    virtual double rotMat( Mat3d& rot)const override{ rot.c = nodes.y->pos - nodes.x->pos; double l=rot.c.normalize(); return l; };
+    virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 ) const override{ return 0; };
+    virtual int pointAlong( double c, int side=-1, Vec3d* pout=0, Vec3d p0=Vec3dZero )const override{ 
+        int i = (int)(c*nseg+0.5);
+        if(pout){
+            Vec3d d = (nodes.y->pos - nodes.x->pos)*(1./nseg);
+            *pout = nodes.x->pos + d*i;
+        }
+        return i; 
+    };
 };
 
 class Modul: public ShipComponent { public:
@@ -419,8 +478,8 @@ class Slider : public ShipComponent { public:
 class Slider : public ShipComponent { public:
     // allow slide a node over a girder
     // this slider moves one vertex (fixed point) which respect to vertex-loop (e.g. girder,wheel,rope). It will interpolate the position along current edge on the vertex loop. It will apply force to the two vertexes of the current edge.
-    ShipComponent* comp1;  // Warrning - this becomes invalid when arrays are re-allocated !!!!
-    ShipComponent* comp2;
+    StructuralComponent* comp1;  // Warrning - this becomes invalid when arrays are re-allocated !!!!
+    StructuralComponent* comp2;
     Vec2d along;
     Vec2i sides;
     int  ifix;    // to which vertex it is anchored

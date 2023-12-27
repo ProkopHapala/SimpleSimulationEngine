@@ -474,8 +474,10 @@ void SpaceCraftEditGUI::draw(){
     glLineWidth(3.0);
     Draw3D::color( Vec3f{1.0,0.0,1.0} );
     drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
-
     
+    //drawSpaceCraft_nodes( theSpaceCraft, const Quat4f* ps=0, float sz=10, int i0=0, int i1=-1 );
+    Draw3D::color(Vec3f{0.f,1.f,0.f}); drawSpaceCraft_nodes( *theSpaceCraft, 0, 10 );
+
     {
         glPointSize(10);
         const Radiator& o =  theSpaceCraft->radiators[0];

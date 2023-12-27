@@ -169,6 +169,23 @@ int drawSpaceCraft_sliderPaths( const SpaceCraft& craft, const Quat4f* ps, float
     return n;
 }
 
+void drawNode( const Node& o, float sz=10 ){
+    //Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
+    Draw3D::drawPointCross( o.pos, sz );
+}
+
+void drawNode( const Node& o, const Quat4f* ps, float sz=10.f ){
+    //Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
+    Draw3D::drawPointCross( ps[o.along.x].f, sz );
+}
+
+void drawSpaceCraft_nodes( const SpaceCraft& craft, const Quat4f* ps=0, float sz=10, int i0=0, int i1=-1 ){
+    //Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
+    if(i1<0) i1 = craft.nodes.size() + i1;
+    if( ps ){ for(int i=i0; i<=i1; i++){ drawNode( *craft.nodes[i], ps, sz ); } }
+    else    { for(int i=i0; i<=i1; i++){ drawNode( *craft.nodes[i],     sz ); } }
+}
+
 int drawPointRange( int n, Vec2i prange, int byN, int off, Vec2d span, const Quat4f* ps ){
     //printf( "drawPointRange(n=%i prange=%i byN=%i off=%i span(%g,%g))\n", n, prange.x, prange.y, byN, off, span.x, span.y );
     int i0 = prange.x;

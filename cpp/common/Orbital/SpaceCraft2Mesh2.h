@@ -23,28 +23,32 @@ using namespace SpaceCrafting;
 namespace Mesh{
 
 void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
+    printf( "exportSim() START \n" );
     int np = mesh.verts.size();
     int nb = mesh.edges.size();
     int* nneighs = new int[ np ];
-    printf( "exportSim() np=%i\n", np );
+    //printf( "exportSim() np=%i\n", np );
     // find max number of neighbors
     for(int i=0; i<np; i++){ nneighs[i]=0; }
     for(int i=0; i<nb; i++){ const Vec2i& e = mesh.edges[i].lo; nneighs[e.a]++; nneighs[e.b]++; }
     int nneighmax = 0;
     for(int i=0; i<np; i++){ int ni=nneighs[i]; if(ni>nneighmax)nneighmax=ni; }
-    printf( "exportSim() nneighmax %i \n", nneighmax );
+    //printf( "exportSim() nneighmax %i \n", nneighmax );
     sim.recalloc(np, nneighmax, nb );
     // fill neighs
-
     for(int i=0; i<np; i++){ sim.points[i].f=(Vec3f)mesh.verts[i].pos; sim.points[i].e=0.0f; }
     for(int i=0; i<np; i++){ nneighs[i]=0;   }
     for(int i=0; i<sim.nNeighTot; i++){ sim.neighs[i]=-1; }
     for(int i=0; i<nb; i++){
+        //printf( "exportSim()[%i] \n", i );
         const Quat4i& e = mesh.edges[i];
         int ia = e.x*sim.nNeighMax + nneighs[e.x];
         int ib = e.y*sim.nNeighMax + nneighs[e.y];
         sim.neighs[ ia ] = e.y; 
         sim.neighs[ ib ] = e.x;
+        //printf( "e.w %i \n", e.w );
+        if(e.w<0){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i \n", i, e.w ); exit(0); }
+        if(e.w>=shop.stickMaterials.vec.size()){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i > stickMaterials.size()\n", i, e.w, e.w>=shop.stickMaterials.vec.size() ); exit(0); }
         const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
         // l0, kPress, kPull, damping
         double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
@@ -62,6 +66,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
             sim.strain[i] = 0;
         }
     }
+    printf( "exportSim() DONE! \n" );
     delete [] nneighs;
 }
 
@@ -82,7 +87,7 @@ int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, 
     Vec3d dir = p1-p0;
     double length = dir.normalize();
     up.makeOrthoU(dir);
-    Vec3d side; side.set_cross(dir,up);
+    Vec3d side; side.set_cross(dir,up); side.normalize();
     //print(dir); print(up); print(side); printf("dir up side \n");
     double dl = length/(2*n + 1);
     //int dnb = 2+4+4+4;
@@ -345,12 +350,14 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     for(const Node* o: craft.nodes){
         mesh.vert( o->pos );
     }
-    /*
     for(Rope o: craft.ropes){
+        mesh.block();
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
-        mesh.rope( o.nodes.x,o.nodes.y, o.face_mat );
+        mesh.rope( o.nodes.x->id,o.nodes.y->id, o.face_mat );
+        Quat4i& b = mesh.blocks.back();
+        o.poitRange  = {b.x,(int)mesh.verts.size()};
+        o.stickRange = {b.y,(int)mesh.edges.size()};
     }
-    */
     for(Girder& o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
         mesh.block();
@@ -359,7 +366,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         Quat4i& b = mesh.blocks.back();
         o.poitRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
-        o.print();
+        //o.print();
         //printf( "BuildCraft_truss() girder.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
         i++;
     }

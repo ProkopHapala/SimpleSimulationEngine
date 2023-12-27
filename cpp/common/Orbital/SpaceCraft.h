@@ -59,15 +59,15 @@ class SpaceCraft : public CatalogItem { public:
 
     // ==== functions
 
-    ShipComponent* getPathComponent( int id, int type ){
+    StructuralComponent* getStructuralComponent( int id, int type ){
         ComponetKind t = (ComponetKind) type;
-        printf( "getPathComponent(id=%i,type=%i) (known Girder=%i,Ring=%i,Rope=%i) \n", id, type, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
+        printf( "getStructuralComponent(id=%i,type=%i) (known Girder=%i,Ring=%i,Rope=%i) \n", id, type, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
         switch (t){
             case ComponetKind::Girder : return &girders[id]; break;
             case ComponetKind::Ring   : return &rings  [id]; break;
             case ComponetKind::Rope   : return &ropes  [id]; break;
             default:{
-                printf( "getPathComponent( int id, int type ); ERROR: unknown type %i (known Girder=%i,Ring=%i,Rope=%i)\n", type, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );  
+                printf( "getStructuralComponent( int id, int type ); ERROR: unknown type %i (known Girder=%i,Ring=%i,Rope=%i)\n", type, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );  
                 exit(0); 
                 return 0;
             };
@@ -258,9 +258,10 @@ int add_Gun     ( int suppId, const Vec2d& suppSpan, int type=-1 ){
     return o.id;
 };
 
-int add_slider( ShipComponent* comp1, ShipComponent* comp2, Vec2d along, Vec2i sides ){
+int add_slider( StructuralComponent* comp1, StructuralComponent* comp2, Vec2d along, Vec2i sides ){
     Slider o;
-    o.comp1 = comp1; o,comp2;
+    o.comp1 = comp1; 
+    o.comp2 = comp2;
     o.sides=sides; o.along=along;
     if(bPrint) o.print();
     o.id = sliders.size();
