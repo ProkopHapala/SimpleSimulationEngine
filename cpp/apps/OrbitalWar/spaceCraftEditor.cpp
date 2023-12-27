@@ -135,11 +135,11 @@ void drawPicked( const SpaceCraft& craft, int ipick ){
             }break;
         case ComponetKind::Girder:{
             const Girder& o = craft.girders[ipick];
-            Draw3D::drawLine(craft.nodes[o.p0].pos,craft.nodes[o.p1].pos);
+            Draw3D::drawLine(craft.nodes[o.nodes.x].pos,craft.nodes[o.nodes.y].pos);
             } break;
         case ComponetKind::Rope:{
             const Rope& o = craft.ropes[ipick];
-            Draw3D::drawLine(craft.nodes[o.p0].pos,craft.nodes[o.p1].pos);
+            Draw3D::drawLine(craft.nodes[o.nodes.x].pos,craft.nodes[o.nodes.y].pos);
             } break;
     }
 }

@@ -65,10 +65,10 @@ void drawTruss_mesh( Mesh::Builder& mesh, const Truss& truss, bool bColor, float
  * @param girders array of SpaceCrafting::Girder objects on which the plate is attached
  */
 void drawPlate_mesh( Mesh::Builder& mesh, const Plate& o, const Node* nodes, const Girder* girders ){
-    Vec3f p00=(Vec3f)nodes[ girders[o.g1].p0 ].pos;
-    Vec3f p01=(Vec3f)nodes[ girders[o.g1].p1 ].pos;
-    Vec3f p10=(Vec3f)nodes[ girders[o.g2].p0 ].pos;
-    Vec3f p11=(Vec3f)nodes[ girders[o.g2].p1 ].pos;
+    Vec3f p00=(Vec3f)nodes[ girders[o.g1].nodes.x ].pos;
+    Vec3f p01=(Vec3f)nodes[ girders[o.g1].nodes.y ].pos;
+    Vec3f p10=(Vec3f)nodes[ girders[o.g2].nodes.x ].pos;
+    Vec3f p11=(Vec3f)nodes[ girders[o.g2].nodes.y ].pos;
     Vec3f d;
     d = p01-p00; p01=p00+d*o.g1span.x;  p00.add_mul( d,o.g1span.y);
     d = p11-p10; p11=p10+d*o.g2span.x;  p10.add_mul( d,o.g2span.y);
@@ -86,8 +86,8 @@ void drawPlate_mesh( Mesh::Builder& mesh, const Plate& o, const Node* nodes, con
  */
 void drawPlateContour_mesh( Mesh::Builder& mesh,  const Plate& o, const Node* nodes, const Girder* girders, bool filled ){
     Quad3d qd;
-    qd.l1.fromSubLine( nodes[ girders[o.g1].p0 ].pos, nodes[ girders[o.g1].p1 ].pos, o.g1span.x, o.g1span.y );
-    qd.l2.fromSubLine( nodes[ girders[o.g2].p0 ].pos, nodes[ girders[o.g2].p1 ].pos, o.g2span.x, o.g2span.y );
+    qd.l1.fromSubLine( nodes[ girders[o.g1].nodes.x ].pos, nodes[ girders[o.g1].nodes.y ].pos, o.g1span.x, o.g1span.y );
+    qd.l2.fromSubLine( nodes[ girders[o.g2].nodes.x ].pos, nodes[ girders[o.g2].nodes.y ].pos, o.g2span.x, o.g2span.y );
     //printf( );
     //Draw3D::drawQuad(qd, filled);
     mesh.addQuad( (Vec3f)qd.p00, (Vec3f)qd.p01, (Vec3f)qd.p10, (Vec3f)qd.p11 );
@@ -117,8 +117,8 @@ int drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, Mesh::Builder& mesh, int 
     }
     if(!bColor) mesh.penColor = (Vec3f){0.2,0.2,0.2};
     for( const Rope& rp : spaceCraft.ropes ){
-        Vec3f p1=(Vec3f)nodes[rp.p0].pos;
-        Vec3f p2=(Vec3f)nodes[rp.p1].pos;
+        Vec3f p1=(Vec3f)nodes[rp.nodes.x].pos;
+        Vec3f p2=(Vec3f)nodes[rp.nodes.y].pos;
         if(iLOD==0){
             mesh.newSub( Mesh::LINES ); // toDo
             if(line_width>0){
@@ -133,16 +133,16 @@ int drawSpaceCraft_Mesh( const SpaceCraft& spaceCraft, Mesh::Builder& mesh, int 
     // --- Girders
     if(!bColor) mesh.penColor = (Vec3f){0.1,0.1,0.5};
     for( const Girder& gd : spaceCraft.girders ){
-        Vec3f p0=(Vec3f)nodes[gd.p0].pos;
-        Vec3f p1=(Vec3f)nodes[gd.p1].pos;
+        Vec3f p0=(Vec3f)nodes[gd.nodes.x].pos;
+        Vec3f p1=(Vec3f)nodes[gd.nodes.y].pos;
         if(iLOD==0){
             mesh.newSub( Mesh::LINES ); // toDo
             mesh.addLine( p0, p1 );
         }
     };
     for( const Gun& o : spaceCraft.guns ){
-        Vec3f p0=(Vec3f)nodes[ girders[o.suppId].p0 ].pos;
-        Vec3f p1=(Vec3f)nodes[ girders[o.suppId].p1 ].pos;
+        Vec3f p0=(Vec3f)nodes[ girders[o.suppId].nodes.x ].pos;
+        Vec3f p1=(Vec3f)nodes[ girders[o.suppId].nodes.y ].pos;
         Vec3f d;
         d = p1-p0; p1=p0+d*o.suppSpan.x;  p0.add_mul( d,o.suppSpan.y);
         if(iLOD==0){

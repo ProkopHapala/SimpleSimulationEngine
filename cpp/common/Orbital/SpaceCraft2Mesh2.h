@@ -269,12 +269,12 @@ void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft ){
     }
     for(Rope o: craft.ropes){
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
-        mesh.rope( o.p0,o.p1, o.face_mat );
+        mesh.rope( o.nodes.x,o.nodes.y, o.face_mat );
     }
     for(Girder o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
-        girder1( mesh, craft.nodes[o.p0].pos, craft.nodes[o.p1].pos, o.up, o.nseg, o.wh.a, o.st );
-        girder1_caps( mesh, o.p0, o.p1, o.st.x );
+        girder1( mesh, craft.nodes[o.nodes.x].pos, craft.nodes[o.nodes.y].pos, o.up, o.nseg, o.wh.a, o.st );
+        girder1_caps( mesh, o.nodes.x, o.nodes.y, o.st.x );
         Quat4i& b = mesh.blocks.back();
         o.poitRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};

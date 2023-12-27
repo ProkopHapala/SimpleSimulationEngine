@@ -128,10 +128,10 @@ void drawTruss( const Truss& truss, bool bColor ){
 };
 
 void drawPlate( const Plate& o, const Node* nodes, const Girder* girders ){
-    Vec3f p00=(Vec3f)nodes[ girders[o.g1].p0 ].pos;
-    Vec3f p01=(Vec3f)nodes[ girders[o.g1].p1 ].pos;
-    Vec3f p10=(Vec3f)nodes[ girders[o.g2].p0 ].pos;
-    Vec3f p11=(Vec3f)nodes[ girders[o.g2].p1 ].pos;
+    Vec3f p00=(Vec3f)nodes[ girders[o.g1].nodes.x ].pos;
+    Vec3f p01=(Vec3f)nodes[ girders[o.g1].nodes.y ].pos;
+    Vec3f p10=(Vec3f)nodes[ girders[o.g2].nodes.x ].pos;
+    Vec3f p11=(Vec3f)nodes[ girders[o.g2].nodes.y ].pos;
     Vec3f d;
     d = p01-p00; p01=p00+d*o.g1span.x;  p00.add_mul( d,o.g1span.y);
     d = p11-p10; p11=p10+d*o.g2span.x;  p10.add_mul( d,o.g2span.y);
@@ -150,8 +150,8 @@ void drawPlate( const Plate& o, const Node* nodes, const Girder* girders ){
 
 void drawPlateContour( const Plate& o, const Node* nodes, const Girder* girders, bool filled ){
     Quad3d qd;
-    qd.l1.fromSubLine( nodes[ girders[o.g1].p0 ].pos, nodes[ girders[o.g1].p1 ].pos, o.g1span.x, o.g1span.y );
-    qd.l2.fromSubLine( nodes[ girders[o.g2].p0 ].pos, nodes[ girders[o.g2].p1 ].pos, o.g2span.x, o.g2span.y );
+    qd.l1.fromSubLine( nodes[ girders[o.g1].nodes.x ].pos, nodes[ girders[o.g1].nodes.y ].pos, o.g1span.x, o.g1span.y );
+    qd.l2.fromSubLine( nodes[ girders[o.g2].nodes.x ].pos, nodes[ girders[o.g2].nodes.y ].pos, o.g2span.x, o.g2span.y );
     //printf( );
     Draw3D::drawQuad(qd, filled);
     //mesh.addQuad( qd.p00, qd.p01, qd.p10, qd.p11 );
@@ -168,15 +168,15 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     glLineWidth(0.5);
     if(!bColor)glColor3f(0.2,0.2,0.2);
     for( const Rope& rp : spaceCraft.ropes ){
-        Vec3f p0=(Vec3f)nodes[rp.p0].pos;
-        Vec3f p1=(Vec3f)nodes[rp.p1].pos;
+        Vec3f p0=(Vec3f)nodes[rp.nodes.x].pos;
+        Vec3f p1=(Vec3f)nodes[rp.nodes.y].pos;
         glEnable( GL_BLEND );
         glEnable(GL_DEPTH_TEST);
         if(iLOD==0) Draw3D::drawLine( p0,p1 );
         // if(bText){
         //     sprintf( str, "rope_%03i", rp.id );
         //     Vec3f d = p1-p0; d.normalize();
-        //     //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
+        //     //Draw3D::drawText( str, nodes[rp.nodes.x].pos+nodes[rp.nodes.y].pos, fontTex, 10.1, 0 );
         //     Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
         //     //Draw3D::drawText3D( str, (p0+p1)*0.5, (Vec3f){1.0,0.0,0.0}, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
         // }
@@ -199,8 +199,8 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     if(bColor)glColor3f(0.1,0.1,0.5);
     for( const Girder& gd : spaceCraft.girders ){
-        Vec3f p0=(Vec3f)nodes[gd.p0].pos;
-        Vec3f p1=(Vec3f)nodes[gd.p1].pos;
+        Vec3f p0=(Vec3f)nodes[gd.nodes.x].pos;
+        Vec3f p1=(Vec3f)nodes[gd.nodes.y].pos;
         glEnable( GL_BLEND );
         glEnable(GL_DEPTH_TEST);
         if(iLOD==0) Draw3D::drawLine( p0,p1 );
@@ -209,7 +209,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
         if(bText){
             sprintf( str, "Girder_%03i", gd.id );
             Vec3f d = p1-p0; d.normalize();
-            //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
+            //Draw3D::drawText( str, nodes[rp.nodes.x].pos+nodes[rp.nodes.y].pos, fontTex, 10.1, 0 );
             Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
         }
         */
@@ -217,8 +217,8 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     glLineWidth(5);
     if(bColor)glColor3f(0.6,0.1,0.1);
     for( const Gun& o : spaceCraft.guns ){
-        Vec3f p0=(Vec3f)nodes[ girders[o.suppId].p0 ].pos;
-        Vec3f p1=(Vec3f)nodes[ girders[o.suppId].p1 ].pos;
+        Vec3f p0=(Vec3f)nodes[ girders[o.suppId].nodes.x ].pos;
+        Vec3f p1=(Vec3f)nodes[ girders[o.suppId].nodes.y ].pos;
         Vec3f d;
         d = p1-p0; p1=p0+d*o.suppSpan.x;  p0.add_mul( d,o.suppSpan.y);
         if(iLOD==0) Draw3D::drawLine( p0,p1 );
@@ -241,8 +241,8 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
     //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     if(bColor)glColor3f(0.1,0.1,0.5);
     for( const Ring& o : spaceCraft.rings ){
-        //Vec3f p0=(Vec3f)nodes[o.p0].pos;
-        //Vec3f p1=(Vec3f)nodes[o.p1].pos;
+        //Vec3f p0=(Vec3f)nodes[o.nodes.x].pos;
+        //Vec3f p1=(Vec3f)nodes[o.nodes.y].pos;
         //Vec3f uax = (p1-p0); uax.normalize();
         glEnable( GL_BLEND );
         glEnable(GL_DEPTH_TEST);
@@ -251,7 +251,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
         //Draw3D::drawCylinderStrip( 6, 1.0,1.0, p0, p1 );
         //sprintf( str, "Girder_%03i", gd.id );
         //Vec3f d = p1-p0; d.normalize();
-        //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
+        //Draw3D::drawText( str, nodes[rp.nodes.x].pos+nodes[rp.nodes.y].pos, fontTex, 10.1, 0 );
         //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
     };
     // --- Radiators
@@ -283,7 +283,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
         Draw3D::drawCapsula( (Vec3f)(o.pose.pos+o.pose.rot.c*(o.span.c*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.span.c*-0.5)), o.span.a, o.span.b, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
         //sprintf( str, "Radiator_%03i", gd.id );
         //Vec3f d = p1-p0; d.normalize();
-        //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
+        //Draw3D::drawText( str, nodes[rp.nodes.x].pos+nodes[rp.nodes.y].pos, fontTex, 10.1, 0 );
         //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
     };
     // --- Thrusters
@@ -318,7 +318,7 @@ void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bC
         //Draw3D::drawShere( (Vec3f)(o.pose.pos+o.pose.rot.c*(o.span.c*0.5)), Vec3f(o.pose.pos+o.pose.rot.c*(o.span.c*-0.5)), o.span.a, o.span.b, M_PI*0.5, M_PI*0.5, M_PI*0.1, 16, true );
         //sprintf( str, "Radiator_%03i", gd.id );
         //Vec3f d = p1-p0; d.normalize();
-        //Draw3D::drawText( str, nodes[rp.p0].pos+nodes[rp.p1].pos, fontTex, 10.1, 0 );
+        //Draw3D::drawText( str, nodes[rp.nodes.x].pos+nodes[rp.nodes.y].pos, fontTex, 10.1, 0 );
         //Draw3D::drawText3D( str, (p0+p1)*0.5, d, (Vec3f){0.0,1.0,0.0},  fontTex, 3.0, 0 );
         glPopMatrix();
     };

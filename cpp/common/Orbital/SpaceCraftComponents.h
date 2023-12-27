@@ -141,14 +141,6 @@ class GunType : public CatalogItem { public:
 
 // ==== Components
 
-class Node{ public:
-    Vec3d pos;
-    std::vector<Vec2i> components; // {kind,index}  // TODO: is this still valid ?
-    int id;
-    //Node(Vec3d pos):pos(pos){};
-
-    virtual void print(){ printf("Node(id=%i) kidn=%i face_mat=%i \n", id, pos.x,pos.y,pos.z ); };
-};
 
 class ShipComponent{ public:
     int    id;
@@ -165,6 +157,101 @@ class ShipComponent{ public:
 
     virtual void print(){ printf("ShipComponent(id=%i) kidn=%i face_mat=%i \n", id, kind, face_mat ); };
 };
+
+
+//class GirderType : public CatalogItem { public:
+//    int mseg;
+//    Vec3d wh;
+//};
+
+
+/*
+class NodeLinker : public ShipComponent { public:
+    int p0,p1;
+    double length;
+    
+    virtual void print() override { printf("NodeLinker(id=%i) between(%i,%i) L=%g \n", id, p0,p1, length ); };
+    void ray( const Vec3d& ro, const Vec3d& rd ){}
+};
+*/
+
+class StructuralComponent : public ShipComponent { public:
+    Quat4i nodes;
+    //double length;
+    virtual void print() override { printf("StructuralComponent(id=%i) nodes(%i,%i,%i,%i) \n", id, nodes.x,nodes.y,nodes.z,nodes.w ); };
+    void ray( const Vec3d& ro, const Vec3d& rd ){}
+};
+
+class Node{ public:
+    Vec3d pos;
+    //std::vector<Vec2i> components; // {kind,index}  // TODO: is this still valid ?
+    int id;
+    StructuralComponent* boundTo=0; // node can be bound to a girder, rope or ring. if boundTo==0 then node is free in space
+    Vec2i along;              // index of 
+    //Node(Vec3d pos):pos(pos){};
+
+    virtual void print(){ printf("Node(id=%i) kidn=%i face_mat=%i \n", id, pos.x,pos.y,pos.z ); };
+};
+class NodeLinker : public StructuralComponent { public:
+    double length;
+    virtual void print() override { printf("NodeLinker(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
+    void ray( const Vec3d& ro, const Vec3d& rd ){}
+};
+
+class Girder : public NodeLinker { public:
+    //int p1; // anchor node; p0 inherate
+    //double length;
+    int nseg;
+    int mseg;
+    Vec2d wh;  // [m] width and height
+    Vec3d up;
+    Quat4i st;
+    //double SPull,SPush;
+    //double kPull,kPush;
+    //Material * material;
+    //Vec2i poitRange;  // index of start and end in Truss
+    //Vec2i stickRange; // --,,---
+    //GirderType * type = NULL;
+    
+    virtual void print() override {
+        printf( "Girder(%i) ps(%i,%i) up(%g,%g,%g) nm(%i,%i) wh(%g,%g) st(%i,%i,%i,%i)\n", id, nodes.x, nodes.y, up.x, up.y, up.z, nseg, mseg, wh.x, wh.y, st.x,st.y,st.z,st.w );
+    }
+
+};
+
+//class Ring : public NodeLinker { public:
+class Ring : public StructuralComponent { public:
+    //int p1; // anchor node; p0 inherate
+    //double length;
+    BodyPose pose;
+    int nseg;
+    double R;
+    Vec2d wh;
+    Quat4i st;
+    //Material * material;
+    //Vec2i poitRange;  // index of start and end in Truss
+    //Vec2i stickRange; // --,,---
+    //GirderType * type = NULL;
+
+    virtual void print() override {
+        printf( "Ring(%i) n(%i) pos(%g,%g,%g) rot(%g,%g,%g)(%g,%g,%g)(%g,%g,%g) R=%g wh(%g,%g) st(%i,%i,%i,%i)\n", id, nseg,
+        pose.pos.x,   pose.pos.y,   pose.pos.z,
+        pose.rot.a.x, pose.rot.a.y, pose.rot.a.z,
+        pose.rot.b.x, pose.rot.b.y, pose.rot.b.z,
+        pose.rot.c.x, pose.rot.c.y, pose.rot.c.z,
+        R, wh.x, wh.y, st.x,st.y,st.z,st.w );
+    }
+
+};
+
+class Rope : public NodeLinker { public:
+    double thick;
+    int nseg;
+    //Material * material;
+
+    virtual void print() override { printf("Rope(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
+};
+
 
 class Modul: public ShipComponent { public:
     BodyPose pose;
@@ -198,76 +285,6 @@ class Balloon : public Modul { public:
 class Rock : public Modul { public:
     virtual void print() override { printf("Rock(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); };
 
-};
-
-//class GirderType : public CatalogItem { public:
-//    int mseg;
-//    Vec3d wh;
-//};
-
-
-class NodeLinker : public ShipComponent { public:
-    int p0,p1;
-    double length;
-
-    virtual void print() override { printf("NodeLinker(id=%i) between(%i,%i) L=%g \n", id, p0,p1, length ); };
-
-    void ray( const Vec3d& ro, const Vec3d& rd ){
-
-    }
-};
-
-class Girder : public NodeLinker { public:
-    //int p1; // anchor node; p0 inherate
-    //double length;
-    int nseg;
-    int mseg;
-    Vec2d wh;  // [m] width and height
-    Vec3d up;
-    Quat4i st;
-    //double SPull,SPush;
-    //double kPull,kPush;
-    //Material * material;
-    //Vec2i poitRange;  // index of start and end in Truss
-    //Vec2i stickRange; // --,,---
-    //GirderType * type = NULL;
-    
-    virtual void print() override {
-        printf( "Girder(%i) ps(%i,%i) up(%g,%g,%g) nm(%i,%i) wh(%g,%g) st(%i,%i,%i,%i)\n", id, p0, p1, up.x, up.y, up.z, nseg, mseg, wh.x, wh.y, st.x,st.y,st.z,st.w );
-    }
-
-};
-
-//class Ring : public NodeLinker { public:
-class Ring : public ShipComponent { public:
-    //int p1; // anchor node; p0 inherate
-    //double length;
-    BodyPose pose;
-    int nseg;
-    double R;
-    Vec2d wh;
-    Quat4i st;
-    //Material * material;
-    //Vec2i poitRange;  // index of start and end in Truss
-    //Vec2i stickRange; // --,,---
-    //GirderType * type = NULL;
-
-    virtual void print() override {
-        printf( "Ring(%i) n(%i) pos(%g,%g,%g) rot(%g,%g,%g)(%g,%g,%g)(%g,%g,%g) R=%g wh(%g,%g) st(%i,%i,%i,%i)\n", id, nseg,
-        pose.pos.x,   pose.pos.y,   pose.pos.z,
-        pose.rot.a.x, pose.rot.a.y, pose.rot.a.z,
-        pose.rot.b.x, pose.rot.b.y, pose.rot.b.z,
-        pose.rot.c.x, pose.rot.c.y, pose.rot.c.z,
-        R, wh.x, wh.y, st.x,st.y,st.z,st.w );
-    }
-
-};
-
-class Rope : public NodeLinker { public:
-    double thick;
-    //Material * material;
-
-    virtual void print() override { printf("Rope(id=%i) between(%i,%i) L=%g \n", id, p0,p1, length ); };
 };
 
 class Pipe : public ShipComponent { public:
