@@ -158,6 +158,46 @@ void drawPlateContour( const Plate& o, const Node* nodes, const Girder* girders,
     //Draw3D::drawQuad_bare();
 }
 
+int drawSpaceCraft_sliderPaths( const SpaceCraft& craft, const Quat4f* ps, float sz=10 ){
+    //Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
+    int n = craft.sliders.size();
+    for(int i=0; i<n; i++){
+        const Slider2& o = craft.sliders[i];
+        Draw3D::drawPointCross( ps[o.ifix].f, sz );
+        Draw3D::drawLineStrip( o.path.n, o.path.ps, ps, o.path.closed );
+    }
+    return n;
+}
+
+int drawPointRange( int n, Vec2i prange, int byN, int off, Vec2d span, const Quat4f* ps ){
+    //printf( "drawPointRange(n=%i prange=%i byN=%i off=%i span(%g,%g))\n", n, prange.x, prange.y, byN, off, span.x, span.y );
+    int i0 = prange.x;
+    int np = (prange.y - prange.x)/byN;
+    //double d = (span.y-span.x)/n;
+    double step = 1./(n-1);
+    glBegin(GL_POINTS);
+    for(int i=0;i<n; i++){
+        double c = i*step;
+        int ip = prange.x + off + byN*(int)( ( span.x*(1-c) + span.y*c )*np  + 0.5 );
+        //int ip = i0 + off + byN*i;
+        //printf( "plateOnGriders()[%i] (%i/%i) (%i/%i)\n", i, i1,n1, i2,n2 );
+        Draw3D::vertex( ps[ip].f );      
+    }
+    /*
+    for(int i=0;i<np; i++){
+        int ip = i0 + i*byN + off;
+        //printf( "plateOnGriders()[%i] (%i/%i) (%i/%i)\n", i, i1,n1, i2,n2 );
+        if( (i>(span.x*np))&&(i<(span.y*np)) ){
+            Draw3D::vertex( ps[ip].f );
+        }      
+    }
+    */
+    //return ibloc;
+    glEnd();
+    return 0;
+}
+
+
 void drawSpaceCraft( const SpaceCraft& spaceCraft, int iLOD, bool bText, bool bColor ){
     //nodes,ropes;girders;thrustes;guns;radiators;shields;tanks;pipes;
     //for( None nd : nodes ){};

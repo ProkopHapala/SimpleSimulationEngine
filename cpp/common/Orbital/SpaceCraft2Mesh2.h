@@ -16,10 +16,54 @@
 #include "MeshBuilder2.h"
 //#include "MeshBuilderDraw.h"
 #include "SpaceCraft.h"
+#include "OrbSim.h"
 
 using namespace SpaceCrafting;
 
 namespace Mesh{
+
+void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
+    int np = mesh.verts.size();
+    int nb = mesh.edges.size();
+    int* nneighs = new int[ np ];
+    printf( "exportSim() np=%i\n", np );
+    // find max number of neighbors
+    for(int i=0; i<np; i++){ nneighs[i]=0; }
+    for(int i=0; i<nb; i++){ const Vec2i& e = mesh.edges[i].lo; nneighs[e.a]++; nneighs[e.b]++; }
+    int nneighmax = 0;
+    for(int i=0; i<np; i++){ int ni=nneighs[i]; if(ni>nneighmax)nneighmax=ni; }
+    printf( "exportSim() nneighmax %i \n", nneighmax );
+    sim.recalloc(np, nneighmax, nb );
+    // fill neighs
+
+    for(int i=0; i<np; i++){ sim.points[i].f=(Vec3f)mesh.verts[i].pos; sim.points[i].e=0.0f; }
+    for(int i=0; i<np; i++){ nneighs[i]=0;   }
+    for(int i=0; i<sim.nNeighTot; i++){ sim.neighs[i]=-1; }
+    for(int i=0; i<nb; i++){
+        const Quat4i& e = mesh.edges[i];
+        int ia = e.x*sim.nNeighMax + nneighs[e.x];
+        int ib = e.y*sim.nNeighMax + nneighs[e.y];
+        sim.neighs[ ia ] = e.y; 
+        sim.neighs[ ib ] = e.x;
+        const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
+        // l0, kPress, kPull, damping
+        double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
+        double mass = l0*mat.linearDensity;
+        sim.points[e.x].w += mass*0.5;
+        sim.points[e.y].w += mass*0.5;
+        Quat4f param = (Quat4f){ l0, mat.Kpush, mat.Kpull, mat.damping }; 
+        sim.params[ ia ] = param;
+        sim.params[ ib ] = param;
+        nneighs[e.x]++; nneighs[e.y]++;
+        if(sim.bonds){
+            sim.bonds[i]     = *(int2*)&e.lo;
+            sim.l0s[i]       =  l0;
+            sim.maxStrain[i] = (Vec2f){ (float)(mat.Spull/mat.Kpull), float(mat.Spush/mat.Kpush) };
+            sim.strain[i] = 0;
+        }
+    }
+    delete [] nneighs;
+}
 
 /**
  * Creates a girder in the truss structure.
@@ -34,7 +78,7 @@ namespace Mesh{
 int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes ){
     // ToDo: ad p0,p1 etc. - maybe we should rather specify indexes of existing verts rather than positions of new verts ?
     //                       No. this is done in girder1_caps
-    printf( "Mesh::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) stickTypes(%i,%i,%i,%i)\n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
+    //printf( "Mesh::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) stickTypes(%i,%i,%i,%i)\n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
     Vec3d dir = p1-p0;
     double length = dir.normalize();
     up.makeOrthoU(dir);
@@ -73,6 +117,39 @@ int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, 
     return i00;
 }
 
+
+
+/* @brief : plot planar fill between two strips of vertexes (e.g. between two girders or ropes)
+*
+*/
+// int plateOnGriders( Builder2& mesh, Vec2i ns, Vec2i iblocks, Vec2i byN, Vec2i offs, Vec2d span1, Vec2d span2, Quat4i stickTypes ){
+int plateOnGriders( Builder2& mesh, Vec2i ns, Vec2i prange1, Vec2i prange2, Vec2i byN, Vec2i offs, Vec2d span1, Vec2d span2, Quat4i stickTypes ){
+    //printf( "plateOnGriders() ns(%i,%i) iblocks(%i,%i) byN(%i,%i) offs(%i,%i) span1(%6.3f,%6.3f) span2(%6.3f,%6.3f) \n", ns.x,ns.y, iblocks.x,iblocks.y, byN.x,byN.y,  offs.x,offs.y, span1.x,span1.y,  span2.x,span2.y );
+    int n1   = (prange1.y - prange1.x)/byN.x;
+    int n2   = (prange2.y - prange2.x)/byN.y;
+    double step = 1.0/(ns.x-1);
+    if(offs.x<0){
+        int i0 = prange1.x + byN.x*(n1/2);
+        offs.x=mesh.findClosestVert( mesh.verts[ prange2.x + byN.y*(n2/2) ].pos,i0,byN.x);
+    }
+    if(offs.y<0){
+        int i0 = prange2.x + byN.y*(n2/2);
+        offs.y=mesh.findClosestVert( mesh.verts[ prange1.x + byN.x*(n1/2) ].pos,i0,byN.y);
+    }
+    for(int i=0;i<ns.x; i++){
+        double c = i*step;
+        int i1 = prange1.x + offs.x + byN.x*(int)(  ( span1.x*(1-c)+span1.y*c)* n1 + 0.5 );
+        int i2 = prange2.x + offs.y + byN.y*(int)(  ( span2.x*(1-c)+span2.y*c)* n2 + 0.5 );
+        //printf( "plateOnGriders()[%i] (%i/%i) (%i/%i)\n", i, i1,n1, i2,n2 );
+        mesh.edge( i1,i2,stickTypes.x );
+    }
+    //return ibloc;
+    return 0;
+}
+
+
+
+
 int girder1_caps( Builder2& mesh, int ip0, int ip1, int kind ){
     //printf( "Truss::girder1_caps() ip0=%i ip1=%i ipbeg=%i ipend=%i \n", ip0, ip1, ipbeg, ipend );
     // it is expected that we call this immediately after girder1 - so we know the indexes of the first and last point of the girder block
@@ -106,8 +183,8 @@ int girder1( Builder2& mesh, int ip0, int ip1, Vec3d up, int n, double width, Qu
  * @param width The width of the wheel rim.
  * @return The index of the created block containing the starting indexes of the points and edges
  */
-int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, double width, Quat4i stickTypes ){
-    printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) stickTypes(%i,%i,%i,%i) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
+int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, Vec2d wh, Quat4i stickTypes ){
+    //printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) stickTypes(%i,%i,%i,%i) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
     //int kind_long   = 0;
     //int kind_perp   = 1;
     //int kind_zigIn  = 2;
@@ -131,15 +208,15 @@ int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, double width, Qu
         int i01=i00+1; int i10=i00+2; int i11=i00+3;
 
         Vec3d R = dir*rot.a + side*rot.b;
-        mesh.vert( p0 + R*r );
-        //mesh.vert( p0 + R*(r+width) );
-        mesh.vert( p0 + R*(r-width) );
+        //mesh.vert( p0 + R*r );
+        mesh.vert( p0 + R*(r+wh.x) );
+        mesh.vert( p0 + R*(r-wh.x) );
         // points.push_back( p0 +  R*(r-width) );
         // points.push_back( p0 +  R*(r+width) );
         rot.mul_cmplx(drot);
         R       = dir*rot.a + side*rot.b;
-        mesh.vert( p0 + ax*-width + R*r );
-        mesh.vert( p0 + ax*-width + R*r );
+        mesh.vert( p0 + ax*+wh.y + R*r );
+        mesh.vert( p0 + ax*-wh.y + R*r );
         // points.push_back( p0 + ax*-width + R*r );
         // points.push_back( p0 + ax*+width + R*r );
         rot.mul_cmplx(drot);
@@ -209,7 +286,7 @@ int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, double width, Qu
  */
 int panel( Builder2& mesh, Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width, Quat4i stickTypes ){
     // ToDo: ad p00,p01,p10,p11 etc. - maybe we should rather specify indexes of existing verts rather than positions of new verts ?
-    printf( "Mesh::panel() n(%i,%i) w=%g p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g) \n", n.x,n.y, p00.x,p00.y,p00.z, p01.x,p01.y,p01.z, p10.x,p10.y,p10.z, p11.x,p11.y,p11.z );
+    //printf( "Mesh::panel() n(%i,%i) w=%g p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g) \n", n.x,n.y, p00.x,p00.y,p00.z, p01.x,p01.y,p01.z, p10.x,p10.y,p10.z, p11.x,p11.y,p11.z );
     //int kind_long   = 0;
     //int kind_perp   = 1;
     //int kind_zigIn  = 2;
@@ -259,36 +336,75 @@ int panel( Builder2& mesh, Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, 
     return i0;
 }
 
-void BuildCraft_truss( Builder2& mesh, const SpaceCraft& craft ){
+void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     printf( "BuildCraft_truss() \n" );
+    if(max_size>0){ mesh.max_size=max_size; };
     int i=0;
     mesh.block();
     int ip0 = mesh.verts.size();
-    for(Node o: craft.nodes){
+    for(Node& o: craft.nodes){
         mesh.vert( o.pos );
     }
+    /*
     for(Rope o: craft.ropes){
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
         mesh.rope( o.nodes.x,o.nodes.y, o.face_mat );
     }
-    for(Girder o: craft.girders){
+    */
+    for(Girder& o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
         girder1( mesh, craft.nodes[o.nodes.x].pos, craft.nodes[o.nodes.y].pos, o.up, o.nseg, o.wh.a, o.st );
         girder1_caps( mesh, o.nodes.x, o.nodes.y, o.st.x );
         Quat4i& b = mesh.blocks.back();
         o.poitRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
+        //printf( "BuildCraft_truss() girder.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
         i++;
     }
+    
     i=0;
-    for(Ring o: craft.rings){
+    for(Ring& o: craft.rings){
+        mesh.block();
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
-        wheel( mesh, o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh.a, o.st );
+        wheel( mesh, o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh, o.st );
         Quat4i& b = mesh.blocks.back();
         o.poitRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
+        //printf( "BuildCraft_truss() ring.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
         i++;
     }
+    
+    // --- Radiators
+    printf("BuildCraft_truss().radiators\n");
+    for(Radiator& o : craft.radiators ){
+        mesh.block();
+        o.print();
+        /*
+        Vec3d p00 = craft.pointOnGirder(o.g1, o.g1span.x);
+        Vec3d p01 = craft.pointOnGirder(o.g1, o.g1span.y);
+        Vec3d p10 = craft.pointOnGirder(o.g2, o.g2span.x);
+        Vec3d p11 = craft.pointOnGirder(o.g2, o.g2span.y);
+        printf( "p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g)\n", p00.x,p00.y,p00.z,  p01.x,p01.y,p01.z,  p10.x,p10.y,p10.z,  p11.x,p11.y,p11.z );
+        mesh.plate( p00,p01,p10,p11,{0,1,2,0}, {-1,-1} );
+        */
+        const Girder& g1 =craft.girders[o.g1];
+        const Girder& g2 =craft.girders[o.g2];
+        plateOnGriders( mesh, {10,1}, g1.poitRange, g2.poitRange, {4,4}, {-1,-1}, o.g1span, o.g2span, {0,1,2,3} );
+        //break;
+        Quat4i& b = mesh.blocks.back();
+        o.poitRange  = {b.x,(int)mesh.verts.size()};
+        o.stickRange = {b.y,(int)mesh.edges.size()};
+        //break;
+    };
+    // --- Shields
+    for( const Shield& o : craft.shields ){
+        //mesh.block();
+        //drawPlate_mesh(mesh, o, nodes.data(), girders.data() );
+    };
+
+
+
+    //int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 );
     /*
     // ToDo: Shields
     // ToDo: Radiators

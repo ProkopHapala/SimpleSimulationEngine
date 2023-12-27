@@ -129,7 +129,7 @@ void truss2SoftBody( const Truss& truss, BondType* bondTypes, SoftBody& body ){
 }
 
 void truss2ocl( const SpaceCraft& craft, const Truss& truss, OCL_Orb& ocl ){
-     int * nneighs = new int[ truss.points.size() ];
+    int * nneighs = new int[ truss.points.size() ];
 
     // find max number of neighbors
     for(int i=0; i<truss.points.size(); i++){ nneighs[i]=0; }

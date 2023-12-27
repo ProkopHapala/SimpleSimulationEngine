@@ -20,6 +20,8 @@ int verbosity = 0;
 #include "quaternion.h"
 #include "raytrace.h"
 
+#include "testUtils.h"
+
 #include "Truss.h"
 #include "SpaceCraft.h"
 #include "SpaceCraftDraw.h"
@@ -33,11 +35,12 @@ int verbosity = 0;
 
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
+
 #include "IO_utils.h"
-#include "testUtils.h"
 
 #include "EditSpaceCraft.h"
 
+#include "OrbSim.h"
 #include "TriangleRayTracer.h"
 #include "Radiosity.h"
 
@@ -46,6 +49,14 @@ int verbosity = 0;
 #include "spaceCraftEditorUtils.h"
 
 #include "argparse.h"
+
+
+
+// TODO:
+// Collision Detection:
+//   Try Collisions using [kBoxes.h]    tested in    [test_BoxAndSweep.cpp]
+// 
+
 
 
 // ======================  Global Variables & Declarations
@@ -57,9 +68,30 @@ enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.c
 Truss      truss;
 
 Mesh::Builder2 mesh2;
+OrbSim_f sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 //char str[8096];
 double elementSize  = 5.;
+
+
+
+// Render 
+
+void renderTruss(int nb, int2* bonds, Quat4f* ps, float* strain=0, float sc=1.0 ){
+    glBegin(GL_LINES);
+    for(int i=0; i<nb; i++ ){
+        //printf( "renderTruss()[%i] \n", i );
+        int2 b =  bonds[i];
+        if(strain){
+            float f=strain[i]*sc;
+            if(f>0){  Draw3D::color(Vec3f{f,0,0}); }else{ Draw3D::color(Vec3f{0,0,f}); };
+        } 
+        Draw3D::vertex( ps[b.x].f );
+        Draw3D::vertex( ps[b.y].f );
+        //printf( "renderTruss[%i](%i,%i) p(%g,%g,%g) p(%g,%g,%g)\n", i, b.x, b.y,  ps[b.x].f.x,ps[b.x].f.y,ps[b.x].f.z,   ps[b.y].f.x,ps[b.y].f.y,ps[b.y].f.z );
+    }
+    glEnd();
+}
 
 // ======================  Free Functions
 
@@ -84,11 +116,33 @@ void renderShip(){
     mesh.write_obj( "ship.obj" );
     */
 
+    //mesh2.max_size = 30.0;
     mesh2.clear();
-    BuildCraft_truss( mesh2, *theSpaceCraft );
+    BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
     mesh2.printSizes();
+    exportSim( sim, mesh2, workshop );
+    //sim.printAllNeighs();
+    //theSpaceCraft->printAll_girders();
+    theSpaceCraft->updateSliderPaths();
+    
+    glEnable(GL_LIGHTING);
+    glEnable     ( GL_LIGHT0           );
+    glEnable     ( GL_NORMALIZE        );
     Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
     
+    /*
+    Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
+    for(int i=0; i<theSpaceCraft->sliders.size(); i++){
+        const Slider2& o = theSpaceCraft->sliders[i];
+        Draw3D::drawLineStrip( o.path.n, o.path.ps, sim.points, o.path.closed );
+    }
+    */
+    
+    //Draw3D::color(Vec3f{1.0,0.,1.});
+    //for( const Node& o : theSpaceCraft->nodes ){ Draw3D::drawPointCross( o.pos, 5 ); }
+
+
+
 
     /*
     radiositySolver.clearTriangles();
@@ -282,8 +336,9 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
 SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     //Lua1.init();
-    fontTex     = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
-    GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    fontTex       = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    GUI_fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    Draw::fontTex = fontTex;
 
     plateGui  = (PlateGUI* )gui.addPanel( new PlateGUI ( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
     girderGui = (GirderGUI*)gui.addPanel( new GirderGUI( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
@@ -377,14 +432,20 @@ void SpaceCraftEditGUI::draw(){
     //printf( " ==== frame %i \n", frameCount );
     //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
     //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
-    glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-    //glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
+    //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+    glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	//glDisable(GL_DEPTH_TEST);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glColor3f(1.0,0.5,1.0);
-	if(glo_capsula) glCallList(glo_capsula);
+	//if(glo_capsula) glCallList(glo_capsula);
+
+    //Vec3f cam.rot.c;
+    //float lightPos   []{ 1.0f, -1.0f, 1.0f, 0.0f  };
+    glLightfv( GL_LIGHT0, GL_POSITION,  (float*)&cam.rot.c  );
+    //glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
 
 	/*
     // to make nice antialiased lines without supersampling buffer
@@ -407,8 +468,35 @@ void SpaceCraftEditGUI::draw(){
     }
     */
 
-    if(glo_truss) glCallList(glo_truss);
-    if(glo_ship ) glCallList(glo_ship);
+    glDisable(GL_LIGHTING);
+    glLineWidth(0.5);
+    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+    glLineWidth(3.0);
+    Draw3D::color( Vec3f{1.0,0.0,1.0} );
+    drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
+
+    
+    {
+        glPointSize(10);
+        const Radiator& o =  theSpaceCraft->radiators[0];
+        const Girder& g1  =  theSpaceCraft->girders[o.g1];
+        const Girder& g2  =  theSpaceCraft->girders[o.g2];
+        Draw3D::color(Vec3f{1.f,0.f,0.f}); drawPointRange( 10, g1.poitRange, 4, 0, o.g1span, sim.points );
+        Draw3D::color(Vec3f{0.f,0.f,1.f}); drawPointRange( 10, g2.poitRange, 4, 1, o.g2span, sim.points );
+    }
+
+    glDisable(GL_CULL_FACE);
+    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+
+    //if(glo_truss) glCallList(glo_truss);
+    //if(glo_ship ) glCallList(glo_ship);
+
+    //pointLabels( mesh.verts.size(), &mesh.verts[0].pos, 0.1, 0.0, fontTex, 10.0, 0 );
+    
+
+    Draw3D::color( Vec3f{0.0,0.0,1.0} );
+    //for(int i=0; i<mesh2.verts.size(); i++){  Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );}
+    
 
     /*
     if(ogl_asteroide){
@@ -421,7 +509,7 @@ void SpaceCraftEditGUI::draw(){
 
     //Mat3d camMat;
     //qCamera.toMatrix_T(camMat);
-    Draw3D::drawMatInPos( cam.rot, (Vec3f){0.0,0.0,0.0} );
+    //Draw3D::drawMatInPos( cam.rot, (Vec3f){0.0,0.0,0.0} );
 
     //printf( "%i\n", EDIT_MODE::vertex );
     if(picked>=0){
@@ -438,6 +526,9 @@ void SpaceCraftEditGUI::draw(){
     mouse_ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     //glColor3f(0.0f,0.0f,0.0f); drawTruss( truss.edges.size(), &truss.edges[0], &truss.points[0] );
     //glColor3f(1.0f,1.0f,1.0f); Draw3D::drawPoints( truss.points.size(), &truss.points[0], 0.1 );
+
+
+    
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
@@ -488,8 +579,11 @@ void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){
     //qCamera.toMatrix(camMat);
     if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -keyRotSpeed ); }
-	if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
-	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
+	//if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.dpitch(  keyRotSpeed ); }
+	//if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.dpitch( -keyRotSpeed ); }
+    if( keys[ SDL_SCANCODE_UP    ] ){ qCamera.roll(  keyRotSpeed ); }
+	if( keys[ SDL_SCANCODE_DOWN  ] ){ qCamera.roll( -keyRotSpeed ); }
+
     if( keys[ SDL_SCANCODE_W ] ){ cam.pos.add_mul( cam.rot.b, +0.05*zoom ); }
 	if( keys[ SDL_SCANCODE_S ] ){ cam.pos.add_mul( cam.rot.b, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_A ] ){ cam.pos.add_mul( cam.rot.a, -0.05*zoom );  }

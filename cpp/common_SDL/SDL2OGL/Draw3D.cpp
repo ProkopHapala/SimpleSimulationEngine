@@ -94,7 +94,7 @@ void vecsInPoss( int n, const Vec3d* vs, const Vec3d* ps, float sc ){
     glEnd();
 };
 
-void drawPolyLine( int n, Vec3d * ps, bool closed ){   // closed=false
+void drawPolyLine( int n, const Vec3d * ps, bool closed ){   // closed=false
     //printf("%i %i\n", n, closed );
     if(closed){ glBegin(GL_LINE_LOOP); }else{ glBegin(GL_LINE_STRIP); }
     for(int i=0; i<n; i++){
@@ -103,6 +103,20 @@ void drawPolyLine( int n, Vec3d * ps, bool closed ){   // closed=false
     };
     glEnd();
 };
+
+void drawLineStrip( int n, const int* inds, const Quat4f * ps, bool closed ){   // closed=false
+    //printf( "Draw3d::drawLineStrip(n=%i) \n", n );
+    if(closed){ glBegin(GL_LINE_LOOP); }else{ glBegin(GL_LINE_STRIP); }
+    for(int i=0; i<n; i++){ 
+        Vec3f p=ps[inds[i]].f;
+        //printf( "drawLineStrip[%i] ind=%i p(%g,%g,%g)\n", i, inds[i], p.x,p.y,p.z ); 
+        glVertex3d( p.x, p.y, p.z ); 
+    
+    };
+    glEnd();
+};
+
+
 
 void drawScale( const Vec3f& p1, const Vec3f& p2, const Vec3f& up, float tick, float sza, float szb ){
 	//glDisable (GL_LIGHTING);
@@ -1379,19 +1393,28 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
             }
             glEnd();
         }
+        
         if( mask & 2 ){ // lines
             glBegin(GL_LINES);
             for(int j=ob.y; j<b.y; j++){ 
                 Quat4i e = mesh.edges[j];
                 if(color_mode==1){ Draw::color_of_hash( e.w*446+161, clr ); color( clr); }
                 //printf( "drawMeshBuilder2() block[%i] edge[%i] typ=%i clr(%g,%g,%g) color_mode=%i\n", i, j, e.w, clr.x,clr.y,clr.z, color_mode );
-                vertex( mesh.verts[e.x].pos );
-                vertex( mesh.verts[e.y].pos );
+                Vec3f a = (Vec3f)mesh.verts[e.x].pos;
+                Vec3f b = (Vec3f)mesh.verts[e.y].pos;
+                vertex( a );
+                vertex( b );
+                //if(e.w>1000){ printf("edge(%i,%i|%i) a(%g,%g,%g) b(%g,%g,%g) \n", e.x, e.y, e.w,     a.x,a.y,a.z,  b.x,b.y,b.z ); };
             }
             glEnd();
         }
-        if( mask & 3 ){ // faces
+        
+        if( mask & 4 ){ // faces
             glBegin(GL_TRIANGLES);
+            if(bTwoSided){
+                glDisable(GL_CULL_FACE);
+                glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+            }
             for(int j=ob.z; j<b.z; j++){ 
                 Quat4i t = mesh.tris[j];
                 if(color_mode==1){ Draw::color_of_hash( t.w*446+161, clr ); color( clr); }
@@ -1399,21 +1422,55 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
                     Vec3f a = (Vec3f)mesh.verts[t.x].pos;
                     Vec3f b = (Vec3f)mesh.verts[t.y].pos;
                     Vec3f c = (Vec3f)mesh.verts[t.z].pos;
+                    //printf("flat_tri(%i,%i,%i|%i) a(%g,%g,%g) b(%g,%g,%g) c(%g,%g,%g) )\n", t.x, t.y, t.z, t.w,   a.x,a.y,a.z,  b.x,b.y,b.z, c.x,c.y,c.z );
                     Vec3f nor; nor.set_cross( a-b, b-c ); nor.normalize();
-                    vertex( a ); normal( nor );
+                    normal( nor );
+                    vertex( a ); //normal( nor );
+                    vertex( b ); //normal( nor );
+                    vertex( c ); //normal( nor );
+                    //normal( nor );
                 }else{
-                    vertex( mesh.verts[t.x].pos ); normal( mesh.verts[t.x].nor );
-                    vertex( mesh.verts[t.y].pos ); normal( mesh.verts[t.y].nor );
-                    vertex( mesh.verts[t.z].pos ); normal( mesh.verts[t.z].nor );
+                    normal( mesh.verts[t.x].nor ); vertex( mesh.verts[t.x].pos ); 
+                    normal( mesh.verts[t.y].nor ); vertex( mesh.verts[t.y].pos ); 
+                    normal( mesh.verts[t.z].nor ); vertex( mesh.verts[t.z].pos ); 
                 }
             }
             glEnd();
         }
+        
         ob=b;
     }
     return 0;
 }
 
+
+    void drawText( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend ){
+        glDisable    ( GL_LIGHTING   );
+        glDisable    ( GL_DEPTH_TEST );
+        glShadeModel ( GL_FLAT       );
+        glPushMatrix();
+            glTranslatef( pos.x, pos.y, pos.z );
+            //Draw::billboardCamProj( 1.0 );
+            Draw::billboardCamProj();
+            //Draw::drawText( str, fontTex, textSize, iend );
+            //Draw::drawText( str, fontTex, 100.0, iend ); 
+            //Draw::drawText( str, fontTex, 0.001, iend ); 
+            Draw::drawText( str, fontTex, textSize, iend ); 
+        glPopMatrix();
+	}
+    void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3f& up, int fontTex, float textSize, int iend){
+        // ToDo: These functions are the same !!!!
+        glDisable    ( GL_LIGHTING   );
+        glDisable    ( GL_DEPTH_TEST );
+        glShadeModel ( GL_FLAT       );
+        glPushMatrix();
+            glTranslatef( pos.x, pos.y, pos.z );
+            Draw::billboardCamProj( textSize );
+            Draw::drawText( str, fontTex, 1.0, iend );
+        glPopMatrix();
+	}
+
+    /*
     void drawText( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend ){
         glDisable    ( GL_LIGHTING   );
         glDisable    ( GL_DEPTH_TEST );
@@ -1429,7 +1486,6 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
             Draw::drawText( str, fontTex, textSize, iend );
         glPopMatrix();
 	}
-
     void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3f& up, int fontTex, float textSize, int iend ){
         glDisable    ( GL_LIGHTING   );
         glDisable    ( GL_DEPTH_TEST );
@@ -1448,6 +1504,7 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
             Draw::drawText( str, fontTex, textSize, iend );
         glPopMatrix();
 	}
+    */
 
 	void drawInt( const Vec3d& pos, int i, int fontTex, float sz, const char* format ){
         char str[16];
@@ -1459,6 +1516,14 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
         sprintf(str,format,f);
         Draw3D::drawText(str, pos, fontTex, sz, 0);
     }
+
+
+    void pointLabels( int n, const Vec3d* ps, int fontTex, float sz ){
+        for(int i=0; i<n; i++){
+            drawInt( ps[i], i, fontTex, sz );
+        }
+    }
+
 
 	void drawCurve( float tmin, float tmax, int n, Func1d3 func ){
         glBegin(GL_LINE_STRIP);

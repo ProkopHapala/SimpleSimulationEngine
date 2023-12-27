@@ -13,6 +13,7 @@
 #include "Mat3.h"
 #include "quaternion.h"
 #include "geom3D.h"
+#include "macroUtils.h"
 
 namespace SpaceCrafting{
 
@@ -36,8 +37,8 @@ class BBox : public BodyPose{ public:
 
 // === SpaceShip Component Types
 
-enum class ComponetKind:int{ Node, Rope, Girder, Ring, Thruster, Gun, Radiator, Shield, Tank, Pipe, Balloon, Rock };
-
+//enum class ComponetKind:int{ Node, Rope, Girder, Ring, Thruster, Gun, Radiator, Shield, Tank, Pipe, Balloon, Rock };
+enum class ComponetKind:int{Node=0,ShipComponent=1,NodeLinker=2,Girder=3,Ring=4,Rope=5,Pipe=6,Plate=7,Radiator=8,Shield=9,Collector=10,Thruster=11,Rotor=12,Slider=13,Slider2=14,Accelerator=15,Gun,Modul=16,Tank=17,Balloon=18,Rock=19};
 // ==== Materials
 
 class CatalogItem{ public:
@@ -45,7 +46,7 @@ class CatalogItem{ public:
 	int  kind;
 	char name[NAME_LEN] = "\n";
 
-    virtual void print(){ printf("CatalogItem(%i|%s) kidn=%i \n", id, name, kind ); }
+    virtual void print() const { printf("CatalogItem(%i|%s) kidn=%i \n", id, name, kind ); }
     virtual ~CatalogItem(){}   // this is necessary to avoid error see. https://stackoverflow.com/questions/12994920/how-to-delete-an-object-of-a-polymorphic-class-type-that-has-no-virtual-destruct
 };
 
@@ -56,7 +57,7 @@ class Material : public CatalogItem { public:
 	double reflectivity; // [1] reflectivity
 	double Tmelt;        // [T] temperature of failure
 
-    virtual void print(){ printf( "Material(%i|%-16s) dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", id, name, density, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
+    virtual void print()const override{ printf( "Material(%i|%-16s) dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", id, name, density, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
  	// What about heat, electricity etc. ?
 };
 
@@ -64,13 +65,13 @@ class Commodity : public CatalogItem { public:
 	double density;      // [kg/m3]
 	// What about heat, electricity etc. ?
 
-    virtual void print(){ printf( "Commodity(%i|%s) %s dens %g \n", id, name, density ); };
+    virtual void print()const override{ printf( "Commodity(%i|%s) %s dens %g \n", id, name, density ); };
 };
 
 class FuelType : public Commodity { public:
     double EnergyDesity;   // [J/kg]
 
-    virtual void print(){ printf( "FuelType(%i|%s) %s dens %g E=%g[J/kg] \n", id, name, density, EnergyDesity ); };
+    virtual void print()const override{ printf( "FuelType(%i|%s) %s dens %g E=%g[J/kg] \n", id, name, density, EnergyDesity ); };
 };
 
 
@@ -103,7 +104,7 @@ class StickMaterial : public CatalogItem { public:
         Tmelt         = mat->Tmelt;
     }
 
-    virtual void print(){ printf( "StickMaterial(%i|%-16s) d=%g[m] A=%g[m2] ldens=%g[kg/m] S(%g,%g)[N] K(%g,%g)[N/m] Refl=%g Tmelt=%g[K] \n", id, name, diameter, area, linearDensity, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
+    virtual void print()const override{ printf( "StickMaterial(%i|%-16s) d=%g[m] A=%g[m2] ldens=%g[kg/m] S(%g,%g)[N] K(%g,%g)[N/m] Refl=%g Tmelt=%g[K] \n", id, name, diameter, area, linearDensity, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
 };
 
 class PanelMaterial : public CatalogItem { public:
@@ -118,7 +119,7 @@ class PanelMaterial : public CatalogItem { public:
         for( PanelLayer& l : layers ){ areaDensity += l.thickness * l.materiallId; }
     }
 
-    virtual void print(){ printf( "PanelMaterial(%i|%s) dens=%g[kg/m2] nlayer=%i \n", id, name, areaDensity, layers.size() ); };
+    virtual void print()const override{ printf( "PanelMaterial(%i|%s) dens=%g[kg/m2] nlayer=%i \n", id, name, areaDensity, layers.size() ); };
 };
 
 class ThrusterType : public CatalogItem { public:
@@ -129,18 +130,33 @@ class ThrusterType : public CatalogItem { public:
 	FuelType  * fuel      = NULL;
 	Commodity  * Propelant = NULL;
 
-    virtual void print(){ printf( "ThrusterType(%i|%s) eff=%g ve(%g,%g)[m/s] fuel=%s propelant=%s \n", id, name, efficiency, veMin, veMax, fuel->name, Propelant->name ); };
+    virtual void print()const override{ printf( "ThrusterType(%i|%s) eff=%g ve(%g,%g)[m/s] fuel=%s propelant=%s \n", id, name, efficiency, veMin, veMax, fuel->name, Propelant->name ); };
 };
 
 class GunType : public CatalogItem { public:
 	double recoil;
 	// scaling laws - how performace (power, accuracy, penetration, time of flight ...) scales with size ?
 
-    virtual void print(){ printf( "GunType(%i|%s) recoil=%g \n", id, name, recoil ); };
+    virtual void print()const override{ printf( "GunType(%i|%s) recoil=%g \n", id, name, recoil ); };
 };
 
-// ==== Components
 
+// ====
+
+class Path{ public:
+    int    n;    // number of points in the path
+    int*   ps;   // indexes of points in the path
+    double cur;  // position along the path
+    bool closed=false; // is it line point-to-point or closed loop? 
+
+    inline void   realloc(int n_){ printf("Path::realoc(%i)\n",n_);   n=n_; _realloc(ps,n); }
+    inline int    icur   (  ){ return (int)cur;          }
+    inline double dcur   (  ){ return cur-(int)cur;      }
+};
+
+// ====================
+// ==== Components
+// ====================
 
 class ShipComponent{ public:
     int    id;
@@ -155,7 +171,8 @@ class ShipComponent{ public:
     Vec2i poitRange;  // index of start and end in Truss
     Vec2i stickRange; // --,,--
 
-    virtual void print(){ printf("ShipComponent(id=%i) kidn=%i face_mat=%i \n", id, kind, face_mat ); };
+    virtual void print()const{ printf("ShipComponent(id=%i) kidn=%i face_mat=%i \n", id, kind, face_mat ); };
+    virtual int component_kind(){ return (int)ComponetKind::ShipComponent; }; 
 };
 
 
@@ -178,7 +195,7 @@ class NodeLinker : public ShipComponent { public:
 class StructuralComponent : public ShipComponent { public:
     Quat4i nodes;
     //double length;
-    virtual void print() override { printf("StructuralComponent(id=%i) nodes(%i,%i,%i,%i) \n", id, nodes.x,nodes.y,nodes.z,nodes.w ); };
+    virtual void print()const override { printf("StructuralComponent(id=%i) nodes(%i,%i,%i,%i) \n", id, nodes.x,nodes.y,nodes.z,nodes.w ); };
     void ray( const Vec3d& ro, const Vec3d& rd ){}
 };
 
@@ -190,19 +207,22 @@ class Node{ public:
     Vec2i along;              // index of 
     //Node(Vec3d pos):pos(pos){};
 
-    virtual void print(){ printf("Node(id=%i) kidn=%i face_mat=%i \n", id, pos.x,pos.y,pos.z ); };
+    virtual void print()const{ printf("Node(id=%i) kidn=%i face_mat=%i \n", id, pos.x,pos.y,pos.z ); };
 };
 class NodeLinker : public StructuralComponent { public:
     double length;
-    virtual void print() override { printf("NodeLinker(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
+    virtual void print()const override { printf("NodeLinker(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
     void ray( const Vec3d& ro, const Vec3d& rd ){}
+     virtual int component_kind(){ return (int)ComponetKind::NodeLinker; };
 };
+
 
 class Girder : public NodeLinker { public:
     //int p1; // anchor node; p0 inherate
     //double length;
     int nseg;
     int mseg;
+    //Vec2i nseg;
     Vec2d wh;  // [m] width and height
     Vec3d up;
     Quat4i st;
@@ -213,11 +233,13 @@ class Girder : public NodeLinker { public:
     //Vec2i stickRange; // --,,---
     //GirderType * type = NULL;
     
-    virtual void print() override {
-        printf( "Girder(%i) ps(%i,%i) up(%g,%g,%g) nm(%i,%i) wh(%g,%g) st(%i,%i,%i,%i)\n", id, nodes.x, nodes.y, up.x, up.y, up.z, nseg, mseg, wh.x, wh.y, st.x,st.y,st.z,st.w );
+    virtual void print()const override {
+        printf( "Girder(%i) ps(%i,%i) up(%g,%g,%g) nm(%i,%i) wh(%g,%g) st(%i,%i,%i,%i)\n", id, nodes.x, nodes.y, up.x, up.y, up.z, nseg, mseg, wh.x, wh.y, st.x,st.y,st.z,st.w, poitRange.x,poitRange.y  );
     }
+    virtual int component_kind(){ return (int)ComponetKind::Girder; };
 
 };
+
 
 //class Ring : public NodeLinker { public:
 class Ring : public StructuralComponent { public:
@@ -233,7 +255,7 @@ class Ring : public StructuralComponent { public:
     //Vec2i stickRange; // --,,---
     //GirderType * type = NULL;
 
-    virtual void print() override {
+    virtual void print()const override {
         printf( "Ring(%i) n(%i) pos(%g,%g,%g) rot(%g,%g,%g)(%g,%g,%g)(%g,%g,%g) R=%g wh(%g,%g) st(%i,%i,%i,%i)\n", id, nseg,
         pose.pos.x,   pose.pos.y,   pose.pos.z,
         pose.rot.a.x, pose.rot.a.y, pose.rot.a.z,
@@ -241,6 +263,7 @@ class Ring : public StructuralComponent { public:
         pose.rot.c.x, pose.rot.c.y, pose.rot.c.z,
         R, wh.x, wh.y, st.x,st.y,st.z,st.w );
     }
+    virtual int component_kind(){ return (int)ComponetKind::Ring; };
 
 };
 
@@ -249,9 +272,9 @@ class Rope : public NodeLinker { public:
     int nseg;
     //Material * material;
 
-    virtual void print() override { printf("Rope(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
+    virtual void print()const override { printf("Rope(id=%i) between(%i,%i) L=%g \n", id, nodes.x,nodes.y, length ); };
+    virtual int component_kind(){ return (int)ComponetKind::Rope; };
 };
-
 
 class Modul: public ShipComponent { public:
     BodyPose pose;
@@ -259,11 +282,9 @@ class Modul: public ShipComponent { public:
     Vec3d    span;
     double   volume;
 
-    void pick(const Vec3d& ro, const Vec3d& rd){
-
-    }
-
-    virtual void print() override { printf("Modul(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); };
+    void pick(const Vec3d& ro, const Vec3d& rd){}
+    virtual void print()const override{ printf("Modul(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); };
+    virtual int component_kind(){ return (int)ComponetKind::Modul; }; 
 };
 
 class Tank : public Modul { public:
@@ -274,23 +295,30 @@ class Tank : public Modul { public:
 	        // [m^3]
 	double filled;         // [1]
 
-    virtual void print() override { printf("Tank(id=%i) %g [m^3] of Commodity[%i] \n", id, filled, commodityId ); };
+    virtual void print()const override { printf("Tank(id=%i) %g [m^3] of Commodity[%i] \n", id, filled, commodityId ); };
+    virtual int component_kind(){ return (int)ComponetKind::Tank; }; 
 };
 
 
 class Balloon : public Modul { public:
-    virtual void print() override { printf("Balloon(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); };
+    virtual void print()const  override { printf("Balloon(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); };
+    virtual int component_kind(){ return (int)ComponetKind::Balloon; };
 };
 
 class Rock : public Modul { public:
-    virtual void print() override { printf("Rock(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); };
-
+    virtual void print()const override { printf("Rock(id=%i) kind=%i face_mat=%i \n", id, kind, face_mat ); };
+    virtual int component_kind(){ return (int)ComponetKind::Rock; };
 };
 
 class Pipe : public ShipComponent { public:
     double maxFlow;   // units depend on commodity
-	ShipComponent * a;
+    //int  npath; // number of vertex along path
+    //int* path;  // indexes of vertexes along the path
+	Path path;
+    ShipComponent * a;
 	ShipComponent * b;
+    virtual void print()const override{ printf("Pipe(id=%i) Comp_a(kind=%i,id=%i) Comp_b(kind=%i,id=%i) nvert=%i maxFlow=%g \n", id, kind, a->kind,a->id, b->kind,b->id, path.n, maxFlow ); };
+    virtual int component_kind(){ return (int)ComponetKind::Rope; };
 };
 
 //class Hub : public ShipComponent { public:
@@ -310,21 +338,24 @@ class Plate : public ShipComponent { public:
 	//int ntris;
 	//int * tris;  // triangles from points of spaceship
 
-    virtual void print() override { printf("Plate(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f))  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y ); };
-
+    virtual void print()const override{ printf("Plate(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f))  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y ); };
+    virtual int component_kind(){ return (int)ComponetKind::Plate; };
 };
 
 class Radiator : public Plate{ public:
     double temperature;
-    virtual void print() override { printf("Radiator(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f)) T=%g  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y, temperature ); };
+    virtual void print()const override{ printf("Radiator(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f)) T=%g  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y, temperature ); };
+    virtual int component_kind(){ return (int)ComponetKind::Radiator; };
 };
 
 class Shield : public Plate{ public:
-    virtual void print() override { printf("Plate(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f))  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y ); };
+    virtual void print()const override{ printf("Plate(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f))  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y ); };
+    virtual int component_kind(){ return (int)ComponetKind::Shield; };
 };
 
 class Collector : public Plate{ public:
-    virtual void print() override { printf("Collector(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f))  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y ); };
+    virtual void print()const override{ printf("Collector(id=%i) kidn=%i face_mat=%i Girders(%i(%4.2f,%4.2f),%i(%4.2f,%4.2f))  \n", id, kind, face_mat, g1,g1span.x,g1span.y, g2,g2span.x,g2span.y ); };
+    virtual int component_kind(){ return (int)ComponetKind::Collector; };
 };
 
 // ==== Motors
@@ -336,7 +367,8 @@ class Thruster : public Modul { public:
 	double power;
 	double consumption;
 
-    virtual void print() override { printf("Thruster(id=%i) type=%i kidn=%i face_mat=%i P=%g[W] F=%g C=%g \n", id, type, kind, face_mat, power, thrust, consumption ); };
+    virtual void print()const override{ printf("Thruster(id=%i) type=%i kidn=%i face_mat=%i P=%g[W] F=%g C=%g \n", id, type, kind, face_mat, power, thrust, consumption ); };
+    virtual int component_kind(){ return (int)ComponetKind::Thruster; };
 };
 
 class Rotor : public ShipComponent { public:
@@ -346,16 +378,45 @@ class Rotor : public ShipComponent { public:
     double torque;   //  [kg.m^2]
     double Inertia;  //  [kg.m^2]  moment of inertia
 
-    virtual void print() override { printf("Rotor(id=%i) kidn=%i face_mat=%i I=%g P=%g[W] tq=%g \n", id, kind, face_mat, Inertia, power, torque ); };
+    virtual void print()const override{ printf("Rotor(id=%i) kidn=%i face_mat=%i I=%g P=%g[W] tq=%g \n", id, kind, face_mat, Inertia, power, torque ); };
+    virtual int component_kind(){ return (int)ComponetKind::Rotor; };
 };
 
+/*
 class Slider : public ShipComponent { public:
     // allow slide a node over a girder
     int  girder;
     double power;    //  [kg.m^2]
     double Force;
 
-    virtual void print() override { printf("Slider(id=%i) kidn=%i face_mat=%i girder=%i P=%g[W] F=%g \n", id, kind, face_mat, girder, power, Force ); };
+    virtual void print()const override{ printf("Slider(id=%i) kidn=%i face_mat=%i girder=%i P=%g[W] F=%g \n", id, kind, face_mat, girder, power, Force ); };
+    virtual int component_kind(){ return (int)ComponetKind::Slider; };
+};
+*/
+
+//ToDo : We need to move wheel with respect to girder
+
+
+//class Slider2 : public Node { public:    // If we make Slider child of Node we can easily generate it somewhere along a girder  
+class Slider2 : public ShipComponent { public:
+    // allow slide a node over a girder
+    // this slider moves one vertex (fixed point) which respect to vertex-loop (e.g. girder,wheel,rope). It will interpolate the position along current edge on the vertex loop. It will apply force to the two vertexes of the current edge.
+    ShipComponent* comp1;  // Warrning - this becomes invalid when arrays are re-allocated !!!!
+    ShipComponent* comp2;
+    Vec2d along;
+    Vec2i sides;
+    int  ifix;    // to which vertex it is anchored
+    //int  iloop;   // index along vetex loop
+    //int  npath;   // number of points int he vetrex loop
+    //int* path;   // vertex loop - typically along girder, wheel or rope
+    //Vec3d dir;  // orientation of slinding
+    Path path;
+    double range;    // how much deflection of the slider perpedicular to the edge on loop this slider allows? 
+    double forceMax; // max force which ca ne exerted by this slider
+    double powerMax;
+
+    virtual void print()const override{ printf("Slider2(id=%i) kidn=%i face_mat=%i girder=%i P=%g[W] F=%g \n", id, kind,  ifix, forceMax, powerMax ); };
+    virtual int component_kind(){ return (int)ComponetKind::Slider; };
 };
 
 // === Guns
@@ -371,14 +432,16 @@ class Accelerator : public ShipComponent{ public:
     int   suppId;   // support Id   - anchor which girder or ring ?
     Vec2d suppSpan; // pos along the support  (girder or ring)
 
+    Path path; // along which vertexes it goes?
+
     double lenght;        // [m]
     double PowerPeak;     // [W]
     double PulseEnergy;   // [J]
     double PulseDuration; // [s]
     double PulsePeriod;   // [s]
 
-    virtual void print() override { printf("Accelerator(id=%i) kidn=%i face_mat=%i supp(%i(%4.2f,%4.2f)) L=%g P=%g[W] E=%g[J] ts(%g,%g)[s] \n", id, kind, face_mat, suppType,suppSpan.x,suppSpan.y, lenght, PowerPeak, PulseEnergy, PulseDuration, PulsePeriod); };
-
+    virtual void print()const override{ printf("Accelerator(id=%i) kidn=%i face_mat=%i supp(%i(%4.2f,%4.2f)) L=%g P=%g[W] E=%g[J] ts(%g,%g)[s] \n", id, kind, face_mat, suppType,suppSpan.x,suppSpan.y, lenght, PowerPeak, PulseEnergy, PulseDuration, PulsePeriod); };
+    virtual int component_kind(){ return (int)ComponetKind::Accelerator; };
     //std::vector<int> anchors; // anchor points
 };
 
@@ -390,8 +453,8 @@ class Gun : public Accelerator{ public:
     // attached to girder?
     // incorporated in girder?
 
-    virtual void print() override { printf("Gun(id=%i) kidn=%i face_mat=%i supp(%i(%4.2f,%4.2f)) A=%g[m^2] D=%g[1] L=%g[m] P=%g[W] E=%g[J] ts(%g,%g)[s] \n", id, kind, face_mat, suppType,suppSpan.x,suppSpan.y, Aperture, divergence, lenght, PowerPeak, PulseEnergy, PulseDuration, PulsePeriod); };
-
+    virtual void print()const override{ printf("Gun(id=%i) kidn=%i face_mat=%i supp(%i(%4.2f,%4.2f)) A=%g[m^2] D=%g[1] L=%g[m] P=%g[W] E=%g[J] ts(%g,%g)[s] \n", id, kind, face_mat, suppType,suppSpan.x,suppSpan.y, Aperture, divergence, lenght, PowerPeak, PulseEnergy, PulseDuration, PulsePeriod); };
+    virtual int component_kind(){ return (int)ComponetKind::Gun; };
 };
 
 template<typename T>

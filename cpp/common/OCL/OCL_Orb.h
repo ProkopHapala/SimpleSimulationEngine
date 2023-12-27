@@ -6,13 +6,14 @@
 #include "OCL.h"
 #include "Vec3.h"
 //#include "Mat3.h"
+#include "OrbSim.h"
 
 //=======================================================================
-class OCL_Orb: public OCLsystem { public:
+class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     cl_program program1=0;
 
     // dimensions
-    int nPoint=0, nNeighMax=0, nNeighTot=0; 
+    //int nPoint=0, nNeighMax=0, nNeighTot=0; 
     
     // OpenCL buffers and textures ids
     int ibuff_points=-1,ibuff_forces=-1,ibuff_params=-1,ibuff_neighs=-1;
@@ -22,11 +23,13 @@ class OCL_Orb: public OCLsystem { public:
     int4 nDOFs    {0,0,0,0};  // number of DOFs (nPoints,nNeighMax,0,0)
 
 
-    // cpu buffers
-    float4* points=0;
-    float4* forces=0;
-    float4* params=0;
-    int*    neighs=0;
+    // cpu buffers    - Form OrbSim_f
+    //float4* points=0;
+    //float4* forces=0;
+    //float4* params=0;
+    //int*    neighs=0;
+
+    
 
     // ------- Grid
     
