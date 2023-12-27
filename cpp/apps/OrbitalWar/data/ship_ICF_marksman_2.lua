@@ -62,11 +62,9 @@ Rope(nRt,nUp, 25, "Kevlar");
 
 --- Finished basic layout of the ship ( main girders and ropes )
 
---- nb1 = BoundNode( gFw, 0.5, {0.0,-200.0,0.0} );
-
-
-
-
+nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {0.0,100.0,0.0} );
+-- nB2 = BoundNode( gUp, ComponetKind.Girder, 0.5, {0.0,100.0,0.0} );
+-- gB  = Girder( nB1, nB2, xvec, 10, 2, {4.0,4.0}, "Steel", g1_st )
 
 print( "#------ Lua:girderFans:" )
 

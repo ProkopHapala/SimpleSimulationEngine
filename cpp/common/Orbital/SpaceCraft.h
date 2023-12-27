@@ -381,7 +381,7 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
             truss.girder1_caps( o.nodes.x->id, o.nodes.y->id, 1 );
 
             Vec2i& bak = truss.blocks.back();
-            o.poitRange  = {bak.x,truss.points.size()};
+            o.pointRange  = {bak.x,truss.points.size()};
             o.stickRange = {bak.y,truss.edges .size()};
             i++;
         }
@@ -390,7 +390,7 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
             //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
             truss.wheel( o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh.a );
             Vec2i& bak = truss.blocks.back();
-            o.poitRange  = {bak.x,truss.points.size()};
+            o.pointRange  = {bak.x,truss.points.size()};
             o.stickRange = {bak.y,truss.edges .size()};
             i++;
         }
@@ -407,7 +407,7 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
                 int edgeMat = workshop->panelMaterials.vec[ o.face_mat ]->stickMaterialId;
                 truss.makeCylinder( p0, p1, o.span.b, o.span.b, -1, -1, 1.0, o.face_mat, o.face_mat );
                 Vec2i& bak = truss.blocks.back();
-                o.poitRange  = {bak.x,truss.points.size()};
+                o.pointRange  = {bak.x,truss.points.size()};
                 o.stickRange = {bak.y,truss.edges .size()};
                 i++;
             }
@@ -418,8 +418,8 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
 
     int getVertAlong(ShipComponent* s, double c, int side=0){
             int t1 = s->component_kind();
-            int i0 = s->poitRange.x;
-            int n  = s->poitRange.y-i0;
+            int i0 = s->pointRange.x;
+            int n  = s->pointRange.y-i0;
             int iv = -1;
             if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){
                 // ToDo: PBC for closed ring ????s
@@ -434,8 +434,8 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
     ToDo: this will be complicated - we need to find crossection of the two components
     int nearestVertAlong(ShipComponent* s, double& c, int side=0){
             int t1 = s->component_kind();
-            int i0 = s->poitRange.x;
-            int n  = s->poitRange.y-i0;
+            int i0 = s->pointRange.x;
+            int n  = s->pointRange.y-i0;
             int iv = -1;
             if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){
                 
@@ -460,8 +460,8 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
             int t1 = o.comp1->component_kind();
 
             printf( "updateSliderPaths[%i] t=%i | Girder=%i Ring=%i Rope=%i\n", io, t1, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
-            int i0 = o.comp1->poitRange.x;
-            int n  = o.comp1->poitRange.y-i0;
+            int i0 = o.comp1->pointRange.x;
+            int n  = o.comp1->pointRange.y-i0;
             if((n>1000)||(n<=0)){printf( "updateSliderPaths() n=%i seems wrong\n", n ); exit(0);   }
             printf("SpaceCraft::updateSliderPaths() i0=%i n=%i\n", i0, n );
             if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){

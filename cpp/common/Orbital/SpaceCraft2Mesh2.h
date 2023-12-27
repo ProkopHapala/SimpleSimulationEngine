@@ -355,7 +355,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
         mesh.rope( o.nodes.x->id,o.nodes.y->id, o.face_mat );
         Quat4i& b = mesh.blocks.back();
-        o.poitRange  = {b.x,(int)mesh.verts.size()};
+        o.pointRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
     }
     for(Girder& o: craft.girders){
@@ -364,10 +364,10 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         girder1( mesh, o.nodes.x->pos, o.nodes.y->pos, o.up, o.nseg, o.wh.a, o.st );
         girder1_caps( mesh, o.nodes.x->id, o.nodes.y->id, o.st.x );
         Quat4i& b = mesh.blocks.back();
-        o.poitRange  = {b.x,(int)mesh.verts.size()};
+        o.pointRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
         //o.print();
-        //printf( "BuildCraft_truss() girder.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
+        //printf( "BuildCraft_truss() girder.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
         i++;
     }
     
@@ -377,9 +377,9 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
         wheel( mesh, o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh, o.st );
         Quat4i& b = mesh.blocks.back();
-        o.poitRange  = {b.x,(int)mesh.verts.size()};
+        o.pointRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
-        //printf( "BuildCraft_truss() ring.poitRange(%i,%i)\n", o.poitRange.x, o.poitRange.y );
+        //printf( "BuildCraft_truss() ring.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
         i++;
     }
     
@@ -398,10 +398,10 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         */
         const Girder& g1 =craft.girders[o.g1];
         const Girder& g2 =craft.girders[o.g2];
-        plateOnGriders( mesh, {10,1}, g1.poitRange, g2.poitRange, {4,4}, {-1,-1}, o.g1span, o.g2span, {0,1,2,3} );
+        plateOnGriders( mesh, {10,1}, g1.pointRange, g2.pointRange, {4,4}, {-1,-1}, o.g1span, o.g2span, {0,1,2,3} );
         //break;
         Quat4i& b = mesh.blocks.back();
-        o.poitRange  = {b.x,(int)mesh.verts.size()};
+        o.pointRange  = {b.x,(int)mesh.verts.size()};
         o.stickRange = {b.y,(int)mesh.edges.size()};
         //break;
     };
@@ -428,7 +428,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
             int edgeMat = workshop->panelMaterials.vec[ o.face_mat ]->stickMaterialId;
             truss.makeCylinder( p0, p1, o.span.b, o.span.b, -1, -1, 1.0, o.face_mat, o.face_mat );
             Vec2i& bak = truss.blocks.back();
-            o.poitRange  = {bak.x,truss.points.size()};
+            o.pointRange  = {bak.x,truss.points.size()};
             o.stickRange = {bak.y,truss.edges .size()};
             i++;
         }

@@ -476,15 +476,19 @@ void SpaceCraftEditGUI::draw(){
     drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
     
     //drawSpaceCraft_nodes( theSpaceCraft, const Quat4f* ps=0, float sz=10, int i0=0, int i1=-1 );
-    Draw3D::color(Vec3f{0.f,1.f,0.f}); drawSpaceCraft_nodes( *theSpaceCraft, 0, 10 );
+    Draw3D::color(Vec3f{0.f,0.5f,0.f});  drawSpaceCraft_nodes( *theSpaceCraft, 0, 10 );
+    glLineWidth(5.0);
+    Draw3D::color(Vec3f{0.5f,0.5f,0.f}); drawSpaceCraft_nodes( *theSpaceCraft, sim.points, 5 );
+    Node* nd = theSpaceCraft->nodes[7];
+    Draw3D::color(Vec3f{0.f,0.5f,0.5f});  Draw3D::drawPointCross( nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong, 5 );
 
     {
         glPointSize(10);
         const Radiator& o =  theSpaceCraft->radiators[0];
         const Girder& g1  =  theSpaceCraft->girders[o.g1];
         const Girder& g2  =  theSpaceCraft->girders[o.g2];
-        Draw3D::color(Vec3f{1.f,0.f,0.f}); drawPointRange( 10, g1.poitRange, 4, 0, o.g1span, sim.points );
-        Draw3D::color(Vec3f{0.f,0.f,1.f}); drawPointRange( 10, g2.poitRange, 4, 1, o.g2span, sim.points );
+        Draw3D::color(Vec3f{1.f,0.f,0.f}); drawPointRange( 10, g1.pointRange, 4, 0, o.g1span, sim.points );
+        Draw3D::color(Vec3f{0.f,0.f,1.f}); drawPointRange( 10, g2.pointRange, 4, 1, o.g2span, sim.points );
     }
 
     glDisable(GL_CULL_FACE);
@@ -590,6 +594,12 @@ void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){
 	if( keys[ SDL_SCANCODE_S ] ){ cam.pos.add_mul( cam.rot.b, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_A ] ){ cam.pos.add_mul( cam.rot.a, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_D ] ){ cam.pos.add_mul( cam.rot.a, +0.05*zoom );  }
+
+    if( keys[ SDL_SCANCODE_LEFTBRACKET  ] ){ theSpaceCraft->nodes[7]->calong-=0.001; theSpaceCraft->nodes[7]->updateBound(); }
+    if( keys[ SDL_SCANCODE_RIGHTBRACKET ] ){ theSpaceCraft->nodes[7]->calong+=0.001; theSpaceCraft->nodes[7]->updateBound(); }
+
+
+
 };
 
 void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){

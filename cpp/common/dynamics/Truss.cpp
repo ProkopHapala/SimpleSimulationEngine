@@ -256,7 +256,7 @@ void Truss::panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double w
  * @return The index of the created block containing the starting indexes of the points and edges
  */
 int Truss::girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width ){
-    printf( "Truss::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z );
+    //printf( "Truss::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z );
     int kind_long   = 0;
     int kind_perp   = 1;
     int kind_zigIn  = 2;

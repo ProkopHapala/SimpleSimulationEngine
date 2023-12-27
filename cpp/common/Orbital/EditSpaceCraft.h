@@ -46,8 +46,7 @@ int l_Material (lua_State * L){
     o->Tmelt        = Lua::getDoubleField(L, "Tmelt"   );
     if( workshop.materials.add(o) && (verbosity>0) ) printf( "Material(%s) replaced\n", o->name );
     o->id =  workshop.materials.getId( o->name );
-    //if(verbosity>1) 
-    o->print();
+    if(verbosity>1) o->print();
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -77,8 +76,7 @@ int l_StickMaterial(lua_State * L){
     o->update( workshop.materials.vec[o->materiallId] );
     if( workshop.stickMaterials.add(o) && (verbosity>0) ) printf( "StickMaterial(%s) replaced\n", o->name );
     o->id = workshop.stickMaterials.getId( o->name );
-    //if(verbosity>1) 
-    o->print();
+    if(verbosity>1) o->print();
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -90,28 +88,29 @@ int l_Node    (lua_State * L){
     Lua::getVec3(L, 1, o->pos );
     o->id =  theSpaceCraft->nodes.size();
     theSpaceCraft->nodes.push_back( o  );
-    //printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
-    if(verbosity>1) o->print();
+    //if(verbosity>1) 
+    o->print();
     lua_pushnumber(L, o->id);
     return 1;
 };
 
 // n1 = Node( g1, 0.5, p0 )
 int l_BoundNode(lua_State * L){
-    printf( "l_BoundNode()\n" );
+    printf( "!!!! l_BoundNode()\n" );
     Node* o = new Node();
     //Vec3d pos;
     int gid  = Lua::getInt(L, 1);       // index of girder
-    int kind = Lua::getInt(L, 2);       //
-    o->calong = Lua::getDouble(L, 2);   // position along girder
-    Vec3d p0; Lua::getVec3(L, 1, p0 );
+    int kind = Lua::getInt(L, 2);       // type of component
+    o->calong = Lua::getDouble(L, 3);   // position along girder
+    Vec3d p0; Lua::getVec3(L, 4, p0 );
     o->boundTo = theSpaceCraft->getStructuralComponent( gid, kind);
-    o->boundTo->pointAlong( o->calong, -1, &o->pos, p0 );
+    //o->along.x = o->boundTo->pointAlong( o->calong, -1, &o->pos, p0 );
+    o->updateBound();
     o->id =  theSpaceCraft->nodes.size();
     theSpaceCraft->nodes.push_back( o  );
-    //printf( "Node (%g,%g,%g)  ->  %i\n",  pos.x, pos.y, pos.z, id );
     //if(verbosity>1) 
     o->print();
+    printf("--- boundTo: "); o->boundTo->print();
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -128,15 +127,14 @@ int l_Rope    (lua_State * L){
     { // define new StickMaterial
         StickMaterial *mat = new StickMaterial();
         //char mat_name[NAME_LEN];
-        sprintf( mat->name, "rope%i", o.id ); printf( "l_Rope() mat->name(%s)\n", mat->name );
+        sprintf( mat->name, "rope%i", o.id ); //printf( "l_Rope() mat->name(%s)\n", mat->name );
         mat->diameter    =  o.thick;
         mat->area        =  o.thick*o.thick*0.25*M_PI;
         mat->materiallId = workshop.materials.getId( matn );
         mat->update( workshop.materials.vec[mat->materiallId] );
         if( workshop.stickMaterials.add(mat) && (verbosity>0) ) printf( "StickMaterial(%s) replaced\n", mat->name );
         mat->id = workshop.stickMaterials.getId( mat->name );
-        //if(verbosity>1) 
-        mat->print();
+        if(verbosity>1) mat->print();
         o.face_mat = mat->id;
     }
     if(verbosity>1) o.print();
@@ -158,8 +156,7 @@ int l_Girder  (lua_State * L){
             Lua::getVec4i(L,8, o.st );
     o.face_mat = workshop.panelMaterials.getId( matn );
     o.id     = theSpaceCraft->girders.size();
-    //if(verbosity>1) 
-    o.print();
+    if(verbosity>1) o.print();
     theSpaceCraft->girders.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;
@@ -172,9 +169,9 @@ int l_Ring    (lua_State * L){
     //Lua::dumpStack(L);
     Ring o;
     // Lua::getVec3(L,3, o.up );
-    Lua::getVec3(L,1, o.pose.pos   ); //print(o.pose.pos);   printf("pos\n");
-    Lua::getVec3(L,2, o.pose.rot.c ); //print(o.pose.rot.c); printf("dir\n"); // ax
-    Lua::getVec3(L,3, o.pose.rot.b ); //print(o.pose.rot.b); printf("up\n");// up
+    Lua::getVec3(L,1, o.pose.pos   ); 
+    Lua::getVec3(L,2, o.pose.rot.c );
+    Lua::getVec3(L,3, o.pose.rot.b );
     o.pose.rot.fromDirUp(o.pose.rot.c,o.pose.rot.b);
     o.nseg = Lua::getInt (L,4);
     o.R    = Lua::getDouble(L,5);
@@ -205,7 +202,6 @@ int l_Slider(lua_State * L){
     o.along=Vec2d{c1,c2};
     o.sides=Vec2i{is1,is2};
     o.id   = theSpaceCraft->sliders.size();
-    //printf( "Girder (%i,%i) (%g,%g,%g) (%i,%i), (%g,%g) %s ->  %i\n", o.p0, o.p1, o.up.x, o.up.y, o.up.z, o.nseg, o.mseg, o.wh.x, o.wh.y, matn, o.id );
     //if(verbosity>1) 
     o.print();
     printf(" - compi1:"); o.comp1->print();
@@ -286,11 +282,8 @@ int l_Gun     (lua_State * L){
     o.suppSpan.x  = Lua::getDouble(L,2);
     o.suppSpan.y  = Lua::getDouble(L,3);
     const char * skind = Lua::getString(L,4);
-    //auto it = materials.find(matn);
-    //if( it != materials.end() ){r.material = it->second;}else{ printf( "Material `%s` not found\n", matn ); }
     o.id   = theSpaceCraft->guns.size();
     if(verbosity>1) o.print();
-    //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o.suppId, o.suppSpan.x, o.suppSpan.y,   skind, o.id );
     theSpaceCraft->guns.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;
@@ -307,7 +300,6 @@ int l_Rock     (lua_State * L){
     Lua::getVec3(L, 4, o.span );
     o.id   = theSpaceCraft->rocks.size();
     if(verbosity>1) o.print();
-    //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o., o.suppSpan.x, o.suppSpan.y,   skind, o.id );
     theSpaceCraft->rocks.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;
@@ -323,7 +315,6 @@ int l_Balloon     (lua_State * L){
     Lua::getVec3(L, 4, o.span );
     o.id   = theSpaceCraft->balloons.size();
     if(verbosity>1) o.print();
-    //printf( "Gun %i(%.2f,%.2f) %s -> %i\n", o., o.suppSpan.x, o.suppSpan.y,   skind, o.id );
     theSpaceCraft->balloons.push_back( o );
     lua_pushnumber(L, o.id);
     return 1;

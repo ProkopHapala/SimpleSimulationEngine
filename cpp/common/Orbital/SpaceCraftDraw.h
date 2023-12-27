@@ -176,7 +176,11 @@ void drawNode( const Node& o, float sz=10 ){
 
 void drawNode( const Node& o, const Quat4f* ps, float sz=10.f ){
     //Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
-    Draw3D::drawPointCross( ps[o.along.x].f, sz );
+    if(o.boundTo){
+        Draw3D::drawPointCross( ps[o.along.x+o.boundTo->pointRange.x].f, sz );
+    }else{
+        Draw3D::drawPointCross( ps[o.id].f, sz );
+    }
 }
 
 void drawSpaceCraft_nodes( const SpaceCraft& craft, const Quat4f* ps=0, float sz=10, int i0=0, int i1=-1 ){
