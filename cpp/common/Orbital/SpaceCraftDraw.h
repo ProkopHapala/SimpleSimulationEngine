@@ -158,6 +158,13 @@ void drawPlateContour( const Plate& o, const Girder*const* girders, bool filled 
     //Draw3D::drawQuad_bare();
 }
 
+int drawSliderPath( const Slider* o, const Quat4f* ps, float sz=10 ){
+    Draw3D::drawPointCross( ps[o->along.x].f, sz );
+    Draw3D::drawLineStrip( o->path.n, o->path.ps, ps, o->path.closed );
+    return 0;
+}
+
+/*
 int drawSpaceCraft_sliderPaths( const SpaceCraft& craft, const Quat4f* ps, float sz=10 ){
     //Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
     int n = craft.sliders.size();
@@ -168,6 +175,7 @@ int drawSpaceCraft_sliderPaths( const SpaceCraft& craft, const Quat4f* ps, float
     }
     return n;
 }
+*/
 
 void drawNode( const Node& o, float sz=10 ){
     //Draw3D::color(Vec3f{1.0f,0.0f,1.0f});

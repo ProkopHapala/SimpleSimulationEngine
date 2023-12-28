@@ -114,6 +114,52 @@ int l_BoundNode(lua_State * L){
     return 1;
 };
 
+int l_Slider(lua_State * L){
+    //Lua::dumpStack(L);
+    Slider* o = new Slider();
+    int gid   = Lua::getInt   (L,1);
+    int kind  = Lua::getInt   (L,2);
+    o->calong = Lua::getDouble(L, 3);   // position along girder
+    Vec3d p0; Lua::getVec3(L, 4, p0 );
+    o->boundTo = theSpaceCraft->getStructuralComponent( gid, kind);
+    o->updateBound( p0 );
+    o->updatePath();
+    o->id   = theSpaceCraft->sliders.size();
+    //if(verbosity>1) 
+    o->print();
+    printf(" - boundTo:"); o->boundTo->print();
+    theSpaceCraft->sliders.push_back( o );
+    lua_pushnumber(L, o->id);
+    return 1;
+};
+
+/*
+int l_Slider(lua_State * L){
+    //Lua::dumpStack(L);
+    Slider* o = new Slider();
+    int id1  = Lua::getInt   (L,1);
+    int id2  = Lua::getInt   (L,2);
+    int it1  = Lua::getInt   (L,3);
+    int it2  = Lua::getInt   (L,4);
+    int is1  = Lua::getInt   (L,5);
+    int is2  = Lua::getInt   (L,6);
+    double c1 = Lua::getDouble(L,7);
+    double c2 = Lua::getDouble(L,8);
+    o->comp1 = theSpaceCraft->getStructuralComponent( id1, it1);
+    o->comp2 = theSpaceCraft->getStructuralComponent( id2, it2);
+    o->along=Vec2d{c1,c2};
+    o->sides=Vec2i{is1,is2};
+    o->id   = theSpaceCraft->sliders.size();
+    //if(verbosity>1) 
+    o->print();
+    printf(" - compi1:"); o->comp1->print();
+    printf(" - compi2:"); o->comp2->print();
+    theSpaceCraft->sliders.push_back( o );
+    lua_pushnumber(L, o->id);
+    return 1;
+};
+*/
+
 int l_Rope    (lua_State * L){
     Rope* o = new Rope();
     o->nodes.x    = theSpaceCraft->nodes[Lua::getInt(L,1)];
@@ -188,31 +234,6 @@ int l_Ring    (lua_State * L){
     o->id     = theSpaceCraft->rings.size();
     if(verbosity>1) o->print();
     theSpaceCraft->rings.push_back( o );
-    lua_pushnumber(L, o->id);
-    return 1;
-};
-
-int l_Slider(lua_State * L){
-    //Lua::dumpStack(L);
-    Slider* o = new Slider();
-    int id1  = Lua::getInt   (L,1);
-    int id2  = Lua::getInt   (L,2);
-    int it1  = Lua::getInt   (L,3);
-    int it2  = Lua::getInt   (L,4);
-    int is1  = Lua::getInt   (L,5);
-    int is2  = Lua::getInt   (L,6);
-    double c1 = Lua::getDouble(L,7);
-    double c2 = Lua::getDouble(L,8);
-    o->comp1 = theSpaceCraft->getStructuralComponent( id1, it1);
-    o->comp2 = theSpaceCraft->getStructuralComponent( id2, it2);
-    o->along=Vec2d{c1,c2};
-    o->sides=Vec2i{is1,is2};
-    o->id   = theSpaceCraft->sliders.size();
-    //if(verbosity>1) 
-    o->print();
-    printf(" - compi1:"); o->comp1->print();
-    printf(" - compi2:"); o->comp2->print();
-    theSpaceCraft->sliders.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };

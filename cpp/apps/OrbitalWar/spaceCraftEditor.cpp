@@ -126,7 +126,7 @@ void renderShip(){
     exportSim( sim, mesh2, workshop );
     //sim.printAllNeighs();
     //theSpaceCraft->printAll_girders();
-    theSpaceCraft->updateSliderPaths();
+    //theSpaceCraft->updateSliderPaths();
     
     glEnable(GL_LIGHTING);
     glEnable     ( GL_LIGHT0           );
@@ -480,7 +480,7 @@ void SpaceCraftEditGUI::draw(){
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     glLineWidth(3.0);
     Draw3D::color( Vec3f{1.0,0.0,1.0} );
-    drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
+    //drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
     //drawSpaceCraft_nodes( theSpaceCraft, const Quat4f* ps=0, float sz=10, int i0=0, int i1=-1 );
     Draw3D::color(Vec3f{0.f,0.5f,0.f});  drawSpaceCraft_nodes( *theSpaceCraft, 0, 10 );
     glLineWidth(5.0);

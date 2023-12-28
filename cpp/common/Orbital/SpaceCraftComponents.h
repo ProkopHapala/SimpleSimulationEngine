@@ -159,9 +159,19 @@ class Path{ public:
 // ==== Components
 // ====================
 
-class ShipComponent{ public:
+class Object{ public:
     int    id;
     int    kind;
+
+    virtual ~Object(){  };
+    virtual void print(bool bShort=false)const{ printf("Object(id=%i,kind=%i)",id,kind); }
+    virtual int component_kind(){ return -1; }
+    //virtual Object (){ kind = component_kind(); }
+};
+
+class ShipComponent : public Object { public:
+    //int    id;
+    //int    kind;
     //int    compKind = (int)ComponetKind::ShipComponent;
     int    shape;
     int    face_mat=-1;
@@ -210,13 +220,15 @@ class StructuralComponent : public ShipComponent { public:
     virtual double rotMat( Mat3d& rot)const = 0;
     virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 ) const = 0;
     virtual int pointAlong( double c, int side, Vec3d* pout=0 ) const = 0;
+    virtual int sideToPath( int side, int* inds ) const =0;
 
 };
 
-class Node{ public:
+class Node : public Object{ public:
+    int ivert=-1; // to which vertex int the mesh/truss it corresponds
     Vec3d pos;
     //std::vector<Vec2i> components; // {kind,index}  // TODO: is this still valid ?
-    int id;
+    //int id;
     StructuralComponent* boundTo=0; // node can be bound to a girder, rope or ring. if boundTo==0 then node is free in space
     double calong;           // position along the bound component
     Vec2i  along{-1,-1};     // index of
@@ -225,9 +237,8 @@ class Node{ public:
 
     virtual ~Node(){};
     int updateBound(Vec3d p0=Vec3dZero){ if(boundTo){ if(along.y<0)along.y=boundTo->nearSide(p0); along.x = boundTo->pointAlong( calong, along.y, &pos); }else{ along.x=-1; } return along.x; } 
-
     virtual void print(bool bShort=false)const{  if(bShort){printf("Node(id=%i)",id);}else{ 
-        printf("Node(id=%i) pos(%g,%g,%g) \n", id, pos.x,pos.y,pos.z ); if(boundTo){printf(" -- boundTo(along.x=%i calong=%g ", along.x, calong ); boundTo->print(true); printf(")\n");} } 
+        printf("Node(id=%i) iv=%i pos(%g,%g,%g) \n", id, ivert, pos.x,pos.y,pos.z ); if(boundTo){printf(" -- boundTo(along.x=%i calong=%g ", along.x, calong ); boundTo->print(true); printf(")\n");} } 
     }
 };
 
@@ -294,29 +305,20 @@ class Girder : public NodeLinker { public:
         else                       { if( cb<0 ){ side=2; }else{ side=3; } }  // width
         return side;
     };
-    virtual int pointAlong( double c, int side, Vec3d* pout=0 )const override{ 
-        Mat3d rot;
-        rotMat(rot);
-        //if(side<0){ side=nearSide(pOther,&rot); }
-        //side = 0;
-        //side = 1;
-        //side = 2;
-        //side = 3;
+    virtual int pointAlong( double c, int side, Vec3d* pout=0 )const override{
         int i;
-        if(side>1){
-            i = (int)(c*(nseg+0.5)-0.5);
-        }else{
-            i = (int)(c*(nseg+0.5));
-        }
+        if(side>1){ i = (int)(c*(nseg+0.5)-0.5); }
+        else      { i = (int)(c*(nseg+0.5));     }
         if(i<0){i=0;}else if(i>=nseg){i=nseg-1;}
         int ip=i*4+side;
         if(pout){
+            Mat3d rot;
+            rotMat(rot);
             Vec3d d = (nodes.y->pos - nodes.x->pos)*(1./(nseg*2+1));
              *pout = nodes.x->pos + d*(i*2.0+1);
             if(side>1){ 
                 pout->add( d );
                 pout->add_mul( rot.b, (side-2.5)*2*wh.y );
-
             }else{     
                 pout->add_mul( rot.a, (side-0.5)*2*wh.x );
             }            
@@ -325,6 +327,13 @@ class Girder : public NodeLinker { public:
         //printf( "Girder::pointAlong(c=%g) i=%i side=%i nseg=%i (nv/4)=%i \n", c, i, side, nseg, pointRange.y-pointRange.x );
         return ip; 
     };
+    virtual int sideToPath( int side, int* inds ) const override{
+        int i0 = pointRange.x;
+        int n  = pointRange.y-i0;
+        //if((n>1000)||(n<=0)){printf( "Girder::sideToPath() n=%i seems wrong\n", n ); exit(0);   }
+        for(int i=0; i<n; i++){ inds[i] = i0+4*i+side; }
+        return n;
+    }
 
 };
 
@@ -357,6 +366,13 @@ class Ring : public StructuralComponent { public:
     virtual int nearSide  ( Vec3d p, const Mat3d* rot=0 )const override{ return -1; };
     virtual int pointAlong( double c, int side, Vec3d* pout=0 )const override{ return -1; };
 
+    virtual int sideToPath( int side, int* inds ) const override{
+        int i0 = pointRange.x;
+        int n  = pointRange.y-i0;
+        //if((n>1000)||(n<=0)){printf( "Girder::sideToPath() n=%i seems wrong\n", n ); exit(0);   }
+        for(int i=0; i<n; i++){ inds[i] = i0+i; }
+        return n;
+    }
 };
 
 class Rope : public NodeLinker { public:
@@ -379,6 +395,13 @@ class Rope : public NodeLinker { public:
         }
         return i; 
     };
+    virtual int sideToPath( int side, int* inds ) const override{
+        int i0 = pointRange.x;
+        int n  = pointRange.y-i0;
+        //if((n>1000)||(n<=0)){printf( "Rope::sideToPath() n=%i seems wrong\n", n ); exit(0);   }
+        for(int i=0; i<n; i++){ inds[i] = i0+4*i+side; }
+        return n;
+    }
 };
 
 class Modul: public ShipComponent { public:
@@ -525,7 +548,49 @@ class Slider : public ShipComponent { public:
 
 
 //class Slider : public Node { public:    // If we make Slider child of Node we can easily generate it somewhere along a girder  
-class Slider : public ShipComponent { public:
+class Slider : public Node { public:
+    //int  ifix;    // to which vertex it is anchored
+    Path path;
+    double range;    // how much deflection of the slider perpedicular to the edge on loop this slider allows? 
+    double forceMax; // max force which ca ne exerted by this slider
+    double powerMax;
+
+    virtual void print(bool bShort=false)const override{ if(bShort){printf("Slider(id=%i)",id);}else{
+        printf("Slider(id=%i) kind=%i girder=%i F=%g[N] P=%g[W] \n", id, kind, forceMax, powerMax ); }
+    }
+    virtual int component_kind(){ return (int)ComponetKind::Slider; };
+
+
+    void updatePath(){
+        printf("Slider::updatePath()\n");
+        print();
+        printf(" - boundTo:"); boundTo->print();
+
+        /*
+        //o->ifix = getVertAlong(o->comp2, o->along.y, o->sides.y );
+        //int t1 = o->comp1->component_kind();
+        printf( "updateSliderPaths[%i] t=%i | Girder=%i Ring=%i Rope=%i\n", io, t1, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
+        int i0 = o->comp1->pointRange.x;
+        int n  = o->comp1->pointRange.y-i0;
+        if((n>1000)||(n<=0)){printf( "updateSliderPaths() n=%i seems wrong\n", n ); exit(0);   }
+        printf("SpaceCraft::updateSliderPaths() i0=%i n=%i\n", i0, n );
+        if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){
+            if((t1 == (int)ComponetKind::Ring)) o->path.closed=true;
+            n/=4;
+            o->path.realloc(n);
+            for(int i=0; i<n; i++){ o->path.ps[i] = i0+4*i+o->sides.x; }
+        }else if (t1 == (int)ComponetKind::Rope){
+            o->path.realloc(n);
+            for(int i=0; i<n; i++){ o->path.ps[i] = i0+i; }
+        }
+        */
+    }
+
+};
+
+
+/*
+class Slider_old : public Node { public:
     // allow slide a node over a girder
     // this slider moves one vertex (fixed point) which respect to vertex-loop (e.g. girder,wheel,rope). It will interpolate the position along current edge on the vertex loop. It will apply force to the two vertexes of the current edge.
     StructuralComponent* comp1;  // Warrning - this becomes invalid when arrays are re-allocated !!!!
@@ -547,6 +612,7 @@ class Slider : public ShipComponent { public:
     }
     virtual int component_kind(){ return (int)ComponetKind::Slider; };
 };
+*/
 
 // === Guns
 

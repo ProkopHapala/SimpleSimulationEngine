@@ -267,6 +267,7 @@ int add_Gun     ( int suppId, const Vec2d& suppSpan, int type=-1 ){
     return o->id;
 };
 
+/*
 int add_slider( StructuralComponent* comp1, StructuralComponent* comp2, Vec2d along, Vec2i sides ){
     Slider* o = new Slider();
     o->comp1 = comp1; 
@@ -277,6 +278,7 @@ int add_slider( StructuralComponent* comp1, StructuralComponent* comp2, Vec2d al
     sliders.push_back( o );
     return o->id;
 }
+*/
 
 /*
     std::vector<Node>      nodes;
@@ -408,7 +410,7 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    ->pr
             pm->areaDensity = areaDensity;
         }
     }
-
+    /*
     void updateSliderPaths(){
         printf("SpaceCraft::updateSliderPaths()\n");
         for(int io=0;io<sliders.size();io++){
@@ -437,6 +439,7 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    ->pr
             }
         }
     }
+    */
 
     void checkIntegrity(){
         printf("SpaceCraft::checkIntegrity() %i nodes, %i girders, %i rings, %i ropes, \n", nodes.size(), girders.size(), rings.size(), ropes.size() );
