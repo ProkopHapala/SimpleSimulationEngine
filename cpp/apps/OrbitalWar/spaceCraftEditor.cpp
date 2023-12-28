@@ -23,7 +23,7 @@ int verbosity = 0;
 #include "testUtils.h"
 
 #include "SpaceCraft.h"
-#include "SpaceCraft2Mesh.h"   // deprecated
+//#include "SpaceCraft2Mesh.h"   // deprecated
 #include "SpaceCraft2Mesh2.h"
 #include "SoftBody.h"
 
@@ -187,18 +187,18 @@ void drawPicked( const SpaceCraft& craft, int ipick ){
     switch( (ComponetKind)craft.pickedTyp){
         case ComponetKind::Radiator :{
             //printf("drawPicked radiator[%i] \n", ipick );
-            drawPlateContour( craft.radiators[ipick], &craft.girders[0], false );
+            drawPlateContour( *craft.radiators[ipick], &craft.girders[0], false );
             }break;
         case ComponetKind::Shield:{
             //printf("drawPicked shield[%i] \n", ipick );
-            drawPlateContour( craft.shields  [ipick], &craft.girders[0], false );
+            drawPlateContour( *craft.shields  [ipick], &craft.girders[0], false );
             }break;
         case ComponetKind::Girder:{
-            const Girder& o = craft.girders[ipick];
+            const Girder& o = *craft.girders[ipick];
             Draw3D::drawLine(o.nodes.x->pos,o.nodes.y->pos);
             } break;
         case ComponetKind::Rope:{
-            const Rope& o = craft.ropes[ipick];
+            const Rope& o = *craft.ropes[ipick];
             Draw3D::drawLine(o.nodes.x->pos,o.nodes.y->pos);
             } break;
     }
@@ -491,24 +491,24 @@ void SpaceCraftEditGUI::draw(){
         //printf( "node[%i] %li \n", nd->id, (long)(nd->boundTo) );
         //printf( "node[%i] \n", nd->id );
         if(nd->boundTo==0) continue;
-        printf( "node[%i] %li bt.id=%i\n", nd->id, (long)(nd->boundTo), nd->boundTo->id );
+        //printf( "node[%i] %li bt.id=%i\n", nd->id, (long)(nd->boundTo), nd->boundTo->id );
         if((nd->boundTo->id>1000)||(nd->boundTo->id<0)){ printf("ERROR node[%id]->boundTo->id==%i\n", nd->id, nd->boundTo->id ); exit(0); }
         //Node* nd = theSpaceCraft->nodes[7];
-        //Draw3D::color(Vec3f{0.f,0.5f,0.5f});  Draw3D::drawPointCross( nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong, 5 );
-        //Mat3d rot;
-        //nd->boundTo->rotMat( rot );
-        //Vec3d pos = nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong;
-        //Draw3D::drawMatInPos( rot, pos, Vec3dOne*10.0 );
-        //glLineWidth(3.0);
-        //Draw3D::color(Vec3f{1.f,1.0f,1.0f});
-        //Draw3D::drawVecInPos( ((Girder*)nd->boundTo)->up*30.0, pos );
+        Draw3D::color(Vec3f{0.f,0.5f,0.5f});  Draw3D::drawPointCross( nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong, 5 );
+        Mat3d rot;
+        nd->boundTo->rotMat( rot );
+        Vec3d pos = nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong;
+        Draw3D::drawMatInPos( rot, pos, Vec3dOne*10.0 );
+        glLineWidth(3.0);
+        Draw3D::color(Vec3f{1.f,1.0f,1.0f});
+        Draw3D::drawVecInPos( ((Girder*)nd->boundTo)->up*30.0, pos );
     }
     
     {
         glPointSize(10);
-        const Radiator& o =  theSpaceCraft->radiators[0];
-        const Girder& g1  =  theSpaceCraft->girders[o.g1];
-        const Girder& g2  =  theSpaceCraft->girders[o.g2];
+        const Radiator& o =  *theSpaceCraft->radiators[0];
+        const Girder& g1  =  *theSpaceCraft->girders[o.g1];
+        const Girder& g2  =  *theSpaceCraft->girders[o.g2];
         Draw3D::color(Vec3f{1.f,0.f,0.f}); drawPointRange( 10, g1.pointRange, 4, 0, o.g1span, sim.points );
         Draw3D::color(Vec3f{0.f,0.f,1.f}); drawPointRange( 10, g2.pointRange, 4, 1, o.g2span, sim.points );
     }

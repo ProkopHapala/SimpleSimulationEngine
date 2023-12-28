@@ -92,8 +92,8 @@ r_pitch = Ring( {8.0,0.0,0.0}, xvec, yvec, 64, 80.0, {16.0,4.0}, "Steel", g1_st 
 -- Ring( {0.0,0.0,0.0}, yvec, xvec, 16, 160.0, {8.0,5.0}, "Steel" )
 
 --- print( "ComponetKind[Girder,Ring,Rope]", ComponetKind.Girder,ComponetKind.Ring,ComponetKind.Rope)
---- Slider( gFw,r_roll, ComponetKind.Girder,ComponetKind.Ring,   3,0, 0,0  )
--- Slider( r_pitch,gFw, ComponetKind.Ring,ComponetKind.Girder,   3,3, 0,0.1  )
+-- Slider( gFw,r_roll, ComponetKind.Girder,ComponetKind.Ring,   3,0, 0,0  )
+ Slider( r_pitch,gFw, ComponetKind.Ring,ComponetKind.Girder,   3,3, 0,0.1  )
 
 --  There should be mechanism how to generate nodes on-top of ship components (anchor points)
 

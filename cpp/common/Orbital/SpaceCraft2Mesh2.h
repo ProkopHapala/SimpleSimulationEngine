@@ -350,60 +350,57 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     for(const Node* o: craft.nodes){
         mesh.vert( o->pos );
     }
-    for(Rope o: craft.ropes){
+    for(Rope* o: craft.ropes){
         mesh.block();
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
-        mesh.rope( o.nodes.x->id,o.nodes.y->id, o.face_mat );
+        mesh.rope( o->nodes.x->id,o->nodes.y->id, o->face_mat );
         Quat4i& b = mesh.blocks.back();
-        o.pointRange  = {b.x,(int)mesh.verts.size()};
-        o.stickRange = {b.y,(int)mesh.edges.size()};
+        o->pointRange = {b.x,(int)mesh.verts.size()};
+        o->stickRange = {b.y,(int)mesh.edges.size()};
     }
-    for(Girder& o: craft.girders){
+    for(Girder* o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
         mesh.block();
-        girder1( mesh, o.nodes.x->pos, o.nodes.y->pos, o.up, o.nseg, o.wh.a, o.st );
-        girder1_caps( mesh, o.nodes.x->id, o.nodes.y->id, o.st.x );
+        girder1( mesh, o->nodes.x->pos, o->nodes.y->pos, o->up, o->nseg, o->wh.a, o->st );
+        girder1_caps( mesh, o->nodes.x->id, o->nodes.y->id, o->st.x );
         Quat4i& b = mesh.blocks.back();
-        o.pointRange  = {b.x,(int)mesh.verts.size()};
-        o.stickRange = {b.y,(int)mesh.edges.size()};
+        o->pointRange  = {b.x,(int)mesh.verts.size()};
+        o->stickRange = {b.y,(int)mesh.edges.size()};
         //o.print();
         //printf( "BuildCraft_truss() girder.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
         i++;
     }
-    /*
     // --- Rings
     i=0;
-    for(Ring& o: craft.rings){
+    for(Ring* o: craft.rings){
         mesh.block();
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
-        wheel( mesh, o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh, o.st );
+        wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );
         Quat4i& b = mesh.blocks.back();
-        o.pointRange  = {b.x,(int)mesh.verts.size()};
-        o.stickRange = {b.y,(int)mesh.edges.size()};
+        o->pointRange = {b.x,(int)mesh.verts.size()};
+        o->stickRange = {b.y,(int)mesh.edges.size()};
         //printf( "BuildCraft_truss() ring.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
         i++;
     }
     // --- Radiators
     printf("BuildCraft_truss().radiators\n");
-    for(Radiator& o : craft.radiators ){
+    for(Radiator* o : craft.radiators ){
         mesh.block();
-        o.print();
-        const Girder& g1 =craft.girders[o.g1];
-        const Girder& g2 =craft.girders[o.g2];
-        plateOnGriders( mesh, {10,1}, g1.pointRange, g2.pointRange, {4,4}, {-1,-1}, o.g1span, o.g2span, {0,1,2,3} );
+        o->print();
+        const Girder& g1 = *craft.girders[o->g1];
+        const Girder& g2 = *craft.girders[o->g2];
+        plateOnGriders( mesh, {10,1}, g1.pointRange, g2.pointRange, {4,4}, {-1,-1}, o->g1span, o->g2span, {0,1,2,3} );
         //break;
         Quat4i& b = mesh.blocks.back();
-        o.pointRange  = {b.x,(int)mesh.verts.size()};
-        o.stickRange = {b.y,(int)mesh.edges.size()};
+        o->pointRange = {b.x,(int)mesh.verts.size()};
+        o->stickRange = {b.y,(int)mesh.edges.size()};
         //break;
     };
     // --- Shields
-    for( const Shield& o : craft.shields ){
-        //mesh.block();
-        //drawPlate_mesh(mesh, o, nodes.data(), girders.data() );
-    };
-    */
-
+    //for( const Shield* o : craft.shields ){
+    //    //mesh.block();
+    //    //drawPlate_mesh(mesh, o, nodes.data(), girders.data() );
+    //};
 
     //int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 );
     /*

@@ -173,6 +173,7 @@ class ShipComponent{ public:
     Vec2i pointRange;  // index of start and end in Truss
     Vec2i stickRange; // --,,--
 
+    virtual ~ShipComponent(){};
     virtual void print(bool bShort=false)const{ if(bShort){printf("ShipComponent(id=%i)",id);}else{
         printf("ShipComponent(id=%i) kidn=%i face_mat=%i \n", id, kind, face_mat );} 
     }
@@ -222,6 +223,7 @@ class Node{ public:
     double length;           // length of the bound component
     //Node(Vec3d pos):pos(pos){};
 
+    virtual ~Node(){};
     int updateBound(Vec3d p0=Vec3dZero){ if(boundTo){ if(along.y<0)along.y=boundTo->nearSide(p0); along.x = boundTo->pointAlong( calong, along.y, &pos); }else{ along.x=-1; } return along.x; } 
 
     virtual void print(bool bShort=false)const{  if(bShort){printf("Node(id=%i)",id);}else{ 
