@@ -76,10 +76,6 @@ int glo_truss=0, glo_capsula=0, glo_ship=0;
 //char str[8096];
 double elementSize  = 5.;
 
-
-
-// Render 
-
 void renderTruss(int nb, int2* bonds, Quat4f* ps, float* strain=0, float sc=1.0 ){
     glBegin(GL_LINES);
     for(int i=0; i<nb; i++ ){
@@ -95,6 +91,48 @@ void renderTruss(int nb, int2* bonds, Quat4f* ps, float* strain=0, float sc=1.0 
     }
     glEnd();
 }
+
+void renderPoinSizes(int n, Quat4f* ps, float sc=1.0 ){
+    glColor3f(0.0,0.0,1.0);
+    glPointSize( 10.0 );
+    glBegin(GL_POINTS);
+    for(int i=0; i<n; i++ ){
+        //printf( "point[%i] m=%g \n", i, ps[i].e );
+        float c = ps[i].e*sc;
+        glColor3f(c,c,c);
+        //glPointSize( ps[i].e*sc );
+        Draw3D::vertex( ps[i].f );
+    }
+    glEnd();
+    //exit(0);
+}
+
+void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
+    glColor3f(1.0,0.0,1.0);
+    //glPointSize( 10.0 );
+    glBegin(GL_LINES);
+    for(int i=0; i<n; i++ ){
+        //printf( "point[%i] m=%g \n", i, ps[i].e );
+        //float c = ps[i].e*sc;
+        //glColor3f(c,c,c);
+        //glPointSize( ps[i].e*sc );
+        Draw3D::vertex( ps[i].f );
+        Draw3D::vertex( ps[i].f+fs[i].f*sc );
+    }
+    glEnd();
+    //exit(0);
+}
+
+// Render 
+void runSim( OrbSim_f& sim ){
+    sim.cleanForce();   
+    //sim.evalTrussForce();
+    sim.applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 1.0 );
+    sim.move_GD( 0.01 );
+
+    //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 0.001 );
+};
 
 // ======================  Free Functions
 
@@ -476,8 +514,8 @@ void SpaceCraftEditGUI::draw(){
     */
 
     glDisable(GL_LIGHTING);
-    glLineWidth(0.5);
-    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+
+    /*
     glLineWidth(3.0);
     Draw3D::color( Vec3f{1.0,0.0,1.0} );
     //drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
@@ -503,17 +541,22 @@ void SpaceCraftEditGUI::draw(){
         Draw3D::color(Vec3f{1.f,1.0f,1.0f});
         Draw3D::drawVecInPos( ((Girder*)nd->boundTo)->up*30.0, pos );
     }
-    
-    {
-        glPointSize(10);
-        const Radiator& o =  *theSpaceCraft->radiators[0];
-        const Girder& g1  =  *theSpaceCraft->girders[o.g1];
-        const Girder& g2  =  *theSpaceCraft->girders[o.g2];
-        Draw3D::color(Vec3f{1.f,0.f,0.f}); drawPointRange( 10, g1.pointRange, 4, 0, o.g1span, sim.points );
-        Draw3D::color(Vec3f{0.f,0.f,1.f}); drawPointRange( 10, g2.pointRange, 4, 1, o.g2span, sim.points );
-    }
+    */
+
+    // { // Draw Radiators anchor points
+    //     glPointSize(10);
+    //     const Radiator& o =  *theSpaceCraft->radiators[0];
+    //     const Girder& g1  =  *theSpaceCraft->girders[o.g1];
+    //     const Girder& g2  =  *theSpaceCraft->girders[o.g2];
+    //     Draw3D::color(Vec3f{1.f,0.f,0.f}); drawPointRange( 10, g1.pointRange, 4, 0, o.g1span, sim.points );
+    //     Draw3D::color(Vec3f{0.f,0.f,1.f}); drawPointRange( 10, g2.pointRange, 4, 1, o.g2span, sim.points );
+    // }
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+
+    // Render simulation
+    runSim( sim );
+    glLineWidth(0.5); renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 
     //if(glo_truss) glCallList(glo_truss);
     //if(glo_ship ) glCallList(glo_ship);

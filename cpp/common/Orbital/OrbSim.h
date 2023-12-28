@@ -80,6 +80,18 @@ class OrbSim_f{ public:
         }
     }
 
+    void applyCentrifugalForce( Vec3f p0, Vec3f ax, float omega ){
+        double omega2 = omega*omega;
+        for(int i=0;i<nPoint; i++ ){
+            const Quat4f& p = points[i];
+            //Vec3f f; f.set_cross(ax,p.f-p0);
+            Vec3f f; f.set_sub(p.f,p0); f.mul( p.w*omega2 );
+            f.makeOrthoU(ax);
+            forces[i].f.add(f);
+            //forces[i].f.add_mul( f, p.w*omega2 );
+        }
+    }
+
     void printNeighs(int i){
         int j0 = i*nNeighMax;
         for(int jj=0;jj<nNeighMax;jj++){
@@ -92,6 +104,16 @@ class OrbSim_f{ public:
     }
     void printAllNeighs(){ printf("OrbSim_f::printAllNeighs(nPoint=%i,nNeighMax=%i)\n",nPoint,nNeighMax); for(int i=0;i<nPoint;i++){ printNeighs(i); }; };
 
+    void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero; } };
+
+    void move_GD(float dt){
+        for(int i=0;i<nPoint; i++ ){
+            Quat4f p = points[i];
+            Quat4f f = forces[i];
+            float dtm = dt/p.w;
+            points[i].f.add_mul( f.f, dtm );
+        }
+    }
 
 };   // OrbSim_f
 
