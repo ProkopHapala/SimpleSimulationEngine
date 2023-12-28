@@ -10,13 +10,11 @@
 #include "quaternion.h"
 #include "geom3D.h"
 
-#include "TriangleRayTracer.h"
-#include "Radiosity.h"
-
-#include "Truss.h"
+//#include "TriangleRayTracer.h"
+//#include "Radiosity.h"
+//#include "Truss.h"
 
 #include "SpaceCraftComponents.h"
-
 
 namespace SpaceCrafting{
 
@@ -26,11 +24,10 @@ class SpaceCraft : public CatalogItem { public:
     SpaceCraftWorkshop* workshop = 0;
 
     std::vector<int>       LODs;  // levels of detail for OpenGL rendering
-    Truss truss;
+    //Truss truss;
     //std::vector<Node>      nodes;
     std::vector<Node*>      nodes;
 
-    
     // Node-Connectors ( linear structures )
     std::vector<Rope>      ropes;
     std::vector<Girder>    girders;
@@ -61,7 +58,7 @@ class SpaceCraft : public CatalogItem { public:
 
     StructuralComponent* getStructuralComponent( int id, int type ){
         ComponetKind t = (ComponetKind) type;
-        printf( "getStructuralComponent(id=%i,type=%i) (known Girder=%i,Ring=%i,Rope=%i) \n", id, type, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
+        //printf( "getStructuralComponent(id=%i,type=%i) (known Girder=%i,Ring=%i,Rope=%i) \n", id, type, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
         switch (t){
             case ComponetKind::Girder : return &girders[id]; break;
             case ComponetKind::Ring   : return &rings  [id]; break;
@@ -77,7 +74,7 @@ class SpaceCraft : public CatalogItem { public:
 	void clear(){
         nodes.clear(); ropes.clear(); girders.clear(); rings.clear(); thrusters.clear(); guns.clear(); radiators.clear(); shields.clear(); tanks.clear(); pipes.clear();
         rocks.clear(); balloons.clear();
-        truss.clear();
+        //truss.clear();
 	};
 
 
@@ -359,63 +356,6 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
         return 0;
     }
 
-/**
- * Converts the SpaceCraft object to a Truss object. Nodes, ropes, girders and rings are converted to points and edges of the truss. Each ship component is assigned a range of points and edges in the truss.
- * 
- * @param truss The Truss object to populate with the converted data.
- */
-	void toTruss(Truss& truss, bool bTanks=false ){
-        printf( "SpaceCraft::toTruss() \n" );
-        int i=0;
-        truss.newBlock();
-        int ip0 = truss.points.size();
-        for(Node* o: nodes){
-            truss.points.push_back( o->pos );
-        }
-        for(Rope o: ropes){
-            truss.edges.push_back( (TrussEdge){o.nodes.x->id,o.nodes.y->id,0} );
-        }
-        for(Girder& o: girders){
-            //printf("DEBUG toTruss : girder #%i \n", i);
-            truss.girder1( o.nodes.x->pos, o.nodes.y->pos, o.up, o.nseg, o.wh.a );
-            truss.girder1_caps( o.nodes.x->id, o.nodes.y->id, 1 );
-
-            Vec2i& bak = truss.blocks.back();
-            o.pointRange  = {bak.x,truss.points.size()};
-            o.stickRange = {bak.y,truss.edges .size()};
-            i++;
-        }
-        i=0;
-        for(Ring& o: rings){
-            //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
-            truss.wheel( o.pose.pos, o.pose.pos+o.pose.rot.b*o.R, o.pose.rot.c, o.nseg, o.wh.a );
-            Vec2i& bak = truss.blocks.back();
-            o.pointRange  = {bak.x,truss.points.size()};
-            o.stickRange = {bak.y,truss.edges .size()};
-            i++;
-        }
-        // ToDo: Shields
-        // ToDo: Radiators
-        // ToDo: Thrusters
-        // ToDo: Tanks
-        // ToDo: maybe Tanks would be better simulated as rigid-body objects, but than we need to couple the Truss (SoftBody) and RigidBody ?
-        if( bTanks ){
-            for(Tank& o: tanks){
-                //printf("DEBUG toTruss : tank #%i \n", i);
-                Vec3d p0 = o.pose.pos + o.pose.rot.a*o.span.a*0.5;
-                Vec3d p1 = o.pose.pos - o.pose.rot.a*o.span.a*0.5;
-                int edgeMat = workshop->panelMaterials.vec[ o.face_mat ]->stickMaterialId;
-                truss.makeCylinder( p0, p1, o.span.b, o.span.b, -1, -1, 1.0, o.face_mat, o.face_mat );
-                Vec2i& bak = truss.blocks.back();
-                o.pointRange  = {bak.x,truss.points.size()};
-                o.stickRange = {bak.y,truss.edges .size()};
-                i++;
-            }
-        }
-        printf( "npoint %i nstick %i nblocks %i \n", truss.points.size(), truss.edges.size(), truss.blocks.size()  );
-	}
-	void toTruss(){ truss.clear(); toTruss(truss); };
-
     int getVertAlong(ShipComponent* s, double c, int side=0){
             int t1 = s->component_kind();
             int i0 = s->pointRange.x;
@@ -447,6 +387,16 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
     }
     */
 
+    void updatePanelMaterials(){
+        for (PanelMaterial* pm : workshop->panelMaterials.vec ){     
+            double areaDensity = 0.0;
+            for( PanelLayer& l : pm->layers ){ 
+                areaDensity += l.materiallId = workshop->materials.vec[l.materiallId]->density * l.thickness; // [kg/m2]
+            }   
+            pm->areaDensity = areaDensity;
+        }
+    }
+
     void updateSliderPaths(){
         printf("SpaceCraft::updateSliderPaths()\n");
         for(int io=0;io<sliders.size();io++){
@@ -473,46 +423,6 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    .pri
                 o.path.realloc(n);
                 for(int i=0; i<n; i++){ o.path.ps[i] = i0+i; }
             }
-        }
-    }
-
-    inline void plate2raytracer( const Plate& o, TriangleRayTracer& raytracer, double elemMaxSize, bool active )const{
-        Quad3d qd;
-        plate2quad(o, qd);
-        raytracer.addTriangle( {qd.l1.a,qd.l1.b,qd.l2.b}, elemMaxSize, active );
-        raytracer.addTriangle( {qd.l1.a,qd.l2.b,qd.l2.a}, elemMaxSize, active );
-        //return fmin(t1,t2);
-	}
-
-	void toRayTracer( TriangleRayTracer& raytracer, double elemMaxSize )const{
-        for(int i=0; i<radiators.size(); i++){ plate2raytracer( radiators[i], raytracer, elemMaxSize, true ); }
-        for(int i=0; i<shields.size();   i++){ plate2raytracer( shields  [i], raytracer, elemMaxSize, true ); }
-	}
-
-    void updatePanelMaterials(){
-        for (PanelMaterial* pm : workshop->panelMaterials.vec ){     
-            double areaDensity = 0.0;
-            for( PanelLayer& l : pm->layers ){ 
-                areaDensity += l.materiallId = workshop->materials.vec[l.materiallId]->density * l.thickness; // [kg/m2]
-            }   
-            pm->areaDensity = areaDensity;
-        }
-    }
-
-    void updateTrussEdges( Truss& truss ){
-        for( TrussEdge& e : truss.edges ){
-            Material* mat = workshop->materials.vec[ e.type ];
-            double c = e.crossection / e.l0;
-            e.kT = mat->Kpull * c;
-            e.kP = mat->Kpush * c;
-            e.mass = mat->density * e.crossection * e.l0;
-        }
-    }
-
-    void updateTrussFaces( Truss& truss ){
-        for( TrussFace& f : truss.faces ){
-            PanelMaterial* mat = workshop->panelMaterials.vec[ f.type ];
-            f.mass = mat->areaDensity * f.area;
         }
     }
 

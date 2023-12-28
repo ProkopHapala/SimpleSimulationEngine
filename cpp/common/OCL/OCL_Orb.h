@@ -50,9 +50,9 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         nNeighMax=nNeighMax_;
         nNeighTot = nPoint*nNeighMax;
         printf( "initAtomsForces() nPoint %i nNeighMax %i \n", nPoint, nNeighMax );
-        ibuff_points  = newBuffer( "atoms",  nPoint   , sizeof(float4), 0, CL_MEM_READ_WRITE ); if(bCPU)points = (float4*)malloc( nPoint*sizeof(float4)    );
-        ibuff_forces  = newBuffer( "forces", nPoint   , sizeof(float4), 0, CL_MEM_READ_WRITE ); if(bCPU)forces = (float4*)malloc( nPoint*sizeof(float4)    );
-        ibuff_params  = newBuffer( "forces", nNeighTot, sizeof(float4), 0, CL_MEM_READ_WRITE ); if(bCPU)params = (float4*)malloc( nNeighTot*sizeof(float4) );
+        ibuff_points  = newBuffer( "atoms",  nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); if(bCPU)points = (Quat4f*)malloc( nPoint*sizeof(Quat4f)    );
+        ibuff_forces  = newBuffer( "forces", nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); if(bCPU)forces = (Quat4f*)malloc( nPoint*sizeof(Quat4f)    );
+        ibuff_params  = newBuffer( "forces", nNeighTot, sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); if(bCPU)params = (Quat4f*)malloc( nNeighTot*sizeof(Quat4f) );
         ibuff_neighs  = newBuffer( "REQs",   nNeighTot, sizeof(int)   , 0, CL_MEM_READ_ONLY  ); if(bCPU)neighs = (int*   )malloc( nNeighTot*sizeof(int)    );
         return ibuff_points;
     }

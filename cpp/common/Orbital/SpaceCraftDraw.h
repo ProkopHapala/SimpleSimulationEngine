@@ -219,7 +219,7 @@ int drawPointRange( int n, Vec2i prange, int byN, int off, Vec2d span, const Qua
 }
 
 
-void drawSpaceCraft( const SpaceCraft& craft, int iLOD, bool bText, bool bColor ){
+void drawSpaceCraft( const SpaceCraft& craft, const Truss& truss, int iLOD, bool bText, bool bColor ){
     //nodes,ropes;girders;thrustes;guns;radiators;shields;tanks;pipes;
     //for( None nd : nodes ){};
     //const std::vector<Node*>&   nodes  = craft.nodes;
@@ -251,7 +251,7 @@ void drawSpaceCraft( const SpaceCraft& craft, int iLOD, bool bText, bool bColor 
         glLineWidth(1.0);
         //if(bColor)glColor3f(0.0,0.0,0.0);
         //drawTruss( craft.truss, bColor );
-        drawTruss( craft.truss, false );
+        drawTruss( truss, false );
     }
     // --- Girders
     glLineWidth(3);

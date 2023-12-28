@@ -8,12 +8,16 @@ print("BEGIN spaceship");
 
 --- newSpaceShip( "Ship1" )
 
+print( "#------ Lua:StickMaterials" )
+
 --- long, perp, zigIn, zigOut
 st1  = StickMaterial( "GS1_long", "Steel", 0.1,  0.005 )
 st2  = StickMaterial( "GS1_perp", "Steel", 0.05, 0.003 )
 st3  = StickMaterial( "GS1_in",   "Steel", 0.04, 0.002 )
 st4  = StickMaterial( "GS1_out",  "Steel", 0.04, 0.002 )
 -- stK1 = StickMaterial( "RK_1","Kevalr", 0.01, 0.001 )
+
+print( "#------ Lua:Nodes" )
 
 n0  = Node( origin );
 nLf = Node( {-100.0,   0.0,    0.0} )
@@ -23,7 +27,7 @@ nUp = Node( {   0.0, 200.0,    0.0} )
 nBk = Node( {   0.0,   0.0, -300.0} )
 nFw = Node( {   0.0,   0.0,  800.0} )
 
-
+print( "#------ Lua:Girders" )
 
 
 print( "Lua:Nodes:" , n0,nLf,nRt,nDw,nUp,nBk,nFw )
@@ -45,6 +49,8 @@ gFw = Girder( n0, nFw, xvec, 80, 2, {8.0,8.0}, "Steel", g1_st )
 gWdw = Girder( nDw, nFw, xvec, 70, 2, {defGirderWidth,defGirderWidth}, "Steel", g1_st )
 gWup = Girder( nUp, nFw, xvec, 70, 2, {defGirderWidth,defGirderWidth}, "Steel", g1_st )
 
+print( "#------ Lua:Ropes" )
+
 --          type     thick[mm]
 Rope(nBk,nLf, 25, "Kevlar" );
 Rope(nFw,nLf, 25, "Kevlar" )
@@ -60,6 +66,8 @@ Rope(nLf,nUp, 25, "Kevlar");
 Rope(nRt,nDw, 25, "Kevlar");
 Rope(nRt,nUp, 25, "Kevlar");
 
+print( "#------ Lua:BoundNodes and Girders" )
+
 --- Finished basic layout of the ship ( main girders and ropes )
 
 nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {0.0,100.0,100.0} );
@@ -69,12 +77,14 @@ nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {0.0,100.0,100.0} );
 nB2 = BoundNode( gUp, ComponetKind.Girder, 0.5, {0.0,100.0,100.0} );
 gB  = Girder( nB1, nB2, xvec, 10, 2, {4.0,4.0}, "Steel", g1_st )
 
-print( "#------ Lua:girderFans:" )
+print( "#------ Lua:Radiataors" )
 
 -- =RadiatorType = {"LithiumHeatPipe", 1280.0 }
 --Radiator( g5,0.2,0.8, g1,0.2,0.8, 1280.0 )
 Radiator( gFw,0.15,0.8, gWdw,0.02,0.8, 1280.0 )
 Radiator( gFw,0.15,0.8, gWup,0.02,0.8, 1280.0 )
+
+print( "#------ Lua:Rings & Sliders" )
 
 --      node1,2, up,  nseg    R     {width,height}
 r_roll  = Ring( {0.0,0.0,8.0}, zvec, xvec, 64, 55.0, {4.0,4.0}, "Steel", g1_st )
@@ -87,10 +97,10 @@ r_pitch = Ring( {8.0,0.0,0.0}, xvec, yvec, 64, 80.0, {16.0,4.0}, "Steel", g1_st 
 
 --  There should be mechanism how to generate nodes on-top of ship components (anchor points)
 
+print( "#------ Lua:Thrustrs,Tansk,Guns etc." )
+
 Thruster( {0.0,0.0,-300.0}, zvec, {5.0,100.0,120.0}, "ICF_Ebeam_magNozzle" )
 -- Thruster( {-16,-16,16}, {1.0,2.0,3.0}, {5.0,100.0,50.0}, "ICF_Ebeam_magNozzle" )
-
-
 tanks( 6,0.0, 10.0, 5.0, -50.0, -20.0 )
 Gun( gFw, 0.1, 0.8, "XFEL" )
 

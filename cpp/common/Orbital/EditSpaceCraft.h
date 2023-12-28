@@ -88,15 +88,14 @@ int l_Node    (lua_State * L){
     Lua::getVec3(L, 1, o->pos );
     o->id =  theSpaceCraft->nodes.size();
     theSpaceCraft->nodes.push_back( o  );
-    //if(verbosity>1) 
-    o->print();
+    if(verbosity>1) o->print();
     lua_pushnumber(L, o->id);
     return 1;
 };
 
 // n1 = Node( g1, 0.5, p0 )
 int l_BoundNode(lua_State * L){
-    printf( "!!!! l_BoundNode()\n" );
+    //printf( "!!!! l_BoundNode()\n" );
     Node* o = new Node();
     //Vec3d pos;
     int gid  = Lua::getInt(L, 1);       // index of girder
@@ -110,7 +109,7 @@ int l_BoundNode(lua_State * L){
     theSpaceCraft->nodes.push_back( o  );
     //if(verbosity>1) 
     o->print();
-    printf("--- boundTo: "); o->boundTo->print();
+    printf(" -- boundTo: "); o->boundTo->print();
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -148,7 +147,7 @@ int l_Girder  (lua_State * L){
     Girder o;
     int id1  = Lua::getInt   (L,1);
     int id2  = Lua::getInt   (L,2);
-    printf( "l_Girder() id1,id2 %i,%i\n", id1, id2 );
+    //printf( "l_Girder() id1,id2 %i,%i\n", id1, id2 );
     if(id1>=theSpaceCraft->nodes.size() || (id1)<0 ){ printf( "ERROR in l_Girder() node1(%i) out of bounds (0,%i)", id1, theSpaceCraft->nodes.size() ); return 0; }
     if(id2>=theSpaceCraft->nodes.size() || (id2)<0 ){ printf( "ERROR in l_Girder() node2(%i) out of bounds (0,%i)", id2, theSpaceCraft->nodes.size() ); return 0; }
     o.nodes.x = theSpaceCraft->nodes[id1];

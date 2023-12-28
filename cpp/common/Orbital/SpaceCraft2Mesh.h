@@ -111,10 +111,10 @@ int drawSpaceCraft_Mesh( const SpaceCraft& craft, Mesh::Builder& mesh, int iLOD,
     //const std::vector<Girder>& girders = craft.girders;
     // --- Ropes
     float line_width = 0.25;   // TODO : this should be set better
-    if( iLOD>0 ){
-        if(bColor) mesh.penColor = (Vec3f){0.0,0.0,0.0};
-        drawTruss_mesh( mesh, craft.truss, false, line_width );
-    }
+    //if( iLOD>0 ){
+    //    if(bColor) mesh.penColor = (Vec3f){0.0,0.0,0.0};
+    //    drawTruss_mesh( mesh, truss, false, line_width );
+    //}
     if(!bColor) mesh.penColor = (Vec3f){0.2,0.2,0.2};
     for( const Rope& rp : craft.ropes ){
         Vec3f p1=(Vec3f)rp.nodes.x->pos;

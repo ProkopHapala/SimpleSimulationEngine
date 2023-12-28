@@ -154,7 +154,7 @@ void truss2ocl( const SpaceCraft& craft, const Truss& truss, OCL_Orb& ocl ){
         ocl.neighs[ ia ] = e.b; 
         ocl.neighs[ ib ] = e.a;
         // l0, kPress, kPull, damping
-        float4 param = (float4){ e.l0, e.kP, e.kT, e.damp }; 
+        Quat4f param = (Quat4f){ e.l0, e.kP, e.kT, e.damp }; 
         ocl.params[ ia ] = param;
         ocl.params[ ib ] = param;
         nneighs[e.a]++; nneighs[e.b]++;

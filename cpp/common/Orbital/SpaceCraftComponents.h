@@ -286,7 +286,7 @@ class Girder : public NodeLinker { public:
         Vec3d d = p - nodes.x->pos;
         double ca = rot->a.dot(d);
         double cb = rot->b.dot(d);
-        printf( "Girder::nearSide() ca,cb(%g,%g) d(%g,%g,%g) rot(%g,%g,%g)(%g,%g,%g)(%g,%g,%g)\n", ca, cb,  d.x,d.y,d.z,   rot->a.x,rot->a.y,rot->a.z, rot->b.x,rot->b.y,rot->b.z, rot->c.x,rot->c.y,rot->c.z );
+        //printf( "Girder::nearSide() ca,cb(%g,%g) d(%g,%g,%g) rot(%g,%g,%g)(%g,%g,%g)(%g,%g,%g)\n", ca, cb,  d.x,d.y,d.z,   rot->a.x,rot->a.y,rot->a.z, rot->b.x,rot->b.y,rot->b.z, rot->c.x,rot->c.y,rot->c.z );
         int side;
         if    ( fabs(ca)>fabs(cb) ){ if( ca<0 ){ side=0; }else{ side=1; } }  // height
         else                       { if( cb<0 ){ side=2; }else{ side=3; } }  // width
