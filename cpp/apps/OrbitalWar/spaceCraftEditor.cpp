@@ -22,14 +22,15 @@ int verbosity = 0;
 
 #include "testUtils.h"
 
-#include "Truss.h"
 #include "SpaceCraft.h"
-#include "SpaceCraftDraw.h"
 #include "SpaceCraft2Mesh.h"   // deprecated
 #include "SpaceCraft2Mesh2.h"
 #include "SoftBody.h"
 
+#include "Truss.h"
 #include "SpaceCraft2Truss.h" // deprecated
+
+#include "SpaceCraftDraw.h"
 
 #include "SphereSampling.h"
 #include "DrawSphereMap.h"
@@ -173,10 +174,11 @@ void reloadShip( const char* fname  ){
     printf("#### START reloadShip('%s')\n", fname );
     Lua::dofile(theLua,fname);
     printf( "Lua::dofile(%s) DONE \n", fname );
+    theSpaceCraft->checkIntegrity();
     //luaL_dostring(theLua, "print('LuaDEBUG 1'); n1 = Node( {-100.0,0.0,0.0} ); print('LuaDEBUG 2'); print(n1)");
     //theSpaceCraft->toTruss();
-    truss.clear();
-    toTruss(*theSpaceCraft, truss);
+    //truss.clear();
+    //toTruss(*theSpaceCraft, truss);
     renderShip();
     printf("#### END reloadShip('%s')\n", fname );
 };
@@ -500,7 +502,6 @@ void SpaceCraftEditGUI::draw(){
         //glLineWidth(3.0);
         //Draw3D::color(Vec3f{1.f,1.0f,1.0f});
         //Draw3D::drawVecInPos( ((Girder*)nd->boundTo)->up*30.0, pos );
-        
     }
     
     {

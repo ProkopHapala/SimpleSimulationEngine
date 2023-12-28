@@ -148,8 +148,8 @@ int l_Girder  (lua_State * L){
     int id1  = Lua::getInt   (L,1);
     int id2  = Lua::getInt   (L,2);
     //printf( "l_Girder() id1,id2 %i,%i\n", id1, id2 );
-    if(id1>=theSpaceCraft->nodes.size() || (id1)<0 ){ printf( "ERROR in l_Girder() node1(%i) out of bounds (0,%i)", id1, theSpaceCraft->nodes.size() ); return 0; }
-    if(id2>=theSpaceCraft->nodes.size() || (id2)<0 ){ printf( "ERROR in l_Girder() node2(%i) out of bounds (0,%i)", id2, theSpaceCraft->nodes.size() ); return 0; }
+    if((id1>=theSpaceCraft->nodes.size()) || (id1<0) ){ printf( "ERROR in l_Girder() node1(%i) out of bounds (0,%i)", id1, theSpaceCraft->nodes.size() ); return 0; }
+    if((id2>=theSpaceCraft->nodes.size()) || (id2<0) ){ printf( "ERROR in l_Girder() node2(%i) out of bounds (0,%i)", id2, theSpaceCraft->nodes.size() ); return 0; }
     o.nodes.x = theSpaceCraft->nodes[id1];
     o.nodes.y = theSpaceCraft->nodes[id2];
     //o.nodes.x = theSpaceCraft->nodes[Lua::getInt (L,1)];

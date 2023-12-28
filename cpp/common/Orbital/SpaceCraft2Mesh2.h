@@ -370,7 +370,8 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         //printf( "BuildCraft_truss() girder.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
         i++;
     }
-    
+    /*
+    // --- Rings
     i=0;
     for(Ring& o: craft.rings){
         mesh.block();
@@ -382,20 +383,11 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         //printf( "BuildCraft_truss() ring.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
         i++;
     }
-    
     // --- Radiators
     printf("BuildCraft_truss().radiators\n");
     for(Radiator& o : craft.radiators ){
         mesh.block();
         o.print();
-        /*
-        Vec3d p00 = craft.pointOnGirder(o.g1, o.g1span.x);
-        Vec3d p01 = craft.pointOnGirder(o.g1, o.g1span.y);
-        Vec3d p10 = craft.pointOnGirder(o.g2, o.g2span.x);
-        Vec3d p11 = craft.pointOnGirder(o.g2, o.g2span.y);
-        printf( "p00(%g,%g,%g) p01(%g,%g,%g) p10(%g,%g,%g) p11(%g,%g,%g)\n", p00.x,p00.y,p00.z,  p01.x,p01.y,p01.z,  p10.x,p10.y,p10.z,  p11.x,p11.y,p11.z );
-        mesh.plate( p00,p01,p10,p11,{0,1,2,0}, {-1,-1} );
-        */
         const Girder& g1 =craft.girders[o.g1];
         const Girder& g2 =craft.girders[o.g2];
         plateOnGriders( mesh, {10,1}, g1.pointRange, g2.pointRange, {4,4}, {-1,-1}, o.g1span, o.g2span, {0,1,2,3} );
@@ -410,7 +402,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         //mesh.block();
         //drawPlate_mesh(mesh, o, nodes.data(), girders.data() );
     };
-
+    */
 
 
     //int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 );
