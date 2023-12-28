@@ -8,6 +8,22 @@
 #include "quaternion.h"
 //#include "datatypes.h"  
 
+
+float springForce( float l, float& f, Quat4f par ){
+    float dl = l - par.x;
+    float k;
+    if( dl > 0.0f ){
+        k = -par.z;
+    } else {
+        k = par.y;
+    }
+    //Quat4f fe; 
+    //fe.f = d*(k*dl/l);
+    //fe.e = k*dl*dl;
+    f += k*dl;
+    return k*dl*dl;
+}
+
 Quat4f springForce( Vec3f d, Quat4f par ){
     float l  = d.norm();
     float dl = l - par.x;
@@ -61,14 +77,22 @@ class OrbSim_f{ public:
             Quat4f p = points[iG];
             Quat4f f =Quat4f{0.0f,0.0f,0.0f,0.0f};
             //#pragma omp simd
-            for(int ij=0; ij<nNeighTot; ij++){
-                int j  = nNeighTot*iG + ij;
+            for(int ij=0; ij<nNeighMax; ij++){
+                int j  = nNeighMax*iG + ij;
                 int ja = neighs[j];
                 if(j == -1) break;
-                f.add( springForce( points[ja].f - p.f, params[j] ) );
+                //f.add( springForce( points[ja].f - p.f, params[j] ) );
+                
+                Vec3f d =  points[ja].f - p.f;
+                float l = d.norm();
+                float fi,ei = springForce( l, fi, params[j] );
+                //f.add( Quat4f{ d*(fi/l), ei } );
+                f.f.add_mul( d, fi/l );
+                printf( "p[%i,j=%i] l=%g f=%g e=%g par(%g,%g,%g,%g) \n", iG,ij, l,fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
             }
             forces[iG] = f; // we may need to do += in future
         } 
+        exit(0);
     }
 
     void evalBondTension(){

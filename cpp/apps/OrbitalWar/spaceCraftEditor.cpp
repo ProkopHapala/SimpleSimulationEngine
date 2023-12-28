@@ -126,9 +126,9 @@ void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
 // Render 
 void runSim( OrbSim_f& sim ){
     sim.cleanForce();   
-    //sim.evalTrussForce();
-    sim.applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 1.0 );
-    sim.move_GD( 0.01 );
+    sim.evalTrussForce();
+    //sim.applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 1.0 );
+    //sim.move_GD( 0.01 );
 
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     renderPointForces( sim.nPoint, sim.points, sim.forces, 0.001 );
