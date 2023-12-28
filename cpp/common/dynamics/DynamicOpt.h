@@ -17,8 +17,8 @@ class DynamicOpt{ public:
     double * invMasses = 0;
 
     // parameters
-    double dt           = 0.1d;
-    double damping      = 0.2d;
+    double dt           = 0.1;
+    double damping      = 0.2;
 
     double f_limit      = 10.0;
     double v_limit      = 10.0;
@@ -30,10 +30,10 @@ class DynamicOpt{ public:
 
     // FIRE
     int    minLastNeg   = 5;
-    double finc         = 1.1d;
-    double fdec         = 0.5d;
-    double falpha       = 0.98d;
-    double kickStart    = 1.0d;
+    double finc         = 1.1;
+    double fdec         = 0.5;
+    double falpha       = 0.98;
+    double kickStart    = 1.0;
 
     double dt_max       = dt;
     double dt_min       = 0.1 * dt;
@@ -44,7 +44,7 @@ class DynamicOpt{ public:
     // other
     int method    = 2;
     int stepsDone = 0;
-    double t      = 0.0d;
+    double t      = 0.0;
 
     ForceFunction getForce = 0;
 

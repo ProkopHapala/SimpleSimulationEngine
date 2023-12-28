@@ -140,7 +140,9 @@ void runSim( OrbSim_f& sim, int niter=100 ){
     }
     */
     //sim.run( 100, 1e-3, 1e-4 );
-    sim.run_omp( 100, 1e-3, 1e-4 );
+    sim.run_omp( 100, false, 1e-3, 1e-4 );
+    //sim.run_omp( 100, true, 1e-3, 1e-4 );
+
     double T = (getCPUticks()-t0)*1e-6;
     printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );

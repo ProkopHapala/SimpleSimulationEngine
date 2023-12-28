@@ -62,6 +62,21 @@ class OrbSim_f{ public:
     Vec3f ax{0.0,0.0,1.0};
     float omega = 0.1;
 
+    float dt      = 1e-3;
+    //float damping = 1e-4;
+    float damping  = 0.05;
+    int    lastNeg = 0;
+    // FIRE
+    int    minLastNeg   = 5;
+    float finc         = 1.1;
+    float fdec         = 0.5;
+    float falpha       = 0.98;
+    float dt_max       = dt;
+    float dt_min       = 0.1 * dt;
+    float damp_max     = damping;
+    double ff_safety    = 1e-32;
+
+
     void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0 ){
         nPoint = nPoint_; nNeighMax = nNeighMax_;
         nNeighTot = nPoint*nNeighMax;
@@ -217,6 +232,14 @@ class OrbSim_f{ public:
         forces[i].f.add_mul(f, p.w );
     }
 
+    void applyForceCentrifug_i( int i, Vec3f p0, Vec3f ax, float omega ){
+        const Quat4f& p = points[i];
+        Vec3f d;
+        d.set_sub(p.f,p0);
+        d.makeOrthoU(ax);   
+        forces[i].f.add_mul(d, p.w*omega*omega );
+    }
+
     void applyForceRotatingFrame( Vec3f p0, Vec3f ax, float omega ){
         double omega2 = omega*omega;
         Vec3f omega_ax = ax*omega*2.0;
@@ -302,17 +325,46 @@ int run( int niter, float dt, float damp  ){
     return niter;
 }
 
-int run_omp( int niter_max, float dt, float damp ){
+inline void setOpt( double dt_, double damp_ ){
+    dt      = dt_max   = dt_;  dt_min=0.1*dt_max;
+    damping = damp_max = damp_;
+    cleanForce( );
+    cleanVel  ( );
+}
+
+void FIRE_update( float& vf, float& vv, float& ff, float& cv, float& cf ){
+    float cs = vf/sqrt(vv*ff);
+    if( vf < 0.0 ){
+		dt       = fmax( dt * fdec, dt_min );
+	  	damping  = damp_max;
+		lastNeg  = 0;
+        cv=0.0; cf=0.0;
+        printf( "FIRE<0 cv,cf(%g,%g) cs=%g   vf,vv,ff(%g,%g,%g) \n", cv,cf, cs, vf,vv,ff );
+	}else{
+		cf   =     damping * sqrt(vv/(ff+ff_safety));
+		cv   = 1 - damping;
+		if( lastNeg > minLastNeg ){
+			dt      = fmin( dt * finc, dt_max );
+			damping = damping  * falpha;
+		}
+		lastNeg++;
+        printf( "FIRE>0 cv,cf(%g,%g) cs=%g  vf,vv,ff(%g,%g,%g) \n", cv,cf, cs, vf,vv,ff );
+	}
+}
+
+
+int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
     //printf( "run_omp() niter_max %i dt %g Fconv %g Flim %g timeLimit %g outE %li outF %li \n", niter_max, dt, Fconv, Flim, timeLimit, (long)outE, (long)outF );
-    float cdamp = 1.0f - damp;
+    float cdamp = 1.0f - damp_;
+    float E,F2,ff,vv,vf, cf,cv;
     //long T0 = getCPUticks();
     int itr=0,niter=niter_max;
     #pragma omp parallel shared(niter,itr,cdamp)
     while(itr<niter){
         if(itr<niter){
         //#pragma omp barrier
-        //#pragma omp single
-        //{E=0;F2=0;ff=0;vv=0;vf=0;}
+        #pragma omp single
+        {E=0;F2=0;ff=0;vv=0;vf=0;}
         //------ eval forces
         //#pragma omp barrier
         //#pragma omp for reduction(+:E)
@@ -320,13 +372,35 @@ int run_omp( int niter_max, float dt, float damp ){
         for(int iG=0; iG<nPoint; iG++){ 
             forces[iG] = Quat4fZero;
             evalTrussForce_neighs2(iG);
-            applyForceRotatingFrame_i( iG, p0, ax, omega );
+            if(bDynamic){ applyForceRotatingFrame_i( iG, p0, ax, omega ); }
+            else        { applyForceCentrifug_i    ( iG, p0, ax, omega ); }
         }
         // ---- assemble (we need to wait when all atoms are evaluated)
         //#pragma omp barrier
+        if(!bDynamic){    // FIRE if not dynamic
+            #pragma omp for reduction(+:vv,vf,ff)
+            for(int i=0;i<nPoint; i++ ){
+                Quat4f p = points[i];
+                Quat4f f = forces[i];
+                Quat4f v = vel   [i];
+                vv += v.f.norm2();
+                vf += v.f.dot(f.f);
+                ff += f.f.norm2();
+            }
+            #pragma omp single
+            { 
+                FIRE_update( vf, vv, ff, cv, cf );
+                //printf( "FIRE cv,cf(%g,%g)   vf,vv,ff(%g,%g,%g) \n", cv,cf, vf,vv,ff );
+            }
+        }
         #pragma omp for
         for(int i=0;i<nPoint; i++ ){
-            move_i_MD( i, dt, cdamp );
+            if(bDynamic){ 
+                move_i_MD( i, dt, cdamp );
+            }else{
+                vel[i].f = vel[i].f*cv  + forces[i].f*cf;  // FIRE
+                move_i_MD( i, dt, 1.0 );
+            }
         }
         //#pragma omp barrier
         #pragma omp single
