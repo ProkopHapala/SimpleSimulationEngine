@@ -58,7 +58,7 @@ class Material : public CatalogItem { public:
 	double reflectivity; // [1] reflectivity
 	double Tmelt;        // [T] temperature of failure
 
-    virtual void print()const override{ printf( "Material(%i|%-16s) dens %g Strength (%g,%g) Stiffness (%g,%g) Refl %g Tmelt %g \n", id, name, density, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
+    virtual void print()const override{ printf( "Material(%i|%-16s) dens=%5.2e[kg/m3] S(%5.2e,%5.2e)[Pa] K(%5.2e,%5.2e)[Pa] Refl=%5.2e Tmelt %4.0f[K]\n", id, name, density, Spull,Spush,  Kpull,Kpush, reflectivity, Tmelt ); };
  	// What about heat, electricity etc. ?
 };
 
@@ -78,12 +78,13 @@ class FuelType : public Commodity { public:
 
 class PanelLayer{ public:
     double thickness;    // [m]
-    int    materiallId;  // index of material in catalog
+    int    materialId;  // index of material in catalog
 };
 
 class StickMaterial : public CatalogItem { public:
-    int    materiallId;    // index of material in catalog
+    int    materialId;     // index of material in catalog
     double diameter;       // [m]
+    double wallThickness;  // [m]
     double area;           // [m2]
     // -- auxuliary
     double linearDensity;  // [kg/m]
@@ -95,7 +96,9 @@ class StickMaterial : public CatalogItem { public:
 
     void update( const Material* mat ){
         //area          = M_PI*diameter*diameter*0.25;
-        //const Material* mat = mats[materiallId];
+        //const Material* mat = mats[materialId];
+        double din    = diameter - 2*wallThickness;
+        area          = M_PI*(diameter*diameter - din*din)*0.25; 
         linearDensity = area*mat->density;
         Kpull         = area*mat->Kpull;
         Kpush         = area*mat->Kpush;
@@ -105,7 +108,7 @@ class StickMaterial : public CatalogItem { public:
         Tmelt         = mat->Tmelt;
     }
 
-    virtual void print()const override{ printf( "StickMaterial(%i|%-16s) d=%g[m] A=%g[m2] ldens=%g[kg/m] S(%g,%g)[N] K(%g,%g)[N/m] Refl=%g Tmelt=%g[K] \n", id, name, diameter, area, linearDensity, Kpull,Kpush, Spull,Spush, reflectivity, Tmelt ); };
+    virtual void print()const override{ printf( "StickMaterial(%3i|%-16s) d=%8.5f[m] w=%8.5f[mm] A=%8.5e[m2] ldens=%5.2e[kg/m] S(%5.2e,%5.2e)[N] K(%5.2e,%5.2e)[N] Refl=%5.2e Tmelt=%4.0f[K] \n", id, name, diameter, wallThickness*1e+3, area, linearDensity, Spull,Spush, Kpull,Kpush, reflectivity, Tmelt ); };
 };
 
 class PanelMaterial : public CatalogItem { public:
@@ -117,7 +120,7 @@ class PanelMaterial : public CatalogItem { public:
 
     void evalAreaDensity(){
         areaDensity = 0.0;
-        for( PanelLayer& l : layers ){ areaDensity += l.thickness * l.materiallId; }
+        for( PanelLayer& l : layers ){ areaDensity += l.thickness * l.materialId; }
     }
 
     virtual void print()const override{ printf( "PanelMaterial(%i|%s) dens=%g[kg/m2] nlayer=%i \n", id, name, areaDensity, layers.size() ); };

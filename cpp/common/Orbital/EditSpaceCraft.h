@@ -68,12 +68,13 @@ int l_StickMaterial(lua_State * L){
     char mat_name[NAME_LEN];
     StickMaterial *o = new StickMaterial();
     //Lua::dumpStack(L); //DEBUG
-    strcpy( o->name,  Lua::getString(L, 1 ) );
-    strcpy( mat_name, Lua::getString(L, 2 ) );
-    o->diameter    =  Lua::getDouble(L, 3 );
-    o->area        =  Lua::getDouble(L, 4 );
-    o->materiallId = workshop.materials.getId( mat_name );
-    o->update( workshop.materials.vec[o->materiallId] );
+    strcpy( o->name,   Lua::getString(L, 1 ) );
+    strcpy( mat_name,  Lua::getString(L, 2 ) );
+    o->diameter      = Lua::getDouble(L, 3 ) * 1e-3; // [mm]->[m]
+    o->wallThickness = Lua::getDouble(L, 4 ) * 1e-3; // [mm]->[m]
+    //o->area        =  Lua::getDouble(L, 4 );
+    o->materialId = workshop.materials.getId( mat_name );
+    o->update( workshop.materials.vec[o->materialId] );
     if( workshop.stickMaterials.add(o) && (verbosity>0) ) printf( "StickMaterial(%s) replaced\n", o->name );
     o->id = workshop.stickMaterials.getId( o->name );
     if(verbosity>1) o->print();
@@ -164,7 +165,7 @@ int l_Rope    (lua_State * L){
     Rope* o = new Rope();
     o->nodes.x    = theSpaceCraft->nodes[Lua::getInt(L,1)];
     o->nodes.y    = theSpaceCraft->nodes[Lua::getInt(L,2)];
-    o->thick = Lua::getDouble(L,3);
+    o->thick = Lua::getDouble(L,3) * 1e-3; // [mm]->[m]
     const char * matn = Lua::getString(L,4);
     //o->face_mat = workshop.panelMaterials.getId( matn );
     //o->face_mat = workshop.stickMaterials.getId( matn );
@@ -173,10 +174,11 @@ int l_Rope    (lua_State * L){
         StickMaterial *mat = new StickMaterial();
         //char mat_name[NAME_LEN];
         sprintf( mat->name, "rope%i", o->id ); //printf( "l_Rope() mat->name(%s)\n", mat->name );
-        mat->diameter    =  o->thick;
-        mat->area        =  o->thick*o->thick*0.25*M_PI;
-        mat->materiallId = workshop.materials.getId( matn );
-        mat->update( workshop.materials.vec[mat->materiallId] );
+        mat->diameter      =  o->thick;
+        mat->wallThickness =  o->thick*0.5;
+        //mat->area          =  o->thick*o->thick*0.25*M_PI;
+        mat->materialId    = workshop.materials.getId( matn );
+        mat->update( workshop.materials.vec[mat->materialId] );
         if( workshop.stickMaterials.add(mat) && (verbosity>0) ) printf( "StickMaterial(%s) replaced\n", mat->name );
         mat->id = workshop.stickMaterials.getId( mat->name );
         if(verbosity>1) mat->print();

@@ -405,7 +405,7 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    ->pr
         for (PanelMaterial* pm : workshop->panelMaterials.vec ){     
             double areaDensity = 0.0;
             for( PanelLayer& l : pm->layers ){ 
-                areaDensity += l.materiallId = workshop->materials.vec[l.materiallId]->density * l.thickness; // [kg/m2]
+                areaDensity += l.materialId = workshop->materials.vec[l.materialId]->density * l.thickness; // [kg/m2]
             }   
             pm->areaDensity = areaDensity;
         }

@@ -23,6 +23,12 @@ using namespace SpaceCrafting;
 namespace Mesh{
 
 void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
+    {
+        printf("#====== Materials \n");      for(const Material*      o: shop.materials.vec     ){  o->print();    }
+        //printf("#====== PanelMaterials \n"); for(const PanelMaterial* o: shop.panelMaterials.vec){  o->print();    }
+        printf("#====== StickMaterials \n"); for(const StickMaterial* o: shop.stickMaterials.vec){  o->print();  }
+        //exit(0);
+    }
     printf( "exportSim() START \n" );
     int np = mesh.verts.size();
     int nb = mesh.edges.size();
@@ -55,7 +61,11 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         double mass = l0*mat.linearDensity;
         sim.points[e.x].w += mass*0.5;
         sim.points[e.y].w += mass*0.5;
-        Quat4f param = (Quat4f){ l0, mat.Kpush, mat.Kpull, mat.damping }; 
+        Quat4f param = (Quat4f){ l0, mat.Kpush/l0, mat.Kpull/l0, mat.damping }; 
+        {
+        //    const Material& M = *shop.materials.vec[mat.materialId];
+        //    printf( "stick[%i] par(%7.3f,%5.2e,%5.2e,%5.2e) Stick(%s,%g[m^2],%g[m])K(%5.2e,%5.2e) Stick()mat(%s,K(%5.2e,%5.2e))\n",  i, param.x, param.y, param.z, param.w,   mat.name, mat.area, mat.diameter, mat.Kpush, mat.Kpull, M.name, M.Kpull, M.Kpush );
+        }
         sim.params[ ia ] = param;
         sim.params[ ib ] = param;
         nneighs[e.x]++; nneighs[e.y]++;
@@ -66,8 +76,11 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
             sim.strain[i] = 0;
         }
     }
+    sim.cleanVel();
+    //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(1.0); }
     printf( "exportSim() DONE! \n" );
     delete [] nneighs;
+    //exit(0);
 }
 
 /**

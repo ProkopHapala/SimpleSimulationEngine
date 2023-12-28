@@ -20,7 +20,7 @@ float springForce( float l, float& f, Quat4f par ){
     //Quat4f fe; 
     //fe.f = d*(k*dl/l);
     //fe.e = k*dl*dl;
-    f += k*dl;
+    f = k*dl;
     return k*dl*dl;
 }
 
@@ -44,6 +44,8 @@ class OrbSim_f{ public:
     // cpu buffers
     Quat4f* points=0;
     Quat4f* forces=0;
+    Quat4f* vel   =0;
+
     Quat4f* params=0;
     int*    neighs=0;
 
@@ -58,6 +60,7 @@ class OrbSim_f{ public:
         nNeighTot = nPoint*nNeighMax;
         _realloc( points, nPoint    );
         _realloc( forces, nPoint    );
+        _realloc( vel,    nPoint    );
         _realloc( params, nNeighTot );
         _realloc( neighs, nNeighTot );
 
@@ -76,23 +79,30 @@ class OrbSim_f{ public:
             //const int iG = get_global_id(0);
             Quat4f p = points[iG];
             Quat4f f =Quat4f{0.0f,0.0f,0.0f,0.0f};
+            //printf( "--- p[%i] \n", iG );
             //#pragma omp simd
             for(int ij=0; ij<nNeighMax; ij++){
                 int j  = nNeighMax*iG + ij;
                 int ja = neighs[j];
-                if(j == -1) break;
+                if(ja == -1) break;
                 //f.add( springForce( points[ja].f - p.f, params[j] ) );
                 
+                
                 Vec3f d =  points[ja].f - p.f;
-                float l = d.norm();
-                float fi,ei = springForce( l, fi, params[j] );
+                float li = d.norm();
+                /*
+                float fi,ei = springForce( li, fi, params[j] );
                 //f.add( Quat4f{ d*(fi/l), ei } );
-                f.f.add_mul( d, fi/l );
-                printf( "p[%i,j=%i] l=%g f=%g e=%g par(%g,%g,%g,%g) \n", iG,ij, l,fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
+                f.f.add_mul( d, fi/li );
+                */
+                float k = 1e+6;
+                f.f.add_mul( d, (k*(li-params[j].x)/li) );
+
+                //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
             }
             forces[iG] = f; // we may need to do += in future
         } 
-        exit(0);
+        //exit(0);
     }
 
     void evalBondTension(){
@@ -129,13 +139,30 @@ class OrbSim_f{ public:
     void printAllNeighs(){ printf("OrbSim_f::printAllNeighs(nPoint=%i,nNeighMax=%i)\n",nPoint,nNeighMax); for(int i=0;i<nPoint;i++){ printNeighs(i); }; };
 
     void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero; } };
+    void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero; } };
 
     void move_GD(float dt){
         for(int i=0;i<nPoint; i++ ){
             Quat4f p = points[i];
             Quat4f f = forces[i];
-            float dtm = dt/p.w;
-            points[i].f.add_mul( f.f, dtm );
+            p.f.add_mul( f.f, dt/p.w );
+            //printf( "move_GD[%i] |d|=%g |f|=%g dt/m=%g m=%g \n", i, f.f.norm() * dt/p.w, f.f.norm(), dt/p.w, p.w );
+            points[i]=p;
+        }
+    }
+
+    void move_MD(float dt, float damp=0.0f ){
+        float cdamp = 1.0f - damp;
+        for(int i=0;i<nPoint; i++ ){
+            Quat4f p = points[i];
+            Quat4f f = forces[i];
+            Quat4f v = vel   [i];
+            v.f.mul( cdamp );
+            v.f.add_mul( f.f, dt/p.w );
+            p.f.add_mul( v.f, dt     );
+            //printf( "move_GD[%i] |d|=%g |f|=%g dt/m=%g m=%g \n", i, f.f.norm() * dt/p.w, f.f.norm(), dt/p.w, p.w );
+            vel   [i]=v;
+            points[i]=p;
         }
     }
 

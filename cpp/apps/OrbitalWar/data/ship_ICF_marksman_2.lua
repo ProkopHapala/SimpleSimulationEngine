@@ -11,10 +11,10 @@ print("BEGIN spaceship");
 print( "#------ Lua:StickMaterials" )
 
 --- long, perp, zigIn, zigOut
-st1  = StickMaterial( "GS1_long", "Steel", 0.1,  0.005 )
-st2  = StickMaterial( "GS1_perp", "Steel", 0.05, 0.003 )
-st3  = StickMaterial( "GS1_in",   "Steel", 0.04, 0.002 )
-st4  = StickMaterial( "GS1_out",  "Steel", 0.04, 0.002 )
+st1  = StickMaterial( "GS1_long", "Steel", 100, 5 )
+st2  = StickMaterial( "GS1_perp", "Steel", 50,  3 )
+st3  = StickMaterial( "GS1_in",   "Steel", 40,  2 )
+st4  = StickMaterial( "GS1_out",  "Steel", 40,  2 )
 -- stK1 = StickMaterial( "RK_1","Kevalr", 0.01, 0.001 )
 
 print( "#------ Lua:Nodes" )
@@ -81,8 +81,8 @@ print( "#------ Lua:Radiataors" )
 
 -- =RadiatorType = {"LithiumHeatPipe", 1280.0 }
 --Radiator( g5,0.2,0.8, g1,0.2,0.8, 1280.0 )
-Radiator( gFw,0.15,0.8, gWdw,0.02,0.8, 1280.0 )
-Radiator( gFw,0.15,0.8, gWup,0.02,0.8, 1280.0 )
+--Radiator( gFw,0.15,0.8, gWdw,0.02,0.8, 1280.0 )
+--Radiator( gFw,0.15,0.8, gWup,0.02,0.8, 1280.0 )
 
 print( "#------ Lua:Rings & Sliders" )
 
