@@ -9,6 +9,11 @@
 #include <vector>
 //#include <iostream>
 
+#include "Vec2.h"
+#include "Vec3.h"
+#include "Mat3.h"
+#include "quaternion.h"
+
 #ifdef __cplusplus
 # include <lua5.2/lua.hpp>
 #else

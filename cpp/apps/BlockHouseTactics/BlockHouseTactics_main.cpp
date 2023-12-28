@@ -62,7 +62,7 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
 		}
 	}
 
-	void drawTruss( bool DEBUG ){
+	void drawTruss( bool bDebug ){
 	    if( ( world.truss.bonds != NULL )&&( world.truss.points != NULL )  ){
             glBegin( GL_LINES );
             for( int i=0; i<world.truss.nbonds; i++ ){
@@ -71,7 +71,7 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
                 Vec3d& pj  =  world.truss.points[bond.j];
                 glVertex3f( (float)pi.x, (float)pi.y, (float)pi.z );
                 glVertex3f( (float)pj.x, (float)pj.y, (float)pj.z );
-                if( DEBUG ){
+                if( bDebug ){
                     printf( " %i  %i %i   (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f)\n",  i,   bond.i, bond.j,  pi.x, pi.y, pi.z,  pj.x, pj.y, pj.z  );
                 }
             }
@@ -79,7 +79,7 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
 	    }
 	}
 
-    void drawForces( double scale, bool DEBUG ){
+    void drawForces( double scale, bool bDebug ){
 	    if( ( world.truss.points != NULL )&&( world.truss.forces != NULL ) ){
             glBegin( GL_LINES );
             for( int i=0; i<world.truss.npoints; i++ ){
@@ -88,7 +88,7 @@ class TestAppBlockBuilder : public AppSDL2OGL_3D {
                 Vec3d  pf; pf.set(p); pf.add_mul( f, scale );
                 glVertex3f( (float)p.x, (float)p.y, (float)p.z );
                 glVertex3f( (float)pf.x, (float)pf.y, (float)pf.z );
-                if( DEBUG ){
+                if( bDebug ){
                     //printf( " %i  %i %i   (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f)\n",  i,   bond.i, bond.j,  pi.x, pi.y, pi.z,  f.x, f.y, f.z  );
                     printf( " %i  (%3.3f,%3.3f,%3.3f) \n",  i, f.x, f.y, f.z  );
                 }

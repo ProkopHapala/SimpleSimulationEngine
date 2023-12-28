@@ -168,14 +168,19 @@ class OrbSim_f{ public:
         }
     }
 
-    void applyCentrifugalForce( Vec3f p0, Vec3f ax, float omega ){
+    void applyForceRotatingFrame( Vec3f p0, Vec3f ax, float omega ){
         double omega2 = omega*omega;
+        Vec3f omega_ax = ax*omega*2.0;
         for(int i=0;i<nPoint; i++ ){
             const Quat4f& p = points[i];
+            const Quat4f& v = vel   [i];
             //Vec3f f; f.set_cross(ax,p.f-p0);
-            Vec3f f; f.set_sub(p.f,p0); f.mul( p.w*omega2 );
-            f.makeOrthoU(ax);
-            forces[i].f.add(f);
+            Vec3f d,f;
+            d.set_sub(p.f,p0);
+            d.makeOrthoU(ax);
+            f.set_mul( d, omega2 );     // centrifugal force  = r*m*omega^2
+            f.add_cross(omega_ax,v.f);  // Coriolis force     = 2*m*omega*v
+            forces[i].f.add_mul(f, p.w );
             //forces[i].f.add_mul( f, p.w*omega2 );
         }
     }

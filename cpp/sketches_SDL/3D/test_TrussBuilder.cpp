@@ -54,8 +54,8 @@ class TestAppTrussBuilder : public AppSDL2OGL_3D {
 	void op_enter     ();
 	void op_backspace ();
 	void op_fixNode   ();
-	void drawTruss  ( bool DEBUG );
-	void drawBuilder( bool DEBUG );
+	void drawTruss  ( bool bDebug );
+	void drawBuilder( bool bDebug );
 
 	TestAppTrussBuilder( int& id, int WIDTH_, int HEIGHT_ );
 
@@ -79,7 +79,7 @@ TestAppTrussBuilder::TestAppTrussBuilder( int& id, int WIDTH_, int HEIGHT_ ) : A
 
 };
 
-void TestAppTrussBuilder::drawTruss( bool DEBUG ){
+void TestAppTrussBuilder::drawTruss( bool bDebug ){
     if( ( truss.bonds != NULL )&&( truss.points != NULL )  ){
         glBegin( GL_LINES );
         for( int i=0; i<truss.nbonds; i++ ){
@@ -88,7 +88,7 @@ void TestAppTrussBuilder::drawTruss( bool DEBUG ){
             Vec3d& pj  = truss.points[bond.j];
             glVertex3f( (float)pi.x, (float)pi.y, (float)pi.z );
             glVertex3f( (float)pj.x, (float)pj.y, (float)pj.z );
-            if( DEBUG ){
+            if( bDebug ){
                 printf( " %i  %i %i   (%3.3f,%3.3f,%3.3f)  (%3.3f,%3.3f,%3.3f)\n",  i,   bond.i, bond.j,  pi.x, pi.y, pi.z,  pj.x, pj.y, pj.z  );
             }
         }
@@ -96,7 +96,7 @@ void TestAppTrussBuilder::drawTruss( bool DEBUG ){
     }
 }
 
-void TestAppTrussBuilder::drawBuilder( bool DEBUG ){
+void TestAppTrussBuilder::drawBuilder( bool bDebug ){
     glColor3f( 0.0f, 0.0f, 0.0f );
     for( int i=0; i<builder.nodes.size(); i++ ){
         //truss.points[ node.id ] = node.pos; // do we need this at all ?

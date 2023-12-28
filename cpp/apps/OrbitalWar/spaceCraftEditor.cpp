@@ -132,9 +132,9 @@ void runSim( OrbSim_f& sim, int niter=100 ){
         sim.evalTrussForce_neighs2();
         //sim.evalTrussForce_bonds();
         //sim.applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 1e-2 );
-        sim.applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 0.1 );
+        sim.applyForceRotatingFrame( {0.,0.,0.}, {0.0,0.0,1.0}, 0.1 );
         //sim.move_GD( 0.00001 );
-        sim.move_MD( 1e-3, 1e-3 );
+        sim.move_MD( 1e-3, 1e-5 );
         //sim.move_GD( 1e-7 );
     }
     double T = (getCPUticks()-t0)*1e-6;

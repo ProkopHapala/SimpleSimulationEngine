@@ -201,7 +201,7 @@ class RBodyConfDyn{
             double f = optStep( );
             if( f < convF ) break;
         }
-        double storeThisConfiguration( );
+        //double storeThisConfiguration( );
     }
 
 
