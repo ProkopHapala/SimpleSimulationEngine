@@ -128,7 +128,9 @@ void runSim( OrbSim_f& sim, int niter=100 ){
     long t0 = getCPUticks();
     for(int itr=0; itr<niter; itr++){
         sim.cleanForce();   
-        sim.evalTrussForce();
+        //sim.evalTrussForce_neighs();
+        sim.evalTrussForce_neighs2();
+        //sim.evalTrussForce_bonds();
         //sim.applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 1e-2 );
         sim.applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 0.1 );
         //sim.move_GD( 0.00001 );

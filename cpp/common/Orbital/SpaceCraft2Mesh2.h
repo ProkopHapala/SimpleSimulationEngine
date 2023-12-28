@@ -52,6 +52,10 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         int ib = e.y*sim.nNeighMax + nneighs[e.y];
         sim.neighs[ ia ] = e.y; 
         sim.neighs[ ib ] = e.x;
+
+        sim.neighBs[ ia ] = i; 
+        sim.neighBs[ ib ] = i;
+
         //printf( "e.w %i \n", e.w );
         if(e.w<0){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i \n", i, e.w ); exit(0); }
         if(e.w>=shop.stickMaterials.vec.size()){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i > stickMaterials.size()\n", i, e.w, e.w>=shop.stickMaterials.vec.size() ); exit(0); }

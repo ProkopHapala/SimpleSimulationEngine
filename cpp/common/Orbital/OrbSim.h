@@ -48,6 +48,7 @@ class OrbSim_f{ public:
 
     Quat4f* params=0;  // neighbor parameters (l0,kP,kT,damp)
     int*    neighs=0;  // neighbor indices
+    int*    neighBs=0; // neighbor bond indices
 
     int     nBonds =0; // number of bonds
     Quat4f* bparams=0; // bond parameters (l0,kP,kT,damp)
@@ -64,6 +65,7 @@ class OrbSim_f{ public:
         _realloc( vel,    nPoint    );
         _realloc( params, nNeighTot );
         _realloc( neighs, nNeighTot );
+        _realloc( neighBs,nNeighTot );
 
         if(nBonds_>0){
             nBonds=nBonds_;
@@ -76,7 +78,7 @@ class OrbSim_f{ public:
         }
     }
 
-    void evalTrussForce_neigh(){
+    void evalTrussForce_neighs(){
         //#pragma omp paralel for 
         for(int iG=0; iG<nPoint; iG++){
             //const int iG = get_global_id(0);
@@ -89,7 +91,6 @@ class OrbSim_f{ public:
                 int ja = neighs[j];
                 if(ja == -1) break;
                 //f.add( springForce( points[ja].f - p.f, params[j] ) );
-                
                 
                 Vec3f d =  points[ja].f - p.f;
                 float li = d.norm();
@@ -108,17 +109,51 @@ class OrbSim_f{ public:
         //exit(0);
     }
 
-    void evalTrussForce_edge(){
+    void evalTrussForce_neighs2(){
+        //#pragma omp paralel for 
+        for(int iG=0; iG<nPoint; iG++){
+            //const int iG = get_global_id(0);
+            Quat4f p = points[iG];
+            Quat4f f =Quat4f{0.0f,0.0f,0.0f,0.0f};
+            //printf( "--- p[%i] \n", iG );
+            //#pragma omp simd
+            for(int ij=0; ij<nNeighMax; ij++){
+                int j  = nNeighMax*iG + ij;
+                int ja = neighs[j];
+                if(ja == -1) break;
+
+                int ib = neighBs[j];
+                Quat4f par = bparams[ib];
+                //f.add( springForce( points[ja].f - p.f, params[j] ) );
+                
+                Vec3f d =  points[ja].f - p.f;
+                float li = d.norm();
+                /*
+                float fi,ei = springForce( li, fi, params[j] );
+                //f.add( Quat4f{ d*(fi/l), ei } );
+                f.f.add_mul( d, fi/li );
+                */
+                float k = 1e+6;
+                f.f.add_mul( d, (k*(li-par.x)/li) );
+
+                //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
+            }
+            forces[iG] = f; // we may need to do += in future
+        } 
+        //exit(0);
+    }
+
+    void evalTrussForce_bonds(){
         //#pragma omp paralel for 
         for(int i=0; i<nBonds; i++){
-            Vec2i b = bonds[i];
+            int2  b = bonds[i];
             Vec3f d = points[b.y].f - points[b.x].f;
             float li = d.norm();
             //float fi,ei = springForce( li, fi, bparams[i] );
             float k = 1e+6;
             d.mul( (k*(li-bparams[i].x)/li) );
-            forces[b.i].add(d);
-            forces[b.j].add(d);
+            forces[b.x].f.add(d);
+            forces[b.y].f.sub(d);
         } 
         //exit(0);
     }
@@ -126,7 +161,8 @@ class OrbSim_f{ public:
     void evalBondTension(){
         for(int i=0;i<nBonds; i++ ){
             int2  b  = bonds[i];
-            float l0 = l0s[i];
+            float l0 = bparams[i].x;
+            //float l0 = l0s[i];
             float s  = ((points[b.y]-points[b.x]).norm() - l0)/l0;
             // ToDo: break the bond if strain > maxStrain;
         }
