@@ -42,18 +42,19 @@ Quat4f springForce( Vec3f d, Quat4f par ){
 class OrbSim_f{ public:
     int nPoint=0, nNeighMax=0, nNeighTot=0;
     // cpu buffers
-    Quat4f* points=0;
-    Quat4f* forces=0;
-    Quat4f* vel   =0;
+    Quat4f* points=0;  // position and mass
+    Quat4f* forces=0;  // force and energy
+    Quat4f* vel   =0;  // velocity
 
-    Quat4f* params=0;
-    int*    neighs=0;
+    Quat4f* params=0;  // neighbor parameters (l0,kP,kT,damp)
+    int*    neighs=0;  // neighbor indices
 
-    int nBonds=0;
-    int2*  bonds  =0;
-    float* strain =0;
-    float* l0s    =0; 
-    Vec2f* maxStrain=0;
+    int     nBonds =0; // number of bonds
+    Quat4f* bparams=0; // bond parameters (l0,kP,kT,damp)
+    int2*   bonds  =0; // indices of bonded points (i,j)
+    float*  strain =0; // strain
+    //float*  l0s    =0; // 
+    Vec2f*  maxStrain=0;
 
     void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0 ){
         nPoint = nPoint_; nNeighMax = nNeighMax_;
@@ -68,12 +69,14 @@ class OrbSim_f{ public:
             nBonds=nBonds_;
             _realloc( bonds,     nBonds );
             _realloc( strain,    nBonds );
-            _realloc( l0s,       nBonds );
+            //_realloc( l0s,       nBonds );
             _realloc( maxStrain, nBonds );
+            _realloc( bparams,   nBonds );
+
         }
     }
 
-    void evalTrussForce(){
+    void evalTrussForce_neigh(){
         //#pragma omp paralel for 
         for(int iG=0; iG<nPoint; iG++){
             //const int iG = get_global_id(0);
@@ -101,6 +104,21 @@ class OrbSim_f{ public:
                 //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
             }
             forces[iG] = f; // we may need to do += in future
+        } 
+        //exit(0);
+    }
+
+    void evalTrussForce_edge(){
+        //#pragma omp paralel for 
+        for(int i=0; i<nBonds; i++){
+            Vec2i b = bonds[i];
+            Vec3f d = points[b.y].f - points[b.x].f;
+            float li = d.norm();
+            //float fi,ei = springForce( li, fi, bparams[i] );
+            float k = 1e+6;
+            d.mul( (k*(li-bparams[i].x)/li) );
+            forces[b.i].add(d);
+            forces[b.j].add(d);
         } 
         //exit(0);
     }

@@ -71,7 +71,8 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         nneighs[e.x]++; nneighs[e.y]++;
         if(sim.bonds){
             sim.bonds[i]     = *(int2*)&e.lo;
-            sim.l0s[i]       =  l0;
+            sim.bparams[i]   = param;
+            //sim.l0s[i]       =  l0;
             sim.maxStrain[i] = (Vec2f){ (float)(mat.Spull/mat.Kpull), float(mat.Spush/mat.Kpush) };
             sim.strain[i] = 0;
         }
