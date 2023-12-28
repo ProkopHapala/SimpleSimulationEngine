@@ -8,10 +8,10 @@ ln -s ../../cpp/common_resources
 
 # ====== Multiprocesing
 ncpu=`nproc`
-#ncpu=$(($ncpu - 1))     # let one CPU free for user interaction
-#echo "compile using ncpu="$ncpu
-#OMP_NUM_THREADS=$ncpu
-#export OMP_NUM_THREADS
+ncpu=$(($ncpu - 1))     # let one CPU free for user interaction
+echo "compile using ncpu="$ncpu
+OMP_NUM_THREADS=$ncpu
+export OMP_NUM_THREADS
 
 # ====== Compilation
 wd=`pwd`

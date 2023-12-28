@@ -371,7 +371,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     for(Rope* o: craft.ropes){
         mesh.block();
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
-        mesh.rope( o->nodes.x->id,o->nodes.y->id, o->face_mat );
+        mesh.rope( o->nodes.x->id,o->nodes.y->id, o->face_mat, o->nseg );
         Quat4i& b = mesh.blocks.back();
         o->pointRange = {b.x,(int)mesh.verts.size()};
         o->stickRange = {b.y,(int)mesh.edges.size()};

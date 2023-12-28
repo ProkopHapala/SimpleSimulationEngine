@@ -52,19 +52,19 @@ gWup = Girder( nUp, nFw, xvec, 70, 2, {defGirderWidth,defGirderWidth}, "Steel", 
 print( "#------ Lua:Ropes" )
 
 --          type     thick[mm]
-Rope(nBk,nLf, 25, "Kevlar" );
-Rope(nFw,nLf, 25, "Kevlar" )
-Rope(nBk,nRt, 25, "Kevlar" );
-Rope(nFw,nRt, 25, "Kevlar" )
-Rope(nBk,nDw, 25, "Kevlar" );
---Rope(nFw,nDw, 25, "Kevlar" )
-Rope(nBk,nUp, 25, "Kevlar");
---Rope(nFw,nUp, 25, "Kevlar" )
+Rope(nBk,nLf, 25.,4, "Kevlar" );
+Rope(nFw,nLf, 25.,4, "Kevlar" )
+Rope(nBk,nRt, 25.,4, "Kevlar" );
+Rope(nFw,nRt, 25.,4, "Kevlar" )
+Rope(nBk,nDw, 25.,4, "Kevlar" );
+--Rope(nFw,nDw, 25.,4, "Kevlar" )
+Rope(nBk,nUp, 25.,4, "Kevlar");
+--Rope(nFw,nUp, 25.,4, "Kevlar" )
 
-Rope(nLf,nDw, 25, "Kevlar");
-Rope(nLf,nUp, 25, "Kevlar");
-Rope(nRt,nDw, 25, "Kevlar");
-Rope(nRt,nUp, 25, "Kevlar");
+Rope(nLf,nDw, 25.,4, "Kevlar");
+Rope(nLf,nUp, 25.,4, "Kevlar");
+Rope(nRt,nDw, 25.,4, "Kevlar");
+Rope(nRt,nUp, 25.,4, "Kevlar");
 
 print( "#------ Lua:BoundNodes and Girders" )
 

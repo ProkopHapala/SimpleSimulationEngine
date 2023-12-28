@@ -166,7 +166,8 @@ int l_Rope    (lua_State * L){
     o->nodes.x    = theSpaceCraft->nodes[Lua::getInt(L,1)];
     o->nodes.y    = theSpaceCraft->nodes[Lua::getInt(L,2)];
     o->thick = Lua::getDouble(L,3) * 1e-3; // [mm]->[m]
-    const char * matn = Lua::getString(L,4);
+    o->nseg  = Lua::getInt(L,4);
+    const char * matn = Lua::getString(L,5);
     //o->face_mat = workshop.panelMaterials.getId( matn );
     //o->face_mat = workshop.stickMaterials.getId( matn );
     o->id   = theSpaceCraft->ropes.size();

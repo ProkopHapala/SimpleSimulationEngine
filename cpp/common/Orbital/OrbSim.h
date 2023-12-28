@@ -57,6 +57,11 @@ class OrbSim_f{ public:
     //float*  l0s    =0; // 
     Vec2f*  maxStrain=0;
 
+    // Rotating frame
+    Vec3f p0{0.,0.,0.};
+    Vec3f ax{0.0,0.0,1.0};
+    float omega = 0.1;
+
     void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0 ){
         nPoint = nPoint_; nNeighMax = nNeighMax_;
         nNeighTot = nPoint*nNeighMax;
@@ -78,7 +83,7 @@ class OrbSim_f{ public:
         }
     }
 
-    void evalTrussForce_neighs(){
+    void evalTrussForces_neighs(){
         //#pragma omp paralel for 
         for(int iG=0; iG<nPoint; iG++){
             //const int iG = get_global_id(0);
@@ -109,7 +114,36 @@ class OrbSim_f{ public:
         //exit(0);
     }
 
-    void evalTrussForce_neighs2(){
+    inline void evalTrussForce_neighs2(int iG){
+        //const int iG = get_global_id(0);
+        Quat4f p = points[iG];
+        Quat4f f =Quat4f{0.0f,0.0f,0.0f,0.0f};
+        //printf( "--- p[%i] \n", iG );
+        //#pragma omp simd
+        for(int ij=0; ij<nNeighMax; ij++){
+            int j  = nNeighMax*iG + ij;
+            int ja = neighs[j];
+            if(ja == -1) break;
+
+            int ib = neighBs[j];
+            Quat4f par = bparams[ib];
+            //f.add( springForce( points[ja].f - p.f, params[j] ) );
+            
+            Vec3f d =  points[ja].f - p.f;
+            float li = d.norm();
+            /*
+            float fi,ei = springForce( li, fi, params[j] );
+            //f.add( Quat4f{ d*(fi/l), ei } );
+            f.f.add_mul( d, fi/li );
+            */
+            float k = 1e+6;
+            f.f.add_mul( d, (k*(li-par.x)/li) );
+            //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
+        }
+        forces[iG] = f; // we may need to do += in future
+    }
+
+    void evalTrussForces_neighs2(){
         //#pragma omp paralel for 
         for(int iG=0; iG<nPoint; iG++){
             //const int iG = get_global_id(0);
@@ -143,7 +177,7 @@ class OrbSim_f{ public:
         //exit(0);
     }
 
-    void evalTrussForce_bonds(){
+    void evalTrussForces_bonds(){
         //#pragma omp paralel for 
         for(int i=0; i<nBonds; i++){
             int2  b = bonds[i];
@@ -166,6 +200,21 @@ class OrbSim_f{ public:
             float s  = ((points[b.y]-points[b.x]).norm() - l0)/l0;
             // ToDo: break the bond if strain > maxStrain;
         }
+    }
+
+    void applyForceRotatingFrame_i( int i, Vec3f p0, Vec3f ax, float omega ){
+        const Quat4f& p = points[i];
+        const Quat4f& v = vel   [i];
+        Vec3f d,f;
+        // Coriolis force     = 2*m*omega*v
+        f.set_cross(ax,v.f);        
+        f.mul( 2.0*omega );
+        // centrifugal force  = r*m*omega^2
+        d.set_sub(p.f,p0);
+        d.makeOrthoU(ax);
+        f.add_mul( d, omega*omega );     
+        // apply force
+        forces[i].f.add_mul(f, p.w );
     }
 
     void applyForceRotatingFrame( Vec3f p0, Vec3f ax, float omega ){
@@ -210,6 +259,18 @@ class OrbSim_f{ public:
         }
     }
 
+    inline void move_i_MD(int i, float dt, float cdamp ){
+        Quat4f p = points[i];
+        Quat4f f = forces[i];
+        Quat4f v = vel   [i];
+        v.f.mul( cdamp );
+        v.f.add_mul( f.f, dt/p.w );
+        p.f.add_mul( v.f, dt     );
+        //printf( "move_GD[%i] |d|=%g |f|=%g dt/m=%g m=%g \n", i, f.f.norm() * dt/p.w, f.f.norm(), dt/p.w, p.w );
+        vel   [i]=v;
+        points[i]=p;
+    }
+
     void move_MD(float dt, float damp=0.0f ){
         float cdamp = 1.0f - damp;
         for(int i=0;i<nPoint; i++ ){
@@ -224,6 +285,62 @@ class OrbSim_f{ public:
             points[i]=p;
         }
     }
+
+int run( int niter, float dt, float damp  ){
+    for(int itr=0; itr<niter; itr++){
+        cleanForce();   
+        //evalTrussForce_neighs();
+        evalTrussForces_neighs2();
+        //evalTrussForce_bonds();
+        //applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 1e-2 );
+        applyForceRotatingFrame( p0, ax, omega );
+        //move_GD( 0.00001 );
+        //move_MD( 1e-3, 1e-5 );
+        //move_GD( 1e-7 );
+        move_MD( dt, damp );
+    }
+    return niter;
+}
+
+int run_omp( int niter_max, float dt, float damp ){
+    //printf( "run_omp() niter_max %i dt %g Fconv %g Flim %g timeLimit %g outE %li outF %li \n", niter_max, dt, Fconv, Flim, timeLimit, (long)outE, (long)outF );
+    float cdamp = 1.0f - damp;
+    //long T0 = getCPUticks();
+    int itr=0,niter=niter_max;
+    #pragma omp parallel shared(niter,itr,cdamp)
+    while(itr<niter){
+        if(itr<niter){
+        //#pragma omp barrier
+        //#pragma omp single
+        //{E=0;F2=0;ff=0;vv=0;vf=0;}
+        //------ eval forces
+        //#pragma omp barrier
+        //#pragma omp for reduction(+:E)
+        #pragma omp for 
+        for(int iG=0; iG<nPoint; iG++){ 
+            forces[iG] = Quat4fZero;
+            evalTrussForce_neighs2(iG);
+            applyForceRotatingFrame_i( iG, p0, ax, omega );
+        }
+        // ---- assemble (we need to wait when all atoms are evaluated)
+        //#pragma omp barrier
+        #pragma omp for
+        for(int i=0;i<nPoint; i++ ){
+            move_i_MD( i, dt, cdamp );
+        }
+        //#pragma omp barrier
+        #pragma omp single
+        { 
+            itr++; 
+        }
+        } // if(itr<niter){
+    }
+    //{
+    //double t = (getCPUticks() - T0)*tick2second;
+    //if(itr>=niter_max)if(verbosity>0)printf( "run_omp() NOT CONVERGED in %i/%i E=%g |F|=%g time= %g [ms]( %g [us/%i iter]) \n", itr,niter_max, E, sqrt(F2), t*1e+3, t*1e+6/itr, itr );
+    //}
+    return itr;
+}
 
 };   // OrbSim_f
 

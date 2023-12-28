@@ -126,6 +126,7 @@ void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
 // Render 
 void runSim( OrbSim_f& sim, int niter=100 ){
     long t0 = getCPUticks();
+    /*
     for(int itr=0; itr<niter; itr++){
         sim.cleanForce();   
         //sim.evalTrussForce_neighs();
@@ -137,13 +138,17 @@ void runSim( OrbSim_f& sim, int niter=100 ){
         sim.move_MD( 1e-3, 1e-5 );
         //sim.move_GD( 1e-7 );
     }
+    */
+    //sim.run( 100, 1e-3, 1e-4 );
+    sim.run_omp( 100, 1e-3, 1e-4 );
     double T = (getCPUticks()-t0)*1e-6;
     printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
-    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
+    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-2 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
-};
+}
 
 // ======================  Free Functions
 
