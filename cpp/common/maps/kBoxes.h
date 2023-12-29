@@ -302,56 +302,75 @@ class HierarchicalKpivot{ public:
 // ========================================
 
 
+/**
+    * @brief Represents axis-aligned bouding box in 3D space and range of indexes pointing to bodies contained in the box which are stored in a permutation array.
+    * 
+    * This struct contains information about a box in a k-d tree, including the number of bodies in the block,
+    * the index pointing to the beginning of the block in the permutation array, and the bounding box of the block.
+    */
 struct KBox{
-    // we should probably split this
-    int n;  //
-    int i0; // pointg to beginning of block in permutation array
-    Box span;
+    int n;    // number of bodies in the block
+    int i0;   // pointing to beginning of block in permutation array
+    Box span; // bounding box 
     //float cost; // this may be also outside
 };
 
+/**
+ * @file kBoxes.h
+ * @brief Defines the KBoxes class for spatial partitioning using K-d trees.
+ * 
+ * The KBoxes class is used for spatial partitioning using K-d trees. It is used for collision detection and for finding the nearest neighbour of a point and ray-tracing.
+ */
 class KBoxes{ public:
-    std::vector<KBox>    branches;  // we should probably split this
+    std::vector<KBox>    branches; 
     // ToDo : if we split KBox to (Box)span and (Vec2i){n,i0} we can use general function   cellPermut()
     //std::vector<Box>    branches;  // we should probably split this
     //std::vector<Vec2i>  branche_ni;
-    std::vector<Vec2i>  collisionPairs;
+    std::vector<Vec2i>  collisionPairs; // to output collision pairs for narrow-phase 
     //Box   * bounds;
     //Vec2i * ranges;
-    int   * permut      = 0;
-    int   * body2branch = 0; // inv permut
+    int   * permut      = 0;    // indexes of bodies sorted by the branches  ( should call it branch2body )
+    int   * body2branch = 0;    // inverse of permut
 
-    bool   bakePermut = false;
-    float  growFactor = 1.6;
-    int    nbodies =0;
-    int    nBodyMax=0;
-    int    nBinKmax = 0;
-    Box   * bodies         = 0;    // if we permute also this array we can optimize some cache
-    Box   * bodiesPremuted = 0;
+    bool   bakePermut = false;  // if true we will store permutated bodies in bodiesPremuted array
+    float  growFactor = 1.6;    // how much we grow the arrays when we need more space
+    int    nbodies =0;          // number of bodies
+    int    nBodyMax=0;          // maximum number of bodies
+    int    nBinKmax = 0;        // maximum number of bodies in a single branch
+    Box   * bodies         = 0; // bounding boxes of individual bodies     (if we permute also this array we can optimize some cache access)
+    Box   * bodiesPremuted = 0; // bounding boxes of individual bodies sorted by the branches (if bakePermut==true), this is optimized for cache access
 
-    double costDisolveTrashold = 1e+6; // We should think how to set this number properly
+    double costDisolveTrashold = 1e+6;  // if cost of the box (given by volume and number of bodies) is larger than this we disolve it   (We should think how to set this number properly)
 
-    // Sweep temps
+    // ====== Sweep and Prune temporary variables
     bool bSweep = false;
-
-    int*         Kpermut=0;
-    sweep::Span* Kintervals=0;
-    sweep::Span* Bintervals=0;
-    Int2*        Kcols=0;
-    Int2*        colPairsTmp=0;
-    Box globBBox;
-    float sweepXStep,invSweeXStep;
+    int*         Kpermut     = 0;  // permutation of branches
+    sweep::Span* Kintervals  = 0;  // intervals of branches (KBoxes)
+    sweep::Span* Bintervals  = 0;  // intervals of bodies   (Boxes)
+    Int2*        Kcols       = 0;  // collision pairs of branches
+    Int2*        colPairsTmp = 0;  // temporary storage for collision pairs
+    Box   globBBox;                // global bounding box of all bodies
+    float sweepXStep,invSweeXStep; // step of line-sweep and its inverse
 
 
     // ========== Functions
 
+    /**
+     * @brief Reserves memory for the bodies in the kBoxes class.
+     * 
+     * This function reserves memory for the bodies in the kBoxes class based on the given number of bodies (n) and a flag indicating whether permutation is required (bPermut).
+     * If the given number of bodies is greater than the current maximum number of bodies (nBodyMax), the memory is reallocated to accommodate the new number of bodies.
+     * 
+     * @param n The number of bodies to reserve memory for.
+     * @param bPermut A flag indicating whether permutation is required.
+     */
     void reserveBodies( int n, bool bPermut ){
         //branches.reserve(K);
         //branches.resize(K);
         if(n>nBodyMax){
             nBodyMax = n*growFactor;
-            _realloc( permut, nBodyMax);
-            _realloc( body2branch,    nBodyMax);
+            _realloc( permut,      nBodyMax );
+            _realloc( body2branch, nBodyMax );
             if(bPermut){
                 _realloc( bodiesPremuted, nBodyMax);
             }
@@ -359,9 +378,6 @@ class KBoxes{ public:
     }
 
     void realocSweep( int nk, int n ){
-        //Kpermut     = new int        [ nk ];
-        //Kintervals  = new sweep::Span[ nk ];
-        //Bintervals  = new sweep::Span[ n ];
         _realloc(Kpermut    ,nk );
         _realloc(Kintervals ,nk );
         _realloc(Bintervals ,n  );
@@ -376,6 +392,14 @@ class KBoxes{ public:
         }
     };
 
+    /**
+     * Sketches branches sweep.
+     * 
+     * This function divides the global bounding box into nk equal branches along the x-axis
+     * and assigns each branch a span based on the sweep step size.
+     * 
+     * @param nk The number of branches to create.
+     */
     void sketchBrachesSweep( int nk ){
         sweepXStep   = (globBBox.b.x-globBBox.a.x)/nk;
         invSweeXStep = 1.0/sweepXStep;
@@ -409,6 +433,12 @@ class KBoxes{ public:
         return cost;
     }
 
+    /**
+     * Inserts a box into the kBoxes data structure. It finds the branch with the lowest cost of inserting the box and inserts the box into that branch.
+     * 
+     * @param ib  The index of the box to be inserted.
+     * @param box The box to be inserted.
+     */
     void insert( int ib, const Box& box ){
         int    imin;
         double minCost = +1e+300;
@@ -420,6 +450,12 @@ class KBoxes{ public:
         body2branch[ib] = imin;
     }
 
+    /**
+     * Inserts a box into the sweep structure at the specified index. It finds the branch with the lowest cost of inserting the box and inserts the box into that branch.
+     * 
+     * @param ib The index of the box to be inserted.
+     * @param box The box to be inserted.
+     */
     void insertSweep( int ib, const Box& box ){
         int    imin;
         double minCost = +1e+300;
@@ -434,11 +470,15 @@ class KBoxes{ public:
         body2branch[ib] = imin;
     }
 
+    /**
+     * Updates the permutation array based on new mapping of bodies to branches (body2branch array).
+     * This function should be called after each rearrangement of bodies.
+     */
     void updatePermut(){
-        // we need to call this after each rearrangement of bodies
         //printf( "updatePermut nbodies %i bSweep %i\n", nbodies, bSweep );
-
+        // --- count number of bodies in each branch
         for(int i=0; i<nbodies; i++ ){ branches[ body2branch[i] ].n++; };
+        // --- find starting index for each branch, also find maximum number of bodies in a single branch (nBinKmax)
         int ntot=0;
         for(int k=0; k<branches.size(); k++ ){
             branches[k].i0=ntot;
@@ -447,6 +487,7 @@ class KBoxes{ public:
             if( ni>nBinKmax ) nBinKmax=ni;
             ni=0;
         }
+        // --- fill the permutation array (permut) (inverse of body2branch)
         for(int i=0; i<nbodies; i++){
             int k =  body2branch[i];
             int j =  branches[k].i0 + branches[k].n;
@@ -458,17 +499,27 @@ class KBoxes{ public:
         if(bSweep){ realocTemp(); }
     }
 
+    /**
+     * Updates the sweep intervals for stable sorting of branches and bodies.
+     * 
+     * @param kSorted Flag indicating that the Kintervals array is almost sorted, therefore insertion sort is used rather than quicksort.
+     * @param bSorted Flag indicating that the Bintervals array is almost sorted, therefore insertion sort is used rather than quicksort.
+     */
     void updateSweepStable( bool kSorted=true, bool bSorted=true ){
         int nk = branches.size();
+        // --- update Kintervals ( temporary array with x-intervals of branches used for sorting )
         for(int i=0; i<nk; i++){
             Box& span =  branches[i].span;
             Kintervals[i] = (sweep::Span){(float)span.a.x,(float)span.b.x};
         }
+        // --- update Bintervals ( temporary array with x-intervals of bodies used for sorting )
         for(int i=0; i<nbodies; i++){ // TODO: we can merge this with findGlobalBounds() ?????
             Box& span =  bodies[i];
             Bintervals[i] = (sweep::Span){(float)span.a.y,(float)span.b.y};
         }
+        // --- sort Kintervals  ( sort branches by x-coordinate )
         sort_permut( nk, Kpermut, Kintervals, false, kSorted ); //printf( "insertSort N: %i niters: %i \n",  nk, niter );
+        // --- sort Bintervals  ( sort bodies inside each branch by x-coordinate )
         for(int i=0; i<nk; i++){
             KBox& B =  branches[i];
             sort_permut( B.n, permut+B.i0, Bintervals, false, bSorted );
@@ -476,6 +527,14 @@ class KBoxes{ public:
         //printf("updateSweep  1.3 \n");
     }
 
+    /**
+     * @brief Rebuilds the sweep structure.
+     * This function updates the sweep structure by performing the following steps:
+     * 1. Calculates the number of branches (nk) in the structure.
+     * 2. Finds the global bounds of the structure.
+     * 3. Sketches initial layout of intervals (branches) equaly spaced along the x-axis.
+     * 4. Inserts the bodies into the sweep structure.
+     */
     void rebuildSweep(){
         int nk = branches.size();
         findGlobalBounds();
@@ -483,11 +542,18 @@ class KBoxes{ public:
         for(int i=0; i<nbodies; i++ ){ insertSweep( i, bodies[i] ); }
     }
 
+    /**
+     * @brief Updates the sweep by rebuilding it, updating the permutation, and updating the sweep by sorting branches and bodies.
+     * This function updates the sweep structure by performing the following steps:
+     * 1. Rebuilds the sweep structure.
+     * 2. Updates the permutation.
+     * 3. Updates the sweep by sorting branches and bodies.
+     */
     void updateSweep(){
-        rebuildSweep();
-        updatePermut();
+        rebuildSweep();   // find bounds and sketch branches equally spaced along x-axis
+        updatePermut();   // update permutation array mapping bodies to branches
         //updateSweepStable(false,true);
-        updateSweepStable(true,false);
+        updateSweepStable(true,false);  // update sweep by sorting branches and bodies
         //updateSweepStable(true,true);
     }
 
@@ -502,7 +568,7 @@ class KBoxes{ public:
         // insert pick pivots
         //   - TODO: maybe would be more efficient to use K-Means to pick pivots?
         branches.clear();
-        branches.resize(K); // if will not free memory //https://stackoverflow.com/questions/1155693/stdvector-resize-downward
+        branches.resize(K); // it will not free memory //https://stackoverflow.com/questions/1155693/stdvector-resize-downward
         //printf( "n %i K %i size %i \n", n, K, branches.size()  );
         int picked[K];
         //printf( "KBoxes::build 1.1  K %i  nb %i\n", K, nbodies );
@@ -512,7 +578,7 @@ class KBoxes{ public:
             //for(int i=0; i<nbodies; i++ ){ insertSweep( i, bodies[i] ); }
             rebuildSweep();
         }else{
-            pickKofN( K, nbodies, picked );
+            pickKofN( K, nbodies, picked );   // pick K bodies at random as pivots
             for(int k=0; k<K; k++ ){
                 branches[k].span = bodies[ picked[k] ];
                 branches[k].n = 0;
@@ -560,7 +626,7 @@ class KBoxes{ public:
     }
 
     bool checkDisolve( const KBox& B ){
-        double cost = B.span.volume() + B.n;
+        double cost = B.span.volume() + B.n;   // TODO: think more about this function
         if( cost > costDisolveTrashold ){
             return true;
         }
@@ -568,19 +634,28 @@ class KBoxes{ public:
         return false;
     }
 
-    void update(){
-        // update with changing connectivity
-        //int freeBodies  [nBodies]; // is this stack-allocation too much?
-        int *freeBodies = new int[nbodies];
-        int freeBranches[branches.size()];
-        int nfreeBranches = 0;
-        int nfreeBodies   = 0;
+    /**
+     * Updates the kBoxes data structure with dissolving and generating new branches.
+     * 1. Updates the bounding box of each branch based on the bodies it contains.
+     * 2. Dissolves branches that meet certain criteria and stores the bodies and branch indexes.
+     * 3. Generates new branches based on the dissolved branches and randomly picks pivots from the free bodies.
+     * 4. Reinserts the free bodies into the new branches.
+     * 5. Updates the permutation array.
+     * 6. Updates the sweep structure if enabled.
+     */
+    void update(){ 
+        int *freeBodies = new int[nbodies];   // to store indexes of bodies which are not in any branch
+        int freeBranches[branches.size()];    // to store indexes of branches which are disolved
+        int nfreeBranches = 0;                // number of disolved branches
+        int nfreeBodies   = 0;                // number of bodies which are not in any branch
         for(int i=0; i<branches.size(); i++){
             KBox& Bi = branches[i];
+            // --- update branch bounding box
             for( int ii=Bi.i0; ii<Bi.i0+Bi.n; ii++ ){
                 int ib = permut[ii];
                 Bi.span.enclose( bodies[ib] );
             }
+            // --- try to disolve branch
             if( checkDisolve(Bi) ){
                 for( int ii=Bi.i0; ii<Bi.i0+Bi.n; ii++ ){
                     freeBodies[ii] = permut[ii];
@@ -589,15 +664,15 @@ class KBoxes{ public:
                 nfreeBodies+=Bi.n;
             }
         }
-        // Now we have to generate new branches ... What strategy?
+        // --- Now we have to generate new branches ( What strategy? )
         int picked[nfreeBranches];
-        pickKofN( nfreeBranches, nfreeBodies, picked );
-        for(int i=0; i<nfreeBranches;i++ ){
-            int k  = picked[nfreeBranches];
-            int ib = freeBodies[i];
-            branches[k].span = bodies[ib];
+        pickKofN( nfreeBranches, nfreeBodies, picked );  // pick k pivots from free-bodies at random 
+        for(int i=0; i<nfreeBranches;i++ ){              // setup new branches by picked pivots
+            int k  = picked[i];
+            int ib = freeBodies[k];
+            branches[i].span = bodies[ib];
         }
-        // reinsert free free bodies
+        // --- reinsert free bodies to new branches
         for(int i=0; i<nfreeBodies; i++){
             int ib = freeBodies[i];
             insert( ib, bodies[ib] );
@@ -640,27 +715,61 @@ class KBoxes{ public:
         }
     }
 
-    void collideBranchesNew( const KBox& Bi, const KBox& Bj ){
-        // TODO : optimization where we fist check shared BBox
-        //printf(" collideBranchesNew \n");
-        int isel[Bi.n];
+    inline int selectOverlap( const KBox& Bi, const KBox& Bj, int* sel ){
         int nsel = 0;
         for( int ii=Bi.i0; ii<Bi.i0+Bi.n; ii++ ){
             int ib = permut[ii];
-            if( Bj.span.overlap( bodies[ib] ) ){ isel[nsel]=ib; nsel++; };
+            if( Bj.span.overlap( bodies[ib] ) ){ sel[nsel]=ib; nsel++; };
         }
-        //printf(" isel done \n");
+        return nsel;
+    }
+
+    void collideBranchesNew( const KBox& Bi, const KBox& Bj ){
+        // TODO : optimization where we fist check shared BBox
+        //printf(" collideBranchesNew \n");
+        int isel[Bi.n];  // selection of bodies in Bi which overlap with Bj
+        int nsel = selectOverlap( Bi, Bj, isel );
+        // --- select bodies in Bi which overlap with Bj
+        //int nsel = 0;    // number of selected bodies
+        //for( int ii=Bi.i0; ii<Bi.i0+Bi.n; ii++ ){
+        //    int ib = permut[ii];
+        //    if( Bj.span.overlap( bodies[ib] ) ){ isel[nsel]=ib; nsel++; };
+        // }
+        // --- check overlap of selected bodies with bodies in Bj
         for( int jj=Bj.i0; jj<Bj.i0+Bj.n; jj++ ){
-            int jb  = permut[jj];
+            int jb        = permut[jj];
             const Box& bj = bodies[jb];
             if( !Bi.span.overlap(bj) ) continue;
             for( int ii=0; ii<nsel; ii++ ){
                 int ib  = isel[ii];
-                //printf( "ib %i jb %i \n", ib, jb );
                 if( bj.overlap( bodies[ib] ) ){
                     collisionPairs.push_back({ib,jb});
-                    // callback
-                    // generate NarrowPhase pair ?
+                    // ToDo: callback
+                    // ToDo: generate NarrowPhase pair ?
+                };
+                //printf( "-- ib %i jb %i \n", ib, jb );
+            }
+        }
+    }
+
+    void collideBranchesNew2( const KBox& Bi, const KBox& Bj ){
+        // TODO : optimization where we fist check shared BBox
+        //printf(" collideBranchesNew \n");
+        int isel[Bi.n];  // selection of bodies in Bi which overlap with Bj
+        int jsel[Bj.n];  // selection of bodies in Bj which overlap with Bi
+        int nj = selectOverlap( Bj, Bi, jsel );
+        int ni = selectOverlap( Bi, Bj, isel );
+        // --- check overlap of selected bodies with bodies in Bj
+        for( int jj=0; jj<nj; jj++ ){
+            int jb        = jsel[jj];
+            const Box& bj = bodies[jb];
+            if( !Bi.span.overlap(bj) ) continue;
+            for( int ii=0; ii<ni; ii++ ){
+                int ib  = isel[ii];
+                if( bj.overlap( bodies[ib] ) ){
+                    collisionPairs.push_back({ib,jb});
+                    // ToDo: callback
+                    // ToDo: generate NarrowPhase pair ?
                 };
                 //printf( "-- ib %i jb %i \n", ib, jb );
             }

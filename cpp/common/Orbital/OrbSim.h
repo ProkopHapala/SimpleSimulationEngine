@@ -60,9 +60,9 @@ class OrbSim_f{ public:
     // Rotating frame
     Vec3f p0{0.,0.,0.};
     Vec3f ax{0.0,0.0,1.0};
-    float omega = 0.1;
+    float omega = 0.05;
 
-    float dt      = 1e-3;
+    float dt      = 2e-3;
     //float damping = 1e-4;
     float damping  = 0.05;
     int    lastNeg = 0;
@@ -212,7 +212,10 @@ class OrbSim_f{ public:
             int2  b  = bonds[i];
             float l0 = bparams[i].x;
             //float l0 = l0s[i];
-            float s  = ((points[b.y]-points[b.x]).norm() - l0)/l0;
+            float l   = (points[b.y]-points[b.x]).norm();
+            float s   = (l-l0)/l0;
+            if( fabs(s)>0.5 ){ printf( "evalBondTension[%i] strain=%g l=%g l0=%g\n", i, s, l, l0 ); }
+            strain[i] = s;
             // ToDo: break the bond if strain > maxStrain;
         }
     }
@@ -334,12 +337,14 @@ inline void setOpt( double dt_, double damp_ ){
 
 void FIRE_update( float& vf, float& vv, float& ff, float& cv, float& cf ){
     float cs = vf/sqrt(vv*ff);
-    if( vf < 0.0 ){
+    //if( vf < 0.0 ){
+    if( vv>1600.0 )damping  = damp_max;
+    if( cs<0.02 ){
 		dt       = fmax( dt * fdec, dt_min );
 	  	damping  = damp_max;
 		lastNeg  = 0;
         cv=0.0; cf=0.0;
-        printf( "FIRE<0 cv,cf(%g,%g) cs=%g   vf,vv,ff(%g,%g,%g) \n", cv,cf, cs, vf,vv,ff );
+        //printf( "FIRE<0 cv,cf(%g,%g) cs=%g   vf,vv,ff(%g,%g,%g) \n", cv,cf, cs, vf,vv,ff );
 	}else{
 		cf   =     damping * sqrt(vv/(ff+ff_safety));
 		cv   = 1 - damping;
@@ -348,8 +353,9 @@ void FIRE_update( float& vf, float& vv, float& ff, float& cv, float& cf ){
 			damping = damping  * falpha;
 		}
 		lastNeg++;
-        printf( "FIRE>0 cv,cf(%g,%g) cs=%g  vf,vv,ff(%g,%g,%g) \n", cv,cf, cs, vf,vv,ff );
+        
 	}
+    printf( "FIRE>0 cv,cf(%g,%g) cs=%g dt=%g damp=%g/%g lastNeg=%i vf,vv,ff(%g,%g,%g) \n", cv,cf, cs,  dt, damping,damp_max, lastNeg,  vf,vv,ff );
 }
 
 

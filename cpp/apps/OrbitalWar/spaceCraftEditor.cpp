@@ -82,8 +82,10 @@ void renderTruss(int nb, int2* bonds, Quat4f* ps, float* strain=0, float sc=1.0 
         //printf( "renderTruss()[%i] \n", i );
         int2 b =  bonds[i];
         if(strain){
-            float f=strain[i]*sc;
-            if(f>0){  Draw3D::color(Vec3f{f,0,0}); }else{ Draw3D::color(Vec3f{0,0,f}); };
+            float f=strain[i];
+            //printf( "Edge[%i] strain=%g \n", i, f );
+            f*=sc;
+            if(f>0){  Draw3D::color(Vec3f{f,0,0}); }else{ Draw3D::color(Vec3f{0,f,f}); };
         } 
         Draw3D::vertex( ps[b.x].f );
         Draw3D::vertex( ps[b.y].f );
@@ -145,6 +147,8 @@ void runSim( OrbSim_f& sim, int niter=100 ){
 
     double T = (getCPUticks()-t0)*1e-6;
     printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
+
+    sim.evalBondTension();
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
