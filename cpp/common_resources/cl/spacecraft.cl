@@ -3,7 +3,7 @@
 
 // Problem - we want to avoid asynchronious memory writes, therefore we need to iterate over vertexes rather than over edges
 
-float3 springForce( float3 d, float4 par ){
+float4 springForce( float3 d, float4 par ){
     float l  = length(d);
     float dl = l - par.x;
     float f;
@@ -12,7 +12,7 @@ float3 springForce( float3 d, float4 par ){
     } else {
         f = par.y * dl;
     }
-    return d*f;
+    return (float4){d*f, f*dl*0.5f};
 }
 
 __kernel void  evalTrussForce(
@@ -29,7 +29,36 @@ __kernel void  evalTrussForce(
         int j  = ns.y*iG + ij;
         int ja = neighs[j];
         if(j == -1) break;
-        f.xyz += springForce( points[ja].xyz - p.xyz, params[j] );
+        f += springForce( points[ja].xyz - p.xyz, params[j] );
+    }
+    forces[iG] = f; // we may need to do += in future 
+}
+
+__kernel void  evalTrussForce2(
+    const int4 ns, 
+    __global const float4*  points,    // x,y,z,mass
+    __global       float4*  forces, 
+    //__global const int*     neighs,    // indexes of neighbor points, if neighs[i] == -1 it is not connected
+    __global const int2*    neighBs,   // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
+    __global const float4*  bparams    // l0, kPress, kPull, damping
+){
+    const int iG = get_global_id(0);
+    float4 p = points[iG];
+    float4 f =(float4){0.0f,0.0f,0.0f,0.0f};
+    for(int ij=0; ij<ns.y; ij++){
+        int  j = ns.y*iG + ij;
+        int2 b = neighBs[j];
+        if(b.x==-1) break;
+        //f += springForce( points[b.x].xyz - p.xyz, bparams[b.y] );
+
+        float3 d = points[b.x].xyz - p.xyz;
+        float l  = length(d.xyz);
+        float dl = l - bparams[b.y].x;
+        float k = 1e+6f;
+        // f.f.add_mul( d, (k*(li-params[j].x)/li) );
+        f.xyz += d.xyz * (k*dl/l);
+        f.w   += dl*dl*0.5f;
+
     }
     forces[iG] = f; // we may need to do += in future 
 }

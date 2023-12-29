@@ -51,7 +51,8 @@ class OrbSim_f : public Picker { public:
 
     Quat4f* params=0;  // neighbor parameters (l0,kP,kT,damp)
     int*    neighs=0;  // neighbor indices
-    int*    neighBs=0; // neighbor bond indices
+    int2*   neighBs=0; // neighbor bond indices
+    //int*    neighBs=0; // neighbor bond indices
 
     int     nBonds =0; // number of bonds
     Quat4f* bparams=0; // bond parameters (l0,kP,kT,damp)
@@ -191,20 +192,12 @@ class OrbSim_f : public Picker { public:
         //#pragma omp simd
         for(int ij=0; ij<nNeighMax; ij++){
             int j  = nNeighMax*iG + ij;
-            int ja = neighs[j];
-            if(ja == -1) break;
-
-            int ib = neighBs[j];
-            Quat4f par = bparams[ib];
+            int2 b = neighBs[j];
+            if(b.x == -1) break;
+            Quat4f par = bparams[b.y];
             //f.add( springForce( points[ja].f - p.f, params[j] ) );
-            
-            Vec3f d =  points[ja].f - p.f;
+            Vec3f d =  points[b.x].f - p.f;
             float li = d.norm();
-            /*
-            float fi,ei = springForce( li, fi, params[j] );
-            //f.add( Quat4f{ d*(fi/l), ei } );
-            f.f.add_mul( d, fi/li );
-            */
             float k = 1e+6;
             f.f.add_mul( d, (k*(li-par.x)/li) );
             //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
@@ -213,41 +206,12 @@ class OrbSim_f : public Picker { public:
     }
 
     void evalTrussForces_neighs2(){
-        //#pragma omp paralel for 
         for(int iG=0; iG<nPoint; iG++){
-            //const int iG = get_global_id(0);
-            Quat4f p = points[iG];
-            Quat4f f =Quat4f{0.0f,0.0f,0.0f,0.0f};
-            //printf( "--- p[%i] \n", iG );
-            //#pragma omp simd
-            for(int ij=0; ij<nNeighMax; ij++){
-                int j  = nNeighMax*iG + ij;
-                int ja = neighs[j];
-                if(ja == -1) break;
-
-                int ib = neighBs[j];
-                Quat4f par = bparams[ib];
-                //f.add( springForce( points[ja].f - p.f, params[j] ) );
-                
-                Vec3f d =  points[ja].f - p.f;
-                float li = d.norm();
-                /*
-                float fi,ei = springForce( li, fi, params[j] );
-                //f.add( Quat4f{ d*(fi/l), ei } );
-                f.f.add_mul( d, fi/li );
-                */
-                float k = 1e+6;
-                f.f.add_mul( d, (k*(li-par.x)/li) );
-
-                //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
-            }
-            forces[iG] = f; // we may need to do += in future
+            evalTrussForce_neighs2(iG);
         } 
-        //exit(0);
     }
 
     void evalTrussForces_bonds(){
-        //#pragma omp paralel for 
         for(int i=0; i<nBonds; i++){
             int2  b = bonds[i];
             Vec3f d = points[b.y].f - points[b.x].f;
@@ -258,7 +222,6 @@ class OrbSim_f : public Picker { public:
             forces[b.x].f.add(d);
             forces[b.y].f.sub(d);
         } 
-        //exit(0);
     }
 
     void evalBondTension(){
@@ -326,6 +289,13 @@ class OrbSim_f : public Picker { public:
     }
     void printAllNeighs(){ printf("OrbSim_f::printAllNeighs(nPoint=%i,nNeighMax=%i)\n",nPoint,nNeighMax); for(int i=0;i<nPoint;i++){ printNeighs(i); }; };
 
+    double getFmax(){ 
+        double fmax=0;
+        for(int i=0; i<nPoint; i++){ float f=forces[i].norm(); fmax=fmax>f?fmax:f; }   
+        //printf( "|fmax|=%g\n", fmax );
+        return fmax;
+    }
+
     void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero; } };
     void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero; } };
 
@@ -351,12 +321,14 @@ class OrbSim_f : public Picker { public:
         points[i]=p;
     }
 
-    void move_MD(float dt, float damp=0.0f ){
+    double move_MD(float dt, float damp=0.0f ){
         float cdamp = 1.0f - damp;
+        double ff = 0.0; 
         for(int i=0;i<nPoint; i++ ){
             Quat4f p = points[i];
             Quat4f f = forces[i];
             Quat4f v = vel   [i];
+            ff += f.f.norm2();
             v.f.mul( cdamp );
             v.f.add_mul( f.f, dt/p.w );
             p.f.add_mul( v.f, dt     );
@@ -364,20 +336,23 @@ class OrbSim_f : public Picker { public:
             vel   [i]=v;
             points[i]=p;
         }
+        return ff;
     }
 
 int run( int niter, float dt, float damp  ){
+    float f2 = -1;
     for(int itr=0; itr<niter; itr++){
         cleanForce();   
-        //evalTrussForce_neighs();
+        //evalTrussForces_neighs();
         evalTrussForces_neighs2();
-        //evalTrussForce_bonds();
+        //evalTrussForces_bonds();
         //applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 1e-2 );
         applyForceRotatingFrame( p0, ax, omega );
         //move_GD( 0.00001 );
         //move_MD( 1e-3, 1e-5 );
         //move_GD( 1e-7 );
-        move_MD( dt, damp );
+        f2 = move_MD( dt, damp );
+        printf( "OrbSim_f::run[%i] |F|=%g\n", itr, sqrt(f2) );
     }
     return niter;
 }

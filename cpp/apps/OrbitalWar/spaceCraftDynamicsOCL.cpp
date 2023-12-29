@@ -55,19 +55,39 @@ int verbosity = 0;
 
 using namespace SpaceCrafting;
 
+bool bRun = false;
+
 Mesh::Builder2 mesh2;
-OrbSim_f       sim;
+//OrbSim_f       sim;
+OCL_Orb        sim;
+
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 double elementSize  = 5.;
 
 // Render 
-void runSim( OrbSim_f& sim, int niter=100 ){
-    long t0 = getCPUticks();
-    //sim.run_omp( 100, false, 1e-3, 1e-4 );
-    //sim.run_omp( 100, true, 1e-3, 1e-4 );
-    double T = (getCPUticks()-t0)*1e-6;
-    //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
-    printf( "runSim() nPoint=%i nBonds=%i \n", sim.nPoint, sim.nBonds );
+void runSim( OCL_Orb& sim, int niter=100 ){
+    niter=1;
+    if(bRun){
+        long t0 = getCPUticks();
+        //sim.run( niter, 1e-4, 1e-4 );
+        //sim.run_omp( niter, false, 1e-3, 1e-4 );
+        //sim.run_omp( niter, true, 1e-3, 1e-4 );
+        //sim.run( niter, 1e-4, 1e-4 );
+
+        sim.cleanForce();  sim.evalTrussForces_neighs2(); float fmax_ref = sim.getFmax(); //printf( "|fmax|=%g\n", fmax );
+
+        //sim.run_ocl( niter );
+        sim.cleanForce();
+        sim.run_ocl( niter, 0b001, 0b111 );
+
+        sim.move_MD( 1e-3, 1e-4 );
+        double T = (getCPUticks()-t0)*1e-6;
+        //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
+        //printf( "runSim() nPoint=%i nBonds=%i \n", sim.nPoint, sim.nBonds );
+        
+        printf( "runSim() fmax=%g fmax_ref=%g\n", sim.getFmax(), fmax_ref );
+
+    }
     sim.evalBondTension();
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
@@ -91,6 +111,13 @@ void reloadShip( const char* fname  ){
     mesh2.printSizes();
     exportSim( sim, mesh2, workshop );
 
+    // OpenCL initialization
+    printf("###### OpenCL initialization\n");
+    sim.makeKrenels_Orb( "./common_resources/cl" );
+    sim.initCLBuffsOrb(  );
+    sim.setup_evalTrussForce2();
+    sim.setup_move();
+    
     printf("#### END reloadShip('%s')\n", fname );
 };
 
@@ -141,8 +168,10 @@ void SpaceCraftEditorApp::draw(){
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
     // Render simulation
+    glLineWidth(0.5); 
+
     runSim( sim );
-    glLineWidth(0.5); renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
  
     picker.hray = (Vec3d)(cam.rot.c);
     picker.ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
@@ -203,6 +232,7 @@ void SpaceCraftEditorApp::eventHandling ( const SDL_Event& event  ){
                     //reloadShip( );
                     //onSelectLuaShipScript.GUIcallback(lstLuaFiles);
                     break;
+                case SDLK_SPACE: bRun = !bRun; break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
@@ -236,6 +266,9 @@ int main(int argc, char *argv[]){
     // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
     //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
     funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
+
+
+    sim.initOCL();
 
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);

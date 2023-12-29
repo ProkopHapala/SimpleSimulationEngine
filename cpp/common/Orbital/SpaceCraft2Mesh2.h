@@ -45,6 +45,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     for(int i=0; i<np; i++){ sim.points[i].f=(Vec3f)mesh.verts[i].pos; sim.points[i].e=0.0f; }
     for(int i=0; i<np; i++){ nneighs[i]=0;   }
     for(int i=0; i<sim.nNeighTot; i++){ sim.neighs[i]=-1; }
+    if(sim.neighBs){ for(int i=0; i<sim.nNeighTot; i++){ sim.neighBs[i]=(int2){-1,-1}; } }
     for(int i=0; i<nb; i++){
         //printf( "exportSim()[%i] \n", i );
         const Quat4i& e = mesh.edges[i];
@@ -52,9 +53,10 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         int ib = e.y*sim.nNeighMax + nneighs[e.y];
         sim.neighs[ ia ] = e.y; 
         sim.neighs[ ib ] = e.x;
-
-        sim.neighBs[ ia ] = i; 
-        sim.neighBs[ ib ] = i;
+        if(sim.neighBs){
+            sim.neighBs[ ia ] = (int2){e.y,i}; 
+            sim.neighBs[ ib ] = (int2){e.x,i};
+        }
 
         //printf( "e.w %i \n", e.w );
         if(e.w<0){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i \n", i, e.w ); exit(0); }
