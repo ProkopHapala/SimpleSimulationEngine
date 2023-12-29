@@ -16,6 +16,8 @@
 #include "geom3D.h"
 #include "macroUtils.h"
 
+#include "containers.h"
+
 namespace SpaceCrafting{
 
 const int NAME_LEN = 16;
@@ -661,30 +663,6 @@ class Gun : public Accelerator{ public:
 
 
 // ============= SpaceCraftWorkshop
-
-template<typename T>
-class Dict{ public:
-    std::unordered_map<std::string,int> map;
-    std::vector<T*>                     vec;
-
-    int getId( const char* name )const{
-        auto it = map.find(name);
-        if( it != map.end() ){ return it->second; }else{ return -1; }
-    }
-
-    T* get( const char* name )const{
-        auto it = map.find(name);
-        if( it != map.end() ){ return vec[it->second]; }else{ return 0; }
-    }
-
-    int add( T* mat, bool bDel=true ){
-        auto it = map.find( mat->name );
-        if( it == map.end() ){ int i=vec.size(); vec.push_back(mat); map.insert({mat->name,i}); return i; }else{ if(bDel)delete vec[it->second]; vec[it->second] = mat; return -1; }
-    }
-};
-
-
-// === SpaceCraftWorkshop
 
 class SpaceCraftWorkshop{ public:
     bool bPrint = true;

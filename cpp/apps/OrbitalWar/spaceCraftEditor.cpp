@@ -24,6 +24,7 @@ int verbosity = 0;
 
 #include "SpaceCraft.h"
 //#include "SpaceCraft2Mesh.h"   // deprecated
+#include "MeshBuilder2.h"
 #include "SpaceCraft2Mesh2.h"
 #include "SoftBody.h"
 
@@ -35,9 +36,6 @@ int verbosity = 0;
 #include "SphereSampling.h"
 #include "DrawSphereMap.h"
 #include "Draw3D_Surf.h"
-
-#include "AppSDL2OGL_3D.h"
-#include "GUI.h"
 
 #include "IO_utils.h"
 
@@ -51,79 +49,29 @@ int verbosity = 0;
 
 #include "spaceCraftEditorUtils.h"
 
+#include "AppSDL2OGL_3D.h"
+#include "GUI.h"
+#include "SpaceCraftGUI.h"
+
 #include "argparse.h"
-
-
 
 // TODO:
 // Collision Detection:
 //   Try Collisions using [kBoxes.h]    tested in    [test_BoxAndSweep.cpp]
 // 
 
-
-
 // ======================  Global Variables & Declarations
 
 using namespace SpaceCrafting;
-enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.cprogramming.com/c++11/c++11-nullptr-strongly-typed-enum-class.html
 
 //SpaceCraft craft;
-Truss      truss;
+//Truss      truss;
 
 Mesh::Builder2 mesh2;
 OrbSim_f sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 //char str[8096];
 double elementSize  = 5.;
-
-void renderTruss(int nb, int2* bonds, Quat4f* ps, float* strain=0, float sc=1.0 ){
-    glBegin(GL_LINES);
-    for(int i=0; i<nb; i++ ){
-        //printf( "renderTruss()[%i] \n", i );
-        int2 b =  bonds[i];
-        if(strain){
-            float f=strain[i];
-            //printf( "Edge[%i] strain=%g \n", i, f );
-            f*=sc;
-            if(f>0){  Draw3D::color(Vec3f{f,0,0}); }else{ Draw3D::color(Vec3f{0,f,f}); };
-        } 
-        Draw3D::vertex( ps[b.x].f );
-        Draw3D::vertex( ps[b.y].f );
-        //printf( "renderTruss[%i](%i,%i) p(%g,%g,%g) p(%g,%g,%g)\n", i, b.x, b.y,  ps[b.x].f.x,ps[b.x].f.y,ps[b.x].f.z,   ps[b.y].f.x,ps[b.y].f.y,ps[b.y].f.z );
-    }
-    glEnd();
-}
-
-void renderPoinSizes(int n, Quat4f* ps, float sc=1.0 ){
-    glColor3f(0.0,0.0,1.0);
-    glPointSize( 10.0 );
-    glBegin(GL_POINTS);
-    for(int i=0; i<n; i++ ){
-        //printf( "point[%i] m=%g \n", i, ps[i].e );
-        float c = ps[i].e*sc;
-        glColor3f(c,c,c);
-        //glPointSize( ps[i].e*sc );
-        Draw3D::vertex( ps[i].f );
-    }
-    glEnd();
-    //exit(0);
-}
-
-void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
-    glColor3f(1.0,0.0,1.0);
-    //glPointSize( 10.0 );
-    glBegin(GL_LINES);
-    for(int i=0; i<n; i++ ){
-        //printf( "point[%i] m=%g \n", i, ps[i].e );
-        //float c = ps[i].e*sc;
-        //glColor3f(c,c,c);
-        //glPointSize( ps[i].e*sc );
-        Draw3D::vertex( ps[i].f );
-        Draw3D::vertex( ps[i].f+fs[i].f*sc );
-    }
-    glEnd();
-    //exit(0);
-}
 
 // Render 
 void runSim( OrbSim_f& sim, int niter=100 ){
@@ -142,11 +90,10 @@ void runSim( OrbSim_f& sim, int niter=100 ){
     }
     */
     //sim.run( 100, 1e-3, 1e-4 );
-    sim.run_omp( 100, false, 1e-3, 1e-4 );
+    //sim.run_omp( 100, false, 1e-3, 1e-4 );
     //sim.run_omp( 100, true, 1e-3, 1e-4 );
-
     double T = (getCPUticks()-t0)*1e-6;
-    printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
+    //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
 
     sim.evalBondTension();
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
@@ -159,7 +106,7 @@ void runSim( OrbSim_f& sim, int niter=100 ){
 // ======================  Free Functions
 
 void renderShip(){
-    printf( "spaceCraftEditor.cpp::renderShip() \n" );
+    printf( "SpaceCraftEditorApp.cpp::renderShip() \n" );
     if(glo_ship){ glDeleteLists(glo_ship,1); };
     glo_ship = glGenLists(1);
     glNewList( glo_ship, GL_COMPILE );
@@ -180,10 +127,6 @@ void renderShip(){
     */
 
     //mesh2.max_size = 30.0;
-    mesh2.clear();
-    BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
-    mesh2.printSizes();
-    exportSim( sim, mesh2, workshop );
     //sim.printAllNeighs();
     //theSpaceCraft->printAll_girders();
     //theSpaceCraft->updateSliderPaths();
@@ -239,30 +182,15 @@ void reloadShip( const char* fname  ){
     //theSpaceCraft->toTruss();
     //truss.clear();
     //toTruss(*theSpaceCraft, truss);
+
+    mesh2.clear();
+    BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
+    mesh2.printSizes();
+    exportSim( sim, mesh2, workshop );
+
     renderShip();
     printf("#### END reloadShip('%s')\n", fname );
 };
-
-void drawPicked( const SpaceCraft& craft, int ipick ){
-    switch( (ComponetKind)craft.pickedTyp){
-        case ComponetKind::Radiator :{
-            //printf("drawPicked radiator[%i] \n", ipick );
-            drawPlateContour( *craft.radiators[ipick], &craft.girders[0], false );
-            }break;
-        case ComponetKind::Shield:{
-            //printf("drawPicked shield[%i] \n", ipick );
-            drawPlateContour( *craft.shields  [ipick], &craft.girders[0], false );
-            }break;
-        case ComponetKind::Girder:{
-            const Girder& o = *craft.girders[ipick];
-            Draw3D::drawLine(o.nodes.x->pos,o.nodes.y->pos);
-            } break;
-        case ComponetKind::Rope:{
-            const Rope& o = *craft.ropes[ipick];
-            Draw3D::drawLine(o.nodes.x->pos,o.nodes.y->pos);
-            } break;
-    }
-}
 
 /*
 template<typename T>
@@ -276,86 +204,10 @@ class Driver{ public:
 
 // ====================== Class Definitions
 
-class GUIPanelWatcher{ public:
-    GUIPanel* master;
-    void*   slave;
-    bool bInt=false;
-    void bind    ( GUIPanel* master_, void* slave_, bool bInt_ ){ master=master_; slave=slave_; bInt=bInt_; };
-    void bindLoad( GUIPanel* master_, void* slave_, bool bInt_ ){ bind(master_,slave_,bInt_); load(); master_->redraw=true; };
-    void apply(){ if(bInt){ *(int*)slave  =  (int )master->value;   }else{ *(double*)slave = master->value;   };                     };
-    void load (){ if(bInt){ master->value = *(int*)slave;           }else{ master->value   = *(double*)slave; }; master->val2text(); };
-    bool check(){ if(master&&slave) if( master->redraw ){ apply(); return true; }; return false; }
-};
-
-class ComponetGUI:public MultiPanel{ public:
-    //static const int np=4;
-    bool binded=false;
-    GUIPanelWatcher* drivers=0;
-    ComponetGUI(const std::string& caption, int xmin, int ymin, int xmax, int dy,int nsub):MultiPanel(caption,xmin,ymin,xmax,dy,nsub){
-        opened=false;
-    }
-    virtual void view()override{ if(opened)MultiPanel::view(); };
-    virtual void bindLoad(ShipComponent* o)=0;
-    void unbind(){
-        binded=false;
-        close();
-        //opened=false;
-        //redraw=true; tryRender();
-    }
-    bool check(){
-        if(!binded) return false;
-        bool bChanged=false;
-        for(int i=0; i<nsubs; i++){
-            bChanged |= drivers[i].check();
-        }
-        return bChanged;
-    }
-};
-
-class PlateGUI:public ComponetGUI{ public:
-    //static const int np=4;
-    PlateGUI(int xmin, int ymin, int xmax, int dy):ComponetGUI("Plate",xmin,ymin,xmax,dy,4){
-        opened=false;
-        subs[0]->caption="g1.a ";
-        subs[1]->caption="g1.b ";
-        subs[2]->caption="g2.a ";
-        subs[3]->caption="g2.b ";
-    }
-    void bindLoad(ShipComponent* o_)override{
-        Plate* o = (Plate*) o_;
-        //printf( "PlateGUI %li \n", o );
-        if(drivers==0)drivers=new GUIPanelWatcher[nsubs];
-        drivers[0].bindLoad(subs[0],&o->g1span.a,false);
-        drivers[1].bindLoad(subs[1],&o->g1span.b,false);
-        drivers[2].bindLoad(subs[2],&o->g2span.a,false);
-        drivers[3].bindLoad(subs[3],&o->g2span.b,false);
-        binded=true;
-        open();
-        //redraw=true; tryRender();
-    }
-};
-
-class GirderGUI:public ComponetGUI{ public:
-    //static const int np=4;
-    GirderGUI(int xmin, int ymin, int xmax, int dy):ComponetGUI("Girder",xmin,ymin,xmax,dy,2){
-        opened=false;
-        subs[0]->caption="nseg ";
-        subs[1]->caption="mseg ";
-    }
-    void bindLoad(ShipComponent* o_)override{
-        Girder* o = (Girder*) o_;
-        //printf( "GirderGUI %li \n", o );
-        if(drivers==0)drivers=new GUIPanelWatcher[nsubs];
-        drivers[0].bindLoad(subs[0],&o->nseg,true);
-        drivers[1].bindLoad(subs[1],&o->mseg,true);
-        binded=true;
-        open();
-        //redraw=true; tryRender();
-    }
-};
 
 
-class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
+
+class SpaceCraftEditorApp : public AppSDL2OGL_3D { public:
 
 	class OnSelectLuaShipScript : public GUIEventCallback{ public:
         virtual int GUIcallback(GUIAbstractPanel* caller) override {
@@ -370,9 +222,10 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
 
 	//DropDownList lstLuaFiles;
     GUI gui;
-    ComponetGUI*  compGui   =0;
-    GirderGUI*  girderGui =0;
-    PlateGUI*   plateGui  =0;
+    BoundGUI*  compGui   =0;
+    GirderGUI* girderGui =0;
+    PlateGUI*  plateGui  =0;
+    PickerUI   picker;
 
     DropDownList* lstLuaFiles=0;
     OnSelectLuaShipScript onSelectLuaShipScript;
@@ -383,7 +236,7 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
     int picked = -1;
     Vec3d mouse_ray0;
 
-    void selectCompGui();
+    //void selectCompGui();
 
     // https://stackoverflow.com/questions/29145476/requiring-virtual-function-overrides-to-use-override-keyword
 
@@ -395,11 +248,11 @@ class SpaceCraftEditGUI : public AppSDL2OGL_3D { public:
 	virtual void keyStateHandling( const Uint8 *keys ) override;
     //virtual void mouseHandling( );
 
-	SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_ , int argc, char *argv[]);
+	SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_ , int argc, char *argv[]);
 
 };
 
-SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     //Lua1.init();
     fontTex       = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
@@ -449,6 +302,7 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_, int argc
 
     //camera();
 
+    picker.picker = &sim;   picker.Rmax=10.0;
     theSpaceCraft = new SpaceCraft();
     initSpaceCraftingLua();
     if(argc<=1)reloadShip( "data/ship_ICF_interceptor_1.lua" );
@@ -468,14 +322,15 @@ SpaceCraftEditGUI::SpaceCraftEditGUI( int& id, int WIDTH_, int HEIGHT_, int argc
 
     VIEW_DEPTH = 10000.0;
     zoom = 1000.0;
-    printf( "### SpaceCraftEditGUI() DONE\n" );
+    printf( "### SpaceCraftEditorApp() DONE\n" );
 }
 
-//void SpaceCraftEditGUI::camera(){
+//void SpaceCraftEditorApp::camera(){
 //    camera_FreeLook( camPos );
 //}
 
-void SpaceCraftEditGUI::selectCompGui(){
+/*
+void SpaceCraftEditorApp::selectCompGui(){
     if(compGui)compGui->close();
     switch( (ComponetKind)theSpaceCraft->pickedTyp ){
         case ComponetKind::Radiator:
@@ -493,9 +348,9 @@ void SpaceCraftEditGUI::selectCompGui(){
     }
     if(compGui)compGui->open();
 }
+*/
 
-
-void SpaceCraftEditGUI::draw(){
+void SpaceCraftEditorApp::draw(){
     //printf( " ==== frame %i \n", frameCount );
     //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
     //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
@@ -602,33 +457,38 @@ void SpaceCraftEditGUI::draw(){
     //qCamera.toMatrix_T(camMat);
     //Draw3D::drawMatInPos( cam.rot, (Vec3f){0.0,0.0,0.0} );
 
-    //printf( "%i\n", EDIT_MODE::vertex );
-    if(picked>=0){
-        switch(edit_mode){
-            case EDIT_MODE::vertex:
-                glColor3f(1.0,1.0,1.0); Draw3D::drawPointCross( truss.points[picked], 0.3 );
-                if ( SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_LEFT) ){ Draw3D::drawLine(truss.points[picked], mouse_ray0); }
-                break;
-            case EDIT_MODE::edge  : glColor3f(1.0,1.0,1.0); auto ed = truss.edges[picked]; Draw3D::drawLine( truss.points[ed.a], truss.points[ed.b] ); break;
-        }
+    picker.hray = (Vec3d)(cam.rot.c);
+    picker.ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
 
-    }
-    mouse_ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
+    glLineWidth(5.0);
+    if     (picker.edit_mode == EDIT_MODE::vertex){ if( picker.picked>=0 ){ Vec3f p = *(Vec3f*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawPointCross( p, 10.0 );                              } }
+    else if(picker.edit_mode == EDIT_MODE::edge  ){ if( picker.picked>=0 ){ Vec2i b = *(Vec2i*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawLine      ( sim.points[b.x].f, sim.points[b.y].f ); } }
+
+    //mouse_ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
+
+    //printf( "%i\n", EDIT_MODE::vertex );
+    // if(picked>=0){
+    //     switch(edit_mode){
+    //         case EDIT_MODE::vertex:
+    //             glColor3f(1.0,1.0,1.0); Draw3D::drawPointCross( truss.points[picked], 0.3 );
+    //             if ( SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_LEFT) ){ Draw3D::drawLine(truss.points[picked], mouse_ray0); }
+    //             break;
+    //         case EDIT_MODE::edge  : glColor3f(1.0,1.0,1.0); auto ed = truss.edges[picked]; Draw3D::drawLine( truss.points[ed.a], truss.points[ed.b] ); break;
+    //     }
+    // }
+
     //glColor3f(0.0f,0.0f,0.0f); drawTruss( truss.edges.size(), &truss.edges[0], &truss.points[0] );
     //glColor3f(1.0f,1.0f,1.0f); Draw3D::drawPoints( truss.points.size(), &truss.points[0], 0.1 );
 
-
-    
-
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
-    if( (picked>=0) && (edit_mode==EDIT_MODE::component) ){
+    if( (picker.picked>=0) && (edit_mode==EDIT_MODE::component) ){
         glColor3f(0,1.0,0);
         drawPicked( *theSpaceCraft, picked );
     }
 };
 
-void SpaceCraftEditGUI::drawHUD(){
+void SpaceCraftEditorApp::drawHUD(){
     glDisable( GL_LIGHTING );
     glDisable(GL_DEPTH_TEST);
 
@@ -637,9 +497,9 @@ void SpaceCraftEditGUI::drawHUD(){
     //glPopMatrix();
 }
 
-//void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){ };
+//void SpaceCraftEditorApp::keyStateHandling( const Uint8 *keys ){ };
 /*
-void SpaceCraftEditGUI::mouseHandling( ){
+void SpaceCraftEditorApp::mouseHandling( ){
     SDL_GetMouseState( &mouseX, &mouseY ); mouseY=HEIGHT-mouseY;
     mouse_t   = (mouseX-20 )/timeScale + tstart;
     mouse_val = (mouseY-200)/valScale;
@@ -661,7 +521,7 @@ void SpaceCraftEditGUI::mouseHandling( ){
 
 
 
-void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){
+void SpaceCraftEditorApp::keyStateHandling( const Uint8 *keys ){
     //Mat3d camMat;
     //qCamera.toMatrix_T(camMat);
     //Draw3D::drawMatInPos(  (Mat3f)camMat, (Vec3f){0.0,0.0,0.0} );
@@ -677,21 +537,12 @@ void SpaceCraftEditGUI::keyStateHandling( const Uint8 *keys ){
 	if( keys[ SDL_SCANCODE_S ] ){ cam.pos.add_mul( cam.rot.b, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_A ] ){ cam.pos.add_mul( cam.rot.a, -0.05*zoom );  }
 	if( keys[ SDL_SCANCODE_D ] ){ cam.pos.add_mul( cam.rot.a, +0.05*zoom );  }
-
     if( keys[ SDL_SCANCODE_LEFTBRACKET  ] ){ theSpaceCraft->nodes[7]->calong-=0.001; theSpaceCraft->nodes[7]->updateBound(); }
     if( keys[ SDL_SCANCODE_RIGHTBRACKET ] ){ theSpaceCraft->nodes[7]->calong+=0.001; theSpaceCraft->nodes[7]->updateBound(); }
-
-
-
 };
 
-void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
+void SpaceCraftEditorApp::eventHandling ( const SDL_Event& event  ){
     //printf( "NonInert_seats::eventHandling() \n" );
-    //if(event.type == SDL_MOUSEWHEEL){
-    //    if     (event.wheel.y > 0){ zoom*=VIEW_ZOOM_STEP; }
-    //    else if(event.wheel.y < 0){ zoom/=VIEW_ZOOM_STEP; }
-    //}
-
     if(event.type == SDL_MOUSEWHEEL){
         if     (event.wheel.y > 0){ zoom/=VIEW_ZOOM_STEP; }
         else if(event.wheel.y < 0){ zoom*=VIEW_ZOOM_STEP; }
@@ -700,7 +551,8 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
     switch( event.type ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
-                case SDLK_m:  edit_mode = (EDIT_MODE)((((int)edit_mode)+1)%((int)EDIT_MODE::size)); printf("edit_mode %i\n", (int)edit_mode); break;
+                //case SDLK_m:  edit_mode = (EDIT_MODE)((((int)edit_mode)+1)%((int)EDIT_MODE::size)); printf("edit_mode %i\n", (int)edit_mode); break;
+                case SDLK_m: picker.switch_mode(); break;
                 //case SDLK_h:  warrior1->tryJump(); break;
                 case SDLK_l:
                     //reloadShip( );
@@ -711,6 +563,7 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
+                    /*
                     switch(edit_mode){
                         case EDIT_MODE::vertex    : picked = truss.pickVertex( mouse_ray0, (Vec3d)cam.rot.c, 0.5  ); printf("picked %i\n", picked); break;
                         case EDIT_MODE::edge      : picked = truss.pickEdge  ( mouse_ray0, (Vec3d)cam.rot.c, 0.25 ); printf("picked %i\n", picked); break;
@@ -725,16 +578,20 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
                             }
                             break;
                     }; break;
+                    */
+                   picker.pick();
                 case SDL_BUTTON_RIGHT: break;
             }
             break;
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
+                    /*
                     switch(edit_mode){
                         case EDIT_MODE::vertex: int ip2 = truss.pickVertex( mouse_ray0, (Vec3d)cam.rot.c, 0.5  ); if((picked>=0)&(ip2!=picked)); truss.edges.push_back((TrussEdge){picked,ip2,0}); break;
                         //case EDIT_MODE::edge  : picked = truss.pickEdge  ( mouse_ray0, camMat.c, 0.25 ); printf("picked %i\n", picked); break;
                     }; break;
+                    */
                 case SDL_BUTTON_RIGHT:break;
             }
             break;
@@ -749,13 +606,13 @@ void SpaceCraftEditGUI::eventHandling ( const SDL_Event& event  ){
 // ===================== MAIN
 
 LambdaDict funcs;
-SpaceCraftEditGUI * app;
+SpaceCraftEditorApp * app;
 
 int main(int argc, char *argv[]){
 
     printf( "argc %i \n", argc );
 
-    // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
+    // example: use like : ./SpaceCraftEditorApp -s data/ship_ICF_interceptor_1.lua
     //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
     funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
 
@@ -775,18 +632,16 @@ int main(int argc, char *argv[]){
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
     //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
     glEnable(GL_MULTISAMPLE);
-
-
 	//SDL_SetRelativeMouseMode( SDL_TRUE );
 	int junk;
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
-	app = new SpaceCraftEditGUI( junk , dm.w-150, dm.h-100, argc, argv );
+	app = new SpaceCraftEditorApp( junk , dm.w-150, dm.h-100, argc, argv );
     
 
     process_args( argc, argv, funcs );
 
-	//app = new SpaceCraftEditGUI( junk , 800, 600 );
+	//app = new SpaceCraftEditorApp( junk , 800, 600 );
 	app->loop( 1000000 );
 	return 0;
 }

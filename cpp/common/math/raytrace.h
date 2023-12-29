@@ -31,6 +31,16 @@ inline void setToRay( const Vec3d& ro, const Vec3d& rd, Vec3d& p ){
     p.sub(d);
 }
 
+template<typename T>
+inline T rayPointDistance2( const Vec3T<T>& ray0, const Vec3T<T>& hRay, const Vec3T<T>& point, T& t ){
+	Vec3T<T> pt;
+	pt.set_sub( point, ray0 );
+	t  = hRay.dot( pt );;
+    pt.add_mul( hRay, -t );
+	return pt.norm2();
+}
+
+/*
 inline double rayPointDistance2( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& point, double& t ){
 	Vec3d pt;
 	pt.set_sub( point, ray0 );
@@ -41,6 +51,7 @@ inline double rayPointDistance2( const Vec3d& ray0, const Vec3d& hRay, const Vec
     //printf( " %f %f (%3.3f,%3.3f,%3.3f) \n", t, pt.norm2(), pt.x, pt.y, pt.z    );
 	return pt.norm2();
 }
+*/
 
 inline double linePointDistance2( const Vec3d& p0, const Vec3d& hdir, const Vec3d& point, double tmax ){
 	Vec3d d;
@@ -50,6 +61,7 @@ inline double linePointDistance2( const Vec3d& p0, const Vec3d& hdir, const Vec3
 	else if ( t>0    ){ d.add_mul( hdir, -t    ); }
 	return d.norm2();
 }
+
 
 inline double raySphere( const Vec3d& ray0, const Vec3d& hRay, double R, const Vec3d& center ){
 	double t0;

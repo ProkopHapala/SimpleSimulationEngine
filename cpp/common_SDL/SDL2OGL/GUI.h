@@ -10,6 +10,7 @@
 #include "Draw3D.h"
 
 #include "Table.h"
+#include "Interfaces.h"
 
 #include <string>
 #include <functional>
@@ -571,6 +572,60 @@ class TableView : public GUIAbstractPanel { public:
 
 };
 
+
+// ==============================
+//    BoundGUI & GUIPanelWatcher
+// ==============================
+
+/**
+ * @class GUIPanelWatcher
+ * @brief A class that represents a watcher for GUIPanel objects.
+ * 
+ * The GUIPanelWatcher class is used to bind a GUIPanel object with a slave object and synchronize their values.
+ * It provides methods to bind, load, and apply the values between the master and slave objects.
+ * The watcher can handle both integer and double values based on the provided flag.
+ */
+class GUIPanelWatcher{ public:
+    GUIPanel* master;  // GUIPanel object which visualize state of the slave object and can change slave's state
+    void*     slave;   // Pointer to data value to be watched (i.e. visualized and controlled by the master GUIPanel object)
+    bool bInt=false;
+    void bind    ( GUIPanel* master_, void* slave_, bool bInt_ ){ master=master_; slave=slave_; bInt=bInt_; };
+    void bindLoad( GUIPanel* master_, void* slave_, bool bInt_ ){ bind(master_,slave_,bInt_); load(); master_->redraw=true; };
+    void apply(){ if(bInt){ *(int*)slave  =  (int )master->value;   }else{ *(double*)slave = master->value;   };                     };   // change slave value  
+    void load (){ if(bInt){ master->value = *(int*)slave;           }else{ master->value   = *(double*)slave; }; master->val2text(); };   // read and visualize slave value 
+    bool check(){ if(master&&slave) if( master->redraw ){ apply(); return true; }; return false; }    // update if master should be redrawn
+};
+
+/**
+ * @class BoundGUI
+ * @brief A class representing a bound graphical user interface to some set of parameters
+ * 
+ * This class inherits from MultiPanel and BindLoader.
+ * It provides functionality for managing a GUI with multiple panels and binding data to the GUI elements.
+ */
+class BoundGUI:public MultiPanel,public BindLoader{ public:
+    bool binded=false;
+    GUIPanelWatcher* drivers=0;  // list of GUIPanelWatcher which control individual binded values, each correspond to one sub-panel of MultiPanel
+    BoundGUI(const std::string& caption, int xmin, int ymin, int xmax, int dy,int nsub):MultiPanel(caption,xmin,ymin,xmax,dy,nsub){
+        opened=false;
+    }
+    virtual void view()override{ if(opened)MultiPanel::view(); };
+    //virtual int bindLoad(void* o)=0;
+    void unbind(){
+        binded=false;
+        close();
+        //opened=false;
+        //redraw=true; tryRender();
+    }
+    bool check(){
+        if(!binded) return false;
+        bool bChanged=false;
+        for(int i=0; i<nsubs; i++){
+            bChanged |= drivers[i].check();
+        }
+        return bChanged;
+    }
+};
 
 // ==============================
 //    class GUI

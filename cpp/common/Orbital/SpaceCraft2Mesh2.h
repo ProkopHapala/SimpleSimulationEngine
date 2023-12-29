@@ -81,6 +81,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
             sim.strain[i] = 0;
         }
     }
+    sim.cleanForce();
     sim.cleanVel();
     //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(1.0); }
     printf( "exportSim() DONE! \n" );

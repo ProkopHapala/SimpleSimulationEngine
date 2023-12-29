@@ -3,14 +3,15 @@
 #define spaceCraftEditorUtils_h
 
 #include "Tree.h"
-#include "Truss.h"
 
+//#include "Truss.h"
 //#include "TriangleRayTracer.h"
 //#include "Radiosity.h"
 
+#include "GUI.h"
+
 #include <unistd.h>
 #include <dirent.h>
-
 
 int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="", bool bPrint=false ){
     node.content.caption = name;
@@ -37,11 +38,10 @@ int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="", bool
     return 0;
 }
 
+#ifdef Truss_h
 
 int makeTruss( Truss& truss ){
-
     //truss.girder1( (Vec3d){-5.0,0.0,0.0}, (Vec3d){5.0,0.0,0.0}, (Vec3d){0.0,1.0,0.0}, 5, 1.0 );
-
     Truss trussPlan;
     trussPlan.loadXYZ(  "data/octShip.xyz" );
     //trussPlan.affineTransform( (Mat3d){5.5,0.0,0.0, 0.0,5.5,0.0, 0.0,0.0,5.5}, false );
@@ -71,7 +71,8 @@ int makeTruss( Truss& truss ){
     glEndList();
 
     return glo;
-
 }
+
+#endif // Truss_h
 
 #endif

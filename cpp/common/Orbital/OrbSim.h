@@ -8,6 +8,9 @@
 #include "quaternion.h"
 //#include "datatypes.h"  
 
+#include "raytrace.h"
+#include "geom3D.h"
+#include "Interfaces.h"
 
 float springForce( float l, float& f, Quat4f par ){
     float dl = l - par.x;
@@ -39,7 +42,7 @@ Quat4f springForce( Vec3f d, Quat4f par ){
     return fe;
 }
 
-class OrbSim_f{ public:
+class OrbSim_f : public Picker { public:
     int nPoint=0, nNeighMax=0, nNeighTot=0;
     // cpu buffers
     Quat4f* points=0;  // position and mass
@@ -97,6 +100,57 @@ class OrbSim_f{ public:
 
         }
     }
+
+
+    // =================== Picking
+
+    int pick_point_brute( const Vec3f& ray0, const Vec3f& hray, float Rmax ){
+        float r2min =  Rmax*Rmax;
+        int imin    = -1;
+        for(int i=0; i<nPoint; i++){
+            float t;
+            float r2 = rayPointDistance2( ray0, hray, points[i].f, t );
+            //printf( "pick_point_brute ipick %i r %g p(%g,%g,%g)\n", i, sqrt(r2), points[i].f.x,points[i].f.y,points[i].f.z );
+            if(r2<r2min){ imin=i; r2min=r2; }
+            //double ti = raySphere( ray0, hRay, R, ps[i] );
+            //if(ti<tmin){ imin=i; tmin=ti; }
+        }
+        //printf( "pick_point_brute ipick %i r2min %g \n", ipick, r2min );
+        return imin;
+    }
+
+    int pick_bond_brute( const Vec3d& ray0, const Vec3d& hRay, double Rmax ) const {
+        double dist_min =  Rmax;
+        int    imin     = -1;
+        for(int ib=0; ib<nBonds; ib++){
+            int2 b = bonds[ib];
+            double t1,t2;
+            Vec3d p0 = (Vec3d)points[b.x].f;
+            Vec3d d  = (Vec3d)points[b.y].f - p0;
+            double l = d.normalize();
+            double dist = rayLine( ray0, hRay, p0, d, t1, t2 );
+            if( (dist<dist_min) && (t2>0) && (t2<l) ){
+                imin=ib; dist_min=dist;
+            }
+        }
+        return imin;
+    };
+
+    virtual int pick_nearest(Vec3d ray0, Vec3d hray, int& ipick, int mask, double Rmax ) override {
+        if     (mask==1){ ipick=pick_point_brute((Vec3f)ray0,(Vec3f)hray,Rmax); return 1; }
+        else if(mask==2){ ipick=pick_bond_brute ( ray0, hray, Rmax );           return 2; }
+        return -1;
+    };
+    
+    virtual int pick_all(Vec3d ray0, Vec3d hray, int* out, int mask, double Rmax ) override { return 0; };
+    
+    virtual void* getPickedObject(int picked, int mask) override { 
+        if     (mask==1){ return (void*)&points[picked]; }
+        else if(mask==2){ return (void*)&bonds [picked]; }
+        return 0; 
+    };
+
+    // =================== Truss Simulation
 
     void evalTrussForces_neighs(){
         //#pragma omp paralel for 
@@ -214,7 +268,7 @@ class OrbSim_f{ public:
             //float l0 = l0s[i];
             float l   = (points[b.y]-points[b.x]).norm();
             float s   = (l-l0)/l0;
-            if( fabs(s)>0.5 ){ printf( "evalBondTension[%i] strain=%g l=%g l0=%g\n", i, s, l, l0 ); }
+            //if( fabs(s)>0.5 ){ printf( "evalBondTension[%i] strain=%g l=%g l0=%g\n", i, s, l, l0 ); }
             strain[i] = s;
             // ToDo: break the bond if strain > maxStrain;
         }
@@ -355,7 +409,7 @@ void FIRE_update( float& vf, float& vv, float& ff, float& cv, float& cf ){
 		lastNeg++;
         
 	}
-    printf( "FIRE>0 cv,cf(%g,%g) cs=%g dt=%g damp=%g/%g lastNeg=%i vf,vv,ff(%g,%g,%g) \n", cv,cf, cs,  dt, damping,damp_max, lastNeg,  vf,vv,ff );
+    //printf( "FIRE>0 cv,cf(%g,%g) cs=%g dt=%g damp=%g/%g lastNeg=%i vf,vv,ff(%g,%g,%g) \n", cv,cf, cs,  dt, damping,damp_max, lastNeg,  vf,vv,ff );
 }
 
 
