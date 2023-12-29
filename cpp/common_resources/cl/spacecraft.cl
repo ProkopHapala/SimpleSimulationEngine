@@ -21,6 +21,7 @@ __kernel void  evalTrussForce(
     __global       float4*  forces, 
     __global const int*     neighs,    // indexes of neighbors, if neighs[i] == -1 it is not connected
     __global const float4*  params    // l0, kPress, kPull, damping
+
 ){
     const int iG = get_global_id(0);
     float4 p = points[iG];
@@ -37,14 +38,21 @@ __kernel void  evalTrussForce(
 __kernel void  evalTrussForce2(
     const int4 ns, 
     __global const float4*  points,    // x,y,z,mass
+    __global const float4*  vels,      // velocities are used for damping 
     __global       float4*  forces, 
-    //__global const int*     neighs,    // indexes of neighbor points, if neighs[i] == -1 it is not connected
+    //__global const int*     neighs,  // indexes of neighbor points, if neighs[i] == -1 it is not connected
     __global const int2*    neighBs,   // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
-    __global const float4*  bparams    // l0, kPress, kPull, damping
+    __global const float4*  bparams,   // l0, kPress, kPull, damping
+    float4 accel, // acceleration of the reference frame
+    float4 omega, // angular velocity for simulation of rotating reference frame
+    float4 rot0   // center of rotation
 ){
     const int iG = get_global_id(0);
+    if(iG>=ns.x) return;
     float4 p = points[iG];
+    float4 v = vels  [iG];
     float4 f =(float4){0.0f,0.0f,0.0f,0.0f};
+    
     for(int ij=0; ij<ns.y; ij++){
         int  j = ns.y*iG + ij;
         int2 b = neighBs[j];
@@ -58,8 +66,16 @@ __kernel void  evalTrussForce2(
         // f.f.add_mul( d, (k*(li-params[j].x)/li) );
         f.xyz += d.xyz * (k*dl/l);
         f.w   += dl*dl*0.5f;
-
     }
+    
+    //if(iG==0){ printf("accel(%g,%g,%g,%g) omega(%g,%g,%g,%g) rot0(%g,%g,%g,%g) \n" , accel.x,accel.y,accel.z,accel.w, omega.x,omega.y,omega.z,omega.w, rot0.x,rot0.y,rot0.z,rot0.w ); }
+    //if(iG==1074){ printf("p[%i](%g,%g,%g|%g) v(%g,%g,%g|%g) \n", iG, p.x,p.y,p.z,p.w,  v.x,v.y,v.z,v.w ); }
+    // acceleration of the reference frame
+    f.xyz += accel.xyz*p.w;
+    // centrifugal force
+    float3 d = p.xyz - rot0.xyz;
+    f.xyz += (d - omega.xyz * dot(omega.xyz,d)) * omega.w*omega.w*p.w; 
+    //coriolis force (depends on velocity) => we cannot calculate it here
     forces[iG] = f; // we may need to do += in future 
 }
 
@@ -106,17 +122,18 @@ __kernel void  move(
     __global const float4* forces
 ){
     const int iG = get_global_id(0);
-    
+    if(iG>=ns.x) return;
     // ------ Move (Leap-Frog)
-    float4       p = points      [iG];
-    float4       v = velocities  [iG];
-    const float4 f = forces[iG];
-    v     *= MDpars.y;
-    v.xyz += f.xyz*MDpars.x;
+    float4       p = points    [iG];
+    float4       v = velocities[iG];
+    const float4 f = forces    [iG];
+    //if(iG==0){ printf("GPU::move() MDpars(%g,%g,%g,%g)\n" , MDpars.x,MDpars.y,MDpars.z,MDpars.w ); }
+    v.xyz *= MDpars.y;
+    v.xyz += f.xyz*MDpars.x/p.w;
     p.xyz += v.xyz*MDpars.x;
     // ToDo: something like FIRE ?
     velocities[iG] = v;
-    points[iG]     = p;
+    points    [iG] = p;
 }
 
 

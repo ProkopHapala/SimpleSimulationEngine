@@ -66,33 +66,38 @@ double elementSize  = 5.;
 
 // Render 
 void runSim( OCL_Orb& sim, int niter=100 ){
-    niter=1;
+    //niter=1;
+    //niter=10;
+    niter = 100;
     if(bRun){
         long t0 = getCPUticks();
         //sim.run( niter, 1e-4, 1e-4 );
         //sim.run_omp( niter, false, 1e-3, 1e-4 );
         //sim.run_omp( niter, true, 1e-3, 1e-4 );
-        //sim.run( niter, 1e-4, 1e-4 );
-
-        sim.cleanForce();  sim.evalTrussForces_neighs2(); float fmax_ref = sim.getFmax(); //printf( "|fmax|=%g\n", fmax );
-
-        //sim.run_ocl( niter );
-        sim.cleanForce();
-        sim.run_ocl( niter, 0b001, 0b111 );
-
-        sim.move_MD( 1e-3, 1e-4 );
+        //sim.damping = 1e-5; sim.dt      = 1e-3; // does not have any effect here
+        sim.run_ocl( niter, 0b001, 0b111 ); // 0b001 - upload points, 0b111 - download points, velocities, forces
+        // ---- Debug loop --- check if forces are the same between GPU and CPU
+        //printf( "runSim() fmax=%g fmax_ref=%g\n", sim.getFmax(), fmax_ref );
+        //printf( "runSim() fmax=%g fmax_ref=%g\n", sim.getFmax(), fmax_ref );
+        // for(int itr=0; itr<niter; itr++){
+        //     sim.damping = 1e-5;
+        //     sim.dt      = 1e-3;
+        //     sim.run_ocl( 1, 0b011, 0b111 );
+        //     //sim.cleanForce();
+        //     //sim.evalTrussForces_neighs2();
+        //     //sim.applyForceCentrifug( sim.rot0.f, sim.omega.f, sim.omega.w );
+        //     //sim.move_MD( 1e-3, 1e-5 );
+        // }
         double T = (getCPUticks()-t0)*1e-6;
-        //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
+        printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
         //printf( "runSim() nPoint=%i nBonds=%i \n", sim.nPoint, sim.nBonds );
-        
-        printf( "runSim() fmax=%g fmax_ref=%g\n", sim.getFmax(), fmax_ref );
-
     }
     sim.evalBondTension();
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
-    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-2 );
+    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-2 );
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-1 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
 }
 
@@ -115,6 +120,7 @@ void reloadShip( const char* fname  ){
     printf("###### OpenCL initialization\n");
     sim.makeKrenels_Orb( "./common_resources/cl" );
     sim.initCLBuffsOrb(  );
+    sim.damping = 1e-5; sim.dt = 1e-3; // must be here before sim.setup_evalTrussForce2();
     sim.setup_evalTrussForce2();
     sim.setup_move();
     

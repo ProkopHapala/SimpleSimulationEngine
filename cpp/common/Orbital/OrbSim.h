@@ -62,9 +62,13 @@ class OrbSim_f : public Picker { public:
     Vec2f*  maxStrain=0;
 
     // Rotating frame
-    Vec3f p0{0.,0.,0.};
-    Vec3f ax{0.0,0.0,1.0};
-    float omega = 0.05;
+    //Vec3f p0{0.,0.,0.};
+    //Vec3f ax{0.0,0.0,1.0};
+    //float omega = 0.05;
+    Quat4f accel{0.0f,0.0f,0.0f,0.0f};    // acceleration
+    Quat4f rot0 {0.0f,0.0f,0.0f,0.0f};    // center of rotation
+    //Quat4f omega{0.0f,0.0f,1.0f,0.05f}; // angular velocity, (xyz=axisxyz,w=magnitude)
+    Quat4f omega{0.0f,0.0f,1.0f,0.05f};
 
     float dt      = 2e-3;
     //float damping = 1e-4;
@@ -78,8 +82,8 @@ class OrbSim_f : public Picker { public:
     float dt_max       = dt;
     float dt_min       = 0.1 * dt;
     float damp_max     = damping;
-    double ff_safety    = 1e-32;
-
+    float ff_safety    = 1e-16;
+    float cv,cf;
 
     void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0 ){
         nPoint = nPoint_; nNeighMax = nNeighMax_;
@@ -277,6 +281,10 @@ class OrbSim_f : public Picker { public:
         }
     }
 
+    void applyForceCentrifug( Vec3f p0, Vec3f ax, float omega ){
+        for(int i=0;i<nPoint; i++ ){ applyForceCentrifug_i( i, p0, ax,omega ); }
+    }
+
     void printNeighs(int i){
         int j0 = i*nNeighMax;
         for(int jj=0;jj<nNeighMax;jj++){
@@ -347,7 +355,7 @@ int run( int niter, float dt, float damp  ){
         evalTrussForces_neighs2();
         //evalTrussForces_bonds();
         //applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 1e-2 );
-        applyForceRotatingFrame( p0, ax, omega );
+        applyForceRotatingFrame( rot0.f, omega.f, omega.w );
         //move_GD( 0.00001 );
         //move_MD( 1e-3, 1e-5 );
         //move_GD( 1e-7 );
@@ -391,7 +399,7 @@ void FIRE_update( float& vf, float& vv, float& ff, float& cv, float& cf ){
 int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
     //printf( "run_omp() niter_max %i dt %g Fconv %g Flim %g timeLimit %g outE %li outF %li \n", niter_max, dt, Fconv, Flim, timeLimit, (long)outE, (long)outF );
     float cdamp = 1.0f - damp_;
-    float E,F2,ff,vv,vf, cf,cv;
+    float E,F2,ff,vv,vf;
     //long T0 = getCPUticks();
     int itr=0,niter=niter_max;
     #pragma omp parallel shared(niter,itr,cdamp)
@@ -407,8 +415,8 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
         for(int iG=0; iG<nPoint; iG++){ 
             forces[iG] = Quat4fZero;
             evalTrussForce_neighs2(iG);
-            if(bDynamic){ applyForceRotatingFrame_i( iG, p0, ax, omega ); }
-            else        { applyForceCentrifug_i    ( iG, p0, ax, omega ); }
+            if(bDynamic){ applyForceRotatingFrame_i( iG, rot0.f, omega.f, omega.w ); }
+            else        { applyForceCentrifug_i    ( iG, rot0.f, omega.f, omega.w ); }
         }
         // ---- assemble (we need to wait when all atoms are evaluated)
         //#pragma omp barrier

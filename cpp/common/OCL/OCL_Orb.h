@@ -62,12 +62,13 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
 
     void run_ocl( int niter, int upload_mask=0b001, int download_mask=0b001 ){
         int err=0;
+        MDpars = Quat4f{ dt, 1-damping, cv, cf };
         if(upload_mask&0b001) err=upload( ibuff_points, points );
         if(upload_mask&0b010) err=upload( ibuff_vels  , vel    );
         if(upload_mask&0b100) err=upload( ibuff_forces, forces );
         for(int itr=0; itr<niter; itr++){
-            err=task_evalTrussForce2->enque_raw();
-            //err=task_move->enque_raw();
+            err= task_evalTrussForce2 ->enque_raw();
+            err= task_move            ->enque_raw();
         }
         if(download_mask&0b001)err=download( ibuff_points, points );
         if(download_mask&0b010)err=download( ibuff_vels  , vel    );
@@ -82,9 +83,11 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         if(task==0) task = getTask("move");
         task->global.x = nPoint;
         task->local.x  = 1;
+        //task->local.x  = 16;
         useKernel( task->ikernel );
         nDOFs.x=nPoint; 
         //nDOFs.y=nNeighMax;
+        MDpars = Quat4f{ dt, 1-damping, cv, cf };
         // ------- Maybe We do-not need to do this every frame ?
         int err=0;
         err |= _useArg   ( nDOFs  );       //1 
@@ -115,7 +118,8 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
             upload( ibuff_vels,    vel      ); // to make sure it is initialized
         }
         task->global.x = nPoint;
-        task->local.x  = 1;
+        //task->local.x  = 1;
+        task->local.x  = 16;
         useKernel( task->ikernel );
         nDOFs.x=nPoint; 
         nDOFs.y=nNeighMax;
@@ -123,18 +127,26 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         int err=0;
         err |= _useArg   ( nDOFs );         //1 
         err |= useArgBuff( ibuff_points  ); //2  
+        err |= useArgBuff( ibuff_vels    ); //2  
         err |= useArgBuff( ibuff_forces  ); //3
         err |= useArgBuff( ibuff_neighBs ); //4
         err |= useArgBuff( ibuff_bparams ); //5
+        err |= _useArg   ( accel );         //6
+        err |= _useArg   ( omega );         //7
+        err |= _useArg   ( rot0  );         //8 
         OCL_checkError(err, "setup_evalTrussForce2");
         return task;
         /*
         __kernel void  evalTrussForce(
             const int4 ns,                    //1
             __global const float4*  points,   //2 x,y,z,mass
+            __global const float4*  vels,      // velocities are used for damping 
             __global       float4*  forces,   //3
             __global const int*     neighs,   //4 indexes of neighbors, if neighs[i] == -1 it is not connected
             __global const float4*  params    //5 l0, kPress, kPull, damping
+            float4 accel, // acceleration of the reference frame
+            float4 omega, // angular velocity for simulation of rotating reference frame
+            float4 rot0   // center of rotation
         ){
         */
     }
