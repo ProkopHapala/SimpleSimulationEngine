@@ -77,11 +77,11 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         if(upload_mask&0b010){ err=upload( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.2"); }
         if(upload_mask&0b100){ err=upload( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.3"); }
         for(int itr=0; itr<niter; itr++){
-            //err= task_evalTrussForce2 ->enque_raw();  //OCL_checkError(err, "run_ocl.4");
+            err= task_evalTrussForce2 ->enque_raw();  //OCL_checkError(err, "run_ocl.4");
             //err= task_evalTrussForce1 ->enque_raw();  //OCL_checkError(err, "run_ocl.4");
-            //err= task_move            ->enque_raw();  //OCL_checkError(err, "run_ocl.4");
-            err= task_evalTrussBondForce->enque_raw();  OCL_checkError(err, "run_ocl.4");
-            err= task_assembleAndMove   ->enque_raw();  OCL_checkError(err, "run_ocl.4");
+            err= task_move            ->enque_raw();  //OCL_checkError(err, "run_ocl.4");
+            //err= task_evalTrussBondForce->enque_raw();  OCL_checkError(err, "run_ocl.4");
+            //err= task_assembleAndMove   ->enque_raw();  OCL_checkError(err, "run_ocl.4");
         }
         if(download_mask&0b001){err=download( ibuff_points, points ); OCL_checkError(err, "run_ocl.5"); }
         if(download_mask&0b010){err=download( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.6"); }
@@ -121,7 +121,8 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         OCLtask*& task = task_assembleAndMove;
         if(task==0) task = getTask("assembleAndMove");
         task->global.x = nPoint;
-        task->local.x  = 1;
+        //task->local.x  = 1;
+        task->local.x  = 16; task->roundSizes();
         if(bUploadParams){
             upload( ibuff_neighB2s, neighB2s  );
             upload( ibuff_bonds,    bonds    );
@@ -168,8 +169,10 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         OCLtask*& task = task_evalTrussBondForce;
         if(task==0) task = getTask("evalTrussBondForce");
         task->global.x = nBonds;
-        task->local.x  = 1;
-        //task->local.x  = 16;
+        //task->local.x  = 1;
+        task->local.x  = 16; task->roundSizes();
+        //task->global.x = ((nBonds/task->local.x)+1)*task->local.x; // make sure global size is multiple of local size
+        //if( (task->global.x%task->local.x!=0)||(task->global.x<nBonds) ){ printf( "ERROR in setup_evalTrussBondForce() task->global.x %i\%%i= nBond=%i \n", task->global.x, task->local.x, task->global.x%task->local.x, nBonds ); exit(0); }
         useKernel( task->ikernel );
         nDOFs.x=nBonds; 
         //nDOFs.y=nNeighMax;
@@ -196,8 +199,8 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         OCLtask*& task = task_move;
         if(task==0) task = getTask("move");
         task->global.x = nPoint;
-        task->local.x  = 1;
-        //task->local.x  = 16;
+        //task->local.x  = 1;
+        task->local.x  = 16; task->roundSizes();
         useKernel( task->ikernel );
         nDOFs.x=nPoint; 
         //nDOFs.y=nNeighMax;
@@ -232,8 +235,9 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
             upload( ibuff_vels,    vel      ); // to make sure it is initialized
         }
         task->global.x = nPoint;
-        task->local.x  = 1;
+        //task->local.x  = 1;
         //task->local.x  = 16;
+        task->local.x  = 16; task->roundSizes();
         useKernel( task->ikernel );
         nDOFs.x=nPoint; 
         nDOFs.y=nNeighMax;
@@ -276,7 +280,8 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         }
         //int nloc = 64;
         task->global.x = nPoint;
-        task->local.x  = 1;
+        //task->local.x  = 1;
+        task->local.x  = 16; task->roundSizes();
         useKernel( task->ikernel );
         nDOFs.x=nPoint; 
         nDOFs.y=nNeighMax;

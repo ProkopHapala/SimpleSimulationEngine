@@ -39,6 +39,13 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     for(int i=0; i<nb; i++){ const Vec2i& e = mesh.edges[i].lo; nneighs[e.a]++; nneighs[e.b]++; }
     int nneighmax = 0;
     for(int i=0; i<np; i++){ int ni=nneighs[i]; if(ni>nneighmax)nneighmax=ni; }
+
+    int nneigh_hist[nneighmax+1];
+    for(int i=0; i<=nneighmax; i++){ nneigh_hist[i]=0; }
+    for(int i=0; i<np; i++){ nneigh_hist[ nneighs[i] ]++; }
+    for(int i=0; i<=nneighmax; i++){ printf( "exportSim() nneigh_hist[%i] %i \n", i, nneigh_hist[i] ); }
+    //exit(0);
+
     //printf( "exportSim() nneighmax %i \n", nneighmax );
     sim.recalloc(np, nneighmax, nb );
     // fill neighs

@@ -69,6 +69,7 @@ void runSim( OCL_Orb& sim, int niter=100 ){
     niter=1;
     //niter=10;
     niter = 100;
+    //niter = 500;
     if(bRun){
         long t0 = getCPUticks();
         //sim.run( niter, 1e-4, 1e-4 );

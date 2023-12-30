@@ -136,6 +136,51 @@ __kernel void  evalTrussForce2(
     forces[iG] = f; // we may need to do += in future 
 }
 
+__kernel void  evalTrussBondForce_loc(
+    const int4 ns, 
+    __global const float4*  points,    // x,y,z,mass
+    __global const int*     nPgroup,   // number of points in the group
+    __global const int*     ips,       // indexes of points in the group
+    __global       float4*  bforces,   // bond forces
+    __global const int2*    bonds,     // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
+    __global const float4*  bparams    // l0, kPress, kPull, damping
+){
+    local float4 points_loc[64];
+    const int iG = get_global_id(0);
+    const int iL = get_local_id(0);
+    const int nL = get_local_size(0);
+
+    // --- preload points to local memory
+    //     NOTE: we will read less than 2*nL points ( nL is number of bonds in the group (one bond per thread)
+    const int npg = nPgroup[ get_group_id(0) ];
+    // 1st point
+    if( iL < npg ){
+        const int ip   = ips[iL];
+        points_loc[iL] = points[ip];
+    }
+    // 2nd point
+    const int i2  = nL+iL;
+    if( i2 < npg ){
+        const int ip   = ips[i2];
+        points_loc[i2] = points[ip];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);  // wait for loading all  pos_shared[iL]
+
+    //if(iG==0){ printf("GPU::evalTrussBondForce(nBonds=%i,nNeigh=%i)\n", ns.x, ns.y ); }
+    int2   b   = bonds  [iG];
+    float4 par = bparams[iG];
+    float3 d   = points_loc[b.y].xyz - points_loc[b.x].xyz;
+    float l    = length(d);
+    float dl   = l - par.x;
+    float k    = 1e+6f;
+    float4 f = (float4){
+        d*(k*dl/l), // force 
+        dl*dl*0.5f  // potential energy
+    };
+    bforces[iG] = f; // we may need to do += in future 
+    //bforces[iG] = (float4)( iG ,0.0,1.0,2.0);
+}
+
 __kernel void  evalTrussBondForce(
     const int4 ns, 
     __global const float4*  points,    // x,y,z,mass
@@ -147,7 +192,7 @@ __kernel void  evalTrussBondForce(
     //if(iG==0){ printf("GPU::evalTrussBondForce(nBonds=%i,nNeigh=%i)\n", ns.x, ns.y ); }
     int2   b   = bonds  [iG];
     float4 par = bparams[iG];
-    float3 d   = points [b.y].xyz - points[b.x].xyz;
+    float3 d   = points [b.y].xyz - points[b.x].xyz;  // bottleneck is probably here. If we preload points to local memory it can be faster.
     float l    = length(d);
     float dl   = l - par.x;
     float k    = 1e+6f;
@@ -181,6 +226,7 @@ __kernel void  assembleAndMove(
     //float4 f = forces    [iG];
     float4 f = (float4){0.0f,0.0f,0.0f,0.0f};
     for(int ij=0; ij<ns.y; ij++){
+    //for(int ij=0; ij<8; ij++){     // change from 23 to 8 to test if it is significantly faster. It is not. The bottleneck is elsewhere.
         int  j  = ns.y*iG + ij;
         int  ib = neighB2s[j];
         //if(iG==0){ float4 fb = bforces[ ib-1]; printf("GPU::bond[iG=%i,j=%i,ib=%i]  \n", iG, ij, ib ); }
