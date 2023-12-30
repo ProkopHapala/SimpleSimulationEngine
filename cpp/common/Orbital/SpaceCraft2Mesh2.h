@@ -45,7 +45,8 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     for(int i=0; i<np; i++){ sim.points[i].f=(Vec3f)mesh.verts[i].pos; sim.points[i].e=0.0f; }
     for(int i=0; i<np; i++){ nneighs[i]=0;   }
     for(int i=0; i<sim.nNeighTot; i++){ sim.neighs[i]=-1; }
-    if(sim.neighBs){ for(int i=0; i<sim.nNeighTot; i++){ sim.neighBs[i]=(int2){-1,-1}; } }
+    if(sim.neighBs ){ for(int i=0; i<sim.nNeighTot; i++){ sim.neighBs [i]=(int2){-1,-1}; } }
+    if(sim.neighB2s){ for(int i=0; i<sim.nNeighTot; i++){ sim.neighB2s[i]=0;             } }
     for(int i=0; i<nb; i++){
         //printf( "exportSim()[%i] \n", i );
         const Quat4i& e = mesh.edges[i];
@@ -56,6 +57,10 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         if(sim.neighBs){
             sim.neighBs[ ia ] = (int2){e.y,i}; 
             sim.neighBs[ ib ] = (int2){e.x,i};
+        }
+        if(sim.neighB2s){
+            sim.neighB2s[ ia ] =  (i+1); 
+            sim.neighB2s[ ib ] = -(i+1);
         }
 
         //printf( "e.w %i \n", e.w );
@@ -87,7 +92,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     }
     sim.cleanForce();
     sim.cleanVel();
-    //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(1.0); }
+    //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(0.1); }
     printf( "exportSim() DONE! \n" );
     delete [] nneighs;
     //exit(0);

@@ -128,6 +128,8 @@ void reloadShip( const char* fname  ){
     sim.setup_evalTrussForce1();
     sim.setup_evalTrussForce2();
     sim.setup_move();
+    sim.setup_assembleAndMove();
+    sim.setup_evalTrussBondForce();
     
     printf("#### END reloadShip('%s')\n", fname );
 };

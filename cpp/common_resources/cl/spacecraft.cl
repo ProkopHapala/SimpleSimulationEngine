@@ -140,11 +140,12 @@ __kernel void  evalTrussBondForce(
     const int4 ns, 
     __global const float4*  points,    // x,y,z,mass
     __global       float4*  bforces,   // bond forces
-    __global const int2*    bonbds,    // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
+    __global const int2*    bonds,     // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
     __global const float4*  bparams    // l0, kPress, kPull, damping
 ){
     const int iG = get_global_id(0);
-    int2   b   = bonbds [iG];
+    //if(iG==0){ printf("GPU::evalTrussBondForce(nBonds=%i,nNeigh=%i)\n", ns.x, ns.y ); }
+    int2   b   = bonds  [iG];
     float4 par = bparams[iG];
     float3 d   = points [b.y].xyz - points[b.x].xyz;
     float l    = length(d);
@@ -155,6 +156,7 @@ __kernel void  evalTrussBondForce(
         dl*dl*0.5f  // potential energy
     };
     bforces[iG] = f; // we may need to do += in future 
+    //bforces[iG] = (float4)( iG ,0.0,1.0,2.0);
 }
 
 __kernel void  assembleAndMove(
@@ -162,28 +164,35 @@ __kernel void  assembleAndMove(
     float4 MDpars,
     __global       float4* points,    // x,y,z,mass
     __global       float4* velocities, 
-    __global const float4* forces,
+    __global       float4* forces,
+    //__global const float4* forces,
     __global const int*    neighB2s,  // index of bond for each neighbor, if neighs[i]==0 it is not connected, if negative it is opposite direction
     __global const float4* bforces,
     float4 accel, // acceleration of the reference frame
     float4 omega, // angular velocity for simulation of rotating reference frame
     float4 rot0   // center of rotation
 ){
+    
     const int iG = get_global_id(0);
     if(iG>=ns.x) return;
+    //if(iG==0){ printf("GPU::assembleAndMove(nPoint=%i,nNeigh=%i)\n", ns.x, ns.y ); }
 
     // ------ Assemble bond forces
-    float4 f = forces    [iG];
+    //float4 f = forces    [iG];
+    float4 f = (float4){0.0f,0.0f,0.0f,0.0f};
     for(int ij=0; ij<ns.y; ij++){
         int  j  = ns.y*iG + ij;
         int  ib = neighB2s[j];
+        //if(iG==0){ float4 fb = bforces[ ib-1]; printf("GPU::bond[iG=%i,j=%i,ib=%i]  \n", iG, ij, ib ); }
         if(ib==0) break;
         if(ib>0){
             f += bforces[ ib-1];
         }else{
             f -= bforces[-ib-1];
         }
+        //if(iG==0){ float4 fb = bforces[ ib-1]; printf("GPU::bond[iG=%i,j=%i,b=%i] fb(%g,%g,%g|%g) \n", iG, ij, ib, fb.x,fb.y,fb.z,fb.w ); }
     }
+    forces[iG] = f;   // DEBUG
 
     // ------ apply local (pointwise) forces
     float4       p = points    [iG];
@@ -192,11 +201,13 @@ __kernel void  assembleAndMove(
     // centrifugal force
     float3 d = p.xyz - rot0.xyz;
     f.xyz += (d - omega.xyz * dot(omega.xyz,d)) * omega.w*omega.w*p.w; 
-    //coriolis force (depends on velocity) => we cannot calculate it here
+    // //coriolis force (depends on velocity) => we cannot calculate it here
 
     // ------ Move (Leap-Frog)
     //if(iG==0){ printf("GPU::move() MDpars(%g,%g,%g,%g)\n" , MDpars.x,MDpars.y,MDpars.z,MDpars.w ); }
+    
     v.xyz *= MDpars.y;
+    //v.xyz *= 0.95f;
     v.xyz += f.xyz*MDpars.x/p.w;
     p.xyz += v.xyz*MDpars.x;
     // ToDo: something like FIRE ?

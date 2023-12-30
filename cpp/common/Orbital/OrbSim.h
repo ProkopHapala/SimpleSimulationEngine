@@ -53,6 +53,7 @@ class OrbSim_f : public Picker { public:
     int*    neighs=0;  // neighbor indices
     int2*   neighBs=0; // neighbor bond indices
     //int*    neighBs=0; // neighbor bond indices
+    int*    neighB2s=0;  // neighbor indices
 
     int     nBonds =0; // number of bonds
     Quat4f* bparams=0; // bond parameters (l0,kP,kT,damp)
@@ -94,6 +95,7 @@ class OrbSim_f : public Picker { public:
         _realloc( params, nNeighTot );
         _realloc( neighs, nNeighTot );
         _realloc( neighBs,nNeighTot );
+        _realloc( neighB2s,nNeighTot );
 
         if(nBonds_>0){
             nBonds=nBonds_;
@@ -102,7 +104,6 @@ class OrbSim_f : public Picker { public:
             //_realloc( l0s,       nBonds );
             _realloc( maxStrain, nBonds );
             _realloc( bparams,   nBonds );
-
         }
     }
 

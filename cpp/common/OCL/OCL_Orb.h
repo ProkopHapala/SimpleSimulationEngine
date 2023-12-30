@@ -20,7 +20,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     //int*    neighs=0;
 
     //  ----  OpenCL buffers and textures ids
-    int ibuff_points=-1,ibuff_forces=-1,ibuff_vels=-1,ibuff_params=-1,ibuff_neighs=-1,ibuff_neighBs=-1,ibuff_bparams=-1, ibuff_neighB2s=-1, ibuff_bforces=-1, ibuff_bonbds=-1;
+    int ibuff_points=-1,ibuff_forces=-1,ibuff_vels=-1,ibuff_params=-1,ibuff_neighs=-1,ibuff_neighBs=-1,ibuff_bparams=-1, ibuff_neighB2s=-1, ibuff_bforces=-1, ibuff_bonds=-1;
     // OpenCL buffers and textures ids
     //int itex_FE_Paul=-1;
     // --- OpenCL tasks
@@ -47,6 +47,8 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         newTask( "evalTrussForce1"     ,program1, 1);
         newTask( "evalTrussForce2"     ,program1, 1);
         newTask( "move"                ,program1, 1);
+        newTask( "assembleAndMove"     ,program1, 1);
+        newTask( "evalTrussBondForce"  ,program1, 1);
         //newTask( "test_enque"        ,program1, 1);
         printf( "... makeKrenels_Orb() DONE \n" );
     }
@@ -63,7 +65,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         ibuff_params  = newBuffer( "params",   nNeighTot, sizeof(Quat4f), 0, CL_MEM_READ_ONLY  ); 
         ibuff_bparams = newBuffer( "bparams",  nBonds   , sizeof(Quat4f) , 0, CL_MEM_READ_ONLY  );
         ibuff_bforces = newBuffer( "bforces",  nBonds   , sizeof(Quat4f) , 0, CL_MEM_READ_WRITE );
-        ibuff_bonbds  = newBuffer( "bonbds",   nBonds   , sizeof(int2)   , 0, CL_MEM_READ_ONLY  );
+        ibuff_bonds   = newBuffer( "bonds",    nBonds   , sizeof(int2)   , 0, CL_MEM_READ_ONLY  );
         return ibuff_points;
     }
 
@@ -76,8 +78,10 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         if(upload_mask&0b100){ err=upload( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.3"); }
         for(int itr=0; itr<niter; itr++){
             //err= task_evalTrussForce2 ->enque_raw();  //OCL_checkError(err, "run_ocl.4");
-            err= task_evalTrussForce1 ->enque_raw();   //OCL_checkError(err, "run_ocl.4");
-            err= task_move            ->enque_raw();
+            //err= task_evalTrussForce1 ->enque_raw();  //OCL_checkError(err, "run_ocl.4");
+            //err= task_move            ->enque_raw();  //OCL_checkError(err, "run_ocl.4");
+            err= task_evalTrussBondForce->enque_raw();  OCL_checkError(err, "run_ocl.4");
+            err= task_assembleAndMove   ->enque_raw();  OCL_checkError(err, "run_ocl.4");
         }
         if(download_mask&0b001){err=download( ibuff_points, points ); OCL_checkError(err, "run_ocl.5"); }
         if(download_mask&0b010){err=download( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.6"); }
@@ -112,16 +116,24 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     }
 
 
-    OCLtask* setup_assembleAndMove(){
+    OCLtask* setup_assembleAndMove(  bool bUploadParams=true  ){
         printf("setup_assembleAndMove()\n" );
         OCLtask*& task = task_assembleAndMove;
         if(task==0) task = getTask("assembleAndMove");
         task->global.x = nPoint;
         task->local.x  = 1;
+        if(bUploadParams){
+            upload( ibuff_neighB2s, neighB2s  );
+            upload( ibuff_bonds,    bonds    );
+            upload( ibuff_bparams,  bparams  );
+            upload( ibuff_points,   points   );
+            upload( ibuff_forces,   forces   ); // to make sure it is initialized
+            upload( ibuff_vels,     vel      ); // to make sure it is initialized
+        }
         //task->local.x  = 16;
         useKernel( task->ikernel );
         nDOFs.x=nPoint; 
-        //nDOFs.y=nNeighMax;
+        nDOFs.y=nNeighMax;
         MDpars = Quat4f{ dt, 1-damping, cv, cf };
         // ------- Maybe We do-not need to do this every frame ?
         int err=0;
@@ -155,18 +167,18 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         printf("setup_evalTrussBondForce()\n" );
         OCLtask*& task = task_evalTrussBondForce;
         if(task==0) task = getTask("evalTrussBondForce");
-        task->global.x = nPoint;
+        task->global.x = nBonds;
         task->local.x  = 1;
         //task->local.x  = 16;
         useKernel( task->ikernel );
-        nDOFs.x=nPoint; 
+        nDOFs.x=nBonds; 
         //nDOFs.y=nNeighMax;
         // ------- Maybe We do-not need to do this every frame ?
         int err=0;
         err |= _useArg   ( nDOFs  );        //1 
         err |= useArgBuff( ibuff_points  ); //2  
         err |= useArgBuff( ibuff_bforces ); //3
-        err |= useArgBuff( ibuff_bonbds  ); //4
+        err |= useArgBuff( ibuff_bonds   ); //4
         err |= useArgBuff( ibuff_bparams ); //5
         OCL_checkError(err, "setup_evalTrussBondForce");
         return task;
@@ -175,7 +187,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     //     const int4 ns, 
     //     __global const float4*  points,    // x,y,z,mass
     //     __global       float4*  bforces,   // bond forces
-    //     __global const int2*    bonbds,    // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
+    //     __global const int2*    bonds,     // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
     //     __global const float4*  bparams    // l0, kPress, kPull, damping
     // ){
 
