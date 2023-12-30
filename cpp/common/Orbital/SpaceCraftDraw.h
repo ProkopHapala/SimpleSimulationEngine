@@ -35,9 +35,19 @@ void renderTruss(int nb, int2* bonds, Quat4f* ps, float* strain=0, float sc=1.0 
         int2 b =  bonds[i];
         if(strain){
             float f=strain[i];
-            //printf( "Edge[%i] strain=%g \n", i, f );
+            //if( fabs(f)>0.0001 )printf( "Edge[%i] strain=%g \n", i, f );
             f*=sc;
-            if(f>0){  Draw3D::color(Vec3f{f,0,0}); }else{ Draw3D::color(Vec3f{0,f,f}); };
+            if(f>0){ 
+                //Draw3D::color(Vec3f{f*0,0,0}); 
+                glColor3f(f,f*0.2,0.);
+            }else{ 
+                //Draw3D::color(Vec3f{0,f*100.0f,f});
+                glColor3f(0.,f*-0.2,-f);  
+                //glColor3f(0,1.,0.);
+                //glColor3f(0,-f*10000000.0,0.);
+                //printf("neg\n"); 
+            };
+            //Draw3D::color(Vec3f{0.,1.0,0.});
         } 
         Draw3D::vertex( ps[b.x].f );
         Draw3D::vertex( ps[b.y].f );

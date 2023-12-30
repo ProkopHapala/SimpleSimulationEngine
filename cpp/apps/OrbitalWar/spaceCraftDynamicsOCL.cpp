@@ -97,7 +97,7 @@ void runSim( OCL_Orb& sim, int niter=100 ){
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-2 );
-    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-1 );
+    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-1 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
 }
 

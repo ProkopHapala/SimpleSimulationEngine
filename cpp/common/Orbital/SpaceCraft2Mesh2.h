@@ -63,7 +63,8 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         if(e.w>=shop.stickMaterials.vec.size()){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i > stickMaterials.size()\n", i, e.w, e.w>=shop.stickMaterials.vec.size() ); exit(0); }
         const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
         // l0, kPress, kPull, damping
-        double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
+        //double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
+        double l0 = (sim.points[e.y].f - sim.points[e.x].f ).norm();
         double mass = l0*mat.linearDensity;
         sim.points[e.x].w += mass*0.5;
         sim.points[e.y].w += mass*0.5;
@@ -79,6 +80,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
             sim.bonds[i]     = *(int2*)&e.lo;
             sim.bparams[i]   = param;
             //sim.l0s[i]       =  l0;
+            //if(i==6272){ printf( "exportSim [ib=%i](%i,%i) param.x=%g l0=%g \n", i, e.x,e.y, param.x, l0 ); }
             sim.maxStrain[i] = (Vec2f){ (float)(mat.Spull/mat.Kpull), float(mat.Spush/mat.Kpush) };
             sim.strain[i] = 0;
         }
