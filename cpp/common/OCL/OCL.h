@@ -390,15 +390,30 @@ class OCLsystem{ public:
     void check_deviceSet  (){ if(device  ==0){ printf("ERROR OCLsystem device   not set \n"); exit(-1); } }
     void check_commandsSet(){ if(commands==0){ printf("ERROR OCLsystem commands not set \n"); exit(-1); } }
 
-    int initOCL(int ichoice=0 ){
+
+    int autoDeviceChoice(int n, const cl_device_id* devices){
+        int ipick = -1;
+        for(int i=0; i<n; i++){
+            char name[MAX_INFO_STRING];
+            getDeviceName(devices[i], name);
+            printf("Device[%i]: %s\n", i, name);
+            if(strstr(name, "NVIDIA") != NULL){ ipick=i; }
+        }
+        if(ipick<0){ printf( "OCLsystem::autoDeviceChoice() WARRNING nVidia not found!\n" ); ipick=0; }
+        return ipick;
+    }
+
+    int initOCL(int deviceIndex=-1 ){
         int err=0;
         //cl_info(); exit(0);
-        cl_uint deviceIndex = 0;
-        if( ichoice>=0 ){ deviceIndex=ichoice; }
+        //cl_uint deviceIndex = 0;
         //parseArguments(argc, argv, &deviceIndex);
         cl_device_id devices[MAX_DEVICES];
         unsigned numDevices = getDeviceList(devices);
-        if (deviceIndex >= numDevices){  printf("Invalid device index (try '--list')\n"); return -1; }
+        if( deviceIndex<0 ){
+            deviceIndex = autoDeviceChoice(numDevices, devices );
+        }
+        if ((deviceIndex >= numDevices)||(deviceIndex<0)){  printf("ERROR in OCLsystem::initOCL() deviceIndex(%i)>=numDevices(%i)\n", deviceIndex, numDevices ); exit(0); }
         device = devices[deviceIndex];
         char name[MAX_INFO_STRING];
         getDeviceName(device, name);

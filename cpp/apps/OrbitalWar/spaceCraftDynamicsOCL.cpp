@@ -66,7 +66,7 @@ double elementSize  = 5.;
 
 // Render 
 void runSim( OCL_Orb& sim, int niter=100 ){
-    //niter=1;
+    niter=1;
     //niter=10;
     niter = 100;
     if(bRun){
@@ -86,7 +86,7 @@ void runSim( OCL_Orb& sim, int niter=100 ){
         //     //sim.cleanForce();
         //     //sim.evalTrussForces_neighs2();
         //     //sim.applyForceCentrifug( sim.rot0.f, sim.omega.f, sim.omega.w );
-        //     //sim.move_MD( 1e-3, 1e-5 );
+        //     sim.move_MD( 1e-3, 1e-5 );
         // }
         double T = (getCPUticks()-t0)*1e-6;
         printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
@@ -97,7 +97,7 @@ void runSim( OCL_Orb& sim, int niter=100 ){
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-2 );
-    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-1 );
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-1 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
 }
 
@@ -120,7 +120,12 @@ void reloadShip( const char* fname  ){
     printf("###### OpenCL initialization\n");
     sim.makeKrenels_Orb( "./common_resources/cl" );
     sim.initCLBuffsOrb(  );
+    
+    //sim.setup_test_enque();
+    //sim.test_enque();
+
     sim.damping = 1e-5; sim.dt = 1e-3; // must be here before sim.setup_evalTrussForce2();
+    sim.setup_evalTrussForce1();
     sim.setup_evalTrussForce2();
     sim.setup_move();
     
@@ -273,8 +278,9 @@ int main(int argc, char *argv[]){
     //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
     funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
 
-
+    sim.print_devices();
     sim.initOCL();
+    //sim.initOCL(0);
 
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);

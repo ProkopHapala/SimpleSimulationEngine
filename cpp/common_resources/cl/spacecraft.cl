@@ -1,6 +1,37 @@
 
 // ====================== Truss Simulation ( Soft Body ) ======================
 
+
+
+// ========== Try Device Side Enqueue ==========
+// see: https://github.com/ProkopHapala/FireCore/wiki/OpenCL-performance-tips 
+//   *  https://bloerg.net/posts/opencl-2-0-is-here/
+//   *  https://www.codeproject.com/Articles/867780/GPU-Quicksort-in-OpenCL-Nested-Parallelism-and-Wor#05_converting
+
+
+// __kernel void  test_enque(
+//     //const int4 ns, 
+//     //__global const float4*  inp,  
+//     //__global       float4*  work,
+//     //int n,  
+//     __global       float4*  out
+// ){
+//     const int i = get_global_id(0);
+//     out[i] = (float4){ i*1.0f , 0.0f , 0.0f , 1.0f };
+    
+//     //if(i==0){
+//         //ndrange_t range = ndrange_1D( get_global_size(0), get_local_size(0) );
+//         ndrange_t range = ndrange_1D( 5, 1 );
+//         enqueue_kernel( get_default_queue(), CLK_ENQUEUE_FLAGS_WAIT_KERNEL, range,
+//         ^{
+//             int i  = get_global_id (0);
+//             if(i==0){ printf( "GPU::inside enqueue_kernel block \n" ); }
+//             out[i] = (float4){ i*2.0f , 0.0f , 0.0f , 2.0f };
+//         });
+//     //}
+    
+// }
+
 // Problem - we want to avoid asynchronious memory writes, therefore we need to iterate over vertexes rather than over edges
 
 float4 springForce( float3 d, float4 par ){
@@ -15,23 +46,47 @@ float4 springForce( float3 d, float4 par ){
     return (float4){d*f, f*dl*0.5f};
 }
 
-__kernel void  evalTrussForce(
+__kernel void  evalTrussForce1(
     const int4 ns, 
-    __global const float4*  points,    // x,y,z,mass
+    __global const float4*  points, // x,y,z,mass
+    __global const float4*  vels,   // velocities are used for damping 
     __global       float4*  forces, 
-    __global const int*     neighs,    // indexes of neighbors, if neighs[i] == -1 it is not connected
-    __global const float4*  params    // l0, kPress, kPull, damping
-
+    __global const int*     neighs, // indexes of neighbor points, if neighs[i] == -1 it is not connected
+    __global const float4*  params, // l0, kPress, kPull, damping
+    float4 accel, // acceleration of the reference frame
+    float4 omega, // angular velocity for simulation of rotating reference frame
+    float4 rot0   // center of rotation
 ){
     const int iG = get_global_id(0);
+
+    //if(iG==0){ printf("GPU::evalTrussForce2() \n" ); }
+    if(iG>=ns.x) return;
     float4 p = points[iG];
+    float4 v = vels  [iG];
     float4 f =(float4){0.0f,0.0f,0.0f,0.0f};
+    
     for(int ij=0; ij<ns.y; ij++){
-        int j  = ns.y*iG + ij;
-        int ja = neighs[j];
-        if(j == -1) break;
-        f += springForce( points[ja].xyz - p.xyz, params[j] );
+        int  j  = ns.y*iG + ij;
+        int  ja = neighs[j];
+        if(ja==-1) break;
+        //f += springForce( points[b.x].xyz - p.xyz, bparams[b.y] );
+        float3 d = points[ja].xyz - p.xyz;
+        float l  = length(d.xyz);
+        float dl = l - params[j].x;
+        float k = 1e+6f;
+        // f.f.add_mul( d, (k*(li-params[j].x)/li) );
+        f.xyz += d.xyz * (k*dl/l);
+        f.w   += dl*dl*0.5f;
     }
+    
+    //if(iG==0){ printf("accel(%g,%g,%g,%g) omega(%g,%g,%g,%g) rot0(%g,%g,%g,%g) \n" , accel.x,accel.y,accel.z,accel.w, omega.x,omega.y,omega.z,omega.w, rot0.x,rot0.y,rot0.z,rot0.w ); }
+    // acceleration of the reference frame
+    f.xyz += accel.xyz*p.w;
+    // centrifugal force
+    float3 d = p.xyz - rot0.xyz;
+    f.xyz += (d - omega.xyz * dot(omega.xyz,d)) * omega.w*omega.w*p.w; 
+    //coriolis force (depends on velocity) => we cannot calculate it here
+    
     forces[iG] = f; // we may need to do += in future 
 }
 
@@ -40,7 +95,7 @@ __kernel void  evalTrussForce2(
     __global const float4*  points,    // x,y,z,mass
     __global const float4*  vels,      // velocities are used for damping 
     __global       float4*  forces, 
-    //__global const int*     neighs,  // indexes of neighbor points, if neighs[i] == -1 it is not connected
+    //__global const int*   neighs,  // indexes of neighbor points, if neighs[i] == -1 it is not connected
     __global const int2*    neighBs,   // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
     __global const float4*  bparams,   // l0, kPress, kPull, damping
     float4 accel, // acceleration of the reference frame
@@ -48,6 +103,9 @@ __kernel void  evalTrussForce2(
     float4 rot0   // center of rotation
 ){
     const int iG = get_global_id(0);
+
+    //if(iG==0){ printf("GPU::evalTrussForce2() \n" ); }
+
     if(iG>=ns.x) return;
     float4 p = points[iG];
     float4 v = vels  [iG];
@@ -67,7 +125,6 @@ __kernel void  evalTrussForce2(
         f.xyz += d.xyz * (k*dl/l);
         f.w   += dl*dl*0.5f;
     }
-    
     //if(iG==0){ printf("accel(%g,%g,%g,%g) omega(%g,%g,%g,%g) rot0(%g,%g,%g,%g) \n" , accel.x,accel.y,accel.z,accel.w, omega.x,omega.y,omega.z,omega.w, rot0.x,rot0.y,rot0.z,rot0.w ); }
     //if(iG==1074){ printf("p[%i](%g,%g,%g|%g) v(%g,%g,%g|%g) \n", iG, p.x,p.y,p.z,p.w,  v.x,v.y,v.z,v.w ); }
     // acceleration of the reference frame
@@ -77,6 +134,74 @@ __kernel void  evalTrussForce2(
     f.xyz += (d - omega.xyz * dot(omega.xyz,d)) * omega.w*omega.w*p.w; 
     //coriolis force (depends on velocity) => we cannot calculate it here
     forces[iG] = f; // we may need to do += in future 
+}
+
+__kernel void  evalTrussBondForce(
+    const int4 ns, 
+    __global const float4*  points,    // x,y,z,mass
+    __global       float4*  bforces,   // bond forces
+    __global const int2*    bonbds,    // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
+    __global const float4*  bparams    // l0, kPress, kPull, damping
+){
+    const int iG = get_global_id(0);
+    int2   b   = bonbds [iG];
+    float4 par = bparams[iG];
+    float3 d   = points [b.y].xyz - points[b.x].xyz;
+    float l    = length(d);
+    float dl   = l - par.x;
+    float k    = 1e+6f;
+    float4 f = (float4){
+        d*(k*dl/l), // force 
+        dl*dl*0.5f  // potential energy
+    };
+    bforces[iG] = f; // we may need to do += in future 
+}
+
+__kernel void  assembleAndMove(
+    const int4 ns, 
+    float4 MDpars,
+    __global       float4* points,    // x,y,z,mass
+    __global       float4* velocities, 
+    __global const float4* forces,
+    __global const int*    neighB2s,  // index of bond for each neighbor, if neighs[i]==0 it is not connected, if negative it is opposite direction
+    __global const float4* bforces,
+    float4 accel, // acceleration of the reference frame
+    float4 omega, // angular velocity for simulation of rotating reference frame
+    float4 rot0   // center of rotation
+){
+    const int iG = get_global_id(0);
+    if(iG>=ns.x) return;
+
+    // ------ Assemble bond forces
+    float4 f = forces    [iG];
+    for(int ij=0; ij<ns.y; ij++){
+        int  j  = ns.y*iG + ij;
+        int  ib = neighB2s[j];
+        if(ib==0) break;
+        if(ib>0){
+            f += bforces[ ib-1];
+        }else{
+            f -= bforces[-ib-1];
+        }
+    }
+
+    // ------ apply local (pointwise) forces
+    float4       p = points    [iG];
+    float4       v = velocities[iG];
+    f.xyz += accel.xyz*p.w;
+    // centrifugal force
+    float3 d = p.xyz - rot0.xyz;
+    f.xyz += (d - omega.xyz * dot(omega.xyz,d)) * omega.w*omega.w*p.w; 
+    //coriolis force (depends on velocity) => we cannot calculate it here
+
+    // ------ Move (Leap-Frog)
+    //if(iG==0){ printf("GPU::move() MDpars(%g,%g,%g,%g)\n" , MDpars.x,MDpars.y,MDpars.z,MDpars.w ); }
+    v.xyz *= MDpars.y;
+    v.xyz += f.xyz*MDpars.x/p.w;
+    p.xyz += v.xyz*MDpars.x;
+    // ToDo: something like FIRE ?
+    velocities[iG] = v;
+    points    [iG] = p;
 }
 
 // ====================== Magnetic Interactions ( Amber / Boist-Sawart / Lorenz ) ======================
