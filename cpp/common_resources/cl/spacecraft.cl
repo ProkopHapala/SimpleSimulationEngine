@@ -9,28 +9,93 @@
 //   *  https://www.codeproject.com/Articles/867780/GPU-Quicksort-in-OpenCL-Nested-Parallelism-and-Wor#05_converting
 
 
-// __kernel void  test_enque(
-//     //const int4 ns, 
-//     //__global const float4*  inp,  
-//     //__global       float4*  work,
-//     //int n,  
-//     __global       float4*  out
-// ){
-//     const int i = get_global_id(0);
-//     out[i] = (float4){ i*1.0f , 0.0f , 0.0f , 1.0f };
+__kernel void  test_enque(
+    //const int4 ns, 
+    //__global const float4*  inp,  
+    //__global       float4*  work,
+    //int n,  
+    __global       float4*  out,
+    __global       float4*  out2
+){
+    //const int i = get_global_id(0);
+    //out[i] = (float4){ i*1.0f , 0.0f , 1.0f , 1.0f };
+    if( 0 == get_global_id(0) ){  // the global_size is 1 anyway, but just to be sure
+
+
+    ndrange_t range = ndrange_1D( 100, 1 );
     
-//     //if(i==0){
-//         //ndrange_t range = ndrange_1D( get_global_size(0), get_local_size(0) );
-//         ndrange_t range = ndrange_1D( 5, 1 );
-//         enqueue_kernel( get_default_queue(), CLK_ENQUEUE_FLAGS_WAIT_KERNEL, range,
-//         ^{
-//             int i  = get_global_id (0);
-//             if(i==0){ printf( "GPU::inside enqueue_kernel block \n" ); }
-//             out[i] = (float4){ i*2.0f , 0.0f , 0.0f , 2.0f };
-//         });
-//     //}
-    
-// }
+    // this kernell just clears the output array
+    //enqueue_kernel( get_default_queue(), CLK_ENQUEUE_FLAGS_WAIT_KERNEL, range,
+    enqueue_kernel( get_default_queue(), CLK_ENQUEUE_FLAGS_NO_WAIT, range,
+    ^{
+        const int iG  = get_global_id (0);
+        //if(iG==0){ printf( "GPU::inside enqueue_kernel.clear \n" ); }
+        out[iG] = (float4){ 0.0f, 0.0f , 0.0f , 2.0f };
+        if(iG==10) out[iG].x = 1.0f;
+        //barrier(CLK_GLOBAL_MEM_FENCE);
+
+    });
+    //barrier(CLK_GLOBAL_MEM_FENCE);
+    for(int itr=0; itr<100; itr++){   // we submit 5 iterations of the same kernel      
+        //enqueue_kernel( get_default_queue(), CLK_ENQUEUE_FLAGS_WAIT_KERNEL, range,
+        enqueue_kernel( get_default_queue(), CLK_ENQUEUE_FLAGS_NO_WAIT, range,
+        ^{
+            const int iG = get_global_id (0);
+            const int nG = get_global_size(0);
+            //if(iG==0){ printf( "GPU::inside enqueue_kernel.flip(%i) \n", itr ); }
+            //out[iG] = out[iG] + (float4){ 1.0f, iG*1.f, itr , 0.0f };
+
+            //out2[iG].x = out[iG].x + 1.0f;
+
+            // blur
+            if ((iG>0)||(iG<nG)) { out2[iG].x = (out[iG-1].x + out[iG].x + out[iG+1].x)/3.0f; }
+
+            //pascal triangle
+            // if ((iG==0) || (iG==nG-1)) {
+            //    out2[iG].x = 1.0f;
+            // }else{ 
+            //    out2[iG].x = out[iG].x + out[iG-1].x;
+            // }
+            //barrier(CLK_GLOBAL_MEM_FENCE);
+        });
+
+        //enqueue_kernel( get_default_queue(), CLK_ENQUEUE_FLAGS_WAIT_KERNEL, range,
+        enqueue_kernel( get_default_queue(), CLK_ENQUEUE_FLAGS_NO_WAIT, range,
+        ^{
+            const int iG = get_global_id (0);
+            const int nG = get_global_size(0);
+            //if(iG==0){ printf( "GPU::inside enqueue_kernel.flop(%i) \n", itr ); }
+            //out[iG] = out[iG] + (float4){ 1.0f, iG*1.f, itr , 0.0f };
+
+            //out2[iG].x = out[iG].x + out[iG-1].x;
+
+            //out[iG].x = out2[iG].x + 1.0f;
+            // blur
+            if ((iG>0)||(iG<nG)) { out[iG].x = (out2[iG-1].x + out2[iG].x + out2[iG+1].x)/3.0f; }
+
+            //pascal triangle
+            // if ((iG==0) || (iG==nG)) {
+            //    out[iG].x = 1.0f;
+            // }else{ 
+            //    out[iG].x = out2[iG].x + out2[iG-1].x;
+            // }
+            //barrier(CLK_GLOBAL_MEM_FENCE);
+        });
+
+    }
+   
+    }
+}
+
+__kernel void  test_blur(
+    __global       float4*  inp,
+    __global       float4*  out
+){
+    const int iG = get_global_id(0);
+    const int nG = get_global_size(0);
+    if ((iG>0)||(iG<nG)) { out[iG].x = (inp[iG-1].x + inp[iG].x + inp[iG+1].x)/3.0f; }
+}    
+
 
 // Problem - we want to avoid asynchronious memory writes, therefore we need to iterate over vertexes rather than over edges
 

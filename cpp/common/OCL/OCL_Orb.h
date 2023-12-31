@@ -28,6 +28,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     OCLtask* task_evalTrussForce1=0;
     OCLtask* task_move           =0;   
     OCLtask* task_test_enque     =0; 
+    OCLtask* task_blur           =0;
     OCLtask* task_assembleAndMove    =0;
     OCLtask* task_evalTrussBondForce =0;
 
@@ -49,7 +50,8 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         newTask( "move"                ,program1, 1);
         newTask( "assembleAndMove"     ,program1, 1);
         newTask( "evalTrussBondForce"  ,program1, 1);
-        //newTask( "test_enque"        ,program1, 1);
+        newTask( "test_enque"          ,program1, 1);
+        newTask( "test_blur"           ,program1, 1);
         printf( "... makeKrenels_Orb() DONE \n" );
     }
 
@@ -92,27 +94,49 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         //exit(0);
     }
 
-    OCLtask* setup_test_enque(){
-        printf("setup_test_enque()\n" );
-        OCLtask*& task = task_test_enque;
-        if(task==0) task = getTask("test_enque");
-        task->global.x = nPoint;
+    OCLtask* setup_blur(){
+        printf("setup_blur()\n" );
+        OCLtask*& task = task_blur;
+        if(task==0) task = getTask("test_blur");
+        task->global.x = 1; // we really need just one thread to enque list of kernels
         task->local.x  = 1;
         useKernel( task->ikernel );
         // ------- Maybe We do-not need to do this every frame ?
         int err=0;
         //err |= _useArg   ( nDOFs  );     //1 
         err |= useArgBuff( ibuff_forces ); //1
+        err |= useArgBuff( ibuff_vels    );//2
+        OCL_checkError(err, "setup_blur");
+        return task;
+    }
+
+    OCLtask* setup_test_enque(){
+        printf("setup_test_enque()\n" );
+        OCLtask*& task = task_test_enque;
+        if(task==0) task = getTask("test_enque");
+        task->global.x = 1; // we really need just one thread to enque list of kernels
+        task->local.x  = 1;
+        useKernel( task->ikernel );
+        // ------- Maybe We do-not need to do this every frame ?
+        int err=0;
+        //err |= _useArg   ( nDOFs  );     //1 
+        err |= useArgBuff( ibuff_forces ); //1
+        err |= useArgBuff( ibuff_vels    );//2
         OCL_checkError(err, "setup_test_enque");
         return task;
     }
 
     void test_enque(){
         int err=0;
-        err = task_test_enque->enque_raw();       OCL_checkError(err, "test_enque.enque");
-        err = download( ibuff_forces, forces );   OCL_checkError(err, "test_enque.download");
+        err = finishRaw(); OCL_checkError(err, "test_enque.enque");
+        long t0 = getCPUticks();
+        err = task_test_enque->enque_raw();      OCL_checkError(err, "test_enque.enque");
+        //for(int i=0; i<100; i++){ task_blur->enque_raw(); }
+        err = download( ibuff_forces, forces, 100 );   OCL_checkError(err, "test_enque.download");
         err = finishRaw();                        OCL_checkError(err, "test_enque.finish");
-        for(int i=0; i<10; i++){ printf( "forces[%i] (%g,%g,%g) \n", i, forces[i].x, forces[i].y, forces[i].z ); }
+        double T = (getCPUticks()-t0)*1e-6; printf( "test_enque: %g ms\n", T );
+        for(int i=0; i<100; i++){ printf( "out[%i] (%g,%g,%g,%g) \n", i, forces[i].x, forces[i].y, forces[i].z, forces[i].w ); }
+        exit(0);
     }
 
 
