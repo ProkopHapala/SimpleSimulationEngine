@@ -108,7 +108,7 @@ void reloadShip( const char* fname  ){
     theSpaceCraft->clear();                  // clear all components
     //luaL_dofile(theLua, "data/spaceshil1.lua");
     printf("#### START reloadShip('%s')\n", fname );
-    Lua::dofile(theLua,fname);
+    if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
     printf( "Lua::dofile(%s) DONE \n", fname );
     theSpaceCraft->checkIntegrity();
 
@@ -121,18 +121,16 @@ void reloadShip( const char* fname  ){
     printf("###### OpenCL initialization\n");
     sim.makeKrenels_Orb( "./common_resources/cl" );
     sim.initCLBuffsOrb(  );
-    
+
     //sim.setup_test_enque();
     //sim.setup_blur();
     //sim.test_enque();
-
     sim.damping = 1e-5; sim.dt = 1e-3; // must be here before sim.setup_evalTrussForce2();
     sim.setup_evalTrussForce1();
     sim.setup_evalTrussForce2();
     sim.setup_move();
     sim.setup_assembleAndMove();
     sim.setup_evalTrussBondForce();
-
     
     printf("#### END reloadShip('%s')\n", fname );
 };

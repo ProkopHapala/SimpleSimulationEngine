@@ -246,6 +246,34 @@ __kernel void  evalTrussBondForce_loc(
     //bforces[iG] = (float4)( iG ,0.0,1.0,2.0);
 }
 
+// The purpose of this kernel is towfold:
+// 1) improve numerical stability in single-precision by avoiding subtractions of large numbers (e.g. d = points[b.y].xyz - points[b.x].xyz; dl = length(d) - l0; )
+// 2) to improve performance avoding sqrt() and division ( this is perhaps negligible considering that the kernel is memory bound )
+// see: https://github.com/ProkopHapala/SimpleSimulationEngine/wiki/Truss-Simulation
+__kernel void  evalTrussBondForceLinearized(
+    const int4 ns, 
+    __global const float4*  dpoints,   // x,y,z,mass - (small) displacements of points from initial position (around which we linearize)
+    __global       float4*  bforces,   // bond forces
+    __global       float4*  bvecs,     // (x,y,z,dl0) - normalized bond vectors, dl0 is displacement from initial length with respect to the rest-length
+    __global const int2*    bonds,     // indexes of neighbor (point,bond), if neighs[i].x == -1 it is not connected
+    __global const float4*  bparams    // l0, kPress, kPull, damping
+){
+    const int iG = get_global_id(0);
+    //if(iG==0){ printf("GPU::evalTrussBondForce(nBonds=%i,nNeigh=%i)\n", ns.x, ns.y ); }
+    const int2   b   = bonds  [iG];
+    const float4 par = bparams[iG];
+    const float4 hb  = bforces[iG]; 
+    const float3 d   = dpoints[b.y].xyz - dpoints[b.x].xyz;  
+    const float  dl  = dot(d,hb.xyz) + hb.w;
+    const float  k   = 1e+6f;
+    float4 f = (float4){
+        hb.xyz*(k*dl), // force 
+        k*dl*dl*0.5f   // potential energy
+    };
+    bforces[iG] = f; // we may need to do += in future 
+    //bforces[iG] = (float4)( iG ,0.0,1.0,2.0);
+}
+
 __kernel void  evalTrussBondForce(
     const int4 ns, 
     __global const float4*  points,    // x,y,z,mass

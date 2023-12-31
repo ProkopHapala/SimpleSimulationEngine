@@ -27,7 +27,7 @@ namespace Lua{
     void print_error(lua_State* L) { puts( lua_tostring(L, -1)); lua_pop(L, 1); }
     bool  checkError( lua_State* L, int ret ){ if(ret!=LUA_OK) print_error(L); return ret==LUA_OK; }
 
-    void getError( int i,  const char * s ){ printf( "LuaERROR [%i] : %s\n", s     ); }
+    void getError( int i,  const char * s ){ printf( "LuaERROR @Stack[%i]: %s\n", i, s ); }
     void clean   (lua_State* L) { int n = lua_gettop(L); lua_pop(L, n); }
 
     void dumpStack(lua_State* L ){
@@ -227,13 +227,13 @@ namespace Lua{
         // Load the program; this supports both source code and bytecode files.
         //int result = luaL_loadfile(state, filename);
         //if ( result != LUA_OK ) { print_error(state); return; }
-        if( !checkError(L,luaL_loadfile(L, filename)) ) return false;
+        if( !checkError(L,luaL_loadfile(L, filename)) ) return true;
         // Finally, execute the program by calling into it.
         // Change the arguments if you're not running vanilla Lua code.
         //result = lua_pcall(state, 0, LUA_MULTRET, 0);
         //if ( result != LUA_OK ) { print_error(state); return; }
-        if( !checkError(L,lua_pcall(L, 0, LUA_MULTRET, 0)) ) return false;
-        return true;
+        if( !checkError(L,lua_pcall(L, 0, LUA_MULTRET, 0)) ) return true;
+        return false;
     }
 
 /*

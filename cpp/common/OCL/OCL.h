@@ -462,7 +462,7 @@ class OCLsystem{ public:
         buffers.push_back( OCLBuffer( name, n, typesize, p_cpu, flags ) );
         int i=buffers.size()-1;
         buffer_dict.insert( { name, i } );
-        int err=buffers[i].initOnGPU(context); OCL_checkError__(err, "newBuffer",i,name);
+        int err=buffers[i].initOnGPU(context); OCL_checkError__(err, "OCLsystem::newBuffer() ",n,name);
         return i;
     }
 
@@ -475,7 +475,7 @@ class OCLsystem{ public:
         buffers[i].nImg[0]     = nx;
         buffers[i].nImg[1]     = ny;
         buffers[i].imageFormat = imageFormat;
-        int err=buffers[i].initOnGPUImage(context); OCL_checkError__(err, "newBufferImage2D",i,name);
+        int err=buffers[i].initOnGPUImage(context); OCL_checkError__(err, "OCLsystem::newBufferImage2D",nx*ny,name);
         return i;
     }
 

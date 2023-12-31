@@ -105,7 +105,7 @@ void OCL_check_error(cl_int err, const char *operation=0, char *filename=0, int 
         //else          { fprintf(stderr, "OCL_ERROR(%i) %s during operation '%s'", err, OCL_err_code(err), operation, i, name );  }
         fprintf(stderr, "OCL_ERROR(%i) %s", err, OCL_err_code(err));
         if(operation)fprintf(stderr, " during %s", operation );
-        if(filename )fprintf(stderr, "%s #line=%i", filename, line );
+        //if(filename )fprintf(stderr, "%s #line=%i", filename, line );
         if(name     )fprintf(stderr, "%s[%i]", name, i );
         fprintf(stderr, "\n" );
         exit(0);

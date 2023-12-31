@@ -248,8 +248,9 @@ int l_Ring2    (lua_State * L){
     Ring* o = new Ring();
     int   gs[4];
     float cs[4] ;
-    Lua::getLuaArr( L,1, gs );
-    Lua::getLuaArr( L,2, cs );
+    Lua::getLuaArr( L, 4, gs, 1 );
+    Lua::getLuaArr( L, 4, cs, 2 );
+    for(int i=0; i<4; i++){ printf( "l_Ring2() node[%i](g=%i,c=%g)\n", i, gs[i], cs[i] ); }
     Vec3d p0; Lua::getVec3(L,3, p0 );
     // Make nodes bound to nodes to attach ring to girders
     Node* nd[4];
@@ -263,10 +264,10 @@ int l_Ring2    (lua_State * L){
         theSpaceCraft->nodes.push_back( nd[i] ); 
     }
     //o->R = circle_3point( nd[0]->pos, nd[1]->pos, nd[2]->pos, o->pose.pos, o->pose.rot.c, o->pose.rot.b );
-    o->nseg = Lua::getInt (L,4);
-              Lua::getVec2(L,5, o->wh );
-    const char * matn = Lua::getString(L,7);
-              Lua::getVec4i(L,6, o->st );
+    o->nseg = Lua::getInt (L,4);             printf( "l_Ring2() nseg %i\n", o->nseg );
+              Lua::getVec2(L,5, o->wh );     printf( "l_Ring2() wh %g,%g\n", o->wh.x, o->wh.y );
+    const char * matn = Lua::getString(L,7); printf( "l_Ring2() matn %s\n", matn );
+              Lua::getVec4i(L,6, o->st );    printf( "l_Ring2() st %i,%i,%i,%i\n", o->st.x, o->st.y, o->st.z, o->st.w );
     o->face_mat = workshop.panelMaterials.getId( matn );
     o->id     = theSpaceCraft->rings.size();
     if(verbosity>1) o->print();
@@ -402,6 +403,7 @@ void initSpaceCraftingLua(){
     lua_register(L, "Rope",     l_Rope     );
     lua_register(L, "Girder",   l_Girder   );
     lua_register(L, "Ring",     l_Ring     );
+    lua_register(L, "Ring2",    l_Ring2    );
     lua_register(L, "Slider",   l_Slider   ); 
     lua_register(L, "Gun",      l_Gun      );
     lua_register(L, "Thruster", l_Thruster );
