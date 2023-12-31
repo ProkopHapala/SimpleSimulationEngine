@@ -412,36 +412,6 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    ->pr
             pm->areaDensity = areaDensity;
         }
     }
-    /*
-    void updateSliderPaths(){
-        printf("SpaceCraft::updateSliderPaths()\n");
-        for(int io=0;io<sliders.size();io++){
-            Slider* o = sliders[io];
-            o->print();
-            printf(" - compi1:"); o->comp1->print();
-            printf(" - compi2:"); o->comp2->print();
-
-            o->ifix = getVertAlong(o->comp2, o->along.y, o->sides.y );
-
-            int t1 = o->comp1->component_kind();
-
-            printf( "updateSliderPaths[%i] t=%i | Girder=%i Ring=%i Rope=%i\n", io, t1, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
-            int i0 = o->comp1->pointRange.x;
-            int n  = o->comp1->pointRange.y-i0;
-            if((n>1000)||(n<=0)){printf( "updateSliderPaths() n=%i seems wrong\n", n ); exit(0);   }
-            printf("SpaceCraft::updateSliderPaths() i0=%i n=%i\n", i0, n );
-            if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){
-                if((t1 == (int)ComponetKind::Ring)) o->path.closed=true;
-                n/=4;
-                o->path.realloc(n);
-                for(int i=0; i<n; i++){ o->path.ps[i] = i0+4*i+o->sides.x; }
-            }else if (t1 == (int)ComponetKind::Rope){
-                o->path.realloc(n);
-                for(int i=0; i<n; i++){ o->path.ps[i] = i0+i; }
-            }
-        }
-    }
-    */
 
     void checkIntegrity(){
         printf("SpaceCraft::checkIntegrity() %i nodes, %i girders, %i rings, %i ropes, \n", nodes.size(), girders.size(), rings.size(), ropes.size() );

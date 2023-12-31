@@ -195,7 +195,13 @@ void reloadShip( const char* fname  ){
     mesh2.clear();
     BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
     mesh2.printSizes();
+
     exportSim( sim, mesh2, workshop );
+
+    // update ring slider paths
+    for( Ring* o : theSpaceCraft->rings ){
+        o->updateSlidersPaths( true, true, sim.points );
+    }
 
     renderShip();
     printf("#### END reloadShip('%s')\n", fname );

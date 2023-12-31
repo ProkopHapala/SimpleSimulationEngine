@@ -124,7 +124,7 @@ int l_Slider(lua_State * L){
     Vec3d p0; Lua::getVec3(L, 4, p0 );
     o->boundTo = theSpaceCraft->getStructuralComponent( gid, kind);
     o->updateBound( p0 );
-    o->updatePath();
+    //o->updatePath();  // path vertices are not created yet
     o->id   = theSpaceCraft->sliders.size();
     //if(verbosity>1) 
     o->print();

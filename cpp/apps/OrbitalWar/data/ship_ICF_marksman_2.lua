@@ -75,12 +75,12 @@ print( "#------ Lua:BoundNodes and Girders" )
 
 --- Finished basic layout of the ship ( main girders and ropes )
 
-nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {0.0,100.0,100.0} );
+--nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {0.0,100.0,100.0} );
 --nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {0.0,-100.0,0.0} );
 --nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {100.0,0.0,0.0} );
 --nB1 = BoundNode( gFw, ComponetKind.Girder, 0.5, {-100.0,0.0,0.0} );
-nB2 = BoundNode( gUp, ComponetKind.Girder, 0.5, {0.0,100.0,100.0} );
-gB  = Girder( nB1, nB2, xvec, 10, 2, {4.0,4.0}, "Steel", g1_st )
+--nB2 = BoundNode( gUp, ComponetKind.Girder, 0.5, {0.0,100.0,100.0} );
+--gB  = Girder( nB1, nB2, xvec, 10, 2, {4.0,4.0}, "Steel", g1_st )
 
 print( "#------ Lua:Radiataors" )
 
