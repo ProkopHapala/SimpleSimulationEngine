@@ -163,6 +163,33 @@ class OrbSim_f : public Picker { public:
 
     // =================== Truss Simulation
 
+    void evalTrussForce_neighs(int iG){
+        Quat4f p = points[iG];
+        Quat4f f =Quat4f{0.0f,0.0f,0.0f,0.0f};
+        //printf( "--- p[%i] \n", iG );
+        //#pragma omp simd
+        for(int ij=0; ij<nNeighMax; ij++){
+            int j  = nNeighMax*iG + ij;
+            int ja = neighs[j];
+            if(ja == -1) break;
+            //f.add( springForce( points[ja].f - p.f, params[j] ) );
+            
+            Vec3f d =  points[ja].f - p.f;
+            float li = d.norm();
+            /*
+            float fi,ei = springForce( li, fi, params[j] );
+            //f.add( Quat4f{ d*(fi/l), ei } );
+            f.f.add_mul( d, fi/li );
+            */
+            float k = 1e+6;
+            f.f.add_mul( d, (k*(li-params[j].x)/li) );
+
+            //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
+        }
+        forces[iG] = f; // we may need to do += in future
+    }
+
+    /*
     void evalTrussForces_neighs(){
         //#pragma omp paralel for 
         for(int iG=0; iG<nPoint; iG++){
@@ -179,11 +206,11 @@ class OrbSim_f : public Picker { public:
                 
                 Vec3f d =  points[ja].f - p.f;
                 float li = d.norm();
-                /*
-                float fi,ei = springForce( li, fi, params[j] );
-                //f.add( Quat4f{ d*(fi/l), ei } );
-                f.f.add_mul( d, fi/li );
-                */
+                
+                // float fi,ei = springForce( li, fi, params[j] );
+                // //f.add( Quat4f{ d*(fi/l), ei } );
+                // f.f.add_mul( d, fi/li );
+                
                 float k = 1e+6;
                 f.f.add_mul( d, (k*(li-params[j].x)/li) );
 
@@ -193,33 +220,49 @@ class OrbSim_f : public Picker { public:
         } 
         //exit(0);
     }
+    */
 
     inline void evalTrussForce_neighs2(int iG){
+        const float Adamp = collision_damping;
         //const int iG = get_global_id(0);
-        Quat4f p = points[iG];
-        Quat4f f =Quat4f{0.0f,0.0f,0.0f,0.0f};
+        const Quat4f p = points[iG];
+        const Quat4f v = vel   [iG];
+        Quat4f f = Quat4f{0.0f,0.0f,0.0f,0.0f};
         //printf( "--- p[%i] \n", iG );
         //#pragma omp simd
         for(int ij=0; ij<nNeighMax; ij++){
-            int j  = nNeighMax*iG + ij;
-            int2 b = neighBs[j];
+            const int j  = nNeighMax*iG + ij;
+            const int2 b = neighBs[j];
             if(b.x == -1) break;
-            Quat4f par = bparams[b.y];
+            const Quat4f par = bparams[b.y];
             //f.add( springForce( points[ja].f - p.f, params[j] ) );
-            Vec3f d =  points[b.x].f - p.f;
-            float li = d.norm();
-            float k = 1e+6;
-            f.f.add_mul( d, (k*(li-par.x)/li) );
+            Quat4f d = points[b.x];
+            d.f.sub( p.f );
+            const float l  = d.f.norm();
+            float k        = 1e+6;
+            float fl       = k*(l-par.x);
+            
+            // collision damping
+            const float invL = 1/l;
+            const float dv  = d.f.dot( vel[b.x].f - v.f );
+            const float imp = collision_damping * p.w*d.w*dv/(p.w+d.w);
+            //const float imp = 0;
+
+            f.f.add_mul( d.f, ( imp + fl )*invL );
             //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
         }
         forces[iG] = f; // we may need to do += in future
     }
 
     void evalTrussForces_neighs2(){
-        for(int iG=0; iG<nPoint; iG++){
-            evalTrussForce_neighs2(iG);
-        } 
+        for(int iG=0; iG<nPoint; iG++){ evalTrussForce_neighs2(iG); } 
     }
+
+    void evalTrussForces_neighs(){
+        for(int iG=0; iG<nPoint; iG++){ evalTrussForce_neighs(iG); } 
+    }
+
+    
 
     void evalTrussForces_bonds(){
         for(int i=0; i<nBonds; i++){
@@ -379,9 +422,9 @@ class OrbSim_f : public Picker { public:
         }
     }
 
-    inline void move_i_MD(int i, float dt, float cdamp ){
+    inline float move_i_MD(int i, float dt, float cdamp ){
+        const Quat4f f = forces[i];
         Quat4f p = points[i];
-        Quat4f f = forces[i];
         Quat4f v = vel   [i];
         v.f.mul( cdamp );
         v.f.add_mul( f.f, dt/p.w );
@@ -389,23 +432,13 @@ class OrbSim_f : public Picker { public:
         //printf( "move_GD[%i] |d|=%g |f|=%g dt/m=%g m=%g \n", i, f.f.norm() * dt/p.w, f.f.norm(), dt/p.w, p.w );
         vel   [i]=v;
         points[i]=p;
+        return f.f.norm2();
     }
 
     double move_MD(float dt, float damp=0.0f ){
         float cdamp = 1.0f - damp;
         double ff = 0.0; 
-        for(int i=0;i<nPoint; i++ ){
-            Quat4f p = points[i];
-            Quat4f f = forces[i];
-            Quat4f v = vel   [i];
-            ff += f.f.norm2();
-            v.f.mul( cdamp );
-            v.f.add_mul( f.f, dt/p.w );
-            p.f.add_mul( v.f, dt     );
-            //printf( "move_GD[%i] |d|=%g |f|=%g dt/m=%g m=%g \n", i, f.f.norm() * dt/p.w, f.f.norm(), dt/p.w, p.w );
-            vel   [i]=v;
-            points[i]=p;
-        }
+        for(int i=0;i<nPoint; i++ ){ move_i_MD(i, dt, cdamp ); }
         return ff;
     }
 
@@ -422,7 +455,7 @@ int run( int niter, float dt, float damp  ){
         //move_MD( 1e-3, 1e-5 );
         //move_GD( 1e-7 );
         f2 = move_MD( dt, damp );
-        printf( "OrbSim_f::run[%i] |F|=%g\n", itr, sqrt(f2) );
+        //printf( "OrbSim_f::run[%i] |F|=%g\n", itr, sqrt(f2) );
     }
     return niter;
 }
@@ -476,12 +509,16 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
         #pragma omp for 
         for(int iG=0; iG<nPoint; iG++){ 
             forces[iG] = Quat4fZero;
+            //evalTrussForce_neighs(iG);
             evalTrussForce_neighs2(iG);
-            if(bDynamic){ applyForceRotatingFrame_i( iG, rot0.f, omega.f, omega.w ); }
-            else        { applyForceCentrifug_i    ( iG, rot0.f, omega.f, omega.w ); }
+            
+            applyForceCentrifug_i    ( iG, rot0.f, omega.f, omega.w );
+            //if(bDynamic){ applyForceRotatingFrame_i( iG, rot0.f, omega.f, omega.w ); }
+            //else        { applyForceCentrifug_i    ( iG, rot0.f, omega.f, omega.w ); }
         }
         // ---- assemble (we need to wait when all atoms are evaluated)
         //#pragma omp barrier
+        /*
         if(!bDynamic){    // FIRE if not dynamic
             #pragma omp for reduction(+:vv,vf,ff)
             for(int i=0;i<nPoint; i++ ){
@@ -498,14 +535,19 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
                 //printf( "FIRE cv,cf(%g,%g)   vf,vv,ff(%g,%g,%g) \n", cv,cf, vf,vv,ff );
             }
         }
+        */
         #pragma omp for
         for(int i=0;i<nPoint; i++ ){
+            move_i_MD( i, dt, 1.0 );
+            //move_i_MD( i, dt, cdamp );
+            /*
             if(bDynamic){ 
                 move_i_MD( i, dt, cdamp );
             }else{
                 vel[i].f = vel[i].f*cv  + forces[i].f*cf;  // FIRE
                 move_i_MD( i, dt, 1.0 );
             }
+            */
         }
         //#pragma omp barrier
         #pragma omp single

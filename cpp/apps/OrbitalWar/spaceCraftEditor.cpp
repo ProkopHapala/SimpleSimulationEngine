@@ -78,11 +78,12 @@ bool bRun = false;
 void runSim( OrbSim_f& sim, int niter=100 ){
     long t0 = getCPUticks();
     if(bRun){
+        /*
         for(int itr=0; itr<niter; itr++){
             sim.cleanForce();   
             //sim.evalTrussForces_neighs();
-            //sim.evalTrussForces_neighs2();
-            sim.evalTrussForces_bonds();
+            sim.evalTrussForces_neighs2();
+            //sim.evalTrussForces_bonds();
             //sim.evalTrussCollisionImpulses_bonds(0.5);
             //sim.evalTrussCollisionImpulses_bonds(1.0);
             //sim.evalTrussCollisionImpulses_bonds(0.1);
@@ -94,12 +95,15 @@ void runSim( OrbSim_f& sim, int niter=100 ){
             sim.move_MD( 1e-3, 1e-8 );
             //sim.move_GD( 1e-7 );
         }
+        */
+        //sim.run( niter, 1e-3, 1e-8 );
         //sim.run( niter, 1e-3, 1e-4 );
         //sim.run_omp( niter, false, 1e-3, 1e-4 );
-        //sim.run_omp( niter, true, 1e-3, 1e-5 );
+        sim.run_omp( niter, true, 1e-3, 1e-5 );
         double T = (getCPUticks()-t0)*1e-6;
         printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
     }
+    
     sim.evalBondTension();
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
