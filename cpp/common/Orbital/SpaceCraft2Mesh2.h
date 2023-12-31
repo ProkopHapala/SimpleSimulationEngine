@@ -23,12 +23,12 @@ using namespace SpaceCrafting;
 namespace Mesh{
 
 void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
-    {
-        printf("#====== Materials \n");      for(const Material*      o: shop.materials.vec     ){  o->print();    }
-        //printf("#====== PanelMaterials \n"); for(const PanelMaterial* o: shop.panelMaterials.vec){  o->print();    }
-        printf("#====== StickMaterials \n"); for(const StickMaterial* o: shop.stickMaterials.vec){  o->print();  }
-        //exit(0);
-    }
+    // {
+    //     printf("#====== Materials \n");      for(const Material*      o: shop.materials.vec     ){  o->print();    }
+    //     //printf("#====== PanelMaterials \n"); for(const PanelMaterial* o: shop.panelMaterials.vec){  o->print();    }
+    //     printf("#====== StickMaterials \n"); for(const StickMaterial* o: shop.stickMaterials.vec){  o->print();  }
+    //     //exit(0);
+    // }
     printf( "exportSim() START \n" );
     int np = mesh.verts.size();
     int nb = mesh.edges.size();
@@ -43,7 +43,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     int nneigh_hist[nneighmax+1];
     for(int i=0; i<=nneighmax; i++){ nneigh_hist[i]=0; }
     for(int i=0; i<np; i++){ nneigh_hist[ nneighs[i] ]++; }
-    for(int i=0; i<=nneighmax; i++){ printf( "exportSim() nneigh_hist[%i] %i \n", i, nneigh_hist[i] ); }
+    //for(int i=0; i<=nneighmax; i++){ printf( "exportSim() nneigh_hist[%i] %i \n", i, nneigh_hist[i] ); }
     //exit(0);
 
     //printf( "exportSim() nneighmax %i \n", nneighmax );

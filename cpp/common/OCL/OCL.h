@@ -177,7 +177,7 @@ class OCLtask{ public:
         for(int i=0;i<dim;i++){
             int nL=local_[i]; if(nL<1){nL==1;}
             global_[i] = (((int)(global_[i]/nL))+1)*nL;
-            printf("OCLtask roundSizes[%li/%i] \n", global_[i], nL, global_[i]%nL );
+            //printf("OCLtask roundSizes[%li/%i] \n", global_[i], nL, global_[i]%nL );
         }
     }
 

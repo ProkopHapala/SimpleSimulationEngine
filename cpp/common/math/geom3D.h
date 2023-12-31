@@ -52,7 +52,7 @@ inline double circle_3point( Vec3d A, Vec3d B, Vec3d C, Vec3d& center, Vec3d& a,
     b.add_mul( a, -xc );
     double yc = b.normalize();
     // solve for y-coordinate of the center of the circle
-    double y  = (xa*xa - yc*yc - xc*xc)/(2*yc);
+    double y  = (xa*xa - yc*yc - xc*xc)/(-2*yc);
     center.add_mul( b, y );   // center of the circle
     double r2 =  xa*xa + y*y;         // radius of the circle
     return sqrt(r2);

@@ -72,29 +72,34 @@ OrbSim_f sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 //char str[8096];
 double elementSize  = 5.;
+bool bRun = false;
 
 // Render 
 void runSim( OrbSim_f& sim, int niter=100 ){
     long t0 = getCPUticks();
-    /*
-    for(int itr=0; itr<niter; itr++){
-        sim.cleanForce();   
-        //sim.evalTrussForce_neighs();
-        sim.evalTrussForce_neighs2();
-        //sim.evalTrussForce_bonds();
-        //sim.applyCentrifugalForce( {0.,0.,0.}, {0.0,0.0,1.0}, 1e-2 );
-        sim.applyForceRotatingFrame( {0.,0.,0.}, {0.0,0.0,1.0}, 0.1 );
-        //sim.move_GD( 0.00001 );
-        sim.move_MD( 1e-3, 1e-5 );
-        //sim.move_GD( 1e-7 );
+    if(bRun){
+        for(int itr=0; itr<niter; itr++){
+            sim.cleanForce();   
+            //sim.evalTrussForces_neighs();
+            //sim.evalTrussForces_neighs2();
+            sim.evalTrussForces_bonds();
+            //sim.evalTrussCollisionImpulses_bonds(0.5);
+            //sim.evalTrussCollisionImpulses_bonds(1.0);
+            //sim.evalTrussCollisionImpulses_bonds(0.1);
+            sim.applyForceCentrifug( {0.,0.,0.}, {0.0,0.0,1.0}, 5e-2 );
+            //sim.applyForceRotatingFrame( {0.,0.,0.}, {0.0,0.0,1.0}, 0.1 );
+            //sim.move_GD( 0.00001 );
+            //sim.move_MD( 1e-3, 1e-5 );
+            //sim.move_MD( 1e-3, 1e-8 );
+            sim.move_MD( 1e-3, 1e-8 );
+            //sim.move_GD( 1e-7 );
+        }
+        //sim.run( niter, 1e-3, 1e-4 );
+        //sim.run_omp( niter, false, 1e-3, 1e-4 );
+        //sim.run_omp( niter, true, 1e-3, 1e-5 );
+        double T = (getCPUticks()-t0)*1e-6;
+        printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
     }
-    */
-    //sim.run( 100, 1e-3, 1e-4 );
-    //sim.run_omp( 100, false, 1e-3, 1e-4 );
-    //sim.run_omp( 100, true, 1e-3, 1e-4 );
-    double T = (getCPUticks()-t0)*1e-6;
-    //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
-
     sim.evalBondTension();
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
@@ -432,8 +437,9 @@ void SpaceCraftEditorApp::draw(){
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
     // Render simulation
+    glLineWidth(0.5); 
     runSim( sim );
-    glLineWidth(0.5); renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 
     //if(glo_truss) glCallList(glo_truss);
     //if(glo_ship ) glCallList(glo_ship);
@@ -558,6 +564,7 @@ void SpaceCraftEditorApp::eventHandling ( const SDL_Event& event  ){
                     //reloadShip( );
                     onSelectLuaShipScript.GUIcallback(lstLuaFiles);
                     break;
+                case SDLK_SPACE: bRun = !bRun; break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:

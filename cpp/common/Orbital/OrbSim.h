@@ -71,6 +71,11 @@ class OrbSim_f : public Picker { public:
     //Quat4f omega{0.0f,0.0f,1.0f,0.05f}; // angular velocity, (xyz=axisxyz,w=magnitude)
     Quat4f omega{0.0f,0.0f,1.0f,0.05f};
 
+    //float maxAcc = 1e+6;
+    float maxAcc = 1.0;
+    float collision_damping = 0.1;
+    //float collision_damping = 1.1;   // if collision_damping > 1.0 then it is like successive over-relaxation (SOR) method ? https://en.wikipedia.org/wiki/Successive_over-relaxation
+
     float dt      = 2e-3;
     //float damping = 1e-4;
     float damping  = 0.05;
@@ -219,13 +224,67 @@ class OrbSim_f : public Picker { public:
     void evalTrussForces_bonds(){
         for(int i=0; i<nBonds; i++){
             int2  b = bonds[i];
-            Vec3f d = points[b.y].f - points[b.x].f;
-            float li = d.norm();
+            const Quat4f& pi = points[b.x];
+            const Quat4f& pj = points[b.y];
+            Vec3f d = pj.f - pi.f;
+            float l = d.norm();
             //float fi,ei = springForce( li, fi, bparams[i] );
             float k = 1e+6;
-            d.mul( (k*(li-bparams[i].x)/li) );
+            float f = k*(l-bparams[i].x);
+
+            // Limit acceleration force to improve stability   -- it does not seem to help
+            // float mmin = (pi.w < pj.w) ? pi.w : pj.w;
+            // if( (fabs(f)/mmin) > maxAcc ){   // here it would be more efficient to use momentum rather than force 
+            //     f = maxAcc*mmin;
+            // }
+
+            // collision damping
+            //float vi   = d.dot( vel[b.x].f );
+            //float vj   = d.dot( vel[b.y].f );
+            //float dv   = vj   - vi;
+            float invL = 1./l;
+            float dv   = d.dot( vel[b.y].f - vel[b.x].f )*invL;
+            float mcog = pj.w + pi.w;
+            float imp  = collision_damping * pi.w*pi.w*dv/mcog;
+
+            d.mul( (imp + f)*invL );          
             forces[b.x].f.add(d);
             forces[b.y].f.sub(d);
+        } 
+    }
+
+    void evalTrussCollisionImpulses_bonds( float rate=1.0 ){
+        // Collision forces are based on momentum-conserving impulses, it does not need to know anything about the interaction potential (e.g. spring constants)
+        for(int i=0; i<nBonds; i++){
+            int2  b = bonds[i];
+            const Quat4f& pi = points[b.x];
+            const Quat4f& pj = points[b.y];
+            Vec3f d  = pi.f - pj.f;
+            float l  = d.normalize();
+            float vi = d.dot( vel[b.x].f );
+            float vj = d.dot( vel[b.y].f );
+            float mcog = pj.w + pi.w;
+            float dv   = vj   - vi;
+            //float vcog = (pi.w*vi + pj.w*vj)/(pi.w+pj.w);
+            // ---- Inelastic collision
+            //float dvi  = vcog - vi;
+            //float imp1 = dvi*pi.w;
+            // Analytical Derivation:
+            // dvi = ( pi.w*vi + pj.w*vj                        )/(pi.w+pj.w) - (pi.w+pj.w)*vi/(pi.w+pj.w)
+            //     = ( pi.w*vi + pj.w*vj -  pi.w*vi - pj.w*vi   )/(pi.w+pj.w)
+            //     = (           pj.w*vj            - pj.w*vi   )/(pi.w+pj.w)
+            //     = (           pj.w*(vj-vi)                   )/(pi.w+pj.w)
+            // imp1 = dvi*pi.w = pi.w*pj.w*(vj-vi)/(pi.w+pj.w)
+            float imp = pi.w*pi.w*dv/mcog;
+            //if( i==146 ){ // Debug
+            //    float dvj  = vcog - vj;
+            //    float imp2 = dvj*pj.w; // shoould be the same as imp1 
+            //    printf( "evalTrussCollisionForces_bonds[%i] imp1 %g imp2 %g \n", i, imp1, imp2  );
+            //}
+            // apply force to points
+            d.mul( imp*rate );
+            forces[b.x].f.add( d );
+            forces[b.y].f.sub( d );
         } 
     }
 

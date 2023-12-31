@@ -186,7 +186,22 @@ void SpaceCraftEditorApp::draw(){
 
     runSim( sim );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
- 
+
+    // draw ring nodes
+    glLineWidth(3.0);
+    glColor3f(1.0,0.0,1.0);
+    for(const Ring* o: theSpaceCraft->rings){
+
+        Draw3D::drawMatInPos( o->pose.rot, o->pose.pos, {100.,100.,100.} );
+
+        Node** nds = (Node**)&o->nodes;
+        for( int i=0; i<4; i++ ){
+            //printf( "nds[%i] %li \n", i, (long)nds[i] );
+            if( nds[i] == 0 ) continue;
+             Draw3D::drawPointCross( nds[i]->pos, 10.0 );
+        }
+    }
+
     picker.hray = (Vec3d)(cam.rot.c);
     picker.ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     glLineWidth(5.0);

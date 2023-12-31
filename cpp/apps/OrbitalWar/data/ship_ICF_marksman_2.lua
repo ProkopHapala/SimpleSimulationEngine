@@ -32,24 +32,29 @@ print( "#------ Lua:Girders" )
 
 print( "Lua:Nodes:" , n0,nLf,nRt,nDw,nUp,nBk,nFw )
 
-defGirderWidth = 4.0
-
 g1_st = { st1, st2, st3, st4 };
 
 print( "Lua:g1_st:" , st1, st2, st3, st4 )
 
---         from to  Up nseg,mseg   width, hegith
-gLf = Girder( n0, nLf, zvec, 10, 2, {defGirderWidth,defGirderWidth}, "Steel", g1_st )
-gRt = Girder( n0, nRt, zvec, 10, 2, {defGirderWidth,defGirderWidth}, "Steel", g1_st )
-gDw = Girder( n0, nDw, xvec, 20, 2, {defGirderWidth,defGirderWidth}, "Steel", g1_st )
-gUp = Girder( n0, nUp, xvec, 20, 2, {defGirderWidth,defGirderWidth}, "Steel", g1_st )
-gBk = Girder( n0, nBk, xvec, 30, 2, {8.0,8.0}, "Steel", g1_st )
-gFw = Girder( n0, nFw, xvec, 80, 2, {8.0,8.0}, "Steel", g1_st )
+Rg1 = 6.0
+Rg2 = 3.0
+Rg3 = 2.0
 
-gWdw = Girder( nDw, nFw, xvec, 70, 2, {defGirderWidth,defGirderWidth}, "Steel", g1_st )
-gWup = Girder( nUp, nFw, xvec, 70, 2, {defGirderWidth,defGirderWidth}, "Steel", g1_st )
+--         from to  Up nseg,mseg   width, hegith
+gFw = Girder( n0, nFw, xvec, 80, 2, {Rg1,Rg1}, "Steel", g1_st )
+gBk = Girder( n0, nBk, xvec, 30, 2, {Rg1,Rg1}, "Steel", g1_st )
+gDw = Girder( n0, nDw, xvec, 20, 2, {Rg1,Rg1}, "Steel", g1_st )
+gUp = Girder( n0, nUp, xvec, 20, 2, {Rg1,Rg1}, "Steel", g1_st )
+
+gLf  = Girder( n0, nLf, zvec, 10, 2, {Rg2,Rg2}, "Steel", g1_st )
+gRt  = Girder( n0, nRt, zvec, 10, 2, {Rg2,Rg2}, "Steel", g1_st )
+
+gWdw = Girder( nDw, nFw, xvec, 70, 2, {Rg3,Rg3}, "Steel", g1_st )
+gWup = Girder( nUp, nFw, xvec, 70, 2, {Rg3,Rg3}, "Steel", g1_st )
 
 print( "#------ Lua:Ropes" )
+
+-- ToDo: Ropes should be pre-strained (pre-tensioned) to avoid slack, we should set pre-strain force for each rope, the leght should be calculated from the rope material properties and pre-strain force
 
 --          type     thick[mm]
 Rope(nBk,nLf, 25.,4, "Kevlar" );
@@ -89,7 +94,7 @@ print( "#------ Lua:Rings & Sliders" )
 
 -- r_pitch = Ring( {8.0,0.0,0.0}, xvec, yvec, 64, 80.0, {16.0,4.0}, "Steel", g1_st )
 
-r_pitch = Ring2( {gBk,gUp,gDw,gBk}, {0.3,0.3,0.3,-1.0}, {1.0,0.0,0.0}, nseg, {4.0,4.0}, "Steel", g1_st )
+r_pitch = Ring2( {gBk,gUp,gDw,gBk}, {0.2,0.4,0.4,-1.0}, {1.0,0.0,0.0}, 64, {16.0,4.0}, "Steel", g1_st )
 
 --      node1,2, up,  nseg    R     {width,height}
 --r_roll  = Ring( {0.0,0.0,8.0}, zvec, xvec, 64, 55.0, {4.0,4.0}, "Steel", g1_st )
