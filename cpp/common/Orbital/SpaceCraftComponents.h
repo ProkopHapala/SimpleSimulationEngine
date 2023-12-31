@@ -185,8 +185,8 @@ class ShipComponent : public Object { public:
     // char name[NAME_LEN];
 	double mass;           // [kg]
 	//RigidBody pose;
-    Vec2i pointRange;  // index of start and end in Truss
-    Vec2i stickRange; // --,,--
+    Vec2i pointRange{-1,-1}; // index of start and end in Truss
+    Vec2i stickRange{-1,-1}; // --,,--
 
     virtual ~ShipComponent(){};
     virtual void print(bool bShort=false)const{ if(bShort){printf("ShipComponent(id=%i)",id);}else{
@@ -227,6 +227,7 @@ class StructuralComponent : public ShipComponent { public:
     virtual int pointAlong( double c, int side, Vec3d* pout=0 ) const = 0;
     virtual int sideToPath( int side, int* inds ) const =0;
 
+    virtual void update_nodes(); 
 };
 
 class Node : public Object{ public:
@@ -245,12 +246,19 @@ class Node : public Object{ public:
     virtual void print(bool bShort=false)const{  if(bShort){printf("Node(id=%i)",id);}else{ 
         printf("Node(id=%i) iv=%i pos(%g,%g,%g) \n", id, ivert, pos.x,pos.y,pos.z ); if(boundTo){printf(" -- boundTo(along.x=%i calong=%g ", along.x, calong ); boundTo->print(true); printf(")\n");} } 
     }
+    virtual int update_vert(){ if(boundTo){ int i0=boundTo->pointRange.x; if(i0>=0){ ivert=along.x+i0; }else{ ivert=-1; }; }; return ivert; };
 };
 
 void StructuralComponent::print(bool bShort)const{ 
     if(bShort){ printf("StructuralComponent(id=%i)",id); }else{
         printf("StructuralComponent(id=%i) nodes(%i,%i,%i,%i) \n", id, nodes.x->id,nodes.y->id,nodes.z->id,nodes.w->id );
     } 
+}
+void StructuralComponent::update_nodes(){ 
+    if(nodes.x)nodes.x->update_vert(); 
+    if(nodes.y)nodes.y->update_vert(); 
+    if(nodes.z)nodes.z->update_vert(); 
+    if(nodes.w)nodes.w->update_vert(); 
 }
 
 

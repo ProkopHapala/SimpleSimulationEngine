@@ -382,10 +382,15 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     int i=0;
     mesh.block();
     int ip0 = mesh.verts.size();
-    for(const Node* o: craft.nodes){
-        mesh.vert( o->pos );
+    for(Node* o: craft.nodes){
+        // the bound nodes should not be inserted as a new verts, but rather as a reference to existing verts
+        if( o->boundTo == 0 ){ 
+            o->ivert = mesh.verts.size();
+            mesh.vert( o->pos );
+        }
     }
     for(Rope* o: craft.ropes){
+        o->update_nodes();
         mesh.block();
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
         mesh.rope( o->nodes.x->id,o->nodes.y->id, o->face_mat, o->nseg );
@@ -395,11 +400,12 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     }
     for(Girder* o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
+        o->update_nodes(); // if girder bound to BoundNode, the vert indexes may need to be updated
         mesh.block();
         girder1( mesh, o->nodes.x->pos, o->nodes.y->pos, o->up, o->nseg, o->wh.a, o->st );
-        girder1_caps( mesh, o->nodes.x->id, o->nodes.y->id, o->st.x );
+        girder1_caps( mesh, o->nodes.x->ivert, o->nodes.y->ivert, o->st.x );
         Quat4i& b = mesh.blocks.back();
-        o->pointRange  = {b.x,(int)mesh.verts.size()};
+        o->pointRange = {b.x,(int)mesh.verts.size()};
         o->stickRange = {b.y,(int)mesh.edges.size()};
         //o.print();
         //printf( "BuildCraft_truss() girder.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
@@ -408,6 +414,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     // --- Rings
     i=0;
     for(Ring* o: craft.rings){
+        o->update_nodes();
         mesh.block();
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
         wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );

@@ -122,9 +122,9 @@ void reloadShip( const char* fname  ){
     sim.makeKrenels_Orb( "./common_resources/cl" );
     sim.initCLBuffsOrb(  );
     
-    sim.setup_test_enque();
-    sim.setup_blur();
-    sim.test_enque();
+    //sim.setup_test_enque();
+    //sim.setup_blur();
+    //sim.test_enque();
 
     sim.damping = 1e-5; sim.dt = 1e-3; // must be here before sim.setup_evalTrussForce2();
     sim.setup_evalTrussForce1();

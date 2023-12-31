@@ -37,18 +37,26 @@ Slab  { Vec3d dir; double cmin,cmax; }
 */
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+inline double circle_3point( Vec3d A, Vec3d B, Vec3d C, Vec3d& center, Vec3d& a, Vec3d& b ){
+    // we find a plane and choose coordinate with origin in between A,B, with AB along x-axis
+    // then the center of the circle is on the y-axis (x=0) bisecting AB segment, we only need to find its y coordinate (y)
+    //   xa^2 +     y ^2 = R   // condition for point A on the circle
+    //   xc^2 + (yc-y)^2 = R   // condition for point C on the circle
+    // we solve this system of equations to find y
+    // solution is y = (xa^2 - xc^2 - yc^2 )/(2*yc)
+    center = (A+B)*0.5;
+    a = B-A;  double xa = a.normalize()/2;  // vector along x-axis
+    // vector along y-axis
+    b = C-center;                               
+    double xc = b.dot(a);
+    b.add_mul( a, -xc );
+    double yc = b.normalize();
+    // solve for y-coordinate of the center of the circle
+    double y  = (xa*xa - yc*yc - xc*xc)/(2*yc);
+    center.add_mul( b, y );   // center of the circle
+    double r2 =  xa*xa + y*y;         // radius of the circle
+    return sqrt(r2);
+}
 
 
 inline Vec3d cog_of_points ( int n, Vec3d * points ){ Vec3d c;  c.set(0.0); for(int i=0;i<n; i++){ c.add(points[i]); }  c.mul(1.0/n); return c; }

@@ -50,6 +50,8 @@ class SpaceCraft : public CatalogItem { public:
 	// Truss * coarse = NULL;
 	// Truss * fine   = NULL;
 
+    std::vector<ShipComponent*>  build_order; // we need to know order of building because structural components can be attached to nodes bound  to previous components. => the mesh of the previous component must be already built so we can pick proper vertex to attach to
+
 	// aux
 	int pickedTyp = -1;
 

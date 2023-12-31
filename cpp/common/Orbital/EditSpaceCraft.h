@@ -241,6 +241,42 @@ int l_Ring    (lua_State * L){
     return 1;
 };
 
+// this ring is attached to girders by 3-4 nodes, 3 points define a circle
+// Ring( [g1,g2,g3,g4], [c1,c1,c1,c1], p0, nseg, wh={4.0,4.0}, "Steel", g1_st )
+int l_Ring2    (lua_State * L){
+    //Lua::dumpStack(L);
+    Ring* o = new Ring();
+    int   gs[4];
+    float cs[4] ;
+    Lua::getLuaArr( L,1, gs );
+    Lua::getLuaArr( L,2, cs );
+    Vec3d p0; Lua::getVec3(L,3, p0 );
+    // Make nodes bound to nodes to attach ring to girders
+    Node* nd[4];
+    for(int i=0; i<4; i++){ 
+        if(gs[i]<0) continue;
+        nd[i] = new Node();
+        nd[i]->calong = cs[i];
+        nd[i]->boundTo = theSpaceCraft->getStructuralComponent( gs[i], (int)ComponetKind::Girder );
+        nd[i]->updateBound( p0 );
+        nd[i]->id = theSpaceCraft->nodes.size(); 
+        theSpaceCraft->nodes.push_back( nd[i] ); 
+    }
+    //o->R = circle_3point( nd[0]->pos, nd[1]->pos, nd[2]->pos, o->pose.pos, o->pose.rot.c, o->pose.rot.b );
+    o->nseg = Lua::getInt (L,4);
+              Lua::getVec2(L,5, o->wh );
+    const char * matn = Lua::getString(L,7);
+              Lua::getVec4i(L,6, o->st );
+    o->face_mat = workshop.panelMaterials.getId( matn );
+    o->id     = theSpaceCraft->rings.size();
+    if(verbosity>1) o->print();
+    theSpaceCraft->rings.push_back( o );
+    lua_pushnumber(L, o->id);
+    return 1;
+};
+
+
+
 // Radiator( g5,0.2,0.8, g1,0.2,0.8, 1280.0 )
 int l_Radiator (lua_State * L){
     Radiator* o = new Radiator();

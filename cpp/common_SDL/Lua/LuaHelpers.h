@@ -104,6 +104,20 @@ namespace Lua{
         return s;
     }
 
+    void getLuaArr( lua_State* L, int n, float * arr, int idx=-1 ){
+        luaL_checktype(L, idx, LUA_TTABLE);
+        for(int i=0; i<n; i++){
+            lua_rawgeti(L, idx, i+1); arr[i] = lua_tonumber(L, -1); lua_pop(L, 1);
+        }
+    }
+
+    void getLuaArr( lua_State* L,  int n, int * arr, int idx=-1 ){
+        luaL_checktype(L, idx, LUA_TTABLE);
+        for(int i=0; i<n; i++){
+            lua_rawgeti(L, idx, i+1); arr[i] = floor(lua_tonumber(L, -1)); lua_pop(L, 1);
+        }
+    }
+
     void getVec4( lua_State* L, int idx, Quat4d& vec){
         // universal helper function to get Vec3 function argument from Lua to C++ function
         luaL_checktype(L, idx, LUA_TTABLE);
