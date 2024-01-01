@@ -776,6 +776,64 @@ void StructuralComponent::updateSlidersPaths( bool bSelf, bool bShared, Quat4f* 
     //if(nodes.w)nodes.w->update_vert(); 
 }
 
+
+
+
+
+
+double intersect_RingGirder( const Ring* ring, const StructuralComponent* girder, Vec3d* pout=0, bool bError=true ){
+    Vec3d p0 = girder->nodes.x->pos - ring->pose.pos;
+    Vec3d p1 = girder->nodes.y->pos - ring->pose.pos;
+    double R = ring->R; // ToDo: we can add width of wheel here
+    // -- transform to ring pose coordinate system
+    Vec2d q0,q1;
+    q0.x = ring->pose.rot.a.dot( p0 ); 
+    q0.y = ring->pose.rot.b.dot( p0 );
+    q1.x = ring->pose.rot.a.dot( p1 );
+    q1.y = ring->pose.rot.b.dot( p1 );
+    q1.sub( q0 );
+    // -- find intersection of line with circle of radius R centered at zero
+    double t1,t2;
+    double a =   q1.norm2();
+    double b = 2*q0.dot(q1);
+    double c =   q0.norm2() - R*R;
+    //bool which = 
+    quadratic_roots( a, b, c,  t1, t2 );
+    //printf( "t1,t2 = %g,%g \n", which, t1, t2 );
+    // -- find which root is in range
+    double t = -1;
+    if(       (t1>0) && (t1<1) ){
+        if(bError){ if( (t2<0)||(t2>1) ){ printf( "WARRNING in intersect_RingGirder() both roots(%g,%g) are in range(0,1) \n", t1,t2 ); exit(0); } } 
+        t=t1;
+    }else if( (t2>0) && (t2<1) ){
+        t=t2;
+    }else if (bError){ printf( "ERROR in intersect_RingGirder() none of roots(%g,%g) in range(0,1) \n", t1,t2 ); exit(0); }
+    if(pout){ pout->set_lincomb( 1-t, p0, t, p1 ); }
+    return t;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*
 class Slider_old : public Node { public:
     // allow slide a node over a girder

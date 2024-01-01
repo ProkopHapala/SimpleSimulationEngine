@@ -408,17 +408,31 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     }
     for(Rope* o: craft.ropes){
         o->update_nodes();
-        Node* nd1 = o->nodes.x;
-        Node* nd2 = o->nodes.y;
-        if( (nd1->boundTo!=0)||(nd2->boundTo!=0) ){ 
-            printf("Bound_Rope[%i] to mesh\n", o->id );
-            printf("  node.x ivert=%i pos(%g,%g,%g) boundTo: \n", nd1->ivert, nd1->pos.x,nd1->pos.y,nd1->pos.z ); if(nd1->boundTo)nd1->boundTo->print();
-            printf("  node.y ivert=%i pos(%g,%g,%g) boundTo: \n", nd2->ivert, nd2->pos.x,nd2->pos.y,nd2->pos.z ); if(nd2->boundTo)nd2->boundTo->print();
-        }
-        mesh.block();
+        // Node* nd1 = o->nodes.x;
+        // Node* nd2 = o->nodes.y;
+        // if( (nd1->boundTo!=0)||(nd2->boundTo!=0) ){ 
+        //     printf("Bound_Rope[%i] to mesh\n", o->id );
+        //     printf("  node.x ivert=%i pos(%g,%g,%g) boundTo: \n", nd1->ivert, nd1->pos.x,nd1->pos.y,nd1->pos.z ); if(nd1->boundTo)nd1->boundTo->print();
+        //     printf("  node.y ivert=%i pos(%g,%g,%g) boundTo: \n", nd2->ivert, nd2->pos.x,nd2->pos.y,nd2->pos.z ); if(nd2->boundTo)nd2->boundTo->print();
+        // }
+        mesh.block(); Quat4i& b = mesh.blocks.back();
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
         mesh.rope( o->nodes.x->ivert,o->nodes.y->ivert, o->face_mat, o->nseg );
-        Quat4i& b = mesh.blocks.back();
+        
+        
+        // Rope Dampers ( to dampe perpendicular oscillations )
+        double damper_length = 10.0;
+        Vec3d d = o->nodes.y->pos - o->nodes.x->pos; d.normalize();
+        Vec3d up,lf; d.getSomeOrtho( up, lf );
+        up.mul( damper_length );
+        for(int i=0; i<o->nseg-1; i++){
+            int ov = b.x+i;
+            int v  = mesh.vert( mesh.verts[ ov ].pos + up ); // duplicate the vert
+            mesh.edge( ov,v, o->face_mat );
+        }
+        
+
+        
         o->pointRange = {b.x,(int)mesh.verts.size()};
         o->stickRange = {b.y,(int)mesh.edges.size()};
     }
@@ -426,6 +440,13 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     i=0;
     for(Ring* o: craft.rings){
         o->update_nodes();
+
+        Node** nd = (Node**)&o->nodes;
+        printf("Ring[%i] to mesh\n", o->id );
+        for(int i=0; i<4; i++){
+            Node* n = nd[i]; printf("  node[%i] ivert=%i pos(%g,%g,%g) boundTo: \n", i, n->ivert, n->pos.x,n->pos.y,n->pos.z ); if(n->boundTo)n->boundTo->print();
+        }
+
         mesh.block();
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );
         wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );

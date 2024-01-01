@@ -201,7 +201,7 @@ inline bool quadratic_roots( double a, double b, double c,  double& x1, double& 
     double D     = b*b - 4*a*c;
     if (D < 0) return false;
     double sqrtD = sqrt( D );
-    double ia    = -0.5d/a;
+    double ia    = -0.5/a;
     x1         = ( b - sqrtD )*ia;
     x2         = ( b + sqrtD )*ia;
     //printf( "  a,b,c, %f %f %f  x1,x2 %f %f \n", a,b,c, x1, x2 );

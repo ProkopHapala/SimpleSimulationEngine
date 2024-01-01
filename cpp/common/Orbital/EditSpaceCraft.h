@@ -206,16 +206,16 @@ int l_Rope2 (lua_State * L){
     Node* nd[2];
     Vec3d p0 = (theSpaceCraft->girders[gs[0]]->nodes.x->pos + theSpaceCraft->girders[gs[0]]->nodes.y->pos 
              +  theSpaceCraft->girders[gs[1]]->nodes.x->pos + theSpaceCraft->girders[gs[1]]->nodes.y->pos)*0.25;
-    printf( "l_Rope2() p0 (%g,%g,%g)\n", p0.x, p0.y, p0.z );
+    //printf( "l_Rope2() p0 (%g,%g,%g)\n", p0.x, p0.y, p0.z );
     for(int i=0; i<2; i++){ 
         if       (cs[i]<0){  // start point
-            printf( "l_Rope2() node[%i] is start \n", i  );
+            //printf( "l_Rope2() node[%i] is start \n", i  );
             nd[i] = theSpaceCraft->girders[gs[i]]->nodes.x;
         }else if (cs[i]>1){  // end point
-        printf( "l_Rope2() node[%i] is end \n", i  );
+            //printf( "l_Rope2() node[%i] is end \n", i  );
             nd[i] = theSpaceCraft->girders[gs[i]]->nodes.y;
         }else{   // along girder
-            printf( "l_Rope2() node[%i] is bound \n", i  );
+            //printf( "l_Rope2() node[%i] is bound \n", i  );
             nd[i] = new Node();
             nd[i]->boundTo = theSpaceCraft->getStructuralComponent( gs[i], (int)ComponetKind::Girder );
             nd[i]->calong = cs[i];
@@ -313,7 +313,7 @@ int l_Ring2    (lua_State * L){
     float cs[4] ;
     Lua::getLuaArr( L, 4, gs, 1 );
     Lua::getLuaArr( L, 4, cs, 2 );
-    for(int i=0; i<4; i++){ printf( "l_Ring2() node[%i](g=%i,c=%g)\n", i, gs[i], cs[i] ); }
+    //for(int i=0; i<4; i++){ printf( "l_Ring2() node[%i](g=%i,c=%g)\n", i, gs[i], cs[i] ); }
     Vec3d p0; Lua::getVec3(L,3, p0 );
     // Make nodes bound to nodes to attach ring to girders
     Slider* nd[4];
@@ -324,24 +324,31 @@ int l_Ring2    (lua_State * L){
         if(cs[i]>0){
             nd[i]->calong = cs[i];
             nd[i]->updateBound( p0 );
+            printf( "l_Ring2() node[%i] calong %g pos(%g,%g,%g) \n", i, nd[i]->calong, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z );
+        }else{
+            nd[i]->calong = -1.0;  // to be calculated later
         }
         nd[i]->id = theSpaceCraft->nodes.size(); 
         theSpaceCraft->nodes.push_back( nd[i] ); 
         theSpaceCraft->sliders.push_back( nd[i] );
         ((Slider**)&(o->nodes))[i] = nd[i];
     }
+    // Warrning 1: what if nodes->pos are not yet defined (which is the case for BoundNodes)
     o->R = circle_3point( nd[1]->pos, nd[2]->pos, nd[0]->pos, o->pose.pos, o->pose.rot.a, o->pose.rot.b );   o->pose.rot.c.set_cross( o->pose.rot.b, o->pose.rot.a );
     //printf("o->pose.pos");   print( o->pose.pos );
     //printf("o->pose.rot.c"); print( o->pose.rot.c );
     //printf("o->pose.rot.b"); print( o->pose.rot.b );
-    // ToDo: remaining nodes ( with cs[i]<0 ) should be evaluated to find the best position for them accoordign to the circle shape
+    // now when we know the ring pose we can calculate the position of the remaining nodes from intersection of the girders with the ring
     for(int i=0; i<4; i++){ 
+        if(gs[i]<0) continue;
         if(cs[i]<0){
-            //nd[i]->calong = 0.0;
-            //nd[i]->updateBound( p0 );
+            nd[i]->calong = intersect_RingGirder( o, (Girder*)nd[i]->boundTo, &nd[i]->pos, true );
+            nd[i]->updateBound( p0 );
+            printf( "l_Ring2() FINALIZED node[%i|id=%i] calong %g along(%i,%i) pos(%g,%g,%g) \n", i, nd[i]->id, nd[i]->calong, nd[i]->along.x, nd[i]->along.y, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z ); 
         }
     }
 
+    // ToDo: remaining nodes ( with cs[i]<0 ) should be evaluated to find the best position for them accoordign to the circle shape
     o->nseg = Lua::getInt (L,4);             printf( "l_Ring2() nseg %i\n",  o->nseg          );
               Lua::getVec2(L,5, o->wh );     printf( "l_Ring2() wh %g,%g\n", o->wh.x, o->wh.y );
     o->pose.pos.add_mul( o->pose.rot.c, -o->wh.y );
