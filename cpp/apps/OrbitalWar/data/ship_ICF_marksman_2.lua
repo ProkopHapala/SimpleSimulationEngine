@@ -11,11 +11,11 @@ print("BEGIN spaceship");
 print( "#------ Lua:StickMaterials" )
 
 --- long, perp, zigIn, zigOut
-st1  = StickMaterial( "GS1_long", "Steel", 100, 5 )
-st2  = StickMaterial( "GS1_perp", "Steel", 50,  3 )
-st3  = StickMaterial( "GS1_in",   "Steel", 40,  2 )
-st4  = StickMaterial( "GS1_out",  "Steel", 40,  2 )
--- stK1 = StickMaterial( "RK_1","Kevalr", 0.01, 0.001 )
+st1  = StickMaterial( "GS1_long", "Steel", 100, 5, 0.0 )
+st2  = StickMaterial( "GS1_perp", "Steel", 50,  3, 0.0 )
+st3  = StickMaterial( "GS1_in",   "Steel", 40,  2, 0.0 )
+st4  = StickMaterial( "GS1_out",  "Steel", 40,  2, 0.0 )
+-- stK1 = StickMaterial( "RK_1","Kevalr", 0.01, 0.001, 0.0 )
 
 print( "#------ Lua:Nodes" )
 
@@ -56,20 +56,39 @@ print( "#------ Lua:Ropes" )
 
 -- ToDo: Ropes should be pre-strained (pre-tensioned) to avoid slack, we should set pre-strain force for each rope, the leght should be calculated from the rope material properties and pre-strain force
 
---          type     thick[mm]
-Rope(nBk,nLf, 25.,4, "Kevlar" );
-Rope(nFw,nLf, 25.,4, "Kevlar" )
-Rope(nBk,nRt, 25.,4, "Kevlar" );
-Rope(nFw,nRt, 25.,4, "Kevlar" )
-Rope(nBk,nDw, 25.,4, "Kevlar" );
---Rope(nFw,nDw, 25.,4, "Kevlar" )
-Rope(nBk,nUp, 25.,4, "Kevlar");
---Rope(nFw,nUp, 25.,4, "Kevlar" )
 
-Rope(nLf,nDw, 25.,4, "Kevlar");
-Rope(nLf,nUp, 25.,4, "Kevlar");
-Rope(nRt,nDw, 25.,4, "Kevlar");
-Rope(nRt,nUp, 25.,4, "Kevlar");
+preS1 = 0.001
+--          type     thick[mm]
+Rope(nBk,nLf, 25.,4, preS1,  "Kevlar" );
+Rope(nFw,nLf, 25.,4, preS1, "Kevlar" )
+Rope(nBk,nRt, 25.,4, preS1, "Kevlar" );
+Rope(nFw,nRt, 25.,4, preS1, "Kevlar" )
+Rope(nBk,nDw, 25.,4, preS1, "Kevlar" );
+--Rope(nFw,nDw, 25.,4, preS1, "Kevlar" )
+Rope(nBk,nUp, 25.,4, preS1, "Kevlar");
+--Rope(nFw,nUp, 25.,4, preS1, "Kevlar" )
+
+Rope(nLf,nDw, 25.,4, preS1, "Kevlar");
+Rope(nLf,nUp, 25.,4, preS1, "Kevlar");
+Rope(nRt,nDw, 25.,4, preS1, "Kevlar");
+Rope(nRt,nUp, 25.,4, preS1, "Kevlar");
+
+preS2 = 0.003
+
+Rope2( {gFw,gLf}, {0.5,2.0}, 25.,4, preS2, "Kevlar");
+Rope2( {gFw,gRt}, {0.5,2.0}, 25.,4, preS2, "Kevlar");
+Rope2( {gFw,gDw}, {0.5,2.0}, 25.,4, preS2, "Kevlar");
+Rope2( {gFw,gUp}, {0.5,2.0}, 25.,4, preS2, "Kevlar");
+
+Rope2( {gFw,gLf}, {0.25,2.0}, 25.,4, preS2, "Kevlar");
+Rope2( {gFw,gRt}, {0.25,2.0}, 25.,4, preS2, "Kevlar");
+Rope2( {gFw,gDw}, {0.25,2.0}, 25.,4, preS2, "Kevlar");
+Rope2( {gFw,gUp}, {0.25,2.0}, 25.,4, preS2, "Kevlar");
+
+Rope2( {gFw,gLf}, {0.75,2.0}, 25.,4, preS2, "Kevlar");
+Rope2( {gFw,gRt}, {0.75,2.0}, 25.,4, preS2, "Kevlar");
+Rope2( {gFw,gDw}, {0.75,2.0}, 25.,4, preS2, "Kevlar");
+Rope2( {gFw,gUp}, {0.75,2.0}, 25.,4, preS2, "Kevlar");
 
 print( "#------ Lua:BoundNodes and Girders" )
 

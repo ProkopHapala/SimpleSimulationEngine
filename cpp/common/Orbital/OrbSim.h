@@ -78,7 +78,8 @@ class OrbSim_f : public Picker { public:
 
     //float maxAcc = 1e+6;
     float maxAcc = 1.0;
-    float collision_damping = 0.1;
+    //float collision_damping = 0.1;
+    float collision_damping = 1.0;
     //float collision_damping = 1.1;   // if collision_damping > 1.0 then it is like successive over-relaxation (SOR) method ? https://en.wikipedia.org/wiki/Successive_over-relaxation
 
     float dt      = 2e-3;
@@ -302,24 +303,39 @@ class OrbSim_f : public Picker { public:
     }
 
     void evalEdgeVert( Vec3i b, float c, float K ){
+        // ToDo: perhaps we should interpolate it by B-spline to make the path more smooth
+        // ToDo: Apply Force in the direction of the edge, constrain perpendicular to the edge
+        // ToDo: Damping ( collision damping )
+        
         // fit vert to edge
+        const Quat4f& pa = points[b.x];
+        const Quat4f& pb = points[b.y];
+        const Quat4f& pc = points[b.z];
+        float mc = 1-c;
+        Vec3f d = pc.f - (pa.f*mc + pb.f*c);
+        //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( d, pc.f*1.0 );
+        
+        float invL = 1./d.norm();
+        float dv   = d.dot( vel[b.z].f - vel[b.x].f*mc - vel[b.y].f*c )*invL;
+        float mab  = pa.w*mc + pb.w*c;
+        float imp  = collision_damping * pc.w*mab*dv/( pc.w  + mab );
+
+        d.mul( K + imp*invL );       
+        //printf( "evalEdgeVert[%i,%i,%i] d(%g,%g,%g) c=%g \n", b.x,b.y,b.z, d.x,d.y,d.z, c );   
+        forces[b.x].f.add_mul(d,mc);
+        forces[b.y].f.add_mul(d, c);
+        forces[b.z].f.sub(d);
+
+        // Force
         // const Quat4f& pa = points[b.x];
-        // const Quat4f& pb = points[b.y];
         // const Quat4f& pc = points[b.z];
-        // float mc = 1-c;
-        // Vec3f d = (pa.f*mc + pb.f*c) - pc.f;
-        // d.mul( K*0.01 );          
-        // forces[b.x].f.add_mul(d,mc);
+        // Vec3f d = pc.f - pa.f;          
+        // // Damping
+        // //float dv   = d.dot( vel[b.x].f + vel[b.y].f - vel[b.z].f );
+        // d.mul( K );
+        // forces[b.x].f.add(d);
         // //forces[b.y].f.add_mul(d, c);
         // forces[b.z].f.sub(d);
-
-        const Quat4f& pa = points[b.x];
-        const Quat4f& pc = points[b.z];
-        Vec3f d = pc.f - pa.f;
-        d.mul( K );          
-        forces[b.x].f.add(d);
-        //forces[b.y].f.add_mul(d, c);
-        forces[b.z].f.sub(d);
     }
 
     void evalEdgeVerts(){

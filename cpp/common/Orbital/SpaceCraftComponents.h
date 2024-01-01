@@ -95,6 +95,7 @@ class StickMaterial : public CatalogItem { public:
     double damping;
     double Kpull,Kpush;    // [N/m] elastic modulus
     double Spull,Spush;    // [N]   Strenght
+    double preStrain=0.0;  // [1]   preStrain, how much shorter is the rest-length of the stick than its length at zero force (i.e. distance between nodes)
 
     void update( const Material* mat ){
         //area          = M_PI*diameter*diameter*0.25;
@@ -165,10 +166,11 @@ class Path{ public:
         i0 = (int)cur;
         i1 = i0+1;
         if(i1>=n){ if(closed){ i1=0; }else{ i1=n-1; } }
+        float c = cur-i0;
         i0 = ps[i0];
         i1 = ps[i1];
-        printf( "fromCur(%i,%i) \n", i0, i1 );
-        return cur-i0;
+        //printf( "fromCur(%i,%i) \n", i0, i1 );
+        return c;
     }
 
     inline void bindSharedPath( Path* path_ ){ 

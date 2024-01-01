@@ -416,10 +416,10 @@ void printAll_rocks()    { for(int i=0;i<rocks    .size();i++){ rocks[i]    ->pr
     void checkIntegrity(){
         printf("SpaceCraft::checkIntegrity() %i nodes, %i girders, %i rings, %i ropes, \n", nodes.size(), girders.size(), rings.size(), ropes.size() );
         // --- check bound nodes
-        for( const Girder* o: girders ){ o->print(); }
+        //for( const Girder* o: girders ){ o->print(); }
         for( const Node* o: nodes ){
             if(o->boundTo==0) continue;
-            printf( "node[%i] @bt=%li bt.id=%i\n", o->id, (long)(o->boundTo), o->boundTo->id );
+            //printf( "node[%i] @bt=%li bt.id=%i\n", o->id, (long)(o->boundTo), o->boundTo->id );
             if((o->boundTo->id>1000)||(o->boundTo->id<0)){ printf("ERROR node[%i]->boundTo->id==%i\n", o->id, o->boundTo->id ); exit(0); }
         }
     }

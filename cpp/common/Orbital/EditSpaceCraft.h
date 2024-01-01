@@ -72,6 +72,7 @@ int l_StickMaterial(lua_State * L){
     strcpy( mat_name,  Lua::getString(L, 2 ) );
     o->diameter      = Lua::getDouble(L, 3 ) * 1e-3; // [mm]->[m]
     o->wallThickness = Lua::getDouble(L, 4 ) * 1e-3; // [mm]->[m]
+    o->preStrain     = Lua::getDouble(L, 5 );
     //o->area        =  Lua::getDouble(L, 4 );
     o->materialId = workshop.materials.getId( mat_name );
     o->update( workshop.materials.vec[o->materialId] );
@@ -168,7 +169,8 @@ int l_Rope    (lua_State * L){
     o->nodes.y    = theSpaceCraft->nodes[Lua::getInt(L,2)];
     o->thick = Lua::getDouble(L,3) * 1e-3; // [mm]->[m]
     o->nseg  = Lua::getInt(L,4);
-    const char * matn = Lua::getString(L,5);
+    double preStrain = Lua::getDouble(L,5);
+    const char * matn = Lua::getString(L,6);
     //o->face_mat = workshop.panelMaterials.getId( matn );
     //o->face_mat = workshop.stickMaterials.getId( matn );
     o->id   = theSpaceCraft->ropes.size();
@@ -178,6 +180,7 @@ int l_Rope    (lua_State * L){
         sprintf( mat->name, "rope%i", o->id ); //printf( "l_Rope() mat->name(%s)\n", mat->name );
         mat->diameter      =  o->thick;
         mat->wallThickness =  o->thick*0.5;
+        mat->preStrain     =  preStrain;
         //mat->area          =  o->thick*o->thick*0.25*M_PI;
         mat->materialId    = workshop.materials.getId( matn );
         mat->update( workshop.materials.vec[mat->materialId] );
@@ -187,6 +190,65 @@ int l_Rope    (lua_State * L){
         o->face_mat = mat->id;
     }
     if(verbosity>1) o->print();
+    theSpaceCraft->ropes.push_back( o );
+    lua_pushnumber(L, o->id);
+    return 1;
+};
+
+int l_Rope2 (lua_State * L){
+    printf( "####### l_Rope2()\n" );
+    //ToDo: Ropes should be pre-strained (pre-tensioned) to avoid slack, we should set pre-strain force for each rope, the leght should be calculated from the rope material properties and pre-strain force
+    Rope* o = new Rope();
+    int   gs[2];
+    float cs[2];
+    Lua::getLuaArr( L, 2, gs, 1 );
+    Lua::getLuaArr( L, 2, cs, 2 );
+    Node* nd[2];
+    Vec3d p0 = (theSpaceCraft->girders[gs[0]]->nodes.x->pos + theSpaceCraft->girders[gs[0]]->nodes.y->pos 
+             +  theSpaceCraft->girders[gs[1]]->nodes.x->pos + theSpaceCraft->girders[gs[1]]->nodes.y->pos)*0.25;
+    printf( "l_Rope2() p0 (%g,%g,%g)\n", p0.x, p0.y, p0.z );
+    for(int i=0; i<2; i++){ 
+        if       (cs[i]<0){  // start point
+            printf( "l_Rope2() node[%i] is start \n", i  );
+            nd[i] = theSpaceCraft->girders[gs[i]]->nodes.x;
+        }else if (cs[i]>1){  // end point
+        printf( "l_Rope2() node[%i] is end \n", i  );
+            nd[i] = theSpaceCraft->girders[gs[i]]->nodes.y;
+        }else{   // along girder
+            printf( "l_Rope2() node[%i] is bound \n", i  );
+            nd[i] = new Node();
+            nd[i]->boundTo = theSpaceCraft->getStructuralComponent( gs[i], (int)ComponetKind::Girder );
+            nd[i]->calong = cs[i];
+            nd[i]->updateBound( p0 );
+            nd[i]->id = theSpaceCraft->nodes.size(); 
+            theSpaceCraft->nodes.push_back( nd[i] ); 
+        }
+        ((Node**)&(o->nodes))[i] = nd[i];
+    }
+    o->thick = Lua::getDouble(L,3) * 1e-3; // [mm]->[m]
+    o->nseg  = Lua::getInt(L,4);
+    double preStrain = Lua::getDouble(L,5);
+    const char * matn = Lua::getString(L,6);
+    //o->face_mat = workshop.panelMaterials.getId( matn );
+    //o->face_mat = workshop.stickMaterials.getId( matn );
+    o->id   = theSpaceCraft->ropes.size();
+    { // define new StickMaterial
+        StickMaterial *mat = new StickMaterial();
+        //char mat_name[NAME_LEN];
+        sprintf( mat->name, "rope%i", o->id ); //printf( "l_Rope() mat->name(%s)\n", mat->name );
+        mat->diameter      =  o->thick;
+        mat->wallThickness =  o->thick*0.5;
+        mat->preStrain     =  preStrain;
+        //mat->area          =  o->thick*o->thick*0.25*M_PI;
+        mat->materialId    = workshop.materials.getId( matn );
+        mat->update( workshop.materials.vec[mat->materialId] );
+        if( workshop.stickMaterials.add(mat) && (verbosity>0) ) printf( "StickMaterial(%s) replaced\n", mat->name );
+        mat->id = workshop.stickMaterials.getId( mat->name );
+        if(verbosity>1) mat->print();
+        o->face_mat = mat->id;
+    }
+    //if(verbosity>1) 
+    o->print();
     theSpaceCraft->ropes.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
@@ -418,6 +480,7 @@ void initSpaceCraftingLua(){
     lua_register(L, "Node",     l_Node     );
     lua_register(L, "BoundNode",l_BoundNode);
     lua_register(L, "Rope",     l_Rope     );
+    lua_register(L, "Rope2",    l_Rope2    );
     lua_register(L, "Girder",   l_Girder   );
     lua_register(L, "Ring",     l_Ring     );
     lua_register(L, "Ring2",    l_Ring2    );

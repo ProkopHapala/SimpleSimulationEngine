@@ -80,7 +80,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
         // l0, kPress, kPull, damping
         //double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
-        double l0 = (sim.points[e.y].f - sim.points[e.x].f ).norm();
+        double l0 = (sim.points[e.y].f - sim.points[e.x].f ).norm() * ( 1.f - mat.preStrain );
         double mass = l0*mat.linearDensity;
         sim.points[e.x].w += mass*0.5;
         sim.points[e.y].w += mass*0.5;
@@ -393,15 +393,6 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
             mesh.vert( o->pos );
         }
     }
-    for(Rope* o: craft.ropes){
-        o->update_nodes();
-        mesh.block();
-        //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
-        mesh.rope( o->nodes.x->id,o->nodes.y->id, o->face_mat, o->nseg );
-        Quat4i& b = mesh.blocks.back();
-        o->pointRange = {b.x,(int)mesh.verts.size()};
-        o->stickRange = {b.y,(int)mesh.edges.size()};
-    }
     for(Girder* o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
         o->update_nodes(); // if girder bound to BoundNode, the vert indexes may need to be updated
@@ -414,6 +405,22 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         //o.print();
         //printf( "BuildCraft_truss() girder.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
         i++;
+    }
+    for(Rope* o: craft.ropes){
+        o->update_nodes();
+        Node* nd1 = o->nodes.x;
+        Node* nd2 = o->nodes.y;
+        if( (nd1->boundTo!=0)||(nd2->boundTo!=0) ){ 
+            printf("Bound_Rope[%i] to mesh\n", o->id );
+            printf("  node.x ivert=%i pos(%g,%g,%g) boundTo: \n", nd1->ivert, nd1->pos.x,nd1->pos.y,nd1->pos.z ); if(nd1->boundTo)nd1->boundTo->print();
+            printf("  node.y ivert=%i pos(%g,%g,%g) boundTo: \n", nd2->ivert, nd2->pos.x,nd2->pos.y,nd2->pos.z ); if(nd2->boundTo)nd2->boundTo->print();
+        }
+        mesh.block();
+        //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
+        mesh.rope( o->nodes.x->ivert,o->nodes.y->ivert, o->face_mat, o->nseg );
+        Quat4i& b = mesh.blocks.back();
+        o->pointRange = {b.x,(int)mesh.verts.size()};
+        o->stickRange = {b.y,(int)mesh.edges.size()};
     }
     // --- Rings
     i=0;
