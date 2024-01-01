@@ -42,6 +42,8 @@ Quat4f springForce( Vec3f d, Quat4f par ){
     return fe;
 }
 
+struct EdgeVertBond{ Vec3i verts; float c; float K; };
+
 class OrbSim_f : public Picker { public:
     int nPoint=0, nNeighMax=0, nNeighTot=0;
     // cpu buffers
@@ -61,6 +63,9 @@ class OrbSim_f : public Picker { public:
     float*  strain =0; // strain
     //float*  l0s    =0; // 
     Vec2f*  maxStrain=0;
+
+    int nEdgeVertBonds=0;
+    EdgeVertBond* edgeVertBonds=0; // indices of bonded points (i,j)
 
     // Rotating frame
     //Vec3f p0{0.,0.,0.};
@@ -296,6 +301,31 @@ class OrbSim_f : public Picker { public:
         } 
     }
 
+    void evalEdgeVert( Vec3i b, float c, float K ){
+        // fit vert to edge
+        // const Quat4f& pa = points[b.x];
+        // const Quat4f& pb = points[b.y];
+        // const Quat4f& pc = points[b.z];
+        // float mc = 1-c;
+        // Vec3f d = (pa.f*mc + pb.f*c) - pc.f;
+        // d.mul( K*0.01 );          
+        // forces[b.x].f.add_mul(d,mc);
+        // //forces[b.y].f.add_mul(d, c);
+        // forces[b.z].f.sub(d);
+
+        const Quat4f& pa = points[b.x];
+        const Quat4f& pc = points[b.z];
+        Vec3f d = pc.f - pa.f;
+        d.mul( K );          
+        forces[b.x].f.add(d);
+        //forces[b.y].f.add_mul(d, c);
+        forces[b.z].f.sub(d);
+    }
+
+    void evalEdgeVerts(){
+        for(int i=0; i<nEdgeVertBonds; i++){ evalEdgeVert( edgeVertBonds[i].verts, edgeVertBonds[i].c, edgeVertBonds[i].K ); }
+    }
+
     void evalTrussCollisionImpulses_bonds( float rate=1.0 ){
         // Collision forces are based on momentum-conserving impulses, it does not need to know anything about the interaction potential (e.g. spring constants)
         for(int i=0; i<nBonds; i++){
@@ -512,7 +542,7 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
             //evalTrussForce_neighs(iG);
             evalTrussForce_neighs2(iG);
             
-            applyForceCentrifug_i    ( iG, rot0.f, omega.f, omega.w );
+            //applyForceCentrifug_i    ( iG, rot0.f, omega.f, omega.w );
             //if(bDynamic){ applyForceRotatingFrame_i( iG, rot0.f, omega.f, omega.w ); }
             //else        { applyForceCentrifug_i    ( iG, rot0.f, omega.f, omega.w ); }
         }
@@ -536,6 +566,10 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
             }
         }
         */
+        #pragma omp single
+        { 
+            evalEdgeVerts();
+        }
         #pragma omp for
         for(int i=0;i<nPoint; i++ ){
             move_i_MD( i, dt, 1.0 );

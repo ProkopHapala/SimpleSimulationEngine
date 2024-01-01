@@ -144,6 +144,9 @@ void renderShip(){
     glEnable     ( GL_LIGHT0           );
     glEnable     ( GL_NORMALIZE        );
     Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
+
+
+    
     
     /*
     Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
@@ -202,6 +205,28 @@ void reloadShip( const char* fname  ){
     for( Ring* o : theSpaceCraft->rings ){
         o->updateSlidersPaths( true, true, sim.points );
     }
+
+    // ----- Sliders to EdgeVerts
+    sim.nEdgeVertBonds =  theSpaceCraft->sliders.size();
+    sim.edgeVertBonds  = new EdgeVertBond[ sim.nEdgeVertBonds ];
+    for( int i=0; i<theSpaceCraft->sliders.size(); i++ ){
+        Slider* o = theSpaceCraft->sliders[i];
+        EdgeVertBond& ev = sim.edgeVertBonds[i];
+        ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
+        ev.verts.z = o->ivert;
+        ev.K = 1000.0;
+        //o->updateEdgeVerts( sim.points );
+    }
+
+    // --- kick to rings
+    Vec3f v0 = {1.0,0.0,0.0};
+    for( Ring* o : theSpaceCraft->rings ){
+        for(int iv=o->pointRange.a; iv<o->pointRange.b; iv++){
+            sim.vel[iv].f = v0; 
+        }
+    }
+
+
 
     renderShip();
     printf("#### END reloadShip('%s')\n", fname );
@@ -450,6 +475,27 @@ void SpaceCraftEditorApp::draw(){
     glLineWidth(0.5); 
     runSim( sim );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+
+    glLineWidth(3.0);
+    glColor3f(0.0,0.5,1.0);
+    // render EdgeVertBonds
+    glBegin(GL_LINES);
+    for(int i=0; i<sim.nEdgeVertBonds; i++){
+        EdgeVertBond& ev = sim.edgeVertBonds[i];
+        Vec3f a = sim.points[ ev.verts.x ].f;
+        Vec3f b = sim.points[ ev.verts.y ].f;
+        Vec3f c = sim.points[ ev.verts.z ].f;
+        Draw3D::vertex( a );  Draw3D::vertex( c );
+        Draw3D::vertex( b );  Draw3D::vertex( c );
+    }
+    glEnd();
+
+
+    glLineWidth(3.0);
+    glColor3f(0.0,0.5,1.0);
+    for( const Slider* o: theSpaceCraft->sliders){
+        drawSliderPath( o, sim.points, 10 );
+    }
 
     //if(glo_truss) glCallList(glo_truss);
     //if(glo_ship ) glCallList(glo_ship);

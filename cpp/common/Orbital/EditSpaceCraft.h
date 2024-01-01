@@ -265,6 +265,7 @@ int l_Ring2    (lua_State * L){
         }
         nd[i]->id = theSpaceCraft->nodes.size(); 
         theSpaceCraft->nodes.push_back( nd[i] ); 
+        theSpaceCraft->sliders.push_back( nd[i] );
         ((Slider**)&(o->nodes))[i] = nd[i];
     }
     o->R = circle_3point( nd[1]->pos, nd[2]->pos, nd[0]->pos, o->pose.pos, o->pose.rot.a, o->pose.rot.b );   o->pose.rot.c.set_cross( o->pose.rot.b, o->pose.rot.a );

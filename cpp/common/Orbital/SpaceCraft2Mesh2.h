@@ -48,6 +48,10 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
 
     //printf( "exportSim() nneighmax %i \n", nneighmax );
     sim.recalloc(np, nneighmax, nb );
+
+    // --- EdgeVerts
+    //printf( "exportSim() sim.nEdgeVert %i \n", sim.nEdgeVert );
+
     // fill neighs
     for(int i=0; i<np; i++){ sim.points[i].f=(Vec3f)mesh.verts[i].pos; sim.points[i].e=0.0f; }
     for(int i=0; i<np; i++){ nneighs[i]=0;   }
