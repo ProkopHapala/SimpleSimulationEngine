@@ -110,9 +110,13 @@ class Buckets{ public:
     }
     inline int* inCell( int icell ){ return cell2obj + cellI0s[icell]; }
 
-    inline void printObjCellMaping(){
+    inline void printObjCellMaping(int i0=-1, int i1=-1, bool bBoundary=true){
+        if(i0<0)i0=0; 
+        if(i1<0)i1=nobj;
         printf( "Buckets::printObjCellMaping() ncell %i nobj %i \n", ncell, nobj );
-        for(int i=0; i<nobj; i++){
+        int ib=0;
+        for(int i=i0; i<i1; i++){
+            if( bBoundary & (i==cellI0s[ib])){ printf( "---- start cell[%i] \n", i, ib ); ib++; }
             printf( "[%i] o2c %i c2o %i \n", i, obj2cell[i], cell2obj[i] );
         }
     }
