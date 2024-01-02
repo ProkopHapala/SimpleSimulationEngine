@@ -196,7 +196,7 @@ int l_Rope    (lua_State * L){
 };
 
 int l_Rope2 (lua_State * L){
-    printf( "####### l_Rope2()\n" );
+    //printf( "####### l_Rope2()\n" );
     //ToDo: Ropes should be pre-strained (pre-tensioned) to avoid slack, we should set pre-strain force for each rope, the leght should be calculated from the rope material properties and pre-strain force
     Rope* o = new Rope();
     int   gs[2];
@@ -247,8 +247,7 @@ int l_Rope2 (lua_State * L){
         if(verbosity>1) mat->print();
         o->face_mat = mat->id;
     }
-    //if(verbosity>1) 
-    o->print();
+    //if(verbosity>1) o->print();
     theSpaceCraft->ropes.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
@@ -315,12 +314,12 @@ int l_Ring2    (lua_State * L){
     Lua::getLuaArr( L, 4, cs, 2 );
     //for(int i=0; i<4; i++){ printf( "l_Ring2() node[%i](g=%i,c=%g)\n", i, gs[i], cs[i] ); }
     Vec3d p0; Lua::getVec3(L,3, p0 );
-    o->nseg = Lua::getInt (L,4);             printf( "l_Ring2() nseg %i\n",  o->nseg          );
-              Lua::getVec2(L,5, o->wh );     printf( "l_Ring2() wh %g,%g\n", o->wh.x, o->wh.y );
+    o->nseg = Lua::getInt (L,4);             //printf( "l_Ring2() nseg %i\n",  o->nseg          );
+              Lua::getVec2(L,5, o->wh );     //printf( "l_Ring2() wh %g,%g\n", o->wh.x, o->wh.y );
     o->pose.pos.add_mul( o->pose.rot.c, -o->wh.y );
-    const char * matn = Lua::getString(L,6); printf( "l_Ring2() matn %s\n", matn );
-              Lua::getVec4i(L,7, o->st );    printf( "l_Ring2() st %i,%i,%i,%i\n", o->st.x, o->st.y, o->st.z, o->st.w );
-    int icontrol = Lua::getInt (L,8);        printf( "l_Ring2() icontrol %i\n", icontrol );
+    const char * matn = Lua::getString(L,6); //printf( "l_Ring2() matn %s\n", matn );
+              Lua::getVec4i(L,7, o->st );    //printf( "l_Ring2() st %i,%i,%i,%i\n", o->st.x, o->st.y, o->st.z, o->st.w );
+    int icontrol = Lua::getInt (L,8);        //printf( "l_Ring2() icontrol %i\n", icontrol );
 
     // Make nodes bound to nodes to attach ring to girders
     Slider* nd[4];
@@ -331,7 +330,7 @@ int l_Ring2    (lua_State * L){
         if(cs[i]>0){
             nd[i]->calong = cs[i];
             nd[i]->updateBound( p0 );
-            printf( "l_Ring2() node[%i] calong %g pos(%g,%g,%g) \n", i, nd[i]->calong, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z );
+            //printf( "l_Ring2() node[%i] calong %g pos(%g,%g,%g) \n", i, nd[i]->calong, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z );
         }else{
             nd[i]->calong = -1.0;  // to be calculated later
         }
@@ -352,14 +351,29 @@ int l_Ring2    (lua_State * L){
         if(cs[i]<0){
             nd[i]->calong = intersect_RingGirder( o, (Girder*)nd[i]->boundTo, &nd[i]->pos, true );
             nd[i]->updateBound( p0 );
-            printf( "l_Ring2() FINALIZED node[%i|id=%i] calong %g along(%i,%i) pos(%g,%g,%g) \n", i, nd[i]->id, nd[i]->calong, nd[i]->along.x, nd[i]->along.y, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z ); 
+            //printf( "l_Ring2() FINALIZED node[%i|id=%i] calong %g along(%i,%i) pos(%g,%g,%g) \n", i, nd[i]->id, nd[i]->calong, nd[i]->along.x, nd[i]->along.y, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z ); 
         }
     }
     o->face_mat = workshop.panelMaterials.getId( matn );
     o->id     = theSpaceCraft->rings.size();
-    //if(verbosity>1) 
-    o->print();
+    //if(verbosity>1) o->print();
     theSpaceCraft->rings.push_back( o );
+    lua_pushnumber(L, o->id);
+    return 1;
+};
+
+int l_Weld    (lua_State * L){
+    //Lua::dumpStack(L);
+    Weld* o = new Weld();
+    int ic1     = Lua::getInt   (L,1);
+    int ic2     = Lua::getInt   (L,2);
+    o->Rmax     = Lua::getDouble(L,3);
+    o->face_mat = Lua::getInt   (L,4);
+    o->comps.x = theSpaceCraft->getStructuralComponent( ic1, (int)ComponetKind::Girder );
+    o->comps.y = theSpaceCraft->getStructuralComponent( ic2, (int)ComponetKind::Girder );
+    o->id     = theSpaceCraft->welds.size();
+    if(verbosity>1) o->print();
+    theSpaceCraft->welds.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
 };
@@ -493,7 +507,8 @@ void initSpaceCraftingLua(){
     lua_register(L, "Girder",   l_Girder   );
     lua_register(L, "Ring",     l_Ring     );
     lua_register(L, "Ring2",    l_Ring2    );
-    lua_register(L, "Slider",   l_Slider   ); 
+    lua_register(L, "Slider",   l_Slider   );
+    lua_register(L, "Weld",     l_Weld     ); 
     lua_register(L, "Gun",      l_Gun      );
     lua_register(L, "Thruster", l_Thruster );
     lua_register(L, "Tank",     l_Tank     );

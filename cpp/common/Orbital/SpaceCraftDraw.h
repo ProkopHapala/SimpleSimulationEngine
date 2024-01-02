@@ -189,7 +189,7 @@ int drawSliderPath( const Slider* o, const Quat4f* ps, float sz=10 ){
     //Draw3D::drawPointCross( o->pos,         sz );
     //glColor3f(0.0f,1.0f,0.0f);
     //Draw3D::drawLine( ps[o->ivert].f, (Vec3f)o->pos );
-    Draw3D::drawPointCross( ps[o->ivert].f, sz );
+    //Draw3D::drawPointCross( ps[o->ivert].f, sz );
     //printf( "drawSliderPath[%i] n=%i closed=%i \n", o->id, o->path.n, o->path.closed );
     Draw3D::drawLineStrip( o->path.n, o->path.ps, ps, o->path.closed );
     return 0;

@@ -393,6 +393,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
             mesh.vert( o->pos );
         }
     }
+    printf("BuildCraft_truss().girders n=%i\n", craft.girders.size() );
     for(Girder* o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
         o->update_nodes(); // if girder bound to BoundNode, the vert indexes may need to be updated
@@ -406,6 +407,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         //printf( "BuildCraft_truss() girder.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
         i++;
     }
+    printf("BuildCraft_truss().ropes n=%i\n", craft.ropes.size() );
     for(Rope* o: craft.ropes){
         o->update_nodes();
         // Node* nd1 = o->nodes.x;
@@ -434,6 +436,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         o->stickRange = {b.y,(int)mesh.edges.size()};
     }
     // --- Rings
+    printf("BuildCraft_truss().rings n=%i\n", craft.rings.size() );
     i=0;
     for(Ring* o: craft.rings){
         o->update_nodes();
@@ -454,13 +457,25 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         i++;
     }
     // --- Radiators
-    printf("BuildCraft_truss().radiators\n");
+    printf("BuildCraft_truss().radiators n=%i\n", craft.radiators.size() );
     for(Radiator* o : craft.radiators ){
         mesh.block();
         o->print();
         const Girder& g1 = *craft.girders[o->g1];
         const Girder& g2 = *craft.girders[o->g2];
         plateOnGriders( mesh, {10,1}, g1.pointRange, g2.pointRange, {4,4}, {-1,-1}, o->g1span, o->g2span, {0,1,2,3} );
+        //break;
+        Quat4i& b = mesh.blocks.back();
+        o->pointRange = {b.x,(int)mesh.verts.size()};
+        o->stickRange = {b.y,(int)mesh.edges.size()};
+        //break;
+    };
+    printf("BuildCraft_truss().Welds n=%i\n", craft.welds.size() );
+    for( Weld* o : craft.welds ){
+        //printf("Welds[]\n");
+        mesh.block();
+        o->print();
+        mesh.bondsBetweenVertRanges( o->comps.x->pointRange, o->comps.y->pointRange, o->Rmax, o->face_mat );
         //break;
         Quat4i& b = mesh.blocks.back();
         o->pointRange = {b.x,(int)mesh.verts.size()};

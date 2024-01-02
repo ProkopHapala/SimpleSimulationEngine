@@ -80,6 +80,26 @@ class Builder2{ public:
     inline int edge( int a, int b, int t=-1, int t2=-1 ){ edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; }
     inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
 
+    inline int bondsBetweenVertRanges( Vec2i v1s, Vec2i v2s, double Rmax, int et=-1 ){
+        double R2max = Rmax*Rmax;
+        int n1 = v1s.b-v1s.a;
+        int n2 = v2s.b-v2s.a;
+        int nb =0;
+        for(int i=0; i<n1; i++){
+            Vec3d& p1 = verts[v1s.a+i].pos;
+            for(int j=0; j<n2; j++){
+                Vec3d& p2 = verts[v2s.a+j].pos;
+                double r2 = (p1-p2).norm2();
+                //printf( "bondsBetweenVertRanges[%i,%i] r=%g Rmax=%g \n", i, j, sqrt(r2), Rmax );
+                if( r2<R2max ){ 
+                    edge( v1s.a+i, v2s.a+j, et ); 
+                    nb++;
+                }
+            }
+        }
+        return nb;
+    }
+
     inline int vstrip(Vec3d p0, Vec3d p1, int n, int et=-1 ){
         Vec3d d=p1-p0; 
         d.mul(1./n);
@@ -286,9 +306,6 @@ class Builder2{ public:
         }
         return i0;
     }
-
-
-
 
     // ToDo: This is too complicated, put we should remove it or move it elsewhere
     int plate_quad( int ip00, int ip01, int ip10, int ip11, Quat4i typs={-1,-1,-1,-1}, Vec2i n={1,1}, int fillType=1 ){ 

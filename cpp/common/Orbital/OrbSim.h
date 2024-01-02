@@ -80,8 +80,7 @@ class OrbSim_f : public Picker { public:
     //Quat4f omega{0.0f,0.0f,1.0f,0.05f}; // angular velocity, (xyz=axisxyz,w=magnitude)
     Quat4f omega{0.0f,0.0f,1.0f,0.05f};
 
-    //float kGlobal = 1e+6;
-    float kGlobal = 1e+8;
+
 
     //float maxAcc = 1e+6;
     float maxAcc = 1.0;
@@ -89,8 +88,11 @@ class OrbSim_f : public Picker { public:
     float collision_damping = 1.0;
     //float collision_damping = 1.1;   // if collision_damping > 1.0 then it is like successive over-relaxation (SOR) method ? https://en.wikipedia.org/wiki/Successive_over-relaxation
 
-    //float dt      = 2e-3;
-    float dt      = 0.5e-3;
+    //float kGlobal = 1e+6;
+    
+    float dt      = 2e-3;    float kGlobal = 1e+7;
+    //float dt      = 0.5e-3;  float kGlobal = 1e+8;
+
     //float damping = 1e-4;
     float damping  = 0.05;
     int    lastNeg = 0;

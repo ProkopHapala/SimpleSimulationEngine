@@ -52,12 +52,22 @@ gRt  = Girder( n0, nRt, zvec, 10, 2, {Rg2,Rg2}, "Steel", g1_st )
 gWdw = Girder( nDw, nFw, xvec, 70, 2, {Rg3,Rg3}, "Steel", g1_st )
 gWup = Girder( nUp, nFw, xvec, 70, 2, {Rg3,Rg3}, "Steel", g1_st )
 
+Weld( gFw, gUp, 10.0, st4 )
+Weld( gFw, gDw, 10.0, st4 )
+Weld( gFw, gLf, 10.0, st4 )
+Weld( gFw, gRt, 10.0, st4 )
+
+Weld( gBk, gUp, 10.0, st4 )
+Weld( gBk, gDw, 10.0, st4 )
+Weld( gBk, gLf, 10.0, st4 )
+Weld( gBk, gRt, 10.0, st4 )
+
 print( "#------ Lua:Ropes" )
 
 -- ToDo: Ropes should be pre-strained (pre-tensioned) to avoid slack, we should set pre-strain force for each rope, the leght should be calculated from the rope material properties and pre-strain force
 
 
-preS1 = 0.001
+preS1 = 0.001*0
 --          type     thick[mm]
 Rope(nBk,nLf, 25.,4, preS1,  "Kevlar" );
 Rope(nFw,nLf, 25.,4, preS1, "Kevlar" )
@@ -73,7 +83,7 @@ Rope(nLf,nUp, 25.,4, preS1, "Kevlar");
 Rope(nRt,nDw, 25.,4, preS1, "Kevlar");
 Rope(nRt,nUp, 25.,4, preS1, "Kevlar");
 
-preS2 = 0.003
+preS2 = 0.003*0
 
 Rope2( {gFw,gLf}, {0.5,2.0}, 25.,4, preS2, "Kevlar");
 Rope2( {gFw,gRt}, {0.5,2.0}, 25.,4, preS2, "Kevlar");

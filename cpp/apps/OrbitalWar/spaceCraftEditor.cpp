@@ -134,7 +134,7 @@ void runSim( OrbSim_f& sim, int niter=100 ){
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
-    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-4 );
+    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-4 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
 }
 
@@ -508,23 +508,23 @@ void SpaceCraftEditorApp::draw(){
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 
     // --- draw nodes
-    glPointSize(10);
-    glColor3f(1.0,0.0,1.0);
-    glBegin(GL_POINTS);
-    for(int i=0; i<theSpaceCraft->nodes.size(); i++){ 
-        theSpaceCraft->nodes[i]->pos = (Vec3d)sim.points[ theSpaceCraft->nodes[i]->ivert ].f;
-        Draw3D::vertex( theSpaceCraft->nodes[i]->pos );
-        //Draw3D::vertex( sim.points[i].f ); 
-    }
-    for(int i=0; i<theSpaceCraft->nodes.size(); i++){   // labels
-        Draw3D::drawText( std::to_string(i).c_str(), (Vec3f)theSpaceCraft->nodes[i]->pos, fontTex, 0.04, 0 );
-        //Draw3D::vertex( sim.points[i].f ); 
-    }
-    glEnd();
+    // glPointSize(10);
+    // glColor3f(1.0,0.0,1.0);
+    // glBegin(GL_POINTS);
+    // for(int i=0; i<theSpaceCraft->nodes.size(); i++){ 
+    //     theSpaceCraft->nodes[i]->pos = (Vec3d)sim.points[ theSpaceCraft->nodes[i]->ivert ].f;
+    //     Draw3D::vertex( theSpaceCraft->nodes[i]->pos );
+    //     //Draw3D::vertex( sim.points[i].f ); 
+    // }
+    // for(int i=0; i<theSpaceCraft->nodes.size(); i++){   // labels
+    //     Draw3D::drawText( std::to_string(i).c_str(), (Vec3f)theSpaceCraft->nodes[i]->pos, fontTex, 0.04, 0 );
+    //     //Draw3D::vertex( sim.points[i].f ); 
+    // }
+    // glEnd();
 
     // --- draw slider bonds
     glLineWidth(3.0);
-    glColor3f(0.0,0.5,1.0);
+    glColor3f(0.0,0.5,0.0);
     // render EdgeVertBonds
     glBegin(GL_LINES);
     for(int i=0; i<sim.nEdgeVertBonds; i++){
@@ -539,9 +539,9 @@ void SpaceCraftEditorApp::draw(){
     // --- draw slider paths
     glLineWidth(3.0);
     glColor3f(0.0,0.5,1.0);
-    for( const Slider* o: theSpaceCraft->sliders){
-        drawSliderPath( o, sim.points, 10 );
-    }
+    for( const Slider* o: theSpaceCraft->sliders){ drawSliderPath( o, sim.points, 10 ); }
+    glPointSize(20); glBegin(GL_POINTS); for( const Slider* o: theSpaceCraft->sliders){ Draw3D::vertex( sim.points[o->ivert].f ); } glEnd();
+    //glPointSize(3000/zoom); glBegin(GL_POINTS); for( const Slider* o: theSpaceCraft->sliders){ Draw3D::vertex( sim.points[o->ivert].f ); } glEnd();
 
     //if(glo_truss) glCallList(glo_truss);
     //if(glo_ship ) glCallList(glo_ship);
