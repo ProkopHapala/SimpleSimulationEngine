@@ -17,6 +17,7 @@
 #include "macroUtils.h"
 
 #include "containers.h"
+#include "Buckets.h"
 
 namespace SpaceCrafting{
 
@@ -280,6 +281,10 @@ class Node; // forward declaration
 class StructuralComponent : public ShipComponent { public:
     //Quat4i nodes;
     vec4<Node*> nodes;
+    int mvert = -1; // number of vertices per segment nvert = nseg*mvert
+
+    // ==== methods
+
     //double length;
     virtual void print(bool bShort=false)const override;
     void ray( const Vec3d& ro, const Vec3d& rd ){}
@@ -310,6 +315,44 @@ class StructuralComponent : public ShipComponent { public:
         //printf( "StructuralComponent[%i]::findNearestPoint() found imin=%i rmin=%g n=%i \n", id, i0min, sqrt(r2min), n );
         return i0min;
     }
+
+    virtual int toBuckets( int ib0, int nPerBucket, Buckets* buckets=0, bool bHardLimit=true ){
+        printf( "StructuralComponent[%i]::toBuckets() ib0=%i nPerBucket=%i \n", id, ib0, nPerBucket );
+        int i0 = pointRange.x;
+        int i1 = pointRange.y;
+        int n  = i1-i0;
+        int nbuck = n / nPerBucket; // what if it is not integer ? but it should be
+        int nrest = n - nbuck*nPerBucket;
+        //if((n<=0)||(n>1000)){ printf( "ERROR in StructuralComponent[%i]::getPos() n=%i seems wrong\n",id, n ); exit(0);   }
+        //if((i<i0)||(i>=i1)){ printf( "ERROR in StructuralComponent[%i]::getPos() i=%i out of range [%i,%i)\n",id, i, i0,i1 ); exit(0);   }
+        //p = ps[i].f;
+        if( buckets ){
+            int ip = i0;
+            for(int i=0; i<nbuck; i++){
+                int ib = ib0+i;
+                printf( "StructuralComponent[%i]::toBuckets() i=%i ib=%i ip=%i \n", id, i, ib, ip );
+                buckets->cellNs [ib]  = nPerBucket;
+                buckets->cellI0s[ib] = ib*nPerBucket;
+                for(int j=0; j<nPerBucket; j++){ buckets->obj2cell[ip]=ib; ip++; }
+            }
+            if(nrest>0){
+                int ib = ib0 + nbuck-1;  if(bHardLimit){ 
+                    ib++; 
+                    buckets->cellNs[ib]  = nrest;
+                    buckets->cellI0s[ib] = ib*nPerBucket;
+                }else{
+                    buckets->cellNs[ib] += nrest;
+                }
+                printf( "StructuralComponent[%i]::toBuckets() i=%i ib=%i ip=%i (rest)\n", id, nbuck+1, ib, ip );
+                for(int j=0; j<nrest; j++){ 
+                    buckets->obj2cell[ip]=ib; ip++; 
+                }
+            }
+        }
+        if(bHardLimit && (nrest>0) ) nbuck++; 
+        return nbuck;
+    }
+
 };
 
 class Weld : public ShipComponent { public:

@@ -229,6 +229,19 @@ void reloadShip( const char* fname  ){
     exportSim( sim, mesh2, workshop );
     sim.user_update = SpaceCraftControl;
 
+    // // --- Bounding boxes
+    // int nbuck  = exportBuckets( *theSpaceCraft,             0, 16, true );
+    // printf( "nbuck %i \n", nbuck );
+    // sim.recallocBBs( nbuck );
+    // int nbuck_ = exportBuckets( *theSpaceCraft, &sim.pointBBs, 16, true );
+    // sim.pointBBs.printCells();
+    // sim.pointBBs.printObjCellMaping();   // see if obj2cell is incorrect at the beginning
+    // DEBUG
+    // sim.pointBBs.updateCells();
+    // DEBUG
+    // updatePointBBs( sim.pointBBs, sim.BBs, sim.points );  // It crashes here because of the wrong obj2cell mapping
+    // exit(0);
+
     printf( "reloadShip().updateSlidersPaths \n" );
     // update ring slider paths
     for( Ring* o : theSpaceCraft->rings ){

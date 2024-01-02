@@ -8,6 +8,8 @@
 #include "quaternion.h"
 //#include "datatypes.h"  
 
+#include "Buckets.h"
+
 #include "raytrace.h"
 #include "geom3D.h"
 #include "Interfaces.h"
@@ -44,6 +46,40 @@ Quat4f springForce( Vec3f d, Quat4f par ){
 
 struct EdgeVertBond{ Vec3i verts; float c; float K; };
 
+void fitAABB( Quat8T<float>& bb, int n, int* c2o, Quat4f * ps ){
+    DEBUG
+    //Quat8T<float> bb;
+    //bb.lo = bb.lo = ps[c2o[0]];
+    for(int i=0; i<n; i++){ 
+        //printf( "fitAABB() i %i \n", i );
+        int ip = c2o[i];
+        printf( "fitAABB() i=%i ip=%i \n", i, ip );
+        DEBUG
+        Quat4f p = ps[ip];
+        DEBUG
+        bb.lo.f.setIfLower  ( p.f );
+        bb.hi.f.setIfGreater( p.f );
+    }; 
+    //return bb;
+}
+
+inline void updatePointBBs(const Buckets& buckets, Quat8T<float>* BBs, Quat4f* points, bool bInit=true){
+    for(int ib=0; ib<buckets.ncell; ib++){
+        printf( "updatePointBBs() ib %i \n", ib );
+        if(bInit){ BBs[ib].lo.f = Vec3fMax; BBs[ib].hi.f = Vec3fMin; }
+        DEBUG
+        int n = buckets.cellNs[ib];
+        DEBUG
+        if(n>0){
+            DEBUG
+            int i0 = buckets.cellI0s[ib];
+            printf( "updatePointBBs() ib %i n %i i0 %i \n", ib, n, i0 );
+            DEBUG
+            fitAABB( BBs[ib], n, buckets.cell2obj+i0, points );
+        }
+    }
+}
+
 class OrbSim_f : public Picker { public:
     double time=0;
     int nPoint=0, nNeighMax=0, nNeighTot=0;
@@ -64,6 +100,19 @@ class OrbSim_f : public Picker { public:
     float*  strain =0; // strain
     //float*  l0s    =0; // 
     Vec2f*  maxStrain=0;
+
+
+    // ====== Collision
+    // ToDo: this should be moved to a separate class ?
+    int       nBBs=0;
+    Quat8T<float>*  BBs=0; // bounding boxes (can be either AABB, or cylinder, capsula) 
+    Buckets   pointBBs;    // buckets for collision detection
+    Buckets   edgeBBs;
+    Buckets   faceBBs;
+
+    // Faces are used just for ray-tracing, collision detection, etc
+    int   nFaces=0;
+    int4* faces=0; // indices of points tringles or quads, the last index is -1 is the face is a triangle, ot it can be used also to store face type if just triangles are used
 
     int nEdgeVertBonds=0;
     EdgeVertBond* edgeVertBonds=0; // indices of bonded points (i,j)
@@ -107,7 +156,7 @@ class OrbSim_f : public Picker { public:
     float ff_safety    = 1e-16;
     float cv,cf;
 
-    void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0 ){
+    void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0){
         nPoint = nPoint_; nNeighMax = nNeighMax_;
         nNeighTot = nPoint*nNeighMax;
         _realloc( points, nPoint    );
@@ -127,6 +176,21 @@ class OrbSim_f : public Picker { public:
             _realloc( bparams,   nBonds );
         }
     }
+
+    void recallocBBs( int n, bool bPoint=true, bool bEdge=true, bool bFace=true ){
+        nBBs = n;
+        _realloc( BBs, nBBs );
+        if(bPoint &&(nPoint>0) )pointBBs.realloc( nBBs, nPoint, true );
+        if(bEdge  &&(nBonds>0) )edgeBBs .realloc( nBBs, nBonds, true );
+        if(bFace  &&(nFaces>0) )faceBBs .realloc( nBBs, nFaces, true );
+         //_realloc( , nBBs, nPoint );
+    }
+
+    // ================= Bounding Boxes
+
+
+
+
 
 
     // =================== Picking

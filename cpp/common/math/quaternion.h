@@ -811,8 +811,13 @@ inline int print( const Quat4f& v){ return printf( "%g %g %g %g", v.x, v.y, v.z,
 inline int print( const Quat4d& v){ return printf( "%g %g %g %g", v.x, v.y, v.z, v.w ); };
 inline int print( const Quat4i& v){ return printf( "%i %i %i %i", v.x, v.y, v.z, v.w ); };
 
-
-
+template <class T>
+class Quat8T { public:
+	union{
+        struct{ Quat4T<T> lo,hi; };
+		T array[8];
+	};
+};
 
 #endif
 
