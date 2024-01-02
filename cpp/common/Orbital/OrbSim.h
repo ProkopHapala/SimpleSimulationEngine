@@ -45,6 +45,7 @@ Quat4f springForce( Vec3f d, Quat4f par ){
 struct EdgeVertBond{ Vec3i verts; float c; float K; };
 
 class OrbSim_f : public Picker { public:
+    double time=0;
     int nPoint=0, nNeighMax=0, nNeighTot=0;
     // cpu buffers
     Quat4f* points=0;  // position and mass
@@ -67,6 +68,9 @@ class OrbSim_f : public Picker { public:
     int nEdgeVertBonds=0;
     EdgeVertBond* edgeVertBonds=0; // indices of bonded points (i,j)
 
+    // callback function pointer what to do in between iterations
+    void (*user_update)(double dt);
+
     // Rotating frame
     //Vec3f p0{0.,0.,0.};
     //Vec3f ax{0.0,0.0,1.0};
@@ -76,13 +80,17 @@ class OrbSim_f : public Picker { public:
     //Quat4f omega{0.0f,0.0f,1.0f,0.05f}; // angular velocity, (xyz=axisxyz,w=magnitude)
     Quat4f omega{0.0f,0.0f,1.0f,0.05f};
 
+    //float kGlobal = 1e+6;
+    float kGlobal = 1e+8;
+
     //float maxAcc = 1e+6;
     float maxAcc = 1.0;
     //float collision_damping = 0.1;
     float collision_damping = 1.0;
     //float collision_damping = 1.1;   // if collision_damping > 1.0 then it is like successive over-relaxation (SOR) method ? https://en.wikipedia.org/wiki/Successive_over-relaxation
 
-    float dt      = 2e-3;
+    //float dt      = 2e-3;
+    float dt      = 0.5e-3;
     //float damping = 1e-4;
     float damping  = 0.05;
     int    lastNeg = 0;
@@ -187,7 +195,7 @@ class OrbSim_f : public Picker { public:
             //f.add( Quat4f{ d*(fi/l), ei } );
             f.f.add_mul( d, fi/li );
             */
-            float k = 1e+6;
+            float k = kGlobal;
             f.f.add_mul( d, (k*(li-params[j].x)/li) );
 
             //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
@@ -217,7 +225,7 @@ class OrbSim_f : public Picker { public:
                 // //f.add( Quat4f{ d*(fi/l), ei } );
                 // f.f.add_mul( d, fi/li );
                 
-                float k = 1e+6;
+                float k = kGlobal;
                 f.f.add_mul( d, (k*(li-params[j].x)/li) );
 
                 //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
@@ -245,7 +253,7 @@ class OrbSim_f : public Picker { public:
             Quat4f d = points[b.x];
             d.f.sub( p.f );
             const float l  = d.f.norm();
-            float k        = 1e+6;
+            float k        = kGlobal;
             float fl       = k*(l-par.x);
             
             // collision damping
@@ -278,7 +286,7 @@ class OrbSim_f : public Picker { public:
             Vec3f d = pj.f - pi.f;
             float l = d.norm();
             //float fi,ei = springForce( li, fi, bparams[i] );
-            float k = 1e+6;
+            float k = kGlobal;
             float f = k*(l-bparams[i].x);
 
             // Limit acceleration force to improve stability   -- it does not seem to help
@@ -561,6 +569,12 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
             //applyForceCentrifug_i    ( iG, rot0.f, omega.f, omega.w );
             //if(bDynamic){ applyForceRotatingFrame_i( iG, rot0.f, omega.f, omega.w ); }
             //else        { applyForceCentrifug_i    ( iG, rot0.f, omega.f, omega.w ); }
+
+            // ToDo: Through-space interactions (e.g. magnetic damping of ropes by induced currents)   
+            //  1) Magneto-static F = (mu_0/2pi)(L/r)dot(I_i,I_j)    // see http://hyperphysics.phy-astr.gsu.edu/hbase/magnetic/wirfor.html
+            //  2) Volatage induced in wire moving in magnetic field: https://en.wikipedia.org/wiki/Moving_magnet_and_conductor_problem#Conductor_frame
+            //  3) Magnetic Breaking: 
+
         }
         // ---- assemble (we need to wait when all atoms are evaluated)
         //#pragma omp barrier
@@ -584,6 +598,7 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
         */
         #pragma omp single
         { 
+            if(user_update) user_update(dt);  // call e.g. spacecraft control (move the wheels etc. )
             evalEdgeVerts();
         }
         #pragma omp for
@@ -602,6 +617,7 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
         //#pragma omp barrier
         #pragma omp single
         { 
+            time+=dt;
             itr++; 
         }
         } // if(itr<niter){

@@ -158,7 +158,7 @@ class Path{ public:
     Path*  sharedFrom=0; // if this path is shared from another path, the data pointers like ps are not owned by this path
 
     inline void   realloc(int n_){ printf("Path::realoc(%i)\n",n_); n=n_; _realloc(ps,n); }
-    inline void   fold(){ if(cur<0){ cur+=n; }else if(cur>=n){ cur-=n; } }
+    inline void   fold(){ if(cur<0){ cur+=n; }else if(cur>=n){ cur-=n; } } // this works only for closed paths
     inline int    icur (){ return (int)cur;         }  // ToDo: proper boundary conditions
     inline int    icur1(){ int  i=(int)cur+1; if(i>=n){ if(closed){ i=0; }else{ i=n-1; } } return i; }  // ToDo: proper boundary conditions
     inline double dcur(){ return cur-(int)cur;      }
@@ -187,6 +187,7 @@ class Path{ public:
         int i1 = i0+1;
         if(i1>=n){ if(closed){ i1=0; }else{ i1=n-1; } }
         float c = cur-i0;
+        printf( "getPos(%i,%i) c=%g cur=%g \n", i0, i1, c,  cur );
         return pos[ps[i0]].f*(1-c) + pos[ps[i1]].f*c;
     }
 
@@ -215,7 +216,8 @@ class Path{ public:
         //return imin;
         if((imin==0)&&(closed))imin=n;
         imin--;
-        //printf( "Path::findNearestPoint() found imin=%i/%i tmin=%g rmin=%g \n", imin,n, tmin, sqrt(r2min) );
+        if(tmin>0.999)tmin=0.999; // there was problem that tmin=1 and imin+tmin=n which caused crash
+        printf( "Path::findNearestPoint() found imin=%i/%i tmin=%g rmin=%g \n", imin,n, tmin, sqrt(r2min) );
         return imin+tmin;   // ToDo: we should consider that this may by < 0 for closed path
     }
 
@@ -292,7 +294,7 @@ class StructuralComponent : public ShipComponent { public:
     virtual void updateSlidersPaths( bool bSelf, bool bShared=false, Quat4f* ps=0 );
 
     virtual int findNearestPoint( Vec3f p, Quat4f* ps=0 ){
-        //printf( "StructuralComponent[%i]::findNearestPoint() p(%g,%g,%g)\n", id, p.x,p.y,p.z );
+        printf( "StructuralComponent[%i]::findNearestPoint() p(%g,%g,%g)\n", id, p.x,p.y,p.z );
         //printf(" -- "); print();
         int i0 = pointRange.x;
         int i1 = pointRange.y;
@@ -482,7 +484,9 @@ class Ring : public StructuralComponent { public:
         if(inds==0){ if(bAlloc){ inds = new int[n]; }else{ printf( "ERROR in Ring[%i]::sideToPath() inds==0 and bAlloc=false \n", id ); exit(0); } }
         if(nmax>0 ){ if(n>nmax)                          { printf( "ERROR in Ring[%i]::sideToPath() n=%i > nmax=%i \n", id, n, nmax );  exit(0); } }
         if((n>1000)||(n<=0))                             { printf( "ERROR in Ring[%i]::sideToPath() n=%i seems wrong\n",id, n ); exit(0);   }
+        DEBUG
         for(int i=0; i<n; i++){ inds[i] = i0+4*i+side; }
+        DEBUG
         return n;
     }
 
@@ -668,9 +672,32 @@ class Slider : public ShipComponent { public:
 class Slider : public Node { public:
     //int  ifix;    // to which vertex it is anchored
     Path path;
-    double range;    // how much deflection of the slider perpedicular to the edge on loop this slider allows? 
-    double forceMax; // max force which ca ne exerted by this slider
-    double powerMax;
+    double maxDist =1.;    // how much deflection of the slider perpedicular to the edge on loop this slider allows? 
+    double forceMax=1.; // max force which ca ne exerted by this slider
+    double powerMax=1.;
+    double maxSpeed=1.;
+    double speed=0;
+    double springK=0;
+    int icontrol = -1; // index of degree of freedom which controls the slider in SpaceCraftControl() function
+
+
+    inline void move(double dt, Quat4f* ps ){
+        
+        // // -- check if the motor has enough power to move
+        // int i0,i1;
+        // float c = path.fromCur( i0, i1 );
+        // Vec3f ed = ps[i1].f - ps[i0].f;
+        // Vec3f p  = ps[i0].f + ed*c;
+        // Vec3f d  = p - ps[ivert].f;
+        // Vec3f f  = d*springK;
+        // float fed = f.dot(ed);
+        // if( fed*fed / ed.norm2() > forceMax*forceMax ) retrun;   // we should move along the path only if the motor can exert the force required
+               
+        // -- the actual move
+        path.cur += speed*dt;
+        path.fold();
+    }
+
 
     virtual void print(bool bShort=false)const override{ if(bShort){printf("Slider(id=%i)",id);}else{
         printf("Slider(id=%i) kind=%i girder=%i F=%g[N] P=%g[W] \n", id, kind, forceMax, powerMax ); }
@@ -678,32 +705,13 @@ class Slider : public Node { public:
     virtual int component_kind(){ return (int)ComponetKind::Slider; };
 
     void updatePath( StructuralComponent* o, int side=-1 ){
-        // printf("Slider::updatePath()\n");
+        printf("Slider[%i]::updatePath()\n", id );
         // print();
         // printf(" - boundTo:"); boundTo->print();
         // printf(" - path@  :"); o->print();
-        // DEBUG
         if(side<0)side=along.y;
         path.n = o->sideToPath( side, path.ps );
         if( o->component_kind() == (int)ComponetKind::Ring ){ path.closed = true; }else{ path.closed = false; }
-        //DEBUG
-        //int t1 = o->component_kind();
-        //printf( "updateSliderPaths[%i] t=%i | Girder=%i Ring=%i Rope=%i\n", o->id, t1, (int)ComponetKind::Girder, (int)ComponetKind::Ring, (int)ComponetKind::Rope );
-        //int i0 = o->pointRange.x;
-        //int n  = o->pointRange.y-i0;
-        /*
-        if((n>1000)||(n<=0)){printf( "updateSliderPaths() n=%i seems wrong\n", n ); exit(0);   }
-        printf("SpaceCraft::updateSliderPaths() i0=%i n=%i\n", i0, n );
-        if( (t1 == (int)ComponetKind::Girder) || (t1 == (int)ComponetKind::Ring) ){
-            if((t1 == (int)ComponetKind::Ring)) o->path.closed=true;
-            n/=4;
-            o->path.realloc(n);
-            for(int i=0; i<n; i++){ o->path.ps[i] = i0+4*i+o->sides.x; }
-        }else if (t1 == (int)ComponetKind::Rope){
-            o->path.realloc(n);
-            for(int i=0; i<n; i++){ o->path.ps[i] = i0+i; }
-        }
-        */
     }
 
     /*
@@ -742,13 +750,14 @@ void StructuralComponent::updateSlidersPaths( bool bSelf, bool bShared, Quat4f* 
     Node** nds = (Node**)&nodes;
     Slider* share = 0; 
     for(int i=0; i<4; i++){ 
+        printf( "update nds[%i] \n", i );
         Node* nd = nds[i];
         if( nd==0 ) continue; 
         if( nd->component_kind() == (int)ComponetKind::Slider ){ 
             Slider * sl = (Slider*)nd;
             if( (share==0)||(!bShared) ){ 
                 if( bSelf ){
-                    printf( "  if( bSelf ) == true \n" );
+                    //printf( "  if( bSelf ) == true \n" );
                     if(ps!=0){
                         int inear = findNearestPoint( (Vec3f)nd->pos, ps );
                         //nd->pos   = (Vec3d)ps[inear].f;
@@ -756,17 +765,23 @@ void StructuralComponent::updateSlidersPaths( bool bSelf, bool bShared, Quat4f* 
                         //printf( "side = %i i0=%i imin=%i\n", side, inear-pointRange.x, pointRange.x );
                         //side = 0;
                         sl->updatePath( this, side ); 
+                        printf( "sl[%i] update \n", i  );
                     }else{ printf("ERROR in StructuralComponent[%i]::updateSlidersPaths() bSelf=true but ps==0 \n", id ); exit(0); }
                 }else{ 
                     sl->updatePath( sl->boundTo, sl->along.y ); 
                 }
+                DEBUG
                 share=sl;  
             }else if(bShared){ 
+                DEBUG
                 sl->path.bindSharedPath( &share->path ); 
             }
             if(ps){ 
+                DEBUG
                 sl->path.cur = sl->path.findNearestPoint( (Vec3f)nd->pos, ps ); 
+                DEBUG
                 nd->pos = (Vec3d)sl->path.getPos(ps);
+                DEBUG
             }
         }
     }

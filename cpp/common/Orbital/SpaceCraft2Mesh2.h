@@ -419,19 +419,16 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         //truss.edges.push_back( (TrussEdge){o.p0,o.p1,0} );
         mesh.rope( o->nodes.x->ivert,o->nodes.y->ivert, o->face_mat, o->nseg );
         
-        
-        // Rope Dampers ( to dampe perpendicular oscillations )
-        double damper_length = 10.0;
-        Vec3d d = o->nodes.y->pos - o->nodes.x->pos; d.normalize();
-        Vec3d up,lf; d.getSomeOrtho( up, lf );
-        up.mul( damper_length );
-        for(int i=0; i<o->nseg-1; i++){
-            int ov = b.x+i;
-            int v  = mesh.vert( mesh.verts[ ov ].pos + up ); // duplicate the vert
-            mesh.edge( ov,v, o->face_mat );
-        }
-        
-
+        // // Rope Dampers ( to dampe perpendicular oscillations )
+        // double damper_length = 10.0;
+        // Vec3d d = o->nodes.y->pos - o->nodes.x->pos; d.normalize();
+        // Vec3d up,lf; d.getSomeOrtho( up, lf );
+        // up.mul( damper_length );
+        // for(int i=0; i<o->nseg-1; i++){
+        //     int ov = b.x+i;
+        //     int v  = mesh.vert( mesh.verts[ ov ].pos + up ); // duplicate the vert
+        //     mesh.edge( ov,v, o->face_mat );
+        // }
         
         o->pointRange = {b.x,(int)mesh.verts.size()};
         o->stickRange = {b.y,(int)mesh.edges.size()};
@@ -441,11 +438,11 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     for(Ring* o: craft.rings){
         o->update_nodes();
 
-        Node** nd = (Node**)&o->nodes;
-        printf("Ring[%i] to mesh\n", o->id );
-        for(int i=0; i<4; i++){
-            Node* n = nd[i]; printf("  node[%i] ivert=%i pos(%g,%g,%g) boundTo: \n", i, n->ivert, n->pos.x,n->pos.y,n->pos.z ); if(n->boundTo)n->boundTo->print();
-        }
+        // Node** nd = (Node**)&o->nodes;
+        // printf("Ring[%i] to mesh\n", o->id );
+        // for(int i=0; i<4; i++){
+        //     Node* n = nd[i]; printf("  node[%i] ivert=%i pos(%g,%g,%g) boundTo: \n", i, n->ivert, n->pos.x,n->pos.y,n->pos.z ); if(n->boundTo)n->boundTo->print();
+        // }
 
         mesh.block();
         //printf("DEBUG toTruss : ring #%i  %f   %f \n", i, o.nseg, o.wh.a );

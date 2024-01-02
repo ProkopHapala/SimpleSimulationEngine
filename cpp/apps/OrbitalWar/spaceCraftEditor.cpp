@@ -70,11 +70,37 @@ using namespace SpaceCrafting;
 Mesh::Builder2 mesh2;
 OrbSim_f sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
-//char str[8096];
+char str_tmp[8096];
 double elementSize  = 5.;
 bool bRun = false;
 
-// Render 
+Vec3d wheel_speed  = {0.0,0.0,0.0};
+
+void SpaceCraftControl(double dt){
+    // wheel_speed
+    //printf( "SpaceCraftControl() wheel_speed(%g,%g,%g)\n", wheel_speed.x, wheel_speed.y, wheel_speed.z );
+    // --- move the sliders & update corresponding EdgeVerts
+    for( int i=0; i<theSpaceCraft->sliders.size(); i++ ){
+        Slider* o = theSpaceCraft->sliders[i];
+
+        int icon = o->icontrol;
+        if(icon>=0){ 
+            if(icon<3){ o->speed = wheel_speed.array[icon]; }
+        }
+
+        o->move( dt, sim.points );
+        
+        // -- update corresponding EdgeVerts
+        EdgeVertBond& ev = sim.edgeVertBonds[i];
+        ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
+        ev.verts.z = o->ivert;
+        //ev.K = 1000.0;
+        //o->updateEdgeVerts( sim.points );
+
+    }
+}
+
+
 void runSim( OrbSim_f& sim, int niter=100 ){
     long t0 = getCPUticks();
     if(bRun){
@@ -108,7 +134,7 @@ void runSim( OrbSim_f& sim, int niter=100 ){
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
-    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-2 );
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-4 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
 }
 
@@ -201,12 +227,14 @@ void reloadShip( const char* fname  ){
     mesh2.printSizes();
 
     exportSim( sim, mesh2, workshop );
+    sim.user_update = SpaceCraftControl;
 
+    printf( "reloadShip().updateSlidersPaths \n" );
     // update ring slider paths
     for( Ring* o : theSpaceCraft->rings ){
         o->updateSlidersPaths( true, true, sim.points );
     }
-
+    printf( "reloadShip().SlidersToEdgeVerts \n" );
     // ----- Sliders to EdgeVerts
     sim.nEdgeVertBonds =  theSpaceCraft->sliders.size();
     sim.edgeVertBonds  = new EdgeVertBond[ sim.nEdgeVertBonds ];
@@ -215,19 +243,21 @@ void reloadShip( const char* fname  ){
         EdgeVertBond& ev = sim.edgeVertBonds[i];
         ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
         ev.verts.z = o->ivert;
-        ev.K = 1000.0;
+        //ev.K = 1000.0;
+        ev.K = 10000.0;
+        //ev.K = 0.0;
+
+        o->speed = 1.0;
         //o->updateEdgeVerts( sim.points );
     }
 
     // --- kick to rings
-    Vec3f v0 = {1.0,0.0,0.0};
-    for( Ring* o : theSpaceCraft->rings ){
-        for(int iv=o->pointRange.a; iv<o->pointRange.b; iv++){
-            sim.vel[iv].f = v0; 
-        }
-    }
-
-
+    // Vec3f v0 = {1.0,0.0,0.0};
+    // for( Ring* o : theSpaceCraft->rings ){
+    //     for(int iv=o->pointRange.a; iv<o->pointRange.b; iv++){
+    //         sim.vel[iv].f = v0; 
+    //     }
+    // }
 
     renderShip();
     printf("#### END reloadShip('%s')\n", fname );
@@ -570,6 +600,10 @@ void SpaceCraftEditorApp::drawHUD(){
     glDisable( GL_LIGHTING );
     glDisable(GL_DEPTH_TEST);
 
+    // void Draw::drawText( const char * str, int itex, float sz, Vec2i block_size ){
+    sprintf( str_tmp, "time= %10.5f[s] \n ", sim.time );
+    Draw::drawText( str_tmp, fontTex, fontSizeDef,  {WIDTH,HEIGHT-20}  );
+
     gui.draw();
     //glColor3f(1.0f,1.0f,1.0f);   txtStatic.view3D( {5,5}, fontTex, 8 );
     //glPopMatrix();
@@ -617,6 +651,15 @@ void SpaceCraftEditorApp::keyStateHandling( const Uint8 *keys ){
 	if( keys[ SDL_SCANCODE_D ] ){ cam.pos.add_mul( cam.rot.a, +0.05*zoom );  }
     if( keys[ SDL_SCANCODE_LEFTBRACKET  ] ){ theSpaceCraft->nodes[7]->calong-=0.001; theSpaceCraft->nodes[7]->updateBound(); }
     if( keys[ SDL_SCANCODE_RIGHTBRACKET ] ){ theSpaceCraft->nodes[7]->calong+=0.001; theSpaceCraft->nodes[7]->updateBound(); }
+
+    wheel_speed = Vec3dZero;
+	if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y=-1.0; }
+    if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y= 1.0; }
+    if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x=-1.0; }
+	if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x= 1.0; }
+	if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z=-1.0; }
+	if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z= 1.0; }
+
 };
 
 void SpaceCraftEditorApp::eventHandling ( const SDL_Event& event  ){

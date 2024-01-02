@@ -64,6 +64,7 @@ OCL_Orb        sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 double elementSize  = 5.;
 
+
 // Render 
 void runSim( OCL_Orb& sim, int niter=100 ){
     niter=1;

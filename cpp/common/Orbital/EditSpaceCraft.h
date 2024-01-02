@@ -315,6 +315,13 @@ int l_Ring2    (lua_State * L){
     Lua::getLuaArr( L, 4, cs, 2 );
     //for(int i=0; i<4; i++){ printf( "l_Ring2() node[%i](g=%i,c=%g)\n", i, gs[i], cs[i] ); }
     Vec3d p0; Lua::getVec3(L,3, p0 );
+    o->nseg = Lua::getInt (L,4);             printf( "l_Ring2() nseg %i\n",  o->nseg          );
+              Lua::getVec2(L,5, o->wh );     printf( "l_Ring2() wh %g,%g\n", o->wh.x, o->wh.y );
+    o->pose.pos.add_mul( o->pose.rot.c, -o->wh.y );
+    const char * matn = Lua::getString(L,6); printf( "l_Ring2() matn %s\n", matn );
+              Lua::getVec4i(L,7, o->st );    printf( "l_Ring2() st %i,%i,%i,%i\n", o->st.x, o->st.y, o->st.z, o->st.w );
+    int icontrol = Lua::getInt (L,8);        printf( "l_Ring2() icontrol %i\n", icontrol );
+
     // Make nodes bound to nodes to attach ring to girders
     Slider* nd[4];
     for(int i=0; i<4; i++){ 
@@ -331,6 +338,7 @@ int l_Ring2    (lua_State * L){
         nd[i]->id = theSpaceCraft->nodes.size(); 
         theSpaceCraft->nodes.push_back( nd[i] ); 
         theSpaceCraft->sliders.push_back( nd[i] );
+        nd[i]->icontrol = icontrol;
         ((Slider**)&(o->nodes))[i] = nd[i];
     }
     // Warrning 1: what if nodes->pos are not yet defined (which is the case for BoundNodes)
@@ -347,16 +355,10 @@ int l_Ring2    (lua_State * L){
             printf( "l_Ring2() FINALIZED node[%i|id=%i] calong %g along(%i,%i) pos(%g,%g,%g) \n", i, nd[i]->id, nd[i]->calong, nd[i]->along.x, nd[i]->along.y, nd[i]->pos.x, nd[i]->pos.y, nd[i]->pos.z ); 
         }
     }
-
-    // ToDo: remaining nodes ( with cs[i]<0 ) should be evaluated to find the best position for them accoordign to the circle shape
-    o->nseg = Lua::getInt (L,4);             printf( "l_Ring2() nseg %i\n",  o->nseg          );
-              Lua::getVec2(L,5, o->wh );     printf( "l_Ring2() wh %g,%g\n", o->wh.x, o->wh.y );
-    o->pose.pos.add_mul( o->pose.rot.c, -o->wh.y );
-    const char * matn = Lua::getString(L,6); printf( "l_Ring2() matn %s\n", matn );
-              Lua::getVec4i(L,7, o->st );    printf( "l_Ring2() st %i,%i,%i,%i\n", o->st.x, o->st.y, o->st.z, o->st.w );
     o->face_mat = workshop.panelMaterials.getId( matn );
     o->id     = theSpaceCraft->rings.size();
-    if(verbosity>1) o->print();
+    //if(verbosity>1) 
+    o->print();
     theSpaceCraft->rings.push_back( o );
     lua_pushnumber(L, o->id);
     return 1;
