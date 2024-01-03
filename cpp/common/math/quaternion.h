@@ -818,6 +818,9 @@ class Quat8T { public:
 		T array[8];
 	};
 };
+using Quat8i = Quat8T< int>;
+using Quat8f = Quat8T< float>;
+using Quat8d = Quat8T< double >;
 
 #endif
 

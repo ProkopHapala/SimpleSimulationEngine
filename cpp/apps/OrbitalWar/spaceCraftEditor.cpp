@@ -140,6 +140,35 @@ void runSim( OrbSim_f& sim, int niter=100 ){
 
 // ======================  Free Functions
 
+void renderEdgeBox( int ib, Buckets& buckets, int2* edges, Quat4f* points){
+    //const Quat8f& bb = BBs[ib];
+    //Draw3D::drawBBox( bb.lo.f, bb.hi.f );
+    int i0 = buckets.cellI0s[ib];
+    int n  = buckets.cellNs [ib];
+    //printf( "---- renderEdgeBox[%i] n=%i i0=%i \n", ib, n, i0 );
+    for(int i=0; i<n; i++){
+        int ie = buckets.cell2obj[i+i0];
+        int2& e = edges[ie];
+        //printf( "renderEdgeBox[%i] ie %i e(%i,%i) \n", ib, ie, e.x, e.y );
+        Draw3D::drawLine( points[e.x].f, points[e.y].f );
+    }
+}
+
+void renderPointBox( int ib, Buckets& buckets, Quat4f* points){
+    //const Quat8f& bb = BBs[ib];
+    //Draw3D::drawBBox( bb.lo.f, bb.hi.f );
+    int i0 = buckets.cellI0s[ib];
+    int n  = buckets.cellNs [ib];
+    //printf( "---- renderEdgeBox[%i] n=%i i0=%i \n", ib, n, i0 );
+    glBegin(GL_POINTS);
+    for(int i=0; i<n; i++){
+        int ip = buckets.cell2obj[i+i0];
+        //printf( "renderEdgeBox[%i] ie %i e(%i,%i) \n", ib, ie, e.x, e.y );
+        Draw3D::vertex( points[ip].f );   
+    }
+    glEnd();
+}
+
 void renderShip(){
     printf( "SpaceCraftEditorApp.cpp::renderShip() \n" );
     if(glo_ship){ glDeleteLists(glo_ship,1); };
@@ -233,15 +262,20 @@ void reloadShip( const char* fname  ){
     int nbuck  = exportBuckets( *theSpaceCraft,             0, 16, true );
     printf( "nbuck %i \n", nbuck );
     sim.recallocBBs( nbuck );
+    sim.pointBBs.cleanO2C(0);  // by default we assign all points to cell 0
     int nbuck_ = exportBuckets( *theSpaceCraft, &sim.pointBBs, 16, true );
-    sim.pointBBs.printCells();
+    //sim.pointBBs.printCells();
     sim.pointBBs.printObjCellMaping(0,100);   // see if obj2cell is incorrect at the beginning
-    exit(0);
-    DEBUG
     sim.pointBBs.updateCells();
-    DEBUG
-    updatePointBBs( sim.pointBBs, sim.BBs, sim.points );  // It crashes here because of the wrong obj2cell mapping
-    exit(0);
+    printf("### pointBBs.printCells() \n"); sim.pointBBs.printCells();
+    sim.edgesToBBs();
+    sim.edgeBBs.updateCells();
+    printf("### edgeBBs.printCells() \n"); sim.edgeBBs.printCells();
+    updatePointBBs( sim.pointBBs, sim.BBs, sim.points,            true );  // It crashes here because of the wrong obj2cell mapping
+    updateEdgeBBs ( sim.edgeBBs,  sim.BBs, sim.bonds, sim.points, false );
+    //updateEdgeBBs ( sim.edgeBBs, sim.BBs, sim.bonds, sim.points, true );
+    //sim.printBBs();
+
 
     printf( "reloadShip().updateSlidersPaths \n" );
     // update ring slider paths
@@ -320,6 +354,8 @@ class SpaceCraftEditorApp : public AppSDL2OGL_3D { public:
     //EDIT_MODE edit_mode = EDIT_MODE::edge;
     int picked = -1;
     Vec3d mouse_ray0;
+
+    int picked_block = -1;
 
     //void selectCompGui();
 
@@ -517,9 +553,26 @@ void SpaceCraftEditorApp::draw(){
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
     // Render simulation
-    glLineWidth(0.5); 
+    glLineWidth(1.0); 
     runSim( sim );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+
+    // --- render bounding boxes
+    glColor3f(0.0,0.5,0.0);
+    for(int i=0; i<sim.nBBs; i++){
+        const Quat8T<float> bb = sim.BBs[i];
+        Draw3D::drawBBox( bb.lo.f, bb.hi.f );
+    }
+
+    glDisable(GL_DEPTH_TEST);
+
+    if(picked_block>=0){
+        glPointSize(5);
+        Quat8f bb = sim.BBs[picked_block];
+        glColor3f( 0.0,1.0,0.0 ); Draw3D::drawBBox( bb.lo.f, bb.hi.f );
+        glColor3f( 0.0,1.0,1.0 ); renderEdgeBox ( picked_block, sim.edgeBBs,  sim.bonds, sim.points );
+        glColor3f( 0.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointBBs,            sim.points );
+    }
 
     // --- draw nodes
     // glPointSize(10);
@@ -687,6 +740,8 @@ void SpaceCraftEditorApp::eventHandling ( const SDL_Event& event  ){
         case SDL_KEYDOWN :
             switch( event.key.keysym.sym ){
                 //case SDLK_m:  edit_mode = (EDIT_MODE)((((int)edit_mode)+1)%((int)EDIT_MODE::size)); printf("edit_mode %i\n", (int)edit_mode); break;
+                case SDLK_LEFTBRACKET  : circ_inc(picked_block, sim.edgeBBs.ncell ); break;
+                case SDLK_RIGHTBRACKET : circ_dec(picked_block, sim.edgeBBs.ncell ); break;
                 case SDLK_m: picker.switch_mode(); break;
                 //case SDLK_h:  warrior1->tryJump(); break;
                 case SDLK_l:

@@ -83,7 +83,7 @@ Rope(nLf,nUp, 25.,4, preS1, "Kevlar");
 Rope(nRt,nDw, 25.,4, preS1, "Kevlar");
 Rope(nRt,nUp, 25.,4, preS1, "Kevlar");
 
-preS2 = 0.003*0
+preS2 = 0.01*0
 
 Rope2( {gFw,gLf}, {0.5,2.0}, 25.,4, preS2, "Kevlar");
 Rope2( {gFw,gRt}, {0.5,2.0}, 25.,4, preS2, "Kevlar");

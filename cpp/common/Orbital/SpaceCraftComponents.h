@@ -328,12 +328,17 @@ class StructuralComponent : public ShipComponent { public:
         //p = ps[i].f;
         if( buckets ){
             int ip = i0;
+            printf( "StructuralComponent[%i]::toBuckets() i0=%i i1=%i n=%i nbuck=%i nrest=%i \n", id, i0, i1, n, nbuck, nrest );
             for(int i=0; i<nbuck; i++){
                 int ib = ib0+i;
                 printf( "StructuralComponent[%i]::toBuckets() i=%i ib=%i ip=%i \n", id, i, ib, ip );
                 buckets->cellNs [ib]  = nPerBucket;
                 buckets->cellI0s[ib] = ib*nPerBucket;
                 for(int j=0; j<nPerBucket; j++){ buckets->obj2cell[ip]=ib; ip++; }
+                // { // Debug
+                // buckets->printObjCellMaping(0,100);
+                // exit(0);
+                // }
             }
             if(nrest>0){
                 int ib = ib0 + nbuck-1;  if(bHardLimit){ 

@@ -46,38 +46,64 @@ Quat4f springForce( Vec3f d, Quat4f par ){
 
 struct EdgeVertBond{ Vec3i verts; float c; float K; };
 
-void fitAABB( Quat8T<float>& bb, int n, int* c2o, Quat4f * ps ){
-    DEBUG
-    //Quat8T<float> bb;
+void fitAABB( Quat8f& bb, int n, int* c2o, Quat4f * ps ){
+    //Quat8f bb;
     //bb.lo = bb.lo = ps[c2o[0]];
     for(int i=0; i<n; i++){ 
         //printf( "fitAABB() i %i \n", i );
         int ip = c2o[i];
-        printf( "fitAABB() i=%i ip=%i \n", i, ip );
-        DEBUG
+        //printf( "fitAABB() i=%i ip=%i \n", i, ip );
         Quat4f p = ps[ip];
-        DEBUG
         bb.lo.f.setIfLower  ( p.f );
         bb.hi.f.setIfGreater( p.f );
     }; 
     //return bb;
 }
 
-inline void updatePointBBs(const Buckets& buckets, Quat8T<float>* BBs, Quat4f* points, bool bInit=true){
+void fitAABB_edge( Quat8f& bb, int n, int* c2o, int2* edges, Quat4f * ps ){
+    //Quat8f bb;
+    //bb.lo = bb.lo = ps[c2o[0]];
+    for(int i=0; i<n; i++){ 
+        //printf( "fitAABB() i %i \n", i );
+        int ie = c2o[i];
+        int2 b = edges[ie];
+        //printf( "fitAABB() i=%i ip=%i \n", i, ip );
+        Quat4f pi = ps[b.x];
+        bb.lo.f.setIfLower  ( pi.f );
+        bb.hi.f.setIfGreater( pi.f );
+        Quat4f pj = ps[b.y];
+        bb.lo.f.setIfLower  ( pj.f );
+        bb.hi.f.setIfGreater( pj.f );
+    }; 
+    //return bb;
+}
+
+inline void updatePointBBs(const Buckets& buckets, Quat8f* BBs, Quat4f* points, bool bInit=true){
+    printf( "updatePointBBs() START \n" );
     for(int ib=0; ib<buckets.ncell; ib++){
-        printf( "updatePointBBs() ib %i \n", ib );
+        //printf( "updatePointBBs() ib %i \n", ib );
         if(bInit){ BBs[ib].lo.f = Vec3fMax; BBs[ib].hi.f = Vec3fMin; }
-        DEBUG
         int n = buckets.cellNs[ib];
-        DEBUG
         if(n>0){
-            DEBUG
             int i0 = buckets.cellI0s[ib];
-            printf( "updatePointBBs() ib %i n %i i0 %i \n", ib, n, i0 );
-            DEBUG
+            //printf( "updatePointBBs() ib %i n %i i0 %i \n", ib, n, i0 );
             fitAABB( BBs[ib], n, buckets.cell2obj+i0, points );
         }
     }
+    printf( "updatePointBBs() DONE \n" );
+}
+
+inline void updateEdgeBBs(const Buckets& buckets, Quat8f* BBs, int2* edges, Quat4f* points, bool bInit=true){
+    printf( "updateEdgeBBs() START \n" );
+    for(int ib=0; ib<buckets.ncell; ib++){
+        if(bInit){ BBs[ib].lo.f = Vec3fMax; BBs[ib].hi.f = Vec3fMin; }
+        int n = buckets.cellNs[ib];
+        if(n>0){
+            int i0 = buckets.cellI0s[ib];
+            fitAABB_edge( BBs[ib], n, buckets.cell2obj+i0, edges, points );
+        }
+    }
+    printf( "updateEdgeBBs() DONE \n" );
 }
 
 class OrbSim_f : public Picker { public:
@@ -105,7 +131,7 @@ class OrbSim_f : public Picker { public:
     // ====== Collision
     // ToDo: this should be moved to a separate class ?
     int       nBBs=0;
-    Quat8T<float>*  BBs=0; // bounding boxes (can be either AABB, or cylinder, capsula) 
+    Quat8f*  BBs=0; // bounding boxes (can be either AABB, or cylinder, capsula) 
     Buckets   pointBBs;    // buckets for collision detection
     Buckets   edgeBBs;
     Buckets   faceBBs;
@@ -177,21 +203,37 @@ class OrbSim_f : public Picker { public:
         }
     }
 
-    void recallocBBs( int n, bool bPoint=true, bool bEdge=true, bool bFace=true ){
+    void recallocBBs( int n, bool bPoint=true, bool bEdge=true, bool bFace=true, bool bClean=true ){
         nBBs = n;
         _realloc( BBs, nBBs );
-        if(bPoint &&(nPoint>0) )pointBBs.realloc( nBBs, nPoint, true );
-        if(bEdge  &&(nBonds>0) )edgeBBs .realloc( nBBs, nBonds, true );
-        if(bFace  &&(nFaces>0) )faceBBs .realloc( nBBs, nFaces, true );
+        if(bPoint &&(nPoint>0) ){ pointBBs.realloc( nBBs, nPoint, true ); if(bClean)pointBBs.clean(); }
+        if(bEdge  &&(nBonds>0) ){ edgeBBs .realloc( nBBs, nBonds, true ); if(bClean)pointBBs.clean(); }
+        if(bFace  &&(nFaces>0) ){ faceBBs .realloc( nBBs, nFaces, true ); if(bClean)pointBBs.clean(); }
          //_realloc( , nBBs, nPoint );
     }
 
     // ================= Bounding Boxes
 
+    void edgesToBBs(){
+        // assign to cell with smaller number of points
+        for(int i=0; i<nBonds; i++){
+            int2 b = bonds[i];
+            int ci = pointBBs.obj2cell[b.x];
+            int cj = pointBBs.obj2cell[b.y];
+            int ni = pointBBs.cellNs[ci]; 
+            int nj = pointBBs.cellNs[cj];
+            if(ni<nj){ edgeBBs.obj2cell[i]=ci; }else{ edgeBBs.obj2cell[i]=cj; }
+        }
+    }
 
-
-
-
+    void printBBs(){
+        for(int i=0; i<nBBs; i++){ 
+            int np = (pointBBs.cellNs) ? pointBBs.cellNs[i] : 0;
+            int ne = (edgeBBs .cellNs) ? edgeBBs .cellNs[i] : -1;
+            int nf = (faceBBs .cellNs) ? faceBBs .cellNs[i] : -1;
+            printf( "BBs[%i] (%g,%g,%g) (%g,%g,%g) np=%i ned=%i nfc=%i \n", i, BBs[i].lo.x, BBs[i].lo.y, BBs[i].lo.z, BBs[i].hi.x, BBs[i].hi.y, BBs[i].hi.z, np, ne, nf );
+        }
+    };
 
     // =================== Picking
 
@@ -324,9 +366,10 @@ class OrbSim_f : public Picker { public:
             
             // collision damping
             const float invL = 1/l;
-            const float dv  = d.f.dot( vel[b.x].f - v.f );
-            const float imp = collision_damping * p.w*d.w*dv/(p.w+d.w);
-            //const float imp = 0;
+            // const float dv  = d.f.dot( vel[b.x].f - v.f );
+            // float imp = collision_damping * p.w*d.w*dv/(p.w+d.w);
+            const float imp = 0;
+            //imp/=dt;
 
             f.f.add_mul( d.f, ( imp + fl )*invL );
             //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
@@ -393,6 +436,7 @@ class OrbSim_f : public Picker { public:
         float dv   = d.dot( vel[b.z].f - vel[b.x].f*mc - vel[b.y].f*c )*invL;
         float mab  = pa.w*mc + pb.w*c;
         float imp  = collision_damping * pc.w*mab*dv/( pc.w  + mab );
+        //imp/=dt; 
 
         d.mul( K + imp*invL );       
         //printf( "evalEdgeVert[%i,%i,%i] d(%g,%g,%g) c=%g \n", b.x,b.y,b.z, d.x,d.y,d.z, c );   

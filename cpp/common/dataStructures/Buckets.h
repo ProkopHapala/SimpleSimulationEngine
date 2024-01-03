@@ -16,6 +16,7 @@ class Buckets{ public:
     int* obj2cell=0; 
 
     inline void clean(){ for(int k=0; k<ncell; k++ ){ cellNs[k]=0; } }
+    inline void cleanO2C( int icell=-1 ){ for(int i=0; i<nobj; i++ ){ obj2cell[i]=icell; } }
 
     /**
      * Counts the number of objects in each cell based on the given mapping. It stores the result in the array cellNs.

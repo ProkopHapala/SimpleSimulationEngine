@@ -113,7 +113,7 @@ int exportBuckets( SpaceCraft& craft, Buckets* buckets=0, int nPerBucket=16, boo
     // Goes over all the StructuralComponents in the SpaceCraft and exports them to the Buckets (i.e. bounding boxes), split each structural component into a number of buckets.
     // if no output Buckets is specified, it just counts the number of buckets
     printf("exportBuckets() nGirder=%i nRings=%i nRopes=%i \n", craft.girders.size(), craft.rings.size(), craft.ropes.size() );
-    int nBuck = 0;
+    int nBuck = 1; // bucket 0 is reserved for un-assigned objects
     for(Girder* o: craft.girders){ nBuck += o->toBuckets( nBuck, nPerBucket, buckets, bHardLimit ); }
     for(Ring*   o: craft.rings  ){ nBuck += o->toBuckets( nBuck, nPerBucket, buckets, bHardLimit ); }
     for(Rope*   o: craft.ropes  ){ nBuck += o->toBuckets( nBuck, nPerBucket, buckets, bHardLimit ); }

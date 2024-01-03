@@ -19,6 +19,9 @@
 #define _circ_inc( i, n )   (i)++; if((i)>=n) (i)=0;
 #define _circ_dec( i, n )   (i)--; if((i)< 0) (i)=(n)-1;
 
+inline void circ_inc( int& i, int n ){ i++; if(i>=n) i=0;   };
+inline void circ_dec( int& i, int n ){ i--; if(i< 0) i=n-1; };
+
 //#define _realloc(TYPE,arr,n){ if(var) delete [] arr; arr=new TYPE[n]; }
 
 //#define BEGIN_WITH(x) { \

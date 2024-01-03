@@ -33,9 +33,6 @@ template <class TYPE> inline TYPE clip(TYPE x, TYPE xmin, TYPE xmax ){ if( x<xmi
 #define _minit( i, x, imin, xmin )  if( x<xmin ){ xmin=x; imin=i; }
 #define _maxit( i, x, imax, xmax )  if( x>xmax ){ xmax=x; imax=i; }
 
-#define _circ_inc( i, n )   i++; if(i>=n) i=0;
-#define _circ_dec( i, n )   i--; if(i< 0) i=n-1;
-
 typedef float  (*Func1f)( float  );
 typedef double (*Func1d)( double );
 
@@ -44,6 +41,7 @@ typedef double (*Func2d)( double, double );
 
 typedef float  (*Func3f)( float,  float,  float  );
 typedef double (*Func3d)( double, double, double );
+
 
 
 inline double x2grid( double x, double xstep, double invXstep, int& ix ){
