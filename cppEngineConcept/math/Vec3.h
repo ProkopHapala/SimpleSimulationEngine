@@ -57,7 +57,8 @@ class Vec3TYPE{
 	inline void sub_mul( const VEC& a, const VEC& b          ){ x-=a.x*b.x;   y-=a.y*b.y;   z-=a.z*b.z; };
 	inline void add_mul( const VEC& a, const VEC& b, TYPE f  ){ x+=a.x*b.x*f; y+=a.y*b.y*f; z+=a.z*b.z*f;   };
 
-	inline void set_add_mul( const VEC& a, const VEC& b, TYPE f ){ x= a.x + f*b.x;     y= a.y + f*b.y;     z= a.z + f*b.z;  };
+	inline void set_add_mul( const VEC& a, const VEC& b, const VEC& f ){ x= a.x + f  *b.x;     y= a.y + f  *b.y;     z= a.z + f  *b.z;  };
+    inline void set_add_mul( const VEC& a, const VEC& b, const VEC& f ){ x= a.x + f.x*b.x;     y= a.y + f.y*b.y;     z= a.z + f.z*b.z;  };
 
 	inline void set_lincomb( TYPE fa, const VEC& a, TYPE fb, const VEC& b ){ x = fa*a.x + fb*b.x;  y = fa*a.y + fb*b.y;  z = fa*a.z + fb*b.z; };
 	inline void add_lincomb( TYPE fa, const VEC& a, TYPE fb, const VEC& b ){ x+= fa*a.x + fb*b.x;  y+= fa*a.y + fb*b.y;  z+= fa*a.z + fb*b.z; };

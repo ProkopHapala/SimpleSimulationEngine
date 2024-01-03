@@ -354,6 +354,7 @@ inline bool pointInRect( const Vec3d& p, const Mat3d& rot, Vec2d ){
 //}
 
 inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, const Vec3d& p2,  Vec3d& hitPos, Vec3d& normal ){
+    // we assume that p1 and p2 are opposite corners of the box, and are already sorted (p1.x<p2.x, p1.y<p2.y, p1.z<p2.z)
     Vec3d d1,d2;
     d1.set_sub( p1, ray0 );
     d2.set_sub( p2, ray0 );
@@ -365,7 +366,7 @@ inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, con
     if( (hRay.x*hRay.x) > 1e-32 ){
 
         double t,dir;
-        if  ( hRay.x > 0 ){  t = d1.x/hRay.x;  dir = -1.0;  }
+        if  ( hRay.x > 0 ){  t = d1.x/hRay.x;  dir = -1.0;  } // we use assumption that p1.x<p2.x here
         else              {  t = d2.x/hRay.x;  dir =  1.0;  }
         //printf( " tx %f \n", t );
         //if( t < tmin ){
@@ -386,7 +387,7 @@ inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, con
     // ---  along y
     if( (hRay.y*hRay.y) > 1e-32 ){
         double t,dir;
-        if  ( hRay.y > 0 ){  t = d1.y/hRay.y;  dir = -1.0;  }
+        if  ( hRay.y > 0 ){  t = d1.y/hRay.y;  dir = -1.0;  }  // we use assumption that p1.y<p2.y here
         else              {  t = d2.y/hRay.y;  dir =  1.0;  }
         //printf( " ty %f \n", t );
         if( t < tmin ){
@@ -407,7 +408,7 @@ inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, con
     // ---  along z
     if( (hRay.z*hRay.z) > 1e-32 ){
         double t,dir;
-        if  ( hRay.z > 0 ){  t = d1.z/hRay.z;   dir = -1.0; }
+        if  ( hRay.z > 0 ){  t = d1.z/hRay.z;   dir = -1.0; }   // we use assumption that p1.y<p2.y here
         else              {  t = d2.z/hRay.z;   dir =  1.0; }
         //printf( " tz %f \n", t );
         if( t < tmin ){
@@ -429,6 +430,25 @@ inline double rayBox( const Vec3d& ray0, const Vec3d& hRay, const Vec3d& p1, con
     hitPos.add_mul( hRay, tmin );
     return tmin;
 }
+
+/*
+template<typename T>
+inline int rayBox2( const Vec3TYPE<T>& o, const Vec3TYPE<T>& h, const Vec3TYPE<T>& p1, Vec3TYPE<T>& p2, T& tin, T& tout, Vec3TYPE<T>* normal ){
+    Vec3TYPE<T> inv; inv.set_inv( hRay );
+    Vec3d t1; t1.set_add_mul( o, p1, inv ); // hit to planes passing through p1
+    Vec3d t2; t2.set_add_mul( o, p2, inv ); // hit to planes passing through p2
+
+    if( t1.x > t2.x ){ T t=t1.x; t1.x=t2.x; t2.x=t; }
+    if( t1.y > t2.y ){ T t=t1.y; t1.y=t2.y; t2.y=t; }
+    if( t1.z > t2.z ){ T t=t1.z; t1.z=t2.z; t2.z=t; }
+
+    // is closer hit to x-plane within y,z rectangle ?
+    T y = o.y + h.y*t1.x;
+    T z = o.z + h.z*t1.x;
+    if( y )
+    return tmin;
+}
+*/
 
 #endif
 

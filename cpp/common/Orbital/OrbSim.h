@@ -156,6 +156,8 @@ class OrbSim_f : public Picker { public:
     Quat4f omega{0.0f,0.0f,1.0f,0.05f};
 
 
+    Vec3d hit_pos, hit_normal;
+
 
     //float maxAcc = 1e+6;
     float maxAcc = 1.0;
@@ -237,10 +239,12 @@ class OrbSim_f : public Picker { public:
 
     // =================== Picking
 
-    int pick_point_brute( const Vec3f& ray0, const Vec3f& hray, float Rmax ){
+    int pick_point_brute( const Vec3f& ray0, const Vec3f& hray, float Rmax, int i0=-1, int i1=-1 ){
+        if(i0<0){ i0=0;      }
+        if(i1<0){ i1=nPoint; }
         float r2min =  Rmax*Rmax;
         int imin    = -1;
-        for(int i=0; i<nPoint; i++){
+        for(int i=i0; i<i1; i++){
             float t;
             float r2 = rayPointDistance2( ray0, hray, points[i].f, t );
             //printf( "pick_point_brute ipick %i r %g p(%g,%g,%g)\n", i, sqrt(r2), points[i].f.x,points[i].f.y,points[i].f.z );
@@ -252,10 +256,12 @@ class OrbSim_f : public Picker { public:
         return imin;
     }
 
-    int pick_bond_brute( const Vec3d& ray0, const Vec3d& hRay, double Rmax ) const {
+    int pick_bond_brute( const Vec3d& ray0, const Vec3d& hRay, double Rmax, int i0=-1, int i1=-1 ) const {
+        if(i0<0){ i0=0;      }
+        if(i1<0){ i1=nBonds; }
         double dist_min =  Rmax;
         int    imin     = -1;
-        for(int ib=0; ib<nBonds; ib++){
+        for(int ib=i0; ib<i1; ib++){
             int2 b = bonds[ib];
             double t1,t2;
             Vec3d p0 = (Vec3d)points[b.x].f;
@@ -265,6 +271,20 @@ class OrbSim_f : public Picker { public:
             if( (dist<dist_min) && (t2>0) && (t2<l) ){
                 imin=ib; dist_min=dist;
             }
+        }
+        return imin;
+    };
+
+    int pick_BBox( const Vec3d& ray0, const Vec3d& hRay, double tmax, int i0=-1, int i1=-1 ){
+        if(i0<0){ i0=0;     }
+        if(i1<0){ i1=nBBs; }
+        if(i0<0){ i0=0; i1=nBonds; }
+        double tmin = tmax;
+        int    imin = -1;
+        for(int ib=i0; ib<i1; ib++){
+            const Quat8f& bb = BBs[ib];
+            double t = rayBox( ray0, hRay, (Vec3d)bb.lo.f, (Vec3d)bb.hi.f, hit_pos, hit_normal );
+            if( t<tmin ){ imin=ib; tmin=t; }
         }
         return imin;
     };

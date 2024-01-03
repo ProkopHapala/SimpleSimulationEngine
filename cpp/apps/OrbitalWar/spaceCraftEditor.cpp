@@ -571,6 +571,8 @@ void SpaceCraftEditorApp::draw(){
 
     glDisable(GL_DEPTH_TEST);
 
+    picked_block = sim.pick_BBox( picker.ray0, picker.hray, 10000.0, 1 );
+
     if(picked_block>=0){
         glPointSize(5);
         Quat8f bb = sim.BBs[picked_block];
