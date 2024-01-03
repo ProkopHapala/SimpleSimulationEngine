@@ -280,7 +280,7 @@ void reloadShip( const char* fname  ){
     updateEdgeBBs ( sim.edgeBBs,  sim.BBs, sim.bonds, sim.points, false );
     //updateEdgeBBs ( sim.edgeBBs, sim.BBs, sim.bonds, sim.points, true );
     //sim.printBBs();
-
+    makePointCunks( sim.edgeBBs, sim.bonds, sim.pointChunks );
 
     printf( "reloadShip().updateSlidersPaths \n" );
     // update ring slider paths
@@ -578,6 +578,7 @@ void SpaceCraftEditorApp::draw(){
         Quat8f bb = sim.BBs[picked_block];
         glColor3f( 0.0,1.0,0.0 ); Draw3D::drawBBox( bb.lo.f, bb.hi.f );
         glColor3f( 0.0,1.0,1.0 ); renderEdgeBox ( picked_block, sim.edgeBBs,  sim.bonds, sim.points );
+        glColor3f( 1.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointChunks,         sim.points );
         glColor3f( 0.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointBBs,            sim.points );
     }
 

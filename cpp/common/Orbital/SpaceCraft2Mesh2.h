@@ -120,6 +120,44 @@ int exportBuckets( SpaceCraft& craft, Buckets* buckets=0, int nPerBucket=16, boo
     return nBuck;
 }
 
+int makePointCunks( Buckets& ebuck, int2* edges, Buckets& pbuck ){
+    printf( "makePointCunks() ncell %i nobj %i \n", ebuck.ncell, ebuck.nobj );
+    std::unordered_set<int> ps; // we use set to remove duplicates
+    std::vector<int> p2c;       // we use vector because we do not know the sizes in advance
+    pbuck.cellNs = new int[ ebuck.ncell ];
+    pbuck.cellI0s= new int[ ebuck.ncell ];
+    //DEBUG
+    //ebuck.printCells();
+    //printf( "makePointCunks() ncell %i nobj %i \n", ebuck.ncell, ebuck.nobj );
+    //exit(0);
+    // --- select points from edges (without duplicates)
+    for(int ib=0; ib<ebuck.ncell; ib++){
+        int i0 =      ebuck.cellI0s[ib];
+        int i1 = i0 + ebuck.cellNs [ib]; 
+        ps.clear();
+        //printf( "makePointCunks() ib %i i0 %i i1 %i \n", ib, i0, i1 );
+        for(int j=i0; j<i1; j++){
+            int ie = ebuck.cell2obj[j];
+            int2 e = edges[ie];
+            ps.insert( e.x );
+            ps.insert( e.y );
+        }
+        pbuck.cellNs [ib] = ps.size();
+        pbuck.cellI0s[ib] = p2c.size();
+        for( int p : ps ){ p2c.push_back(p); }  // copy set to vector
+    }
+    // --- copy point from vector to pbuck
+    pbuck.nobj     = p2c.size();
+    pbuck.cell2obj = new int[ pbuck.nobj ];
+    //pbuck.obj2cel  = new int[ pbuck.nobj ];
+    for(int i=0; i<pbuck.nobj; i++){ 
+        int j = p2c[i];
+        pbuck.cell2obj[i]=j;
+        //pbuck.obj2cel [j]=i; 
+    }
+    return pbuck.nobj;
+}
+
 /**
  * Creates a girder in the truss structure.
  * 

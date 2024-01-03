@@ -132,9 +132,10 @@ class OrbSim_f : public Picker { public:
     // ToDo: this should be moved to a separate class ?
     int       nBBs=0;
     Quat8f*  BBs=0; // bounding boxes (can be either AABB, or cylinder, capsula) 
-    Buckets   pointBBs;    // buckets for collision detection
-    Buckets   edgeBBs;
-    Buckets   faceBBs;
+    Buckets  pointBBs;    // buckets for collision detection
+    Buckets  edgeBBs;
+    Buckets  faceBBs;
+    Buckets  pointChunks;  // chunks for parallelization, these points are copied to local memory when solving one edgeBBs chunk of bonds  
 
     // Faces are used just for ray-tracing, collision detection, etc
     int   nFaces=0;
