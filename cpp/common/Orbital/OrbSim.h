@@ -79,7 +79,7 @@ void fitAABB_edge( Quat8f& bb, int n, int* c2o, int2* edges, Quat4f * ps ){
 }
 
 inline void updatePointBBs(const Buckets& buckets, Quat8f* BBs, Quat4f* points, bool bInit=true){
-    printf( "updatePointBBs() START \n" );
+    //printf( "updatePointBBs() START \n" );
     for(int ib=0; ib<buckets.ncell; ib++){
         //printf( "updatePointBBs() ib %i \n", ib );
         if(bInit){ BBs[ib].lo.f = Vec3fMax; BBs[ib].hi.f = Vec3fMin; }
@@ -90,11 +90,11 @@ inline void updatePointBBs(const Buckets& buckets, Quat8f* BBs, Quat4f* points, 
             fitAABB( BBs[ib], n, buckets.cell2obj+i0, points );
         }
     }
-    printf( "updatePointBBs() DONE \n" );
+    //printf( "updatePointBBs() DONE \n" );
 }
 
 inline void updateEdgeBBs(const Buckets& buckets, Quat8f* BBs, int2* edges, Quat4f* points, bool bInit=true){
-    printf( "updateEdgeBBs() START \n" );
+    //printf( "updateEdgeBBs() START \n" );
     for(int ib=0; ib<buckets.ncell; ib++){
         if(bInit){ BBs[ib].lo.f = Vec3fMax; BBs[ib].hi.f = Vec3fMin; }
         int n = buckets.cellNs[ib];
@@ -103,7 +103,7 @@ inline void updateEdgeBBs(const Buckets& buckets, Quat8f* BBs, int2* edges, Quat
             fitAABB_edge( BBs[ib], n, buckets.cell2obj+i0, edges, points );
         }
     }
-    printf( "updateEdgeBBs() DONE \n" );
+    //printf( "updateEdgeBBs() DONE \n" );
 }
 
 class OrbSim_f : public Picker { public:

@@ -128,6 +128,7 @@ void runSim( OrbSim_f& sim, int niter=100 ){
         sim.run_omp( niter, true, 1e-3, 1e-5 );
         double T = (getCPUticks()-t0)*1e-6;
         printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
+
     }
     
     sim.evalBondTension();
@@ -136,6 +137,10 @@ void runSim( OrbSim_f& sim, int niter=100 ){
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-4 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
+
+    if(sim.pointBBs.ncell>0) updatePointBBs( sim.pointBBs, sim.BBs, sim.points,            true );  // It crashes here because of the wrong obj2cell mapping
+    if(sim.edgeBBs .ncell>0) updateEdgeBBs ( sim.edgeBBs,  sim.BBs, sim.bonds, sim.points, false );
+    
 }
 
 // ======================  Free Functions
