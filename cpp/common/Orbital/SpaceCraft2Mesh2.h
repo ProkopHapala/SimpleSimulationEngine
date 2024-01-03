@@ -109,10 +109,10 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     //exit(0);
 }
 
-int exportBuckets( SpaceCraft& craft, Buckets* buckets=0, int nPerBucket=16, bool bHardLimit=true ){
+int exportBuckets( const SpaceCraft& craft, Buckets* buckets=0, int nPerBucket=16, bool bHardLimit=true ){
     // Goes over all the StructuralComponents in the SpaceCraft and exports them to the Buckets (i.e. bounding boxes), split each structural component into a number of buckets.
     // if no output Buckets is specified, it just counts the number of buckets
-    printf("exportBuckets() nGirder=%i nRings=%i nRopes=%i \n", craft.girders.size(), craft.rings.size(), craft.ropes.size() );
+    printf("exportBuckets(out=%i,nPerBucket=%i,hardlimit=%i) nGirder=%i nRings=%i nRopes=%i \n", buckets!=0, nPerBucket, bHardLimit, craft.girders.size(), craft.rings.size(), craft.ropes.size() );
     int nBuck = 1; // bucket 0 is reserved for un-assigned objects
     for(Girder* o: craft.girders){ nBuck += o->toBuckets( nBuck, nPerBucket, buckets, bHardLimit ); }
     for(Ring*   o: craft.rings  ){ nBuck += o->toBuckets( nBuck, nPerBucket, buckets, bHardLimit ); }
@@ -522,8 +522,8 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     printf("BuildCraft_truss().Welds n=%i\n", craft.welds.size() );
     for( Weld* o : craft.welds ){
         //printf("Welds[]\n");
+        //o->print();
         mesh.block();
-        o->print();
         mesh.bondsBetweenVertRanges( o->comps.x->pointRange, o->comps.y->pointRange, o->Rmax, o->face_mat );
         //break;
         Quat4i& b = mesh.blocks.back();

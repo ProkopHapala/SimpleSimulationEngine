@@ -26,7 +26,8 @@ class Buckets{ public:
      */
     inline void count( int nobj, int* obj2cell ){ 
         for(int i=0; i<nobj; i++ ){ 
-            int ic = obj2cell[i]; printf( "obj[%i ]-> cell %i \n", i, ic );
+            int ic = obj2cell[i]; 
+            //printf( "obj[%i ]-> cell %i \n", i, ic );
             cellNs[ ic ]++;  
         } 
     }
@@ -82,10 +83,10 @@ class Buckets{ public:
     inline void updateCells( int nobj_=-1, int* obj2cell_=0 ){
         if( obj2cell_==0 ) obj2cell_=obj2cell;
         if( nobj_<0      ) nobj_    =nobj;
-        clean         ();                      printf("updateCells.clean() \n"  );
-        count         ( nobj_, obj2cell_ );    printf("updateCells.count() \n"  );
-        updateOffsets ();                      printf("updateCells.updateOffsets() \n"  );
-        objectsToCells( nobj_, obj2cell_ );    printf("updateCells.objectsToCells() \n"  );
+        clean         ();                      //printf("updateCells.clean() \n"  );
+        count         ( nobj_, obj2cell_ );    //printf("updateCells.count() \n"  );
+        updateOffsets ();                      //printf("updateCells.updateOffsets() \n"  );
+        objectsToCells( nobj_, obj2cell_ );    //printf("updateCells.objectsToCells() \n"  );
     }
 
     inline bool resizeCells( int ncell_                 ){ bool b=(ncell_>ncell); if(b){ ncell=ncell_; _realloc(cellNs,ncell_); _realloc(cellI0s,ncell_); }; return b; };

@@ -299,7 +299,7 @@ class StructuralComponent : public ShipComponent { public:
     virtual void updateSlidersPaths( bool bSelf, bool bShared=false, Quat4f* ps=0 );
 
     virtual int findNearestPoint( Vec3f p, Quat4f* ps=0 ){
-        printf( "StructuralComponent[%i]::findNearestPoint() p(%g,%g,%g)\n", id, p.x,p.y,p.z );
+        //printf( "StructuralComponent[%i]::findNearestPoint() p(%g,%g,%g)\n", id, p.x,p.y,p.z );
         //printf(" -- "); print();
         int i0 = pointRange.x;
         int i1 = pointRange.y;
@@ -316,8 +316,8 @@ class StructuralComponent : public ShipComponent { public:
         return i0min;
     }
 
-    virtual int toBuckets( int ib0, int nPerBucket, Buckets* buckets=0, bool bHardLimit=true ){
-        printf( "StructuralComponent[%i]::toBuckets() ib0=%i nPerBucket=%i \n", id, ib0, nPerBucket );
+    virtual int toBuckets( int ib0, int nPerBucket, Buckets* buckets=0, bool bHardLimit=true )const{
+        //printf( "StructuralComponent[%i]::toBuckets() ib0=%i nPerBucket=%i \n", id, ib0, nPerBucket );
         int i0 = pointRange.x;
         int i1 = pointRange.y;
         int n  = i1-i0;
@@ -328,10 +328,10 @@ class StructuralComponent : public ShipComponent { public:
         //p = ps[i].f;
         if( buckets ){
             int ip = i0;
-            printf( "StructuralComponent[%i]::toBuckets() i0=%i i1=%i n=%i nbuck=%i nrest=%i \n", id, i0, i1, n, nbuck, nrest );
+            //printf( "StructuralComponent[%i]::toBuckets() i0=%i i1=%i n=%i nbuck=%i nrest=%i \n", id, i0, i1, n, nbuck, nrest );
             for(int i=0; i<nbuck; i++){
                 int ib = ib0+i;
-                printf( "StructuralComponent[%i]::toBuckets() i=%i ib=%i ip=%i \n", id, i, ib, ip );
+                //printf( "StructuralComponent[%i]::toBuckets() i=%i ib=%i ip=%i \n", id, i, ib, ip );
                 buckets->cellNs [ib]  = nPerBucket;
                 buckets->cellI0s[ib] = ib*nPerBucket;
                 for(int j=0; j<nPerBucket; j++){ buckets->obj2cell[ip]=ib; ip++; }
@@ -348,7 +348,7 @@ class StructuralComponent : public ShipComponent { public:
                 }else{
                     buckets->cellNs[ib] += nrest;
                 }
-                printf( "StructuralComponent[%i]::toBuckets() i=%i ib=%i ip=%i (rest)\n", id, nbuck+1, ib, ip );
+                //printf( "StructuralComponent[%i]::toBuckets() i=%i ib=%i ip=%i (rest)\n", id, nbuck+1, ib, ip );
                 for(int j=0; j<nrest; j++){ 
                     buckets->obj2cell[ip]=ib; ip++; 
                 }

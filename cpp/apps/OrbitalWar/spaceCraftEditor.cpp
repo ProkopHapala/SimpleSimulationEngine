@@ -175,7 +175,7 @@ void renderPointBox( int ib, Buckets& buckets, Quat4f* points){
 }
 
 void renderShip(){
-    printf( "SpaceCraftEditorApp.cpp::renderShip() \n" );
+    //printf( "SpaceCraftEditorApp.cpp::renderShip() \n" );
     if(glo_ship){ glDeleteLists(glo_ship,1); };
     glo_ship = glGenLists(1);
     glNewList( glo_ship, GL_COMPILE );
@@ -243,6 +243,27 @@ void renderShip(){
     glEndList();
 }
 
+
+void makeBBoxes( const SpaceCraft& craft, OrbSim_f& sim ){
+    // // --- Bounding boxes
+    int nbuck  = exportBuckets( craft,             0, 16, true );
+    //printf( "nbuck %i \n", nbuck );
+    sim.recallocBBs( nbuck );
+    sim.pointBBs.cleanO2C(0);  // by default we assign all points to cell 0
+    int nbuck_ = exportBuckets( craft, &sim.pointBBs, 16, true );
+    //sim.pointBBs.printCells();
+    //sim.pointBBs.printObjCellMaping(0,100);   // see if obj2cell is incorrect at the beginning
+    sim.pointBBs.updateCells();
+    //printf("### pointBBs.printCells() \n"); sim.pointBBs.printCells();
+    sim.edgesToBBs();
+    sim.edgeBBs.updateCells();
+    //printf("### edgeBBs.printCells() \n"); sim.edgeBBs.printCells();
+    updatePointBBs( sim.pointBBs, sim.BBs, sim.points,            true );  // It crashes here because of the wrong obj2cell mapping
+    updateEdgeBBs ( sim.edgeBBs,  sim.BBs, sim.bonds, sim.points, false );
+    //updateEdgeBBs ( sim.edgeBBs, sim.BBs, sim.bonds, sim.points, true );
+    //sim.printBBs();
+}
+
 void reloadShip( const char* fname  ){
     theSpaceCraft->clear();                  // clear all components
     //luaL_dofile(theLua, "data/spaceshil1.lua");
@@ -255,32 +276,25 @@ void reloadShip( const char* fname  ){
     //theSpaceCraft->toTruss();
     //truss.clear();
     //toTruss(*theSpaceCraft, truss);
+    long t0;
 
+    t0 = getCPUticks();
     mesh2.clear();
     BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
+    printf( "BuildCraft_truss() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
     mesh2.printSizes();
 
+    t0 = getCPUticks();
     exportSim( sim, mesh2, workshop );
-    sim.user_update = SpaceCraftControl;
+    printf( "exportSim() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
 
-    // // --- Bounding boxes
-    int nbuck  = exportBuckets( *theSpaceCraft,             0, 16, true );
-    printf( "nbuck %i \n", nbuck );
-    sim.recallocBBs( nbuck );
-    sim.pointBBs.cleanO2C(0);  // by default we assign all points to cell 0
-    int nbuck_ = exportBuckets( *theSpaceCraft, &sim.pointBBs, 16, true );
-    //sim.pointBBs.printCells();
-    sim.pointBBs.printObjCellMaping(0,100);   // see if obj2cell is incorrect at the beginning
-    sim.pointBBs.updateCells();
-    printf("### pointBBs.printCells() \n"); sim.pointBBs.printCells();
-    sim.edgesToBBs();
-    sim.edgeBBs.updateCells();
-    printf("### edgeBBs.printCells() \n"); sim.edgeBBs.printCells();
-    updatePointBBs( sim.pointBBs, sim.BBs, sim.points,            true );  // It crashes here because of the wrong obj2cell mapping
-    updateEdgeBBs ( sim.edgeBBs,  sim.BBs, sim.bonds, sim.points, false );
-    //updateEdgeBBs ( sim.edgeBBs, sim.BBs, sim.bonds, sim.points, true );
-    //sim.printBBs();
+    t0 = getCPUticks();
+    makeBBoxes( *theSpaceCraft, sim );
     makePointCunks( sim.edgeBBs, sim.bonds, sim.pointChunks );
+    sim.pointChunks.printCells();
+    printf( "makeBBoxes() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
+
+    sim.user_update = SpaceCraftControl;
 
     printf( "reloadShip().updateSlidersPaths \n" );
     // update ring slider paths
