@@ -440,6 +440,16 @@ class OrbSim_f : public Picker { public:
         } 
     }
 
+    Vec3f getEdgeVertPos( int i ){
+        Vec3i b = edgeVertBonds[i].verts;
+        const Quat4f& pa = points[b.x];
+        const Quat4f& pb = points[b.y];
+        const Quat4f& pc = points[b.z];
+        double c = edgeVertBonds[i].c;
+        float mc = 1-c;
+        return pa.f*mc + pb.f*c;
+    }
+
     void evalEdgeVert( Vec3i b, float c, float K ){
         // ToDo: perhaps we should interpolate it by B-spline to make the path more smooth
         // ToDo: Apply Force in the direction of the edge, constrain perpendicular to the edge

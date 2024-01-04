@@ -74,7 +74,8 @@ char str_tmp[8096];
 double elementSize  = 5.;
 bool bRun = false;
 
-Vec3d wheel_speed  = {0.0,0.0,0.0};
+Vec3d wheel_speed       = {0.0,0.0,0.0};
+Vec3d wheel_speed_setup = { 0.1, 0.1, 0.1 };
 
 void SpaceCraftControl(double dt){
     // wheel_speed
@@ -314,7 +315,8 @@ void reloadShip( const char* fname  ){
         ev.K = 10000.0;
         //ev.K = 0.0;
 
-        o->speed = 1.0;
+        //o->speed = 1.0;
+        o->speed = 0.1;
         //o->updateEdgeVerts( sim.points );
     }
 
@@ -613,22 +615,34 @@ void SpaceCraftEditorApp::draw(){
 
     // --- draw slider bonds
     glLineWidth(3.0);
-    glColor3f(0.0,0.5,0.0);
-    // render EdgeVertBonds
-    glBegin(GL_LINES);
-    for(int i=0; i<sim.nEdgeVertBonds; i++){
-        EdgeVertBond& ev = sim.edgeVertBonds[i];
-        Vec3f a = sim.points[ ev.verts.x ].f;
-        Vec3f b = sim.points[ ev.verts.y ].f;
-        Vec3f c = sim.points[ ev.verts.z ].f;
-        Draw3D::vertex( a );  Draw3D::vertex( c );
-        Draw3D::vertex( b );  Draw3D::vertex( c );
-    }
-    glEnd();
+    // glColor3f(0.0,0.5,0.0);
+    // // render EdgeVertBonds
+    // glBegin(GL_LINES);
+    // for(int i=0; i<sim.nEdgeVertBonds; i++){
+    //     EdgeVertBond& ev = sim.edgeVertBonds[i];
+    //     Vec3f a = sim.points[ ev.verts.x ].f;
+    //     Vec3f b = sim.points[ ev.verts.y ].f;
+    //     Vec3f c = sim.points[ ev.verts.z ].f;
+    //     Draw3D::vertex( a );  Draw3D::vertex( c );
+    //     Draw3D::vertex( b );  Draw3D::vertex( c );
+    // }
+    // glEnd();
     // --- draw slider paths
     glLineWidth(3.0);
+    
+    //for( const Slider* o: theSpaceCraft->sliders){ 
+    for( int i=0; i<theSpaceCraft->sliders.size(); i++ ){
+        const Slider* o = theSpaceCraft->sliders[i];
+        glColor3f(0.0,0.5,1.0);
+        drawSliderPath( o, sim.points, 10 ); 
+        
+        glColor3f(1.0,0.0,1.0);
+        Vec3f p  = sim.getEdgeVertPos( i );
+        Vec3f p0 = sim.points[ o->ivert ].f;
+        Draw3D::drawLine( p0, p );
+        
+    }
     glColor3f(0.0,0.5,1.0);
-    for( const Slider* o: theSpaceCraft->sliders){ drawSliderPath( o, sim.points, 10 ); }
     glPointSize(20); glBegin(GL_POINTS); for( const Slider* o: theSpaceCraft->sliders){ Draw3D::vertex( sim.points[o->ivert].f ); } glEnd();
     //glPointSize(3000/zoom); glBegin(GL_POINTS); for( const Slider* o: theSpaceCraft->sliders){ Draw3D::vertex( sim.points[o->ivert].f ); } glEnd();
 
@@ -742,12 +756,12 @@ void SpaceCraftEditorApp::keyStateHandling( const Uint8 *keys ){
     if( keys[ SDL_SCANCODE_RIGHTBRACKET ] ){ theSpaceCraft->nodes[7]->calong+=0.001; theSpaceCraft->nodes[7]->updateBound(); }
 
     wheel_speed = Vec3dZero;
-	if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y=-1.0; }
-    if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y= 1.0; }
-    if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x=-1.0; }
-	if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x= 1.0; }
-	if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z=-1.0; }
-	if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z= 1.0; }
+	if( keys[ SDL_SCANCODE_KP_5 ] ){ wheel_speed.y=-wheel_speed_setup.y; }
+    if( keys[ SDL_SCANCODE_KP_8 ] ){ wheel_speed.y= wheel_speed_setup.y; }
+    if( keys[ SDL_SCANCODE_KP_4 ] ){ wheel_speed.x=-wheel_speed_setup.x; }
+	if( keys[ SDL_SCANCODE_KP_6 ] ){ wheel_speed.x= wheel_speed_setup.x; }
+	if( keys[ SDL_SCANCODE_KP_7 ] ){ wheel_speed.z=-wheel_speed_setup.z; }
+	if( keys[ SDL_SCANCODE_KP_9 ] ){ wheel_speed.z= wheel_speed_setup.z; }
 
 };
 
