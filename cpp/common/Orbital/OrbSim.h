@@ -387,9 +387,9 @@ class OrbSim_f : public Picker { public:
             
             // collision damping
             const float invL = 1/l;
-            // const float dv  = d.f.dot( vel[b.x].f - v.f );
-            // float imp = collision_damping * p.w*d.w*dv/(p.w+d.w);
-            const float imp = 0;
+            const float dv  = d.f.dot( vel[b.x].f - v.f );
+            float imp = collision_damping * p.w*d.w*dv/(p.w+d.w);
+            //const float imp = 0;
             //imp/=dt;
 
             f.f.add_mul( d.f, ( imp + fl )*invL );
@@ -744,8 +744,8 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
         }
         #pragma omp for
         for(int i=0;i<nPoint; i++ ){
-            move_i_MD( i, dt, 1.0 );
-            //move_i_MD( i, dt, cdamp );
+            //move_i_MD( i, dt, 1.0 );
+            move_i_MD( i, dt, cdamp );
             /*
             if(bDynamic){ 
                 move_i_MD( i, dt, cdamp );

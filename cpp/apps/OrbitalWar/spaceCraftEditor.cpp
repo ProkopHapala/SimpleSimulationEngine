@@ -75,7 +75,8 @@ double elementSize  = 5.;
 bool bRun = false;
 
 Vec3d wheel_speed       = {0.0,0.0,0.0};
-Vec3d wheel_speed_setup = { 0.1, 0.1, 0.1 };
+//Vec3d wheel_speed_setup = { 0.1, 0.1, 0.1 };
+Vec3d wheel_speed_setup = { 0.5, 0.5, 0.5 };
 
 void SpaceCraftControl(double dt){
     // wheel_speed
@@ -126,7 +127,8 @@ void runSim( OrbSim_f& sim, int niter=100 ){
         //sim.run( niter, 1e-3, 1e-8 );
         //sim.run( niter, 1e-3, 1e-4 );
         //sim.run_omp( niter, false, 1e-3, 1e-4 );
-        sim.run_omp( niter, true, 1e-3, 1e-5 );
+        //sim.run_omp( niter, true, 1e-3, 1e-5 );
+        sim.run_omp( niter, true, 1e-3, 1e-4 );
         double T = (getCPUticks()-t0)*1e-6;
         printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
 
@@ -135,7 +137,7 @@ void runSim( OrbSim_f& sim, int niter=100 ){
     sim.evalBondTension();
     //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
-    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-4 );
     //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
 
@@ -312,11 +314,11 @@ void reloadShip( const char* fname  ){
         ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
         ev.verts.z = o->ivert;
         //ev.K = 1000.0;
-        ev.K = 10000.0;
+        ev.K = 100000.0;
         //ev.K = 0.0;
 
-        //o->speed = 1.0;
-        o->speed = 0.1;
+        o->speed = 1.0;
+        //o->speed = 0.1;
         //o->updateEdgeVerts( sim.points );
     }
 
@@ -573,17 +575,25 @@ void SpaceCraftEditorApp::draw(){
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
+    /*
+    glLineWidth(1.0); glColor3f(1.0,0.0,0.0);
+    sim.cleanForce();
+    SpaceCraftControl(0.1);
+    sim.evalEdgeVerts();
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
+    */
+
     // Render simulation
     glLineWidth(1.0); 
     runSim( sim );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 
     // --- render bounding boxes
-    glColor3f(0.0,0.5,0.0);
-    for(int i=0; i<sim.nBBs; i++){
-        const Quat8T<float> bb = sim.BBs[i];
-        Draw3D::drawBBox( bb.lo.f, bb.hi.f );
-    }
+    // glColor3f(0.0,0.5,0.0);
+    // for(int i=0; i<sim.nBBs; i++){
+    //     const Quat8T<float> bb = sim.BBs[i];
+    //     Draw3D::drawBBox( bb.lo.f, bb.hi.f );
+    // }
 
     glDisable(GL_DEPTH_TEST);
 
@@ -633,8 +643,8 @@ void SpaceCraftEditorApp::draw(){
     //for( const Slider* o: theSpaceCraft->sliders){ 
     for( int i=0; i<theSpaceCraft->sliders.size(); i++ ){
         const Slider* o = theSpaceCraft->sliders[i];
-        glColor3f(0.0,0.5,1.0);
-        drawSliderPath( o, sim.points, 10 ); 
+        // glColor3f(0.0,0.5,1.0);
+        // drawSliderPath( o, sim.points, 10 ); 
         
         glColor3f(1.0,0.0,1.0);
         Vec3f p  = sim.getEdgeVertPos( i );
