@@ -43,8 +43,12 @@ Quat4f springForce( Vec3f d, Quat4f par ){
     fe.e = k*dl*dl;
     return fe;
 }
-
-struct EdgeVertBond{ Vec3i verts; float c; float K; };
+struct EdgeVertBond{ 
+    Vec3i verts; 
+    float c; 
+    float K; 
+    Vec3f f=Vec3fZero; 
+};
 
 void fitAABB( Quat8f& bb, int n, int* c2o, Quat4f * ps ){
     //Quat8f bb;
@@ -450,7 +454,11 @@ class OrbSim_f : public Picker { public:
         return pa.f*mc + pb.f*c;
     }
 
-    void evalEdgeVert( Vec3i b, float c, float K ){
+    //void evalEdgeVert( Vec3i b, float c, float K ){
+    void evalEdgeVert( int i ){
+        Vec3i b = edgeVertBonds[i].verts;
+        float c = edgeVertBonds[i].c;
+        float K = edgeVertBonds[i].K;
         // ToDo: perhaps we should interpolate it by B-spline to make the path more smooth
         // ToDo: Apply Force in the direction of the edge, constrain perpendicular to the edge
         // ToDo: Damping ( collision damping )
@@ -469,7 +477,8 @@ class OrbSim_f : public Picker { public:
         float imp  = collision_damping * pc.w*mab*dv/( pc.w  + mab );
         //imp/=dt; 
 
-        d.mul( K + imp*invL );       
+        d.mul( K + imp*invL ); 
+        edgeVertBonds[i].f = d;
         //printf( "evalEdgeVert[%i,%i,%i] d(%g,%g,%g) c=%g \n", b.x,b.y,b.z, d.x,d.y,d.z, c );   
         forces[b.x].f.add_mul(d,mc);
         forces[b.y].f.add_mul(d, c);
@@ -488,7 +497,8 @@ class OrbSim_f : public Picker { public:
     }
 
     void evalEdgeVerts(){
-        for(int i=0; i<nEdgeVertBonds; i++){ evalEdgeVert( edgeVertBonds[i].verts, edgeVertBonds[i].c, edgeVertBonds[i].K ); }
+        //for(int i=0; i<nEdgeVertBonds; i++){ evalEdgeVert( edgeVertBonds[i].verts, edgeVertBonds[i].c, edgeVertBonds[i].K ); }
+        for(int i=0; i<nEdgeVertBonds; i++){ evalEdgeVert( i ); }
     }
 
     void evalTrussCollisionImpulses_bonds( float rate=1.0 ){

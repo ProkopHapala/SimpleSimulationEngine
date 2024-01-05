@@ -76,7 +76,8 @@ bool bRun = false;
 
 Vec3d wheel_speed       = {0.0,0.0,0.0};
 //Vec3d wheel_speed_setup = { 0.1, 0.1, 0.1 };
-Vec3d wheel_speed_setup = { 0.5, 0.5, 0.5 };
+//Vec3d wheel_speed_setup = { 0.5, 0.5, 0.5 };
+Vec3d wheel_speed_setup = { 5.0, 5.0, 5.0 };
 
 void SpaceCraftControl(double dt){
     // wheel_speed
@@ -90,10 +91,18 @@ void SpaceCraftControl(double dt){
             if(icon<3){ o->speed = wheel_speed.array[icon]; }
         }
 
-        o->move( dt, sim.points );
+        EdgeVertBond& ev = sim.edgeVertBonds[i];
+
+        Vec3f  d  = sim.points[ev.verts.y].f - sim.points[ev.verts.x].f;
+        Vec3f  dv = sim.vel[ev.verts.z].f - sim.vel[ev.verts.y].f*ev.c + sim.vel[ev.verts.x].f*(1-ev.c);
+        double l = d.norm();
+        float  f = d.dot( ev.f )/l; // force along the slider path
+        float  v = d.dot( dv   )/l; // velocity along the slider path
+
+        o->move( dt, l, v, f );
         
         // -- update corresponding EdgeVerts
-        EdgeVertBond& ev = sim.edgeVertBonds[i];
+        
         ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
         ev.verts.z = o->ivert;
         //ev.K = 1000.0;
@@ -652,8 +661,7 @@ void SpaceCraftEditorApp::draw(){
         Draw3D::drawLine( p0, p );
         
     }
-    glColor3f(0.0,0.5,1.0);
-    glPointSize(20); glBegin(GL_POINTS); for( const Slider* o: theSpaceCraft->sliders){ Draw3D::vertex( sim.points[o->ivert].f ); } glEnd();
+    //glColor3f(0.0,0.5,1.0); glPointSize(20); glBegin(GL_POINTS); for( const Slider* o: theSpaceCraft->sliders){ Draw3D::vertex( sim.points[o->ivert].f ); } glEnd();
     //glPointSize(3000/zoom); glBegin(GL_POINTS); for( const Slider* o: theSpaceCraft->sliders){ Draw3D::vertex( sim.points[o->ivert].f ); } glEnd();
 
     //if(glo_truss) glCallList(glo_truss);

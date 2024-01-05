@@ -123,10 +123,11 @@ print( "#------ Lua:Rings & Sliders" )
 
 -- r_pitch = Ring( {8.0,0.0,0.0}, xvec, yvec, 64, 80.0, {16.0,4.0}, "Steel", g1_st )
 
-r_roll  = Ring2( {gLf,gUp,gDw,gRt}, {0.7,0.3,0.3,-1.0}, {0.0,0.0,1.0}, 64, { 4.0,4.0}, "Steel", g1_st, 0 )
--- r_roll  = Ring2( {gLf,gUp,gDw,-1}, {0.8,0.3,0.3,-1.0}, {0.0,0.0,10.0}, 64, { 4.0,4.0}, "Steel", g1_st, 0 )
-r_pitch = Ring2( {gBk,gUp,gDw,gFw}, {0.2,0.4,0.4,-1.0}, {1.0,0.0,0.0}, 64, {16.0,4.0}, "Steel", g1_st, 1 )
--- r_pitch = Ring2( {gBk,gUp,gDw,-1}, {0.2,0.4,0.4,-1.0}, {1.0,0.0,0.0}, 64, {16.0,4.0}, "Steel", g1_st )
+r_roll  = Ring2( {gLf,gUp,gDw,-1}, {0.7,0.3,0.3,-1.0}, {0.0,0.0,1.0}, 64, { 4.0,4.0}, "Steel", g1_st, 0 )
+r_pitch = Ring2( {gBk,gUp,gDw,-1}, {0.2,0.4,0.4,-1.0}, {1.0,0.0,0.0}, 64, {16.0,4.0}, "Steel", g1_st, 1 )
+
+-- r_roll  = Ring2( {gLf,gUp,gDw,gRt}, {0.7,0.3,0.3,-1.0}, {0.0,0.0,1.0}, 64, { 4.0,4.0}, "Steel", g1_st, 0 )
+-- r_pitch = Ring2( {gBk,gUp,gDw,gFw}, {0.2,0.4,0.4,-1.0}, {1.0,0.0,0.0}, 64, {16.0,4.0}, "Steel", g1_st, 1 )
 
 --      node1,2, up,  nseg    R     {width,height}
 --r_roll  = Ring( {0.0,0.0,8.0}, zvec, xvec, 64, 55.0, {4.0,4.0}, "Steel", g1_st )

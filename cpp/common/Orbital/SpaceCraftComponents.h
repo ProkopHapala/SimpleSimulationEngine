@@ -736,10 +736,16 @@ class Slider : public Node { public:
     double maxSpeed=1.;
     double speed=0;
     double springK=0;
+
+    double Kdv  = 0.1; 
+    double vel  = 0.0;
+    double mass = 1.;
+
+
     int icontrol = -1; // index of degree of freedom which controls the slider in SpaceCraftControl() function
 
 
-    inline void move(double dt, Quat4f* ps ){
+    inline void move(double dt, double l, double v, double f ){
         
         // // -- check if the motor has enough power to move
         // int i0,i1;
@@ -750,9 +756,24 @@ class Slider : public Node { public:
         // Vec3f f  = d*springK;
         // float fed = f.dot(ed);
         // if( fed*fed / ed.norm2() > forceMax*forceMax ) retrun;   // we should move along the path only if the motor can exert the force required
-               
+
+        // float vel = speed;
+        // if( vel*f<0 ){ // force and speed have opposite signs
+        //     vel = fmin( vel,powerMax/f );
+        // }
+
+        double dv      = speed-vel;
+        double fdrive_ = dv*Kdv;
+        double fdrive  = _clamp( fdrive_, -forceMax, forceMax );
+        //double acc = (fdrive - f)/mass;
+        double acc = fdrive/mass;
+        vel += acc*dt;  
+        //vel = _clamp( vel, -speed, speed );
+        path.cur += vel*dt;
+        //if(id==20) printf( "Slider[%i] vel=%g acc=%g fdrive=%g fdrive_=%g speed=%g \n", id, vel, acc, fdrive, fdrive_, speed );
+        
         // -- the actual move
-        path.cur += speed*dt;
+        //path.cur += speed*dt;
         path.fold();
     }
 
