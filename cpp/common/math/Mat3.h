@@ -54,6 +54,12 @@ class Mat3T{
 		zx=M.zx; zy=M.zy; zz=M.zz;
 	};
 
+    inline void add_outer( const VEC& a, const VEC& b, T f ){
+        xx+=a.x*b.x*f; xy+=a.x*b.y*f; xz+=a.x*b.z*f;
+        yx+=a.y*b.x*f; yy+=a.y*b.y*f; yz+=a.y*b.z*f;
+        zx+=a.z*b.x*f; zy+=a.z*b.y*f; zz+=a.z*b.z*f;
+    };
+
 	inline void set_outer  ( const VEC& a, const VEC& b ){
 		xx=a.x*b.x; xy=a.x*b.y; xz=a.x*b.z;
 		yx=a.y*b.x; yy=a.y*b.y; yz=a.y*b.z;

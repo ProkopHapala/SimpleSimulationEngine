@@ -119,6 +119,7 @@ class Vec3T{
     inline VEC& set_cross( const VEC& a, const VEC& b ){ x =a.y*b.z-a.z*b.y; y =a.z*b.x-a.x*b.z; z =a.x*b.y-a.y*b.x; return *this;};
 	inline VEC& add_cross( const VEC& a, const VEC& b ){ x+=a.y*b.z-a.z*b.y; y+=a.z*b.x-a.x*b.z; z+=a.x*b.y-a.y*b.x; return *this;};
 	inline VEC& sub_cross( const VEC& a, const VEC& b ){ x-=a.y*b.z-a.z*b.y; y-=a.z*b.x-a.x*b.z; z-=a.x*b.y-a.y*b.x; return *this;};
+    inline VEC& add_crossw( const VEC& a, const VEC& b, T f ){ x-=(a.y*b.z-a.z*b.y)*f; y-=(a.z*b.x-a.x*b.z)*f; z-=(a.x*b.y-a.y*b.x)*f; return *this;};
 
 	T makeOrthoU( const VEC& a ){ T c = dot(a);           add_mul(a, -c); return c; }
 	T makeOrtho ( const VEC& a ){ T c = dot(a)/a.norm2(); add_mul(a, -c); return c; }

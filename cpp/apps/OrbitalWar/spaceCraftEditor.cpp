@@ -140,7 +140,7 @@ void runSim( OrbSim_f& sim, int niter=100 ){
         sim.run_omp( niter, true, 1e-3, 1e-4 );
         double T = (getCPUticks()-t0)*1e-6;
         printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
-
+        sim.updateInveriants(false);
     }
     
     sim.evalBondTension();
@@ -276,6 +276,18 @@ void makeBBoxes( const SpaceCraft& craft, OrbSim_f& sim ){
     //sim.printBBs();
 }
 
+void makeTestTruss(){
+    mesh2.clear();
+    int stickType = 0;
+    mesh2.stick( {0.0,0.0,0.0}, {10.0,0.0,0.0}, stickType );
+    workshop.stickMaterials.vec[stickType]->preStrain = 0.01;
+
+    exportSim( sim, mesh2, workshop );
+    sim.updateInveriants(true);
+
+    renderShip();
+}
+
 void reloadShip( const char* fname  ){
     theSpaceCraft->clear();                  // clear all components
     //luaL_dofile(theLua, "data/spaceshil1.lua");
@@ -298,6 +310,8 @@ void reloadShip( const char* fname  ){
 
     t0 = getCPUticks();
     exportSim( sim, mesh2, workshop );
+
+    
     printf( "exportSim() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
 
     t0 = getCPUticks();
@@ -340,6 +354,9 @@ void reloadShip( const char* fname  ){
     // }
 
     renderShip();
+
+    sim.updateInveriants(true);
+
     printf("#### END reloadShip('%s')\n", fname );
 };
 
@@ -458,7 +475,12 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     picker.picker = &sim;   picker.Rmax=10.0;
     theSpaceCraft = new SpaceCraft();
     initSpaceCraftingLua();
-    if(argc<=1)reloadShip( "data/ship_ICF_interceptor_1.lua" );
+    //if(argc<=1)reloadShip( "data/ship_ICF_marksman_2.lua" );
+    if(argc<=1){
+        reloadShip( "data/test_materials.lua" ); 
+        makeTestTruss();
+    }
+
     //onSelectLuaShipScript.GUIcallback(lstLuaFiles);
 
     /*
@@ -544,6 +566,10 @@ void SpaceCraftEditorApp::draw(){
     */
 
     glDisable(GL_LIGHTING);
+
+    //Draw3D::drawMatInPos( sim.I, sim.cog, (Vec3f){sqrt(1/sim.I.xx),sqrt(1/sim.I.yy),sqrt(1/sim.I.zz)} );
+
+    Draw3D::drawMatInPos( Mat3fIdentity, sim.cog, Vec3f{100.,100.,100.} );
 
     /*
     glLineWidth(3.0);
@@ -722,7 +748,9 @@ void SpaceCraftEditorApp::drawHUD(){
     glDisable(GL_DEPTH_TEST);
 
     // void Draw::drawText( const char * str, int itex, float sz, Vec2i block_size ){
-    sprintf( str_tmp, "time= %10.5f[s] \n ", sim.time );
+
+    sprintf(str_tmp, "time=%10.5f[s] mass=%g cog(%g,%g,%g) vcog(%g,%g,%g) L(%g,%g,%g) torq(%g,%g,%g) \n", sim.time, sim.mass, sim.cog.x,sim.cog.y,sim.cog.z, sim.vcog.x,sim.vcog.y,sim.vcog.z, sim.L.x,sim.L.y,sim.L.z, sim.torq.x,sim.torq.y,sim.torq.z );
+    //sprintf( str_tmp, "time= %10.5f[s] \n ", sim.time );
     Draw::drawText( str_tmp, fontTex, fontSizeDef,  {WIDTH,HEIGHT-20}  );
 
     gui.draw();

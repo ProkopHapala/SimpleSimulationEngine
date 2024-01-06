@@ -131,6 +131,14 @@ class OrbSim_f : public Picker { public:
     //float*  l0s    =0; // 
     Vec2f*  maxStrain=0;
 
+    // ====== Invairiants
+
+    float mass = 0;
+    Vec3f cog  = Vec3fZero;
+    Vec3f vcog = Vec3fZero;
+    Mat3f I    = Mat3fZero;
+    Vec3f L    = Vec3fZero;
+    Vec3f torq = Vec3fZero;
 
     // ====== Collision
     // ToDo: this should be moved to a separate class ?
@@ -309,6 +317,30 @@ class OrbSim_f : public Picker { public:
     };
 
     // =================== Truss Simulation
+
+    void updateInveriants(bool bPrint=false){
+        mass=0;
+        cog =Vec3fZero;
+        vcog=Vec3fZero;
+        for(int i=0; i<nPoint; i++){ float mi=points[i].w; mass+=mi;  cog.add_mul( points[i].f, mi ); vcog.add_mul( vel[i].f, mi ); }
+        cog .mul( 1.0/mass );
+        vcog.mul( 1.0/mass );
+        I=Mat3fZero;
+        L=Vec3fZero;
+        torq=Vec3fZero;
+        for(int i=0; i<nPoint; i++){ 
+            float mi=points[i].w; 
+            Vec3f d; 
+            d   .set_sub   ( points[i].f, cog    );
+            L   .add_crossw( d, vel[i]   .f, mi  );
+            torq.add_cross ( d, forces[i].f      );
+            I   .add_outer ( d, d, mi            );
+        }
+        if(bPrint){
+            printf( "OrbSim::updateInveriants() mass %g cog(%g,%g,%g) vcog(%g,%g,%g)  L(%g,%g,%g) torq(%g,%g,%g) \n", mass, cog.x,cog.y,cog.z, vcog.x,vcog.y,vcog.z, L.x,L.y,L.z, torq.x,torq.y,torq.z );
+            printf( "OrbSim::updateInveriants() I \n" ); I.print();
+        }
+    }
 
     void evalTrussForce_neighs(int iG){
         Quat4f p = points[iG];

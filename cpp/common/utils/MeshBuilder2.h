@@ -80,6 +80,19 @@ class Builder2{ public:
     inline int edge( int a, int b, int t=-1, int t2=-1 ){ edges.push_back(Quat4i{a,b,t2,t}); return edges.size()-1; }
     inline int tri ( int a, int b, int c,    int t=-1  ){ tris .push_back(Quat4i{a,b,c,t});  return tris .size()-1; }
 
+    inline int stick( Vec3d a, Vec3d b, int t=-1 ){ 
+        int ia = vert(a); 
+        int ib = vert(b);
+        return edge(ia,ib,t); 
+    }
+
+    inline int stickTo( int ia, Vec3d b, int t=-1 ){ 
+        int ib = vert(b);
+        return edge(ia,ib,t); 
+    }
+
+
+
     inline int bondsBetweenVertRanges( Vec2i v1s, Vec2i v2s, double Rmax, int et=-1 ){
         double R2max = Rmax*Rmax;
         int n1 = v1s.b-v1s.a;
