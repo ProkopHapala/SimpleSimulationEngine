@@ -140,6 +140,8 @@ class OrbSim_f : public Picker { public:
     Vec3f L    = Vec3fZero;
     Vec3f torq = Vec3fZero;
 
+    float F_residual = 0.0;
+
     // ====== Collision
     // ToDo: this should be moved to a separate class ?
     int       nBBs=0;
@@ -174,8 +176,8 @@ class OrbSim_f : public Picker { public:
 
     //float maxAcc = 1e+6;
     float maxAcc = 1.0;
-    //float collision_damping = 0.1;
-    float collision_damping = 1.0;
+    float collision_damping = 0.002;
+    //float collision_damping = 1.0;
     //float collision_damping = 1.1;   // if collision_damping > 1.0 then it is like successive over-relaxation (SOR) method ? https://en.wikipedia.org/wiki/Successive_over-relaxation
 
     //float kGlobal = 1e+6;
@@ -402,7 +404,7 @@ class OrbSim_f : public Picker { public:
     */
 
     inline void evalTrussForce_neighs2(int iG){
-        const float Adamp = collision_damping;
+        const float Adamp = collision_damping*0.5/dt;
         //const int iG = get_global_id(0);
         const Quat4f p = points[iG];
         const Quat4f v = vel   [iG];
@@ -420,13 +422,21 @@ class OrbSim_f : public Picker { public:
             const float l  = d.f.norm();
             float k        = kGlobal;
             float fl       = k*(l-par.x);
-            
-            // collision damping
             const float invL = 1/l;
-            const float dv  = d.f.dot( vel[b.x].f - v.f );
-            float imp = collision_damping * p.w*d.w*dv/(p.w+d.w);
-            //const float imp = 0;
-            //imp/=dt;
+
+
+            // const float dv  = d.f.dot( vel[b.x].f - v.f );
+            // if(dv<0){ fl*=1-dv; }
+
+
+            // // collision damping
+            
+            // const float dv  = d.f.dot( vel[b.x].f - v.f );
+            // float imp = Adamp * p.w*d.w*dv/(p.w+d.w);
+            // //float imp = 0.1* 0.5 * p.w*d.w*dv/(p.w+d.w);
+            // //const float imp = 0;
+            // //imp/=dt;
+            float imp = 0;
 
             f.f.add_mul( d.f, ( imp + fl )*invL );
             //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
@@ -649,20 +659,27 @@ class OrbSim_f : public Picker { public:
     void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero; } };
     void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero; } };
 
-    void move_GD(float dt){
+    double move_GD(float dt){
+        float ff=0;
         for(int i=0;i<nPoint; i++ ){
             Quat4f p = points[i];
             Quat4f f = forces[i];
+            ff += f.f.norm2();
             p.f.add_mul( f.f, dt/p.w );
             //printf( "move_GD[%i] |d|=%g |f|=%g dt/m=%g m=%g \n", i, f.f.norm() * dt/p.w, f.f.norm(), dt/p.w, p.w );
             points[i]=p;
         }
+        return ff;
     }
 
     inline float move_i_MD(int i, float dt, float cdamp ){
-        const Quat4f f = forces[i];
+        Quat4f f = forces[i];
         Quat4f p = points[i];
         Quat4f v = vel   [i];
+
+        //float vf = v.f.dot(f.f);
+        //if( vf>0.0 ){ f.f.mul( 0.99 ); }
+
         v.f.mul( cdamp );
         v.f.add_mul( f.f, dt/p.w );
         p.f.add_mul( v.f, dt     );
@@ -739,7 +756,7 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
         if(itr<niter){
         //#pragma omp barrier
         #pragma omp single
-        {E=0;F2=0;ff=0;vv=0;vf=0;}
+        {E=0;ff=0;vv=0;vf=0;}
         //------ eval forces
         //#pragma omp barrier
         //#pragma omp for reduction(+:E)
@@ -784,10 +801,10 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
             if(user_update) user_update(dt);  // call e.g. spacecraft control (move the wheels etc. )
             evalEdgeVerts();
         }
-        #pragma omp for
+        #pragma omp for reduction(+:ff)
         for(int i=0;i<nPoint; i++ ){
             //move_i_MD( i, dt, 1.0 );
-            move_i_MD( i, dt, cdamp );
+            ff += move_i_MD( i, dt, cdamp );
             /*
             if(bDynamic){ 
                 move_i_MD( i, dt, cdamp );
@@ -800,6 +817,8 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
         //#pragma omp barrier
         #pragma omp single
         { 
+            F_residual = sqrt(ff);
+            //printf( "OrbSim::run_omp() itr %i/%i E=%g |F|=%g time= %g [ms]( %g [us/%i iter]) \n", itr,niter_max, E, F_residual, time*1e+3, time*1e+6/itr, itr );
             time+=dt;
             itr++; 
         }

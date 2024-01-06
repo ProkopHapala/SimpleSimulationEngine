@@ -67,6 +67,7 @@ using namespace SpaceCrafting;
 //SpaceCraft craft;
 //Truss      truss;
 
+bool bShipReady = false;
 Mesh::Builder2 mesh2;
 OrbSim_f sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
@@ -137,9 +138,12 @@ void runSim( OrbSim_f& sim, int niter=100 ){
         //sim.run( niter, 1e-3, 1e-4 );
         //sim.run_omp( niter, false, 1e-3, 1e-4 );
         //sim.run_omp( niter, true, 1e-3, 1e-5 );
-        sim.run_omp( niter, true, 1e-3, 1e-4 );
+        //sim.run_omp( niter, true, 1e-3, 1e-4 );
+        sim.run_omp( niter, true, 1e-3, 1e-6 );
+        //sim.run_omp( 1, true, 1e-3, 1e-4 );
         double T = (getCPUticks()-t0)*1e-6;
-        printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
+        //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
+        //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
         sim.updateInveriants(false);
     }
     
@@ -279,12 +283,15 @@ void makeBBoxes( const SpaceCraft& craft, OrbSim_f& sim ){
 void makeTestTruss(){
     mesh2.clear();
     int stickType = 0;
-    mesh2.stick( {0.0,0.0,0.0}, {10.0,0.0,0.0}, stickType );
+    mesh2.stick  ( {0.0,0.0,0.0}, {10.0,0.0,0.0}, stickType );
+    mesh2.stickTo( 0,             {5.0,10.0,0.0}, stickType );
+    mesh2.edge   ( 1, 2, stickType );
     workshop.stickMaterials.vec[stickType]->preStrain = 0.01;
 
     exportSim( sim, mesh2, workshop );
     sim.updateInveriants(true);
 
+    bShipReady = false;
     renderShip();
 }
 
@@ -356,7 +363,7 @@ void reloadShip( const char* fname  ){
     renderShip();
 
     sim.updateInveriants(true);
-
+    bShipReady = true;
     printf("#### END reloadShip('%s')\n", fname );
 };
 
@@ -569,7 +576,7 @@ void SpaceCraftEditorApp::draw(){
 
     //Draw3D::drawMatInPos( sim.I, sim.cog, (Vec3f){sqrt(1/sim.I.xx),sqrt(1/sim.I.yy),sqrt(1/sim.I.zz)} );
 
-    Draw3D::drawMatInPos( Mat3fIdentity, sim.cog, Vec3f{100.,100.,100.} );
+    if(bShipReady)Draw3D::drawMatInPos( Mat3fIdentity, sim.cog, Vec3f{100.,100.,100.} );
 
     /*
     glLineWidth(3.0);
@@ -620,8 +627,10 @@ void SpaceCraftEditorApp::draw(){
 
     // Render simulation
     glLineWidth(1.0); 
-    runSim( sim );
+    runSim( sim, bShipReady?100:1 );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+    glColor3f(0.0,0.0,0.0);
+    if(bShipReady==false)renderPoinSizes( sim.nPoint, sim.points, 1.0 );
 
     // --- render bounding boxes
     // glColor3f(0.0,0.5,0.0);
@@ -749,7 +758,7 @@ void SpaceCraftEditorApp::drawHUD(){
 
     // void Draw::drawText( const char * str, int itex, float sz, Vec2i block_size ){
 
-    sprintf(str_tmp, "time=%10.5f[s] mass=%g cog(%g,%g,%g) vcog(%g,%g,%g) L(%g,%g,%g) torq(%g,%g,%g) \n", sim.time, sim.mass, sim.cog.x,sim.cog.y,sim.cog.z, sim.vcog.x,sim.vcog.y,sim.vcog.z, sim.L.x,sim.L.y,sim.L.z, sim.torq.x,sim.torq.y,sim.torq.z );
+    sprintf(str_tmp, "time=%10.5f[s] mass=%g cog(%g,%g,%g) vcog(%g,%g,%g) L(%g,%g,%g) torq(%g,%g,%g) |F|=%g \n", sim.time, sim.mass, sim.cog.x,sim.cog.y,sim.cog.z, sim.vcog.x,sim.vcog.y,sim.vcog.z, sim.L.x,sim.L.y,sim.L.z, sim.torq.x,sim.torq.y,sim.torq.z, sim.F_residual );
     //sprintf( str_tmp, "time= %10.5f[s] \n ", sim.time );
     Draw::drawText( str_tmp, fontTex, fontSizeDef,  {WIDTH,HEIGHT-20}  );
 

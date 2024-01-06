@@ -57,13 +57,12 @@ void renderTruss(int nb, int2* bonds, Quat4f* ps, float* strain=0, float sc=1.0 
 }
 
 void renderPoinSizes(int n, Quat4f* ps, float sc=1.0 ){
-    glColor3f(0.0,0.0,1.0);
-    glPointSize( 10.0 );
+    glPointSize( 10.0f*sc );
     glBegin(GL_POINTS);
     for(int i=0; i<n; i++ ){
-        //printf( "point[%i] m=%g \n", i, ps[i].e );
-        float c = ps[i].e*sc;
-        glColor3f(c,c,c);
+        //printf( "point[%i] m=%g p(%g,%g,%g)\n", i, ps[i].e, ps[i].x,ps[i].y,ps[i].z );
+        //float c = ps[i].e*sc;
+        //glColor3f(c,c,c);
         //glPointSize( ps[i].e*sc );
         Draw3D::vertex( ps[i].f );
     }
