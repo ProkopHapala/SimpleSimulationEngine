@@ -1,6 +1,6 @@
 ﻿
-#ifndef  OrbSim_h
-#define  OrbSim_h
+#ifndef  OrbSim_d_h
+#define  OrbSim_d_h
 
 #include "Vec2.h"
 #include "Vec3.h"
@@ -14,79 +14,79 @@
 #include "geom3D.h"
 #include "Interfaces.h"
 
-float springForce( float l, float& f, Quat4f par ){
-    float dl = l - par.x;
-    float k;
+double springForce( double l, double& f, Quat4d par ){
+    double dl = l - par.x;
+    double k;
     if( dl > 0.0f ){
         k = -par.z;
     } else {
         k = par.y;
     }
-    //Quat4f fe; 
+    //Quat4d fe; 
     //fe.f = d*(k*dl/l);
     //fe.e = k*dl*dl;
     f = k*dl;
     return k*dl*dl;
 }
 
-Quat4f springForce( Vec3f d, Quat4f par ){
-    float l  = d.norm();
-    float dl = l - par.x;
-    float k;
+Quat4d springForce( Vec3d d, Quat4d par ){
+    double l  = d.norm();
+    double dl = l - par.x;
+    double k;
     if( dl > 0.0f ){
         k = -par.z;
     } else {
         k = par.y;
     }
-    Quat4f fe; 
+    Quat4d fe; 
     fe.f = d*(k*dl/l);
     fe.e = k*dl*dl;
     return fe;
 }
-struct EdgeVertBond_f{ 
+struct EdgeVertBond{ 
     Vec3i verts; 
-    float c; 
-    float K; 
-    Vec3f f=Vec3fZero; 
+    double c; 
+    double K; 
+    Vec3d f=Vec3dZero; 
 };
 
-void fitAABB( Quat8f& bb, int n, int* c2o, Quat4f * ps ){
-    //Quat8f bb;
+void fitAABB( Quat8d& bb, int n, int* c2o, Quat4d * ps ){
+    //Quat8d bb;
     //bb.lo = bb.lo = ps[c2o[0]];
     for(int i=0; i<n; i++){ 
         //printf( "fitAABB() i %i \n", i );
         int ip = c2o[i];
         //printf( "fitAABB() i=%i ip=%i \n", i, ip );
-        Quat4f p = ps[ip];
+        Quat4d p = ps[ip];
         bb.lo.f.setIfLower  ( p.f );
         bb.hi.f.setIfGreater( p.f );
     }; 
     //return bb;
 }
 
-void fitAABB_edge( Quat8f& bb, int n, int* c2o, int2* edges, Quat4f * ps ){
-    //Quat8f bb;
+void fitAABB_edge( Quat8d& bb, int n, int* c2o, int2* edges, Quat4d * ps ){
+    //Quat8d bb;
     //bb.lo = bb.lo = ps[c2o[0]];
     for(int i=0; i<n; i++){ 
         //printf( "fitAABB() i %i \n", i );
         int ie = c2o[i];
         int2 b = edges[ie];
         //printf( "fitAABB() i=%i ip=%i \n", i, ip );
-        Quat4f pi = ps[b.x];
+        Quat4d pi = ps[b.x];
         bb.lo.f.setIfLower  ( pi.f );
         bb.hi.f.setIfGreater( pi.f );
-        Quat4f pj = ps[b.y];
+        Quat4d pj = ps[b.y];
         bb.lo.f.setIfLower  ( pj.f );
         bb.hi.f.setIfGreater( pj.f );
     }; 
     //return bb;
 }
 
-inline void updatePointBBs(const Buckets& buckets, Quat8f* BBs, Quat4f* points, bool bInit=true){
+inline void updatePointBBs(const Buckets& buckets, Quat8d* BBs, Quat4d* points, bool bInit=true){
     //printf( "updatePointBBs() START \n" );
     for(int ib=0; ib<buckets.ncell; ib++){
         //printf( "updatePointBBs() ib %i \n", ib );
-        if(bInit){ BBs[ib].lo.f = Vec3fMax; BBs[ib].hi.f = Vec3fMin; }
+        if(bInit){ BBs[ib].lo.f = Vec3dMax; BBs[ib].hi.f = Vec3dMin; }
         int n = buckets.cellNs[ib];
         if(n>0){
             int i0 = buckets.cellI0s[ib];
@@ -97,10 +97,10 @@ inline void updatePointBBs(const Buckets& buckets, Quat8f* BBs, Quat4f* points, 
     //printf( "updatePointBBs() DONE \n" );
 }
 
-inline void updateEdgeBBs(const Buckets& buckets, Quat8f* BBs, int2* edges, Quat4f* points, bool bInit=true){
+inline void updateEdgeBBs(const Buckets& buckets, Quat8d* BBs, int2* edges, Quat4d* points, bool bInit=true){
     //printf( "updateEdgeBBs() START \n" );
     for(int ib=0; ib<buckets.ncell; ib++){
-        if(bInit){ BBs[ib].lo.f = Vec3fMax; BBs[ib].hi.f = Vec3fMin; }
+        if(bInit){ BBs[ib].lo.f = Vec3dMax; BBs[ib].hi.f = Vec3dMin; }
         int n = buckets.cellNs[ib];
         if(n>0){
             int i0 = buckets.cellI0s[ib];
@@ -110,42 +110,42 @@ inline void updateEdgeBBs(const Buckets& buckets, Quat8f* BBs, int2* edges, Quat
     //printf( "updateEdgeBBs() DONE \n" );
 }
 
-class OrbSim_f : public Picker { public:
+class OrbSim: public Picker { public:
     double time=0;
     int nPoint=0, nNeighMax=0, nNeighTot=0;
     // cpu buffers
-    Quat4f* points=0;  // position and mass
-    Quat4f* forces=0;  // force and energy
-    Quat4f* vel   =0;  // velocity
+    Quat4d* points=0;  // position and mass
+    Quat4d* forces=0;  // force and energy
+    Quat4d* vel   =0;  // velocity
 
-    Quat4f* params=0;  // neighbor parameters (l0,kP,kT,damp)
+    Quat4d* params=0;  // neighbor parameters (l0,kP,kT,damp)
     int*    neighs=0;  // neighbor indices
     int2*   neighBs=0; // neighbor bond indices
     //int*    neighBs=0; // neighbor bond indices
     int*    neighB2s=0;  // neighbor indices
 
     int     nBonds =0; // number of bonds
-    Quat4f* bparams=0; // bond parameters (l0,kP,kT,damp)
+    Quat4d* bparams=0; // bond parameters (l0,kP,kT,damp)
     int2*   bonds  =0; // indices of bonded points (i,j)
-    float*  strain =0; // strain
-    //float*  l0s    =0; // 
-    Vec2f*  maxStrain=0;
+    double*  strain =0; // strain
+    //double*  l0s    =0; // 
+    Vec2d*  maxStrain=0;
 
     // ====== Invairiants
 
-    float mass = 0;
-    Vec3f cog  = Vec3fZero;
-    Vec3f vcog = Vec3fZero;
-    Mat3f I    = Mat3fZero;
-    Vec3f L    = Vec3fZero;
-    Vec3f torq = Vec3fZero;
+    double mass = 0;
+    Vec3d cog  = Vec3dZero;
+    Vec3d vcog = Vec3dZero;
+    Mat3d I    = Mat3dZero;
+    Vec3d L    = Vec3dZero;
+    Vec3d torq = Vec3dZero;
 
-    float F_residual = 0.0;
+    double F_residual = 0.0;
 
     // ====== Collision
     // ToDo: this should be moved to a separate class ?
     int       nBBs=0;
-    Quat8f*  BBs=0; // bounding boxes (can be either AABB, or cylinder, capsula) 
+    Quat8d*  BBs=0; // bounding boxes (can be either AABB, or cylinder, capsula) 
     Buckets  pointBBs;    // buckets for collision detection
     Buckets  edgeBBs;
     Buckets  faceBBs;
@@ -156,48 +156,48 @@ class OrbSim_f : public Picker { public:
     int4* faces=0; // indices of points tringles or quads, the last index is -1 is the face is a triangle, ot it can be used also to store face type if just triangles are used
 
     int nEdgeVertBonds=0;
-    EdgeVertBond_f* edgeVertBonds=0; // indices of bonded points (i,j)
+    EdgeVertBond* edgeVertBonds=0; // indices of bonded points (i,j)
 
     // callback function pointer what to do in between iterations
     void (*user_update)(double dt);
 
     // Rotating frame
-    //Vec3f p0{0.,0.,0.};
-    //Vec3f ax{0.0,0.0,1.0};
-    //float omega = 0.05;
-    Quat4f accel{0.0f,0.0f,0.0f,0.0f};    // acceleration
-    Quat4f rot0 {0.0f,0.0f,0.0f,0.0f};    // center of rotation
-    //Quat4f omega{0.0f,0.0f,1.0f,0.05f}; // angular velocity, (xyz=axisxyz,w=magnitude)
-    Quat4f omega{0.0f,0.0f,1.0f,0.05f};
+    //Vec3d p0{0.,0.,0.};
+    //Vec3d ax{0.0,0.0,1.0};
+    //double omega = 0.05;
+    Quat4d accel{0.0f,0.0f,0.0f,0.0f};    // acceleration
+    Quat4d rot0 {0.0f,0.0f,0.0f,0.0f};    // center of rotation
+    //Quat4d omega{0.0f,0.0f,1.0f,0.05f}; // angular velocity, (xyz=axisxyz,w=magnitude)
+    Quat4d omega{0.0f,0.0f,1.0f,0.05f};
 
 
     Vec3d hit_pos, hit_normal;
 
 
-    //float maxAcc = 1e+6;
-    float maxAcc = 1.0;
-    float collision_damping = 0.002;
-    //float collision_damping = 1.0;
-    //float collision_damping = 1.1;   // if collision_damping > 1.0 then it is like successive over-relaxation (SOR) method ? https://en.wikipedia.org/wiki/Successive_over-relaxation
+    //double maxAcc = 1e+6;
+    double maxAcc = 1.0;
+    double collision_damping = 0.002;
+    //double collision_damping = 1.0;
+    //double collision_damping = 1.1;   // if collision_damping > 1.0 then it is like successive over-relaxation (SOR) method ? https://en.wikipedia.org/wiki/Successive_over-relaxation
 
-    //float kGlobal = 1e+6;
+    //double kGlobal = 1e+6;
     
-    float dt      = 2e-3;    float kGlobal = 1e+7;
-    //float dt      = 0.5e-3;  float kGlobal = 1e+8;
+    double dt      = 2e-3;    double kGlobal = 1e+7;
+    //double dt      = 0.5e-3;  double kGlobal = 1e+8;
 
-    //float damping = 1e-4;
-    float damping  = 0.05;
+    //double damping = 1e-4;
+    double damping  = 0.05;
     int    lastNeg = 0;
     // FIRE
     int    minLastNeg   = 5;
-    float finc         = 1.1;
-    float fdec         = 0.5;
-    float falpha       = 0.98;
-    float dt_max       = dt;
-    float dt_min       = 0.1 * dt;
-    float damp_max     = damping;
-    float ff_safety    = 1e-16;
-    float cv,cf;
+    double finc         = 1.1;
+    double fdec         = 0.5;
+    double falpha       = 0.98;
+    double dt_max       = dt;
+    double dt_min       = 0.1 * dt;
+    double damp_max     = damping;
+    double ff_safety    = 1e-16;
+    double cv,cf;
 
     void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0){
         nPoint = nPoint_; nNeighMax = nNeighMax_;
@@ -254,14 +254,14 @@ class OrbSim_f : public Picker { public:
 
     // =================== Picking
 
-    int pick_point_brute( const Vec3f& ray0, const Vec3f& hray, float Rmax, int i0=-1, int i1=-1 ){
+    int pick_point_brute( const Vec3d& ray0, const Vec3d& hray, double Rmax, int i0=-1, int i1=-1 ){
         if(i0<0){ i0=0;      }
         if(i1<0){ i1=nPoint; }
-        float r2min =  Rmax*Rmax;
+        double r2min =  Rmax*Rmax;
         int imin    = -1;
         for(int i=i0; i<i1; i++){
-            float t;
-            float r2 = rayPointDistance2( ray0, hray, points[i].f, t );
+            double t;
+            double r2 = rayPointDistance2( ray0, hray, points[i].f, t );
             //printf( "pick_point_brute ipick %i r %g p(%g,%g,%g)\n", i, sqrt(r2), points[i].f.x,points[i].f.y,points[i].f.z );
             if(r2<r2min){ imin=i; r2min=r2; }
             //double ti = raySphere( ray0, hRay, R, ps[i] );
@@ -297,7 +297,7 @@ class OrbSim_f : public Picker { public:
         double tmin = tmax;
         int    imin = -1;
         for(int ib=i0; ib<i1; ib++){
-            const Quat8f& bb = BBs[ib];
+            const Quat8d& bb = BBs[ib];
             double t = rayBox( ray0, hRay, (Vec3d)bb.lo.f, (Vec3d)bb.hi.f, hit_pos, hit_normal );
             if( t<tmin ){ imin=ib; tmin=t; }
         }
@@ -305,7 +305,7 @@ class OrbSim_f : public Picker { public:
     };
 
     virtual int pick_nearest(Vec3d ray0, Vec3d hray, int& ipick, int mask, double Rmax ) override {
-        if     (mask==1){ ipick=pick_point_brute((Vec3f)ray0,(Vec3f)hray,Rmax); return 1; }
+        if     (mask==1){ ipick=pick_point_brute((Vec3d)ray0,(Vec3d)hray,Rmax); return 1; }
         else if(mask==2){ ipick=pick_bond_brute ( ray0, hray, Rmax );           return 2; }
         return -1;
     };
@@ -322,17 +322,17 @@ class OrbSim_f : public Picker { public:
 
     void updateInveriants(bool bPrint=false){
         mass=0;
-        cog =Vec3fZero;
-        vcog=Vec3fZero;
-        for(int i=0; i<nPoint; i++){ float mi=points[i].w; mass+=mi;  cog.add_mul( points[i].f, mi ); vcog.add_mul( vel[i].f, mi ); }
+        cog =Vec3dZero;
+        vcog=Vec3dZero;
+        for(int i=0; i<nPoint; i++){ double mi=points[i].w; mass+=mi;  cog.add_mul( points[i].f, mi ); vcog.add_mul( vel[i].f, mi ); }
         cog .mul( 1.0/mass );
         vcog.mul( 1.0/mass );
-        I=Mat3fZero;
-        L=Vec3fZero;
-        torq=Vec3fZero;
+        I=Mat3dZero;
+        L=Vec3dZero;
+        torq=Vec3dZero;
         for(int i=0; i<nPoint; i++){ 
-            float mi=points[i].w; 
-            Vec3f d; 
+            double mi=points[i].w; 
+            Vec3d d; 
             d   .set_sub   ( points[i].f, cog    );
             L   .add_crossw( d, vel[i]   .f, mi  );
             torq.add_cross ( d, forces[i].f      );
@@ -345,8 +345,8 @@ class OrbSim_f : public Picker { public:
     }
 
     void evalTrussForce_neighs(int iG){
-        Quat4f p = points[iG];
-        Quat4f f =Quat4f{0.0f,0.0f,0.0f,0.0f};
+        Quat4d p = points[iG];
+        Quat4d f =Quat4d{0.0f,0.0f,0.0f,0.0f};
         //printf( "--- p[%i] \n", iG );
         //#pragma omp simd
         for(int ij=0; ij<nNeighMax; ij++){
@@ -355,14 +355,14 @@ class OrbSim_f : public Picker { public:
             if(ja == -1) break;
             //f.add( springForce( points[ja].f - p.f, params[j] ) );
             
-            Vec3f d =  points[ja].f - p.f;
-            float li = d.norm();
+            Vec3d d =  points[ja].f - p.f;
+            double li = d.norm();
             /*
-            float fi,ei = springForce( li, fi, params[j] );
-            //f.add( Quat4f{ d*(fi/l), ei } );
+            double fi,ei = springForce( li, fi, params[j] );
+            //f.add( Quat4d{ d*(fi/l), ei } );
             f.f.add_mul( d, fi/li );
             */
-            float k = kGlobal;
+            double k = kGlobal;
             f.f.add_mul( d, (k*(li-params[j].x)/li) );
 
             //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
@@ -375,8 +375,8 @@ class OrbSim_f : public Picker { public:
         //#pragma omp paralel for 
         for(int iG=0; iG<nPoint; iG++){
             //const int iG = get_global_id(0);
-            Quat4f p = points[iG];
-            Quat4f f =Quat4f{0.0f,0.0f,0.0f,0.0f};
+            Quat4d p = points[iG];
+            Quat4d f =Quat4d{0.0f,0.0f,0.0f,0.0f};
             //printf( "--- p[%i] \n", iG );
             //#pragma omp simd
             for(int ij=0; ij<nNeighMax; ij++){
@@ -385,14 +385,14 @@ class OrbSim_f : public Picker { public:
                 if(ja == -1) break;
                 //f.add( springForce( points[ja].f - p.f, params[j] ) );
                 
-                Vec3f d =  points[ja].f - p.f;
-                float li = d.norm();
+                Vec3d d =  points[ja].f - p.f;
+                double li = d.norm();
                 
-                // float fi,ei = springForce( li, fi, params[j] );
-                // //f.add( Quat4f{ d*(fi/l), ei } );
+                // double fi,ei = springForce( li, fi, params[j] );
+                // //f.add( Quat4d{ d*(fi/l), ei } );
                 // f.f.add_mul( d, fi/li );
                 
-                float k = kGlobal;
+                double k = kGlobal;
                 f.f.add_mul( d, (k*(li-params[j].x)/li) );
 
                 //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
@@ -404,39 +404,39 @@ class OrbSim_f : public Picker { public:
     */
 
     inline void evalTrussForce_neighs2(int iG){
-        const float Adamp = collision_damping*0.5/dt;
+        const double Adamp = collision_damping*0.5/dt;
         //const int iG = get_global_id(0);
-        const Quat4f p = points[iG];
-        const Quat4f v = vel   [iG];
-        Quat4f f = Quat4f{0.0f,0.0f,0.0f,0.0f};
+        const Quat4d p = points[iG];
+        const Quat4d v = vel   [iG];
+        Quat4d f = Quat4d{0.0f,0.0f,0.0f,0.0f};
         //printf( "--- p[%i] \n", iG );
         //#pragma omp simd
         for(int ij=0; ij<nNeighMax; ij++){
             const int j  = nNeighMax*iG + ij;
             const int2 b = neighBs[j];
             if(b.x == -1) break;
-            const Quat4f par = bparams[b.y];
+            const Quat4d par = bparams[b.y];
             //f.add( springForce( points[ja].f - p.f, params[j] ) );
-            Quat4f d = points[b.x];
+            Quat4d d = points[b.x];
             d.f.sub( p.f );
-            const float l  = d.f.norm();
-            float k        = kGlobal;
-            float fl       = k*(l-par.x);
-            const float invL = 1/l;
+            const double l  = d.f.norm();
+            double k        = kGlobal;
+            double fl       = k*(l-par.x);
+            const double invL = 1/l;
 
 
-            // const float dv  = d.f.dot( vel[b.x].f - v.f );
+            // const double dv  = d.f.dot( vel[b.x].f - v.f );
             // if(dv<0){ fl*=1-dv; }
 
 
             // // collision damping
             
-            // const float dv  = d.f.dot( vel[b.x].f - v.f );
-            // float imp = Adamp * p.w*d.w*dv/(p.w+d.w);
-            // //float imp = 0.1* 0.5 * p.w*d.w*dv/(p.w+d.w);
-            // //const float imp = 0;
+            // const double dv  = d.f.dot( vel[b.x].f - v.f );
+            // double imp = Adamp * p.w*d.w*dv/(p.w+d.w);
+            // //double imp = 0.1* 0.5 * p.w*d.w*dv/(p.w+d.w);
+            // //const double imp = 0;
             // //imp/=dt;
-            float imp = 0;
+            double imp = 0;
 
             f.f.add_mul( d.f, ( imp + fl )*invL );
             //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
@@ -457,28 +457,28 @@ class OrbSim_f : public Picker { public:
     void evalTrussForces_bonds(){
         for(int i=0; i<nBonds; i++){
             int2  b = bonds[i];
-            const Quat4f& pi = points[b.x];
-            const Quat4f& pj = points[b.y];
-            Vec3f d = pj.f - pi.f;
-            float l = d.norm();
-            //float fi,ei = springForce( li, fi, bparams[i] );
-            float k = kGlobal;
-            float f = k*(l-bparams[i].x);
+            const Quat4d& pi = points[b.x];
+            const Quat4d& pj = points[b.y];
+            Vec3d d = pj.f - pi.f;
+            double l = d.norm();
+            //double fi,ei = springForce( li, fi, bparams[i] );
+            double k = kGlobal;
+            double f = k*(l-bparams[i].x);
 
             // Limit acceleration force to improve stability   -- it does not seem to help
-            // float mmin = (pi.w < pj.w) ? pi.w : pj.w;
+            // double mmin = (pi.w < pj.w) ? pi.w : pj.w;
             // if( (fabs(f)/mmin) > maxAcc ){   // here it would be more efficient to use momentum rather than force 
             //     f = maxAcc*mmin;
             // }
 
             // collision damping
-            //float vi   = d.dot( vel[b.x].f );
-            //float vj   = d.dot( vel[b.y].f );
-            //float dv   = vj   - vi;
-            float invL = 1./l;
-            float dv   = d.dot( vel[b.y].f - vel[b.x].f )*invL;
-            float mcog = pj.w + pi.w;
-            float imp  = collision_damping * pi.w*pi.w*dv/mcog;
+            //double vi   = d.dot( vel[b.x].f );
+            //double vj   = d.dot( vel[b.y].f );
+            //double dv   = vj   - vi;
+            double invL = 1./l;
+            double dv   = d.dot( vel[b.y].f - vel[b.x].f )*invL;
+            double mcog = pj.w + pi.w;
+            double imp  = collision_damping * pi.w*pi.w*dv/mcog;
 
             d.mul( (imp + f)*invL );          
             forces[b.x].f.add(d);
@@ -486,37 +486,37 @@ class OrbSim_f : public Picker { public:
         } 
     }
 
-    Vec3f getEdgeVertPos( int i ){
+    Vec3d getEdgeVertPos( int i ){
         Vec3i b = edgeVertBonds[i].verts;
-        const Quat4f& pa = points[b.x];
-        const Quat4f& pb = points[b.y];
-        const Quat4f& pc = points[b.z];
+        const Quat4d& pa = points[b.x];
+        const Quat4d& pb = points[b.y];
+        const Quat4d& pc = points[b.z];
         double c = edgeVertBonds[i].c;
-        float mc = 1-c;
+        double mc = 1-c;
         return pa.f*mc + pb.f*c;
     }
 
-    //void evalEdgeVert( Vec3i b, float c, float K ){
+    //void evalEdgeVert( Vec3i b, double c, double K ){
     void evalEdgeVert( int i ){
         Vec3i b = edgeVertBonds[i].verts;
-        float c = edgeVertBonds[i].c;
-        float K = edgeVertBonds[i].K;
+        double c = edgeVertBonds[i].c;
+        double K = edgeVertBonds[i].K;
         // ToDo: perhaps we should interpolate it by B-spline to make the path more smooth
         // ToDo: Apply Force in the direction of the edge, constrain perpendicular to the edge
         // ToDo: Damping ( collision damping )
         
         // fit vert to edge
-        const Quat4f& pa = points[b.x];
-        const Quat4f& pb = points[b.y];
-        const Quat4f& pc = points[b.z];
-        float mc = 1-c;
-        Vec3f d = pc.f - (pa.f*mc + pb.f*c);
+        const Quat4d& pa = points[b.x];
+        const Quat4d& pb = points[b.y];
+        const Quat4d& pc = points[b.z];
+        double mc = 1-c;
+        Vec3d d = pc.f - (pa.f*mc + pb.f*c);
         //glColor3f(1.0,0.0,0.0); Draw3D::drawVecInPos( d, pc.f*1.0 );
         
-        float invL = 1./d.norm();
-        float dv   = d.dot( vel[b.z].f - vel[b.x].f*mc - vel[b.y].f*c )*invL;
-        float mab  = pa.w*mc + pb.w*c;
-        float imp  = collision_damping * pc.w*mab*dv/( pc.w  + mab );
+        double invL = 1./d.norm();
+        double dv   = d.dot( vel[b.z].f - vel[b.x].f*mc - vel[b.y].f*c )*invL;
+        double mab  = pa.w*mc + pb.w*c;
+        double imp  = collision_damping * pc.w*mab*dv/( pc.w  + mab );
         //imp/=dt; 
 
         d.mul( K + imp*invL ); 
@@ -527,11 +527,11 @@ class OrbSim_f : public Picker { public:
         forces[b.z].f.sub(d);
 
         // Force
-        // const Quat4f& pa = points[b.x];
-        // const Quat4f& pc = points[b.z];
-        // Vec3f d = pc.f - pa.f;          
+        // const Quat4d& pa = points[b.x];
+        // const Quat4d& pc = points[b.z];
+        // Vec3d d = pc.f - pa.f;          
         // // Damping
-        // //float dv   = d.dot( vel[b.x].f + vel[b.y].f - vel[b.z].f );
+        // //double dv   = d.dot( vel[b.x].f + vel[b.y].f - vel[b.z].f );
         // d.mul( K );
         // forces[b.x].f.add(d);
         // //forces[b.y].f.add_mul(d, c);
@@ -543,32 +543,32 @@ class OrbSim_f : public Picker { public:
         for(int i=0; i<nEdgeVertBonds; i++){ evalEdgeVert( i ); }
     }
 
-    void evalTrussCollisionImpulses_bonds( float rate=1.0 ){
+    void evalTrussCollisionImpulses_bonds( double rate=1.0 ){
         // Collision forces are based on momentum-conserving impulses, it does not need to know anything about the interaction potential (e.g. spring constants)
         for(int i=0; i<nBonds; i++){
             int2  b = bonds[i];
-            const Quat4f& pi = points[b.x];
-            const Quat4f& pj = points[b.y];
-            Vec3f d  = pi.f - pj.f;
-            float l  = d.normalize();
-            float vi = d.dot( vel[b.x].f );
-            float vj = d.dot( vel[b.y].f );
-            float mcog = pj.w + pi.w;
-            float dv   = vj   - vi;
-            //float vcog = (pi.w*vi + pj.w*vj)/(pi.w+pj.w);
+            const Quat4d& pi = points[b.x];
+            const Quat4d& pj = points[b.y];
+            Vec3d d  = pi.f - pj.f;
+            double l  = d.normalize();
+            double vi = d.dot( vel[b.x].f );
+            double vj = d.dot( vel[b.y].f );
+            double mcog = pj.w + pi.w;
+            double dv   = vj   - vi;
+            //double vcog = (pi.w*vi + pj.w*vj)/(pi.w+pj.w);
             // ---- Inelastic collision
-            //float dvi  = vcog - vi;
-            //float imp1 = dvi*pi.w;
+            //double dvi  = vcog - vi;
+            //double imp1 = dvi*pi.w;
             // Analytical Derivation:
             // dvi = ( pi.w*vi + pj.w*vj                        )/(pi.w+pj.w) - (pi.w+pj.w)*vi/(pi.w+pj.w)
             //     = ( pi.w*vi + pj.w*vj -  pi.w*vi - pj.w*vi   )/(pi.w+pj.w)
             //     = (           pj.w*vj            - pj.w*vi   )/(pi.w+pj.w)
             //     = (           pj.w*(vj-vi)                   )/(pi.w+pj.w)
             // imp1 = dvi*pi.w = pi.w*pj.w*(vj-vi)/(pi.w+pj.w)
-            float imp = pi.w*pi.w*dv/mcog;
+            double imp = pi.w*pi.w*dv/mcog;
             //if( i==146 ){ // Debug
-            //    float dvj  = vcog - vj;
-            //    float imp2 = dvj*pj.w; // shoould be the same as imp1 
+            //    double dvj  = vcog - vj;
+            //    double imp2 = dvj*pj.w; // shoould be the same as imp1 
             //    printf( "evalTrussCollisionForces_bonds[%i] imp1 %g imp2 %g \n", i, imp1, imp2  );
             //}
             // apply force to points
@@ -581,10 +581,10 @@ class OrbSim_f : public Picker { public:
     void evalBondTension(){
         for(int i=0;i<nBonds; i++ ){
             int2  b  = bonds[i];
-            float l0 = bparams[i].x;
-            //float l0 = l0s[i];
-            float l   = (points[b.y].f-points[b.x].f).norm();
-            float s   = (l-l0)/l0;
+            double l0 = bparams[i].x;
+            //double l0 = l0s[i];
+            double l   = (points[b.y].f-points[b.x].f).norm();
+            double s   = (l-l0)/l0;
             //if( fabs(s)>0.5 ){ printf( "evalBondTension[%i] strain=%g l=%g l0=%g\n", i, s, l, l0 ); }
             //if(i==6272){ printf( "evalBondTension[%i](%i,%i) strain=%g l=%g l0=%g\n", i, b.x,b.y, s, l, l0 ); }
             strain[i] = s;
@@ -593,10 +593,10 @@ class OrbSim_f : public Picker { public:
         //exit(0);
     }
 
-    void applyForceRotatingFrame_i( int i, Vec3f p0, Vec3f ax, float omega ){
-        const Quat4f& p = points[i];
-        const Quat4f& v = vel   [i];
-        Vec3f d,f;
+    void applyForceRotatingFrame_i( int i, Vec3d p0, Vec3d ax, double omega ){
+        const Quat4d& p = points[i];
+        const Quat4d& v = vel   [i];
+        Vec3d d,f;
         // Coriolis force     = 2*m*omega*v
         f.set_cross(ax,v.f);        
         f.mul( 2.0*omega );
@@ -608,22 +608,22 @@ class OrbSim_f : public Picker { public:
         forces[i].f.add_mul(f, p.w );
     }
 
-    void applyForceCentrifug_i( int i, Vec3f p0, Vec3f ax, float omega ){
-        const Quat4f& p = points[i];
-        Vec3f d;
+    void applyForceCentrifug_i( int i, Vec3d p0, Vec3d ax, double omega ){
+        const Quat4d& p = points[i];
+        Vec3d d;
         d.set_sub(p.f,p0);
         d.makeOrthoU(ax);   
         forces[i].f.add_mul(d, p.w*omega*omega );
     }
 
-    void applyForceRotatingFrame( Vec3f p0, Vec3f ax, float omega ){
+    void applyForceRotatingFrame( Vec3d p0, Vec3d ax, double omega ){
         double omega2 = omega*omega;
-        Vec3f omega_ax = ax*omega*2.0;
+        Vec3d omega_ax = ax*omega*2.0;
         for(int i=0;i<nPoint; i++ ){
-            const Quat4f& p = points[i];
-            const Quat4f& v = vel   [i];
-            //Vec3f f; f.set_cross(ax,p.f-p0);
-            Vec3f d,f;
+            const Quat4d& p = points[i];
+            const Quat4d& v = vel   [i];
+            //Vec3d f; f.set_cross(ax,p.f-p0);
+            Vec3d d,f;
             d.set_sub(p.f,p0);
             d.makeOrthoU(ax);
             f.set_mul( d, omega2 );     // centrifugal force  = r*m*omega^2
@@ -633,7 +633,7 @@ class OrbSim_f : public Picker { public:
         }
     }
 
-    void applyForceCentrifug( Vec3f p0, Vec3f ax, float omega ){
+    void applyForceCentrifug( Vec3d p0, Vec3d ax, double omega ){
         for(int i=0;i<nPoint; i++ ){ applyForceCentrifug_i( i, p0, ax,omega ); }
     }
 
@@ -643,27 +643,27 @@ class OrbSim_f : public Picker { public:
             int j=j0+jj;
             int ing = neighs[j];
             if(ing<0) break;
-            Quat4f par = params[j];
+            Quat4d par = params[j];
             printf( "ng[%i,%i|%i] l0,kP,kT,damp(%g,%g,%g,%g)\n", i, ing, jj, par.x,par.y,par.z,par.w );
         }
     }
-    void printAllNeighs(){ printf("OrbSim_f::printAllNeighs(nPoint=%i,nNeighMax=%i)\n",nPoint,nNeighMax); for(int i=0;i<nPoint;i++){ printNeighs(i); }; };
+    void printAllNeighs(){ printf("OrbSim::printAllNeighs(nPoint=%i,nNeighMax=%i)\n",nPoint,nNeighMax); for(int i=0;i<nPoint;i++){ printNeighs(i); }; };
 
     double getFmax(){ 
         double fmax=0;
-        for(int i=0; i<nPoint; i++){ float f=forces[i].norm(); fmax=fmax>f?fmax:f; }   
+        for(int i=0; i<nPoint; i++){ double f=forces[i].norm(); fmax=fmax>f?fmax:f; }   
         //printf( "|fmax|=%g\n", fmax );
         return fmax;
     }
 
-    void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero; } };
-    void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero; } };
+    void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4dZero; } };
+    void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4dZero; } };
 
-    double move_GD(float dt){
-        float ff=0;
+    double move_GD(double dt){
+        double ff=0;
         for(int i=0;i<nPoint; i++ ){
-            Quat4f p = points[i];
-            Quat4f f = forces[i];
+            Quat4d p = points[i];
+            Quat4d f = forces[i];
             ff += f.f.norm2();
             p.f.add_mul( f.f, dt/p.w );
             //printf( "move_GD[%i] |d|=%g |f|=%g dt/m=%g m=%g \n", i, f.f.norm() * dt/p.w, f.f.norm(), dt/p.w, p.w );
@@ -672,12 +672,12 @@ class OrbSim_f : public Picker { public:
         return ff;
     }
 
-    inline float move_i_MD(int i, float dt, float cdamp ){
-        Quat4f f = forces[i];
-        Quat4f p = points[i];
-        Quat4f v = vel   [i];
+    inline double move_i_MD(int i, double dt, double cdamp ){
+        Quat4d f = forces[i];
+        Quat4d p = points[i];
+        Quat4d v = vel   [i];
 
-        //float vf = v.f.dot(f.f);
+        //double vf = v.f.dot(f.f);
         //if( vf>0.0 ){ f.f.mul( 0.99 ); }
 
         v.f.mul( cdamp );
@@ -689,15 +689,15 @@ class OrbSim_f : public Picker { public:
         return f.f.norm2();
     }
 
-    double move_MD(float dt, float damp=0.0f ){
-        float cdamp = 1.0f - damp;
+    double move_MD(double dt, double damp=0.0f ){
+        double cdamp = 1.0f - damp;
         double ff = 0.0; 
         for(int i=0;i<nPoint; i++ ){ move_i_MD(i, dt, cdamp ); }
         return ff;
     }
 
-int run( int niter, float dt, float damp  ){
-    float f2 = -1;
+int run( int niter, double dt, double damp  ){
+    double f2 = -1;
     for(int itr=0; itr<niter; itr++){
         cleanForce();   
         //evalTrussForces_neighs();
@@ -721,8 +721,8 @@ inline void setOpt( double dt_, double damp_ ){
     cleanVel  ( );
 }
 
-void FIRE_update( float& vf, float& vv, float& ff, float& cv, float& cf ){
-    float cs = vf/sqrt(vv*ff);
+void FIRE_update( double& vf, double& vv, double& ff, double& cv, double& cf ){
+    double cs = vf/sqrt(vv*ff);
     //if( vf < 0.0 ){
     if( vv>1600.0 )damping  = damp_max;
     if( cs<0.02 ){
@@ -745,10 +745,10 @@ void FIRE_update( float& vf, float& vv, float& ff, float& cv, float& cf ){
 }
 
 
-int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
+int run_omp( int niter_max, bool bDynamic, double dt_, double damp_ ){
     //printf( "run_omp() niter_max %i dt %g Fconv %g Flim %g timeLimit %g outE %li outF %li \n", niter_max, dt, Fconv, Flim, timeLimit, (long)outE, (long)outF );
-    float cdamp = 1.0f - damp_;
-    float E,F2,ff,vv,vf;
+    double cdamp = 1.0f - damp_;
+    double E,F2,ff,vv,vf;
     //long T0 = getCPUticks();
     int itr=0,niter=niter_max;
     #pragma omp parallel shared(niter,itr,cdamp)
@@ -762,7 +762,7 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
         //#pragma omp for reduction(+:E)
         #pragma omp for 
         for(int iG=0; iG<nPoint; iG++){ 
-            forces[iG] = Quat4fZero;
+            forces[iG] = Quat4dZero;
             //evalTrussForce_neighs(iG);
             evalTrussForce_neighs2(iG);
             
@@ -782,9 +782,9 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
         if(!bDynamic){    // FIRE if not dynamic
             #pragma omp for reduction(+:vv,vf,ff)
             for(int i=0;i<nPoint; i++ ){
-                Quat4f p = points[i];
-                Quat4f f = forces[i];
-                Quat4f v = vel   [i];
+                Quat4d p = points[i];
+                Quat4d f = forces[i];
+                Quat4d v = vel   [i];
                 vv += v.f.norm2();
                 vf += v.f.dot(f.f);
                 ff += f.f.norm2();
@@ -831,6 +831,6 @@ int run_omp( int niter_max, bool bDynamic, float dt_, float damp_ ){
     return itr;
 }
 
-};   // OrbSim_f
+};   // OrbSim
 
 #endif

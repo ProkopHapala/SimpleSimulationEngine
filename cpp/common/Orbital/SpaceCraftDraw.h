@@ -28,6 +28,8 @@ namespace SpaceCrafting{
 
 int ogl_asteroide=0, ogl_geoSphere=0;
 
+// ========================   Single-precision
+
 void renderTruss(int nb, int2* bonds, Quat4f* ps, float* strain=0, float sc=1.0 ){
     glBegin(GL_LINES);
     for(int i=0; i<nb; i++ ){
@@ -85,6 +87,71 @@ void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
     glEnd();
     //exit(0);
 }
+
+
+// ========================   Double precision
+
+void renderTruss(int nb, int2* bonds, Quat4d* ps, double* strain=0, float sc=1.0 ){
+    glBegin(GL_LINES);
+    for(int i=0; i<nb; i++ ){
+        //printf( "renderTruss()[%i] \n", i );
+        int2 b =  bonds[i];
+        if(strain){
+            float f=strain[i];
+            //if( fabs(f)>0.0001 )printf( "Edge[%i] strain=%g \n", i, f );
+            f*=sc;
+            if(f>0){ 
+                //Draw3D::color(Vec3f{f*0,0,0}); 
+                glColor3f(f,f*0.2,0.);
+            }else{ 
+                //Draw3D::color(Vec3f{0,f*100.0f,f});
+                glColor3f(0.,f*-0.2,-f);  
+                //glColor3f(0,1.,0.);
+                //glColor3f(0,-f*10000000.0,0.);
+                //printf("neg\n"); 
+            };
+            //Draw3D::color(Vec3f{0.,1.0,0.});
+        } 
+        Draw3D::vertex( ps[b.x].f );
+        Draw3D::vertex( ps[b.y].f );
+        //printf( "renderTruss[%i](%i,%i) p(%g,%g,%g) p(%g,%g,%g)\n", i, b.x, b.y,  ps[b.x].f.x,ps[b.x].f.y,ps[b.x].f.z,   ps[b.y].f.x,ps[b.y].f.y,ps[b.y].f.z );
+    }
+    glEnd();
+}
+
+void renderPoinSizes(int n, Quat4d* ps, double sc=1.0 ){
+    glPointSize( 10.0f*sc );
+    glBegin(GL_POINTS);
+    for(int i=0; i<n; i++ ){
+        //printf( "point[%i] m=%g p(%g,%g,%g)\n", i, ps[i].e, ps[i].x,ps[i].y,ps[i].z );
+        //float c = ps[i].e*sc;
+        //glColor3f(c,c,c);
+        //glPointSize( ps[i].e*sc );
+        Draw3D::vertex( ps[i].f );
+    }
+    glEnd();
+    //exit(0);
+}
+
+void renderPointForces(int n, Quat4d* ps, Quat4d* fs, double sc=1.0 ){
+    glColor3f(1.0,0.0,1.0);
+    //glPointSize( 10.0 );
+    glBegin(GL_LINES);
+    for(int i=0; i<n; i++ ){
+        //printf( "point[%i] m=%g \n", i, ps[i].e );
+        //float c = ps[i].e*sc;
+        //glColor3f(c,c,c);
+        //glPointSize( ps[i].e*sc );
+        Draw3D::vertex( ps[i].f );
+        Draw3D::vertex( ps[i].f+fs[i].f*sc );
+    }
+    glEnd();
+    //exit(0);
+}
+
+
+// ========================   Asteroid
+
 
 void drawAsteroide( int nsamp, int nCrater, float hscale, bool wire ){
 

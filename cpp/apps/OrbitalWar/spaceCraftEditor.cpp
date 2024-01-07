@@ -42,6 +42,7 @@ int verbosity = 0;
 #include "EditSpaceCraft.h"
 
 #include "OrbSim.h"
+#include "OrbSim_d.h"
 #include "TriangleRayTracer.h"
 #include "Radiosity.h"
 
@@ -69,7 +70,8 @@ using namespace SpaceCrafting;
 
 bool bShipReady = false;
 Mesh::Builder2 mesh2;
-OrbSim_f sim;
+//OrbSim_f sim;
+OrbSim sim;
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 char str_tmp[8096];
 double elementSize  = 5.;
@@ -94,11 +96,11 @@ void SpaceCraftControl(double dt){
 
         EdgeVertBond& ev = sim.edgeVertBonds[i];
 
-        Vec3f  d  = sim.points[ev.verts.y].f - sim.points[ev.verts.x].f;
-        Vec3f  dv = sim.vel[ev.verts.z].f - sim.vel[ev.verts.y].f*ev.c + sim.vel[ev.verts.x].f*(1-ev.c);
-        double l = d.norm();
-        float  f = d.dot( ev.f )/l; // force along the slider path
-        float  v = d.dot( dv   )/l; // velocity along the slider path
+        Vec3d  d  = sim.points[ev.verts.y].f - sim.points[ev.verts.x].f;
+        Vec3d  dv = sim.vel[ev.verts.z].f - sim.vel[ev.verts.y].f*ev.c + sim.vel[ev.verts.x].f*(1-ev.c);
+        double l  = d.norm();
+        double f  = d.dot( ev.f )/l; // force along the slider path
+        double v  = d.dot( dv   )/l; // velocity along the slider path
 
         o->move( dt, l, v, f );
         
@@ -113,7 +115,7 @@ void SpaceCraftControl(double dt){
 }
 
 
-void runSim( OrbSim_f& sim, int niter=100 ){
+void runSim( OrbSim& sim, int niter=100 ){
     long t0 = getCPUticks();
     if(bRun){
         /*
@@ -161,8 +163,8 @@ void runSim( OrbSim_f& sim, int niter=100 ){
 
 // ======================  Free Functions
 
-void renderEdgeBox( int ib, Buckets& buckets, int2* edges, Quat4f* points){
-    //const Quat8f& bb = BBs[ib];
+void renderEdgeBox( int ib, Buckets& buckets, int2* edges, Quat4d* points){
+    //const Quat8d& bb = BBs[ib];
     //Draw3D::drawBBox( bb.lo.f, bb.hi.f );
     int i0 = buckets.cellI0s[ib];
     int n  = buckets.cellNs [ib];
@@ -175,8 +177,8 @@ void renderEdgeBox( int ib, Buckets& buckets, int2* edges, Quat4f* points){
     }
 }
 
-void renderPointBox( int ib, Buckets& buckets, Quat4f* points){
-    //const Quat8f& bb = BBs[ib];
+void renderPointBox( int ib, Buckets& buckets, Quat4d* points){
+    //const Quat8d& bb = BBs[ib];
     //Draw3D::drawBBox( bb.lo.f, bb.hi.f );
     int i0 = buckets.cellI0s[ib];
     int n  = buckets.cellNs [ib];
@@ -204,7 +206,7 @@ void renderShip(){
     // If we use drawSpaceCraft_Mesh() there are problems with backface lighting
     Mesh::Builder mesh;
     glColor3f(1.0,1.0,1.0);
-    drawSpaceCraft_Mesh( *theSpaceCraft, mesh, 1, false, true, (Vec3f){0.5,0.5,0.5} );
+    drawSpaceCraft_Mesh( *theSpaceCraft, mesh, 1, false, true, (Vec3d){0.5,0.5,0.5} );
     mesh.newSub();
     mesh.printSizes();
     Draw3D::drawMeshBuilder( mesh );
@@ -225,14 +227,14 @@ void renderShip(){
     
     
     /*
-    Draw3D::color(Vec3f{1.0f,0.0f,1.0f});
+    Draw3D::color(Vec3d{1.0f,0.0f,1.0f});
     for(int i=0; i<theSpaceCraft->sliders.size(); i++){
         const Slider& o = theSpaceCraft->sliders[i];
         Draw3D::drawLineStrip( o.path.n, o.path.ps, sim.points, o.path.closed );
     }
     */
     
-    //Draw3D::color(Vec3f{1.0,0.,1.});
+    //Draw3D::color(Vec3d{1.0,0.,1.});
     //for( const Node& o : theSpaceCraft->nodes ){ Draw3D::drawPointCross( o.pos, 5 ); }
 
 
@@ -260,7 +262,7 @@ void renderShip(){
 }
 
 
-void makeBBoxes( const SpaceCraft& craft, OrbSim_f& sim ){
+void makeBBoxes( const SpaceCraft& craft, OrbSim& sim ){
     // // --- Bounding boxes
     int nbuck  = exportBuckets( craft,             0, 16, true );
     //printf( "nbuck %i \n", nbuck );
@@ -353,7 +355,7 @@ void reloadShip( const char* fname  ){
     }
 
     // --- kick to rings
-    // Vec3f v0 = {1.0,0.0,0.0};
+    // Vec3d v0 = {1.0,0.0,0.0};
     // for( Ring* o : theSpaceCraft->rings ){
     //     for(int iv=o->pointRange.a; iv<o->pointRange.b; iv++){
     //         sim.vel[iv].f = v0; 
@@ -465,13 +467,13 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     listDirContaining( "data", ".lua", lstLuaFiles->labels );
 
     /*
-    Vec3f pf;
+    Vec3d pf;
     Vec3d pd;
     //pd.set(1.5,1.800001,1.9);
     pd.set(1.5,1.800000001,1.9);
     //pd = pf;
     //pd = (Vec3d)pf;
-    pf = (Vec3f)pd;
+    pf = (Vec3d)pd;
     print(pf);printf(" // pf\n");
     print(pd);printf(" // pd\n");
     //exit(0);
@@ -496,7 +498,7 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     glo_capsula = glGenLists(1);
     glNewList( glo_capsula, GL_COMPILE );
     //Draw3D::drawCylinderStrip  ( 16, 10, 10, {0.0,0.0,-16.0,}, {0.0,0.0,16} );
-    Draw3D::drawCapsula( (Vec3f){0.0,0.0,-1.0}, (Vec3f){0.0,0.0,1.0}, 2.0, 1.0, 0.7, 0.7, 0.2, 32, false );
+    Draw3D::drawCapsula( (Vec3d){0.0,0.0,-1.0}, (Vec3d){0.0,0.0,1.0}, 2.0, 1.0, 0.7, 0.7, 0.2, 32, false );
     glEndList();
     //delete [] ups;
     */
@@ -545,7 +547,7 @@ void SpaceCraftEditorApp::draw(){
 	glColor3f(1.0,0.5,1.0);
 	//if(glo_capsula) glCallList(glo_capsula);
 
-    //Vec3f cam.rot.c;
+    //Vec3d cam.rot.c;
     //float lightPos   []{ 1.0f, -1.0f, 1.0f, 0.0f  };
     glLightfv( GL_LIGHT0, GL_POSITION,  (float*)&cam.rot.c  );
     //glLightfv(GL_LIGHT0, GL_POSITION, light_position);
@@ -574,18 +576,18 @@ void SpaceCraftEditorApp::draw(){
 
     glDisable(GL_LIGHTING);
 
-    //Draw3D::drawMatInPos( sim.I, sim.cog, (Vec3f){sqrt(1/sim.I.xx),sqrt(1/sim.I.yy),sqrt(1/sim.I.zz)} );
+    //Draw3D::drawMatInPos( sim.I, sim.cog, (Vec3d){sqrt(1/sim.I.xx),sqrt(1/sim.I.yy),sqrt(1/sim.I.zz)} );
 
-    if(bShipReady)Draw3D::drawMatInPos( Mat3fIdentity, sim.cog, Vec3f{100.,100.,100.} );
+    if(bShipReady)Draw3D::drawMatInPos( Mat3dIdentity, sim.cog, Vec3d{100.,100.,100.} );
 
     /*
     glLineWidth(3.0);
-    Draw3D::color( Vec3f{1.0,0.0,1.0} );
+    Draw3D::color( Vec3d{1.0,0.0,1.0} );
     //drawSpaceCraft_sliderPaths( *theSpaceCraft, sim.points );
-    //drawSpaceCraft_nodes( theSpaceCraft, const Quat4f* ps=0, float sz=10, int i0=0, int i1=-1 );
-    Draw3D::color(Vec3f{0.f,0.5f,0.f});  drawSpaceCraft_nodes( *theSpaceCraft, 0, 10 );
+    //drawSpaceCraft_nodes( theSpaceCraft, const Quat4d* ps=0, float sz=10, int i0=0, int i1=-1 );
+    Draw3D::color(Vec3d{0.f,0.5f,0.f});  drawSpaceCraft_nodes( *theSpaceCraft, 0, 10 );
     glLineWidth(5.0);
-    Draw3D::color(Vec3f{0.5f,0.5f,0.f}); drawSpaceCraft_nodes( *theSpaceCraft, sim.points, 5 );
+    Draw3D::color(Vec3d{0.5f,0.5f,0.f}); drawSpaceCraft_nodes( *theSpaceCraft, sim.points, 5 );
     //printf( "nodes.size() = %i \n", theSpaceCraft->nodes.size() );
     
     for(SpaceCrafting::Node* nd: theSpaceCraft->nodes ){
@@ -595,13 +597,13 @@ void SpaceCraftEditorApp::draw(){
         //printf( "node[%i] %li bt.id=%i\n", nd->id, (long)(nd->boundTo), nd->boundTo->id );
         if((nd->boundTo->id>1000)||(nd->boundTo->id<0)){ printf("ERROR node[%id]->boundTo->id==%i\n", nd->id, nd->boundTo->id ); exit(0); }
         //Node* nd = theSpaceCraft->nodes[7];
-        Draw3D::color(Vec3f{0.f,0.5f,0.5f});  Draw3D::drawPointCross( nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong, 5 );
+        Draw3D::color(Vec3d{0.f,0.5f,0.5f});  Draw3D::drawPointCross( nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong, 5 );
         Mat3d rot;
         nd->boundTo->rotMat( rot );
         Vec3d pos = nd->boundTo->nodes.x->pos*(1-nd->calong) + nd->boundTo->nodes.y->pos*nd->calong;
         Draw3D::drawMatInPos( rot, pos, Vec3dOne*10.0 );
         glLineWidth(3.0);
-        Draw3D::color(Vec3f{1.f,1.0f,1.0f});
+        Draw3D::color(Vec3d{1.f,1.0f,1.0f});
         Draw3D::drawVecInPos( ((Girder*)nd->boundTo)->up*30.0, pos );
     }
     */
@@ -611,8 +613,8 @@ void SpaceCraftEditorApp::draw(){
     //     const Radiator& o =  *theSpaceCraft->radiators[0];
     //     const Girder& g1  =  *theSpaceCraft->girders[o.g1];
     //     const Girder& g2  =  *theSpaceCraft->girders[o.g2];
-    //     Draw3D::color(Vec3f{1.f,0.f,0.f}); drawPointRange( 10, g1.pointRange, 4, 0, o.g1span, sim.points );
-    //     Draw3D::color(Vec3f{0.f,0.f,1.f}); drawPointRange( 10, g2.pointRange, 4, 1, o.g2span, sim.points );
+    //     Draw3D::color(Vec3d{1.f,0.f,0.f}); drawPointRange( 10, g1.pointRange, 4, 0, o.g1span, sim.points );
+    //     Draw3D::color(Vec3d{0.f,0.f,1.f}); drawPointRange( 10, g2.pointRange, 4, 1, o.g2span, sim.points );
     // }
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
@@ -645,7 +647,7 @@ void SpaceCraftEditorApp::draw(){
 
     if(picked_block>=0){
         glPointSize(5);
-        Quat8f bb = sim.BBs[picked_block];
+        Quat8d bb = sim.BBs[picked_block];
         glColor3f( 0.0,1.0,0.0 ); Draw3D::drawBBox( bb.lo.f, bb.hi.f );
         glColor3f( 0.0,1.0,1.0 ); renderEdgeBox ( picked_block, sim.edgeBBs,  sim.bonds, sim.points );
         glColor3f( 1.0,0.0,1.0 ); renderPointBox( picked_block, sim.pointChunks,         sim.points );
@@ -662,7 +664,7 @@ void SpaceCraftEditorApp::draw(){
     //     //Draw3D::vertex( sim.points[i].f ); 
     // }
     // for(int i=0; i<theSpaceCraft->nodes.size(); i++){   // labels
-    //     Draw3D::drawText( std::to_string(i).c_str(), (Vec3f)theSpaceCraft->nodes[i]->pos, fontTex, 0.04, 0 );
+    //     Draw3D::drawText( std::to_string(i).c_str(), (Vec3d)theSpaceCraft->nodes[i]->pos, fontTex, 0.04, 0 );
     //     //Draw3D::vertex( sim.points[i].f ); 
     // }
     // glEnd();
@@ -674,9 +676,9 @@ void SpaceCraftEditorApp::draw(){
     // glBegin(GL_LINES);
     // for(int i=0; i<sim.nEdgeVertBonds; i++){
     //     EdgeVertBond& ev = sim.edgeVertBonds[i];
-    //     Vec3f a = sim.points[ ev.verts.x ].f;
-    //     Vec3f b = sim.points[ ev.verts.y ].f;
-    //     Vec3f c = sim.points[ ev.verts.z ].f;
+    //     Vec3d a = sim.points[ ev.verts.x ].f;
+    //     Vec3d b = sim.points[ ev.verts.y ].f;
+    //     Vec3d c = sim.points[ ev.verts.z ].f;
     //     Draw3D::vertex( a );  Draw3D::vertex( c );
     //     Draw3D::vertex( b );  Draw3D::vertex( c );
     // }
@@ -691,8 +693,8 @@ void SpaceCraftEditorApp::draw(){
         // drawSliderPath( o, sim.points, 10 ); 
         
         glColor3f(1.0,0.0,1.0);
-        Vec3f p  = sim.getEdgeVertPos( i );
-        Vec3f p0 = sim.points[ o->ivert ].f;
+        Vec3d p  = sim.getEdgeVertPos( i );
+        Vec3d p0 = sim.points[ o->ivert ].f;
         Draw3D::drawLine( p0, p );
         
     }
@@ -705,7 +707,7 @@ void SpaceCraftEditorApp::draw(){
     //pointLabels( mesh.verts.size(), &mesh.verts[0].pos, 0.1, 0.0, fontTex, 10.0, 0 );
     
 
-    Draw3D::color( Vec3f{0.0,0.0,1.0} );
+    Draw3D::color( Vec3d{0.0,0.0,1.0} );
     //for(int i=0; i<mesh2.verts.size(); i++){  Draw3D::drawInt( mesh2.verts[i].pos, i, Draw::fontTex, 0.02 );}
 
     /*
@@ -719,13 +721,13 @@ void SpaceCraftEditorApp::draw(){
 
     //Mat3d camMat;
     //qCamera.toMatrix_T(camMat);
-    //Draw3D::drawMatInPos( cam.rot, (Vec3f){0.0,0.0,0.0} );
+    //Draw3D::drawMatInPos( cam.rot, (Vec3d){0.0,0.0,0.0} );
 
     picker.hray = (Vec3d)(cam.rot.c);
     picker.ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
 
     glLineWidth(5.0);
-    if     (picker.edit_mode == EDIT_MODE::vertex){ if( picker.picked>=0 ){ Vec3f p = *(Vec3f*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawPointCross( p, 10.0 );                              } }
+    if     (picker.edit_mode == EDIT_MODE::vertex){ if( picker.picked>=0 ){ Vec3d p = *(Vec3d*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawPointCross( p, 10.0 );                              } }
     else if(picker.edit_mode == EDIT_MODE::edge  ){ if( picker.picked>=0 ){ Vec2i b = *(Vec2i*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawLine      ( sim.points[b.x].f, sim.points[b.y].f ); } }
 
     //mouse_ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
@@ -794,7 +796,7 @@ void SpaceCraftEditorApp::mouseHandling( ){
 void SpaceCraftEditorApp::keyStateHandling( const Uint8 *keys ){
     //Mat3d camMat;
     //qCamera.toMatrix_T(camMat);
-    //Draw3D::drawMatInPos(  (Mat3f)camMat, (Vec3f){0.0,0.0,0.0} );
+    //Draw3D::drawMatInPos(  (Mat3f)camMat, (Vec3d){0.0,0.0,0.0} );
     //qCamera.toMatrix(camMat);
     if( keys[ SDL_SCANCODE_LEFT  ] ){ qCamera.dyaw  (  keyRotSpeed ); }
 	if( keys[ SDL_SCANCODE_RIGHT ] ){ qCamera.dyaw  ( -keyRotSpeed ); }

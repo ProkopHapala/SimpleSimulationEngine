@@ -163,11 +163,11 @@ class Path{ public:
     inline int    icur (){ return (int)cur;         }  // ToDo: proper boundary conditions
     inline int    icur1(){ int  i=(int)cur+1; if(i>=n){ if(closed){ i=0; }else{ i=n-1; } } return i; }  // ToDo: proper boundary conditions
     inline double dcur(){ return cur-(int)cur;      }
-    inline float fromCur(int& i0, int& i1 ){   
+    inline double fromCur(int& i0, int& i1 ){   
         i0 = (int)cur;
         i1 = i0+1;
         if(i1>=n){ if(closed){ i1=0; }else{ i1=n-1; } }
-        float c = cur-i0;
+        double c = cur-i0;
         i0 = ps[i0];
         i1 = ps[i1];
         //printf( "fromCur(%i,%i) \n", i0, i1 );
@@ -183,32 +183,32 @@ class Path{ public:
         //cur = path_->cur;
     }
 
-    inline Vec3f getPos( const Quat4f* pos ){ 
+    inline Vec3d getPos( const Quat4d* pos ){ 
         int i0 = (int)cur;
         int i1 = i0+1;
         if(i1>=n){ if(closed){ i1=0; }else{ i1=n-1; } }
-        float c = cur-i0;
+        double c = cur-i0;
         //printf( "getPos(%i,%i) c=%g cur=%g \n", i0, i1, c,  cur );
         return pos[ps[i0]].f*(1-c) + pos[ps[i1]].f*c;
     }
 
-    float findNearestPoint( const Vec3f& p_from, Quat4f* pos ){
+    double findNearestPoint( const Vec3d& p_from, Quat4d* pos ){
         // ToDo: should this be rather function of path ?
         //printf("Path::findNearestPoint() n=%i  p_from(%g,%g,%g)\n", n, p_from.x,p_from.y,p_from.z );
-        float tmin  = -1;
-        float r2min = 1e+30;
+        double tmin  = -1;
+        double r2min = 1e+30;
         int   imin  = -1;
-        Vec3f po;
+        Vec3d po;
         for(int i=0; i<n; i++){
-            Vec3f p = pos[ps[i]].f;
+            Vec3d p = pos[ps[i]].f;
             if(i==0){ if(closed){ po = pos[ ps[n-1]].f; }else{ continue; } } // periodic boundary condition ?
             // --- closest point on line segment to p_from
-            Vec3f d = p - po;
-            float t = d.dot(p_from - po) / d.norm2();
+            Vec3d d = p - po;
+            double t = d.dot(p_from - po) / d.norm2();
             if(t<0){ t=0; }else if(t>1){ t=1; }
             d.mul(t); d.add(po);
             d.sub(p_from);
-            float r2 = d.norm2(); 
+            double r2 = d.norm2(); 
             //printf( "path[%i] t=%g r=%g \n", i, t, sqrt(r2) );
             if(r2<r2min){ r2min=r2; imin=i; tmin=t; }
             po=p;
@@ -296,16 +296,16 @@ class StructuralComponent : public ShipComponent { public:
     virtual int sideToPath( int side, int*& inds, bool bAlloc=true, int nmax=-1 ) const =0;
 
     virtual void update_nodes(); 
-    virtual void updateSlidersPaths( bool bSelf, bool bShared=false, Quat4f* ps=0 );
+    virtual void updateSlidersPaths( bool bSelf, bool bShared=false, Quat4d* ps=0 );
 
-    virtual int findNearestPoint( Vec3f p, Quat4f* ps=0 ){
+    virtual int findNearestPoint( Vec3d p, Quat4d* ps=0 ){
         //printf( "StructuralComponent[%i]::findNearestPoint() p(%g,%g,%g)\n", id, p.x,p.y,p.z );
         //printf(" -- "); print();
         int i0 = pointRange.x;
         int i1 = pointRange.y;
         int n  = i1-i0;
         if((n<=0)||(n>1000)){ printf( "ERROR in StructuralComponent[%i]::findNearestPoint() n=%i seems wrong\n",id, n ); exit(0);   }
-        float r2min = 1e+30;
+        double r2min = 1e+30;
         int   i0min = -1;
         for(int i=i0; i<i1; i++){
             double r2 = ( ps[i].f - p ).norm2();
@@ -749,15 +749,15 @@ class Slider : public Node { public:
         
         // // -- check if the motor has enough power to move
         // int i0,i1;
-        // float c = path.fromCur( i0, i1 );
-        // Vec3f ed = ps[i1].f - ps[i0].f;
-        // Vec3f p  = ps[i0].f + ed*c;
-        // Vec3f d  = p - ps[ivert].f;
-        // Vec3f f  = d*springK;
-        // float fed = f.dot(ed);
+        // double c = path.fromCur( i0, i1 );
+        // Vec3d ed = ps[i1].f - ps[i0].f;
+        // Vec3d p  = ps[i0].f + ed*c;
+        // Vec3d d  = p - ps[ivert].f;
+        // Vec3d f  = d*springK;
+        // double fed = f.dot(ed);
         // if( fed*fed / ed.norm2() > forceMax*forceMax ) retrun;   // we should move along the path only if the motor can exert the force required
 
-        // float vel = speed;
+        // double vel = speed;
         // if( vel*f<0 ){ // force and speed have opposite signs
         //     vel = fmin( vel,powerMax/f );
         // }
@@ -794,23 +794,23 @@ class Slider : public Node { public:
     }
 
     /*
-    int findNearestPoint( const Vec3f& p_from, Quat4f* ps ){
+    int findNearestPoint( const Vec3d& p_from, Quat4d* ps ){
         // ToDo: should this be rather function of path ?
         printf("Slider::findNearestPoint() path.n=%i  p_from(%g,%g,%g)\n", path.n, p_from.x,p_from.y,p_from.z );
-        float tmin  = -1;
-        float r2min = 1e+30;
+        double tmin  = -1;
+        double r2min = 1e+30;
         int   imin  = -1;
-        Vec3f po;
+        Vec3d po;
         for(int i=0; i<path.n; i++){
-            Vec3f p = ps[path.ps[i]].f;
+            Vec3d p = ps[path.ps[i]].f;
             if( (i==0) && path.closed ){ po = ps[ path.ps[path.n-1]].f; }else{ continue; }  // periodic boundary condition ?
             // --- closest point on line segment to p_from
-            Vec3f d = p - po;
-            float t = d.dot(p_from - po) / d.norm2();
+            Vec3d d = p - po;
+            double t = d.dot(p_from - po) / d.norm2();
             if(t<0){ t=0; }else if(t>1){ t=1; }
             d.mul(t); d.add(po);
             d.sub(p_from);
-            float r2 = d.norm2(); 
+            double r2 = d.norm2(); 
             printf( "path[%i] t=%g r=%g \n", id, i, t, sqrt(r2) );
             if(r2<r2min){ r2min=r2; imin=i; tmin=t; }
             po=p;
@@ -823,7 +823,7 @@ class Slider : public Node { public:
 
 };
 
-void StructuralComponent::updateSlidersPaths( bool bSelf, bool bShared, Quat4f* ps ){  
+void StructuralComponent::updateSlidersPaths( bool bSelf, bool bShared, Quat4d* ps ){  
     //  bSelf: should the rail for the slider be on this component or the bound component ?
     //printf("StructuralComponent::updateSlidersPaths() bSelf=%i bShared=%i @ps=%li \n", bSelf, bShared, (long)ps ); 
     Node** nds = (Node**)&nodes;
@@ -838,7 +838,7 @@ void StructuralComponent::updateSlidersPaths( bool bSelf, bool bShared, Quat4f* 
                 if( bSelf ){
                     //printf( "  if( bSelf ) == true \n" );
                     if(ps!=0){
-                        int inear = findNearestPoint( (Vec3f)nd->pos, ps );
+                        int inear = findNearestPoint( (Vec3d)nd->pos, ps );
                         //nd->pos   = (Vec3d)ps[inear].f;
                         int side  = ( inear - pointRange.x )%4;
                         //printf( "side = %i i0=%i imin=%i\n", side, inear-pointRange.x, pointRange.x );
@@ -854,7 +854,7 @@ void StructuralComponent::updateSlidersPaths( bool bSelf, bool bShared, Quat4f* 
                 sl->path.bindSharedPath( &share->path ); 
             }
             if(ps){ 
-                sl->path.cur = sl->path.findNearestPoint( (Vec3f)nd->pos, ps ); 
+                sl->path.cur = sl->path.findNearestPoint( (Vec3d)nd->pos, ps ); 
                 nd->pos = (Vec3d)sl->path.getPos(ps);
             }
         }

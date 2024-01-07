@@ -17,10 +17,100 @@
 //#include "MeshBuilderDraw.h"
 #include "SpaceCraft.h"
 #include "OrbSim.h"
+#include "OrbSim_d.h"
 
 using namespace SpaceCrafting;
 
 namespace Mesh{
+
+void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
+    // {
+    //     printf("#====== Materials \n");      for(const Material*      o: shop.materials.vec     ){  o->print();    }
+    //     //printf("#====== PanelMaterials \n"); for(const PanelMaterial* o: shop.panelMaterials.vec){  o->print();    }
+    //     printf("#====== StickMaterials \n"); for(const StickMaterial* o: shop.stickMaterials.vec){  o->print();  }
+    //     //exit(0);
+    // }
+    printf( "exportSim() START \n" );
+    int np = mesh.verts.size();
+    int nb = mesh.edges.size();
+    int* nneighs = new int[ np ];
+    //printf( "exportSim() np=%i\n", np );
+    // find max number of neighbors
+    for(int i=0; i<np; i++){ nneighs[i]=0; }
+    for(int i=0; i<nb; i++){ const Vec2i& e = mesh.edges[i].lo; nneighs[e.a]++; nneighs[e.b]++; }
+    int nneighmax = 0;
+    for(int i=0; i<np; i++){ int ni=nneighs[i]; if(ni>nneighmax)nneighmax=ni; }
+
+    int nneigh_hist[nneighmax+1];
+    for(int i=0; i<=nneighmax; i++){ nneigh_hist[i]=0; }
+    for(int i=0; i<np; i++){ nneigh_hist[ nneighs[i] ]++; }
+    //for(int i=0; i<=nneighmax; i++){ printf( "exportSim() nneigh_hist[%i] %i \n", i, nneigh_hist[i] ); }
+    //exit(0);
+
+    //printf( "exportSim() nneighmax %i \n", nneighmax );
+    sim.recalloc(np, nneighmax, nb );
+
+    // --- EdgeVerts
+    //printf( "exportSim() sim.nEdgeVert %i \n", sim.nEdgeVert );
+
+    // fill neighs
+    for(int i=0; i<np; i++){ sim.points[i].f=mesh.verts[i].pos; sim.points[i].e=0.0f; }
+    for(int i=0; i<np; i++){ nneighs[i]=0;   }
+    for(int i=0; i<sim.nNeighTot; i++){ sim.neighs[i]=-1; }
+    if(sim.neighBs ){ for(int i=0; i<sim.nNeighTot; i++){ sim.neighBs [i]=(int2){-1,-1}; } }
+    if(sim.neighB2s){ for(int i=0; i<sim.nNeighTot; i++){ sim.neighB2s[i]=0;             } }
+    for(int i=0; i<nb; i++){
+        //printf( "exportSim()[%i] \n", i );
+        const Quat4i& e = mesh.edges[i];
+        int ia = e.x*sim.nNeighMax + nneighs[e.x];
+        int ib = e.y*sim.nNeighMax + nneighs[e.y];
+        sim.neighs[ ia ] = e.y; 
+        sim.neighs[ ib ] = e.x;
+        if(sim.neighBs){
+            sim.neighBs[ ia ] = (int2){e.y,i}; 
+            sim.neighBs[ ib ] = (int2){e.x,i};
+        }
+        if(sim.neighB2s){
+            sim.neighB2s[ ia ] =  (i+1); 
+            sim.neighB2s[ ib ] = -(i+1);
+        }
+
+        //printf( "e.w %i \n", e.w );
+        if(e.w<0){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i \n", i, e.w ); exit(0); }
+        if(e.w>=shop.stickMaterials.vec.size()){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i > stickMaterials.size()\n", i, e.w, e.w>=shop.stickMaterials.vec.size() ); exit(0); }
+        const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
+        // l0, kPress, kPull, damping
+        //double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
+        double l0 = (sim.points[e.y].f - sim.points[e.x].f ).norm() * ( 1.f - mat.preStrain );
+        double mass = l0*mat.linearDensity;
+        sim.points[e.x].w += mass*0.5;
+        sim.points[e.y].w += mass*0.5;
+        Quat4d param = (Quat4d){ l0, mat.Kpush/l0, mat.Kpull/l0, mat.damping }; 
+        {
+            printf( "exportSim(ib=%i) length=%g[m] mass=%g[kg] fPush(%g[10kN~ton]\%1) fPull(%g[10kN~ton]\%1)\n", i, l0, mass, mat.Kpush*1e-6, mat.Kpull*1e-6 );
+        //    const Material& M = *shop.materials.vec[mat.materialId];
+        //    printf( "stick[%i] par(%7.3f,%5.2e,%5.2e,%5.2e) Stick(%s,%g[m^2],%g[m])K(%5.2e,%5.2e) Stick()mat(%s,K(%5.2e,%5.2e))\n",  i, param.x, param.y, param.z, param.w,   mat.name, mat.area, mat.diameter, mat.Kpush, mat.Kpull, M.name, M.Kpull, M.Kpush );
+        }
+        sim.params[ ia ] = param;
+        sim.params[ ib ] = param;
+        nneighs[e.x]++; nneighs[e.y]++;
+        if(sim.bonds){
+            sim.bonds[i]     = *(int2*)&e.lo;
+            sim.bparams[i]   = param;
+            //sim.l0s[i]       =  l0;
+            //if(i==6272){ printf( "exportSim [ib=%i](%i,%i) param.x=%g l0=%g \n", i, e.x,e.y, param.x, l0 ); }
+            sim.maxStrain[i] = (Vec2d){ (mat.Spull/mat.Kpull), (mat.Spush/mat.Kpush) };
+            sim.strain[i] = 0;
+        }
+    }
+    sim.cleanForce();
+    sim.cleanVel();
+    //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(0.1); }
+    printf( "exportSim() DONE! \n" );
+    delete [] nneighs;
+    //exit(0);
+}
+
 
 void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
     // {
@@ -73,7 +163,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
             sim.neighB2s[ ia ] =  (i+1); 
             sim.neighB2s[ ib ] = -(i+1);
         }
-
+        
         //printf( "e.w %i \n", e.w );
         if(e.w<0){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i \n", i, e.w ); exit(0); }
         if(e.w>=shop.stickMaterials.vec.size()){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i > stickMaterials.size()\n", i, e.w, e.w>=shop.stickMaterials.vec.size() ); exit(0); }
@@ -83,7 +173,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
         double l0 = (sim.points[e.y].f - sim.points[e.x].f ).norm() * ( 1.f - mat.preStrain );
         double mass = l0*mat.linearDensity;
         sim.points[e.x].w += mass*0.5;
-        sim.points[e.y].w += mass*0.5;
+        sim.points[e.y].w += mass*0.5; 
         Quat4f param = (Quat4f){ l0, mat.Kpush/l0, mat.Kpull/l0, mat.damping }; 
         {
             printf( "exportSim(ib=%i) length=%g[m] mass=%g[kg] fPush(%g[10kN~ton]\%1) fPull(%g[10kN~ton]\%1)\n", i, l0, mass, mat.Kpush*1e-6, mat.Kpull*1e-6 );
