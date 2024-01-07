@@ -6,7 +6,7 @@
 #include "OCL.h"
 #include "Vec3.h"
 //#include "Mat3.h"
-#include "OrbSim.h"
+#include "OrbSim_f.h"
 
 //=======================================================================
 class OCL_Orb: public OCLsystem, public OrbSim_f { public:

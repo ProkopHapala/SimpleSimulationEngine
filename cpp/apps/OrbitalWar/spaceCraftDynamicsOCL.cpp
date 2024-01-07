@@ -40,7 +40,7 @@ int verbosity = 0;
 
 #include "EditSpaceCraft.h"
 
-#include "OrbSim.h"
+#include "OrbSim_f.h"
 #include "OCL_Orb.h"
 //#include "TriangleRayTracer.h"
 //#include "Radiosity.h"
