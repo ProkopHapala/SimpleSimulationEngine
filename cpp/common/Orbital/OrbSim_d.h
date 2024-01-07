@@ -131,6 +131,13 @@ class OrbSim: public Picker { public:
     //double*  l0s    =0; // 
     Vec2d*  maxStrain=0;
 
+    // ====== Linearized Truss
+
+    Quat4f* hbs  =0;  // normalized direction of the stick, and initial distortion of the length from neutral length
+    Quat4f* dpos =0;  // distortion of point from neutral postion
+    Quat4f* fdpos=0;  // force on distortion of point from neutral postion
+    Quat4f* vdpos=0;  // velocity of distortion of point from neutral postion
+
     // ====== Invairiants
 
     double mass = 0;
@@ -318,6 +325,97 @@ class OrbSim: public Picker { public:
         return 0; 
     };
 
+    // =================== Linearized Elasticity Truss Simulation
+
+    void prepareLinearizedTruss(){
+        for(int ib=0; ib<nBonds; ib++){ 
+            int2    b = bonds[ib];
+            Vec3d   d = points[b.y].f-points[b.x].f;
+            double  l = d.normalize();
+            hbs [ib].f = (Vec3f)d;
+            hbs [ib].e = l-bparams[ib].x; 
+            dpos[ib]   = Quat4fZero; 
+        }
+    }
+
+    void evalTrussForcesLinearized(){ 
+        const double k = kGlobal;
+        for(int ib=0;ib<nBonds;ib++){
+            const int2   b  = bonds[ib];
+            Quat4f h        = hbs[ib];
+            float        dl = h.w + h.f.dot( dpos[b.y].f-dpos[b.x].f );
+            h.f.mul(dl*k);
+            fdpos[b.x].f.sub(h.f);
+            fdpos[b.y].f.add(h.f);
+        }
+    }
+
+    inline float evalTrussForceLinearized_neighs2(int iG){
+        const Quat4f dp = dpos[iG];
+        Quat4f f = Quat4f{0.0f,0.0f,0.0f,0.0f};
+        const double k = kGlobal;
+        for(int ij=0; ij<nNeighMax; ij++){
+            const int j  = nNeighMax*iG + ij;
+            const int2 b = neighBs[j];
+            if(b.x == -1) break;
+            //const Quat4d par = bparams[b.y];
+            const Quat4f h  = hbs[b.y];
+            float  dl = h.w + h.f.dot( dpos[b.x].f-dp.f );
+            f.f.add_mul( h.f, k*dl );
+        }
+        fdpos[iG] = f; // we may need to do += in future
+        return f.f.norm2();
+    }
+    float evalTrussForcesLinearized_neighs2(){
+        float F2=0;
+        for(int iG=0; iG<nPoint; iG++){ F2+=evalTrussForceLinearized_neighs2(iG); } 
+        return F2;
+    }
+
+    void solveLinearizedConjugateGradient(){
+        // modified from    genLinSolve_CG()      /cpp/common/math/Lingebra.h
+        // We can just re-prase conjugate gradient to dynamics by putting
+        // x_k     = pos_k
+        // p_k     = vel_k
+        // r_k     = force_k
+        // alpha_k = dt_k 
+
+
+        // the idea is that we chose alpha_k to minimize the residual force and make it orthogonal to the previous residual force
+        // dot( r_k1, r_k ) = 0
+        // dot( r_k1, r_k ) = dot( r_k - alpha_k * A*p_k, r_k ) = dot( r_k, r_k ) - alpha_k * dot( A*p_k, r_k ) = 0
+        // alpha_k = dot( r_k, r_k ) / dot( A*p_k, r_k )
+        // Alternatively
+        // dot( r_k1, r_k ) = dot( b - A*(x_k+d_k) , b - A*x_k ) = dot(b,b) - dot(b,A*d_k) - 2*dot(b,A*x_k) + dot(A*d_k,A*x_k)  = bb + dot(A*d_k, A*x_k - b  ) - 2*dot(b,A*x_k) = 0
+        // dot( A*d_k, A*x_k - b  )  = 2*dot(b,A*x_k) - bb
+        // dot( A*d_k,   r_k      )  = 2*dot(b,A*x_k) - bb
+        // d_k = ak * p_k        
+        // ak  = dot(r_k,r_k) / dot( r_k , A * p_k )
+        // 1   = dot(r_k,r_k) / dot( r_k , A * d_k )
+
+        // https://en.wikipedia.org/wiki/Conjugate_gradient_method
+        // l = dot(r_k,r_k) / (p_k * Ap_k)
+        // x_k1 = x_k + l_k * p_k
+        // r_k1 = b - A*x_k1               = r_k          - l_k * Ap_k     (in exact arithmetic it is equivalent, because r_k = b - A*x_k )
+        //      = b - A*(x_k + l_k * p_k)  =  (b - A*x_k) - l_k * Ap_k    
+        // fac = dot(r_k1,r_k1) / dot(r_k,r_k)
+        // p_k1 = r_k1 + fac * p_k                  // it is like velocity damping assuming that r_k1 is the force and p_k is the velocity      
+
+
+        //   l = dot(r_k1,r_k1) / (p_k1 * Ap_k1)
+
+          
+        // The problem:
+        //  * to calculate l_k = dot(r_k,r_k) / (p_k * Ap_k)     we need to calculate  A * p_k
+        //  * however to calculate   r_k1 = b   -       A*x_k1   we neeed to calculate A * x_k1
+        //  * we may also calculater r_k1 = r_k - l_k * A*p_k    but this may be numerically unstable 
+        //  *  if there is some way how to calculate ak using A*x_k without calculating A*p_k then we can avoid this problem
+
+
+
+    };
+    
+
     // =================== Truss Simulation
 
     void updateInveriants(bool bPrint=false){
@@ -369,39 +467,6 @@ class OrbSim: public Picker { public:
         }
         forces[iG] = f; // we may need to do += in future
     }
-
-    /*
-    void evalTrussForces_neighs(){
-        //#pragma omp paralel for 
-        for(int iG=0; iG<nPoint; iG++){
-            //const int iG = get_global_id(0);
-            Quat4d p = points[iG];
-            Quat4d f =Quat4d{0.0f,0.0f,0.0f,0.0f};
-            //printf( "--- p[%i] \n", iG );
-            //#pragma omp simd
-            for(int ij=0; ij<nNeighMax; ij++){
-                int j  = nNeighMax*iG + ij;
-                int ja = neighs[j];
-                if(ja == -1) break;
-                //f.add( springForce( points[ja].f - p.f, params[j] ) );
-                
-                Vec3d d =  points[ja].f - p.f;
-                double li = d.norm();
-                
-                // double fi,ei = springForce( li, fi, params[j] );
-                // //f.add( Quat4d{ d*(fi/l), ei } );
-                // f.f.add_mul( d, fi/li );
-                
-                double k = kGlobal;
-                f.f.add_mul( d, (k*(li-params[j].x)/li) );
-
-                //printf( "p[%i,ij=%i,j=%i] li=%7.3f dl=%8.5e fi=%8.5e e=%8.5e par(%7.3f,%8.5e,%8.5e,%8.5e) \n", iG,ij,ja, li, li-params[j].x, fi,ei, params[j].x,params[j].y,params[j].z,params[j].w );
-            }
-            forces[iG] = f; // we may need to do += in future
-        } 
-        //exit(0);
-    }
-    */
 
     inline void evalTrussForce_neighs2(int iG){
         const double Adamp = collision_damping*0.5/dt;

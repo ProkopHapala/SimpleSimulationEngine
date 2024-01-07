@@ -1,6 +1,6 @@
 ﻿
-#ifndef  OrbSim_h
-#define  OrbSim_h
+#ifndef  OrbSim_f_h
+#define  OrbSim_f_h
 
 #include "Vec2.h"
 #include "Vec3.h"
