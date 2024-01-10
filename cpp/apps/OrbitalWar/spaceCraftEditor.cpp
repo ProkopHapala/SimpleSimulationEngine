@@ -56,6 +56,11 @@ int verbosity = 0;
 
 #include "argparse.h"
 
+
+#include "Lingebra.h"
+
+
+
 // TODO:
 // Collision Detection:
 //   Try Collisions using [kBoxes.h]    tested in    [test_BoxAndSweep.cpp]
@@ -77,10 +82,23 @@ char str_tmp[8096];
 double elementSize  = 5.;
 bool bRun = false;
 
+
+
 Vec3d wheel_speed       = {0.0,0.0,0.0};
 //Vec3d wheel_speed_setup = { 0.1, 0.1, 0.1 };
 //Vec3d wheel_speed_setup = { 0.5, 0.5, 0.5 };
 Vec3d wheel_speed_setup = { 5.0, 5.0, 5.0 };
+
+
+class LinSolverOrbSim : public LinSolver{ public:
+    OrbSim* sim=0;
+    virtual void dotFunc( int n, double * x, double * Ax ) override {
+        //printf( "LinSolverOrbSim::dotFunc(n=%i) \n", n );
+        sim->dot_Linearized_neighs2(n, x, Ax);
+    }
+};
+LinSolverOrbSim linSolver;
+
 
 void SpaceCraftControl(double dt){
     // wheel_speed
@@ -142,6 +160,13 @@ void runSim( OrbSim& sim, int niter=100 ){
         //sim.run_omp( niter, true, 1e-3, 1e-5 );
         //sim.run_omp( niter, true, 1e-3, 1e-4 );
         sim.run_omp( niter, true, 1e-3, 1e-6 );
+
+
+        //sim.prepareLinearizedTruss(linSolver.b);
+        //linSolver.solve_CG( 5, 0 );
+
+
+
         //sim.run_omp( 1, true, 1e-3, 1e-4 );
         double T = (getCPUticks()-t0)*1e-6;
         //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
@@ -293,6 +318,16 @@ void makeTestTruss(){
     exportSim( sim, mesh2, workshop );
     sim.updateInveriants(true);
 
+    // // ---- Conjugate Gradient ( does not work )
+    // linSolver.realloc( sim.nPoint*3, true );
+    // linSolver.sim = &sim;
+    // sim.realloc_lin();
+    // //sim.prepareLinearizedTruss();
+    // sim.prepareLinearizedTruss_ling(linSolver.b);  
+    // //linSolver.solve_CG( 5, 0 );
+    // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); }, 5 );
+    // exit(0);
+
     bShipReady = false;
     renderShip();
 }
@@ -319,6 +354,14 @@ void reloadShip( const char* fname  ){
 
     t0 = getCPUticks();
     exportSim( sim, mesh2, workshop );
+
+    linSolver.realloc( sim.nPoint*3, true );
+    linSolver.sim = &sim;
+
+    // conjugate gradient ( does not work )
+    // sim.prepareLinearizedTruss_ling(linSolver.b);  
+    // //linSolver.solve_CG( 5, 0 );
+    // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); } );
 
     
     printf( "exportSim() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );

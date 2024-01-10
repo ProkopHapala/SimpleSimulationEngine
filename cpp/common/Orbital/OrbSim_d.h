@@ -138,6 +138,10 @@ class OrbSim: public Picker { public:
     Quat4f* fdpos=0;  // force on distortion of point from neutral postion
     Quat4f* vdpos=0;  // velocity of distortion of point from neutral postion
 
+    Vec3d*  kDirs=0;  // d/|d| where d = p1-p0 normalized direction of the stick, and initial distortion of the length from neutral length
+    //double* f0s  =0;  // (|d|-l0) *k  force on distortion of point from neutral postion
+
+
     // ====== Invairiants
 
     double mass = 0;
@@ -224,6 +228,18 @@ class OrbSim: public Picker { public:
             //_realloc( l0s,       nBonds );
             _realloc( maxStrain, nBonds );
             _realloc( bparams,   nBonds );
+        }
+    }
+
+    void realloc_lin( bool bLinSolver=true){
+        if(bLinSolver){
+            _realloc( kDirs, nBonds );
+            //_realloc( f0s,   nBonds );
+        }else{
+            _realloc( hbs,   nBonds );
+            _realloc( dpos,  nBonds );
+            _realloc( fdpos, nBonds );
+            _realloc( vdpos, nBonds );  
         }
     }
 
@@ -370,6 +386,44 @@ class OrbSim: public Picker { public:
         float F2=0;
         for(int iG=0; iG<nPoint; iG++){ F2+=evalTrussForceLinearized_neighs2(iG); } 
         return F2;
+    }
+
+
+    void prepareLinearizedTruss_ling( double* b ){
+        printf( "prepareLinearizedTruss_ling nBonds %i \n", nBonds );
+        double* f0s = b;
+        //double k = kGlobal;
+        double k = 1.0;
+        for(int ib=0; ib<nBonds; ib++){ 
+            int2    b = bonds[ib];
+            Vec3d   d = points[b.y].f-points[b.x].f;
+            double  l = d.normalize();
+            kDirs[ib] = d * k;
+            f0s  [ib] = (l-bparams[ib].x)*-k; 
+            printf( "prepareLinearizedTruss_ling ib %i f0 %g kDir(%g,%g,%g) \n", ib, f0s[ib], kDirs[ib].x, kDirs[ib].y, kDirs[ib].z );
+            //dpos[ib]  = Quat4fZero; 
+        }
+    }
+
+    void dot_Linearized_neighs2(int n, double* x, double * Ax){
+        //printf( "OrbSim_d::dot_Linearized_neighs2(n=%i) @x=%li @Ax=%li\n", n, (long*)x, (long*)Ax );
+        Vec3d * dpos  = (Vec3d*)x;
+        Vec3d * fdpos = (Vec3d*)Ax;
+        int nG = n/3;
+        for(int iG=0; iG<nG; iG++){
+            const Vec3d dp = dpos[iG];
+            Vec3d f = Vec3dZero;
+            for(int ij=0; ij<nNeighMax; ij++){
+                const int j  = nNeighMax*iG + ij;
+                const int2 b = neighBs[j];
+                if(b.x == -1) break;
+                //const Quat4d par = bparams[b.y];
+                const Vec3d h  = kDirs[b.y];
+                double fl = h.dot( dpos[b.x]-dp );
+                f.add_mul( h, -fl );
+            }
+            fdpos[iG] = f; // we may need to do += in future
+        }
     }
 
     void solveLinearizedConjugateGradient(){
