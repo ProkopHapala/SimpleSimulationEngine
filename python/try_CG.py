@@ -3,12 +3,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse.linalg as spla
+from   matplotlib import collections  as mc
 
 # =========== Functions
-itr=0
+iCGstep=0
 
 def stepCG( K, x, d, f, f2old ):
-    global itr
+    global iCGstep
     #print( "stepCG ", itr, "=========================="  )
     Kd  = np.dot(K,d)
     dt  = np.dot(d,f) / np.dot(d,Kd)    # step length such that f is orthogonal to d 
@@ -19,31 +20,31 @@ def stepCG( K, x, d, f, f2old ):
     #print( "dt", dt )
     x   = x + d *dt
     f   = f - Kd*dt
-    print( "x:", x, " f:", f )
+    #print( "x:", x, " f:", f )
     #print( "f", f )
     f2  = np.dot(f,f)
-    #print( itr, "dt ", dt, "f2", f2, "f2old", f2old )
+    print( "CG[%i]" %iCGstep, "dt ", dt, "f2", f2, "f2old", f2old )
     d   = f + d*(f2/f2old)
-    itr = itr+1
+    iCGstep = iCGstep+1
     # NOTE: we can always normalize d to 1, but it is not necessary
     return x, f, d, f2
 
 def SolveCG( K, f0, x0=None, niter=10, eps=1e-6 ):
     if x0 is None: x0 = np.zeros(len(f0))
-    print( "===== SolveCG" )
+    #print( "===== SolveCG" )
     x  = x0.copy()
     f  = f0 - np.dot(K,x)
     d  = f.copy()
     f2 = np.dot(f,f)
-    print( "x:", x )
-    print( "f:", f )
-    print( "d:", d )
-    print( "---- CG loop:", d )
+    #print( "x:", x )
+    #print( "f:", f )
+    #print( "d:", d )
+    #print( "---- CG loop:", d )
     eps2 = eps**2
     for i in range(niter):
         x, f, d, f2 = stepCG( K, x, d, f, f2 )
         if( f2 < eps2 ): break
-    return x
+    return x, f2
 
 def makeMat( couplings, n ):
     A = np.zeros((n,n))
@@ -87,34 +88,73 @@ def makeMat_stick_2d( sticks, ps ):
 
     return A
 
-
-def makeMat_stick_2d_( sticks, ps ):
-    n = len(ps)
-    Ax = np.zeros((n,n))
-    Ay = np.zeros((n,n))
-    #A += np.diag( np.ones(n*2) )
-    for ( i,j,k) in sticks:
+def makeMat_stick_2d_( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
+    '''
+    sticks: list of (i,j,k) where k is the spring constant
+    ps:     list of (x,y) coordinates of the points
+    constrKs: list of spring constants constraining the points in place (i.e. fixed points), this is important to ensure that the matrix is well conditioned
+    kReg:   regularization constant to ensure that the matrix is well conditioned (e.g. if there are no constrKs)
+    '''
+    n    = len(ps)
+    Ax   = np.zeros((n,n))
+    Ay   = np.zeros((n,n))
+    fdlx = np.zeros((n))
+    fdly = np.zeros((n))
+    Ax  += np.diag( np.ones(n)*kReg )
+    Ay  += np.diag( np.ones(n)*kReg )
+    if constrKs is None: constrKs = np.zeros(n)
+    bIsRelaxed = False
+    if l0s  is None: 
+        bIsRelaxed = True
+    ls = np.zeros(len(sticks))
+    for ib,( i,j,k) in enumerate(sticks):
         x = ps[j,0] - ps[i,0]
         y = ps[j,1] - ps[i,1]
-        il = 1./np.sqrt( x*x + y*y )
-        kx = k*x*il
-        ky = k*y*il
+        l  = np.sqrt( x*x + y*y )
+        ls[ib] = l
+        il = 1./l
+        x*=il
+        y*=il
+        dl = 0.0
+        if not bIsRelaxed: 
+            dl  = ls[ib] - l0s[ib]
+        fdl = k*dl
+        fdlx[i] += x*fdl
+        fdly[i] += y*fdl
+        fdlx[j] -= x*fdl
+        fdly[j] -= y*fdl
+        
+        kx = k* np.abs(x)
+        ky = k* np.abs(y)
         i2 = i*2
         j2 = j*2
-        Ax[i,i] += kx
-        Ay[i,i] += ky
+        Ax[i,i] += kx + constrKs[i]
+        Ay[i,i] += ky + constrKs[i]
 
-        Ax[j,j] += kx
-        Ay[j,j] += ky
+        Ax[j,j] += kx + constrKs[j]
+        Ay[j,j] += ky + constrKs[j]
 
         Ax[i,j] = -kx
         Ay[i,j] = -ky
 
         Ax[j,i] = -kx
         Ay[j,i] = -ky
-    return Ax, Ay
+    return Ax, Ay, fdlx, fdly, ls
 
-
+def move_CG( ps, f0, l0s, nitr = 10, nCGmax=5, fCGconv=1e-3  ):
+    global iCGstep
+    n = len(ps)
+    f = f0.copy()
+    iCGstep = 0
+    for i in range(n):
+        Kx, Ky, fdlx, fdly, ls = makeMat_stick_2d_( sticks, ps, l0s=l0s, constrKs=[50.0, 0.0, 0.0, 0.0,50.0] )      # fixed end points
+        x, f2x = SolveCG( Kx, f0[:,0]+fdlx, niter=nCGmax, eps=fCGconv )
+        y, f2y = SolveCG( Ky, f0[:,1]+fdly, niter=nCGmax, eps=fCGconv )
+        #print( x.shape, y.shape, ps.shape )
+        print( "move[%i,%i] |x|" %(i,iCGstep),  np.linalg.norm(x), "|y|", np.linalg.norm(y), "fCGx:", np.sqrt(f2x),"fCGx:", np.sqrt(f2y) )
+        ps[:,0] += x
+        ps[:,1] += y
+        plt.plot( ps[:,0]+x, ps[:,1]+y, 'o-', label=("step[%i]" % i) )
 
 # =========== Main
 '''
@@ -136,27 +176,27 @@ x = SolveCG( K, x0, f0 )
 '''
 
 ps = np.array([     
-#    [-2.0, 0.0],
-    [-1.3,-0.2],
+    [-2.0, 0.0],
+    [-1.0,-0.1],
     [ 0.0,-0.5],
     [+1.0,-0.1],
-#    [+2.0, 0.0],
+    [+2.0, 0.0],
 ])
 
 f0 = np.array([ 
-[-0.5,-0.5],
-#[ 0.0, 0.0],
+[-0.5,+0.5],
+[ 0.0, 0.0],
 [ 0.0,-1.0],
-#[ 0.0, 0.0],
-[ 0.5,-0.5],
+[ 0.0, 0.0],
+[ 0.5,+0.5],
 ])
 
-k0 = 0.2
+k0 = 50.0
 sticks =[
- ( 0,1, k0*1.2 ),
- ( 1,2, k0*3 ),
- #( 2,3, k0 ),
- #( 3,4, k0 ),
+ ( 0,1, k0 ),
+ ( 1,2, k0 ),
+ ( 2,3, k0 ),
+ ( 3,4, k0 ),
 ]
 '''
 f0 = f0.flatten()
@@ -167,21 +207,41 @@ print( K.shape, f0.shape, x0.shape )
 # print( "x \n", x )
 '''
 
-Kx, Ky = makeMat_stick_2d_( sticks, ps )
+
+
+#Kx, Ky = makeMat_stick_2d_( sticks, ps )     # regularization by homogeneous constrain
+
+Kx, Ky, fdlx, fdly, ls = makeMat_stick_2d_( sticks, ps, constrKs=[50.0, 0.0, 0.0, 0.0,50.0] )      # fixed end points
+
 print( "Kx \n", Kx )
 print( "Ky \n", Ky )
 
 print( " ====== solve Kx" )
-x = SolveCG( Kx, f0[:,0] )
+x = SolveCG( Kx,  f0[:,0] )
+print( "f0_x : ", f0[:,0] )
+print( "x_CG : ", x  )
 print( "x_ref: ", np.linalg.solve( Kx, f0[:,0] ) )
 
 print( " ====== solve Ky" )
-y = SolveCG( Ky, f0[:,1] )
-print( "x_ref: ", np.linalg.solve( Ky, f0[:,1] ) )
+y = SolveCG( Ky,  f0[:,1] )
+print( "f0_y : ", f0[:,1] )
+print( "y_CG : ", y  )
+print( "y_ref: ", np.linalg.solve( Ky, f0[:,1] ) )
 
-exit()
 
-#x_cg = spla.cg(K, f0, x0, tol=1e-05, maxiter=5, callback=myPrint )
-x_cg = spla.cg(K, f0, x0, tol=1e-05, maxiter=5 )
-print( "x_cg: ", x_cg )
-print( "x_ref: ", np.linalg.solve( K, f0 ) )
+# plot arrow for each point in direction of force
+
+   
+
+plt.figure()
+plt.plot( ps[:,0], ps[:,1], 'o-k' )
+plt.quiver( ps[:,0], ps[:,1], f0[:,0], f0[:,1] )
+#plt.plot( ps[:,0]+x, ps[:,1]+y, 'o-' )
+
+move_CG( ps, f0, ls, nitr = 10 )
+
+plt.legend()
+plt.xlim(-3,3)
+plt.ylim(-3,3)
+plt.grid()
+plt.show()
