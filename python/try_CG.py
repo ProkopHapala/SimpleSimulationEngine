@@ -28,7 +28,8 @@ def stepCG( K, x, d, f, f2old ):
     # NOTE: we can always normalize d to 1, but it is not necessary
     return x, f, d, f2
 
-def SolveCG( K, x0, f0, niter=10, eps=1e-6 ):
+def SolveCG( K, f0, x0=None, niter=10, eps=1e-6 ):
+    if x0 is None: x0 = np.zeros(len(f0))
     print( "===== SolveCG" )
     x  = x0.copy()
     f  = f0 - np.dot(K,x)
@@ -46,10 +47,12 @@ def SolveCG( K, x0, f0, niter=10, eps=1e-6 ):
 
 def makeMat( couplings, n ):
     A = np.zeros((n,n))
-    A += np.diag( np.ones(n) )
+    #A += np.diag( np.ones(n) )
     for (i,j,k) in couplings:
-        A[i,j] = k
-        A[j,i] = k
+        A[i,j]  = -k
+        A[j,i]  = -k
+        A[i,i] +=  k
+        A[j,j] +=  k
     return A
 
 itr=0
@@ -58,15 +61,69 @@ def myPrint( x ):
     print( itr, "x", x )
     itr = itr+1
 
-# =========== Main
+def makeMat_stick_2d( sticks, ps ):
+    n = len(ps)
+    A = np.zeros((n*2,n*2))
+    #A += np.diag( np.ones(n*2) )
+    for ( i,j,k) in sticks:
+        x = ps[j,0] - ps[i,0]
+        y = ps[j,1] - ps[i,1]
+        il = 1./np.sqrt( x*x + y*y )
+        kx = k*x*il
+        ky = k*y*il
+        i2 = i*2
+        j2 = j*2
+        A[i2+0,i2+0] += kx
+        A[i2+1,i2+1] += ky
 
-k0 = -1000.0
+        A[j2+0,j2+0] += kx
+        A[j2+1,j2+1] += ky
+
+        A[i2+0,j2+0] = -kx
+        A[i2+1,j2+1] = -ky
+
+        A[j2+0,i2+0] = -kx
+        A[j2+1,i2+1] = -ky
+
+    return A
+
+
+def makeMat_stick_2d_( sticks, ps ):
+    n = len(ps)
+    Ax = np.zeros((n,n))
+    Ay = np.zeros((n,n))
+    #A += np.diag( np.ones(n*2) )
+    for ( i,j,k) in sticks:
+        x = ps[j,0] - ps[i,0]
+        y = ps[j,1] - ps[i,1]
+        il = 1./np.sqrt( x*x + y*y )
+        kx = k*x*il
+        ky = k*y*il
+        i2 = i*2
+        j2 = j*2
+        Ax[i,i] += kx
+        Ay[i,i] += ky
+
+        Ax[j,j] += kx
+        Ay[j,j] += ky
+
+        Ax[i,j] = -kx
+        Ay[i,j] = -ky
+
+        Ax[j,i] = -kx
+        Ay[j,i] = -ky
+    return Ax, Ay
+
+
+
+# =========== Main
+'''
+k0 = 1000.0
 couplings =[
  ( 0,1, k0*3 ),
  ( 1,2, k0*2 ),
  ( 2,3, k0 ),
 ]
-
 f0 = np.array([ 
     -1.0, 
      0.0,
@@ -74,15 +131,57 @@ f0 = np.array([
     +1.0,
 ])
 x0 = np.zeros(len(f0))
-
 K = makeMat( couplings, len(f0) )    ;print( "K \n", K )
 x = SolveCG( K, x0, f0 )
+'''
+
+ps = np.array([     
+#    [-2.0, 0.0],
+    [-1.3,-0.2],
+    [ 0.0,-0.5],
+    [+1.0,-0.1],
+#    [+2.0, 0.0],
+])
+
+f0 = np.array([ 
+[-0.5,-0.5],
+#[ 0.0, 0.0],
+[ 0.0,-1.0],
+#[ 0.0, 0.0],
+[ 0.5,-0.5],
+])
+
+k0 = 0.2
+sticks =[
+ ( 0,1, k0*1.2 ),
+ ( 1,2, k0*3 ),
+ #( 2,3, k0 ),
+ #( 3,4, k0 ),
+]
+'''
+f0 = f0.flatten()
+x0 = np.zeros(len(f0))
+K = makeMat_stick_2d(sticks , ps )    ;print( "K \n", K )
+print( K.shape, f0.shape, x0.shape )
+# x = SolveCG( K, x0, f0 )
 # print( "x \n", x )
+'''
 
+Kx, Ky = makeMat_stick_2d_( sticks, ps )
+print( "Kx \n", Kx )
+print( "Ky \n", Ky )
 
+print( " ====== solve Kx" )
+x = SolveCG( Kx, f0[:,0] )
+print( "x_ref: ", np.linalg.solve( Kx, f0[:,0] ) )
+
+print( " ====== solve Ky" )
+y = SolveCG( Ky, f0[:,1] )
+print( "x_ref: ", np.linalg.solve( Ky, f0[:,1] ) )
+
+exit()
 
 #x_cg = spla.cg(K, f0, x0, tol=1e-05, maxiter=5, callback=myPrint )
 x_cg = spla.cg(K, f0, x0, tol=1e-05, maxiter=5 )
 print( "x_cg: ", x_cg )
 print( "x_ref: ", np.linalg.solve( K, f0 ) )
-
