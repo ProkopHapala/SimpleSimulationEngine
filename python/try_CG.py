@@ -141,20 +141,32 @@ def makeMat_stick_2d_( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
         Ay[j,i] = -ky
     return Ax, Ay, fdlx, fdly, ls
 
-def move_CG( ps, f0, l0s, nitr = 10, nCGmax=5, fCGconv=1e-3  ):
+def move_CG( ps, f0, l0s, nitr = 10, dt=0.1, nCGmax=5, fCGconv=1e-3  ):
     global iCGstep
     n = len(ps)
-    f = f0.copy()
     iCGstep = 0
-    for i in range(n):
-        Kx, Ky, fdlx, fdly, ls = makeMat_stick_2d_( sticks, ps, l0s=l0s, constrKs=[50.0, 0.0, 0.0, 0.0,50.0] )      # fixed end points
+    constrKs=np.array([50.0, 0.0, 0.0, 0.0,50.0])
+    ps0 = ps.copy()
+    _, _, _, _, ls = makeMat_stick_2d_( sticks, ps, l0s=l0s, constrKs=constrKs )  
+    for i in range(nitr):
+        # ---- Here we do normal dynamical move v+=(f/m)*dt, p+=v*dt
+        f = f0[:,:] #- ps[:,:]*constrKs[:,None]
+        ps += f*dt
+        mask = constrKs>1
+        ps[ mask,:] = ps0[ mask,:]
+        plt.plot( ps[:,0], ps[:,1], 'o:', label=("step[%i]" % i) )
+
+        # ---- Linearize the force around the current position to be able to use CG
+        Kx, Ky, fdlx, fdly, ls = makeMat_stick_2d_( sticks, ps, l0s=l0s, constrKs=constrKs )      # fixed end points
+        # ---- CG is like corrector step (to ensure Truss contrains)
         x, f2x = SolveCG( Kx, f0[:,0]+fdlx, niter=nCGmax, eps=fCGconv )
         y, f2y = SolveCG( Ky, f0[:,1]+fdly, niter=nCGmax, eps=fCGconv )
         #print( x.shape, y.shape, ps.shape )
         print( "move[%i,%i] |x|" %(i,iCGstep),  np.linalg.norm(x), "|y|", np.linalg.norm(y), "fCGx:", np.sqrt(f2x),"fCGx:", np.sqrt(f2y) )
         ps[:,0] += x
         ps[:,1] += y
-        plt.plot( ps[:,0]+x, ps[:,1]+y, 'o-', label=("step[%i]" % i) )
+        
+        plt.plot( ps[:,0], ps[:,1], 'o-', label=("step[%i]" % i) )
 
 # =========== Main
 '''
@@ -184,11 +196,11 @@ ps = np.array([
 ])
 
 f0 = np.array([ 
-[-0.5,+0.5],
+[-0.5*0,+0.5*0],
 [ 0.0, 0.0],
-[ 0.0,-1.0],
+[ 0.0,-5.0],
 [ 0.0, 0.0],
-[ 0.5,+0.5],
+[ 0.5*0,+0.5*0],
 ])
 
 k0 = 50.0
@@ -238,10 +250,10 @@ plt.plot( ps[:,0], ps[:,1], 'o-k' )
 plt.quiver( ps[:,0], ps[:,1], f0[:,0], f0[:,1] )
 #plt.plot( ps[:,0]+x, ps[:,1]+y, 'o-' )
 
-move_CG( ps, f0, ls, nitr = 10 )
+move_CG( ps, f0, ls )
 
-plt.legend()
-plt.xlim(-3,3)
-plt.ylim(-3,3)
+plt.legend( loc='lower left' )
+plt.xlim(-5,3)
+plt.ylim(-5,3)
 plt.grid()
 plt.show()
