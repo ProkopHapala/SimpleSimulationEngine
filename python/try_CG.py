@@ -46,6 +46,36 @@ def SolveCG( K, f0, x0=None, niter=10, eps=1e-6 ):
         if( f2 < eps2 ): break
     return x, f2
 
+def Jacobi( K, f0, x0=None, niter=10, eps=1e-6 ):
+    n = len(f0)
+    if x0 is None: 
+        x = np.zeros(n)
+    else:
+        x = x0.copy()
+    for i in range(niter):
+        f2 = 0.0
+        for i in range(n):
+            fi = f0[i] - np.dot( K[i,:], x )
+            x[i] =  fi / K[i,i]
+            f2 += fi*fi
+        if( f2 < eps**2 ): break
+    return x, f2
+
+def SOR( K, f0, x0=None, niter=10, eps=1e-6, w=0.9 ):
+    n = len(f0)
+    if x0 is None: 
+        x = np.zeros(n)
+    else:
+        x = x0.copy()
+    for i in range(niter):
+        f2 = 0.0
+        for i in range(n):
+            fi = f0[i] - np.dot( K[i,:], x )
+            x[i] = x[i]*(1.-w) + fi * (w/K[i,i])
+        f2 += fi*fi
+        if( f2 < eps**2 ): break
+    return x, f2
+
 def makeMat( couplings, n ):
     A = np.zeros((n,n))
     #A += np.diag( np.ones(n) )
@@ -55,12 +85,6 @@ def makeMat( couplings, n ):
         A[i,i] +=  k
         A[j,j] +=  k
     return A
-
-itr=0
-def myPrint( x ):
-    global itr
-    print( itr, "x", x )
-    itr = itr+1
 
 def makeMat_stick_2d( sticks, ps ):
     n = len(ps)
@@ -141,7 +165,7 @@ def makeMat_stick_2d_( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
         Ay[j,i] = -ky
     return Ax, Ay, fdlx, fdly, ls
 
-def move_CG( ps, f0, l0s, nitr = 10, dt=0.1, nCGmax=5, fCGconv=1e-3  ):
+def move_CG( ps, f0, l0s, nitr = 20, dt=0.01, nCGmax=5, fCGconv=1e-3  ):
     global iCGstep
     n = len(ps)
     iCGstep = 0
@@ -154,13 +178,22 @@ def move_CG( ps, f0, l0s, nitr = 10, dt=0.1, nCGmax=5, fCGconv=1e-3  ):
         ps += f*dt
         mask = constrKs>1
         ps[ mask,:] = ps0[ mask,:]
-        plt.plot( ps[:,0], ps[:,1], 'o:', label=("step[%i]" % i) )
+        #plt.plot( ps[:,0], ps[:,1], 'o:', label=("step[%i]" % i) )
 
         # ---- Linearize the force around the current position to be able to use CG
         Kx, Ky, fdlx, fdly, ls = makeMat_stick_2d_( sticks, ps, l0s=l0s, constrKs=constrKs )      # fixed end points
         # ---- CG is like corrector step (to ensure Truss contrains)
-        x, f2x = SolveCG( Kx, f0[:,0]+fdlx, niter=nCGmax, eps=fCGconv )
-        y, f2y = SolveCG( Ky, f0[:,1]+fdly, niter=nCGmax, eps=fCGconv )
+        # x, f2x = SolveCG( Kx, f0[:,0]+fdlx, niter=nCGmax, eps=fCGconv )
+        # y, f2y = SolveCG( Ky, f0[:,1]+fdly, niter=nCGmax, eps=fCGconv )
+
+        # # ---- Jacobi is like corrector step (to ensure Truss contrains)
+        # x, f2x = Jacobi( Kx, f0[:,0]+fdlx, niter=nCGmax, eps=fCGconv )
+        # y, f2y = Jacobi( Ky, f0[:,1]+fdly, niter=nCGmax, eps=fCGconv )
+
+        # ---- SOR is like corrector step (to ensure Truss contrains)
+        x, f2x = SOR( Kx, f0[:,0]+fdlx, niter=nCGmax, eps=fCGconv )
+        y, f2y = SOR( Ky, f0[:,1]+fdly, niter=nCGmax, eps=fCGconv )
+
         #print( x.shape, y.shape, ps.shape )
         print( "move[%i,%i] |x|" %(i,iCGstep),  np.linalg.norm(x), "|y|", np.linalg.norm(y), "fCGx:", np.sqrt(f2x),"fCGx:", np.sqrt(f2y) )
         ps[:,0] += x
