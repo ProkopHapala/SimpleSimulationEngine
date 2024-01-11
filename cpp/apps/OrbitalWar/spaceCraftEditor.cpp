@@ -319,12 +319,11 @@ void makeTestTruss(){
     sim.updateInveriants(true);
 
     // // ---- Conjugate Gradient ( does not work )
-    // linSolver.realloc( sim.nPoint*3, true );
-    // linSolver.sim = &sim;
-    // sim.realloc_lin();
-    // //sim.prepareLinearizedTruss();
-    // sim.prepareLinearizedTruss_ling(linSolver.b);  
-    // //linSolver.solve_CG( 5, 0 );
+    linSolver.realloc( sim.nPoint*3, true );
+    linSolver.sim = &sim;
+    sim.realloc_lin();
+    sim.prepareLinearizedTruss_ling(linSolver.b);  
+    linSolver.solve_CG( 5, 0 );
     // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); }, 5 );
     // exit(0);
 
