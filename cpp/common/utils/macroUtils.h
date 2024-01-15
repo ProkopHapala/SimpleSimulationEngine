@@ -106,6 +106,7 @@ _inline_T int      signum(T val)      { return (T(0) < val) - (val < T(0)); }
 
 _inline_T bool _allocIfNull(T*& arr, int n){ if(arr==0){ arr=new T[n]; return true; } return false; }
 _inline_T void _alloc  (T*& arr, int n){ arr=new T[n]; }
+_inline_T void _realloc0(T*& arr, int n, T v0 ){ if(arr){ delete [] arr; } arr=new T[n]; for(int i=0;i<n;i++){ arr[i]=v0; } }
 _inline_T void _realloc(T*& arr, int n){ if(arr){ delete [] arr; } arr=new T[n]; }
 _inline_T void _dealloc(T*& arr       ){ if(arr){ delete [] arr; } arr=0;        }
 _inline_T bool _bindOrRealloc(int n, T* from, T*& arr ){ if(from){ arr=from; return false; }else{ _realloc(arr,n); return true; } }

@@ -118,6 +118,9 @@ class OrbSim: public Picker { public:
     Quat4d* forces=0;  // force and energy
     Quat4d* vel   =0;  // velocity
 
+    double* kFix=0;   // force constant for fixed points
+    double  kLinRegularize = 1.0;
+
     Quat4d* params=0;  // neighbor parameters (l0,kP,kT,damp)
     int*    neighs=0;  // neighbor indices
     int2*   neighBs=0; // neighbor bond indices
@@ -232,6 +235,7 @@ class OrbSim: public Picker { public:
     }
 
     void realloc_lin( bool bLinSolver=true){
+        _realloc0( kFix, nPoint, 0.0 );
         if(bLinSolver){
             _realloc( kDirs, nBonds );
             //_realloc( f0s,   nBonds );
@@ -388,10 +392,9 @@ class OrbSim: public Picker { public:
         return F2;
     }
 
-
-    void prepareLinearizedTruss_ling( double* b ){
+    void prepareLinearizedTruss_ling( double* bvec ){
         printf( "prepareLinearizedTruss_ling nBonds %i \n", nBonds );
-        double* f0s = b;
+        Vec3d* f0s = (Vec3d*)bvec;
         //double k = kGlobal;
         double k = 1.0;
         for(int ib=0; ib<nBonds; ib++){ 
@@ -399,7 +402,10 @@ class OrbSim: public Picker { public:
             Vec3d   d = points[b.y].f-points[b.x].f;
             double  l = d.normalize();
             kDirs[ib] = d * k;
-            f0s  [ib] = (l-bparams[ib].x)*-k; 
+            //f0s  [ib] = (l-bparams[ib].x)*-k; 
+            Vec3d f = d*(l-bparams[ib].x)*k;
+            f0s[b.x].add(f);
+            f0s[b.y].sub(f);
             printf( "prepareLinearizedTruss_ling ib %i f0 %g kDir(%g,%g,%g) \n", ib, f0s[ib], kDirs[ib].x, kDirs[ib].y, kDirs[ib].z );
             //dpos[ib]  = Quat4fZero; 
         }
@@ -412,7 +418,11 @@ class OrbSim: public Picker { public:
         int nG = n/3;
         for(int iG=0; iG<nG; iG++){
             const Vec3d dp = dpos[iG];
-            Vec3d f = Vec3dZero;
+            //double kOnSide = kLinRegularize;
+            double kp = kFix[iG] + kLinRegularize;
+            //kp.add(kLinRegularize);
+            Vec3d f = dp*kp;   // regularize
+            //printf( "dot_Linearized_neighs2[%i] dp(%g,%g,%g) f(%g,%g,%g) kp=%g \n", iG, dp.x, dp.y, dp.z, f.x, f.y, f.z, kp );
             for(int ij=0; ij<nNeighMax; ij++){
                 const int j  = nNeighMax*iG + ij;
                 const int2 b = neighBs[j];
@@ -423,6 +433,7 @@ class OrbSim: public Picker { public:
                 f.add_mul( h, -fl );
             }
             fdpos[iG] = f; // we may need to do += in future
+            //fdpos[iG] = Vec3d{iG,1,2};
         }
     }
 

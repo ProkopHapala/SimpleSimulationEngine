@@ -310,20 +310,57 @@ void makeBBoxes( const SpaceCraft& craft, OrbSim& sim ){
 void makeTestTruss(){
     mesh2.clear();
     int stickType = 0;
+    /*
+    ps = np.array([     
+        [-2.0, 0.0],
+        [-1.0, 0.0],
+        [ 0.0, 0.0],
+        [+1.0, 0.0],
+        [+2.0, 0.0],
+    ])
+    */
+
+    //workshop.stickMaterials.vec[stickType]->k = 0.01;
+
+    mesh2.stick  (    {-2.0, 0.0, 0.0}, 
+                      {-1.0,-0.1, 0.0}, stickType );
+    mesh2.stickTo( 1, { 0.0,-0.2, 0.0}, stickType );
+    mesh2.stickTo( 2, { 1.0,-0.1, 0.0}, stickType );
+    mesh2.stickTo( 3, { 2.0, 0.0, 0.0}, stickType );
+    
+    /*
     mesh2.stick  ( {0.0,0.0,0.0}, {10.0,0.0,0.0}, stickType );
     mesh2.stickTo( 0,             {5.0,10.0,0.0}, stickType );
     mesh2.edge   ( 1, 2, stickType );
     workshop.stickMaterials.vec[stickType]->preStrain = 0.01;
+    */
 
+    LinSolverOrbSim& ls = linSolver;
     exportSim( sim, mesh2, workshop );
-    sim.updateInveriants(true);
 
     // // ---- Conjugate Gradient ( does not work )
-    linSolver.realloc( sim.nPoint*3, true );
-    linSolver.sim = &sim;
+    ls.realloc( sim.nPoint*3, true );
+    ls.sim = &sim;
     sim.realloc_lin();
-    sim.prepareLinearizedTruss_ling(linSolver.b);  
-    linSolver.solve_CG( 5, 0 );
+    sim.kLinRegularize = 1e-2;
+    sim.kFix[0] = 50.0;
+    sim.kFix[4] = 50.0;
+    sim.updateInveriants(true);
+    sim.prepareLinearizedTruss_ling(linSolver.b); 
+    Vec3d* f0 =  (Vec3d*)ls.b;
+    f0[2].y += -5.0;
+
+    ((Vec3d*)ls.x)[0].y = 1.0;
+    ((Vec3d*)ls.x)[2].y = 1.0;
+    ls.dotFunc( ls.n, ls.x, ls.r );
+
+    printf("x: "); VecN::print_vector(ls.n, ls.x);
+    printf("f: "); VecN::print_vector(ls.n, ls.r);
+
+    exit(0);
+
+
+    ls.solve_CG( 5, 0 );
     // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); }, 5 );
     // exit(0);
 
@@ -523,6 +560,9 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
 
     //camera();
 
+    VIEW_DEPTH = 10000.0;
+    zoom = 1000.0;
+
     picker.picker = &sim;   picker.Rmax=10.0;
     theSpaceCraft = new SpaceCraft();
     initSpaceCraftingLua();
@@ -530,6 +570,8 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     if(argc<=1){
         reloadShip( "data/test_materials.lua" ); 
         makeTestTruss();
+        printf("zoom %g \n", zoom );
+        zoom = 10.0;
     }
 
     //onSelectLuaShipScript.GUIcallback(lstLuaFiles);
@@ -546,8 +588,7 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     */
 
 
-    VIEW_DEPTH = 10000.0;
-    zoom = 1000.0;
+
     printf( "### SpaceCraftEditorApp() DONE\n" );
 }
 
