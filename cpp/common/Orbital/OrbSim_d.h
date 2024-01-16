@@ -401,13 +401,36 @@ class OrbSim: public Picker { public:
             int2    b = bonds[ib];
             Vec3d   d = points[b.y].f-points[b.x].f;
             double  l = d.normalize();
-            kDirs[ib] = d * k;
-            //f0s  [ib] = (l-bparams[ib].x)*-k; 
+            kDirs[ib] = d; 
             Vec3d f = d*(l-bparams[ib].x)*k;
             f0s[b.x].add(f);
             f0s[b.y].sub(f);
-            printf( "prepareLinearizedTruss_ling ib %i f0 %g kDir(%g,%g,%g) \n", ib, f0s[ib], kDirs[ib].x, kDirs[ib].y, kDirs[ib].z );
+            printf( "prepare_lin[%i|%i,%i] f0=%g l=%g hdir(%g,%g,%g) \n", ib,b.x,b.y, d.dot(f), l, kDirs[ib].x, kDirs[ib].y, kDirs[ib].z );
             //dpos[ib]  = Quat4fZero; 
+        }
+    }
+
+    void dot_Linearized_bonds(int n, double* x, double * Ax){
+        //printf( "OrbSim_d::dot_Linearized_neighs2(n=%i) @x=%li @Ax=%li\n", n, (long*)x, (long*)Ax );
+        Vec3d* dpos  = (Vec3d*)x;
+        Vec3d* fdpos = (Vec3d*)Ax;
+        int nG = n/3;
+        for(int iG=0; iG<nG; iG++){
+            double kp = kFix[iG] + kLinRegularize;
+            //kp = 0; // DEBUG
+            fdpos[iG] = dpos[iG]*kp;
+        }
+        //double k = kGlobal;
+        double k = 50.0;
+        for(int ib=0; ib<nBonds; ib++){
+            const int2  b = bonds[ib];
+            Vec3d h = kDirs[ib];
+            // double k = bparams.x;
+            double dl = h.dot( dpos[b.y]-dpos[b.x] );
+            printf( "dot_bond[%i|%i,%i] k=%g dl=%g h(%g,%g,%g)\n", ib,b.x,b.y, k, dl, h.x, h.y, h.z );
+            h.mul( -dl*k );
+            fdpos[b.x].add( h );
+            fdpos[b.y].sub( h );
         }
     }
 
@@ -420,17 +443,20 @@ class OrbSim: public Picker { public:
             const Vec3d dp = dpos[iG];
             //double kOnSide = kLinRegularize;
             double kp = kFix[iG] + kLinRegularize;
+            //kp = 0;
             //kp.add(kLinRegularize);
             Vec3d f = dp*kp;   // regularize
             //printf( "dot_Linearized_neighs2[%i] dp(%g,%g,%g) f(%g,%g,%g) kp=%g \n", iG, dp.x, dp.y, dp.z, f.x, f.y, f.z, kp );
+            //double k = kGlobal;
+            double k = 50.0;
             for(int ij=0; ij<nNeighMax; ij++){
                 const int j  = nNeighMax*iG + ij;
                 const int2 b = neighBs[j];
                 if(b.x == -1) break;
                 //const Quat4d par = bparams[b.y];
                 const Vec3d h  = kDirs[b.y];
-                double fl = h.dot( dpos[b.x]-dp );
-                f.add_mul( h, -fl );
+                double dl = h.dot( dpos[b.x]-dp );
+                f.add_mul( h, -dl*k );
             }
             fdpos[iG] = f; // we may need to do += in future
             //fdpos[iG] = Vec3d{iG,1,2};

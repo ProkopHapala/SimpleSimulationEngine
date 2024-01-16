@@ -96,10 +96,12 @@ def apply_sticks( dx, sticks, hdirs, constrKs=None, kReg=1e-2 ):
         i3 = i*3
         j3 = j*3
         # --- strick vector
-        hdir = hdirs[ib]; #print( "hdir", hdir )
+        h    = hdirs[ib]; #print( "hdir", hdir )
         dxij = dx[j3:j3+3] - dx[i3:i3+3]
         #k*= 0 # DEBUG
-        fb   =  hdir * ( -k * np.dot( dxij, hdir ) )    # scalar force
+        dl   =  np.dot( h, dxij )
+        fb   =  h * ( dl * -k )    # scalar force
+        print( "dot_bond[%i] k %g fl %g h(%g,%g,%g)" %( ib, k, dl, h[0], h[1], h[2]) );
         # apply force to the points
         # point i
         f[i3+0] += fb[0]
@@ -245,26 +247,29 @@ sticks =[
 constrKs = [50.0, 0.0, 0.0, 0.0,50.0]
 kReg     = 1e-2
 
+#constrKs = [0.0, 0.0, 0.0, 0.0,0.0]
+#kReg     = 0.0
+
 os.system('mode con: cols=100 lines=50')
 np.set_printoptions(linewidth=np.inf)
 
 dp = np.zeros(ps.shape )
 dp[0,1] = 1.0
 dp[2,1] = 1.0
+dp[4,1] = 0.5
 
 K, fdl, ls, hdirs = makeMat( sticks, ps, constrKs=constrKs, kReg=kReg )      # fixed end points
 
-print( "K: \n", K )
 x = dp.flat.copy()
 f  = np.dot( K, x )
 ff = apply_sticks( x, sticks, hdirs, constrKs=constrKs, kReg=kReg )
 
+#print( "K: \n", K )
 print( "x    : ", x )
 print( "f_mat: ", f )
 print( "f_fun: ", ff )
-exit(0)
+#exit(0)
 
-K, fdl, ls = makeMat_stick_2d_( sticks, ps, constrKs=constrKs )      # fixed end points
 x, err2 = SolveCG( K, f0.flat+fdl, x0=None, niter=10, eps=1e-6 )
 print( "x_CG ", x )
-print( "x_def", np.linalg.solve( K, f0.flat+fdl ) )
+print( "x_ref", np.linalg.solve( K, f0.flat+fdl ) )

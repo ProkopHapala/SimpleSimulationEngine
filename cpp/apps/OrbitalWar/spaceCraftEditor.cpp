@@ -94,7 +94,8 @@ class LinSolverOrbSim : public LinSolver{ public:
     OrbSim* sim=0;
     virtual void dotFunc( int n, double * x, double * Ax ) override {
         //printf( "LinSolverOrbSim::dotFunc(n=%i) \n", n );
-        sim->dot_Linearized_neighs2(n, x, Ax);
+        //sim->dot_Linearized_neighs2(n, x, Ax);
+        sim->dot_Linearized_bonds(n, x, Ax);
     }
 };
 LinSolverOrbSim linSolver;
@@ -351,22 +352,26 @@ void makeTestTruss(){
     f0[2].y += -5.0;
 
     printf("kReg: %g\n", sim.kLinRegularize);
-    printf("x: "); VecN::print_vector(sim.nPoint, sim.kFix );
-    
+    printf("kFix: ");  VecN::print_vector(sim.nPoint, sim.kFix );
+    printf("kDirs: "); VecN::print_vector(sim.nBonds*3, (double*)sim.kDirs );
+    printf("x:     "); VecN::print_vector(ls.n, ls.x);
 
     ((Vec3d*)ls.x)[0].y = 1.0;
     ((Vec3d*)ls.x)[2].y = 1.0;
-    ls.dotFunc( ls.n, ls.x, ls.r );
+    ((Vec3d*)ls.x)[4].y = 0.5;
+    //ls.dotFunc( ls.n, ls.x, ls.r );
 
-    printf("x: "); VecN::print_vector(ls.n, ls.x);
-    printf("f: "); VecN::print_vector(ls.n, ls.r);
+    sim.dot_Linearized_bonds(ls.n, ls.x, ls.r );
+    printf("f_bo: "); VecN::print_vector(ls.n, ls.r);
 
-    exit(0);
+    sim.dot_Linearized_neighs2(ls.n, ls.x, ls.r);
+    printf("f_ng: "); VecN::print_vector(ls.n, ls.r);
 
+    //exit(0);
 
-    ls.solve_CG( 5, 0 );
+    //ls.solve_CG( 5, 0 );
     // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); }, 5 );
-    // exit(0);
+    exit(0);
 
     bShipReady = false;
     renderShip();
