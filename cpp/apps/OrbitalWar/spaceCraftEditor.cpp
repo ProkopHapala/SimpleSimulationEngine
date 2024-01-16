@@ -350,6 +350,10 @@ void makeTestTruss(){
     Vec3d* f0 =  (Vec3d*)ls.b;
     f0[2].y += -5.0;
 
+    printf("kReg: %g\n", sim.kLinRegularize);
+    printf("x: "); VecN::print_vector(sim.nPoint, sim.kFix );
+    
+
     ((Vec3d*)ls.x)[0].y = 1.0;
     ((Vec3d*)ls.x)[2].y = 1.0;
     ls.dotFunc( ls.n, ls.x, ls.r );

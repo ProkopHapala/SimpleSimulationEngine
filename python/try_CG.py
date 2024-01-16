@@ -77,7 +77,41 @@ def SOR( K, f0, x0=None, niter=10, eps=1e-6, w=0.9 ):
         if( f2 < eps**2 ): break
     return x, f2
 
-def makeMat_stick_2d_( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
+
+def apply_sticks( dx, sticks, hdirs, constrKs=None, kReg=1e-2 ):
+
+    n = len(dx)//3
+    f = np.zeros((n*3))
+    #print( "kReg", kReg )
+    #print( "constrKs", constrKs )
+    for ia in range(n):
+        i3 = ia*3
+        k  = constrKs[ia] + kReg
+        #k *= 0.0 # DEBUG
+        f[i3+0] = dx[i3+0]*k
+        f[i3+1] = dx[i3+1]*k
+        f[i3+2] = dx[i3+2]*k
+    
+    for ib,( i,j,k) in enumerate(sticks):
+        i3 = i*3
+        j3 = j*3
+        # --- strick vector
+        hdir = hdirs[ib]; #print( "hdir", hdir )
+        dxij = dx[j3:j3+3] - dx[i3:i3+3]
+        #k*= 0 # DEBUG
+        fb   =  hdir * ( -k * np.dot( dxij, hdir ) )    # scalar force
+        # apply force to the points
+        # point i
+        f[i3+0] += fb[0]
+        f[i3+1] += fb[1]
+        f[i3+2] += fb[2]
+        # point j
+        f[j3+0] -= fb[0]
+        f[j3+1] -= fb[1]
+        f[j3+2] -= fb[2]
+    return f
+
+def makeMat( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
     '''
     sticks:   list of (i,j,k) where k is the spring constant
     ps:       list of (x,y) coordinates of the points
@@ -93,8 +127,15 @@ def makeMat_stick_2d_( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
     if l0s  is None: bIsRelaxed = True
     ls = np.zeros(len(sticks))
 
-    for i in range(2*n):
+    for i in range(3*n):
         A[i,i] += constrKs[i//3]
+
+    #A[:,:] = 0.0 # DEBUG
+
+    print( "kReg", kReg )
+    print( "constrKs", constrKs )
+
+    hdirs = np.zeros((len(sticks),3))
     
     for ib,( i,j,k) in enumerate(sticks):
 
@@ -110,6 +151,7 @@ def makeMat_stick_2d_( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
         x*=il
         y*=il
         z*=il
+        hdirs[ib,:] = [x,y,z]
 
         # --- force due to change of stick length
         dl = 0.0
@@ -129,6 +171,8 @@ def makeMat_stick_2d_( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
         fdl[j3+1] -= y*fdlij
         fdl[j3+2] -= z*fdlij
         
+
+        #k*=0.0 # DEBUG
         # --- stiffness matrix
         # diagonal i,i
         A[i3+0,i3+0] += k*x*x
@@ -170,7 +214,7 @@ def makeMat_stick_2d_( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
         A[j3+0,i3+2] -= k*x*z
         A[j3+1,i3+2] -= k*y*z
         A[j3+2,i3+2] -= k*z*z
-    return A, fdl, ls
+    return A, fdl, ls, hdirs
 
 # =========== Main
 
@@ -198,7 +242,8 @@ sticks =[
  ( 3,4, k0 ),
 ]
 
-constrKs=[50.0, 0.0, 0.0, 0.0,50.0]
+constrKs = [50.0, 0.0, 0.0, 0.0,50.0]
+kReg     = 1e-2
 
 os.system('mode con: cols=100 lines=50')
 np.set_printoptions(linewidth=np.inf)
@@ -207,13 +252,16 @@ dp = np.zeros(ps.shape )
 dp[0,1] = 1.0
 dp[2,1] = 1.0
 
-K, fdl, ls = makeMat_stick_2d_( sticks, ps, constrKs=constrKs )      # fixed end points
+K, fdl, ls, hdirs = makeMat( sticks, ps, constrKs=constrKs, kReg=kReg )      # fixed end points
 
 print( "K: \n", K )
 x = dp.flat.copy()
-f = np.dot( K, x )
-print( "x: ", x )
-print( "f: ", f )
+f  = np.dot( K, x )
+ff = apply_sticks( x, sticks, hdirs, constrKs=constrKs, kReg=kReg )
+
+print( "x    : ", x )
+print( "f_mat: ", f )
+print( "f_fun: ", ff )
 exit(0)
 
 K, fdl, ls = makeMat_stick_2d_( sticks, ps, constrKs=constrKs )      # fixed end points

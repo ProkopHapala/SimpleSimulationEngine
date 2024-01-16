@@ -396,7 +396,7 @@ class OrbSim: public Picker { public:
         printf( "prepareLinearizedTruss_ling nBonds %i \n", nBonds );
         Vec3d* f0s = (Vec3d*)bvec;
         //double k = kGlobal;
-        double k = 1.0;
+        double k = 50.0;
         for(int ib=0; ib<nBonds; ib++){ 
             int2    b = bonds[ib];
             Vec3d   d = points[b.y].f-points[b.x].f;
