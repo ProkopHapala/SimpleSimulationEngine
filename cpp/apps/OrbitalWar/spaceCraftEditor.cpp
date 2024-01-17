@@ -369,7 +369,15 @@ void makeTestTruss(){
 
     //exit(0);
 
-    //ls.solve_CG( 5, 0 );
+    printf("====================set initial conditions \n");
+    VecN::set( ls.n, 0.0, ls.x );
+    VecN::set( ls.n, 0.0, ls.b );
+    ((Vec3d*)ls.b)[2].y = -5.0;
+    printf("x0: "); VecN::print_vector(ls.n, ls.x);
+    printf("f0: "); VecN::print_vector(ls.n, ls.b);
+    printf("====================SOLVE \n");
+    //ls.solve_CG( 3, 1.e-6 );
+    ls.solve_CG_( 3, 1.e-6 );
     // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); }, 5 );
     exit(0);
 

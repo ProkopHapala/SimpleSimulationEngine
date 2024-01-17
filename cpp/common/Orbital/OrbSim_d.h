@@ -427,7 +427,7 @@ class OrbSim: public Picker { public:
             Vec3d h = kDirs[ib];
             // double k = bparams.x;
             double dl = h.dot( dpos[b.y]-dpos[b.x] );
-            printf( "dot_bond[%i|%i,%i] k=%g dl=%g h(%g,%g,%g)\n", ib,b.x,b.y, k, dl, h.x, h.y, h.z );
+            //printf( "dot_bond[%i|%i,%i] k=%g dl=%g h(%g,%g,%g)\n", ib,b.x,b.y, k, dl, h.x, h.y, h.z );
             h.mul( -dl*k );
             fdpos[b.x].add( h );
             fdpos[b.y].sub( h );

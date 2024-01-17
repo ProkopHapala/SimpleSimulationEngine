@@ -11,20 +11,23 @@ iCGstep=0
 
 def stepCG( K, x, d, f, f2old ):
     global iCGstep
-    #print( "stepCG ", itr, "=========================="  )
     Kd  = np.dot(K,d)
+    print("[%i]r :" %(iCGstep-1), f  );
+    print("[%i]p :" %(iCGstep-1), d  );
+    print("[%i]Ap:" %(iCGstep-1), Kd );
     dt  = np.dot(d,f) / np.dot(d,Kd)    # step length such that f is orthogonal to d 
     #dt  = np.dot(f,f) / np.dot(d,Kd)
-    #print( "d", d )
+    print( "### CG_step ", iCGstep, " dt=", dt, " rho=", f2old )
+    print( "[%i]Kd:" %iCGstep, Kd )
     #print( "ox", x )
     #print( "of", f )
-    #print( "dt", dt )
+    print( "dt", dt )
     x   = x + d *dt
     f   = f - Kd*dt
-    #print( "x:", x, " f:", f )
-    #print( "f", f )
+    print( "[%i]x :"%iCGstep, x )
+    print( "[%i]f :"%iCGstep, f )
     f2  = np.dot(f,f)
-    print( "CG[%i]" %iCGstep, "dt ", dt, "f2", f2, "f2old", f2old )
+    #print( "CG[%i]" %iCGstep, "dt ", dt, "f2", f2, "f2old", f2old )
     d   = f + d*(f2/f2old)
     iCGstep = iCGstep+1
     # NOTE: we can always normalize d to 1, but it is not necessary
@@ -44,7 +47,9 @@ def SolveCG( K, f0, x0=None, niter=10, eps=1e-6 ):
     eps2 = eps**2
     for i in range(niter):
         x, f, d, f2 = stepCG( K, x, d, f, f2 )
-        if( f2 < eps2 ): break
+        if( f2 < eps2 ): 
+            print ("### CG converged at step", i )
+            break
     return x, f2
 
 def Jacobi( K, f0, x0=None, niter=10, eps=1e-6 ):
@@ -270,6 +275,10 @@ print( "f_mat: ", f )
 print( "f_fun: ", ff )
 #exit(0)
 
+print("====================set initial conditions");
+print( "x0", np.zeros(len(fdl))  )
+print( "f0", f0.flat+fdl         )
+print("==================== SOLVE");
 x, err2 = SolveCG( K, f0.flat+fdl, x0=None, niter=10, eps=1e-6 )
 print( "x_CG ", x )
 print( "x_ref", np.linalg.solve( K, f0.flat+fdl ) )
