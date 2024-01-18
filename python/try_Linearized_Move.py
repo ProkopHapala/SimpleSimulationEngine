@@ -140,14 +140,6 @@ def dynamics( ps, f0, niter = 10, dt=0.05 ):
 
 # =========== Main
 
-# ps = np.array([     
-#     [-2.0, 0.0],
-#     [-1.0,-0.1],
-#     [ 0.0,-0.5],
-#     [+1.0,-0.1],
-#     [+2.0, 0.0],
-# ])
-
 # 5 point in line along x-axis
 ps = np.array([     
     [-2.0, 0.0],
