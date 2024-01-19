@@ -309,18 +309,9 @@ void makeBBoxes( const SpaceCraft& craft, OrbSim& sim ){
 }
 
 void makeTestTruss(){
+    printf( "#### makeTestTruss() \n" );
     mesh2.clear();
     int stickType = 0;
-    /*
-    ps = np.array([     
-        [-2.0, 0.0],
-        [-1.0, 0.0],
-        [ 0.0, 0.0],
-        [+1.0, 0.0],
-        [+2.0, 0.0],
-    ])
-    */
-
     //workshop.stickMaterials.vec[stickType]->k = 0.01;
 
     mesh2.stick  (    {-2.0, 0.0, 0.0}, 
@@ -328,6 +319,11 @@ void makeTestTruss(){
     mesh2.stickTo( 1, { 0.0,-0.2, 0.0}, stickType );
     mesh2.stickTo( 2, { 1.0,-0.1, 0.0}, stickType );
     mesh2.stickTo( 3, { 2.0, 0.0, 0.0}, stickType );
+
+    for(int i=0; i<mesh2.verts.size(); i++){
+        Vec3d& p = mesh2.verts[i].pos;
+        printf( "vert[%i] i %i p(%g,%g,%g)\n", i, p.x, p.y, p.z );
+    }
     
     /*
     mesh2.stick  ( {0.0,0.0,0.0}, {10.0,0.0,0.0}, stickType );
@@ -339,36 +335,36 @@ void makeTestTruss(){
     LinSolverOrbSim& ls = linSolver;
     exportSim( sim, mesh2, workshop );
 
+    printf("export ps:"); print_vector(sim.nPoint, (double*)sim.points, 4,0,3 );
+
     // // ---- Conjugate Gradient ( does not work )
     ls.realloc( sim.nPoint*3, true );
     ls.sim = &sim;
     sim.realloc_lin();
-    sim.kLinRegularize = 1e-2;
+    sim.kLinRegularize = 5.0;
     sim.kFix[0] = 50.0;
     sim.kFix[4] = 50.0;
-    sim.updateInveriants(true);
+    //sim.updateInveriants(true);
+    sim.updateInveriants(false);
+    printf("upInv ps:"); print_vector(sim.nPoint, (double*)sim.points,  4,0,3  );
+
+    /*
     sim.prepareLinearizedTruss_ling(linSolver.b); 
     Vec3d* f0 =  (Vec3d*)ls.b;
     f0[2].y += -5.0;
-
     printf("kReg: %g\n", sim.kLinRegularize);
     printf("kFix: ");  VecN::print_vector(sim.nPoint, sim.kFix );
     printf("kDirs: "); VecN::print_vector(sim.nBonds*3, (double*)sim.kDirs );
     printf("x:     "); VecN::print_vector(ls.n, ls.x);
-
     ((Vec3d*)ls.x)[0].y = 1.0;
     ((Vec3d*)ls.x)[2].y = 1.0;
     ((Vec3d*)ls.x)[4].y = 0.5;
     //ls.dotFunc( ls.n, ls.x, ls.r );
-
     sim.dot_Linearized_bonds(ls.n, ls.x, ls.r );
     printf("f_bo: "); VecN::print_vector(ls.n, ls.r);
-
     sim.dot_Linearized_neighs2(ls.n, ls.x, ls.r);
     printf("f_ng: "); VecN::print_vector(ls.n, ls.r);
-
     //exit(0);
-
     printf("====================set initial conditions \n");
     VecN::set( ls.n, 0.0, ls.x );
     VecN::set( ls.n, 0.0, ls.b );
@@ -377,12 +373,44 @@ void makeTestTruss(){
     printf("f0: "); VecN::print_vector(ls.n, ls.b);
     printf("====================SOLVE \n");
     //ls.solve_CG( 3, 1.e-6 );
-    ls.solve_CG_( 3, 1.e-6 );
+    //ls.solve_CG_( 3, 1.e-6 );
     // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); }, 5 );
-    exit(0);
+    //exit(0);
+    */
+
+    int nitr  = 3;
+    double dt=0.05;
+    sim.cleanVel();
+    for(int itr=0; itr<nitr; itr++){ 
+        printf( "--------- move[%i]\n", itr );
+        sim.cleanForce();
+        sim.forces[2].f.y = -5.0;
+        printf("pre-move ps:"); print_vector(sim.nPoint, (double*)sim.points, 4,0,3 );
+        //printf("pre-move fs:"); print_vector(sim.nPoint, (double*)sim.forces, 4,0,3 );
+        for(int i=0; i<sim.nPoint; i++){ 
+            sim.vel   [i].f.add_mul( sim.forces[i].f, dt); 
+            sim.points[i].f.add_mul( sim.vel   [i].f, dt); 
+        }
+        printf("post-move ps:"); print_vector(sim.nPoint, (double*)sim.points, 4,0,3 );
+        //printf("post-move vs:"); print_vector(sim.nPoint, (double*)sim.vel   , 4,0,3 );
+        //printf("linearize ps:"); print_vector(sim.nPoint, (double*)sim.points,  4,0,3 );
+        sim.prepareLinearizedTruss_ling(linSolver.b); 
+        printf("f(Ax=f):     "); VecN::print_vector(ls.n, ls.b);
+        VecN::set( ls.n, 0.0, ls.x );
+        int ncg = ls.solve_CG_( 10, 1.e-6 );
+        printf("dp: "); VecN::print_vector( ls.n, ls.x );
+        double dd = VecN::sum2( ls.n, ls.x ); printf( "move[%i,%i] |d|=%g \n", itr, ncg, sqrt(dd) );
+        Vec3d * dx = (Vec3d*)ls.x;
+        for(int i=0; i<sim.nPoint; i++){ // correct point positions (ignoring fixed points)
+            if( ! (sim.kFix[i]>1.0) ){ 
+                //dx[i].set(0.0);
+                sim.points[i].f.add( dx[i] ); 
+            }
+        }        
+    }
 
     bShipReady = false;
-    renderShip();
+    //renderShip();
 }
 
 void reloadShip( const char* fname  ){
@@ -402,8 +430,8 @@ void reloadShip( const char* fname  ){
     t0 = getCPUticks();
     mesh2.clear();
     BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
-    printf( "BuildCraft_truss() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
-    mesh2.printSizes();
+    //printf( "BuildCraft_truss() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
+    //mesh2.printSizes();
 
     t0 = getCPUticks();
     exportSim( sim, mesh2, workshop );
@@ -415,24 +443,22 @@ void reloadShip( const char* fname  ){
     // sim.prepareLinearizedTruss_ling(linSolver.b);  
     // //linSolver.solve_CG( 5, 0 );
     // Lingebra::genLinSolve_CG( linSolver.n, linSolver.b, linSolver.x , [&](int n,int n_, double*x,double*Ax){ sim.dot_Linearized_neighs2(n, x, Ax); } );
-
-    
-    printf( "exportSim() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
+    //printf( "exportSim() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
 
     t0 = getCPUticks();
     makeBBoxes( *theSpaceCraft, sim );
     makePointCunks( sim.edgeBBs, sim.bonds, sim.pointChunks );
-    sim.pointChunks.printCells();
-    printf( "makeBBoxes() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
+    //sim.pointChunks.printCells();
+    //printf( "makeBBoxes() DONE T=%g[ms] \n", (getCPUticks()-t0)*1e-6 );
 
     sim.user_update = SpaceCraftControl;
 
-    printf( "reloadShip().updateSlidersPaths \n" );
+    //printf( "reloadShip().updateSlidersPaths \n" );
     // update ring slider paths
     for( Ring* o : theSpaceCraft->rings ){
         o->updateSlidersPaths( true, true, sim.points );
     }
-    printf( "reloadShip().SlidersToEdgeVerts \n" );
+    //printf( "reloadShip().SlidersToEdgeVerts \n" );
     // ----- Sliders to EdgeVerts
     sim.nEdgeVertBonds =  theSpaceCraft->sliders.size();
     sim.edgeVertBonds  = new EdgeVertBond[ sim.nEdgeVertBonds ];
@@ -460,7 +486,8 @@ void reloadShip( const char* fname  ){
 
     renderShip();
 
-    sim.updateInveriants(true);
+    //sim.updateInveriants(true);
+    sim.updateInveriants(false);
     bShipReady = true;
     printf("#### END reloadShip('%s')\n", fname );
 };
@@ -585,7 +612,9 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     initSpaceCraftingLua();
     //if(argc<=1)reloadShip( "data/ship_ICF_marksman_2.lua" );
     if(argc<=1){
-        reloadShip( "data/test_materials.lua" ); 
+        //reloadShip( "data/test_materials.lua" ); 
+        const char* fname = "data/test_materials.lua";
+        if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
         makeTestTruss();
         printf("zoom %g \n", zoom );
         zoom = 10.0;

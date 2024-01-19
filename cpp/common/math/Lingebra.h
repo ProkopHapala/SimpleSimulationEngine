@@ -163,7 +163,7 @@ class LinSolver{ public:
 
     double step_CG(){
         // see https://en.wikipedia.org/wiki/Conjugate_gradient_method
-        printf( "LinSolver::step_CG %i \n", istep );
+        //printf( "LinSolver::step_CG %i \n", istep );
         if(istep==0){
             printf( "STEP1 START \n" );
             dotFunc  ( n, x, r );
@@ -216,8 +216,10 @@ class LinSolver{ public:
         VecN::set( n, r, p    ); // p = r
         double err2 = VecN::dot(n, r,r);
         rho = err2;
-        printf("[_]f :"); VecN::print_vector(n, r);
-        printf("[_]d :"); VecN::print_vector(n, p);
+        //printf("[_]x :"); VecN::print_vector(n, x);
+        //printf("[_]f0:"); VecN::print_vector(n, b);
+        //printf("[_]f :"); VecN::print_vector(n, r);
+        //printf("[_]d :"); VecN::print_vector(n, p);
         return err2;
     }
 
@@ -227,18 +229,18 @@ class LinSolver{ public:
         dotFunc( n, p, Ap);   // Kd = K*d
         //printf("Ap "); VecN::print_vector(n, Ap);
         
-        printf("[%i]r :",istep-1); VecN::print_vector(n, r );
-        printf("[%i]p :",istep-1); VecN::print_vector(n, p );
-        printf("[%i]Ap:",istep-1); VecN::print_vector(n, Ap);
+        //printf("[%i]r :",istep-1); VecN::print_vector(n, r );
+        //printf("[%i]p :",istep-1); VecN::print_vector(n, p );
+        //printf("[%i]Ap:",istep-1); VecN::print_vector(n, Ap);
 
         //alpha = VecN::dot(n, r, p) / VecN::dot(n, p, Ap);
         alpha = rho / VecN::dot(n, p, Ap);   // dt  = dot(d,f) / dot(d,Kd)    # step length such that f is orthogonal to d
-        printf( "### CG_step %i dt=%g rho=%g \n", istep, alpha, rho );
+        //printf( "### CG_step %i dt=%g rho=%g \n", istep, alpha, rho );
         VecN::fma( n, x, p ,  alpha,   x );  // x = x + d  * dt;
         VecN::fma( n, r, Ap, -alpha,   r );  // f = f - Kd * dt;
-        printf("[%i]Kd:",istep-1); VecN::print_vector(n, Ap);
-        printf("[%i]x :",istep  ); VecN::print_vector(n, x);
-        printf("[%i]f :",istep  ); VecN::print_vector(n, r);
+        //printf("[%i]Kd:",istep-1); VecN::print_vector(n, Ap);
+        //printf("[%i]x :",istep  ); VecN::print_vector(n, x);
+        //printf("[%i]f :",istep  ); VecN::print_vector(n, r);
         double err2 = VecN::dot(n, r,r);
         //printf( "err2 %f \n", err2 );
         double beta = err2 / rho;
@@ -259,18 +261,21 @@ class LinSolver{ public:
         }
     }
 
-    void solve_CG_( int maxIters, double maxErr2 ){
+    int solve_CG_( int maxIters, double maxErr2 ){
         istep = 0;
         step0_CG();
-        for ( int i =0; i<maxIters; i++) {
-            printf( "[%i]========\n", istep );
+        int i=0;
+        for ( i =0; i<maxIters; i++) {
+            //printf( "[%i]========\n", istep );
             double err2 = step_CG_simple();
-            printf( "[%i]err2 %g maxErr2 %g \n", istep, err2, maxErr2 );
+            //printf("CG[%i]x :",istep  ); VecN::print_vector(n, x);
+            //printf( "[%i]err2 %g maxErr2 %g \n", istep, err2, maxErr2 );
             if ( err2< maxErr2 ){ 
-                printf("### CG converged at step %i \n", istep );
+                //printf("### CG converged at step %i \n", istep );
                 break;
             }
         }
+        return i;
     }
 
 };

@@ -87,7 +87,7 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
         sim.points[e.y].w += mass*0.5;
         Quat4d param = (Quat4d){ l0, mat.Kpush/l0, mat.Kpull/l0, mat.damping }; 
         {
-            printf( "exportSim(ib=%i) length=%g[m] mass=%g[kg] fPush(%g[10kN~ton]\%1) fPull(%g[10kN~ton]\%1)\n", i, l0, mass, mat.Kpush*1e-6, mat.Kpull*1e-6 );
+        //      printf( "exportSim(ib=%i) length=%g[m] mass=%g[kg] fPush(%g[10kN~ton]\%1) fPull(%g[10kN~ton]\%1)\n", i, l0, mass, mat.Kpush*1e-6, mat.Kpull*1e-6 );
         //    const Material& M = *shop.materials.vec[mat.materialId];
         //    printf( "stick[%i] par(%7.3f,%5.2e,%5.2e,%5.2e) Stick(%s,%g[m^2],%g[m])K(%5.2e,%5.2e) Stick()mat(%s,K(%5.2e,%5.2e))\n",  i, param.x, param.y, param.z, param.w,   mat.name, mat.area, mat.diameter, mat.Kpush, mat.Kpull, M.name, M.Kpull, M.Kpush );
         }
@@ -119,7 +119,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     //     printf("#====== StickMaterials \n"); for(const StickMaterial* o: shop.stickMaterials.vec){  o->print();  }
     //     //exit(0);
     // }
-    printf( "exportSim() START \n" );
+    printf( "exportSim() _f START \n" );
     int np = mesh.verts.size();
     int nb = mesh.edges.size();
     int* nneighs = new int[ np ];
@@ -195,7 +195,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     sim.cleanForce();
     sim.cleanVel();
     //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(0.1); }
-    printf( "exportSim() DONE! \n" );
+    printf( "exportSim() _f DONE! \n" );
     delete [] nneighs;
     //exit(0);
 }
@@ -203,7 +203,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
 int exportBuckets( const SpaceCraft& craft, Buckets* buckets=0, int nPerBucket=16, bool bHardLimit=true ){
     // Goes over all the StructuralComponents in the SpaceCraft and exports them to the Buckets (i.e. bounding boxes), split each structural component into a number of buckets.
     // if no output Buckets is specified, it just counts the number of buckets
-    printf("exportBuckets(out=%i,nPerBucket=%i,hardlimit=%i) nGirder=%i nRings=%i nRopes=%i \n", buckets!=0, nPerBucket, bHardLimit, craft.girders.size(), craft.rings.size(), craft.ropes.size() );
+    //printf("exportBuckets(out=%i,nPerBucket=%i,hardlimit=%i) nGirder=%i nRings=%i nRopes=%i \n", buckets!=0, nPerBucket, bHardLimit, craft.girders.size(), craft.rings.size(), craft.ropes.size() );
     int nBuck = 1; // bucket 0 is reserved for un-assigned objects
     for(Girder* o: craft.girders){ nBuck += o->toBuckets( nBuck, nPerBucket, buckets, bHardLimit ); }
     for(Ring*   o: craft.rings  ){ nBuck += o->toBuckets( nBuck, nPerBucket, buckets, bHardLimit ); }
@@ -212,7 +212,7 @@ int exportBuckets( const SpaceCraft& craft, Buckets* buckets=0, int nPerBucket=1
 }
 
 int makePointCunks( Buckets& ebuck, int2* edges, Buckets& pbuck ){
-    printf( "makePointCunks() ncell %i nobj %i \n", ebuck.ncell, ebuck.nobj );
+    //printf( "makePointCunks() ncell %i nobj %i \n", ebuck.ncell, ebuck.nobj );
     std::unordered_set<int> ps; // we use set to remove duplicates
     std::vector<int> p2c;       // we use vector because we do not know the sizes in advance
     pbuck.cellNs = new int[ ebuck.ncell ];
@@ -521,7 +521,7 @@ int panel( Builder2& mesh, Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, 
 }
 
 void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
-    printf( "BuildCraft_truss() \n" );
+    //printf( "BuildCraft_truss() \n" );
     if(max_size>0){ mesh.max_size=max_size; };
     int i=0;
     mesh.block();
@@ -533,7 +533,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
             mesh.vert( o->pos );
         }
     }
-    printf("BuildCraft_truss().girders n=%i\n", craft.girders.size() );
+    //printf("BuildCraft_truss().girders n=%i\n", craft.girders.size() );
     for(Girder* o: craft.girders){
         //printf("DEBUG toTruss : girder #%i \n", i);
         o->update_nodes(); // if girder bound to BoundNode, the vert indexes may need to be updated
@@ -547,7 +547,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         //printf( "BuildCraft_truss() girder.pointRange(%i,%i)\n", o.pointRange.x, o.pointRange.y );
         i++;
     }
-    printf("BuildCraft_truss().ropes n=%i\n", craft.ropes.size() );
+    //printf("BuildCraft_truss().ropes n=%i\n", craft.ropes.size() );
     for(Rope* o: craft.ropes){
         o->update_nodes();
         // Node* nd1 = o->nodes.x;
@@ -576,7 +576,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         o->stickRange = {b.y,(int)mesh.edges.size()};
     }
     // --- Rings
-    printf("BuildCraft_truss().rings n=%i\n", craft.rings.size() );
+    //printf("BuildCraft_truss().rings n=%i\n", craft.rings.size() );
     i=0;
     for(Ring* o: craft.rings){
         o->update_nodes();
@@ -597,7 +597,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         i++;
     }
     // --- Radiators
-    printf("BuildCraft_truss().radiators n=%i\n", craft.radiators.size() );
+    //printf("BuildCraft_truss().radiators n=%i\n", craft.radiators.size() );
     for(Radiator* o : craft.radiators ){
         mesh.block();
         o->print();
@@ -610,7 +610,7 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
         o->stickRange = {b.y,(int)mesh.edges.size()};
         //break;
     };
-    printf("BuildCraft_truss().Welds n=%i\n", craft.welds.size() );
+    //printf("BuildCraft_truss().Welds n=%i\n", craft.welds.size() );
     for( Weld* o : craft.welds ){
         //printf("Welds[]\n");
         //o->print();

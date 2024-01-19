@@ -41,24 +41,29 @@ def stepCG( x, d, f, f2old, K=None, dotFunc=None ):
     return x, f, d, f2
 
 def SolveCG( f0, K=None, dotFunc=None, x0=None, niter=10, eps=1e-6, bPrint=False ):
+    global iCGstep
+    iCGstep = 0
     if x0 is None: x0 = np.zeros(len(f0))
     #print( "===== SolveCG" )
     x  = x0.copy()
+    
     if dotFunc is not None:
         f = f0 - dotFunc(x)
     else:
         f  = f0 - np.dot(K,x)
     d  = f.copy()
     f2 = np.dot(f,f)
-    if bPrint:
-        print( "x:", x )
-        print( "f:", f )
-        print( "d:", d )
-        print( "---- CG loop: f2= ", f2 )
+    #if bPrint:
+    #print( "[_]x :", x )
+    #print( "[_]f0:", f0)
+    #print( "[_]f :", f )
+    #print( "[_]d :", d )
+    #    print( "---- CG loop: f2= ", f2 )
     eps2 = eps**2
     for i in range(niter):
         x, f, d, f2 = stepCG( x, d, f, f2, K=K, dotFunc=dotFunc )
-        if bPrint: print( "CG[%i] x: ", x )
+        #print( "CG[%i] x: " %i, x )
+        if bPrint: print( "CG[%i] x: " %i, x )
         if( f2 < eps2 ): 
             if bPrint: print ("### CG converged at step", i )
             break
@@ -104,11 +109,13 @@ def apply_sticks( dx, sticks, hdirs, constrKs=None, kReg=1e-2 ):
     for ia in range(n):
         i3 = ia*3
         k  = constrKs[ia] + kReg
+        #print( "Kdp[%i] k %g dp(%g,%g,%g)" %( ia, k, dx[i3+0], dx[i3+1], dx[i3+2] ) );
         #k *= 0.0 # DEBUG
         f[i3+0] = dx[i3+0]*k
         f[i3+1] = dx[i3+1]*k
         f[i3+2] = dx[i3+2]*k
     
+    #print( "fdpos:", f )
     for ib,( i,j,k) in enumerate(sticks):
         i3 = i*3
         j3 = j*3
@@ -118,7 +125,7 @@ def apply_sticks( dx, sticks, hdirs, constrKs=None, kReg=1e-2 ):
         #k*= 0 # DEBUG
         dl   =  np.dot( h, dxij )
         fb   =  h * ( dl * -k )    # scalar force
-        #print( "dot_bond[%i] k %g fl %g h(%g,%g,%g)" %( ib, k, dl, h[0], h[1], h[2]) );
+        #print( "dot_bond[%i] k %g dl %g h(%g,%g,%g) f(%g,%g,%g)" %( ib, k, dl, h[0],h[1],h[2],   fb[0],fb[1],fb[2]    ) );
         # apply force to the points
         # point i
         f[i3+0] += fb[0]
@@ -170,6 +177,8 @@ def linearize( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
         if not bIsRelaxed: 
             dl  = ls[ib] - l0s[ib]
         fdlij = k*dl
+
+        #print( "prepare_lin[%i|%i,%i] f0=%g l=%g hdir(%g,%g,%g)"  %( ib,i,j, fdlij, l, hdirs[ib,0], hdirs[ib,1], hdirs[ib,2]) );
 
         # construct the system in the standard form Ax=b
         i3 = i*3
@@ -291,7 +300,7 @@ def makeMat( sticks, ps, l0s=None, constrKs=None, kReg=1e-2 ):
         A[j3+2,i3+2] -= k*z*z
     return A, fdl, ls, hdirs
 
-def dynamics( ps, f0, niter = 5, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True ):
+def dynamics( ps, f0, niter = 3, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True ):
     #cmap   = plt.get_cmap('rainbow')
     cmap   = plt.get_cmap('gist_rainbow')
     #cmap   = plt.get_cmap('jet')
@@ -319,25 +328,37 @@ def dynamics( ps, f0, niter = 5, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True )
     v = np.zeros((n,3))
 
     for i in range(niter):
+        print( "--------- move[%i]" %i );
         plt.subplot(1,niter,i+1)
         clr = colors[i%len(colors)]
+
 
         # ---- Predictor step ( move mass points by external forces )
         # Here we do normal dynamical move v+=(f/m)*dt, p+=v*dt
         f   = f0[:,:] #- ps[:,:]*constrKs[:,None]
+
+        print( "pre-move ps", ps.flat.copy() )
+        #print( "pre-move fs", f .flat.copy() )
+
         v  += f*dt    # move by external forces (ignoring constraints)   # NOTE: now we use steep descent, but we could verlet or other integrator of equations of motion
         ps += v*dt    # move by external forces (ignoring constraints)   # NOTE: now we use steep descent, but we could verlet or other integrator of equations of motion
-        
+        print( "post-move ps", ps.flat.copy() )
+        #print( "pre-move vs", v .flat.copy() )
+
         if bUseCG:
             # K, fdl, ls, hdirs = makeMat( sticks, ps, l0s=l0s, constrKs=constrKs, kReg=kReg )      # fixed end points
             # f  = f0.flatten() + fdl
             # #dp = np.linalg.solve( K, f )    # solve (f0x+fdlx) = Kx*dx    aka b=A*x ( A=Kx, x=dx, b=f0x+fdlx )
             # dp, err2 = SolveCG( f, niter=10, eps=1e-6, bPrint=True, K=K )
 
+            #print( "linearize ps", ps.flat.copy() )
             fdl, ls, hdirs = linearize( sticks, ps, l0s=l0s, constrKs=constrKs, kReg=kReg )
+            #print( "fdl", fdl )
             f = f0.flatten() + fdl
+            print( "f(Ax=f)", f )
             hdirs_glob = hdirs
             dp, err2 = SolveCG( f, niter=10, eps=1e-6, bPrint=False, dotFunc=dot_func )
+            print( "dp ", dp )
 
             #exit()
         else:
@@ -365,6 +386,8 @@ def dynamics( ps, f0, niter = 5, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True )
         plt.ylim(-3,1)
 
 # =========== Main
+os.system('mode con: cols=100 lines=50')
+np.set_printoptions(linewidth=np.inf)
 
 ps = np.array([     
     [-2.0, -0.0, 0.0],
@@ -399,9 +422,6 @@ dynamics( ps, f0, constrKs=constrKs, kReg=kReg )
 '''
 #constrKs = [0.0, 0.0, 0.0, 0.0,0.0]
 #kReg     = 0.0
-
-os.system('mode con: cols=100 lines=50')
-np.set_printoptions(linewidth=np.inf)
 
 dp = np.zeros(ps.shape )
 dp[0,1] = 1.0

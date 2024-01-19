@@ -110,6 +110,14 @@ inline void updateEdgeBBs(const Buckets& buckets, Quat8d* BBs, int2* edges, Quat
     //printf( "updateEdgeBBs() DONE \n" );
 }
 
+inline void print_vector( int n, double * a, int pitch, int j0, int j1 ){
+    for(int i=0; i<n; i++){
+        double* ai = a + i*pitch;	
+        for (int j=j0; j<j1; j++ ){	printf( "%f ", ai[j] );	}
+    }    
+    printf( "\n" );
+}
+
 class OrbSim: public Picker { public:
     double time=0;
     int nPoint=0, nNeighMax=0, nNeighTot=0;
@@ -392,11 +400,12 @@ class OrbSim: public Picker { public:
         return F2;
     }
 
-    void prepareLinearizedTruss_ling( double* bvec ){
-        printf( "prepareLinearizedTruss_ling nBonds %i \n", nBonds );
+    void prepareLinearizedTruss_ling( double* bvec, bool bAddForce=true ){
+        //printf( "prepareLinearizedTruss_ling nBonds %i \n", nBonds );
         Vec3d* f0s = (Vec3d*)bvec;
         //double k = kGlobal;
         double k = 50.0;
+        for(int i=0; i<nPoint; i++){ f0s[i]=Vec3dZero; }
         for(int ib=0; ib<nBonds; ib++){ 
             int2    b = bonds[ib];
             Vec3d   d = points[b.y].f-points[b.x].f;
@@ -405,9 +414,14 @@ class OrbSim: public Picker { public:
             Vec3d f = d*(l-bparams[ib].x)*k;
             f0s[b.x].add(f);
             f0s[b.y].sub(f);
-            printf( "prepare_lin[%i|%i,%i] f0=%g l=%g hdir(%g,%g,%g) \n", ib,b.x,b.y, d.dot(f), l, kDirs[ib].x, kDirs[ib].y, kDirs[ib].z );
+            //printf( "prepare_lin[%i|%i,%i] f0=%g l=%g hdir(%g,%g,%g) \n", ib,b.x,b.y, d.dot(f), l, kDirs[ib].x, kDirs[ib].y, kDirs[ib].z );
             //dpos[ib]  = Quat4fZero; 
         }
+        //printf("fdl: "); print_vector(nPoint, (double*)f0s, 3,0,3 );
+        if(bAddForce){
+            for(int iG=0; iG<nPoint; iG++){ f0s[iG].add( forces[iG].f ); }
+        }
+        //printf("f:  "); print_vector(nPoint, (double*)f0s, 3,0,3 );
     }
 
     void dot_Linearized_bonds(int n, double* x, double * Ax){
@@ -418,19 +432,22 @@ class OrbSim: public Picker { public:
         for(int iG=0; iG<nG; iG++){
             double kp = kFix[iG] + kLinRegularize;
             //kp = 0; // DEBUG
+            //printf( "Kdp[%i] k=%g dp(%g,%g,%g)\n", iG, kp, dpos[iG].x, dpos[iG].y, dpos[iG].z );
             fdpos[iG] = dpos[iG]*kp;
         }
+        //printf("fdpos:"); print_vector(nG, (double*)fdpos, 3,0,3 );
         //double k = kGlobal;
         double k = 50.0;
         for(int ib=0; ib<nBonds; ib++){
             const int2  b = bonds[ib];
-            Vec3d h = kDirs[ib];
+            const Vec3d h = kDirs[ib];
             // double k = bparams.x;
             double dl = h.dot( dpos[b.y]-dpos[b.x] );
-            //printf( "dot_bond[%i|%i,%i] k=%g dl=%g h(%g,%g,%g)\n", ib,b.x,b.y, k, dl, h.x, h.y, h.z );
-            h.mul( -dl*k );
-            fdpos[b.x].add( h );
-            fdpos[b.y].sub( h );
+            //h.mul( -dl*k );
+            Vec3d f = h*(-dl*k);
+            //printf( "dot_bond[%i|%i,%i] k=%g dl=%g h(%g,%g,%g) f(%g,%g,%g)\n", ib,b.x,b.y, k, dl,  h.x,h.y,h.z,   f.x,f.y,f.z );
+            fdpos[b.x].add( f );
+            fdpos[b.y].sub( f );
         }
     }
 
