@@ -83,6 +83,8 @@ double elementSize  = 5.;
 bool bRun = false;
 
 
+int iFrame = 0;
+
 
 Vec3d wheel_speed       = {0.0,0.0,0.0};
 //Vec3d wheel_speed_setup = { 0.1, 0.1, 0.1 };
@@ -160,13 +162,28 @@ void runSim( OrbSim& sim, int niter=100 ){
         //sim.run_omp( niter, false, 1e-3, 1e-4 );
         //sim.run_omp( niter, true, 1e-3, 1e-5 );
         //sim.run_omp( niter, true, 1e-3, 1e-4 );
-        sim.run_omp( niter, true, 1e-3, 1e-6 );
+        //sim.run_omp( niter, true, 1e-3, 1e-6 );
 
 
         //sim.prepareLinearizedTruss(linSolver.b);
         //linSolver.solve_CG( 5, 0 );
 
+        //sim.run_constr_dynamics(  1, 0.1 );
 
+        if( iFrame % 100 == 0 ){ 
+            sim.points[2].f.y -= 0.5;
+        }else{
+            double dlmax = sim.constr_jacobi_neighs2_absolute();
+            //printf( "run_constr_dynamics[%i,%i] dlmax=%g \n", i,isolver,  dlmax );
+            //sim.apply_dpos( 2.3 );
+            sim.apply_dpos( 1.0 );
+        }
+
+        for(int i=0; i<sim.nPoint; i++){ 
+            Vec3f p = (Vec3f)sim.points[i].f;
+            Vec3f v = sim.dpos  [i].f;
+            Draw3D::drawArrow( p, p+v, 0.1 );
+        }
 
         //sim.run_omp( 1, true, 1e-3, 1e-4 );
         double T = (getCPUticks()-t0)*1e-6;
@@ -308,46 +325,7 @@ void makeBBoxes( const SpaceCraft& craft, OrbSim& sim ){
     //sim.printBBs();
 }
 
-void makeTestTruss(){
-    printf( "#### makeTestTruss() \n" );
-    mesh2.clear();
-    int stickType = 0;
-    //workshop.stickMaterials.vec[stickType]->k = 0.01;
-
-    mesh2.stick  (    {-2.0, 0.0, 0.0}, 
-                      {-1.0,-0.1, 0.0}, stickType );
-    mesh2.stickTo( 1, { 0.0,-0.2, 0.0}, stickType );
-    mesh2.stickTo( 2, { 1.0,-0.1, 0.0}, stickType );
-    mesh2.stickTo( 3, { 2.0, 0.0, 0.0}, stickType );
-
-    for(int i=0; i<mesh2.verts.size(); i++){
-        Vec3d& p = mesh2.verts[i].pos;
-        printf( "vert[%i] i %i p(%g,%g,%g)\n", i, p.x, p.y, p.z );
-    }
-    
-    /*
-    mesh2.stick  ( {0.0,0.0,0.0}, {10.0,0.0,0.0}, stickType );
-    mesh2.stickTo( 0,             {5.0,10.0,0.0}, stickType );
-    mesh2.edge   ( 1, 2, stickType );
-    workshop.stickMaterials.vec[stickType]->preStrain = 0.01;
-    */
-
-    LinSolverOrbSim& ls = linSolver;
-    exportSim( sim, mesh2, workshop );
-
-    printf("export ps:"); print_vector(sim.nPoint, (double*)sim.points, 4,0,3 );
-
-    // // ---- Conjugate Gradient ( does not work )
-    ls.realloc( sim.nPoint*3, true );
-    ls.sim = &sim;
-    sim.realloc_lin();
-    sim.kLinRegularize = 5.0;
-    sim.kFix[0] = 50.0;
-    sim.kFix[4] = 50.0;
-    //sim.updateInveriants(true);
-    sim.updateInveriants(false);
-    printf("upInv ps:"); print_vector(sim.nPoint, (double*)sim.points,  4,0,3  );
-
+void solveTrussCG(){
     /*
     sim.prepareLinearizedTruss_ling(linSolver.b); 
     Vec3d* f0 =  (Vec3d*)ls.b;
@@ -378,13 +356,13 @@ void makeTestTruss(){
     //exit(0);
     */
 
+    LinSolverOrbSim& ls = linSolver;
+
     int nitr  = 3;
     double dt=0.05;
     sim.cleanVel();
     for(int itr=0; itr<nitr; itr++){ 
         printf( "--------- move[%i]\n", itr );
-        sim.cleanForce();
-        sim.forces[2].f.y = -5.0;
         printf("pre-move ps:"); print_vector(sim.nPoint, (double*)sim.points, 4,0,3 );
         //printf("pre-move fs:"); print_vector(sim.nPoint, (double*)sim.forces, 4,0,3 );
         for(int i=0; i<sim.nPoint; i++){ 
@@ -408,9 +386,51 @@ void makeTestTruss(){
             }
         }        
     }
+}
 
+
+void makeTestTruss(){
+    printf( "#### makeTestTruss() \n" );
+    mesh2.clear();
+    int stickType = 0;
+    //workshop.stickMaterials.vec[stickType]->k = 0.01;
+
+    mesh2.stick  (    {-2.0, 0.0, 0.0}, 
+                      {-1.0,-0.1, 0.0}, stickType );
+    mesh2.stickTo( 1, { 0.0,-0.2, 0.0}, stickType );
+    mesh2.stickTo( 2, { 1.0,-0.1, 0.0}, stickType );
+    mesh2.stickTo( 3, { 2.0, 0.0, 0.0}, stickType );
+
+    //for(int i=0; i<mesh2.verts.size(); i++){ Vec3d& p = mesh2.verts[i].pos; printf( "vert[%i] i %i p(%g,%g,%g)\n", i, p.x, p.y, p.z );}
+    
+    exportSim( sim, mesh2, workshop );
+    _realloc ( sim.dpos, sim.nBonds );
+    _realloc( sim.points_bak, sim.nPoint );
+    sim.points[0].w = 1e+300; // fix first point
+    sim.points[4].w = 1e+300; // fix last point
+    sim.cleanForce();
+    sim.cleanVel();
+    sim.forces[2].f.y = -5.0;
+
+    /*
+    LinSolverOrbSim& ls = linSolver;
+    printf("export ps:"); print_vector(sim.nPoint, (double*)sim.points, 4,0,3 );
+    // // ---- Conjugate Gradient ( does not work )
+    ls.realloc( sim.nPoint*3, true );
+    ls.sim = &sim;
+    sim.realloc_lin();
+    sim.kLinRegularize = 5.0;
+    sim.kFix[0] = 50.0;
+    sim.kFix[4] = 50.0;
+    //sim.updateInveriants(true);
+    sim.updateInveriants(false);
+    printf("upInv ps:"); print_vector(sim.nPoint, (double*)sim.points,  4,0,3  );
+    sim.cleanForce();
+    sim.forces[2].f.y = -5.0;
+    solveTrussCG();
     bShipReady = false;
     //renderShip();
+    */
 }
 
 void reloadShip( const char* fname  ){
@@ -680,7 +700,7 @@ void SpaceCraftEditorApp::draw(){
     //float lightPos   []{ 1.0f, -1.0f, 1.0f, 0.0f  };
     glLightfv( GL_LIGHT0, GL_POSITION,  (float*)&cam.rot.c  );
     //glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
+    iFrame = frameCount;
 
 	/*
     // to make nice antialiased lines without supersampling buffer

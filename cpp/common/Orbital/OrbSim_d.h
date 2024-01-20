@@ -149,7 +149,10 @@ class OrbSim: public Picker { public:
     Quat4f* fdpos=0;  // force on distortion of point from neutral postion
     Quat4f* vdpos=0;  // velocity of distortion of point from neutral postion
 
-    Vec3d*  kDirs=0;  // d/|d| where d = p1-p0 normalized direction of the stick, and initial distortion of the length from neutral length
+    Quat4d* points_bak = 0; // backup of points for position based dynamics
+
+    float* dls =0;  // distortion of point from neutral postion
+    Vec3d* kDirs=0;  // d/|d| where d = p1-p0 normalized direction of the stick, and initial distortion of the length from neutral length
     //double* f0s  =0;  // (|d|-l0) *k  force on distortion of point from neutral postion
 
 
@@ -479,6 +482,155 @@ class OrbSim: public Picker { public:
             //fdpos[iG] = Vec3d{iG,1,2};
         }
     }
+
+    void findGuassSeidelPivotingPriority( double* priority ){
+        // The lightest points should be solved first
+        // also the points with the most neighbors should be solved first
+        // also the points which are lighter than their neighbors should be solved first
+
+        // Perhaps better strategy would be to solve first the points which move the most in previous iteration
+
+        for(int iG=0; iG<nPoint; iG++){
+            double m = points[iG].w;
+            double neigh_mass = 0;
+            for(int ij=0; ij<nNeighMax; ij++){
+                const int j  = nNeighMax*iG + ij;
+                const int2 b = neighBs[j];
+                if(b.x == -1) break;
+                neigh_mass += points[b.x].w;
+            }
+            priority[iG] = (neigh_mass + 1e-3)/m;
+        }
+    }
+
+    void move_dpos( double dt=1.0 ){
+        for(int iG=0; iG<nPoint; iG++){ 
+            Quat4d p = points[iG];
+            Quat4d v = vel   [iG];
+            const Quat4d f = forces[iG];
+            points_bak[iG] = p;
+            v.f.add_mul( f.f, dt);
+            //Quat4d dp; dp.f.set_mul(v.f,dt); dp.w=p.w;
+            //p.f.add( dp.f );
+            p.f.add_mul( v.f, dt);
+            points[iG] = p;
+            vel   [iG] = v;
+            //dpos  [iG] = (Quat4f)dp;
+        }
+    }
+
+    void apply_dpos( double sc=1.0 ){
+        for(int iG=0; iG<nPoint; iG++){ 
+            points[iG].f.add_mul( (Vec3d)dpos[iG].f, sc );
+        }
+    }
+
+    void update_velocity( double dt=1.0 ){
+        double invdt = 1.0/dt;
+        for(int iG=0; iG<nPoint; iG++){ 
+            //Vec3d dp = (Vec3d)dpos[iG].f;
+            //points[iG].f.add( dp );
+            // warrning  points are already updated by p_k1 =  p_k + ( v_k + f_k *dt )*dt
+            // but to update v we need    v_k1 = ( p_k1 - p_k )/dt, therefore we need to store p_k1, or add ( v_k + f_k *dt )*dt to dp
+            //   so dp = ( v_k + f_k *dt )*dt + dp_constrain
+            Vec3d dp = points[iG].f - points_bak[iG].f;
+            vel[iG].f.set_mul( dp, invdt );
+        }
+    }
+
+    double constr_jacobi_neighs2_absolute(){
+        // This is constrain-solver
+        //   we know how long should be each bond
+        //   we need to solve for dpos (i.e. how much we should shift each point to make the bond correct length)
+        //   we shift more the points which are lighter (i.e. we use inverse mass as a weight)
+        //   it should correspond to to position based dynamics (PBD) developed by Muller et al. 2007 (https://matthias-research.github.io/pages/) https://doi.org/10.1016/j.jvcir.2007.01.005  https://matthias-research.github.io/pages/publications/posBasedDyn.pdf
+        double dlmax = 0;
+        for(int iG=0; iG<nPoint; iG++){
+            const Quat4d pi = points[iG];
+            //const double k = 50.0;
+            //double im = 1.0/pi.w;
+            Vec3d dp = Vec3dZero;
+            double wsum = 0;
+            for(int ij=0; ij<nNeighMax; ij++){
+                const int j  = nNeighMax*iG + ij;
+                const int2 b = neighBs[j];
+                if(b.x == -1) break;
+                Quat4d pj  = points[b.x];
+                Vec3d d; d.set_sub( pj.f, pi.f);
+                double l  = d.normalize();
+                double dl = l - bparams[b.y].x; // l0
+                //double w = im/(im+1./pj.w);
+                double w = pj.w/(pi.w+pj.w);  // (1/mi)/(1/mi+1/mj) = mi*mj/( mi*(mi + mj)) = mj/(mi+mj)
+                dp.add_mul( d, dl*w*w );
+                wsum += w;
+                {
+                    dl    = (dl>0    ) ? dl : -dl;
+                    dlmax = (dl>dlmax) ? dl : dlmax;
+                }
+            }
+            // Note about weighting: Sum_i{ d*w_i^2 }/Sum_i{ w_i } 
+            // if we have just one neighbor then d*w_i^2/w_i = d*w_i
+            // if we have two same neighbors then 2*(d*w_i^2)/2*w_i = d*w_i
+            dp.mul( 1.0/wsum );
+            //points[iG].f.add( dp ); // This would be gauss-seidel, but we need to do it in parallel, and we do-not want have dependency on order of points (pivottinh)
+            //dpos[iG].f.add( (Vec3f)dp ); // we may need to do += in future
+            dpos[iG].f = (Vec3f)dp; // we may need to do += in future
+            //fdpos[iG] = Vec3d{iG,1,2};
+        }
+        return dlmax;
+    }
+
+    double constr_jacobi_neighs2_diff(){
+        // This is constrain-solver
+        //   we know how much longer/shorter should be each bond (dls)
+        //   we need to solve for dpos (i.e. how much we should shift each point to make the bond correct length)
+        double dlmax = 0;
+        for(int iG=0; iG<nPoint; iG++){
+            const Quat4f dpi = dpos[iG];
+            Vec3f dp         = Vec3fZero;
+            double wsum      = 0;
+            for(int ij=0; ij<nNeighMax; ij++){
+                const int j  = nNeighMax*iG + ij;
+                const int2 b = neighBs[j];
+                if(b.x == -1) break;
+                const Vec3f  h  = (Vec3f)kDirs[b.y];
+                const Quat4f dpj = dpos[b.x];
+                float dl = h.dot( dpj.f - dpi.f ) + dls[ b.y ];
+                float mj = dpj.x;
+                float w  = dpi.w/(dpi.w+dpj.w);  // (1/mi)/(1/mi+1/mj) = mi*mj/( mi*(mi + mj)) = mj/(mi+mj)
+                dp.add_mul( h, dl*w*w );
+                wsum += w;
+                {
+                    dl    = (dl>0    ) ? dl : -dl;
+                    dlmax = (dl>dlmax) ? dl : dlmax;
+                }
+            }
+            dp.mul( 1.0/wsum );
+            dpos[iG].f = (Vec3f)dp;
+            //dpos[iG].f.add( dp ); // we may need to do += in future
+            //fdpos[iG] = Vec3d{iG,1,2};
+        }
+        return dlmax;
+    }
+
+
+    void run_constr_dynamics(int nitr, double dt ){
+        int nsolver = 3;
+        double dlconv = 1e-3;
+        //dt = 0.001;
+        dt = 1.0;
+        for(int i=0; i<nitr; i++){
+            move_dpos( dt );
+            for(int isolver=0; isolver<nsolver; isolver++){
+                double dlmax = constr_jacobi_neighs2_absolute();
+                //printf( "run_constr_dynamics[%i,%i] dlmax=%g \n", i,isolver,  dlmax );
+                apply_dpos( 1.5 );
+                //constr_jacobi_neighs2_diff();
+            }
+            update_velocity( dt );
+        }
+    }
+
 
     void solveLinearizedConjugateGradient(){
         // modified from    genLinSolve_CG()      /cpp/common/math/Lingebra.h
