@@ -179,16 +179,6 @@ def apply_sticks( dx, sticks, hdirs, constrKs=None, kReg=1e-2 ):
         f[j3+2] -= fb[2]
     return f
 
-def globalize( sticks, hdirs ):
-    global sticks_glob, hdirs_glob #, constrKs_glob, kReg_glob
-    sticks_glob    = sticks
-    hdirs_glob     = hdirs
-    #constrKs_glob  = np.zeros(len(hdirs)//2)
-    #kReg_glob      = 1e-2
-
-def dot_func( dx ):
-    return apply_sticks( dx, sticks_glob, hdirs_glob, constrKs=constrKs_glob, kReg=kReg_glob )
-
 def stickLenghs( sticks, ps ):
     ls = np.zeros(len(sticks))
     for ib,( i,j,k) in enumerate(sticks):

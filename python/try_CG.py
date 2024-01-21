@@ -19,7 +19,6 @@ def drawStricks( ps, sticks, ax=None, color='k', lw=1, ls='-' ):
     ax.add_collection(lc)
     #ax.axis('equal')
 
-
 def dynamics_PBD_GS( ps, ms, f0, sticks, niter=1, dt=0.2, nsolvmax=20, dlconv=1e-3 ):
     cmap   = plt.get_cmap('rainbow')
     colors = [cmap(i/float(nsolvmax)) for i in range(nsolvmax)]
@@ -106,7 +105,19 @@ def dynamics_PBD_GS( ps, ms, f0, sticks, niter=1, dt=0.2, nsolvmax=20, dlconv=1e
         plt.legend( loc='upper left' )
         plt.axis('equal')
 
-def dynamics( ps, f0, niter = 3, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True ):
+
+def globalize( sticks, hdirs ):
+    global sticks_glob, hdirs_glob #, constrKs_glob, kReg_glob
+    sticks_glob    = sticks
+    hdirs_glob     = hdirs
+    #constrKs_glob  = np.zeros(len(hdirs)//2)
+    #kReg_glob      = 1e-2
+
+def dot_func( dx ):
+    return cs.apply_sticks( dx, sticks_glob, hdirs_glob, constrKs=constrKs_glob, kReg=kReg_glob )
+
+
+def dynamics_CG( ps, f0, niter = 3, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True ):
     #cmap   = plt.get_cmap('rainbow')
     cmap   = plt.get_cmap('gist_rainbow')
     #cmap   = plt.get_cmap('jet')
@@ -127,7 +138,8 @@ def dynamics( ps, f0, niter = 3, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True )
 
     plt.figure(figsize=(3*niter,3))
     plt.subplot(1,niter,1)
-    plt.plot(   ps[:,0], ps[:,1], 'o-k' )
+    #plt.plot(   ps[:,0], ps[:,1], 'o-k' )
+    drawStricks( ps, sticks, color='k', ls = '--' )
     plt.quiver( ps[:,0], ps[:,1], f0[:,0], f0[:,1] )
     #plt.plot( ps[:,0]+x, ps[:,1]+y, 'o-' )
 
@@ -176,7 +188,8 @@ def dynamics( ps, f0, niter = 3, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True )
 
         fx = f[0::3]
         fy = f[1::3]
-        plt.plot  ( ps[:,0], ps[:,1], 'o:', label=("predicted[%i]" % i), color='k' )
+        #plt.plot  ( ps[:,0], ps[:,1], 'o:', label=("predicted[%i]" % i), color='k' )
+        drawStricks( ps, sticks, color='k', ls = ':' )
         plt.quiver( ps[:,0], ps[:,1], fx , fy, color='r', scale=1000.0 )
 
         #print( x.shape, y.shape, ps.shape )
@@ -185,10 +198,13 @@ def dynamics( ps, f0, niter = 3, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True )
         ps[:,1] += dp[1::3]
         mask = constrKs>1; ps[ mask,:] = ps0[ mask,:]   # return the constrained points to their original position
         
+        drawStricks( ps, sticks, color='k', ls = '-' )
+
         #plt.plot( ps[:,0], ps[:,1], 'o-', label=("step[%i]" % i) )
-        plt.plot( ps[:,0], ps[:,1], 'o-', label=("corected[%i]" % i), color='k' )
+        #plt.plot( ps[:,0], ps[:,1], 'o-', label=("corected[%i]" % i), color='k' )
         #plt.xlim(-5,5); 
         plt.ylim(-3,1)
+        plt.axis('equal')
 
 # =========== Main
 os.system('mode con: cols=100 lines=50')
@@ -246,9 +262,11 @@ f0 = np.array([
 [ 0.0, 0.0, 0.0],
 [ 0.0,-5.0, 0.0],
 ])
+constrKs = np.array([50.0, 0.0, 0.0, 0.0])
+kReg     = 5.0
 
 
-# dynamics( ps, f0, constrKs=constrKs, kReg=kReg )
+#dynamics_CG( ps, f0, constrKs=constrKs, kReg=kReg )
 
 dynamics_PBD_GS( ps, ms, f0, sticks )
 
