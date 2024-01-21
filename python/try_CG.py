@@ -8,7 +8,19 @@ from   matplotlib import collections  as mc
 
 import constrain_solver as cs
 
-def dynamics_PBD_GS( ps, ms, f0, sticks, niter=1, dt=0.5, nsolvmax=10, dlconv=1e-3 ):
+def drawStricks( ps, sticks, ax=None, color='k', lw=1, ls='-' ):
+    if ax is None: ax = plt.gca()
+    lines = []
+    for i1,i2,k in sticks:
+        p1 = ps[i1][:2]
+        p2 = ps[i2][:2]
+        lines.append( [p1,p2] )
+    lc = mc.LineCollection(lines, colors=color, linewidths=lw, linestyle=ls  )
+    ax.add_collection(lc)
+    #ax.axis('equal')
+
+
+def dynamics_PBD_GS( ps, ms, f0, sticks, niter=1, dt=0.2, nsolvmax=20, dlconv=1e-3 ):
     cmap   = plt.get_cmap('rainbow')
     colors = [cmap(i/float(nsolvmax)) for i in range(nsolvmax)]
     n = len(ps)
@@ -28,8 +40,8 @@ def dynamics_PBD_GS( ps, ms, f0, sticks, niter=1, dt=0.5, nsolvmax=10, dlconv=1e
     #    print("neighBs[%i]" %i, b)
     #exit()
 
-    f0[2,1] = -5.0
-    f0[2,0] =  5.0
+    # f0[2,1] = -5.0
+    # f0[2,0] =  5.0
 
     dp_sc = 1.2
     sc_1  = 2.0
@@ -43,10 +55,12 @@ def dynamics_PBD_GS( ps, ms, f0, sticks, niter=1, dt=0.5, nsolvmax=10, dlconv=1e
         
         v[:,:]  += f0[:,:]*dt   
         ps_bak = ps.copy()
-        plt.plot( ps_bak[:,0], ps_bak[:,1], 'o--k', label=("start[%i]" % i) )
+        #plt.plot( ps_bak[:,0], ps_bak[:,1], 'o--k', label=("start[%i]" % i) )
+        drawStricks( ps_bak, sticks, color='k' )
         ps[:,:] += v[:,:]*dt   
         ps_mov = ps.copy()
-        plt.plot( ps_mov[:,0], ps_mov[:,1], 'o:k',  label=("moved[%i]" % i) )
+        #plt.plot( ps_mov[:,0], ps_mov[:,1], 'o:k',  label=("moved[%i]" % i) )
+        drawStricks( ps_mov, sticks, color='k', ls = ':' )
         
         vdp[:,:] = 0.0
         
@@ -54,17 +68,15 @@ def dynamics_PBD_GS( ps, ms, f0, sticks, niter=1, dt=0.5, nsolvmax=10, dlconv=1e
             dps, dlmax = cs.constr_jacobi_neighs2_absolute( ps, neighBs, ms, l0s )
             
             #vdp[:,:] = dps[:,:]*1.5
+            #vdp[:,:] = dps[:,:]
+            cvf = 0  
 
-            cvf = 0        
             # if isolv==0:
             #     vdp[:,:]= dps*sc_1
             # else:
             #     dps *= dp_sc
-            #     #vdp *= bmix
-            #     vdp *= 0.5
-            #     #vdp *= 0
-            #     vdp += dps
-            # cvf = 0
+            #     vdp  = dps
+
             if isolv==0:
                 vdp[:,:]= dps*sc_1
             else:
@@ -86,7 +98,8 @@ def dynamics_PBD_GS( ps, ms, f0, sticks, niter=1, dt=0.5, nsolvmax=10, dlconv=1e
             plt.quiver( ps[:,0], ps[:,1], vdp[:,0], vdp[:,1], scale=1., scale_units='xy', width=0.002 )
             #plt.quiver( ps[:,0], ps[:,1], dps[:,0], dps[:,1] )
             ps[:,:] += vdp
-            plt.plot( ps    [:,0], ps[:,1], 'o-', c=colors[isolv], label=("final[%i|%i]" %(i,isolv)) )
+            drawStricks( ps, sticks, color=colors[isolv] )
+            #plt.plot( ps    [:,0], ps[:,1], 'o-', c=colors[isolv], label=("final[%i|%i]" %(i,isolv)) )
             if dlmax<dlconv: break
         v = (ps-ps_bak)/dt
 
@@ -181,6 +194,9 @@ def dynamics( ps, f0, niter = 3, dt=0.05, constrKs=None, kReg=5.0, bUseCG=True )
 os.system('mode con: cols=100 lines=50')
 np.set_printoptions(linewidth=np.inf)
 
+
+# =====  ROPE
+''''
 ps = np.array([     
     [-2.0, -0.0, 0.0],
     [-1.0, -0.0, 0.0],
@@ -188,9 +204,7 @@ ps = np.array([
     [+1.0, -0.0, 0.0],
     [+2.0, -0.0, 0.0],
 ])
-
 ms = np.array([ 1.0e+300, 1.0, 1.0, 1.0, 1.0e+300 ])
-
 k0 = 50.0
 sticks =[
  ( 0,1, k0 ),
@@ -198,7 +212,6 @@ sticks =[
  ( 2,3, k0 ),
  ( 3,4, k0 ),
 ]
-
 f0 = np.array([ 
 [ 0.0, 0.0, 0.0],
 [ 0.0, 0.0, 0.0],
@@ -206,9 +219,34 @@ f0 = np.array([
 [ 0.0, 0.0, 0.0],
 [ 0.0, 0.0, 0.0],
 ])
-
 constrKs = np.array([50.0, 0.0, 0.0, 0.0,50.0])
 kReg     = 5.0
+'''
+
+
+# =====  Minimal-Truss
+ps = np.array([     
+    [ 0.0,  0.0, 0.0],
+    [-1.0, -1.0, 0.0],
+    [+1.0, -1.0, 0.0],
+    [ 0.0, -2.0, 0.0],
+])
+ms = np.array([ 1.0e+300, 1.0, 1.0, 1.0, ])
+k0 = 50.0
+sticks =[
+ ( 0,1, k0 ),
+ ( 0,2, k0 ),
+ ( 3,1, k0 ),
+ ( 3,2, k0 ),
+ ( 1,2, k0 ),
+]
+f0 = np.array([ 
+[ 0.0, 0.0, 0.0],
+[ 0.0, 0.0, 0.0],
+[ 0.0, 0.0, 0.0],
+[ 0.0,-5.0, 0.0],
+])
+
 
 # dynamics( ps, f0, constrKs=constrKs, kReg=kReg )
 
