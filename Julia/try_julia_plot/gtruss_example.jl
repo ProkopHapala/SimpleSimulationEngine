@@ -224,9 +224,7 @@ function Plot_Structure(ne::Int64, connect::Array{Int64,2}, coord::Array{Float64
             display(plot!([x1,x2],[y1,y2], color=:red,legend=false));
 
         end #ele
-
     end #if length
-
 end
 
 
