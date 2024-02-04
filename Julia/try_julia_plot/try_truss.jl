@@ -1,5 +1,9 @@
+using Random
+
 include("ProjectedGuassSeidel.jl")
 include("plot_utils.jl")
+include("IterativeSolvers.jl")
+include("ProjectiveDynamics.jl")
 
 # =========== Data
 
@@ -37,10 +41,10 @@ plt = plot(legend=false, aspect_ratio = :equal )
 #plot_truss( plt, bonds, points0, c=:blue )
 
 # add random displacement to the points
+Random.seed!(1234)  # Sets the seed to 1234
 points = points0 + 0.1*randn(size(points0))
 points[1   ,:] = points0[1   ,:]
 points[nx+1,:] = points0[nx+1,:]
-
 
 # =========== Main Body
 
@@ -50,7 +54,29 @@ hs,ls   = process_bonds( bonds, points );
 dl     = ls - l0s
 strain = dl ./ l0s; #print("strain : "); display(strain)
 
-#A_      = build_PGSMatrix_direct( bonds, hs, l0s, masses, neighBs );
+#Ad      = build_PGSMatrix_direct( bonds, hs, l0s, masses, neighBs );
+
+# linear solve for the displacement x = A_ \cdot b
+#x = Ad \ dl
+dt = 0.1
+#print("x : "); display(x)
+gravity = [0.0, 0.0, -9.81] 
+pnew    = pnew = points .+ gravity' .* (dt^2)
+
+dt = 0.1
+A = make_PDMatrix( neighBs, bonds, masses, dt, ks )
+b = make_PD_rhs(   neighBs, bonds, masses, dt, ks, points, l0s, pnew )
+print( "b : "); display(b)
+print( "A : "); display(A)
+x0 = zeros(size(b)) 
+x  = SolveIterative( A, b, x0, niter=10, tol=1.e-3, method=1 )
+
+print("x : "); display(x)
+
+# solve A*x=b using direct solver
+x_ref = A \ b
+print("x_ref : "); display(x_ref)
+
 
 # A, J, M = build_PGSMatrix(bonds, points, masses)
 
