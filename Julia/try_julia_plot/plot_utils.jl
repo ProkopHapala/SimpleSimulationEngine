@@ -3,7 +3,7 @@ using Plots
 
 
 #function Plot_Structure( bonds::Array{Int64,2}, points::Array{Float64,2} )
-function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, lw=1.0 )
+function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, lw=1.0, bPoints=false )
     #plt = plot(legend=false, aspect_ratio = :equal )
     nb    = length(bonds)
     ix,iy = axes
@@ -25,7 +25,25 @@ function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, l
         plot!( plt, [pi[ix],pj[ix]], [pi[iy],pj[iy]], color=c, legend=false, lw=lw )
     end 
     # Plot each point
-    pxs, pys = points[:, ix], points[:, iy]
-    scatter!(plt, pxs, pys, color=c, marker=:circle)
+    if bPoints
+        pxs, pys = points[:, ix], points[:, iy]
+        scatter!(plt, pxs, pys, color=c, marker=:circle)
+    end
+
     #display( plt )
+end
+
+#plot matrix using heatmap
+function plot_matrix_bwr( plt, A )
+    # select color
+    cmap = cgrad(:bwr)
+    vmax = max( abs(minimum(A)), abs(maximum(A)) )
+    return heatmap!( plt, A, aspect_ratio = :equal , color=cmap, colorbar=true, clim=(-vmax,vmax) )
+end
+
+#plot log of absolute value of matrix using heatmap
+function plot_matrix_log( plt, A, vrange=6.0, cmap=:default )
+    logA = log10.( abs.(A) .+ 1.e-300 )
+    vmax = maximum(logA)
+    return heatmap!(plt, logA, aspect_ratio = :equal, colorbar=true, clim=(vmax-vrange,vmax) )
 end

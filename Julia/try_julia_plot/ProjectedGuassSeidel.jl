@@ -88,9 +88,9 @@ function process_bonds( bonds, points )
     return hs, ls
 end
 
-function point_neighBs(bonds, points)
-    np = size(points, 1)
-    nb = size(bonds,  1)
+function point_neighBs(bonds, np )
+    #np = size(points, 1)
+    #nb = size(bonds,  1)
     #neighBs = Vector{Vector{Int}}(undef, nps)
     neighBs = [ Vector{Int}() for _ in 1:np ]    
     for (ib, (i,j)) in enumerate(bonds)
@@ -101,6 +101,47 @@ function point_neighBs(bonds, points)
     return neighBs
 end
 
+function point_neighs(bonds, np, bSort=:true )
+    #np = size(points, 1)
+    #nb = size(bonds,  1)
+    neighs = [ Vector{Int}() for _ in 1:np ]    
+    for (ib, (i,j)) in enumerate(bonds)
+        #println("ib, (i,j) : ", ib, " ", (i,j) )
+        push!( neighs[i], j )
+        push!( neighs[j], i )
+    end
+    # sort vectors inside neighs
+    if bSort
+        for i in 1:np
+            sort!(neighs[i])
+        end
+    end
+    return neighs
+end  
+
+function point_neighs2( neighs )
+    np = length(neighs)
+    #ngmax = maximum( [length(ng) for ng in neighs] )
+    #mask = zeros(Bool, ngmax)
+    found = Set{Int}()
+    neighs2 = [ Vector{Int}() for _ in 1:np ]
+    for i in 1:np
+        ngi=neighs[i]
+        empty!(found)
+        for j in ngi
+            ngj=neighs[j]
+            for k in ngj
+                if( k != i )
+                    #found.add(k)
+                    push!(found, k)
+                end
+            end
+        end
+        neighs2[i] = collect(found) # convert Set to Vector
+        sort!(neighs2[i])
+    end
+    return neighs2
+end
 # ======= Bulding system as dense matrices ( A, J, M )
 
 function build_Jacobian(bonds, points)
