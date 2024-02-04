@@ -30,12 +30,15 @@ bonds = [
 
 #bonds, points, masses = buildRope( 11 )
 #nx = 3; ny = 3
-nx = 3; ny = 3
+#nx = 3; ny = 3
 
 #nx = 10; ny = 10
+nx = 30; ny = 30
+#nx = 50; ny = 50
 
-bonds, points0, masses, ks = buildGrid2D( nx,ny, kDiag=1.0 )
-_, l0s = process_bonds( bonds, points0 );
+print("buildGrid2D()"); @time   bonds, points0, masses, ks = buildGrid2D( nx,ny, kDiag=1.0 )
+print("process_bonds()"); @time   _, l0s = process_bonds( bonds, points0 );
+
 
 #print("bonds :");  display(bonds)
 #print("points :"); display(points)
@@ -53,11 +56,13 @@ points[nx+1,:] = points0[nx+1,:]
 
 # =========== Main Body
 np = size(points,1)
-neighs  = point_neighs( bonds,  np )     #;print("neighs : "); display(neighs)
-neighBs = point_neighBs( bonds, np )      #;
-hs,ls   = process_bonds( bonds, points )  #;
+print("point_neighs()"); @time neighs  = point_neighs( bonds,  np )     #;print("neighs : "); display(neighs)
+print("point_neighBs()"); @time neighBs = point_neighBs( bonds, np )      #;
+print("process_bonds()"); @time hs,ls   = process_bonds( bonds, points )  #;
 
-neighs2 = point_neighs2( neighs )    #; print("neighs2 : "); display(neighs2)
+#neighsets::Array{Set{Int}} = [ Set(neighs[i]) for i in 1:np ] 
+
+print("point_neighs2()");@time neighs2 = point_neighs2( neighs )    #; print("neighs2 : "); display(neighs2)
 
 #return
 
@@ -74,32 +79,33 @@ gravity = [0.0, 0.0, -9.81]
 pnew    = pnew = points .+ gravity' .* (dt^2)
 
 dt = 0.1
-A = make_PDMatrix( neighBs, bonds, masses, dt, ks )                     # ;print( "A : "); display(A)
-b = make_PD_rhs(   neighBs, bonds, masses, dt, ks, points, l0s, pnew )  # ;print( "b : "); display(b)
+print("make_PDMatrix()");@time  A = make_PDMatrix( neighBs, bonds, masses, dt, ks )                     # ;print( "A : "); display(A)
+print("make_PD_rhs()");@time    b = make_PD_rhs(   neighBs, bonds, masses, dt, ks, points, l0s, pnew )  # ;print( "b : "); display(b)
 
 #Ch = cholesky(A);             #;print("Cholesky.L : "); display(Ch.L)
 #L  = CholeskyDecomp( A )       ;print("L : "); display(L)
 #L_ = CholeskyDecomp_Crout( A ) ;print("L_ : "); display(L_)
 #Ch = cholesky(A);              ;print("Cholesky.L : "); display(Ch.L)
-@time begin
-L_C = CholeskyDecomp_Crout( A )          #;print("L_C: "); display(L_C)
-end
-@time begin
-L_   = CholeskyDecomp_sparse( A, neighs ) #;print("L_: "); display(L_)
-end
-@time begin
-L  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)
-end
+print("CholeskyDecomp_Crout()");@time   L_C = CholeskyDecomp_Crout( A )          #;print("L_C: "); display(L_C)
 
 
-plot_matrix_log(plt, L-L_C )
+# L_   = CholeskyDecomp_sparse( A, neighs ) #;print("L_: "); display(L_)
+
+
+print("CholeskyDecomp_sparse()");@time L,neighsCh  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)
+
+
+#print("neighsCh"); display(neighsCh)
+
+#plot_matrix_log(plt, L-L_C )
+plot_matrix_log(plt, abs.(L) .> 1e-16 )
 #plot_matrix_log(plt, L-L_ )
 
-#display( plt ); return
+
 
 U  = copy(L') 
-println("CholeskyDecomp_sparse max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L*U      - A)) );
-println("CholeskyDecomp_Crout  max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L_C*L_C' - A)) );
+println("CholeskyDecomp_sparse() max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L*U      - A)) );
+println("CholeskyDecomp_Crout()  max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L_C*L_C' - A)) );
 
 #plot_matrix_log(plt, Ch.L )
 #plot_matrix_log(plt, L )
@@ -110,8 +116,22 @@ println("CholeskyDecomp_Crout  max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L_C
 #x_ch = backsub_bak(  U,y_ch)     ;print("x_chb : "); display(x_ch)
 
 
-y_ch = forwardsub(L,b)  #;print("y_ch : "); display(y_ch)
-x_ch = backsub(U,y_ch)  #;print("x_ch : "); display(x_ch)
+print("forwardsub()");@time y_ch = forwardsub(L,b)  #;print("y_ch : "); display(y_ch)
+print("backsub()");@time    x_ch = backsub(U,y_ch)  #;print("x_ch : "); display(x_ch)
+
+neighsL = mapMatrixNeighs(L)    #;print("neighsL"); display(neighsL)   
+neighsU = invNeighs( neighsL )
+
+print("forwardsub()");@time y_ch_ = forwardsub_sparse(L,b   ,neighsL)  #;print("y_ch : "); display(y_ch)
+print("backsub()");@time    x_ch_ = backsub_sparse(   U,y_ch,neighsU)  #;print("x_ch : "); display(x_ch)
+
+println("max_error=max(abs(y_ch-y_ch_)) : ", maximum(abs.(y_ch-y_ch_)) );
+println("max_error=max(abs(x_ch-x_ch_)) : ", maximum(abs.(x_ch-x_ch_)) );
+
+
+
+display( plt ); return
+
 x_ref = A \ b           #;print("x_ref : ");display(x_ref)
 
 x_err = x_ch - x_ref    #;print("x_err : ");display(x_err)
@@ -156,7 +176,7 @@ display( plt )
 
 ==#
 display( plt )
-end # function main
+end # function mai
 
 
 main()

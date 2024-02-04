@@ -49,7 +49,7 @@ p_c                                  :  is the projection of q into the energy-f
 
 # ======= Bulding system as dense matrix  
 
-function make_PDMatrix( neighBs, bonds, masses, dt, ks )
+function make_PDMatrix( neighBs::Array{Vector{Float64},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1} )
     # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
     #       resp. eq.14 in the same paper, or eq.14 in https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems
     np = length(masses)
@@ -74,7 +74,7 @@ function make_PDMatrix( neighBs, bonds, masses, dt, ks )
     return A
 end 
 
-function make_PD_rhs( neighBs, bonds, masses, dt, ks, points, l0s, pnew )
+function make_PD_rhs( neighBs::Array{Vector{Float64},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1}, points::Array{Float64,2}, l0s::Array{Float64,1}, pnew::Array{Float64,2} )
     # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
     #       resp. eq.14 in the same paper, or eq.14 in https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems
     np = length(masses)

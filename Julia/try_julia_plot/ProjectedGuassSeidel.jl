@@ -5,7 +5,7 @@ using LinearAlgebra
 
 # =========== Functions
 
-function buildRope( n, m=1.0, m_end=1000.0, l=1.0 )
+function buildRope( n::Int, m::Float64=1.0, m_end::Float64=1000.0, l::Float64=1.0 )
     bonds = [ (i,i+1) for i=1:(n-1) ]
     masses = [m_end; ones(n-2)*m; m_end]
     points = zeros(n, 3)
@@ -16,7 +16,7 @@ function buildRope( n, m=1.0, m_end=1000.0, l=1.0 )
     return bonds, points, masses
 end
 
-function buildGrid2D( nx,ny; m=1.0, m_end=1000.0, l=1.0, k=1.0, kDiag=-1.0 )
+function buildGrid2D( nx::Int,ny::Int; m::Float64=1.0, m_end::Float64=1000.0, l::Float64=1.0, k::Float64=1.0, kDiag::Float64=-1.0 )
     np = (nx+1)*(ny+1)
     #print("np :"); display(np)
     masses = ones(np)*m
@@ -71,7 +71,7 @@ function buildGrid2D( nx,ny; m=1.0, m_end=1000.0, l=1.0, k=1.0, kDiag=-1.0 )
     return bonds, points, masses, ks
 end
 
-function process_bonds( bonds, points )
+function process_bonds( bonds::Array{Tuple{Int,Int},1}, points::Array{Float64,2} )
     #println("process_bonds");
     n  = length(bonds)
     ls = zeros(n)
@@ -88,7 +88,7 @@ function process_bonds( bonds, points )
     return hs, ls
 end
 
-function point_neighBs(bonds, np )
+function point_neighBs( bonds::Array{Tuple{Int,Int},1}, np::Int )
     #np = size(points, 1)
     #nb = size(bonds,  1)
     #neighBs = Vector{Vector{Int}}(undef, nps)
@@ -101,7 +101,7 @@ function point_neighBs(bonds, np )
     return neighBs
 end
 
-function point_neighs(bonds, np, bSort=:true )
+function point_neighs(bonds::Array{Tuple{Int,Int},1}, np::Int, bSort::Bool=true)
     #np = size(points, 1)
     #nb = size(bonds,  1)
     neighs = [ Vector{Int}() for _ in 1:np ]    
@@ -119,7 +119,7 @@ function point_neighs(bonds, np, bSort=:true )
     return neighs
 end  
 
-function point_neighs2( neighs )
+function point_neighs2( neighs::Array{Vector{Int},1} )
     np = length(neighs)
     #ngmax = maximum( [length(ng) for ng in neighs] )
     #mask = zeros(Bool, ngmax)
@@ -144,7 +144,7 @@ function point_neighs2( neighs )
 end
 # ======= Bulding system as dense matrices ( A, J, M )
 
-function build_Jacobian(bonds, points)
+function build_Jacobian(bonds::Array{Tuple{Int,Int},1}, points::Array{Float64,2} )
     hs, l0s = process_bonds( bonds, points )
     nb      = length(bonds)
     np      = size(points, 1)
@@ -159,7 +159,7 @@ function build_Jacobian(bonds, points)
     return J, l0s, hs
 end
 
-function build_MassMatrix(ms)
+function build_MassMatrix(ms::Array{Float64,1} )
     #nps    = length(ms)
     M_diag = repeat(ms, inner=3 )
     M      = Diagonal(M_diag)
@@ -175,7 +175,7 @@ end
 
 # ======= Bulding system as sparse solver
 
-function build_PGSMatrix_direct( bonds, hs, ms, neighBs )
+function build_PGSMatrix_direct( bonds::Array{Tuple{Int,Int},1}, hs::Array{Float64,2}, ms::Array{Float64,1}, neighBs::Array{Vector{Int},1} )
     """
     Calculate the dot product of A = J*M*J^T with a vector x
     k,l index of bonds
