@@ -46,9 +46,7 @@ print("process_bonds()"); @time   _, l0s = process_bonds( bonds, points0 );
 #f_grav = [ gravity .* m for m in masses ]   
 #println( "typeof(masses) ", typeof(masses) )
 
-f_grav = masses .* gravity'
-
-print("f_grav : "); display(f_grav)
+f_grav = masses .* gravity'    #;print("f_grav : "); display(f_grav)
 
 plt = plot(legend=false, aspect_ratio = :equal )
 
@@ -69,13 +67,36 @@ print("point_neighs2()");@time neighs2 = point_neighs2( neighs )    #; print("ne
 
 #print("bonds :");  display(bonds)
 #print("points :"); display(points)
-print("masses :"); display(masses)
+#print("masses :"); display(masses)
 print("make_PDMatrix()");@time  A = make_PD_Matrix( neighBs, bonds, masses, dt, ks )                     # ;print( "A : "); display(A)
 
 print("CholeskyDecomp_sparse()");@time L,neighsCh  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)
+print("CholeskyDecomp_sparse()");@time L_C         = CholeskyDecomp_Crout( A ) #;print("L: "); display(L)
 U  = copy(L') 
+println("CholeskyDecomp_sparse() max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L*U      - A)) );
+println("CholeskyDecomp_Crout()  max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L_C*L_C' - A)) );
+
+#AFact = factorize(A) ;print("AFact : "); display(AFact)
+AFact = cholesky(A) #;print("AFact : "); display(AFact)
+
+dL = L - AFact.L
+dU = U - AFact.U
+
+#plot_matrix_log(plt, dL )
+plot_matrix_log(plt, dU )
+
+
+
 print("mapMatrixNeighs()");@time neighsL = mapMatrixNeighs(L)    #;print("neighsL"); display(neighsL)   
 print("invNeighs()"      );@time neighsU = invNeighs( neighsL )
+
+#plot_matrix_log(plt, L )
+#plot_matrix_log(plt, abs.(L) .> 1e-16 )
+
+invA = inv(A)      #;print("invA : "); display(invA)
+#plot_matrix_log(plt, invA )
+#plot_matrix_log(plt, abs.(invA) .> 1e-6 )
+
 
 print("process_bonds()"); @time hs,ls   = process_bonds( bonds, points )  #;
 
@@ -119,7 +140,8 @@ plot_truss( plt, bonds, points0, lw=1.0, c=:black )
 #plot_truss( plt, bonds, points,  lw=1.0, strain=strain*10.0, )
 plot_truss( plt, bonds, points,  lw=1.0, c=:red )
 
-bSparseCholesky = false
+#bSparseCholesky = false
+bSparseCholesky = true
 niter = 100
 for i=1:niter
     pnew   = points .+ v*dt .+ f_ext*(dt^2)
@@ -128,10 +150,29 @@ for i=1:niter
     b      = make_PD_rhs( neighBs, bonds, masses, dt, ks, points, l0s, pnew )  # ;print( "b : "); display(b)
     
     if bSparseCholesky
-        y_ch = forwardsub_sparse(L,b   ,neighsL)  #;print("y_ch : "); display(y_ch)
-        pnew = backsub_sparse(   U,y_ch,neighsU)  #;print("x_ch : "); display(x_ch)
+        #y_ch = forwardsub(L,b   )  #;print("y_ch : "); display(y_ch)
+        #pnew = backsub(   U,y_ch)  #;print("x_ch : "); display(x_ch)
+
+        #y_ch = forwardsub_sparse(L,b   ,neighsL)  #;print("y_ch : "); display(y_ch)
+        #pnew = backsub_sparse(   U,y_ch,neighsU)  #;print("x_ch : "); display(x_ch)
+
+        #y    = forwardsub(L,b)
+        #pnew = backsub(   U,y)
+
+        #L = Matrix(AFact.L)
+        #U = Matrix(AFact.U)
+
+        y    = forwardsub(L,b)
+        pnew = backsub(   U,y)
+
+        y    = AFact.L \ b
+        pnew = AFact.U \ y
+
+        #pnew = AFact \ b
+
+        #pnew = invA * b 
     else
-        pnew   = A \ b
+        pnew = A \ b
     end
 
 
