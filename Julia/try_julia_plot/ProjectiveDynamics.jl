@@ -49,7 +49,7 @@ p_c                                  :  is the projection of q into the energy-f
 
 # ======= Bulding system as dense matrix  
 
-function make_PDMatrix( neighBs::Array{Vector{Float64},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1} )
+function make_PD_Matrix( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1} )
     # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
     #       resp. eq.14 in the same paper, or eq.14 in https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems
     np = length(masses)
@@ -61,20 +61,23 @@ function make_PDMatrix( neighBs::Array{Vector{Float64},1}, bonds::Array{Tuple{In
             k = ks[ib]
             Aii += k
             (i_,j_) = bonds[ib]
+            # I think there is error in the paper https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations. Fratarcangeli, M., Wang, H., & Yang, Y. (2018).  SIGGRAPH Asia 2018 Courses, 1–45.
+            #  the off-diagonal elements should be -k, not +k
             if     ( j_ > i )
-                A[i,j_] = k
-                A[j_,i] = k
+                A[i,j_] = -k
+                A[j_,i] = -k
             elseif ( i_ > i )
-                A[i,i_] = k
-                A[i_,i] = k
+                A[i,i_] = -k
+                A[i_,i] = -k
             end 
         end
         A[i,i] += Aii
     end
+    println( "make_PDMatrix() DONE !!!!!!!!!!!!!!!!!!!!! " )
     return A
 end 
 
-function make_PD_rhs( neighBs::Array{Vector{Float64},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1}, points::Array{Float64,2}, l0s::Array{Float64,1}, pnew::Array{Float64,2} )
+function make_PD_rhs( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1}, points::Array{Float64,2}, l0s::Array{Float64,1}, pnew::Array{Float64,2} )
     # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
     #       resp. eq.14 in the same paper, or eq.14 in https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems
     np = length(masses)

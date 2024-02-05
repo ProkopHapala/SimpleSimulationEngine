@@ -35,8 +35,10 @@ function buildGrid2D( nx::Int,ny::Int; m::Float64=1.0, m_end::Float64=1000.0, l:
     end
     #print("points :"); display(points)
     # bonds loop over iy,ix
-    bonds = []
-    ks    = [] 
+    bonds = Array{Tuple{Int,Int},1}(undef, 0)
+    ks    = Array{Float64,1}(undef, 0)
+    #fixed = Set{Int}()
+    fixed = [1, nx+1]
     for iy=1:ny+1
         for ix=1:nx+1
             i = (iy-1)*(nx+1) + ix
@@ -68,7 +70,15 @@ function buildGrid2D( nx::Int,ny::Int; m::Float64=1.0, m_end::Float64=1000.0, l:
         end
     end
     #print("bonds :"); display(bonds)
-    return bonds, points, masses, ks
+
+    println( "bonds:",  typeof(bonds) )
+    println( "points:", typeof(points) )
+    println( "masses:", typeof(masses) )
+    println( "ks:", typeof(ks) )
+
+    println("buildGrid2D() DONE !!!!!!!!!!!!!!!!!!!!! ")
+
+    return bonds, points, masses, ks, fixed
 end
 
 function process_bonds( bonds::Array{Tuple{Int,Int},1}, points::Array{Float64,2} )
