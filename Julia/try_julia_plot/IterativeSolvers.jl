@@ -366,7 +366,7 @@ function forwardsub_sparse(L::Array{Float64,2}, b::Array{Float64,2}, neighs::Arr
     return x
 end
 
-function backsub(U::Array{Float64,2},b::Array{Float64,2})
+function backsub_bad(U::Array{Float64,2},b::Array{Float64,2})
     n = size(U,1)
     x = zeros( size(b)   )
     s = zeros( size(b,2) )
@@ -381,6 +381,23 @@ function backsub(U::Array{Float64,2},b::Array{Float64,2})
         x[i,:] = ( b[i] .- s[:] ) ./ U[i,i]
     end    
     #println("backsub_sparse() nops=", nop );   
+    return x
+end
+
+function backsub(U::Array{Float64,2}, b::Array{Float64,2})
+    n = size(U, 1)
+    x = zeros(size(b))
+    s = zeros(size(b, 2))
+    x[n, :] = b[n, :] / U[n, n]  # Corrected to element-wise operation
+    nop = 0
+    for i = n-1:-1:1
+        s[:] .= 0.0
+        for j = i+1:n
+            s[:] .+= U[i, j] * x[j, :]
+            nop += 1
+        end
+        x[i, :] = (b[i, :] .- s[:]) ./ U[i, i]  # Corrected to element-wise operation
+    end
     return x
 end
 

@@ -70,14 +70,11 @@ function buildGrid2D( nx::Int,ny::Int; m::Float64=1.0, m_end::Float64=1000.0, l:
         end
     end
     #print("bonds :"); display(bonds)
-
-    println( "bonds:",  typeof(bonds) )
-    println( "points:", typeof(points) )
-    println( "masses:", typeof(masses) )
-    println( "ks:", typeof(ks) )
-
-    println("buildGrid2D() DONE !!!!!!!!!!!!!!!!!!!!! ")
-
+    #println( "bonds:",  typeof(bonds) )
+    #println( "points:", typeof(points) )
+    #println( "masses:", typeof(masses) )
+    #println( "ks:", typeof(ks) )
+    #println("buildGrid2D() DONE !!!!!!!!!!!!!!!!!!!!! ")
     return bonds, points, masses, ks, fixed
 end
 

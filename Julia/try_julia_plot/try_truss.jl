@@ -25,6 +25,7 @@ ToDo:
 # =========== Data
 
 function test_Factorization( A::Array{Float64,2} )
+plt = plot(legend=false, aspect_ratio = :equal )
 #Ch = cholesky(A);             #;print("Cholesky.L : "); display(Ch.L)
 #L  = CholeskyDecomp( A )       ;print("L : "); display(L)
 #L_ = CholeskyDecomp_Crout( A ) ;print("L_ : "); display(L_)
@@ -34,7 +35,7 @@ print("CholeskyDecomp_Crout()");@time   L_C = CholeskyDecomp_Crout( A )         
 print("CholeskyDecomp_sparse()");@time L,neighsCh  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)
 #print("neighsCh"); display(neighsCh)
 #plot_matrix_log(plt, L-L_C )
-plot_matrix_log(plt, abs.(L) .> 1e-16 )
+#plot_matrix_log(plt, abs.(L) .> 1e-16 )
 #plot_matrix_log(plt, L-L_ )
 U  = copy(L') 
 println("CholeskyDecomp_sparse() max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L*U      - A)) );
@@ -80,6 +81,7 @@ end
 ###################
 
 function main( nx=5, ny=5, dt=5.0 )
+#function main( nx=5, ny=5, dt=5.0 )    
 # ==== Sytem 1 : triangle (3 points, 3 sticks)
 # ==== Sytem 2 : rope with 10 segments (11 points, 10 sticks)
 #bonds, points, masses = buildRope( 11 )
@@ -104,7 +106,6 @@ print("process_bonds()"); @time   _, l0s = process_bonds( bonds, points0 );
 f_grav = masses .* gravity'    #;print("f_grav : "); display(f_grav)
 
 plt = plot(legend=false, aspect_ratio = :equal )
-
 #plot_truss( plt, bonds, points0, c=:blue )
 
 # add random displacement to the points
@@ -128,24 +129,25 @@ print("make_PDMatrix()");  @time  A = make_PD_Matrix( neighBs, bonds, masses, dt
 #make_PD_Matrix( neighBs::Array{Vector{Float64},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1} )
 #print("make_PDMatrix()"); @time  A = make_PD_Matrix( neighBs, bonds, masses, dt, ks )                     # ;print( "A : "); display(A)
 #print("make_PD_rhs()");   @time  b = make_PD_rhs(   neighBs, bonds, masses, dt, ks, points, l0s, pnew )  # ;print( "b : "); display(b)
-print(" ==== projective dynamics matrix A: "); display(A)
+#print(" ==== projective dynamics matrix A: "); display(A)
 
 # =========== Matrix Factorization (or inversion) for efficient solution of linear system later
 
 print("CholeskyDecomp_sparse()"); @time L,neighsCh  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)    # evaluate Cholensky decomposition for sparse matrix (efficient)
 print("CholeskyDecomp_Crout() "); @time L_C         = CholeskyDecomp_Crout( A ) #;print("L: "); display(L)                      # evaluate Cholensky decomposition using Cholesky–Crout algorithm
 U  = copy(L') 
+
+"""
+# ----- Check our Cholensky decomposition versus Julia's native cholesky() algorithm
 println("CholeskyDecomp_sparse() max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L*U      - A)) );                     #  evaluate error of CholeskyDecomp_sparse()
 println("CholeskyDecomp_Crout()  max_error=max(abs(L*L^T-A)) : ", maximum(abs.(L_C*L_C' - A)) );                     #  evaluate error of CholeskyDecomp_Crout() 
-
 #AFact = factorize(A) ;print("AFact : "); display(AFact)
 AFact = cholesky(A) #;print("AFact : "); display(AFact)                                                              #  evaluate Cholensky decomposition using Julia's native cholesky() algorithm
-
 dL = L - AFact.L     # evaluate error of CholeskyDecomp_sparse()  with respect to Julia's native cholesky() algorithm
 dU = U - AFact.U     # evaluate error of CholeskyDecomp_sparse()  with respect to Julia's native cholesky() algorithm
-
 plot_matrix_log(plt, dL )  #  plot error of  CholeskyDecomp_sparse()  with respect to Julia's native cholesky() algorithm
-plot_matrix_log(plt, dU )   #  plot error of  CholeskyDecomp_sparse()  with respect to Julia's native cholesky() algorithm                                    
+plot_matrix_log(plt, dU )  #  plot error of  CholeskyDecomp_sparse()  with respect to Julia's native cholesky() algorithm                                    
+"""
 
 print("mapMatrixNeighs()"); @time neighsL = mapMatrixNeighs(L)    #;print("neighsL"); display(neighsL)   # find which elements of L are non-zero ( for each row    i map all non-zero Aij to columns j )
 print("invNeighs()");       @time neighsU = invNeighs( neighsL )      #;print("neighsU"); display(neighsU)     # find non-zero back-neighbors          ( for each column j map all non-zero Aij to rows    i )
@@ -204,8 +206,8 @@ for i=1:niter
         #pnew = backsub_sparse(   U,y_ch,neighsU)  #;print("x_ch : "); display(x_ch)
 
         # ---- Method 3)   using  forward-and-backsubstitution with Our Cholensky factorization
-        #y    = forwardsub(L,b)
-        #pnew = backsub(   U,y)
+        y    = forwardsub(L,b)
+        pnew = backsub(   U,y)
 
         # ---- Method 4)   using  forward-and-backsubstitution with Our Cholensky factorization from Julia's native algorithm
         #L = Matrix(AFact.L)
@@ -214,8 +216,11 @@ for i=1:niter
         #pnew = backsub(   U,y)
 
         # ---- Method 5b)   using factorization by Julia's native algorithm
-        y    = L \ b
-        pnew = U \ y
+        #y    = L \ b
+        #y    = forwardsub(L,b)
+        #pnew = U \ y
+        #pnew    = forwardsub(U,y)
+        #pnew = backsub(   U,y)
 
         # ---- Method 5)   using factorization by Julia's native algorithm
         #y    = AFact.L \ b
