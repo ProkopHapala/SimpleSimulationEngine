@@ -73,7 +73,7 @@ function make_PD_Matrix( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,I
         end
         A[i,i] += Aii
     end
-    println( "make_PDMatrix() DONE !!!!!!!!!!!!!!!!!!!!! " )
+    #println( "make_PDMatrix() DONE !!!!!!!!!!!!!!!!!!!!! " )
     return A
 end 
 

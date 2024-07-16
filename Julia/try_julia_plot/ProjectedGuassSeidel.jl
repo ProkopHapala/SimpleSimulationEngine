@@ -130,6 +130,7 @@ function point_neighs(bonds::Array{Tuple{Int,Int},1}, np::Int, bSort::Bool=true)
 end  
 
 function point_neighs2( neighs::Array{Vector{Int},1} )
+    # this function finds the neighbors of the neighbors ( i.e. second order neighbors )
     np = length(neighs)
     #ngmax = maximum( [length(ng) for ng in neighs] )
     #mask = zeros(Bool, ngmax)

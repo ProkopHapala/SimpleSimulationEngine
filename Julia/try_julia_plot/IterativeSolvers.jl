@@ -119,7 +119,7 @@ function CholeskyDecomp_Crout( A::Array{Float64,2} )
             L[i,j] = ( A[i,j] - sum1) / L[j,j]
         end
     end
-    println("CholeskyDecomp_Crout() nops=", nop );
+    #println("CholeskyDecomp_Crout() nops=", nop );
     return L
 end
 
@@ -225,7 +225,7 @@ function CholeskyDecomp_sparse( A::Array{Float64,2}, neighs::Array{Vector{Int},1
         nngmax = max( nngmax, length(ngs) )
     end
     neighsCh = [ sort!(collect(ngs)) for ngs in neighsets ]
-    println("CholeskyDecomp_sparse() nops=", nop, " nngmax=", nngmax );
+    #println("CholeskyDecomp_sparse() nops=", nop, " nngmax=", nngmax );
     return L, neighsCh
 end
 
@@ -293,6 +293,7 @@ function IncompleteCholeskyDecompSparse(a::Array{Float64,2}, neighs::Array{Vecto
 end
 
 function mapMatrixNeighs( A::Array{Float64,2}, tol::Float64 = 1.e-16 )
+    # find which rows i are coupled with witch columns j by matrix elements Aij 
     n = size(A,1)
     neighs  = [ Vector{Int}() for _ in 1:n ]   
     #neighsT = [ Vector{Int}() for _ in 1:n ]
@@ -309,7 +310,7 @@ function mapMatrixNeighs( A::Array{Float64,2}, tol::Float64 = 1.e-16 )
         nngmax = max( nngmax, nngi )
         #println("[$i] nngi : ", nngi )
     end
-    println("mapMatrixNeighs() nngmax : ", nngmax )
+    #println("mapMatrixNeighs() nngmax : ", nngmax )
     return neighs #, neighsT
 end
 
@@ -341,7 +342,7 @@ function forwardsub(L::Array{Float64,2},b::Array{Float64,2})
         end
         x[i,:] = ( b[i,:] .- s[:] ) ./ L[i,i]
     end    
-    println("forwardsub() nops=", nop );   
+    #println("forwardsub() nops=", nop );   
     return x
 end
 
@@ -361,7 +362,7 @@ function forwardsub_sparse(L::Array{Float64,2}, b::Array{Float64,2}, neighs::Arr
         end
         x[i,:] = ( b[i,:] .- s[:] ) ./ L[i,i]
     end  
-    println("forwardsub_sparse() nops=", nop );     
+    #println("forwardsub_sparse() nops=", nop );     
     return x
 end
 
@@ -379,7 +380,7 @@ function backsub(U::Array{Float64,2},b::Array{Float64,2})
         end
         x[i,:] = ( b[i] .- s[:] ) ./ U[i,i]
     end    
-    println("backsub_sparse() nops=", nop );   
+    #println("backsub_sparse() nops=", nop );   
     return x
 end
 
@@ -399,7 +400,7 @@ function backsub_sparse(U::Array{Float64,2},b::Array{Float64,2}, neighs::Array{V
         end
         x[i,:] = ( b[i] .- s[:] ) ./ U[i,i]
     end 
-    println("backsub_sparse() nops=", nop );   
+    #println("backsub_sparse() nops=", nop );   
     return x
 end
 
