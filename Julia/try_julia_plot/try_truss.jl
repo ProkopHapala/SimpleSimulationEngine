@@ -198,16 +198,16 @@ for i=1:niter
     b      = make_PD_rhs( neighBs, bonds, masses, dt, ks, points, l0s, pnew )  # ;print( "b : "); display(b)
             
         # ---- Method 1)
-        #y_ch = forwardsub(L,b   )  #;print("y_ch : "); display(y_ch)
+        #y    = forwardsub(L,b   )  #;print("y_ch : "); display(y_ch)
         #pnew = backsub(   U,y_ch)  #;print("x_ch : "); display(x_ch)
 
         # ---- Method 2)
-        #y_ch = forwardsub_sparse(L,b   ,neighsL)  #;print("y_ch : "); display(y_ch)
-        #pnew = backsub_sparse(   U,y_ch,neighsU)  #;print("x_ch : "); display(x_ch)
+        y    = forwardsub_sparse(L,b,neighsL)  #;print("y_ch : "); display(y_ch)
+        pnew = backsub_sparse(   U,y,neighsU)  #;print("x_ch : "); display(x_ch)
 
         # ---- Method 3)   using  forward-and-backsubstitution with Our Cholensky factorization
-        y    = forwardsub(L,b)
-        pnew = backsub(   U,y)
+        #y    = forwardsub(L,b)
+        #pnew = backsub(   U,y)
 
         # ---- Method 4)   using  forward-and-backsubstitution with Our Cholensky factorization from Julia's native algorithm
         #L = Matrix(AFact.L)

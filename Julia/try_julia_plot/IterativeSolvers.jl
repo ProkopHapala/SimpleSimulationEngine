@@ -405,7 +405,8 @@ function backsub_sparse(U::Array{Float64,2},b::Array{Float64,2}, neighs::Array{V
     n = size(U,1)
     x = zeros( size(b)   )
     s = zeros( size(b,2) )
-    x[n] = b[n]/U[n,n]
+    #x[n]   = b[n]    / U[n, n] # this was probably error 
+    x[n, :] = b[n, :] / U[n, n] # Correced 
     nop = 0
     for i = n-1:-1:1
         s[:] .= 0.0
@@ -415,7 +416,7 @@ function backsub_sparse(U::Array{Float64,2},b::Array{Float64,2}, neighs::Array{V
                 nop += 1
             end
         end
-        x[i,:] = ( b[i] .- s[:] ) ./ U[i,i]
+        x[i,:] = ( b[i,:] .- s[:] ) ./ U[i,i]
     end 
     #println("backsub_sparse() nops=", nop );   
     return x
