@@ -78,6 +78,198 @@ function buildGrid2D( nx::Int,ny::Int; m::Float64=1.0, m_end::Float64=1000.0, l:
     return bonds, points, masses, ks, fixed
 end
 
+
+struct TrussEdge
+    i::Int64
+    j::Int64
+    kind::Int64
+end
+
+# mutable struct Truss
+#    points::Vector{Vector{Float64}}
+#    edges::Vector{TrussEdge}
+#    blocks::Vector{Tuple{Int64, Int64}}
+# end
+
+function make_ortho_u!(ax::Vector{Float64}, dir::Vector{Float64})
+    ax -= (ax ⋅ dir) * dir
+    return ax / norm(ax) 
+end
+
+# function from_angle!(angle::Float64)
+#     return [cos(angle), sin(angle)]
+# end
+
+# function mul_cmplx!(v::Vector{Float64}, drot::Vector{Float64})
+#     a = v[1] * drot[1] - v[2] * drot[2]
+#     b = v[1] * drot[2] + v[2] * drot[1]
+#     return [a, b]
+# end
+
+
+function wheel(p0::Vector{Float64}, p1::Vector{Float64}, ax::Vector{Float64}, n::Int, width::Float64)
+    #println("Truss::wheel() n=$n p0=($p0[1],$p0[2],$p0[3]) p1=($p1[1],$p1[2],$p1[3]) ax=($ax[1],$ax[2],$ax[3])")
+    kind_long   = 1
+    kind_perp   = 2
+    kind_zigIn  = 3
+    kind_zigOut = 4
+
+    dir  = p1 - p0
+    r    = norm(dir)
+    dir  = dir / norm(dir)
+    ax   = make_ortho_u!(ax, dir)
+    side = cross(dir, ax)
+
+    dnp  = 4
+    i00  = 1
+    i000 = i00
+
+    rot  = 1.0 + 0.0im
+    drot = cis(π / n)  # Using complex number representation for rotation
+
+    points = Vector{Vector{Float64}}()
+    edges  = Vector{TrussEdge}()
+
+    for i in 1:n
+        i01 = i00 + 1
+        i10 = i00 + 2
+        i11 = i00 + 3
+
+        R = dir * real(rot) + side * imag(rot)
+        push!(points, p0 + R * (r - width))
+        push!(points, p0 + R * (r + width))
+        rot *= drot  # Complex multiplication
+        R = dir * real(rot) + side * imag(rot)
+        push!(points, p0 + ax * -width + R * r)
+        push!(points, p0 + ax * width + R * r)
+        rot *= drot  # Complex multiplication
+
+        push!(edges, TrussEdge(i00, i01, kind_perp))
+        push!(edges, TrussEdge(i10, i11, kind_perp))
+        push!(edges, TrussEdge(i00, i10, kind_zigIn))
+        push!(edges, TrussEdge(i00, i11, kind_zigIn))
+        push!(edges, TrussEdge(i01, i10, kind_zigIn))
+        push!(edges, TrussEdge(i01, i11, kind_zigIn))
+        if i < n
+            push!(edges, TrussEdge(i10, i00 + dnp, kind_zigOut))
+            push!(edges, TrussEdge(i10, i01 + dnp, kind_zigOut))
+            push!(edges, TrussEdge(i11, i00 + dnp, kind_zigOut))
+            push!(edges, TrussEdge(i11, i01 + dnp, kind_zigOut))
+            push!(edges, TrussEdge(i00, i00 + dnp, kind_long))
+            push!(edges, TrussEdge(i01, i01 + dnp, kind_long))
+            push!(edges, TrussEdge(i10, i10 + dnp, kind_long))
+            push!(edges, TrussEdge(i11, i11 + dnp, kind_long))
+        else
+            push!(edges, TrussEdge(i10, i000 + 0, kind_zigOut))
+            push!(edges, TrussEdge(i10, i000 + 1, kind_zigOut))
+            push!(edges, TrussEdge(i11, i000 + 0, kind_zigOut))
+            push!(edges, TrussEdge(i11, i000 + 1, kind_zigOut))
+            push!(edges, TrussEdge(i00, i000 + 0, kind_long))
+            push!(edges, TrussEdge(i01, i000 + 1, kind_long))
+            push!(edges, TrussEdge(i10, i000 + 2, kind_long))
+            push!(edges, TrussEdge(i11, i000 + 3, kind_long))
+        end
+        i00 += dnp
+    end
+
+    points = hcat(points...)'
+
+    kdict = [1.0, 2.0, 3.0, 4.0]
+    bonds = Array{Tuple{Int, Int}, 1}(undef, 0)
+    ks = Array{Float64, 1}(undef, 0)
+    for e in edges
+        push!(bonds, (e.i, e.j))
+        push!(ks, kdict[e.kind])
+    end
+    return points, bonds, ks
+end
+
+#==
+function wheel( p0::Vector{Float64}, p1::Vector{Float64}, ax::Vector{Float64}, n::Int, width::Float64)
+    println("Truss::wheel() n=$n p0=($p0[1],$p0[2],$p0[3]) p1=($p1[1],$p1[2],$p1[3]) ax=($ax[1],$ax[2],$ax[3])")
+    kind_long   = 0
+    kind_perp   = 1
+    kind_zigIn  = 2
+    kind_zigOut = 3
+
+    dir  = p1 - p0
+    r    = norm(dir)
+    dir  = dir / norm(dir)
+    ax   = make_ortho_u!(ax, dir)
+    side = cross(dir, ax)
+
+    dnp = 4
+    i00 = 0
+    #i00 = length(points)
+    i000 = i00
+
+    rot = [1.0, 0.0]
+    drot = from_angle!(π / n)
+
+    points = Vector{Vector{Float64}}()
+    edges = Vector{TrussEdge}()
+    #points = Vector{Vector{Float64}}
+    #edges  = Vector{TrussEdge}
+    #blocks::Vector{Tuple{Int64, Int64}}
+
+    #ibloc = length(truss.blocks)
+    #push!(truss.blocks, (i00, length(truss.edges)))
+
+    for i in 1:n
+        i01 = i00 + 1
+        i10 = i00 + 2
+        i11 = i00 + 3
+
+        R = dir * rot[1] + side * rot[2]
+        push!( points, p0 + R * (r - width))
+        push!( points, p0 + R * (r + width))
+        rot = mul_cmplx!(rot, drot)
+        R = dir * rot[1] + side * rot[2]
+        push!( points, p0 + ax * -width + R * r)
+        push!( points, p0 + ax * width + R * r)
+        rot = mul_cmplx!(rot, drot)
+
+        push!( edges, TrussEdge(i00, i01, kind_perp ))
+        push!( edges, TrussEdge(i10, i11, kind_perp ))
+        push!( edges, TrussEdge(i00, i10, kind_zigIn))
+        push!( edges, TrussEdge(i00, i11, kind_zigIn))
+        push!( edges, TrussEdge(i01, i10, kind_zigIn))
+        push!( edges, TrussEdge(i01, i11, kind_zigIn))
+        if i < n
+            push!(edges, TrussEdge(i10, i00 + dnp, kind_zigOut))
+            push!(edges, TrussEdge(i10, i01 + dnp, kind_zigOut))
+            push!(edges, TrussEdge(i11, i00 + dnp, kind_zigOut))
+            push!(edges, TrussEdge(i11, i01 + dnp, kind_zigOut))
+            push!(edges, TrussEdge(i00, i00 + dnp, kind_long))
+            push!(edges, TrussEdge(i01, i01 + dnp, kind_long))
+            push!(edges, TrussEdge(i10, i10 + dnp, kind_long))
+            push!(edges, TrussEdge(i11, i11 + dnp, kind_long))
+        else
+            push!(edges, TrussEdge(i10, i000 + 0, kind_zigOut))
+            push!(edges, TrussEdge(i10, i000 + 1, kind_zigOut))
+            push!(edges, TrussEdge(i11, i000 + 0, kind_zigOut))
+            push!(edges, TrussEdge(i11, i000 + 1, kind_zigOut))
+            push!(edges, TrussEdge(i00, i000 + 0, kind_long))
+            push!(edges, TrussEdge(i01, i000 + 1, kind_long))
+            push!(edges, TrussEdge(i10, i000 + 2, kind_long))
+            push!(edges, TrussEdge(i11, i000 + 3, kind_long))
+        end
+        i00 += dnp
+    end
+    kdict = [1.0,2.0,3.0,4.0]
+    bonds = Array{Tuple{Int,Int},1}(undef, 0)
+    ks    = Array{Float64,1}(undef, 0)
+    for e in edges
+        push!(bonds, (e.i1, e.i2))
+        push!(ks, kdict[e.kind] )
+    end
+    #return ibloc
+    return points, bonds, ks
+    #return ibloc
+    #return points, edges
+end
+==#
+
 function process_bonds( bonds::Array{Tuple{Int,Int},1}, points::Array{Float64,2} )
     #println("process_bonds");
     n  = length(bonds)
