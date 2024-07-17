@@ -77,7 +77,7 @@ function make_PD_Matrix( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,I
     return A
 end 
 
-function make_PD_rhs( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1}, points::Array{Float64,2}, l0s::Array{Float64,1}, pnew::Array{Float64,2} )
+function make_PD_rhs( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1}, points::Matrix{Float64}, l0s::Array{Float64,1}, pnew::Matrix{Float64} )
     # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
     #       resp. eq.14 in the same paper, or eq.14 in https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems
     np = length(masses)
@@ -104,5 +104,86 @@ function make_PD_rhs( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int}
     return b
 end
 
+struct Truss
+    points::Matrix{Float64}
+    bonds::Array{Tuple{Int, Int}, 1}
+    masses::Array{Float64, 1}
+    ks::Array{Float64, 1}
+    l0s::Array{Float64, 1}
+    fixed::Vector{Int}
+    neighBs::Array{Vector{Int}, 1}
+end
+
+struct TrussSolution
+    A::Matrix{Float64}
+    U::Matrix{Float64}
+    L::Matrix{Float64}
+    neighsL::Vector{Vector{Int}}
+    neighsU::Vector{Vector{Int}}
+end
+
+function update_velocity( ps_pred::Matrix{Float64}, ps_cor::Matrix{Float64}, dt::Float64 )
+    return (ps_cor .- ps_pred) / dt
+end
+
+function run_solver( truss::Truss, sol::TrussSolution, velocity::Matrix{Float64}, eval_forces::Function; dt::Float64=0.1, niter::Int=100 ) 
+    points = copy( truss.points )
+    for i=1:niter
+        force = eval_forces( points, velocity )
+        ps_pred   = points .+ velocity*dt .+ force*(dt^2)
+        ps_pred[truss.fixed,:]   .= truss.points[truss.fixed,:]
+        b      = make_PD_rhs( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  # ;print( "b : "); display(b)
+
+        # ---- Method 2)
+        y      = forwardsub_sparse(sol.L,b,sol.neighsL)  #;print("y_ch : "); display(y_ch)
+        ps_cor = backsub_sparse(   sol.U,y,sol.neighsU)  #;print("x_ch : "); display(x_ch)
+        
+        # ---- Method 3)   using  forward-and-backsubstitution with Our Cholensky factorization
+        #y    = forwardsub(L,b)
+        #ps_cor = backsub(   U,y)
+        # ---- Method 4)   using  forward-and-backsubstitution with Our Cholensky factorization from Julia's native algorithm
+        #L = Matrix(AFact.L)
+        #U = Matrix(AFact.U)
+        #y    = forwardsub(L,b)
+        #ps_cor = backsub(   U,y)
+        # ---- Method 5b)   using factorization by Julia's native algorithm
+        #y    = L \ b
+        #y    = forwardsub(L,b)
+        #ps_cor = U \ y
+        #ps_cor    = forwardsub(U,y)
+        #ps_cor = backsub(   U,y)
+
+        # ---- Method 5)   using factorization by Julia's native algorithm
+        #y    = AFact.L \ b
+        #ps_cor = AFact.U \ y
+
+        # ---- Method 6)   multiply by inverse matrix
+        #ps_cor = AFact \ b
+
+        # ---- Method 8)   multiply by inverse matrix
+        #ps_cor = invA * b 
+
+        # ---- Method 9)   direct sover
+        #ps_cor = A \ b
+
+        # ---- residual
+        dpos   =  ps_cor - ps_pred
+        #print("dpos[$i] " ); display(dpos)
+        res    = maximum( abs.(dpos) )   ;println("residual[$i] : ", res );
+        v      = dpos/dt
+        # ---- update        
+        velocity .+= update_velocity( ps_pred, ps_cor, dt )
+        points[:,:] .= ps_cor[:,:]
+        
+        #   ToDo:   We need to update velocity and forces based on position update
+
+        #points = points .+ x
+        #plot!( plt, [points0[i,1],points[i,1]], [points0[i,2],points[i,2]], color=:blue, lw=0.5 )
+
+        #plot_truss( plt, bonds, points, lw=1.0, c=:blue )
+        #plot_truss( plt, bonds, points0, lw=1.0, c=:blue )
+    end
+    return points
+end
 
 # ======= Bulding system as sparse solver

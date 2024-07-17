@@ -3,7 +3,7 @@ using Plots
 
 
 #function Plot_Structure( bonds::Array{Int64,2}, points::Array{Float64,2} )
-function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, lw=1.0, bPoints=false )
+function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, lw=1.0, bPoints=false, bLabel=false )
     #plt = plot(legend=false, aspect_ratio = :equal )
     nb    = length(bonds)
     ix,iy = axes
@@ -29,7 +29,13 @@ function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, l
         pxs, pys = points[:, ix], points[:, iy]
         scatter!(plt, pxs, pys, color=c, marker=:circle)
     end
-
+    # Add labels to points
+    if bLabel
+        for i in 1:size(points, 1)
+            pi = points[i, :]
+            annotate!(plt, pi[ix], pi[iy], text(string(i), :black, :center))
+        end
+    end
     #display( plt )
 end
 
