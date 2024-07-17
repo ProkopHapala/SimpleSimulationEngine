@@ -25,8 +25,16 @@ include("ProjectiveDynamics.jl")
 #     neighsU::Vector{Vector{Int}}
 # end
 
-function eval_forces(position, velocity)
+function eval_force_and_plot( position, velocity,   plt, bonds )
+    plot_truss( plt, bonds, position, lw=0.5, c=:black )
     force = -0.0 * position - 0.00 * velocity
+    return force
+end
+
+
+function eval_force_and_plot_f( position::Matrix{Float32}, velocity::Matrix{Float32},   plt, bonds )
+    plot_truss( plt, bonds, position, lw=0.5, c=:black )
+    force = -0.0f0 * position - 0.0f0 * velocity
     return force
 end
 
@@ -39,6 +47,8 @@ function main( nx=5, ny=5, dt=5.0 )
     p1 =  Vector([1.0,0.0,0.0])
     ax =  Vector([0.0,0.0,1.0])
     print("wheel()");         @time points, bonds, ks = wheel( p0, p1, ax, 8, 0.2 )
+
+    plt = plot(legend=false, aspect_ratio = :equal )
 
     #println("typeof(points) ", typeof(points) );
 
@@ -59,6 +69,13 @@ function main( nx=5, ny=5, dt=5.0 )
     print("CholeskyDecomp_sparse()"); @time L,neighsCh  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)    # evaluate Cholensky decomposition for sparse matrix (efficient)                    # evaluate Cholensky decomposition using Cholesky–Crout algorithm
     U  = copy(L') 
 
+    LDLT_L, LDLT_D = CholeskyDecomp_LDLT(A)
+
+    reconstructed = LDLT_L * Diagonal(LDLT_D) * LDLT_L'
+    diff = A - reconstructed
+    println("Max difference between A and LDL': ", maximum(abs.(diff)))
+
+
     print("mapMatrixNeighs()"); @time neighsL = mapMatrixNeighs(L)    #;print("neighsL"); display(neighsL)   # find which elements of L are non-zero ( for each row    i map all non-zero Aij to columns j )
     print("invNeighs()");       @time neighsU = invNeighs( neighsL ) 
 
@@ -71,19 +88,31 @@ function main( nx=5, ny=5, dt=5.0 )
 
 
     truss  = Truss(points, bonds, masses, ks, l0s, fixed, neighBs)
-    sol    = TrussSolution(A,L,U,neighsL,neighsU)
+    sol    = TrussSolution(A,L,U,neighsL,neighsU, LDLT_L,LDLT_D )
 
-    velocity = zeros(size(points))
-    #eval_forces = (truss, sol, velocity) -> eval_forces( truss, sol, velocity, ks, l0s )
+    #truss_f = convert_Truss( Float32, truss )
+    #sol_f   = convert_TrussSolution( Float32, sol  )
 
-    points = run_solver( truss, sol, velocity, eval_forces; dt=0.1, niter=5 ) 
+    truss_f = convert_to_truss_f( truss )
+    sol_f   = convert_to_TrussSolution_f( sol  )
+
+    axis = [0.0, 0.0, 1.0]  # Example axis of rotation
+    #velocity = Matrix( eachrow(points) .|> p -> cross(axis, p) )
+    velocity = mapslices(p -> cross(axis, p), points, dims=2)
+    #velocity = zeros(size(points))
+    eval_forces   = (position, velocity) -> eval_force_and_plot(position,velocity, plt, truss.bonds )
+    eval_forces_f = (position, velocity) -> eval_force_and_plot_f(position,velocity, plt, truss_f.bonds )
+
+    #points = run_solver( truss, sol, velocity, eval_forces; dt=5.0, niter=5 ) 
+
+    points_f = run_solver_f( truss_f, sol_f, convert.(Float32, velocity), eval_forces_f; dt=5.0f0, niter=5 ) 
 
     #print("points : "); display(points)
     #print("bonds  : "); display(bonds)
     #print("x : "); display(x)
-    plt = plot(legend=false, aspect_ratio = :equal )
-    plot_truss( plt, truss.bonds, truss.points, lw=1.0, c=:blue, bLabel=true )
-    plot_truss( plt, truss.bonds, points      , lw=1.0, c=:red )
+    
+    plot_truss( plt, truss.bonds, truss.points, lw=2.0, c=:blue, bLabel=true )
+    plot_truss( plt, truss.bonds, points      , lw=2.0, c=:red )
     display( plt );
 end # function main
 

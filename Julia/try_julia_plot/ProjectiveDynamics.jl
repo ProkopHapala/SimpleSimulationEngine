@@ -104,6 +104,33 @@ function make_PD_rhs( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int}
     return b
 end
 
+function make_PD_rhs_f( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float32,1}, dt::Float32, ks::Array{Float32,1}, points::Matrix{Float32}, l0s::Array{Float32,1}, pnew::Matrix{Float32} )
+    # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
+    #       resp. eq.14 in the same paper, or eq.14 in https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems
+    np = length(masses)
+    b = zeros( Float32, np, 3 )
+    #print( "b : "); display(b)
+    idt2 = 1.f0 /dt^2
+    for i = 1:np
+        bi =  pnew[i,:] * (masses[i] * idt2)
+        for ib in neighBs[i]
+            k = ks[ib]
+            (i_,j_) = bonds[ib]
+            if i_ == i
+                j = j_
+            else
+                j = i_
+            end
+            d = points[i,:] - points[j,:]
+            d *= k * l0s[ib] / norm(d)
+            bi += d        
+        end
+        b[i,:] = bi
+    end
+    #print( "b : "); display(b)
+    return b
+end
+
 struct Truss
     points::Matrix{Float64}
     bonds::Array{Tuple{Int, Int}, 1}
@@ -116,11 +143,81 @@ end
 
 struct TrussSolution
     A::Matrix{Float64}
-    U::Matrix{Float64}
     L::Matrix{Float64}
+    U::Matrix{Float64}
     neighsL::Vector{Vector{Int}}
     neighsU::Vector{Vector{Int}}
+    LDLT_L::Matrix{Float64}
+    LDLT_D::Vector{Float64}
 end
+
+struct Truss_f
+    points::Matrix{Float32}
+    bonds::Array{Tuple{Int, Int}, 1}
+    masses::Array{Float32, 1}
+    ks::Array{Float32, 1}
+    l0s::Array{Float32, 1}
+    fixed::Vector{Int}
+    neighBs::Array{Vector{Int}, 1}
+end
+
+struct TrussSolution_f
+    A::Matrix{Float32}
+    L::Matrix{Float32}
+    U::Matrix{Float32}
+    neighsL::Vector{Vector{Int}}
+    neighsU::Vector{Vector{Int}}
+    LDLT_L::Matrix{Float32}
+    LDLT_D::Vector{Float32}
+end
+
+function convert_to_truss_f(truss::Truss)
+    return Truss_f(
+        convert.(Float32, truss.points), 
+        truss.bonds,  
+        convert.(Float32, truss.masses), 
+        convert.(Float32, truss.ks),  
+        convert.(Float32, truss.l0s), 
+        truss.fixed,  
+        truss.neighBs 
+    )
+end
+
+function convert_to_TrussSolution_f(sol::TrussSolution)
+    return TrussSolution_f(
+        convert.(Float32, sol.A), 
+        convert.(Float32, sol.L),  
+        convert.(Float32, sol.U), 
+        sol.neighsL,  
+        sol.neighsL,
+        convert.(Float32, sol.LDLT_L),  
+        convert.(Float32, sol.LDLT_D), 
+    )
+end
+
+#===
+function convert_Truss(T::Type, truss)
+    return T(
+        convert(Matrix{T}, truss.points),
+        truss.bonds,
+        convert(Vector{T}, truss.masses),
+        convert(Vector{T}, truss.ks),
+        convert(Vector{T}, truss.l0s),
+        truss.fixed,
+        truss.neighBs
+    )
+end
+
+function convert_TrussSolution(T::Type, sol)
+    return T(
+        convert(Vector{T}, sol.A),
+        convert(Vector{T}, sol.L),
+        convert(Vector{T}, sol.U),
+        sol.neighsU,
+        sol.neighsU
+    )
+end
+==#
 
 function update_velocity( ps_pred::Matrix{Float64}, ps_cor::Matrix{Float64}, dt::Float64 )
     return (ps_cor .- ps_pred) / dt
@@ -128,15 +225,23 @@ end
 
 function run_solver( truss::Truss, sol::TrussSolution, velocity::Matrix{Float64}, eval_forces::Function; dt::Float64=0.1, niter::Int=100 ) 
     points = copy( truss.points )
+    ps_cor = copy(points)
     for i=1:niter
-        force = eval_forces( points, velocity )
-        ps_pred   = points .+ velocity*dt .+ force*(dt^2)
-        ps_pred[truss.fixed,:]   .= truss.points[truss.fixed,:]
-        b      = make_PD_rhs( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  # ;print( "b : "); display(b)
+        force                    = eval_forces( points, velocity )
+        ps_pred                  = points .+ velocity*dt .+ force*(dt^2)
+        ps_pred[truss.fixed,:]  .= truss.points[truss.fixed,:]
+        b                        = make_PD_rhs( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  # ;print( "b : "); display(b)
 
         # ---- Method 2)
-        y      = forwardsub_sparse(sol.L,b,sol.neighsL)  #;print("y_ch : "); display(y_ch)
-        ps_cor = backsub_sparse(   sol.U,y,sol.neighsU)  #;print("x_ch : "); display(x_ch)
+        #y      = forwardsub_sparse(sol.L,b,sol.neighsL)  #;print("y_ch : "); display(y_ch)
+        #ps_cor = backsub_sparse(   sol.U,y,sol.neighsU)  #;print("x_ch : "); display(x_ch)
+
+        ps_cor[:,1] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,1] )
+        ps_cor[:,2] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,2] )
+        ps_cor[:,3] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,3] )
+
+        #ps_cor = sol.A \ b
+
         
         # ---- Method 3)   using  forward-and-backsubstitution with Our Cholensky factorization
         #y    = forwardsub(L,b)
@@ -164,13 +269,12 @@ function run_solver( truss::Truss, sol::TrussSolution, velocity::Matrix{Float64}
         #ps_cor = invA * b 
 
         # ---- Method 9)   direct sover
-        #ps_cor = A \ b
+        #ps_cor = sol.A \ b
+
+        #ps_cor = copy(ps_pred)
 
         # ---- residual
-        dpos   =  ps_cor - ps_pred
-        #print("dpos[$i] " ); display(dpos)
-        res    = maximum( abs.(dpos) )   ;println("residual[$i] : ", res );
-        v      = dpos/dt
+        res    = maximum( abs.(ps_cor-points) )   ;println("residual[$i] : ", res );
         # ---- update        
         velocity .+= update_velocity( ps_pred, ps_cor, dt )
         points[:,:] .= ps_cor[:,:]
@@ -185,5 +289,85 @@ function run_solver( truss::Truss, sol::TrussSolution, velocity::Matrix{Float64}
     end
     return points
 end
+
+
+#====== To improve numerical stability in Float32 use LDL^T ( root-free Cholesky decomposition) 
+
+https://en.wikipedia.org/wiki/Cholesky_decomposition#LDL_decomposition
+
+Alternative approach using two forward substitutions:
+You're correct that there's a method to replace backward substitution with another forward substitution. This approach is sometimes called the "LDL^T factorization" or "root-free Cholesky decomposition". Here's how it works:
+a. Instead of decomposing A into LL^T, decompose it into LDL^T, where L is lower triangular with 1's on the diagonal, and D is diagonal.
+b. Solve the system in three steps:
+
+Solve Lz = b (forward substitution)
+Solve Dy = z (simple division)
+Solve L^Tx = y (can be rewritten as a forward substitution)
+
+===#
+
+
+function run_solver_f( truss::Truss_f, sol::TrussSolution_f, velocity::Matrix{Float32}, eval_forces::Function; dt::Float32=0.1f0, niter::Int=100 ) 
+    points = copy( truss.points )
+
+    ps_cor = copy(points)
+
+    #L,D = CholeskyDecomp_LDLT(sol.A)
+
+    for i=1:niter
+        force                    = eval_forces( points, velocity )
+        ps_pred                  = points .+ velocity*dt .+ force*(dt^2)
+        ps_pred[truss.fixed,:]  .= truss.points[truss.fixed,:]
+        #println("typeof(ps_pred) ", typeof(ps_pred))
+        #println("typeof(points)  ", typeof(points))
+        #println("typeof(velocity) ", typeof(velocity))
+        #println("typeof(force) ", typeof(force))
+        #println("typeof(truss.points)  ", typeof(truss.points))
+        b                        = make_PD_rhs_f( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  # ;print( "b : "); display(b)
+
+
+        #println("typeof(b)  ", typeof(b))
+
+        # ---- Method 2)
+        #y      = forwardsub_sparse_f(sol.L,b,sol.neighsL)
+        #ps_cor = backsub_sparse_f(   sol.U,y,sol.neighsU)
+
+        #y      = forwardsub_sparse_f(sol.L,b,sol.neighsL)
+        #ps_cor = sol.U \ y
+
+        #y      = sol.L \ b
+        #ps_cor = backsub_sparse_f(   sol.U,y,sol.neighsU)
+
+        #y      = sol.L \ b
+        #ps_cor = sol.U \ y
+
+        #ps_cor = sol.A \ b
+
+        #println("typeof(L) ", typeof(L))
+        #println("typeof(D) ", typeof(D))
+        #println("typeof(b) ", typeof(b))
+        #println("b ", b[:,1] )
+
+        #ps_cor[:,1] = solve_LDLT( L, D, b[:,1] )
+        #ps_cor[:,2] = solve_LDLT( L, D, b[:,2] )
+        #ps_cor[:,3] = solve_LDLT( L, D, b[:,3] )
+
+        ps_cor[:,1] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,1] )
+        ps_cor[:,2] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,2] )
+        ps_cor[:,3] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,3] )
+
+
+        # ---- residual
+        res    = maximum( abs.(ps_cor-points) )   ;println("residual[$i] : ", res );
+        # ---- update        
+        points[:,:] .= ps_cor[:,:]
+    end
+    return points
+end
+
+
+
+
+
 
 # ======= Bulding system as sparse solver

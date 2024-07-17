@@ -76,6 +76,13 @@ return bonds, points, masses
 end 
 
 
+function eval_forces_grav(position, velocity, masses, gravity = [0.0, -9.81, 0.0 ])
+    force = masses .* gravity' 
+    #f_ext  = f_grav .* 1.0
+    #force  = -0.0 * position - 0.00 * velocity
+    return force
+end
+
 ###################
 ###    main()   ###
 ###################
@@ -173,21 +180,23 @@ strain = dl ./ l0s; #print("strain : "); display(strain)
 #x = Ad \ dl
 
 #print("x : "); display(x)
-println( size(points), size(gravity) )
+#println( size(points), size(gravity) )
 f_ext  = f_grav .* 1.0
-println( " size(f_ext) 1 ",  size(f_ext) )
+#println( " size(f_ext) 1 ",  size(f_ext) )
 #f_ext   = f_ext .+ gravity #.* masses   
 #println( " size(f_ext) 2 ",  size(f_ext) )
 
 v       = points .*0.0 
-pnew    = points .+ v*dt .+ f_ext .* (dt^2)*0.0
+#pnew    = points .+ v*dt .+ f_ext .* (dt^2)*0.0
 
 # ========== Solver 
 
 plot_truss( plt, bonds, points0, lw=1.0, c=:black )
 #plot_truss( plt, bonds, points,  lw=1.0, strain=strain*10.0, )
-plot_truss( plt, bonds, points,  lw=1.0, c=:red )
+#plot_truss( plt, bonds, points,  lw=1.0, c=:red )
 
+
+#==
 #bSparseCholesky = false
 bSparseCholesky = true
 niter = 100
@@ -247,6 +256,16 @@ for i=1:niter
     #plot_truss( plt, bonds, points, lw=1.0, c=:blue )
     #plot_truss( plt, bonds, points0, lw=1.0, c=:blue )
 end
+==#
+
+truss    = Truss(copy(points), bonds, masses, ks, l0s, fixed, neighBs)
+sol      = TrussSolution(A,L,U,neighsL,neighsU)
+eval_forces_closure = (position, velocity) -> eval_forces_grav(position, velocity, truss.masses, gravity)
+velocity = zeros(size(points))
+
+points = run_solver( truss, sol, velocity, eval_forces_closure; dt=dt, niter=100 ) 
+#points = run_solver_bak( truss, sol, velocity, eval_forces_closure; dt=dt, niter=5 ) 
+#points = run_solver_2( truss, sol, velocity, eval_forces_closure; dt=dt, niter=5 ) 
 
 plot_truss( plt, bonds, points, lw=1.0, c=:blue )
 

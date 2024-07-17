@@ -7,7 +7,7 @@ using DataStructures
 
 # =========== Functions
 
-function Jacobi_step_Dens( A::Array{Float64,2}, b::Array{Float64,2}, x::Array{Float64,2}, xnew::Array{Float64,2} )
+function Jacobi_step_Dens( A::Matrix{Float64}, b::Matrix{Float64}, x::Matrix{Float64}, xnew::Matrix{Float64} )
     n = size(b,1)
     #println("n : ", n)
     s   = zeros(3)
@@ -27,7 +27,7 @@ function Jacobi_step_Dens( A::Array{Float64,2}, b::Array{Float64,2}, x::Array{Fl
     return err
 end
 
-function GaussSeidel_step_Sparse( A::Array{Float64,2}, b::Array{Float64,2}, x::Array{Float64,2} )
+function GaussSeidel_step_Sparse( A::Matrix{Float64}, b::Matrix{Float64}, x::Matrix{Float64} )
     n = length(b)
     s = zeros(3)
     err = 0.0
@@ -46,7 +46,7 @@ function GaussSeidel_step_Sparse( A::Array{Float64,2}, b::Array{Float64,2}, x::A
     return err
 end
 
-function SolveIterative( A::Array{Float64,2}, b::Array{Float64,2}, x::Array{Float64,2}; niter::Int=10, tol::Float64=1.e-3, method::Int=1 )
+function SolveIterative( A::Matrix{Float64}, b::Matrix{Float64}, x::Matrix{Float64}; niter::Int=10, tol::Float64=1.e-3, method::Int=1 )
     xnew = zeros( size(x) )
     for iter=1:niter
         if     method == 1
@@ -65,7 +65,7 @@ function SolveIterative( A::Array{Float64,2}, b::Array{Float64,2}, x::Array{Floa
     end 
 end
 
-function CholeskyDecomp( A::Array{Float64,2} )
+function CholeskyDecomp( A::Matrix{Float64} )
     # seems to be: The Cholesky–Banachiewicz algorithm  (https://en.wikipedia.org/wiki/Cholesky_decomposition)
     n = size(A,1)
     L = zeros(n,n)
@@ -91,7 +91,7 @@ function CholeskyDecomp( A::Array{Float64,2} )
     return L
 end
 
-function CholeskyDecomp_Crout( A::Array{Float64,2} )
+function CholeskyDecomp_Crout( A::Matrix{Float64} )
     # Cholesky–Crout algorithm
     #println( "CholeskyDecomp_Crout()" )
     n = size(A,1)
@@ -123,7 +123,7 @@ function CholeskyDecomp_Crout( A::Array{Float64,2} )
     return L
 end
 
-function CholeskyDecomp_sparse( A::Array{Float64,2}, neighs::Array{Vector{Int},1}, neighs2::Array{Vector{Int},1}=nothing, tol::Float64=1.e-16, bSortedSets::Bool=true )
+function CholeskyDecomp_sparse( A::Matrix{Float64}, neighs::Array{Vector{Int},1}, neighs2::Array{Vector{Int},1}=nothing, tol::Float64=1.e-16, bSortedSets::Bool=true )
     #neighsets = [ Set(ng) for ng in neighs ] 
     # How can I initialize set with reserved size in Julia?
     #s = Set{Int}(100)  # set with reserved size 100
@@ -229,7 +229,7 @@ function CholeskyDecomp_sparse( A::Array{Float64,2}, neighs::Array{Vector{Int},1
     return L, neighsCh
 end
 
-function IncompleteCholeskyDecomp(A::Array{Float64,2} )
+function IncompleteCholeskyDecomp(A::Matrix{Float64} )
     # https://en.wikipedia.org/wiki/Incomplete_Cholesky_factorization
 	n = size(a,1);
 	for k = 1:n
@@ -254,7 +254,7 @@ function IncompleteCholeskyDecomp(A::Array{Float64,2} )
     # end       
 end
 
-function IncompleteCholeskyDecompSparse(a::Array{Float64,2}, neighs::Array{Vector{Int},1}, tol = 1.e-10 )
+function IncompleteCholeskyDecompSparse(a::Matrix{Float64}, neighs::Array{Vector{Int},1}, tol = 1.e-10 )
     # https://en.wikipedia.org/wiki/Incomplete_Cholesky_factorization
 	n = size(a,1);
 	for k = 1:n
@@ -292,7 +292,7 @@ function IncompleteCholeskyDecompSparse(a::Array{Float64,2}, neighs::Array{Vecto
     # end       
 end
 
-function mapMatrixNeighs( A::Array{Float64,2}, tol::Float64 = 1.e-16 )
+function mapMatrixNeighs( A::Matrix{Float64}, tol::Float64 = 1.e-16 )
     # find which rows i are coupled with witch columns j by matrix elements Aij 
     n = size(A,1)
     neighs  = [ Vector{Int}() for _ in 1:n ]   
@@ -328,7 +328,7 @@ end
 
 # https://fncbook.github.io/fnc/linsys/linear-systems.html
 
-function forwardsub(L::Array{Float64,2},b::Array{Float64,2})
+function forwardsub(L::Matrix{Float64},b::Matrix{Float64})
     n = size(L,1)
     x = zeros( size(b)   )
     s = zeros( size(b,2) )
@@ -346,7 +346,24 @@ function forwardsub(L::Array{Float64,2},b::Array{Float64,2})
     return x
 end
 
-function forwardsub_sparse(L::Array{Float64,2}, b::Array{Float64,2}, neighs::Array{Vector{Int},1} )
+function backsub(U::Matrix{Float64}, b::Matrix{Float64})
+    n = size(U, 1)
+    x = zeros(size(b))
+    s = zeros(size(b, 2))
+    x[n, :] = b[n, :] / U[n, n]  # Corrected to element-wise operation
+    nop = 0
+    for i = n-1:-1:1
+        s[:] .= 0.0
+        for j = i+1:n
+            s[:] .+= U[i, j] * x[j, :]
+            nop += 1
+        end
+        x[i, :] = (b[i, :] .- s[:]) ./ U[i, i]  # Corrected to element-wise operation
+    end
+    return x
+end
+
+function forwardsub_sparse(L::Matrix{Float64}, b::Matrix{Float64}, neighs::Array{Vector{Int},1} )
     n = size(L,1)
     x = zeros( size(b)   )
     s = zeros( size(b,2) )
@@ -366,42 +383,7 @@ function forwardsub_sparse(L::Array{Float64,2}, b::Array{Float64,2}, neighs::Arr
     return x
 end
 
-function backsub_bad(U::Array{Float64,2},b::Array{Float64,2})
-    n = size(U,1)
-    x = zeros( size(b)   )
-    s = zeros( size(b,2) )
-    x[n] = b[n]/U[n,n]
-    nop = 0
-    for i = n-1:-1:1
-        s[:] .= 0.0
-        for j=i+1:n
-            s[:] .+= U[i,j]*x[j,:]
-            nop += 1
-        end
-        x[i,:] = ( b[i] .- s[:] ) ./ U[i,i]
-    end    
-    #println("backsub_sparse() nops=", nop );   
-    return x
-end
-
-function backsub(U::Array{Float64,2}, b::Array{Float64,2})
-    n = size(U, 1)
-    x = zeros(size(b))
-    s = zeros(size(b, 2))
-    x[n, :] = b[n, :] / U[n, n]  # Corrected to element-wise operation
-    nop = 0
-    for i = n-1:-1:1
-        s[:] .= 0.0
-        for j = i+1:n
-            s[:] .+= U[i, j] * x[j, :]
-            nop += 1
-        end
-        x[i, :] = (b[i, :] .- s[:]) ./ U[i, i]  # Corrected to element-wise operation
-    end
-    return x
-end
-
-function backsub_sparse(U::Array{Float64,2},b::Array{Float64,2}, neighs::Array{Vector{Int},1} )
+function backsub_sparse(U::Matrix{Float64},b::Matrix{Float64}, neighs::Array{Vector{Int},1} )
     n = size(U,1)
     x = zeros( size(b)   )
     s = zeros( size(b,2) )
@@ -422,3 +404,88 @@ function backsub_sparse(U::Array{Float64,2},b::Array{Float64,2}, neighs::Array{V
     return x
 end
 
+
+
+
+function forwardsub_sparse_f(L::Matrix{Float32}, b::Matrix{Float32}, neighs::Array{Vector{Int},1} )
+    n = size(L,1)
+    x = zeros( Float32, size(b)   )
+    s = zeros( Float32, size(b,2) )
+    x[1,:] = b[1,:]/L[1,1]
+    nop = 0
+    for i = 2:n
+        s[:] .= 0.0
+        for j in neighs[i]
+            if j < i
+                s[:] .+= L[i,j]*x[j,:]
+                nop += 1
+            end
+        end
+        x[i,:] = ( b[i,:] .- s[:] ) ./ L[i,i]
+    end  
+    #println("forwardsub_sparse() nops=", nop );     
+    return x
+end
+
+function backsub_sparse_f(U::Matrix{Float32},b::Matrix{Float32}, neighs::Array{Vector{Int},1} )
+    n = size(U,1)
+    x = zeros( Float32, size(b)   )
+    s = zeros( Float32, size(b,2) )
+    #x[n]   = b[n]    / U[n, n] # this was probably error 
+    x[n, :] = b[n, :] / U[n, n] # Correced 
+    nop = 0
+    for i = n-1:-1:1
+        s[:] .= 0.0
+        for j in neighs[i]
+            if j > i
+                s[:] .+= U[i,j]*x[j,:]
+                nop += 1
+            end
+        end
+        x[i,:] = ( b[i,:] .- s[:] ) ./ U[i,i]
+    end 
+    #println("backsub_sparse() nops=", nop );   
+    return x
+end
+
+
+
+function CholeskyDecomp_LDLT(A::Matrix{T}) where T<:AbstractFloat
+    n = size(A, 1)
+    L = Matrix{T}(I, n, n)  # Initialize L as identity matrix
+    D = zeros(T, n)
+    for j in 1:n
+        D[j] = A[j,j] - dot(L[j,1:j-1].^2, D[1:j-1])
+        for i in j+1:n
+            L[i,j] = (A[i,j] - dot(L[i,1:j-1] .* L[j,1:j-1], D[1:j-1])) / D[j]
+        end
+    end
+    return L, D
+end
+
+function forward_substitution(L::Matrix{T}, b::Vector{T}) where T<:AbstractFloat
+    n = size(L, 1)
+    y = zeros(T, n)
+    for i in 1:n
+        y[i] = b[i] - dot(L[i,1:i-1], y[1:i-1])
+    end
+    return y
+end
+
+function forward_substitution_transposed(L::Matrix{T}, b::Vector{T}) where T<:AbstractFloat
+    n = size(L, 1)
+    x = zeros(T, n)
+    for i in n:-1:1
+        x[i] = b[i] - dot(L[i+1:n,i], x[i+1:n])
+    end
+    return x
+end
+
+function solve_LDLT( L::Matrix{T}, D::Vector{T}, b::Vector{T}) where T<:AbstractFloat
+    #L, D = CholeskyLDLDecomp(A)
+    z = forward_substitution(L, b)
+    #y = diagonal_solve(D, z)
+    y = z ./ D
+    x = forward_substitution_transposed(L, y)
+    return x
+end

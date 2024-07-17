@@ -4,6 +4,8 @@ using Plots
 
 #function Plot_Structure( bonds::Array{Int64,2}, points::Array{Float64,2} )
 function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, lw=1.0, bPoints=false, bLabel=false )
+    # println("points: "); display(points)
+    #plt = plot(legend=false, aspect_ratio = :equal )
     #plt = plot(legend=false, aspect_ratio = :equal )
     nb    = length(bonds)
     ix,iy = axes
