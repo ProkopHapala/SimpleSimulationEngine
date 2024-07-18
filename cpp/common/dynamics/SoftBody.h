@@ -75,6 +75,7 @@ class Bond{ public:
     //double mass;
     bool    broken;
 	double  l0;           // relaxed length
+    double  k;
 	BondType * type;
 
     inline double getMass()const{ return l0 * type->linearDensity; }
@@ -169,6 +170,9 @@ static const BondType default_BondType = {
     1e+9,1e+9   // strength
 };
 
+#define N_MAX_NEIGH   32
+
+
 // ==================
 //    SoftBody
 // ==================
@@ -188,6 +192,12 @@ class SoftBody{ public:
 	Vec3d  * disps = NULL;
 	Vec3d  * dirs  = NULL;
     double * f0s   = NULL;
+
+    // ---- for Projection Dynamics/Cholesky Solver
+    int    *neighBs=0;  // [npoint]
+    int    *neighsLDLT=0;
+    double *LDLT_L=0;
+    double *LDLT_D=0; 
 
     Vec3d cog;
     Vec3d vcog;
@@ -218,6 +228,9 @@ class SoftBody{ public:
     double viscosity  = -0.0;
     double fmax       = 1e+300;
     double vdamp      = 1.0;  // [m/s]  maximum speed for velocity based damping
+
+
+
 	// ==== function declarations
 
 	//void evalForces     (  );
@@ -228,6 +241,14 @@ class SoftBody{ public:
 	void applyConstrains(  );
 	void move_LeapFrog  (  );
 	int  relaxStepGS( double errMax );
+
+
+
+    void rhs_ProjectiveDynamics(double dt, Vec3d* ps, Vec3d* b);
+    void run_cholesky( int niter );
+
+
+    
 	void step           (  );
 
 

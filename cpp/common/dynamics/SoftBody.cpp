@@ -3,6 +3,7 @@
 #include <SDL2/SDL_opengl.h>
 
 #include <SoftBody.h>
+#include <Cholesky.h>
 
 // ==== Dynamics
 
@@ -135,6 +136,106 @@ void SoftBody::step( ){
     applyConstrains();
     move_LeapFrog( );
 }
+
+
+
+void SoftBody::rhs_ProjectiveDynamics(
+    double dt, Vec3d* ps, Vec3d* b
+    //int*    neighBs, int* neighBs_sizes, int np,
+    //Vec2i*  bonds, int nbonds,
+    //double* masses, double dt, double* ks,
+    //Vec3d*  points, double* l0s,
+    //Vec3d*  pnew, Vec3d* b
+) {
+    double idt2 = 1.0 / (dt * dt);
+    for (int i = 0; i < npoints; i++) {
+        Vec3d bi;
+        bi.set_mul( ps[i], mass[i] * idt2 );
+        //int neighB_start = (i == 0) ? 0 : neighBs_sizes[i-1];
+        //int neighB_end   = neighBs_sizes[i];
+        int nb0 = i*N_MAX_NEIGH;
+        int nb1 = nb0 + N_MAX_NEIGH;
+        for (int nb  = nb0; nb < nb1; nb++) {
+            int ib   = neighBs[nb];
+            const Bond& b = bonds[ib]; 
+            double k = b.k;
+            int i_ = bonds[ib].i;
+            int j_ = bonds[ib].j;
+            int j = (i_ == i) ? j_ : i_;
+            Vec3d  d = ps[i] - ps[j];
+            bi.add_mul(d,k*b.l0/d.norm());  
+        }
+        b[i] = bi;
+    }
+}
+
+void SoftBody::run_cholesky(
+    int niter
+    //int np, int nbonds,
+    //Vec3d* points, Vec3d* velocity, int* fixed, int nfixed,
+    //int* neighBs, int* neighBs_sizes,
+    //Vec2i* bonds, double* masses, double* ks, double* l0s,
+    //double* LDLT_L, double* LDLT_D, int* neighsLDLT,
+    //void (*eval_forces)(Vec3d* points, Vec3d* velocity, Vec3d* force, int np),
+    //double dt, int niter
+){
+    Vec3d* ps_cor  = new Vec3d[npoints];
+    Vec3d* ps_pred = new Vec3d[npoints];
+    //Vec3d* force   = new Vec3d[npoints];
+    Vec3d* b       = new Vec3d[npoints];
+
+    //double* zz = new double[npoints*3];
+    double* yy = new double[npoints*3];
+
+    memcpy(ps_cor, points, npoints * sizeof(Vec3d));
+
+    const int m=3; 
+
+    for (int iter = 0; iter < niter; iter++) {
+        // Evaluate forces
+        //eval_forces(points, velocity, force, npoints);
+
+        // Predict step
+        double dt2 = dt*dt;
+        for (int i = 0; i < npoints; i++) {    ps_pred[i] = points[i] + velocities[i]*dt + forces[i]*dt2; }
+
+        //for (int i = 0; i < nfixed; i++) {  ps_pred[fixed[i]] = points[fixed[i]];}  // Apply fixed constraints
+
+        rhs_ProjectiveDynamics( dt, ps_pred, b);   // Compute right-hand side
+
+        // Solve using LDLT decomposition (assuming solve_LDLT_sparse is adapted for Vec3d)
+        //Lingebra::solve_LDLT_sparse( npoints ,3, LDLT_L, LDLT_D, (double*)b, (double*)ps_cor, neighsLDLT );
+
+        Lingebra::forward_substitution_sparse( npoints,m,  LDLT_L, (double*)b, yy, neighsLDLT );
+        for (int i=0; i< npoints; i++){  double c=(1/LDLT_D[i]);   for(int s=0;s<m;s++){ yy[i*m+s]*=c; }; } // Diagonal 
+        Lingebra::forward_substitution_transposed_sparse( npoints,m, LDLT_L, yy, (double*)ps_cor, neighsLDLT );
+
+        // Compute residual
+        // double res = 0.0;
+        // for (int i = 0; i < npoints; i++) {
+        //     Vec3d d = ps_cor[i] - points[i];
+        //     double l = d.norm();
+        //     if (l > res) res = l;
+        // }
+        // printf("residual[%d] : %f\n", iter, res);
+
+        // Update velocity and points
+        for (int i = 0; i < npoints; i++) {
+            Vec3d dv = (ps_cor[i] - ps_pred[i])*(1/dt);
+            velocities[i].add(dv);
+            points[i] = ps_cor[i];
+        }
+    }
+
+    // free(ps_cor);
+    // free(ps_pred);
+    // free(b);
+    delete []ps_cor; 
+    delete []ps_pred; 
+    delete []b;
+    delete []yy;
+}
+
 
 // ==== Setup
 

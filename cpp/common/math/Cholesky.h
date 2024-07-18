@@ -75,24 +75,24 @@ int find_or_add_to_neighlist(int* neighs, int i, int n, int max_nodes) {
 
 void CholeskyDecomp_LDLT_sparse(double* A, double* L, double* D, int* neighs, int n) {
     for (int j = 0; j < n; j++) {
-        double sum1 = 0.0;
-        int* neighs_j = neighs + j * N_MAX_NEIGH;
-        for (int k = 0; k < N_MAX_NEIGH && neighs_j[k] != 0; k++) {
+        double sum = 0.0;
+        const int* neighs_j = neighs + j * N_MAX_NEIGH;
+        for (int k = 0; k < N_MAX_NEIGH && (neighs_j[k]>=0); k++) {
             if (neighs_j[k] < j) {
                 int idx = neighs_j[k];
-                sum1 += L[j*n + idx] * L[j*n + idx] * D[idx];
+                sum += L[j*n + idx] * L[j*n + idx] * D[idx];
             }
         }
-        D[j] = A[j*n + j] - sum1;
+        D[j] = A[j*n + j] - sum;
         for (int i = j+1; i < n; i++) {
-            sum1 = 0.0;
-            for (int k = 0; k < N_MAX_NEIGH && neighs_j[k] != 0; k++) {
+            sum = 0.0;
+            for (int k = 0; k < N_MAX_NEIGH && (neighs_j[k]>=0); k++) {
                 if (neighs_j[k] < j) {
                     int idx = neighs_j[k];
-                    sum1 += L[i*n + idx] * L[j*n + idx] * D[idx];
+                    sum += L[i*n + idx] * L[j*n + idx] * D[idx];
                 }
             }
-            double Lij = (A[i*n + j] - sum1) / D[j];
+            double Lij = (A[i*n + j] - sum) / D[j];
             if (fabs(Lij) > TOLERANCE) {
                 L[i*n + j] = Lij;
                 find_or_add_to_neighlist(neighs, j, i, n);
@@ -102,41 +102,47 @@ void CholeskyDecomp_LDLT_sparse(double* A, double* L, double* D, int* neighs, in
     }
 }
 
-void forward_substitution_sparse(double* L, double* b, int* neighs, double* y, int n) {
+void forward_substitution_sparse( int n, int m, const double* L, const double* b, double* x, const int* neighs ) {
+    double sum[m];
     for (int i = 0; i < n; i++) {
-        double sum1 = 0.0;
-        int* neighs_i = neighs + i * N_MAX_NEIGH;
-        for (int k = 0; k < N_MAX_NEIGH && neighs_i[k] != 0; k++) {
+        for(int s=0; s<m;s++){ sum[s]=0.0; }
+        const int* neighs_i = neighs + i * N_MAX_NEIGH;
+        for (int k = 0; k < N_MAX_NEIGH && (neighs_i[k]>=0); k++) {
             int j = neighs_i[k];
-            if (j < i) { sum1 += L[i*n + j] * y[j]; }
+            if (j < i) { 
+                for(int s=0; s<m;s++){ sum[s] += L[i*n+j] * x[j*m+s]; }
+            }
         }
-        
-        y[i] = b[i] - sum1;
+        for(int s=0; s<m;s++){  int ii=i*m+s; x[ii] = b[ii] - sum[s]; }
     }
 }
 
-void forward_substitution_transposed_sparse(double* L, double* b, int* neighs, double* x, int n) {
+void forward_substitution_transposed_sparse( int n, int m, const double* L, const double* b, double* x, const int* neighs ) {
+    double sum[m];
     for (int i = n-1; i >= 0; i--) {
-        double sum1 = 0.0;
-        int* neighs_i = neighs + i * N_MAX_NEIGH;
-        for (int k = 0; k < N_MAX_NEIGH && neighs_i[k] != 0; k++) {
+        //double sum1 = 0.0;
+        for(int s=0; s<m;s++){ sum[s]=0.0; }
+        const int* neighs_i = neighs + i * N_MAX_NEIGH;
+        for (int k = 0; k < N_MAX_NEIGH && (neighs_i[k]>=0); k++) {
             int j = neighs_i[k];
-            if (j > i) { sum1 += L[j*n + i] * x[j]; }
+            if (j > i) { 
+                //sum1 += L[j*n + i] * x[j]; 
+                for(int s=0; s<m;s++){ sum[s] += L[j*n+i] * x[j*m+s]; }
+            }
         }
-        x[i] = b[i] - sum1;
+        //x[i] = b[i] - sum1;
+        for(int s=0; s<m;s++){  int ii=i*m+s; x[ii] = b[ii] - sum[s]; }
     }
 }
 
-void solve_LDLT_sparse(double* L, double* D, double* b, int* neighs, double* x, int n) {
-    double* z = (double*)malloc(n * sizeof(double));
-    double* y = (double*)malloc(n * sizeof(double));
-    
-    forward_substitution_sparse(L, b, neighs, z, n);
-    for (int i = 0; i < n; i++) { y[i] = z[i] / D[i]; } // Diagonal 
-    forward_substitution_transposed_sparse(L, y, neighs, x, n);
-    
-    free(z);
-    free(y);
+void solve_LDLT_sparse(int n, int m, const double* L, const double* D, double* b, double* x, int* neighs ) {
+    double* z = new double[n*m];
+    double* y = new double[n*m];
+    forward_substitution_sparse( n,m,  L, b, z, neighs );
+    for (int i = 0; i < n; i++){ y[i] = z[i] / D[i]; } // Diagonal 
+    forward_substitution_transposed_sparse(n,m, L, y, x, neighs );
+    delete [] z;
+    delete [] y;
 }
 
 };

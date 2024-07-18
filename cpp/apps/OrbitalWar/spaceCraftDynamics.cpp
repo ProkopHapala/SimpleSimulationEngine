@@ -131,6 +131,13 @@ void makeShip1( int n, int m, int perRope, double L, Truss& truss, SoftBody& bod
     truss2SoftBody( truss, &bondTypes[0], body );
 }
 
+/**
+ * Draws a SoftBody object (which is a physical model of the truss used in simulations - evaulates forces and moves points).
+ * 
+ * @param body SoftBody object to draw.
+ * @param vsc  Scale factor for drawing velocities.
+ * @param fsc  Scale factor for drawing forces.
+*/
 void drawSoftBody( SoftBody& body, float vsc, float fsc ){
     glBegin(GL_LINES);
     glColor3f(.0,.0,.0);
