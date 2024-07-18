@@ -489,3 +489,186 @@ function solve_LDLT( L::Matrix{T}, D::Vector{T}, b::Vector{T}) where T<:Abstract
     x = forward_substitution_transposed(L, y)
     return x
 end
+
+
+function CholeskyDecomp_LDLT_sparse(A::Matrix{T}, neighs::Array{Vector{Int},1}, tol::T=1e-16) where T<:AbstractFloat
+    neighsets = [Set(ng) for ng in neighs]
+    n = size(A, 1)
+    L = Matrix{T}(I, n, n)
+    D = zeros(T, n)
+    nop = 0
+    nngmax = 0
+
+    for j in 1:n
+        sum1 = 0.0
+        ngs = neighsets[j]
+        for k in ngs
+            if k < j
+                sum1 += (L[j,k]^2) * D[k]
+                nop += 1
+            end
+        end
+        D[j] = A[j,j] - sum1
+
+        for i in j+1:n
+            sum1 = 0.0
+            for k in ngs
+                if k < j
+                    sum1 += L[i,k] * L[j,k] * D[k]
+                    nop += 1
+                end
+            end
+            Lij = (A[i,j] - sum1) / D[j]
+            if abs(Lij) > tol
+                L[i,j] = Lij
+                push!(ngs, i)
+                push!(neighsets[i], j)
+            end
+        end
+        nngmax = max(nngmax, length(ngs))
+    end
+
+    neighsLDLT = [sort!(collect(ngs)) for ngs in neighsets]
+    return L, D, neighsLDLT
+end
+
+function forward_substitution_sparse(L::Matrix{T}, b::Vector{T}, neighs::Array{Vector{Int},1}) where T<:AbstractFloat
+    n = size(L, 1)
+    y = zeros(T, n)
+    for i in 1:n
+        sum1 = 0.0
+        for j in neighs[i]
+            if j < i
+                sum1 += L[i,j] * y[j]
+            end
+        end
+        y[i] = b[i] - sum1
+    end
+    return y
+end
+
+function forward_substitution_transposed_sparse(L::Matrix{T}, b::Vector{T}, neighs::Array{Vector{Int},1}) where T<:AbstractFloat
+    n = size(L, 1)
+    x = zeros(T, n)
+    for i in n:-1:1
+        sum1 = 0.0
+        for j in neighs[i]
+            if j > i
+                sum1 += L[j,i] * x[j]
+            end
+        end
+        x[i] = b[i] - sum1
+    end
+    return x
+end
+
+function solve_LDLT_sparse(L::Matrix{T}, D::Vector{T},  neighs::Array{Vector{Int},1}, b::Vector{T} ) where T<:AbstractFloat
+    z = forward_substitution_sparse(L, b, neighs)
+    y = z ./ D
+    x = forward_substitution_transposed_sparse(L, y, neighs)
+    return x
+end
+
+
+const N_MAX_NEIGH = 32
+
+function find_or_add_to_neighlist!(neighs::Matrix{Int}, i::Int, n::Int)
+    for j in 1:N_MAX_NEIGH
+        if neighs[j,i] == n
+            return j  # n is already in the list, return its position
+        elseif neighs[j,i] == 0
+            neighs[j,i] = n  # n is not in the list, add it here
+            return j  # return the position where n was added
+        end
+    end
+    return 0  # list is full, couldn't add n
+end
+
+function CholeskyDecomp_LDLT_sparse_m(A::Matrix{Float64}, neighs::Matrix{Int}, tol::Float64=1e-16)
+    n = size(A, 1)
+    L = Matrix{Float64}(I, n, n)
+    D = zeros(Float64, n)
+    nop = 0
+    nngmax = 0
+
+    for j in 1:n
+        sum1 = 0.0
+        for k in 1:N_MAX_NEIGH
+            if neighs[k,j] == 0
+                break
+            end
+            if neighs[k,j] < j
+                sum1 += (L[j,neighs[k,j]]^2) * D[neighs[k,j]]
+                nop += 1
+            end
+        end
+        D[j] = A[j,j] - sum1
+
+        for i in j+1:n
+            sum1 = 0.0
+            for k in 1:N_MAX_NEIGH
+                if neighs[k,j] == 0
+                    break
+                end
+                if neighs[k,j] < j
+                    sum1 += L[i,neighs[k,j]] * L[j,neighs[k,j]] * D[neighs[k,j]]
+                    nop += 1
+                end
+            end
+            Lij = (A[i,j] - sum1) / D[j]
+            if abs(Lij) > tol
+                L[i,j] = Lij
+                find_or_add_to_neighlist!(neighs, j, i)
+                find_or_add_to_neighlist!(neighs, i, j)
+            end
+        end
+        nngmax = max(nngmax, count(!iszero, view(neighs,:,j)))
+    end
+
+    return L, D, neighs
+end
+
+function forward_substitution_sparse_m(L::Matrix{Float64}, b::Vector{Float64}, neighs::Matrix{Int})
+    n = size(L, 1)
+    y = zeros(Float64, n)
+    for i in 1:n
+        sum1 = 0.0
+        for k in 1:N_MAX_NEIGH
+            if neighs[k,i] == 0
+                break
+            end
+            j = neighs[k,i]
+            if j < i
+                sum1 += L[i,j] * y[j]
+            end
+        end
+        y[i] = b[i] - sum1
+    end
+    return y
+end
+
+function forward_substitution_transposed_sparse_m(L::Matrix{Float64}, b::Vector{Float64}, neighs::Matrix{Int})
+    n = size(L, 1)
+    x = zeros(Float64, n)
+    for i in n:-1:1
+        sum1 = 0.0
+        for k in 1:N_MAX_NEIGH
+            if neighs[k,i] == 0
+                break
+            end
+            j = neighs[k,i]
+            if j > i
+                sum1 += L[j,i] * x[j]
+            end
+        end
+        x[i] = b[i] - sum1
+    end
+    return x
+end
+
+function solve_LDLT_sparse_m(L::Matrix{Float64}, D::Vector{Float64}, b::Vector{Float64}, neighs::Matrix{Int})
+    z = forward_substitution_sparse(L, b, neighs)
+    y = z ./ D
+    x = forward_substitution_transposed_sparse(L, y, neighs)
+    return x
+end

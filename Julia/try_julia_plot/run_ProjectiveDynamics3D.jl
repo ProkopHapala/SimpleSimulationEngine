@@ -69,7 +69,8 @@ function main( nx=5, ny=5, dt=5.0 )
     print("CholeskyDecomp_sparse()"); @time L,neighsCh  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)    # evaluate Cholensky decomposition for sparse matrix (efficient)                    # evaluate Cholensky decomposition using Cholesky–Crout algorithm
     U  = copy(L') 
 
-    LDLT_L, LDLT_D = CholeskyDecomp_LDLT(A)
+    LDLT_L, LDLT_D              = CholeskyDecomp_LDLT(A)
+    LDLT_L, LDLT_D, LDLT_neighs = CholeskyDecomp_LDLT_sparse(A,neighs)
 
     reconstructed = LDLT_L * Diagonal(LDLT_D) * LDLT_L'
     diff = A - reconstructed
@@ -88,7 +89,7 @@ function main( nx=5, ny=5, dt=5.0 )
 
 
     truss  = Truss(points, bonds, masses, ks, l0s, fixed, neighBs)
-    sol    = TrussSolution(A,L,U,neighsL,neighsU, LDLT_L,LDLT_D )
+    sol    = TrussSolution(A,L,U,neighsL,neighsU, LDLT_L,LDLT_D,LDLT_neighs )
 
     #truss_f = convert_Truss( Float32, truss )
     #sol_f   = convert_TrussSolution( Float32, sol  )
@@ -112,7 +113,8 @@ function main( nx=5, ny=5, dt=5.0 )
     #print("x : "); display(x)
     
     plot_truss( plt, truss.bonds, truss.points, lw=2.0, c=:blue, bLabel=true )
-    plot_truss( plt, truss.bonds, points      , lw=2.0, c=:red )
+    #plot_truss( plt, truss.bonds, points      , lw=2.0, c=:red )
+    plot_truss( plt, truss.bonds, points_f      , lw=2.0, c=:red )
     display( plt );
 end # function main
 

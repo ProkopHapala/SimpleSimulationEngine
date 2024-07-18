@@ -149,6 +149,7 @@ struct TrussSolution
     neighsU::Vector{Vector{Int}}
     LDLT_L::Matrix{Float64}
     LDLT_D::Vector{Float64}
+    neighsLDLT::Vector{Vector{Int}}
 end
 
 struct Truss_f
@@ -169,6 +170,7 @@ struct TrussSolution_f
     neighsU::Vector{Vector{Int}}
     LDLT_L::Matrix{Float32}
     LDLT_D::Vector{Float32}
+    neighsLDLT::Vector{Vector{Int}}
 end
 
 function convert_to_truss_f(truss::Truss)
@@ -192,6 +194,7 @@ function convert_to_TrussSolution_f(sol::TrussSolution)
         sol.neighsL,
         convert.(Float32, sol.LDLT_L),  
         convert.(Float32, sol.LDLT_D), 
+        sol.neighsLDLT,
     )
 end
 
@@ -236,9 +239,13 @@ function run_solver( truss::Truss, sol::TrussSolution, velocity::Matrix{Float64}
         #y      = forwardsub_sparse(sol.L,b,sol.neighsL)  #;print("y_ch : "); display(y_ch)
         #ps_cor = backsub_sparse(   sol.U,y,sol.neighsU)  #;print("x_ch : "); display(x_ch)
 
-        ps_cor[:,1] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,1] )
-        ps_cor[:,2] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,2] )
-        ps_cor[:,3] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,3] )
+        #ps_cor[:,1] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,1] )
+        #ps_cor[:,2] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,2] )
+        #ps_cor[:,3] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,3] )
+
+        ps_cor[:,1] = solve_LDLT_sparse( sol.LDLT_L, sol.LDLT_D, sol.neighsLDLT, b[:,1] )
+        ps_cor[:,2] = solve_LDLT_sparse( sol.LDLT_L, sol.LDLT_D, sol.neighsLDLT, b[:,2] )
+        ps_cor[:,3] = solve_LDLT_sparse( sol.LDLT_L, sol.LDLT_D, sol.neighsLDLT, b[:,3] )
 
         #ps_cor = sol.A \ b
 
