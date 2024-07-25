@@ -1016,9 +1016,26 @@ class SpaceCraftWorkshop{ public:
         mat->reflectivity= reflectivity;
         mat->Tmelt       = Tmelt;
         materials.add( mat );
+        mat->id = materials.getId( mat->name );
         if(bPrint)mat->print();
-        return 0;
+        return mat->id;
     };
+
+    int add_StickMaterial ( const char* name, const char* mat_name, double diameter, double wallThickness, double preStrain ){
+        //char mat_name[NAME_LEN];
+        StickMaterial *o = new StickMaterial();
+        //o->name = name;
+        strcpy( o->name, name );
+        o->diameter      = diameter;
+        o->wallThickness = wallThickness;
+        o->preStrain     = preStrain;
+        o->materialId = materials.getId( mat_name );
+        o->materialId = materials.getId( mat_name );
+        o->update( materials.vec[o->materialId] );
+        if( stickMaterials.add(o) && (verbosity>0) ) printf( "StickMaterial(%s) replaced\n", o->name );
+        o->id = stickMaterials.getId( o->name );
+        return o->id;
+    }
 
     /*
     int l_PanelMaterial (lua_State * L){

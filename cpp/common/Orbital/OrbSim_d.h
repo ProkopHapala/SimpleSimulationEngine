@@ -14,6 +14,8 @@
 #include "geom3D.h"
 #include "Interfaces.h"
 
+#include "Cholesky.h"
+
 double springForce( double l, double& f, Quat4d par ){
     double dl = l - par.x;
     double k;
@@ -134,6 +136,12 @@ class OrbSim: public Picker { public:
     int2*   neighBs=0; // neighbor bond indices
     //int*    neighBs=0; // neighbor bond indices
     int*    neighB2s=0;  // neighbor indices
+
+    // Cholesky / Projective Dynamics 
+    double* PDmat=0;
+    double* LDLT_L=0;
+    double* LDLT_D=0; 
+    int* neighsLDLT=0;
 
     int     nBonds =0; // number of bonds
     Quat4d* bparams=0; // bond parameters (l0,kP,kT,damp)
@@ -355,6 +363,116 @@ class OrbSim: public Picker { public:
         else if(mask==2){ return (void*)&bonds [picked]; }
         return 0; 
     };
+
+    // =================== Solver Using Projective Dynamics and Cholesky Decomposition
+
+    void make_PD_Matrix( double* A ) {
+        int n = nPoint;
+        int n2 = n*n;
+        //for(int i=0; i<np2; i++){ PDmat[i]=0.0; }
+        double idt2 = 1.0 / (dt * dt);
+        for (int i = 0; i < n; ++i) {
+            double Aii = points[i].w * idt2; // Assuming points[i].w stores the mass
+            for (int ib = neighBs[i].x; ib < neighBs[i].y; ++ib) {
+                int j    = neighs[ib];
+                double k = params[ib].y; // Assuming params[ib].y stores the spring constant
+                Aii += k;
+                if (j > i) {
+                    A[i+j*n] = -k;
+                    A[j+i*n] = -k;
+                }
+            }
+            A[i+i*n] += Aii;
+        }
+    }
+
+    void prepare_Cholesky(){ 
+        int n = nPoint;
+        int n2 = n*n;
+        _realloc0( PDmat,  n2, 0.0 );
+        _realloc0( LDLT_L, n2, 0.0 );
+        _realloc0( LDLT_D, n , 0.0 );
+        make_PD_Matrix( PDmat ); 
+        Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighs, n );
+    }
+
+    void rhs_ProjectiveDynamics(Vec3d* pnew, Vec3d* b) {
+        double idt2 = 1.0 / (dt * dt);
+        for (int i = 0; i < nPoint; i++) {
+            Vec3d bi;
+            bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
+            int neighB_start = (i == 0) ? 0 : neighB2s[i-1];
+            int neighB_end = neighB2s[i];
+            for (int nb = neighB_start; nb < neighB_end; nb++) {
+                int ib = neighs[nb];
+                double k = params[ib].y;  // assuming params.y is the spring constant
+                int i_ = bonds[ib].x;
+                int j_ = bonds[ib].y;
+                int j = (i_ == i) ? j_ : i_;
+                Vec3d d = points[i].f -  points[j].f;
+                bi.add_mul(d, k * params[ib].x / d.norm());  // params[ib].x is l0
+            }
+            b[i] = bi;
+        }
+    }
+
+    void run_Cholesky(int niter) {
+        Vec3d*  ps_cor = new Vec3d[nPoint];
+        Vec3d*  ps_pred = new Vec3d[nPoint];
+        Vec3d*  b       = new Vec3d[nPoint];
+        Vec3d*  yy      = new Vec3d[nPoint];
+
+        const int m=3;
+        memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
+        double dt2 = dt * dt;
+        for (int iter = 0; iter < niter; iter++) {
+            // Evaluate forces (assuming you have a method for this)
+            //evalForces();
+
+            // Predict step
+            for (int i = 0; i < nPoint; i++) { ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2; }
+
+            // Apply fixed constraints
+            for (int i = 0; i < nPoint; i++) {    if (kFix[i] > 0) { ps_pred[i] = points[i].f; } }
+
+            // Compute right-hand side
+            rhs_ProjectiveDynamics(ps_pred, b);
+
+            // Solve using LDLT decomposition (assuming you have this method)
+            //solve_LDLT_sparse(b, ps_cor);
+
+            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)b, (double*)yy, neighsLDLT );
+            for (int i=0; i<nPoint; i++){ yy[i].mul(1/LDLT_D[i]); } // Diagonal 
+            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (double*)yy, (double*)ps_cor, neighsLDLT );
+
+            // Compute residual
+            double res = 0.0;
+            for (int i=0;i<nPoint;i++) {
+                Vec3d  d = ps_cor[i] - points[i].f;
+                double l = d.norm();
+                if (l > res) res = l;
+            }
+            printf("residual[%d] : %f\n", iter, res);
+
+            // Update velocity and points
+            for (int i=0;i<nPoint;i++) {
+                Vec3d dv = ps_cor[i] - ps_pred[i];
+                dv.mul(1.0 / dt);
+                vel   [i].f.add( dv );
+                points[i].f = ps_cor[i];
+            }
+
+            // Call user update function if set
+            if (user_update) {
+                user_update(dt);
+            }
+        }
+
+        delete[] ps_cor;
+        delete[] ps_pred;
+        delete[] b;
+    }
+
 
     // =================== Linearized Elasticity Truss Simulation
 

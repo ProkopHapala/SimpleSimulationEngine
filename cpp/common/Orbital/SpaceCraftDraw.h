@@ -92,10 +92,12 @@ void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
 // ========================   Double precision
 
 void renderTruss(int nb, int2* bonds, Quat4d* ps, double* strain=0, float sc=1.0 ){
+    //printf( "renderTruss() nb=%i\n", nb );
     glBegin(GL_LINES);
     for(int i=0; i<nb; i++ ){
         //printf( "renderTruss()[%i] \n", i );
         int2 b =  bonds[i];
+        //printf( "renderTruss()[%i] (%i,%i)\n", i, b.x, b.y );
         if(strain){
             float f=strain[i];
             //if( fabs(f)>0.0001 )printf( "Edge[%i] strain=%g \n", i, f );

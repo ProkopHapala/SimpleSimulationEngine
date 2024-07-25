@@ -14,6 +14,8 @@
 #include "geom3D.h"
 #include "Interfaces.h"
 
+#include "Cholesky.h"
+
 float springForce( float l, float& f, Quat4f par ){
     float dl = l - par.x;
     float k;
@@ -118,11 +120,20 @@ class OrbSim_f : public Picker { public:
     Quat4f* forces=0;  // force and energy
     Quat4f* vel   =0;  // velocity
 
+    float* kFix=0;   // force constant for fixed points
+    float  kLinRegularize = 1.0;
+
     Quat4f* params=0;  // neighbor parameters (l0,kP,kT,damp)
     int*    neighs=0;  // neighbor indices
     int2*   neighBs=0; // neighbor bond indices
     //int*    neighBs=0; // neighbor bond indices
     int*    neighB2s=0;  // neighbor indices
+
+
+    // Cholesky / Projective Dynamics 
+    float* LDLT_L=0;
+    float* LDLT_D=0; 
+    int* neighsLDLT=0;
 
     int     nBonds =0; // number of bonds
     Quat4f* bparams=0; // bond parameters (l0,kP,kT,damp)
@@ -317,6 +328,86 @@ class OrbSim_f : public Picker { public:
         else if(mask==2){ return (void*)&bonds [picked]; }
         return 0; 
     };
+
+    // =================== Solver Using Projective Dynamics and Cholesky Decomposition
+
+    void rhs_ProjectiveDynamics(Vec3f* pnew, Vec3f* b) {
+        float idt2 = 1.0 / (dt * dt);
+        for (int i = 0; i < nPoint; i++) {
+            Vec3f bi;
+            bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
+            int neighB_start = (i == 0) ? 0 : neighB2s[i-1];
+            int neighB_end = neighB2s[i];
+            for (int nb = neighB_start; nb < neighB_end; nb++) {
+                int ib = neighs[nb];
+                double k = params[ib].y;  // assuming params.y is the spring constant
+                int i_ = bonds[ib].x;
+                int j_ = bonds[ib].y;
+                int j = (i_ == i) ? j_ : i_;
+                Vec3f d = points[i].f -  points[j].f;
+                bi.add_mul(d, k * params[ib].x / d.norm());  // params[ib].x is l0
+            }
+            b[i] = bi;
+        }
+    }
+
+    void run_Cholesky(int niter) {
+        Vec3f*  ps_cor  = new Vec3f[nPoint];
+        Vec3f*  ps_pred = new Vec3f[nPoint];
+        Vec3f*  b       = new Vec3f[nPoint];
+        Vec3f*  yy      = new Vec3f[nPoint];
+
+        const int m=3;
+        memcpy(ps_cor, points, nPoint * sizeof(Vec3f));
+        double dt2 = dt * dt;
+        for (int iter = 0; iter < niter; iter++) {
+            // Evaluate forces (assuming you have a method for this)
+            //evalForces();
+
+            // Predict step
+            for (int i = 0; i < nPoint; i++) { ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2; }
+
+            // Apply fixed constraints
+            for (int i = 0; i < nPoint; i++) {    if (kFix[i] > 0) { ps_pred[i] = points[i].f; } }
+
+            // Compute right-hand side
+            rhs_ProjectiveDynamics(ps_pred, b);
+
+            // Solve using LDLT decomposition (assuming you have this method)
+            //solve_LDLT_sparse(b, ps_cor);
+
+            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (float*)b, (float*)yy, neighsLDLT );
+            for (int i=0; i<nPoint; i++){ yy[i].mul(1/LDLT_D[i]); } // Diagonal 
+            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (float*)yy, (float*)ps_cor, neighsLDLT );
+
+            // Compute residual
+            double res = 0.0;
+            for (int i=0;i<nPoint;i++) {
+                Vec3f  d = ps_cor[i] - points[i].f;
+                double l = d.norm();
+                if (l > res) res = l;
+            }
+            printf("residual[%d] : %f\n", iter, res);
+
+            // Update velocity and points
+            for (int i=0;i<nPoint;i++) {
+                Vec3f dv = ps_cor[i] - ps_pred[i];
+                dv.mul(1.0 / dt);
+                vel   [i].f.add( dv );
+                points[i].f = ps_cor[i];
+            }
+
+            // Call user update function if set
+            if (user_update) {
+                user_update(dt);
+            }
+        }
+
+        delete[] ps_cor;
+        delete[] ps_pred;
+        delete[] b;
+    }
+
 
     // =================== Truss Simulation
 

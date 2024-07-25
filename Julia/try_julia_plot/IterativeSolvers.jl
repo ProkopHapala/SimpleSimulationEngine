@@ -5,6 +5,22 @@
 
 using DataStructures
 
+# function write_matrix_to_file(A::Matrix{T}, filename::String; delimiter::Char='\t', format::String="%.6f") where T
+#     open(filename, "w") do io
+#         rows, cols = size(A)
+#         for i in 1:rows
+#             for j in 1:cols
+#                 @printf(io, format, A[i,j])
+#                 if j < cols
+#                 print(io, delimiter)
+#             end
+#         end
+#         println(io)
+#         end
+#     end
+#     println("Matrix written to $filename")
+# end
+
 # =========== Functions
 
 function Jacobi_step_Dens( A::Matrix{Float64}, b::Matrix{Float64}, x::Matrix{Float64}, xnew::Matrix{Float64} )

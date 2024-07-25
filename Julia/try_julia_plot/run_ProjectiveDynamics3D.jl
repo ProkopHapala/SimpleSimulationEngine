@@ -1,5 +1,6 @@
 using Random
 using Revise # prevent problem with redefinition of types at runtipme (when using include() in REPL)
+using DelimitedFiles
 
 include("ProjectedGuassSeidel.jl")
 include("plot_utils.jl")
@@ -71,6 +72,17 @@ function main( nx=5, ny=5, dt=5.0 )
 
     LDLT_L, LDLT_D              = CholeskyDecomp_LDLT(A)
     LDLT_L, LDLT_D, LDLT_neighs = CholeskyDecomp_LDLT_sparse(A,neighs)
+
+    #writedlm("PDmat.csv",  A,      ',')
+    #writedlm("LDLT_L.csv", LDLT_L, ',')
+
+    #writedlm("PDmat.csv",  A,      ' ')
+    #writedlm("LDLT_L.csv", LDLT_L, ' ')
+
+    A_cpp = readdlm("../../tests_bash/Orbital/PDmat.log", Float64)
+
+    println("A_cpp ", size(A_cpp) ); display(A_cpp);
+    println("A     ", size(A    ) ); display(A    );
 
     reconstructed = LDLT_L * Diagonal(LDLT_D) * LDLT_L'
     diff = A - reconstructed

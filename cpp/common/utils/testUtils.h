@@ -39,6 +39,10 @@ inline void printMat( const Mat3d& mat  ){
 	printf( " %f %f %f \n", mat.cx, mat.cy, mat.cz );
 }
 
+template<typename T> inline void fprintVec(FILE* fout,int n      ,T* vec, const char* fmt="%20.10f "){ for(int i=0;i<n;i++){ fprintf( fout,fmt, vec[i] ); }; fprintf(fout,"\n"); }
+template<typename T> inline void fprintMat(FILE* fout,int n,int m,T* mat, const char* fmt="%20.10f "){ for(int i=0;i<n;i++){ fprintVec(fout,m,mat+i*m, fmt); } }
+template<typename T> inline void mat2file(const char* fname,int n, int m, T* vec, const char* fmt="%20.10f ", const char* mode="w" ){ FILE* fout=fopen(fname,mode); fprintMat(fout,n,m,vec); fclose(fout); }
+
 template<typename T> void println(const T& t){t.print(); puts(""); };
 template<typename T> void println(const char* s,const T& t){ printf("%s",s);t.print(); puts(""); };
 

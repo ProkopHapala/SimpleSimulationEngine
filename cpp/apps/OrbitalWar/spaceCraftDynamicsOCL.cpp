@@ -40,6 +40,7 @@ int verbosity = 0;
 
 #include "EditSpaceCraft.h"
 
+#include "OrbSim_d.h"
 #include "OrbSim_f.h"
 #include "OCL_Orb.h"
 //#include "TriangleRayTracer.h"
@@ -51,6 +52,8 @@ int verbosity = 0;
 #include "SpaceCraftGUI.h"
 #include "argparse.h"
 
+#include "testUtils.h"
+
 // ======================  Global Variables & Declarations
 
 using namespace SpaceCrafting;
@@ -58,6 +61,7 @@ using namespace SpaceCrafting;
 bool bRun = false;
 
 Mesh::Builder2 mesh2;
+OrbSim         sim2;
 //OrbSim_f       sim;
 OCL_Orb        sim;
 
@@ -136,6 +140,50 @@ void reloadShip( const char* fname  ){
     printf("#### END reloadShip('%s')\n", fname );
 };
 
+void makeShip_Wheel( ){
+
+    StickMaterial *o = new StickMaterial();
+    //Material{ name="Kevlar", density=1.44e+3, Spull=3.6e+9, Spush=0.0,    Kpull=154.0e+9, Kpush=0.0,      reflectivity=0.6,  Tmelt=350 }
+    //Material{ name="Steel" , density=7.89e+3, Spull=1.2e+9, Spush=1.2e+9, Kpull=200.0e+9, Kpush=200.0e+9, reflectivity=0.85, Tmelt=800 }
+    //st1  = StickMaterial( "GS1_long", "Steel", 0.1,  0.005 )
+    //st2  = StickMaterial( "GS1_perp", "Steel", 0.05, 0.003 )
+    //st3  = StickMaterial( "GS1_in",   "Steel", 0.04, 0.002 )
+    //st4  = StickMaterial( "GS1_out",  "Steel", 0.04, 0.002 )
+
+    workshop.add_Material     ( "Steel", 7.89e+3, 1.2e+9, 1.2e+9, 200.0e+9, 200.0e+9, 0.85, 800 );
+    workshop.add_StickMaterial( "GS1_long", "Steel", 0.1, 0.005, 0.0 );
+
+    Vec3d p0{0.0,0.0,0.0};
+    Vec3d p1{1.0,0.0,0.0};
+    Vec3d ax{0.0,0.0,1.0};
+    
+    //BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
+    mesh2.clear();
+    //mesh.block();
+    //mesh2.wheel( p0, p1, ax, 8, 0.2 );
+    wheel( mesh2, p0, p1, ax, 8, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
+    //wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );
+    //Quat4i& b = mesh.blocks.back();
+    //o->pointRange = {b.x,(int)mesh.verts.size()};
+    //o->stickRange = {b.y,(int)mesh.edges.size()};
+
+    mesh2.printSizes();
+
+    exportSim( sim2, mesh2, workshop );
+    sim2.printAllNeighs();
+    sim2.prepare_Cholesky();
+
+    int n = sim2.nPoint;
+    mat2file( "PDmat.log", n,n,  sim2.PDmat  );
+    mat2file( "LDLT_L.log", n,n, sim2.LDLT_L );
+    
+
+    //exportSim( sim, mesh2, workshop );
+    //sim.printAllNeighs();
+
+    printf("#### END makeShip_Whee()\n" );
+};
+
 // ====================== Class Definitions
 
 class SpaceCraftEditorApp : public AppSDL2OGL_3D { public:
@@ -164,7 +212,10 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
 
     theSpaceCraft = new SpaceCraft();
     initSpaceCraftingLua();
-    if(argc<=1)reloadShip( "data/ship_ICF_interceptor_1.lua" );
+    if(argc<=1){
+        //reloadShip( "data/ship_ICF_interceptor_1.lua" );
+        makeShip_Wheel();
+    }
 
     picker.picker = &sim;   picker.Rmax=10.0;
 

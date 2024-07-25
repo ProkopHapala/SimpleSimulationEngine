@@ -1,6 +1,7 @@
+#pragma once
 
-#ifndef  Cholesky_h
-#define  Cholesky_h
+//#ifndef  Cholesky_h
+//#define  Cholesky_h
 
 #include <math.h>
 #include <cstdlib>
@@ -18,9 +19,10 @@ namespace Lingebra{
 
 // =============== Cholesky solver (non-sparse)
 
-void CholeskyDecomp_LDLT(double* A, double* L, double* D, int n) {
+template<typename T>
+inline void CholeskyDecomp_LDLT(T* A, T* L, T* D, int n) {
     for (int j = 0; j < n; j++) {
-        double sum = A[j*n + j];
+        T sum = A[j*n + j];
         for (int k = 0; k < j; k++) { sum -= L[j*n + k] * L[j*n + k] * D[k]; }
         D[j] = sum;
         for (int i = j+1; i < n; i++) {
@@ -31,9 +33,10 @@ void CholeskyDecomp_LDLT(double* A, double* L, double* D, int n) {
     }
 }
 
-void forward_substitution(double* L, double* b, double* y, int n) {
+template<typename T>
+inline void forward_substitution(T* L, T* b, T* y, int n) {
     for (int i = 0; i < n; i++) {
-        double sum = b[i];
+        T sum = b[i];
         for (int j = 0; j < i; j++) {
             sum -= L[i*n + j] * y[j];
         }
@@ -41,17 +44,19 @@ void forward_substitution(double* L, double* b, double* y, int n) {
     }
 }
 
-void forward_substitution_transposed(double* L, double* b, double* x, int n) {
+template<typename T>
+inline void forward_substitution_transposed(T* L, T* b, T* x, int n) {
     for (int i = n-1; i >= 0; i--) {
-        double sum = b[i];
+        T sum = b[i];
         for (int j = i+1; j < n; j++) { sum -= L[j*n + i] * x[j]; }
         x[i] = sum;
     }
 }
 
-void solve_LDLT(double* L, double* D, double* b, double* x, int n) {
-    double* z = (double*)malloc(n * sizeof(double));
-    double* y = (double*)malloc(n * sizeof(double));
+template<typename T>
+inline  void solve_LDLT(T* L, T* D, T* b, T* x, int n) {
+    T* z = (T*)malloc(n * sizeof(T));
+    T* y = (T*)malloc(n * sizeof(T));
 
     forward_substitution(L, b, z, n);
     for (int i = 0; i < n; i++) { y[i] = z[i] / D[i]; } // Diagonal
@@ -64,7 +69,7 @@ void solve_LDLT(double* L, double* D, double* b, double* x, int n) {
 
 // =============== Sparse Cholesky solver
 
-int find_or_add_to_neighlist(int* neighs, int i, int n, int max_nodes) {
+inline int find_or_add_to_neighlist(int* neighs, int i, int n, int max_nodes) {
     int* row = neighs + i * N_MAX_NEIGH;
     for (int j = 0; j < N_MAX_NEIGH; j++) {
         if      (row[j] == n) {  return j; } 
@@ -73,9 +78,10 @@ int find_or_add_to_neighlist(int* neighs, int i, int n, int max_nodes) {
     return -1;  // list is full, couldn't add n
 }
 
-void CholeskyDecomp_LDLT_sparse(double* A, double* L, double* D, int* neighs, int n) {
+template<typename T>
+inline void CholeskyDecomp_LDLT_sparse(T* A, T* L, T* D, int* neighs, int n) {
     for (int j = 0; j < n; j++) {
-        double sum = 0.0;
+        T sum = 0.0;
         const int* neighs_j = neighs + j * N_MAX_NEIGH;
         for (int k = 0; k < N_MAX_NEIGH && (neighs_j[k]>=0); k++) {
             if (neighs_j[k] < j) {
@@ -92,7 +98,7 @@ void CholeskyDecomp_LDLT_sparse(double* A, double* L, double* D, int* neighs, in
                     sum += L[i*n + idx] * L[j*n + idx] * D[idx];
                 }
             }
-            double Lij = (A[i*n + j] - sum) / D[j];
+            T Lij = (A[i*n + j] - sum) / D[j];
             if (fabs(Lij) > TOLERANCE) {
                 L[i*n + j] = Lij;
                 find_or_add_to_neighlist(neighs, j, i, n);
@@ -102,8 +108,9 @@ void CholeskyDecomp_LDLT_sparse(double* A, double* L, double* D, int* neighs, in
     }
 }
 
-void forward_substitution_sparse( int n, int m, const double* L, const double* b, double* x, const int* neighs ) {
-    double sum[m];
+template<typename T>
+inline void forward_substitution_sparse( int n, int m, const T* L, const T* b, T* x, const int* neighs ) {
+    T sum[m];
     for (int i = 0; i < n; i++) {
         for(int s=0; s<m;s++){ sum[s]=0.0; }
         const int* neighs_i = neighs + i * N_MAX_NEIGH;
@@ -117,10 +124,11 @@ void forward_substitution_sparse( int n, int m, const double* L, const double* b
     }
 }
 
-void forward_substitution_transposed_sparse( int n, int m, const double* L, const double* b, double* x, const int* neighs ) {
-    double sum[m];
+template<typename T>
+inline void forward_substitution_transposed_sparse( int n, int m, const T* L, const T* b, T* x, const int* neighs ) {
+    T sum[m];
     for (int i = n-1; i >= 0; i--) {
-        //double sum1 = 0.0;
+        //T sum1 = 0.0;
         for(int s=0; s<m;s++){ sum[s]=0.0; }
         const int* neighs_i = neighs + i * N_MAX_NEIGH;
         for (int k = 0; k < N_MAX_NEIGH && (neighs_i[k]>=0); k++) {
@@ -135,9 +143,10 @@ void forward_substitution_transposed_sparse( int n, int m, const double* L, cons
     }
 }
 
-void solve_LDLT_sparse(int n, int m, const double* L, const double* D, double* b, double* x, int* neighs ) {
-    double* z = new double[n*m];
-    double* y = new double[n*m];
+template<typename T>
+inline void solve_LDLT_sparse(int n, int m, const T* L, const T* D, T* b, T* x, int* neighs ) {
+    T* z = new T[n*m];
+    T* y = new T[n*m];
     forward_substitution_sparse( n,m,  L, b, z, neighs );
     for (int i = 0; i < n; i++){ y[i] = z[i] / D[i]; } // Diagonal 
     forward_substitution_transposed_sparse(n,m, L, y, x, neighs );
@@ -148,5 +157,5 @@ void solve_LDLT_sparse(int n, int m, const double* L, const double* D, double* b
 };
 
 
-#endif
+//#endif
 
