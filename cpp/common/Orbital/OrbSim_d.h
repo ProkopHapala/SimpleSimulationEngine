@@ -366,33 +366,53 @@ class OrbSim: public Picker { public:
 
     // =================== Solver Using Projective Dynamics and Cholesky Decomposition
 
-    void make_PD_Matrix( double* A ) {
+    void make_PD_Matrix( double* A, double dt ) {
+        printf( "make_PD_Matrix() dt=%g\n", dt );
+        //for(int i=0; i<nPoint; i++){ printf("mass[%i] %g\n", points[i].w ); }; // debug
+        //for(int i=0; i<nBonds; i++){ printf("ks[%i] %g\n",   params[i].y ); }; // debug
         int n = nPoint;
         int n2 = n*n;
         //for(int i=0; i<np2; i++){ PDmat[i]=0.0; }
         double idt2 = 1.0 / (dt * dt);
-        for (int i = 0; i < n; ++i) {
+        for (int i = 0; i < n; ++i) { // point i
             double Aii = points[i].w * idt2; // Assuming points[i].w stores the mass
-            for (int ib = neighBs[i].x; ib < neighBs[i].y; ++ib) {
-                int j    = neighs[ib];
+            printf( "==i,i %i %g %g %g \n", i, Aii, points[i].w, idt2  );
+            int2* ngi = neighBs + (i*nNeighMax);
+            for( int jj=0; jj<nNeighMax; jj++ ){
+                int2  ng = ngi[jj];
+                int   ib = ng.y;  
+                int2   b = bonds[ib];
+                //int j    = neighs[b.x];
+                int j    = b.y;
                 double k = params[ib].y; // Assuming params[ib].y stores the spring constant
+
+                printf( "i,ib %i %i %g \n", i, ib+1, k  );
+
                 Aii += k;
-                if (j > i) {
-                    A[i+j*n] = -k;
-                    A[j+i*n] = -k;
+                // if (j > i) {
+                //     A[i+j*n] = -k;
+                //     A[j+i*n] = -k;
+                // }
+
+                if     ( b.y > i ){
+                    A[i  *n+b.y] = -k;
+                    A[b.y*n+i  ] = -k;
+                }else if ( b.x > i ){
+                    A[i  *n+b.x] = -k;
+                    A[b.x*n+i  ] = -k;
                 }
             }
             A[i+i*n] += Aii;
         }
     }
 
-    void prepare_Cholesky(){ 
+    void prepare_Cholesky( double dt ){ 
         int n = nPoint;
         int n2 = n*n;
         _realloc0( PDmat,  n2, 0.0 );
         _realloc0( LDLT_L, n2, 0.0 );
         _realloc0( LDLT_D, n , 0.0 );
-        make_PD_Matrix( PDmat ); 
+        make_PD_Matrix( PDmat, dt ); 
         Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighs, n );
     }
 

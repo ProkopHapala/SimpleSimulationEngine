@@ -170,8 +170,10 @@ void makeShip_Wheel( ){
     mesh2.printSizes();
 
     exportSim( sim2, mesh2, workshop );
-    sim2.printAllNeighs();
-    sim2.prepare_Cholesky();
+    for(int i=0; i<sim2.nPoint; i++)  sim2.points[i].w=1.0;
+    for(int i=0; i<sim2.nBonds;  i++) sim2.params[i].y=1.0;
+    //sim2.printAllNeighs();
+    sim2.prepare_Cholesky( 5.0 );
 
     int n = sim2.nPoint;
     mat2file( "PDmat.log", n,n,  sim2.PDmat  );

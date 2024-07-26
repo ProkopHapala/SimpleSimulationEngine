@@ -109,10 +109,10 @@ end
 
 function wheel(p0::Vector{Float64}, p1::Vector{Float64}, ax::Vector{Float64}, n::Int, width::Float64)
     #println("Truss::wheel() n=$n p0=($p0[1],$p0[2],$p0[3]) p1=($p1[1],$p1[2],$p1[3]) ax=($ax[1],$ax[2],$ax[3])")
-    kind_long   = 1
-    kind_perp   = 2
-    kind_zigIn  = 3
-    kind_zigOut = 4
+    kind_long   = 1.
+    kind_perp   = 1.
+    kind_zigIn  = 1.
+    kind_zigOut = 1.
 
     dir  = p1 - p0
     r    = norm(dir)

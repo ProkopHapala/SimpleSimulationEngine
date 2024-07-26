@@ -57,10 +57,12 @@ function make_PD_Matrix( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,I
     idt2 = 1. /dt^2
     for i = 1:np
         Aii = masses[i] * idt2
+        println( "==i,i ", i," ", Aii," ", masses[i]," ", idt2 )
         for ib in neighBs[i]
             k = ks[ib]
             Aii += k
             (i_,j_) = bonds[ib]
+            println( "i,ib ",i," ",ib," ",  k  )
             # I think there is error in the paper https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations. Fratarcangeli, M., Wang, H., & Yang, Y. (2018).  SIGGRAPH Asia 2018 Courses, 1–45.
             #  the off-diagonal elements should be -k, not +k
             if     ( j_ > i )

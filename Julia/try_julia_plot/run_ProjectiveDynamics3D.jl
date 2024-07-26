@@ -66,6 +66,11 @@ function main( nx=5, ny=5, dt=5.0 )
     print("point_neighs()");   @time neighs  = point_neighs(  bonds, np )     #;print("neighs : "); display(neighs)      # finds neighbors
     print("point_neighBs()");  @time neighBs = point_neighBs( bonds, np )     #;                                         # finds bonds to neighbors
     print("point_neighs2()");  @time neighs2 = point_neighs2( neighs    )     #; print("neighs2 : "); display(neighs2)   # finds neighbors of neighbors ( i.e. second order neighbors )
+
+    print("ks       ");  display(ks     );
+    print("masses() ");  display(masses );
+    print("neighBs  ");  display(neighBs);
+
     print("make_PDMatrix()");  @time  A = make_PD_Matrix( neighBs, bonds, masses, dt, ks )  
     print("CholeskyDecomp_sparse()"); @time L,neighsCh  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)    # evaluate Cholensky decomposition for sparse matrix (efficient)                    # evaluate Cholensky decomposition using Cholesky–Crout algorithm
     U  = copy(L') 
@@ -79,10 +84,17 @@ function main( nx=5, ny=5, dt=5.0 )
     #writedlm("PDmat.csv",  A,      ' ')
     #writedlm("LDLT_L.csv", LDLT_L, ' ')
 
-    A_cpp = readdlm("../../tests_bash/Orbital/PDmat.log", Float64)
-
-    println("A_cpp ", size(A_cpp) ); display(A_cpp);
-    println("A     ", size(A    ) ); display(A    );
+    A_cpp = readdlm("../../tests_bash/Orbital/PDmat.log",  Float64)
+    L_cpp = readdlm("../../tests_bash/Orbital/LDLT_L.log", Float64)
+    #println("A_cpp ", size(A_cpp) ); display(A_cpp);
+    #println("A     ", size(A    ) ); display(A    );
+    dAcpp = A_cpp - A;   errAcpp = norm(dAcpp)
+    println("|A_cpp - A|=", errAcpp," size=", size(dAcpp),  ); #display(dAcpp);
+    #plot( dAcpp );
+    println("L_cpp  ", size(L_cpp  ) ); display(L_cpp );
+    println("LDLT_L ", size(LDLT_L ) ); display(LDLT_L);
+    dLcpp = L_cpp - LDLT_L; errLcpp = norm(dLcpp)
+    println("|L_cpp - LDLT_L|=", errLcpp," size=", size(dLcpp),  ); #display(dAcpp);
 
     reconstructed = LDLT_L * Diagonal(LDLT_D) * LDLT_L'
     diff = A - reconstructed
