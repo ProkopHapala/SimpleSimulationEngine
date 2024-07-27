@@ -98,7 +98,7 @@ TestApp_clConvolve2D::TestApp_clConvolve2D( int& id, int WIDTH_, int HEIGHT_ ) :
     genPos0(nx, ny, pos, l0*1.1, 0.1 );
 
     // --- OpenCL
-    cl.init();
+    cl.initOCL();
     cl.newBuffer( "pos",     ntot, sizeof(float)*4, pos  , CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
     cl.newBuffer( "vel",     ntot, sizeof(float)*4, vel  , CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
     cl.newBuffer( "force",   ntot, sizeof(float)*4, force, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );

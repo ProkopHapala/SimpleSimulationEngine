@@ -26,12 +26,12 @@ class Buckets3D : public Buckets, public CubeGridRuler { public:
     void pointsToCells( int np, Vec3d* ps, bool* ignore=0 ){
         //printf( "DEBUG pointsToCells() 1 \n"  );
         if(bResizing)resizeObjs ( np, true );
-        if(obj2cell_bind==0){ Buckets::resizeObjs( np, true ); }
+        if(obj2cell==0){ Buckets::resizeObjs( np, true ); }
         //printf( "DEBUG pointsToCells() 2 obj2cell_bind %li \n", (long)obj2cell_bind  );
-        if  (ignore){ for( int i=0; i<np; i++ ){ if(!ignore[i])obj2cell_bind[i] = icell( ps[i] );} }
-        else        { for( int i=0; i<np; i++ ){               obj2cell_bind[i] = icell( ps[i] );} }
+        if  (ignore){ for( int i=0; i<np; i++ ){ if(!ignore[i])obj2cell[i] = icell( ps[i] );} }
+        else        { for( int i=0; i<np; i++ ){               obj2cell[i] = icell( ps[i] );} }
         //printf( "DEBUG pointsToCells() 3 np %i \n", np  );
-        updateCells( np, obj2cell_bind );
+        updateCells( np, obj2cell );
         //printf( "DEBUG pointsToCells() 4 \n"  );
     }
 

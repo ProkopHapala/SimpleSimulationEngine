@@ -333,7 +333,7 @@ AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ )
 
 
     cl = new OCLsystem();  DEBUG
-    cl->init();
+    cl->initOCL();
     gridFFocl.init( cl, "cl/FF.cl" ); DEBUG
     clworld  .init( cl, "cl/relaxMolecules.cl" ); DEBUG
 

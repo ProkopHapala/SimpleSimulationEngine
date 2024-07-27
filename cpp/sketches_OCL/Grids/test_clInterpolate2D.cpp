@@ -62,7 +62,7 @@ TestApp_clInterpolate2D::TestApp_clInterpolate2D( int& id, int WIDTH_, int HEIGH
     pointsOnLine( {50.0f,20.0f}, {100.0f/nPoints,200.0f/nPoints}, nPoints, points );
 
     // --- OpenCL
-    cl.init();
+    cl.initOCL();
 
     // copy input data
     //ret = clEnqueueWriteImage(

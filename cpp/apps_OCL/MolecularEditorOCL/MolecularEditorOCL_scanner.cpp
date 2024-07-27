@@ -287,7 +287,7 @@ void AppMolecularEditorOCL::initRigidSubstrate(){
 AppMolecularEditorOCL::AppMolecularEditorOCL( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
 
     cl = new OCLsystem();  DEBUG
-    cl->init();
+    cl->initOCL();
     gridFFocl.init( cl, "cl/FF.cl" ); DEBUG
     clworld  .init( cl, "cl/relaxMolecules.cl" ); DEBUG
 

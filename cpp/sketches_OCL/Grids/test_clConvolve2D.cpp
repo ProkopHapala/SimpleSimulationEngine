@@ -52,7 +52,7 @@ TestApp_clConvolve2D::TestApp_clConvolve2D( int& id, int WIDTH_, int HEIGHT_ ) :
     texture1 = Draw::makeTexture<Draw::float2RGBA>( nx, ny, buff );
 
     // --- OpenCL
-    cl.init();
+    cl.initOCL();
     cl.newBuffer( "I",   ntot, sizeof(float), (float*)buff , CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
     cl.newBuffer( "O",   ntot, sizeof(float), (float*)buff_, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR );
     err = cl.buildProgram( "cl/convolve2D.cl" );     OCL_checkError(err, "cl.buildProgram");

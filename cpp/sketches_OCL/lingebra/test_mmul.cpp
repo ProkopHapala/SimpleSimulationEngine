@@ -141,7 +141,7 @@ int main(){
     printf("DEBUG 1\n");
 
 
-    cl.init();
+    cl.initOCL();
 
     //runCL_direct();
     runCL_auto();

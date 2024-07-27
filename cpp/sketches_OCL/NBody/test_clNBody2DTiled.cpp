@@ -89,7 +89,7 @@ TestApp_clNBody2DTiled::TestApp_clNBody2DTiled( int& id, int WIDTH_, int HEIGHT_
 
     // --- OpenCL
     printf(" ::: Init OpenCL .... \n");
-    cl.init();
+    cl.initOCL();
 
     // http://stackoverflow.com/questions/5237181/is-there-a-limit-to-opencl-local-memory
     //cl_ulong local_mem_size;
