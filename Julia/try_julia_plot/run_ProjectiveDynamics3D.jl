@@ -160,7 +160,9 @@ end # function main
 
 #main()
 
-main( dt=0.5, niter=5, k=1000000.0 )
+#main( dt=0.1, niter=15, k=1000000.0 )
+main( dt=0.5, niter=5, k=1000000.0 , omega=0.8 )
+#main( dt=0.5, niter=5, k=1000000.0 )
 #main( dt=0.1, niter=1 )
 
 #main(dt=0.01 )

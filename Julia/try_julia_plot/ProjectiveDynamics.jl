@@ -1,5 +1,5 @@
 # Load the essential modules
-#using LinearAlgebra
+using LinearAlgebra
 #using SparseArrays
 #using Plots
 
@@ -317,8 +317,20 @@ function convert_TrussSolution(T::Type, sol)
 end
 ==#
 
-function update_velocity( ps_pred::Matrix{Float64}, ps_cor::Matrix{Float64}, dt::Float64 )
-    return (ps_cor .- ps_pred) / dt
+function update_velocity_old( ps_cor::Matrix{Float64}, ps0::Matrix{Float64}, dt::Float64 )
+    return (ps_cor .- ps0) / dt
+end
+
+function update_velocity( ps_cor::Matrix{Float64}, ps0::Matrix{Float64}, vel0::Matrix{Float64}, dt::Float64 )
+    vel    = (ps_cor .- ps0) / dt
+    #renorm = vecnorm(vel0, dims=2) / vecnorm(vel, dims=2)
+    #vr  = sqrt.(  sum(abs2, vel,  dims=2) ); println( "vr  ", vr  )
+    #vr0 = sqrt.(  sum(abs2, vel0, dims=2) ); println( "vr0 ", vr0 )
+    #renorm = vr0 ./ vr
+    renorm = sqrt.( sum(abs2, vel0, dims=2) ./ sum(abs2, vel, dims=2) )
+    #println( "renorm ", renorm)
+    vel   .*= renorm
+    return vel
 end
 
 function run_solver_bak( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float64}, eval_forces::Function; dt::Float64=0.1, niter::Int=100 ) 
@@ -378,7 +390,7 @@ function run_solver_bak( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float
         # ---- residual
         res    = maximum( abs.(ps_cor-points) )   ;println("residual[$i] : ", res );
         # ---- update        
-        velocity .+= update_velocity( ps_pred, ps_cor, dt )
+        velocity = update_velocity( ps_cor, points, velocity, dt )
         points[:,:] .= ps_cor[:,:]
         
         #   ToDo:   We need to update velocity and forces based on position update
@@ -413,7 +425,7 @@ function run_solver( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float64},
     ps_cor = copy( points )
     for i=1:niter
         force                    = eval_forces( points, velocity )
-        ps_pred                  = points .+ velocity*dt .+ force*(dt^2)
+        ps_pred                  = points .+ velocity*dt #.+ force*(dt^2)
         ps_pred[truss.fixed,:]  .= truss.points[truss.fixed,:]
         b                        = make_PD_rhs( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  # ;print( "b : "); display(b)
         
@@ -436,6 +448,7 @@ function run_solver( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float64},
         end
         # ---- update        
         #velocity .+= update_velocity( ps_pred, ps_cor, dt )
+        velocity = update_velocity( ps_cor, points, velocity, dt )
         points[:,:] .= ps_cor[:,:]
     end
     return points
@@ -462,6 +475,7 @@ function run_solver_f( truss::Truss_f, sol::LDLTsolution_f, velocity::Matrix{Flo
         res    = maximum( abs.(ps_cor-points) )   ;println("residual[$i] : ", res );
         # ---- update        
         #velocity .+= update_velocity( ps_pred, ps_cor, dt )
+        #velocity = update_velocity( ps_pred, points, velocity, dt )
         points[:,:] .= ps_cor[:,:]
     end
     return points
