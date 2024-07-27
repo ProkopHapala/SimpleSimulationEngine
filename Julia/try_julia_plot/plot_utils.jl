@@ -3,7 +3,7 @@ using Plots
 
 
 #function Plot_Structure( bonds::Array{Int64,2}, points::Array{Float64,2} )
-function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, lw=1.0, bPoints=false, bLabel=false )
+function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, lw=1.0, bPoints=false, bLabel=false, legend=nothing )
     # println("points: "); display(points)
     #plt = plot(legend=false, aspect_ratio = :equal )
     #plt = plot(legend=false, aspect_ratio = :equal )
@@ -24,7 +24,8 @@ function plot_truss( plt, bonds, points; axes=(1,2), c=:black, strain=nothing, l
             c = get(cmap, strain[ib])
             #println("c : ", c)
         end
-        plot!( plt, [pi[ix],pj[ix]], [pi[iy],pj[iy]], color=c, legend=false, lw=lw )
+        plot!( plt, [pi[ix],pj[ix]], [pi[iy],pj[iy]], color=c, label=legend, legend=true, lw=lw )
+        legend=nothing
     end 
     # Plot each point
     if bPoints

@@ -3,6 +3,8 @@
 #using SparseArrays
 #using Plots
 
+include("Truss.jl")
+
 """
 # NOTES_TO: https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems, Liu, T., Bargteil, A. W., O’Brien, J. F., & Kavan, L. (2013). Fast simulation of mass-spring systems. ACM Transactions on Graphics, 32(6), 1–7.
 
@@ -49,7 +51,44 @@ p_c                                  :  is the projection of q into the energy-f
 
 # ======= Bulding system as dense matrix  
 
+
 function make_PD_Matrix( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1} )
+    # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
+    #       resp. eq.14 in the same paper, or eq.14 in https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems
+    np = length(masses)
+    A  = zeros( np, np)
+    idt2 = 1. /dt^2
+    for i = 1:np
+        Aii = 0
+        #println( "==i,i ", i," ", Aii," ", masses[i]," ", idt2 )
+        for ib in neighBs[i]
+            k = ks[ib]
+            Aii += k
+            (i_,j_) = bonds[ib]
+            #println( "i,ib ",i," ",ib," ",  k  )
+            # I think there is error in the paper https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations. Fratarcangeli, M., Wang, H., & Yang, Y. (2018).  SIGGRAPH Asia 2018 Courses, 1–45.
+            #  the off-diagonal elements should be -k, not +k
+            if     ( j_ > i )
+                A[i,j_] = -k
+                A[j_,i] = -k
+            elseif ( i_ > i )
+                A[i,i_] = -k
+                A[i_,i] = -k
+            end 
+        end
+        A[i,i] += Aii
+    end
+    Mt  = zeros( np)
+    for i = 1:np
+        mti     = masses[i] * idt2
+        Mt[i]   = mti
+        A[i,i] += mti
+    end
+    #println( "make_PDMatrix() DONE !!!!!!!!!!!!!!!!!!!!! " )
+    return A, Mt
+end 
+
+function make_PD_Matrix_bak( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1} )
     # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
     #       resp. eq.14 in the same paper, or eq.14 in https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems
     np = length(masses)
@@ -57,12 +96,12 @@ function make_PD_Matrix( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,I
     idt2 = 1. /dt^2
     for i = 1:np
         Aii = masses[i] * idt2
-        println( "==i,i ", i," ", Aii," ", masses[i]," ", idt2 )
+        #println( "==i,i ", i," ", Aii," ", masses[i]," ", idt2 )
         for ib in neighBs[i]
             k = ks[ib]
             Aii += k
             (i_,j_) = bonds[ib]
-            println( "i,ib ",i," ",ib," ",  k  )
+            #println( "i,ib ",i," ",ib," ",  k  )
             # I think there is error in the paper https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations. Fratarcangeli, M., Wang, H., & Yang, Y. (2018).  SIGGRAPH Asia 2018 Courses, 1–45.
             #  the off-diagonal elements should be -k, not +k
             if     ( j_ > i )
@@ -78,6 +117,36 @@ function make_PD_Matrix( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,I
     #println( "make_PDMatrix() DONE !!!!!!!!!!!!!!!!!!!!! " )
     return A
 end 
+
+function make_PD_rhs_decomp( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1}, points::Matrix{Float64}, l0s::Array{Float64,1}, pnew::Matrix{Float64} )
+    # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
+    #       resp. eq.14 in the same paper, or eq.14 in https://doi.org/10.1145/2508363.2508406 Fast Simulation of Mass-Spring Systems
+    np = length(masses)
+    bK = zeros( np, 3)
+    bM = zeros( np, 3)
+    #print( "b : "); display(b)
+    idt2 = 1. /dt^2
+    for i = 1:np
+        for ib in neighBs[i]
+            (i_,j_) = bonds[ib]
+            if i_ == i
+                j = j_
+            else
+                j = i_
+            end
+            k = ks[ib]
+            d = points[i,:] - points[j,:]
+            d *= k * l0s[ib] / norm(d)
+            bK[i,:] += d        
+        end
+    end
+    for i = 1:np
+        bM[i,:] =  pnew[i,:] * (masses[i] * idt2)
+    end
+    #print( "b : "); display(b)
+    return bK, bM
+end
+
 
 function make_PD_rhs( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int},1}, masses::Array{Float64,1}, dt::Float64, ks::Array{Float64,1}, points::Matrix{Float64}, l0s::Array{Float64,1}, pnew::Matrix{Float64} )
     # see:  1.3.3 A Simple Example,                 in https://doi.org/10.1145/3277644.3277779 Parallel iterative solvers for real-time elastic deformations.
@@ -96,7 +165,8 @@ function make_PD_rhs( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int}
             else
                 j = i_
             end
-            d = points[i,:] - points[j,:]
+            #d = points[i,:] - points[j,:]   # using old positions seems to limit the propagation
+            d = pnew[i,:] - pnew[j,:]        # using update positions seems to work much better !!!
             d *= k * l0s[ib] / norm(d)
             bi += d        
         end
@@ -123,7 +193,8 @@ function make_PD_rhs_f( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,In
             else
                 j = i_
             end
-            d = points[i,:] - points[j,:]
+            #d = points[i,:] - points[j,:]   # using old positions seems to limit the propagation
+            d = pnew[i,:] - pnew[j,:]        # using update positions seems to work much better !!!
             d *= k * l0s[ib] / norm(d)
             bi += d        
         end
@@ -153,6 +224,20 @@ struct TrussSolution
     LDLT_D::Vector{Float64}
     neighsLDLT::Vector{Vector{Int}}
 end
+
+
+struct LDLTsolution
+    L::Matrix{Float64}
+    D::Vector{Float64}
+    neighs::Vector{Vector{Int}}
+end
+
+struct LDLTsolution_f
+    L::Matrix{Float32}
+    D::Vector{Float32}
+    neighs::Vector{Vector{Int}}
+end
+
 
 struct Truss_f
     points::Matrix{Float32}
@@ -200,6 +285,14 @@ function convert_to_TrussSolution_f(sol::TrussSolution)
     )
 end
 
+function convert_to_LDLTsolution_f(sol::LDLTsolution)
+    return LDLTsolution_f(
+        convert.(Float32, sol.L),  
+        convert.(Float32, sol.D), 
+        sol.neighs,
+    )
+end
+
 #===
 function convert_Truss(T::Type, truss)
     return T(
@@ -228,7 +321,7 @@ function update_velocity( ps_pred::Matrix{Float64}, ps_cor::Matrix{Float64}, dt:
     return (ps_cor .- ps_pred) / dt
 end
 
-function run_solver( truss::Truss, sol::TrussSolution, velocity::Matrix{Float64}, eval_forces::Function; dt::Float64=0.1, niter::Int=100 ) 
+function run_solver_bak( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float64}, eval_forces::Function; dt::Float64=0.1, niter::Int=100 ) 
     points = copy( truss.points )
     ps_cor = copy(points)
     for i=1:niter
@@ -241,13 +334,13 @@ function run_solver( truss::Truss, sol::TrussSolution, velocity::Matrix{Float64}
         #y      = forwardsub_sparse(sol.L,b,sol.neighsL)  #;print("y_ch : "); display(y_ch)
         #ps_cor = backsub_sparse(   sol.U,y,sol.neighsU)  #;print("x_ch : "); display(x_ch)
 
-        #ps_cor[:,1] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,1] )
-        #ps_cor[:,2] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,2] )
-        #ps_cor[:,3] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,3] )
+        ps_cor[:,1] = solve_LDLT( sol.L, sol.D, b[:,1] )
+        ps_cor[:,2] = solve_LDLT( sol.L, sol.D, b[:,2] )
+        ps_cor[:,3] = solve_LDLT( sol.L, sol.D, b[:,3] )
 
-        ps_cor[:,1] = solve_LDLT_sparse( sol.LDLT_L, sol.LDLT_D, sol.neighsLDLT, b[:,1] )
-        ps_cor[:,2] = solve_LDLT_sparse( sol.LDLT_L, sol.LDLT_D, sol.neighsLDLT, b[:,2] )
-        ps_cor[:,3] = solve_LDLT_sparse( sol.LDLT_L, sol.LDLT_D, sol.neighsLDLT, b[:,3] )
+        #ps_cor[:,1] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,1] )
+        #ps_cor[:,2] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,2] )
+        #ps_cor[:,3] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,3] )
 
         #ps_cor = sol.A \ b
 
@@ -315,60 +408,60 @@ Solve L^Tx = y (can be rewritten as a forward substitution)
 
 ===#
 
-
-function run_solver_f( truss::Truss_f, sol::TrussSolution_f, velocity::Matrix{Float32}, eval_forces::Function; dt::Float32=0.1f0, niter::Int=100 ) 
+function run_solver( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float64}, eval_forces::Function; dt::Float64=0.1, niter::Int=100, A_check::Matrix{Float64}, bRes::Bool=:true ) 
     points = copy( truss.points )
-
-    ps_cor = copy(points)
-
-    #L,D = CholeskyDecomp_LDLT(sol.A)
-
+    ps_cor = copy( points )
     for i=1:niter
         force                    = eval_forces( points, velocity )
         ps_pred                  = points .+ velocity*dt .+ force*(dt^2)
         ps_pred[truss.fixed,:]  .= truss.points[truss.fixed,:]
-        #println("typeof(ps_pred) ", typeof(ps_pred))
-        #println("typeof(points)  ", typeof(points))
-        #println("typeof(velocity) ", typeof(velocity))
-        #println("typeof(force) ", typeof(force))
-        #println("typeof(truss.points)  ", typeof(truss.points))
+        b                        = make_PD_rhs( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  # ;print( "b : "); display(b)
+        
+        #println( "run_solver().b=", b )
+
+        ps_cor[:,1] = solve_LDLT( sol.L, sol.D, b[:,1] )
+        ps_cor[:,2] = solve_LDLT( sol.L, sol.D, b[:,2] )
+        ps_cor[:,3] = solve_LDLT( sol.L, sol.D, b[:,3] )
+        #ps_cor[:,1] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,1] )
+        #ps_cor[:,2] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,2] )
+        #ps_cor[:,3] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,3] )
+        # ---- residual
+        if bRes
+            #err = ps_cor - points
+            #err = ps_cor - ps_pred
+            #err = A_check*ps_cor - b     # check matrix solution
+            err = process_bonds(truss.bonds,ps_cor)[2] - truss.l0s  # check bond lenghs 
+            res = maximum( abs.(err) )
+            println("residual[$i] : ", res );
+        end
+        # ---- update        
+        #velocity .+= update_velocity( ps_pred, ps_cor, dt )
+        points[:,:] .= ps_cor[:,:]
+    end
+    return points
+end
+
+function run_solver_f( truss::Truss_f, sol::LDLTsolution_f, velocity::Matrix{Float32}, eval_forces::Function; dt::Float32=0.1f0, niter::Int=100 ) 
+    points = copy( truss.points )
+    ps_cor = copy( points )
+    for i=1:niter
+        force                    = eval_forces( points, velocity )
+        ps_pred                  = points .+ velocity*dt .+ force*(dt^2)
+        ps_pred[truss.fixed,:]  .= truss.points[truss.fixed,:]
         b                        = make_PD_rhs_f( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  # ;print( "b : "); display(b)
+        
+        println( "run_solver_f().b=", b )
 
-
-        #println("typeof(b)  ", typeof(b))
-
-        # ---- Method 2)
-        #y      = forwardsub_sparse_f(sol.L,b,sol.neighsL)
-        #ps_cor = backsub_sparse_f(   sol.U,y,sol.neighsU)
-
-        #y      = forwardsub_sparse_f(sol.L,b,sol.neighsL)
-        #ps_cor = sol.U \ y
-
-        #y      = sol.L \ b
-        #ps_cor = backsub_sparse_f(   sol.U,y,sol.neighsU)
-
-        #y      = sol.L \ b
-        #ps_cor = sol.U \ y
-
-        #ps_cor = sol.A \ b
-
-        #println("typeof(L) ", typeof(L))
-        #println("typeof(D) ", typeof(D))
-        #println("typeof(b) ", typeof(b))
-        #println("b ", b[:,1] )
-
-        #ps_cor[:,1] = solve_LDLT( L, D, b[:,1] )
-        #ps_cor[:,2] = solve_LDLT( L, D, b[:,2] )
-        #ps_cor[:,3] = solve_LDLT( L, D, b[:,3] )
-
-        ps_cor[:,1] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,1] )
-        ps_cor[:,2] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,2] )
-        ps_cor[:,3] = solve_LDLT( sol.LDLT_L, sol.LDLT_D, b[:,3] )
-
-
+        ps_cor[:,1] = solve_LDLT( sol.L, sol.D, b[:,1] )
+        ps_cor[:,2] = solve_LDLT( sol.L, sol.D, b[:,2] )
+        ps_cor[:,3] = solve_LDLT( sol.L, sol.D, b[:,3] )
+        # ps_cor[:,1] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,1] )
+        # ps_cor[:,2] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,2] )
+        # ps_cor[:,3] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,3] )
         # ---- residual
         res    = maximum( abs.(ps_cor-points) )   ;println("residual[$i] : ", res );
         # ---- update        
+        #velocity .+= update_velocity( ps_pred, ps_cor, dt )
         points[:,:] .= ps_cor[:,:]
     end
     return points
