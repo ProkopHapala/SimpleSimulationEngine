@@ -69,10 +69,14 @@ inline  void solve_LDLT(T* L, T* D, T* b, T* x, int n) {
 
 // =============== Sparse Cholesky solver
 
-inline int find_or_add_neigh( int ng, int* neighs, int nmax, int iVoid=-1, bool bErrExit=true) {
+inline int find_or_add_neigh( int i, int ng, int* neighs, int nmax, int iVoid=-1, bool bPrint=false, bool bErrExit=true) {
+    int* ngi = neighs+i*nmax;
     for (int j=0; j<nmax; j++) {
-        if      ( neighs[j]== ng    ){               return j; } 
-        else if ( neighs[j]== iVoid ){ neighs[j]=ng; return j; }
+        if      ( ngi[j]== ng    ){               return j; } 
+        else if ( ngi[j]== iVoid ){ 
+            if(bPrint)printf("insert neigh[%i].insert(%i)\n", i, ng );    
+            ngi[j]=ng; return j; 
+        }
     }
     if(bErrExit){ printf("ERROR in find_or_add_neigh() cannot add ng=%i, neighs[n=%i] is full => exit() \n", ng, nmax); exit(0);  }
     return -1;  // list is full, couldn't add n
@@ -80,29 +84,33 @@ inline int find_or_add_neigh( int ng, int* neighs, int nmax, int iVoid=-1, bool 
 
 template<typename T>
 inline void CholeskyDecomp_LDLT_sparse(T* A, T* L, T* D, int* neighs, int n, int nNeighMax, bool bErrExit=true ) {
-    for (int j = 0; j < n; j++) {
+    for (int j=0; j<n; j++){ L[j*n+j]=1; };  // Diagonal
+    for (int j=0; j<n; j++){
+        //printf(" ---- CholeskyDecomp_LDLT_sparse[%i] \n", j );
         T sum = 0.0;
-        const int* neighs_j = neighs + j * nNeighMax;
-        for (int k = 0; k < nNeighMax && (neighs_j[k]>=0); k++) {
-            if (neighs_j[k] < j) {
-                int idx = neighs_j[k];
-                sum += L[j*n + idx] * L[j*n + idx] * D[idx];
+        const int* neighs_j = neighs + j*nNeighMax;
+        for (int k=0; k<nNeighMax; k++){
+            int ng = neighs_j[k];
+            if (  (ng>=0)&&(ng<j) ){
+                T Lij = L[j*n+ng];
+                sum  += Lij*Lij * D[ng];
             }
         }
-        D[j] = A[j*n + j] - sum;
-        for (int i = j+1; i < n; i++) {
+        D[j] = A[j*n+j] - sum;
+        printf(  "Ch[%i] D,A,sum  %20.10f   %20.10f   %20.10f \n",  D[j],  A[j*n+j],  sum  );
+        for (int i=j+1; i<n; i++){
             sum = 0.0;
-            for (int k = 0; k < nNeighMax && (neighs_j[k]>=0); k++) {
-                if (neighs_j[k] < j) {
-                    int idx = neighs_j[k];
-                    sum += L[i*n + idx] * L[j*n + idx] * D[idx];
+            for (int k=0; k<nNeighMax; k++){
+                int ng = neighs_j[k];
+                if ( (ng>=0)&&(ng<j)){
+                    sum += L[i*n+ng] * L[j*n+ng] * D[ng];
                 }
             }
-            T Lij = (A[i*n + j] - sum) / D[j];
+            T Lij = (A[i*n+j]-sum)/D[j];
             if (fabs(Lij) > TOLERANCE) {
-                L[i*n + j] = Lij;
-                find_or_add_neigh( i, neighs+j*nNeighMax, nNeighMax,-1,bErrExit);
-                find_or_add_neigh( j, neighs+i*nNeighMax, nNeighMax,-1,bErrExit);
+                L[i*n+j] = Lij;
+                find_or_add_neigh( j, i, neighs, nNeighMax,-1,false,bErrExit);
+                find_or_add_neigh( i, j, neighs, nNeighMax,-1,false,bErrExit);
             }
         }
     }
@@ -148,8 +156,12 @@ void CholeskyDecomp_LDLT_sparse_set(T* A, T* L, T* D, int* neighs, int n, int nN
             T Lij = (A[i * n + j] - sum2) / D[j];
             if (std::fabs(Lij) > tol) {
                 L[i * n + j] = Lij;
+                
+                
                 neigh_set[j].insert(i);
                 neigh_set[i].insert(j);
+
+
             }
         }
     }

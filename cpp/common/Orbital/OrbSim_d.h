@@ -377,7 +377,7 @@ class OrbSim: public Picker { public:
         double idt2 = 1.0 / (dt * dt);
         for (int i = 0; i < n; ++i) { // point i
             double Aii = points[i].w * idt2; // Assuming points[i].w stores the mass
-            printf( "==i,i %i %g %g %g \n", i, Aii, points[i].w, idt2  );
+            //printf( "==i,i %i %g %g %g \n", i, Aii, points[i].w, idt2  );
             int2* ngi = neighBs + (i*nNeighMax);
             for( int jj=0; jj<nNeighMax; jj++ ){
                 int2  ng = ngi[jj];
@@ -387,7 +387,7 @@ class OrbSim: public Picker { public:
                 int j    = b.y;
                 double k = params[ib].y; // Assuming params[ib].y stores the spring constant
 
-                printf( "i,ib %i %i %g \n", i, ib+1, k  );
+                //printf( "i,ib %i %i %g \n", i, ib+1, k  );
 
                 Aii += k;
                 // if (j > i) {
@@ -415,11 +415,17 @@ class OrbSim: public Picker { public:
         _realloc0( LDLT_L, n2, 0.0 );
         _realloc0( LDLT_D, n , 0.0 );
         make_PD_Matrix( PDmat, dt ); 
+        DEBUG
 
         nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
-        realloc( neighsLDLT, n*nNeighMaxLDLT );
-        for(int i=0; i<n; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=-neighs[i*nNeighMax+j]; };  } }
+        DEBUG
+        _realloc0( neighsLDLT, n*nNeighMaxLDLT, -1 );
+        DEBUG
+        printf( "nNeighMaxLDLT=%i nNeighMax=%i \n",  nNeighMaxLDLT, nNeighMax );
+        for(int i=0; i<n; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=neighs[i*nNeighMax+j]; };  } }
+        DEBUG
         Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighsLDLT, n, nNeighMaxLDLT );
+        DEBUG
     }
 
     void rhs_ProjectiveDynamics(Vec3d* pnew, Vec3d* b) {

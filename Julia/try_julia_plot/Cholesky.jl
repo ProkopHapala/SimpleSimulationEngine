@@ -209,6 +209,13 @@ function solve_LDLT( L::Matrix{T}, D::Vector{T}, b::Vector{T}) where T<:Abstract
     return x
 end
 
+# function inset_to_set(i::Int64,ng::Int64, st::Set{Int64})
+#     if !( ng in st )
+#         push!(st,ng)
+#         println("insert neigh[",i,"].insert(",ng,")" )
+#     end
+# end
+
 function CholeskyDecomp_LDLT_sparse(A::Matrix{T}, neighs::Array{Vector{Int},1}, tol::T=1e-16) where T<:AbstractFloat
     neighsets = [Set(ng) for ng in neighs]
     n = size(A, 1)
@@ -218,6 +225,7 @@ function CholeskyDecomp_LDLT_sparse(A::Matrix{T}, neighs::Array{Vector{Int},1}, 
     nngmax = 0
 
     for j in 1:n
+        #println(" --- CholeskyDecomp_LDLT_sparse[",j,"]" );
         sum1 = 0.0
         ngs = neighsets[j]
         for k in ngs
@@ -227,7 +235,8 @@ function CholeskyDecomp_LDLT_sparse(A::Matrix{T}, neighs::Array{Vector{Int},1}, 
             end
         end
         D[j] = A[j,j] - sum1
-
+        #println(  "Ch[%i] D,A,sum  %20.10f   %20.10f   %20.10f ",  D[j],  A[j*n+j],  sum  );
+        println("Ch[$j] D,A,sum  $(lpad(D[j], 20, ' '))   $(lpad(A[j,j], 20, ' '))   $(lpad(sum1, 20, ' '))")
         for i in j+1:n
             sum1 = 0.0
             for k in ngs
@@ -239,7 +248,12 @@ function CholeskyDecomp_LDLT_sparse(A::Matrix{T}, neighs::Array{Vector{Int},1}, 
             Lij = (A[i,j] - sum1) / D[j]
             if abs(Lij) > tol
                 L[i,j] = Lij
-                push!(ngs, i)
+
+                #inset_to_set(i,j,neighsets[i])
+                #inset_to_set(i,j,ngs)
+                #push!(ngs,          i)
+
+                push!(ngs,          i)
                 push!(neighsets[i], j)
             end
         end

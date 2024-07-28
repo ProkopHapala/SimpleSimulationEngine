@@ -190,6 +190,7 @@ void makeShip_Wheel( int nseg=8){
     //sim.printAllNeighs();
 
     printf("#### END makeShip_Whee()\n" );
+    exit(0);
 };
 
 // ====================== Class Definitions

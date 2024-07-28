@@ -163,6 +163,9 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     dLcpp = L_cpp - LDLT_L; errLcpp = norm(dLcpp)
     println("|L_cpp - LDLT_L|=", errLcpp," size=", size(dLcpp),  ); #display(dAcpp);
 
+    plot_matrix_bwr( plt, dLcpp )
+    display(plt)
+
     return
 
     reconstructed = LDLT_L * Diagonal(LDLT_D) * LDLT_L'
