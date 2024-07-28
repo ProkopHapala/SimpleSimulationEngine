@@ -104,6 +104,7 @@ class Truss{ public:
     void panel( Vec3d p00, Vec3d p01, Vec3d p10, Vec3d p11, Vec2i n, double width );
     int girder1( Vec3d p0, Vec3d p1, Vec3d up, int n, double width );
     void girder1_caps( int ip0, int ip1, int kind );
+    int nGon ( Vec3d p0, Vec3d p1, Vec3d ax, int n, int kind );
     int wheel( Vec3d p0, Vec3d p1, Vec3d ax, int n, double width );
     int makeGriders( int nEdges, TrussEdge* edges, Vec3d* points, GirderParams* params, Vec3d * ups );
     int makeGriders( Truss plan, GirderParams* params, Vec3d * ups, std::vector<Vec2i>* ends );

@@ -142,6 +142,7 @@ class OrbSim: public Picker { public:
     double* LDLT_L=0;
     double* LDLT_D=0; 
     int* neighsLDLT=0;
+    int  nNeighMaxLDLT=0;
 
     int     nBonds =0; // number of bonds
     Quat4d* bparams=0; // bond parameters (l0,kP,kT,damp)
@@ -406,14 +407,19 @@ class OrbSim: public Picker { public:
         }
     }
 
-    void prepare_Cholesky( double dt ){ 
+    void prepare_Cholesky( double dt, int nNeighMaxLDLT_ ){ 
+        //  WARRNING: we are using neighs, but we should be using neighs_LDLT
         int n = nPoint;
         int n2 = n*n;
         _realloc0( PDmat,  n2, 0.0 );
         _realloc0( LDLT_L, n2, 0.0 );
         _realloc0( LDLT_D, n , 0.0 );
         make_PD_Matrix( PDmat, dt ); 
-        Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighs, n );
+
+        nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
+        realloc( neighsLDLT, n*nNeighMaxLDLT );
+        for(int i=0; i<n; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=-neighs[i*nNeighMax+j]; };  } }
+        Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighsLDLT, n, nNeighMaxLDLT );
     }
 
     void rhs_ProjectiveDynamics(Vec3d* pnew, Vec3d* b) {
@@ -461,9 +467,9 @@ class OrbSim: public Picker { public:
             // Solve using LDLT decomposition (assuming you have this method)
             //solve_LDLT_sparse(b, ps_cor);
 
-            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)b, (double*)yy, neighsLDLT );
+            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)b, (double*)yy, neighsLDLT, nNeighMax );
             for (int i=0; i<nPoint; i++){ yy[i].mul(1/LDLT_D[i]); } // Diagonal 
-            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (double*)yy, (double*)ps_cor, neighsLDLT );
+            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (double*)yy, (double*)ps_cor, neighsLDLT, nNeighMax );
 
             // Compute residual
             double res = 0.0;

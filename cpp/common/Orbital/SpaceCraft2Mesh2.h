@@ -23,7 +23,7 @@ using namespace SpaceCrafting;
 
 namespace Mesh{
 
-void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop ){
+void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& shop, int nneighmax_min=0 ){
     // {
     //     printf("#====== Materials \n");      for(const Material*      o: shop.materials.vec     ){  o->print();    }
     //     //printf("#====== PanelMaterials \n"); for(const PanelMaterial* o: shop.panelMaterials.vec){  o->print();    }
@@ -38,7 +38,8 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
     // find max number of neighbors
     for(int i=0; i<np; i++){ nneighs[i]=0; }
     for(int i=0; i<nb; i++){ const Vec2i& e = mesh.edges[i].lo; nneighs[e.a]++; nneighs[e.b]++; }
-    int nneighmax = 0;
+
+    int nneighmax = nneighmax_min;
     for(int i=0; i<np; i++){ int ni=nneighs[i]; if(ni>nneighmax)nneighmax=ni; }
 
     int nneigh_hist[nneighmax+1];
@@ -368,7 +369,7 @@ int girder1( Builder2& mesh, int ip0, int ip1, Vec3d up, int n, double width, Qu
  * @return The index of the created block containing the starting indexes of the points and edges
  */
 int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, Vec2d wh, Quat4i stickTypes ){
-    //printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) stickTypes(%i,%i,%i,%i) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
+    printf( "Truss::wheel() n=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) stickTypes(%i,%i,%i,%i) \n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
     //int kind_long   = 0;
     //int kind_perp   = 1;
     //int kind_zigIn  = 2;

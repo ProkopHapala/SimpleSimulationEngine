@@ -206,9 +206,9 @@ void SoftBody::run_cholesky(
         // Solve using LDLT decomposition (assuming solve_LDLT_sparse is adapted for Vec3d)
         //Lingebra::solve_LDLT_sparse( npoints ,3, LDLT_L, LDLT_D, (double*)b, (double*)ps_cor, neighsLDLT );
 
-        Lingebra::forward_substitution_sparse( npoints,m,  LDLT_L, (double*)b, yy, neighsLDLT );
+        Lingebra::forward_substitution_sparse( npoints,m,  LDLT_L, (double*)b, yy, neighsLDLT, N_MAX_NEIGH );
         for (int i=0; i< npoints; i++){  double c=(1/LDLT_D[i]);   for(int s=0;s<m;s++){ yy[i*m+s]*=c; }; } // Diagonal 
-        Lingebra::forward_substitution_transposed_sparse( npoints,m, LDLT_L, yy, (double*)ps_cor, neighsLDLT );
+        Lingebra::forward_substitution_transposed_sparse( npoints,m, LDLT_L, yy, (double*)ps_cor, neighsLDLT, N_MAX_NEIGH );
 
         // Compute residual
         // double res = 0.0;

@@ -140,7 +140,7 @@ void reloadShip( const char* fname  ){
     printf("#### END reloadShip('%s')\n", fname );
 };
 
-void makeShip_Wheel( ){
+void makeShip_Wheel( int nseg=8){
 
     StickMaterial *o = new StickMaterial();
     //Material{ name="Kevlar", density=1.44e+3, Spull=3.6e+9, Spush=0.0,    Kpull=154.0e+9, Kpush=0.0,      reflectivity=0.6,  Tmelt=350 }
@@ -160,8 +160,9 @@ void makeShip_Wheel( ){
     //BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
     mesh2.clear();
     //mesh.block();
-    //mesh2.wheel( p0, p1, ax, 8, 0.2 );
-    wheel( mesh2, p0, p1, ax, 8, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
+    //mesh2.wheel( p0, p1, ax, nseg, 0.2 );
+    //wheel( mesh2, p0, p1, ax, nseg, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
+    wheel( mesh2, p0, p1, ax, 3, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
     //wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );
     //Quat4i& b = mesh.blocks.back();
     //o->pointRange = {b.x,(int)mesh.verts.size()};
@@ -169,17 +170,22 @@ void makeShip_Wheel( ){
 
     mesh2.printSizes();
 
-    exportSim( sim2, mesh2, workshop );
+    //int nneighmax_min = 16;
+    int nneighmax_min = 8;
+    exportSim( sim2, mesh2, workshop,  nneighmax_min );
     for(int i=0; i<sim2.nPoint; i++)  sim2.points[i].w=1.0;
-    for(int i=0; i<sim2.nBonds;  i++) sim2.params[i].y=1.0;
+    for(int i=0; i<sim2.nBonds;  i++) sim2.params[i].y=10000.0;
     //sim2.printAllNeighs();
-    sim2.prepare_Cholesky( 5.0 );
 
     int n = sim2.nPoint;
-    mat2file( "PDmat.log", n,n,  sim2.PDmat  );
-    mat2file( "LDLT_L.log", n,n, sim2.LDLT_L );
-    
 
+    mat2file<int>( "neighs_before.log",  n, sim2.nNeighMax,      sim2.neighs, "%10i " );
+    sim2.prepare_Cholesky( 0.05, 32 );
+    mat2file<int>( "neighs_after.log",   n, sim2.nNeighMaxLDLT,  sim2.neighsLDLT, "%10i " );
+
+    mat2file<double>( "PDmat.log",  n,n, sim2.PDmat  );
+    mat2file<double>( "LDLT_L.log", n,n, sim2.LDLT_L );
+    
     //exportSim( sim, mesh2, workshop );
     //sim.printAllNeighs();
 

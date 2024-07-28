@@ -6,11 +6,11 @@
 #include <math.h>
 #include <cstdlib>
 #include <stdio.h>
+#include <unordered_set>
 
 //#include "fastmath.h"
 //#include "VecN.h"
 
-#define N_MAX_NEIGH 32
 #define TOLERANCE 1e-16
 
 //#define IJ(i,j) n*i+j
@@ -69,21 +69,21 @@ inline  void solve_LDLT(T* L, T* D, T* b, T* x, int n) {
 
 // =============== Sparse Cholesky solver
 
-inline int find_or_add_to_neighlist(int* neighs, int i, int n, int max_nodes) {
-    int* row = neighs + i * N_MAX_NEIGH;
-    for (int j = 0; j < N_MAX_NEIGH; j++) {
-        if      (row[j] == n) {  return j; } 
-        else if (row[j] == 0) { row[j] = n;return j; }
+inline int find_or_add_neigh( int ng, int* neighs, int nmax, int iVoid=-1, bool bErrExit=true) {
+    for (int j=0; j<nmax; j++) {
+        if      ( neighs[j]== ng    ){               return j; } 
+        else if ( neighs[j]== iVoid ){ neighs[j]=ng; return j; }
     }
+    if(bErrExit){ printf("ERROR in find_or_add_neigh() cannot add ng=%i, neighs[n=%i] is full => exit() \n", ng, nmax); exit(0);  }
     return -1;  // list is full, couldn't add n
 }
 
 template<typename T>
-inline void CholeskyDecomp_LDLT_sparse(T* A, T* L, T* D, int* neighs, int n) {
+inline void CholeskyDecomp_LDLT_sparse(T* A, T* L, T* D, int* neighs, int n, int nNeighMax, bool bErrExit=true ) {
     for (int j = 0; j < n; j++) {
         T sum = 0.0;
-        const int* neighs_j = neighs + j * N_MAX_NEIGH;
-        for (int k = 0; k < N_MAX_NEIGH && (neighs_j[k]>=0); k++) {
+        const int* neighs_j = neighs + j * nNeighMax;
+        for (int k = 0; k < nNeighMax && (neighs_j[k]>=0); k++) {
             if (neighs_j[k] < j) {
                 int idx = neighs_j[k];
                 sum += L[j*n + idx] * L[j*n + idx] * D[idx];
@@ -92,7 +92,7 @@ inline void CholeskyDecomp_LDLT_sparse(T* A, T* L, T* D, int* neighs, int n) {
         D[j] = A[j*n + j] - sum;
         for (int i = j+1; i < n; i++) {
             sum = 0.0;
-            for (int k = 0; k < N_MAX_NEIGH && (neighs_j[k]>=0); k++) {
+            for (int k = 0; k < nNeighMax && (neighs_j[k]>=0); k++) {
                 if (neighs_j[k] < j) {
                     int idx = neighs_j[k];
                     sum += L[i*n + idx] * L[j*n + idx] * D[idx];
@@ -101,20 +101,67 @@ inline void CholeskyDecomp_LDLT_sparse(T* A, T* L, T* D, int* neighs, int n) {
             T Lij = (A[i*n + j] - sum) / D[j];
             if (fabs(Lij) > TOLERANCE) {
                 L[i*n + j] = Lij;
-                find_or_add_to_neighlist(neighs, j, i, n);
-                find_or_add_to_neighlist(neighs, i, j, n);
+                find_or_add_neigh( i, neighs+j*nNeighMax, nNeighMax,-1,bErrExit);
+                find_or_add_neigh( j, neighs+i*nNeighMax, nNeighMax,-1,bErrExit);
+            }
+        }
+    }
+}
+
+//#include <unordered_set>;
+
+template<typename T>
+void CholeskyDecomp_LDLT_sparse_set(T* A, T* L, T* D, int* neighs, int n, int nNeighMax, T tol=1.e-16 ) {
+    // Initialize D and L
+    for (int j = 0; j < n; j++) {
+        D[j] = T(0);
+        for (int i = 0; i < n; i++) {
+            L[j * n + i] = (i == j) ? T(1) : T(0);
+        }
+    }
+    std::unordered_set<int>  neigh_set[n];
+    for (int j = 0; j < n; j++) {
+        T sum1 = 0.0;
+
+        // Convert the neighbor list array for column j to an unordered set
+        for (int k = 0; k < nNeighMax; ++k) {
+            int neighbor = neighs[j * nNeighMax + k];
+            if (neighbor > -1 ) {  // Assuming 0 means no neighbor; use another sentinel if needed
+                neigh_set[j].insert(neighbor);
+            }
+        }
+
+        for (const int& k : neigh_set[j] ) {
+            if (k < j) {
+                sum1 += (L[j * n + k] * L[j * n + k]) * D[k];
+            }
+        }
+        D[j] = A[j * n + j] - sum1;
+
+        for (int i = j + 1; i < n; i++) {
+            T sum2 = 0.0;
+            for (const int& k : neigh_set[j] ) {
+                if (k < j) {
+                    sum2 += L[i * n + k] * L[j * n + k] * D[k];
+                }
+            }
+            T Lij = (A[i * n + j] - sum2) / D[j];
+            if (std::fabs(Lij) > tol) {
+                L[i * n + j] = Lij;
+                neigh_set[j].insert(i);
+                neigh_set[i].insert(j);
             }
         }
     }
 }
 
 template<typename T>
-inline void forward_substitution_sparse( int n, int m, const T* L, const T* b, T* x, const int* neighs ) {
+inline void forward_substitution_sparse( int n, int m, const T* L, const T* b, T* x, const int* neighs, int nNeighMax ) {
     T sum[m];
     for (int i = 0; i < n; i++) {
         for(int s=0; s<m;s++){ sum[s]=0.0; }
-        const int* neighs_i = neighs + i * N_MAX_NEIGH;
-        for (int k = 0; k < N_MAX_NEIGH && (neighs_i[k]>=0); k++) {
+        const int* neighs_i = neighs + i * nNeighMax;
+        for (int k = 0; k < nNeighMax && (neighs_i[k]>=0); k++) {
             int j = neighs_i[k];
             if (j < i) { 
                 for(int s=0; s<m;s++){ sum[s] += L[i*n+j] * x[j*m+s]; }
@@ -125,13 +172,13 @@ inline void forward_substitution_sparse( int n, int m, const T* L, const T* b, T
 }
 
 template<typename T>
-inline void forward_substitution_transposed_sparse( int n, int m, const T* L, const T* b, T* x, const int* neighs ) {
+inline void forward_substitution_transposed_sparse( int n, int m, const T* L, const T* b, T* x, const int* neighs, int nNeighMax ) {
     T sum[m];
     for (int i = n-1; i >= 0; i--) {
         //T sum1 = 0.0;
         for(int s=0; s<m;s++){ sum[s]=0.0; }
-        const int* neighs_i = neighs + i * N_MAX_NEIGH;
-        for (int k = 0; k < N_MAX_NEIGH && (neighs_i[k]>=0); k++) {
+        const int* neighs_i = neighs + i * nNeighMax;
+        for (int k = 0; k < nNeighMax && (neighs_i[k]>=0); k++) {
             int j = neighs_i[k];
             if (j > i) { 
                 //sum1 += L[j*n + i] * x[j]; 
@@ -144,12 +191,12 @@ inline void forward_substitution_transposed_sparse( int n, int m, const T* L, co
 }
 
 template<typename T>
-inline void solve_LDLT_sparse(int n, int m, const T* L, const T* D, T* b, T* x, int* neighs ) {
+inline void solve_LDLT_sparse(int n, int m, const T* L, const T* D, T* b, T* x, int* neighs, int nNeighMax ) {
     T* z = new T[n*m];
     T* y = new T[n*m];
-    forward_substitution_sparse( n,m,  L, b, z, neighs );
+    forward_substitution_sparse( n,m,  L, b, z, neighs, nNeighMax );
     for (int i = 0; i < n; i++){ y[i] = z[i] / D[i]; } // Diagonal 
-    forward_substitution_transposed_sparse(n,m, L, y, x, neighs );
+    forward_substitution_transposed_sparse(n,m, L, y, x, neighs, nNeighMax );
     delete [] z;
     delete [] y;
 }

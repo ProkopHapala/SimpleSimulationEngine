@@ -376,9 +376,9 @@ class OrbSim_f : public Picker { public:
             // Solve using LDLT decomposition (assuming you have this method)
             //solve_LDLT_sparse(b, ps_cor);
 
-            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (float*)b, (float*)yy, neighsLDLT );
+            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (float*)b, (float*)yy, neighsLDLT, nNeighMax );
             for (int i=0; i<nPoint; i++){ yy[i].mul(1/LDLT_D[i]); } // Diagonal 
-            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (float*)yy, (float*)ps_cor, neighsLDLT );
+            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (float*)yy, (float*)ps_cor, neighsLDLT, nNeighMax );
 
             // Compute residual
             double res = 0.0;

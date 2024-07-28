@@ -29,12 +29,52 @@ include("ProjectiveDynamics.jl")
 #     neighsU::Vector{Vector{Int}}
 # end
 
+#using Base.Iterators: zip
+
+function read_neighbor_list(filename::String, _i0=1 )
+    # Read the neighbor list from a file and convert to sets
+    #file_neighbors = []
+    file_neighbors = Vector{Vector{Int64}}()
+    open(filename, "r") do file
+        for line in eachline(file)
+            # Split line into integers, filter out -1, and convert to a set
+            #neighbors = Set(filter(x -> x != -1, parse.(Int, split(line))))
+            neighbors = sort( collect( filter(x -> x != -1, parse.(Int, split(line) ) ) ) )
+            neighbors .+= _i0
+            push!(file_neighbors, Vector{Int64}(neighbors) )
+        end
+    end
+    return file_neighbors
+end
+
+function compare_lists( lst1::Vector{Int64}, lst2::Vector{Int64} )
+    set1 = Set(lst1)
+    set2 = Set(lst2)
+    for (i,ng) in enumerate(lst1)
+        if !( ng in set2 )
+            println("lst1[",i,"] ", ng, " miss in set2" )
+        end
+    end
+    for (i,ng) in enumerate(lst2)
+        if !( ng in set1 )
+            println("lst2[",i,"] ", ng, " miss in set1" )
+        end
+    end
+end  
+
+function compare_neighbor_lists_( lst1::Vector{Vector{Int64}}, lst2::Vector{Vector{Int64}} )
+    n = size(lst1,1)
+    for i in 1:n
+        println("--compare_neighbor_lists[",i,"] " )
+        compare_lists( lst1[i], lst2[i] )
+    end
+end
+
 function eval_force_and_plot( position, velocity,   plt, bonds )
     plot_truss( plt, bonds, position, lw=0.5, c=:black )
     force = -0.0 * position - 0.00 * velocity
     return force
 end
-
 
 function eval_force_and_plot_f( position::Matrix{Float32}, velocity::Matrix{Float32},   plt, bonds )
     plot_truss( plt, bonds, position, lw=0.5, c=:black )
@@ -53,8 +93,8 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     p0 =  Vector([0.0,0.0,0.0])
     p1 =  Vector([1.0,0.0,0.0])
     ax =  Vector([0.0,0.0,1.0])
-    #print("wheel()");       @time points, bonds, ks = wheel( p0, p1, ax, wheel_width, n=nseg, kscale=k )
-    print("ngonTruss()");    @time points, bonds, ks = ngonTruss( p0, p1, ax, n=3, k=k )
+    print("wheel()");       @time points, bonds, ks = wheel( p0, p1, ax, wheel_width, n=nseg, kscale=k )
+    #print("ngonTruss()");    @time points, bonds, ks = ngonTruss( p0, p1, ax, n=3, k=k )
     plt = plot(legend=false, aspect_ratio = :equal )
     #println("typeof(points) ", typeof(points) );
     print("process_bonds()"); @time   _, l0s          = process_bonds( bonds, points );
@@ -97,16 +137,33 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     #writedlm("LDLT_L.csv", LDLT_L, ' ')
 
     # ===========  Check C++ result vs Julia
-    # A_cpp = readdlm("../../tests_bash/Orbital/PDmat.log",  Float64)
-    # L_cpp = readdlm("../../tests_bash/Orbital/LDLT_L.log", Float64)
-    # #println("A_cpp ", size(A_cpp) ); display(A_cpp);
-    # dAcpp = A_cpp - A;   errAcpp = norm(dAcpp)
-    # println("|A_cpp - A|=", errAcpp," size=", size(dAcpp),  ); #display(dAcpp);
-    # #plot( dAcpp );
-    # println("L_cpp  ", size(L_cpp  ) ); display(L_cpp );
-    # println("LDLT_L ", size(LDLT_L ) ); display(LDLT_L);
-    # dLcpp = L_cpp - LDLT_L; errLcpp = norm(dLcpp)
-    # println("|L_cpp - LDLT_L|=", errLcpp," size=", size(dLcpp),  ); #display(dAcpp);
+    println("# ===========  Check C++ result vs Julia"  );
+    A_cpp = readdlm("../../tests_bash/Orbital/PDmat.log",  Float64)
+    L_cpp = readdlm("../../tests_bash/Orbital/LDLT_L.log", Float64)
+    println("A_cpp ", size(A_cpp) ); display(A_cpp);
+    dAcpp = A_cpp - A;   errAcpp = norm(dAcpp)
+    println("|A_cpp - A|=", errAcpp," size=", size(dAcpp),  ); #display(dAcpp);
+    #plot( dAcpp )
+
+    println("# --------  Check LDLT Neighobrs (C++ vs Julia)"  );
+    neighs0_cpp = read_neighbor_list("../../tests_bash/Orbital/neighs_before.log")
+    neighs_cpp = read_neighbor_list("../../tests_bash/Orbital/neighs_after.log")
+
+    println("neighs0_cpp  " ); display(neighs0_cpp);
+    println("neighs " ); display(neighs);
+    compare_neighbor_lists_( neighs0_cpp, neighs )
+
+    println("neighs_cpp  " ); display(neighs_cpp);
+    println("LDLT_neighs " ); display(LDLT_neighs);
+    compare_neighbor_lists_( neighs_cpp, LDLT_neighs )
+
+    println("# --------  Check LDLT_L (C++ vs Julia)"  );
+    println("L_cpp  ", size(L_cpp  ) ); display(L_cpp );
+    println("LDLT_L ", size(LDLT_L ) ); display(LDLT_L);
+    dLcpp = L_cpp - LDLT_L; errLcpp = norm(dLcpp)
+    println("|L_cpp - LDLT_L|=", errLcpp," size=", size(dLcpp),  ); #display(dAcpp);
+
+    return
 
     reconstructed = LDLT_L * Diagonal(LDLT_D) * LDLT_L'
     diff = A - reconstructed
@@ -161,7 +218,7 @@ end # function main
 #main()
 
 #main( dt=0.1, niter=15, k=1000000.0 )
-main( dt=0.5, niter=5, k=1000000.0 , omega=0.8 )
+#main( dt=0.5, niter=5, k=1000000.0 , omega=0.8 )
 #main( dt=0.5, niter=5, k=1000000.0 )
 #main( dt=0.1, niter=1 )
 
@@ -170,7 +227,7 @@ main( dt=0.5, niter=5, k=1000000.0 , omega=0.8 )
 #main(dt=0.05)
 #main(dt=0.08)
 #main(dt=0.05, nseg=6)
-#main(dt=0.05, nseg=3)
+main(dt=0.05, nseg=3)
 #main(dt=0.1)
 #main(dt=1.0)
 #main(dt=5.0)

@@ -315,6 +315,67 @@ void Truss::girder1_caps( int ip0, int ip1, int kind ){
     edges.push_back( (TrussEdge){ip1,ipend+3,kind} );
 }
 
+/*
+function ngonTruss(p0::Vector{Float64}, p1::Vector{Float64}, ax::Vector{Float64}; n::Int=8, k::Float64=1.00 )
+    #println("Truss::ngonTruss() n=$n p0=($p0[1],$p0[2],$p0[3]) p1=($p1[1],$p1[2],$p1[3]) ax=($ax[1],$ax[2],$ax[3])")
+
+    dir  = p1 - p0
+    r    = norm(dir)
+    dir  = dir / norm(dir)
+    ax   = make_ortho_u!(ax, dir)
+    side = cross(dir, ax)
+
+    rot  = 1.0 + 0.0im
+    drot = cis(2*π / n)  # Using complex number representation for rotation
+
+    points = Vector{Vector{Float64}}()
+    edges  = Vector{TrussEdge}()
+
+    io = n
+    for i in 1:n
+        R = dir * real(rot) + side * imag(rot)
+        push!(points, p0 + R )
+        push!(edges, TrussEdge(i, io, 1))
+        rot *= drot  # Complex multiplication
+        io=i
+    end
+
+    points = Matrix(hcat(points...)')
+
+    bonds = Array{Tuple{Int, Int}, 1}(undef, 0)
+    ks = Array{Float64, 1}(undef, 0)
+    for e in edges
+        push!(bonds, (e.i, e.j))
+        push!(ks, k )
+    end
+    return points, bonds, ks
+end
+*/
+
+int Truss::nGon( Vec3d p0, Vec3d p1, Vec3d ax, int n, int kind ){
+    printf( "Truss::nGon() n=%i kind=%i p0(%g,%g,%g) p1(%g,%g,%g) ax(%g,%g,%g) \n", n, kind, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, ax.x,ax.y,ax.z );
+    Vec3d dir = p1-p0;
+    double r = dir.normalize();
+    ax.makeOrthoU(dir);
+    Vec3d side; side.set_cross(dir,ax);
+    
+    Vec2d  rot = {1.0,0.0};
+    Vec2d drot; drot.fromAngle( 2.*M_PI/n );
+    int i1   = points.size();
+    int ibloc = blocks.size();
+    blocks.push_back( {i1,edges.size()} );
+    int i0 = i1+n-1;
+    for (int i=0; i<n; i++){
+        Vec3d R = dir*rot.a + side*rot.b;
+        points.push_back( p0 +  R );
+        edges .push_back( (TrussEdge){i0,i1,kind}  );
+        rot.mul_cmplx(drot);
+        i0=i1; i1++;
+    }
+    return ibloc;
+}
+
+
 /**
  * Creates a wheel-shaped truss structure.
  *
