@@ -71,11 +71,15 @@ inline  void solve_LDLT(T* L, T* D, T* b, T* x, int n) {
 
 inline int find_or_add_neigh( int i, int ng, int* neighs, int nmax, int iVoid=-1, bool bPrint=false, bool bErrExit=true) {
     int* ngi = neighs+i*nmax;
-    for (int j=0; j<nmax; j++) {
-        if      ( ngi[j]== ng    ){               return j; } 
-        else if ( ngi[j]== iVoid ){ 
-            if(bPrint)printf("insert neigh[%i].insert(%i)\n", i, ng );    
-            ngi[j]=ng; return j; 
+
+    if(i==ng){ printf("ERROR in find_or_add_neigh() i=ng[%i=%i] \n", i, ng ); exit(0); }
+
+    for (int k=0; k<nmax; k++) {
+        if      ( ngi[k]== ng    ){   return k; } 
+        else if ( ngi[k]== iVoid ){ 
+            if(bPrint)printf("insert neigh[%i].insert(%i) at %i \n", i, ng, k );    
+            ngi[k]=ng; 
+            return k; 
         }
     }
     if(bErrExit){ printf("ERROR in find_or_add_neigh() cannot add ng=%i, neighs[n=%i] is full => exit() \n", ng, nmax); exit(0);  }
@@ -91,21 +95,26 @@ inline void CholeskyDecomp_LDLT_sparse(T* A, T* L, T* D, int* neighs, int n, int
         const int* neighs_j = neighs + j*nNeighMax;
         for (int k=0; k<nNeighMax; k++){
             int ng = neighs_j[k];
-            if (  (ng>=0)&&(ng<j) ){
+            if(ng<0) break;
+            if (ng<j){
                 T Lij = L[j*n+ng];
-                sum  += Lij*Lij * D[ng];
+                T val = Lij*Lij * D[ng];
+                sum  += val;
+                printf(  "sum[%i,%i]  %20.10f   %20.10f \n", j,k,  val,  sum,  Lij,  D[ng]  );
             }
         }
         D[j] = A[j*n+j] - sum;
-        printf(  "Ch[%i] D,A,sum  %20.10f   %20.10f   %20.10f \n",  D[j],  A[j*n+j],  sum  );
+        printf(  "Ch[%i] D,A,sum  %20.10f   %20.10f   %20.10f \n", j,  D[j],  A[j*n+j],  sum  );
         for (int i=j+1; i<n; i++){
             sum = 0.0;
             for (int k=0; k<nNeighMax; k++){
                 int ng = neighs_j[k];
-                if ( (ng>=0)&&(ng<j)){
+                if(ng<0)break;
+                if (ng<j){
                     sum += L[i*n+ng] * L[j*n+ng] * D[ng];
                 }
             }
+            if(i==j){ printf("ERROR in CholeskyDecomp_LDLT_sparse i=j[%i=%i] \n", i, j ); exit(0); }
             T Lij = (A[i*n+j]-sum)/D[j];
             if (fabs(Lij) > TOLERANCE) {
                 L[i*n+j] = Lij;

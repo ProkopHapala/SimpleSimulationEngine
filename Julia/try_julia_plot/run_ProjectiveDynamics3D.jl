@@ -124,8 +124,12 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     #print("CholeskyDecomp_sparse()"); @time L,neighsCh  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)    # evaluate Cholensky decomposition for sparse matrix (efficient)                    # evaluate Cholensky decomposition using Cholesky–Crout algorithm
     #U  = copy(L') 
 
-    LDLT_L, LDLT_D              = CholeskyDecomp_LDLT(A)
-    LDLT_L, LDLT_D, LDLT_neighs = CholeskyDecomp_LDLT_sparse(A,neighs)
+    #print("point_neighs()"); @time LDLT_L, LDLT_D              = CholeskyDecomp_LDLT(A)
+    print("point_neighs()"); @time LDLT_L, LDLT_D, LDLT_neighs = CholeskyDecomp_LDLT_sparse(A,neighs)
+
+    reconstructed = LDLT_L * Diagonal(LDLT_D) * LDLT_L'
+    diff = A - reconstructed
+    println("Max.Error|A-LDL|=': ", maximum(abs.(diff)))
 
     println("A  ", size(A    ) ); display(A    );
     println("Mt ", Mt );
@@ -167,10 +171,6 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     display(plt)
 
     return
-
-    reconstructed = LDLT_L * Diagonal(LDLT_D) * LDLT_L'
-    diff = A - reconstructed
-    println("Max.Error|A-LDL|=': ", maximum(abs.(diff)))
 
     #print("mapMatrixNeighs()"); @time neighsL = mapMatrixNeighs(L)    #;print("neighsL"); display(neighsL)   # find which elements of L are non-zero ( for each row    i map all non-zero Aij to columns j )
     #print("invNeighs()");       @time neighsU = invNeighs( neighsL ) 

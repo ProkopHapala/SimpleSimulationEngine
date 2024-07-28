@@ -230,7 +230,9 @@ function CholeskyDecomp_LDLT_sparse(A::Matrix{T}, neighs::Array{Vector{Int},1}, 
         ngs = neighsets[j]
         for k in ngs
             if k < j
-                sum1 += (L[j,k]^2) * D[k]
+                val = (L[j,k]^2) * D[k]
+                sum1 += val
+                println("sum[$j,$k] $(lpad(val, 20, ' '))   $(lpad(sum1, 20, ' '))  ")
                 nop += 1
             end
         end

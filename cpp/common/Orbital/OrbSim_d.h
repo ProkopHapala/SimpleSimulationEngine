@@ -422,7 +422,7 @@ class OrbSim: public Picker { public:
         _realloc0( neighsLDLT, n*nNeighMaxLDLT, -1 );
         DEBUG
         printf( "nNeighMaxLDLT=%i nNeighMax=%i \n",  nNeighMaxLDLT, nNeighMax );
-        for(int i=0; i<n; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=neighs[i*nNeighMax+j]; };  } }
+        for(int i=0; i<n; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>=nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=neighs[i*nNeighMax+j]; };  } }
         DEBUG
         Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighsLDLT, n, nNeighMaxLDLT );
         DEBUG

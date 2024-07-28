@@ -179,9 +179,9 @@ void makeShip_Wheel( int nseg=8){
 
     int n = sim2.nPoint;
 
-    mat2file<int>( "neighs_before.log",  n, sim2.nNeighMax,      sim2.neighs, "%10i " );
+    mat2file<int>( "neighs_before.log",  n, sim2.nNeighMax,      sim2.neighs,     "%5i " );
     sim2.prepare_Cholesky( 0.05, 32 );
-    mat2file<int>( "neighs_after.log",   n, sim2.nNeighMaxLDLT,  sim2.neighsLDLT, "%10i " );
+    mat2file<int>( "neighs_after.log",   n, sim2.nNeighMaxLDLT,  sim2.neighsLDLT, "%5i " );
 
     mat2file<double>( "PDmat.log",  n,n, sim2.PDmat  );
     mat2file<double>( "LDLT_L.log", n,n, sim2.LDLT_L );
