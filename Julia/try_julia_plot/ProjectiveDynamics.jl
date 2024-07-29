@@ -451,7 +451,9 @@ function run_solver( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float64},
         velocity = update_velocity( ps_cor, points, velocity, dt )
         points[:,:] .= ps_cor[:,:]
     end
-    return points
+
+    tmps = (ps_pred,ps_cor,b)
+    return points, tmps
 end
 
 function run_solver_f( truss::Truss_f, sol::LDLTsolution_f, velocity::Matrix{Float32}, eval_forces::Function; dt::Float32=0.1f0, niter::Int=100 ) 

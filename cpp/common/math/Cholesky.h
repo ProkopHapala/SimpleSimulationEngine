@@ -100,11 +100,11 @@ inline void CholeskyDecomp_LDLT_sparse(T* A, T* L, T* D, int* neighs, int n, int
                 T Lij = L[j*n+ng];
                 T val = Lij*Lij * D[ng];
                 sum  += val;
-                printf(  "sum[%i,%i]  %20.10f   %20.10f \n", j,k,  val,  sum,  Lij,  D[ng]  );
+                //printf(  "sum[%i,%i]  %20.10f   %20.10f \n", j,k,  val,  sum,  Lij,  D[ng]  );
             }
         }
         D[j] = A[j*n+j] - sum;
-        printf(  "Ch[%i] D,A,sum  %20.10f   %20.10f   %20.10f \n", j,  D[j],  A[j*n+j],  sum  );
+        //printf(  "Ch[%i] D,A,sum  %20.10f   %20.10f   %20.10f \n", j,  D[j],  A[j*n+j],  sum  );
         for (int i=j+1; i<n; i++){
             sum = 0.0;
             for (int k=0; k<nNeighMax; k++){

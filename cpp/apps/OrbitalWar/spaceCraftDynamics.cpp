@@ -175,8 +175,8 @@ void makeShip_Wheel( int nseg=8){
     for(int i=0; i<sim.nBonds;  i++) sim.params[i].y=10000.0;
     //sim2.printAllNeighs();
 
-    double omega = 0.0;
-    double dt    = 0.01;
+    double omega = 1.0;
+    double dt    = 0.05;
 
     sim.dt = dt;
     int n = sim.nPoint;
@@ -190,6 +190,7 @@ void makeShip_Wheel( int nseg=8){
     sim.cleanVel();
     sim.addAngularVelocity(  p0, ax*omega );
     //apply_torq( sim2.nPoint, p0, ax*omega, sim2.points, sim2.vel );  
+    mat2file<double>( "vel_1.log", n,4, (double*)sim.vel );
     
     //exportSim( sim, mesh, workshop );
     //sim.printAllNeighs();

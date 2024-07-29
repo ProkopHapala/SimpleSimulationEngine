@@ -435,8 +435,8 @@ class OrbSim: public Picker { public:
     }
 
     void realloc_Cholesky( int nNeighMaxLDLT_  ){
+        printf( "OrbSim_d::realloc_Cholesky() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT, nNeighMax );
         nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
-        printf( "nNeighMaxLDLT=%i nNeighMax=%i \n",  nNeighMaxLDLT, nNeighMax );
         int n2 = nPoint*nPoint;
         // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
         _realloc0( PDmat,  n2,     0.0 );
@@ -451,7 +451,7 @@ class OrbSim: public Picker { public:
     }
 
     void prepare_Cholesky( double dt, int nNeighMaxLDLT_ ){ 
-        printf( "OrbSim_d::prepare_Cholesky() dt=%g nNeighMaxLDLT_=%i\n", dt );
+        printf( "OrbSim_d::prepare_Cholesky() dt=%g nNeighMaxLDLT_=%i\n", dt, nNeighMaxLDLT_ );
         realloc_Cholesky( nNeighMaxLDLT_ );
         make_PD_Matrix( PDmat, dt ); 
         for(int i=0; i<nPoint; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>=nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=neighs[i*nNeighMax+j]; };  } }
@@ -479,6 +479,16 @@ class OrbSim: public Picker { public:
             Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)linsolve_b, (double*)linsolve_yy, neighsLDLT, nNeighMax );
             for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
             Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (double*)linsolve_yy, (double*)ps_cor, neighsLDLT, nNeighMax );
+
+            mat2file<double>( "points.log",  nPoint,4, (double*)points      );
+            mat2file<double>( "vel.log",     nPoint,4, (double*)vel         );
+            mat2file<double>( "ps_pred.log", nPoint,3, (double*)linsolve_yy );
+            mat2file<double>( "b.log",       nPoint,3, (double*)linsolve_yy );
+            mat2file<double>( "yy.log",      nPoint,3, (double*)linsolve_yy );
+            mat2file<double>( "ps_cor.log",  nPoint,3, (double*)linsolve_yy );
+
+            exit(0);
+
             // Compute residual
             // double res = 0.0;
             // for (int i=0;i<nPoint;i++) {
@@ -488,6 +498,7 @@ class OrbSim: public Picker { public:
             // }
             // printf("residual[%d] : %f\n", iter, res);
             // Update velocity and points
+            
             for (int i=0;i<nPoint;i++) {
                 //Vec3d dv = ps_cor[i] - ps_pred[i];
                 //dv.mul(1.0 / dt);
@@ -503,9 +514,7 @@ class OrbSim: public Picker { public:
                 points[i].f = ps_cor[i];
             }
             // Call user update function if set
-            if (user_update) {
-                user_update(dt);
-            }
+            //if (user_update){ user_update(dt);}
         }
     }
 
@@ -1141,7 +1150,10 @@ class OrbSim: public Picker { public:
     void addAngularVelocity( Vec3d p0, Vec3d ax ){
         for(int i=0; i<nPoint; i++){
             Vec3d dp = points[i].f - p0;
-            Vec3d v; v.set_cross(ax,dp);
+            Vec3d v; 
+            //v.set_cross(ax,dp);
+            v.set_cross(dp,ax);
+            //cross(axis, p)
             vel[i].f.add(v);
         }
     };
