@@ -175,8 +175,11 @@ void makeShip_Wheel( int nseg=8){
     for(int i=0; i<sim.nBonds;  i++) sim.params[i].y=10000.0;
     //sim2.printAllNeighs();
 
-    int n = sim.nPoint;
+    double omega = 0.0;
+    double dt    = 0.01;
 
+    sim.dt = dt;
+    int n = sim.nPoint;
     mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim.neighs,     "%5i " );
     sim.prepare_Cholesky( 0.05, 32 );
     mat2file<int>( "neighs_after.log",   n, sim.nNeighMaxLDLT,  sim.neighsLDLT, "%5i " );
@@ -184,7 +187,6 @@ void makeShip_Wheel( int nseg=8){
     mat2file<double>( "PDmat.log",  n,n, sim.PDmat  );
     mat2file<double>( "LDLT_L.log", n,n, sim.LDLT_L );
 
-    double omega = 1.0;
     sim.cleanVel();
     sim.addAngularVelocity(  p0, ax*omega );
     //apply_torq( sim2.nPoint, p0, ax*omega, sim2.points, sim2.vel );  
@@ -323,7 +325,7 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_, 
     }
     //exit(0);
     VIEW_DEPTH = 10000.0;
-    zoom = 1000.0;
+    zoom = 10.0;
 }
 
 void SpaceCraftDynamicsApp::drawBody(){
@@ -399,6 +401,11 @@ void SpaceCraftDynamicsApp::draw(){
     //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
     //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
     glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_LIGHTING);
+    glDisable(GL_CULL_FACE);
+    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
     //drawBody();
     drawSim();

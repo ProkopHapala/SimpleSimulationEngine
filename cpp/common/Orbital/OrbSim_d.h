@@ -373,7 +373,7 @@ class OrbSim: public Picker { public:
     // =================== Solver Using Projective Dynamics and Cholesky Decomposition
 
     void make_PD_Matrix( double* A, double dt ) {
-        printf( "make_PD_Matrix() dt=%g\n", dt );
+        printf( "OrbSim_d::make_PD_Matrix() dt=%g\n", dt );
         //for(int i=0; i<nPoint; i++){ printf("mass[%i] %g\n", points[i].w ); }; // debug
         //for(int i=0; i<nBonds; i++){ printf("ks[%i] %g\n",   params[i].y ); }; // debug
         int n = nPoint;
@@ -384,11 +384,14 @@ class OrbSim: public Picker { public:
             double Aii = points[i].w * idt2; // Assuming points[i].w stores the mass
             //printf( "==i,i %i %g %g %g \n", i, Aii, points[i].w, idt2  );
             int2* ngi = neighBs + (i*nNeighMax);
-            for( int jj=0; jj<nNeighMax; jj++ ){
-                int2  ng = ngi[jj];
-                int   ib = ng.y;  
+            for( int ing=0; ing<nNeighMax; ing++ ){
+                int2  ng = ngi[ing];
+                int   ib = ng.y;
+                if(ib<0) break;
+                //if(ib<0){ printf("ERROR int OrbSim_d::make_PD_Matrix() invalid neighbor [i=%i,ing=%i] ng(%i,%i) neigh=%i\n", i, ing, ib, ng.x, neighs[i*nNeighMax+ing] ); exit(0); }  
+                //printf( "make_PD_Matrix()[i=%i,ing=%i] ng(%i,%i)\n", i, ing, ib, ng.x );
                 int2   b = bonds[ib];
-                //int j    = neighs[b.x];
+                //int j  = neighs[b.x];
                 int j    = b.y;
                 double k = params[ib].y; // Assuming params[ib].y stores the spring constant
 
@@ -412,6 +415,25 @@ class OrbSim: public Picker { public:
         }
     }
 
+    void rhs_ProjectiveDynamics(const Vec3d* pnew, Vec3d* b) {
+        double idt2 = 1.0 / (dt * dt);
+        for (int i = 0; i < nPoint; i++) {
+            Vec3d bi; bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
+            int2* ngi = neighBs + (i*nNeighMax);
+            for( int ing=0; ing<nNeighMax; ing++ ){
+                int2  ng = ngi[ing];
+                int   ib = ng.y;
+                if(ib<0) break;
+                double k  = params[ib].y;  // assuming params.y is the spring constant
+                int2   b  = bonds[ib];
+                int j     = (b.x == i) ? b.y : b.x;
+                Vec3d d = pnew[i] -  pnew[j];
+                bi.add_mul(d, k * params[ib].x / d.norm());  // params[ib].x is l0
+            }
+            b[i] = bi;
+        }
+    }
+
     void realloc_Cholesky( int nNeighMaxLDLT_  ){
         nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
         printf( "nNeighMaxLDLT=%i nNeighMax=%i \n",  nNeighMaxLDLT, nNeighMax );
@@ -429,62 +451,34 @@ class OrbSim: public Picker { public:
     }
 
     void prepare_Cholesky( double dt, int nNeighMaxLDLT_ ){ 
+        printf( "OrbSim_d::prepare_Cholesky() dt=%g nNeighMaxLDLT_=%i\n", dt );
         realloc_Cholesky( nNeighMaxLDLT_ );
         make_PD_Matrix( PDmat, dt ); 
         for(int i=0; i<nPoint; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>=nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=neighs[i*nNeighMax+j]; };  } }
         Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighsLDLT, nPoint, nNeighMaxLDLT );
     }
 
-    void rhs_ProjectiveDynamics(const Vec3d* pnew, Vec3d* b) {
-        double idt2 = 1.0 / (dt * dt);
-        for (int i = 0; i < nPoint; i++) {
-            DEBUG
-            Vec3d bi; bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
-            int neighB_start = (i == 0) ? 0 : neighB2s[i-1];
-            int neighB_end   = neighB2s[i];
-            DEBUG
-            for (int nb=neighB_start; nb<neighB_end; nb++) {
-                int    ib  = neighs[nb];
-                double k = params[ib].y;  // assuming params.y is the spring constant
-                int i_ = bonds[ib].x;
-                int j_ = bonds[ib].y;
-                int j = (i_ == i) ? j_ : i_;
-                Vec3d d = pnew[i] -  pnew[j];
-                DEBUG
-                bi.add_mul(d, k * params[ib].x / d.norm());  // params[ib].x is l0
-                DEBUG
-            }
-            b[i] = bi;
-        }
-    }
-
     void run_Cholesky(int niter) {
-        DEBUG
         const int m=3;
         memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
         double dt2 = dt * dt;
         cleanForce();
-        DEBUG
         for (int iter = 0; iter < niter; iter++) {
             // Evaluate forces (assuming you have a method for this)
             //evalForces();
-            DEBUG
             // Predict step
             for (int i = 0; i < nPoint; i++) { ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2; }
 
             // Apply fixed constraints
             //for (int i = 0; i < nPoint; i++) {    if (kFix[i] > 0) { ps_pred[i] = points[i].f; } }
-            DEBUG
             // Compute right-hand side
             rhs_ProjectiveDynamics(ps_pred, linsolve_b );
 
             // Solve using LDLT decomposition (assuming you have this method)
             //solve_LDLT_sparse(b, ps_cor);
-            DEBUG
             Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)linsolve_b, (double*)linsolve_yy, neighsLDLT, nNeighMax );
             for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
             Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (double*)linsolve_yy, (double*)ps_cor, neighsLDLT, nNeighMax );
-            DEBUG
             // Compute residual
             // double res = 0.0;
             // for (int i=0;i<nPoint;i++) {
@@ -493,7 +487,6 @@ class OrbSim: public Picker { public:
             //     if (l > res) res = l;
             // }
             // printf("residual[%d] : %f\n", iter, res);
-            DEBUG
             // Update velocity and points
             for (int i=0;i<nPoint;i++) {
                 //Vec3d dv = ps_cor[i] - ps_pred[i];
@@ -509,7 +502,6 @@ class OrbSim: public Picker { public:
                 // update positions
                 points[i].f = ps_cor[i];
             }
-            DEBUG
             // Call user update function if set
             if (user_update) {
                 user_update(dt);
