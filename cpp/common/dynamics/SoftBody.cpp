@@ -331,7 +331,6 @@ int SoftBody::findBonds( double lmax, BondType * bt ){
 int SoftBody::findKinks( double damp, double kstiff ){
     int*   npls = new int  [npoints];
     Vec2i* ijs  = new Vec2i[npoints];
-    DEBUG
     for(int i=0; i<npoints; i++){ npls[i]=0; }
     auto func = [&](int ip, int ib){ int ni=npls[ip]; if(ni<2){ ijs[ip].array[ni]=ib; }; npls[ip]=ni+1; };
     for(int i=0; i<nbonds; i++){

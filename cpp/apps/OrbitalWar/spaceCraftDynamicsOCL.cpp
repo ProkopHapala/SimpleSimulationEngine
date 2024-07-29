@@ -18,6 +18,7 @@ int verbosity = 0;
 #include "Mat3.h"
 #include "quaternion.h"
 #include "raytrace.h"
+#include "Vec3Utils.h"
 
 #include "testUtils.h"
 
@@ -185,12 +186,17 @@ void makeShip_Wheel( int nseg=8){
 
     mat2file<double>( "PDmat.log",  n,n, sim2.PDmat  );
     mat2file<double>( "LDLT_L.log", n,n, sim2.LDLT_L );
+
+    double omega = 1.0;
+    sim2.cleanVel();
+    sim2.addAngularVelocity(  p0, ax*omega );
+    //apply_torq( sim2.nPoint, p0, ax*omega, sim2.points, sim2.vel );  
     
     //exportSim( sim, mesh2, workshop );
     //sim.printAllNeighs();
 
     printf("#### END makeShip_Whee()\n" );
-    exit(0);
+    //exit(0);
 };
 
 // ====================== Class Definitions
@@ -242,11 +248,18 @@ void SpaceCraftEditorApp::draw(){
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
+DEBUG
+
     // Render simulation
     glLineWidth(0.5); 
-
-    runSim( sim );
-    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+DEBUG
+    //runSim( sim );
+    //renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+DEBUG
+    sim2.run_Cholesky(1);
+DEBUG
+    renderTruss( sim2.nBonds, sim2.bonds, sim2.points, sim2.strain, 1000.0 );
+DEBUG
 
     // draw ring nodes
     glLineWidth(3.0);

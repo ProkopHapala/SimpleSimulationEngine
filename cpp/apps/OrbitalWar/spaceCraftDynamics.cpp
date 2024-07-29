@@ -21,6 +21,7 @@ int verbosity = 0;
 
 #include "Truss.h"
 #include "SpaceCraft.h"
+#include "SpaceCraft2Mesh2.h"
 #include "SpaceCraftDraw.h"
 #include "SoftBody.h"
 
@@ -41,6 +42,7 @@ int verbosity = 0;
 #include "Tree.h"
 
 #include "spaceCraftEditorUtils.h"
+#include "OrbSim_d.h"
 
 using namespace SpaceCrafting;
 
@@ -56,6 +58,9 @@ int glo_truss=0;
 //char str[8096];
 double elementSize  = 5.;
 
+Mesh::Builder2 mesh;
+OrbSim         sim;
+
 /**
  * Creates a ship truss structure assuming that the ship is composed of a central spine and peripheral maneuvering pendulums all connected by ropes.
  * 
@@ -66,6 +71,7 @@ double elementSize  = 5.;
  * @param perRope The number of ropes per connection.
  */
 void makeShipTruss1( Truss& truss, int n, int m, double L, int perRope ){
+    printf( "makeShipTruss1() n=%i m=%i perRope=%i L=%g\n", n, m, perRope, L );
     // central spine
     for(int i=0; i<(n+1); i++){
         truss.points.push_back( (Vec3d){0.,0.,i*L} ); // 1
@@ -104,7 +110,7 @@ void makeShipTruss1( Truss& truss, int n, int m, double L, int perRope ){
  * @param body      The SoftBody object to store the converted data and do the simulation later.
  */
 void truss2SoftBody( const Truss& truss, BondType* bondTypes, SoftBody& body ){
-    //printf( "npoints %i nedge %i \n", truss.points.size(), truss.edges.size() );
+    printf( "truss2SoftBody() npoints %i nedge %i \n", truss.points.size(), truss.edges.size() );
     body.allocate( truss.points.size(), truss.edges.size() );
     delete [] body.points;
     body.points = (Vec3d*)&(truss.points[0]);      // this will help to visualizatio
@@ -127,9 +133,68 @@ void truss2SoftBody( const Truss& truss, BondType* bondTypes, SoftBody& body ){
 }
 
 void makeShip1( int n, int m, int perRope, double L, Truss& truss, SoftBody& body, BondType* bondTypes ){
+    printf( "makeShip1()\n" );
     makeShipTruss1( truss, n, m, L, perRope );
     truss2SoftBody( truss, &bondTypes[0], body );
 }
+
+void makeShip_Wheel( int nseg=8){
+    printf("makeShip_Wheel()\n");
+    StickMaterial *o = new StickMaterial();
+    //Material{ name="Kevlar", density=1.44e+3, Spull=3.6e+9, Spush=0.0,    Kpull=154.0e+9, Kpush=0.0,      reflectivity=0.6,  Tmelt=350 }
+    //Material{ name="Steel" , density=7.89e+3, Spull=1.2e+9, Spush=1.2e+9, Kpull=200.0e+9, Kpush=200.0e+9, reflectivity=0.85, Tmelt=800 }
+    //st1  = StickMaterial( "GS1_long", "Steel", 0.1,  0.005 )
+    //st2  = StickMaterial( "GS1_perp", "Steel", 0.05, 0.003 )
+    //st3  = StickMaterial( "GS1_in",   "Steel", 0.04, 0.002 )
+    //st4  = StickMaterial( "GS1_out",  "Steel", 0.04, 0.002 )
+
+    workshop.add_Material     ( "Steel", 7.89e+3, 1.2e+9, 1.2e+9, 200.0e+9, 200.0e+9, 0.85, 800 );
+    workshop.add_StickMaterial( "GS1_long", "Steel", 0.1, 0.005, 0.0 );
+
+    Vec3d p0{0.0,0.0,0.0};
+    Vec3d p1{1.0,0.0,0.0};
+    Vec3d ax{0.0,0.0,1.0};
+    
+    //BuildCraft_truss( mesh, *theSpaceCraft, 30.0 );
+    mesh.clear();
+    //mesh.block();
+    //mesh.wheel( p0, p1, ax, nseg, 0.2 );
+    //wheel( mesh, p0, p1, ax, nseg, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
+    wheel( mesh, p0, p1, ax, 3, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
+    //wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );
+    //Quat4i& b = mesh.blocks.back();
+    //o->pointRange = {b.x,(int)mesh.verts.size()};
+    //o->stickRange = {b.y,(int)mesh.edges.size()};
+
+    mesh.printSizes();
+
+    //int nneighmax_min = 16;
+    int nneighmax_min = 8;
+    exportSim( sim, mesh, workshop,  nneighmax_min );
+    for(int i=0; i<sim.nPoint; i++)  sim.points[i].w=1.0;
+    for(int i=0; i<sim.nBonds;  i++) sim.params[i].y=10000.0;
+    //sim2.printAllNeighs();
+
+    int n = sim.nPoint;
+
+    mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim.neighs,     "%5i " );
+    sim.prepare_Cholesky( 0.05, 32 );
+    mat2file<int>( "neighs_after.log",   n, sim.nNeighMaxLDLT,  sim.neighsLDLT, "%5i " );
+
+    mat2file<double>( "PDmat.log",  n,n, sim.PDmat  );
+    mat2file<double>( "LDLT_L.log", n,n, sim.LDLT_L );
+
+    double omega = 1.0;
+    sim.cleanVel();
+    sim.addAngularVelocity(  p0, ax*omega );
+    //apply_torq( sim2.nPoint, p0, ax*omega, sim2.points, sim2.vel );  
+    
+    //exportSim( sim, mesh, workshop );
+    //sim.printAllNeighs();
+
+    printf("#### END makeShip_Whee()\n" );
+    //exit(0);
+};
 
 /**
  * Draws a SoftBody object (which is a physical model of the truss used in simulations - evaulates forces and moves points).
@@ -182,28 +247,21 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 	virtual void keyStateHandling( const Uint8 *keys ) override;
     //virtual void mouseHandling( );
 
-	SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ );
+    void makeSoftBody();
+    void drawBody();
+    void drawSim();
+
+	SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] );
 
 };
 
-SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
-
-    //Lua1.init();
-    fontTex     = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
-    GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
-
-    //	            id, linearDensity, kPress,kTens  sPress,sTens;  // strength
-    //bondTypes.push_back( BondType::stick( 0, 0.1 ,  200e+9, 2.0e+9  ) );
-    //bondTypes.push_back( BondType::rope ( 0, 0.01,  200e+9, 20.0e+9 ) );
-    //bondTypes.push_back( BondType::rope ( 0, 0.01,  200e+9, 20.0e+9 ) );
-
+void SpaceCraftDynamicsApp::makeSoftBody(){
+    printf("SpaceCraftDynamicsApp::makeSoftBody()\n");
     double modul = 100.0e+9;
     bondTypes.push_back( BondType::stick( 0, 0.1 ,  modul, 2.0e+9 , 2e+3 ) );
     bondTypes.push_back( BondType::rope ( 1, 0.01,  modul, 20.0e+9, 4e+3 ) );
     bondTypes.push_back( BondType::rope ( 2, 0.01,  modul, 20.0e+9, 4e+3 ) );
-
     //makeShipTruss1( truss, 3, 3, 100.0 );
-
     int n=1;
     int m=3;
     //makeShipTruss1( truss, n, m, 100.0, 1 );
@@ -211,7 +269,6 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
     truss2SoftBody( truss, &bondTypes[0], body );
     //body.findKinks( 0.5, 100000000.0 );
     body.findKinks( 100000.0, 100000000.0 );
-
     /*
     for(int i=0; i<truss.edges.size(); i++){
         TrussEdge& ed = truss.edges[i];
@@ -220,8 +277,6 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
         printf( "edge[%i] (%i,%i) (%g,%g,%g) (%g,%g,%g) \n", i, ed.a, ed.b, p1.x,p1.y,p1.z, p2.x,p2.y,p2.z );
     }
     */
-
-
     double pendulumWeight = 300.0; // [kg]
     float speed = 10.0;
     //printf( "body.npoints %i \n" , body.npoints );
@@ -236,9 +291,7 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
         //printf( "body.npoints[%i]  \n" , i );
         Vec3d& p  = body.points[i];
         double r2 = sq(p.x) + sq(p.y);
-
         //body.points[i].addRandomCube( 5.0 ); // DEBUG RANDOMNESS
-
         body.velocities[i].set_cross( p, Vec3dZ*speed );
         printf( "point[%i] mass %g[kg] \n" , i, body.mass[i] );
     }
@@ -251,27 +304,30 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ )
     body.damp        = 0.0;
     // body.damp_stick  = 0.5;
     body.viscosity = 0.0;
+    printf("### SpaceCraftDynamicsApp::makeSoftBody() DONE\n");
+}
 
+void SpaceCraftDynamicsApp::drawSim(){
+    sim.run_Cholesky(1);
+    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+};
 
+SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+    //Lua1.init();
+    fontTex     = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
+    GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+    if(argc<=1){
+        //makeSoftBody();
+        //reloadShip( "data/ship_ICF_interceptor_1.lua" );
+        makeShip_Wheel();
+    }
+    //exit(0);
     VIEW_DEPTH = 10000.0;
     zoom = 1000.0;
 }
 
-
-
-void SpaceCraftDynamicsApp::draw(){
-    //printf( " ==== frame %i \n", frameCount );
-    //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
-    //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
-    //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-    glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
-
-
-	if(!bDrawTrj)glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glDisable(GL_DEPTH_TEST);
-	//glEnable(GL_DEPTH_TEST);
-
-	//int npull = 2; int ipulls[]{2,3};
+void SpaceCraftDynamicsApp::drawBody(){
+//int npull = 2; int ipulls[]{2,3};
 	//int npull = 4; int ipulls[]{2,3,4,5};
 	int npull = 4; int ipulls[]{1,2,3,4};
 	int iref  = 4;
@@ -280,14 +336,11 @@ void SpaceCraftDynamicsApp::draw(){
 
 	double ang0 = atan2(body.points[iref].x,body.points[iref].y);
     for(int itr=0; itr<perFrame; itr++){
-
         time+=body.dt;
-
         int pullDir = (((int)(time))%2)*2-1;
         for(int i=0; i<npull; i++){
             body.bonds[ipulls[i]].l0*=(1 + 0.4*body.dt*pullDir );
         }
-
         //body.step( );
         body.cleanForces();
         body.evalBondForces();
@@ -338,7 +391,21 @@ void SpaceCraftDynamicsApp::draw(){
         glLineWidth(1);
         Draw3D::drawAxis(10.0);
     }
+}
 
+void SpaceCraftDynamicsApp::draw(){
+    //printf( " ==== frame %i \n", frameCount );
+    //glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
+    //glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+    //glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+    glClearColor( 0.8f, 0.8f, 0.8f, 1.0f );
+
+    //drawBody();
+    drawSim();
+
+	//if(!bDrawTrj)glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	//glDisable(GL_DEPTH_TEST);
+	//glEnable(GL_DEPTH_TEST);
 };
 
 void SpaceCraftDynamicsApp::drawHUD(){
@@ -435,7 +502,7 @@ int main(int argc, char *argv[]){
 	int junk;
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
-	thisApp = new SpaceCraftDynamicsApp( junk , dm.w-150, dm.h-100 );
+	thisApp = new SpaceCraftDynamicsApp( junk , dm.w-150, dm.h-100, argc, argv );
 	//thisApp = new SpaceCraftDynamicsApp( junk , 800, 600 );
 	thisApp->loop( 1000000 );
 	return 0;

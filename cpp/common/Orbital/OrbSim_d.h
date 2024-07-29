@@ -144,6 +144,11 @@ class OrbSim: public Picker { public:
     int* neighsLDLT=0;
     int  nNeighMaxLDLT=0;
 
+    Vec3d*  ps_cor      =0; // new Vec3d[nPoint];
+    Vec3d*  ps_pred     =0; // new Vec3d[nPoint];
+    Vec3d*  linsolve_b  =0; // new Vec3d[nPoint];
+    Vec3d*  linsolve_yy =0; // new Vec3d[nPoint];
+
     int     nBonds =0; // number of bonds
     Quat4d* bparams=0; // bond parameters (l0,kP,kT,damp)
     int2*   bonds  =0; // indices of bonded points (i,j)
@@ -407,102 +412,109 @@ class OrbSim: public Picker { public:
         }
     }
 
-    void prepare_Cholesky( double dt, int nNeighMaxLDLT_ ){ 
-        //  WARRNING: we are using neighs, but we should be using neighs_LDLT
-        int n = nPoint;
-        int n2 = n*n;
-        _realloc0( PDmat,  n2, 0.0 );
-        _realloc0( LDLT_L, n2, 0.0 );
-        _realloc0( LDLT_D, n , 0.0 );
-        make_PD_Matrix( PDmat, dt ); 
-        DEBUG
-
+    void realloc_Cholesky( int nNeighMaxLDLT_  ){
         nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
-        DEBUG
-        _realloc0( neighsLDLT, n*nNeighMaxLDLT, -1 );
-        DEBUG
         printf( "nNeighMaxLDLT=%i nNeighMax=%i \n",  nNeighMaxLDLT, nNeighMax );
-        for(int i=0; i<n; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>=nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=neighs[i*nNeighMax+j]; };  } }
-        DEBUG
-        Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighsLDLT, n, nNeighMaxLDLT );
-        DEBUG
+        int n2 = nPoint*nPoint;
+        // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
+        _realloc0( PDmat,  n2,     0.0 );
+        _realloc0( LDLT_L, n2,     0.0 );
+        _realloc0( LDLT_D, nPoint, 0.0 );
+        _realloc0( neighsLDLT, nPoint*nNeighMaxLDLT, -1 );
+        // ---- Temporary Work arrays
+        _realloc0(  ps_cor     ,nPoint, Vec3dZero );
+        _realloc0(  ps_pred    ,nPoint, Vec3dZero );
+        _realloc0(  linsolve_b ,nPoint, Vec3dZero );
+        _realloc0(  linsolve_yy,nPoint, Vec3dZero);
     }
 
-    void rhs_ProjectiveDynamics(Vec3d* pnew, Vec3d* b) {
+    void prepare_Cholesky( double dt, int nNeighMaxLDLT_ ){ 
+        realloc_Cholesky( nNeighMaxLDLT_ );
+        make_PD_Matrix( PDmat, dt ); 
+        for(int i=0; i<nPoint; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>=nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=neighs[i*nNeighMax+j]; };  } }
+        Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighsLDLT, nPoint, nNeighMaxLDLT );
+    }
+
+    void rhs_ProjectiveDynamics(const Vec3d* pnew, Vec3d* b) {
         double idt2 = 1.0 / (dt * dt);
         for (int i = 0; i < nPoint; i++) {
-            Vec3d bi;
-            bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
+            DEBUG
+            Vec3d bi; bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
             int neighB_start = (i == 0) ? 0 : neighB2s[i-1];
-            int neighB_end = neighB2s[i];
-            for (int nb = neighB_start; nb < neighB_end; nb++) {
-                int ib = neighs[nb];
+            int neighB_end   = neighB2s[i];
+            DEBUG
+            for (int nb=neighB_start; nb<neighB_end; nb++) {
+                int    ib  = neighs[nb];
                 double k = params[ib].y;  // assuming params.y is the spring constant
                 int i_ = bonds[ib].x;
                 int j_ = bonds[ib].y;
                 int j = (i_ == i) ? j_ : i_;
-                Vec3d d = points[i].f -  points[j].f;
+                Vec3d d = pnew[i] -  pnew[j];
+                DEBUG
                 bi.add_mul(d, k * params[ib].x / d.norm());  // params[ib].x is l0
+                DEBUG
             }
             b[i] = bi;
         }
     }
 
     void run_Cholesky(int niter) {
-        Vec3d*  ps_cor = new Vec3d[nPoint];
-        Vec3d*  ps_pred = new Vec3d[nPoint];
-        Vec3d*  b       = new Vec3d[nPoint];
-        Vec3d*  yy      = new Vec3d[nPoint];
-
+        DEBUG
         const int m=3;
         memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
         double dt2 = dt * dt;
+        cleanForce();
+        DEBUG
         for (int iter = 0; iter < niter; iter++) {
             // Evaluate forces (assuming you have a method for this)
             //evalForces();
-
+            DEBUG
             // Predict step
             for (int i = 0; i < nPoint; i++) { ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2; }
 
             // Apply fixed constraints
-            for (int i = 0; i < nPoint; i++) {    if (kFix[i] > 0) { ps_pred[i] = points[i].f; } }
-
+            //for (int i = 0; i < nPoint; i++) {    if (kFix[i] > 0) { ps_pred[i] = points[i].f; } }
+            DEBUG
             // Compute right-hand side
-            rhs_ProjectiveDynamics(ps_pred, b);
+            rhs_ProjectiveDynamics(ps_pred, linsolve_b );
 
             // Solve using LDLT decomposition (assuming you have this method)
             //solve_LDLT_sparse(b, ps_cor);
-
-            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)b, (double*)yy, neighsLDLT, nNeighMax );
-            for (int i=0; i<nPoint; i++){ yy[i].mul(1/LDLT_D[i]); } // Diagonal 
-            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (double*)yy, (double*)ps_cor, neighsLDLT, nNeighMax );
-
+            DEBUG
+            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)linsolve_b, (double*)linsolve_yy, neighsLDLT, nNeighMax );
+            for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
+            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (double*)linsolve_yy, (double*)ps_cor, neighsLDLT, nNeighMax );
+            DEBUG
             // Compute residual
-            double res = 0.0;
-            for (int i=0;i<nPoint;i++) {
-                Vec3d  d = ps_cor[i] - points[i].f;
-                double l = d.norm();
-                if (l > res) res = l;
-            }
-            printf("residual[%d] : %f\n", iter, res);
-
+            // double res = 0.0;
+            // for (int i=0;i<nPoint;i++) {
+            //     Vec3d  d = ps_cor[i] - points[i].f;
+            //     double l = d.norm();
+            //     if (l > res) res = l;
+            // }
+            // printf("residual[%d] : %f\n", iter, res);
+            DEBUG
             // Update velocity and points
             for (int i=0;i<nPoint;i++) {
-                Vec3d dv = ps_cor[i] - ps_pred[i];
-                dv.mul(1.0 / dt);
-                vel   [i].f.add( dv );
+                //Vec3d dv = ps_cor[i] - ps_pred[i];
+                //dv.mul(1.0 / dt);
+                //vel   [i].f.add( dv );
+
+                // position-based velocity update
+                double vr2 = vel[i].norm2();
+                Vec3d v    = ps_cor[i] - points[i].f;
+                //v.mul(1/dt);
+                v.mul( sqrt(  vel[i].norm2()/v.norm2() ) );
+                vel[i].f = v;
+                // update positions
                 points[i].f = ps_cor[i];
             }
-
+            DEBUG
             // Call user update function if set
             if (user_update) {
                 user_update(dt);
             }
         }
-
-        delete[] ps_cor;
-        delete[] ps_pred;
-        delete[] b;
     }
 
 
@@ -1133,6 +1145,14 @@ class OrbSim: public Picker { public:
 
     void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4dZero; } };
     void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4dZero; } };
+
+    void addAngularVelocity( Vec3d p0, Vec3d ax ){
+        for(int i=0; i<nPoint; i++){
+            Vec3d dp = points[i].f - p0;
+            Vec3d v; v.set_cross(ax,dp);
+            vel[i].f.add(v);
+        }
+    };
 
     double move_GD(double dt){
         double ff=0;

@@ -589,31 +589,31 @@ using  Mat3Sf =  Mat3S<float>;
 using  Mat3Sd =  Mat3S<double>;
 
 
-template<typename T, typename Func>
-void numDeriv( Vec3d p, double d, Vec3d& f, Func func){
-    //double e0 = Efunc(p);
-    double d_=d*0.5;
-    p.x+=d_; f.x = func(p); p.x-=d; f.x-=func(p); p.x+=d_;
-    p.y+=d_; f.y = func(p); p.y-=d; f.y-=func(p); p.y+=d_;
-    p.z+=d_; f.z = func(p); p.z-=d; f.z-=func(p); p.z+=d_;
-    f.mul(1/d);
-}
+// template<typename T, typename Func>
+// void numDeriv( Vec3d p, double d, Vec3d& f, Func func){
+//     //double e0 = Efunc(p);
+//     double d_=d*0.5;
+//     p.x+=d_; f.x = func(p); p.x-=d; f.x-=func(p); p.x+=d_;
+//     p.y+=d_; f.y = func(p); p.y-=d; f.y-=func(p); p.y+=d_;
+//     p.z+=d_; f.z = func(p); p.z-=d; f.z-=func(p); p.z+=d_;
+//     f.mul(1/d);
+// }
 
-template<typename T>
-void makeSamples(const Vec2i& ns, const Vec3T<T>& p0, const Vec3T<T>& a, const Vec3T<T>& b, Vec3T<T> *ps ){
-    Vec3T<T> da=a*(1.0/ns.x);
-    Vec3T<T> db=b*(1.0/ns.y);
-    //printf( "da (%g,%g,%g)\n", da.x,da.y,da.z );
-    //printf( "db (%g,%g,%g)\n", db.x,db.y,db.z );
-    for(int ib=0; ib<ns.y; ib++){
-        Vec3T<T> p = p0+db*ib;
-        for(int ia=0; ia<ns.x; ia++){
-            *ps = p;
-            p.add(da);
-            ps++;
-        }
-    }
-}
+// template<typename T>
+// void makeSamples(const Vec2i& ns, const Vec3T<T>& p0, const Vec3T<T>& a, const Vec3T<T>& b, Vec3T<T> *ps ){
+//     Vec3T<T> da=a*(1.0/ns.x);
+//     Vec3T<T> db=b*(1.0/ns.y);
+//     //printf( "da (%g,%g,%g)\n", da.x,da.y,da.z );
+//     //printf( "db (%g,%g,%g)\n", db.x,db.y,db.z );
+//     for(int ib=0; ib<ns.y; ib++){
+//         Vec3T<T> p = p0+db*ib;
+//         for(int ia=0; ia<ns.x; ia++){
+//             *ps = p;
+//             p.add(da);
+//             ps++;
+//         }
+//     }
+// }
 
 #endif
 

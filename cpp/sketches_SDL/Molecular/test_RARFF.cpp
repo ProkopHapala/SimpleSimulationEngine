@@ -15,6 +15,7 @@
 #include "Vec3.h"
 #include "Mat3.h"
 #include "VecN.h"
+#include "Vec3Utils.h"
 
 /*
 #include "Multipoles.h"
