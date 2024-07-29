@@ -83,9 +83,13 @@ function eval_force_and_plot_f( position::Matrix{Float32}, velocity::Matrix{Floa
 end
 
 
-function checkMat(fname::String, ref::Matrix{Float64}, m::Int64; tol::Float64=1e-6)
+function checkMat(fname::String, ref::Matrix{Float64}, m::Int64=-1; tol::Float64=1e-6)
     mat     = readdlm(fname, Float64)
-    diff    = mat[:,1:m] - ref[:,1:m]
+    if m<0
+        diff    = mat .- ref
+    else
+        diff    = mat[:,1:m] - ref[:,1:m]
+    end
     max_err = maximum(abs.(diff))
     if( max_err > tol )
         println("#####")
@@ -159,33 +163,37 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     # ===========  Check C++ result vs Julia
     println("# ===========  Check C++ result vs Julia"  );
     cpp_dir = "../../tests_bash/Orbital/"
-    A_cpp = readdlm(cpp_dir*"PDmat.log",  Float64)
-    L_cpp = readdlm(cpp_dir*"LDLT_L.log", Float64)
-    println("A_cpp ", size(A_cpp) ); display(A_cpp);
-    dAcpp = A_cpp - A;   errAcpp = norm(dAcpp)
-    println("|A_cpp - A|=", errAcpp," size=", size(dAcpp),  ); #display(dAcpp);
+    checkMat( cpp_dir*"PDmat.log",   A      )
+    checkMat( cpp_dir*"LDLT_L.log",  LDLT_L )
+    #checkMat( cpp_dir*"LDLT_D.log",  Matrix(LDLT_D) )
+    
+    #cpp_dir = "../../tests_bash/Orbital/"
+    #A_cpp = readdlm(cpp_dir*"PDmat.log",  Float64)
+    #println("A_cpp ", size(A_cpp) ); display(A_cpp);
+    #dAcpp = A_cpp - A;   errAcpp = norm(dAcpp)
+    #println("|A_cpp - A|=", errAcpp," size=", size(dAcpp),  ); #display(dAcpp);
     #plot( dAcpp )
 
-    println("# --------  Check LDLT Neighobrs (C++ vs Julia)"  );
-    neighs0_cpp = read_neighbor_list(cpp_dir*"neighs_before.log")
-    neighs_cpp  = read_neighbor_list(cpp_dir*"neighs_after.log")
+    #println("# --------  Check LDLT Neighobrs (C++ vs Julia)"  );
+    #neighs0_cpp = read_neighbor_list(cpp_dir*"neighs_before.log")
+    #println("neighs0_cpp  " ); display(neighs0_cpp);
+    #println("neighs " ); display(neighs);
+    #compare_neighbor_lists_( neighs0_cpp, neighs )
 
-    println("neighs0_cpp  " ); display(neighs0_cpp);
-    println("neighs " ); display(neighs);
-    compare_neighbor_lists_( neighs0_cpp, neighs )
+    #neighs_cpp  = read_neighbor_list(cpp_dir*"neighs_after.log")
+    #println("neighs_cpp  " ); display(neighs_cpp);
+    #println("LDLT_neighs " ); display(LDLT_neighs);
+    #compare_neighbor_lists_( neighs_cpp, LDLT_neighs )
 
-    println("neighs_cpp  " ); display(neighs_cpp);
-    println("LDLT_neighs " ); display(LDLT_neighs);
-    compare_neighbor_lists_( neighs_cpp, LDLT_neighs )
+    #println("# --------  Check LDLT_L (C++ vs Julia)"  );
+    #L_cpp = readdlm(cpp_dir*"LDLT_L.log", Float64)
+    #println("L_cpp  ", size(L_cpp  ) ); display(L_cpp );
+    #println("LDLT_L ", size(LDLT_L ) ); display(LDLT_L);
+    #dLcpp = L_cpp - LDLT_L; errLcpp = norm(dLcpp)
+    #println("|L_cpp - LDLT_L|=", errLcpp," size=", size(dLcpp),  ); #display(dAcpp);
 
-    println("# --------  Check LDLT_L (C++ vs Julia)"  );
-    println("L_cpp  ", size(L_cpp  ) ); display(L_cpp );
-    println("LDLT_L ", size(LDLT_L ) ); display(LDLT_L);
-    dLcpp = L_cpp - LDLT_L; errLcpp = norm(dLcpp)
-    println("|L_cpp - LDLT_L|=", errLcpp," size=", size(dLcpp),  ); #display(dAcpp);
-
-    plot_matrix_bwr( plt, dLcpp )
-    display(plt)
+    #plot_matrix_bwr( plt, dLcpp )
+    #display(plt)
 
     #print("mapMatrixNeighs()"); @time neighsL = mapMatrixNeighs(L)    #;print("neighsL"); display(neighsL)   # find which elements of L are non-zero ( for each row    i map all non-zero Aij to columns j )
     #print("invNeighs()");       @time neighsU = invNeighs( neighsL ) 
@@ -219,7 +227,7 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     println("# --------  Check dynamics (C++ vs Julia)"  );
     checkMat( cpp_dir*"points.log",  points,   3 )
     checkMat( cpp_dir*"vel.log",     velocity, 3 )
-    checkMat( cpp_dir*"ps_pred.log", ps_pred,  3 )
+    #checkMat( cpp_dir*"ps_pred.log", ps_pred,  3 )
 
     # --- Float64 solver 
     eval_forces  = (position, velocity) -> eval_force_and_plot(position,velocity, plt, truss.bonds )
@@ -227,8 +235,9 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     plot_truss( plt, truss.bonds, points     , lw=2.0, c=:green, legend="Constrained"  )
 
     println("# --------  Check dynamics (C++ vs Julia)"  );
+    checkMat( cpp_dir*"ps_pred.log", ps_pred,  3 )
+    checkMat( cpp_dir*"b.log",       b,        3 )
     checkMat( cpp_dir*"ps_cor.log",  ps_cor,   3 )
-    checkMat( cpp_dir*"b.log",       b, 3        )
 
     # --- Float32 solver
     #eval_forces_f = (position, velocity) -> eval_force_and_plot_f(position,velocity, plt, truss_f.bonds )
@@ -256,6 +265,7 @@ end # function main
 #main(dt=0.08)
 #main(dt=0.05, nseg=6)
 main(dt=0.05, nseg=3)
+main(dt=0.05, nseg=3, niter=1)
 #main(dt=0.1)
 #main(dt=1.0)
 #main(dt=5.0)

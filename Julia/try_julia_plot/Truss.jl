@@ -173,12 +173,12 @@ function wheel(p0::Vector{Float64}, p1::Vector{Float64}, ax::Vector{Float64}, wi
         i11 = i00 + 3
 
         R = dir * real(rot) + side * imag(rot)
-        push!(points, p0 + R * (r - width))
         push!(points, p0 + R * (r + width))
+        push!(points, p0 + R * (r - width))
         rot *= drot  # Complex multiplication
         R = dir * real(rot) + side * imag(rot)
+        push!(points, p0 + ax *  width + R * r)
         push!(points, p0 + ax * -width + R * r)
-        push!(points, p0 + ax * width + R * r)
         rot *= drot  # Complex multiplication
 
         push!(edges, TrussEdge(i00, i01, kind_perp))

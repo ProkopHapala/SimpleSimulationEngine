@@ -2,6 +2,7 @@
 using LinearAlgebra
 #using SparseArrays
 #using Plots
+#using Printf
 
 include("Truss.jl")
 
@@ -421,14 +422,22 @@ Solve L^Tx = y (can be rewritten as a forward substitution)
 ===#
 
 function run_solver( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float64}, eval_forces::Function; dt::Float64=0.1, niter::Int=100, A_check::Matrix{Float64}, bRes::Bool=:true ) 
-    points = copy( truss.points )
-    ps_cor = copy( points )
-    for i=1:niter
+    n = size(truss.points,1)
+    points  = copy( truss.points )
+    ps_cor  = copy( points )
+    ps_pred = copy( points )
+    b       = copy( points )
+    for iter=1:niter
         force                    = eval_forces( points, velocity )
-        ps_pred                  = points .+ velocity*dt #.+ force*(dt^2)
+        ps_pred[:,:]             = points .+ velocity*dt #.+ force*(dt^2)
         ps_pred[truss.fixed,:]  .= truss.points[truss.fixed,:]
-        b                        = make_PD_rhs( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  # ;print( "b : "); display(b)
+        b[:,:]                   = make_PD_rhs( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  # ;print( "b : "); display(b)
         
+        #for i=1:n
+        #    #printf( "ps_pred[%i](%10.6f,%10.6f,%10.6f) v(%10.6f,%10.6f,%10.6f) p(%10.6f,%10.6f,%10.6f) dt=%g \n", ps_pred[i,1],ps_pred[i,2],ps_pred[i,3], velocity[i,1],velocity[i,2],velocity[i,3], points[i,1],points[i,2],points[i,3], dt );
+        #    println( "ps_pred[",i,"]",ps_pred[i,:]," v", velocity[i,:],"  p", points[i,:]," dt= ", dt );
+        #end
+
         #println( "run_solver().b=", b )
 
         ps_cor[:,1] = solve_LDLT( sol.L, sol.D, b[:,1] )
@@ -444,7 +453,7 @@ function run_solver( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float64},
             #err = A_check*ps_cor - b     # check matrix solution
             err = process_bonds(truss.bonds,ps_cor)[2] - truss.l0s  # check bond lenghs 
             res = maximum( abs.(err) )
-            println("residual[$i] : ", res );
+            println("residual[$iter] : ", res );
         end
         # ---- update        
         #velocity .+= update_velocity( ps_pred, ps_cor, dt )

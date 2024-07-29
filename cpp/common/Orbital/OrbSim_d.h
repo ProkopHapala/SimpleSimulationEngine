@@ -467,7 +467,10 @@ class OrbSim: public Picker { public:
             // Evaluate forces (assuming you have a method for this)
             //evalForces();
             // Predict step
-            for (int i = 0; i < nPoint; i++) { ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2; }
+            for (int i=0;i<nPoint;i++){ 
+                ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2; 
+                //printf( "ps_pred[%3i](%10.6f,%10.6f,%10.6f) v(%10.6f,%10.6f,%10.6f) p(%10.6f,%10.6f,%10.6f) dt=%g \n", i, ps_pred[i].x,ps_pred[i].y,ps_pred[i].z, vel[i].x,vel[i].y,vel[i].z, points[i].x,points[i].y,points[i].z, dt );
+            }
 
             // Apply fixed constraints
             //for (int i = 0; i < nPoint; i++) {    if (kFix[i] > 0) { ps_pred[i] = points[i].f; } }
@@ -482,10 +485,10 @@ class OrbSim: public Picker { public:
 
             mat2file<double>( "points.log",  nPoint,4, (double*)points      );
             mat2file<double>( "vel.log",     nPoint,4, (double*)vel         );
-            mat2file<double>( "ps_pred.log", nPoint,3, (double*)linsolve_yy );
-            mat2file<double>( "b.log",       nPoint,3, (double*)linsolve_yy );
+            mat2file<double>( "ps_pred.log", nPoint,3, (double*)ps_pred     );
+            mat2file<double>( "b.log",       nPoint,3, (double*)linsolve_b  );
             mat2file<double>( "yy.log",      nPoint,3, (double*)linsolve_yy );
-            mat2file<double>( "ps_cor.log",  nPoint,3, (double*)linsolve_yy );
+            mat2file<double>( "ps_cor.log",  nPoint,3, (double*)ps_cor      );
 
             exit(0);
 
@@ -1151,8 +1154,8 @@ class OrbSim: public Picker { public:
         for(int i=0; i<nPoint; i++){
             Vec3d dp = points[i].f - p0;
             Vec3d v; 
-            //v.set_cross(ax,dp);
-            v.set_cross(dp,ax);
+            v.set_cross(ax,dp);
+            //v.set_cross(dp,ax);
             //cross(axis, p)
             vel[i].f.add(v);
         }

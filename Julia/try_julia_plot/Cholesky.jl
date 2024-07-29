@@ -232,13 +232,13 @@ function CholeskyDecomp_LDLT_sparse(A::Matrix{T}, neighs::Array{Vector{Int},1}, 
             if k < j
                 val = (L[j,k]^2) * D[k]
                 sum1 += val
-                println("sum[$j,$k] $(lpad(val, 20, ' '))   $(lpad(sum1, 20, ' '))  ")
+                #println("sum[$j,$k] $(lpad(val, 20, ' '))   $(lpad(sum1, 20, ' '))  ")
                 nop += 1
             end
         end
         D[j] = A[j,j] - sum1
         #println(  "Ch[%i] D,A,sum  %20.10f   %20.10f   %20.10f ",  D[j],  A[j*n+j],  sum  );
-        println("Ch[$j] D,A,sum  $(lpad(D[j], 20, ' '))   $(lpad(A[j,j], 20, ' '))   $(lpad(sum1, 20, ' '))")
+        #println("Ch[$j] D,A,sum  $(lpad(D[j], 20, ' '))   $(lpad(A[j,j], 20, ' '))   $(lpad(sum1, 20, ' '))")
         for i in j+1:n
             sum1 = 0.0
             for k in ngs

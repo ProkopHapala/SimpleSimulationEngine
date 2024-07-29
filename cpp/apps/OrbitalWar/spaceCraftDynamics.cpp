@@ -186,6 +186,7 @@ void makeShip_Wheel( int nseg=8){
 
     mat2file<double>( "PDmat.log",  n,n, sim.PDmat  );
     mat2file<double>( "LDLT_L.log", n,n, sim.LDLT_L );
+    mat2file<double>( "LDLT_D.log", n,1, sim.LDLT_D );
 
     sim.cleanVel();
     sim.addAngularVelocity(  p0, ax*omega );
