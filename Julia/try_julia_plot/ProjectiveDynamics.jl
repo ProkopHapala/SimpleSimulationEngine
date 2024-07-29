@@ -158,6 +158,7 @@ function make_PD_rhs( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int}
     idt2 = 1. /dt^2
     for i = 1:np
         bi =  pnew[i,:] * (masses[i] * idt2)
+        ni = 0
         for ib in neighBs[i]
             k = ks[ib]
             (i_,j_) = bonds[ib]
@@ -166,11 +167,14 @@ function make_PD_rhs( neighBs::Array{Vector{Int},1}, bonds::Array{Tuple{Int,Int}
             else
                 j = i_
             end
+            println( "rhs[",i-1,",ib=",ib-1,",j=",j-1,"] k=",k," l0=",l0s[ib] );
             #d = points[i,:] - points[j,:]   # using old positions seems to limit the propagation
             d = pnew[i,:] - pnew[j,:]        # using update positions seems to work much better !!!
             d *= k * l0s[ib] / norm(d)
-            bi += d        
+            bi += d
+            ni += 1        
         end
+        println( "rhs[",i-1,"] ni=",ni," bi=",bi );
         b[i,:] = bi
     end
     #print( "b : "); display(b)

@@ -417,19 +417,24 @@ class OrbSim: public Picker { public:
 
     void rhs_ProjectiveDynamics(const Vec3d* pnew, Vec3d* b) {
         double idt2 = 1.0 / (dt * dt);
-        for (int i = 0; i < nPoint; i++) {
-            Vec3d bi; bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
+        for (int i=0; i<nPoint; i++) {
+            Vec3d bi; bi.set_mul(pnew[i], points[i].w*idt2);  // points[i].w is the mass
             int2* ngi = neighBs + (i*nNeighMax);
+            int ni = 0;
             for( int ing=0; ing<nNeighMax; ing++ ){
                 int2  ng = ngi[ing];
                 int   ib = ng.y;
                 if(ib<0) break;
                 double k  = params[ib].y;  // assuming params.y is the spring constant
+                double l0 = params[ib].x;
                 int2   b  = bonds[ib];
                 int j     = (b.x == i) ? b.y : b.x;
+                printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
                 Vec3d d = pnew[i] -  pnew[j];
-                bi.add_mul(d, k * params[ib].x / d.norm());  // params[ib].x is l0
+                bi.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
+                ni++;
             }
+            printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
             b[i] = bi;
         }
     }
