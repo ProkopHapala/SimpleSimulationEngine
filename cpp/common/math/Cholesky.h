@@ -20,32 +20,35 @@ namespace Lingebra{
 // =============== Cholesky solver (non-sparse)
 
 template<typename T>
-inline void CholeskyDecomp_LDLT(T* A, T* L, T* D, int n) {
-    for (int j = 0; j < n; j++) {
-        T sum = A[j*n + j];
-        for (int k = 0; k < j; k++) { sum -= L[j*n + k] * L[j*n + k] * D[k]; }
+inline void CholeskyDecomp_LDLT(T* A, T* L, T* D, int n){
+    for(int j=0; j<n; j++){
+        T sum = A[j*n+j];
+        for(int k=0; k<j; k++){ sum -= L[j*n+k] * L[j*n+k] * D[k]; }
         D[j] = sum;
-        for (int i = j+1; i < n; i++) {
-            sum = A[i*n + j];
-            for (int k = 0; k < j; k++) {  sum -= L[i*n + k] * L[j*n + k] * D[k]; }
-            L[i*n + j] = sum / D[j];
+        for(int i=j+1; i<n; i++){
+            sum=A[i*n+j];
+            for(int k=0; k<j; k++){ sum -= L[i*n+k] * L[j*n+k] * D[k]; }
+            L[i*n+j] = sum / D[j];
         }
     }
 }
 
 
 template<typename T>
-inline void forward_substitution_m(T* L, T* b, T* y, int n, int m) {
+inline void forward_substitution_m(T* L, T* b, T* y, int n, int m){
+    constexpr double tol = 1e-32;
     T sum[m];
-    for (int i=0; i<n; i++){
+    for(int i=0; i<n; i++){
+        printf("forward_substitution_T_m() [i=%i] \n", i);
         for (int s=0; s<m; s++){ sum[s]=0.0; };
         for (int j=0; j<i; j++){
             double l = L[i*n+j];
+            if( fabs(l)>tol ){  printf("L[%2i,%2i]=%20.20f\n", i,j,l); };
             for (int s=0; s<m; s++){
                 sum[s] += l*y[j*m+s];
             }
         }
-        for (int s=0; s<m; s++){
+        for(int s=0; s<m; s++){
             int ii = i*m+s;
             y[ii]  = b[ii] - sum[s];
             //if(s==0){ printf("fws(m=0)[%3i](x=%20.10f,b=%20.10f,sum=%20.10f)\n",i,x[ii],b[ii],sum[s]); }
@@ -57,11 +60,14 @@ inline void forward_substitution_m(T* L, T* b, T* y, int n, int m) {
 
 template<typename T>
 inline void forward_substitution_T_m(T* L, T* b, T* y, int n, int m) {
+    //constexpr double tol = 1e-32;
     T sum[m];
     for (int i=n-1; i>=0; i--){
+        //printf("forward_substitution_T_m() [i=%i] \n", i);
         for (int s=0; s<m; s++){ sum[s]=0.0; };
         for (int j=i+1; j<n; j++){
             double l = L[j*n+i];
+            //if( fabs(l)>tol ){  printf("L[%2i,%2i]=%20.20f\n", i,j,l); };
             for (int s=0; s<m; s++){
                 sum[s] += l*y[j*m+s];
             }
@@ -70,7 +76,7 @@ inline void forward_substitution_T_m(T* L, T* b, T* y, int n, int m) {
             int ii = i*m+s;
             y[ii]  = b[ii] - sum[s];
             //if(s==0){ printf("fws(m=0)[%3i](x=%20.10f,b=%20.10f,sum=%20.10f)\n",i,x[ii],b[ii],sum[s]); }
-            if(s==0){ printf("fwsT(m=0)[%3i]sum=%20.10f)\n",i,sum[s]); }
+            //if(s==0){ printf("fwsT(m=0)[%3i]sum=%20.10f)\n",i,sum[s]); }
         }
         //y[i] = b[i] - sum;
     }
@@ -78,10 +84,10 @@ inline void forward_substitution_T_m(T* L, T* b, T* y, int n, int m) {
 
 template<typename T>
 inline void forward_substitution(T* L, T* b, T* y, int n) {
-    for (int i = 0; i < n; i++) {
+    for (int i=0; i<n; i++) {
         T sum = b[i];
-        for (int j = 0; j < i; j++) {
-            sum -= L[i*n + j] * y[j];
+        for (int j=0; j<i; j++) {
+            sum -= L[i*n+j] * y[j];
         }
         y[i] = sum;
     }
@@ -91,7 +97,7 @@ template<typename T>
 inline void forward_substitution_transposed(T* L, T* b, T* x, int n) {
     for (int i = n-1; i >= 0; i--) {
         T sum = b[i];
-        for (int j = i+1; j < n; j++) { sum -= L[j*n + i] * x[j]; }
+        for (int j=i+1; j<n; j++) { sum -= L[j*n+i] * x[j]; }
         x[i] = sum;
     }
 }
@@ -223,19 +229,24 @@ template<typename T>
 inline void forward_substitution_sparse( int n, int m, const T* L, const T* b, T* x, const int* neighs, int nNeighMax ) {
     T sum[m];
     for (int i=0; i<n; i++){
+        printf("forward_substitution_sparse() [i=%i] \n", i);
         for(int s=0;s<m;s++){ sum[s]=0.0; }
         const int* neighs_i = neighs + i*nNeighMax;
         for (int k=0; k<nNeighMax; k++){
-            int j = neighs_i[k];
+            const int j = neighs_i[k];
             if(j<0)break;
-            if (j<i){ 
-                for(int s=0;s<m;s++){ sum[s]+=L[i*n+j]*x[j*m+s]; }
+            if (j<i){
+                const T l = L[i*n+j];
+                //if( fabs(l)>tol ){ 
+                printf("L[%2i,%2i]=%20.20f     k=%i\n", i,j,l, k);
+                //}; 
+                for(int s=0;s<m;s++){ sum[s]+=l*x[j*m+s]; }
             }
         }
         for(int s=0;s<m;s++){ 
-            int ii=i*m+s; x[ii]=b[ii]-sum[s]; 
+            const int ii=i*m+s; x[ii]=b[ii]-sum[s]; 
             //if(s==0){ printf("fws(m=0)[%3i](x=%20.10f,b=%20.10f,sum=%20.10f)\n",i,x[ii],b[ii],sum[s]); }
-            if(s==0){ printf("fws(m=0)[%3i]sum=%20.10f)\n",i,sum[s]); }
+            //if(s==0){ printf("fws(m=0)[%3i]sum=%20.10f)\n",i,sum[s]); }
         }
     }
 }
@@ -247,13 +258,14 @@ inline void forward_substitution_transposed_sparse( int n, int m, const T* L, co
         for(int s=0;s<m;s++){ sum[s]=0.0; }
         const int* neighs_i = neighs + i*nNeighMax;
         for (int k=0; k<nNeighMax; k++){
-            int j = neighs_i[k];
+            const int j = neighs_i[k];
             if(j<0)break;
             if(j>i){ 
-                for(int s=0; s<m;s++){ sum[s] += L[j*n+i]*x[j*m+s]; }
+                const T l = L[j*n+i];
+                for(int s=0; s<m;s++){ sum[s] += l*x[j*m+s]; }
             }
         }
-        for(int s=0;s<m;s++){  int ii=i*m+s; x[ii]=b[ii]-sum[s]; }
+        for(int s=0;s<m;s++){  const int ii=i*m+s; x[ii]=b[ii]-sum[s]; }
     }
 }
 

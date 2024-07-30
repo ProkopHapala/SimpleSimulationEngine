@@ -488,18 +488,25 @@ class OrbSim: public Picker { public:
             //for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
             //Lingebra::forward_substitution_transposed_sparse( nPoint,m,  LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      neighsLDLT, nNeighMax );
 
-            Lingebra::forward_substitution_m  ( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint,m );
+            Lingebra::forward_substitution_sparse( nPoint,m, LDLT_L, (double*)linsolve_b,  (double*)ps_cor, neighsLDLT, nNeighMax  );
+            Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint,m );
+            { // Check sparse vs dense Lingebra::forward_substitution()
+                double tol=1e-9; double tol2=tol*tol; bool bExit=false;
+                for(int i=0; i<nPoint; i++){ Vec3d dif=ps_cor[i]-linsolve_yy[i];  if(dif.norm2()>tol2){ printf("err[i=%i]=%g sparse(%g,%g,%g) ref(%g,%g,%g) dif(%g,%g,%g) \n", linsolve_yy[i].x,linsolve_yy[i].y,linsolve_yy[i].z, ps_cor[i].x,ps_cor[i].y,ps_cor[i].z, dif.x,dif.y,dif.z);  bExit=true;};  };
+                if(bExit)exit(0);
+            }
+
             for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
             Lingebra::forward_substitution_T_m( LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      nPoint,m );
 
-            mat2file<double>( "points.log",  nPoint,4, (double*)points      );
-            mat2file<double>( "vel.log",     nPoint,4, (double*)vel         );
-            mat2file<double>( "ps_pred.log", nPoint,3, (double*)ps_pred     );
-            mat2file<double>( "b.log",       nPoint,3, (double*)linsolve_b  );
-            mat2file<double>( "yy.log",      nPoint,3, (double*)linsolve_yy );
-            mat2file<double>( "ps_cor.log",  nPoint,3, (double*)ps_cor      );
+            //mat2file<double>( "points.log",  nPoint,4, (double*)points      );
+            //mat2file<double>( "vel.log",     nPoint,4, (double*)vel         );
+            //mat2file<double>( "ps_pred.log", nPoint,3, (double*)ps_pred     );
+            //mat2file<double>( "b.log",       nPoint,3, (double*)linsolve_b  );
+            //mat2file<double>( "yy.log",      nPoint,3, (double*)linsolve_yy );
+            //mat2file<double>( "ps_cor.log",  nPoint,3, (double*)ps_cor      );
 
-            exit(0);
+            //exit(0);
 
             // Compute residual
             // double res = 0.0;

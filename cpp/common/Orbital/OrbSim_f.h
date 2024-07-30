@@ -387,7 +387,7 @@ class OrbSim_f : public Picker { public:
                 double l = d.norm();
                 if (l > res) res = l;
             }
-            printf("residual[%d] : %f\n", iter, res);
+            //printf("residual[%d] : %f\n", iter, res);
 
             // Update velocity and points
             for (int i=0;i<nPoint;i++) {
