@@ -171,12 +171,15 @@ void makeShip_Wheel( int nseg=8){
     //int nneighmax_min = 16;
     int nneighmax_min = 8;
     exportSim( sim, mesh, workshop,  nneighmax_min );
-    for(int i=0; i<sim.nPoint; i++)  sim.points[i].w=1.0;
-    for(int i=0; i<sim.nBonds;  i++) sim.params[i].y=10000.0;
+    for(int i=0; i<sim.nPoint; i++) sim.points[i].w=1.0;
+    for(int i=0; i<sim.nBonds; i++) sim.bparams[i].y=10000.0;
     //sim2.printAllNeighs();
 
     double omega = 1.0;
     double dt    = 0.05;
+
+    mat2file<double>( "bond_params.log",  sim.nBonds,4, (double*)sim.bparams  );
+    
 
     sim.dt = dt;
     int n = sim.nPoint;

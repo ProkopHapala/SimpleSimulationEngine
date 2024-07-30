@@ -83,21 +83,24 @@ function eval_force_and_plot_f( position::Matrix{Float32}, velocity::Matrix{Floa
 end
 
 
-function checkMat(fname::String, ref::Matrix{Float64}, m::Int64=-1; tol::Float64=1e-6)
+function checkMat(fname::String, ref::Matrix{Float64}; m::Int64=-1, m0::Int64=1, tol::Float64=1e-6)
     mat     = readdlm(fname, Float64)
+    println("##### checkMat(",fname,") size(mat)=",size(mat)," size(ref)=", size(ref) )
     if m<0
         diff    = mat .- ref
     else
-        diff    = mat[:,1:m] - ref[:,1:m]
+        diff    = mat[:,m0:m] - ref[:,m0:m]
     end
     max_err = maximum(abs.(diff))
     if( max_err > tol )
-        println("#####")
-        println("##### checkMat(",fname,") has max_err=",max_err,">tol(",tol,")")
+        #println("##### checkMat(",fname,") has max_err=",max_err,">tol(",tol,")")
+        println("... ERROR  ",max_err," >tol(",tol,") in ", fname)
         println("ref(",fname,")=" ); display(ref);
         println("mat(",fname,")=" ); display(mat);
         println("dif(",fname,")=" ); display(diff);
-        println("#####")
+        println("")
+    else
+        println("... CORRECT err=",max_err," <tol(",tol,")")
     end
 end
 
@@ -118,6 +121,7 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     plt = plot(legend=false, aspect_ratio = :equal )
     #println("typeof(points) ", typeof(points) );
     print("process_bonds()"); @time   _, l0s          = process_bonds( bonds, points );
+    
     #print("bonds :");  display(bonds)
     #print("points :"); display(points)
     #print("masses :"); display(masses)
@@ -125,9 +129,10 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     masses = ones(np)
     fixed  = []
     #masses[fixed] .= 100000.0
-
-    print("ks:       ", ks);  #display(ks     );
-    #print("masses:  ", masses);  #display(masses );
+    
+    #print("l0s:    ", l0s    );  #display(l0s    )
+    #print("ks:     ", ks     );  #display(ks     );
+    #print("masses: ", masses );  #display(masses );
 
     # ===========  Generate Neigbor Lists
 
@@ -152,7 +157,7 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     println("Max.Error|A-LDL|=': ", maximum(abs.(diff)))
 
     println("A  ", size(A    ) ); display(A    );
-    println("Mt ", Mt );
+    #println("Mt ", Mt );
     # println("LDLT_L ", size(LDLT_L ) ); display(LDLT_L);
 
     #writedlm("PDmat.csv",  A,      ',')
@@ -165,6 +170,7 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     cpp_dir = "../../tests_bash/Orbital/"
     checkMat( cpp_dir*"PDmat.log",   A      )
     checkMat( cpp_dir*"LDLT_L.log",  LDLT_L )
+    checkMat( cpp_dir*"bond_params.log", hcat(l0s,ks), m=2, m0=1 )
     #checkMat( cpp_dir*"LDLT_D.log",  Matrix(LDLT_D) )
     
     #cpp_dir = "../../tests_bash/Orbital/"
@@ -217,17 +223,17 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
 
     ps_pred  = points .+ velocity*dt
     bK, bMt  = make_PD_rhs_decomp( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  
-    println("bK  ", bK  );
-    println("bMt ", bMt );
+    #println("bK  ", bK  );
+    #println("bMt ", bMt );
 
     plot_truss( plt, truss.bonds, truss.points, lw=2.0, c=:blue, bLabel=true, legend="Initial" )
     plot_truss( plt, truss.bonds, ps_pred, lw=2.0, c=:red, legend="Predicted" )
 
 
     println("# --------  Check dynamics (C++ vs Julia)"  );
-    checkMat( cpp_dir*"points.log",  points,   3 )
-    checkMat( cpp_dir*"vel.log",     velocity, 3 )
-    #checkMat( cpp_dir*"ps_pred.log", ps_pred,  3 )
+    checkMat( cpp_dir*"points.log",  points,   m=3 )
+    checkMat( cpp_dir*"vel.log",     velocity, m=3 )
+    #checkMat( cpp_dir*"ps_pred.log", ps_pred, m=3 )
 
     # --- Float64 solver 
     eval_forces  = (position, velocity) -> eval_force_and_plot(position,velocity, plt, truss.bonds )
@@ -235,9 +241,9 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     plot_truss( plt, truss.bonds, points     , lw=2.0, c=:green, legend="Constrained"  )
 
     println("# --------  Check dynamics (C++ vs Julia)"  );
-    checkMat( cpp_dir*"ps_pred.log", ps_pred,  3 )
-    checkMat( cpp_dir*"b.log",       b,        3 )
-    checkMat( cpp_dir*"ps_cor.log",  ps_cor,   3 )
+    checkMat( cpp_dir*"ps_pred.log", ps_pred,  m=3 )
+    checkMat( cpp_dir*"b.log",       b,        m=3 )
+    checkMat( cpp_dir*"ps_cor.log",  ps_cor,   m=3 )
 
     # --- Float32 solver
     #eval_forces_f = (position, velocity) -> eval_force_and_plot_f(position,velocity, plt, truss_f.bonds )
@@ -264,7 +270,7 @@ end # function main
 #main(dt=0.05)
 #main(dt=0.08)
 #main(dt=0.05, nseg=6)
-main(dt=0.05, nseg=3)
+#main(dt=0.05, nseg=3)
 main(dt=0.05, nseg=3, niter=1)
 #main(dt=0.1)
 #main(dt=1.0)

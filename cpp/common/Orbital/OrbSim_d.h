@@ -393,7 +393,7 @@ class OrbSim: public Picker { public:
                 int2   b = bonds[ib];
                 //int j  = neighs[b.x];
                 int j    = b.y;
-                double k = params[ib].y; // Assuming params[ib].y stores the spring constant
+                double k = bparams[ib].y; // Assuming params[ib].y stores the spring constant
 
                 //printf( "i,ib %i %i %g \n", i, ib+1, k  );
 
@@ -425,16 +425,16 @@ class OrbSim: public Picker { public:
                 int2  ng = ngi[ing];
                 int   ib = ng.y;
                 if(ib<0) break;
-                double k  = params[ib].y;  // assuming params.y is the spring constant
-                double l0 = params[ib].x;
+                double k  = bparams[ib].y;  // assuming params.y is the spring constant
+                double l0 = bparams[ib].x;
                 int2   b  = bonds[ib];
                 int j     = (b.x == i) ? b.y : b.x;
-                printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
+                //printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
                 Vec3d d = pnew[i] -  pnew[j];
                 bi.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
                 ni++;
             }
-            printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
+            //printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
             b[i] = bi;
         }
     }
