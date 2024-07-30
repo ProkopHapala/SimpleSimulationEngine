@@ -444,7 +444,7 @@ function run_solver( truss::Truss, sol::LDLTsolution, velocity::Matrix{Float64},
 
         #println( "run_solver().b=", b )
 
-        ps_cor[:,1] = solve_LDLT( sol.L, sol.D, b[:,1] )
+        ps_cor[:,1] = solve_LDLT( sol.L, sol.D, b[:,1], bPrint=true )
         ps_cor[:,2] = solve_LDLT( sol.L, sol.D, b[:,2] )
         ps_cor[:,3] = solve_LDLT( sol.L, sol.D, b[:,3] )
         #ps_cor[:,1] = solve_LDLT_sparse( sol.L, sol.D, sol.neighs, b[:,1] )

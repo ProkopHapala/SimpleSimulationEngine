@@ -484,9 +484,13 @@ class OrbSim: public Picker { public:
 
             // Solve using LDLT decomposition (assuming you have this method)
             //solve_LDLT_sparse(b, ps_cor);
-            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)linsolve_b, (double*)linsolve_yy, neighsLDLT, nNeighMax );
+            //Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, neighsLDLT, nNeighMax );
+            //for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
+            //Lingebra::forward_substitution_transposed_sparse( nPoint,m,  LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      neighsLDLT, nNeighMax );
+
+            Lingebra::forward_substitution_m  ( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint,m );
             for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
-            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (double*)linsolve_yy, (double*)ps_cor, neighsLDLT, nNeighMax );
+            Lingebra::forward_substitution_T_m( LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      nPoint,m );
 
             mat2file<double>( "points.log",  nPoint,4, (double*)points      );
             mat2file<double>( "vel.log",     nPoint,4, (double*)vel         );

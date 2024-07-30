@@ -160,13 +160,18 @@ function backsub_sparse_f(U::Matrix{Float32},b::Matrix{Float32}, neighs::Array{V
     return x
 end
 
-function forward_substitution(L::Matrix{T}, b::Vector{T}) where T<:AbstractFloat
+function forward_substitution(L::Matrix{T}, b::Vector{T}; bPrint::Bool=:false) where T<:AbstractFloat
     n = size(L, 1)
-    y = zeros(T, n)
+    x = zeros(T, n)
     for i in 1:n
-        y[i] = b[i] - dot(L[i,1:i-1], y[1:i-1])
+        sum  = dot(L[i,1:i-1], x[1:i-1])
+        x[i] = b[i] - sum
+        if(bPrint) 
+            #println("fwsub()[",i,"](x=",x[i],",b=",b[i],",sum=",sum,")")
+            println("fwsub()sum[",i,"]=   ",sum )
+        end
     end
-    return y
+    return x
 end
 
 function forward_substitution_transposed(L::Matrix{T}, b::Vector{T}) where T<:AbstractFloat

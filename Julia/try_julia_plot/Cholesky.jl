@@ -200,9 +200,9 @@ function CholeskyDecomp_LDLT(A::Matrix{T}) where T<:AbstractFloat
     return L, D
 end
 
-function solve_LDLT( L::Matrix{T}, D::Vector{T}, b::Vector{T}) where T<:AbstractFloat
+function solve_LDLT( L::Matrix{T}, D::Vector{T}, b::Vector{T}; bPrint::Bool=:false) where T<:AbstractFloat
     #L, D = CholeskyLDLDecomp(A)
-    z = forward_substitution(L, b)
+    z = forward_substitution(L, b, bPrint=bPrint)
     #y = diagonal_solve(D, z)
     y = z ./ D
     x = forward_substitution_transposed(L, y)
