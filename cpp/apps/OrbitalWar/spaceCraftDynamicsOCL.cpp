@@ -256,7 +256,9 @@ DEBUG
     //runSim( sim );
     //renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 DEBUG
-    sim2.run_Cholesky(1);
+    //sim2.run_Cholesky(1);
+    sim2.run_LinSolve(1);
+
 DEBUG
     renderTruss( sim2.nBonds, sim2.bonds, sim2.points, sim2.strain, 1000.0 );
 DEBUG

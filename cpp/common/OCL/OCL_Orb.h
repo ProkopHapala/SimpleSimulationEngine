@@ -21,6 +21,12 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
 
     //  ----  OpenCL buffers and textures ids
     int ibuff_points=-1,ibuff_forces=-1,ibuff_vels=-1,ibuff_params=-1,ibuff_neighs=-1,ibuff_neighBs=-1,ibuff_bparams=-1, ibuff_neighB2s=-1, ibuff_bforces=-1, ibuff_bonds=-1;
+    
+    int ibuff_Amat=-1;
+    int ibuff_xvec=-1;
+    int ibuff_yvec=-1;
+    
+    
     // OpenCL buffers and textures ids
     //int itex_FE_Paul=-1;
     // --- OpenCL tasks
@@ -36,6 +42,10 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     int4   nDOFs    {0,0,0,0};       // number of DOFs (nPoints,nNeighMax,0,0 )
     Quat4f MDpars   {1e-3,1e-4,0,0}; // MD parameters (dt, damping, cv, cf    )
    
+    int iker_dot_mat_vec_loc    = -1; //newKernel( "dot_mat_vec_loc",    program1 );
+    int iker_dot_mat_vec_sparse = -1; //newKernel( "dot_mat_vec_sparse", program1 );
+
+
     // ====================== Functions
 
     void makeKrenels_Orb( const char*  cl_src_dir ){
@@ -52,6 +62,11 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         newTask( "evalTrussBondForce"  ,program1, 1);
         newTask( "test_enque"          ,program1, 1);
         newTask( "test_blur"           ,program1, 1);
+
+
+        iker_dot_mat_vec_loc    = newKernel( "dot_mat_vec_loc",    program1 );
+        iker_dot_mat_vec_sparse = newKernel( "dot_mat_vec_sparse", program1 );
+        //OCLtask* task = new OCLtask( this, iker, dim, global, local );
         printf( "... makeKrenels_Orb() DONE \n" );
     }
 
@@ -68,6 +83,16 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         ibuff_bparams = newBuffer( "bparams",  nBonds   , sizeof(Quat4f) , 0, CL_MEM_READ_ONLY  );
         ibuff_bforces = newBuffer( "bforces",  nBonds   , sizeof(Quat4f) , 0, CL_MEM_READ_WRITE );
         ibuff_bonds   = newBuffer( "bonds",    nBonds   , sizeof(int2)   , 0, CL_MEM_READ_ONLY  );
+        return ibuff_points;
+    }
+
+    int initCLBuffs_CG(){
+        //int err=0;
+        printf( "initCLBuffs_CG() nPoint %i nNeighMax %i \n", nPoint, nNeighMax );
+        ibuff_Amat  = newBuffer( "Amat",  nPoint*nPoint   , sizeof(float), 0, CL_MEM_READ_WRITE );  
+        ibuff_xvec = newBuffer( "xvec",   nPoint, sizeof(Quat4f) , 0, CL_MEM_READ_WRITE );      // actually xvec=points 
+        ibuff_yvec = newBuffer( "yvec",   nPoint, sizeof(Quat4f) , 0, CL_MEM_READ_WRITE );
+        //ibuff_neighs  = newBuffer( "neighs",   nNeighTot, sizeof(int)   , 0, CL_MEM_READ_ONLY  );  // already allocated 
         return ibuff_points;
     }
 
@@ -138,6 +163,66 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         for(int i=0; i<100; i++){ printf( "out[%i] (%g,%g,%g,%g) \n", i, forces[i].x, forces[i].y, forces[i].z, forces[i].w ); }
         exit(0);
     }
+
+    OCLtask* setup_dot_mat_vec_loc( int n, int ibuff_A, int ibuff_x, int ibuff_y ){
+        printf("setup_assembleAndMove()\n" );
+        //OCLtask*& task = setup_dot_mat_vec_loc;
+        //if(task==0) task = getTask("assembleAndMove");
+        OCLtask* task = new OCLtask();
+        task->ikernel = iker_dot_mat_vec_loc;
+        task->global.x = nPoint;
+        //task->local.x  = 1;
+        task->local.x  = 32; 
+        task->roundSizes();
+        Quat4i ns=Quat4iZero;
+        ns.x=n; 
+        // ------- Maybe We do-not need to do this every frame ?
+        int err=0;
+        useKernel( task->ikernel );
+        err |= _useArg   ( ns    );    //1  
+        err |= useArgBuff( ibuff_A  ); //2  
+        err |= useArgBuff( ibuff_x  ); //3
+        err |= useArgBuff( ibuff_y  ); //4
+        OCL_checkError(err, "setup_dot_mat_vec_loc"  );
+        return task;
+    }
+// __kernel void  dot_mat_vec_loc(
+//     const int4 ns, 
+//     __global const float*   Amat,    // [n,nNeighMax] sparse Lmat coefs at postions of neighs
+//     __global const float4*  xvec,    // [n,m]         right-hand-side of linear system y = A*x
+//     __global       float4*  yvec     // [n,m]         solution        of linear system y = A*x  
+// ){
+
+
+    OCLtask* setup_dot_mat_vec_sparse(  int n, int nneigh, int ibuff_A, int ibuff_neighs, int ibuff_x, int ibuff_y ){
+        printf("setup_dot_mat_vec_sparse()\n" );
+        OCLtask* task = new OCLtask();
+        task->ikernel = iker_dot_mat_vec_sparse;
+        task->global.x = n;
+        //task->local.x  = 1;
+        task->local.x  = 32; 
+        task->roundSizes();
+        Quat4i ns=Quat4iZero;
+        nDOFs.x=nPoint; 
+        nDOFs.y=nNeighMax;
+        // ------- Maybe We do-not need to do this every frame ?
+        int err=0;
+        useKernel( task->ikernel );
+        err |= _useArg   ( nDOFs  );       //1 
+        err |= useArgBuff( ibuff_A      ); //2
+        err |= useArgBuff( ibuff_neighs ); //3
+        err |= useArgBuff( ibuff_x      ); //4
+        err |= useArgBuff( ibuff_y      ); //5
+        OCL_checkError(err, "setup_dot_mat_vec_sparse"  );
+        return task;
+    }
+// __kernel void  dot_mat_vec_sparse(
+//     const int4 ns, 
+//     __global const float*   Amat,    // [n,nNeighMax] sparse Lmat coefs at postions of neighs
+//     __global const int*     neighs,  // [n,nNeighMax] neighbor indexes
+//     __global const float4*  xvec,    // [n,m]         solution        of linear system A*x=b
+//     __global       float4*  yvec     // [n,m]         right-hand-side of linear system A*x=b
+// ){
 
 
     OCLtask* setup_assembleAndMove(  bool bUploadParams=true  ){

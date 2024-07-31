@@ -185,6 +185,9 @@ void makeShip_Wheel( int nseg=8){
     int n = sim.nPoint;
     mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim.neighs,     "%5i " );
     sim.prepare_Cholesky( 0.05, 32 );
+    sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CholeskySparse;
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::Cholesky;
+
 
     sortNeighs( sim.nPoint, sim.nNeighMaxLDLT, sim.neighsLDLT);
     mat2file<int>( "neighs_after.log",   n, sim.nNeighMaxLDLT,  sim.neighsLDLT, "%5i " );
@@ -317,7 +320,7 @@ void SpaceCraftDynamicsApp::makeSoftBody(){
 }
 
 void SpaceCraftDynamicsApp::drawSim(){
-    sim.run_Cholesky(1);
+    sim.run_LinSolve(1);
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 };
 

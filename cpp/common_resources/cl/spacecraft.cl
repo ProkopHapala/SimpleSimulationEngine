@@ -297,6 +297,81 @@ __kernel void  evalTrussBondForce(
     //bforces[iG] = (float4)( iG ,0.0,1.0,2.0);
 }
 
+
+
+__kernel void  dot_mat_vec_loc(
+    const int4 ns, 
+    __global const float*   Amat,    // [n,nNeighMax] sparse Lmat coefs at postions of neighs
+    __global const float4*  xvec,    // [n,m]         right-hand-side of linear system y = A*x
+    __global       float4*  yvec     // [n,m]         solution        of linear system y = A*x  
+){
+    __local float4 x_loc[32];
+    __local float  A_loc[32];
+    const int iG = get_global_id(0);
+    const int iL = get_local_id(0);
+    const int nL = get_local_size(0);
+    if(iG>=ns.x) return;
+    float4 sum = (float4){0.0f,0.0f,0.0f,0.0f};
+    const int j0 = iG*ns.x;
+    for (int i0=0; i0<ns.x; i0+= nL ){ 
+        x_loc[iL] = xvec[   i0+iL];
+        A_loc[iL] = Amat[j0+i0+iL]; 
+        barrier(CLK_LOCAL_MEM_FENCE);  // wait for loading all  pos_shared[iL] 
+        for (int j=0; j<nL; j++){
+            sum += x_loc[j]*A_loc[j];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);  // block writing new     pos_shared[iL] before inner loop finished 
+    }    
+    yvec[iG] = sum; // we may need to do += in future 
+}
+
+
+__kernel void  dot_mat_vec_sparse(
+    const int4 ns, 
+    __global const float*   Amat,    // [n,nNeighMax] sparse Lmat coefs at postions of neighs
+    __global const int*     neighs,  // [n,nNeighMax] neighbor indexes
+    __global const float4*  xvec,    // [n,m]         solution        of linear system A*x=b
+    __global       float4*  yvec     // [n,m]         right-hand-side of linear system A*x=b
+){
+    const int iG = get_global_id(0);
+    if(iG>=ns.x) return;
+    const int nNeighMax = ns.y;
+    float4 sum = (float4){0.0f,0.0f,0.0f,0.0f};
+    const int k0 = iG*nNeighMax;
+    const int j0 = iG*ns.x;
+    for (int k=0; k<nNeighMax; k++){
+        const int j = neighs[j0+k];
+        if(j<0)break;
+        sum += xvec[j]*Amat[j0+j];
+    }
+    yvec[iG] = sum; // we may need to do += in future 
+}
+
+
+
+__kernel void  fwd_subs(
+    const int4 ns, 
+    __global const float*   Lmat,    // [n,nNeighMax] sparse Lmat coefs at postions of neighs
+    __global const int*     neighs,  // [n,nNeighMax] neighbor indexes
+    __global       float4*  bvec,    // [n,m]         right-hand-side of linear system A*x=b
+    __global const float4*  xvec,    // [n,m]         solution        of linear system A*x=b
+    __global const float4*  
+){
+    const int iG = get_global_id(0);
+    if(iG>=ns.x) return;
+    const int nNeighMax = ns.y;
+    float4 sum = bvec[i];
+    const int k0 = iG*nNeighMax;
+    const int j0 = iG*ns.x;
+    for (int k=0; k<nNeighMax; k++){
+        const int j = neighs[j0+k];
+        if(j<0)break;
+        if (j<i){ sum += xvec[j]*Lmat[j0+j]; }
+    }
+    // PARALELIZATION PROBLEM !!!!   depends on previous x-values
+    xvec[iG] = sum; // we may need to do += in future 
+}
+
 __kernel void  assembleAndMove(
     const int4 ns, 
     float4 MDpars,
