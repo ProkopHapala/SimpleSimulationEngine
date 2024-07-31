@@ -39,20 +39,22 @@ inline void forward_substitution_m(T* L, T* b, T* y, int n, int m){
     constexpr double tol = 1e-32;
     T sum[m];
     for(int i=0; i<n; i++){
-        printf("forward_substitution_T_m() [i=%i] \n", i);
+        //printf("forward_substitution_T_m() [i=%i] ", i);
         for (int s=0; s<m; s++){ sum[s]=0.0; };
         for (int j=0; j<i; j++){
             double l = L[i*n+j];
-            if( fabs(l)>tol ){  printf("L[%2i,%2i]=%20.20f\n", i,j,l); };
+            //if( fabs(l)>tol ){  printf("L[%2i,%2i]=%20.20f\n", i,j,l); };
+            //if( fabs(l)>tol ){  printf("%i ", j); };
             for (int s=0; s<m; s++){
                 sum[s] += l*y[j*m+s];
             }
         }
+        //printf("\n");
         for(int s=0; s<m; s++){
             int ii = i*m+s;
             y[ii]  = b[ii] - sum[s];
             //if(s==0){ printf("fws(m=0)[%3i](x=%20.10f,b=%20.10f,sum=%20.10f)\n",i,x[ii],b[ii],sum[s]); }
-            if(s==0){ printf("fws(m=0)[%3i]sum=%20.10f)\n",i,sum[s]); }
+            //if(s==0){ printf("fws(m=0)[%3i]sum=%20.10f)\n",i,sum[s]); }
         }
         //y[i] = b[i] - sum;
     }
@@ -120,9 +122,7 @@ inline  void solve_LDLT(T* L, T* D, T* b, T* x, int n) {
 
 inline int find_or_add_neigh( int i, int ng, int* neighs, int nmax, int iVoid=-1, bool bPrint=false, bool bErrExit=true) {
     int* ngi = neighs+i*nmax;
-
-    if(i==ng){ printf("ERROR in find_or_add_neigh() i=ng[%i=%i] \n", i, ng ); exit(0); }
-
+    if(bErrExit && (i==ng) ){ printf("ERROR in find_or_add_neigh() i=ng[%i=%i] \n", i, ng ); exit(0); }
     for (int k=0; k<nmax; k++) {
         if      ( ngi[k]== ng    ){   return k; } 
         else if ( ngi[k]== iVoid ){ 
@@ -229,20 +229,20 @@ template<typename T>
 inline void forward_substitution_sparse( int n, int m, const T* L, const T* b, T* x, const int* neighs, int nNeighMax ) {
     T sum[m];
     for (int i=0; i<n; i++){
-        printf("forward_substitution_sparse() [i=%i] \n", i);
+        //printf("forward_substitution_sparse() [i=%i] ", i);
         for(int s=0;s<m;s++){ sum[s]=0.0; }
         const int* neighs_i = neighs + i*nNeighMax;
         for (int k=0; k<nNeighMax; k++){
             const int j = neighs_i[k];
             if(j<0)break;
+            //printf("%i  ", j);
             if (j<i){
                 const T l = L[i*n+j];
-                //if( fabs(l)>tol ){ 
-                printf("L[%2i,%2i]=%20.20f     k=%i\n", i,j,l, k);
-                //}; 
+                //if( fabs(l)>tol ){ printf("L[%2i,%2i]=%20.20f     k=%i\n", i,j,l, k); }; 
                 for(int s=0;s<m;s++){ sum[s]+=l*x[j*m+s]; }
             }
         }
+        //printf("\n");
         for(int s=0;s<m;s++){ 
             const int ii=i*m+s; x[ii]=b[ii]-sum[s]; 
             //if(s==0){ printf("fws(m=0)[%3i](x=%20.10f,b=%20.10f,sum=%20.10f)\n",i,x[ii],b[ii],sum[s]); }
