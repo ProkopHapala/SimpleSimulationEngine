@@ -23,6 +23,7 @@ template<typename T>
 inline void dot_ax_(int n,int m, const T* A, const T* b, T* sum ){ 
     for (int k=0; k<m; k++ ){ sum[k]=0.0; } 
     for (int i=0; i<n; i++ ){
+        //printf( "dot_ax_[%i] nm[%i,%i]\n", i, n,m );
         double  ai = A[i];
         for (int k=0; k<m; k++ ){ sum[k]+=b[i*m+k]*ai; };        
     }
@@ -30,7 +31,8 @@ inline void dot_ax_(int n,int m, const T* A, const T* b, T* sum ){
 
 void dotM_ax( int n, int m, const double* A, const double* x, double* out ){
     for (int i=0; i<n; i++ ){
-        dot_ax_(n,m, A+i*n, x, out+i*n );
+        //printf( "dotM_ax[%i] nm[%i,%i] \n", i, n,m );
+        dot_ax_(n,m, A+i*n, x, out+i*m );
     }
 }
 
@@ -93,7 +95,7 @@ class CGsolver{ public:
         _realloc(res, n*m );
         _realloc(d,   n*m );
         _realloc(Ad,  n*m );
-        _realloc(z,  n*m );
+        _realloc(z,   n*m );
     }
 
     void initDiagPrecond( double* A, double safe=0.0 ){
@@ -115,15 +117,14 @@ class CGsolver{ public:
         double err2  [m];
         double tol2 = tol*tol;
 
-        DEBUG
         istep = 0;
         dotFunc( n, d, Ad);   // Kd = K*d
-        VecN::sub( n*m, b,     Ad,    res );  DEBUG
-        mul_ax_  ( n,m, invD,  res,    d  );  DEBUG
-        dot_ax   ( n,m, d,     res,   err );  DEBUG
-        double err2tot=0;   DEBUG
+        VecN::sub( n*m, b,     Ad,    res );  
+        mul_ax_  ( n,m, invD,  res,    d  ); 
+        dot_ax   ( n,m, d,     res,   err ); 
+        double err2tot=0;                     
         for(int k=0;k<m;k++){ err2tot += err[k]*err[k]; }
-        DEBUG
+
         int iter=0;
         for ( iter=0; iter<maxIters; iter++) {
             dotFunc( n, d, Ad );   // Kd = K*d            
@@ -143,6 +144,7 @@ class CGsolver{ public:
                 beta[k]  = err2[k]/err[k]; 
                 err2tot += err2[k]*err2[k]; 
             }
+            printf( "CGsolver: iter=%i err=%g \n", iter, err2tot );
             if( err2tot<tol2){
                 bConverged=true;
                 return err2tot;
@@ -152,7 +154,8 @@ class CGsolver{ public:
             for(int k=0;k<m;k++){ err[k]=err2[k]; };
             istep++;
         }
-        DEBUG
+        exit(0);
+        //DEBUG
         return iter;
     }
 
