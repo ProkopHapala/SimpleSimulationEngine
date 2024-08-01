@@ -107,7 +107,7 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 6,1 );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 6,2 );
         //cos_sin( lcos_ref->xs[i], lcos->ys[i], lsin->ys[i], 6,3 );
-        lsqrt->ys[i]    = fastInvSqrt( lsqrt_ref->xs[i] );
+        //lsqrt->ys[i]    = fastInvSqrt( lsqrt_ref->xs[i] );
         lcos_err->ys[i] = log10( fabs( lcos->ys[i] - lcos_ref->ys[i] ) );
         lsin_err->ys[i] = log10( fabs( lsin->ys[i] - lsin_ref->ys[i] ) );
         lsqrt_err->ys[i] = log10( fabs( lsqrt->ys[i] - lsqrt_ref->ys[i] ) );
@@ -141,7 +141,7 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     TEST_ERROR_PROC_N( "tan_xx_12 () ",{double x=xs_[i]; c=x*tan_xx_12 (x*x); c-=tan(x); STORE_ERROR(c) }, n );
     TEST_ERROR_PROC_N( "tan_xx_12_() ",{double x=xs_[i]; c=x*tan_xx_12_(x*x); c-=tan(x); STORE_ERROR(c) }, n );
 
-    TEST_ERROR_PROC_N( "fastInvSqrt() ",{double x=xs[i]; c=fastInvSqrt(x); c-=1/sqrt(x); STORE_ERROR(c) }, n );
+    //TEST_ERROR_PROC_N( "fastInvSqrt() ",{double x=xs[i]; c=fastInvSqrt(x); c-=1/sqrt(x); STORE_ERROR(c) }, n );
 
     TEST_ERROR_PROC_N( "cos_sin()     ", {double x=xs[i]; cos_sin(x,c,s); c-=cos(x); s-=sin(x); STORE_ERROR(c); STORE_ERROR(s); }, n );
 
@@ -165,7 +165,7 @@ TestAppPlotting::TestAppPlotting( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
     SPEED_TEST_PROC_NM( "tan_xx_12_()" ,{double x=xs_[i]; sum+=x*tan_xx_12_(x*x); }, n, m );
 
     SPEED_TEST_PROC_NM( "1/sqrt()      ", {sum+=1/sqrt(xs[i]);      }, n, m );
-    SPEED_TEST_PROC_NM( "fastInvSqrt() ", {sum+=fastInvSqrt(xs[i]); }, n, m );
+    //SPEED_TEST_PROC_NM( "fastInvSqrt() ", {sum+=fastInvSqrt(xs[i]); }, n, m );
 
     SPEED_TEST_PROC_NM( "cos();sin()  ", {double x=xs[i];sum+=cos(x)+sin(x);      }, n, m );
     SPEED_TEST_PROC_NM( "sincos()     ", {sincos (xs[i],&c,&s);sum+=c+s; }, n, m );

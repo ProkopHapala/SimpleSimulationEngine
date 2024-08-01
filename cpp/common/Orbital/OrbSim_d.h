@@ -157,6 +157,8 @@ class OrbSim: public Picker { public:
     int* neighsLDLT=0;
     int  nNeighMaxLDLT=0;
 
+    CGsolver cgSolver;
+
     int linSolveMethod = 0;
     enum class LinSolveMEthod{ CG,CGsparse,Cholesky,CholeskySparse };
 
@@ -519,7 +521,7 @@ class OrbSim: public Picker { public:
                     Lingebra::forward_substitution_T_m( LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      nPoint,m );
                 } break;
                 case LinSolveMEthod::CG:{
-                
+                    cgSolver.solve();
                 } break;
                 case LinSolveMEthod::CGsparse:{
                 

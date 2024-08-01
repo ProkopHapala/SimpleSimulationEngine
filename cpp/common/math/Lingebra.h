@@ -81,14 +81,14 @@ namespace Lingebra{
         for ( int i =0; i<maxIters; i++) {
             dotFunc( n, n, p, Ap);
 
-            printf("p  "); VecN::print_vector(n, p);
-            printf("Ap "); VecN::print_vector(n, Ap);
+            //printf("p  "); VecN::print_vector(n, p);
+            //printf("Ap "); VecN::print_vector(n, Ap);
 
             alpha = rho / VecN::dot(n, p, Ap);
             VecN::fma( n, x, p ,  alpha,   x );
             VecN::fma( n, r, Ap, -alpha,   r2 );
             double err2 = VecN::dot(n, r2,r2);
-            printf( " iter: %i  err2: %f |  alpha %f \n", i, err2,     alpha );
+            //printf( " iter: %i  err2: %f |  alpha %f \n", i, err2,     alpha );
             //printf( " iter: %i  err2: %f \n", i, err2 );
             if (err2 < maxErr2 ) break;
             double rho2 = VecN::dot(n, r2,r2);

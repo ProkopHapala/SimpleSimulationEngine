@@ -185,7 +185,13 @@ void makeShip_Wheel( int nseg=8){
     int n = sim.nPoint;
     mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim.neighs,     "%5i " );
     sim.prepare_Cholesky( 0.05, 32 );
-    sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CholeskySparse;
+
+    // setup Conjugate-Gradient solver
+    sim.cgSolver.setLinearProblem(  sim.nPoint, 3, (double*)sim.ps_cor, (double*)sim.linsolve_b );
+    sim.cgSolver.dotFunc = [&](int n, double* x, double* y){ dotM_ax( n,3, sim.PDmat, x, y );  };
+    sim.cgSolver.initDiagPrecond( sim.PDmat );
+    sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CG;
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CholeskySparse;
     //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::Cholesky;
 
 
