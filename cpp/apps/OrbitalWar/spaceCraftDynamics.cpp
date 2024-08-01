@@ -159,8 +159,8 @@ void makeShip_Wheel( int nseg=8){
     mesh.clear();
     //mesh.block();
     //mesh.wheel( p0, p1, ax, nseg, 0.2 );
-    //wheel( mesh, p0, p1, ax, nseg, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
-    wheel( mesh, p0, p1, ax, 3, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
+    wheel( mesh, p0, p1, ax, nseg, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
+    //wheel( mesh, p0, p1, ax, 3, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
     //wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );
     //Quat4i& b = mesh.blocks.back();
     //o->pointRange = {b.x,(int)mesh.verts.size()};
@@ -172,11 +172,13 @@ void makeShip_Wheel( int nseg=8){
     int nneighmax_min = 8;
     exportSim( sim, mesh, workshop,  nneighmax_min );
     for(int i=0; i<sim.nPoint; i++) sim.points[i].w=1.0;
-    for(int i=0; i<sim.nBonds; i++) sim.bparams[i].y=10000.0;
+    for(int i=0; i<sim.nBonds; i++) sim.bparams[i].y=100000.0;
     //sim2.printAllNeighs();
 
     double omega = 1.0;
     double dt    = 0.05;
+    //double dt    = 0.02;
+    //double dt    = 0.01;
 
     mat2file<double>( "bond_params.log",  sim.nBonds,4, (double*)sim.bparams  );
     
@@ -184,14 +186,14 @@ void makeShip_Wheel( int nseg=8){
     sim.dt = dt;
     int n = sim.nPoint;
     mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim.neighs,     "%5i " );
-    sim.prepare_Cholesky( 0.05, 32 );
+    sim.prepare_Cholesky( dt, 32 );
 
     // setup Conjugate-Gradient solver
     sim.cgSolver.setLinearProblem(  sim.nPoint, 3, (double*)sim.ps_cor, (double*)sim.linsolve_b );
     sim.cgSolver.initDiagPrecond( sim.PDmat );
-    sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CG;
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CG;
     //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CholeskySparse;
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::Cholesky;
+    sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::Cholesky;
 
     sortNeighs( sim.nPoint, sim.nNeighMaxLDLT, sim.neighsLDLT);
     mat2file<int>( "neighs_after.log",   n, sim.nNeighMaxLDLT,  sim.neighsLDLT, "%5i " );
@@ -203,17 +205,17 @@ void makeShip_Wheel( int nseg=8){
     sim.cleanVel();
     sim.addAngularVelocity(  p0, ax*omega );
 
-    {   printf( "# ---------- Test Conjugate-Gradient ");
-        sim.cgSolver.dotFunc = [&](int n, double* x, double* y){   dotM_ax( n,1, sim.PDmat, x, y );  };
-        for(int i=0; i<sim.nPoint; i++){ sim.ps_pred[i] = sim.points[i].f + sim.vel[i].f*dt; sim.ps_cor[i]=sim.ps_pred[i];  }; 
-        sim.rhs_ProjectiveDynamics( sim.ps_pred, sim.linsolve_b );
-        for(int i=0; i<sim.nPoint; i++){ 
-            ((double*)sim.linsolve_b)[i] = sim.linsolve_b[i].x;
-            ((double*)sim.ps_cor    )[i] = sim.ps_cor    [i].x;
-        }
-        sim.cgSolver.solve_m1(1e-6,2);
-        //exit(0);
-    }
+    // {   printf( "# ---------- Test Conjugate-Gradient ");
+    //     sim.cgSolver.dotFunc = [&](int n, double* x, double* y){   dotM_ax( n,1, sim.PDmat, x, y );  };
+    //     for(int i=0; i<sim.nPoint; i++){ sim.ps_pred[i] = sim.points[i].f + sim.vel[i].f*dt; sim.ps_cor[i]=sim.ps_pred[i];  }; 
+    //     sim.rhs_ProjectiveDynamics( sim.ps_pred, sim.linsolve_b );
+    //     for(int i=0; i<sim.nPoint; i++){ 
+    //         ((double*)sim.linsolve_b)[i] = sim.linsolve_b[i].x;
+    //         ((double*)sim.ps_cor    )[i] = sim.ps_cor    [i].x;
+    //     }
+    //     sim.cgSolver.solve_m1(1e-6,2);
+    //     //exit(0);
+    // }
 
     sim.cgSolver.dotFunc = [&](int n, double* x, double* y){  dotM_ax( n,3, sim.PDmat, x, y ); };
 
@@ -223,7 +225,7 @@ void makeShip_Wheel( int nseg=8){
     //exportSim( sim, mesh, workshop );
     //sim.printAllNeighs();
 
-    printf("#### END makeShip_Whee()\n" );
+    printf("#### END makeShip_Wheel()\n" );
     //exit(0);
 };
 

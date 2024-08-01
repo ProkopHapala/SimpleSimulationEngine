@@ -109,8 +109,8 @@ class CGsolver{ public:
     }
 
 
-    int solve_m1( double tol=1e-6, int maxIters=100 ){
-        //printf( "CGsolver::solve_m1()\n" );
+    int solve_m1( double tol=1e-6, int maxIters=100, bool bPrint=false ){
+        if(bPrint)printf( "CGsolver::solve_m1() tol=%g  maxIters=%i \n", tol, maxIters );
         double alpha;
         double alpha_;
         double beta;
@@ -148,7 +148,7 @@ class CGsolver{ public:
             err2 = VecN::dot(n, z, res );
 
             beta = err2/err; 
-            printf( "CGsolver: iter=%i err=%g \n", iter, err2 );
+            if(bPrint)printf( "CGsolver[iter=%i] err=%g \n", iter, err2 );
             if( err2<tol2){
                 bConverged=true;
                 return err2;
@@ -166,13 +166,12 @@ class CGsolver{ public:
             err = err2;
             istep++;
         }
-        exit(0);
         return iter;
     }
 
 
-    int solve( double tol=1e-6, int maxIters=2 ){
-        //printf( "CGsolver::solve()\n" );
+    int solve( double tol=1e-6, int maxIters=100, bool bPrint=false ){
+        if(bPrint)printf( "CGsolver::solve() tol=%g  maxIters=%i \n", tol, maxIters );
         double alpha [m];
         double alpha_[m];
         double beta  [m];
@@ -224,7 +223,7 @@ class CGsolver{ public:
                 beta[k] = err2[k]/err[k]; 
                 err2tot = fmax(err2[k],err2tot); 
             }
-            printf( "CGsolver: iter=%i err=%g \n", iter, err2tot );
+            if(bPrint)printf( "CGsolver[iter=%i] err=%g \n", iter, err2tot );
             if( err2tot<tol2){
                 bConverged=true;
                 return err2tot;
@@ -242,7 +241,7 @@ class CGsolver{ public:
             for(int k=0;k<m;k++){ err[k]=err2[k]; };
             istep++;
         }
-        exit(0);
+        //exit(0);
         //DEBUG
         return iter;
     }

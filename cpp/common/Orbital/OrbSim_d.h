@@ -485,6 +485,7 @@ class OrbSim: public Picker { public:
         const int m=3;
         memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
         double dt2 = dt * dt;
+        double inv_dt = 1/dt;
         cleanForce();
         for (int iter = 0; iter < niter; iter++) {
             // Evaluate forces (assuming you have a method for this)
@@ -521,7 +522,7 @@ class OrbSim: public Picker { public:
                     Lingebra::forward_substitution_T_m( LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      nPoint,m );
                 } break;
                 case LinSolveMEthod::CG:{
-                    printf("OrbSim_d::run_LinSolve()  LinSolveMEthod::CG \n");
+                    //printf("OrbSim_d::run_LinSolve()  LinSolveMEthod::CG \n");
                     for(int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; };
                     cgSolver.solve();
                 } break;
@@ -553,11 +554,13 @@ class OrbSim: public Picker { public:
                 //dv.mul(1.0 / dt);
                 //vel   [i].f.add( dv );
 
+                // To-Do : We need more rigorous approach how to update velocity
+
                 // position-based velocity update
                 double vr2 = vel[i].norm2();
-                Vec3d v    = ps_cor[i] - points[i].f;
-                //v.mul(1/dt);
-                v.mul( sqrt(  vel[i].norm2()/v.norm2() ) );
+                Vec3d v    = (ps_cor[i] - points[i].f);
+                v.mul(inv_dt);
+                //v.mul( sqrt(  vel[i].norm2()/( v.norm2() + 1e-8 ) ) ); // This is unphysicsl
                 vel[i].f = v;
                 // update positions
                 points[i].f = ps_cor[i];
@@ -645,7 +648,7 @@ class OrbSim: public Picker { public:
         int nG = n/3;
         for(int iG=0; iG<nG; iG++){
             double kp = kFix[iG] + kLinRegularize;
-            //kp = 0; // DEBUG
+            //kp = 0;
             //printf( "Kdp[%i] k=%g dp(%g,%g,%g)\n", iG, kp, dpos[iG].x, dpos[iG].y, dpos[iG].z );
             fdpos[iG] = dpos[iG]*kp;
         }
@@ -1102,7 +1105,7 @@ class OrbSim: public Picker { public:
             //     = (           pj.w*(vj-vi)                   )/(pi.w+pj.w)
             // imp1 = dvi*pi.w = pi.w*pj.w*(vj-vi)/(pi.w+pj.w)
             double imp = pi.w*pi.w*dv/mcog;
-            //if( i==146 ){ // Debug
+            //if( i==146 ){
             //    double dvj  = vcog - vj;
             //    double imp2 = dvj*pj.w; // shoould be the same as imp1 
             //    printf( "evalTrussCollisionForces_bonds[%i] imp1 %g imp2 %g \n", i, imp1, imp2  );
