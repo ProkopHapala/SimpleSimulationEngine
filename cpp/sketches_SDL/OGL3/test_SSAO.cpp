@@ -37,7 +37,7 @@ GLfloat  afineMat[4] = {
   0.0, 1.0
 };
 
-const int nspheres = 16;
+static const int nspheres = 16;
 GLfloat spheres[4*nspheres];
 
 GLfloat camPos[3] = { 0.0,0.0,-50.0 };
@@ -216,7 +216,7 @@ void draw(){
     uloc = glGetUniformLocation( shader_pre->shaderprogram, "origin"  );	glUniform2fv(uloc, 0, origin        );
     uloc = glGetUniformLocation( shader_pre->shaderprogram, "nholes"     );	glUniform1iv(uloc, 1, &nholes        );
     uloc = glGetUniformLocation( shader_pre->shaderprogram, "holes"      );	glUniform4fv(uloc, nholes, holes    );
-    for( int i; i<nspheres; i++ ){
+    for( int i=0; i<nspheres; i++ ){
         uloc = glGetUniformLocation( shader_pre->shaderprogram, "sphere"     );	glUniform4fv(uloc, 1, &spheres[i<<2] );
         glEnableVertexAttribArray(0); object1->draw();
     }

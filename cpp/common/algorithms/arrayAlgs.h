@@ -134,7 +134,7 @@ int insertSort( int n, int* permut, const T* data ){
 }
 
 template<typename T>
-int insertSort_reverse( int n, int* permut, T* data ){
+int insertSort_reverse( int n, int* permut, const T* data ){
     //https://en.wikipedia.org/wiki/Insertion_sort
     int niter=0;
     int i=1;

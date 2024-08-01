@@ -299,6 +299,45 @@ __kernel void  evalTrussBondForce(
 
 
 
+__kernel void dot_product_loc(
+    const int ntot,
+    __global const float* x, 
+    __global const float* y, 
+    __global float* result
+    ) {
+
+    // ntot = nG * nW
+    // Algorithm:
+    // 1. each processor 
+
+    //__local float LOC[64];  // Local memory for partial sums
+    __local float LOC[256];   // Local memory for partial sums
+
+    const int iG = get_global_id(0);
+    const int iL = get_local_id(0);
+    const int iW = get_group_id(0);
+
+    const int nG = get_global_size(0);
+    const int nL = get_local_size(0);
+    //const int nW = get_group_size(0);
+
+    // Perform the dot product for a chunk of data
+    float sum = 0.0f;
+    for (int i=iG; i<ntot; i+=nG ) { sum += x[i] * y[i]; }
+    LOC[iL] = sum;   // Store the partial sum in local memory
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Perform reduction within the work-group
+    for (int offset = nL/2; offset>0; offset >>= 1) {
+        if ( iL < offset) { LOC[iL] += LOC[iL+offset];   }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    // Store the result of this work-group in global memory
+    if (iL==0) {  result[iW] = LOC[0]; }
+}
+
+
 __kernel void  dot_mat_vec_loc(
     const int4 ns, 
     __global const float*   Amat,    // [n,nNeighMax] sparse Lmat coefs at postions of neighs

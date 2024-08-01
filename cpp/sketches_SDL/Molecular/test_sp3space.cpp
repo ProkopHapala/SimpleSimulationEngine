@@ -91,7 +91,7 @@ TestAppSp3Space::TestAppSp3Space( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OG
 
 
     double sqrt3 = sqrt(3.0); // normalization of spherical harmonsi
-    double invsqrt3 = 1/invsqrt3;
+    double invsqrt3 = 1/sqrt3;
     orbs.vecs[0] = (Quat4d){-1,-1,+1,1};
     orbs.vecs[1] = (Quat4d){+1,+1,+1,1};
     orbs.vecs[2] = (Quat4d){+1,-1,-1,1};

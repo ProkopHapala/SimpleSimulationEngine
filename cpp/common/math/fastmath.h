@@ -294,18 +294,18 @@ inline double fastPrecisePow(double a, double b) {
 }
 
 
-inline float fastInvSqrt( float x ){
-	long i;
-	float xh, y;
-	xh  = x*0.5f;
-	y   = x;
-	i   = *(long*)&y;               // cast float->int
-	i   = 0x5f3759df-(i>>1);
-	y   = *(float*)&i;              // cast back
-	y   = y * ( 1.5f - (xh*y*y) );   // 1st iteration
-	y   = y * ( 1.5f - (xh*y*y) );   // 2nd iteration, this can be removed
-	return y;
-}
+// inline float fastInvSqrt( float x ){
+// 	long i;
+// 	float xh=x*0.5f, y=x;
+// 	//xh  = x*0.5f;
+// 	//y   = x;
+// 	i   = *(long*)&y;               // cast float->int
+// 	i   = 0x5f3759df-(i>>1);
+// 	y   = *(float*)&i;              // cast back
+// 	y   = y * ( 1.5f - (xh*y*y) );   // 1st iteration
+// 	y   = y * ( 1.5f - (xh*y*y) );   // 2nd iteration, this can be removed
+// 	return y;
+// }
 
 
 

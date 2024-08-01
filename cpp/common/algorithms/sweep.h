@@ -21,8 +21,8 @@ namespace sweep{
 
 struct Span{
     float xmin,xmax;
-    inline bool operator<( const Span& rhs){ return xmin < rhs.xmin; }
-    inline bool operator>( const Span& rhs){ return xmin > rhs.xmin; }
+    inline bool operator<( const Span& rhs) const { return xmin < rhs.xmin; }
+    inline bool operator>( const Span& rhs) const { return xmin > rhs.xmin; }
     //inline bool operator>( const Span& rhs){ return xmax > rhs.xmax; }
 };
 
