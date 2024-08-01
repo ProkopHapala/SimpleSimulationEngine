@@ -6,7 +6,7 @@ using DelimitedFiles
 include("Truss.jl")
 #include("ProjectedGuassSeidel.jl")
 include("plot_utils.jl")
-#include("IterativeSolvers.jl")
+include("IterativeSolvers.jl")
 include("Cholesky.jl")
 include("ProjectiveDynamics.jl")
 
@@ -140,11 +140,13 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     print("point_neighBs()");  @time neighBs = point_neighBs( bonds, np )     #;                                         # finds bonds to neighbors
     print("point_neighs2()");  @time neighs2 = point_neighs2( neighs    )     #; print("neighs2 : "); display(neighs2)   # finds neighbors of neighbors ( i.e. second order neighbors )
 
+    truss   = Truss(points, bonds, masses, ks, l0s, fixed, neighBs)
+
     #print("neighBs: ");  display(neighBs);
 
     # ===========  Generate system matrix ( Projective Dynamics Matrix ) using neighborhood information
 
-    print("make_PDMatrix()");  @time  A,Mt = make_PD_Matrix( neighBs, bonds, masses, dt, ks )  
+    print("make_PDMatrix()");  @time  A,Mt = make_PD_Matrix( neighBs, bonds, masses, dt, ks )
     
     #print("CholeskyDecomp_sparse()"); @time L,neighsCh  = CholeskyDecomp_sparse( A, neighs, neighs2 ) #;print("L: "); display(L)    # evaluate Cholensky decomposition for sparse matrix (efficient)                    # evaluate Cholensky decomposition using Cholesky–Crout algorithm
     #U  = copy(L') 
@@ -209,7 +211,6 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     # print("point_neighBs()");  @time neighBs = point_neighBs( bonds, np )     #;                                         # finds bonds to neighbors
     # print("point_neighs2()");  @time neighs2 = point_neighs2( neighs    )     
 
-    truss   = Truss(points, bonds, masses, ks, l0s, fixed, neighBs)
     #sol    = TrussSolution(A,L,U,neighsL,neighsU, LDLT_L,LDLT_D,LDLT_neighs )
     sol     = LDLTsolution(LDLT_L,LDLT_D,LDLT_neighs)
     truss_f = convert_to_truss_f( truss )
@@ -220,6 +221,17 @@ function main(;nseg=8, wheel_width=0.2, k=10000.0, dt=5.0, niter=5, omega=1.0 )
     #velocity = Matrix( eachrow(points) .|> p -> cross(axis, p) )
     velocity = mapslices(p -> cross(axis, p)*omega, points, dims=2)
     #velocity = zeros(size(points))
+
+
+
+    println( " # ----------- Test Conjugate Gradient " );
+    ps_pre = points .+ velocity.*dt
+    x = copy(ps_pre[:,1])
+    b = make_PD_rhs( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pre )[:,1]
+    conjugate_gradient_jac!( A,  b, x;  tol=1e-6, niter=10, bPrint=:true )
+    return
+
+    
 
     ps_pred  = points .+ velocity*dt
     bK, bMt  = make_PD_rhs_decomp( truss.neighBs, truss.bonds, truss.masses, dt, truss.ks, points, truss.l0s, ps_pred )  

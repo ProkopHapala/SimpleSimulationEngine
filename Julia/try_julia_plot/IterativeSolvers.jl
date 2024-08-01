@@ -127,25 +127,28 @@ end
 
 function conjugate_gradient_jac!(  A::AbstractMatrix,  b::AbstractVector,   x::AbstractVector;  tol=1e-6, niter::Int=10, bPrint::Bool=:false )
 
-    jacobi_precond = ( 1 ./ diag(A) ) #.+ 1e-16
-    #M =  Diagonal(1 ./ diag(A))
-    # Initialize residual vector
+    invD = ( 1 ./ diag(A) ) #.+ 1e-16
     res = b - A * x
-    #z .*= jacobi_precond
-    z = res .* jacobi_precond
-    #z = M * res
-    dir = copy(z)     # Initialize search direction vector
-    err = dot(z,res)  # Compute initial squared residual norm
+    d = res .* invD
+    err = dot(d,res)  # Compute initial squared residual norm
+
+    println("x:    ", x    );
+    println("A*x:  ", A*x  );
+    println("b:    ", b    );
+    println("res:  ", res  );
+    println("invD: ", invD );
+    println("d:    ", d    );
+    println("err:  ", err  );
+    #return
 
     for iter in 1:niter
-        A_dir = A * dir
-        alpha = err / dot(dir, A_dir )
+        Ad = A * d
+        alpha = err / dot(d, Ad )
         
-        x   .+= dir   .* alpha
-        res .-= A_dir .* alpha
+        x   .+= d  .* alpha
+        res .-= Ad .* alpha
 
-        z = res .* jacobi_precond
-        #z = M * res
+        z = res .* invD
 
         err_new = dot(res,z)     # reduction
         
@@ -156,7 +159,13 @@ function conjugate_gradient_jac!(  A::AbstractMatrix,  b::AbstractVector,   x::A
             return x, iter
         end
         beta = err_new / err
-        dir .= z .+ ( dir .* beta  ) 
+        d .= z .+ ( d .* beta  ) 
+
+        println("x:    ", x    );
+        println("res:  ", res  );
+        println("z:    ", z    );
+        println("d:    ", d    );
+
         err = err_new
     end
     return x, niter

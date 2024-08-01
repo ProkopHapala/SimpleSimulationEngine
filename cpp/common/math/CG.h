@@ -91,11 +91,11 @@ class CGsolver{ public:
     //double alpha = 0;
 
     void realloc(int n, int m ){
-        _realloc(invD, n );
-        _realloc(res, n*m );
-        _realloc(d,   n*m );
-        _realloc(Ad,  n*m );
-        _realloc(z,   n*m );
+        _realloc0(invD, n  , 0.0 );
+        _realloc0(res,  n*m, 0.0 );
+        _realloc0(d,    n*m, 0.0 );
+        _realloc0(Ad,   n*m, 0.0 );
+        _realloc0(z,    n*m, 0.0 );
     }
 
     void initDiagPrecond( double* A, double safe=0.0 ){
@@ -107,6 +107,66 @@ class CGsolver{ public:
         if(bRealloc) realloc(n,m);
         x=x_; b=b_;
     }
+
+
+    int solve_m1( double tol=1e-6, int maxIters=100 ){
+        printf( "CGsolver::solve_m1()\n" );
+        double alpha;
+        double alpha_;
+        double beta;
+        double err;
+        double err2;
+        double tol2 = tol*tol;
+
+        istep = 0;
+        //dotFunc( n, d, Ad); 
+        dotFunc( n, x, Ad);    
+        VecN::sub( n, b,     Ad,    res );   
+        VecN::mul( n, invD,  res,    d  ); 
+        err=VecN::dot( n, d,     res ); 
+
+        printf("x:    "); printArray(n,x);  
+        printf("Ad:   "); printArray(n,Ad);  
+        printf("b:    "); printArray(n,b); 
+        printf("res:  "); printArray(n,res);  
+        printf("invD: "); printArray(n,invD);  
+        printf("d:    "); printArray(n,d);  
+        printf("err:  %g\n", err );
+
+        //exit(0);
+
+        int iter=0;
+        for ( iter=0; iter<maxIters; iter++) {
+            dotFunc( n, d, Ad );   // Kd = K*d            
+            err2=VecN::dot(n, d, Ad );
+            alpha=err/err2;
+
+            VecN::fma( n,   x,   d,  alpha, x   );  // x = x + d  * dt;
+            VecN::fma( n,  res, Ad, -alpha, res );  // f = f - Kd * dt;
+            VecN::mul( n,  invD  , res,     z   );  // z = f * invD;
+
+            err2 = VecN::dot(n, z, res );
+
+            beta = err2/err; 
+            printf( "CGsolver: iter=%i err=%g \n", iter, err2 );
+            if( err2<tol2){
+                bConverged=true;
+                return err2;
+            }
+            VecN::fma( n, z, d, beta, d );    // d   = f + d*(f2/f2old)
+
+            printf("x:    "); printArray(n,x);  
+            printf("res:  "); printArray(n,res);  
+            printf("z:    "); printArray(n,z); 
+            printf("d:    "); printArray(n,d); 
+            
+            err = err2;
+            istep++;
+        }
+        exit(0);
+        return iter;
+    }
+
 
     int solve( double tol=1e-6, int maxIters=100 ){
         printf( "CGsolver::solve()\n" );
