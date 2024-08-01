@@ -15,6 +15,7 @@
 #include "Interfaces.h"
 
 #include "Cholesky.h"
+#include "CG.h"
 #include "arrayAlgs.h"
 
 int sortNeighs( int n, int m, int* neighs){

@@ -33,22 +33,51 @@ class LinSolver{ public:
     int m;  // number of rhs
     // temp
     int    istep=0;
-    double *  r=0;
-    double *  r2=0;
-    double *  p =0; // [n,m]   
-    double *  Ap=0; // [n,m] 
-    
+    double *  r=0;   // [n,m] 
+    double *  r2=0;  // [n,m] 
+    double *  p =0;  // [n,m]   
+    double *  Ap=0;  // [n,m] 
+    double *  rho=0; // [m] 
     //double rho = 0;
     //double alpha = 0;
 
-    void setLinearProblem(int n_, int m_, double* x_, double* b_ ){
-        realloc(n_);
+    realloc(int n_, int m_ ){
+        n=n_;m=m_;
+        _realloc(p ,n*m);
+        _realloc(Ap,n*m);
+        _realloc(r);
+        _realloc(r2);
+    }
+
+    void setLinearProblem(int n_, int m_, double* x_, double* b_, bool bRealoc=true ){
+        n=n_;m=m_;
+        if(bRealoc)realloc(n_,m_);
         x=x_; b=b_;
     }
 
     template<typename Func>
+    double step0_CG(  Func dotFunc ){
+        // f  = f0 - np.dot(K,x)
+        // d  = f.copy()
+        // f2 = np.dot(f,f)
+        dot_ax(n,m, p, Ap, r );
+        dotFunc  ( n,m, x, r );      // r = A*x
+        VecN::sub( n*m, b, r, r ); // r = b - A*x
+        VecN::set( n*m, r, p    ); // p = r
+        dot_ax(n,m, r,r, err2 );
+        for(int k=0;k<m;k++){ rho[k]=err2[k]; };
+        return err2;
+    }
+
+    template<typename Func>
     double step_CG_simple( Func dotFunc ){
-        dotFunc( n, p, Ap);   // Kd = K*d
+
+        double err2 [m];
+        double alpha[m];
+        double beta [m];
+        double rho2 [m];
+
+        dotFunc( n,m, p, Ap);   // Kd = K*d
 
         //alpha = VecN::dot(n, r, p) / VecN::dot(n, p, Ap);
         //alpha = rho / VecN::dot(n, p, Ap);   // dt  = dot(d,f) / dot(d,Kd)    # step length such that f is orthogonal to d
@@ -61,6 +90,7 @@ class LinSolver{ public:
         fma_ax( n,m, x, p ,  alpha,   x );  // x = x + d  * dt;
         fma_ax( n,m, r, Ap, -alpha,   r );  // f = f - Kd * dt;
         
+        dot_ax(n,m, r, r, err2 );
         double err2 = VecN::dot(n, r,r);
 
         dot_ax(n,m, p, Ap, rho2 );

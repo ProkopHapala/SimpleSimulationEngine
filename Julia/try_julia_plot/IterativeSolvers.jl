@@ -3,6 +3,9 @@
 #using SparseArrays
 #using Plots
 
+using LinearAlgebra
+using Random
+
 using DataStructures
 
 # function write_matrix_to_file(A::Matrix{T}, filename::String; delimiter::Char='\t', format::String="%.6f") where T
@@ -81,610 +84,211 @@ function SolveIterative( A::Matrix{Float64}, b::Matrix{Float64}, x::Matrix{Float
     end 
 end
 
-function CholeskyDecomp( A::Matrix{Float64} )
-    # seems to be: The Cholesky–Banachiewicz algorithm  (https://en.wikipedia.org/wiki/Cholesky_decomposition)
-    n = size(A,1)
-    L = zeros(n,n)
+function SOR!(A::AbstractMatrix, res::AbstractVector, z::AbstractVector, omega::Float64)
+    n = length(res)
     for i in 1:n
-        for j in 1:i
-            sum1 = 0;
-            if (j == i)  # diagonal
-                for k in 1:j
-                    sum1 += (L[j,k])^2
-                end
-                L[j,j] = sqrt(  A[j,j] - sum1 )
-            else
-                # Evaluating L(i, j)  using L(j, j)
-                for k in 1:j
-                    sum1 += (L[i,k] * L[j,k]);
-                end
-                if( L[j,j] > 0 )
-                    L[i,j] = ( A[i,j] - sum1) / L[j,j]
-                end
+        sum = 0.0
+        for j in 1:n
+            if i != j
+                sum += A[i, j] * z[j]
             end
         end
+        z[i] = (1 - omega) * z[i] + omega * (res[i] - sum) / A[i, i]
     end
-    return L
 end
 
-function CholeskyDecomp_Crout( A::Matrix{Float64} )
-    # Cholesky–Crout algorithm
-    #println( "CholeskyDecomp_Crout()" )
-    n = size(A,1)
-    L = zeros(n,n)
-    nop = 0 
-    for j in 1:n
-        sum1 = 0.0
-        ngs = []
-        for k in 1:j
-            # put j,j inside string
-            #if(L[j,k]>0) println( "[$j,$k] $(L[j,k]) " ) end
-            if(L[j,k]>0) push!(ngs, k ) end
-            sum1 += (L[j,k])^2
-            nop += 1
-        end
-        #println( "ngs[$j] ", ngs )
-        L[j,j] = sqrt(  A[j,j] - sum1 )
+function conjugate_gradient!(  A::AbstractMatrix,  b::AbstractVector,   x::AbstractVector;  tol=1e-6, niter::Int=10, bPrint::Bool=:false )
 
-        for i in j+1:n
-            sum1 = 0.0
-            for k in 1:j
-                sum1 += (L[i,k] * L[j,k]);
-                nop += 1
-            end
-            L[i,j] = ( A[i,j] - sum1) / L[j,j]
-        end
-    end
-    #println("CholeskyDecomp_Crout() nops=", nop );
-    return L
-end
+    # Initialize residual vector
+    res = b - A * x
+    dir = copy(res)     # Initialize search direction vector
+    err = norm(res)     # Compute initial squared residual norm
 
-function CholeskyDecomp_sparse( A::Matrix{Float64}, neighs::Array{Vector{Int},1}, neighs2::Array{Vector{Int},1}=nothing, tol::Float64=1.e-16, bSortedSets::Bool=true )
-    #neighsets = [ Set(ng) for ng in neighs ] 
-    # How can I initialize set with reserved size in Julia?
-    #s = Set{Int}(100)  # set with reserved size 100
-    # if bSortedSets
-    #     neighsets = [ SortedSet(ng) for ng in neighs ]
-    # else
-    #     neighsets = [ Set(ng) for ng in neighs ] 
-    # end
-    #neighsets = [ SortedSet(ng) for ng in neighs ] 
-    neighsets = [ Set(ng) for ng in neighs ]          # this seems faster
-    n = size(A,1)
-    L = zeros(n,n)
-    nop = 0
-    #println( "CholeskyDecomp_sparse()" )
-
-    nngmax = 0
-    for j in 1:n
-        sum1 = 0.0
-        ngs  = neighsets[j]
-        ngs_ = []
-        for k in ngs
-            if k <= j
-                #println( "[$j,$k] $(L[j,k]) " )
-                #push!(ngs_, k )
-                sum1 += (L[j,k])^2
-                nop += 1
-            end
-        end
-        #println( "ngs[$j] ", ngs_, "       ", ngs )
-        Ljj    = sqrt(  A[j,j] - sum1 )
-        L[j,j] = Ljj
-        invLjj = 1.0/Ljj
-
-        for i in j+1:n
-            sum1 = 0.0
-            for k in ngs
-                if k <= j
-                    sum1 += L[i,k] * L[j,k];
-                    nop += 1
-                end
-            end
-            Lij = ( A[i,j] - sum1) * invLjj
-            if abs(Lij) > tol
-                L[i,j] = Lij
-                push!(ngs,          i )
-                push!(neighsets[i], j )
-            end
-        end
-
-        # for i in j+1:n
-        #     sum1 = 0.0
-        #     for k in ngs
-        #         if k <= j
-        #             sum1 += (L[i,k] * L[j,k]);
-        #             nop += 1
-        #         end
-        #     end
-        #     Lij = ( A[i,j] - sum1) / L[j,j]
-        #     if abs(Lij) > tol
-        #         L[i,j] = Lij
-        #         push!(ngs, i )
-        #         push!(neighsets[i], j )
-        #     end
-        # end
-
-        # ngs2 = neighs2[j]
-        # for i in ngs2
-        #     if i > j
-        #         sum1 = 0.0
-        #         for k in ngs
-        #             if k <= j
-        #                 sum1 += (L[i,k] * L[j,k]);
-        #                 nop += 1
-        #             end
-        #         end
-        #         Lij = ( A[i,j] - sum1) / L[j,j]
-        #         if abs(Lij) > tol
-        #             L[i,j] = Lij
-        #             push!(ngs, i )
-        #             push!(neighsets[i], j )
-        #         end
-        #     end
-        # end
+    for iter in 1:niter
+        A_dir = A * dir
+        alpha = err^2 / dot(dir, A_dir )
         
-        # for i in j+1:n
-        #     sum1 = 0.0
-        #     for k in 1:j
-        #         sum1 += (L[i,k] * L[j,k]);
-        #         nop += 1
-        #     end
-        #     Lij = ( A[i,j] - sum1) / L[j,j]
-        #     if abs(Lij) > tol
-        #         L[i,j] = Lij
-        #         push!(ngs, i )
-        #         push!(neighsets[i], j )
-        #     end
-        # end
+        x   .+= dir   .* alpha
+        res .-= A_dir .* alpha
 
-        nngmax = max( nngmax, length(ngs) )
+        err_new = norm(res)
+        if bPrint 
+            println("CG[",iter,"] err=", err_new )
+        end
+        if err_new < tol
+            return x, iter
+        end
+        beta = (err_new / err)^2
+        dir .= res .+ ( dir .* beta  ) 
+        err = err_new
     end
-    neighsCh = [ sort!(collect(ngs)) for ngs in neighsets ]
-    #println("CholeskyDecomp_sparse() nops=", nop, " nngmax=", nngmax );
-    return L, neighsCh
+    return x, -1
 end
 
-function IncompleteCholeskyDecomp(A::Matrix{Float64} )
-    # https://en.wikipedia.org/wiki/Incomplete_Cholesky_factorization
-	n = size(a,1);
-	for k = 1:n
-		A[k,k] = sqrt(A[k,k]);
-		for i = (k+1):n
-		    if (A[i,k] != 0)
-		        A[i,k] = A[i,k]/A[k,k];            
-		    end
-		end
-		for j = (k+1):n
-		    for i = j:n
-		        if (A[i,j] != 0)
-		            A[i,j] = A[i,j] - A[i,k]*A[j,k];  
-		        end
-		    end
-		end
-	end
-    # for i = 1:n
-    #     for j = i+1:n
-    #         a[i,j] = 0;
-    #     end
-    # end       
-end
+function conjugate_gradient_jac!(  A::AbstractMatrix,  b::AbstractVector,   x::AbstractVector;  tol=1e-6, niter::Int=10, bPrint::Bool=:false )
 
-function IncompleteCholeskyDecompSparse(a::Matrix{Float64}, neighs::Array{Vector{Int},1}, tol = 1.e-10 )
-    # https://en.wikipedia.org/wiki/Incomplete_Cholesky_factorization
-	n = size(a,1);
-	for k = 1:n
-        Akk = sqrt(A[k,k]);
-		A[k,k] = Akk
-        invAkk = 1.0/Akk;
-        ngk = neighs[k];
-        for i in ngk
-            if i > k
-                aik = A[i,k];
-                if ( abs(aik)>tol )
-                    A[i,k] = aik*invAkk          
-                end
-            end
-        end
-        for j in ngk
-            if j > k
-                ajk = A[j,k]
-                ngj = neighs[j];
-                for i in ngj
-                    if i >= j
-                        aij = A[i,j];
-                        if ( abs(aij)>tol )
-                            A[i,j] = aij - A[i,k]*ajk;  
-                        end
-                    end
-                end
-            end
-        end
-	end
-    # for i = 1:n
-    #     for j = i+1:n
-    #         a[i,j] = 0;
-    #     end
-    # end       
-end
+    jacobi_precond = ( 1 ./ diag(A) ) #.+ 1e-16
+    #M =  Diagonal(1 ./ diag(A))
+    # Initialize residual vector
+    res = b - A * x
+    #z .*= jacobi_precond
+    z = res .* jacobi_precond
+    #z = M * res
+    dir = copy(z)     # Initialize search direction vector
+    err = dot(z,res)  # Compute initial squared residual norm
 
-function mapMatrixNeighs( A::Matrix{Float64}, tol::Float64 = 1.e-16 )
-    # find which rows i are coupled with witch columns j by matrix elements Aij 
-    n = size(A,1)
-    neighs  = [ Vector{Int}() for _ in 1:n ]   
-    #neighsT = [ Vector{Int}() for _ in 1:n ]
-    nngmax = 0
-    for i in 1:n
-        ngi = neighs[i]
-        for j in 1:i-1
-            if abs(A[i,j]) > tol
-                push!(ngi,        j )
-                #push!(neighsT[j], i )
-            end
+    for iter in 1:niter
+        A_dir = A * dir
+        alpha = err / dot(dir, A_dir )
+        
+        x   .+= dir   .* alpha
+        res .-= A_dir .* alpha
+
+        z = res .* jacobi_precond
+        #z = M * res
+
+        err_new = dot(res,z)     # reduction
+        
+        if bPrint 
+            println("CG[",iter,"] err=", err_new )
         end
-        nngi   = length(ngi)
-        nngmax = max( nngmax, nngi )
-        #println("[$i] nngi : ", nngi )
+        if sqrt(err_new) < tol
+            return x, iter
+        end
+        beta = err_new / err
+        dir .= z .+ ( dir .* beta  ) 
+        err = err_new
     end
-    #println("mapMatrixNeighs() nngmax : ", nngmax )
-    return neighs #, neighsT
+    return x, niter
 end
 
-function invNeighs( neighs::Array{Vector{Int},1} )
-    n = length(neighs)
-    neighsT = [ Vector{Int}() for _ in 1:n ]
-    for i in 1:n
-        #ngT = neighsT[i]
-        for j in neighs[i]
-            push!(neighsT[j], i )
+
+function conjugate_gradient_sor!(A::AbstractMatrix, b::AbstractVector, x::AbstractVector; tol=1e-6, niter::Int=10, omega::Float64=1.5, bPrint::Bool=false)
+    n = length(b)
+    res = b - A * x
+    z = zeros(eltype(x), n)
+    dir = zeros(eltype(x), n)
+    err = 0.0
+
+    jacobi_precond = ( 1 ./ diag(A) ) #.+ 1e-16
+
+    # Initial SOR preconditioning
+    SOR!(A, res, z, omega)
+    #SOR!(A, res .* jacobi_precond , z, omega)
+
+    dir .= z
+    err = dot(z, res)
+
+    for iter in 1:niter
+        A_dir = A * dir
+        alpha = err / dot(dir, A_dir)
+        
+        x   .+= dir   .* alpha
+        res .-= A_dir .* alpha
+
+        # SOR preconditioning step
+        SOR!(A, res  , z, omega)
+        #SOR!(A, res .* jacobi_precond  , z, omega)
+
+        err_new = dot(res, z)
+        
+        if bPrint
+            println("CG[", iter, "] err=", err_new)
         end
+        if sqrt(err_new) < tol
+            return x, iter
+        end
+        beta = err_new / err
+        dir .= z .+ (dir .* beta)
+        err = err_new
     end
-    return neighsT
+    return x, niter
 end
 
-# https://fncbook.github.io/fnc/linsys/linear-systems.html
 
-function forwardsub(L::Matrix{Float64},b::Matrix{Float64})
-    n = size(L,1)
-    x = zeros( size(b)   )
-    s = zeros( size(b,2) )
-    x[1,:] = b[1,:]/L[1,1]
-    nop = 0
-    for i = 2:n
-        s[:] .= 0.0
-        for j = 1:i-1
-            s[:] .+= L[i,j]*x[j,:]
-            nop += 1
+function conjugate_gradient_precond!(A::AbstractMatrix, b::AbstractVector, x::AbstractVector, M::AbstractMatrix; tol=1e-6, niter::Int=10, bPrint::Bool=:false )
+    r = b - A * x
+    z = M * r        # Preconditioning step as matrix multiplication
+    p   = copy(z)
+    err = dot(r, z)
+
+    for iter in 1:niter
+        Ap    = A * p
+        alpha = err / dot(p, Ap)
+
+        x .+= alpha .* p
+        r .-= alpha .* Ap
+
+        z = M * r        # Preconditioning step as matrix multiplication
+        err_new = dot(r, z)
+        if bPrint 
+            println("CG[",iter,"] err=", err_new )
         end
-        x[i,:] = ( b[i,:] .- s[:] ) ./ L[i,i]
-    end    
-    #println("forwardsub() nops=", nop );   
-    return x
-end
-
-function backsub(U::Matrix{Float64}, b::Matrix{Float64})
-    n = size(U, 1)
-    x = zeros(size(b))
-    s = zeros(size(b, 2))
-    x[n, :] = b[n, :] / U[n, n]  # Corrected to element-wise operation
-    nop = 0
-    for i = n-1:-1:1
-        s[:] .= 0.0
-        for j = i+1:n
-            s[:] .+= U[i, j] * x[j, :]
-            nop += 1
+        if sqrt(err_new) < tol
+            return x, iter
         end
-        x[i, :] = (b[i, :] .- s[:]) ./ U[i, i]  # Corrected to element-wise operation
-    end
-    return x
-end
 
-function forwardsub_sparse(L::Matrix{Float64}, b::Matrix{Float64}, neighs::Array{Vector{Int},1} )
-    n = size(L,1)
-    x = zeros( size(b)   )
-    s = zeros( size(b,2) )
-    x[1,:] = b[1,:]/L[1,1]
-    nop = 0
-    for i = 2:n
-        s[:] .= 0.0
-        for j in neighs[i]
-            if j < i
-                s[:] .+= L[i,j]*x[j,:]
-                nop += 1
-            end
-        end
-        x[i,:] = ( b[i,:] .- s[:] ) ./ L[i,i]
-    end  
-    #println("forwardsub_sparse() nops=", nop );     
-    return x
-end
+        beta = err_new / err
+        p .= z .+ beta .* p
 
-function backsub_sparse(U::Matrix{Float64},b::Matrix{Float64}, neighs::Array{Vector{Int},1} )
-    n = size(U,1)
-    x = zeros( size(b)   )
-    s = zeros( size(b,2) )
-    #x[n]   = b[n]    / U[n, n] # this was probably error 
-    x[n, :] = b[n, :] / U[n, n] # Correced 
-    nop = 0
-    for i = n-1:-1:1
-        s[:] .= 0.0
-        for j in neighs[i]
-            if j > i
-                s[:] .+= U[i,j]*x[j,:]
-                nop += 1
-            end
-        end
-        x[i,:] = ( b[i,:] .- s[:] ) ./ U[i,i]
-    end 
-    #println("backsub_sparse() nops=", nop );   
-    return x
-end
-
-
-
-
-function forwardsub_sparse_f(L::Matrix{Float32}, b::Matrix{Float32}, neighs::Array{Vector{Int},1} )
-    n = size(L,1)
-    x = zeros( Float32, size(b)   )
-    s = zeros( Float32, size(b,2) )
-    x[1,:] = b[1,:]/L[1,1]
-    nop = 0
-    for i = 2:n
-        s[:] .= 0.0
-        for j in neighs[i]
-            if j < i
-                s[:] .+= L[i,j]*x[j,:]
-                nop += 1
-            end
-        end
-        x[i,:] = ( b[i,:] .- s[:] ) ./ L[i,i]
-    end  
-    #println("forwardsub_sparse() nops=", nop );     
-    return x
-end
-
-function backsub_sparse_f(U::Matrix{Float32},b::Matrix{Float32}, neighs::Array{Vector{Int},1} )
-    n = size(U,1)
-    x = zeros( Float32, size(b)   )
-    s = zeros( Float32, size(b,2) )
-    #x[n]   = b[n]    / U[n, n] # this was probably error 
-    x[n, :] = b[n, :] / U[n, n] # Correced 
-    nop = 0
-    for i = n-1:-1:1
-        s[:] .= 0.0
-        for j in neighs[i]
-            if j > i
-                s[:] .+= U[i,j]*x[j,:]
-                nop += 1
-            end
-        end
-        x[i,:] = ( b[i,:] .- s[:] ) ./ U[i,i]
-    end 
-    #println("backsub_sparse() nops=", nop );   
-    return x
-end
-
-
-
-function CholeskyDecomp_LDLT(A::Matrix{T}) where T<:AbstractFloat
-    n = size(A, 1)
-    L = Matrix{T}(I, n, n)  # Initialize L as identity matrix
-    D = zeros(T, n)
-    for j in 1:n
-        D[j] = A[j,j] - dot(L[j,1:j-1].^2, D[1:j-1])
-        for i in j+1:n
-            L[i,j] = (A[i,j] - dot(L[i,1:j-1] .* L[j,1:j-1], D[1:j-1])) / D[j]
-        end
-    end
-    return L, D
-end
-
-function forward_substitution(L::Matrix{T}, b::Vector{T}) where T<:AbstractFloat
-    n = size(L, 1)
-    y = zeros(T, n)
-    for i in 1:n
-        y[i] = b[i] - dot(L[i,1:i-1], y[1:i-1])
-    end
-    return y
-end
-
-function forward_substitution_transposed(L::Matrix{T}, b::Vector{T}) where T<:AbstractFloat
-    n = size(L, 1)
-    x = zeros(T, n)
-    for i in n:-1:1
-        x[i] = b[i] - dot(L[i+1:n,i], x[i+1:n])
-    end
-    return x
-end
-
-function solve_LDLT( L::Matrix{T}, D::Vector{T}, b::Vector{T}) where T<:AbstractFloat
-    #L, D = CholeskyLDLDecomp(A)
-    z = forward_substitution(L, b)
-    #y = diagonal_solve(D, z)
-    y = z ./ D
-    x = forward_substitution_transposed(L, y)
-    return x
-end
-
-
-function CholeskyDecomp_LDLT_sparse(A::Matrix{T}, neighs::Array{Vector{Int},1}, tol::T=1e-16) where T<:AbstractFloat
-    neighsets = [Set(ng) for ng in neighs]
-    n = size(A, 1)
-    L = Matrix{T}(I, n, n)
-    D = zeros(T, n)
-    nop = 0
-    nngmax = 0
-
-    for j in 1:n
-        sum1 = 0.0
-        ngs = neighsets[j]
-        for k in ngs
-            if k < j
-                sum1 += (L[j,k]^2) * D[k]
-                nop += 1
-            end
-        end
-        D[j] = A[j,j] - sum1
-
-        for i in j+1:n
-            sum1 = 0.0
-            for k in ngs
-                if k < j
-                    sum1 += L[i,k] * L[j,k] * D[k]
-                    nop += 1
-                end
-            end
-            Lij = (A[i,j] - sum1) / D[j]
-            if abs(Lij) > tol
-                L[i,j] = Lij
-                push!(ngs, i)
-                push!(neighsets[i], j)
-            end
-        end
-        nngmax = max(nngmax, length(ngs))
+        err = err_new
     end
 
-    neighsLDLT = [sort!(collect(ngs)) for ngs in neighsets]
-    return L, D, neighsLDLT
+    return x, niter
 end
 
-function forward_substitution_sparse(L::Matrix{T}, b::Vector{T}, neighs::Array{Vector{Int},1}) where T<:AbstractFloat
-    n = size(L, 1)
-    y = zeros(T, n)
-    for i in 1:n
-        sum1 = 0.0
-        for j in neighs[i]
-            if j < i
-                sum1 += L[i,j] * y[j]
-            end
-        end
-        y[i] = b[i] - sum1
+# Jacobi preconditioner as a matrix
+function jacobi_preconditioner_matrix(A::AbstractMatrix)
+    return Diagonal(1 ./ diag(A))
+end
+
+# Symmetric Gauss-Seidel preconditioner approximation
+function sgs_preconditioner_matrix(A::AbstractMatrix)
+    D = Diagonal(A)
+    L = LowerTriangular(A) - D
+    return (D + L) * inv(D) * (D + L')
+end
+
+
+function generate_test_matrix( n::Int64, off::Float64; diag::Float64=1.0)
+    A = randn(n, n)
+    return (A + A')*off + I*diag
+end
+
+# Helper function to check if a matrix is SPD
+function is_spd(A::AbstractMatrix)
+    isapprox(A, A') || return false  # Check symmetry
+    try
+        cholesky(A)  # Check positive definiteness
+        return true
+    catch
+        return false
     end
-    return y
 end
 
-function forward_substitution_transposed_sparse(L::Matrix{T}, b::Vector{T}, neighs::Array{Vector{Int},1}) where T<:AbstractFloat
-    n = size(L, 1)
-    x = zeros(T, n)
-    for i in n:-1:1
-        sum1 = 0.0
-        for j in neighs[i]
-            if j > i
-                sum1 += L[j,i] * x[j]
-            end
-        end
-        x[i] = b[i] - sum1
+function test_CG(  n::Int64=3; bPre::Bool=:false, off::Float64=0.1, nIterMax::Int64=100, tol::Float64=1e-6 )
+    A = generate_test_matrix(n,off)
+    b = randn(n)
+
+    println("A: "); display(A)
+    
+    # Solve using Julia's direct solver
+    x_direct = A \ b
+    x_cg = zeros(n)
+    if bPre
+        M_pre = jacobi_preconditioner_matrix(A)
+        #M_pre = sgs_preconditioner_matrix(A)
+        #conjugate_gradient_precond!(A, b, x_cg, M_pre; tol=tol, niter=nIterMax, bPrint=true)
+        conjugate_gradient_sor!(A, b, x_cg, tol=tol, niter=nIterMax, bPrint=true)
+    else
+        conjugate_gradient_jac!(A, b, x_cg, tol=tol, niter=nIterMax, bPrint=true)
+        #conjugate_gradient!(A, b, x_cg, tol=tol, niter=nIterMax, bPrint=true)
     end
-    return x
-end
-
-function solve_LDLT_sparse(L::Matrix{T}, D::Vector{T},  neighs::Array{Vector{Int},1}, b::Vector{T} ) where T<:AbstractFloat
-    z = forward_substitution_sparse(L, b, neighs)
-    y = z ./ D
-    x = forward_substitution_transposed_sparse(L, y, neighs)
-    return x
-end
-
-
-const N_MAX_NEIGH = 32
-
-function find_or_add_to_neighlist!(neighs::Matrix{Int}, i::Int, n::Int)
-    for j in 1:N_MAX_NEIGH
-        if neighs[j,i] == n
-            return j  # n is already in the list, return its position
-        elseif neighs[j,i] == 0
-            neighs[j,i] = n  # n is not in the list, add it here
-            return j  # return the position where n was added
-        end
-    end
-    return 0  # list is full, couldn't add n
-end
-
-function CholeskyDecomp_LDLT_sparse_m(A::Matrix{Float64}, neighs::Matrix{Int}, tol::Float64=1e-16)
-    n = size(A, 1)
-    L = Matrix{Float64}(I, n, n)
-    D = zeros(Float64, n)
-    nop = 0
-    nngmax = 0
-
-    for j in 1:n
-        sum1 = 0.0
-        for k in 1:N_MAX_NEIGH
-            if neighs[k,j] == 0
-                break
-            end
-            if neighs[k,j] < j
-                sum1 += (L[j,neighs[k,j]]^2) * D[neighs[k,j]]
-                nop += 1
-            end
-        end
-        D[j] = A[j,j] - sum1
-
-        for i in j+1:n
-            sum1 = 0.0
-            for k in 1:N_MAX_NEIGH
-                if neighs[k,j] == 0
-                    break
-                end
-                if neighs[k,j] < j
-                    sum1 += L[i,neighs[k,j]] * L[j,neighs[k,j]] * D[neighs[k,j]]
-                    nop += 1
-                end
-            end
-            Lij = (A[i,j] - sum1) / D[j]
-            if abs(Lij) > tol
-                L[i,j] = Lij
-                find_or_add_to_neighlist!(neighs, j, i)
-                find_or_add_to_neighlist!(neighs, i, j)
-            end
-        end
-        nngmax = max(nngmax, count(!iszero, view(neighs,:,j)))
-    end
-
-    return L, D, neighs
-end
-
-function forward_substitution_sparse_m(L::Matrix{Float64}, b::Vector{Float64}, neighs::Matrix{Int})
-    n = size(L, 1)
-    y = zeros(Float64, n)
-    for i in 1:n
-        sum1 = 0.0
-        for k in 1:N_MAX_NEIGH
-            if neighs[k,i] == 0
-                break
-            end
-            j = neighs[k,i]
-            if j < i
-                sum1 += L[i,j] * y[j]
-            end
-        end
-        y[i] = b[i] - sum1
-    end
-    return y
-end
-
-function forward_substitution_transposed_sparse_m(L::Matrix{Float64}, b::Vector{Float64}, neighs::Matrix{Int})
-    n = size(L, 1)
-    x = zeros(Float64, n)
-    for i in n:-1:1
-        sum1 = 0.0
-        for k in 1:N_MAX_NEIGH
-            if neighs[k,i] == 0
-                break
-            end
-            j = neighs[k,i]
-            if j > i
-                sum1 += L[j,i] * x[j]
-            end
-        end
-        x[i] = b[i] - sum1
-    end
-    return x
-end
-
-function solve_LDLT_sparse_m(L::Matrix{Float64}, D::Vector{Float64}, b::Vector{Float64}, neighs::Matrix{Int})
-    z = forward_substitution_sparse(L, b, neighs)
-    y = z ./ D
-    x = forward_substitution_transposed_sparse(L, y, neighs)
-    return x
+    # Compare results
+    rel_error = norm(x_cg - x_direct) / norm(x_direct)
+    
+    println("Matrix size:    n=$n  off=$off")
+    println("Relative error:            $rel_error")
+    println("Direct solver residual: ", norm(A * x_direct - b) ) 
+    println("CG     solver residual: ", norm(A * x_cg - b    ) )
 end
