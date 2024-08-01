@@ -37,10 +37,10 @@ void dotM_ax( int n, int m, const double* A, const double* x, double* out ){
 }
 
 template<typename T>
-inline void fma_ax(int n,int m, const T* f, const T* a, const T* b, T* out ){ 
+inline void fma_ax(int n,int m, const T* a, const T* b, const T* f, T* out ){ 
     //double sum[m]; 
     for (int i=0; i<n; i++ ){
-        for (int k=0; k<m; k++ ){ const int ii=i*m+k; out[ii] += a[ii] + b[ii]*f[k]; };        
+        for (int k=0; k<m; k++ ){ const int ii=i*m+k; out[ii] = a[ii] + b[ii]*f[k]; };        
     }
 }
 
@@ -48,7 +48,7 @@ template<typename T>
 inline void mul_ax(int n,int m, const T* f, const T* a,  T* out ){ 
     //double sum[m]; 
     for (int i=0; i<n; i++ ){
-        for (int k=0; k<m; k++ ){ const int ii=i*m+k; out[ii] += a[ii]*f[k]; };        
+        for (int k=0; k<m; k++ ){ const int ii=i*m+k; out[ii] = a[ii]*f[k]; };        
     }
 }
 
@@ -57,7 +57,7 @@ inline void mul_ax_(int n,int m, const T* f, const T* a,  T* out ){
     //double sum[m]; 
     for (int i=0; i<n; i++ ){
         const T fi=f[i];
-        for (int k=0; k<m; k++ ){  const int ii=i*m+k; out[ii] += a[ii]*fi; };        
+        for (int k=0; k<m; k++ ){  const int ii=i*m+k; out[ii] = a[ii]*fi; };        
     }
 }
 
@@ -110,7 +110,7 @@ class CGsolver{ public:
 
 
     int solve_m1( double tol=1e-6, int maxIters=100 ){
-        printf( "CGsolver::solve_m1()\n" );
+        //printf( "CGsolver::solve_m1()\n" );
         double alpha;
         double alpha_;
         double beta;
@@ -125,13 +125,13 @@ class CGsolver{ public:
         VecN::mul( n, invD,  res,    d  ); 
         err=VecN::dot( n, d,     res ); 
 
-        printf("x:    "); printArray(n,x);  
-        printf("Ad:   "); printArray(n,Ad);  
-        printf("b:    "); printArray(n,b); 
-        printf("res:  "); printArray(n,res);  
-        printf("invD: "); printArray(n,invD);  
-        printf("d:    "); printArray(n,d);  
-        printf("err:  %g\n", err );
+        // printf("invD: "); printArray(n,invD);  
+        // printf("x:    "); printArray(n,x);  
+        // printf("Ad:   "); printArray(n,Ad);  
+        // printf("b:    "); printArray(n,b); 
+        // printf("res:  "); printArray(n,res);  
+        // printf("d:    "); printArray(n,d);  
+        // printf("err:  %g\n", err );
 
         //exit(0);
 
@@ -140,7 +140,7 @@ class CGsolver{ public:
             dotFunc( n, d, Ad );   // Kd = K*d            
             err2=VecN::dot(n, d, Ad );
             alpha=err/err2;
-
+            //printf( "# --- iter=%i err2(%g) alpha(%g)\n", iter, err2, alpha );
             VecN::fma( n,   x,   d,  alpha, x   );  // x = x + d  * dt;
             VecN::fma( n,  res, Ad, -alpha, res );  // f = f - Kd * dt;
             VecN::mul( n,  invD  , res,     z   );  // z = f * invD;
@@ -155,10 +155,13 @@ class CGsolver{ public:
             }
             VecN::fma( n, z, d, beta, d );    // d   = f + d*(f2/f2old)
 
-            printf("x:    "); printArray(n,x);  
-            printf("res:  "); printArray(n,res);  
-            printf("z:    "); printArray(n,z); 
-            printf("d:    "); printArray(n,d); 
+            // printf("Ad:   "); printArray(n,Ad);  
+            // printf("x:    "); printArray(n,x);  
+            // printf("res:  "); printArray(n,res);  
+            // printf("z:    "); printArray(n,z); 
+            // printf("d:    "); printArray(n,d); 
+            // printf( "alpha %g \n", alpha );
+            // printf( "beta  %g \n", beta  );
             
             err = err2;
             istep++;
@@ -168,8 +171,8 @@ class CGsolver{ public:
     }
 
 
-    int solve( double tol=1e-6, int maxIters=100 ){
-        printf( "CGsolver::solve()\n" );
+    int solve( double tol=1e-6, int maxIters=2 ){
+        //printf( "CGsolver::solve()\n" );
         double alpha [m];
         double alpha_[m];
         double beta  [m];
@@ -178,38 +181,63 @@ class CGsolver{ public:
         double tol2 = tol*tol;
 
         istep = 0;
-        dotFunc( n, d, Ad);   // Kd = K*d
+        dotFunc( n, x, Ad);  
         VecN::sub( n*m, b,     Ad,    res );  
         mul_ax_  ( n,m, invD,  res,    d  ); 
         dot_ax   ( n,m, d,     res,   err ); 
         double err2tot=0;                     
-        for(int k=0;k<m;k++){ err2tot += err[k]*err[k]; }
+        for(int k=0;k<m;k++){ err2tot=fmax(err2[k],err2tot); }
+
+        // printf("invD: "); printArray(n, invD );  
+        // printf("x:    "); printArray(n,3,0, x    );  
+        // printf("Ad:   "); printArray(n,3,0, Ad   );  
+        // printf("b:    "); printArray(n,3,0, b    ); 
+        // printf("res:  "); printArray(n,3,0, res  );  
+        // printf("d:    "); printArray(n,3,0, d    );  
+        // printf("err:  %g %g %g\n", err[0], err[1], err[2] );
 
         int iter=0;
         for ( iter=0; iter<maxIters; iter++) {
             dotFunc( n, d, Ad );   // Kd = K*d            
             dot_ax(n,m, d, Ad, err2 );
 
-            for(int k=0;k<m;k++){  alpha[k]=err[k]/err2[k]; alpha_[k]=alpha[k]; }
+            for(int k=0;k<m;k++){  
+                if(err2[k]<=1e-32){ alpha[k]=0.0;  }else{  alpha[k]=err[k]/err2[k]; }; 
+                alpha_[k]=-alpha[k]; 
+            }
+
+            //printf( "# --- iter=%i err2(%g,%g,%g) alpha(%g,%g,%g)\n", iter, err2[0],err2[1],err2[2], alpha[0],alpha[1],alpha[2] );
+
+            // VecN::fma( n,   x,   d,  alpha, x   );  // x = x + d  * dt;
+            // VecN::fma( n,  res, Ad, -alpha, res );  // f = f - Kd * dt;
+            // VecN::mul( n,  invD  , res,     z   );  // z = f * invD;
 
             //printf( "### CG_step %i dt=%g rho=%g \n", istep, alpha, rho );
-            fma_ax ( n,m,  alpha,  x,    d,   x   );  // x = x + d  * dt;
-            fma_ax ( n,m,  alpha_, res, Ad,   res );  // f = f - Kd * dt;
-            mul_ax_( n,m,  invD,   res,       z   );  // z = f * invD;
+            fma_ax ( n,m,  x,    d, alpha,   x   );  // x = x + d  * dt;
+            fma_ax ( n,m,  res, Ad, alpha_,  res );  // f = f - Kd * dt;
+            mul_ax_( n,m,  invD,   res,      z   );  // z = f * invD;
 
             dot_ax(n,m, z, res, err2 );
 
-            double err2tot=0;
+            err2tot=0;         
             for(int k=0;k<m;k++){ 
-                beta[k]  = err2[k]/err[k]; 
-                err2tot += err2[k]*err2[k]; 
+                beta[k] = err2[k]/err[k]; 
+                err2tot = fmax(err2[k],err2tot); 
             }
             printf( "CGsolver: iter=%i err=%g \n", iter, err2tot );
             if( err2tot<tol2){
                 bConverged=true;
                 return err2tot;
             }
-            fma_ax( n,m, beta, res, d, d );    // d   = f + d*(f2/f2old)
+            fma_ax( n,m, z, d, beta, d );    // d   = f + d*(f2/f2old)
+
+            // printf("Ad:   "); printArray(n,3,0,Ad);  
+            // printf("x:    "); printArray(n,3,0,x);  
+            // printf("res:  "); printArray(n,3,0,res);  
+            // printf("z:    "); printArray(n,3,0,z); 
+            // printf("d:    "); printArray(n,3,0,d); 
+            // printf( "alpha %g %g %g\n", alpha[0], alpha[1], alpha[2] );
+            // printf( "beta  %g %g %g\n", beta[0], beta[1], beta[2] );
             
             for(int k=0;k<m;k++){ err[k]=err2[k]; };
             istep++;

@@ -188,10 +188,6 @@ void makeShip_Wheel( int nseg=8){
 
     // setup Conjugate-Gradient solver
     sim.cgSolver.setLinearProblem(  sim.nPoint, 3, (double*)sim.ps_cor, (double*)sim.linsolve_b );
-    sim.cgSolver.dotFunc = [&](int n, double* x, double* y){ 
-        //dotM_ax( n,3, sim.PDmat, x, y ); 
-        dotM_ax( n,1, sim.PDmat, x, y );  
-    };
     sim.cgSolver.initDiagPrecond( sim.PDmat );
     sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CG;
     //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CholeskySparse;
@@ -208,6 +204,7 @@ void makeShip_Wheel( int nseg=8){
     sim.addAngularVelocity(  p0, ax*omega );
 
     {   printf( "# ---------- Test Conjugate-Gradient ");
+        sim.cgSolver.dotFunc = [&](int n, double* x, double* y){   dotM_ax( n,1, sim.PDmat, x, y );  };
         for(int i=0; i<sim.nPoint; i++){ sim.ps_pred[i] = sim.points[i].f + sim.vel[i].f*dt; sim.ps_cor[i]=sim.ps_pred[i];  }; 
         sim.rhs_ProjectiveDynamics( sim.ps_pred, sim.linsolve_b );
         for(int i=0; i<sim.nPoint; i++){ 
@@ -215,8 +212,10 @@ void makeShip_Wheel( int nseg=8){
             ((double*)sim.ps_cor    )[i] = sim.ps_cor    [i].x;
         }
         sim.cgSolver.solve_m1(1e-6,2);
-        exit(0);
+        //exit(0);
     }
+
+    sim.cgSolver.dotFunc = [&](int n, double* x, double* y){  dotM_ax( n,3, sim.PDmat, x, y ); };
 
     //apply_torq( sim2.nPoint, p0, ax*omega, sim2.points, sim2.vel );  
     mat2file<double>( "vel_1.log", n,4, (double*)sim.vel );

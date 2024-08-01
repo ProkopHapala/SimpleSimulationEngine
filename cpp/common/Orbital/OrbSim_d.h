@@ -521,6 +521,8 @@ class OrbSim: public Picker { public:
                     Lingebra::forward_substitution_T_m( LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      nPoint,m );
                 } break;
                 case LinSolveMEthod::CG:{
+                    printf("OrbSim_d::run_LinSolve()  LinSolveMEthod::CG \n");
+                    for(int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; };
                     cgSolver.solve();
                 } break;
                 case LinSolveMEthod::CGsparse:{
