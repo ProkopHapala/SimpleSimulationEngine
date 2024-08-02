@@ -22,19 +22,20 @@ inline int insertN( int i0, int len, TYPE * x, TYPE * x ){
 */
 
 template<typename T>
-int countNonZero( int n, T* v, T tol ){
+int countNonZero( int n, const T* v, T tol ){
     int count=0;
     for(int i=0; i<n; i++){ if( fabs(v[i])>tol ){ count++; }; }
     return count;
 }
 
 template<typename T>
-int exportNonZero( int n, T* v, T tol, T* vals=0, int* inds=0 ){
+int exportNonZero( int n, const T* v, T tol, T* vals=0, int* inds=0 ){
     int count=0;
     for(int i=0; i<n; i++){
-        if( fabs(v[i])>tol ){
-            if(vals) vals[count]=v[i];
-            if(inds) inds[count]=v[i];
+        const T vi = v[i];
+        if( fabs(vi)>tol ){
+            if(vals) vals[count]=vi;
+            if(inds) inds[count]=i;
             count++;
         };
     }

@@ -20,7 +20,7 @@ namespace Lingebra{
 // =============== Cholesky solver (non-sparse)
 
 template<typename T>
-inline void CholeskyDecomp_LDLT(T* A, T* L, T* D, int n){
+inline void CholeskyDecomp_LDLT(T* A, T* L, T* D, int n, bool bTransp=false ){
     for(int j=0; j<n; j++){
         T sum = A[j*n+j];
         for(int k=0; k<j; k++){ sum -= L[j*n+k] * L[j*n+k] * D[k]; }
@@ -28,7 +28,9 @@ inline void CholeskyDecomp_LDLT(T* A, T* L, T* D, int n){
         for(int i=j+1; i<n; i++){
             sum=A[i*n+j];
             for(int k=0; k<j; k++){ sum -= L[i*n+k] * L[j*n+k] * D[k]; }
-            L[i*n+j] = sum / D[j];
+            sum /= D[j];
+            if(bTransp){ L[j*n+i]=sum; }
+            else       { L[i*n+j]=sum; };
         }
     }
 }
@@ -69,11 +71,12 @@ inline void forward_substitution_T_m(T* L, T* b, T* y, int n, int m) {
         for (int s=0; s<m; s++){ sum[s]=0.0; };
         for (int j=i+1; j<n; j++){
             double l = L[j*n+i];
-            //if( fabs(l)>tol ){  printf("L[%2i,%2i]=%20.20f\n", i,j,l); };
+            //if( fabs(l)>1e-12 ){ printf("%6i ", j ); };
             for (int s=0; s<m; s++){
                 sum[s] += l*y[j*m+s];
             }
         }
+        //printf("\n");
         for (int s=0; s<m; s++){
             int ii = i*m+s;
             y[ii]  = b[ii] - sum[s];

@@ -21,6 +21,21 @@
 #include "SparseMatrix.h"
 #include "SparseMatrix2.h"
 
+
+double checkDist(int n, const Vec3d* vec, const Vec3d* ref, int verb=1, double tol=1e-12 ){
+    double err=0;
+    for(int i=0; i<n; i++){ 
+        double ei = (vec[i]-ref[i]).norm();
+        err = fmax( err, ei );
+        if(verb>1){
+           if(ei>tol) printf( "[%i] vec(%20.10f,%20.10f,%20.10f) ref(%20.10f,%20.10f,%20.10f)\n", i, vec[i].x,vec[i].y,vec[i].z,  ref[i].x,ref[i].y,ref[i].z ); 
+        }
+    }; 
+    if( verb>0 )printf( "Err| v - ref |=%g\n", err );
+    return err;
+}
+
+
 int sortNeighs( int n, int m, int* neighs){
     //int permut[m];
     for(int i=0; i<n;i++){
@@ -161,6 +176,7 @@ class OrbSim: public Picker { public:
     int  nNeighMaxLDLT=0;
 
     SparseMatrix2<double>  Lsparse; 
+    SparseMatrix2<double>  LsparseT; 
 
 
     SparseMatrix<double> PDsparse;
@@ -169,7 +185,7 @@ class OrbSim: public Picker { public:
 
     double cg_tol             = 1e-3;
     int    cgSolver_niterdone = 0;
-    double time_cgSolver      = 0;
+    double time_LinSolver     = 0;
     double time_cg_dot        = 0;
 
 
@@ -545,6 +561,7 @@ class OrbSim: public Picker { public:
         if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_ );
 
         this->dt = dt;
+        int n2 = nPoint*nPoint;
 
         //long t0;
         //t0=getCPUticks(); make_PD_Matrix(    PDmat,    dt );         printf("@time make_PD_Matrix()    t= %g [MTicks] \n", (getCPUticks()-t0)*1.0e-6 );
@@ -602,11 +619,34 @@ class OrbSim: public Picker { public:
                 Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighsLDLT, nPoint, nNeighMaxLDLT );
                 sortNeighs( nPoint, nNeighMaxLDLT, neighsLDLT);
             }else{
+                //Lingebra::CholeskyDecomp_LDLT( PDmat, LDLT_L, LDLT_D, nPoint, true );
+                //LsparseT.fromDense( nPoint, LDLT_L, 1.e-16, true );
+                //for(int i=0; i<n2; i++){ LDLT_L[i]=0; }
                 Lingebra::CholeskyDecomp_LDLT( PDmat, LDLT_L, LDLT_D, nPoint );
+                Lsparse.fromDense( nPoint, LDLT_L, 1.e-16 );
+                LsparseT.fromFwdSubT( nPoint, LDLT_L);
+                
+
                 //mat2file<double>( "PDmat.log",  nPoint,nPoint, PDmat  );
                 //mat2file<double>( "LDLT_L.log", nPoint,nPoint, LDLT_L );
             }
-            Lsparse.fromDense( nPoint, LDLT_L, 1.e-16 );
+           
+
+            {   printf( "# ---------- Test Cholesky Lsparse \n");
+                for(int i=0; i<nPoint; i++){ ps_pred[i] = points[i].f*1.1; }; 
+                rhs_ProjectiveDynamics( ps_pred, linsolve_b );
+                Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint, 3 );
+                Lsparse.fwd_subs_m( 3,  (double*)linsolve_b,  (double*)ps_cor );
+                checkDist( nPoint, ps_cor, linsolve_yy, 2 );
+            }
+
+            //mat2file<double>( "LDLT_L.log", nPoint,nPoint, LDLT_L );
+            Lsparse.fprint_inds("Lsparse_inds.log");
+            //Lsparse.fprint_vals("Lsparse_vals.log");
+
+            LsparseT.fprint_inds("LsparseT_inds.log");
+            //LsparseT.fprint_vals("LsparseT_vals.log");
+            //exit(0);
         }
 
     }
@@ -633,39 +673,39 @@ class OrbSim: public Picker { public:
             // Compute right-hand side
             rhs_ProjectiveDynamics(ps_pred, linsolve_b );
 
-
+            long t0 = getCPUticks();
             switch( (LinSolveMethod)linSolveMethod ){
                 case LinSolveMethod::CholeskySparse:{
                     // Solve using LDLT decomposition (assuming you have this method)
-                     //solve_LDLT_sparse(b, ps_cor);
+                    //solve_LDLT_sparse(b, ps_cor);
                     Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, neighsLDLT, nNeighMaxLDLT );
                     for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
                     Lingebra::forward_substitution_transposed_sparse( nPoint,m,  LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      neighsLDLT, nNeighMaxLDLT );
                 } break;
                 case LinSolveMethod::Cholesky:{
-                    //Lingebra::forward_substitution_sparse( nPoint,m, LDLT_L, (double*)linsolve_b, (double*)ps_cor, neighsLDLT, nNeighMaxLDLT );
-                    Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint,m );
-                    //{ // Check sparse vs dense Lingebra::forward_substitution()
-                    //    double tol=1e-9; double tol2=tol*tol; bool bExit=false;
-                    //    for(int i=0; i<nPoint; i++){ Vec3d dif=ps_cor[i]-linsolve_yy[i];  if(dif.norm2()>tol2){ printf("err[i=%i]=%g sparse(%g,%g,%g) ref(%g,%g,%g) dif(%g,%g,%g) \n", linsolve_yy[i].x,linsolve_yy[i].y,linsolve_yy[i].z, ps_cor[i].x,ps_cor[i].y,ps_cor[i].z, dif.x,dif.y,dif.z);  bExit=true;};  };
-                    //    if(bExit)exit(0);
-                    //}
+                    //Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint,m );
+                    //Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)ps_cor );
+                    //if( checkDist( nPoint, ps_cor, linsolve_yy, 1 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };
+                    Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)linsolve_yy );
+                    
                     for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
-                    Lingebra::forward_substitution_T_m( LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      nPoint,m );
+                    LsparseT.fwd_subs_T_m( m,  (double*)linsolve_yy,  (double*)ps_cor );
+                    //Lingebra::forward_substitution_T_m( LDLT_L, (double*)linsolve_yy, (double*)ps_cor,      nPoint,m );
+                    //if( checkDist( nPoint, ps_pred, ps_cor, 2 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };
+
                 } break;
                 case LinSolveMethod::CG:{
                     //printf("OrbSim_d::run_LinSolve()  LinSolveMethod::CG \n");
                     for(int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; };
-
-                    long t0 = getCPUticks();
                     cg_tol = 1e-2;
                     cgSolver_niterdone += cgSolver.solve( cg_tol );
-                    time_cgSolver += (getCPUticks()-t0)*1e-6;
+                    
                 } break;
                 case LinSolveMethod::CGsparse:{
                 
                 } break;
             }
+            time_LinSolver += (getCPUticks()-t0)*1e-6;
             //mat2file<double>( "points.log",  nPoint,4, (double*)points      );
             //mat2file<double>( "vel.log",     nPoint,4, (double*)vel         );
             //mat2file<double>( "ps_pred.log", nPoint,3, (double*)ps_pred     );
