@@ -341,7 +341,7 @@ void SpaceCraftDynamicsApp::makeSoftBody(){
     //body.preparePoints( true, -1, -1 );
     body.updateInvariants();
 
-    perFrame = 10;
+    perFrame = 100;
     body.dt        = 0.00001;
     body.damp        = 0.0;
     // body.damp_stick  = 0.5;
