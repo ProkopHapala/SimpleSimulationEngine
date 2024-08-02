@@ -180,8 +180,11 @@ void makeShip_Wheel( int nseg=8){
 
     int n = sim2.nPoint;
 
+    double dt = 0.05;
+
     mat2file<int>( "neighs_before.log",  n, sim2.nNeighMax,      sim2.neighs,     "%5i " );
-    sim2.prepare_Cholesky( 0.05, 32 );
+    //sim2.prepare_Cholesky( 0.05, 32 );
+    sim2.prepare_LinearSystem( dt, true, true, true, 32 );
     mat2file<int>( "neighs_after.log",   n, sim2.nNeighMaxLDLT,  sim2.neighsLDLT, "%5i " );
 
     mat2file<double>( "PDmat.log",  n,n, sim2.PDmat  );
@@ -248,20 +251,16 @@ void SpaceCraftEditorApp::draw(){
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
-DEBUG
-
     // Render simulation
     glLineWidth(0.5); 
-DEBUG
-    //runSim( sim );
-    //renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
-DEBUG
-    //sim2.run_Cholesky(1);
-    sim2.run_LinSolve(1);
 
-DEBUG
-    renderTruss( sim2.nBonds, sim2.bonds, sim2.points, sim2.strain, 1000.0 );
-DEBUG
+    runSim( sim );
+    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+
+    //sim2.run_Cholesky(1);
+    //sim2.run_LinSolve(1);
+    //renderTruss( sim2.nBonds, sim2.bonds, sim2.points, sim2.strain, 1000.0 );
+
 
     // draw ring nodes
     glLineWidth(3.0);

@@ -32,6 +32,7 @@ int verbosity = 0;
 #include "AppSDL2OGL_3D.h"
 #include "GUI.h"
 #include "IO_utils.h"
+#include "argparse.h"
 #include "testUtils.h"
 
 //#include "EditSpaceCraft.h"
@@ -141,9 +142,8 @@ void makeShip1( int n, int m, int perRope, double L, Truss& truss, SoftBody& bod
 
 void reloadShip( const char* fname, double dt=0.05 ){
     printf("#### START reloadShip('%s')\n", fname );
-    theSpaceCraft->clear();                  // clear all components
-    //luaL_dofile(theLua, "data/spaceshil1.lua");
-    printf("#### START reloadShip('%s')\n", fname );
+    theSpaceCraft->clear();                       DEBUG
+    //luaL_dofile(theLua, "data/spaceshil1.lua"); DEBUG
     if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
     printf( "Lua::dofile(%s) DONE \n", fname );
     theSpaceCraft->checkIntegrity();
@@ -153,7 +153,7 @@ void reloadShip( const char* fname, double dt=0.05 ){
     mesh.printSizes();
     exportSim( sim, mesh, workshop );
 
-    sim.prepare_LinearSystem( dt, true, true, 32 );
+    sim.prepare_LinearSystem( dt, true, true, true, 256 );
     
     printf("#### END reloadShip('%s')\n", fname );
 };
@@ -203,10 +203,10 @@ void makeShip_Wheel( int nseg=8){
     double dt    = 0.05;
     //double dt    = 0.02;
     //double dt    = 0.01;
-
+    int n = sim.nPoint;
     mat2file<double>( "bond_params.log",  sim.nBonds,4, (double*)sim.bparams  );
     mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim.neighs,     "%5i " );
-    sim.prepare_LinearSystem( dt, true, true, 32 );
+    sim.prepare_LinearSystem( dt, true, true, true, 32 );
 
     mat2file<int>( "neighs_after.log",   n, sim.nNeighMaxLDLT,  sim.neighsLDLT, "%5i " );
     mat2file<double>( "PDmat.log",  n,n, sim.PDmat  );
@@ -350,6 +350,9 @@ SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_, 
     //Lua1.init();
     fontTex     = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
+
+    theSpaceCraft = new SpaceCraft();
+    initSpaceCraftingLua();
     if(argc<=1){
         //makeSoftBody();
         //reloadShip( "data/ship_ICF_interceptor_1.lua" );
@@ -513,7 +516,7 @@ void SpaceCraftDynamicsApp::eventHandling ( const SDL_Event& event  ){
 }
 
 // ===================== MAIN
-
+LambdaDict funcs;
 SpaceCraftDynamicsApp * app;
 
 int main(int argc, char *argv[]){

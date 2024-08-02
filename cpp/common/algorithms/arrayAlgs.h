@@ -155,8 +155,8 @@ int insertSort_reverse( int n, int* permut, const T* data ){
 
 
 //1 2 1 2.0000
-template< class TYPE >
-inline int binSearchBetween( TYPE x, int imax, TYPE * xs ){
+template< class T >
+inline int binSearchBetween( T x, int imax, const T* xs ){
 	int di   = imax;
 	int imin = 0;
 	do{
@@ -169,8 +169,8 @@ inline int binSearchBetween( TYPE x, int imax, TYPE * xs ){
 	return imin;
 }
 
-template< class TYPE >
-inline int binSearchFrom( TYPE x, int n, TYPE * xs ){
+template< class T >
+inline int binSearchFrom( T x, int n, const T * xs ){
 	int   i = 1;
 	do{
         i  = i << 1;

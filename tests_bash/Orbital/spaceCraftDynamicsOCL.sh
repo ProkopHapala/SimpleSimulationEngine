@@ -29,10 +29,10 @@ ln -s $dir/$name .
 
 # ====== RUN
 
-./$name
+#./$name
 #./$name -s data/ship_ICF_interceptor_1.lua
 #./$name -s data/ship_ICF_marksman_1.lua
-#./$name -s data/ship_ICF_marksman_2.lua
+./$name -s data/ship_ICF_marksman_2.lua
 #./$name -s data/ship_NFPP_pendulum_1.lua
 #./$name -s data/ship_NTR_marksman_1.lua
 #./$name -s data/colony_1.lua

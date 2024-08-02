@@ -270,7 +270,7 @@ int l_Girder  (lua_State * L){
     o->mseg = Lua::getInt (L,5);
               Lua::getVec2(L,6, o->wh ); 
     const char * matn = Lua::getString(L,7);
-            Lua::getVec4i(L,8, o->st );
+              Lua::getVec4i(L,8, o->st );
     o->face_mat = workshop.panelMaterials.getId( matn );
     o->id     = theSpaceCraft->girders.size();
     if(verbosity>1) o->print();

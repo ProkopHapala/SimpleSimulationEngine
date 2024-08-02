@@ -113,6 +113,8 @@ inline uint64_t getCPUticks(){
     return (uint64_t)hi << 32 | lo;
 }
 
+template<typename Func> void timeit( const char* fmt, double scale, Func func ){ long t0=getCPUticks(); func(); printf( fmt, (getCPUticks()-t0)*scale ); }
+
 class StopWatch{ public:
     long t1;
     double T;
