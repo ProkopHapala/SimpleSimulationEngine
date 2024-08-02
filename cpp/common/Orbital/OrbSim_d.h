@@ -473,12 +473,40 @@ class OrbSim: public Picker { public:
         _realloc0(  linsolve_yy,nPoint, Vec3dZero);
     }
 
-    void prepare_Cholesky( double dt, int nNeighMaxLDLT_ ){ 
-        printf( "OrbSim_d::prepare_Cholesky() dt=%g nNeighMaxLDLT_=%i\n", dt, nNeighMaxLDLT_ );
-        realloc_Cholesky( nNeighMaxLDLT_ );
+    void prepare_LinearSystem( double dt, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32 ){ 
+        printf( "OrbSim_d::prepare_LinearSystem() dt=%g nNeighMaxLDLT_=%i\n", dt, nNeighMaxLDLT_ );
+        
+        this->dt = dt;
+        int n = sim.nPoint;
+
         make_PD_Matrix( PDmat, dt ); 
-        for(int i=0; i<nPoint; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>=nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=neighs[i*nNeighMax+j]; };  } }
-        Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighsLDLT, nPoint, nNeighMaxLDLT );
+
+        if( bCG ){
+            // setup Conjugate-Gradient solver
+            cgSolver.setLinearProblem(  nPoint, 3, (double*)ps_cor, (double*)linsolve_b );
+            cgSolver.initDiagPrecond( PDmat );
+            cgSolver.dotFunc = [&](int n, double* x, double* y){  dotM_ax( n,3, PDmat, x, y ); };
+        
+            // {   printf( "# ---------- Test Conjugate-Gradient ");
+            //     cgSolver.dotFunc = [&](int n, double* x, double* y){   dotM_ax( n,1, PDmat, x, y );  };
+            //     for(int i=0; i<nPoint; i++){ ps_pred[i] = points[i].f + vel[i].f*dt; ps_cor[i]=ps_pred[i];  }; 
+            //     rhs_ProjectiveDynamics( ps_pred, linsolve_b );
+            //     for(int i=0; i<nPoint; i++){ 
+            //         ((double*)linsolve_b)[i] = linsolve_b[i].x;
+            //         ((double*)ps_cor    )[i] = ps_cor    [i].x;
+            //     }
+            //     cgSolver.solve_m1(1e-6,2);
+            //     //exit(0);
+            // }
+        }
+        
+        if( bCholesky ){
+            realloc_Cholesky( nNeighMaxLDLT_ );
+            for(int i=0; i<nPoint; i++){  for(int j=0; j<nNeighMaxLDLT; j++){ if(j>=nNeighMax){neighsLDLT[i*nNeighMaxLDLT+j]=-1;}else{ neighsLDLT[i*nNeighMaxLDLT+j]=neighs[i*nNeighMax+j]; };  } }
+            Lingebra::CholeskyDecomp_LDLT_sparse( PDmat, LDLT_L, LDLT_D, neighsLDLT, nPoint, nNeighMaxLDLT );
+            sortNeighs( nPoint, nNeighMaxLDLT, neighsLDLT);
+        }
+
     }
 
     void run_LinSolve(int niter) {

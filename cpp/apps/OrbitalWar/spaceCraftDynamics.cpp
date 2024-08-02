@@ -135,8 +135,28 @@ void truss2SoftBody( const Truss& truss, BondType* bondTypes, SoftBody& body ){
 void makeShip1( int n, int m, int perRope, double L, Truss& truss, SoftBody& body, BondType* bondTypes ){
     printf( "makeShip1()\n" );
     makeShipTruss1( truss, n, m, L, perRope );
-    truss2SoftBody( truss, &bondTypes[0], body );
+    //truss2SoftBody( truss, &bondTypes[0], body );
 }
+
+
+void reloadShip( const char* fname, double dt=0.05 ){
+    printf("#### START reloadShip('%s')\n", fname );
+    theSpaceCraft->clear();                  // clear all components
+    //luaL_dofile(theLua, "data/spaceshil1.lua");
+    printf("#### START reloadShip('%s')\n", fname );
+    if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
+    printf( "Lua::dofile(%s) DONE \n", fname );
+    theSpaceCraft->checkIntegrity();
+
+    mesh.clear();
+    BuildCraft_truss( mesh, *theSpaceCraft, 30.0 );
+    mesh.printSizes();
+    exportSim( sim, mesh, workshop );
+
+    sim.prepare_LinearSystem( dt, true, true, 32 );
+    
+    printf("#### END reloadShip('%s')\n", fname );
+};
 
 void makeShip_Wheel( int nseg=8){
     printf("makeShip_Wheel()\n");
@@ -147,6 +167,8 @@ void makeShip_Wheel( int nseg=8){
     //st2  = StickMaterial( "GS1_perp", "Steel", 0.05, 0.003 )
     //st3  = StickMaterial( "GS1_in",   "Steel", 0.04, 0.002 )
     //st4  = StickMaterial( "GS1_out",  "Steel", 0.04, 0.002 )
+
+    // ---------- Truss Generation
 
     workshop.add_Material     ( "Steel", 7.89e+3, 1.2e+9, 1.2e+9, 200.0e+9, 200.0e+9, 0.85, 800 );
     workshop.add_StickMaterial( "GS1_long", "Steel", 0.1, 0.005, 0.0 );
@@ -175,49 +197,28 @@ void makeShip_Wheel( int nseg=8){
     for(int i=0; i<sim.nBonds; i++) sim.bparams[i].y=100000.0;
     //sim2.printAllNeighs();
 
+    // ------ Linear System Preparation
+
     double omega = 1.0;
     double dt    = 0.05;
     //double dt    = 0.02;
     //double dt    = 0.01;
 
     mat2file<double>( "bond_params.log",  sim.nBonds,4, (double*)sim.bparams  );
-    
-
-    sim.dt = dt;
-    int n = sim.nPoint;
     mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim.neighs,     "%5i " );
-    sim.prepare_Cholesky( dt, 32 );
+    sim.prepare_LinearSystem( dt, true, true, 32 );
 
-    // setup Conjugate-Gradient solver
-    sim.cgSolver.setLinearProblem(  sim.nPoint, 3, (double*)sim.ps_cor, (double*)sim.linsolve_b );
-    sim.cgSolver.initDiagPrecond( sim.PDmat );
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CG;
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CholeskySparse;
-    sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::Cholesky;
-
-    sortNeighs( sim.nPoint, sim.nNeighMaxLDLT, sim.neighsLDLT);
     mat2file<int>( "neighs_after.log",   n, sim.nNeighMaxLDLT,  sim.neighsLDLT, "%5i " );
-
     mat2file<double>( "PDmat.log",  n,n, sim.PDmat  );
     mat2file<double>( "LDLT_L.log", n,n, sim.LDLT_L );
     mat2file<double>( "LDLT_D.log", n,1, sim.LDLT_D );
 
+    sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CG;
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CholeskySparse;
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::Cholesky;
+
     sim.cleanVel();
     sim.addAngularVelocity(  p0, ax*omega );
-
-    // {   printf( "# ---------- Test Conjugate-Gradient ");
-    //     sim.cgSolver.dotFunc = [&](int n, double* x, double* y){   dotM_ax( n,1, sim.PDmat, x, y );  };
-    //     for(int i=0; i<sim.nPoint; i++){ sim.ps_pred[i] = sim.points[i].f + sim.vel[i].f*dt; sim.ps_cor[i]=sim.ps_pred[i];  }; 
-    //     sim.rhs_ProjectiveDynamics( sim.ps_pred, sim.linsolve_b );
-    //     for(int i=0; i<sim.nPoint; i++){ 
-    //         ((double*)sim.linsolve_b)[i] = sim.linsolve_b[i].x;
-    //         ((double*)sim.ps_cor    )[i] = sim.ps_cor    [i].x;
-    //     }
-    //     sim.cgSolver.solve_m1(1e-6,2);
-    //     //exit(0);
-    // }
-
-    sim.cgSolver.dotFunc = [&](int n, double* x, double* y){  dotM_ax( n,3, sim.PDmat, x, y ); };
 
     //apply_torq( sim2.nPoint, p0, ax*omega, sim2.points, sim2.vel );  
     mat2file<double>( "vel_1.log", n,4, (double*)sim.vel );
@@ -513,12 +514,17 @@ void SpaceCraftDynamicsApp::eventHandling ( const SDL_Event& event  ){
 
 // ===================== MAIN
 
-SpaceCraftDynamicsApp * thisApp;
+SpaceCraftDynamicsApp * app;
 
 int main(int argc, char *argv[]){
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 
+
+    printf( "argc %i \n", argc );
+    // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
+    //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
+    funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
 
 	// https://www.opengl.org/discussion_boards/showthread.php/163904-MultiSampling-in-SDL
 	//https://wiki.libsdl.org/SDL_GLattr
@@ -540,9 +546,10 @@ int main(int argc, char *argv[]){
 	int junk;
     SDL_DisplayMode dm;
     SDL_GetDesktopDisplayMode(0, &dm);
-	thisApp = new SpaceCraftDynamicsApp( junk , dm.w-150, dm.h-100, argc, argv );
+	app = new SpaceCraftDynamicsApp( junk , dm.w-150, dm.h-100, argc, argv );
+    process_args( argc, argv, funcs );
 	//thisApp = new SpaceCraftDynamicsApp( junk , 800, 600 );
-	thisApp->loop( 1000000 );
+	app->loop( 1000000 );
 	return 0;
 }
 
