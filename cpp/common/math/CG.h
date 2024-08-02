@@ -63,6 +63,8 @@ inline void mul_ax_(int n,int m, const T* f, const T* a,  T* out ){
 
 //template<void dotFunc(int nx, int ny, double* x, double* y)>
 class CGsolver{ public:
+    double err2tot=0;
+
     int n;  // dimension of vectro 
     int m;  // number of rhs
     // temp
@@ -108,7 +110,7 @@ class CGsolver{ public:
         x=x_; b=b_;
     }
 
-
+    __attribute__((hot)) 
     int solve_m1( double tol=1e-6, int maxIters=100, bool bPrint=false ){
         if(bPrint)printf( "CGsolver::solve_m1() tol=%g  maxIters=%i \n", tol, maxIters );
         double alpha;
@@ -169,7 +171,7 @@ class CGsolver{ public:
         return iter;
     }
 
-
+    __attribute__((hot)) 
     int solve( double tol=1e-6, int maxIters=100, bool bPrint=false ){
         if(bPrint)printf( "CGsolver::solve() tol=%g  maxIters=%i \n", tol, maxIters );
         double alpha [m];
@@ -184,7 +186,7 @@ class CGsolver{ public:
         VecN::sub( n*m, b,     Ad,    res );  
         mul_ax_  ( n,m, invD,  res,    d  ); 
         dot_ax   ( n,m, d,     res,   err ); 
-        double err2tot=0;                     
+        err2tot=0;                     
         for(int k=0;k<m;k++){ err2tot=fmax(err2[k],err2tot); }
 
         // printf("invD: "); printArray(n, invD );  
@@ -226,7 +228,7 @@ class CGsolver{ public:
             if(bPrint)printf( "CGsolver[iter=%i] err=%g \n", iter, err2tot );
             if( err2tot<tol2){
                 bConverged=true;
-                return err2tot;
+                return iter;
             }
             fma_ax( n,m, z, d, beta, d );    // d   = f + d*(f2/f2old)
 
@@ -246,6 +248,85 @@ class CGsolver{ public:
         return iter;
     }
 
+    __attribute__((hot)) 
+    int solve_lm( double tol=1e-6, int niter=100, bool bPrint=false ){
+        double alpha [m];
+        double beta  [m];
+        double err   [m];
+        double err2  [m];
+        double tol2 = tol*tol;
+
+        //invD = 1.0/D;
+        dotFunc( n, d, Ad);
+        
+        for(int k=0;k<m;k++){ err[k]=0; };
+        for(int i=0; i<n; i++){
+            const double indDi = invD[i];
+            for(int k=0; k<m; k++){
+                const int ik = i*m+k; 
+                const double ri  = b[ik] - Ad[ik];
+                const double zi  = ri * indDi;
+                err[k ]    += ri * zi;
+                res[ik]    =  ri;
+                d  [ik]    =  zi;
+            }
+        }
+        int iter=0;
+        for (iter=0; iter<niter; iter++ ){
+            dotFunc( n, d, Ad);
+            
+            for(int k=0;k<m;k++){ err2[k]=0; };
+            for(int i=0; i<n; i++){
+                for(int k=0; k<m; k++){
+                    const int ik = i*m+k;
+                    err2[k]     += d[ik]*Ad[ik];
+                }
+            }
+
+            for(int k=0;k<m;k++){  
+                if(err2[k]<=1e-32){ alpha[k]=0.0;  }else{  alpha[k]=err[k]/err2[k]; }; 
+            }
+
+            for(int k=0;k<m;k++){ err2[k]=0; };
+            for(int i=0; i<n; i++){
+                const double indDi = invD[i];
+                for(int k=0; k<m; k++){
+                    const int   ik  = i*m+k;
+                    const double a  = alpha[k];
+                    const double xi = x  [ik] + d [ik]*a;
+                    const double ri = res[ik] - Ad[ik]*a;
+                    const double zi =           ri    *indDi;
+                    x   [ik]    = xi;
+                    res [ik]    = ri;
+                    z   [ik]    = zi;
+                    err2[k]    += zi*ri;  
+                }
+            }
+        
+            err2tot=0;         
+            for(int k=0;k<m;k++){ 
+                beta[k] = err2[k]/err[k]; 
+                err2tot = fmax(err2[k],err2tot); 
+            }
+            if(bPrint)printf( "CGsolver[iter=%i] err=%g \n", iter, err2tot );
+            if( err2tot<tol2){
+                bConverged=true;
+                return iter;
+            }
+
+            for(int i=0; i<n; i++){
+                for(int k=0; k<m; k++){
+                    const int ik = i*m+k;
+                    d[ik] = d[ik]*beta[k] + z[ik];
+                }
+            }
+            for(int k=0;k<m;k++){ err[k]=err2[k]; };
+            istep++;
+        }
+        return iter;
+    }
+
+    __attribute__((hot)) 
     int solve_l( double tol=1e-6, int niter=100 ){
         double tol2 = tol*tol;
         //invD = 1.0/D;
@@ -292,6 +373,10 @@ class CGsolver{ public:
         }
         return iter;
     }
+
+
+
+
 
 
 /*

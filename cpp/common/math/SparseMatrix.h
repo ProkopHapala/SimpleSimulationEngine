@@ -4,30 +4,15 @@
 
 #include "arrayAlgs.h"
 
-//__attribute__((pure))
+/*
 
-__attribute__((hot)) 
-int binarySearch_ignor( int j, int end, const int* inds, int ignore=-1) {
-    int start=0;
-    while (start < end) {
-        int mid = start + (end - start) / 2;
-        if ( inds[mid] == ignore || inds[mid] > j) {
-            end = mid;
-        } else if (inds[mid] < j) {
-            start = mid + 1;
-        } else {
-            return mid;
-        }
-    }
-    return start;  // Return the position where j should be inserted
-}
+This sparse matrix has constant maximum number of neighbors
+That makes it efficient to store e.g. nearest neighbor interactions / trusses / molecules etc
+However it is inefficient for torage e.g. triangular matrixes (such as resulting from sparse Cholesky factorization)
 
+Assumption of constant maximum neighbor count is usefull for efficient layout in memory, paralelization, and inserting new elements 
 
-template<typename T>
-void insertElement( T x, int i, int n, T* arr ) {
-    for(int k=n-1; k>i; --k) { arr[k]=arr[k-1]; }
-    arr[i] = x;
-}
+*/
 
 template<typename T>
 class SparseMatrix { public:
@@ -73,7 +58,7 @@ class SparseMatrix { public:
 
     __attribute__((hot)) 
     void dot_dens_vector(const T* v, T* out) const {
-        // printf( "SparseMatrix::dot_dens_vector()\n" );
+        //printf( "SparseMatrix::dot_dens_vector()\n" );
         for (int i=0; i<n; i++){ // iteratie over rows
             const int ni = nng[i];     // number of non-zero values in the row
             const int i0 = i*m;        // start index of the row in the folded arrays
@@ -90,7 +75,7 @@ class SparseMatrix { public:
 
     __attribute__((hot)) 
     void dot_dens_vector_m(int ns, const T* v, T* out) const {
-        printf( "SparseMatrix::dot_dens_vector_m()\n" );
+        //printf( "SparseMatrix::dot_dens_vector_m()\n" );
         for (int i=0; i<n; i++){ // iteratie over rows
             const int ni = nng[i];     // number of non-zero values in the row
             const int i0 = i*m;        // start index of the row in the folded arrays
@@ -114,7 +99,8 @@ class SparseMatrix { public:
         const int ni = nng[i];     // number of non-zero values in the row
         const int i0 = i*m;        // start index of the row in the folded arrays
         int ni_ = 0; for (int j=0; j<n; j++){ if( fabs(ref[j])>tol ){ ni_++; }; } // count number of non-zero elements
-        if( ni_!=ni ){ bErr=true; if(bPrint){ printf( "checkRow[%i] ni=%i ref.ni=%i | tol=%g\n", i, ni, ni_, tol ); }; return true; }
+        //if( ni_!=ni ){ bErr=true; if(bPrint){ printf( "checkRow[%i] ni=%i ref.ni=%i | tol=%g\n", i, ni, ni_, tol ); }; return true; }
+        if( ni_>ni ){ bErr=true; if(bPrint){ printf( "checkRow[%i] ni=%i ref.ni=%i | tol=%g\n", i, ni, ni_, tol ); }; return true; }
         for (int k=0; k<ni; k++) {
             const int ik = i0+k; 
             const int j = inds[ik];

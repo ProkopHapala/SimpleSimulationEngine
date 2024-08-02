@@ -140,7 +140,7 @@ void makeShip1( int n, int m, int perRope, double L, Truss& truss, SoftBody& bod
 }
 
 
-void reloadShip( const char* fname, double dt=0.05 ){
+void reloadShip( const char* fname, double dt=0.02 ){
     printf("#### START reloadShip('%s')\n", fname );
     theSpaceCraft->clear();                       DEBUG
     //luaL_dofile(theLua, "data/spaceshil1.lua"); DEBUG
@@ -154,6 +154,12 @@ void reloadShip( const char* fname, double dt=0.05 ){
     exportSim( sim, mesh, workshop );
 
     sim.prepare_LinearSystem( dt, true, true, true, 256 );
+    sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
+
+    sim.cleanVel();
+    sim.addAngularVelocity( Vec3dZero, Vec3dZ*0.01 );
     
     printf("#### END reloadShip('%s')\n", fname );
 };
@@ -213,9 +219,9 @@ void makeShip_Wheel( int nseg=8){
     mat2file<double>( "LDLT_L.log", n,n, sim.LDLT_L );
     mat2file<double>( "LDLT_D.log", n,1, sim.LDLT_D );
 
-    sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CG;
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::CholeskySparse;
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMEthod::Cholesky;
+    sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
+    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
 
     sim.cleanVel();
     sim.addAngularVelocity(  p0, ax*omega );
@@ -333,7 +339,7 @@ void SpaceCraftDynamicsApp::makeSoftBody(){
     //body.preparePoints( true, -1, -1 );
     body.updateInvariants();
 
-    perFrame = 100;
+    perFrame = 10;
     body.dt        = 0.00001;
     body.damp        = 0.0;
     // body.damp_stick  = 0.5;
@@ -342,7 +348,15 @@ void SpaceCraftDynamicsApp::makeSoftBody(){
 }
 
 void SpaceCraftDynamicsApp::drawSim(){
-    sim.run_LinSolve(1);
+
+    //timeit( "TIME sim.run_LinSolve(perFrame) T = %g [ms]\n", 1e-6, [&](){sim.run_LinSolve(perFrame);});
+    
+    long t0 = getCPUticks();  sim.time_cgSolver=0; sim.time_cg_dot=0; sim.cgSolver_niterdone=0;
+    sim.run_LinSolve(perFrame);
+    double time_run_LinSolve = (getCPUticks()-t0)*1e-6;
+    printf( "TIME run: %g [Mticks] CG: %g(%g\%) dot: %g(%g\%) niter_av=%g err2tot=%g \n", time_run_LinSolve, sim.time_cgSolver,   100*sim.time_cgSolver/time_run_LinSolve, sim.time_cg_dot, 100*sim.time_cg_dot/time_run_LinSolve, sim.cgSolver_niterdone/((double)perFrame), sim.cgSolver.err2tot );
+
+
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 };
 

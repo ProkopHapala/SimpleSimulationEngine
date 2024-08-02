@@ -21,6 +21,49 @@ inline int insertN( int i0, int len, TYPE * x, TYPE * x ){
 }
 */
 
+template<typename T>
+int countNonZero( int n, T* v, T tol ){
+    int count=0;
+    for(int i=0; i<n; i++){ if( fabs(v[i])>tol ){ count++; }; }
+    return count;
+}
+
+template<typename T>
+int exportNonZero( int n, T* v, T tol, T* vals=0, int* inds=0 ){
+    int count=0;
+    for(int i=0; i<n; i++){
+        if( fabs(v[i])>tol ){
+            if(vals) vals[count]=v[i];
+            if(inds) inds[count]=v[i];
+            count++;
+        };
+    }
+    return count;
+}
+
+__attribute__((hot)) 
+inline int binarySearch_ignor( int j, int end, const int* inds, int ignore=-1) {
+    int start=0;
+    while (start < end) {
+        int mid = start + (end - start) / 2;
+        if ( inds[mid] == ignore || inds[mid] > j) {
+            end = mid;
+        } else if (inds[mid] < j) {
+            start = mid + 1;
+        } else {
+            return mid;
+        }
+    }
+    return start;  // Return the position where j should be inserted
+}
+
+
+template<typename T>
+void insertElement( T x, int i, int n, T* arr ) {
+    for(int k=n-1; k>i; --k) { arr[k]=arr[k-1]; }
+    arr[i] = x;
+}
+
 template< typename T, typename CondFunc >
 inline int prune( int n, T* arr, CondFunc cond ){
     if(n==1){ if( cond( arr[0] ) ) {return 0;} else {return 1; } };
