@@ -4,6 +4,7 @@
 #using Plots
 
 using LinearAlgebra
+using SparseArrays
 using Random
 
 using DataStructures
@@ -300,4 +301,91 @@ function test_CG(  n::Int64=3; bPre::Bool=:false, off::Float64=0.1, nIterMax::In
     println("Relative error:            $rel_error")
     println("Direct solver residual: ", norm(A * x_direct - b) ) 
     println("CG     solver residual: ", norm(A * x_cg - b    ) )
+end
+
+
+function CGNE(A::SparseMatrixCSC{T}, b::Vector{T}; tol::T=1e-10, maxiter::Int=1000) where T<:AbstractFloat
+    m, n = size(A)
+    x = zeros(T, n)
+    r = copy(b)
+    p = A' * r
+    rsold = dot(r, r)
+
+    for iter in 1:maxiter
+        Ap = A * p
+        alpha = rsold / dot(p, p)
+        x .+= alpha .* p
+        r .-= alpha .* Ap
+        rsnew = dot(r, r)
+
+        if sqrt(rsnew) < tol
+            return x, iter
+        end
+
+        beta = rsnew / rsold
+        p = A' * r + beta * p
+        rsold = rsnew
+    end
+
+    error("CGNE did not converge within the maximum number of iterations.")
+end
+
+# Example usage
+function test_CGNE( n::Int64=3; maxiter::Int64=100, tol::Float64=1e-6  )
+    # Create a sample sparse matrix
+    A = sprand(n, n, 0.1)
+    #A = A' * A  # Make it symmetric positive definite
+    
+    # Create a sample right-hand side vector
+    b = randn(100)
+    
+    # Solve the system
+    x, iterations = CGNE(A, b, tol=tol, maxiter=maxiter )
+    
+    println("Solution found in $iterations iterations.")
+    println("Relative error: ", norm(A*x - b) / norm(b))
+end
+
+function approximate_inverse_cgne(A::SparseMatrixCSC{T}; tol::T=1e-10, maxiter::Int=1000) where T<:AbstractFloat
+    n = size(A, 1)
+    A_inv = spzeros(T, n, n)
+    
+    for i in 1:n
+        e_i = sparsevec([i], [one(T)], n)
+        x, iterations = CGNE(A, Array(e_i), tol=tol, maxiter=maxiter)
+        A_inv[:, i] = x
+        println("Column $i completed in $iterations iterations")
+    end
+    
+    return A_inv
+end
+
+function test_cgne_inverse()
+    # Create a sample sparse matrix
+    n = 100
+    A = sprandn(n, n, 0.1)
+    A = A'A + 10I  # Make it symmetric positive definite and well-conditioned
+    
+    # Compute the approximate inverse using CGNE
+    A_inv_approx = approximate_inverse_cgne(A)
+    
+    # Compute the true inverse for comparison
+    A_inv_true = inv(Matrix(A))
+    
+    # Compute the error
+    #error_frobenius = norm(A_inv_approx - A_inv_true) / norm(A_inv_true)
+    #println("Relative Frobenius norm error: ", error_frobenius)
+    
+    # Test the quality of the inverse
+    #I_approx = A * A_inv_approx
+    #I_error = norm(I_approx - I) / norm(I)
+    #println("Relative error in I - A * A_inv: ", I_error)
+    
+    # Visualize a few elements for comparison
+    println("\nComparison of a few elements:")
+    for i in 1:min(5, n)
+        for j in 1:min(5, n)
+            println("A_inv[$i, $j]: Approx = $(A_inv_approx[i,j]), True = $(A_inv_true[i,j])")
+        end
+    end
 end

@@ -45,10 +45,68 @@ class SparseMatrix2 { public:
         if( inds[k] == j ){ return vals[i0s+k]; }else{ return 0; };
     }
 
+
+
+
+    __attribute__((hot)) 
+    void fwd_subs_mi( int i, int ns, const T* b, T* x ){
+        //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
+        T sum[ns];
+        for(int s=0;s<ns;s++){ sum[s]=0.0; }
+        const int i0 = i0s [i];
+        const int ni = nngs[i];
+        for (int k=0; k<ni; k++){
+            const int ik = i0+k;
+            const int j  = inds[ik]*ns;
+            const T   l  = vals[ik];  
+            for(int s=0;s<ns;s++){ sum[s]+=l*x[j+s]; }
+        }
+        for(int s=0;s<ns;s++){ 
+            const int ii=i*ns+s; x[ii]=b[ii]-sum[s]; 
+        }
+    }
+    __attribute__((hot)) 
+    void fwd_subs_m_( int ns, const T* b, T* x ){
+        //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
+        T sum[ns];
+        for (int i=0; i<n; i++){
+            fwd_subs_mi( i, ns, b, x );
+        }
+    }
+    
+    __attribute__((hot)) 
+    void fwd_subs_T_mi( int i, int ns, const T* b, T* x ){
+        //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
+        T sum[ns];
+        for(int s=0;s<ns;s++){ sum[s]=0.0; }
+        const int i0 = i0s [i];
+        const int ni = nngs[i];
+        for (int k=0; k<ni; k++){
+            const int ik = i0+k;
+            const int j  = inds[ik]*ns;
+            const T   l  = vals[ik];  
+            for(int s=0;s<ns;s++){ sum[s]+=l*x[j+s]; }
+        }
+        for(int s=0;s<ns;s++){ 
+            const int ii=i*ns+s; x[ii]=b[ii]-sum[s]; 
+        }
+    }
+
+    void fwd_subs_T_m_( int ns, const T* b, T* x ){
+        //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
+        T sum[ns];
+        for (int i=n-1; i>=0; i--){
+            fwd_subs_T_mi( ns, b, x );
+        }
+    }
+
+
+
     __attribute__((hot)) 
     void fwd_subs_m( int ns, const T* b, T* x ){
         //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
         T sum[ns];
+        #pragma omp simd
         for (int i=0; i<n; i++){
             for(int s=0;s<ns;s++){ sum[s]=0.0; }
             const int i0 = i0s [i];
@@ -69,6 +127,7 @@ class SparseMatrix2 { public:
     void fwd_subs_T_m( int ns, const T* b, T* x ){
         //printf("SparseMatrix2::fwd_subs_m() [i=%i] ", i);
         T sum[ns];
+        #pragma omp simd
         for (int i=n-1; i>=0; i--){
             for(int s=0;s<ns;s++){ sum[s]=0.0; }
             const int i0 = i0s [i];

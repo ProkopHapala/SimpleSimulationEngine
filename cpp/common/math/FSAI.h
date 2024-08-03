@@ -195,6 +195,114 @@ std::vector<double> apply_preconditioner(const std::vector<double>& G, const std
 }
 
 
+    void CGNE( int n, double* A, double* g_i, double* b, int niter=100 ){
+
+        // // Step 3: Solve the least squares problem using Conjugate Gradient Normal Equation (CGNE)
+        // std::vector<double> g_i(pattern_size, 0.0);
+        
+        std::vector<double> r   (n);
+        std::vector<double> p   (n);
+        std::vector<double> Ap  (n);
+        std::vector<double> AtAp(n);
+
+        for (int iter=0; iter<niter; ++iter) {
+            // Compute A^T * A * p
+            for (int k = 0; k < n; ++k) {
+                double Api = 0.0;
+                for (int l = 0; l < n; ++l) {
+                    Api += A[l*n+k] * p[l];
+                }
+                Ap[k] = Api;
+            }
+            for (int k = 0; k < n; ++k) {
+                double AtApi=0.0;
+                for (int l = 0; l < n; ++l) {
+                    AtApi += A[k*n+l] * Ap[l];
+                }
+                AtAp[k]=AtApi;
+            }
+
+            double alpha = 0.0;
+            double pAtAp = 0.0;
+            for (int k = 0; k < n; ++k) {
+                alpha += r[k] * r[k];
+                pAtAp += p[k] * AtAp[k];
+            }
+            alpha /= pAtAp;
+
+            for (int k = 0; k < n; ++k) {
+                g_i[k] += alpha * p[k];
+                r  [k] -= alpha * AtAp[k];
+            }
+
+            double beta = 0.0;
+            for (int k = 0; k < n; ++k) {
+                beta += r[k] * r[k];
+            }
+            if (sqrt(beta) < 1e-10) break;  // Convergence check
+
+            beta /= alpha * pAtAp;
+
+            for (int k = 0; k < n; ++k) {
+                p[k] = r[k] + beta * p[k];
+            }
+        }
+    }
+
+
+void sparse_fsai( const SparseMatrix& A, int niter=100 ) {
+    int n = A.n;
+    std::vector<double> G(n*n, 0.0);  // Initialize G as a dense matrix for simplicity
+
+    for (int i=0; i<n; ++i){ // loop over rows
+        // Step 1: Determine the sparsity pattern for row i
+        std::vector<int> pattern;
+        int ni = A.lens[i];
+        int i0 = A.i0s[i];
+        const int* indi = A.indexed + i0;
+        for (int k = 0; k < ni; ++k) {
+            if (indi[k] <= i) {    // only upper triangular (?)
+                pattern.push_back(indi[k]);
+            }
+        }
+
+        //if (pattern.size() > ni_max) {  pattern.resize(ni_max); }   // Ensure we don't exceed p non-zero elements
+        //int pattern_size = pattern.size();
+
+        // Step 2: Set up the least squares problem
+        std::vector<double> A_i(ni*ni,0.0);
+        std::vector<double> b_i(ni, 0.0);
+        std::vector<double> g_i(ni, 0.0);
+
+        // Build local linear system Ai*bi=gi  to fit one row of approximate matrix G   
+        for (int k=0; k<ni; ++k){
+            int row = pattern[k];
+            int row_ni = A.lens[row];
+            int row_i0 = A.i0s[row];
+            const int*    row_indi   = A.indexed + row_i0;
+            const double* row_values = A.values  + row_i0;
+            for (int l=0; l<ni; ++l){
+                int col = pattern[l];
+                for (int m = 0; m < row_ni; ++m){
+                    if (row_indi[m] == col){
+                        A_i[ k*ni + l ] = row_values[m];
+                        break;
+                    }
+                }
+            }
+            if(row==i){  b_i[k]=1.0;  }  // basis vectors like b4 = {0,0,0,1,0,0}
+        }
+
+        
+        CGNE( ni, A_i.data(), g_i.data(), b_i.data(), niter );
+
+        for (int k=0; k<ni; ++k) {
+            int j = pattern[k];
+            G[i*n+j] = g_i[k];
+        }
+
+    }  // for i     // loop over rows
+}
 
 std::vector<double> sparse_preserving_fsai(const SparseMatrix& A, int p) {
     int n = A.n;
@@ -244,6 +352,7 @@ std::vector<double> sparse_preserving_fsai(const SparseMatrix& A, int p) {
                 b[k] = 1.0;
             }
         }
+
 
         // Step 3: Solve the least squares problem using Conjugate Gradient Normal Equation (CGNE)
         std::vector<double> g_i(pattern_size, 0.0);

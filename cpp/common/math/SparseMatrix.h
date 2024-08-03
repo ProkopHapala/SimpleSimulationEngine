@@ -3,6 +3,7 @@
 #define  SparseMatrix_h
 
 #include "arrayAlgs.h"
+#include "CGNE.h"
 
 /*
 
@@ -22,19 +23,19 @@ class SparseMatrix { public:
     T*   vals =0; // [m*n] folded non-zero values in the matrix 
     int* inds =0; // [m*n] folded column-index (j) for each non-zero value, -1 for empty slots
 
+    void realloc(int n_,int m_){ 
+        m=m_; n=n_;
+        _realloc0(nng,n,0);
+        _realloc0(inds,n*m,-1);
+        _realloc0(vals,n*m,0.0);
+    }
+
     __attribute__((pure)) 
     __attribute__((hot)) 
     double get(int i, int j) const {
         // use binary search in sorted array to check if exist such non-zero value (neighbor), and return it, otherwise return 0;         
         const int k = i*m + binarySearch_ignor( j, m, inds+i*m );
         if( inds[k] == j ){ return vals[k]; }else{ return 0; };
-    }
-
-    void realloc(int n_,int m_){ 
-        m=m_; n=n_;
-        _realloc0(nng,n,0);
-        _realloc0(inds,n*m,-1);
-        _realloc0(vals,n*m,0.0);
     }
 
     __attribute__((hot)) 
@@ -127,6 +128,62 @@ class SparseMatrix { public:
 
 };
 
+
+void sparse_fsai( const SparseMatrix<double>& A, SparseMatrix<double>& G, double tol=1e-16, int niter=100 ) {
+    int n = A.n;
+    //std::vector<double> G(n*n, 0.0);  // Initialize G as a dense matrix for simplicity
+
+    for (int i=0; i<n; ++i){ // loop over rows
+        // Step 1: Determine the sparsity pattern for row i
+        std::vector<int> pattern;
+        int ni = A.nng[i];
+        int i0 = A.m*i;
+        const int* indi = A.inds + i0;
+        for (int k = 0; k < ni; ++k) {
+            if (indi[k] <= i) {    // only upper triangular (?)
+                pattern.push_back(indi[k]);
+            }
+        }
+
+        //if (pattern.size() > ni_max) {  pattern.resize(ni_max); }   // Ensure we don't exceed p non-zero elements
+        //int pattern_size = pattern.size();
+
+        // Step 2: Set up the least squares problem
+        std::vector<double> A_i(ni*ni,0.0);
+        std::vector<double> b_i(ni, 0.0);
+        std::vector<double> g_i(ni, 0.0);
+
+        // Build local linear system Ai*bi=gi  to fit one row of approximate matrix G   
+        for (int k=0; k<ni; ++k){
+            int row = pattern[k];
+            //int row_ni = A.lens[row];
+            //int row_i0 = A.i0s[row];
+            int row_ni = A.nng[i];
+            int row_i0 = A.m*row;
+            const int*    row_indi   = A.inds + row_i0;
+            const double* row_values = A.vals + row_i0;
+            for (int l=0; l<ni; ++l){
+                int col = pattern[l];
+                for (int m = 0; m < row_ni; ++m){
+                    if (row_indi[m] == col){
+                        A_i[ k*ni + l ] = row_values[m];
+                        break;
+                    }
+                }
+            }
+            if(row==i){  b_i[k]=1.0;  }  // basis vectors like b4 = {0,0,0,1,0,0}
+        }
+
+        CGNE( ni, A_i.data(), g_i.data(), b_i.data(), niter );
+
+        for (int k=0; k<ni; ++k){
+            int j = pattern[k];
+            //G[i*n+j] = g_i[k];
+            G.set( i,j, g_i[k] );
+        }
+
+    }  // for i     // loop over rows
+}
 
 #endif
 

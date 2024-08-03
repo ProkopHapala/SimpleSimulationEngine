@@ -519,6 +519,38 @@ class OrbSim: public Picker { public:
         }
     }
 
+
+    __attribute__((hot)) 
+    Vec3d rhs_ProjectiveDynamics_i(int i, const Vec3d* pnew) {
+        double idt2 = 1.0 / (dt * dt);
+        Vec3d bi; bi.set_mul(pnew[i], points[i].w*idt2);  // points[i].w is the mass
+        int2* ngi = neighBs + (i*nNeighMax);
+        int ni = 0;
+        for( int ing=0; ing<nNeighMax; ing++ ){
+            int2  ng = ngi[ing];
+            int   ib = ng.y;
+            if(ib<0) break;
+            double k  = bparams[ib].y;  // assuming params.y is the spring constant
+            double l0 = bparams[ib].x;
+            int2   b  = bonds[ib];
+            int j     = (b.x == i) ? b.y : b.x;
+            //printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
+            Vec3d d = pnew[i] -  pnew[j];
+            bi.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
+            ni++;
+        }
+        //printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
+        return bi;
+    }
+
+    __attribute__((hot)) 
+    void rhs_ProjectiveDynamics_(const Vec3d* pnew, Vec3d* b) {
+        double idt2 = 1.0 / (dt * dt);
+        for (int i=0; i<nPoint; i++) {
+            b[i] = rhs_ProjectiveDynamics_i(i,pnew);
+        }
+    }
+
     // void realloc_Cholesky( int nNeighMaxLDLT_  ){
     //     printf( "OrbSim_d::realloc_Cholesky() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT, nNeighMax );
     //     nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
@@ -743,6 +775,106 @@ class OrbSim: public Picker { public:
             }
             // Call user update function if set
             //if (user_update){ user_update(dt);}
+        }
+    }
+
+
+    __attribute__((hot)) 
+    void run_Cholesky_omp_simd(int niter) {
+        //printf( "OrbSim::run_LinSolve() \n" );
+        const int m=3;
+        memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
+        double dt2 = dt * dt;
+        double inv_dt = 1/dt;
+        cleanForce();
+        int iter=0;
+        for (iter = 0; iter < niter; iter++) {
+            #pragma omp simd
+            for (int i=0;i<nPoint;i++){ ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2;  }
+            #pragma omp simd
+            for (int i=0;i<nPoint;i++){ linsolve_b[i] = rhs_ProjectiveDynamics_i(i,ps_pred); }
+            Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)linsolve_yy );            
+            #pragma omp simd
+            for(int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
+            LsparseT.fwd_subs_T_m( m,  (double*)linsolve_yy,  (double*)ps_cor );
+            #pragma omp simd
+            for (int i=0;i<nPoint;i++) {
+                vel[i].f    = (ps_cor[i] - points[i].f) * inv_dt;
+                points[i].f = ps_cor[i];
+            }
+        }
+    }
+
+    __attribute__((hot)) 
+    void run_Cholesky_omp(int niter) {
+        //printf( "OrbSim::run_LinSolve() \n" );
+        const int m=3;
+        memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
+        double dt2 = dt * dt;
+        double inv_dt = 1/dt;
+        cleanForce();
+        const int ns=3;
+        double sum[ns];
+        double* bb  = (double*)linsolve_b; 
+        double* yy  = (double*)linsolve_yy;
+        double* xx  = (double*)ps_cor ;
+        int iter=0;
+        #pragma omp parallel shared(sum) private(iter)
+        for (iter = 0; iter < niter; iter++) {
+            #pragma omp for
+            for (int i=0;i<nPoint;i++){ ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2;  }
+            #pragma omp for 
+            for (int i=0;i<nPoint;i++){ linsolve_b[i] = rhs_ProjectiveDynamics_i(i,ps_pred); }
+            #pragma omp single
+            {
+                Lsparse.fwd_subs_m( m,  (double*)linsolve_b,  (double*)linsolve_yy );
+                //for(int i=0; i<nPoint; i++){ Lsparse.fwd_subs_mi( m,  (double*)linsolve_b,  (double*)linsolve_yy ); }
+            }
+            // for (int i=0; i<Lsparse.n; i++){
+            //     for(int s=0;s<ns;s++){ sum[s]=0.0; }
+            //     const int i0 = Lsparse.i0s [i];
+            //     const int ni = Lsparse.nngs[i];
+            //     #pragma omp for reduction(+:sum)
+            //     for (int k=0; k<ni; k++){
+            //         const int ik = i0+k;
+            //         const int j  = Lsparse.inds[ik]*ns;
+            //         const double l  = Lsparse.vals[ik];  
+            //         for(int s=0;s<ns;s++){ sum[s]+=l*yy[j+s]; }
+            //     }
+            //     for(int s=0;s<ns;s++){ 
+            //         const int ii=i*ns+s; yy[ii]=bb[ii]-sum[s]; 
+            //     }
+            //     //#pragma omp barrier
+            // }
+            
+            #pragma omp for
+            for(int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
+            #pragma omp single
+            {
+                LsparseT.fwd_subs_T_m( m,  (double*)linsolve_yy,  (double*)ps_cor );
+                //for(int i=0; i<nPoint; i++){ LsparseT.fwd_subs_T_mi( m,  (double*)linsolve_yy,  (double*)ps_cor ); }
+            }
+            // for (int i=Lsparse.n-1; i>=0; i--){
+            //     for(int s=0;s<ns;s++){ sum[s]=0.0; }
+            //     const int i0 = LsparseT.i0s [i];
+            //     const int ni = LsparseT.nngs[i];
+            //     #pragma omp for reduction(+:sum)
+            //     for (int k=0; k<ni; k++){
+            //         const int ik = i0+k;
+            //         const int j  = LsparseT.inds[ik]*ns;
+            //         const double   l  = LsparseT.vals[ik];  
+            //         for(int s=0;s<ns;s++){ sum[s]+=l*xx[j+s]; }
+            //     }
+            //     for(int s=0;s<ns;s++){ 
+            //         const int ii=i*ns+s; xx[ii]=yy[ii]-sum[s]; 
+            //     }
+            // }
+
+            #pragma omp for
+            for (int i=0;i<nPoint;i++) {
+                vel[i].f    = (ps_cor[i] - points[i].f) * inv_dt;
+                points[i].f = ps_cor[i];
+            }
         }
     }
 

@@ -278,7 +278,8 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
     bool bDrawTrj=false;
     double time=0;
     //int perFrame = 1;
-    int perFrame = 10;
+    //int perFrame = 10;
+    int perFrame = 100;
     // https://stackoverflow.com/questions/29145476/requiring-virtual-function-overrides-to-use-override-keyword
 
 	virtual void draw   () override;
@@ -341,7 +342,7 @@ void SpaceCraftDynamicsApp::makeSoftBody(){
     //body.preparePoints( true, -1, -1 );
     body.updateInvariants();
 
-    perFrame = 100;
+    perFrame = 10;
     body.dt        = 0.00001;
     body.damp        = 0.0;
     // body.damp_stick  = 0.5;
@@ -354,7 +355,9 @@ void SpaceCraftDynamicsApp::drawSim(){
     //timeit( "TIME sim.run_LinSolve(perFrame) T = %g [ms]\n", 1e-6, [&](){sim.run_LinSolve(perFrame);});
     
     long t0 = getCPUticks();  sim.time_LinSolver=0; sim.time_cg_dot=0; sim.cgSolver_niterdone=0;
-    sim.run_LinSolve(perFrame);
+    //sim.run_LinSolve(perFrame);
+    sim.run_Cholesky_omp_simd(perFrame);
+    //sim.run_Cholesky_omp(perFrame);
     double time_run_LinSolve = (getCPUticks()-t0)*1e-6;
     printf( "TIME run: %g [Mticks] LinSolve: %g(%g\%) Mdot: %g(%g\%) niter_av=%g err2tot=%g \n", time_run_LinSolve, sim.time_LinSolver,   100*sim.time_LinSolver/time_run_LinSolve, sim.time_cg_dot, 100*sim.time_cg_dot/time_run_LinSolve, sim.cgSolver_niterdone/((double)perFrame), sim.cgSolver.err2tot );
 
