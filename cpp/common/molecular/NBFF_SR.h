@@ -50,41 +50,50 @@ class NBFF_SR{ public:
 
     Vec3d* apos_old = 0; // [nAtom] atomic position before last step
 
-    int nCluster   = 0;
-    int nPerBox    = 16; // how many atoms per cluster
+    //int nCluster   = 0;
+    //int nPerBox    = 16; // how many atoms per cluster
 
     // global parameters of bonded interactions
     double L_bond = 1.0; // bond length
     double K_bond = 1.0; // stiffnes of bonds (springs) within cluster
 
     // global parameters of non-bonded interactions
-    double Rcut = 5.0;   // cut-off radius for non-bonded interactions
-    double R0_nb = 1.0; // bond length
-    double K_nb  = 1.0; // stiffnes of bonds (springs) within cluster
-    double E0_nb  = 1.0; // stiffnes of bonds (springs) within cluster
+    double Rcol  = 1.0;   // collision radius
+    double Rcut  = 5.0;   // cut-off radius for non-bonded interactions
+    double R0_nb = 1.0;  // bond length
+    double E0_nb = 1.0; // stiffnes of bonds (springs) within cluster
+    double K_nb  = 1.0;  // stiffnes of bonds (springs) within cluster
 
     // clusters and their bounding boxes
     int      nBBs=0;
     Vec6d*   BBs=0;      // bounding boxes (can be either AABB, or cylinder, capsula) 
     Buckets  pointBBs;   // buckets for collision detection
 
-    void realloc(int natom_, int nPerBox_ ){
-        nPerBox = nPerBox_;
+    void realloc( int natom_, int nCluster ){
+        //nPerBox  = nPerBox_;
+        //nCluster = nCluster_;
         natom = natom_;
-        _realloc( REQs   ,natom );
-        _realloc( apos   ,natom );
-        _realloc( avel   ,natom );
-        _realloc( aforce ,natom );
+        pointBBs.realloc(nCluster, natom );
+        _realloc( REQs   , natom );
+        _realloc( apos   , natom );
+        _realloc( avel   , natom );
+        _realloc( aforce , natom );
+
+        _realloc( apos_old, natom );
+        
     }
 
+    void clean_forces  ( Vec3d zero = Vec3dZero ){ for(int ia=0; ia<natom; ia++){ aforce[ia] = zero; } }
+    void clean_velocity( Vec3d zero = Vec3dZero ){ for(int ia=0; ia<natom; ia++){ avel[ia] = zero;   } }
+
     void step( double dt ){
-
+        clean_forces();
         //evalSortRange_BBs( Rcut, perCluster );
-        move_MD( dt, 0 );
-        solve_sphere_colision( );
-        solve_cluster_bonds  ( );
-        update_velocity( dt );
-
+        evalSortRange_brute();   
+        move_MD( dt, 0 );       
+        solve_sphere_colision_brute( ); 
+        solve_cluster_bonds  ( );  
+        update_velocity( dt );     
     };
 
     void update_velocity(double dt){
@@ -107,13 +116,65 @@ class NBFF_SR{ public:
         }
     }
 
-    void solve_sphere_colision( ){
-
-    }
-
     void solve_cluster_bonds  ( ){
-
+        // Gauss-Seidel method
+        for(int ib=0; ib<nBBs; ib++){
+            Vec6d& bb = BBs[ib];
+            const int  npi = pointBBs.cellNs[ib];
+            const int  ip0 = pointBBs.cellI0s[ib];
+            //const int* ips = pointBBs.cell2obj + ip0;
+            int iao =  ip0 + npi - 1;
+            for(int ia=ip0; ia<npi; ia++){
+                Vec3d  d = apos[ia] - apos[iao];
+                double l = d.norm();
+                d.mul( (L_bond-l)/l );
+                apos[ia ].add( d );
+                apos[iao].sub( d );
+            }
+        }
     }
+
+    void solve_sphere_colision_brute( ){
+        // brute force
+        double Rcol2 = Rcol*Rcol;
+        for(int ia=0; ia<natom; ia++){
+            Vec3d& pi = apos[ia];
+            for(int ja=ia; ja<natom; ja++){
+                if(ia==ja) continue;
+                Vec3d& pj  = apos[ja];
+                Vec3d  d   = pj-pi;
+                double r2  = d.norm2();
+                if(r2<Rcol2){
+                    double r = sqrt(r2);
+                    d.mul( (Rcol-r)/r );
+                    pi.add( d );
+                    pj.sub( d );
+                }
+            }
+        }
+    }
+
+    double evalSortRange_brute( ){
+        // brute force
+        double Rcut2 = Rcut*Rcut;
+        double E = 0;
+        for(int ia=0; ia<natom; ia++){
+            Vec3d& pi = apos[ia];
+            for(int ja=ia; ja<natom; ja++){
+                if(ia==ja) continue;
+                Vec3d& pj  = apos[ja];
+                Vec3d  d   = pj-pi;
+                double r2  = d.norm2();
+                if(r2<Rcut2){
+                    double r = sqrt(r2);
+                    Vec3d f; E += getSR( d, f, R0_nb, R0_nb, K_nb, Rcut );
+                    aforce[ia].add( f );
+                    aforce[ja].sub( f );
+                }
+            }
+        }
+        return E;
+    }   
 
 /*
     __attribute__((hot))  

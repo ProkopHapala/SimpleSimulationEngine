@@ -68,17 +68,16 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
     void makePotentialPlot();
     void view_BBoxes();
     void view_atoms();
-    void make_atoms( int natom, double xspan, double size );
+    void make_atoms( int nCluster, int nPerCluster, double xspan, double size );
 
 };
 
 TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
-
-
+    make_atoms( 3, 4, 10.0, 3.0 );
+    
     Draw3D::makeSphereOgl( ogl_sph, 3, 0.25 );
-
 }
 
 void run(int niter){
@@ -236,10 +235,21 @@ void TestAppRARFF::view_atoms(){
     };
 }
 
-void TestAppRARFF::make_atoms( int natom, double xspan, double step  ){
-    ff.realloc( natom, 16 );
-    for(int i=0; i<natom; i++){
-        ff.apos [i].fromRandomBox( Vec3d{-10.,-10.,-10.} ,Vec3d{10.,10.,10.});
+void TestAppRARFF::make_atoms( int nCluster, int nPerCluster, double xspan, double size  ){
+    ff.realloc( nCluster*nPerCluster, nPerCluster );
+    for(int ib=0; ib<nCluster; ib++){
+        Vec3d c; c.fromRandomBox( Vec3d{-xspan,-xspan,-xspan} ,Vec3d{xspan,xspan,xspan});
+        //const int  npi = ff.pointBBs.cellNs[ib];
+        //const int  ip0 = ff.pointBBs.cellI0s[ib];
+        ff.pointBBs.cellI0s[ib] = nPerCluster * ib;
+        ff.pointBBs.cellNs [ib] = nPerCluster;
+        DEBUG
+        for(int i=0; i<nPerCluster; i++){
+            Vec3d d; d.fromRandomBox( Vec3d{-size,-size,-size} ,Vec3d{size,size,size});
+            ff.apos [i] = c  + d;
+            ff.pointBBs.cell2obj[ff.pointBBs.cellI0s[ib]+i] = ib*nPerCluster+i;
+        }
+        DEBUG
     }
 }
 
