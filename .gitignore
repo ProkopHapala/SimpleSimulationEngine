@@ -14,7 +14,8 @@
 *.wssettings
 *.selections.json
 
-Build
+Build*/
+
 tmp
 
 *.log
