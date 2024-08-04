@@ -30,9 +30,9 @@ cd $wd
 ln -s $dir/$name .
 
 # ====== ASan (Memory Sanitizer)
-#LD_PRELOAD=$(g++ -print-file-name=libasan.so)
-#echo   $LD_PRELOAD
-#export LD_PRELOAD
+LD_PRELOAD=$(g++ -print-file-name=libasan.so)
+echo   $LD_PRELOAD
+export LD_PRELOAD
 
 # ====== RUN
 

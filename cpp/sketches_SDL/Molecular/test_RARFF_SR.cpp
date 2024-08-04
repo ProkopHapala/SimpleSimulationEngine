@@ -214,6 +214,7 @@ void TestAppRARFF::draw(){
         }
     }
     if(ff.AccelType==1)visualize_cells();
+    glEnable( GL_LIGHTING );
     visualize_atoms();
     ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
     Draw3D::drawPointCross( ray0, 0.1 );

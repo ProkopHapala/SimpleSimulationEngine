@@ -10,6 +10,7 @@
 #include "Draw.h"
 #include "Draw3D.h"
 //#include "Solids.h"
+#include "raytrace.h"
 
 #include "fastmath.h"
 #include "Vec3.h"
@@ -68,6 +69,7 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
     void makePotentialPlot();
     void view_BBoxes();
     void view_atoms();
+    void view_bonds();
     void make_atoms( int nCluster, int nPerCluster, double xspan, double size );
 
 };
@@ -75,7 +77,9 @@ class TestAppRARFF: public AppSDL2OGL_3D { public:
 TestAppRARFF::TestAppRARFF( int& id, int WIDTH_, int HEIGHT_ ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     fontTex   = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
 
-    make_atoms( 3, 4, 10.0, 3.0 );
+    make_atoms( 4, 8, 5.0, 2.0 );
+
+    makePotentialPlot();
     
     Draw3D::makeSphereOgl( ogl_sph, 3, 0.25 );
 }
@@ -85,8 +89,9 @@ void run(int niter){
         //ff.eval();
         //ff.solve_constr();
         //ff.move();
-        ff.step( 0.1 );
+        ff.step( 0.5 );
     }
+    
 }
 
 void TestAppRARFF::draw(){
@@ -100,14 +105,26 @@ void TestAppRARFF::draw(){
     //ff.bGridAccel=false;
     if(bRun){
         run(1);
+        //run(3); exit(0);
         //run(perFrame);
-    }else{
-
     }
+
+    glEnable( GL_LIGHTING );
+    glColor3f( 1.0, 1.0, 1.0 );
     view_atoms();
+
+    glDisable( GL_LIGHTING );
+    glColor3f( 0.0, 0.0, 0.0 );
+    view_bonds();
+    //view_BBoxes();
     ray0 = (Vec3d)(cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y);
+    glColor3f( 0.0, 0.0, 0.0 );
     Draw3D::drawPointCross( ray0, 0.1 );
-    if(ipicked>=0) Draw3D::drawLine( ff.apos[ipicked], ray0);
+    if(ff.ipicked>=0){
+        ff.pick_ray0 = ray0;
+        ff.pick_hray = (Vec3d)(cam.rot.c);
+        Draw3D::drawLine( ff.apos[ff.ipicked], ray0);
+    }
     Draw3D::drawAxis( 1.0);
 };
 
@@ -152,14 +169,8 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONDOWN:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:{
-                    //int ip = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos, ff.ignoreAtoms );
-                    // bBlockAddAtom=false;
-                    // if( ip>=0){
-                    //     if(ipicked==ip){ ipicked=-1; bBlockAddAtom=true; printf("inv\n"); }
-                    //     else           { ipicked=ip;                     printf("set\n"); }
-                    // }else{ ipicked=-1; }
-                    // mouse_p0 = (Vec3d)( cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y );
-                    // printf( "LMB DOWN picked %i/%i bblock %i \n", ipicked,ip, bBlockAddAtom );
+                    ff.ipicked = pickParticle( ray0, (Vec3d)cam.rot.c, 0.5, ff.natom, ff.apos );
+                        printf( "LMB DOWN picked %i \n", ff.ipicked );
                     }break;
                 case SDL_BUTTON_RIGHT:{
                     /*
@@ -173,15 +184,15 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
         case SDL_MOUSEBUTTONUP:
             switch( event.button.button ){
                 case SDL_BUTTON_LEFT:
-                    printf( "LMB UP picked %i bblock %i \n", ipicked, bBlockAddAtom );
-                    if( (ipicked==-1)&&(!bBlockAddAtom) ){
-                        Vec3d mouse_p = (Vec3d)( cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y );
-                        Vec3d dir = mouse_p-mouse_p0;
+                    // printf( "LMB UP picked %i bblock %i \n", ipicked, bBlockAddAtom );
+                    // if( (ipicked==-1)&&(!bBlockAddAtom) ){
+                    //     Vec3d mouse_p = (Vec3d)( cam.rot.a*mouse_begin_x + cam.rot.b*mouse_begin_y );
+                    //     Vec3d dir = mouse_p-mouse_p0;
                        
-                    }
+                    // }
                     break;
                 case SDL_BUTTON_RIGHT:
-                    ipicked = -1;
+                    ff.ipicked = -1;
                     break;
             }
             break;
@@ -190,23 +201,36 @@ void TestAppRARFF::eventHandling ( const SDL_Event& event  ){
 }
 
 void TestAppRARFF::makePotentialPlot(){
-    // DataLine2D * line_Er = new DataLine2D(100); line_Er->clr = 0xFF0000FF; 
-    // DataLine2D * line_Fr = new DataLine2D(100); line_Fr->clr = 0xFFFF0000;   line_Fr->replace_xs( line_Er->xs );
-    // DataLine2D * line_Fn = new DataLine2D(100); line_Fn->clr = 0xFF008000;   line_Fn->replace_xs( line_Er->xs );
-    // testEF( ff, 0.0, 6.0, 60, line_Er->ys, line_Fr->ys,  line_Er->xs, line_Fn->ys );
-    // plot1.init();
-    // plot1.scaling.y = 1.0;
-    // plot1.fontTex = fontTex;
-    // plot1.clrGrid = 0xFF404040;
-    // //plot1.clrBg   = 0xFF408080;
-    // //plot1.lines.push_back( line1  );
-    // plot1.lines.push_back( line_Er  );
-    // plot1.lines.push_back( line_Fr  );
-    // plot1.lines.push_back( line_Fn  );
-    // plot1.render();
+    int np = 100;
+    DataLine2D* L = 0; 
+    DataLine2D* line_Er=new DataLine2D(np); L=line_Er; plot1.add(L); L->clr = 0xFF0000FF; 
+    DataLine2D* line_Fr=new DataLine2D(np); L=line_Fr; plot1.add(L); L->clr = 0xFFFF0000;  // L->replace_xs( line_Er->xs );
+
+    DataLine2D* line_Er2=new DataLine2D(np); L=line_Er2; plot1.add(L); L->clr = 0xFFFF00FF; 
+    DataLine2D* line_Fr2=new DataLine2D(np); L=line_Fr2; plot1.add(L); L->clr = 0xFFFF80FF;  // L->replace_xs( line_Er->xs );
+
+    for(int i=0;i<100;i++){
+        double x = i*0.1;
+        Vec3d f;  double E  = getSR( Vec3d{x,0.0,0.0}, f, ff.Rcut, ff.R0_nb, ff.E0_nb, ff.K_nb  );
+        Vec3d f2; double E2 = getSR2( Vec3d{x,0.0,0.0}, f2, ff.Rcut, ff.R0_nb, ff.E0_nb, ff.K_nb, ff.Rf  );
+        //printf( "[%i] r=%g R=%g fr=%g \n", i, x, E, f.x );
+        line_Er->xs[i] = x; line_Er->ys[i] = E;
+        line_Fr->xs[i] = x; line_Fr->ys[i] = f.x;
+
+        line_Er2->xs[i] = x; line_Er2->ys[i] = E2;
+        line_Fr2->xs[i] = x; line_Fr2->ys[i] = f2.x;
+
+    }
+    plot1.init();
+    plot1.scaling.y = 10.0;
+    plot1.fontTex = fontTex;
+    plot1.clrGrid = 0xFF404040;
+    plot1.bRenderAxes = false;
+    plot1.render();
 }
 
 void TestAppRARFF::view_BBoxes(){
+    //printf( "view_BBoxes() ff.pointBBs.ncell=%i \n", ff.pointBBs.ncell );
     for(int ic=0;ic<ff.pointBBs.ncell;ic++){
         int i0=ff.pointBBs.cellI0s[ic];
         int ni=ff.pointBBs.cellNs [ic];
@@ -215,13 +239,16 @@ void TestAppRARFF::view_BBoxes(){
         Draw  ::color_of_hash( 464+645*ic );
         //ff.pointBBs.i2ixyz( ic, ip );
         Draw3D::drawBBox( ff.BBs[ic].lo,  ff.BBs[ic].hi );
-        for(int j=i0; j<i0+ni;j++){
-            int io = ff.pointBBs.cell2obj[j];
-            Vec3d p = ff.apos[io];
-            //printf( "j %i io %i p(%g,%g,%g) \n", j, io, p.x,p.y,p.z );
-            //Draw  ::color_of_hash( 464+645*ic );
-            Draw3D::drawPointCross( p, 0.2 );            
-        }
+        //printf( "BBox[%i] p(%g,%g,%g) p(%g,%g,%g)\n", ic, ff.BBs[ic].lo.x, ff.BBs[ic].lo.y, ff.BBs[ic].lo.z, ff.BBs[ic].hi.x, ff.BBs[ic].hi.y, ff.BBs[ic].hi.z );
+        
+        // for(int j=i0; j<i0+ni;j++){
+        //     //printf( "view_BBoxes() ic=%i j=%i i0=%i ni=%i \n", ic, j, i0, ni );
+        //     int   io = ff.pointBBs.cell2obj[j];
+        //     Vec3d p  = ff.apos[io];
+        //     //printf( "j %i io %i p(%g,%g,%g) \n", j, io, p.x,p.y,p.z );
+        //     //Draw  ::color_of_hash( 464+645*ic );
+        //     Draw3D::drawPointCross( p, 0.2 );            
+        // }
     }
 }
 
@@ -231,25 +258,48 @@ void TestAppRARFF::view_atoms(){
     double tsc = 0.1;
     //printf( "ff.natom %i \n", ff.natom );
     for(int ia=0; ia<ff.natom; ia++){
+        glColor3f(1.0,1.0,1.0);
         Draw3D::drawShape( ogl_sph, ff.apos[ia], Mat3dIdentity );
+        glColor3f(1.0,0.0,0.0);
+        //Draw3D::drawVecInPos(  ff.aforce[ia]*100.0, ff.apos[ia] );
     };
 }
 
+void TestAppRARFF::view_bonds(){
+    for(int ib=0; ib<ff.nBBs; ib++){
+        int i0 = ff.pointBBs.cellI0s[ib];
+        int ni = ff.pointBBs.cellNs [ib];
+        int iao =  i0 + ni - 1;
+        glBegin( GL_LINES );
+        for(int ia=i0; ia<i0+ni; ia++){
+            Draw3D::drawLine( ff.apos[ia], ff.apos[iao] );
+            iao = ia;
+        }
+        glEnd();
+    }
+}
+
 void TestAppRARFF::make_atoms( int nCluster, int nPerCluster, double xspan, double size  ){
-    ff.realloc( nCluster*nPerCluster, nPerCluster );
+    double vsize = 0.0;
+    ff.realloc( nCluster*nPerCluster, nCluster );
     for(int ib=0; ib<nCluster; ib++){
         Vec3d c; c.fromRandomBox( Vec3d{-xspan,-xspan,-xspan} ,Vec3d{xspan,xspan,xspan});
         //const int  npi = ff.pointBBs.cellNs[ib];
         //const int  ip0 = ff.pointBBs.cellI0s[ib];
         ff.pointBBs.cellI0s[ib] = nPerCluster * ib;
         ff.pointBBs.cellNs [ib] = nPerCluster;
-        DEBUG
+        Vec3d vcog=Vec3dZero;
         for(int i=0; i<nPerCluster; i++){
+            int ip = ib*nPerCluster+i;
             Vec3d d; d.fromRandomBox( Vec3d{-size,-size,-size} ,Vec3d{size,size,size});
-            ff.apos [i] = c  + d;
-            ff.pointBBs.cell2obj[ff.pointBBs.cellI0s[ib]+i] = ib*nPerCluster+i;
+            Vec3d v; v.fromRandomBox( Vec3d{-vsize,-vsize,-vsize} ,Vec3d{vsize,vsize,vsize});
+            ff.apos [ip] = c + d;
+            //ff.avel [ip] = v;
+            //vcog.add( v );
+            ff.pointBBs.cell2obj[ff.pointBBs.cellI0s[ib]+i] =ip;
         }
-        DEBUG
+        //vcog.mul( 1./nPerCluster );
+        //for(int i=0; i<nPerCluster; i++){ ff.avel [ib*nPerCluster+i].sub( vcog ); }
     }
 }
 

@@ -58,7 +58,7 @@ class DataLine2D{ public:
     //inline DataLine2D(int n_,double xmin,double xmax){ allocate(n_); linspan(xmin,xmax);  }
     inline DataLine2D(int n_,double xmin,double dx, uint32_t clr_=0xFFFF00FF, std::string label_="", double* ys_=0 ){ ys=ys_; allocate(n_); arange(xmin,dx);                 clr=clr_; label=label_; }
     inline DataLine2D(int n_,double*xs_,            uint32_t clr_=0xFFFF00FF, std::string label_="", double* ys_=0 ){ ys=ys_; n=n_; bSharedX=true; xs=xs_; ys=new double[n]; clr=clr_; label=label_; }
-    inline void replace_xs( double* xs_ ){ if(xs)delete xs; xs=xs_; };
+    inline void replace_xs( double* xs_ ){ if(xs)delete [] xs; xs=xs_; };
     
     ~DataLine2D();
 };
@@ -82,7 +82,7 @@ class Plot2D{ public:
     double * yTicks=NULL;
     int      glObj=0;
 
-
+    bool bRenderAxes=true;
     Vec2d shift   =Vec2dZero;
     Vec2d scaling =Vec2dOnes;
 

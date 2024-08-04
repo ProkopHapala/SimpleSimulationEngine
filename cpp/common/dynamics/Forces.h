@@ -12,6 +12,176 @@
 #define R2SAFE  1.0e-8f
 #define F2MAX   10.0f
 
+#define RSAFE   1.0e-4f
+#define R2SAFE  1.0e-8f
+#define F2MAX   10.0f
+
+
+
+
+inline bool clampForce( Vec3d& f, const double f2max ){
+    const double f2   = f.norm2();
+    const bool bClamp = f2>f2max;
+    if( bClamp )[[unlikely]]{
+        f.mul( sqrt(f2max/f2) );
+    }
+    return bClamp;
+}
+
+
+// ================= Trashold functions
+
+double smoothstep_up(double x_, double xmin, double xmax) {
+    if      (x_<xmin){ return 0; }
+    else if (x_>xmax){ return 1; }
+    double x = (x_-xmin)/(xmax-xmin);
+    return x*x*(3-2*x);
+}
+
+double smoothstep_down(double x_, double xmin, double xmax) {
+    if      (x_<xmin){ return 1; }
+    else if (x_>xmax){ return 0; }
+    double x = (x_-xmin)/(xmax-xmin);
+    return 1-x*x*(3-2*x);
+}
+
+double R4blob(double r2) { r2=1-r2; return r2*r2; }   // simplest and fastest cutoff function which depends only on r2 (i.e. eliminate need for sqrt)
+
+double R8func(double r2, double R, double Rnod ){
+    //This functions should is C1-continuous smoothstep function which is use only r2 (i.e. eliminate need for sqrt), it can be used in 3 ways:
+    //  1) smoothstep from 0.0 to 1.0 at interval [Rnod,R] if Rnod<R
+    //  2) smoothstep from 1.0 to 0.0 at interval [R,Rnod] if Rnod>R
+    //  3) smooth bumb at interval [R1,R2] with peak at R, where 2R^2 = R1^2 + R2^2
+    double R2   = R*R;              // 1 mul
+    double R2n  = Rnod*Rnod;        // 1 mul
+    double y1   =       R2 - r2;    // 1 add
+    double y2   = R2n + R2 - y1*y1; // 2 add, 1 mul 
+    y2*= R2/(R2+R2n); // rescale to have maximum at y=1   // 1 add, 1 div, 1 mul
+    return y2*y2;                   // 1 mul .... in total cost 5 mul, 3 add, 1 div
+}
+
+double R8down(double r2, double R, double Rnod ){
+    //This functions should is C1-continuous smoothstep function which is use only r2 (i.e. eliminate need for sqrt), it can be used in 3 ways:
+    //  1) smoothstep from 0.0 to 1.0 at interval [Rnod,R] if Rnod<R
+    double R2   = R*R;             
+    double R2n  = Rnod*Rnod;       
+    if     ( r2<R2  ) return 1;
+    else if( r2>R2n ) return 0;
+    double y1   =       R2 - r2;    
+    double y2   = R2n + R2 - y1*y1; 
+    y2*= R2/(R2+R2n); 
+    return y2*y2;   
+}
+
+double finiteLorenz( double r2, double w2, double R2cut ){
+    if( r2>R2cut ) return 0;
+    double fcut = (R2cut-r2);
+    return fcut*fcut/(R2cut*R2cut*(r2+w2));
+}
+
+double repulsion_R4( Vec3d d, Vec3d& f, double R, double Rcut, double A ){
+    // we use R4blob(r) = A * (1-r^2)^2
+    // such that at distance r=R we have force f = fmax
+    // f = -dR4blob/dr = 4*A*r*(1-r^2) = fmax
+    // A = fmax/(4*R*(1-R^2))
+    double R2    = R*R;
+    double R2cut = Rcut*Rcut;
+    double r2 = d.norm2();
+    if( r2>R2cut ){ 
+        return 0;
+        // f = Vec3dZero;
+    }else if( r2>R2 ){ 
+        double mr2 = R2cut-r2;
+        double fr = A*mr2;
+        f.add_mul( d, -4*fr );
+        return fr*mr2;
+    }else{
+        double mr2 = R2cut-R2;
+        double fr  = A*mr2;
+        double r    = sqrt(r2);
+        double fmax = 4*R*fr;
+        f.add_mul( d, -fmax/r );
+        return fmax*(R-r) + fr*mr2;
+    }
+}
+
+
+inline double getSR( const Vec3d& d, Vec3d& f, double Rcut, double R0, double E0, double K  ){
+    double r2 = d.norm2();
+    if(r2>(Rcut*Rcut)){
+        //printf( "r %g Rcut %g => E=0 \n", sqrt(r2), Rcut );
+        f = Vec3dZero;
+        return 0.0;
+    }
+    double r  = sqrt(r2);
+    double dr = r-R0;
+    double E  = 0.5*K*(dr*dr) - E0;
+    f         = d*((-K*dr)/r);
+    return E;
+}
+
+
+inline double getSR2( const Vec3d& d, Vec3d& f, double Rcut, double R0, double E0, double K, double Rf  ){
+    double r2 = d.norm2();
+    if(r2>(Rcut*Rcut)){
+        //printf( "r %g Rcut %g => E=0 \n", sqrt(r2), Rcut );
+        f = Vec3dZero;
+        return 0.0;
+    }
+    double r  = sqrt(r2);
+
+    if(r>Rf){
+        double dr = r-Rcut;
+        double lc = (Rcut-Rf);
+        double l0 = (R0-Rf);
+        double Ef = 0.5*K*(l0*l0) - E0;
+        double K2 = Ef/(lc*lc);
+        double E  = K2*( dr*dr );
+        f         = d*(-2*K2*dr/r);
+        return E;
+    }
+
+    double dr = r-R0;
+    double E  = 0.5*K*(dr*dr) - E0;
+    f         = d*(-K*dr/r);
+    return E;
+}
+
+
+inline double getSR3( const Vec3d& d, Vec3d& f, double Rcut, double R0, double E0, double K, double Rf  ){
+    double r2 = d.norm2();
+    if(r2>(Rcut*Rcut)){
+        //printf( "r %g Rcut %g => E=0 \n", sqrt(r2), Rcut );
+        f = Vec3dZero;
+        return 0.0;
+    }
+    double r  = sqrt(r2);
+
+    if(r>Rf){
+        double x  = r-Rcut;
+        double lc = (Rcut-Rf);
+        double l0 = (R0-Rf);
+        double Ef = 0.5*K*(l0*l0) - E0;
+        double K2 = 2*Ef/(lc*lc);
+
+        double dK = K - K2;
+        // TODO: we should include cubic term ( A x^3 ) and solve system of two equation to match both Force(~K) and Energy at point (Rf) using two polynominal    E = A x^3 + B x^2 , where x=(r-Rcut)
+        double E  = 0.5*K2*( x*x );
+        f         = d*(-K2*x/r);
+        return E;
+    }
+
+    double x = r-R0;
+    double E  = 0.5*K*(x*x) - E0;
+    f         = d*(-K*x/r);
+    return E;
+}
+
+
+
+
+
+
 
 void sum(int n, Vec3d* ps, Vec3d& psum){ for(int i=0;i<n;i++){ psum.add(ps[i]); } };
 
