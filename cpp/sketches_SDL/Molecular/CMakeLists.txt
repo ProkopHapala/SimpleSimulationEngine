@@ -49,6 +49,8 @@ target_link_libraries( test_RARFFarr ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIB
 add_executable       ( test_RARFF_SR test_RARFF_SR.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
 target_link_libraries( test_RARFF_SR ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
+add_executable       ( test_PBD_LJ_cluster test_PBD_LJ_cluster.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
+target_link_libraries( test_PBD_LJ_cluster ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )
 
 add_executable       ( test_RARFF2 test_RARFF2.cpp $<TARGET_OBJECTS:SDL2OGL> $<TARGET_OBJECTS:DynamicOpt>  )
 target_link_libraries( test_RARFF2 ${OpenGL_LIBRARY} ${GLU_LIBRARY} ${SDL2_LIBRARY} )

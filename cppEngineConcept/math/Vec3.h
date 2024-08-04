@@ -176,6 +176,17 @@ inline Vec3i    from_id    ( uint64_t id   ){
 inline void convert( const Vec3f& from, Vec3d& to ){ to.x=from.x;        to.y=from.y;        to.z=from.z; };
 inline void convert( const Vec3d& from, Vec3f& to ){ to.x=(float)from.x; to.y=(float)from.y; to.z=(float)from.z; };
 
+template <class T>
+class Vec6T { public:
+	union{
+        struct{ Vec3T<T> lo,hi; };
+		T array[6];
+	};
+};
+using Vec6i = Vec6T< int>;
+using Vec6f = Vec6T< float>;
+using Vec6d = Vec6T< double >;
+
 #endif
 
 

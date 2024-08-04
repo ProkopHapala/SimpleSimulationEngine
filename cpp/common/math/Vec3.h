@@ -588,6 +588,17 @@ struct Mat3S{ // symmetric 3x3 matrix
 using  Mat3Sf =  Mat3S<float>;
 using  Mat3Sd =  Mat3S<double>;
 
+template <class T>
+class Vec6T { public:
+	union{
+        struct{ Vec3T<T> lo,hi; };
+		T array[6];
+	};
+};
+using Vec6i = Vec6T< int>;
+using Vec6f = Vec6T< float>;
+using Vec6d = Vec6T< double >;
+
 
 // template<typename T, typename Func>
 // void numDeriv( Vec3d p, double d, Vec3d& f, Func func){
