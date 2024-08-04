@@ -165,7 +165,7 @@ inline double getSR3( const Vec3d& d, Vec3d& f, double Rcut, double R0, double E
         double K2 = 2*Ef/(lc*lc);
 
         double dK = K - K2;
-        // TODO: we should include cubic term ( A x^3 ) and solve system of two equation to match both Force(~K) and Energy at point (Rf) using two polynominal    E = A x^3 + B x^2 , where x=(r-Rcut)
+        // TODO: we should include cubic term ( A x^3 ) and solve system of two equation to match both Force(~K) and Energy at inflex point (Rf) using two polynominal    E = A x^3 + B x^2 , where x=(r-Rcut)
         double E  = 0.5*K2*( x*x );
         f         = d*(-K2*x/r);
         return E;
