@@ -56,3 +56,44 @@ function plot_matrix_log( plt, A, vrange=6.0, cmap=:default )
     vmax = maximum(logA)
     return heatmap!(plt, logA, aspect_ratio = :equal, colorbar=true, clim=(vmax-vrange,vmax) )
 end
+
+function xrange( x0, dx, n )
+    xs = Vector{Float64}(undef,n)
+    for i in 1:n 
+        xs[i] = x0 + dx*(i-1)    
+    end
+    return xs
+end
+
+function plot_func( plt, xs, func::Function; label=nothing, clr=nothing, dnum::Bool=false )
+    #p = plot()
+    # Add each edge as a line segment to the plot
+    n = size(xs,1)
+    E = Vector{Float64}(undef,n)
+    F = Vector{Float64}(undef,n)
+    for i in 1:n 
+        E[i],F[i] = func( xs[i] )    
+    end
+    Emin = minimum(E)
+    Fmin = minimum(F)
+    plot!(plt[1], xs, E, seriestype=:path, line=clr, label=label )
+    plot!(plt[2], xs, F, seriestype=:path, line=clr, label=label )
+
+    if dnum
+        Fnum = num_deriv(xs,E)
+        plot!(plt[2], xs, -Fnum, seriestype=:path, line=clr, label=label*"(num)", linestyle=:dash )
+    end
+    return [Emin,Fmin]
+end
+
+
+function num_deriv(xs::Array{T},ys::Array{T}) where T <: AbstractFloat
+    n = length(xs)
+    dy = zeros(Float64, n)
+    dy[1] = (ys[2] - ys[1]) / (xs[2] - xs[1])
+    for i in 2:n-1
+        dy[i] = (ys[i+1] - ys[i-1]) / (xs[i+1] - xs[i-1])
+    end
+    dy[n] = (ys[n] - ys[n-1]) / (xs[n] - xs[n-1])
+    return dy
+end
