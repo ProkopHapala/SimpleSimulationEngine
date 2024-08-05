@@ -223,7 +223,7 @@ end
 function getLJx2( r, R0, E0 )
     """
     Modified Lennard-Jones potential with quadratic function K*r^2 for r<R0
-    - The stiffness of the quadratic function K is automatically adjusted to match the LJ part in the minimum (where derivative is equal to zero => also mathcing )
+    - The stiffness of the quadratic function K is automatically adjusted to match curvature of the LJ part in the minimum (where derivative is equal to zero => also mathcing )
     - Notice that LJ potential does not need derivative for r>R0
     """
     if(r<R0)
@@ -239,11 +239,36 @@ function getLJx2( r, R0, E0 )
     return E,F
 end
 
+
+function getLJs2( r, R0, E0 )
+    """
+    Modified Lennard-Jones potential with softer 1/r^4 for r<R0
+    - The softer repulsive part is more useful for molecular simulations (avoiding hard collisions and high frequency)
+    - The parametrs A,B of A*(u2*u2-2*u2)+B are found to match stiffness of the LJ part in the minimum (where derivative is equal to zero => also mathcing )
+    - Notice that it does not need sqrt() only depends on powers of 1/r^2
+    """
+    u  = R0/r
+    u2 = u^2
+    if(r<R0)
+        A = E0*(57.0/7.0)
+        B = A - E0
+        E = A * ( u2*u2 - 2*u2 ) + B
+        F = A * 8*( u2*u2 -   u2 )/r 
+    else
+        u6 = u2*u2*u2
+        E  = E0 *    ( u6*u6 - 2*u6 )
+        F  = E0 * 12*( u6*u6 -   u6 )/r    
+    end
+    return E,F
+end
+
+
+
 # ========== Body
 
 # eval_forces = (position, velocity) -> eval_force_and_plot(position,velocity, plt, truss.bonds )
 
-xs = xrange( 0.5, 0.01, 600 )
+xs = xrange( 2.5, 0.01, 600 )
 
 plt = plot( layout = (2, 1), size=(1000, 1000) )
 mins = []
@@ -256,15 +281,18 @@ Rf  = R0 + 0.25
 
 
 
-#push!( mins, plot_func( plt, xs, (x)->getLJ(x,R0,E0),        clr=:black  , label="LJ"     ) )
+push!( mins, plot_func( plt, xs, (x)->getLJ(x,R0,E0),        clr=:black  , label="LJ"     ) )
 push!( mins, plot_func( plt, xs, (x)->getLJx2(x,R0,E0),      clr=:blue    , label="LJx2"   ) )
+
+push!( mins, plot_func( plt, xs, (x)->getLJs2(x,R0,E0),      clr=:red    , label="LJs2"   ) )
+
 #push!( mins, plot_func( plt, xs, (x)->getLJr4(x,R0,E0),      clr=:green  , label="LJr4"   ) )
 #push!( mins, plot_func( plt, xs, (x)->getLJr2(x,R0,E0),      clr=:red    , label="LJr4"   ) )
-push!( mins, plot_func( plt, xs, (x)->getMorse(x,R0,E0,1.7), clr=:black , label="Morse"  ) )
+#push!( mins, plot_func( plt, xs, (x)->getMorse(x,R0,E0,1.7), clr=:black , label="Morse"  ) )
 
-push!( mins, plot_func( plt, xs, (x)->getRr3(     x, R0, E0, Rc, Rf, Ksr ), clr=:cyan , label="Rr3"  ) )
+#push!( mins, plot_func( plt, xs, (x)->getRr3(     x, R0, E0, Rc, Rf, Ksr ), clr=:cyan , label="Rr3"  ) )
 
-push!( mins, plot_func( plt, xs, (x)->getR_ir4r8( x, R0, E0, Rc, Rf, Ksr ), clr=:magenta , label="R_ir4r8" ,  dnum=:true  ) )
+#push!( mins, plot_func( plt, xs, (x)->getR_ir4r8( x, R0, E0, Rc, Rf, Ksr ), clr=:magenta , label="R_ir4r8" ,  dnum=:true  ) )
 
 #push!( mins, plot_func( plt, xs, (x)->getR4(x,Rc,E0),        clr=:black   , label="R4"     ) )
 #push!( mins, plot_func( plt, xs, (x)->getR8(x,Rc,E0),        clr=:black  , label="R2"     ) )

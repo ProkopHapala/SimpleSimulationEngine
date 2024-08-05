@@ -74,6 +74,8 @@ function plot_func( plt, xs, func::Function; label=nothing, clr=nothing, dnum::B
     for i in 1:n 
         E[i],F[i] = func( xs[i] )    
     end
+
+    #println("Emin: ", E  )
     Emin = minimum(E)
     Fmin = minimum(F)
     plot!(plt[1], xs, E, seriestype=:path, line=clr, label=label )
