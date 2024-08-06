@@ -363,6 +363,111 @@ function getCoulomb_dampInv2( r, Q, ADamp )
 end    
 
 
+function getCoulomb_x2( r, R0, E0, Q, Rf )
+    #if r==Rf println("Q = ", Q, Q*Coulomb_const_eVA ) end
+    Q *= Coulomb_const_eVA
+    K   =  ( Q/Rf + E0 )/(Rf-R0)^2
+    if r==Rf println("Q = ", Q, " K = ", K ) end
+    if(r<Rf)
+        # condition: Ef = Q/Rf = K*(Rf-R0)^2 - E0
+        # => K = ( Q/Rf + E0 )/(Rf-R0)^2
+        #K   =  ( Q/Rf + E0 )/(Rf-R0)^2
+        E   =    K*(r-R0)^2 - E0
+        F   = -2*K*(r-R0)
+    else
+        E = Q/r
+        F = Q/r^2
+    end
+    return E,F
+end    
+
+
+
+function getCoulomb_x2smooth( r, R0, E0, Q, Rf, K )
+    #if r==Rf println("Q = ", Q, " E0 ", E0 ," R0 ", R0, " Rf ", Rf ) end
+    Q *= Coulomb_const_eVA
+
+    #K   =  ( Q/Rf + E0 )/(Rf-R0)^2
+    #if r==Rf println("Q = ", Q, " K = ", K ) end
+
+    if(r<R0)
+        E   =    K*(r-R0)^2 - E0
+        F   = -2*K*(r-R0)
+    elseif(r<Rf)
+        x = (r-R0)/(Rf-R0)
+
+        #smooth-step : https://en.wikipedia.org/wiki/Smoothstep
+        s   =  1 - x*x*(3-2*x)
+        ds  =  6*x*(1-x)/(Rf-R0)
+
+        #smoother step : https://en.wikipedia.org/wiki/Smoothstep#Variations
+        #s  =  1-x*x*x*( (6*x - 15)*x + 10 )
+        #ds = 30*(x-1)*(x-1)*x*x /(Rf-R0)
+
+        
+        #s = (1-x)*(1-x)*(1-x)*(1-x)*x*x 
+        #s = (1-x*x)*(1-x*x)/( 1 + x*x/(0.1) ) 
+        s = (1-x*x)/( 1 + x*x/(0.1) ) 
+        ds = 0
+        
+        return s, ds
+
+        #s  = 1-x
+        #ds = 1/(Rf-R0)
+
+        #s  = 1-x*x
+        #ds = 2*x/(Rf-R0)
+
+        Eh   =    K*(r-R0)^2 - E0  
+        Fh   = -2*K*(r-R0)         
+
+        Ec = Q/r
+        Fc = Q/r^2
+
+        E   =    Eh*s  + Ec*(1-s)
+        F   =  ( Fh*s  + Fc*(1-s)    + ds*Eh - ds*Ec  )
+        #return s,ds
+    else
+        E = Q/r
+        F = Q/r^2
+    end
+    return E,F
+end 
+
+function getCoulomb_x2lor( r, R0, E0, Q, Rf )
+    #if r==Rf println("Q = ", Q, " E0 ", E0 ," R0 ", R0, " Rf ", Rf ) end
+    Q *= Coulomb_const_eVA
+    if(r<Rf)
+        L  = (Rf-R0)   # lenght of the pseudo-Lorenz interval
+        dx = 1/L       # dx/dr = 1/L
+        Ef =  Q/Rf     # Energy at the end of the pseudo-Lorenz interval
+        Ff = -Q/Rf^2   # Force at the end of the pseudo-Lorenz interval
+        dE = E0 + Ef   # total energy difference covered by the pseudo-Lorenz interval
+        w  =  2*dE*dx/Ff - 1   # width of the pseudo-Lorenz potential to match the derivative Ff ath the end of the pseudo-Lorenz interval
+        if(r>R0)  # pseudo-Lorenz interval 
+            x  = (r-R0)*dx
+            x2 = x*x
+            ix2w1 = 1/(x2*w + 1)
+            w =  2*dE*dx/Ff - 1
+            e   = -dE*ix2w1
+            E   = e*(1-x2)  + Ef
+            F   = e*2*x*dx*( (1-x2)*ix2w1*w + 1 )
+            #E   = -dE*(1-x2)*ix2w1   + Ef
+            #F   = -dE*(1-x2)*2*dx*w*x*ix2w1*ix2w1 - dE*ix2w1*2*x*dx
+        else     # parabolic interval    
+            # we fit stiffness of parabolic potential K*x^2 to stiffness of the pseudo-Lorenz potential
+            K   =  dE*(w + 1) *dx*dx   #*L^2
+            E   =    K*(r-R0)^2 - E0
+            F   = -2*K*(r-R0)
+        end
+    else
+        E = Q/r
+        F = Q/r^2
+    end
+    return E,F
+end 
+
+
 
 # ========== Body
 
@@ -373,42 +478,55 @@ xs = xrange( 0.01, 0.01, 600 )
 plt = plot( layout = (2, 1), size=(1000, 1000) )
 mins = []
 
-E0  = 1.0
-Rc  = 6.0
-R0  = 3.0
-Ksr = 1.7
-Rf  = R0 + 0.25
+Rc    = 6.0
+EvdW  = 0.01
+RvdW  = 3.5
+Ksr   = 1.7
+Rf    = RvdW + 0.25
 
-Q = -1.0
+RHb = 2.0
+EHb = 0.7
+
+Q = -0.2*0.4
 Rdamp0 = 0.5
 Rdamp  = 2.0
 Adamp  = 1.4
 
 xlim = [1.0, 10.0]
 
-push!( mins, plot_func( plt,  xs, (x)->getCoulomb(         x,Q     ),               clr=:black   , label="getCoulomb"   ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampC2(   x,Q,Rdamp),              clr=:red     , label="Coulomb_C2"   ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),       clr=:blue    , label="Coulomb_R2"   ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampSS(   x,Q,Rdamp, Adamp,Rdamp0), clr=:magenta , label="Coulomb_SS"  ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv4( x,Q,Adamp),              clr=:green   , label="Coulomb_Inv4" ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv2( x,Q,Adamp),              clr=:cyan   , label="Coulomb_Inv2" ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt,  xs, (x)->getCoulomb(         x,Q     ),               clr=:black   , label="Coulomb"       ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampC2(   x,Q,Rdamp),              clr=:red     , label="Coulomb_C2"   ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),       clr=:blue    , label="Coulomb_R2"   ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampSS(   x,Q,Rdamp, Adamp,Rdamp0), clr=:magenta , label="Coulomb_SS"  ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv4( x,Q,Adamp),              clr=:green   , label="Coulomb_Inv4" ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv2( x,Q,Adamp),              clr=:cyan   , label="Coulomb_Inv2" ,  xlim=xlim, dnum=:true ) )
 
-#push!( mins, plot_func( plt, xs, (x)->getLJ(x,R0,E0),        clr=:black  , label="LJ"     ) )
-#push!( mins, plot_func( plt, xs, (x)->getLJx2(x,R0,E0),      clr=:blue    , label="LJx2"   ) )
-#push!( mins, plot_func( plt, xs, (x)->getLJs2(x,R0,E0),      clr=:red    , label="LJs2"   ) )
+#push!( mins, plot_func( plt, xs, (x)->getLJ(x,RvdW,EvdW),        clr=:black  , label="LJ"     ) )
+#push!( mins, plot_func( plt, xs, (x)->getLJx2(x,RvdW,EvdW),      clr=:blue    , label="LJx2"   ) )
+#push!( mins, plot_func( plt, xs, (x)->getLJs2(x,RvdW,EvdW),      clr=:red    , label="LJs2"   ) )
 
-#push!( mins, plot_func( plt, xs, (x)->getLJr4(x,R0,E0),      clr=:green  , label="LJr4"   ) )
-#push!( mins, plot_func( plt, xs, (x)->getLJr2(x,R0,E0),      clr=:red    , label="LJr4"   ) )
-#push!( mins, plot_func( plt, xs, (x)->getMorse(x,R0,E0,1.7), clr=:black , label="Morse"  ) )
+#push!( mins, plot_func( plt, xs, (x)->getLJr4(x,RvdW,EvdW),      clr=:green  , label="LJr4"   ) )
+#push!( mins, plot_func( plt, xs, (x)->getLJr2(x,RvdW,EvdW),      clr=:red    , label="LJr4"   ) )
+#push!( mins, plot_func( plt, xs, (x)->getMorse(x,RvdW,EvdW,1.7), clr=:black , label="Morse"  ) )
 
-#push!( mins, plot_func( plt, xs, (x)->getRr3(     x, R0, E0, Rc, Rf, Ksr ), clr=:cyan , label="Rr3"  ) )
+#push!( mins, plot_func( plt, xs, (x)->getRr3(     x, RvdW, EvdW, Rc, Rf, Ksr ), clr=:cyan , label="Rr3"  ) )
 
-#push!( mins, plot_func( plt, xs, (x)->getR_ir4r8( x, R0, E0, Rc, Rf, Ksr ), clr=:magenta , label="R_ir4r8" ,  dnum=:true  ) )
+#push!( mins, plot_func( plt, xs, (x)->getR_ir4r8( x, RvdW, EvdW, Rc, Rf, Ksr ), clr=:magenta , label="R_ir4r8" ,  dnum=:true  ) )
 
 #push!( mins, plot_func( plt, xs, (x)->getR4(x,Rc,E0),        clr=:black   , label="R4"     ) )
 #push!( mins, plot_func( plt, xs, (x)->getR8(x,Rc,E0),        clr=:black  , label="R2"     ) )
 #push!( mins, plot_func( plt, xs, (x)->getR4x2(x,R0+0.15,E0*1.85,Rc,Ksr),      clr=:red   , label="R4x2"  ,  dnum=:true  ) )
 #push!( mins, plot_func( plt, xs, (x)->getR8x2(x,R0+0.17,E0*3.50,Rc,Ksr*2.0),  clr=:green  , label="R2x2" ,  dnum=:true) )
+
+
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),                                                    clr=:blue    , label="Coulomb_R2" ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getR_ir4r8( x, RHb, EHb, Rc, RHb+0,1, 10.0 ),                                             clr=:magenta , label="R_ir4r8"    ,  dnum=:true  ) )
+#push!( mins, plot_func( plt, xs, (x)->(getR_ir4r8( x,RHb, EHb, Rc, RHb+0,1, 10.0 ) .+ getCoulomb_dampR2(   x,Q,Rdamp, Adamp)), clr=:cyan    , label="R_ir4r8"    ,  dnum=:true  ) )
+
+
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2( x, RHb, EHb, Q, RvdW ),                                                    clr=:blue    , label="Coulomb_x2" ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2smooth( x, RHb, EHb, Q, RHb+0.8, 5.0 ),                                               clr=:blue    , label="Coulomb_x2smooth" ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2lor( x, RHb, EHb, Q, RvdW-0.7 ),                                               clr=:blue    , label="Coulomb_x2lor" ,  xlim=xlim, dnum=:true ) )
 
 Emin = minimum( [min[1] for min in mins] ); ylims!( plt[1], Emin*1.5, -Emin )
 Fmin = minimum( [min[2] for min in mins] ); ylims!( plt[2], Fmin*1.5, -Fmin )
@@ -419,11 +537,13 @@ hline!( plt[1], [0.0], color=:black, label="", linestyle=:dash )
 hline!( plt[2], [0.0], color=:black, label="",linestyle=:dash )
 
 vline!( plt[1], [Rc],  color=:gray,  label="", linestyle=:dash )
-vline!( plt[1], [R0],  color=:black, label="", linestyle=:dash )
+vline!( plt[1], [RvdW],  color=:black, label="", linestyle=:dash )
+vline!( plt[1], [RHb],  color=:black, label="", linestyle=:dash )
 vline!( plt[1], [0.0], color=:black, label="", linestyle=:dash )
 
 vline!( plt[2], [Rc],  color=:gray,  label="", linestyle=:dash )
-vline!( plt[2], [R0],  color=:black, label="", linestyle=:dash )
+vline!( plt[2], [RvdW],  color=:black, label="", linestyle=:dash )
+vline!( plt[2], [RHb],  color=:black, label="", linestyle=:dash )
 vline!( plt[2], [0.0], color=:black, label="", linestyle=:dash )
 
 display(plt)
