@@ -65,7 +65,7 @@ function xrange( x0, dx, n )
     return xs
 end
 
-function plot_func( plt, xs, func::Function; label=nothing, clr=nothing, dnum::Bool=false )
+function plot_func( plt, xs, func::Function; label=nothing, clr=nothing, dnum::Bool=false, xlim=nothing )
     #p = plot()
     # Add each edge as a line segment to the plot
     n = size(xs,1)
@@ -76,8 +76,14 @@ function plot_func( plt, xs, func::Function; label=nothing, clr=nothing, dnum::B
     end
 
     #println("Emin: ", E  )
-    Emin = minimum(E)
-    Fmin = minimum(F)
+    if xlim !== nothing
+        mask = (xs .> xlim[1]) .& (xs .< xlim[2])
+        Emin = minimum( E[mask] )
+        Fmin = minimum( F[mask] )
+    else
+        Emin = minimum(E)
+        Fmin = minimum(F)
+    end
     plot!(plt[1], xs, E, seriestype=:path, line=clr, label=label )
     plot!(plt[2], xs, F, seriestype=:path, line=clr, label=label )
 

@@ -2,8 +2,12 @@
 using Plots
 include("plot_utils.jl")
 
+
+Coulomb_const_eVA = 14.3996448915 
+
 # ========== Functions
 
+# ============ fast r^2 based polynomial potentials ============
 
 function getRr3( r, R0, E0, Rc, Rf, K )
     """
@@ -87,8 +91,6 @@ function getR_ir4r8( r, R0, E0, Rc, Rf, K )
     end
     return E,F
 end
-
-
 
 
 function getR4( r, Rc, E0 )
@@ -178,6 +180,8 @@ function getR8x2( r, Rf, E0, Rc, K )
 end
 
 
+# ============ exponetial based polynomial potentials ============
+
 function getMorse( r, R0, E0, k )
     """
     Morse potential with minimum at R0, depth E0 and stiffness k
@@ -188,6 +192,8 @@ function getMorse( r, R0, E0, k )
     F  = E0 * 2*k* ( e*e -   e ) 
     return E,F
 end
+
+# ============  Lanard-Jones like 1/r^2 based reciprocal potnetials  ============
 
 function getLJ( r, R0, E0 )
     """
@@ -263,12 +269,106 @@ function getLJs2( r, R0, E0 )
 end
 
 
+# ============  Damped Coulomb potential  ============
+
+
+function getCoulomb( r, Q )
+    Q *= Coulomb_const_eVA
+    E  = Q/r
+    F  = Q/r^2
+    return E,F
+end
+
+function getCoulomb_dampC2( r, Q, Rdamp )
+    Q *= Coulomb_const_eVA
+    r_ = sqrt( Rdamp^2 + r^2 )
+    E  = Q/r_
+    F  = Q*r/(r_^3)
+    return E,F
+end
+
+
+function getCoulomb_dampR4( r, Q, Rdamp, ADamp )
+    Q *= Coulomb_const_eVA
+    if r<Rdamp
+        D   = ADamp*( 1 - (r/Rdamp)^2 )
+        dD  = ADamp*( -2*r/Rdamp^2 )
+        r_  = sqrt( r^2 + D^2  )
+        dr_ =     ( r + dD*D )/r_
+    else
+        r_  = r
+        dr_ = 1
+    end
+    E  = Q/r_
+    F  = Q*dr_/(r_^2)
+    return E,F
+end
+
+function getCoulomb_dampSS( r, Q, Rdamp, ADamp, Rdam0 )
+    Q *= Coulomb_const_eVA
+    if r<Rdamp
+        if r>Rdamp0
+            x   = (r-Rdamp0)/(Rdamp-Rdam0)
+            D   =  ADamp*( 1 - x * x * (3-2*x) )
+            dD  = -ADamp*( 6*x*(1-x)/(Rdamp-Rdam0) )
+        else
+            D = ADamp
+            dD  = 0
+        end
+        r_  = sqrt( D^2 + r^2 )
+        dr_ = (r +dD*D)/r_ 
+        #println( "r,x,D,dD = ", r," ",x," ",D," ",dD )
+        #return D,dD
+    else
+        r_  = r
+        dr_ = 1
+    end
+    E  = Q/r_
+    F  = Q*dr_/(r_^2)
+    return E,F
+end
+
+function getCoulomb_dampInv4( r, Q, ADamp )
+    Q *= Coulomb_const_eVA
+
+    ir2 = 1/r^2
+    D   =    ir2*ir2
+    dD  = -4*ir2*ir2*ir2
+
+    #Ec =  1/r;
+    #Fc = -1/(r^2)
+    # e     = 1/( 1/f(x) + g(x) ) = f/( 1 + f*g )
+    # de/dx = ( f' - f^2*g' )/(1+f*g) = ( f/(1+f*g) )^2  * ( f'/f^2 - g' ) = e^2 * ( f'/f^2 - g' ) 
+    e  = 1/(  r +  D*ADamp );
+    E = Q*e
+    F = E*e*( 1 + r*dD*ADamp )
+    return E,F
+end    
+
+function getCoulomb_dampInv2( r, Q, ADamp )
+    Q *= Coulomb_const_eVA
+
+    ir = 1/r
+    D   =    ir*ir
+    dD  = -2*ir*ir*ir
+
+    #Ec =  1/r;
+    #Fc = -1/(r^2)
+    # e     = 1/( 1/f(x) + g(x) ) = f/( 1 + f*g )
+    # de/dx = ( f' - f^2*g' )/(1+f*g) = ( f/(1+f*g) )^2  * ( f'/f^2 - g' ) = e^2 * ( f'/f^2 - g' ) 
+    e  = 1/(  r +  D*ADamp );
+    E = Q*e
+    F = E*e*( 1 + dD*ADamp )
+    return E,F
+end    
+
+
 
 # ========== Body
 
 # eval_forces = (position, velocity) -> eval_force_and_plot(position,velocity, plt, truss.bonds )
 
-xs = xrange( 2.5, 0.01, 600 )
+xs = xrange( 0.01, 0.01, 600 )
 
 plt = plot( layout = (2, 1), size=(1000, 1000) )
 mins = []
@@ -279,12 +379,23 @@ R0  = 3.0
 Ksr = 1.7
 Rf  = R0 + 0.25
 
+Q = -1.0
+Rdamp0 = 0.5
+Rdamp  = 2.0
+Adamp  = 1.4
 
+xlim = [1.0, 10.0]
 
-push!( mins, plot_func( plt, xs, (x)->getLJ(x,R0,E0),        clr=:black  , label="LJ"     ) )
-push!( mins, plot_func( plt, xs, (x)->getLJx2(x,R0,E0),      clr=:blue    , label="LJx2"   ) )
+push!( mins, plot_func( plt,  xs, (x)->getCoulomb(         x,Q     ),               clr=:black   , label="getCoulomb"   ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampC2(   x,Q,Rdamp),              clr=:red     , label="Coulomb_C2"   ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),       clr=:blue    , label="Coulomb_R2"   ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampSS(   x,Q,Rdamp, Adamp,Rdamp0), clr=:magenta , label="Coulomb_SS"  ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv4( x,Q,Adamp),              clr=:green   , label="Coulomb_Inv4" ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv2( x,Q,Adamp),              clr=:cyan   , label="Coulomb_Inv2" ,  xlim=xlim, dnum=:true ) )
 
-push!( mins, plot_func( plt, xs, (x)->getLJs2(x,R0,E0),      clr=:red    , label="LJs2"   ) )
+#push!( mins, plot_func( plt, xs, (x)->getLJ(x,R0,E0),        clr=:black  , label="LJ"     ) )
+#push!( mins, plot_func( plt, xs, (x)->getLJx2(x,R0,E0),      clr=:blue    , label="LJx2"   ) )
+#push!( mins, plot_func( plt, xs, (x)->getLJs2(x,R0,E0),      clr=:red    , label="LJs2"   ) )
 
 #push!( mins, plot_func( plt, xs, (x)->getLJr4(x,R0,E0),      clr=:green  , label="LJr4"   ) )
 #push!( mins, plot_func( plt, xs, (x)->getLJr2(x,R0,E0),      clr=:red    , label="LJr4"   ) )
@@ -299,8 +410,8 @@ push!( mins, plot_func( plt, xs, (x)->getLJs2(x,R0,E0),      clr=:red    , label
 #push!( mins, plot_func( plt, xs, (x)->getR4x2(x,R0+0.15,E0*1.85,Rc,Ksr),      clr=:red   , label="R4x2"  ,  dnum=:true  ) )
 #push!( mins, plot_func( plt, xs, (x)->getR8x2(x,R0+0.17,E0*3.50,Rc,Ksr*2.0),  clr=:green  , label="R2x2" ,  dnum=:true) )
 
-Emin = minimum( [min[1] for min in mins] ); ylims!( plt[1], Emin*1.1, -Emin )
-Fmin = minimum( [min[2] for min in mins] ); ylims!( plt[2], Fmin*1.1, -Fmin )
+Emin = minimum( [min[1] for min in mins] ); ylims!( plt[1], Emin*1.5, -Emin )
+Fmin = minimum( [min[2] for min in mins] ); ylims!( plt[2], Fmin*1.5, -Fmin )
 
 #println( "Emin = ", Emin )
 
