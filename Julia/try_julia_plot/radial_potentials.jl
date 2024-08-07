@@ -325,13 +325,14 @@ function getCoulomb_cutR8( r, Q, Rf )
         # Equations:
         # 1) Energy:   E0 +   A*Rf^8 = Q/Rf
         # 2) Force:         8*A*Rf^7 = Q/Rf^2
-        A = Q/(8*Rf^9)
-        E0 = 7Q/(8*Rf)
-        E  = A*x^8    + E0
-        F  = A*8*x^7
+        A  = -Q/(8*Rf^9)
+        E0 = 9Q/(8*Rf)
+        E  =  A*r^8    + E0
+        F  = -A*8*r^7
+    else
+        E  = Q/r
+        F  = Q/(r^2)
     end
-    E  = Q/r
-    F  = Q/(r_^2)
     return E,F
 end
 
@@ -625,7 +626,7 @@ push!( mins, plot_func( plt,  xs, (x)->getCoulomb(         x,Q     ),           
 push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),       clr=:blue   , label="Coulomb_R2"   ,  xlim=xlim, dnum=:true ) )
 push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR3(   x,Q,Rdamp, Adamp),       clr=:green  , label="Coulomb_R3"   ,  xlim=xlim, dnum=:true ) )
 push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR4(   x,Q,Rdamp, Adamp),       clr=:red    , label="Coulomb_R4"   ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_cutR8(   x,Q,Rdamp),              clr=:red    , label="Coulomb_cutR8"   ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_cutR8(   x,Q,Rdamp),              clr=:magenta    , label="Coulomb_cutR8"   ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampSS(   x,Q,Rdamp, Adamp,Rdamp0), clr=:magenta , label="Coulomb_SS"  ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv4( x,Q,Adamp),              clr=:green   , label="Coulomb_Inv4" ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv2( x,Q,Adamp),              clr=:cyan   , label="Coulomb_Inv2" ,  xlim=xlim, dnum=:true ) )
