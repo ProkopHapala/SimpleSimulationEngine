@@ -319,23 +319,19 @@ function getCoulomb_dampR3( r, Q, Rdamp, ADamp )
     return E,F
 end
 
-function getCoulomb_dampR4( r, Q, Rdamp, ADamp )
+function getCoulomb_cutR8( r, Q, Rf )
     Q *= Coulomb_const_eVA
-    if r<Rdamp
-        D   = ( 1 - (r/Rdamp)^2 ) *Rdamp
-        dD  = (   -2*r/Rdamp^2  ) *Rdamp
-
-        #D   = ( Rdamp^2 - r^2  )*0.5
-        #dD  = (        -2*r^2  )*0.5
-
-        r_  = sqrt( r^2 + ADamp* D^2  )
-        dr_ =     ( r   + ADamp*dD*D )/r_
-    else
-        r_  = r
-        dr_ = 1
+    if r<Rf
+        # Equations:
+        # 1) Energy:   E0 +   A*Rf^8 = Q/Rf
+        # 2) Force:         8*A*Rf^7 = Q/Rf^2
+        A = Q/(8*Rf^9)
+        E0 = 7Q/(8*Rf)
+        E  = A*x^8    + E0
+        F  = A*8*x^7
     end
-    E  = Q/r_
-    F  = Q*dr_/(r_^2)
+    E  = Q/r
+    F  = Q/(r_^2)
     return E,F
 end
 
@@ -629,6 +625,7 @@ push!( mins, plot_func( plt,  xs, (x)->getCoulomb(         x,Q     ),           
 push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),       clr=:blue   , label="Coulomb_R2"   ,  xlim=xlim, dnum=:true ) )
 push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR3(   x,Q,Rdamp, Adamp),       clr=:green  , label="Coulomb_R3"   ,  xlim=xlim, dnum=:true ) )
 push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR4(   x,Q,Rdamp, Adamp),       clr=:red    , label="Coulomb_R4"   ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_cutR8(   x,Q,Rdamp),              clr=:red    , label="Coulomb_cutR8"   ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampSS(   x,Q,Rdamp, Adamp,Rdamp0), clr=:magenta , label="Coulomb_SS"  ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv4( x,Q,Adamp),              clr=:green   , label="Coulomb_Inv4" ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv2( x,Q,Adamp),              clr=:cyan   , label="Coulomb_Inv2" ,  xlim=xlim, dnum=:true ) )
