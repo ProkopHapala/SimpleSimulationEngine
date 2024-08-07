@@ -287,14 +287,49 @@ function getCoulomb_dampC2( r, Q, Rdamp )
     return E,F
 end
 
+function getCoulomb_dampR2( r, Q, Rdamp, ADamp )
+    Q *= Coulomb_const_eVA
+    if r<Rdamp
+        D    = Rdamp - r
+        dD   = -1  
+        r_  = sqrt( r^2 + ADamp* D*D )
+        dr_ =     ( r   + ADamp*dD*D )/r_
+    else
+        r_  = r
+        dr_ = 1
+    end
+    E  = Q/r_
+    F  = Q*dr_/(r_^2)
+    return E,F
+end
+
+function getCoulomb_dampR3( r, Q, Rdamp, ADamp )
+    Q *= Coulomb_const_eVA
+    if r<Rdamp
+        D    = Rdamp - r
+        dD   = -1  
+        r_  = sqrt( r^2 +     ADamp* D*D*D )
+        dr_ =     ( r   + 1.5*ADamp*dD*D*D )/r_
+    else
+        r_  = r
+        dr_ = 1
+    end
+    E  = Q/r_
+    F  = Q*dr_/(r_^2)
+    return E,F
+end
 
 function getCoulomb_dampR4( r, Q, Rdamp, ADamp )
     Q *= Coulomb_const_eVA
     if r<Rdamp
-        D   = ADamp*( 1 - (r/Rdamp)^2 )
-        dD  = ADamp*( -2*r/Rdamp^2 )
-        r_  = sqrt( r^2 + D^2  )
-        dr_ =     ( r + dD*D )/r_
+        D   = ( 1 - (r/Rdamp)^2 ) *Rdamp
+        dD  = (   -2*r/Rdamp^2  ) *Rdamp
+
+        #D   = ( Rdamp^2 - r^2  )*0.5
+        #dD  = (        -2*r^2  )*0.5
+
+        r_  = sqrt( r^2 + ADamp* D^2  )
+        dr_ =     ( r   + ADamp*dD*D )/r_
     else
         r_  = r
         dr_ = 1
@@ -582,16 +617,18 @@ Rf    = RvdW + 0.25
 RHb = 2.0
 EHb = 0.7
 
-Q = -0.2*0.3
+Q = -0.2*0.3   * 6.0
 Rdamp0 = 0.5
 Rdamp  = 2.0
-Adamp  = 1.4
+Adamp  = 1.0
 
 xlim = [1.0, 10.0]
 
-push!( mins, plot_func( plt,  xs, (x)->getCoulomb(         x,Q     ),               clr=:black   , label="Coulomb"       ,  xlim=xlim ) )
-#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampC2(   x,Q,Rdamp),              clr=:red     , label="Coulomb_C2"   ,  xlim=xlim, dnum=:true ) )
-#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),       clr=:blue    , label="Coulomb_R2"   ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt,  xs, (x)->getCoulomb(         x,Q     ),               clr=:black  , label="Coulomb"       ,  xlim=xlim ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampC2(   x,Q,Rdamp),              clr=:red   , label="Coulomb_C2"   ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),       clr=:blue   , label="Coulomb_R2"   ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR3(   x,Q,Rdamp, Adamp),       clr=:green  , label="Coulomb_R3"   ,  xlim=xlim, dnum=:true ) )
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR4(   x,Q,Rdamp, Adamp),       clr=:red    , label="Coulomb_R4"   ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampSS(   x,Q,Rdamp, Adamp,Rdamp0), clr=:magenta , label="Coulomb_SS"  ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv4( x,Q,Adamp),              clr=:green   , label="Coulomb_Inv4" ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv2( x,Q,Adamp),              clr=:cyan   , label="Coulomb_Inv2" ,  xlim=xlim, dnum=:true ) )
@@ -622,7 +659,7 @@ push!( mins, plot_func( plt,  xs, (x)->getCoulomb(         x,Q     ),           
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2( x, RHb, EHb, Q, RvdW ),                                                    clr=:blue    , label="Coulomb_x2" ,       xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2smooth( x, RHb, EHb, Q, RHb+0.8, 5.0 ),                                      clr=:blue    , label="Coulomb_x2smooth" , xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2lor( x, RHb, EHb, Q, RvdW-0.7 ),                                             clr=:blue    , label="Coulomb_x2lor" ,    xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2lor2( x, RHb, EHb, Q, RHb+0.8, 5.0 ),                                         clr=:blue    , label="Coulomb_x2lor2" ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2lor2( x, RHb, EHb, Q, RHb+0.8, 5.0 ),                                         clr=:blue    , label="Coulomb_x2lor2" ,  xlim=xlim, dnum=:true ) )
 
 Emin = minimum( [min[1] for min in mins] ); ylims!( plt[1], Emin*1.5, -Emin )
 Fmin = minimum( [min[2] for min in mins] ); ylims!( plt[2], Fmin*1.5, -Fmin )
