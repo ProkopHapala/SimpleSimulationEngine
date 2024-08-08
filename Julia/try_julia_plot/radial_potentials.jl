@@ -525,6 +525,30 @@ ddf (x=0) : (-2*w)-4
 df  {S}   : 2*L^2 * (x-1) *x* (x+1) * (w*x^2+w+2)
 ddf {S}   : 2*L^3 * ( w^2*x^6 + 3*w*x^4 + 3*w^2*x^2 + 6*w*x^2 + 6*x^2-w-2   )
 
+==== L0x6
+f: (1-x^2)^3/(w*x^2+1)
+df(x=1): 0
+ddf(x=0): (-2*w)-6
+df{S}: -2*L^2*(x-1)^2*x*(x+1)^2*(2*w*x^2+w+3)
+ddf{S}: -2*L^3*(x-1)*(x+1)*(6*w^2*x^6+3*w^2*x^4+17*w*x^4+3*w^2*x^2+8*w*x^2+15*x^2-w-3)
+
+==== L0sm  ( smooth step )
+
+f: ((x-1)^2*(2*x+1))/(w*x^2+1)
+df(x=1): 0
+ddf(x=0): (-2*w)-6
+df{S}: 2*L^2*(x-1)*x*(w*x^2+w*x+w+3)
+ddf{S}: 2*L^2*(8*L*x-2*x-4*L*w+3*w-12*L+9)
+
+==== L0sm2 ( smoother step )
+
+f: ((1-x)^3*(6*x^2+3*x+1))/(w*x^2+1)
+df(x=1): 0
+ddf(x=0): -2*w
+df{S}: -2*L^2*(x-1)^2*x*(9*w*x^3+3*w*x^2+2*w*x+15*x+w)
+ddf{S}: -2*L^3*(x-1)*(18*w^2*x^6+3*w^2*x^5+3*w^2*x^4+54*w*x^4+3*w^2*x^3+9*w*x^3+3*w^2*x^2-w*x^2+60*x^2-w*x-30*x-w)
+
+
 =#
 
 function getCoulomb_x2lor2( r, R0, E0, Q, Rf, K )
@@ -596,6 +620,70 @@ function getCoulomb_x2lor2( r, R0, E0, Q, Rf, K )
 end 
 
 
+function getCoulomb_x2lor2sm2( r, R0, E0, Q, Rf, K )
+    #if r==Rf println("Q = ", Q, " E0 ", E0 ," R0 ", R0, " Rf ", Rf ) end
+    Q *= Coulomb_const_eVA
+    if(r<Rf)
+
+        if(r>R0)  # pseudo-Lorenz interval 
+            
+            
+            
+            Ef =  Q/Rf     # Energy at the end of the pseudo-Lorenz interval
+            Ff = -Q/Rf^2   # Force at the end of the pseudo-Lorenz interval
+            dE = E0 + Ef   # total energy difference covered by the pseudo-Lorenz interval
+            
+            # transform variables from r@[R0,Rf] to x@[0,1]
+            l  = (Rf-R0)
+            dx = 1/l    
+            x  = (r-R0)*dx
+            Ff *= l   # resale force f=dE/dr to get derivative by dx 
+
+            # System of equations to solve:
+            #  derivative F(x=1) :  A1 * -4/(w+1)     = Ff         
+            #  value      E(x=0) :  A1 + A2           = dE
+            #  stiffness  K(x=0) :  A1*-2*w + A2*-2*w = K
+
+            # solve the system of equations
+            #w = -( -4*dE - Ff - K ) / ( 2*dE+Ff )
+            w = K*l*l
+            #w  = 4.55 
+            A1 = Ff*(w+1)/4
+            A2 = dE - A1
+
+            #w  = 4.55 
+            #A1 = dE
+            #A2 = 0 
+            #println("w,A1,A2 ", w, " ", A1/dE," ",A2/dE )
+
+            x2 = x*x
+            L  = 1/(x2*w+1)
+            E1 = 1-x2*x2
+            E2 = ((1-x)^3*(6*x2+3*x+1))
+            F1 = -( (w*x2 + 2)*x2 + w ) 
+            F2 = -(x-1)^2*( (3*x + 1 )*3*w*x2   +(2*w+15)*x+w)
+            E  = Ef - ( A1*E1 + A2*E2 )*L
+            F  = (A1*F1 + A2*F2) * dx * 2*L^2 *x
+
+
+
+            #return E, 0.0
+
+            #E   = -dE*(1-x2)*ix2w1   + Ef
+            #F   = -dE*(1-x2)*2*dx*w*x*ix2w1*ix2w1 - dE*ix2w1*2*x*dx
+        else     # parabolic interval    
+            # we fit stiffness of parabolic potential K*x^2 to stiffness of the pseudo-Lorenz potential
+            #K   =  dE*(w + 1) *dx*dx   #*L^2
+            E   =    K*(r-R0)^2 - E0
+            F   = -2*K*(r-R0)
+        end
+    else
+        E = Q/r
+        F = Q/r^2
+    end
+    return E,F
+end 
+
 # ========== Body
 
 # eval_forces = (position, velocity) -> eval_force_and_plot(position,velocity, plt, truss.bonds )
@@ -614,7 +702,7 @@ Rf    = RvdW + 0.25
 RHb = 2.0
 EHb = 0.7
 
-Q = -0.2*0.3   * 6.0
+Q = -0.2*0.3   
 Rdamp0 = 0.5
 Rdamp  = 2.0
 Adamp  = 1.0
@@ -623,10 +711,10 @@ xlim = [1.0, 10.0]
 
 push!( mins, plot_func( plt,  xs, (x)->getCoulomb(         x,Q     ),               clr=:black  , label="Coulomb"       ,  xlim=xlim ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampC2(   x,Q,Rdamp),              clr=:red   , label="Coulomb_C2"   ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),       clr=:blue   , label="Coulomb_R2"   ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR3(   x,Q,Rdamp, Adamp),       clr=:green  , label="Coulomb_R3"   ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR4(   x,Q,Rdamp, Adamp),       clr=:red    , label="Coulomb_R4"   ,  xlim=xlim, dnum=:true ) )
-push!( mins, plot_func( plt, xs, (x)->getCoulomb_cutR8(   x,Q,Rdamp),              clr=:magenta    , label="Coulomb_cutR8"   ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR2(   x,Q,Rdamp, Adamp),       clr=:blue   , label="Coulomb_R2"   ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR3(   x,Q,Rdamp, Adamp),       clr=:green  , label="Coulomb_R3"   ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampR4(   x,Q,Rdamp, Adamp),       clr=:red    , label="Coulomb_R4"   ,  xlim=xlim, dnum=:true ) )
+#push!( mins, plot_func( plt, xs, (x)->getCoulomb_cutR8(   x,Q,Rdamp),              clr=:magenta    , label="Coulomb_cutR8"   ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampSS(   x,Q,Rdamp, Adamp,Rdamp0), clr=:magenta , label="Coulomb_SS"  ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv4( x,Q,Adamp),              clr=:green   , label="Coulomb_Inv4" ,  xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_dampInv2( x,Q,Adamp),              clr=:cyan   , label="Coulomb_Inv2" ,  xlim=xlim, dnum=:true ) )
@@ -658,6 +746,9 @@ push!( mins, plot_func( plt, xs, (x)->getCoulomb_cutR8(   x,Q,Rdamp),           
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2smooth( x, RHb, EHb, Q, RHb+0.8, 5.0 ),                                      clr=:blue    , label="Coulomb_x2smooth" , xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2lor( x, RHb, EHb, Q, RvdW-0.7 ),                                             clr=:blue    , label="Coulomb_x2lor" ,    xlim=xlim, dnum=:true ) )
 #push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2lor2( x, RHb, EHb, Q, RHb+0.8, 5.0 ),                                         clr=:blue    , label="Coulomb_x2lor2" ,  xlim=xlim, dnum=:true ) )
+
+
+push!( mins, plot_func( plt, xs, (x)->getCoulomb_x2lor2sm2( x, RHb, EHb, Q, RHb+1.2, 5.0 ),                                         clr=:blue    , label="Coulomb_x2lor2sm2" ,  xlim=xlim, dnum=:true ) )
 
 Emin = minimum( [min[1] for min in mins] ); ylims!( plt[1], Emin*1.5, -Emin )
 Fmin = minimum( [min[2] for min in mins] ); ylims!( plt[2], Fmin*1.5, -Fmin )
