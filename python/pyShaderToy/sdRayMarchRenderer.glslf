@@ -30,8 +30,7 @@ vec2 castRay( in vec3 ro, in vec3 rd ){
 #if 1
     // bounding volume
     float tp1 = (0.0-ro.y)/rd.y; if( tp1>0.0 ) tmax = min( tmax, tp1 );
-    float tp2 = (1.6-ro.y)/rd.y; if( tp2>0.0 ) { if( ro.y>1.6 ) tmin = max( tmin, tp2 );
-                                                 else           tmax = min( tmax, tp2 ); }
+    float tp2 = (1.6-ro.y)/rd.y; if( tp2>0.0 ) { if( ro.y>1.6 ){ tmin = max( tmin, tp2 );  }else{ tmax = min( tmax, tp2 ); } }
 #endif
     float t = tmin;
     float m = -1.0;

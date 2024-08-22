@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui, QtOpenGL
 from PyQt5.QtOpenGL import QGLWidget, QGLFormat
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer,QElapsedTimer
 
 import moderngl
 import numpy as np
@@ -28,6 +28,10 @@ uniform int iFrame;
 uniform vec4 iMouse;
 uniform vec4 iDate;
 uniform float iSampleRate;
+
+layout(std140) uniform VecData {
+    vec3 u_vec_data[100];  // Example: an array of 100 vec3s (adjust the size as needed)
+};
 """
 
 class GLPlotWidget(QGLWidget):
@@ -38,19 +42,38 @@ class GLPlotWidget(QGLWidget):
         super(GLPlotWidget, self).__init__(parent)
         self.setMinimumSize(self.width, self.height)
         self.frameCount = 0
+
+        self.elapsed_timer = QElapsedTimer()
+        self.elapsed_timer.start()
+
         self.timer = QTimer()
         self.timer.setInterval(10)
-        self.timer.timeout.connect(self.updateGL)
+        #self.timer.timeout.connect(self.updateGL)
+        self.timer.timeout.connect(self.update_frame)
         self.ctx = None
         self.shader_program = None
         self.vbo = None
         self.vao = None
+
+    def update_frame(self):
+        self.vec_data[0,1] = 0.25
+        self.vec_data[0,2] = 0.25
+        self.vec_data[0,0] = 2.0*np.sin( self.elapsed_timer.elapsed()*0.001 )
+        print( "vec_data[0] ", self.vec_data[0])
+        self.update_vec_data()
+
+        self.updateGL()
+        #self.update()
 
     def updateShader(self):
         if self.shader_program:
             self.shader_program.release()
         self.shader_program = self.ctx.program( vertex_shader=DEFAULT_VERTEX_SHADER,  fragment_shader=self.fragment_code )
         self.shader_program['iResolution'].value = (self.width, self.height, 1.0)
+        self.update()
+
+    def update_vec_data(self):
+        self.vec_buffer.write(self.vec_data.tobytes())
         self.update()
 
     def initializeGL(self):
@@ -61,6 +84,19 @@ class GLPlotWidget(QGLWidget):
         self.updateShader()
         self.vao = self.ctx.vertex_array(self.shader_program, [(self.vbo, '2f', 'in_vert')])
         self.frameCount = 0
+
+        # Example array of vec3 (can also be vec4, just adjust the shape and dtype)
+        #self.vec_data = np.zeros( (100,4), dtype='f4' )
+        self.vec_data = np.zeros( (100,4), dtype=np.float32 )
+
+        # Create a buffer and upload the vec3 array data to the GPU
+        self.vec_buffer = self.ctx.buffer(self.vec_data.tobytes())
+        
+        # Ensure that the buffer is bound to the correct uniform block
+        uniform_block = self.shader_program['VecData']      ;print( "uniform_block", uniform_block)
+        uniform_block.binding = 0
+        #self.shader_program.uniform_block_binding(block_index, 0)  # Bind the block to binding point 0
+        self.vec_buffer.bind_to_uniform_block(0) 
 
     def link_program(self,vertex_shader, fragment_shader):
         """Link vertex and fragment shaders into a program"""
@@ -91,7 +127,6 @@ class MainWindow(QtWidgets.QWidget):
         l0 = QtWidgets.QHBoxLayout();
         self.setLayout(l0)
 
-        
         qgl_format = QGLFormat()
         qgl_format.setSwapInterval(1)
         self.glview =w= GLPlotWidget(qgl_format); l0.addWidget(w); w.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -107,8 +142,9 @@ class MainWindow(QtWidgets.QWidget):
         self.btShLoad   =w= QtWidgets.QPushButton('load', self);   l2.addWidget(w); w.setToolTip('load shader from code');   w.clicked.connect(self.loadShaderDlg);
         self.btPlay     =w= QtWidgets.QPushButton('play', self);   l2.addWidget(w); w.setToolTip('on/off update on timer');  w.clicked.connect(self.play);
 
-        self.txtCode.setPlainText("d = opU( sdPlane(pos), sdSphere(pos-vec3( 0.0,0.25, 0.0), 0.25 ) );")
-        
+        #self.txtCode.setPlainText("d = opU( sdPlane(pos), sdSphere(pos-vec3( 0.0,0.25, 0.0), 0.25 ) );")
+        self.txtCode.setPlainText("d = opU( sdPlane(pos), sdSphere(pos-u_vec_data[0], 0.25 ) );")
+
         self.setWindowTitle('Shader Toy')
         #self.setGeometry(100, 100, 1920, 1080)  # Set position (x, y) and size (width, height)
         self.setGeometry(100, 100, 1600, 1000) 
