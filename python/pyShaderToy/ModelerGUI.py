@@ -13,9 +13,14 @@ TODO:
 
 '''
 
-from PyQt4          import QtGui, QtCore, QtOpenGL
-from PyQt4.QtOpenGL import QGLWidget,QGLFormat
-from PyQt4.QtCore   import QTimer
+#from PyQt4          import QtGui, QtCore, QtOpenGL
+#from PyQt4.QtOpenGL import QGLWidget,QGLFormat
+#from PyQt4.QtCore   import QTimer
+
+from PyQt5          import QtGui, QtCore, QtOpenGL
+from PyQt5.QtOpenGL import QGLWidget,QGLFormat
+from PyQt5.QtCore   import QTimer
+
 import OpenGL.GL as gl
 import OpenGL.arrays.vbo as glvbo
 import GLUtils as glu
@@ -50,7 +55,7 @@ class GLPlotWidget(QGLWidget):
     width, height = 256, 256
 
     def __init__(self, parent):
-        #print "GLPlotWidget.__init__"
+        #print( "GLPlotWidget.__init__" )
         QGLWidget.__init__(self, parent)
         self.setMinimumSize(self.width, self.height)
         self.frameCount = 0
@@ -63,7 +68,7 @@ class GLPlotWidget(QGLWidget):
         #self.timer.start()
 
     def updateShader(self):
-        #print "GLPlotWidget.updateShader"
+        #print( "GLPlotWidget.updateShader" )
         try:gl.glDeleteShader(self.shader)
         except:pass
         self.vertex_code = glu.DEFAULT_VERTEX_SHADER
@@ -80,12 +85,12 @@ class GLPlotWidget(QGLWidget):
             'iDate':        gl.glGetUniformLocation( self.shader, 'iDate'       ), 
             'iSampleRate':  gl.glGetUniformLocation( self.shader, 'iSampleRate' ), 
         }
-        #print self.UNIFORM_LOCATIONS
+        #print( self.UNIFORM_LOCATIONS )
         gl.glUniform3f ( self.UNIFORM_LOCATIONS['iResolution'], 1.0*self.width, 1.0*self.height, 1.0 )
         self.update()
 
     def initializeGL(self):
-        #print "GLPlotWidget.initializeGL"
+        #print( "GLPlotWidget.initializeGL" )
         self.points = np.array([[-1.0,-1.0],[1.0,-1.0],[-1.0,1.0],   [1.0,1.0],[1.0,-1.0],[-1.0,1.0]], dtype=np.float32)
         self.vbo = glvbo.VBO(self.points)    # create a Vertex Buffer Object with the specified data
         self.updateShader()
@@ -93,8 +98,8 @@ class GLPlotWidget(QGLWidget):
         self.frameCount = 0
 
     def paintGL(self):
-        #print "GLPlotWidget.paintGL"
-        #print "self.frameCount = ", self.frameCount
+        #print( "GLPlotWidget.paintGL" )
+        #print( "self.frameCount = ", self.frameCount )
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)    # clear the buffer
         self.vbo.bind()                       # bind the VBO
         gl.glEnableVertexAttribArray(0)
@@ -107,7 +112,7 @@ class GLPlotWidget(QGLWidget):
         self.frameCount +=1
 
     def resizeGL(self, width, height):
-        #print "GLPlotWidget.resizeGL"
+        #print( "GLPlotWidget.resizeGL" )
         self.width, self.height = width, height   # update the window size
         gl.glViewport(0, 0, width, height)        # paint within the whole window
         gl.glUniform3f ( self.UNIFORM_LOCATIONS['iResolution'], 1.0*self.width, 1.0*self.height, 1.0 )
@@ -149,13 +154,13 @@ class MainWindow(QtGui.QWidget):
     def saveShaderDlg(self):
         fname = QtGui.QFileDialog.getSaveFileName(self, 'Save Shader ... ', os.getcwd(), selectedFilter='*.glslf')
         if fname:
-            print "saving shader to file : ", fname
+            print( "saving shader to file : ", fname )
             with open(fname, "w") as fo: fo.write( self.txtCode.toPlainText() )
     
     def loadShaderDlg(self):
         fname= QtGui.QFileDialog.getOpenFileName(self, 'Load Shader ... ', os.getcwd(), selectedFilter='*.glslf')
         if fname:
-            print "loading shader to file : ",fname
+            print( "loading shader to file : ",fname )
             with open(fname,'r') as f: self.txtCode.setPlainText( f.read() )
             self.updateShader()
 
