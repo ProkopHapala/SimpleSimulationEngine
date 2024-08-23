@@ -10,6 +10,7 @@
 //------------------------------------------------------------------
 
 float sdPlane    ( vec3 p )                  { return p.y; }
+float sdPlane2   ( vec3 p, vec3 d )          { return dot(d,p); }
 float sdSphere   ( vec3 p, float s )         { return length(p)-s; }
 float sdBox      ( vec3 p, vec3 b )          { vec3 d = abs(p) - b; return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0)); }
 float sdEllipsoid( in vec3 p, in vec3 r )    { return (length( p/r ) - 1.0) * min(min(r.x,r.y),r.z); }

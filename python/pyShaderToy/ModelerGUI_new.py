@@ -5,7 +5,7 @@ from PyQt5.QtCore import QTimer,QElapsedTimer
 import moderngl
 import numpy as np
 import sys, os
-
+from FormulaNode import *
 
 
 # Default Vertex Shader as a string
@@ -59,7 +59,7 @@ class GLPlotWidget(QGLWidget):
         self.vec_data[0,1] = 0.25
         self.vec_data[0,2] = 0.25
         self.vec_data[0,0] = 2.0*np.sin( self.elapsed_timer.elapsed()*0.001 )
-        print( "vec_data[0] ", self.vec_data[0])
+        #print( "vec_data[0] ", self.vec_data[0])
         self.update_vec_data()
 
         self.updateGL()
@@ -93,7 +93,7 @@ class GLPlotWidget(QGLWidget):
         self.vec_buffer = self.ctx.buffer(self.vec_data.tobytes())
         
         # Ensure that the buffer is bound to the correct uniform block
-        uniform_block = self.shader_program['VecData']      ;print( "uniform_block", uniform_block)
+        uniform_block = self.shader_program['VecData']  #    ;print( "uniform_block", uniform_block)
         uniform_block.binding = 0
         #self.shader_program.uniform_block_binding(block_index, 0)  # Bind the block to binding point 0
         self.vec_buffer.bind_to_uniform_block(0) 
@@ -143,13 +143,28 @@ class MainWindow(QtWidgets.QWidget):
         self.btPlay     =w= QtWidgets.QPushButton('play', self);   l2.addWidget(w); w.setToolTip('on/off update on timer');  w.clicked.connect(self.play);
 
         #self.txtCode.setPlainText("d = opU( sdPlane(pos), sdSphere(pos-vec3( 0.0,0.25, 0.0), 0.25 ) );")
-        self.txtCode.setPlainText("d = opU( sdPlane(pos), sdSphere(pos-u_vec_data[0], 0.25 ) );")
+        #self.txtCode.setPlainText("d = opU( sdPlane(pos), sdSphere(pos-u_vec_data[0], 0.25 ) );")
+        
+        scene_code= '''P1 = Plane(  [0.0,0.0,0.0] )\nS2 = Sphere( [0.0,0.25, 0.0], 0.25 )\nscene = P1 + S2'''
+        self.txtCode.setPlainText(scene_code)
+
+        # P1 = Plane(  [0.0,0.0,0.0] )
+        # #P1 = Formula( f"sdPlane( pos)" )
+        # S2 = Sphere( [0.0,0.25, 0.0], 0.25 )
+        # scene = P1 + S2
+
+        #S1 = Sphere( [1.3,0.5,.2], 1.5 )
+        #S2 = Sphere( [0.3,0.5,2.2], 0.5 )
+        #B1 = RoundBox( [-0.3,0.5,-2.2], [0.5,0.5,0.5], 1.5 )
+        #scene = (B1 - S1) + S2
+        #scene_str = "d="+scene.eval_CGS() + ";";  print( "scene_str: \n", scene_str )
+        #self.txtCode.setPlainText( scene_str )
 
         self.setWindowTitle('Shader Toy')
         #self.setGeometry(100, 100, 1920, 1080)  # Set position (x, y) and size (width, height)
         self.setGeometry(100, 100, 1600, 1000) 
 
-        self.makeShaderCode()
+        self.makeShaderCode( self.txtCode.toPlainText() )
 
     def play(self):
         self.btPlay.setText("Stop")
@@ -174,14 +189,33 @@ class MainWindow(QtWidgets.QWidget):
             with open(fname, 'r') as f: self.txtCode.setPlainText(f.read())
             self.updateShader()
 
-    def makeShaderCode(self):
-        src_scene = "vec2 map( in vec3 pos ){\n float d;\n" + self.txtCode.toPlainText() + "\n return vec2(d,1.0);\n}"
+    def makeShaderCode(self, scene_code, bPython=True ):
+        if bPython:
+            local_context = {}
+            try:
+                exec(scene_code, globals(), local_context)
+                if 'scene' in local_context:
+                    scene = local_context['scene']
+                    scene_code = "d="+scene.eval_CGS()+";"
+                    print(f"Scene variable captured: {scene_code}")
+                else:
+                    print("Scene variable not found.")
+
+            except Exception as e:
+                print(f"Error executing code: {e}")
+
+        #src = SHADERTOY_HEADER + self.src_primitives + src_scene + self.src_renderer
+        #self.glview.fragment_code = src
+        #with open("fragment_code.glslf", "w") as fo: fo.write(self.glview.fragment_code)
+        
+        #scene_code = self.txtCode.toPlainText()
+        src_scene = "vec2 map( in vec3 pos ){\n float d;\n" + scene_code + "\n return vec2(d,1.0);\n}"
         src = SHADERTOY_HEADER + self.src_primitives + src_scene + self.src_renderer
         self.glview.fragment_code = src
         with open("fragment_code.glslf", "w") as fo: fo.write(self.glview.fragment_code)
 
     def updateShader(self):
-        self.makeShaderCode()
+        self.makeShaderCode( self.txtCode.toPlainText() )
         self.glview.updateShader()
 
 if __name__ == '__main__':
