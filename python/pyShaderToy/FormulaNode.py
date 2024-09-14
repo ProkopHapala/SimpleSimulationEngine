@@ -55,7 +55,7 @@ def process_vec_arg( a ):
     elif( isinstance( a, float ) ):
         return str(a)
     elif ( isinstance( a, int ) ):
-        return ("vec_data[%i]" %a)
+        return ("u_vec_data[%i]" %a)
     elif( isinstance( a, list ) ):
         return "vec3( " + ", ".join( process_vec_arg( x ) for x in a ) + " )"
     elif( isinstance( a, tuple ) ):
@@ -84,6 +84,8 @@ def Plane(p, d=(0.0,1.0,0.0) ):
     d = process_vec_arg(d)
     # sdPlane    ( vec3 p )
     return Formula( f"sdPlane2( pos-{p}, {d} )" )
+
+
 def Sphere(p,r):
     p = process_vec_arg(p)
     # sdSphere   ( vec3 p, float r ) 

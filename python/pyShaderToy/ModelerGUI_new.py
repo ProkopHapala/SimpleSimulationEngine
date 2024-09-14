@@ -7,6 +7,18 @@ import numpy as np
 import sys, os
 from FormulaNode import *
 
+'''
+# Example of more complex scene
+P1 = Plane(  [0.0,0.0,0.0] )
+S2 = Sphere( [0.0,0.25, 0.0], 0.25 )
+S3 = Sphere( [0.0,0.25    , 0.0], 0.2 )
+S4 = Sphere( [0.0,0.25-0.2, 0.2], 0.2 )
+S5 = Sphere( [-0.2,0.25+0.2, 0.0], 0.2 )  
+scene = P1 + (S2 -( S3 +S4+S5 ))
+'''
+
+
+
 
 # Default Vertex Shader as a string
 DEFAULT_VERTEX_SHADER = """
