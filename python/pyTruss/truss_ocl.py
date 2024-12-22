@@ -1,10 +1,11 @@
 import numpy as np
 import pyopencl as cl
 import os
+import matplotlib.pyplot as plt
 
 from sparse import (
     build_neighbor_list, neigh_stiffness, make_Aii, neighs_to_dense_arrays,
-    linsolve_Jacobi_sparse
+    linsolve_Jacobi_sparse, jacobi_iteration_sparse
 )
 from projective_dynamics import make_pd_rhs, make_pd_Aii0
 from truss import Truss
@@ -85,39 +86,64 @@ class TrussOpenCLSolver:
         self.Aii_buf    = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=Aii)
         self.r_buf      = cl.Buffer(self.ctx, mf.READ_WRITE, x_padded.nbytes)
 
-    def solve_pd(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1):
+    def solve_pd(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1, errs=None, bPrint=False):
+        """Solve projective dynamics using OpenCL"""
         # Initialize system and create buffers
         pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
         self._create_ocl_buffers(pos_pred, masses, neighs, kngs, Aii, b)
         
-        # Solve using OpenCL
+        
+        # Prepare output arrays
         x_out = np.zeros((self.n_points, 4), dtype=np.float32)
         r = np.zeros_like(x_out)
-
+        
+        # Main iteration loop
         itr = 0
         while itr < niter:
-            # python functions are costly therefore we call multiple times the kernell before we read the results
-            for itr_sub in range(nsub):
-                self.prg.jacobi_iteration_sparse(
-                    self.queue, (self.n_points,), None,
-                    self.x_buf, self.b_buf, self.neighs_buf, self.kngs_buf, self.Aii_buf,
-                    self.x_out_buf, self.r_buf,
-                    np.int32(self.n_max), np.int32(self.n_points)
-                )
+            # Run nsub iterations without checking convergence
+            events = []
+            last_write_buf = None  # Keep track of which buffer has the latest results
+            
+            for sub_iter in range(nsub):
+                # Run kernel
+                if sub_iter % 2 == 0:  # Even iterations
+                    event = self.prg.jacobi_iteration_sparse(
+                        self.queue, (self.n_points,), None,
+                        self.x_buf, self.b_buf, self.neighs_buf, self.kngs_buf, self.Aii_buf,
+                        self.x_out_buf, self.r_buf,
+                        np.int32(self.n_max), np.int32(self.n_points)
+                    )
+                    last_write_buf = self.x_out_buf
+                else:  # Odd iterations
+                    event = self.prg.jacobi_iteration_sparse(
+                        self.queue, (self.n_points,), None,
+                        self.x_out_buf, self.b_buf, self.neighs_buf, self.kngs_buf, self.Aii_buf,
+                        self.x_buf, self.r_buf,
+                        np.int32(self.n_max), np.int32(self.n_points)
+                    )
+                    last_write_buf = self.x_buf
+                events.append(event)
+            
+            cl.wait_for_events(events)
             itr += nsub
             
-            # Read results back
+            # Read results back (from the last output buffer used)
             cl.enqueue_copy(self.queue, r, self.r_buf)
-            cl.enqueue_copy(self.queue, x_out, self.x_out_buf)
+            cl.enqueue_copy(self.queue, x_out, last_write_buf)
+            
+            # Update x_buf for next iteration with the latest results
+            if last_write_buf != self.x_buf:
+                cl.enqueue_copy(self.queue, self.x_buf, x_out)
             
             # Check convergence
             err = np.linalg.norm(r[:, :3])
+            if errs is not None:
+                errs.append(err)  # Store error value
+            if bPrint:
+                print(f"TrussOpenCLSolver::solve_pd() itr: {itr}, err: {err}")
             if err < tol:
                 break
-            
-            # Update x for next iteration
-            cl.enqueue_copy(self.queue, self.x_buf, x_out)
-        
+
         return x_out[:, :3]  # Return only xyz coordinates
 
     def solve_pd_event(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1):
@@ -184,78 +210,76 @@ def test_against_reference():
     print("\nReference solution:")
     neighs, kngs, n_max = neigh_stiffness(neighbs, bonds, ks)
     Aii0 = make_pd_Aii0(masses, dt)
+    Aii = make_Aii(neighs, kngs, Aii0)  
     b = make_pd_rhs(neighbs, bonds, masses, dt, ks, points, l0s, pos_pred)
     
-    err_cpu = []
-    def callback(itr, x, r):
-        err = np.linalg.norm(r)
-        err_cpu.append(err)
-        print(f"Reference itr: {itr}, err: {err}")
-    
-    x_ref = linsolve_Jacobi_sparse(b, neighs, kngs, x0=pos_pred, Aii0=Aii0, niter=100, tol=1e-6, callback=callback)
+    # Run one iteration of CPU solver
+    print("\nCPU Iteration:")
+    x_ref, r_ref = jacobi_iteration_sparse(pos_pred, b, neighs, kngs, Aii)  
     
     # OpenCL solution
-    print("\nOpenCL solution:")
+    print("\nGPU Iteration:")
     solver = TrussOpenCLSolver()
     
-    # Modify solve_pd to track errors
-    err_gpu = []
-    x_ocl = np.zeros_like(pos_pred)
-    r = np.zeros_like(pos_pred)
-    
     # Initialize system and create buffers
-    pos_pred, masses, neighs, kngs, Aii, b = solver._init_pd_system(truss, dt, gravity, fixed_points)
-    solver._create_ocl_buffers(pos_pred, masses, neighs, kngs, Aii, b)
+    pos_pred_gpu, masses, neighs, kngs, Aii, b = solver._init_pd_system(truss, dt, gravity, fixed_points)
+    solver._create_ocl_buffers(pos_pred_gpu, masses, neighs, kngs, Aii, b)
     
-    # Solve using OpenCL
+    # Run one iteration
     x_out = np.zeros((solver.n_points, 4), dtype=np.float32)
     r = np.zeros_like(x_out)
-
-    for itr in range(100):  # Same number of iterations as CPU
-        solver.prg.jacobi_iteration_sparse(
-            solver.queue, (solver.n_points,), None,
-            solver.x_buf, solver.b_buf, solver.neighs_buf, solver.kngs_buf, solver.Aii_buf,
-            solver.x_out_buf, solver.r_buf,
-            np.int32(solver.n_max), np.int32(solver.n_points)
-        )
-        
-        # Read results back
-        cl.enqueue_copy(solver.queue, r, solver.r_buf)
-        cl.enqueue_copy(solver.queue, x_out, solver.x_out_buf)
-        
-        # Calculate error
-        err = np.linalg.norm(r[:, :3])
-        err_gpu.append(err)
-        print(f"OpenCL itr: {itr}, err: {err}")
-        
-        if err < 1e-6:
-            break
-            
-        # Update x for next iteration
-        cl.enqueue_copy(solver.queue, solver.x_buf, x_out)
     
+    solver.prg.jacobi_iteration_sparse(
+        solver.queue, (solver.n_points,), None,
+        solver.x_buf, solver.b_buf, solver.neighs_buf, solver.kngs_buf, solver.Aii_buf,
+        solver.x_out_buf, solver.r_buf,
+        np.int32(solver.n_max), np.int32(solver.n_points)
+    )
+    
+    # Read results back
+    cl.enqueue_copy(solver.queue, r, solver.r_buf)
+    cl.enqueue_copy(solver.queue, x_out, solver.x_out_buf)
     x_ocl = x_out[:, :3]
     
     # Compare results
+    print("\nComparison:")
     diff = np.abs(x_ref - x_ocl)
     max_diff = np.max(diff)
-    print(f"\nMax difference between reference and OpenCL: {max_diff}")
+    print(f"Max difference between reference and OpenCL: {max_diff}")
     
-    # Plot error histories
-    import matplotlib.pyplot as plt
-    plt.figure(figsize=(10, 6))
-    plt.plot(err_cpu, label="Jacobi CPU")
-    plt.plot(err_gpu, label="Jacobi GPU")
-    plt.yscale('log')
-    plt.xlabel('Iteration')
-    plt.ylabel('Error (log scale)')
-    plt.title('Convergence Comparison: CPU vs GPU Implementation')
-    plt.grid(True)
-    plt.legend()
-    plt.show()
-    
-    return x_ref, x_ocl, err_cpu, err_gpu
+    return x_ref, x_ocl
 
 if __name__ == "__main__":
-    # Run reference comparison test only
+    # First run reference comparison test
     test_against_reference()
+    
+    print("\nRunning full solver to show convergence...")
+    # Create test truss (grid)
+    truss = Truss()
+    truss.build_grid_2d(nx=5, ny=5, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
+    
+    # Run solver
+    errs = []
+    solver = TrussOpenCLSolver()
+    x_final = solver.solve_pd(
+        truss, 
+        dt=1.0, 
+        gravity=np.array([0., -9.81, 0.0]), 
+        fixed_points=[0], 
+        niter=100,  # More iterations to see convergence
+        tol=1e-6,
+        nsub=1,
+        errs=errs,
+        bPrint=True
+    )
+
+
+    # Plot error convergence
+    plt.figure(figsize=(10, 6))
+    plt.semilogy(errs, 'b-', label='Error')
+    plt.grid(True)
+    plt.xlabel('Iteration')
+    plt.ylabel('Error (log scale)')
+    plt.title('Convergence of Jacobi Solver')
+    plt.legend()
+    plt.show()

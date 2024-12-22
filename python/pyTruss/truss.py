@@ -247,8 +247,8 @@ class Truss:
         """
         bonds   = np.array(self.bonds)
         l0s     = self.get_rest_lengths()
-        neighbs = self.get_neighbor_list()
-        return bonds, self.points, self.masses, self.ks, list(self.fixed), l0s, neighbs
+        neighs = self.get_neighbor_list()
+        return bonds, self.points, self.masses, self.ks, list(self.fixed), l0s, neighs
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

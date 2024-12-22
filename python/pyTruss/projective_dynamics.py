@@ -1,5 +1,6 @@
 import numpy as np
-from sparse import build_neighbor_list
+#from sparse import build_neighbor_list
+import sparse
 
 def make_pd_Aii0(  masses, dt ):
     """Create the diagonal terms of the system matrix for projective dynamics"""
@@ -60,7 +61,7 @@ def update_velocity(ps_cor, points, velocity, dt):
 def solve_pd(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100, gravity=np.array([0, -9.81, 0]), fixed_points=None, call_back=None, damping=0.01 ):
     """Solve the system using projective dynamics following the Julia implementation"""
     n_points = len(points)
-    neighbs = build_neighbor_list(bonds, n_points)
+    neighbs = sparse.build_neighbor_list(bonds, n_points)
     A = make_pd_matrix(neighbs, bonds, masses, dt, ks)
     
     # Initialize
@@ -113,6 +114,26 @@ def solve_pd(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100, gravity=np
             print(f"    max bond length error: {max_bond_error:.3e}")
     
     return pos, velocity
+
+# def makeSparseSystem( dt, bonds, points, masses, ks, fixed, l0s, neighbs, gravity = np.array([0., -9.81, 0.0 ]) ):
+#     neighs, kngs, n_max = sparse.neigh_stiffness(neighbs, bonds, ks)
+#     Aii0     = make_pd_Aii0(  masses, dt )
+#     Aii      = sparse.make_Aii(neighs, kngs, Aii0)
+#     velocity = points*0 + gravity[None,:] * dt
+#     pos_pred = points + velocity * dt
+#     b        = make_pd_rhs(neighbs, bonds, masses, dt, ks, points, l0s, pos_pred)
+#     return neighs, kngs, Aii, b, pos_pred, velocity, n_max
+
+def makeSparseSystem( dt, bonds, points, masses, ks, fixed, l0s, neighbs, gravity = np.array([0., -9.81, 0.0 ]) ):
+    velocity = points*0 + gravity[None,:] * dt
+    pos_pred = points + velocity * dt
+    if fixed is not None:
+        pos_pred[fixed] = points[fixed]
+    b = make_pd_rhs(neighbs, bonds, masses, dt, ks, points, l0s, pos_pred)
+    neighs, kngs, n_max = sparse.neigh_stiffness(neighbs, bonds, ks)
+    Aii0 = make_pd_Aii0(  masses, dt )
+    Aii = sparse.make_Aii(neighs, kngs, Aii0)
+    return neighs, kngs, Aii, b, pos_pred, velocity, n_max
 
 def apply_pd_matrix(x, neighbs, bonds, masses, dt, ks):
     """Apply system matrix A to vector x without explicitly building A"""

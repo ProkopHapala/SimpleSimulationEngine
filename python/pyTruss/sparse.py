@@ -128,7 +128,7 @@ def dot_sparse(x, neighs, kngs, Aii ):
         for jj in range(ni):
             j      = ngsi[jj]
             k      = ksi[jj]
-            sum_j -= k * x[j]   # Off-diagonal contribution
+            sum_j = k * x[j]   # Off-diagonal contribution
         y[i] = sum_j + Aii[i] * x[i]
     return y
 
@@ -137,25 +137,25 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
     n = len(x)
     x_out = np.zeros_like(x)
     r     = np.zeros_like(x)
-    #print("n = ", n, " len(x) = ", len(x))
     for i in range(n):
         sum_j  = 0  # RHS term
         ngsi = neighs[i]
         ksi  = kngs[i] 
         ni = len(ngsi)
+        #print(f"\nCPU Point {i}:")
+        #print(f"  Initial sum_j: {sum_j}")
+        #print(f"  Neighbors: {ngsi[:ni]}")
+        #print(f"  Stiffness: {ksi[:ni]}")
         for jj in range(ni):
             j      = ngsi[jj]
             k      = ksi[jj]
-            #sum_j -= k * x[j]   # Off-diagonal contribution
             sum_j += k * x[j]   # Off-diagonal contribution
+            #print(f"    j={j}, k={k}, x[j]={x[j]}, sum_j={sum_j}")
         x_out[i] =  (b[i] + sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
-        r[i]     = b[i] + sum_j - Aii[i]*x[i] # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
-
-        #x_out[i] =  (b[i] - sum_j) / Aii[i]                 # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
-        #r[i]     = b[i] - ( sum_j + Aii[i] * x[i]) # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
-    
-    #r = b - dot_sparse(x, neighs, kngs, Aii )
+        r[i]     = b[i] +sum_j - Aii[i]*x[i] # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
+        #print(f"  Final: b[i]={b[i]}, Aii[i]={Aii[i]}, x_out[i]={x_out[i]}, r[i]={r[i]}")
     return x_out, r
+
 
 # def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
 #     """One iteration of Jacobi method using sparse operations"""
@@ -173,7 +173,6 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
 #             #if i != j:  # Skip diagonal terms
 #             sum_j += k * x[j]   # Add because A[i,j] is -k, so when moved to RHS it becomes +k
 #         x_out[i] = sum_j / Aii[i]  # x_new = (b + sum_(j!=i){ k * x[j] }) / Aii
-#     r = b - dot_sparse(x, neighs, kngs, Aii )  
 #     r = b - dot_sparse(x, neighs, kngs, Aii )  
 #     return x_out, r
 
@@ -203,8 +202,9 @@ def check_diagonal(A, Aii, bPrint=True):
     error = np.linalg.norm(Aii - Aii_dense)
     print(f"check_diagonal() Total error: {error:.6f}")
 
+
 if __name__ == "__main__":
-    from projective_dynamics import make_pd_matrix, make_pd_rhs, make_pd_Aii0
+    from projective_dynamics import make_pd_matrix, make_pd_rhs, make_pd_Aii0, makeSparseSystem
     from truss               import Truss
 
     bWheel = False
@@ -225,32 +225,22 @@ if __name__ == "__main__":
     else:
         truss.build_grid_2d(nx=5, ny=5, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
 
-    bonds, points, masses, ks, fixed, l0s, neighbs = truss.get_pd_quantities()
+    bonds, points, masses, ks, fixed, l0s, neighs = truss.get_pd_quantities()
     neighbs = build_neighbor_list(bonds, len(points))
+    
+    neighs, kngs, Aii, b, pos_pred, velocity, n_max = makeSparseSystem( dt, bonds, points, masses, ks, fixed, l0s, neighbs )
     A = make_pd_matrix(neighbs, bonds, masses, dt, ks)
-    velocity = points*0 + gravity[None,:] * dt
-    pos_pred = points + velocity * dt
-    if fixed_points is not None:
-        pos_pred[fixed_points] = points[fixed_points]
-    b = make_pd_rhs(neighbs, bonds, masses, dt, ks, points, l0s, pos_pred)
 
-    neighs, kngs, n_max = neigh_stiffness(neighbs, bonds, ks)
-    print("n_max = ",  n_max)
-    #print("neighs = ", neighs)
-    #print("kngs = ",   kngs)
-
-    Aii0 = make_pd_Aii0(  masses, dt )
     bx = b[:,1]
     x0 = pos_pred[:,1]
 
-
     # check diagonal
-    Aii_sparse = make_Aii(neighs, kngs, Aii0)
-    check_diagonal(A, Aii_sparse, bPrint=False)
+   
+    check_diagonal(A, Aii, bPrint=False)
 
     # check Matrix-vector product
     Ax_ref    = A@x0
-    Ax_sparse = dot_sparse(x0, neighs, kngs, Aii_sparse)
+    Ax_sparse = dot_sparse(x0, neighs, kngs, Aii)
     #print("Ax_ref = ", Ax_ref)
     #print("Ax_sparse = ", Ax_sparse)
     print("| Ax_sparse - Ax_ref | = ", np.linalg.norm(Ax_sparse - Ax_ref))  
@@ -259,8 +249,6 @@ if __name__ == "__main__":
 
     x_ref = np.linalg.solve(A, bx)
 
-
-
     #x_jacobi = linsolve_Jacobi       ( bx, A,            x0=x0,            bPrint=True )
     #x_sparse = linsolve_Jacobi_sparse( bx, neighs, kngs, x0=x0, Aii0=Aii0, bPrint=True )
 
@@ -268,9 +256,9 @@ if __name__ == "__main__":
     err_jacobi = []
     err_JacobMix = []
     err_sparse = []
-    x_jacobi   = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                                bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_jacobi )
-    x_JacobMix = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                                bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_JacobMix, niter_mix=2, bmix=0.75, bPrint=True )
-    x_sparse = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii_sparse ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
+    x_jacobi   = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_jacobi )
+    x_JacobMix = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_JacobMix, niter_mix=2, bmix=0.75, bPrint=True )
+    x_sparse = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
 
     #print("x_ref = ", x_ref)
     print("| x_jacobi - x_ref | = ", np.linalg.norm(x_jacobi - x_ref))
@@ -285,7 +273,3 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid()
     plt.show()
-
-
-
-

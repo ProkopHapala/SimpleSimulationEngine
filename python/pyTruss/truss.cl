@@ -1,4 +1,6 @@
+
 // def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
+//     """One iteration of Jacobi method using sparse operations"""
 //     n = len(x)
 //     x_out = np.zeros_like(x)
 //     r     = np.zeros_like(x)
@@ -7,12 +9,18 @@
 //         ngsi = neighs[i]
 //         ksi  = kngs[i] 
 //         ni = len(ngsi)
+//         #print(f"\nCPU Point {i}:")
+//         #print(f"  Initial sum_j: {sum_j}")
+//         #print(f"  Neighbors: {ngsi[:ni]}")
+//         #print(f"  Stiffness: {ksi[:ni]}")
 //         for jj in range(ni):
 //             j      = ngsi[jj]
 //             k      = ksi[jj]
-//             sum_j += k * x[j]                 # Off-diagonal contribution
+//             sum_j += k * x[j]   # Off-diagonal contribution
+//             #print(f"    j={j}, k={k}, x[j]={x[j]}, sum_j={sum_j}")
 //         x_out[i] =  (b[i] + sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
-//         r[i]     = b[i] + sum_j - Aii[i]*x[i] # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
+//         r[i]     = b[i] - (-sum_j + Aii[i]*x[i]) # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
+//         #print(f"  Final: b[i]={b[i]}, Aii[i]={Aii[i]}, x_out[i]={x_out[i]}, r[i]={r[i]}")
 //     return x_out, r
 
 __kernel void jacobi_iteration_sparse(
@@ -34,35 +42,28 @@ __kernel void jacobi_iteration_sparse(
     float4 xi      = x[iG];
     int row_offset = iG * nmax_neigh;
     
+    // printf("\nGPU Point %d:\n", iG);
+    // printf("  Initial sum_j: (%f, %f, %f)\n", sum_j.x, sum_j.y, sum_j.z);
+    
     // Loop through neighbors
     for(int jj = 0; jj < nmax_neigh; jj++){
         int j = neighs[row_offset + jj];
         if(j < 0) break;  // Stop at sentinel value (-1)
         float k = kngs[row_offset + jj];
-        sum_j += k * x[j].xyz;  // Off-diagonal contribution
+        float4 xj = x[j];
+        sum_j += k * xj.xyz;  // Off-diagonal contribution
+        //printf("    j=%d, k=%f, x[j]=(%f, %f, %f), sum_j=(%f, %f, %f)\n",    j, k, xj.x, xj.y, xj.z, sum_j.x, sum_j.y, sum_j.z);
     }
     
     float3 bi = b[iG].xyz;
-    x_out[iG] = (float4){  ( bi - sum_j) / Aii[iG],         xi.w };   // Calculate new solution
-    r[iG]     = (float4){  bi + sum_j - Aii[iG] * xi.xyz,   0.0f };   // Calculate residual
+    x_out[iG] = (float4){ (bi + sum_j) / Aii[iG], xi.w };  // Calculate new solution
+    r[iG]     = (float4){ bi +  sum_j - Aii[iG] * xi.xyz, 0.0f };  // Calculate residual
+
+    //x_out[i] =  (b[i] + sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
+    //r[i]     = b[i] - (-sum_j + Aii[i]*x[i]) # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
+    // printf("  Final: b[i]=(%f, %f, %f), Aii[i]=%f\n", bi.x, bi.y, bi.z, Aii[iG]);
+    // printf("  x_out[i]=(%f, %f, %f), r[i]=(%f, %f, %f)\n",    x_out[iG].x, x_out[iG].y, x_out[iG].z,  r[iG].x, r[iG].y, r[iG].z);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // =========== Optimized kernel using local memory and group-wise processing ===========
 //    Not sure if this is faster than the original kernel
@@ -119,16 +120,22 @@ __kernel void jacobi_iteration_sparse_local(
     float4 bi    = b[iG];            // RHS vector for current point
     float3 sum_j = (float3)(0.0f);   // Accumulator for neighbor contributions
     
+    // printf("\nGPU Point %d:\n", iG);
+    // printf("  Initial sum_j: (%f, %f, %f)\n", sum_j.x, sum_j.y, sum_j.z);
+    
     // Process points assigned to this work-item
     for(int i = iL; i < lrange.y; i += nL ){
         int il  = i + lrange.x;
         int j   = loc_ngs [il];
         float k = loc_kngs[il];
         sum_j += k * loc_xs[j].xyz;  // Only use xyz components
+       // printf("    j=%d, k=%f, x[j]=(%f, %f, %f), sum_j=(%f, %f, %f)\n",    j, k, loc_xs[j].x, loc_xs[j].y, loc_xs[j].z, sum_j.x, sum_j.y, sum_j.z);
     }
 
     const float aii = Aii[iG];
-    x_out[iG] = (float4)( (bi.xyz + sum_j) / aii,          xi.w );
-    r    [iG] = (float4)(  bi.xyz + sum_j  - aii * xi.xyz, 0.0f );
+    x_out[iG] = (float4)( (bi.xyz - sum_j) / aii,          xi.w );
+    r    [iG] = (float4)(  bi.xyz - (sum_j + aii * xi.xyz), 0.0f );
     
+    //printf("  Final: b[i]=(%f, %f, %f), Aii[i]=%f\n", bi.x, bi.y, bi.z, Aii[iG]);
+    //printf("  x_out[i]=(%f, %f, %f), r[i]=(%f, %f, %f)\n",     x_out[iG].x, x_out[iG].y, x_out[iG].z,  r[iG].x, r[iG].y, r[iG].z);
 }
