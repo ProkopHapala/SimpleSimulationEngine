@@ -146,9 +146,13 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
         for jj in range(ni):
             j      = ngsi[jj]
             k      = ksi[jj]
-            sum_j -= k * x[j]   # Off-diagonal contribution
-        x_out[i] =  (b[i] - sum_j) / Aii[i]                 # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
-        r[i]     = b[i] - ( sum_j + Aii[i] * x[i]) # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
+            #sum_j -= k * x[j]   # Off-diagonal contribution
+            sum_j += k * x[j]   # Off-diagonal contribution
+        x_out[i] =  (b[i] + sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
+        r[i]     = b[i] + sum_j - Aii[i]*x[i] # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
+
+        #x_out[i] =  (b[i] - sum_j) / Aii[i]                 # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
+        #r[i]     = b[i] - ( sum_j + Aii[i] * x[i]) # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
     
     #r = b - dot_sparse(x, neighs, kngs, Aii )
     return x_out, r
@@ -263,13 +267,15 @@ if __name__ == "__main__":
     niter = 50
     err_jacobi = []
     err_JacobMix = []
+    err_sparse = []
     x_jacobi   = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                                bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_jacobi )
     x_JacobMix = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                                bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_JacobMix, niter_mix=2, bmix=0.75, bPrint=True )
-    #x_sparse = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii_sparse ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
+    x_sparse = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii_sparse ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
 
     #print("x_ref = ", x_ref)
     print("| x_jacobi - x_ref | = ", np.linalg.norm(x_jacobi - x_ref))
     print("| x_JacobMix - x_ref | = ", np.linalg.norm(x_JacobMix - x_ref))
+    print("| x_sparse - x_ref | = ", np.linalg.norm(x_sparse - x_ref))
 
 
     import matplotlib.pyplot as plt
