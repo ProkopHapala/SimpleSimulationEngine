@@ -5,6 +5,17 @@ def jacobi_iteration(A, b, x):
     r   = b - A @ x
     return ( r + Aii*x ) / Aii, r
 
+def gauss_seidel_iteration(A, b, x):
+    n = len(x)
+    x_new = x.copy()
+    for i in range(n):
+        sum1 = np.dot(A[i, :i], x_new[:i])
+        sum2 = np.dot(A[i, i+1:], x[i+1:])
+        x_new[i] = (b[i] - sum1 - sum2) / A[i, i]
+        #print(f"{i} sum1: {sum1:.6f} sum2: {sum2:.6f} x_new[i]: {x_new[i]:.6f}")
+    r = b - A @ x_new
+    return x_new, r
+
 def linsolve_Jacobi( b, A, x0=None, niter=10, tol=1e-6, bPrint=False, callback=None ):
     if x0 is None: x0 = np.zeros_like(b)
     x = x0.copy()
@@ -128,7 +139,7 @@ def dot_sparse(x, neighs, kngs, Aii ):
         for jj in range(ni):
             j      = ngsi[jj]
             k      = ksi[jj]
-            sum_j = k * x[j]   # Off-diagonal contribution
+            sum_j -= k * x[j]   # Off-diagonal contribution
         y[i] = sum_j + Aii[i] * x[i]
     return y
 
@@ -152,6 +163,42 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
         #print("CPU i: %i Aii[i]: %f b[i]: %f sum_j: %f x_out[i]: %f r[i]: %f" %(i, Aii[i], b[i], sum_j, x_out[i], r[i]) );
     return x_out, r
 
+# def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
+#     """One iteration of Gauss-Seidel method using sparse operations"""
+#     n = len(x)
+#     x_new = x.copy()
+#     for i in range(n):
+#         sum_val = 0.0
+#         sum_j  = 0  # RHS term
+#         ngsi = neighs[i]
+#         ksi  = kngs[i] 
+#         ni = len(ngsi)
+#         for jj in range(ni):
+#             j      = ngsi[jj]
+#             k      = ksi[jj]
+#             sum_j += k * x_new[j]   # Off-diagonal contribution
+#         #for j, k in zip(neighs[i], kngs[i]):
+#         #    sum_val += k * (x_new[j] if j < i else x[j])
+#         x_new[i] = (b[i] + sum_j) / Aii[i]
+#     r = b - dot_sparse(x_new, neighs, kngs, Aii )
+#     return x_new, r
+
+def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
+    """One iteration of Gauss-Seidel method using sparse operations"""
+    n = len(x)
+    x_new = x.copy()
+    for i in range(n):
+        sum1 = 0.0  # sum for already updated elements (j < i)
+        sum2 = 0.0  # sum for not yet updated elements (j > i)
+        for j, k in zip(neighs[i], kngs[i]):
+            if j < i:
+                sum1 += k * x_new[j]  # Use updated values
+            else:
+                sum2 += k * x[j]      # Use previous iteration values
+        x_new[i] = (b[i] + sum1 + sum2) / Aii[i]
+        #print(f"{i} sum1: {sum1:.6f} sum2: {sum2:.6f} x_new[i]: {x_new[i]:.6f}")
+    r = b - dot_sparse(x_new, neighs, kngs, Aii)
+    return x_new, r
 
 # def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
 #     """One iteration of Jacobi method using sparse operations"""
@@ -245,26 +292,45 @@ if __name__ == "__main__":
 
     x_ref = np.linalg.solve(A, bx)
 
-    #x_jacobi = linsolve_Jacobi       ( bx, A,            x0=x0,            bPrint=True )
-    #x_sparse = linsolve_Jacobi_sparse( bx, neighs, kngs, x0=x0, Aii0=Aii0, bPrint=True )
+
+    #x,r = gauss_seidel_iteration       (A, bx, x0)                 ;print( "x=", x, "\nr=", r )  
+    #x,r = gauss_seidel_iteration_sparse(x0, bx, neighs, kngs, Aii) ;print( "x=", x, "\nr=", r )  
+
+    #exit()
+
 
     niter = 50
     err_jacobi = []
     err_JacobMix = []
     err_sparse = []
+    err_GSsp = []
+    err_GS = []
     x_jacobi   = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_jacobi )
     x_JacobMix = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_JacobMix, niter_mix=2, bmix=0.75, bPrint=True )
-    x_sparse = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
+    x_sparse   = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
+    x_GSsp     = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_GSsp )
+    x_GS       = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration(A, b, x),                 bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_GS )
 
-    #print("x_ref = ", x_ref)
-    print("| x_jacobi - x_ref | = ", np.linalg.norm(x_jacobi - x_ref))
+    print("x_ref = ", x_ref)
+    print("x0 = ", x0)
+    print("x_jacobi = ", x_jacobi)
+    print("x_JacobMix = ", x_JacobMix)
+    print("x_sparse = ", x_sparse)
+    print("x_GSsp = ", x_GSsp)
+    print("x_GS = ", x_GS)
+    print("| x_jacobi   - x_ref | = ", np.linalg.norm(x_jacobi   - x_ref))
     print("| x_JacobMix - x_ref | = ", np.linalg.norm(x_JacobMix - x_ref))
-    print("| x_sparse - x_ref | = ", np.linalg.norm(x_sparse - x_ref))
+    print("| x_sparse   - x_ref | = ", np.linalg.norm(x_sparse   - x_ref))
+    print("| x_GSsp     - x_ref | = ", np.linalg.norm(x_GSsp     - x_ref))
+    print("| x_GS       - x_ref | = ", np.linalg.norm(x_GS       - x_ref))
 
 
     import matplotlib.pyplot as plt
-    plt.plot(err_jacobi, label="Jacobi")
+    plt.plot(err_jacobi,   label="Jacobi")
     plt.plot(err_JacobMix, label="JacobMix")
+    plt.plot(err_sparse,   label="sparse")
+    plt.plot(err_GS,       label="GS")
+    plt.plot(err_GSsp,     label="GSsparse")
     plt.yscale('log')
     plt.legend()
     plt.grid()
