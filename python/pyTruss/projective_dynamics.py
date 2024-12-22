@@ -1,37 +1,18 @@
 import numpy as np
+from sparse import build_neighbor_list
 
-
-def jacobi_iteration(A, b, x):
-    Aii = np.diag(A)
-    r   = b - A @ x
-    return ( r + Aii*x ) / Aii, r
-
-def linsolve_Jacobi( A, b, niter=10, tol=1e-6, bPrint=False, callback=None ):
-    for itr in range(niter):
-        x, r = jacobi_iteration(A, b, x)
-        err = np.linalg.norm(r)
-        if callback is not None:
-            callback(itr, x, r)
-        if bPrint:
-            print(f"linsolve_Jacobi() itr: {itr}, err: {err}")
-        if err < tol:
-            break
-
-def build_neighbor_list(bonds, n_points):
-    """Build list of neighboring bonds for each point"""
-    neighbs = [[] for _ in range(n_points)]
-    for i, (i_, j_) in enumerate(bonds):
-        neighbs[i_].append(i)
-        neighbs[j_].append(i)
-    return neighbs
+def make_pd_Aii0(  masses, dt ):
+    """Create the diagonal terms of the system matrix for projective dynamics"""
+    idt2 = 1.0 / (dt * dt)
+    return masses * idt2
 
 def make_pd_matrix(neighbs, bonds, masses, dt, ks):
     """Create the system matrix for projective dynamics"""
     np_total = len(masses)
-    A = np.zeros((np_total, np_total))
-    idt2 = 1.0 / (dt * dt)
+    A    = np.zeros((np_total, np_total))
+    Aii0 = make_pd_Aii0( masses, dt )
     for i in range(np_total):
-        Aii = masses[i] * idt2
+        Aii = Aii0[i]
         for ib in neighbs[i]:
             k = ks[ib]
             i_, j_ = bonds[ib]
@@ -43,9 +24,7 @@ def make_pd_matrix(neighbs, bonds, masses, dt, ks):
                 A[i, i_] = -k
                 A[i_, i] = -k
         A[i, i] = Aii
-    
-    #Mt = masses * idt2
-    return A #, Mt
+    return A
 
 def make_pd_rhs(neighbs, bonds, masses, dt, ks, points, l0s, pnew):
     """Build the right-hand side of the system following the Julia implementation"""
@@ -135,12 +114,35 @@ def solve_pd(points, velocity, bonds, masses, ks, dt=0.1, n_iter=100, gravity=np
     
     return pos, velocity
 
+def apply_pd_matrix(x, neighbs, bonds, masses, dt, ks):
+    """Apply system matrix A to vector x without explicitly building A"""
+    n = len(masses)
+    result = np.zeros_like(x)
+    idt2 = 1.0 / (dt * dt)
+    
+    for i in range(n):
+        # Diagonal term (mass + spring coefficients)
+        Aii = masses[i] * idt2
+        xi = x[i]
+        
+        # Accumulate spring contributions
+        for ib in neighbs[i]:
+            k = ks[ib]
+            i_, j_ = bonds[ib]
+            j = j_ if i_ == i else i_
+            
+            Aii += k  # Add to diagonal
+            result[i] += k * (xi - x[j])  # Off-diagonal contribution
+            
+        result[i] += (masses[i] * idt2) * xi  # Mass term
+    
+    return result
+
 # Example usage
 if __name__ == "__main__":
 
     #import numpy as np
     import matplotlib.pyplot as plt
-    from projective_dynamics import solve_pd
     from truss import Truss
     import plot_utils as pu 
 
