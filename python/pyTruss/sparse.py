@@ -90,7 +90,7 @@ def neighs_to_dense_arrays(neighs, kngs, n_max):
     '''
     n = len(neighs)
     nis      = np.zeros(n, dtype=np.int32)
-    neighs_  = np.zeros((n, n_max), dtype=np.int32  )
+    neighs_  = np.zeros((n, n_max), dtype=np.int32  ) ; neighs_.fill(-1)
     kngs_    = np.zeros((n, n_max), dtype=np.float32 )
     for i in range(n):
         ngi  = neighs[i]
