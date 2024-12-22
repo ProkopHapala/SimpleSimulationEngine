@@ -131,12 +131,13 @@ class TrussOpenCLSolver:
                 cl.enqueue_copy(self.queue, self.x_buf, x_out)
             
             # Check convergence
-            err = np.linalg.norm(r[:, :3])  # Use all components for now
+            #err = np.linalg.norm(r[:, :3])  # Use all components for now
+            err = np.sum( r*r, axis=0 )
             if errs is not None:
-                errs.append(err)  # Store error value
+                errs.append( np.sqrt(err) )  # Store error value
             if bPrint:
                 print(f"TrussOpenCLSolver::solve_pd() itr: {itr}, err: {err}")
-            if err < tol:
+            if np.sqrt(err.sum()) < tol:
                 break
 
         return x_out[:, :3]  # Return only xyz coordinates
@@ -283,29 +284,29 @@ if __name__ == "__main__":
     neighs, kngs, Aii, b, pos_pred, velocity, n_max = makeSparseSystem(dt, bonds, points, masses, ks, fixed, l0s, neighbs)
     
     # Run both solvers
-    errs_cpu = []
+    errs_cpu_x = []
+    errs_cpu_y = []
     errs_gpu = []
     niter = 100
+
+    bPrint = False
     
     # CPU solver (just x component)
-    bx = b[:,0]  # Use x component
-    x0 = pos_pred[:,0]  # Use x component
-    x_cpu = linsolve_iterative(
-        lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii),
-        bx, None, x0=x0, niter=niter, tol=1e-6, bPrint=True, errs=errs_cpu
-    )
+    x_cpu = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii),  b[:,0] , None, pos_pred[:,0], niter=niter, tol=1e-6, bPrint=bPrint, errs=errs_cpu_x  )
+    y_cpu = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii),  b[:,1] , None, pos_pred[:,1], niter=niter, tol=1e-6, bPrint=bPrint, errs=errs_cpu_y  )
     
     # GPU solver (all components)
     solver = TrussOpenCLSolver()
-    x_gpu = solver.solve_pd_arrays(
-        pos_pred, neighs, kngs, Aii, b, n_max,
-        niter=niter, tol=1e-6, errs=errs_gpu, bPrint=True
-    )
+    x_gpu = solver.solve_pd_arrays( pos_pred, neighs, kngs, Aii, b, n_max,  niter=niter, tol=1e-6, errs=errs_gpu, bPrint=bPrint  )
+    errs_gpu = np.array(errs_gpu)
     
     # Plot convergence comparison
     plt.figure(figsize=(10, 6))
-    plt.semilogy(errs_cpu, 'b-', label='CPU (x component)')
-    plt.semilogy(errs_gpu, 'r:', label='GPU (all components)')
+    plt.semilogy(errs_cpu_x, 'r:', label='CPU x')
+    plt.semilogy(errs_cpu_y, 'g:', label='CPU y')
+    plt.semilogy(errs_gpu[:,0], 'r-', lw=0.5, label='GPU x')
+    plt.semilogy(errs_gpu[:,1], 'g-', lw=0.5, label='GPU y')
+    #plt.semilogy(errs_gpu[:,2], 'b-', label='GPU z')
     plt.grid(True)
     plt.xlabel('Iteration')
     plt.ylabel('Error (log scale)')

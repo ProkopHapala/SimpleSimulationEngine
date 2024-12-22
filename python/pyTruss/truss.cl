@@ -63,7 +63,7 @@ __kernel void jacobi_iteration_sparse(
             float3 x_out_i = (bi + sum_j) / Aii[iG];  // Calculate new solution
             float3 r_i     = bi +  sum_j - Aii[iG] * xi.xyz;  // Calculate residual
             
-            printf("GPU i: %i Aii[i]: %f b[i]: %f sum_j: %f  x_out[i]: %f r[i]: %f\n", iG, Aii[iG], b[iG].x, sum_j.x,  x_out_i.x, r_i.x);
+            //printf("GPU i: %i Aii[i]: %f b[i]: %f sum_j: %f  x_out[i]: %f r[i]: %f\n", iG, Aii[iG], b[iG].x, sum_j.x,  x_out_i.x, r_i.x);
 
             // float3 bi = b[iG].xyz;
             // x_out[iG] = (float4){ (bi + sum_j) / Aii[iG], xi.w };  // Calculate new solution

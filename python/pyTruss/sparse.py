@@ -143,20 +143,13 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
         ngsi = neighs[i]
         ksi  = kngs[i] 
         ni = len(ngsi)
-        #print(f"\nCPU Point {i}:")
-        #print(f"  Initial sum_j: {sum_j}")
-        #print(f"  Neighbors: {ngsi[:ni]}")
-        #print(f"  Stiffness: {ksi[:ni]}")
         for jj in range(ni):
             j      = ngsi[jj]
             k      = ksi[jj]
             sum_j += k * x[j]   # Off-diagonal contribution
-            #print(f"    j={j}, k={k}, x[j]={x[j]}, sum_j={sum_j}")
-        
         x_out[i] =  (b[i] + sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
         r[i]     = b[i] +sum_j - Aii[i]*x[i] # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
-        print("CPU i: %i Aii[i]: %f b[i]: %f sum_j: %f x_out[i]: %f r[i]: %f" %(i, Aii[i], b[i], sum_j, x_out[i], r[i]) );
-        #print(f"  Final: b[i]={b[i]}, Aii[i]={Aii[i]}, x_out[i]={x_out[i]}, r[i]={r[i]}")
+        #print("CPU i: %i Aii[i]: %f b[i]: %f sum_j: %f x_out[i]: %f r[i]: %f" %(i, Aii[i], b[i], sum_j, x_out[i], r[i]) );
     return x_out, r
 
 
