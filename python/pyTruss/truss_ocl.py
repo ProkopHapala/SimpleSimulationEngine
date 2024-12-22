@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 from sparse import (
     build_neighbor_list, neigh_stiffness, make_Aii, neighs_to_dense_arrays,
-    linsolve_Jacobi_sparse, jacobi_iteration_sparse
+    linsolve_Jacobi_sparse, jacobi_iteration_sparse, linsolve_iterative
 )
-from projective_dynamics import make_pd_rhs, make_pd_Aii0
+from projective_dynamics import make_pd_rhs, make_pd_Aii0, makeSparseSystem
 from truss import Truss
 
 class TrussOpenCLSolver:
@@ -60,24 +60,19 @@ class TrussOpenCLSolver:
 
     def _create_ocl_buffers(self, pos_pred, masses, neighs, kngs, Aii, b):
         """Create and initialize OpenCL buffers"""
-        # Convert and pad data for OpenCL
-        x = pos_pred.astype(np.float32)
-        b = b.astype(np.float32)
+        mf = cl.mem_flags
+        
+        # Pad arrays for OpenCL
+        x_padded = np.zeros((len(pos_pred), 4), dtype=np.float32)
+        x_padded[:, :3] = pos_pred
+        b_padded = np.zeros_like(x_padded)
+        b_padded[:, :3] = b
         Aii = Aii.astype(np.float32)
         
-        # Use neighs_to_dense_arrays to get padded arrays
-        padded_neighs, padded_kngs, _ = neighs_to_dense_arrays(neighs, kngs, self.n_max)
+        # Create dense arrays from sparse data
+        padded_neighs, padded_kngs, n_max = neighs_to_dense_arrays(neighs, kngs, self.n_max if self.n_max is not None else max(len(ng) for ng in neighs))
         
-        # Create float4 arrays for positions and forces
-        self.n_points = len(pos_pred)
-        x_padded = np.zeros((self.n_points, 4), dtype=np.float32)
-        b_padded = np.zeros((self.n_points, 4), dtype=np.float32)
-        x_padded[:, :3] = x
-        x_padded[:,  3] = masses  # Store mass in w component
-        b_padded[:, :3] = b
-        
-        # Create OpenCL buffers
-        mf = cl.mem_flags
+        # Create buffers
         self.x_buf      = cl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=x_padded)
         self.x_out_buf  = cl.Buffer(self.ctx, mf.READ_WRITE, x_padded.nbytes)
         self.b_buf      = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=b_padded)
@@ -86,12 +81,12 @@ class TrussOpenCLSolver:
         self.Aii_buf    = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=Aii)
         self.r_buf      = cl.Buffer(self.ctx, mf.READ_WRITE, x_padded.nbytes)
 
-    def solve_pd(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1, errs=None, bPrint=False):
-        """Solve projective dynamics using OpenCL"""
-        # Initialize system and create buffers
-        pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
-        self._create_ocl_buffers(pos_pred, masses, neighs, kngs, Aii, b)
-        
+    def solve_pd_arrays(self, pos_pred, neighs, kngs, Aii, b, n_max, niter=10, tol=1e-6, nsub=1, errs=None, bPrint=False):
+        """Solve projective dynamics using OpenCL with pre-computed arrays"""
+        # Create OpenCL buffers from input arrays
+        self._create_ocl_buffers(pos_pred, None, neighs, kngs, Aii, b)
+        self.n_max = n_max
+        self.n_points = len(pos_pred)
         
         # Prepare output arrays
         x_out = np.zeros((self.n_points, 4), dtype=np.float32)
@@ -136,7 +131,7 @@ class TrussOpenCLSolver:
                 cl.enqueue_copy(self.queue, self.x_buf, x_out)
             
             # Check convergence
-            err = np.linalg.norm(r[:, :3])
+            err = np.linalg.norm(r[:, :3])  # Use all components for now
             if errs is not None:
                 errs.append(err)  # Store error value
             if bPrint:
@@ -145,6 +140,11 @@ class TrussOpenCLSolver:
                 break
 
         return x_out[:, :3]  # Return only xyz coordinates
+
+    def solve_pd(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1, errs=None, bPrint=False):
+        """Original solve_pd that initializes arrays internally"""
+        pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
+        return self.solve_pd_arrays(pos_pred, neighs, kngs, Aii, b, self.n_max, niter, tol, nsub, errs, bPrint)
 
     def solve_pd_event(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1):
         # Initialize system and create buffers
@@ -196,7 +196,7 @@ def test_against_reference():
 
     # Create test truss (grid)
     truss = Truss()
-    truss.build_grid_2d(nx=5, ny=5, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
+    truss.build_grid_2d(nx=2, ny=2, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
     
     # Get initial data
     bonds, points, masses, ks, fixed, l0s, neighbs = truss.get_pd_quantities()
@@ -208,27 +208,25 @@ def test_against_reference():
     
     # Reference solution
     print("\nReference solution:")
-    neighs, kngs, n_max = neigh_stiffness(neighbs, bonds, ks)
-    Aii0 = make_pd_Aii0(masses, dt)
-    Aii = make_Aii(neighs, kngs, Aii0)  
-    b = make_pd_rhs(neighbs, bonds, masses, dt, ks, points, l0s, pos_pred)
-    
+    neighs, kngs, Aii, b, pos_pred, velocity, n_max = makeSparseSystem( dt, bonds, points, masses, ks, fixed, l0s, neighbs )
+
     # Run one iteration of CPU solver
     print("\nCPU Iteration:")
-    x_ref, r_ref = jacobi_iteration_sparse(pos_pred, b, neighs, kngs, Aii)  
+    x_ref, r_ref = jacobi_iteration_sparse(pos_pred[:,0], b[:,0], neighs, kngs, Aii)  
     
     # OpenCL solution
     print("\nGPU Iteration:")
     solver = TrussOpenCLSolver()
+
+    solver._create_ocl_buffers(pos_pred, masses, neighs, kngs, Aii, b)
     
-    # Initialize system and create buffers
-    pos_pred_gpu, masses, neighs, kngs, Aii, b = solver._init_pd_system(truss, dt, gravity, fixed_points)
-    solver._create_ocl_buffers(pos_pred_gpu, masses, neighs, kngs, Aii, b)
-    
+    solver.n_points = len(pos_pred)
+    solver.n_max = n_max
+
     # Run one iteration
     x_out = np.zeros((solver.n_points, 4), dtype=np.float32)
     r = np.zeros_like(x_out)
-    
+
     solver.prg.jacobi_iteration_sparse(
         solver.queue, (solver.n_points,), None,
         solver.x_buf, solver.b_buf, solver.neighs_buf, solver.kngs_buf, solver.Aii_buf,
@@ -239,47 +237,78 @@ def test_against_reference():
     # Read results back
     cl.enqueue_copy(solver.queue, r, solver.r_buf)
     cl.enqueue_copy(solver.queue, x_out, solver.x_out_buf)
-    x_ocl = x_out[:, :3]
+    x_ocl = x_out[:,0]
     
     # Compare results
     print("\nComparison:")
     diff = np.abs(x_ref - x_ocl)
     max_diff = np.max(diff)
     print(f"Max difference between reference and OpenCL: {max_diff}")
+
+    if max_diff > 1e-6:
+        print("\nReference solution:")
+        print(x_ref)
+        print("\nOpenCL solution:")
+        print(x_ocl)
+        print("\nError:")
+        print(diff)
+        print("\nMax difference between reference and OpenCL: ", max_diff)
+        print("EROOR in test_against_reference() => exit()")
+        exit()
     
     return x_ref, x_ocl
 
 if __name__ == "__main__":
+    from projective_dynamics import makeSparseSystem
+    from sparse import linsolve_iterative
+    import matplotlib.pyplot as plt
+
     # First run reference comparison test
     test_against_reference()
+
+
+    #exit()
     
-    print("\nRunning full solver to show convergence...")
+    print("\nRunning full solver comparison...")
     # Create test truss (grid)
     truss = Truss()
     truss.build_grid_2d(nx=5, ny=5, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
     
-    # Run solver
-    errs = []
-    solver = TrussOpenCLSolver()
-    x_final = solver.solve_pd(
-        truss, 
-        dt=1.0, 
-        gravity=np.array([0., -9.81, 0.0]), 
-        fixed_points=[0], 
-        niter=100,  # More iterations to see convergence
-        tol=1e-6,
-        nsub=1,
-        errs=errs,
-        bPrint=True
+    # Get system arrays
+    dt = 1.0
+    gravity = np.array([0., -9.81, 0.0])
+    fixed_points = [0]
+    bonds, points, masses, ks, fixed, l0s, neighbs = truss.get_pd_quantities()
+    neighbs = build_neighbor_list(bonds, len(points))
+    neighs, kngs, Aii, b, pos_pred, velocity, n_max = makeSparseSystem(dt, bonds, points, masses, ks, fixed, l0s, neighbs)
+    
+    # Run both solvers
+    errs_cpu = []
+    errs_gpu = []
+    niter = 100
+    
+    # CPU solver (just x component)
+    bx = b[:,0]  # Use x component
+    x0 = pos_pred[:,0]  # Use x component
+    x_cpu = linsolve_iterative(
+        lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii),
+        bx, None, x0=x0, niter=niter, tol=1e-6, bPrint=True, errs=errs_cpu
     )
-
-
-    # Plot error convergence
+    
+    # GPU solver (all components)
+    solver = TrussOpenCLSolver()
+    x_gpu = solver.solve_pd_arrays(
+        pos_pred, neighs, kngs, Aii, b, n_max,
+        niter=niter, tol=1e-6, errs=errs_gpu, bPrint=True
+    )
+    
+    # Plot convergence comparison
     plt.figure(figsize=(10, 6))
-    plt.semilogy(errs, 'b-', label='Error')
+    plt.semilogy(errs_cpu, 'b-', label='CPU (x component)')
+    plt.semilogy(errs_gpu, 'r:', label='GPU (all components)')
     plt.grid(True)
     plt.xlabel('Iteration')
     plt.ylabel('Error (log scale)')
-    plt.title('Convergence of Jacobi Solver')
+    plt.title('Convergence Comparison: CPU vs GPU Solver')
     plt.legend()
     plt.show()

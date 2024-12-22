@@ -138,6 +138,7 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
     x_out = np.zeros_like(x)
     r     = np.zeros_like(x)
     for i in range(n):
+        #print("CPU i: %i Aii[i]: %f b[i]: %f " %(i, Aii[i], b[i]) );
         sum_j  = 0  # RHS term
         ngsi = neighs[i]
         ksi  = kngs[i] 
@@ -151,8 +152,10 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
             k      = ksi[jj]
             sum_j += k * x[j]   # Off-diagonal contribution
             #print(f"    j={j}, k={k}, x[j]={x[j]}, sum_j={sum_j}")
+        
         x_out[i] =  (b[i] + sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
         r[i]     = b[i] +sum_j - Aii[i]*x[i] # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
+        print("CPU i: %i Aii[i]: %f b[i]: %f sum_j: %f x_out[i]: %f r[i]: %f" %(i, Aii[i], b[i], sum_j, x_out[i], r[i]) );
         #print(f"  Final: b[i]={b[i]}, Aii[i]={Aii[i]}, x_out[i]={x_out[i]}, r[i]={r[i]}")
     return x_out, r
 
@@ -204,7 +207,7 @@ def check_diagonal(A, Aii, bPrint=True):
 
 
 if __name__ == "__main__":
-    from projective_dynamics import make_pd_matrix, make_pd_rhs, make_pd_Aii0, makeSparseSystem
+    from projective_dynamics import make_pd_matrix, makeSparseSystem
     from truss               import Truss
 
     bWheel = False
