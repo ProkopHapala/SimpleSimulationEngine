@@ -2,7 +2,10 @@ import numpy as np
 import pyopencl as cl
 import os
 
-from sparse import build_neighbor_list, neigh_stiffness, make_Aii, neighs_to_dense_arrays
+from sparse import (
+    build_neighbor_list, neigh_stiffness, make_Aii, neighs_to_dense_arrays,
+    linsolve_Jacobi_sparse
+)
 from projective_dynamics import make_pd_rhs, make_pd_Aii0
 from truss import Truss
 
@@ -159,8 +162,8 @@ class TrussOpenCLSolver:
 
         return x_out[:, :3]  # Return only xyz coordinates
 
-if __name__ == "__main__":
-    # Example usage
+def test_against_reference():
+    print("\nTesting against reference implementation:")
     dt = 1.0
     gravity = np.array([0., -9.81, 0.0])
     fixed_points = [0]
@@ -169,22 +172,90 @@ if __name__ == "__main__":
     truss = Truss()
     truss.build_grid_2d(nx=5, ny=5, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
     
-    # Create solver
+    # Get initial data
+    bonds, points, masses, ks, fixed, l0s, neighbs = truss.get_pd_quantities()
+    neighbs = build_neighbor_list(bonds, len(points))
+    velocity = points * 0 + gravity[None,:] * dt
+    pos_pred = points + velocity * dt
+    if fixed_points is not None:
+        pos_pred[fixed_points] = points[fixed_points]
+    
+    # Reference solution
+    print("\nReference solution:")
+    neighs, kngs, n_max = neigh_stiffness(neighbs, bonds, ks)
+    Aii0 = make_pd_Aii0(masses, dt)
+    b = make_pd_rhs(neighbs, bonds, masses, dt, ks, points, l0s, pos_pred)
+    
+    err_cpu = []
+    def callback(itr, x, r):
+        err = np.linalg.norm(r)
+        err_cpu.append(err)
+        print(f"Reference itr: {itr}, err: {err}")
+    
+    x_ref = linsolve_Jacobi_sparse(b, neighs, kngs, x0=pos_pred, Aii0=Aii0, niter=100, tol=1e-6, callback=callback)
+    
+    # OpenCL solution
+    print("\nOpenCL solution:")
     solver = TrussOpenCLSolver()
     
-    # Test original method
-    import time
-    print("Testing original method:")
-    t0 = time.time()
-    result1 = solver.solve_pd(truss, dt, gravity, fixed_points, niter=100, tol=1e-6)
-    t1 = time.time()
-    print(f"Time taken: {t1-t0:.3f} seconds")
+    # Modify solve_pd to track errors
+    err_gpu = []
+    x_ocl = np.zeros_like(pos_pred)
+    r = np.zeros_like(pos_pred)
     
-    # Test event-based method with different nsub values
-    for nsub in [2, 6, 10, 20]:
-        print(f"\nTesting event-based method with nsub={nsub}:")
-        t0 = time.time()
-        result2 = solver.solve_pd_event(truss, dt, gravity, fixed_points, niter=100, tol=1e-6, nsub=nsub)
-        t1 = time.time()
-        print(f"Time taken: {t1-t0:.3f} seconds")
-        print(f"Max difference between methods: {np.max(np.abs(result1 - result2))}")
+    # Initialize system and create buffers
+    pos_pred, masses, neighs, kngs, Aii, b = solver._init_pd_system(truss, dt, gravity, fixed_points)
+    solver._create_ocl_buffers(pos_pred, masses, neighs, kngs, Aii, b)
+    
+    # Solve using OpenCL
+    x_out = np.zeros((solver.n_points, 4), dtype=np.float32)
+    r = np.zeros_like(x_out)
+
+    for itr in range(100):  # Same number of iterations as CPU
+        solver.prg.jacobi_iteration_sparse(
+            solver.queue, (solver.n_points,), None,
+            solver.x_buf, solver.b_buf, solver.neighs_buf, solver.kngs_buf, solver.Aii_buf,
+            solver.x_out_buf, solver.r_buf,
+            np.int32(solver.n_max), np.int32(solver.n_points)
+        )
+        
+        # Read results back
+        cl.enqueue_copy(solver.queue, r, solver.r_buf)
+        cl.enqueue_copy(solver.queue, x_out, solver.x_out_buf)
+        
+        # Calculate error
+        err = np.linalg.norm(r[:, :3])
+        err_gpu.append(err)
+        print(f"OpenCL itr: {itr}, err: {err}")
+        
+        if err < 1e-6:
+            break
+            
+        # Update x for next iteration
+        cl.enqueue_copy(solver.queue, solver.x_buf, x_out)
+    
+    x_ocl = x_out[:, :3]
+    
+    # Compare results
+    diff = np.abs(x_ref - x_ocl)
+    max_diff = np.max(diff)
+    print(f"\nMax difference between reference and OpenCL: {max_diff}")
+    
+    # Plot error histories
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(10, 6))
+    plt.plot(err_cpu, label="Jacobi CPU")
+    plt.plot(err_gpu, label="Jacobi GPU")
+    plt.yscale('log')
+    plt.xlabel('Iteration')
+    plt.ylabel('Error (log scale)')
+    plt.title('Convergence Comparison: CPU vs GPU Implementation')
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+    
+    return x_ref, x_ocl, err_cpu, err_gpu
+
+if __name__ == "__main__":
+    # Run reference comparison test only
+    test_against_reference()
