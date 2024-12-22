@@ -19,25 +19,36 @@ def linsolve_Jacobi( b, A, x0=None, niter=10, tol=1e-6, bPrint=False, callback=N
             break
     return x
 
-def linsolve_iterative( update_func, b, A, x0=None, niter=10, tol=1e-6, bPrint=False, callback=None, errs=None, bmix=1.0, niter_mix=1000000  ):
+def linsolve_iterative( update_func, b, A, x0=None, niter=10, tol=1e-6, bPrint=False, callback=None, errs=None, bmix=1.0, niter_mix=100000 ):
     if x0 is None: x0 = np.zeros_like(b)
     x = x0.copy()
     d = x*0
+    err = 1 
     for itr in range(niter):
         x_, r = update_func(A, b, x)
+
+        err_prev = err
+        err = np.linalg.norm(r)
         if itr>niter_mix:
+            # if err > err_prev:
+            #     bmix = min(1.0, bmix * 1.1)  # Increase mixing if error decreasing
+            # else:
+            #     bmix = max(0.7, bmix * 0.97)  # Decrease mixing if error increasing
+
+            #x = bmix*x_ + (1-bmix)*x
             d_ = x_ - x
             x = x + bmix*d_ + (1-bmix)*d
             d = d_
         else:
             x = x_
-        err = np.linalg.norm(r)
+
+        
         if errs is not None:
             errs.append(err)
         if callback is not None:
             callback(itr, x, r)
         if bPrint:
-            print(f"linsolve_iterative() itr: {itr}, err: {err}")
+            print(f"linsolve_iterative() itr: {itr}, err: {err} bmix: {bmix}")
         if err < tol:
             break
     return x
@@ -193,7 +204,9 @@ if __name__ == "__main__":
     from truss               import Truss
 
     bWheel = False
-    dt = 0.1
+    dt = 1.0
+    #dt = 0.5
+    #dt = 0.2
     gravity = np.array([0., -9.81, 0.0 ])
 
     fixed_points = [0]
@@ -247,21 +260,21 @@ if __name__ == "__main__":
     #x_jacobi = linsolve_Jacobi       ( bx, A,            x0=x0,            bPrint=True )
     #x_sparse = linsolve_Jacobi_sparse( bx, neighs, kngs, x0=x0, Aii0=Aii0, bPrint=True )
 
-    niter = 30
+    niter = 50
     err_jacobi = []
-    err_sparse = []
-    x_jacobi = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                                bx, A,    x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_jacobi )
-    x_sparse = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                                bx, A,    x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse, niter_mix=2, bmix=0.85 )
+    err_JacobMix = []
+    x_jacobi   = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                                bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_jacobi )
+    x_JacobMix = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                                bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_JacobMix, niter_mix=2, bmix=0.75, bPrint=True )
     #x_sparse = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii_sparse ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
 
     #print("x_ref = ", x_ref)
     print("| x_jacobi - x_ref | = ", np.linalg.norm(x_jacobi - x_ref))
-    print("| x_sparse - x_ref | = ", np.linalg.norm(x_sparse - x_ref))
+    print("| x_JacobMix - x_ref | = ", np.linalg.norm(x_JacobMix - x_ref))
 
 
     import matplotlib.pyplot as plt
     plt.plot(err_jacobi, label="Jacobi")
-    plt.plot(err_sparse, label="Sparse")
+    plt.plot(err_JacobMix, label="JacobMix")
     plt.yscale('log')
     plt.legend()
     plt.grid()
