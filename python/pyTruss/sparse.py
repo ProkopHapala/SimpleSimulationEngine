@@ -163,6 +163,38 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
         #print("CPU i: %i Aii[i]: %f b[i]: %f sum_j: %f x_out[i]: %f r[i]: %f" %(i, Aii[i], b[i], sum_j, x_out[i], r[i]) );
     return x_out, r
 
+
+def color_graph(neighs):
+    """Color the graph using a greedy algorithm
+    Returns:
+        colors: list of vertex colors (integers)
+        color_groups: list of lists, where each inner list contains vertices of the same color
+    """
+    n = len(neighs)
+    colors = [-1] * n  # -1 means uncolored
+    
+    # For each vertex
+    for i in range(n):
+        # Get colors of neighbors
+        neighbor_colors = set()
+        for j in neighs[i]:
+            if colors[j] != -1:
+                neighbor_colors.add(colors[j])
+        
+        # Find smallest available color
+        color = 0
+        while color in neighbor_colors:
+            color += 1
+        colors[i] = color
+    
+    # Group vertices by color
+    max_color = max(colors)
+    color_groups = [[] for _ in range(max_color + 1)]
+    for i, color in enumerate(colors):
+        color_groups[color].append(i)
+    
+    return colors, color_groups
+    
 # def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
 #     """One iteration of Gauss-Seidel method using sparse operations"""
 #     n = len(x)
@@ -219,6 +251,27 @@ def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
 #     r = b - dot_sparse(x, neighs, kngs, Aii )  
 #     return x_out, r
 
+def gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups):
+    """Parallel Gauss-Seidel iteration using graph coloring"""
+    n = len(x)
+    x_new = x.copy()
+    
+    # Process each color group sequentially
+    for group in color_groups:
+        # Process vertices of the same color in parallel
+        # (in practice, this could be parallelized with OpenMP or similar)
+        for i in group:
+            sum1 = 0.0  # sum for already updated elements
+            sum2 = 0.0  # sum for not yet updated elements
+            for j, k in zip(neighs[i], kngs[i]):
+                if j < i:  # If neighbor has been processed
+                    sum1 += k * x_new[j]
+                else:  # If neighbor hasn't been processed yet
+                    sum2 += k * x[j]
+            x_new[i] = (b[i] - sum1 - sum2) / Aii[i]
+    
+    r = b - dot_sparse(x_new, neighs, kngs, Aii)
+    return x_new, r
 
 def linsolve_Jacobi_sparse( b, neighs, kngs, x0=None, Aii0=None, niter=10, tol=1e-6, bPrint=False, callback=None ):
     if x0 is None: x = np.zeros_like(b)
@@ -305,11 +358,15 @@ if __name__ == "__main__":
     err_sparse = []
     err_GSsp = []
     err_GS = []
+    err_GScolored = []
     x_jacobi   = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_jacobi )
     x_JacobMix = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_JacobMix, niter_mix=2, bmix=0.75, bPrint=True )
     x_sparse   = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
     x_GSsp     = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_GSsp )
     x_GS       = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration(A, b, x),                 bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_GS )
+
+    colors, color_groups = color_graph(neighs)
+    x_GS_colored = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_GScolored)
 
     print("x_ref = ", x_ref)
     print("x0 = ", x0)
@@ -318,11 +375,13 @@ if __name__ == "__main__":
     print("x_sparse = ", x_sparse)
     print("x_GSsp = ", x_GSsp)
     print("x_GS = ", x_GS)
+    print("x_GS_colored = ", x_GS_colored)
     print("| x_jacobi   - x_ref | = ", np.linalg.norm(x_jacobi   - x_ref))
     print("| x_JacobMix - x_ref | = ", np.linalg.norm(x_JacobMix - x_ref))
     print("| x_sparse   - x_ref | = ", np.linalg.norm(x_sparse   - x_ref))
     print("| x_GSsp     - x_ref | = ", np.linalg.norm(x_GSsp     - x_ref))
     print("| x_GS       - x_ref | = ", np.linalg.norm(x_GS       - x_ref))
+    print("| x_GS_colored - x_ref | = ", np.linalg.norm(x_GS_colored - x_ref))
 
 
     import matplotlib.pyplot as plt
@@ -331,6 +390,7 @@ if __name__ == "__main__":
     plt.plot(err_sparse,   label="sparse")
     plt.plot(err_GS,       label="GS")
     plt.plot(err_GSsp,     label="GSsparse")
+    plt.plot(err_GScolored, label="GScolored")
     plt.yscale('log')
     plt.legend()
     plt.grid()
