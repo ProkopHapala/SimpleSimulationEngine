@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from sparse import (
     build_neighbor_list, neigh_stiffness, make_Aii, neighs_to_dense_arrays,
-    linsolve_Jacobi_sparse, jacobi_iteration_sparse, linsolve_iterative
+    linsolve_Jacobi_sparse, jacobi_iteration_sparse, linsolve_iterative, color_graph
 )
 from projective_dynamics import make_pd_rhs, make_pd_Aii0, makeSparseSystem
 from truss import Truss
@@ -34,6 +34,7 @@ class TrussOpenCLSolver:
         self.kngs_buf = None
         self.Aii_buf = None
         self.r_buf = None
+        self.color_group_buf = None
         self.n_points = None
         self.n_max = None
 
@@ -80,6 +81,21 @@ class TrussOpenCLSolver:
         self.kngs_buf   = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=padded_kngs)
         self.Aii_buf    = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=Aii)
         self.r_buf      = cl.Buffer(self.ctx, mf.READ_WRITE, x_padded.nbytes)
+
+    def _prepare_color_groups(self, neighs):
+        """Prepare color groups for Gauss-Seidel"""
+        # Color the graph
+        colors, color_groups = color_graph(neighs)
+        
+        # Convert color groups to flat array format
+        color_counts = [len(group) for group in color_groups]
+        flat_groups = np.concatenate(color_groups).astype(np.int32)
+        
+        # Create color group buffer
+        mf = cl.mem_flags
+        self.color_group_buf = cl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=flat_groups)
+        
+        return color_counts
 
     def solve_pd_arrays(self, pos_pred, neighs, kngs, Aii, b, n_max, niter=10, tol=1e-6, nsub=1, errs=None, bPrint=False):
         """Solve projective dynamics using OpenCL with pre-computed arrays"""
@@ -141,6 +157,53 @@ class TrussOpenCLSolver:
                 break
 
         return x_out[:, :3]  # Return only xyz coordinates
+
+    def solve_pd_gauss_seidel(self, pos_pred, neighs, kngs, Aii, b, n_max, niter=10, tol=1e-6, errs=None, bPrint=False):
+        """Solve projective dynamics using OpenCL with colored Gauss-Seidel method"""
+        # Create OpenCL buffers
+        self._create_ocl_buffers(pos_pred, None, neighs, kngs, Aii, b)
+        self.n_max = n_max
+        self.n_points = len(pos_pred)
+        
+        # Prepare color groups
+        color_counts = self._prepare_color_groups(neighs)
+        color_starts = np.cumsum([0] + color_counts[:-1])
+        
+        # Prepare output arrays
+        x_out = np.zeros((self.n_points, 4), dtype=np.float32)
+        r = np.zeros_like(x_out)
+        
+        # Main iteration loop
+        for itr in range(niter):
+            # Process each color group in sequence
+            for color_idx, (start, count) in enumerate(zip(color_starts, color_counts)):
+                event = self.prg.gauss_seidel_iteration_colored(
+                    self.queue, (count,), None,
+                    self.x_buf, self.b_buf, self.neighs_buf, self.kngs_buf, self.Aii_buf,
+                    self.color_group_buf, self.r_buf,
+                    np.int32(self.n_max), np.int32(self.n_points),
+                    np.int32(start), np.int32(count)
+                )
+                event.wait()
+            
+            # Check convergence after processing all colors
+            cl.enqueue_copy(self.queue, r, self.r_buf)
+            cl.enqueue_copy(self.queue, x_out, self.x_buf)
+            
+            err = np.sum(r*r, axis=0)
+            if errs is not None:
+                errs.append(np.sqrt(err))
+            if bPrint:
+                print(f"TrussOpenCLSolver::solve_pd_gauss_seidel() itr: {itr}, err: {err}")
+            if np.sqrt(err.sum()) < tol:
+                break
+        
+        return x_out[:, :3]  # Return only xyz coordinates
+
+    def solve_pd_gauss_seidel_truss(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, errs=None, bPrint=False):
+        """Solve projective dynamics for a truss using colored Gauss-Seidel"""
+        pos_pred, masses, neighs, kngs, Aii, b = self._init_pd_system(truss, dt, gravity, fixed_points)
+        return self.solve_pd_gauss_seidel(pos_pred, neighs, kngs, Aii, b, self.n_max, niter, tol, errs, bPrint)
 
     def solve_pd(self, truss, dt, gravity, fixed_points=None, niter=10, tol=1e-6, nsub=1, errs=None, bPrint=False):
         """Original solve_pd that initializes arrays internally"""
