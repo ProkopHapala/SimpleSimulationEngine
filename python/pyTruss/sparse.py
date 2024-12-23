@@ -33,23 +33,16 @@ def linsolve_Jacobi( b, A, x0=None, niter=10, tol=1e-6, bPrint=False, callback=N
 def linsolve_iterative( update_func, b, A, x0=None, niter=10, tol=1e-6, bPrint=False, callback=None, errs=None, bmix=1.0, niter_mix=100000 ):
     if x0 is None: x0 = np.zeros_like(b)
     x = x0.copy()
-    d = x*0
+    d = np.zeros_like(x)  # intertia (like velocity in dynamical_relaxation), change of x in previous iteration
     err = 1 
     for itr in range(niter):
         x_, r = update_func(A, b, x)
-
         err_prev = err
         err = np.linalg.norm(r)
         if itr>niter_mix:
-            # if err > err_prev:
-            #     bmix = min(1.0, bmix * 1.1)  # Increase mixing if error decreasing
-            # else:
-            #     bmix = max(0.7, bmix * 0.97)  # Decrease mixing if error increasing
-
-            #x = bmix*x_ + (1-bmix)*x
-            d_ = x_ - x
-            x = x + bmix*d_ + (1-bmix)*d
-            d = d_
+            x_new = x_ + bmix*d
+            d = x_new - x
+            x = x_new
         else:
             x = x_
 
@@ -213,23 +206,6 @@ def color_graph(neighs):
 #     r = b - dot_sparse(x_new, neighs, kngs, Aii )
 #     return x_new, r
 
-def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
-    """One iteration of Gauss-Seidel method using sparse operations"""
-    n = len(x)
-    x_new = x.copy()
-    for i in range(n):
-        sum1 = 0.0  # sum for already updated elements (j < i)
-        sum2 = 0.0  # sum for not yet updated elements (j > i)
-        for j, k in zip(neighs[i], kngs[i]):
-            if j < i:
-                sum1 += k * x_new[j]  # Use updated values
-            else:
-                sum2 += k * x[j]      # Use previous iteration values
-        x_new[i] = (b[i] + sum1 + sum2) / Aii[i]
-        #print(f"{i} sum1: {sum1:.6f} sum2: {sum2:.6f} x_new[i]: {x_new[i]:.6f}")
-    r = b - dot_sparse(x_new, neighs, kngs, Aii)
-    return x_new, r
-
 # def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
 #     """One iteration of Jacobi method using sparse operations"""
 #     n = len(x)
@@ -249,6 +225,25 @@ def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
 #     r = b - dot_sparse(x, neighs, kngs, Aii )  
 #     return x_out, r
 
+
+def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
+    """One iteration of Gauss-Seidel method using sparse operations"""
+    n = len(x)
+    x_new = x.copy()
+    for i in range(n):
+        sum1 = 0.0  # sum for already updated elements (j < i)
+        sum2 = 0.0  # sum for not yet updated elements (j > i)
+        for j, k in zip(neighs[i], kngs[i]):
+            if j < i:
+                sum1 += k * x_new[j]  # Use updated values
+            else:
+                sum2 += k * x[j]      # Use previous iteration values
+        x_new[i] = (b[i] + sum1 + sum2) / Aii[i]
+        #print(f"{i} sum1: {sum1:.6f} sum2: {sum2:.6f} x_new[i]: {x_new[i]:.6f}")
+    r = b - dot_sparse(x_new, neighs, kngs, Aii)
+    return x_new, r
+
+
 def gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups):
     """Parallel Gauss-Seidel iteration using graph coloring"""
     n = len(x)
@@ -266,7 +261,7 @@ def gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups):
                     sum1 += k * x_new[j]
                 else:  # If neighbor hasn't been processed yet
                     sum2 += k * x[j]
-            x_new[i] = (b[i] - sum1 - sum2) / Aii[i]
+            x_new[i] = (b[i] + sum1 + sum2) / Aii[i]
     
     r = b - dot_sparse(x_new, neighs, kngs, Aii)
     return x_new, r
@@ -302,7 +297,7 @@ if __name__ == "__main__":
     from truss               import Truss
 
     bWheel = False
-    dt = 1.0
+    dt = .1
     #dt = 0.5
     #dt = 0.2
     gravity = np.array([0., -9.81, 0.0 ])
@@ -317,7 +312,7 @@ if __name__ == "__main__":
         k_dict = [10000.0, 5000.0, 2000.0, 2000.0]  # [long, perp, zigIn, zigOut]
         truss.wheel(p0, p1, ax, width=0.2, n=8, k_scale=1.0, k_dict=k_dict)
     else:
-        truss.build_grid_2d(nx=5, ny=5, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
+        truss.build_grid_2d(nx=5, ny=5, m=1.0, m_end=1000000.0, l=1.0, k=10000.0, k_diag=1000.0)
 
     bonds, points, masses, ks, fixed, l0s, neighs = truss.get_pd_quantities()
     neighbs = build_neighbor_list(bonds, len(points))
@@ -341,7 +336,11 @@ if __name__ == "__main__":
 
     #exit()
 
-    x_ref = np.linalg.solve(A, bx)
+    x_ref = np.linalg.solve(A, b[:,0])
+    y_ref = np.linalg.solve(A, b[:,1])
+    pos_ref = pos_pred.copy()
+    pos_ref[:,0] = x_ref
+    pos_ref[:,1] = y_ref
 
 
     #x,r = gauss_seidel_iteration       (A, bx, x0)                 ;print( "x=", x, "\nr=", r )  
@@ -349,8 +348,43 @@ if __name__ == "__main__":
 
     #exit()
 
+    """
+    # ==== Plot evolution of mesh during solution
+    import matplotlib.pyplot as plt
+    import plot_utils as pu
+    err_jacobi  = []
+    niter = 100
+    perN=10
+    trj = np.zeros( (niter//perN,) + pos_pred.shape )
 
-    niter = 50
+    def store(itr, x, icomp, trj):
+        if itr % perN == 0:
+            trj[itr//perN,:,icomp] = x[:]
+
+    #linsolve_iterative(lambda A, b, x: jacobi_iteration(A, b, x), b[:,0], A, x0=pos_pred[:,0], niter=niter, tol=1e-8, errs=err_jacobi, callback=lambda itr, x, r: store(itr, x, 0, trj))
+    #linsolve_iterative(lambda A, b, x: jacobi_iteration(A, b, x), b[:,1], A, x0=pos_pred[:,1], niter=niter, tol=1e-8, errs=err_jacobi, callback=lambda itr, x, r: store(itr, x, 1, trj))
+    
+    linsolve_iterative(lambda A, b, x: gauss_seidel_iteration(A, b, x), b[:,0], A, x0=pos_pred[:,0], niter=niter, tol=1e-8, errs=err_jacobi, niter_mix=2, bmix=0.75, callback=lambda itr, x, r: store(itr, x, 0, trj))
+    linsolve_iterative(lambda A, b, x: gauss_seidel_iteration(A, b, x), b[:,1], A, x0=pos_pred[:,1], niter=niter, tol=1e-8, errs=err_jacobi, niter_mix=2, bmix=0.75, callback=lambda itr, x, r: store(itr, x, 1, trj))
+
+    #linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),  b[:,0], A, x0=pos_pred[:,0], niter=niter,  tol=1e-8, errs=err_jacobi, callback=(lambda itr, x, r: trj[itr,:,0] = x) )
+    #linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),  b[:,1], A, x0=pos_pred[:,1], niter=niter,  tol=1e-8, errs=err_jacobi, callback=(lambda itr, x, r: trj[itr,:,1] = x) )
+    
+    for i in range(niter//perN):
+        pu.plot_truss(trj[i,:,:], truss.bonds, edge_alpha=0.5, edge_color='gray')
+
+    pos_pref = pos_pred.copy()
+
+    pu.plot_truss( pos_pred, truss.bonds, edge_alpha=1.0, edge_color='r')
+    pu.plot_truss( pos_ref,  truss.bonds, edge_alpha=1.0, edge_color='b')
+    
+    plt.show()
+    exit()
+    """
+    
+
+
+    niter = 100
     err_jacobi = []
     err_JacobMix = []
     err_sparse = []
@@ -358,30 +392,22 @@ if __name__ == "__main__":
     err_GS = []
     err_GScol = []
     x_jacobi   = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_jacobi )
-    x_JacobMix = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_JacobMix, niter_mix=2, bmix=0.75, bPrint=True )
-    x_sparse   = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
-    x_GSsp     = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_GSsp )
+    x_JacobMix = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_JacobMix, niter_mix=2, bmix=0.75 )
+    x_sparse   = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, errs=err_sparse )
+    x_GSsp     = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, errs=err_GSsp, niter_mix=2, bmix=0.75  )
     x_GS       = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration(A, b, x),                 bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_GS )
 
     colors, color_groups = color_graph(neighs)
-    x_GSsp_col = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_GScol)
+    x_GSsp_col = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups), bx, None, x0=x0, niter=niter, tol=1e-8, errs=err_GScol)
 
-    import matplotlib.pyplot as plt
-    import plot_utils as pu
-
-    colors_ = [ 'rgbcmykw'[i] for i in colors ]
-    pu.plot_truss(truss.points, truss.bonds, edge_color='gray', edge_alpha=0.5,   point_color=colors_, point_size=100)
-    plt.show()
-
-
-    print("x_ref = ", x_ref)
-    print("x0 = ", x0)
-    print("x_jacobi = ", x_jacobi)
-    print("x_JacobMix = ", x_JacobMix)
-    print("x_sparse = ", x_sparse)
-    print("x_GSsp = ", x_GSsp)
-    print("x_GS = ", x_GS)
-    print("x_GSsp_col = ", x_GSsp_col)
+    # print("x_ref = ", x_ref)
+    # print("x0 = ", x0)
+    # print("x_jacobi = ", x_jacobi)
+    # print("x_JacobMix = ", x_JacobMix)
+    # print("x_sparse = ", x_sparse)
+    # print("x_GSsp = ", x_GSsp)
+    # print("x_GS = ", x_GS)
+    # print("x_GSsp_col = ", x_GSsp_col)
     print("| x_jacobi   - x_ref | = ", np.linalg.norm(x_jacobi   - x_ref))
     print("| x_JacobMix - x_ref | = ", np.linalg.norm(x_JacobMix - x_ref))
     print("| x_sparse   - x_ref | = ", np.linalg.norm(x_sparse   - x_ref))
@@ -389,13 +415,18 @@ if __name__ == "__main__":
     print("| x_GS       - x_ref | = ", np.linalg.norm(x_GS       - x_ref))
     print("| x_GSsp_col - x_ref | = ", np.linalg.norm(x_GSsp_col - x_ref))
 
-
     import matplotlib.pyplot as plt
+    import plot_utils as pu
+    colors_ = [ 'rgbcmykw'[i] for i in colors ]
+    pu.plot_truss(truss.points, truss.bonds, edge_color='gray', edge_alpha=0.5,   point_color=colors_, point_size=100)
+    #plt.show()
+
+    plt.figure()
     plt.plot(err_jacobi,   label="Jacobi")
-    plt.plot(err_JacobMix, label="JacobMix")
+    plt.plot(err_JacobMix, label="Jacobi+inertia")
     plt.plot(err_sparse,   label="sparse")
     plt.plot(err_GS,       label="GS")
-    plt.plot(err_GSsp,     label="GSsparse")
+    plt.plot(err_GSsp,     label="GSsparse+inertia")
     plt.plot(err_GScol, label="GScolored")
     plt.yscale('log')
     plt.legend()

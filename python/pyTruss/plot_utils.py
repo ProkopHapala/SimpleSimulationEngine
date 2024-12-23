@@ -21,7 +21,8 @@ def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_co
         label: label for legend
         node_colors: optional list of colors for nodes, overrides point_color if provided
     """
-    if ax is None: _, ax = plt.subplots(figsize=(10, 10))
+    #if ax is None: _, ax = plt.subplots(figsize=(10, 10))
+    if ax is None: ax = plt.gca()
     
     # Prepare line segments for LineCollection
     segments = []
