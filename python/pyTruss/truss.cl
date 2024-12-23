@@ -119,18 +119,10 @@ __kernel void gauss_seidel_iteration_colored(
         sum_j += k * x[j].xyz;  // Off-diagonal contribution
     }
     
-    const float3 bi = b[iG].xyz;
-    x[iG] = (float4){ (bi + sum_j) / Aii[iG], 1.0f };  // Set w=1.0 to mark as updated
-    r[iG] = (float4){  bi + sum_j -  Aii[iG] * xi.xyz, 0.0f };  // Calculate residual
+    const float3 bi = b[i].xyz;  // Fixed: Use i instead of iG
+    x[i] = (float4){ (bi + sum_j) / Aii[i], xi.w };  // Update solution in-place
+    r[i] = (float4){ bi + sum_j - Aii[i] * xi.xyz, 0.0f };  // Calculate residual
 }
-
-
-
-
-
-
-
-
 
 // =========== Optimized kernel using local memory and group-wise processing ===========
 //    Not sure if this is faster than the original kernel

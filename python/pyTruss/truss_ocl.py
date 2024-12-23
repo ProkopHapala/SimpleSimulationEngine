@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 
 from sparse import (
     build_neighbor_list, neigh_stiffness, make_Aii, neighs_to_dense_arrays,
-    linsolve_Jacobi_sparse, jacobi_iteration_sparse, linsolve_iterative, color_graph
+    linsolve_Jacobi_sparse, jacobi_iteration_sparse, linsolve_iterative, color_graph,
+    gauss_seidel_iteration_colored
 )
 from projective_dynamics import make_pd_rhs, make_pd_Aii0, makeSparseSystem
 from truss import Truss
@@ -252,6 +253,34 @@ class TrussOpenCLSolver:
 
         return x_out[:, :3]  # Return only xyz coordinates
 
+def setup_test_problem(nx=2, ny=2):
+    """Common setup for test problems"""
+    dt = 1.0
+    gravity = np.array([0., -9.81, 0.0])
+    fixed_points = [0]
+
+    # Create test truss (grid)
+    truss = Truss()
+    truss.build_grid_2d(nx=nx, ny=ny, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
+    
+    # Get truss data
+    bonds, points, masses, ks, fixed, l0s, neighbs = truss.get_pd_quantities()
+    neighbs = build_neighbor_list(bonds, len(points))
+    
+    # Compute initial state
+    velocity = points * 0 + gravity[None, :] * dt
+    pos_pred = points + velocity * dt
+    if fixed_points is not None:
+        pos_pred[fixed_points] = points[fixed_points]
+    
+    # Prepare sparse data
+    neighs, kngs, n_max = neigh_stiffness(neighbs, bonds, ks)
+    Aii0 = make_pd_Aii0(masses, dt)
+    Aii  = make_Aii(neighs, kngs, Aii0)
+    b    = make_pd_rhs(neighbs, bonds, masses, dt, ks, points, l0s, pos_pred)
+    
+    return truss, pos_pred, neighs, kngs, Aii, b, n_max
+
 def test_against_reference():
     print("\nTesting against reference implementation:")
     dt = 1.0
@@ -322,57 +351,76 @@ def test_against_reference():
     
     return x_ref, x_ocl
 
-if __name__ == "__main__":
-    from projective_dynamics import makeSparseSystem
-    from sparse import linsolve_iterative
-    import matplotlib.pyplot as plt
-
-    # First run reference comparison test
-    test_against_reference()
-
-
-    #exit()
+def test_Jacobi_vs_python():
+    print("\nRunning Jacobi solver comparison...")
     
-    print("\nRunning full solver comparison...")
-    # Create test truss (grid)
-    truss = Truss()
-    truss.build_grid_2d(nx=5, ny=5, m=1.0, m_end=1000.0, l=1.0, k=10000.0, k_diag=1000.0)
+    # Setup test problem
+    truss, pos_pred, neighs, kngs, Aii, b, n_max = setup_test_problem(nx=2, ny=2)
     
-    # Get system arrays
-    dt = 1.0
-    gravity = np.array([0., -9.81, 0.0])
-    fixed_points = [0]
-    bonds, points, masses, ks, fixed, l0s, neighbs = truss.get_pd_quantities()
-    neighbs = build_neighbor_list(bonds, len(points))
-    neighs, kngs, Aii, b, pos_pred, velocity, n_max = makeSparseSystem(dt, bonds, points, masses, ks, fixed, l0s, neighbs)
+    # Run CPU solver
+    errs_cpu = []
+    x_cpu = linsolve_iterative(
+        lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii),
+        b, None, pos_pred, niter=50, tol=1e-10, errs=errs_cpu, bPrint=True
+    )
     
-    # Run both solvers
-    errs_cpu_x = []
-    errs_cpu_y = []
+    # Run GPU solver
     errs_gpu = []
-    niter = 100
-
-    bPrint = False
-    
-    # CPU solver (just x component)
-    x_cpu = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii),  b[:,0] , None, pos_pred[:,0], niter=niter, tol=1e-6, bPrint=bPrint, errs=errs_cpu_x  )
-    y_cpu = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii),  b[:,1] , None, pos_pred[:,1], niter=niter, tol=1e-6, bPrint=bPrint, errs=errs_cpu_y  )
-    
-    # GPU solver (all components)
     solver = TrussOpenCLSolver()
-    x_gpu = solver.solve_pd_arrays( pos_pred, neighs, kngs, Aii, b, n_max,  niter=niter, tol=1e-6, errs=errs_gpu, bPrint=bPrint  )
-    errs_gpu = np.array(errs_gpu)
+    x_gpu = solver.solve_pd_arrays(pos_pred, neighs, kngs, Aii, b, n_max, niter=50, tol=1e-10, nsub=1, errs=errs_gpu, bPrint=True)
     
-    # Plot convergence comparison
+    # Plot convergence
     plt.figure(figsize=(10, 6))
-    plt.semilogy(errs_cpu_x, 'r:', label='CPU x')
-    plt.semilogy(errs_cpu_y, 'g:', label='CPU y')
-    plt.semilogy(errs_gpu[:,0], 'r-', lw=0.5, label='GPU x')
-    plt.semilogy(errs_gpu[:,1], 'g-', lw=0.5, label='GPU y')
-    #plt.semilogy(errs_gpu[:,2], 'b-', label='GPU z')
+    plt.semilogy(errs_cpu, 'b-', label='CPU Jacobi')
+    plt.semilogy(errs_gpu, 'r--', label='GPU Jacobi')
     plt.grid(True)
     plt.xlabel('Iteration')
     plt.ylabel('Error (log scale)')
-    plt.title('Convergence Comparison: CPU vs GPU Solver')
+    plt.title('Convergence Comparison: CPU vs GPU Jacobi Solver')
     plt.legend()
     plt.show()
+
+def test_GaussSeidel_vs_python():
+    print("\nRunning Gauss-Seidel solver comparison...")
+    
+    # Setup test problem
+    truss, pos_pred, neighs, kngs, Aii, b, n_max = setup_test_problem(nx=2, ny=2)
+    
+    # Color the graph for CPU solver
+    colors, color_groups = color_graph(neighs)
+    
+    # Run CPU solver
+    errs_cpu = []
+    x_cpu = linsolve_iterative(
+        lambda A, b, x: gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups),
+        b, None, pos_pred, niter=50, tol=1e-10, errs=errs_cpu, bPrint=True
+    )
+    
+    # Run GPU solver
+    errs_gpu = []
+    solver = TrussOpenCLSolver()
+    x_gpu = solver.solve_pd_gauss_seidel(pos_pred, neighs, kngs, Aii, b, n_max, niter=50, tol=1e-10, errs=errs_gpu, bPrint=True)
+    
+    # Plot convergence
+    plt.figure(figsize=(10, 6))
+    plt.semilogy(errs_cpu, 'b-', label='CPU Gauss-Seidel')
+    plt.semilogy(errs_gpu, 'r--', label='GPU Gauss-Seidel')
+    plt.grid(True)
+    plt.xlabel('Iteration')
+    plt.ylabel('Error (log scale)')
+    plt.title('Convergence Comparison: CPU vs GPU Gauss-Seidel Solver')
+    plt.legend()
+    plt.show()
+
+if __name__ == "__main__":
+    from projective_dynamics import makeSparseSystem
+    from sparse import (
+        linsolve_iterative, jacobi_iteration_sparse,
+        gauss_seidel_iteration_colored, color_graph
+    )
+    import matplotlib.pyplot as plt
+
+    # Run tests
+    #test_against_reference()
+    #test_Jacobi_vs_python()
+    test_GaussSeidel_vs_python()
