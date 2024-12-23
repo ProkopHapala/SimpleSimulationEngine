@@ -12,12 +12,14 @@ def plot_truss( points, bonds, ax=None, edge_color='k', edge_alpha=1.0, point_co
         ax: matplotlib axis to plot on (creates new if None)
         edge_color: color for edges (ignored if color_by_stiffness=True)
         edge_alpha: transparency for edges
-        point_color: color for points
+        point_color: color for points (ignored if node_colors is provided)
         point_size: size of points
         color_by_stiffness: if True, color edges by their stiffness
         cmap: colormap to use when color_by_stiffness=True
         show_colorbar: whether to show colorbar when color_by_stiffness=True
         ks: array of stiffness values for each bond (required if color_by_stiffness=True)
+        label: label for legend
+        node_colors: optional list of colors for nodes, overrides point_color if provided
     """
     if ax is None: _, ax = plt.subplots(figsize=(10, 10))
     

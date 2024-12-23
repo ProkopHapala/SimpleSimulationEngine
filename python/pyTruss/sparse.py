@@ -172,8 +172,6 @@ def color_graph(neighs):
     """
     n = len(neighs)
     colors = [-1] * n  # -1 means uncolored
-    
-    # For each vertex
     for i in range(n):
         # Get colors of neighbors
         neighbor_colors = set()
@@ -358,7 +356,7 @@ if __name__ == "__main__":
     err_sparse = []
     err_GSsp = []
     err_GS = []
-    err_GScolored = []
+    err_GScol = []
     x_jacobi   = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_jacobi )
     x_JacobMix = linsolve_iterative( lambda A, b, x: jacobi_iteration(A, b, x),                       bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_JacobMix, niter_mix=2, bmix=0.75, bPrint=True )
     x_sparse   = linsolve_iterative( lambda A, b, x: jacobi_iteration_sparse(x, b, neighs, kngs, Aii ), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_sparse )
@@ -366,7 +364,15 @@ if __name__ == "__main__":
     x_GS       = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration(A, b, x),                 bx, A,    x0=x0, niter=niter, tol=1e-8, errs=err_GS )
 
     colors, color_groups = color_graph(neighs)
-    x_GS_colored = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_GScolored)
+    x_GSsp_col = linsolve_iterative( lambda A, b, x: gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups), bx, None, x0=x0, niter=niter, tol=1e-8, bPrint=True, errs=err_GScol)
+
+    import matplotlib.pyplot as plt
+    import plot_utils as pu
+
+    colors_ = [ 'rgbcmykw'[i] for i in colors ]
+    pu.plot_truss(truss.points, truss.bonds, edge_color='gray', edge_alpha=0.5,   point_color=colors_, point_size=100)
+    plt.show()
+
 
     print("x_ref = ", x_ref)
     print("x0 = ", x0)
@@ -375,13 +381,13 @@ if __name__ == "__main__":
     print("x_sparse = ", x_sparse)
     print("x_GSsp = ", x_GSsp)
     print("x_GS = ", x_GS)
-    print("x_GS_colored = ", x_GS_colored)
+    print("x_GSsp_col = ", x_GSsp_col)
     print("| x_jacobi   - x_ref | = ", np.linalg.norm(x_jacobi   - x_ref))
     print("| x_JacobMix - x_ref | = ", np.linalg.norm(x_JacobMix - x_ref))
     print("| x_sparse   - x_ref | = ", np.linalg.norm(x_sparse   - x_ref))
     print("| x_GSsp     - x_ref | = ", np.linalg.norm(x_GSsp     - x_ref))
     print("| x_GS       - x_ref | = ", np.linalg.norm(x_GS       - x_ref))
-    print("| x_GS_colored - x_ref | = ", np.linalg.norm(x_GS_colored - x_ref))
+    print("| x_GSsp_col - x_ref | = ", np.linalg.norm(x_GSsp_col - x_ref))
 
 
     import matplotlib.pyplot as plt
@@ -390,7 +396,7 @@ if __name__ == "__main__":
     plt.plot(err_sparse,   label="sparse")
     plt.plot(err_GS,       label="GS")
     plt.plot(err_GSsp,     label="GSsparse")
-    plt.plot(err_GScolored, label="GScolored")
+    plt.plot(err_GScol, label="GScolored")
     plt.yscale('log')
     plt.legend()
     plt.grid()
