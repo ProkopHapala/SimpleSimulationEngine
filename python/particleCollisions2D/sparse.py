@@ -16,20 +16,6 @@ def gauss_seidel_iteration(A, b, x):
     r = b - A @ x_new
     return x_new, r
 
-def linsolve_Jacobi( b, A, x0=None, niter=10, tol=1e-6, bPrint=False, callback=None ):
-    if x0 is None: x0 = np.zeros_like(b)
-    x = x0.copy()
-    for itr in range(niter):
-        x, r = jacobi_iteration(A, b, x)
-        err = np.linalg.norm(r)
-        if callback is not None:
-            callback(itr, x, r)
-        if bPrint:
-            print(f"linsolve_Jacobi() itr: {itr}, err: {err}")
-        if err < tol:
-            break
-    return x
-
 def linsolve_iterative( update_func, b, A, x0=None, niter=10, tol=1e-6, bPrint=False, callback=None, errs=None, bmix=1.0, niter_mix=100000 ):
     if x0 is None: x0 = np.zeros_like(b)
     x = x0.copy()
@@ -45,8 +31,6 @@ def linsolve_iterative( update_func, b, A, x0=None, niter=10, tol=1e-6, bPrint=F
             x = x_new
         else:
             x = x_
-
-        
         if errs is not None:
             errs.append(err)
         if callback is not None:
@@ -156,7 +140,6 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
         #print("CPU i: %i Aii[i]: %f b[i]: %f sum_j: %f x_out[i]: %f r[i]: %f" %(i, Aii[i], b[i], sum_j, x_out[i], r[i]) );
     return x_out, r
 
-
 def color_graph(neighs):
     """Color the graph using a greedy algorithm
     Returns:
@@ -202,7 +185,6 @@ def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
         #print(f"{i} sum1: {sum1:.6f} sum2: {sum2:.6f} x_new[i]: {x_new[i]:.6f}")
     r = b - dot_sparse(x_new, neighs, kngs, Aii)
     return x_new, r
-
 
 def gauss_seidel_iteration_colored(x, b, neighs, kngs, Aii, color_groups):
     """Parallel Gauss-Seidel iteration using graph coloring"""
