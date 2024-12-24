@@ -103,7 +103,108 @@ class World:
             dp2 = -w1 * p2.m * dr     # displacement for p2
             return dp1, dp2
         return np.zeros(2), np.zeros(2)
+
+    def prepare_pd_system(self):
+        """Prepare system for projective dynamics solver"""
+        from sparse import build_neighbor_list, neigh_stiffness, make_Aii
         
+        # Collect all particles, bonds, and their properties
+        all_bonds = []    # collect all bonds
+        all_ks = []       # collect all spring constants
+        all_masses = []   # collect all masses
+        points = []       # collect all positions
+        velocities = []   # collect all velocities
+        all_particles = []  # collect all particles for collision handling
+        offset = 0
+        for mol in self.molecules:
+            for p in mol.particles:
+                points.append(p.pos[0])  # x-coordinate only for now
+                velocities.append(p.vel[0])
+                all_masses.append(p.m)
+                all_particles.append(p)
+            for b in mol.bonds:
+                all_bonds.append([b.i + offset, b.j + offset])
+                all_ks.append(b.k)
+            offset += len(mol.particles)
+        
+        points = np.array(points)
+        velocities = np.array(velocities)
+        all_masses = np.array(all_masses)
+        
+        # Build neighbor lists and stiffness matrices for bonds
+        n_points = offset
+        neighbs = build_neighbor_list(all_bonds, n_points)
+        neighs, kngs, _ = neigh_stiffness(neighbs, all_bonds, all_ks)
+        
+        # Update collision neighbors and add them to the system
+        self._update_neighbors()
+        for i, p1 in enumerate(all_particles):
+            for p2 in p1.neighbors:
+                j = all_particles.index(p2)
+                # Add collision neighbor if not already in bond neighbors
+                if j not in neighs[i]:
+                    neighs[i].append(j)
+                    kngs[i].append(self.K_col)
+        
+        # Make diagonal terms with mass/dt^2 and all stiffness terms
+        Aii0 = all_masses / (self.dt * self.dt)
+        Aii = make_Aii(neighs, kngs, Aii0)  # Now includes both bond and collision stiffness
+        
+        # Predict positions using current velocities
+        pos_pred = points + velocities * self.dt
+        
+        return points, pos_pred, velocities, neighs, kngs, Aii, all_masses, all_particles
+
+    def make_pd_rhs(self, neighs, kngs, Aii, masses, points, pos_pred):
+        """Build RHS according to projective dynamics, including collisions"""
+        n_points = len(points)
+        b = np.zeros(n_points)
+        idt2 = 1.0 / (self.dt * self.dt)
+        
+        # Mass and constraint terms for all particles
+        for i in range(n_points):
+            # Mass term (inertial prediction)
+            bi = pos_pred[i] * (masses[i] * idt2)
+            
+            # Both bond and collision terms (unified in neighs and kngs)
+            for j, k in zip(neighs[i], kngs[i]):
+                d = pos_pred[i] - pos_pred[j]
+                d_norm = abs(d)  # 1D case
+                if d_norm > 1e-10:  # Avoid division by zero
+                    bi += k * d/d_norm  # Unit vector in 1D is just sign
+            
+            b[i] = bi
+        
+        return b
+
+    def solve_pd_step(self, niter=100, tol=1e-8, callback=None):
+        """Solve one step of projective dynamics"""
+        from sparse import linsolve_iterative, jacobi_iteration_sparse
+        
+        # Prepare system
+        points, pos_pred, velocities, neighs, kngs, Aii, masses, particles = self.prepare_pd_system()
+        
+        # Build RHS
+        b = self.make_pd_rhs(neighs, kngs, Aii, masses, points, pos_pred)
+        
+        # Define Jacobi iteration function
+        def update_func(A, b, x):
+            return jacobi_iteration_sparse(x, b, neighs, kngs, Aii)
+        
+        # Solve system
+        errs = []
+        x_sol = linsolve_iterative(update_func, b, None, x0=points, niter=niter, tol=tol, errs=errs, callback=callback)
+        
+        # Update particle positions and velocities
+        offset = 0
+        for mol in self.molecules:
+            for p in mol.particles:
+                p.pos[0] = x_sol[offset]  # Update x-coordinate
+                p.vel[0] = (x_sol[offset] - points[offset]) / self.dt  # Update velocity
+                offset += 1
+        
+        return errs  # Return convergence history
+
     def _predict_positions(self):
         """Step 1: Predict positions using current velocities"""
         for mol in self.molecules:
