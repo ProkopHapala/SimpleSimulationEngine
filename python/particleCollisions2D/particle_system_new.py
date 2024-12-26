@@ -146,11 +146,11 @@ class World:
                     if bond.i == i:
                         j_world = mol.inds[bond.j]  # Convert local to world index
                         self.neighs_bonds[atom_index].add((j_world, bond.r0))  # Store both neighbor index and rest length
-                        print(f"Added bond: {atom_index}-{j_world} with r0={bond.r0}")  # Debug
+                        #print(f"Added bond: {atom_index}-{j_world} with r0={bond.r0}")  # Debug
                     elif bond.j == i:
                         i_world = mol.inds[bond.i]  # Convert local to world index
                         self.neighs_bonds[atom_index].add((i_world, bond.r0))  # Store both neighbor index and rest length
-                        print(f"Added bond: {atom_index}-{i_world} with r0={bond.r0}")  # Debug
+                        #print(f"Added bond: {atom_index}-{i_world} with r0={bond.r0}")  # Debug
                 
                 atom_index += 1
         
@@ -190,13 +190,13 @@ class World:
                 r0s = []  # rest length for each neighbor
                 
                 # First add bonded neighbors
-                print(f"\nProcessing atom {ip}:")  # Debug
+                #print(f"\nProcessing atom {ip}:")  # Debug
                 print(f"Bond neighbors: {self.neighs_bonds[ip]}")  # Debug
                 for j, r0 in self.neighs_bonds[ip]:
                     ngs.append(j)
                     kngs.append(self.Kbond)
                     r0s.append(r0)
-                    print(f"  Added bond neighbor {j} with r0={r0}")  # Debug
+                    print(f"  Added bond neighbor {ip}-{j} with r0={r0}")  # Debug
                 
                 # Then find collision neighbors
                 for jm, molj in enumerate(self.molecules):
@@ -209,7 +209,7 @@ class World:
                             ngs.append(jp)
                             kngs.append(self.K_col)
                             r0s.append(self.Rc)  # For collisions, rest length is Rc
-                            print(f"  Added collision neighbor {jp} with r0={self.Rc}")  # Debug
+                            print(f"  Added collision neighbor {ip}-{jp} with r0={self.Rc}")  # Debug
 
                 # Store all neighbors and their parameters
                 self.neighs[ip] = ngs
@@ -241,7 +241,7 @@ class World:
             for ip in mol.inds:
                 self.vels[ip,:2] = (self.apos[ip,:2] - self.pos_pred[ip,:2]) / self.dt
 
-    def solve_constraints(self):
+    def solve_constraints(self, niter=10, errs=None, callback=None):
         """Step 2: Solve position constraints (bonds and collisions)"""
         neighs, kngs, r0s = self.update_collision_neighbors()  # 
 
@@ -257,9 +257,15 @@ class World:
         y = self.apos[:,1].copy()
         
         # Iterate to solve constraints for component x
-        for _ in range(self.n_iter):
+        for itr in range( niter ):
             x, err_x = jacobi_iteration_sparse(x, bx, neighs, kngs, Aii ) # solve for x component
             y, err_y = jacobi_iteration_sparse(y, by, neighs, kngs, Aii ) # solver for y component
+
+            if errs is not None:
+                errs.append(np.linalg.norm(err_x) + np.linalg.norm(err_y))
+
+            if callback is not None:
+                callback(itr, x,y, err_x, err_y)
         
         # Update positions
         self.apos[:,0] = x
@@ -314,14 +320,16 @@ class World:
         
         return Aii
 
-
-def create_water(pos=[0,0], vel=[0,0]):
+def create_water(pos=[0,0], l0=1.0, ang=np.pi/2, vel=[0,0] ):
     """Create a water molecule (H2O) at given position with given velocity"""
     types = [16.0, 1.0, 1.0]  # masses of O, H1, H2
+
+    ca = np.cos(ang)
+    sa = np.sin(ang)
     positions = [
-        [pos[0], pos[1]],      # O
-        [pos[0]+1, pos[1]],    # H1
-        [pos[0], pos[1]+1]     # H2
+        [pos[0],       pos[1]      ],  # O
+        [pos[0]+l0,    pos[1]      ],  # H1
+        [pos[0]+l0*ca, pos[1]+l0*sa]   # H2
     ]
     bonds = [
         Bond(0, 1, k=10.0, r0=1.0),  # O-H1 bond
@@ -329,46 +337,31 @@ def create_water(pos=[0,0], vel=[0,0]):
     ]
     return Molecule(types, positions, bonds)
 
-def create_water_grid(n=3, spacing=2.0):
+def create_water_grid(nx=3, ny=3, spacing=2.0, l0=1.0, ang=np.pi/2):
     """Create a grid of water molecules"""
     molecules = []
-    for i in range(n):
-        for j in range(n):
+    for i in range(nx):
+        for j in range(ny):
             pos = [i*spacing, j*spacing]
-            molecules.append(create_water(pos))
+            molecules.append(create_water(pos, l0=l0, ang=ang))
     return molecules
 
-def init_world():
+def init_world( nx=2, ny=2, spacing=2.0, l0=1.0, ang=np.pi/2 ):
     """Initialize world with water molecules"""
     world = World(dt=0.01)
-    mols = create_water_grid(2, 2)
+    mols = create_water_grid(nx, ny, spacing=spacing, l0=l0, ang=ang)
     world.from_molecules(mols)
     return world
 
-def test_1(world):
+def test_1(world, n_iter = 10):
     """Test convergence of constraint solver"""
     print("\nTesting constraint solver convergence:")
     
-    # Setup visualization
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    errors = []
-    
-    # Plot initial state
     pu.plot_molecules(world, ax=ax1, color='b', label='Initial')
-    
-    # Run constraint solver iterations
-    n_iter = 20
-    for i in range(n_iter):
-        # Solve constraints
-        err = world.solve_constraints()
-        errors.append(err)
-        print(f"Iteration {i}: error = {err}")
-        
-        # Plot intermediate state
-        if i % 5 == 0:
-            pu.plot_molecules(world, ax=ax1, color='k', alpha=0.2)
-    
-    # Plot final state and convergence
+    errors = []
+    world.solve_constraints(n_iter, errs=errors, callback=lambda i, x, y, err_x, err_y: pu.plot_molecules(world, x=x, y=y, ax=ax1, label='i')  )
     pu.plot_molecules(world, ax=ax1, color='r', label='Final')
     ax1.legend()
     ax1.set_title('Molecule Positions')
@@ -418,7 +411,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import plot_utils as pu
     
-    world = init_world()
+    world = init_world(1,1, ang=np.pi/4)
     test_1(world)  # Test constraint solver convergence
 
     #world = init_world()  # Re-initialize for test 2
