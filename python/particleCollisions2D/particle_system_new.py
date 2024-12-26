@@ -79,6 +79,7 @@ class World:
         self.neighs_bonds = None # [ set() ]*natoms 
         self.neighs      = None # [ [] ]*natoms   # include neighbors from bonds and collisions 
         self.kngs       = None # [ [] ]*natoms   # stiffness for each of the neighbors
+        self.r0s        = None # [ [] ]*natoms   # rest length for each of the neighbors
         self.Kbond      = 100.0  # bond stiffness
 
         # simulation parameters
@@ -98,6 +99,7 @@ class World:
         self.neighs_bonds = [set() for _ in range(natoms)]
         self.neighs       = [[] for _ in range(natoms)]
         self.kngs        = [[] for _ in range(natoms)]
+        self.r0s         = [[] for _ in range(natoms)]
     
     def add_molecule(self, molecule):
         """Add a molecule to the world"""
@@ -142,9 +144,13 @@ class World:
                 # Add bond neighbors for this atom
                 for bond in mol.bonds:
                     if bond.i == i:
-                        self.neighs_bonds[atom_index].add(mol.inds[bond.j])
+                        j_world = mol.inds[bond.j]  # Convert local to world index
+                        self.neighs_bonds[atom_index].add((j_world, bond.r0))  # Store both neighbor index and rest length
+                        print(f"Added bond: {atom_index}-{j_world} with r0={bond.r0}")  # Debug
                     elif bond.j == i:
-                        self.neighs_bonds[atom_index].add(mol.inds[bond.i])
+                        i_world = mol.inds[bond.i]  # Convert local to world index
+                        self.neighs_bonds[atom_index].add((i_world, bond.r0))  # Store both neighbor index and rest length
+                        print(f"Added bond: {atom_index}-{i_world} with r0={bond.r0}")  # Debug
                 
                 atom_index += 1
         
@@ -179,25 +185,38 @@ class World:
         """
         for im, mol in enumerate(self.molecules):
             for ip in mol.inds:
-                ngs = [] 
-                kngs = []
-                bngs = self.neighs_bonds[ip]
-                # find collision neighbors of atom ip (which are not bonded to it)
+                ngs = []  # neighbors (both bonds and collisions)
+                kngs = [] # stiffness for each neighbor
+                r0s = []  # rest length for each neighbor
+                
+                # First add bonded neighbors
+                print(f"\nProcessing atom {ip}:")  # Debug
+                print(f"Bond neighbors: {self.neighs_bonds[ip]}")  # Debug
+                for j, r0 in self.neighs_bonds[ip]:
+                    ngs.append(j)
+                    kngs.append(self.Kbond)
+                    r0s.append(r0)
+                    print(f"  Added bond neighbor {j} with r0={r0}")  # Debug
+                
+                # Then find collision neighbors
                 for jm, molj in enumerate(self.molecules):
                     for jp in molj.inds:
                         if ip == jp:
                             continue
-                        if im == jm and jp in bngs:
+                        if im == jm and jp in [j for j, _ in self.neighs_bonds[ip]]:
                             continue
                         if np.linalg.norm(self.apos[ip][:2] - self.apos[jp][:2]) < self.Rc:
                             ngs.append(jp)
                             kngs.append(self.K_col)
+                            r0s.append(self.Rc)  # For collisions, rest length is Rc
+                            print(f"  Added collision neighbor {jp} with r0={self.Rc}")  # Debug
 
-                # store both bond and collision neighbors
-                self.neighs[ip] = list(bngs) + ngs 
-                self.kngs[ip] = [self.Kbond]*len(bngs) + kngs
+                # Store all neighbors and their parameters
+                self.neighs[ip] = ngs
+                self.kngs[ip] = kngs
+                self.r0s[ip] = r0s
 
-        return self.neighs, self.kngs
+        return self.neighs, self.kngs, self.r0s
 
 
     # --------- Iterative Solver  -------------
@@ -224,10 +243,10 @@ class World:
 
     def solve_constraints(self):
         """Step 2: Solve position constraints (bonds and collisions)"""
-        neighs, kngs = self.update_collision_neighbors()  # 
+        neighs, kngs, r0s = self.update_collision_neighbors()  # 
 
         Aii = self.update_PD_matrix( neighs, kngs )
-        b   = self.update_rhs      ( neighs, kngs )
+        b   = self.update_rhs      ( neighs, kngs, r0s )
         
         # Separate x and y components
         bx = b[:,0]
@@ -248,9 +267,11 @@ class World:
 
         return np.linalg.norm(err_x) + np.linalg.norm(err_y)
 
-    def update_rhs(self, neighs, kngs):
+    def update_rhs(self, neighs, kngs, r0s):
         """
-        Update the right-hand side of the Projective Dynamics equation
+        Update the right-hand side of the Projective Dynamics equation:
+        b_i = (m_i/dt^2)p'_i + sum_j (K_ij * d_ij)
+        where d_ij is the displacement vector (length r0 for each neighbor)
         """
         n = len(self.apos)
         b = np.zeros_like(self.apos[:,:2])  # Only x,y coordinates
@@ -260,7 +281,7 @@ class World:
             b[ip] = (self.apos[ip,3] / (self.dt**2)) * self.pos_pred[ip,:2]
             
             # Sum of constraint terms
-            for j, k in zip(neighs[ip], kngs[ip]):
+            for j, k, r0 in zip(neighs[ip], kngs[ip], r0s[ip]):
                 # Current positions
                 p_i = self.apos[ip,:2]
                 p_j = self.apos[j,:2]
@@ -270,7 +291,9 @@ class World:
                 r = np.linalg.norm(r_ij)
                 
                 if r > 0:  # Avoid division by zero
-                    b[ip] += k * p_j  # Add neighbor contribution
+                    dir_ij = r_ij / r
+                    d_ij = dir_ij * r0  # Displacement vector of length r0
+                    b[ip] += k * d_ij  # Add K_ij * d_ij to RHS
         
         return b
 
@@ -315,18 +338,18 @@ def create_water_grid(n=3, spacing=2.0):
             molecules.append(create_water(pos))
     return molecules
 
-def test_1():
-    """Test convergence of constraint solver"""
-    print("\nTesting constraint solver convergence:")
-    
-    # Create a world with water molecules
+def init_world():
+    """Initialize world with water molecules"""
     world = World(dt=0.01)
     mols = create_water_grid(2, 2)
     world.from_molecules(mols)
+    return world
+
+def test_1(world):
+    """Test convergence of constraint solver"""
+    print("\nTesting constraint solver convergence:")
     
     # Setup visualization
-    import matplotlib.pyplot as plt
-    import plot_utils as pu
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     errors = []
     
@@ -356,18 +379,11 @@ def test_1():
     plt.tight_layout()
     plt.show()
 
-def test_2():
+def test_2(world):
     """Test dynamics over multiple steps"""
     print("\nTesting dynamics:")
     
-    # Create a world with water molecules
-    world = World(dt=0.01)
-    mols = create_water_grid(2, 2)
-    world.from_molecules(mols)
-    
     # Setup visualization
-    import matplotlib.pyplot as plt
-    import plot_utils as pu
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     errors = []
     
@@ -402,5 +418,8 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import plot_utils as pu
     
-    test_1()  # Test constraint solver convergence
-    test_2()  # Test dynamics
+    world = init_world()
+    test_1(world)  # Test constraint solver convergence
+
+    #world = init_world()  # Re-initialize for test 2
+    #test_2(world)  # Test dynamics
