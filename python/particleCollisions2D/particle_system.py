@@ -26,6 +26,14 @@ class Molecule:
         total_mass = sum(p.m for p in self.particles)
         self.com = np.sum([p.pos * p.m for p in self.particles], axis=0) / total_mass
 
+def to_1d_coords(points_2d):
+    """Convert 2D points array to 1D array [x1,y1,x2,y2,...]"""
+    return points_2d.flatten()
+
+def to_2d_coords(points_1d):
+    """Convert 1D points array [x1,y1,x2,y2,...] to 2D array [[x1,y1],[x2,y2],...]"""
+    return points_1d.reshape(-1, 2)
+
 class World:
     def __init__(self, dt=0.1, D=0.1):
         self.molecules = []          # list of molecules
@@ -112,19 +120,21 @@ class World:
         all_bonds = []    # collect all bonds
         all_ks = []       # collect all spring constants
         all_masses = []   # collect all masses
-        points = []       # collect all positions
-        velocities = []   # collect all velocities
+        points = []       # collect all positions (x,y)
+        velocities = []   # collect all velocities (x,y)
         all_particles = []  # collect all particles for collision handling
         offset = 0
         for mol in self.molecules:
             for p in mol.particles:
-                points.append(p.pos[0])  # x-coordinate only for now
-                velocities.append(p.vel[0])
-                all_masses.append(p.m)
+                points.extend([p.pos[0], p.pos[1]])  # both x and y coordinates
+                velocities.extend([p.vel[0], p.vel[1]])
+                all_masses.extend([p.m, p.m])  # mass repeated for x and y
                 all_particles.append(p)
             for b in mol.bonds:
-                all_bonds.append([b.i + offset, b.j + offset])
-                all_ks.append(b.k)
+                # Each bond creates two constraints (x and y)
+                all_bonds.extend([[2*(b.i + offset), 2*(b.j + offset)],     # x coordinates
+                                [2*(b.i + offset)+1, 2*(b.j + offset)+1]])  # y coordinates
+                all_ks.extend([b.k, b.k])  # spring constant for both x and y
             offset += len(mol.particles)
         
         points = np.array(points)
@@ -132,7 +142,7 @@ class World:
         all_masses = np.array(all_masses)
         
         # Build neighbor lists and stiffness matrices for bonds
-        n_points = offset
+        n_points = len(points)
         neighbs = build_neighbor_list(all_bonds, n_points)
         neighs, kngs, _ = neigh_stiffness(neighbs, all_bonds, all_ks)
         
@@ -141,10 +151,17 @@ class World:
         for i, p1 in enumerate(all_particles):
             for p2 in p1.neighbors:
                 j = all_particles.index(p2)
-                # Add collision neighbor if not already in bond neighbors
-                if j not in neighs[i]:
-                    neighs[i].append(j)
-                    kngs[i].append(self.K_col)
+                # Add collision neighbors for both x and y coordinates
+                ix, iy = 2*i, 2*i+1
+                jx, jy = 2*j, 2*j+1
+                # Add x coordinate neighbor if not already present
+                if jx not in neighs[ix]:
+                    neighs[ix].append(jx)
+                    kngs[ix].append(self.K_col)
+                # Add y coordinate neighbor if not already present
+                if jy not in neighs[iy]:
+                    neighs[iy].append(jy)
+                    kngs[iy].append(self.K_col)
         
         # Make diagonal terms with mass/dt^2 and all stiffness terms
         Aii0 = all_masses / (self.dt * self.dt)
@@ -162,48 +179,164 @@ class World:
         idt2 = 1.0 / (self.dt * self.dt)
         
         # Mass and constraint terms for all particles
-        for i in range(n_points):
-            # Mass term (inertial prediction)
-            bi = pos_pred[i] * (masses[i] * idt2)
+        for i in range(0, n_points, 2):  # Process x,y coordinates together
+            # Mass terms (inertial prediction) for x,y
+            bi_x = pos_pred[i] * (masses[i] * idt2)
+            bi_y = pos_pred[i+1] * (masses[i+1] * idt2)
             
-            # Both bond and collision terms (unified in neighs and kngs)
+            
+            # Process neighbors for x coordinate
             for j, k in zip(neighs[i], kngs[i]):
-                d = pos_pred[i] - pos_pred[j]
-                d_norm = abs(d)  # 1D case
-                if d_norm > 1e-10:  # Avoid division by zero
-                    bi += k * d/d_norm  # Unit vector in 1D is just sign
+                dx = pos_pred[i] - pos_pred[j]
+                dy = pos_pred[i+1] - pos_pred[j+1]
+                d = np.sqrt(dx*dx + dy*dy)  # true distance in 2D
+                if d > 1e-10:  # Avoid division by zero
+                    bi_x += k * dx/d  # x component of force
             
-            b[i] = bi
+            # Process neighbors for y coordinate
+            for j, k in zip(neighs[i+1], kngs[i+1]):
+                dx = pos_pred[i] - pos_pred[j-1]
+                dy = pos_pred[i+1] - pos_pred[j]
+                d = np.sqrt(dx*dx + dy*dy)  # true distance in 2D
+                if d > 1e-10:  # Avoid division by zero
+                    bi_y += k * dy/d  # y component of force
+            
+            b[i] = bi_x
+            b[i+1] = bi_y
         
         return b
 
-    def solve_pd_step(self, niter=100, tol=1e-8, callback=None):
-        """Solve one step of projective dynamics"""
-        from sparse import linsolve_iterative, jacobi_iteration_sparse
+    def prepare_constraints(self, points_1d):
+        """Prepare combined constraints from bonds and collisions"""
+        from sparse import build_neighbor_list, neigh_stiffness
         
-        # Prepare system
-        points, pos_pred, velocities, neighs, kngs, Aii, masses, particles = self.prepare_pd_system()
+        points_2d = to_2d_coords(points_1d)
+        n_particles = len(points_2d)
         
-        # Build RHS
-        b = self.make_pd_rhs(neighs, kngs, Aii, masses, points, pos_pred)
-        
-        # Define Jacobi iteration function
-        def update_func(A, b, x):
-            return jacobi_iteration_sparse(x, b, neighs, kngs, Aii)
-        
-        # Solve system
-        errs = []
-        x_sol = linsolve_iterative(update_func, b, None, x0=points, niter=niter, tol=tol, errs=errs, callback=callback)
-        
-        # Update particle positions and velocities
+        # Get static bond constraints
+        bond_bonds = []
+        bond_ks = []
         offset = 0
         for mol in self.molecules:
-            for p in mol.particles:
-                p.pos[0] = x_sol[offset]  # Update x-coordinate
-                p.vel[0] = (x_sol[offset] - points[offset]) / self.dt  # Update velocity
-                offset += 1
+            for b in mol.bonds:
+                # Each bond creates two constraints (x and y)
+                bond_bonds.extend([[2*(b.i + offset), 2*(b.j + offset)],      # x coordinates
+                                 [2*(b.i + offset)+1, 2*(b.j + offset)+1]])   # y coordinates
+                bond_ks.extend([b.k, b.k])  # spring constant for both x and y
+            offset += len(mol.particles)
         
-        return errs  # Return convergence history
+        # Get collision constraints based on current positions
+        col_bonds = []
+        col_ks = []
+        all_particles = [p for mol in self.molecules for p in mol.particles]
+        
+        # Update collision neighbors using current positions
+        self._update_neighbors()
+        for i, p1 in enumerate(all_particles):
+            for p2 in p1.neighbors:
+                j = all_particles.index(p2)
+                # Add collision bonds for both x and y coordinates
+                col_bonds.extend([[2*i, 2*j], [2*i+1, 2*j+1]])
+                col_ks.extend([self.K_col, self.K_col])
+        
+        # Combine all constraints
+        all_bonds = bond_bonds + col_bonds
+        all_ks = bond_ks + col_ks
+        
+        # Build neighbor lists and stiffness matrices
+        n_points = len(points_1d)
+        neighbs = build_neighbor_list(all_bonds, n_points)
+        neighs, kngs, _ = neigh_stiffness(neighbs, all_bonds, all_ks)
+        
+        return neighs, kngs
+
+    def solve_pd_step(self, niter_outer=10, niter_inner=10, tol=1e-8, callback=None):
+        """Solve one step of projective dynamics with periodic collision updates"""
+        from sparse import make_Aii, jacobi_iteration_sparse
+        
+        # Collect initial state
+        points_2d = np.array([p.pos for mol in self.molecules for p in mol.particles])
+        vels_2d = np.array([p.vel for mol in self.molecules for p in mol.particles])
+        masses = np.array([p.m for mol in self.molecules for p in mol.particles])
+        
+        # Convert to 1D arrays
+        points = to_1d_coords(points_2d)
+        velocities = to_1d_coords(vels_2d)
+        masses_1d = np.repeat(masses, 2)  # repeat for x,y components
+        
+        # Predict positions
+        pos_pred = points + velocities * self.dt
+        x = points.copy()
+        errs = []
+        
+        # Outer iteration loop - update neighbors periodically
+        for it_outer in range(niter_outer):
+            # Prepare constraints with current positions
+            neighs, kngs = self.prepare_constraints(x)
+            
+            # Make diagonal terms
+            Aii0 = masses_1d / (self.dt * self.dt)
+            Aii = make_Aii(neighs, kngs, Aii0)
+            
+            # Inner iteration loop - solve with fixed neighbors
+            for it_inner in range(niter_inner):
+                # Build RHS (b vector)
+                b = self.make_pd_rhs(neighs, kngs, Aii, masses_1d, x, pos_pred)
+                
+                # One step of Jacobi iteration
+                x_new, r = jacobi_iteration_sparse(x, b, neighs, kngs, Aii)
+                
+                # Check convergence
+                err = np.linalg.norm(r)
+                errs.append(err)
+                if callback: callback(it_outer*niter_inner + it_inner, x_new, r)
+                if err < tol: break
+                x = x_new
+        
+        # Update particle states
+        points_2d_new = to_2d_coords(x)
+        for i, p in enumerate([p for mol in self.molecules for p in mol.particles]):
+            p.pos = points_2d_new[i]
+            p.vel = (points_2d_new[i] - points_2d[i]) / self.dt
+        
+        return errs
+
+    def _get_bond_neighbors(self):
+        """Get static bond topology neighbors"""
+        all_bonds = []
+        all_ks = []
+        offset = 0
+        for mol in self.molecules:
+            for b in mol.bonds:
+                # Each bond creates one constraint between points
+                all_bonds.append([b.i + offset, b.j + offset])
+                all_ks.append(b.k)
+            offset += len(mol.particles)
+        return all_bonds, all_ks
+
+    def _get_collision_neighbors(self, pos_pred):
+        """Get current collision neighbors based on predicted positions"""
+        collision_bonds = []
+        collision_ks = []
+        
+        # Check all pairs of points for collisions
+        n = len(pos_pred) // 2  # number of particles (each has x,y)
+        for i in range(n):
+            for j in range(i+1, n):
+                # Get positions
+                i2 = 2*i
+                j2 = 2*j
+                dx = pos_pred[i2] - pos_pred[j2]
+                dy = pos_pred[i2+1] - pos_pred[j2+1]
+                r = np.sqrt(dx*dx + dy*dy)
+                
+                # Add collision constraint if particles are close enough
+                if r < self.Rc - self.D:
+                    # Add one constraint between points
+                    collision_bonds.append([i, j])
+                    collision_ks.append(self.K_col)
+        
+        return collision_bonds, collision_ks
 
     def _predict_positions(self):
         """Step 1: Predict positions using current velocities"""
@@ -295,7 +428,7 @@ if __name__ == "__main__":
     
     # Solve one step of projective dynamics
     print("\nStarting Jacobi iteration:")
-    errs = world.solve_pd_step(niter=100, tol=1e-8, callback=callback)
+    errs = world.solve_pd_step(niter_outer=10, niter_inner=10, tol=1e-8, callback=callback)
     
     # Plot convergence
     plt.figure(figsize=(10,6))
