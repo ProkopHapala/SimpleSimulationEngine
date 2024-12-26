@@ -1,29 +1,48 @@
 import numpy as np
 
+class Particle:
+    def __init__(self, pos, vel=None, mass=1.0):
+        self.pos = np.array(pos, dtype=np.float64)    # position vector [x,y]
+        self.vel = np.zeros(2) if vel is None else np.array(vel, dtype=np.float64)   # velocity vector [vx,vy]
+        self.m = mass                                 # mass
+        self.f = np.zeros(2)                         # force accumulator
+        self.neighbors = []                          # list of neighbor particles for collision detection
         
+
 class Bond:
-    def __init__(self, i, j, k, r0):
-        self.i = i          # index of first particle
-        self.j = j          # index of second particle
-        self.k = k          # spring constant
-        self.r0 = r0        # equilibrium length
+    """A bond between two particles"""
+    def __init__(self, i, j, k=1.0, r0=1.0):
+        self.i = i   # index of first particle
+        self.j = j   # index of second particle
+        self.k = k   # spring constant
+        self.r0 = r0 # rest length
+    
+    def get_error(self, pos):
+        """Get the error in the bond constraint"""
+        d = pos[self.j,:2] - pos[self.i,:2]
+        r = np.linalg.norm(d)
+        return abs(r - self.r0)
 
 class Molecule:
     def __init__(self, types, pos, bonds):
         self.natom = len(pos)
-        self.types =  # types of each atom
+        self.types = types.copy()  # types of each atom
+        self.particles = [Particle(pos[i], mass=types[i]) for i in range(len(pos))]
         self.pos   = pos   # list of integers of particle objects
         self.bonds = bonds           # list of Bond objects
         # -- to be done
         self.cog   = None            # np.array[3]
         self.inds  = np.zeros(len(pos), dtype=np.int32)   # list of indices of this p
         
-    def update(self, bUpdateCenter ):
+    def update(self, bUpdateCenter):
         """Update center of geometry and radius of the molecule"""
+        # Convert pos to numpy array if it's a list
+        pos = np.array(self.pos)
+        
         # Compute center of geometry
-        if bUpdateCenter:
-            self.cog = np.mean(self.pos, axis=0)
-        self.Rg = np.max(np.linalg.norm(self.pos - self.cog, axis=1))
+        if bUpdateCenter or self.cog is None:
+            self.cog = np.mean(pos, axis=0)
+        self.Rg = np.max(np.linalg.norm(pos - self.cog, axis=1))
 
 def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
     """One iteration of Jacobi method using sparse operations"""
@@ -50,17 +69,17 @@ class World:
         nmaxneighs = 8
         natoms     = 0
         # dynamicsl varialbes (for all particles in the system)
-        self.apos   = None  # [natoms,4] {x,y,z,m} 
-        self.vels   = None  # [natoms,4]
-        self.forces = None  # [natoms,4]
+        self.apos      = None  # [natoms,4] {x,y,z,m} 
+        self.pos_pred  = None  # [natoms,4] predicted positions
+        self.vels      = None  # [natoms,4]
+        self.forces    = None  # [natoms,4]
         # topplogy and parameters
         self.molecules    = []   # list of grups of atoms 
         
         self.neighs_bonds = None # [ set() ]*natoms 
-        #self.neighs_bonds = [natoms, nmaxneighs]   # neighbor lists for each atom due to bonds ( not changed during the simulation)
-        #self.neighs_colls = [natoms, nmaxneighs]   # neighbor lists for collisions ( collision changes during the simulation)
-        self.neighs_all   = None #[natoms, nmaxneighs]   # include neighbors from bonds and collisions 
-        self.kngs         = None #[natoms, nmaxneighs]   # stiffness for each of the neighbors
+        self.neighs      = None # [ [] ]*natoms   # include neighbors from bonds and collisions 
+        self.kngs       = None # [ [] ]*natoms   # stiffness for each of the neighbors
+        self.Kbond      = 100.0  # bond stiffness
 
         # simulation parameters
         self.dt = dt               # time step
@@ -69,12 +88,22 @@ class World:
         self.Rg     = 2.0          # grouping radius for neighbor search
         self.K_col  = 100.0        # collision stiffness
         self.n_iter = 10           # number of iterations for constraint solver
-        
+        self.damping = 0.1         # velocity damping
+
     def allocate(self, natoms):
-        self.apos   = np.zeros((natoms,4))
-        self.vels   = np.zeros((natoms,4))
-        self.forces = np.zeros((natoms,4))
+        self.apos      = np.zeros((natoms,4))
+        self.pos_pred  = np.zeros((natoms,4))
+        self.vels      = np.zeros((natoms,4))
+        self.forces    = np.zeros((natoms,4))
+        self.neighs_bonds = [set() for _ in range(natoms)]
+        self.neighs       = [[] for _ in range(natoms)]
+        self.kngs        = [[] for _ in range(natoms)]
     
+    def add_molecule(self, molecule):
+        """Add a molecule to the world"""
+        self.molecules.append(molecule)
+        self.from_molecules(self.molecules)
+
     def from_molecules(self, molecules):
         """
         Take all molecules from list of molecules and create world arrays 
@@ -92,9 +121,6 @@ class World:
         # Allocate arrays for positions, velocities, and forces
         self.allocate(natoms)
         
-        # Initialize bond neighbors list
-        self.neighs_bonds = [set() for _ in range(natoms)]
-        
         # Populate world arrays and bond neighbors
         atom_index = 0
         for mol in molecules:
@@ -104,7 +130,8 @@ class World:
             # Add molecule's atoms to world arrays
             for i, pos in enumerate(mol.pos):
                 # Add position (x, y, z, mass)
-                self.apos[atom_index] = np.concatenate([pos, [mol.types[i]]])
+                # For 2D simulation, set z=0 and use mass as 4th component
+                self.apos[atom_index] = np.array([pos[0], pos[1], 0.0, mol.types[i]])
                 
                 # Add initial velocities (assuming zero initial velocity)
                 self.vels[atom_index] = np.zeros(4)
@@ -174,54 +201,82 @@ class World:
 
 
     # --------- Iterative Solver  -------------
-
     def step(self):
         """Perform one time step of the simulation"""
-        self._predict_positions()
-        self._solve_constraints()
-        self._update_velocities()
+        # Damp velocities
+        self.vels[:,:2] *= (1.0 - self.damping)
+        
+        self.predict_positions()
+        self.solve_constraints()
+        self.update_velocities()
 
-    def _solve_constraints(self):
+    def predict_positions(self):
+        """Step 1: Predict positions using current velocities"""
+        for mol in self.molecules:
+            for ip in mol.inds:
+                self.pos_pred[ip,:2] = self.apos[ip,:2] + self.vels[ip,:2] * self.dt
+
+    def update_velocities(self):
+        """Step 3: Update velocities from position changes"""
+        for mol in self.molecules:
+            for ip in mol.inds:
+                self.vels[ip,:2] = (self.apos[ip,:2] - self.pos_pred[ip,:2]) / self.dt
+
+    def solve_constraints(self):
         """Step 2: Solve position constraints (bonds and collisions)"""
         neighs, kngs = self.update_collision_neighbors()  # 
 
         Aii = self.update_PD_matrix( neighs, kngs )
         b   = self.update_rhs      ( neighs, kngs )
         
+        # Separate x and y components
         bx = b[:,0]
         by = b[:,1]
+        
+        # Initial guess is current positions
+        x = self.apos[:,0].copy()
+        y = self.apos[:,1].copy()
+        
         # Iterate to solve constraints for component x
         for _ in range(self.n_iter):
             x, err_x = jacobi_iteration_sparse(x, bx, neighs, kngs, Aii ) # solve for x component
             y, err_y = jacobi_iteration_sparse(y, by, neighs, kngs, Aii ) # solver for y component
-        self.apos[:,:2] = np.column_stack((x, y))
+        
+        # Update positions
+        self.apos[:,0] = x
+        self.apos[:,1] = y
 
-    def _update_velocities(self):
-        """Step 3: Update velocities from position changes"""
-        for mol in self.molecules:
-            for p in mol.particles:
-                p.vel = (p.pos - p.pos_pred) / self.dt
-                p.pos_pred = None  # cleanup
+        return np.linalg.norm(err_x) + np.linalg.norm(err_y)
+
+    def update_rhs(self, neighs, kngs):
+        """
+        Update the right-hand side of the Projective Dynamics equation
+        """
+        n = len(self.apos)
+        b = np.zeros_like(self.apos[:,:2])  # Only x,y coordinates
+        
+        for ip in range(n):
+            # Inertial term: (m_i/dt^2) * p'_i
+            b[ip] = (self.apos[ip,3] / (self.dt**2)) * self.pos_pred[ip,:2]
+            
+            # Sum of constraint terms
+            for j, k in zip(neighs[ip], kngs[ip]):
+                # Current positions
+                p_i = self.apos[ip,:2]
+                p_j = self.apos[j,:2]
                 
-
-
-    def _predict_positions(self):
-        """Step 1: Predict positions using current velocities"""
-        for mol in self.molecules:
-            for p in mol.particles:
-                p.pos_pred = p.pos + p.vel * self.dt
-                p.pos      = p.pos_pred.copy()  # Initialize position for constraint solving
+                # Vector from i to j
+                r_ij = p_j - p_i
+                r = np.linalg.norm(r_ij)
                 
+                if r > 0:  # Avoid division by zero
+                    b[ip] += k * p_j  # Add neighbor contribution
+        
+        return b
+
     def update_PD_matrix(self, neighs, kngs):
         """
         Update the diagonal matrix for Projective Dynamics
-        
-        Args:
-            neighs (list): List of neighbor indices for each particle
-            kngs (list): List of corresponding spring/collision stiffnesses
-        
-        Returns:
-            numpy array: Diagonal matrix of coefficients
         """
         n = len(self.apos)
         Aii = np.zeros(n)
@@ -236,89 +291,116 @@ class World:
         
         return Aii
 
-    def update_rhs(self, neighs, kngs):
-        """
-        Update the right-hand side of the Projective Dynamics equation
-        
-        Args:
-            neighs (list): List of neighbor indices for each particle
-            kngs (list): List of corresponding spring/collision stiffnesses
-        
-        Returns:
-            numpy array: Right-hand side vector for each particle
-        """
-        n = len(self.apos)
-        b = np.zeros_like(self.apos[:,:2])  # Only x,y coordinates
-        
-        for ip in range(n):
-            # Inertial term: (m_i/dt^2) * p'_i
-            b[ip] = (self.apos[ip,3] / (self.dt**2)) * self.apos[ip,:2]
-            
-            # Sum of constraint displacements
-            for j, k in zip(neighs[ip], kngs[ip]):
-                # Compute displacement to satisfy constraint
-                d_ij = self._compute_constraint_displacement(ip, j)
-                b[ip] += k * d_ij
-        
-        return b
 
+def create_water(pos=[0,0], vel=[0,0]):
+    """Create a water molecule (H2O) at given position with given velocity"""
+    types = [16.0, 1.0, 1.0]  # masses of O, H1, H2
+    positions = [
+        [pos[0], pos[1]],      # O
+        [pos[0]+1, pos[1]],    # H1
+        [pos[0], pos[1]+1]     # H2
+    ]
+    bonds = [
+        Bond(0, 1, k=10.0, r0=1.0),  # O-H1 bond
+        Bond(0, 2, k=10.0, r0=1.0),  # O-H2 bond
+    ]
+    return Molecule(types, positions, bonds)
 
-# Example usage:
-if __name__ == "__main__":
-    #import numpy as np
-    import matplotlib.pyplot as plt
-    #from particle_system import Particle, Bond, Molecule, World
-    from visualizer import Visualizer
+def create_water_grid(n=3, spacing=2.0):
+    """Create a grid of water molecules"""
+    molecules = []
+    for i in range(n):
+        for j in range(n):
+            pos = [i*spacing, j*spacing]
+            molecules.append(create_water(pos))
+    return molecules
 
-    def create_water(pos=[0,0], vel=[0,0]):
-        """Create a water molecule (H2O) at given position with given velocity"""
-        p1 = Particle([pos[0], pos[1]], vel=vel, mass=16.0)      # O
-        p2 = Particle([pos[0]+1, pos[1]], vel=vel, mass=1.0)     # H1
-        p3 = Particle([pos[0], pos[1]+1], vel=vel, mass=1.0)     # H2
-        bonds = [
-            Bond(0, 1, k=100.0, r0=1.0),  # O-H1 bond
-            Bond(0, 2, k=100.0, r0=1.0),  # O-H2 bond
-        ]
-        return Molecule([p1, p2, p3], bonds)
-
-    def create_water_grid(n=3, spacing=2.0):
-        """Create a grid of water molecules"""
-        molecules = []
-        for i in range(n):
-            for j in range(n):
-                pos = [i*spacing, j*spacing]
-                vel = [0.1*(i-n/2), 0.1*(j-n/2)]  # velocity depends on position
-                molecules.append(create_water(pos, vel))
-        return molecules
-
-    # Create simulation world with multiple water molecules
-    dt = 0.01
-    world = World(dt=dt, D=0.1)
-    world.K_col = 1000.0  # Increase collision stiffness
-    molecules = create_water_grid(n=3, spacing=1.3)
-    for mol in molecules:
-        world.add_molecule(mol)
+def test_1():
+    """Test convergence of constraint solver"""
+    print("\nTesting constraint solver convergence:")
+    
+    # Create a world with water molecules
+    world = World(dt=0.01)
+    mols = create_water_grid(2, 2)
+    world.from_molecules(mols)
     
     # Setup visualization
-    vis = Visualizer(world)
+    import matplotlib.pyplot as plt
+    import plot_utils as pu
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    errors = []
     
-    def callback(itr, x, r):
-        """Callback to update visualization during iteration"""
-        err = np.linalg.norm(r)
-        print(f"Iteration {itr:4d} residual: {err:10.6f}")
-        if itr % 5 == 0:  # Update visualization every 5 iterations
-            vis.update()
+    # Plot initial state
+    pu.plot_molecules(world, ax=ax1, color='b', label='Initial')
     
-    # Solve one step of projective dynamics
-    print("\nStarting Jacobi iteration:")
-    errs = world.solve_pd_step(niter_outer=10, niter_inner=10, tol=1e-8, callback=callback)
+    # Run constraint solver iterations
+    n_iter = 20
+    for i in range(n_iter):
+        # Solve constraints
+        err = world.solve_constraints()
+        errors.append(err)
+        print(f"Iteration {i}: error = {err}")
+        
+        # Plot intermediate state
+        if i % 5 == 0:
+            pu.plot_molecules(world, ax=ax1, color='k', alpha=0.2)
     
-    # Plot convergence
-    plt.figure(figsize=(10,6))
-    plt.semilogy(errs, 'b-', label='Jacobi')
-    plt.grid(True)
-    plt.xlabel('Iteration')
-    plt.ylabel('Error (log scale)')
-    plt.title('Convergence of Jacobi Method for Water Molecules')
-    plt.legend()
+    # Plot final state and convergence
+    pu.plot_molecules(world, ax=ax1, color='r', label='Final')
+    ax1.legend()
+    ax1.set_title('Molecule Positions')
+    
+    pu.plot_convergence(errors, ax=ax2)
+    ax2.set_title('Constraint Error')
+    
+    plt.tight_layout()
     plt.show()
+
+def test_2():
+    """Test dynamics over multiple steps"""
+    print("\nTesting dynamics:")
+    
+    # Create a world with water molecules
+    world = World(dt=0.01)
+    mols = create_water_grid(2, 2)
+    world.from_molecules(mols)
+    
+    # Setup visualization
+    import matplotlib.pyplot as plt
+    import plot_utils as pu
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    errors = []
+    
+    # Plot initial state
+    pu.plot_molecules(world, ax=ax1, color='b', label='Initial')
+    
+    # Run simulation steps
+    n_steps = 10
+    for i in range(n_steps):
+        # Step simulation
+        world.step()
+        err = world.solve_constraints()  # Get error from last constraint solve
+        errors.append(err)
+        print(f"Step {i}: error = {err}")
+        
+        # Plot intermediate state
+        if i % 2 == 0:
+            pu.plot_molecules(world, ax=ax1, color='k', alpha=0.2)
+    
+    # Plot final state and convergence
+    pu.plot_molecules(world, ax=ax1, color='r', label='Final')
+    ax1.legend()
+    ax1.set_title('Molecule Positions')
+    
+    pu.plot_convergence(errors, ax=ax2)
+    ax2.set_title('Constraint Error')
+    
+    plt.tight_layout()
+    plt.show()
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    import plot_utils as pu
+    
+    test_1()  # Test constraint solver convergence
+    test_2()  # Test dynamics

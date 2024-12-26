@@ -121,54 +121,20 @@ def dot_sparse(x, neighs, kngs, Aii ):
     return y
 
 def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
-    """One iteration of Jacobi method using sparse operations"""
-    n = len(x)
-    x_out = np.zeros_like(x)
-    r     = np.zeros_like(x)
-    for i in range(n):
-        #print("CPU i: %i Aii[i]: %f b[i]: %f " %(i, Aii[i], b[i]) );
-        sum_j  = 0  # RHS term
-        ngsi = neighs[i]
-        ksi  = kngs[i] 
-        ni = len(ngsi)
-        for jj in range(ni):
-            j      = ngsi[jj]
-            k      = ksi[jj]
-            sum_j += k * x[j]   # Off-diagonal contribution
-        x_out[i] =  (b[i] + sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
-        r[i]     = b[i] +sum_j - Aii[i]*x[i] # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
-        #print("CPU i: %i Aii[i]: %f b[i]: %f sum_j: %f x_out[i]: %f r[i]: %f" %(i, Aii[i], b[i], sum_j, x_out[i], r[i]) );
-    return x_out, r
+    """Perform one iteration of Jacobi method for sparse system"""
+    x_new = np.zeros_like(x)
+    err = 0.0
+    
+    # Update each component
+    for i in range(len(x)):
+        sum_j = 0
+        for j, k in zip(neighs[i], kngs[i]):
+            sum_j += k * x[j]
+        x_new[i] = (b[i] + sum_j) / Aii[i]
+        err += (x_new[i] - x[i])**2
+    
+    return x_new, np.sqrt(err)
 
-def color_graph(neighs):
-    """Color the graph using a greedy algorithm
-    Returns:
-        colors: list of vertex colors (integers)
-        color_groups: list of lists, where each inner list contains vertices of the same color
-    """
-    n = len(neighs)
-    colors = [-1] * n  # -1 means uncolored
-    for i in range(n):
-        # Get colors of neighbors
-        neighbor_colors = set()
-        for j in neighs[i]:
-            if colors[j] != -1:
-                neighbor_colors.add(colors[j])
-        
-        # Find smallest available color
-        color = 0
-        while color in neighbor_colors:
-            color += 1
-        colors[i] = color
-    
-    # Group vertices by color
-    max_color = max(colors)
-    color_groups = [[] for _ in range(max_color + 1)]
-    for i, color in enumerate(colors):
-        color_groups[color].append(i)
-    
-    return colors, color_groups
-    
 def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
     """One iteration of Gauss-Seidel method using sparse operations"""
     n = len(x)
