@@ -126,3 +126,41 @@ Note: The stiffness $K$ of the constraint solver at the transition point $r = R_
   1. grid-based approach where particles are first assigned to grid-cells by rounding their position, and then searching neighbors in the adjacent cells.
   2. using each molecule as the group, and searching neighbors in the molecules which centers of mass are closer than $R_g+R_c$.
 - Initially, we will implement the molecule-based grouping approach as it is the simplest one, and it has little overhead for large sparse worlds.
+
+
+
+
+
+
+
+# Scratchpad
+
+
+now the error we should plot is the lengh of residual from jacobi_iteration_sparse()
+
+r[i]     = b[i] +sum_j - Aii[i]*x[i]
+
+this is basically 
+r = b - Ax
+
+if we use formulas 
+
+A_{ii} = \sum_j K_{ij}
+b_i    = \sum_j (K_{ij} d_{ij})
+
+we can say
+
+y=Ax is
+y_i = A_{ii} p_i + \sum_j K_{ij} p_j  
+
+r_i = b_i - y_i =   \sum_j (K_{ij} d_{ij}) - A_{ii} p_i - \sum_j K_{ij} p_j 
+r_i =    \sum_j ( K_{ij} d_{ij} )  -  \sum_j K_{ij} p_i - \sum_j K_{ij} p_j   
+r_i =    \sum_j K_{ij} ( d_{ij} - p_i + p_j )
+r_i =    \sum_j K_{ij} ( p'_ij - p_i   )
+
+where   
+p'_ij = d_{ij} + p_j is the predicted position of point p_i due to contrain with point p_j
+and
+d_{ij} = dir_{ij} * r0 (resp. r_c) is the optimal vectro between the two points
+
+Therefore the residual r_i should reflect how far is each point p_i from its optimal contrained position p'_ij therefore it should reflect the fact that we do not satisfy the constrian betwen the two atoms  

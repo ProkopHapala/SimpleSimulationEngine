@@ -121,19 +121,25 @@ def dot_sparse(x, neighs, kngs, Aii ):
     return y
 
 def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
-    """Perform one iteration of Jacobi method for sparse system"""
+    """One iteration of Jacobi method using sparse operations"""
+    n = len(x)
     x_new = np.zeros_like(x)
-    err = 0.0
+    err = np.zeros_like(x)
     
-    # Update each component
-    for i in range(len(x)):
-        sum_j = 0
+    print("\nJacobi iteration:")
+    for i in range(n):
+        # Calculate sum of off-diagonal terms
+        sum_off = 0.0
         for j, k in zip(neighs[i], kngs[i]):
-            sum_j += k * x[j]
-        x_new[i] = (b[i] + sum_j) / Aii[i]
-        err += (x_new[i] - x[i])**2
+            sum_off += k * x[j]  # Add neighbor contributions
+        
+        # New value of x[i]
+        x_new[i] = (b[i] + sum_off) / Aii[i]  # Note: + sum_off because we're solving Ax=b
+        err[i] = x_new[i] - x[i]
+        print(f"  Atom {i}: x={x[i]:.3f} -> {x_new[i]:.3f} (err={err[i]:.3e})")
+        print(f"    b={b[i]:.3f} sum_off={sum_off:.3f} Aii={Aii[i]:.3f}")
     
-    return x_new, np.sqrt(err)
+    return x_new, err
 
 def gauss_seidel_iteration_sparse(x, b, neighs, kngs, Aii):
     """One iteration of Gauss-Seidel method using sparse operations"""

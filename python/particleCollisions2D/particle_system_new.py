@@ -58,10 +58,12 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
         for jj in range(ni):
             j      = ngsi[jj]
             k      = ksi[jj]
-            sum_j += k * x[j]   # Off-diagonal contribution
-        x_out[i] =  (b[i] + sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
-        r[i]     = b[i] +sum_j - Aii[i]*x[i] # Residual r = b - Ax ;  Ax = Aii * x[i] + sum_(j!=i){ Aij * x[j] }
-        #print("CPU i: %i Aii[i]: %f b[i]: %f sum_j: %f x_out[i]: %f r[i]: %f" %(i, Aii[i], b[i], sum_j, x_out[i], r[i]) );
+            sum_j -= k * x[j]   # Off-diagonal contribution
+        x_out[i] =  (b[i] - sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
+        y_i = Aii[i]*x[i] + sum_j              # This is Ax_i
+        Api_ = b[i] - sum_j                    # Api_ = sum_j K_ij ( d_ij + p_j ) 
+        r[i] = b[i] - y_i                      # Residual r = b - Ax
+        print("i: %i r_i: %f pi_: %f x_i: %f " %(i, r[i], Api_/Aii[i], x[i] ) )
     return x_out, r
 
 class World:
@@ -193,6 +195,7 @@ class World:
                 #print(f"\nProcessing atom {ip}:")  # Debug
                 print(f"Bond neighbors: {self.neighs_bonds[ip]}")  # Debug
                 for j, r0 in self.neighs_bonds[ip]:
+                    #continue # debug - ommit bonds
                     ngs.append(j)
                     kngs.append(self.Kbond)
                     r0s.append(r0)
@@ -256,16 +259,26 @@ class World:
         x = self.apos[:,0].copy()
         y = self.apos[:,1].copy()
         
+        print("\nSolving for x component:")
         # Iterate to solve constraints for component x
         for itr in range( niter ):
+
+            print(f"\nIteration {itr}:")
+            print(f"  x positions: {x}")
+            print(f"  y positions: {y}")
+            
             x, err_x = jacobi_iteration_sparse(x, bx, neighs, kngs, Aii ) # solve for x component
             y, err_y = jacobi_iteration_sparse(y, by, neighs, kngs, Aii ) # solver for y component
+
+            print(f"  errors: x={np.linalg.norm(err_x):.3e} y={np.linalg.norm(err_y):.3e}")
 
             if errs is not None:
                 errs.append(np.linalg.norm(err_x) + np.linalg.norm(err_y))
 
             if callback is not None:
                 callback(itr, x,y, err_x, err_y)
+            
+
         
         # Update positions
         self.apos[:,0] = x
@@ -273,33 +286,79 @@ class World:
 
         return np.linalg.norm(err_x) + np.linalg.norm(err_y)
 
+    # def update_rhs(self, neighs, kngs, r0s):
+    #     """
+    #     Update the right-hand side of the Projective Dynamics equation:
+    #     b_i = (m_i/dt^2)p'_i + sum_j (K_ij * d_ij)
+    #     where d_ij is the displacement vector (length r0 for each neighbor)
+    #     """
+    #     n = len(self.apos)
+    #     b = np.zeros_like(self.apos[:,:2])  # Only x,y coordinates
+        
+    #     for ip in range(n):
+    #         # Inertial term: (m_i/dt^2) * p'_i
+    #         b[ip] = (self.apos[ip,3] / (self.dt**2)) * self.pos_pred[ip,:2]
+    #         print(f"\nRHS for atom {ip}:")
+    #         print(f"  Inertial term: {b[ip]}")
+            
+    #         # Sum of constraint terms
+    #         for j, k, r0 in zip(neighs[ip], kngs[ip], r0s[ip]):
+    #             # Current positions
+    #             p_i = self.apos[ip,:2]
+    #             p_j = self.apos[j,:2]
+                
+    #             # Vector from i to j
+    #             r_ij = p_j - p_i
+    #             r = np.linalg.norm(r_ij)
+                
+    #             if r > 0:  # Avoid division by zero
+    #                 dir_ij = r_ij / r
+    #                 d_ij = dir_ij * r0  # Displacement vector of length r0
+    #                 force = k * d_ij  # Add K_ij * d_ij to RHS
+    #                 b[ip] += force
+    #                 print(f"  Neighbor {j}: r={r:.3f} r0={r0:.3f} k={k:.1f}")
+    #                 print(f"    r_ij={r_ij} d_ij={d_ij} force={force}")
+        
+    #     return b
+
+
     def update_rhs(self, neighs, kngs, r0s):
         """
         Update the right-hand side of the Projective Dynamics equation:
-        b_i = (m_i/dt^2)p'_i + sum_j (K_ij * d_ij)
-        where d_ij is the displacement vector (length r0 for each neighbor)
+        b_i = (m_i/dt^2)p'_i + sum_j (K_ij * (p_j + d_ij))
+        where d_ij = dir_ij * r0
         """
         n = len(self.apos)
         b = np.zeros_like(self.apos[:,:2])  # Only x,y coordinates
         
         for ip in range(n):
             # Inertial term: (m_i/dt^2) * p'_i
-            b[ip] = (self.apos[ip,3] / (self.dt**2)) * self.pos_pred[ip,:2]
+            b[ip] = (self.apos[ip, 3] / (self.dt ** 2)) * self.pos_pred[ip, :2]
+            print(f"\nRHS for atom {ip}:")
+            print(f"  Inertial term: {b[ip]}")
             
             # Sum of constraint terms
             for j, k, r0 in zip(neighs[ip], kngs[ip], r0s[ip]):
                 # Current positions
-                p_i = self.apos[ip,:2]
-                p_j = self.apos[j,:2]
+                p_i = self.apos[ip, :2]
+                p_j = self.apos[j, :2]
                 
                 # Vector from i to j
                 r_ij = p_j - p_i
                 r = np.linalg.norm(r_ij)
                 
-                if r > 0:  # Avoid division by zero
+                if r > 1e-12:  # Avoid division by zero
                     dir_ij = r_ij / r
-                    d_ij = dir_ij * r0  # Displacement vector of length r0
-                    b[ip] += k * d_ij  # Add K_ij * d_ij to RHS
+                    d_ij = dir_ij * r0  # Desired displacement
+                    
+                    # **Corrected Line:** Include p_j in the RHS
+                    p_ij_desired = p_j + d_ij
+                    force = k * p_ij_desired
+                    b[ip] += force
+                    
+                    # Debugging output
+                    print(f"  Neighbor {j}: r={r:.3f} r0={r0:.3f} k={k:.1f}")
+                    print(f"    p_j={p_j} d_ij={d_ij} p_ij_desired={p_ij_desired} force={force}")
         
         return b
 
@@ -357,18 +416,27 @@ def test_1(world, n_iter = 10):
     """Test convergence of constraint solver"""
     print("\nTesting constraint solver convergence:")
     
-
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    pu.plot_molecules(world, ax=ax1, color='b', label='Initial')
+    pu.plot_molecules(world, ax=ax1, color='b', label='Initial', markersize=10)
     errors = []
-    world.solve_constraints(n_iter, errs=errors, callback=lambda i, x, y, err_x, err_y: pu.plot_molecules(world, x=x, y=y, ax=ax1, label='i')  )
-    pu.plot_molecules(world, ax=ax1, color='r', label='Final')
+    
+    # Plot intermediate states with different colors
+    colors = plt.cm.viridis(np.linspace(0, 1, n_iter))
+    def plot_callback(i, x, y, err_x, err_y):
+        pu.plot_molecules(world, x=x, y=y, ax=ax1, color=colors[i], alpha=0.5, 
+                         label=f'iter {i}', markersize=5)
+        ax1.set_xlim(-0.5, 1.5)
+        ax1.set_ylim(-0.5, 1.5)
+    
+    world.solve_constraints(n_iter, errs=errors, callback=plot_callback)
+    pu.plot_molecules(world, ax=ax1, color='r', label='Final', markersize=10)
     ax1.legend()
     ax1.set_title('Molecule Positions')
+    ax1.grid(True)
     
     pu.plot_convergence(errors, ax=ax2)
     ax2.set_title('Constraint Error')
-    
+    ax2.grid(True)
     plt.tight_layout()
     plt.show()
 
@@ -411,7 +479,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import plot_utils as pu
     
-    world = init_world(1,1, ang=np.pi/4)
+    world = init_world(1,1, ang=np.pi/16)
     test_1(world)  # Test constraint solver convergence
 
     #world = init_world()  # Re-initialize for test 2
