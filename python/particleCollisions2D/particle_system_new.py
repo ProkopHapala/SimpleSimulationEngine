@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Particle:
     def __init__(self, pos, vel=None, mass=1.0):
@@ -8,7 +9,6 @@ class Particle:
         self.f = np.zeros(2)                         # force accumulator
         self.neighbors = []                          # list of neighbor particles for collision detection
         
-
 class Bond:
     """A bond between two particles"""
     def __init__(self, i, j, k=1.0, r0=1.0):
@@ -19,7 +19,7 @@ class Bond:
     
     def get_error(self, pos):
         """Get the error in the bond constraint"""
-        d = pos[self.j,:2] - pos[self.i,:2]
+        d = pos[self.j] - pos[self.i]
         r = np.linalg.norm(d)
         return abs(r - self.r0)
 
@@ -71,37 +71,40 @@ class World:
         nmaxneighs = 8
         natoms     = 0
         # dynamicsl varialbes (for all particles in the system)
-        self.apos      = None  # [natoms,4] {x,y,z,m} 
-        self.pos_pred  = None  # [natoms,4] predicted positions
-        self.vels      = None  # [natoms,4]
-        self.forces    = None  # [natoms,4]
+        self.apos      = None  # [natoms,2] {x,y} 
+        self.pos_pred  = None  # [natoms,2] predicted positions
+        self.vels      = None  # [natoms,2]
+        self.forces    = None  # [natoms,2]
         # topplogy and parameters
         self.molecules    = []   # list of grups of atoms 
         
-        self.neighs_bonds = None # [ set() ]*natoms 
-        self.neighs      = None # [ [] ]*natoms   # include neighbors from bonds and collisions 
-        self.kngs       = None # [ [] ]*natoms   # stiffness for each of the neighbors
-        self.r0s        = None # [ [] ]*natoms   # rest length for each of the neighbors
-        self.Kbond      = 100.0  # bond stiffness
-
+        self.neighs_bonds = None # [natoms,set()] # bond neighbors of each atom `i`; It is a set for fast 'in' query
+        self.neighs       = None # [natoms,[]]    # all neighbors from both bonds and collisions 
+        self.kngs         = None # [natoms,[]]    # stiffness   for each of the neighbors
+        self.l0s          = None # [natoms,[]]    # rest length for each of the neighbors
+        self.Aii          = None # [natoms]       # diagonal of the PD matrix
+        
         # simulation parameters
         self.dt = dt               # time step
         self.D = D                 # collision offset
         self.Rc     = 1.0          # cutoff radius for non-bonded interactions
         self.Rg     = 2.0          # grouping radius for neighbor search
-        self.K_col  = 100.0        # collision stiffness
+        self.K_col  = 10.0        # collision stiffness
+        self.Kbond  = 10.0        # bond stiffness
         self.n_iter = 10           # number of iterations for constraint solver
         self.damping = 0.1         # velocity damping
 
     def allocate(self, natoms):
-        self.apos      = np.zeros((natoms,4))
-        self.pos_pred  = np.zeros((natoms,4))
-        self.vels      = np.zeros((natoms,4))
-        self.forces    = np.zeros((natoms,4))
+        self.apos      = np.zeros((natoms,2))
+        self.pos_pred  = np.zeros((natoms,2))
+        self.vels      = np.zeros((natoms,2))
+        self.forces    = np.zeros((natoms,2))
         self.neighs_bonds = [set() for _ in range(natoms)]
-        self.neighs       = [[] for _ in range(natoms)]
-        self.kngs        = [[] for _ in range(natoms)]
-        self.r0s         = [[] for _ in range(natoms)]
+        self.neighs       = [[]    for _ in range(natoms)]
+        self.kngs         = [[]    for _ in range(natoms)]
+        self.l0s          = [[]    for _ in range(natoms)]
+        self.Aii          = np.zeros(natoms)
+        self.masses       = np.ones(natoms)
     
     def add_molecule(self, molecule):
         """Add a molecule to the world"""
@@ -135,13 +138,13 @@ class World:
             for i, pos in enumerate(mol.pos):
                 # Add position (x, y, z, mass)
                 # For 2D simulation, set z=0 and use mass as 4th component
-                self.apos[atom_index] = np.array([pos[0], pos[1], 0.0, mol.types[i]])
+                self.apos[atom_index] = np.array([pos[0], pos[1]])
                 
                 # Add initial velocities (assuming zero initial velocity)
-                self.vels[atom_index] = np.zeros(4)
+                self.vels[atom_index] = np.zeros(2)
                 
                 # Add initial forces (assuming zero initial force)
-                self.forces[atom_index] = np.zeros(4)
+                self.forces[atom_index] = np.zeros(2)
                 
                 # Add bond neighbors for this atom
                 for bond in mol.bonds:
@@ -176,10 +179,10 @@ class World:
             for jm,molj in enumerate(self.molecules):
                 if im == jm: continue
                 for jp in molj:
-                    if np.linalg.norm(self.apos[jp][:3] - cog[:3]) < molj.Rg:
+                    if np.linalg.norm(self.apos[jp] - cog) < molj.Rg:
                         gngs[jp].add(im)
 
-    def update_collision_neighbors(self):
+    def update_collision_neighbors(self, bCollisions=True):
         """
         This function goes through all the molecules and update the neighs_colls by adding all atoms which are closer than Rc from both the same molecule and tho other molecules
         - output is merged list of all neighbors ( both bonds and collisions) and their stiffness
@@ -187,46 +190,52 @@ class World:
         """
         for im, mol in enumerate(self.molecules):
             for ip in mol.inds:
-                ngs = []  # neighbors (both bonds and collisions)
+                ngs  = []  # neighbors (both bonds and collisions)
                 kngs = [] # stiffness for each neighbor
-                r0s = []  # rest length for each neighbor
+                l0s  = []  # rest length for each neighbor
+                Kii = 0.0
                 
                 # First add bonded neighbors
                 #print(f"\nProcessing atom {ip}:")  # Debug
                 print(f"Bond neighbors: {self.neighs_bonds[ip]}")  # Debug
                 for j, r0 in self.neighs_bonds[ip]:
                     #continue # debug - ommit bonds
-                    ngs.append(j)
-                    kngs.append(self.Kbond)
-                    r0s.append(r0)
+                    ngs .append(j)
+                    k = self.Kbond
+                    kngs.append(k)
+                    Kii += k
+                    l0s .append(r0)
                     print(f"  Added bond neighbor {ip}-{j} with r0={r0}")  # Debug
                 
-                # Then find collision neighbors
-                for jm, molj in enumerate(self.molecules):
-                    for jp in molj.inds:
-                        if ip == jp:
-                            continue
-                        if im == jm and jp in [j for j, _ in self.neighs_bonds[ip]]:
-                            continue
-                        if np.linalg.norm(self.apos[ip][:2] - self.apos[jp][:2]) < self.Rc:
-                            ngs.append(jp)
-                            kngs.append(self.K_col)
-                            r0s.append(self.Rc)  # For collisions, rest length is Rc
-                            print(f"  Added collision neighbor {ip}-{jp} with r0={self.Rc}")  # Debug
+                if bCollisions:
+                    for jm, molj in enumerate(self.molecules):
+                        for jp in molj.inds:
+                            if ip == jp:
+                                continue
+                            if im == jm and jp in [j for j, _ in self.neighs_bonds[ip]]:
+                                continue
+                            if np.linalg.norm(self.apos[ip]- self.apos[jp]) < self.Rc:
+                                ngs.append(jp)
+                                k = self.K_col
+                                kngs.append(k)
+                                Kii += k
+                                l0s.append(self.Rc)  # For collisions, rest length is Rc
+                                print(f"  Added collision neighbor {ip}-{jp} with r0={self.Rc}")  # Debug
 
                 # Store all neighbors and their parameters
                 self.neighs[ip] = ngs
-                self.kngs[ip] = kngs
-                self.r0s[ip] = r0s
+                self.kngs[ip]   = kngs
+                self.l0s[ip]    = l0s
+                self.Aii[ip]    = Kii   # A_ii = \sum_j K_{ij} + m_i /dt^2, for the moment we neglect the mass (inertial term m_i/dt^2)
 
-        return self.neighs, self.kngs, self.r0s
+        return self.neighs, self.kngs, self.l0s
 
 
     # --------- Iterative Solver  -------------
     def step(self):
         """Perform one time step of the simulation"""
         # Damp velocities
-        self.vels[:,:2] *= (1.0 - self.damping)
+        self.vels[:] *= (1.0 - self.damping)
         
         self.predict_positions()
         self.solve_constraints()
@@ -236,20 +245,20 @@ class World:
         """Step 1: Predict positions using current velocities"""
         for mol in self.molecules:
             for ip in mol.inds:
-                self.pos_pred[ip,:2] = self.apos[ip,:2] + self.vels[ip,:2] * self.dt
+                self.pos_pred[ip] = self.apos[ip] + self.vels[ip] * self.dt
 
     def update_velocities(self):
         """Step 3: Update velocities from position changes"""
         for mol in self.molecules:
             for ip in mol.inds:
-                self.vels[ip,:2] = (self.apos[ip,:2] - self.pos_pred[ip,:2]) / self.dt
+                self.vels[ip] = (self.apos[ip] - self.pos_pred[ip]) / self.dt
 
     def solve_constraints(self, niter=10, errs=None, callback=None):
         """Step 2: Solve position constraints (bonds and collisions)"""
-        neighs, kngs, r0s = self.update_collision_neighbors()  # 
+        neighs, kngs, l0s = self.update_collision_neighbors()  # 
 
         Aii = self.update_PD_matrix( neighs, kngs )
-        b   = self.update_rhs      ( neighs, kngs, r0s )
+        b   = self.update_rhs      ( neighs, kngs, l0s )
         
         # Separate x and y components
         bx = b[:,0]
@@ -278,70 +287,33 @@ class World:
             if callback is not None:
                 callback(itr, x,y, err_x, err_y)
             
-
-        
         # Update positions
         self.apos[:,0] = x
         self.apos[:,1] = y
 
         return np.linalg.norm(err_x) + np.linalg.norm(err_y)
 
-    # def update_rhs(self, neighs, kngs, r0s):
-    #     """
-    #     Update the right-hand side of the Projective Dynamics equation:
-    #     b_i = (m_i/dt^2)p'_i + sum_j (K_ij * d_ij)
-    #     where d_ij is the displacement vector (length r0 for each neighbor)
-    #     """
-    #     n = len(self.apos)
-    #     b = np.zeros_like(self.apos[:,:2])  # Only x,y coordinates
-        
-    #     for ip in range(n):
-    #         # Inertial term: (m_i/dt^2) * p'_i
-    #         b[ip] = (self.apos[ip,3] / (self.dt**2)) * self.pos_pred[ip,:2]
-    #         print(f"\nRHS for atom {ip}:")
-    #         print(f"  Inertial term: {b[ip]}")
-            
-    #         # Sum of constraint terms
-    #         for j, k, r0 in zip(neighs[ip], kngs[ip], r0s[ip]):
-    #             # Current positions
-    #             p_i = self.apos[ip,:2]
-    #             p_j = self.apos[j,:2]
-                
-    #             # Vector from i to j
-    #             r_ij = p_j - p_i
-    #             r = np.linalg.norm(r_ij)
-                
-    #             if r > 0:  # Avoid division by zero
-    #                 dir_ij = r_ij / r
-    #                 d_ij = dir_ij * r0  # Displacement vector of length r0
-    #                 force = k * d_ij  # Add K_ij * d_ij to RHS
-    #                 b[ip] += force
-    #                 print(f"  Neighbor {j}: r={r:.3f} r0={r0:.3f} k={k:.1f}")
-    #                 print(f"    r_ij={r_ij} d_ij={d_ij} force={force}")
-        
-    #     return b
 
-
-    def update_rhs(self, neighs, kngs, r0s):
+    def update_rhs(self, neighs, kngs, l0s):
         """
         Update the right-hand side of the Projective Dynamics equation:
         b_i = (m_i/dt^2)p'_i + sum_j (K_ij * (p_j + d_ij))
         where d_ij = dir_ij * r0
         """
         n = len(self.apos)
-        b = np.zeros_like(self.apos[:,:2])  # Only x,y coordinates
+        b = np.zeros_like(self.apos[:])  # Only x,y coordinates
         
         for ip in range(n):
             # Inertial term: (m_i/dt^2) * p'_i
-            b[ip] = (self.apos[ip, 3] / (self.dt ** 2)) * self.pos_pred[ip, :2]
+            b[ip] = (self.apos[ip, 3] / (self.dt ** 2)) * self.pos_pred[ip]
             print(f"\nRHS for atom {ip}:")
             print(f"  Inertial term: {b[ip]}")
             
             # Sum of constraint terms
-            for j, k, r0 in zip(neighs[ip], kngs[ip], r0s[ip]):
+            for j, k, r0 in zip(neighs[ip], kngs[ip], l0s[ip]):
                 # Current positions
-                p_i = self.apos[ip, :2]
-                p_j = self.apos[j, :2]
+                p_i = self.apos[ip]
+                p_j = self.apos[j]
                 
                 # Vector from i to j
                 r_ij = p_j - p_i
@@ -407,6 +379,184 @@ def create_water_grid(nx=3, ny=3, spacing=2.0, l0=1.0, ang=np.pi/2):
             pos = [i*spacing, j*spacing]
             molecules.append(create_water(pos, l0=l0, ang=ang))
     return molecules
+
+def create_triangle_system(l=1.0):
+    """Create three particles in equilateral triangle with bonds"""
+    # Create three particles at vertices of equilateral triangle
+    pos = [
+        [0.0, 0.0],                # First particle at origin
+        [l, 0.0],                  # Second particle at distance l along x-axis
+        [l/2, l*np.sqrt(3)/2]      # Third particle to form equilateral triangle
+    ]
+    types = [1.0, 1.0, 1.0]  # Equal masses
+    bonds = [
+        Bond(0, 1, r0=l),  # Bond between particles 0 and 1
+        Bond(1, 2, r0=l),  # Bond between particles 1 and 2
+        Bond(2, 0, r0=l)   # Bond between particles 2 and 0
+    ]
+    return Molecule(types, pos, bonds)
+
+def init_triangle_world(l=1.0):
+    """Initialize world with three particles in triangle"""
+    world = World(dt=0.05, D=0.1)  # Create world with small time step
+    mol = create_triangle_system(l)
+    world.add_molecule(mol)
+    return world
+
+def rhs_ij( pi, pj, k, l0 ):
+    '''
+    b_i = \sum_j (K_{ij} p_{ij})
+    where p_{ij} is ideal position of particle i which satisfy the constraint between i and j
+    p_{ij} = p_j + (p_i-p_j)/|p_i-p_j| * l0
+    '''
+    d = pi - pj
+    l = np.linalg.norm(d)
+    return d * (k * l0/l)
+
+def make_PD_RHS( ps, neighs, kngs, l0s, masses=None, dt=1.0 ):
+    '''
+    b_i = \sum_j (K_{ij} p_{ij})  + M/dt^2 p'_i
+    '''
+    n = len(ps)
+    b = np.zeros((n,2))
+    inv_dt2 = 1.0/(dt*dt);
+    for i in range(n):
+        pi = ps[i]
+        bi = np.zeros(2)
+        ngsi  = neighs[i]
+        ksi   = kngs  [i]
+        l0i   = l0s   [i]
+        ni    = len(ngsi) 
+        for jj in range(ni):
+            k  = ksi [jj]
+            l0 = l0i [jj] 
+            j  = ngsi[jj]
+            pj = ps  [j ]
+            bi += rhs_ij( pi, pj, k, l0 )
+        if masses is not None:
+            bi += masses[i] * inv_dt2    # for the moment we neglect the inertial term
+        b[i] = bi
+    return b
+
+def jacobi_iteration_sparse_debug(ps, b, neighs, kngs, Aii, bPlot=True, l0s=None):
+    """Debug version of Jacobi iteration that plots p'_ij points"""
+    n = len(ps)
+    ps_out = np.zeros_like(ps)
+    r = np.zeros_like(ps)
+    
+    if bPlot: 
+        plt.scatter(ps[:,0], ps[:,1], c='blue', label='Current positions')
+    
+    # For each particle
+    for i in range(n):
+        pi    = ps[i]
+        bi    = b [i]    #   bi = \sum_j (K_{ij} d_{ij})
+        ngsi  = neighs[i]
+        ksi   = kngs[i]
+        ni    = len(ngsi)
+        sum_j = np.zeros(2)  
+
+        sum_pij = np.zeros(2)  
+        for jj in range(ni):
+            j  = ngsi[jj]
+            k  = ksi [jj]
+            pj = ps  [j]
+            sum_j += k * pj
+            if bPlot:
+                l0 = l0s[i][jj]
+                d_ij = rhs_ij( pi, pj, 1.0, l0 )
+                p_ij = pj + d_ij
+
+                sum_pij += p_ij * k
+                plt.plot(p_ij[0], p_ij[1], '.r', alpha=0.5)                     # Plot p'_ij point
+                plt.plot([pj[0], p_ij[0]], [pj[1], p_ij[1]], 'k--', lw=0.5, alpha=0.3 ) # Draw line from current position to p'_ij
+                
+        # Note 
+        # d_{ij}  = (p_i - p_j)/|p_i-p_j| * l0
+        # bi      = \sum_j K_{ij} d_{ij}
+        # sum_j   = \sum_j K_{ij} p_j
+        # p'_{ij} = p_j + d_{ij}
+        # A_{ii}  = \sum_j K_{ij}
+        # p^{new}_i = (bi + sum_j) / A_{ii} 
+        #           = \sum_j K_{ij} (d_{ij} + p_j) / A_{ii} 
+        #           = K_{ij} p'_{ij} / A_{ii} 
+        #           = {sum_j K_{ij} p'_{ij} } / { sum_j K_{ij} }
+        pi_new = (bi + sum_j) / Aii[i]
+
+        pi_ij = sum_pij / Aii[i]
+
+        if bPlot:
+            plt.plot(pi_new[0], pi_new[1], '+k', alpha=0.5)                     # Plot p'_ij point
+            
+            plt.plot([pi[0], pi_new[0]], [pi[1], pi_new[1]], 'k--', lw=0.5, alpha=1.0 ) # Draw line from current position to p'_ij
+
+            plt.plot(pi_ij[0], pi_ij[1], '+r', alpha=0.5)  
+            plt.plot([pi[0], pi_ij[0]], [pi[1], pi_ij[1]], 'r--', lw=0.5, alpha=1.0 ) 
+        
+        ps_out[i] = pi_new
+
+        # Calculate residual
+        y_i = Aii[i]*ps[i] + sum_j  # This is Ax_i
+        r[i] = b[i] - y_i  # Residual r = b - Ax
+        #print(f"i: {i} r_i: {np.linalg.norm(r[i]):.6f} pi_: {np.linalg.norm(b[i]/Aii[i]):.6f}")
+    
+    # Plot bonds between particles
+    # for i in range(n):
+    #     for j in neighs[i]:
+    #         plt.plot([ps[i,0], ps[j,0]], [ps[i,1], ps[j,1]], 'k-', lw=0.5, alpha=1.0 )
+    
+    plt.axis('equal')
+    plt.grid(True)
+    plt.legend()
+    plt.title('Debug visualization of Jacobi iteration')
+    #plt.show()
+    
+    return ps_out, r
+
+def print_bond_lengths(world, end=" "):
+    for i in range(len(world.apos)):
+        for j in world.neighs[i]:
+            if j > i:  # Only print each distance once
+                d = np.linalg.norm(world.apos[j] - world.apos[i])
+                print(f"{i}-{j}: {d:.6f},", end=end )
+    #print()
+
+def test_jacobi_debug(world, n_iter=5, bPrint=True, bPlot=True, sz=5, fRnadom=0.3, bUpdateB=True ):
+    """Test convergence with three particles and debug visualization"""
+    print("\nTesting three-particle system convergence with debug:")
+    
+    world.update_collision_neighbors(bCollisions=False)  # Comment this out
+
+    # random perturbation to points
+    world.apos[:,0] += np.random.uniform(-fRnadom, fRnadom, len(world.apos))
+
+    #b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s, masses=world.masses, dt=world.dt)
+    b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s )
+
+    print("##### Initial world state: \n")
+    for i in range(len(world.apos)):
+        print( f"i: {i} Aii: {world.Aii[i]} b: {b[i]} ")  
+
+    if bPlot:
+        plt.figure(figsize=(n_iter*sz,sz))
+
+    # Solve iteratively the equation Ap = b, where A is the PD matrix, p is the position, and b is the right-hand side from make_PD_RHS
+    ps = world.apos  # Only use x,y components
+    for it in range(n_iter):
+
+        if bPlot:
+            ax = plt.subplot(1, n_iter, it+1)
+
+        if bUpdateB:
+            # NOTE: this goes beyond linear-algebra solution, in poper linear algebra we should not update b during iterative solution of Ap=b    
+            #       but with this it converge faster, and it is more physical
+            b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s )
+
+        ps_new, r = jacobi_iteration_sparse_debug(ps, b, world.neighs, world.kngs, world.Aii, l0s=world.l0s, bPlot=bPlot)
+        ps[:] = ps_new[:]
+        if bPrint:
+            print(f"\nIteration {it} Distances:", end=" ")
+            print_bond_lengths(world, end=" " )
 
 def init_world( nx=2, ny=2, spacing=2.0, l0=1.0, ang=np.pi/2 ):
     """Initialize world with water molecules"""
@@ -482,8 +632,13 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import plot_utils as pu
     
-    world = init_world(1,1, ang=np.pi/16)
-    test_1(world)  # Test constraint solver convergence
+    #world = init_world(1,1, ang=np.pi/16)
+    #test_1(world)  # Test constraint solver convergence
 
     #world = init_world()  # Re-initialize for test 2
     #test_2(world)  # Test dynamics
+
+
+    world = init_triangle_world(); 
+    test_jacobi_debug(world)
+    plt.show()

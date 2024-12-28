@@ -376,6 +376,55 @@ def test_two_particle(world, n_iter=10):
             print("Converged to desired bond length.")
             break
 
+def create_three_particle_system(l=3.2489):
+    """Create three particles in equilateral triangle with bonds"""
+    types = [1.0, 1.0, 1.0]  # masses
+    positions = [
+        [0.0, 0.0],                    # Particle 0
+        [l, 0.0],                      # Particle 1
+        [l/2, l*0.866],                # Particle 2 (height = l*sin(60°))
+    ]
+    bonds = [
+        Bond(0, 1, k=1000.0, r0=l),     # Bond between 0-1
+        Bond(1, 2, k=1000.0, r0=l),     # Bond between 1-2
+        Bond(2, 0, k=1000.0, r0=l),     # Bond between 2-0
+    ]
+    return Molecule(types, positions, bonds)
+
+def init_three_particle_world(l=1.0):
+    """Initialize world with three particles in triangle"""
+    world = World(dt=0.1, D=0.1)
+    mol = create_three_particle_system(l)
+    world.add_molecule(mol)
+    return world
+
+def test_three_particle(world, n_iter=10):
+    """Test convergence with three particles"""
+    print("\nTesting three-particle system convergence:")
+    for itr in range(n_iter):
+        print(f"\nIteration {itr}:")
+        world.solve_constraints(niter=1)  # One iteration at a time
+        
+        # Print positions
+        for ip, p in enumerate(world.apos[:,:2]):
+            print(f"Particle {ip}: Position = {p}")
+        
+        # Check distances between all pairs
+        p0 = world.apos[0,:2]
+        p1 = world.apos[1,:2]
+        p2 = world.apos[2,:2]
+        d01 = np.linalg.norm(p1 - p0)
+        d12 = np.linalg.norm(p2 - p1)
+        d20 = np.linalg.norm(p0 - p2)
+        print(f"Distances: 0-1: {d01:.6f}, 1-2: {d12:.6f}, 2-0: {d20:.6f}")
+        
+        if all(abs(d - 1.0) < 1e-4 for d in [d01,d12,d20]):
+            print("Converged to desired bond lengths.")
+            break
+
 if __name__ == "__main__":
-    world = init_two_particle_world( l=3.123432)
-    test_two_particle(world, n_iter=10)
+    #world = init_two_particle_world( l=3.123432)
+    #test_two_particle(world, n_iter=10)
+
+    world = init_three_particle_world( l=3.123432)
+    test_three_particle(world, n_iter=10)
