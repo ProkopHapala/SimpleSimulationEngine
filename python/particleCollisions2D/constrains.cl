@@ -1,6 +1,6 @@
 
 
-__kernel void updateBondsAndCollison_neighs( 
+__kernel void updateJacobi_neighs( 
     int npoint,                     // number of points
     int nmax_neigh,                 // max number of neighbors
     __global const float4*  ps,     // [npoint] x,y,z,mass
