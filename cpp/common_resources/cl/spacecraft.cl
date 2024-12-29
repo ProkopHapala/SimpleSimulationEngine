@@ -155,6 +155,67 @@ __kernel void  evalTrussForce1(
     forces[iG] = f; // we may need to do += in future 
 }
 
+
+
+__kernel void updateJacobi_neighs( 
+    int npoint,                     // number of points
+    int nmax_neigh,                 // max number of neighbors
+    __global const float4*  ps,     // [npoint] x,y,z,mass
+    __global       float4*  ps_out, // [npoint] x,y,z,mass
+    __global const int*     neighs, // [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
+    __global const float*   kngs,   // [npoint,nmax_neigh] stiffnesses for bonds to neighbors
+    __global const float*   l0s,    // [npoint,nmax_neigh] rest lengths for bonds to neighbors
+    float inv_dt2,                  // 1/dt^2, controls scale of inertial term
+    const float Rd                  // reduced collision radius, we detect only hard collision if r<(r-Rd) (i.e. if we are deep in penetration) to prevent instability, soft collison should be solved by non-covalent force-field
+){
+
+    const int iG     =  get_global_id(0);
+    const int j0     = iG * nmax_neigh;
+    const float4 pi  = ps[iG];                       
+     
+    // inertial term
+    const float mi = pi.w*inv_dt2;
+    float3 pi_new  = pi.xyz * mi; // p_i    = \sum_j (K_{ij} p_j + d_{ij} )  + M_i/dt^2 p'_i
+    float  Aii     =          mi; // A_{ii} = \sum_j  K_{ij}                 + M_i/dt^2
+
+    for( int j = 0; j < nmax_neigh; j++ ){
+        int jG = neighs[j];
+        if( jG == -1 ) break;
+        const int jng = j0 + j;
+        const float  k   = kngs[jng];
+        float        l0  = l0s [jng];
+        const float3 pj  = ps[jG].xyz;
+        const float3 dij = pi.xyz - pj;
+        const float  l2  = dot(dij,dij);
+
+        if(l0<0){ // collision - if not in repulsion we skip this neighbor
+            const float lc = l0 - Rd;  //  we cut-off collision if we are noit deep enough in penetration 
+            if( l2<(lc*lc) ) continue;
+        }
+        const float l    = sqrt(l2);
+        const float3 pij = pj + dij * l0/l;  // p'_{ij} is ideal position of particle i which satisfy the constraint between i and j
+        // ToDo: we should make sure pij originating from collision does not reach beyond l0
+        pi_new += pij * k;   // 
+        Aii    +=       k;   // diagonal of the Projective-Dynamics matrix, \sum_j k_{ij}       (+ inertial term M_i/dt^2)
+    }
+
+    // NOTE 1: pi_new is basically weighted average of predicted positions of particles and due to all the constraints weighted by stiffness (and due to intertial term M_i/dt^2)
+    // pi_new   = \sum_j pij * k_{ij} / \sum_j k_{ij}
+    // NOTE 2: at the same time, pi_new can be seen as one step of Jacobi iteration for Projective-Dynamics equation Ap=b
+    // pi_new   = (bi + sum_j) / A_{ii} 
+    // where  bi     = \sum_j K_{ij} d_{ij}    (+ inertial term M_i/dt^2 pi )
+    // and    A_{ii} = \sum_j K_{ij}           (+ inertial term M_i/dt^2    )
+
+    pi_new /= Aii;
+
+    ps_out[iG] = (float4)(pi_new, pi.w);
+
+}
+
+
+
+
+
 __kernel void  evalTrussForce2(
     const int4 ns, 
     __global const float4*  points,    // x,y,z,mass
@@ -386,26 +447,24 @@ __kernel void  dot_mat_vec_sparse(
     yvec[iG] = sum; // we may need to do += in future 
 }
 
-
-
 __kernel void  fwd_subs(
     const int4 ns, 
     __global const float*   Lmat,    // [n,nNeighMax] sparse Lmat coefs at postions of neighs
     __global const int*     neighs,  // [n,nNeighMax] neighbor indexes
-    __global       float4*  bvec,    // [n,m]         right-hand-side of linear system A*x=b
-    __global const float4*  xvec,    // [n,m]         solution        of linear system A*x=b
-    __global const float4*  
+    __global const float4*  bvec,    // [n,m]         right-hand-side of linear system A*x=b
+    __global       float4*  xvec    // [n,m]         solution        of linear system A*x=b
+    //__global const float4*  
 ){
     const int iG = get_global_id(0);
     if(iG>=ns.x) return;
     const int nNeighMax = ns.y;
-    float4 sum = bvec[i];
+    float4 sum = bvec[iG];
     const int k0 = iG*nNeighMax;
     const int j0 = iG*ns.x;
     for (int k=0; k<nNeighMax; k++){
         const int j = neighs[j0+k];
         if(j<0)break;
-        if (j<i){ sum += xvec[j]*Lmat[j0+j]; }
+        if (j<iG){ sum += xvec[j]*Lmat[j0+j]; }
     }
     // PARALELIZATION PROBLEM !!!!   depends on previous x-values
     xvec[iG] = sum; // we may need to do += in future 
