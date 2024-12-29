@@ -1,6 +1,152 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def rhs_ij( pi, pj, k, l0 ):
+    '''
+    b_i = \sum_j (K_{ij} p_{ij})
+    where p_{ij} is ideal position of particle i which satisfy the constraint between i and j
+    p_{ij} = p_j + (p_i-p_j)/|p_i-p_j| * l0
+    '''
+    d = pi - pj
+    l = np.linalg.norm(d)
+    return d * (k * l0/l)
+
+def make_PD_RHS( ps, neighs, kngs, l0s, masses=None, dt=1.0 ):
+    '''
+    b_i = \sum_j (K_{ij} p_{ij})  + M/dt^2 p'_i
+    '''
+    n = len(ps)
+    b = np.zeros((n,2))
+    inv_dt2 = 1.0/(dt*dt);
+    for i in range(n):
+        pi = ps[i]
+        bi = np.zeros(2)
+        ngsi  = neighs[i]
+        ksi   = kngs  [i]
+        l0i   = l0s   [i]
+        ni    = len(ngsi) 
+        for jj in range(ni):
+            k  = ksi [jj]
+            l0 = l0i [jj] 
+            j  = ngsi[jj]
+            pj = ps  [j ]
+            bi += rhs_ij( pi, pj, k, l0 )
+        if masses is not None:
+            bi += masses[i] * inv_dt2    # for the moment we neglect the inertial term
+        b[i] = bi
+    return b
+
+def update_PD_matrix( apos, neighs, kngs, dt=1.0 ):
+    """
+    Update the diagonal matrix for Projective Dynamics
+    """
+    n = len(apos)
+    Aii = np.zeros(n)
+    for ip in range(n):
+        # Inertial term: m_i/dt^2
+        Aii[ip] = 1.0 / (dt**2)  # Using unit mass
+        # Sum of stiffness for all neighbors
+        for j, k in zip(neighs[ip], kngs[ip]):
+            Aii[ip] += k
+    return Aii
+
+def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
+    """One iteration of Jacobi method using sparse operations"""
+    n = len(x)
+    x_out = np.zeros_like(x)
+    r     = np.zeros_like(x)
+    for i in range(n):
+        #print("CPU i: %i Aii[i]: %f b[i]: %f " %(i, Aii[i], b[i]) );
+        sum_j  = 0  # RHS term
+        ngsi = neighs[i]
+        ksi  = kngs[i] 
+        ni = len(ngsi)
+        for jj in range(ni):
+            j      = ngsi[jj]
+            k      = ksi[jj]
+            sum_j -= k * x[j]   # Off-diagonal contribution
+        x_out[i] =  (b[i] - sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
+        y_i = Aii[i]*x[i] + sum_j              # This is Ax_i
+        Api_ = b[i] - sum_j                    # Api_ = sum_j K_ij ( d_ij + p_j ) 
+        r[i] = b[i] - y_i                      # Residual r = b - Ax
+        print("i: %i r_i: %f pi_: %f x_i: %f " %(i, r[i], Api_/Aii[i], x[i] ) )
+    return x_out, r
+
+def jacobi_iteration_sparse_debug(ps, b, neighs, kngs, Aii, bPlot=True, l0s=None):
+    """Debug version of Jacobi iteration that plots p'_ij points"""
+    n = len(ps)
+    ps_out = np.zeros_like(ps)
+    r = np.zeros_like(ps)
+    
+    if bPlot: 
+        plt.scatter(ps[:,0], ps[:,1], c='blue', label='Current positions')
+    
+    # For each particle
+    for i in range(n):
+        pi    = ps[i]
+        bi    = b [i]    #   bi = \sum_j (K_{ij} d_{ij})
+        ngsi  = neighs[i]
+        ksi   = kngs[i]
+        ni    = len(ngsi)
+        sum_j = np.zeros(2)  
+
+        sum_pij = np.zeros(2)  
+        for jj in range(ni):
+            j  = ngsi[jj]
+            k  = ksi [jj]
+            pj = ps  [j]
+            sum_j += k * pj
+            if bPlot:
+                l0 = l0s[i][jj]
+                d_ij = rhs_ij( pi, pj, 1.0, l0 )
+                p_ij = pj + d_ij
+
+                sum_pij += p_ij * k
+                plt.plot(p_ij[0], p_ij[1], '.r', alpha=0.5)                     # Plot p'_ij point
+                plt.plot([pj[0], p_ij[0]], [pj[1], p_ij[1]], 'k--', lw=0.5, alpha=0.3 ) # Draw line from current position to p'_ij
+                
+        # Note 
+        # d_{ij}  = (p_i - p_j)/|p_i-p_j| * l0
+        # bi      = \sum_j K_{ij} d_{ij}
+        # sum_j   = \sum_j K_{ij} p_j
+        # p'_{ij} = p_j + d_{ij}
+        # A_{ii}  = \sum_j K_{ij}
+        # p^{new}_i = (bi + sum_j) / A_{ii} 
+        #           = \sum_j K_{ij} (d_{ij} + p_j) / A_{ii} 
+        #           = K_{ij} p'_{ij} / A_{ii} 
+        #           = {sum_j K_{ij} p'_{ij} } / { sum_j K_{ij} }
+        pi_new = (bi + sum_j) / Aii[i]
+
+        pi_ij = sum_pij / Aii[i]
+
+        if bPlot:
+            plt.plot(pi_new[0], pi_new[1], '+k', alpha=0.5)                     # Plot p'_ij point
+            
+            plt.plot([pi[0], pi_new[0]], [pi[1], pi_new[1]], 'k--', lw=0.5, alpha=1.0 ) # Draw line from current position to p'_ij
+
+            plt.plot(pi_ij[0], pi_ij[1], '+r', alpha=0.5)  
+            plt.plot([pi[0], pi_ij[0]], [pi[1], pi_ij[1]], 'r--', lw=0.5, alpha=1.0 ) 
+        
+        ps_out[i] = pi_new
+
+        # Calculate residual
+        y_i = Aii[i]*ps[i] + sum_j  # This is Ax_i
+        r[i] = b[i] - y_i  # Residual r = b - Ax
+        #print(f"i: {i} r_i: {np.linalg.norm(r[i]):.6f} pi_: {np.linalg.norm(b[i]/Aii[i]):.6f}")
+    
+    # Plot bonds between particles
+    # for i in range(n):
+    #     for j in neighs[i]:
+    #         plt.plot([ps[i,0], ps[j,0]], [ps[i,1], ps[j,1]], 'k-', lw=0.5, alpha=1.0 )
+    
+    plt.axis('equal')
+    plt.grid(True)
+    plt.legend()
+    plt.title('Debug visualization of Jacobi iteration')
+    #plt.show()
+    
+    return ps_out, r
+
 class Particle:
     def __init__(self, pos, vel=None, mass=1.0):
         self.pos = np.array(pos, dtype=np.float64)    # position vector [x,y]
@@ -43,28 +189,6 @@ class Molecule:
         if bUpdateCenter or self.cog is None:
             self.cog = np.mean(pos, axis=0)
         self.Rg = np.max(np.linalg.norm(pos - self.cog, axis=1))
-
-def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
-    """One iteration of Jacobi method using sparse operations"""
-    n = len(x)
-    x_out = np.zeros_like(x)
-    r     = np.zeros_like(x)
-    for i in range(n):
-        #print("CPU i: %i Aii[i]: %f b[i]: %f " %(i, Aii[i], b[i]) );
-        sum_j  = 0  # RHS term
-        ngsi = neighs[i]
-        ksi  = kngs[i] 
-        ni = len(ngsi)
-        for jj in range(ni):
-            j      = ngsi[jj]
-            k      = ksi[jj]
-            sum_j -= k * x[j]   # Off-diagonal contribution
-        x_out[i] =  (b[i] - sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
-        y_i = Aii[i]*x[i] + sum_j              # This is Ax_i
-        Api_ = b[i] - sum_j                    # Api_ = sum_j K_ij ( d_ij + p_j ) 
-        r[i] = b[i] - y_i                      # Residual r = b - Ax
-        print("i: %i r_i: %f pi_: %f x_i: %f " %(i, r[i], Api_/Aii[i], x[i] ) )
-    return x_out, r
 
 class World:
     def __init__(self, dt=0.1, D=0.1):
@@ -196,10 +320,8 @@ class World:
                 Kii = 0.0
                 
                 # First add bonded neighbors
-                #print(f"\nProcessing atom {ip}:")  # Debug
                 print(f"Bond neighbors: {self.neighs_bonds[ip]}")  # Debug
                 for j, r0 in self.neighs_bonds[ip]:
-                    #continue # debug - ommit bonds
                     ngs .append(j)
                     k = self.Kbond
                     kngs.append(k)
@@ -236,7 +358,6 @@ class World:
         """Perform one time step of the simulation"""
         # Damp velocities
         self.vels[:] *= (1.0 - self.damping)
-        
         self.predict_positions()
         self.solve_constraints()
         self.update_velocities()
@@ -253,91 +374,55 @@ class World:
             for ip in mol.inds:
                 self.vels[ip] = (self.apos[ip] - self.pos_pred[ip]) / self.dt
 
-    def solve_constraints(self, niter=10, errs=None, callback=None):
-        """Step 2: Solve position constraints (bonds and collisions)"""
-        neighs, kngs, l0s = self.update_collision_neighbors()  # 
+    def solve_constraints(self, niter=10):
+        """Solve position constraints using Jacobi iteration"""
+        # Update neighbors and constraints
+        self.update_collision_neighbors()
+        ps  = self.pos_pred.copy()
+        b   = self.update_rhs(ps)
+        Aii = self.update_Aii(ps)
+        # Solve using Jacobi iteration
+        for it in range(niter):
+            ps, r = jacobi_iteration_sparse(ps, b, self.neighs, self.kngs, Aii)
+            err_x = np.linalg.norm(r[:, 0])
+            err_y = np.linalg.norm(r[:, 1])
+            print(f"  errors: x={err_x:.3e} y={err_y:.3e}")
+        self.pos_pred = ps.copy()
+        return ps
 
-        Aii = self.update_PD_matrix( neighs, kngs )
-        b   = self.update_rhs      ( neighs, kngs, l0s )
-        
-        # Separate x and y components
-        bx = b[:,0]
-        by = b[:,1]
-        
-        # Initial guess is current positions
-        x = self.apos[:,0].copy()
-        y = self.apos[:,1].copy()
-        
-        print("\nSolving for x component:")
-        # Iterate to solve constraints for component x
-        for itr in range( niter ):
+    def update_rhs(self, pos_pred ):
+        return make_PD_RHS( pos_pred, self.neighs, self.kngs, self.l0s, masses=self.masses, dt=1.0 )
 
-            print(f"\nIteration {itr}:")
-            print(f"  x positions: {x}")
-            print(f"  y positions: {y}")
-            
-            x, err_x = jacobi_iteration_sparse(x, bx, neighs, kngs, Aii ) # solve for x component
-            y, err_y = jacobi_iteration_sparse(y, by, neighs, kngs, Aii ) # solver for y component
+    def update_Aii(self, pos_pred ):
+        return update_PD_matrix( self.pos_pred, self.neighs, self.kngs, dt=1.0 )
 
-            print(f"  errors: x={np.linalg.norm(err_x):.3e} y={np.linalg.norm(err_y):.3e}")
+    def print_bond_lengths(self, end=" "):
+        for i in range(len(self.apos)):
+            for j in self.neighs[i]:
+                if j > i:  # Only print each distance once
+                    d = np.linalg.norm(self.apos[j] - self.apos[i])
+                    print(f"{i}-{j}: {d:.6f},", end=end )
+        #print()
 
-            if errs is not None:
-                errs.append(np.linalg.norm(err_x) + np.linalg.norm(err_y))
+# ========================================================
+# ============ Create initial configurations  ============
+# ========================================================
 
-            if callback is not None:
-                callback(itr, x,y, err_x, err_y)
-            
-        # Update positions
-        self.apos[:,0] = x
-        self.apos[:,1] = y
-
-        return np.linalg.norm(err_x) + np.linalg.norm(err_y)
-
-
-    def update_rhs(self, neighs, kngs, l0s):
-        """
-        Update the right-hand side of the Projective Dynamics equation:
-        b_i = (m_i/dt^2)p'_i + sum_j (K_ij * (p_j + d_ij))
-        where d_ij = dir_ij * r0
-        """
-        n = len(self.apos)
-        b = np.zeros((n, 2))
-        
-        for ip in range(n):
-            # Inertial term: (m_i/dt^2)p'_i
-            b[ip] = (1.0 / (self.dt ** 2)) * self.pos_pred[ip]  # Using unit mass
-            
-            # Sum over neighbors
-            for j, k in zip(neighs[ip], kngs[ip]):
-                # Get rest length for this pair
-                l0 = l0s[ip][neighs[ip].index(j)]
-                
-                # Get direction vector
-                dir_ij = self.pos_pred[j] - self.pos_pred[ip]
-                length = np.linalg.norm(dir_ij)
-                if length > 1e-10:  # Avoid division by zero
-                    dir_ij /= length
-                    # Add contribution from this neighbor
-                    b[ip] += k * (self.pos_pred[j] + dir_ij * l0)
-        
-        return b
-
-    def update_PD_matrix(self, neighs, kngs):
-        """
-        Update the diagonal matrix for Projective Dynamics
-        """
-        n = len(self.apos)
-        Aii = np.zeros(n)
-        
-        for ip in range(n):
-            # Inertial term: m_i/dt^2
-            Aii[ip] = 1.0 / (self.dt**2)  # Using unit mass
-            
-            # Sum of stiffness for all neighbors
-            for j, k in zip(neighs[ip], kngs[ip]):
-                Aii[ip] += k
-        
-        return Aii
+def create_triangle_system(l=1.0):
+    """Create three particles in equilateral triangle with bonds"""
+    # Create three particles at vertices of equilateral triangle
+    pos = [
+        [0.0, 0.0],                # First particle at origin
+        [l, 0.0],                  # Second particle at distance l along x-axis
+        [l/2, l*np.sqrt(3)/2]      # Third particle to form equilateral triangle
+    ]
+    types = [1.0, 1.0, 1.0]  # Equal masses
+    bonds = [
+        Bond(0, 1, r0=l),  # Bond between particles 0 and 1
+        Bond(1, 2, r0=l),  # Bond between particles 1 and 2
+        Bond(2, 0, r0=l)   # Bond between particles 2 and 0
+    ]
+    return Molecule(types, pos, bonds)
 
 def create_water(pos=[0,0], l0=1.0, ang=np.pi/2, vel=[0,0] ):
     """Create a water molecule (H2O) at given position with given velocity"""
@@ -365,22 +450,6 @@ def create_water_grid(nx=3, ny=3, spacing=2.0, l0=1.0, ang=np.pi/2):
             molecules.append(create_water(pos, l0=l0, ang=ang))
     return molecules
 
-def create_triangle_system(l=1.0):
-    """Create three particles in equilateral triangle with bonds"""
-    # Create three particles at vertices of equilateral triangle
-    pos = [
-        [0.0, 0.0],                # First particle at origin
-        [l, 0.0],                  # Second particle at distance l along x-axis
-        [l/2, l*np.sqrt(3)/2]      # Third particle to form equilateral triangle
-    ]
-    types = [1.0, 1.0, 1.0]  # Equal masses
-    bonds = [
-        Bond(0, 1, r0=l),  # Bond between particles 0 and 1
-        Bond(1, 2, r0=l),  # Bond between particles 1 and 2
-        Bond(2, 0, r0=l)   # Bond between particles 2 and 0
-    ]
-    return Molecule(types, pos, bonds)
-
 def init_triangle_world(l=1.0):
     """Initialize world with three particles in triangle"""
     world = World(dt=0.05, D=0.1)  # Create world with small time step
@@ -394,6 +463,10 @@ def init_world( nx=2, ny=2, spacing=2.0, l0=1.0, ang=np.pi/2 ):
     mols = create_water_grid(nx, ny, spacing=spacing, l0=l0, ang=ang)
     world.from_molecules(mols)
     return world
+
+# ========================================================
+# ============ Create initial configurations  ============
+# ========================================================
 
 def test_jacobi_debug(world, n_iter=5, bPrint=True, bPlot=True, sz=5, fRnadom=0.3, bUpdateB=True ):
     """Test convergence with three particles and debug visualization"""
@@ -430,7 +503,7 @@ def test_jacobi_debug(world, n_iter=5, bPrint=True, bPlot=True, sz=5, fRnadom=0.
         ps[:] = ps_new[:]
         if bPrint:
             print(f"\nIteration {it} Distances:", end=" " )
-            print_bond_lengths(world, end=" " )
+            world.print_bond_lengths( end=" " )
 
 def test_triangle_cl():
     """Compare Python and OpenCL implementations for triangle system"""
@@ -476,124 +549,6 @@ def test_triangle_cl():
     world.apos = pos_py; plt.subplot(132);  pu.plot_molecules(world, ax=plt.gca(), color='red',   label='Python');  plt.title('Python Solution')
     world.apos = pos_cl; plt.subplot(133);  pu.plot_molecules(world, ax=plt.gca(), color='green', label='OpenCL');  plt.title('OpenCL Solution')
     plt.tight_layout()
-
-def rhs_ij( pi, pj, k, l0 ):
-    '''
-    b_i = \sum_j (K_{ij} p_{ij})
-    where p_{ij} is ideal position of particle i which satisfy the constraint between i and j
-    p_{ij} = p_j + (p_i-p_j)/|p_i-p_j| * l0
-    '''
-    d = pi - pj
-    l = np.linalg.norm(d)
-    return d * (k * l0/l)
-
-def make_PD_RHS( ps, neighs, kngs, l0s, masses=None, dt=1.0 ):
-    '''
-    b_i = \sum_j (K_{ij} p_{ij})  + M/dt^2 p'_i
-    '''
-    n = len(ps)
-    b = np.zeros((n,2))
-    inv_dt2 = 1.0/(dt*dt);
-    for i in range(n):
-        pi = ps[i]
-        bi = np.zeros(2)
-        ngsi  = neighs[i]
-        ksi   = kngs  [i]
-        l0i   = l0s   [i]
-        ni    = len(ngsi) 
-        for jj in range(ni):
-            k  = ksi [jj]
-            l0 = l0i [jj] 
-            j  = ngsi[jj]
-            pj = ps  [j ]
-            bi += rhs_ij( pi, pj, k, l0 )
-        if masses is not None:
-            bi += masses[i] * inv_dt2    # for the moment we neglect the inertial term
-        b[i] = bi
-    return b
-
-def jacobi_iteration_sparse_debug(ps, b, neighs, kngs, Aii, bPlot=True, l0s=None):
-    """Debug version of Jacobi iteration that plots p'_ij points"""
-    n = len(ps)
-    ps_out = np.zeros_like(ps)
-    r = np.zeros_like(ps)
-    
-    if bPlot: 
-        plt.scatter(ps[:,0], ps[:,1], c='blue', label='Current positions')
-    
-    # For each particle
-    for i in range(n):
-        pi    = ps[i]
-        bi    = b [i]    #   bi = \sum_j (K_{ij} d_{ij})
-        ngsi  = neighs[i]
-        ksi   = kngs[i]
-        ni    = len(ngsi)
-        sum_j = np.zeros(2)  
-
-        sum_pij = np.zeros(2)  
-        for jj in range(ni):
-            j  = ngsi[jj]
-            k  = ksi [jj]
-            pj = ps  [j]
-            sum_j += k * pj
-            if bPlot:
-                l0 = l0s[i][jj]
-                d_ij = rhs_ij( pi, pj, 1.0, l0 )
-                p_ij = pj + d_ij
-
-                sum_pij += p_ij * k
-                plt.plot(p_ij[0], p_ij[1], '.r', alpha=0.5)                     # Plot p'_ij point
-                plt.plot([pj[0], p_ij[0]], [pj[1], p_ij[1]], 'k--', lw=0.5, alpha=0.3 ) # Draw line from current position to p'_ij
-                
-        # Note 
-        # d_{ij}  = (p_i - p_j)/|p_i-p_j| * l0
-        # bi      = \sum_j K_{ij} d_{ij}
-        # sum_j   = \sum_j K_{ij} p_j
-        # p'_{ij} = p_j + d_{ij}
-        # A_{ii}  = \sum_j K_{ij}
-        # p^{new}_i = (bi + sum_j) / A_{ii} 
-        #           = \sum_j K_{ij} (d_{ij} + p_j) / A_{ii} 
-        #           = K_{ij} p'_{ij} / A_{ii} 
-        #           = {sum_j K_{ij} p'_{ij} } / { sum_j K_{ij} }
-        pi_new = (bi + sum_j) / Aii[i]
-
-        pi_ij = sum_pij / Aii[i]
-
-        if bPlot:
-            plt.plot(pi_new[0], pi_new[1], '+k', alpha=0.5)                     # Plot p'_ij point
-            
-            plt.plot([pi[0], pi_new[0]], [pi[1], pi_new[1]], 'k--', lw=0.5, alpha=1.0 ) # Draw line from current position to p'_ij
-
-            plt.plot(pi_ij[0], pi_ij[1], '+r', alpha=0.5)  
-            plt.plot([pi[0], pi_ij[0]], [pi[1], pi_ij[1]], 'r--', lw=0.5, alpha=1.0 ) 
-        
-        ps_out[i] = pi_new
-
-        # Calculate residual
-        y_i = Aii[i]*ps[i] + sum_j  # This is Ax_i
-        r[i] = b[i] - y_i  # Residual r = b - Ax
-        #print(f"i: {i} r_i: {np.linalg.norm(r[i]):.6f} pi_: {np.linalg.norm(b[i]/Aii[i]):.6f}")
-    
-    # Plot bonds between particles
-    # for i in range(n):
-    #     for j in neighs[i]:
-    #         plt.plot([ps[i,0], ps[j,0]], [ps[i,1], ps[j,1]], 'k-', lw=0.5, alpha=1.0 )
-    
-    plt.axis('equal')
-    plt.grid(True)
-    plt.legend()
-    plt.title('Debug visualization of Jacobi iteration')
-    #plt.show()
-    
-    return ps_out, r
-
-def print_bond_lengths(world, end=" "):
-    for i in range(len(world.apos)):
-        for j in world.neighs[i]:
-            if j > i:  # Only print each distance once
-                d = np.linalg.norm(world.apos[j] - world.apos[i])
-                print(f"{i}-{j}: {d:.6f},", end=end )
-    #print()
 
 def test_1(world, n_iter = 10):
     """Test convergence of constraint solver"""
@@ -662,14 +617,9 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import plot_utils as pu
     
-    #world = init_world(1,1, ang=np.pi/16)
-    #test_1(world)  # Test constraint solver convergence
-
-    #world = init_world()  # Re-initialize for test 2
-    #test_2(world)  # Test dynamics
-
-    world = init_triangle_world(); 
+    # Initialize world with triangle system
+    world = init_triangle_world()
+    
+    # Run test with debug visualization
     test_jacobi_debug(world)
-    #test_triangle_cl()
-
     plt.show()
