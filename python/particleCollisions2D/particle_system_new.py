@@ -301,39 +301,24 @@ class World:
         where d_ij = dir_ij * r0
         """
         n = len(self.apos)
-        b = np.zeros_like(self.apos[:])  # Only x,y coordinates
+        b = np.zeros((n, 2))
         
         for ip in range(n):
-            # Inertial term: (m_i/dt^2) * p'_i
-            b[ip] = (self.apos[ip, 3] / (self.dt ** 2)) * self.pos_pred[ip]
-            print(f"\nRHS for atom {ip}:")
-            print(f"  Inertial term: {b[ip]}")
+            # Inertial term: (m_i/dt^2)p'_i
+            b[ip] = (1.0 / (self.dt ** 2)) * self.pos_pred[ip]  # Using unit mass
             
-            # Sum of constraint terms
-            for j, k, r0 in zip(neighs[ip], kngs[ip], l0s[ip]):
-                # Current positions
-                p_i = self.apos[ip]
-                p_j = self.apos[j]
+            # Sum over neighbors
+            for j, k in zip(neighs[ip], kngs[ip]):
+                # Get rest length for this pair
+                l0 = l0s[ip][neighs[ip].index(j)]
                 
-                # Vector from i to j
-                r_ij = p_j - p_i
-                r = np.linalg.norm(r_ij)
-                
-                if r > 1e-12:  # Avoid division by zero
-                    dir_ij = r_ij / r
-                    d_ij = dir_ij * r0  # Desired displacement
-                    
-                    # **Corrected Line:** Include p_j in the RHS
-                    #p_ij_desired = p_j + d_ij
-                    #force = k * p_ij_desired
-
-                    force = k * d_ij 
-
-                    b[ip] += force
-                    
-                    # Debugging output
-                    print(f"  Neighbor {j}: r={r:.3f} r0={r0:.3f} k={k:.1f}")
-                    #print(f"    p_j={p_j} d_ij={d_ij} p_ij_desired={p_ij_desired} force={force}")
+                # Get direction vector
+                dir_ij = self.pos_pred[j] - self.pos_pred[ip]
+                length = np.linalg.norm(dir_ij)
+                if length > 1e-10:  # Avoid division by zero
+                    dir_ij /= length
+                    # Add contribution from this neighbor
+                    b[ip] += k * (self.pos_pred[j] + dir_ij * l0)
         
         return b
 
@@ -346,7 +331,7 @@ class World:
         
         for ip in range(n):
             # Inertial term: m_i/dt^2
-            Aii[ip] = self.apos[ip,3] / (self.dt**2)
+            Aii[ip] = 1.0 / (self.dt**2)  # Using unit mass
             
             # Sum of stiffness for all neighbors
             for j, k in zip(neighs[ip], kngs[ip]):
@@ -402,6 +387,95 @@ def init_triangle_world(l=1.0):
     mol = create_triangle_system(l)
     world.add_molecule(mol)
     return world
+
+def init_world( nx=2, ny=2, spacing=2.0, l0=1.0, ang=np.pi/2 ):
+    """Initialize world with water molecules"""
+    world = World(dt=0.01)
+    mols = create_water_grid(nx, ny, spacing=spacing, l0=l0, ang=ang)
+    world.from_molecules(mols)
+    return world
+
+def test_jacobi_debug(world, n_iter=5, bPrint=True, bPlot=True, sz=5, fRnadom=0.3, bUpdateB=True ):
+    """Test convergence with three particles and debug visualization"""
+    print("\nTesting three-particle system convergence with debug:")
+    
+    world.update_collision_neighbors(bCollisions=False)  # Comment this out
+
+    # random perturbation to points
+    world.apos[:,0] += np.random.uniform(-fRnadom, fRnadom, len(world.apos))
+
+    #b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s, masses=world.masses, dt=world.dt)
+    b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s )
+
+    print("##### Initial world state: \n")
+    for i in range(len(world.apos)):
+        print( f"i: {i} Aii: {world.Aii[i]} b: {b[i]} ")  
+
+    if bPlot:
+        plt.figure(figsize=(n_iter*sz,sz))
+
+    # Solve iteratively the equation Ap = b, where A is the PD matrix, p is the position, and b is the right-hand side from make_PD_RHS
+    ps = world.apos  # Only use x,y components
+    for it in range(n_iter):
+
+        if bPlot:
+            ax = plt.subplot(1, n_iter, it+1)
+
+        if bUpdateB:
+            # NOTE: this goes beyond linear-algebra solution, in poper linear algebra we should not update b during iterative solution of Ap=b    
+            #       but with this it converge faster, and it is more physical
+            b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s )
+
+        ps_new, r = jacobi_iteration_sparse_debug(ps, b, world.neighs, world.kngs, world.Aii, l0s=world.l0s, bPlot=bPlot)
+        ps[:] = ps_new[:]
+        if bPrint:
+            print(f"\nIteration {it} Distances:", end=" " )
+            print_bond_lengths(world, end=" " )
+
+def test_triangle_cl():
+    """Compare Python and OpenCL implementations for triangle system"""
+    # Initialize world with three particles
+    world = init_triangle_world()
+    n = len(world.apos)
+
+    import constrains_cl
+    
+    solver = constrains_cl.CLConstrains(max_points=n, max_neighs=2)
+    
+    # Prepare neighbor data (only bonds, no collisions)
+    world.update_collision_neighbors(bCollisions=False)
+    
+    # Print and perturb initial positions
+    print("Initial positions:")
+    print(world.apos)
+    world.apos += np.random.rand(n,2) * 0.3
+    print("\nPerturbed positions:")
+    print(world.apos)
+    
+    # Parameters for both solvers
+    dt = 0.1
+    inv_dt2 = 1.0/(dt*dt)
+    Rd = 0.1
+    n_iter = 10
+    
+    # Run both solvers
+    print("\nRunning Python solver...")
+    world.solve_constraints(niter=n_iter)
+    pos_py = world.apos.copy()
+    
+    print("\nRunning OpenCL solver...")
+    pos_cl = solver.solve_constraints(world.apos, np.ones(n), world.neighs, world.kngs, world.l0s, inv_dt2, Rd, niter=n_iter)
+    
+    # Compare results
+    diff = np.linalg.norm(pos_py - pos_cl)
+    print(f"\nDifference between solutions: {diff}")
+    
+    # Visualize results
+    plt.figure(figsize=(12,4))
+    plt.subplot(131);  pu.plot_molecules(world, ax=plt.gca(), color='blue',  label='Initial'); plt.title('Initial')
+    world.apos = pos_py; plt.subplot(132);  pu.plot_molecules(world, ax=plt.gca(), color='red',   label='Python');  plt.title('Python Solution')
+    world.apos = pos_cl; plt.subplot(133);  pu.plot_molecules(world, ax=plt.gca(), color='green', label='OpenCL');  plt.title('OpenCL Solution')
+    plt.tight_layout()
 
 def rhs_ij( pi, pj, k, l0 ):
     '''
@@ -521,50 +595,6 @@ def print_bond_lengths(world, end=" "):
                 print(f"{i}-{j}: {d:.6f},", end=end )
     #print()
 
-def test_jacobi_debug(world, n_iter=5, bPrint=True, bPlot=True, sz=5, fRnadom=0.3, bUpdateB=True ):
-    """Test convergence with three particles and debug visualization"""
-    print("\nTesting three-particle system convergence with debug:")
-    
-    world.update_collision_neighbors(bCollisions=False)  # Comment this out
-
-    # random perturbation to points
-    world.apos[:,0] += np.random.uniform(-fRnadom, fRnadom, len(world.apos))
-
-    #b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s, masses=world.masses, dt=world.dt)
-    b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s )
-
-    print("##### Initial world state: \n")
-    for i in range(len(world.apos)):
-        print( f"i: {i} Aii: {world.Aii[i]} b: {b[i]} ")  
-
-    if bPlot:
-        plt.figure(figsize=(n_iter*sz,sz))
-
-    # Solve iteratively the equation Ap = b, where A is the PD matrix, p is the position, and b is the right-hand side from make_PD_RHS
-    ps = world.apos  # Only use x,y components
-    for it in range(n_iter):
-
-        if bPlot:
-            ax = plt.subplot(1, n_iter, it+1)
-
-        if bUpdateB:
-            # NOTE: this goes beyond linear-algebra solution, in poper linear algebra we should not update b during iterative solution of Ap=b    
-            #       but with this it converge faster, and it is more physical
-            b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s )
-
-        ps_new, r = jacobi_iteration_sparse_debug(ps, b, world.neighs, world.kngs, world.Aii, l0s=world.l0s, bPlot=bPlot)
-        ps[:] = ps_new[:]
-        if bPrint:
-            print(f"\nIteration {it} Distances:", end=" ")
-            print_bond_lengths(world, end=" " )
-
-def init_world( nx=2, ny=2, spacing=2.0, l0=1.0, ang=np.pi/2 ):
-    """Initialize world with water molecules"""
-    world = World(dt=0.01)
-    mols = create_water_grid(nx, ny, spacing=spacing, l0=l0, ang=ang)
-    world.from_molecules(mols)
-    return world
-
 def test_1(world, n_iter = 10):
     """Test convergence of constraint solver"""
     print("\nTesting constraint solver convergence:")
@@ -638,7 +668,8 @@ if __name__ == "__main__":
     #world = init_world()  # Re-initialize for test 2
     #test_2(world)  # Test dynamics
 
-
     world = init_triangle_world(); 
     test_jacobi_debug(world)
+    #test_triangle_cl()
+
     plt.show()

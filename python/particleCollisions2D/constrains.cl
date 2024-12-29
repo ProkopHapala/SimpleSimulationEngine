@@ -1,59 +1,55 @@
+// Normalize a float2 vector
+float2 normalize2(float2 v) {
+    float len = length(v);
+    return (len > 1e-10f) ? v / len : (float2)(0.0f, 0.0f);
+}
 
-
-__kernel void updateJacobi_neighs( 
-    int npoint,                     // number of points
-    int nmax_neigh,                 // max number of neighbors
-    __global const float4*  ps,     // [npoint] x,y,z,mass
-    __global       float4*  ps_out, // [npoint] x,y,z,mass
-    //__global const float* Aii,    // [npoint] diagonal of the Projective-Dynamics matrix of indexes
-    __global const int*     neighs, // [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
-    __global const float*   kngs,   // [npoint,nmax_neigh] stiffnesses for bonds to neighbors
-    __global const float*   l0s,    // [npoint,nmax_neigh] rest lengths for bonds to neighbors
-    float inv_dt2,                  // 1/dt^2, controls scale of inertial term
-    const float Rd                  // reduced collision radius, we detect only hard collision if r<(r-Rd) (i.e. if we are deep in penetration) to prevent instability, soft collison should be solved by non-covalent force-field
-){
-
-    const int iG     =  get_global_id(0);
-    const int j0     = iG * nmax_neigh;
-    const float4 pi  = ps[iG];                       
-     
-    // inertial term
-    const float mi = pi.w*inv_dt2;
-    float3 pi_new  = pi.xyz * mi;
-    float  Aii     = mi;
-
-    for( int j = 0; j < nmax_neigh; j++ ){
-        int jG = neighs[j];
-        if( jG == -1 ) break;
-        const int jng = j0 + j;
-        const float  k   = kngs[jng];
-        float        l0  = l0s [jng];
-        const float3 pj  = ps[jG].xyz;
-        const float3 dij = pi.xyz - pj;
-        const float  l2  = dot(dij,dij);
-
-        if(l0<0){ // collision - if not in repulsion we skip this neighbor
-            const float lc = l0 - Rd;  //  we cut-off collision if we are noit deep enough in penetration 
-            if( l2<(lc*lc) ) continue;
-        }
-        const float l    = sqrt(l2);
-        const float3 pij = pj + dij * l0/l;  // p'_{ij} is ideal position of particle i which satisfy the constraint between i and j
-        // ToDo: we should make sure pij originating from collision does not reach beyond l0
-        pi_new += pij * k;   // 
-        Aii    += k;         // diagonal of the Projective-Dynamics matrix, \sum_j k_{ij}       (+ inertial term M_i/dt^2)
+// One iteration of Jacobi solver for position-based dynamics
+__kernel void updateJacobi_neighs(
+    const int n,              // number of particles
+    const int max_neighs,     // maximum number of neighbors per particle
+    __global float4* ps,      // particle positions and masses (x,y,z,mass)
+    __global float4* ps_out,  // output positions
+    __global int* neighs,     // neighbor indices
+    __global float* kngs,     // stiffness coefficients
+    __global float* l0s,      // rest lengths
+    const float inv_dt2,      // 1/dt^2
+    const float Rd            // relaxation distance
+) {
+    int i = get_global_id(0);
+    if (i >= n) return;
+    
+    // Load current position
+    float4 pi = ps[i];
+    float2 pos_i = (float2)(pi.x, pi.y);
+    float mass_i = pi.w;
+    
+    // Initialize right-hand side with inertial term
+    float2 bi = pos_i * (mass_i * inv_dt2);
+    
+    // Sum over neighbors
+    for (int k = 0; k < max_neighs; k++) {
+        int j = neighs[i * max_neighs + k];
+        if (j < 0) break;  // No more neighbors
+        
+        float kng = kngs[i * max_neighs + k];
+        float l0 = l0s[i * max_neighs + k];
+        
+        // Get neighbor position
+        float4 pj = ps[j];
+        float2 pos_j = (float2)(pj.x, pj.y);
+        
+        // Get direction vector
+        float2 dir_ij = pos_j - pos_i;
+        dir_ij = normalize2(dir_ij);
+        
+        // Add contribution from this neighbor
+        bi += kng * (pos_j + dir_ij * l0);
     }
-
-    // NOTE 1: pi_new is basically weighted average of predicted positions of particles and due to all the constraints weighted by stiffness (and due to intertial term M_i/dt^2)
-    // pi_new   = \sum_j pij * k_{ij} / \sum_j k_{ij}
-    // NOTE 2: at the same time, pi_new can be seen as one step of Jacobi iteration for Projective-Dynamics equation Ap=b
-    // pi_new   = (bi + sum_j) / A_{ii} 
-    // where  bi     = \sum_j K_{ij} d_{ij}    (+ inertial term M_i/dt^2 pi )
-    // and    A_{ii} = \sum_j K_{ij}           (+ inertial term M_i/dt^2    )
-
-    pi_new /= Aii;
-
-    ps_out[iG] = (float4)(pi_new, pi.w);
-
+    
+    // Update position
+    float2 pos_new = bi / (mass_i * inv_dt2 + 1.0f);
+    ps_out[i] = (float4)(pos_new.x, pos_new.y, 0.0f, mass_i);
 }
 
 /// this function updates neighs, kngs, l0s based on collisions found considering current positions of points, it use groups to speed up
