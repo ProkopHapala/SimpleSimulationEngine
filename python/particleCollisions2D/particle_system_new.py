@@ -1,6 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+CONST_COULOMB = 14.3996448915
+
+def getMorseQ( d, R0, E0, Qij, alpha=1.7 ):
+    r    = np.linalg.norm(d)
+    ir   = 1.0/r
+
+    E_Coulomb = CONST_COULOMB * Qij * ir
+    f_Coulomb = d * ( ir*irE_Coulomb ) 
+
+    e         = np.exp(-alpha * (r - R0))
+    E_Morse   =            E0 *           (e*e - 2*e)
+    f_Morse   = d * ( ir * E0 * 2*alpha * (e*e -   e) ) 
+    
+    return f_Coulomb + f_Morse , E_Coulomb + E_Morse
+
 def rhs_ij( pi, pj, k, l0 ):
     '''
     b_i = \sum_j (K_{ij} p_{ij})
@@ -11,12 +26,13 @@ def rhs_ij( pi, pj, k, l0 ):
     l = np.linalg.norm(d)
     return d * (k * l0/l)
 
-def make_PD_RHS( ps, neighs, kngs, l0s, masses=None, dt=1.0 ):
+def make_PD_RHS( ps, neighs, kngs, l0s, masses=None, dt=1.0, b=None ):
     '''
     b_i = \sum_j (K_{ij} p_{ij})  + M/dt^2 p'_i
     '''
     n = len(ps)
-    b = np.zeros((n,2))
+    if b is None:
+        b = np.zeros((n,2))
     inv_dt2 = 1.0/(dt*dt);
     for i in range(n):
         pi = ps[i]
@@ -26,9 +42,10 @@ def make_PD_RHS( ps, neighs, kngs, l0s, masses=None, dt=1.0 ):
         l0i   = l0s   [i]
         ni    = len(ngsi) 
         for jj in range(ni):
+            j  = ngsi[jj]
+            if j<0: break
             k  = ksi [jj]
             l0 = l0i [jj] 
-            j  = ngsi[jj]
             pj = ps  [j ]
             bi += rhs_ij( pi, pj, k, l0 )
         if masses is not None:
@@ -50,11 +67,13 @@ def update_PD_matrix( apos, neighs, kngs, dt=1.0 ):
             Aii[ip] += k
     return Aii
 
-def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
+def jacobi_iteration_sparse(ps, b, neighs, kngs, Aii, ps_out=None  ):
     """One iteration of Jacobi method using sparse operations"""
-    n = len(x)
-    x_out = np.zeros_like(x)
-    r     = np.zeros_like(x)
+    n      = len(ps)
+    if ps_out is None:
+        ps_out = np.zeros_like(ps)
+    #r    = np.zeros_like(x)
+    err2  = 0.0 
     for i in range(n):
         #print("CPU i: %i Aii[i]: %f b[i]: %f " %(i, Aii[i], b[i]) );
         sum_j  = 0  # RHS term
@@ -63,17 +82,65 @@ def jacobi_iteration_sparse(x, b, neighs, kngs, Aii ):
         ni = len(ngsi)
         for jj in range(ni):
             j      = ngsi[jj]
+            if j<0: break
             k      = ksi[jj]
-            sum_j -= k * x[j]   # Off-diagonal contribution
-        x_out[i] =  (b[i] - sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
-        y_i = Aii[i]*x[i] + sum_j              # This is Ax_i
-        Api_ = b[i] - sum_j                    # Api_ = sum_j K_ij ( d_ij + p_j ) 
-        r[i] = b[i] - y_i                      # Residual r = b - Ax
-        print("i: %i r_i: %f pi_: %f x_i: %f " %(i, r[i], Api_/Aii[i], x[i] ) )
-    return x_out, r
+            sum_j -= k * ps[j]                 # Off-diagonal contribution
+        ps_out[i] =  (b[i] - sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
+        y_i       = Aii[i]*ps_out[i] + sum_j   # y = Ax
+        ri = b[i] - y_i                        # Residual r = b - Ax
+        err2 += ri*ri
+        #print("i: %i r_i: %f pi_: %f x_i: %f " %(i, r[i], Api_/Aii[i], x[i] ) )
+    return ps_out, err2
+
+def jacobi_iteration_sparse_fly( ps, ps_out, neighs, kngs, l0s, masses=None, dt=1.0 ):
+    """
+    This version of Jacobi solver updates b and Aii on the fly
+    """
+    n = len(ps)
+    #ps_out = np.zeros_like(ps)
+    #r      = np.zeros_like(ps)
+    err2  = 0.0 
+    inv_dt2 = 1.0/(dt*dt);
+    for i in range(n):
+        #print("CPU i: %i Aii[i]: %f b[i]: %f " %(i, Aii[i], b[i]) );
+        sum_j = 0     # RHS term
+        mi    = masses[i] * inv_dt2   # intertial term M_i/dt^2
+        bi    = mi*ps[i]              # bi  = \sum_j (K_{ij} d_{ij})  + M_i/dt^2 p'_i
+        Aii   = mi                    # Aii = \sum_j (K_{ij} +          M_i/dt^2
+        
+        pi    = ps[i] 
+        ngsi  = neighs[i]
+        ksi   = kngs[i] 
+        l0i   = l0s[i]
+        ni    = len(ngsi)
+        for jj in range(ni):
+            j      = ngsi[jj]
+            if j<0: break
+            k      = ksi[jj]
+            sum_j -= k * ps_in[j]   # Off-diagonal contribution
+
+            l0   = l0i[jj]
+            pj   = ps_in[j]
+            bi  += rhs_ij( pi, pj, k, l0 ) # NOTE: updating bi on the fly here goes beyond linear solver
+            Aii += k
+
+        ps_out[i] =  (bi - sum_j) / Aii[i]   # solution x_new = (b - sum_(j!=i){ Aij * x[j] } ) / Aii
+        y_i  = Aii[i]*pi + sum_j             # This is Ax_i
+        ri   = bi - y_i                      # Residual r = b - Ax
+        err2 += ri*ri
+        #print("i: %i r_i: %f pi_: %f x_i: %f " %(i, r[i], Api_/Aii[i], x[i] ) )
+    return ps_out, err2
+
 
 def jacobi_iteration_sparse_debug(ps, b, neighs, kngs, Aii, bPlot=True, l0s=None):
     """Debug version of Jacobi iteration that plots p'_ij points"""
+
+    print("jacobi_iteration_sparse_debug")
+    print("b: ",      b      )
+    print("neighs: ", neighs )
+    print("kngs: ",   kngs   )
+    print("Aii: ",    Aii    )
+    
     n = len(ps)
     ps_out = np.zeros_like(ps)
     r = np.zeros_like(ps)
@@ -93,11 +160,12 @@ def jacobi_iteration_sparse_debug(ps, b, neighs, kngs, Aii, bPlot=True, l0s=None
         sum_pij = np.zeros(2)  
         for jj in range(ni):
             j  = ngsi[jj]
+            if j<0: break
             k  = ksi [jj]
             pj = ps  [j]
             sum_j += k * pj
             if bPlot:
-                l0 = l0s[i][jj]
+                l0   = l0s[i][jj]
                 d_ij = rhs_ij( pi, pj, 1.0, l0 )
                 p_ij = pj + d_ij
 
@@ -115,13 +183,15 @@ def jacobi_iteration_sparse_debug(ps, b, neighs, kngs, Aii, bPlot=True, l0s=None
         #           = \sum_j K_{ij} (d_{ij} + p_j) / A_{ii} 
         #           = K_{ij} p'_{ij} / A_{ii} 
         #           = {sum_j K_{ij} p'_{ij} } / { sum_j K_{ij} }
+
+        print(f"i: {i} b_i: {bi} sum_j: {sum_j} Aii[i]: {Aii[i]}")
+
         pi_new = (bi + sum_j) / Aii[i]
 
         pi_ij = sum_pij / Aii[i]
 
         if bPlot:
             plt.plot(pi_new[0], pi_new[1], '+k', alpha=0.5)                     # Plot p'_ij point
-            
             plt.plot([pi[0], pi_new[0]], [pi[1], pi_new[1]], 'k--', lw=0.5, alpha=1.0 ) # Draw line from current position to p'_ij
 
             plt.plot(pi_ij[0], pi_ij[1], '+r', alpha=0.5)  
@@ -139,13 +209,15 @@ def jacobi_iteration_sparse_debug(ps, b, neighs, kngs, Aii, bPlot=True, l0s=None
     #     for j in neighs[i]:
     #         plt.plot([ps[i,0], ps[j,0]], [ps[i,1], ps[j,1]], 'k-', lw=0.5, alpha=1.0 )
     
-    plt.axis('equal')
-    plt.grid(True)
-    plt.legend()
-    plt.title('Debug visualization of Jacobi iteration')
-    #plt.show()
+    if bPlot:
+        plt.axis('equal')
+        plt.grid(True)
+        plt.legend()
+        plt.title('Debug visualization of Jacobi iteration')
+        #plt.show()
     
-    return ps_out, r
+    err2 = np.linalg.norm(r)
+    return ps_out, err2
 
 class Particle:
     def __init__(self, pos, vel=None, mass=1.0):
@@ -170,12 +242,12 @@ class Bond:
         return abs(r - self.r0)
 
 class Molecule:
-    def __init__(self, types, pos, bonds):
-        self.natom = len(pos)
-        self.types = types.copy()  # types of each atom
-        self.particles = [Particle(pos[i], mass=types[i]) for i in range(len(pos))]
-        self.pos   = pos   # list of integers of particle objects
-        self.bonds = bonds           # list of Bond objects
+    def __init__(self, types, pos, bonds=None):
+        self.types = np.array(types, dtype=np.float64)  # particle masses
+        self.pos = np.array(pos, dtype=np.float64)      # positions
+        self.bonds = bonds if bonds else []             # bonds between particles
+        self.vel = np.zeros_like(self.pos)             # velocities (initially zero)
+        self.charges = np.zeros(len(types))            # charges (initially zero)
         # -- to be done
         self.cog   = None            # np.array[3]
         self.inds  = np.zeros(len(pos), dtype=np.int32)   # list of indices of this p
@@ -193,42 +265,53 @@ class Molecule:
 class World:
     def __init__(self, dt=0.1, D=0.1):
         nmaxneighs = 8
-        natoms     = 0
-        # dynamicsl varialbes (for all particles in the system)
-        self.apos      = None  # [natoms,2] {x,y} 
-        self.pos_pred  = None  # [natoms,2] predicted positions
-        self.vels      = None  # [natoms,2]
-        self.forces    = None  # [natoms,2]
-        # topplogy and parameters
-        self.molecules    = []   # list of grups of atoms 
+        self.dt = dt
+        self.D = D           # collision offset
+        self.Kbond = 20.0    # bond stiffness
+        self.K_col = 20.0    # collision stiffness
+        self.damping = 0.1   # velocity damping
         
-        self.neighs_bonds = None # [natoms,set()] # bond neighbors of each atom `i`; It is a set for fast 'in' query
-        self.neighs       = None # [natoms,[]]    # all neighbors from both bonds and collisions 
-        self.kngs         = None # [natoms,[]]    # stiffness   for each of the neighbors
-        self.l0s          = None # [natoms,[]]    # rest length for each of the neighbors
-        self.Aii          = None # [natoms]       # diagonal of the PD matrix
+        # Non-covalent interaction parameters
+        self.eps    = 0.1    # Morse potential well depth
+        self.r0_vdw = 0.5    # Morse potential equilibrium distance
+        self.alpha  = 2.0    # Morse potential decay rate
+        self.k_el   = 1.0    # Coulomb constant (1/4πε０)
+        
+        # Arrays for positions, velocities, and forces
+        self.apos     = None # current positions
+        self.vels     = None # velocities
+        self.forces   = None # forces
+        self.pos_pred = None # predicted positions
+        self.pos_solv = None # position buffer used for costraint solver
+        
+        self.masses   = None # particle masses
+        self.charges  = None # particle charges
+        
+        # Neighbor lists and parameters
+        self.neighs = []        # neighbor indices
+        self.kngs   = []        # neighbor stiffness
+        self.l0s    = []        # rest lengths
+        self.neighs_bonds = []  # bonded neighbors
         
         # simulation parameters
-        self.dt = dt               # time step
-        self.D = D                 # collision offset
-        self.Rc     = 1.0          # cutoff radius for non-bonded interactions
-        self.Rg     = 2.0          # grouping radius for neighbor search
-        self.K_col  = 10.0        # collision stiffness
-        self.Kbond  = 10.0        # bond stiffness
-        self.n_iter = 10           # number of iterations for constraint solver
-        self.damping = 0.1         # velocity damping
+        self.Rc     = 1.0       # cutoff radius for non-bonded interactions
+        self.Rg     = 2.0       # grouping radius for neighbor search
+        self.n_iter = 10        # number of iterations for constraint solver
 
     def allocate(self, natoms):
         self.apos      = np.zeros((natoms,2))
         self.pos_pred  = np.zeros((natoms,2))
+        self.pos_solv  = np.zeros((natoms,2))
         self.vels      = np.zeros((natoms,2))
         self.forces    = np.zeros((natoms,2))
         self.neighs_bonds = [set() for _ in range(natoms)]
         self.neighs       = [[]    for _ in range(natoms)]
         self.kngs         = [[]    for _ in range(natoms)]
         self.l0s          = [[]    for _ in range(natoms)]
+        self.b            = np.zeros(natoms)
         self.Aii          = np.zeros(natoms)
         self.masses       = np.ones(natoms)
+        self.charges      = np.zeros(natoms)
     
     def add_molecule(self, molecule):
         """Add a molecule to the world"""
@@ -236,56 +319,30 @@ class World:
         self.from_molecules(self.molecules)
 
     def from_molecules(self, molecules):
-        """
-        Take all molecules from list of molecules and create world arrays 
-        like apos, vels, forces, and bond-neighbors
-        
-        Args:
-            molecules (list): List of Molecule objects to add to the world
-        """
-        # Set molecules in the world
-        self.molecules = molecules
-        
+        """Initialize world from a list of molecules"""
         # Count total number of atoms
         natoms = sum(len(mol.pos) for mol in molecules)
-        
-        # Allocate arrays for positions, velocities, and forces
         self.allocate(natoms)
         
-        # Populate world arrays and bond neighbors
-        atom_index = 0
+        # Add each molecule
+        offset = 0
         for mol in molecules:
-            # Update molecule's indices
-            mol.inds = np.arange(atom_index, atom_index + len(mol.pos))
+            n = len(mol.pos)
+            self.apos[offset:offset+n] = mol.pos
+            self.vels[offset:offset+n] = mol.vel
+            self.masses[offset:offset+n] = mol.types
+            if hasattr(mol, 'charges'):
+                self.charges[offset:offset+n] = mol.charges
             
-            # Add molecule's atoms to world arrays
-            for i, pos in enumerate(mol.pos):
-                # Add position (x, y, z, mass)
-                # For 2D simulation, set z=0 and use mass as 4th component
-                self.apos[atom_index] = np.array([pos[0], pos[1]])
-                
-                # Add initial velocities (assuming zero initial velocity)
-                self.vels[atom_index] = np.zeros(2)
-                
-                # Add initial forces (assuming zero initial force)
-                self.forces[atom_index] = np.zeros(2)
-                
-                # Add bond neighbors for this atom
-                for bond in mol.bonds:
-                    if bond.i == i:
-                        j_world = mol.inds[bond.j]  # Convert local to world index
-                        self.neighs_bonds[atom_index].add((j_world, bond.r0))  # Store both neighbor index and rest length
-                        #print(f"Added bond: {atom_index}-{j_world} with r0={bond.r0}")  # Debug
-                    elif bond.j == i:
-                        i_world = mol.inds[bond.i]  # Convert local to world index
-                        self.neighs_bonds[atom_index].add((i_world, bond.r0))  # Store both neighbor index and rest length
-                        #print(f"Added bond: {atom_index}-{i_world} with r0={bond.r0}")  # Debug
-                
-                atom_index += 1
-        
-        # Update groups (center of geometry and radius)
-        self.update_groups()
-    
+            # Add bonds to neighbor list
+            for bond in mol.bonds:
+                i = bond.i + offset
+                j = bond.j + offset
+                self.neighs_bonds[i].add((j, bond.r0))
+                self.neighs_bonds[j].add((i, bond.r0))
+            
+            offset += n
+
     def update_groups(self, bUpdateCenter=False):
         '''
         Goes through atoms of molecule and find the center (optionaly) and group radius Rg
@@ -308,48 +365,49 @@ class World:
 
     def update_collision_neighbors(self, bCollisions=True):
         """
-        This function goes through all the molecules and update the neighs_colls by adding all atoms which are closer than Rc from both the same molecule and tho other molecules
-        - output is merged list of all neighbors ( both bonds and collisions) and their stiffness
-        - this is accelerated by using the list  
+        Update neighbors list with both bonded and collision neighbors.
+        Args:
+            bCollisions (bool): If True, include collision neighbors
         """
-        for im, mol in enumerate(self.molecules):
-            for ip in mol.inds:
-                ngs  = []  # neighbors (both bonds and collisions)
-                kngs = [] # stiffness for each neighbor
-                l0s  = []  # rest length for each neighbor
-                Kii = 0.0
-                
-                # First add bonded neighbors
-                print(f"Bond neighbors: {self.neighs_bonds[ip]}")  # Debug
-                for j, r0 in self.neighs_bonds[ip]:
-                    ngs .append(j)
-                    k = self.Kbond
-                    kngs.append(k)
-                    Kii += k
-                    l0s .append(r0)
-                    print(f"  Added bond neighbor {ip}-{j} with r0={r0}")  # Debug
-                
-                if bCollisions:
-                    for jm, molj in enumerate(self.molecules):
-                        for jp in molj.inds:
-                            if ip == jp:
-                                continue
-                            if im == jm and jp in [j for j, _ in self.neighs_bonds[ip]]:
-                                continue
-                            if np.linalg.norm(self.apos[ip]- self.apos[jp]) < self.Rc:
-                                ngs.append(jp)
-                                k = self.K_col
-                                kngs.append(k)
-                                Kii += k
-                                l0s.append(self.Rc)  # For collisions, rest length is Rc
-                                print(f"  Added collision neighbor {ip}-{jp} with r0={self.Rc}")  # Debug
-
-                # Store all neighbors and their parameters
-                self.neighs[ip] = ngs
-                self.kngs[ip]   = kngs
-                self.l0s[ip]    = l0s
-                self.Aii[ip]    = Kii   # A_ii = \sum_j K_{ij} + m_i /dt^2, for the moment we neglect the mass (inertial term m_i/dt^2)
-
+        print( f"update_collision_neighbors() bCollisions={bCollisions}" )
+        n = len(self.apos)
+        self.neighs[:] = [None] * n
+        self.kngs  [:] = [None] * n
+        self.l0s   [:] = [None] * n
+        # First add all bonded neighbors
+        for i in range(n):
+            neighs = []
+            kngs   = []
+            l0s    = []
+            Aii    = 0.0 
+            #print(f"Bond neighbors for atom {i}: {self.neighs_bonds[i]}")  # Debug
+            for j, r0 in self.neighs_bonds[i]:
+                k     =  self.Kbond
+                Aii  += k
+                kngs  .append(k)
+                l0s   .append(r0)
+                neighs.append(j)
+                #print(f"  Added bond neighbor {i}-{j} with r0={r0}")  # Debug
+            # Add collision neighbors if enabled
+            if bCollisions:
+                for j in range(n):  # we loop over all atoms, not just j>i because it is better for parallelization 
+                    if i == j: continue
+                    if any(j == x[0] for x in self.neighs_bonds[i]):   # this can be slow, need to optimize (?)
+                        continue
+                    # Check if within cutoff
+                    d = self.apos[j] - self.apos[i]
+                    r = np.linalg.norm(d)
+                    if r < self.Rc:
+                        # Add collision pair (both directions)
+                        k    = self.K_col   # perhaps later we can use different stiffnesses for each particle by some mixing ?                        
+                        Aii += k
+                        kngs  .append(k)
+                        l0s   .append(-self.D)    # Negative rest length for collisions
+                        neighs.append(j)
+            self.neighs[i] = neighs ;
+            self.kngs  [i] = kngs   ;
+            self.l0s   [i] = l0s    ;
+            self.Aii   [i] = Aii    ;
         return self.neighs, self.kngs, self.l0s
 
 
@@ -363,38 +421,48 @@ class World:
         self.update_velocities()
 
     def predict_positions(self):
-        """Step 1: Predict positions using current velocities"""
-        for mol in self.molecules:
-            for ip in mol.inds:
-                self.pos_pred[ip] = self.apos[ip] + self.vels[ip] * self.dt
+        """Update predicted positions using leapfrog with non-covalent forces"""
+        # Compute non-covalent forces
+        self.compute_non_covalent_forces()
+        self.vels    [:,:] += self.forces[:,:] * self.dt /        self.masses[:, np.newaxis]
+        self.pos_pred[:,:]  = self.apos[:,:]   + self.vels[:,:] * self.dt
+        
+    def update_velocities(self, pos_pred ):
+        self.vels[:,:] = (pos_pred[:,:] - self.pos[:,:])/self.dt
+        self.apos[:,:] =  pos_pred[:,:]
 
-    def update_velocities(self):
-        """Step 3: Update velocities from position changes"""
-        for mol in self.molecules:
-            for ip in mol.inds:
-                self.vels[ip] = (self.apos[ip] - self.pos_pred[ip]) / self.dt
-
-    def solve_constraints(self, niter=10):
+    def solve_constraints(self, niter=5, bOnTheFly=False):
         """Solve position constraints using Jacobi iteration"""
         # Update neighbors and constraints
         self.update_collision_neighbors()
-        ps  = self.pos_pred.copy()
-        b   = self.update_rhs(ps)
-        Aii = self.update_Aii(ps)
-        # Solve using Jacobi iteration
+        ps_in  = self.pos_pred
+        ps_out = self.pos_solv
+        if not bOnTheFly:
+            b   = self.update_rhs(ps_in, b=self.b  )
+            #Aii = self.update_Aii(ps_in, Aii=self.Aii ) # Aii is already updated in update_collision_neighbors()
         for it in range(niter):
-            ps, r = jacobi_iteration_sparse(ps, b, self.neighs, self.kngs, Aii)
-            err_x = np.linalg.norm(r[:, 0])
-            err_y = np.linalg.norm(r[:, 1])
-            print(f"  errors: x={err_x:.3e} y={err_y:.3e}")
-        self.pos_pred = ps.copy()
+            if bOnTheFly:
+                ps_out, err2 = jacobi_iteration_sparse_fly(ps_in, ps_out, self.neighs, self.kngs, self.l0s, masses=self.masses, dt=self.dt)
+            else:
+                ps_out, err2 = jacobi_iteration_sparse(ps, b, self.neighs, self.kngs, Aii, ps_out=ps_out)
+            if err2 < 1e-8: break
+            ps_in, ps_out = ps_out, ps_in
+
+        self.pos_pred[:,:] = ps
         return ps
 
     def update_rhs(self, pos_pred ):
         return make_PD_RHS( pos_pred, self.neighs, self.kngs, self.l0s, masses=self.masses, dt=1.0 )
 
-    def update_Aii(self, pos_pred ):
-        return update_PD_matrix( self.pos_pred, self.neighs, self.kngs, dt=1.0 )
+    def update_Aii(self, Aii=None ):
+        """Update diagonal elements of PD matrix"""
+        n = len(self.apos)
+        if Aii is None: Aii = np.zeros(n)
+        Aii += 1.0 / (self.dt * self.dt)  # m_i/dt^2 (using unit mass)
+        for i in range(n):
+            for k in self.kngs[i]:
+                Aii[i] += k
+        return Aii
 
     def print_bond_lengths(self, end=" "):
         for i in range(len(self.apos)):
@@ -403,6 +471,24 @@ class World:
                     d = np.linalg.norm(self.apos[j] - self.apos[i])
                     print(f"{i}-{j}: {d:.6f},", end=end )
         #print()
+
+    def compute_non_covalent_forces(self):
+        """Compute forces from non-covalent interactions (Morse + Coulomb)"""
+        n = len(self.apos)
+        self.forces[:,:] = 0.0
+        E = 0.0
+        for i in range(n):
+            pi = self.apos  [i]
+            fi = self.forces[i]
+            for j in range(n):
+                if i == j: continue
+                if j in self.neighs_bonds[i]:  # this can be slow, need to optimize (?)
+                    continue
+                d = self.apos[j] - pi
+                f,E = getMorseQ( d, R0, E0, Qij, alpha=1.7 )
+                fi += f
+                self.forces[j] -= f
+        return E
 
 # ========================================================
 # ============ Create initial configurations  ============
@@ -424,22 +510,33 @@ def create_triangle_system(l=1.0):
     ]
     return Molecule(types, pos, bonds)
 
-def create_water(pos=[0,0], l0=1.0, ang=np.pi/2, vel=[0,0] ):
+def create_water(pos=[0,0], l0=1.0, ang=np.pi/2, vel=[0,0]):
     """Create a water molecule (H2O) at given position with given velocity"""
-    types = [16.0, 1.0, 1.0]  # masses of O, H1, H2
-
-    ca = np.cos(ang)
-    sa = np.sin(ang)
+    # Create oxygen atom at center
+    types = [16.0, 1.0, 1.0]  # O, H, H masses
+    charges = [-0.8, 0.4, 0.4]  # O, H, H charges
+    
+    # Calculate H positions
+    r = l0  # O-H bond length
+    dx = r * np.cos(ang/2)
+    dy = r * np.sin(ang/2)
+    
     positions = [
-        [pos[0],       pos[1]      ],  # O
-        [pos[0]+l0,    pos[1]      ],  # H1
-        [pos[0]+l0*ca, pos[1]+l0*sa]   # H2
+        pos,                    # O at center
+        [pos[0]-dx, pos[1]-dy], # H1
+        [pos[0]+dx, pos[1]-dy]  # H2
     ]
+    
+    # Create bonds
     bonds = [
-        Bond(0, 1, k=10.0, r0=1.0),  # O-H1 bond
-        Bond(0, 2, k=10.0, r0=1.0),  # O-H2 bond
+        Bond(0, 1, r0=r),  # O-H1 bond
+        Bond(0, 2, r0=r)   # O-H2 bond
     ]
-    return Molecule(types, positions, bonds)
+    
+    mol = Molecule(types, positions, bonds)
+    mol.charges = charges  # Add charges to molecule
+    mol.vel = np.array(vel)
+    return mol
 
 def create_water_grid(nx=3, ny=3, spacing=2.0, l0=1.0, ang=np.pi/2):
     """Create a grid of water molecules"""
@@ -450,17 +547,26 @@ def create_water_grid(nx=3, ny=3, spacing=2.0, l0=1.0, ang=np.pi/2):
             molecules.append(create_water(pos, l0=l0, ang=ang))
     return molecules
 
-def init_triangle_world(l=1.0):
-    """Initialize world with three particles in triangle"""
-    world = World(dt=0.05, D=0.1)  # Create world with small time step
-    mol = create_triangle_system(l)
-    world.add_molecule(mol)
-    return world
-
-def init_world( nx=2, ny=2, spacing=2.0, l0=1.0, ang=np.pi/2 ):
-    """Initialize world with water molecules"""
-    world = World(dt=0.01)
-    mols = create_water_grid(nx, ny, spacing=spacing, l0=l0, ang=ang)
+def init_world(molecule_func=create_triangle_system, dt=0.05, D=0.1, **kwargs):
+    """Initialize world with molecules created by the provided function
+    Args:
+        molecule_func: Function to create molecules. Default is create_triangle_system
+        dt: Time step for simulation
+        D: Collision offset
+        **kwargs: Additional arguments passed to molecule_func
+    """
+    # Create world with specified parameters
+    world = World(dt=dt, D=D)
+    
+    # Create molecules using the provided function
+    if molecule_func == create_water_grid:
+        # Special case for water grid which returns multiple molecules
+        mols = molecule_func(**kwargs)
+    else:
+        # Single molecule case
+        mols = [molecule_func(**kwargs)]
+    
+    # Initialize world with molecules
     world.from_molecules(mols)
     return world
 
@@ -468,14 +574,15 @@ def init_world( nx=2, ny=2, spacing=2.0, l0=1.0, ang=np.pi/2 ):
 # ============ Create initial configurations  ============
 # ========================================================
 
-def test_jacobi_debug(world, n_iter=5, bPrint=True, bPlot=True, sz=5, fRnadom=0.3, bUpdateB=True ):
+def test_jacobi_debug(world, n_iter=5, bPrint=True, bPlot=True, sz=5, fRnadom=0.3, bUpdateB=True, rseed = 454454 ):
     """Test convergence with three particles and debug visualization"""
     print("\nTesting three-particle system convergence with debug:")
     
     world.update_collision_neighbors(bCollisions=False)  # Comment this out
 
     # random perturbation to points
-    world.apos[:,0] += np.random.uniform(-fRnadom, fRnadom, len(world.apos))
+    np.random.seed(rseed)
+    world.apos[:,:] += np.random.uniform(-fRnadom, fRnadom, world.apos.shape)
 
     #b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s, masses=world.masses, dt=world.dt)
     b = make_PD_RHS(world.apos, world.neighs, world.kngs, world.l0s )
@@ -508,7 +615,7 @@ def test_jacobi_debug(world, n_iter=5, bPrint=True, bPlot=True, sz=5, fRnadom=0.
 def test_triangle_cl():
     """Compare Python and OpenCL implementations for triangle system"""
     # Initialize world with three particles
-    world = init_triangle_world()
+    world = init_world()
     n = len(world.apos)
 
     import constrains_cl
@@ -550,76 +657,15 @@ def test_triangle_cl():
     world.apos = pos_cl; plt.subplot(133);  pu.plot_molecules(world, ax=plt.gca(), color='green', label='OpenCL');  plt.title('OpenCL Solution')
     plt.tight_layout()
 
-def test_1(world, n_iter = 10):
-    """Test convergence of constraint solver"""
-    print("\nTesting constraint solver convergence:")
-    
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    pu.plot_molecules(world, ax=ax1, color='b', label='Initial', markersize=10)
-    errors = []
-    
-    # Plot intermediate states with different colors
-    colors = plt.cm.viridis(np.linspace(0, 1, n_iter))
-    def plot_callback(i, x, y, err_x, err_y):
-        pu.plot_molecules(world, x=x, y=y, ax=ax1, color=colors[i], alpha=0.5, 
-                         label=f'iter {i}', markersize=5)
-        ax1.set_xlim(-0.5, 1.5)
-        ax1.set_ylim(-0.5, 1.5)
-    
-    world.solve_constraints(n_iter, errs=errors, callback=plot_callback)
-    pu.plot_molecules(world, ax=ax1, color='r', label='Final', markersize=10)
-    ax1.legend()
-    ax1.set_title('Molecule Positions')
-    ax1.grid(True)
-    
-    pu.plot_convergence(errors, ax=ax2)
-    ax2.set_title('Constraint Error')
-    ax2.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-def test_2(world):
-    """Test dynamics over multiple steps"""
-    print("\nTesting dynamics:")
-    
-    # Setup visualization
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    errors = []
-    
-    # Plot initial state
-    pu.plot_molecules(world, ax=ax1, color='b', label='Initial')
-    
-    # Run simulation steps
-    n_steps = 10
-    for i in range(n_steps):
-        # Step simulation
-        world.step()
-        err = world.solve_constraints()  # Get error from last constraint solve
-        errors.append(err)
-        print(f"Step {i}: error = {err}")
-        
-        # Plot intermediate state
-        if i % 2 == 0:
-            pu.plot_molecules(world, ax=ax1, color='k', alpha=0.2)
-    
-    # Plot final state and convergence
-    pu.plot_molecules(world, ax=ax1, color='r', label='Final')
-    ax1.legend()
-    ax1.set_title('Molecule Positions')
-    
-    pu.plot_convergence(errors, ax=ax2)
-    ax2.set_title('Constraint Error')
-    
-    plt.tight_layout()
-    plt.show()
-
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import plot_utils as pu
     
-    # Initialize world with triangle system
-    world = init_triangle_world()
+    # Create a system with two water molecules
+    #world = init_world(molecule_func=create_water_grid, nx=2, ny=1, spacing=1.5, l0=0.5, ang=104.5*np.pi/180)
+    world = init_world()
+
     
     # Run test with debug visualization
-    test_jacobi_debug(world)
+    test_jacobi_debug(world, n_iter=5)
     plt.show()
