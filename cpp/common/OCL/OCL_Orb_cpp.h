@@ -66,6 +66,62 @@ public:
     Quat4f MDpars   {1e-3,1e-4,0,0}; // MD parameters (dt, damping, cv, cf)
     Vec2f  bmix     {1.0,0.7};       // momentum-mixing parameters
 
+    OCL_Orb_cpp() = default;
+
+    void init(const char* cl_src_dir) {
+        try {
+            // Get platform and device
+            std::vector<cl::Platform> platforms;
+            cl::Platform::get(&platforms);
+            if(platforms.empty()) {
+                throw std::runtime_error("No OpenCL platforms found");
+            }
+            
+            std::vector<cl::Device> devices;
+            platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
+            if(devices.empty()) {
+                throw std::runtime_error("No OpenCL GPU devices found");
+            }
+            
+            // Create context and command queue
+            context = cl::Context(devices[0]);
+            queue   = cl::CommandQueue(context, devices[0]);
+            
+            // Initialize kernels
+            char srcpath[1024];
+            sprintf(srcpath, "%s/orb.cl", cl_src_dir);
+            printf("Initializing OpenCL kernels from: %s\n", srcpath);
+            
+            initKernels();
+            
+            printf("OpenCL initialization complete\n");
+        } catch (cl::Error& e) {
+            printf("OpenCL error in init: %s (%d)\n", e.what(), e.err());
+            throw;
+        }
+    }
+
+    void initKernels() {
+        try {
+            // Build the program
+            program1 = buildProgram("cpp/common/OCL/cl/orb.cl");
+            
+            // Create kernels
+            ker_getTrussForces      = cl::Kernel(program1, "getTrussForces");
+            ker_updateJacobi_neighs = cl::Kernel(program1, "updateJacobi_neighs");
+            ker_updateJacobi_mix    = cl::Kernel(program1, "updateJacobi_mix");
+            ker_PD_perdictor        = cl::Kernel(program1, "PD_perdictor");
+            ker_PD_corrector        = cl::Kernel(program1, "PD_corrector");
+            ker_dot_mat_vec_loc     = cl::Kernel(program1, "dot_mat_vec_loc");
+            ker_dot_mat_vec_sparse  = cl::Kernel(program1, "dot_mat_vec_sparse");
+            
+            printf("Successfully initialized OpenCL kernels\n");
+        } catch (cl::Error& e) {
+            printf("OpenCL error in initKernels: %s (%d)\n", e.what(), e.err());
+            throw;
+        }
+    }
+    
     int initCLBuffs() {
         printf("initCLBuffs() nPoint %i nNeighMax %i \n", nPoint, nNeighMax);
         try {
@@ -95,45 +151,206 @@ public:
         }
     }
 
-    int initCLBuffs_CG() {
-        printf("initCLBuffs_CG() nPoint %i nNeighMax %i \n", nPoint, nNeighMax);
+    void run_getTrussForces(cl::Buffer* ps, cl::Buffer* fs ) {
         try {
-            buf.Amat = cl::Buffer(context, CL_MEM_READ_WRITE, nPoint * nPoint * sizeof(float));
-            buf.xvec = cl::Buffer(context, CL_MEM_READ_WRITE, nPoint * sizeof(Quat4f));
-            buf.yvec = cl::Buffer(context, CL_MEM_READ_WRITE, nPoint * sizeof(Quat4f));
-            return 0;
+            size_t local_work_size = 32;
+            size_t global_work_size = roundUp(nPoint, local_work_size);
+            ker_getTrussForces.setArg(0, nPoint);
+            ker_getTrussForces.setArg(1, *ps );
+            ker_getTrussForces.setArg(2, *fs );
+            queue.enqueueNDRangeKernel(ker_getTrussForces, cl::NullRange, cl::NDRange(global_work_size), cl::NDRange(local_work_size));
         } catch (cl::Error& e) {
-            printf("OpenCL error in initCLBuffs_CG: %s (%d)\n", e.what(), e.err());
+            printf("OpenCL error in run_getTrussForces: %s (%d)\n", e.what(), e.err());
             throw;
         }
     }
 
-    void run_ocl(int niter, int upload_mask = 0b001, int download_mask = 0b001) {
+    void run_updateJacobi_neighs(cl::Buffer* ps_in, cl::Buffer* ps_out) {
         try {
-            MDpars = Quat4f{dt, 1-damping, cv, cf};
-
-            // Upload data to GPU
-            if (upload_mask & 0b001) queue.enqueueWriteBuffer(buf.points, CL_TRUE, 0, nPoint * sizeof(Quat4f), points);
-            if (upload_mask & 0b010) queue.enqueueWriteBuffer(buf.vels,   CL_TRUE, 0, nPoint * sizeof(Quat4f), vel);
-            if (upload_mask & 0b100) queue.enqueueWriteBuffer(buf.forces, CL_TRUE, 0, nPoint * sizeof(Quat4f), forces);
-
-            // Execute kernels
+            float inv_dt2 = 1.0f / (dt * dt);
             size_t local_work_size = 32;
             size_t global_work_size = roundUp(nPoint, local_work_size);
             
-            for(int itr = 0; itr < niter; itr++) {
-                queue.enqueueNDRangeKernel(ker_getTrussForces, cl::NullRange, cl::NDRange(global_work_size), cl::NDRange(local_work_size));
-                queue.enqueueNDRangeKernel(ker_PD_perdictor,   cl::NullRange, cl::NDRange(global_work_size), cl::NDRange(local_work_size));
+            ker_updateJacobi_neighs.setArg(0, nPoint);
+            ker_updateJacobi_neighs.setArg(1, nNeighMax);
+            ker_updateJacobi_neighs.setArg(2, *ps_in  );
+            ker_updateJacobi_neighs.setArg(3, *ps_out );
+            ker_updateJacobi_neighs.setArg(4, buf.dps );
+            ker_updateJacobi_neighs.setArg(5, buf.neighs);
+            ker_updateJacobi_neighs.setArg(6, buf.params);
+            ker_updateJacobi_neighs.setArg(7, inv_dt2);
+            
+            queue.enqueueNDRangeKernel(ker_updateJacobi_neighs, cl::NullRange, cl::NDRange(global_work_size), cl::NDRange(local_work_size));
+        } catch (cl::Error& e) {
+            printf("OpenCL error in run_updateJacobi_neighs: %s (%d)\n", e.what(), e.err());
+            throw;
+        }
+    }
+
+    void run_updateJacobi_mix( cl::Buffer* ps_in, cl::Buffer* ps_out) {
+        try {
+            float inv_dt2 = 1.0f / (dt * dt);
+            size_t local_work_size = 32;
+            size_t global_work_size = roundUp(nPoint, local_work_size);
+            
+            ker_updateJacobi_mix.setArg(0, nPoint);
+            ker_updateJacobi_mix.setArg(1, nNeighMax);
+            ker_updateJacobi_mix.setArg(2, *ps_in );
+            ker_updateJacobi_mix.setArg(3, *ps_out );
+            ker_updateJacobi_mix.setArg(4, buf.dps);
+            ker_updateJacobi_mix.setArg(5, buf.neighs);
+            ker_updateJacobi_mix.setArg(6, buf.params);
+            ker_updateJacobi_mix.setArg(7, inv_dt2);
+            ker_updateJacobi_mix.setArg(8, bmix);
+            
+            queue.enqueueNDRangeKernel(ker_updateJacobi_mix, cl::NullRange, cl::NDRange(global_work_size), cl::NDRange(local_work_size));
+        } catch (cl::Error& e) {
+            printf("OpenCL error in run_updateJacobi_mix: %s (%d)\n", e.what(), e.err());
+            throw;
+        }
+    }
+
+    double run_updateJacobi_smart( cl::Buffer* psa, cl::Buffer* psb, int itr) {
+        const float bmix_end   = 0.75f;
+        const float bmix_start = 0.55f;
+        const int   nitr_start = 3;
+        const int   nitr_end   = 10;
+        
+        if(itr < nitr_start) {
+            run_updateJacobi_neighs(psa, psb);
+        } else {
+            if(itr > nitr_end) {
+                bmix.y = bmix_end;
+            } else {
+                bmix.y = bmix_start + (bmix_end - bmix_start) * (itr - nitr_start) / (nitr_end - nitr_start);
             }
+            run_updateJacobi_mix(psa, psb);
+        }
+        return bmix.y;
+    }
 
-            // Download results from GPU
-            if (download_mask & 0b001) queue.enqueueReadBuffer(buf.points, CL_TRUE, 0, nPoint * sizeof(Quat4f), points);
-            if (download_mask & 0b010) queue.enqueueReadBuffer(buf.vels,   CL_TRUE, 0, nPoint * sizeof(Quat4f), vel);
-            if (download_mask & 0b100) queue.enqueueReadBuffer(buf.forces, CL_TRUE, 0, nPoint * sizeof(Quat4f), forces);
+    void run_PD_perdictor( cl::Buffer* ps_out ) {
+        try {
+            size_t local_work_size = 32;
+            size_t global_work_size = roundUp(nPoint, local_work_size);
+            
+            ker_PD_perdictor.setArg(0, nPoint);
+            ker_PD_perdictor.setArg(1, buf.points);
+            ker_PD_perdictor.setArg(2, *ps_out );
+            ker_PD_perdictor.setArg(3, buf.forces);
+            ker_PD_perdictor.setArg(4, buf.vels);
+            ker_PD_perdictor.setArg(5, dt);
+            
+            queue.enqueueNDRangeKernel(ker_PD_perdictor, cl::NullRange, cl::NDRange(global_work_size), cl::NDRange(local_work_size));
+        } catch (cl::Error& e) {
+            printf("OpenCL error in run_PD_perdictor: %s (%d)\n", e.what(), e.err());
+            throw;
+        }
+    }
 
+    void run_PD_corrector( cl::Buffer* ps_in, cl::Buffer* ps_out  ) {
+        try {
+            size_t local_work_size = 32;
+            size_t global_work_size = roundUp(nPoint, local_work_size);
+            ker_PD_corrector.setArg(0, nPoint     );
+            ker_PD_corrector.setArg(1, *ps_in     );
+            ker_PD_corrector.setArg(2, buf.points );
+            ker_PD_corrector.setArg(3, buf.vels   );
+            ker_PD_corrector.setArg(4, dt);
+            queue.enqueueNDRangeKernel(ker_PD_corrector, cl::NullRange, cl::NDRange(global_work_size), cl::NDRange(local_work_size));
+        } catch (cl::Error& e) {
+            printf("OpenCL error in run_PD_corrector: %s (%d)\n", e.what(), e.err());
+            throw;
+        }
+    }
+
+
+
+    void run_projective_dynamics(int nSolverIters, int ialg) {
+        cl::Buffer* psa =  ps1;      
+        cl::Buffer* psb =  ps2;       
+        run_PD_perdictor(psa);
+        switch(ialg) {
+            case 0: for(int i = 0; i < nSolverIters; i++) { run_updateJacobi_neighs( psa, psb );   std::swap(psa, psb); } break;
+            case 1: for(int i = 0; i < nSolverIters; i++) { run_updateJacobi_mix   ( psa, psb );   std::swap(psa, psb); } break;
+            case 2: for(int i = 0; i < nSolverIters; i++) { run_updateJacobi_smart ( psa, psb, i); std::swap(psa, psb); } break;
+        }
+        run_PD_corrector(psa);
+    }
+
+    void run_PDcl(int niter, int nSolverIters, int upload_mask = 0b001, int download_mask = 0b001, int ialg = 2) {
+        try {
+            MDpars = Quat4f{dt, 1-damping, cv, cf};
+            
+            if(upload_mask & 0b001) queue.enqueueWriteBuffer(buf.points, CL_TRUE, 0, nPoint * sizeof(Quat4f), points);
+            if(upload_mask & 0b010) queue.enqueueWriteBuffer(buf.vels,   CL_TRUE, 0, nPoint * sizeof(Quat4f), vel);
+            if(upload_mask & 0b100) queue.enqueueWriteBuffer(buf.forces, CL_TRUE, 0, nPoint * sizeof(Quat4f), forces);
+            
+            for(int itr = 0; itr < niter; itr++) {
+                run_projective_dynamics(nSolverIters, ialg);
+            }
+            
+            if(download_mask & 0b001) queue.enqueueReadBuffer(buf.points, CL_TRUE, 0, nPoint * sizeof(Quat4f), points);
+            if(download_mask & 0b010) queue.enqueueReadBuffer(buf.vels,   CL_TRUE, 0, nPoint * sizeof(Quat4f), vel);
+            if(download_mask & 0b100) queue.enqueueReadBuffer(buf.forces, CL_TRUE, 0, nPoint * sizeof(Quat4f), forces);
+            
             queue.finish();
         } catch (cl::Error& e) {
-            printf("OpenCL error in run_ocl: %s (%d)\n", e.what(), e.err());
+            printf("OpenCL error in run_PDcl: %s (%d)\n", e.what(), e.err());
+            throw;
+        }
+    }
+
+    Vec2f run_SolverConvergence(int nSolverIters, int ialg, bool bPrint = false) {
+        try {
+            int psa = 1, psb = 2;  // Using 1 for ps1 and 2 for ps2 buffers
+            
+            // Initialize forces to zero
+            std::fill(forces, forces + nPoint, Quat4fZero);
+            
+            // Upload initial data
+            queue.enqueueWriteBuffer(buf.ps1, CL_TRUE, 0, nPoint * sizeof(Quat4f), points);
+            queue.enqueueWriteBuffer(buf.dps, CL_TRUE, 0, nPoint * sizeof(Quat4f), forces);
+            
+            Vec2f fe = Vec2fNAN;
+            Vec2f fe1 = Vec2fNAN;
+            
+            for(int i = 0; i < nSolverIters; i++) {
+                // Run solver step
+                switch(ialg) {
+                    case 0: run_updateJacobi_neighs(psa, psb); break;
+                    case 1: run_updateJacobi_mix(psa, psb);    break;
+                    case 2: run_updateJacobi_smart(psa, psb, i); break;
+                }
+                
+                // Get forces
+                run_getTrussForces(psb, 1);  // 1 for main forces buffer
+                
+                // Download results
+                queue.enqueueReadBuffer((psb == 1) ? buf.ps1 : buf.ps2, CL_TRUE, 0, nPoint * sizeof(Quat4f), points);
+                queue.enqueueReadBuffer(buf.forces, CL_TRUE, 0, nPoint * sizeof(Quat4f), forces);
+                queue.finish();
+                
+                // Calculate energy and force
+                Vec2f fe_ = Vec2fZero;
+                for(int ia = 0; ia < nPoint; ia++) {
+                    fe_.x += forces[ia].f.norm2();
+                    fe_.y += forces[ia].e;
+                }
+                
+                std::swap(psa, psb);
+                if(i == 0) fe1 = fe_;
+                fe = fe_;
+            }
+            
+            if(bPrint) {
+                printf("RESULT OCL_Orb::run_SolverConvergence()  ialg: %i bmix(%.2f,%.2f) nstep: %3i Estart: %.2e Eend: %.2e Eend/Estart: %g\n", 
+                    ialg, bmix.x, bmix.y, nSolverIters, fe1.y, fe.y, fe.y/fe1.y);
+            }
+            
+            return fe;
+        } catch (cl::Error& e) {
+            printf("OpenCL error in run_SolverConvergence: %s (%d)\n", e.what(), e.err());
             throw;
         }
     }
@@ -167,6 +384,7 @@ protected:
             throw;
         }
     }
+
 };
 
 #endif
