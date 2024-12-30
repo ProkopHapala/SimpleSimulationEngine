@@ -1,0 +1,67 @@
+setup_evalTrussBondForce()
+test_SolverConvergence() nPoint=480 nSolverIters=0.5 nbmix=3 bmix0=0.05 dbmix=-124.267 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 0 bmix( 1.00 , 0.70 ) nstep:   3 Estart:   5.06e+11 Eend:   1.59e+11 Eend/Estart: 0.315294 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 2 bmix( 1.00 , 0.70 ) nstep:   3 Estart:   5.06e+11 Eend:   1.59e+11 Eend/Estart: 0.315294 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.50 ) nstep:   3 Estart:   5.06e+11 Eend:   4.17e+11 Eend/Estart: 0.825507 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.55 ) nstep:   3 Estart:   5.06e+11 Eend:   5.42e+11 Eend/Estart: 1.07259 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.60 ) nstep:   3 Estart:   5.06e+11 Eend:   7.01e+11 Eend/Estart: 1.38594 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.65 ) nstep:   3 Estart:   5.06e+11 Eend:   8.98e+11 Eend/Estart: 1.77665 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.70 ) nstep:   3 Estart:   5.06e+11 Eend:   1.14e+12 Eend/Estart: 2.25543 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.75 ) nstep:   3 Estart:   5.06e+11 Eend:   1.44e+12 Eend/Estart: 2.83887 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.80 ) nstep:   3 Estart:   5.06e+11 Eend:   1.79e+12 Eend/Estart: 3.5431 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.85 ) nstep:   3 Estart:   5.06e+11 Eend:   2.21e+12 Eend/Estart: 4.37948 
+test_SolverConvergence() nPoint=480 nSolverIters=0.5 nbmix=5 bmix0=0.05 dbmix=-nan 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 0 bmix( 1.00 , 0.85 ) nstep:   5 Estart:   5.06e+11 Eend:   8.18e+10 Eend/Estart: 0.161792 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 2 bmix( 1.00 , 0.58 ) nstep:   5 Estart:   5.06e+11 Eend:   6.70e+10 Eend/Estart: 0.132482 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.50 ) nstep:   5 Estart:   5.06e+11 Eend:   1.03e+11 Eend/Estart: 0.203022 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.55 ) nstep:   5 Estart:   5.06e+11 Eend:   1.37e+11 Eend/Estart: 0.270838 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.60 ) nstep:   5 Estart:   5.06e+11 Eend:   1.87e+11 Eend/Estart: 0.369071 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.65 ) nstep:   5 Estart:   5.06e+11 Eend:   2.56e+11 Eend/Estart: 0.507217 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.70 ) nstep:   5 Estart:   5.06e+11 Eend:   3.55e+11 Eend/Estart: 0.70168 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.75 ) nstep:   5 Estart:   5.06e+11 Eend:   4.82e+11 Eend/Estart: 0.953101 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.80 ) nstep:   5 Estart:   5.06e+11 Eend:   6.45e+11 Eend/Estart: 1.2748 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.85 ) nstep:   5 Estart:   5.06e+11 Eend:   8.44e+11 Eend/Estart: 1.66974 
+test_SolverConvergence() nPoint=480 nSolverIters=0.5 nbmix=10 bmix0=0.05 dbmix=-nan 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 0 bmix( 1.00 , 0.85 ) nstep:  10 Estart:   5.06e+11 Eend:   3.43e+10 Eend/Estart: 0.0678901 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 2 bmix( 1.00 , 0.72 ) nstep:  10 Estart:   5.06e+11 Eend:   1.95e+10 Eend/Estart: 0.0385441 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.50 ) nstep:  10 Estart:   5.06e+11 Eend:   1.74e+10 Eend/Estart: 0.0344843 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.55 ) nstep:  10 Estart:   5.06e+11 Eend:   1.95e+10 Eend/Estart: 0.0386042 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.60 ) nstep:  10 Estart:   5.06e+11 Eend:   2.57e+10 Eend/Estart: 0.0509091 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.65 ) nstep:  10 Estart:   5.06e+11 Eend:   4.01e+10 Eend/Estart: 0.0793159 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.70 ) nstep:  10 Estart:   5.06e+11 Eend:   7.24e+10 Eend/Estart: 0.143109 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.75 ) nstep:  10 Estart:   5.06e+11 Eend:   1.41e+11 Eend/Estart: 0.27969 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.80 ) nstep:  10 Estart:   5.06e+11 Eend:   2.75e+11 Eend/Estart: 0.544157 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.85 ) nstep:  10 Estart:   5.06e+11 Eend:   5.43e+11 Eend/Estart: 1.07418 
+test_SolverConvergence() nPoint=480 nSolverIters=0.5 nbmix=20 bmix0=0.05 dbmix=-nan 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 0 bmix( 1.00 , 0.85 ) nstep:  20 Estart:   5.06e+11 Eend:   1.63e+10 Eend/Estart: 0.0321712 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 2 bmix( 1.00 , 0.75 ) nstep:  20 Estart:   5.06e+11 Eend:   4.20e+09 Eend/Estart: 0.00829727 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.50 ) nstep:  20 Estart:   5.06e+11 Eend:   5.44e+09 Eend/Estart: 0.0107492 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.55 ) nstep:  20 Estart:   5.06e+11 Eend:   4.25e+09 Eend/Estart: 0.00840335 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.60 ) nstep:  20 Estart:   5.06e+11 Eend:   4.15e+09 Eend/Estart: 0.00820951 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.65 ) nstep:  20 Estart:   5.06e+11 Eend:   4.06e+09 Eend/Estart: 0.00802099 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.70 ) nstep:  20 Estart:   5.06e+11 Eend:   5.70e+09 Eend/Estart: 0.0112694 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.75 ) nstep:  20 Estart:   5.06e+11 Eend:   1.37e+10 Eend/Estart: 0.0270871 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.80 ) nstep:  20 Estart:   5.06e+11 Eend:   3.62e+10 Eend/Estart: 0.0715207 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.85 ) nstep:  20 Estart:   5.06e+11 Eend:   1.08e+11 Eend/Estart: 0.213934 
+test_SolverConvergence() nPoint=480 nSolverIters=0.5 nbmix=50 bmix0=0.05 dbmix=-nan 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 0 bmix( 1.00 , 0.85 ) nstep:  50 Estart:   5.06e+11 Eend:   5.00e+09 Eend/Estart: 0.00987945 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 2 bmix( 1.00 , 0.75 ) nstep:  50 Estart:   5.06e+11 Eend:   4.63e+08 Eend/Estart: 0.000916103 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.50 ) nstep:  50 Estart:   5.06e+11 Eend:   1.16e+09 Eend/Estart: 0.00228659 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.55 ) nstep:  50 Estart:   5.06e+11 Eend:   9.48e+08 Eend/Estart: 0.00187407 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.60 ) nstep:  50 Estart:   5.06e+11 Eend:   7.85e+08 Eend/Estart: 0.00155174 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.65 ) nstep:  50 Estart:   5.06e+11 Eend:   6.92e+08 Eend/Estart: 0.00136923 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.70 ) nstep:  50 Estart:   5.06e+11 Eend:   6.00e+08 Eend/Estart: 0.00118701 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.75 ) nstep:  50 Estart:   5.06e+11 Eend:   1.11e+09 Eend/Estart: 0.00218866 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.80 ) nstep:  50 Estart:   5.06e+11 Eend:   1.52e+09 Eend/Estart: 0.00300807 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.85 ) nstep:  50 Estart:   5.06e+11 Eend:   2.77e+09 Eend/Estart: 0.00546931 
+test_SolverConvergence() nPoint=480 nSolverIters=0.5 nbmix=100 bmix0=0.05 dbmix=-nan 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 0 bmix( 1.00 , 0.85 ) nstep: 100 Estart:   5.06e+11 Eend:   1.51e+09 Eend/Estart: 0.00297995 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 2 bmix( 1.00 , 0.75 ) nstep: 100 Estart:   5.06e+11 Eend:   1.40e+08 Eend/Estart: 0.000277272 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.50 ) nstep: 100 Estart:   5.06e+11 Eend:   3.69e+08 Eend/Estart: 0.000728771 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.55 ) nstep: 100 Estart:   5.06e+11 Eend:   3.05e+08 Eend/Estart: 0.000602467 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.60 ) nstep: 100 Estart:   5.06e+11 Eend:   2.57e+08 Eend/Estart: 0.000508905 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.65 ) nstep: 100 Estart:   5.06e+11 Eend:   2.25e+08 Eend/Estart: 0.000444536 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.70 ) nstep: 100 Estart:   5.06e+11 Eend:   2.07e+08 Eend/Estart: 0.000408621 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.75 ) nstep: 100 Estart:   5.06e+11 Eend:   2.61e+08 Eend/Estart: 0.000516903 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.80 ) nstep: 100 Estart:   5.06e+11 Eend:   8.82e+08 Eend/Estart: 0.0017432 
+RESULT OCL_Orb::run_SolverConvergence()  ialg: 1 bmix( 1.00 , 0.85 ) nstep: 100 Estart:   5.06e+11 Eend:   9.92e+08 Eend/Estart: 0.00196231 

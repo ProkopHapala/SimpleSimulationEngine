@@ -260,10 +260,16 @@ int makePointCunks( Buckets& ebuck, int2* edges, Buckets& pbuck ){
  * @param width The width of the girder.
  * @return The index of the created block containing the starting indexes of the points and edges
  */
-int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes ){
+int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes, bool bCaps=false ){
     // ToDo: ad p0,p1 etc. - maybe we should rather specify indexes of existing verts rather than positions of new verts ?
     //                       No. this is done in girder1_caps
     //printf( "Mesh::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) stickTypes(%i,%i,%i,%i)\n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
+    
+    if( bCaps ){
+        mesh.vert( p0 ); 
+        mesh.vert( p1 );
+    }
+    
     Vec3d dir = p1-p0;
     double length = dir.normalize();
     up.makeOrthoU(dir);

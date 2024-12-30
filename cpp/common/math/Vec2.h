@@ -177,11 +177,13 @@ static constexpr Vec2d Vec2dZero = (Vec2d){0.0,0.0};
 static constexpr Vec2d Vec2dOnes = (Vec2d){1.0,1.0};
 static constexpr Vec2d Vec2dX    = (Vec2d){1.0,0.0};
 static constexpr Vec2d Vec2dY    = (Vec2d){0.0,1.0};
+static constexpr Vec2d Vec2dNAN  = (Vec2d){NAN,NAN};
 
 static constexpr Vec2f Vec2fZero = (Vec2f){0.0f,0.0f};
 static constexpr Vec2f Vec2fOnes = (Vec2f){1.0f,1.0f};
 static constexpr Vec2f Vec2fX    = (Vec2f){1.0f,0.0f};
 static constexpr Vec2f Vec2fY    = (Vec2f){0.0f,1.0f};
+static constexpr Vec2f Vec2fNAN  = (Vec2f){NAN,NAN};
 
 static constexpr Vec2i Vec2iZero = (Vec2i){0,0};
 static constexpr Vec2i Vec2iOnes = (Vec2i){1,1};

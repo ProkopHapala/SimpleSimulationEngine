@@ -59,6 +59,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     int iker_dot_mat_vec_sparse = -1; //newKernel( "dot_mat_vec_sparse", program1 );
 
 
+    int iker_getTrussForces      = -1;
     int iker_updateJacobi_neighs = -1;
     int iker_updateJacobi_mix    = -1;
     int iker_PD_perdictor        = -1;
@@ -86,6 +87,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         iker_dot_mat_vec_loc    = newKernel( "dot_mat_vec_loc",    program1 );
         iker_dot_mat_vec_sparse = newKernel( "dot_mat_vec_sparse", program1 );
 
+        iker_getTrussForces      = newKernel( "getTrussForces",      program1 );
         iker_updateJacobi_neighs = newKernel( "updateJacobi_neighs", program1 );
         iker_updateJacobi_mix    = newKernel( "updateJacobi_mix",    program1 );
         iker_PD_perdictor        = newKernel( "PD_perdictor",        program1 );
@@ -118,7 +120,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     int initCLBuffs_CG(){
         //int err=0;
         printf( "initCLBuffs_CG() nPoint %i nNeighMax %i \n", nPoint, nNeighMax );
-        ibuff_Amat  = newBuffer( "Amat",  nPoint*nPoint   , sizeof(float), 0, CL_MEM_READ_WRITE );  
+        ibuff_Amat = newBuffer( "Amat",  nPoint*nPoint   , sizeof(float), 0, CL_MEM_READ_WRITE );  
         ibuff_xvec = newBuffer( "xvec",   nPoint, sizeof(Quat4f) , 0, CL_MEM_READ_WRITE );      // actually xvec=points 
         ibuff_yvec = newBuffer( "yvec",   nPoint, sizeof(Quat4f) , 0, CL_MEM_READ_WRITE );
         //ibuff_neighs  = newBuffer( "neighs",   nNeighTot, sizeof(int)   , 0, CL_MEM_READ_ONLY  );  // already allocated 
@@ -148,6 +150,33 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         //exit(0);
     }
 
+
+    // __kernel void getTrussForces( 
+    //     int npoint,                     // 1 number of points
+    //     int nmax_neigh,                 // 2 max number of neighbors
+    //     __global const float4*  ps,     // 3 [npoint] x,y,z,mass
+    //     __global       float4*  forces, // 3 [npoint] x,y,z,mass
+    //     __global const int*     neighs, // 5 [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
+    //     __global const float4*  params, // 6 [npoint,nmax_neigh] {l0, kPress, kPull, damping} 
+    //     float inv_dt2                   // 7 1/dt^2, controls scale of inertial term
+    // ){
+    void run_getTrussForces( int ibuff_ps, int ibuff_fs ){
+        //printf( "run_getTrussForces() nPoint %i \n", nPoint );
+        int err = 0;
+        cl_kernel ker = kernels[iker_getTrussForces];
+        err |= clSetKernelArg(ker, 0, sizeof(int),    &nPoint);                               OCL_checkError(err, "run_getTrussForces.1");
+        err |= clSetKernelArg(ker, 1, sizeof(int),    &nNeighMax);                            OCL_checkError(err, "run_getTrussForces.2");
+        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[ibuff_ps    ].p_gpu));        OCL_checkError(err, "run_getTrussForces.3");
+        err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_fs    ].p_gpu));        OCL_checkError(err, "run_getTrussForces.4");
+        err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_getTrussForces.5");
+        err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_getTrussForces.6");
+        float inv_dt2 = 1.0f / (dt * dt);
+        err |= clSetKernelArg(ker, 6, sizeof(float), &inv_dt2);                               OCL_checkError(err, "run_getTrussForces.7");
+        size_t local_work_size  = 32;
+        size_t global_work_size = roundUp(nPoint, local_work_size);
+        err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);  OCL_checkError(err, "run_getTrussForces.8");
+        OCL_checkError(err, "run_getTrussForces");
+    }
 
     // __kernel void updateJacobi_neighs( 
     //     int npoint,                     // 1 number of points
@@ -187,25 +216,47 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     //     float inv_dt2,                  // 7 1/dt^2, controls scale of inertial term
     //     float2 bmix                     // 8 mixing parameter for momentum
     // ){
-void run_updateJacobi_mix(int ibuff_ps_in, int ibuff_ps_out ) {
-    int err = 0;
-    cl_kernel ker = kernels[iker_updateJacobi_mix];
-    err |= clSetKernelArg(ker, 0, sizeof(int),    &nPoint);                               OCL_checkError(err, "run_updateJacobi_mix.1");
-    err |= clSetKernelArg(ker, 1, sizeof(int),    &nNeighMax);                            OCL_checkError(err, "run_updateJacobi_mix.2");
-    err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[ibuff_ps_in ].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.3");
-    err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_ps_out].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.4");
-    err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_dps   ].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.5");
-    err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.6");
-    err |= clSetKernelArg(ker, 6, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.7");
-    float inv_dt2 = 1.0f / (dt * dt);
-    err |= clSetKernelArg(ker, 7, sizeof(float), &inv_dt2);                               OCL_checkError(err, "run_updateJacobi_mix.8");
-    err |= clSetKernelArg(ker, 8, sizeof(float2), &bmix);                                 OCL_checkError(err, "run_updateJacobi_mix.9");
-    size_t local_work_size  = 32;
-    size_t global_work_size = roundUp(nPoint, local_work_size);
-    err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);  OCL_checkError(err, "run_updateJacobi_mix.10");
-    OCL_checkError(err, "run_updateJacobi_mix");
-}
-    
+    void run_updateJacobi_mix(int ibuff_ps_in, int ibuff_ps_out ) {
+        int err = 0;
+        cl_kernel ker = kernels[iker_updateJacobi_mix];
+        err |= clSetKernelArg(ker, 0, sizeof(int),    &nPoint);                               OCL_checkError(err, "run_updateJacobi_mix.1");
+        err |= clSetKernelArg(ker, 1, sizeof(int),    &nNeighMax);                            OCL_checkError(err, "run_updateJacobi_mix.2");
+        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[ibuff_ps_in ].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.3");
+        err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_ps_out].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.4");
+        err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_dps   ].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.5");
+        err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.6");
+        err |= clSetKernelArg(ker, 6, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.7");
+        float inv_dt2 = 1.0f / (dt * dt);
+        err |= clSetKernelArg(ker, 7, sizeof(float), &inv_dt2);                               OCL_checkError(err, "run_updateJacobi_mix.8");
+        err |= clSetKernelArg(ker, 8, sizeof(float2), &bmix);                                 OCL_checkError(err, "run_updateJacobi_mix.9");
+        size_t local_work_size  = 32;
+        size_t global_work_size = roundUp(nPoint, local_work_size);
+        err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);  OCL_checkError(err, "run_updateJacobi_mix.10");
+        OCL_checkError(err, "run_updateJacobi_mix");
+    }
+
+
+    double run_updateJacobi_smart( int psa, int psb, int itr ) {
+        //run_updateJacobi_neighs(psa, psb);
+        // I want some function of form     A/( B + itr ) which interpolates between  bmix_end and bmix_start when itr transitions from nitr_end to nitr_start
+        const float bmix_end   = 0.75f;
+        const float bmix_start = 0.55f;
+        const int   nitr_start = 3;
+        const int   nitr_end   = 10; 
+        // float A = (bmix_end * nitr_end - bmix_start * nitr_start) / (bmix_end - bmix_start);
+        // float B = (nitr_end - nitr_start) / (bmix_end - bmix_start) - nitr_start;
+        // bmix.y = A / (B + itr);
+        // bmix.y = std::max(bmix_end, std::min(bmix_start, bmix.y));
+        //printf( "run_updateJacobi_smart() itr: %i bmix: %g \n", itr, bmix.y );
+        if(itr<nitr_start){ run_updateJacobi_neighs(psa, psb);  }
+        else              { 
+            if ( itr > nitr_end ) { bmix.y = bmix_end; }
+            else                  { bmix.y = bmix_start + (bmix_end - bmix_start ) * (itr - nitr_start) / (nitr_end - nitr_start); }
+            run_updateJacobi_mix(psa, psb); 
+        }
+        
+       return bmix.y;
+    }
 
 
     // __kernel void PD_perdictor( 
@@ -255,7 +306,7 @@ void run_updateJacobi_mix(int ibuff_ps_in, int ibuff_ps_out ) {
         OCL_checkError(err, "run_PD_corrector");
     }   
 
-    void run_projective_dynamics( int nSolverIters, bool bMix ) {
+    void run_projective_dynamics( int nSolverIters, int  ialg ) {
         // 1) predict positions 
         //    - evaluate external forces ( without truss contrains, like gravity, centrifugal forces etc. )
         //    - update velocities v += f/m * dt
@@ -269,19 +320,59 @@ void run_updateJacobi_mix(int ibuff_ps_in, int ibuff_ps_out ) {
         //printf( "OCL_Orb::run_projective_dynamics() \n" );
         int psa = ibuff_ps1, psb = ibuff_ps2;
         run_PD_perdictor(psa);
-        if(bMix){ for (int i = 0; i < nSolverIters; i++) { run_updateJacobi_mix   (psa, psb);  _swap(psa, psb);  } }
-        else    { for (int i = 0; i < nSolverIters; i++) { run_updateJacobi_neighs(psa, psb);  _swap(psa, psb);  } }
+        switch(ialg){
+            case 0: for (int i = 0; i < nSolverIters; i++) {  run_updateJacobi_neighs( psa, psb    ); _swap(psa, psb);  } break;
+            case 1: for (int i = 0; i < nSolverIters; i++) {  run_updateJacobi_mix   ( psa, psb    ); _swap(psa, psb);  } break;
+            case 2: for (int i = 0; i < nSolverIters; i++) {  run_updateJacobi_smart ( psa, psb, i ); _swap(psa, psb);  } break;
+        }
         run_PD_corrector(psa);
     }
 
-    void run_PDcl( int niter, int nSolverIters, int upload_mask=0b001, int download_mask=0b001, bool bMix=true ){
+    /// this function is used for debugging and performance benchmarks, it runs iterative solver of linear system, and downloads solution and resudual forces at every step
+    Vec2f run_SolverConvergence( int nSolverIters, int ialg, bool bPrint=false ) {
+        //printf( "OCL_Orb::run_SolverConvergence() ialg: %i bmix( %g, %g ) \n", ialg, bmix.x, bmix.y );
+        int err = 0;
+        int psa = ibuff_ps1; 
+        int psb = ibuff_ps2;
+        for(int i=0; i<nPoint; i++){ forces[i] = Quat4fZero; }
+        err |= upload( psa, points       );                OCL_checkError(err, "run_SolverConvergence.1"); 
+        err |= upload( ibuff_dps, forces );                OCL_checkError(err, "run_SolverConvergence.2");
+        Vec2f fe =Vec2fNAN; 
+        Vec2f fe1=Vec2fNAN; 
+        int i=0;
+        for (i=0; i<nSolverIters; i++) { 
+            switch(ialg){
+                case 0: run_updateJacobi_neighs( psa, psb );    break;
+                case 1: run_updateJacobi_mix   ( psa, psb );    break;
+                case 2: run_updateJacobi_smart ( psa, psb, i ); break;
+                //case 2: run_updateJacobi_neighs ( psa, psb ); break;
+            }
+            run_getTrussForces( psb, ibuff_forces );  
+            err |= download( psb, points          ); OCL_checkError(err, "run_SolverConvergence.5");
+            err |= download( ibuff_forces, forces ); OCL_checkError(err, "run_SolverConvergence.6");
+            err |= finishRaw();                      OCL_checkError(err, "run_SolverConvergence.7");
+            Vec2f fe_=Vec2fZero;
+            for(int ia=0; ia<nPoint; ia++){ fe_.x += forces[ia].f.norm2(); fe_.y += forces[ia].e; }
+            _swap(psa, psb);
+            if(i==0){ fe1=fe_; }
+            //if(bPrint){ printf( "step %3i E: %10.2e Enew/Eold: %g \n", i, fe.y, fe_.y/fe.y ); }
+            fe=fe_;
+        }
+        if(bPrint){ printf( "RESULT OCL_Orb::run_SolverConvergence()  ialg: %i bmix( %3.2f , %3.2f ) nstep: %3i Estart: %10.2e Eend: %10.2e Eend/Estart: %g \n", ialg, bmix.x, bmix.y, nSolverIters, fe1.y, fe.y, fe.y/fe1.y ); }
+        return (Vec2f)fe;
+    }
+
+
+
+
+    void run_PDcl( int niter, int nSolverIters, int upload_mask=0b001, int download_mask=0b001, int ialg=2 ){
         //printf( "OCL_Orb::run_PDcl() \n" );
         int err=0;
         MDpars = Quat4f{ dt, 1-damping, cv, cf };
         if(upload_mask&0b001){ err=upload( ibuff_points, points ); OCL_checkError(err, "run_ocl.1"); }
         if(upload_mask&0b010){ err=upload( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.2"); }
         if(upload_mask&0b100){ err=upload( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.3"); }
-        for(int itr=0; itr<niter; itr++){ run_projective_dynamics( nSolverIters, bMix ); }
+        for(int itr=0; itr<niter; itr++){ run_projective_dynamics( nSolverIters, ialg ); }
         if(download_mask&0b001){err=download( ibuff_points, points ); OCL_checkError(err, "run_ocl.5"); }
         if(download_mask&0b010){err=download( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.6"); }
         if(download_mask&0b100){err=download( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.7"); }

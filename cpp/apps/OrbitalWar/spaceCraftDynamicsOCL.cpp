@@ -183,10 +183,28 @@ void reloadShip( const char* fname  ){
     printf("#### END reloadShip('%s')\n", fname );
 };
 
+void distort_points( int n, Quat4f* ps, Quat4f* ps_out, float rnd=0.1, Vec3f sc=Vec3fOne, int seed=15454 ){
+    srand(seed);
+    for(int i=0; i<n; i++){
+        Vec3f r; r.fromRandomCube(rnd);
+        ps_out[i].f = ps[i].f*sc + r;
+    }
+}
 
+void test_SolverConvergence( Mesh::Builder2& mesh2, Quat4f* ps_bak , int nSolverIters=10, int nbmix=3, float bmix0=0.5, float dbmix=0.1 ){
+    printf( "test_SolverConvergence() nPoint=%i nSolverIters=%g nbmix=%i bmix0=%g dbmix=%g \n", sim_cl.nPoint, nSolverIters, nbmix, bmix0, dbmix );
+    if( ps_bak){ for(int i=0; i<sim_cl.nPoint; i++){ sim_cl.points[i]=ps_bak[i]; } }
+    sim_cl.run_SolverConvergence( nSolverIters, 0, true );
+    if( ps_bak){ for(int i=0; i<sim_cl.nPoint; i++){ sim_cl.points[i]=ps_bak[i]; } }
+    sim_cl.run_SolverConvergence( nSolverIters, 2, true );
+    for(int i=0; i<nbmix; i++){
+        sim_cl.bmix.y = bmix0 + i*dbmix; 
+        if( ps_bak){ for(int i=0; i<sim_cl.nPoint; i++){ sim_cl.points[i]=ps_bak[i]; } }
+        sim_cl.run_SolverConvergence( nSolverIters, 1, true );
+    }
+}
 
-
-void makeShip_Wheel( int nseg, double R, double r, bool bFlat=false, bool bCPU=false, bool bGPU=true ){
+void makeTrussShape( int ishape, int nseg, double R, double r, bool bCPU=false, bool bGPU=true ){
 
     StickMaterial *o = new StickMaterial();
     //Material{ name="Kevlar", density=1.44e+3, Spull=3.6e+9, Spush=0.0,    Kpull=154.0e+9, Kpush=0.0,      reflectivity=0.6,  Tmelt=350 }
@@ -208,10 +226,11 @@ void makeShip_Wheel( int nseg, double R, double r, bool bFlat=false, bool bCPU=f
     //mesh.block();
     //mesh2.wheel( p0, p1, ax, nseg, 0.2 );
     //wheel( mesh2, p0, p1, ax, nseg, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
-    if(bFlat){
-        ngon(  mesh2, p0, p1, ax, nseg, 0 );
-    }else{
-        wheel( mesh2, p0, p1, ax, nseg, Vec2d{r,r}, Quat4i{0,0,0,0} );
+    switch(ishape){
+        case 0: ngon   ( mesh2, p0, p1, ax, nseg, 0 ); break;
+        case 1: wheel  ( mesh2, p0, p1, ax, nseg, Vec2d{r,r}, Quat4i{0,0,0,0}       ); break;
+        case 2: girder1( mesh2, p0, (p1-p0).normalized()*r*nseg, ax, nseg, r,          Quat4i{0,0,0,0}, true ); break;
+        //int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes ){
     }
     //wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );
     //Quat4i& b = mesh.blocks.back();
@@ -221,6 +240,20 @@ void makeShip_Wheel( int nseg, double R, double r, bool bFlat=false, bool bCPU=f
 
     if(bCPU){ to_sim2  ( mesh2,        p0,         ax      ); }
     if(bGPU){ to_sim_cl( mesh2, (Vec3f)p0, (Vec3f)(ax*5.0) ); }
+
+    distort_points( sim_cl.nPoint, sim_cl.points, sim_cl.points, 1.0, Vec3fOne, 15454 ); 
+
+    // std::vector<Quat4f> ps_bak(sim_cl.nPoint); 
+    // distort_points( sim_cl.nPoint, sim_cl.points, ps_bak.data(), 1.0, Vec3fOne, 15454 ); 
+
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 3,   8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 5,   8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 10,  8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 20,  8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 50,  8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 100, 8, 0.5, 0.05 );
+
+    
 
     printf("#### END makeShip_Whee()\n" );
     //exit(0);
@@ -258,7 +291,7 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     initSpaceCraftingLua();
     if(argc<=1){
         //reloadShip( "data/ship_ICF_interceptor_1.lua" );
-        makeShip_Wheel( 120, 100.0, 10.0,  false, false, true );
+        makeTrussShape( 2, 3000, 100.0, 10.0,  false, true );
     }
 
     picker.picker = &sim_cl;   picker.Rmax=10.0;

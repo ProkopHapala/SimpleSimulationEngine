@@ -156,6 +156,37 @@ __kernel void  evalTrussForce1(
 }
 
 
+
+__kernel void getTrussForces( 
+    int npoint,                     // 1 number of points
+    int nmax_neigh,                 // 2 max number of neighbors
+    __global const float4*  ps,     // 3 [npoint] x,y,z,mass
+    __global       float4*  forces, // 3 [npoint] x,y,z,mass
+    __global const int*     neighs, // 5 [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
+    __global const float4*  params, // 6 [npoint,nmax_neigh] {l0, kPress, kPull, damping} 
+    float inv_dt2                   // 7 1/dt^2, controls scale of inertial term
+){
+    const int iG     =  get_global_id(0);
+    if(iG>=npoint) return;
+    const int j0     = iG * nmax_neigh;
+    const float4 pi  = ps[iG];                       
+    float4       fi  = (float4){0.0f,0.0f,0.0f,0.0f}; 
+    for( int j = 0; j < nmax_neigh; j++ ){
+        int jG = neighs[j0+j];
+        if( jG == -1 ) break;
+        const float4 par = params[j0+j];
+        const float3 pj  = ps[jG].xyz;
+        const float3 dij = pi.xyz - pj;
+        const float  l   = length(dij);
+        const float  dl  = l - par.x; 
+        const float  k   = (dl>0.f)?par.y:par.z;
+        const float  fr  = dl*k;
+        fi.xyz          += dij  * fr/l  ;
+        fi.w            += 0.5f * fr*dl ;
+    }
+    forces[iG] = fi;
+}
+
 __kernel void updateJacobi_mix( 
     int npoint,                     // 1 number of points
     int nmax_neigh,                 // 2 max number of neighbors
