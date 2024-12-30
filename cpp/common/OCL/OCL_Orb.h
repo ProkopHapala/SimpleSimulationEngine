@@ -235,7 +235,6 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         OCL_checkError(err, "run_updateJacobi_mix");
     }
 
-
     double run_updateJacobi_smart( int psa, int psb, int itr ) {
         //run_updateJacobi_neighs(psa, psb);
         // I want some function of form     A/( B + itr ) which interpolates between  bmix_end and bmix_start when itr transitions from nitr_end to nitr_start
