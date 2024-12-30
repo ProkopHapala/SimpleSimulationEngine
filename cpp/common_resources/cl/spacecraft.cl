@@ -156,6 +156,52 @@ __kernel void  evalTrussForce1(
 }
 
 
+__kernel void updateJacobi_mix( 
+    int npoint,                     // 1 number of points
+    int nmax_neigh,                 // 2 max number of neighbors
+    __global const float4*  ps,     // 3 [npoint] x,y,z,mass
+    __global       float4*  ps_out, // 4 [npoint] x,y,z,mass
+    __global       float4*  dps,    // 4 [npoint] x,y,z,mass momentum
+    __global const int*     neighs, // 5 [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
+    __global const float4*  params, // 6 [npoint,nmax_neigh] {l0, kPress, kPull, damping} 
+    float inv_dt2,                  // 7 1/dt^2, controls scale of inertial term
+    float2 bmix                     // 8 mixing parameter for momentum
+){
+
+    //printf( "GPU::updateJacobi_mix() \n" );
+    const int iG     =  get_global_id(0);
+    if(iG>=npoint) return;
+
+    const int j0     = iG * nmax_neigh;
+    const float4 pi  = ps[iG];                       
+     
+    // inertial term
+    const float mi = pi.w*inv_dt2;
+    float3 pi_new  = pi.xyz * mi; // p_i    = \sum_j (K_{ij} p_j + d_{ij} )  + M_i/dt^2 p'_i
+    float  Aii     =          mi; // A_{ii} = \sum_j  K_{ij}                 + M_i/dt^2
+
+    for( int j = 0; j < nmax_neigh; j++ ){
+        int jG = neighs[j0+j];
+        if( jG == -1 ) break;
+        const float4 par = params[j0+j];
+        const float3 pj  = ps[jG].xyz;
+        const float3 dij = pi.xyz - pj;
+        const float  l   = length(dij);
+        const float3 pij = pj + dij * (par.x/l);  // p'_{ij} is ideal position of particle i which satisfy the constraint between i and j
+        const float k = (l<par.x)?par.y:par.z;
+        pi_new += pij * k;   // 
+        Aii    +=       k;   // diagonal of the Projective-Dynamics matrix, \sum_j k_{ij}       (+ inertial term M_i/dt^2)
+    }
+
+    pi_new /= Aii;
+
+    // momentum mixing
+    pi_new      = pi_new * bmix.x   +   dps[iG].xyz * bmix.y;
+    dps[iG].xyz = pi_new - pi.xyz;
+
+    ps_out[iG] = (float4)(pi_new, pi.w);
+
+}
 
 __kernel void updateJacobi_neighs( 
     int npoint,                     // 1 number of points
