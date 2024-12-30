@@ -158,18 +158,32 @@ __kernel void  evalTrussForce1(
 
 
 __kernel void updateJacobi_neighs( 
-    int npoint,                     // number of points
-    int nmax_neigh,                 // max number of neighbors
-    __global const float4*  ps,     // [npoint] x,y,z,mass
-    __global       float4*  ps_out, // [npoint] x,y,z,mass
-    __global const int*     neighs, // [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
-    __global const float*   kngs,   // [npoint,nmax_neigh] stiffnesses for bonds to neighbors
-    __global const float*   l0s,    // [npoint,nmax_neigh] rest lengths for bonds to neighbors
-    float inv_dt2,                  // 1/dt^2, controls scale of inertial term
-    const float Rd                  // reduced collision radius, we detect only hard collision if r<(r-Rd) (i.e. if we are deep in penetration) to prevent instability, soft collison should be solved by non-covalent force-field
+    int npoint,                     // 1 number of points
+    int nmax_neigh,                 // 2 max number of neighbors
+    __global const float4*  ps,     // 3 [npoint] x,y,z,mass
+    __global       float4*  ps_out, // 4 [npoint] x,y,z,mass
+    __global const int*     neighs, // 5 [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
+    __global const float4*  params, // 6 [npoint,nmax_neigh] {l0, kPress, kPull, damping} 
+    float inv_dt2                   // 7 1/dt^2, controls scale of inertial term
 ){
 
     const int iG     =  get_global_id(0);
+    if(iG>=npoint) return;
+
+    // if(iG==0){
+    //     printf( "updateJacobi_neighs() npoint(%i) nmax_neigh(%i) inv_dt2(%g) \n",  npoint, nmax_neigh, inv_dt2 );
+    //     for(int i=0; i<npoint; i++){
+    //         printf("GPU::updateJacobi_neighs(%3i) ps(%10.3e,%10.3e,%10.3e,%10.3e) " , i, ps[i].x,ps[i].y,ps[i].z,ps[i].w );
+    //         for(int j=0; j<nmax_neigh; j++){
+    //             int jG = neighs[i*nmax_neigh+j];
+    //             float4 par = params[i*nmax_neigh+j];
+    //             if( jG == -1 ) break;
+    //             printf(" ngs[%i](%3i,%10.3f,%10.3f)" ,  j, jG, par.x, par.y );
+    //         }
+    //         printf("\n");
+    //     }
+    // }
+
     const int j0     = iG * nmax_neigh;
     const float4 pi  = ps[iG];                       
      
@@ -179,22 +193,17 @@ __kernel void updateJacobi_neighs(
     float  Aii     =          mi; // A_{ii} = \sum_j  K_{ij}                 + M_i/dt^2
 
     for( int j = 0; j < nmax_neigh; j++ ){
-        int jG = neighs[j];
+        int jG = neighs[j0+j];
         if( jG == -1 ) break;
-        const int jng = j0 + j;
-        const float  k   = kngs[jng];
-        float        l0  = l0s [jng];
+        const float4 par = params[j0+j];
         const float3 pj  = ps[jG].xyz;
         const float3 dij = pi.xyz - pj;
-        const float  l2  = dot(dij,dij);
+        const float  l   = length(dij);
+        const float3 pij = pj + dij * (par.x/l);  // p'_{ij} is ideal position of particle i which satisfy the constraint between i and j
+        const float k = (l<par.x)?par.y:par.z;
 
-        if(l0<0){ // collision - if not in repulsion we skip this neighbor
-            const float lc = l0 - Rd;  //  we cut-off collision if we are noit deep enough in penetration 
-            if( l2<(lc*lc) ) continue;
-        }
-        const float l    = sqrt(l2);
-        const float3 pij = pj + dij * l0/l;  // p'_{ij} is ideal position of particle i which satisfy the constraint between i and j
-        // ToDo: we should make sure pij originating from collision does not reach beyond l0
+        //printf("GPU::updateJacobi_neighs(iG=%3i,j=%i) jG(%3i) l(%10.3f) l0(%10.3f) k(%10.3f) \n" , iG, j, jG, l, par.x, k );
+
         pi_new += pij * k;   // 
         Aii    +=       k;   // diagonal of the Projective-Dynamics matrix, \sum_j k_{ij}       (+ inertial term M_i/dt^2)
     }
@@ -206,15 +215,44 @@ __kernel void updateJacobi_neighs(
     // where  bi     = \sum_j K_{ij} d_{ij}    (+ inertial term M_i/dt^2 pi )
     // and    A_{ii} = \sum_j K_{ij}           (+ inertial term M_i/dt^2    )
 
+    //printf("GPU::updateJacobi_neighs(iG=%3i) Aii(%10.3f) pi_new(%10.3f,%10.3f,%10.3f) \n" , iG, Aii, pi_new.x,pi_new.y,pi_new.z );
+
     pi_new /= Aii;
 
     ps_out[iG] = (float4)(pi_new, pi.w);
 
 }
 
+__kernel void PD_perdictor( 
+    int npoint,                     // 1 number of points
+    __global const float4*  ps,     // 3 [npoint] x,y,z,mass
+    __global       float4*  ps_out, // 4 [npoint] x,y,z,mass
+    __global const float4*  fs    , // 4 [npoint] x,y,z,E      force 
+    __global const float4*  vs    , // 4 [npoint] x,y,z,?      velocity 
+    float dt                  
+){
+    const int iG     =  get_global_id(0);
+    if(iG>=npoint) return;
+    // if(iG==0){    for(int i=0; i<npoint; i++){ printf("GPU::PD_perdictor(%3i) ps(%10.3e,%10.3e,%10.3e,%10.3e) fs(%10.3e,%10.3e,%10.3e,%10.3e) vs(%10.3e,%10.3e,%10.3e,%10.3e) \n" , i, ps[i].x,ps[i].y,ps[i].z,ps[i].w, fs[i].x,fs[i].y,fs[i].z,fs[i].w, vs[i].x,vs[i].y,vs[i].z,vs[i].w );  } }
+    const float4 pi  = ps[iG];                       
+    float3 v = vs[iG].xyz + fs[iG].xyz * dt;
+    ps_out[iG] = (float4){ pi.xyz + v*dt, pi.w };
+}
 
-
-
+__kernel void PD_corrector( 
+    int npoint,                     // 1 number of points
+    __global const float4*  ps_new, // 3 [npoint] x,y,z,mass
+    __global       float4*  ps_old, // 4 [npoint] x,y,z,mass
+    __global       float4*  vs    , // 4 [npoint] x,y,z,?      velocity 
+    float dt                  
+){
+    const int iG     =  get_global_id(0);
+    if(iG>=npoint) return;
+    //if(iG==0){  for(int i=0; i<npoint; i++){ printf("GPU::PD_corrector(%3i) ps_new(%10.3e,%10.3e,%10.3e,%10.3e) ps_old(%10.3e,%10.3e,%10.3e,%10.3e) \n" , i, ps_new[i].x,ps_new[i].y,ps_new[i].z,ps_new[i].w, ps_old[i].x,ps_old[i].y,ps_old[i].z,ps_old[i].w ); }}
+    const float4 pi  = ps_new[iG];
+    vs    [iG] = (float4){ (pi.xyz - ps_old[iG].xyz)/dt, 0.0f };
+    ps_old[iG] = (float4){  pi.xyz,                      pi.w };
+}
 
 __kernel void  evalTrussForce2(
     const int4 ns, 

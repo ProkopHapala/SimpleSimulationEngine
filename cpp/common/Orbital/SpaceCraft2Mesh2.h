@@ -458,6 +458,27 @@ int wheel( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n, Vec2d wh, Quat4i
     return i000;
 }
 
+int ngon( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n,  int stickType ){
+    Vec3d dir = p1-p0;
+    double r = dir.normalize();
+    ax.makeOrthoU(dir);
+    Vec3d side; side.set_cross(dir,ax);
+    Vec2d  rot = {1.0,0.0};
+    Vec2d drot; drot.fromAngle( 2*M_PI/n );
+    int i0 = mesh.verts.size();
+    for (int i=0; i<n; i++){
+        Vec3d R = dir*rot.a + side*rot.b;
+        mesh.vert( p0 + R*r );
+        if (i > 0) {
+            mesh.edge(i0+i-1, i0+i, stickType);
+        }
+        rot.mul_cmplx(drot);
+    }
+    mesh.edge(i0+n-1, i0, stickType);  // Close the loop
+    return i0;
+}
+
+
 /**
  * Creates a panel of truss elements between four corner points. Adds the points and edges to the Truss object.
  * // TODO: make also triangular panel
