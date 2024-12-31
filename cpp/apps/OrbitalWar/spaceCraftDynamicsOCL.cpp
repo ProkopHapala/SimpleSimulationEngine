@@ -367,8 +367,8 @@ void SpaceCraftEditorApp::draw(){
     // Render simulation
     glLineWidth(0.5); 
 
-    runSim( sim_cl );
-    //runSim_cpu( sim_cl );
+    //runSim( sim_cl );
+    runSim_cpu( sim_cl );
 
     renderTruss( sim_cl.nBonds, sim_cl.bonds, sim_cl.points, sim_cl.strain, 1000.0 );
 

@@ -35,18 +35,6 @@ double checkDist(int n, const Vec3d* vec, const Vec3d* ref, int verb=1, double t
     return err;
 }
 
-
-// int sortNeighs( int n, int m, int* neighs){
-//     //int permut[m];
-//     for(int i=0; i<n;i++){
-//         int* ngi=neighs+i*m;
-//         int m_=0;
-//         for(int j=0; j<m;j++){ if(ngi[j]<0)break; m_++; };
-//         insertSort<int>( m_, ngi );
-//     }
-//     return 0;
-// }
-
 double springForce( double l, double& f, Quat4d par ){
     double dl = l - par.x;
     double k;
@@ -565,12 +553,12 @@ class OrbSim: public Picker { public:
     //     _realloc0(  linsolve_yy,nPoint, Vec3dZero);
     // }
 
-    void realloc_LinearSystem( bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32  ){
+    void realloc_LinearSystem( bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){
         printf( "OrbSim_d::realloc_LinearSystem() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT_, nNeighMax );
         nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
         int n2 = nPoint*nPoint;
         // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
-        _realloc0( PDmat,  n2,     0.0 );
+        if(bDens){ _realloc0( PDmat,  n2,     0.0 ); }
         _realloc0( ps_cor     ,nPoint, Vec3dZero );
         _realloc0( ps_pred    ,nPoint, Vec3dZero );
         _realloc0( linsolve_b ,nPoint, Vec3dZero );
@@ -585,10 +573,10 @@ class OrbSim: public Picker { public:
         }
     }
 
-    void prepare_LinearSystem( double dt, bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32 ){ 
+    void prepare_LinearSystem( double dt, bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){ 
         printf( "OrbSim_d::prepare_LinearSystem() dt=%g nNeighMaxLDLT_=%i\n", dt, nNeighMaxLDLT_ );
         //nNeighMaxLDLT=nNeighMaxLDLT_;
-        if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_ );
+        if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_, bDens );
 
         this->dt = dt;
         int n2 = nPoint*nPoint;
@@ -597,15 +585,15 @@ class OrbSim: public Picker { public:
         //t0=getCPUticks(); make_PD_Matrix(    PDmat,    dt );         printf("@time make_PD_Matrix()    t= %g [MTicks] \n", (getCPUticks()-t0)*1.0e-6 );
         //t0=getCPUticks(); make_PDmat_sparse( PDsparse, dt, true );   printf("@time make_PD_Matrix()    t= %g [MTicks] \n", (getCPUticks()-t0)*1.0e-6 );
 
-        timeit( "TIME make_PD_Matrix()    t= %g [MTicks]\n", 1e-6, [&](){ make_PD_Matrix(    PDmat,    dt );       });
-        
         timeit( "TIME make_PDmat_sparse() t= %g [MTicks]\n", 1e-6, [&](){ make_PDmat_sparse( PDsparse, dt, true ); });
-        
         mat2file<int>   ( "PDsparse_inds.log",  nPoint, nNeighMax+1, (int*)   PDsparse.inds, "%5i " );
         mat2file<double>( "PDsparse_vals.log",  nPoint, nNeighMax+1, (double*)PDsparse.vals );
 
-        if( PDsparse.checkDens( PDmat, 1e-16, true ) ){ printf("ERROR in OrbSim_d::prepare_LinearSystem() PDsparse does not match PDmat => exit \n"); exit(0); }
-        
+        if(bDens){
+            timeit( "TIME make_PD_Matrix()    t= %g [MTicks]\n", 1e-6, [&](){ make_PD_Matrix(    PDmat,    dt );       });
+            if( PDsparse.checkDens( PDmat, 1e-16, true ) ){ printf("ERROR in OrbSim_d::prepare_LinearSystem() PDsparse does not match PDmat => exit \n"); exit(0); }
+        }
+
         // { // Check M.dot(vec) sparse
         //     for(int i=0; i<nPoint; i++){ ps_pred[i] = points[i].f *1.1; }; 
         //     dotM_ax                   ( nPoint,3, PDmat, (double*)ps_pred, (double*)linsolve_b );

@@ -18,21 +18,10 @@
 #include "SparseMatrix.h"
 #include "SparseMatrix2.h"
 
-// int sortNeighs( int n, int m, int* neighs){
-//     //int permut[m];
-//     for(int i=0; i<n;i++){
-//         int* ngi=neighs+i*m;
-//         int m_=0;
-//         for(int j=0; j<m;j++){ if(ngi[j]<0)break; m_++; };
-//         insertSort<int>( m_, ngi );
-//     }
-//     return 0;
-// }
-
-double checkDist(int n, const Vec3f* vec, const Vec3f* ref, int verb=1, float tol=1e-12 ){
-    double err=0;
+float checkDist(int n, const Vec3f* vec, const Vec3f* ref, int verb=1, float tol=1e-12 ){
+    float err=0;
     for(int i=0; i<n; i++){ 
-        double ei = (vec[i]-ref[i]).norm();
+        float ei = (vec[i]-ref[i]).norm();
         err = fmax( err, ei );
         if(verb>1){
            if(ei>tol) printf( "[%i] vec(%20.10f,%20.10f,%20.10f) ref(%20.10f,%20.10f,%20.10f)\n", i, vec[i].x,vec[i].y,vec[i].z,  ref[i].x,ref[i].y,ref[i].z ); 
@@ -173,6 +162,10 @@ class OrbSim_f : public Picker { public:
     SparseMatrix2<float>  LsparseT; 
     SparseMatrix<float> PDsparse;
     //CGsolver cgSolver;
+    double time_LinSolver     = 0;
+
+    int linSolveMethod = 0;
+    enum class LinSolveMethod{ CG,CGsparse,Cholesky,CholeskySparse };
 
     Vec3f*  ps_cor      =0; // new Vec3d[nPoint];
     Vec3f*  ps_pred     =0; // new Vec3d[nPoint];
@@ -407,6 +400,37 @@ class OrbSim_f : public Picker { public:
         }
     }
 
+    __attribute__((hot)) 
+    Vec3f rhs_ProjectiveDynamics_i(int i, const Vec3f* pnew) {
+        float idt2 = 1.0 / (dt * dt);
+        Vec3f bi; bi.set_mul(pnew[i], points[i].w*idt2);  // points[i].w is the mass
+        int2* ngi = neighBs + (i*nNeighMax);
+        int ni = 0;
+        for( int ing=0; ing<nNeighMax; ing++ ){
+            int2  ng = ngi[ing];
+            int   ib = ng.y;
+            if(ib<0) break;
+            float k  = bparams[ib].y;  // assuming params.y is the spring constant
+            float l0 = bparams[ib].x;
+            int2   b  = bonds[ib];
+            int j     = (b.x == i) ? b.y : b.x;
+            //printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
+            Vec3f d = pnew[i] -  pnew[j];
+            bi.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
+            ni++;
+        }
+        //printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
+        return bi;
+    }
+
+    __attribute__((hot)) 
+    void rhs_ProjectiveDynamics_(const Vec3f* pnew, Vec3f* b) {
+        float idt2 = 1.0 / (dt * dt);
+        for (int i=0; i<nPoint; i++) {
+            b[i] = rhs_ProjectiveDynamics_i(i,pnew);
+        }
+    }
+
     void run_Cholesky(int niter) {
         Vec3f*  ps_cor  = new Vec3f[nPoint];
         Vec3f*  ps_pred = new Vec3f[nPoint];
@@ -458,12 +482,12 @@ class OrbSim_f : public Picker { public:
     }
 
 
-    void realloc_LinearSystem( bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32  ){
+    void realloc_LinearSystem( bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){
         printf( "OrbSim_f::realloc_LinearSystem() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT_, nNeighMax );
         nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
         int n2 = nPoint*nPoint;
         // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
-        _realloc0( PDmat      ,n2    , 0.0f      );
+        if(bDens){ _realloc0( PDmat      ,n2    , 0.0f      ); }
         _realloc0( ps_cor     ,nPoint, Vec3fZero );
         _realloc0( ps_pred    ,nPoint, Vec3fZero );
         _realloc0( linsolve_b ,nPoint, Vec3fZero );
@@ -550,21 +574,22 @@ class OrbSim_f : public Picker { public:
         }
     }
 
-    void prepare_LinearSystem( float dt, bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32 ){ 
+    void prepare_LinearSystem( float dt, bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){ 
         printf( "OrbSim_d::prepare_LinearSystem() dt=%g nNeighMaxLDLT_=%i\n", dt, nNeighMaxLDLT_ );
         //nNeighMaxLDLT=nNeighMaxLDLT_;
-        if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_ );
+        if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_, bDens );
         this->dt = dt;
         int n2 = nPoint*nPoint;
-        timeit( "TIME make_PD_Matrix()    t= %g [MTicks]\n", 1e-6, [&](){ make_PD_Matrix(    PDmat,    dt );       });
-        
+
         timeit( "TIME make_PDmat_sparse() t= %g [MTicks]\n", 1e-6, [&](){ make_PDmat_sparse( PDsparse, dt, true ); });
-        
-        mat2file<int>   ( "PDsparse_inds.log",  nPoint, nNeighMax+1, (int*)   PDsparse.inds, "%5i " );
+        mat2file<int>  ( "PDsparse_inds.log",  nPoint, nNeighMax+1, (int*)  PDsparse.inds, "%5i " );
         mat2file<float>( "PDsparse_vals.log",  nPoint, nNeighMax+1, (float*)PDsparse.vals );
 
-        if( PDsparse.checkDens( PDmat, 1e-16, true ) ){ printf("ERROR in OrbSim_d::prepare_LinearSystem() PDsparse does not match PDmat => exit \n"); exit(0); }
-
+        if(bDens){
+            timeit( "TIME make_PD_Matrix()    t= %g [MTicks]\n", 1e-6, [&](){ make_PD_Matrix(    PDmat,    dt );       });
+            if( PDsparse.checkDens( PDmat, 1e-16, true ) ){ printf("ERROR in OrbSim_d::prepare_LinearSystem() PDsparse does not match PDmat => exit \n"); exit(0); }
+        }
+        
         // if( bCG ){
         //     // setup Conjugate-Gradient solver
         //     cgSolver.setLinearProblem(  nPoint, 3, (float*)ps_cor, (float*)linsolve_b, false );
@@ -606,8 +631,6 @@ class OrbSim_f : public Picker { public:
 
     }
 
-
-/*
     __attribute__((hot)) 
     void run_LinSolve(int niter) {
         //printf( "OrbSim::run_LinSolve() \n" );
@@ -644,22 +667,11 @@ class OrbSim_f : public Picker { public:
                     //Lsparse.fwd_subs_m( m,  (float*)linsolve_b,  (float*)ps_cor );
                     //if( checkDist( nPoint, ps_cor, linsolve_yy, 1 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };
                     Lsparse.fwd_subs_m( m,  (float*)linsolve_b,  (float*)linsolve_yy );
-                    
                     for (int i=0; i<nPoint; i++){ linsolve_yy[i].mul(1/LDLT_D[i]); } // Diagonal 
                     LsparseT.fwd_subs_T_m( m,  (float*)linsolve_yy,  (float*)ps_cor );
                     //Lingebra::forward_substitution_T_m( LDLT_L, (float*)linsolve_yy, (float*)ps_cor,      nPoint,m );
                     //if( checkDist( nPoint, ps_pred, ps_cor, 2 ) ){ printf("ERROR run_LinSolve.checkDist() => exit()"); exit(0); };
 
-                } break;
-                case LinSolveMethod::CG:{
-                    //printf("OrbSim_d::run_LinSolve()  LinSolveMethod::CG \n");
-                    for(int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; };
-                    cg_tol = 1e-2;
-                    cgSolver_niterdone += cgSolver.solve( cg_tol );
-                    
-                } break;
-                case LinSolveMethod::CGsparse:{
-                
                 } break;
             }
             time_LinSolver += (getCPUticks()-t0)*1e-6;            
@@ -678,7 +690,6 @@ class OrbSim_f : public Picker { public:
             //if (user_update){ user_update(dt);}
         }
     }
-
 
     __attribute__((hot)) 
     void run_Cholesky_omp_simd(int niter) {
@@ -705,8 +716,6 @@ class OrbSim_f : public Picker { public:
             }
         }
     }
-*/
-
 
     // =================== Truss Simulation
 
