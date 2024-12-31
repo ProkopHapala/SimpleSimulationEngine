@@ -302,33 +302,41 @@ __kernel void updateJacobi_neighs(
 
 __kernel void PD_perdictor( 
     int npoint,                     // 1 number of points
-    __global const float4*  ps,     // 3 [npoint] x,y,z,mass
-    __global       float4*  ps_out, // 4 [npoint] x,y,z,mass
+    __global const float4*  ps,     // 2 [npoint] x,y,z,mass
+    __global       float4*  ps_out, // 3 [npoint] x,y,z,mass
     __global const float4*  fs    , // 4 [npoint] x,y,z,E      force 
-    __global const float4*  vs    , // 4 [npoint] x,y,z,?      velocity 
+    __global const float4*  vs    , // 5 [npoint] x,y,z,?      velocity 
+    //__global const float4*  dps , // 6 [npoint] x,y,z,?      solver momentum
     float dt                  
 ){
     const int iG     =  get_global_id(0);
     if(iG>=npoint) return;
-    // if(iG==0){    for(int i=0; i<npoint; i++){ printf("GPU::PD_perdictor(%3i) ps(%10.3e,%10.3e,%10.3e,%10.3e) fs(%10.3e,%10.3e,%10.3e,%10.3e) vs(%10.3e,%10.3e,%10.3e,%10.3e) \n" , i, ps[i].x,ps[i].y,ps[i].z,ps[i].w, fs[i].x,fs[i].y,fs[i].z,fs[i].w, vs[i].x,vs[i].y,vs[i].z,vs[i].w );  } }
+    //if(iG==0){    for(int i=0; i<npoint; i++){ printf("GPU::PD_perdictor(%3i) ps(%10.3e,%10.3e,%10.3e,%10.3e) fs(%10.3e,%10.3e,%10.3e,%10.3e) vs(%10.3e,%10.3e,%10.3e,%10.3e) \n" , i, ps[i].x,ps[i].y,ps[i].z,ps[i].w, fs[i].x,fs[i].y,fs[i].z,fs[i].w, vs[i].x,vs[i].y,vs[i].z,vs[i].w );  } }
     const float4 pi  = ps[iG];                       
-    float3 v = vs[iG].xyz + fs[iG].xyz * dt;
-    ps_out[iG] = (float4){ pi.xyz + v*dt, pi.w };
+    float3 v   = vs[iG].xyz + fs[iG].xyz * (dt/pi.w); // Leap-Frog: v_{k+1/2} = v_{k-1/2} + f_k / m   dt
+    ps_out[iG] = (float4){ pi.xyz + v*dt, pi.w };     //            p_{k+1  } = p_k       + v_{k+1/2} dt 
 }
 
 __kernel void PD_corrector( 
     int npoint,                     // 1 number of points
-    __global const float4*  ps_new, // 3 [npoint] x,y,z,mass
-    __global       float4*  ps_old, // 4 [npoint] x,y,z,mass
-    __global       float4*  vs    , // 4 [npoint] x,y,z,?      velocity 
+    __global const float4*  ps_new, // 2 [npoint] x,y,z,mass
+    __global       float4*  ps_old, // 3 [npoint] x,y,z,mass
+    __global       float4*  vs    , // 4 [npoint] x,y,z,?      velocity
+    __global       float4*  dvs   , // 5 [npoint] x,y,z,?      Impulse
+    __global       float4*  fs    , // 6 [npoint] x,y,z,?      force
     float dt                  
 ){
     const int iG     =  get_global_id(0);
     if(iG>=npoint) return;
-    //if(iG==0){  for(int i=0; i<npoint; i++){ printf("GPU::PD_corrector(%3i) ps_new(%10.3e,%10.3e,%10.3e,%10.3e) ps_old(%10.3e,%10.3e,%10.3e,%10.3e) \n" , i, ps_new[i].x,ps_new[i].y,ps_new[i].z,ps_new[i].w, ps_old[i].x,ps_old[i].y,ps_old[i].z,ps_old[i].w ); }}
-    const float4 pi  = ps_new[iG];
-    vs    [iG] = (float4){ (pi.xyz - ps_old[iG].xyz)/dt, 0.0f };
-    ps_old[iG] = (float4){  pi.xyz,                      pi.w };
+    //if(iG==0){  for(int i=0; i<npoint; i++){ printf("GPU::PD_corrector(%3i) ps_new(%10.3e,%10.3e,%10.3e|%10.3e) ps_old(%10.3e,%10.3e,%10.3e) vs(%10.3e,%10.3e,%10.3e) dvs(%10.3e,%10.3e,%10.3e) fs(%10.3e,%10.3e,%10.3e)\n" , i, ps_new[i].x,ps_new[i].y,ps_new[i].z,ps_new[i].w, ps_old[i].x,ps_old[i].y,ps_old[i].z, vs[i].x,vs[i].y,vs[i].z, dvs[i].x,dvs[i].y,dvs[i].z, fs[i].x,fs[i].y,fs[i].z ); }}
+    const float4 pi     = ps_new[iG];
+    float3       v_new  = (pi.xyz - ps_old[iG].xyz)/dt;        // Leap-Frog: v_{k+1/2}  = ( p_{k+1  } - p_k ) /   dt
+    float3       v_new_ = vs[iG].xyz + fs[iG].xyz * (dt*pi.w); // Leap-Frog: v_{k+1/2}' =   v_{k-1/2} + f_k / m   dt
+    dvs   [iG] += (float4){ (v_new-v_new_), 0.0f };  // we accumulate impulses due to velocity correction which can be used to correct momentum conservation violated by the constraint solver
+    vs    [iG]  = (float4){ v_new       , 0.0f };
+    ps_old[iG]  = (float4){ pi.xyz      , pi.w };
+
+    //fs  [iG] = (float4){  (v_new_-v_new)*pi.w/dt    ,0.0f};
 }
 
 __kernel void  evalTrussForce2(

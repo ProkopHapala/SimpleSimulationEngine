@@ -29,7 +29,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     //  ----  OpenCL buffers and textures ids
     int ibuff_points=-1,ibuff_forces=-1,ibuff_vels=-1,ibuff_params=-1,ibuff_neighs=-1,ibuff_neighBs=-1,ibuff_bparams=-1, ibuff_neighB2s=-1, ibuff_bforces=-1, ibuff_bonds=-1;
     
-    int ibuff_ps1=-1, ibuff_ps2=-1, ibuff_dps=-1;
+    int ibuff_ps1=-1, ibuff_ps2=-1, ibuff_dps=-1, ibuff_impuls=-1;
 
     int ibuff_Amat=-1;
     int ibuff_xvec=-1;
@@ -104,6 +104,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         ibuff_ps1     = newBuffer( "ps1",      nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // working copy of points for solver
         ibuff_ps2     = newBuffer( "ps2",      nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // working copy of points for solver
         ibuff_dps     = newBuffer( "ps2",      nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // momentum (change) of points in solver from previous iteration
+        ibuff_impuls  = newBuffer( "impuls",   nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // accumulated impulses corrections
         
         ibuff_forces  = newBuffer( "forces",   nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); 
         ibuff_vels    = newBuffer( "vels",     nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); 
@@ -298,10 +299,12 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         err |= clSetKernelArg(ker, 1, sizeof(cl_mem), &(buffers[ibuff_ps    ].p_gpu));         OCL_checkError(err, "run_PD_corrector().2");
         err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[ibuff_points].p_gpu));         OCL_checkError(err, "run_PD_corrector().3");
         err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_vels  ].p_gpu));         OCL_checkError(err, "run_PD_corrector().4");
-        err |= clSetKernelArg(ker, 4, sizeof(float), &dt);
+        err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_impuls].p_gpu));         OCL_checkError(err, "run_PD_corrector().5");
+        err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_forces].p_gpu));         OCL_checkError(err, "run_PD_corrector().6");
+        err |= clSetKernelArg(ker, 6, sizeof(float), &dt);
         size_t local_work_size  = 32;
         size_t global_work_size = roundUp(nPoint, local_work_size);
-        err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);   OCL_checkError(err, "run_PD_corrector().5");
+        err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);   OCL_checkError(err, "run_PD_corrector().7");
         OCL_checkError(err, "run_PD_corrector");
     }   
 
@@ -362,21 +365,73 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     }
 
 
-
+    static bool isnan_(const Vec3f& v){ return isnan(v.x) || isnan(v.y) || isnan(v.z); } 
 
     void run_PDcl( int niter, int nSolverIters, int upload_mask=0b001, int download_mask=0b001, int ialg=2 ){
-        //printf( "OCL_Orb::run_PDcl() \n" );
+        //printf( "OCL_Orb::run_PDcl() niter=%i nSolverIters=%i \n", niter, nSolverIters );
+        //for(int i=0; i<nPoint; i++){  printf( "OCL_Orb::run_PDcl() points[%i] (%10.2e,%10.2e,%10.2e|%10.2e) \n", i, points[i].x, points[i].y, points[i].z, points[i].w );  }
         int err=0;
         MDpars = Quat4f{ dt, 1-damping, cv, cf };
-        if(upload_mask&0b001){ err=upload( ibuff_points, points ); OCL_checkError(err, "run_ocl.1"); }
-        if(upload_mask&0b010){ err=upload( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.2"); }
-        if(upload_mask&0b100){ err=upload( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.3"); }
-        for(int itr=0; itr<niter; itr++){ run_projective_dynamics( nSolverIters, ialg ); }
-        if(download_mask&0b001){err=download( ibuff_points, points ); OCL_checkError(err, "run_ocl.5"); }
-        if(download_mask&0b010){err=download( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.6"); }
-        if(download_mask&0b100){err=download( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.7"); }
+        // if(upload_mask&0b001){ err=upload( ibuff_points, points ); OCL_checkError(err, "run_ocl.1"); }
+        // if(upload_mask&0b010){ err=upload( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.2"); }
+        // if(upload_mask&0b100){ err=upload( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.3"); }
+        // for(int i=0; i<nPoint; i++){ impuls[i] = Quat4fZero; }
+        // if(upload_mask&0b010){ err=upload( ibuff_impuls, impuls ); OCL_checkError(err, "run_ocl.4"); }
+
+        for(int i=0; i<nPoint; i++){ impuls[i] = Quat4fZero; }
+        err=upload( ibuff_impuls, impuls ); OCL_checkError(err, "run_ocl.1"); 
+        err=upload( ibuff_points, points ); OCL_checkError(err, "run_ocl.2"); 
+        err=upload( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.3"); 
+        err=upload( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.4"); 
+
+
+        for(int itr=0; itr<niter; itr++){ 
+            //run_projective_dynamics( nSolverIters, ialg ); 
+            run_projective_dynamics( nSolverIters, 0 ); 
+            //exit(0);
+        }
+        // if(download_mask&0b001){err=download( ibuff_points, points ); OCL_checkError(err, "run_ocl.5"); }
+        // if(download_mask&0b010){err=download( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.6"); }
+        // if(download_mask&0b100){err=download( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.7"); }
+        // if(download_mask&0b010){err=download( ibuff_impuls, impuls ); OCL_checkError(err, "run_ocl.8"); }
+        
+        err=download( ibuff_points, points ); OCL_checkError(err, "run_ocl.5"); 
+        err=download( ibuff_vels  , vel    ); OCL_checkError(err, "run_ocl.6"); 
+        err=download( ibuff_forces, forces ); OCL_checkError(err, "run_ocl.7"); 
+        err=download( ibuff_impuls, impuls ); OCL_checkError(err, "run_ocl.8"); 
+
         OCL_checkError(err, "run_ocl");
         finishRaw();
+        Vec3f cog   = Vec3fZero;
+        Vec3f vcog  = Vec3fZero;
+        Vec3f dvcog = Vec3fZero; 
+        Vec3f fcog  = Vec3fZero;
+        Vec3f torq  = Vec3fZero;
+        float mass=0;
+        bool bNan=false;
+        for(int i=0; i<nPoint; i++){ 
+            float mi = points[i].w;
+            cog .add_mul ( points[i].f, mi );
+        }
+        for(int i=0; i<nPoint; i++){ 
+            if( isnan_(points[i].f) ){ printf( "OCL_Orb::run_PDcl() NAN points[%i] (%10.2e,%10.2e,%10.2e) \n", i, points[i].f ); bNan=true; }
+            if( isnan_(vel[i].f)    ){ printf( "OCL_Orb::run_PDcl() NAN vel   [%i] (%10.2e,%10.2e,%10.2e) \n", i, vel[i].f    ); bNan=true; }
+            if( isnan_(forces[i].f) ){ printf( "OCL_Orb::run_PDcl() NAN forces[%i] (%10.2e,%10.2e,%10.2e) \n", i, forces[i].f ); bNan=true; }
+            float mi = points[i].w;
+            mass += mi;
+            vcog .add_mul  ( vel   [i].f, mi );
+            dvcog.add_mul  ( impuls[i].f, mi                     );
+            torq .add_cross( impuls[i].f *mi , points[i].f - cog );
+            fcog .add      ( forces[i].f );
+        }
+        if(bNan){ printf( "OCL_Orb::run_PDcl() nan detected in points => Exit() \n" ); exit(0); }
+        cog .mul( 1.0/mass );
+        vcog.mul( 1.0/mass );
+        dvcog.mul( 1.0/mass );
+        for(int i=0; i<nPoint; i++){ 
+            vel[i].f.sub( dvcog );
+        }
+        printf( "OCL_Orb::run_PDcl() cog(%10.2e,%10.2e,%10.2e) vcog(%10.2e,%10.2e,%10.2e) dvcog(%10.2e,%10.2e,%10.2e) fcog(%10.2e,%10.2e,%10.2e) \n", cog.x,cog.y,cog.z, vcog.x,vcog.y,vcog.z, dvcog.x,dvcog.y,dvcog.z, fcog.x,fcog.y,fcog.z ); 
         //for(int i=0; i<4; i++){ printf( "forces[%i] (%g,%g,%g) \n", i, forces[i].x, forces[i].y, forces[i].z ); }
         //exit(0);
     }

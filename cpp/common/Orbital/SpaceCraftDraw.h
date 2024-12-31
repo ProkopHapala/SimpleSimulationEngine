@@ -73,7 +73,6 @@ void renderPoinSizes(int n, Quat4f* ps, float sc=1.0 ){
 }
 
 void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
-    glColor3f(1.0,0.0,1.0);
     //glPointSize( 10.0 );
     glBegin(GL_LINES);
     for(int i=0; i<n; i++ ){
@@ -136,7 +135,7 @@ void renderPoinSizes(int n, Quat4d* ps, double sc=1.0 ){
 }
 
 void renderPointForces(int n, Quat4d* ps, Quat4d* fs, double sc=1.0 ){
-    glColor3f(1.0,0.0,1.0);
+    //glColor3f(1.0,0.0,1.0);
     //glPointSize( 10.0 );
     glBegin(GL_LINES);
     for(int i=0; i<n; i++ ){

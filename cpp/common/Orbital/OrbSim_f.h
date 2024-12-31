@@ -119,6 +119,7 @@ class OrbSim_f : public Picker { public:
     Quat4f* points=0;  // position and mass
     Quat4f* forces=0;  // force and energy
     Quat4f* vel   =0;  // velocity
+    Quat4f* impuls=0;  // accumulated impulse from corrector
 
     float* kFix=0;   // force constant for fixed points
     float  kLinRegularize = 1.0;
@@ -216,6 +217,7 @@ class OrbSim_f : public Picker { public:
         _realloc( points, nPoint    );
         _realloc( forces, nPoint    );
         _realloc( vel,    nPoint    );
+        _realloc( impuls, nPoint    );
         _realloc( params, nNeighTot );
         _realloc( neighs, nNeighTot );
         _realloc( neighBs,nNeighTot );
@@ -747,8 +749,9 @@ class OrbSim_f : public Picker { public:
         return fmax;
     }
 
-    void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero; } };
-    void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero; } };
+    void cleanForce (){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero; } };
+    void cleanVel   (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero; } };
+    void cleanImpuls(){ for (int i=0; i<nPoint; i++){ impuls[i]=Quat4fZero; } };
 
     double move_GD(float dt){
         float ff=0;

@@ -74,7 +74,7 @@ double elementSize  = 5.;
 void runSim( OCL_Orb& sim_cl, int niter=100 ){
     niter=1;
     //niter=10;
-    int nbig = 3;
+    int nbig = 10;
     int nsub = 10;
     niter = nbig*nsub;
 
@@ -86,7 +86,10 @@ void runSim( OCL_Orb& sim_cl, int niter=100 ){
         //sim_cl.run_omp( niter, true, 1e-3, 1e-4 );
         //sim_cl.damping = 1e-5; sim_cl.dt      = 1e-3; // does not have any effect here
         //sim_cl.run_ocl( niter*nsub, 0b001, 0b111 ); // 0b001 - upload points, 0b111 - download points, velocities, forces
-        sim_cl.run_PDcl( nbig, nsub, 0b001, 0b111 ); // 0b001 - upload points, 0b111 - download points, velocities, forces
+        //sim_cl.run_PDcl( nbig, nsub, 0b001, 0b111 ); // 0b001 - upload points, 0b111 - download points, velocities, forces
+
+        sim_cl.run_PDcl( nbig, nsub, 0b111, 0b111 );
+
         // ---- Debug loop --- check if forces are the same between GPU and CPU
         //printf( "runSim() fmax=%g fmax_ref=%g\n", sim_cl.getFmax(), fmax_ref );
         //printf( "runSim() fmax=%g fmax_ref=%g\n", sim_cl.getFmax(), fmax_ref );
@@ -100,16 +103,20 @@ void runSim( OCL_Orb& sim_cl, int niter=100 ){
         //     sim_cl.move_MD( 1e-3, 1e-5 );
         // }
         double T = (getCPUticks()-t0)*1e-6;
-        printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim_cl.nPoint, sim_cl.nNeighMax );
+        //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim_cl.nPoint, sim_cl.nNeighMax );
         //printf( "runSim() nPoint=%i nBonds=%i \n", sim_cl.nPoint, sim_cl.nBonds );
     }
     sim_cl.evalBondTension();
+    glColor3f(1.0,0.0,1.0);
     //renderPoinSizes( sim_cl.nPoint, sim_cl.points, 0.001 );
     //renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1e-6 );
     //renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1e-3 );
     //renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1e-2 );
     renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1e-1 );
     //renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1.0 );
+
+    glColor3f(0.0,1.0,1.0);
+    renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.vel, 1e-1 );
 }
 
 // ======================  Free Functions
@@ -152,11 +159,21 @@ void to_sim_cl( Mesh::Builder2& mesh2, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero
     //sim_cl.setup_test_enque();
     //sim_cl.setup_blur();
     //sim_cl.test_enque();
+
+    sim_cl.cleanForce();
+    sim_cl.cleanVel();
+    sim_cl.cleanImpuls();
+
     for(int i=0; i<sim_cl.nPoint; i++){
-        Vec3f r = sim_cl.points[i].f - p0;
-        sim_cl.vel[i].f.set_cross(omega,r);
+    //     Vec3f r = sim_cl.points[i].f - p0;
+    //     sim_cl.vel[i].f.set_cross(omega,r);
+           sim_cl.points[i].x -= 100.0;
     }
-    sim_cl.upload( sim_cl.ibuff_vels  , sim_cl.vel  );
+
+    sim_cl.upload( sim_cl.ibuff_points, sim_cl.points );
+    sim_cl.upload( sim_cl.ibuff_vels  , sim_cl.vel    );
+    sim_cl.upload( sim_cl.ibuff_forces, sim_cl.forces );
+    sim_cl.upload( sim_cl.ibuff_impuls, sim_cl.impuls );
     sim_cl.damping = 1e-5; 
     sim_cl.dt      = 1e-3; // must be here before sim_cl.setup_evalTrussForce2();
     sim_cl.setup_evalTrussForce1();
@@ -229,7 +246,7 @@ void makeTrussShape( int ishape, int nseg, double R, double r, bool bCPU=false, 
     switch(ishape){
         case 0: ngon   ( mesh2, p0, p1, ax, nseg, 0 ); break;
         case 1: wheel  ( mesh2, p0, p1, ax, nseg, Vec2d{r,r}, Quat4i{0,0,0,0}       ); break;
-        case 2: girder1( mesh2, p0, (p1-p0).normalized()*r*nseg, ax, nseg, r,          Quat4i{0,0,0,0}, true ); break;
+        case 2: girder1( mesh2, p0, (p1-p0).normalized()*r*4*nseg, ax, nseg, r,          Quat4i{0,0,0,0}, true ); break;
         //int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes ){
     }
     //wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );
@@ -291,7 +308,8 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     initSpaceCraftingLua();
     if(argc<=1){
         //reloadShip( "data/ship_ICF_interceptor_1.lua" );
-        makeTrussShape( 2, 3000, 100.0, 10.0,  false, true );
+        //makeTrussShape( 2, 1, 100.0, 10.0,  false, true );
+        makeTrussShape( 2, 100, 100.0, 10.0,  false, true );
     }
 
     picker.picker = &sim_cl;   picker.Rmax=10.0;
@@ -320,14 +338,11 @@ void SpaceCraftEditorApp::draw(){
     //sim2.run_LinSolve(1);
     //renderTruss( sim2.nBonds, sim2.bonds, sim2.points, sim2.strain, 1000.0 );
 
-
     // draw ring nodes
     glLineWidth(3.0);
     glColor3f(1.0,0.0,1.0);
     for(const Ring* o: theSpaceCraft->rings){
-
         Draw3D::drawMatInPos( o->pose.rot, o->pose.pos, {100.,100.,100.} );
-
         Node** nds = (Node**)&o->nodes;
         for( int i=0; i<4; i++ ){
             //printf( "nds[%i] %li \n", i, (long)nds[i] );

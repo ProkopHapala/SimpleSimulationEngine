@@ -265,9 +265,10 @@ int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, 
     //                       No. this is done in girder1_caps
     //printf( "Mesh::girder1() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g) stickTypes(%i,%i,%i,%i)\n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z,   stickTypes.x,stickTypes.y,stickTypes.z,stickTypes.w );
     
+    int ip0=-1,ip1=-1;
     if( bCaps ){
-        mesh.vert( p0 ); 
-        mesh.vert( p1 );
+        ip0 = mesh.vert( p0 ); 
+        ip1 = mesh.vert( p1 );
     }
     
     Vec3d dir = p1-p0;
@@ -278,8 +279,10 @@ int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, 
     double dl = length/(2*n + 1);
     //int dnb = 2+4+4+4;
     int dnp = 4;
-    int i00   = mesh.verts.size();
+    int i00start = mesh.verts.size();
+    int i00      = i00start;
     //int ibloc = mesh.block();   // this is better to call manually from outside
+    //Quat4i istart;
     for (int i=0; i<n; i++){
         int i01=i00+1; int i10=i00+2; int i11=i00+3;
         mesh.vert( p0 + side*-width + dir*(dl*(1+2*i  )) );
@@ -303,6 +306,17 @@ int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, 
             mesh.edge( i11,i11+dnp,stickTypes.x );
         }
         i00+=dnp;
+    }
+    if( bCaps ){
+        mesh.edge( i00start+0 ,ip0,stickTypes.x );
+        mesh.edge( i00start+1 ,ip0,stickTypes.x );
+        mesh.edge( i00start+2 ,ip0,stickTypes.x );
+        mesh.edge( i00start+3 ,ip0,stickTypes.x );
+        int i00end = i00-dnp;
+        mesh.edge( i00end  +0 ,ip1,stickTypes.x );
+        mesh.edge( i00end  +1 ,ip1,stickTypes.x );
+        mesh.edge( i00end  +2 ,ip1,stickTypes.x );
+        mesh.edge( i00end  +3 ,ip1,stickTypes.x );
     }
     //return ibloc;
     return i00;

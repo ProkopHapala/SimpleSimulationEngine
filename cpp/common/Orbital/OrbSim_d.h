@@ -158,6 +158,7 @@ class OrbSim: public Picker { public:
     Quat4d* points=0;  // position and mass
     Quat4d* forces=0;  // force and energy
     Quat4d* vel   =0;  // velocity
+    //Quat4d* impuls=0;  // accumulated impulse from corrector
 
     double* kFix=0;   // force constant for fixed points
     double  kLinRegularize = 1.0;
@@ -292,6 +293,7 @@ class OrbSim: public Picker { public:
         _realloc( points, nPoint    );
         _realloc( forces, nPoint    );
         _realloc( vel,    nPoint    );
+        //_realloc( impuls, nPoint    );
         _realloc( params, nNeighTot );
         _realloc( neighs, nNeighTot );
         _realloc( neighBs,nNeighTot );
