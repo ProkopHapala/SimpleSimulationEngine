@@ -28,8 +28,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
 
     //  ----  OpenCL buffers and textures ids
     int ibuff_points=-1,ibuff_forces=-1,ibuff_vels=-1,ibuff_params=-1,ibuff_neighs=-1,ibuff_neighBs=-1,ibuff_bparams=-1, ibuff_neighB2s=-1, ibuff_bforces=-1, ibuff_bonds=-1;
-    
-    int ibuff_ps1=-1, ibuff_ps2=-1, ibuff_dps=-1, ibuff_impuls=-1;
+    int ibuff_ps1=-1, ibuff_ps2=-1, ibuff_dps=-1, ibuff_impuls=-1, ibuff_bvec=-1, ibuff_kngs;
 
     int ibuff_Amat=-1;
     int ibuff_xvec=-1;
@@ -65,6 +64,9 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     int iker_PD_perdictor        = -1;
     int iker_PD_corrector        = -1;
 
+    int iker_updatePD_RHS        = -1;
+    int iker_updateJacobi_lin    = -1;
+
 
     // ====================== Functions
 
@@ -92,6 +94,9 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         iker_updateJacobi_mix    = newKernel( "updateJacobi_mix",    program1 );
         iker_PD_perdictor        = newKernel( "PD_perdictor",        program1 );
         iker_PD_corrector        = newKernel( "PD_corrector",        program1 );
+        iker_updatePD_RHS        = newKernel( "updatePD_RHS",        program1 );
+        iker_updateJacobi_lin    = newKernel( "updateJacobi_lin",    program1 );
+
 
         //OCLtask* task = new OCLtask( this, iker, dim, global, local );
         printf( "... makeKrenels_Orb() DONE \n" );
@@ -105,13 +110,18 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         ibuff_ps2     = newBuffer( "ps2",      nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // working copy of points for solver
         ibuff_dps     = newBuffer( "ps2",      nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // momentum (change) of points in solver from previous iteration
         ibuff_impuls  = newBuffer( "impuls",   nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // accumulated impulses corrections
+
+        ibuff_bvec    = newBuffer( "bvec",     nBonds   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE );
         
         ibuff_forces  = newBuffer( "forces",   nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); 
         ibuff_vels    = newBuffer( "vels",     nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); 
+
         ibuff_neighs  = newBuffer( "neighs",   nNeighTot, sizeof(int)   , 0, CL_MEM_READ_ONLY  ); 
         ibuff_neighBs = newBuffer( "bneighBs", nNeighTot, sizeof(int2)  , 0, CL_MEM_READ_ONLY  );
         ibuff_neighB2s= newBuffer( "bneighB2s",nNeighTot, sizeof(int)   , 0, CL_MEM_READ_ONLY  );
         ibuff_params  = newBuffer( "params",   nNeighTot, sizeof(Quat4f), 0, CL_MEM_READ_ONLY  ); 
+        ibuff_kngs    = newBuffer( "kngs",     nNeighTot, sizeof(float) , 0, CL_MEM_READ_ONLY  );
+
         ibuff_bparams = newBuffer( "bparams",  nBonds   , sizeof(Quat4f), 0, CL_MEM_READ_ONLY  );
         ibuff_bforces = newBuffer( "bforces",  nBonds   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE );
         ibuff_bonds   = newBuffer( "bonds",    nBonds   , sizeof(int2)  , 0, CL_MEM_READ_ONLY  );
@@ -151,7 +161,6 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         //exit(0);
     }
 
-
     // __kernel void getTrussForces( 
     //     int npoint,                     // 1 number of points
     //     int nmax_neigh,                 // 2 max number of neighbors
@@ -179,6 +188,40 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         OCL_checkError(err, "run_getTrussForces");
     }
 
+
+    void run_updatePD_RHS( int ps ) {
+        int err = 0;
+        cl_kernel ker = kernels[iker_updatePD_RHS];
+        err |= clSetKernelArg(ker, 0, sizeof(int),    &nPoint);                               OCL_checkError(err, "run_updatePD_RHS.1");
+        err |= clSetKernelArg(ker, 1, sizeof(int),    &nNeighMax);                            OCL_checkError(err, "run_updatePD_RHS.2");
+        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[ps          ].p_gpu));        OCL_checkError(err, "run_updatePD_RHS.3");
+        err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_bvec  ].p_gpu));        OCL_checkError(err, "run_updatePD_RHS.4");
+        err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_updatePD_RHS.5");
+        err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_updatePD_RHS.6");
+        float inv_dt2 = 1.0f / (dt * dt);
+        err |= clSetKernelArg(ker, 6, sizeof(float), &inv_dt2);                               OCL_checkError(err, "run_updatePD_RHS.7");
+        size_t local_work_size  = 32;
+        size_t global_work_size = roundUp(nPoint, local_work_size);
+        err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);  OCL_checkError(err, "run_updatePD_RHS.8");
+        OCL_checkError(err, "run_updatePD_RHS");
+    }
+
+    void run_updateJacobi_lin(int ps_in, int ps_out) {
+        int err = 0;
+        cl_kernel ker = kernels[iker_updateJacobi_lin];
+        err |= clSetKernelArg(ker, 0, sizeof(int),    &nPoint);                               OCL_checkError(err, "run_updateJacobi_lin.1");
+        err |= clSetKernelArg(ker, 1, sizeof(int),    &nNeighMax);                            OCL_checkError(err, "run_updateJacobi_lin.2");
+        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[      ps_in ].p_gpu));        OCL_checkError(err, "run_updateJacobi_lin.3");
+        err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[      ps_out].p_gpu));        OCL_checkError(err, "run_updateJacobi_lin.4");
+        err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_bvec  ].p_gpu));        OCL_checkError(err, "run_updateJacobi_lin.5");
+        err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_updateJacobi_lin.6");
+        err |= clSetKernelArg(ker, 6, sizeof(cl_mem), &(buffers[ibuff_kngs  ].p_gpu));        OCL_checkError(err, "run_updateJacobi_lin.7");
+        size_t local_work_size  = 32;
+        size_t global_work_size = roundUp(nPoint, local_work_size);
+        err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);  OCL_checkError(err, "run_updateJacobi_lin.8");
+        OCL_checkError(err, "run_updateJacobi_lin");
+    }
+
     // __kernel void updateJacobi_neighs( 
     //     int npoint,                     // 1 number of points
     //     int nmax_neigh,                 // 2 max number of neighbors
@@ -188,14 +231,14 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     //     __global const float4*  params, // 6 [npoint,nmax_neigh] {l0, kPress, kPull, damping} 
     //     float inv_dt2                   // 7 1/dt^2, controls scale of inertial term
     // ){
-    void run_updateJacobi_neighs( int ibuff_ps_in, int ibuff_ps_out ){
+    void run_updateJacobi_neighs( int ps_in, int ps_out ){
         //printf( "run_updateJacobi_neighs() nPoint %i \n", nPoint );
         int err = 0;
         cl_kernel ker = kernels[iker_updateJacobi_neighs];
         err |= clSetKernelArg(ker, 0, sizeof(int),    &nPoint);                               OCL_checkError(err, "run_updateJacobi_neighs.1");   
         err |= clSetKernelArg(ker, 1, sizeof(int),    &nNeighMax);                            OCL_checkError(err, "run_updateJacobi_neighs.2");       
-        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[ibuff_ps_in ].p_gpu));        OCL_checkError(err, "run_updateJacobi_neighs.3");
-        err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_ps_out].p_gpu));        OCL_checkError(err, "run_updateJacobi_neighs.4");
+        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[      ps_in ].p_gpu));        OCL_checkError(err, "run_updateJacobi_neighs.3");
+        err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[      ps_out].p_gpu));        OCL_checkError(err, "run_updateJacobi_neighs.4");
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_updateJacobi_neighs.5");
         err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_updateJacobi_neighs.6");
         float inv_dt2 = 1.0f / (dt * dt);
@@ -217,13 +260,13 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     //     float inv_dt2,                  // 7 1/dt^2, controls scale of inertial term
     //     float2 bmix                     // 8 mixing parameter for momentum
     // ){
-    void run_updateJacobi_mix(int ibuff_ps_in, int ibuff_ps_out ) {
+    void run_updateJacobi_mix(int ps_in, int ps_out ) {
         int err = 0;
         cl_kernel ker = kernels[iker_updateJacobi_mix];
         err |= clSetKernelArg(ker, 0, sizeof(int),    &nPoint);                               OCL_checkError(err, "run_updateJacobi_mix.1");
         err |= clSetKernelArg(ker, 1, sizeof(int),    &nNeighMax);                            OCL_checkError(err, "run_updateJacobi_mix.2");
-        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[ibuff_ps_in ].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.3");
-        err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_ps_out].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.4");
+        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[      ps_in ].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.3");
+        err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[      ps_out].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.4");
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_dps   ].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.5");
         err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.6");
         err |= clSetKernelArg(ker, 6, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.7");
@@ -267,13 +310,13 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     //     __global const float4*  vs    , // 4 [npoint] x,y,z,?      velocity 
     //     float dt    
     // ){   
-    void run_PD_perdictor( int ibuff_ps ){ 
+    void run_PD_perdictor( int ps ){ 
         //printf( "run_PD_perdictor() nPoint %i \n", nPoint );
         int err = 0;
         cl_kernel ker = kernels[iker_PD_perdictor];
         err |= clSetKernelArg(ker, 0, sizeof(int),    &nPoint);                             OCL_checkError(err, "run_PD_perdictor().1");
         err |= clSetKernelArg(ker, 1, sizeof(cl_mem), &(buffers[ibuff_points].p_gpu));      OCL_checkError(err, "run_PD_perdictor().2");
-        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[ibuff_ps    ].p_gpu));      OCL_checkError(err, "run_PD_perdictor().3");
+        err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[      ps    ].p_gpu));      OCL_checkError(err, "run_PD_perdictor().3");
         err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_forces].p_gpu));      OCL_checkError(err, "run_PD_perdictor().4");
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_vels  ].p_gpu));      OCL_checkError(err, "run_PD_perdictor().5");
         err |= clSetKernelArg(ker, 5, sizeof(float), &dt);                                  OCL_checkError(err, "run_PD_perdictor().6");
@@ -291,12 +334,12 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
     //     __global       float4*  vs    , // 4 [npoint] x,y,z,?      velocity 
     //     float dt                  
     // ){
-    void run_PD_corrector( int ibuff_ps ){ 
+    void run_PD_corrector( int ps ){ 
         //printf( "run_PD_corrector() nPoint %i \n", nPoint );
         int err = 0;
         cl_kernel ker = kernels[iker_PD_corrector];
         err |= clSetKernelArg(ker, 0, sizeof(int),    &nPoint);                                OCL_checkError(err, "run_PD_corrector().1");
-        err |= clSetKernelArg(ker, 1, sizeof(cl_mem), &(buffers[ibuff_ps    ].p_gpu));         OCL_checkError(err, "run_PD_corrector().2");
+        err |= clSetKernelArg(ker, 1, sizeof(cl_mem), &(buffers[      ps    ].p_gpu));         OCL_checkError(err, "run_PD_corrector().2");
         err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[ibuff_points].p_gpu));         OCL_checkError(err, "run_PD_corrector().3");
         err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_vels  ].p_gpu));         OCL_checkError(err, "run_PD_corrector().4");
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_impuls].p_gpu));         OCL_checkError(err, "run_PD_corrector().5");
@@ -326,6 +369,13 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
             case 0: for (int i = 0; i < nSolverIters; i++) {  run_updateJacobi_neighs( psa, psb    ); _swap(psa, psb);  } break;
             case 1: for (int i = 0; i < nSolverIters; i++) {  run_updateJacobi_mix   ( psa, psb    ); _swap(psa, psb);  } break;
             case 2: for (int i = 0; i < nSolverIters; i++) {  run_updateJacobi_smart ( psa, psb, i ); _swap(psa, psb);  } break;
+            case 3:{ run_updatePD_RHS( psa );
+                    for (int i = 0; i < nSolverIters; i++) {  
+                        //run_updateJacobi_neighs( psa, psb );  // DEBUG
+                        run_updateJacobi_lin   ( psa, psb ); _swap(psa, psb);  
+                        //exit(0);
+                    } 
+                   } break;
         }
         run_PD_corrector(psa);
     }
@@ -387,7 +437,10 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
 
         for(int itr=0; itr<niter; itr++){ 
             //run_projective_dynamics( nSolverIters, ialg ); 
-            run_projective_dynamics( nSolverIters, 0 ); 
+            //run_projective_dynamics( nSolverIters, 0 );   // non-linear Jaccobi solver without mixing
+            //run_projective_dynamics( nSolverIters, 1 );   // non-linear Jaccobi solver with mixing
+            //run_projective_dynamics( nSolverIters, 2 );   // non-linear Jaccobi solver with smart mixing
+            run_projective_dynamics( nSolverIters, 3 );     // linear Jaccobi solver
             //exit(0);
         }
         // if(download_mask&0b001){err=download( ibuff_points, points ); OCL_checkError(err, "run_ocl.5"); }

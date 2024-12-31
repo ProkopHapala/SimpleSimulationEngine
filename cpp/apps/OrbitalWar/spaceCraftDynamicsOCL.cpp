@@ -160,6 +160,7 @@ void to_sim_cl( Mesh::Builder2& mesh2, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero
     //sim_cl.setup_blur();
     //sim_cl.test_enque();
 
+    sim_cl.setKngs();
     sim_cl.cleanForce();
     sim_cl.cleanVel();
     sim_cl.cleanImpuls();
@@ -174,6 +175,7 @@ void to_sim_cl( Mesh::Builder2& mesh2, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero
     sim_cl.upload( sim_cl.ibuff_vels  , sim_cl.vel    );
     sim_cl.upload( sim_cl.ibuff_forces, sim_cl.forces );
     sim_cl.upload( sim_cl.ibuff_impuls, sim_cl.impuls );
+    sim_cl.upload( sim_cl.ibuff_kngs  , sim_cl.kngs   );
     sim_cl.damping = 1e-5; 
     sim_cl.dt      = 1e-3; // must be here before sim_cl.setup_evalTrussForce2();
     sim_cl.setup_evalTrussForce1();

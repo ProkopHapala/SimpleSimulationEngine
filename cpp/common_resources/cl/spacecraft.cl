@@ -161,7 +161,7 @@ __kernel void getTrussForces(
     int npoint,                     // 1 number of points
     int nmax_neigh,                 // 2 max number of neighbors
     __global const float4*  ps,     // 3 [npoint] x,y,z,mass
-    __global       float4*  forces, // 3 [npoint] x,y,z,mass
+    __global       float4*  forces, // 4 [npoint] x,y,z,E
     __global const int*     neighs, // 5 [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
     __global const float4*  params, // 6 [npoint,nmax_neigh] {l0, kPress, kPull, damping} 
     float inv_dt2                   // 7 1/dt^2, controls scale of inertial term
@@ -171,10 +171,11 @@ __kernel void getTrussForces(
     const int j0     = iG * nmax_neigh;
     const float4 pi  = ps[iG];                       
     float4       fi  = (float4){0.0f,0.0f,0.0f,0.0f}; 
-    for( int j = 0; j < nmax_neigh; j++ ){
-        int jG = neighs[j0+j];
+    for( int jj = 0; jj < nmax_neigh; jj++ ){
+        const int j  = j0 + jj;
+        const int jG = neighs[j];
         if( jG == -1 ) break;
-        const float4 par = params[j0+j];
+        const float4 par = params[j];
         const float3 pj  = ps[jG].xyz;
         const float3 dij = pi.xyz - pj;
         const float  l   = length(dij);
@@ -186,6 +187,79 @@ __kernel void getTrussForces(
     }
     forces[iG] = fi;
 }
+
+
+__kernel void updatePD_RHS( 
+    int npoint,                     // 1 number of points
+    int nmax_neigh,                 // 2 max number of neighbors
+    __global const float4*  ps,     // 3 [npoint] x,y,z,mass
+    __global       float4*  bvec,   // 4 [npoint] x,y,z,Aii
+    __global const int*     neighs, // 5 [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
+    __global const float4*  params, // 6 [npoint,nmax_neigh] {l0, kPress, kPull, damping} 
+    float inv_dt2                   // 7 1/dt^2, controls scale of inertial term
+){
+
+    //printf( "GPU::updateJacobi_mix() \n" );
+    const int iG     =  get_global_id(0);
+    if(iG>=npoint) return;
+    const float4 pi  = ps[iG];                       
+     
+    // inertial term
+    const float Aii0 = pi.w*inv_dt2;                   // A_{ii} =  M_i/dt^2        +  \sum_j   K_{ij} 
+    float4      bi   = (float4){pi.xyz * Aii0, Aii0};  // b_i    =  M_i/dt^2 p'_i   +  \sum_j ( K_{ij} d_{ij} )
+    
+    const int    j0  = iG * nmax_neigh;
+    for( int jj = 0; jj < nmax_neigh; jj++ ){
+        const int j   = j0 + jj;
+        const int jG  = neighs[j];
+        if( jG == -1 ) break;
+        const float4 par = params[j];
+        const float3 pj  = ps[jG].xyz;
+        const float3 dij = pi.xyz - pj;
+        const float  l   = length(dij);
+        //const float k = (l<par.x)?par.y:par.z;
+        const float k    = par.z;
+        bi.xyz          += dij * (k*par.x/l) ;   // RHS      bi  = \sum_j K_{ij} d_{ij} (+ inertial term M_i/dt^2 p'_i )
+        bi.w            +=        k          ;   // diagonal Aii =  \sum_j k_{ij}       (+ inertial term M_i/dt^2      )
+    }
+    bvec[iG] = bi;
+}
+
+
+
+__kernel void updateJacobi_lin( 
+    int npoint,                     // 1 number of points
+    int nmax_neigh,                 // 2 max number of neighbors
+    __global const float4*  ps,     // 3 [npoint] x,y,z,mass
+    __global       float4*  ps_out, // 4 [npoint] x,y,z,mass
+    __global       float4*  bvec,   // 5 [npoint] x,y,z,Aii      force
+    __global const int*     neighs, // 6 [npoint,nmax_neigh] indexes of neighbor points, if neighs[i] == -1 it is not connected, includes both bonds and collisions
+    __global const float*   kngs    // 7 [npoint,nmax_neigh] stiffness 
+){
+    //printf( "GPU::updateJacobi_lin() \n" );
+    const int iG     =  get_global_id(0);
+    if(iG>=npoint) return;
+
+    //if(iG==0){    for(int i=0; i<npoint; i++){ printf("GPU::updateJacobi_lin(%3i) ps(%10.3e,%10.3e,%10.3e|%10.3e) bi(%10.3e,%10.3e,%10.3e|%10.3e)\n" , i, ps[i].x,ps[i].y,ps[i].z,ps[i].w, bvec[i].x,bvec[i].y,bvec[i].z,bvec[i].w );  } }
+
+    const int j0     = iG * nmax_neigh;
+    float3 sum_j = (float3){0.0f,0.0f,0.0f};                         
+    for( int jj = 0; jj < nmax_neigh; jj++ ){
+        const int j = j0 + jj;
+        const int jG = neighs[j];
+        if( jG == -1 ) break;
+        sum_j       += ps[jG].xyz * kngs[j];   // kPull 
+        //if(iG==0){ printf("GPU::updateJacobi_lin(%3i) j: %3i k: %10.3e pj(%10.3e,%10.3e,%10.3e)\n" , iG, kngs[j], ps[jG].x,ps[jG].y,ps[jG].z ); }
+    }
+    const float4 bi     =  bvec[iG];
+
+    //if(iG==0){  printf("GPU::updateJacobi_lin(%3i) Aii(%10.3e) bi(%10.3e,%10.3e,%10.3e) sum_j(%10.3e,%10.3e,%10.3e)\n" , iG, bi.w, bi.x,bi.y,bi.z, sum_j.x,sum_j.y,sum_j.z );  }
+
+    const float3 pi_new = (bi.xyz + sum_j)/bi.w;
+    ps_out[iG] = (float4)(pi_new, ps[iG].w );
+}
+
+
 
 __kernel void updateJacobi_mix( 
     int npoint,                     // 1 number of points
@@ -211,10 +285,11 @@ __kernel void updateJacobi_mix(
     float3 pi_new  = pi.xyz * mi; // p_i    = \sum_j (K_{ij} p_j + d_{ij} )  + M_i/dt^2 p'_i
     float  Aii     =          mi; // A_{ii} = \sum_j  K_{ij}                 + M_i/dt^2
 
-    for( int j = 0; j < nmax_neigh; j++ ){
-        int jG = neighs[j0+j];
+    for( int jj = 0; jj < nmax_neigh; jj++ ){
+        const int j  = j0 + jj;
+        const int jG = neighs[j];
         if( jG == -1 ) break;
-        const float4 par = params[j0+j];
+        const float4 par = params[j];
         const float3 pj  = ps[jG].xyz;
         const float3 dij = pi.xyz - pj;
         const float  l   = length(dij);
@@ -269,20 +344,27 @@ __kernel void updateJacobi_neighs(
     float3 pi_new  = pi.xyz * mi; // p_i    = \sum_j (K_{ij} p_j + d_{ij} )  + M_i/dt^2 p'_i
     float  Aii     =          mi; // A_{ii} = \sum_j  K_{ij}                 + M_i/dt^2
 
-    for( int j = 0; j < nmax_neigh; j++ ){
-        int jG = neighs[j0+j];
+    //float3 bi     = pi.xyz * mi;             // DEBUG 
+    //float3 sum_j  = (float3){0.0f,0.0f,0.0f};  // DEBUG
+
+    for( int jj = 0; jj < nmax_neigh; jj++ ){
+        const int j  = j0 + jj;
+        const int jG = neighs[j];
         if( jG == -1 ) break;
-        const float4 par = params[j0+j];
+        const float4 par = params[j];
         const float3 pj  = ps[jG].xyz;
         const float3 dij = pi.xyz - pj;
         const float  l   = length(dij);
         const float3 pij = pj + dij * (par.x/l);  // p'_{ij} is ideal position of particle i which satisfy the constraint between i and j
         const float k = (l<par.x)?par.y:par.z;
-
         //printf("GPU::updateJacobi_neighs(iG=%3i,j=%i) jG(%3i) l(%10.3f) l0(%10.3f) k(%10.3f) \n" , iG, j, jG, l, par.x, k );
-
         pi_new += pij * k;   // 
         Aii    +=       k;   // diagonal of the Projective-Dynamics matrix, \sum_j k_{ij}       (+ inertial term M_i/dt^2)
+
+        //bi     += dij * (k*par.x/l);   // DEBUG
+        //sum_j  += pj  *  k;            // DEBUG
+        //if(iG==0){ printf("GPU::updateJacobi_neighs(%3i) j: %3i k: %10.3e pj(%10.3e,%10.3e,%10.3e)\n" , iG, j, k, pj.x,pj.y,pj.z ); }
+
     }
 
     // NOTE 1: pi_new is basically weighted average of predicted positions of particles and due to all the constraints weighted by stiffness (and due to intertial term M_i/dt^2)
@@ -295,6 +377,11 @@ __kernel void updateJacobi_neighs(
     //printf("GPU::updateJacobi_neighs(iG=%3i) Aii(%10.3f) pi_new(%10.3f,%10.3f,%10.3f) \n" , iG, Aii, pi_new.x,pi_new.y,pi_new.z );
 
     pi_new /= Aii;
+
+   // if(iG==0){  printf("GPU::updateJacobi_neighs(%3i) Aii(%10.3e) bi(%10.3e,%10.3e,%10.3e) sum_j(%10.3e,%10.3e,%10.3e)\n" , iG, Aii, bi.x,bi.y,bi.z, sum_j.x,sum_j.y,sum_j.z );  }
+    //pi_new = (bi + sum_j)/Aii;    // DEBUG
+
+
 
     ps_out[iG] = (float4)(pi_new, pi.w);
 
@@ -330,13 +417,16 @@ __kernel void PD_corrector(
     if(iG>=npoint) return;
     //if(iG==0){  for(int i=0; i<npoint; i++){ printf("GPU::PD_corrector(%3i) ps_new(%10.3e,%10.3e,%10.3e|%10.3e) ps_old(%10.3e,%10.3e,%10.3e) vs(%10.3e,%10.3e,%10.3e) dvs(%10.3e,%10.3e,%10.3e) fs(%10.3e,%10.3e,%10.3e)\n" , i, ps_new[i].x,ps_new[i].y,ps_new[i].z,ps_new[i].w, ps_old[i].x,ps_old[i].y,ps_old[i].z, vs[i].x,vs[i].y,vs[i].z, dvs[i].x,dvs[i].y,dvs[i].z, fs[i].x,fs[i].y,fs[i].z ); }}
     const float4 pi     = ps_new[iG];
+
+    /*
     float3       v_new  = (pi.xyz - ps_old[iG].xyz)/dt;        // Leap-Frog: v_{k+1/2}  = ( p_{k+1  } - p_k ) /   dt
     float3       v_new_ = vs[iG].xyz + fs[iG].xyz * (dt*pi.w); // Leap-Frog: v_{k+1/2}' =   v_{k-1/2} + f_k / m   dt
     dvs   [iG] += (float4){ (v_new-v_new_), 0.0f };  // we accumulate impulses due to velocity correction which can be used to correct momentum conservation violated by the constraint solver
     vs    [iG]  = (float4){ v_new       , 0.0f };
+    */
     ps_old[iG]  = (float4){ pi.xyz      , pi.w };
-
     //fs  [iG] = (float4){  (v_new_-v_new)*pi.w/dt    ,0.0f};
+    
 }
 
 __kernel void  evalTrussForce2(

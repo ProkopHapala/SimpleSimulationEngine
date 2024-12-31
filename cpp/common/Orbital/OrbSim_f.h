@@ -124,7 +124,8 @@ class OrbSim_f : public Picker { public:
     float* kFix=0;   // force constant for fixed points
     float  kLinRegularize = 1.0;
 
-    Quat4f* params=0;  // neighbor parameters (l0,kP,kT,damp)
+    Quat4f* params=0;  // neighbor parameters ( l0,kP,kT,damp )
+    float * kngs  =0;  // neighbor stiffness  ( for linear solver )
     int*    neighs=0;  // neighbor indices
     int2*   neighBs=0; // neighbor bond indices
     //int*    neighBs=0; // neighbor bond indices
@@ -219,6 +220,7 @@ class OrbSim_f : public Picker { public:
         _realloc( vel,    nPoint    );
         _realloc( impuls, nPoint    );
         _realloc( params, nNeighTot );
+        _realloc( kngs,   nNeighTot );
         _realloc( neighs, nNeighTot );
         _realloc( neighBs,nNeighTot );
         _realloc( neighB2s,nNeighTot );
@@ -749,9 +751,10 @@ class OrbSim_f : public Picker { public:
         return fmax;
     }
 
-    void cleanForce (){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero; } };
-    void cleanVel   (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero; } };
-    void cleanImpuls(){ for (int i=0; i<nPoint; i++){ impuls[i]=Quat4fZero; } };
+    void cleanForce (){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4fZero;   } };
+    void cleanVel   (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero;   } };
+    void cleanImpuls(){ for (int i=0; i<nPoint; i++){ impuls[i]=Quat4fZero;   } };
+    void setKngs    (){ for (int i=0; i<nNeighTot; i++){ kngs[i]=params[i].z; } };   // kPull
 
     double move_GD(float dt){
         float ff=0;
