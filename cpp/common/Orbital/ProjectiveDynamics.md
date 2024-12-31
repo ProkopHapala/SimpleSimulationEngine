@@ -14,7 +14,9 @@ Instead we propagate dynamical equations with only soft external forces $f^{ext}
    where the right hand side $b$ is computed from predicted positions $p'_{k+1}$
 4. correct velocity at half step: $v_{k+/2} = (p_{k+1} - p_k) / dt$
 
-Now, the last step is questionable. **We should check if this velocity satisfies the equations of motion and does not violate some laws of physics, in particular the conservation of energy and linear and angular momentum.**
+## Conservation of momentum
+
+Now, the last step $v_{k+/2} = (p_{k+1} - p_k) / dt$ is questionable. We should check if this velocity satisfies the equations of motion and does not violate some laws of physics, in particular the conservation of energy and linear and angular momentum.
 
 We start by discretization of Newton's equations of motion:
 $$ 
@@ -31,7 +33,11 @@ where we substituted:
  - $v_{k+/2} dt = p_{k+1} - p_k$
  - $v_{k-/2} dt = p_k - p_{k-1}$
 
-To update velocity at half step by corrected position as $ v_{k+/2}  = (p_{k+1} - p_k) / dt$ seems to be valid approach. Nevertheless, we are not sure if the impulses introduced by constrain solver  $ dv_{k+/2} = v'_{k+/2} - v_{k+/2} = (p_{k+1} - p_k)/dt -  v_{k-/2} - (f^{ext}_k/m)dt$ conserve linear and angular momentum.
+To update velocity at half step by corrected position as $ v_{k+/2}  = (p_{k+1} - p_k) / dt$ seems to be valid approach. Nevertheless, we are not sure if the impulses introduced by constrain solver $dv_{k+/2}$ conserve linear and angular momentum.
+
+$dv_{k+/2} = v'_{k+/2} - v_{k+/2} = (f^{int}_k/m)dt$
+$dv_{k+/2} = (p_{k+1} - p_k)/dt -  v_{k-/2} - (f^{ext}_k/m)dt$
+$dv_{k+/2} = (p_{k+1} - p_k + v_{k-/2}dt )/dt - (f^{ext}_k/m)dt$
 
 ## Projective dynamics as linear system
 

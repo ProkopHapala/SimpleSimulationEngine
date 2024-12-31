@@ -25,9 +25,9 @@ class SparseMatrix { public:
 
     void realloc(int n_,int m_){ 
         m=m_; n=n_;
-        _realloc0(nng,n,0);
-        _realloc0(inds,n*m,-1);
-        _realloc0(vals,n*m,0.0);
+        _realloc0(nng ,n   ,  0  );
+        _realloc0(inds,n*m , -1  );
+        _realloc0(vals,n*m , (T)0 );
     }
 
     __attribute__((pure)) 

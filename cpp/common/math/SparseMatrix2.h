@@ -147,7 +147,7 @@ class SparseMatrix2 { public:
     int fromDense( int n_, T* A, T tol, bool bRev=false ){
         n=n_;
         printf( "SparseMatrix2::fromDense() n=%i \n", n );
-        _realloc0(nngs, n, 0 );
+        _realloc0(nngs, n,  0  );
         _realloc0(i0s,  n, -1 );
         ntot = 0;
         for(int i=0; i<n; i++){
@@ -158,7 +158,7 @@ class SparseMatrix2 { public:
             i0s [i]=ntot;
             ntot+=ni;
         }
-        _realloc0(vals, ntot, 0.0 );
+        _realloc0(vals, ntot, (T)0 );
         _realloc0(inds, ntot, -1  );
         for(int i=0; i<n; i++){
             int ii = i; if(bRev)ii=n-i-1;
@@ -196,7 +196,7 @@ class SparseMatrix2 { public:
         _realloc0(nngs, n, 0 );
         _realloc0(i0s,  n, -1 );
         ntot = fromFwdSubT_( L, false);
-        _realloc0(vals, ntot, 0.0 );
+        _realloc0(vals, ntot, (T)0 );
         _realloc0(inds, ntot, -1  );
         fromFwdSubT_( L, true);
         return ntot;

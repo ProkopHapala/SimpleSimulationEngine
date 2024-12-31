@@ -416,14 +416,14 @@ __kernel void PD_corrector(
     const int iG     =  get_global_id(0);
     if(iG>=npoint) return;
     //if(iG==0){  for(int i=0; i<npoint; i++){ printf("GPU::PD_corrector(%3i) ps_new(%10.3e,%10.3e,%10.3e|%10.3e) ps_old(%10.3e,%10.3e,%10.3e) vs(%10.3e,%10.3e,%10.3e) dvs(%10.3e,%10.3e,%10.3e) fs(%10.3e,%10.3e,%10.3e)\n" , i, ps_new[i].x,ps_new[i].y,ps_new[i].z,ps_new[i].w, ps_old[i].x,ps_old[i].y,ps_old[i].z, vs[i].x,vs[i].y,vs[i].z, dvs[i].x,dvs[i].y,dvs[i].z, fs[i].x,fs[i].y,fs[i].z ); }}
-    const float4 pi     = ps_new[iG];
+    //const 
+    float4 pi     = ps_new[iG];
 
-    /*
     float3       v_new  = (pi.xyz - ps_old[iG].xyz)/dt;        // Leap-Frog: v_{k+1/2}  = ( p_{k+1  } - p_k ) /   dt
     float3       v_new_ = vs[iG].xyz + fs[iG].xyz * (dt*pi.w); // Leap-Frog: v_{k+1/2}' =   v_{k-1/2} + f_k / m   dt
-    dvs   [iG] += (float4){ (v_new-v_new_), 0.0f };  // we accumulate impulses due to velocity correction which can be used to correct momentum conservation violated by the constraint solver
-    vs    [iG]  = (float4){ v_new       , 0.0f };
-    */
+    { pi.z = 0.0f; v_new.z = 0.0f; v_new_.z = 0.0f; } // DEBUG 2D
+    //dvs   [iG] += (float4){ (v_new-v_new_), 0.0f };  // we accumulate impulses due to velocity correction which can be used to correct momentum conservation violated by the constraint solver
+    vs    [iG]  = (float4){ v_new       , 0.0f };    
     ps_old[iG]  = (float4){ pi.xyz      , pi.w };
     //fs  [iG] = (float4){  (v_new_-v_new)*pi.w/dt    ,0.0f};
     

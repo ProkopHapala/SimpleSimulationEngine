@@ -36,16 +36,16 @@ double checkDist(int n, const Vec3d* vec, const Vec3d* ref, int verb=1, double t
 }
 
 
-int sortNeighs( int n, int m, int* neighs){
-    //int permut[m];
-    for(int i=0; i<n;i++){
-        int* ngi=neighs+i*m;
-        int m_=0;
-        for(int j=0; j<m;j++){ if(ngi[j]<0)break; m_++; };
-        insertSort<int>( m_, ngi );
-    }
-    return 0;
-}
+// int sortNeighs( int n, int m, int* neighs){
+//     //int permut[m];
+//     for(int i=0; i<n;i++){
+//         int* ngi=neighs+i*m;
+//         int m_=0;
+//         for(int j=0; j<m;j++){ if(ngi[j]<0)break; m_++; };
+//         insertSort<int>( m_, ngi );
+//     }
+//     return 0;
+// }
 
 double springForce( double l, double& f, Quat4d par ){
     double dl = l - par.x;
@@ -175,13 +175,9 @@ class OrbSim: public Picker { public:
     double* LDLT_D=0; 
     int* neighsLDLT=0;
     int  nNeighMaxLDLT=0;
-
     SparseMatrix2<double>  Lsparse; 
     SparseMatrix2<double>  LsparseT; 
-
-
     SparseMatrix<double> PDsparse;
-
     CGsolver cgSolver;
 
     double cg_tol             = 1e-3;

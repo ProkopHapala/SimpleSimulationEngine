@@ -180,14 +180,12 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_fs    ].p_gpu));        OCL_checkError(err, "run_getTrussForces.4");
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_getTrussForces.5");
         err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_getTrussForces.6");
-        float inv_dt2 = 1.0f / (dt * dt);
         err |= clSetKernelArg(ker, 6, sizeof(float), &inv_dt2);                               OCL_checkError(err, "run_getTrussForces.7");
         size_t local_work_size  = 32;
         size_t global_work_size = roundUp(nPoint, local_work_size);
         err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);  OCL_checkError(err, "run_getTrussForces.8");
         OCL_checkError(err, "run_getTrussForces");
     }
-
 
     void run_updatePD_RHS( int ps ) {
         int err = 0;
@@ -198,8 +196,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_bvec  ].p_gpu));        OCL_checkError(err, "run_updatePD_RHS.4");
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_updatePD_RHS.5");
         err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_updatePD_RHS.6");
-        float inv_dt2 = 1.0f / (dt * dt);
-        err |= clSetKernelArg(ker, 6, sizeof(float), &inv_dt2);                               OCL_checkError(err, "run_updatePD_RHS.7");
+        err |= clSetKernelArg(ker, 6, sizeof(float),  &inv_dt2);                               OCL_checkError(err, "run_updatePD_RHS.7");
         size_t local_work_size  = 32;
         size_t global_work_size = roundUp(nPoint, local_work_size);
         err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);  OCL_checkError(err, "run_updatePD_RHS.8");
@@ -241,8 +238,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[      ps_out].p_gpu));        OCL_checkError(err, "run_updateJacobi_neighs.4");
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_updateJacobi_neighs.5");
         err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_updateJacobi_neighs.6");
-        float inv_dt2 = 1.0f / (dt * dt);
-        err |= clSetKernelArg(ker, 6, sizeof(float), &inv_dt2);
+        err |= clSetKernelArg(ker, 6, sizeof(float),  &inv_dt2);
         size_t local_work_size  = 32;
         size_t global_work_size = roundUp(nPoint, local_work_size);
         err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);  OCL_checkError(err, "run_updateJacobi_neighs.7");
@@ -270,9 +266,8 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_dps   ].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.5");
         err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_neighs].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.6");
         err |= clSetKernelArg(ker, 6, sizeof(cl_mem), &(buffers[ibuff_params].p_gpu));        OCL_checkError(err, "run_updateJacobi_mix.7");
-        float inv_dt2 = 1.0f / (dt * dt);
-        err |= clSetKernelArg(ker, 7, sizeof(float), &inv_dt2);                               OCL_checkError(err, "run_updateJacobi_mix.8");
-        err |= clSetKernelArg(ker, 8, sizeof(float2), &bmix);                                 OCL_checkError(err, "run_updateJacobi_mix.9");
+        err |= clSetKernelArg(ker, 7, sizeof(float),  &inv_dt2 );                             OCL_checkError(err, "run_updateJacobi_mix.8");
+        err |= clSetKernelArg(ker, 8, sizeof(float2), &bmix    );                             OCL_checkError(err, "run_updateJacobi_mix.9");
         size_t local_work_size  = 32;
         size_t global_work_size = roundUp(nPoint, local_work_size);
         err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);  OCL_checkError(err, "run_updateJacobi_mix.10");
@@ -319,7 +314,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         err |= clSetKernelArg(ker, 2, sizeof(cl_mem), &(buffers[      ps    ].p_gpu));      OCL_checkError(err, "run_PD_perdictor().3");
         err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_forces].p_gpu));      OCL_checkError(err, "run_PD_perdictor().4");
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_vels  ].p_gpu));      OCL_checkError(err, "run_PD_perdictor().5");
-        err |= clSetKernelArg(ker, 5, sizeof(float), &dt);                                  OCL_checkError(err, "run_PD_perdictor().6");
+        err |= clSetKernelArg(ker, 5, sizeof(float),  &dt);                                OCL_checkError(err, "run_PD_perdictor().6");
         size_t local_work_size  = 32;
         size_t global_work_size = roundUp(nPoint, local_work_size);
         err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL); OCL_checkError(err, "run_PD_perdictor().7");
@@ -344,7 +339,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         err |= clSetKernelArg(ker, 3, sizeof(cl_mem), &(buffers[ibuff_vels  ].p_gpu));         OCL_checkError(err, "run_PD_corrector().4");
         err |= clSetKernelArg(ker, 4, sizeof(cl_mem), &(buffers[ibuff_impuls].p_gpu));         OCL_checkError(err, "run_PD_corrector().5");
         err |= clSetKernelArg(ker, 5, sizeof(cl_mem), &(buffers[ibuff_forces].p_gpu));         OCL_checkError(err, "run_PD_corrector().6");
-        err |= clSetKernelArg(ker, 6, sizeof(float), &dt);
+        err |= clSetKernelArg(ker, 6, sizeof(float),  &dt);
         size_t local_work_size  = 32;
         size_t global_work_size = roundUp(nPoint, local_work_size);
         err |= clEnqueueNDRangeKernel(commands, ker, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);   OCL_checkError(err, "run_PD_corrector().7");
@@ -478,12 +473,12 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
             fcog .add      ( forces[i].f );
         }
         if(bNan){ printf( "OCL_Orb::run_PDcl() nan detected in points => Exit() \n" ); exit(0); }
-        cog .mul( 1.0/mass );
-        vcog.mul( 1.0/mass );
+        cog  .mul( 1.0/mass );
+        vcog .mul( 1.0/mass );
         dvcog.mul( 1.0/mass );
-        for(int i=0; i<nPoint; i++){ 
-            vel[i].f.sub( dvcog );
-        }
+        // for(int i=0; i<nPoint; i++){ 
+        //     vel[i].f.sub( dvcog );
+        // }
         printf( "OCL_Orb::run_PDcl() cog(%10.2e,%10.2e,%10.2e) vcog(%10.2e,%10.2e,%10.2e) dvcog(%10.2e,%10.2e,%10.2e) fcog(%10.2e,%10.2e,%10.2e) \n", cog.x,cog.y,cog.z, vcog.x,vcog.y,vcog.z, dvcog.x,dvcog.y,dvcog.z, fcog.x,fcog.y,fcog.z ); 
         //for(int i=0; i<4; i++){ printf( "forces[%i] (%g,%g,%g) \n", i, forces[i].x, forces[i].y, forces[i].z ); }
         //exit(0);

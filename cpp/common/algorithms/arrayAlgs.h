@@ -157,6 +157,17 @@ int insertSort( int n, T* data ){
     return niter;
 }
 
+inline int sortNeighs( int n, int m, int* neighs){
+    //int permut[m];
+    for(int i=0; i<n;i++){
+        int* ngi=neighs+i*m;
+        int m_=0;
+        for(int j=0; j<m;j++){ if(ngi[j]<0)break; m_++; };
+        insertSort<int>( m_, ngi );
+    }
+    return 0;
+}
+
 template<typename T>
 int insertSort( int n, int* permut, const T* data ){
     //https://en.wikipedia.org/wiki/Insertion_sort

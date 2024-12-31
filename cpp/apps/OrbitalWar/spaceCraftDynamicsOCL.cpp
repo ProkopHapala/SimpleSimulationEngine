@@ -63,7 +63,6 @@ bool bRun = false;
 
 Mesh::Builder2 mesh2;
 OrbSim         sim2;
-//OrbSim_f       sim_cl;
 OCL_Orb        sim_cl;
 
 int glo_truss=0, glo_capsula=0, glo_ship=0;
@@ -74,9 +73,16 @@ double elementSize  = 5.;
 void runSim( OCL_Orb& sim_cl, int niter=100 ){
     niter=1;
     //niter=10;
-    int nbig = 10;
-    int nsub = 10;
+    int nbig = 20;
+    int nsub = 20;
     niter = nbig*nsub;
+    //sim_cl.dt = 0.1;
+    //sim_cl.dt = 0.1e-4;
+
+    //sim_cl.set_time_step(0.1   );
+    //sim_cl.set_time_step(0.01  );
+    //sim_cl.set_time_step(0.001 );
+    sim_cl.set_time_step(0.0001);
 
     //niter = 500;
     if(bRun){
@@ -118,6 +124,31 @@ void runSim( OCL_Orb& sim_cl, int niter=100 ){
     glColor3f(0.0,1.0,1.0);
     renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.vel, 1e-1 );
 }
+
+void runSim_cpu( OrbSim_f& sim, int niter=100 ){
+    niter=1;
+    //niter=10;
+    int nbig = 20;
+    int nsub = 20;
+    niter = nbig*nsub;
+    //sim.set_time_step(0.1   );
+    //sim.set_time_step(0.01  );
+    //sim.set_time_step(0.001 );
+    sim.set_time_step(0.0001);
+
+    //niter = 500;
+    if(bRun){
+        long t0 = getCPUticks();
+        //sim.run_Cholesky_omp_simd(nbig);
+        double T = (getCPUticks()-t0)*1e-6;
+    }
+    sim.evalBondTension();
+    glColor3f(1.0,0.0,1.0);
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-1 );
+    glColor3f(0.0,1.0,1.0);
+    renderPointForces( sim.nPoint, sim.points, sim.vel, 1e-1 );
+}
+
 
 // ======================  Free Functions
 
@@ -314,7 +345,7 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
         //reloadShip( "data/ship_ICF_interceptor_1.lua" );
         //makeTrussShape( 2, 1, 100.0, 10.0,  false, true );
         //makeTrussShape( 2, 100, 100.0, 10.0,  false, true );
-        makeTrussShape( 3, 100, 100.0, 10.0,  false, true );
+        makeTrussShape( 3, 50, 100.0, 10.0,  false, true );
     }
 
     picker.picker = &sim_cl;   picker.Rmax=10.0;
@@ -337,6 +368,8 @@ void SpaceCraftEditorApp::draw(){
     glLineWidth(0.5); 
 
     runSim( sim_cl );
+    //runSim_cpu( sim_cl );
+
     renderTruss( sim_cl.nBonds, sim_cl.bonds, sim_cl.points, sim_cl.strain, 1000.0 );
 
     //sim2.run_Cholesky(1);
