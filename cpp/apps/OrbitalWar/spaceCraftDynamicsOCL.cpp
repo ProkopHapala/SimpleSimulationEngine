@@ -62,70 +62,73 @@ using namespace SpaceCrafting;
 bool bRun = false;
 
 Mesh::Builder2 mesh2;
-OrbSim         sim2;
-OCL_Orb        sim_cl;
+OrbSim         sim2;   // CPU double precision
+OCL_Orb        sim_cl; // single precision both CPU and GPU
 
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 double elementSize  = 5.;
 
 
 // Render 
-void runSim( OCL_Orb& sim_cl, int niter=100 ){
+void runSim( OCL_Orb& sim, int niter=100 ){
+    if( (sim.nPoint==0)||(sim.points==0) ){ printf( "ERROR in runSim() sim.nPoint=%i sim.points=%p => exit() \n", sim.nPoint, sim.points ); exit(0); };
     niter=1;
     //niter=10;
     int nbig = 20;
     int nsub = 20;
     niter = nbig*nsub;
-    //sim_cl.dt = 0.1;
-    //sim_cl.dt = 0.1e-4;
+    //sim.dt = 0.1;
+    //sim.dt = 0.1e-4;
 
-    //sim_cl.set_time_step(0.1   );
-    //sim_cl.set_time_step(0.01  );
-    //sim_cl.set_time_step(0.001 );
-    sim_cl.set_time_step(0.0001);
+    //sim.set_time_step(0.1   );
+    //sim.set_time_step(0.01  );
+    //sim.set_time_step(0.001 );
+    sim.set_time_step(0.0001);
 
     //niter = 500;
     if(bRun){
         long t0 = getCPUticks();
-        //sim_cl.run( niter, 1e-4, 1e-4 );
-        //sim_cl.run_omp( niter, false, 1e-3, 1e-4 );
-        //sim_cl.run_omp( niter, true, 1e-3, 1e-4 );
-        //sim_cl.damping = 1e-5; sim_cl.dt      = 1e-3; // does not have any effect here
-        //sim_cl.run_ocl( niter*nsub, 0b001, 0b111 ); // 0b001 - upload points, 0b111 - download points, velocities, forces
-        //sim_cl.run_PDcl( nbig, nsub, 0b001, 0b111 ); // 0b001 - upload points, 0b111 - download points, velocities, forces
+        //sim.run( niter, 1e-4, 1e-4 );
+        //sim.run_omp( niter, false, 1e-3, 1e-4 );
+        //sim.run_omp( niter, true, 1e-3, 1e-4 );
+        //sim.damping = 1e-5; sim.dt      = 1e-3; // does not have any effect here
+        //sim.run_ocl( niter*nsub, 0b001, 0b111 );   // 0b001 - upload points, 0b111 - download points, velocities, forces
+        //sim.run_PDcl( nbig, nsub, 0b001, 0b111 ); // 0b001 - upload points, 0b111 - download points, velocities, forces
 
-        sim_cl.run_PDcl( nbig, nsub, 0b111, 0b111 );
+        sim.run_PDcl( nbig, nsub, 0b111, 0b111 );
 
         // ---- Debug loop --- check if forces are the same between GPU and CPU
-        //printf( "runSim() fmax=%g fmax_ref=%g\n", sim_cl.getFmax(), fmax_ref );
-        //printf( "runSim() fmax=%g fmax_ref=%g\n", sim_cl.getFmax(), fmax_ref );
+        //printf( "runSim() fmax=%g fmax_ref=%g\n", sim.getFmax(), fmax_ref );
+        //printf( "runSim() fmax=%g fmax_ref=%g\n", sim.getFmax(), fmax_ref );
         // for(int itr=0; itr<niter; itr++){
-        //     sim_cl.damping = 1e-5;
-        //     sim_cl.dt      = 1e-3;
-        //     sim_cl.run_ocl( 1, 0b011, 0b111 );
-        //     //sim_cl.cleanForce();
-        //     //sim_cl.evalTrussForces_neighs2();
-        //     //sim_cl.applyForceCentrifug( sim_cl.rot0.f, sim_cl.omega.f, sim_cl.omega.w );
-        //     sim_cl.move_MD( 1e-3, 1e-5 );
+        //     sim.damping = 1e-5;
+        //     sim.dt      = 1e-3;
+        //     sim.run_ocl( 1, 0b011, 0b111 );
+        //     //sim.cleanForce();
+        //     //sim.evalTrussForces_neighs2();
+        //     //sim.applyForceCentrifug( sim.rot0.f, sim.omega.f, sim.omega.w );
+        //     sim.move_MD( 1e-3, 1e-5 );
         // }
         double T = (getCPUticks()-t0)*1e-6;
-        //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim_cl.nPoint, sim_cl.nNeighMax );
-        //printf( "runSim() nPoint=%i nBonds=%i \n", sim_cl.nPoint, sim_cl.nBonds );
+        //printf( "runSim() DONE T=%g[ms] %g[ms/iter] niter=%i,nP=%i,nE=%i \n", T, T/niter, niter, sim.nPoint, sim.nNeighMax );
+        //printf( "runSim() nPoint=%i nBonds=%i \n", sim.nPoint, sim.nBonds );
     }
-    sim_cl.evalBondTension();
+    sim.evalBondTension();
     glColor3f(1.0,0.0,1.0);
-    //renderPoinSizes( sim_cl.nPoint, sim_cl.points, 0.001 );
-    //renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1e-6 );
-    //renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1e-3 );
-    //renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1e-2 );
-    renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1e-1 );
-    //renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.forces, 1.0 );
+    //renderPoinSizes( sim.nPoint, sim.points, 0.001 );
+    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-6 );
+    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-3 );
+    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-2 );
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-1 );
+    //renderPointForces( sim.nPoint, sim.points, sim.forces, 1.0 );
 
     glColor3f(0.0,1.0,1.0);
-    renderPointForces( sim_cl.nPoint, sim_cl.points, sim_cl.vel, 1e-1 );
+    renderPointForces( sim.nPoint, sim.points, sim.vel, 1e-1 );
+    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
 }
 
 void runSim_cpu( OrbSim_f& sim, int niter=100 ){
+    if( (sim.nPoint==0)||(sim.points==0) ){ printf( "ERROR in runSim_cpu() sim.nPoint=%i sim.points=%p => exit() \n", sim.nPoint, sim.points ); exit(0); };
     niter=1;
     //niter=10;
     int nbig = 20;
@@ -139,7 +142,7 @@ void runSim_cpu( OrbSim_f& sim, int niter=100 ){
     //niter = 500;
     if(bRun){
         long t0 = getCPUticks();
-        //sim.run_Cholesky_omp_simd(nbig);
+        sim.run_Cholesky_omp_simd(nbig);
         double T = (getCPUticks()-t0)*1e-6;
     }
     sim.evalBondTension();
@@ -147,15 +150,43 @@ void runSim_cpu( OrbSim_f& sim, int niter=100 ){
     renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-1 );
     glColor3f(0.0,1.0,1.0);
     renderPointForces( sim.nPoint, sim.points, sim.vel, 1e-1 );
+    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+}
+
+void runSim_double( OrbSim& sim, int niter=100 ){
+    //printf( "runSim_double() nPoint=%i nBonds=%i nNeighMax=%i nNeighMaxLDLT=%i\n", sim.nPoint, sim.nBonds, sim.nNeighMax, sim.nNeighMaxLDLT );
+    if( (sim.nPoint==0)||(sim.points==0) ){ printf( "ERROR in runSim_double() sim.nPoint=%i sim.points=%p => exit() \n", sim.nPoint, sim.points ); exit(0); };
+    niter=1;
+    //niter=10;
+    int nbig = 20;
+    int nsub = 20;
+    niter = nbig*nsub;
+    //sim.set_time_step(0.1   );
+    //sim.set_time_step(0.01  );
+    //sim.set_time_step(0.001 );
+    //sim.set_time_step(0.0001);
+
+    //niter = 500;
+    if(bRun){
+        long t0 = getCPUticks();
+        sim.run_Cholesky_omp_simd(nbig);
+        double T = (getCPUticks()-t0)*1e-6;
+    }
+    sim.evalBondTension();
+    glColor3f(1.0,0.0,1.0);
+    renderPointForces( sim.nPoint, sim.points, sim.forces, 1e-1 );
+    glColor3f(0.0,1.0,1.0);
+    renderPointForces( sim.nPoint, sim.points, sim.vel, 1e-1 );
+    renderTruss      ( sim.nBonds, sim.bonds,  sim.points, sim.strain, 1000.0 );
 }
 
 
 // ======================  Free Functions
 
-void to_sim2( Mesh::Builder2& mesh2, Vec3d p0, Vec3d ax ){
+void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh2, Vec3d p0, Vec3d ax ){
     //int nneighmax_min = 16;
     int nneighmax_min = 8;
-    exportSim( sim2, mesh2, workshop,  nneighmax_min );
+    exportSim( sim, mesh2, workshop,  nneighmax_min );
     for(int i=0; i<sim2.nPoint; i++)  sim2.points[i].w=1.0;
     for(int i=0; i<sim2.nBonds;  i++) sim2.params[i].y=10000.0;
     //sim2.printAllNeighs();
@@ -164,56 +195,73 @@ void to_sim2( Mesh::Builder2& mesh2, Vec3d p0, Vec3d ax ){
 
     double dt = 0.05;
 
-    mat2file<int>( "neighs_before.log",  n, sim2.nNeighMax,      sim2.neighs,     "%5i " );
+    mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim2.neighs,     "%5i " );
     //sim2.prepare_Cholesky( 0.05, 32 );
     sim2.prepare_LinearSystem( dt, true, true, true, 32 );
-    mat2file<int>( "neighs_after.log",   n, sim2.nNeighMaxLDLT,  sim2.neighsLDLT, "%5i " );
+    mat2file<int>( "neighs_after.log",   n, sim.nNeighMaxLDLT,  sim2.neighsLDLT, "%5i " );
 
-    mat2file<double>( "PDmat.log",  n,n, sim2.PDmat  );
-    mat2file<double>( "LDLT_L.log", n,n, sim2.LDLT_L );
+    mat2file<double>( "PDmat.log",  n,n, sim.PDmat  );
+    mat2file<double>( "LDLT_L.log", n,n, sim.LDLT_L );
 
     double omega = 1.0;
-    sim2.cleanVel();
-    sim2.addAngularVelocity(  p0, ax*omega );
-    //apply_torq( sim2.nPoint, p0, ax*omega, sim2.points, sim2.vel );  
-    
-    //exportSim( sim_cl, mesh2, workshop );
-    //sim_cl.printAllNeighs();
+    sim.cleanVel();
+    sim.addAngularVelocity(  p0, ax*omega );
+    //apply_torq( sim.nPoint, p0, ax*omega, sim2.points, sim2.vel );  
 }
 
-void to_sim_cl( Mesh::Builder2& mesh2, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero ){
+void to_OCL_Orb( OCL_Orb& sim, Mesh::Builder2& mesh2, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero, bool bCholesky=false, bool bGPU=true ){
     exportSim( sim_cl, mesh2, workshop );
     // OpenCL initialization
-    printf("###### OpenCL initialization\n");
-    sim_cl.makeKrenels_Orb( "./common_resources/cl" );
-    sim_cl.initCLBuffsOrb(  );
-    //sim_cl.setup_test_enque();
-    //sim_cl.setup_blur();
-    //sim_cl.test_enque();
 
-    sim_cl.setKngs();
-    sim_cl.cleanForce();
-    sim_cl.cleanVel();
-    sim_cl.cleanImpuls();
+    sim.damping = 1e-5; 
+    sim.set_time_step( 1e-3 );
 
-    for(int i=0; i<sim_cl.nPoint; i++){
+    sim.cleanForce();
+    sim.cleanVel();
+    sim.cleanImpuls();
+    sim.addAngularVelocity(  p0, omega );
+
+    for(int i=0; i<sim.nPoint; i++){
     //     Vec3f r = sim_cl.points[i].f - p0;
-    //     sim_cl.vel[i].f.set_cross(omega,r);
-           sim_cl.points[i].x -= 100.0;
+    //     sim.vel[i].f.set_cross(omega,r);
+           sim.points[i].x -= 100.0;
     }
-
-    sim_cl.upload( sim_cl.ibuff_points, sim_cl.points );
-    sim_cl.upload( sim_cl.ibuff_vels  , sim_cl.vel    );
-    sim_cl.upload( sim_cl.ibuff_forces, sim_cl.forces );
-    sim_cl.upload( sim_cl.ibuff_impuls, sim_cl.impuls );
-    sim_cl.upload( sim_cl.ibuff_kngs  , sim_cl.kngs   );
-    sim_cl.damping = 1e-5; 
-    sim_cl.dt      = 1e-3; // must be here before sim_cl.setup_evalTrussForce2();
-    sim_cl.setup_evalTrussForce1();
-    sim_cl.setup_evalTrussForce2();
-    sim_cl.setup_move();
-    sim_cl.setup_assembleAndMove();
-    sim_cl.setup_evalTrussBondForce();
+    if(bCholesky){
+        //double omega = 1.0;
+        //double dt    = 0.05;
+        //double dt    = 0.02;
+        //double dt    = 0.01;
+        int n = sim_cl.nPoint;
+        mat2file<float>( "bond_params_f.log",   sim.nBonds,4, (float*) sim.bparams        );
+        mat2file<int>( "neighs_before.log",  n, sim.nNeighMax, sim.neighs, "%5i " );
+        sim.prepare_LinearSystem( sim.dt, true, true, true, 32 );
+        mat2file<int>  ( "neighs_after_f.log", n, sim.nNeighMaxLDLT, sim.neighsLDLT, "%5i " );
+        mat2file<float>( "PDmat_f.log",  n,n, sim.PDmat  );
+        mat2file<float>( "LDLT_L_f.log", n,n, sim.LDLT_L );
+        mat2file<float>( "LDLT_D_f.log", n,1, sim.LDLT_D );
+        //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
+        sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
+        //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
+    }
+    if(bGPU){
+        printf("###### OpenCL initialization\n");
+        sim.makeKrenels_Orb( "./common_resources/cl" );
+        sim.initCLBuffsOrb(  );
+        //sim_cl.setup_test_enque();
+        //sim_cl.setup_blur();
+        //sim_cl.test_enque();
+        sim.setKngs();
+        sim.upload( sim_cl.ibuff_points, sim_cl.points );
+        sim.upload( sim_cl.ibuff_vels  , sim_cl.vel    );
+        sim.upload( sim_cl.ibuff_forces, sim_cl.forces );
+        sim.upload( sim_cl.ibuff_impuls, sim_cl.impuls );
+        sim.upload( sim_cl.ibuff_kngs  , sim_cl.kngs   );
+        sim.setup_evalTrussForce1();
+        sim.setup_evalTrussForce2();
+        sim.setup_move();
+        sim.setup_assembleAndMove();
+        sim.setup_evalTrussBondForce();
+    }
 }
 
 void reloadShip( const char* fname  ){
@@ -228,7 +276,8 @@ void reloadShip( const char* fname  ){
     BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
     mesh2.printSizes();
 
-    to_sim_cl( mesh2 );
+    to_OCL_Orb(sim_cl, mesh2, Vec3fZero, Vec3fZ );
+    to_OrbSim( sim2,   mesh2, Vec3dZero, Vec3dZ );
     
     printf("#### END reloadShip('%s')\n", fname );
 };
@@ -254,7 +303,7 @@ void test_SolverConvergence( Mesh::Builder2& mesh2, Quat4f* ps_bak , int nSolver
     }
 }
 
-void makeTrussShape( int ishape, int nseg, double R, double r, bool bCPU=false, bool bGPU=true ){
+void makeTrussShape( int ishape, int nseg, double R, double r, bool bDouble=true, bool bSingle=true ){
 
     StickMaterial *o = new StickMaterial();
     //Material{ name="Kevlar", density=1.44e+3, Spull=3.6e+9, Spush=0.0,    Kpull=154.0e+9, Kpush=0.0,      reflectivity=0.6,  Tmelt=350 }
@@ -290,8 +339,8 @@ void makeTrussShape( int ishape, int nseg, double R, double r, bool bCPU=false, 
     //o->stickRange = {b.y,(int)mesh.edges.size()};
     mesh2.printSizes();
 
-    if(bCPU){ to_sim2  ( mesh2,        p0,         ax      ); }
-    if(bGPU){ to_sim_cl( mesh2, (Vec3f)p0, (Vec3f)(ax*5.0) ); }
+    if(bDouble){ to_OrbSim ( sim2,   mesh2,        p0,         ax      ); }
+    if(bSingle){ to_OCL_Orb( sim_cl, mesh2, (Vec3f)p0, (Vec3f)(ax*5.0) ); }
 
     distort_points( sim_cl.nPoint, sim_cl.points, sim_cl.points, 1.0, Vec3fOne, 15454 ); 
 
@@ -304,8 +353,6 @@ void makeTrussShape( int ishape, int nseg, double R, double r, bool bCPU=false, 
     // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 20,  8, 0.5, 0.05 );
     // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 50,  8, 0.5, 0.05 );
     // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 100, 8, 0.5, 0.05 );
-
-    
 
     printf("#### END makeShip_Whee()\n" );
     //exit(0);
@@ -343,9 +390,9 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     initSpaceCraftingLua();
     if(argc<=1){
         //reloadShip( "data/ship_ICF_interceptor_1.lua" );
-        //makeTrussShape( 2, 1, 100.0, 10.0,  false, true );
-        //makeTrussShape( 2, 100, 100.0, 10.0,  false, true );
-        makeTrussShape( 3, 50, 100.0, 10.0,  false, true );
+        //makeTrussShape( 2, 1,   100.0, 10.0,   true, true );
+        //makeTrussShape( 2, 100, 100.0, 10.0,  true, true );
+        makeTrussShape  ( 3, 50, 100.0, 10.0,  true, true );
     }
 
     picker.picker = &sim_cl;   picker.Rmax=10.0;
@@ -366,11 +413,13 @@ void SpaceCraftEditorApp::draw(){
 
     // Render simulation
     glLineWidth(0.5); 
-
-    //runSim( sim_cl );
-    runSim_cpu( sim_cl );
-
-    renderTruss( sim_cl.nBonds, sim_cl.bonds, sim_cl.points, sim_cl.strain, 1000.0 );
+    bool bDouble = true;
+    if(bDouble){
+        runSim_double( sim2  );
+    }else{
+        runSim( sim_cl );
+        //runSim_cpu( sim_cl );
+    }
 
     //sim2.run_Cholesky(1);
     //sim2.run_LinSolve(1);

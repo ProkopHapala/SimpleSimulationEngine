@@ -271,6 +271,13 @@ class OrbSim: public Picker { public:
     double ff_safety    = 1e-16;
     double cv,cf;
 
+    // ============ Functions
+
+    inline void set_time_step( float dt_ ){
+        dt      = dt_;
+        //inv_dt2 = 1.0f / (dt * dt);
+    }
+
     void recalloc( int nPoint_, int nNeighMax_, int nBonds_=0){
         nPoint = nPoint_; nNeighMax = nNeighMax_;
         nNeighTot = nPoint*nNeighMax;

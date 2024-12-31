@@ -381,18 +381,21 @@ class OrbSim_f : public Picker { public:
     // =================== Solver Using Projective Dynamics and Cholesky Decomposition
 
     void rhs_ProjectiveDynamics(Vec3f* pnew, Vec3f* b) {
+        printf("OrbSim_f::rhs_ProjectiveDynamics() nPoint=%i nNeighMax=%i @nNeighMaxLDLT=%i @pnew=%p b=%p\n", nPoint, nNeighMax, nNeighMaxLDLT, pnew, b );
         float idt2 = 1.0 / (dt * dt);
         for (int i = 0; i < nPoint; i++) {
+            //printf("OrbSim_f::rhs_ProjectiveDynamics() i=%i\n", i );
             Vec3f bi;
             bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
             int neighB_start = (i == 0) ? 0 : neighB2s[i-1];
             int neighB_end = neighB2s[i];
+            printf("OrbSim_f::rhs_ProjectiveDynamics() i=%i neighB_start=%i neighB_end=%i\n", i, neighB_end, neighB_start );
             for (int nb = neighB_start; nb < neighB_end; nb++) {
-                int ib = neighs[nb];
+                int ib  = neighs[nb];
                 float k = params[ib].y;  // assuming params.y is the spring constant
-                int i_ = bonds[ib].x;
-                int j_ = bonds[ib].y;
-                int j = (i_ == i) ? j_ : i_;
+                int i_  = bonds [ib].x;
+                int j_  = bonds [ib].y;
+                int j   = (i_ == i) ? j_ : i_;
                 Vec3f d = points[i].f -  points[j].f;
                 bi.add_mul(d, k * params[ib].x / d.norm());  // params[ib].x is l0
             }
@@ -615,11 +618,17 @@ class OrbSim_f : public Picker { public:
                 LsparseT.fromFwdSubT( nPoint, LDLT_L);
             }
             {   printf( "# ---------- Test Cholesky Lsparse \n");
+                DEBUG
                 for(int i=0; i<nPoint; i++){ ps_pred[i] = points[i].f*1.1; }; 
+                DEBUG
                 rhs_ProjectiveDynamics( ps_pred, linsolve_b );
+                DEBUG
                 Lingebra::forward_substitution_m( LDLT_L, (float*)linsolve_b,  (float*)linsolve_yy, nPoint, 3 );
+                DEBUG
                 Lsparse.fwd_subs_m( 3,  (float*)linsolve_b,  (float*)ps_cor );
+                DEBUG
                 checkDist( nPoint, ps_cor, linsolve_yy, 2 );
+                DEBUG
             }
             //mat2file<float>( "LDLT_L.log", nPoint,nPoint, LDLT_L );
             Lsparse.fprint_inds("Lsparse_inds.log");
@@ -1059,6 +1068,17 @@ class OrbSim_f : public Picker { public:
     void cleanVel   (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4fZero;   } };
     void cleanImpuls(){ for (int i=0; i<nPoint; i++){ impuls[i]=Quat4fZero;   } };
     void setKngs    (){ for (int i=0; i<nNeighTot; i++){ kngs[i]=params[i].z; } };   // kPull
+
+    void addAngularVelocity( Vec3f p0, Vec3f ax ){
+        for(int i=0; i<nPoint; i++){
+            Vec3f dp = points[i].f - p0;
+            Vec3f v; 
+            v.set_cross(ax,dp);
+            //v.set_cross(dp,ax);
+            //cross(axis, p)
+            vel[i].f.add(v);
+        }
+    };
 
     float move_GD(float dt){
         float ff=0;
