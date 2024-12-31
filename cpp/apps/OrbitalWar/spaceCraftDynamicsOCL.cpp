@@ -62,7 +62,7 @@ using namespace SpaceCrafting;
 bool bRun = false;
 bool bViewPointLabels = false;
 
-Mesh::Builder2 mesh2;
+Mesh::Builder2 mesh;
 OrbSim         sim2;   // CPU double precision
 OCL_Orb        sim_cl; // single precision both CPU and GPU
 
@@ -183,10 +183,10 @@ void runSim_double( OrbSim& sim, int niter=100 ){
 
 // ======================  Free Functions
 
-void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh2, Vec3d p0, Vec3d ax ){
+void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, Vec3d p0, Vec3d ax ){
     //int nneighmax_min = 16;
     int nneighmax_min = 8;
-    exportSim( sim, mesh2, workshop,  nneighmax_min );
+    exportSim( sim, mesh, workshop,  nneighmax_min );
     for(int i=0; i<sim2.nPoint; i++)  sim2.points[i].w=1.0;
     for(int i=0; i<sim2.nBonds;  i++) sim2.params[i].y=10000.0;
     //sim2.printAllNeighs();
@@ -213,8 +213,8 @@ void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh2, Vec3d p0, Vec3d ax ){
     //apply_torq( sim.nPoint, p0, ax*omega, sim.points, sim.vel );  
 }
 
-void to_OCL_Orb( OCL_Orb& sim, Mesh::Builder2& mesh2, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero, bool bCholesky=false, bool bGPU=true ){
-    exportSim( sim, mesh2, workshop );
+void to_OCL_Orb( OCL_Orb& sim, Mesh::Builder2& mesh, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero, bool bCholesky=false, bool bGPU=true ){
+    exportSim( sim, mesh, workshop );
 
     sim.reallocFixed();
     for(int i:fixPoints){ printf("to_OCL_Orb fixing point %i \n", i); sim.kFix[i] = Kfix ; }
@@ -278,12 +278,12 @@ void reloadShip( const char* fname  ){
     printf( "Lua::dofile(%s) DONE \n", fname );
     theSpaceCraft->checkIntegrity();
 
-    mesh2.clear();
-    BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
-    mesh2.printSizes();
+    mesh.clear();
+    BuildCraft_truss( mesh, *theSpaceCraft, 30.0 );
+    mesh.printSizes();
 
-    to_OCL_Orb(sim_cl, mesh2, Vec3fZero, Vec3fZ );
-    to_OrbSim( sim2,   mesh2, Vec3dZero, Vec3dZ );
+    to_OCL_Orb(sim_cl, mesh, Vec3fZero, Vec3fZ );
+    to_OrbSim( sim2,   mesh, Vec3dZero, Vec3dZ );
     
     printf("#### END reloadShip('%s')\n", fname );
 };
@@ -296,7 +296,7 @@ void distort_points( int n, Quat4f* ps, Quat4f* ps_out, float rnd=0.1, Vec3f sc=
     }
 }
 
-void test_SolverConvergence( Mesh::Builder2& mesh2, Quat4f* ps_bak , int nSolverIters=10, int nbmix=3, float bmix0=0.5, float dbmix=0.1 ){
+void test_SolverConvergence( Mesh::Builder2& mesh, Quat4f* ps_bak , int nSolverIters=10, int nbmix=3, float bmix0=0.5, float dbmix=0.1 ){
     printf( "test_SolverConvergence() nPoint=%i nSolverIters=%g nbmix=%i bmix0=%g dbmix=%g \n", sim_cl.nPoint, nSolverIters, nbmix, bmix0, dbmix );
     if( ps_bak){ for(int i=0; i<sim_cl.nPoint; i++){ sim_cl.points[i]=ps_bak[i]; } }
     sim_cl.run_SolverConvergence( nSolverIters, 0, true );
@@ -327,38 +327,38 @@ void makeTrussShape( int ishape, int nseg, double R, double r, bool bDouble=true
     Vec3d ax{0.0,0.0,1.0};
     Vec3d up{0.0,1.0,0.0};
     
-    //BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
-    mesh2.clear();
+    //BuildCraft_truss( mesh, *theSpaceCraft, 30.0 );
+    mesh.clear();
     //mesh.block();
-    //mesh2.wheel( p0, p1, ax, nseg, 0.2 );
-    //wheel( mesh2, p0, p1, ax, nseg, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
+    //mesh.wheel( p0, p1, ax, nseg, 0.2 );
+    //wheel( mesh, p0, p1, ax, nseg, Vec2d{0.2,0.2}, Quat4i{0,0,0,0} );
     switch(ishape){
-        case 0: ngon   ( mesh2, p0, p1, ax, nseg, 0 ); break;
-        case 1: wheel  ( mesh2, p0, p1, ax, nseg, Vec2d{r,r}, Quat4i{0,0,0,0}       ); break;
-        case 2: girder1( mesh2, p0, (p1-p0).normalized()*r*4*nseg, ax, nseg, r,          Quat4i{0,0,0,0}, true ); break;
-        case 3: triangle_strip( mesh2, p0, (p1-p0).normalized()*r*nseg, up, nseg, r, 0, true );
+        case 0: ngon   ( mesh, p0, p1, ax, nseg, 0 ); break;
+        case 1: wheel  ( mesh, p0, p1, ax, nseg, Vec2d{r,r}, Quat4i{0,0,0,0}       ); break;
+        case 2: girder1( mesh, p0, (p1-p0).normalized()*r*4*nseg, ax, nseg, r,          Quat4i{0,0,0,0}, true ); break;
+        case 3: triangle_strip( mesh, p0, (p1-p0).normalized()*r*nseg, up, nseg, r, 0, true );
         //int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes ){
     }
     //wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );
     //Quat4i& b = mesh.blocks.back();
     //o->pointRange = {b.x,(int)mesh.verts.size()};
     //o->stickRange = {b.y,(int)mesh.edges.size()};
-    mesh2.printSizes();
+    mesh.printSizes();
 
-    if(bDouble){ to_OrbSim ( sim2,   mesh2,        p0,         ax      ); }
-    if(bSingle){ to_OCL_Orb( sim_cl, mesh2, (Vec3f)p0, (Vec3f)(ax*5.0) ); }
+    if(bDouble){ to_OrbSim ( sim2,   mesh,        p0,         ax      ); }
+    if(bSingle){ to_OCL_Orb( sim_cl, mesh, (Vec3f)p0, (Vec3f)(ax*5.0) ); }
 
     distort_points( sim_cl.nPoint, sim_cl.points, sim_cl.points, 1.0, Vec3fOne, 15454 ); 
 
     // std::vector<Quat4f> ps_bak(sim_cl.nPoint); 
     // distort_points( sim_cl.nPoint, sim_cl.points, ps_bak.data(), 1.0, Vec3fOne, 15454 ); 
 
-    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 3,   8, 0.5, 0.05 );
-    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 5,   8, 0.5, 0.05 );
-    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 10,  8, 0.5, 0.05 );
-    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 20,  8, 0.5, 0.05 );
-    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 50,  8, 0.5, 0.05 );
-    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh2, ps_bak.data(), 100, 8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh, ps_bak.data(), 3,   8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh, ps_bak.data(), 5,   8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh, ps_bak.data(), 10,  8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh, ps_bak.data(), 20,  8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh, ps_bak.data(), 50,  8, 0.5, 0.05 );
+    // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh, ps_bak.data(), 100, 8, 0.5, 0.05 );
 
     printf("#### END makeShip_Whee()\n" );
     //exit(0);
@@ -424,7 +424,7 @@ void SpaceCraftEditorApp::draw(){
     if(bDouble){
         runSim_double( sim2  );
     }else{
-        runSim( sim_cl );
+        runSim_gpu( sim_cl );
         //runSim_cpu( sim_cl );
     }
 
