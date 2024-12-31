@@ -239,6 +239,7 @@ void makeTrussShape( int ishape, int nseg, double R, double r, bool bCPU=false, 
     Vec3d p0{0.0,0.0,0.0};
     Vec3d p1{R  ,0.0,0.0};
     Vec3d ax{0.0,0.0,1.0};
+    Vec3d up{0.0,1.0,0.0};
     
     //BuildCraft_truss( mesh2, *theSpaceCraft, 30.0 );
     mesh2.clear();
@@ -249,6 +250,7 @@ void makeTrussShape( int ishape, int nseg, double R, double r, bool bCPU=false, 
         case 0: ngon   ( mesh2, p0, p1, ax, nseg, 0 ); break;
         case 1: wheel  ( mesh2, p0, p1, ax, nseg, Vec2d{r,r}, Quat4i{0,0,0,0}       ); break;
         case 2: girder1( mesh2, p0, (p1-p0).normalized()*r*4*nseg, ax, nseg, r,          Quat4i{0,0,0,0}, true ); break;
+        case 3: triangle_strip( mesh2, p0, (p1-p0).normalized()*r*nseg, up, nseg, r, 0, true );
         //int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, Quat4i stickTypes ){
     }
     //wheel( mesh, o->pose.pos, o->pose.pos+o->pose.rot.b*o->R, o->pose.rot.c, o->nseg, o->wh, o->st );
@@ -311,7 +313,8 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
     if(argc<=1){
         //reloadShip( "data/ship_ICF_interceptor_1.lua" );
         //makeTrussShape( 2, 1, 100.0, 10.0,  false, true );
-        makeTrussShape( 2, 100, 100.0, 10.0,  false, true );
+        //makeTrussShape( 2, 100, 100.0, 10.0,  false, true );
+        makeTrussShape( 3, 100, 100.0, 10.0,  false, true );
     }
 
     picker.picker = &sim_cl;   picker.Rmax=10.0;

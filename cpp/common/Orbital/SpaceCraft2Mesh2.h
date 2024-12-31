@@ -322,6 +322,42 @@ int girder1( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, 
     return i00;
 }
 
+/// this generate flat zig-zag triangle strip made of equal sized triangles. 
+/// The upper and lower edges are parallel to each other 
+/// The result vary if n is odd or even
+///   1. for even n, the edges are tilted with respect to dir=p1-p0 because p1 is on the upper edge, and p0 is on the lower edge 
+///   2. for odd n, both p1 and p0 are on the upper edge, and the edges are parallel to p1-p0
+int triangle_strip( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d up, int n, double width, int stickType, bool bCaps=false ){
+    printf( "Mesh::triangle_strip() n=%i p0(%g,%g,%g) p1(%g,%g,%g) up(%g,%g,%g)\n", n, p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, up.x,up.y,up.z );
+    Vec3d dir = p1-p0;
+    if( (n&1)==0) dir.add_mul(up, -width);
+    double length = dir.normalize();
+    double dl     = length / (n+1);
+    int i00 = mesh.verts.size();
+    int ip0=-1,ip1=-1;
+    if (bCaps) {
+        ip0=mesh.vert(p0);
+        ip1=mesh.vert(p1);
+        i00 += 2;
+    }
+    int i00start = i00;
+    int ip;
+    for (int i = 0; i <n; i++) {
+        Vec3d p = p0 + dir * dl*(i+1.0);
+        if ( (i&1)==0 ){ p.add(up*width); }
+        ip=mesh.vert(p);
+        if (i > 0) { mesh.edge(ip, ip-1, stickType); } // zig-zag
+        if (i > 1) { mesh.edge(ip, ip-2, stickType); } // beam mains
+    }
+    if (bCaps) {
+        mesh.edge(i00start   , ip0, stickType);
+        mesh.edge(i00start +1, ip0, stickType);
+        mesh.edge(ip       -1, ip1, stickType);
+        mesh.edge(ip         , ip1, stickType);
+    }
+    return i00;
+}
+
 
 
 /* @brief : plot planar fill between two strips of vertexes (e.g. between two girders or ropes)
