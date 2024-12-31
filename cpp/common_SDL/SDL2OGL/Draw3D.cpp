@@ -1450,12 +1450,8 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
         glShadeModel ( GL_FLAT       );
         glPushMatrix();
             glTranslatef( pos.x, pos.y, pos.z );
-            //Draw::billboardCamProj( 1.0 );
-            Draw::billboardCamProj();
-            //Draw::drawText( str, fontTex, textSize, iend );
-            //Draw::drawText( str, fontTex, 100.0, iend ); 
-            //Draw::drawText( str, fontTex, 0.001, iend ); 
-            Draw::drawText( str, fontTex, textSize, iend ); 
+            Draw::billboardCamProj( );
+            Draw::drawText( str, fontTex, textSize, iend );
         glPopMatrix();
 	}
     void drawText3D( const char * str, const Vec3f& pos, const Vec3f& fw, const Vec3f& up, int fontTex, float textSize, int iend){
@@ -1465,10 +1461,22 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
         glShadeModel ( GL_FLAT       );
         glPushMatrix();
             glTranslatef( pos.x, pos.y, pos.z );
-            Draw::billboardCamProj( textSize );
-            Draw::drawText( str, fontTex, 1.0, iend );
+            Draw::billboardCamProj();
+            Draw::drawText( str, fontTex, textSize, iend );
         glPopMatrix();
 	}
+
+	void drawInt( const Vec3d& pos, int i, int fontTex, float sz, const char* format ){
+        char str[16]; sprintf(str,format,i); //printf("%s\n", str);
+        Draw3D::drawText(str, pos, fontTex, sz, 0);
+    }
+    void drawDouble( const Vec3d& pos, double f, int fontTex, float sz, const char* format ){
+        char str[24];  sprintf(str,format,f);
+        Draw3D::drawText(str, pos, fontTex, sz, 0);
+    }
+    void pointLabels( int n, const Vec3d* ps, int fontTex, float sz ){
+        for(int i=0; i<n; i++){ drawInt( ps[i], i, fontTex, sz ); }
+    }
 
     /*
     void drawText( const char * str, const Vec3f& pos, int fontTex, float textSize, int iend ){
@@ -1505,25 +1513,6 @@ int drawMeshBuilder2( const Mesh::Builder2& mesh, int mask, int color_mode, bool
         glPopMatrix();
 	}
     */
-
-	void drawInt( const Vec3d& pos, int i, int fontTex, float sz, const char* format ){
-        char str[16];
-        sprintf(str,format,i);
-        Draw3D::drawText(str, pos, fontTex, sz, 0);
-    }
-    void drawDouble( const Vec3d& pos, double f, int fontTex, float sz, const char* format ){
-        char str[24];
-        sprintf(str,format,f);
-        Draw3D::drawText(str, pos, fontTex, sz, 0);
-    }
-
-
-    void pointLabels( int n, const Vec3d* ps, int fontTex, float sz ){
-        for(int i=0; i<n; i++){
-            drawInt( ps[i], i, fontTex, sz );
-        }
-    }
-
 
 	void drawCurve( float tmin, float tmax, int n, Func1d3 func ){
         glBegin(GL_LINE_STRIP);

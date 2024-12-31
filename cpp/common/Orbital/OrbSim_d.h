@@ -424,6 +424,9 @@ class OrbSim: public Picker { public:
         double idt2 = 1.0 / (dt * dt);
         for (int i = 0; i < n; ++i) { // point i
             double Aii = points[i].w * idt2; // Assuming points[i].w stores the mass
+
+            if(kFix) Aii += kFix[i];  // fixed point
+
             //printf( "==i,i %i %g %g %g \n", i, Aii, points[i].w, idt2  );
             int2* ngi = neighBs + (i*nNeighMax);
             for( int ing=0; ing<nNeighMax; ing++ ){
@@ -463,8 +466,10 @@ class OrbSim: public Picker { public:
         double idt2 = 1.0 / (dt * dt);
         // --- count neighbors
         if( bRealloc ){ A.realloc( nPoint, nNeighMax+1 ); }
+        
         for (int i=0; i<nPoint; i++) {
             double Aii = points[i].w * idt2; 
+            if(kFix) Aii += kFix[i];  // fixed point
             int2* ngi = neighBs + (i*nNeighMax);
             for( int ing=0; ing<nNeighMax; ing++ ){
                 int2  ng = ngi[ing];
@@ -694,7 +699,7 @@ class OrbSim: public Picker { public:
             }
 
             // Apply fixed constraints
-            //for (int i = 0; i < nPoint; i++) {    if (kFix[i] > 0) { ps_pred[i] = points[i].f; } }
+            if(kFix) for (int i = 0; i < nPoint; i++) { if (kFix[i] > 1e-8 ) { ps_pred[i] = points[i].f; } }
             // Compute right-hand side
             rhs_ProjectiveDynamics(ps_pred, linsolve_b );
 
@@ -1496,6 +1501,7 @@ class OrbSim: public Picker { public:
         return fmax;
     }
 
+    void reallocFixed(){ _realloc0( kFix, nPoint, 0.0 ); }
     void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4dZero; } };
     void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4dZero; } };
 

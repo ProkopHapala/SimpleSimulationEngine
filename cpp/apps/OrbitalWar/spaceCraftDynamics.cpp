@@ -62,6 +62,9 @@ double elementSize  = 5.;
 Mesh::Builder2 mesh;
 OrbSim         sim;
 
+bool bRun             = false;
+bool bViewPointLabels = false;
+
 /**
  * Creates a ship truss structure assuming that the ship is composed of a central spine and peripheral maneuvering pendulums all connected by ropes.
  * 
@@ -152,6 +155,12 @@ void reloadShip( const char* fname, double dt=0.02 ){
     BuildCraft_truss( mesh, *theSpaceCraft, 30.0 );
     mesh.printSizes();
     exportSim( sim, mesh, workshop );
+
+
+    std::vector<int> fixPoints{ 1413 };
+    double Kfix = 1e12;
+    sim.reallocFixed();
+    for(int i:fixPoints){ printf("to_OCL_Orb fixing point %i \n", i); sim.kFix[i] = Kfix ; }
 
     sim.prepare_LinearSystem( dt, true, true, true, 256 );
     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
@@ -354,15 +363,18 @@ void SpaceCraftDynamicsApp::drawSim(){
 
     //timeit( "TIME sim.run_LinSolve(perFrame) T = %g [ms]\n", 1e-6, [&](){sim.run_LinSolve(perFrame);});
     
+    if(bRun){
     long t0 = getCPUticks();  sim.time_LinSolver=0; sim.time_cg_dot=0; sim.cgSolver_niterdone=0;
     //sim.run_LinSolve(perFrame);
     sim.run_Cholesky_omp_simd(perFrame);
     //sim.run_Cholesky_omp(perFrame);
     double time_run_LinSolve = (getCPUticks()-t0)*1e-6;
     printf( "TIME run: %g [Mticks] LinSolve: %g(%g\%) Mdot: %g(%g\%) niter_av=%g err2tot=%g \n", time_run_LinSolve, sim.time_LinSolver,   100*sim.time_LinSolver/time_run_LinSolve, sim.time_cg_dot, 100*sim.time_cg_dot/time_run_LinSolve, sim.cgSolver_niterdone/((double)perFrame), sim.cgSolver.err2tot );
-
+    }
 
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+    if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
+
 };
 
 SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
@@ -514,7 +526,8 @@ void SpaceCraftDynamicsApp::eventHandling ( const SDL_Event& event  ){
                 case SDLK_t: bDrawTrj=!bDrawTrj; glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); break;
                 case SDLK_m:  break;
                 //case SDLK_h:  warrior1->tryJump(); break;
-                case SDLK_l:break;
+                case SDLK_SPACE: bRun             ^=1; break;
+                case SDLK_l:     bViewPointLabels ^=1; break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:

@@ -63,19 +63,19 @@ void atomsREQ( int n, Vec3d* ps, Vec3d* REQs, int ogl_sph, float qsc=1, float Rs
 void bondLabels( int n, const Vec2i* b2a, const Vec3d* apos, int fontTex, float sz=0.02 ){
     for(int i=0; i<n; i++){
         Vec2i ib = b2a[i];
-        drawInt( (apos[ib.x]+apos[ib.y])*0.5, i, fontTex, sz );
+        Draw3D::drawInt( (apos[ib.x]+apos[ib.y])*0.5, i, fontTex, sz );
     }
 }
 
 void atomLabels( int n, const Vec3d* apos, int fontTex, float sz=0.02 ){
     for(int i=0; i<n; i++){
-        drawInt( apos[i], i, fontTex, sz );
+        Draw3D::drawInt( apos[i], i, fontTex, sz );
     }
 }
 
 void atomPropertyLabel( int n, double* data, Vec3d* ps, int pitch, int offset, int fontTex, float sz=0.02, const char* format="%4.2f\0" ){
     for(int i=0; i<n; i++){
-        drawDouble( ps[i], data[i*pitch+offset], fontTex, sz, format );
+        Draw3D::drawDouble( ps[i], data[i*pitch+offset], fontTex, sz, format );
         //drawInt( ps[i], (int)data[i*pitch+offset], fontTex, sz );
     }
 }

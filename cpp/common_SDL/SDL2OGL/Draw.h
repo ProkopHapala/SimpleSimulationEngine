@@ -74,8 +74,7 @@ namespace Draw{
     void color_of_hash( int i, Vec3f& c );
 
     void billboardCam( );
-    void billboardCamProj( );
-    void billboardCamProj( float scale );
+    void billboardCamProj( float scale=200.0 );
     void drawText ( const char * str, int itex, float sz, int iend=0       );
     void drawText ( const char * str, int itex, float sz, Vec2i block_size );
 

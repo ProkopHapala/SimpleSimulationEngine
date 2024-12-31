@@ -87,6 +87,18 @@ void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
     //exit(0);
 }
 
+void pointLabels( int n, const Quat4d* ps, int fontTex, float sz=0.1 ){
+    for(int i=0; i<n; i++){
+        Draw3D::drawInt( ps[i].f, i, fontTex, sz );
+    }
+}
+
+void pointLabels( int n, const Quat4f* ps, int fontTex, float sz=0.1 ){
+    for(int i=0; i<n; i++){
+        Draw3D::drawInt( (Vec3d)ps[i].f, i, fontTex, sz );
+    }
+}
+
 
 // ========================   Double precision
 

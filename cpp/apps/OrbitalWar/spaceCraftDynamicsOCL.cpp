@@ -60,17 +60,22 @@ int verbosity = 0;
 using namespace SpaceCrafting;
 
 bool bRun = false;
+bool bViewPointLabels = false;
 
 Mesh::Builder2 mesh2;
 OrbSim         sim2;   // CPU double precision
 OCL_Orb        sim_cl; // single precision both CPU and GPU
+
+// make list of fixed points containing following indices : [0]
+std::vector<int> fixPoints{ 1 };
+double Kfix = 1e+12;
 
 int glo_truss=0, glo_capsula=0, glo_ship=0;
 double elementSize  = 5.;
 
 
 // Render 
-void runSim( OCL_Orb& sim, int niter=100 ){
+void runSim_gpu( OCL_Orb& sim, int niter=100 ){
     if( (sim.nPoint==0)||(sim.points==0) ){ printf( "ERROR in runSim() sim.nPoint=%i sim.points=%p => exit() \n", sim.nPoint, sim.points ); exit(0); };
     niter=1;
     //niter=10;
@@ -125,19 +130,16 @@ void runSim( OCL_Orb& sim, int niter=100 ){
     glColor3f(0.0,1.0,1.0);
     renderPointForces( sim.nPoint, sim.points, sim.vel, 1e-1 );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+    if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
 }
 
 void runSim_cpu( OrbSim_f& sim, int niter=100 ){
     if( (sim.nPoint==0)||(sim.points==0) ){ printf( "ERROR in runSim_cpu() sim.nPoint=%i sim.points=%p => exit() \n", sim.nPoint, sim.points ); exit(0); };
     niter=1;
     //niter=10;
-    int nbig = 20;
+    int nbig = 1;
     int nsub = 20;
     niter = nbig*nsub;
-    //sim.set_time_step(0.1   );
-    //sim.set_time_step(0.01  );
-    //sim.set_time_step(0.001 );
-    sim.set_time_step(0.0001);
 
     //niter = 500;
     if(bRun){
@@ -151,6 +153,7 @@ void runSim_cpu( OrbSim_f& sim, int niter=100 ){
     glColor3f(0.0,1.0,1.0);
     renderPointForces( sim.nPoint, sim.points, sim.vel, 1e-1 );
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+    if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
 }
 
 void runSim_double( OrbSim& sim, int niter=100 ){
@@ -158,13 +161,9 @@ void runSim_double( OrbSim& sim, int niter=100 ){
     if( (sim.nPoint==0)||(sim.points==0) ){ printf( "ERROR in runSim_double() sim.nPoint=%i sim.points=%p => exit() \n", sim.nPoint, sim.points ); exit(0); };
     niter=1;
     //niter=10;
-    int nbig = 20;
+    int nbig = 1;
     int nsub = 20;
     niter = nbig*nsub;
-    //sim.set_time_step(0.1   );
-    //sim.set_time_step(0.01  );
-    //sim.set_time_step(0.001 );
-    //sim.set_time_step(0.0001);
 
     //niter = 500;
     if(bRun){
@@ -178,6 +177,7 @@ void runSim_double( OrbSim& sim, int niter=100 ){
     glColor3f(0.0,1.0,1.0);
     renderPointForces( sim.nPoint, sim.points, sim.vel, 1e-1 );
     renderTruss      ( sim.nBonds, sim.bonds,  sim.points, sim.strain, 1000.0 );
+    if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
 }
 
 
@@ -191,27 +191,33 @@ void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh2, Vec3d p0, Vec3d ax ){
     for(int i=0; i<sim2.nBonds;  i++) sim2.params[i].y=10000.0;
     //sim2.printAllNeighs();
 
-    int n = sim2.nPoint;
+    sim.reallocFixed();
+    for(int i:fixPoints){ printf("to_OrbSim fixing point %i @kFix=%p\n", i, sim.kFix); sim.kFix[i]=Kfix; }
 
-    double dt = 0.05;
+    int n = sim.nPoint;
 
-    mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim2.neighs,     "%5i " );
+    double dt = 0.0001;
+    sim.set_time_step( dt );
+
+    mat2file<int>( "neighs_before.log",  n, sim.nNeighMax,      sim.neighs,     "%5i " );
     //sim2.prepare_Cholesky( 0.05, 32 );
-    sim2.prepare_LinearSystem( dt, true, true, true, 32 );
-    mat2file<int>( "neighs_after.log",   n, sim.nNeighMaxLDLT,  sim2.neighsLDLT, "%5i " );
+    sim.prepare_LinearSystem( dt, true, true, true, 32 );
+    mat2file<int>( "neighs_after.log",   n, sim.nNeighMaxLDLT,  sim.neighsLDLT, "%5i " );
 
     mat2file<double>( "PDmat.log",  n,n, sim.PDmat  );
     mat2file<double>( "LDLT_L.log", n,n, sim.LDLT_L );
 
-    double omega = 1.0;
+    double omega = 0.0;
     sim.cleanVel();
     sim.addAngularVelocity(  p0, ax*omega );
-    //apply_torq( sim.nPoint, p0, ax*omega, sim2.points, sim2.vel );  
+    //apply_torq( sim.nPoint, p0, ax*omega, sim.points, sim.vel );  
 }
 
 void to_OCL_Orb( OCL_Orb& sim, Mesh::Builder2& mesh2, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero, bool bCholesky=false, bool bGPU=true ){
-    exportSim( sim_cl, mesh2, workshop );
-    // OpenCL initialization
+    exportSim( sim, mesh2, workshop );
+
+    sim.reallocFixed();
+    for(int i:fixPoints){ printf("to_OCL_Orb fixing point %i \n", i); sim.kFix[i] = Kfix ; }
 
     sim.damping = 1e-5; 
     sim.set_time_step( 1e-3 );
@@ -392,7 +398,8 @@ SpaceCraftEditorApp::SpaceCraftEditorApp( int& id, int WIDTH_, int HEIGHT_, int 
         //reloadShip( "data/ship_ICF_interceptor_1.lua" );
         //makeTrussShape( 2, 1,   100.0, 10.0,   true, true );
         //makeTrussShape( 2, 100, 100.0, 10.0,  true, true );
-        makeTrussShape  ( 3, 50, 100.0, 10.0,  true, true );
+        makeTrussShape  ( 2, 10, 100.0, 10.0,  true, true );
+        //makeTrussShape  ( 3, 50, 100.0, 10.0,  true, true );
     }
 
     picker.picker = &sim_cl;   picker.Rmax=10.0;
@@ -493,11 +500,12 @@ void SpaceCraftEditorApp::eventHandling ( const SDL_Event& event  ){
             switch( event.key.keysym.sym ){
                 case SDLK_m: picker.switch_mode(); break;
                 //case SDLK_h:  warrior1->tryJump(); break;
-                case SDLK_l:
-                    //reloadShip( );
-                    //onSelectLuaShipScript.GUIcallback(lstLuaFiles);
-                    break;
+                //case SDLK_l:
+                //    //reloadShip( );
+                //    //onSelectLuaShipScript.GUIcallback(lstLuaFiles);
+                //    break;
                 case SDLK_SPACE: bRun = !bRun; break;
+                case SDLK_l:     bViewPointLabels ^=1; break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
