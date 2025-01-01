@@ -71,37 +71,38 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
     //virtual void mouseHandling( );
 
     void drawSim( OrbSim& sim );
+    virtual void initSimDefault();
 
-	SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] );
+	SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ );
 
 };
+
+void SpaceCraftDynamicsApp::initSimDefault( ){
+    init_workshop ();
+    makeTrussShape( *_mesh, 3, 10, 100.0, 10.0 );
+    to_OrbSim( *_sim, *_mesh );
+}
 
 void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
     //timeit( "TIME sim.run_LinSolve(perFrame) T = %g [ms]\n", 1e-6, [&](){sim.run_LinSolve(perFrame);});
     if(bRun){
-    long t0 = getCPUticks();  sim.time_LinSolver=0; sim.time_cg_dot=0; sim.cgSolver_niterdone=0;
-    //sim.run_LinSolve(perFrame);
-    sim.run_Cholesky_omp_simd(perFrame);
-    //sim.run_Cholesky_omp(perFrame);
-    double time_run_LinSolve = (getCPUticks()-t0)*1e-6;
-    printf( "TIME run: %g [Mticks] LinSolve: %g(%g\%) Mdot: %g(%g\%) niter_av=%g err2tot=%g \n", time_run_LinSolve, sim.time_LinSolver,   100*sim.time_LinSolver/time_run_LinSolve, sim.time_cg_dot, 100*sim.time_cg_dot/time_run_LinSolve, sim.cgSolver_niterdone/((double)perFrame), sim.cgSolver.err2tot );
+        long t0 = getCPUticks();  sim.time_LinSolver=0; sim.time_cg_dot=0; sim.cgSolver_niterdone=0;
+        //sim.run_LinSolve(perFrame);
+        sim.run_Cholesky_omp_simd(perFrame);
+        //sim.run_Cholesky_omp(perFrame);
+        double time_run_LinSolve = (getCPUticks()-t0)*1e-6;
+        printf( "TIME run: %g [Mticks] LinSolve: %g(%g\%) Mdot: %g(%g\%) niter_av=%g err2tot=%g \n", time_run_LinSolve, sim.time_LinSolver,   100*sim.time_LinSolver/time_run_LinSolve, sim.time_cg_dot, 100*sim.time_cg_dot/time_run_LinSolve, sim.cgSolver_niterdone/((double)perFrame), sim.cgSolver.err2tot );
     }
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
 };
 
-SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_, int argc, char *argv[] ) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
+SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
     //Lua1.init();
     fontTex     = makeTexture    ( "common_resources/dejvu_sans_mono_RGBA_inv.bmp" );
     GUI_fontTex = makeTextureHard( "common_resources/dejvu_sans_mono_RGBA_pix.bmp" );
     theSpaceCraft = new SpaceCraft();
     initSpaceCraftingLua();
-    if(argc<=1){
-        init_workshop ();
-        makeTrussShape( *_mesh, 3, 10, 100.0, 10.0 );
-        to_OrbSim( *_sim, *_mesh );
-    }
-    //exit(0);
     VIEW_DEPTH = 10000.0;
     zoom = 10.0;
 }

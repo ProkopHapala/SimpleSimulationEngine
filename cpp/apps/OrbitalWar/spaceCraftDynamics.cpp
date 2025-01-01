@@ -56,22 +56,23 @@ Mesh::Builder2 mesh;
 OrbSim         sim;
 
 // ===================== MAIN
-LambdaDict funcs;
 
 int main(int argc, char *argv[]){
-    printf( "argc %i \n", argc );
     // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
-    //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
+    printf( "argc %i \n", argc );
+    LambdaDict funcs;
     funcs["-s"]={1,[&](const char** ss){ 
         reloadShip( ss[0], mesh );
         to_OrbSim( sim, mesh );
     }}; 
     SDL_DisplayMode dm = initSDLOGL( 8 );
 	int junk;
-	SpaceCraftDynamicsApp * app = new SpaceCraftDynamicsApp( junk, dm.w-150, dm.h-100, argc, argv );
+	SpaceCraftDynamicsApp * app = new SpaceCraftDynamicsApp( junk, dm.w-150, dm.h-100 );
     app->_mesh = &mesh;
     app->_sim  = &sim;
     process_args( argc, argv, funcs );
+    if( sim.nPoint == 0 ){ app->initSimDefault(); }
+
 	//thisApp = new SpaceCraftDynamicsApp( junk , 800, 600 );
 	app->loop( 1000000 );
 	return 0;
