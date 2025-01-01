@@ -74,7 +74,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
         //printf( "makeKrenels_Orb() \n" );
         char srcpath[1024];
         sprintf( srcpath, "%s/spacecraft.cl", cl_src_dir );   
-        printf( "makeKrenels_Orb(%s) \n", srcpath );  
+        printf( "OCL_Orb::makeKrenels_Orb(%s) \n", srcpath );  
         buildProgram( srcpath, program1 );
         //newTask( "getNonBond"        ,program1, 2);
         newTask( "evalTrussForce1"     ,program1, 1);
@@ -104,7 +104,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
 
     int initCLBuffsOrb(){
         //int err=0;
-        printf( "initAtomsForces() nPoint %i nNeighMax %i \n", nPoint, nNeighMax );
+        printf( "OCL_Orb::initAtomsForces() nPoint %i nNeighMax %i \n", nPoint, nNeighMax );
         ibuff_points  = newBuffer( "atoms",    nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // points state
         ibuff_ps1     = newBuffer( "ps1",      nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // working copy of points for solver
         ibuff_ps2     = newBuffer( "ps2",      nPoint   , sizeof(Quat4f), 0, CL_MEM_READ_WRITE ); // working copy of points for solver
@@ -130,7 +130,7 @@ class OCL_Orb: public OCLsystem, public OrbSim_f { public:
 
     int initCLBuffs_CG(){
         //int err=0;
-        printf( "initCLBuffs_CG() nPoint %i nNeighMax %i \n", nPoint, nNeighMax );
+        printf( "OCL_Orb::initCLBuffs_CG() nPoint %i nNeighMax %i \n", nPoint, nNeighMax );
         ibuff_Amat = newBuffer( "Amat",  nPoint*nPoint   , sizeof(float), 0, CL_MEM_READ_WRITE );  
         ibuff_xvec = newBuffer( "xvec",   nPoint, sizeof(Quat4f) , 0, CL_MEM_READ_WRITE );      // actually xvec=points 
         ibuff_yvec = newBuffer( "yvec",   nPoint, sizeof(Quat4f) , 0, CL_MEM_READ_WRITE );

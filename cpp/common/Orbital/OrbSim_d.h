@@ -523,7 +523,6 @@ class OrbSim: public Picker { public:
         }
     }
 
-
     __attribute__((hot)) 
     Vec3d rhs_ProjectiveDynamics_i(int i, const Vec3d* pnew) {
         double idt2 = 1.0 / (dt * dt);
@@ -594,7 +593,7 @@ class OrbSim: public Picker { public:
     }
 
     void prepare_LinearSystem( double dt, bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){ 
-        printf( "OrbSim_d::prepare_LinearSystem() dt=%g nNeighMaxLDLT_=%i\n", dt, nNeighMaxLDLT_ );
+        printf( "OrbSim_d::prepare_LinearSystem() nPoint=%i dt=%g nNeighMaxLDLT_=%i\n", nPoint, dt, nNeighMaxLDLT_ );
         //nNeighMaxLDLT=nNeighMaxLDLT_;
         if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_, bDens );
 
@@ -670,13 +669,13 @@ class OrbSim: public Picker { public:
             }
            
 
-            {   printf( "# ---------- Test Cholesky Lsparse \n");
-                for(int i=0; i<nPoint; i++){ ps_pred[i] = points[i].f*1.1; }; 
-                rhs_ProjectiveDynamics( ps_pred, linsolve_b );
-                Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint, 3 );
-                Lsparse.fwd_subs_m( 3,  (double*)linsolve_b,  (double*)ps_cor );
-                checkDist( nPoint, ps_cor, linsolve_yy, 2 );
-            }
+            // {   printf( "# ---------- Test Cholesky Lsparse \n");
+            //     for(int i=0; i<nPoint; i++){ ps_pred[i] = points[i].f*1.1; }; 
+            //     rhs_ProjectiveDynamics( ps_pred, linsolve_b );
+            //     Lingebra::forward_substitution_m( LDLT_L, (double*)linsolve_b,  (double*)linsolve_yy, nPoint, 3 );
+            //     Lsparse.fwd_subs_m( 3,  (double*)linsolve_b,  (double*)ps_cor );
+            //     checkDist( nPoint, ps_cor, linsolve_yy, 2 );
+            // }
 
             //mat2file<double>( "LDLT_L.log", nPoint,nPoint, LDLT_L );
             Lsparse.fprint_inds("Lsparse_inds.log");
@@ -1517,7 +1516,7 @@ class OrbSim: public Picker { public:
         for(int i=0;i<n;i++){
             int ip = fixPoints[i]; 
             if(ip>nPoint){ printf("ERROR in OrbSim::setFixPoints fixing point %i > sim.nPoint(%i) \n", ip, nPoint); exit(0); }
-            printf("OrbSim::setFixPoints fixing point %i \n", i); 
+            printf("OrbSim_d::setFixPoints()[%3i]: %6i \n", i, ip ); 
             kFix[ip] = Kfix ; 
         }
     }

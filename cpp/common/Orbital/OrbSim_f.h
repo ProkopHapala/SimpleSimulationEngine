@@ -380,129 +380,11 @@ class OrbSim_f : public Picker { public:
 
     // =================== Solver Using Projective Dynamics and Cholesky Decomposition
 
-    void rhs_ProjectiveDynamics(Vec3f* pnew, Vec3f* b) {
-        printf("OrbSim_f::rhs_ProjectiveDynamics() nPoint=%i nNeighMax=%i @nNeighMaxLDLT=%i @pnew=%p b=%p\n", nPoint, nNeighMax, nNeighMaxLDLT, pnew, b );
-        float idt2 = 1.0 / (dt * dt);
-        for (int i = 0; i < nPoint; i++) {
-            //printf("OrbSim_f::rhs_ProjectiveDynamics() i=%i\n", i );
-            Vec3f bi;
-            bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
-            int neighB_start = (i == 0) ? 0 : neighB2s[i-1];
-            int neighB_end = neighB2s[i];
-            printf("OrbSim_f::rhs_ProjectiveDynamics() i=%i neighB_start=%i neighB_end=%i\n", i, neighB_end, neighB_start );
-            for (int nb = neighB_start; nb < neighB_end; nb++) {
-                int ib  = neighs[nb];
-                float k = params[ib].y;  // assuming params.y is the spring constant
-                int i_  = bonds [ib].x;
-                int j_  = bonds [ib].y;
-                int j   = (i_ == i) ? j_ : i_;
-                Vec3f d = points[i].f -  points[j].f;
-                bi.add_mul(d, k * params[ib].x / d.norm());  // params[ib].x is l0
-            }
-            b[i] = bi;
-        }
+    inline float getLinearBondStiffness( int ib ){
+        // (l0,kPress,kTens,damp)
+        //return  bparams[ib].y;  //k = kPress;
+        return  bparams[ib].z;  //k = kTens;  
     }
-
-    __attribute__((hot)) 
-    Vec3f rhs_ProjectiveDynamics_i(int i, const Vec3f* pnew) {
-        float idt2 = 1.0 / (dt * dt);
-        Vec3f bi; bi.set_mul(pnew[i], points[i].w*idt2);  // points[i].w is the mass
-        int2* ngi = neighBs + (i*nNeighMax);
-        int ni = 0;
-        for( int ing=0; ing<nNeighMax; ing++ ){
-            int2  ng = ngi[ing];
-            int   ib = ng.y;
-            if(ib<0) break;
-            float k  = bparams[ib].y;  // assuming params.y is the spring constant
-            float l0 = bparams[ib].x;
-            int2   b  = bonds[ib];
-            int j     = (b.x == i) ? b.y : b.x;
-            //printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
-            Vec3f d = pnew[i] -  pnew[j];
-            bi.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
-            ni++;
-        }
-        //printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
-        return bi;
-    }
-
-    __attribute__((hot)) 
-    void rhs_ProjectiveDynamics_(const Vec3f* pnew, Vec3f* b) {
-        float idt2 = 1.0 / (dt * dt);
-        for (int i=0; i<nPoint; i++) {
-            b[i] = rhs_ProjectiveDynamics_i(i,pnew);
-        }
-    }
-
-    void run_Cholesky(int niter) {
-        Vec3f*  ps_cor  = new Vec3f[nPoint];
-        Vec3f*  ps_pred = new Vec3f[nPoint];
-        Vec3f*  b       = new Vec3f[nPoint];
-        Vec3f*  yy      = new Vec3f[nPoint];
-
-        const int m=3;
-        memcpy(ps_cor, points, nPoint * sizeof(Vec3f));
-        float idt = 1.0 / dt;
-        float dt2 = idt * idt;
-        for (int iter = 0; iter < niter; iter++) {
-            // Evaluate forces (assuming you have a method for this)
-            //evalForces();
-            for (int i = 0; i < nPoint; i++) { ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2; }  // Predict step
-            for (int i = 0; i < nPoint; i++) { if( kFix[i]>0 ) { ps_pred[i] = points[i].f; } }              // Apply fixed constraints
-            rhs_ProjectiveDynamics(ps_pred, b);             // Compute right-hand side
-            // Solve using LDLT decomposition (assuming you have this method)
-            //solve_LDLT_sparse(b, ps_cor);
-            Lingebra::forward_substitution_sparse           ( nPoint,m,  LDLT_L, (float*)b, (float*)yy, neighsLDLT, nNeighMax );
-            for (int i=0; i<nPoint; i++){ yy[i].mul(1/LDLT_D[i]); } // Diagonal 
-            Lingebra::forward_substitution_transposed_sparse( nPoint,m, LDLT_L, (float*)yy, (float*)ps_cor, neighsLDLT, nNeighMax );
-
-            // Compute residual
-            float res = 0.0;
-            for (int i=0;i<nPoint;i++) {
-                Vec3f  d = ps_cor[i] - points[i].f;
-                float l = d.norm();
-                if (l > res) res = l;
-            }
-            //printf("residual[%d] : %f\n", iter, res);
-
-            // Update velocity and points
-            for (int i=0;i<nPoint;i++) {
-                Vec3f dv = ps_cor[i] - ps_pred[i];
-                dv.mul(1.0 / dt);
-                vel   [i].f.add( dv );
-                points[i].f = ps_cor[i];
-            }
-
-            // Call user update function if set
-            if (user_update) {
-                user_update(dt);
-            }
-        }
-
-        delete[] ps_cor;
-        delete[] ps_pred;
-        delete[] b;
-    }
-
-
-    void realloc_LinearSystem( bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){
-        printf( "OrbSim_f::realloc_LinearSystem() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT_, nNeighMax );
-        nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
-        int n2 = nPoint*nPoint;
-        // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
-        if(bDens){ _realloc0( PDmat      ,n2    , 0.0f      ); }
-        _realloc0( ps_cor     ,nPoint, Vec3fZero );
-        _realloc0( ps_pred    ,nPoint, Vec3fZero );
-        _realloc0( linsolve_b ,nPoint, Vec3fZero );
-        if(bCholesky){
-            _realloc0(  linsolve_yy,nPoint, Vec3fZero);
-            _realloc0( LDLT_L, n2,     0.0f );
-            _realloc0( LDLT_D, nPoint, 0.0f );
-            _realloc0( neighsLDLT, nPoint*nNeighMaxLDLT, -1 );
-        }
-        //if(bCG){  cgSolver.realloc(nPoint,3);}
-    }
-
     __attribute__((hot)) 
     void make_PD_Matrix( float* A, float dt ) {
         printf( "OrbSim_f::make_PD_Matrix() dt=%g\n", dt );
@@ -513,7 +395,7 @@ class OrbSim_f : public Picker { public:
         //for(int i=0; i<np2; i++){ PDmat[i]=0.0; }
         float idt2 = 1.0f / (dt * dt);
         for (int i = 0; i < n; ++i) { // point i
-            float Aii = points[i].w * idt2; // Assuming points[i].w stores the mass
+            float Aii     = points[i].w * idt2; // Assuming points[i].w stores the mass
             if(kFix) Aii += kFix[i];  // fixed point
             //printf( "==i,i %i %g %g %g \n", i, Aii, points[i].w, idt2  );
             int2* ngi = neighBs + (i*nNeighMax);
@@ -525,8 +407,8 @@ class OrbSim_f : public Picker { public:
                 //printf( "make_PD_Matrix()[i=%i,ing=%i] ng(%i,%i)\n", i, ing, ib, ng.x );
                 int2   b = bonds[ib];
                 //int j  = neighs[b.x];
-                int j    = b.y;
-                double k = bparams[ib].y; // Assuming params[ib].y stores the spring constant
+                int    j = b.y;
+                float  k = getLinearBondStiffness( ib ); 
 
                 //printf( "i,ib %i %i %g \n", i, ib+1, k  );
 
@@ -555,7 +437,7 @@ class OrbSim_f : public Picker { public:
         // --- count neighbors
         if( bRealloc ){ A.realloc( nPoint, nNeighMax+1 ); }
         for (int i=0; i<nPoint; i++) {
-            float Aii = points[i].w * idt2; 
+            float    Aii  = points[i].w * idt2; 
             if(kFix) Aii += kFix[i];  // fixed point
             int2* ngi = neighBs + (i*nNeighMax);
             for( int ing=0; ing<nNeighMax; ing++ ){
@@ -563,8 +445,8 @@ class OrbSim_f : public Picker { public:
                 int   ib = ng.y;
                 if(ib<0) break;
                 int2   b = bonds[ib];
-                int j    = b.y;
-                double k = bparams[ib].y; // Assuming params[ib].y stores the spring constant
+                int    j = b.y;
+                float  k = getLinearBondStiffness( ib ); 
                 //printf( "i,ib %i %i %g \n", i, ib+1, k  );
                 Aii += k;
                 if       ( b.y > i ){
@@ -579,8 +461,110 @@ class OrbSim_f : public Picker { public:
         }
     }
 
+    // void rhs_ProjectiveDynamics(Vec3f* pnew, Vec3f* b) {
+    //     printf("OrbSim_f::rhs_ProjectiveDynamics() nPoint=%i nNeighMax=%i @nNeighMaxLDLT=%i @pnew=%p b=%p\n", nPoint, nNeighMax, nNeighMaxLDLT, pnew, b );
+    //     float idt2 = 1.0 / (dt * dt);
+    //     for (int i = 0; i < nPoint; i++) {
+    //         //printf("OrbSim_f::rhs_ProjectiveDynamics() i=%i\n", i );
+    //         Vec3f bi;
+    //         bi.set_mul(pnew[i], points[i].w * idt2);  // points[i].w is the mass
+    //         int neighB_start = (i == 0) ? 0 : neighB2s[i-1];
+    //         int neighB_end   = neighB2s[i];
+    //         printf("OrbSim_f::rhs_ProjectiveDynamics() i=%i neighB_start=%i neighB_end=%i\n", i, neighB_end, neighB_start );
+    //         for (int nb = neighB_start; nb < neighB_end; nb++) {
+    //             int  ib = neighs[nb];
+    //             float k = params[ib].y;  // assuming params.y is the spring constant
+    //             int i_  = bonds [ib].x;
+    //             int j_  = bonds [ib].y;
+    //             int j   = (i_ == i) ? j_ : i_;
+    //             Vec3f d = points[i].f -  points[j].f;
+    //             bi.add_mul(d, k * params[ib].x / d.norm());  // params[ib].x is l0
+    //         }
+    //         b[i] = bi;
+    //     }
+    // }
+
+    __attribute__((hot)) 
+    void rhs_ProjectiveDynamics(const Vec3f* pnew, Vec3f* b) {
+        printf("OrbSim_f::rhs_ProjectiveDynamics() nPoint=%i nNeighMax=%i @nNeighMaxLDLT=%i @pnew=%p b=%p\n", nPoint, nNeighMax, nNeighMaxLDLT, pnew, b );
+        float idt2 = 1.0 / (dt * dt);
+        for (int i=0; i<nPoint; i++) {
+            float    Ii  = points[i].w*idt2; 
+            if(kFix) Ii += kFix[i];
+            Vec3f bi; bi.set_mul(pnew[i], Ii );  // points[i].w is the mass
+            int2* ngi = neighBs + (i*nNeighMax);
+            int ni = 0;
+            for( int ing=0; ing<nNeighMax; ing++ ){
+                int2  ng = ngi[ing];
+                int   ib = ng.y;
+                if(ib<0) break;
+                float k  = getLinearBondStiffness( ib );  
+                float l0 = bparams[ib].x;
+                int2   b = bonds[ib];
+                int j    = (b.x == i) ? b.y : b.x;
+                //printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
+                Vec3f d = pnew[i] -  pnew[j];
+                bi.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
+                ni++;
+            }
+            //printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
+            b[i] = bi;
+        }
+    }
+
+    __attribute__((hot)) 
+    Vec3f rhs_ProjectiveDynamics_i(int i, const Vec3f* pnew) {
+        float  idt2  = 1.0 / (dt * dt);
+        float    Ii  = points[i].w*idt2; 
+        if(kFix) Ii += kFix[i];
+        Vec3f bi; bi.set_mul(pnew[i], Ii );  // points[i].w is the mass
+        int2* ngi = neighBs + (i*nNeighMax);
+        int ni = 0;
+        for( int ing=0; ing<nNeighMax; ing++ ){
+            int2  ng = ngi[ing];
+            int   ib = ng.y;
+            if(ib<0) break;
+            float k  = bparams[ib].y;  // assuming params.y is the spring constant
+            float l0 = bparams[ib].x;
+            int2  b  = bonds[ib];
+            int j    = (b.x == i) ? b.y : b.x;
+            //printf( "rhs[i=%2i,ib=%2i,j=%i] k=%g l0=%g\n", i, ib, j, k, l0 );
+            Vec3f d = pnew[i] -  pnew[j];
+            bi.add_mul(d, k * l0 / d.norm());  // params[ib].x is l0
+            ni++;
+        }
+        //printf( "rhs[i=%2i] ni=%i bi(%g,%g,%g)\n", i, ni, bi.x,bi.y,bi.z );
+        return bi;
+    }
+
+    __attribute__((hot)) 
+    void rhs_ProjectiveDynamics_(const Vec3f* pnew, Vec3f* b) {
+        float idt2 = 1.0 / (dt * dt);
+        for (int i=0; i<nPoint; i++) {
+            b[i] = rhs_ProjectiveDynamics_i(i,pnew);
+        }
+    }
+
+    void realloc_LinearSystem( bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){
+        printf( "OrbSim_f::realloc_LinearSystem() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT_, nNeighMax );
+        nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
+        int n2 = nPoint*nPoint;
+        // --- sparse Linear system Matrix and its Cholesky L*D*L^T decomposition
+        if(bDens){ _realloc0( PDmat      ,n2    , 0.0f      ); }
+        _realloc0( ps_cor     ,nPoint, Vec3fZero );
+        _realloc0( ps_pred    ,nPoint, Vec3fZero );
+        _realloc0( linsolve_b ,nPoint, Vec3fZero );
+        if(bCholesky){
+            _realloc0(  linsolve_yy,nPoint, Vec3fZero);
+            _realloc0( LDLT_L, n2,     0.0f );
+            _realloc0( LDLT_D, nPoint, 0.0f );
+            _realloc0( neighsLDLT, nPoint*nNeighMaxLDLT, -1 );
+        }
+        //if(bCG){  cgSolver.realloc(nPoint,3);}
+    }
+
     void prepare_LinearSystem( float dt, bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){ 
-        printf( "OrbSim_d::prepare_LinearSystem() dt=%g nNeighMaxLDLT_=%i\n", dt, nNeighMaxLDLT_ );
+        printf( "OrbSim_f::prepare_LinearSystem() nPoint=%i dt=%g nNeighMaxLDLT_=%i\n", nPoint, dt, nNeighMaxLDLT_ );
         //nNeighMaxLDLT=nNeighMaxLDLT_;
         if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_, bDens );
         this->dt = dt;
@@ -592,7 +576,7 @@ class OrbSim_f : public Picker { public:
 
         if(bDens){
             timeit( "TIME make_PD_Matrix()    t= %g [MTicks]\n", 1e-6, [&](){ make_PD_Matrix(    PDmat,    dt );       });
-            if( PDsparse.checkDens( PDmat, 1e-16, true ) ){ printf("ERROR in OrbSim_d::prepare_LinearSystem() PDsparse does not match PDmat => exit \n"); exit(0); }
+            if( PDsparse.checkDens( PDmat, 1e-16, true ) ){ printf("ERROR in OrbSim_f::prepare_LinearSystem() PDsparse does not match PDmat => exit \n"); exit(0); }
         }
         
         // if( bCG ){
@@ -619,19 +603,13 @@ class OrbSim_f : public Picker { public:
                 Lsparse.fromDense( nPoint, LDLT_L, 1.e-16 );
                 LsparseT.fromFwdSubT( nPoint, LDLT_L);
             }
-            {   printf( "# ---------- Test Cholesky Lsparse \n");
-                DEBUG
-                for(int i=0; i<nPoint; i++){ ps_pred[i] = points[i].f*1.1; }; 
-                DEBUG
-                rhs_ProjectiveDynamics( ps_pred, linsolve_b );
-                DEBUG
-                Lingebra::forward_substitution_m( LDLT_L, (float*)linsolve_b,  (float*)linsolve_yy, nPoint, 3 );
-                DEBUG
-                Lsparse.fwd_subs_m( 3,  (float*)linsolve_b,  (float*)ps_cor );
-                DEBUG
-                checkDist( nPoint, ps_cor, linsolve_yy, 2 );
-                DEBUG
-            }
+            // {   printf( "# ---------- Test Cholesky Lsparse \n");
+            //     for(int i=0; i<nPoint; i++){ ps_pred[i] = points[i].f*1.1; }; 
+            //     rhs_ProjectiveDynamics( ps_pred, linsolve_b );
+            //     Lingebra::forward_substitution_m( LDLT_L, (float*)linsolve_b,  (float*)linsolve_yy, nPoint, 3 );
+            //     Lsparse.fwd_subs_m( 3,  (float*)linsolve_b,  (float*)ps_cor );
+            //     checkDist( nPoint, ps_cor, linsolve_yy, 2 );
+            // }
             //mat2file<float>( "LDLT_L.log", nPoint,nPoint, LDLT_L );
             Lsparse.fprint_inds("Lsparse_inds.log");
             //Lsparse.fprint_vals("Lsparse_vals.log");
@@ -660,7 +638,7 @@ class OrbSim_f : public Picker { public:
             }
 
             // Apply fixed constraints
-            //for (int i = 0; i < nPoint; i++) {    if (kFix[i] > 0) { ps_pred[i] = points[i].f; } }
+            if(kFix) for (int i = 0; i < nPoint; i++) { if (kFix[i] > 1e-8 ) { ps_pred[i] = points[i].f; } }
             // Compute right-hand side
             rhs_ProjectiveDynamics(ps_pred, linsolve_b );
 
@@ -692,7 +670,7 @@ class OrbSim_f : public Picker { public:
                 float vr2 = vel[i].norm2();
                 Vec3f v    = (ps_cor[i] - points[i].f);
                 v.mul(inv_dt);
-                //v.mul( sqrt(  vel[i].norm2()/( v.norm2() + 1e-8 ) ) ); // This is unphysicsl
+                if(kFix){ if( kFix[i] > 1e-8){ v=Vec3fZero; } }
                 vel[i].f = v;
                 // update positions
                 points[i].f = ps_cor[i];
@@ -722,7 +700,9 @@ class OrbSim_f : public Picker { public:
             LsparseT.fwd_subs_T_m( m,  (float*)linsolve_yy,  (float*)ps_cor );
             #pragma omp simd
             for (int i=0;i<nPoint;i++) {
-                vel[i].f    = (ps_cor[i] - points[i].f) * inv_dt;
+                Vec3f    v   = (ps_cor[i] - points[i].f) * inv_dt;
+                if(kFix){ if( kFix[i] > 1e-8){ v=Vec3fZero; } }
+                vel[i].f    = v;
                 points[i].f = ps_cor[i];
             }
         }
@@ -1064,6 +1044,16 @@ class OrbSim_f : public Picker { public:
         for(int i=0; i<nPoint; i++){ float f=forces[i].norm(); fmax=fmax>f?fmax:f; }   
         //printf( "|fmax|=%g\n", fmax );
         return fmax;
+    }
+
+    void setFixPoints( int n, int* fixPoints, double Kfix=1e12, bool bRealloc=true ){
+        if(bRealloc) reallocFixed();
+        for(int i=0;i<n;i++){
+            int ip = fixPoints[i]; 
+            if(ip>nPoint){ printf("ERROR in OrbSim::setFixPoints fixing point %i > sim.nPoint(%i) \n", ip, nPoint); exit(0); }
+            printf("OrbSim_f::setFixPoints()[%3i]: %6i \n", i, ip ); 
+            kFix[ip] = Kfix ; 
+        }
     }
 
     void reallocFixed(){ _realloc0( kFix, nPoint, 0.0f ); }

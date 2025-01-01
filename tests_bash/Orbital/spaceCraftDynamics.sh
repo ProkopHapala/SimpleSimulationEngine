@@ -23,16 +23,18 @@ cd $wd
 ln -s $dir/$name ./$name.x
 
 # ====== ASan (Memory Sanitizer)
-#LD_PRELOAD=$(g++ -print-file-name=libasan.so)
-#echo   $LD_PRELOAD
-#export LD_PRELOAD
+LD_PRELOAD=$(g++ -print-file-name=libasan.so)
+echo   $LD_PRELOAD
+export LD_PRELOAD
 
 # ====== RUN
 
-#./$name.x
+./$name.x -float -fix 2
+#./$name.x -double -fix 2
+
 #./$name.x -s data/ship_ICF_interceptor_1.lua
 #./$name.x -s data/ship_ICF_marksman_1.lua
-./$name.x -s data/ship_ICF_marksman_2.lua
+#./$name.x -s data/ship_ICF_marksman_2.lua
 #./$name.x -s data/ship_NFPP_pendulum_1.lua
 #./$name.x -s data/ship_NTR_marksman_1.lua
 #./$name.x -s data/colony_1.lua

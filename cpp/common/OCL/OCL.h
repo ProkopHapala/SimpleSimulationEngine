@@ -212,6 +212,7 @@ class OCLtask{ public:
 class OCLsystem{ public:
     // http://stackoverflow.com/questions/20105566/advantages-of-a-program-containing-several-opencl-kernels-versus-several-program
     //cl_int           err;              // error code returned from OpenCL calls
+    bool bOpenCL_initialized  = false;
     cl_device_id     device   = 0;      // compute device id
     cl_context       context  = 0;      // compute context
     cl_command_queue commands = 0;      // compute command queue
@@ -228,6 +229,7 @@ class OCLsystem{ public:
     cl_kernel current_kernel;
     OCLtask* currentTask=0;
     int argCounter;
+    
 
     OCLtask* getTask(const char* name){ 
         auto it = task_dict.find(name);
@@ -428,6 +430,7 @@ class OCLsystem{ public:
         //commands = clCreateCommandQueueWithProperties( context, device, &prop, &err );
         commands = clCreateCommandQueueWithProperties( context, device, NULL, &err );   // if properties are NULL defaults are used 
         OCL_checkError(err, "Creating command queue");
+        bOpenCL_initialized  = true;
         return err;
     }
     

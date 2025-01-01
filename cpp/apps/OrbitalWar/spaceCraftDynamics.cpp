@@ -43,7 +43,7 @@ int verbosity = 0;
 
 #include "spaceCraftEditorUtils.h"
 #include "OrbSim_d.h"
-
+#include "OrbSim_f.h"
 #include "spaceCraftDynamicsShared.h"
 
 using namespace SpaceCrafting;
@@ -52,26 +52,31 @@ enum class EDIT_MODE:int{ vertex=0, edge=1, component=2, size }; // http://www.c
 
 double elementSize  = 5.;
 
-Mesh::Builder2 mesh;
-OrbSim         sim;
+// Mesh::Builder2 mesh;
+// OrbSim         sim;
+// OrbSim_f       sim_f;
+SpaceCraftSimulator W;
 
 // ===================== MAIN
 
 int main(int argc, char *argv[]){
     // example: use like : ./spaceCraftEditor -s data/ship_ICF_interceptor_1.lua
     printf( "argc %i \n", argc );
-    LambdaDict funcs;
-    funcs["-s"]={1,[&](const char** ss){ 
-        reloadShip( ss[0], mesh );
-        to_OrbSim( sim, mesh );
-    }}; 
     SDL_DisplayMode dm = initSDLOGL( 8 );
 	int junk;
 	SpaceCraftDynamicsApp * app = new SpaceCraftDynamicsApp( junk, dm.w-150, dm.h-100 );
-    app->_mesh = &mesh;
-    app->_sim  = &sim;
+    app->bindSimulators( &W ); 
+
+    LambdaDict funcs;
+    funcs["-float" ]={0,[&](const char** ss){ app->bDouble=false; } };
+    funcs["-double"]={0,[&](const char** ss){ app->bDouble=true;  } };
+    funcs["-fix"   ]={1,[&](const char** ss){ readlist( ss[0], W.fixPoints);  } };
+    funcs["-s"]={1,[&](const char** ss){ 
+        W.reloadShip( ss[0] );
+        W.initSimulators( );
+    }};
     process_args( argc, argv, funcs );
-    if( sim.nPoint == 0 ){ app->initSimDefault(); }
+    if( W.sim.nPoint == 0 ){ W.initSimDefault(); }
 
 	//thisApp = new SpaceCraftDynamicsApp( junk , 800, 600 );
 	app->loop( 1000000 );

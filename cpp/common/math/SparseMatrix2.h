@@ -142,14 +142,14 @@ class SparseMatrix2 { public:
 
     int fromDense( int n_, T* A, T tol, bool bRev=false ){
         n=n_;
-        printf( "SparseMatrix2::fromDense() n=%i \n", n );
+        //printf( "SparseMatrix2::fromDense() n=%i \n", n );
         _realloc0(nngs, n,  0  );
         _realloc0(i0s,  n, -1 );
         ntot = 0;
         for(int i=0; i<n; i++){
             int ii = i; if(bRev)ii=n-i-1;
             int ni = countNonZero( n, A+ii*n, tol );
-            printf( "fromDense()[%i] ni=%i \n", i, ni );
+            //printf( "fromDense()[%i] ni=%i \n", i, ni );
             nngs[i]=ni;
             i0s [i]=ntot;
             ntot+=ni;
@@ -159,7 +159,7 @@ class SparseMatrix2 { public:
         for(int i=0; i<n; i++){
             int ii = i; if(bRev)ii=n-i-1;
             int i0 = i0s[i];
-            if(i0<0){ printf("WTF? i=%i i0=%i \n", i, i0); exit(0); }
+            if(i0<0){ printf("ERROR in SparseMatrix::fromDense()[%i/%i] i0=%i \n", i, n, i0); exit(0); }
             int ni = exportNonZero( n, A+ii*n, tol, vals+i0, inds+i0 );
             if(ni!=nngs[i]){ printf("ERROR in SparseMatrix::fromDense()[%i/%i] exportNonZero().count(%i) != countNonZero().count(%i) => exit \n", i,n, ni, nngs[i] );  exit(0); }
         }

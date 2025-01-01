@@ -30,9 +30,9 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
     //     printf("#====== StickMaterials \n"); for(const StickMaterial* o: shop.stickMaterials.vec){  o->print();  }
     //     //exit(0);
     // }
-    printf( "exportSim() START \n" );
     int np = mesh.verts.size();
     int nb = mesh.edges.size();
+    printf( "exportSim() START nvert=%i nedge=%i \n", np, nb );
     int* nneighs = new int[ np ];
     //printf( "exportSim() np=%i\n", np );
     // find max number of neighbors
@@ -120,9 +120,9 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     //     printf("#====== StickMaterials \n"); for(const StickMaterial* o: shop.stickMaterials.vec){  o->print();  }
     //     //exit(0);
     // }
-    printf( "exportSim() _f START \n" );
     int np = mesh.verts.size();
     int nb = mesh.edges.size();
+    printf( "exportSim() START nvert=%i nedge=%i \n", np, nb );
     int* nneighs = new int[ np ];
     //printf( "exportSim() np=%i\n", np );
     // find max number of neighbors
@@ -196,7 +196,7 @@ void exportSim( OrbSim_f& sim, const Builder2& mesh, const SpaceCraftWorkshop& s
     sim.cleanForce();
     sim.cleanVel();
     //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(0.1); }
-    printf( "exportSim() _f DONE! \n" );
+    printf( "exportSim_f()  DONE! \n" );
     delete [] nneighs;
     //exit(0);
 }

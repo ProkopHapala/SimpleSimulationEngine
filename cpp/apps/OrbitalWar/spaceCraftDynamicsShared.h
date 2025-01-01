@@ -12,53 +12,72 @@
 #include "SpaceCraft2Mesh2.h"
 #include "SpaceCraftDraw.h"
 #include "OrbSim_d.h"
+#include "OrbSim_f.h"
 //#include "OCL_Orb.h"
+#include "spaceCraftSimulator.h"
 
 namespace SpaceCrafting {
 
-void reloadShip( const char* fname, Mesh::Builder2& mesh ){
-    printf("#### START reloadShip('%s')\n", fname );
-    theSpaceCraft->clear();                       DEBUG
-    //luaL_dofile(theLua, "data/spaceshil1.lua"); DEBUG
-    if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
-    printf( "Lua::dofile(%s) DONE \n", fname );
-    theSpaceCraft->checkIntegrity();
-    mesh.clear();
-    BuildCraft_truss( mesh, *theSpaceCraft, 30.0 );
-    mesh.printSizes();
-    printf("#### END reloadShip() \n");
-};
+// void reloadShip( const char* fname, Mesh::Builder2& mesh ){
+//     printf("#### START reloadShip('%s')\n", fname );
+//     theSpaceCraft->clear();                       DEBUG
+//     //luaL_dofile(theLua, "data/spaceshil1.lua"); DEBUG
+//     if( Lua::dofile(theLua,fname) ){ printf( "ERROR in reloadShip() Lua::dofile(%s) \n", fname ); exit(0); }
+//     printf( "Lua::dofile(%s) DONE \n", fname );
+//     theSpaceCraft->checkIntegrity();
+//     mesh.clear();
+//     BuildCraft_truss( mesh, *theSpaceCraft, 30.0 );
+//     mesh.printSizes();
+//     printf("#### END reloadShip() \n");
+// };
 
-void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, double dt=0.02, Vec3d p0=Vec3dZero, Vec3d omega=Vec3dZero ){
-    //printf("#### START to_OrbSim() \n");
-    exportSim( sim, mesh, workshop );
-    std::vector<int> fixPoints{ 2 }; sim.setFixPoints( fixPoints.size(), fixPoints.data() );
-    sim.prepare_LinearSystem( dt, true, true, true, 256 );
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
-    sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
-    //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
-    sim.cleanVel();
-    if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
-    sim.addAngularVelocity( p0, Vec3dZ*0.01 );
-};
+// void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, double dt=0.1, Vec3d p0=Vec3dZero, Vec3d omega=Vec3dZero ){
+//     //printf("#### START to_OrbSim() \n");
+//     exportSim( sim, mesh, workshop );
+//     std::vector<int> fixPoints{ 2 }; sim.setFixPoints( fixPoints.size(), fixPoints.data() );
+//     sim.prepare_LinearSystem( dt, true, true, true, 256 );
+//     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
+//     sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
+//     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
+//     sim.cleanVel();
+//     if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
+//     sim.addAngularVelocity( p0, Vec3dZ*0.01 );
+// };
 
-void init_workshop(){
-    //StickMaterial *o = new StickMaterial();
-    workshop.add_Material     ( "Steel", 7.89e+3, 1.2e+9, 1.2e+9, 200.0e+9, 200.0e+9, 0.85, 800 );
-    workshop.add_StickMaterial( "GS1_long", "Steel", 0.1, 0.005, 0.0 );
-}
+// void to_OrbSim_f( OrbSim_f& sim, Mesh::Builder2& mesh, double dt=0.1, Vec3f p0=Vec3fZero, Vec3f omega=Vec3fZero ){
+//     //printf("#### START to_OrbSim() \n");
+//     exportSim( sim, mesh, workshop );
+//     if( sim.nPoint==0 ){ printf( "ERROR in to_OrbSim() sim.nPoint=%i => exit() \n", sim.nPoint ); exit(0); };
+//     //std::vector<int> fixPoints{ 2 }; sim.setFixPoints( fixPoints.size(), fixPoints.data() );
+//     sim.prepare_LinearSystem( dt, true, true, true, 256 );
+//     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
+//     sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
+//     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
+//     sim.cleanVel();
+//     if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
+//     sim.addAngularVelocity( p0, Vec3fZ*0.01 );
+// };
+
+// void init_workshop(){
+//     //StickMaterial *o = new StickMaterial();
+//     workshop.add_Material     ( "Steel", 7.89e+3, 1.2e+9, 1.2e+9, 200.0e+9, 200.0e+9, 0.85, 800 );
+//     workshop.add_StickMaterial( "GS1_long", "Steel", 0.1, 0.005, 0.0 );
+// }
 
 // =======================================================================
 class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
+    SpaceCraftSimulator* simulator=0;
     Mesh::Builder2* _mesh=0;
     OrbSim*         _sim =0;
+    OrbSim_f*       _sim_f=0;
 
+    bool bDouble          = false;
     bool bRun             = false;
     bool bViewPointLabels = false;
     bool bViewFixedPoints = true;
-    bool bDrawTrj=false;
-    double time=0;
+    bool bDrawTrj         = false;
+
     int perFrame = 1;
     //int perFrame = 10;
     //int perFrame = 100;
@@ -72,34 +91,39 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 	virtual void keyStateHandling( const Uint8 *keys ) override;
     //virtual void mouseHandling( );
 
-    void drawSim( OrbSim& sim );
-    virtual void initSimDefault();
+    virtual void bindSimulators( SpaceCraftSimulator* simulator_ ){
+        simulator=simulator_;
+        _mesh  = simulator->getMesh();
+        _sim   = simulator->getOrbSim();
+        _sim_f = simulator->getOrbSim_f();
+    }
+
+    void drawSim  ( OrbSim&   sim );
+    void drawSim_f( OrbSim_f& sim );
+    //virtual void initSimDefault();
 
 	SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_ );
 
 };
 
-void SpaceCraftDynamicsApp::initSimDefault( ){
-    init_workshop ();
-    makeTrussShape( *_mesh, 3, 10, 100.0, 10.0 );
-    to_OrbSim( *_sim, *_mesh );
-}
+// void SpaceCraftDynamicsApp::initSimDefault( ){
+//     init_workshop ();
+//     //makeTrussShape( *_mesh, 3, 10, 100.0, 10.0 );
+//     makeTrussShape( *_mesh, 2, 100, 100.0, 10.0 );
+//     to_OrbSim  ( *_sim,   *_mesh );
+//     to_OrbSim_f( *_sim_f, *_mesh );
+// }
 
 void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
-    //printf( "SpaceCraftDynamicsApp::drawSim() frame# %i \n", frameCount );
-    //timeit( "TIME sim.run_LinSolve(perFrame) T = %g [ms]\n", 1e-6, [&](){sim.run_LinSolve(perFrame);});
-    if(bRun){
-        long t0 = getCPUticks();  sim.time_LinSolver=0; sim.time_cg_dot=0; sim.cgSolver_niterdone=0;
-        //sim.run_LinSolve(perFrame);
-        sim.run_Cholesky_omp_simd(perFrame);
-        //sim.run_Cholesky_omp(perFrame);
-        double T = (getCPUticks()-t0);
-        //printf( "TIME run: %g [Mticks] LinSolve: %g(%g\%) Mdot: %g(%g\%) niter_av=%g err2tot=%g \n", time_run_LinSolve, sim.time_LinSolver,   100*sim.time_LinSolver/time_run_LinSolve, sim.time_cg_dot, 100*sim.time_cg_dot/time_run_LinSolve, sim.cgSolver_niterdone/((double)perFrame), sim.cgSolver.err2tot );
-        printf( "SpaceCraftDynamicsApp::drawSim() perFrame: %3i nPoint:%6i TIME: %8.3f [Mticks] %8.1f [tick/point] \n", perFrame, sim.nPoint, T*1e-6,  T/(perFrame*sim.nPoint) );
-    }
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
-    if(bViewFixedPoints) renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2d{ 1.0, 1e+300 }, 10.0 );
+    if(bViewFixedPoints && (sim.kFix!=0) ) renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2d{ 1.0, 1e+300 }, 10.0 );
+};
+
+void SpaceCraftDynamicsApp::drawSim_f( OrbSim_f& sim ){
+    renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
+    if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
+    if(bViewFixedPoints && (sim.kFix!=0) ) renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2f{ 1.0, 1e+300 }, 10.0f );
 };
 
 SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {
@@ -124,10 +148,25 @@ void SpaceCraftDynamicsApp::draw(){
     glDisable(GL_CULL_FACE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     //drawBody();
-    drawSim( *_sim );
+    
+    long t0 = getCPUticks(); 
+    if( bDouble ){
+        if(bRun){
+            _sim->run_Cholesky_omp_simd(perFrame);
+        }
+        drawSim( *_sim   );
+    }else{
+        if(bRun){
+            _sim_f->run_Cholesky_omp_simd(perFrame);
+        }
+        drawSim_f( *_sim_f );
+    }
+    double T = (getCPUticks()-t0);
+    if(bRun)printf( "SpaceCraftDynamicsApp::drawSim(bDoublke=%i) perFrame: %3i nPoint:%6i TIME: %8.3f [Mticks] %8.1f [tick/point] \n", bDouble, perFrame, _sim->nPoint, T*1e-6,  T/(perFrame*_sim->nPoint) );
 	//if(!bDrawTrj)glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	//glDisable(GL_DEPTH_TEST);
 	//glEnable(GL_DEPTH_TEST);
+    Draw3D::drawAxis( 1.0 );
 };
 
 void SpaceCraftDynamicsApp::drawHUD(){
