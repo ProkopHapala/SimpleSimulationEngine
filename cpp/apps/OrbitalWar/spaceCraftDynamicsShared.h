@@ -39,6 +39,7 @@ void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, double dt=0.02, Vec3d p0=Vec3
     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
     sim.cleanVel();
     if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
+    sim.addAngularVelocity( p0, Vec3dZ*0.01 );
 };
 
 void init_workshop(){
@@ -55,11 +56,12 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
     bool bRun             = false;
     bool bViewPointLabels = false;
+    bool bViewFixedPoints = true;
     bool bDrawTrj=false;
     double time=0;
-    //int perFrame = 1;
+    int perFrame = 1;
     //int perFrame = 10;
-    int perFrame = 100;
+    //int perFrame = 100;
     // https://stackoverflow.com/questions/29145476/requiring-virtual-function-overrides-to-use-override-keyword
 
 	virtual void draw   () override;
@@ -84,17 +86,20 @@ void SpaceCraftDynamicsApp::initSimDefault( ){
 }
 
 void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
+    //printf( "SpaceCraftDynamicsApp::drawSim() frame# %i \n", frameCount );
     //timeit( "TIME sim.run_LinSolve(perFrame) T = %g [ms]\n", 1e-6, [&](){sim.run_LinSolve(perFrame);});
     if(bRun){
         long t0 = getCPUticks();  sim.time_LinSolver=0; sim.time_cg_dot=0; sim.cgSolver_niterdone=0;
         //sim.run_LinSolve(perFrame);
         sim.run_Cholesky_omp_simd(perFrame);
         //sim.run_Cholesky_omp(perFrame);
-        double time_run_LinSolve = (getCPUticks()-t0)*1e-6;
-        printf( "TIME run: %g [Mticks] LinSolve: %g(%g\%) Mdot: %g(%g\%) niter_av=%g err2tot=%g \n", time_run_LinSolve, sim.time_LinSolver,   100*sim.time_LinSolver/time_run_LinSolve, sim.time_cg_dot, 100*sim.time_cg_dot/time_run_LinSolve, sim.cgSolver_niterdone/((double)perFrame), sim.cgSolver.err2tot );
+        double T = (getCPUticks()-t0);
+        //printf( "TIME run: %g [Mticks] LinSolve: %g(%g\%) Mdot: %g(%g\%) niter_av=%g err2tot=%g \n", time_run_LinSolve, sim.time_LinSolver,   100*sim.time_LinSolver/time_run_LinSolve, sim.time_cg_dot, 100*sim.time_cg_dot/time_run_LinSolve, sim.cgSolver_niterdone/((double)perFrame), sim.cgSolver.err2tot );
+        printf( "SpaceCraftDynamicsApp::drawSim() perFrame: %3i nPoint:%6i TIME: %8.3f [Mticks] %8.1f [tick/point] \n", perFrame, sim.nPoint, T*1e-6,  T/(perFrame*sim.nPoint) );
     }
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
+    if(bViewFixedPoints) renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2d{ 1.0, 1e+300 }, 10.0 );
 };
 
 SpaceCraftDynamicsApp::SpaceCraftDynamicsApp( int& id, int WIDTH_, int HEIGHT_) : AppSDL2OGL_3D( id, WIDTH_, HEIGHT_ ) {

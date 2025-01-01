@@ -423,10 +423,8 @@ class OrbSim: public Picker { public:
         //for(int i=0; i<np2; i++){ PDmat[i]=0.0; }
         double idt2 = 1.0 / (dt * dt);
         for (int i = 0; i < n; ++i) { // point i
-            double Aii = points[i].w * idt2; // Assuming points[i].w stores the mass
-
-            if(kFix) Aii += kFix[i];  // fixed point
-
+            double   Aii  = points[i].w * idt2; // Assuming points[i].w stores the mass
+            if(kFix) Aii += kFix[i];            // fixed point
             //printf( "==i,i %i %g %g %g \n", i, Aii, points[i].w, idt2  );
             int2* ngi = neighBs + (i*nNeighMax);
             for( int ing=0; ing<nNeighMax; ing++ ){
@@ -468,7 +466,7 @@ class OrbSim: public Picker { public:
         if( bRealloc ){ A.realloc( nPoint, nNeighMax+1 ); }
         
         for (int i=0; i<nPoint; i++) {
-            double Aii = points[i].w * idt2; 
+            double   Aii  = points[i].w * idt2; 
             if(kFix) Aii += kFix[i];  // fixed point
             int2* ngi = neighBs + (i*nNeighMax);
             for( int ing=0; ing<nNeighMax; ing++ ){
@@ -496,7 +494,9 @@ class OrbSim: public Picker { public:
     void rhs_ProjectiveDynamics(const Vec3d* pnew, Vec3d* b) {
         double idt2 = 1.0 / (dt * dt);
         for (int i=0; i<nPoint; i++) {
-            Vec3d bi; bi.set_mul(pnew[i], points[i].w*idt2);  // points[i].w is the mass
+            double   Ii  = points[i].w*idt2; 
+            if(kFix) Ii += kFix[i];
+            Vec3d bi; bi.set_mul(pnew[i], Ii );  // points[i].w is the mass
             int2* ngi = neighBs + (i*nNeighMax);
             int ni = 0;
             for( int ing=0; ing<nNeighMax; ing++ ){
@@ -521,7 +521,9 @@ class OrbSim: public Picker { public:
     __attribute__((hot)) 
     Vec3d rhs_ProjectiveDynamics_i(int i, const Vec3d* pnew) {
         double idt2 = 1.0 / (dt * dt);
-        Vec3d bi; bi.set_mul(pnew[i], points[i].w*idt2);  // points[i].w is the mass
+        double   Ii  = points[i].w*idt2; 
+        if(kFix) Ii += kFix[i];
+        Vec3d bi; bi.set_mul(pnew[i], Ii );  // points[i].w is the mass
         int2* ngi = neighBs + (i*nNeighMax);
         int ni = 0;
         for( int ing=0; ing<nNeighMax; ing++ ){
@@ -764,9 +766,10 @@ class OrbSim: public Picker { public:
 
                 // position-based velocity update
                 double vr2 = vel[i].norm2();
-                Vec3d v    = (ps_cor[i] - points[i].f);
+                Vec3d v    = ps_cor[i] - points[i].f;
                 v.mul(inv_dt);
                 //v.mul( sqrt(  vel[i].norm2()/( v.norm2() + 1e-8 ) ) ); // This is unphysicsl
+                if(kFix){ if( kFix[i] > 1e-8){ v=Vec3dZero; } }
                 vel[i].f = v;
                 // update positions
                 points[i].f = ps_cor[i];
@@ -797,7 +800,9 @@ class OrbSim: public Picker { public:
             LsparseT.fwd_subs_T_m( m,  (double*)linsolve_yy,  (double*)ps_cor );
             #pragma omp simd
             for (int i=0;i<nPoint;i++) {
-                vel[i].f    = (ps_cor[i] - points[i].f) * inv_dt;
+                Vec3d    v   = (ps_cor[i] - points[i].f) * inv_dt;
+                if(kFix){ if( kFix[i] > 1e-8){ v=Vec3dZero; } }
+                vel[i].f    = v;
                 points[i].f = ps_cor[i];
             }
         }

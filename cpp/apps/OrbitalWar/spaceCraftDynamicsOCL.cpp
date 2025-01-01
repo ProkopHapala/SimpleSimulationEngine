@@ -262,6 +262,7 @@ void SpaceCraftDynamicsOCLapp::draw(){
     // if     (picker.edit_mode == EDIT_MODE::vertex){ if( picker.picked>=0 ){ Vec3f p = *(Vec3f*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawPointCross( p, 10.0 );                              } }
     // else if(picker.edit_mode == EDIT_MODE::edge  ){ if( picker.picked>=0 ){ Vec2i b = *(Vec2i*)picker.getPickedObject(); glColor3f(0.0,1.0,0.0); Draw3D::drawLine      ( sim_cl.points[b.x].f, sim_cl.points[b.y].f ); } }
 
+    Draw3D::drawAxis( 10.0 );
 };
 
 // void SpaceCraftDynamicsOCLapp::drawHUD(){

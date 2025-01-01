@@ -157,6 +157,7 @@ class Vec2T{
         y = Db*invD;
 	};
 
+    inline bool inrange(T v){ return (v>x)&&(v<y); }
 	inline void enclose(T v){ x=fmin(x,v); y=fmax(y,v); }
 
 	// === static functions:

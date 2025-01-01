@@ -72,6 +72,16 @@ void renderPoinSizes(int n, Quat4f* ps, float sc=1.0 ){
     //exit(0);
 }
 
+void renderPoinsSizeRange(int n, Quat4d* ps, double* vals, Vec2d vrange, float sc ){
+    glPointSize( sc );
+    glBegin(GL_POINTS);
+    for(int i=0; i<n; i++ ){
+        if( vrange.inrange(vals[i]) ){  Draw3D::vertex( ps[i].f ); }
+    }
+    glEnd();
+    //exit(0);
+}
+
 void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
     //glPointSize( 10.0 );
     glBegin(GL_LINES);
