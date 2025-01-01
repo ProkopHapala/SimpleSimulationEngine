@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <functional> 
 
+#include "macroUtils.h"
 #include "fastmath.h"
 #include "VecN.h"
 
