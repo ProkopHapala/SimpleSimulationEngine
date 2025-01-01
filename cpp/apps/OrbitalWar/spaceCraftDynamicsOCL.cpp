@@ -56,7 +56,7 @@ int verbosity = 0;
 #include "testUtils.h"
 
 #include "spaceCraftSimulatorOCL.h"
-#include "spaceCraftDynamicsShared.h"
+#include "SpaceCraftDynamicsApp.h"
 
 // ======================  Global Variables & Declarations
 

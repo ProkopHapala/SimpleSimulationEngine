@@ -44,7 +44,7 @@ int verbosity = 0;
 #include "spaceCraftEditorUtils.h"
 #include "OrbSim_d.h"
 #include "OrbSim_f.h"
-#include "spaceCraftDynamicsShared.h"
+#include "SpaceCraftDynamicsApp.h"
 
 using namespace SpaceCrafting;
 
