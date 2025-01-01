@@ -5,16 +5,19 @@
 #include "arrayAlgs.h"
 #include "CGNE.h"
 
-/*
-
-This sparse matrix has constant maximum number of neighbors
-That makes it efficient to store e.g. nearest neighbor interactions / trusses / molecules etc
-However it is inefficient for torage e.g. triangular matrixes (such as resulting from sparse Cholesky factorization)
-
-Assumption of constant maximum neighbor count is usefull for efficient layout in memory, paralelization, and inserting new elements 
-
-*/
-
+/// @brief Sparse matrix with constant maximum number of neighbors
+///
+/// This sparse matrix implementation is designed for efficient storage of:
+/// - Nearest neighbor interactions
+/// - Trusses
+/// - Molecular structures
+///
+/// @note It is less efficient for storing triangular matrices (e.g., those resulting from sparse Cholesky factorization)
+///
+/// @details The assumption of constant maximum neighbor count provides several advantages:
+/// - Efficient memory layout
+/// - Easier parallelization
+/// - Faster insertion of new elements
 template<typename T>
 class SparseMatrix { public:
     int  n;       // dimension (number of rows)

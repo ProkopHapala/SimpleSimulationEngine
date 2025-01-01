@@ -4,14 +4,10 @@
 
 #include "arrayAlgs.h"
 
-/*
-
-This sparse matrix has varying number of neighbors
-That makes it efficient to store e.g. e.g. triangular matrixes (such as resulting from sparse Cholesky factorization)
-
-The storage is densly packed, which makes it problematic for inserting new elements, => we need to re-create the matrix each time valency changes
-
-*/
+/// @brief Sparse matrix with varying number of neighbors per row
+/// @details This implementation is efficient for storing triangular matrices, such as those resulting from sparse Cholesky factorization. 
+/// The storage is densely packed, which optimizes memory usage but makes inserting new elements problematic. 
+/// As a result, the matrix needs to be recreated each time the number of non-zero elements (valency) changes (e.g. when changing the number of neighbors in a truss or other interaction topology).
 
 template<typename T>
 class SparseMatrix2 { public:
