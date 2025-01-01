@@ -360,7 +360,7 @@ void makeTrussShape( int ishape, int nseg, double R, double r, bool bDouble=true
     // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh, ps_bak.data(), 50,  8, 0.5, 0.05 );
     // sim_cl.bmix.x = 1.0; test_SolverConvergence( mesh, ps_bak.data(), 100, 8, 0.5, 0.05 );
 
-    printf("#### END makeShip_Whee()\n" );
+    printf("#### END makeTrussShape()\n" );
     //exit(0);
 };
 

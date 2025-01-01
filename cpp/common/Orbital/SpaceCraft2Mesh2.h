@@ -730,6 +730,27 @@ void BuildCraft_truss( Builder2& mesh, SpaceCraft& craft, double max_size=-1 ){
     printf( "BuildCraft_truss() DONE! : npoint %i nstick %i nblocks %i \n", mesh.verts.size(), mesh.edges.size(), mesh.blocks.size()  );
 }
 
+void makeTrussShape( Mesh::Builder2& mesh, int ishape, int nseg, double R, double r, Mat3d rot=Mat3dIdentity, Vec3d p0=Vec3dZero ){
+    printf("makeTrussShape(%i,%i,%f,%f)\n",ishape,nseg,R,r);
+    //StickMaterial *o = new StickMaterial();
+    //shop.add_Material     ( "Steel", 7.89e+3, 1.2e+9, 1.2e+9, 200.0e+9, 200.0e+9, 0.85, 800 );
+    //shop.add_StickMaterial( "GS1_long", "Steel", 0.1, 0.005, 0.0 );
+    Quat4i stickTypes{0,0,0,0};
+    Vec3d p1 = rot.a * R;
+    Vec3d up = rot.b;
+    Vec3d ax = rot.c;
+    mesh.clear();
+    switch(ishape){
+        case 0: ngon          ( mesh, p0, p1                            , ax, nseg,             stickTypes.x       ); break;
+        case 1: wheel         ( mesh, p0, p1                            , ax, nseg, Vec2d{r,r}, stickTypes         ); break;
+        case 2: girder1       ( mesh, p0, (p1-p0).normalized()*r*4*nseg , ax, nseg, r,          stickTypes,   true ); break;
+        case 3: triangle_strip( mesh, p0, (p1-p0).normalized()*r*nseg   , up, nseg, r,          stickTypes.x, true ); break;
+    }
+    mesh.printSizes();
+    //if(bDouble){ to_OrbSim ( sim2,   mesh,        p0,         ax      ); }
+    //if(bSingle){ to_OCL_Orb( sim_cl, mesh, (Vec3f)p0, (Vec3f)(ax*5.0) ); }
+    //distort_points( sim_cl.nPoint, sim_cl.points, sim_cl.points, 1.0, Vec3fOne, 15454 ); 
+};
 
 } // namespace SpaceCrafting
 

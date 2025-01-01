@@ -1501,6 +1501,16 @@ class OrbSim: public Picker { public:
         return fmax;
     }
 
+    void setFixPoints( int n, int* fixPoints, double Kfix=1e12, bool bRealloc=true ){
+        if(bRealloc) reallocFixed();
+        for(int i=0;i<n;i++){
+            int ip = fixPoints[i]; 
+            if(ip>nPoint){ printf("ERROR in OrbSim::setFixPoints fixing point %i > sim.nPoint(%i) \n", ip, nPoint); exit(0); }
+            printf("OrbSim::setFixPoints fixing point %i \n", i); 
+            kFix[ip] = Kfix ; 
+        }
+    }
+
     void reallocFixed(){ _realloc0( kFix, nPoint, 0.0 ); }
     void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4dZero; } };
     void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4dZero; } };
