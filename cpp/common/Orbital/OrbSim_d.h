@@ -182,11 +182,11 @@ class OrbSim: public Picker { public:
     Vec3d*  linsolve_b  =0; // new Vec3d[nPoint];
     Vec3d*  linsolve_yy =0; // new Vec3d[nPoint];
 
-    int     nBonds =0; // number of bonds
-    Quat4d* bparams=0; // bond parameters (l0,kP,kT,damp)
-    int2*   bonds  =0; // indices of bonded points (i,j)
-    double*  strain =0; // strain
-    //double*  l0s    =0; // 
+    int     nBonds  =0;    // number of bonds
+    Quat4d* bparams =0;    // bond parameters (l0,kPress,kTens,damp)
+    int2*   bonds   =0;    // indices of bonded points (i,j)
+    double*  strain =0;    // strain
+    //double*  l0s  =0;    // 
     Vec2d*  maxStrain=0;
 
     // ====== Linearized Truss
@@ -411,6 +411,12 @@ class OrbSim: public Picker { public:
         return 0; 
     };
 
+    inline double getLinearBondStiffness( int ib ){
+        // (l0,kPress,kTens,damp)
+        //return  bparams[ib].y;  //k = kPress;
+        return  bparams[ib].z;  //k = kTens;  
+    }
+
     // =================== Solver Using Projective Dynamics and Cholesky Decomposition
 
     __attribute__((hot)) 
@@ -436,7 +442,7 @@ class OrbSim: public Picker { public:
                 int2   b = bonds[ib];
                 //int j  = neighs[b.x];
                 int j    = b.y;
-                double k = bparams[ib].y; // Assuming params[ib].y stores the spring constant
+                double k = getLinearBondStiffness( ib );  
 
                 //printf( "i,ib %i %i %g \n", i, ib+1, k  );
 
@@ -475,7 +481,7 @@ class OrbSim: public Picker { public:
                 if(ib<0) break;
                 int2   b = bonds[ib];
                 int j    = b.y;
-                double k = bparams[ib].y; // Assuming params[ib].y stores the spring constant
+                double k = getLinearBondStiffness( ib );  
                 //printf( "i,ib %i %i %g \n", i, ib+1, k  );
                 Aii += k;
                 if       ( b.y > i ){
@@ -503,7 +509,7 @@ class OrbSim: public Picker { public:
                 int2  ng = ngi[ing];
                 int   ib = ng.y;
                 if(ib<0) break;
-                double k  = bparams[ib].y;  // assuming params.y is the spring constant
+                double k  = getLinearBondStiffness( ib );  
                 double l0 = bparams[ib].x;
                 int2   b  = bonds[ib];
                 int j     = (b.x == i) ? b.y : b.x;
@@ -530,7 +536,7 @@ class OrbSim: public Picker { public:
             int2  ng = ngi[ing];
             int   ib = ng.y;
             if(ib<0) break;
-            double k  = bparams[ib].y;  // assuming params.y is the spring constant
+            double k  = getLinearBondStiffness( ib );  
             double l0 = bparams[ib].x;
             int2   b  = bonds[ib];
             int j     = (b.x == i) ? b.y : b.x;
