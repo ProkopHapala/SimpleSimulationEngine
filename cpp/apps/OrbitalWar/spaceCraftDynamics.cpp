@@ -75,6 +75,8 @@ int main(int argc, char *argv[]){
     funcs["-nsolve"  ]={1,[&](const char** ss){ int nsolv; sscanf( ss[0], "%i", &nsolv ); printf( "COMMAND LINE: -nsolve(%i) \n", nsolv ); W.sim_f.nSolverIters=nsolv; W.sim.nSolverIters=nsolv;  } };
     funcs["-method"  ]={1,[&](const char** ss){ int im;    sscanf( ss[0], "%i", &im    ); printf( "COMMAND LINE: -method(%i) \n", im    ); W.sim_f.linSolveMethod=im;  W.sim.linSolveMethod=im;   } };
     funcs["-bmix"    ]={1,[&](const char** ss){ int istart; float bmix;  sscanf( ss[0], "%i,%f", &istart, &bmix ); W.sim.mixer.b_end=bmix; W.sim.mixer.istart=istart; printf( "COMMAND LINE: -bmix( istart:%i bmix: %f ) \n", W.sim.mixer.istart, W.sim.mixer.b_end );    } };
+    funcs["-dt"    ]={1,[&](const char** ss){ float dt;  sscanf( ss[0], "%f", &dt ); W.sim.dt=dt; W.sim_f.dt=dt; printf( "COMMAND LINE: -dt( dt: %f ) \n", W.sim.dt );    } };
+    
     funcs["-shape"   ]={1,[&](const char** ss){ 
         int ishape, nseg; int nret=sscanf( ss[0],"%i,%i", &ishape, &nseg ); if(nret<2){ printf( "ERROR reading argument -shape nret(%i)<2 %s \n", nret, ss[0] ); exit(0);}
         printf( "COMMAND LINE: -shape( ishape: %i nseg: %i ) \n", ishape, nseg );

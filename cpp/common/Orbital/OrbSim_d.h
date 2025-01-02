@@ -937,8 +937,8 @@ class OrbSim: public Picker { public:
 
             //  Predictor step
             for (int i=0;i<nPoint;i++){ 
-                forces[i].f.add_mul( Gravity, points[i].w ); // Grafivity
-                forces[i].f.add_mul( vel[i].f, Cdrag ); // Drag force
+                //forces[i].f.add_mul( Gravity, points[i].w ); // Grafivity
+                //forces[i].f.add_mul( vel[i].f, Cdrag ); // Drag force
                 ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*(dt2/points[i].w); 
                 //printf( "ps_pred[%3i](%10.6f,%10.6f,%10.6f) v(%10.6f,%10.6f,%10.6f) p(%10.6f,%10.6f,%10.6f) dt=%g \n", i, ps_pred[i].x,ps_pred[i].y,ps_pred[i].z, vel[i].x,vel[i].y,vel[i].z, points[i].x,points[i].y,points[i].z, dt );
             }
@@ -1981,6 +1981,15 @@ int run_omp( int niter_max, bool bDynamic, double dt_, double damp_ ){
     //}
     return itr;
 }
+
+
+
+void print_points(){
+
+}
+
+
+
 
 };   // OrbSim
 

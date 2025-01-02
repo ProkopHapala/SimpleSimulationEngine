@@ -28,13 +28,13 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
     double Estrain = 0.0;
 
-    bool bDouble          = false;
+    bool bDouble          = true;
     bool bRun             = false;
     bool bViewPointLabels = false;
     bool bViewFixedPoints = true;
     bool bDrawTrj         = false;
 
-    bool bViewResudualForces = true;
+    bool bViewResudualForces = false;
     bool bViewVelocities     = false;
     double scale_force       = 0.1;
     double scale_velocity    = 1.0;

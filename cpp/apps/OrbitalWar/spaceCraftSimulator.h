@@ -56,7 +56,7 @@ void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, double dt, Vec3d p0, Vec3d om
     sim.cleanVel();
     sim.cleanForce();
     if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
-    //sim.addAngularVelocity( p0, Vec3dZ*0.01 );   
+    sim.addAngularVelocity( p0, Vec3dZ*0.01 );   
     sim.addAngularVelocity2( p0, Vec3dZ*0.000001 ); // accelerate more the end
 };
 
