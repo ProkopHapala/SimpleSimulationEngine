@@ -160,10 +160,11 @@ class OrbSim_f : public Picker { public:
     int  nNeighMaxLDLT=0;
     SparseMatrix2<float>  Lsparse; 
     SparseMatrix2<float>  LsparseT; 
-    SparseMatrix<float> PDsparse;
+    SparseMatrix<float>   PDsparse;
     //CGsolver cgSolver;
     double time_LinSolver     = 0;
 
+    int nSolverIters   = 10;
     int linSolveMethod = 0;
     enum class LinSolveMethod{ CG,CGsparse,Cholesky,CholeskySparse };
 

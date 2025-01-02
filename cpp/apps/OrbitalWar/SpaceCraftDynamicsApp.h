@@ -152,17 +152,18 @@ void SpaceCraftDynamicsApp::draw(){
     long t0 = getCPUticks(); 
     if( bDouble ){
         if(bRun){
-            _sim->run_Cholesky_omp_simd(perFrame);
+            //_sim->run_Cholesky_omp_simd(perFrame);
+            _sim->run_LinSolve( perFrame );
         }
         drawSim( *_sim   );
     }else{
         if(bRun){
-            _sim_f->run_Cholesky_omp_simd(perFrame);
+            //_sim_f->run_Cholesky_omp_simd(perFrame);
         }
         drawSim_f( *_sim_f );
     }
     double T = (getCPUticks()-t0);
-    if(bRun)printf( "SpaceCraftDynamicsApp::drawSim(bDoublke=%i) perFrame: %3i nPoint:%6i TIME: %8.3f [Mticks] %8.1f [tick/point] \n", bDouble, perFrame, _sim->nPoint, T*1e-6,  T/(perFrame*_sim->nPoint) );
+    if(bRun)printf( "SpaceCraftDynamicsApp::drawSim(bDouble=%i) perFrame: %3i nPoint:%6i TIME: %8.3f [Mticks] %8.1f [tick/point] \n", bDouble, perFrame, _sim->nPoint, T*1e-6,  T/(perFrame*_sim->nPoint) );
 	//if(!bDrawTrj)glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	//glDisable(GL_DEPTH_TEST);
 	//glEnable(GL_DEPTH_TEST);

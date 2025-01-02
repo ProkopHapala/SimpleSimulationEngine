@@ -29,8 +29,8 @@ export LD_PRELOAD
 
 # ====== RUN
 
-./$name.x -float -fix 2
-#./$name.x -double -fix 2
+#./$name.x -float -fix 2
+./$name.x -double -fix 2 -shape 2,200 -method 4 -perframe 10 -nsolve 1
 
 #./$name.x -s data/ship_ICF_interceptor_1.lua
 #./$name.x -s data/ship_ICF_marksman_1.lua

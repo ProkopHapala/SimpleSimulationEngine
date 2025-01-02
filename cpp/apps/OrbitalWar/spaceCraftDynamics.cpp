@@ -68,9 +68,19 @@ int main(int argc, char *argv[]){
     app->bindSimulators( &W ); 
 
     LambdaDict funcs;
-    funcs["-float" ]={0,[&](const char** ss){ app->bDouble=false; } };
-    funcs["-double"]={0,[&](const char** ss){ app->bDouble=true;  } };
-    funcs["-fix"   ]={1,[&](const char** ss){ readlist( ss[0], W.fixPoints);  } };
+    funcs["-float"   ]={0,[&](const char** ss){ app->bDouble=false; printf( "COMMAND LINE: -float  app->bDouble=%i\n", app->bDouble );  } };
+    funcs["-double"  ]={0,[&](const char** ss){ app->bDouble=true;  printf( "COMMAND LINE: -double app->bDouble=%i\n", app->bDouble );  } };
+    funcs["-fix"     ]={1,[&](const char** ss){ int n =  readlist( ss[0], W.fixPoints); printf("COMMAND LINE: -fix[%i]{%s}\n", n, ss[0] );  } };
+    funcs["-perframe"]={1,[&](const char** ss){            sscanf( ss[0], "%i", &app->perFrame ); printf( "COMMAND LINE: -perframe(%i) \n", app->perFrame ); } };
+    funcs["-nsolve"  ]={1,[&](const char** ss){ int nsolv; sscanf( ss[0], "%i", &nsolv ); printf( "COMMAND LINE: -nsolve(%i) \n", nsolv ); W.sim_f.nSolverIters=nsolv; W.sim.nSolverIters=nsolv;  } };
+    funcs["-method"  ]={1,[&](const char** ss){ int im;    sscanf( ss[0], "%i", &im    ); printf( "COMMAND LINE: -method(%i) \n", im    ); W.sim_f.linSolveMethod=im;  W.sim.linSolveMethod=im;   } };
+    funcs["-shape"   ]={1,[&](const char** ss){ 
+        int ishape, nseg; int nret=sscanf( ss[0],"%i,%i", &ishape, &nseg ); if(nret<2){ printf( "ERROR reading argument -shape nret(%i)<2 %s \n", nret, ss[0] ); exit(0);}
+        printf( "COMMAND LINE: -shape( ishape: %i nseg: %i ) \n", ishape, nseg );
+        init_workshop ();
+        makeTrussShape( W.mesh, ishape, nseg, 100.0, 10.0 );
+        W.initSimulators();
+    }};
     funcs["-s"]={1,[&](const char** ss){ 
         W.reloadShip( ss[0] );
         W.initSimulators( );

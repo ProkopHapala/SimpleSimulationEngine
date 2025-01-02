@@ -17,13 +17,13 @@
 
 namespace SpaceCrafting {
 
-void readlist(const char* input, std::vector<int>& lst) {
+int readlist(const char* input, std::vector<int>& lst) {
     int num;
     const char* p = input;
     int i=0;
     while (*p) {
         if (sscanf(p, "%d", &num) == 1) {
-            printf("readlist() [%i]: %d\n", i, num);
+            //printf("readlist() [%i]: %d\n", i, num);
             lst.push_back(num);
             while (*p && *p != ',') p++;
             if (*p == ',') p++;
@@ -34,6 +34,7 @@ void readlist(const char* input, std::vector<int>& lst) {
             break;
         }
     }
+    return i;
 }
 
 void init_workshop(){
