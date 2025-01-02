@@ -88,7 +88,8 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
         sim.points[e.y].w += mass*0.5;
         Quat4d param = (Quat4d){ l0, mat.Kpush/l0, mat.Kpull/l0, mat.damping }; 
         {
-        //      printf( "exportSim(ib=%i) length=%g[m] mass=%g[kg] fPush(%g[10kN~ton]\%1) fPull(%g[10kN~ton]\%1)\n", i, l0, mass, mat.Kpush*1e-6, mat.Kpull*1e-6 );
+            //printf( "exportSim ib: %6i typ: %2i %-10s   length: %6.2f [m] mass: %6.2f [kg] kPush: %.3e [kN/\%] kPull: %.3e [kN/\%] \n", i,  e.w, mat.name,  l0, mass, mat.Kpush*1e-6, mat.Kpull*1e-6 );
+            printf( "exportSim ib: %6i typ: %2i %-10s   length: %6.2f [m] mass: %6.2f [kg] m/l %6.2f [kg/m] k: %.3e [N/m] k/l: %.3e [10kN/\%] \n", i,  e.w, mat.name, l0, mass, mat.linearDensity, param.z, mat.Kpull*1e-6 );
         //    const Material& M = *shop.materials.vec[mat.materialId];
         //    printf( "stick[%i] par(%7.3f,%5.2e,%5.2e,%5.2e) Stick(%s,%g[m^2],%g[m])K(%5.2e,%5.2e) Stick()mat(%s,K(%5.2e,%5.2e))\n",  i, param.x, param.y, param.z, param.w,   mat.name, mat.area, mat.diameter, mat.Kpush, mat.Kpull, M.name, M.Kpull, M.Kpush );
         }
@@ -535,6 +536,14 @@ int ngon( Builder2& mesh, Vec3d p0, Vec3d p1, Vec3d ax, int n,  int stickType ){
 }
 
 
+int rope( Builder2& mesh, Vec3d p0, Vec3d p1, int n,  int stickType ){
+    int i0 = mesh.vert( p0 );
+    int i1 = mesh.vert( p1 );
+    mesh.rope( i0, i1, stickType, n );
+    return i0;
+}
+
+
 /**
  * Creates a panel of truss elements between four corner points. Adds the points and edges to the Truss object.
  * // TODO: make also triangular panel
@@ -745,6 +754,7 @@ void makeTrussShape( Mesh::Builder2& mesh, int ishape, int nseg, double R, doubl
         case 1: wheel         ( mesh, p0, p1                            , ax, nseg, Vec2d{r,r}, stickTypes         ); break;
         case 2: girder1       ( mesh, p0, (p1-p0).normalized()*r*4*nseg , ax, nseg, r,          stickTypes,   true ); break;
         case 3: triangle_strip( mesh, p0, (p1-p0).normalized()*r*nseg   , up, nseg, r,          stickTypes.x, true ); break;
+        case 4: rope          ( mesh, p0, (p1-p0).normalized()*r*nseg   ,     nseg,             stickTypes.x       ); break;
     }
     mesh.printSizes();
     //if(bDouble){ to_OrbSim ( sim2,   mesh,        p0,         ax      ); }

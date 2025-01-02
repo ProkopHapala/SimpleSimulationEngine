@@ -28,12 +28,14 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 
     double Estrain = 0.0;
 
-    bool bDouble          = true;
-    bool bRun             = false;
-    bool bViewPointLabels = false;
-    bool bViewFixedPoints = true;
-    bool bDrawTrj         = false;
-    bool bViewStrinNumbers= true;
+    bool bDouble            = true;
+    bool bRun               = false;
+    bool bViewPointLabels   = false;
+    bool bViewFixedPoints   = true;
+    bool bDrawTrj           = false;
+    bool bViewStrainNumbers = true;
+    bool bViewMassNumbers   = true;
+    bool bViewBondStiffness = false;
 
     bool bViewResudualForces = false;
     bool bViewVelocities     = false;
@@ -75,10 +77,12 @@ void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     glColor3f( 0.0f,0.0f, 0.0f );
     //if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); Draw3D::drawVectorArray( sim.nPoint, sim.ps_cor, sim.linsolve_b, scale_force    );  }
-    if(bViewStrinNumbers  ){ bondProperties( sim.nBonds, sim.bonds, sim.points, sim.strain, fontTex,  0.02, "%.2f", 100.0 ); };
-    if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.forces,     scale_force );     }
-    if(bViewVelocities    ){ glColor3f( 0.0f,0.5f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.vel,        scale_velocity );  }
-    if(bViewPointLabels   ){ pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );}
+    if(bViewMassNumbers    ){ drawPointProperties( sim.nPoint, sim.points, (double*)sim.points, 4,3, fontTex,  0.02, "%.0f" ); };
+    if(bViewBondStiffness  ){ drawBondProperties ( sim.nBonds, sim.bonds, sim.points, (double*)sim.bparams, 4,2, fontTex,  0.02, "%.3e"); };
+    if(bViewStrainNumbers  ){ drawBondProperties ( sim.nBonds, sim.bonds, sim.points, sim.strain, 1,0, fontTex,  0.02, "%.3f", 100.0 ); };
+    if(bViewResudualForces ){ glColor3f( 1.0f,0.0f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.forces,     scale_force );     }
+    if(bViewVelocities     ){ glColor3f( 0.0f,0.5f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.vel,        scale_velocity );  }
+    if(bViewPointLabels    ){ pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );}
     if(bViewFixedPoints && (sim.kFix!=0) ){ renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2d{ 1.0, 1e+300 }, 10.0 ); }
 };
 
