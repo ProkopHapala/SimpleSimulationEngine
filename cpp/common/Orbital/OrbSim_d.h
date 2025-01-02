@@ -199,7 +199,7 @@ class OrbSim: public Picker { public:
 
     // choice of linear solver method
     int linSolveMethod = 0;
-    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7 };
+    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9 };
 
     Vec3d*  ps_cor      =0; // new Vec3d[nPoint];
     Vec3d*  ps_pred     =0; // new Vec3d[nPoint]; 
@@ -639,16 +639,87 @@ class OrbSim: public Picker { public:
         }
     }
 
+    void updateJacobi_fly( Vec3d* ps_in, Vec3d* ps_out ){
+        // This solver calculates bi and Aii on-the fly, preventing updatePD_RHS call and possibly improving numerical stability (?)
+        // NOTE: this is goes beyond linar solution of Ap=b because we update b every iteration, and use non-linear operations like d_{ij}=(pi-pj)/|pi-pj| 
+        for(int i=0; i<nPoint; i++){
+            const Vec3d    pi = ps_in[i];
+            const double idt2 = 1.0 / (dt * dt);
+            double         Ii = points[i].w*idt2; 
+            if(kFix)       Ii += kFix[i];
+            Vec3d sum_j; sum_j.set_mul(pi, Ii );   // b_i    =  M_i/dt^2 p'_i   +  \sum_j ( K_{ij} d_{ij} )         
+            double Aii = Ii;                       // A_{ii} =  M_i/dt^2        +  \sum_j   K_{ij} 
+            const int j0 = i * nNeighMax;
+            for(int jj=0; jj<nNeighMax; jj++){
+                const int j  = j0 + jj;
+                const int jG = neighs[j];
+                if(jG == -1) break;
+                
+                //   update RHS bi
+                const Quat4d par = params[j];
+                const Vec3d  pj  = ps_in[jG];
+                const Vec3d  dij = pi - pj;
+                const double l   = dij.norm();
+                const double k   = par.z;
+                sum_j.add_mul( dij, k*par.x/l );   //  b_i  +=  \sum_j ( K_{ij} d_{ij} )   
+                sum_j.add_mul( pj , k         );   //  s_j  +=  \sum_j ( K_{ij} p_j    )
+                Aii  += k;
+
+            }
+            sum_j.mul( 1/Aii );
+            ps_out[i]  = sum_j;
+        }
+    }
+
+    void updateGaussSeidel_fly( Vec3d* ps ){
+        // This solver calculates bi and Aii on-the fly, preventing updatePD_RHS call and possibly improving numerical stability (?)
+        // NOTE: this is goes beyond linar solution of Ap=b because we update b every iteration, and use non-linear operations like d_{ij}=(pi-pj)/|pi-pj| 
+        for(int i=0; i<nPoint; i++){
+            const Vec3d    pi = ps[i];
+            const double idt2 = 1.0 / (dt * dt);
+            double         Ii = points[i].w*idt2; 
+            if(kFix)       Ii += kFix[i];
+            Vec3d sum_j; sum_j.set_mul(pi, Ii );   // b_i    =  M_i/dt^2 p'_i   +  \sum_j ( K_{ij} d_{ij} )         
+            double Aii = Ii;                       // A_{ii} =  M_i/dt^2        +  \sum_j   K_{ij} 
+            const int j0 = i * nNeighMax;
+            for(int jj=0; jj<nNeighMax; jj++){
+                const int j  = j0 + jj;
+                const int jG = neighs[j];
+                if(jG == -1) break;
+                
+                //   update RHS bi
+                const Quat4d par = params[j];
+                const Vec3d  pj  = ps[jG];
+                const Vec3d  dij = pi - pj;
+                const double l   = dij.norm();
+                const double k   = par.z;
+                sum_j.add_mul( dij, k*par.x/l );   //  b_i  +=  \sum_j ( K_{ij} d_{ij} )   
+                sum_j.add_mul( pj , k         );   //  s_j  +=  \sum_j ( K_{ij} p_j    )
+                Aii  += k;
+
+            }
+            sum_j.mul( 1/Aii );
+            ps[i]  = sum_j;
+        }
+    }
+
     void updateIterativeMomentum( Vec3d* psa, Vec3d* psb ){
         //Vec3d* psa = ps_in;
         //Vec3d* psb = ps_out;
-        updatePD_RHS(psa, bvec );
+        //if(LinSolveMethod::JacobiMomentum == (LinSolveMethod)linSolveMethod  ){
+        updatePD_RHS(psa, bvec ); // TODO: we need to calculate this only whem we use linear solvers, not if we use _fly solvers
+        //}
         for (int i = 0; i < nSolverIters; i++) {  
             switch( (LinSolveMethod)linSolveMethod ){
-                case LinSolveMethod::JacobiMomentum: { updateJacobi_lin( psa, psb, bvec ); } break;
+                case LinSolveMethod::JacobiMomentum:    { updateJacobi_lin( psa, psb, bvec ); } break;
+                case LinSolveMethod::JacobiFlyMomentum: { updateJacobi_fly( psa, psb );       } break;
                 case LinSolveMethod::GSMomentum:     { 
                     for (int j=0; j<nPoint; j++){ psb[j]=psa[j]; }
                     updateGaussSeidel_lin( psb, bvec ); 
+                } break; 
+                case LinSolveMethod::GSFlyMomentum:     { 
+                    for (int j=0; j<nPoint; j++){ psb[j]=psa[j]; }
+                    updateGaussSeidel_fly( psb ); 
                 } break; 
             }
             //updateJacobi_lin( psa, psb, bvec );      //    p'_{k+1}    = Solve(A,p_k,b)
@@ -851,8 +922,10 @@ class OrbSim: public Picker { public:
                         updateGaussSeidel_lin( ps_cor, bvec ); 
                     }
                 } break;
-                case LinSolveMethod::JacobiMomentum: [[fallthrough]]
+                case LinSolveMethod::JacobiMomentum:
                 case LinSolveMethod::GSMomentum: 
+                case LinSolveMethod::JacobiFlyMomentum:
+                case LinSolveMethod::GSFlyMomentum:
                     updateIterativeMomentum( ps_pred, ps_cor );
                     break;
                 case LinSolveMethod::CholeskySparse:{
