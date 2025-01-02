@@ -931,9 +931,15 @@ class OrbSim: public Picker { public:
         for (int iter = 0; iter < niter; iter++) {
             // Evaluate forces (assuming you have a method for this)
             //evalForces();
-            // Predict step
+            
+            double Cdrag = -0.001;
+            Vec3d Gravity = {0,-9.8,0};
+
+            //  Predictor step
             for (int i=0;i<nPoint;i++){ 
-                ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*dt2; 
+                forces[i].f.add_mul( Gravity, points[i].w ); // Grafivity
+                forces[i].f.add_mul( vel[i].f, Cdrag ); // Drag force
+                ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*(dt2/points[i].w); 
                 //printf( "ps_pred[%3i](%10.6f,%10.6f,%10.6f) v(%10.6f,%10.6f,%10.6f) p(%10.6f,%10.6f,%10.6f) dt=%g \n", i, ps_pred[i].x,ps_pred[i].y,ps_pred[i].z, vel[i].x,vel[i].y,vel[i].z, points[i].x,points[i].y,points[i].z, dt );
             }
 
@@ -1015,6 +1021,7 @@ class OrbSim: public Picker { public:
             // printf("residual[%d] : %f\n", iter, res);
             // Update velocity and points
             
+            //   Corrector step
             for (int i=0;i<nPoint;i++) {
                 //Vec3d dv = ps_cor[i] - ps_pred[i];
                 //dv.mul(1.0 / dt);

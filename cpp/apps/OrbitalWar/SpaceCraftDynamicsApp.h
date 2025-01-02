@@ -73,7 +73,8 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     glColor3f( 0.0f,0.0f, 0.0f );
-    if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); Draw3D::drawVectorArray( sim.nPoint, sim.ps_cor, sim.linsolve_b, scale_force    );  }
+    //if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); Draw3D::drawVectorArray( sim.nPoint, sim.ps_cor, sim.linsolve_b, scale_force    );  }
+    if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.forces,     scale_force );     }
     if(bViewVelocities    ){ glColor3f( 0.0f,0.5f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.vel,        scale_velocity );  }
     if(bViewPointLabels   ){ pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );}
     if(bViewFixedPoints && (sim.kFix!=0) ){ renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2d{ 1.0, 1e+300 }, 10.0 ); }
