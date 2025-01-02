@@ -31,7 +31,7 @@ export LD_PRELOAD
 # LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5 };
 #./$name.x -float -fix 2
 #./$name.x -double -fix 2 -shape 2,200 -method 2 -perframe 10 
-./$name.x -double -fix 2 -shape 2,200 -method 6 -perframe 10 -nsolve 30 -bmix 3,0.95
+./$name.x -double -fix 2 -shape 2,200 -method 6 -perframe 1 -nsolve 30 -bmix 3,0.95
 #./$name.x -double -fix 2 -shape 2,200 -method 8 -perframe 10 -nsolve 20 -bmix 3,0.75
 #./$name.x -double -fix 2 -shape 2,200 -method 8 -perframe 10 -nsolve 20 -bmix 3,0.75
 

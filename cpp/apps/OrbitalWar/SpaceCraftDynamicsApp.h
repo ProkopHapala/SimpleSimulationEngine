@@ -34,6 +34,14 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
     bool bViewFixedPoints = true;
     bool bDrawTrj         = false;
 
+    bool bViewResudualForces = true;
+    bool bViewVelocities     = false;
+    double scale_force       = 0.1;
+    double scale_velocity    = 1.0;
+
+    // if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); Draw3D::drawVectorArray( sim.nPoint, sim.ps_cor, sim.linsolve_b, scale_force    );  }
+    // if(bViewVelocitie    s){ glColor3f( 0.0f,0.5f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.vel,        scale_velocity );  }
+
     int perFrame = 1;
     //int perFrame = 10;
     //int perFrame = 100;
@@ -65,8 +73,10 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
 void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     glColor3f( 0.0f,0.0f, 0.0f );
-    if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
-    if(bViewFixedPoints && (sim.kFix!=0) ) renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2d{ 1.0, 1e+300 }, 10.0 );
+    if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); Draw3D::drawVectorArray( sim.nPoint, sim.ps_cor, sim.linsolve_b, scale_force    );  }
+    if(bViewVelocities    ){ glColor3f( 0.0f,0.5f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.vel,        scale_velocity );  }
+    if(bViewPointLabels   ){ pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );}
+    if(bViewFixedPoints && (sim.kFix!=0) ){ renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2d{ 1.0, 1e+300 }, 10.0 ); }
 };
 
 void SpaceCraftDynamicsApp::drawSim_f( OrbSim_f& sim ){

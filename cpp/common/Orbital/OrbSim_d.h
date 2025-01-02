@@ -200,6 +200,8 @@ class OrbSim: public Picker { public:
     // choice of linear solver method
     int linSolveMethod = 0;
     enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7, JacobiFlyMomentum=8, GSFlyMomentum=9 };
+    bool   bApplyResudualForce = true;
+    double residualForceFactor = 1.0;
 
     Vec3d*  ps_cor      =0; // new Vec3d[nPoint];
     Vec3d*  ps_pred     =0; // new Vec3d[nPoint]; 
@@ -609,7 +611,7 @@ class OrbSim: public Picker { public:
         }
     }
 
-    void updateJacobi_lin( Vec3d* ps_in, Vec3d* ps_out, Quat4d* bvec ){
+    void updateJacobi_lin( Vec3d* ps_in, Vec3d* ps_out, Quat4d* bvec, Vec3d* rs=0 ){
         for(int i=0; i<nPoint; i++){
             const int j0 = i * nNeighMax;
             Vec3d sum_j  = Vec3dZero;
@@ -620,7 +622,8 @@ class OrbSim: public Picker { public:
                 sum_j.add_mul( ps_in[jG],  params[j].z );   // kPull
             }
             const Quat4d bi     = bvec[i];  // forces array stores RHS vector
-            ps_out[i]  = (bi.f + sum_j)*(1/bi.w);
+            if(ps_out ) ps_out[i] = (bi.f + sum_j       )*(1/bi.w);
+            if(rs     ) rs    [i] = (bi.f + sum_j - ps_in[i]*bi.w );
         }
     }
 
@@ -636,6 +639,30 @@ class OrbSim: public Picker { public:
             }
             const Quat4d bi     = bvec[i];  // forces array stores RHS vector
             ps[i]  = (bi.f + sum_j)*(1/bi.w);
+        }
+    }
+
+    void evalTrussForce( Vec3d* ps_in, Vec3d* force ){
+        // This solver calculates bi and Aii on-the fly, preventing updatePD_RHS call and possibly improving numerical stability (?)
+        // NOTE: this is goes beyond linar solution of Ap=b because we update b every iteration, and use non-linear operations like d_{ij}=(pi-pj)/|pi-pj| 
+        for(int i=0; i<nPoint; i++){
+            const Vec3d    pi = ps_in[i];
+            Vec3d          fi = Vec3dZero;
+            const int j0 = i * nNeighMax;
+            for(int jj=0; jj<nNeighMax; jj++){
+                const int j  = j0 + jj;
+                const int jG = neighs[j];
+                if(jG == -1) break;
+                
+                const Quat4d par = params[j];
+                const Vec3d  pj  = ps_in[jG];
+                const Vec3d  dij = pi - pj;
+                const double l   = dij.norm();
+                const double dl  = l - par.x; 
+                const double k   = par.z;
+                fi.add_mul( dij, k*dl/l ); 
+            }
+            force[i]  = fi;
         }
     }
 
@@ -733,6 +760,17 @@ class OrbSim: public Picker { public:
             }   // we use linsolve_yy to store momentum
             //for (int i=0; i<nPoint; i++){ ps_pred[i]=ps_cor[i]; }
         }
+
+        if( bApplyResudualForce ){
+            double dt2 = dt * dt;
+            evalTrussForce( psa, linsolve_b );
+            //updateJacobi_lin( psa, 0, bvec, linsolve_b );
+            // for (int i=0; i<nPoint; i++){ 
+            //     if(kFix){ if(kFix[i]>1e-8) continue; }
+            //     psa[i].add_mul( linsolve_b[i], residualForceFactor*dt2/points[i].w ); 
+            // }
+        }
+
         for (int i=0; i<nPoint; i++){ psb[i]=psa[i]; }
     }
 
