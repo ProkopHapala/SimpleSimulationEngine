@@ -139,6 +139,26 @@ inline void print_vector( int n, double * a, int pitch, int j0, int j1 ){
     printf( "\n" );
 }
 
+struct SmartMixer{
+    float b_end   = 0.75f;
+    float b_start = 0.55f;
+    int   istart = 3;
+    int   iend   = 10; 
+
+    // float get_bmix(int itr){
+    //     if      ( itr < istart ) { return 0; }
+    //     else if ( itr > iend   ) { return b_end; }
+    //     else                     { return b_start + (b_end - b_start ) * (itr - istart) / (iend - istart); }
+    // }
+
+    float get_bmix(int itr){
+        if ( itr < istart ) { return 0; }
+        else                { return b_end; }
+    }
+};
+
+
+
 class OrbSim: public Picker { public:
     double time=0;
     int nPoint=0, nNeighMax=0, nNeighTot=0;
@@ -167,19 +187,22 @@ class OrbSim: public Picker { public:
     SparseMatrix2<double>  Lsparse; 
     SparseMatrix2<double>  LsparseT; 
     SparseMatrix<double> PDsparse;
-    CGsolver cgSolver;
+    
+    SmartMixer mixer;
 
+    // variables realted to Conjugate Gradient
+    CGsolver cgSolver;
     double cg_tol             = 1e-3;
     int    cgSolver_niterdone = 0;
     double time_LinSolver     = 0;
     double time_cg_dot        = 0;
 
-
+    // choice of linear solver method
     int linSolveMethod = 0;
-    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5 };
+    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5, JacobiMomentum=6, GSMomentum=7 };
 
     Vec3d*  ps_cor      =0; // new Vec3d[nPoint];
-    Vec3d*  ps_pred     =0; // new Vec3d[nPoint];
+    Vec3d*  ps_pred     =0; // new Vec3d[nPoint]; 
     Vec3d*  linsolve_b  =0; // new Vec3d[nPoint];
     Vec3d*  linsolve_yy =0; // new Vec3d[nPoint];
 
@@ -616,6 +639,46 @@ class OrbSim: public Picker { public:
         }
     }
 
+    void updateIterativeMomentum( Vec3d* psa, Vec3d* psb ){
+        //Vec3d* psa = ps_in;
+        //Vec3d* psb = ps_out;
+        updatePD_RHS(psa, bvec );
+        for (int i = 0; i < nSolverIters; i++) {  
+            switch( (LinSolveMethod)linSolveMethod ){
+                case LinSolveMethod::JacobiMomentum: { updateJacobi_lin( psa, psb, bvec ); } break;
+                case LinSolveMethod::GSMomentum:     { 
+                    for (int j=0; j<nPoint; j++){ psb[j]=psa[j]; }
+                    updateGaussSeidel_lin( psb, bvec ); 
+                } break; 
+            }
+            //updateJacobi_lin( psa, psb, bvec );      //    p'_{k+1}    = Solve(A,p_k,b)
+            double bmix = mixer.get_bmix( i );       //    bmix_k = bmix(k)
+            if( (i==0) || (i>=(nSolverIters-1) ) ) bmix = 0.0; // make sure we stop momentum mixing for the last iteration      
+            for(int j=0; j<nPoint; j++){ 
+                Vec3d p = psb[j]; 
+                p.add_mul( linsolve_yy[j], bmix );   //    p_{k+1} = p'_k + bmix d_k
+                linsolve_yy[j] = p - psa[j];         //    d_{k+1} = p_{k+1} - p_k
+                psa[j]         = p;
+            }   // we use linsolve_yy to store momentum
+            //for (int i=0; i<nPoint; i++){ ps_pred[i]=ps_cor[i]; }
+        }
+        for (int i=0; i<nPoint; i++){ psb[i]=psa[i]; }
+    }
+
+    /*    double run_updateJacobi_smart( int psa, int psb, int itr ) {
+        //run_updateJacobi_neighs(psa, psb);
+        // I want some function of form     A/( B + itr ) which interpolates between  bmix_end and bmix_start when itr transitions from nitr_end to nitr_start
+        if(itr<nitr_start){ run_updateJacobi_neighs(psa, psb);  }
+        else              { 
+            if ( itr > nitr_end ) { bmix.y = bmix_end; }
+            else                  { bmix.y = bmix_start + (bmix_end - bmix_start ) * (itr - nitr_start) / (nitr_end - nitr_start); }
+            run_updateJacobi_mix(psa, psb); 
+        }
+        
+       return bmix.y;
+    }
+    */
+
     // void realloc_Cholesky( int nNeighMaxLDLT_  ){
     //     printf( "OrbSim_d::realloc_Cholesky() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT, nNeighMax );
     //     nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
@@ -788,6 +851,10 @@ class OrbSim: public Picker { public:
                         updateGaussSeidel_lin( ps_cor, bvec ); 
                     }
                 } break;
+                case LinSolveMethod::JacobiMomentum: [[fallthrough]]
+                case LinSolveMethod::GSMomentum: 
+                    updateIterativeMomentum( ps_pred, ps_cor );
+                    break;
                 case LinSolveMethod::CholeskySparse:{
                     // Solve using LDLT decomposition (assuming you have this method)
                     //solve_LDLT_sparse(b, ps_cor);
@@ -1611,6 +1678,16 @@ class OrbSim: public Picker { public:
             v.set_cross(ax,dp);
             //v.set_cross(dp,ax);
             //cross(axis, p)
+            vel[i].f.add(v);
+        }
+    };
+
+    void addAngularVelocity2( Vec3d p0, Vec3d ax ){
+        for(int i=0; i<nPoint; i++){
+            Vec3d dp = points[i].f - p0;
+            Vec3d v; 
+            v.set_cross(ax,dp);
+            v.mul( dp.norm() );
             vel[i].f.add(v);
         }
     };
