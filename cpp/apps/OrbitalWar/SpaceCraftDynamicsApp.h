@@ -72,6 +72,8 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
     OrbSim*         _sim =0;
     OrbSim_f*       _sim_f=0;
 
+    double Estrain = 0.0;
+
     bool bDouble          = false;
     bool bRun             = false;
     bool bViewPointLabels = false;
@@ -121,6 +123,7 @@ void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
 };
 
 void SpaceCraftDynamicsApp::drawSim_f( OrbSim_f& sim ){
+    Estrain = sim.evalBondTension();
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     if(bViewPointLabels) pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );
     if(bViewFixedPoints && (sim.kFix!=0) ) renderPoinsSizeRange( sim.nPoint, sim.points, sim.kFix, Vec2f{ 1.0, 1e+300 }, 10.0f );
@@ -154,16 +157,19 @@ void SpaceCraftDynamicsApp::draw(){
         if(bRun){
             //_sim->run_Cholesky_omp_simd(perFrame);
             _sim->run_LinSolve( perFrame );
+            Estrain = _sim->evalBondTension();
         }
         drawSim( *_sim   );
     }else{
         if(bRun){
             //_sim_f->run_Cholesky_omp_simd(perFrame);
+            _sim_f->run_LinSolve( perFrame );
+            Estrain = _sim_f->evalBondTension();
         }
         drawSim_f( *_sim_f );
     }
     double T = (getCPUticks()-t0);
-    if(bRun)printf( "SpaceCraftDynamicsApp::drawSim(bDouble=%i) perFrame: %3i nPoint:%6i TIME: %8.3f [Mticks] %8.1f [tick/point] \n", bDouble, perFrame, _sim->nPoint, T*1e-6,  T/(perFrame*_sim->nPoint) );
+    if(bRun)printf( "SpaceCraftDynamicsApp::drawSim(bDouble=%i,method=%i,nsolve=%i) perFrame: %3i nPoint:%6i TIME: %8.3f [Mticks] %8.1f [tick/point]  Estrain: %10.2e\n", bDouble, _sim->linSolveMethod, _sim->nSolverIters, perFrame, _sim->nPoint, T*1e-6,  T/(perFrame*_sim->nPoint), Estrain );
 	//if(!bDrawTrj)glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	//glDisable(GL_DEPTH_TEST);
 	//glEnable(GL_DEPTH_TEST);

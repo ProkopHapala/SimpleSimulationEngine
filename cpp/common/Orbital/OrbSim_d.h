@@ -176,7 +176,7 @@ class OrbSim: public Picker { public:
 
 
     int linSolveMethod = 0;
-    enum class LinSolveMethod{ CG,CGsparse,Cholesky,CholeskySparse,Jacobi};
+    enum class LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5 };
 
     Vec3d*  ps_cor      =0; // new Vec3d[nPoint];
     Vec3d*  ps_pred     =0; // new Vec3d[nPoint];
@@ -601,6 +601,21 @@ class OrbSim: public Picker { public:
         }
     }
 
+    void updateGaussSeidel_lin( Vec3d* ps, Quat4d* bvec ){
+        for(int i=0; i<nPoint; i++){
+            const int j0 = i * nNeighMax;
+            Vec3d sum_j  = Vec3dZero;
+            for(int jj=0; jj<nNeighMax; jj++){
+                const int j  = j0 + jj;
+                const int jG = neighs[j];
+                if(jG == -1) break;
+                sum_j.add_mul( ps[jG],  params[j].z );   // kPull
+            }
+            const Quat4d bi     = bvec[i];  // forces array stores RHS vector
+            ps[i]  = (bi.f + sum_j)*(1/bi.w);
+        }
+    }
+
     // void realloc_Cholesky( int nNeighMaxLDLT_  ){
     //     printf( "OrbSim_d::realloc_Cholesky() nPoint=%i nNeighMaxLDLT=%i nNeighMax=%i\n", nPoint, nNeighMaxLDLT, nNeighMax );
     //     nNeighMaxLDLT = nNeighMaxLDLT_;  if(nNeighMaxLDLT<nNeighMax){ printf("ERROR in OrbSim::prepare_Cholesky(): nNeighMaxLDLT(%i)<nNeighMax(%i) \n", nNeighMaxLDLT, nNeighMax); exit(0); }
@@ -735,7 +750,7 @@ class OrbSim: public Picker { public:
 
     __attribute__((hot)) 
     void run_LinSolve(int niter) {
-        printf( "OrbSim::run_LinSolve()  linSolveMethod=%i nSolverIters=%i \n", linSolveMethod, nSolverIters  );
+        //printf( "OrbSim::run_LinSolve()  linSolveMethod=%i nSolverIters=%i \n", linSolveMethod, nSolverIters  );
         const int m=3;
         memcpy(ps_cor, points, nPoint * sizeof(Vec3d));
         double dt2 = dt * dt;
@@ -763,6 +778,14 @@ class OrbSim: public Picker { public:
                     for (int i = 0; i < nSolverIters; i++) {  
                         updateJacobi_lin( ps_pred, ps_cor, bvec ); 
                         for (int i=0; i<nPoint; i++){ ps_pred[i]=ps_cor[i]; }
+                    }
+                } break;
+                case LinSolveMethod::GaussSeidel:{
+                    //printf( "Jacobi nSolverIters=%i \n", nSolverIters  );
+                    for (int i=0; i<nPoint; i++){ ps_cor[i]=ps_pred[i]; }
+                    updatePD_RHS(ps_cor, bvec );
+                    for (int i = 0; i < nSolverIters; i++) {  
+                        updateGaussSeidel_lin( ps_cor, bvec ); 
                     }
                 } break;
                 case LinSolveMethod::CholeskySparse:{
@@ -1485,19 +1508,23 @@ class OrbSim: public Picker { public:
         } 
     }
 
-    void evalBondTension(){
+    double evalBondTension(){
+        double E = 0.0;
         for(int i=0;i<nBonds; i++ ){
-            int2  b  = bonds[i];
+            int2   b  = bonds[i];
             double l0 = bparams[i].x;
             //double l0 = l0s[i];
             double l   = (points[b.y].f-points[b.x].f).norm();
-            double s   = (l-l0)/l0;
+            double dl  = l - l0;
+            double s   = dl/l0;
             //if( fabs(s)>0.5 ){ printf( "evalBondTension[%i] strain=%g l=%g l0=%g\n", i, s, l, l0 ); }
             //if(i==6272){ printf( "evalBondTension[%i](%i,%i) strain=%g l=%g l0=%g\n", i, b.x,b.y, s, l, l0 ); }
             strain[i] = s;
+            E+= 0.5*dl*dl*bparams[i].z;
             // ToDo: break the bond if strain > maxStrain;
         }
         //exit(0);
+        return E;
     }
 
     void applyForceRotatingFrame_i( int i, Vec3d p0, Vec3d ax, double omega ){

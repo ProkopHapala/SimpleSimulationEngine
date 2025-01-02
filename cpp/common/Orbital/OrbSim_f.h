@@ -969,19 +969,23 @@ class OrbSim_f : public Picker { public:
         } 
     }
 
-    void evalBondTension(){
+    float evalBondTension(){
+        float E = 0.0;
         for(int i=0;i<nBonds; i++ ){
-            int2  b  = bonds[i];
+            int2   b  = bonds[i];
             float l0 = bparams[i].x;
-            //float l0 = l0s[i];
+            //double l0 = l0s[i];
             float l   = (points[b.y].f-points[b.x].f).norm();
-            float s   = (l-l0)/l0;
+            float dl  = l - l0;
+            float s   = dl/l0;
             //if( fabs(s)>0.5 ){ printf( "evalBondTension[%i] strain=%g l=%g l0=%g\n", i, s, l, l0 ); }
             //if(i==6272){ printf( "evalBondTension[%i](%i,%i) strain=%g l=%g l0=%g\n", i, b.x,b.y, s, l, l0 ); }
             strain[i] = s;
+            E+= 0.5*dl*dl*bparams[i].z;
             // ToDo: break the bond if strain > maxStrain;
         }
         //exit(0);
+        return E;
     }
 
     void applyForceRotatingFrame_i( int i, Vec3f p0, Vec3f ax, float omega ){
