@@ -33,10 +33,11 @@ class SpaceCraftDynamicsApp : public AppSDL2OGL_3D { public:
     bool bViewPointLabels = false;
     bool bViewFixedPoints = true;
     bool bDrawTrj         = false;
+    bool bViewStrinNumbers= true;
 
     bool bViewResudualForces = false;
     bool bViewVelocities     = false;
-    double scale_force       = 0.1;
+    double scale_force       = 0.01;
     double scale_velocity    = 1.0;
 
     // if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); Draw3D::drawVectorArray( sim.nPoint, sim.ps_cor, sim.linsolve_b, scale_force    );  }
@@ -74,6 +75,7 @@ void SpaceCraftDynamicsApp::drawSim( OrbSim& sim ){
     renderTruss( sim.nBonds, sim.bonds, sim.points, sim.strain, 1000.0 );
     glColor3f( 0.0f,0.0f, 0.0f );
     //if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); Draw3D::drawVectorArray( sim.nPoint, sim.ps_cor, sim.linsolve_b, scale_force    );  }
+    if(bViewStrinNumbers  ){ bondProperties( sim.nBonds, sim.bonds, sim.points, sim.strain, fontTex,  0.02, "%.2f", 100.0 ); };
     if(bViewResudualForces){ glColor3f( 1.0f,0.0f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.forces,     scale_force );     }
     if(bViewVelocities    ){ glColor3f( 0.0f,0.5f, 0.0f ); renderPointForces      ( sim.nPoint, sim.points, sim.vel,        scale_velocity );  }
     if(bViewPointLabels   ){ pointLabels( sim.nPoint, sim.points, fontTex, 0.02 );}
@@ -128,7 +130,8 @@ void SpaceCraftDynamicsApp::draw(){
         drawSim_f( *_sim_f );
     }
     double T = (getCPUticks()-t0);
-    if(bRun)printf( "SpaceCraftDynamicsApp::drawSim(bDouble=%i,method=%i,bmix=%g,nsolve=%i) perFrame: %3i nPoint:%6i TIME: %8.3f [Mticks] %8.1f [tick/point]  Estrain: %10.2e\n", bDouble, _sim->linSolveMethod, _sim->mixer.b_end, _sim->nSolverIters, perFrame, _sim->nPoint, T*1e-6,  T/(perFrame*_sim->nPoint), Estrain );
+    if(bRun)printf( "SpaceCraftDynamicsApp::drawSim(bDouble=%i,method=%i,bmix=%g,dt=%g,nsolve=%i) perFrame: %3i nPoint:%6i TIME: %8.3f [Mticks] %8.1f [tick/point]  Estrain: %10.2e\n", 
+                                     bDouble, _sim->linSolveMethod, _sim->mixer.b_end, _sim->dt, _sim->nSolverIters, perFrame, _sim->nPoint, T*1e-6,  T/(perFrame*_sim->nPoint), Estrain );
 	//if(!bDrawTrj)glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	//glDisable(GL_DEPTH_TEST);
 	//glEnable(GL_DEPTH_TEST);

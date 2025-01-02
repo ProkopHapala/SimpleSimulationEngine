@@ -30,9 +30,11 @@ export LD_PRELOAD
 # ====== RUN
 # LinSolveMethod{ CG=0, CGsparse=1, Cholesky=2, CholeskySparse=3, Jacobi=4, GaussSeidel=5 };
 #./$name.x -float -fix 2
-
-#./$name.x -dt 0.01 -double -fix 2 -shape 2,20 -method 2 -perframe 10
 #./$name.x -double -fix 2 -shape 2,200 -method 2 -perframe 10 
+
+#./$name.x -dt 0.1 -double -shape 2,20 -method 2 -perframe 10
+
+./$name.x -dt 0.1 -double -fix 2 -shape 2,20 -method 2 -perframe 10
 #./$name.x -double -fix 2 -shape 2,200 -method 6 -perframe 1 -nsolve 30 -bmix 3,0.95
 #./$name.x -double -fix 2 -shape 2,200 -method 8 -perframe 10 -nsolve 20 -bmix 3,0.75
 #./$name.x -double -fix 2 -shape 2,200 -method 8 -perframe 10 -nsolve 20 -bmix 3,0.75
@@ -40,7 +42,7 @@ export LD_PRELOAD
 
 #./$name.x -s data/ship_ICF_interceptor_1.lua
 #./$name.x -s data/ship_ICF_marksman_1.lua
-./$name.x -fix 2 -s data/ship_ICF_marksman_2.lua
+#./$name.x -fix 2 -s data/ship_ICF_marksman_2.lua
 
 
 #./$name.x -fix 2 -s data/ship_ICF_marksman_2.lua   -method  6   -nsolve 50 -bmix 3,0.95

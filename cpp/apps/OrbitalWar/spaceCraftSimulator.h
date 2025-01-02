@@ -43,37 +43,37 @@ void init_workshop(){
     workshop.add_StickMaterial( "GS1_long", "Steel", 0.1, 0.005, 0.0 );
 }
 
-void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, double dt, Vec3d p0, Vec3d omega, int nfix=0, int* fixPoints=0 ){
+void to_OrbSim( OrbSim& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 ){
     printf("#### ==== SpaceCraftSimulator::to_OrbSim() \n");
     exportSim( sim, mesh, workshop );
     if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulator::to_OrbSim() sim.nPoint=%i => exit() \n", sim.nPoint ); exit(0); };
     //if(fixPoints.size()>0) sim.setFixPoints( fixPoints.size(), fixPoints.data() );
     if(nfix>0) sim.setFixPoints( nfix, fixPoints );
-    sim.prepare_LinearSystem( dt, true, true, true, 256 );
+    sim.prepare_LinearSystem( true, true, true, 256 );
     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
     sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
     sim.cleanVel();
     sim.cleanForce();
-    if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
-    sim.addAngularVelocity( p0, Vec3dZ*0.01 );   
-    sim.addAngularVelocity2( p0, Vec3dZ*0.000001 ); // accelerate more the end
+    //if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
+    //sim.addAngularVelocity( p0, Vec3dZ*0.01 );   
+    //sim.addAngularVelocity2( p0, Vec3dZ*0.000001 ); // accelerate more the end
 };
 
-void to_OrbSim_f(OrbSim_f& sim, Mesh::Builder2& mesh, float dt, Vec3f p0, Vec3f omega, int nfix=0, int* fixPoints=0 ){
+void to_OrbSim_f(OrbSim_f& sim, Mesh::Builder2& mesh, int nfix=0, int* fixPoints=0 ){
     printf("#### ==== SpaceCraftSimulator::to_OrbSim_f() \n");
     exportSim( sim, mesh, workshop );
     if( sim.nPoint==0 ){ printf( "ERROR in SpaceCraftSimulator::to_OrbSim_f() sim.nPoint=%i => exit() \n", sim.nPoint ); exit(0); };
     if(nfix>0) sim.setFixPoints( nfix, fixPoints );
     //if(fixPoints.size()>0) sim.setFixPoints( fixPoints.size(), fixPoints.data() );
-    sim.prepare_LinearSystem( dt, true, true, true, 256 );
+    sim.prepare_LinearSystem( true, true, true, 256 );
     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CG;
     sim.linSolveMethod = (int)OrbSim::LinSolveMethod::Cholesky;
     //sim.linSolveMethod = (int)OrbSim::LinSolveMethod::CholeskySparse;
     sim.cleanVel();
     sim.cleanForce();
-    if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
-    sim.addAngularVelocity( p0, Vec3fZ*0.01 );
+    //if( omega.norm2()>1e-16 )sim.addAngularVelocity( p0, omega );
+    //sim.addAngularVelocity( p0, Vec3fZ*0.01 );
 };
 
 
@@ -120,8 +120,12 @@ void SpaceCraftSimulator::reloadShip( const char* fname ){
 };
 
 void SpaceCraftSimulator::initSimulators( double dt, Vec3d p0, Vec3d omega ){
-    to_OrbSim  ( sim, mesh,   dt,        p0,        omega, fixPoints.size(), fixPoints.data() );
-    to_OrbSim_f( sim_f, mesh, dt, (Vec3f)p0, (Vec3f)omega, fixPoints.size(), fixPoints.data() );
+    to_OrbSim  ( sim,   mesh, fixPoints.size(), fixPoints.data() );
+    to_OrbSim_f( sim_f, mesh, fixPoints.size(), fixPoints.data() );
+
+    //sim.cleanVel( Quat4d{0.0,1.0,0.0,0.0} );
+    //sim.addAngularVelocity( p0, Vec3fZ*0.01 );
+
 }
 
 void SpaceCraftSimulator::initSimDefault(){

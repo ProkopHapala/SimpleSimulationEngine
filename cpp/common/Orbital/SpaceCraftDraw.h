@@ -140,6 +140,14 @@ void pointLabels( int n, const Quat4d* ps, int fontTex, float sz=0.1 ){
     }
 }
 
+void bondProperties(int nb, int2* bonds, Quat4d* ps, double* vals, int fontTex, float sz=0.1, const char* format="%g\0", float sc=1.0 ){
+    for(int i=0; i<nb; i++){
+        int2 b =  bonds[i];
+        Vec3d p = (ps[b.x].f + ps[b.y].f)*0.5;
+        Draw3D::drawDouble( p, vals[i]*sc, fontTex, sz, format );
+    }
+}
+
 
 
 // ========================   Asteroid

@@ -564,11 +564,12 @@ class OrbSim_f : public Picker { public:
         //if(bCG){  cgSolver.realloc(nPoint,3);}
     }
 
-    void prepare_LinearSystem( float dt, bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){ 
+    void prepare_LinearSystem( bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){ 
+        float dt = this->dt;
         printf( "OrbSim_f::prepare_LinearSystem() nPoint=%i dt=%g nNeighMaxLDLT_=%i\n", nPoint, dt, nNeighMaxLDLT_ );
         //nNeighMaxLDLT=nNeighMaxLDLT_;
         if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_, bDens );
-        this->dt = dt;
+        //this->dt = dt;
         int n2 = nPoint*nPoint;
 
         timeit( "TIME make_PDmat_sparse() t= %g [MTicks]\n", 1e-6, [&](){ make_PDmat_sparse( PDsparse, dt, true ); });

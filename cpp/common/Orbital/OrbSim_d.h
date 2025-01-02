@@ -161,6 +161,23 @@ struct SmartMixer{
 
 class OrbSim: public Picker { public:
     double time=0;
+    double Cdrag = -10.1;
+    //Vec3d Gravity = {0,-9.81,0};
+    // Rotating frame
+    //Vec3d p0{0.,0.,0.};
+    //Vec3d ax{0.0,0.0,1.0};
+    //double omega = 0.05;
+    Quat4d accel{ 0.0,-9.81 , 0.0 , 0.0 };    // acceleration
+    Quat4d rot0 { 0.0, 0.0  , 0.0 , 0.0 };    // center of rotation
+    Quat4d omega{ 0.0, 0.0  , 1.0 , 0.0 };    // angular velocity
+
+    //double dt      = 2e-3; //double kGlobal = 1e+6;
+    double dt      = 2e-3;    double kGlobal = 1e+7;
+    //double dt      = 0.5e-3;  double kGlobal = 1e+8;
+    //double damping = 1e-4;
+    double damping  = 0.05;
+    int nSolverIters = 10;
+
     int nPoint=0, nNeighMax=0, nNeighTot=0;
     // cpu buffers
     Quat4d* points=0;  // position and mass
@@ -259,18 +276,10 @@ class OrbSim: public Picker { public:
     // callback function pointer what to do in between iterations
     void (*user_update)(double dt);
 
-    // Rotating frame
-    //Vec3d p0{0.,0.,0.};
-    //Vec3d ax{0.0,0.0,1.0};
-    //double omega = 0.05;
-    Quat4d accel{0.0f,0.0f,0.0f,0.0f};    // acceleration
-    Quat4d rot0 {0.0f,0.0f,0.0f,0.0f};    // center of rotation
-    //Quat4d omega{0.0f,0.0f,1.0f,0.05f}; // angular velocity, (xyz=axisxyz,w=magnitude)
-    Quat4d omega{0.0f,0.0f,1.0f,0.05f};
+
 
 
     Vec3d hit_pos, hit_normal;
-
 
     //double maxAcc = 1e+6;
     double maxAcc = 1.0;
@@ -278,15 +287,6 @@ class OrbSim: public Picker { public:
     //double collision_damping = 1.0;
     //double collision_damping = 1.1;   // if collision_damping > 1.0 then it is like successive over-relaxation (SOR) method ? https://en.wikipedia.org/wiki/Successive_over-relaxation
 
-    //double kGlobal = 1e+6;
-    
-    double dt      = 2e-3;    double kGlobal = 1e+7;
-    //double dt      = 0.5e-3;  double kGlobal = 1e+8;
-
-    int nSolverIters = 10;
-
-    //double damping = 1e-4;
-    double damping  = 0.05;
     int    lastNeg = 0;
     // FIRE
     int    minLastNeg   = 5;
@@ -824,7 +824,8 @@ class OrbSim: public Picker { public:
         }
     }
 
-    void prepare_LinearSystem( double dt, bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){ 
+    void prepare_LinearSystem( bool bRealloc=true, bool bCG=true, bool bCholesky=true, int nNeighMaxLDLT_=32, bool bDens=true ){ 
+        double dt = this->dt;
         printf( "OrbSim_d::prepare_LinearSystem() nPoint=%i dt=%g nNeighMaxLDLT_=%i\n", nPoint, dt, nNeighMaxLDLT_ );
         //nNeighMaxLDLT=nNeighMaxLDLT_;
         if(bRealloc)realloc_LinearSystem( bCG, bCholesky, nNeighMaxLDLT_, bDens );
@@ -920,6 +921,10 @@ class OrbSim: public Picker { public:
 
     }
 
+    inline Vec3d getPointForce( int i ){
+        return (vel[i].f*Cdrag) + (accel.f*points[i].w);
+    }
+
     __attribute__((hot)) 
     void run_LinSolve(int niter) {
         //printf( "OrbSim::run_LinSolve()  linSolveMethod=%i nSolverIters=%i \n", linSolveMethod, nSolverIters  );
@@ -932,11 +937,9 @@ class OrbSim: public Picker { public:
             // Evaluate forces (assuming you have a method for this)
             //evalForces();
             
-            double Cdrag = -0.001;
-            Vec3d Gravity = {0,-9.8,0};
-
             //  Predictor step
             for (int i=0;i<nPoint;i++){ 
+                forces[i].f = getPointForce( i );
                 //forces[i].f.add_mul( Gravity, points[i].w ); // Grafivity
                 //forces[i].f.add_mul( vel[i].f, Cdrag ); // Drag force
                 ps_pred[i] = points[i].f + vel[i].f*dt + forces[i].f*(dt2/points[i].w); 
@@ -1041,7 +1044,10 @@ class OrbSim: public Picker { public:
             }
             // Call user update function if set
             //if (user_update){ user_update(dt);}
-        }
+            time += dt;
+            //printf( "STEP: %6i time: %16.8f p.y: %16.8f v.y: %16.8f f.y: %16.8f mass: %16.8f\n", iter, time, points[0].y, vel[0].y,  forces[0].y, points[0].w );
+        } // for iter ( time stepping )
+        //exit(0);
     }
 
 
@@ -1787,7 +1793,7 @@ class OrbSim: public Picker { public:
 
     void reallocFixed(){ _realloc0( kFix, nPoint, 0.0 ); }
     void cleanForce(){ for (int i=0; i<nPoint; i++){ forces[i]=Quat4dZero; } };
-    void cleanVel  (){ for (int i=0; i<nPoint; i++){ vel   [i]=Quat4dZero; } };
+    void cleanVel  ( Quat4d v0=Quat4dZero ){ for (int i=0; i<nPoint; i++){ vel[i]=v0; } };
 
     void addAngularVelocity( Vec3d p0, Vec3d ax ){
         for(int i=0; i<nPoint; i++){
