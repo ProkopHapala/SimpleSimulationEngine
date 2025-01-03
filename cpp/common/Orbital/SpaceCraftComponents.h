@@ -743,9 +743,7 @@ class Slider : public Node { public:
     double vel  = 0.0;
     double mass = 1.;
 
-
     int icontrol = -1; // index of degree of freedom which controls the slider in SpaceCraftControl() function
-
 
     inline void move(double dt, double l, double v, double f ){
         

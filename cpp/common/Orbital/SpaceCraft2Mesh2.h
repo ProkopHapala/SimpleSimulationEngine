@@ -238,6 +238,70 @@ int exportBuckets( const SpaceCraft& craft, Buckets* buckets=0, int nPerBucket=1
     return nBuck;
 }
 
+void applySliders2sim( SpaceCraft& craft, OrbSim& sim, double* control_speed ){
+    double dt = sim.dt;
+    for( int i=0; i<craft.sliders.size(); i++ ){
+        Slider* o = craft.sliders[i];
+        int icon = o->icontrol; if(icon>=0){  o->speed = control_speed[icon]; }  // Controls
+        EdgeVertBond& ev = sim.edgeVertBonds[i];
+        Vec3d  d  = sim.points[ev.verts.y].f - sim.points[ev.verts.x].f;
+        Vec3d  dv = sim.vel   [ev.verts.z].f - sim.vel   [ev.verts.y].f*ev.c + sim.vel[ev.verts.x].f*(1-ev.c);
+        double l  = d.norm();
+        double f  = d.dot( ev.f )/l; // force along the slider path
+        double v  = d.dot( dv   )/l; // velocity along the slider path
+        o->move( dt, l, v, f );
+        // -- update corresponding EdgeVerts
+        ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
+        ev.verts.z = o->ivert;
+        //ev.K = 1000.0;
+        //o->updateEdgeVerts( sim.points );
+    }
+}
+
+void sliders2edgeverts( SpaceCraft& craft, OrbSim& sim ){
+    //printf( "reloadShip().updateSlidersPaths \n" );
+    // update ring slider paths
+    for( Ring* o : craft.rings ){
+        o->updateSlidersPaths( true, true, sim.points );
+    }
+    //printf( "reloadShip().SlidersToEdgeVerts \n" );
+    // ----- Sliders to EdgeVerts
+    sim.nEdgeVertBonds = craft.sliders.size();
+    sim.edgeVertBonds  = new EdgeVertBond[ sim.nEdgeVertBonds ];
+    for( int i=0; i<craft.sliders.size(); i++ ){
+        Slider* o = craft.sliders[i];
+        EdgeVertBond& ev = sim.edgeVertBonds[i];
+        ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
+        ev.verts.z = o->ivert;
+        //ev.K = 1000.0;
+        ev.K = 100000.0;
+        //ev.K = 0.0;
+        o->speed = 1.0;
+        //o->speed = 0.1;
+        //o->updateEdgeVerts( sim.points );
+    }
+}
+
+void makeBBoxes( const SpaceCraft& craft, OrbSim& sim ){
+    // // --- Bounding boxes
+    int nbuck  = exportBuckets( craft,             0, 16, true );
+    //printf( "nbuck %i \n", nbuck );
+    sim.recallocBBs( nbuck );
+    sim.pointBBs.cleanO2C(0);  // by default we assign all points to cell 0
+    int nbuck_ = exportBuckets( craft, &sim.pointBBs, 16, true );
+    //sim.pointBBs.printCells();
+    //sim.pointBBs.printObjCellMaping(0,100);   // see if obj2cell is incorrect at the beginning
+    sim.pointBBs.updateCells();
+    //printf("### pointBBs.printCells() \n"); sim.pointBBs.printCells();
+    sim.edgesToBBs();
+    sim.edgeBBs.updateCells();
+    //printf("### edgeBBs.printCells() \n"); sim.edgeBBs.printCells();
+    updatePointBBs( sim.pointBBs, sim.BBs, sim.points,            true );  // It crashes here because of the wrong obj2cell mapping
+    updateEdgeBBs ( sim.edgeBBs,  sim.BBs, sim.bonds, sim.points, false );
+    //updateEdgeBBs ( sim.edgeBBs, sim.BBs, sim.bonds, sim.points, true );
+    //sim.printBBs();
+}
+
 int makePointCunks( Buckets& ebuck, int2* edges, Buckets& pbuck ){
     //printf( "makePointCunks() ncell %i nobj %i \n", ebuck.ncell, ebuck.nobj );
     std::unordered_set<int> ps; // we use set to remove duplicates

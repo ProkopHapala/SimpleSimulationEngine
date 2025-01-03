@@ -23,6 +23,7 @@
 #include "SpaceCraft.h"
 #include "EditSpaceCraft.h"
 #include "MeshBuilder.h"
+#include "Buckets.h"
 
 namespace SpaceCrafting{
 
@@ -75,7 +76,6 @@ void renderPointForces(int n, Quat4f* ps, Quat4f* fs, float sc=1.0 ){
     }
     glEnd();
 }
-
 
 void pointLabels( int n, const Quat4f* ps, int fontTex, float sz=0.1 ){
     for(int i=0; i<n; i++){
@@ -154,6 +154,84 @@ void drawPointProperties(int n, Quat4d* ps, double* vals, int pitch, int offset,
         Draw3D::drawDouble( ps[i].f, vals[i*pitch+offset]*sc, fontTex, sz, format );
     }
 }
+
+
+
+
+void renderEdgeBox( int ib, Buckets& buckets, int2* edges, Quat4d* points){
+    //const Quat8d& bb = BBs[ib];
+    //Draw3D::drawBBox( bb.lo.f, bb.hi.f );
+    int i0 = buckets.cellI0s[ib];
+    int n  = buckets.cellNs [ib];
+    //printf( "---- renderEdgeBox[%i] n=%i i0=%i \n", ib, n, i0 );
+    for(int i=0; i<n; i++){
+        int ie = buckets.cell2obj[i+i0];
+        int2& e = edges[ie];
+        //printf( "renderEdgeBox[%i] ie %i e(%i,%i) \n", ib, ie, e.x, e.y );
+        Draw3D::drawLine( points[e.x].f, points[e.y].f );
+    }
+}
+
+void renderPointBox( int ib, Buckets& buckets, Quat4d* points){
+    //const Quat8d& bb = BBs[ib];
+    //Draw3D::drawBBox( bb.lo.f, bb.hi.f );
+    int i0 = buckets.cellI0s[ib];
+    int n  = buckets.cellNs [ib];
+    //printf( "---- renderEdgeBox[%i] n=%i i0=%i \n", ib, n, i0 );
+    glBegin(GL_POINTS);
+    for(int i=0; i<n; i++){
+        int ip = buckets.cell2obj[i+i0];
+        //printf( "renderEdgeBox[%i] ie %i e(%i,%i) \n", ib, ie, e.x, e.y );
+        Draw3D::vertex( points[ip].f );   
+    }
+    glEnd();
+}
+
+
+void drawSliderBonds( OrbSim& sim ){
+    //glLineWidth(3.0);
+    //glColor3f(0.0,0.5,0.0);
+    // render EdgeVertBonds
+    glBegin(GL_LINES);
+    for(int i=0; i<sim.nEdgeVertBonds; i++){
+        EdgeVertBond& ev = sim.edgeVertBonds[i];
+        Vec3d a = sim.points[ ev.verts.x ].f;
+        Vec3d b = sim.points[ ev.verts.y ].f;
+        Vec3d c = sim.points[ ev.verts.z ].f;
+        Draw3D::vertex( a );  Draw3D::vertex( c );
+        Draw3D::vertex( b );  Draw3D::vertex( c );
+    }
+    glEnd();
+    // --- draw slider paths
+    //glLineWidth(3.0);
+}
+
+void drawSliderPaths( SpaceCraft& craft, OrbSim& sim  ){
+    // --- draw slider bonds
+    //for( const Slider* o: theSpaceCraft->sliders){ 
+    glBegin(GL_LINES);
+    for( int i=0; i<craft.sliders.size(); i++ ){
+        const Slider* o = craft.sliders[i];
+        // glColor3f(0.0,0.5,1.0);
+        // drawSliderPath( o, sim.points, 10 ); 
+        glColor3f(1.0,0.0,1.0);
+        Vec3d p  = sim.getEdgeVertPos( i );
+        Vec3d p0 = sim.points[ o->ivert ].f;
+        //Draw3D::drawLine( p0, p );
+        Draw3D::vertex( p0 ); 
+        Draw3D::vertex( p );
+    }
+    glEnd();
+}
+
+
+
+
+
+
+
+
+
 
 // ========================   Asteroid
 

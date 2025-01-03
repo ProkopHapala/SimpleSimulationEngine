@@ -8,35 +8,10 @@
 //#include "TriangleRayTracer.h"
 //#include "Radiosity.h"
 
+#include "SpaceCraft.h"
+#include "OrbSim_d.h"
+
 #include "GUI.h"
-
-#include <unistd.h>
-#include <dirent.h>
-
-int dir2tree(TreeViewTree& node, char * name, const std::string& prefix="", bool bPrint=false ){
-    node.content.caption = name;
-    std::string path;
-    if (prefix.length()==0){ path = name;              } 
-    else                   { path= (prefix+"/")+name;  }
-    DIR           *dir=0;
-    struct dirent *ent=0;
-    //if( chdir(name)==0 ){
-    if( (dir = opendir( path.c_str() ))!=0){
-        if(bPrint)printf("dir2tree(%s)\n", path.c_str() );
-        while( (ent = readdir(dir)) != 0){
-            //printf("dir '%s' \n", path.c_str() );
-            if((ent->d_name[0]=='.'))continue;
-            TreeViewTree* tr = new TreeViewTree();
-            tr->parrent = &node;
-            node.branches.push_back( tr );
-            dir2tree( *node.branches.back(), ent->d_name, path );
-        }
-        closedir(dir);
-    }else{
-        if(bPrint)printf("leaf '%s'\n", path.c_str() );
-    }
-    return 0;
-}
 
 #ifdef Truss_h
 

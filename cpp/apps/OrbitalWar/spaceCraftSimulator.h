@@ -122,7 +122,6 @@ void SpaceCraftSimulator::reloadShip( const char* fname ){
 void SpaceCraftSimulator::initSimulators( double dt, Vec3d p0, Vec3d omega ){
     to_OrbSim  ( sim,   mesh, fixPoints.size(), fixPoints.data() );
     to_OrbSim_f( sim_f, mesh, fixPoints.size(), fixPoints.data() );
-
     //sim.cleanVel( Quat4d{0.0,1.0,0.0,0.0} );
     //sim.addAngularVelocity( p0, Vec3fZ*0.01 );
 

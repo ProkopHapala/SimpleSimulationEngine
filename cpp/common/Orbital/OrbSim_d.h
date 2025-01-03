@@ -167,7 +167,8 @@ class OrbSim: public Picker { public:
     //Vec3d p0{0.,0.,0.};
     //Vec3d ax{0.0,0.0,1.0};
     //double omega = 0.05;
-    Quat4d accel{ 0.0,-9.81 , 0.0 , 0.0 };    // acceleration
+    //Quat4d accel{ 0.0,-9.81 , 0.0 , 0.0 };    // acceleration
+    Quat4d accel{ 0.0, 0.0 , 0.0 , 0.0 };    // acceleration
     Quat4d rot0 { 0.0, 0.0  , 0.0 , 0.0 };    // center of rotation
     Quat4d omega{ 0.0, 0.0  , 1.0 , 0.05 };    // angular velocity
 
@@ -1525,7 +1526,7 @@ class OrbSim: public Picker { public:
     }
 
     inline void evalTrussForce_neighs2(int iG){
-        const double Adamp = collision_damping*0.5/dt;
+        //const double Adamp = collision_damping*0.5/dt;
         //const int iG = get_global_id(0);
         const Quat4d p = points[iG];
         const Quat4d v = vel   [iG];
@@ -1542,25 +1543,21 @@ class OrbSim: public Picker { public:
             d.f.sub( p.f );
             const double l  = d.f.norm();
             //double k        = kGlobal;    // This works
-            double k        = par.z;    // This crashes
-            double fl       = k*(l-par.x);
-            const double invL = 1/l;
-
+            const double k    = par.z;    // This crashes
+            const double fl   = k*(l-par.x);
+            f.f.add_mul( d.f, fl/l );
 
             // const double dv  = d.f.dot( vel[b.x].f - v.f );
             // if(dv<0){ fl*=1-dv; }
 
-
             // // collision damping
-            
+            // const double invL = 1/l;
             // const double dv  = d.f.dot( vel[b.x].f - v.f );
             // double imp = Adamp * p.w*d.w*dv/(p.w+d.w);
             // //double imp = 0.1* 0.5 * p.w*d.w*dv/(p.w+d.w);
             // //const double imp = 0;
             // //imp/=dt;
-            double imp = 0;
-
-            f.f.add_mul( d.f, ( imp + fl )*invL );
+            //f.f.add_mul( d.f, ( imp + fl )*invL );
             //printf( "p[%i,ij=%i,j=%i] fl: %10.2e dl: %10.2e l: %10.2e l0: %10.2e k: %10.2e \n", iG,ij,j, fl, l-par.x, l, par.x, k );
         }
         forces[iG] = f; // we may need to do += in future

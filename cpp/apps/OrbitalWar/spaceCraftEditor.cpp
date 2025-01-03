@@ -76,8 +76,6 @@ bool bRun = false;
 int iFrame = 0;
 
 Vec3d wheel_speed       = {0.0,0.0,0.0};
-//Vec3d wheel_speed_setup = { 0.1, 0.1, 0.1 };
-//Vec3d wheel_speed_setup = { 0.5, 0.5, 0.5 };
 Vec3d wheel_speed_setup = { 5.0, 5.0, 5.0 };
 
 
@@ -91,38 +89,7 @@ class LinSolverOrbSim : public LinSolver{ public:
 };
 LinSolverOrbSim linSolver;
 
-
-void SpaceCraftControl(double dt){
-    // wheel_speed
-    //printf( "SpaceCraftControl() wheel_speed(%g,%g,%g)\n", wheel_speed.x, wheel_speed.y, wheel_speed.z );
-    // --- move the sliders & update corresponding EdgeVerts
-    for( int i=0; i<theSpaceCraft->sliders.size(); i++ ){
-        Slider* o = theSpaceCraft->sliders[i];
-
-        int icon = o->icontrol;
-        if(icon>=0){ 
-            if(icon<3){ o->speed = wheel_speed.array[icon]; }
-        }
-
-        EdgeVertBond& ev = sim.edgeVertBonds[i];
-
-        Vec3d  d  = sim.points[ev.verts.y].f - sim.points[ev.verts.x].f;
-        Vec3d  dv = sim.vel[ev.verts.z].f - sim.vel[ev.verts.y].f*ev.c + sim.vel[ev.verts.x].f*(1-ev.c);
-        double l  = d.norm();
-        double f  = d.dot( ev.f )/l; // force along the slider path
-        double v  = d.dot( dv   )/l; // velocity along the slider path
-
-        o->move( dt, l, v, f );
-        
-        // -- update corresponding EdgeVerts
-        
-        ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
-        ev.verts.z = o->ivert;
-        //ev.K = 1000.0;
-        //o->updateEdgeVerts( sim.points );
-
-    }
-}
+void SpaceCraftControl(double dt){ applySliders2sim( *theSpaceCraft, sim, (double*)&wheel_speed ); }
 
 void runSim( OrbSim& sim, int niter=100 ){
     long t0 = getCPUticks();
@@ -151,35 +118,6 @@ void runSim( OrbSim& sim, int niter=100 ){
 }
 
 // ======================  Free Functions
-
-void renderEdgeBox( int ib, Buckets& buckets, int2* edges, Quat4d* points){
-    //const Quat8d& bb = BBs[ib];
-    //Draw3D::drawBBox( bb.lo.f, bb.hi.f );
-    int i0 = buckets.cellI0s[ib];
-    int n  = buckets.cellNs [ib];
-    //printf( "---- renderEdgeBox[%i] n=%i i0=%i \n", ib, n, i0 );
-    for(int i=0; i<n; i++){
-        int ie = buckets.cell2obj[i+i0];
-        int2& e = edges[ie];
-        //printf( "renderEdgeBox[%i] ie %i e(%i,%i) \n", ib, ie, e.x, e.y );
-        Draw3D::drawLine( points[e.x].f, points[e.y].f );
-    }
-}
-
-void renderPointBox( int ib, Buckets& buckets, Quat4d* points){
-    //const Quat8d& bb = BBs[ib];
-    //Draw3D::drawBBox( bb.lo.f, bb.hi.f );
-    int i0 = buckets.cellI0s[ib];
-    int n  = buckets.cellNs [ib];
-    //printf( "---- renderEdgeBox[%i] n=%i i0=%i \n", ib, n, i0 );
-    glBegin(GL_POINTS);
-    for(int i=0; i<n; i++){
-        int ip = buckets.cell2obj[i+i0];
-        //printf( "renderEdgeBox[%i] ie %i e(%i,%i) \n", ib, ie, e.x, e.y );
-        Draw3D::vertex( points[ip].f );   
-    }
-    glEnd();
-}
 
 void renderShip(){
     //printf( "SpaceCraftEditorApp.cpp::renderShip() \n" );
@@ -212,9 +150,6 @@ void renderShip(){
     glEnable     ( GL_NORMALIZE        );
     Draw3D::drawMeshBuilder2( mesh2, 0b110, 1, true, true );
 
-
-    
-    
     /*
     Draw3D::color(Vec3d{1.0f,0.0f,1.0f});
     for(int i=0; i<theSpaceCraft->sliders.size(); i++){
@@ -225,9 +160,6 @@ void renderShip(){
     
     //Draw3D::color(Vec3d{1.0,0.,1.});
     //for( const Node& o : theSpaceCraft->nodes ){ Draw3D::drawPointCross( o.pos, 5 ); }
-
-
-
 
     /*
     radiositySolver.clearTriangles();
@@ -248,27 +180,6 @@ void renderShip(){
     */
 
     glEndList();
-}
-
-
-void makeBBoxes( const SpaceCraft& craft, OrbSim& sim ){
-    // // --- Bounding boxes
-    int nbuck  = exportBuckets( craft,             0, 16, true );
-    //printf( "nbuck %i \n", nbuck );
-    sim.recallocBBs( nbuck );
-    sim.pointBBs.cleanO2C(0);  // by default we assign all points to cell 0
-    int nbuck_ = exportBuckets( craft, &sim.pointBBs, 16, true );
-    //sim.pointBBs.printCells();
-    //sim.pointBBs.printObjCellMaping(0,100);   // see if obj2cell is incorrect at the beginning
-    sim.pointBBs.updateCells();
-    //printf("### pointBBs.printCells() \n"); sim.pointBBs.printCells();
-    sim.edgesToBBs();
-    sim.edgeBBs.updateCells();
-    //printf("### edgeBBs.printCells() \n"); sim.edgeBBs.printCells();
-    updatePointBBs( sim.pointBBs, sim.BBs, sim.points,            true );  // It crashes here because of the wrong obj2cell mapping
-    updateEdgeBBs ( sim.edgeBBs,  sim.BBs, sim.bonds, sim.points, false );
-    //updateEdgeBBs ( sim.edgeBBs, sim.BBs, sim.bonds, sim.points, true );
-    //sim.printBBs();
 }
 
 void solveTrussCG(){
@@ -303,21 +214,17 @@ void solveTrussCG(){
     }
 }
 
-
 void makeTestTruss(){
     printf( "#### makeTestTruss() \n" );
     mesh2.clear();
     int stickType = 0;
     //workshop.stickMaterials.vec[stickType]->k = 0.01;
-
     mesh2.stick  (    {-2.0, 0.0, 0.0}, 
                       {-1.0,-0.1, 0.0}, stickType );
     mesh2.stickTo( 1, { 0.0,-0.2, 0.0}, stickType );
     mesh2.stickTo( 2, { 1.0,-0.1, 0.0}, stickType );
     mesh2.stickTo( 3, { 2.0, 0.0, 0.0}, stickType );
-
     //for(int i=0; i<mesh2.verts.size(); i++){ Vec3d& p = mesh2.verts[i].pos; printf( "vert[%i] i %i p(%g,%g,%g)\n", i, p.x, p.y, p.z );}
-    
     exportSim( sim, mesh2, workshop );
     _realloc ( sim.dpos, sim.nBonds );
     _realloc( sim.points_bak, sim.nPoint );
@@ -326,67 +233,7 @@ void makeTestTruss(){
     sim.cleanForce();
     sim.cleanVel();
     sim.forces[2].f.y = -5.0;
-}
-
-
-void sliders2edgeverts( SpaceCraft& craft, OrbSim& sim ){
-    //printf( "reloadShip().updateSlidersPaths \n" );
-    // update ring slider paths
-    for( Ring* o : craft.rings ){
-        o->updateSlidersPaths( true, true, sim.points );
-    }
-    //printf( "reloadShip().SlidersToEdgeVerts \n" );
-    // ----- Sliders to EdgeVerts
-    sim.nEdgeVertBonds = craft.sliders.size();
-    sim.edgeVertBonds  = new EdgeVertBond[ sim.nEdgeVertBonds ];
-    for( int i=0; i<craft.sliders.size(); i++ ){
-        Slider* o = craft.sliders[i];
-        EdgeVertBond& ev = sim.edgeVertBonds[i];
-        ev.c = o->path.fromCur( ev.verts.x, ev.verts.y );
-        ev.verts.z = o->ivert;
-        //ev.K = 1000.0;
-        ev.K = 100000.0;
-        //ev.K = 0.0;
-        o->speed = 1.0;
-        //o->speed = 0.1;
-        //o->updateEdgeVerts( sim.points );
-    }
-}
-
-void drawSliderBonds( OrbSim& sim ){
-    //glLineWidth(3.0);
-    //glColor3f(0.0,0.5,0.0);
-    // render EdgeVertBonds
-    glBegin(GL_LINES);
-    for(int i=0; i<sim.nEdgeVertBonds; i++){
-        EdgeVertBond& ev = sim.edgeVertBonds[i];
-        Vec3d a = sim.points[ ev.verts.x ].f;
-        Vec3d b = sim.points[ ev.verts.y ].f;
-        Vec3d c = sim.points[ ev.verts.z ].f;
-        Draw3D::vertex( a );  Draw3D::vertex( c );
-        Draw3D::vertex( b );  Draw3D::vertex( c );
-    }
-    glEnd();
-    // --- draw slider paths
-    //glLineWidth(3.0);
-}
-
-void drawSliderPaths( SpaceCraft& craft, OrbSim& sim  ){
-    // --- draw slider bonds
-    //for( const Slider* o: theSpaceCraft->sliders){ 
-    glBegin(GL_LINES);
-    for( int i=0; i<craft.sliders.size(); i++ ){
-        const Slider* o = craft.sliders[i];
-        // glColor3f(0.0,0.5,1.0);
-        // drawSliderPath( o, sim.points, 10 ); 
-        glColor3f(1.0,0.0,1.0);
-        Vec3d p  = sim.getEdgeVertPos( i );
-        Vec3d p0 = sim.points[ o->ivert ].f;
-        //Draw3D::drawLine( p0, p );
-        Draw3D::vertex( p0 ); 
-        Draw3D::vertex( p );
-    }
-    glEnd();
+    printf( "#### makeTestTruss() DONE \n" );
 }
 
 void reloadShip( const char* fname  ){
@@ -756,28 +603,7 @@ void SpaceCraftEditorApp::eventHandling ( const SDL_Event& event  ){
 
 // ===================== MAIN
 
-//LambdaDict funcs;
-//SpaceCraftEditorApp * app;
-
-int main(int argc, char *argv[]){
-
-    // printf( "argc %i \n", argc );
-    // // example: use like : ./SpaceCraftEditorApp -s data/ship_ICF_interceptor_1.lua
-    // //funcs["-s"]={1,[&](const char** ss){ app->reloadShip( ss[0] ); }}; 
-    // funcs["-s"]={1,[&](const char** ss){ reloadShip( ss[0] ); }}; 
-	// SDL_Init(SDL_INIT_VIDEO);
-	// SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-	// // https://www.opengl.org/discussion_boards/showthread.php/163904-MultiSampling-in-SDL
-	// //https://wiki.libsdl.org/SDL_GLattr
-    // SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
-    // //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16);
-    // glEnable(GL_MULTISAMPLE);
-	// //SDL_SetRelativeMouseMode( SDL_TRUE );
-	// int junk;
-    // SDL_DisplayMode dm;
-    // SDL_GetDesktopDisplayMode(0, &dm);
-	// app = new SpaceCraftEditorApp( junk , dm.w-150, dm.h-100, argc, argv );
-    
+int main(int argc, char *argv[]){    
     printf( "argc %i \n", argc );
     SDL_DisplayMode dm = initSDLOGL( 8 );
 	int junk;
