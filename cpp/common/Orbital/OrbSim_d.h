@@ -172,8 +172,8 @@ class OrbSim: public Picker { public:
     Quat4d omega{ 0.0, 0.0  , 1.0 , 0.05 };    // angular velocity
 
     //double dt      = 2e-3; //double kGlobal = 1e+6;
-    double dt      = 2e-3;    double kGlobal = 1e+7;
-    //double dt      = 0.5e-3;  double kGlobal = 1e+8;
+    //double dt      = 2e-3;    double kGlobal = 1e+7;
+    double dt      = 0.5e-3;  double kGlobal = 1e+8;
     //double damping = 1e-4;
     double damping  = 0.05;
     int nSolverIters = 10;
@@ -1541,7 +1541,8 @@ class OrbSim: public Picker { public:
             Quat4d d = points[b.x];
             d.f.sub( p.f );
             const double l  = d.f.norm();
-            double k        = kGlobal;
+            //double k        = kGlobal;    // This works
+            double k        = par.z;    // This crashes
             double fl       = k*(l-par.x);
             const double invL = 1/l;
 

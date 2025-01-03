@@ -161,7 +161,8 @@ void runSim( OrbSim& sim, int niter=100 ){
         */
         //sim.run( niter, 1e-3, 1e-8 );
         //sim.run( niter, 1e-3, 1e-4 );
-        sim.run_omp( niter, false, 1e-3, 1e-4 );
+        //sim.run_omp( niter, false, 1e-3, 1e-4 );
+        sim.run_omp( niter, false, 1e-6, 1e-4 );
         //sim.run_omp( niter, true, 1e-3, 1e-5 );
         //sim.run_omp( niter, true, 1e-3, 1e-4 );
         //sim.run_omp( niter, true, 1e-3, 1e-6 );

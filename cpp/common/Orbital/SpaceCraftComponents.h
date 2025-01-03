@@ -112,7 +112,9 @@ class StickMaterial : public CatalogItem { public:
         Tmelt         = mat->Tmelt;
     }
 
-    virtual void print()const override{ printf( "StickMaterial(%3i|%-16s) d=%8.5f[m] w=%8.5f[mm] A=%8.5e[m2] ldens=%5.2e[kg/m] S(%5.2e,%5.2e)[N] K(%5.2e,%5.2e)[N] Refl=%5.2e Tmelt=%4.0f[K] \n", id, name, diameter, wallThickness*1e+3, area, linearDensity, Spull,Spush, Kpull,Kpush, reflectivity, Tmelt ); };
+    //virtual void print()const override{ printf( "StickMaterial(%3i|%-16s) d=%8.5f[m] w=%8.5f[mm] A=%8.5e[m2] ldens=%5.2e[kg/m] S(%5.2e,%5.2e)[N] K(%5.2e,%5.2e)[N] Refl=%5.2e Tmelt=%4.0f[K] \n", id, name, diameter, wallThickness*1e+3, area, linearDensity, Spull,Spush, Kpull,Kpush, reflectivity, Tmelt ); };
+    virtual void print()const override{ printf( "StickMaterial %3i %-16s d[m]: %8.5f w[mm]: %8.5f A[m2]: %8.5e ldens[kg/m]: %5.2e S[N]: %5.2e %5.2e K[N]: %5.2e %5.2e Refl: %5.2e Tmelt[K]: %4.0f \n", id, name, diameter, wallThickness*1e+3, area, linearDensity, Spull,Spush, Kpull,Kpush, reflectivity, Tmelt ); };
+
 };
 
 class PanelMaterial : public CatalogItem { public:

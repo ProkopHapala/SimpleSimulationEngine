@@ -54,6 +54,13 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
     // --- EdgeVerts
     //printf( "exportSim() sim.nEdgeVert %i \n", sim.nEdgeVert );
 
+
+    Vec2d kPullRange  = Vec2d{1.e+300,-1.e+300};
+    Vec2d kPushRange  = Vec2d{1.e+300,-1.e+300};
+    Vec2d l0Range     = Vec2d{1.e+300,-1.e+300};
+    Vec2d massRange   = Vec2d{1.e+300,-1.e+300};
+    std::unordered_set<int> stickTypes;;
+
     // fill neighs
     for(int i=0; i<np; i++){ sim.points[i].f=mesh.verts[i].pos; sim.points[i].e=0.0f; }
     for(int i=0; i<np; i++){ nneighs[i]=0;   }
@@ -80,6 +87,7 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
         if(e.w<0){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i \n", i, e.w ); exit(0); }
         if(e.w>=shop.stickMaterials.vec.size()){ printf( "ERROR in exportSim() mesh.edges[%i].type=%i > stickMaterials.size()\n", i, e.w, e.w>=shop.stickMaterials.vec.size() ); exit(0); }
         const StickMaterial& mat = *shop.stickMaterials.vec[e.w];
+        stickTypes.insert(e.w);
         // l0, kPress, kPull, damping
         //double l0 = (mesh.verts[e.y].pos - mesh.verts[e.x].pos ).norm();
         double l0 = (sim.points[e.y].f - sim.points[e.x].f ).norm() * ( 1.f - mat.preStrain );
@@ -87,9 +95,19 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
         sim.points[e.x].w += mass*0.5;
         sim.points[e.y].w += mass*0.5;
         Quat4d param = (Quat4d){ l0, mat.Kpush/l0, mat.Kpull/l0, mat.damping }; 
+
+        l0Range   .enclose( param.x );
+        kPushRange.enclose( param.y );
+        kPullRange.enclose( param.z );
+        massRange .enclose( mass    );
+
+        //param.z = 1e+7;
+        //if( param.z>1e+7) param.z=1e+7;   // This Makes it converge
+        if( (param.z<1e+6) || (param.z>1e+8) )
         {
+            printf( "exportSim ib: %6i typ: %2i %-10s l0[m]: %6.2f m[kg]: %6.2f k[N/m]: %.3e %.3e \n", i, e.w, mat.name, mass, param.x, param.y, param.z, param.w );
             //printf( "exportSim ib: %6i typ: %2i %-10s   length: %6.2f [m] mass: %6.2f [kg] kPush: %.3e [kN/\%] kPull: %.3e [kN/\%] \n", i,  e.w, mat.name,  l0, mass, mat.Kpush*1e-6, mat.Kpull*1e-6 );
-            printf( "exportSim ib: %6i typ: %2i %-10s   length: %6.2f [m] mass: %6.2f [kg] m/l %6.2f [kg/m] k: %.3e [N/m] k/l: %.3e [10kN/\%] \n", i,  e.w, mat.name, l0, mass, mat.linearDensity, param.z, mat.Kpull*1e-6 );
+            //( "exportSim ib: %6i typ: %2i %-10s   length: %6.2f [m] mass: %6.2f [kg] m/l %6.2f [kg/m] k: %.3e [N/m] k/l: %.3e [10kN/\%] \n", i,  e.w, mat.name, l0, mass, mat.linearDensity, param.z, mat.Kpull*1e-6 );
         //    const Material& M = *shop.materials.vec[mat.materialId];
         //    printf( "stick[%i] par(%7.3f,%5.2e,%5.2e,%5.2e) Stick(%s,%g[m^2],%g[m])K(%5.2e,%5.2e) Stick()mat(%s,K(%5.2e,%5.2e))\n",  i, param.x, param.y, param.z, param.w,   mat.name, mat.area, mat.diameter, mat.Kpush, mat.Kpull, M.name, M.Kpull, M.Kpush );
         }
@@ -108,6 +126,13 @@ void exportSim( OrbSim& sim, const Builder2& mesh, const SpaceCraftWorkshop& sho
     sim.cleanForce();
     sim.cleanVel();
     //for(int i=0; i<sim.nPoint; i++){ sim.points[i].f.addRandomCube(0.1); }
+
+    printf( "exportSim() StickMaterials: \n" );
+    for(int i: stickTypes){ shop.stickMaterials.vec[i]->print(); }
+    printf( "exportSim() kPushRange %g %g \n", kPushRange.x, kPushRange.y );
+    printf( "exportSim() kPullRange %g %g \n", kPullRange.x, kPullRange.y );
+    printf( "exportSim() l0Range    %g %g \n", l0Range.x,    l0Range.y    );
+    printf( "exportSim() massRange  %g %g \n", massRange.x,  massRange.y  );
     printf( "exportSim() DONE! \n" );
     delete [] nneighs;
     //exit(0);
