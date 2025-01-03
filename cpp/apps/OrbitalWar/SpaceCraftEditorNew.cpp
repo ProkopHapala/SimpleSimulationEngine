@@ -12,6 +12,7 @@
 #include "spaceCraftEditorUtils.h"
 #include "IO_utils.h"
 #include "Tree.h"
+#include "LuaHelpers.h"
 
 namespace SpaceCrafting {
 
@@ -51,7 +52,11 @@ public:
         SpaceCraftDynamicsApp(id, WIDTH_, HEIGHT_),
         onSelectLuaShipScript(this)
     {
-        // Initialize editor-specific GUI
+        // Initialize GUI elements
+        fontTex       = makeTexture    ("common_resources/dejvu_sans_mono_RGBA_inv.bmp");
+        GUI_fontTex   = makeTextureHard("common_resources/dejvu_sans_mono_RGBA_pix.bmp");
+        Draw::fontTex = fontTex;
+
         plateGui  = (PlateGUI* )gui.addPanel( new PlateGUI ( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
         girderGui = (GirderGUI*)gui.addPanel( new GirderGUI( WIDTH-105, 5, WIDTH-5, fontSizeDef*2+2) );
         
@@ -64,6 +69,43 @@ public:
         gui.addPanel(tvDir);
         dir2tree(tvDir->root, "data");
         tvDir->updateLines();
+
+        // Initialize display lists
+        ogl_asteroide = glGenLists(1);
+        glNewList(ogl_asteroide, GL_COMPILE);
+        drawAsteroide(32, 50, 0.1, false);
+        glEndList();
+
+        ogl_geoSphere = glGenLists(1);
+        glNewList(ogl_geoSphere, GL_COMPILE);
+        drawAsteroide(16, 0, 0.0, true);
+        glEndList();
+
+        // Load lua files list
+        listDirContaining("data", ".lua", lstLuaFiles->labels);
+
+        // Setup view parameters
+        VIEW_DEPTH = 10000.0;
+        zoom = 1000.0;
+
+        // Initialize simulator and spacecraft
+        simulator = new SpaceCraftSimulator();
+        if(_sim) picker.picker = _sim;
+        picker.Rmax = 10.0;
+
+        // Initialize Lua and load default ship
+        initSpaceCraftingLua();
+        if(argc <= 1) {
+            const char* fname = "data/test_materials.lua";
+            if(Lua::dofile(theLua, fname)) {
+                printf("ERROR in reloadShip() Lua::dofile(%s)\n", fname);
+                exit(0);
+            }
+            zoom = 10.0;
+        }
+
+        // Bind simulator to editor
+        bindSimulators(simulator);
     }
 
     virtual void draw() override {
@@ -147,14 +189,16 @@ public:
 
 // ===================== MAIN
 
-SpaceCrafting::SpaceCraftEditorNew* app;
+
 
 int main(int argc, char *argv[]) {
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-    
-    int junk = 1;
-    app = new SpaceCrafting::SpaceCraftEditorNew(junk, 800, 600, argc, argv);
+    SDL_DisplayMode dm = initSDLOGL( 8 );
+	int junk;
+	SpaceCrafting::SpaceCraftEditorNew* app = new SpaceCrafting::SpaceCraftEditorNew( junk, dm.w-150, dm.h-100, argc, argv );
+    //app->bindSimulators( &W ); 
+
+    // int junk = 1;
+    // app = new SpaceCrafting::SpaceCraftEditorNew(junk, 800, 600, argc, argv);
     app->loop(1000000);
     
     return 0;
